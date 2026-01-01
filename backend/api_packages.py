@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
-from package_manager import package_manager, INSTALLED_PATH, AVAILABLE_PATH
+from package_manager import package_manager, INSTALLED_PATH, NOT_INSTALLED_PATH
 
 router = APIRouter()
 
@@ -160,11 +160,44 @@ async def update_package_metadata(package_id: str, request: UpdateMetadataReques
 
 # ============ 패키지 설치/제거 API ============
 
+class AIInstallRequest(BaseModel):
+    use_ai: bool = True  # True면 AI 기반 설치, False면 단순 복사
+
+
 @router.post("/packages/{package_id}/install")
-async def install_package(package_id: str, request: InstallRequest = None):
-    """도구 패키지 설치"""
+async def install_package(package_id: str, request: AIInstallRequest = None):
+    """
+    도구 패키지 설치
+
+    - use_ai=True (기본값): AI가 README 분석, 필요한 라이브러리 설치, handler.py/tool.json 자동 생성
+    - use_ai=False: 단순 파일 복사만
+    """
     try:
-        result = package_manager.install_package(package_id)
+        use_ai = request.use_ai if request else True
+
+        if use_ai:
+            # AI 기반 설치
+            from api_system_ai import load_system_ai_config
+            config = load_system_ai_config()
+
+            if not config.get("enabled", True):
+                # AI 비활성화면 단순 설치
+                result = package_manager.install_package(package_id)
+            else:
+                api_key = config.get("apiKey", "")
+                if not api_key:
+                    # API 키 없으면 단순 설치
+                    result = package_manager.install_package(package_id)
+                else:
+                    provider = config.get("provider", "google")
+                    model = config.get("model")
+                    result = await package_manager.install_package_with_ai(
+                        package_id, api_key, provider, model
+                    )
+        else:
+            # 단순 복사
+            result = package_manager.install_package(package_id)
+
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -277,15 +310,27 @@ def _load_tool_definitions(tools_path: Path) -> List[Dict[str, Any]]:
             with open(tool_json, 'r', encoding='utf-8') as f:
                 tool_data = json.load(f)
 
-            # tool.json이 배열인 경우 (여러 도구 포함)
+            # tool.json 형식 처리:
+            # 1. 배열인 경우: [{...}, {...}]
+            # 2. 객체 안에 tools 배열: {"tools": [{...}, {...}]}
+            # 3. 단일 도구 객체: {"name": "...", ...}
+
             if isinstance(tool_data, list):
+                # 형식 1: 직접 배열
                 for tool in tool_data:
                     tool["_package_id"] = pkg_dir.name
                     tools.append(tool)
-            else:
-                # 단일 도구
+            elif isinstance(tool_data, dict) and "tools" in tool_data and isinstance(tool_data["tools"], list):
+                # 형식 2: {"tools": [...]} 구조
+                for tool in tool_data["tools"]:
+                    tool["_package_id"] = pkg_dir.name
+                    tools.append(tool)
+            elif isinstance(tool_data, dict) and "name" in tool_data:
+                # 형식 3: 단일 도구 객체
                 tool_data["_package_id"] = pkg_dir.name
                 tools.append(tool_data)
+            else:
+                print(f"[api_packages] Unknown tool.json format in {pkg_dir.name}")
         except Exception as e:
             print(f"[api_packages] Failed to load {tool_json}: {e}")
 
@@ -346,20 +391,23 @@ async def get_tools():
 @router.get("/tools/available")
 async def get_available_tools():
     """
-    설치 가능한 모든 도구 목록 (tool.json 포함)
+    모든 도구 목록 (not_installed + installed)
     """
     try:
-        available_tools = _load_tool_definitions(AVAILABLE_PATH / "tools")
+        not_installed_tools = _load_tool_definitions(NOT_INSTALLED_PATH / "tools")
         installed_tools = _load_tool_definitions(INSTALLED_PATH / "tools")
 
         # 설치 여부 표시
-        installed_names = {t["name"] for t in installed_tools}
-        for tool in available_tools:
-            tool["installed"] = tool["name"] in installed_names
+        for tool in not_installed_tools:
+            tool["installed"] = False
+        for tool in installed_tools:
+            tool["installed"] = True
+
+        all_tools = installed_tools + not_installed_tools
 
         return {
-            "tools": available_tools,
-            "total": len(available_tools)
+            "tools": all_tools,
+            "total": len(all_tools)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

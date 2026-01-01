@@ -801,6 +801,60 @@ class APIClient {
     });
   }
 
+  // ============ 도구 개발 ============
+
+  async developTool(
+    message: string,
+    history: Array<{ role: string; content: string }>
+  ) {
+    return this.request<{
+      success: boolean;
+      result?: string;
+      message?: string;
+      tool_calls?: Array<{
+        tool: string;
+        input: Record<string, any>;
+        result: string;
+      }>;
+      tool_info?: {
+        name: string;
+        description: string;
+        status: 'pending' | 'generating' | 'testing' | 'completed' | 'error';
+        files?: string[];
+        error?: string;
+      };
+    }>('/tools/develop', {
+      method: 'POST',
+      body: JSON.stringify({ message, history }),
+    });
+  }
+
+  async testTool(toolName: string, testInput: Record<string, any>) {
+    return this.request<{
+      success: boolean;
+      result?: string;
+      error?: string;
+      tool_calls?: Array<{
+        tool: string;
+        input: Record<string, any>;
+        result: string;
+      }>;
+    }>('/tools/test', {
+      method: 'POST',
+      body: JSON.stringify({ tool_name: toolName, test_input: testInput }),
+    });
+  }
+
+  async installDevTool(toolName: string) {
+    return this.request<{
+      success: boolean;
+      message: string;
+    }>('/tools/install-dev', {
+      method: 'POST',
+      body: JSON.stringify({ tool_name: toolName }),
+    });
+  }
+
   // ============ 음성 모드 ============
 
   async startVoiceMode(projectId: string, agentId: string) {

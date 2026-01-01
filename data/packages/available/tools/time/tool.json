@@ -1,9 +1,0 @@
-{
-  "name": "get_current_time",
-  "description": "현재 날짜와 시간을 가져옵니다.",
-  "input_schema": {
-    "type": "object",
-    "properties": {},
-    "required": []
-  }
-}

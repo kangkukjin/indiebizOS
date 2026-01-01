@@ -142,6 +142,20 @@ export function Manager() {
   useEffect(() => {
     if (currentProject) {
       loadAgents(currentProject.id);
+      // 프로젝트 로드 시 default_tools도 함께 로드
+      const loadDefaultTools = async () => {
+        try {
+          const config = await api.getProjectConfig(currentProject.id);
+          if (config.default_tools) {
+            setDefaultTools(config.default_tools as string[]);
+          } else {
+            setDefaultTools([]);
+          }
+        } catch (error) {
+          console.error('default_tools 로드 실패:', error);
+        }
+      };
+      loadDefaultTools();
     }
   }, [currentProject, loadAgents]);
 
@@ -432,8 +446,10 @@ export function Manager() {
       await api.saveAgentNote(currentProject!.id, editingAgent.id, noteContent);
       addLog(`[저장됨] ${editingAgent.name}의 영구 메모가 저장되었습니다.`);
       setShowNoteDialog(false);
-    } catch (error) {
-      addLog(`[오류] 노트 저장 실패: ${error}`);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message :
+        (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
+      addLog(`[오류] 노트 저장 실패: ${errMsg}`);
     }
   };
 
@@ -442,8 +458,10 @@ export function Manager() {
     try {
       await api.updateProjectConfig(currentProject.id, { common_settings: commonSettings });
       addLog('[설정] 공통 설정이 저장되었습니다.');
-    } catch (error) {
-      addLog(`[오류] 공통 설정 저장 실패: ${error}`);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message :
+        (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
+      addLog(`[오류] 공통 설정 저장 실패: ${errMsg}`);
     }
   };
 
@@ -462,8 +480,10 @@ export function Manager() {
     try {
       await api.updateProjectConfig(currentProject.id, { default_tools: defaultTools });
       addLog(`[설정] 기본 도구가 저장되었습니다. (${defaultTools.length}개)`);
-    } catch (error) {
-      addLog(`[오류] 기본 도구 저장 실패: ${error}`);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message :
+        (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
+      addLog(`[오류] 기본 도구 저장 실패: ${errMsg}`);
     }
   };
 
@@ -538,7 +558,7 @@ export function Manager() {
       nostrKeyName,
       nostrPrivateKey,
       nostrRelays,
-      allowedTools: agent.allowed_tools || [],
+      allowedTools: [...new Set([...defaultTools, ...(agent.allowed_tools || [])])],
     });
 
     try {
@@ -571,7 +591,7 @@ export function Manager() {
       nostrKeyName: '',
       nostrPrivateKey: '',
       nostrRelays: 'wss://relay.damus.io,wss://relay.nostr.band,wss://nos.lol',
-      allowedTools: [],
+      allowedTools: [...defaultTools],
     });
 
     try {
@@ -655,8 +675,10 @@ export function Manager() {
 
       setShowAgentEditDialog(false);
       loadAgents(currentProject.id);
-    } catch (error) {
-      addLog(`[오류] 에이전트 저장 실패: ${error}`);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message :
+        (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
+      addLog(`[오류] 에이전트 저장 실패: ${errMsg}`);
     }
   };
 
@@ -668,8 +690,10 @@ export function Manager() {
       await api.deleteAgent(currentProject.id, agent.id);
       addLog(`[설정] 에이전트 '${agent.name}' 삭제됨`);
       loadAgents(currentProject.id);
-    } catch (error) {
-      addLog(`[오류] 에이전트 삭제 실패: ${error}`);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message :
+        (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
+      addLog(`[오류] 에이전트 삭제 실패: ${errMsg}`);
     }
   };
 
@@ -728,8 +752,10 @@ export function Manager() {
       setEditingToolAI(null);
       const settings = await api.getToolSettings();
       setToolSettings(settings);
-    } catch (error) {
-      addLog(`[오류] 도구 AI 설정 저장 실패: ${error}`);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message :
+        (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
+      addLog(`[오류] 도구 AI 설정 저장 실패: ${errMsg}`);
     }
   };
 
@@ -766,8 +792,16 @@ export function Manager() {
       } else {
         addLog('[알림] 저장할 역할 설명이 없습니다.');
       }
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : JSON.stringify(error);
+    } catch (error: unknown) {
+      let errMsg = '알 수 없는 오류';
+      if (error instanceof Error) {
+        errMsg = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        const errObj = error as Record<string, unknown>;
+        errMsg = (errObj.detail as string) || (errObj.message as string) || String(error);
+      } else if (typeof error === 'string') {
+        errMsg = error;
+      }
       addLog(`[오류] 역할 설명 저장 실패: ${errMsg}`);
     }
   };
@@ -833,8 +867,10 @@ export function Manager() {
         : result.saved_files;
       addLog(`[프롬프트] 저장 완료: ${Array.isArray(fileNames) ? fileNames.join(', ') : fileNames}`);
       setShowAutoPromptDialog(false);
-    } catch (error) {
-      addLog(`[오류] 프롬프트 저장 실패: ${error instanceof Error ? error.message : error}`);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message :
+        (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
+      addLog(`[오류] 프롬프트 저장 실패: ${errMsg}`);
     } finally {
       setAutoPromptLoading(false);
     }

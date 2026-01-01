@@ -1,5 +1,5 @@
 /**
- * ToolboxDialog - 도구 패키지 설치/제거
+ * ToolboxDialog - 도구 패키지 관리
  *
  * 기능:
  * - 도구 패키지 설치/제거
@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { X, Package, Download, Trash2, Check, AlertCircle, FolderOpen, Search, ChevronDown, ChevronRight, FolderPlus, XCircle, Sparkles, Loader2 } from 'lucide-react';
+import { X, Package, Download, Trash2, Check, AlertCircle, FolderOpen, ChevronDown, ChevronRight, FolderPlus, XCircle, Sparkles, Loader2 } from 'lucide-react';
 import { api } from '../../../lib/api';
 
 interface PackageInfo {
@@ -271,12 +271,11 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
               <Package size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-800">도구 패키지</h2>
-              <p className="text-xs text-gray-500">에이전트가 사용하는 도구 관리</p>
+              <h2 className="text-lg font-bold text-gray-800">도구 관리</h2>
+              <p className="text-xs text-gray-500">패키지 설치 및 관리</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* 폴더 등록 버튼 */}
             <button
               onClick={openRegisterDialog}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"

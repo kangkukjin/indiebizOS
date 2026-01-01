@@ -1,0 +1,13 @@
+{
+  "id": "information",
+  "name": "Information & Publishing",
+  "description": "다양한 정보 수집 및 출판 도구 모음입니다. API Ninjas 지식 검색, 전세계 공개 API 탐색, Amadeus 여행 정보 조회를 비롯하여 일반 신문/잡지 생성 및 IT 특화 신문(Hacker News, 긱뉴스, Reddit AI) 생성 기능을 제공합니다.",
+  "tools": [
+    "get_api_ninjas_data",
+    "search_public_apis",
+    "amadeus_travel_search",
+    "generate_newspaper",
+    "generate_magazine",
+    "generate_it_newspaper"
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "id": "system_essentials",
+  "name": "System Essentials Kit",
+  "description": "통합 시스템 도구: 파일 읽기/쓰기, 검색, 폴더 관리 및 시간 확인 기능을 제공합니다.",
+  "version": "1.0.0",
+  "author": "System AI",
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "파일의 내용을 읽습니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": { "type": "string", "description": "읽을 파일의 경로" }
+        },
+        "required": ["file_path"]
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "파일에 내용을 씁니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": { "type": "string", "description": "쓸 파일의 경로" },
+          "content": { "type": "string", "description": "파일에 기록할 내용" }
+        },
+        "required": ["file_path", "content"]
+      }
+    },
+    {
+      "name": "list_directory",
+      "description": "디렉토리의 파일과 폴더 목록을 조회합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "dir_path": { "type": "string", "description": "조회할 디렉토리 경로 (기본값: 현재)" }
+        }
+      }
+    },
+    {
+      "name": "grep_files",
+      "description": "파일 내용에서 텍스트를 검색합니다. 매칭된 라인과 라인 번호를 함께 반환합니다. 정규표현식과 glob 파일 패턴을 지원합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": { "type": "string", "description": "검색할 텍스트 또는 정규표현식" },
+          "file_pattern": { "type": "string", "description": "검색할 파일 패턴 (예: '*.py', '**/*.ts'). 기본값: 모든 파일" },
+          "root_path": { "type": "string", "description": "검색을 시작할 루트 경로" },
+          "regex": { "type": "boolean", "description": "정규표현식 사용 여부 (기본값: false)" }
+        },
+        "required": ["pattern"]
+      }
+    },
+    {
+      "name": "get_current_time",
+      "description": "현재 시스템의 날짜와 시간을 가져옵니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "format": { "type": "string", "description": "시간 포맷 (기본값: %Y-%m-%d %H:%M:%S)" }
+        }
+      }
+    },
+    {
+      "name": "run_command",
+      "description": "쉘 명령어를 실행합니다. 위험한 명령어(rm, sudo, chmod 등)는 사용자 승인이 필요하며, 승인 후 approved=true로 다시 호출해야 합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "command": { "type": "string", "description": "실행할 쉘 명령어" },
+          "timeout": { "type": "number", "description": "실행 제한 시간(초). 기본값 60초, 최대 300초" },
+          "approved": { "type": "boolean", "description": "사용자가 위험한 명령어를 승인했으면 true" }
+        },
+        "required": ["command"]
+      }
+    },
+    {
+      "name": "glob_files",
+      "description": "glob 패턴으로 파일을 검색합니다. 예: '**/*.py'는 모든 Python 파일, 'src/**/*.ts'는 src 폴더 내 모든 TypeScript 파일을 찾습니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": { "type": "string", "description": "glob 패턴 (예: '**/*.py', 'src/**/*.ts', '*.json')" },
+          "root_path": { "type": "string", "description": "검색을 시작할 루트 경로 (기본값: 프로젝트 루트)" }
+        },
+        "required": ["pattern"]
+      }
+    },
+    {
+      "name": "edit_file",
+      "description": "파일의 특정 부분만 수정합니다. 전체 파일을 다시 쓰지 않고 old_string을 new_string으로 교체합니다. 토큰을 절약하고 정확한 수정이 가능합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": { "type": "string", "description": "수정할 파일의 경로" },
+          "old_string": { "type": "string", "description": "교체할 기존 문자열 (파일에서 고유해야 함)" },
+          "new_string": { "type": "string", "description": "새로 넣을 문자열" }
+        },
+        "required": ["file_path", "old_string", "new_string"]
+      }
+    }
+  ]
+}

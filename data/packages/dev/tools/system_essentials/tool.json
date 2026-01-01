@@ -1,0 +1,65 @@
+{
+  "id": "system_essentials",
+  "name": "System Essentials Kit",
+  "description": "통합 시스템 도구: 파일 읽기/쓰기, 검색, 폴더 관리 및 시간 확인 기능을 제공합니다.",
+  "version": "1.0.0",
+  "author": "System AI",
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "파일의 내용을 읽습니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": { "type": "string", "description": "읽을 파일의 경로" }
+        },
+        "required": ["file_path"]
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "파일에 내용을 씁니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": { "type": "string", "description": "쓸 파일의 경로" },
+          "content": { "type": "string", "description": "파일에 기록할 내용" }
+        },
+        "required": ["file_path", "content"]
+      }
+    },
+    {
+      "name": "list_directory",
+      "description": "디렉토리의 파일과 폴더 목록을 조회합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "dir_path": { "type": "string", "description": "조회할 디렉토리 경로 (기본값: 현재)" }
+        }
+      }
+    },
+    {
+      "name": "search_files",
+      "description": "파일명 또는 파일 내용으로 파일을 검색합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "search_type": { "type": "string", "enum": ["name", "content"], "description": "검색 방식: 이름 또는 내용" },
+          "query": { "type": "string", "description": "검색어" },
+          "root_path": { "type": "string", "description": "검색을 시작할 루트 경로" }
+        },
+        "required": ["search_type", "query"]
+      }
+    },
+    {
+      "name": "get_current_time",
+      "description": "현재 시스템의 날짜와 시간을 가져옵니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "format": { "type": "string", "description": "시간 포맷 (기본값: %Y-%m-%d %H:%M:%S)" }
+        }
+      }
+    }
+  ]
+}

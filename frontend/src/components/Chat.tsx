@@ -3,7 +3,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Mic, Camera } from 'lucide-react';
+import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Camera } from 'lucide-react';
 import { CameraPreview } from './CameraPreview';
 import ReactMarkdown from 'react-markdown';
 import { createChatWebSocket, cancelAllAgents, api } from '../lib/api';
@@ -36,9 +36,6 @@ export function Chat({ projectId, agent }: ChatProps) {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [attachedImages, setAttachedImages] = useState<ImageAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-
-  // Push-to-Talk 상태
-  const [isListening, setIsListening] = useState(false);
 
   // 카메라 상태
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -259,76 +256,6 @@ export function Chat({ projectId, agent }: ChatProps) {
     }
   };
 
-  // Push-to-Talk: 버튼 누르고 있는 동안 녹음
-  const handleMicMouseDown = async () => {
-    if (isLoading) return;
-
-    setIsListening(true);
-
-    try {
-      // 음성 모드 시작 (Whisper 초기화)
-      await api.startVoiceMode(projectId, agent.id);
-    } catch (error) {
-      console.error('Failed to start voice mode:', error);
-      setIsListening(false);
-    }
-  };
-
-  const handleMicMouseUp = async () => {
-    if (!isListening) return;
-
-    try {
-      // 음성 입력 받기
-      const listenResult = await api.voiceListen(projectId, agent.id);
-
-      setIsListening(false);
-
-      if (listenResult.status === 'success' && listenResult.text) {
-        // 음성 입력을 채팅으로 전송
-        const userMessage: ChatMessage = {
-          id: Date.now().toString(),
-          role: 'user',
-          content: `🎤 ${listenResult.text}`,
-          timestamp: new Date(),
-        };
-
-        setMessages((prev) => [...prev, userMessage]);
-        setIsLoading(true);
-
-        ws?.send(
-          JSON.stringify({
-            type: 'chat',
-            message: listenResult.text.trim(),
-            agent_name: agent.name,
-            project_id: projectId,
-          })
-        );
-      }
-
-      // 음성 모드 종료
-      await api.stopVoiceMode(projectId, agent.id);
-    } catch (error) {
-      console.error('Voice input error:', error);
-      setIsListening(false);
-    }
-  };
-
-  // 마우스가 버튼 밖으로 나갔을 때도 처리
-  const handleMicMouseLeave = () => {
-    if (isListening) {
-      handleMicMouseUp();
-    }
-  };
-
-  // 컴포넌트 언마운트 시 정리
-  useEffect(() => {
-    return () => {
-      if (isListening) {
-        api.stopVoiceMode(projectId, agent.id).catch(console.error);
-      }
-    };
-  }, [isListening, projectId, agent.id]);
-
   return (
     <div className="flex-1 flex flex-col bg-[#F5F1EB]">
       {/* 채팅 헤더 */}
@@ -343,24 +270,6 @@ export function Chat({ projectId, agent }: ChatProps) {
           </div>
         </div>
 
-        {/* Push-to-Talk 마이크 버튼 */}
-        <button
-          onMouseDown={handleMicMouseDown}
-          onMouseUp={handleMicMouseUp}
-          onMouseLeave={handleMicMouseLeave}
-          disabled={isLoading}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors select-none ${
-            isListening
-              ? 'bg-red-500 text-white'
-              : 'bg-[#D97706] hover:bg-[#B45309] text-white'
-          } disabled:opacity-50`}
-          title="누르고 말하기"
-        >
-          <Mic size={16} className={isListening ? 'animate-pulse' : ''} />
-          <span className="text-sm">
-            {isListening ? '말하세요...' : '누르고 말하기'}
-          </span>
-        </button>
       </div>
 
       {/* 메시지 목록 */}

@@ -1,0 +1,16 @@
+{
+  "name": "browser_action",
+  "description": "자연어로 브라우저 작업을 지시합니다. 웹 검색, 정보 추출, 페이지 캡처, 복잡한 웹 서비스 조작 등에 사용됩니다.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "instruction": {
+        "type": "string",
+        "description": "수행할 구체적인 작업 지시 (예: '네이버에서 오늘의 환율 정보를 검색해서 알려줘')"
+      }
+    },
+    "required": [
+      "instruction"
+    ]
+  }
+}

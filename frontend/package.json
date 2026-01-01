@@ -71,7 +71,21 @@
       },
       {
         "from": "../data",
-        "to": "data"
+        "to": "data",
+        "filter": [
+          "**/*",
+          "!system_ai_config.json",
+          "!system_ai_memory.db",
+          "!packages/installed/**",
+          "packages/installed/tools/time/**",
+          "packages/installed/tools/file-ops/**",
+          "packages/installed/tools/file-search/**",
+          "packages/installed/tools/python-exec/**",
+          "packages/installed/tools/nodejs/**",
+          "packages/installed/tools/web-request/**",
+          "packages/installed/tools/browser/**",
+          "packages/installed/extensions/ai-agent/**"
+        ]
       },
       {
         "from": "../projects",
@@ -92,6 +106,16 @@
       "target": [
         "dmg",
         "zip"
+      ],
+      "extraResources": [
+        {
+          "from": "../runtime/python",
+          "to": "runtime/python"
+        },
+        {
+          "from": "../runtime/node",
+          "to": "runtime/node"
+        }
       ]
     },
     "win": {
@@ -104,8 +128,12 @@
       ],
       "extraResources": [
         {
-          "from": "../build/python-win",
-          "to": "python"
+          "from": "../runtime/python",
+          "to": "runtime/python"
+        },
+        {
+          "from": "../runtime/node",
+          "to": "runtime/node"
         }
       ]
     },

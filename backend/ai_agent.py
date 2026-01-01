@@ -88,68 +88,52 @@ def load_agent_tools(project_path: str, agent_id: str = None) -> List[Dict]:
     """
     에이전트별 도구 로드
 
-    도구 = SYSTEM_TOOLS + default_tools + agent.tools
-
-    project.json 구조:
-    {
-        "default_tools": ["time", "file-ops"],  # 모든 에이전트 공통
-        "agents": [
-            {"id": "agent-a", "tools": ["python-exec"]}  # 추가 도구
-        ]
-    }
+    기본: 설치된 모든 도구 사용 가능
+    제한: agents.yaml의 allowed_tools가 있으면 해당 도구만 사용
     """
-    project_json = Path(project_path) / "project.json"
+    # 설치된 모든 도구 로드
+    base_path = Path(__file__).parent.parent
+    tools_path = base_path / "data" / "packages" / "installed" / "tools"
 
-    if not project_json.exists():
-        return []
-
-    try:
-        project_data = json.loads(project_json.read_text(encoding='utf-8'))
-
-        # 1. 프로젝트 기본 도구
-        default_tool_ids = project_data.get("default_tools", [])
-
-        # 2. 에이전트별 추가 도구
-        agent_tool_ids = []
-        if agent_id:
-            for agent in project_data.get("agents", []):
-                if agent.get("id") == agent_id:
-                    agent_tool_ids = agent.get("tools", [])
-                    break
-
-        # 합치기 (중복 제거)
-        all_tool_ids = list(dict.fromkeys(default_tool_ids + agent_tool_ids))
-
-        if not all_tool_ids:
-            return []
-
-        # 시스템 도구 패키지 경로
-        base_path = Path(__file__).parent.parent
-        tools_path = base_path / "data" / "packages" / "installed" / "tools"
-
-        extra_tools = []
-
-        for tool_id in all_tool_ids:
-            tool_dir = tools_path / tool_id
-            tool_json_path = tool_dir / "tool.json"
-
+    all_tools = []
+    if tools_path.exists():
+        for pkg_dir in tools_path.iterdir():
+            if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
+                continue
+            tool_json_path = pkg_dir / "tool.json"
             if tool_json_path.exists():
                 try:
                     tool_def = json.loads(tool_json_path.read_text(encoding='utf-8'))
-                    # 배열인 경우 (여러 도구가 한 패키지에)
-                    if isinstance(tool_def, list):
-                        for t in tool_def:
-                            extra_tools.append(t)
-                    else:
-                        extra_tools.append(tool_def)
+                    # {"tools": [...]} 형식
+                    if isinstance(tool_def, dict) and "tools" in tool_def:
+                        all_tools.extend(tool_def["tools"])
+                    # 배열 형식
+                    elif isinstance(tool_def, list):
+                        all_tools.extend(tool_def)
+                    # 단일 도구 형식
+                    elif isinstance(tool_def, dict) and "name" in tool_def:
+                        all_tools.append(tool_def)
                 except Exception as e:
-                    print(f"[도구 로드 실패] {tool_id}: {e}")
+                    print(f"[도구 스캔 실패] {pkg_dir.name}: {e}")
 
-        return extra_tools
+    # agents.yaml에서 에이전트별 allowed_tools 확인
+    if agent_id and project_path:
+        agents_yaml = Path(project_path) / "agents.yaml"
+        if agents_yaml.exists():
+            try:
+                import yaml
+                agents_data = yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
+                for agent in agents_data.get("agents", []):
+                    if agent.get("id") == agent_id:
+                        allowed = agent.get("allowed_tools", [])
+                        if allowed:
+                            # allowed_tools가 있으면 해당 도구만 필터링
+                            all_tools = [t for t in all_tools if t["name"] in allowed]
+                        break
+            except Exception as e:
+                print(f"[agents.yaml 로드 실패] {e}")
 
-    except Exception as e:
-        print(f"[에이전트 도구 로드 실패] {e}")
-        return []
+    return all_tools
 
 
 def load_installed_tools(base_path: str = None) -> List[Dict]:
@@ -213,11 +197,16 @@ def _build_tool_package_map():
         try:
             tool_def = json.loads(tool_json.read_text(encoding='utf-8'))
 
+            # {"tools": [...]} 형식 처리
+            if isinstance(tool_def, dict) and "tools" in tool_def:
+                for t in tool_def["tools"]:
+                    _tool_to_package_map[t["name"]] = pkg_dir.name
             # 배열인 경우 (여러 도구가 한 패키지에)
-            if isinstance(tool_def, list):
+            elif isinstance(tool_def, list):
                 for t in tool_def:
                     _tool_to_package_map[t["name"]] = pkg_dir.name
-            else:
+            # 단일 도구
+            elif isinstance(tool_def, dict) and "name" in tool_def:
                 _tool_to_package_map[tool_def["name"]] = pkg_dir.name
 
         except Exception as e:
@@ -367,7 +356,18 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> s
         else:
             handler = _load_tool_handler(tool_name)
             if handler and hasattr(handler, 'execute'):
-                return handler.execute(tool_name, tool_input, project_path)
+                result = handler.execute(tool_name, tool_input, project_path)
+
+                # 승인 필요 여부 확인
+                if isinstance(result, str) and result.startswith("__REQUIRES_APPROVAL__:"):
+                    command = result.replace("__REQUIRES_APPROVAL__:", "")
+                    return json.dumps({
+                        "requires_approval": True,
+                        "command": command,
+                        "message": f"⚠️ 위험한 명령어가 감지되었습니다:\n\n`{command}`\n\n이 명령어를 실행하려면 '승인' 또는 'yes'라고 답해주세요."
+                    }, ensure_ascii=False)
+
+                return result
             else:
                 return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
 
@@ -426,19 +426,13 @@ class AIAgent:
                 print(f"[AIAgent] {self.agent_name}: OpenAI 초기화 완료")
 
             elif self.provider in ["google", "gemini"]:
-                import google.generativeai as genai
-                genai.configure(api_key=self.api_key)
+                from google import genai
+                from google.genai import types
 
-                # Gemini 도구 설정
-                gemini_tools = None
-                if self.tools:
-                    gemini_tools = self._convert_tools_to_gemini()
-
-                self._client = genai.GenerativeModel(
-                    model_name=self.model,
-                    system_instruction=self.system_prompt,
-                    tools=gemini_tools
-                )
+                # Gemini 클라이언트 및 설정 저장
+                self._genai_client = genai.Client(api_key=self.api_key)
+                self._genai_types = types
+                self._client = self._genai_client  # 호환성을 위해
                 print(f"[AIAgent] {self.agent_name}: Gemini 초기화 완료 (도구 {len(self.tools) if self.tools else 0}개)")
 
             else:
@@ -712,8 +706,8 @@ class AIAgent:
         return message.content or ""
 
     def _convert_tools_to_gemini(self) -> list:
-        """도구를 Gemini 형식으로 변환"""
-        import google.generativeai as genai
+        """도구를 Gemini 형식으로 변환 (google-genai 버전)"""
+        types = self._genai_types
 
         gemini_functions = []
         for tool in self.tools:
@@ -721,14 +715,14 @@ class AIAgent:
             params = tool.get("input_schema", {"type": "object", "properties": {}})
 
             gemini_functions.append(
-                genai.protos.FunctionDeclaration(
+                types.FunctionDeclaration(
                     name=tool["name"],
                     description=tool.get("description", ""),
-                    parameters=genai.protos.Schema(
-                        type=genai.protos.Type.OBJECT,
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
                         properties={
-                            k: genai.protos.Schema(
-                                type=genai.protos.Type.STRING,
+                            k: types.Schema(
+                                type=types.Type.STRING,
                                 description=v.get("description", "")
                             )
                             for k, v in params.get("properties", {}).items()
@@ -741,75 +735,95 @@ class AIAgent:
         return gemini_functions
 
     def _process_gemini(self, message: str, history: List[Dict], images: List[Dict] = None) -> str:
-        """Google Gemini 처리 (도구 사용 지원)"""
-        # Gemini는 히스토리를 chat으로 처리
-        chat = self._client.start_chat(history=[])
+        """Google Gemini 처리 (도구 사용 지원) - google-genai 버전"""
+        import base64 as b64
+        types = self._genai_types
 
-        # 히스토리 추가
+        # 대화 히스토리 구성
+        contents = []
         for h in history:
             role = "user" if h["role"] == "user" else "model"
-            chat.history.append({
-                "role": role,
-                "parts": [h["content"]]
-            })
+            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=h["content"])]))
 
-        # 현재 메시지 (이미지 포함)
+        # 현재 메시지 구성 (이미지 포함)
+        current_parts = []
         if images:
-            import base64
-            from PIL import Image
-            import io
-
-            parts = []
             for img in images:
-                img_bytes = base64.b64decode(img["base64"])
-                pil_image = Image.open(io.BytesIO(img_bytes))
-                parts.append(pil_image)
-            parts.append(message)
+                img_bytes = b64.b64decode(img["base64"])
+                current_parts.append(types.Part.from_bytes(data=img_bytes, mime_type=img.get("media_type", "image/png")))
+        current_parts.append(types.Part.from_text(text=message))
+        contents.append(types.Content(role="user", parts=current_parts))
 
-            response = chat.send_message(parts)
-        else:
-            response = chat.send_message(message)
+        # 도구 설정
+        gemini_tools = None
+        if self.tools:
+            gemini_tools = [types.Tool(function_declarations=self._convert_tools_to_gemini())]
+
+        # 설정
+        config = types.GenerateContentConfig(
+            system_instruction=self.system_prompt,
+            tools=gemini_tools
+        )
+
+        # 요청
+        response = self._genai_client.models.generate_content(
+            model=self.model,
+            contents=contents,
+            config=config
+        )
 
         # 도구 사용 처리
-        return self._handle_gemini_response(response, chat)
+        return self._handle_gemini_response(response, contents, config)
 
-    def _handle_gemini_response(self, response, chat, depth: int = 0) -> str:
-        """Gemini 응답 처리 (도구 사용 루프)"""
-        import google.generativeai as genai
+    def _handle_gemini_response(self, response, contents, config, depth: int = 0) -> str:
+        """Gemini 응답 처리 (도구 사용 루프) - google-genai 버전"""
+        types = self._genai_types
 
         if depth > 10:
             return "도구 사용 깊이 제한에 도달했습니다."
 
-        # function_call 확인
+        # function_call 확인 - 모든 function_call을 한 번에 수집
+        function_calls = []
         if hasattr(response, 'candidates') and response.candidates:
             candidate = response.candidates[0]
 
             if hasattr(candidate.content, 'parts'):
                 for part in candidate.content.parts:
-                    # function_call이 있는지 확인
                     if hasattr(part, 'function_call') and part.function_call:
-                        fc = part.function_call
-                        print(f"   [도구 사용] {fc.name}")
+                        function_calls.append(part.function_call)
 
-                        # 도구 실행
-                        tool_input = dict(fc.args) if fc.args else {}
-                        tool_output = execute_tool(fc.name, tool_input, self.project_path)
+        # function_call이 있으면 모두 실행
+        if function_calls:
+            # 먼저 모델 응답을 contents에 추가
+            contents.append(response.candidates[0].content)
 
-                        # function_response로 후속 요청
-                        followup = chat.send_message(
-                            genai.protos.Content(
-                                parts=[
-                                    genai.protos.Part(
-                                        function_response=genai.protos.FunctionResponse(
-                                            name=fc.name,
-                                            response={"result": tool_output}
-                                        )
-                                    )
-                                ]
-                            )
-                        )
+            # 모든 function_call 실행 및 결과 수집
+            function_response_parts = []
+            for fc in function_calls:
+                tool_input = dict(fc.args) if fc.args else {}
+                tool_output = execute_tool(fc.name, tool_input, self.project_path)
 
-                        return self._handle_gemini_response(followup, chat, depth + 1)
+                function_response_parts.append(
+                    types.Part.from_function_response(
+                        name=fc.name,
+                        response={"result": tool_output}
+                    )
+                )
+
+            # 모든 도구 결과를 한 번에 추가
+            contents.append(types.Content(
+                role="user",
+                parts=function_response_parts
+            ))
+
+            # 후속 요청
+            followup = self._genai_client.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=config
+            )
+
+            return self._handle_gemini_response(followup, contents, config, depth + 1)
 
         # 응답에서 텍스트 추출 (function_call만 있는 경우 대비)
         try:

@@ -467,6 +467,41 @@ async def update_agent(project_id: str, agent_id: str, agent_data: AgentUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class RoleDescriptions(BaseModel):
+    descriptions: dict
+
+
+@router.put("/projects/{project_id}/agents/role-descriptions")
+async def update_role_descriptions(project_id: str, data: RoleDescriptions):
+    """에이전트 역할 설명 일괄 업데이트"""
+    try:
+        project_path = project_manager.get_project_path(project_id)
+        agents_file = project_path / "agents.yaml"
+
+        if not agents_file.exists():
+            raise HTTPException(status_code=404, detail="에이전트 설정을 찾을 수 없습니다.")
+
+        with open(agents_file, 'r', encoding='utf-8') as f:
+            yaml_data = yaml.safe_load(f)
+
+        updated_agents = []
+        for agent in yaml_data.get("agents", []):
+            agent_name = agent.get("name")
+            if agent_name in data.descriptions:
+                agent["role_description"] = data.descriptions[agent_name]
+                updated_agents.append(agent_name)
+
+        with open(agents_file, 'w', encoding='utf-8') as f:
+            yaml.dump(yaml_data, f, allow_unicode=True, default_flow_style=False)
+
+        return {"status": "updated", "updated_agents": updated_agents}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/projects/{project_id}/agents/{agent_id}")
 async def delete_agent(project_id: str, agent_id: str):
     """에이전트 삭제"""

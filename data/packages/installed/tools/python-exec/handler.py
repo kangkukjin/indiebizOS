@@ -3,6 +3,44 @@ python-exec 도구 핸들러
 """
 import json
 import subprocess
+import platform
+from pathlib import Path
+
+
+def get_python_cmd():
+    """번들된 Python 또는 시스템 Python 경로 반환"""
+    python_cmd = "python3"
+
+    # backend 폴더 찾기
+    current = Path(__file__).parent
+    while current.parent != current:
+        if (current / "backend").exists():
+            base_path = current
+            break
+        current = current.parent
+    else:
+        return python_cmd
+
+    runtime_path = base_path / "runtime"
+
+    # Electron extraResources 경로도 확인
+    if not runtime_path.exists():
+        resources_path = base_path.parent / "Resources" / "runtime"
+        if resources_path.exists():
+            runtime_path = resources_path
+
+    is_windows = platform.system() == "Windows"
+
+    if runtime_path.exists():
+        if is_windows:
+            bundled_python = runtime_path / "python" / "python.exe"
+        else:
+            bundled_python = runtime_path / "python" / "bin" / "python3"
+
+        if bundled_python.exists():
+            python_cmd = str(bundled_python)
+
+    return python_cmd
 
 
 def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
@@ -20,8 +58,9 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
     if tool_name == "execute_python":
         code = tool_input.get("code", "")
         try:
+            python_cmd = get_python_cmd()
             result = subprocess.run(
-                ["python3", "-c", code],
+                [python_cmd, "-c", code],
                 capture_output=True,
                 text=True,
                 timeout=30,

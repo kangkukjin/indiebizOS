@@ -79,6 +79,7 @@ from api_scheduler import router as scheduler_router
 from api_notifications import router as notifications_router
 from api_prompt_generator import router as prompt_generator_router, init_manager as init_prompt_generator_manager
 from api_gmail import router as gmail_router
+from api_tools import router as tools_router
 
 # 매니저 주입
 init_projects_managers(project_manager, switch_manager)
@@ -105,6 +106,7 @@ app.include_router(scheduler_router, tags=["scheduler"])
 app.include_router(notifications_router, tags=["notifications"])
 app.include_router(prompt_generator_router, tags=["prompt-generator"])
 app.include_router(gmail_router, tags=["gmail"])
+app.include_router(tools_router, tags=["tools"])
 
 
 # ============ 헬스 체크 ============

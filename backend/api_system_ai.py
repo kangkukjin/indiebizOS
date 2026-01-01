@@ -31,8 +31,13 @@ from system_docs import (
     read_doc,
     list_docs,
     init_all_docs,
-    SYSTEM_AI_TOOLS,
-    execute_system_tool
+    SYSTEM_AI_TOOLS as SYSTEM_DOC_TOOLS,
+    execute_system_tool as execute_doc_tool
+)
+from system_ai import (
+    SYSTEM_AI_DEFAULT_PACKAGES,
+    load_tools_from_packages,
+    execute_system_tool as execute_system_ai_tool
 )
 
 router = APIRouter()
@@ -41,6 +46,36 @@ router = APIRouter()
 BACKEND_PATH = Path(__file__).parent
 DATA_PATH = BACKEND_PATH.parent / "data"
 SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
+
+
+def get_all_system_ai_tools() -> List[Dict]:
+    """시스템 AI가 사용할 모든 도구 로드 (문서 도구 + 패키지 도구)"""
+    # 1. 문서/패키지 관리 도구 (system_docs.py)
+    tools = list(SYSTEM_DOC_TOOLS)
+
+    # 2. 패키지에서 동적 로딩 (system_essentials, python-exec, nodejs 등)
+    package_tools = load_tools_from_packages(SYSTEM_AI_DEFAULT_PACKAGES)
+    tools.extend(package_tools)
+
+    return tools
+
+
+def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None) -> str:
+    """
+    시스템 AI 통합 도구 실행
+
+    1. 문서 관련 도구 (system_docs)
+    2. 시스템 전용 + 패키지 도구 (system_ai)
+    """
+    # 문서 관련 도구인지 확인
+    doc_tool_names = [t["name"] for t in SYSTEM_DOC_TOOLS]
+    if tool_name in doc_tool_names:
+        return execute_doc_tool(tool_name, tool_input)
+
+    # 시스템 AI 도구 실행 (시스템 전용 + 패키지)
+    if work_dir is None:
+        work_dir = str(DATA_PATH)
+    return execute_system_ai_tool(tool_name, tool_input, work_dir)
 
 
 class ImageData(BaseModel):
@@ -76,7 +111,11 @@ def load_system_ai_config() -> dict:
 
 def get_system_prompt(user_profile: str = "", system_status: str = "") -> str:
     """시스템 AI의 시스템 프롬프트 (기본 + 사용자 정보 + 상태)"""
-    base_prompt = """당신은 IndieBiz OS의 시스템 AI입니다.
+    base_prompt = """# 정체성
+이름: 시스템 AI
+임무: 시스템 안내와 관리 그리고 도구 개발과 개선
+
+당신은 IndieBiz OS의 시스템 AI입니다.
 
 # 원칙
 - 사용자의 이익을 최우선으로 한다.
@@ -85,7 +124,8 @@ def get_system_prompt(user_profile: str = "", system_status: str = "") -> str:
 # 역할
 - IndieBiz를 처음 사용하는 사용자에게 친절하게 안내
 - 도구 패키지 설치/제거 도움
-- 에이전트 생성/설정 도움
+- 새로운 도구 개발 및 개선 (사용자 요청 시)
+- 프로젝트 생성/설정 도움
 - 문제 해결 및 오류 진단
 
 # 대화 스타일
@@ -94,34 +134,79 @@ def get_system_prompt(user_profile: str = "", system_status: str = "") -> str:
 - 단계별 안내
 - 한국어로 대화
 
+# 중요 경로 (현재 작업 디렉토리: backend/)
+- 프로젝트 폴더: ../projects/[프로젝트명]/
+- 설치된 도구: ../data/packages/installed/tools/[도구명]/
+- 개발중 도구: ../data/packages/dev/tools/[도구명]/
+- 시스템 문서: ../data/system_docs/
+
+# 효율적인 도구 사용
+- 프로젝트/도구 존재 여부는 inventory 문서로 먼저 확인
+- inventory에 답이 있으면 추가 파일 탐색 불필요
+- 불필요한 문서 읽기 자제 (overview, architecture는 시스템 설명 요청 시에만)
+
 # 시스템 문서
 필요할 때 read_system_doc 도구로 문서를 참조하세요:
-- overview: 시스템 개요 및 현재 상태
-- architecture: 시스템 구조 및 설계 의도
-- inventory: 설치된 프로젝트, 에이전트, 도구 목록
+- overview: 시스템 개요 (시스템 소개 요청 시에만)
+- architecture: 시스템 구조 (구조 질문 시에만)
+- inventory: 설치된 프로젝트, 에이전트, 도구 목록 (가장 자주 사용)
 - technical: API, 설정 등 기술 상세
 - packages: 패키지 설치/제거 및 개발 가이드
 
-사용자 질문에 따라 적절한 문서를 참조하세요:
-- 사용법/안내 질문 → overview
-- 구조/설계 질문 → architecture
-- "뭐가 설치되어 있어?" → inventory
-- API/설정 질문 → technical
-- 패키지 설치/제거/개발 → packages (필수!)
-
 # 도구 패키지 관리
-**중요**: 패키지 설치, 제거, 개발 관련 작업 시 반드시 packages 문서를 먼저 읽으세요.
-
 패키지 관련 도구:
 - list_packages: 설치 가능한 도구 패키지 목록 조회
 - get_package_info: 패키지 상세 정보 조회
 - install_package: 패키지 설치 (반드시 사용자 동의 후!)
 
-패키지 설치 시 주의사항:
-1. packages 문서를 읽어 설치 절차 확인
-2. 패키지 정보를 먼저 설명하고 사용자 동의를 받으세요
-3. 의존성이나 추가 요구사항이 있으면 미리 알려주세요
-4. 설치 후 결과를 확인하고 안내하세요"""
+# 도구 개발 가이드
+사용자가 새 도구를 만들어달라고 요청하면 직접 개발해주세요.
+
+패키지 폴더 구조 (패키지는 한 곳에만 존재):
+- 개발 폴더: ../data/packages/dev/tools/[도구이름]/
+- 미설치 폴더: ../data/packages/not_installed/tools/[도구이름]/
+- 설치 폴더: ../data/packages/installed/tools/[도구이름]/
+
+패키지 파일 구성:
+- tool.json: 도구 정의 (아래 형식 참고)
+- handler.py: 도구 실행 코드 (def execute 함수)
+- requirements.txt: 필요한 패키지 (선택)
+
+tool.json 형식 (배열 형태 사용):
+```json
+[
+  {
+    "name": "도구이름",
+    "description": "도구 설명",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "param1": {"type": "string", "description": "설명"}
+      },
+      "required": ["param1"]
+    }
+  }
+]
+```
+주의: {"tools": [...]} 형식이 아닌 배열 [...] 형식을 사용하세요.
+
+중요: 패키지 관리 규칙
+1. 설치 = not_installed → installed로 이동
+2. 삭제 = installed → not_installed로 이동
+3. 새 패키지 생성 시 installed 폴더에 직접 생성 (바로 사용 가능)
+4. 작업 후 inventory.md가 자동 업데이트됨
+
+handler.py 형식:
+```python
+def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
+    # 도구 로직
+    return "결과"
+```
+
+## 코드 안전 규칙
+- 금지: rm -rf, format, mkfs, dd if=, chmod 777
+- 필수: 루프에 종료 조건, API 호출에 타임아웃, try-except 에러 핸들링
+- 파일: encoding='utf-8' 명시"""
 
     # 사용자 정보가 있으면 추가
     if user_profile and user_profile.strip():
@@ -137,67 +222,43 @@ def get_system_prompt(user_profile: str = "", system_status: str = "") -> str:
 
 
 def get_anthropic_tools():
-    """Anthropic 형식의 도구 정의"""
-    return [
-        {
-            "name": "read_system_doc",
-            "description": "시스템 문서를 읽습니다. 사용 가능한 문서: overview(개요), architecture(구조), inventory(인벤토리), technical(기술), packages(패키지 가이드). 패키지 설치/제거 시에는 반드시 packages 문서를 먼저 읽으세요.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "doc_name": {
-                        "type": "string",
-                        "enum": ["overview", "architecture", "inventory", "technical", "packages"],
-                        "description": "읽을 문서 이름"
-                    }
-                },
-                "required": ["doc_name"]
-            }
-        },
-        {
-            "name": "list_packages",
-            "description": "설치 가능한 도구 패키지 목록을 조회합니다.",
-            "input_schema": {
-                "type": "object",
-                "properties": {}
-            }
-        },
-        {
-            "name": "get_package_info",
-            "description": "특정 패키지의 상세 정보를 조회합니다.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "package_id": {
-                        "type": "string",
-                        "description": "패키지 ID"
-                    }
-                },
-                "required": ["package_id"]
-            }
-        },
-        {
-            "name": "install_package",
-            "description": "도구 패키지를 설치합니다. 반드시 사용자의 동의를 받은 후에만 사용하세요.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "package_id": {
-                        "type": "string",
-                        "description": "설치할 패키지 ID"
-                    }
-                },
-                "required": ["package_id"]
-            }
+    """Anthropic 형식의 도구 정의 (동적 로딩)"""
+    all_tools = get_all_system_ai_tools()
+
+    # Anthropic 형식으로 변환 (parameters -> input_schema)
+    anthropic_tools = []
+    for tool in all_tools:
+        t = {
+            "name": tool["name"],
+            "description": tool.get("description", "")
         }
-    ]
+        # input_schema 또는 parameters 사용
+        if "input_schema" in tool:
+            t["input_schema"] = tool["input_schema"]
+        elif "parameters" in tool:
+            t["input_schema"] = tool["parameters"]
+        else:
+            t["input_schema"] = {"type": "object", "properties": {}}
+        anthropic_tools.append(t)
+
+    return anthropic_tools
 
 
-async def chat_with_anthropic(message: str, api_key: str, model: str, user_profile: str = "", overview: str = "", images: List[Dict] = None) -> str:
-    """Anthropic Claude와 대화 (tool use 지원, 이미지 포함 가능)"""
+async def chat_with_anthropic(message: str, api_key: str, model: str, user_profile: str = "", overview: str = "", images: List[Dict] = None, history: List[Dict] = None) -> str:
+    """Anthropic Claude와 대화 (tool use 지원, 이미지 포함 가능, 히스토리 지원)"""
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
+
+        messages = []
+
+        # 대화 히스토리 추가 (ai_agent.py 방식 참조)
+        if history:
+            for h in history:
+                messages.append({
+                    "role": h["role"],
+                    "content": h["content"]
+                })
 
         # 이미지가 있으면 멀티모달 메시지 구성
         if images and len(images) > 0:
@@ -217,9 +278,9 @@ async def chat_with_anthropic(message: str, api_key: str, model: str, user_profi
                 "type": "text",
                 "text": message
             })
-            messages = [{"role": "user", "content": content_blocks}]
+            messages.append({"role": "user", "content": content_blocks})
         else:
-            messages = [{"role": "user", "content": message}]
+            messages.append({"role": "user", "content": message})
 
         # 첫 번째 호출
         response = client.messages.create(
@@ -279,79 +340,42 @@ async def chat_with_anthropic(message: str, api_key: str, model: str, user_profi
 
 
 def get_openai_tools():
-    """OpenAI 형식의 도구 정의"""
-    return [
-        {
+    """OpenAI 형식의 도구 정의 (동적 로딩)"""
+    all_tools = get_all_system_ai_tools()
+
+    # OpenAI 형식으로 변환
+    openai_tools = []
+    for tool in all_tools:
+        params = tool.get("input_schema") or tool.get("parameters") or {"type": "object", "properties": {}}
+        openai_tools.append({
             "type": "function",
             "function": {
-                "name": "read_system_doc",
-                "description": "시스템 문서를 읽습니다. 사용 가능한 문서: overview(개요), architecture(구조), inventory(인벤토리), technical(기술), packages(패키지 가이드). 패키지 설치/제거 시에는 반드시 packages 문서를 먼저 읽으세요.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "doc_name": {
-                            "type": "string",
-                            "enum": ["overview", "architecture", "inventory", "technical", "packages"],
-                            "description": "읽을 문서 이름"
-                        }
-                    },
-                    "required": ["doc_name"]
-                }
+                "name": tool["name"],
+                "description": tool.get("description", ""),
+                "parameters": params
             }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "list_packages",
-                "description": "설치 가능한 도구 패키지 목록을 조회합니다.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {}
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "get_package_info",
-                "description": "특정 패키지의 상세 정보를 조회합니다.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "package_id": {
-                            "type": "string",
-                            "description": "패키지 ID"
-                        }
-                    },
-                    "required": ["package_id"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "install_package",
-                "description": "도구 패키지를 설치합니다. 반드시 사용자의 동의를 받은 후에만 사용하세요.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "package_id": {
-                            "type": "string",
-                            "description": "설치할 패키지 ID"
-                        }
-                    },
-                    "required": ["package_id"]
-                }
-            }
-        }
-    ]
+        })
+
+    return openai_tools
 
 
-async def chat_with_openai(message: str, api_key: str, model: str, user_profile: str = "", overview: str = "", images: List[Dict] = None) -> str:
-    """OpenAI GPT와 대화 (tool use 지원, 이미지 포함 가능)"""
+async def chat_with_openai(message: str, api_key: str, model: str, user_profile: str = "", overview: str = "", images: List[Dict] = None, history: List[Dict] = None) -> str:
+    """OpenAI GPT와 대화 (tool use 지원, 이미지 포함 가능, 히스토리 지원)"""
     try:
         import openai
         client = openai.OpenAI(api_key=api_key)
+
+        messages = [
+            {"role": "system", "content": get_system_prompt(user_profile, overview)}
+        ]
+
+        # 대화 히스토리 추가 (ai_agent.py 방식 참조)
+        if history:
+            for h in history:
+                messages.append({
+                    "role": h["role"],
+                    "content": h["content"]
+                })
 
         # 이미지가 있으면 멀티모달 메시지 구성
         if images and len(images) > 0:
@@ -367,10 +391,7 @@ async def chat_with_openai(message: str, api_key: str, model: str, user_profile:
         else:
             user_content = message
 
-        messages = [
-            {"role": "system", "content": get_system_prompt(user_profile, overview)},
-            {"role": "user", "content": user_content}
-        ]
+        messages.append({"role": "user", "content": user_content})
 
         response = client.chat.completions.create(
             model=model,
@@ -413,98 +434,166 @@ async def chat_with_openai(message: str, api_key: str, model: str, user_profile:
         raise HTTPException(status_code=500, detail=f"OpenAI API 오류: {str(e)}")
 
 
-async def chat_with_google(message: str, api_key: str, model: str, user_profile: str = "", overview: str = "", images: List[Dict] = None) -> str:
-    """Google Gemini와 대화 (tool use 지원, 이미지 포함 가능)"""
+async def chat_with_google(message: str, api_key: str, model: str, user_profile: str = "", overview: str = "", images: List[Dict] = None, history: List[Dict] = None) -> str:
+    """Google Gemini와 대화 (tool use 지원, 이미지 포함 가능, 히스토리 지원) - google-genai 버전"""
     try:
-        import google.generativeai as genai
-        import base64
-        genai.configure(api_key=api_key)
+        from google import genai
+        from google.genai import types
+        import base64 as b64
 
-        # Gemini 도구 정의
-        system_tools = genai.protos.Tool(
-            function_declarations=[
-                genai.protos.FunctionDeclaration(
+        client = genai.Client(api_key=api_key)
+
+        # 도구 정의 (새 API 형식)
+        system_tools = [
+            types.Tool(function_declarations=[
+                types.FunctionDeclaration(
                     name="read_system_doc",
                     description="시스템 문서를 읽습니다. 사용 가능한 문서: overview(개요), architecture(구조), inventory(인벤토리), technical(기술), packages(패키지 가이드). 패키지 설치/제거 시에는 반드시 packages 문서를 먼저 읽으세요.",
-                    parameters=genai.protos.Schema(
-                        type=genai.protos.Type.OBJECT,
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
                         properties={
-                            "doc_name": genai.protos.Schema(
-                                type=genai.protos.Type.STRING,
-                                description="읽을 문서 이름 (overview, architecture, inventory, technical, packages)"
-                            )
+                            "doc_name": types.Schema(type=types.Type.STRING, description="읽을 문서 이름 (overview, architecture, inventory, technical, packages)")
                         },
                         required=["doc_name"]
                     )
                 ),
-                genai.protos.FunctionDeclaration(
+                types.FunctionDeclaration(
                     name="list_packages",
                     description="설치 가능한 도구 패키지 목록을 조회합니다.",
-                    parameters=genai.protos.Schema(
-                        type=genai.protos.Type.OBJECT,
-                        properties={}
-                    )
+                    parameters=types.Schema(type=types.Type.OBJECT, properties={})
                 ),
-                genai.protos.FunctionDeclaration(
+                types.FunctionDeclaration(
                     name="get_package_info",
                     description="특정 패키지의 상세 정보를 조회합니다.",
-                    parameters=genai.protos.Schema(
-                        type=genai.protos.Type.OBJECT,
-                        properties={
-                            "package_id": genai.protos.Schema(
-                                type=genai.protos.Type.STRING,
-                                description="패키지 ID"
-                            )
-                        },
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={"package_id": types.Schema(type=types.Type.STRING, description="패키지 ID")},
                         required=["package_id"]
                     )
                 ),
-                genai.protos.FunctionDeclaration(
+                types.FunctionDeclaration(
                     name="install_package",
                     description="도구 패키지를 설치합니다. 반드시 사용자의 동의를 받은 후에만 사용하세요.",
-                    parameters=genai.protos.Schema(
-                        type=genai.protos.Type.OBJECT,
-                        properties={
-                            "package_id": genai.protos.Schema(
-                                type=genai.protos.Type.STRING,
-                                description="설치할 패키지 ID"
-                            )
-                        },
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={"package_id": types.Schema(type=types.Type.STRING, description="설치할 패키지 ID")},
                         required=["package_id"]
                     )
+                ),
+                # 파일 시스템 도구
+                types.FunctionDeclaration(
+                    name="read_file",
+                    description="파일의 내용을 읽습니다.",
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={"file_path": types.Schema(type=types.Type.STRING, description="읽을 파일의 경로")},
+                        required=["file_path"]
+                    )
+                ),
+                types.FunctionDeclaration(
+                    name="write_file",
+                    description="파일에 내용을 씁니다.",
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={
+                            "file_path": types.Schema(type=types.Type.STRING, description="쓸 파일의 경로"),
+                            "content": types.Schema(type=types.Type.STRING, description="파일에 쓸 내용")
+                        },
+                        required=["file_path", "content"]
+                    )
+                ),
+                types.FunctionDeclaration(
+                    name="list_directory",
+                    description="디렉토리의 파일과 폴더 목록을 가져옵니다.",
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={"dir_path": types.Schema(type=types.Type.STRING, description="디렉토리 경로")}
+                    )
+                ),
+                # 코드 실행 도구
+                types.FunctionDeclaration(
+                    name="execute_python",
+                    description="Python 코드를 실행합니다.",
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={"code": types.Schema(type=types.Type.STRING, description="실행할 Python 코드")},
+                        required=["code"]
+                    )
+                ),
+                types.FunctionDeclaration(
+                    name="execute_node",
+                    description="Node.js JavaScript 코드를 실행합니다.",
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={"code": types.Schema(type=types.Type.STRING, description="실행할 JavaScript 코드")},
+                        required=["code"]
+                    )
+                ),
+                types.FunctionDeclaration(
+                    name="run_command",
+                    description="쉘 명령어를 실행합니다. (pip install, mkdir 등)",
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={"command": types.Schema(type=types.Type.STRING, description="실행할 명령어")},
+                        required=["command"]
+                    )
                 )
-            ]
-        )
+            ])
+        ]
 
-        gemini_model = genai.GenerativeModel(
-            model_name=model,
-            system_instruction=get_system_prompt(user_profile, overview),
-            tools=[system_tools]
-        )
+        # 대화 히스토리 구성
+        contents = []
+        if history:
+            for h in history:
+                role = "user" if h["role"] == "user" else "model"
+                contents.append(types.Content(role=role, parts=[types.Part.from_text(text=h["content"])]))
 
-        chat = gemini_model.start_chat()
-
-        # 이미지가 있으면 멀티모달 메시지 구성
+        # 현재 메시지 구성
+        current_parts = []
         if images and len(images) > 0:
-            import base64 as b64
-            content_parts = [message]
             for img in images:
-                # base64를 바이트로 디코딩
                 image_bytes = b64.b64decode(img.get("base64", ""))
-                content_parts.append({
-                    "mime_type": img.get("media_type", "image/jpeg"),
-                    "data": image_bytes
-                })
-            response = chat.send_message(content_parts)
-        else:
-            response = chat.send_message(message)
+                current_parts.append(types.Part.from_bytes(data=image_bytes, mime_type=img.get("media_type", "image/jpeg")))
+        current_parts.append(types.Part.from_text(text=message))
+        contents.append(types.Content(role="user", parts=current_parts))
+
+        # 설정
+        config = types.GenerateContentConfig(
+            system_instruction=get_system_prompt(user_profile, overview),
+            tools=system_tools
+        )
+
+        # API 호출 헬퍼 (재시도 로직 포함)
+        import time
+        def call_with_retry(contents_to_send, max_retries=3):
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    return client.models.generate_content(
+                        model=model,
+                        contents=contents_to_send,
+                        config=config
+                    )
+                except Exception as e:
+                    last_error = e
+                    error_str = str(e)
+                    # 500 INTERNAL 에러인 경우 재시도
+                    if "500" in error_str or "INTERNAL" in error_str:
+                        print(f"   [Gemini] 500 에러, 재시도 {attempt + 1}/{max_retries}...")
+                        time.sleep(1 * (attempt + 1))  # 점진적 대기
+                        continue
+                    else:
+                        raise e
+            raise last_error
+
+        # 첫 요청
+        response = call_with_retry(contents)
 
         # function call 처리 (최대 10회)
         tool_results_collected = []
 
         for iteration in range(10):
             if not response.candidates or not response.candidates[0].content.parts:
-                print(f"   [Gemini] 반복 {iteration}: 응답 parts 없음")
                 break
 
             has_function_call = False
@@ -515,62 +604,57 @@ async def chat_with_google(message: str, api_key: str, model: str, user_profile:
                 if hasattr(part, 'function_call') and part.function_call:
                     has_function_call = True
                     fc = part.function_call
-                    args = dict(fc.args)
-                    print(f"   [Gemini] 도구 호출: {fc.name}, 인자: {args}")
+                    args = dict(fc.args) if fc.args else {}
                     result = execute_system_tool(fc.name, args)
-                    print(f"   [Gemini] 도구 결과: {result[:200]}..." if len(result) > 200 else f"   [Gemini] 도구 결과: {result}")
+                    result = result or ""  # None 방지
                     tool_results_collected.append({"tool": fc.name, "result": result})
 
                     function_responses.append(
-                        genai.protos.Part(
-                            function_response=genai.protos.FunctionResponse(
-                                name=fc.name,
-                                response={"result": result}
-                            )
+                        types.Part.from_function_response(
+                            name=fc.name,
+                            response={"result": result}
                         )
                     )
 
             if has_function_call and function_responses:
-                # 모든 function response를 한번에 전송
-                print(f"   [Gemini] {len(function_responses)}개의 도구 결과 전송")
-                response = chat.send_message(
-                    genai.protos.Content(parts=function_responses)
-                )
+                # 도구 결과를 대화에 추가
+                contents.append(response.candidates[0].content)
+                contents.append(types.Content(role="user", parts=function_responses))
+                response = call_with_retry(contents)
             else:
-                print(f"   [Gemini] 반복 {iteration}: function_call 없음, 루프 종료")
                 break
 
-        # 응답에서 텍스트 추출
+        # 응답에서 텍스트 추출 (response.text 대신 parts에서 직접 추출)
         result_text = ""
         try:
-            result_text = response.text
-            print(f"   [Gemini] 최종 텍스트 응답: {result_text[:100]}..." if len(result_text) > 100 else f"   [Gemini] 최종 텍스트 응답: {result_text}")
-        except (ValueError, AttributeError) as e:
-            print(f"   [Gemini] response.text 오류: {e}")
-            # function_call만 있고 텍스트가 없는 경우 - parts에서 텍스트 추출 시도
             if hasattr(response, 'candidates') and response.candidates:
                 for part in response.candidates[0].content.parts:
                     if hasattr(part, 'text') and part.text:
                         result_text += part.text
+        except Exception:
+            pass
 
-            # 여전히 텍스트가 없으면, 도구 결과를 기반으로 응답 요청
-            if not result_text and tool_results_collected:
-                print(f"   [Gemini] 텍스트 없음, 도구 결과 기반으로 재요청")
-                # AI에게 도구 결과를 요약해달라고 요청
-                summary_prompt = "위의 도구 호출 결과를 바탕으로 사용자의 질문에 한국어로 답변해주세요."
-                try:
-                    summary_response = chat.send_message(summary_prompt)
-                    result_text = summary_response.text
-                    print(f"   [Gemini] 요약 응답: {result_text[:100]}..." if len(result_text) > 100 else f"   [Gemini] 요약 응답: {result_text}")
-                except Exception as summary_error:
-                    print(f"   [Gemini] 요약 요청 실패: {summary_error}")
-                    # 마지막 수단: 도구 결과 직접 반환
-                    result_text = f"패키지 정보를 조회했습니다:\n\n{tool_results_collected[-1]['result']}"
+        # 텍스트가 없으면, 도구 결과를 기반으로 응답 요청
+        if not result_text and tool_results_collected:
+            summary_prompt = "위의 도구 호출 결과를 바탕으로 사용자의 질문에 한국어로 답변해주세요."
+            contents.append(types.Content(role="user", parts=[types.Part.from_text(text=summary_prompt)]))
+            try:
+                summary_response = client.models.generate_content(
+                    model=model,
+                    contents=contents,
+                    config=config
+                )
+                if hasattr(summary_response, 'candidates') and summary_response.candidates:
+                    for part in summary_response.candidates[0].content.parts:
+                        if hasattr(part, 'text') and part.text:
+                            result_text += part.text
+            except Exception:
+                result_text = f"도구 결과:\n\n{tool_results_collected[-1]['result']}"
 
-        return result_text
+        return result_text if result_text else "요청을 처리했습니다."
 
     except ImportError:
-        raise HTTPException(status_code=500, detail="google-generativeai 라이브러리가 설치되지 않았습니다. pip install google-generativeai")
+        raise HTTPException(status_code=500, detail="google-genai 라이브러리가 설치되지 않았습니다. pip install google-genai")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Google API 오류: {str(e)}")
 
@@ -653,6 +737,17 @@ async def chat_with_system_ai(chat: ChatMessage):
     # 캐시된 시스템 상태만 로드 (overview 전체 대신)
     system_status = _get_cached_system_status()
 
+    # 최근 대화 히스토리 로드 (5회)
+    recent_conversations = get_recent_conversations(limit=5)
+    history = []
+    for conv in recent_conversations:
+        # role은 user 또는 assistant
+        role = conv["role"] if conv["role"] in ["user", "assistant"] else "user"
+        history.append({
+            "role": role,
+            "content": conv["content"]
+        })
+
     # 사용자 메시지 저장 (비동기로 처리 가능하지만 현재는 동기)
     save_conversation("user", chat.message)
 
@@ -661,14 +756,13 @@ async def chat_with_system_ai(chat: ChatMessage):
     if chat.images:
         images_data = [{"base64": img.base64, "media_type": img.media_type} for img in chat.images]
 
-    # 프로바이더별 대화 (tool use 지원)
-    # overview 대신 system_status만 전달
+    # 프로바이더별 대화 (tool use 지원, 히스토리 포함)
     if provider == "anthropic":
-        response_text = await chat_with_anthropic(chat.message, api_key, model, user_profile, system_status, images_data)
+        response_text = await chat_with_anthropic(chat.message, api_key, model, user_profile, system_status, images_data, history)
     elif provider == "openai":
-        response_text = await chat_with_openai(chat.message, api_key, model, user_profile, system_status, images_data)
+        response_text = await chat_with_openai(chat.message, api_key, model, user_profile, system_status, images_data, history)
     elif provider == "google":
-        response_text = await chat_with_google(chat.message, api_key, model, user_profile, system_status, images_data)
+        response_text = await chat_with_google(chat.message, api_key, model, user_profile, system_status, images_data, history)
     else:
         raise HTTPException(status_code=400, detail=f"지원하지 않는 프로바이더: {provider}")
 

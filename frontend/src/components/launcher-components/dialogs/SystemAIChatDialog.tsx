@@ -2,7 +2,7 @@
  * SystemAIChatDialog - 시스템 AI 대화창
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Send, Bot, RefreshCw, Paperclip, Camera } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { api } from '../../../lib/api';
@@ -12,6 +12,11 @@ interface ImageAttachment {
   file: File;
   preview: string;
   base64: string;
+}
+
+interface DialogSize {
+  width: number;
+  height: number;
 }
 
 interface Message {
@@ -25,6 +30,17 @@ interface SystemAIChatDialogProps {
   onClose: () => void;
 }
 
+// 최소/최대 크기 상수
+const MIN_WIDTH = 400;
+const MIN_HEIGHT = 400;
+const MAX_WIDTH = window.innerWidth * 0.95;
+const MAX_HEIGHT = window.innerHeight * 0.95;
+const DEFAULT_WIDTH = 600;
+const DEFAULT_HEIGHT = 700;
+
+// 로컬 스토리지 키
+const STORAGE_KEY = 'system-ai-dialog-size';
+
 export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -33,9 +49,28 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
+  // 크기 조절 관련 상태
+  const [size, setSize] = useState<DialogSize>(() => {
+    // 저장된 크기 로드
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          width: Math.min(Math.max(parsed.width, MIN_WIDTH), MAX_WIDTH),
+          height: Math.min(Math.max(parsed.height, MIN_HEIGHT), MAX_HEIGHT)
+        };
+      }
+    } catch {}
+    return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT };
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDirection, setResizeDirection] = useState<string>('');
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (show && inputRef.current) {
@@ -46,6 +81,66 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // 크기 변경 시 저장
+  useEffect(() => {
+    if (!isResizing) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(size));
+    }
+  }, [size, isResizing]);
+
+  // 리사이즈 시작
+  const handleResizeStart = useCallback((e: React.MouseEvent, direction: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeDirection(direction);
+  }, []);
+
+  // 리사이즈 중
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dialogRef.current) return;
+
+      const rect = dialogRef.current.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      let newWidth = size.width;
+      let newHeight = size.height;
+
+      // 방향에 따라 크기 계산
+      if (resizeDirection.includes('e')) {
+        newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, (e.clientX - centerX) * 2));
+      }
+      if (resizeDirection.includes('w')) {
+        newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, (centerX - e.clientX) * 2));
+      }
+      if (resizeDirection.includes('s')) {
+        newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, (e.clientY - centerY) * 2));
+      }
+      if (resizeDirection.includes('n')) {
+        newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, (centerY - e.clientY) * 2));
+      }
+
+      setSize({ width: newWidth, height: newHeight });
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      setResizeDirection('');
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, resizeDirection, size]);
 
   // 파일을 base64로 변환
   const fileToBase64 = (file: File): Promise<string> => {
@@ -187,12 +282,52 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
       <div
-        className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
+        ref={dialogRef}
+        className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden relative"
         style={{
-          width: 'min(600px, 90vw)',
-          height: 'min(700px, 85vh)',
+          width: `min(${size.width}px, 95vw)`,
+          height: `min(${size.height}px, 95vh)`,
+          cursor: isResizing ? (resizeDirection.includes('n') || resizeDirection.includes('s') ? 'ns-resize' : resizeDirection.includes('e') || resizeDirection.includes('w') ? 'ew-resize' : 'nwse-resize') : 'default'
         }}
       >
+        {/* 리사이즈 핸들들 */}
+        {/* 상단 */}
+        <div
+          className="absolute top-0 left-4 right-4 h-1 cursor-ns-resize hover:bg-amber-400/50 z-10"
+          onMouseDown={(e) => handleResizeStart(e, 'n')}
+        />
+        {/* 하단 */}
+        <div
+          className="absolute bottom-0 left-4 right-4 h-1 cursor-ns-resize hover:bg-amber-400/50 z-10"
+          onMouseDown={(e) => handleResizeStart(e, 's')}
+        />
+        {/* 좌측 */}
+        <div
+          className="absolute left-0 top-4 bottom-4 w-1 cursor-ew-resize hover:bg-amber-400/50 z-10"
+          onMouseDown={(e) => handleResizeStart(e, 'w')}
+        />
+        {/* 우측 */}
+        <div
+          className="absolute right-0 top-4 bottom-4 w-1 cursor-ew-resize hover:bg-amber-400/50 z-10"
+          onMouseDown={(e) => handleResizeStart(e, 'e')}
+        />
+        {/* 코너들 */}
+        <div
+          className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-20"
+          onMouseDown={(e) => handleResizeStart(e, 'nw')}
+        />
+        <div
+          className="absolute top-0 right-0 w-4 h-4 cursor-nesw-resize z-20"
+          onMouseDown={(e) => handleResizeStart(e, 'ne')}
+        />
+        <div
+          className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-20"
+          onMouseDown={(e) => handleResizeStart(e, 'sw')}
+        />
+        <div
+          className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-20"
+          onMouseDown={(e) => handleResizeStart(e, 'se')}
+        />
         {/* 헤더 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50 shrink-0">
           <div className="flex items-center gap-3">

@@ -1,0 +1,77 @@
+[
+  {
+    "name": "get_api_ninjas_data",
+    "description": "API Ninjas를 통해 명언, 역사적 사실, 날씨, 사전 정의 등 다양한 지식 정보를 검색합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string",
+          "description": "조회할 데이터 종류 (quotes, facts, weather 등)"
+        },
+        "params": {
+          "type": "object",
+          "description": "필터링 매개변수"
+        }
+      },
+      "required": ["endpoint"]
+    }
+  },
+  {
+    "name": "search_public_apis",
+    "description": "전 세계의 공개 API 라이브러리에서 특정 주제나 카테고리의 API를 검색합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "title": {"type": "string"},
+        "category": {"type": "string"}
+      }
+    }
+  },
+  {
+    "name": "amadeus_travel_search",
+    "description": "항공권, 호텔, 현지 관광지 등 실시간 여행 정보를 조회합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "endpoint": {"type": "string"},
+        "params": {"type": "object"}
+      },
+      "required": ["endpoint", "params"]
+    }
+  },
+  {
+    "name": "generate_newspaper",
+    "description": "특정 키워드를 바탕으로 최신 뉴스를 수집하여 HTML 신문을 제작합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "keywords": {"type": "array", "items": {"type": "string"}},
+        "title": {"type": "string"}
+      },
+      "required": ["keywords"]
+    }
+  },
+  {
+    "name": "generate_magazine",
+    "description": "특정 주제에 대한 심층 정보를 수집하여 잡지 형식의 보고서를 제작합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "topic": {"type": "string"},
+        "title": {"type": "string"}
+      },
+      "required": ["topic"]
+    }
+  },
+  {
+    "name": "generate_it_newspaper",
+    "description": "GeekNews(국내), Hacker News(해외), Reddit AI의 최신 트렌드를 모아 전문 IT 신문을 생성합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "title": {"type": "string", "description": "신문 제목"}
+      }
+    }
+  }
+]

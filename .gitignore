@@ -1,7 +1,22 @@
 # API 키 및 민감한 정보
 data/system_ai_config.json
 data/system_ai_memory.db
+data/switches.json
 tokens/
+
+# 개인 프로젝트 데이터 (API 키, 이메일 포함)
+projects/
+
+# 패키지 설치 정보 (개인 경로 포함)
+**/.install_info.json
+
+# 개인용 도구 패키지
+data/packages/installed/tools/blog/
+data/packages/installed/tools/android/
+data/packages/installed/tools/pc-manager/
+data/packages/available/tools/blog/
+data/packages/available/tools/android/
+data/packages/available/tools/pc-manager/
 
 # Python
 __pycache__/

@@ -1,7 +1,7 @@
 # IndieBiz OS - 시스템 문서
 
-**버전:** 0.1.0
-**최종 업데이트:** 2025-12-31
+**버전:** 0.1.1
+**최종 업데이트:** 2026-01-02
 
 ## 개요
 
@@ -108,7 +108,7 @@ indiebizOS/
 - **AI 친화적**: 코드와 README만으로 AI가 이해 가능
 - **폴더 기반 탐지**: 폴더 존재만으로 패키지 인식
 
-### 도구 패키지 (Tools) - 17개
+### 도구 패키지 (Tools) - 13개 설치됨
 
 에이전트가 사용할 수 있는 유틸리티
 
@@ -118,19 +118,34 @@ indiebizOS/
 | blog | Blog | 네이버 블로그 검색/분석 |
 | browser | Browser | 웹 브라우저 조작 |
 | browser-automation | Browser Automation | AI 웹 브라우저 자동화 |
-| file-manager | File Manager | 파일 관리 |
-| file-ops | File Ops | 파일 읽기/쓰기 |
-| file-search | File Search | 파일 검색 |
-| image-generation | Image Generation | 이미지 생성 |
 | newspaper-magazine | Newspaper Magazine | 뉴스 수집/신문 생성 |
 | nodejs | Node.js | Node.js 코드 실행 |
-| pc-manager | PC Manager | 로컬 컴퓨터 저장소 분석 |
+| pc-manager | PC Manager | 로컬 컴퓨터 저장소 분석 (df, du, diskutil 사용) |
 | python-exec | Python Exec | Python 코드 실행 |
-| time | Time | 시간/날짜 유틸리티 |
+| system_essentials | System Essentials | 파일 읽기/쓰기, 검색, 시간, **safe_shell** (안전한 쉘 명령어) |
 | web-crawl | Web Crawl | 웹페이지 크롤링 |
 | web-request | Web Request | HTTP 요청 |
 | web-search | Web Search | DuckDuckGo/Google News 검색 |
 | youtube | Youtube | YouTube 동영상 관련 기능 |
+
+### safe_shell 도구
+
+`system_essentials` 패키지에 포함된 안전한 쉘 명령어 실행 도구.
+
+**허용된 명령어:**
+- 시스템 정보: `df`, `du`, `diskutil`, `system_profiler`, `sw_vers`, `sysctl`, `uname`
+- 프로세스/메모리: `ps`, `top`, `vm_stat`, `memory_pressure`
+- 파일 조회: `ls`, `cat`, `head`, `tail`, `file`, `stat`, `wc`, `find`, `which`, `whereis`
+- 네트워크: `ifconfig`, `netstat`, `ping`, `host`, `nslookup`
+- 기타: `date`, `uptime`, `whoami`, `id`, `pwd`, `echo`, `printenv`
+
+**차단되는 패턴:**
+- 위험한 명령어: `rm`, `sudo`, `dd`, `chmod`, `chown`, `mkfs`
+- 리다이렉션/파이프: `>`, `>>`, `|`, `;`, `&&`, `||`
+- 스크립트 실행: `python`, `bash`, `sh`, `perl`, `ruby`
+- 네트워크 다운로드: `curl`, `wget`
+
+**타임아웃:** 기본 30초, 최대 60초
 
 ### 패키지 관리 API
 

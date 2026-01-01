@@ -14,9 +14,13 @@ IndieBiz OS Core
 """
 
 import json
+import os
+import subprocess
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List, Optional
+
+from runtime_utils import get_python_cmd, get_node_cmd
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent
@@ -565,6 +569,105 @@ def execute_system_tool(tool_name: str, arguments: Dict[str, Any]) -> str:
             return f"❌ 설치 실패: {str(e)}"
         except Exception as e:
             return f"❌ 오류 발생: {str(e)}"
+
+    # 파일 시스템 도구
+    elif tool_name == "read_file":
+        file_path = arguments.get("file_path", "")
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
+
+    elif tool_name == "write_file":
+        file_path = arguments.get("file_path", "")
+        content = arguments.get("content", "")
+        try:
+            os.makedirs(os.path.dirname(file_path), exist_ok=True) if os.path.dirname(file_path) else None
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            return json.dumps({"success": True, "message": f"파일 저장 완료: {file_path}"}, ensure_ascii=False)
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
+
+    elif tool_name == "list_directory":
+        dir_path = arguments.get("dir_path", str(DATA_PATH))
+        try:
+            items = os.listdir(dir_path)
+            result = []
+            for item in items:
+                full_path = os.path.join(dir_path, item)
+                item_type = "dir" if os.path.isdir(full_path) else "file"
+                result.append({"name": item, "type": item_type})
+            return json.dumps({"success": True, "items": result}, ensure_ascii=False)
+        except Exception as e:
+            return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
+
+    # 코드 실행 도구
+    elif tool_name == "execute_python":
+        code = arguments.get("code", "")
+        try:
+            python_cmd = get_python_cmd()
+            result = subprocess.run(
+                [python_cmd, "-c", code],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=str(DATA_PATH)
+            )
+            output = result.stdout
+            if result.stderr:
+                output += f"\n[stderr]: {result.stderr}"
+            return output if output else "(실행 완료, 출력 없음)"
+        except subprocess.TimeoutExpired:
+            return "실행 시간 초과 (60초)"
+        except Exception as e:
+            return f"실행 오류: {str(e)}"
+
+    elif tool_name == "execute_node":
+        code = arguments.get("code", "")
+        try:
+            node_cmd = get_node_cmd()
+            result = subprocess.run(
+                [node_cmd, "-e", code],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=str(DATA_PATH)
+            )
+            output = result.stdout
+            if result.stderr:
+                output += f"\n[stderr]: {result.stderr}"
+            return output if output else "(실행 완료, 출력 없음)"
+        except subprocess.TimeoutExpired:
+            return "실행 시간 초과 (60초)"
+        except Exception as e:
+            return f"실행 오류: {str(e)}"
+
+    elif tool_name == "run_command":
+        command = arguments.get("command", "")
+        # 위험한 명령어 필터링
+        dangerous = ["rm -rf", "rmdir /s", "format", "mkfs", "dd if="]
+        for d in dangerous:
+            if d in command:
+                return json.dumps({"success": False, "error": f"위험한 명령어 차단: {d}"}, ensure_ascii=False)
+        try:
+            result = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(DATA_PATH)
+            )
+            output = result.stdout
+            if result.stderr:
+                output += f"\n[stderr]: {result.stderr}"
+            return output if output else "(실행 완료, 출력 없음)"
+        except subprocess.TimeoutExpired:
+            return "실행 시간 초과 (120초)"
+        except Exception as e:
+            return f"실행 오류: {str(e)}"
 
     return f"알 수 없는 도구: {tool_name}"
 

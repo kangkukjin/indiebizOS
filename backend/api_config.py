@@ -496,3 +496,198 @@ async def stop_ollama():
         return {"status": "stopped", "running": False}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ 자동 도구 배분 API ============
+
+@router.post("/projects/{project_id}/auto-assign-tools")
+async def auto_assign_tools(project_id: str):
+    """시스템 AI를 사용하여 에이전트들에게 도구 자동 배분"""
+    try:
+        project_path = project_manager.get_project_path(project_id)
+        agents_file = project_path / "agents.yaml"
+
+        if not agents_file.exists():
+            raise HTTPException(status_code=404, detail="에이전트 설정을 찾을 수 없습니다.")
+
+        with open(agents_file, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+
+        # 에이전트 정보 수집
+        agents_info = []
+        for agent in data.get('agents', []):
+            # 역할 파일 로드
+            role_file = project_path / f"agent_{agent['name']}_role.txt"
+            role = ""
+            if role_file.exists():
+                role = role_file.read_text(encoding='utf-8')
+
+            agents_info.append({
+                'name': agent['name'],
+                'role': role or '역할 미정의'
+            })
+
+        if not agents_info:
+            return {"status": "no_agents", "message": "배분할 에이전트가 없습니다."}
+
+        # 자동 배분 실행
+        try:
+            from tool_selector import SystemDirector
+
+            director = SystemDirector(project_path)
+            success = director.force_reallocate_tools(agents_info)
+
+            if success:
+                return {
+                    "status": "success",
+                    "message": "도구 배분이 완료되었습니다.",
+                    "assignments": director.assignment_map
+                }
+            else:
+                raise HTTPException(status_code=500, detail="도구 배분에 실패했습니다.")
+        except ImportError as e:
+            raise HTTPException(status_code=500, detail=f"tool_selector 모듈을 찾을 수 없습니다: {e}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/projects/{project_id}/init-tools")
+async def init_tools_if_needed(project_id: str):
+    """
+    프로젝트 열 때 호출 - allowed_tools가 없는 에이전트만 자동 배분
+    (이미 allowed_tools가 있으면 스킵)
+    """
+    try:
+        project_path = project_manager.get_project_path(project_id)
+        agents_file = project_path / "agents.yaml"
+
+        if not agents_file.exists():
+            return {"status": "skip", "message": "에이전트 설정 파일 없음"}
+
+        with open(agents_file, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f) or {}
+
+        # allowed_tools가 None인 에이전트만 필터링
+        agents_needing_tools = []
+        for agent in data.get('agents', []):
+            if agent.get('allowed_tools') is None:
+                # 역할 파일 로드
+                role_file = project_path / f"agent_{agent['name']}_role.txt"
+                role = ""
+                if role_file.exists():
+                    role = role_file.read_text(encoding='utf-8')
+
+                agents_needing_tools.append({
+                    'name': agent['name'],
+                    'role': role or '역할 미정의'
+                })
+
+        if not agents_needing_tools:
+            return {"status": "skip", "message": "모든 에이전트에 도구가 이미 배분됨"}
+
+        # 자동 배분 실행 (allowed_tools가 None인 에이전트만)
+        try:
+            from tool_selector import SystemDirector
+
+            director = SystemDirector(project_path)
+            director.reallocate_tools(agents_needing_tools)
+
+            return {
+                "status": "success",
+                "message": f"{len(agents_needing_tools)}개 에이전트에 도구 배분 완료",
+                "agents": [a['name'] for a in agents_needing_tools]
+            }
+        except ImportError:
+            return {"status": "error", "message": "tool_selector 모듈 없음"}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# ============ 프롬프트 자동 생성 API ============
+
+@router.post("/projects/{project_id}/generate-prompts")
+async def generate_prompts(project_id: str, request: Dict[str, Any]):
+    """
+    프로젝트의 프롬프트를 자동 생성합니다.
+
+    Request body:
+    - project_purpose: 프로젝트 목적
+    - agents: 에이전트 목록 [{"name": "이름", "role": "역할 설명", "type": "external/internal"}]
+    """
+    try:
+        from prompt_generator import PromptGenerator, GeneratedPrompts
+
+        project_path = project_manager.get_project_path(project_id)
+        generator = PromptGenerator()
+
+        project_purpose = request.get("project_purpose", "")
+        agents = request.get("agents", [])
+
+        if not agents:
+            raise HTTPException(status_code=400, detail="에이전트 목록이 필요합니다.")
+
+        # 프롬프트 생성
+        result = generator.generate(project_purpose, agents)
+
+        # 검증
+        errors = generator.validate(result)
+
+        return {
+            "status": "success",
+            "common_settings": result.common_settings,
+            "agent_roles": result.agent_roles,
+            "validation_errors": errors
+        }
+
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"prompt_generator 모듈 로드 실패: {e}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/projects/{project_id}/save-prompts")
+async def save_generated_prompts(project_id: str, request: Dict[str, Any]):
+    """
+    미리보기에서 생성된 프롬프트를 프로젝트에 저장합니다.
+    (다시 생성하지 않고 전달받은 데이터를 그대로 저장)
+    """
+    try:
+        from prompt_generator import PromptGenerator, GeneratedPrompts
+
+        project_path = project_manager.get_project_path(project_id)
+        generator = PromptGenerator()
+
+        # 전달받은 데이터로 GeneratedPrompts 객체 생성
+        result = GeneratedPrompts(
+            common_settings=request.get("common_settings", ""),
+            agent_roles=request.get("agent_roles", {})
+        )
+
+        # 검증
+        errors = generator.validate(result)
+        if errors:
+            return {
+                "status": "validation_failed",
+                "errors": errors
+            }
+
+        # 저장
+        saved_files = generator.save_to_project(result, str(project_path))
+
+        return {
+            "status": "saved",
+            "saved_files": saved_files,
+            "common_settings": result.common_settings,
+            "agent_roles": result.agent_roles
+        }
+
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"prompt_generator 모듈 로드 실패: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

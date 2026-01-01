@@ -1,0 +1,16 @@
+# IndieBiz OS - Core
+# Python 3.10+
+
+# 서버
+fastapi
+uvicorn[standard]
+pyyaml
+
+# AI 프로바이더 (3개 모두 지원)
+anthropic
+openai
+google-generativeai
+
+# Nostr / IndieNet
+pynostr
+websocket-client

@@ -1,0 +1,279 @@
+"""
+system_ai_memory.py - 시스템 AI 메모리 관리
+IndieBiz OS Core
+
+시스템 AI의 기억 시스템:
+- 단기기억: my_profile.txt (사용자 정보)
+- 장기기억(대화): SQLite DB (대화 이력)
+- 장기기억(시스템): system_status.md (시스템 현황 문서)
+"""
+
+import sqlite3
+import json
+from pathlib import Path
+from datetime import datetime
+from typing import List, Dict, Any, Optional
+
+# 경로 설정
+BACKEND_PATH = Path(__file__).parent
+DATA_PATH = BACKEND_PATH.parent / "data"
+MEMORY_DB_PATH = DATA_PATH / "system_ai_memory.db"
+SYSTEM_STATUS_PATH = DATA_PATH / "system_status.md"
+PROFILE_PATH = DATA_PATH / "my_profile.txt"
+
+
+def init_memory_db():
+    """메모리 DB 초기화"""
+    DATA_PATH.mkdir(parents=True, exist_ok=True)
+
+    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    cursor = conn.cursor()
+
+    # 대화 이력 테이블
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            summary TEXT,
+            importance INTEGER DEFAULT 0
+        )
+    """)
+
+    # 중요 기억 테이블 (시스템 AI가 기억해야 할 것들)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS memories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            category TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            source TEXT
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def save_conversation(role: str, content: str, importance: int = 0) -> int:
+    """대화 저장"""
+    init_memory_db()
+
+    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO conversations (timestamp, role, content, importance)
+        VALUES (?, ?, ?, ?)
+    """, (datetime.now().isoformat(), role, content, importance))
+
+    conversation_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    return conversation_id
+
+
+def get_recent_conversations(limit: int = 10) -> List[Dict[str, Any]]:
+    """최근 대화 조회"""
+    init_memory_db()
+
+    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, timestamp, role, content, summary, importance
+        FROM conversations
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    conversations = []
+    for row in reversed(rows):  # 시간순으로 정렬
+        conversations.append({
+            "id": row[0],
+            "timestamp": row[1],
+            "role": row[2],
+            "content": row[3],
+            "summary": row[4],
+            "importance": row[5]
+        })
+
+    return conversations
+
+
+def get_important_conversations(min_importance: int = 1, limit: int = 20) -> List[Dict[str, Any]]:
+    """중요 대화 조회"""
+    init_memory_db()
+
+    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, timestamp, role, content, summary, importance
+        FROM conversations
+        WHERE importance >= ?
+        ORDER BY importance DESC, id DESC
+        LIMIT ?
+    """, (min_importance, limit))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [{
+        "id": row[0],
+        "timestamp": row[1],
+        "role": row[2],
+        "content": row[3],
+        "summary": row[4],
+        "importance": row[5]
+    } for row in rows]
+
+
+def save_memory(category: str, title: str, content: str, source: str = None) -> int:
+    """기억 저장"""
+    init_memory_db()
+
+    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    cursor = conn.cursor()
+
+    now = datetime.now().isoformat()
+
+    cursor.execute("""
+        INSERT INTO memories (created_at, updated_at, category, title, content, source)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (now, now, category, title, content, source))
+
+    memory_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    return memory_id
+
+
+def get_memories(category: str = None, limit: int = 50) -> List[Dict[str, Any]]:
+    """기억 조회"""
+    init_memory_db()
+
+    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    cursor = conn.cursor()
+
+    if category:
+        cursor.execute("""
+            SELECT id, created_at, updated_at, category, title, content, source
+            FROM memories
+            WHERE category = ?
+            ORDER BY updated_at DESC
+            LIMIT ?
+        """, (category, limit))
+    else:
+        cursor.execute("""
+            SELECT id, created_at, updated_at, category, title, content, source
+            FROM memories
+            ORDER BY updated_at DESC
+            LIMIT ?
+        """, (limit,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [{
+        "id": row[0],
+        "created_at": row[1],
+        "updated_at": row[2],
+        "category": row[3],
+        "title": row[4],
+        "content": row[5],
+        "source": row[6]
+    } for row in rows]
+
+
+def load_user_profile() -> str:
+    """사용자 프로필 로드 (단기기억)"""
+    if PROFILE_PATH.exists():
+        return PROFILE_PATH.read_text(encoding='utf-8').strip()
+    return ""
+
+
+def load_system_status() -> str:
+    """시스템 현황 문서 로드"""
+    if SYSTEM_STATUS_PATH.exists():
+        return SYSTEM_STATUS_PATH.read_text(encoding='utf-8')
+    return ""
+
+
+def save_system_status(content: str):
+    """시스템 현황 문서 저장"""
+    DATA_PATH.mkdir(parents=True, exist_ok=True)
+    SYSTEM_STATUS_PATH.write_text(content, encoding='utf-8')
+
+
+def init_system_status():
+    """시스템 현황 문서 초기화 (없으면 생성)"""
+    if not SYSTEM_STATUS_PATH.exists():
+        initial_content = """# IndieBiz OS 시스템 현황
+
+## 개요
+IndieBiz OS는 다중 AI 에이전트 협업 플랫폼입니다.
+
+## 설치된 구성요소
+
+### 코어 시스템
+- 시스템 AI: 활성화됨
+- 지원 프로바이더: Anthropic, OpenAI, Google
+
+### 프로젝트
+(아직 프로젝트가 없습니다)
+
+### 에이전트
+(아직 에이전트가 없습니다)
+
+### 도구 패키지
+(아직 설치된 도구 패키지가 없습니다)
+
+## 시스템 이벤트 로그
+- {date}: 시스템 초기화됨
+
+---
+*이 문서는 시스템 AI가 참조하는 시스템 현황 문서입니다.*
+""".format(date=datetime.now().strftime("%Y-%m-%d"))
+
+        save_system_status(initial_content)
+
+    return load_system_status()
+
+
+def get_memory_context(include_conversations: int = 5, include_system_status: bool = True) -> str:
+    """시스템 AI를 위한 메모리 컨텍스트 생성"""
+    context_parts = []
+
+    # 1. 최근 대화 이력
+    if include_conversations > 0:
+        recent = get_recent_conversations(include_conversations)
+        if recent:
+            context_parts.append("# 최근 대화 이력")
+            for conv in recent:
+                role_name = "사용자" if conv["role"] == "user" else "시스템 AI"
+                # 긴 내용은 요약
+                content = conv["content"]
+                if len(content) > 200:
+                    content = content[:200] + "..."
+                context_parts.append(f"- {role_name}: {content}")
+
+    # 2. 시스템 현황
+    if include_system_status:
+        status = load_system_status()
+        if status:
+            context_parts.append("\n" + status)
+
+    return "\n".join(context_parts) if context_parts else ""
+
+
+# 모듈 로드 시 DB 초기화
+init_memory_db()

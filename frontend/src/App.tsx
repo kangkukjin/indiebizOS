@@ -1,0 +1,150 @@
+/**
+ * IndieBiz 메인 앱
+ */
+
+import { useEffect, useState } from 'react';
+import { useAppStore } from './stores/appStore';
+import { Launcher } from './components/Launcher';
+import { Manager } from './components/Manager';
+import { FolderView } from './components/FolderView';
+import { IndieNet } from './components/IndieNet';
+import { api } from './lib/api';
+
+function App() {
+  const { currentView, setCurrentProject, setIsConnected, setError } = useAppStore();
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [folderId, setFolderId] = useState<string | null>(null);
+  const [isIndieNet, setIsIndieNet] = useState(false);
+
+  // URL 해시에서 프로젝트/폴더/IndieNet 확인
+  useEffect(() => {
+    const checkHash = () => {
+      const hash = window.location.hash;
+
+      // IndieNet 체크
+      if (hash === '#/indienet') {
+        setIsIndieNet(true);
+        setProjectId(null);
+        setFolderId(null);
+        return;
+      }
+
+      // 프로젝트 체크 (URL 인코딩된 ID 디코딩)
+      const projectMatch = hash.match(/^#\/project\/(.+)$/);
+      if (projectMatch) {
+        setProjectId(decodeURIComponent(projectMatch[1]));
+        setFolderId(null);
+        setIsIndieNet(false);
+        return;
+      }
+
+      // 폴더 체크 (URL 인코딩된 ID 디코딩)
+      const folderMatch = hash.match(/^#\/folder\/(.+)$/);
+      if (folderMatch) {
+        setFolderId(decodeURIComponent(folderMatch[1]));
+        setProjectId(null);
+        setIsIndieNet(false);
+        return;
+      }
+
+      // 기본
+      setProjectId(null);
+      setFolderId(null);
+      setIsIndieNet(false);
+    };
+
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, []);
+
+  // 프로젝트 ID가 있으면 프로젝트 정보 로드 + 도구 자동 배분
+  useEffect(() => {
+    if (projectId) {
+      const loadProject = async () => {
+        try {
+          const projects = await api.getProjects();
+          const project = projects.find((p: { id: string }) => p.id === projectId);
+          if (project) {
+            setCurrentProject(project);
+
+            // 프로젝트 열 때 도구 자동 배분 (allowed_tools가 없는 에이전트만)
+            try {
+              const result = await api.initTools(project.id);
+              if (result.status === 'success') {
+                console.log(`[도구 자동 배분] ${result.message}:`, result.agents);
+              }
+            } catch (e) {
+              // 무시 (이미 배분됨 또는 에러)
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load project:', error);
+        }
+      };
+      loadProject();
+    }
+  }, [projectId, setCurrentProject]);
+
+  // 서버 연결 확인
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        await api.health();
+        setIsConnected(true);
+        setError(null);
+      } catch (error) {
+        setIsConnected(false);
+        setError('서버에 연결할 수 없습니다. 백엔드가 실행 중인지 확인해주세요.');
+      }
+    };
+
+    checkConnection();
+
+    // 주기적으로 연결 확인
+    const interval = setInterval(checkConnection, 10000);
+    return () => clearInterval(interval);
+  }, [setIsConnected, setError]);
+
+  // IndieNet 창인 경우
+  if (isIndieNet) {
+    return (
+      <div className="h-screen w-screen overflow-hidden">
+        <IndieNet />
+      </div>
+    );
+  }
+
+  // 폴더 창인 경우 FolderView 표시
+  if (folderId) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+          <FolderView folderId={folderId} />
+        </div>
+      </div>
+    );
+  }
+
+  // 프로젝트 창인 경우 Manager 표시
+  if (projectId) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+          <Manager />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+      <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+        {currentView === 'launcher' && <Launcher />}
+        {currentView === 'manager' && <Manager />}
+      </div>
+    </div>
+  );
+}
+
+export default App;

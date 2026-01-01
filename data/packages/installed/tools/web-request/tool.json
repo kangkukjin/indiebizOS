@@ -1,0 +1,26 @@
+{
+  "name": "web_request",
+  "description": "HTTP 요청을 보냅니다. API 호출, 웹 데이터 가져오기 등에 사용합니다.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "요청할 URL"
+      },
+      "method": {
+        "type": "string",
+        "description": "HTTP 메소드 (GET, POST, PUT, DELETE). 기본: GET"
+      },
+      "headers": {
+        "type": "string",
+        "description": "HTTP 헤더 (JSON 문자열)"
+      },
+      "body": {
+        "type": "string",
+        "description": "요청 본문 (POST/PUT 시)"
+      }
+    },
+    "required": ["url"]
+  }
+}

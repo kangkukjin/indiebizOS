@@ -1,0 +1,127 @@
+agents:
+- active: true
+  ai:
+    api_key: ""
+    model: gemini-2.0-flash-exp
+    provider: google
+  allowed_tools:
+  - send_email
+  - send_nostr_message
+  - check_nostr_messages
+  - get_channel_status
+  - scheduler
+  - search_nostr_notes
+  - select_my_tools
+  - list_available_tools
+  channels: []
+  email: ""
+  id: agent_001
+  name: 집사
+  role_description: 사용자의 지시를 받고 전문에이전트가 있는 경우 그 일을 위임. 최종 결과를 사용자에게 보고.
+  type: external
+- active: true
+  ai:
+    api_key: ""
+    model: gemini-2.0-flash-exp
+    provider: google
+  allowed_tools:
+  - send_email
+  - send_nostr_message
+  - check_nostr_messages
+  - search_nostr_notes
+  - get_channel_status
+  - ddgs_search
+  - google_news_search
+  channel: null
+  channels: []
+  email: ""
+  id: agent_5df8bfe1
+  name: 직원1
+  type: external
+- active: true
+  ai:
+    api_key: ""
+    model: gemini-2.0-flash-exp
+    provider: google
+  allowed_tools:
+  - execute_python
+  - execute_nodejs
+  - read_file
+  - write_file
+  - list_directory
+  - browser_action
+  - crawl_website
+  - select_my_tools
+  - list_available_tools
+  channel: null
+  email: null
+  id: agent_3d88111a
+  name: 대장장이
+  role_description: 프로그램 개발. 시스템 정비. 코딩.
+  type: internal
+- active: true
+  ai:
+    api_key: ""
+    model: gemini-2.0-flash-exp
+    provider: google
+  allowed_tools:
+  - generate_newspaper
+  - generate_magazine
+  - ddgs_search
+  - google_news_search
+  - search_blog
+  - get_post_content
+  - read_file
+  - write_file
+  - select_my_tools
+  - list_available_tools
+  channel: null
+  email: null
+  id: agent_40f06472
+  name: 출판
+  role_description: 신문과 잡지 만들기. 블로그 보고서 만들기.
+  type: internal
+- active: true
+  ai:
+    api_key: ""
+    model: gemini-2.0-flash-exp
+    provider: google
+  allowed_tools:
+  - download_youtube_music
+  - get_youtube_info
+  - read_file
+  - write_file
+  - list_available_transcripts
+  - get_youtube_transcript
+  - summarize_youtube
+  - select_my_tools
+  - list_available_tools
+  channel: null
+  email: null
+  id: agent_900b7943
+  name: 영상담당
+  role_description: 유튜브 동영상의 음성 녹음. 유튜브 동영상의 내용 요약 만들기.
+  type: internal
+common:
+  claude:
+    api_key: ""
+    model: claude-sonnet-4-20250514
+  daily_tasks: []
+  polling_interval: 60
+system_ai:
+  api_key: ""
+  enabled: true
+  model: gemini-2.0-flash-exp
+  provider: google
+  role: |
+    당신은 IndieBiz 프로젝트의 시스템 AI입니다.
+
+    ## 주요 역할
+    - 각 에이전트의 역할을 분석하고 적절한 도구를 배분합니다.
+    - 에이전트들이 효율적으로 협업할 수 있도록 도구를 최적화합니다.
+
+    ## 도구 배분 원칙
+    1. 각 에이전트의 '역할'에 꼭 필요한 도구만 할당
+    2. 통신 담당(집사)에게는 이메일, 메시지 등 소통 도구
+    3. 제작 담당(출판, 대장장이)에게는 생성, 실행 도구
+    4. 검색 담당(잡부)에게는 검색, 크롤링 도구

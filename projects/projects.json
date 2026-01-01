@@ -1,0 +1,27 @@
+[
+  {
+    "id": "1",
+    "name": "1",
+    "type": "project",
+    "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/projects/1",
+    "created_at": "2025-12-31T05:39:38.120477",
+    "icon_position": [
+      56,
+      50
+    ],
+    "parent_folder": null,
+    "last_opened": null
+  },
+  {
+    "id": "임시",
+    "name": "임시",
+    "type": "folder",
+    "created_at": "2025-12-31T05:41:55.630616",
+    "icon_position": [
+      197,
+      46
+    ],
+    "parent_folder": "임시2",
+    "items": []
+  }
+]

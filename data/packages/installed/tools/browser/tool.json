@@ -1,0 +1,14 @@
+{
+  "name": "open_in_browser",
+  "description": "URL 또는 로컬 파일을 기본 브라우저에서 엽니다.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "열 URL 또는 파일 경로"
+      }
+    },
+    "required": ["url"]
+  }
+}

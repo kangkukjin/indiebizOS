@@ -1,0 +1,33 @@
+# IndieBiz OS 에이전트 설정
+
+agents:
+  - id: agent_001
+    name: 집사
+    type: external
+    active: true
+    ai:
+      provider: anthropic
+      model: claude-sonnet-4-20250514
+      api_key: ""
+    allowed_tools: []
+    role: ""
+    channels: []
+
+# 공통 AI 설정 (에이전트들이 공유)
+common:
+  anthropic:
+    model: claude-sonnet-4-20250514
+    api_key: ""
+  openai:
+    model: gpt-4o
+    api_key: ""
+  google:
+    model: gemini-2.0-flash-exp
+    api_key: ""
+
+# 시스템 AI 설정 (도구 배분 등)
+system_ai:
+  enabled: true
+  provider: anthropic
+  model: claude-sonnet-4-20250514
+  api_key: ""

@@ -8,14 +8,21 @@ IndieBiz OS Core
 - AI가 폴더를 분석하여 유효성 판별 및 README 자동 생성
 
 packages/
-├── available/tools/     # 설치 가능한 도구 패키지
+├── not_installed/tools/  # 설치되지 않은 도구 패키지
 │   └── youtube/
-└── installed/tools/     # 설치된 도구 패키지
-    └── time/
+├── installed/tools/      # 설치된 도구 패키지
+│   └── time/
+└── dev/tools/            # 개발 중인 도구 패키지
+
+available = not_installed + installed (논리적 합집합)
+설치: not_installed → installed로 이동
+삭제: installed → not_installed로 이동
 """
 
 import json
 import shutil
+import inspect
+import importlib.util
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List, Optional
@@ -24,13 +31,127 @@ from typing import Dict, Any, List, Optional
 BACKEND_PATH = Path(__file__).parent
 DATA_PATH = BACKEND_PATH.parent / "data"
 PACKAGES_PATH = DATA_PATH / "packages"
-AVAILABLE_PATH = PACKAGES_PATH / "available"
+NOT_INSTALLED_PATH = PACKAGES_PATH / "not_installed"
 INSTALLED_PATH = PACKAGES_PATH / "installed"
+
+
+def validate_tool_package(pkg_path: Path) -> Dict[str, Any]:
+    """
+    도구 패키지 검증
+
+    검증 항목:
+    1. tool.json 존재 및 유효한 JSON
+    2. handler.py 존재
+    3. handler.py에 execute() 함수 존재
+    4. execute() 함수 시그니처가 (tool_name, args, project_path) 형식
+    5. tool.json의 모든 도구가 handler.py에서 처리 가능
+
+    Returns:
+        {
+            "valid": True/False,
+            "errors": ["에러 메시지들"],
+            "warnings": ["경고 메시지들"],
+            "tools": ["도구 이름들"]
+        }
+    """
+    result = {
+        "valid": True,
+        "errors": [],
+        "warnings": [],
+        "tools": []
+    }
+
+    # 1. tool.json 확인
+    tool_json_path = pkg_path / "tool.json"
+    if not tool_json_path.exists():
+        result["valid"] = False
+        result["errors"].append("tool.json 파일이 없습니다")
+        return result
+
+    try:
+        tool_data = json.loads(tool_json_path.read_text(encoding='utf-8'))
+    except json.JSONDecodeError as e:
+        result["valid"] = False
+        result["errors"].append(f"tool.json이 유효한 JSON이 아닙니다: {e}")
+        return result
+
+    # 도구 목록 추출
+    tools = []
+    if isinstance(tool_data, list):
+        tools = tool_data
+    elif isinstance(tool_data, dict):
+        if "tools" in tool_data:
+            tools = tool_data["tools"]
+        elif "name" in tool_data:
+            tools = [tool_data]
+
+    tool_names = [t.get("name") for t in tools if t.get("name")]
+    result["tools"] = tool_names
+
+    if not tool_names:
+        result["valid"] = False
+        result["errors"].append("tool.json에 도구가 정의되어 있지 않습니다")
+        return result
+
+    # 2. handler.py 확인
+    handler_path = pkg_path / "handler.py"
+    if not handler_path.exists():
+        result["valid"] = False
+        result["errors"].append("handler.py 파일이 없습니다")
+        return result
+
+    # 3. handler.py 로드 및 execute 함수 확인
+    try:
+        spec = importlib.util.spec_from_file_location("temp_handler", handler_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    except Exception as e:
+        result["valid"] = False
+        result["errors"].append(f"handler.py 로드 실패: {e}")
+        return result
+
+    if not hasattr(module, 'execute'):
+        result["valid"] = False
+        result["errors"].append("handler.py에 execute() 함수가 없습니다")
+        return result
+
+    # 4. execute() 시그니처 확인
+    execute_func = getattr(module, 'execute')
+    sig = inspect.signature(execute_func)
+    params = list(sig.parameters.keys())
+
+    # 최소 2개 파라미터 필요 (tool_name, args)
+    # 3개면 완벽 (tool_name, args, project_path)
+    if len(params) < 2:
+        result["valid"] = False
+        result["errors"].append(f"execute() 함수는 최소 2개 파라미터가 필요합니다. 현재: {params}")
+        return result
+
+    if len(params) == 2:
+        result["warnings"].append(
+            f"execute() 함수가 2개 파라미터만 받습니다: {params}. "
+            "project_path를 세 번째 파라미터로 추가하는 것을 권장합니다."
+        )
+
+    # 5. handler.py 코드에서 도구 처리 확인
+    handler_code = handler_path.read_text(encoding='utf-8')
+    missing_tools = []
+    for tool_name in tool_names:
+        # tool_name이 handler 코드에 언급되는지 확인
+        if f'"{tool_name}"' not in handler_code and f"'{tool_name}'" not in handler_code:
+            missing_tools.append(tool_name)
+
+    if missing_tools:
+        result["warnings"].append(
+            f"다음 도구들이 handler.py에서 처리되지 않을 수 있습니다: {missing_tools}"
+        )
+
+    return result
 
 
 def ensure_package_dirs():
     """패키지 디렉토리 생성"""
-    (AVAILABLE_PATH / "tools").mkdir(parents=True, exist_ok=True)
+    (NOT_INSTALLED_PATH / "tools").mkdir(parents=True, exist_ok=True)
     (INSTALLED_PATH / "tools").mkdir(parents=True, exist_ok=True)
 
 
@@ -85,23 +206,28 @@ class PackageManager:
         return metadata
 
     def _scan_all_packages(self) -> List[Dict[str, Any]]:
-        """모든 도구 패키지 폴더 스캔"""
+        """모든 도구 패키지 폴더 스캔 (not_installed + installed)"""
         packages = []
-        tools_path = AVAILABLE_PATH / "tools"
 
-        if not tools_path.exists():
-            return packages
+        # installed 폴더 스캔
+        installed_path = INSTALLED_PATH / "tools"
+        if installed_path.exists():
+            for pkg_dir in installed_path.iterdir():
+                if pkg_dir.is_dir() and not pkg_dir.name.startswith('.'):
+                    pkg_info = self._scan_package(pkg_dir)
+                    pkg_info["installed"] = True
+                    pkg_info["package_type"] = "tools"
+                    packages.append(pkg_info)
 
-        for pkg_dir in tools_path.iterdir():
-            if pkg_dir.is_dir() and not pkg_dir.name.startswith('.'):
-                pkg_info = self._scan_package(pkg_dir)
-
-                # 설치 여부 확인
-                installed_path = INSTALLED_PATH / "tools" / pkg_dir.name
-                pkg_info["installed"] = installed_path.exists()
-                pkg_info["package_type"] = "tools"
-
-                packages.append(pkg_info)
+        # not_installed 폴더 스캔
+        not_installed_path = NOT_INSTALLED_PATH / "tools"
+        if not_installed_path.exists():
+            for pkg_dir in not_installed_path.iterdir():
+                if pkg_dir.is_dir() and not pkg_dir.name.startswith('.'):
+                    pkg_info = self._scan_package(pkg_dir)
+                    pkg_info["installed"] = False
+                    pkg_info["package_type"] = "tools"
+                    packages.append(pkg_info)
 
         return packages
 
@@ -142,21 +268,30 @@ class PackageManager:
 
     def get_package_info(self, package_id: str, package_type: str = None) -> Optional[Dict[str, Any]]:
         """패키지 정보 조회"""
-        pkg_path = AVAILABLE_PATH / "tools" / package_id
-        if pkg_path.exists():
-            pkg_info = self._scan_package(pkg_path)
-            installed_path = INSTALLED_PATH / "tools" / package_id
-            pkg_info["installed"] = installed_path.exists()
+        installed_path = INSTALLED_PATH / "tools" / package_id
+        not_installed_path = NOT_INSTALLED_PATH / "tools" / package_id
+
+        # 설치된 패키지
+        if installed_path.exists():
+            pkg_info = self._scan_package(installed_path)
+            pkg_info["installed"] = True
             pkg_info["package_type"] = "tools"
-            pkg_info["path"] = str(pkg_path)
+            pkg_info["path"] = str(installed_path)
+            return pkg_info
+        # 미설치 패키지
+        elif not_installed_path.exists():
+            pkg_info = self._scan_package(not_installed_path)
+            pkg_info["installed"] = False
+            pkg_info["package_type"] = "tools"
+            pkg_info["path"] = str(not_installed_path)
             return pkg_info
         return None
 
     # ============ 패키지 설치/제거 ============
 
-    def install_package(self, package_id: str, package_type: str = None) -> Dict[str, Any]:
-        """도구 패키지 설치"""
-        src_path = AVAILABLE_PATH / "tools" / package_id
+    def install_package(self, package_id: str, package_type: str = None, skip_validation: bool = False) -> Dict[str, Any]:
+        """도구 패키지 설치 (not_installed → installed로 이동)"""
+        src_path = NOT_INSTALLED_PATH / "tools" / package_id
         dst_path = INSTALLED_PATH / "tools" / package_id
 
         if not src_path.exists():
@@ -165,13 +300,21 @@ class PackageManager:
         if dst_path.exists():
             raise ValueError(f"이미 설치된 패키지입니다: {package_id}")
 
-        # 복사
-        shutil.copytree(src_path, dst_path)
+        # 설치 전 검증
+        validation = None
+        if not skip_validation:
+            validation = validate_tool_package(src_path)
+            if not validation["valid"]:
+                raise ValueError(f"패키지 검증 실패: {'; '.join(validation['errors'])}")
 
-        # 설치 기록
+        # 이동 (복사가 아닌 이동)
+        shutil.move(str(src_path), str(dst_path))
+
+        # 설치 기록 (검증 결과 포함)
         install_info = {
             "installed_at": datetime.now().isoformat(),
-            "from": str(src_path)
+            "ai_installed": False,
+            "validation": validation
         }
         with open(dst_path / ".install_info.json", 'w', encoding='utf-8') as f:
             json.dump(install_info, f, ensure_ascii=False, indent=2)
@@ -179,26 +322,200 @@ class PackageManager:
         # inventory.md 자동 업데이트
         self._update_inventory()
 
-        pkg_info = self._scan_package(src_path)
-        return {
+        pkg_info = self._scan_package(dst_path)
+        result = {
             "status": "installed",
             "package": pkg_info,
             "message": f"'{pkg_info.get('name', package_id)}' 패키지가 설치되었습니다."
         }
 
-    def uninstall_package(self, package_id: str, package_type: str = None) -> Dict[str, Any]:
-        """도구 패키지 제거"""
-        installed_path = INSTALLED_PATH / "tools" / package_id
+        # 경고가 있으면 추가
+        if validation and validation.get("warnings"):
+            result["warnings"] = validation["warnings"]
 
-        if not installed_path.exists():
+        return result
+
+    async def install_package_with_ai(self, package_id: str, api_key: str, provider: str = "google", model: str = None) -> Dict[str, Any]:
+        """
+        AI 기반 도구 패키지 설치
+
+        1. README.md 분석하여 설치 요구사항 파악
+        2. 필요한 라이브러리 설치 (pip install, npm install 등)
+        3. handler.py가 없으면 AI가 생성
+        4. tool.json이 없으면 AI가 생성
+        5. 설치 완료 후 검증
+        """
+        import subprocess
+
+        src_path = NOT_INSTALLED_PATH / "tools" / package_id
+        dst_path = INSTALLED_PATH / "tools" / package_id
+
+        if not src_path.exists():
+            raise ValueError(f"패키지를 찾을 수 없습니다: {package_id}")
+
+        if dst_path.exists():
+            raise ValueError(f"이미 설치된 패키지입니다: {package_id}")
+
+        # 1. 패키지 정보 수집
+        readme_content = ""
+        readme_path = src_path / "README.md"
+        if readme_path.exists():
+            readme_content = readme_path.read_text(encoding='utf-8')
+
+        tool_json_exists = (src_path / "tool.json").exists()
+        handler_exists = (src_path / "handler.py").exists()
+
+        files_info = {}
+        for f in src_path.iterdir():
+            if f.is_file() and not f.name.startswith('.'):
+                try:
+                    content = f.read_text(encoding='utf-8')
+                    if len(content) > 3000:
+                        content = content[:3000] + "\n... (truncated)"
+                    files_info[f.name] = content
+                except:
+                    files_info[f.name] = "(binary file)"
+
+        # 2. AI에게 설치 계획 요청
+        install_prompt = f"""IndieBiz OS 도구 패키지 '{package_id}'를 설치하려고 합니다.
+
+패키지 정보:
+- README.md: {readme_content or '(없음)'}
+- tool.json 존재: {tool_json_exists}
+- handler.py 존재: {handler_exists}
+
+파일 내용:
+{chr(10).join([f'=== {fname} ==={chr(10)}{content}' for fname, content in files_info.items()])}
+
+---
+
+이 패키지를 완전히 작동하도록 설치하려면 무엇이 필요한지 분석해주세요.
+
+다음 JSON 형식으로 응답해주세요:
+{{
+    "analysis": "패키지 분석 결과",
+    "pip_packages": ["설치할 pip 패키지 목록"],
+    "npm_packages": ["설치할 npm 패키지 목록"],
+    "system_requirements": ["필요한 시스템 요구사항 (예: node.js 설치 필요)"],
+    "generate_handler": true/false,
+    "handler_code": "handler.py가 없으면 생성할 코드 (execute 함수 포함)",
+    "generate_tool_json": true/false,
+    "tool_json": {{"name": "...", "description": "...", "input_schema": {{...}}}},
+    "installation_steps": ["설치 단계 설명"],
+    "warnings": ["주의사항"]
+}}"""
+
+        try:
+            if provider in ["google", "gemini"]:
+                ai_response = await self._analyze_with_gemini(install_prompt, api_key, model)
+            elif provider == "anthropic":
+                ai_response = await self._analyze_with_anthropic(install_prompt, api_key, model)
+            elif provider in ["openai", "gpt"]:
+                ai_response = await self._analyze_with_openai(install_prompt, api_key, model)
+            else:
+                raise ValueError(f"지원하지 않는 AI 프로바이더: {provider}")
+
+            # JSON 파싱
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', ai_response)
+            if not json_match:
+                raise ValueError("AI 응답을 파싱할 수 없습니다")
+
+            install_plan = json.loads(json_match.group())
+
+        except Exception as e:
+            raise ValueError(f"AI 분석 실패: {str(e)}")
+
+        # 3. 파일 복사
+        shutil.copytree(src_path, dst_path)
+
+        installation_log = []
+
+        # 4. pip 패키지 설치
+        pip_packages = install_plan.get("pip_packages", [])
+        if pip_packages:
+            installation_log.append(f"pip 패키지 설치: {', '.join(pip_packages)}")
+            try:
+                subprocess.run(
+                    ["pip3", "install"] + pip_packages,
+                    capture_output=True,
+                    text=True,
+                    timeout=120
+                )
+            except Exception as e:
+                installation_log.append(f"pip 설치 경고: {str(e)}")
+
+        # 5. handler.py 생성 (필요시)
+        if install_plan.get("generate_handler") and install_plan.get("handler_code"):
+            handler_path = dst_path / "handler.py"
+            if not handler_path.exists():
+                handler_path.write_text(install_plan["handler_code"], encoding='utf-8')
+                installation_log.append("handler.py 생성됨")
+
+        # 6. tool.json 생성 (필요시)
+        if install_plan.get("generate_tool_json") and install_plan.get("tool_json"):
+            tool_json_path = dst_path / "tool.json"
+            if not tool_json_path.exists():
+                with open(tool_json_path, 'w', encoding='utf-8') as f:
+                    json.dump(install_plan["tool_json"], f, ensure_ascii=False, indent=2)
+                installation_log.append("tool.json 생성됨")
+
+        # 7. 설치 후 검증
+        validation = validate_tool_package(dst_path)
+        if not validation["valid"]:
+            # 검증 실패 시 설치 롤백
+            shutil.rmtree(dst_path)
+            raise ValueError(f"패키지 검증 실패 (롤백됨): {'; '.join(validation['errors'])}")
+
+        if validation.get("warnings"):
+            installation_log.extend([f"경고: {w}" for w in validation["warnings"]])
+
+        # 8. 설치 기록 저장
+        install_info = {
+            "installed_at": datetime.now().isoformat(),
+            "from": str(src_path),
+            "ai_installed": True,
+            "provider": provider,
+            "pip_packages": pip_packages,
+            "installation_log": installation_log,
+            "ai_analysis": install_plan.get("analysis", ""),
+            "validation": validation
+        }
+        with open(dst_path / ".install_info.json", 'w', encoding='utf-8') as f:
+            json.dump(install_info, f, ensure_ascii=False, indent=2)
+
+        # inventory.md 업데이트
+        self._update_inventory()
+
+        pkg_info = self._scan_package(dst_path)
+        return {
+            "status": "installed",
+            "package": pkg_info,
+            "ai_installed": True,
+            "installation_log": installation_log,
+            "warnings": install_plan.get("warnings", []) + validation.get("warnings", []),
+            "message": f"'{pkg_info.get('name', package_id)}' 패키지가 AI에 의해 설치되었습니다."
+        }
+
+    def uninstall_package(self, package_id: str, package_type: str = None) -> Dict[str, Any]:
+        """도구 패키지 제거 (installed → not_installed로 이동)"""
+        src_path = INSTALLED_PATH / "tools" / package_id
+        dst_path = NOT_INSTALLED_PATH / "tools" / package_id
+
+        if not src_path.exists():
             raise ValueError(f"설치되지 않은 패키지입니다: {package_id}")
 
         # 이름 먼저 가져오기
-        pkg_info = self._scan_package(installed_path)
+        pkg_info = self._scan_package(src_path)
         pkg_name = pkg_info.get("name", package_id)
 
-        # 삭제
-        shutil.rmtree(installed_path)
+        # 설치 정보 파일 제거
+        install_info_path = src_path / ".install_info.json"
+        if install_info_path.exists():
+            install_info_path.unlink()
+
+        # 이동 (삭제가 아닌 이동)
+        shutil.move(str(src_path), str(dst_path))
 
         # inventory.md 자동 업데이트
         self._update_inventory()
@@ -484,11 +801,14 @@ README 존재: {basic_analysis['has_readme']}
         return response.choices[0].message.content
 
     async def _analyze_with_gemini(self, prompt: str, api_key: str, model: str = None) -> str:
-        """Google Gemini로 분석"""
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        gemini_model = genai.GenerativeModel(model_name=model or "gemini-2.0-flash-exp")
-        response = gemini_model.generate_content(prompt)
+        """Google Gemini로 분석 - google-genai 버전"""
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=model or "gemini-2.0-flash-exp",
+            contents=prompt
+        )
         return response.text
 
     # ============ 패키지 등록 ============
@@ -502,7 +822,7 @@ README 존재: {basic_analysis['has_readme']}
             raise ValueError("유효한 폴더가 아닙니다")
 
         pkg_id = folder.name
-        dst_path = AVAILABLE_PATH / "tools" / pkg_id
+        dst_path = NOT_INSTALLED_PATH / "tools" / pkg_id
 
         if dst_path.exists():
             raise ValueError(f"이미 등록된 패키지입니다: {pkg_id}")
@@ -535,7 +855,7 @@ README 존재: {basic_analysis['has_readme']}
 
     def remove_package(self, package_id: str, package_type: str = None) -> Dict[str, Any]:
         """패키지 제거 (available에서 삭제)"""
-        available_path = AVAILABLE_PATH / "tools" / package_id
+        available_path = NOT_INSTALLED_PATH / "tools" / package_id
         installed_path = INSTALLED_PATH / "tools" / package_id
 
         if not available_path.exists():
@@ -564,7 +884,7 @@ README 존재: {basic_analysis['has_readme']}
 
     def get_package_files(self, package_id: str, package_type: str = None) -> List[str]:
         """패키지 내 파일 목록"""
-        pkg_path = AVAILABLE_PATH / "tools" / package_id
+        pkg_path = NOT_INSTALLED_PATH / "tools" / package_id
         if not pkg_path.exists():
             return []
 
@@ -577,7 +897,7 @@ README 존재: {basic_analysis['has_readme']}
 
     def read_package_file(self, package_id: str, package_type: str, file_path: str) -> Optional[str]:
         """패키지 내 파일 읽기"""
-        pkg_path = AVAILABLE_PATH / "tools" / package_id
+        pkg_path = NOT_INSTALLED_PATH / "tools" / package_id
         full_path = pkg_path / file_path
 
         # 보안: 패키지 경로 밖으로 나가는 것 방지
@@ -597,7 +917,7 @@ README 존재: {basic_analysis['has_readme']}
     def update_package_metadata(self, package_id: str, package_type: str = None,
                                  name: str = None, description: str = None) -> Dict[str, Any]:
         """패키지 README.md 업데이트로 메타데이터 변경"""
-        pkg_path = AVAILABLE_PATH / "tools" / package_id
+        pkg_path = NOT_INSTALLED_PATH / "tools" / package_id
         if not pkg_path.exists():
             raise ValueError(f"패키지를 찾을 수 없습니다: {package_id}")
 

@@ -1,0 +1,20 @@
+{
+  "name": "pc-manager",
+  "description": "PC 저장소 관리 및 시스템 건강 상태 진단 도구",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["scan_storage", "check_health"],
+        "description": "수행할 작업: scan_storage (용량 분석), check_health (시스템 건강 진단)"
+      },
+      "path": {
+        "type": "string",
+        "description": "scan_storage 시 분석할 경로 (기본값: '.')",
+        "default": "."
+      }
+    },
+    "required": ["action"]
+  }
+}

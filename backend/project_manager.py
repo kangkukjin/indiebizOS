@@ -75,6 +75,15 @@ class ProjectManager:
         projects.append(project_info)
         self._save_projects_list(projects)
 
+        # 시스템 문서 업데이트 (inventory.md)
+        try:
+            from system_docs import update_inventory_projects, log_change
+            project_items = [p for p in projects if p.get("type") == "project"]
+            update_inventory_projects(project_items)
+            log_change("PROJECT_CREATED", f"{name} (ID: {name})")
+        except Exception as e:
+            print(f"[ProjectManager] 시스템 문서 업데이트 실패: {e}")
+
         return project_info
 
     def list_templates(self) -> list:
@@ -184,6 +193,16 @@ agents:
 
         projects = [p for p in projects if p["id"] != item_to_delete["id"]]
         self._save_projects_list(projects)
+
+        # 시스템 문서 업데이트 (inventory.md)
+        if item_to_delete.get("type") == "project":
+            try:
+                from system_docs import update_inventory_projects, log_change
+                project_items = [p for p in projects if p.get("type") == "project"]
+                update_inventory_projects(project_items)
+                log_change("PROJECT_DELETED", f"{name}")
+            except Exception as e:
+                print(f"[ProjectManager] 시스템 문서 업데이트 실패: {e}")
 
     def update_project_position(self, name: str, x: int, y: int):
         """프로젝트 아이콘 위치 업데이트"""
@@ -363,6 +382,16 @@ agents:
         projects[original_idx] = original
         self._save_projects_list(projects)
 
+        # 시스템 문서 업데이트 (inventory.md)
+        try:
+            from system_docs import update_inventory_projects, log_change
+            # 프로젝트만 필터링해서 업데이트
+            project_items = [p for p in projects if p.get("type") == "project"]
+            update_inventory_projects(project_items)
+            log_change("PROJECT_RENAMED", f"{old_name} -> {new_name}")
+        except Exception as e:
+            print(f"[ProjectManager] 시스템 문서 업데이트 실패: {e}")
+
         return original
 
     def copy_item(self, item_id: str, new_name: str = None, parent_folder: str = None) -> dict:
@@ -390,8 +419,12 @@ agents:
             if p["name"] == new_name and p.get("parent_folder") == parent_folder:
                 raise ValueError(f"같은 위치에 '{new_name}'이(가) 이미 존재합니다.")
 
+        # 아이콘 위치 오프셋 (복사본이 원본과 겹치지 않도록)
+        original_pos = original.get("icon_position", (100, 100))
+        offset_pos = (original_pos[0] + 30, original_pos[1] + 30)
+
         if original["type"] == "folder":
-            copied = self.create_folder(new_name, original.get("icon_position", (100, 100)), parent_folder)
+            copied = self.create_folder(new_name, offset_pos, parent_folder)
 
             folder_items = self.get_folder_items(item_id)
             for item in folder_items:
@@ -411,7 +444,7 @@ agents:
                 "type": "project",
                 "path": str(dst_path),
                 "created_at": datetime.now().isoformat(),
-                "icon_position": original.get("icon_position", (100, 100)),
+                "icon_position": offset_pos,
                 "parent_folder": parent_folder,
                 "last_opened": None
             }

@@ -1,50 +1,48 @@
 # IndieBiz OS 인벤토리
 
 ## 프로젝트
-- **1** (ID: 1) - 폴더 "임시" 안에 위치
+- **1** (ID: 1)
+- **하드웨어** (ID: 하드웨어)
+- **정보** (ID: 정보)
+- **하드웨어 사본** (ID: 하드웨어 사본)
+- **나의 신문사** (ID: 나의 신문사)
+- **Youtube** (ID: Youtube)
 
 ## 폴더
-- **임시** (ID: 임시)
+- (없음)
 
-## 도구 패키지 (Tools) - 17개
+## 도구 패키지 (Tools) - 13개
 에이전트가 사용할 수 있는 유틸리티
 
 | ID | 이름 | 설명 | 상태 |
 |----|------|------|------|
-| android | Android | 에이전트가 USB로 연결된 안드로이드 기기를 관리할 수 있게 합니다. | 미설치 |
-| blog | Blog | 에이전트가 네이버 블로그를 검색하고 분석할 수 있게 합니다. | 미설치 |
-| browser | Browser | 에이전트가 웹 브라우저를 조작할 수 있게 합니다. | 설치됨 |
-| browser-automation | Browser Automation | 에이전트가 실제 웹 브라우저를 자동화할 수 있게 합니다. 로그인이 필요한 작업 등에 사용. | 미설치 |
-| file-manager | File Manager | 파일 관리 기능을 제공합니다. | 미설치 |
-| file-ops | File Ops | 에이전트가 파일을 읽고 쓸 수 있게 합니다. | 설치됨 |
-| file-search | File Search | 에이전트가 파일을 검색할 수 있게 합니다. | 설치됨 |
-| image-generation | Image Generation | 이미지 생성 기능을 제공합니다. | 미설치 |
-| newspaper-magazine | Newspaper Magazine | 에이전트가 뉴스를 수집하여 신문이나 잡지 형태의 HTML 문서를 만들 수 있게 합니다. | 미설치 |
-| nodejs | Node.js | 에이전트가 Node.js 코드를 실행할 수 있게 합니다. | 미설치 |
-| pc-manager | PC Manager | 에이전트가 로컬 컴퓨터의 저장소를 분석하고 관리할 수 있게 합니다. | 미설치 |
-| python-exec | Python Exec | 에이전트가 Python 코드를 실행할 수 있게 합니다. | 설치됨 |
-| time | Time | 에이전트가 시간/날짜 관련 기능을 사용할 수 있게 합니다. | 설치됨 |
-| web-crawl | Web Crawl | 에이전트가 웹페이지 내용을 읽을 수 있게 합니다. | 미설치 |
-| web-request | Web Request | 에이전트가 HTTP 요청을 보낼 수 있게 합니다. | 설치됨 |
-| web-search | Web Search | AI 에이전트가 웹에서 정보를 검색할 수 있게 합니다. | 미설치 |
-| youtube | Youtube | 에이전트가 YouTube 동영상을 다루는 능력을 제공합니다. | 미설치 |
+| android | Android | 에이전트가 USB로 연결된 안드로이드 기기를 관리할 수 있게 합니다. | 설치됨 |
+| blog | Blog | 에이전트가 네이버 블로그를 검색하고 분석할 수 있게 합니다. | 설치됨 |
+| browser | Browser | 브라우저 기반 검색 도구 | 설치됨 |
+| browser-automation | Browser Automation | 에이전트가 실제 웹 브라우저를 조작할 수 있게 합니다. | 설치됨 |
+| information | Information & Publishing | API Ninjas, Amadeus 여행 정보 조회 및 IT 신문/잡지 생성 도구 모음 | 설치됨 |
+| nodejs | Nodejs | JavaScript/Node.js 코드 실행 | 설치됨 |
+| pc-manager | Pc Manager | 로컬 컴퓨터 파일 및 저장소 관리 | 설치됨 |
+| python-exec | Python Exec | Python 코드 실행 | 설치됨 |
+| system_essentials | System Essentials | 파일 관리 및 시스템 기본 유틸리티 | 설치됨 |
+| web-crawl | Web Crawl | 웹페이지 내용 크롤링 | 설치됨 |
+| web-request | Web Request | HTTP 웹 요청 도구 | 설치됨 |
+| web-search | Web Search | 웹 검색 엔진 연동 도구 | 설치됨 |
+| youtube | Youtube | 유튜브 동영상 및 오디오 관리 | 설치됨 |
 
 ## 템플릿
 - **기본** - 빈 프로젝트 템플릿
 - **프로젝트1** - 사용자 정의 템플릿
 
-## 스위치
-(아직 스위치가 없습니다)
-
 ## 에이전트 (프로젝트 1)
 
 | ID | 이름 | 역할 | 유형 |
 |----|------|------|------|
-| agent_001 | 집사 | 사용자의 지시를 받고 전문에이전트가 있는 경우 그 일을 위임. 최종 결과를 사용자에게 보고. | 외부 |
+| agent_001 | 집사 | 사용자의 지시를 받고 전문에이전트가 있는 경우 그 일을 위임. | 외부 |
 | agent_5df8bfe1 | 직원1 | 검색 및 정보 수집 | 외부 |
 | agent_3d88111a | 대장장이 | 프로그램 개발. 시스템 정비. 코딩. | 내부 |
 | agent_40f06472 | 출판 | 신문과 잡지 만들기. 블로그 보고서 만들기. | 내부 |
-| agent_900b7943 | 영상담당 | 유튜브 동영상의 음성 녹음. 유튜브 동영상의 내용 요약 만들기. | 내부 |
+| agent_900b7943 | 영상담당 | 유튜브 동영상의 음성 녹음. 요약 만들기. | 내부 |
 
 ---
-*마지막 업데이트: 2025-12-31*
+*마지막 업데이트: 2026-01-04 11:44*

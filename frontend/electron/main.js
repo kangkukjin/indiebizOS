@@ -67,11 +67,11 @@ async function startPythonBackend() {
 
     if (process.platform === 'win32') {
       // Windows: 임베디드 Python 사용
-      pythonPath = path.join(process.resourcesPath, 'python', 'python.exe');
+      pythonPath = path.join(process.resourcesPath, 'runtime', 'python', 'python.exe');
       pythonArgs = [path.join(backendPath, 'api.py')];
     } else if (process.platform === 'darwin') {
       // macOS: 시스템 Python 또는 번들된 Python
-      const bundledPython = path.join(process.resourcesPath, 'python', 'bin', 'python3');
+      const bundledPython = path.join(process.resourcesPath, 'runtime', 'python', 'bin', 'python3');
       const fs = require('fs');
       if (fs.existsSync(bundledPython)) {
         pythonPath = bundledPython;

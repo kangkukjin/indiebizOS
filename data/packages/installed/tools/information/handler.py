@@ -123,6 +123,8 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         title = tool_input.get("title", "IT Tech News")
         sections = [
             {"keyword": "Hacker News", "articles": fetch_rss("https://hnrss.org/frontpage", 5)},
+            {"keyword": "Reddit AI", "articles": fetch_rss("https://www.reddit.com/r/artificial/.rss", 5)},
+            {"keyword": "Ars Technica", "articles": fetch_rss("https://feeds.arstechnica.com/arstechnica/index", 5)},
             {"keyword": "TechCrunch", "articles": fetch_rss("https://techcrunch.com/feed/", 5)}
         ]
         template = Template(DEFAULT_TEMPLATE)

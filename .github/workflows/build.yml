@@ -1,0 +1,176 @@
+name: Build IndieBiz
+
+on:
+  push:
+    tags:
+      - 'v*'  # v1.0.0 같은 태그 푸시 시 빌드
+  workflow_dispatch:  # 수동 실행 가능
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Prepare Python Embedded
+        shell: powershell
+        run: |
+          # Python 임베디드 다운로드
+          $pythonVersion = "3.11.9"
+          $pythonUrl = "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-amd64.zip"
+          $runtimeDir = "runtime"
+          $pythonDir = "$runtimeDir/python"
+
+          New-Item -ItemType Directory -Force -Path $pythonDir
+
+          # 다운로드 및 압축 해제
+          Invoke-WebRequest -Uri $pythonUrl -OutFile "$runtimeDir/python-embed.zip"
+          Expand-Archive -Path "$runtimeDir/python-embed.zip" -DestinationPath $pythonDir -Force
+          Remove-Item "$runtimeDir/python-embed.zip"
+
+          # python311._pth 수정 (site-packages 활성화)
+          $pthContent = @"
+python311.zip
+.
+Lib\site-packages
+import site
+"@
+          Set-Content -Path "$pythonDir/python311._pth" -Value $pthContent
+
+          # pip 설치
+          Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "$runtimeDir/get-pip.py"
+          & "$pythonDir/python.exe" "$runtimeDir/get-pip.py" --no-warn-script-location
+          Remove-Item "$runtimeDir/get-pip.py"
+
+          # 패키지 설치
+          & "$pythonDir/python.exe" -m pip install -r backend/requirements-core.txt --target "$pythonDir/Lib/site-packages" --no-warn-script-location
+
+      - name: Prepare Node.js Embedded
+        shell: powershell
+        run: |
+          # Node.js 다운로드
+          $nodeVersion = "20.18.0"
+          $nodeUrl = "https://nodejs.org/dist/v$nodeVersion/node-v$nodeVersion-win-x64.zip"
+          $runtimeDir = "runtime"
+          $nodeDir = "$runtimeDir/node"
+
+          New-Item -ItemType Directory -Force -Path $nodeDir
+
+          # 다운로드 및 압축 해제
+          Invoke-WebRequest -Uri $nodeUrl -OutFile "$runtimeDir/node.zip"
+          Expand-Archive -Path "$runtimeDir/node.zip" -DestinationPath "$runtimeDir/node-temp" -Force
+
+          # 내부 폴더를 node로 이동
+          Move-Item -Path "$runtimeDir/node-temp/node-v$nodeVersion-win-x64/*" -Destination $nodeDir -Force
+          Remove-Item "$runtimeDir/node-temp" -Recurse -Force
+          Remove-Item "$runtimeDir/node.zip"
+
+      - name: Install Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Windows
+        working-directory: frontend
+        run: npm run electron:build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IndieBiz-Windows
+          path: frontend/release/*.exe
+
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Prepare Python Standalone
+        run: |
+          # Python standalone 다운로드 (python-build-standalone)
+          PYTHON_VERSION="3.11.9"
+          PYTHON_BUILD="20240415"
+          RUNTIME_DIR="runtime"
+          PYTHON_DIR="$RUNTIME_DIR/python"
+
+          mkdir -p $PYTHON_DIR
+
+          # macOS용 standalone Python (ARM64 + x64 둘 다 지원하려면 universal2 필요)
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "arm64" ]; then
+            PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/$PYTHON_BUILD/cpython-${PYTHON_VERSION}+${PYTHON_BUILD}-aarch64-apple-darwin-install_only.tar.gz"
+          else
+            PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/$PYTHON_BUILD/cpython-${PYTHON_VERSION}+${PYTHON_BUILD}-x86_64-apple-darwin-install_only.tar.gz"
+          fi
+
+          curl -L -o $RUNTIME_DIR/python.tar.gz $PYTHON_URL
+          tar -xzf $RUNTIME_DIR/python.tar.gz -C $RUNTIME_DIR
+          mv $RUNTIME_DIR/python/* $PYTHON_DIR/ || true
+          rm -rf $RUNTIME_DIR/python.tar.gz
+
+          # pip로 패키지 설치
+          $PYTHON_DIR/bin/python3 -m pip install -r backend/requirements-core.txt
+
+      - name: Prepare Node.js Embedded
+        run: |
+          # Node.js 다운로드
+          NODE_VERSION="20.18.0"
+          RUNTIME_DIR="runtime"
+          NODE_DIR="$RUNTIME_DIR/node"
+
+          mkdir -p $NODE_DIR
+
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "arm64" ]; then
+            NODE_URL="https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-darwin-arm64.tar.gz"
+          else
+            NODE_URL="https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-darwin-x64.tar.gz"
+          fi
+
+          curl -L -o $RUNTIME_DIR/node.tar.gz $NODE_URL
+          tar -xzf $RUNTIME_DIR/node.tar.gz -C $RUNTIME_DIR
+          mv $RUNTIME_DIR/node-v$NODE_VERSION-darwin-*/* $NODE_DIR/
+          rm -rf $RUNTIME_DIR/node.tar.gz $RUNTIME_DIR/node-v$NODE_VERSION-darwin-*
+
+      - name: Install Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build macOS
+        working-directory: frontend
+        run: npm run electron:build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: IndieBiz-macOS
+          path: |
+            frontend/release/*.dmg
+            frontend/release/*.zip

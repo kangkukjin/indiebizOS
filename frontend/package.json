@@ -6,7 +6,7 @@
   "author": "nicekukjin",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nicekukjin/indiebizOS.git"
+    "url": "https://github.com/kangkukjin/indiebizOS.git"
   },
   "private": true,
   "type": "module",
@@ -107,7 +107,6 @@
     ],
     "mac": {
       "category": "public.app-category.productivity",
-      "icon": "public/icon.icns",
       "target": [
         "dmg",
         "zip"
@@ -124,7 +123,6 @@
       ]
     },
     "win": {
-      "icon": "public/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -145,15 +143,11 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "public/icon.ico",
-      "uninstallerIcon": "public/icon.ico",
-      "installerHeaderIcon": "public/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "IndieBiz"
     },
     "linux": {
-      "icon": "public/icon.png",
       "target": [
         "AppImage",
         "deb"

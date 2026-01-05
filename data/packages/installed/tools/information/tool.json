@@ -66,7 +66,7 @@
   },
   {
     "name": "generate_it_newspaper",
-    "description": "GeekNews(국내), Hacker News(해외), Reddit AI의 최신 트렌드를 모아 전문 IT 신문을 생성합니다.",
+    "description": "Hacker News, Reddit AI, Ars Technica, TechCrunch의 최신 IT 트렌드를 모아 전문 IT 신문을 생성합니다.",
     "input_schema": {
       "type": "object",
       "properties": {

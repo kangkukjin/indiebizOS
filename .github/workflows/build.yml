@@ -6,6 +6,9 @@ on:
       - 'v*'  # v1.0.0 같은 태그 푸시 시 빌드
   workflow_dispatch:  # 수동 실행 가능
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest

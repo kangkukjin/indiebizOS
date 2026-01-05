@@ -41,13 +41,7 @@ jobs:
           Remove-Item "$runtimeDir/python-embed.zip"
 
           # python311._pth 수정 (site-packages 활성화)
-          $pthContent = @"
-python311.zip
-.
-Lib\site-packages
-import site
-"@
-          Set-Content -Path "$pythonDir/python311._pth" -Value $pthContent
+          @("python311.zip", ".", "Lib\site-packages", "import site") | Set-Content -Path "$pythonDir/python311._pth"
 
           # pip 설치
           Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "$runtimeDir/get-pip.py"

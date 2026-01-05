@@ -71,6 +71,13 @@ jobs:
           Remove-Item "$runtimeDir/node-temp" -Recurse -Force
           Remove-Item "$runtimeDir/node.zip"
 
+      - name: Create Required Directories
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path "projects"
+          New-Item -ItemType Directory -Force -Path "tokens"
+          New-Item -ItemType Directory -Force -Path "templates"
+
       - name: Install Dependencies
         working-directory: frontend
         run: npm install
@@ -150,6 +157,12 @@ jobs:
           tar -xzf $RUNTIME_DIR/node.tar.gz -C $RUNTIME_DIR
           mv $RUNTIME_DIR/node-v$NODE_VERSION-darwin-*/* $NODE_DIR/
           rm -rf $RUNTIME_DIR/node.tar.gz $RUNTIME_DIR/node-v$NODE_VERSION-darwin-*
+
+      - name: Create Required Directories
+        run: |
+          mkdir -p projects
+          mkdir -p tokens
+          mkdir -p templates
 
       - name: Install Dependencies
         working-directory: frontend

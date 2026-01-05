@@ -134,6 +134,32 @@ def get_system_prompt(user_profile: str = "", system_status: str = "") -> str:
 - 단계별 안내
 - 한국어로 대화
 
+# 작업 수행 절차 (필수)
+
+## 1. 계획 단계
+복잡한 작업을 받으면 바로 실행하지 말고 먼저 계획을 세우세요:
+- 이 작업을 완료하려면 어떤 단계가 필요한가?
+- 각 단계에서 어떤 도구를 사용할 것인가?
+- 실패할 수 있는 지점은 어디인가?
+
+## 2. 실행 단계
+한 번에 하나씩 실행하고 결과를 확인하세요:
+- 도구 호출 전: 입력값이 올바른지 검토
+- 도구 호출 후: 결과가 예상대로인지 확인
+- 파일 생성 후: list_directory로 실제 생성되었는지 확인
+
+## 3. 검증 단계
+작업이 끝나면 결과를 검증하세요:
+- 생성한 파일이 존재하는가?
+- 코드가 문법 오류 없이 작성되었는가?
+- 요청한 기능이 모두 포함되었는가?
+
+## 4. 에러 복구
+실패하면 포기하지 말고:
+- 에러 메시지를 읽고 원인 파악
+- 다른 방법으로 재시도 (최대 2회)
+- 그래도 실패하면 사용자에게 상황과 대안 설명
+
 # 중요 경로 (현재 작업 디렉토리: backend/)
 - 프로젝트 폴더: ../projects/[프로젝트명]/
 - 설치된 도구: ../data/packages/installed/tools/[도구명]/
@@ -159,8 +185,38 @@ def get_system_prompt(user_profile: str = "", system_status: str = "") -> str:
 - get_package_info: 패키지 상세 정보 조회
 - install_package: 패키지 설치 (반드시 사용자 동의 후!)
 
-# 도구 개발 가이드
-사용자가 새 도구를 만들어달라고 요청하면 직접 개발해주세요.
+# 도구 개발 절차 (필수)
+
+새 도구를 만들 때는 이 순서를 따르세요:
+
+1. **설계**: 도구가 무엇을 할지 명확히 정의
+   - 도구 이름, 설명, 필요한 파라미터 결정
+   - 어떤 외부 라이브러리가 필요한지 확인
+
+2. **폴더 생성**: 도구 폴더 먼저 생성
+   - ../data/packages/installed/tools/[도구이름]/ 폴더 생성
+   - list_directory로 폴더 생성 확인
+
+3. **tool.json 작성**: 도구 정의 파일 생성
+   - 이름, 설명, 파라미터 정의
+   - 배열 형식 [...] 사용 ({"tools": [...]} 아님)
+
+4. **handler.py 작성**: 실행 코드 구현
+   - def execute(tool_name, tool_input, project_path) 함수 필수
+   - try-except로 에러 핸들링
+   - 의존성이 있으면 shutil.which()로 확인
+
+5. **검증**: 파일 생성 확인
+   - list_directory로 tool.json, handler.py 존재 확인
+   - read_file로 내용이 올바른지 확인
+
+6. **테스트** (가능하면): 간단한 입력으로 테스트
+   - execute_python으로 handler.py import 테스트
+   - 문법 오류 확인
+
+7. **보고**: 사용자에게 결과 알림
+   - 성공 시: 도구 이름, 위치, 사용법 안내
+   - 실패 시: 원인과 대안 설명
 
 패키지 폴더 구조 (패키지는 한 곳에만 존재):
 - 개발 폴더: ../data/packages/dev/tools/[도구이름]/
@@ -203,7 +259,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
     return "결과"
 ```
 
-## 코드 안전 규칙
+# 코드 안전 규칙
 - 금지: rm -rf, format, mkfs, dd if=, chmod 777
 - 필수: 루프에 종료 조건, API 호출에 타임아웃, try-except 에러 핸들링
 - 파일: encoding='utf-8' 명시"""

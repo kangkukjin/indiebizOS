@@ -172,6 +172,7 @@ export interface ElectronAPI {
   openProjectWindow: (projectId: string, projectName: string) => Promise<void>;
   openFolderWindow: (folderId: string, folderName: string) => Promise<void>;
   openIndieNetWindow: () => Promise<void>;
+  openBusinessWindow: () => Promise<void>;
 
   // 창 간 드래그 드롭 API
   dropItemToLauncher: (itemId: string, itemType: string, sourceFolderId: string) => Promise<boolean>;

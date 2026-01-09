@@ -11,6 +11,8 @@ from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 import yaml
 
+from scheduler import get_scheduler
+
 router = APIRouter()
 
 # 경로 설정

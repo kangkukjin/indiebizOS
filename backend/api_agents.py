@@ -181,12 +181,35 @@ async def cancel_all_agents(project_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/projects/{project_id}/stop_all")
+async def stop_all_agents(project_id: str):
+    """프로젝트의 모든 에이전트 완전 중지 (프로젝트 전환 시 사용)"""
+    try:
+        stopped = []
+
+        if project_id in agent_runners:
+            for agent_id, runner_info in list(agent_runners[project_id].items()):
+                runner = runner_info.get("runner")
+                if runner:
+                    agent_name = runner.config.get('name', agent_id)
+                    runner.stop()  # cancel()이 아닌 stop()으로 완전 중지
+                    stopped.append({"agent_id": agent_id, "name": agent_name})
+                    print(f"[에이전트 중지] {agent_name}")
+
+            del agent_runners[project_id]
+
+        return {"status": "stopped", "stopped_agents": stopped}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============ 에이전트 명령 ============
 
 @router.post("/projects/{project_id}/agents/{agent_id}/command")
 async def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
     """에이전트에게 명령 전송"""
     from conversation_db import ConversationDB
+    from thread_context import set_current_agent_id, set_current_agent_name, clear_all_context
 
     try:
         # 에이전트 실행 중인지 확인
@@ -201,6 +224,10 @@ async def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
 
         project_path = project_manager.get_project_path(project_id)
         agent_name = runner.config.get("name", agent_id)
+
+        # 스레드 컨텍스트 설정 (call_agent 등에서 발신자 정보로 사용)
+        set_current_agent_id(agent_id)
+        set_current_agent_name(agent_name)
 
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
@@ -226,12 +253,17 @@ async def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
         # AI 응답 저장
         db.save_message(target_agent_id, user_id, response)
 
+        # 컨텍스트 정리
+        clear_all_context()
+
         return {"response": response}
     except HTTPException:
+        clear_all_context()
         raise
     except Exception as e:
         import traceback
         traceback.print_exc()
+        clear_all_context()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -403,6 +435,41 @@ async def create_agent(project_id: str, agent_data: AgentUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class RoleDescriptions(BaseModel):
+    descriptions: dict
+
+
+@router.put("/projects/{project_id}/agents/role-descriptions")
+async def update_role_descriptions(project_id: str, data: RoleDescriptions):
+    """에이전트 역할 설명 일괄 업데이트"""
+    try:
+        project_path = project_manager.get_project_path(project_id)
+        agents_file = project_path / "agents.yaml"
+
+        if not agents_file.exists():
+            raise HTTPException(status_code=404, detail="에이전트 설정을 찾을 수 없습니다.")
+
+        with open(agents_file, 'r', encoding='utf-8') as f:
+            yaml_data = yaml.safe_load(f)
+
+        updated_agents = []
+        for agent in yaml_data.get("agents", []):
+            agent_name = agent.get("name")
+            if agent_name in data.descriptions:
+                agent["role_description"] = data.descriptions[agent_name]
+                updated_agents.append(agent_name)
+
+        with open(agents_file, 'w', encoding='utf-8') as f:
+            yaml.dump(yaml_data, f, allow_unicode=True, default_flow_style=False)
+
+        return {"status": "updated", "updated_agents": updated_agents}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.put("/projects/{project_id}/agents/{agent_id}")
 async def update_agent(project_id: str, agent_id: str, agent_data: AgentUpdate):
     """에이전트 업데이트"""
@@ -460,41 +527,6 @@ async def update_agent(project_id: str, agent_id: str, agent_data: AgentUpdate):
             yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
 
         return {"status": "updated", "agent_id": agent_id}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-class RoleDescriptions(BaseModel):
-    descriptions: dict
-
-
-@router.put("/projects/{project_id}/agents/role-descriptions")
-async def update_role_descriptions(project_id: str, data: RoleDescriptions):
-    """에이전트 역할 설명 일괄 업데이트"""
-    try:
-        project_path = project_manager.get_project_path(project_id)
-        agents_file = project_path / "agents.yaml"
-
-        if not agents_file.exists():
-            raise HTTPException(status_code=404, detail="에이전트 설정을 찾을 수 없습니다.")
-
-        with open(agents_file, 'r', encoding='utf-8') as f:
-            yaml_data = yaml.safe_load(f)
-
-        updated_agents = []
-        for agent in yaml_data.get("agents", []):
-            agent_name = agent.get("name")
-            if agent_name in data.descriptions:
-                agent["role_description"] = data.descriptions[agent_name]
-                updated_agents.append(agent_name)
-
-        with open(agents_file, 'w', encoding='utf-8') as f:
-            yaml.dump(yaml_data, f, allow_unicode=True, default_flow_style=False)
-
-        return {"status": "updated", "updated_agents": updated_agents}
 
     except HTTPException:
         raise

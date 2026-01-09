@@ -4,6 +4,14 @@ data/system_ai_memory.db
 data/switches.json
 tokens/
 
+# 개인정보 파일
+data/my_profile.txt
+data/business.db
+data/outputs/
+
+# 백엔드 데이터 (개인정보 포함)
+backend/data/
+
 # 개인 프로젝트 데이터 (API 키, 이메일 포함)
 projects/
 
@@ -17,6 +25,9 @@ data/packages/installed/tools/pc-manager/
 data/packages/available/tools/blog/
 data/packages/available/tools/android/
 data/packages/available/tools/pc-manager/
+
+# 출력 결과물
+outputs/
 
 # Python
 __pycache__/

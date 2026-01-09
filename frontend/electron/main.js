@@ -21,6 +21,7 @@ let mainWindow = null;
 let projectWindows = new Map(); // 프로젝트 창 관리
 let folderWindows = new Map(); // 폴더 창 관리
 let indieNetWindow = null; // IndieNet 창
+let businessWindow = null; // 비즈니스 관리 창
 
 // API 포트
 const API_PORT = 8765;
@@ -253,6 +254,14 @@ function createProjectWindow(projectId, projectName) {
   projectWindows.set(projectId, projectWindow);
 
   projectWindow.on('closed', () => {
+    // 프로젝트 창 닫을 때 해당 프로젝트의 모든 에이전트 중지
+    fetch(`http://localhost:${API_PORT}/projects/${projectId}/stop_all`, {
+      method: 'POST'
+    }).then(() => {
+      console.log(`[Electron] 프로젝트 ${projectId} 에이전트 중지됨`);
+    }).catch(err => {
+      console.warn(`[Electron] 에이전트 중지 실패: ${err.message}`);
+    });
     projectWindows.delete(projectId);
   });
 
@@ -375,6 +384,60 @@ function createIndieNetWindow() {
 }
 
 /**
+ * 비즈니스 관리 창 생성
+ */
+function createBusinessWindow() {
+  // 이미 열려있으면 포커스
+  if (businessWindow && !businessWindow.isDestroyed()) {
+    businessWindow.focus();
+    return;
+  }
+
+  businessWindow = new BrowserWindow({
+    width: 1100,
+    height: 700,
+    minWidth: 800,
+    minHeight: 500,
+    title: '비즈니스 관리',
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 15, y: 15 },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  if (isDev) {
+    businessWindow.loadURL('http://localhost:5173/#/business');
+  } else {
+    businessWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
+      hash: '/business'
+    });
+  }
+
+  // 외부 링크는 기본 브라우저에서 열기
+  businessWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  // 페이지 내 링크 클릭도 처리
+  businessWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  businessWindow.on('closed', () => {
+    businessWindow = null;
+  });
+
+  return businessWindow;
+}
+
+/**
  * IPC 핸들러 등록
  */
 function setupIPC() {
@@ -406,6 +469,11 @@ function setupIPC() {
   // IndieNet 창 열기
   ipcMain.handle('open-indienet-window', () => {
     createIndieNetWindow();
+  });
+
+  // 비즈니스 관리 창 열기
+  ipcMain.handle('open-business-window', () => {
+    createBusinessWindow();
   });
 
   // 폴더에서 아이템을 밖으로 드래그할 때 (런처에 드롭)

@@ -3,17 +3,34 @@ agent_runner.py - 에이전트 실행 엔진
 IndieBiz OS Core
 
 에이전트를 백그라운드에서 실행하고 AI 대화를 처리합니다.
+비동기 메시지 큐를 통한 에이전트 간 통신 및 위임 체인을 지원합니다.
 """
 
+import json
+import re
 import threading
+import uuid
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from ai_agent import AIAgent
+from conversation_db import ConversationDB, HISTORY_LIMIT_AGENT
+from thread_context import (
+    set_current_agent_id, set_current_agent_name,
+    get_current_agent_id, get_current_agent_name,
+    set_current_task_id, get_current_task_id, clear_current_task_id,
+    set_called_agent, did_call_agent, clear_called_agent
+)
 
 
 class AgentRunner:
-    """에이전트 실행기"""
+    """에이전트 실행기 - 비동기 메시지 큐 및 위임 체인 지원"""
+
+    # 클래스 변수 (모든 인스턴스가 공유)
+    internal_messages: Dict[str, List[dict]] = {}  # agent_id -> [메시지 dict]
+    agent_registry: Dict[str, 'AgentRunner'] = {}  # agent_id -> AgentRunner 인스턴스
+    _lock = threading.Lock()  # 스레드 안전성을 위한 Lock
 
     def __init__(self, agent_config: dict, common_config: dict = None):
         self.config = agent_config
@@ -26,9 +43,29 @@ class AgentRunner:
         # AI 에이전트
         self.ai: Optional[AIAgent] = None
 
+        # 채널 관리 (외부 에이전트용)
+        self.channels: List = []
+        self.processed_ids: set = set()
+
         # 프로젝트 정보
         self.project_path = Path(agent_config.get("_project_path", "."))
         self.project_id = agent_config.get("_project_id", "")
+
+        # 대화 DB
+        db_path = self.project_path / "conversations.db"
+        self.db = ConversationDB(str(db_path))
+
+        # 레지스트리에 등록 (스레드 안전)
+        # 키 형식: {project_id}:{agent_id} - 프로젝트 간 충돌 방지
+        agent_id = agent_config.get("id")
+        if agent_id:
+            registry_key = f"{self.project_id}:{agent_id}" if self.project_id else agent_id
+            self.registry_key = registry_key  # stop()에서 사용
+            with AgentRunner._lock:
+                AgentRunner.agent_registry[registry_key] = self
+                if registry_key not in AgentRunner.internal_messages:
+                    AgentRunner.internal_messages[registry_key] = []
+            print(f"[AgentRunner] {agent_config.get('name')} 레지스트리 등록됨 (key: {registry_key})")
 
     def start(self):
         """에이전트 시작"""
@@ -41,7 +78,7 @@ class AgentRunner:
         # AI 에이전트 초기화
         self._init_ai()
 
-        # 백그라운드 스레드 시작 (채널 폴링 등)
+        # 백그라운드 스레드 시작 (내부 메시지 폴링)
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
 
@@ -55,6 +92,15 @@ class AgentRunner:
         if self.thread:
             self.thread.join(timeout=5)
 
+        # 레지스트리에서 제거
+        registry_key = getattr(self, 'registry_key', None)
+        if registry_key:
+            with AgentRunner._lock:
+                if registry_key in AgentRunner.agent_registry:
+                    del AgentRunner.agent_registry[registry_key]
+                if registry_key in AgentRunner.internal_messages:
+                    del AgentRunner.internal_messages[registry_key]
+
         print(f"[AgentRunner] {self.config.get('name')} 중지됨")
 
     def cancel(self):
@@ -65,6 +111,7 @@ class AgentRunner:
         """AI 에이전트 초기화"""
         ai_config = self.config.get("ai", {})
         agent_name = self.config.get("name", "에이전트")
+        agent_id = self.config.get("id")
 
         # 역할 로드
         role_file = self.project_path / f"agent_{agent_name}_role.txt"
@@ -80,6 +127,7 @@ class AgentRunner:
             ai_config=ai_config,
             system_prompt=system_prompt,
             agent_name=agent_name,
+            agent_id=agent_id,
             project_path=str(self.project_path)
         )
 
@@ -108,16 +156,740 @@ class AgentRunner:
 
         return "\n".join(parts)
 
+    def _setup_channels(self) -> List:
+        """
+        채널 설정 (외부 에이전트용)
+        Returns:
+            list: Channel 인스턴스 리스트
+        """
+        from channels import get_channel
+
+        channels = []
+        agent_config = self.config
+
+        # 방법 1: 단일 채널 (기존 호환)
+        if 'channel' in agent_config:
+            channel_type = agent_config['channel']
+            channel_config = agent_config.get(channel_type, {}).copy()
+
+            # 에이전트의 email 정보 추가
+            if 'email' in agent_config:
+                channel_config['email'] = agent_config['email']
+
+            try:
+                ch = get_channel(channel_type, channel_config)
+                channels.append(ch)
+                self._log(f"채널 로드: {channel_type}")
+            except Exception as e:
+                self._log(f"채널 로드 실패 ({channel_type}): {e}")
+
+        # 방법 2: 멀티 채널
+        elif 'channels' in agent_config:
+            for ch_cfg in agent_config['channels']:
+                try:
+                    ch = get_channel(ch_cfg['type'], ch_cfg)
+                    channels.append(ch)
+                    self._log(f"채널 로드: {ch_cfg['type']}")
+                except Exception as e:
+                    self._log(f"채널 로드 실패: {e}")
+
+        return channels
+
+    def _log(self, message: str):
+        """로그 출력"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        agent_name = self.config.get('name', '?')
+        print(f"[{timestamp}] [{agent_name}] {message}")
+
     def _run_loop(self):
-        """백그라운드 루프 (채널 폴링 등)"""
+        """백그라운드 루프 (내부 메시지 + 외부 채널 폴링)"""
         import time
+
+        # 스레드별 에이전트 컨텍스트 설정
+        set_current_agent_id(self.config.get("id"))
+        set_current_agent_name(self.config.get("name"))
+
+        # 에이전트 타입 확인
+        agent_type = self.config.get('type', 'internal')
+
+        # 외부 에이전트만 채널 초기화
+        if agent_type == 'external':
+            self.channels = self._setup_channels()
+
+            if not self.channels:
+                self._log("채널 없음 - 내부 메시지만 처리")
+            else:
+                self._log(f"채널 설정 완료: {[ch.__class__.__name__ for ch in self.channels]}")
+
+                # 모든 채널 인증 및 실시간 채널 설정
+                for channel in self.channels:
+                    try:
+                        if channel.authenticate():
+                            info = channel.get_channel_info()
+                            self._log(f"채널 연결: {info.get('type', 'unknown')} - {info.get('account', 'unknown')}")
+
+                            # 실시간 채널이면 콜백 등록 및 리스닝 시작
+                            if channel.is_realtime():
+                                callback = self._make_channel_callback(channel)
+                                channel.register_callback(callback)
+                                channel.start_listening()
+                                self._log(f"실시간 채널 활성화: {info.get('type', 'unknown')}")
+                        else:
+                            self._log(f"채널 인증 실패: {channel.__class__.__name__}")
+                    except Exception as e:
+                        import traceback
+                        self._log(f"채널 인증 오류: {e}")
+                        traceback.print_exc()
+
+                # 외부 에이전트는 채널을 AI에게 전달
+                if self.ai:
+                    for channel in self.channels:
+                        if channel.__class__.__name__ == 'GmailChannel':
+                            self.ai.gmail = channel.client
+                            self._log("Gmail 채널 AI 연결")
+                        elif channel.__class__.__name__ == 'NostrChannel':
+                            self.ai.nostr = channel
+                            self._log("Nostr 채널 AI 연결")
+
+        polling_interval = self.common_config.get('polling_interval', 10)
 
         while self.running and not self.cancel_event.is_set():
             try:
-                # TODO: 채널(이메일, Nostr 등) 폴링
-                # 현재는 단순 대기
-                time.sleep(1)
+                # 1. 내부 메시지 확인
+                self._check_internal_messages()
+
+                # 2. 폴링 채널 확인 (외부 에이전트, 실시간 채널은 콜백으로 처리됨)
+                if agent_type == 'external':
+                    for channel in self.channels:
+                        if not channel.is_realtime():
+                            try:
+                                messages = channel.poll_messages(max_count=5)
+                                for msg in messages:
+                                    msg_id = msg.get('id', '')
+                                    if msg_id and msg_id not in self.processed_ids:
+                                        self.processed_ids.add(msg_id)
+
+                                        # 읽음 표시
+                                        try:
+                                            channel.mark_as_read(msg_id)
+                                        except Exception as e:
+                                            self._log(f"읽음 표시 실패: {e}")
+
+                                        # 메시지 처리
+                                        self._process_channel_message(channel, msg)
+                            except Exception as e:
+                                self._log(f"채널 폴링 오류 ({channel.__class__.__name__}): {e}")
+
+                # 대기 (1초마다 내부 메시지 확인)
+                for _ in range(polling_interval):
+                    if not self.running or self.cancel_event.is_set():
+                        break
+                    time.sleep(1)
+                    self._check_internal_messages()
 
             except Exception as e:
-                print(f"[AgentRunner] 루프 에러: {e}")
+                self._log(f"루프 에러: {e}")
+                import traceback
+                traceback.print_exc()
                 time.sleep(5)
+
+        # 종료 시 실시간 채널 리스닝 중지
+        for channel in self.channels:
+            if channel.is_realtime():
+                channel.stop_listening()
+
+    def _make_channel_callback(self, channel):
+        """채널별 콜백 함수 생성 (클로저 문제 해결)"""
+        def callback(msg):
+            self._process_channel_message(channel, msg)
+        return callback
+
+    def _process_channel_message(self, channel, msg):
+        """외부 채널에서 받은 메시지 처리"""
+        import time as time_module
+
+        subject = msg.get('subject', '(제목 없음)')
+        from_addr = msg.get('from', '')
+        content = msg.get('body', '')
+
+        # 시스템 메시지 필터링
+        system_senders = ['mailer-daemon@', 'postmaster@', 'noreply@', 'no-reply@']
+        if any(sender in from_addr.lower() for sender in system_senders):
+            self._log(f"시스템 메시지 무시: {subject}")
+            return
+
+        self._log(f"새 메시지: {subject} (from: {from_addr})")
+
+        try:
+            # 채널 타입 파악
+            channel_type = channel.__class__.__name__
+            if 'Gmail' in channel_type:
+                contact_type = 'gmail'
+                reply_to = from_addr
+            elif 'Nostr' in channel_type:
+                contact_type = 'nostr'
+                reply_to = from_addr
+            else:
+                contact_type = 'unknown'
+                reply_to = from_addr
+
+            # 태스크 생성
+            task_id = f"task_{uuid.uuid4().hex[:8]}"
+            requester_info = f"{from_addr}@{contact_type}"
+
+            try:
+                self.db.create_task(
+                    task_id=task_id,
+                    requester=requester_info,
+                    requester_channel=contact_type,
+                    original_request=content,
+                    delegated_to=self.config.get('name', '')
+                )
+                self._log(f"[외부채널] task 생성: {task_id}")
+            except Exception as task_err:
+                self._log(f"[외부채널] task 생성 실패: {task_err}")
+
+            set_current_task_id(task_id)
+            clear_called_agent()
+
+            # AI 처리
+            if self.ai:
+                start_time = time_module.time()
+                response = self.ai.process_message_with_history(
+                    message_content=content,
+                    from_email=from_addr,
+                    history=[],
+                    reply_to=reply_to,
+                    task_id=task_id
+                )
+                process_time = time_module.time() - start_time
+                self._log(f"AI 응답 생성 ({process_time:.1f}초): {len(response)}자")
+
+                # call_agent 호출 여부 확인
+                called_another = did_call_agent()
+
+                if not called_another:
+                    # 직접 처리 완료 → 채널로 응답 전송
+                    try:
+                        channel.send_message(
+                            to=reply_to,
+                            subject=f"Re: {subject}",
+                            body=response
+                        )
+                        self._log(f"응답 전송 완료 → {reply_to}")
+
+                        # 태스크 완료
+                        self.db.complete_task(task_id, response[:500])
+                    except Exception as send_err:
+                        self._log(f"응답 전송 실패: {send_err}")
+                else:
+                    self._log("call_agent 호출됨 - 위임 결과 대기")
+
+            # 컨텍스트 정리
+            clear_current_task_id()
+            clear_called_agent()
+
+        except Exception as e:
+            import traceback
+            self._log(f"채널 메시지 처리 실패: {e}")
+            traceback.print_exc()
+
+    def _check_internal_messages(self):
+        """내부 메시지 확인 및 처리"""
+        my_key = getattr(self, 'registry_key', None)
+        my_name = self.config.get('name')
+        if not my_key:
+            return
+
+        # 스레드 안전하게 메시지 가져오기
+        with AgentRunner._lock:
+            messages = AgentRunner.internal_messages.get(my_key, [])
+            if not messages:
+                return
+            msg_dict = messages.pop(0)
+
+        while msg_dict:
+            if not isinstance(msg_dict, dict):
+                print(f"[AgentRunner] {my_name} 경고: 유효하지 않은 메시지 - 건너뛰기")
+                continue
+
+            try:
+                from_agent = msg_dict.get('from_agent', 'unknown')
+                content = msg_dict.get('content', '')
+                task_id = msg_dict.get('task_id')
+
+                print(f"[AgentRunner] {my_name} 내부 메시지 수신: {from_agent}로부터")
+                print(f"   내용: {content[:100]}..." if len(content) > 100 else f"   내용: {content}")
+
+                # 태스크 ID 설정 (메시지에서 추출 또는 전달받은 것 사용)
+                extracted_task_id = task_id
+                if not extracted_task_id:
+                    task_match = re.search(r'\[task:([^\]]+)\]', content)
+                    if task_match:
+                        extracted_task_id = task_match.group(1)
+
+                if extracted_task_id:
+                    set_current_task_id(extracted_task_id)
+                    print(f"   [task_id] {extracted_task_id}")
+
+                # call_agent 호출 플래그 초기화
+                clear_called_agent()
+
+                # 위임 컨텍스트 복원 (보고 메시지인 경우)
+                delegation_context = None
+                is_report_message = any(keyword in content for keyword in ['완료', '보고', '결과'])
+
+                if is_report_message and extracted_task_id:
+                    task = self.db.get_task(extracted_task_id)
+                    if task and task.get('delegation_context'):
+                        try:
+                            delegation_context = json.loads(task['delegation_context'])
+                            # 새 형식 (delegations 배열)
+                            if 'delegations' in delegation_context:
+                                delegations = delegation_context.get('delegations', [])
+                                print(f"   [위임 컨텍스트 복원] {len(delegations)}개 위임의 결과 수신")
+                            else:
+                                # 구 형식
+                                print(f"   [위임 컨텍스트 복원] {delegation_context.get('delegated_to', '?')}의 결과 수신")
+                        except json.JSONDecodeError:
+                            print(f"   [위임 컨텍스트] JSON 파싱 실패")
+
+                # AI 처리
+                if self.ai:
+                    # 위임 컨텍스트가 있으면 메시지에 컨텍스트 리마인더 추가
+                    ai_message = content
+                    if delegation_context:
+                        # 새 형식 (delegations 배열) vs 구 형식 분기
+                        if 'delegations' in delegation_context:
+                            delegations = delegation_context.get('delegations', [])
+                            responses = delegation_context.get('responses', [])
+
+                            # 위임 내역 요약
+                            delegation_summary = ""
+                            for i, d in enumerate(delegations, 1):
+                                delegation_summary += f"  {i}. {d.get('delegated_to', '?')}: {d.get('delegation_message', '')[:100]}\n"
+
+                            context_reminder = f"""[시스템 알림 - 위임 컨텍스트 복원]
+당신이 이전에 {len(delegations)}개의 작업을 위임했을 때의 상황입니다:
+- 원래 요청자: {delegation_context.get('requester', '?')}
+- 원래 요청 내용: {delegation_context.get('original_request', '?')}
+- 위임 내역:
+{delegation_summary}
+이제 모든 위임한 작업의 결과가 도착했습니다. 이 컨텍스트와 결과들을 바탕으로 원래 요청을 완료하세요.
+
+---
+[위임 결과 보고]
+{content}"""
+                        else:
+                            # 구 형식 (단일 위임)
+                            context_reminder = f"""[시스템 알림 - 위임 컨텍스트 복원]
+당신이 이전에 '{delegation_context.get('delegated_to', '?')}'에게 작업을 위임했을 때의 상황입니다:
+- 원래 요청자: {delegation_context.get('requester', '?')}
+- 원래 요청 내용: {delegation_context.get('original_request', '?')}
+- 위임 시 메시지: {delegation_context.get('delegation_message', '?')}
+
+이제 위임한 작업의 결과가 도착했습니다. 이 컨텍스트를 바탕으로 원래 요청을 완료하세요.
+
+---
+[{from_agent}의 결과 보고]
+{content}"""
+                        ai_message = context_reminder
+
+                    response = self.ai.process_message_with_history(
+                        message_content=ai_message,
+                        from_email=f"{from_agent}@internal",
+                        history=[],
+                        reply_to=f"{from_agent}@internal"
+                    )
+                    print(f"[AgentRunner] {my_name} 응답 생성: {len(response)}자")
+
+                    # call_agent 호출 여부 확인
+                    called_another = did_call_agent()
+
+                    if called_another:
+                        # 다른 에이전트에게 위임함 → 자동 보고 스킵
+                        print(f"[AgentRunner] {my_name} call_agent 호출됨 - 자동 보고 스킵, 위임 결과 대기")
+                    else:
+                        # 직접 처리 완료 → 자동 보고
+                        if extracted_task_id:
+                            self._auto_report_to_chain(extracted_task_id, response, from_agent)
+                        else:
+                            # 태스크 ID 없이 받은 메시지 - 발신자에게 직접 응답
+                            self._send_response_to_sender(from_agent, response)
+
+                # 컨텍스트 정리
+                clear_current_task_id()
+                clear_called_agent()
+
+            except Exception as e:
+                import traceback
+                print(f"[AgentRunner] {my_name} 메시지 처리 실패: {e}")
+                traceback.print_exc()
+
+            # 다음 메시지 가져오기 (스레드 안전)
+            with AgentRunner._lock:
+                messages = AgentRunner.internal_messages.get(my_key, [])
+                if not messages:
+                    break
+                msg_dict = messages.pop(0)
+
+    def _send_to_external_channel(self, channel_type: str, requester: str, response: str, task_id: str):
+        """
+        외부 채널(email, nostr)로 최종 결과 전송 - 자기 채널 사용
+
+        Args:
+            channel_type: 'gmail' or 'nostr'
+            requester: 요청자 정보 (예: "user@email.com@gmail" or "pubkey@nostr")
+            response: 전송할 결과 메시지
+            task_id: 작업 ID
+        """
+        # requester에서 주소 추출 (format: "address@channel_type")
+        if requester.endswith(f"@{channel_type}"):
+            address = requester[:-len(f"@{channel_type}")-1]
+        else:
+            address = requester.split('@')[0] if '@' in requester else requester
+
+        # 해당 타입의 채널 찾기
+        target_channel = None
+        for ch in self.channels:
+            ch_name = ch.__class__.__name__
+            if channel_type == 'gmail' and 'Gmail' in ch_name:
+                target_channel = ch
+                break
+            elif channel_type == 'nostr' and 'Nostr' in ch_name:
+                target_channel = ch
+                break
+
+        if not target_channel:
+            self._log(f"[외부채널] {channel_type} 채널을 찾을 수 없음")
+            return
+
+        try:
+            target_channel.send_message(
+                to=address,
+                subject=f"[작업 완료] {task_id}",
+                body=response
+            )
+            self._log(f"[외부채널] {channel_type} 전송 완료 → {address}")
+        except Exception as e:
+            self._log(f"[외부채널] {channel_type} 전송 실패: {e}")
+
+    def _send_to_gui(self, ws_client_id: str, response: str):
+        """WebSocket을 통해 GUI에 응답 전송"""
+        import asyncio
+        my_name = self.config.get('name', '')
+
+        try:
+            from websocket_manager import manager
+
+            # 연결 확인
+            if ws_client_id not in manager.active_connections:
+                print(f"[GUI 전송] 클라이언트 연결 없음: {ws_client_id}")
+                return
+
+            # 비동기 전송 실행
+            asyncio.run(manager.send_message(ws_client_id, {
+                "type": "auto_report",
+                "content": f"[작업 완료]\n{response}",
+                "agent": my_name
+            }))
+            print(f"[GUI 전송] WebSocket 전송 완료: {ws_client_id}")
+
+        except Exception as e:
+            print(f"[GUI 전송] 실패: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def _send_response_to_sender(self, from_agent: str, response: str):
+        """발신자에게 응답 전송"""
+        my_name = self.config.get('name', '')
+
+        if not from_agent or from_agent == 'system':
+            print(f"[AgentRunner] {my_name} 응답: {response[:200]}...")
+            return
+
+        # 같은 프로젝트 내에서 발신자 찾기
+        target = AgentRunner.get_agent_by_name(from_agent, project_id=self.project_id)
+        if target:
+            target_key = target.registry_key
+            reply_msg = f"[{my_name} 응답] {response}"
+
+            msg_dict = {
+                'content': reply_msg,
+                'from_agent': my_name,
+                'timestamp': datetime.now().isoformat()
+            }
+
+            with AgentRunner._lock:
+                if target_key not in AgentRunner.internal_messages:
+                    AgentRunner.internal_messages[target_key] = []
+                AgentRunner.internal_messages[target_key].append(msg_dict)
+
+            print(f"[AgentRunner] {my_name} → {from_agent}: 응답 전달 완료")
+        else:
+            print(f"[AgentRunner] {my_name} 응답 (발신자 '{from_agent}' 미발견): {response[:200]}...")
+
+    def _auto_report_to_chain(self, task_id: str, response: str, from_agent: str):
+        """
+        자동 보고 체인: 작업 완료 시 위임 체인을 따라 결과 전달
+
+        1. parent_task_id가 있으면 → 부모 태스크의 delegated_to에게 보고
+        2. parent_task_id가 없으면 → 발신자에게 응답
+        3. 병렬 위임 시 → 모든 응답 수집 후 통합 보고
+        """
+        my_name = self.config.get('name', '')
+
+        try:
+            task = self.db.get_task(task_id)
+            if not task:
+                print(f"[자동 보고] task를 찾을 수 없음: {task_id}")
+                # 태스크 없으면 발신자에게 직접 응답
+                self._send_response_to_sender(from_agent, response)
+                return
+
+            # 이미 완료된 태스크는 중복 보고 방지
+            if task.get('status') == 'completed':
+                print(f"[자동 보고] 이미 완료된 task - 스킵: {task_id}")
+                return
+
+            parent_task_id = task.get('parent_task_id')
+            requester = task.get('requester', '')
+            channel = task.get('requester_channel', 'gui')
+
+            # 결과 요약
+            result_summary = response[:500] if len(response) > 500 else response
+
+            # 현재 태스크 완료 처리
+            self.db.complete_task(task_id, result_summary)
+            print(f"[자동 보고] 태스크 완료: {task_id}")
+
+            # 1. parent_task_id가 있으면 → 부모 태스크에 응답 누적 + 조건부 보고
+            if parent_task_id:
+                parent_task = self.db.get_task(parent_task_id)
+                if parent_task:
+                    # 부모 태스크의 delegation_context에 응답 누적
+                    delegation_context_str = parent_task.get('delegation_context')
+                    total_delegations = 0
+
+                    if delegation_context_str:
+                        try:
+                            delegation_context = json.loads(delegation_context_str)
+
+                            # 새 형식 (delegations 배열)
+                            if 'delegations' in delegation_context:
+                                total_delegations = len(delegation_context['delegations'])
+
+                                # 응답 누적
+                                if 'responses' not in delegation_context:
+                                    delegation_context['responses'] = []
+
+                                delegation_context['responses'].append({
+                                    'child_task_id': task_id,
+                                    'from_agent': my_name,
+                                    'response': result_summary,
+                                    'completed_at': datetime.now().isoformat()
+                                })
+
+                                # pending_delegations 감소 및 컨텍스트 업데이트
+                                with self.db.get_connection() as conn:
+                                    cursor = conn.cursor()
+                                    cursor.execute('''
+                                        UPDATE tasks
+                                        SET delegation_context = ?,
+                                            pending_delegations = MAX(0, COALESCE(pending_delegations, 0) - 1)
+                                        WHERE task_id = ?
+                                    ''', (json.dumps(delegation_context, ensure_ascii=False), parent_task_id))
+                                    conn.commit()
+
+                                    # 업데이트된 pending_delegations 조회
+                                    cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (parent_task_id,))
+                                    row = cursor.fetchone()
+                                    remaining = row[0] if row else 0
+
+                                print(f"[자동 보고] 응답 누적: {task_id} → {parent_task_id} (남은 위임: {remaining}/{total_delegations})")
+
+                                # ✅ 병렬 위임 수집 모드: 2개 이상 위임이면 모든 응답 도착 시까지 대기
+                                if total_delegations >= 2:
+                                    if remaining > 0:
+                                        print(f"[자동 보고] 수집 모드 - 대기 중: {remaining}개 응답 더 필요")
+                                        return  # 아직 다 안 모임 → 보고 스킵
+                                    else:
+                                        print(f"[자동 보고] 수집 모드 - 모든 응답 도착! 통합 보고 전송")
+                                        # 모든 응답을 통합해서 보고
+                                        all_responses = delegation_context.get('responses', [])
+                                        combined_report = "[병렬 위임 결과 통합 보고]\n\n"
+                                        for resp in all_responses:
+                                            combined_report += f"◆ {resp['from_agent']}:\n{resp['response']}\n\n"
+                                        result_summary = combined_report
+                            else:
+                                # 구버전 형식 - 기존 로직 사용
+                                total_delegations = 1
+                        except json.JSONDecodeError:
+                            total_delegations = 1
+                    else:
+                        total_delegations = 1
+
+                    # 부모 태스크의 delegated_to가 보고 받을 에이전트
+                    report_to = parent_task.get('delegated_to')
+                    if report_to:
+                        # 같은 프로젝트 내에서 보고 대상 찾기
+                        target = AgentRunner.get_agent_by_name(report_to, project_id=self.project_id)
+                        if target:
+                            # 부모 태스크 ID로 보고
+                            report_msg = f"[task:{parent_task_id}] 완료.\n{result_summary}"
+                            target_key = target.registry_key
+
+                            msg_dict = {
+                                'content': report_msg,
+                                'from_agent': my_name,
+                                'task_id': parent_task_id,
+                                'timestamp': datetime.now().isoformat()
+                            }
+
+                            with AgentRunner._lock:
+                                if target_key not in AgentRunner.internal_messages:
+                                    AgentRunner.internal_messages[target_key] = []
+                                AgentRunner.internal_messages[target_key].append(msg_dict)
+
+                            print(f"[자동 보고] {my_name} → {report_to}: {task_id} → {parent_task_id}")
+                        else:
+                            print(f"[자동 보고] 상위 에이전트를 찾을 수 없음: {report_to}")
+                else:
+                    print(f"[자동 보고] 부모 태스크를 찾을 수 없음: {parent_task_id}")
+
+            # 2. parent_task_id가 없으면 → 최초 요청이므로 사용자에게 최종 응답
+            else:
+                if channel == 'gui':
+                    # GUI 채널: WebSocket으로 직접 전송
+                    ws_client_id = task.get('ws_client_id')
+                    if ws_client_id:
+                        self._send_to_gui(ws_client_id, result_summary)
+                    else:
+                        # ws_client_id가 없으면 발신자에게 응답
+                        self._send_response_to_sender(from_agent, result_summary)
+                elif channel in ('gmail', 'nostr'):
+                    # 외부 채널: Gmail/Nostr로 전송
+                    self._send_to_external_channel(channel, requester, result_summary, task_id)
+                else:
+                    # 알 수 없는 채널: 발신자에게 응답
+                    self._send_response_to_sender(from_agent, result_summary)
+                print(f"[자동 보고] 최초 태스크 완료: {task_id} (채널: {channel})")
+
+        except Exception as e:
+            import traceback
+            print(f"[자동 보고] 오류: {e}")
+            traceback.print_exc()
+
+    # ============ 클래스 메서드: 에이전트 검색 ============
+
+    @classmethod
+    def get_agent_by_name(cls, name: str, project_id: str = None) -> Optional['AgentRunner']:
+        """이름으로 에이전트 찾기 (스레드 안전)
+
+        Args:
+            name: 에이전트 이름
+            project_id: 프로젝트 ID (지정하면 해당 프로젝트 내에서만 검색)
+        """
+        with cls._lock:
+            for registry_key, runner in cls.agent_registry.items():
+                if runner.config.get('name') == name:
+                    # 프로젝트 ID가 지정되면 같은 프로젝트만 반환
+                    if project_id and runner.project_id != project_id:
+                        continue
+                    return runner
+        return None
+
+    @classmethod
+    def get_agent_by_id(cls, agent_id: str, project_id: str = None) -> Optional['AgentRunner']:
+        """ID로 에이전트 찾기 (스레드 안전)
+
+        Args:
+            agent_id: 에이전트 ID
+            project_id: 프로젝트 ID (지정하면 해당 프로젝트의 레지스트리 키로 검색)
+        """
+        with cls._lock:
+            # 프로젝트 ID가 있으면 복합 키로 검색
+            if project_id:
+                registry_key = f"{project_id}:{agent_id}"
+                return cls.agent_registry.get(registry_key)
+            # 없으면 agent_id만으로 검색 (하위 호환)
+            return cls.agent_registry.get(agent_id)
+
+    @classmethod
+    def get_all_agent_names(cls) -> List[str]:
+        """모든 에이전트 이름 목록 (스레드 안전)"""
+        with cls._lock:
+            return [runner.config.get('name', '') for runner in cls.agent_registry.values()]
+
+    @classmethod
+    def get_all_agents(cls) -> List[dict]:
+        """모든 에이전트 정보 목록 (스레드 안전)"""
+        with cls._lock:
+            result = []
+            for agent_id, runner in cls.agent_registry.items():
+                result.append({
+                    "id": agent_id,
+                    "name": runner.config.get("name", ""),
+                    "type": runner.config.get("type", "internal"),
+                    "running": runner.running
+                })
+            return result
+
+    @classmethod
+    def send_message(cls, to_agent_id: str, message: str, from_agent: str = "system",
+                     task_id: str = None) -> bool:
+        """
+        에이전트에게 메시지 전송 (비동기)
+
+        Args:
+            to_agent_id: 대상 에이전트 ID
+            message: 전달할 메시지
+            from_agent: 발신 에이전트 이름
+            task_id: 연관된 태스크 ID
+
+        Returns:
+            성공 여부
+        """
+        with cls._lock:
+            if to_agent_id not in cls.agent_registry:
+                return False
+
+            msg_dict = {
+                'content': message,
+                'from_agent': from_agent,
+                'task_id': task_id,
+                'timestamp': datetime.now().isoformat()
+            }
+
+            if to_agent_id not in cls.internal_messages:
+                cls.internal_messages[to_agent_id] = []
+
+            cls.internal_messages[to_agent_id].append(msg_dict)
+            print(f"[AgentRunner] 메시지 큐 추가: {from_agent} → {to_agent_id}")
+            return True
+
+    @classmethod
+    def send_message_by_name(cls, to_agent_name: str, message: str, from_agent: str = "system",
+                             task_id: str = None, project_id: str = None) -> bool:
+        """
+        에이전트 이름으로 메시지 전송 (비동기)
+
+        Args:
+            to_agent_name: 대상 에이전트 이름
+            message: 전달할 메시지
+            from_agent: 발신 에이전트 이름
+            task_id: 연관된 태스크 ID
+            project_id: 프로젝트 ID (지정하면 해당 프로젝트 내에서만 검색)
+
+        Returns:
+            성공 여부
+        """
+        target = cls.get_agent_by_name(to_agent_name, project_id=project_id)
+        if not target:
+            return False
+
+        registry_key = getattr(target, 'registry_key', None)
+        if not registry_key:
+            return False
+
+        return cls.send_message(registry_key, message, from_agent, task_id)

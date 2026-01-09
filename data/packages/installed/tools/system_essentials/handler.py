@@ -134,6 +134,23 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
             return f"Successfully edited {tool_input['file_path']}"
 
+        elif tool_name == "open_in_browser":
+            import sys
+            path = tool_input.get("path", "")
+            if not path:
+                return "Error: 경로가 지정되지 않았습니다."
+
+            try:
+                if sys.platform == "darwin":
+                    subprocess.run(["open", path], check=True)
+                elif sys.platform == "win32":
+                    subprocess.run(["start", path], shell=True, check=True)
+                else:
+                    subprocess.run(["xdg-open", path], check=True)
+                return f"브라우저에서 열었습니다: {path}"
+            except Exception as e:
+                return f"Error: 브라우저 열기 실패: {e}"
+
         elif tool_name == "run_command":
             command = tool_input.get("command", "").strip()
             timeout = min(tool_input.get("timeout", 60), 300)  # 최대 300초

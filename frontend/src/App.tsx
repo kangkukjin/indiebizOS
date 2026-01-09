@@ -8,6 +8,7 @@ import { Launcher } from './components/Launcher';
 import { Manager } from './components/Manager';
 import { FolderView } from './components/FolderView';
 import { IndieNet } from './components/IndieNet';
+import { BusinessManager } from './components/BusinessManager';
 import { api } from './lib/api';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [folderId, setFolderId] = useState<string | null>(null);
   const [isIndieNet, setIsIndieNet] = useState(false);
+  const [isBusiness, setIsBusiness] = useState(false);
 
   // URL 해시에서 프로젝트/폴더/IndieNet 확인
   useEffect(() => {
@@ -24,6 +26,16 @@ function App() {
       // IndieNet 체크
       if (hash === '#/indienet') {
         setIsIndieNet(true);
+        setIsBusiness(false);
+        setProjectId(null);
+        setFolderId(null);
+        return;
+      }
+
+      // Business 체크
+      if (hash === '#/business') {
+        setIsBusiness(true);
+        setIsIndieNet(false);
         setProjectId(null);
         setFolderId(null);
         return;
@@ -35,6 +47,7 @@ function App() {
         setProjectId(decodeURIComponent(projectMatch[1]));
         setFolderId(null);
         setIsIndieNet(false);
+        setIsBusiness(false);
         return;
       }
 
@@ -44,6 +57,7 @@ function App() {
         setFolderId(decodeURIComponent(folderMatch[1]));
         setProjectId(null);
         setIsIndieNet(false);
+        setIsBusiness(false);
         return;
       }
 
@@ -51,6 +65,7 @@ function App() {
       setProjectId(null);
       setFolderId(null);
       setIsIndieNet(false);
+      setIsBusiness(false);
     };
 
     checkHash();
@@ -111,6 +126,17 @@ function App() {
     return (
       <div className="h-screen w-screen overflow-hidden">
         <IndieNet />
+      </div>
+    );
+  }
+
+  // Business 창인 경우
+  if (isBusiness) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+          <BusinessManager />
+        </div>
       </div>
     );
   }

@@ -116,6 +116,11 @@ async def handle_chat_message(client_id: str, data: dict):
             })
             return
 
+        # 스레드 컨텍스트 설정 (call_agent 등에서 발신자 정보로 사용)
+        from thread_context import set_current_agent_id, set_current_agent_name
+        set_current_agent_id(agent_id)
+        set_current_agent_name(agent_name)
+
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
 
@@ -142,6 +147,10 @@ async def handle_chat_message(client_id: str, data: dict):
             )
         except Exception as e:
             print(f"[WS] 태스크 생성 실패: {e}")
+
+        # 스레드 컨텍스트에 task_id 설정 (call_agent에서 사용)
+        from thread_context import set_current_task_id
+        set_current_task_id(task_id)
 
         # AI 응답 생성
         response = runner.ai.process_message_with_history(
@@ -170,9 +179,16 @@ async def handle_chat_message(client_id: str, data: dict):
             "agent": agent_name
         })
 
+        # 컨텍스트 정리
+        from thread_context import clear_all_context
+        clear_all_context()
+
     except Exception as e:
         import traceback
         traceback.print_exc()
+        # 컨텍스트 정리
+        from thread_context import clear_all_context
+        clear_all_context()
         await manager.send_message(client_id, {
             "type": "error",
             "message": str(e)

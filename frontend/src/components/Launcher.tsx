@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, RefreshCw, User, Clock, Folder, Globe, Bot, Package } from 'lucide-react';
+import { Zap, Settings, RefreshCw, User, Clock, Folder, Globe, Bot, Package, Building2 } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 import type { Project, Switch, SchedulerTask, SchedulerAction } from '../types';
@@ -354,6 +354,103 @@ export function Launcher() {
     }
   };
 
+  // 아이콘 격자 정렬 (가장 가까운 격자점으로 스냅)
+  const handleArrangeIcons = async () => {
+    // 최신 데이터를 서버에서 직접 가져오기
+    let latestProjects: Project[] = [];
+    let latestSwitches: Switch[] = [];
+    try {
+      latestProjects = await api.getProjects();
+      latestSwitches = await api.getSwitches();
+    } catch (error) {
+      console.error('Failed to fetch latest data:', error);
+      return;
+    }
+
+    const GRID_SIZE = 100; // 격자 크기 (아이콘 간격)
+    const PADDING = 20;    // 좌상단 여백
+
+    // 가장 가까운 격자점 계산
+    const snapToGrid = (x: number, y: number): { x: number; y: number } => {
+      const col = Math.round((x - PADDING) / GRID_SIZE);
+      const row = Math.round((y - PADDING) / GRID_SIZE);
+      return {
+        x: PADDING + Math.max(0, col) * GRID_SIZE,
+        y: PADDING + Math.max(0, row) * GRID_SIZE,
+      };
+    };
+
+    // 루트 레벨 아이템만 필터링
+    const rootProjects = latestProjects.filter((p: Project & { in_trash?: boolean }) => !p.parent_folder && !p.in_trash);
+    const rootSwitches = latestSwitches.filter((s: Switch) => !s.parent_folder && !s.in_trash);
+
+    // 모든 아이템 수집 (icon_position은 [x, y] 배열)
+    const allItems: { id: string; type: 'project' | 'switch'; x: number; y: number }[] = [
+      ...rootProjects.map(p => ({
+        id: p.id,
+        type: 'project' as const,
+        x: Array.isArray(p.icon_position) ? p.icon_position[0] : 100,
+        y: Array.isArray(p.icon_position) ? p.icon_position[1] : 100,
+      })),
+      ...rootSwitches.map(s => ({
+        id: s.id,
+        type: 'switch' as const,
+        x: Array.isArray(s.icon_position) ? s.icon_position[0] : 100,
+        y: Array.isArray(s.icon_position) ? s.icon_position[1] : 100,
+      })),
+    ];
+
+    // 점유된 격자점 추적 (충돌 방지)
+    const occupiedGrids = new Set<string>();
+
+    // 가까운 격자점 찾기 (충돌 시 다른 빈 격자점 찾기)
+    const findNearestFreeGrid = (x: number, y: number): { x: number; y: number } => {
+      const snapped = snapToGrid(x, y);
+      const key = `${snapped.x},${snapped.y}`;
+
+      if (!occupiedGrids.has(key)) {
+        return snapped;
+      }
+
+      // 충돌 시 주변 빈 격자점 탐색 (나선형으로)
+      for (let radius = 1; radius <= 20; radius++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          for (let dy = -radius; dy <= radius; dy++) {
+            if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+            const newX = PADDING + (Math.round((x - PADDING) / GRID_SIZE) + dx) * GRID_SIZE;
+            const newY = PADDING + (Math.round((y - PADDING) / GRID_SIZE) + dy) * GRID_SIZE;
+            if (newX < PADDING || newY < PADDING) continue;
+            const newKey = `${newX},${newY}`;
+            if (!occupiedGrids.has(newKey)) {
+              return { x: newX, y: newY };
+            }
+          }
+        }
+      }
+      return snapped; // fallback
+    };
+
+    // 각 아이템을 가까운 격자점으로 이동
+    const updatePromises = allItems.map((item) => {
+      const newPos = findNearestFreeGrid(item.x, item.y);
+      occupiedGrids.add(`${newPos.x},${newPos.y}`);
+
+      if (item.type === 'project') {
+        return api.updateProjectPosition(item.id, newPos.x, newPos.y);
+      } else {
+        return api.updateSwitchPosition(item.id, newPos.x, newPos.y);
+      }
+    });
+
+    try {
+      await Promise.all(updatePromises);
+      loadProjects();
+      loadSwitches();
+    } catch (error) {
+      console.error('Failed to arrange icons:', error);
+    }
+  };
+
   // 복사 기능
   const handleCopy = (id: string, type: 'project' | 'switch') => {
     setClipboard({ id, type });
@@ -605,6 +702,20 @@ export function Launcher() {
             <span className="text-sm">IndieNet</span>
           </button>
           <button
+            onClick={() => {
+              if (window.electron?.openBusinessWindow) {
+                window.electron.openBusinessWindow();
+              } else {
+                console.log('Business: Electron API 없음');
+              }
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
+            title="비즈니스 관리"
+          >
+            <Building2 size={16} />
+            <span className="text-sm">비즈니스</span>
+          </button>
+          <button
             onClick={() => setShowSystemAIChatDialog(true)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F] bg-gradient-to-r from-amber-50 to-orange-50"
             title="시스템 AI와 대화"
@@ -780,6 +891,7 @@ export function Launcher() {
         onNewFolder={() => setShowNewFolderDialog(true)}
         onOpenTrash={handleOpenTrash}
         onEmptyTrash={handleEmptyTrash}
+        onArrangeIcons={handleArrangeIcons}
         getItemName={getItemName}
       />
 

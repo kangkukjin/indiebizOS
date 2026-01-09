@@ -5,6 +5,84 @@
 [2026-01-02 17:30:00] TOOL_ADDED: safe_shell (system_essentials) - 안전한 쉘 명령어 실행 도구
 [2026-01-02 17:30:00] TOOL_UPDATED: pc-manager - subprocess 타임아웃 추가, df/du 명령어 사용으로 성능 개선
 [2026-01-02 21:31:09] PROJECT_CREATED: 정보 (ID: 정보)
-[2026-01-02 21:31:09] PROJECT_CREATED: 정보 (ID: 정보)
 [2026-01-03 19:41:59] PROJECT_RENAMED: 정보 사본 -> 나의 신문사
 [2026-01-04 11:44:40] PROJECT_RENAMED: 1 사본 -> Youtube
+[2026-01-04 22:33:01] PROJECT_CREATED: 나를 지키는 공간 (ID: 나를 지키는 공간)
+[2026-01-06 04:30:00] BUG_FIX: api_agents.py - FastAPI 라우트 순서 수정
+  - /projects/{project_id}/agents/role-descriptions 라우트를 {agent_id} 라우트 앞으로 이동
+  - 역할 설명 저장 시 [object Object] 오류 해결
+[2026-01-06 04:30:00] BUG_FIX: api.ts - API 오류 메시지 처리 개선
+  - error.detail이 객체일 때 적절히 문자열로 변환
+[2026-01-06 04:45:00] DOCS_UPDATED: system_docs 전체 업데이트
+  - architecture.md: 시스템 구조 상세화, 파일 위치 추가
+  - overview.md: 에이전트 설정 항목 추가, 현재 상태 갱신
+  - technical.md: API 엔드포인트 전체 목록, 라우트 순서 주의사항 추가
+  - packages.md: 도구/확장 패키지 분리, 현재 설치 목록 갱신
+  - inventory.md: 프로젝트별 에이전트 현황 추가, 휴지통 목록 추가
+[2026-01-06 17:14:23] PROJECT_CREATED: 금융투자 (ID: 금융투자)
+[2026-01-06 17:14:23] PROJECT_CREATED: 금융투자 (ID: 금융투자)
+[2026-01-06 17:14:40] PROJECT_CREATED: 의료 (ID: 의료)
+[2026-01-06 17:14:40] PROJECT_CREATED: 의료 (ID: 의료)
+[2026-01-06 17:14:58] PROJECT_CREATED: 부동산 (ID: 부동산)
+[2026-01-06 17:14:58] PROJECT_CREATED: 부동산 (ID: 부동산)
+[2026-01-06 17:15:11] PROJECT_CREATED: 창업 (ID: 창업)
+[2026-01-06 17:15:11] PROJECT_CREATED: 창업 (ID: 창업)
+[2026-01-06 17:15:23] PROJECT_CREATED: 해외 (ID: 해외)
+[2026-01-06 17:15:23] PROJECT_CREATED: 해외 (ID: 해외)
+[2026-01-07 09:43:02] PROJECT_RENAMED: 금융투자 -> 자산관리
+[2026-01-07 15:34:07] PROJECT_CREATED: 컨설턴트미 (ID: 컨설턴트미)
+[2026-01-07 15:34:07] PROJECT_CREATED: 컨설턴트미 (ID: 컨설턴트미)
+[2026-01-07 20:09:11] PROJECT_CREATED: 미2 (ID: 미2)
+[2026-01-07 20:09:11] PROJECT_CREATED: 미2 (ID: 미2)
+[2026-01-08 10:50:34] PROJECT_CREATED: 1+1 (ID: 1+1)
+[2026-01-08 10:50:34] PROJECT_CREATED: 1+1 (ID: 1+1)
+[2026-01-08 10:58:24] PROJECT_CREATED: 테스트프로젝트 (ID: 테스트프로젝트)
+[2026-01-08 10:58:24] PROJECT_CREATED: 테스트프로젝트 (ID: 테스트프로젝트)
+[2026-01-08 11:25:16] PROJECT_CREATED: 1+1 (ID: 1+1)
+[2026-01-08 11:25:16] PROJECT_CREATED: 1+1 (ID: 1+1)
+[2026-01-08 16:30:00] FEATURE_ADDED: 비즈니스 관리 시스템 (kvisual-mcp 통합)
+  - business_manager.py: 비즈니스/이웃/메시지 관리 매니저
+  - api_business.py: 비즈니스 관련 API 엔드포인트
+  - BusinessManager.tsx: 비즈니스 관리 UI
+  - NeighborManagerDialog.tsx: 이웃 관리/대화 다이얼로그
+[2026-01-08 16:30:00] FEATURE_ADDED: 다중채널 메시지 수신 시스템
+  - channel_poller.py: Gmail 폴링 + Nostr 실시간 WebSocket
+  - Gmail: 주기적 폴링으로 이메일 수신
+  - Nostr: 실시간 WebSocket으로 DM 수신
+  - IndieNet identity.json과 키 연동
+[2026-01-08 16:30:00] FEATURE_ADDED: 자동응답 서비스
+  - auto_response.py: 미응답 메시지 자동 응답 서비스
+  - 시스템 AI 설정 재사용 (프로바이더, 모델, API 키)
+  - 컨텍스트 기반 응답 생성 (근무지침, 비즈니스 문서, 대화 기록)
+  - 무한 루프 방지 (연속 자동응답 5개 초과 시 스킵)
+[2026-01-08 16:30:00] UI_UPDATED: 채널 설정 UI 개선
+  - SettingsDialog.tsx: Nostr 실시간 설정, nsec 보안 처리
+  - Gmail 접두사 필터 제거 (모든 이메일 수신)
+[2026-01-08 16:30:00] DOCS_UPDATED: system_docs 전체 업데이트
+  - overview.md: 비즈니스/채널/자동응답 기능 추가
+  - architecture.md: 비즈니스/채널/자동응답 컴포넌트 추가, 데이터 흐름 다이어그램
+  - inventory.md: 확장 패키지 목록, 비즈니스 DB 테이블 추가
+  - technical.md: 비즈니스/이웃/메시지/채널/자동응답 API 엔드포인트 추가
+[2026-01-08 16:51:52] PROJECT_CREATED: 오락실 (ID: 오락실)
+[2026-01-08 16:51:52] PROJECT_CREATED: 오락실 (ID: 오락실)
+[2026-01-08 17:45:42] PROJECT_CREATED: 요리사 (ID: 요리사)
+[2026-01-08 17:45:42] PROJECT_CREATED: 요리사 (ID: 요리사)
+[2026-01-08 21:00:00] FEATURE_ADDED: 위임 체인 시스템 (Delegation Chain System)
+  - agent_runner.py: 위임 컨텍스트 복원 로직 추가
+    - 보고 메시지 수신 시 delegation_context 자동 복원
+    - AI에게 "왜 위임했는지" 컨텍스트 리마인더 주입
+  - agent_runner.py: 병렬 위임 수집 모드 추가
+    - 2개 이상 위임 시 모든 응답 도착까지 상위 보고 대기
+    - pending_delegations 카운터로 대기 중인 위임 추적
+    - 통합 보고 형식: [병렬 위임 결과 통합 보고]
+  - ai_agent.py: call_agent 위임 컨텍스트 저장 로직 추가
+    - delegations 배열로 복수 위임 추적
+    - responses 배열로 결과 누적
+  - ai_agent.py: get_my_tools 도구 추가
+    - 에이전트가 위임 전 자가 처리 가능 여부 판단
+  - conversation_db.py: 태스크 테이블 확장
+    - delegation_context, parent_task_id, pending_delegations 컬럼
+  - thread_context.py: 스레드별 컨텍스트 관리 모듈 추가
+  - prompt_generator.py: 위임 체인 및 병렬 위임 가이드 추가
+[2026-01-08 21:00:00] DOCS_UPDATED: system_docs 업데이트
+  - architecture.md: 위임 체인 시스템 섹션 추가, 에이전트 간 협업 흐름 다이어그램

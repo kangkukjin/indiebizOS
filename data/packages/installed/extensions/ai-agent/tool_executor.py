@@ -425,6 +425,23 @@ class ToolExecutorMixin:
             result = blog_check_new_posts()
             return json.dumps(result, ensure_ascii=False)
 
+        elif tool_name == "kinsight":
+            from tool_kinsight import kinsight
+            result = kinsight(
+                project_path=self.project_path if hasattr(self, 'project_path') else ".",
+                before_date=tool_input.get("before_date")
+            )
+            return json.dumps(result, ensure_ascii=False)
+
+        elif tool_name == "kinsight2":
+            from tool_kinsight import kinsight2
+            result = kinsight2(
+                project_path=self.project_path if hasattr(self, 'project_path') else ".",
+                count=tool_input.get("count", 10),
+                before_date=tool_input.get("before_date")
+            )
+            return json.dumps(result, ensure_ascii=False)
+
         # 카메라 도구
         elif tool_name in ["capture_camera", "list_cameras"]:
             from tool_camera import use_tool as camera_use_tool

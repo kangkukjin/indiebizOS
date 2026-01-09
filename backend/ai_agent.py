@@ -23,13 +23,13 @@ from pathlib import Path
 SYSTEM_TOOLS = [
     {
         "name": "call_agent",
-        "description": "다른 에이전트를 호출하여 작업을 요청합니다. 같은 프로젝트 내 에이전트 간 협업에 사용합니다.",
+        "description": "다른 에이전트를 호출하여 작업을 요청합니다. 같은 프로젝트 내 에이전트 간 협업에 사용합니다. 에이전트 이름 또는 ID로 호출할 수 있습니다.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "agent_id": {
                     "type": "string",
-                    "description": "호출할 에이전트 ID"
+                    "description": "호출할 에이전트 이름 또는 ID (예: '내과', 'agent_001')"
                 },
                 "message": {
                     "type": "string",
@@ -73,6 +73,15 @@ SYSTEM_TOOLS = [
     {
         "name": "get_project_info",
         "description": "현재 프로젝트의 정보를 가져옵니다 (이름, 설명, 에이전트 목록 등).",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
+        "name": "get_my_tools",
+        "description": "현재 에이전트에게 허용된 도구 목록을 조회합니다. 위임 전 자신이 가진 도구로 처리 가능한지 확인할 때 사용합니다.",
         "input_schema": {
             "type": "object",
             "properties": {},
@@ -262,56 +271,220 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> s
         # 1. 시스템 도구 처리 (call_agent, list_agents, send_notification, get_project_info)
         # ============ 에이전트 간 통신 ============
         if tool_name == "call_agent":
-            agent_id = tool_input.get("agent_id", "")
+            agent_id_or_name = tool_input.get("agent_id", "")
             message = tool_input.get("message", "")
 
             try:
-                # 프로젝트 경로에서 에이전트 설정 로드
-                project_json = Path(project_path) / "project.json"
-                if not project_json.exists():
-                    return json.dumps({"success": False, "error": "프로젝트 설정을 찾을 수 없습니다."}, ensure_ascii=False)
+                import re
+                import uuid
+                from agent_runner import AgentRunner
+                from thread_context import (
+                    get_current_agent_id, get_current_agent_name,
+                    get_current_task_id, set_called_agent
+                )
+                from conversation_db import ConversationDB
 
-                project_data = json.loads(project_json.read_text(encoding='utf-8'))
-                agents = project_data.get("agents", [])
+                # call_agent 호출 플래그 설정 (자동 보고 스킵용)
+                set_called_agent(True)
 
+                # 프로젝트 ID 추출 (project_path의 마지막 폴더명)
+                project_id = Path(project_path).name
+
+                # 1. 먼저 실행 중인 에이전트 레지스트리에서 찾기 (같은 프로젝트 내에서만)
+                target_runner = AgentRunner.get_agent_by_name(agent_id_or_name, project_id=project_id)
+                if not target_runner:
+                    target_runner = AgentRunner.get_agent_by_id(agent_id_or_name, project_id=project_id)
+
+                if target_runner:
+                    # 실행 중인 에이전트 발견 - 비동기 메시지 전송
+                    target_id = target_runner.config.get("id")
+                    target_name = target_runner.config.get("name")
+
+                    # 발신자 정보 (현재 에이전트)
+                    current_agent_id = get_current_agent_id()
+                    current_agent_name = get_current_agent_name()
+                    from_agent = current_agent_name if current_agent_name else "system"
+
+                    # 태스크 ID 처리
+                    current_task_id = get_current_task_id()
+                    new_task_id = None
+
+                    if current_task_id:
+                        # 에이전트가 수동으로 붙인 [task:xxx] 태그가 있으면 제거
+                        message = re.sub(r'\[task:[^\]]+\]\s*', '', message)
+
+                        # 위임 시: 자식 태스크 생성
+                        try:
+                            db_path = Path(project_path) / "conversations.db"
+                            db = ConversationDB(str(db_path))
+                            parent_task = db.get_task(current_task_id)
+
+                            if parent_task:
+                                # 자식 태스크 생성
+                                new_task_id = f"task_{uuid.uuid4().hex[:8]}"
+
+                                # 위임 컨텍스트 구성
+                                existing_context_str = parent_task.get('delegation_context')
+                                if existing_context_str:
+                                    try:
+                                        existing_context = json.loads(existing_context_str)
+                                        if 'delegations' not in existing_context:
+                                            existing_context = {
+                                                'original_request': existing_context.get('original_request', ''),
+                                                'requester': existing_context.get('requester', ''),
+                                                'delegations': [],
+                                                'responses': []
+                                            }
+                                    except json.JSONDecodeError:
+                                        existing_context = None
+                                else:
+                                    existing_context = None
+
+                                if not existing_context:
+                                    existing_context = {
+                                        'original_request': parent_task.get('original_request', ''),
+                                        'requester': parent_task.get('requester', ''),
+                                        'delegations': [],
+                                        'responses': []
+                                    }
+
+                                existing_context['delegations'].append({
+                                    'child_task_id': new_task_id,
+                                    'delegated_to': target_name,
+                                    'delegation_message': message,
+                                    'delegation_time': datetime.now().isoformat()
+                                })
+
+                                delegation_context = json.dumps(existing_context, ensure_ascii=False)
+                                db.update_task_delegation(current_task_id, delegation_context, increment_pending=True)
+
+                                # 자식 태스크 생성
+                                db.create_task(
+                                    task_id=new_task_id,
+                                    requester=parent_task.get('requester', ''),
+                                    requester_channel=parent_task.get('requester_channel', 'gui'),
+                                    original_request=parent_task.get('original_request', ''),
+                                    delegated_to=target_name,
+                                    parent_task_id=current_task_id
+                                )
+
+                                print(f"   [call_agent] 자식 태스크 생성: {new_task_id} (parent: {current_task_id})")
+                                print(f"   [call_agent] 위임: {from_agent} → {target_name}")
+
+                        except Exception as ctx_err:
+                            import traceback
+                            print(f"   [call_agent] 태스크 생성 실패: {ctx_err}")
+                            traceback.print_exc()
+
+                        # 메시지에 새 task_id 적용 (자식 태스크가 생성되면 새 ID, 아니면 현재 ID)
+                        task_for_message = new_task_id if new_task_id else current_task_id
+                        message = f"[task:{task_for_message}] {message}"
+
+                    # 메시지 전송 (registry_key 사용)
+                    success = AgentRunner.send_message(
+                        to_agent_id=target_runner.registry_key,
+                        message=message,
+                        from_agent=from_agent,
+                        task_id=new_task_id if new_task_id else current_task_id
+                    )
+
+                    if success:
+                        return json.dumps({
+                            "success": True,
+                            "message": f"'{target_name}'에게 메시지를 전송했습니다. 비동기로 처리됩니다.",
+                            "agent": target_name,
+                            "task_id": new_task_id if new_task_id else current_task_id,
+                            "async": True
+                        }, ensure_ascii=False)
+                    else:
+                        return json.dumps({
+                            "success": False,
+                            "error": f"메시지 전송 실패: {target_name}"
+                        }, ensure_ascii=False)
+
+                # 2. 레지스트리에 없으면 agents.yaml에서 확인 (실행되지 않은 에이전트)
+                import yaml as yaml_lib
+
+                agents_yaml = Path(project_path) / "agents.yaml"
+                if not agents_yaml.exists():
+                    return json.dumps({
+                        "success": False,
+                        "error": "에이전트 설정 파일(agents.yaml)을 찾을 수 없습니다."
+                    }, ensure_ascii=False)
+
+                agents_data = yaml_lib.safe_load(agents_yaml.read_text(encoding='utf-8'))
+                agents = agents_data.get("agents", [])
+
+                # 이름 또는 ID로 에이전트 찾기
                 target_agent = None
                 for agent in agents:
-                    if agent.get("id") == agent_id:
+                    if agent.get("id") == agent_id_or_name or agent.get("name") == agent_id_or_name:
                         target_agent = agent
                         break
 
                 if not target_agent:
-                    return json.dumps({"success": False, "error": f"에이전트를 찾을 수 없습니다: {agent_id}"}, ensure_ascii=False)
+                    # 사용 가능한 에이전트 목록 제공
+                    available_running = AgentRunner.get_all_agent_names()
+                    available_yaml = [f"{a.get('name')} (id: {a.get('id')})" for a in agents if a.get("active", True)]
+                    return json.dumps({
+                        "success": False,
+                        "error": f"에이전트를 찾을 수 없습니다: {agent_id_or_name}",
+                        "running_agents": available_running,
+                        "available_agents": available_yaml
+                    }, ensure_ascii=False)
 
-                # 에이전트 호출 (agent_runner 사용)
-                from agent_runner import AgentRunner
-                runner = AgentRunner(project_path)
-                response = runner.run_agent(agent_id, message)
-
-                return json.dumps({"success": True, "response": response}, ensure_ascii=False)
+                # 에이전트가 있지만 실행되지 않은 상태
+                return json.dumps({
+                    "success": False,
+                    "error": f"에이전트 '{target_agent.get('name')}'가 실행 중이 아닙니다. 먼저 에이전트를 시작해주세요.",
+                    "agent": target_agent.get("name"),
+                    "agent_id": target_agent.get("id")
+                }, ensure_ascii=False)
 
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
 
         elif tool_name == "list_agents":
             try:
-                project_json = Path(project_path) / "project.json"
-                if not project_json.exists():
-                    return json.dumps({"success": False, "error": "프로젝트 설정을 찾을 수 없습니다."}, ensure_ascii=False)
+                from agent_runner import AgentRunner
+                import yaml as yaml_lib
 
-                project_data = json.loads(project_json.read_text(encoding='utf-8'))
-                agents = project_data.get("agents", [])
+                # 실행 중인 에이전트 목록
+                running_agents = AgentRunner.get_all_agents()
+                running_ids = {a["id"] for a in running_agents}
+
+                # agents.yaml에서 전체 에이전트 목록 로드
+                agents_yaml = Path(project_path) / "agents.yaml"
+                if not agents_yaml.exists():
+                    # yaml 파일이 없으면 실행 중인 에이전트만 반환
+                    return json.dumps({
+                        "success": True,
+                        "agents": running_agents,
+                        "running_count": len(running_agents)
+                    }, ensure_ascii=False)
+
+                agents_data = yaml_lib.safe_load(agents_yaml.read_text(encoding='utf-8'))
+                agents = agents_data.get("agents", [])
 
                 agent_list = []
                 for agent in agents:
+                    agent_id = agent.get("id")
                     agent_list.append({
-                        "id": agent.get("id"),
+                        "id": agent_id,
                         "name": agent.get("name"),
-                        "role": agent.get("role", ""),
-                        "enabled": agent.get("enabled", True)
+                        "type": agent.get("type", "internal"),
+                        "role_description": agent.get("role_description", ""),
+                        "active": agent.get("active", True),
+                        "running": agent_id in running_ids  # 실행 중 여부
                     })
 
-                return json.dumps({"success": True, "agents": agent_list}, ensure_ascii=False)
+                return json.dumps({
+                    "success": True,
+                    "agents": agent_list,
+                    "running_count": len(running_agents)
+                }, ensure_ascii=False)
 
             except Exception as e:
                 return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
@@ -333,17 +506,29 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> s
         # ============ 프로젝트 정보 ============
         elif tool_name == "get_project_info":
             try:
-                project_json = Path(project_path) / "project.json"
-                if not project_json.exists():
-                    return json.dumps({"success": False, "error": "프로젝트 설정을 찾을 수 없습니다."}, ensure_ascii=False)
+                import yaml as yaml_lib
 
-                project_data = json.loads(project_json.read_text(encoding='utf-8'))
+                # project.json에서 기본 정보 로드
+                project_json = Path(project_path) / "project.json"
+                project_data = {}
+                if project_json.exists():
+                    project_data = json.loads(project_json.read_text(encoding='utf-8'))
+
+                # agents.yaml에서 에이전트 정보 로드
+                agents_yaml = Path(project_path) / "agents.yaml"
+                agents = []
+                if agents_yaml.exists():
+                    agents_data = yaml_lib.safe_load(agents_yaml.read_text(encoding='utf-8'))
+                    agents = agents_data.get("agents", [])
+
+                # 프로젝트 이름은 폴더명에서 추출
+                project_name = Path(project_path).name
 
                 info = {
-                    "name": project_data.get("name", ""),
+                    "name": project_data.get("name", project_name),
                     "description": project_data.get("description", ""),
-                    "agent_count": len(project_data.get("agents", [])),
-                    "agents": [{"id": a.get("id"), "name": a.get("name")} for a in project_data.get("agents", [])],
+                    "agent_count": len(agents),
+                    "agents": [{"id": a.get("id"), "name": a.get("name"), "active": a.get("active", True)} for a in agents],
                     "path": str(project_path)
                 }
 
@@ -351,6 +536,58 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> s
 
             except Exception as e:
                 return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
+
+        # ============ 내 도구 목록 ============
+        elif tool_name == "get_my_tools":
+            try:
+                from agent_runner import AgentRunner
+                from thread_context import get_current_agent_id
+
+                current_agent_id = get_current_agent_id()
+                if not current_agent_id:
+                    return json.dumps({
+                        "success": False,
+                        "tools": [],
+                        "message": "현재 에이전트를 식별할 수 없습니다"
+                    }, ensure_ascii=False)
+
+                runner = AgentRunner.agent_registry.get(current_agent_id)
+                if not runner:
+                    return json.dumps({
+                        "success": False,
+                        "tools": [],
+                        "message": "에이전트 정보를 찾을 수 없습니다"
+                    }, ensure_ascii=False)
+
+                # 에이전트의 allowed_tools 확인
+                allowed_tools = runner.config.get('allowed_tools', [])
+
+                # 기본 시스템 도구
+                base_tools = ['call_agent', 'list_agents', 'get_my_tools', 'send_notification', 'get_project_info']
+
+                # 허용된 도구가 없으면 모든 설치된 도구 사용 가능
+                if not allowed_tools:
+                    # 설치된 모든 도구 목록 가져오기
+                    _build_tool_package_map()
+                    all_installed = list(_tool_to_package_map.keys())
+                    all_tools = base_tools + all_installed
+                else:
+                    all_tools = base_tools + allowed_tools
+
+                return json.dumps({
+                    "success": True,
+                    "tools": all_tools,
+                    "base_tools": base_tools,
+                    "allowed_tools": allowed_tools if allowed_tools else "all (제한 없음)",
+                    "message": f"기본 도구 {len(base_tools)}개 + 허용 도구 {len(allowed_tools) if allowed_tools else '전체'}개"
+                }, ensure_ascii=False)
+
+            except Exception as e:
+                return json.dumps({
+                    "success": False,
+                    "tools": [],
+                    "message": f"에러 발생: {str(e)}"
+                }, ensure_ascii=False)
 
         # 2. 동적 로딩된 도구 패키지에서 실행 시도
         else:

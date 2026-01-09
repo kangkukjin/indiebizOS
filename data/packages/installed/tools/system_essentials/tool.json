@@ -99,6 +99,17 @@
         },
         "required": ["file_path", "old_string", "new_string"]
       }
+    },
+    {
+      "name": "open_in_browser",
+      "description": "URL 또는 로컬 파일을 기본 브라우저에서 엽니다. HTML 파일, 웹 URL 등을 열 때 사용합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "열 URL 또는 파일 경로" }
+        },
+        "required": ["path"]
+      }
     }
   ]
 }

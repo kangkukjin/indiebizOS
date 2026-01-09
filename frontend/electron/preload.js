@@ -28,6 +28,10 @@ contextBridge.exposeInMainWorld('electron', {
   openIndieNetWindow: () =>
     ipcRenderer.invoke('open-indienet-window'),
 
+  // 비즈니스 관리 창 열기
+  openBusinessWindow: () =>
+    ipcRenderer.invoke('open-business-window'),
+
   // 폴더에서 아이템을 런처로 드롭
   dropItemToLauncher: (itemId, itemType, sourceFolderId) =>
     ipcRenderer.invoke('drop-item-to-launcher', itemId, itemType, sourceFolderId),

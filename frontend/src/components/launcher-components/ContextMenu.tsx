@@ -2,7 +2,7 @@
  * ContextMenu - 컨텍스트 메뉴 컴포넌트
  */
 
-import { Plus, FolderPlus, Pencil, Copy, Clipboard, Folder, Trash } from 'lucide-react';
+import { Plus, FolderPlus, Pencil, Copy, Clipboard, Folder, Trash, Grid3X3 } from 'lucide-react';
 import type { ContextMenuState, ClipboardItem } from './types';
 
 interface ContextMenuProps {
@@ -16,6 +16,7 @@ interface ContextMenuProps {
   onNewFolder: () => void;
   onOpenTrash: () => void;
   onEmptyTrash: () => void;
+  onArrangeIcons: () => void;
   getItemName: (id: string, type: 'project' | 'switch') => string;
 }
 
@@ -30,6 +31,7 @@ export function ContextMenu({
   onNewFolder,
   onOpenTrash,
   onEmptyTrash,
+  onArrangeIcons,
   getItemName,
 }: ContextMenuProps) {
   if (!contextMenu) return null;
@@ -138,6 +140,17 @@ export function ContextMenu({
       >
         <FolderPlus size={16} className="text-blue-600" />
         새 폴더
+      </button>
+      <div className="border-t border-gray-100 my-1" />
+      <button
+        onClick={() => {
+          onArrangeIcons();
+          onClose();
+        }}
+        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+      >
+        <Grid3X3 size={16} className="text-purple-600" />
+        아이콘 정렬
       </button>
     </div>
   );

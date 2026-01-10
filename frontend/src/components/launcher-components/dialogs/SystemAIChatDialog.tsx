@@ -3,7 +3,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Bot, RefreshCw, Paperclip, Camera } from 'lucide-react';
+import { X, Send, Bot, RefreshCw, Paperclip, Camera, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { api } from '../../../lib/api';
 import { CameraPreview } from '../../CameraPreview';
@@ -14,6 +14,15 @@ interface ImageAttachment {
   base64: string;
 }
 
+interface TextAttachment {
+  file: File;
+  content: string;
+  preview: string;
+}
+
+// 텍스트 파일 확장자 목록
+const TEXT_EXTENSIONS = ['.txt', '.md', '.json', '.yaml', '.yml', '.xml', '.csv', '.log', '.py', '.js', '.ts', '.tsx', '.jsx', '.html', '.css', '.sql', '.sh', '.env', '.ini', '.conf', '.toml'];
+
 interface DialogSize {
   width: number;
   height: number;
@@ -23,6 +32,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   images?: string[];  // base64 데이터 URL
+  textFiles?: { name: string; content: string }[];
 }
 
 interface SystemAIChatDialogProps {
@@ -46,6 +56,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [attachedImages, setAttachedImages] = useState<ImageAttachment[]>([]);
+  const [attachedTextFiles, setAttachedTextFiles] = useState<TextAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
@@ -156,6 +167,25 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
     });
   };
 
+  // 텍스트 파일인지 확인
+  const isTextFile = (file: File): boolean => {
+    const fileName = file.name.toLowerCase();
+    return TEXT_EXTENSIONS.some(ext => fileName.endsWith(ext)) ||
+           file.type.startsWith('text/') ||
+           file.type === 'application/json' ||
+           file.type === 'application/xml';
+  };
+
+  // 텍스트 파일 읽기
+  const readTextFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsText(file, 'UTF-8');
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
+  };
+
   // 이미지 파일 처리
   const handleImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -166,6 +196,25 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
     setAttachedImages(prev => [...prev, { file, preview, base64 }]);
   };
 
+  // 텍스트 파일 처리
+  const handleTextFile = async (file: File) => {
+    if (!isTextFile(file)) return;
+
+    const content = await readTextFile(file);
+    const preview = content.length > 200 ? content.substring(0, 200) + '...' : content;
+
+    setAttachedTextFiles(prev => [...prev, { file, content, preview }]);
+  };
+
+  // 파일 타입에 따라 처리
+  const handleFile = async (file: File) => {
+    if (file.type.startsWith('image/')) {
+      await handleImageFile(file);
+    } else if (isTextFile(file)) {
+      await handleTextFile(file);
+    }
+  };
+
   // 이미지 제거
   const removeImage = (index: number) => {
     setAttachedImages(prev => {
@@ -173,6 +222,15 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
       URL.revokeObjectURL(newImages[index].preview);
       newImages.splice(index, 1);
       return newImages;
+    });
+  };
+
+  // 텍스트 파일 제거
+  const removeTextFile = (index: number) => {
+    setAttachedTextFiles(prev => {
+      const newFiles = [...prev];
+      newFiles.splice(index, 1);
+      return newFiles;
     });
   };
 
@@ -201,7 +259,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
 
     const files = Array.from(e.dataTransfer.files);
     for (const file of files) {
-      await handleImageFile(file);
+      await handleFile(file);
     }
   };
 
@@ -223,15 +281,23 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     for (const file of files) {
-      await handleImageFile(file);
+      await handleFile(file);
     }
     e.target.value = '';
   };
 
   const handleSend = async () => {
-    if ((!input.trim() && attachedImages.length === 0) || isLoading) return;
+    const hasContent = input.trim() || attachedImages.length > 0 || attachedTextFiles.length > 0;
+    if (!hasContent || isLoading) return;
 
-    const userMessage = input.trim();
+    // 텍스트 파일 내용을 메시지에 추가
+    let messageContent = input.trim();
+    if (attachedTextFiles.length > 0) {
+      const fileContents = attachedTextFiles.map(tf =>
+        `\n\n--- 첨부파일: ${tf.file.name} ---\n${tf.content}`
+      ).join('');
+      messageContent = messageContent + fileContents;
+    }
 
     // 이미지 데이터 준비
     const imageData = attachedImages.map(img => ({
@@ -243,16 +309,22 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
     const messageImages = attachedImages.map(img => `data:${img.file.type};base64,${img.base64}`);
 
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage, images: messageImages }]);
+    setMessages(prev => [...prev, {
+      role: 'user',
+      content: input.trim(),
+      images: messageImages,
+      textFiles: attachedTextFiles.map(tf => ({ name: tf.file.name, content: tf.content }))
+    }]);
 
-    // 이미지 정리
+    // 첨부 파일 정리
     attachedImages.forEach(img => URL.revokeObjectURL(img.preview));
     setAttachedImages([]);
+    setAttachedTextFiles([]);
 
     setIsLoading(true);
 
     try {
-      const response = await api.chatWithSystemAI(userMessage, imageData.length > 0 ? imageData : undefined);
+      const response = await api.chatWithSystemAI(messageContent, imageData.length > 0 ? imageData : undefined);
       setMessages(prev => [...prev, { role: 'assistant', content: response.response }]);
     } catch (error: any) {
       setMessages(prev => [...prev, {
@@ -275,6 +347,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
     setMessages([]);
     attachedImages.forEach(img => URL.revokeObjectURL(img.preview));
     setAttachedImages([]);
+    setAttachedTextFiles([]);
   };
 
   if (!show) return null;
@@ -390,6 +463,17 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
                       ))}
                     </div>
                   )}
+                  {/* 사용자 첨부 텍스트 파일 표시 */}
+                  {msg.textFiles && msg.textFiles.length > 0 && (
+                    <div className="flex gap-2 flex-wrap mb-2">
+                      {msg.textFiles.map((tf, tfIdx) => (
+                        <div key={tfIdx} className={`flex items-center gap-2 px-2 py-1 rounded ${msg.role === 'user' ? 'bg-amber-400/30' : 'bg-gray-200'}`}>
+                          <FileText size={14} />
+                          <span className="text-xs font-medium">{tf.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {msg.role === 'assistant' ? (
                     <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -445,10 +529,33 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
             </div>
           )}
 
+          {/* 첨부된 텍스트 파일 미리보기 */}
+          {attachedTextFiles.length > 0 && (
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {attachedTextFiles.map((tf, index) => (
+                <div key={index} className="relative group bg-gray-100 border border-gray-200 rounded-lg p-2 max-w-[180px]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText size={14} className="text-amber-500 flex-shrink-0" />
+                    <span className="text-xs font-medium text-gray-700 truncate">{tf.file.name}</span>
+                  </div>
+                  <div className="text-[10px] text-gray-500 line-clamp-2 break-all">
+                    {tf.preview}
+                  </div>
+                  <button
+                    onClick={() => removeTextFile(index)}
+                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* 드래그 오버레이 */}
           {isDragging && (
             <div className="mb-3 p-3 border-2 border-dashed border-amber-400 rounded-xl bg-amber-50 text-center text-amber-600 text-sm">
-              이미지를 여기에 놓으세요
+              파일을 여기에 놓으세요 (이미지, 텍스트 파일)
             </div>
           )}
 
@@ -457,7 +564,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.txt,.md,.json,.yaml,.yml,.xml,.csv,.log,.py,.js,.ts,.tsx,.jsx,.html,.css,.sql,.sh,.env,.ini,.conf,.toml"
               multiple
               onChange={handleFileSelect}
               className="hidden"
@@ -466,7 +573,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
               className="p-2.5 bg-gray-100 rounded-xl border border-gray-200 hover:border-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-500 hover:text-amber-500"
-              title="이미지 첨부"
+              title="파일 첨부 (이미지, 텍스트)"
             >
               <Paperclip size={18} />
             </button>
@@ -487,20 +594,20 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
-              placeholder="메시지를 입력하세요... (이미지 붙여넣기 가능)"
+              placeholder="메시지를 입력하세요... (파일 드래그/붙여넣기 가능)"
               className="flex-1 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl focus:border-amber-400 focus:outline-none resize-none text-gray-800 placeholder:text-gray-400"
               rows={1}
               disabled={isLoading}
             />
             <button
               onClick={handleSend}
-              disabled={(!input.trim() && attachedImages.length === 0) || isLoading}
+              disabled={(!input.trim() && attachedImages.length === 0 && attachedTextFiles.length === 0) || isLoading}
               className="px-4 py-2.5 bg-amber-500 text-white rounded-xl hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Send size={18} />
             </button>
           </div>
-          <p className="text-xs text-gray-400 mt-2 text-center">Enter로 전송 · Shift+Enter로 줄바꿈 · 이미지 드래그 또는 붙여넣기</p>
+          <p className="text-xs text-gray-400 mt-2 text-center">Enter로 전송 · Shift+Enter로 줄바꿈 · 파일 드래그 또는 붙여넣기</p>
         </div>
       </div>
 

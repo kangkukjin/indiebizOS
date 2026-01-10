@@ -3,7 +3,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Camera } from 'lucide-react';
+import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Camera, FileText } from 'lucide-react';
 import { CameraPreview } from './CameraPreview';
 import ReactMarkdown from 'react-markdown';
 import { createChatWebSocket, cancelAllAgents, api } from '../lib/api';
@@ -14,6 +14,15 @@ interface ImageAttachment {
   preview: string;
   base64: string;
 }
+
+interface TextAttachment {
+  file: File;
+  content: string;
+  preview: string;  // 미리보기용 (앞부분만)
+}
+
+// 텍스트 파일 확장자 목록
+const TEXT_EXTENSIONS = ['.txt', '.md', '.json', '.yaml', '.yml', '.xml', '.csv', '.log', '.py', '.js', '.ts', '.tsx', '.jsx', '.html', '.css', '.sql', '.sh', '.env', '.ini', '.conf', '.toml'];
 
 interface ChatProps {
   projectId: string;
@@ -27,6 +36,7 @@ interface ChatMessage {
   timestamp: Date;
   isStreaming?: boolean;
   images?: string[];  // base64 이미지 배열
+  textFiles?: { name: string; content: string }[];  // 첨부된 텍스트 파일
 }
 
 export function Chat({ projectId, agent }: ChatProps) {
@@ -35,6 +45,7 @@ export function Chat({ projectId, agent }: ChatProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [attachedImages, setAttachedImages] = useState<ImageAttachment[]>([]);
+  const [attachedTextFiles, setAttachedTextFiles] = useState<TextAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
   // 카메라 상태
@@ -59,6 +70,25 @@ export function Chat({ projectId, agent }: ChatProps) {
     });
   };
 
+  // 텍스트 파일인지 확인
+  const isTextFile = (file: File): boolean => {
+    const fileName = file.name.toLowerCase();
+    return TEXT_EXTENSIONS.some(ext => fileName.endsWith(ext)) ||
+           file.type.startsWith('text/') ||
+           file.type === 'application/json' ||
+           file.type === 'application/xml';
+  };
+
+  // 텍스트 파일 읽기
+  const readTextFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsText(file, 'UTF-8');
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
+  };
+
   // 이미지 파일 처리
   const handleImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -69,6 +99,25 @@ export function Chat({ projectId, agent }: ChatProps) {
     setAttachedImages(prev => [...prev, { file, preview, base64 }]);
   };
 
+  // 텍스트 파일 처리
+  const handleTextFile = async (file: File) => {
+    if (!isTextFile(file)) return;
+
+    const content = await readTextFile(file);
+    const preview = content.length > 200 ? content.substring(0, 200) + '...' : content;
+
+    setAttachedTextFiles(prev => [...prev, { file, content, preview }]);
+  };
+
+  // 파일 타입에 따라 처리
+  const handleFile = async (file: File) => {
+    if (file.type.startsWith('image/')) {
+      await handleImageFile(file);
+    } else if (isTextFile(file)) {
+      await handleTextFile(file);
+    }
+  };
+
   // 이미지 제거
   const removeImage = (index: number) => {
     setAttachedImages(prev => {
@@ -76,6 +125,15 @@ export function Chat({ projectId, agent }: ChatProps) {
       URL.revokeObjectURL(newImages[index].preview);
       newImages.splice(index, 1);
       return newImages;
+    });
+  };
+
+  // 텍스트 파일 제거
+  const removeTextFile = (index: number) => {
+    setAttachedTextFiles(prev => {
+      const newFiles = [...prev];
+      newFiles.splice(index, 1);
+      return newFiles;
     });
   };
 
@@ -104,7 +162,7 @@ export function Chat({ projectId, agent }: ChatProps) {
 
     const files = Array.from(e.dataTransfer.files);
     for (const file of files) {
-      await handleImageFile(file);
+      await handleFile(file);
     }
   };
 
@@ -126,7 +184,7 @@ export function Chat({ projectId, agent }: ChatProps) {
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     for (const file of files) {
-      await handleImageFile(file);
+      await handleFile(file);
     }
     // input 초기화 (같은 파일 다시 선택 가능하게)
     e.target.value = '';
@@ -194,13 +252,23 @@ export function Chat({ projectId, agent }: ChatProps) {
 
   // 메시지 전송
   const sendMessage = () => {
-    if ((!input.trim() && attachedImages.length === 0) || !ws || isLoading) return;
+    const hasContent = input.trim() || attachedImages.length > 0 || attachedTextFiles.length > 0;
+    if (!hasContent || !ws || isLoading) return;
 
     // 이미지 base64 배열 준비
     const imageData = attachedImages.map(img => ({
       base64: img.base64,
       media_type: img.file.type
     }));
+
+    // 텍스트 파일 내용을 메시지에 추가
+    let messageContent = input.trim();
+    if (attachedTextFiles.length > 0) {
+      const fileContents = attachedTextFiles.map(tf =>
+        `\n\n--- 첨부파일: ${tf.file.name} ---\n${tf.content}`
+      ).join('');
+      messageContent = messageContent + fileContents;
+    }
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -209,6 +277,7 @@ export function Chat({ projectId, agent }: ChatProps) {
       timestamp: new Date(),
       // base64 데이터 URL로 저장 (blob URL은 revoke되면 무효화됨)
       images: attachedImages.map(img => `data:${img.file.type};base64,${img.base64}`),
+      textFiles: attachedTextFiles.map(tf => ({ name: tf.file.name, content: tf.content })),
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -216,7 +285,7 @@ export function Chat({ projectId, agent }: ChatProps) {
     ws.send(
       JSON.stringify({
         type: 'chat',
-        message: input.trim(),
+        message: messageContent,
         agent_name: agent.name,
         project_id: projectId,
         images: imageData.length > 0 ? imageData : undefined,
@@ -224,9 +293,10 @@ export function Chat({ projectId, agent }: ChatProps) {
     );
 
     setInput('');
-    // 이미지 첨부 초기화
+    // 첨부 파일 초기화
     attachedImages.forEach(img => URL.revokeObjectURL(img.preview));
     setAttachedImages([]);
+    setAttachedTextFiles([]);
     inputRef.current?.focus();
   };
 
@@ -325,10 +395,33 @@ export function Chat({ projectId, agent }: ChatProps) {
           </div>
         )}
 
+        {/* 첨부된 텍스트 파일 미리보기 */}
+        {attachedTextFiles.length > 0 && (
+          <div className="flex gap-2 mb-3 flex-wrap">
+            {attachedTextFiles.map((tf, index) => (
+              <div key={index} className="relative group bg-white border border-[#E5DFD5] rounded-lg p-2 max-w-[200px]">
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText size={16} className="text-[#D97706] flex-shrink-0" />
+                  <span className="text-xs font-medium text-[#4A4035] truncate">{tf.file.name}</span>
+                </div>
+                <div className="text-[10px] text-[#A09080] line-clamp-2 break-all">
+                  {tf.preview}
+                </div>
+                <button
+                  onClick={() => removeTextFile(index)}
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* 드래그 오버레이 */}
         {isDragging && (
           <div className="mb-3 p-4 border-2 border-dashed border-[#D97706] rounded-xl bg-[#FEF3C7] text-center text-[#D97706]">
-            이미지를 여기에 놓으세요
+            파일을 여기에 놓으세요 (이미지, 텍스트 파일)
           </div>
         )}
 
@@ -337,7 +430,7 @@ export function Chat({ projectId, agent }: ChatProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,.txt,.md,.json,.yaml,.yml,.xml,.csv,.log,.py,.js,.ts,.tsx,.jsx,.html,.css,.sql,.sh,.env,.ini,.conf,.toml"
             multiple
             onChange={handleFileSelect}
             className="hidden"
@@ -346,7 +439,7 @@ export function Chat({ projectId, agent }: ChatProps) {
             onClick={() => fileInputRef.current?.click()}
             disabled={isLoading}
             className="p-3 bg-white rounded-xl border border-[#E5DFD5] hover:border-[#D97706] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[#A09080] hover:text-[#D97706]"
-            title="이미지 첨부"
+            title="파일 첨부 (이미지, 텍스트)"
           >
             <Paperclip size={20} />
           </button>
@@ -367,7 +460,7 @@ export function Chat({ projectId, agent }: ChatProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={`${agent.name}에게 메시지 보내기... (이미지 붙여넣기 가능)`}
+            placeholder={`${agent.name}에게 메시지 보내기... (파일 드래그/붙여넣기 가능)`}
             className="flex-1 px-4 py-3 bg-white rounded-xl border border-[#E5DFD5] focus:border-[#D97706] focus:outline-none resize-none min-h-[48px] max-h-[200px] text-[#4A4035] placeholder:text-[#A09080]"
             rows={1}
             disabled={isLoading}
@@ -383,7 +476,7 @@ export function Chat({ projectId, agent }: ChatProps) {
           ) : (
             <button
               onClick={sendMessage}
-              disabled={!input.trim() && attachedImages.length === 0}
+              disabled={!input.trim() && attachedImages.length === 0 && attachedTextFiles.length === 0}
               className="p-3 bg-[#D97706] rounded-xl hover:bg-[#B45309] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
             >
               <Send size={20} />
@@ -484,6 +577,17 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                 alt={`첨부 이미지 ${index + 1}`}
                 className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
               />
+            ))}
+          </div>
+        )}
+        {/* 사용자 첨부 텍스트 파일 표시 */}
+        {message.textFiles && message.textFiles.length > 0 && (
+          <div className="flex gap-2 flex-wrap mb-2">
+            {message.textFiles.map((tf, index) => (
+              <div key={index} className={`flex items-center gap-2 px-2 py-1 rounded ${isUser ? 'bg-blue-400/30' : 'bg-[#D5CFC5]'}`}>
+                <FileText size={14} />
+                <span className="text-xs font-medium">{tf.name}</span>
+              </div>
             ))}
           </div>
         )}

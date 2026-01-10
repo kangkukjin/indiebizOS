@@ -20,6 +20,7 @@ let pythonProcess = null;
 let mainWindow = null;
 let projectWindows = new Map(); // 프로젝트 창 관리
 let folderWindows = new Map(); // 폴더 창 관리
+let multiChatWindows = new Map(); // 다중채팅방 창 관리
 let indieNetWindow = null; // IndieNet 창
 let businessWindow = null; // 비즈니스 관리 창
 
@@ -438,6 +439,75 @@ function createBusinessWindow() {
 }
 
 /**
+ * 다중채팅방 창 생성
+ */
+function createMultiChatWindow(roomId, roomName) {
+  // 이미 열려있으면 포커스
+  if (multiChatWindows.has(roomId)) {
+    const existingWindow = multiChatWindows.get(roomId);
+    if (!existingWindow.isDestroyed()) {
+      existingWindow.focus();
+      return;
+    }
+  }
+
+  const multiChatWindow = new BrowserWindow({
+    width: 1100,
+    height: 700,
+    minWidth: 900,
+    minHeight: 600,
+    title: roomName || '다중채팅방',
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 15, y: 15 },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  // URL에 채팅방 ID 전달 (한글 등 특수문자 인코딩)
+  const encodedRoomId = encodeURIComponent(roomId);
+  if (isDev) {
+    multiChatWindow.loadURL(`http://localhost:5173/#/multichat/${encodedRoomId}`);
+  } else {
+    multiChatWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
+      hash: `/multichat/${encodedRoomId}`
+    });
+  }
+
+  // 외부 링크는 기본 브라우저에서 열기
+  multiChatWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  // 페이지 내 링크 클릭도 처리
+  multiChatWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  multiChatWindows.set(roomId, multiChatWindow);
+
+  multiChatWindow.on('closed', () => {
+    // 다중채팅방 창 닫을 때 해당 방의 모든 에이전트 비활성화
+    fetch(`http://localhost:${API_PORT}/multi-chat/rooms/${roomId}/deactivate-all`, {
+      method: 'POST'
+    }).then(() => {
+      console.log(`[Electron] 다중채팅방 ${roomId} 에이전트 비활성화됨`);
+    }).catch(err => {
+      console.warn(`[Electron] 에이전트 비활성화 실패: ${err.message}`);
+    });
+    multiChatWindows.delete(roomId);
+  });
+
+  return multiChatWindow;
+}
+
+/**
  * IPC 핸들러 등록
  */
 function setupIPC() {
@@ -474,6 +544,11 @@ function setupIPC() {
   // 비즈니스 관리 창 열기
   ipcMain.handle('open-business-window', () => {
     createBusinessWindow();
+  });
+
+  // 다중채팅방 창 열기
+  ipcMain.handle('open-multichat-window', (_, roomId, roomName) => {
+    createMultiChatWindow(roomId, roomName);
   });
 
   // 폴더에서 아이템을 밖으로 드래그할 때 (런처에 드롭)

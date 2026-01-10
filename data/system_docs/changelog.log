@@ -86,3 +86,22 @@
   - prompt_generator.py: 위임 체인 및 병렬 위임 가이드 추가
 [2026-01-08 21:00:00] DOCS_UPDATED: system_docs 업데이트
   - architecture.md: 위임 체인 시스템 섹션 추가, 에이전트 간 협업 흐름 다이어그램
+[2026-01-09 13:05:27] PROJECT_CREATED: 다방 (ID: 다방)
+[2026-01-09 13:05:27] PROJECT_CREATED: 다방 (ID: 다방)
+[2026-01-09 16:59:52] PROJECT_CREATED: 리리 (ID: 리리)
+[2026-01-09 16:59:52] PROJECT_CREATED: 리리 (ID: 리리)
+[2026-01-10 01:20:38] PROJECT_CREATED: 12 (ID: 12)
+[2026-01-10 01:20:38] PROJECT_CREATED: 12 (ID: 12)
+[2026-01-10 09:00:00] FEATURE_ADDED: 다중채팅방 시스템 개선
+  - 다중채팅방을 별도 창으로 열기 (프로젝트 창처럼)
+  - 전체시작/전체중단 버튼 추가
+  - 도구 선택 드롭다운 추가 (에이전트에게 도구 할당)
+  - 창 닫을 때 에이전트 자동 비활성화
+  - 에이전트 소환 시 원본 AI 설정 유지 (provider, model, api_key)
+  - DB 스키마 확장: room_participants에 ai_provider, ai_model, ai_api_key 컬럼 추가
+  - 파일: multi_chat_manager.py, multi_chat_db.py, api_multi_chat.py
+  - 프론트엔드: MultiChat.tsx, main.js, preload.js, api.ts
+[2026-01-10 10:00:00] TOOL_ADDED: search_restaurants (information 패키지)
+  - 카카오 로컬 API 기반 맛집/음식점 검색 도구
+  - 키워드, 위치, 반경, 정렬 기준 지원
+  - 음식점명, 카테고리, 주소, 전화번호, 카카오맵 URL 반환

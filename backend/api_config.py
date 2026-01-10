@@ -139,6 +139,8 @@ async def get_project_config(project_id: str):
 @router.put("/projects/{project_id}/config")
 async def update_project_config(project_id: str, config: Dict[str, Any]):
     """프로젝트별 설정 업데이트"""
+    from api_helpers import update_all_agents_rules_json
+
     try:
         project_path = project_manager.get_project_path(project_id)
         agents_file = project_path / "agents.yaml"
@@ -168,6 +170,9 @@ async def update_project_config(project_id: str, config: Dict[str, Any]):
         if 'common_settings' in config:
             common_file = project_path / "common_settings.txt"
             common_file.write_text(config['common_settings'], encoding='utf-8')
+
+            # 공통설정 변경 시 모든 에이전트의 rules.json 업데이트
+            update_all_agents_rules_json(project_path)
 
         # default_tools를 project.json에 저장
         if 'default_tools' in config:
@@ -500,6 +505,27 @@ async def stop_ollama():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/ollama/models")
+async def get_ollama_models():
+    """설치된 Ollama 모델 목록 조회"""
+    import subprocess
+    import json
+
+    try:
+        result = subprocess.run(
+            ['curl', '-s', 'http://localhost:11434/api/tags'],
+            capture_output=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            data = json.loads(result.stdout.decode())
+            models = [m["name"] for m in data.get("models", [])]
+            return {"models": models, "running": True}
+        return {"models": [], "running": False}
+    except:
+        return {"models": [], "running": False}
+
+
 # ============ 자동 도구 배분 API ============
 
 @router.post("/projects/{project_id}/auto-assign-tools")
@@ -661,6 +687,7 @@ async def save_generated_prompts(project_id: str, request: Dict[str, Any]):
     """
     try:
         from prompt_generator import PromptGenerator, GeneratedPrompts
+        from api_helpers import update_all_agents_rules_json
 
         project_path = project_manager.get_project_path(project_id)
         generator = PromptGenerator()
@@ -681,6 +708,9 @@ async def save_generated_prompts(project_id: str, request: Dict[str, Any]):
 
         # 저장
         saved_files = generator.save_to_project(result, str(project_path))
+
+        # 공통설정 및 역할 변경 시 모든 에이전트의 rules.json 업데이트
+        update_all_agents_rules_json(project_path)
 
         return {
             "status": "saved",

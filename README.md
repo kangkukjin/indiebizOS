@@ -105,7 +105,9 @@ agents:
 | android | Android device management (adb) |
 | blog | Blog RAG search and insights |
 | browser-automation | Web automation (Playwright) |
-| information | API Ninjas, travel info, publishing |
+| gov | Government data APIs (공공데이터) |
+| hometax | Korean tax service (국세청 홈택스) |
+| information | API Ninjas, travel info, restaurant search (Kakao API) |
 | nodejs | JavaScript/Node.js execution |
 | pc-manager | File and storage management |
 | python-exec | Python code execution |
@@ -138,7 +140,16 @@ agents:
   - Business documents
   - Conversation history
 
-### 7. System AI (Meta-Controller)
+### 7. Multi-Chat Rooms (Group Conversation)
+
+- **Separate windows**: Each chat room opens in its own window
+- **Summon agents**: Bring agents from any project into a conversation
+- **Preserve AI settings**: Summoned agents keep their original provider/model/API key
+- **Start/Stop all**: Activate or deactivate all participants at once
+- **Tool assignment**: Assign specific tools to each agent via dropdown
+- **@mentions**: Target specific agents with @name syntax
+
+### 8. System AI (Meta-Controller)
 
 - Sits above all projects
 - Manages system-wide settings
@@ -158,7 +169,8 @@ indiebizOS/
 │   ├── system_ai.py     # System AI core
 │   ├── scheduler.py     # Task scheduler
 │   ├── auto_response.py # Auto-response service
-│   └── channel_poller.py # Gmail/Nostr message receiver
+│   ├── channel_poller.py # Gmail/Nostr message receiver
+│   └── multi_chat_manager.py # Multi-chat room manager
 │
 ├── frontend/            # Electron + React (TypeScript)
 │   ├── electron/        # Main/preload
@@ -297,6 +309,7 @@ A single "universal agent" can't optimize this. IndieBiz can.
 | Scheduler | No | No | Yes |
 | Business network | No | No | Yes |
 | Auto-response | No | No | Yes |
+| Multi-chat rooms | No | No | Yes |
 
 ---
 
@@ -315,8 +328,9 @@ A single "universal agent" can't optimize this. IndieBiz can.
 **This project is under active development.**
 
 This is a working personal project with:
-- 11 active projects in production use
-- 13 installed tool packages
+- 14 active projects in production use
+- 12 installed tool packages
+- Multi-chat rooms for group conversations
 - Functional scheduler, switches, and business network
 
 ### Design Philosophy: Your OS, Your Way

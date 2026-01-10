@@ -909,6 +909,7 @@ async def clear_conversations():
     from system_ai_memory import MEMORY_DB_PATH
 
     conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn.execute("PRAGMA journal_mode=WAL")
     cursor = conn.cursor()
     cursor.execute("DELETE FROM conversations")
     conn.commit()

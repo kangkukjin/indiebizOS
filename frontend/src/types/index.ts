@@ -173,6 +173,7 @@ export interface ElectronAPI {
   openFolderWindow: (folderId: string, folderName: string) => Promise<void>;
   openIndieNetWindow: () => Promise<void>;
   openBusinessWindow: () => Promise<void>;
+  openMultiChatWindow: (roomId: string, roomName: string) => Promise<void>;
 
   // 창 간 드래그 드롭 API
   dropItemToLauncher: (itemId: string, itemType: string, sourceFolderId: string) => Promise<boolean>;

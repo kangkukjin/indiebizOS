@@ -9,12 +9,14 @@ import { Manager } from './components/Manager';
 import { FolderView } from './components/FolderView';
 import { IndieNet } from './components/IndieNet';
 import { BusinessManager } from './components/BusinessManager';
+import { MultiChat } from './components/MultiChat';
 import { api } from './lib/api';
 
 function App() {
   const { currentView, setCurrentProject, setIsConnected, setError } = useAppStore();
   const [projectId, setProjectId] = useState<string | null>(null);
   const [folderId, setFolderId] = useState<string | null>(null);
+  const [multiChatRoomId, setMultiChatRoomId] = useState<string | null>(null);
   const [isIndieNet, setIsIndieNet] = useState(false);
   const [isBusiness, setIsBusiness] = useState(false);
 
@@ -29,6 +31,7 @@ function App() {
         setIsBusiness(false);
         setProjectId(null);
         setFolderId(null);
+        setMultiChatRoomId(null);
         return;
       }
 
@@ -36,6 +39,18 @@ function App() {
       if (hash === '#/business') {
         setIsBusiness(true);
         setIsIndieNet(false);
+        setProjectId(null);
+        setFolderId(null);
+        setMultiChatRoomId(null);
+        return;
+      }
+
+      // MultiChat 체크 (URL 인코딩된 ID 디코딩)
+      const multiChatMatch = hash.match(/^#\/multichat\/(.+)$/);
+      if (multiChatMatch) {
+        setMultiChatRoomId(decodeURIComponent(multiChatMatch[1]));
+        setIsIndieNet(false);
+        setIsBusiness(false);
         setProjectId(null);
         setFolderId(null);
         return;
@@ -48,6 +63,7 @@ function App() {
         setFolderId(null);
         setIsIndieNet(false);
         setIsBusiness(false);
+        setMultiChatRoomId(null);
         return;
       }
 
@@ -58,6 +74,7 @@ function App() {
         setProjectId(null);
         setIsIndieNet(false);
         setIsBusiness(false);
+        setMultiChatRoomId(null);
         return;
       }
 
@@ -66,6 +83,7 @@ function App() {
       setFolderId(null);
       setIsIndieNet(false);
       setIsBusiness(false);
+      setMultiChatRoomId(null);
     };
 
     checkHash();
@@ -136,6 +154,17 @@ function App() {
       <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
         <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
           <BusinessManager />
+        </div>
+      </div>
+    );
+  }
+
+  // MultiChat 창인 경우
+  if (multiChatRoomId) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+          <MultiChat roomId={multiChatRoomId} />
         </div>
       </div>
     );

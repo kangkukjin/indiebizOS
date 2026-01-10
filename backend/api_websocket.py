@@ -47,10 +47,18 @@ async def websocket_chat(websocket: WebSocket, client_id: str):
 
     except WebSocketDisconnect:
         manager.disconnect(client_id)
-        print(f"[WS] 연결 해제: {client_id}")
+        print(f"[WS] 정상 연결 해제: {client_id}")
     except Exception as e:
-        print(f"[WS 에러] {e}")
-        manager.disconnect(client_id)
+        error_msg = str(e)
+        # 연결 관련 에러인 경우에만 disconnect
+        if "closed" in error_msg.lower() or "disconnect" in error_msg.lower() or "connection" in error_msg.lower():
+            print(f"[WS] 연결 에러로 해제: {client_id} - {e}")
+            manager.disconnect(client_id)
+        else:
+            # 일시적 에러는 로그만 남기고 루프 계속 (연결 유지)
+            print(f"[WS 에러] {client_id}: {e} (연결 유지 시도)")
+            # 하지만 여기서는 while 루프가 끝나므로 결국 연결 해제됨
+            manager.disconnect(client_id)
 
 
 async def handle_chat_message(client_id: str, data: dict):

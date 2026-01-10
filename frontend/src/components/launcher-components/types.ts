@@ -75,6 +75,7 @@ export interface DraggableIconProps {
   trashHover: boolean;
   isSwitch?: boolean;
   isFolder?: boolean;
+  isMultiChat?: boolean;
   isFolderHovered?: boolean;
   folderRef?: (el: HTMLDivElement | null) => void;
   hoveringFolderId?: string | null;

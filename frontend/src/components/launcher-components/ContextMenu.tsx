@@ -2,7 +2,7 @@
  * ContextMenu - 컨텍스트 메뉴 컴포넌트
  */
 
-import { Plus, FolderPlus, Pencil, Copy, Clipboard, Folder, Trash, Grid3X3 } from 'lucide-react';
+import { Plus, FolderPlus, Pencil, Copy, Clipboard, Folder, Trash, Grid3X3, Users } from 'lucide-react';
 import type { ContextMenuState, ClipboardItem } from './types';
 
 interface ContextMenuProps {
@@ -14,6 +14,7 @@ interface ContextMenuProps {
   onPaste: () => void;
   onNewProject: () => void;
   onNewFolder: () => void;
+  onNewMultiChatRoom: () => void;
   onOpenTrash: () => void;
   onEmptyTrash: () => void;
   onArrangeIcons: () => void;
@@ -29,6 +30,7 @@ export function ContextMenu({
   onPaste,
   onNewProject,
   onNewFolder,
+  onNewMultiChatRoom,
   onOpenTrash,
   onEmptyTrash,
   onArrangeIcons,
@@ -140,6 +142,16 @@ export function ContextMenu({
       >
         <FolderPlus size={16} className="text-blue-600" />
         새 폴더
+      </button>
+      <button
+        onClick={() => {
+          onNewMultiChatRoom();
+          onClose();
+        }}
+        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+      >
+        <Users size={16} className="text-purple-600" />
+        새 다중채팅방
       </button>
       <div className="border-t border-gray-100 my-1" />
       <button

@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, RefreshCw, User, Clock, Folder, Globe, Bot, Package, Building2 } from 'lucide-react';
+import { Zap, Settings, RefreshCw, User, Clock, Folder, Globe, Bot, Package, Building2, Users } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 import type { Project, Switch, SchedulerTask, SchedulerAction } from '../types';
@@ -45,6 +45,7 @@ export function Launcher() {
 
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [showNewMultiChatDialog, setShowNewMultiChatDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
   const [showTaskEditDialog, setShowTaskEditDialog] = useState(false);
@@ -52,6 +53,17 @@ export function Launcher() {
   const [showToolboxDialog, setShowToolboxDialog] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
+  const [newMultiChatName, setNewMultiChatName] = useState('');
+
+  // 다중채팅방 목록
+  interface MultiChatRoom {
+    id: string;
+    name: string;
+    description: string;
+    participant_count: number;
+    icon_position?: [number, number];
+  }
+  const [multiChatRooms, setMultiChatRooms] = useState<MultiChatRoom[]>([]);
   const [profileContent, setProfileContent] = useState('');
   const [trashHover, setTrashHover] = useState(false);
   const [draggedItem, setDraggedItem] = useState<{ id: string; type: 'project' | 'switch' } | null>(null);
@@ -100,9 +112,24 @@ export function Launcher() {
   const trashRef = useRef<HTMLDivElement>(null);
   const desktopRef = useRef<HTMLDivElement>(null);
 
+  const loadMultiChatRooms = async () => {
+    try {
+      const rooms = await api.getMultiChatRooms();
+      // 아이콘 위치가 없으면 기본 위치 할당
+      const roomsWithPosition = rooms.map((room, index) => ({
+        ...room,
+        icon_position: room.icon_position || [600 + (index % 5) * 100, 100 + Math.floor(index / 5) * 100] as [number, number],
+      }));
+      setMultiChatRooms(roomsWithPosition);
+    } catch (error) {
+      console.error('Failed to load multi-chat rooms:', error);
+    }
+  };
+
   useEffect(() => {
     loadProjects();
     loadSwitches();
+    loadMultiChatRooms();
   }, [loadProjects, loadSwitches]);
 
   // 폴더에서 아이템이 드롭되었을 때 이벤트 수신
@@ -190,9 +217,31 @@ export function Launcher() {
     }
   };
 
+  const handleCreateMultiChatRoom = async () => {
+    if (!newMultiChatName.trim()) return;
+
+    try {
+      await api.createMultiChatRoom(newMultiChatName);
+      setNewMultiChatName('');
+      setShowNewMultiChatDialog(false);
+      loadMultiChatRooms();
+    } catch (error) {
+      console.error('Failed to create multi-chat room:', error);
+    }
+  };
+
+  const handleOpenMultiChatRoom = (room: MultiChatRoom) => {
+    if (window.electron?.openMultiChatWindow) {
+      window.electron.openMultiChatWindow(room.id, room.name);
+    } else {
+      window.location.hash = `/multichat/${room.id}`;
+    }
+  };
+
   const handleRefresh = () => {
     loadProjects();
     loadSwitches();
+    loadMultiChatRooms();
   };
 
   const handleOpenMyProfile = async () => {
@@ -359,9 +408,12 @@ export function Launcher() {
     // 최신 데이터를 서버에서 직접 가져오기
     let latestProjects: Project[] = [];
     let latestSwitches: Switch[] = [];
+    let latestMultiChatRooms: MultiChatRoom[] = [];
     try {
       latestProjects = await api.getProjects();
       latestSwitches = await api.getSwitches();
+      latestMultiChatRooms = await api.getMultiChatRooms();
+      console.log('[아이콘정렬] 다중채팅방:', latestMultiChatRooms);
     } catch (error) {
       console.error('Failed to fetch latest data:', error);
       return;
@@ -385,7 +437,7 @@ export function Launcher() {
     const rootSwitches = latestSwitches.filter((s: Switch) => !s.parent_folder && !s.in_trash);
 
     // 모든 아이템 수집 (icon_position은 [x, y] 배열)
-    const allItems: { id: string; type: 'project' | 'switch'; x: number; y: number }[] = [
+    const allItems: { id: string; type: 'project' | 'switch' | 'multichat'; x: number; y: number }[] = [
       ...rootProjects.map(p => ({
         id: p.id,
         type: 'project' as const,
@@ -397,6 +449,12 @@ export function Launcher() {
         type: 'switch' as const,
         x: Array.isArray(s.icon_position) ? s.icon_position[0] : 100,
         y: Array.isArray(s.icon_position) ? s.icon_position[1] : 100,
+      })),
+      ...latestMultiChatRooms.map(r => ({
+        id: r.id,
+        type: 'multichat' as const,
+        x: Array.isArray(r.icon_position) ? r.icon_position[0] : 100,
+        y: Array.isArray(r.icon_position) ? r.icon_position[1] : 100,
       })),
     ];
 
@@ -437,8 +495,11 @@ export function Launcher() {
 
       if (item.type === 'project') {
         return api.updateProjectPosition(item.id, newPos.x, newPos.y);
-      } else {
+      } else if (item.type === 'switch') {
         return api.updateSwitchPosition(item.id, newPos.x, newPos.y);
+      } else {
+        console.log(`[아이콘정렬] 다중채팅방 위치 업데이트: ${item.id} -> (${newPos.x}, ${newPos.y})`);
+        return api.updateMultiChatRoomPosition(item.id, newPos.x, newPos.y);
       }
     });
 
@@ -446,6 +507,7 @@ export function Launcher() {
       await Promise.all(updatePromises);
       loadProjects();
       loadSwitches();
+      loadMultiChatRooms();
     } catch (error) {
       console.error('Failed to arrange icons:', error);
     }
@@ -862,6 +924,48 @@ export function Launcher() {
               />
             ))}
 
+            {/* 다중채팅방 아이콘들 */}
+            {multiChatRooms.map((room) => (
+              <DraggableIcon
+                key={room.id}
+                icon={<Users size={40} className="text-purple-500" />}
+                label={room.name}
+                position={room.icon_position || [600, 100]}
+                onDoubleClick={() => handleOpenMultiChatRoom(room)}
+                onPositionChange={async (x, y) => {
+                  // 로컬 상태 업데이트
+                  setMultiChatRooms(prev => prev.map(r =>
+                    r.id === room.id ? { ...r, icon_position: [x, y] as [number, number] } : r
+                  ));
+                  // 서버에 위치 저장
+                  try {
+                    await api.updateMultiChatRoomPosition(room.id, x, y);
+                  } catch (error) {
+                    console.error('Failed to update multi-chat room position:', error);
+                  }
+                }}
+                onDragStart={() => handleDragStart(room.id, 'project')}
+                onDragEnd={() => {
+                  handleDragEnd();
+                }}
+                onDragMove={(x, y) => {
+                  checkTrashHover(x, y);
+                  return trashHover;
+                }}
+                onDropOnTrash={async () => {
+                  // 다중채팅방 삭제
+                  try {
+                    await api.deleteMultiChatRoom(room.id);
+                    loadMultiChatRooms();
+                  } catch (error) {
+                    console.error('Failed to delete multi-chat room:', error);
+                  }
+                }}
+                trashHover={trashHover}
+                isMultiChat
+              />
+            ))}
+
             {/* 휴지통 아이콘 - 드래그 가능 */}
             <DraggableTrash
               trashRef={trashRef}
@@ -889,6 +993,7 @@ export function Launcher() {
         onPaste={handlePaste}
         onNewProject={() => setShowNewProjectDialog(true)}
         onNewFolder={() => setShowNewFolderDialog(true)}
+        onNewMultiChatRoom={() => setShowNewMultiChatDialog(true)}
         onOpenTrash={handleOpenTrash}
         onEmptyTrash={handleEmptyTrash}
         onArrangeIcons={handleArrangeIcons}
@@ -912,6 +1017,47 @@ export function Launcher() {
         onSubmit={handleCreateFolder}
         onClose={() => setShowNewFolderDialog(false)}
       />
+
+      {/* 새 다중채팅방 다이얼로그 */}
+      {showNewMultiChatDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-96 shadow-xl">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Users size={20} className="text-purple-500" />
+              새 다중채팅방
+            </h2>
+            <input
+              type="text"
+              value={newMultiChatName}
+              onChange={(e) => setNewMultiChatName(e.target.value)}
+              placeholder="채팅방 이름"
+              className="w-full px-4 py-2 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateMultiChatRoom();
+                if (e.key === 'Escape') setShowNewMultiChatDialog(false);
+              }}
+            />
+            <p className="text-sm text-gray-500 mb-4">
+              여러 에이전트와 동시에 대화할 수 있는 토론방입니다.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowNewMultiChatDialog(false)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleCreateMultiChatRoom}
+                className="px-4 py-2 bg-purple-500 text-white hover:bg-purple-600 rounded-lg transition-colors"
+              >
+                만들기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 나의 정보 다이얼로그 */}
       <ProfileDialog

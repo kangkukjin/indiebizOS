@@ -7,7 +7,10 @@ tokens/
 # 개인정보 파일
 data/my_profile.txt
 data/business.db
+data/multi_chat.db
 data/outputs/
+data/health/
+data/gomoku_board.png
 
 # 백엔드 데이터 (개인정보 포함)
 backend/data/

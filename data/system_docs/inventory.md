@@ -1,6 +1,6 @@
 # IndieBiz OS 인벤토리
 
-## 프로젝트 (활성) - 11개
+## 프로젝트 (활성) - 14개
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -15,10 +15,13 @@
 | 부동산 | 부동산 | 건물 관리 및 부동산 투자 정보 분석 |
 | 창업 | 창업 | 새로운 비즈니스 모델 연구 및 창업 지원 |
 | 해외 | 해외 | 한류 소식 및 해외 비즈니스 정보 수집 |
+| 컨설턴트미 | 컨설턴트미 | 컨설팅 프로젝트 |
+| 오락실 | 오락실 | 게임/엔터테인먼트 |
+| 요리사 | 요리사 | 요리/레시피 프로젝트 |
 
 ---
 
-## 도구 패키지 (Tools) - 11개
+## 도구 패키지 (Tools) - 12개
 에이전트가 사용할 수 있는 유틸리티
 
 | ID | 이름 | 설명 | 상태 |
@@ -26,7 +29,8 @@
 | android | Android | 안드로이드 기기 관리 (adb) | 설치됨 |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 | 설치됨 |
 | browser-automation | Browser Automation | 웹 브라우저 자동화 (Playwright) | 설치됨 |
-| information | Information & Publishing | API Ninjas, 여행 정보, 출판 도구 | 설치됨 |
+| health-record | Health Record Manager | 개인 건강 정보 저장/관리 (측정값, 증상, 투약, 검사결과) | 설치됨 |
+| information | Information & Publishing | API Ninjas, 여행 정보, 출판 도구, **맛집 검색 (카카오 API)** | 설치됨 |
 | nodejs | Nodejs | JavaScript/Node.js 코드 실행 | 설치됨 |
 | pc-manager | Pc Manager | 파일 및 저장소 관리 | 설치됨 |
 | python-exec | Python Exec | Python 코드 실행 | 설치됨 |
@@ -54,10 +58,30 @@
 
 ---
 
+## 다중채팅방 시스템
+여러 에이전트와 사용자가 함께 대화하는 그룹 채팅
+
+### 주요 기능
+- 채팅방 생성/삭제/아이콘 정렬
+- 프로젝트 에이전트 소환 (원본 AI 설정 유지)
+- @지목 또는 랜덤 응답
+- 전체 시작/중단 버튼
+- 도구 할당 기능
+- 별도 창에서 운영 (창 닫으면 에이전트 비활성화)
+
+### DB 테이블 (multi_chat.db)
+| 테이블 | 설명 |
+|--------|------|
+| rooms | 채팅방 정보 (id, name, description, icon_position) |
+| room_participants | 채팅방 참여자 (agent_name, system_prompt, ai_provider, ai_model, ai_api_key) |
+| room_messages | 채팅방 메시지 (speaker, content, message_time) |
+
+---
+
 ## 비즈니스 관리 시스템
 kvisual-mcp 기반 비즈니스 파트너 관리
 
-### DB 테이블
+### DB 테이블 (business.db)
 | 테이블 | 설명 |
 |--------|------|
 | businesses | 비즈니스 항목 (레벨별) |
@@ -101,4 +125,4 @@ kvisual-mcp 방식의 2단계 처리:
 - **프로젝트1** - 에이전트 팀 템플릿 (집사, 직원1, 대장장이, 출판, 영상담당)
 
 ---
-*마지막 업데이트: 2026-01-09*
+*마지막 업데이트: 2026-01-10*

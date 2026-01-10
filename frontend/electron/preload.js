@@ -32,6 +32,10 @@ contextBridge.exposeInMainWorld('electron', {
   openBusinessWindow: () =>
     ipcRenderer.invoke('open-business-window'),
 
+  // 다중채팅방 창 열기
+  openMultiChatWindow: (roomId, roomName) =>
+    ipcRenderer.invoke('open-multichat-window', roomId, roomName),
+
   // 폴더에서 아이템을 런처로 드롭
   dropItemToLauncher: (itemId, itemType, sourceFolderId) =>
     ipcRenderer.invoke('drop-item-to-launcher', itemId, itemType, sourceFolderId),

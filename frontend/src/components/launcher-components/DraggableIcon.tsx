@@ -19,6 +19,7 @@ export function DraggableIcon({
   trashHover,
   isSwitch = false,
   isFolder = false,
+  isMultiChat = false,
   isFolderHovered = false,
   folderRef,
   hoveringFolderId,
@@ -178,7 +179,9 @@ export function DraggableIcon({
             ? 'bg-[#D97706] text-white'
             : isFolder
               ? 'bg-[#F59E0B] text-white'
-              : 'bg-[#3B82F6] text-white'
+              : isMultiChat
+                ? 'bg-[#8B5CF6] text-white'
+                : 'bg-[#3B82F6] text-white'
         } ${finalIsSelected ? 'ring-2 ring-[#D97706] ring-offset-2 ring-offset-[#F5F1EB]' : ''} ${
           isFolderHovered ? 'ring-4 ring-[#22C55E] ring-offset-2 ring-offset-[#F5F1EB]' : ''
         }`}

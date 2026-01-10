@@ -73,5 +73,31 @@
         "title": {"type": "string", "description": "신문 제목"}
       }
     }
+  },
+  {
+    "name": "search_restaurants",
+    "description": "카카오 + 네이버 API를 병합하여 한국 맛집/음식점을 검색합니다. 두 플랫폼의 결과를 합쳐 더 풍부한 정보를 제공합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "검색 키워드 (예: '강남 파스타', '홍대 맛집', '부산 해물')"
+        },
+        "x": {
+          "type": "string",
+          "description": "중심 좌표 경도 (선택, 예: '127.027619')"
+        },
+        "y": {
+          "type": "string",
+          "description": "중심 좌표 위도 (선택, 예: '37.497942')"
+        },
+        "radius": {
+          "type": "integer",
+          "description": "검색 반경 미터 (기본: 5000, 최대: 20000)"
+        }
+      },
+      "required": ["query"]
+    }
   }
 ]

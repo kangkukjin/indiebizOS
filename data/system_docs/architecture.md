@@ -19,6 +19,7 @@ indiebizOS/
 │   │   ├── api_indienet.py    # IndieNet (Nostr)
 │   │   ├── api_scheduler.py   # 스케줄러
 │   │   ├── api_business.py    # 비즈니스/이웃/메시지/자동응답
+│   │   ├── api_multi_chat.py  # 다중채팅방 API
 │   │   ├── api_notifications.py # 알림
 │   │   └── api_prompt_generator.py # 프롬프트 생성
 │   ├── *_manager.py     # 비즈니스 로직 매니저
@@ -26,7 +27,9 @@ indiebizOS/
 │   │   ├── switch_manager.py  # 스위치 매니저
 │   │   ├── package_manager.py # 도구 패키지 매니저
 │   │   ├── business_manager.py # 비즈니스/이웃/메시지 매니저
+│   │   ├── multi_chat_manager.py # 다중채팅방 매니저
 │   │   └── notification_manager.py # 알림 매니저
+│   ├── multi_chat_db.py    # 다중채팅방 DB 관리
 │   ├── ai_agent.py      # AI 에이전트 코어
 │   ├── agent_runner.py  # 에이전트 실행기
 │   ├── system_ai.py     # 시스템 AI 코어
@@ -51,7 +54,8 @@ indiebizOS/
 │       │   ├── FolderView.tsx # 폴더 뷰
 │       │   ├── IndieNet.tsx   # IndieNet 뷰
 │       │   ├── BusinessManager.tsx # 비즈니스 관리
-│       │   └── NeighborManagerDialog.tsx # 이웃 관리 다이얼로그
+│       │   ├── NeighborManagerDialog.tsx # 이웃 관리 다이얼로그
+│       │   └── MultiChat.tsx  # 다중채팅방 UI
 │       ├── lib/         # API 클라이언트
 │       │   └── api.ts   # API 클라이언트 클래스
 │       ├── stores/      # 상태 관리
@@ -63,10 +67,14 @@ indiebizOS/
 │   │   ├── installed/tools/     # 설치된 도구 패키지 (활성)
 │   │   ├── installed/extensions/ # 설치된 확장 (gmail 등)
 │   │   └── dev/tools/           # 개발 중인 패키지
+│   ├── health/          # 건강 기록 데이터
+│   │   ├── health_records.db    # 건강 정보 DB (측정값, 증상, 투약, 문서)
+│   │   └── images/              # 검사결과/처방전 이미지
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억)
 │   ├── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
 │   ├── system_ai_config.json # 시스템 AI 설정
 │   ├── business.db      # 비즈니스/이웃/메시지 DB (SQLite)
+│   ├── multi_chat.db    # 다중채팅방 DB (SQLite)
 │   └── switches.json    # 스위치 설정
 │
 ├── projects/            # 사용자 프로젝트
@@ -195,10 +203,33 @@ kvisual-mcp의 2단계 자동응답 시스템을 Python으로 포팅.
 
 파일 위치: `backend/auto_response.py`, `backend/ai_judgment.py`
 
+### 다중채팅방 시스템 (Multi Chat)
+여러 에이전트와 사용자가 함께하는 그룹 채팅방 시스템입니다.
+
+**핵심 기능:**
+- **별도 창 운영**: 프로젝트 창처럼 다중채팅방을 독립 창으로 열기
+- **에이전트 소환**: 다른 프로젝트에서 에이전트를 불러와 참여시킴
+- **원본 AI 설정 유지**: 소환 시 에이전트의 원래 AI 설정(provider, model, api_key) 보존
+- **전체 시작/중단**: 모든 참여 에이전트를 한 번에 활성화/비활성화
+- **도구 할당**: 에이전트에게 도구 선택 가능 (드롭다운)
+- **창 닫기 자동 정리**: 창 닫을 때 에이전트 자동 비활성화
+
+**DB 스키마:**
+- `rooms`: 채팅방 정보 (id, name, description, icon_position)
+- `room_participants`: 참여자 (room_id, agent_name, agent_source, system_prompt, ai_provider, ai_model, ai_api_key)
+- `room_messages`: 메시지 (room_id, speaker, content, created_at)
+
+**대화 규칙:**
+- 대화만 가능 (도구 미사용 시)
+- @지목으로 특정 에이전트 호출 가능
+- 지목 없으면 랜덤 2명 응답
+
+파일 위치: `backend/multi_chat_manager.py`, `backend/multi_chat_db.py`, `backend/api_multi_chat.py`, `frontend/src/components/MultiChat.tsx`
+
 ### Electron IPC
 - 네이티브 폴더 선택 다이얼로그
 - 외부 URL 열기
-- 다중 창 관리 (프로젝트, 폴더, IndieNet, 비즈니스)
+- 다중 창 관리 (프로젝트, 폴더, IndieNet, 비즈니스, 다중채팅방)
 
 ### 스케줄러
 - 예약된 작업 자동 실행
@@ -257,4 +288,4 @@ Gmail/Nostr → ChannelPoller → DB 저장 (replied=0)
 ```
 
 ---
-*마지막 업데이트: 2026-01-09*
+*마지막 업데이트: 2026-01-10*

@@ -85,13 +85,14 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 ---
 
-## 현재 설치된 도구 패키지 (11개)
+## 현재 설치된 도구 패키지 (12개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
 | android | Android | 안드로이드 기기 관리 (adb) |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
 | browser-automation | Browser Automation | 웹 브라우저 자동화 (Playwright) |
+| health-record | Health Record Manager | 개인 건강 정보 저장/관리 (측정값, 증상, 투약, 검사결과) |
 | information | Information & Publishing | API Ninjas, 여행 정보, 출판 도구 |
 | nodejs | Nodejs | JavaScript/Node.js 코드 실행 |
 | pc-manager | Pc Manager | 파일 및 저장소 관리 |

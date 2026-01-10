@@ -22,11 +22,18 @@ SYSTEM_STATUS_PATH = DATA_PATH / "system_status.md"
 PROFILE_PATH = DATA_PATH / "my_profile.txt"
 
 
+def _get_connection():
+    """WAL 모드가 적용된 DB 연결 반환"""
+    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
+
 def init_memory_db():
     """메모리 DB 초기화"""
     DATA_PATH.mkdir(parents=True, exist_ok=True)
 
-    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn = _get_connection()
     cursor = conn.cursor()
 
     # 대화 이력 테이블
@@ -62,7 +69,7 @@ def save_conversation(role: str, content: str, importance: int = 0) -> int:
     """대화 저장"""
     init_memory_db()
 
-    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn = _get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -81,7 +88,7 @@ def get_recent_conversations(limit: int = 10) -> List[Dict[str, Any]]:
     """최근 대화 조회"""
     init_memory_db()
 
-    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn = _get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -112,7 +119,7 @@ def get_important_conversations(min_importance: int = 1, limit: int = 20) -> Lis
     """중요 대화 조회"""
     init_memory_db()
 
-    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn = _get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -140,7 +147,7 @@ def save_memory(category: str, title: str, content: str, source: str = None) -> 
     """기억 저장"""
     init_memory_db()
 
-    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn = _get_connection()
     cursor = conn.cursor()
 
     now = datetime.now().isoformat()
@@ -161,7 +168,7 @@ def get_memories(category: str = None, limit: int = 50) -> List[Dict[str, Any]]:
     """기억 조회"""
     init_memory_db()
 
-    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn = _get_connection()
     cursor = conn.cursor()
 
     if category:

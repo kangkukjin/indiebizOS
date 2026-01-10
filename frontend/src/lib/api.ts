@@ -321,6 +321,10 @@ class APIClient {
     });
   }
 
+  async getOllamaModels() {
+    return this.request<{ models: string[]; running: boolean }>('/ollama/models');
+  }
+
   // ============ 설정 ============
 
   async getConfig() {
@@ -1266,14 +1270,171 @@ class APIClient {
       method: 'POST',
     });
   }
+
+  // ============ 다중채팅방 ============
+
+  async getMultiChatRooms() {
+    const data = await this.request<{ rooms: Array<{
+      id: string;
+      name: string;
+      description: string;
+      participant_count: number;
+      created_at: string;
+      updated_at: string;
+    }> }>('/multi-chat/rooms');
+    return data.rooms;
+  }
+
+  async createMultiChatRoom(name: string, description = '') {
+    const data = await this.request<{ room: {
+      id: string;
+      name: string;
+      description: string;
+      created_at: string;
+    } }>('/multi-chat/rooms', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    });
+    return data.room;
+  }
+
+  async getMultiChatRoom(roomId: string) {
+    const data = await this.request<{ room: {
+      id: string;
+      name: string;
+      description: string;
+      participants: Array<{
+        agent_name: string;
+        agent_source: string;
+        system_prompt: string;
+      }>;
+    } }>(`/multi-chat/rooms/${roomId}`);
+    return data.room;
+  }
+
+  async deleteMultiChatRoom(roomId: string) {
+    return this.request<{ success: boolean }>(`/multi-chat/rooms/${roomId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateMultiChatRoomPosition(roomId: string, x: number, y: number) {
+    return this.request<{ success: boolean }>(`/multi-chat/rooms/${roomId}/position`, {
+      method: 'PATCH',
+      body: JSON.stringify({ x, y }),
+    });
+  }
+
+  async getAvailableAgentsForMultiChat() {
+    const data = await this.request<{ agents: Array<{
+      project_id: string;
+      project_name: string;
+      agent_id: string;
+      agent_name: string;
+      role: string;
+      source: string;
+    }> }>('/multi-chat/available-agents');
+    return data.agents;
+  }
+
+  async addAgentToMultiChatRoom(roomId: string, projectId: string, agentId: string) {
+    return this.request<{ success: boolean }>(`/multi-chat/rooms/${roomId}/participants`, {
+      method: 'POST',
+      body: JSON.stringify({ project_id: projectId, agent_id: agentId }),
+    });
+  }
+
+  async removeAgentFromMultiChatRoom(roomId: string, agentName: string) {
+    return this.request<{ success: boolean }>(`/multi-chat/rooms/${roomId}/participants/${encodeURIComponent(agentName)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getMultiChatMessages(roomId: string, limit = 50) {
+    const data = await this.request<{ messages: Array<{
+      id: number;
+      room_id: string;
+      speaker: string;
+      content: string;
+      message_time: string;
+    }> }>(`/multi-chat/rooms/${roomId}/messages?limit=${limit}`);
+    return data.messages;
+  }
+
+  async sendMultiChatMessage(roomId: string, message: string, responseCount = 2) {
+    return this.request<{
+      user_message: string;
+      responses: Array<{
+        speaker: string;
+        content: string;
+      }>;
+    }>(`/multi-chat/rooms/${roomId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ message, response_count: responseCount }),
+    });
+  }
+
+  async clearMultiChatMessages(roomId: string) {
+    return this.request<{ deleted_count: number }>(`/multi-chat/rooms/${roomId}/messages`, {
+      method: 'DELETE',
+    });
+  }
+
+  // 다중채팅방 에이전트 전체 활성화
+  async activateAllMultiChatAgents(roomId: string, tools: string[] = []) {
+    return this.request<{ success: boolean; activated: string[] }>(`/multi-chat/rooms/${roomId}/activate-all`, {
+      method: 'POST',
+      body: JSON.stringify({ tools }),
+    });
+  }
+
+  // 다중채팅방 에이전트 전체 비활성화
+  async deactivateAllMultiChatAgents(roomId: string) {
+    return this.request<{ success: boolean; deactivated: string[] }>(`/multi-chat/rooms/${roomId}/deactivate-all`, {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new APIClient();
 
-// WebSocket 연결
-export function createChatWebSocket(clientId: string) {
-  const ws = new WebSocket(`ws://127.0.0.1:8765/ws/chat/${clientId}`);
-  return ws;
+// WebSocket 연결 (자동 재연결 지원)
+export function createChatWebSocket(clientId: string, onReconnect?: () => void) {
+  let ws: WebSocket;
+  let reconnectAttempts = 0;
+  const maxReconnectAttempts = 5;
+  const reconnectDelay = 2000; // 2초
+
+  function connect(): WebSocket {
+    ws = new WebSocket(`ws://127.0.0.1:8765/ws/chat/${clientId}`);
+
+    ws.onclose = (event) => {
+      console.log(`[WS] 연결 종료 (code: ${event.code})`);
+      // 정상 종료가 아닌 경우 재연결 시도
+      if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+        reconnectAttempts++;
+        console.log(`[WS] 재연결 시도 ${reconnectAttempts}/${maxReconnectAttempts}...`);
+        setTimeout(() => {
+          const newWs = connect();
+          // 원래 핸들러들 복원
+          if (onReconnect) onReconnect();
+        }, reconnectDelay);
+      }
+    };
+
+    ws.onopen = () => {
+      console.log('[WS] 연결됨');
+      reconnectAttempts = 0; // 연결 성공시 카운터 리셋
+    };
+
+    ws.onerror = (error) => {
+      console.error('[WS] 에러:', error);
+    };
+
+    return ws;
+  }
+
+  return connect();
 }
 
 // 작업 중단

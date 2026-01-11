@@ -127,6 +127,49 @@ async def update_room_position(room_id: str, request: UpdatePositionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============ 휴지통 ============
+
+@router.post("/multi-chat/rooms/{room_id}/trash")
+async def move_room_to_trash(room_id: str):
+    """채팅방을 휴지통으로 이동"""
+    try:
+        manager = get_manager()
+        result = manager.move_to_trash(room_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
+        return {"status": "trashed", "item": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/multi-chat/trash")
+async def list_trashed_rooms():
+    """휴지통에 있는 채팅방 목록"""
+    try:
+        manager = get_manager()
+        rooms = manager.list_trashed_rooms()
+        return {"rooms": rooms}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/multi-chat/trash/{room_id}/restore")
+async def restore_room_from_trash(room_id: str):
+    """채팅방을 휴지통에서 복원"""
+    try:
+        manager = get_manager()
+        result = manager.restore_from_trash(room_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
+        return {"status": "restored", "item": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============ 에이전트 소환 ============
 
 @router.get("/multi-chat/available-agents")

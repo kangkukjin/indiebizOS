@@ -36,16 +36,22 @@ class MultiChatDB:
                     name TEXT NOT NULL,
                     description TEXT,
                     icon_position TEXT DEFAULT '[100, 100]',
+                    in_trash INTEGER DEFAULT 0,
+                    trashed_at TIMESTAMP,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
 
-            # icon_position 컬럼이 없으면 추가 (기존 DB 마이그레이션)
+            # 기존 DB 마이그레이션
             cursor.execute("PRAGMA table_info(rooms)")
             columns = [col[1] for col in cursor.fetchall()]
             if 'icon_position' not in columns:
                 cursor.execute("ALTER TABLE rooms ADD COLUMN icon_position TEXT DEFAULT '[100, 100]'")
+            if 'in_trash' not in columns:
+                cursor.execute("ALTER TABLE rooms ADD COLUMN in_trash INTEGER DEFAULT 0")
+            if 'trashed_at' not in columns:
+                cursor.execute("ALTER TABLE rooms ADD COLUMN trashed_at TIMESTAMP")
 
             # 채팅방 참여자 테이블
             cursor.execute("""
@@ -123,13 +129,14 @@ class MultiChatDB:
             row = cursor.fetchone()
             return dict(row) if row else None
 
-    def list_rooms(self) -> List[Dict]:
-        """모든 채팅방 목록"""
+    def list_rooms(self, include_trash: bool = False) -> List[Dict]:
+        """모든 채팅방 목록 (휴지통 제외)"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT * FROM rooms ORDER BY updated_at DESC
-            """)
+            if include_trash:
+                cursor.execute("SELECT * FROM rooms ORDER BY updated_at DESC")
+            else:
+                cursor.execute("SELECT * FROM rooms WHERE in_trash = 0 ORDER BY updated_at DESC")
             return [dict(row) for row in cursor.fetchall()]
 
     def delete_room(self, room_id: str) -> bool:
@@ -160,6 +167,61 @@ class MultiChatDB:
             """, (json.dumps([x, y]), room_id))
             conn.commit()
             return cursor.rowcount > 0
+
+    # ============ 휴지통 관리 ============
+
+    def move_to_trash(self, room_id: str) -> Optional[Dict]:
+        """채팅방을 휴지통으로 이동"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE rooms SET in_trash = 1, trashed_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            """, (room_id,))
+            conn.commit()
+            if cursor.rowcount > 0:
+                return self.get_room(room_id)
+            return None
+
+    def restore_from_trash(self, room_id: str) -> Optional[Dict]:
+        """채팅방을 휴지통에서 복원"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE rooms SET in_trash = 0, trashed_at = NULL
+                WHERE id = ?
+            """, (room_id,))
+            conn.commit()
+            if cursor.rowcount > 0:
+                return self.get_room(room_id)
+            return None
+
+    def list_trashed_rooms(self) -> List[Dict]:
+        """휴지통에 있는 채팅방 목록"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM rooms WHERE in_trash = 1 ORDER BY trashed_at DESC
+            """)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def empty_trash(self) -> int:
+        """휴지통 비우기 (영구 삭제)"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            # 휴지통에 있는 방들의 ID 조회
+            cursor.execute("SELECT id FROM rooms WHERE in_trash = 1")
+            trashed_ids = [row[0] for row in cursor.fetchall()]
+
+            deleted_count = 0
+            for room_id in trashed_ids:
+                cursor.execute("DELETE FROM room_messages WHERE room_id = ?", (room_id,))
+                cursor.execute("DELETE FROM room_participants WHERE room_id = ?", (room_id,))
+                cursor.execute("DELETE FROM rooms WHERE id = ?", (room_id,))
+                deleted_count += 1
+
+            conn.commit()
+            return deleted_count
 
     # ============ Participant 관리 ============
 

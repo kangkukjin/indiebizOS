@@ -111,11 +111,16 @@ class APIClient {
   // ============ 휴지통 ============
 
   async getTrash() {
-    return this.request<{ items: (Project | Switch)[]; projects: Project[]; switches: Switch[] }>('/trash');
+    return this.request<{
+      items: unknown[];
+      projects: Project[];
+      switches: Switch[];
+      chat_rooms: Array<{ id: string; name: string; type: 'chat_room'; description?: string }>;
+    }>('/trash');
   }
 
-  async restoreFromTrash(itemId: string, itemType: 'project' | 'switch' = 'project') {
-    return this.request<{ status: string; item: Project | Switch }>(`/trash/${itemId}/restore?item_type=${itemType}`, {
+  async restoreFromTrash(itemId: string, itemType: 'project' | 'switch' | 'chat_room' = 'project') {
+    return this.request<{ status: string; item: unknown }>(`/trash/${itemId}/restore?item_type=${itemType}`, {
       method: 'POST',
     });
   }
@@ -1315,6 +1320,12 @@ class APIClient {
   async deleteMultiChatRoom(roomId: string) {
     return this.request<{ success: boolean }>(`/multi-chat/rooms/${roomId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async moveMultiChatRoomToTrash(roomId: string) {
+    return this.request<{ status: string; item: unknown }>(`/multi-chat/rooms/${roomId}/trash`, {
+      method: 'POST',
     });
   }
 

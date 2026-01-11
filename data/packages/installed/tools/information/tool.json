@@ -76,13 +76,13 @@
   },
   {
     "name": "search_restaurants",
-    "description": "카카오 + 네이버 API를 병합하여 한국 맛집/음식점을 검색합니다. 두 플랫폼의 결과를 합쳐 더 풍부한 정보를 제공합니다.",
+    "description": "한국 맛집/음식점 검색 (카카오+네이버 통합). 한 번 호출로 카카오 10개 + 네이버 5개 = 최대 15개 결과를 반환합니다. 중복 호출 불필요 - 한 번만 호출하세요.",
     "input_schema": {
       "type": "object",
       "properties": {
         "query": {
           "type": "string",
-          "description": "검색 키워드 (예: '강남 파스타', '홍대 맛집', '부산 해물')"
+          "description": "검색 키워드 (예: '대전 유성구 맛집', '강남 파스타'). 지역+음식종류 조합 권장"
         },
         "x": {
           "type": "string",

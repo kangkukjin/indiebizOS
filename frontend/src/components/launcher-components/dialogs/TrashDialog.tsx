@@ -2,13 +2,13 @@
  * TrashDialog - 휴지통 다이얼로그
  */
 
-import { X, Trash2, Trash, Folder, RotateCcw } from 'lucide-react';
+import { X, Trash2, Trash, Folder, RotateCcw, MessageCircle } from 'lucide-react';
 import type { TrashItems } from '../types';
 
 interface TrashDialogProps {
   show: boolean;
   trashItems: TrashItems;
-  onRestore: (itemId: string, itemType: 'project' | 'switch') => void;
+  onRestore: (itemId: string, itemType: 'project' | 'switch' | 'chat_room') => void;
   onEmpty: () => void;
   onClose: () => void;
 }
@@ -22,7 +22,8 @@ export function TrashDialog({
 }: TrashDialogProps) {
   if (!show) return null;
 
-  const totalCount = trashItems.projects.length + trashItems.switches.length;
+  const chatRooms = trashItems.chat_rooms || [];
+  const totalCount = trashItems.projects.length + trashItems.switches.length + chatRooms.length;
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
@@ -100,6 +101,28 @@ export function TrashDialog({
                   </div>
                   <button
                     onClick={() => onRestore(item.id, 'switch')}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg"
+                  >
+                    <RotateCcw size={14} />
+                    복원
+                  </button>
+                </div>
+              ))}
+              {/* 채팅방 */}
+              {chatRooms.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+                >
+                  <div className="flex items-center gap-3">
+                    <MessageCircle size={24} className="text-purple-500" />
+                    <div>
+                      <p className="font-medium text-gray-800">{item.name}</p>
+                      <p className="text-xs text-gray-500">다중채팅방</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onRestore(item.id, 'chat_room')}
                     className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg"
                   >
                     <RotateCcw size={14} />

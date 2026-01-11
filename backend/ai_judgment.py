@@ -74,7 +74,7 @@ class AIJudgmentService:
             return self._get_fallback_judgment(context.get('message', {}))
 
     def _build_judgment_prompt(self, context: dict) -> str:
-        """판단 프롬프트 생성"""
+        """판단 프롬프트 생성 - CoT + Few-shot 적용"""
         message = context.get('message', {})
         neighbor = context.get('neighbor', {})
         work_guideline = context.get('work_guideline') or '근무지침이 설정되지 않았습니다.'
@@ -91,31 +91,67 @@ class AIJudgmentService:
                 history_lines.append(f"[{msg.get('message_time', '')}] {direction} - {sender}: {msg.get('subject', '제목 없음')}")
             history_text = '\n'.join(history_lines)
 
-        prompt = f"""당신은 비즈니스 매칭 에이전트입니다. 다음 정보를 바탕으로 들어온 메시지에 대한 응답 방식을 결정해주세요.
+        prompt = f"""당신은 비즈니스 매칭 에이전트입니다. 들어온 메시지를 분석하여 자동응답 여부를 결정합니다.
 
-## 근무지침
+## 판단 예시
+
+### 예시 1: 서비스 문의 → BUSINESS_RESPONSE
+메시지: "안녕하세요, 혹시 세탁기 수리 가능하신가요? 드럼세탁기인데 물이 안 빠져요."
+사고과정:
+1. 의도 파악: 세탁기 수리 서비스 가능 여부 문의
+2. 비즈니스 관련성: 서비스 요청 → 관련 있음
+3. 검색 필요: "할수있습니다" 카테고리에서 "세탁기", "수리" 키워드 검색
+결과: {{"action": "BUSINESS_RESPONSE", "confidence": 0.9, "reasoning": "세탁기 수리 서비스 문의", "searches": [{{"category": "할수있습니다", "keywords": ["세탁기", "수리", "가전"], "confidence": 0.9}}]}}
+
+### 예시 2: 개인적 대화 → NO_RESPONSE
+메시지: "어제 저녁에 뭐 드셨어요? 저는 삼겹살 먹었는데 맛있더라구요 ㅎㅎ"
+사고과정:
+1. 의도 파악: 일상적인 안부/잡담
+2. 비즈니스 관련성: 개인적 대화 → 관련 없음
+3. 판단: 사용자가 직접 응답해야 할 개인적 내용
+결과: {{"action": "NO_RESPONSE", "confidence": 0.95, "reasoning": "개인적 일상 대화, 비즈니스 무관", "searches": []}}
+
+### 예시 3: 물품 구매 의사 → BUSINESS_RESPONSE
+메시지: "올리신 자전거 아직 있나요? 관심 있습니다"
+사고과정:
+1. 의도 파악: 판매 중인 자전거에 대한 구매 관심 표현
+2. 비즈니스 관련성: 거래 문의 → 관련 있음
+3. 검색 필요: "팔아요" 카테고리에서 "자전거" 검색
+결과: {{"action": "BUSINESS_RESPONSE", "confidence": 0.9, "reasoning": "판매 물품 구매 문의", "searches": [{{"category": "팔아요", "keywords": ["자전거"], "confidence": 0.9}}]}}
+
+### 예시 4: 스팸/광고 → NO_RESPONSE
+메시지: "★긴급★ 무료 체험 이벤트! 지금 클릭하세요!"
+사고과정:
+1. 의도 파악: 광고/홍보성 메시지
+2. 비즈니스 관련성: 스팸 → 응답 불필요
+결과: {{"action": "NO_RESPONSE", "confidence": 0.95, "reasoning": "스팸/광고 메시지", "searches": []}}
+
+---
+
+## 현재 컨텍스트
+
+### 근무지침
 {work_guideline}
 
-## 나의 열린 비즈니스 문서
+### 나의 비즈니스 문서
 {business_doc}
 
-## 대화 기록
+### 대화 기록
 {history_text}
 
-## 들어온 메시지
+### 들어온 메시지
 발신자: {neighbor.get('name', '알 수 없음')}
 제목: {message.get('subject', '제목 없음')}
 내용: {message.get('content', '내용 없음')}
 
-## 응답 결정
-다음 중 하나를 선택하고 JSON 형식으로 응답해주세요:
-1. NO_RESPONSE - 자동응답이 필요없는 경우 (개인적인 대화, 사적인 내용, 비즈니스와 무관한 내용, 스팸, 광고 등)
-2. BUSINESS_RESPONSE - 비즈니스 관련 자동응답이 필요한 경우 (비즈니스 문의, 요청, 인사 등)
+---
 
-중요: 비즈니스와 관련된 내용이거나 공식적인 응답이 필요한 경우에만 BUSINESS_RESPONSE를 선택하세요.
-개인적이거나 사적인 대화는 NO_RESPONSE로 분류하여 사용자가 직접 응답할 수 있도록 하세요.
-BUSINESS_RESPONSE를 선택한 경우, 검색해야 할 비즈니스 카테고리와 키워드를 함께 제공해주세요.
-단순 인사나 감사의 경우 searches를 빈 배열로 제공하세요.
+## 판단 수행
+
+위 예시처럼 단계별로 분석하세요:
+1. **의도 파악**: 발신자가 원하는 것이 무엇인가?
+2. **비즈니스 관련성**: 우리 비즈니스와 관련이 있는가?
+3. **검색 필요 여부**: 어떤 카테고리/키워드로 검색해야 하는가?
 
 비즈니스 카테고리:
 - 나눕니다: 무료 나눔
@@ -126,11 +162,16 @@ BUSINESS_RESPONSE를 선택한 경우, 검색해야 할 비즈니스 카테고�
 - 팔아요: 판매
 - 할수있습니다: 서비스 제공
 
-응답 형식 (JSON만 출력):
+**중요 원칙**:
+- 비즈니스 문의, 서비스 요청, 거래 관련 → BUSINESS_RESPONSE
+- 개인적 대화, 사적인 내용, 스팸 → NO_RESPONSE (사용자가 직접 응답)
+- 단순 인사/감사도 공식적이면 BUSINESS_RESPONSE (searches는 빈 배열)
+
+JSON만 출력하세요:
 {{
   "action": "NO_RESPONSE|BUSINESS_RESPONSE",
   "confidence": 0.0-1.0,
-  "reasoning": "판단 이유",
+  "reasoning": "판단 이유 (1-2문장)",
   "searches": [
     {{
       "category": "비즈니스 카테고리",

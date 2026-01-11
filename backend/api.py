@@ -74,7 +74,7 @@ switch_manager = SwitchManager()
 
 # ============ 라우터 임포트 및 매니저 주입 ============
 
-from api_projects import router as projects_router, init_managers as init_projects_managers
+from api_projects import router as projects_router, init_managers as init_projects_managers, init_multi_chat_manager as init_projects_multi_chat
 from api_switches import router as switches_router, init_manager as init_switches_manager
 from api_config import router as config_router, init_manager as init_config_manager
 from api_system_ai import router as system_ai_router
@@ -100,6 +100,10 @@ init_websocket_manager(project_manager)
 init_prompt_generator_manager(project_manager)
 init_business_manager()
 init_multi_chat_manager()  # AI 설정은 필요시 전달
+
+# 다중채팅 매니저를 api_projects에도 주입 (휴지통 통합용)
+from api_multi_chat import get_manager as get_multi_chat_manager
+init_projects_multi_chat(get_multi_chat_manager())
 
 
 # ============ 라우터 등록 ============

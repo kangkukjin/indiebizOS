@@ -37,10 +37,22 @@ export interface RenamingItem {
   name: string;
 }
 
+// 채팅방 타입 (휴지통용)
+export interface ChatRoom {
+  id: string;
+  name: string;
+  type: 'chat_room';
+  description?: string;
+  icon_position?: [number, number];
+  in_trash?: number;
+  trashed_at?: string;
+}
+
 // 휴지통 아이템 타입
 export interface TrashItems {
   projects: Project[];
   switches: Switch[];
+  chat_rooms: ChatRoom[];
 }
 
 // 스케줄러 태스크 폼 타입

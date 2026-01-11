@@ -1,0 +1,82 @@
+[
+  {
+    "name": "analyze_storage",
+    "description": "디스크 또는 폴더의 용량 사용량을 분석합니다. 한 번 호출로 최상위 폴더들의 크기를 보여줍니다. 하위 폴더를 다시 분석할 필요 없이 결과를 바로 사용자에게 보여주세요.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "분석할 경로 (기본: 홈 디렉토리)"
+        },
+        "depth": {
+          "type": "integer",
+          "description": "분석 깊이 (기본: 2)"
+        }
+      }
+    }
+  },
+  {
+    "name": "find_duplicates",
+    "description": "지정된 경로에서 중복된 파일을 찾아 목록을 보여줍니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "검색할 디렉토리 경로"
+        }
+      }
+    }
+  },
+  {
+    "name": "find_junk",
+    "description": "임시 파일, 캐시 등 삭제 가능한 정크 파일을 찾아 예상 절약 공간을 계산합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "검색할 디렉토리 경로"
+        }
+      }
+    }
+  },
+  {
+    "name": "get_system_overview",
+    "description": "macOS 시스템 사양(CPU, RAM, OS 버전, 디스크 용량) 및 현재 가동 시간을 가져옵니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_detailed_storage",
+    "description": "내/외장 하드디스크의 상세 정보(총 용량, 사용량, 여유공간)를 가져옵니다. 외장하드 분석 시 이 도구를 먼저 사용하세요.",
+    "input_schema": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  {
+    "name": "get_resource_usage",
+    "description": "CPU 및 메모리 사용량이 높은 상위 프로세스 목록을 가져옵니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "description": "가져올 프로세스 개수 (기본 5개)"
+        }
+      }
+    }
+  },
+  {
+    "name": "list_external_drives",
+    "description": "외장 드라이브 및 파티션 목록을 가져옵니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {}
+    }
+  }
+]

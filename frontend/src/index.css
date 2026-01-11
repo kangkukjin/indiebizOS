@@ -137,3 +137,31 @@ body {
   border-top: 1px solid rgba(0, 0, 0, 0.2);
   margin: 0.75em 0;
 }
+
+/* 표(테이블) 스타일 */
+.chat-markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75em 0;
+  font-size: 0.9em;
+}
+
+.chat-markdown th,
+.chat-markdown td {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+
+.chat-markdown th {
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 600;
+}
+
+.chat-markdown tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.chat-markdown tr:hover {
+  background: rgba(0, 0, 0, 0.06);
+}

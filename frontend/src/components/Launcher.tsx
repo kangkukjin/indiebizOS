@@ -80,7 +80,7 @@ export function Launcher() {
 
   // 휴지통 관련 상태
   const [showTrashDialog, setShowTrashDialog] = useState(false);
-  const [trashItems, setTrashItems] = useState<TrashItems>({ projects: [], switches: [] });
+  const [trashItems, setTrashItems] = useState<TrashItems>({ projects: [], switches: [], chat_rooms: [] });
   const [trashPosition, setTrashPosition] = useState({ x: -1, y: -1 }); // -1은 우하단 기본 위치
 
   // 폴더 드래그 앤 드롭 관련 상태
@@ -582,7 +582,7 @@ export function Launcher() {
   const handleOpenTrash = async () => {
     try {
       const data = await api.getTrash();
-      setTrashItems({ projects: data.projects, switches: data.switches });
+      setTrashItems({ projects: data.projects, switches: data.switches, chat_rooms: data.chat_rooms || [] });
       setShowTrashDialog(true);
     } catch (error) {
       console.error('휴지통 로드 실패:', error);
@@ -590,13 +590,16 @@ export function Launcher() {
   };
 
   // 휴지통에서 복원
-  const handleRestoreFromTrash = async (itemId: string, itemType: 'project' | 'switch') => {
+  const handleRestoreFromTrash = async (itemId: string, itemType: 'project' | 'switch' | 'chat_room') => {
     try {
       await api.restoreFromTrash(itemId, itemType);
       const data = await api.getTrash();
-      setTrashItems({ projects: data.projects, switches: data.switches });
+      setTrashItems({ projects: data.projects, switches: data.switches, chat_rooms: data.chat_rooms || [] });
       loadProjects();
       loadSwitches();
+      if (itemType === 'chat_room') {
+        loadMultiChatRooms();
+      }
     } catch (error) {
       console.error('복원 실패:', error);
     }
@@ -608,7 +611,7 @@ export function Launcher() {
 
     try {
       await api.emptyTrash();
-      setTrashItems({ projects: [], switches: [] });
+      setTrashItems({ projects: [], switches: [], chat_rooms: [] });
       setShowTrashDialog(false);
     } catch (error) {
       console.error('휴지통 비우기 실패:', error);
@@ -953,12 +956,13 @@ export function Launcher() {
                   return trashHover;
                 }}
                 onDropOnTrash={async () => {
-                  // 다중채팅방 삭제
+                  // 다중채팅방을 휴지통으로 이동
                   try {
-                    await api.deleteMultiChatRoom(room.id);
+                    await api.moveMultiChatRoomToTrash(room.id);
                     loadMultiChatRooms();
+                    loadTrashItems();
                   } catch (error) {
-                    console.error('Failed to delete multi-chat room:', error);
+                    console.error('Failed to move multi-chat room to trash:', error);
                   }
                 }}
                 trashHover={trashHover}
@@ -977,7 +981,7 @@ export function Launcher() {
                 e.preventDefault();
                 setContextMenu({ x: e.clientX, y: e.clientY, itemId: '__trash__', itemType: 'project' });
               }}
-              trashCount={trashItems.projects.length + trashItems.switches.length}
+              trashCount={trashItems.projects.length + trashItems.switches.length + (trashItems.chat_rooms?.length || 0)}
             />
           </>
         )}

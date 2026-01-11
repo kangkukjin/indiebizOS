@@ -16,6 +16,7 @@ router = APIRouter()
 # 매니저 인스턴스는 api.py에서 주입받음
 project_manager = None
 switch_manager = None
+multi_chat_manager = None
 
 
 def init_managers(pm, sm):
@@ -23,6 +24,12 @@ def init_managers(pm, sm):
     global project_manager, switch_manager
     project_manager = pm
     switch_manager = sm
+
+
+def init_multi_chat_manager(mcm):
+    """다중채팅 매니저 초기화"""
+    global multi_chat_manager
+    multi_chat_manager = mcm
 
 
 # ============ 프로젝트 API ============
@@ -174,10 +181,20 @@ async def list_trash():
     try:
         project_trash = project_manager.list_trash()
         switch_trash = switch_manager.list_trashed_switches()
+
+        # 다중채팅방 휴지통
+        chat_rooms_trash = []
+        if multi_chat_manager:
+            chat_rooms_trash = multi_chat_manager.list_trashed_rooms()
+            # 채팅방에 type 추가
+            for room in chat_rooms_trash:
+                room['type'] = 'chat_room'
+
         return {
-            "items": project_trash + switch_trash,
+            "items": project_trash + switch_trash + chat_rooms_trash,
             "projects": project_trash,
-            "switches": switch_trash
+            "switches": switch_trash,
+            "chat_rooms": chat_rooms_trash
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -191,6 +208,12 @@ async def restore_from_trash(item_id: str, item_type: str = "project"):
             result = switch_manager.restore_from_trash(item_id)
             if not result:
                 raise HTTPException(status_code=404, detail="스위치를 찾을 수 없습니다.")
+        elif item_type == "chat_room":
+            if not multi_chat_manager:
+                raise HTTPException(status_code=500, detail="다중채팅 매니저가 초기화되지 않았습니다.")
+            result = multi_chat_manager.restore_from_trash(item_id)
+            if not result:
+                raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
         else:
             result = project_manager.restore_from_trash(item_id)
         return {"status": "restored", "item": result}
@@ -208,6 +231,8 @@ async def empty_trash():
     try:
         project_manager.empty_trash()
         switch_manager.empty_trash()
+        if multi_chat_manager:
+            multi_chat_manager.empty_trash()
         return {"status": "emptied"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,19 +1,20 @@
 [
   {
     "name": "ddgs_search",
-    "description": "DuckDuckGo를 사용하여 일반 웹 정보를 검색합니다. 결과는 JSON 파일로 저장됩니다.",
+    "description": "DuckDuckGo 일반 웹 검색. 한 번 호출로 최대 10개 결과 반환. 음식점 검색은 search_restaurants를 사용하세요. 중복 호출 불필요.",
     "input_schema": {
       "type": "object",
       "properties": {
         "query": {
           "type": "string",
-          "description": "검색 키워드"
+          "description": "검색 키워드 (구체적으로 작성)"
         },
         "count": {
           "type": "integer",
           "default": 5,
           "minimum": 1,
-          "maximum": 10
+          "maximum": 10,
+          "description": "결과 수 (기본 5개, 더 필요하면 10으로 설정)"
         },
         "country": {
           "type": "string",

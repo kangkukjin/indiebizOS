@@ -1,0 +1,24 @@
+[
+  {
+    "name": "search_kstartup",
+    "description": "K-Startup 창업지원 사업공고 검색. 한 번 호출로 최대 50개 공고 반환.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "keyword": { "type": "string", "description": "검색 키워드 (예: 예비창업, 기술창업)" },
+        "count": { "type": "integer", "default": 10, "minimum": 1, "maximum": 50, "description": "조회 건수 (기본 10)" }
+      }
+    }
+  },
+  {
+    "name": "search_mss_biz",
+    "description": "중소벤처기업부 사업공고 검색. 한 번 호출로 최대 50개 공고 반환.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "keyword": { "type": "string", "description": "검색 키워드 (예: 창업, R&D, 수출)" },
+        "count": { "type": "integer", "default": 10, "minimum": 1, "maximum": 50, "description": "조회 건수 (기본 10)" }
+      }
+    }
+  }
+]

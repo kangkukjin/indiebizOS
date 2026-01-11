@@ -66,8 +66,24 @@ class MultiChatManager:
         return rooms
 
     def delete_room(self, room_id: str) -> bool:
-        """채팅방 삭제"""
+        """채팅방 영구 삭제"""
         return self.db.delete_room(room_id)
+
+    def move_to_trash(self, room_id: str) -> dict:
+        """채팅방을 휴지통으로 이동"""
+        return self.db.move_to_trash(room_id)
+
+    def restore_from_trash(self, room_id: str) -> dict:
+        """채팅방을 휴지통에서 복원"""
+        return self.db.restore_from_trash(room_id)
+
+    def list_trashed_rooms(self) -> List[Dict]:
+        """휴지통에 있는 채팅방 목록"""
+        return self.db.list_trashed_rooms()
+
+    def empty_trash(self) -> int:
+        """휴지통 비우기"""
+        return self.db.empty_trash()
 
     def update_room_position(self, room_id: str, x: int, y: int) -> bool:
         """채팅방 아이콘 위치 업데이트"""

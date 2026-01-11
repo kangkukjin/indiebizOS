@@ -1,0 +1,73 @@
+[
+  {
+    "name": "kosis_search_statistics",
+    "description": "KOSIS 통계목록 검색. 한 번 호출로 키워드 관련 통계표 목록 반환.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "keyword": { "type": "string", "description": "검색 키워드 (예: '인구', '주택', 'GDP')" },
+        "vw_cd": {
+          "type": "string",
+          "description": "서비스뷰: MT_ZTITLE(주제별), MT_OTITLE(기관별), MT_RTITLE(국제통계)",
+          "default": "MT_ZTITLE"
+        },
+        "parent_list_id": { "type": "string", "description": "상위 목록 ID" }
+      }
+    }
+  },
+  {
+    "name": "kosis_get_data",
+    "description": "KOSIS 통계자료 조회. [중요] 인구 질문시 1회 호출로 전국+모든 시도 데이터 반환. c1_name에서 원하는 지역 필터링. 재호출 불필요. 주요 ID: 인구(org=101, tbl=DT_1B040A3), GDP(org=301, tbl=DT_200Y001).",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "org_id": { "type": "string", "description": "기관 ID (예: '101'=통계청)" },
+        "tbl_id": { "type": "string", "description": "통계표 ID (예: 'DT_1B040A3')" },
+        "itm_id": { "type": "string", "description": "항목 ID (기본 'ALL')", "default": "ALL" },
+        "obj_l1": { "type": "string", "description": "분류1 (기본 'ALL')", "default": "ALL" },
+        "obj_l2": { "type": "string", "description": "분류2 (기본 'ALL')", "default": "ALL" },
+        "obj_l3": { "type": "string", "description": "분류3 (기본 'ALL')", "default": "ALL" },
+        "prd_se": { "type": "string", "description": "주기: Y(년), H(반기), Q(분기), M(월)", "default": "Y" },
+        "start_prd_de": { "type": "string", "description": "시작 시점 (예: '2020')" },
+        "end_prd_de": { "type": "string", "description": "종료 시점 (예: '2023')" }
+      },
+      "required": ["org_id", "tbl_id"]
+    }
+  },
+  {
+    "name": "kosis_get_statistics_info",
+    "description": "통계표 메타데이터 조회 (분류, 항목, 주기 등). 한 번 호출로 상세 정보 반환.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "org_id": { "type": "string", "description": "기관 ID" },
+        "tbl_id": { "type": "string", "description": "통계표 ID" }
+      },
+      "required": ["org_id", "tbl_id"]
+    }
+  },
+  {
+    "name": "kosis_integrated_search",
+    "description": "KOSIS 통합검색. 한 번 호출로 통계표, 설명, 주요지표 등 통합 결과 반환.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "keyword": { "type": "string", "description": "검색 키워드" },
+        "count": { "type": "integer", "description": "결과 수 (기본 10, 최대 100)", "default": 10 }
+      },
+      "required": ["keyword"]
+    }
+  },
+  {
+    "name": "kosis_get_indicators",
+    "description": "KOSIS 주요지표 조회 (경제, 인구, 물가 등). 한 번 호출로 핵심 지표 반환.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "indicator_id": { "type": "string", "description": "지표 ID (없으면 전체 목록)" },
+        "start_prd_de": { "type": "string", "description": "시작 시점" },
+        "end_prd_de": { "type": "string", "description": "종료 시점" }
+      }
+    }
+  }
+]

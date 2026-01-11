@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Camera, FileText } from 'lucide-react';
 import { CameraPreview } from './CameraPreview';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { createChatWebSocket, cancelAllAgents, api } from '../lib/api';
 import type { Agent } from '../types';
 
@@ -609,6 +610,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         {(isUser ? message.content : parsedContent.text) && (
           <div className="chat-markdown">
             <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
               components={{
                 a: ({ href, children }) => (
                   <a

@@ -1,0 +1,9 @@
+{
+  "id": "health-record",
+  "name": "Health Record Manager",
+  "description": "개인 건강 정보를 저장하고 관리하는 도구입니다. 혈압, 혈당, 체중 등 정기 측정값, 증상/질병 이벤트, 투약 기록, 검사 결과(이미지 포함)를 저장하고 AI 에이전트가 참조할 수 있도록 합니다.",
+  "tools": [
+    "save_health_info",
+    "get_health_context"
+  ]
+}

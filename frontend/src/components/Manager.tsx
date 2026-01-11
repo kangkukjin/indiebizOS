@@ -15,6 +15,7 @@ import {
   ServerOff,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 import { Chat } from './Chat';
@@ -1030,6 +1031,7 @@ export function Manager() {
                   logs.map((log, i) => (
                     <div key={i} className="py-1 chat-markdown">
                       <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
                         components={{
                           a: ({ href, children }) => (
                             <a

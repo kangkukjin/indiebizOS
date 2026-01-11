@@ -105,12 +105,13 @@ agents:
 | android | Android device management (adb) |
 | blog | Blog RAG search and insights |
 | browser-automation | Web automation (Playwright) |
-| gov | Government data APIs (공공데이터) |
-| hometax | Korean tax service (국세청 홈택스) |
+| health-record | Personal health data management (measurements, symptoms, medications) |
 | information | API Ninjas, travel info, restaurant search (Kakao API) |
+| kosis | Korean Statistics (KOSIS) data retrieval |
 | nodejs | JavaScript/Node.js execution |
-| pc-manager | File and storage management |
 | python-exec | Python code execution |
+| real-estate | Korean real estate data (apartment/house trade & rent) |
+| startup | Korean startup support (K-Startup, MSS business info) |
 | system_essentials | File management, search, utilities |
 | web-crawl | Web page crawling |
 | web-search | Web search (DuckDuckGo, Google News) |
@@ -135,10 +136,11 @@ agents:
 - **Gmail Integration**: Receive and process emails
 - **Nostr Integration**: Real-time decentralized messaging
 - **Neighbor Management**: Track business partners and contacts
-- **Auto-Response**: AI generates contextual replies based on:
-  - Work guidelines
-  - Business documents
-  - Conversation history
+- **Auto-Response V2**: AI generates contextual replies using advanced prompt engineering:
+  - **Chain-of-Thought (CoT)**: Step-by-step reasoning for message classification
+  - **Few-shot Learning**: Example-based response generation for consistent quality
+  - Work guidelines, business documents, conversation history
+  - Hallucination prevention: Only mentions info from search results
 
 ### 7. Multi-Chat Rooms (Group Conversation)
 
@@ -329,9 +331,10 @@ A single "universal agent" can't optimize this. IndieBiz can.
 
 This is a working personal project with:
 - 14 active projects in production use
-- 12 installed tool packages
+- 15 installed tool packages
 - Multi-chat rooms for group conversations
 - Functional scheduler, switches, and business network
+- Advanced prompt engineering (CoT + Few-shot) for auto-response
 
 ### Design Philosophy: Your OS, Your Way
 

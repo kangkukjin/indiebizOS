@@ -21,7 +21,7 @@
 
 ---
 
-## 도구 패키지 (Tools) - 12개
+## 도구 패키지 (Tools) - 15개
 에이전트가 사용할 수 있는 유틸리티
 
 | ID | 이름 | 설명 | 상태 |
@@ -31,13 +31,20 @@
 | browser-automation | Browser Automation | 웹 브라우저 자동화 (Playwright) | 설치됨 |
 | health-record | Health Record Manager | 개인 건강 정보 저장/관리 (측정값, 증상, 투약, 검사결과) | 설치됨 |
 | information | Information & Publishing | API Ninjas, 여행 정보, 출판 도구, **맛집 검색 (카카오 API)** | 설치됨 |
+| kosis | KOSIS | 통계청 데이터 조회 (국가통계포털 API) | 설치됨 |
 | nodejs | Nodejs | JavaScript/Node.js 코드 실행 | 설치됨 |
-| pc-manager | Pc Manager | 파일 및 저장소 관리 | 설치됨 |
 | python-exec | Python Exec | Python 코드 실행 | 설치됨 |
+| real-estate | Real Estate | 부동산 실거래가 조회 (아파트/단독주택 매매/전월세) | 설치됨 |
+| startup | Startup | 창업 지원 정보 (K-Startup, 중소벤처기업부) | 설치됨 |
 | system_essentials | System Essentials | 파일 관리, 검색, 시스템 유틸리티 | 설치됨 |
 | web-crawl | Web Crawl | 웹페이지 크롤링 | 설치됨 |
 | web-search | Web Search | 웹 검색 엔진 (DuckDuckGo, Google News) | 설치됨 |
 | youtube | Youtube | 유튜브 동영상/오디오 관리 | 설치됨 |
+
+### 미설치 패키지
+| ID | 설명 | 상태 |
+|----|------|------|
+| pc-manager | 파일 및 저장소 관리 | 미설치 |
 
 ---
 
@@ -99,11 +106,15 @@ kvisual-mcp 기반 비즈니스 파트너 관리
 | Gmail | 폴링 | 주기적으로 이메일 수신 |
 | Nostr | WebSocket | 실시간 DM 수신 |
 
-### 자동응답 V2
-kvisual-mcp 방식의 2단계 처리:
+### 자동응답 V2 (프롬프트 엔지니어링 적용)
+kvisual-mcp 방식 + **CoT + Few-shot** 적용:
 1. **AI 판단** (ai_judgment.py): 메시지 분류 (NO_RESPONSE / BUSINESS_RESPONSE)
+   - 4가지 판단 예시 (서비스 문의, 개인 대화, 구매 문의, 스팸)
+   - 단계별 사고과정 유도 (의도 파악 → 비즈니스 관련성 → 검색 필요)
 2. **비즈니스 검색**: 카테고리/키워드로 관련 아이템 검색
-3. **응답 생성**: 컨텍스트 기반 응답 (근무지침, 비즈니스 문서, 대화 기록, 검색 결과)
+3. **응답 생성** (auto_response.py): 컨텍스트 기반 응답
+   - 3가지 응답 예시 (서비스 문의, 물품 구매, 인사)
+   - 환각 방지: "검색 결과에 없는 정보를 지어내지 마세요"
 
 ---
 
@@ -125,4 +136,4 @@ kvisual-mcp 방식의 2단계 처리:
 - **프로젝트1** - 에이전트 팀 템플릿 (집사, 직원1, 대장장이, 출판, 영상담당)
 
 ---
-*마지막 업데이트: 2026-01-11 08:33*
+*마지막 업데이트: 2026-01-12*

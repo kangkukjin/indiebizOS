@@ -10,6 +10,8 @@ import { FolderView } from './components/FolderView';
 import { IndieNet } from './components/IndieNet';
 import { BusinessManager } from './components/BusinessManager';
 import { MultiChat } from './components/MultiChat';
+import { PCManager } from './components/PCManager';
+import { PhotoManager } from './components/PhotoManager';
 import { api } from './lib/api';
 
 function App() {
@@ -19,6 +21,10 @@ function App() {
   const [multiChatRoomId, setMultiChatRoomId] = useState<string | null>(null);
   const [isIndieNet, setIsIndieNet] = useState(false);
   const [isBusiness, setIsBusiness] = useState(false);
+  const [isPCManager, setIsPCManager] = useState(false);
+  const [pcManagerPath, setPCManagerPath] = useState<string | null>(null);
+  const [isPhotoManager, setIsPhotoManager] = useState(false);
+  const [photoManagerPath, setPhotoManagerPath] = useState<string | null>(null);
 
   // URL 해시에서 프로젝트/폴더/IndieNet 확인
   useEffect(() => {
@@ -39,9 +45,48 @@ function App() {
       if (hash === '#/business') {
         setIsBusiness(true);
         setIsIndieNet(false);
+        setIsPCManager(false);
         setProjectId(null);
         setFolderId(null);
         setMultiChatRoomId(null);
+        return;
+      }
+
+      // PC Manager 체크
+      if (hash.startsWith('#/pcmanager')) {
+        setIsPCManager(true);
+        setIsIndieNet(false);
+        setIsBusiness(false);
+        setIsPhotoManager(false);
+        setProjectId(null);
+        setFolderId(null);
+        setMultiChatRoomId(null);
+        // path 파라미터 추출
+        const pathMatch = hash.match(/path=([^&]+)/);
+        if (pathMatch) {
+          setPCManagerPath(decodeURIComponent(pathMatch[1]));
+        } else {
+          setPCManagerPath(null);
+        }
+        return;
+      }
+
+      // Photo Manager 체크
+      if (hash.startsWith('#/photo')) {
+        setIsPhotoManager(true);
+        setIsPCManager(false);
+        setIsIndieNet(false);
+        setIsBusiness(false);
+        setProjectId(null);
+        setFolderId(null);
+        setMultiChatRoomId(null);
+        // path 파라미터 추출
+        const pathMatch = hash.match(/path=([^&]+)/);
+        if (pathMatch) {
+          setPhotoManagerPath(decodeURIComponent(pathMatch[1]));
+        } else {
+          setPhotoManagerPath(null);
+        }
         return;
       }
 
@@ -83,6 +128,8 @@ function App() {
       setFolderId(null);
       setIsIndieNet(false);
       setIsBusiness(false);
+      setIsPCManager(false);
+      setIsPhotoManager(false);
       setMultiChatRoomId(null);
     };
 
@@ -154,6 +201,28 @@ function App() {
       <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
         <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
           <BusinessManager />
+        </div>
+      </div>
+    );
+  }
+
+  // PC Manager 창인 경우
+  if (isPCManager) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+          <PCManager initialPath={pcManagerPath} />
+        </div>
+      </div>
+    );
+  }
+
+  // Photo Manager 창인 경우
+  if (isPhotoManager) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+          <PhotoManager initialPath={photoManagerPath} />
         </div>
       </div>
     );

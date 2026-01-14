@@ -132,6 +132,50 @@ export function Launcher() {
     loadMultiChatRooms();
   }, [loadProjects, loadSwitches]);
 
+  // PC Manager 창 열기 요청 폴링
+  useEffect(() => {
+    const pollPendingWindows = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8765/pcmanager/pending-windows');
+        if (response.ok) {
+          const data = await response.json();
+          for (const req of data.requests || []) {
+            if (window.electron?.openPCManagerWindow) {
+              window.electron.openPCManagerWindow(req.path || null);
+            }
+          }
+        }
+      } catch {
+        // 서버 연결 실패 무시
+      }
+    };
+
+    const interval = setInterval(pollPendingWindows, 300);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Photo Manager 창 열기 요청 폴링
+  useEffect(() => {
+    const pollPhotoWindows = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8765/photo/pending-windows');
+        if (response.ok) {
+          const data = await response.json();
+          for (const req of data.requests || []) {
+            if (window.electron?.openPhotoManagerWindow) {
+              window.electron.openPhotoManagerWindow(req.path || null);
+            }
+          }
+        }
+      } catch {
+        // 서버 연결 실패 무시
+      }
+    };
+
+    const interval = setInterval(pollPhotoWindows, 300);
+    return () => clearInterval(interval);
+  }, []);
+
   // 폴더에서 아이템이 드롭되었을 때 이벤트 수신
   useEffect(() => {
     if (window.electron?.onItemDroppedFromFolder) {

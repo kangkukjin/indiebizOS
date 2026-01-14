@@ -239,9 +239,8 @@ class ChannelPoller:
             except Exception as e:
                 self._log(f"Nostr 오류: {e}")
 
-            # 재연결 대기
+            # 재연결 대기 (로그 없이 조용히)
             if not stop_event.is_set() and self.running:
-                self._log("Nostr 5초 후 재연결...")
                 time.sleep(5)
 
     def _init_nostr_keys(self) -> bool:
@@ -333,10 +332,13 @@ class ChannelPoller:
                 pass
 
         def on_error(ws, error):
-            self._log(f"Nostr WebSocket 에러: {error}")
+            # 정상적인 연결 끊김은 로그 안 남김
+            error_str = str(error)
+            if "Connection to remote host was lost" not in error_str:
+                self._log(f"Nostr WebSocket 에러: {error}")
 
         def on_close(ws, close_status_code, close_msg):
-            self._log(f"Nostr WebSocket 닫힘")
+            pass  # 정상적인 닫힘은 로그 안 남김
 
         def on_open(ws):
             connected.set()
@@ -351,7 +353,10 @@ class ChannelPoller:
                 }
             ])
             ws.send(req)
-            self._log(f"Nostr 연결됨: {relay_url}")
+            # 최초 연결 시에만 로그
+            if not hasattr(self, '_nostr_connected_once'):
+                self._log(f"Nostr 연결됨: {relay_url}")
+                self._nostr_connected_once = True
             self._update_last_poll_time('nostr')
 
         self._nostr_ws = websocket.WebSocketApp(

@@ -20,6 +20,16 @@ try:
 except ImportError:
     HAS_NOSTR = False
     print("⚠️  IndieNet: pynostr 필요 - pip install pynostr websocket-client")
+    # 타입 힌트를 위한 더미 클래스 정의
+    class Event:
+        pass
+    class EventKind:
+        TEXT_NOTE = 1
+        ENCRYPTED_DIRECT_MESSAGE = 4
+    class PrivateKey:
+        pass
+    class PublicKey:
+        pass
 
 
 # IndieNet 데이터 디렉토리

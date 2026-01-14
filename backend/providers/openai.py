@@ -114,6 +114,8 @@ class OpenAIProvider(BaseProvider):
             return "도구 사용 깊이 제한에 도달했습니다."
 
         message = response.choices[0].message
+        approval_requested = False
+        approval_message = ""
 
         # 도구 호출이 있는 경우
         if message.tool_calls:
@@ -128,11 +130,24 @@ class OpenAIProvider(BaseProvider):
                 else:
                     tool_output = '{"error": "도구 실행 함수가 없습니다"}'
 
+                # 승인 요청 감지
+                if tool_output.startswith("[[APPROVAL_REQUESTED]]"):
+                    approval_requested = True
+                    tool_output = tool_output.replace("[[APPROVAL_REQUESTED]]", "")
+                    approval_message = tool_output
+
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "content": tool_output
                 })
+
+            # 승인 요청이 있으면 루프 중단 - 사용자에게 바로 반환
+            if approval_requested:
+                existing_text = message.content or ""
+                if existing_text:
+                    return existing_text + "\n\n" + approval_message
+                return approval_message
 
             # 후속 호출
             openai_tools = self._convert_tools()

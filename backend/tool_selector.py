@@ -55,6 +55,74 @@ def get_installed_tools() -> List[Dict[str, Any]]:
     return tools
 
 
+def get_installed_packages() -> List[Dict[str, Any]]:
+    """설치된 패키지 목록 반환 (패키지 단위 정보 포함)"""
+    packages = []
+
+    if not INSTALLED_TOOLS_PATH.exists():
+        return packages
+
+    for pkg_dir in INSTALLED_TOOLS_PATH.iterdir():
+        if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
+            continue
+
+        tool_json = pkg_dir / "tool.json"
+        if not tool_json.exists():
+            continue
+
+        pkg_info = {
+            "id": pkg_dir.name,
+            "name": pkg_dir.name.replace('-', ' ').replace('_', ' ').title(),
+            "description": "",
+            "tools": []
+        }
+
+        # README에서 패키지 설명 추출
+        for doc_file in ['README.md', 'readme.md']:
+            doc_path = pkg_dir / doc_file
+            if doc_path.exists():
+                try:
+                    content = doc_path.read_text(encoding='utf-8')
+                    lines = content.strip().split('\n')
+                    desc_lines = []
+                    for line in lines:
+                        line = line.strip()
+                        if line.startswith('#') or not line:
+                            if desc_lines:
+                                break
+                            continue
+                        desc_lines.append(line)
+                        if len(desc_lines) >= 2:
+                            break
+                    if desc_lines:
+                        pkg_info["description"] = ' '.join(desc_lines)[:200]
+                except:
+                    pass
+                break
+
+        # tool.json에서 도구 목록 추출
+        try:
+            with open(tool_json, 'r', encoding='utf-8') as f:
+                tool_data = json.load(f)
+
+            tools = []
+            if isinstance(tool_data, list):
+                tools = tool_data
+            elif isinstance(tool_data, dict) and "tools" in tool_data:
+                tools = tool_data["tools"]
+            elif isinstance(tool_data, dict) and "name" in tool_data:
+                tools = [tool_data]
+
+            pkg_info["tools"] = [t.get("name") for t in tools if t.get("name")]
+            pkg_info["tool_count"] = len(pkg_info["tools"])
+        except:
+            pass
+
+        packages.append(pkg_info)
+
+    return packages
+
+
 def get_base_tools() -> List[str]:
     """기초 도구 이름 목록 반환 (시스템 기본 도구)"""
     return ["call_agent", "list_agents", "send_notification", "get_project_info"]
@@ -132,37 +200,84 @@ class SystemDirector:
             print(f"⚠️ 시스템 AI 호출 실패: {e}")
         return ""
 
-    def reallocate_tools(self, agents_info: List[Dict[str, str]]):
-        """
-        allowed_tools가 None인 에이전트에게만 도구를 배분합니다.
-        """
-        installed_tools = get_installed_tools()
-        tools_desc = "\n".join([f"- {t.get('name')}: {t.get('description', '')}" for t in installed_tools])
+    def _build_package_assignment_prompt(self, agents_info: List[Dict[str, str]]) -> str:
+        """패키지 단위 배분을 위한 프롬프트 생성 (Chain-of-Thought 적용)"""
+        packages = get_installed_packages()
 
-        agents_desc = "\n".join([f"[{a['name']}]\n역할: {a['role']}" for a in agents_info])
+        # 패키지 설명 구성
+        packages_desc = []
+        for pkg in packages:
+            tools_list = ", ".join(pkg["tools"][:5])
+            if len(pkg["tools"]) > 5:
+                tools_list += f" 외 {len(pkg['tools']) - 5}개"
+            packages_desc.append(
+                f"📦 {pkg['id']} ({pkg['tool_count']}개 도구)\n"
+                f"   설명: {pkg['description'] or '(설명 없음)'}\n"
+                f"   도구: {tools_list}"
+            )
+        packages_text = "\n\n".join(packages_desc)
 
-        prompt = f'''
-다음은 우리 시스템의 '설치된 도구'와 '에이전트' 목록이야. 전문성을 고려해서 도구를 배분해줘.
+        # 에이전트 설명 구성
+        agents_desc = "\n".join([
+            f"👤 {a['name']}\n   역할: {a['role']}"
+            for a in agents_info
+        ])
 
-[규칙]
-1. 각 에이전트의 '역할'에 꼭 필요한 도구만 할당해.
-2. 실행 도구(제작, 검색 등)는 전문가 에이전트에게 몰아주고, 집사(관리자)는 조율 도구(이메일, 메시지 등) 위주로 배분해.
-3. 결과는 반드시 배분표 JSON만 반환해.
+        prompt = f'''도구 패키지를 에이전트에게 배분해야 합니다.
 
-[설치된 도구 목록]
-{tools_desc}
+## 설치된 도구 패키지
+{packages_text}
 
-[에이전트 목록]
+## 에이전트 목록
 {agents_desc}
 
-[반환 형식]
+## 배분 규칙
+1. **패키지 단위로 배분**: 패키지 안의 도구들은 함께 움직입니다. 개별 도구가 아닌 패키지 ID를 배분하세요.
+2. **역할 매칭**: 에이전트의 역할과 패키지의 목적이 일치해야 합니다.
+3. **중복 허용**: 여러 에이전트가 같은 패키지를 가질 수 있습니다.
+4. **최소 배분**: 역할에 필요 없는 패키지는 배분하지 마세요.
+
+## 단계별로 생각하세요
+1단계: 각 에이전트의 핵심 업무가 무엇인지 파악하세요.
+2단계: 각 패키지가 어떤 종류의 작업에 필요한지 분류하세요.
+3단계: 에이전트별로 필요한 패키지를 매칭하세요.
+4단계: 매칭 결과를 검증하세요 - 이 도구들로 에이전트가 역할을 수행할 수 있나요?
+
+## 예시
+에이전트 "유튜버"의 역할이 "유튜브 콘텐츠 제작 및 관리"라면:
+→ youtube 패키지 (영상 다운로드, 자막 추출)
+→ web-search 패키지 (트렌드 조사)
+
+## 반환 형식 (JSON만 반환)
 {{
   "배분표": {{
-    "에이전트이름": ["도구이름1", "도구이름2"],
+    "에이전트이름": ["패키지id1", "패키지id2"],
     ...
   }}
 }}
 '''
+        return prompt
+
+    def _expand_packages_to_tools(self, package_assignments: Dict[str, List[str]]) -> Dict[str, List[str]]:
+        """패키지 ID 목록을 실제 도구 이름 목록으로 확장"""
+        packages = get_installed_packages()
+        pkg_tools_map = {pkg["id"]: pkg["tools"] for pkg in packages}
+
+        expanded = {}
+        for agent_name, pkg_ids in package_assignments.items():
+            tools = []
+            for pkg_id in pkg_ids:
+                if pkg_id in pkg_tools_map:
+                    tools.extend(pkg_tools_map[pkg_id])
+            expanded[agent_name] = tools
+        return expanded
+
+    def reallocate_tools(self, agents_info: List[Dict[str, str]]):
+        """
+        allowed_tools가 None인 에이전트에게만 도구를 배분합니다.
+        패키지 단위로 배분 후 도구로 확장합니다.
+        """
+        prompt = self._build_package_assignment_prompt(agents_info)
         response = self._call_ai(prompt)
         if not response:
             return False
@@ -170,8 +285,13 @@ class SystemDirector:
         try:
             json_str = re.search(r'\{.*\}', response, re.DOTALL).group()
             data = json.loads(json_str)
-            self.assignment_map = data.get("배분표", {})
+            package_assignments = data.get("배분표", {})
+
+            # 패키지 → 도구로 확장
+            self.assignment_map = self._expand_packages_to_tools(package_assignments)
             print(f"✅ [감독관] 도구 배분 완료: {list(self.assignment_map.keys())}")
+            for agent, tools in self.assignment_map.items():
+                print(f"   📦 {agent}: {len(tools)}개 도구")
 
             # agents.yaml에 allowed_tools 저장 (force=False)
             self._save_allowed_tools_to_agents_yaml(force=False)
@@ -185,33 +305,7 @@ class SystemDirector:
         모든 에이전트의 도구를 강제로 재배분합니다. (기존 설정 덮어쓰기)
         설정 화면의 '자동 배분' 버튼용
         """
-        installed_tools = get_installed_tools()
-        tools_desc = "\n".join([f"- {t.get('name')}: {t.get('description', '')}" for t in installed_tools])
-
-        agents_desc = "\n".join([f"[{a['name']}]\n역할: {a['role']}" for a in agents_info])
-
-        prompt = f'''
-다음은 우리 시스템의 '설치된 도구'와 '에이전트' 목록이야. 전문성을 고려해서 도구를 배분해줘.
-
-[규칙]
-1. 각 에이전트의 '역할'에 꼭 필요한 도구만 할당해.
-2. 실행 도구(제작, 검색 등)는 전문가 에이전트에게 몰아주고, 집사(관리자)는 조율 도구(이메일, 메시지 등) 위주로 배분해.
-3. 결과는 반드시 배분표 JSON만 반환해.
-
-[설치된 도구 목록]
-{tools_desc}
-
-[에이전트 목록]
-{agents_desc}
-
-[반환 형식]
-{{
-  "배분표": {{
-    "에이전트이름": ["도구이름1", "도구이름2"],
-    ...
-  }}
-}}
-'''
+        prompt = self._build_package_assignment_prompt(agents_info)
         response = self._call_ai(prompt)
         if not response:
             return False
@@ -219,8 +313,13 @@ class SystemDirector:
         try:
             json_str = re.search(r'\{.*\}', response, re.DOTALL).group()
             data = json.loads(json_str)
-            self.assignment_map = data.get("배분표", {})
+            package_assignments = data.get("배분표", {})
+
+            # 패키지 → 도구로 확장
+            self.assignment_map = self._expand_packages_to_tools(package_assignments)
             print(f"✅ [감독관] 도구 재배분 완료: {list(self.assignment_map.keys())}")
+            for agent, tools in self.assignment_map.items():
+                print(f"   📦 {agent}: {len(tools)}개 도구")
 
             # 강제로 agents.yaml에 저장
             self._save_allowed_tools_to_agents_yaml(force=True)

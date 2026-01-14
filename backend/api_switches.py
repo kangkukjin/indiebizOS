@@ -33,12 +33,67 @@ async def list_switches():
 
 @router.post("/switches")
 async def create_switch(switch: SwitchCreate):
-    """새 스위치 생성"""
+    """새 스위치 생성 - 프로젝트 설정을 완전히 복사하여 독립적으로 저장"""
+    import yaml
+    from project_manager import ProjectManager
+
     try:
+        config = switch.config.copy() if switch.config else {}
+        project_id = config.get("projectId")
+        agent_name = config.get("agentName")
+
+        # 프로젝트에서 설정 복사
+        if project_id:
+            pm = ProjectManager()
+            project_path = pm.get_project_path(project_id)
+            agents_file = project_path / "agents.yaml"
+
+            if agents_file.exists():
+                with open(agents_file, 'r', encoding='utf-8') as f:
+                    project_config = yaml.safe_load(f) or {}
+
+                # 에이전트 찾기
+                agents = project_config.get("agents", [])
+                agent = None
+                for a in agents:
+                    if a.get("name") == agent_name or a.get("id") == agent_name:
+                        agent = a
+                        break
+
+                if not agent and agents:
+                    agent = agents[0]
+
+                # 에이전트 설정 복사
+                if agent:
+                    config["agent_name"] = agent.get("name", agent_name)
+                    config["agent_role"] = agent.get("role_description", "")
+                    config["tools"] = agent.get("allowed_tools", [])
+
+                    # AI 설정: 에이전트 내부 설정 우선, 없으면 common에서
+                    agent_ai = agent.get("ai", {})
+                    if agent_ai.get("api_key"):
+                        config["ai"] = {
+                            "provider": agent_ai.get("provider", "anthropic"),
+                            "api_key": agent_ai.get("api_key", ""),
+                            "model": agent_ai.get("model", "claude-sonnet-4-20250514")
+                        }
+                    else:
+                        # common에서 AI 설정 가져오기
+                        ai_provider = project_config.get("common", {}).get("default_ai", "anthropic")
+                        ai_settings = project_config.get("ai", {}).get(ai_provider, {})
+                        config["ai"] = {
+                            "provider": ai_provider,
+                            "api_key": ai_settings.get("api_key", ""),
+                            "model": ai_settings.get("model", "claude-sonnet-4-20250514")
+                        }
+
+                # 공통 프롬프트 복사
+                config["common_prompt"] = project_config.get("common", {}).get("common_prompt", "")
+
         result = switch_manager.create_switch(
             name=switch.name,
             command=switch.command,
-            config=switch.config,
+            config=config,
             icon=switch.icon,
             description=switch.description
         )
@@ -76,12 +131,22 @@ async def update_switch_position(switch_id: str, position: PositionUpdate):
 
 @router.post("/switches/{switch_id}/execute")
 async def execute_switch(switch_id: str, background_tasks: BackgroundTasks):
-    """스위치 실행"""
+    """스위치 실행 - 저장된 설정을 그대로 사용 (프로젝트 독립적)"""
     from switch_runner import SwitchRunner
 
     switch = switch_manager.get_switch(switch_id)
     if not switch:
         raise HTTPException(status_code=404, detail="Switch not found")
+
+    # 스위치에 저장된 설정 그대로 사용 (이미 생성 시 복사됨)
+    config = switch.get("config", {})
+
+    # AI 설정이 없으면 에러
+    if not config.get("ai", {}).get("api_key"):
+        raise HTTPException(
+            status_code=400,
+            detail="스위치에 AI 설정이 없습니다. 스위치를 다시 생성해주세요."
+        )
 
     # 스위치 실행 (백그라운드)
     runner = SwitchRunner(switch)

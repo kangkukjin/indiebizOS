@@ -57,6 +57,19 @@ class SwitchRunner:
             agent_name = self.config.get("agent_name", "스위치 에이전트")
             agent_role = self.config.get("agent_role", "")
             common_prompt = self.config.get("common_prompt", "")
+            allowed_tools = self.config.get("tools", [])
+
+            # 도구 로드
+            from tool_loader import load_installed_tools
+            all_tools = load_installed_tools()
+
+            # allowed_tools가 있으면 필터링, 없으면 전체 사용
+            if allowed_tools:
+                tools = [t for t in all_tools if t.get("name") in allowed_tools]
+            else:
+                tools = all_tools
+
+            self._status(f"도구 {len(tools)}개 로드됨")
 
             # 시스템 프롬프트 구성
             system_prompt = f"당신은 '{agent_name}'입니다.\n"
@@ -69,7 +82,8 @@ class SwitchRunner:
             agent = AIAgent(
                 ai_config=ai_config,
                 system_prompt=system_prompt,
-                agent_name=agent_name
+                agent_name=agent_name,
+                tools=tools
             )
 
             # 명령 실행

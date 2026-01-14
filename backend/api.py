@@ -89,6 +89,8 @@ from api_prompt_generator import router as prompt_generator_router, init_manager
 from api_gmail import router as gmail_router
 from api_business import router as business_router, init_manager as init_business_manager
 from api_multi_chat import router as multi_chat_router, init_manager as init_multi_chat_manager
+from api_pcmanager import router as pcmanager_router
+from api_photo import router as photo_router
 
 # 매니저 주입
 init_projects_managers(project_manager, switch_manager)
@@ -123,6 +125,8 @@ app.include_router(prompt_generator_router, tags=["prompt-generator"])
 app.include_router(gmail_router, tags=["gmail"])
 app.include_router(business_router, tags=["business"])
 app.include_router(multi_chat_router, tags=["multi-chat"])
+app.include_router(pcmanager_router, tags=["pcmanager"])
+app.include_router(photo_router, tags=["photo"])
 
 
 # ============ 헬스 체크 ============

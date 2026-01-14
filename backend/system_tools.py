@@ -19,6 +19,29 @@ from tool_loader import build_tool_package_map, load_tool_handler, get_all_tool_
 
 SYSTEM_TOOLS = [
     {
+        "name": "request_user_approval",
+        "description": "사용자 승인을 요청합니다. 파일 생성/수정/삭제, 코드 실행, 패키지 설치 등 시스템을 변경하는 작업 전에 반드시 이 도구를 먼저 호출하세요. 이 도구를 호출하면 대화가 중단되고 사용자의 응답을 기다립니다.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action_type": {
+                    "type": "string",
+                    "description": "수행하려는 작업 유형 (예: 파일 생성, 코드 실행, 패키지 설치)"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "수행하려는 작업에 대한 상세 설명"
+                },
+                "affected_items": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "영향받는 파일, 패키지 등의 목록"
+                }
+            },
+            "required": ["action_type", "description"]
+        }
+    },
+    {
         "name": "call_agent",
         "description": "다른 에이전트를 호출하여 작업을 요청합니다. 같은 프로젝트 내 에이전트 간 협업에 사용합니다. 에이전트 이름 또는 ID로 호출할 수 있습니다.",
         "input_schema": {
@@ -439,6 +462,25 @@ def execute_get_my_tools(tool_input: dict, project_path: str) -> str:
 
 # ============ 통합 도구 실행 함수 ============
 
+def execute_request_user_approval(tool_input: dict, project_path: str) -> str:
+    """request_user_approval 도구 실행 - 사용자 승인 요청"""
+    action_type = tool_input.get("action_type", "작업")
+    description = tool_input.get("description", "")
+    affected_items = tool_input.get("affected_items", [])
+
+    result_parts = [
+        "🔔 **승인 요청**",
+        f"**작업 유형**: {action_type}",
+        f"**설명**: {description}"
+    ]
+    if affected_items:
+        result_parts.append(f"**영향받는 항목**: {', '.join(affected_items)}")
+    result_parts.append("\n진행하시려면 '승인' 또는 '진행해'라고 답해주세요.")
+
+    # 특수 마커 추가 - 도구 호출 루프에서 이를 감지하여 중단
+    return "[[APPROVAL_REQUESTED]]" + "\n".join(result_parts)
+
+
 def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
     """
     도구 실행 (시스템 도구 + 동적 로딩)
@@ -452,6 +494,10 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> s
         실행 결과 (JSON 문자열)
     """
     try:
+        # 승인 요청 도구 (가장 먼저 처리)
+        if tool_name == "request_user_approval":
+            return execute_request_user_approval(tool_input, project_path)
+
         # 시스템 도구 처리
         if tool_name == "call_agent":
             return execute_call_agent(tool_input, project_path)

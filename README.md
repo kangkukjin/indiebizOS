@@ -4,7 +4,81 @@
 
 [Homepage](https://indiebiz-homepage.vercel.app) | English | [한국어](README.ko.md)
 
-IndieBiz OS is not just another AI chatbot. It's a complete operating system where you can create unlimited AI agent teams, each working in isolated project workspaces with their own specialized tools.
+IndieBiz OS is not just another AI chatbot. It's a complete operating system where you design your own AI personas, automate tasks with one click, and connect through decentralized networks.
+
+---
+
+## Three Core Values
+
+### 1. Design Your AI Personas
+
+Not just "act as a doctor" - define **who** they are and **how** they communicate.
+
+```yaml
+# Example: A compassionate internal medicine doctor
+agents:
+  dr_kim:
+    role: |
+      You are Dr. Kim, an internal medicine specialist with 20 years of experience.
+      You always start by acknowledging the patient's concerns before asking questions.
+      You explain medical terms in everyday language.
+      You end every consultation with clear next steps and reassurance.
+    model: claude-sonnet
+    allowed_tools: [health-record, web-search]
+```
+
+| Generic AI | IndieBiz Persona |
+|------------|------------------|
+| "You may have hypertension. Consult a doctor." | "I can see you're worried. Let me ask a few questions first... Based on your history, here's what I recommend..." |
+| Information delivery | Empathetic conversation with context |
+
+**Each agent remembers your context** - your medications, preferences, past conversations. They're not generic assistants; they're **your** specialists.
+
+### 2. One-Click Automation with Switches
+
+Stop repeating the same AI conversations. **Save them as Switches** and execute with one click.
+
+**Before (Manual):**
+```
+1. Open AI chat
+2. Type "Find today's tech news"
+3. Wait for results
+4. Copy and paste
+5. Type "Summarize this"
+6. Save to file manually
+7. Repeat tomorrow...
+```
+
+**After (Switch):**
+```
+[Toggle] Daily Tech News  →  Click  →  Done!
+         ↓
+    AI executes predefined prompt
+         ↓
+    Results saved to outputs/daily_news.md
+```
+
+**Switch Features:**
+- **Natural language definition** - Write prompts as you normally would
+- **Scheduled execution** - Run daily at 8 AM, weekly on Fridays
+- **Agent assignment** - Specify which agent handles the switch
+- **Output storage** - Results automatically saved to files
+
+**Example Switches:**
+| Switch | Prompt | Schedule |
+|--------|--------|----------|
+| Daily News | "Collect AI/blockchain news and summarize in 5 bullets" | Daily 8 AM |
+| Weekly Report | "Analyze this week's work logs and generate productivity report" | Friday 6 PM |
+| Market Watch | "Check my watchlist stocks and alert on anomalies" | Daily market close |
+
+### 3. P2P Network (IndieNet)
+
+Connect with others through decentralized, censorship-resistant networks.
+
+- **Nostr Protocol** - No central server, no data collection
+- **Public Board** - Share and discover with other IndieBiz users
+- **Encrypted DMs** - Private messages only you and the recipient can read
+- **Business Network** - Manage partners, auto-respond to inquiries
 
 ---
 
@@ -15,9 +89,9 @@ IndieBiz OS is not just another AI chatbot. It's a complete operating system whe
 Most AI systems try to be one all-knowing assistant. This approach fails because:
 
 - **Context pollution**: Your medical consultation gets mixed with your hardware projects
-- **Tool overload**: 100 tools confuse a single agent
+- **No personalization**: Every AI sounds the same, generic responses
 - **No automation**: You must manually trigger every action
-- **No separation**: Can't easily delete or isolate work domains
+- **Platform lock-in**: Your data lives on their servers
 
 ### The IndieBiz Approach
 
@@ -41,17 +115,17 @@ Most AI systems try to be one all-knowing assistant. This approach fails because
 ```
 IndieBiz OS
 ├── Medical Project
-│   ├── Internal Medicine Agent (GPT-4o-mini, cheap)
-│   ├── Orthopedic Agent (Claude Sonnet)
-│   └── Pharmacist Agent (local LLM, free)
+│   ├── Dr. Kim (empathetic internist)
+│   ├── Dr. Park (detail-oriented orthopedist)
+│   └── Pharmacist Lee (medication checker)
 │
 ├── Real Estate Project
-│   ├── Tax Advisor Agent (Claude Opus, accurate)
-│   └── Legal Agent (Claude Sonnet)
+│   ├── Tax Advisor (conservative, thorough)
+│   └── Legal Advisor (fact-focused)
 │
 └── Startup Project
-    ├── Marketing Agent
-    └── Developer Agent
+    ├── Marketing Agent (creative)
+    └── Developer Agent (practical)
 ```
 
 Each project is **completely isolated**. Delete a project, and everything related disappears cleanly.
@@ -60,39 +134,21 @@ Each project is **completely isolated**. Delete a project, and everything relate
 
 ## Core Features
 
-### 1. Project System (Unlimited Workspaces)
+### Project System (Unlimited Workspaces)
 
 - Create as many projects as you need
 - Each project has its own conversation history, agents, and context
 - Copy projects to create variations
 - Delete projects without affecting others
 
-### 2. Agent Teams (Delegation Chain)
+### Agent Teams (Delegation Chain)
 
-- Define multiple agents per project with different roles
+- Define multiple agents per project with different personalities
 - Agents can delegate tasks to each other
 - Parallel delegation: one agent can dispatch to multiple agents simultaneously
 - Automatic result reporting back through the chain
 
-```yaml
-# Example: agents.yaml
-agents:
-  coordinator:
-    role: "Route requests to specialists"
-    model: claude-sonnet
-
-  researcher:
-    role: "Deep research and analysis"
-    model: claude-opus
-    allowed_tools: [web-search, web-crawl]
-
-  coder:
-    role: "Write and execute code"
-    model: gpt-4o
-    allowed_tools: [python-exec, nodejs]
-```
-
-### 3. Dynamic Tool Loading
+### Dynamic Tool Loading
 
 - Tools are loaded **per-agent**, not globally
 - Add 1000 tools without overwhelming any single agent
@@ -105,58 +161,62 @@ agents:
 | android | Android device management (adb) |
 | blog | Blog RAG search and insights |
 | browser-automation | Web automation (Playwright) |
-| health-record | Personal health data management (measurements, symptoms, medications) |
-| information | API Ninjas, travel info, restaurant search (Kakao API) |
+| health-record | Personal health data management |
+| information | API Ninjas, travel info, restaurant search |
 | kosis | Korean Statistics (KOSIS) data retrieval |
 | nodejs | JavaScript/Node.js execution |
 | python-exec | Python code execution |
-| real-estate | Korean real estate data (apartment/house trade & rent) |
-| startup | Korean startup support (K-Startup, MSS business info) |
+| real-estate | Korean real estate data |
+| startup | Korean startup support |
 | system_essentials | File management, search, utilities |
 | web-crawl | Web page crawling |
 | web-search | Web search (DuckDuckGo, Google News) |
 | youtube | YouTube video/audio management |
 
-### 4. Scheduler (Automated Execution)
+### Scheduler & Switches
 
-- Schedule tasks with cron expressions
-- Agents work automatically without manual triggers
-- Examples:
+- **Switches**: Save any prompt as a reusable automation
+- **Scheduler**: Run switches automatically with cron expressions
+- **Examples**:
   - Daily news summary at 9 AM
   - Hourly server health check
   - Weekly report generation
 
-### 5. Switches (Event Triggers)
-
-- Define conditions that trigger agent actions
-- React to external events automatically
-
-### 6. Business Network (Communication Channels)
+### Business Network
 
 - **Gmail Integration**: Receive and process emails
-- **Nostr Integration**: Real-time decentralized messaging
-- **Neighbor Management**: Track business partners and contacts
-- **Auto-Response V2**: AI generates contextual replies using advanced prompt engineering:
-  - **Chain-of-Thought (CoT)**: Step-by-step reasoning for message classification
-  - **Few-shot Learning**: Example-based response generation for consistent quality
-  - Work guidelines, business documents, conversation history
-  - Hallucination prevention: Only mentions info from search results
+- **Nostr Integration**: Decentralized messaging
+- **Neighbor Management**: Track business partners
+- **Auto-Response**: AI generates contextual replies using:
+  - Chain-of-Thought reasoning
+  - Few-shot learning
+  - Work guidelines + business documents + conversation history
 
-### 7. Multi-Chat Rooms (Group Conversation)
+### Multi-Chat Rooms
 
 - **Separate windows**: Each chat room opens in its own window
 - **Summon agents**: Bring agents from any project into a conversation
-- **Preserve AI settings**: Summoned agents keep their original provider/model/API key
-- **Start/Stop all**: Activate or deactivate all participants at once
-- **Tool assignment**: Assign specific tools to each agent via dropdown
 - **@mentions**: Target specific agents with @name syntax
+- **Tool assignment**: Assign specific tools to each agent
 
-### 8. System AI (Meta-Controller)
+### System AI (Meta-Controller)
 
 - Sits above all projects
 - Manages system-wide settings
 - References system documentation as long-term memory
-- Provides guidance and coordination
+
+---
+
+## Data Sovereignty
+
+**Your data stays on your computer.**
+
+| Cloud AI | IndieBiz OS |
+|----------|-------------|
+| Data on their servers | Data on your PC |
+| Internet required | Offline capable (Ollama) |
+| Platform lock-in | Freedom of choice |
+| Subscription fees | Pay per API call (or free with local LLMs) |
 
 ---
 
@@ -171,8 +231,7 @@ indiebizOS/
 │   ├── system_ai.py     # System AI core
 │   ├── scheduler.py     # Task scheduler
 │   ├── auto_response.py # Auto-response service
-│   ├── channel_poller.py # Gmail/Nostr message receiver
-│   └── multi_chat_manager.py # Multi-chat room manager
+│   └── channel_poller.py # Gmail/Nostr message receiver
 │
 ├── frontend/            # Electron + React (TypeScript)
 │   ├── electron/        # Main/preload
@@ -181,8 +240,7 @@ indiebizOS/
 ├── data/
 │   ├── packages/        # Tool packages
 │   │   ├── installed/   # Active packages
-│   │   ├── not_installed/ # Available packages
-│   │   └── dev/         # Development packages
+│   │   └── not_installed/ # Available packages
 │   └── system_docs/     # System AI memory
 │
 └── projects/            # User projects
@@ -199,13 +257,13 @@ indiebizOS/
 
 - Python 3.10+
 - Node.js 18+
-- API keys for AI providers (Claude, OpenAI, etc.)
+- API keys for AI providers (Claude, OpenAI, etc.) or Ollama for local LLMs
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-repo/indiebizOS.git
+git clone https://github.com/kangkukjin/indiebizOS.git
 cd indiebizOS
 
 # Backend setup
@@ -245,11 +303,11 @@ npm run electron:build:win   # Windows
 
 ## Philosophy
 
-### Human-in-the-Loop AGI
+### Human-in-the-Loop Intelligence
 
-We don't believe in a single, all-knowing AGI. Instead, we believe:
+We don't believe in a single, all-knowing AGI. Instead:
 
-> **AGI = Federation of Specialized AIs + Human**
+> **Practical AI = Federation of Specialized AIs + Human Oversight**
 
 ```
         ┌─────────────────────────────────┐
@@ -265,53 +323,24 @@ We don't believe in a single, all-knowing AGI. Instead, we believe:
    └─────────┘   └─────────┘   └─────────┘
 ```
 
-**The human is part of the system**, not just a user:
-- Connects insights across different domains
+The human is part of the system:
+- Connects insights across domains
 - Makes final decisions
 - Takes responsibility
 - Provides ethical judgment
 
-**Why this is better than a single AGI:**
-
-| Single AGI | IndieBiz Approach |
-|------------|-------------------|
-| One system decides everything | Human makes final calls |
-| One failure breaks all | Failures are isolated |
-| Unclear accountability | Human is accountable |
-| Hallucinations spread | Domain experts can verify |
-| Black box | Transparent, modular |
-
-This isn't a limitation—it's a feature. The safest, most practical path to general intelligence is **distributed intelligence with human oversight**.
-
----
-
-### Why Project Isolation Matters
-
-1. **Clean deletion**: Remove a project, remove all its data
-2. **Context accuracy**: Medical agents don't see hardware code
-3. **Cost optimization**: Use expensive models only where needed
-4. **Experimentation**: Create throwaway agents, test prompts freely
-
-### Why Many Agents Beat One
-
-- Simple tasks → cheap/local models ($0)
-- Medium tasks → mid-tier models ($0.01)
-- Complex tasks → premium models ($0.10)
-
-A single "universal agent" can't optimize this. IndieBiz can.
-
 ### Compared to Alternatives
 
-| Feature | Claude Desktop | OpenDAN | IndieBiz OS |
+| Feature | Claude Desktop | ChatGPT | IndieBiz OS |
 |---------|---------------|---------|-------------|
-| GUI | Native app | CLI/Telegram | Electron app |
-| Project isolation | No | No | Yes |
-| Unlimited agents | No | Limited | Yes |
-| Tool scaling | MCP (limited) | Limited | Unlimited |
-| Scheduler | No | No | Yes |
-| Business network | No | No | Yes |
-| Auto-response | No | No | Yes |
-| Multi-chat rooms | No | No | Yes |
+| Custom personas | Limited | Limited | **Full control** |
+| One-click automation | No | No | **Yes (Switches)** |
+| Project isolation | No | No | **Yes** |
+| Unlimited agents | No | No | **Yes** |
+| Scheduler | No | No | **Yes** |
+| P2P Network | No | No | **Yes (IndieNet)** |
+| Local data | No | No | **Yes** |
+| Offline capable | No | No | **Yes (Ollama)** |
 
 ---
 
@@ -329,23 +358,21 @@ A single "universal agent" can't optimize this. IndieBiz can.
 
 **This project is under active development.**
 
-This is a working personal project with:
 - 14 active projects in production use
 - 15 installed tool packages
-- Multi-chat rooms for group conversations
 - Functional scheduler, switches, and business network
 - Advanced prompt engineering (CoT + Few-shot) for auto-response
 
-### Design Philosophy: Your OS, Your Way
+### Your OS, Your Way
 
-IndieBiz OS is designed to be **customized by each user**. There is no "correct" way to use it.
+IndieBiz OS is designed to be **customized by each user**.
 
-- **Fork and modify**: This is your personal operating system—change anything
+- **Fork and modify**: This is your personal operating system
 - **Add your own tools**: Create packages that fit your workflow
-- **Define your own agents**: Build teams that match your thinking style
-- **No prescribed structure**: Organize projects however makes sense to you
+- **Define your own personas**: Build agents that match your needs
+- **No prescribed structure**: Organize however makes sense to you
 
-The goal is not to build a product everyone uses the same way, but to provide a foundation that each person can adapt to their unique needs. Think of it as a starting point, not a finished product.
+The goal is not a product everyone uses the same way, but a foundation you adapt to your unique needs.
 
 Contributions and feedback welcome.
 
@@ -357,4 +384,4 @@ MIT License
 
 ---
 
-*IndieBiz OS - Your Personal AI Team, Not Just Another Chatbot*
+*IndieBiz OS - Design. Automate. Connect.*

@@ -180,18 +180,24 @@ class GeminiProvider(BaseProvider):
 
         # function_call 수집
         function_calls = []
+        collected_text_parts = []
         if hasattr(response, 'candidates') and response.candidates:
             candidate = response.candidates[0]
             if hasattr(candidate.content, 'parts'):
                 for part in candidate.content.parts:
                     if hasattr(part, 'function_call') and part.function_call:
                         function_calls.append(part.function_call)
+                    elif hasattr(part, 'text') and part.text:
+                        collected_text_parts.append(part.text)
 
         # function_call 실행
         if function_calls:
             contents.append(response.candidates[0].content)
 
             function_response_parts = []
+            approval_requested = False
+            approval_message = ""
+
             for fc in function_calls:
                 print(f"   [도구 사용] {fc.name}")
 
@@ -201,12 +207,30 @@ class GeminiProvider(BaseProvider):
                 else:
                     tool_output = '{"error": "도구 실행 함수가 없습니다"}'
 
+                # dict/list 결과를 JSON 문자열로 변환
+                if isinstance(tool_output, (dict, list)):
+                    import json
+                    tool_output = json.dumps(tool_output, ensure_ascii=False)
+
+                # 승인 요청 감지
+                if tool_output.startswith("[[APPROVAL_REQUESTED]]"):
+                    approval_requested = True
+                    tool_output = tool_output.replace("[[APPROVAL_REQUESTED]]", "")
+                    approval_message = tool_output
+
                 function_response_parts.append(
                     types.Part.from_function_response(
                         name=fc.name,
                         response={"result": tool_output}
                     )
                 )
+
+            # 승인 요청이 있으면 루프 중단 - 사용자에게 바로 반환
+            if approval_requested:
+                existing_text = "\n".join(collected_text_parts) if collected_text_parts else ""
+                if existing_text:
+                    return existing_text + "\n\n" + approval_message
+                return approval_message
 
             contents.append(types.Content(
                 role="user",

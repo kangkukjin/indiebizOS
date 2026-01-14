@@ -420,6 +420,29 @@ def log_change(action: str, details: str):
 
 SYSTEM_AI_TOOLS = [
     {
+        "name": "request_user_approval",
+        "description": "사용자 승인을 요청합니다. 파일 쓰기, 코드 실행, 패키지 설치 등 시스템을 변경하는 작업 전에 반드시 이 도구를 먼저 호출하세요. 이 도구를 호출하면 대화가 중단되고 사용자의 응답을 기다립니다.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action_type": {
+                    "type": "string",
+                    "description": "수행하려는 작업 유형 (예: 파일 생성, 코드 실행, 패키지 설치)"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "수행하려는 작업에 대한 상세 설명"
+                },
+                "affected_items": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "영향받는 파일, 패키지 등의 목록"
+                }
+            },
+            "required": ["action_type", "description"]
+        }
+    },
+    {
         "name": "read_system_doc",
         "description": "시스템 문서를 읽습니다. 사용 가능한 문서: overview(개요), architecture(구조), inventory(인벤토리), technical(기술), packages(패키지 가이드). 패키지 설치/제거 시에는 반드시 packages 문서를 먼저 읽으세요.",
         "parameters": {
@@ -483,6 +506,24 @@ SYSTEM_AI_TOOLS = [
 
 def execute_system_tool(tool_name: str, arguments: Dict[str, Any]) -> str:
     """시스템 AI 도구 실행"""
+    # 승인 요청 도구 - 특수 마커를 반환하여 루프 중단 신호
+    if tool_name == "request_user_approval":
+        action_type = arguments.get("action_type", "작업")
+        description = arguments.get("description", "")
+        affected_items = arguments.get("affected_items", [])
+
+        result_parts = [
+            "🔔 **승인 요청**",
+            f"**작업 유형**: {action_type}",
+            f"**설명**: {description}"
+        ]
+        if affected_items:
+            result_parts.append(f"**영향받는 항목**: {', '.join(affected_items)}")
+        result_parts.append("\n진행하시려면 '승인' 또는 '진행해'라고 답해주세요.")
+
+        # 특수 마커 추가 - 도구 호출 루프에서 이를 감지하여 중단
+        return "[[APPROVAL_REQUESTED]]" + "\n".join(result_parts)
+
     if tool_name == "read_system_doc":
         doc_name = arguments.get("doc_name", "")
         content = read_doc(doc_name)

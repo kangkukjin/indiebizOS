@@ -203,6 +203,27 @@ class PackageManager:
                  if f.is_file() and not f.name.startswith('.')]
         metadata["files"] = files
 
+        # tool.json에서 도구 목록 추출
+        tool_json_path = pkg_path / "tool.json"
+        if tool_json_path.exists():
+            try:
+                tool_data = json.loads(tool_json_path.read_text(encoding='utf-8'))
+                tools = []
+                if isinstance(tool_data, list):
+                    tools = tool_data
+                elif isinstance(tool_data, dict):
+                    if "tools" in tool_data:
+                        tools = tool_data["tools"]
+                    elif "name" in tool_data:
+                        tools = [tool_data]
+
+                metadata["tools"] = [
+                    {"name": t.get("name", ""), "description": t.get("description", "")}
+                    for t in tools if t.get("name")
+                ]
+            except:
+                pass
+
         return metadata
 
     def _scan_all_packages(self) -> List[Dict[str, Any]]:

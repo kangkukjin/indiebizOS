@@ -126,13 +126,27 @@ def get_system_prompt(user_profile: str = "", system_status: str = "") -> str:
 - 모르는 것은 "모른다"고 인정하고, 알아볼 방법을 제시하세요
 - 실수했다면 즉시 인정하고 수정 방안을 제시하세요
 
-## 3. 사용자 동의 (필수!)
-시스템을 변경하는 작업은 반드시 사용자 동의를 받으세요:
-- 파일 생성/수정/삭제 → "~을 수정해도 될까요?"
-- 코드/명령어 실행 → 무엇을 실행할지 먼저 설명
-- 패키지 설치/제거 → 동의 후 진행
+## 3. 사용자 동의 (필수!) - 매우 중요!
+시스템을 변경하는 작업 전에는 **반드시** `request_user_approval` 도구를 호출하세요.
 
-예외: read_file, list_directory, read_system_doc 등 읽기 전용 작업은 바로 실행해도 됩니다.
+**승인이 필요한 작업:**
+- 파일 생성/수정/삭제 (write_file, create_directory 등)
+- 코드/명령어 실행 (execute_python, execute_nodejs, run_command)
+- 패키지 설치/제거 (install_package)
+
+**승인 없이 바로 실행 가능한 작업:**
+- read_file, list_directory, read_system_doc 등 읽기 전용 작업
+
+**올바른 흐름:**
+1. 읽기 도구로 정보 수집 (바로 실행 OK)
+2. 계획 수립
+3. `request_user_approval` 호출 → 여기서 멈추고 사용자 응답 대기
+4. 사용자가 승인하면 다음 대화에서 실제 작업 수행
+
+**절대 하지 말 것:**
+- request_user_approval 없이 쓰기 작업 실행
+- "진행할까요?"라고 텍스트로만 쓰고 도구를 계속 호출하는 것
+- 승인 요청 후 사용자 응답 없이 다른 도구 호출
 
 ---
 
@@ -468,8 +482,11 @@ async def chat_with_anthropic(message: str, api_key: str, model: str, user_profi
             messages=messages
         )
 
-        # tool use 처리 (최대 3회 반복)
-        for _ in range(3):
+        # tool use 처리 (최대 5회 반복)
+        approval_requested = False
+        approval_message = ""
+
+        for _ in range(5):
             if response.stop_reason != "tool_use":
                 break
 
@@ -481,6 +498,13 @@ async def chat_with_anthropic(message: str, api_key: str, model: str, user_profi
                 if block.type == "tool_use":
                     # 도구 실행
                     result = execute_system_tool(block.name, block.input)
+
+                    # 승인 요청 감지 - 마커를 제거하고 루프 중단 플래그 설정
+                    if result.startswith("[[APPROVAL_REQUESTED]]"):
+                        approval_requested = True
+                        result = result.replace("[[APPROVAL_REQUESTED]]", "")
+                        approval_message = result
+
                     tool_results.append({
                         "type": "tool_result",
                         "tool_use_id": block.id,
@@ -489,6 +513,21 @@ async def chat_with_anthropic(message: str, api_key: str, model: str, user_profi
                     assistant_content.append(block)
                 elif block.type == "text":
                     assistant_content.append(block)
+
+            # 승인 요청이 있으면 루프 중단 - 사용자에게 바로 반환
+            if approval_requested:
+                # 지금까지의 텍스트 응답 수집
+                collected_text = []
+                for block in response.content:
+                    if hasattr(block, 'text') and block.text:
+                        collected_text.append(block.text)
+
+                # 승인 요청 메시지와 함께 반환
+                final_response = "\n\n".join(collected_text) if collected_text else ""
+                if final_response:
+                    final_response += "\n\n"
+                final_response += approval_message
+                return final_response
 
             # 대화 이력 업데이트
             messages.append({"role": "assistant", "content": assistant_content})
@@ -577,8 +616,11 @@ async def chat_with_openai(message: str, api_key: str, model: str, user_profile:
             max_tokens=2048
         )
 
-        # tool call 처리 (최대 3회)
-        for _ in range(3):
+        # tool call 처리 (최대 5회)
+        approval_requested = False
+        approval_message = ""
+
+        for _ in range(5):
             choice = response.choices[0]
             if choice.finish_reason != "tool_calls":
                 break
@@ -590,11 +632,26 @@ async def chat_with_openai(message: str, api_key: str, model: str, user_profile:
             for tool_call in assistant_msg.tool_calls:
                 args = json.loads(tool_call.function.arguments)
                 result = execute_system_tool(tool_call.function.name, args)
+
+                # 승인 요청 감지
+                if result.startswith("[[APPROVAL_REQUESTED]]"):
+                    approval_requested = True
+                    result = result.replace("[[APPROVAL_REQUESTED]]", "")
+                    approval_message = result
+
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "content": result
                 })
+
+            # 승인 요청이 있으면 루프 중단
+            if approval_requested:
+                # 기존 assistant 메시지 텍스트 + 승인 요청 메시지
+                existing_text = assistant_msg.content or ""
+                if existing_text:
+                    return existing_text + "\n\n" + approval_message
+                return approval_message
 
             response = client.chat.completions.create(
                 model=model,
@@ -623,6 +680,18 @@ async def chat_with_google(message: str, api_key: str, model: str, user_profile:
         # 도구 정의 (새 API 형식)
         system_tools = [
             types.Tool(function_declarations=[
+                types.FunctionDeclaration(
+                    name="request_user_approval",
+                    description="사용자 승인을 요청합니다. 파일 쓰기, 코드 실행, 패키지 설치 등 시스템을 변경하는 작업 전에 반드시 이 도구를 먼저 호출하세요.",
+                    parameters=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={
+                            "action_type": types.Schema(type=types.Type.STRING, description="수행하려는 작업 유형"),
+                            "description": types.Schema(type=types.Type.STRING, description="수행하려는 작업에 대한 상세 설명")
+                        },
+                        required=["action_type", "description"]
+                    )
+                ),
                 types.FunctionDeclaration(
                     name="read_system_doc",
                     description="시스템 문서를 읽습니다. 사용 가능한 문서: overview(개요), architecture(구조), inventory(인벤토리), technical(기술), packages(패키지 가이드). 패키지 설치/제거 시에는 반드시 packages 문서를 먼저 읽으세요.",
@@ -768,6 +837,8 @@ async def chat_with_google(message: str, api_key: str, model: str, user_profile:
 
         # function call 처리 (최대 10회)
         tool_results_collected = []
+        approval_requested = False
+        approval_message = ""
 
         for iteration in range(10):
             if not response.candidates or not response.candidates[0].content.parts:
@@ -775,6 +846,12 @@ async def chat_with_google(message: str, api_key: str, model: str, user_profile:
 
             has_function_call = False
             function_responses = []
+
+            # 응답에서 텍스트 수집 (승인 요청 시 함께 반환하기 위해)
+            collected_text_parts = []
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, 'text') and part.text:
+                    collected_text_parts.append(part.text)
 
             # 모든 function_call을 수집
             for part in response.candidates[0].content.parts:
@@ -784,6 +861,13 @@ async def chat_with_google(message: str, api_key: str, model: str, user_profile:
                     args = dict(fc.args) if fc.args else {}
                     result = execute_system_tool(fc.name, args)
                     result = result or ""  # None 방지
+
+                    # 승인 요청 감지
+                    if result.startswith("[[APPROVAL_REQUESTED]]"):
+                        approval_requested = True
+                        result = result.replace("[[APPROVAL_REQUESTED]]", "")
+                        approval_message = result
+
                     tool_results_collected.append({"tool": fc.name, "result": result})
 
                     function_responses.append(
@@ -792,6 +876,13 @@ async def chat_with_google(message: str, api_key: str, model: str, user_profile:
                             response={"result": result}
                         )
                     )
+
+            # 승인 요청이 있으면 루프 중단
+            if approval_requested:
+                final_text = "\n".join(collected_text_parts) if collected_text_parts else ""
+                if final_text:
+                    return final_text + "\n\n" + approval_message
+                return approval_message
 
             if has_function_call and function_responses:
                 # 도구 결과를 대화에 추가

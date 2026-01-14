@@ -36,6 +36,14 @@ contextBridge.exposeInMainWorld('electron', {
   openMultiChatWindow: (roomId, roomName) =>
     ipcRenderer.invoke('open-multichat-window', roomId, roomName),
 
+  // PC Manager 창 열기
+  openPCManagerWindow: (initialPath) =>
+    ipcRenderer.invoke('open-pcmanager-window', initialPath),
+
+  // Photo Manager 창 열기
+  openPhotoManagerWindow: (initialPath) =>
+    ipcRenderer.invoke('open-photo-manager-window', initialPath),
+
   // 폴더에서 아이템을 런처로 드롭
   dropItemToLauncher: (itemId, itemType, sourceFolderId) =>
     ipcRenderer.invoke('drop-item-to-launcher', itemId, itemType, sourceFolderId),

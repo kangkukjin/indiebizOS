@@ -3,7 +3,7 @@
  * Python 백엔드 관리 및 윈도우 생성
  */
 
-import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, Menu } from 'electron';
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -23,6 +23,8 @@ let folderWindows = new Map(); // 폴더 창 관리
 let multiChatWindows = new Map(); // 다중채팅방 창 관리
 let indieNetWindow = null; // IndieNet 창
 let businessWindow = null; // 비즈니스 관리 창
+let pcManagerWindow = null; // PC Manager 창
+let photoManagerWindow = null; // Photo Manager 창
 
 // API 포트
 const API_PORT = 8765;
@@ -102,11 +104,19 @@ async function startPythonBackend() {
   });
 
   pythonProcess.stdout.on('data', (data) => {
-    console.log(`[Python] ${data.toString().trim()}`);
+    try {
+      console.log(`[Python] ${data.toString().trim()}`);
+    } catch (e) {
+      // 파이프 에러 무시
+    }
   });
 
   pythonProcess.stderr.on('data', (data) => {
-    console.error(`[Python Error] ${data.toString().trim()}`);
+    try {
+      console.error(`[Python Error] ${data.toString().trim()}`);
+    } catch (e) {
+      // 파이프 에러 무시
+    }
   });
 
   pythonProcess.on('close', (code) => {
@@ -439,6 +449,122 @@ function createBusinessWindow() {
 }
 
 /**
+ * PC Manager 창 생성
+ */
+function createPCManagerWindow(initialPath = null) {
+  // 이미 열려있으면 포커스
+  if (pcManagerWindow && !pcManagerWindow.isDestroyed()) {
+    pcManagerWindow.focus();
+    return;
+  }
+
+  pcManagerWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    minWidth: 800,
+    minHeight: 600,
+    title: 'PC Manager',
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 15, y: 15 },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  // URL에 초기 경로 전달
+  const hashPath = initialPath
+    ? `/pcmanager?path=${encodeURIComponent(initialPath)}`
+    : '/pcmanager';
+
+  if (isDev) {
+    pcManagerWindow.loadURL(`http://localhost:5173/#${hashPath}`);
+  } else {
+    pcManagerWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
+      hash: hashPath
+    });
+  }
+
+  // 외부 링크는 기본 브라우저에서 열기
+  pcManagerWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  pcManagerWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  pcManagerWindow.on('closed', () => {
+    pcManagerWindow = null;
+  });
+
+  return pcManagerWindow;
+}
+
+/**
+ * Photo Manager 창 생성
+ */
+function createPhotoManagerWindow(initialPath = null) {
+  // 이미 열려있으면 포커스
+  if (photoManagerWindow && !photoManagerWindow.isDestroyed()) {
+    photoManagerWindow.focus();
+    return;
+  }
+
+  photoManagerWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    minWidth: 1000,
+    minHeight: 700,
+    title: 'Photo Manager',
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 15, y: 15 },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  // URL에 초기 경로 전달
+  const hashPath = initialPath
+    ? `/photo?path=${encodeURIComponent(initialPath)}`
+    : '/photo';
+
+  if (isDev) {
+    photoManagerWindow.loadURL(`http://localhost:5173/#${hashPath}`);
+  } else {
+    photoManagerWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
+      hash: hashPath
+    });
+  }
+
+  // 외부 링크는 기본 브라우저에서 열기
+  photoManagerWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  photoManagerWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  photoManagerWindow.on('closed', () => {
+    photoManagerWindow = null;
+  });
+
+  return photoManagerWindow;
+}
+
+/**
  * 다중채팅방 창 생성
  */
 function createMultiChatWindow(roomId, roomName) {
@@ -551,6 +677,16 @@ function setupIPC() {
     createMultiChatWindow(roomId, roomName);
   });
 
+  // PC Manager 창 열기
+  ipcMain.handle('open-pcmanager-window', (_, initialPath) => {
+    createPCManagerWindow(initialPath);
+  });
+
+  // Photo Manager 창 열기
+  ipcMain.handle('open-photo-manager-window', (_, initialPath) => {
+    createPhotoManagerWindow(initialPath);
+  });
+
   // 폴더에서 아이템을 밖으로 드래그할 때 (런처에 드롭)
   ipcMain.handle('drop-item-to-launcher', (event, itemId, itemType, sourceFolderId) => {
     // 런처 창에 이벤트 전송
@@ -613,6 +749,66 @@ function setupIPC() {
 // 앱 준비
 app.whenReady().then(async () => {
   console.log('[Electron] 앱 시작');
+
+  // macOS 기본 메뉴 설정 (복사/붙여넣기 등)
+  const template = [
+    {
+      label: 'IndieBiz',
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    },
+    {
+      label: '편집',
+      submenu: [
+        { role: 'undo', label: '실행 취소' },
+        { role: 'redo', label: '다시 실행' },
+        { type: 'separator' },
+        { role: 'cut', label: '잘라내기' },
+        { role: 'copy', label: '복사' },
+        { role: 'paste', label: '붙여넣기' },
+        { role: 'pasteAndMatchStyle', label: '스타일 맞춰 붙여넣기' },
+        { role: 'delete', label: '삭제' },
+        { role: 'selectAll', label: '전체 선택' }
+      ]
+    },
+    {
+      label: '보기',
+      submenu: [
+        { role: 'reload', label: '새로고침' },
+        { role: 'forceReload', label: '강제 새로고침' },
+        { role: 'toggleDevTools', label: '개발자 도구' },
+        { type: 'separator' },
+        { role: 'resetZoom', label: '확대/축소 초기화' },
+        { role: 'zoomIn', label: '확대' },
+        { role: 'zoomOut', label: '축소' },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: '전체 화면' }
+      ]
+    },
+    {
+      label: '윈도우',
+      submenu: [
+        { role: 'minimize', label: '최소화' },
+        { role: 'zoom', label: '확대/축소' },
+        { type: 'separator' },
+        { role: 'front', label: '앞으로 가져오기' },
+        { type: 'separator' },
+        { role: 'window', label: '윈도우' }
+      ]
+    }
+  ];
+  
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 
   // IPC 설정
   setupIPC();

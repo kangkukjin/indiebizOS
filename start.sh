@@ -5,7 +5,8 @@ cd "$(dirname "$0")"
 
 echo "🚀 IndieBiz OS 시작..."
 
-# 기존 프로세스 정리
+# 기존 프로세스 정리 (포트 8765 사용 중인 프로세스 종료)
+lsof -ti :8765 | xargs kill -9 2>/dev/null
 pkill -f "python3 api.py" 2>/dev/null
 sleep 1
 

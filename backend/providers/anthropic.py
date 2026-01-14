@@ -99,6 +99,8 @@ class AnthropicProvider(BaseProvider):
 
         result_parts = []
         tool_results = []
+        approval_requested = False
+        approval_message = ""
 
         for block in response.content:
             if block.type == "text":
@@ -112,11 +114,24 @@ class AnthropicProvider(BaseProvider):
                 else:
                     tool_output = '{"error": "도구 실행 함수가 없습니다"}'
 
+                # 승인 요청 감지
+                if tool_output.startswith("[[APPROVAL_REQUESTED]]"):
+                    approval_requested = True
+                    tool_output = tool_output.replace("[[APPROVAL_REQUESTED]]", "")
+                    approval_message = tool_output
+
                 tool_results.append({
                     "type": "tool_result",
                     "tool_use_id": block.id,
                     "content": tool_output
                 })
+
+        # 승인 요청이 있으면 루프 중단 - 사용자에게 바로 반환
+        if approval_requested:
+            collected_text = "\n".join(result_parts) if result_parts else ""
+            if collected_text:
+                return collected_text + "\n\n" + approval_message
+            return approval_message
 
         # 도구 결과가 있으면 후속 호출
         if tool_results:

@@ -86,19 +86,6 @@ export interface ToolSettings {
   };
 }
 
-// 생성된 프롬프트 타입
-export interface GeneratedPrompts {
-  common_settings: string;
-  agent_roles: Record<string, string>;
-}
-
-// 시스템 AI 설정 타입
-export interface SystemAIConfig {
-  provider: string;
-  model: string;
-  apiKey: string;
-}
-
 // 대화 다이얼로그 크기/위치 타입
 export interface DialogSize {
   width: number;

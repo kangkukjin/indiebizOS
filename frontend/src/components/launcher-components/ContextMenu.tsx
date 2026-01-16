@@ -2,7 +2,7 @@
  * ContextMenu - 컨텍스트 메뉴 컴포넌트
  */
 
-import { Plus, FolderPlus, Pencil, Copy, Clipboard, Folder, Trash, Grid3X3, Users } from 'lucide-react';
+import { Plus, FolderPlus, Pencil, Copy, Clipboard, Folder, Trash, Grid3X3, Users, Settings } from 'lucide-react';
 import type { ContextMenuState, ClipboardItem } from './types';
 
 interface ContextMenuProps {
@@ -19,6 +19,7 @@ interface ContextMenuProps {
   onEmptyTrash: () => void;
   onArrangeIcons: () => void;
   getItemName: (id: string, type: 'project' | 'switch') => string;
+  onEditSwitch?: (id: string) => void;  // 스위치 편집
 }
 
 export function ContextMenu({
@@ -35,6 +36,7 @@ export function ContextMenu({
   onEmptyTrash,
   onArrangeIcons,
   getItemName,
+  onEditSwitch,
 }: ContextMenuProps) {
   if (!contextMenu) return null;
 
@@ -74,6 +76,19 @@ export function ContextMenu({
       {/* 아이템 위에서 우클릭한 경우 */}
       {contextMenu.itemId && contextMenu.itemType && contextMenu.itemId !== '__trash__' && (
         <>
+          {/* 스위치 편집 버튼 (스위치일 때만 표시) */}
+          {contextMenu.itemType === 'switch' && onEditSwitch && (
+            <button
+              onClick={() => {
+                onEditSwitch(contextMenu.itemId!);
+                onClose();
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+            >
+              <Settings size={16} className="text-amber-600" />
+              스위치 편집
+            </button>
+          )}
           <button
             onClick={() => {
               const currentName = getItemName(contextMenu.itemId!, contextMenu.itemType!);

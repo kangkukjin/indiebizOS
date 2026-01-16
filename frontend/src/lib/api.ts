@@ -199,6 +199,21 @@ class APIClient {
     });
   }
 
+  async updateSwitch(
+    switchId: string,
+    updates: {
+      name?: string;
+      command?: string;
+      icon?: string;
+      description?: string;
+    }
+  ) {
+    return this.request<{ status: string; switch: Switch }>(`/switches/${switchId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
   async deleteSwitch(switchId: string) {
     return this.request<{ status: string }>(`/switches/${switchId}`, {
       method: 'DELETE',
@@ -445,16 +460,6 @@ class APIClient {
     );
   }
 
-  async updateRoleDescriptions(projectId: string, descriptions: Record<string, string>) {
-    return this.request<{ status: string; updated_agents: string[] }>(
-      `/projects/${projectId}/agents/role-descriptions`,
-      {
-        method: 'PUT',
-        body: JSON.stringify({ descriptions }),
-      }
-    );
-  }
-
   // ============ 프로필 ============
 
   async getProfile() {
@@ -546,37 +551,165 @@ class APIClient {
     });
   }
 
-  // ============ 프롬프트 생성 ============
+  // ============ 시스템 AI 프롬프트 템플릿 ============
 
-  async generatePrompts(projectId: string, params: {
-    project_purpose: string;
-    agents: Array<{ name: string; role_description: string; type?: string }>;
-    use_ai?: boolean;
-    ai_config?: Record<string, unknown>;
-  }) {
+  async getPromptTemplates() {
     return this.request<{
-      status: string;
-      common_settings: string;
-      agent_roles: Record<string, string>;
-      validation_errors?: string[];
-    }>(`/projects/${projectId}/generate-prompts`, {
-      method: 'POST',
-      body: JSON.stringify(params),
+      templates: Array<{
+        id: string;
+        name: string;
+        description: string;
+        tokens: number;
+        selected: boolean;
+      }>;
+      selected_template: string;
+      role_prompt_enabled: boolean;
+    }>('/system-ai/prompts/templates');
+  }
+
+  async getPromptTemplateContent(templateId: string) {
+    return this.request<{ template_id: string; content: string }>(
+      `/system-ai/prompts/template/${templateId}`
+    );
+  }
+
+  async updatePromptConfig(config: { selected_template?: string; role_prompt_enabled?: boolean }) {
+    return this.request<{ status: string; config: typeof config }>(
+      '/system-ai/prompts/config',
+      {
+        method: 'PUT',
+        body: JSON.stringify(config),
+      }
+    );
+  }
+
+  async getRolePrompt() {
+    return this.request<{ content: string }>('/system-ai/prompts/role');
+  }
+
+  async updateRolePrompt(content: string) {
+    return this.request<{ status: string }>('/system-ai/prompts/role', {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
     });
   }
 
-  async savePrompts(projectId: string, params: {
-    common_settings: string;
-    agent_roles: Record<string, string>;
-  }) {
+  async previewFullPrompt() {
     return this.request<{
-      status: string;
-      saved_files: Record<string, string>;  // {파일종류: 경로}
-      common_settings?: string;
-      agent_roles?: Record<string, string>;
-    }>(`/projects/${projectId}/save-prompts`, {
+      prompt: string;
+      estimated_tokens: number;
+      config: { selected_template: string; role_prompt_enabled: boolean };
+    }>('/system-ai/prompts/preview');
+  }
+
+  // ============ 시스템 AI 대화 히스토리 ============
+
+  async getSystemAIConversationDates() {
+    return this.request<{
+      dates: Array<{ date: string; count: number }>;
+    }>('/system-ai/conversations/dates');
+  }
+
+  async getSystemAIConversationsByDate(date: string) {
+    return this.request<{
+      date: string;
+      conversations: Array<{
+        id: number;
+        timestamp: string;
+        role: string;
+        content: string;
+      }>;
+    }>(`/system-ai/conversations/by-date/${date}`);
+  }
+
+  async getSystemAIRecentConversations(limit: number = 100) {
+    return this.request<{
+      conversations: Array<{
+        id: number;
+        timestamp: string;
+        role: string;
+        content: string;
+      }>;
+    }>(`/system-ai/conversations/recent?limit=${limit}`);
+  }
+
+  // ============ Todo 상태 ============
+
+  async getSystemAITodos() {
+    return this.request<{
+      todos: Array<{
+        content: string;
+        status: 'pending' | 'in_progress' | 'completed';
+        activeForm: string;
+      }>;
+      updated_at: string | null;
+    }>('/system-ai/todos');
+  }
+
+  async clearSystemAITodos() {
+    return this.request<{ status: string }>('/system-ai/todos', {
+      method: 'DELETE',
+    });
+  }
+
+  // ============ 질문 상태 ============
+
+  async getSystemAIQuestions() {
+    return this.request<{
+      questions: Array<{
+        question: string;
+        header: string;
+        options: Array<{ label: string; description: string }>;
+        multiSelect?: boolean;
+      }>;
+      status: 'none' | 'pending' | 'answered';
+      answers: Record<string, string | string[]> | null;
+    }>('/system-ai/questions');
+  }
+
+  async submitSystemAIQuestionAnswer(answers: Record<string, string | string[]>) {
+    return this.request<{ status: string; answers: Record<string, string | string[]> }>(
+      '/system-ai/questions/answer',
+      {
+        method: 'POST',
+        body: JSON.stringify({ answers }),
+      }
+    );
+  }
+
+  async clearSystemAIQuestions() {
+    return this.request<{ status: string }>('/system-ai/questions', {
+      method: 'DELETE',
+    });
+  }
+
+  // ============ 계획 모드 ============
+
+  async getSystemAIPlanMode() {
+    return this.request<{
+      active: boolean;
+      phase: 'exploring' | 'designing' | 'reviewing' | 'finalizing' | 'awaiting_approval' | 'approved' | 'revision_requested' | null;
+      plan_content?: string;
+      entered_at?: string;
+    }>('/system-ai/plan-mode');
+  }
+
+  async approveSystemAIPlan() {
+    return this.request<{ status: string }>('/system-ai/plan-mode/approve', {
       method: 'POST',
-      body: JSON.stringify(params),
+    });
+  }
+
+  async rejectSystemAIPlan(reason?: string) {
+    return this.request<{ status: string }>('/system-ai/plan-mode/reject', {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  async clearSystemAIPlanMode() {
+    return this.request<{ status: string }>('/system-ai/plan-mode', {
+      method: 'DELETE',
     });
   }
 

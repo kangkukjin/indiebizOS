@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 import os
 from datetime import datetime
 
-SERVICE_KEY = os.environ.get('MOLIT_API_KEY', '5d93a49043da935280488408c84d900a7c673384b77bb9668ea68f32227ee002')
+SERVICE_KEY = os.environ.get('MOLIT_API_KEY', '')
 BASE_URL = 'https://apis.data.go.kr/1613000/RTMSDataSvcSHRent/getRTMSDataSvcSHRent'
 
 def _get_months_range(start_month: str, end_month: str) -> list:

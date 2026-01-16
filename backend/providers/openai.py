@@ -1,15 +1,16 @@
 """
-openai.py - OpenAI GPT 프로바이더
+openai.py - OpenAI GPT 프로바이더 (스트리밍 지원)
 IndieBiz OS Core
 """
 
 import json
-from typing import List, Dict, Callable
+import re
+from typing import List, Dict, Callable, Generator, Any
 from .base import BaseProvider
 
 
 class OpenAIProvider(BaseProvider):
-    """OpenAI GPT 프로바이더"""
+    """OpenAI GPT 프로바이더 (스트리밍 지원)"""
 
     def init_client(self) -> bool:
         """OpenAI 클라이언트 초기화"""
@@ -36,11 +37,55 @@ class OpenAIProvider(BaseProvider):
         images: List[Dict] = None,
         execute_tool: Callable = None
     ) -> str:
-        """GPT로 메시지 처리"""
+        """GPT로 메시지 처리 (동기 모드 - 기존 호환성 유지)"""
         if not self._client:
             return "AI가 초기화되지 않았습니다. API 키를 확인해주세요."
 
+        # 스트리밍 제너레이터를 실행하고 최종 결과만 반환
+        final_text = ""
+        for event in self.process_message_stream(message, history, images, execute_tool):
+            if event["type"] == "text":
+                final_text += event["content"]
+            elif event["type"] == "final":
+                final_text = event["content"]
+
+        return final_text
+
+    def process_message_stream(
+        self,
+        message: str,
+        history: List[Dict] = None,
+        images: List[Dict] = None,
+        execute_tool: Callable = None
+    ) -> Generator[Dict[str, Any], None, None]:
+        """
+        GPT로 메시지 처리 (스트리밍 모드)
+
+        Yields:
+            {"type": "text", "content": "..."} - 텍스트 청크
+            {"type": "tool_start", "name": "...", "input": {...}} - 도구 시작
+            {"type": "tool_result", "name": "...", "result": "..."} - 도구 결과
+            {"type": "thinking", "content": "..."} - AI 사고 과정
+            {"type": "final", "content": "..."} - 최종 응답
+            {"type": "error", "content": "..."} - 에러
+        """
+        if not self._client:
+            yield {"type": "error", "content": "AI가 초기화되지 않았습니다."}
+            return
+
         history = history or []
+        messages = self._build_messages(message, history, images)
+        openai_tools = self._convert_tools()
+
+        yield from self._stream_response(messages, openai_tools, execute_tool)
+
+    def _build_messages(
+        self,
+        message: str,
+        history: List[Dict],
+        images: List[Dict] = None
+    ) -> List[Dict]:
+        """메시지 목록 구성"""
         messages = [{"role": "system", "content": self.system_prompt}]
 
         # 히스토리
@@ -65,25 +110,7 @@ class OpenAIProvider(BaseProvider):
         else:
             messages.append({"role": "user", "content": message})
 
-        # OpenAI 도구 형식 변환
-        openai_tools = self._convert_tools()
-
-        # API 호출
-        if openai_tools:
-            response = self._client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                tools=openai_tools,
-                max_tokens=4096
-            )
-        else:
-            response = self._client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                max_tokens=4096
-            )
-
-        return self._handle_response(response, messages, execute_tool)
+        return messages
 
     def _convert_tools(self) -> List[Dict]:
         """도구를 OpenAI 형식으로 변환"""
@@ -102,69 +129,153 @@ class OpenAIProvider(BaseProvider):
             })
         return openai_tools
 
-    def _handle_response(
+    def _stream_response(
         self,
-        response,
         messages: List[Dict],
+        openai_tools: List[Dict],
         execute_tool: Callable,
         depth: int = 0
-    ) -> str:
-        """응답 처리 (도구 사용 루프)"""
+    ) -> Generator[Dict[str, Any], None, None]:
+        """스트리밍 응답 처리 (도구 사용 루프 포함)"""
         if depth > 10:
-            return "도구 사용 깊이 제한에 도달했습니다."
+            yield {"type": "error", "content": "도구 사용 깊이 제한에 도달했습니다."}
+            return
 
-        message = response.choices[0].message
-        approval_requested = False
-        approval_message = ""
-
-        # 도구 호출이 있는 경우
-        if message.tool_calls:
-            messages.append(message)
-
-            for tool_call in message.tool_calls:
-                print(f"   [도구 사용] {tool_call.function.name}")
-
-                if execute_tool:
-                    tool_input = json.loads(tool_call.function.arguments)
-                    tool_output = execute_tool(tool_call.function.name, tool_input, self.project_path)
-                else:
-                    tool_output = '{"error": "도구 실행 함수가 없습니다"}'
-
-                # 승인 요청 감지
-                if tool_output.startswith("[[APPROVAL_REQUESTED]]"):
-                    approval_requested = True
-                    tool_output = tool_output.replace("[[APPROVAL_REQUESTED]]", "")
-                    approval_message = tool_output
-
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": tool_output
-                })
-
-            # 승인 요청이 있으면 루프 중단 - 사용자에게 바로 반환
-            if approval_requested:
-                existing_text = message.content or ""
-                if existing_text:
-                    return existing_text + "\n\n" + approval_message
-                return approval_message
-
-            # 후속 호출
-            openai_tools = self._convert_tools()
+        try:
+            # 스트리밍 API 호출
+            create_params = {
+                "model": self.model,
+                "messages": messages,
+                "max_tokens": 4096,
+                "stream": True
+            }
             if openai_tools:
-                followup = self._client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    tools=openai_tools,
-                    max_tokens=4096
-                )
+                create_params["tools"] = openai_tools
+
+            collected_text = ""
+            tool_calls = {}  # id -> {name, arguments}
+            current_tool_id = None
+
+            stream = self._client.chat.completions.create(**create_params)
+
+            for chunk in stream:
+                delta = chunk.choices[0].delta if chunk.choices else None
+                if not delta:
+                    continue
+
+                # 텍스트 청크
+                if delta.content:
+                    collected_text += delta.content
+                    yield {"type": "text", "content": delta.content}
+
+                # 도구 호출 청크
+                if delta.tool_calls:
+                    for tc in delta.tool_calls:
+                        if tc.id:
+                            current_tool_id = tc.id
+                            tool_calls[current_tool_id] = {
+                                "id": tc.id,
+                                "name": tc.function.name if tc.function else "",
+                                "arguments": ""
+                            }
+                            if tc.function and tc.function.name:
+                                yield {
+                                    "type": "tool_start",
+                                    "name": tc.function.name,
+                                    "input": {}
+                                }
+                        if tc.function and tc.function.arguments:
+                            if current_tool_id and current_tool_id in tool_calls:
+                                tool_calls[current_tool_id]["arguments"] += tc.function.arguments
+
+            # 도구 실행이 필요한 경우
+            if tool_calls:
+                # assistant 메시지 구성
+                tool_calls_list = []
+                for tc_id, tc_info in tool_calls.items():
+                    tool_calls_list.append({
+                        "id": tc_id,
+                        "type": "function",
+                        "function": {
+                            "name": tc_info["name"],
+                            "arguments": tc_info["arguments"]
+                        }
+                    })
+
+                assistant_message = {
+                    "role": "assistant",
+                    "content": collected_text or None,
+                    "tool_calls": tool_calls_list
+                }
+                messages.append(assistant_message)
+
+                tool_results = []
+                approval_requested = False
+                approval_message = ""
+
+                for tc_id, tc_info in tool_calls.items():
+                    tool_name = tc_info["name"]
+                    yield {
+                        "type": "thinking",
+                        "content": f"도구 실행 중: {tool_name}"
+                    }
+
+                    # 도구 실행
+                    if execute_tool:
+                        try:
+                            tool_input = json.loads(tc_info["arguments"]) if tc_info["arguments"] else {}
+                        except:
+                            tool_input = {}
+                        tool_output = execute_tool(tool_name, tool_input, self.project_path, self.agent_id)
+                    else:
+                        tool_output = '{"error": "도구 실행 함수가 없습니다"}'
+
+                    # 승인 요청 감지
+                    if tool_output.startswith("[[APPROVAL_REQUESTED]]"):
+                        approval_requested = True
+                        tool_output = tool_output.replace("[[APPROVAL_REQUESTED]]", "")
+                        approval_message = tool_output
+
+                    # [MAP:...] 태그 추출
+                    map_match = re.search(r'\[MAP:(\{.*\})\]\s*$', tool_output, re.DOTALL)
+                    if map_match:
+                        if not hasattr(self, '_pending_map_tags'):
+                            self._pending_map_tags = []
+                        self._pending_map_tags.append(map_match.group(0).strip())
+                        tool_output = tool_output[:map_match.start()].strip()
+
+                    yield {
+                        "type": "tool_result",
+                        "name": tool_name,
+                        "result": tool_output[:500] + "..." if len(tool_output) > 500 else tool_output
+                    }
+
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc_id,
+                        "content": tool_output
+                    })
+
+                # 승인 요청 시 루프 중단
+                if approval_requested:
+                    final = collected_text + "\n\n" + approval_message if collected_text else approval_message
+                    yield {"type": "final", "content": final}
+                    return
+
+                # 재귀 호출로 후속 응답 처리
+                yield from self._stream_response(messages, openai_tools, execute_tool, depth + 1)
             else:
-                followup = self._client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    max_tokens=4096
-                )
+                # 도구 사용 없이 완료
+                final_result = collected_text
 
-            return self._handle_response(followup, messages, execute_tool, depth + 1)
+                # 저장된 [MAP:...] 태그 추가
+                if hasattr(self, '_pending_map_tags') and self._pending_map_tags:
+                    final_result += "\n\n" + "\n".join(self._pending_map_tags)
+                    self._pending_map_tags = []
 
-        return message.content or ""
+                yield {"type": "final", "content": final_result}
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            yield {"type": "error", "content": f"API 호출 실패: {str(e)}"}

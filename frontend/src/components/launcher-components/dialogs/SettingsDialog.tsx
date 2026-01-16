@@ -3,9 +3,17 @@
  */
 
 import { useEffect, useState } from 'react';
-import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Mail, Globe, ChevronDown, ChevronRight } from 'lucide-react';
+import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Mail, Globe, ChevronDown, ChevronRight, FileText, Edit3 } from 'lucide-react';
 import type { SystemAISettings } from '../types';
 import { api } from '../../../lib/api';
+
+interface PromptTemplate {
+  id: string;
+  name: string;
+  description: string;
+  tokens: number;
+  selected: boolean;
+}
 
 interface ChannelSetting {
   id: number;
@@ -41,6 +49,77 @@ export function SettingsDialog({
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
   const [channelConfigs, setChannelConfigs] = useState<Record<string, any>>({});
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
+
+  // 프롬프트 템플릿 상태
+  const [templates, setTemplates] = useState<PromptTemplate[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [rolePromptEnabled, setRolePromptEnabled] = useState(true);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [showRolePromptModal, setShowRolePromptModal] = useState(false);
+  const [rolePromptContent, setRolePromptContent] = useState('');
+  const [isSavingRolePrompt, setIsSavingRolePrompt] = useState(false);
+
+  // 프롬프트 템플릿 로드
+  useEffect(() => {
+    if (show && activeTab === 'ai') {
+      loadPromptTemplates();
+    }
+  }, [show, activeTab]);
+
+  const loadPromptTemplates = async () => {
+    try {
+      setIsLoadingTemplates(true);
+      const data = await api.getPromptTemplates();
+      setTemplates(data.templates);
+      setSelectedTemplate(data.selected_template);
+      setRolePromptEnabled(data.role_prompt_enabled);
+    } catch (err) {
+      console.error('Failed to load prompt templates:', err);
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  };
+
+  const handleTemplateChange = async (templateId: string) => {
+    try {
+      await api.updatePromptConfig({ selected_template: templateId });
+      setSelectedTemplate(templateId);
+      setTemplates(prev => prev.map(t => ({ ...t, selected: t.id === templateId })));
+    } catch (err) {
+      console.error('Failed to change template:', err);
+    }
+  };
+
+  const handleRolePromptToggle = async (enabled: boolean) => {
+    try {
+      await api.updatePromptConfig({ role_prompt_enabled: enabled });
+      setRolePromptEnabled(enabled);
+    } catch (err) {
+      console.error('Failed to toggle role prompt:', err);
+    }
+  };
+
+  const openRolePromptModal = async () => {
+    try {
+      const data = await api.getRolePrompt();
+      setRolePromptContent(data.content);
+      setShowRolePromptModal(true);
+    } catch (err) {
+      console.error('Failed to load role prompt:', err);
+    }
+  };
+
+  const saveRolePrompt = async () => {
+    try {
+      setIsSavingRolePrompt(true);
+      await api.updateRolePrompt(rolePromptContent);
+      setShowRolePromptModal(false);
+    } catch (err) {
+      console.error('Failed to save role prompt:', err);
+    } finally {
+      setIsSavingRolePrompt(false);
+    }
+  };
 
   // 통신채널 설정 로드
   useEffect(() => {
@@ -230,6 +309,128 @@ export function SettingsDialog({
                       {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* 프롬프트 템플릿 설정 */}
+              <div className="bg-gray-50 rounded-lg p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText size={18} className="text-gray-600" />
+                  <h3 className="text-sm font-semibold text-gray-900">프롬프트 템플릿</h3>
+                </div>
+
+                {isLoadingTemplates ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#D97706]" />
+                  </div>
+                ) : (
+                  <>
+                    {/* 템플릿 선택 */}
+                    <div className="space-y-2">
+                      {templates.map(template => (
+                        <label
+                          key={template.id}
+                          className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                            selectedTemplate === template.id
+                              ? 'bg-amber-50 border border-amber-200'
+                              : 'bg-white border border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="template"
+                            value={template.id}
+                            checked={selectedTemplate === template.id}
+                            onChange={() => handleTemplateChange(template.id)}
+                            className="mt-1 accent-[#D97706]"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">{template.name}</span>
+                              <span className="text-xs text-gray-500">{template.tokens.toLocaleString()} 토큰</span>
+                            </div>
+                            <p className="text-xs text-gray-600 mt-0.5">{template.description}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    {/* 역할 프롬프트 */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={rolePromptEnabled}
+                            onChange={(e) => handleRolePromptToggle(e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#D97706]"></div>
+                        </label>
+                        <span className="text-sm text-gray-700">역할 프롬프트 사용</span>
+                      </div>
+                      <button
+                        onClick={openRolePromptModal}
+                        disabled={!rolePromptEnabled}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                          rolePromptEnabled
+                            ? 'text-[#D97706] hover:bg-amber-50'
+                            : 'text-gray-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <Edit3 size={14} />
+                        편집
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 역할 프롬프트 편집 모달 */}
+          {showRolePromptModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+              <div className="bg-white rounded-xl shadow-2xl w-[600px] max-h-[80vh] flex flex-col">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                  <h3 className="font-semibold text-gray-900">역할 프롬프트 편집</h3>
+                  <button
+                    onClick={() => setShowRolePromptModal(false)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <X size={18} className="text-gray-500" />
+                  </button>
+                </div>
+                <div className="flex-1 p-5 overflow-auto">
+                  <p className="text-xs text-gray-600 mb-3">
+                    시스템 AI의 역할과 IndieBiz OS 관련 정보를 정의합니다. 베이스 템플릿 뒤에 추가됩니다.
+                  </p>
+                  <textarea
+                    value={rolePromptContent}
+                    onChange={(e) => setRolePromptContent(e.target.value)}
+                    className="w-full h-80 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 font-mono text-sm resize-none"
+                    placeholder="역할 프롬프트를 입력하세요..."
+                  />
+                </div>
+                <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-200">
+                  <button
+                    onClick={() => setShowRolePromptModal(false)}
+                    className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={saveRolePrompt}
+                    disabled={isSavingRolePrompt}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#B45309] disabled:opacity-50"
+                  >
+                    {isSavingRolePrompt ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    ) : (
+                      <Save size={16} />
+                    )}
+                    저장
+                  </button>
                 </div>
               </div>
             </div>

@@ -1,9 +1,11 @@
 """
-api_websocket.py - WebSocket 채팅 API
+api_websocket.py - WebSocket 채팅 API (스트리밍 지원)
 IndieBiz OS Core
 """
 
 import uuid
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import yaml
@@ -15,6 +17,9 @@ router = APIRouter()
 
 # 매니저 인스턴스
 project_manager = None
+
+# 스트리밍을 위한 스레드 풀
+executor = ThreadPoolExecutor(max_workers=4)
 
 
 def get_agent_runners():
@@ -42,6 +47,10 @@ async def websocket_chat(websocket: WebSocket, client_id: str):
 
             if message_type == "chat":
                 await handle_chat_message(client_id, data)
+            elif message_type == "chat_stream":
+                await handle_chat_message_stream(client_id, data)
+            elif message_type == "system_ai_stream":
+                await handle_system_ai_chat_stream(client_id, data)
             elif message_type == "ping":
                 await manager.send_message(client_id, {"type": "pong"})
 
@@ -62,7 +71,7 @@ async def websocket_chat(websocket: WebSocket, client_id: str):
 
 
 async def handle_chat_message(client_id: str, data: dict):
-    """채팅 메시지 처리"""
+    """채팅 메시지 처리 (기존 동기 방식)"""
     message = data.get("message", "")
     agent_name = data.get("agent_name", "")
     project_id = data.get("project_id", "")
@@ -201,3 +210,504 @@ async def handle_chat_message(client_id: str, data: dict):
             "type": "error",
             "message": str(e)
         })
+
+
+async def handle_chat_message_stream(client_id: str, data: dict):
+    """채팅 메시지 처리 (스트리밍 방식)"""
+    message = data.get("message", "")
+    agent_name = data.get("agent_name", "")
+    project_id = data.get("project_id", "")
+    images = data.get("images", [])
+
+    try:
+        # 시작 알림
+        await manager.send_message(client_id, {
+            "type": "start",
+            "agent": agent_name
+        })
+
+        project_path = project_manager.get_project_path(project_id)
+
+        # 에이전트 설정 로드
+        agents_file = project_path / "agents.yaml"
+        if not agents_file.exists():
+            await manager.send_message(client_id, {
+                "type": "error",
+                "message": "에이전트 설정을 찾을 수 없습니다."
+            })
+            return
+
+        with open(agents_file, 'r', encoding='utf-8') as f:
+            agents_data = yaml.safe_load(f)
+
+        # 에이전트 찾기
+        agent_config = None
+        agent_id = None
+        for agent in agents_data.get("agents", []):
+            if agent.get("name") == agent_name:
+                agent_config = agent
+                agent_id = agent.get("id")
+                break
+
+        if not agent_config:
+            await manager.send_message(client_id, {
+                "type": "error",
+                "message": f"에이전트 '{agent_name}'을(를) 찾을 수 없습니다."
+            })
+            return
+
+        # 실행 중인 AgentRunner 확인
+        agent_runners = get_agent_runners()
+        if project_id not in agent_runners or agent_id not in agent_runners[project_id]:
+            await manager.send_message(client_id, {
+                "type": "error",
+                "message": f"에이전트 '{agent_name}'이(가) 실행 중이 아닙니다. 먼저 시작해주세요."
+            })
+            return
+
+        runner_info = agent_runners[project_id][agent_id]
+        runner = runner_info.get("runner")
+
+        if not runner or not runner.ai:
+            await manager.send_message(client_id, {
+                "type": "error",
+                "message": f"에이전트 '{agent_name}'의 AI가 준비되지 않았습니다."
+            })
+            return
+
+        # 스레드 컨텍스트 설정
+        from thread_context import set_current_agent_id, set_current_agent_name, set_current_task_id
+        set_current_agent_id(agent_id)
+        set_current_agent_name(agent_name)
+
+        # 대화 DB
+        db = ConversationDB(str(project_path / "conversations.db"))
+
+        # 사용자 및 에이전트 ID
+        user_id = db.get_or_create_agent("user", "human")
+        target_agent_id = db.get_or_create_agent(agent_name, "ai_agent")
+
+        # 히스토리 로드
+        history = db.get_history_for_ai(target_agent_id, user_id)
+
+        # 사용자 메시지 저장
+        db.save_message(user_id, target_agent_id, message)
+
+        # 태스크 생성
+        task_id = f"task_{uuid.uuid4().hex[:8]}"
+        try:
+            db.create_task(
+                task_id=task_id,
+                requester="user@gui",
+                requester_channel="gui",
+                original_request=message,
+                delegated_to=agent_name,
+                ws_client_id=client_id
+            )
+        except Exception as e:
+            print(f"[WS] 태스크 생성 실패: {e}")
+
+        set_current_task_id(task_id)
+
+        # 스트리밍 처리를 위한 큐
+        event_queue = asyncio.Queue()
+        final_content = ""
+        loop = asyncio.get_running_loop()
+
+        def run_stream():
+            """스레드에서 스트리밍 실행"""
+            nonlocal final_content
+            try:
+                for event in runner.ai.process_message_stream(
+                    message_content=message,
+                    history=history,
+                    images=images
+                ):
+                    asyncio.run_coroutine_threadsafe(
+                        event_queue.put(event),
+                        loop
+                    )
+                    if event["type"] == "final":
+                        final_content = event["content"]
+            except Exception as e:
+                asyncio.run_coroutine_threadsafe(
+                    event_queue.put({"type": "error", "content": str(e)}),
+                    loop
+                )
+            finally:
+                asyncio.run_coroutine_threadsafe(
+                    event_queue.put(None),  # 종료 신호
+                    loop
+                )
+
+        # 별도 스레드에서 스트리밍 시작
+        executor.submit(run_stream)
+
+        # 이벤트 수신 및 클라이언트 전송
+        while True:
+            try:
+                event = await asyncio.wait_for(event_queue.get(), timeout=120)
+            except asyncio.TimeoutError:
+                await manager.send_message(client_id, {
+                    "type": "error",
+                    "message": "응답 시간 초과"
+                })
+                break
+
+            if event is None:
+                break
+
+            event_type = event.get("type")
+
+            if event_type == "text":
+                # 텍스트 청크 전송
+                await manager.send_message(client_id, {
+                    "type": "stream_chunk",
+                    "content": event["content"],
+                    "agent": agent_name
+                })
+
+            elif event_type == "tool_start":
+                # 도구 시작 알림
+                await manager.send_message(client_id, {
+                    "type": "tool_start",
+                    "name": event["name"],
+                    "agent": agent_name
+                })
+
+            elif event_type == "tool_result":
+                # 도구 결과 알림
+                await manager.send_message(client_id, {
+                    "type": "tool_result",
+                    "name": event["name"],
+                    "result": event.get("result", ""),
+                    "agent": agent_name
+                })
+
+            elif event_type == "thinking":
+                # AI 사고 과정 알림
+                await manager.send_message(client_id, {
+                    "type": "thinking",
+                    "content": event["content"],
+                    "agent": agent_name
+                })
+
+            elif event_type == "final":
+                final_content = event["content"]
+
+            elif event_type == "error":
+                await manager.send_message(client_id, {
+                    "type": "error",
+                    "message": event["content"]
+                })
+                break
+
+        # AI 응답 저장 (final_content 사용)
+        if final_content:
+            message_id = db.save_message(target_agent_id, user_id, final_content)
+
+            # 최종 응답 전송
+            await manager.send_message(client_id, {
+                "type": "response",
+                "content": final_content,
+                "agent": agent_name,
+                "message_id": message_id
+            })
+
+        # 완료 알림
+        await manager.send_message(client_id, {
+            "type": "end",
+            "agent": agent_name
+        })
+
+        # 컨텍스트 정리
+        from thread_context import clear_all_context
+        clear_all_context()
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        from thread_context import clear_all_context
+        clear_all_context()
+        await manager.send_message(client_id, {
+            "type": "error",
+            "message": str(e)
+        })
+
+
+# ============ 시스템 AI WebSocket 스트리밍 (통합 아키텍처) ============
+
+async def handle_system_ai_chat_stream(client_id: str, data: dict):
+    """시스템 AI 채팅 메시지 처리 (스트리밍 방식)
+
+    **통합 아키텍처**: process_system_ai_message_stream()을 사용하여
+    AIAgent 클래스의 스트리밍 기능을 활용합니다.
+    모든 프로바이더(Anthropic, OpenAI, Gemini, Ollama)가 자동으로 지원됩니다.
+    """
+    message = data.get("message", "")
+    images = data.get("images", [])
+
+    try:
+        # 시작 알림
+        await manager.send_message(client_id, {
+            "type": "start",
+            "agent": "system_ai"
+        })
+
+        # 시스템 AI 설정 및 헬퍼 함수 로드
+        from api_system_ai import (
+            load_system_ai_config,
+            process_system_ai_message_stream
+        )
+        from system_ai_memory import (
+            save_conversation,
+            get_recent_conversations
+        )
+
+        config = load_system_ai_config()
+        api_key = config.get("apiKey", "")
+        provider = config.get("provider", "anthropic")
+        model = config.get("model", "claude-sonnet-4-20250514")
+
+        if not api_key:
+            await manager.send_message(client_id, {
+                "type": "error",
+                "message": "API 키가 설정되지 않았습니다."
+            })
+            return
+
+        # 히스토리 로드
+        recent_conversations = get_recent_conversations(limit=7)
+        history = []
+        for conv in recent_conversations:
+            role = conv["role"] if conv["role"] in ["user", "assistant"] else "user"
+            history.append({"role": role, "content": conv["content"]})
+
+        # 사용자 메시지 저장
+        save_conversation("user", message)
+
+        # 스트리밍 처리 (AIAgent 사용)
+        event_queue = asyncio.Queue()
+        final_content = ""
+        loop = asyncio.get_running_loop()
+
+        def run_stream():
+            """스레드에서 시스템 AI 스트리밍 실행 (AIAgent 사용)"""
+            nonlocal final_content
+            try:
+                # 통합된 스트리밍 함수 사용 - 모든 프로바이더 지원
+                for event in process_system_ai_message_stream(
+                    message=message,
+                    history=history,
+                    images=images if images else None
+                ):
+                    asyncio.run_coroutine_threadsafe(event_queue.put(event), loop)
+                    if event["type"] == "final":
+                        final_content = event["content"]
+            except Exception as e:
+                asyncio.run_coroutine_threadsafe(
+                    event_queue.put({"type": "error", "content": str(e)}),
+                    loop
+                )
+            finally:
+                asyncio.run_coroutine_threadsafe(event_queue.put(None), loop)
+
+        # 스레드에서 스트리밍 시작
+        executor.submit(run_stream)
+
+        # 이벤트 수신 및 클라이언트 전송
+        while True:
+            try:
+                event = await asyncio.wait_for(event_queue.get(), timeout=120)
+            except asyncio.TimeoutError:
+                await manager.send_message(client_id, {
+                    "type": "error",
+                    "message": "응답 시간 초과"
+                })
+                break
+
+            if event is None:
+                break
+
+            event_type = event.get("type")
+
+            if event_type == "text":
+                await manager.send_message(client_id, {
+                    "type": "stream_chunk",
+                    "content": event["content"],
+                    "agent": "system_ai"
+                })
+
+            elif event_type == "tool_start":
+                await manager.send_message(client_id, {
+                    "type": "tool_start",
+                    "name": event["name"],
+                    "agent": "system_ai"
+                })
+
+            elif event_type == "tool_result":
+                await manager.send_message(client_id, {
+                    "type": "tool_result",
+                    "name": event["name"],
+                    "result": event.get("result", ""),
+                    "agent": "system_ai"
+                })
+
+            elif event_type == "thinking":
+                await manager.send_message(client_id, {
+                    "type": "thinking",
+                    "content": event["content"],
+                    "agent": "system_ai"
+                })
+
+            elif event_type == "final":
+                final_content = event["content"]
+
+            elif event_type == "error":
+                await manager.send_message(client_id, {
+                    "type": "error",
+                    "message": event["content"]
+                })
+                break
+
+        # AI 응답 저장
+        if final_content:
+            save_conversation("assistant", final_content)
+
+            await manager.send_message(client_id, {
+                "type": "response",
+                "content": final_content,
+                "agent": "system_ai"
+            })
+
+        # 완료 알림
+        await manager.send_message(client_id, {
+            "type": "end",
+            "agent": "system_ai"
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        await manager.send_message(client_id, {
+            "type": "error",
+            "message": str(e)
+        })
+
+
+# ============ [DEPRECATED] 레거시 스트리밍 함수 ============
+# 이제 AIAgent.process_message_stream()이 모든 프로바이더의 스트리밍을 처리합니다.
+# 아래 함수는 참고용으로만 유지합니다.
+
+def _stream_anthropic_system_ai_legacy(message: str, api_key: str, model: str, user_profile: str, system_status: str, images: list, history: list):
+    """[DEPRECATED] Anthropic API로 시스템 AI 스트리밍 - AIAgent로 대체됨"""
+    import anthropic
+    from api_system_ai import get_system_prompt, get_anthropic_tools, execute_system_tool
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    messages = []
+
+    # 히스토리 추가
+    if history:
+        for h in history:
+            messages.append({"role": h["role"], "content": h["content"]})
+
+    # 이미지가 있으면 멀티모달 메시지 구성
+    if images and len(images) > 0:
+        content_blocks = []
+        for img in images:
+            content_blocks.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": img.get("media_type", "image/jpeg"),
+                    "data": img.get("base64", "")
+                }
+            })
+        content_blocks.append({"type": "text", "text": message})
+        messages.append({"role": "user", "content": content_blocks})
+    else:
+        messages.append({"role": "user", "content": message})
+
+    system_prompt = get_system_prompt(user_profile, system_status)
+    tools = get_anthropic_tools()
+
+    accumulated_text = ""
+
+    # 최대 10회 도구 호출 루프
+    for iteration in range(10):
+        # 스트리밍 호출
+        with client.messages.stream(
+            model=model,
+            max_tokens=4096,
+            system=system_prompt,
+            tools=tools,
+            messages=messages
+        ) as stream:
+            current_text = ""
+            tool_uses = []
+
+            for event in stream:
+                # 텍스트 델타
+                if hasattr(event, 'type'):
+                    if event.type == "content_block_delta":
+                        if hasattr(event.delta, 'text'):
+                            current_text += event.delta.text
+                            yield {"type": "text", "content": event.delta.text}
+                        elif hasattr(event.delta, 'partial_json'):
+                            pass  # 도구 입력 스트리밍 (무시)
+
+                    elif event.type == "content_block_start":
+                        if hasattr(event.content_block, 'type') and event.content_block.type == "tool_use":
+                            yield {"type": "tool_start", "name": event.content_block.name}
+
+            # 최종 응답 가져오기
+            response = stream.get_final_message()
+
+        # 텍스트 누적
+        if current_text:
+            accumulated_text += current_text
+
+        # 도구 호출 확인
+        if response.stop_reason != "tool_use":
+            # 도구 호출 없음 - 완료
+            yield {"type": "final", "content": accumulated_text}
+            return
+
+        # 도구 실행
+        tool_results = []
+        assistant_content = []
+
+        for block in response.content:
+            if block.type == "tool_use":
+                yield {"type": "tool_start", "name": block.name}
+
+                # 도구 실행
+                result = execute_system_tool(block.name, block.input)
+
+                # 승인 요청 감지
+                if result and result.startswith("[[APPROVAL_REQUESTED]]"):
+                    result = result.replace("[[APPROVAL_REQUESTED]]", "")
+                    accumulated_text += f"\n\n{result}"
+                    yield {"type": "text", "content": f"\n\n{result}"}
+                    yield {"type": "final", "content": accumulated_text}
+                    return
+
+                yield {"type": "tool_result", "name": block.name, "result": result[:200] if result else ""}
+
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": result or ""
+                })
+                assistant_content.append(block)
+            elif block.type == "text":
+                assistant_content.append(block)
+
+        # 대화 이력 업데이트
+        messages.append({"role": "assistant", "content": assistant_content})
+        messages.append({"role": "user", "content": tool_results})
+
+    # 최대 반복 도달
+    yield {"type": "final", "content": accumulated_text}

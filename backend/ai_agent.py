@@ -6,6 +6,7 @@ Anthropic, OpenAI, Google Gemini, Ollama를 지원하는 통합 AI 에이전트
 - 도구(tool use) 지원
 - 이미지 입력 지원
 - 대화 히스토리 지원
+- 스트리밍 응답 지원
 
 모듈 구조:
 - tool_loader.py: 도구 패키지 로딩/캐싱
@@ -13,7 +14,7 @@ Anthropic, OpenAI, Google Gemini, Ollama를 지원하는 통합 AI 에이전트
 - providers/: AI 프로바이더별 처리
 """
 
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Generator, Any
 
 # 모듈 임포트
 from tool_loader import load_agent_tools, load_installed_tools
@@ -64,7 +65,8 @@ class AIAgent:
                 system_prompt=self.system_prompt,
                 tools=self.tools,
                 project_path=self.project_path,
-                agent_name=self.agent_name
+                agent_name=self.agent_name,
+                agent_id=self.agent_id
             )
             self._provider.init_client()
         except Exception as e:
@@ -115,6 +117,61 @@ class AIAgent:
             import traceback
             traceback.print_exc()
             return f"AI 응답 생성 실패: {str(e)}"
+
+    def process_message_stream(
+        self,
+        message_content: str,
+        history: List[Dict] = None,
+        images: List[Dict] = None
+    ) -> Generator[Dict[str, Any], None, None]:
+        """
+        스트리밍 메시지 처리
+
+        Args:
+            message_content: 사용자 메시지
+            history: 대화 히스토리
+            images: 이미지 데이터
+
+        Yields:
+            스트리밍 이벤트 딕셔너리:
+            - {"type": "text", "content": "..."} - 텍스트 청크
+            - {"type": "tool_start", "name": "..."} - 도구 시작
+            - {"type": "tool_result", "name": "...", "result": "..."} - 도구 결과
+            - {"type": "thinking", "content": "..."} - AI 사고 과정
+            - {"type": "final", "content": "..."} - 최종 응답
+            - {"type": "error", "content": "..."} - 에러
+        """
+        if not self._provider or not self._provider.is_ready:
+            yield {"type": "error", "content": "AI가 초기화되지 않았습니다."}
+            return
+
+        history = history or []
+
+        # 프로바이더가 스트리밍을 지원하는지 확인
+        if hasattr(self._provider, 'process_message_stream'):
+            try:
+                yield from self._provider.process_message_stream(
+                    message=message_content,
+                    history=history,
+                    images=images,
+                    execute_tool=execute_tool
+                )
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                yield {"type": "error", "content": f"AI 응답 생성 실패: {str(e)}"}
+        else:
+            # 스트리밍 미지원 프로바이더는 일괄 응답
+            try:
+                response = self._provider.process_message(
+                    message=message_content,
+                    history=history,
+                    images=images,
+                    execute_tool=execute_tool
+                )
+                yield {"type": "final", "content": response}
+            except Exception as e:
+                yield {"type": "error", "content": f"AI 응답 생성 실패: {str(e)}"}
 
 
 # ============ 하위 호환성을 위한 함수 export ============

@@ -3,10 +3,11 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Bot, RefreshCw, Paperclip, Camera, FileText } from 'lucide-react';
+import { X, Send, Bot, RefreshCw, Paperclip, Camera, FileText, History, ListTodo, CheckCircle2, Circle, Loader2, HelpCircle, FileEdit, Check, XCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { api } from '../../../lib/api';
 import { CameraPreview } from '../../CameraPreview';
+import { SystemAIChatHistoryDialog } from './SystemAIChatHistoryDialog';
 
 interface ImageAttachment {
   file: File;
@@ -18,6 +19,30 @@ interface TextAttachment {
   file: File;
   content: string;
   preview: string;
+}
+
+interface TodoItem {
+  content: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  activeForm: string;
+}
+
+interface QuestionOption {
+  label: string;
+  description: string;
+}
+
+interface QuestionItem {
+  question: string;
+  header: string;
+  options: QuestionOption[];
+  multiSelect?: boolean;
+}
+
+interface PlanModeState {
+  active: boolean;
+  phase: string | null;
+  plan_content?: string;
 }
 
 // 텍스트 파일 확장자 목록
@@ -59,6 +84,18 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
   const [attachedTextFiles, setAttachedTextFiles] = useState<TextAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [todos, setTodos] = useState<TodoItem[]>([]);
+  const [showTodos, setShowTodos] = useState(true);
+  const [questions, setQuestions] = useState<QuestionItem[]>([]);
+  const [questionStatus, setQuestionStatus] = useState<'none' | 'pending' | 'answered'>('none');
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string | string[]>>({});
+  const [planMode, setPlanMode] = useState<PlanModeState>({ active: false, phase: null });
+  // 스트리밍 관련 상태
+  const [streamingContent, setStreamingContent] = useState('');
+  const [currentToolActivity, setCurrentToolActivity] = useState<string | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const clientIdRef = useRef<string>(`system_ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
   // 크기 조절 관련 상태
   const [size, setSize] = useState<DialogSize>(() => {
@@ -87,6 +124,35 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
     if (show && inputRef.current) {
       inputRef.current.focus();
     }
+  }, [show]);
+
+  // Todo/질문/계획 모드 상태 폴링
+  useEffect(() => {
+    if (!show) return;
+
+    const fetchStates = async () => {
+      try {
+        // Todo 상태
+        const todoData = await api.getSystemAITodos();
+        setTodos(todoData.todos || []);
+
+        // 질문 상태
+        const questionData = await api.getSystemAIQuestions();
+        setQuestions(questionData.questions || []);
+        setQuestionStatus(questionData.status);
+
+        // 계획 모드 상태
+        const planData = await api.getSystemAIPlanMode();
+        setPlanMode(planData);
+      } catch (err) {
+        console.error('Failed to fetch states:', err);
+      }
+    };
+
+    fetchStates();
+    const interval = setInterval(fetchStates, 2000); // 2초마다 폴링
+
+    return () => clearInterval(interval);
   }, [show]);
 
   useEffect(() => {
@@ -322,17 +388,129 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
     setAttachedTextFiles([]);
 
     setIsLoading(true);
+    setStreamingContent('');
+    setCurrentToolActivity(null);
+
+    // WebSocket 연결 및 스트리밍
+    const wsUrl = `ws://localhost:8765/ws/chat/${clientIdRef.current}`;
 
     try {
-      const response = await api.chatWithSystemAI(messageContent, imageData.length > 0 ? imageData : undefined);
-      setMessages(prev => [...prev, { role: 'assistant', content: response.response }]);
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        // 메시지 전송
+        ws.send(JSON.stringify({
+          type: 'system_ai_stream',
+          message: messageContent,
+          images: imageData.length > 0 ? imageData : undefined
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        switch (data.type) {
+          case 'stream_chunk':
+            setStreamingContent(prev => prev + data.content);
+            break;
+
+          case 'tool_start':
+            setCurrentToolActivity(`🔧 ${data.name} 실행 중...`);
+            break;
+
+          case 'tool_result':
+            setCurrentToolActivity(null);
+            // 도구 결과는 스트리밍 내용에 포함되지 않음 (AI가 요약해서 전달)
+            break;
+
+          case 'response':
+            // 최종 응답 - 메시지에 추가
+            setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
+            setStreamingContent('');
+            break;
+
+          case 'end':
+            setIsLoading(false);
+            setCurrentToolActivity(null);
+            ws.close();
+            break;
+
+          case 'error':
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `오류: ${data.message}`
+            }]);
+            setIsLoading(false);
+            setStreamingContent('');
+            setCurrentToolActivity(null);
+            ws.close();
+            break;
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: '연결 오류가 발생했습니다. 다시 시도해주세요.'
+        }]);
+        setIsLoading(false);
+        setStreamingContent('');
+      };
+
+      ws.onclose = () => {
+        wsRef.current = null;
+      };
+
     } catch (error: any) {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: `오류: ${error.message || '응답을 받지 못했습니다. 설정에서 API 키를 확인해주세요.'}`
       }]);
-    } finally {
       setIsLoading(false);
+      setStreamingContent('');
+    }
+  };
+
+  // 질문 응답 제출
+  const handleSubmitAnswer = async () => {
+    try {
+      await api.submitSystemAIQuestionAnswer(selectedAnswers);
+      setSelectedAnswers({});
+      // 메시지에 응답 추가
+      const answerText = Object.entries(selectedAnswers)
+        .map(([idx, ans]) => {
+          const q = questions[parseInt(idx)];
+          return `**${q?.header}**: ${Array.isArray(ans) ? ans.join(', ') : ans}`;
+        })
+        .join('\n');
+      setMessages(prev => [...prev, { role: 'user', content: answerText }]);
+    } catch (err) {
+      console.error('Failed to submit answer:', err);
+    }
+  };
+
+  // 계획 승인
+  const handleApprovePlan = async () => {
+    try {
+      await api.approveSystemAIPlan();
+      setMessages(prev => [...prev, { role: 'user', content: '계획을 승인합니다. 진행해주세요.' }]);
+    } catch (err) {
+      console.error('Failed to approve plan:', err);
+    }
+  };
+
+  // 계획 거부
+  const handleRejectPlan = async () => {
+    const reason = prompt('수정이 필요한 이유를 입력하세요:');
+    if (reason !== null) {
+      try {
+        await api.rejectSystemAIPlan(reason);
+        setMessages(prev => [...prev, { role: 'user', content: `계획 수정 요청: ${reason || '다시 검토해주세요.'}` }]);
+      } catch (err) {
+        console.error('Failed to reject plan:', err);
+      }
     }
   };
 
@@ -414,6 +592,13 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowHistory(true)}
+              className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
+              title="대화 히스토리"
+            >
+              <History size={16} className="text-gray-500" />
+            </button>
+            <button
               onClick={handleClear}
               className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
               title="대화 초기화"
@@ -428,6 +613,183 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
             </button>
           </div>
         </div>
+
+        {/* Todo 패널 */}
+        {todos.length > 0 && showTodos && (
+          <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 shrink-0">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-amber-700">
+                <ListTodo size={14} />
+                <span className="text-xs font-medium">작업 진행 상황</span>
+                <span className="text-[10px] text-amber-500">
+                  ({todos.filter(t => t.status === 'completed').length}/{todos.length})
+                </span>
+              </div>
+              <button
+                onClick={() => setShowTodos(false)}
+                className="text-amber-400 hover:text-amber-600"
+              >
+                <X size={12} />
+              </button>
+            </div>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {todos.map((todo, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-center gap-2 text-xs py-0.5 ${
+                    todo.status === 'completed' ? 'text-gray-400 line-through' :
+                    todo.status === 'in_progress' ? 'text-amber-700 font-medium' :
+                    'text-gray-600'
+                  }`}
+                >
+                  {todo.status === 'completed' ? (
+                    <CheckCircle2 size={12} className="text-green-500 flex-shrink-0" />
+                  ) : todo.status === 'in_progress' ? (
+                    <Loader2 size={12} className="text-amber-500 animate-spin flex-shrink-0" />
+                  ) : (
+                    <Circle size={12} className="text-gray-300 flex-shrink-0" />
+                  )}
+                  <span className="truncate">
+                    {todo.status === 'in_progress' ? todo.activeForm : todo.content}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Todo 최소화 버튼 */}
+        {todos.length > 0 && !showTodos && (
+          <button
+            onClick={() => setShowTodos(true)}
+            className="absolute top-14 right-4 z-30 px-2 py-1 bg-amber-100 text-amber-600 rounded-full text-xs flex items-center gap-1 hover:bg-amber-200 transition-colors"
+          >
+            <ListTodo size={12} />
+            {todos.filter(t => t.status === 'completed').length}/{todos.length}
+          </button>
+        )}
+
+        {/* 질문 패널 */}
+        {questionStatus === 'pending' && questions.length > 0 && (
+          <div className="px-4 py-3 bg-blue-50 border-b border-blue-200 shrink-0">
+            <div className="flex items-center gap-2 text-blue-700 mb-3">
+              <HelpCircle size={16} />
+              <span className="text-sm font-medium">AI가 질문합니다</span>
+            </div>
+            <div className="space-y-4">
+              {questions.map((q, qIdx) => (
+                <div key={qIdx} className="bg-white rounded-lg p-3 border border-blue-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-medium rounded">
+                      {q.header}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-3">{q.question}</p>
+                  <div className="space-y-2">
+                    {q.options.map((opt, optIdx) => (
+                      <label
+                        key={optIdx}
+                        className={`flex items-start gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                          (q.multiSelect
+                            ? (selectedAnswers[qIdx] as string[] || []).includes(opt.label)
+                            : selectedAnswers[qIdx] === opt.label)
+                            ? 'bg-blue-100 border border-blue-300'
+                            : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
+                        }`}
+                      >
+                        <input
+                          type={q.multiSelect ? 'checkbox' : 'radio'}
+                          name={`question-${qIdx}`}
+                          checked={
+                            q.multiSelect
+                              ? (selectedAnswers[qIdx] as string[] || []).includes(opt.label)
+                              : selectedAnswers[qIdx] === opt.label
+                          }
+                          onChange={() => {
+                            if (q.multiSelect) {
+                              const current = (selectedAnswers[qIdx] as string[]) || [];
+                              const updated = current.includes(opt.label)
+                                ? current.filter(l => l !== opt.label)
+                                : [...current, opt.label];
+                              setSelectedAnswers(prev => ({ ...prev, [qIdx]: updated }));
+                            } else {
+                              setSelectedAnswers(prev => ({ ...prev, [qIdx]: opt.label }));
+                            }
+                          }}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-800">{opt.label}</div>
+                          {opt.description && (
+                            <div className="text-xs text-gray-500 mt-0.5">{opt.description}</div>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 mt-3">
+              <button
+                onClick={handleSubmitAnswer}
+                disabled={Object.keys(selectedAnswers).length === 0}
+                className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <Check size={14} />
+                응답 제출
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 계획 모드 패널 */}
+        {planMode.active && planMode.phase === 'awaiting_approval' && (
+          <div className="px-4 py-3 bg-purple-50 border-b border-purple-200 shrink-0 max-h-64 overflow-y-auto">
+            <div className="flex items-center gap-2 text-purple-700 mb-3">
+              <FileEdit size={16} />
+              <span className="text-sm font-medium">구현 계획 검토</span>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-purple-100 mb-3">
+              <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 text-gray-700">
+                <ReactMarkdown>{planMode.plan_content || ''}</ReactMarkdown>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={handleRejectPlan}
+                className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+              >
+                <XCircle size={14} />
+                수정 요청
+              </button>
+              <button
+                onClick={handleApprovePlan}
+                className="px-4 py-2 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-600 transition-colors flex items-center gap-2"
+              >
+                <Check size={14} />
+                계획 승인
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 계획 모드 진행 중 표시 */}
+        {planMode.active && planMode.phase !== 'awaiting_approval' && (
+          <div className="px-4 py-2 bg-purple-50 border-b border-purple-200 shrink-0">
+            <div className="flex items-center gap-2 text-purple-700">
+              <FileEdit size={14} />
+              <span className="text-xs font-medium">계획 모드 진행 중</span>
+              <Loader2 size={12} className="animate-spin text-purple-500" />
+              <span className="text-xs text-purple-500">
+                {planMode.phase === 'exploring' ? '코드 탐색 중...' :
+                 planMode.phase === 'designing' ? '설계 중...' :
+                 planMode.phase === 'reviewing' ? '검토 중...' :
+                 planMode.phase === 'finalizing' ? '마무리 중...' : '진행 중...'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* 메시지 영역 */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
@@ -485,16 +847,32 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
               </div>
             ))
           )}
+          {/* 스트리밍 중인 응답 표시 */}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm max-w-[80%]">
+                {/* 도구 활동 표시 */}
+                {currentToolActivity && (
+                  <div className="flex items-center gap-2 text-amber-600 text-sm mb-2 pb-2 border-b border-gray-100">
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>{currentToolActivity}</span>
                   </div>
-                </div>
+                )}
+                {/* 스트리밍 텍스트 표시 */}
+                {streamingContent ? (
+                  <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
+                    <ReactMarkdown>{streamingContent}</ReactMarkdown>
+                    <span className="inline-block w-2 h-4 bg-amber-400 animate-pulse ml-0.5" />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -616,6 +994,12 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
         isOpen={isCameraOpen}
         onClose={() => setIsCameraOpen(false)}
         onCapture={handleCameraCapture}
+      />
+
+      {/* 대화 히스토리 모달 */}
+      <SystemAIChatHistoryDialog
+        show={showHistory}
+        onClose={() => setShowHistory(false)}
       />
     </div>
   );

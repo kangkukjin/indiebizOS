@@ -130,3 +130,11 @@
 [2026-01-12 00:16:35] PROJECT_CREATED: study (ID: study)
 [2026-01-13 20:02:18] PROJECT_CREATED: 사진 (ID: 사진)
 [2026-01-13 20:02:18] PROJECT_CREATED: 사진 (ID: 사진)
+[2026-01-14 18:06:39] PROJECT_CREATED: indiebiz (ID: indiebiz)
+[2026-01-14 18:06:39] PROJECT_CREATED: indiebiz (ID: indiebiz)
+[2026-01-22 14:35:00] PROJECT_CREATED: my_space (ID: my_space)
+[2026-01-22 14:35:00] TOOL_RESTORED: pc-manager (다시 활성화됨)
+[2026-01-22 14:40:00] DOCS_UPDATED: system_docs 최신화
+  - inventory.md: 프로젝트 목록(18개) 및 ID 수정
+  - packages.md: 업데이트 날짜 갱신
+[2026-01-16 00:37:10] PROJECT_RENAMED: Youtube -> 컨텐츠

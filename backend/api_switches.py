@@ -5,7 +5,7 @@ IndieBiz OS Core
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 
-from api_models import SwitchCreate, PositionUpdate, RenameRequest
+from api_models import SwitchCreate, SwitchUpdate, PositionUpdate, RenameRequest
 
 router = APIRouter()
 
@@ -109,6 +109,36 @@ async def get_switch(switch_id: str):
     if not switch:
         raise HTTPException(status_code=404, detail="Switch not found")
     return switch
+
+
+@router.put("/switches/{switch_id}")
+async def update_switch(switch_id: str, switch: SwitchUpdate):
+    """스위치 편집 - 이름, 명령어, 아이콘 등 수정"""
+    try:
+        # None이 아닌 필드만 업데이트
+        updates = {}
+        if switch.name is not None:
+            updates["name"] = switch.name
+        if switch.command is not None:
+            updates["command"] = switch.command
+        if switch.icon is not None:
+            updates["icon"] = switch.icon
+        if switch.description is not None:
+            updates["description"] = switch.description
+        if switch.config is not None:
+            updates["config"] = switch.config
+
+        if not updates:
+            raise HTTPException(status_code=400, detail="수정할 내용이 없습니다.")
+
+        result = switch_manager.update_switch(switch_id, updates)
+        if not result:
+            raise HTTPException(status_code=404, detail="스위치를 찾을 수 없습니다.")
+        return {"status": "updated", "switch": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/switches/{switch_id}")

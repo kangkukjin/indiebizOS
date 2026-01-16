@@ -7,12 +7,10 @@ import {
   Bot,
   Radio,
   Wrench,
-  Settings,
   Plus,
   Trash2,
   Edit2,
   Zap,
-  Sparkles,
   Save,
 } from 'lucide-react';
 import type { Agent } from '../../../types';
@@ -21,15 +19,14 @@ import type { Tool, ToolSettings } from '../types';
 interface SettingsDialogProps {
   show: boolean;
   onClose: () => void;
-  settingsTab: 'channels' | 'tools' | 'agents' | 'common';
-  setSettingsTab: (tab: 'channels' | 'tools' | 'agents' | 'common') => void;
+  settingsTab: 'channels' | 'tools' | 'agents';
+  setSettingsTab: (tab: 'channels' | 'tools' | 'agents') => void;
   // 에이전트 탭
   agents: Agent[];
   runningAgents: Set<string>;
   onAddAgentSettings: () => void;
   onEditAgentSettings: (agent: Agent) => void;
   onDeleteAgentSettings: (agent: Agent) => void;
-  onAutoPrompt: () => void;
   onAutoAssignTools: () => void;
   // 도구 탭
   tools: Tool[];
@@ -38,10 +35,6 @@ interface SettingsDialogProps {
   defaultTools: string[];
   onToggleDefaultTool: (toolName: string) => void;
   onSaveDefaultTools: () => void;
-  // 공통 설정 탭
-  commonSettings: string;
-  setCommonSettings: (settings: string) => void;
-  onSaveCommonSettings: () => void;
 }
 
 export function SettingsDialog({
@@ -55,7 +48,6 @@ export function SettingsDialog({
   onAddAgentSettings,
   onEditAgentSettings,
   onDeleteAgentSettings,
-  onAutoPrompt,
   onAutoAssignTools,
   // 도구 탭
   tools,
@@ -64,10 +56,6 @@ export function SettingsDialog({
   defaultTools,
   onToggleDefaultTool,
   onSaveDefaultTools,
-  // 공통 설정 탭
-  commonSettings,
-  setCommonSettings,
-  onSaveCommonSettings,
 }: SettingsDialogProps) {
   if (!show) return null;
 
@@ -122,15 +110,6 @@ export function SettingsDialog({
               >
                 <Wrench size={16} />
                 도구
-              </button>
-              <button
-                onClick={() => setSettingsTab('common')}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-colors ${
-                  settingsTab === 'common' ? 'bg-[#D97706] text-white' : 'hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                <Settings size={16} />
-                공통 설정
               </button>
             </nav>
           </div>
@@ -298,14 +277,6 @@ export function SettingsDialog({
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={onAutoPrompt}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm"
-                      title="모든 에이전트의 프롬프트를 자동 생성합니다"
-                    >
-                      <Sparkles size={14} />
-                      자동 프롬프트
-                    </button>
-                    <button
                       onClick={onAutoAssignTools}
                       className="flex items-center gap-1 px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 text-sm"
                     >
@@ -373,30 +344,6 @@ export function SettingsDialog({
               </div>
             )}
 
-            {/* 공통 설정 탭 */}
-            {settingsTab === 'common' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">공통 시스템 프롬프트</h3>
-                  <p className="text-sm text-gray-500">모든 에이전트에게 공통으로 적용되는 기본 지침입니다.</p>
-                </div>
-
-                <textarea
-                  value={commonSettings}
-                  onChange={(e) => setCommonSettings(e.target.value)}
-                  placeholder="공통 시스템 프롬프트를 입력하세요..."
-                  className="w-full h-80 px-4 py-3 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none resize-none text-gray-900"
-                />
-
-                <button
-                  onClick={onSaveCommonSettings}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
-                >
-                  <Save size={16} />
-                  저장
-                </button>
-              </div>
-            )}
           </div>
         </div>
 

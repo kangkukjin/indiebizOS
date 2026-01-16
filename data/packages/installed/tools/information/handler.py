@@ -2,8 +2,6 @@ import os
 import json
 import requests
 from datetime import datetime
-from jinja2 import Template
-import feedparser
 import re
 
 # API Keys (환경변수에서 로드)
@@ -14,9 +12,6 @@ AMADEUS_BASE_URL = "https://test.api.amadeus.com"
 KAKAO_REST_API_KEY = os.environ.get("KAKAO_REST_API_KEY", "")
 NAVER_CLIENT_ID = os.environ.get("NAVER_CLIENT_ID", "")
 NAVER_CLIENT_SECRET = os.environ.get("NAVER_CLIENT_SECRET", "")
-
-# 출력 디렉토리 설정
-OUTPUTS_DIR = 'outputs'
 
 def get_amadeus_token():
     auth_url = f"{AMADEUS_BASE_URL}/v1/security/oauth2/token"
@@ -33,46 +28,6 @@ def get_amadeus_token():
     except:
         pass
     return None
-
-def search_news(keyword, max_results=5):
-    from duckduckgo_search import DDGS
-    results = []
-    try:
-        with DDGS() as ddgs:
-            # 최신 ddgs 라이브러리 형식 사용 (ddgs.news)
-            ddgs_gen = ddgs.news(keyword, region="wt-wt", safesearch="off", timelimit="d", max_results=max_results)
-            for r in ddgs_gen:
-                results.append({
-                    "title": r['title'],
-                    "snippet": r['body'],
-                    "link": r['url'],
-                    "source": r['source']
-                })
-    except Exception as e:
-        print(f"Error searching news for {keyword}: {e}")
-    return results
-
-def fetch_rss(url, limit=7):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
-    try:
-        response = requests.get(url, headers=headers, timeout=15)
-        if response.status_code != 200: return []
-        feed = feedparser.parse(response.text)
-        articles = []
-        source_title = feed.feed.get('title', 'RSS Source')
-        for entry in feed.entries[:limit]:
-            content = entry.get('summary', entry.get('description', ''))
-            clean_text = re.sub('<[^<]+?>', '', str(content)).replace('&nbsp;', ' ').strip()
-            articles.append({
-                "title": entry.get('title', 'No Title'),
-                "snippet": clean_text[:400] + "...",
-                "link": entry.get('link', ''),
-                "source": source_title
-            })
-        return articles
-    except: return []
 
 
 def search_kakao_restaurants(query: str, x: str = None, y: str = None,
@@ -251,70 +206,296 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
     return results
 
 
-DEFAULT_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="utf-8">
-    <title>{{ title }}</title>
-    <style>
-        body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
-        h1 { color: #1a2a6c; border-bottom: 2px solid #1a2a6c; }
-        .article { margin-bottom: 30px; }
-        .article h3 { margin: 0; }
-        .article a { color: #3498db; }
-    </style>
-</head>
-<body>
-    <h1>{{ title }}</h1>
-    <p>발행일: {{ date }}</p>
-    {% for section in sections %}
-        <h2>{{ section.keyword }}</h2>
-        {% for article in section.articles %}
-            <div class="article">
-                <h3>{{ article.title }}</h3>
-                <p>{{ article.snippet }}</p>
-                <a href="{{ article.link }}" target="_blank">기사 보기</a>
-            </div>
-        {% endfor %}
-    {% endfor %}
-</body>
-</html>
-"""
+def generate_route_map_data(origin_coord: tuple, dest_coord: tuple,
+                            path_coords: list, origin_name: str = "출발",
+                            dest_name: str = "도착", summary_info: dict = None) -> dict:
+    """
+    경로 지도 데이터 생성 (프론트엔드 렌더링용)
+
+    Args:
+        origin_coord: 출발지 좌표 (경도, 위도)
+        dest_coord: 목적지 좌표 (경도, 위도)
+        path_coords: 경로 좌표 리스트 [(경도, 위도), ...]
+        origin_name: 출발지 이름
+        dest_name: 목적지 이름
+        summary_info: 요약 정보 (거리, 시간 등)
+
+    Returns:
+        지도 렌더링용 데이터 딕셔너리
+    """
+    # 경로 좌표를 [위도, 경도] 형식으로 변환 (Leaflet 형식)
+    path_latlng = [[coord[1], coord[0]] for coord in path_coords]
+
+    # 좌표 샘플링 (너무 많으면 성능 저하, 최대 200개)
+    if len(path_latlng) > 200:
+        step = len(path_latlng) // 200
+        path_latlng = path_latlng[::step]
+
+    return {
+        "type": "route_map",
+        "origin": {
+            "lat": origin_coord[1],
+            "lng": origin_coord[0],
+            "name": origin_name
+        },
+        "destination": {
+            "lat": dest_coord[1],
+            "lng": dest_coord[0],
+            "name": dest_name
+        },
+        "path": path_latlng,
+        "summary": {
+            "distance_km": summary_info.get("distance_km", 0) if summary_info else 0,
+            "duration_min": summary_info.get("duration_min", 0) if summary_info else 0,
+            "toll": summary_info.get("fare", {}).get("toll", 0) if summary_info else 0
+        }
+    }
+
+
+def kakao_navigation(origin: str, destination: str, waypoints: str = None,
+                      priority: str = "RECOMMEND", avoid: str = None,
+                      alternatives: bool = False, summary: bool = False,
+                      generate_map: bool = True, project_path: str = ".") -> dict:
+    """
+    카카오모빌리티 길찾기 API
+
+    Args:
+        origin: 출발지 좌표 "경도,위도" 또는 "경도,위도,name=장소명"
+        destination: 목적지 좌표 "경도,위도" 또는 "경도,위도,name=장소명"
+        waypoints: 경유지 (최대 5개, "|"로 구분) "경도1,위도1|경도2,위도2"
+        priority: 경로 우선순위 (RECOMMEND: 추천, TIME: 최단시간, DISTANCE: 최단거리)
+        avoid: 회피 옵션 (쉼표 구분: toll,motorway,ferries,schoolzone,uturn)
+        alternatives: 대안 경로 제공 여부
+        summary: 요약 정보만 반환 여부
+        generate_map: HTML 지도 생성 여부 (기본: True)
+        project_path: 출력 경로
+
+    Returns:
+        경로 정보 (거리, 시간, 요금, 구간별 안내, 지도 파일 경로)
+    """
+    if not KAKAO_REST_API_KEY:
+        return {"error": "KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다."}
+
+    url = "https://apis-navi.kakaomobility.com/v1/directions"
+    headers = {
+        "Authorization": f"KakaoAK {KAKAO_REST_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    params = {
+        "origin": origin,
+        "destination": destination,
+        "priority": priority,
+        "alternatives": str(alternatives).lower(),
+        "summary": str(summary).lower()
+    }
+
+    if waypoints:
+        params["waypoints"] = waypoints
+    if avoid:
+        params["avoid"] = avoid
+
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=15)
+
+        if response.status_code != 200:
+            return {"error": f"카카오 네비 API 오류: {response.status_code} - {response.text}"}
+
+        data = response.json()
+        routes = data.get("routes", [])
+
+        if not routes:
+            return {"error": "경로를 찾을 수 없습니다.", "raw": data}
+
+        result = {
+            "trans_id": data.get("trans_id"),
+            "routes": []
+        }
+
+        # 경로 좌표 수집 (지도 생성용)
+        all_path_coords = []
+
+        for route in routes:
+            route_info = {
+                "result_code": route.get("result_code"),
+                "result_msg": route.get("result_msg")
+            }
+
+            summary_data = route.get("summary", {})
+            if summary_data:
+                route_info["summary"] = {
+                    "origin": summary_data.get("origin", {}),
+                    "destination": summary_data.get("destination", {}),
+                    "waypoints": summary_data.get("waypoints", []),
+                    "distance": summary_data.get("distance"),  # 미터
+                    "distance_km": round(summary_data.get("distance", 0) / 1000, 1),
+                    "duration": summary_data.get("duration"),  # 초
+                    "duration_min": round(summary_data.get("duration", 0) / 60),
+                    "fare": summary_data.get("fare", {}),  # 요금 정보
+                    "priority": summary_data.get("priority")
+                }
+
+            # 구간별 상세 정보 (summary=False일 때)
+            sections = route.get("sections", [])
+            if sections:
+                route_info["sections"] = []
+                for section in sections:
+                    section_info = {
+                        "distance": section.get("distance"),
+                        "duration": section.get("duration"),
+                        "guides": []
+                    }
+
+                    # 턴바이턴 안내
+                    guides = section.get("guides", [])
+                    for guide in guides:
+                        section_info["guides"].append({
+                            "name": guide.get("name"),
+                            "guidance": guide.get("guidance"),
+                            "type": guide.get("type"),
+                            "distance": guide.get("distance")
+                        })
+
+                    route_info["sections"].append(section_info)
+
+                    # 경로 좌표 수집 (roads의 vertexes)
+                    roads = section.get("roads", [])
+                    for road in roads:
+                        vertexes = road.get("vertexes", [])
+                        # vertexes는 [경도1, 위도1, 경도2, 위도2, ...] 형태
+                        for i in range(0, len(vertexes), 2):
+                            if i + 1 < len(vertexes):
+                                all_path_coords.append((vertexes[i], vertexes[i+1]))
+
+            result["routes"].append(route_info)
+
+        # 간단한 요약 메시지
+        if result["routes"] and result["routes"][0].get("summary"):
+            s = result["routes"][0]["summary"]
+            fare_info = ""
+            if s.get("fare"):
+                toll = s["fare"].get("toll", 0)
+                if toll > 0:
+                    fare_info = f", 톨비: {toll:,}원"
+            result["message"] = f"총 {s['distance_km']}km, 약 {s['duration_min']}분 소요{fare_info}"
+
+        # 지도 데이터 생성 (프론트엔드 렌더링용)
+        if generate_map and all_path_coords and not summary:
+            # 출발지/목적지 좌표 파싱
+            origin_parts = origin.split(",")
+            dest_parts = destination.split(",")
+
+            origin_coord = (float(origin_parts[0]), float(origin_parts[1]))
+            dest_coord = (float(dest_parts[0]), float(dest_parts[1]))
+
+            # 장소명 추출
+            origin_name = "출발지"
+            dest_name = "목적지"
+            if len(origin_parts) > 2 and "name=" in origin_parts[2]:
+                origin_name = origin_parts[2].replace("name=", "")
+            if len(dest_parts) > 2 and "name=" in dest_parts[2]:
+                dest_name = dest_parts[2].replace("name=", "")
+
+            # 요약 정보에서 이름 가져오기
+            if result["routes"] and result["routes"][0].get("summary"):
+                s = result["routes"][0]["summary"]
+                if s.get("origin", {}).get("name"):
+                    origin_name = s["origin"]["name"]
+                if s.get("destination", {}).get("name"):
+                    dest_name = s["destination"]["name"]
+
+            # 지도 데이터 생성
+            map_data = generate_route_map_data(
+                origin_coord=origin_coord,
+                dest_coord=dest_coord,
+                path_coords=all_path_coords,
+                origin_name=origin_name,
+                dest_name=dest_name,
+                summary_info=result["routes"][0].get("summary")
+            )
+
+            result["map_data"] = map_data
+
+        return result
+
+    except requests.exceptions.Timeout:
+        return {"error": "카카오 네비 API 요청 시간 초과"}
+    except Exception as e:
+        return {"error": f"길찾기 실패: {str(e)}"}
+
+
+def show_location_map(query: str = None, lat: float = None, lng: float = None,
+                       zoom: int = 15, markers: list = None) -> dict:
+    """
+    특정 위치의 지도를 대화창에 표시
+
+    Args:
+        query: 검색할 장소명 (예: '강남역')
+        lat: 위도 (직접 지정시)
+        lng: 경도 (직접 지정시)
+        zoom: 줌 레벨 (기본: 15)
+        markers: 추가 마커 목록 [{name, lat, lng}, ...]
+
+    Returns:
+        지도 데이터 (map_data 포함)
+    """
+    center_lat = lat
+    center_lng = lng
+    center_name = query or "위치"
+
+    # 장소명으로 검색
+    if query and (lat is None or lng is None):
+        if not KAKAO_REST_API_KEY:
+            return {"error": "KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다."}
+
+        try:
+            url = "https://dapi.kakao.com/v2/local/search/keyword.json"
+            headers = {"Authorization": f"KakaoAK {KAKAO_REST_API_KEY}"}
+            params = {"query": query, "size": 1}
+
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            data = response.json()
+
+            if data.get("documents"):
+                place = data["documents"][0]
+                center_lng = float(place["x"])
+                center_lat = float(place["y"])
+                center_name = place.get("place_name", query)
+            else:
+                return {"error": f"'{query}' 장소를 찾을 수 없습니다."}
+
+        except Exception as e:
+            return {"error": f"장소 검색 실패: {str(e)}"}
+
+    if center_lat is None or center_lng is None:
+        return {"error": "위치 정보가 필요합니다. query 또는 lat/lng를 지정하세요."}
+
+    # 마커 목록 생성
+    all_markers = [{"name": center_name, "lat": center_lat, "lng": center_lng}]
+    if markers:
+        all_markers.extend(markers)
+
+    # 지도 데이터 생성
+    map_data = {
+        "type": "location_map",
+        "center": {
+            "lat": center_lat,
+            "lng": center_lng,
+            "name": center_name
+        },
+        "zoom": zoom,
+        "markers": all_markers
+    }
+
+    return {
+        "message": f"'{center_name}' 위치 지도",
+        "center": {"lat": center_lat, "lng": center_lng, "name": center_name},
+        "map_data": map_data
+    }
+
 
 def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    out_dir = os.path.join(project_path, OUTPUTS_DIR)
-    os.makedirs(out_dir, exist_ok=True)
-
-    if tool_name == "generate_magazine":
-        topic = tool_input.get("topic")
-        title = tool_input.get("title", f"{topic} Weekly Magazine")
-        articles = search_news(topic, 10)
-        sections = [{"keyword": "심층 취재", "articles": articles}]
-        
-        template = Template(DEFAULT_TEMPLATE)
-        html = template.render(title=title, date=datetime.now().strftime("%Y-%m-%d"), sections=sections)
-        filename = f"magazine_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-        filepath = os.path.join(out_dir, filename)
-        with open(filepath, "w", encoding="utf-8") as f: f.write(html)
-        return f"잡지 생성 완료: {os.path.abspath(filepath)}"
-
-    elif tool_name == "generate_it_newspaper":
-        title = tool_input.get("title", "IT Tech News")
-        sections = [
-            {"keyword": "Hacker News", "articles": fetch_rss("https://hnrss.org/frontpage", 5)},
-            {"keyword": "Reddit AI", "articles": fetch_rss("https://www.reddit.com/r/artificial/.rss", 5)},
-            {"keyword": "Ars Technica", "articles": fetch_rss("https://feeds.arstechnica.com/arstechnica/index", 5)},
-            {"keyword": "TechCrunch", "articles": fetch_rss("https://techcrunch.com/feed/", 5)}
-        ]
-        template = Template(DEFAULT_TEMPLATE)
-        html = template.render(title=title, date=datetime.now().strftime("%Y-%m-%d"), sections=sections)
-        filename = f"it_news_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-        filepath = os.path.join(out_dir, filename)
-        with open(filepath, "w", encoding="utf-8") as f: f.write(html)
-        return f"IT 신문 생성 완료: {os.path.abspath(filepath)}"
-
-    elif tool_name == "search_restaurants":
+    if tool_name == "search_restaurants":
         query = tool_input.get("query", "")
         if not query:
             return json.dumps({"error": "검색 키워드(query)가 필요합니다."}, ensure_ascii=False)
@@ -325,6 +506,35 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
             x=tool_input.get("x"),
             y=tool_input.get("y"),
             radius=tool_input.get("radius", 5000)
+        )
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "kakao_navigation":
+        origin = tool_input.get("origin", "")
+        destination = tool_input.get("destination", "")
+        if not origin or not destination:
+            return json.dumps({"error": "출발지(origin)와 목적지(destination) 좌표가 필요합니다."}, ensure_ascii=False)
+
+        result = kakao_navigation(
+            origin=origin,
+            destination=destination,
+            waypoints=tool_input.get("waypoints"),
+            priority=tool_input.get("priority", "RECOMMEND"),
+            avoid=tool_input.get("avoid"),
+            alternatives=tool_input.get("alternatives", False),
+            summary=tool_input.get("summary", False),
+            generate_map=tool_input.get("generate_map", True),
+            project_path=project_path
+        )
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "show_location_map":
+        result = show_location_map(
+            query=tool_input.get("query"),
+            lat=tool_input.get("lat"),
+            lng=tool_input.get("lng"),
+            zoom=tool_input.get("zoom", 15),
+            markers=tool_input.get("markers")
         )
         return json.dumps(result, ensure_ascii=False, indent=2)
 

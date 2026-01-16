@@ -19,7 +19,7 @@ import remarkGfm from 'remark-gfm';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 import { Chat } from './Chat';
-import type { Agent } from '../types';
+import type { Agent, Switch } from '../types';
 
 // 모듈화된 컴포넌트 임포트
 import {
@@ -27,7 +27,6 @@ import {
   SwitchDialog,
   NoteDialog,
   ToolAIDialog,
-  AutoPromptDialog,
   AgentEditDialog,
   TeamChatDialog,
   SettingsDialog,
@@ -41,8 +40,6 @@ import type {
   ToolAIForm,
   Tool,
   ToolSettings,
-  GeneratedPrompts,
-  SystemAIConfig,
 } from './manager-dialogs';
 
 export function Manager() {
@@ -53,6 +50,8 @@ export function Manager() {
     loadAgents,
     setCurrentAgent,
     setCurrentView,
+    switches,
+    loadSwitches,
   } = useAppStore();
 
   // 상태
@@ -85,17 +84,17 @@ export function Manager() {
   const [isResizing, setIsResizing] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // 스위치 생성 폼
+  // 스위치 생성/편집 폼
   const [switchForm, setSwitchForm] = useState<SwitchForm>({
     name: '',
     icon: '⚡',
     command: '',
     agentName: '',
   });
+  const [editingSwitch, setEditingSwitch] = useState<Switch | null>(null);
 
   // 설정 다이얼로그 상태
-  const [settingsTab, setSettingsTab] = useState<'channels' | 'tools' | 'agents' | 'common'>('agents');
-  const [commonSettings, setCommonSettings] = useState('');
+  const [settingsTab, setSettingsTab] = useState<'channels' | 'tools' | 'agents'>('agents');
   const [tools, setTools] = useState<Tool[]>([]);
   const [showAgentEditDialog, setShowAgentEditDialog] = useState(false);
   const [editingAgentData, setEditingAgentData] = useState<Agent | null>(null);
@@ -130,19 +129,13 @@ export function Manager() {
   });
   const [toolSettings, setToolSettings] = useState<ToolSettings>({});
 
-  // 자동 프롬프트 다이얼로그 상태
-  const [showAutoPromptDialog, setShowAutoPromptDialog] = useState(false);
-  const [projectPurpose, setProjectPurpose] = useState('');
-  const [autoPromptLoading, setAutoPromptLoading] = useState(false);
-  const [generatedPrompts, setGeneratedPrompts] = useState<GeneratedPrompts | null>(null);
-  const [agentRoleDescriptions, setAgentRoleDescriptions] = useState<Record<string, string>>({});
-  const [systemAiConfig, setSystemAiConfig] = useState<SystemAIConfig | null>(null);
 
   // ============ useEffect 훅들 ============
 
   useEffect(() => {
     if (currentProject) {
       loadAgents(currentProject.id);
+      loadSwitches();  // 스위치 로드
       // 프로젝트 로드 시 default_tools도 함께 로드
       const loadDefaultTools = async () => {
         try {
@@ -158,7 +151,7 @@ export function Manager() {
       };
       loadDefaultTools();
     }
-  }, [currentProject, loadAgents]);
+  }, [currentProject, loadAgents, loadSwitches]);
 
   useEffect(() => {
     const checkOllamaStatus = async () => {
@@ -172,21 +165,6 @@ export function Manager() {
     checkOllamaStatus();
   }, []);
 
-  useEffect(() => {
-    const loadSystemAiConfig = async () => {
-      try {
-        const config = await api.getSystemAI();
-        setSystemAiConfig({
-          provider: config.provider,
-          model: config.model,
-          apiKey: config.apiKey,
-        });
-      } catch {
-        // 무시
-      }
-    };
-    loadSystemAiConfig();
-  }, []);
 
   useEffect(() => {
     if (showSettingsDialog && currentProject) {
@@ -274,9 +252,6 @@ export function Manager() {
       }
 
       const config = await api.getProjectConfig(currentProject.id);
-      if (config.common_settings) {
-        setCommonSettings(config.common_settings as string);
-      }
       // 프로젝트 기본 도구 로드
       if (config.default_tools) {
         setDefaultTools(config.default_tools as string[]);
@@ -451,18 +426,6 @@ export function Manager() {
       const errMsg = error instanceof Error ? error.message :
         (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
       addLog(`[오류] 노트 저장 실패: ${errMsg}`);
-    }
-  };
-
-  const handleSaveCommonSettings = async () => {
-    if (!currentProject) return;
-    try {
-      await api.updateProjectConfig(currentProject.id, { common_settings: commonSettings });
-      addLog('[설정] 공통 설정이 저장되었습니다.');
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message :
-        (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
-      addLog(`[오류] 공통 설정 저장 실패: ${errMsg}`);
     }
   };
 
@@ -760,122 +723,6 @@ export function Manager() {
     }
   };
 
-  const handleAutoPrompt = () => {
-    if (agents.length === 0) {
-      addLog('[오류] 등록된 에이전트가 없습니다. 먼저 에이전트를 추가하세요.');
-      return;
-    }
-    setProjectPurpose('범용');
-    setGeneratedPrompts(null);
-    const initialDescriptions: Record<string, string> = {};
-    agents.forEach(agent => {
-      initialDescriptions[agent.name] = agent.role_description || '';
-    });
-    setAgentRoleDescriptions(initialDescriptions);
-    setShowAutoPromptDialog(true);
-  };
-
-  const handleSaveRoleDescriptions = async () => {
-    if (!currentProject) return;
-
-    try {
-      const descriptionsToSave: Record<string, string> = {};
-      Object.entries(agentRoleDescriptions).forEach(([name, desc]) => {
-        if (desc.trim()) {
-          descriptionsToSave[name] = desc.trim();
-        }
-      });
-
-      if (Object.keys(descriptionsToSave).length > 0) {
-        const result = await api.updateRoleDescriptions(currentProject.id, descriptionsToSave);
-        addLog(`[저장] 역할 설명이 저장되었습니다. (${result.updated_agents?.join(', ') || ''})`);
-        await loadAgents(currentProject.id);
-      } else {
-        addLog('[알림] 저장할 역할 설명이 없습니다.');
-      }
-    } catch (error: unknown) {
-      let errMsg = '알 수 없는 오류';
-      if (error instanceof Error) {
-        errMsg = error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        const errObj = error as Record<string, unknown>;
-        errMsg = (errObj.detail as string) || (errObj.message as string) || String(error);
-      } else if (typeof error === 'string') {
-        errMsg = error;
-      }
-      addLog(`[오류] 역할 설명 저장 실패: ${errMsg}`);
-    }
-  };
-
-  const handleGeneratePrompts = async () => {
-    if (!currentProject) {
-      addLog('[오류] 프로젝트가 선택되지 않았습니다.');
-      return;
-    }
-
-    setAutoPromptLoading(true);
-    try {
-      const agentList = agents.map(agent => ({
-        name: agent.name,
-        role_description: agentRoleDescriptions[agent.name]?.trim() ||
-          `${agent.type === 'external' ? '외부 사용자와 소통하는' : '내부 작업을 처리하는'} 에이전트`,
-        type: agent.type
-      }));
-
-      const result = await api.generatePrompts(currentProject.id, {
-        project_purpose: projectPurpose.trim() || '범용',
-        agents: agentList,
-        use_ai: true,
-        ai_config: systemAiConfig ? {
-          provider: systemAiConfig.provider,
-          model: systemAiConfig.model,
-          api_key: systemAiConfig.apiKey,
-        } : undefined
-      });
-
-      if (result.common_settings && result.agent_roles) {
-        setGeneratedPrompts({
-          common_settings: result.common_settings,
-          agent_roles: result.agent_roles
-        });
-        addLog('[프롬프트] 미리보기가 생성되었습니다.');
-      } else {
-        addLog(`[오류] 응답 형식이 올바르지 않습니다: ${JSON.stringify(result)}`);
-      }
-    } catch (error) {
-      addLog(`[오류] 프롬프트 생성 실패: ${error instanceof Error ? error.message : error}`);
-    } finally {
-      setAutoPromptLoading(false);
-    }
-  };
-
-  const handleSavePrompts = async () => {
-    if (!currentProject) return;
-    if (!generatedPrompts) {
-      addLog('[오류] 저장할 프롬프트가 없습니다. 먼저 미리보기를 생성하세요.');
-      return;
-    }
-
-    setAutoPromptLoading(true);
-    try {
-      const result = await api.savePrompts(currentProject.id, {
-        common_settings: generatedPrompts.common_settings,
-        agent_roles: generatedPrompts.agent_roles
-      });
-
-      const fileNames = typeof result.saved_files === 'object'
-        ? Object.keys(result.saved_files)
-        : result.saved_files;
-      addLog(`[프롬프트] 저장 완료: ${Array.isArray(fileNames) ? fileNames.join(', ') : fileNames}`);
-      setShowAutoPromptDialog(false);
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message :
-        (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
-      addLog(`[오류] 프롬프트 저장 실패: ${errMsg}`);
-    } finally {
-      setAutoPromptLoading(false);
-    }
-  };
 
   const handleCreateSwitch = async () => {
     if (!switchForm.name || !switchForm.command || !switchForm.agentName) {
@@ -890,11 +737,43 @@ export function Manager() {
         switchForm.icon
       );
       addLog(`[스위치 생성] '${switchForm.name}' 스위치가 생성되었습니다!`);
-      setShowSwitchDialog(false);
       setSwitchForm({ name: '', icon: '⚡', command: '', agentName: '' });
+      loadSwitches();  // 목록 새로고침
     } catch (error) {
       addLog(`[오류] 스위치 생성 실패: ${error}`);
     }
+  };
+
+  const handleUpdateSwitch = async () => {
+    if (!editingSwitch) return;
+    if (!switchForm.name || !switchForm.command) {
+      addLog('[오류] 이름과 명령어를 입력하세요.');
+      return;
+    }
+    try {
+      await api.updateSwitch(editingSwitch.id, {
+        name: switchForm.name,
+        command: switchForm.command,
+        icon: switchForm.icon,
+      });
+      addLog(`[스위치 수정] '${switchForm.name}' 스위치가 수정되었습니다!`);
+      setEditingSwitch(null);
+      setSwitchForm({ name: '', icon: '⚡', command: '', agentName: '' });
+      loadSwitches();  // 목록 새로고침
+    } catch (error) {
+      addLog(`[오류] 스위치 수정 실패: ${error}`);
+    }
+  };
+
+  const handleEditSwitch = (switchItem: Switch) => {
+    setEditingSwitch(switchItem);
+    setSwitchForm({
+      name: switchItem.name,
+      icon: switchItem.icon || '⚡',
+      command: switchItem.command,
+      agentName: (switchItem.config?.agent_name as string) || '',
+    });
+    setShowSwitchDialog(true);
   };
 
   // ============ 렌더링 ============
@@ -908,6 +787,11 @@ export function Manager() {
   }
 
   const connectedAgent = agents.find((a) => a.id === connectedAgentId);
+
+  // 현재 프로젝트의 스위치만 필터링
+  const projectSwitches = switches.filter(
+    (sw) => sw.config?.projectId === currentProject.id
+  );
 
   return (
     <div className="h-full flex flex-col bg-[#F5F1EB]">
@@ -1064,11 +948,20 @@ export function Manager() {
       {/* 다이얼로그들 */}
       <SwitchDialog
         show={showSwitchDialog}
-        onClose={() => setShowSwitchDialog(false)}
+        onClose={() => {
+          setShowSwitchDialog(false);
+          setEditingSwitch(null);
+          setSwitchForm({ name: '', icon: '⚡', command: '', agentName: '' });
+        }}
         switchForm={switchForm}
         setSwitchForm={setSwitchForm}
         agents={agents}
         onCreateSwitch={handleCreateSwitch}
+        onUpdateSwitch={handleUpdateSwitch}
+        editingSwitch={editingSwitch}
+        projectSwitches={projectSwitches}
+        onEditSwitch={handleEditSwitch}
+        onCancelEdit={() => setEditingSwitch(null)}
       />
 
       <NoteDialog
@@ -1090,7 +983,6 @@ export function Manager() {
         onAddAgentSettings={handleAddAgentSettings}
         onEditAgentSettings={handleEditAgentSettings}
         onDeleteAgentSettings={handleDeleteAgentSettings}
-        onAutoPrompt={handleAutoPrompt}
         onAutoAssignTools={handleAutoAssignTools}
         tools={tools}
         toolSettings={toolSettings}
@@ -1098,9 +990,6 @@ export function Manager() {
         defaultTools={defaultTools}
         onToggleDefaultTool={handleToggleDefaultTool}
         onSaveDefaultTools={handleSaveDefaultTools}
-        commonSettings={commonSettings}
-        setCommonSettings={setCommonSettings}
-        onSaveCommonSettings={handleSaveCommonSettings}
       />
 
       <ToolAIDialog
@@ -1112,20 +1001,6 @@ export function Manager() {
         onSaveToolAI={handleSaveToolAI}
       />
 
-      <AutoPromptDialog
-        show={showAutoPromptDialog}
-        onClose={() => setShowAutoPromptDialog(false)}
-        agents={agents}
-        projectPurpose={projectPurpose}
-        setProjectPurpose={setProjectPurpose}
-        agentRoleDescriptions={agentRoleDescriptions}
-        setAgentRoleDescriptions={setAgentRoleDescriptions}
-        autoPromptLoading={autoPromptLoading}
-        generatedPrompts={generatedPrompts}
-        onGeneratePrompts={handleGeneratePrompts}
-        onSavePrompts={handleSavePrompts}
-        onSaveRoleDescriptions={handleSaveRoleDescriptions}
-      />
 
       <AgentEditDialog
         show={showAgentEditDialog}

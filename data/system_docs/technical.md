@@ -38,6 +38,10 @@
 - `GET /system-ai` - 시스템 AI 설정 조회
 - `PUT /system-ai` - 시스템 AI 설정 업데이트
 - `POST /system-ai/chat` - 시스템 AI와 대화
+- `GET /system-ai/prompts/config` - 프롬프트 설정 조회
+- `PUT /system-ai/prompts/config` - 프롬프트 설정 업데이트 (역할 프롬프트 토글)
+- `GET /system-ai/prompts/role` - 역할 프롬프트 조회
+- `PUT /system-ai/prompts/role` - 역할 프롬프트 업데이트
 
 ### 도구 패키지 관리
 - `GET /packages` - 전체 패키지 목록
@@ -109,20 +113,24 @@
 ### 자동응답 V2 (/business/auto-response)
 2단계 처리: AI 판단 → 비즈니스 검색 → 응답 생성
 
-- `GET /business/auto-response/status` - 자동응답 상태 (running, check_interval, processed_count)
+- `GET /business/auto-response/status` - 자동응답 상태
 - `POST /business/auto-response/start` - 자동응답 시작
 - `POST /business/auto-response/stop` - 자동응답 중지
 
-**AI 판단 결과:**
-- `NO_RESPONSE`: 자동응답 불필요 (개인적 대화, 스팸 등) → replied=1 마킹
-- `BUSINESS_RESPONSE`: 자동응답 필요 → 비즈니스 검색 후 응답 생성
+### WebSocket (실시간 스트리밍)
+- `ws://127.0.0.1:8765/ws/chat/{client_id}` - 실시간 채팅 (스트리밍)
 
-### WebSocket
-- `ws://127.0.0.1:8765/ws/chat/{client_id}` - 실시간 채팅
+## 스트리밍 이벤트 타입
+| 타입 | 설명 |
+|------|------|
+| `text` | 텍스트 청크 (실시간) |
+| `tool_start` | 도구 실행 시작 |
+| `tool_result` | 도구 실행 결과 |
+| `thinking` | AI 사고 과정 |
+| `final` | 최종 응답 |
+| `error` | 에러 발생 |
 
 ## 에이전트 기본 도구 (System Tools)
-
-에이전트가 기본으로 사용할 수 있는 시스템 도구입니다.
 
 | 도구 | 설명 |
 |------|------|
@@ -131,49 +139,6 @@
 | `get_my_tools()` | 현재 에이전트의 도구 목록 확인 |
 | `send_notification(title, message)` | 시스템 알림 전송 |
 | `get_project_info()` | 현재 프로젝트 정보 조회 |
-
-### 위임 체인 DB 스키마 (tasks 테이블)
-
-| 컬럼 | 타입 | 설명 |
-|------|------|------|
-| task_id | TEXT (PK) | 작업 고유 ID (예: task_abc123) |
-| requester | TEXT | 최초 요청자 (예: user@gui) |
-| requester_channel | TEXT | 요청 채널 (gui, email, nostr) |
-| original_request | TEXT | 원래 요청 내용 |
-| delegated_to | TEXT | 현재 담당 에이전트 이름 |
-| delegation_context | TEXT | 위임 컨텍스트 JSON |
-| parent_task_id | TEXT | 부모 태스크 ID (계층적 위임 추적) |
-| pending_delegations | INTEGER | 대기 중인 위임 수 (병렬 위임용) |
-| status | TEXT | 상태 (pending, in_progress, completed) |
-| result | TEXT | 작업 결과 |
-| ws_client_id | TEXT | WebSocket 클라이언트 ID |
-| created_at | TIMESTAMP | 생성 시간 |
-| completed_at | TIMESTAMP | 완료 시간 |
-
-### delegation_context 구조
-
-```json
-{
-  "original_request": "사용자의 원래 요청",
-  "requester": "user@gui",
-  "delegations": [
-    {
-      "child_task_id": "task_xxx",
-      "delegated_to": "대장장이",
-      "delegation_message": "위임 시 전달한 메시지",
-      "delegation_time": "2026-01-08T21:00:00"
-    }
-  ],
-  "responses": [
-    {
-      "child_task_id": "task_xxx",
-      "from_agent": "대장장이",
-      "response": "작업 결과",
-      "completed_at": "2026-01-08T21:05:00"
-    }
-  ]
-}
-```
 
 ## 설정 파일 위치
 - **시스템 AI 설정**: `data/system_ai_config.json`
@@ -185,22 +150,19 @@
 - **도구 패키지**: `data/packages/installed/tools/`
 - **비즈니스 DB**: `data/business.db` (SQLite)
 
-## 지원 AI 프로바이더
-- **Anthropic Claude**: claude-sonnet-4-20250514, claude-3-5-haiku-20241022, claude-opus-4-5-20251101
+## 지원 AI 프로바이더 (모두 스트리밍 지원)
+- **Anthropic Claude**: claude-sonnet-4-20250514, claude-3-5-haiku-20241022, claude-3-5-sonnet-latest
 - **OpenAI GPT**: gpt-4o, gpt-4o-mini
-- **Google Gemini**: gemini-2.0-flash-exp, gemini-1.5-pro, gemini-1.5-flash, gemini-3-flash-preview
-
-## 기술 스택
-- **백엔드**: Python 3.x, FastAPI, uvicorn
-- **프론트엔드**: React 18, TypeScript, Vite, TailwindCSS
-- **데스크톱**: Electron (IPC를 통한 백엔드 통신)
+- **Google Gemini**: gemini-2.0-flash-exp, gemini-1.5-pro, gemini-1.5-flash
+- **Ollama**: 로컬 LLM (llama3.2 등)
 
 ## 물리적 구조 (주요 경로)
 - `backend/`: 서버 소스 코드
+- `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (11개)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (16개)
 - `data/packages/installed/extensions/`: 설치된 확장 (9개)
-- `projects/`: 사용자 프로젝트 데이터 (11개)
+- `projects/`: 사용자 프로젝트 데이터 (17개)
 
 ---
-*마지막 업데이트: 2026-01-09*
+*마지막 업데이트: 2026-01-16*

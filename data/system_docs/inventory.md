@@ -1,50 +1,50 @@
 # IndieBiz OS 인벤토리
 
-## 프로젝트 (활성) - 14개
+## 프로젝트 (활성) - 17개
 
 | ID | 이름 | 설명 |
 |----|------|------|
 | 1 | 1 | 메인 프로젝트 |
 | 하드웨어 | 하드웨어 | 하드웨어 관리 프로젝트 |
-| 정보 | 정보 | 정보 수집/분석 프로젝트 |
-| Youtube | Youtube | 유튜브 관련 프로젝트 |
-| 나를 지키는 공간 | 나를 지키는 공간 | 개인 공간 |
+| 블로그 | 블로그 | 블로그 포스팅 및 관리 |
+| 컨텐츠 | 컨텐츠 | 콘텐츠 제작 및 관리 |
+| 나를지키는공간 | 나를 지키는 공간 | 개인 공간 |
 | 행정_서비스 | 행정_서비스 | 정부24 및 민원 서비스 지원 |
 | 자산관리 | 자산관리 | 주식, 채권, ETF 등 자산 관리 및 분석 |
 | 의료 | 의료 | 건강 정보 관리 및 병원/약국 행정 안내 |
 | 부동산 | 부동산 | 건물 관리 및 부동산 투자 정보 분석 |
 | 창업 | 창업 | 새로운 비즈니스 모델 연구 및 창업 지원 |
 | 해외 | 해외 | 한류 소식 및 해외 비즈니스 정보 수집 |
-| 컨설턴트미 | 컨설턴트미 | 컨설팅 프로젝트 |
 | 오락실 | 오락실 | 게임/엔터테인먼트 |
 | 요리사 | 요리사 | 요리/레시피 프로젝트 |
+| 정보센터 | 정보센터 | 정보 수집/분석 프로젝트 |
+| study | study | 학습 및 연구 프로젝트 |
+| 사진 | 사진 | 사진 관리 및 아카이빙 |
+| indiebiz | indiebiz | IndieBiz OS 시스템 개발 프로젝트 |
 
 ---
 
-## 도구 패키지 (Tools) - 15개
+## 도구 패키지 (Tools) - 16개
 에이전트가 사용할 수 있는 유틸리티
 
 | ID | 이름 | 설명 | 상태 |
 |----|------|------|------|
 | android | Android | 안드로이드 기기 관리 (adb) | 설치됨 |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 | 설치됨 |
-| browser-automation | Browser Automation | 웹 브라우저 자동화 (Playwright) | 설치됨 |
-| health-record | Health Record Manager | 개인 건강 정보 저장/관리 (측정값, 증상, 투약, 검사결과) | 설치됨 |
-| information | Information & Publishing | API Ninjas, 여행 정보, 출판 도구, **맛집 검색 (카카오 API)** | 설치됨 |
-| kosis | KOSIS | 통계청 데이터 조회 (국가통계포털 API) | 설치됨 |
+| health-record | Health Record Manager | 개인 건강 정보 저장/관리 | 설치됨 |
+| information | Information & Publishing | API Ninjas, 맛집 검색 등 | 설치됨 |
+| kosis | KOSIS | 통계청 데이터 조회 | 설치됨 |
 | nodejs | Nodejs | JavaScript/Node.js 코드 실행 | 설치됨 |
+| pc-manager | PC Manager | 파일 및 저장소 관리, 시스템 분석 | 설치됨 |
+| photo-manager | Photo Manager | 사진 라이브러리 관리 | 설치됨 |
 | python-exec | Python Exec | Python 코드 실행 | 설치됨 |
-| real-estate | Real Estate | 부동산 실거래가 조회 (아파트/단독주택 매매/전월세) | 설치됨 |
-| startup | Startup | 창업 지원 정보 (K-Startup, 중소벤처기업부) | 설치됨 |
-| system_essentials | System Essentials | 파일 관리, 검색, 시스템 유틸리티 | 설치됨 |
-| web-crawl | Web Crawl | 웹페이지 크롤링 | 설치됨 |
-| web-search | Web Search | 웹 검색 엔진 (DuckDuckGo, Google News) | 설치됨 |
+| read-and-see | Read and See | 문서 읽기 및 시각적 분석 | 설치됨 |
+| real-estate | Real Estate | 부동산 실거래가 조회 | 설치됨 |
+| startup | Startup | 창업 지원 정보 | 설치됨 |
+| study | Study Helper | 학습 및 논문 요약 지원 | 설치됨 |
+| system_essentials | System Essentials | 파일 관리, 시스템 유틸리티 | 설치됨 |
+| web | Web Tools | 웹 검색 및 크롤링 | 설치됨 |
 | youtube | Youtube | 유튜브 동영상/오디오 관리 | 설치됨 |
-
-### 미설치 패키지
-| ID | 설명 | 상태 |
-|----|------|------|
-| pc-manager | 파일 및 저장소 관리 | 미설치 |
 
 ---
 
@@ -76,29 +76,10 @@
 - 도구 할당 기능
 - 별도 창에서 운영 (창 닫으면 에이전트 비활성화)
 
-### DB 테이블 (multi_chat.db)
-| 테이블 | 설명 |
-|--------|------|
-| rooms | 채팅방 정보 (id, name, description, icon_position) |
-| room_participants | 채팅방 참여자 (agent_name, system_prompt, ai_provider, ai_model, ai_api_key) |
-| room_messages | 채팅방 메시지 (speaker, content, message_time) |
-
 ---
 
 ## 비즈니스 관리 시스템
 kvisual-mcp 기반 비즈니스 파트너 관리
-
-### DB 테이블 (business.db)
-| 테이블 | 설명 |
-|--------|------|
-| businesses | 비즈니스 항목 (레벨별) |
-| business_items | 비즈니스 세부 항목 |
-| neighbors | 이웃 (비즈니스 파트너) |
-| contacts | 이웃 연락처 (email, nostr, phone) |
-| messages | 수신/발송 메시지 |
-| channel_settings | 통신채널 설정 (Gmail, Nostr) |
-| my_business_documents | 비즈니스 문서 (레벨별) |
-| work_guidelines | 근무지침 (레벨별) |
 
 ### 통신 채널
 | 채널 | 방식 | 설명 |
@@ -107,27 +88,14 @@ kvisual-mcp 기반 비즈니스 파트너 관리
 | Nostr | WebSocket | 실시간 DM 수신 |
 
 ### 자동응답 V2 (프롬프트 엔지니어링 적용)
-kvisual-mcp 방식 + **CoT + Few-shot** 적용:
-1. **AI 판단** (ai_judgment.py): 메시지 분류 (NO_RESPONSE / BUSINESS_RESPONSE)
-   - 4가지 판단 예시 (서비스 문의, 개인 대화, 구매 문의, 스팸)
-   - 단계별 사고과정 유도 (의도 파악 → 비즈니스 관련성 → 검색 필요)
+1. **AI 판단**: 메시지 분류 (NO_RESPONSE / BUSINESS_RESPONSE)
 2. **비즈니스 검색**: 카테고리/키워드로 관련 아이템 검색
-3. **응답 생성** (auto_response.py): 컨텍스트 기반 응답
-   - 3가지 응답 예시 (서비스 문의, 물품 구매, 인사)
-   - 환각 방지: "검색 결과에 없는 정보를 지어내지 마세요"
+3. **응답 생성**: 컨텍스트 기반 응답 생성
 
 ---
 
 ## 휴지통
-
 런처에서 삭제한 프로젝트, 폴더, 스위치는 휴지통으로 이동합니다.
-- 휴지통에서 복구하거나 완전 삭제 가능
-- API: `GET /trash`, `POST /trash/{item_id}/restore`, `DELETE /trash`
-
-| 종류 | 항목 수 |
-|------|---------|
-| 프로젝트 | 0개 |
-| 스위치 | 0개 |
 
 ---
 
@@ -136,4 +104,4 @@ kvisual-mcp 방식 + **CoT + Few-shot** 적용:
 - **프로젝트1** - 에이전트 팀 템플릿 (집사, 직원1, 대장장이, 출판, 영상담당)
 
 ---
-*마지막 업데이트: 2026-01-13 20:02*
+*마지막 업데이트: 2026-01-16*

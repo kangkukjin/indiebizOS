@@ -1,14 +1,14 @@
 """
-ollama.py - Ollama 로컬 LLM 프로바이더
+ollama.py - Ollama 로컬 LLM 프로바이더 (스트리밍 지원)
 IndieBiz OS Core
 """
 
-from typing import List, Dict, Callable
+from typing import List, Dict, Callable, Generator, Any
 from .base import BaseProvider
 
 
 class OllamaProvider(BaseProvider):
-    """Ollama 로컬 LLM 프로바이더 (OpenAI 호환 API 사용)"""
+    """Ollama 로컬 LLM 프로바이더 (OpenAI 호환 API, 스트리밍 지원)"""
 
     def __init__(self, **kwargs):
         # Ollama는 API 키 불필요
@@ -39,11 +39,51 @@ class OllamaProvider(BaseProvider):
         images: List[Dict] = None,
         execute_tool: Callable = None
     ) -> str:
-        """Ollama로 메시지 처리"""
+        """Ollama로 메시지 처리 (동기 모드 - 기존 호환성 유지)"""
         if not self._client:
             return "AI가 초기화되지 않았습니다."
 
+        # 스트리밍 제너레이터를 실행하고 최종 결과만 반환
+        final_text = ""
+        for event in self.process_message_stream(message, history, images, execute_tool):
+            if event["type"] == "text":
+                final_text += event["content"]
+            elif event["type"] == "final":
+                final_text = event["content"]
+
+        return final_text
+
+    def process_message_stream(
+        self,
+        message: str,
+        history: List[Dict] = None,
+        images: List[Dict] = None,
+        execute_tool: Callable = None
+    ) -> Generator[Dict[str, Any], None, None]:
+        """
+        Ollama로 메시지 처리 (스트리밍 모드)
+
+        Yields:
+            {"type": "text", "content": "..."} - 텍스트 청크
+            {"type": "final", "content": "..."} - 최종 응답
+            {"type": "error", "content": "..."} - 에러
+        """
+        if not self._client:
+            yield {"type": "error", "content": "AI가 초기화되지 않았습니다."}
+            return
+
         history = history or []
+        messages = self._build_messages(message, history, images)
+
+        yield from self._stream_response(messages)
+
+    def _build_messages(
+        self,
+        message: str,
+        history: List[Dict],
+        images: List[Dict] = None
+    ) -> List[Dict]:
+        """메시지 목록 구성"""
         messages = [{"role": "system", "content": self.system_prompt}]
 
         # 히스토리
@@ -68,12 +108,38 @@ class OllamaProvider(BaseProvider):
         else:
             messages.append({"role": "user", "content": message})
 
+        return messages
+
+    def _stream_response(
+        self,
+        messages: List[Dict]
+    ) -> Generator[Dict[str, Any], None, None]:
+        """스트리밍 응답 처리"""
         try:
+            collected_text = ""
+
+            # 스트리밍 API 호출
             # Ollama는 도구(function calling) 지원이 제한적이므로 기본 채팅만 사용
-            response = self._client.chat.completions.create(
+            stream = self._client.chat.completions.create(
                 model=self.model,
-                messages=messages
+                messages=messages,
+                stream=True
             )
-            return response.choices[0].message.content or ""
+
+            for chunk in stream:
+                delta = chunk.choices[0].delta if chunk.choices else None
+                if not delta:
+                    continue
+
+                # 텍스트 청크
+                if delta.content:
+                    collected_text += delta.content
+                    yield {"type": "text", "content": delta.content}
+
+            # 최종 결과
+            yield {"type": "final", "content": collected_text}
+
         except Exception as e:
-            return f"Ollama 응답 오류: {str(e)}"
+            import traceback
+            traceback.print_exc()
+            yield {"type": "error", "content": f"Ollama 응답 오류: {str(e)}"}

@@ -45,6 +45,14 @@ class SwitchCreate(BaseModel):
     description: str = ""
 
 
+class SwitchUpdate(BaseModel):
+    name: Optional[str] = None
+    command: Optional[str] = None
+    icon: Optional[str] = None
+    description: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None
+
+
 # ============ 시스템 AI 관련 ============
 
 class SystemAIConfig(BaseModel):

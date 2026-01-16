@@ -11,3 +11,4 @@ export { SchedulerDialog } from './SchedulerDialog';
 export { TaskEditDialog } from './TaskEditDialog';
 export { SystemAIChatDialog } from './SystemAIChatDialog';
 export { ToolboxDialog } from './ToolboxDialog';
+export { SwitchEditDialog } from './SwitchEditDialog';

@@ -148,12 +148,25 @@ class SystemDirector:
                 pass
         return {}
 
-    def _call_ai(self, prompt: str) -> str:
+    # 도구 배분용 시스템 프롬프트
+    TOOL_DISTRIBUTOR_PROMPT = """You are a tool package distributor for IndieBiz OS.
+
+Your task: Assign tool packages to AI agents based on role relevance.
+
+Rules:
+- Assign by package ID only (packages contain multiple tools)
+- Match package purpose to agent's role description
+- Multiple agents can share the same package
+- Only assign packages clearly relevant to the role
+
+Output: Return only valid JSON in the specified format."""
+
+    def _call_ai(self, prompt: str, system_role: str = None) -> str:
         """시스템 AI 설정을 사용하여 AI 호출"""
         provider = self.config.get('provider', 'google')
         api_key = self.config.get('apiKey') or self.config.get('api_key')
         model = self.config.get('model', 'gemini-2.0-flash')
-        role = self.config.get('role') or '너는 IndieBiz 시스템 AI야. 에이전트들의 역할과 도구 설명을 분석해서 최적의 배분표를 작성해야 해.'
+        role = system_role or self.TOOL_DISTRIBUTOR_PROMPT
 
         if not api_key:
             print("⚠️ 시스템 AI: API 키가 설정되지 않았습니다.")
@@ -201,61 +214,36 @@ class SystemDirector:
         return ""
 
     def _build_package_assignment_prompt(self, agents_info: List[Dict[str, str]]) -> str:
-        """패키지 단위 배분을 위한 프롬프트 생성 (Chain-of-Thought 적용)"""
+        """패키지 단위 배분을 위한 프롬프트 생성"""
         packages = get_installed_packages()
 
-        # 패키지 설명 구성
-        packages_desc = []
+        # 패키지 정보를 간결하게 구성
+        packages_list = []
         for pkg in packages:
-            tools_list = ", ".join(pkg["tools"][:5])
-            if len(pkg["tools"]) > 5:
-                tools_list += f" 외 {len(pkg['tools']) - 5}개"
-            packages_desc.append(
-                f"📦 {pkg['id']} ({pkg['tool_count']}개 도구)\n"
-                f"   설명: {pkg['description'] or '(설명 없음)'}\n"
-                f"   도구: {tools_list}"
-            )
-        packages_text = "\n\n".join(packages_desc)
+            tools_preview = ", ".join(pkg["tools"][:3])
+            if len(pkg["tools"]) > 3:
+                tools_preview += f", ... (+{len(pkg['tools']) - 3})"
+            desc = pkg['description'][:100] if pkg['description'] else 'No description'
+            packages_list.append(f"- {pkg['id']}: {desc} [tools: {tools_preview}]")
+        packages_text = "\n".join(packages_list)
 
-        # 에이전트 설명 구성
-        agents_desc = "\n".join([
-            f"👤 {a['name']}\n   역할: {a['role']}"
-            for a in agents_info
-        ])
+        # 에이전트 정보를 간결하게 구성
+        agents_list = [f"- {a['name']}: {a['role']}" for a in agents_info]
+        agents_text = "\n".join(agents_list)
 
-        prompt = f'''도구 패키지를 에이전트에게 배분해야 합니다.
+        # 패키지 ID 목록 (유효성 검사용)
+        valid_pkg_ids = [pkg['id'] for pkg in packages]
 
-## 설치된 도구 패키지
+        prompt = f"""PACKAGES:
 {packages_text}
 
-## 에이전트 목록
-{agents_desc}
+AGENTS:
+{agents_text}
 
-## 배분 규칙
-1. **패키지 단위로 배분**: 패키지 안의 도구들은 함께 움직입니다. 개별 도구가 아닌 패키지 ID를 배분하세요.
-2. **역할 매칭**: 에이전트의 역할과 패키지의 목적이 일치해야 합니다.
-3. **중복 허용**: 여러 에이전트가 같은 패키지를 가질 수 있습니다.
-4. **최소 배분**: 역할에 필요 없는 패키지는 배분하지 마세요.
+VALID PACKAGE IDs: {valid_pkg_ids}
 
-## 단계별로 생각하세요
-1단계: 각 에이전트의 핵심 업무가 무엇인지 파악하세요.
-2단계: 각 패키지가 어떤 종류의 작업에 필요한지 분류하세요.
-3단계: 에이전트별로 필요한 패키지를 매칭하세요.
-4단계: 매칭 결과를 검증하세요 - 이 도구들로 에이전트가 역할을 수행할 수 있나요?
-
-## 예시
-에이전트 "유튜버"의 역할이 "유튜브 콘텐츠 제작 및 관리"라면:
-→ youtube 패키지 (영상 다운로드, 자막 추출)
-→ web-search 패키지 (트렌드 조사)
-
-## 반환 형식 (JSON만 반환)
-{{
-  "배분표": {{
-    "에이전트이름": ["패키지id1", "패키지id2"],
-    ...
-  }}
-}}
-'''
+Return JSON:
+{{"배분표": {{"agent_name": ["package_id", ...]}}}}"""
         return prompt
 
     def _expand_packages_to_tools(self, package_assignments: Dict[str, List[str]]) -> Dict[str, List[str]]:

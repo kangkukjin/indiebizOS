@@ -71,12 +71,20 @@ class SwitchRunner:
 
             self._status(f"도구 {len(tools)}개 로드됨")
 
-            # 시스템 프롬프트 구성
-            system_prompt = f"당신은 '{agent_name}'입니다.\n"
-            if agent_role:
-                system_prompt += f"\n# 역할\n{agent_role}\n"
-            if common_prompt:
-                system_prompt += f"\n# 공통 지침\n{common_prompt}\n"
+            # 시스템 프롬프트 구성 (동적 빌더 사용)
+            from prompt_builder import build_agent_prompt
+
+            # 도구 이름 목록 추출
+            tool_names = [t["name"] for t in tools if isinstance(t, dict) and "name" in t]
+
+            system_prompt = build_agent_prompt(
+                agent_name=agent_name,
+                role=agent_role or "",
+                agent_count=1,  # 스위치는 단독 실행
+                project_settings=common_prompt or "",
+                agent_notes="",
+                git_enabled=False  # 스위치는 Git 비활성화
+            )
 
             # AI 에이전트 생성
             agent = AIAgent(

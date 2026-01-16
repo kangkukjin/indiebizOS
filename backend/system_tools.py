@@ -481,7 +481,7 @@ def execute_request_user_approval(tool_input: dict, project_path: str) -> str:
     return "[[APPROVAL_REQUESTED]]" + "\n".join(result_parts)
 
 
-def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
+def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
     """
     도구 실행 (시스템 도구 + 동적 로딩)
 
@@ -489,6 +489,7 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> s
         tool_name: 도구 이름
         tool_input: 도구 입력
         project_path: 프로젝트 경로
+        agent_id: 에이전트 ID (에이전트별 상태 저장용)
 
     Returns:
         실행 결과 (JSON 문자열)
@@ -513,7 +514,13 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> s
         # 동적 로딩된 도구 패키지에서 실행
         handler = load_tool_handler(tool_name)
         if handler and hasattr(handler, 'execute'):
-            result = handler.execute(tool_name, tool_input, project_path)
+            # handler.execute의 시그니처에 따라 agent_id 전달
+            import inspect
+            sig = inspect.signature(handler.execute)
+            if 'agent_id' in sig.parameters:
+                result = handler.execute(tool_name, tool_input, project_path, agent_id)
+            else:
+                result = handler.execute(tool_name, tool_input, project_path)
 
             # 승인 필요 여부 확인
             if isinstance(result, str) and result.startswith("__REQUIRES_APPROVAL__:"):
@@ -523,6 +530,19 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> s
                     "command": command,
                     "message": f"⚠️ 위험한 명령어가 감지되었습니다:\n\n`{command}`\n\n이 명령어를 실행하려면 '승인' 또는 'yes'라고 답해주세요."
                 }, ensure_ascii=False)
+
+            # 지도 데이터가 있으면 [MAP:...] 형식으로 변환하여 추가
+            if isinstance(result, str):
+                try:
+                    result_data = json.loads(result)
+                    if isinstance(result_data, dict) and "map_data" in result_data:
+                        map_data = result_data["map_data"]
+                        map_tag = f"\n\n[MAP:{json.dumps(map_data, ensure_ascii=False)}]"
+                        # map_data 필드 제거 (중복 방지)
+                        del result_data["map_data"]
+                        result = json.dumps(result_data, ensure_ascii=False, indent=2) + map_tag
+                except (json.JSONDecodeError, TypeError):
+                    pass
 
             return result
         else:

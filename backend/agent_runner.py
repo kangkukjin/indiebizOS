@@ -132,29 +132,92 @@ class AgentRunner:
         )
 
     def _build_system_prompt(self, role: str) -> str:
-        """시스템 프롬프트 구성"""
+        """시스템 프롬프트 구성 (동적 조합)
+
+        Anthropic Claude Code 방식으로 상황에 따라 필요한 프롬프트만 조합합니다.
+        - 에이전트가 1명이면 위임 프롬프트 제외
+        - Git 도구가 없으면 Git 프롬프트 제외
+        - 등등...
+        """
+        from prompt_builder import build_agent_prompt
+
         agent_name = self.config.get("name", "에이전트")
 
-        parts = [f"당신은 '{agent_name}'입니다."]
+        # 1. 프로젝트 내 에이전트 수 파악
+        agent_count = self._get_agent_count()
 
-        if role:
-            parts.append(f"\n# 역할\n{role}")
+        # 2. 사용 가능한 도구 목록 파악
+        tools = self._get_available_tools()
 
-        # 공통 설정
+        # 3. Git 활성화 여부 (run_command가 있고 프로젝트에 .git이 있으면)
+        git_enabled = "run_command" in tools and (self.project_path / ".git").exists()
+
+        # 4. 프로젝트 공통 설정
+        project_settings = ""
         common_file = self.project_path / "common_settings.txt"
         if common_file.exists():
-            common = common_file.read_text(encoding='utf-8')
-            if common.strip():
-                parts.append(f"\n# 공통 지침\n{common}")
+            project_settings = common_file.read_text(encoding='utf-8').strip()
 
-        # 메모
+        # 5. 에이전트별 메모
+        agent_notes = ""
         note_file = self.project_path / f"agent_{agent_name}_note.txt"
         if note_file.exists():
-            note = note_file.read_text(encoding='utf-8')
-            if note.strip():
-                parts.append(f"\n# 메모\n{note}")
+            agent_notes = note_file.read_text(encoding='utf-8').strip()
 
-        return "\n".join(parts)
+        # 동적 프롬프트 빌드
+        return build_agent_prompt(
+            agent_name=agent_name,
+            role=role,
+            agent_count=agent_count,
+            project_settings=project_settings,
+            agent_notes=agent_notes,
+            git_enabled=git_enabled
+        )
+
+    def _get_agent_count(self) -> int:
+        """프로젝트 내 에이전트 수 반환"""
+        try:
+            import yaml
+            agents_file = self.project_path / "agents.yaml"
+            if agents_file.exists():
+                with open(agents_file, 'r', encoding='utf-8') as f:
+                    data = yaml.safe_load(f)
+                    agents = data.get("agents", [])
+                    return len(agents)
+        except Exception:
+            pass
+        return 1
+
+    def _get_available_tools(self) -> list:
+        """에이전트가 사용할 수 있는 도구 목록 반환"""
+        tools = []
+
+        # 기본 시스템 도구들
+        default_tools = [
+            "read_file", "write_file", "edit_file", "list_directory",
+            "glob_files", "grep_files", "run_command",
+            "todo_write", "ask_user_question",
+            "enter_plan_mode", "exit_plan_mode"
+        ]
+        tools.extend(default_tools)
+
+        # 에이전트가 2명 이상이면 위임 도구 추가
+        if self._get_agent_count() > 1:
+            tools.extend(["list_agents", "call_agent"])
+
+        # 에이전트 설정에서 추가 패키지 도구 확인
+        agent_packages = self.config.get("packages", [])
+        if agent_packages:
+            from tool_loader import load_tools_for_agent
+            try:
+                package_tools = load_tools_for_agent(agent_packages)
+                for t in package_tools:
+                    if isinstance(t, dict) and "name" in t:
+                        tools.append(t["name"])
+            except Exception:
+                pass
+
+        return tools
 
     def _setup_channels(self) -> List:
         """

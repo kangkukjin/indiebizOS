@@ -17,7 +17,8 @@ class BaseProvider(ABC):
         system_prompt: str,
         tools: List[Dict] = None,
         project_path: str = ".",
-        agent_name: str = "에이전트"
+        agent_name: str = "에이전트",
+        agent_id: str = None
     ):
         self.api_key = api_key
         self.model = model
@@ -25,6 +26,7 @@ class BaseProvider(ABC):
         self.tools = tools or []
         self.project_path = project_path
         self.agent_name = agent_name
+        self.agent_id = agent_id
         self._client = None
 
     @abstractmethod

@@ -3,6 +3,14 @@
 
 cd "$(dirname "$0")"
 
+# .env 파일 로드
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+    echo "✅ 환경변수 로드 완료"
+else
+    echo "⚠️  .env 파일이 없습니다. .env.example을 참고하여 생성하세요."
+fi
+
 echo "🚀 IndieBiz OS 시작..."
 
 # 기존 프로세스 정리 (포트 8765 사용 중인 프로세스 종료)

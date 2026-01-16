@@ -7,16 +7,20 @@ IndieBiz OS Core
 - 도구 패키지 분석, 설치, 제거
 - 에이전트 생성, 수정, 삭제 도움
 - 오류 진단 및 해결
+
+**통합 아키텍처**: AIAgent 클래스와 providers/ 모듈을 재사용하여
+프로젝트 에이전트와 동일한 스트리밍/도구 실행 로직을 공유합니다.
 """
 
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Generator
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+# 메모리 관련
 from system_ai_memory import (
     load_user_profile,
     load_system_status,
@@ -27,6 +31,7 @@ from system_ai_memory import (
     save_memory,
     get_memories
 )
+# 시스템 문서 관련
 from system_docs import (
     read_doc,
     list_docs,
@@ -34,11 +39,16 @@ from system_docs import (
     SYSTEM_AI_TOOLS as SYSTEM_DOC_TOOLS,
     execute_system_tool as execute_doc_tool
 )
+# 도구 로딩
 from system_ai import (
     SYSTEM_AI_DEFAULT_PACKAGES,
     load_tools_from_packages,
     execute_system_tool as execute_system_ai_tool
 )
+# 통합: AIAgent 클래스 사용
+from ai_agent import AIAgent
+# 통합: 프롬프트 빌더 사용
+from prompt_builder import build_system_ai_prompt
 
 router = APIRouter()
 
@@ -47,6 +57,64 @@ BACKEND_PATH = Path(__file__).parent
 DATA_PATH = BACKEND_PATH.parent / "data"
 SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
 
+
+# ============ 설정 및 캐시 ============
+
+def load_system_ai_config() -> dict:
+    """시스템 AI 설정 로드"""
+    if SYSTEM_AI_CONFIG_PATH.exists():
+        with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {
+        "enabled": True,
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "apiKey": ""
+    }
+
+
+# 캐시: 시스템 상태 (5분간 유효)
+_system_status_cache = {
+    "status": None,
+    "timestamp": None,
+    "ttl_seconds": 300  # 5분
+}
+
+
+def _get_cached_system_status() -> str:
+    """캐시된 시스템 상태 반환 (overview의 '현재 상태' 섹션만)"""
+    import time
+    now = time.time()
+
+    # 캐시가 유효하면 반환
+    if (_system_status_cache["status"] is not None and
+        _system_status_cache["timestamp"] is not None and
+        now - _system_status_cache["timestamp"] < _system_status_cache["ttl_seconds"]):
+        return _system_status_cache["status"]
+
+    # overview에서 '현재 상태' 섹션만 추출
+    overview = read_doc("overview")
+    status_section = ""
+    if overview and "## 현재 상태" in overview:
+        try:
+            status_section = overview.split("## 현재 상태")[1].split("---")[0].strip()
+        except:
+            pass
+
+    # 캐시 업데이트
+    _system_status_cache["status"] = status_section
+    _system_status_cache["timestamp"] = now
+
+    return status_section
+
+
+def invalidate_system_status_cache():
+    """시스템 상태 캐시 무효화 (패키지 설치/제거 등 변경 시 호출)"""
+    _system_status_cache["status"] = None
+    _system_status_cache["timestamp"] = None
+
+
+# ============ 도구 관련 ============
 
 def get_all_system_ai_tools() -> List[Dict]:
     """시스템 AI가 사용할 모든 도구 로드 (문서 도구 + 패키지 도구)"""
@@ -58,6 +126,106 @@ def get_all_system_ai_tools() -> List[Dict]:
     tools.extend(package_tools)
 
     return tools
+
+
+def create_system_ai_agent(config: dict = None, user_profile: str = "", system_status: str = "") -> AIAgent:
+    """시스템 AI용 AIAgent 인스턴스 생성
+
+    **통합 아키텍처**: 프로젝트 에이전트와 동일한 AIAgent 클래스를 사용합니다.
+    - 동일한 프로바이더 코드 (anthropic, openai, gemini, ollama)
+    - 동일한 스트리밍 로직
+    - 동일한 도구 실행 로직
+
+    Args:
+        config: 시스템 AI 설정 (None이면 자동 로드)
+        user_profile: 사용자 프로필
+        system_status: 시스템 상태
+
+    Returns:
+        AIAgent 인스턴스
+    """
+    if config is None:
+        config = load_system_ai_config()
+
+    # AI 설정
+    ai_config = {
+        "provider": config.get("provider", "anthropic"),
+        "model": config.get("model", "claude-sonnet-4-20250514"),
+        "api_key": config.get("apiKey", "")
+    }
+
+    # 시스템 프롬프트 생성 (공통 프롬프트 빌더 사용)
+    system_prompt = build_system_ai_prompt(
+        user_profile=user_profile,
+        system_status=system_status
+    )
+
+    # 시스템 AI 전용 도구 로드
+    tools = get_all_system_ai_tools()
+
+    # AIAgent 인스턴스 생성
+    agent = AIAgent(
+        ai_config=ai_config,
+        system_prompt=system_prompt,
+        agent_name="시스템 AI",
+        agent_id="system_ai",
+        project_path=str(DATA_PATH),
+        tools=tools
+    )
+
+    return agent
+
+
+def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None) -> str:
+    """시스템 AI 메시지 처리 (AIAgent 사용, 동기 모드)
+
+    Args:
+        message: 사용자 메시지
+        history: 대화 히스토리
+        images: 이미지 데이터
+
+    Returns:
+        AI 응답
+    """
+    user_profile = load_user_profile()
+    system_status = _get_cached_system_status()
+
+    agent = create_system_ai_agent(
+        user_profile=user_profile,
+        system_status=system_status
+    )
+
+    return agent.process_message_with_history(
+        message_content=message,
+        history=history,
+        images=images
+    )
+
+
+def process_system_ai_message_stream(message: str, history: List[Dict] = None, images: List[Dict] = None) -> Generator:
+    """시스템 AI 메시지 처리 (AIAgent 사용, 스트리밍 모드)
+
+    Args:
+        message: 사용자 메시지
+        history: 대화 히스토리
+        images: 이미지 데이터
+
+    Yields:
+        스트리밍 이벤트 딕셔너리
+    """
+    user_profile = load_user_profile()
+    system_status = _get_cached_system_status()
+
+    agent = create_system_ai_agent(
+        user_profile=user_profile,
+        system_status=system_status
+    )
+
+    yield from agent.process_message_stream(
+        message_content=message,
+        history=history,
+        images=images
+    )
 
 
 def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None) -> str:
@@ -96,21 +264,18 @@ class ChatResponse(BaseModel):
     model: str
 
 
-def load_system_ai_config() -> dict:
-    """시스템 AI 설정 로드"""
-    if SYSTEM_AI_CONFIG_PATH.exists():
-        with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {
-        "enabled": True,
-        "provider": "anthropic",
-        "model": "claude-sonnet-4-20250514",
-        "apiKey": ""
-    }
-
-
 def get_system_prompt(user_profile: str = "", system_status: str = "") -> str:
-    """시스템 AI의 시스템 프롬프트 (기본 + 사용자 정보 + 상태)"""
+    """시스템 AI의 시스템 프롬프트 (prompt_builder.py 사용)
+
+    **통합**: 이제 공통 프롬프트 빌더를 사용합니다.
+    - base_prompt.md (공통 설정) + 시스템 AI 역할 + 사용자 정보 + 시스템 상태
+    """
+    return build_system_ai_prompt(user_profile=user_profile, system_status=system_status)
+
+
+# 기존 하드코딩된 프롬프트 (호환성을 위해 유지, 실제로는 사용 안함)
+def _get_system_prompt_legacy(user_profile: str = "", system_status: str = "") -> str:
+    """[DEPRECATED] 기존 하드코딩 프롬프트 - 참고용으로만 남김"""
     base_prompt = """# 정체성
 당신은 IndieBiz OS의 시스템 AI입니다. 사용자의 개인 비서이자 시스템 관리자로서, 단순히 명령을 수행하는 것이 아니라 사용자의 의도를 이해하고 최선의 결과를 도출하는 것이 목표입니다.
 
@@ -435,8 +600,13 @@ def get_anthropic_tools():
     return anthropic_tools
 
 
-async def chat_with_anthropic(message: str, api_key: str, model: str, user_profile: str = "", overview: str = "", images: List[Dict] = None, history: List[Dict] = None) -> str:
-    """Anthropic Claude와 대화 (tool use 지원, 이미지 포함 가능, 히스토리 지원)"""
+# ============ [DEPRECATED] 레거시 프로바이더별 함수들 ============
+# 아래 함수들은 이제 AIAgent 클래스를 통해 처리됩니다.
+# WebSocket 스트리밍에서 아직 참조할 수 있으므로 임시로 유지합니다.
+# TODO: api_websocket.py도 통합 후 완전히 제거
+
+async def _chat_with_anthropic_legacy(message: str, api_key: str, model: str, user_profile: str = "", overview: str = "", images: List[Dict] = None, history: List[Dict] = None) -> str:
+    """[DEPRECATED] Anthropic Claude와 대화 - AIAgent로 대체됨"""
     try:
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
@@ -927,46 +1097,6 @@ async def chat_with_google(message: str, api_key: str, model: str, user_profile:
         raise HTTPException(status_code=500, detail=f"Google API 오류: {str(e)}")
 
 
-# 캐시: 시스템 상태 (5분간 유효)
-_system_status_cache = {
-    "status": None,
-    "timestamp": None,
-    "ttl_seconds": 300  # 5분
-}
-
-def _get_cached_system_status() -> str:
-    """캐시된 시스템 상태 반환 (overview의 '현재 상태' 섹션만)"""
-    import time
-    now = time.time()
-
-    # 캐시가 유효하면 반환
-    if (_system_status_cache["status"] is not None and
-        _system_status_cache["timestamp"] is not None and
-        now - _system_status_cache["timestamp"] < _system_status_cache["ttl_seconds"]):
-        return _system_status_cache["status"]
-
-    # overview에서 '현재 상태' 섹션만 추출
-    overview = read_doc("overview")
-    status_section = ""
-    if overview and "## 현재 상태" in overview:
-        try:
-            status_section = overview.split("## 현재 상태")[1].split("---")[0].strip()
-        except:
-            pass
-
-    # 캐시 업데이트
-    _system_status_cache["status"] = status_section
-    _system_status_cache["timestamp"] = now
-
-    return status_section
-
-
-def invalidate_system_status_cache():
-    """시스템 상태 캐시 무효화 (패키지 설치/제거 등 변경 시 호출)"""
-    _system_status_cache["status"] = None
-    _system_status_cache["timestamp"] = None
-
-
 # 시스템 문서 초기화 플래그
 _docs_initialized = False
 
@@ -976,9 +1106,9 @@ async def chat_with_system_ai(chat: ChatMessage):
     """
     시스템 AI와 대화
 
-    시스템 AI는 IndieBiz의 안내자이자 관리자입니다.
-    설정된 AI 프로바이더(Anthropic/OpenAI/Google)를 사용합니다.
-    도구(tool use)를 통해 시스템 문서를 필요할 때 참조합니다.
+    **통합 아키텍처**: AIAgent 클래스를 사용하여 프로젝트 에이전트와
+    동일한 프로바이더 코드를 공유합니다. 모든 프로바이더(Anthropic, OpenAI,
+    Google, Ollama)가 자동으로 지원됩니다.
     """
     global _docs_initialized
 
@@ -994,29 +1124,19 @@ async def chat_with_system_ai(chat: ChatMessage):
     provider = config.get("provider", "anthropic")
     model = config.get("model", "claude-sonnet-4-20250514")
 
-    # 메모리 로드 (가벼움)
-    user_profile = load_user_profile()
-
     # 시스템 문서 초기화 (서버 시작 후 최초 1회만)
     if not _docs_initialized:
         init_all_docs()
         _docs_initialized = True
 
-    # 캐시된 시스템 상태만 로드 (overview 전체 대신)
-    system_status = _get_cached_system_status()
-
     # 최근 대화 히스토리 로드 (7회)
     recent_conversations = get_recent_conversations(limit=7)
     history = []
     for conv in recent_conversations:
-        # role은 user 또는 assistant
         role = conv["role"] if conv["role"] in ["user", "assistant"] else "user"
-        history.append({
-            "role": role,
-            "content": conv["content"]
-        })
+        history.append({"role": role, "content": conv["content"]})
 
-    # 사용자 메시지 저장 (비동기로 처리 가능하지만 현재는 동기)
+    # 사용자 메시지 저장
     save_conversation("user", chat.message)
 
     # 이미지 데이터 변환
@@ -1024,15 +1144,15 @@ async def chat_with_system_ai(chat: ChatMessage):
     if chat.images:
         images_data = [{"base64": img.base64, "media_type": img.media_type} for img in chat.images]
 
-    # 프로바이더별 대화 (tool use 지원, 히스토리 포함)
-    if provider == "anthropic":
-        response_text = await chat_with_anthropic(chat.message, api_key, model, user_profile, system_status, images_data, history)
-    elif provider == "openai":
-        response_text = await chat_with_openai(chat.message, api_key, model, user_profile, system_status, images_data, history)
-    elif provider == "google":
-        response_text = await chat_with_google(chat.message, api_key, model, user_profile, system_status, images_data, history)
-    else:
-        raise HTTPException(status_code=400, detail=f"지원하지 않는 프로바이더: {provider}")
+    # AIAgent를 사용한 통합 처리 (모든 프로바이더 자동 지원)
+    try:
+        response_text = process_system_ai_message(
+            message=chat.message,
+            history=history,
+            images=images_data
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI 응답 생성 실패: {str(e)}")
 
     # AI 응답 저장
     save_conversation("assistant", response_text)
@@ -1137,6 +1257,71 @@ async def get_conversations(limit: int = 20):
     return {"conversations": conversations}
 
 
+@router.get("/system-ai/conversations/recent")
+async def get_conversations_recent(limit: int = 20):
+    """시스템 AI 최근 대화 조회"""
+    conversations = get_recent_conversations(limit)
+    return {"conversations": conversations}
+
+
+@router.get("/system-ai/conversations/dates")
+async def get_conversation_dates():
+    """대화가 있는 날짜 목록 조회 (날짜별 메시지 수 포함)"""
+    import sqlite3
+    from system_ai_memory import MEMORY_DB_PATH
+
+    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn.execute("PRAGMA journal_mode=WAL")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT date(timestamp) as date, COUNT(*) as count
+        FROM conversations
+        GROUP BY date(timestamp)
+        ORDER BY date DESC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    dates = [{"date": row[0], "count": row[1]} for row in rows if row[0]]
+    return {"dates": dates}
+
+
+@router.get("/system-ai/conversations/by-date/{date}")
+async def get_conversations_by_date(date: str):
+    """특정 날짜의 대화 조회"""
+    import sqlite3
+    from system_ai_memory import MEMORY_DB_PATH
+
+    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn.execute("PRAGMA journal_mode=WAL")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, timestamp, role, content, summary, importance
+        FROM conversations
+        WHERE date(timestamp) = ?
+        ORDER BY id ASC
+    """, (date,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    conversations = []
+    for row in rows:
+        conversations.append({
+            "id": row[0],
+            "timestamp": row[1],
+            "role": row[2],
+            "content": row[3],
+            "summary": row[4],
+            "importance": row[5]
+        })
+
+    return {"conversations": conversations}
+
+
 @router.delete("/system-ai/conversations")
 async def clear_conversations():
     """시스템 AI 대화 이력 삭제"""
@@ -1167,4 +1352,64 @@ async def update_system_status(data: Dict[str, str]):
 
     content = data.get("content", "")
     save_system_status(content)
+    return {"status": "updated"}
+
+
+# ============ 프롬프트 설정 API ============
+
+def save_system_ai_config(config: dict):
+    """시스템 AI 설정 저장"""
+    with open(SYSTEM_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+
+class PromptConfigUpdate(BaseModel):
+    selected_template: Optional[str] = None
+    role_prompt_enabled: Optional[bool] = None
+
+
+@router.get("/system-ai/prompts/config")
+async def get_prompt_config():
+    """프롬프트 설정 조회"""
+    config = load_system_ai_config()
+    return {
+        "selected_template": config.get("selected_template", "default"),
+        "role_prompt_enabled": config.get("role_prompt_enabled", False)
+    }
+
+
+@router.put("/system-ai/prompts/config")
+async def update_prompt_config(data: PromptConfigUpdate):
+    """프롬프트 설정 업데이트"""
+    config = load_system_ai_config()
+
+    if data.selected_template is not None:
+        config["selected_template"] = data.selected_template
+    if data.role_prompt_enabled is not None:
+        config["role_prompt_enabled"] = data.role_prompt_enabled
+
+    save_system_ai_config(config)
+    return {"status": "updated", "config": {
+        "selected_template": config.get("selected_template"),
+        "role_prompt_enabled": config.get("role_prompt_enabled")
+    }}
+
+
+@router.get("/system-ai/prompts/role")
+async def get_role_prompt():
+    """역할 프롬프트 조회"""
+    config = load_system_ai_config()
+    return {"content": config.get("role", "")}
+
+
+class RolePromptUpdate(BaseModel):
+    content: str
+
+
+@router.put("/system-ai/prompts/role")
+async def update_role_prompt(data: RolePromptUpdate):
+    """역할 프롬프트 업데이트"""
+    config = load_system_ai_config()
+    config["role"] = data.content
+    save_system_ai_config(config)
     return {"status": "updated"}

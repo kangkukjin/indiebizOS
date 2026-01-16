@@ -30,6 +30,25 @@ let photoManagerWindow = null; // Photo Manager 창
 const API_PORT = 8765;
 
 /**
+ * 우클릭 컨텍스트 메뉴 설정 (복사/붙여넣기 등)
+ */
+function setupContextMenu(window) {
+  window.webContents.on('context-menu', (event, params) => {
+    const contextMenu = Menu.buildFromTemplate([
+      { role: 'undo', label: '실행 취소' },
+      { role: 'redo', label: '다시 실행' },
+      { type: 'separator' },
+      { role: 'cut', label: '잘라내기' },
+      { role: 'copy', label: '복사' },
+      { role: 'paste', label: '붙여넣기' },
+      { type: 'separator' },
+      { role: 'selectAll', label: '전체 선택' }
+    ]);
+    contextMenu.popup(window);
+  });
+}
+
+/**
  * 포트 사용 가능 여부 확인
  */
 function isPortAvailable(port) {
@@ -207,6 +226,9 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  // 우클릭 컨텍스트 메뉴 설정
+  setupContextMenu(mainWindow);
 }
 
 /**
@@ -769,15 +791,15 @@ app.whenReady().then(async () => {
     {
       label: '편집',
       submenu: [
-        { role: 'undo', label: '실행 취소' },
-        { role: 'redo', label: '다시 실행' },
+        { role: 'undo', label: '실행 취소', accelerator: 'CmdOrCtrl+Z' },
+        { role: 'redo', label: '다시 실행', accelerator: 'Shift+CmdOrCtrl+Z' },
         { type: 'separator' },
-        { role: 'cut', label: '잘라내기' },
-        { role: 'copy', label: '복사' },
-        { role: 'paste', label: '붙여넣기' },
-        { role: 'pasteAndMatchStyle', label: '스타일 맞춰 붙여넣기' },
+        { role: 'cut', label: '잘라내기', accelerator: 'CmdOrCtrl+X' },
+        { role: 'copy', label: '복사', accelerator: 'CmdOrCtrl+C' },
+        { role: 'paste', label: '붙여넣기', accelerator: 'CmdOrCtrl+V' },
+        { role: 'pasteAndMatchStyle', label: '스타일 맞춰 붙여넣기', accelerator: 'Shift+CmdOrCtrl+V' },
         { role: 'delete', label: '삭제' },
-        { role: 'selectAll', label: '전체 선택' }
+        { role: 'selectAll', label: '전체 선택', accelerator: 'CmdOrCtrl+A' }
       ]
     },
     {

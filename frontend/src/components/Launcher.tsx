@@ -20,6 +20,7 @@ import {
   TaskEditDialog,
   SystemAIChatDialog,
   ToolboxDialog,
+  SwitchEditDialog,
 } from './launcher-components';
 import type {
   ContextMenuState,
@@ -51,9 +52,18 @@ export function Launcher() {
   const [showTaskEditDialog, setShowTaskEditDialog] = useState(false);
   const [showSystemAIChatDialog, setShowSystemAIChatDialog] = useState(false);
   const [showToolboxDialog, setShowToolboxDialog] = useState(false);
+  const [showSwitchEditDialog, setShowSwitchEditDialog] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [newMultiChatName, setNewMultiChatName] = useState('');
+
+  // 스위치 편집 상태
+  const [editingSwitchData, setEditingSwitchData] = useState<Switch | null>(null);
+  const [switchEditForm, setSwitchEditForm] = useState({
+    name: '',
+    icon: '⚡',
+    command: '',
+  });
 
   // 다중채팅방 목록
   interface MultiChatRoom {
@@ -427,6 +437,43 @@ export function Launcher() {
       return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
     } catch {
       return '-';
+    }
+  };
+
+  // 스위치 편집 시작
+  const handleEditSwitch = (switchId: string) => {
+    const sw = switches.find(s => s.id === switchId);
+    if (!sw) return;
+
+    setEditingSwitchData(sw);
+    setSwitchEditForm({
+      name: sw.name,
+      icon: sw.icon || '⚡',
+      command: sw.command,
+    });
+    setShowSwitchEditDialog(true);
+  };
+
+  // 스위치 편집 저장
+  const handleSaveSwitchEdit = async () => {
+    if (!editingSwitchData) return;
+    if (!switchEditForm.name || !switchEditForm.command) {
+      alert('이름과 명령어를 입력하세요.');
+      return;
+    }
+
+    try {
+      await api.updateSwitch(editingSwitchData.id, {
+        name: switchEditForm.name,
+        icon: switchEditForm.icon,
+        command: switchEditForm.command,
+      });
+      setShowSwitchEditDialog(false);
+      setEditingSwitchData(null);
+      loadSwitches();  // 목록 새로고침
+    } catch (error) {
+      console.error('스위치 수정 실패:', error);
+      alert('스위치 수정에 실패했습니다.');
     }
   };
 
@@ -1046,6 +1093,7 @@ export function Launcher() {
         onEmptyTrash={handleEmptyTrash}
         onArrangeIcons={handleArrangeIcons}
         getItemName={getItemName}
+        onEditSwitch={handleEditSwitch}
       />
 
       {/* 새 프로젝트 다이얼로그 */}
@@ -1170,6 +1218,19 @@ export function Launcher() {
       <ToolboxDialog
         show={showToolboxDialog}
         onClose={() => setShowToolboxDialog(false)}
+      />
+
+      {/* 스위치 편집 다이얼로그 */}
+      <SwitchEditDialog
+        show={showSwitchEditDialog}
+        switchData={editingSwitchData}
+        form={switchEditForm}
+        onFormChange={setSwitchEditForm}
+        onSave={handleSaveSwitchEdit}
+        onClose={() => {
+          setShowSwitchEditDialog(false);
+          setEditingSwitchData(null);
+        }}
       />
     </div>
   );

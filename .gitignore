@@ -1,8 +1,13 @@
 # API 키 및 민감한 정보
+.env
+.env.local
+.env.*.local
 data/system_ai_config.json
 data/system_ai_memory.db
 data/switches.json
 tokens/
+**/api_key.json
+**/config.json
 
 # 개인정보 파일
 data/my_profile.txt
@@ -11,6 +16,11 @@ data/multi_chat.db
 data/outputs/
 data/health/
 data/gomoku_board.png
+data/system_ai_prompts/
+data/ai_desktop_map.json
+
+# 캐시 및 임시 파일
+data/thumbnail_cache/
 
 # 백엔드 데이터 (개인정보 포함)
 backend/data/
@@ -25,9 +35,23 @@ projects/
 data/packages/installed/tools/blog/
 data/packages/installed/tools/android/
 data/packages/installed/tools/pc-manager/
+data/packages/installed/tools/photo-manager/
+data/packages/installed/tools/read-and-see/
+data/packages/installed/tools/study/
+data/packages/installed/tools/web/
+data/packages/installed/tools/health-record/
+
 data/packages/available/tools/blog/
 data/packages/available/tools/android/
 data/packages/available/tools/pc-manager/
+
+# 스캔/인덱스 데이터 (개인 파일 경로 포함)
+data/packages/photo_scans/
+data/packages/installed/photo_index.db
+data/packages/storage_index.db
+data/storage_scans/
+**/*_index.db
+**/*_scans/
 
 # 출력 결과물
 outputs/

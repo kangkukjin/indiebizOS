@@ -41,40 +41,6 @@
     }
   },
   {
-    "name": "generate_newspaper",
-    "description": "특정 키워드를 바탕으로 최신 뉴스를 수집하여 HTML 신문을 제작합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "keywords": {"type": "array", "items": {"type": "string"}},
-        "title": {"type": "string"}
-      },
-      "required": ["keywords"]
-    }
-  },
-  {
-    "name": "generate_magazine",
-    "description": "특정 주제에 대한 심층 정보를 수집하여 잡지 형식의 보고서를 제작합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "topic": {"type": "string"},
-        "title": {"type": "string"}
-      },
-      "required": ["topic"]
-    }
-  },
-  {
-    "name": "generate_it_newspaper",
-    "description": "Hacker News, Reddit AI, Ars Technica, TechCrunch의 최신 IT 트렌드를 모아 전문 IT 신문을 생성합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "title": {"type": "string", "description": "신문 제목"}
-      }
-    }
-  },
-  {
     "name": "search_restaurants",
     "description": "한국 맛집/음식점 검색 (카카오+네이버 통합). 한 번 호출로 카카오 10개 + 네이버 5개 = 최대 15개 결과를 반환합니다. 중복 호출 불필요 - 한 번만 호출하세요.",
     "input_schema": {
@@ -98,6 +64,86 @@
         }
       },
       "required": ["query"]
+    }
+  },
+  {
+    "name": "kakao_navigation",
+    "description": "카카오모빌리티 길찾기 API. 출발지에서 목적지까지의 자동차 경로를 탐색합니다. 거리, 소요시간, 톨비, 턴바이턴 안내와 함께 경로가 표시된 HTML 지도 파일을 생성합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "origin": {
+          "type": "string",
+          "description": "출발지 좌표. 형식: '경도,위도' (예: '126.9706,37.5546') 또는 '경도,위도,name=장소명'"
+        },
+        "destination": {
+          "type": "string",
+          "description": "목적지 좌표. 형식: '경도,위도' (예: '127.0276,37.4979') 또는 '경도,위도,name=장소명'"
+        },
+        "waypoints": {
+          "type": "string",
+          "description": "경유지 좌표 (선택, 최대 5개). '|'로 구분. 예: '127.0,37.5|127.1,37.6'"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["RECOMMEND", "TIME", "DISTANCE"],
+          "description": "경로 우선순위. RECOMMEND(추천, 기본값), TIME(최단시간), DISTANCE(최단거리)"
+        },
+        "avoid": {
+          "type": "string",
+          "description": "회피 옵션. 쉼표로 구분. toll(유료도로), motorway(고속도로), ferries(페리), schoolzone(스쿨존), uturn(유턴)"
+        },
+        "alternatives": {
+          "type": "boolean",
+          "description": "대안 경로 제공 여부 (기본: false)"
+        },
+        "summary": {
+          "type": "boolean",
+          "description": "요약 정보만 반환 (기본: false). true면 턴바이턴 안내와 지도 생략"
+        },
+        "generate_map": {
+          "type": "boolean",
+          "description": "HTML 지도 파일 생성 여부 (기본: true). 경로가 표시된 인터랙티브 지도를 outputs/ 폴더에 생성"
+        }
+      },
+      "required": ["origin", "destination"]
+    }
+  },
+  {
+    "name": "show_location_map",
+    "description": "특정 위치나 장소의 지도를 대화창에 표시합니다. 장소 검색 결과, 지역 소개, 위치 안내 등에 활용합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "검색할 장소명 (예: '강남역', '해운대해수욕장', '서울시청')"
+        },
+        "lat": {
+          "type": "number",
+          "description": "위도 (직접 좌표 지정시)"
+        },
+        "lng": {
+          "type": "number",
+          "description": "경도 (직접 좌표 지정시)"
+        },
+        "zoom": {
+          "type": "integer",
+          "description": "줌 레벨 (기본: 15, 범위: 1-18). 숫자가 클수록 확대"
+        },
+        "markers": {
+          "type": "array",
+          "description": "추가 마커 목록. [{name: '장소명', lat: 위도, lng: 경도}, ...]",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"},
+              "lat": {"type": "number"},
+              "lng": {"type": "number"}
+            }
+          }
+        }
+      }
     }
   }
 ]

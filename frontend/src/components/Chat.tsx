@@ -1,14 +1,16 @@
 /**
- * 채팅 컴포넌트
+ * 채팅 컴포넌트 (스트리밍 지원)
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Camera, FileText } from 'lucide-react';
+import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Camera, FileText, Wrench } from 'lucide-react';
 import { CameraPreview } from './CameraPreview';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { createChatWebSocket, cancelAllAgents, api } from '../lib/api';
 import type { Agent } from '../types';
+import { RouteMap, type RouteMapData } from './RouteMap';
+import { LocationMap, type LocationMapData } from './LocationMap';
 
 interface ImageAttachment {
   file: File;
@@ -30,6 +32,12 @@ interface ChatProps {
   agent: Agent;
 }
 
+interface ToolActivity {
+  name: string;
+  status: 'running' | 'done';
+  result?: string;
+}
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -38,6 +46,7 @@ interface ChatMessage {
   isStreaming?: boolean;
   images?: string[];  // base64 이미지 배열
   textFiles?: { name: string; content: string }[];  // 첨부된 텍스트 파일
+  toolActivities?: ToolActivity[];  // 도구 사용 활동
 }
 
 export function Chat({ projectId, agent }: ChatProps) {
@@ -48,6 +57,11 @@ export function Chat({ projectId, agent }: ChatProps) {
   const [attachedImages, setAttachedImages] = useState<ImageAttachment[]>([]);
   const [attachedTextFiles, setAttachedTextFiles] = useState<TextAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+
+  // 스트리밍 상태
+  const [streamingContent, setStreamingContent] = useState('');
+  const [currentToolActivity, setCurrentToolActivity] = useState<ToolActivity | null>(null);
+  const [thinkingText, setThinkingText] = useState('');
 
   // 카메라 상태
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -206,9 +220,42 @@ export function Chat({ projectId, agent }: ChatProps) {
       switch (data.type) {
         case 'start':
           setIsLoading(true);
+          setStreamingContent('');
+          setCurrentToolActivity(null);
+          setThinkingText('');
           break;
+
+        case 'stream_chunk':
+          // 스트리밍 텍스트 청크
+          setStreamingContent(prev => prev + data.content);
+          break;
+
+        case 'tool_start':
+          // 도구 시작
+          setCurrentToolActivity({
+            name: data.name,
+            status: 'running'
+          });
+          setThinkingText('');
+          break;
+
+        case 'tool_result':
+          // 도구 결과
+          setCurrentToolActivity(prev => prev ? {
+            ...prev,
+            status: 'done',
+            result: data.result
+          } : null);
+          break;
+
+        case 'thinking':
+          // AI 사고 과정
+          setThinkingText(data.content);
+          break;
+
         case 'response':
         case 'auto_report':
+          // 최종 응답
           setMessages((prev) => [
             ...prev,
             {
@@ -218,14 +265,25 @@ export function Chat({ projectId, agent }: ChatProps) {
               timestamp: new Date(),
             },
           ]);
+          setStreamingContent('');
+          setCurrentToolActivity(null);
+          setThinkingText('');
           setIsLoading(false);
           break;
+
         case 'error':
           console.error('Chat error:', data.message);
+          setStreamingContent('');
+          setCurrentToolActivity(null);
+          setThinkingText('');
           setIsLoading(false);
           break;
+
         case 'end':
           setIsLoading(false);
+          setStreamingContent('');
+          setCurrentToolActivity(null);
+          setThinkingText('');
           break;
       }
     };
@@ -249,7 +307,7 @@ export function Chat({ projectId, agent }: ChatProps) {
   // 스크롤 자동 이동
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, streamingContent]);
 
   // 메시지 전송
   const sendMessage = () => {
@@ -283,9 +341,10 @@ export function Chat({ projectId, agent }: ChatProps) {
 
     setMessages((prev) => [...prev, userMessage]);
 
+    // 스트리밍 모드로 전송
     ws.send(
       JSON.stringify({
-        type: 'chat',
+        type: 'chat_stream',  // 스트리밍 모드
         message: messageContent,
         agent_name: agent.name,
         project_id: projectId,
@@ -313,12 +372,15 @@ export function Chat({ projectId, agent }: ChatProps) {
     try {
       await cancelAllAgents(projectId);
       setIsLoading(false);
+      setStreamingContent('');
+      setCurrentToolActivity(null);
+      setThinkingText('');
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
           role: 'assistant',
-          content: '⛔ 작업이 중단되었습니다.',
+          content: '작업이 중단되었습니다.',
           timestamp: new Date(),
         },
       ]);
@@ -345,7 +407,7 @@ export function Chat({ projectId, agent }: ChatProps) {
 
       {/* 메시지 목록 */}
       <div className="flex-1 overflow-auto p-4 space-y-4">
-        {messages.length === 0 ? (
+        {messages.length === 0 && !isLoading ? (
           <div className="h-full flex items-center justify-center text-[#A09080]">
             <div className="text-center">
               <Bot size={48} className="mx-auto mb-4 opacity-50" />
@@ -358,10 +420,59 @@ export function Chat({ projectId, agent }: ChatProps) {
           ))
         )}
 
+        {/* 스트리밍 중인 응답 표시 */}
         {isLoading && (
-          <div className="flex items-center gap-2 text-[#A09080]">
-            <Loader2 size={16} className="animate-spin" />
-            <span>{agent.name}이(가) 응답 중...</span>
+          <div className="space-y-2">
+            {/* 도구 사용 상태 */}
+            {currentToolActivity && (
+              <div className="flex items-center gap-2 text-[#A09080] bg-[#EAE4DA] rounded-lg px-3 py-2">
+                <Wrench size={16} className={currentToolActivity.status === 'running' ? 'animate-spin' : ''} />
+                <span className="text-sm">
+                  {currentToolActivity.status === 'running'
+                    ? `${currentToolActivity.name} 실행 중...`
+                    : `${currentToolActivity.name} 완료`
+                  }
+                </span>
+                {currentToolActivity.result && (
+                  <span className="text-xs text-[#8A7A6A] truncate max-w-[200px]">
+                    {currentToolActivity.result}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* AI 사고 과정 */}
+            {thinkingText && (
+              <div className="flex items-center gap-2 text-[#A09080] text-sm italic">
+                <Loader2 size={14} className="animate-spin" />
+                <span>{thinkingText}</span>
+              </div>
+            )}
+
+            {/* 스트리밍 텍스트 */}
+            {streamingContent && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D97706] to-[#B45309] flex items-center justify-center flex-shrink-0 text-white">
+                  <Bot size={16} />
+                </div>
+                <div className="max-w-[70%] px-4 py-3 rounded-2xl bg-[#E5DFD5] text-[#4A4035] rounded-tl-sm">
+                  <div className="chat-markdown">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {streamingContent}
+                    </ReactMarkdown>
+                  </div>
+                  <span className="inline-block w-2 h-4 bg-[#D97706] animate-pulse ml-1" />
+                </div>
+              </div>
+            )}
+
+            {/* 로딩 표시 (스트리밍 콘텐츠가 없을 때) */}
+            {!streamingContent && !currentToolActivity && !thinkingText && (
+              <div className="flex items-center gap-2 text-[#A09080]">
+                <Loader2 size={16} className="animate-spin" />
+                <span>{agent.name}이(가) 응답 중...</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -541,14 +652,97 @@ function parseImagePaths(content: string): { text: string; images: string[] } {
   return { text: text.trim(), images };
 }
 
+// 지도 데이터 패턴 감지 및 파싱 (route_map, location_map 모두 지원)
+function parseMapData(content: string): { text: string; routeMaps: RouteMapData[]; locationMaps: LocationMapData[] } {
+  const routeMaps: RouteMapData[] = [];
+  const locationMaps: LocationMapData[] = [];
+  let text = content;
+
+  // [MAP:{...}] 패턴 찾기 - JSON 내부의 ]를 피하기 위해 수동 파싱
+  const mapStart = '[MAP:';
+  let startIdx = text.indexOf(mapStart);
+
+  while (startIdx !== -1) {
+    const jsonStart = startIdx + mapStart.length;
+
+    // JSON 끝 찾기: 중괄호 카운팅
+    let braceCount = 0;
+    let jsonEnd = -1;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = jsonStart; i < text.length; i++) {
+      const char = text[i];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        escaped = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) continue;
+
+      if (char === '{') {
+        braceCount++;
+      } else if (char === '}') {
+        braceCount--;
+        if (braceCount === 0) {
+          // ] 확인
+          if (text[i + 1] === ']') {
+            jsonEnd = i + 2;
+            break;
+          }
+        }
+      }
+    }
+
+    if (jsonEnd !== -1) {
+      const jsonStr = text.substring(jsonStart, jsonEnd - 1);
+      try {
+        const mapData = JSON.parse(jsonStr);
+        if (mapData.type === 'route_map') {
+          routeMaps.push(mapData as RouteMapData);
+        } else if (mapData.type === 'location_map') {
+          locationMaps.push(mapData as LocationMapData);
+        }
+      } catch {
+        // JSON 파싱 실패 시 무시
+      }
+
+      // 태그 제거
+      text = text.substring(0, startIdx) + text.substring(jsonEnd);
+      startIdx = text.indexOf(mapStart);
+    } else {
+      break;
+    }
+  }
+
+  return { text: text.trim(), routeMaps, locationMaps };
+}
+
 // 메시지 버블 컴포넌트
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
 
-  // AI 응답에서 이미지 경로 파싱
+  // AI 응답에서 이미지 경로 및 지도 데이터 파싱
   const parsedContent = !isUser
     ? parseImagePaths(message.content)
     : { text: message.content, images: [] };
+
+  const parsedMaps = !isUser
+    ? parseMapData(parsedContent.text)
+    : { text: parsedContent.text, routeMaps: [], locationMaps: [] };
+
+  const finalText = !isUser ? parsedMaps.text : message.content;
 
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
@@ -607,7 +801,23 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             ))}
           </div>
         )}
-        {(isUser ? message.content : parsedContent.text) && (
+        {/* AI 응답 내 경로 지도 표시 */}
+        {!isUser && parsedMaps.routeMaps.length > 0 && (
+          <div className="mb-2 space-y-2">
+            {parsedMaps.routeMaps.map((mapData, index) => (
+              <RouteMap key={`route-${index}`} data={mapData} />
+            ))}
+          </div>
+        )}
+        {/* AI 응답 내 위치 지도 표시 */}
+        {!isUser && parsedMaps.locationMaps.length > 0 && (
+          <div className="mb-2 space-y-2">
+            {parsedMaps.locationMaps.map((mapData, index) => (
+              <LocationMap key={`location-${index}`} data={mapData} />
+            ))}
+          </div>
+        )}
+        {finalText && (
           <div className="chat-markdown">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
@@ -628,7 +838,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                 ),
               }}
             >
-              {isUser ? message.content : parsedContent.text}
+              {finalText}
             </ReactMarkdown>
           </div>
         )}

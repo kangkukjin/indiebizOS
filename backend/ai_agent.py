@@ -14,7 +14,7 @@ Anthropic, OpenAI, Google Gemini, Ollama를 지원하는 통합 AI 에이전트
 - providers/: AI 프로바이더별 처리
 """
 
-from typing import Optional, List, Dict, Generator, Any
+from typing import Optional, List, Dict, Generator, Any, Callable
 
 # 모듈 임포트
 from tool_loader import load_agent_tools, load_installed_tools
@@ -32,13 +32,17 @@ class AIAgent:
         agent_name: str = "에이전트",
         agent_id: str = None,
         project_path: str = ".",
-        tools: List[Dict] = None
+        tools: List[Dict] = None,
+        execute_tool_func: Callable = None
     ):
         self.config = ai_config
         self.system_prompt = system_prompt
         self.agent_name = agent_name
         self.agent_id = agent_id
         self.project_path = project_path
+
+        # 커스텀 도구 실행 함수 (시스템 AI 등에서 사용)
+        self._custom_execute_tool = execute_tool_func
 
         # 시스템 도구 + 프로젝트 기본 도구 + 에이전트별 도구
         if tools is not None:
@@ -122,7 +126,8 @@ class AIAgent:
         self,
         message_content: str,
         history: List[Dict] = None,
-        images: List[Dict] = None
+        images: List[Dict] = None,
+        cancel_check: Callable = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
         스트리밍 메시지 처리
@@ -131,6 +136,7 @@ class AIAgent:
             message_content: 사용자 메시지
             history: 대화 히스토리
             images: 이미지 데이터
+            cancel_check: 중단 여부를 확인하는 콜백 함수
 
         Yields:
             스트리밍 이벤트 딕셔너리:
@@ -147,6 +153,9 @@ class AIAgent:
 
         history = history or []
 
+        # 커스텀 execute_tool이 있으면 사용, 없으면 기본 execute_tool 사용
+        tool_executor = self._custom_execute_tool if self._custom_execute_tool else execute_tool
+
         # 프로바이더가 스트리밍을 지원하는지 확인
         if hasattr(self._provider, 'process_message_stream'):
             try:
@@ -154,7 +163,8 @@ class AIAgent:
                     message=message_content,
                     history=history,
                     images=images,
-                    execute_tool=execute_tool
+                    execute_tool=tool_executor,
+                    cancel_check=cancel_check
                 )
             except Exception as e:
                 import traceback
@@ -167,7 +177,7 @@ class AIAgent:
                     message=message_content,
                     history=history,
                     images=images,
-                    execute_tool=execute_tool
+                    execute_tool=tool_executor
                 )
                 yield {"type": "final", "content": response}
             except Exception as e:

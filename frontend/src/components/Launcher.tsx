@@ -898,10 +898,10 @@ export function Launcher() {
           <button
             onClick={handleOpenMyProfile}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="나의 정보"
+            title="시스템 메모"
           >
             <User size={16} />
-            <span className="text-sm">나의 정보</span>
+            <span className="text-sm">시스템 메모</span>
           </button>
           <button
             onClick={handleRefresh}
@@ -1155,7 +1155,7 @@ export function Launcher() {
         </div>
       )}
 
-      {/* 나의 정보 다이얼로그 */}
+      {/* 시스템 메모 다이얼로그 */}
       <ProfileDialog
         show={showProfileDialog}
         content={profileContent}

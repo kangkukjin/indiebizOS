@@ -1256,6 +1256,8 @@ const BROWSER_PLAYABLE_VIDEO = ['mp4', 'webm', 'ogg', 'm4v', 'mov'];
 
 // 미디어 상세 모달
 function MediaDetailModal({ item, onClose }: { item: any; onClose: () => void }) {
+  const [isResizing, setIsResizing] = useState(false);
+
   const canPlayInBrowser = item.media_type === 'video' &&
     BROWSER_PLAYABLE_VIDEO.includes(item.extension?.toLowerCase());
 
@@ -1269,15 +1271,46 @@ function MediaDetailModal({ item, onClose }: { item: any; onClose: () => void })
     }
   };
 
+  // 리사이즈 시작 감지 (모달 영역 내 마우스다운)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    // 모서리 근처(15px)에서 마우스다운하면 리사이즈로 간주
+    const isNearEdge =
+      e.clientX > rect.right - 15 ||
+      e.clientY > rect.bottom - 15 ||
+      e.clientX < rect.left + 15 ||
+      e.clientY < rect.top + 15;
+
+    if (isNearEdge) {
+      setIsResizing(true);
+    }
+  };
+
+  // 리사이즈 종료 감지
+  const handleMouseUp = () => {
+    // 약간의 딜레이를 주어 클릭 이벤트가 먼저 처리되지 않도록
+    setTimeout(() => setIsResizing(false), 100);
+  };
+
+  // 배경 클릭 시 닫기 (리사이즈 중이 아닐 때만)
+  const handleBackdropClick = () => {
+    if (!isResizing) {
+      onClose();
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]"
-      onClick={onClose}
+      onClick={handleBackdropClick}
+      onMouseUp={handleMouseUp}
     >
       <div
         className="bg-white rounded-xl w-[800px] min-w-[400px] min-h-[400px] max-w-[95vw] max-h-[95vh] overflow-hidden resize flex flex-col"
         style={{ resize: 'both' }}
         onClick={(e) => e.stopPropagation()}
+        onMouseDown={handleMouseDown}
       >
         {/* 미디어 미리보기 - flex-1로 남은 공간 차지 */}
         <div className="flex-1 min-h-[200px] bg-[#1a1a1a] flex items-center justify-center overflow-hidden">

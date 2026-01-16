@@ -21,6 +21,19 @@ project_manager = None
 # 스트리밍을 위한 스레드 풀
 executor = ThreadPoolExecutor(max_workers=4)
 
+# 클라이언트별 중단 플래그 (client_id -> bool)
+cancel_flags: dict[str, bool] = {}
+
+
+def is_cancelled(client_id: str) -> bool:
+    """클라이언트의 중단 요청 여부 확인"""
+    return cancel_flags.get(client_id, False)
+
+
+def set_cancel(client_id: str, value: bool):
+    """클라이언트의 중단 플래그 설정"""
+    cancel_flags[client_id] = value
+
 
 def get_agent_runners():
     from api_agents import get_agent_runners as _get
@@ -51,6 +64,11 @@ async def websocket_chat(websocket: WebSocket, client_id: str):
                 await handle_chat_message_stream(client_id, data)
             elif message_type == "system_ai_stream":
                 await handle_system_ai_chat_stream(client_id, data)
+            elif message_type == "cancel":
+                # 중단 요청 처리
+                set_cancel(client_id, True)
+                print(f"[WS] 중단 요청: {client_id}")
+                await manager.send_message(client_id, {"type": "cancelled"})
             elif message_type == "ping":
                 await manager.send_message(client_id, {"type": "pong"})
 
@@ -377,12 +395,23 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 
             elif event_type == "tool_result":
                 # 도구 결과 알림
-                await manager.send_message(client_id, {
+                tool_name = event["name"]
+                tool_input = event.get("input", {})
+
+                message_data = {
                     "type": "tool_result",
-                    "name": event["name"],
+                    "name": tool_name,
                     "result": event.get("result", ""),
                     "agent": agent_name
-                })
+                }
+
+                # todo_write 도구인 경우 TODO 데이터 추가
+                if tool_name == "todo_write":
+                    todos = tool_input.get("todos", [])
+                    if todos:
+                        message_data["todos"] = todos
+
+                await manager.send_message(client_id, message_data)
 
             elif event_type == "thinking":
                 # AI 사고 과정 알림
@@ -489,7 +518,11 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         # 스트리밍 처리 (AIAgent 사용)
         event_queue = asyncio.Queue()
         final_content = ""
+        tool_results_list = []  # 도구 실행 결과 기록용
         loop = asyncio.get_running_loop()
+
+        # 중단 플래그 초기화
+        set_cancel(client_id, False)
 
         def run_stream():
             """스레드에서 시스템 AI 스트리밍 실행 (AIAgent 사용)"""
@@ -499,8 +532,16 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 for event in process_system_ai_message_stream(
                     message=message,
                     history=history,
-                    images=images if images else None
+                    images=images if images else None,
+                    cancel_check=lambda: is_cancelled(client_id)  # 중단 체크 함수 전달
                 ):
+                    # 중단 요청 시 루프 탈출
+                    if is_cancelled(client_id):
+                        asyncio.run_coroutine_threadsafe(
+                            event_queue.put({"type": "cancelled", "content": "사용자가 중단했습니다."}),
+                            loop
+                        )
+                        break
                     asyncio.run_coroutine_threadsafe(event_queue.put(event), loop)
                     if event["type"] == "final":
                         final_content = event["content"]
@@ -529,6 +570,14 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             if event is None:
                 break
 
+            # 중단된 경우
+            if event.get("type") == "cancelled":
+                await manager.send_message(client_id, {
+                    "type": "cancelled",
+                    "message": event.get("content", "중단됨")
+                })
+                break
+
             event_type = event.get("type")
 
             if event_type == "text":
@@ -542,16 +591,37 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 await manager.send_message(client_id, {
                     "type": "tool_start",
                     "name": event["name"],
+                    "input": event.get("input", {}),
                     "agent": "system_ai"
                 })
 
             elif event_type == "tool_result":
-                await manager.send_message(client_id, {
-                    "type": "tool_result",
-                    "name": event["name"],
-                    "result": event.get("result", ""),
-                    "agent": "system_ai"
+                tool_result = event.get("result", "")
+                tool_name = event["name"]
+
+                # 도구 결과 기록 (final이 비어있을 때 사용)
+                tool_results_list.append({
+                    "name": tool_name,
+                    "result": tool_result,
+                    "has_error": "error" in tool_result.lower() or '"success": false' in tool_result.lower()
                 })
+
+                tool_input = event.get("input", {})
+
+                message_data = {
+                    "type": "tool_result",
+                    "name": tool_name,
+                    "result": tool_result,
+                    "agent": "system_ai"
+                }
+
+                # todo_write 도구인 경우 TODO 데이터 추가
+                if tool_name == "todo_write":
+                    todos = tool_input.get("todos", [])
+                    if todos:
+                        message_data["todos"] = todos
+
+                await manager.send_message(client_id, message_data)
 
             elif event_type == "thinking":
                 await manager.send_message(client_id, {
@@ -571,14 +641,29 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 break
 
         # AI 응답 저장
-        if final_content:
-            save_conversation("assistant", final_content)
+        # final_content가 비어있으면 도구만 실행되고 텍스트 응답이 없는 경우
+        # 도구 결과를 기반으로 유용한 메시지 제공
+        if not final_content or final_content.strip() == "":
+            if tool_results_list:
+                # 에러가 있는지 확인
+                errors = [r for r in tool_results_list if r.get("has_error")]
+                if errors:
+                    error_details = "\n".join([f"- {e['name']}: {e['result'][:200]}" for e in errors])
+                    final_content = f"도구 실행 중 오류가 발생했습니다:\n\n{error_details}"
+                else:
+                    # 마지막 도구 결과 표시
+                    last_result = tool_results_list[-1]
+                    final_content = f"도구 '{last_result['name']}'이 실행되었지만 AI가 응답을 생성하지 않았습니다.\n\n도구 결과:\n{last_result['result'][:500]}"
+            else:
+                final_content = "(AI가 응답을 생성하지 않았습니다. 다시 시도해주세요.)"
 
-            await manager.send_message(client_id, {
-                "type": "response",
-                "content": final_content,
-                "agent": "system_ai"
-            })
+        save_conversation("assistant", final_content)
+
+        await manager.send_message(client_id, {
+            "type": "response",
+            "content": final_content,
+            "agent": "system_ai"
+        })
 
         # 완료 알림
         await manager.send_message(client_id, {
@@ -599,7 +684,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
 # 이제 AIAgent.process_message_stream()이 모든 프로바이더의 스트리밍을 처리합니다.
 # 아래 함수는 참고용으로만 유지합니다.
 
-def _stream_anthropic_system_ai_legacy(message: str, api_key: str, model: str, user_profile: str, system_status: str, images: list, history: list):
+def _stream_anthropic_system_ai_legacy(message: str, api_key: str, model: str, user_profile: str, images: list, history: list):
     """[DEPRECATED] Anthropic API로 시스템 AI 스트리밍 - AIAgent로 대체됨"""
     import anthropic
     from api_system_ai import get_system_prompt, get_anthropic_tools, execute_system_tool
@@ -630,7 +715,7 @@ def _stream_anthropic_system_ai_legacy(message: str, api_key: str, model: str, u
     else:
         messages.append({"role": "user", "content": message})
 
-    system_prompt = get_system_prompt(user_profile, system_status)
+    system_prompt = get_system_prompt(user_profile)
     tools = get_anthropic_tools()
 
     accumulated_text = ""

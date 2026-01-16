@@ -563,7 +563,6 @@ class APIClient {
         selected: boolean;
       }>;
       selected_template: string;
-      role_prompt_enabled: boolean;
     }>('/system-ai/prompts/templates');
   }
 
@@ -573,7 +572,7 @@ class APIClient {
     );
   }
 
-  async updatePromptConfig(config: { selected_template?: string; role_prompt_enabled?: boolean }) {
+  async updatePromptConfig(config: { selected_template?: string }) {
     return this.request<{ status: string; config: typeof config }>(
       '/system-ai/prompts/config',
       {
@@ -598,7 +597,7 @@ class APIClient {
     return this.request<{
       prompt: string;
       estimated_tokens: number;
-      config: { selected_template: string; role_prompt_enabled: boolean };
+      config: { selected_template: string };
     }>('/system-ai/prompts/preview');
   }
 

@@ -14,7 +14,7 @@ IndieBiz OS Core
 
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Generator
+from typing import Dict, Any, Optional, List, Generator, Callable
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
@@ -23,8 +23,6 @@ from pydantic import BaseModel
 # 메모리 관련
 from system_ai_memory import (
     load_user_profile,
-    load_system_status,
-    init_system_status,
     save_conversation,
     get_recent_conversations,
     get_memory_context,
@@ -34,10 +32,7 @@ from system_ai_memory import (
 # 시스템 문서 관련
 from system_docs import (
     read_doc,
-    list_docs,
-    init_all_docs,
-    SYSTEM_AI_TOOLS as SYSTEM_DOC_TOOLS,
-    execute_system_tool as execute_doc_tool
+    init_all_docs
 )
 # 도구 로딩
 from system_ai import (
@@ -73,62 +68,21 @@ def load_system_ai_config() -> dict:
     }
 
 
-# 캐시: 시스템 상태 (5분간 유효)
-_system_status_cache = {
-    "status": None,
-    "timestamp": None,
-    "ttl_seconds": 300  # 5분
-}
-
-
-def _get_cached_system_status() -> str:
-    """캐시된 시스템 상태 반환 (overview의 '현재 상태' 섹션만)"""
-    import time
-    now = time.time()
-
-    # 캐시가 유효하면 반환
-    if (_system_status_cache["status"] is not None and
-        _system_status_cache["timestamp"] is not None and
-        now - _system_status_cache["timestamp"] < _system_status_cache["ttl_seconds"]):
-        return _system_status_cache["status"]
-
-    # overview에서 '현재 상태' 섹션만 추출
-    overview = read_doc("overview")
-    status_section = ""
-    if overview and "## 현재 상태" in overview:
-        try:
-            status_section = overview.split("## 현재 상태")[1].split("---")[0].strip()
-        except:
-            pass
-
-    # 캐시 업데이트
-    _system_status_cache["status"] = status_section
-    _system_status_cache["timestamp"] = now
-
-    return status_section
-
-
-def invalidate_system_status_cache():
-    """시스템 상태 캐시 무효화 (패키지 설치/제거 등 변경 시 호출)"""
-    _system_status_cache["status"] = None
-    _system_status_cache["timestamp"] = None
-
-
 # ============ 도구 관련 ============
 
 def get_all_system_ai_tools() -> List[Dict]:
-    """시스템 AI가 사용할 모든 도구 로드 (문서 도구 + 패키지 도구)"""
-    # 1. 문서/패키지 관리 도구 (system_docs.py)
-    tools = list(SYSTEM_DOC_TOOLS)
+    """시스템 AI가 사용할 모든 도구 로드 (패키지 도구만)
 
-    # 2. 패키지에서 동적 로딩 (system_essentials, python-exec, nodejs 등)
-    package_tools = load_tools_from_packages(SYSTEM_AI_DEFAULT_PACKAGES)
-    tools.extend(package_tools)
-
+    NOTE: 시스템 AI 전용 도구들은 제거되었습니다.
+    시스템 AI는 일반 에이전트와 동일한 도구를 사용하며,
+    시스템 문서와 패키지 정보는 read_file, list_directory로 접근합니다.
+    """
+    # 패키지에서 동적 로딩 (system_essentials, python-exec, nodejs 등)
+    tools = load_tools_from_packages(SYSTEM_AI_DEFAULT_PACKAGES)
     return tools
 
 
-def create_system_ai_agent(config: dict = None, user_profile: str = "", system_status: str = "") -> AIAgent:
+def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAgent:
     """시스템 AI용 AIAgent 인스턴스 생성
 
     **통합 아키텍처**: 프로젝트 에이전트와 동일한 AIAgent 클래스를 사용합니다.
@@ -139,7 +93,6 @@ def create_system_ai_agent(config: dict = None, user_profile: str = "", system_s
     Args:
         config: 시스템 AI 설정 (None이면 자동 로드)
         user_profile: 사용자 프로필
-        system_status: 시스템 상태
 
     Returns:
         AIAgent 인스턴스
@@ -156,21 +109,21 @@ def create_system_ai_agent(config: dict = None, user_profile: str = "", system_s
 
     # 시스템 프롬프트 생성 (공통 프롬프트 빌더 사용)
     system_prompt = build_system_ai_prompt(
-        user_profile=user_profile,
-        system_status=system_status
+        user_profile=user_profile
     )
 
     # 시스템 AI 전용 도구 로드
     tools = get_all_system_ai_tools()
 
-    # AIAgent 인스턴스 생성
+    # AIAgent 인스턴스 생성 (시스템 AI 전용 도구 실행 함수 전달)
     agent = AIAgent(
         ai_config=ai_config,
         system_prompt=system_prompt,
         agent_name="시스템 AI",
         agent_id="system_ai",
         project_path=str(DATA_PATH),
-        tools=tools
+        tools=tools,
+        execute_tool_func=execute_system_tool
     )
 
     return agent
@@ -188,11 +141,9 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
         AI 응답
     """
     user_profile = load_user_profile()
-    system_status = _get_cached_system_status()
 
     agent = create_system_ai_agent(
-        user_profile=user_profile,
-        system_status=system_status
+        user_profile=user_profile
     )
 
     return agent.process_message_with_history(
@@ -202,45 +153,50 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     )
 
 
-def process_system_ai_message_stream(message: str, history: List[Dict] = None, images: List[Dict] = None) -> Generator:
+def process_system_ai_message_stream(
+    message: str,
+    history: List[Dict] = None,
+    images: List[Dict] = None,
+    cancel_check: Callable = None
+) -> Generator:
     """시스템 AI 메시지 처리 (AIAgent 사용, 스트리밍 모드)
 
     Args:
         message: 사용자 메시지
         history: 대화 히스토리
         images: 이미지 데이터
+        cancel_check: 중단 여부를 확인하는 콜백 함수
 
     Yields:
         스트리밍 이벤트 딕셔너리
     """
     user_profile = load_user_profile()
-    system_status = _get_cached_system_status()
 
     agent = create_system_ai_agent(
-        user_profile=user_profile,
-        system_status=system_status
+        user_profile=user_profile
     )
 
     yield from agent.process_message_stream(
         message_content=message,
         history=history,
-        images=images
+        images=images,
+        cancel_check=cancel_check
     )
 
 
-def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None) -> str:
+def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None, agent_id: str = None) -> str:
     """
-    시스템 AI 통합 도구 실행
+    시스템 AI 도구 실행
 
-    1. 문서 관련 도구 (system_docs)
-    2. 시스템 전용 + 패키지 도구 (system_ai)
+    NOTE: 시스템 AI 전용 도구가 제거되어 이제 system_ai.py의
+    execute_system_tool만 사용합니다.
+
+    Args:
+        tool_name: 도구 이름
+        tool_input: 도구 입력
+        work_dir: 작업 디렉토리
+        agent_id: 에이전트 ID (프로바이더에서 전달, 시스템 AI는 "system_ai")
     """
-    # 문서 관련 도구인지 확인
-    doc_tool_names = [t["name"] for t in SYSTEM_DOC_TOOLS]
-    if tool_name in doc_tool_names:
-        return execute_doc_tool(tool_name, tool_input)
-
-    # 시스템 AI 도구 실행 (시스템 전용 + 패키지)
     if work_dir is None:
         work_dir = str(DATA_PATH)
     return execute_system_ai_tool(tool_name, tool_input, work_dir)
@@ -264,317 +220,13 @@ class ChatResponse(BaseModel):
     model: str
 
 
-def get_system_prompt(user_profile: str = "", system_status: str = "") -> str:
+def get_system_prompt(user_profile: str = "") -> str:
     """시스템 AI의 시스템 프롬프트 (prompt_builder.py 사용)
 
     **통합**: 이제 공통 프롬프트 빌더를 사용합니다.
-    - base_prompt.md (공통 설정) + 시스템 AI 역할 + 사용자 정보 + 시스템 상태
+    - base_prompt.md (공통 설정) + 시스템 AI 역할 + 사용자 정보
     """
-    return build_system_ai_prompt(user_profile=user_profile, system_status=system_status)
-
-
-# 기존 하드코딩된 프롬프트 (호환성을 위해 유지, 실제로는 사용 안함)
-def _get_system_prompt_legacy(user_profile: str = "", system_status: str = "") -> str:
-    """[DEPRECATED] 기존 하드코딩 프롬프트 - 참고용으로만 남김"""
-    base_prompt = """# 정체성
-당신은 IndieBiz OS의 시스템 AI입니다. 사용자의 개인 비서이자 시스템 관리자로서, 단순히 명령을 수행하는 것이 아니라 사용자의 의도를 이해하고 최선의 결과를 도출하는 것이 목표입니다.
-
-# 핵심 원칙
-
-## 1. 사용자 중심 사고
-- 사용자가 "무엇을 원하는지"뿐만 아니라 "왜 원하는지"를 생각하세요
-- 요청의 표면적 의미 너머에 있는 실제 목적을 파악하려고 노력하세요
-- 더 나은 방법이 있다면 제안하되, 최종 결정은 사용자에게 맡기세요
-
-## 2. 정직하고 투명한 소통
-- 확실하지 않은 것은 "확실하지 않다"고 말하세요
-- 모르는 것은 "모른다"고 인정하고, 알아볼 방법을 제시하세요
-- 실수했다면 즉시 인정하고 수정 방안을 제시하세요
-
-## 3. 사용자 동의 (필수!) - 매우 중요!
-시스템을 변경하는 작업 전에는 **반드시** `request_user_approval` 도구를 호출하세요.
-
-**승인이 필요한 작업:**
-- 파일 생성/수정/삭제 (write_file, create_directory 등)
-- 코드/명령어 실행 (execute_python, execute_nodejs, run_command)
-- 패키지 설치/제거 (install_package)
-
-**승인 없이 바로 실행 가능한 작업:**
-- read_file, list_directory, read_system_doc 등 읽기 전용 작업
-
-**올바른 흐름:**
-1. 읽기 도구로 정보 수집 (바로 실행 OK)
-2. 계획 수립
-3. `request_user_approval` 호출 → 여기서 멈추고 사용자 응답 대기
-4. 사용자가 승인하면 다음 대화에서 실제 작업 수행
-
-**절대 하지 말 것:**
-- request_user_approval 없이 쓰기 작업 실행
-- "진행할까요?"라고 텍스트로만 쓰고 도구를 계속 호출하는 것
-- 승인 요청 후 사용자 응답 없이 다른 도구 호출
-
----
-
-# 사고 과정 (Chain-of-Thought)
-
-## 단계적 사고 - 모든 요청에 적용
-요청을 받으면 다음 단계를 순서대로 수행하세요:
-
-**1단계. 분석** - 요청 파악
-- "사용자가 요청한 것: [명시적 요청]"
-- "실제로 원하는 것: [숨겨진 의도가 있다면]"
-- "필요한 정보/도구: [무엇이 필요한가]"
-
-**2단계. 계획** - 접근 방법 수립
-- 복잡한 작업은 하위 단계로 분해
-- "진행 순서: [A] → [B] → [C]"
-- 여러 방법이 가능하면 비교 후 최선 선택
-
-**3단계. 실행** - 한 단계씩 진행
-- 각 단계의 결과를 확인하며 진행
-- 예상과 다르면 계획 수정
-
-**4단계. 검증** - 결과 확인
-- "요청한 [X]가 달성되었는가?"
-- 누락된 부분이 없는지 점검
-
-복잡한 작업은 이 과정을 사용자에게 간략히 공유하세요.
-
-## 복잡한 요청 분해 (Least-to-Most)
-큰 문제는 작은 문제로 나누어 해결하세요:
-
-예시: "새 도구 패키지를 만들어줘"
-```
-분해:
-1. 요구사항 파악 → 어떤 기능이 필요한가?
-2. 참고 자료 탐색 → 비슷한 기존 패키지가 있나?
-3. 설계 → 폴더 구조와 인터페이스 결정
-4. 구현 → tool.json, handler.py 작성
-5. 검증 → 테스트 실행
-```
-각 하위 문제를 순차적으로 해결하고, 이전 결과를 다음 단계에 활용하세요.
-
----
-
-# 자기 검증 (Self-Verification)
-
-응답하기 전에 스스로 점검하세요:
-
-## 사실 확인
-- 내가 말한 정보가 정확한가?
-- 불확실하면 도구로 확인하거나 "확실하지 않습니다"라고 명시
-- 추측과 사실을 구분해서 전달
-
-## 완전성 확인
-- 사용자의 질문에 완전히 답했는가?
-- 누락된 부분이 있다면 추가
-- "더 필요한 것이 있나요?" 확인
-
-## 실행 가능성 확인
-- 제안한 해결책이 실제로 작동하는가?
-- 코드/명령어는 실행 전 문법 오류 확인
-- 경로, 파일명 등 구체적인 정보가 정확한가?
-
----
-
-# 여러 방법 고려 (Alternative Approaches)
-
-하나의 문제에 여러 해결책이 가능할 때:
-
-1. **2-3가지 접근 방법**을 먼저 생각하세요
-2. 각 방법의 **장단점**을 간략히 비교하세요
-3. **가장 적절한 방법을 추천**하되, 선택은 사용자에게
-
-예시: "파일 백업하고 싶어"
-```
-방법 1: 단순 복사 - 빠르고 간단, 수동 관리 필요
-방법 2: 압축 저장 - 공간 절약, 시간 소요
-방법 3: 버전 관리 - 이력 추적 가능, 설정 필요
-
-→ "단순 복사가 가장 빠릅니다. 다른 방법이 필요하신가요?"
-```
-
----
-
-# 불확실할 때
-
-- 추측하지 말고 물어보세요: "~를 말씀하시는 건가요?"
-- 여러 해석이 가능하면 선택지를 제시하세요
-- 중요한 결정은 사용자에게 확인받으세요
-
-# 문제가 생겼을 때
-
-1. **원인 분석**: 에러 메시지를 읽고 원인 파악
-2. **대안 시도**: 다른 방법으로 재시도 (최대 2회)
-3. **상황 공유**: 그래도 안 되면 상황 설명 + 대안 제시
-
----
-
-# 응답 형식 가이드
-
-상황에 따라 적절한 형식을 사용하세요:
-
-## 정보 제공
-- 목록은 불릿 포인트(•)나 번호로 정리
-- 중요 정보는 **굵게** 강조
-- 긴 내용은 섹션으로 구분
-
-## 작업 수행
-```
-[무엇을 할 것인지 설명]
-↓
-[도구 실행]
-↓
-[결과 요약]
-```
-
-## 문제 해결
-```
-문제: [증상 설명]
-원인: [분석 결과]
-해결: [해결 방법]
-```
-
-## 코드 제공
-- 언어 명시 (```python, ```json 등)
-- 주요 부분에 간단한 주석
-- 실행 방법 안내
-
----
-
-# 도구 사용 가이드
-
-## 언제 어떤 도구를 쓸까?
-
-**정보가 필요할 때**
-- 시스템 현황 궁금 → `read_system_doc("inventory")` (프로젝트, 패키지 목록)
-- 파일 내용 확인 → `read_file(경로)`
-- 폴더 내용 확인 → `list_directory(경로)`
-
-**패키지 관련**
-- 설치 가능한 패키지 목록 → `list_packages`
-- 패키지 상세 정보 → `get_package_info(패키지명)`
-- 패키지 설치 → `install_package(패키지명)` (동의 후!)
-
-**파일 작업** (동의 후!)
-- 파일 생성/수정 → `write_file(경로, 내용)`
-- 폴더 생성 → `create_directory(경로)`
-
-**코드 실행** (동의 후!)
-- Python 코드 → `execute_python(코드)`
-- Node.js 코드 → `execute_nodejs(코드)`
-- 쉘 명령어 → `run_command(명령어)`
-
-## 도구 사용 원칙
-- 단순한 질문에는 도구 없이 직접 답하세요
-- 도구를 쓰기 전에 "이게 정말 필요한가?" 생각하세요
-- 여러 도구가 필요하면 순서를 계획하고 진행하세요
-
----
-
-# 좋은 응답 예시
-
-## 예시 1: 시스템 현황 질문 (단순)
-사용자: "설치된 도구가 뭐가 있어?"
-
-사고 과정:
-- 분석: 현재 설치된 패키지 목록 요청
-- 계획: inventory 문서 확인 → 목록 정리 → 간단한 설명 추가
-- 실행: read_system_doc("inventory")
-
-좋은 응답: 목록을 보여주고, 각 도구의 용도를 한 줄로 설명
-
-## 예시 2: 새 도구 개발 요청 (복잡)
-사용자: "날씨 API 도구 만들어줘"
-
-사고 과정:
-- 분석: 날씨 정보를 가져오는 도구 패키지 개발 요청
-- 분해:
-  1. 어떤 날씨 API 사용? (사용자 확인 필요)
-  2. 기존 유사 패키지 참고
-  3. 설계 (tool.json 구조)
-  4. 구현 (handler.py)
-  5. 테스트
-
-좋은 응답:
-1. 먼저 어떤 날씨 API를 사용할지 물어봄
-2. 설계 내용을 설명하고 동의 구함
-3. 단계별로 파일 생성 (각 단계에서 확인)
-4. 완료 후 사용법 안내
-
-## 예시 3: 모호한 요청
-사용자: "이거 고쳐줘"
-
-사고 과정:
-- 분석: "이거"가 무엇인지 불명확
-- 계획: 맥락 파악 필요 → 질문
-
-좋은 응답: "어떤 부분을 말씀하시는 건가요? 조금 더 구체적으로 알려주시면 도움드릴게요."
-
-## 예시 4: 에러 발생
-사용자: "파일 저장이 안 돼"
-
-사고 과정:
-- 분석: 파일 저장 실패 - 여러 원인 가능 (권한, 경로, 디스크 등)
-- 계획: 정보 수집 → 원인 파악 → 해결
-
-좋은 응답:
-1. 구체적인 에러 메시지나 상황 질문
-2. 권한 문제인지, 경로 문제인지 파악
-3. 원인에 맞는 해결 방법 제시
-
----
-
-# 시스템 정보
-
-## 중요 경로
-- 프로젝트: ../projects/[프로젝트명]/
-- 설치된 도구: ../data/packages/installed/tools/[도구명]/
-- 시스템 문서: ../data/system_docs/
-
-## 시스템 문서 (read_system_doc으로 참조)
-- `inventory`: 프로젝트, 패키지 현황 (가장 자주 사용)
-- `packages`: 패키지 개발 가이드
-- `overview`: 시스템 소개
-- `architecture`: 시스템 구조
-- `technical`: API, 설정 상세
-
----
-
-# 도구 개발 시 참고
-
-새 도구를 만들 때:
-1. 설계 → 동의 → 폴더 생성 → tool.json → handler.py → 검증
-
-tool.json 형식 (배열 사용):
-```json
-[{"name": "도구명", "description": "설명", "input_schema": {...}}]
-```
-
-handler.py 필수 함수:
-```python
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    return "결과"
-```
-
----
-
-# 안전 규칙
-- 금지 명령어: rm -rf, format, mkfs, dd if=, chmod 777
-- 필수: 루프 종료 조건, API 타임아웃, try-except
-- 파일: encoding='utf-8' 명시"""
-
-    # 사용자 정보가 있으면 추가
-    if user_profile and user_profile.strip():
-        base_prompt += f"\n\n# 사용자 정보\n{user_profile.strip()}"
-
-    # 시스템 상태가 있으면 추가 (이미 추출된 섹션)
-    if system_status and system_status.strip():
-        base_prompt += f"\n\n# 현재 시스템 상태\n{system_status.strip()}"
-
-    base_prompt += "\n\n지금부터 사용자와 대화합니다."
-
-    return base_prompt
+    return build_system_ai_prompt(user_profile=user_profile)
 
 
 def get_anthropic_tools():
@@ -839,7 +491,10 @@ async def chat_with_openai(message: str, api_key: str, model: str, user_profile:
 
 
 async def chat_with_google(message: str, api_key: str, model: str, user_profile: str = "", overview: str = "", images: List[Dict] = None, history: List[Dict] = None) -> str:
-    """Google Gemini와 대화 (tool use 지원, 이미지 포함 가능, 히스토리 지원) - google-genai 버전"""
+    """[DEPRECATED] Google Gemini와 대화 - AIAgent로 대체됨
+
+    NOTE: 이 함수는 레거시입니다. 새 코드에서는 AIAgent를 사용하세요.
+    """
     try:
         from google import genai
         from google.genai import types
@@ -847,115 +502,54 @@ async def chat_with_google(message: str, api_key: str, model: str, user_profile:
 
         client = genai.Client(api_key=api_key)
 
-        # 도구 정의 (새 API 형식)
-        system_tools = [
-            types.Tool(function_declarations=[
-                types.FunctionDeclaration(
-                    name="request_user_approval",
-                    description="사용자 승인을 요청합니다. 파일 쓰기, 코드 실행, 패키지 설치 등 시스템을 변경하는 작업 전에 반드시 이 도구를 먼저 호출하세요.",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={
-                            "action_type": types.Schema(type=types.Type.STRING, description="수행하려는 작업 유형"),
-                            "description": types.Schema(type=types.Type.STRING, description="수행하려는 작업에 대한 상세 설명")
-                        },
-                        required=["action_type", "description"]
-                    )
-                ),
-                types.FunctionDeclaration(
-                    name="read_system_doc",
-                    description="시스템 문서를 읽습니다. 사용 가능한 문서: overview(개요), architecture(구조), inventory(인벤토리), technical(기술), packages(패키지 가이드). 패키지 설치/제거 시에는 반드시 packages 문서를 먼저 읽으세요.",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={
-                            "doc_name": types.Schema(type=types.Type.STRING, description="읽을 문서 이름 (overview, architecture, inventory, technical, packages)")
-                        },
-                        required=["doc_name"]
-                    )
-                ),
-                types.FunctionDeclaration(
-                    name="list_packages",
-                    description="설치 가능한 도구 패키지 목록을 조회합니다.",
-                    parameters=types.Schema(type=types.Type.OBJECT, properties={})
-                ),
-                types.FunctionDeclaration(
-                    name="get_package_info",
-                    description="특정 패키지의 상세 정보를 조회합니다.",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={"package_id": types.Schema(type=types.Type.STRING, description="패키지 ID")},
-                        required=["package_id"]
-                    )
-                ),
-                types.FunctionDeclaration(
-                    name="install_package",
-                    description="도구 패키지를 설치합니다. 반드시 사용자의 동의를 받은 후에만 사용하세요.",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={"package_id": types.Schema(type=types.Type.STRING, description="설치할 패키지 ID")},
-                        required=["package_id"]
-                    )
-                ),
-                # 파일 시스템 도구
-                types.FunctionDeclaration(
-                    name="read_file",
-                    description="파일의 내용을 읽습니다.",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={"file_path": types.Schema(type=types.Type.STRING, description="읽을 파일의 경로")},
-                        required=["file_path"]
-                    )
-                ),
-                types.FunctionDeclaration(
-                    name="write_file",
-                    description="파일에 내용을 씁니다.",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={
-                            "file_path": types.Schema(type=types.Type.STRING, description="쓸 파일의 경로"),
-                            "content": types.Schema(type=types.Type.STRING, description="파일에 쓸 내용")
-                        },
-                        required=["file_path", "content"]
-                    )
-                ),
-                types.FunctionDeclaration(
-                    name="list_directory",
-                    description="디렉토리의 파일과 폴더 목록을 가져옵니다.",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={"dir_path": types.Schema(type=types.Type.STRING, description="디렉토리 경로")}
-                    )
-                ),
-                # 코드 실행 도구
-                types.FunctionDeclaration(
-                    name="execute_python",
-                    description="Python 코드를 실행합니다.",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={"code": types.Schema(type=types.Type.STRING, description="실행할 Python 코드")},
-                        required=["code"]
-                    )
-                ),
-                types.FunctionDeclaration(
-                    name="execute_node",
-                    description="Node.js JavaScript 코드를 실행합니다.",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={"code": types.Schema(type=types.Type.STRING, description="실행할 JavaScript 코드")},
-                        required=["code"]
-                    )
-                ),
-                types.FunctionDeclaration(
-                    name="run_command",
-                    description="쉘 명령어를 실행합니다. (pip install, mkdir 등)",
-                    parameters=types.Schema(
-                        type=types.Type.OBJECT,
-                        properties={"command": types.Schema(type=types.Type.STRING, description="실행할 명령어")},
-                        required=["command"]
-                    )
+        # 도구 동적 로딩 및 Gemini 형식으로 변환
+        all_tools = get_all_system_ai_tools()
+
+        def convert_schema(schema: dict):
+            """JSON Schema를 Gemini Schema로 변환"""
+            json_type = schema.get("type", "string")
+            description = schema.get("description", "")
+
+            type_map = {
+                "string": types.Type.STRING,
+                "number": types.Type.NUMBER,
+                "integer": types.Type.INTEGER,
+                "boolean": types.Type.BOOLEAN,
+                "array": types.Type.ARRAY,
+                "object": types.Type.OBJECT,
+            }
+            gemini_type = type_map.get(json_type, types.Type.STRING)
+
+            if json_type == "object":
+                props = schema.get("properties", {})
+                converted_props = {k: convert_schema(v) for k, v in props.items()}
+                return types.Schema(
+                    type=types.Type.OBJECT,
+                    description=description,
+                    properties=converted_props,
+                    required=schema.get("required", [])
                 )
-            ])
-        ]
+            elif json_type == "array":
+                items = schema.get("items", {"type": "string"})
+                return types.Schema(
+                    type=types.Type.ARRAY,
+                    description=description,
+                    items=convert_schema(items)
+                )
+            return types.Schema(type=gemini_type, description=description)
+
+        function_declarations = []
+        for tool in all_tools:
+            params = tool.get("input_schema") or tool.get("parameters") or {"type": "object", "properties": {}}
+            function_declarations.append(
+                types.FunctionDeclaration(
+                    name=tool["name"],
+                    description=tool.get("description", ""),
+                    parameters=convert_schema(params)
+                )
+            )
+
+        system_tools = [types.Tool(function_declarations=function_declarations)] if function_declarations else None
 
         # 대화 히스토리 구성
         contents = []
@@ -1338,21 +932,6 @@ async def clear_conversations():
     return {"status": "cleared"}
 
 
-@router.get("/system-ai/system-status")
-async def get_system_status():
-    """시스템 현황 문서 조회"""
-    content = init_system_status()
-    return {"content": content}
-
-
-@router.put("/system-ai/system-status")
-async def update_system_status(data: Dict[str, str]):
-    """시스템 현황 문서 업데이트"""
-    from system_ai_memory import save_system_status
-
-    content = data.get("content", "")
-    save_system_status(content)
-    return {"status": "updated"}
 
 
 # ============ 프롬프트 설정 API ============
@@ -1365,7 +944,6 @@ def save_system_ai_config(config: dict):
 
 class PromptConfigUpdate(BaseModel):
     selected_template: Optional[str] = None
-    role_prompt_enabled: Optional[bool] = None
 
 
 @router.get("/system-ai/prompts/config")
@@ -1373,8 +951,7 @@ async def get_prompt_config():
     """프롬프트 설정 조회"""
     config = load_system_ai_config()
     return {
-        "selected_template": config.get("selected_template", "default"),
-        "role_prompt_enabled": config.get("role_prompt_enabled", False)
+        "selected_template": config.get("selected_template", "default")
     }
 
 
@@ -1385,21 +962,25 @@ async def update_prompt_config(data: PromptConfigUpdate):
 
     if data.selected_template is not None:
         config["selected_template"] = data.selected_template
-    if data.role_prompt_enabled is not None:
-        config["role_prompt_enabled"] = data.role_prompt_enabled
 
     save_system_ai_config(config)
     return {"status": "updated", "config": {
-        "selected_template": config.get("selected_template"),
-        "role_prompt_enabled": config.get("role_prompt_enabled")
+        "selected_template": config.get("selected_template")
     }}
+
+
+# 시스템 AI 역할 파일 경로
+SYSTEM_AI_ROLE_PATH = DATA_PATH / "system_ai_role.txt"
 
 
 @router.get("/system-ai/prompts/role")
 async def get_role_prompt():
-    """역할 프롬프트 조회"""
-    config = load_system_ai_config()
-    return {"content": config.get("role", "")}
+    """역할 프롬프트 조회 (별도 파일에서 로드)"""
+    if SYSTEM_AI_ROLE_PATH.exists():
+        content = SYSTEM_AI_ROLE_PATH.read_text(encoding='utf-8')
+    else:
+        content = ""
+    return {"content": content}
 
 
 class RolePromptUpdate(BaseModel):
@@ -1408,8 +989,6 @@ class RolePromptUpdate(BaseModel):
 
 @router.put("/system-ai/prompts/role")
 async def update_role_prompt(data: RolePromptUpdate):
-    """역할 프롬프트 업데이트"""
-    config = load_system_ai_config()
-    config["role"] = data.content
-    save_system_ai_config(config)
+    """역할 프롬프트 업데이트 (별도 파일에 저장)"""
+    SYSTEM_AI_ROLE_PATH.write_text(data.content, encoding='utf-8')
     return {"status": "updated"}

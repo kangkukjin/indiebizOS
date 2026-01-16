@@ -3,7 +3,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Bot, RefreshCw, Paperclip, Camera, FileText, History, ListTodo, CheckCircle2, Circle, Loader2, HelpCircle, FileEdit, Check, XCircle } from 'lucide-react';
+import { X, Send, Bot, RefreshCw, Paperclip, Camera, FileText, History, ListTodo, CheckCircle2, Circle, Loader2, HelpCircle, FileEdit, Check, XCircle, Square } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { api } from '../../../lib/api';
 import { CameraPreview } from '../../CameraPreview';
@@ -94,6 +94,14 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
   // 스트리밍 관련 상태
   const [streamingContent, setStreamingContent] = useState('');
   const [currentToolActivity, setCurrentToolActivity] = useState<string | null>(null);
+  // 도구 실행 이력 (상세 정보 포함)
+  const [toolHistory, setToolHistory] = useState<{
+    name: string;
+    input?: Record<string, unknown>;
+    result?: string;
+    status: 'running' | 'completed';
+  }[]>([]);
+  // expandedTools 상태 제거됨 - Claude Desktop 스타일로 항상 펼침
   const wsRef = useRef<WebSocket | null>(null);
   const clientIdRef = useRef<string>(`system_ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
@@ -352,6 +360,178 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
     e.target.value = '';
   };
 
+  // 재연결을 위한 마지막 요청 저장
+  const lastRequestRef = useRef<{ message: string; images?: any[] } | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const maxReconnectAttempts = 3;
+
+  // WebSocket 연결 함수 (재연결 지원)
+  const connectWebSocket = (messageContent: string, imageData: any[], isRetry = false) => {
+    const wsUrl = `ws://localhost:8765/ws/chat/${clientIdRef.current}`;
+
+    // 마지막 요청 저장 (재연결 시 사용)
+    lastRequestRef.current = { message: messageContent, images: imageData };
+
+    try {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        if (isRetry) {
+          console.log('WebSocket 재연결 성공');
+        }
+        reconnectAttemptRef.current = 0; // 연결 성공 시 재연결 시도 횟수 초기화
+
+        ws.send(JSON.stringify({
+          type: 'system_ai_stream',
+          message: messageContent,
+          images: imageData.length > 0 ? imageData : undefined
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        switch (data.type) {
+          case 'stream_chunk':
+            setStreamingContent(prev => prev + data.content);
+            break;
+
+          case 'tool_start':
+            setCurrentToolActivity(`🔧 ${data.name} 실행 중...`);
+            setToolHistory(prev => [...prev, {
+              name: data.name,
+              input: data.input,
+              status: 'running'
+            }]);
+            break;
+
+          case 'tool_result':
+            // 도구 결과가 와도 바로 지우지 않고, 결과 요약을 잠시 표시
+            setCurrentToolActivity(`✓ ${data.name} 완료`);
+            // 해당 도구의 결과 업데이트
+            setToolHistory(prev => {
+              const updated = [...prev];
+              const idx = updated.findLastIndex(t => t.name === data.name && t.status === 'running');
+              if (idx !== -1) {
+                updated[idx] = { ...updated[idx], result: data.result, status: 'completed' };
+              }
+              return updated;
+            });
+            // TODO 데이터가 있으면 업데이트
+            if (data.todos) {
+              setTodos(data.todos);
+            }
+            break;
+
+          case 'response':
+            setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
+            setStreamingContent('');
+            setToolHistory([]);  // 도구 이력 초기화
+            setTodos([]);  // TODO 리스트 초기화
+            lastRequestRef.current = null; // 응답 완료 시 요청 정보 클리어
+            break;
+
+          case 'end':
+            setIsLoading(false);
+            setCurrentToolActivity(null);
+            setToolHistory([]);  // 도구 이력 초기화
+            setTodos([]);  // TODO 리스트 초기화
+            lastRequestRef.current = null;
+            ws.close();
+            break;
+
+          case 'error':
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `오류: ${data.message}`
+            }]);
+            setIsLoading(false);
+            setStreamingContent('');
+            setCurrentToolActivity(null);
+            setToolHistory([]);  // 도구 이력 초기화
+            setTodos([]);  // TODO 리스트 초기화
+            lastRequestRef.current = null;
+            ws.close();
+            break;
+
+          case 'cancelled':
+            // 중단 완료 - 부분 응답이 있으면 표시
+            if (streamingContent) {
+              setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: streamingContent + '\n\n*(중단됨)*'
+              }]);
+            }
+            setIsLoading(false);
+            setStreamingContent('');
+            setCurrentToolActivity(null);
+            setToolHistory([]);
+            setTodos([]);  // TODO 리스트 초기화
+            lastRequestRef.current = null;
+            break;
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+
+      ws.onclose = (event) => {
+        wsRef.current = null;
+
+        // 비정상 종료이고 응답 대기 중이면 재연결 시도
+        if (event.code !== 1000 && lastRequestRef.current && reconnectAttemptRef.current < maxReconnectAttempts) {
+          reconnectAttemptRef.current++;
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current - 1), 8000); // exponential backoff
+
+          console.log(`WebSocket 연결 끊김 (code: ${event.code}), ${delay/1000}초 후 재연결 시도 (${reconnectAttemptRef.current}/${maxReconnectAttempts})`);
+
+          setTimeout(() => {
+            if (lastRequestRef.current) {
+              connectWebSocket(lastRequestRef.current.message, lastRequestRef.current.images || [], true);
+            }
+          }, delay);
+        } else if (reconnectAttemptRef.current >= maxReconnectAttempts && lastRequestRef.current) {
+          // 최대 재연결 시도 초과
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: '연결이 불안정합니다. 잠시 후 다시 시도해주세요.'
+          }]);
+          setIsLoading(false);
+          setStreamingContent('');
+          setCurrentToolActivity(null);
+          lastRequestRef.current = null;
+          reconnectAttemptRef.current = 0;
+        }
+      };
+
+    } catch (error: any) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `오류: ${error.message || '응답을 받지 못했습니다. 설정에서 API 키를 확인해주세요.'}`
+      }]);
+      setIsLoading(false);
+      setStreamingContent('');
+      lastRequestRef.current = null;
+    }
+  };
+
+  // 중지 버튼 핸들러
+  const handleCancel = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      // 백엔드에 중단 메시지 전송
+      wsRef.current.send(JSON.stringify({ type: 'cancel' }));
+      console.log('[SystemAI] 중단 요청 전송');
+    }
+    // UI 상태 초기화
+    setIsLoading(false);
+    setStreamingContent('');
+    setCurrentToolActivity(null);
+    setToolHistory([]);
+    lastRequestRef.current = null;
+  };
+
   const handleSend = async () => {
     const hasContent = input.trim() || attachedImages.length > 0 || attachedTextFiles.length > 0;
     if (!hasContent || isLoading) return;
@@ -390,87 +570,10 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
     setIsLoading(true);
     setStreamingContent('');
     setCurrentToolActivity(null);
+    reconnectAttemptRef.current = 0;
 
-    // WebSocket 연결 및 스트리밍
-    const wsUrl = `ws://localhost:8765/ws/chat/${clientIdRef.current}`;
-
-    try {
-      const ws = new WebSocket(wsUrl);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        // 메시지 전송
-        ws.send(JSON.stringify({
-          type: 'system_ai_stream',
-          message: messageContent,
-          images: imageData.length > 0 ? imageData : undefined
-        }));
-      };
-
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-
-        switch (data.type) {
-          case 'stream_chunk':
-            setStreamingContent(prev => prev + data.content);
-            break;
-
-          case 'tool_start':
-            setCurrentToolActivity(`🔧 ${data.name} 실행 중...`);
-            break;
-
-          case 'tool_result':
-            setCurrentToolActivity(null);
-            // 도구 결과는 스트리밍 내용에 포함되지 않음 (AI가 요약해서 전달)
-            break;
-
-          case 'response':
-            // 최종 응답 - 메시지에 추가
-            setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
-            setStreamingContent('');
-            break;
-
-          case 'end':
-            setIsLoading(false);
-            setCurrentToolActivity(null);
-            ws.close();
-            break;
-
-          case 'error':
-            setMessages(prev => [...prev, {
-              role: 'assistant',
-              content: `오류: ${data.message}`
-            }]);
-            setIsLoading(false);
-            setStreamingContent('');
-            setCurrentToolActivity(null);
-            ws.close();
-            break;
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: '연결 오류가 발생했습니다. 다시 시도해주세요.'
-        }]);
-        setIsLoading(false);
-        setStreamingContent('');
-      };
-
-      ws.onclose = () => {
-        wsRef.current = null;
-      };
-
-    } catch (error: any) {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: `오류: ${error.message || '응답을 받지 못했습니다. 설정에서 API 키를 확인해주세요.'}`
-      }]);
-      setIsLoading(false);
-      setStreamingContent('');
-    }
+    // WebSocket 연결
+    connectWebSocket(messageContent, imageData);
   };
 
   // 질문 응답 제출
@@ -851,11 +954,68 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm max-w-[80%]">
-                {/* 도구 활동 표시 */}
+                {/* 도구 실행 이력 표시 (Claude Desktop 스타일 - 항상 펼침) */}
+                {toolHistory.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    {toolHistory.map((tool, idx) => (
+                      <div key={idx} className="text-xs border border-gray-200 rounded-lg overflow-hidden bg-white">
+                        {/* 도구 헤더 */}
+                        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                          {tool.status === 'running' ? (
+                            <Loader2 size={14} className="animate-spin text-amber-500 shrink-0" />
+                          ) : (
+                            <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+                          )}
+                          <span className="font-semibold text-gray-800">{tool.name}</span>
+                          {tool.status === 'running' && (
+                            <span className="ml-auto text-[10px] text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">실행 중</span>
+                          )}
+                        </div>
+
+                        {/* 입력 파라미터 (항상 표시) */}
+                        {tool.input && Object.keys(tool.input).length > 0 && (
+                          <div className="px-3 py-2 border-b border-gray-100 bg-blue-50/30">
+                            <div className="text-[10px] text-blue-600 font-medium mb-1 flex items-center gap-1">
+                              <span>📥</span> 입력
+                            </div>
+                            <pre className="text-[11px] text-gray-700 bg-white/80 p-2 rounded border border-gray-100 overflow-x-auto max-h-40 overflow-y-auto">
+                              {JSON.stringify(tool.input, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+
+                        {/* 결과 (항상 표시) */}
+                        {tool.result && (
+                          <div className="px-3 py-2 bg-green-50/30">
+                            <div className="text-[10px] text-green-600 font-medium mb-1 flex items-center gap-1">
+                              <span>📤</span> 결과
+                            </div>
+                            <pre className="text-[11px] text-gray-700 bg-white/80 p-2 rounded border border-gray-100 overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap break-words">
+                              {tool.result}
+                            </pre>
+                          </div>
+                        )}
+
+                        {/* 실행 중일 때 로딩 표시 */}
+                        {tool.status === 'running' && !tool.result && (
+                          <div className="px-3 py-3 flex items-center justify-center gap-2 text-gray-500">
+                            <Loader2 size={12} className="animate-spin" />
+                            <span className="text-[11px]">결과를 기다리는 중...</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* 현재 도구 활동 표시 */}
                 {currentToolActivity && (
-                  <div className="flex items-center gap-2 text-amber-600 text-sm mb-2 pb-2 border-b border-gray-100">
-                    <Loader2 size={14} className="animate-spin" />
-                    <span>{currentToolActivity}</span>
+                  <div className="flex items-center gap-2 text-amber-600 text-sm mb-2">
+                    {currentToolActivity.startsWith('✓') ? (
+                      <span className="text-green-500">✓</span>
+                    ) : (
+                      <Loader2 size={14} className="animate-spin" />
+                    )}
+                    <span>{currentToolActivity.replace(/^[✓🔧]\s*/, '')}</span>
                   </div>
                 )}
                 {/* 스트리밍 텍스트 표시 */}
@@ -864,7 +1024,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
                     <ReactMarkdown>{streamingContent}</ReactMarkdown>
                     <span className="inline-block w-2 h-4 bg-amber-400 animate-pulse ml-0.5" />
                   </div>
-                ) : (
+                ) : !currentToolActivity && (
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -977,13 +1137,23 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
               rows={1}
               disabled={isLoading}
             />
-            <button
-              onClick={handleSend}
-              disabled={(!input.trim() && attachedImages.length === 0 && attachedTextFiles.length === 0) || isLoading}
-              className="px-4 py-2.5 bg-amber-500 text-white rounded-xl hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Send size={18} />
-            </button>
+            {isLoading ? (
+              <button
+                onClick={handleCancel}
+                className="px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors"
+                title="중지"
+              >
+                <Square size={18} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() && attachedImages.length === 0 && attachedTextFiles.length === 0}
+                className="px-4 py-2.5 bg-amber-500 text-white rounded-xl hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Send size={18} />
+              </button>
+            )}
           </div>
           <p className="text-xs text-gray-400 mt-2 text-center">Enter로 전송 · Shift+Enter로 줄바꿈 · 파일 드래그 또는 붙여넣기</p>
         </div>

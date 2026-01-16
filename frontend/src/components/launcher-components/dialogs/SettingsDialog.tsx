@@ -53,7 +53,6 @@ export function SettingsDialog({
   // 프롬프트 템플릿 상태
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
-  const [rolePromptEnabled, setRolePromptEnabled] = useState(true);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
   const [showRolePromptModal, setShowRolePromptModal] = useState(false);
   const [rolePromptContent, setRolePromptContent] = useState('');
@@ -72,7 +71,6 @@ export function SettingsDialog({
       const data = await api.getPromptTemplates();
       setTemplates(data.templates);
       setSelectedTemplate(data.selected_template);
-      setRolePromptEnabled(data.role_prompt_enabled);
     } catch (err) {
       console.error('Failed to load prompt templates:', err);
     } finally {
@@ -87,15 +85,6 @@ export function SettingsDialog({
       setTemplates(prev => prev.map(t => ({ ...t, selected: t.id === templateId })));
     } catch (err) {
       console.error('Failed to change template:', err);
-    }
-  };
-
-  const handleRolePromptToggle = async (enabled: boolean) => {
-    try {
-      await api.updatePromptConfig({ role_prompt_enabled: enabled });
-      setRolePromptEnabled(enabled);
-    } catch (err) {
-      console.error('Failed to toggle role prompt:', err);
     }
   };
 
@@ -355,28 +344,15 @@ export function SettingsDialog({
                       ))}
                     </div>
 
-                    {/* 역할 프롬프트 */}
+                    {/* 역할 프롬프트 (개별역할) */}
                     <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                       <div className="flex items-center gap-2">
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={rolePromptEnabled}
-                            onChange={(e) => handleRolePromptToggle(e.target.checked)}
-                            className="sr-only peer"
-                          />
-                          <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#D97706]"></div>
-                        </label>
-                        <span className="text-sm text-gray-700">역할 프롬프트 사용</span>
+                        <span className="text-sm text-gray-700">역할 프롬프트</span>
+                        <span className="text-xs text-gray-500">(시스템 AI의 개별역할)</span>
                       </div>
                       <button
                         onClick={openRolePromptModal}
-                        disabled={!rolePromptEnabled}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                          rolePromptEnabled
-                            ? 'text-[#D97706] hover:bg-amber-50'
-                            : 'text-gray-400 cursor-not-allowed'
-                        }`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors text-[#D97706] hover:bg-amber-50"
                       >
                         <Edit3 size={14} />
                         편집
@@ -403,7 +379,7 @@ export function SettingsDialog({
                 </div>
                 <div className="flex-1 p-5 overflow-auto">
                   <p className="text-xs text-gray-600 mb-3">
-                    시스템 AI의 역할과 IndieBiz OS 관련 정보를 정의합니다. 베이스 템플릿 뒤에 추가됩니다.
+                    시스템 AI의 개별역할을 정의합니다. 프로젝트 에이전트의 role_description과 동일한 개념입니다.
                   </p>
                   <textarea
                     value={rolePromptContent}

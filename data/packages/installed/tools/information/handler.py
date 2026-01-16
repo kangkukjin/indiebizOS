@@ -494,8 +494,589 @@ def show_location_map(query: str = None, lat: float = None, lng: float = None,
     }
 
 
+def get_api_ninjas_data(endpoint: str, params: dict = None) -> dict:
+    """
+    API Ninjas를 통해 다양한 지식 정보 조회
+
+    Args:
+        endpoint: API 엔드포인트 (quotes, facts, weather, dictionary, trivia 등)
+        params: 필터링 매개변수
+
+    지원 엔드포인트 예시:
+        - quotes: 명언 (category: happiness, love, etc.)
+        - facts: 흥미로운 사실
+        - weather: 날씨 (city 필수)
+        - dictionary: 사전 정의 (word 필수)
+        - trivia: 퀴즈 (category: artliterature, science, etc.)
+        - jokes: 농담
+        - riddles: 수수께끼
+        - historicalevents: 역사적 사건 (day, month, year)
+    """
+    if not NINJAS_API_KEY:
+        return {"error": "NINJAS_API_KEY 환경변수가 설정되지 않았습니다. https://api-ninjas.com 에서 발급받으세요."}
+
+    base_url = "https://api.api-ninjas.com/v1"
+    url = f"{base_url}/{endpoint}"
+
+    headers = {
+        "X-Api-Key": NINJAS_API_KEY
+    }
+
+    try:
+        response = requests.get(url, headers=headers, params=params or {}, timeout=15)
+
+        if response.status_code == 401:
+            return {"error": "API Ninjas 인증 실패. API 키를 확인하세요."}
+        elif response.status_code == 400:
+            return {"error": f"잘못된 요청: {response.text}"}
+        elif response.status_code != 200:
+            return {"error": f"API Ninjas 오류: {response.status_code} - {response.text}"}
+
+        data = response.json()
+
+        # 결과가 리스트인 경우 (대부분의 엔드포인트)
+        if isinstance(data, list):
+            return {
+                "endpoint": endpoint,
+                "count": len(data),
+                "results": data
+            }
+        else:
+            return {
+                "endpoint": endpoint,
+                "result": data
+            }
+
+    except requests.exceptions.Timeout:
+        return {"error": "API Ninjas 요청 시간 초과"}
+    except Exception as e:
+        return {"error": f"API Ninjas 조회 실패: {str(e)}"}
+
+
+def search_public_apis(title: str = None, category: str = None) -> dict:
+    """
+    Public APIs 라이브러리에서 API 검색
+
+    Args:
+        title: API 이름으로 검색
+        category: 카테고리로 검색 (예: Weather, Finance, Games 등)
+
+    Note: api.publicapis.org 서비스가 중단되어 현재 제한적으로 동작합니다.
+    """
+    # 내장 API 목록 (자주 사용되는 무료 API들)
+    builtin_apis = [
+        {"API": "Open-Meteo", "Description": "Free weather API with hourly forecasts", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Weather", "Link": "https://open-meteo.com/"},
+        {"API": "OpenWeatherMap", "Description": "Weather data and forecasts", "Auth": "apiKey", "HTTPS": True, "Cors": "unknown", "Category": "Weather", "Link": "https://openweathermap.org/api"},
+        {"API": "CoinGecko", "Description": "Cryptocurrency data API", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Cryptocurrency", "Link": "https://www.coingecko.com/en/api"},
+        {"API": "ExchangeRate-API", "Description": "Free currency exchange rates", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Currency", "Link": "https://www.exchangerate-api.com/"},
+        {"API": "REST Countries", "Description": "Country information", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Geography", "Link": "https://restcountries.com/"},
+        {"API": "JSONPlaceholder", "Description": "Fake data for testing and prototyping", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Development", "Link": "https://jsonplaceholder.typicode.com/"},
+        {"API": "Random User", "Description": "Random user data generator", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Development", "Link": "https://randomuser.me/"},
+        {"API": "PokéAPI", "Description": "Pokemon data API", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Games", "Link": "https://pokeapi.co/"},
+        {"API": "OMDB", "Description": "Movie database", "Auth": "apiKey", "HTTPS": True, "Cors": "unknown", "Category": "Movies", "Link": "http://www.omdbapi.com/"},
+        {"API": "NewsAPI", "Description": "News articles from various sources", "Auth": "apiKey", "HTTPS": True, "Cors": "unknown", "Category": "News", "Link": "https://newsapi.org/"},
+        {"API": "NASA", "Description": "NASA data including imagery", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Science", "Link": "https://api.nasa.gov/"},
+        {"API": "Wikipedia", "Description": "Wikipedia content API", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Reference", "Link": "https://www.mediawiki.org/wiki/API:Main_page"},
+        {"API": "Dog API", "Description": "Random dog images", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Animals", "Link": "https://dog.ceo/dog-api/"},
+        {"API": "Cat Facts", "Description": "Random cat facts", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Animals", "Link": "https://catfact.ninja/"},
+        {"API": "JokeAPI", "Description": "Programming and misc jokes", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Entertainment", "Link": "https://jokeapi.dev/"},
+        {"API": "Quotable", "Description": "Random quotes API", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Quotes", "Link": "https://quotable.io/"},
+        {"API": "IP-API", "Description": "IP geolocation", "Auth": "", "HTTPS": False, "Cors": "unknown", "Category": "Network", "Link": "http://ip-api.com/"},
+        {"API": "GitHub", "Description": "GitHub repository and user data", "Auth": "OAuth", "HTTPS": True, "Cors": "yes", "Category": "Development", "Link": "https://docs.github.com/en/rest"},
+        {"API": "Unsplash", "Description": "Free high-resolution photos", "Auth": "OAuth", "HTTPS": True, "Cors": "unknown", "Category": "Photography", "Link": "https://unsplash.com/developers"},
+        {"API": "Spotify", "Description": "Music streaming data", "Auth": "OAuth", "HTTPS": True, "Cors": "unknown", "Category": "Music", "Link": "https://developer.spotify.com/documentation/web-api/"}
+    ]
+
+    # 필터링
+    filtered = []
+    for api in builtin_apis:
+        # 카테고리 필터
+        if category and api.get("Category", "").lower() != category.lower():
+            continue
+        # 이름 필터
+        if title and title.lower() not in api.get("API", "").lower():
+            continue
+        filtered.append({
+            "name": api.get("API", ""),
+            "description": api.get("Description", ""),
+            "auth": api.get("Auth", ""),
+            "https": api.get("HTTPS", False),
+            "cors": api.get("Cors", ""),
+            "category": api.get("Category", ""),
+            "link": api.get("Link", "")
+        })
+
+    # 카테고리 목록 (검색어 없을 때)
+    if not title and not category:
+        categories = sorted(list(set(api.get("Category", "") for api in builtin_apis)))
+        return {
+            "type": "categories",
+            "count": len(categories),
+            "categories": categories,
+            "message": "카테고리 목록입니다. category 매개변수로 특정 카테고리의 API를 검색하세요. (내장 목록, 전체 목록은 https://github.com/public-apis/public-apis 참조)"
+        }
+
+    return {
+        "query": title or category,
+        "count": len(filtered),
+        "apis": filtered,
+        "note": "내장 API 목록입니다. 더 많은 API는 https://github.com/public-apis/public-apis 참조"
+    }
+
+
+def amadeus_travel_search(endpoint: str, params: dict) -> dict:
+    """
+    Amadeus API를 통한 여행 정보 검색
+
+    Args:
+        endpoint: API 엔드포인트
+            - flight-offers: 항공권 검색 (originLocationCode, destinationLocationCode, departureDate, adults 필수)
+            - hotel-list: 호텔 목록 (cityCode 필수)
+            - points-of-interest: 관광지 (latitude, longitude 필수)
+        params: 검색 매개변수
+
+    예시:
+        항공권: endpoint="flight-offers", params={"originLocationCode": "ICN", "destinationLocationCode": "NRT", "departureDate": "2024-03-01", "adults": 1}
+        호텔: endpoint="hotel-list", params={"cityCode": "PAR"}
+        관광지: endpoint="points-of-interest", params={"latitude": 48.8566, "longitude": 2.3522}
+    """
+    if not AMADEUS_API_KEY or not AMADEUS_API_SECRET:
+        return {"error": "AMADEUS_API_KEY/AMADEUS_API_SECRET 환경변수가 설정되지 않았습니다. https://developers.amadeus.com 에서 발급받으세요."}
+
+    # 토큰 획득
+    token = get_amadeus_token()
+    if not token:
+        return {"error": "Amadeus API 인증 실패. API 키를 확인하세요."}
+
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    try:
+        # 엔드포인트별 URL 매핑
+        endpoint_urls = {
+            "flight-offers": f"{AMADEUS_BASE_URL}/v2/shopping/flight-offers",
+            "hotel-list": f"{AMADEUS_BASE_URL}/v1/reference-data/locations/hotels/by-city",
+            "points-of-interest": f"{AMADEUS_BASE_URL}/v1/reference-data/locations/pois",
+            "airport-routes": f"{AMADEUS_BASE_URL}/v1/airport/direct-destinations",
+            "city-search": f"{AMADEUS_BASE_URL}/v1/reference-data/locations"
+        }
+
+        url = endpoint_urls.get(endpoint)
+        if not url:
+            available = ", ".join(endpoint_urls.keys())
+            return {"error": f"지원하지 않는 엔드포인트: {endpoint}. 사용 가능: {available}"}
+
+        response = requests.get(url, headers=headers, params=params, timeout=20)
+
+        if response.status_code == 401:
+            return {"error": "Amadeus API 인증 만료. 다시 시도하세요."}
+        elif response.status_code == 400:
+            error_detail = response.json().get("errors", [{}])[0].get("detail", response.text)
+            return {"error": f"잘못된 요청: {error_detail}"}
+        elif response.status_code != 200:
+            return {"error": f"Amadeus API 오류: {response.status_code} - {response.text[:500]}"}
+
+        data = response.json()
+        results = data.get("data", [])
+
+        return {
+            "endpoint": endpoint,
+            "count": len(results) if isinstance(results, list) else 1,
+            "results": results[:20] if isinstance(results, list) else results,  # 최대 20개
+            "meta": data.get("meta", {})
+        }
+
+    except requests.exceptions.Timeout:
+        return {"error": "Amadeus API 요청 시간 초과"}
+    except Exception as e:
+        return {"error": f"Amadeus 여행 검색 실패: {str(e)}"}
+
+
+def get_crypto_price(coin_id: str = "bitcoin") -> dict:
+    """
+    CoinGecko API를 통해 암호화폐 가격 조회 (무료, API 키 불필요)
+
+    Args:
+        coin_id: CoinGecko 코인 ID (bitcoin, ethereum, dogecoin 등)
+            - 일반적인 매핑: BTC=bitcoin, ETH=ethereum, XRP=ripple, DOGE=dogecoin
+
+    Returns:
+        암호화폐 가격 정보
+    """
+    # 심볼 -> CoinGecko ID 매핑
+    symbol_map = {
+        "BTC": "bitcoin", "BITCOIN": "bitcoin",
+        "ETH": "ethereum", "ETHEREUM": "ethereum",
+        "XRP": "ripple", "RIPPLE": "ripple",
+        "DOGE": "dogecoin", "DOGECOIN": "dogecoin",
+        "ADA": "cardano", "CARDANO": "cardano",
+        "SOL": "solana", "SOLANA": "solana",
+        "DOT": "polkadot", "POLKADOT": "polkadot",
+        "MATIC": "matic-network", "POLYGON": "matic-network",
+        "AVAX": "avalanche-2", "AVALANCHE": "avalanche-2",
+        "LINK": "chainlink", "CHAINLINK": "chainlink",
+        "UNI": "uniswap", "UNISWAP": "uniswap",
+        "ATOM": "cosmos", "COSMOS": "cosmos",
+        "LTC": "litecoin", "LITECOIN": "litecoin",
+        "BCH": "bitcoin-cash",
+        "BNB": "binancecoin", "BINANCE": "binancecoin",
+        "SHIB": "shiba-inu", "SHIBA": "shiba-inu",
+    }
+
+    # 심볼 변환 (BTC-USD -> bitcoin)
+    coin = coin_id.upper().replace("-USD", "").replace("-KRW", "")
+    coin_id_resolved = symbol_map.get(coin, coin_id.lower())
+
+    try:
+        url = f"https://api.coingecko.com/api/v3/coins/{coin_id_resolved}"
+        params = {
+            "localization": "false",
+            "tickers": "false",
+            "market_data": "true",
+            "community_data": "false",
+            "developer_data": "false"
+        }
+
+        response = requests.get(url, params=params, timeout=15)
+
+        if response.status_code == 404:
+            return {"error": f"'{coin_id}' 암호화폐를 찾을 수 없습니다. 사용 가능한 ID: bitcoin, ethereum, ripple, dogecoin 등"}
+        elif response.status_code != 200:
+            return {"error": f"CoinGecko API 오류: {response.status_code}"}
+
+        data = response.json()
+        market = data.get("market_data", {})
+
+        current_price_usd = market.get("current_price", {}).get("usd", 0)
+        current_price_krw = market.get("current_price", {}).get("krw", 0)
+        change_24h = market.get("price_change_percentage_24h", 0)
+
+        result = {
+            "symbol": data.get("symbol", "").upper(),
+            "name": data.get("name", ""),
+            "current_price_usd": current_price_usd,
+            "current_price_krw": current_price_krw,
+            "change_24h_percent": round(change_24h, 2) if change_24h else 0,
+            "market_cap_usd": market.get("market_cap", {}).get("usd"),
+            "market_cap_krw": market.get("market_cap", {}).get("krw"),
+            "market_cap_formatted": _format_number(market.get("market_cap", {}).get("usd")),
+            "volume_24h_usd": market.get("total_volume", {}).get("usd"),
+            "high_24h_usd": market.get("high_24h", {}).get("usd"),
+            "low_24h_usd": market.get("low_24h", {}).get("usd"),
+            "ath_usd": market.get("ath", {}).get("usd"),  # 역대 최고가
+            "ath_date": market.get("ath_date", {}).get("usd", "")[:10] if market.get("ath_date", {}).get("usd") else "",
+            "circulating_supply": market.get("circulating_supply"),
+            "total_supply": market.get("total_supply"),
+            "rank": data.get("market_cap_rank"),
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        # 요약 메시지
+        direction = "▲" if change_24h and change_24h >= 0 else "▼"
+        result["message"] = f"{result['name']} ({result['symbol']}): ${current_price_usd:,.2f} ({current_price_krw:,.0f}원) {direction} {abs(change_24h):.2f}% (24h)"
+
+        return result
+
+    except requests.exceptions.Timeout:
+        return {"error": "CoinGecko API 요청 시간 초과"}
+    except Exception as e:
+        return {"error": f"암호화폐 정보 조회 실패: {str(e)}"}
+
+
+def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d") -> dict:
+    """
+    Yahoo Finance를 통해 주식/암호화폐 가격 정보 조회
+
+    Args:
+        symbol: 종목 심볼 (예: AAPL, TSLA, BTC-USD, 005930.KS)
+            - 미국 주식: AAPL, MSFT, GOOGL, TSLA
+            - 한국 주식: 005930.KS (삼성전자), 000660.KS (SK하이닉스)
+            - 암호화폐: BTC-USD (비트코인), ETH-USD (이더리움)
+            - ETF: SPY, QQQ, VOO
+        period: 조회 기간 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
+        interval: 데이터 간격 (1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo)
+
+    Returns:
+        주식 가격 정보 딕셔너리
+    """
+    # 암호화폐 심볼인 경우 CoinGecko API 사용
+    crypto_symbols = ["BTC", "ETH", "XRP", "DOGE", "ADA", "SOL", "DOT", "MATIC", "AVAX",
+                      "LINK", "UNI", "ATOM", "LTC", "BCH", "BNB", "SHIB"]
+    symbol_upper = symbol.upper().replace("-USD", "").replace("-KRW", "")
+    if symbol_upper in crypto_symbols or "-USD" in symbol.upper() or "-KRW" in symbol.upper():
+        return get_crypto_price(symbol)
+
+    try:
+        import yfinance as yf
+    except ImportError:
+        return {"error": "yfinance 라이브러리가 설치되지 않았습니다. pip install yfinance 실행 필요"}
+
+    try:
+        ticker = yf.Ticker(symbol)
+
+        # 가격 히스토리 (info 대신 history만 사용 - Rate limit 회피)
+        hist = ticker.history(period=period, interval=interval)
+
+        if hist.empty:
+            return {"error": f"'{symbol}' 종목을 찾을 수 없거나 데이터가 없습니다. Yahoo Finance API 일시적 오류일 수 있습니다."}
+
+        # 최신 가격 정보
+        latest = hist.iloc[-1]
+        current_price = latest["Close"]
+
+        # 이전 종가 (히스토리에서 계산)
+        prev_close = hist.iloc[-2]["Close"] if len(hist) >= 2 else current_price
+
+        # 변동률 계산
+        if prev_close and prev_close > 0:
+            change = current_price - prev_close
+            change_percent = (change / prev_close) * 100
+        else:
+            change = 0
+            change_percent = 0
+
+        result = {
+            "symbol": symbol.upper(),
+            "name": symbol.upper(),  # info 호출 없이 심볼 사용
+            "current_price": round(current_price, 2),
+            "currency": "USD" if not symbol.endswith((".KS", ".KQ")) else "KRW",
+            "change": round(change, 2),
+            "change_percent": round(change_percent, 2),
+            "previous_close": round(prev_close, 2),
+            "open": round(latest.get("Open", 0), 2),
+            "high": round(latest.get("High", 0), 2),
+            "low": round(latest.get("Low", 0), 2),
+            "volume": int(latest.get("Volume", 0)),
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        # 가격 히스토리 (최근 5개)
+        if len(hist) > 1:
+            history_data = []
+            for idx, row in hist.tail(5).iterrows():
+                history_data.append({
+                    "date": idx.strftime("%Y-%m-%d %H:%M"),
+                    "open": round(row["Open"], 2),
+                    "high": round(row["High"], 2),
+                    "low": round(row["Low"], 2),
+                    "close": round(row["Close"], 2),
+                    "volume": int(row["Volume"])
+                })
+            result["history"] = history_data
+
+        # 요약 메시지
+        direction = "▲" if change >= 0 else "▼"
+        result["message"] = f"{result['name']} ({symbol}): {result['current_price']} {result['currency']} {direction} {abs(result['change'])} ({result['change_percent']:+.2f}%)"
+
+        return result
+
+    except Exception as e:
+        return {"error": f"주식 정보 조회 실패: {str(e)}"}
+
+
+def get_stock_info(symbol: str) -> dict:
+    """
+    Yahoo Finance를 통해 주식/암호화폐 상세 정보 조회
+
+    Args:
+        symbol: 종목 심볼 (예: AAPL, 005930.KS, BTC-USD)
+
+    Returns:
+        회사/자산 상세 정보
+    """
+    try:
+        import yfinance as yf
+    except ImportError:
+        return {"error": "yfinance 라이브러리가 설치되지 않았습니다. pip install yfinance 실행 필요"}
+
+    try:
+        ticker = yf.Ticker(symbol)
+
+        # fast_info 사용 (rate limit 회피, info 대신)
+        try:
+            fast = ticker.fast_info
+            hist = ticker.history(period="1y")
+
+            if hist.empty:
+                return {"error": f"'{symbol}' 종목 정보를 찾을 수 없습니다."}
+
+            latest = hist.iloc[-1]
+
+            # 52주 최고/최저 계산
+            year_high = hist["High"].max()
+            year_low = hist["Low"].min()
+
+            result = {
+                "symbol": symbol.upper(),
+                "name": symbol.upper(),
+                "currency": "USD" if not symbol.endswith((".KS", ".KQ")) else "KRW",
+                "current_price": round(latest["Close"], 2),
+                "market_cap": getattr(fast, 'market_cap', None),
+                "market_cap_formatted": _format_number(getattr(fast, 'market_cap', None)),
+                "52_week_high": round(year_high, 2),
+                "52_week_low": round(year_low, 2),
+                "50_day_avg": round(hist.tail(50)["Close"].mean(), 2) if len(hist) >= 50 else None,
+                "200_day_avg": round(hist.tail(200)["Close"].mean(), 2) if len(hist) >= 200 else None,
+                "volume": int(latest.get("Volume", 0)),
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+
+            return result
+
+        except Exception as fast_err:
+            # fast_info 실패 시 history만 사용
+            hist = ticker.history(period="1y")
+            if hist.empty:
+                return {"error": f"'{symbol}' 종목 정보를 찾을 수 없습니다."}
+
+            latest = hist.iloc[-1]
+            return {
+                "symbol": symbol.upper(),
+                "name": symbol.upper(),
+                "current_price": round(latest["Close"], 2),
+                "52_week_high": round(hist["High"].max(), 2),
+                "52_week_low": round(hist["Low"].min(), 2),
+                "volume": int(latest.get("Volume", 0)),
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+
+    except Exception as e:
+        return {"error": f"종목 정보 조회 실패: {str(e)}"}
+
+
+def search_stock(query: str, search_type: str = "quotes") -> dict:
+    """
+    Yahoo Finance에서 종목 검색
+
+    Args:
+        query: 검색어 (종목 심볼 또는 회사명)
+        search_type: 검색 유형 (all, quotes, news)
+
+    Returns:
+        검색 결과 목록
+    """
+    try:
+        import yfinance as yf
+    except ImportError:
+        return {"error": "yfinance 라이브러리가 설치되지 않았습니다. pip install yfinance 실행 필요"}
+
+    try:
+        search = yf.Search(query)
+
+        if search_type == "all":
+            return {
+                "query": query,
+                "quotes": search.quotes[:10] if search.quotes else [],
+                "news": search.news[:5] if search.news else []
+            }
+        elif search_type == "news":
+            return {
+                "query": query,
+                "count": len(search.news) if search.news else 0,
+                "news": search.news[:10] if search.news else []
+            }
+        else:  # quotes
+            quotes = []
+            for q in (search.quotes or [])[:10]:
+                quotes.append({
+                    "symbol": q.get("symbol", ""),
+                    "name": q.get("shortname") or q.get("longname", ""),
+                    "exchange": q.get("exchange", ""),
+                    "type": q.get("quoteType", ""),
+                    "score": q.get("score", 0)
+                })
+            return {
+                "query": query,
+                "count": len(quotes),
+                "quotes": quotes
+            }
+
+    except Exception as e:
+        return {"error": f"종목 검색 실패: {str(e)}"}
+
+
+def get_stock_news(symbol: str) -> dict:
+    """
+    Yahoo Finance에서 종목 관련 뉴스 조회
+
+    Args:
+        symbol: 종목 심볼
+
+    Returns:
+        관련 뉴스 목록
+    """
+    try:
+        import yfinance as yf
+    except ImportError:
+        return {"error": "yfinance 라이브러리가 설치되지 않았습니다. pip install yfinance 실행 필요"}
+
+    try:
+        ticker = yf.Ticker(symbol)
+        news = ticker.news
+
+        if not news:
+            return {"symbol": symbol, "count": 0, "news": [], "message": f"'{symbol}' 관련 뉴스가 없습니다."}
+
+        news_list = []
+        for item in news[:10]:
+            news_list.append({
+                "title": item.get("title", ""),
+                "publisher": item.get("publisher", ""),
+                "link": item.get("link", ""),
+                "published": datetime.fromtimestamp(item.get("providerPublishTime", 0)).strftime("%Y-%m-%d %H:%M") if item.get("providerPublishTime") else "",
+                "type": item.get("type", "")
+            })
+
+        return {
+            "symbol": symbol.upper(),
+            "count": len(news_list),
+            "news": news_list
+        }
+
+    except Exception as e:
+        return {"error": f"뉴스 조회 실패: {str(e)}"}
+
+
+def _format_number(num):
+    """숫자를 읽기 쉬운 형태로 포맷"""
+    if num is None:
+        return None
+    if num >= 1_000_000_000_000:
+        return f"{num/1_000_000_000_000:.2f}T"
+    elif num >= 1_000_000_000:
+        return f"{num/1_000_000_000:.2f}B"
+    elif num >= 1_000_000:
+        return f"{num/1_000_000:.2f}M"
+    elif num >= 1_000:
+        return f"{num/1_000:.2f}K"
+    return str(num)
+
+
 def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    if tool_name == "search_restaurants":
+    if tool_name == "get_api_ninjas_data":
+        endpoint = tool_input.get("endpoint", "")
+        if not endpoint:
+            return json.dumps({"error": "endpoint 매개변수가 필요합니다."}, ensure_ascii=False)
+        result = get_api_ninjas_data(endpoint, tool_input.get("params"))
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "search_public_apis":
+        result = search_public_apis(
+            title=tool_input.get("title"),
+            category=tool_input.get("category")
+        )
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "amadeus_travel_search":
+        endpoint = tool_input.get("endpoint", "")
+        params = tool_input.get("params", {})
+        if not endpoint:
+            return json.dumps({"error": "endpoint 매개변수가 필요합니다."}, ensure_ascii=False)
+        result = amadeus_travel_search(endpoint, params)
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "search_restaurants":
         query = tool_input.get("query", "")
         if not query:
             return json.dumps({"error": "검색 키워드(query)가 필요합니다."}, ensure_ascii=False)
@@ -536,6 +1117,46 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
             zoom=tool_input.get("zoom", 15),
             markers=tool_input.get("markers")
         )
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "get_stock_price":
+        symbol = tool_input.get("symbol", "")
+        if not symbol:
+            return json.dumps({"error": "종목 심볼(symbol)이 필요합니다."}, ensure_ascii=False)
+        result = get_stock_price(
+            symbol=symbol,
+            period=tool_input.get("period", "1d"),
+            interval=tool_input.get("interval", "1d")
+        )
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "get_stock_info":
+        symbol = tool_input.get("symbol", "")
+        if not symbol:
+            return json.dumps({"error": "종목 심볼(symbol)이 필요합니다."}, ensure_ascii=False)
+        result = get_stock_info(symbol)
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "search_stock":
+        query = tool_input.get("query", "")
+        if not query:
+            return json.dumps({"error": "검색어(query)가 필요합니다."}, ensure_ascii=False)
+        result = search_stock(
+            query=query,
+            search_type=tool_input.get("search_type", "quotes")
+        )
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "get_stock_news":
+        symbol = tool_input.get("symbol", "")
+        if not symbol:
+            return json.dumps({"error": "종목 심볼(symbol)이 필요합니다."}, ensure_ascii=False)
+        result = get_stock_news(symbol)
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "get_crypto_price":
+        coin_id = tool_input.get("coin_id", "bitcoin")
+        result = get_crypto_price(coin_id)
         return json.dumps(result, ensure_ascii=False, indent=2)
 
     return f"Unknown tool: {tool_name}"

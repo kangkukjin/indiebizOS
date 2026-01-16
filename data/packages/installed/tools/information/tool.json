@@ -145,5 +145,90 @@
         }
       }
     }
+  },
+  {
+    "name": "get_stock_price",
+    "description": "Yahoo Finance를 통해 주식/암호화폐/ETF의 실시간 가격 정보를 조회합니다. 현재가, 변동률, 거래량, 52주 최고/최저가 등을 반환합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "종목 심볼. 미국주식: AAPL, TSLA | 한국주식: 005930.KS(삼성전자) | 암호화폐: BTC-USD(비트코인), ETH-USD(이더리움) | ETF: SPY, QQQ"
+        },
+        "period": {
+          "type": "string",
+          "description": "조회 기간 (기본: 1d). 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max",
+          "enum": ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"]
+        },
+        "interval": {
+          "type": "string",
+          "description": "데이터 간격 (기본: 1d). 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo",
+          "enum": ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo"]
+        }
+      },
+      "required": ["symbol"]
+    }
+  },
+  {
+    "name": "get_stock_info",
+    "description": "Yahoo Finance를 통해 주식/암호화폐의 상세 정보를 조회합니다. 회사 정보, 섹터, 산업, PE ratio, 배당수익률, 시가총액 등을 반환합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "종목 심볼 (예: AAPL, 005930.KS, BTC-USD)"
+        }
+      },
+      "required": ["symbol"]
+    }
+  },
+  {
+    "name": "search_stock",
+    "description": "Yahoo Finance에서 종목을 검색합니다. 종목 심볼이나 회사명으로 검색하여 관련 종목 목록을 반환합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "검색어 (종목 심볼 또는 회사명, 예: 'Apple', 'Tesla', '삼성')"
+        },
+        "search_type": {
+          "type": "string",
+          "description": "검색 유형 (기본: quotes). all(전체), quotes(종목), news(뉴스)",
+          "enum": ["all", "quotes", "news"]
+        }
+      },
+      "required": ["query"]
+    }
+  },
+  {
+    "name": "get_stock_news",
+    "description": "Yahoo Finance에서 특정 종목과 관련된 최신 뉴스를 조회합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "symbol": {
+          "type": "string",
+          "description": "종목 심볼 (예: AAPL, TSLA, BTC-USD)"
+        }
+      },
+      "required": ["symbol"]
+    }
+  },
+  {
+    "name": "get_crypto_price",
+    "description": "CoinGecko API를 통해 암호화폐 실시간 가격을 조회합니다. API 키 불필요, 무료 사용 가능. USD/KRW 가격, 24시간 변동률, 시가총액, 거래량, 역대 최고가 등을 반환합니다.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "coin_id": {
+          "type": "string",
+          "description": "암호화폐 ID 또는 심볼. 예: bitcoin, ethereum, BTC, ETH, BTC-USD 등. 주요 매핑: BTC=bitcoin, ETH=ethereum, XRP=ripple, DOGE=dogecoin, SOL=solana, ADA=cardano"
+        }
+      },
+      "required": ["coin_id"]
+    }
   }
 ]

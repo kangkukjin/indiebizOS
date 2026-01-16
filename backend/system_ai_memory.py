@@ -3,9 +3,8 @@ system_ai_memory.py - 시스템 AI 메모리 관리
 IndieBiz OS Core
 
 시스템 AI의 기억 시스템:
-- 단기기억: my_profile.txt (사용자 정보)
-- 장기기억(대화): SQLite DB (대화 이력)
-- 장기기억(시스템): system_status.md (시스템 현황 문서)
+- 시스템 메모: system_ai_memo.txt
+- 대화 이력: SQLite DB (system_ai_memory.db)
 """
 
 import sqlite3
@@ -18,8 +17,7 @@ from typing import List, Dict, Any, Optional
 BACKEND_PATH = Path(__file__).parent
 DATA_PATH = BACKEND_PATH.parent / "data"
 MEMORY_DB_PATH = DATA_PATH / "system_ai_memory.db"
-SYSTEM_STATUS_PATH = DATA_PATH / "system_status.md"
-PROFILE_PATH = DATA_PATH / "my_profile.txt"
+SYSTEM_MEMO_PATH = DATA_PATH / "system_ai_memo.txt"
 
 
 def _get_connection():
@@ -201,66 +199,22 @@ def get_memories(category: str = None, limit: int = 50) -> List[Dict[str, Any]]:
     } for row in rows]
 
 
-def load_user_profile() -> str:
-    """사용자 프로필 로드 (단기기억)"""
-    if PROFILE_PATH.exists():
-        return PROFILE_PATH.read_text(encoding='utf-8').strip()
+def load_system_memo() -> str:
+    """시스템 메모 로드"""
+    if SYSTEM_MEMO_PATH.exists():
+        return SYSTEM_MEMO_PATH.read_text(encoding='utf-8').strip()
     return ""
 
 
-def load_system_status() -> str:
-    """시스템 현황 문서 로드"""
-    if SYSTEM_STATUS_PATH.exists():
-        return SYSTEM_STATUS_PATH.read_text(encoding='utf-8')
-    return ""
+# 하위 호환성을 위한 별칭
+load_user_profile = load_system_memo
 
 
-def save_system_status(content: str):
-    """시스템 현황 문서 저장"""
-    DATA_PATH.mkdir(parents=True, exist_ok=True)
-    SYSTEM_STATUS_PATH.write_text(content, encoding='utf-8')
-
-
-def init_system_status():
-    """시스템 현황 문서 초기화 (없으면 생성)"""
-    if not SYSTEM_STATUS_PATH.exists():
-        initial_content = """# IndieBiz OS 시스템 현황
-
-## 개요
-IndieBiz OS는 다중 AI 에이전트 협업 플랫폼입니다.
-
-## 설치된 구성요소
-
-### 코어 시스템
-- 시스템 AI: 활성화됨
-- 지원 프로바이더: Anthropic, OpenAI, Google
-
-### 프로젝트
-(아직 프로젝트가 없습니다)
-
-### 에이전트
-(아직 에이전트가 없습니다)
-
-### 도구 패키지
-(아직 설치된 도구 패키지가 없습니다)
-
-## 시스템 이벤트 로그
-- {date}: 시스템 초기화됨
-
----
-*이 문서는 시스템 AI가 참조하는 시스템 현황 문서입니다.*
-""".format(date=datetime.now().strftime("%Y-%m-%d"))
-
-        save_system_status(initial_content)
-
-    return load_system_status()
-
-
-def get_memory_context(include_conversations: int = 5, include_system_status: bool = True) -> str:
+def get_memory_context(include_conversations: int = 5) -> str:
     """시스템 AI를 위한 메모리 컨텍스트 생성"""
     context_parts = []
 
-    # 1. 최근 대화 이력
+    # 최근 대화 이력
     if include_conversations > 0:
         recent = get_recent_conversations(include_conversations)
         if recent:
@@ -272,12 +226,6 @@ def get_memory_context(include_conversations: int = 5, include_system_status: bo
                 if len(content) > 200:
                     content = content[:200] + "..."
                 context_parts.append(f"- {role_name}: {content}")
-
-    # 2. 시스템 현황
-    if include_system_status:
-        status = load_system_status()
-        if status:
-            context_parts.append("\n" + status)
 
     return "\n".join(context_parts) if context_parts else ""
 

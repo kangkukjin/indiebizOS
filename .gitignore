@@ -17,6 +17,10 @@ data/outputs/
 data/health/
 data/gomoku_board.png
 data/system_ai_prompts/
+data/system_ai_role.txt
+data/system_ai_memo.txt
+data/packages/system_ai_state/
+data/plan.md
 data/ai_desktop_map.json
 
 # 캐시 및 임시 파일

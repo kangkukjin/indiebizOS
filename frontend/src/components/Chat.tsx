@@ -3,7 +3,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Camera, FileText, Wrench } from 'lucide-react';
+import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Camera, FileText, CheckCircle2, Circle, CircleDot } from 'lucide-react';
 import { CameraPreview } from './CameraPreview';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -35,7 +35,14 @@ interface ChatProps {
 interface ToolActivity {
   name: string;
   status: 'running' | 'done';
+  input?: Record<string, unknown>;
   result?: string;
+}
+
+interface TodoItem {
+  content: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  activeForm: string;
 }
 
 interface ChatMessage {
@@ -61,7 +68,9 @@ export function Chat({ projectId, agent }: ChatProps) {
   // 스트리밍 상태
   const [streamingContent, setStreamingContent] = useState('');
   const [currentToolActivity, setCurrentToolActivity] = useState<ToolActivity | null>(null);
+  const [toolHistory, setToolHistory] = useState<ToolActivity[]>([]);
   const [thinkingText, setThinkingText] = useState('');
+  const [todos, setTodos] = useState<TodoItem[]>([]);
 
   // 카메라 상태
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -205,13 +214,21 @@ export function Chat({ projectId, agent }: ChatProps) {
     e.target.value = '';
   };
 
-  // WebSocket 연결
-  useEffect(() => {
+  // WebSocket 재연결 관리
+  const reconnectAttemptRef = useRef(0);
+  const maxReconnectAttempts = 5;
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // WebSocket 연결 함수
+  const connectWebSocket = (isRetry = false) => {
     const clientId = `${projectId}-${agent.id}-${Date.now()}`;
     const websocket = createChatWebSocket(clientId);
 
     websocket.onopen = () => {
-      console.log('WebSocket connected');
+      console.log(isRetry ? 'WebSocket 재연결 성공' : 'WebSocket connected');
+      reconnectAttemptRef.current = 0; // 연결 성공 시 재연결 시도 횟수 초기화
+      // 연결 완료 후 state 업데이트 (OPEN 상태에서만)
+      setWs(websocket);
     };
 
     websocket.onmessage = (event) => {
@@ -222,40 +239,56 @@ export function Chat({ projectId, agent }: ChatProps) {
           setIsLoading(true);
           setStreamingContent('');
           setCurrentToolActivity(null);
+          setToolHistory([]);
           setThinkingText('');
+          setTodos([]);
           break;
 
         case 'stream_chunk':
-          // 스트리밍 텍스트 청크
           setStreamingContent(prev => prev + data.content);
           break;
 
-        case 'tool_start':
-          // 도구 시작
-          setCurrentToolActivity({
+        case 'tool_start': {
+          const newTool: ToolActivity = {
             name: data.name,
-            status: 'running'
-          });
+            status: 'running',
+            input: data.input
+          };
+          setCurrentToolActivity(newTool);
+          setToolHistory(prev => [...prev, newTool]);
           setThinkingText('');
           break;
+        }
 
         case 'tool_result':
-          // 도구 결과
           setCurrentToolActivity(prev => prev ? {
             ...prev,
             status: 'done',
             result: data.result
           } : null);
+          setToolHistory(prev => {
+            const updated = [...prev];
+            if (updated.length > 0) {
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                status: 'done',
+                result: data.result
+              };
+            }
+            return updated;
+          });
+          // TODO 업데이트
+          if (data.todos) {
+            setTodos(data.todos);
+          }
           break;
 
         case 'thinking':
-          // AI 사고 과정
           setThinkingText(data.content);
           break;
 
         case 'response':
         case 'auto_report':
-          // 최종 응답
           setMessages((prev) => [
             ...prev,
             {
@@ -267,7 +300,9 @@ export function Chat({ projectId, agent }: ChatProps) {
           ]);
           setStreamingContent('');
           setCurrentToolActivity(null);
+          setToolHistory([]);
           setThinkingText('');
+          setTodos([]);
           setIsLoading(false);
           break;
 
@@ -275,7 +310,9 @@ export function Chat({ projectId, agent }: ChatProps) {
           console.error('Chat error:', data.message);
           setStreamingContent('');
           setCurrentToolActivity(null);
+          setToolHistory([]);
           setThinkingText('');
+          setTodos([]);
           setIsLoading(false);
           break;
 
@@ -283,6 +320,8 @@ export function Chat({ projectId, agent }: ChatProps) {
           setIsLoading(false);
           setStreamingContent('');
           setCurrentToolActivity(null);
+          setToolHistory([]);
+          setTodos([]);
           setThinkingText('');
           break;
       }
@@ -290,16 +329,42 @@ export function Chat({ projectId, agent }: ChatProps) {
 
     websocket.onerror = (error) => {
       console.error('WebSocket error:', error);
-      setIsLoading(false);
     };
 
-    websocket.onclose = () => {
-      console.log('WebSocket closed');
+    websocket.onclose = (event) => {
+      console.log(`WebSocket closed (code: ${event.code})`);
+      setWs(null);
+
+      // 비정상 종료 시 자동 재연결 (code 1000은 정상 종료)
+      if (event.code !== 1000 && reconnectAttemptRef.current < maxReconnectAttempts) {
+        reconnectAttemptRef.current++;
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current - 1), 16000); // exponential backoff, max 16초
+
+        console.log(`${delay/1000}초 후 재연결 시도 (${reconnectAttemptRef.current}/${maxReconnectAttempts})`);
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectWebSocket(true);
+          // setWs는 onopen에서 호출됨
+        }, delay);
+      } else if (reconnectAttemptRef.current >= maxReconnectAttempts) {
+        console.error('최대 재연결 시도 횟수 초과');
+        setIsLoading(false);
+      }
     };
 
-    setWs(websocket);
+    return websocket;
+  };
+
+  // WebSocket 연결
+  useEffect(() => {
+    const websocket = connectWebSocket();
+    // setWs는 onopen에서 호출됨 (연결 완료 후)
 
     return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      reconnectAttemptRef.current = maxReconnectAttempts; // cleanup 시 재연결 방지
       websocket.close();
     };
   }, [projectId, agent.id]);
@@ -312,7 +377,11 @@ export function Chat({ projectId, agent }: ChatProps) {
   // 메시지 전송
   const sendMessage = () => {
     const hasContent = input.trim() || attachedImages.length > 0 || attachedTextFiles.length > 0;
-    if (!hasContent || !ws || isLoading) return;
+    console.log('[Chat] sendMessage called:', { hasContent, ws: !!ws, readyState: ws?.readyState, isLoading, input: input.substring(0, 50) });
+    if (!hasContent || !ws || ws.readyState !== WebSocket.OPEN || isLoading) {
+      console.log('[Chat] sendMessage blocked:', { hasContent, wsExists: !!ws, readyState: ws?.readyState, isLoading });
+      return;
+    }
 
     // 이미지 base64 배열 준비
     const imageData = attachedImages.map(img => ({
@@ -423,21 +492,86 @@ export function Chat({ projectId, agent }: ChatProps) {
         {/* 스트리밍 중인 응답 표시 */}
         {isLoading && (
           <div className="space-y-2">
-            {/* 도구 사용 상태 */}
-            {currentToolActivity && (
-              <div className="flex items-center gap-2 text-[#A09080] bg-[#EAE4DA] rounded-lg px-3 py-2">
-                <Wrench size={16} className={currentToolActivity.status === 'running' ? 'animate-spin' : ''} />
-                <span className="text-sm">
-                  {currentToolActivity.status === 'running'
-                    ? `${currentToolActivity.name} 실행 중...`
-                    : `${currentToolActivity.name} 완료`
-                  }
-                </span>
-                {currentToolActivity.result && (
-                  <span className="text-xs text-[#8A7A6A] truncate max-w-[200px]">
-                    {currentToolActivity.result}
-                  </span>
-                )}
+            {/* TODO 리스트 - Claude Code 스타일 */}
+            {todos.length > 0 && (
+              <div className="mb-3 border border-[#E5DFD5] rounded-lg overflow-hidden bg-white">
+                <div className="px-3 py-2 bg-gradient-to-r from-[#F5F1EB] to-[#EAE4DA] border-b border-[#E5DFD5]">
+                  <span className="text-xs font-semibold text-[#4A4035]">📋 작업 목록</span>
+                </div>
+                <div className="p-2 space-y-1">
+                  {todos.map((todo, idx) => (
+                    <div key={idx} className="flex items-center gap-2 px-2 py-1 text-xs">
+                      {todo.status === 'completed' ? (
+                        <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+                      ) : todo.status === 'in_progress' ? (
+                        <CircleDot size={14} className="text-[#D97706] shrink-0 animate-pulse" />
+                      ) : (
+                        <Circle size={14} className="text-[#A09080] shrink-0" />
+                      )}
+                      <span className={`${
+                        todo.status === 'completed' ? 'text-[#A09080] line-through' :
+                        todo.status === 'in_progress' ? 'text-[#4A4035] font-medium' :
+                        'text-[#4A4035]'
+                      }`}>
+                        {todo.status === 'in_progress' ? todo.activeForm : todo.content}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 도구 사용 히스토리 - Claude Desktop 스타일 */}
+            {toolHistory.length > 0 && (
+              <div className="mb-3 space-y-2">
+                {toolHistory.map((tool, idx) => (
+                  <div key={idx} className="text-xs border border-[#E5DFD5] rounded-lg overflow-hidden bg-white">
+                    {/* 도구 헤더 */}
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-[#F5F1EB] to-[#EAE4DA] border-b border-[#E5DFD5]">
+                      {tool.status === 'running' ? (
+                        <Loader2 size={14} className="animate-spin text-[#D97706] shrink-0" />
+                      ) : (
+                        <CheckCircle2 size={14} className="text-green-500 shrink-0" />
+                      )}
+                      <span className="font-semibold text-[#4A4035]">{tool.name}</span>
+                      {tool.status === 'running' && (
+                        <span className="ml-auto text-[10px] text-[#D97706] bg-amber-100 px-2 py-0.5 rounded-full">실행 중</span>
+                      )}
+                    </div>
+
+                    {/* 입력 파라미터 */}
+                    {tool.input && Object.keys(tool.input).length > 0 && (
+                      <div className="px-3 py-2 border-b border-[#E5DFD5]/50 bg-blue-50/30">
+                        <div className="text-[10px] text-blue-600 font-medium mb-1 flex items-center gap-1">
+                          <span>📥</span> 입력
+                        </div>
+                        <pre className="text-[11px] text-[#4A4035] bg-white/80 p-2 rounded border border-[#E5DFD5]/50 overflow-x-auto max-h-40 overflow-y-auto">
+                          {JSON.stringify(tool.input, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+
+                    {/* 결과 */}
+                    {tool.result && (
+                      <div className="px-3 py-2 bg-green-50/30">
+                        <div className="text-[10px] text-green-600 font-medium mb-1 flex items-center gap-1">
+                          <span>📤</span> 결과
+                        </div>
+                        <pre className="text-[11px] text-[#4A4035] bg-white/80 p-2 rounded border border-[#E5DFD5]/50 overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap break-words">
+                          {tool.result}
+                        </pre>
+                      </div>
+                    )}
+
+                    {/* 실행 중일 때 로딩 표시 */}
+                    {tool.status === 'running' && !tool.result && (
+                      <div className="px-3 py-3 flex items-center justify-center gap-2 text-[#A09080]">
+                        <Loader2 size={12} className="animate-spin" />
+                        <span className="text-[11px]">결과를 기다리는 중...</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
@@ -467,7 +601,7 @@ export function Chat({ projectId, agent }: ChatProps) {
             )}
 
             {/* 로딩 표시 (스트리밍 콘텐츠가 없을 때) */}
-            {!streamingContent && !currentToolActivity && !thinkingText && (
+            {!streamingContent && toolHistory.length === 0 && !thinkingText && (
               <div className="flex items-center gap-2 text-[#A09080]">
                 <Loader2 size={16} className="animate-spin" />
                 <span>{agent.name}이(가) 응답 중...</span>

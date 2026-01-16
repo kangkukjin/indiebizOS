@@ -142,39 +142,26 @@ def build_agent_prompt(
 
 def build_system_ai_prompt(
     user_profile: str = "",
-    system_status: str = "",
-    tools: list = None,
-    custom_role_prompt: str = None,
-    role_prompt_enabled: bool = None
+    role: str = None
 ) -> str:
     """시스템 AI용 시스템 프롬프트 생성
 
+    구조: 공통설정(base_prompt.md) + 개별역할(role) + 사용자정보
+
     Args:
         user_profile: 사용자 프로필
-        system_status: 시스템 상태
-        tools: 사용 가능한 도구 목록 (현재 미사용, 호환성을 위해 유지)
-        custom_role_prompt: 사용자 정의 역할 프롬프트 (None이면 설정 파일에서 로드)
-        role_prompt_enabled: 역할 프롬프트 활성화 여부 (None이면 설정 파일에서 로드)
+        role: 개별역할 프롬프트 (None이면 파일에서 로드)
 
     Returns:
         조합된 시스템 프롬프트
     """
-    import json
-
-    # 설정 파일에서 역할 프롬프트 설정 로드
-    config_path = Path(__file__).parent.parent / "data" / "system_ai_config.json"
-    if config_path.exists():
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-        if role_prompt_enabled is None:
-            role_prompt_enabled = config.get("role_prompt_enabled", False)
-        if custom_role_prompt is None:
-            custom_role_prompt = config.get("role", "")
-    else:
-        if role_prompt_enabled is None:
-            role_prompt_enabled = False
-        if custom_role_prompt is None:
-            custom_role_prompt = ""
+    # 역할 프롬프트를 별도 파일에서 로드 (프로젝트 에이전트와 동일한 구조)
+    if role is None:
+        role_path = Path(__file__).parent.parent / "data" / "system_ai_role.txt"
+        if role_path.exists():
+            role = role_path.read_text(encoding='utf-8')
+        else:
+            role = ""
 
     builder = PromptBuilder()
 
@@ -184,52 +171,17 @@ def build_system_ai_prompt(
         git_enabled=False
     )
 
-    # 기본 시스템 AI 역할
-    default_role = """# IndieBiz OS 시스템 AI
+    parts = [prompt]
 
-당신은 IndieBiz OS의 시스템 AI입니다. 사용자의 개인 비서이자 시스템 관리자입니다.
+    # 개별역할 추가 (프로젝트 에이전트의 role_description과 동일한 개념)
+    if role and role.strip():
+        parts.append(f"# Role\n{role.strip()}")
 
-## 시스템 경로
-- 프로젝트: `../projects/[프로젝트명]/`
-- 설치된 도구: `../data/packages/installed/tools/[도구명]/`
-- 시스템 문서: `../data/system_docs/`
-
-## 시스템 문서 (read_system_doc으로 참조)
-- `inventory`: 프로젝트, 패키지 현황 (가장 자주 사용)
-- `packages`: 패키지 개발 가이드
-- `overview`: 시스템 소개
-- `architecture`: 시스템 구조
-- `technical`: API, 설정 상세
-
-## 도구 개발 형식
-
-tool.json:
-```json
-[{"name": "도구명", "description": "설명", "input_schema": {...}}]
-```
-
-handler.py:
-```python
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    return "결과"
-```
-"""
-
-    parts = [prompt, default_role]
-
-    # 사용자 정의 역할 프롬프트 추가 (활성화된 경우)
-    if role_prompt_enabled and custom_role_prompt and custom_role_prompt.strip():
-        parts.append(f"\n# 사용자 정의 역할\n{custom_role_prompt.strip()}")
-
-    # 사용자 정보 추가
+    # 시스템 메모 추가
     if user_profile and user_profile.strip():
-        parts.append(f"\n# 사용자 정보\n{user_profile.strip()}")
+        parts.append(f"# 시스템 메모\n{user_profile.strip()}")
 
-    # 시스템 상태 추가
-    if system_status and system_status.strip():
-        parts.append(f"\n# 현재 시스템 상태\n{system_status.strip()}")
-
-    parts.append("\n지금부터 사용자와 대화합니다.")
+    parts.append("지금부터 사용자와 대화합니다.")
 
     return "\n\n".join(parts)
 

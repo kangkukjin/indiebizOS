@@ -20,7 +20,7 @@ BACKEND_PATH = Path(__file__).parent
 DATA_PATH = BACKEND_PATH.parent / "data"
 DATA_PATH.mkdir(exist_ok=True)
 
-PROFILE_PATH = DATA_PATH / "my_profile.txt"
+SYSTEM_MEMO_PATH = DATA_PATH / "system_ai_memo.txt"
 SCHEDULE_CONFIG_PATH = DATA_PATH / "program_schedule.json"
 SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
 
@@ -201,11 +201,11 @@ class ProfileUpdate:
 
 @router.get("/profile")
 async def get_profile():
-    """나의 정보 조회"""
+    """시스템 메모 조회"""
     try:
         content = ""
-        if PROFILE_PATH.exists():
-            content = PROFILE_PATH.read_text(encoding='utf-8')
+        if SYSTEM_MEMO_PATH.exists():
+            content = SYSTEM_MEMO_PATH.read_text(encoding='utf-8')
         return {"content": content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -213,10 +213,10 @@ async def get_profile():
 
 @router.put("/profile")
 async def update_profile(profile: Dict[str, str]):
-    """나의 정보 업데이트"""
+    """시스템 메모 업데이트"""
     try:
-        PROFILE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        PROFILE_PATH.write_text(profile.get('content', ''), encoding='utf-8')
+        SYSTEM_MEMO_PATH.parent.mkdir(parents=True, exist_ok=True)
+        SYSTEM_MEMO_PATH.write_text(profile.get('content', ''), encoding='utf-8')
         return {"status": "updated"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

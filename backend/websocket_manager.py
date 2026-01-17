@@ -41,8 +41,8 @@ class WebSocketManager:
             return True
         except Exception as e:
             error_msg = str(e)
-            # 연결이 닫힌 경우에만 disconnect
-            if "closed" in error_msg.lower() or "disconnect" in error_msg.lower():
+            # 연결이 닫힌 경우 disconnect
+            if any(keyword in error_msg.lower() for keyword in ["closed", "close", "disconnect"]):
                 print(f"[WS] 연결 끊김 감지: {client_id}")
                 self.disconnect(client_id)
             else:

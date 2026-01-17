@@ -1,73 +1,75 @@
-[
-  {
-    "name": "kosis_search_statistics",
-    "description": "KOSIS 통계목록 검색. 한 번 호출로 키워드 관련 통계표 목록 반환.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "keyword": { "type": "string", "description": "검색 키워드 (예: '인구', '주택', 'GDP')" },
-        "vw_cd": {
-          "type": "string",
-          "description": "서비스뷰: MT_ZTITLE(주제별), MT_OTITLE(기관별), MT_RTITLE(국제통계)",
-          "default": "MT_ZTITLE"
+{
+  "id": "kosis",
+  "name": "KOSIS Statistics",
+  "description": "통계청 KOSIS API를 통한 국가통계 조회 도구",
+  "version": "1.1.0",
+  "tools": [
+    {
+      "name": "kosis_search_statistics",
+      "description": "KOSIS 통계표 목록을 검색합니다.\n\n## 사용 시점\n- 특정 주제의 통계표 찾기\n- 통계표 ID 확인 (kosis_get_data 사용 전)\n\n## 서비스뷰 (vw_cd)\n- MT_ZTITLE: 주제별 통계 (기본)\n- MT_OTITLE: 기관별 통계\n- MT_RTITLE: 국제통계",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": { "type": "string", "description": "검색 키워드 (예: '인구', 'GDP')" },
+          "vw_cd": { "type": "string", "description": "서비스뷰 (기본: MT_ZTITLE)" },
+          "parent_list_id": { "type": "string", "description": "상위 목록 ID" }
+        }
+      }
+    },
+    {
+      "name": "kosis_get_data",
+      "description": "KOSIS 통계 데이터를 조회합니다.\n\n## 중요 - 한 번 호출로 충분\n- 인구 조회 시 전국+모든 시도 데이터가 한 번에 반환됨\n- 결과에서 c1_name으로 원하는 지역 필터링\n- 재호출 불필요!\n\n## 주요 통계표 ID\n- 인구: org_id='101', tbl_id='DT_1B040A3'\n- GDP: org_id='301', tbl_id='DT_200Y001'\n\n## 주기 (prd_se)\n- Y: 연간, H: 반기, Q: 분기, M: 월간",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "org_id": { "type": "string", "description": "기관 ID (예: '101'=통계청)" },
+          "tbl_id": { "type": "string", "description": "통계표 ID" },
+          "itm_id": { "type": "string", "description": "항목 ID (기본 'ALL')" },
+          "obj_l1": { "type": "string", "description": "분류1 (기본 'ALL')" },
+          "obj_l2": { "type": "string", "description": "분류2 (기본 'ALL')" },
+          "obj_l3": { "type": "string", "description": "분류3 (기본 'ALL')" },
+          "prd_se": { "type": "string", "description": "주기 (Y/H/Q/M)" },
+          "start_prd_de": { "type": "string", "description": "시작 시점 (예: '2020')" },
+          "end_prd_de": { "type": "string", "description": "종료 시점" }
         },
-        "parent_list_id": { "type": "string", "description": "상위 목록 ID" }
+        "required": ["org_id", "tbl_id"]
+      }
+    },
+    {
+      "name": "kosis_get_statistics_info",
+      "description": "통계표의 메타데이터를 조회합니다.\n\n## 사용 시점\n- kosis_get_data 호출 전 파라미터 확인\n- 분류 항목, 주기 등 확인\n\n## 반환 정보\n- 통계표 설명\n- 분류/항목 목록\n- 수록 기간, 주기",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "org_id": { "type": "string", "description": "기관 ID" },
+          "tbl_id": { "type": "string", "description": "통계표 ID" }
+        },
+        "required": ["org_id", "tbl_id"]
+      }
+    },
+    {
+      "name": "kosis_integrated_search",
+      "description": "KOSIS 통합 검색을 수행합니다.\n\n## 반환 정보\n- 통계표, 설명, 주요지표 통합 결과\n\n## 사용 시점\n- 키워드로 빠르게 관련 통계 찾기",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": { "type": "string", "description": "검색 키워드" },
+          "count": { "type": "integer", "description": "결과 수 (기본 10, 최대 100)" }
+        },
+        "required": ["keyword"]
+      }
+    },
+    {
+      "name": "kosis_get_indicators",
+      "description": "KOSIS 주요 지표를 조회합니다.\n\n## 포함 지표\n- 경제: GDP, 물가, 환율\n- 인구: 인구수, 출생률\n- 고용: 실업률, 취업자수\n\n## 사용 시점\n- 핵심 경제/사회 지표 빠른 조회",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "indicator_id": { "type": "string", "description": "지표 ID (없으면 전체 목록)" },
+          "start_prd_de": { "type": "string", "description": "시작 시점" },
+          "end_prd_de": { "type": "string", "description": "종료 시점" }
+        }
       }
     }
-  },
-  {
-    "name": "kosis_get_data",
-    "description": "KOSIS 통계자료 조회. [중요] 인구 질문시 1회 호출로 전국+모든 시도 데이터 반환. c1_name에서 원하는 지역 필터링. 재호출 불필요. 주요 ID: 인구(org=101, tbl=DT_1B040A3), GDP(org=301, tbl=DT_200Y001).",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "org_id": { "type": "string", "description": "기관 ID (예: '101'=통계청)" },
-        "tbl_id": { "type": "string", "description": "통계표 ID (예: 'DT_1B040A3')" },
-        "itm_id": { "type": "string", "description": "항목 ID (기본 'ALL')", "default": "ALL" },
-        "obj_l1": { "type": "string", "description": "분류1 (기본 'ALL')", "default": "ALL" },
-        "obj_l2": { "type": "string", "description": "분류2 (기본 'ALL')", "default": "ALL" },
-        "obj_l3": { "type": "string", "description": "분류3 (기본 'ALL')", "default": "ALL" },
-        "prd_se": { "type": "string", "description": "주기: Y(년), H(반기), Q(분기), M(월)", "default": "Y" },
-        "start_prd_de": { "type": "string", "description": "시작 시점 (예: '2020')" },
-        "end_prd_de": { "type": "string", "description": "종료 시점 (예: '2023')" }
-      },
-      "required": ["org_id", "tbl_id"]
-    }
-  },
-  {
-    "name": "kosis_get_statistics_info",
-    "description": "통계표 메타데이터 조회 (분류, 항목, 주기 등). 한 번 호출로 상세 정보 반환.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "org_id": { "type": "string", "description": "기관 ID" },
-        "tbl_id": { "type": "string", "description": "통계표 ID" }
-      },
-      "required": ["org_id", "tbl_id"]
-    }
-  },
-  {
-    "name": "kosis_integrated_search",
-    "description": "KOSIS 통합검색. 한 번 호출로 통계표, 설명, 주요지표 등 통합 결과 반환.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "keyword": { "type": "string", "description": "검색 키워드" },
-        "count": { "type": "integer", "description": "결과 수 (기본 10, 최대 100)", "default": 10 }
-      },
-      "required": ["keyword"]
-    }
-  },
-  {
-    "name": "kosis_get_indicators",
-    "description": "KOSIS 주요지표 조회 (경제, 인구, 물가 등). 한 번 호출로 핵심 지표 반환.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "indicator_id": { "type": "string", "description": "지표 ID (없으면 전체 목록)" },
-        "start_prd_de": { "type": "string", "description": "시작 시점" },
-        "end_prd_de": { "type": "string", "description": "종료 시점" }
-      }
-    }
-  }
-]
+  ]
+}

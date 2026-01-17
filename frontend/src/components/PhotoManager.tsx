@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { FiCamera, FiVideo, FiCopy, FiGrid, FiCalendar, FiBarChart2, FiFolder, FiRefreshCw, FiChevronRight, FiImage, FiTrash2, FiMapPin, FiZoomIn, FiZoomOut, FiRotateCcw } from 'react-icons/fi';
+import { FiCamera, FiVideo, FiCopy, FiGrid, FiCalendar, FiBarChart2, FiFolder, FiRefreshCw, FiChevronRight, FiImage, FiTrash2, FiMapPin, FiZoomIn, FiZoomOut, FiRotateCcw, FiChevronLeft, FiX } from 'react-icons/fi';
 import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, BarChart, Bar
@@ -116,7 +116,8 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
   const [galleryItems, setGalleryItems] = useState<MediaItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
+  const [viewerItems, setViewerItems] = useState<MediaItem[]>([]);
 
   // Duplicates data
   const [duplicates, setDuplicates] = useState<DuplicateGroup[]>([]);
@@ -341,9 +342,28 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
     }
   };
 
-  // 미디어 아이템 선택 - 갤러리에서 받은 item을 그대로 사용
-  const handleSelectItem = (item: MediaItem) => {
-    setSelectedItem(item);
+  // 미디어 아이템 선택 - 갤러리에서 인덱스와 목록을 받음
+  const handleSelectItem = (_item: MediaItem, index: number, items: MediaItem[]) => {
+    setViewerItems(items);
+    setSelectedItemIndex(index);
+  };
+
+  // 뷰어에서 이전/다음 이동
+  const handlePrevItem = () => {
+    if (selectedItemIndex !== null && selectedItemIndex > 0) {
+      setSelectedItemIndex(selectedItemIndex - 1);
+    }
+  };
+
+  const handleNextItem = () => {
+    if (selectedItemIndex !== null && selectedItemIndex < viewerItems.length - 1) {
+      setSelectedItemIndex(selectedItemIndex + 1);
+    }
+  };
+
+  const handleCloseViewer = () => {
+    setSelectedItemIndex(null);
+    setViewerItems([]);
   };
 
   const selectedScan = scans.find(s => s.root_path === selectedPath);
@@ -563,7 +583,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                   <MapView
                     apiUrl={apiUrl}
                     selectedPath={selectedPath}
-                    onSelectItem={setSelectedItem}
+                    onSelectItem={handleSelectItem}
                   />
                 )}
               </div>
@@ -590,10 +610,14 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
       </div>
 
       {/* 미디어 상세 모달 */}
-      {selectedItem && (
+      {selectedItemIndex !== null && viewerItems.length > 0 && (
         <MediaDetailModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
+          item={viewerItems[selectedItemIndex]}
+          currentIndex={selectedItemIndex}
+          totalCount={viewerItems.length}
+          onPrev={handlePrevItem}
+          onNext={handleNextItem}
+          onClose={handleCloseViewer}
         />
       )}
     </div>
@@ -612,7 +636,7 @@ function GalleryView({
   totalItems: number;
   currentPage: number;
   onPageChange: (page: number) => void;
-  onSelectItem: (item: MediaItem) => void;
+  onSelectItem: (item: MediaItem, index: number, items: MediaItem[]) => void;
 }) {
   const totalPages = Math.ceil(totalItems / 50);
 
@@ -627,10 +651,10 @@ function GalleryView({
   return (
     <div>
       <div className="grid grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <div
             key={item.id}
-            onClick={() => onSelectItem(item)}
+            onClick={() => onSelectItem(item, index, items)}
             className="aspect-square bg-[#F0EDE8] rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#8B7355] transition-all relative group"
           >
             {item.media_type === 'photo' ? (
@@ -756,7 +780,7 @@ function TimelineView({
 }: {
   apiUrl: string;
   selectedPath: string;
-  onSelectItem: (item: any) => void;
+  onSelectItem: (item: any, index: number, items: any[]) => void;
 }) {
   const [timelineData, setTimelineData] = useState<any>(null);
   const [timelineStartDate, setTimelineStartDate] = useState<string>('');
@@ -1035,11 +1059,13 @@ function TimelineView({
           </div>
           <div className="overflow-y-auto flex-1 border border-[#E8E4DC] rounded-lg p-2">
             <div className="grid grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 gap-2">
-              {files.slice(currentPage * 50, (currentPage + 1) * 50).map((file: any, idx: number) => (
+              {files.slice(currentPage * 50, (currentPage + 1) * 50).map((file: any, idx: number) => {
+                const pageFiles = files.slice(currentPage * 50, (currentPage + 1) * 50);
+                return (
                 <div
                   key={idx}
                   className="aspect-square bg-[#F0EDE8] rounded-lg overflow-hidden cursor-pointer relative group hover:ring-2 hover:ring-[#8B7355] transition-all"
-                  onClick={() => onSelectItem(file)}
+                  onClick={() => onSelectItem(file, idx, pageFiles)}
                   onDoubleClick={() => openWithDefaultApp(file.path)}
                   title={`${file.filename}\n${(file.taken_date || file.mtime)?.slice(0, 16).replace('T', ' ')}\n클릭: 미리보기 / 더블클릭: 파일 열기`}
                 >
@@ -1069,7 +1095,7 @@ function TimelineView({
                     <div className="text-[8px] text-white/70">{(file.taken_date || file.mtime)?.slice(0, 10)}</div>
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           </div>
         </div>
@@ -1254,12 +1280,29 @@ function StatsView({ data }: { data: any }) {
 // 브라우저에서 재생 가능한 동영상 확장자
 const BROWSER_PLAYABLE_VIDEO = ['mp4', 'webm', 'ogg', 'm4v', 'mov'];
 
-// 미디어 상세 모달
-function MediaDetailModal({ item, onClose }: { item: any; onClose: () => void }) {
-  const [isResizing, setIsResizing] = useState(false);
+// 미디어 상세 모달 (풀스크린, 이전/다음 네비게이션)
+function MediaDetailModal({
+  item,
+  currentIndex,
+  totalCount,
+  onPrev,
+  onNext,
+  onClose
+}: {
+  item: any;
+  currentIndex: number;
+  totalCount: number;
+  onPrev: () => void;
+  onNext: () => void;
+  onClose: () => void;
+}) {
+  const [showInfo, setShowInfo] = useState(false);
 
   const canPlayInBrowser = item.media_type === 'video' &&
     BROWSER_PLAYABLE_VIDEO.includes(item.extension?.toLowerCase());
+
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < totalCount - 1;
 
   const openInExternalPlayer = async () => {
     try {
@@ -1271,151 +1314,182 @@ function MediaDetailModal({ item, onClose }: { item: any; onClose: () => void })
     }
   };
 
-  // 리사이즈 시작 감지 (모달 영역 내 마우스다운)
-  const handleMouseDown = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    // 모서리 근처(15px)에서 마우스다운하면 리사이즈로 간주
-    const isNearEdge =
-      e.clientX > rect.right - 15 ||
-      e.clientY > rect.bottom - 15 ||
-      e.clientX < rect.left + 15 ||
-      e.clientY < rect.top + 15;
+  // 키보드 이벤트 핸들러
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowLeft':
+          if (hasPrev) onPrev();
+          break;
+        case 'ArrowRight':
+          if (hasNext) onNext();
+          break;
+        case 'Escape':
+          onClose();
+          break;
+        case 'i':
+        case 'I':
+          setShowInfo(prev => !prev);
+          break;
+      }
+    };
 
-    if (isNearEdge) {
-      setIsResizing(true);
-    }
-  };
-
-  // 리사이즈 종료 감지
-  const handleMouseUp = () => {
-    // 약간의 딜레이를 주어 클릭 이벤트가 먼저 처리되지 않도록
-    setTimeout(() => setIsResizing(false), 100);
-  };
-
-  // 배경 클릭 시 닫기 (리사이즈 중이 아닐 때만)
-  const handleBackdropClick = () => {
-    if (!isResizing) {
-      onClose();
-    }
-  };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasPrev, hasNext, onPrev, onNext, onClose]);
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999]"
-      onClick={handleBackdropClick}
-      onMouseUp={handleMouseUp}
+      className="fixed inset-0 bg-black z-[9999] flex flex-col"
+      onClick={onClose}
     >
+      {/* 상단 바 */}
       <div
-        className="bg-white rounded-xl w-[800px] min-w-[400px] min-h-[400px] max-w-[95vw] max-h-[95vh] overflow-hidden resize flex flex-col"
-        style={{ resize: 'both' }}
+        className="absolute top-0 left-0 right-0 h-14 bg-gradient-to-b from-black/70 to-transparent z-10 flex items-center px-4"
         onClick={(e) => e.stopPropagation()}
-        onMouseDown={handleMouseDown}
       >
-        {/* 미디어 미리보기 - flex-1로 남은 공간 차지 */}
-        <div className="flex-1 min-h-[200px] bg-[#1a1a1a] flex items-center justify-center overflow-hidden">
-          {item.media_type === 'photo' ? (
-            <img
-              src={`http://127.0.0.1:8765/photo/image?path=${encodeURIComponent(item.path)}`}
-              alt={item.filename}
-              className="max-h-full max-w-full object-contain"
-            />
-          ) : canPlayInBrowser ? (
-            <video
-              src={`http://127.0.0.1:8765/photo/video?path=${encodeURIComponent(item.path)}`}
-              controls
-              autoPlay
-              className="max-h-full max-w-full"
-            >
-              동영상을 재생할 수 없습니다
-            </video>
-          ) : (
-            <div className="text-center text-white">
-              <img
-                src={`http://127.0.0.1:8765/photo/video-thumbnail?path=${encodeURIComponent(item.path)}&size=400`}
-                alt={item.filename}
-                className="max-h-[30vh] max-w-full object-contain mb-4 rounded"
-              />
-              <p className="text-gray-400 mb-4">이 형식(.{item.extension})은 브라우저에서 재생할 수 없습니다</p>
-              <button
-                onClick={openInExternalPlayer}
-                className="px-6 py-2 bg-[#8B7355] text-white rounded-lg hover:bg-[#7A6349] transition-colors"
-              >
-                외부 플레이어로 열기
-              </button>
-            </div>
-          )}
+        <div className="flex-1 text-white text-sm truncate pr-4">
+          {item.filename}
         </div>
-
-        {/* 상세 정보 - 고정 높이, 늘어나지 않음 */}
-        <div className="p-4 max-h-48 overflow-y-auto flex-shrink-0 border-t border-gray-200">
-          <h3 className="font-semibold text-[#5C5347] mb-3">{item.filename}</h3>
-
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="col-span-2">
-              <span className="text-[#9B8B7A]">경로:</span>
-              <p className="text-[#5C5347] break-all">{item.path}</p>
-            </div>
-            <div>
-              <span className="text-[#9B8B7A]">크기:</span>
-              <p className="text-[#5C5347]">{item.size_mb} MB</p>
-            </div>
-            {/* 파일 수정일 (항상 표시) */}
-            {item.mtime && (
-              <div>
-                <span className="text-[#9B8B7A]">파일 날짜:</span>
-                <p className="text-[#5C5347]">{new Date(item.mtime).toLocaleString()}</p>
-              </div>
-            )}
-            {item.width && item.height && (
-              <div>
-                <span className="text-[#9B8B7A]">해상도:</span>
-                <p className="text-[#5C5347]">{item.width} x {item.height}</p>
-              </div>
-            )}
-            {/* 촬영일 (EXIF 정보가 있을 때만) */}
-            {item.taken_date && (
-              <div>
-                <span className="text-[#9B8B7A]">촬영일:</span>
-                <p className="text-[#5C5347]">{new Date(item.taken_date).toLocaleString()}</p>
-              </div>
-            )}
-            {item.camera_model && (
-              <div>
-                <span className="text-[#9B8B7A]">카메라:</span>
-                <p className="text-[#5C5347]">{item.camera_make} {item.camera_model}</p>
-              </div>
-            )}
-            {item.gps_lat && item.gps_lon && (
-              <div>
-                <span className="text-[#9B8B7A]">위치:</span>
-                <p className="text-[#5C5347]">{item.gps_lat}, {item.gps_lon}</p>
-              </div>
-            )}
-            {item.duration && (
-              <div>
-                <span className="text-[#9B8B7A]">재생시간:</span>
-                <p className="text-[#5C5347]">{Math.floor(item.duration / 60)}분 {Math.floor(item.duration % 60)}초</p>
-              </div>
-            )}
-            {item.codec && (
-              <div>
-                <span className="text-[#9B8B7A]">코덱:</span>
-                <p className="text-[#5C5347]">{item.codec}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 닫기 버튼 */}
-        <div className="p-4 border-t border-[#E8E4DC]">
+        <div className="flex items-center gap-2 text-white/80 text-sm">
+          <span>{currentIndex + 1} / {totalCount}</span>
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            className="p-2 hover:bg-white/20 rounded-lg transition-colors ml-2"
+            title="정보 보기 (I)"
+          >
+            <FiImage size={18} />
+          </button>
           <button
             onClick={onClose}
-            className="w-full py-2 bg-[#E8E4DC] text-[#5C5347] rounded-lg hover:bg-[#D4C8B8] transition-colors"
+            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            title="닫기 (ESC)"
           >
-            닫기
+            <FiX size={20} />
           </button>
         </div>
+      </div>
+
+      {/* 이전 버튼 */}
+      {hasPrev && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPrev(); }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+          title="이전 (←)"
+        >
+          <FiChevronLeft size={32} />
+        </button>
+      )}
+
+      {/* 다음 버튼 */}
+      {hasNext && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onNext(); }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+          title="다음 (→)"
+        >
+          <FiChevronRight size={32} />
+        </button>
+      )}
+
+      {/* 미디어 콘텐츠 (풀스크린) */}
+      <div
+        className="flex-1 flex items-center justify-center p-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {item.media_type === 'photo' ? (
+          <img
+            src={`http://127.0.0.1:8765/photo/image?path=${encodeURIComponent(item.path)}`}
+            alt={item.filename}
+            className="max-h-full max-w-full object-contain"
+            style={{ maxHeight: 'calc(100vh - 80px)' }}
+          />
+        ) : canPlayInBrowser ? (
+          <video
+            key={item.path}
+            src={`http://127.0.0.1:8765/photo/video?path=${encodeURIComponent(item.path)}`}
+            controls
+            autoPlay
+            className="max-h-full max-w-full"
+            style={{ maxHeight: 'calc(100vh - 80px)' }}
+          >
+            동영상을 재생할 수 없습니다
+          </video>
+        ) : (
+          <div className="text-center text-white">
+            <img
+              src={`http://127.0.0.1:8765/photo/video-thumbnail?path=${encodeURIComponent(item.path)}&size=600`}
+              alt={item.filename}
+              className="max-h-[60vh] max-w-full object-contain mb-4 rounded"
+            />
+            <p className="text-gray-400 mb-4">이 형식(.{item.extension})은 브라우저에서 재생할 수 없습니다</p>
+            <button
+              onClick={openInExternalPlayer}
+              className="px-6 py-2 bg-[#8B7355] text-white rounded-lg hover:bg-[#7A6349] transition-colors"
+            >
+              외부 플레이어로 열기
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* 하단 정보 패널 (토글) */}
+      {showInfo && (
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-black/90 text-white p-4 max-h-[40vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="max-w-3xl mx-auto">
+            <h3 className="font-semibold mb-3">{item.filename}</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div className="col-span-2 md:col-span-4">
+                <span className="text-gray-400">경로:</span>
+                <p className="text-gray-200 break-all">{item.path}</p>
+              </div>
+              {item.size_mb && (
+                <div>
+                  <span className="text-gray-400">크기:</span>
+                  <p className="text-gray-200">{item.size_mb} MB</p>
+                </div>
+              )}
+              {item.mtime && (
+                <div>
+                  <span className="text-gray-400">파일 날짜:</span>
+                  <p className="text-gray-200">{new Date(item.mtime).toLocaleString()}</p>
+                </div>
+              )}
+              {item.width && item.height && (
+                <div>
+                  <span className="text-gray-400">해상도:</span>
+                  <p className="text-gray-200">{item.width} x {item.height}</p>
+                </div>
+              )}
+              {item.taken_date && (
+                <div>
+                  <span className="text-gray-400">촬영일:</span>
+                  <p className="text-gray-200">{new Date(item.taken_date).toLocaleString()}</p>
+                </div>
+              )}
+              {(item.camera_make || item.camera_model) && (
+                <div>
+                  <span className="text-gray-400">카메라:</span>
+                  <p className="text-gray-200">{item.camera_make} {item.camera_model}</p>
+                </div>
+              )}
+              {item.gps_lat && item.gps_lon && (
+                <div>
+                  <span className="text-gray-400">위치:</span>
+                  <p className="text-gray-200">{item.gps_lat}, {item.gps_lon}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 하단 안내 */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/50 text-xs">
+        ← → 이전/다음 | ESC 닫기 | I 정보
       </div>
     </div>
   );
@@ -1429,7 +1503,7 @@ function MapView({
 }: {
   apiUrl: string;
   selectedPath: string | null;
-  onSelectItem: (item: any) => void;
+  onSelectItem: (item: any, index: number, items: any[]) => void;
 }) {
   const [gpsPhotos, setGpsPhotos] = useState<GpsPhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1520,16 +1594,20 @@ function MapView({
                       src={`${apiUrl}/photo/thumbnail?path=${encodeURIComponent(photo.path)}&size=150`}
                       alt={photo.filename}
                       className="w-full h-32 object-cover rounded mb-2 cursor-pointer"
-                      onClick={() => onSelectItem({
-                        id: photo.id,
-                        path: photo.path,
-                        filename: photo.filename,
-                        media_type: 'photo',
-                        gps_lat: photo.lat,
-                        gps_lon: photo.lon,
-                        taken_date: photo.taken_date,
-                        mtime: photo.mtime
-                      })}
+                      onClick={() => {
+                        const idx = gpsPhotos.findIndex(p => p.id === photo.id);
+                        const items = gpsPhotos.map(p => ({
+                          id: p.id,
+                          path: p.path,
+                          filename: p.filename,
+                          media_type: 'photo',
+                          gps_lat: p.lat,
+                          gps_lon: p.lon,
+                          taken_date: p.taken_date,
+                          mtime: p.mtime
+                        }));
+                        onSelectItem(items[idx], idx, items);
+                      }}
                     />
                     <p className="text-xs font-medium truncate">{photo.filename}</p>
                     {photo.taken_date && (

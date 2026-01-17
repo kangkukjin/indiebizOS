@@ -1,24 +1,30 @@
-[
-  {
-    "name": "search_kstartup",
-    "description": "K-Startup 창업지원 사업공고 검색. 한 번 호출로 최대 50개 공고 반환.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "keyword": { "type": "string", "description": "검색 키워드 (예: 예비창업, 기술창업)" },
-        "count": { "type": "integer", "default": 10, "minimum": 1, "maximum": 50, "description": "조회 건수 (기본 10)" }
+{
+  "id": "startup",
+  "name": "Startup Support",
+  "description": "창업지원 사업공고 검색 도구 (K-Startup, 중소벤처기업부)",
+  "version": "1.1.0",
+  "tools": [
+    {
+      "name": "search_kstartup",
+      "description": "K-Startup 창업지원 사업공고를 검색합니다.\n\n## 사용 시점\n- 정부 창업지원 사업 찾기\n- 예비창업자/초기창업자 지원금 검색\n- 기술창업, 소상공인 지원 공고 확인\n\n## 검색 키워드 예시\n- 예비창업패키지\n- 초기창업패키지\n- 기술창업\n- 소상공인\n- 청년창업\n\n## 반환 정보\n- 공고명, 지원기관, 접수기간, 지원내용 요약\n\n## search_mss_biz와의 차이\n- K-Startup: 창업진흥원 중심, 창업 특화\n- MSS: 중기부 전체, R&D/수출 포함",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": { "type": "string", "description": "검색 키워드 (예: 예비창업, 기술창업)" },
+          "count": { "type": "integer", "default": 10, "minimum": 1, "maximum": 50, "description": "조회 건수 (기본 10)" }
+        }
+      }
+    },
+    {
+      "name": "search_mss_biz",
+      "description": "중소벤처기업부 사업공고를 검색합니다.\n\n## 사용 시점\n- 중소기업 지원사업 찾기\n- R&D 지원, 수출지원 공고 검색\n- 정책자금, 컨설팅 지원 확인\n\n## 검색 키워드 예시\n- R&D\n- 수출\n- 정책자금\n- 컨설팅\n- 스마트공장\n\n## 반환 정보\n- 공고명, 담당부서, 접수기간, 사업내용\n\n## search_kstartup과의 차이\n- MSS: 기존 중소기업 대상 포함\n- K-Startup: 창업/예비창업 특화",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": { "type": "string", "description": "검색 키워드 (예: 창업, R&D, 수출)" },
+          "count": { "type": "integer", "default": 10, "minimum": 1, "maximum": 50, "description": "조회 건수 (기본 10)" }
+        }
       }
     }
-  },
-  {
-    "name": "search_mss_biz",
-    "description": "중소벤처기업부 사업공고 검색. 한 번 호출로 최대 50개 공고 반환.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "keyword": { "type": "string", "description": "검색 키워드 (예: 창업, R&D, 수출)" },
-        "count": { "type": "integer", "default": 10, "minimum": 1, "maximum": 50, "description": "조회 건수 (기본 10)" }
-      }
-    }
-  }
-]
+  ]
+}

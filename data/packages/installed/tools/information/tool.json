@@ -1,234 +1,147 @@
-[
-  {
-    "name": "get_api_ninjas_data",
-    "description": "API Ninjas를 통해 명언, 역사적 사실, 날씨, 사전 정의 등 다양한 지식 정보를 검색합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "endpoint": {
-          "type": "string",
-          "description": "조회할 데이터 종류 (quotes, facts, weather 등)"
+{
+  "id": "information",
+  "name": "Information Tools",
+  "description": "외부 API를 통한 정보 조회 도구 (명언, 여행, 맛집, 주식, 지도 등)",
+  "version": "1.1.0",
+  "tools": [
+    {
+      "name": "get_api_ninjas_data",
+      "description": "API Ninjas에서 다양한 지식 정보를 조회합니다.\n\n## 지원 endpoint\n- quotes: 명언 (category로 필터링)\n- facts: 역사적 사실\n- weather: 날씨 정보 (city 필요)\n- dictionary: 사전 정의 (word 필요)\n- trivia: 상식 퀴즈\n\n## 사용 예시\n- 명언: endpoint='quotes', params={category: 'inspirational'}\n- 날씨: endpoint='weather', params={city: 'Seoul'}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "endpoint": { "type": "string", "description": "데이터 종류 (quotes, facts, weather, dictionary 등)" },
+          "params": { "type": "object", "description": "필터링 매개변수" }
         },
-        "params": {
-          "type": "object",
-          "description": "필터링 매개변수"
-        }
-      },
-      "required": ["endpoint"]
-    }
-  },
-  {
-    "name": "search_public_apis",
-    "description": "전 세계의 공개 API 라이브러리에서 특정 주제나 카테고리의 API를 검색합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "title": {"type": "string"},
-        "category": {"type": "string"}
+        "required": ["endpoint"]
       }
-    }
-  },
-  {
-    "name": "amadeus_travel_search",
-    "description": "항공권, 호텔, 현지 관광지 등 실시간 여행 정보를 조회합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "endpoint": {"type": "string"},
-        "params": {"type": "object"}
-      },
-      "required": ["endpoint", "params"]
-    }
-  },
-  {
-    "name": "search_restaurants",
-    "description": "한국 맛집/음식점 검색 (카카오+네이버 통합). 한 번 호출로 카카오 10개 + 네이버 5개 = 최대 15개 결과를 반환합니다. 중복 호출 불필요 - 한 번만 호출하세요.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "query": {
-          "type": "string",
-          "description": "검색 키워드 (예: '대전 유성구 맛집', '강남 파스타'). 지역+음식종류 조합 권장"
-        },
-        "x": {
-          "type": "string",
-          "description": "중심 좌표 경도 (선택, 예: '127.027619')"
-        },
-        "y": {
-          "type": "string",
-          "description": "중심 좌표 위도 (선택, 예: '37.497942')"
-        },
-        "radius": {
-          "type": "integer",
-          "description": "검색 반경 미터 (기본: 5000, 최대: 20000)"
-        }
-      },
-      "required": ["query"]
-    }
-  },
-  {
-    "name": "kakao_navigation",
-    "description": "카카오모빌리티 길찾기 API. 출발지에서 목적지까지의 자동차 경로를 탐색합니다. 거리, 소요시간, 톨비, 턴바이턴 안내와 함께 경로가 표시된 HTML 지도 파일을 생성합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "origin": {
-          "type": "string",
-          "description": "출발지 좌표. 형식: '경도,위도' (예: '126.9706,37.5546') 또는 '경도,위도,name=장소명'"
-        },
-        "destination": {
-          "type": "string",
-          "description": "목적지 좌표. 형식: '경도,위도' (예: '127.0276,37.4979') 또는 '경도,위도,name=장소명'"
-        },
-        "waypoints": {
-          "type": "string",
-          "description": "경유지 좌표 (선택, 최대 5개). '|'로 구분. 예: '127.0,37.5|127.1,37.6'"
-        },
-        "priority": {
-          "type": "string",
-          "enum": ["RECOMMEND", "TIME", "DISTANCE"],
-          "description": "경로 우선순위. RECOMMEND(추천, 기본값), TIME(최단시간), DISTANCE(최단거리)"
-        },
-        "avoid": {
-          "type": "string",
-          "description": "회피 옵션. 쉼표로 구분. toll(유료도로), motorway(고속도로), ferries(페리), schoolzone(스쿨존), uturn(유턴)"
-        },
-        "alternatives": {
-          "type": "boolean",
-          "description": "대안 경로 제공 여부 (기본: false)"
-        },
-        "summary": {
-          "type": "boolean",
-          "description": "요약 정보만 반환 (기본: false). true면 턴바이턴 안내와 지도 생략"
-        },
-        "generate_map": {
-          "type": "boolean",
-          "description": "HTML 지도 파일 생성 여부 (기본: true). 경로가 표시된 인터랙티브 지도를 outputs/ 폴더에 생성"
-        }
-      },
-      "required": ["origin", "destination"]
-    }
-  },
-  {
-    "name": "show_location_map",
-    "description": "특정 위치나 장소의 지도를 대화창에 표시합니다. 장소 검색 결과, 지역 소개, 위치 안내 등에 활용합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "query": {
-          "type": "string",
-          "description": "검색할 장소명 (예: '강남역', '해운대해수욕장', '서울시청')"
-        },
-        "lat": {
-          "type": "number",
-          "description": "위도 (직접 좌표 지정시)"
-        },
-        "lng": {
-          "type": "number",
-          "description": "경도 (직접 좌표 지정시)"
-        },
-        "zoom": {
-          "type": "integer",
-          "description": "줌 레벨 (기본: 15, 범위: 1-18). 숫자가 클수록 확대"
-        },
-        "markers": {
-          "type": "array",
-          "description": "추가 마커 목록. [{name: '장소명', lat: 위도, lng: 경도}, ...]",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {"type": "string"},
-              "lat": {"type": "number"},
-              "lng": {"type": "number"}
-            }
-          }
+    },
+    {
+      "name": "search_public_apis",
+      "description": "전 세계 공개 API 목록에서 검색합니다.\n\n## 사용 시점\n- 특정 기능의 API 찾기\n- 개발에 활용할 무료 API 탐색\n\n## 검색 방법\n- title: API 이름으로 검색\n- category: 카테고리로 필터링 (Weather, Finance, Music 등)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "API 이름 검색어" },
+          "category": { "type": "string", "description": "카테고리 필터" }
         }
       }
-    }
-  },
-  {
-    "name": "get_stock_price",
-    "description": "Yahoo Finance를 통해 주식/암호화폐/ETF의 실시간 가격 정보를 조회합니다. 현재가, 변동률, 거래량, 52주 최고/최저가 등을 반환합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "symbol": {
-          "type": "string",
-          "description": "종목 심볼. 미국주식: AAPL, TSLA | 한국주식: 005930.KS(삼성전자) | 암호화폐: BTC-USD(비트코인), ETH-USD(이더리움) | ETF: SPY, QQQ"
+    },
+    {
+      "name": "amadeus_travel_search",
+      "description": "Amadeus API로 여행 정보를 조회합니다.\n\n## 지원 endpoint\n- flight-offers: 항공권 검색\n- hotel-offers: 호텔 검색\n- points-of-interest: 관광지 검색\n\n## 주의사항\n- API 키 설정 필요\n- 실시간 조회로 응답 시간이 길 수 있음",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "endpoint": { "type": "string", "description": "조회 유형" },
+          "params": { "type": "object", "description": "검색 매개변수" }
         },
-        "period": {
-          "type": "string",
-          "description": "조회 기간 (기본: 1d). 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max",
-          "enum": ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"]
+        "required": ["endpoint", "params"]
+      }
+    },
+    {
+      "name": "search_restaurants",
+      "description": "한국 맛집/음식점을 검색합니다 (카카오+네이버 통합).\n\n## 반환 정보\n- 카카오 최대 10개 + 네이버 5개 = 최대 15개 결과\n- 가게명, 주소, 전화번호, 영업시간, 평점\n\n## 사용법\n- query에 '지역 + 음식종류' 조합 권장\n- 예: '강남 파스타', '홍대 맛집', '대전 유성구 삼겹살'\n\n## 주의사항\n- 한 번 호출로 충분한 결과 반환 - 중복 호출 불필요\n- 일반 웹 검색은 ddgs_search 사용",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "검색 키워드 (예: '강남 파스타')" },
+          "x": { "type": "string", "description": "중심 경도 (선택)" },
+          "y": { "type": "string", "description": "중심 위도 (선택)" },
+          "radius": { "type": "integer", "description": "검색 반경 미터 (기본 5000, 최대 20000)" }
         },
-        "interval": {
-          "type": "string",
-          "description": "데이터 간격 (기본: 1d). 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo",
-          "enum": ["1m", "2m", "5m", "15m", "30m", "60m", "90m", "1h", "1d", "5d", "1wk", "1mo", "3mo"]
-        }
-      },
-      "required": ["symbol"]
-    }
-  },
-  {
-    "name": "get_stock_info",
-    "description": "Yahoo Finance를 통해 주식/암호화폐의 상세 정보를 조회합니다. 회사 정보, 섹터, 산업, PE ratio, 배당수익률, 시가총액 등을 반환합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "symbol": {
-          "type": "string",
-          "description": "종목 심볼 (예: AAPL, 005930.KS, BTC-USD)"
-        }
-      },
-      "required": ["symbol"]
-    }
-  },
-  {
-    "name": "search_stock",
-    "description": "Yahoo Finance에서 종목을 검색합니다. 종목 심볼이나 회사명으로 검색하여 관련 종목 목록을 반환합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "query": {
-          "type": "string",
-          "description": "검색어 (종목 심볼 또는 회사명, 예: 'Apple', 'Tesla', '삼성')"
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "kakao_navigation",
+      "description": "카카오모빌리티 API로 자동차 길찾기를 수행합니다.\n\n## 반환 정보\n- 거리, 예상 소요시간, 톨비\n- 턴바이턴 안내\n- 경로가 표시된 HTML 지도 파일\n\n## 좌표 형식\n- '경도,위도' (예: '127.0276,37.4979')\n- '경도,위도,name=장소명' 형식도 가능\n\n## 경로 옵션\n- priority: RECOMMEND(추천), TIME(최단시간), DISTANCE(최단거리)\n- avoid: toll(유료도로), motorway(고속도로) 회피",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "origin": { "type": "string", "description": "출발지 좌표 (경도,위도)" },
+          "destination": { "type": "string", "description": "목적지 좌표 (경도,위도)" },
+          "waypoints": { "type": "string", "description": "경유지 (|로 구분, 최대 5개)" },
+          "priority": { "type": "string", "enum": ["RECOMMEND", "TIME", "DISTANCE"], "description": "경로 우선순위" },
+          "avoid": { "type": "string", "description": "회피 옵션 (toll, motorway 등)" },
+          "alternatives": { "type": "boolean", "description": "대안 경로 제공" },
+          "summary": { "type": "boolean", "description": "요약만 반환 (지도 생략)" },
+          "generate_map": { "type": "boolean", "description": "HTML 지도 생성 (기본 true)" }
         },
-        "search_type": {
-          "type": "string",
-          "description": "검색 유형 (기본: quotes). all(전체), quotes(종목), news(뉴스)",
-          "enum": ["all", "quotes", "news"]
+        "required": ["origin", "destination"]
+      }
+    },
+    {
+      "name": "show_location_map",
+      "description": "특정 위치의 지도를 대화창에 표시합니다.\n\n## 사용 시점\n- 장소 검색 결과 시각화\n- 위치 안내\n- 여러 장소 비교 (markers 사용)\n\n## 사용법\n- query로 장소명 검색\n- 또는 lat, lng로 직접 좌표 지정\n- markers로 여러 마커 추가 가능",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "장소명 (예: '강남역')" },
+          "lat": { "type": "number", "description": "위도 (직접 지정시)" },
+          "lng": { "type": "number", "description": "경도 (직접 지정시)" },
+          "zoom": { "type": "integer", "description": "줌 레벨 (기본 15, 1-18)" },
+          "markers": { "type": "array", "description": "추가 마커 [{name, lat, lng}, ...]" }
         }
-      },
-      "required": ["query"]
+      }
+    },
+    {
+      "name": "get_stock_price",
+      "description": "Yahoo Finance에서 주식/암호화폐/ETF 가격을 조회합니다.\n\n## 심볼 형식\n- 미국주식: AAPL, TSLA, MSFT\n- 한국주식: 005930.KS (삼성전자), 000660.KS (SK하이닉스)\n- 암호화폐: BTC-USD, ETH-USD\n- ETF: SPY, QQQ\n\n## 반환 정보\n- 현재가, 변동률, 거래량\n- 52주 최고/최저가\n- 기간별 차트 데이터\n\n## 암호화폐 대안\n- CoinGecko 사용 시 get_crypto_price 권장 (무료, API 키 불필요)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": { "type": "string", "description": "종목 심볼" },
+          "period": { "type": "string", "enum": ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"], "description": "조회 기간" },
+          "interval": { "type": "string", "enum": ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"], "description": "데이터 간격" }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "get_stock_info",
+      "description": "Yahoo Finance에서 종목 상세 정보를 조회합니다.\n\n## 반환 정보\n- 회사명, 섹터, 산업\n- 시가총액, PE ratio\n- 배당수익률, EPS\n- 회사 설명",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": { "type": "string", "description": "종목 심볼" }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "search_stock",
+      "description": "Yahoo Finance에서 종목을 검색합니다.\n\n## 사용 시점\n- 정확한 심볼을 모를 때\n- 회사명으로 종목 찾기\n\n## 사용 예시\n- 'Apple' → AAPL 찾기\n- '삼성' → 005930.KS 찾기",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "검색어 (종목명 또는 회사명)" },
+          "search_type": { "type": "string", "enum": ["all", "quotes", "news"], "description": "검색 유형" }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "get_stock_news",
+      "description": "Yahoo Finance에서 종목 관련 뉴스를 조회합니다.\n\n## 반환 정보\n- 뉴스 제목, 요약, 링크\n- 발행 시간, 출처",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": { "type": "string", "description": "종목 심볼" }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "get_crypto_price",
+      "description": "CoinGecko API로 암호화폐 가격을 조회합니다.\n\n## 장점\n- API 키 불필요, 완전 무료\n- USD/KRW 동시 조회\n\n## 지원 코인 ID\n- bitcoin, ethereum, ripple, dogecoin, solana, cardano\n- BTC, ETH 등 심볼도 자동 변환\n\n## 반환 정보\n- USD/KRW 현재가\n- 24시간 변동률\n- 시가총액, 거래량\n- 역대 최고가",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "coin_id": { "type": "string", "description": "코인 ID 또는 심볼 (bitcoin, BTC 등)" }
+        },
+        "required": ["coin_id"]
+      }
     }
-  },
-  {
-    "name": "get_stock_news",
-    "description": "Yahoo Finance에서 특정 종목과 관련된 최신 뉴스를 조회합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "symbol": {
-          "type": "string",
-          "description": "종목 심볼 (예: AAPL, TSLA, BTC-USD)"
-        }
-      },
-      "required": ["symbol"]
-    }
-  },
-  {
-    "name": "get_crypto_price",
-    "description": "CoinGecko API를 통해 암호화폐 실시간 가격을 조회합니다. API 키 불필요, 무료 사용 가능. USD/KRW 가격, 24시간 변동률, 시가총액, 거래량, 역대 최고가 등을 반환합니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "coin_id": {
-          "type": "string",
-          "description": "암호화폐 ID 또는 심볼. 예: bitcoin, ethereum, BTC, ETH, BTC-USD 등. 주요 매핑: BTC=bitcoin, ETH=ethereum, XRP=ripple, DOGE=dogecoin, SOL=solana, ADA=cardano"
-        }
-      },
-      "required": ["coin_id"]
-    }
-  }
-]
+  ]
+}

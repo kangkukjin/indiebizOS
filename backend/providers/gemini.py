@@ -121,7 +121,7 @@ class GeminiProvider(BaseProvider):
             role = "user" if h["role"] == "user" else "model"
             contents.append(types.Content(role=role, parts=[types.Part.from_text(text=h["content"])]))
 
-        # 현재 메시지 (이미지 포함 가능)
+        # 현재 메시지 (이미지 포함 가능) - 태그로 명확히 구분
         current_parts = []
         if images:
             for img in images:
@@ -130,7 +130,8 @@ class GeminiProvider(BaseProvider):
                     data=img_bytes,
                     mime_type=img.get("media_type", "image/png")
                 ))
-        current_parts.append(types.Part.from_text(text=message))
+        # 현재 요청을 XML 태그로 감싸서 히스토리와 구분
+        current_parts.append(types.Part.from_text(text=f"<current_user_request>\n{message}\n</current_user_request>"))
         contents.append(types.Content(role="user", parts=current_parts))
 
         return contents
@@ -421,7 +422,7 @@ class GeminiProvider(BaseProvider):
                     yield {"type": "final", "content": final}
                     return
 
-                # 함수 응답 추가 (role="tool" - Gemini API 권장 방식)
+                # 함수 응답 추가 (role="tool" - google-genai SDK 공식 방식)
                 contents.append(types.Content(
                     role="tool",
                     parts=function_response_parts

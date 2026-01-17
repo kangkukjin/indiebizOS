@@ -163,7 +163,7 @@ async def stop_agent(project_id: str, agent_id: str):
 
 @router.post("/projects/{project_id}/cancel_all")
 async def cancel_all_agents(project_id: str):
-    """프로젝트의 모든 에이전트 작업 중단"""
+    """프로젝트의 모든 에이전트 작업 중단 (에이전트는 유지, 현재 작업만 취소)"""
     try:
         cancelled = []
 
@@ -173,8 +173,7 @@ async def cancel_all_agents(project_id: str):
                 if runner:
                     runner.cancel()
                     cancelled.append(agent_id)
-
-            agent_runners[project_id] = {}
+            # 주의: 레지스트리를 비우지 않음 - 에이전트는 유지되고 다음 메시지를 받을 수 있어야 함
 
         return {"status": "cancelled", "cancelled_agents": cancelled}
     except Exception as e:

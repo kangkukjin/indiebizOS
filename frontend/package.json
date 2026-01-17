@@ -22,7 +22,8 @@
     "electron:build:mac": "vite build && electron-builder --mac",
     "electron:build:linux": "vite build && electron-builder --linux",
     "electron:preview": "vite build && electron .",
-    "prepare:python:win": "node scripts/prepare-python-win.js"
+    "prepare:python:win": "node scripts/prepare-python-win.js",
+    "prepare:python:mac": "node scripts/prepare-python-mac.js"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
@@ -121,12 +122,8 @@
       ],
       "extraResources": [
         {
-          "from": "../runtime/python",
+          "from": "../build/python-mac",
           "to": "runtime/python"
-        },
-        {
-          "from": "../runtime/node",
-          "to": "runtime/node"
         }
       ]
     },
@@ -141,12 +138,8 @@
       ],
       "extraResources": [
         {
-          "from": "../runtime/python",
+          "from": "../build/python-win",
           "to": "runtime/python"
-        },
-        {
-          "from": "../runtime/node",
-          "to": "runtime/node"
         }
       ]
     },

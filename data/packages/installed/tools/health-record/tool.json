@@ -1,58 +1,38 @@
-[
-  {
-    "name": "save_health_info",
-    "description": "건강 정보 저장 (혈압, 혈당, 체중, 증상, 투약 등). 한 번 호출로 모든 정보 저장. 여러 사람 분리 관리.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "person": {
-          "type": "string",
-          "description": "대상자 (예: '나', '어머니'). 기본값 '나'"
+{
+  "id": "health-record",
+  "name": "Health Record",
+  "description": "건강 정보 기록 및 조회 도구 (혈압, 혈당, 체중, 증상, 투약 등)",
+  "version": "1.1.0",
+  "tools": [
+    {
+      "name": "save_health_info",
+      "description": "건강 정보를 저장합니다.\n\n## 정보 유형 (info_type)\n- measurement: 측정값 (혈압, 혈당, 체중 등)\n- symptom: 증상 기록\n- medication: 투약 정보\n- document: 검사 결과 (이미지/문서)\n\n## 다중 사용자 지원\n- person 파라미터로 대상자 구분 (예: '나', '어머니')\n\n## 사용 예시\n- 혈압: info_type='measurement', data={category: 'blood_pressure', value: {systolic: 120, diastolic: 80}}\n- 체중: info_type='measurement', data={category: 'weight', value: {kg: 70}}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "person": { "type": "string", "description": "대상자 (기본: '나')" },
+          "info_type": { "type": "string", "enum": ["measurement", "symptom", "medication", "document"], "description": "정보 유형" },
+          "data": { "type": "object", "description": "건강 정보 데이터" },
+          "measured_at": { "type": "string", "description": "측정 일시 (YYYY-MM-DD HH:MM)" },
+          "note": { "type": "string", "description": "추가 메모" }
         },
-        "info_type": {
-          "type": "string",
-          "enum": ["measurement", "symptom", "medication", "document"],
-          "description": "정보 유형: measurement(측정), symptom(증상), medication(투약), document(검사결과)"
-        },
-        "data": {
-          "type": "object",
-          "description": "건강 정보 데이터",
-          "properties": {
-            "category": { "type": "string", "description": "카테고리 (blood_pressure, blood_sugar, weight 등)" },
-            "value": { "type": "object", "description": "측정값 (예: {systolic: 120, diastolic: 80})" },
-            "description": { "type": "string", "description": "설명/메모" },
-            "severity": { "type": "string", "enum": ["mild", "moderate", "severe"], "description": "심각도" },
-            "dosage": { "type": "string", "description": "복용량" },
-            "frequency": { "type": "string", "description": "복용 빈도" },
-            "started_at": { "type": "string", "description": "시작일 (YYYY-MM-DD)" },
-            "ended_at": { "type": "string", "description": "종료일 (YYYY-MM-DD)" },
-            "image_path": { "type": "string", "description": "이미지 경로" },
-            "extracted_data": { "type": "object", "description": "OCR 추출 데이터" }
-          }
-        },
-        "measured_at": { "type": "string", "description": "측정 일시 (YYYY-MM-DD HH:MM). 생략시 현재" },
-        "note": { "type": "string", "description": "추가 메모" }
-      },
-      "required": ["info_type", "data"]
-    }
-  },
-  {
-    "name": "get_health_context",
-    "description": "건강 기록 조회. 한 번 호출로 요약/측정값/증상/투약 등 반환. 여러 사람 분리 조회.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "person": { "type": "string", "description": "대상자. 기본값 '나'" },
-        "query_type": {
-          "type": "string",
-          "enum": ["summary", "measurements", "symptoms", "medications", "documents", "search", "list_persons"],
-          "description": "조회 유형"
-        },
-        "category": { "type": "string", "description": "카테고리 필터 (blood_pressure, weight 등)" },
-        "days": { "type": "integer", "description": "최근 N일 (기본 30)" },
-        "keyword": { "type": "string", "description": "검색 키워드 (query_type=search)" },
-        "include_images": { "type": "boolean", "description": "이미지 경로 포함 (기본 false)" }
+        "required": ["info_type", "data"]
+      }
+    },
+    {
+      "name": "get_health_context",
+      "description": "건강 기록을 조회합니다.\n\n## 조회 유형 (query_type)\n- summary: 종합 요약\n- measurements: 측정 기록\n- symptoms: 증상 기록\n- medications: 투약 기록\n- documents: 검사 결과\n- search: 키워드 검색\n- list_persons: 등록된 대상자 목록\n\n## 필터 옵션\n- category: 측정 종류 필터 (blood_pressure, weight 등)\n- days: 최근 N일 데이터",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "person": { "type": "string", "description": "대상자 (기본: '나')" },
+          "query_type": { "type": "string", "enum": ["summary", "measurements", "symptoms", "medications", "documents", "search", "list_persons"], "description": "조회 유형" },
+          "category": { "type": "string", "description": "카테고리 필터" },
+          "days": { "type": "integer", "description": "최근 N일 (기본 30)" },
+          "keyword": { "type": "string", "description": "검색 키워드" },
+          "include_images": { "type": "boolean", "description": "이미지 경로 포함" }
+        }
       }
     }
-  }
-]
+  ]
+}

@@ -126,7 +126,8 @@ class OpenAIProvider(BaseProvider):
                 "content": h["content"]
             })
 
-        # 현재 메시지 (이미지 포함 가능)
+        # 현재 메시지 (이미지 포함 가능) - 태그로 명확히 구분
+        tagged_message = f"<current_user_request>\n{message}\n</current_user_request>"
         if images:
             content = []
             for img in images:
@@ -136,10 +137,10 @@ class OpenAIProvider(BaseProvider):
                         "url": f"data:{img.get('media_type', 'image/png')};base64,{img['base64']}"
                     }
                 })
-            content.append({"type": "text", "text": message})
+            content.append({"type": "text", "text": tagged_message})
             messages.append({"role": "user", "content": content})
         else:
-            messages.append({"role": "user", "content": message})
+            messages.append({"role": "user", "content": tagged_message})
 
         return messages
 

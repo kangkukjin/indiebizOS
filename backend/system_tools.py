@@ -20,7 +20,7 @@ from tool_loader import build_tool_package_map, load_tool_handler, get_all_tool_
 SYSTEM_TOOLS = [
     {
         "name": "request_user_approval",
-        "description": "사용자 승인을 요청합니다. 파일 생성/수정/삭제, 코드 실행, 패키지 설치 등 시스템을 변경하는 작업 전에 반드시 이 도구를 먼저 호출하세요. 이 도구를 호출하면 대화가 중단되고 사용자의 응답을 기다립니다.",
+        "description": "사용자 승인을 요청합니다. 하나의 작업 요청에 대해 한 번만 호출하세요. 사용자가 승인하면 이후 모든 단계를 진행하고, 완료 후 결과를 보고하세요. 절대 같은 작업에 대해 두 번 이상 호출하지 마세요.",
         "input_schema": {
             "type": "object",
             "properties": {

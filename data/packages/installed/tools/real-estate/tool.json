@@ -1,68 +1,74 @@
-[
-  {
-    "name": "apt_trade_price",
-    "description": "아파트 매매 실거래가 조회. 한 번 호출로 최대 12개월 데이터 반환. [단위: 만원] 예: 64,000 = 6억4천만원.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "region_code": { "type": "string", "description": "법정동 코드 5자리 (강남=11680, 서초=11650)" },
-        "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
-        "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
-        "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
-      },
-      "required": ["region_code", "start_month"]
-    }
-  },
-  {
-    "name": "apt_rent_price",
-    "description": "아파트 전월세 실거래가 조회. 한 번 호출로 최대 12개월 데이터 반환. [단위: 만원] 예: 30,000 = 3억원.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "region_code": { "type": "string", "description": "법정동 코드 5자리" },
-        "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
-        "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
-        "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
-      },
-      "required": ["region_code", "start_month"]
-    }
-  },
-  {
-    "name": "house_trade_price",
-    "description": "단독/다가구 주택 매매 실거래가 조회. 한 번 호출로 최대 12개월 데이터 반환. [단위: 만원]",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "region_code": { "type": "string", "description": "법정동 코드 5자리" },
-        "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
-        "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
-        "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
-      },
-      "required": ["region_code", "start_month"]
-    }
-  },
-  {
-    "name": "house_rent_price",
-    "description": "단독/다가구 주택 전월세 실거래가 조회. 한 번 호출로 최대 12개월 데이터 반환. [단위: 만원]",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "region_code": { "type": "string", "description": "법정동 코드 5자리" },
-        "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
-        "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
-        "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
-      },
-      "required": ["region_code", "start_month"]
-    }
-  },
-  {
-    "name": "get_region_codes",
-    "description": "지역 코드 목록 조회. 한 번 호출로 전체 또는 특정 도시 코드 반환.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "city": { "type": "string", "description": "도시명 (서울, 경기, 부산 등). 생략시 전체", "default": "" }
+{
+  "id": "real-estate",
+  "name": "Real Estate",
+  "description": "국토교통부 부동산 실거래가 API 도구",
+  "version": "1.1.0",
+  "tools": [
+    {
+      "name": "apt_trade_price",
+      "description": "아파트 매매 실거래가를 조회합니다.\n\n## 중요 - 데이터 이해\n- 단위: 만원 (예: 64,000 = 6억4천만원)\n- 한 번 호출로 최대 12개월 데이터 반환\n- 재호출 불필요!\n\n## 사용 시점\n- 아파트 시세 파악\n- 가격 추이 분석\n- 매매 타이밍 검토\n\n## 주요 지역 코드\n- 강남구: 11680\n- 서초구: 11650\n- 송파구: 11710\n- 전체 목록: get_region_codes 사용\n\n## 반환 정보\n- 거래일, 아파트명, 면적, 층수, 거래금액",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "region_code": { "type": "string", "description": "법정동 코드 5자리 (강남=11680, 서초=11650)" },
+          "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
+          "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
+          "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
+        },
+        "required": ["region_code", "start_month"]
+      }
+    },
+    {
+      "name": "apt_rent_price",
+      "description": "아파트 전월세 실거래가를 조회합니다.\n\n## 중요 - 데이터 이해\n- 단위: 만원 (예: 30,000 = 3억원)\n- 전세/월세 구분 포함\n- 한 번 호출로 최대 12개월 데이터 반환\n\n## 사용 시점\n- 전세/월세 시세 파악\n- 임대료 추이 분석\n- 전세가율 계산 (apt_trade_price와 함께)\n\n## 반환 정보\n- 거래일, 아파트명, 면적, 층수, 보증금, 월세",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "region_code": { "type": "string", "description": "법정동 코드 5자리" },
+          "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
+          "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
+          "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
+        },
+        "required": ["region_code", "start_month"]
+      }
+    },
+    {
+      "name": "house_trade_price",
+      "description": "단독/다가구 주택 매매 실거래가를 조회합니다.\n\n## 사용 시점\n- 단독주택 시세 파악\n- 재건축/재개발 대상지 분석\n- 토지+건물 가치 평가\n\n## apt_trade_price와의 차이\n- 대상: 단독주택, 다가구주택 (아파트 X)\n- 토지면적, 건물면적 별도 제공\n\n## 반환 정보\n- 거래일, 건물유형, 토지면적, 건물면적, 거래금액",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "region_code": { "type": "string", "description": "법정동 코드 5자리" },
+          "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
+          "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
+          "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
+        },
+        "required": ["region_code", "start_month"]
+      }
+    },
+    {
+      "name": "house_rent_price",
+      "description": "단독/다가구 주택 전월세 실거래가를 조회합니다.\n\n## 사용 시점\n- 단독주택 임대료 파악\n- 다가구 수익률 분석\n\n## 반환 정보\n- 거래일, 건물유형, 면적, 보증금, 월세",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "region_code": { "type": "string", "description": "법정동 코드 5자리" },
+          "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
+          "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
+          "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
+        },
+        "required": ["region_code", "start_month"]
+      }
+    },
+    {
+      "name": "get_region_codes",
+      "description": "부동산 조회에 필요한 지역 코드를 조회합니다.\n\n## 사용 시점\n- 다른 도구 호출 전 지역코드 확인\n- 특정 도시의 구/군 목록 필요할 때\n\n## 사용법\n- city 생략: 전국 전체 코드\n- city='서울': 서울시 구 코드만\n- city='경기': 경기도 시/군 코드만\n\n## 다른 도구와의 관계\n- 여기서 얻은 코드를 apt_trade_price 등에 사용",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "city": { "type": "string", "description": "도시명 (서울, 경기, 부산 등). 생략시 전체", "default": "" }
+        }
       }
     }
-  }
-]
+  ]
+}

@@ -161,6 +161,7 @@ IndieBiz OS
 | android | 안드로이드 기기 관리 (adb) |
 | blog | 블로그 RAG 검색 및 인사이트 |
 | browser-automation | 웹 자동화 (Playwright) |
+| culture | 한국 문화 데이터 (공연, 도서관, 전시회) |
 | health-record | 개인 건강 데이터 관리 |
 | information | API Ninjas, 여행 정보, 맛집 검색 |
 | kosis | 통계청 데이터 조회 (KOSIS) |
@@ -359,7 +360,7 @@ npm run electron:build:win   # Windows
 **이 프로젝트는 활발히 개발 중입니다.**
 
 - 14개의 활성 프로젝트 운영 중
-- 15개의 도구 패키지 설치됨
+- 16개의 도구 패키지 설치됨
 - 스케줄러, 스위치, 비즈니스 네트워크 작동 중
 - 고급 프롬프트 엔지니어링 (CoT + Few-shot) 적용
 

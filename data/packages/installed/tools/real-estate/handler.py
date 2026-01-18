@@ -52,6 +52,15 @@ def execute(tool_name: str, params: dict, project_path: str = None):
         city = params.get("city", "")
         return tool.get_region_codes(city)
 
+    elif tool_name == "search_commercial_district":
+        tool = load_module("tool_commercial_district")
+        lat = params.get("lat")
+        lng = params.get("lng")
+        radius = params.get("radius", 500)
+        region_code = params.get("region_code")
+        indsLclsCd = params.get("indsLclsCd")
+        return tool.search_commercial_district(lat=lat, lng=lng, radius=radius, region_code=region_code, indsLclsCd=indsLclsCd)
+
     else:
         return {
             "success": False,

@@ -9,6 +9,10 @@ from pathlib import Path
 from datetime import datetime
 from contextlib import asynccontextmanager
 
+# .env 파일 로드 (python-dotenv)
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / ".env")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse

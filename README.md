@@ -161,6 +161,7 @@ Each project is **completely isolated**. Delete a project, and everything relate
 | android | Android device management (adb) |
 | blog | Blog RAG search and insights |
 | browser-automation | Web automation (Playwright) |
+| culture | Korean cultural data (performances, libraries, exhibitions) |
 | health-record | Personal health data management |
 | information | API Ninjas, travel info, restaurant search |
 | kosis | Korean Statistics (KOSIS) data retrieval |
@@ -359,7 +360,7 @@ The human is part of the system:
 **This project is under active development.**
 
 - 14 active projects in production use
-- 15 installed tool packages
+- 16 installed tool packages
 - Functional scheduler, switches, and business network
 - Advanced prompt engineering (CoT + Few-shot) for auto-response
 

@@ -257,6 +257,8 @@ export function Chat({ projectId, agent }: ChatProps) {
           setCurrentToolActivity(newTool);
           setToolHistory(prev => [...prev, newTool]);
           setThinkingText('');
+          // 도구 실행 시작 시 중간 텍스트 초기화 (Claude Desktop처럼 최종 응답만 보여주기 위함)
+          setStreamingContent('');
           break;
         }
 
@@ -368,6 +370,13 @@ export function Chat({ projectId, agent }: ChatProps) {
       websocket.close();
     };
   }, [projectId, agent.id]);
+
+  // 컴포넌트 언마운트 시 첨부 이미지 ObjectURL 정리 (메모리 누수 방지)
+  useEffect(() => {
+    return () => {
+      attachedImages.forEach(img => URL.revokeObjectURL(img.preview));
+    };
+  }, []);
 
   // 스크롤 자동 이동
   useEffect(() => {

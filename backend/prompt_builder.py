@@ -58,7 +58,7 @@ class PromptBuilder:
         parts = []
 
         # 1. 기본 프롬프트 (항상 포함)
-        base = self._load_file("base_prompt.md")
+        base = self._load_file("base_prompt_v2.md")
         if base:
             parts.append(base)
 

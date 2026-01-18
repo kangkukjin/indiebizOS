@@ -112,11 +112,11 @@ class AutoResponseService:
                 if msg_key in self._processed_messages:
                     continue
 
-                # 내가 보낸 메시지는 스킵
+                # 내가 보낸 메시지는 스킵 (발신 메시지)
                 if msg.get('is_from_user') == 1:
                     continue
 
-                # 메시지 처리
+                # 외부 메시지는 자동응답 로직으로 처리
                 self._process_message(msg)
                 self._processed_messages[msg_key] = time.time()
 
@@ -127,7 +127,7 @@ class AutoResponseService:
             self._log(f"미응답 메시지 확인 오류: {e}")
 
     def _process_message(self, message: dict):
-        """메시지 처리 - AI 판단 → 비즈니스 검색 → 응답 생성"""
+        """외부 메시지 처리 - AI 판단 → 비즈니스 검색 → 응답 생성"""
         try:
             self._log(f"새 메시지 처리: {message.get('subject', '제목없음')[:30]}")
 

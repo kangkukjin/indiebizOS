@@ -409,10 +409,12 @@ class GeminiProvider(BaseProvider):
                         "result": tool_output[:3000] + "..." if len(tool_output) > 3000 else tool_output
                     }
 
+                    # 도구 결과 길이 제한 (Anthropic과 일관성 유지)
+                    truncated_output = tool_output[:8000] if len(tool_output) > 8000 else tool_output
                     function_response_parts.append(
                         types.Part.from_function_response(
                             name=fc.name,
-                            response={"result": tool_output}
+                            response={"result": truncated_output}
                         )
                     )
 

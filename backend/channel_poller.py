@@ -33,6 +33,35 @@ except ImportError:
     HAS_NOSTR = False
 
 
+def _load_owner_identities() -> Dict[str, set]:
+    """환경변수에서 사용자 식별 정보 로드"""
+    from dotenv import load_dotenv
+    load_dotenv(BACKEND_PATH.parent / ".env")
+
+    identities = {
+        'emails': set(),
+        'nostr_pubkeys': set()
+    }
+
+    # 이메일 로드 (쉼표 구분)
+    owner_emails = os.getenv('OWNER_EMAILS', '')
+    if owner_emails:
+        for email in owner_emails.split(','):
+            email = email.strip().lower()
+            if email:
+                identities['emails'].add(email)
+
+    # Nostr 공개키 로드 (쉼표 구분)
+    owner_nostr = os.getenv('OWNER_NOSTR_PUBKEYS', '')
+    if owner_nostr:
+        for pubkey in owner_nostr.split(','):
+            pubkey = pubkey.strip().lower()
+            if pubkey:
+                identities['nostr_pubkeys'].add(pubkey)
+
+    return identities
+
+
 class ChannelPoller:
     """통신채널 메시지 수신 관리자"""
 
@@ -56,6 +85,25 @@ class ChannelPoller:
 
         # 자동응답 서비스 참조
         self._auto_response = None
+
+        # 사용자 식별 정보
+        self._owner_identities = _load_owner_identities()
+
+    def _is_from_owner(self, contact_type: str, contact_value: str) -> bool:
+        """메시지가 소유자(사용자)로부터 왔는지 확인"""
+        contact_value = contact_value.lower().strip()
+
+        if contact_type == 'gmail':
+            # 이메일에서 주소만 추출
+            email_match = re.search(r'<([^>]+)>', contact_value)
+            if email_match:
+                contact_value = email_match.group(1).lower()
+            return contact_value in self._owner_identities['emails']
+
+        elif contact_type == 'nostr':
+            return contact_value in self._owner_identities['nostr_pubkeys']
+
+        return False
 
     def _log(self, message: str):
         """로그 출력"""
@@ -103,15 +151,15 @@ class ChannelPoller:
         if self._auto_response:
             try:
                 self._auto_response.stop()
-            except:
-                pass
+            except Exception as e:
+                self._log(f"자동응답 서비스 중지 실패: {e}")
 
         # Nostr WebSocket 종료
         if self._nostr_ws:
             try:
                 self._nostr_ws.close()
-            except:
-                pass
+            except Exception as e:
+                self._log(f"Nostr WebSocket 종료 실패: {e}")
 
         # 모든 채널 폴링 중지
         for channel_type in list(self.stop_events.keys()):
@@ -177,8 +225,8 @@ class ChannelPoller:
         if channel_type == 'nostr' and self._nostr_ws:
             try:
                 self._nostr_ws.close()
-            except:
-                pass
+            except Exception as e:
+                self._log(f"Nostr WebSocket 종료 실패: {e}")
             self._nostr_ws = None
 
         if channel_type in self.threads:
@@ -542,6 +590,16 @@ class ChannelPoller:
                 if existing:
                     return  # 이미 저장됨
 
+            # 사용자(소유자) 여부 확인
+            is_owner = self._is_from_owner(contact_type, contact_value)
+
+            if is_owner:
+                # 사용자 명령 → 시스템 AI로 처리
+                self._log(f"사용자 명령 감지: {subject[:30]}...")
+                self._process_owner_command(contact_type, contact_value, subject, content)
+                return  # business DB에는 저장하지 않음
+
+            # 외부인 메시지 → 기존대로 DB 저장
             # 연락처로 이웃 찾기
             neighbor = bm.find_neighbor_by_contact(contact_type, contact_value)
             neighbor_id = neighbor['id'] if neighbor else None
@@ -579,6 +637,160 @@ class ChannelPoller:
 
         except Exception as e:
             self._log(f"메시지 저장 실패: {e}")
+
+    def _process_owner_command(self, contact_type: str, contact_value: str,
+                               subject: str, content: str):
+        """사용자 명령을 시스템 AI로 처리 (GUI와 동일하게)"""
+        try:
+            from conversation_db import ConversationDB
+            from prompt_builder import PromptBuilder
+
+            # conversation_db 연결
+            db_path = BACKEND_PATH.parent / "data" / "conversation.db"
+            db = ConversationDB(str(db_path))
+
+            # 시스템 AI 에이전트와 사용자 ID 가져오기
+            agent_id = db.get_or_create_agent("시스템", "ai_agent")
+            user_id = db.get_or_create_agent("user", "user")
+
+            # 메시지 내용 (본문이 비어있으면 제목 사용)
+            message_content = content or subject
+            if not message_content:
+                self._log("빈 명령 무시")
+                return
+
+            # 사용자 메시지를 conversation_db에 저장
+            db.save_message(user_id, agent_id, message_content, contact_type=contact_type)
+
+            # 히스토리 로드 (GUI와 동일한 마스킹 적용)
+            history = db.get_history_for_ai(agent_id, user_id)
+
+            # 시스템 AI 설정 로드
+            config = self._load_system_ai_config()
+            if not config.get('apiKey'):
+                self._log("시스템 AI API 키 없음")
+                return
+
+            # AI 처리
+            response = self._execute_system_ai(message_content, history, config)
+
+            if response:
+                # AI 응답도 conversation_db에 저장
+                db.save_message(agent_id, user_id, response, contact_type=contact_type)
+
+                # 외부 채널로 응답 전송
+                self._send_response(contact_type, contact_value, f"Re: {subject}", response)
+
+            self._log(f"사용자 명령 처리 완료: {subject[:30]}...")
+
+        except Exception as e:
+            self._log(f"사용자 명령 처리 실패: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def _load_system_ai_config(self) -> dict:
+        """시스템 AI 설정 로드"""
+        config_path = BACKEND_PATH.parent / "data" / "system_ai_config.json"
+        if config_path.exists():
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                pass
+        return {"enabled": False, "provider": "", "model": "", "apiKey": ""}
+
+    def _execute_system_ai(self, command: str, history: list, config: dict) -> str:
+        """시스템 AI로 명령 실행"""
+        try:
+            from prompt_builder import PromptBuilder
+            from providers.gemini import GeminiProvider
+            from providers.anthropic import AnthropicProvider
+
+            # 프롬프트 빌더로 시스템 프롬프트 생성
+            builder = PromptBuilder()
+            system_prompt = builder.build_prompt(agent_name="시스템")
+
+            # 프로바이더 선택
+            provider_name = config.get('provider', 'gemini')
+            api_key = config.get('apiKey', '')
+            model = config.get('model', '')
+
+            if provider_name == 'anthropic':
+                provider = AnthropicProvider(
+                    api_key=api_key,
+                    model=model,
+                    system_prompt=system_prompt,
+                    agent_name="시스템"
+                )
+            else:
+                provider = GeminiProvider(
+                    api_key=api_key,
+                    model=model,
+                    system_prompt=system_prompt,
+                    agent_name="시스템"
+                )
+
+            if not provider.init_client():
+                return "AI 초기화 실패"
+
+            # 메시지 처리
+            response = provider.process_message(command, history)
+            return response
+
+        except Exception as e:
+            self._log(f"시스템 AI 실행 오류: {e}")
+            return f"명령 처리 중 오류: {e}"
+
+    def _send_response(self, contact_type: str, contact_value: str, subject: str, body: str):
+        """외부 채널로 응답 전송"""
+        try:
+            if contact_type == 'gmail' and self._gmail_client:
+                self._gmail_client.send_email(
+                    to=contact_value,
+                    subject=subject,
+                    body=body
+                )
+                self._log(f"Gmail 응답 전송: {contact_value}")
+
+            elif contact_type == 'nostr' and self._nostr_private_key:
+                # Nostr DM 전송 로직 (기존 코드 재사용)
+                self._send_nostr_dm(contact_value, body)
+                self._log(f"Nostr 응답 전송: {contact_value[:16]}...")
+
+        except Exception as e:
+            self._log(f"응답 전송 실패: {e}")
+
+    def _send_nostr_dm(self, recipient_pubkey: str, message: str):
+        """Nostr DM 전송"""
+        try:
+            from pynostr.event import Event, EventKind
+            from pynostr.encrypted_dm import EncryptedDM
+
+            # npub → hex 변환
+            if recipient_pubkey.startswith('npub'):
+                from pynostr.key import PublicKey
+                recipient_hex = PublicKey.from_npub(recipient_pubkey).hex()
+            else:
+                recipient_hex = recipient_pubkey
+
+            # 암호화된 DM 생성
+            dm = EncryptedDM(
+                kind=EventKind.ENCRYPTED_DIRECT_MESSAGE,
+                content=message,
+                pubkey=recipient_hex,
+            )
+            dm.sign(self._nostr_private_key)
+
+            # 릴레이로 전송 (첫 번째 릴레이 사용)
+            import websocket
+            relay_url = "wss://relay.damus.io"
+
+            ws = websocket.create_connection(relay_url, timeout=10)
+            ws.send(json.dumps(["EVENT", dm.to_message()[1]]))
+            ws.close()
+
+        except Exception as e:
+            self._log(f"Nostr DM 전송 실패: {e}")
 
     def _extract_email(self, from_str: str) -> str:
         """From 헤더에서 이메일 주소 추출"""

@@ -19,6 +19,8 @@ from typing import Optional, List, Dict
 # ============ 히스토리 설정 ============
 HISTORY_LIMIT_USER = 5       # 사용자 ↔ 에이전트 대화 히스토리
 HISTORY_LIMIT_AGENT = 4      # 에이전트 ↔ 에이전트 내부 메시지 히스토리
+RECENT_TURNS_RAW = 2         # 최근 N턴은 원본 유지 (마스킹 안 함)
+MASK_THRESHOLD = 500         # 이 길이 이상이면 마스킹
 
 
 class ConversationDB:
@@ -82,31 +84,64 @@ class ConversationDB:
 
             conn.commit()
 
-    def _migrate_tables(self, cursor):
-        """기존 DB 마이그레이션"""
-        # tasks 테이블에 새 컬럼 추가
-        columns_to_add = [
-            ('delegation_context', 'TEXT'),
-            ('parent_task_id', 'TEXT'),
-            ('pending_delegations', 'INTEGER DEFAULT 0'),
-            ('ws_client_id', 'TEXT')
-        ]
+    # 허용된 컬럼 이름 화이트리스트 (SQL 인젝션 방지)
+    ALLOWED_COLUMNS = {
+        'delegation_context': 'TEXT',
+        'parent_task_id': 'TEXT',
+        'pending_delegations': 'INTEGER DEFAULT 0',
+        'ws_client_id': 'TEXT'
+    }
 
-        for column_name, column_type in columns_to_add:
-            try:
-                cursor.execute(f'SELECT {column_name} FROM tasks LIMIT 1')
-            except sqlite3.OperationalError:
-                cursor.execute(f'ALTER TABLE tasks ADD COLUMN {column_name} {column_type}')
+    def _migrate_tables(self, cursor):
+        """기존 DB 마이그레이션 (SQL 인젝션 방지를 위한 화이트리스트 사용)"""
+        # 현재 테이블의 컬럼 정보 조회 (안전한 방식)
+        cursor.execute("PRAGMA table_info(tasks)")
+        existing_columns = {row[1] for row in cursor.fetchall()}
+
+        # 화이트리스트에 있는 컬럼만 추가
+        for column_name, column_type in self.ALLOWED_COLUMNS.items():
+            # 컬럼 이름 검증: 알파벳, 숫자, 언더스코어만 허용
+            if not column_name.replace('_', '').isalnum():
+                print(f"[DB 마이그레이션] 잘못된 컬럼명 무시: {column_name}")
+                continue
+
+            if column_name not in existing_columns:
+                # 안전한 방식: 화이트리스트에서 가져온 값만 사용
+                # SQLite는 컬럼명에 파라미터 바인딩을 지원하지 않으므로
+                # 화이트리스트 검증 후 문자열 포매팅 사용
+                safe_query = f'ALTER TABLE tasks ADD COLUMN {column_name} {column_type}'
+                cursor.execute(safe_query)
                 print(f"[DB 마이그레이션] tasks.{column_name} 열 추가됨")
 
     @contextmanager
     def get_connection(self):
         """컨텍스트 매니저로 연결 관리"""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.execute("PRAGMA journal_mode=WAL")
         conn.row_factory = sqlite3.Row
         try:
             yield conn
+        finally:
+            conn.close()
+
+    @contextmanager
+    def get_exclusive_connection(self):
+        """배타적 트랜잭션용 연결 (위임 카운터 업데이트 등 Race Condition 방지)
+
+        EXCLUSIVE 모드는 다른 연결의 읽기/쓰기를 모두 차단하여
+        pending_delegations 같은 카운터의 원자적 업데이트를 보장합니다.
+        """
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.row_factory = sqlite3.Row
+        conn.isolation_level = None  # autocommit 비활성화
+        try:
+            conn.execute("BEGIN EXCLUSIVE")
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
         finally:
             conn.close()
 
@@ -173,7 +208,10 @@ class ConversationDB:
             } for row in cursor.fetchall()]
 
     def get_history_for_ai(self, agent_id: int, user_id: int = 1, limit: int = None) -> list:
-        """AI용 대화 히스토리 (최신 순)"""
+        """AI용 대화 히스토리 (최신 순, Observation Masking 적용)
+
+        JetBrains Research 기반: 최근 N턴은 원본 유지, 오래된 턴은 긴 내용 마스킹
+        """
         if limit is None:
             limit = HISTORY_LIMIT_USER
 
@@ -189,14 +227,28 @@ class ConversationDB:
             """, (agent_id, user_id, user_id, agent_id, limit))
 
             messages = []
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+
+            for idx, row in enumerate(rows):
                 role = "assistant" if row[0] == agent_id else "user"
+                content = row[1]
+
+                # 최근 N턴은 원본 유지, 오래된 것은 마스킹
+                if idx >= RECENT_TURNS_RAW and len(content) > MASK_THRESHOLD:
+                    content = self._mask_long_content(content)
+
                 messages.append({
                     "role": role,
-                    "content": row[1]
+                    "content": content
                 })
 
             return list(reversed(messages))
+
+    def _mask_long_content(self, content: str) -> str:
+        """긴 콘텐츠를 플레이스홀더로 마스킹 (도구 결과 등)"""
+        lines = content.split('\n')
+        first_line = lines[0][:100] if lines else ""
+        return f"[이전 응답: {first_line}... ({len(content)}자)]"
 
     # ============ Task 관리 (위임 체인 지원) ============
 
@@ -252,14 +304,17 @@ class ConversationDB:
     def update_task_delegation(self, task_id: str, delegation_context: str,
                                increment_pending: bool = True) -> bool:
         """
-        태스크의 위임 컨텍스트 업데이트
+        태스크의 위임 컨텍스트 업데이트 (Race Condition 방지)
 
         Args:
             task_id: 작업 ID
             delegation_context: 위임 컨텍스트 JSON
             increment_pending: pending_delegations 증가 여부
+
+        Note:
+            EXCLUSIVE 트랜잭션을 사용하여 병렬 위임 시 카운터 손상 방지
         """
-        with self.get_connection() as conn:
+        with self.get_exclusive_connection() as conn:
             cursor = conn.cursor()
             if increment_pending:
                 cursor.execute("""
@@ -274,24 +329,51 @@ class ConversationDB:
                     SET delegation_context = ?
                     WHERE task_id = ?
                 """, (delegation_context, task_id))
-            conn.commit()
+            # commit은 get_exclusive_connection에서 자동 처리
             return cursor.rowcount > 0
+
+    def decrement_pending_and_update_context(self, task_id: str,
+                                              delegation_context: str) -> int:
+        """
+        pending_delegations 감소 + 컨텍스트 업데이트를 원자적으로 수행
+
+        Args:
+            task_id: 작업 ID
+            delegation_context: 업데이트할 위임 컨텍스트 JSON
+
+        Returns:
+            감소 후 남은 pending_delegations 값
+
+        Note:
+            EXCLUSIVE 트랜잭션으로 읽기-수정-쓰기를 원자적으로 수행
+        """
+        with self.get_exclusive_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE tasks
+                SET delegation_context = ?,
+                    pending_delegations = MAX(0, COALESCE(pending_delegations, 0) - 1)
+                WHERE task_id = ?
+            """, (delegation_context, task_id))
+
+            cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
+            row = cursor.fetchone()
+            return row[0] if row else 0
 
     def decrement_pending_delegations(self, task_id: str) -> int:
         """
-        pending_delegations 감소 및 현재 값 반환
+        pending_delegations 감소 및 현재 값 반환 (Race Condition 방지)
 
         Returns:
             감소 후 남은 pending_delegations 값
         """
-        with self.get_connection() as conn:
+        with self.get_exclusive_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE tasks
                 SET pending_delegations = MAX(0, COALESCE(pending_delegations, 0) - 1)
                 WHERE task_id = ?
             """, (task_id,))
-            conn.commit()
 
             cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
             row = cursor.fetchone()

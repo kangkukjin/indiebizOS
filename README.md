@@ -188,10 +188,17 @@ Each project is **completely isolated**. Delete a project, and everything relate
 - **Gmail Integration**: Receive and process emails
 - **Nostr Integration**: Decentralized messaging
 - **Neighbor Management**: Track business partners
-- **Auto-Response**: AI generates contextual replies using:
-  - Chain-of-Thought reasoning
-  - Few-shot learning
-  - Work guidelines + business documents + conversation history
+- **Auto-Response V2**: Intelligent two-stage AI response system:
+  - **Stage 1 - AI Judgment**: Analyzes incoming messages to determine response necessity
+    - Message intent classification (business inquiry vs. personal chat vs. spam)
+    - Business matching from your registered business list
+    - Detects when requested service doesn't exist in your offerings
+  - **Stage 2 - Response Generation**: Creates contextual replies using:
+    - Chain-of-Thought reasoning + Few-shot learning
+    - Work guidelines + business documents + conversation history
+    - Graceful handling when no matching business found
+  - **Pending Message Queue**: Auto-sends generated responses via background worker
+  - **Multi-Channel Support**: Same logic works across Gmail and Nostr
 
 ### Multi-Chat Rooms
 
@@ -359,10 +366,10 @@ The human is part of the system:
 
 **This project is under active development.**
 
-- 14 active projects in production use
-- 16 installed tool packages
+- 17 active projects in production use
+- 17 installed tool packages
 - Functional scheduler, switches, and business network
-- Advanced prompt engineering (CoT + Few-shot) for auto-response
+- Advanced Auto-Response V2: AI judgment → business search → response generation → pending queue → auto-send
 
 ### Your OS, Your Way
 

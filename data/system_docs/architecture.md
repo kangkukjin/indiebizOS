@@ -25,8 +25,7 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/   # 설치된 패키지
-│   │   │   ├── tools/      # 도구 (16개)
-│   │   │   └── extensions/ # 확장 (9개)
+│   │   │   └── tools/      # 도구 (17개)
 │   │   └── not_installed/  # 미설치 패키지
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억)
 │   ├── business.db      # 비즈니스 DB
@@ -110,6 +109,9 @@ indiebizOS/
 
 ### 자동응답 서비스 V2
 - AI 판단 → 비즈니스 검색 → 응답 생성의 2단계 처리로 정확도 향상
+- 비즈니스 목록 기반 검색으로 실제 DB와 매칭
+- Pending 메시지 자동 전송 시스템
+→ 상세 문서: [auto_response.md](auto_response.md)
 
 ### 다중채팅방 시스템
 - 독립 창에서 여러 프로젝트의 에이전트를 소환하여 그룹 대화 수행

@@ -168,8 +168,8 @@ class AutoResponseService:
             # 6. 비즈니스 검색 수행
             search_results = self._perform_business_searches(judgment.get('searches', []))
 
-            # 7. 응답 생성
-            response = self._generate_response(context, search_results)
+            # 7. 응답 생성 (판단 결과도 전달)
+            response = self._generate_response(context, search_results, judgment)
 
             if response:
                 # 8. 응답 저장 (pending 상태로, channel_poller가 발송)
@@ -257,12 +257,24 @@ class AutoResponseService:
         except:
             pass
 
+        # 비즈니스 목록 (검색용)
+        business_list = []
+        try:
+            businesses = bm.get_businesses()
+            business_list = [
+                {'id': b['id'], 'name': b['name'], 'description': b.get('description', '')}
+                for b in businesses
+            ]
+        except:
+            pass
+
         return {
             'message': message,
             'neighbor': neighbor,
             'conversation_history': conversation_history,
             'work_guideline': work_guideline,
-            'business_doc': business_doc
+            'business_doc': business_doc,
+            'business_list': business_list
         }
 
     def _perform_business_searches(self, searches: List[dict]) -> List[dict]:
@@ -327,7 +339,7 @@ class AutoResponseService:
             self._log(f"비즈니스 검색 오류: {e}")
             return []
 
-    def _generate_response(self, context: dict, search_results: List[dict]) -> Optional[dict]:
+    def _generate_response(self, context: dict, search_results: List[dict], judgment: dict = None) -> Optional[dict]:
         """AI를 사용하여 응답 생성"""
         config = self._load_system_ai_config()
 
@@ -340,7 +352,7 @@ class AutoResponseService:
         api_key = config.get("apiKey", "")
 
         # 프롬프트 구성
-        prompt = self._build_response_prompt(context, search_results)
+        prompt = self._build_response_prompt(context, search_results, judgment)
 
         try:
             if provider == "anthropic":
@@ -359,13 +371,14 @@ class AutoResponseService:
             self._log(f"AI 응답 생성 오류: {e}")
             return None
 
-    def _build_response_prompt(self, context: dict, search_results: List[dict]) -> str:
+    def _build_response_prompt(self, context: dict, search_results: List[dict], judgment: dict = None) -> str:
         """응답 생성 프롬프트 구성 - CoT + Few-shot 적용"""
         message = context['message']
         neighbor = context['neighbor']
         work_guideline = context.get('work_guideline') or '근무지침이 설정되지 않았습니다.'
         business_doc = context.get('business_doc') or '비즈니스 문서가 없습니다.'
         conversation_history = context.get('conversation_history', [])
+        judgment = judgment or {}
 
         # 대화 기록 포맷
         history_text = '이전 대화 없음'
@@ -383,6 +396,18 @@ class AutoResponseService:
 
         # 검색 결과 포맷
         search_text = self._format_search_results(search_results)
+
+        # 해당 비즈니스 없음 여부
+        no_matching_business = judgment.get('no_matching_business', False)
+        requested_service = judgment.get('requested_service', '')
+
+        no_match_notice = ''
+        if no_matching_business and requested_service:
+            no_match_notice = f"""
+### ⚠️ 중요: 해당 비즈니스 없음
+상대방이 요청한 "{requested_service}"은(는) 현재 우리가 제공하지 않는 서비스/상품입니다.
+응답 시 정중하게 해당 서비스를 제공하지 않음을 알리고, 가능하면 다른 도움을 제안하세요.
+"""
 
         prompt = f"""당신은 비즈니스 매칭 에이전트입니다. 상대방의 메시지에 친근하고 전문적으로 응답합니다.
 
@@ -456,7 +481,7 @@ class AutoResponseService:
 
 ### 검색 결과
 {search_text}
-
+{no_match_notice}
 ### 지난 대화
 {history_text}
 

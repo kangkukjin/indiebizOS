@@ -136,6 +136,9 @@ class ChannelPoller:
         # 활성화된 채널 확인 및 수신 시작
         self._refresh_channels()
 
+        # pending 메시지 발송 스레드 시작
+        self._start_pending_message_sender()
+
         # 자동응답 서비스 시작
         try:
             auto_response = self._get_auto_response()
@@ -146,6 +149,10 @@ class ChannelPoller:
     def stop(self):
         """폴러 중지"""
         self.running = False
+
+        # pending 메시지 발송 스레드 중지
+        if 'pending_sender' in self.stop_events:
+            self.stop_events['pending_sender'].set()
 
         # 자동응답 서비스 중지
         if self._auto_response:
@@ -791,6 +798,135 @@ class ChannelPoller:
 
         except Exception as e:
             self._log(f"Nostr DM 전송 실패: {e}")
+
+    # ============ Pending 메시지 발송 ============
+
+    def _start_pending_message_sender(self):
+        """pending 메시지 발송 스레드 시작"""
+        if 'pending_sender' in self.threads:
+            return
+
+        stop_event = threading.Event()
+        self.stop_events['pending_sender'] = stop_event
+
+        thread = threading.Thread(
+            target=self._pending_message_loop,
+            args=(stop_event,),
+            daemon=True
+        )
+        self.threads['pending_sender'] = thread
+        thread.start()
+        self._log("pending 메시지 발송 스레드 시작 (주기: 10초)")
+
+    def _pending_message_loop(self, stop_event: threading.Event):
+        """pending 메시지 폴링 루프"""
+        while not stop_event.is_set() and self.running:
+            try:
+                self._poll_pending_messages()
+            except Exception as e:
+                self._log(f"pending 메시지 폴링 오류: {e}")
+
+            # 10초 대기 (1초 단위로 체크하여 빠른 종료 가능)
+            for _ in range(10):
+                if stop_event.is_set() or not self.running:
+                    break
+                time.sleep(1)
+
+    def _poll_pending_messages(self):
+        """pending 상태의 발신 메시지를 조회하여 발송"""
+        try:
+            bm = self._get_business_manager()
+
+            # pending 상태이고 is_from_user=1인 메시지 조회
+            pending_messages = bm.get_messages(status='pending')
+
+            if not pending_messages:
+                return
+
+            # is_from_user=1 (발신 메시지)만 필터링
+            outgoing_messages = [
+                msg for msg in pending_messages
+                if msg.get('is_from_user') == 1
+            ]
+
+            if not outgoing_messages:
+                return
+
+            self._log(f"발송 대기 메시지 {len(outgoing_messages)}개 발견")
+
+            for msg in outgoing_messages:
+                try:
+                    self._process_pending_message(msg)
+                except Exception as e:
+                    self._log(f"pending 메시지 처리 실패 (ID: {msg.get('id')}): {e}")
+                    # 실패한 메시지는 failed 상태로 업데이트
+                    try:
+                        bm.update_message_status(msg['id'], 'failed', str(e))
+                    except:
+                        pass
+
+        except Exception as e:
+            self._log(f"pending 메시지 조회 실패: {e}")
+
+    def _process_pending_message(self, msg: dict):
+        """개별 pending 메시지 발송 처리"""
+        bm = self._get_business_manager()
+
+        msg_id = msg.get('id')
+        contact_type = msg.get('contact_type', 'gmail')
+        contact_value = msg.get('contact_value', '')
+        subject = msg.get('subject', '')
+        content = msg.get('content', '')
+        attachment_path = msg.get('attachment_path')
+
+        if not contact_value:
+            self._log(f"연락처 없음, 메시지 건너뜀 (ID: {msg_id})")
+            bm.update_message_status(msg_id, 'failed', '연락처 없음')
+            return
+
+        self._log(f"메시지 발송 시작: {contact_type} → {contact_value[:30]}...")
+
+        try:
+            if contact_type == 'gmail':
+                self._send_gmail_message(contact_value, subject, content, attachment_path)
+            elif contact_type == 'nostr':
+                self._send_nostr_dm(contact_value, content)
+            else:
+                raise Exception(f"지원하지 않는 연락처 타입: {contact_type}")
+
+            # 발송 성공 → sent 상태로 업데이트
+            bm.update_message_status(msg_id, 'sent')
+            self._log(f"메시지 발송 완료: {contact_value[:30]}...")
+
+        except Exception as e:
+            # 발송 실패 → failed 상태로 업데이트
+            bm.update_message_status(msg_id, 'failed', str(e))
+            self._log(f"메시지 발송 실패: {e}")
+            raise
+
+    def _send_gmail_message(self, to: str, subject: str, body: str, attachment_path: str = None):
+        """Gmail로 메시지 발송"""
+        # Gmail 클라이언트 초기화
+        if self._gmail_client is None:
+            self._init_gmail_client()
+
+        if self._gmail_client is None:
+            raise Exception("Gmail 클라이언트 초기화 실패")
+
+        # 이메일 발송
+        if attachment_path:
+            self._gmail_client.send_email(
+                to=to,
+                subject=subject,
+                body=body,
+                attachment_path=attachment_path
+            )
+        else:
+            self._gmail_client.send_email(
+                to=to,
+                subject=subject,
+                body=body
+            )
 
     def _extract_email(self, from_str: str) -> str:
         """From 헤더에서 이메일 주소 추출"""

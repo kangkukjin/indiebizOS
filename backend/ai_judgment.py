@@ -80,6 +80,7 @@ class AIJudgmentService:
         work_guideline = context.get('work_guideline') or '근무지침이 설정되지 않았습니다.'
         business_doc = context.get('business_doc') or '비즈니스 문서가 없습니다.'
         conversation_history = context.get('conversation_history', [])
+        business_list = context.get('business_list', [])
 
         # 대화 기록 포맷
         history_text = '이전 대화 없음'
@@ -90,6 +91,15 @@ class AIJudgmentService:
                 sender = msg.get('contact_value', '알 수 없음') if msg.get('is_from_user') == 0 else '나'
                 history_lines.append(f"[{msg.get('message_time', '')}] {direction} - {sender}: {msg.get('subject', '제목 없음')}")
             history_text = '\n'.join(history_lines)
+
+        # 비즈니스 목록 포맷
+        business_list_text = '등록된 비즈니스 없음'
+        if business_list:
+            business_lines = []
+            for b in business_list:
+                desc = f" - {b['description']}" if b.get('description') else ''
+                business_lines.append(f"- {b['name']}{desc}")
+            business_list_text = '\n'.join(business_lines)
 
         prompt = f"""당신은 비즈니스 매칭 에이전트입니다. 들어온 메시지를 분석하여 자동응답 여부를 결정합니다.
 
@@ -136,6 +146,9 @@ class AIJudgmentService:
 ### 나의 비즈니스 문서
 {business_doc}
 
+### 나의 비즈니스 목록 (검색 대상)
+{business_list_text}
+
 ### 대화 기록
 {history_text}
 
@@ -151,35 +164,39 @@ class AIJudgmentService:
 위 예시처럼 단계별로 분석하세요:
 1. **의도 파악**: 발신자가 원하는 것이 무엇인가?
 2. **비즈니스 관련성**: 우리 비즈니스와 관련이 있는가?
-3. **검색 필요 여부**: 어떤 카테고리/키워드로 검색해야 하는가?
+3. **검색 필요 여부**: 위 비즈니스 목록 중 어떤 것을 검색해야 하는가?
 
-비즈니스 카테고리:
-- 나눕니다: 무료 나눔
-- 구합니다: 필요한 것 요청
-- 놉시다: 함께 하기
-- 빌려줍니다: 대여 서비스
-- 소개합니다: 인맥/서비스 소개
-- 팔아요: 판매
-- 할수있습니다: 서비스 제공
+**중요**: searches의 category에는 반드시 위 "나의 비즈니스 목록"에 있는 이름 중 하나를 선택하여 그대로 사용하세요. 목록에 없는 이름은 사용하지 마세요.
 
 **중요 원칙**:
 - 비즈니스 문의, 서비스 요청, 거래 관련 → BUSINESS_RESPONSE
 - 개인적 대화, 사적인 내용, 스팸 → NO_RESPONSE (사용자가 직접 응답)
 - 단순 인사/감사도 공식적이면 BUSINESS_RESPONSE (searches는 빈 배열)
+- 비즈니스 문의이지만 목록에 해당 비즈니스가 없으면 → BUSINESS_RESPONSE + no_matching_business: true
 
 JSON만 출력하세요:
 {{
   "action": "NO_RESPONSE|BUSINESS_RESPONSE",
   "confidence": 0.0-1.0,
   "reasoning": "판단 이유 (1-2문장)",
+  "no_matching_business": false,
+  "requested_service": "",
   "searches": [
     {{
-      "category": "비즈니스 카테고리",
+      "category": "위 비즈니스 목록에서 선택한 이름",
       "keywords": ["키워드1", "키워드2"],
       "confidence": 0.0-1.0
     }}
   ]
-}}"""
+}}
+
+**no_matching_business 필드**:
+- true: 상대방이 요청한 서비스/상품이 비즈니스 목록에 없음
+- false: 매칭되는 비즈니스가 있거나, 비즈니스 문의가 아님
+
+**requested_service 필드**:
+- no_matching_business가 true일 때, 상대방이 요청한 서비스/상품명을 기록 (예: "피아노 레슨", "자동차 수리")
+- no_matching_business가 false이면 빈 문자열"""
 
         return prompt
 

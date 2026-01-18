@@ -30,7 +30,9 @@ class AgentRunner:
     # 클래스 변수 (모든 인스턴스가 공유)
     internal_messages: Dict[str, List[dict]] = {}  # agent_id -> [메시지 dict]
     agent_registry: Dict[str, 'AgentRunner'] = {}  # agent_id -> AgentRunner 인스턴스
-    _lock = threading.Lock()  # 스레드 안전성을 위한 Lock
+    # RLock 사용: 같은 스레드에서 중첩 호출 시 데드락 방지
+    # (예: 메시지 처리 중 call_agent 호출 시 다시 Lock 획득 필요한 경우)
+    _lock = threading.RLock()
 
     def __init__(self, agent_config: dict, common_config: dict = None):
         self.config = agent_config
@@ -264,6 +266,40 @@ class AgentRunner:
         agent_name = self.config.get('name', '?')
         print(f"[{timestamp}] [{agent_name}] {message}")
 
+    def _is_from_owner(self, from_addr: str, contact_type: str) -> bool:
+        """메시지가 소유자(사용자)로부터 왔는지 확인 (환경변수 기반)"""
+        import os
+        from dotenv import load_dotenv
+
+        # 환경변수 로드
+        env_path = Path(__file__).parent.parent / ".env"
+        load_dotenv(env_path)
+
+        from_addr_lower = from_addr.lower().strip()
+
+        if contact_type == 'gmail':
+            # 이메일 주소 비교 (< > 제거)
+            email_match = re.search(r'<([^>]+)>', from_addr)
+            if email_match:
+                from_addr_lower = email_match.group(1).lower()
+
+            # 환경변수에서 소유자 이메일 목록 확인
+            owner_emails = os.getenv('OWNER_EMAILS', '')
+            if owner_emails:
+                emails = {e.strip().lower() for e in owner_emails.split(',') if e.strip()}
+                return from_addr_lower in emails
+            return False
+
+        elif contact_type == 'nostr':
+            # 환경변수에서 소유자 Nostr 공개키 목록 확인
+            owner_nostr = os.getenv('OWNER_NOSTR_PUBKEYS', '')
+            if owner_nostr:
+                pubkeys = {p.strip().lower() for p in owner_nostr.split(',') if p.strip()}
+                return from_addr_lower in pubkeys
+            return False
+
+        return False
+
     def _run_loop(self):
         """백그라운드 루프 (내부 메시지 + 외부 채널 폴링)"""
         import time
@@ -396,6 +432,14 @@ class AgentRunner:
                 contact_type = 'unknown'
                 reply_to = from_addr
 
+            # 사용자(소유자) 여부 확인
+            is_from_owner = self._is_from_owner(from_addr, contact_type)
+
+            # 소유자가 아니면 무시 (보안: 외부인 명령 차단)
+            if not is_from_owner:
+                self._log(f"외부인 메시지 무시: {from_addr}")
+                return
+
             # 태스크 생성
             task_id = f"task_{uuid.uuid4().hex[:8]}"
             requester_info = f"{from_addr}@{contact_type}"
@@ -415,13 +459,23 @@ class AgentRunner:
             set_current_task_id(task_id)
             clear_called_agent()
 
+            # 히스토리 로드 (GUI와 동일하게)
+            self._log(f"사용자 명령으로 처리 (히스토리 적용)")
+            agent_name = self.config.get('name', '')
+            agent_id = self.db.get_or_create_agent(agent_name, "ai_agent")
+            user_id = self.db.get_or_create_agent("user", "user")
+            # conversation_db에 사용자 메시지 저장
+            self.db.save_message(user_id, agent_id, content, contact_type=contact_type)
+            # 히스토리 로드
+            history = self.db.get_history_for_ai(agent_id, user_id)
+
             # AI 처리
             if self.ai:
                 start_time = time_module.time()
                 response = self.ai.process_message_with_history(
                     message_content=content,
                     from_email=from_addr,
-                    history=[],
+                    history=history,
                     reply_to=reply_to,
                     task_id=task_id
                 )
@@ -440,6 +494,13 @@ class AgentRunner:
                             body=response
                         )
                         self._log(f"응답 전송 완료 → {reply_to}")
+
+                        # 사용자 명령인 경우 응답도 conversation_db에 저장
+                        if is_from_owner:
+                            agent_name = self.config.get('name', '')
+                            agent_id = self.db.get_or_create_agent(agent_name, "ai_agent")
+                            user_id = self.db.get_or_create_agent("user", "user")
+                            self.db.save_message(agent_id, user_id, response, contact_type=contact_type)
 
                         # 태스크 완료
                         self.db.complete_task(task_id, response[:500])
@@ -474,6 +535,10 @@ class AgentRunner:
         while msg_dict:
             if not isinstance(msg_dict, dict):
                 print(f"[AgentRunner] {my_name} 경고: 유효하지 않은 메시지 - 건너뛰기")
+                # 다음 메시지 가져오기 (무한 루프 방지)
+                with AgentRunner._lock:
+                    messages = AgentRunner.internal_messages.get(my_key, [])
+                    msg_dict = messages.pop(0) if messages else None
                 continue
 
             try:
@@ -744,21 +809,12 @@ class AgentRunner:
                                     'completed_at': datetime.now().isoformat()
                                 })
 
-                                # pending_delegations 감소 및 컨텍스트 업데이트
-                                with self.db.get_connection() as conn:
-                                    cursor = conn.cursor()
-                                    cursor.execute('''
-                                        UPDATE tasks
-                                        SET delegation_context = ?,
-                                            pending_delegations = MAX(0, COALESCE(pending_delegations, 0) - 1)
-                                        WHERE task_id = ?
-                                    ''', (json.dumps(delegation_context, ensure_ascii=False), parent_task_id))
-                                    conn.commit()
-
-                                    # 업데이트된 pending_delegations 조회
-                                    cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (parent_task_id,))
-                                    row = cursor.fetchone()
-                                    remaining = row[0] if row else 0
+                                # pending_delegations 감소 및 컨텍스트 업데이트 (원자적 수행)
+                                # Race Condition 방지: EXCLUSIVE 트랜잭션 사용
+                                remaining = self.db.decrement_pending_and_update_context(
+                                    parent_task_id,
+                                    json.dumps(delegation_context, ensure_ascii=False)
+                                )
 
                                 print(f"[자동 보고] 응답 누적: {task_id} → {parent_task_id} (남은 위임: {remaining}/{total_delegations})")
 

@@ -259,19 +259,39 @@ def _create_child_task(parent_task_id: str, target_name: str, message: str, proj
 
 
 def _get_or_create_delegation_context(parent_task: dict) -> dict:
-    """위임 컨텍스트 가져오기 또는 생성"""
+    """위임 컨텍스트 가져오기 또는 생성
+
+    이전 위임 사이클이 완료된 경우(모든 응답 수신) 새 컨텍스트로 초기화
+    """
     existing_context_str = parent_task.get('delegation_context')
 
     if existing_context_str:
         try:
             existing_context = json.loads(existing_context_str)
             if 'delegations' not in existing_context:
+                # 구 형식 → 새 형식으로 변환
                 existing_context = {
                     'original_request': existing_context.get('original_request', ''),
                     'requester': existing_context.get('requester', ''),
                     'delegations': [],
                     'responses': []
                 }
+                return existing_context
+
+            # 이전 위임 사이클이 완료되었는지 확인
+            delegations = existing_context.get('delegations', [])
+            responses = existing_context.get('responses', [])
+
+            if len(delegations) > 0 and len(responses) >= len(delegations):
+                # 모든 응답이 도착함 → 새 위임 사이클 시작 → 컨텍스트 초기화
+                print(f"   [위임 컨텍스트] 이전 사이클 완료 ({len(responses)}/{len(delegations)}) → 초기화")
+                return {
+                    'original_request': parent_task.get('original_request', ''),
+                    'requester': parent_task.get('requester', ''),
+                    'delegations': [],
+                    'responses': []
+                }
+
             return existing_context
         except json.JSONDecodeError:
             pass

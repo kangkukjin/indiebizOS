@@ -470,6 +470,14 @@ Do NOT use exit_plan_mode for:
 - You can call multiple tools in a single response. If you intend to call multiple tools and there are no dependencies between them, make all independent tool calls in parallel. Maximize use of parallel tool calls where possible to increase efficiency. However, if some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially. For instance, if one operation must complete before another starts, run these operations sequentially instead. Never use placeholders or guess missing parameters in tool calls.
 - Use specialized tools instead of generic commands when possible, as this provides a better user experience.
 
+## Tool efficiency
+- **Avoid redundant tool calls**: Don't re-read files you've already read in this conversation. Don't search for information you already have.
+- **Minimize total tool calls**: Before calling a tool, ask yourself "Do I really need this information?" If you can reasonably proceed without it, don't call the tool.
+- **Batch operations**: When you need to perform multiple similar operations, look for ways to combine them into fewer tool calls.
+- **Use appropriate scope**: When searching, start with a targeted search. Only broaden if needed. Don't grep the entire codebase when you know which file to look in.
+- **Remember tool results**: Pay attention to what each tool returns. Don't call the same tool with the same parameters twice.
+- **Stop when you have enough**: If a search returns sufficient results, don't continue searching for more.
+
 ## File operations - Use dedicated tools, NOT run_command
 - **read_file**: Use this to read file contents. NEVER use `cat`, `head`, `tail` via run_command.
 - **write_file**: Use this to create/overwrite files. NEVER use `echo >` or `cat <<EOF` via run_command.

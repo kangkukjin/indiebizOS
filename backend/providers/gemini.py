@@ -237,12 +237,12 @@ class GeminiProvider(BaseProvider):
             yield {"type": "cancelled", "content": "사용자가 중단했습니다."}
             return
 
-        if depth > 15:
-            yield {"type": "error", "content": "도구 사용 깊이 제한(15)에 도달했습니다. 요청을 단순화해주세요."}
+        if depth > 30:
+            yield {"type": "error", "content": "도구 사용 깊이 제한(30)에 도달했습니다. 요청을 단순화해주세요."}
             return
 
-        # 텍스트 없이 도구만 15번 연속 호출되면 강제 종료
-        if consecutive_tool_only >= 15:
+        # 텍스트 없이 도구만 30번 연속 호출되면 강제 종료
+        if consecutive_tool_only >= 30:
             print(f"[Gemini] 경고: 텍스트 없이 도구만 {consecutive_tool_only}번 연속 호출됨, 강제 종료")
             yield {"type": "error", "content": "도구만 연속으로 호출되어 응답을 중단합니다. 요청을 다시 시도해주세요."}
             return

@@ -69,6 +69,20 @@
           "city": { "type": "string", "description": "도시명 (서울, 경기, 부산 등). 생략시 전체", "default": "" }
         }
       }
+    },
+    {
+      "name": "search_commercial_district",
+      "description": "특정 위치 주변 또는 특정 행정동의 상권 정보(상가 목록)를 조회합니다.\n\n## 사용 시점\n- 창업 전 주변 경쟁 업체 분석\n- 특정 지역의 업종 분포 파악\n- 부동산 매물 주변 상권 활성도 확인\n\n## 주요 파라미터\n- lat, lng: 위경도 좌표\n- radius: 검색 반경 (미터 단위)\n- region_code: 행정동 코드 (10자리)\n- indsLclsCd: 업종 대분류 (I: 음식, Q: 숙박, S: 서비스 등)\n\n## 반환 데이터 형식\n각 상가: {name, branch, category, subcategory, address, lat, lng}\n- name: 상호명\n- lat, lng: 위경도 (show_location_map markers와 동일한 형식)\n\n## 지도 시각화 방법\n결과의 data 배열을 show_location_map의 markers 파라미터로 직접 전달 가능\n예: show_location_map(lat=중심위도, lng=중심경도, markers=결과.data)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "lat": { "type": "number", "description": "위도 (예: 37.498)" },
+          "lng": { "type": "number", "description": "경도 (예: 127.028)" },
+          "radius": { "type": "integer", "description": "검색 반경 (m), 기본 500m", "default": 500 },
+          "region_code": { "type": "string", "description": "행정동 코드 10자리" },
+          "indsLclsCd": { "type": "string", "description": "업종 대분류 코드 (I: 음식, Q: 숙박, R: 학문/교육, S: 소매, T: 생활서비스, U: 의료, V: 부동산, W: 관광/여가/오락)" }
+        }
+      }
     }
   ]
 }

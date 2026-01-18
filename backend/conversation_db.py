@@ -241,14 +241,11 @@ class ConversationDB:
             return dict(row) if row else None
 
     def complete_task(self, task_id: str, result: str) -> bool:
-        """작업 완료 처리"""
+        """작업 완료 처리 - 태스크 삭제"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE tasks
-                SET status = 'completed', result = ?, completed_at = CURRENT_TIMESTAMP
-                WHERE task_id = ?
-            """, (result, task_id))
+            # 태스크 삭제 (위임 추적은 임시 상태이므로 완료 후 삭제)
+            cursor.execute("DELETE FROM tasks WHERE task_id = ?", (task_id,))
             conn.commit()
             return cursor.rowcount > 0
 

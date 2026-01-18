@@ -1,0 +1,198 @@
+{
+  "id": "culture",
+  "name": "Culture & Arts",
+  "description": "공연, 도서, 영화 등 문화 예술 정보 조회 도구. KOPIS API로 공연/박스오피스/공연장 정보를, 국립중앙도서관 API로 도서 서지정보를 제공합니다.",
+  "version": "1.2.0",
+  "tools": [
+    {
+      "name": "kopis_quick_search",
+      "description": "공연을 키워드로 빠르게 검색합니다. 가장 간단한 공연 검색 도구입니다.\n\n## 사용 예시\n- '위키드' 뮤지컬 검색: keyword='위키드', genre='뮤지컬'\n- 서울 지역 연극: keyword='', genre='연극', region='서울'\n- 공연예정 콘서트: status='공연예정', genre='대중음악'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": { "type": "string", "description": "공연명 검색어" },
+          "genre": { "type": "string", "description": "장르 (연극, 뮤지컬, 클래식, 국악, 대중음악, 무용, 서커스/마술, 복합)" },
+          "region": { "type": "string", "description": "지역 (서울, 부산, 대구, 인천, 광주, 대전, 울산, 세종, 경기, 강원, 충북, 충남, 전북, 전남, 경북, 경남, 제주)" },
+          "status": { "type": "string", "description": "공연 상태 (공연중, 공연예정, 공연완료)", "default": "공연중" },
+          "days": { "type": "integer", "description": "오늘부터 검색할 기간(일)", "default": 90 }
+        }
+      }
+    },
+    {
+      "name": "kopis_search_performances",
+      "description": "기간을 지정하여 공연 목록을 상세 검색합니다.\n\n## 검색 파라미터\n- 날짜: YYYYMMDD 또는 YYYY-MM-DD 형식\n- 장르: 한글(연극, 뮤지컬) 또는 영문(theater, musical)\n- 지역: 한글(서울, 부산) 또는 영문(seoul, busan)\n- 상태: 공연중, 공연예정, 공연완료",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "stdate": { "type": "string", "description": "조회 시작일 (YYYYMMDD 또는 YYYY-MM-DD)" },
+          "eddate": { "type": "string", "description": "조회 종료일" },
+          "genre": { "type": "string", "description": "장르 (연극, 뮤지컬, 클래식 등)" },
+          "region": { "type": "string", "description": "지역 (서울, 부산 등)" },
+          "status": { "type": "string", "description": "공연 상태 (공연중, 공연예정, 공연완료)", "default": "공연중" },
+          "keyword": { "type": "string", "description": "공연명 검색어" },
+          "rows": { "type": "integer", "description": "페이지당 결과 수 (최대 100)", "default": 20 },
+          "page": { "type": "integer", "description": "페이지 번호", "default": 1 }
+        },
+        "required": ["stdate", "eddate"]
+      }
+    },
+    {
+      "name": "kopis_get_performance",
+      "description": "특정 공연의 상세 정보를 조회합니다.\n\n## 반환 정보\n- 공연명, 장르, 공연 기간\n- 공연시간, 관람연령\n- 출연진, 제작진\n- 가격 정보\n- 줄거리, 포스터 이미지 URL",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "performance_id": { "type": "string", "description": "공연 ID (mt20id, 예: PF123456)" }
+        },
+        "required": ["performance_id"]
+      }
+    },
+    {
+      "name": "kopis_box_office",
+      "description": "현재 인기 있는 공연 순위(박스오피스)를 조회합니다.\n\n## 사용 예시\n- 오늘의 전체 박스오피스: period='day'\n- 이번 주 뮤지컬 순위: period='week', genre='뮤지컬'\n- 서울 지역 월간 순위: period='month', region='서울'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "period": { "type": "string", "description": "조회 주기 (day: 일간, week: 주간, month: 월간)", "default": "day" },
+          "date": { "type": "string", "description": "기준일 (YYYYMMDD), 생략시 어제" },
+          "genre": { "type": "string", "description": "장르 필터" },
+          "region": { "type": "string", "description": "지역 필터" }
+        }
+      }
+    },
+    {
+      "name": "kopis_search_facilities",
+      "description": "공연장(공연시설) 정보를 검색합니다.\n\n## 반환 정보\n- 공연장 이름, 주소\n- 좌석 수, 공연장 수\n- 시설 특성, 개관 연도",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": { "type": "string", "description": "공연장명 검색어" },
+          "facility_id": { "type": "string", "description": "시설 ID (상세 조회용)" },
+          "region": { "type": "string", "description": "지역" },
+          "rows": { "type": "integer", "description": "결과 수", "default": 20 },
+          "page": { "type": "integer", "description": "페이지 번호", "default": 1 }
+        }
+      }
+    },
+    {
+      "name": "kopis_search_festivals",
+      "description": "축제/페스티벌 목록을 검색합니다.\n\n## 사용 예시\n- 다가오는 음악 축제: genre='대중음악'\n- 서울 지역 축제: region='서울'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "stdate": { "type": "string", "description": "시작일 (기본: 오늘)" },
+          "eddate": { "type": "string", "description": "종료일 (기본: 6개월 후)" },
+          "genre": { "type": "string", "description": "장르" },
+          "region": { "type": "string", "description": "지역" },
+          "rows": { "type": "integer", "description": "결과 수", "default": 20 },
+          "page": { "type": "integer", "description": "페이지 번호", "default": 1 }
+        }
+      }
+    },
+    {
+      "name": "kopis_get_genres",
+      "description": "KOPIS API에서 지원하는 장르 목록을 조회합니다. 각 장르의 코드와 한글/영문 별칭을 확인할 수 있습니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "kopis_get_regions",
+      "description": "KOPIS API에서 지원하는 지역 목록을 조회합니다. 각 지역의 코드와 한글/영문 별칭을 확인할 수 있습니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "library_search_books",
+      "description": "국립중앙도서관 서지정보에서 도서를 검색합니다. 제목, 저자, 출판사, ISBN, 주제 등으로 검색 가능합니다.\n\n## 사용 예시\n- 제목으로 검색: title='파이썬'\n- 저자로 검색: author='김영하'\n- 출판사로 검색: publisher='민음사'\n- ISBN으로 검색: isbn='9788937460494'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "도서 제목 (부분 일치)" },
+          "author": { "type": "string", "description": "저자명" },
+          "publisher": { "type": "string", "description": "출판사" },
+          "isbn": { "type": "string", "description": "ISBN (10자리 또는 13자리)" },
+          "subject": { "type": "string", "description": "주제 분류" },
+          "rows": { "type": "integer", "description": "결과 수 (최대 100)", "default": 10 },
+          "page": { "type": "integer", "description": "페이지 번호", "default": 1 }
+        }
+      }
+    },
+    {
+      "name": "library_get_book_by_isbn",
+      "description": "ISBN으로 도서 상세 정보를 조회합니다. 10자리 또는 13자리 ISBN을 입력하세요.\n\n## 반환 정보\n- 제목, 저자, 출판사\n- ISBN, 발행년도\n- 페이지 수, 가격\n- 주제 분류 정보",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "isbn": { "type": "string", "description": "ISBN (10자리 또는 13자리, 하이픈 포함 가능)" }
+        },
+        "required": ["isbn"]
+      }
+    },
+    {
+      "name": "library_search_by_title",
+      "description": "도서 제목으로 간편하게 검색합니다.\n\n## 사용 예시\n- '삼체' 검색: title='삼체'\n- '인공지능' 관련 도서: title='인공지능'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "도서 제목 (부분 일치)" },
+          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+        },
+        "required": ["title"]
+      }
+    },
+    {
+      "name": "library_search_by_author",
+      "description": "저자명으로 도서를 검색합니다.\n\n## 사용 예시\n- '무라카미 하루키' 작품: author='무라카미 하루키'\n- '정유정' 작품: author='정유정'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "author": { "type": "string", "description": "저자명" },
+          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+        },
+        "required": ["author"]
+      }
+    },
+    {
+      "name": "kcisa_search_culture",
+      "description": "한국문화정보원(KCISA)에서 전국 박물관, 미술관 전시 및 문화 행사 정보를 검색합니다.\n\n## 사용 예시\n- '피카소' 전시회 검색: keyword='피카소'\n- 이번 달 서울 지역 행사: area='서울'\n- 특정 기간 전시 검색: start_date='20240101', end_date='20240131'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": { "type": "string", "description": "행사명 또는 키워드" },
+          "start_date": { "type": "string", "description": "조회 시작일 (YYYYMMDD)" },
+          "end_date": { "type": "string", "description": "조회 종료일 (YYYYMMDD)" },
+          "area": { "type": "string", "description": "지역 (서울, 부산 등)" },
+          "rows": { "type": "integer", "description": "결과 수", "default": 10 },
+          "page": { "type": "integer", "description": "페이지 번호", "default": 1 }
+        }
+      }
+    },
+    {
+      "name": "kcisa_get_event_detail",
+      "description": "문화 행사의 상세 정보를 조회합니다.\n\n## 반환 정보\n- 행사 상세 설명\n- 이용 시간 및 요금\n- 장소 정보 및 지도 좌표\n- 주최/주관 정보",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "seq": { "type": "string", "description": "행사 일련번호 (UCI 또는 ID)" }
+        },
+        "required": ["seq"]
+      }
+    },
+    {
+      "name": "kcisa_quick_search",
+      "description": "키워드로 문화 정보를 빠르게 검색합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": { "type": "string", "description": "검색어" },
+          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+        },
+        "required": ["keyword"]
+      }
+    }
+  ]
+}

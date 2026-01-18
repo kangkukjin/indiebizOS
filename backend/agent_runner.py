@@ -710,21 +710,12 @@ class AgentRunner:
                 self._send_response_to_sender(from_agent, response)
                 return
 
-            # 이미 완료된 태스크는 중복 보고 방지
-            if task.get('status') == 'completed':
-                print(f"[자동 보고] 이미 완료된 task - 스킵: {task_id}")
-                return
-
             parent_task_id = task.get('parent_task_id')
             requester = task.get('requester', '')
             channel = task.get('requester_channel', 'gui')
 
             # 결과 요약
             result_summary = response[:500] if len(response) > 500 else response
-
-            # 현재 태스크 완료 처리
-            self.db.complete_task(task_id, result_summary)
-            print(f"[자동 보고] 태스크 완료: {task_id}")
 
             # 1. parent_task_id가 있으면 → 부모 태스크에 응답 누적 + 조건부 보고
             if parent_task_id:
@@ -775,6 +766,9 @@ class AgentRunner:
                                 if total_delegations >= 2:
                                     if remaining > 0:
                                         print(f"[자동 보고] 수집 모드 - 대기 중: {remaining}개 응답 더 필요")
+                                        # 현재 태스크 삭제 후 리턴
+                                        self.db.complete_task(task_id, result_summary)
+                                        print(f"[자동 보고] 태스크 삭제: {task_id}")
                                         return  # 아직 다 안 모임 → 보고 스킵
                                     else:
                                         print(f"[자동 보고] 수집 모드 - 모든 응답 도착! 통합 보고 전송")
@@ -837,6 +831,10 @@ class AgentRunner:
                     # 알 수 없는 채널: 발신자에게 응답
                     self._send_response_to_sender(from_agent, result_summary)
                 print(f"[자동 보고] 최초 태스크 완료: {task_id} (채널: {channel})")
+
+            # 보고 완료 후 현재 태스크 삭제
+            self.db.complete_task(task_id, result_summary)
+            print(f"[자동 보고] 태스크 삭제: {task_id}")
 
         except Exception as e:
             import traceback

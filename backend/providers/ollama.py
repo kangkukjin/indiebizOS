@@ -29,7 +29,7 @@ from .base import BaseProvider
 MAX_TOOL_RESULT_LENGTH = 8000
 
 # 최대 도구 호출 깊이
-MAX_TOOL_DEPTH = 15
+MAX_TOOL_DEPTH = 30
 
 # Tool calling 지원 모델 패턴
 TOOL_SUPPORTED_MODELS = [

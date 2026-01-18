@@ -24,7 +24,7 @@ MIN_CACHE_TOKENS = 1024
 MAX_TOOL_RESULT_LENGTH = 8000
 
 # 최대 도구 호출 깊이
-MAX_TOOL_DEPTH = 15
+MAX_TOOL_DEPTH = 30
 
 
 class AnthropicProvider(BaseProvider):

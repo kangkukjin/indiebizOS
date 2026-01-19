@@ -73,15 +73,15 @@ cd frontend && npm run electron:dev # Terminal 2
 
 To use IndieBiz OS, you need **at least one AI API key**. This is the biggest first hurdle. But once you get past this, you can ask or instruct the System AI for everything else.
 
-**Recommended as of Jan 2025: Google Gemini API (Free)**
+**Recommended as of Jan 2026: Google Gemini API (Free)**
 
 Currently, Gemini API can be used for free for a while, making it a good starting point.
 
 1. Get an API key at https://aistudio.google.com
 2. Enter the Gemini API key in the app's settings screen
 3. Select a model:
-   - `gemini-2.5-flash-preview`: Fast and lightweight (recommended for general use)
-   - `gemini-2.5-pro-preview`: More powerful (for complex tasks)
+   - `gemini-3-flash-preview`: Fast and lightweight (recommended for general use)
+   - `gemini-3-pro-preview`: More powerful (for complex tasks)
 
 If you don't know how to get an API key, just ask any AI like ChatGPT or Claude: "How do I get a Gemini API key?"
 

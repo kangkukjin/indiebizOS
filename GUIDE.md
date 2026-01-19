@@ -73,15 +73,15 @@ cd frontend && npm run electron:dev # 터미널 2
 
 IndieBiz OS를 사용하려면 **AI API 키가 최소 1개 필요합니다**. 이게 가장 큰 첫 번째 장벽입니다. 하지만 이것만 넘으면 나머지는 시스템 AI에게 물어보거나 시키면 됩니다.
 
-**2025.1 현재 추천: Google Gemini API (무료)**
+**2026.1 현재 추천: Google Gemini API (무료)**
 
 현재 Gemini API는 한동안 무료로 사용할 수 있어서 시작하기 좋습니다.
 
 1. https://aistudio.google.com 에서 API 키 발급
 2. 앱 내 설정 화면에서 Gemini API 키 입력
 3. 모델 선택:
-   - `gemini-2.5-flash-preview`: 빠르고 가벼움 (일반 용도 추천)
-   - `gemini-2.5-pro-preview`: 더 강력함 (복잡한 작업용)
+   - `gemini-3-flash-preview`: 빠르고 가벼움 (일반 용도 추천)
+   - `gemini-3-pro-preview`: 더 강력함 (복잡한 작업용)
 
 API 키 발급 방법을 모르겠다면, ChatGPT나 Claude 같은 아무 AI에게 "Gemini API 키 발급 방법 알려줘"라고 물어보세요.
 

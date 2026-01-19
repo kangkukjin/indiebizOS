@@ -69,28 +69,33 @@ cd backend && python api.py        # Terminal 1
 cd frontend && npm run electron:dev # Terminal 2
 ```
 
-### API Key Setup
+### API Key Setup - The Most Important First Step
 
-IndieBiz OS uses multiple AI providers and external APIs.
+To use IndieBiz OS, you need **at least one AI API key**. This is the biggest first hurdle. But once you get past this, you can ask or instruct the System AI for everything else.
 
-**AI Providers (at least 1 required)**
-- Anthropic (Claude): https://console.anthropic.com
-- OpenAI (GPT): https://platform.openai.com
-- Google (Gemini): https://aistudio.google.com
-- Ollama: Local installation (free, offline capable)
+**Recommended as of Jan 2025: Google Gemini API (Free)**
 
-Enter AI API keys in the app's settings screen. You need at least one AI provider key to use the System AI.
+Currently, Gemini API can be used for free for a while, making it a good starting point.
 
-**Tool APIs (Optional)**
+1. Get an API key at https://aistudio.google.com
+2. Enter the Gemini API key in the app's settings screen
+3. Select a model:
+   - `gemini-2.5-flash-preview`: Fast and lightweight (recommended for general use)
+   - `gemini-2.5-pro-preview`: More powerful (for complex tasks)
 
-Some tool packages require external APIs:
-- Korea Public Data Portal (data.go.kr): Real estate transactions, startup support, etc.
-- Kakao: Maps, navigation, restaurant search
-- API Ninjas: Various utility APIs
+If you don't know how to get an API key, just ask any AI like ChatGPT or Claude: "How do I get a Gemini API key?"
 
-Tell the System AI your API keys and it will help you set them up. Example: "My Kakao API key is xxx. Please set it up."
+**After entering the API key?**
 
-Not all APIs are required. Set them up selectively based on the tools you use.
+The System AI becomes active. From then on, you can chat with the System AI to install tools, create projects, change settings, and more.
+
+**Alternative: Use Claude Desktop**
+
+If getting an API key is difficult, you can install [Claude Desktop](https://claude.ai/download) instead. You can have Claude Desktop open the indiebizOS folder, explore the system, install tools, or make system modifications.
+
+**Tool APIs (Optional, for later)**
+
+Some tool packages require external APIs. You can set these up later by asking the System AI when you need them.
 
 ---
 

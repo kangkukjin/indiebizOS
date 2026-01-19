@@ -69,28 +69,33 @@ cd backend && python api.py        # 터미널 1
 cd frontend && npm run electron:dev # 터미널 2
 ```
 
-### API 키 설정
+### API 키 설정 - 가장 중요한 첫 단계
 
-IndieBiz OS는 여러 AI 프로바이더와 외부 API를 사용합니다.
+IndieBiz OS를 사용하려면 **AI API 키가 최소 1개 필요합니다**. 이게 가장 큰 첫 번째 장벽입니다. 하지만 이것만 넘으면 나머지는 시스템 AI에게 물어보거나 시키면 됩니다.
 
-**AI 프로바이더 (최소 1개 필요)**
-- Anthropic (Claude): https://console.anthropic.com
-- OpenAI (GPT): https://platform.openai.com
-- Google (Gemini): https://aistudio.google.com
-- Ollama: 로컬 설치 (무료, 오프라인 가능)
+**2025.1 현재 추천: Google Gemini API (무료)**
 
-AI API 키는 앱 내 설정 화면에서 입력합니다. 최소 1개의 AI 프로바이더 키가 있어야 시스템 AI를 사용할 수 있습니다.
+현재 Gemini API는 한동안 무료로 사용할 수 있어서 시작하기 좋습니다.
 
-**도구용 API (선택)**
+1. https://aistudio.google.com 에서 API 키 발급
+2. 앱 내 설정 화면에서 Gemini API 키 입력
+3. 모델 선택:
+   - `gemini-2.5-flash-preview`: 빠르고 가벼움 (일반 용도 추천)
+   - `gemini-2.5-pro-preview`: 더 강력함 (복잡한 작업용)
 
-도구 패키지 중 일부는 외부 API가 필요합니다:
-- 공공데이터포털 (data.go.kr): 부동산 실거래가, 창업지원 등
-- 카카오: 지도, 네비게이션, 맛집 검색
-- API Ninjas: 다양한 유틸리티 API
+API 키 발급 방법을 모르겠다면, ChatGPT나 Claude 같은 아무 AI에게 "Gemini API 키 발급 방법 알려줘"라고 물어보세요.
 
-시스템 AI에게 API 키를 알려주면 설정을 도와줍니다. 예: "카카오 API 키는 xxx야. 설정해줘"
+**API 키를 넣고 나면?**
 
-모든 API가 필요하진 않습니다. 사용할 도구에 따라 선택적으로 설정하세요.
+시스템 AI가 활성화됩니다. 그 다음부터는 시스템 AI와 대화하면서 도구 설치, 프로젝트 생성, 설정 변경 등을 할 수 있습니다.
+
+**대안: Claude Desktop 사용**
+
+API 키 발급이 어렵다면, [Claude Desktop](https://claude.ai/download)을 설치하는 방법도 있습니다. Claude Desktop으로 indiebizOS 폴더를 열어서 시스템을 살펴보게 하고, 도구 설치나 시스템 수정을 시킬 수 있습니다.
+
+**도구용 API (선택, 나중에)**
+
+일부 도구 패키지는 외부 API가 필요합니다. 이건 나중에 필요할 때 시스템 AI에게 물어보면서 설정하면 됩니다.
 
 ---
 

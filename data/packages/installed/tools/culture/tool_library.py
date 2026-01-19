@@ -122,7 +122,7 @@ def search_books(title=None, author=None, publisher=None, isbn=None,
     if not any([title, author, publisher, isbn, subject]):
         return {"error": "검색 조건을 하나 이상 입력해주세요. (title, author, publisher, isbn, subject)"}
 
-    result = call_library_api("searchBookInfo", params)
+    result = call_library_api("getbookList", params)
 
     if "error" not in result:
         result["search_params"] = {

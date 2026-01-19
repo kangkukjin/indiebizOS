@@ -62,13 +62,23 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS 설정 (Electron에서 접근 허용)
+# CORS 설정 (Electron 및 로컬 개발 환경에서 접근 허용)
+# 보안: 허용된 오리진만 명시적으로 지정
+ALLOWED_ORIGINS = os.environ.get("CORS_ORIGINS", "").split(",") if os.environ.get("CORS_ORIGINS") else [
+    "http://localhost:5173",      # Vite 개발 서버
+    "http://localhost:3000",      # React 개발 서버
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "app://.",                    # Electron 앱
+    "file://",                    # Electron 로컬 파일
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
 
 # 매니저 인스턴스
@@ -149,19 +159,48 @@ async def health_check():
 
 @app.get("/image")
 async def serve_image(path: str):
-    """로컬 이미지 파일 서빙"""
+    """
+    로컬 이미지 파일 서빙
+
+    보안 강화:
+    - realpath로 심볼릭 링크 우회 방지
+    - 허용된 디렉토리 목록으로 접근 제한
+    - 파일 확장자 검증
+    """
     import os.path
 
-    abs_path = os.path.abspath(path)
-    allowed_base = str(BASE_PATH)
+    # realpath: 심볼릭 링크를 모두 해석한 실제 경로 반환
+    # (abspath만 사용하면 심볼릭 링크 우회 공격에 취약)
+    real_path = os.path.realpath(path)
 
-    if not abs_path.startswith(allowed_base):
+    # 허용된 기본 디렉토리 목록
+    allowed_bases = [
+        str(BASE_PATH),
+        os.path.expanduser("~"),  # 사용자 홈 디렉토리 (사진 등)
+    ]
+
+    # 환경변수로 추가 허용 경로 설정 가능
+    extra_paths = os.environ.get("ALLOWED_IMAGE_PATHS", "")
+    if extra_paths:
+        allowed_bases.extend(extra_paths.split(":"))
+
+    # 허용된 경로인지 확인
+    is_allowed = any(
+        real_path.startswith(os.path.realpath(base))
+        for base in allowed_bases
+    )
+
+    if not is_allowed:
         return {"error": "접근 권한 없음"}
 
-    if not os.path.exists(abs_path):
+    if not os.path.exists(real_path):
         return {"error": "파일을 찾을 수 없음"}
 
-    ext = os.path.splitext(abs_path)[1].lower()
+    # 파일인지 확인 (디렉토리 접근 방지)
+    if not os.path.isfile(real_path):
+        return {"error": "파일만 접근 가능"}
+
+    ext = os.path.splitext(real_path)[1].lower()
     if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
         return {"error": "이미지 파일만 허용"}
 
@@ -173,7 +212,7 @@ async def serve_image(path: str):
         '.webp': 'image/webp'
     }
 
-    return FileResponse(abs_path, media_type=mime_types.get(ext, 'image/jpeg'))
+    return FileResponse(real_path, media_type=mime_types.get(ext, 'image/jpeg'))
 
 
 # ============ 메인 ============

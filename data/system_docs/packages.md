@@ -54,10 +54,11 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 ---
 
-## 현재 설치된 도구 패키지 (16개)
+## 현재 설치된 도구 패키지 (17개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
+| culture | Culture | KCISA 문화정보(전시, 축제) 조회 |
 | android | Android | 안드로이드 기기 관리 (adb) |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
 | health-record | Health Record Manager | 개인 건강 정보 저장/관리 |

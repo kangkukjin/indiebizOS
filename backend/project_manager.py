@@ -239,6 +239,37 @@ agents:
 
         return folder_info
 
+    def _is_descendant_of(self, projects: list, ancestor_id: str, descendant_id: str) -> bool:
+        """
+        descendant_id가 ancestor_id의 자손인지 확인 (순환 참조 방지용)
+
+        Args:
+            projects: 프로젝트 목록
+            ancestor_id: 조상 후보 ID
+            descendant_id: 자손 후보 ID
+
+        Returns:
+            True면 descendant_id가 ancestor_id의 자손임
+        """
+        current_id = descendant_id
+        visited = set()  # 무한 루프 방지
+
+        while current_id:
+            if current_id in visited:
+                break  # 이미 순환 참조가 있는 경우
+            visited.add(current_id)
+
+            if current_id == ancestor_id:
+                return True
+
+            # 현재 아이템의 부모 찾기
+            current_item = next((p for p in projects if p["id"] == current_id), None)
+            if not current_item:
+                break
+            current_id = current_item.get("parent_folder")
+
+        return False
+
     def move_to_folder(self, item_id: str, folder_id: str):
         """프로젝트 또는 폴더를 다른 폴더로 이동"""
         projects = self._load_projects_list()
@@ -259,6 +290,11 @@ agents:
 
         if item_id == folder_id:
             raise ValueError("폴더를 자기 자신 안으로 이동할 수 없습니다.")
+
+        # 순환 참조 방지: 대상 폴더가 이동할 아이템의 자손인지 확인
+        if item.get("type") == "folder":
+            if self._is_descendant_of(projects, item_id, folder_id):
+                raise ValueError("폴더를 자신의 하위 폴더 안으로 이동할 수 없습니다.")
 
         item["parent_folder"] = folder_id
         self._save_projects_list(projects)
@@ -302,7 +338,18 @@ agents:
         for i, p in enumerate(projects):
             if p["id"] == item_id:
                 p["in_trash"] = False
-                p["parent_folder"] = p.get("original_parent_folder")
+
+                # 원래 폴더가 존재하고 휴지통에 없는지 확인
+                original_folder = p.get("original_parent_folder")
+                if original_folder:
+                    folder_exists = any(
+                        proj["id"] == original_folder and not proj.get("in_trash", False)
+                        for proj in projects
+                    )
+                    p["parent_folder"] = original_folder if folder_exists else None
+                else:
+                    p["parent_folder"] = None
+
                 if "trashed_at" in p:
                     del p["trashed_at"]
                 if "original_parent_folder" in p:

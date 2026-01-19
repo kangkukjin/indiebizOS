@@ -45,8 +45,8 @@ class ProgramScheduler:
             try:
                 with open(SCHEDULE_CONFIG_PATH, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except:
-                pass
+            except (json.JSONDecodeError, IOError, OSError) as e:
+                self._log(f"설정 파일 로드 실패: {e}")
         return {"tasks": []}
 
     def _save_config(self):
@@ -154,8 +154,8 @@ class ProgramScheduler:
                         last_run_date = datetime.fromisoformat(last_run).date()
                         if last_run_date == now.date():
                             continue
-                    except:
-                        pass
+                    except (ValueError, TypeError) as e:
+                        self._log(f"last_run 파싱 실패 ({task.get('name')}): {e}")
 
                 # 작업 실행 (별도 스레드)
                 threading.Thread(

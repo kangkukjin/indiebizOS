@@ -160,8 +160,7 @@
 - `backend/`: 서버 소스 코드
 - `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (16개)
-- `data/packages/installed/extensions/`: 설치된 확장 (9개)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (17개)
 - `projects/`: 사용자 프로젝트 데이터 (17개)
 
 ---

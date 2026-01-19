@@ -5,24 +5,30 @@ Culture 패키지
 공공데이터포털(data.go.kr)에서 제공하는 한국문화정보원 문화정보 서비스입니다.
 전시, 공연, 축제 등 다양한 문화 정보를 검색할 수 있습니다.
 
+API 문서: https://www.data.go.kr/data/15138937/openapi.do
+
 API 키: DATA_GO_KR_API_KEY 환경변수 사용
+
+엔드포인트:
+- /period2: 기간별 검색
+- /area2: 지역별 검색
+- /realm2: 분야별 검색
+- /detail2: 상세정보
+- /livelihood2: 문화캘린더
 """
 
 import os
 import requests
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timedelta
 
-BASE_URL = "http://apis.data.go.kr/B553457/cultureinfo"
+# 올바른 엔드포인트 (HTTPS 사용)
+BASE_URL = "https://apis.data.go.kr/B553457/cultureinfo"
 
 
 def get_api_key():
-    """API 키 가져오기 (환경변수 우선, 없으면 하드코딩된 값 - 보안상 비권장하나 사용자의 요청에 따름)"""
-    key = os.environ.get("DATA_GO_KR_API_KEY", "")
-    if not key:
-        # 사용자가 제공한 키 (일부)
-        key = "5d93a49043da935..." # 실제 키는 시스템 환경에 맞게 설정되어야 함
-    return key
+    """API 키 가져오기"""
+    return os.environ.get("DATA_GO_KR_API_KEY", "")
 
 
 def xml_to_dict(element):
@@ -127,21 +133,31 @@ def search_culture_events(keyword=None, start_date=None, end_date=None, area=Non
         page: 페이지 번호
     """
     params = {
-        "numOfRows": min(rows, 100),
-        "pageNo": page,
-        "type": "json" # JSON 요청 시도 (지원하지 않으면 XML로 반환됨)
+        "numOfrows": min(rows, 100),  # API 스펙에 맞게 수정
+        "PageNo": page  # API 스펙에 맞게 수정
     }
+
+    # 기간 파라미터 (period2 엔드포인트)
+    if start_date:
+        params["from"] = start_date.replace("-", "").replace(".", "")
+    if end_date:
+        params["to"] = end_date.replace("-", "").replace(".", "")
+
+    # 기본 기간 설정 (오늘부터 3개월)
+    if not start_date and not end_date:
+        today = datetime.now()
+        params["from"] = today.strftime("%Y%m%d")
+        params["to"] = (today + timedelta(days=90)).strftime("%Y%m%d")
 
     if keyword:
         params["keyword"] = keyword
-    if start_date:
-        params["startDt"] = start_date.replace("-", "").replace(".", "")
-    if end_date:
-        params["endDt"] = end_date.replace("-", "").replace(".", "")
-    if area:
-        params["area"] = area
 
-    result = call_kcisa_api("culturalEventList", params)
+    # 지역 파라미터
+    if area:
+        params["sido"] = area
+
+    # period2 엔드포인트 사용 (기간별 검색)
+    result = call_kcisa_api("period2", params)
 
     if "error" not in result:
         result["search_params"] = {
@@ -170,7 +186,7 @@ def get_culture_event_detail(seq):
         "type": "json"
     }
 
-    return call_kcisa_api("culturalEventDetail", params)
+    return call_kcisa_api("detail2", params)
 
 
 def quick_search_culture(keyword, rows=10):

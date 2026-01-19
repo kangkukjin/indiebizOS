@@ -70,14 +70,18 @@ export function FolderView({ folderId }: FolderViewProps) {
 
   // 다른 폴더에서 아이템이 드롭되었을 때 이벤트 수신
   useEffect(() => {
+    // 이벤트 핸들러 참조를 저장하여 정확히 같은 함수를 제거할 수 있도록 함
+    const handleDropped = (data: { itemId: string; itemType: string; sourceFolderId: string }) => {
+      console.log('이 폴더로 아이템 드롭됨:', data);
+      // 목록 새로고침 (최신 folderId 사용)
+      api.getFolderItems(folderId).then(setItems).catch(console.error);
+    };
+
     if (window.electron?.onItemDroppedIntoFolder) {
-      window.electron.onItemDroppedIntoFolder((data: { itemId: string; itemType: string; sourceFolderId: string }) => {
-        console.log('이 폴더로 아이템 드롭됨:', data);
-        // 목록 새로고침
-        loadFolderItems();
-      });
+      window.electron.onItemDroppedIntoFolder(handleDropped);
     }
 
+    // 클린업: 컴포넌트 언마운트 시 이벤트 리스너 제거
     return () => {
       if (window.electron?.removeItemDroppedIntoFolder) {
         window.electron.removeItemDroppedIntoFolder();

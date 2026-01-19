@@ -282,14 +282,15 @@ class AnthropicProvider(BaseProvider):
                 return
 
             elif stop_reason == "tool_use" or tool_uses:
-                # 도구 실행 필요
+                # 도구 실행 필요 - 중간 텍스트는 버리고 다음 루프로 진행
+                # (Claude Desktop처럼 최종 응답만 final로 전달)
                 yield from self._execute_tools_and_continue(
                     messages, collected_text, tool_uses, execute_tool, depth
                 )
                 return
 
             else:
-                # end_turn 또는 기타 - 완료
+                # end_turn 또는 기타 - 완료 (이 루프의 텍스트만 final로)
                 final_result = collected_text
 
                 # 저장된 [MAP:...] 태그 추가

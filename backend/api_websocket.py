@@ -3,6 +3,7 @@ api_websocket.py - WebSocket 채팅 API (스트리밍 지원)
 IndieBiz OS Core
 """
 
+import re
 import uuid
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -23,6 +24,25 @@ executor = ThreadPoolExecutor(max_workers=4)
 
 # 클라이언트별 중단 플래그 (client_id -> bool)
 cancel_flags: dict[str, bool] = {}
+
+
+def filter_internal_markers(text: str) -> str:
+    """내부 시스템 마커를 출력에서 제거
+
+    AI가 프롬프트에서 본 내부 마커 형식을 모방하여 출력에 포함시키는 경우가 있음.
+    이런 마커들은 사용자에게 보여서는 안 됨.
+    """
+    if not text:
+        return text
+    # <system-reminder>...</system-reminder> 태그 제거
+    text = re.sub(r'<system-reminder>.*?</system-reminder>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    # 불완전한 태그도 제거
+    text = re.sub(r'</?system-reminder[^>]*>', '', text, flags=re.IGNORECASE)
+    # [[마커]] 형식 제거 (APPROVAL_REQUESTED는 이미 처리됨)
+    text = re.sub(r'\[\[QUESTION_PENDING\]\]', '', text)
+    text = re.sub(r'\[\[PLAN_MODE_ENTERED\]\]', '', text)
+    text = re.sub(r'\[\[PLAN_APPROVAL_REQUESTED\]\]', '', text)
+    return text.strip()
 
 
 def is_cancelled(client_id: str) -> bool:
@@ -433,6 +453,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 
         # AI 응답 저장 (final_content 사용)
         if final_content:
+            # 내부 시스템 마커 필터링
+            final_content = filter_internal_markers(final_content)
             message_id = db.save_message(target_agent_id, user_id, final_content)
 
             # 최종 응답 전송
@@ -656,6 +678,9 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     final_content = f"도구 '{last_result['name']}'이 실행되었지만 AI가 응답을 생성하지 않았습니다.\n\n도구 결과:\n{last_result['result'][:500]}"
             else:
                 final_content = "(AI가 응답을 생성하지 않았습니다. 다시 시도해주세요.)"
+
+        # 내부 시스템 마커 필터링
+        final_content = filter_internal_markers(final_content)
 
         save_conversation("assistant", final_content)
 

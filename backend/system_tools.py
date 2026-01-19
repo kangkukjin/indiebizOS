@@ -20,13 +20,28 @@ from tool_loader import build_tool_package_map, load_tool_handler, get_all_tool_
 SYSTEM_TOOLS = [
     {
         "name": "request_user_approval",
-        "description": "사용자 승인을 요청합니다. 하나의 작업 요청에 대해 한 번만 호출하세요. 사용자가 승인하면 이후 모든 단계를 진행하고, 완료 후 결과를 보고하세요. 절대 같은 작업에 대해 두 번 이상 호출하지 마세요.",
+        "description": """사용자 승인을 요청합니다.
+
+## 사용 시점
+- 파일 삭제, 시스템 설정 변경 등 위험한 작업 전
+- 외부 서비스에 데이터 전송 전
+- 비용이 발생할 수 있는 작업 전
+
+## 중요 규칙
+- 하나의 작업 요청에 대해 한 번만 호출
+- 승인 후 모든 단계를 완료하고 결과 보고
+- 같은 작업에 두 번 이상 호출 금지
+
+## 사용하지 않을 때
+- 일반적인 파일 읽기/쓰기
+- 정보 조회
+- 안전한 도구 실행""",
         "input_schema": {
             "type": "object",
             "properties": {
                 "action_type": {
                     "type": "string",
-                    "description": "수행하려는 작업 유형 (예: 파일 생성, 코드 실행, 패키지 설치)"
+                    "description": "수행하려는 작업 유형 (예: 파일 삭제, 패키지 설치, 시스템 설정 변경)"
                 },
                 "description": {
                     "type": "string",
@@ -43,7 +58,33 @@ SYSTEM_TOOLS = [
     },
     {
         "name": "call_agent",
-        "description": "다른 에이전트를 호출하여 작업을 요청합니다. 같은 프로젝트 내 에이전트 간 협업에 사용합니다. 에이전트 이름 또는 ID로 호출할 수 있습니다.",
+        "description": """다른 에이전트에게 작업을 위임합니다 (비동기).
+
+## 위임 흐름
+1. call_agent 호출 → 대상 에이전트에게 메시지 전송
+2. 대상 에이전트가 작업 수행 (비동기)
+3. 완료 시 자동으로 결과가 당신에게 보고됨
+4. 결과를 받아 최종 처리 후 사용자에게 응답
+
+## 사용 시점
+- 다른 전문 분야의 에이전트가 필요할 때
+- 자신의 도구로 처리할 수 없는 작업일 때
+- 병렬로 여러 작업을 진행해야 할 때
+
+## 사용 전 확인
+1. list_agents로 사용 가능한 에이전트 확인
+2. get_my_tools로 자신의 도구 확인 (직접 처리 가능한지)
+
+## 금지 사항
+- 자기 자신에게 위임 금지
+- 에이전트가 1명뿐이면 위임 불가 (직접 처리)
+- 무한 위임 체인 금지
+
+## 병렬 위임
+여러 에이전트에게 동시 위임 가능. 모든 응답이 도착하면 통합 결과 수신.
+
+## 주의
+call_agent 호출 후 바로 응답하지 마세요. 결과 보고가 도착할 때까지 기다렸다가 최종 응답.""",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -53,7 +94,7 @@ SYSTEM_TOOLS = [
                 },
                 "message": {
                     "type": "string",
-                    "description": "에이전트에게 전달할 메시지/요청"
+                    "description": "에이전트에게 전달할 요청 내용. 명확하고 구체적으로 작성."
                 }
             },
             "required": ["agent_id", "message"]
@@ -61,7 +102,23 @@ SYSTEM_TOOLS = [
     },
     {
         "name": "list_agents",
-        "description": "현재 프로젝트에서 사용 가능한 에이전트 목록을 가져옵니다.",
+        "description": """현재 프로젝트의 에이전트 목록을 조회합니다.
+
+## 반환 정보
+- id: 에이전트 ID
+- name: 에이전트 이름
+- role_description: 역할 설명
+- active: 활성화 여부
+- running: 현재 실행 중 여부
+
+## 사용 시점
+- call_agent 전 적합한 대상 확인
+- 프로젝트 내 협업 가능한 에이전트 파악
+- 실행 중인 에이전트 확인
+
+## 주의
+- running=false인 에이전트는 호출 불가
+- 위임 전 반드시 확인 권장""",
         "input_schema": {
             "type": "object",
             "properties": {},
@@ -70,21 +127,37 @@ SYSTEM_TOOLS = [
     },
     {
         "name": "send_notification",
-        "description": "사용자에게 알림을 보냅니다.",
+        "description": """사용자에게 알림을 보냅니다.
+
+## 알림 유형
+- info: 일반 정보 (기본값)
+- success: 성공 메시지 (녹색)
+- warning: 주의 메시지 (노란색)
+- error: 오류 메시지 (빨간색)
+
+## 사용 시점
+- 장시간 작업 완료 알림
+- 중요한 이벤트 발생 시
+- 스케줄 작업 결과 보고
+- 오류/경고 상황 알림
+
+## 주의
+- 일반적인 응답은 알림 대신 직접 메시지로
+- 너무 빈번한 알림은 피할 것""",
         "input_schema": {
             "type": "object",
             "properties": {
                 "title": {
                     "type": "string",
-                    "description": "알림 제목"
+                    "description": "알림 제목 (간결하게)"
                 },
                 "message": {
                     "type": "string",
-                    "description": "알림 내용"
+                    "description": "알림 본문 내용"
                 },
                 "type": {
                     "type": "string",
-                    "description": "알림 유형: info, success, warning, error. 기본: info"
+                    "description": "알림 유형: info, success, warning, error (기본: info)"
                 }
             },
             "required": ["title", "message"]
@@ -92,7 +165,19 @@ SYSTEM_TOOLS = [
     },
     {
         "name": "get_project_info",
-        "description": "현재 프로젝트의 정보를 가져옵니다 (이름, 설명, 에이전트 목록 등).",
+        "description": """현재 프로젝트의 정보를 조회합니다.
+
+## 반환 정보
+- name: 프로젝트 이름
+- description: 프로젝트 설명
+- agent_count: 에이전트 수
+- agents: 에이전트 목록 (id, name, active)
+- path: 프로젝트 경로
+
+## 사용 시점
+- 프로젝트 구조 파악
+- 협업 가능한 에이전트 확인
+- 프로젝트 컨텍스트 이해""",
         "input_schema": {
             "type": "object",
             "properties": {},
@@ -101,7 +186,22 @@ SYSTEM_TOOLS = [
     },
     {
         "name": "get_my_tools",
-        "description": "현재 에이전트에게 허용된 도구 목록을 조회합니다. 위임 전 자신이 가진 도구로 처리 가능한지 확인할 때 사용합니다.",
+        "description": """현재 에이전트에게 허용된 도구 목록을 조회합니다.
+
+## 반환 정보
+- tools: 사용 가능한 전체 도구 목록
+- base_tools: 시스템 기본 도구 (call_agent, list_agents 등)
+- allowed_tools: 허용된 도구 패키지 도구들
+
+## 사용 시점
+- 위임 전 자가 처리 가능 여부 판단
+- 자신의 역량 범위 확인
+- 도구 사용 가능 여부 확인
+
+## 위임 결정 기준
+1. get_my_tools로 내 도구 확인
+2. 필요한 작업이 내 도구로 가능하면 → 직접 처리
+3. 내 도구로 불가능하면 → list_agents로 적합한 에이전트 찾아 위임""",
         "input_schema": {
             "type": "object",
             "properties": {},
@@ -262,8 +362,13 @@ def _get_or_create_delegation_context(parent_task: dict) -> dict:
     """위임 컨텍스트 가져오기 또는 생성
 
     이전 위임 사이클이 완료된 경우(모든 응답 수신) 새 컨텍스트로 초기화
+
+    Note:
+        pending_delegations 카운터를 기준으로 완료 여부 판단 (Race Condition 방지)
+        responses 배열 길이는 동시성 문제로 정확하지 않을 수 있음
     """
     existing_context_str = parent_task.get('delegation_context')
+    pending = parent_task.get('pending_delegations', 0)
 
     if existing_context_str:
         try:
@@ -279,12 +384,13 @@ def _get_or_create_delegation_context(parent_task: dict) -> dict:
                 return existing_context
 
             # 이전 위임 사이클이 완료되었는지 확인
+            # pending_delegations 카운터를 기준으로 판단 (DB에서 원자적으로 관리됨)
             delegations = existing_context.get('delegations', [])
-            responses = existing_context.get('responses', [])
 
-            if len(delegations) > 0 and len(responses) >= len(delegations):
+            # pending_delegations == 0 이고 이전 위임이 있었으면 → 새 사이클 시작
+            if len(delegations) > 0 and pending == 0:
                 # 모든 응답이 도착함 → 새 위임 사이클 시작 → 컨텍스트 초기화
-                print(f"   [위임 컨텍스트] 이전 사이클 완료 ({len(responses)}/{len(delegations)}) → 초기화")
+                print(f"   [위임 컨텍스트] 이전 사이클 완료 (pending=0, delegations={len(delegations)}) → 초기화")
                 return {
                     'original_request': parent_task.get('original_request', ''),
                     'requester': parent_task.get('requester', ''),

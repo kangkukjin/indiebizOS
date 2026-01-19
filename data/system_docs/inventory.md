@@ -1,6 +1,6 @@
 # IndieBiz OS 인벤토리
 
-## 프로젝트 (활성) - 17개
+## 프로젝트 (활성) - 18개
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -11,6 +11,7 @@
 | 나를지키는공간 | 나를 지키는 공간 | 개인 공간 |
 | 행정_서비스 | 행정_서비스 | 정부24 및 민원 서비스 지원 |
 | 자산관리 | 자산관리 | 주식, 채권, ETF 등 자산 관리 및 분석 |
+| 투자 | 투자 | 주식 및 금융 데이터 분석, 글로벌 시장 조사 |
 | 의료 | 의료 | 건강 정보 관리 및 병원/약국 행정 안내 |
 | 부동산 | 부동산 | 건물 관리 및 부동산 투자 정보 분석 |
 | 창업 | 창업 | 새로운 비즈니스 모델 연구 및 창업 지원 |
@@ -24,11 +25,14 @@
 
 ---
 
-## 도구 패키지 (Tools) - 16개
+## 도구 패키지 (Tools) - 19개
 에이전트가 사용할 수 있는 유틸리티
 
 | ID | 이름 | 설명 | 상태 |
 |----|------|------|------|
+| investment | Investment | KRX, DART, SEC 글로벌 금융 데이터 분석 | 설치됨 |
+| visualization | Visualization | 선, 막대, 캔들스틱 등 데이터 시각화 차트 생성 | 설치됨 |
+| culture | Culture | KCISA 문화정보(전시, 축제) 조회 | 설치됨 |
 | android | Android | 안드로이드 기기 관리 (adb) | 설치됨 |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 | 설치됨 |
 | health-record | Health Record Manager | 개인 건강 정보 저장/관리 | 설치됨 |
@@ -45,23 +49,6 @@
 | system_essentials | System Essentials | 파일 관리, 시스템 유틸리티 | 설치됨 |
 | web | Web Tools | 웹 검색 및 크롤링 | 설치됨 |
 | youtube | Youtube | 유튜브 동영상/오디오 관리 | 설치됨 |
-
----
-
-## 확장 패키지 (Extensions) - 9개
-시스템 기능 확장
-
-| ID | 설명 |
-|----|------|
-| ai-agent | AI 에이전트 코어 |
-| conversation | 대화 관리 |
-| gmail | Gmail 연동 |
-| indienet | IndieNet (Nostr) 연동 |
-| notification-system | 알림 시스템 |
-| prompt-generator | 프롬프트 생성기 |
-| scheduler | 스케줄러 |
-| switch-runner | 스위치 실행기 |
-| websocket-chat | WebSocket 채팅 |
 
 ---
 
@@ -104,4 +91,4 @@ kvisual-mcp 기반 비즈니스 파트너 관리
 - **프로젝트1** - 에이전트 팀 템플릿 (집사, 직원1, 대장장이, 출판, 영상담당)
 
 ---
-*마지막 업데이트: 2026-01-16 23:35*
+*마지막 업데이트: 2026-01-22*

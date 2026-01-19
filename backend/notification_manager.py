@@ -58,8 +58,8 @@ class NotificationManager:
         for listener in self._listeners:
             try:
                 listener(notification)
-            except:
-                pass
+            except Exception as e:
+                print(f"[NotificationManager] 리스너 호출 실패: {e}")
 
         return notification
 

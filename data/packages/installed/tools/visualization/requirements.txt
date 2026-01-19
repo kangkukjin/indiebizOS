@@ -1,0 +1,14 @@
+# Visualization Tools 패키지 의존성
+# pip install -r requirements.txt
+
+# 기본 차트 라이브러리 (필수 - 둘 중 하나 이상)
+matplotlib>=3.5.0
+
+# 인터랙티브 차트 (권장 - HTML 출력, 더 예쁜 차트)
+plotly>=5.10.0
+
+# Plotly PNG 내보내기용 (plotly 사용시 필요)
+kaleido>=0.2.1
+
+# 수치 연산 (추세선, 이동평균 등)
+numpy>=1.20.0

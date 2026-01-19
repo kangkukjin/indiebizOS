@@ -1,0 +1,9 @@
+# Investment Tools 패키지 의존성
+# pip install -r requirements.txt
+
+# 한국 주식 시세 조회 (선택사항 - 없어도 KRX API로 대체)
+finance-datareader>=0.9.50
+
+# DART API용 (선택사항 - 없어도 직접 API 호출로 동작)
+# OpenDartReader>=0.2.0
+# dart-fss>=0.4.0

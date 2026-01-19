@@ -1,0 +1,242 @@
+{
+  "id": "investment",
+  "name": "Investment Tools",
+  "description": "한국/미국 기업의 주가, 재무제표, 공시정보, 뉴스를 조회하는 투자 분석 도구",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "kr_company_info",
+      "description": "한국 기업의 기본 정보를 조회합니다. (DART OpenAPI)\n\n## 반환 정보\n- 회사명, 대표자, 업종, 주소\n- 설립일, 상장일, 결산월\n- 홈페이지, IR 페이지, 전화번호\n\n## 사용법\n- 회사명으로: corp_name='삼성전자'\n- DART 코드로: corp_code='00126380'\n\n## 예시\n삼성전자 정보 → corp_name='삼성전자'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "corp_code": {
+            "type": "string",
+            "description": "DART 고유번호 (8자리). corp_name 사용시 비워두세요."
+          },
+          "corp_name": {
+            "type": "string",
+            "description": "회사명 (예: 삼성전자, SK하이닉스, NAVER)"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "kr_financial_statements",
+      "description": "한국 기업의 재무제표를 조회합니다. (DART OpenAPI)\n\n## 반환 정보\n- 재무상태표: 자산, 부채, 자본 항목\n- 손익계산서: 매출, 영업이익, 당기순이익\n- 현금흐름표: 영업/투자/재무 현금흐름\n\n## 사용법\n- corp_name='삼성전자', year='2024'\n\n## report_type 옵션\n- 11011: 사업보고서 (연간, 기본값)\n- 11012: 반기보고서\n- 11013: 1분기보고서\n- 11014: 3분기보고서\n\n## 예시\n삼성전자 2024년 재무제표 → corp_name='삼성전자', year='2024'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "corp_code": {
+            "type": "string",
+            "description": "DART 고유번호 (8자리)"
+          },
+          "corp_name": {
+            "type": "string",
+            "description": "회사명 (예: 삼성전자)"
+          },
+          "year": {
+            "type": "string",
+            "description": "사업연도 (예: 2024, 2023)"
+          },
+          "report_type": {
+            "type": "string",
+            "description": "보고서 유형: 11011(연간), 11012(반기), 11013(1분기), 11014(3분기)",
+            "default": "11011"
+          }
+        },
+        "required": ["year"]
+      }
+    },
+    {
+      "name": "kr_disclosures",
+      "description": "한국 기업의 공시 목록을 검색합니다. (DART OpenAPI)\n\n## 반환 정보\n- 공시 제목, 접수일, 제출인\n- 공시 원문 URL (DART 링크)\n\n## 사용법\n- 특정 기업: corp_name='삼성전자'\n- 전체 시장: corp_name 생략\n- 기간 지정: start_date='20240101'\n\n## 공시유형 (pblntf_ty)\n- A: 정기공시 (사업보고서)\n- B: 주요사항보고 (유상증자, 합병)\n- D: 지분공시 (대량보유)\n- I: 거래소공시\n\n## 예시\n삼성전자 최근 공시 → corp_name='삼성전자', count=10",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "corp_code": {
+            "type": "string",
+            "description": "DART 고유번호 (8자리)"
+          },
+          "corp_name": {
+            "type": "string",
+            "description": "회사명 (예: 삼성전자)"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "검색 시작일 (YYYYMMDD). 기본값: 1년 전"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "검색 종료일 (YYYYMMDD). 기본값: 오늘"
+          },
+          "pblntf_ty": {
+            "type": "string",
+            "description": "공시유형: A(정기), B(주요사항), D(지분), I(거래소)"
+          },
+          "count": {
+            "type": "integer",
+            "description": "조회할 공시 수 (기본 20)",
+            "default": 20
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "kr_stock_price",
+      "description": "한국 주식의 현재가 및 과거 주가를 조회합니다.\n\n## 반환 정보\n- 현재가, 시가, 고가, 저가\n- 거래량, 등락률\n- 기간별 일봉 데이터 (최근 30일)\n\n## 사용법\n- 종목명: symbol='삼성전자'\n- 종목코드: symbol='005930'\n\n## 주요 종목코드\n- 삼성전자: 005930\n- SK하이닉스: 000660\n- NAVER: 035420\n- 카카오: 035720\n- 현대차: 005380\n\n## 예시\n삼성전자 최근 주가 → symbol='삼성전자'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "종목코드 (005930) 또는 종목명 (삼성전자)"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "조회 시작일 (YYYY-MM-DD). 기본값: 1개월 전"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "조회 종료일 (YYYY-MM-DD). 기본값: 오늘"
+          }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "us_company_profile",
+      "description": "미국 기업의 프로필을 조회합니다. (Financial Modeling Prep)\n\n## 반환 정보\n- 회사명, CEO, 직원수\n- 업종(sector), 산업(industry)\n- 시가총액, 베타, 52주 범위\n- 사업 설명 (영문)\n\n## 주요 티커\n- AAPL(애플), MSFT(MS), GOOGL(구글)\n- AMZN(아마존), NVDA(엔비디아)\n- META(메타), TSLA(테슬라)\n\n## 예시\n애플 기업정보 → symbol='AAPL'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "티커 심볼 (예: AAPL, MSFT, GOOGL)"
+          }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "us_financial_statements",
+      "description": "미국 기업의 재무제표를 조회합니다. (Financial Modeling Prep)\n\n## 반환 정보\n- income: 매출, 영업이익, 순이익, EPS\n- balance: 자산, 부채, 자본, 현금\n- cashflow: 영업/투자/재무 현금흐름, FCF\n\n## statement_type 옵션\n- income: 손익계산서 (기본값)\n- balance: 재무상태표\n- cashflow: 현금흐름표\n\n## period 옵션\n- annual: 연간 (기본값)\n- quarter: 분기\n\n## 예시\n애플 최근 5년 손익계산서 → symbol='AAPL', statement_type='income', limit=5",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "티커 심볼 (예: AAPL)"
+          },
+          "statement_type": {
+            "type": "string",
+            "description": "재무제표 유형: income, balance, cashflow",
+            "default": "income"
+          },
+          "period": {
+            "type": "string",
+            "description": "기간: annual(연간), quarter(분기)",
+            "default": "annual"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "조회할 기간 수 (기본 5)",
+            "default": 5
+          }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "us_sec_filings",
+      "description": "미국 기업의 SEC 공시를 검색합니다. (SEC EDGAR, 무료)\n\n## 반환 정보\n- 공시 유형, 제출일\n- 공시 원문 URL\n\n## 주요 공시 유형 (filing_type)\n- 10-K: 연차보고서 (사업개요, 리스크, MD&A)\n- 10-Q: 분기보고서\n- 8-K: 수시보고 (중요 이벤트)\n- DEF 14A: 주주총회 자료\n\n## 예시\n애플 연차보고서 → symbol='AAPL', filing_type='10-K'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "티커 심볼 (예: AAPL)"
+          },
+          "filing_type": {
+            "type": "string",
+            "description": "공시 유형: 10-K, 10-Q, 8-K (비워두면 전체)"
+          },
+          "count": {
+            "type": "integer",
+            "description": "조회할 공시 수 (기본 10)",
+            "default": 10
+          }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "us_stock_price",
+      "description": "미국 주식의 현재가 및 과거 주가를 조회합니다. (Financial Modeling Prep)\n\n## 반환 정보\n- 현재가, 시가, 고가, 저가\n- 거래량, 등락률, 수정주가\n- 기간별 일봉 데이터\n\n## 사용법\n- symbol='AAPL'\n- 기간 지정 가능\n\n## 참고\n- 15분 지연 시세 (무료 티어)\n\n## 예시\n애플 최근 주가 → symbol='AAPL'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "티커 심볼 (예: AAPL, MSFT)"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "조회 시작일 (YYYY-MM-DD). 기본값: 1개월 전"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "조회 종료일 (YYYY-MM-DD). 기본값: 오늘"
+          }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "company_news",
+      "description": "기업 관련 최신 뉴스를 조회합니다. (Finnhub)\n\n## 반환 정보\n- 뉴스 제목, 요약 (영문)\n- 출처, 발행일\n- 원문 URL\n\n## 사용법\n- 미국 기업: symbol='AAPL'\n- 한국 기업: symbol='005930.KS'\n\n## 주의사항\n- 영문 뉴스 위주\n- 한국 기업은 결과가 제한적일 수 있음\n\n## 예시\n애플 최근 뉴스 → symbol='AAPL'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "티커 심볼 (미국: AAPL, 한국: 005930.KS)"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "검색 시작일 (YYYY-MM-DD). 기본값: 1주일 전"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "검색 종료일 (YYYY-MM-DD). 기본값: 오늘"
+          }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "earnings_calendar",
+      "description": "실적발표 일정을 조회합니다. (Finnhub)\n\n## 반환 정보\n- 기업명, 발표일\n- 예상 EPS vs 실제 EPS\n- 예상 매출 vs 실제 매출\n- 발표 시간\n\n## 발표 시간\n- bmo: Before Market Open (장전)\n- amc: After Market Close (장후)\n- dmh: During Market Hours (장중)\n\n## 사용법\n- 특정 기업: symbol='AAPL'\n- 전체 시장: symbol 생략\n\n## 예시\n향후 2주 실적발표 일정 → (파라미터 없이 호출)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "티커 심볼 (선택). 비워두면 전체 시장"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "검색 시작일 (YYYY-MM-DD). 기본값: 오늘"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "검색 종료일 (YYYY-MM-DD). 기본값: 2주 후"
+          }
+        },
+        "required": []
+      }
+    }
+  ]
+}

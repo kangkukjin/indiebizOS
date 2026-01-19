@@ -58,16 +58,16 @@ def refresh_system_stats(project_manager):
                 try:
                     agents = project_manager.get_agents(project['id'])
                     agent_count += len(agents)
-                except:
-                    pass
+                except (KeyError, TypeError, AttributeError) as e:
+                    print(f"[system_hooks] 에이전트 조회 실패 (project: {project.get('id')}): {e}")
 
         # 도구 패키지 수
         tool_count = 0
         try:
             from package_manager import package_manager
             tool_count = len(package_manager.list_installed())
-        except:
-            pass
+        except (ImportError, AttributeError) as e:
+            print(f"[system_hooks] 패키지 매니저 로드 실패: {e}")
 
         update_overview_stats(
             project_count=project_count,
@@ -80,8 +80,8 @@ def refresh_system_stats(project_manager):
         try:
             from package_manager import package_manager
             package_manager._update_inventory()
-        except:
-            pass
+        except (ImportError, AttributeError) as e:
+            print(f"[system_hooks] 인벤토리 업데이트 실패: {e}")
 
         log_change("STATS_REFRESHED", f"Projects: {project_count}, Agents: {agent_count}, Tools: {tool_count}")
 

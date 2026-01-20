@@ -1,54 +1,82 @@
 # IndieBiz OS 인벤토리
 
-## 프로젝트 (활성) - 18개
+## 프로젝트 (활성) - 16개
 
 | ID | 이름 | 설명 |
 |----|------|------|
-| 1 | 1 | 메인 프로젝트 |
-| 하드웨어 | 하드웨어 | 하드웨어 관리 프로젝트 |
-| 블로그 | 블로그 | 블로그 포스팅 및 관리 |
-| 컨텐츠 | 컨텐츠 | 콘텐츠 제작 및 관리 |
-| 나를지키는공간 | 나를 지키는 공간 | 개인 공간 |
-| 행정_서비스 | 행정_서비스 | 정부24 및 민원 서비스 지원 |
-| 자산관리 | 자산관리 | 주식, 채권, ETF 등 자산 관리 및 분석 |
-| 투자 | 투자 | 주식 및 금융 데이터 분석, 글로벌 시장 조사 |
-| 의료 | 의료 | 건강 정보 관리 및 병원/약국 행정 안내 |
-| 부동산 | 부동산 | 건물 관리 및 부동산 투자 정보 분석 |
-| 창업 | 창업 | 새로운 비즈니스 모델 연구 및 창업 지원 |
-| 해외 | 해외 | 한류 소식 및 해외 비즈니스 정보 수집 |
-| 오락실 | 오락실 | 게임/엔터테인먼트 |
-| 요리사 | 요리사 | 요리/레시피 프로젝트 |
-| 정보센터 | 정보센터 | 정보 수집/분석 프로젝트 |
+| my_space | my_space | 개인 공간 |
 | study | study | 학습 및 연구 프로젝트 |
+| 부동산 | 부동산 | 건물 관리 및 부동산 투자 정보 분석 |
+| 블로그 | 블로그 | 블로그 포스팅 및 관리 |
 | 사진 | 사진 | 사진 관리 및 아카이빙 |
-| indiebiz | indiebiz | IndieBiz OS 시스템 개발 프로젝트 |
+| 오락실 | 오락실 | 게임/엔터테인먼트 |
+| 의료 | 의료 | 건강 정보 관리 및 병원/약국 행정 안내 |
+| 정보센터 | 정보센터 | 정보 수집/분석 프로젝트 |
+| 창업 | 창업 | 새로운 비즈니스 모델 연구 및 창업 지원 |
+| 추천 프로젝트 | 추천 프로젝트 | 추천 시스템 프로젝트 |
+| 컨텐츠 | 컨텐츠 | 콘텐츠 제작 및 관리 |
+| 투자 | 투자 | 주식 및 금융 데이터 분석, 글로벌 시장 조사 |
+| 하드웨어 | 하드웨어 | 하드웨어 관리 프로젝트 |
+| 해외 | 해외 | 한류 소식 및 해외 비즈니스 정보 수집 |
+| 행정_서비스 | 행정_서비스 | 정부24 및 민원 서비스 지원 |
 
 ---
 
 ## 도구 패키지 (Tools) - 19개
 에이전트가 사용할 수 있는 유틸리티
 
-| ID | 이름 | 설명 | 상태 |
-|----|------|------|------|
-| investment | Investment | KRX, DART, SEC 글로벌 금융 데이터 분석 | 설치됨 |
-| visualization | Visualization | 선, 막대, 캔들스틱 등 데이터 시각화 차트 생성 | 설치됨 |
-| culture | Culture | KCISA 문화정보(전시, 축제) 조회 | 설치됨 |
-| android | Android | 안드로이드 기기 관리 (adb) | 설치됨 |
-| blog | Blog | 블로그 RAG 검색 및 인사이트 분석 | 설치됨 |
-| health-record | Health Record Manager | 개인 건강 정보 저장/관리 | 설치됨 |
-| information | Information & Publishing | API Ninjas, 맛집 검색 등 | 설치됨 |
-| kosis | KOSIS | 통계청 데이터 조회 | 설치됨 |
-| nodejs | Nodejs | JavaScript/Node.js 코드 실행 | 설치됨 |
-| pc-manager | PC Manager | 파일 및 저장소 관리, 시스템 분석 | 설치됨 |
-| photo-manager | Photo Manager | 사진 라이브러리 관리 | 설치됨 |
-| python-exec | Python Exec | Python 코드 실행 | 설치됨 |
-| read-and-see | Read and See | 문서 읽기 및 시각적 분석 | 설치됨 |
-| real-estate | Real Estate | 부동산 실거래가 조회 | 설치됨 |
-| startup | Startup | 창업 지원 정보 | 설치됨 |
-| study | Study Helper | 학습 및 논문 요약 지원 | 설치됨 |
-| system_essentials | System Essentials | 파일 관리, 시스템 유틸리티 | 설치됨 |
-| web | Web Tools | 웹 검색 및 크롤링 | 설치됨 |
-| youtube | Youtube | 유튜브 동영상/오디오 관리 | 설치됨 |
+| ID | 이름 | 설명 |
+|----|------|------|
+| android | Android | 안드로이드 기기 관리 (adb) |
+| blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
+| culture | Culture | KCISA 문화정보(전시, 축제) 조회 |
+| health-record | Health Record Manager | 개인 건강 정보 저장/관리 |
+| information | Information & Publishing | API Ninjas, 맛집 검색 등 |
+| investment | Investment | KRX, DART, SEC 글로벌 금융 데이터 분석 |
+| kosis | KOSIS | 통계청 데이터 조회 |
+| nodejs | Nodejs | JavaScript/Node.js 코드 실행 |
+| pc-manager | PC Manager | 파일 및 저장소 관리, 시스템 분석 |
+| photo-manager | Photo Manager | 사진 라이브러리 관리 |
+| python-exec | Python Exec | Python 코드 실행 |
+| read-and-see | Read and See | 문서 읽기 및 시각적 분석 |
+| real-estate | Real Estate | 부동산 실거래가 조회 |
+| startup | Startup | 창업 지원 정보 |
+| study | Study Helper | 학습 및 논문 요약 지원 |
+| system_essentials | System Essentials | 파일 관리, 시스템 유틸리티 |
+| visualization | Visualization | 라인/막대/캔들스틱/파이/산점도/히트맵 차트 |
+| web | Web Tools | 웹 검색 및 크롤링 |
+| youtube | Youtube | 유튜브 동영상/오디오 관리 |
+
+---
+
+## 시스템 AI 위임 기능
+
+시스템 AI는 프로젝트의 전문 에이전트에게 작업을 위임할 수 있습니다.
+
+### 위임 도구
+| 도구 | 설명 |
+|------|------|
+| `list_project_agents` | 모든 프로젝트와 에이전트 목록 조회 |
+| `call_project_agent` | 프로젝트 에이전트에게 작업 위임 |
+
+### 위임 조건
+- **사용자가 명시적으로 요청한 경우에만** 위임
+- "의료팀에게 물어봐" → 위임 O
+- "두통이 있어" → 직접 답변 (위임 X)
+
+### 위임 흐름
+```
+사용자 요청 → 시스템 AI 판단 → call_project_agent 호출
+    → 프로젝트 에이전트들 자동 활성화 → 작업 수행
+    → 결과 자동 보고 → 시스템 AI가 사용자에게 전달
+```
+
+### 병렬 위임
+여러 프로젝트에 동시 위임 가능:
+```python
+call_project_agent("의료", "agent_001", "두통 증상 분석")
+call_project_agent("study", "agent_001", "두통 관련 최신 연구 검색")
+```
 
 ---
 
@@ -66,7 +94,6 @@
 ---
 
 ## 비즈니스 관리 시스템
-kvisual-mcp 기반 비즈니스 파트너 관리
 
 ### 통신 채널
 | 채널 | 방식 | 설명 |
@@ -91,4 +118,4 @@ kvisual-mcp 기반 비즈니스 파트너 관리
 - **프로젝트1** - 에이전트 팀 템플릿 (집사, 직원1, 대장장이, 출판, 영상담당)
 
 ---
-*마지막 업데이트: 2026-01-22*
+*마지막 업데이트: 2026-01-20*

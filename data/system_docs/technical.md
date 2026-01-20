@@ -163,5 +163,29 @@
 - `data/packages/installed/tools/`: 설치된 도구 패키지 (17개)
 - `projects/`: 사용자 프로젝트 데이터 (17개)
 
+## 프롬프트 구조
+
+### XML 태그 구조 (2026-01-20 통일)
+모든 프롬프트에서 AI의 정확한 파싱을 위해 XML 태그 사용:
+
+**프래그먼트 (fragments/)**
+- `<git_operations>` - Git 작업 가이드
+- `<agent_delegation>` - 에이전트 위임 가이드
+
+**히스토리 메시지 (providers/*.py)**
+- `<user_message>` - 사용자 메시지
+- `<assistant_message>` - AI 응답
+- `<current_user_request>` - 현재 요청
+
+**자동응답 (auto_response.py)**
+- `<response_examples>` - 응답 예시
+- `<current_context>` - 현재 컨텍스트
+- `<response_instructions>` - 응답 지시사항
+
+**판단 AI (ai_judgment.py)**
+- `<judgment_examples>` - 판단 예시
+- `<current_context>` - 현재 컨텍스트
+- `<judgment_instructions>` - 판단 지시사항
+
 ---
-*마지막 업데이트: 2026-01-16*
+*마지막 업데이트: 2026-01-20*

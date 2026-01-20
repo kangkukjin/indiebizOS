@@ -116,10 +116,15 @@ class GeminiProvider(BaseProvider):
         types = self._genai_types
         contents = []
 
-        # 히스토리 변환
+        # 히스토리 변환 (XML 태그로 구분)
         for h in history:
             role = "user" if h["role"] == "user" else "model"
-            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=h["content"])]))
+            content = h["content"]
+            if h["role"] == "user":
+                tagged_content = f"<user_message>\n{content}\n</user_message>"
+            else:
+                tagged_content = f"<assistant_message>\n{content}\n</assistant_message>"
+            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=tagged_content)]))
 
         # 현재 메시지 (이미지 포함 가능) - 태그로 명확히 구분
         current_parts = []
@@ -294,6 +299,10 @@ class GeminiProvider(BaseProvider):
 
                 candidate = chunk.candidates[0]
                 if not hasattr(candidate, 'content') or not candidate.content:
+                    continue
+
+                # parts가 None인 경우 방어
+                if not hasattr(candidate.content, 'parts') or not candidate.content.parts:
                     continue
 
                 for part in candidate.content.parts:

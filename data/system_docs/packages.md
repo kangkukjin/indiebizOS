@@ -40,6 +40,11 @@
 ]
 ```
 
+### 도구 설명 작성 가이드 (2026-01-20)
+AI가 도구를 정확히 선택하도록 간결하고 범용적인 설명 권장:
+- **구조**: 한줄 요약 + 데이터 형식 + 예시
+- **예시**: `"라인 차트 생성. x-y 데이터를 선으로 연결하여 시각화.\n\n데이터 형식: [{x: 값, y: 값}, ...]\n\n예시: data=[{x:1, y:1}, {x:2, y:4}]"`
+
 ### 2. handler.py - 실행 로직 표준 템플릿
 `execute(tool_name, tool_input, project_path)` 함수를 포함해야 합니다.
 
@@ -54,15 +59,16 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 ---
 
-## 현재 설치된 도구 패키지 (17개)
+## 현재 설치된 도구 패키지 (19개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
-| culture | Culture | KCISA 문화정보(전시, 축제) 조회 |
 | android | Android | 안드로이드 기기 관리 (adb) |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
+| culture | Culture | KCISA 문화정보(전시, 축제) 조회 |
 | health-record | Health Record Manager | 개인 건강 정보 저장/관리 |
 | information | Information & Publishing | API Ninjas, 여행 정보, 맛집 검색 등 |
+| investment | Investment | KRX, DART, SEC 글로벌 금융 데이터 분석 |
 | kosis | KOSIS | 통계청 데이터 조회 |
 | nodejs | Nodejs | JavaScript/Node.js 코드 실행 |
 | pc-manager | PC Manager | 파일 및 저장소 관리, 시스템 분석 |
@@ -73,6 +79,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | startup | Startup | 창업 지원 정보 |
 | study | Study Helper | 학습 및 논문 요약 지원 |
 | system_essentials | System Essentials | 파일 관리, 검색, 시스템 유틸리티 |
+| visualization | Visualization | 라인/막대/캔들스틱/파이/산점도/히트맵 차트 생성 |
 | web | Web Tools | 웹 검색 및 크롤링 |
 | youtube | Youtube | 유튜브 동영상/오디오 관리 |
 
@@ -92,4 +99,4 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 - `GET /tools` - 활성 도구 목록
 
 ---
-*마지막 업데이트: 2026-01-16*
+*마지막 업데이트: 2026-01-20*

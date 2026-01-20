@@ -154,24 +154,28 @@ IndieBiz OS
 - 1000개의 도구를 추가해도 단일 에이전트가 압도당하지 않음
 - 각 전문가는 필요한 도구만 확인
 
-**설치된 도구 패키지:**
+**설치된 도구 패키지 (19개):**
 
 | 패키지 | 설명 |
 |--------|------|
 | android | 안드로이드 기기 관리 (adb) |
 | blog | 블로그 RAG 검색 및 인사이트 |
-| browser-automation | 웹 자동화 (Playwright) |
 | culture | 한국 문화 데이터 (공연, 도서관, 전시회) |
 | health-record | 개인 건강 데이터 관리 |
 | information | API Ninjas, 여행 정보, 맛집 검색 |
+| investment | 글로벌 금융 데이터 (KRX, DART, SEC, Yahoo Finance) |
 | kosis | 통계청 데이터 조회 (KOSIS) |
 | nodejs | JavaScript/Node.js 실행 |
+| pc-manager | 파일 및 저장소 관리, 시스템 분석 |
+| photo-manager | 사진 라이브러리 관리 |
 | python-exec | Python 코드 실행 |
+| read-and-see | 문서 읽기 및 시각적 분석 |
 | real-estate | 한국 부동산 데이터 |
 | startup | 한국 창업 지원 |
+| study | 학습 도우미 및 논문 요약 |
 | system_essentials | 파일 관리, 검색, 유틸리티 |
-| web-crawl | 웹 페이지 크롤링 |
-| web-search | 웹 검색 (DuckDuckGo, Google News) |
+| visualization | 차트 (라인, 막대, 캔들스틱, 파이, 산점도, 히트맵) |
+| web | 웹 검색 및 크롤링 |
 | youtube | YouTube 동영상/오디오 관리 |
 
 ### 스케줄러 & 스위치
@@ -212,6 +216,11 @@ IndieBiz OS
 - 모든 프로젝트 위에 위치
 - 시스템 전체 설정 관리
 - 시스템 문서를 장기 기억으로 참조
+- **프로젝트 에이전트 위임**: 전문 프로젝트 에이전트에게 작업 배포 가능
+  - `list_project_agents`: 모든 프로젝트와 에이전트 조회
+  - `call_project_agent`: 특정 에이전트에게 작업 위임
+  - 여러 프로젝트에 병렬 위임 가능
+  - 사용자가 명시적으로 요청할 때만 위임
 
 ---
 
@@ -366,10 +375,11 @@ npm run electron:build:win   # Windows
 
 **이 프로젝트는 활발히 개발 중입니다.**
 
-- 17개의 활성 프로젝트 운영 중
-- 17개의 도구 패키지 설치됨
+- 16개의 활성 프로젝트 운영 중
+- 19개의 도구 패키지 설치됨
 - 스케줄러, 스위치, 비즈니스 네트워크 작동 중
 - 고급 자동응답 V2: AI 판단 → 비즈니스 검색 → 응답 생성 → 대기 큐 → 자동 발송
+- 시스템 AI 프로젝트 에이전트 위임
 
 ### 당신의 OS, 당신의 방식
 

@@ -154,24 +154,28 @@ Each project is **completely isolated**. Delete a project, and everything relate
 - Add 1000 tools without overwhelming any single agent
 - Each specialist only sees the tools they need
 
-**Installed Tool Packages:**
+**Installed Tool Packages (19):**
 
 | Package | Description |
 |---------|-------------|
 | android | Android device management (adb) |
 | blog | Blog RAG search and insights |
-| browser-automation | Web automation (Playwright) |
 | culture | Korean cultural data (performances, libraries, exhibitions) |
 | health-record | Personal health data management |
 | information | API Ninjas, travel info, restaurant search |
+| investment | Global financial data (KRX, DART, SEC, Yahoo Finance) |
 | kosis | Korean Statistics (KOSIS) data retrieval |
 | nodejs | JavaScript/Node.js execution |
+| pc-manager | File and storage management, system analysis |
+| photo-manager | Photo library management |
 | python-exec | Python code execution |
+| read-and-see | Document reading and visual analysis |
 | real-estate | Korean real estate data |
 | startup | Korean startup support |
+| study | Study helper and paper summarization |
 | system_essentials | File management, search, utilities |
-| web-crawl | Web page crawling |
-| web-search | Web search (DuckDuckGo, Google News) |
+| visualization | Charts (line, bar, candlestick, pie, scatter, heatmap) |
+| web | Web search and crawling |
 | youtube | YouTube video/audio management |
 
 ### Scheduler & Switches
@@ -212,6 +216,11 @@ Each project is **completely isolated**. Delete a project, and everything relate
 - Sits above all projects
 - Manages system-wide settings
 - References system documentation as long-term memory
+- **Delegation to Project Agents**: Can dispatch tasks to specialized project agents
+  - `list_project_agents`: View all projects and their agents
+  - `call_project_agent`: Delegate tasks to specific agents
+  - Parallel delegation to multiple projects
+  - Only delegates when user explicitly requests it
 
 ---
 
@@ -366,10 +375,11 @@ The human is part of the system:
 
 **This project is under active development.**
 
-- 17 active projects in production use
-- 17 installed tool packages
+- 16 active projects in production use
+- 19 installed tool packages
 - Functional scheduler, switches, and business network
 - Advanced Auto-Response V2: AI judgment → business search → response generation → pending queue → auto-send
+- System AI delegation to project agents
 
 ### Your OS, Your Way
 

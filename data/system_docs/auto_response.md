@@ -148,6 +148,35 @@
 4. **특별 지시** (조건부)
    - 비즈니스 매칭 실패 시: 해당 서비스 없음 안내 지시
 
+### XML 구조 (2026-01-20 통일)
+AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 적용:
+
+**응답 프롬프트 (auto_response.py)**
+```xml
+<response_examples>...</response_examples>
+<current_context>
+  <work_guideline>...</work_guideline>
+  <business_doc>...</business_doc>
+  <searched_business>...</searched_business>
+  <conversation_history>...</conversation_history>
+  <current_message>...</current_message>
+</current_context>
+<no_matching_business>...</no_matching_business>  <!-- 조건부 -->
+<response_instructions>...</response_instructions>
+```
+
+**판단 프롬프트 (ai_judgment.py)**
+```xml
+<judgment_examples>...</judgment_examples>
+<current_context>
+  <message>...</message>
+  <neighbor>...</neighbor>
+  <business_list>...</business_list>
+  <conversation_history>...</conversation_history>
+</current_context>
+<judgment_instructions>...</judgment_instructions>
+```
+
 ### 응답 저장
 
 ```python

@@ -206,4 +206,160 @@ call_agent(
 4. **위임 컨텍스트는 위임 사이클 완료 시 자동 초기화**
 
 ---
-*마지막 업데이트: 2026-01-18*
+
+## 시스템 AI 위임 (System AI Delegation)
+
+시스템 AI가 프로젝트 에이전트에게 작업을 위임하는 시스템.
+
+### 개요
+
+```
+사용자 → 시스템AI → call_project_agent(P, A) → 프로젝트P.에이전트A → 작업 완료 → 자동 보고 → 시스템AI → 사용자
+```
+
+- **일방향 위임**: 시스템 AI → 프로젝트 에이전트 (역방향 불가)
+- 프로젝트 내부의 `call_agent()` 위임 체인과 동일한 구조 사용
+- 시스템 AI Runner가 상주 프로세스로 동작하며 메시지 큐 처리
+
+### 핵심 컴포넌트
+
+| 파일 | 역할 |
+|------|------|
+| `system_ai_runner.py` | 시스템 AI 상주 프로세스, 메시지 큐 처리 |
+| `system_ai_memory.py` | 시스템 AI용 tasks 테이블 |
+| `api_system_ai.py` | `call_project_agent` 도구 정의/실행 |
+| `agent_runner.py` | `system_ai` 채널 처리, 보고 전송 |
+
+### 새 채널: system_ai
+
+`requester_channel`에 새 값 추가:
+
+| 채널 | 응답 대상 |
+|------|----------|
+| `gui` | WebSocket으로 GUI에 전송 |
+| `gmail` | 이메일 회신 |
+| `nostr` | Nostr로 회신 |
+| `system_ai` | 시스템 AI에게 보고 (NEW) |
+
+### call_project_agent 도구
+
+```python
+call_project_agent(
+    project_id="프로젝트ID",
+    agent_id="에이전트ID",
+    message="요청 내용"
+)
+```
+
+동작:
+1. `AgentRunner.agent_registry`에서 대상 에이전트 찾기
+2. 부모 태스크(시스템 AI)의 위임 컨텍스트 업데이트
+3. 프로젝트 에이전트의 DB에 자식 태스크 생성
+4. 에이전트의 `internal_messages` 큐에 메시지 추가
+5. `set_called_agent(True)` 플래그 설정
+
+### 위임 흐름
+
+```
+사용자 "전체 분석해줘" (GUI)
+    ↓
+시스템AI (task_sysai_001 생성)
+    ↓
+call_project_agent("projectA", "analyst", "매출 분석해줘")
+    ↓ did_call_agent=True → 자동 보고 스킵
+프로젝트A.analyst (task_002 생성, parent=task_sysai_001, channel=system_ai)
+    ↓
+작업 수행
+    ↓
+_auto_report_to_chain()
+    ↓ channel == 'system_ai'
+_send_to_system_ai() → SystemAIRunner.send_message()
+    ↓
+task_002 삭제
+    ↓
+시스템AI가 internal_messages에서 결과 수신
+    ↓
+컨텍스트 복원 후 최종 처리
+    ↓
+사용자에게 응답 (WebSocket)
+    ↓
+task_sysai_001 삭제
+```
+
+### SystemAIRunner 클래스
+
+상주 프로세스로 동작하는 시스템 AI 실행기:
+
+```python
+class SystemAIRunner:
+    internal_messages: List[dict] = []  # 메시지 큐
+    _instance: Optional['SystemAIRunner'] = None  # 싱글톤
+
+    @classmethod
+    def send_message(cls, content: str, from_agent: str, task_id: str = None):
+        """외부에서 시스템 AI에게 메시지 전송"""
+
+    def _run_loop(self):
+        """백그라운드 루프 - 1초마다 메시지 큐 폴링"""
+
+    def _check_internal_messages(self):
+        """메시지 처리 및 AI 응답 생성"""
+```
+
+### 병렬 위임 지원
+
+시스템 AI도 여러 프로젝트 에이전트에게 동시 위임 가능:
+
+```
+시스템AI
+    ↓
+call_project_agent(A), call_project_agent(B), call_project_agent(C)
+    ↓
+pending_delegations = 3
+    ↓
+A 완료 → pending=2, 대기
+B 완료 → pending=1, 대기
+C 완료 → pending=0, 통합 보고 → 시스템AI
+```
+
+### 프로젝트 자동 활성화
+
+`call_project_agent` 호출 시 대상 에이전트가 실행 중이 아니면:
+1. 해당 프로젝트의 **모든 활성 에이전트**를 자동 시작
+2. 프로젝트 팀 단위로 작업 수행
+3. 프로젝트 내부에서 자체 위임 체인 사용 가능
+
+```
+시스템AI → call_project_agent("의료", "내과", "두통 진단")
+    ↓
+프로젝트 "의료" 전체 활성화 (내과, 비뇨기과, 심장전문, ...)
+    ↓
+"내과"가 작업 수행
+    ↓ (필요시)
+내과 → call_agent("심장전문", "심장 관련 확인")
+```
+
+### 프로젝트 내부 위임과 동일한 원칙
+
+| 기능 | 프로젝트 내부 | 시스템 AI |
+|------|-------------|-----------|
+| 단일 위임 | ✓ | ✓ |
+| 병렬 위임 | ✓ | ✓ |
+| 위임 컨텍스트 | ✓ | ✓ |
+| 자동 보고 | ✓ | ✓ |
+| 컨텍스트 복원 | ✓ | ✓ |
+
+### 주의사항
+
+1. **일방향만 가능**: 프로젝트 에이전트는 시스템 AI에게 위임 불가
+2. **프로젝트 팀 단위**: 위임 시 프로젝트 전체 에이전트가 활성화됨
+3. **태스크 저장 위치**:
+   - 시스템 AI 태스크 → `data/system_ai_memory.db`
+   - 프로젝트 에이전트 태스크 → 프로젝트별 `conversation.db`
+
+---
+*마지막 업데이트: 2026-01-20*
+
+> 참고: 위임 프롬프트 파일
+> - `fragments/09_delegation.md`: 프로젝트 내 에이전트 간 위임 가이드
+> - `fragments/10_system_ai_delegation.md`: 시스템 AI → 프로젝트 에이전트 위임 가이드

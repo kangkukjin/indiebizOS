@@ -80,17 +80,30 @@ indiebizOS/
 
 ```
 ┌─────────────────────────────────────────┐
-│         공통 설정 (base_prompt.md)       │
+│     공통 설정 (base_prompt_v2.md)        │
 │   - AI 행동 원칙, 도구 사용 가이드       │
 ├─────────────────────────────────────────┤
+│       조건부 프래그먼트 (fragments/)     │
+│   - 06_git.md: git_enabled=true일 때    │
+│   - 09_delegation.md: 에이전트 2개+     │
+│   - 10_system_ai_delegation.md          │
+├─────────────────────────────────────────┤
 │            개별 역할 프롬프트            │
-│   - 시스템 AI: system_ai_config.json    │
+│   - 시스템 AI: system_ai_role.txt       │
 │   - 에이전트: agents.yaml의 role        │
 ├─────────────────────────────────────────┤
 │           컨텍스트 (동적 주입)           │
 │   - 사용자 프로필, 시스템 상태 등        │
 └─────────────────────────────────────────┘
 ```
+
+### 프롬프트 XML 구조
+AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 구조 적용:
+
+- **프래그먼트**: `<git_operations>`, `<agent_delegation>` 등
+- **히스토리**: `<user_message>`, `<assistant_message>`, `<current_user_request>`
+- **자동응답**: `<response_examples>`, `<current_context>`, `<response_instructions>`
+- **판단AI**: `<judgment_examples>`, `<current_context>`, `<judgment_instructions>`
 
 ### AI 프로바이더 시스템 (스트리밍)
 모든 프로바이더가 실시간 스트리밍을 지원합니다:
@@ -106,6 +119,7 @@ indiebizOS/
 - 폴더 기반 탐지 및 동적 로딩
 - AI가 코드와 README를 읽고 직접 사용법 파악
 - `tool.json` + `handler.py` 구조
+- 도구 설명 구조: 한줄 요약 + 데이터 형식 + 예시
 
 ### 자동응답 서비스 V2
 - AI 판단 → 비즈니스 검색 → 응답 생성의 2단계 처리로 정확도 향상
@@ -117,4 +131,4 @@ indiebizOS/
 - 독립 창에서 여러 프로젝트의 에이전트를 소환하여 그룹 대화 수행
 
 ---
-*마지막 업데이트: 2026-01-18*
+*마지막 업데이트: 2026-01-20*

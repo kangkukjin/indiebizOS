@@ -6,13 +6,13 @@
   "tools": [
     {
       "name": "line_chart",
-      "description": "라인 차트 생성. 시계열/추이 분석용.\n\n## 데이터 형식\n- 단일: [{x: '2024-01', y: 100}, ...]\n- 복수: [{x: '2024-01', samsung: 100, palantir: 200}, ...]\n- 키 이름이 범례에 표시됨. 실제 항목명 사용할 것.\n\n## 예시\ndata=[{x:'2024-01', samsung:100, palantir:150}]",
+      "description": "라인 차트 생성. x-y 데이터를 선으로 연결하여 시각화. 수학 함수, 시계열, 가격 추이 등 모든 연속 데이터에 사용.\n\n데이터 형식: [{x: 값, y: 값}, ...] 또는 [{x: 값, series1: 값, series2: 값}, ...]\n\n예시: data=[{x:1, y:1}, {x:2, y:4}, {x:3, y:9}]",
       "input_schema": {
         "type": "object",
         "properties": {
           "data": {
             "type": "array",
-            "description": "데이터 배열. 키 이름이 범례에 표시되므로 실제 항목명 사용 (예: {x:'2024-01', samsung:100, palantir:50})",
+            "description": "데이터 배열. [{x: 값, y: 값}, ...] 또는 여러 시리즈: [{x: 값, gold: 100, silver: 50}, ...]",
             "items": {"type": "object"}
           },
           "title": {
@@ -43,7 +43,7 @@
     },
     {
       "name": "bar_chart",
-      "description": "막대 차트를 생성합니다. (Plotly/Matplotlib)\n\n## 용도\n항목별 비교 (매출 비교, 지역별 가격, 카테고리별 수량)\n\n## 반환 정보\n- 생성된 파일 경로 (PNG/HTML)\n- base64 인코딩 이미지 데이터 (base64 형식 선택시)\n\n## 데이터 형식\n- 단일 값: [{label: '서울', value: 500}, ...]\n- 복수 값: [{label: '서울', value1: 500, value2: 300}, ...]\n\n## 옵션\n- horizontal: 가로 막대 (true/false)\n- stacked: 누적 막대 (true/false)\n\n## 예시\n지역별 판매량 → data=[{label:'서울', value:500}, {label:'부산', value:300}], horizontal=true",
+      "description": "막대 차트 생성. 카테고리별 값을 막대로 비교. 항목별 비교, 순위, 분포 등 이산 데이터에 사용.\n\n데이터 형식: [{label: '항목명', value: 값}, ...] 또는 [{label: '항목명', a: 값, b: 값}, ...]\n\n예시: data=[{label:'A', value:100}, {label:'B', value:200}]",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -94,7 +94,7 @@
     },
     {
       "name": "candlestick_chart",
-      "description": "캔들스틱 차트를 생성합니다. (Plotly/Matplotlib)\n\n## 용도\n주식/암호화폐 가격 변동 분석, OHLC 데이터 시각화\n\n## 반환 정보\n- 생성된 파일 경로 (PNG/HTML)\n- 캔들 색상: 상승(빨강), 하락(파랑)\n\n## 데이터 형식 (OHLC)\n[{date: '2024-01-01', open: 100, high: 110, low: 95, close: 105, volume: 1000}, ...]\n- date: 날짜 (필수)\n- open, high, low, close: 시가/고가/저가/종가 (필수)\n- volume: 거래량 (선택)\n\n## 옵션\n- show_volume: 거래량 차트 표시 (true/false)\n- ma_periods: 이동평균선 기간 배열 [5, 20, 60]\n\n## 예시\n삼성전자 주가 차트 → data=[OHLC 데이터], show_volume=true, ma_periods=[5, 20]",
+      "description": "캔들스틱 차트 생성. OHLC(시가/고가/저가/종가) 데이터를 캔들 형태로 시각화.\n\n데이터 형식: [{date: '날짜', open: 시가, high: 고가, low: 저가, close: 종가, volume: 거래량}, ...]\n\n예시: data=[{date:'2024-01-01', open:100, high:110, low:95, close:105}]",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -132,7 +132,7 @@
     },
     {
       "name": "pie_chart",
-      "description": "파이 차트를 생성합니다. (Plotly/Matplotlib)\n\n## 용도\n구성비, 비율 분석 (포트폴리오 구성, 카테고리 비율, 점유율)\n\n## 반환 정보\n- 생성된 파일 경로 (PNG/HTML)\n- 각 항목의 퍼센트 표시\n\n## 데이터 형식\n[{label: '주식', value: 60}, {label: '채권', value: 30}, {label: '현금', value: 10}]\n- label: 항목명\n- value: 값 (자동으로 비율 계산)\n\n## 옵션\n- donut: 도넛 차트 (true/false)\n- show_percentage: 퍼센트 표시 (true/false)\n\n## 예시\n포트폴리오 구성 → data=[{label:'주식', value:60}, {label:'채권', value:30}], donut=true",
+      "description": "파이 차트 생성. 전체 대비 각 항목의 비율을 원형으로 시각화.\n\n데이터 형식: [{label: '항목명', value: 값}, ...]\n\n예시: data=[{label:'A', value:60}, {label:'B', value:30}, {label:'C', value:10}]",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -170,7 +170,7 @@
     },
     {
       "name": "scatter_plot",
-      "description": "산점도를 생성합니다. (Plotly/Matplotlib)\n\n## 용도\n두 변수 간의 관계, 분포 분석, 상관관계 시각화\n\n## 반환 정보\n- 생성된 파일 경로 (PNG/HTML)\n- 추세선 포함 시 회귀 정보\n\n## 데이터 형식\n[{x: 10, y: 20}, {x: 15, y: 25}, ...]\n- x, y: 좌표값 (필수)\n- label: 점 레이블 (선택)\n- size: 점 크기 (선택)\n\n## 옵션\n- show_trendline: 추세선 표시 (true/false)\n\n## 예시\n가격 vs 거래량 관계 → data=[{x:100, y:1000}, {x:150, y:800}], show_trendline=true",
+      "description": "산점도 생성. x-y 좌표에 점을 찍어 두 변수 간의 관계나 분포를 시각화.\n\n데이터 형식: [{x: 값, y: 값}, ...]\n\n예시: data=[{x:10, y:20}, {x:15, y:25}, {x:20, y:35}]",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -211,7 +211,7 @@
     },
     {
       "name": "heatmap",
-      "description": "히트맵을 생성합니다. (Plotly/Matplotlib)\n\n## 용도\n상관관계, 밀도, 행렬 데이터 시각화, 패턴 분석\n\n## 반환 정보\n- 생성된 파일 경로 (PNG/HTML)\n- 색상 스케일 범례\n\n## 데이터 형식\n1. 2D 배열: [[1, 2, 3], [4, 5, 6], [7, 8, 9]]\n2. 딕셔너리: [{row: 'A', col: 'X', value: 10}, ...]\n\n## 색상 스케일 (color_scale)\n- viridis (기본값), plasma, inferno, magma\n- blues, reds, greens\n\n## 예시\n상관계수 행렬 → data=[[1, 0.8, 0.5], [0.8, 1, 0.3], [0.5, 0.3, 1]], x_labels=['A','B','C']",
+      "description": "히트맵 생성. 2D 행렬 데이터를 색상 강도로 시각화. 상관관계, 밀도, 패턴 분석에 사용.\n\n데이터 형식: [[값, 값, ...], [값, 값, ...], ...] (2D 배열)\n\n예시: data=[[1, 2, 3], [4, 5, 6], [7, 8, 9]]",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -259,7 +259,7 @@
     },
     {
       "name": "multi_chart",
-      "description": "여러 차트를 하나의 이미지/페이지에 배치합니다. (Plotly/Matplotlib)\n\n## 용도\n대시보드 형태 출력, 여러 지표 동시 비교, 리포트 생성\n\n## 반환 정보\n- 생성된 파일 경로 (PNG/HTML)\n- 배치 정보 (rows x cols)\n\n## 차트 정의 형식\n[{type: 'line', data: [...], title: '차트1'}, {type: 'bar', data: [...], title: '차트2'}]\n- type: line, bar, pie, scatter (candlestick, heatmap 미지원)\n- data: 각 차트 유형에 맞는 데이터\n- title: 개별 차트 제목\n\n## 레이아웃 (layout)\n- auto: 차트 수에 따라 자동 (기본값)\n- 2x2, 2x1, 1x2, 3x1, 1x3 등\n\n## 예시\n월간 리포트 → charts=[{type:'line', data:[...]}, {type:'pie', data:[...]}], layout='2x1'",
+      "description": "여러 차트를 하나의 이미지에 배치. 대시보드나 비교 차트 생성에 사용.\n\n데이터 형식: [{type: 'line'|'bar'|'pie'|'scatter', data: [...], title: '제목'}, ...]\n\n예시: charts=[{type:'line', data:[{x:1,y:1}], title:'차트1'}, {type:'bar', data:[{label:'A',value:10}], title:'차트2'}]",
       "input_schema": {
         "type": "object",
         "properties": {

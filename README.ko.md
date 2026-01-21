@@ -154,7 +154,7 @@ IndieBiz OS
 - 1000개의 도구를 추가해도 단일 에이전트가 압도당하지 않음
 - 각 전문가는 필요한 도구만 확인
 
-**설치된 도구 패키지 (19개):**
+**설치된 도구 패키지 (20개):**
 
 | 패키지 | 설명 |
 |--------|------|
@@ -165,6 +165,7 @@ IndieBiz OS
 | information | API Ninjas, 여행 정보, 맛집 검색 |
 | investment | 글로벌 금융 데이터 (KRX, DART, SEC, Yahoo Finance) |
 | kosis | 통계청 데이터 조회 (KOSIS) |
+| media_producer | HTML 기반 슬라이드(12종 테마), 영상 제작, AI 이미지 생성 |
 | nodejs | JavaScript/Node.js 실행 |
 | pc-manager | 파일 및 저장소 관리, 시스템 분석 |
 | photo-manager | 사진 라이브러리 관리 |

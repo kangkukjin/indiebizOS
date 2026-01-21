@@ -154,7 +154,7 @@ Each project is **completely isolated**. Delete a project, and everything relate
 - Add 1000 tools without overwhelming any single agent
 - Each specialist only sees the tools they need
 
-**Installed Tool Packages (19):**
+**Installed Tool Packages (20):**
 
 | Package | Description |
 |---------|-------------|
@@ -165,6 +165,7 @@ Each project is **completely isolated**. Delete a project, and everything relate
 | information | API Ninjas, travel info, restaurant search |
 | investment | Global financial data (KRX, DART, SEC, Yahoo Finance) |
 | kosis | Korean Statistics (KOSIS) data retrieval |
+| media_producer | HTML-based slides (12 themes), video production, AI image generation |
 | nodejs | JavaScript/Node.js execution |
 | pc-manager | File and storage management, system analysis |
 | photo-manager | Photo library management |

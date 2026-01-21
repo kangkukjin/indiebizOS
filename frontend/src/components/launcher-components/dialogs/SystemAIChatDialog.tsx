@@ -5,9 +5,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Send, Bot, RefreshCw, Paperclip, Camera, FileText, History, ListTodo, CheckCircle2, Circle, Loader2, HelpCircle, FileEdit, Check, XCircle, Square } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { api } from '../../../lib/api';
 import { CameraPreview } from '../../CameraPreview';
 import { SystemAIChatHistoryDialog } from './SystemAIChatHistoryDialog';
+import { RouteMap, type RouteMapData } from '../../RouteMap';
+import { LocationMap, type LocationMapData } from '../../LocationMap';
 
 interface ImageAttachment {
   file: File;
@@ -47,6 +50,114 @@ interface PlanModeState {
 
 // 텍스트 파일 확장자 목록
 const TEXT_EXTENSIONS = ['.txt', '.md', '.json', '.yaml', '.yml', '.xml', '.csv', '.log', '.py', '.js', '.ts', '.tsx', '.jsx', '.html', '.css', '.sql', '.sh', '.env', '.ini', '.conf', '.toml'];
+
+// 이미지 경로 패턴 감지 및 파싱
+function parseImagePaths(content: string): { text: string; images: string[] } {
+  const images: string[] = [];
+
+  // 패턴 1: [IMAGE:/path/to/file.jpg] 형식
+  const imageTagPattern = /\[IMAGE:(\/[^\]]+\.(jpg|jpeg|png|gif|webp))\]/gi;
+
+  // 패턴 2: 일반 파일 경로 (outputs, captures, charts 폴더 내 이미지)
+  // 백틱이나 따옴표로 감싸진 경로도 포함
+  const filePathPattern = /`?(\/[^\s`'"\n]+\/(outputs|captures|charts)\/[^\s`'"\n]+\.(jpg|jpeg|png|gif|webp))`?/gi;
+
+  let text = content;
+
+  // [IMAGE:path] 패턴 추출 및 제거
+  let match;
+  while ((match = imageTagPattern.exec(content)) !== null) {
+    images.push(match[1]);
+  }
+  text = text.replace(imageTagPattern, '');
+
+  // 파일 경로 패턴 추출 및 제거
+  while ((match = filePathPattern.exec(content)) !== null) {
+    if (!images.includes(match[1])) {
+      images.push(match[1]);
+    }
+  }
+  text = text.replace(filePathPattern, '');
+
+  return { text: text.trim(), images };
+}
+
+// 지도 데이터 패턴 감지 및 파싱 (route_map, location_map 모두 지원)
+function parseMapData(content: string): { text: string; routeMaps: RouteMapData[]; locationMaps: LocationMapData[] } {
+  const routeMaps: RouteMapData[] = [];
+  const locationMaps: LocationMapData[] = [];
+  let text = content;
+
+  // [MAP:{...}] 패턴 찾기 - JSON 내부의 ]를 피하기 위해 수동 파싱
+  const mapStart = '[MAP:';
+  let startIdx = text.indexOf(mapStart);
+
+  while (startIdx !== -1) {
+    const jsonStart = startIdx + mapStart.length;
+
+    // JSON 끝 찾기: 중괄호 카운팅
+    let braceCount = 0;
+    let jsonEnd = -1;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = jsonStart; i < text.length; i++) {
+      const char = text[i];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (char === '\\' && inString) {
+        escaped = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (inString) continue;
+
+      if (char === '{') {
+        braceCount++;
+      } else if (char === '}') {
+        braceCount--;
+        if (braceCount === 0) {
+          // ] 확인
+          if (text[i + 1] === ']') {
+            jsonEnd = i + 2;
+            break;
+          }
+        }
+      }
+    }
+
+    if (jsonEnd !== -1) {
+      const jsonStr = text.substring(jsonStart, jsonEnd - 1);
+      try {
+        const mapData = JSON.parse(jsonStr);
+        if (mapData.type === 'route_map') {
+          routeMaps.push(mapData as RouteMapData);
+        } else if (mapData.type === 'location_map') {
+          locationMaps.push(mapData as LocationMapData);
+        }
+      } catch {
+        // JSON 파싱 실패 시 무시
+      }
+
+      // 태그 제거
+      text = text.substring(0, startIdx) + text.substring(jsonEnd);
+      startIdx = text.indexOf(mapStart);
+    } else {
+      break;
+    }
+  }
+
+  return { text: text.trim(), routeMaps, locationMaps };
+}
 
 interface DialogSize {
   width: number;
@@ -437,6 +548,24 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
             setCurrentToolActivity(null);
             setToolHistory([]);  // 도구 이력 초기화
             setTodos([]);  // TODO 리스트 초기화
+            lastRequestRef.current = null;
+            ws.close();
+            break;
+
+          case 'delegated':
+            // 위임됨 - 연결 유지, 결과 대기
+            setCurrentToolActivity('⏳ 에이전트가 작업 중... 결과를 기다리는 중');
+            // 로딩 상태 유지, 연결 닫지 않음
+            break;
+
+          case 'system_ai_report':
+            // 위임된 작업의 결과 보고
+            setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
+            setIsLoading(false);
+            setStreamingContent('');
+            setCurrentToolActivity(null);
+            setToolHistory([]);
+            setTodos([]);
             lastRequestRef.current = null;
             ws.close();
             break;
@@ -858,7 +987,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
             </div>
             <div className="bg-white rounded-lg p-3 border border-purple-100 mb-3">
               <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 text-gray-700">
-                <ReactMarkdown>{planMode.plan_content || ''}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{planMode.plan_content || ''}</ReactMarkdown>
               </div>
             </div>
             <div className="flex justify-end gap-2">
@@ -943,9 +1072,53 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
                     </div>
                   )}
                   {msg.role === 'assistant' ? (
-                    <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
+                    (() => {
+                      // 먼저 이미지 파싱
+                      const parsedImages = parseImagePaths(msg.content);
+                      // 이미지 제거 후 지도 파싱
+                      const parsedMaps = parseMapData(parsedImages.text);
+                      return (
+                        <>
+                          {/* 생성된 이미지 표시 (차트 등) */}
+                          {parsedImages.images.length > 0 && (
+                            <div className="mb-2 space-y-2">
+                              {parsedImages.images.map((imgPath, imgIdx) => (
+                                <img
+                                  key={`gen-img-${imgIdx}`}
+                                  src={`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`}
+                                  alt={`생성된 이미지 ${imgIdx + 1}`}
+                                  className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => window.electron?.openExternal(`file://${imgPath}`)}
+                                  title="클릭하여 원본 보기"
+                                />
+                              ))}
+                            </div>
+                          )}
+                          {/* 경로 지도 표시 */}
+                          {parsedMaps.routeMaps.length > 0 && (
+                            <div className="mb-2 space-y-2">
+                              {parsedMaps.routeMaps.map((mapData, mapIdx) => (
+                                <RouteMap key={`route-${mapIdx}`} data={mapData} />
+                              ))}
+                            </div>
+                          )}
+                          {/* 위치 지도 표시 */}
+                          {parsedMaps.locationMaps.length > 0 && (
+                            <div className="mb-2 space-y-2">
+                              {parsedMaps.locationMaps.map((mapData, mapIdx) => (
+                                <LocationMap key={`location-${mapIdx}`} data={mapData} />
+                              ))}
+                            </div>
+                          )}
+                          {/* 텍스트 내용 */}
+                          {parsedMaps.text && (
+                            <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsedMaps.text}</ReactMarkdown>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()
                   ) : (
                     msg.content && <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                   )}
@@ -1024,7 +1197,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
                 {/* 스트리밍 텍스트 표시 */}
                 {streamingContent ? (
                   <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
-                    <ReactMarkdown>{streamingContent}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingContent}</ReactMarkdown>
                     <span className="inline-block w-2 h-4 bg-amber-400 animate-pulse ml-0.5" />
                   </div>
                 ) : !currentToolActivity && (

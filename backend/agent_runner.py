@@ -136,10 +136,7 @@ class AgentRunner:
     def _build_system_prompt(self, role: str) -> str:
         """시스템 프롬프트 구성 (동적 조합)
 
-        Anthropic Claude Code 방식으로 상황에 따라 필요한 프롬프트만 조합합니다.
-        - 에이전트가 1명이면 위임 프롬프트 제외
-        - Git 도구가 없으면 Git 프롬프트 제외
-        - 등등...
+        구조: base_prompt_v2.md + (조건부 위임 프롬프트) + 개별역할 + 영구메모
         """
         from prompt_builder import build_agent_prompt
 
@@ -154,13 +151,7 @@ class AgentRunner:
         # 3. Git 활성화 여부 (run_command가 있고 프로젝트에 .git이 있으면)
         git_enabled = "run_command" in tools and (self.project_path / ".git").exists()
 
-        # 4. 프로젝트 공통 설정
-        project_settings = ""
-        common_file = self.project_path / "common_settings.txt"
-        if common_file.exists():
-            project_settings = common_file.read_text(encoding='utf-8').strip()
-
-        # 5. 에이전트별 메모
+        # 4. 에이전트별 영구메모
         agent_notes = ""
         note_file = self.project_path / f"agent_{agent_name}_note.txt"
         if note_file.exists():
@@ -171,7 +162,6 @@ class AgentRunner:
             agent_name=agent_name,
             role=role,
             agent_count=agent_count,
-            project_settings=project_settings,
             agent_notes=agent_notes,
             git_enabled=git_enabled
         )
@@ -728,6 +718,27 @@ class AgentRunner:
             import traceback
             traceback.print_exc()
 
+    def _send_to_system_ai(self, task_id: str, response: str, from_agent: str):
+        """시스템 AI에게 결과 전송"""
+        my_name = self.config.get('name', '')
+
+        try:
+            from system_ai_runner import SystemAIRunner
+
+            # 시스템 AI에게 메시지 전송
+            report_msg = f"[task:{task_id}] 완료.\n{response}"
+            SystemAIRunner.send_message(
+                content=report_msg,
+                from_agent=my_name,
+                task_id=task_id
+            )
+            print(f"[시스템 AI 전송] {my_name} → 시스템 AI: {task_id}")
+
+        except Exception as e:
+            print(f"[시스템 AI 전송] 실패: {e}")
+            import traceback
+            traceback.print_exc()
+
     def _send_response_to_sender(self, from_agent: str, response: str):
         """발신자에게 응답 전송"""
         my_name = self.config.get('name', '')
@@ -784,7 +795,13 @@ class AgentRunner:
 
             # 1. parent_task_id가 있으면 → 부모 태스크에 응답 누적 + 조건부 보고
             if parent_task_id:
-                parent_task = self.db.get_task(parent_task_id)
+                # 시스템 AI 채널인 경우 시스템 AI DB에서 부모 태스크 조회
+                if channel == 'system_ai':
+                    from system_ai_memory import get_task as get_system_ai_task
+                    parent_task = get_system_ai_task(parent_task_id)
+                else:
+                    parent_task = self.db.get_task(parent_task_id)
+
                 if parent_task:
                     # 부모 태스크의 delegation_context에 응답 누적
                     delegation_context_str = parent_task.get('delegation_context')
@@ -811,10 +828,17 @@ class AgentRunner:
 
                                 # pending_delegations 감소 및 컨텍스트 업데이트 (원자적 수행)
                                 # Race Condition 방지: EXCLUSIVE 트랜잭션 사용
-                                remaining = self.db.decrement_pending_and_update_context(
-                                    parent_task_id,
-                                    json.dumps(delegation_context, ensure_ascii=False)
-                                )
+                                if channel == 'system_ai':
+                                    from system_ai_memory import decrement_pending_and_update_context as sys_decrement
+                                    remaining = sys_decrement(
+                                        parent_task_id,
+                                        json.dumps(delegation_context, ensure_ascii=False)
+                                    )
+                                else:
+                                    remaining = self.db.decrement_pending_and_update_context(
+                                        parent_task_id,
+                                        json.dumps(delegation_context, ensure_ascii=False)
+                                    )
 
                                 print(f"[자동 보고] 응답 누적: {task_id} → {parent_task_id} (남은 위임: {remaining}/{total_delegations})")
 
@@ -845,28 +869,34 @@ class AgentRunner:
                     # 부모 태스크의 delegated_to가 보고 받을 에이전트
                     report_to = parent_task.get('delegated_to')
                     if report_to:
-                        # 같은 프로젝트 내에서 보고 대상 찾기
-                        target = AgentRunner.get_agent_by_name(report_to, project_id=self.project_id)
-                        if target:
-                            # 부모 태스크 ID로 보고
-                            report_msg = f"[task:{parent_task_id}] 완료.\n{result_summary}"
-                            target_key = target.registry_key
-
-                            msg_dict = {
-                                'content': report_msg,
-                                'from_agent': my_name,
-                                'task_id': parent_task_id,
-                                'timestamp': datetime.now().isoformat()
-                            }
-
-                            with AgentRunner._lock:
-                                if target_key not in AgentRunner.internal_messages:
-                                    AgentRunner.internal_messages[target_key] = []
-                                AgentRunner.internal_messages[target_key].append(msg_dict)
-
-                            print(f"[자동 보고] {my_name} → {report_to}: {task_id} → {parent_task_id}")
+                        # 시스템 AI 채널이고 보고 대상이 system_ai인 경우
+                        if channel == 'system_ai' and report_to == 'system_ai':
+                            # 시스템 AI에게 직접 보고
+                            self._send_to_system_ai(parent_task_id, result_summary, my_name)
+                            print(f"[자동 보고] {my_name} → 시스템 AI: {task_id} → {parent_task_id}")
                         else:
-                            print(f"[자동 보고] 상위 에이전트를 찾을 수 없음: {report_to}")
+                            # 같은 프로젝트 내에서 보고 대상 찾기
+                            target = AgentRunner.get_agent_by_name(report_to, project_id=self.project_id)
+                            if target:
+                                # 부모 태스크 ID로 보고
+                                report_msg = f"[task:{parent_task_id}] 완료.\n{result_summary}"
+                                target_key = target.registry_key
+
+                                msg_dict = {
+                                    'content': report_msg,
+                                    'from_agent': my_name,
+                                    'task_id': parent_task_id,
+                                    'timestamp': datetime.now().isoformat()
+                                }
+
+                                with AgentRunner._lock:
+                                    if target_key not in AgentRunner.internal_messages:
+                                        AgentRunner.internal_messages[target_key] = []
+                                    AgentRunner.internal_messages[target_key].append(msg_dict)
+
+                                print(f"[자동 보고] {my_name} → {report_to}: {task_id} → {parent_task_id}")
+                            else:
+                                print(f"[자동 보고] 상위 에이전트를 찾을 수 없음: {report_to}")
                 else:
                     print(f"[자동 보고] 부모 태스크를 찾을 수 없음: {parent_task_id}")
 
@@ -880,6 +910,9 @@ class AgentRunner:
                     else:
                         # ws_client_id가 없으면 발신자에게 응답
                         self._send_response_to_sender(from_agent, result_summary)
+                elif channel == 'system_ai':
+                    # 시스템 AI 채널: 시스템 AI에게 결과 전송
+                    self._send_to_system_ai(task_id, result_summary, from_agent)
                 elif channel in ('gmail', 'nostr'):
                     # 외부 채널: Gmail/Nostr로 전송
                     self._send_to_external_channel(channel, requester, result_summary, task_id)

@@ -108,10 +108,15 @@ def _create_with_plotly(data, title, x_labels, y_labels, color_scale,
 
     result = common.save_plotly_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    summary = f"히트맵 생성 완료 ({len(data)}x{len(data[0])} 행렬)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"히트맵 생성 완료 ({len(data)}x{len(data[0])} 행렬)"
+        "summary": summary
     }
 
 
@@ -169,8 +174,13 @@ def _create_with_matplotlib(data, title, x_labels, y_labels, color_scale,
 
     result = common.save_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    summary = f"히트맵 생성 완료 ({len(data)}x{len(data[0])} 행렬)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"히트맵 생성 완료 ({len(data)}x{len(data[0])} 행렬)"
+        "summary": summary
     }

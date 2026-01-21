@@ -8,7 +8,8 @@ from fastapi import APIRouter, HTTPException
 
 from api_models import (
     IndieNetPostRequest, IndieNetDMRequest, IndieNetSettingsUpdate,
-    IndieNetDisplayNameUpdate, IndieNetImportNsec
+    IndieNetDisplayNameUpdate, IndieNetImportNsec,
+    IndieNetBoardCreate, IndieNetBoardPostRequest
 )
 from indienet import get_indienet
 
@@ -231,6 +232,119 @@ async def send_indienet_dm(data: IndieNetDMRequest):
             }
         else:
             raise HTTPException(status_code=500, detail="DM 전송 실패")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ 보드 (커스텀 해시태그 게시판) API ============
+
+@router.get("/indienet/boards")
+async def get_indienet_boards():
+    """보드 목록 조회"""
+    try:
+        indienet = get_indienet()
+        boards = indienet.get_boards()
+        active_board = indienet.get_active_board()
+        return {
+            "boards": boards,
+            "active_board": active_board,
+            "count": len(boards)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/indienet/boards")
+async def create_indienet_board(data: IndieNetBoardCreate):
+    """새 보드 생성"""
+    try:
+        indienet = get_indienet()
+        if not indienet.is_initialized():
+            raise HTTPException(status_code=400, detail="IndieNet이 초기화되지 않음")
+
+        board = indienet.create_board(name=data.name, hashtag=data.hashtag)
+        return {"status": "created", "board": board}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/indienet/boards/{hashtag}")
+async def delete_indienet_board(hashtag: str):
+    """보드 삭제"""
+    try:
+        indienet = get_indienet()
+        success = indienet.delete_board(hashtag)
+        if success:
+            return {"status": "deleted", "hashtag": hashtag}
+        else:
+            raise HTTPException(status_code=404, detail="보드를 찾을 수 없습니다")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/indienet/boards/active")
+async def set_active_board(hashtag: Optional[str] = None):
+    """활성 보드 설정 (hashtag=null이면 기본 IndieNet)"""
+    try:
+        indienet = get_indienet()
+        success = indienet.set_active_board(hashtag)
+        if success:
+            return {
+                "status": "changed",
+                "active_board": indienet.get_active_board()
+            }
+        else:
+            raise HTTPException(status_code=404, detail="보드를 찾을 수 없습니다")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/indienet/boards/{hashtag}/posts")
+async def get_board_posts(hashtag: str, limit: int = 50, since: Optional[int] = None):
+    """특정 보드의 게시글 조회"""
+    try:
+        indienet = get_indienet()
+        if not indienet.is_initialized():
+            raise HTTPException(status_code=400, detail="IndieNet이 초기화되지 않음")
+
+        posts = indienet.fetch_board_posts(hashtag=hashtag, limit=limit, since=since)
+        return {"posts": posts, "count": len(posts), "hashtag": hashtag}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/indienet/boards/post")
+async def post_to_board(data: IndieNetBoardPostRequest):
+    """보드에 글 게시"""
+    try:
+        indienet = get_indienet()
+        if not indienet.is_initialized():
+            raise HTTPException(status_code=400, detail="IndieNet이 초기화되지 않음")
+
+        event_id = indienet.post_to_board(content=data.content, hashtag=data.hashtag)
+
+        if event_id:
+            import time
+            return {
+                "status": "posted",
+                "event_id": event_id,
+                "hashtag": data.hashtag or indienet.settings.active_board or "indienet",
+                "created_at": int(time.time())
+            }
+        else:
+            raise HTTPException(status_code=500, detail="게시 실패")
     except HTTPException:
         raise
     except Exception as e:

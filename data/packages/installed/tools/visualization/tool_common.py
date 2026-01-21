@@ -2,9 +2,80 @@
 시각화 공통 유틸리티
 """
 import os
+import json
 import base64
 from pathlib import Path
 from datetime import datetime
+
+MAX_POINTS = 300  # 최대 데이터 포인트 수
+
+
+def load_data_from_file(file_path: str) -> list:
+    """파일에서 데이터 로드 (JSON/CSV)"""
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"파일을 찾을 수 없습니다: {file_path}")
+
+    suffix = path.suffix.lower()
+
+    if suffix == '.json':
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    elif suffix == '.csv':
+        import csv
+        data = []
+        with open(path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                converted = {}
+                for k, v in row.items():
+                    try:
+                        converted[k] = float(v) if '.' in v else int(v)
+                    except (ValueError, TypeError):
+                        converted[k] = v
+                data.append(converted)
+        return data
+    else:
+        raise ValueError(f"지원하지 않는 파일 형식: {suffix}")
+
+
+def sample_data(data: list, max_points: int = MAX_POINTS) -> tuple:
+    """
+    데이터 샘플링 - 일정 간격으로 추출하되 처음과 끝은 유지
+
+    Returns:
+        (sampled_data, original_count, was_sampled)
+    """
+    original_count = len(data)
+    if original_count <= max_points:
+        return data, original_count, False
+
+    step = (original_count - 1) / (max_points - 1)
+    indices = [int(i * step) for i in range(max_points - 1)]
+    indices.append(original_count - 1)
+    indices = sorted(set(indices))
+
+    return [data[i] for i in indices], original_count, True
+
+
+def load_and_sample(data: list = None, data_file: str = None, max_points: int = MAX_POINTS) -> tuple:
+    """
+    데이터 로드 및 샘플링 통합 함수
+
+    Returns:
+        (data, original_count, was_sampled, error_message)
+    """
+    if data_file:
+        try:
+            data = load_data_from_file(data_file)
+        except Exception as e:
+            return None, 0, False, f"파일 로드 실패: {e}"
+
+    if not data:
+        return None, 0, False, "데이터가 비어있습니다. data 또는 data_file을 제공하세요."
+
+    sampled_data, original_count, was_sampled = sample_data(data, max_points)
+    return sampled_data, original_count, was_sampled, None
 
 # 기본 출력 경로 (indiebizOS/data/outputs/charts)
 def _get_output_dir():
@@ -96,7 +167,7 @@ def save_figure(fig, output_path: str = None, output_format: str = "png"):
         fig.savefig(output_path, dpi=150, bbox_inches='tight',
                     facecolor='white', edgecolor='none')
         plt.close(fig)
-        return {"format": "png", "path": output_path}
+        return {"format": "png", "path": output_path, "image_tag": f"[IMAGE:{output_path}]"}
 
     else:
         plt.close(fig)
@@ -118,7 +189,7 @@ def save_plotly_figure(fig, output_path: str = None, output_format: str = "png")
     elif output_format == "png":
         output_path = generate_output_path("chart", "png")
         fig.write_image(output_path, scale=2)
-        return {"format": "png", "path": output_path}
+        return {"format": "png", "path": output_path, "image_tag": f"[IMAGE:{output_path}]"}
 
     else:
         return {"format": output_format, "error": f"지원하지 않는 형식: {output_format}"}

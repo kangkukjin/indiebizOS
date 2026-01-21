@@ -99,18 +99,18 @@ def build_agent_prompt(
     agent_name: str,
     role: str = "",
     agent_count: int = 1,
-    project_settings: str = "",
     agent_notes: str = "",
     git_enabled: bool = False
 ) -> str:
     """프로젝트 에이전트용 시스템 프롬프트 생성
 
+    구조: base_prompt_v2.md + (조건부 위임) + 개별역할 + 영구메모
+
     Args:
         agent_name: 에이전트 이름
-        role: 에이전트 역할 설명
+        role: 개별역할
         agent_count: 프로젝트 내 에이전트 수
-        project_settings: 프로젝트 공통 설정
-        agent_notes: 에이전트별 메모
+        agent_notes: 영구메모
         git_enabled: Git 관련 프롬프트 포함 여부
 
     Returns:
@@ -118,19 +118,16 @@ def build_agent_prompt(
     """
     builder = PromptBuilder()
 
-    # 역할 프롬프트 구성
+    # 개별역할 구성
     role_parts = [f"당신은 '{agent_name}'입니다."]
     if role:
         role_parts.append(role)
     role_prompt = "\n".join(role_parts)
 
-    # 추가 컨텍스트 구성
-    additional_parts = []
-    if project_settings:
-        additional_parts.append(f"# Project Guidelines\n{project_settings}")
+    # 영구메모
+    additional_context = ""
     if agent_notes:
-        additional_parts.append(f"# Notes\n{agent_notes}")
-    additional_context = "\n\n".join(additional_parts)
+        additional_context = f"# Notes\n{agent_notes}"
 
     return builder.build(
         agent_count=agent_count,
@@ -142,36 +139,37 @@ def build_agent_prompt(
 
 def build_system_ai_prompt(
     user_profile: str = "",
-    role: str = None
+    git_enabled: bool = False
 ) -> str:
     """시스템 AI용 시스템 프롬프트 생성
 
-    구조: 공통설정(base_prompt.md) + 개별역할(role) + 사용자정보
+    구조: base_prompt_v2.md + (조건부 git) + 위임 프롬프트 + 개별역할 + 시스템메모
 
     Args:
-        user_profile: 사용자 프로필
-        role: 개별역할 프롬프트 (None이면 파일에서 로드)
+        user_profile: 사용자 프로필 (시스템 메모)
+        git_enabled: Git 관련 프롬프트 포함 여부
 
     Returns:
         조합된 시스템 프롬프트
     """
-    # 역할 프롬프트를 별도 파일에서 로드 (프로젝트 에이전트와 동일한 구조)
-    if role is None:
-        role_path = Path(__file__).parent.parent / "data" / "system_ai_role.txt"
-        if role_path.exists():
-            role = role_path.read_text(encoding='utf-8')
-        else:
-            role = ""
+    # 개별역할 파일에서 로드
+    role_path = Path(__file__).parent.parent / "data" / "system_ai_role.txt"
+    role = role_path.read_text(encoding='utf-8') if role_path.exists() else ""
 
     builder = PromptBuilder()
 
-    # 시스템 AI는 위임 기능 없음, Git도 기본 비활성화
+    # 시스템 AI 기본 프롬프트 (git_enabled 조건부)
     prompt = builder.build(
         agent_count=1,
-        git_enabled=False
+        git_enabled=git_enabled
     )
 
     parts = [prompt]
+
+    # 시스템 AI 전용 위임 프롬프트 추가
+    delegation_prompt = builder._load_file("fragments/10_system_ai_delegation.md")
+    if delegation_prompt:
+        parts.append(delegation_prompt)
 
     # 개별역할 추가 (프로젝트 에이전트의 role_description과 동일한 개념)
     if role and role.strip():
@@ -180,8 +178,6 @@ def build_system_ai_prompt(
     # 시스템 메모 추가
     if user_profile and user_profile.strip():
         parts.append(f"# 시스템 메모\n{user_profile.strip()}")
-
-    parts.append("지금부터 사용자와 대화합니다.")
 
     return "\n\n".join(parts)
 

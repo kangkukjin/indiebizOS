@@ -89,10 +89,15 @@ def _create_with_plotly(data, title, show_percentage, donut, output_format, outp
 
     result = common.save_plotly_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    summary = f"파이 차트 생성 완료 ({len(data)}개 항목)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"파이 차트 생성 완료 ({len(data)}개 항목)"
+        "summary": summary
     }
 
 
@@ -148,8 +153,13 @@ def _create_with_matplotlib(data, title, show_percentage, donut, output_format, 
 
     result = common.save_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    summary = f"파이 차트 생성 완료 ({len(data)}개 항목)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"파이 차트 생성 완료 ({len(data)}개 항목)"
+        "summary": summary
     }

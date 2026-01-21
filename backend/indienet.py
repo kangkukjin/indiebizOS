@@ -225,6 +225,9 @@ class IndieNetSettings:
         self.default_tags: List[str] = [INDIENET_TAG]
         self.auto_refresh: bool = True
         self.refresh_interval: int = 60  # 초
+        # 커스텀 보드 (해시태그 기반 비공개 게시판)
+        self.boards: List[Dict[str, Any]] = []  # [{"name": "내 보드", "hashtag": "indienetkukjin", "created_at": "..."}]
+        self.active_board: Optional[str] = None  # 현재 활성 보드의 hashtag (None이면 기본 IndieNet)
 
     def load(self) -> bool:
         """설정 로드"""
@@ -236,6 +239,8 @@ class IndieNetSettings:
                 self.default_tags = data.get('default_tags', [INDIENET_TAG])
                 self.auto_refresh = data.get('auto_refresh', True)
                 self.refresh_interval = data.get('refresh_interval', 60)
+                self.boards = data.get('boards', [])
+                self.active_board = data.get('active_board', None)
             return True
         except Exception as e:
             print(f"⚠️  IndieNet: 설정 로드 실패 - {e}")
@@ -250,7 +255,9 @@ class IndieNetSettings:
                 'relays': self.relays,
                 'default_tags': self.default_tags,
                 'auto_refresh': self.auto_refresh,
-                'refresh_interval': self.refresh_interval
+                'refresh_interval': self.refresh_interval,
+                'boards': self.boards,
+                'active_board': self.active_board
             }
 
             with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
@@ -267,7 +274,9 @@ class IndieNetSettings:
             'relays': self.relays,
             'default_tags': self.default_tags,
             'auto_refresh': self.auto_refresh,
-            'refresh_interval': self.refresh_interval
+            'refresh_interval': self.refresh_interval,
+            'boards': self.boards,
+            'active_board': self.active_board
         }
 
 
@@ -306,6 +315,246 @@ class IndieNet:
             'identity': self.identity.to_dict() if self._initialized else None,
             'settings': self.settings.to_dict() if self._initialized else None
         }
+
+    # ============ 보드 (커스텀 해시태그 게시판) 관리 ============
+
+    def create_board(self, name: str, hashtag: str) -> Dict[str, Any]:
+        """
+        새 보드 생성 (커스텀 해시태그 게시판)
+        Args:
+            name: 보드 이름 (표시용)
+            hashtag: 해시태그 (필터링 키워드, 공백/특수문자 없이)
+        Returns:
+            생성된 보드 정보
+        """
+        # 해시태그 정리 (# 제거, 소문자, 공백 제거)
+        hashtag = hashtag.lstrip('#').lower().replace(' ', '')
+
+        # 중복 체크
+        for board in self.settings.boards:
+            if board['hashtag'] == hashtag:
+                raise ValueError(f"이미 존재하는 해시태그입니다: #{hashtag}")
+
+        board = {
+            'name': name,
+            'hashtag': hashtag,
+            'created_at': datetime.now().isoformat()
+        }
+
+        self.settings.boards.append(board)
+        self.settings.save()
+
+        print(f"✓ IndieNet: 보드 생성 - {name} (#{hashtag})")
+        return board
+
+    def delete_board(self, hashtag: str) -> bool:
+        """보드 삭제"""
+        hashtag = hashtag.lstrip('#').lower()
+
+        for i, board in enumerate(self.settings.boards):
+            if board['hashtag'] == hashtag:
+                self.settings.boards.pop(i)
+                # 활성 보드였다면 해제
+                if self.settings.active_board == hashtag:
+                    self.settings.active_board = None
+                self.settings.save()
+                print(f"✓ IndieNet: 보드 삭제 - #{hashtag}")
+                return True
+
+        return False
+
+    def get_boards(self) -> List[Dict[str, Any]]:
+        """모든 보드 목록 조회"""
+        return self.settings.boards
+
+    def set_active_board(self, hashtag: Optional[str]) -> bool:
+        """
+        활성 보드 설정
+        Args:
+            hashtag: 보드 해시태그 (None이면 기본 IndieNet으로)
+        """
+        if hashtag is None:
+            self.settings.active_board = None
+            self.settings.save()
+            print(f"✓ IndieNet: 기본 보드(#IndieNet)로 전환")
+            return True
+
+        hashtag = hashtag.lstrip('#').lower()
+
+        # 보드 존재 확인
+        for board in self.settings.boards:
+            if board['hashtag'] == hashtag:
+                self.settings.active_board = hashtag
+                self.settings.save()
+                print(f"✓ IndieNet: 활성 보드 변경 - #{hashtag}")
+                return True
+
+        return False
+
+    def get_active_board(self) -> Optional[Dict[str, Any]]:
+        """현재 활성 보드 정보 조회"""
+        if self.settings.active_board is None:
+            return None
+
+        for board in self.settings.boards:
+            if board['hashtag'] == self.settings.active_board:
+                return board
+
+        return None
+
+    def post_to_board(self, content: str, hashtag: str = None) -> Optional[str]:
+        """
+        특정 보드에 글 게시
+        Args:
+            content: 게시할 내용
+            hashtag: 보드 해시태그 (None이면 활성 보드 또는 기본 IndieNet)
+        Returns:
+            이벤트 ID (성공시) 또는 None
+        """
+        # 해시태그 결정
+        if hashtag:
+            target_tag = hashtag.lstrip('#').lower()
+        elif self.settings.active_board:
+            target_tag = self.settings.active_board
+        else:
+            target_tag = INDIENET_TAG.lower()
+
+        # 해당 태그로 게시 (기존 post 메서드 활용, default_tags 대신 직접 지정)
+        return self._post_with_tag(content, target_tag)
+
+    def _post_with_tag(self, content: str, hashtag: str) -> Optional[str]:
+        """특정 해시태그로 글 게시 (내부 메서드)"""
+        if not self._initialized:
+            print("✗ IndieNet이 초기화되지 않음")
+            return None
+
+        try:
+            # 태그를 해시태그 형식으로 content에 추가
+            full_content = f"{content}\n\n#{hashtag}"
+
+            # Nostr 이벤트 생성
+            event = Event(
+                pubkey=self.identity.public_key.hex(),
+                content=full_content,
+                kind=EventKind.TEXT_NOTE
+            )
+
+            # 't' 태그 추가
+            event.tags.append(['t', hashtag.lower()])
+
+            # 서명
+            event.sign(self.identity.private_key.hex())
+
+            # 릴레이에 발행
+            event_id = self._publish_event(event)
+
+            if event_id:
+                print(f"✓ IndieNet: 글 게시 완료 (#{hashtag}) - {event_id[:16]}...")
+
+            return event_id
+
+        except Exception as e:
+            print(f"✗ IndieNet: 글 게시 실패 - {e}")
+            return None
+
+    def fetch_board_posts(self, hashtag: str = None, limit: int = 50, since: int = None) -> List[dict]:
+        """
+        특정 보드의 게시글 가져오기
+        Args:
+            hashtag: 보드 해시태그 (None이면 활성 보드 또는 기본 IndieNet)
+            limit: 최대 개수
+            since: 이 시간 이후 글만 (Unix timestamp)
+        Returns:
+            게시글 리스트
+        """
+        if not self._initialized:
+            return []
+
+        # 해시태그 결정
+        if hashtag:
+            target_tag = hashtag.lstrip('#').lower()
+        elif self.settings.active_board:
+            target_tag = self.settings.active_board
+        else:
+            target_tag = 'indienet'
+
+        try:
+            posts = []
+            connected = threading.Event()
+            done = threading.Event()
+
+            def on_message(ws, message):
+                try:
+                    data = json.loads(message)
+                    if data[0] == "EVENT":
+                        event = data[2]
+                        content = event.get('content', '')
+                        tags = event.get('tags', [])
+
+                        # 해당 해시태그가 있는지 확인
+                        has_tag = any(
+                            (t[0] == 't' and t[1].lower() == target_tag) or
+                            f'#{target_tag}' in content.lower()
+                            for t in tags
+                        ) or f'#{target_tag}' in content.lower()
+
+                        if has_tag:
+                            posts.append({
+                                'id': event.get('id'),
+                                'author': event.get('pubkey'),
+                                'content': content,
+                                'created_at': event.get('created_at'),
+                                'tags': tags
+                            })
+                    elif data[0] == "EOSE":
+                        done.set()
+                except:
+                    pass
+
+            def on_open(ws):
+                connected.set()
+                req_filter = {
+                    "kinds": [1],
+                    "#t": [target_tag],
+                    "limit": limit
+                }
+                if since:
+                    req_filter["since"] = since
+
+                req_id = f"board_{target_tag}_{uuid.uuid4().hex[:8]}"
+                ws.send(json.dumps(["REQ", req_id, req_filter]))
+
+            def on_error(ws, error):
+                done.set()
+
+            def on_close(ws, close_status_code, close_msg):
+                done.set()
+
+            relay_url = self.settings.relays[0] if self.settings.relays else DEFAULT_RELAYS[0]
+
+            ws = websocket.WebSocketApp(
+                relay_url,
+                on_open=on_open,
+                on_message=on_message,
+                on_error=on_error,
+                on_close=on_close
+            )
+
+            wst = threading.Thread(target=ws.run_forever, daemon=True)
+            wst.start()
+
+            connected.wait(timeout=5)
+            done.wait(timeout=10)
+            ws.close()
+
+            # 시간순 정렬 (최신순)
+            posts.sort(key=lambda x: x.get('created_at', 0), reverse=True)
+
+            return posts[:limit]
+
+        except Exception as e:
+            print(f"✗ IndieNet: 보드 글 조회 실패 - {e}")
+            return []
 
     def post(self, content: str, extra_tags: List[str] = None) -> Optional[str]:
         """

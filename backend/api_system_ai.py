@@ -70,15 +70,87 @@ def load_system_ai_config() -> dict:
 
 # ============ 도구 관련 ============
 
-def get_all_system_ai_tools() -> List[Dict]:
-    """시스템 AI가 사용할 모든 도구 로드 (패키지 도구만)
+def _get_list_project_agents_tool() -> Dict:
+    """list_project_agents 도구 정의"""
+    return {
+        "name": "list_project_agents",
+        "description": """시스템 내 모든 프로젝트와 에이전트 목록을 조회합니다.
 
-    NOTE: 시스템 AI 전용 도구들은 제거되었습니다.
-    시스템 AI는 일반 에이전트와 동일한 도구를 사용하며,
-    시스템 문서와 패키지 정보는 read_file, list_directory로 접근합니다.
+## 반환 정보
+- project_id: 프로젝트 ID (폴더명)
+- project_name: 프로젝트 이름
+- agents: 에이전트 목록
+  - id: 에이전트 ID
+  - name: 에이전트 이름
+  - role_description: 역할 설명 (전문 분야)
+
+## 사용 시점
+- call_project_agent 전 적합한 대상 확인
+- 어떤 프로젝트/에이전트가 있는지 파악
+- role_description을 보고 작업에 적합한 에이전트 선택
+
+## 참고
+- 에이전트가 실행 중이 아니어도 call_project_agent 시 자동 시작됨""",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    }
+
+
+def _get_call_project_agent_tool() -> Dict:
+    """call_project_agent 도구 정의"""
+    return {
+        "name": "call_project_agent",
+        "description": """프로젝트의 에이전트에게 작업을 위임합니다.
+
+## 사용 전 확인
+1. list_project_agents로 사용 가능한 에이전트 확인
+2. role_description을 보고 적합한 에이전트 선택
+
+## 사용 시나리오
+- 특정 프로젝트의 전문 에이전트에게 작업을 맡기고 싶을 때
+- 프로젝트별 도구나 컨텍스트가 필요한 작업일 때
+
+## 주의사항
+- 위임 후 결과를 기다려야 합니다
+- 에이전트가 작업을 완료하면 자동으로 결과를 보고받습니다
+- 에이전트가 실행 중이 아니면 자동으로 시작됩니다""",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string",
+                    "description": "프로젝트 ID"
+                },
+                "agent_id": {
+                    "type": "string",
+                    "description": "에이전트 ID (agents.yaml의 id 필드)"
+                },
+                "message": {
+                    "type": "string",
+                    "description": "에이전트에게 전달할 작업 내용"
+                }
+            },
+            "required": ["project_id", "agent_id", "message"]
+        }
+    }
+
+
+def get_all_system_ai_tools() -> List[Dict]:
+    """시스템 AI가 사용할 모든 도구 로드 (패키지 도구 + 위임 도구)
+
+    NOTE: 시스템 AI는 일반 에이전트와 동일한 도구를 사용하며,
+    추가로 call_project_agent 도구를 통해 프로젝트 에이전트에게 위임할 수 있습니다.
     """
     # 패키지에서 동적 로딩 (system_essentials, python-exec, nodejs 등)
     tools = load_tools_from_packages(SYSTEM_AI_DEFAULT_PACKAGES)
+
+    # 위임 관련 도구 추가
+    tools.append(_get_list_project_agents_tool())
+    tools.append(_get_call_project_agent_tool())
+
     return tools
 
 
@@ -107,13 +179,18 @@ def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAge
         "api_key": config.get("apiKey", "")
     }
 
-    # 시스템 프롬프트 생성 (공통 프롬프트 빌더 사용)
-    system_prompt = build_system_ai_prompt(
-        user_profile=user_profile
-    )
-
     # 시스템 AI 전용 도구 로드
     tools = get_all_system_ai_tools()
+
+    # Git 활성화 조건: run_command 도구가 있고 .git 폴더가 있을 때
+    tool_names = [t.get("name") for t in tools]
+    git_enabled = "run_command" in tool_names and (DATA_PATH / ".git").exists()
+
+    # 시스템 프롬프트 생성 (공통 프롬프트 빌더 사용)
+    system_prompt = build_system_ai_prompt(
+        user_profile=user_profile,
+        git_enabled=git_enabled
+    )
 
     # AIAgent 인스턴스 생성 (시스템 AI 전용 도구 실행 함수 전달)
     agent = AIAgent(
@@ -188,18 +265,231 @@ def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None, 
     """
     시스템 AI 도구 실행
 
-    NOTE: 시스템 AI 전용 도구가 제거되어 이제 system_ai.py의
-    execute_system_tool만 사용합니다.
-
     Args:
         tool_name: 도구 이름
         tool_input: 도구 입력
         work_dir: 작업 디렉토리
         agent_id: 에이전트 ID (프로바이더에서 전달, 시스템 AI는 "system_ai")
     """
+    # 위임 관련 도구 처리
+    if tool_name == "list_project_agents":
+        return _execute_list_project_agents(tool_input)
+    if tool_name == "call_project_agent":
+        return _execute_call_project_agent(tool_input)
+
     if work_dir is None:
         work_dir = str(DATA_PATH)
     return execute_system_ai_tool(tool_name, tool_input, work_dir)
+
+
+def _execute_list_project_agents(tool_input: dict) -> str:
+    """list_project_agents 도구 실행 - 모든 프로젝트/에이전트 목록 조회"""
+    import yaml
+
+    try:
+        # projects 폴더 경로 (api.py의 BASE_PATH/projects와 동일)
+        projects_path = BACKEND_PATH.parent / "projects"
+        result = []
+
+        # 모든 프로젝트 폴더 순회
+        for project_dir in projects_path.iterdir():
+            if not project_dir.is_dir():
+                continue
+            if project_dir.name in ['trash', '.DS_Store']:
+                continue
+
+            agents_yaml = project_dir / "agents.yaml"
+            if not agents_yaml.exists():
+                continue
+
+            try:
+                data = yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
+                agents = data.get("agents", [])
+
+                agent_list = []
+                for agent in agents:
+                    if not agent.get("active", True):
+                        continue  # 비활성화된 에이전트 제외
+                    agent_list.append({
+                        "id": agent.get("id"),
+                        "name": agent.get("name"),
+                        "role_description": agent.get("role_description", "")
+                    })
+
+                if agent_list:  # 에이전트가 있는 프로젝트만 포함
+                    result.append({
+                        "project_id": project_dir.name,
+                        "project_name": project_dir.name,
+                        "agents": agent_list
+                    })
+            except Exception as e:
+                print(f"[list_project_agents] {project_dir.name} 파싱 오류: {e}")
+                continue
+
+        return json.dumps({
+            "success": True,
+            "projects": result,
+            "total_projects": len(result),
+            "total_agents": sum(len(p["agents"]) for p in result)
+        }, ensure_ascii=False, indent=2)
+
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": str(e)
+        }, ensure_ascii=False)
+
+
+def _execute_call_project_agent(tool_input: dict) -> str:
+    """프로젝트 에이전트 호출 실행 (자동 시작 포함)"""
+    import uuid
+    import yaml
+    from agent_runner import AgentRunner
+    from thread_context import get_current_task_id, set_called_agent
+    from system_ai_memory import get_task, update_task_delegation
+
+    project_id = tool_input.get("project_id", "")
+    agent_id = tool_input.get("agent_id", "")
+    message = tool_input.get("message", "")
+
+    if not project_id or not agent_id or not message:
+        return "오류: project_id, agent_id, message가 모두 필요합니다."
+
+    # 대상 에이전트 찾기 (실행 중인지 확인)
+    registry_key = f"{project_id}:{agent_id}"
+    target = AgentRunner.agent_registry.get(registry_key)
+
+    # 에이전트가 실행 중이 아니면 프로젝트 전체 에이전트 시작
+    if not target:
+        print(f"[시스템 AI] 프로젝트 활성화: {project_id}")
+        try:
+            # 프로젝트 경로 직접 계산
+            project_path = BACKEND_PATH.parent / "projects" / project_id
+            agents_yaml = project_path / "agents.yaml"
+
+            if not agents_yaml.exists():
+                return f"오류: 프로젝트 '{project_id}'를 찾을 수 없습니다."
+
+            data = yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
+            agents = data.get("agents", [])
+
+            # 대상 에이전트 확인
+            target_config = None
+            for agent in agents:
+                if agent.get("id") == agent_id:
+                    target_config = agent
+                    break
+
+            if not target_config:
+                return f"오류: 에이전트 '{agent_id}'를 찾을 수 없습니다."
+
+            if not target_config.get("active", True):
+                return f"오류: 에이전트 '{agent_id}'가 비활성화되어 있습니다."
+
+            # 공통 설정 로드
+            common_config = data.get("common", {})
+
+            # 프로젝트의 모든 활성 에이전트 시작
+            started_agents = []
+            for agent_config in agents:
+                if not agent_config.get("active", True):
+                    continue
+
+                aid = agent_config.get("id")
+                rkey = f"{project_id}:{aid}"
+
+                # 이미 실행 중이면 스킵
+                if AgentRunner.agent_registry.get(rkey):
+                    continue
+
+                # 프로젝트 정보 추가 (api_agents.py 방식)
+                agent_config["_project_path"] = str(project_path)
+                agent_config["_project_id"] = project_id
+
+                runner = AgentRunner(agent_config, common_config)
+                runner.start()
+                started_agents.append(agent_config.get("name", aid))
+
+            # 에이전트들이 준비될 때까지 잠시 대기
+            import time
+            time.sleep(0.5)
+
+            if started_agents:
+                print(f"[시스템 AI] 프로젝트 '{project_id}' 에이전트 시작 완료: {', '.join(started_agents)}")
+
+            # 대상 에이전트 다시 조회
+            target = AgentRunner.agent_registry.get(registry_key)
+            if not target:
+                return f"오류: 에이전트 '{agent_id}' 시작 실패"
+
+        except Exception as e:
+            return f"오류: 프로젝트 활성화 실패 - {str(e)}"
+
+    # 현재 태스크 ID (시스템 AI의 태스크)
+    parent_task_id = get_current_task_id()
+    if not parent_task_id:
+        return "오류: 현재 태스크 ID가 없습니다. (내부 오류)"
+
+    # 자식 태스크 생성
+    child_task_id = f"task_{uuid.uuid4().hex[:8]}"
+
+    # 위임 컨텍스트 업데이트
+    parent_task = get_task(parent_task_id)
+    if parent_task:
+        delegation_context_str = parent_task.get('delegation_context')
+        if delegation_context_str:
+            delegation_context = json.loads(delegation_context_str)
+        else:
+            delegation_context = {
+                'original_request': parent_task.get('original_request', ''),
+                'requester': parent_task.get('requester', 'user@gui'),
+                'delegations': [],
+                'responses': []
+            }
+
+        delegation_context['delegations'].append({
+            'child_task_id': child_task_id,
+            'delegated_to': target.config.get('name', agent_id),
+            'delegation_message': message,
+            'delegation_time': datetime.now().isoformat()
+        })
+
+        update_task_delegation(
+            parent_task_id,
+            json.dumps(delegation_context, ensure_ascii=False),
+            increment_pending=True
+        )
+
+    # 프로젝트 에이전트의 DB에 자식 태스크 생성
+    target.db.create_task(
+        task_id=child_task_id,
+        requester="system_ai",
+        requester_channel="system_ai",
+        original_request=message,
+        delegated_to=target.config.get('name', agent_id),
+        parent_task_id=parent_task_id
+    )
+
+    # 프로젝트 에이전트에게 메시지 전송
+    msg_dict = {
+        'content': f"[task:{child_task_id}] {message}",
+        'from_agent': '시스템 AI',
+        'task_id': child_task_id,
+        'timestamp': datetime.now().isoformat()
+    }
+
+    with AgentRunner._lock:
+        if registry_key not in AgentRunner.internal_messages:
+            AgentRunner.internal_messages[registry_key] = []
+        AgentRunner.internal_messages[registry_key].append(msg_dict)
+
+    # call_agent 호출 플래그 설정
+    set_called_agent(True)
+
+    agent_name = target.config.get('name', agent_id)
+    print(f"[시스템 AI] 위임: 시스템 AI → {agent_name} (task: {child_task_id})")
+
+    return f"'{agent_name}'에게 작업을 위임했습니다. 결과를 기다리세요."
 
 
 class ImageData(BaseModel):
@@ -220,13 +510,13 @@ class ChatResponse(BaseModel):
     model: str
 
 
-def get_system_prompt(user_profile: str = "") -> str:
+def get_system_prompt(user_profile: str = "", git_enabled: bool = False) -> str:
     """시스템 AI의 시스템 프롬프트 (prompt_builder.py 사용)
 
     **통합**: 이제 공통 프롬프트 빌더를 사용합니다.
-    - base_prompt.md (공통 설정) + 시스템 AI 역할 + 사용자 정보
+    - base_prompt_v2.md + (조건부 git) + 위임 프롬프트 + 개별역할 + 시스템메모
     """
-    return build_system_ai_prompt(user_profile=user_profile)
+    return build_system_ai_prompt(user_profile=user_profile, git_enabled=git_enabled)
 
 
 def get_anthropic_tools():
@@ -703,7 +993,15 @@ async def chat_with_system_ai(chat: ChatMessage):
     **통합 아키텍처**: AIAgent 클래스를 사용하여 프로젝트 에이전트와
     동일한 프로바이더 코드를 공유합니다. 모든 프로바이더(Anthropic, OpenAI,
     Google, Ollama)가 자동으로 지원됩니다.
+
+    **태스크 기반 처리**: 시스템 AI도 태스크를 생성하고 위임 체인을 지원합니다.
+    - 위임이 없으면 → 즉시 응답
+    - 위임이 있으면 → "위임 중" 응답, 결과는 WebSocket으로 전송
     """
+    import uuid
+    from thread_context import set_current_task_id, clear_current_task_id, did_call_agent, clear_called_agent
+    from system_ai_memory import create_task as create_system_ai_task
+
     global _docs_initialized
 
     config = load_system_ai_config()
@@ -722,6 +1020,23 @@ async def chat_with_system_ai(chat: ChatMessage):
     if not _docs_initialized:
         init_all_docs()
         _docs_initialized = True
+
+    # 태스크 생성
+    task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
+    ws_client_id = chat.context.get("ws_client_id") if chat.context else None
+
+    create_system_ai_task(
+        task_id=task_id,
+        requester="user@gui",
+        requester_channel="gui",
+        original_request=chat.message,
+        delegated_to="system_ai",
+        ws_client_id=ws_client_id
+    )
+
+    # 태스크 컨텍스트 설정
+    set_current_task_id(task_id)
+    clear_called_agent()
 
     # 최근 대화 히스토리 로드 (7회)
     recent_conversations = get_recent_conversations(limit=7)
@@ -746,17 +1061,39 @@ async def chat_with_system_ai(chat: ChatMessage):
             images=images_data
         )
     except Exception as e:
+        clear_current_task_id()
+        clear_called_agent()
         raise HTTPException(status_code=500, detail=f"AI 응답 생성 실패: {str(e)}")
 
-    # AI 응답 저장
-    save_conversation("assistant", response_text)
+    # 위임 여부 확인
+    called_another = did_call_agent()
 
-    return ChatResponse(
-        response=response_text,
-        timestamp=datetime.now().isoformat(),
-        provider=provider,
-        model=model
-    )
+    # 컨텍스트 정리
+    clear_current_task_id()
+    clear_called_agent()
+
+    if called_another:
+        # 위임이 발생함 → 결과는 나중에 WebSocket으로 전송
+        return ChatResponse(
+            response=f"[위임 중] 프로젝트 에이전트에게 작업을 위임했습니다. 결과는 잠시 후 도착합니다.\n\n{response_text}",
+            timestamp=datetime.now().isoformat(),
+            provider=provider,
+            model=model
+        )
+    else:
+        # 위임 없음 → 즉시 응답, 태스크 완료
+        from system_ai_memory import complete_task as complete_system_ai_task
+        complete_system_ai_task(task_id, response_text[:500])
+
+        # AI 응답 저장
+        save_conversation("assistant", response_text)
+
+        return ChatResponse(
+            response=response_text,
+            timestamp=datetime.now().isoformat(),
+            provider=provider,
+            model=model
+        )
 
 
 @router.get("/system-ai/welcome")

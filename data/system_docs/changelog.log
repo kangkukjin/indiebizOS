@@ -143,3 +143,49 @@
 [2026-01-18 09:15:25] PROJECT_CREATED: 추천 프로젝트 (ID: 추천 프로젝트)
 [2026-01-18 09:15:25] PROJECT_CREATED: 추천 프로젝트 (ID: 추천 프로젝트)
 [2026-01-19 11:24:34] PROJECT_RENAMED: 자산관리 -> 투자
+[2026-01-20 22:00:00] CLEANUP: rules.json 시스템 제거
+  - api_helpers.py에서 rules.json 로딩 코드 삭제
+  - 각 프로젝트의 agent_*_rules.json 파일 삭제
+  - 에이전트별 규칙은 role 프롬프트로 통합 관리
+[2026-01-20 22:30:00] PROMPT_ENGINEERING: XML 구조 통일
+  - fragments/06_git.md: 마크다운 → XML 태그로 변환
+  - fragments/09_delegation.md: 마크다운 → XML 태그로 변환
+  - fragments/10_system_ai_delegation.md: 마크다운 → XML 태그로 변환
+  - providers/*.py: 히스토리 메시지에 XML 태그 추가
+    - <user_message>, <assistant_message>, <current_user_request>
+  - auto_response.py: 응답 프롬프트 XML 구조화
+  - ai_judgment.py: 판단 프롬프트 XML 구조화
+[2026-01-20 22:30:00] FEATURE_UPDATED: 시스템 AI git 조건부 프롬프트
+  - prompt_builder.py: build_system_ai_prompt()에 git_enabled 파라미터 추가
+  - api_system_ai.py: Git 활성화 조건 감지 로직 추가
+  - system_ai_runner.py: Git 활성화 조건 감지 로직 추가
+  - 불필요한 role 파라미터 제거, system_ai_role.txt에서 항상 로드
+[2026-01-20 23:00:00] TOOL_UPDATED: visualization 패키지 도구 설명 개선
+  - line_chart: 범용적이고 간결한 설명으로 변경
+  - bar_chart: 간결한 설명으로 변경
+  - candlestick_chart: 간결한 설명으로 변경
+  - pie_chart: 간결한 설명으로 변경
+  - scatter_plot: 간결한 설명으로 변경
+  - heatmap: 간결한 설명으로 변경
+  - multi_chart: 간결한 설명으로 변경
+  - 모든 설명: 한줄 요약 + 데이터 형식 + 예시 구조로 통일
+[2026-01-20 23:30:00] DOCS_UPDATED: system_docs 전체 업데이트
+  - communication.md: 통신 채널 시스템 문서 신규 생성
+    - Gmail/Nostr 채널, IndieNet 연동, 자동응답 흐름
+  - packages.md: 도구 패키지 19개 목록 갱신, 도구 설명 가이드 추가
+  - inventory.md: 프로젝트 16개, 시스템 AI 위임 기능 섹션 추가
+  - overview.md: 시스템 AI 위임, 통신 채널 링크 추가
+  - technical.md: 프롬프트 XML 구조 섹션 추가
+  - auto_response.md: XML 구조 섹션 추가
+[2026-01-21 10:00:00] FEATURE_UPDATED: 자동응답 시스템 V3 (Tool Use 통합)
+  - auto_response.py: 2단계 AI 호출 → 1단계 Tool Use 방식으로 통합
+  - 도구: search_business_items, no_response_needed, send_response
+  - send_response: 응답 즉시 발송 (polling 대기 없음)
+  - channel_poller.py: _execute_system_ai에서 실제 시스템 AI 호출
+  - base_prompt_autoresponse.md: Tool Use 지침 프롬프트 추가
+[2026-01-21 10:30:00] TOOL_ADDED: system_essentials 이웃 조회 도구
+  - get_neighbors: 이웃 목록 조회 (검색, 레벨 필터)
+  - get_neighbor_detail: 특정 이웃 상세 정보 (연락처, 메시지 포함)
+[2026-01-21 11:00:00] DOCS_UPDATED: system_docs 업데이트
+  - auto_response.md: V3 Tool Use 방식으로 전면 개정
+  - inventory.md: system_essentials 도구 설명 갱신, 자동응답 V3 반영

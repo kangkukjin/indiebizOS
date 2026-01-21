@@ -836,6 +836,70 @@ class APIClient {
     });
   }
 
+  // ============ IndieNet 보드 (커스텀 해시태그 게시판) ============
+
+  async getIndieNetBoards() {
+    return this.request<{
+      boards: Array<{ name: string; hashtag: string; created_at: string }>;
+      active_board: { name: string; hashtag: string; created_at: string } | null;
+      count: number;
+    }>('/indienet/boards');
+  }
+
+  async createIndieNetBoard(name: string, hashtag: string) {
+    return this.request<{
+      status: string;
+      board: { name: string; hashtag: string; created_at: string };
+    }>('/indienet/boards', {
+      method: 'POST',
+      body: JSON.stringify({ name, hashtag }),
+    });
+  }
+
+  async deleteIndieNetBoard(hashtag: string) {
+    return this.request<{ status: string; hashtag: string }>(`/indienet/boards/${encodeURIComponent(hashtag)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async setActiveIndieNetBoard(hashtag: string | null) {
+    return this.request<{
+      status: string;
+      active_board: { name: string; hashtag: string; created_at: string } | null;
+    }>(`/indienet/boards/active${hashtag ? `?hashtag=${encodeURIComponent(hashtag)}` : ''}`, {
+      method: 'PUT',
+    });
+  }
+
+  async getIndieNetBoardPosts(hashtag: string, limit = 50, since?: number) {
+    const params = new URLSearchParams();
+    params.set('limit', limit.toString());
+    if (since) params.set('since', since.toString());
+    return this.request<{
+      posts: Array<{
+        id: string;
+        author: string;
+        content: string;
+        created_at: number;
+        tags: string[][];
+      }>;
+      count: number;
+      hashtag: string;
+    }>(`/indienet/boards/${encodeURIComponent(hashtag)}/posts?${params}`);
+  }
+
+  async postToIndieNetBoard(content: string, hashtag?: string) {
+    return this.request<{
+      status: string;
+      event_id: string;
+      hashtag: string;
+      created_at: number;
+    }>('/indienet/boards/post', {
+      method: 'POST',
+      body: JSON.stringify({ content, hashtag }),
+    });
+  }
+
   // ============ 도구 패키지 ============
 
   async getPackages() {
@@ -1197,6 +1261,12 @@ class APIClient {
     });
   }
 
+  async authenticateGmail() {
+    return this.request<{ status: string; auth_url?: string; message?: string }>('/business/channels/gmail/authenticate', {
+      method: 'POST',
+    });
+  }
+
   async getPollerStatus() {
     return this.request<{
       running: boolean;
@@ -1255,6 +1325,7 @@ class APIClient {
     additional_info?: string;
     business_doc?: string;
     info_share?: number;
+    favorite?: number;
   }) {
     return this.request<{
       id: number;
@@ -1264,6 +1335,7 @@ class APIClient {
       additional_info: string | null;
       business_doc: string | null;
       info_share: number;
+      favorite: number;
       created_at: string;
       updated_at: string;
     }>(`/business/neighbors/${neighborId}`, {
@@ -1288,6 +1360,38 @@ class APIClient {
   async deleteNeighbor(neighborId: number) {
     return this.request<{ status: string }>(`/business/neighbors/${neighborId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async getFavoriteNeighbors() {
+    return this.request<Array<{
+      id: number;
+      name: string;
+      info_level: number;
+      rating: number;
+      additional_info: string | null;
+      business_doc: string | null;
+      info_share: number;
+      favorite: number;
+      created_at: string;
+      updated_at: string;
+    }>>('/business/neighbors/favorites/list');
+  }
+
+  async toggleNeighborFavorite(neighborId: number) {
+    return this.request<{
+      id: number;
+      name: string;
+      info_level: number;
+      rating: number;
+      additional_info: string | null;
+      business_doc: string | null;
+      info_share: number;
+      favorite: number;
+      created_at: string;
+      updated_at: string;
+    }>(`/business/neighbors/${neighborId}/favorite/toggle`, {
+      method: 'POST',
     });
   }
 
@@ -1363,6 +1467,7 @@ class APIClient {
     neighbor_id?: number;
     is_from_user?: number;
     attachment_path?: string;
+    status?: string;
   }) {
     return this.request<{
       id: number;

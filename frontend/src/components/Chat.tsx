@@ -761,7 +761,8 @@ function parseImagePaths(content: string): { text: string; images: string[] } {
   const imageTagPattern = /\[IMAGE:(\/[^\]]+\.(jpg|jpeg|png|gif|webp))\]/gi;
 
   // 패턴 2: 일반 파일 경로 (outputs, captures 폴더 내 이미지)
-  const filePathPattern = /(\/[^\s]+\/(outputs|captures)\/[^\s]+\.(jpg|jpeg|png|gif|webp))/gi;
+  // /outputs/... 또는 /something/outputs/... 형태 모두 지원, 백틱 제외
+  const filePathPattern = /(\/(?:[^\s`]+\/)?(outputs|captures)\/[^\s`]+\.(jpg|jpeg|png|gif|webp))/gi;
 
   // 패턴 3: 마크다운 이미지 ![alt](path)
   const markdownImagePattern = /!\[[^\]]*\]\((\/[^)]+\.(jpg|jpeg|png|gif|webp))\)/gi;

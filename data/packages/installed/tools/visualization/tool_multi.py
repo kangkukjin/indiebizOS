@@ -147,10 +147,15 @@ def _create_with_plotly(charts, title, layout, output_format, output_path, commo
 
     result = common.save_plotly_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    summary = f"대시보드 생성 완료 ({n_charts}개 차트, {rows}x{cols} 레이아웃)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"대시보드 생성 완료 ({n_charts}개 차트, {rows}x{cols} 레이아웃)"
+        "summary": summary
     }
 
 
@@ -281,10 +286,15 @@ def _create_with_matplotlib(charts, title, layout, output_format, output_path, c
 
     result = common.save_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    summary = f"대시보드 생성 완료 ({n_charts}개 차트)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"대시보드 생성 완료 ({n_charts}개 차트)"
+        "summary": summary
     }
 
 

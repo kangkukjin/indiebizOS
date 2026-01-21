@@ -11,9 +11,26 @@ import urllib.request
 import urllib.parse
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
 
 FINNHUB_API_KEY = os.environ.get("FINNHUB_API_KEY", "")
 BASE_URL = "https://finnhub.io/api/v1"
+
+# 대량 데이터 저장 경로
+DATA_OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "outputs" / "investment"
+DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _save_large_data(data: list, prefix: str, identifier: str) -> str:
+    """대량 데이터를 파일로 저장하고 경로 반환"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{prefix}_{identifier}_{timestamp}.json"
+    filepath = DATA_OUTPUT_DIR / filename
+
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    return str(filepath)
 
 
 def _check_api_key():
@@ -110,10 +127,10 @@ def get_company_news(symbol: str, start_date: str = None, end_date: str = None):
 
     # 뉴스 정리
     news = []
-    for item in data[:20]:  # 최대 20개
+    for item in data:
         news.append({
             "headline": item.get("headline"),
-            "summary": item.get("summary", "")[:300],
+            "summary": item.get("summary", ""),
             "source": item.get("source"),
             "url": item.get("url"),
             "datetime": datetime.fromtimestamp(item.get("datetime", 0)).strftime("%Y-%m-%d %H:%M") if item.get("datetime") else "",
@@ -121,17 +138,37 @@ def get_company_news(symbol: str, start_date: str = None, end_date: str = None):
             "related": item.get("related")
         })
 
-    return {
-        "success": True,
-        "data": {
-            "symbol": symbol,
-            "start_date": start_date,
-            "end_date": end_date,
-            "news": news,
-            "count": len(news)
-        },
-        "summary": f"{symbol}의 뉴스 {len(news)}건 조회 ({start_date} ~ {end_date})"
-    }
+    total_count = len(news)
+
+    # 대량 데이터는 파일로 저장 (20개 초과시)
+    if total_count > 20:
+        file_path = _save_large_data(news, "company_news", symbol)
+
+        # 최근 5개만 요약으로 반환
+        return {
+            "success": True,
+            "data": {
+                "symbol": symbol,
+                "start_date": start_date,
+                "end_date": end_date,
+                "count": total_count,
+                "file_path": file_path,
+                "sample": news[:5]
+            },
+            "summary": f"{symbol}의 뉴스 {total_count}건 조회 ({start_date} ~ {end_date}). 전체 데이터: {file_path}"
+        }
+    else:
+        return {
+            "success": True,
+            "data": {
+                "symbol": symbol,
+                "start_date": start_date,
+                "end_date": end_date,
+                "news": news,
+                "count": total_count
+            },
+            "summary": f"{symbol}의 뉴스 {total_count}건 조회 ({start_date} ~ {end_date})"
+        }
 
 
 def get_earnings_calendar(symbol: str = None, start_date: str = None, end_date: str = None):
@@ -185,7 +222,7 @@ def get_earnings_calendar(symbol: str = None, start_date: str = None, end_date: 
 
     # 일정 정리
     calendar = []
-    for item in earnings[:30]:  # 최대 30개
+    for item in earnings:
         calendar.append({
             "symbol": item.get("symbol"),
             "date": item.get("date"),
@@ -200,18 +237,36 @@ def get_earnings_calendar(symbol: str = None, start_date: str = None, end_date: 
 
     # 날짜순 정렬
     calendar.sort(key=lambda x: x.get("date", ""))
+    total_count = len(calendar)
 
-    return {
-        "success": True,
-        "data": {
-            "symbol": symbol,
-            "start_date": start_date,
-            "end_date": end_date,
-            "earnings": calendar,
-            "count": len(calendar)
-        },
-        "summary": f"실적발표 일정 {len(calendar)}건 ({start_date} ~ {end_date})"
-    }
+    # 대량 데이터는 파일로 저장 (30개 초과시)
+    if total_count > 30:
+        file_path = _save_large_data(calendar, "earnings_calendar", symbol or "market")
+
+        return {
+            "success": True,
+            "data": {
+                "symbol": symbol,
+                "start_date": start_date,
+                "end_date": end_date,
+                "count": total_count,
+                "file_path": file_path,
+                "sample": calendar[:10]
+            },
+            "summary": f"실적발표 일정 {total_count}건 ({start_date} ~ {end_date}). 전체 데이터: {file_path}"
+        }
+    else:
+        return {
+            "success": True,
+            "data": {
+                "symbol": symbol,
+                "start_date": start_date,
+                "end_date": end_date,
+                "earnings": calendar,
+                "count": total_count
+            },
+            "summary": f"실적발표 일정 {total_count}건 ({start_date} ~ {end_date})"
+        }
 
 
 def get_market_news(category: str = "general"):
@@ -246,25 +301,42 @@ def get_market_news(category: str = "general"):
 
     # 뉴스 정리
     news = []
-    for item in data[:20]:
+    for item in data:
         news.append({
             "headline": item.get("headline"),
-            "summary": item.get("summary", "")[:300],
+            "summary": item.get("summary", ""),
             "source": item.get("source"),
             "url": item.get("url"),
             "datetime": datetime.fromtimestamp(item.get("datetime", 0)).strftime("%Y-%m-%d %H:%M") if item.get("datetime") else "",
             "category": item.get("category")
         })
 
-    return {
-        "success": True,
-        "data": {
-            "category": category,
-            "news": news,
-            "count": len(news)
-        },
-        "summary": f"{category} 시장 뉴스 {len(news)}건 조회"
-    }
+    total_count = len(news)
+
+    # 대량 데이터는 파일로 저장 (20개 초과시)
+    if total_count > 20:
+        file_path = _save_large_data(news, "market_news", category)
+
+        return {
+            "success": True,
+            "data": {
+                "category": category,
+                "count": total_count,
+                "file_path": file_path,
+                "sample": news[:5]
+            },
+            "summary": f"{category} 시장 뉴스 {total_count}건 조회. 전체 데이터: {file_path}"
+        }
+    else:
+        return {
+            "success": True,
+            "data": {
+                "category": category,
+                "news": news,
+                "count": total_count
+            },
+            "summary": f"{category} 시장 뉴스 {total_count}건 조회"
+        }
 
 
 def get_company_profile(symbol: str):

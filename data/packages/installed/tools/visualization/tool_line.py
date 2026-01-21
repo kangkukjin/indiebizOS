@@ -16,14 +16,15 @@ def _load_common():
     return module
 
 
-def create_line_chart(data: list, title: str = None, x_label: str = None,
-                      y_label: str = None, series_names: list = None,
+def create_line_chart(data: list = None, data_file: str = None, title: str = None,
+                      x_label: str = None, y_label: str = None, series_names: list = None,
                       output_format: str = "png", output_path: str = None):
     """
     라인 차트 생성
 
     Args:
-        data: 데이터 배열 [{x: '2024-01', y: 100}, ...] 또는 [{x: '2024-01', y1: 100, y2: 200}, ...]
+        data: 데이터 배열 [{x: '2024-01', y: 100}, ...] (소량일 때)
+        data_file: 데이터 파일 경로 (JSON/CSV) - 대량 데이터에 권장
         title: 차트 제목
         x_label: X축 레이블
         y_label: Y축 레이블
@@ -34,23 +35,25 @@ def create_line_chart(data: list, title: str = None, x_label: str = None,
     Returns:
         dict: 결과 정보
     """
-    if not data:
-        return {"success": False, "error": "데이터가 비어있습니다."}
-
     common = _load_common()
+
+    # 데이터 로드 및 샘플링
+    data, original_count, sampled, error = common.load_and_sample(data, data_file)
+    if error:
+        return {"success": False, "error": error}
 
     try:
         # Plotly 사용 시도
         return _create_with_plotly(data, title, x_label, y_label, series_names,
-                                   output_format, output_path, common)
+                                   output_format, output_path, common, sampled, original_count)
     except ImportError:
         # matplotlib 폴백
         return _create_with_matplotlib(data, title, x_label, y_label, series_names,
-                                       output_format, output_path, common)
+                                       output_format, output_path, common, sampled, original_count)
 
 
 def _create_with_plotly(data, title, x_label, y_label, series_names,
-                        output_format, output_path, common):
+                        output_format, output_path, common, sampled, original_count):
     """Plotly로 라인 차트 생성"""
     import plotly.graph_objects as go
 
@@ -130,15 +133,23 @@ def _create_with_plotly(data, title, x_label, y_label, series_names,
     # 저장
     result = common.save_plotly_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    if sampled:
+        summary = f"라인 차트 생성 완료 (원본 {original_count}개 → {len(data)}개로 샘플링, {len(y_keys)}개 시리즈)"
+    else:
+        summary = f"라인 차트 생성 완료 ({len(data)}개 데이터 포인트, {len(y_keys)}개 시리즈)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"라인 차트 생성 완료 ({len(data)}개 데이터 포인트, {len(y_keys)}개 시리즈)"
+        "summary": summary
     }
 
 
 def _create_with_matplotlib(data, title, x_label, y_label, series_names,
-                            output_format, output_path, common):
+                            output_format, output_path, common, sampled, original_count):
     """matplotlib로 라인 차트 생성"""
     import matplotlib.pyplot as plt
 
@@ -203,8 +214,17 @@ def _create_with_matplotlib(data, title, x_label, y_label, series_names,
     # 저장
     result = common.save_figure(fig, output_path, output_format)
 
+    # image_tag가 있으면 summary에 포함 (프론트엔드에서 이미지로 렌더링)
+    image_tag = result.get("image_tag", "")
+    if sampled:
+        summary = f"라인 차트 생성 완료 (원본 {original_count}개 → {len(data)}개로 샘플링)"
+    else:
+        summary = f"라인 차트 생성 완료 ({len(data)}개 데이터 포인트)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"라인 차트 생성 완료 ({len(data)}개 데이터 포인트)"
+        "summary": summary
     }

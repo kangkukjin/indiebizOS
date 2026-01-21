@@ -4,6 +4,9 @@
 # 한국 주식 시세 조회 (선택사항 - 없어도 KRX API로 대체)
 finance-datareader>=0.9.50
 
+# Yahoo Finance API (글로벌 주식/ETF)
+yfinance>=0.2.0
+
 # DART API용 (선택사항 - 없어도 직접 API 호출로 동작)
 # OpenDartReader>=0.2.0
 # dart-fss>=0.4.0

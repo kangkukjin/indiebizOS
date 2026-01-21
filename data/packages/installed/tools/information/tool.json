@@ -1,8 +1,8 @@
 {
   "id": "information",
   "name": "Information Tools",
-  "description": "외부 API를 통한 정보 조회 도구 (명언, 여행, 맛집, 주식, 지도 등)",
-  "version": "1.1.0",
+  "description": "외부 API를 통한 정보 조회 도구 (명언, 여행, 맛집, 지도, 길찾기 등)",
+  "version": "1.2.0",
   "tools": [
     {
       "name": "get_api_ninjas_data",
@@ -83,64 +83,6 @@
           "zoom": { "type": "integer", "description": "줌 레벨 (기본 15, 1-18)" },
           "markers": { "type": "array", "description": "추가 마커 [{name, lat, lng}, ...]" }
         }
-      }
-    },
-    {
-      "name": "get_stock_price",
-      "description": "Yahoo Finance에서 주식/암호화폐/ETF 가격을 조회합니다.\n\n## 심볼 형식\n- 미국주식: AAPL, TSLA, MSFT\n- 한국주식: 005930.KS (삼성전자), 000660.KS (SK하이닉스)\n- 암호화폐: BTC-USD, ETH-USD\n- ETF: SPY, QQQ\n\n## 반환 정보\n- 현재가, 변동률, 거래량\n- 52주 최고/최저가\n- 기간별 차트 데이터\n\n## 암호화폐 대안\n- CoinGecko 사용 시 get_crypto_price 권장 (무료, API 키 불필요)",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "symbol": { "type": "string", "description": "종목 심볼" },
-          "period": { "type": "string", "enum": ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"], "description": "조회 기간" },
-          "interval": { "type": "string", "enum": ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"], "description": "데이터 간격" }
-        },
-        "required": ["symbol"]
-      }
-    },
-    {
-      "name": "get_stock_info",
-      "description": "Yahoo Finance에서 종목 상세 정보를 조회합니다.\n\n## 반환 정보\n- 회사명, 섹터, 산업\n- 시가총액, PE ratio\n- 배당수익률, EPS\n- 회사 설명",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "symbol": { "type": "string", "description": "종목 심볼" }
-        },
-        "required": ["symbol"]
-      }
-    },
-    {
-      "name": "search_stock",
-      "description": "Yahoo Finance에서 종목을 검색합니다.\n\n## 사용 시점\n- 정확한 심볼을 모를 때\n- 회사명으로 종목 찾기\n\n## 사용 예시\n- 'Apple' → AAPL 찾기\n- '삼성' → 005930.KS 찾기",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "query": { "type": "string", "description": "검색어 (종목명 또는 회사명)" },
-          "search_type": { "type": "string", "enum": ["all", "quotes", "news"], "description": "검색 유형" }
-        },
-        "required": ["query"]
-      }
-    },
-    {
-      "name": "get_stock_news",
-      "description": "Yahoo Finance에서 종목 관련 뉴스를 조회합니다.\n\n## 반환 정보\n- 뉴스 제목, 요약, 링크\n- 발행 시간, 출처",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "symbol": { "type": "string", "description": "종목 심볼" }
-        },
-        "required": ["symbol"]
-      }
-    },
-    {
-      "name": "get_crypto_price",
-      "description": "CoinGecko API로 암호화폐 가격을 조회합니다.\n\n## 장점\n- API 키 불필요, 완전 무료\n- USD/KRW 동시 조회\n\n## 지원 코인 ID\n- bitcoin, ethereum, ripple, dogecoin, solana, cardano\n- BTC, ETH 등 심볼도 자동 변환\n\n## 반환 정보\n- USD/KRW 현재가\n- 24시간 변동률\n- 시가총액, 거래량\n- 역대 최고가",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "coin_id": { "type": "string", "description": "코인 ID 또는 심볼 (bitcoin, BTC 등)" }
-        },
-        "required": ["coin_id"]
       }
     }
   ]

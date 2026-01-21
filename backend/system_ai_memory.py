@@ -5,6 +5,7 @@ IndieBiz OS Core
 시스템 AI의 기억 시스템:
 - 시스템 메모: system_ai_memo.txt
 - 대화 이력: SQLite DB (system_ai_memory.db)
+- 태스크 관리: tasks 테이블 (위임 체인 지원)
 """
 
 import sqlite3
@@ -12,6 +13,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+from contextlib import contextmanager
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent
@@ -22,9 +24,28 @@ SYSTEM_MEMO_PATH = DATA_PATH / "system_ai_memo.txt"
 
 def _get_connection():
     """WAL 모드가 적용된 DB 연결 반환"""
-    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn = sqlite3.connect(str(MEMORY_DB_PATH), timeout=30.0)
     conn.execute("PRAGMA journal_mode=WAL")
+    conn.row_factory = sqlite3.Row
     return conn
+
+
+@contextmanager
+def _get_exclusive_connection():
+    """배타적 트랜잭션용 연결 (위임 카운터 업데이트 등 Race Condition 방지)"""
+    conn = sqlite3.connect(str(MEMORY_DB_PATH), timeout=30.0)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.row_factory = sqlite3.Row
+    conn.isolation_level = None
+    try:
+        conn.execute("BEGIN EXCLUSIVE")
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def init_memory_db():
@@ -56,6 +77,25 @@ def init_memory_db():
             title TEXT NOT NULL,
             content TEXT NOT NULL,
             source TEXT
+        )
+    """)
+
+    # 태스크 테이블 (시스템 AI 위임 체인 지원)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            task_id TEXT PRIMARY KEY,
+            requester TEXT,
+            requester_channel TEXT,
+            original_request TEXT,
+            delegated_to TEXT,
+            delegation_context TEXT,
+            parent_task_id TEXT,
+            pending_delegations INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'pending',
+            result TEXT,
+            ws_client_id TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP
         )
     """)
 
@@ -228,6 +268,144 @@ def get_memory_context(include_conversations: int = 5) -> str:
                 context_parts.append(f"- {role_name}: {content}")
 
     return "\n".join(context_parts) if context_parts else ""
+
+
+# ============ 태스크 관리 (시스템 AI 위임 체인) ============
+
+def create_task(task_id: str, requester: str, requester_channel: str,
+                original_request: str, delegated_to: str = "system_ai",
+                delegation_context: str = None, parent_task_id: str = None,
+                ws_client_id: str = None) -> int:
+    """
+    새 작업 생성
+
+    Args:
+        task_id: 작업 ID (예: "task_sysai_abc123")
+        requester: 원래 요청자 (예: "user@gui")
+        requester_channel: 요청 채널 ("gui", "system_ai" 등)
+        original_request: 원래 요청 내용
+        delegated_to: 위임 대상 (기본: "system_ai")
+        delegation_context: 위임 컨텍스트 JSON
+        parent_task_id: 부모 task ID (계층적 위임 추적)
+        ws_client_id: WebSocket 클라이언트 ID (GUI 응답용)
+
+    Returns:
+        생성된 task의 DB ID
+    """
+    init_memory_db()
+    conn = _get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO tasks (task_id, requester, requester_channel,
+                           original_request, delegated_to,
+                           delegation_context, parent_task_id, ws_client_id, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+    """, (task_id, requester, requester_channel, original_request,
+          delegated_to, delegation_context, parent_task_id, ws_client_id))
+    conn.commit()
+    result = cursor.lastrowid
+    conn.close()
+    return result
+
+
+def get_task(task_id: str) -> Optional[Dict]:
+    """작업 정보 조회"""
+    init_memory_db()
+    conn = _get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def complete_task(task_id: str, result: str = None) -> bool:
+    """작업 완료 처리 - 태스크 삭제"""
+    init_memory_db()
+    conn = _get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM tasks WHERE task_id = ?", (task_id,))
+    conn.commit()
+    deleted = cursor.rowcount > 0
+    conn.close()
+    return deleted
+
+
+# delete_task는 complete_task의 별칭
+delete_task = complete_task
+
+
+def update_task_delegation(task_id: str, delegation_context: str,
+                           increment_pending: bool = True) -> bool:
+    """
+    태스크의 위임 컨텍스트 업데이트 (Race Condition 방지)
+
+    Args:
+        task_id: 작업 ID
+        delegation_context: 위임 컨텍스트 JSON
+        increment_pending: pending_delegations 증가 여부
+    """
+    init_memory_db()
+    with _get_exclusive_connection() as conn:
+        cursor = conn.cursor()
+        if increment_pending:
+            cursor.execute("""
+                UPDATE tasks
+                SET delegation_context = ?,
+                    pending_delegations = COALESCE(pending_delegations, 0) + 1
+                WHERE task_id = ?
+            """, (delegation_context, task_id))
+        else:
+            cursor.execute("""
+                UPDATE tasks
+                SET delegation_context = ?
+                WHERE task_id = ?
+            """, (delegation_context, task_id))
+        return cursor.rowcount > 0
+
+
+def decrement_pending_and_update_context(task_id: str,
+                                          delegation_context: str) -> int:
+    """
+    pending_delegations 감소 + 컨텍스트 업데이트를 원자적으로 수행
+
+    Returns:
+        감소 후 남은 pending_delegations 값
+    """
+    init_memory_db()
+    with _get_exclusive_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE tasks
+            SET delegation_context = ?,
+                pending_delegations = MAX(0, COALESCE(pending_delegations, 0) - 1)
+            WHERE task_id = ?
+        """, (delegation_context, task_id))
+
+        cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
+        row = cursor.fetchone()
+        return row[0] if row else 0
+
+
+def get_pending_tasks(delegated_to: str = None) -> List[Dict]:
+    """대기 중인 작업 목록 조회"""
+    init_memory_db()
+    conn = _get_connection()
+    cursor = conn.cursor()
+    if delegated_to:
+        cursor.execute("""
+            SELECT * FROM tasks
+            WHERE status = 'pending' AND delegated_to = ?
+            ORDER BY created_at DESC
+        """, (delegated_to,))
+    else:
+        cursor.execute("""
+            SELECT * FROM tasks WHERE status = 'pending'
+            ORDER BY created_at DESC
+        """)
+    result = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return result
 
 
 # 모듈 로드 시 DB 초기화

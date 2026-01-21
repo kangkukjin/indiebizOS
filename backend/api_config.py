@@ -139,8 +139,6 @@ async def get_project_config(project_id: str):
 @router.put("/projects/{project_id}/config")
 async def update_project_config(project_id: str, config: Dict[str, Any]):
     """프로젝트별 설정 업데이트"""
-    from api_helpers import update_all_agents_rules_json
-
     try:
         project_path = project_manager.get_project_path(project_id)
         agents_file = project_path / "agents.yaml"
@@ -166,13 +164,6 @@ async def update_project_config(project_id: str, config: Dict[str, Any]):
 
         with open(agents_file, 'w', encoding='utf-8') as f:
             yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
-
-        if 'common_settings' in config:
-            common_file = project_path / "common_settings.txt"
-            common_file.write_text(config['common_settings'], encoding='utf-8')
-
-            # 공통설정 변경 시 모든 에이전트의 rules.json 업데이트
-            update_all_agents_rules_json(project_path)
 
         # default_tools를 project.json에 저장
         if 'default_tools' in config:

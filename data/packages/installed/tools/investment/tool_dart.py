@@ -21,6 +21,22 @@ BASE_URL = "https://opendart.fss.or.kr/api"
 # 기업 코드 캐시 파일 경로
 CORP_CODE_CACHE_PATH = Path(__file__).parent / "corp_code_cache.json"
 
+# 대량 데이터 저장 경로
+DATA_OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "outputs" / "investment"
+DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _save_large_data(data: dict, prefix: str, identifier: str) -> str:
+    """대량 데이터를 파일로 저장하고 경로 반환"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{prefix}_{identifier}_{timestamp}.json"
+    filepath = DATA_OUTPUT_DIR / filename
+
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    return str(filepath)
+
 
 def _check_api_key():
     """API 키 확인"""
@@ -271,19 +287,53 @@ def get_financial_statements(corp_code: str = None, corp_name: str = None,
         elif sj_div == "CF":
             cash_flow.append(account)
 
-    return {
-        "success": True,
-        "data": {
+    total_items = len(balance_sheet) + len(income_statement) + len(cash_flow)
+
+    # 대량 데이터는 파일로 저장 (30개 초과시)
+    if total_items > 30:
+        full_data = {
             "corp_code": corp_code,
             "year": year,
             "report_type": report_type,
             "fs_div": params["fs_div"],
-            "balance_sheet": balance_sheet[:20],  # 주요 항목만
-            "income_statement": income_statement[:15],
-            "cash_flow": cash_flow[:15]
-        },
-        "summary": f"{year}년 재무제표 조회 완료 (재무상태표 {len(balance_sheet)}개, 손익계산서 {len(income_statement)}개 항목)"
-    }
+            "balance_sheet": balance_sheet,
+            "income_statement": income_statement,
+            "cash_flow": cash_flow
+        }
+        file_path = _save_large_data(full_data, "financial_statements", corp_code)
+
+        # 주요 항목만 요약 (각 5개씩)
+        return {
+            "success": True,
+            "data": {
+                "corp_code": corp_code,
+                "year": year,
+                "report_type": report_type,
+                "fs_div": params["fs_div"],
+                "file_path": file_path,
+                "total_items": total_items,
+                "sample": {
+                    "balance_sheet": balance_sheet[:5],
+                    "income_statement": income_statement[:5],
+                    "cash_flow": cash_flow[:5]
+                }
+            },
+            "summary": f"{year}년 재무제표 - 재무상태표 {len(balance_sheet)}개, 손익계산서 {len(income_statement)}개, 현금흐름표 {len(cash_flow)}개 항목. 전체 데이터: {file_path}"
+        }
+    else:
+        return {
+            "success": True,
+            "data": {
+                "corp_code": corp_code,
+                "year": year,
+                "report_type": report_type,
+                "fs_div": params["fs_div"],
+                "balance_sheet": balance_sheet,
+                "income_statement": income_statement,
+                "cash_flow": cash_flow
+            },
+            "summary": f"{year}년 재무제표 조회 완료 (재무상태표 {len(balance_sheet)}개, 손익계산서 {len(income_statement)}개 항목)"
+        }
 
 
 def get_disclosures(corp_code: str = None, corp_name: str = None,

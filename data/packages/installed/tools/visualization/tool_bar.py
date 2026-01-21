@@ -16,8 +16,8 @@ def _load_common():
     return module
 
 
-def create_bar_chart(data: list, title: str = None, x_label: str = None,
-                     y_label: str = None, series_names: list = None,
+def create_bar_chart(data: list = None, data_file: str = None, title: str = None,
+                     x_label: str = None, y_label: str = None, series_names: list = None,
                      horizontal: bool = False, stacked: bool = False,
                      output_format: str = "png", output_path: str = None):
     """
@@ -25,6 +25,7 @@ def create_bar_chart(data: list, title: str = None, x_label: str = None,
 
     Args:
         data: 데이터 배열 [{label: '항목1', value: 100}, ...] 또는 다중 시리즈
+        data_file: 데이터 파일 경로 (JSON/CSV)
         title: 차트 제목
         x_label: X축 레이블
         y_label: Y축 레이블
@@ -37,10 +38,17 @@ def create_bar_chart(data: list, title: str = None, x_label: str = None,
     Returns:
         dict: 결과 정보
     """
-    if not data:
-        return {"success": False, "error": "데이터가 비어있습니다."}
-
     common = _load_common()
+
+    # 데이터 로드 (bar chart는 보통 데이터가 적으므로 샘플링 불필요)
+    if data_file:
+        try:
+            data = common.load_data_from_file(data_file)
+        except Exception as e:
+            return {"success": False, "error": f"파일 로드 실패: {e}"}
+
+    if not data:
+        return {"success": False, "error": "데이터가 비어있습니다. data 또는 data_file을 제공하세요."}
 
     try:
         return _create_with_plotly(data, title, x_label, y_label, series_names,
@@ -114,10 +122,15 @@ def _create_with_plotly(data, title, x_label, y_label, series_names,
 
     result = common.save_plotly_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    summary = f"막대 차트 생성 완료 ({len(data)}개 항목, {len(value_keys)}개 시리즈)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"막대 차트 생성 완료 ({len(data)}개 항목, {len(value_keys)}개 시리즈)"
+        "summary": summary
     }
 
 
@@ -203,8 +216,13 @@ def _create_with_matplotlib(data, title, x_label, y_label, series_names,
 
     result = common.save_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    summary = f"막대 차트 생성 완료 ({len(data)}개 항목)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"막대 차트 생성 완료 ({len(data)}개 항목)"
+        "summary": summary
     }

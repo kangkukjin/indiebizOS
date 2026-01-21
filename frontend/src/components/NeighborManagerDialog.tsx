@@ -20,6 +20,7 @@ interface Neighbor {
   additional_info: string | null;
   business_doc: string | null;
   info_share: number;
+  favorite: number;
   created_at: string;
   updated_at: string;
 }
@@ -67,9 +68,10 @@ const LEVEL_NAMES = ['레벨 0', '레벨 1', '레벨 2', '레벨 3', '레벨 4']
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  initialNeighborId?: number;  // 초기에 선택할 이웃 ID
 }
 
-export function NeighborManagerDialog({ isOpen, onClose }: Props) {
+export function NeighborManagerDialog({ isOpen, onClose, initialNeighborId }: Props) {
   // 상태
   const [neighbors, setNeighbors] = useState<Neighbor[]>([]);
   const [selectedNeighbor, setSelectedNeighbor] = useState<Neighbor | null>(null);
@@ -139,12 +141,43 @@ export function NeighborManagerDialog({ isOpen, onClose }: Props) {
     }
   };
 
-  // 초기 로드 및 필터 변경 시 로드
+  // 다이얼로그 열릴 때 상태 초기화 및 initialNeighborId 처리
   useEffect(() => {
     if (isOpen) {
+      if (initialNeighborId) {
+        // initialNeighborId가 있으면 해당 이웃을 바로 로드하여 선택
+        setIsLoading(true);
+        api.getNeighbors().then(allNeighbors => {
+          const found = allNeighbors.find((n: Neighbor) => n.id === initialNeighborId);
+          if (found) {
+            setActiveLevel(found.info_level);
+            setSelectedNeighbor(found);
+            setView('messages');
+            // 해당 레벨의 이웃 목록 로드
+            setNeighbors(allNeighbors.filter((n: Neighbor) => n.info_level === found.info_level));
+          }
+        }).catch(console.error).finally(() => {
+          setIsLoading(false);
+        });
+      } else {
+        // initialNeighborId가 없으면 기존대로 로드
+        setSelectedNeighbor(null);
+        setView('messages');
+        loadNeighbors();
+      }
+    } else {
+      // 다이얼로그 닫힐 때 상태 리셋
+      setSelectedNeighbor(null);
+      setSearchQuery('');
+    }
+  }, [isOpen, initialNeighborId]);
+
+  // 필터 변경 시 로드 (initialNeighborId가 없을 때만)
+  useEffect(() => {
+    if (isOpen && !initialNeighborId) {
       loadNeighbors();
     }
-  }, [isOpen, searchQuery, activeLevel]);
+  }, [searchQuery, activeLevel]);
 
   // 이웃 선택 시 연락처와 메시지 로드
   useEffect(() => {
@@ -253,6 +286,7 @@ export function NeighborManagerDialog({ isOpen, onClose }: Props) {
         contact_value: selectedContact.contact_value,
         neighbor_id: selectedNeighbor.id,
         is_from_user: 1,
+        status: 'pending',  // pending으로 설정해야 실제 발송됨
       });
       setMessageInput('');
       loadMessages(selectedNeighbor.id);
@@ -449,8 +483,32 @@ export function NeighborManagerDialog({ isOpen, onClose }: Props) {
               {/* 이웃 헤더 + 탭 */}
               <div className="p-4 border-b border-[#E5DFD5]">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-semibold text-[#4A4035]">{selectedNeighbor.name}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold text-[#4A4035]">{selectedNeighbor.name}</h2>
+                    {selectedNeighbor.favorite === 1 && (
+                      <Star size={16} className="text-amber-500 fill-amber-500" />
+                    )}
+                  </div>
                   <div className="flex gap-1">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const updated = await api.toggleNeighborFavorite(selectedNeighbor.id);
+                          setSelectedNeighbor({ ...selectedNeighbor, favorite: updated.favorite });
+                          loadNeighbors();
+                        } catch (err) {
+                          console.error('Failed to toggle favorite:', err);
+                        }
+                      }}
+                      className={`p-2 rounded-lg transition-colors ${
+                        selectedNeighbor.favorite === 1
+                          ? 'bg-amber-50 hover:bg-amber-100'
+                          : 'hover:bg-[#F5F1EB]'
+                      }`}
+                      title={selectedNeighbor.favorite === 1 ? '빠른 연락처에서 제거' : '빠른 연락처에 추가'}
+                    >
+                      <Star size={16} className={selectedNeighbor.favorite === 1 ? 'text-amber-500 fill-amber-500' : 'text-[#6B5B4F]'} />
+                    </button>
                     <button
                       onClick={() => openEditNeighborModal(selectedNeighbor)}
                       className="p-2 hover:bg-[#F5F1EB] rounded-lg transition-colors"

@@ -103,6 +103,12 @@ class BusinessManager:
         except sqlite3.OperationalError:
             pass  # 이미 존재하면 무시
 
+        # 마이그레이션: neighbors 테이블에 favorite 컬럼 추가 (빠른 연락처)
+        try:
+            cursor.execute("ALTER TABLE neighbors ADD COLUMN favorite INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # 이미 존재하면 무시
+
         # 연락처 테이블 (이웃당 여러 연락처)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS contacts (
@@ -603,7 +609,8 @@ class BusinessManager:
                         rating: Optional[int] = None,
                         additional_info: Optional[str] = None,
                         business_doc: Optional[str] = None,
-                        info_share: Optional[int] = None) -> Dict:
+                        info_share: Optional[int] = None,
+                        favorite: Optional[int] = None) -> Dict:
         """이웃 수정"""
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -629,6 +636,9 @@ class BusinessManager:
         if info_share is not None:
             updates.append("info_share = ?")
             params.append(info_share)
+        if favorite is not None:
+            updates.append("favorite = ?")
+            params.append(favorite)
 
         if updates:
             updates.append("updated_at = ?")
@@ -650,6 +660,23 @@ class BusinessManager:
         cursor.execute("DELETE FROM neighbors WHERE id = ?", (neighbor_id,))
         conn.commit()
         conn.close()
+
+    def get_favorite_neighbors(self) -> List[Dict]:
+        """빠른 연락처(즐겨찾기) 이웃 목록 조회"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM neighbors WHERE favorite = 1 ORDER BY name")
+        rows = cursor.fetchall()
+        conn.close()
+        return [self._row_to_dict(row) for row in rows]
+
+    def toggle_neighbor_favorite(self, neighbor_id: int) -> Dict:
+        """이웃의 즐겨찾기 토글"""
+        neighbor = self.get_neighbor(neighbor_id)
+        if not neighbor:
+            return None
+        new_favorite = 0 if neighbor.get('favorite', 0) == 1 else 1
+        return self.update_neighbor(neighbor_id, favorite=new_favorite)
 
     # ============ 연락처 (Contacts) CRUD ============
 

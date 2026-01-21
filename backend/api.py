@@ -46,7 +46,14 @@ async def lifespan(app: FastAPI):
     poller = get_channel_poller()
     poller.start()
 
+    # 시스템 AI Runner 자동 시작 (위임 체인 지원)
+    from system_ai_runner import start_system_ai_runner, stop_system_ai_runner
+    system_ai_runner = start_system_ai_runner()
+
     yield
+
+    # 시스템 AI Runner 종료
+    stop_system_ai_runner()
 
     # 채널 폴러 종료
     poller.stop()
@@ -168,6 +175,10 @@ async def serve_image(path: str):
     - 파일 확장자 검증
     """
     import os.path
+
+    # /outputs/ 또는 /captures/로 시작하는 상대 경로를 절대 경로로 변환
+    if path.startswith('/outputs/') or path.startswith('/captures/'):
+        path = str(BASE_PATH / 'data' / path.lstrip('/'))
 
     # realpath: 심볼릭 링크를 모두 해석한 실제 경로 반환
     # (abspath만 사용하면 심볼릭 링크 우회 공격에 취약)

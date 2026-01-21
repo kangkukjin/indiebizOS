@@ -42,7 +42,7 @@
 | real-estate | Real Estate | 부동산 실거래가 조회 |
 | startup | Startup | 창업 지원 정보 |
 | study | Study Helper | 학습 및 논문 요약 지원 |
-| system_essentials | System Essentials | 파일 관리, 시스템 유틸리티 |
+| system_essentials | System Essentials | 파일 관리, 시스템 유틸리티, 이웃 조회 |
 | visualization | Visualization | 라인/막대/캔들스틱/파이/산점도/히트맵 차트 |
 | web | Web Tools | 웹 검색 및 크롤링 |
 | youtube | Youtube | 유튜브 동영상/오디오 관리 |
@@ -101,10 +101,11 @@ call_project_agent("study", "agent_001", "두통 관련 최신 연구 검색")
 | Gmail | 폴링 | 주기적으로 이메일 수신 |
 | Nostr | WebSocket | 실시간 DM 수신 |
 
-### 자동응답 V2 (프롬프트 엔지니어링 적용)
-1. **AI 판단**: 메시지 분류 (NO_RESPONSE / BUSINESS_RESPONSE)
-2. **비즈니스 검색**: 카테고리/키워드로 관련 아이템 검색
-3. **응답 생성**: 컨텍스트 기반 응답 생성
+### 자동응답 V3 (Tool Use 통합)
+AI 호출 1회로 판단, 검색, 발송을 한 번에 처리:
+- `search_business_items`: 비즈니스 DB 검색
+- `no_response_needed`: 응답 불필요 처리 (스팸/광고)
+- `send_response`: 응답 즉시 발송
 
 ---
 
@@ -118,4 +119,4 @@ call_project_agent("study", "agent_001", "두통 관련 최신 연구 검색")
 - **프로젝트1** - 에이전트 팀 템플릿 (집사, 직원1, 대장장이, 출판, 영상담당)
 
 ---
-*마지막 업데이트: 2026-01-20*
+*마지막 업데이트: 2026-01-21*

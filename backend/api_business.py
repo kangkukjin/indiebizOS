@@ -60,6 +60,7 @@ class NeighborUpdate(BaseModel):
     additional_info: Optional[str] = None
     business_doc: Optional[str] = None
     info_share: Optional[int] = None
+    favorite: Optional[int] = None
 
 class ContactUpdate(BaseModel):
     contact_type: Optional[str] = None
@@ -77,6 +78,7 @@ class MessageCreate(BaseModel):
     neighbor_id: Optional[int] = None
     is_from_user: int = 0
     attachment_path: Optional[str] = None
+    status: Optional[str] = "received"  # pending으로 설정하면 실제 발송
 
 class ChannelSettingUpdate(BaseModel):
     enabled: Optional[bool] = None
@@ -172,6 +174,82 @@ async def poll_channel_now(channel_type: str):
         poller = get_channel_poller()
         result = poller.poll_now(channel_type)
         return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/channels/gmail/authenticate")
+async def authenticate_gmail():
+    """Gmail OAuth 인증 시작"""
+    try:
+        import json
+        from pathlib import Path
+
+        bm = BusinessManager()
+        channel = bm.get_channel_setting('gmail')
+        if not channel:
+            raise HTTPException(status_code=404, detail="Gmail 채널 설정 없음")
+
+        config = json.loads(channel.get('config', '{}'))
+        client_id = config.get('client_id', '')
+        client_secret = config.get('client_secret', '')
+
+        if not client_id or not client_secret:
+            raise HTTPException(status_code=400, detail="OAuth 클라이언트 ID/Secret이 설정되지 않았습니다")
+
+        # Gmail 확장 경로의 config.yaml 생성
+        gmail_path = Path(__file__).parent.parent / "data" / "packages" / "installed" / "extensions" / "gmail"
+        gmail_path.mkdir(parents=True, exist_ok=True)
+        config_path = gmail_path / "config.yaml"
+
+        import yaml
+        gmail_config = {
+            'gmail': {
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'token_path': str(gmail_path / 'token.json'),
+                'credentials_path': str(gmail_path / 'credentials.json'),
+            }
+        }
+
+        with open(config_path, 'w', encoding='utf-8') as f:
+            yaml.dump(gmail_config, f, default_flow_style=False)
+
+        # credentials.json도 생성 (Google API가 요구하는 형식)
+        credentials_data = {
+            "installed": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": ["http://localhost"]
+            }
+        }
+
+        credentials_path = gmail_path / "credentials.json"
+        with open(credentials_path, 'w', encoding='utf-8') as f:
+            json.dump(credentials_data, f, indent=2)
+
+        # Gmail 클라이언트로 인증 시작
+        import sys
+        sys.path.insert(0, str(gmail_path))
+
+        try:
+            from gmail import GmailClient
+            gmail_client = GmailClient(gmail_config['gmail'])
+            gmail_client.authenticate()
+
+            # 인증 성공 시 config 업데이트
+            config['authenticated'] = True
+            config['email'] = gmail_client.get_user_email() if hasattr(gmail_client, 'get_user_email') else ''
+            bm.update_channel_setting('gmail', config=json.dumps(config))
+
+            return {"status": "success", "message": "Gmail 인증 완료"}
+        except Exception as auth_error:
+            return {"status": "error", "message": f"인증 실패: {str(auth_error)}"}
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -353,7 +431,8 @@ async def update_neighbor(neighbor_id: int, data: NeighborUpdate):
             rating=data.rating,
             additional_info=data.additional_info,
             business_doc=data.business_doc,
-            info_share=data.info_share
+            info_share=data.info_share,
+            favorite=data.favorite
         )
         return neighbor
     except Exception as e:
@@ -365,6 +444,28 @@ async def delete_neighbor(neighbor_id: int):
     try:
         business_manager.delete_neighbor(neighbor_id)
         return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/neighbors/favorites/list")
+async def get_favorite_neighbors():
+    """빠른 연락처(즐겨찾기) 이웃 목록 조회"""
+    try:
+        neighbors = business_manager.get_favorite_neighbors()
+        return neighbors
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/neighbors/{neighbor_id}/favorite/toggle")
+async def toggle_neighbor_favorite(neighbor_id: int):
+    """이웃 빠른 연락처 토글"""
+    try:
+        neighbor = business_manager.toggle_neighbor_favorite(neighbor_id)
+        if not neighbor:
+            raise HTTPException(status_code=404, detail="이웃을 찾을 수 없습니다")
+        return neighbor
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -450,7 +551,8 @@ async def create_message(data: MessageCreate):
             subject=data.subject,
             neighbor_id=data.neighbor_id,
             is_from_user=data.is_from_user,
-            attachment_path=data.attachment_path
+            attachment_path=data.attachment_path,
+            status=data.status
         )
         return message
     except Exception as e:

@@ -11,8 +11,25 @@ import urllib.request
 import urllib.parse
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
 
 FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
+
+# 대량 데이터 저장 경로
+DATA_OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "outputs" / "investment"
+DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _save_large_data(data: list, prefix: str, symbol: str) -> str:
+    """대량 데이터를 파일로 저장하고 경로 반환"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{prefix}_{symbol}_{timestamp}.json"
+    filepath = DATA_OUTPUT_DIR / filename
+
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    return str(filepath)
 BASE_URL = "https://financialmodelingprep.com/api/v3"
 
 
@@ -285,18 +302,47 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None):
         })
 
     latest = prices[-1] if prices else {}
+    total_days = len(prices)
 
-    return {
-        "success": True,
-        "data": {
-            "symbol": symbol,
-            "start_date": start_date,
-            "end_date": end_date,
-            "latest": latest,
-            "prices": prices[-30:]  # 최근 30일
-        },
-        "summary": f"{symbol} 현재가: ${latest.get('close', 'N/A')}, 변동: {latest.get('change_percent', 0):.2f}%"
-    }
+    # 대량 데이터는 파일로 저장 (50개 초과시)
+    if total_days > 50:
+        file_path = _save_large_data(prices, "us_stock_prices", symbol)
+
+        # 요약용 샘플 (10개 포인트만)
+        step = max(1, total_days // 10)
+        sample_prices = prices[::step]
+        if sample_prices[-1] != prices[-1]:
+            sample_prices.append(prices[-1])
+        sample_compact = [{"date": p["date"], "close": p["close"]} for p in sample_prices]
+
+        return {
+            "success": True,
+            "data": {
+                "symbol": symbol,
+                "start_date": start_date,
+                "end_date": end_date,
+                "total_days": total_days,
+                "latest": latest,
+                "file_path": file_path,
+                "sample": sample_compact
+            },
+            "summary": f"{symbol} 현재가: ${latest.get('close', 'N/A')}, 변동: {latest.get('change_percent', 0):.2f}%, 기간: {start_date} ~ {end_date}, 총 {total_days}거래일. 전체 데이터: {file_path}"
+        }
+    else:
+        compact_prices = [{"date": p["date"], "close": p["close"]} for p in prices]
+
+        return {
+            "success": True,
+            "data": {
+                "symbol": symbol,
+                "start_date": start_date,
+                "end_date": end_date,
+                "total_days": total_days,
+                "latest": latest,
+                "prices": compact_prices
+            },
+            "summary": f"{symbol} 현재가: ${latest.get('close', 'N/A')}, 변동: {latest.get('change_percent', 0):.2f}%"
+        }
 
 
 def get_stock_quote(symbol: str):

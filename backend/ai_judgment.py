@@ -14,6 +14,7 @@ from pathlib import Path
 BACKEND_PATH = Path(__file__).parent
 DATA_PATH = BACKEND_PATH.parent / "data"
 SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
+JUDGMENT_PROMPT_PATH = DATA_PATH / "common_prompts" / "base_prompt_judgment.md"
 
 
 class AIJudgmentService:
@@ -48,6 +49,18 @@ class AIJudgmentService:
             "apiKey": ""
         }
 
+    def _load_system_prompt(self) -> str:
+        """판단용 시스템 프롬프트 로드"""
+        if JUDGMENT_PROMPT_PATH.exists():
+            try:
+                return JUDGMENT_PROMPT_PATH.read_text(encoding='utf-8')
+            except:
+                pass
+        # 파일이 없을 경우 기본 프롬프트
+        return """당신은 IndieBizOS의 메시지 분류 에이전트입니다.
+들어온 메시지를 분석하여 자동응답 여부를 결정합니다.
+JSON 형식만 출력하세요."""
+
     def judge_message(self, context: dict) -> dict:
         """
         메시지에 대한 AI 판단 수행
@@ -66,8 +79,9 @@ class AIJudgmentService:
             return self._get_fallback_judgment(context.get('message', {}))
 
         try:
-            prompt = self._build_judgment_prompt(context)
-            ai_response = self._call_ai(prompt)
+            system_prompt = self._load_system_prompt()
+            user_prompt = self._build_judgment_prompt(context)
+            ai_response = self._call_ai(user_prompt, system_prompt)
             return self._parse_judgment_response(ai_response)
         except Exception as e:
             print(f"[AIJudgment] AI 판단 오류: {e}")
@@ -101,79 +115,89 @@ class AIJudgmentService:
                 business_lines.append(f"- {b['name']}{desc}")
             business_list_text = '\n'.join(business_lines)
 
-        prompt = f"""당신은 비즈니스 매칭 에이전트입니다. 들어온 메시지를 분석하여 자동응답 여부를 결정합니다.
-
-## 판단 예시
-
-### 예시 1: 서비스 문의 → BUSINESS_RESPONSE
-메시지: "안녕하세요, 혹시 세탁기 수리 가능하신가요? 드럼세탁기인데 물이 안 빠져요."
-사고과정:
+        prompt = f"""<judgment_examples>
+<example_1>
+<incoming_message>"안녕하세요, 혹시 세탁기 수리 가능하신가요? 드럼세탁기인데 물이 안 빠져요."</incoming_message>
+<thinking>
 1. 의도 파악: 세탁기 수리 서비스 가능 여부 문의
 2. 비즈니스 관련성: 서비스 요청 → 관련 있음
 3. 검색 필요: "할수있습니다" 카테고리에서 "세탁기", "수리" 키워드 검색
-결과: {{"action": "BUSINESS_RESPONSE", "confidence": 0.9, "reasoning": "세탁기 수리 서비스 문의", "searches": [{{"category": "할수있습니다", "keywords": ["세탁기", "수리", "가전"], "confidence": 0.9}}]}}
+</thinking>
+<result>{{"action": "BUSINESS_RESPONSE", "confidence": 0.9, "reasoning": "세탁기 수리 서비스 문의", "searches": [{{"category": "할수있습니다", "keywords": ["세탁기", "수리", "가전"], "confidence": 0.9}}]}}</result>
+</example_1>
 
-### 예시 2: 개인적 대화 → NO_RESPONSE
-메시지: "어제 저녁에 뭐 드셨어요? 저는 삼겹살 먹었는데 맛있더라구요 ㅎㅎ"
-사고과정:
+<example_2>
+<incoming_message>"어제 저녁에 뭐 드셨어요? 저는 삼겹살 먹었는데 맛있더라구요 ㅎㅎ"</incoming_message>
+<thinking>
 1. 의도 파악: 일상적인 안부/잡담
 2. 비즈니스 관련성: 개인적 대화 → 관련 없음
 3. 판단: 사용자가 직접 응답해야 할 개인적 내용
-결과: {{"action": "NO_RESPONSE", "confidence": 0.95, "reasoning": "개인적 일상 대화, 비즈니스 무관", "searches": []}}
+</thinking>
+<result>{{"action": "NO_RESPONSE", "confidence": 0.95, "reasoning": "개인적 일상 대화, 비즈니스 무관", "searches": []}}</result>
+</example_2>
 
-### 예시 3: 물품 구매 의사 → BUSINESS_RESPONSE
-메시지: "올리신 자전거 아직 있나요? 관심 있습니다"
-사고과정:
+<example_3>
+<incoming_message>"올리신 자전거 아직 있나요? 관심 있습니다"</incoming_message>
+<thinking>
 1. 의도 파악: 판매 중인 자전거에 대한 구매 관심 표현
 2. 비즈니스 관련성: 거래 문의 → 관련 있음
 3. 검색 필요: "팔아요" 카테고리에서 "자전거" 검색
-결과: {{"action": "BUSINESS_RESPONSE", "confidence": 0.9, "reasoning": "판매 물품 구매 문의", "searches": [{{"category": "팔아요", "keywords": ["자전거"], "confidence": 0.9}}]}}
+</thinking>
+<result>{{"action": "BUSINESS_RESPONSE", "confidence": 0.9, "reasoning": "판매 물품 구매 문의", "searches": [{{"category": "팔아요", "keywords": ["자전거"], "confidence": 0.9}}]}}</result>
+</example_3>
 
-### 예시 4: 스팸/광고 → NO_RESPONSE
-메시지: "★긴급★ 무료 체험 이벤트! 지금 클릭하세요!"
-사고과정:
+<example_4>
+<incoming_message>"★긴급★ 무료 체험 이벤트! 지금 클릭하세요!"</incoming_message>
+<thinking>
 1. 의도 파악: 광고/홍보성 메시지
 2. 비즈니스 관련성: 스팸 → 응답 불필요
-결과: {{"action": "NO_RESPONSE", "confidence": 0.95, "reasoning": "스팸/광고 메시지", "searches": []}}
+</thinking>
+<result>{{"action": "NO_RESPONSE", "confidence": 0.95, "reasoning": "스팸/광고 메시지", "searches": []}}</result>
+</example_4>
+</judgment_examples>
 
----
-
-## 현재 컨텍스트
-
-### 근무지침
+<current_context>
+<work_guideline>
 {work_guideline}
+</work_guideline>
 
-### 나의 비즈니스 문서
+<business_document>
 {business_doc}
+</business_document>
 
-### 나의 비즈니스 목록 (검색 대상)
+<business_list>
 {business_list_text}
+</business_list>
 
-### 대화 기록
+<conversation_history>
 {history_text}
+</conversation_history>
 
-### 들어온 메시지
+<incoming_message>
 발신자: {neighbor.get('name', '알 수 없음')}
 제목: {message.get('subject', '제목 없음')}
 내용: {message.get('content', '내용 없음')}
+</incoming_message>
+</current_context>
 
----
-
-## 판단 수행
-
+<judgment_instructions>
 위 예시처럼 단계별로 분석하세요:
-1. **의도 파악**: 발신자가 원하는 것이 무엇인가?
-2. **비즈니스 관련성**: 우리 비즈니스와 관련이 있는가?
-3. **검색 필요 여부**: 위 비즈니스 목록 중 어떤 것을 검색해야 하는가?
+1. 의도 파악: 발신자가 원하는 것이 무엇인가?
+2. 비즈니스 관련성: 우리 비즈니스와 관련이 있는가?
+3. 검색 필요 여부: 위 비즈니스 목록 중 어떤 것을 검색해야 하는가?
 
-**중요**: searches의 category에는 반드시 위 "나의 비즈니스 목록"에 있는 이름 중 하나를 선택하여 그대로 사용하세요. 목록에 없는 이름은 사용하지 마세요.
+<category_rule>
+searches의 category에는 반드시 위 business_list에 있는 이름 중 하나를 선택하여 그대로 사용하세요. 목록에 없는 이름은 사용하지 마세요.
+</category_rule>
 
-**중요 원칙**:
+<judgment_principles>
 - 비즈니스 문의, 서비스 요청, 거래 관련 → BUSINESS_RESPONSE
 - 개인적 대화, 사적인 내용, 스팸 → NO_RESPONSE (사용자가 직접 응답)
 - 단순 인사/감사도 공식적이면 BUSINESS_RESPONSE (searches는 빈 배열)
 - 비즈니스 문의이지만 목록에 해당 비즈니스가 없으면 → BUSINESS_RESPONSE + no_matching_business: true
+</judgment_principles>
 
+<output_format>
 JSON만 출력하세요:
 {{
   "action": "NO_RESPONSE|BUSINESS_RESPONSE",
@@ -189,61 +213,74 @@ JSON만 출력하세요:
     }}
   ]
 }}
+</output_format>
 
-**no_matching_business 필드**:
+<field_descriptions>
+no_matching_business:
 - true: 상대방이 요청한 서비스/상품이 비즈니스 목록에 없음
 - false: 매칭되는 비즈니스가 있거나, 비즈니스 문의가 아님
 
-**requested_service 필드**:
+requested_service:
 - no_matching_business가 true일 때, 상대방이 요청한 서비스/상품명을 기록 (예: "피아노 레슨", "자동차 수리")
-- no_matching_business가 false이면 빈 문자열"""
+- no_matching_business가 false이면 빈 문자열
+</field_descriptions>
+</judgment_instructions>"""
 
         return prompt
 
-    def _call_ai(self, prompt: str) -> str:
+    def _call_ai(self, prompt: str, system_prompt: str = "") -> str:
         """AI API 호출"""
         provider = self.config.get("provider", "anthropic")
         model = self.config.get("model", "claude-sonnet-4-20250514")
         api_key = self.config.get("apiKey", "")
 
         if provider == "anthropic":
-            return self._call_anthropic(prompt, api_key, model)
+            return self._call_anthropic(prompt, api_key, model, system_prompt)
         elif provider == "openai":
-            return self._call_openai(prompt, api_key, model)
+            return self._call_openai(prompt, api_key, model, system_prompt)
         elif provider == "google":
-            return self._call_google(prompt, api_key, model)
+            return self._call_google(prompt, api_key, model, system_prompt)
         else:
             raise ValueError(f"지원하지 않는 프로바이더: {provider}")
 
-    def _call_anthropic(self, prompt: str, api_key: str, model: str) -> str:
+    def _call_anthropic(self, prompt: str, api_key: str, model: str, system_prompt: str = "") -> str:
         """Anthropic API 호출"""
         import anthropic
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model=model,
             max_tokens=1000,
+            system=system_prompt,
             messages=[{"role": "user", "content": prompt}]
         )
         return response.content[0].text
 
-    def _call_openai(self, prompt: str, api_key: str, model: str) -> str:
+    def _call_openai(self, prompt: str, api_key: str, model: str, system_prompt: str = "") -> str:
         """OpenAI API 호출"""
         import openai
         client = openai.OpenAI(api_key=api_key)
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
         response = client.chat.completions.create(
             model=model,
             max_tokens=1000,
-            messages=[{"role": "user", "content": prompt}]
+            messages=messages
         )
         return response.choices[0].message.content
 
-    def _call_google(self, prompt: str, api_key: str, model: str) -> str:
+    def _call_google(self, prompt: str, api_key: str, model: str, system_prompt: str = "") -> str:
         """Google API 호출"""
         from google import genai
         client = genai.Client(api_key=api_key)
+        config = {}
+        if system_prompt:
+            config['system_instruction'] = system_prompt
         response = client.models.generate_content(
             model=model,
-            contents=prompt
+            contents=prompt,
+            config=config if config else None
         )
         return response.text
 

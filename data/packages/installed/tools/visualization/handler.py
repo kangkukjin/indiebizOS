@@ -28,6 +28,28 @@ def get_definitions():
         return json.load(f)
 
 
+def _resolve_data_file(data_file: str, project_path: str = None) -> str:
+    """
+    data_file 경로를 절대 경로로 변환
+    - 절대 경로면 그대로 반환
+    - 상대 경로면 project_path 기준으로 변환
+    """
+    if not data_file:
+        return None
+
+    path = Path(data_file)
+    if path.is_absolute():
+        return data_file
+
+    # 상대 경로인 경우 project_path 기준으로 변환
+    if project_path:
+        resolved = Path(project_path) / data_file
+        if resolved.exists():
+            return str(resolved)
+
+    return data_file  # 그대로 반환 (에러는 도구에서 처리)
+
+
 def execute(tool_name: str, params: dict, project_path: str = None):
     """
     도구 실행 진입점
@@ -40,11 +62,15 @@ def execute(tool_name: str, params: dict, project_path: str = None):
     Returns:
         dict: {"success": bool, "data": ..., "error": ...}
     """
+    # data_file 경로 해석
+    data_file = _resolve_data_file(params.get("data_file"), project_path)
+
     try:
         if tool_name == "line_chart":
             tool = load_module("tool_line")
             return tool.create_line_chart(
                 data=params.get("data"),
+                data_file=data_file,
                 title=params.get("title"),
                 x_label=params.get("x_label"),
                 y_label=params.get("y_label"),
@@ -57,6 +83,7 @@ def execute(tool_name: str, params: dict, project_path: str = None):
             tool = load_module("tool_bar")
             return tool.create_bar_chart(
                 data=params.get("data"),
+                data_file=data_file,
                 title=params.get("title"),
                 x_label=params.get("x_label"),
                 y_label=params.get("y_label"),
@@ -71,6 +98,7 @@ def execute(tool_name: str, params: dict, project_path: str = None):
             tool = load_module("tool_candlestick")
             return tool.create_candlestick_chart(
                 data=params.get("data"),
+                data_file=data_file,
                 title=params.get("title"),
                 show_volume=params.get("show_volume", True),
                 ma_periods=params.get("ma_periods"),
@@ -93,6 +121,7 @@ def execute(tool_name: str, params: dict, project_path: str = None):
             tool = load_module("tool_scatter")
             return tool.create_scatter_plot(
                 data=params.get("data"),
+                data_file=data_file,
                 title=params.get("title"),
                 x_label=params.get("x_label"),
                 y_label=params.get("y_label"),

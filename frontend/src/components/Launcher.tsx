@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, RefreshCw, User, Clock, Folder, Globe, Bot, Package, Building2, Users } from 'lucide-react';
+import { Zap, Settings, RefreshCw, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 import type { Project, Switch, SchedulerTask, SchedulerAction } from '../types';
@@ -22,6 +22,7 @@ import {
   ToolboxDialog,
   SwitchEditDialog,
 } from './launcher-components';
+import { ContactsDialog } from './ContactsDialog';
 import type {
   ContextMenuState,
   ClipboardItem,
@@ -53,6 +54,7 @@ export function Launcher() {
   const [showSystemAIChatDialog, setShowSystemAIChatDialog] = useState(false);
   const [showToolboxDialog, setShowToolboxDialog] = useState(false);
   const [showSwitchEditDialog, setShowSwitchEditDialog] = useState(false);
+  const [showContactsDialog, setShowContactsDialog] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [newMultiChatName, setNewMultiChatName] = useState('');
@@ -872,6 +874,14 @@ export function Launcher() {
             <span className="text-sm">비즈니스</span>
           </button>
           <button
+            onClick={() => setShowContactsDialog(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
+            title="빠른 연락처"
+          >
+            <Contact size={16} />
+            <span className="text-sm">빠른 연락처</span>
+          </button>
+          <button
             onClick={() => setShowSystemAIChatDialog(true)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F] bg-gradient-to-r from-amber-50 to-orange-50"
             title="시스템 AI와 대화"
@@ -1231,6 +1241,12 @@ export function Launcher() {
           setShowSwitchEditDialog(false);
           setEditingSwitchData(null);
         }}
+      />
+
+      {/* 연락처 다이얼로그 */}
+      <ContactsDialog
+        show={showContactsDialog}
+        onClose={() => setShowContactsDialog(false)}
       />
     </div>
   );

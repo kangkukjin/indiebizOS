@@ -512,8 +512,28 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         )
         from system_ai_memory import (
             save_conversation,
-            get_recent_conversations
+            get_recent_conversations,
+            create_task,
+            delete_task
         )
+        from thread_context import set_current_task_id, clear_all_context
+
+        # 태스크 생성 (위임 기능에 필요)
+        task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
+        try:
+            create_task(
+                task_id=task_id,
+                requester="user@gui",
+                requester_channel="gui",
+                original_request=message,
+                delegated_to="system_ai",
+                ws_client_id=client_id
+            )
+        except Exception as e:
+            print(f"[WS] 시스템 AI 태스크 생성 실패: {e}")
+
+        # 스레드 컨텍스트에 task_id 설정 (call_project_agent에서 사용)
+        set_current_task_id(task_id)
 
         config = load_system_ai_config()
         api_key = config.get("apiKey", "")
@@ -549,6 +569,8 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         def run_stream():
             """스레드에서 시스템 AI 스트리밍 실행 (AIAgent 사용)"""
             nonlocal final_content
+            # 스레드별로 컨텍스트를 다시 설정해야 함 (thread-local storage)
+            set_current_task_id(task_id)
             try:
                 # 통합된 스트리밍 함수 사용 - 모든 프로바이더 지원
                 for event in process_system_ai_message_stream(
@@ -690,15 +712,41 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             "agent": "system_ai"
         })
 
-        # 완료 알림
-        await manager.send_message(client_id, {
-            "type": "end",
-            "agent": "system_ai"
-        })
+        # 위임이 발생했는지 확인 (call_project_agent 도구 사용 여부)
+        delegated = any(r.get("name") == "call_project_agent" for r in tool_results_list)
+
+        if delegated:
+            # 위임된 경우: "delegated" 타입으로 전송 (프론트엔드가 연결 유지)
+            await manager.send_message(client_id, {
+                "type": "delegated",
+                "agent": "system_ai",
+                "task_id": task_id,
+                "message": "작업을 위임했습니다. 결과를 기다리는 중..."
+            })
+            print(f"[WS] 시스템 AI 위임 발생 - 태스크 유지: {task_id}")
+        else:
+            # 위임 없이 완료: "end" 전송 후 태스크 삭제
+            await manager.send_message(client_id, {
+                "type": "end",
+                "agent": "system_ai"
+            })
+            try:
+                delete_task(task_id)
+                print(f"[WS] 시스템 AI 태스크 삭제: {task_id}")
+            except Exception as e:
+                print(f"[WS] 시스템 AI 태스크 삭제 실패: {e}")
+
+        clear_all_context()
 
     except Exception as e:
         import traceback
         traceback.print_exc()
+        # 에러 시에도 컨텍스트 정리
+        try:
+            from thread_context import clear_all_context
+            clear_all_context()
+        except:
+            pass
         await manager.send_message(client_id, {
             "type": "error",
             "message": str(e)

@@ -16,14 +16,15 @@ def _load_common():
     return module
 
 
-def create_candlestick_chart(data: list, title: str = None, show_volume: bool = True,
-                              ma_periods: list = None, output_format: str = "png",
-                              output_path: str = None):
+def create_candlestick_chart(data: list = None, data_file: str = None, title: str = None,
+                              show_volume: bool = True, ma_periods: list = None,
+                              output_format: str = "png", output_path: str = None):
     """
     캔들스틱 차트 생성
 
     Args:
         data: OHLC 데이터 [{date, open, high, low, close, volume}, ...]
+        data_file: 데이터 파일 경로 (JSON/CSV) - 대량 데이터에 권장
         title: 차트 제목
         show_volume: 거래량 표시 여부
         ma_periods: 이동평균선 기간 목록 [5, 20, 60]
@@ -33,17 +34,19 @@ def create_candlestick_chart(data: list, title: str = None, show_volume: bool = 
     Returns:
         dict: 결과 정보
     """
-    if not data:
-        return {"success": False, "error": "데이터가 비어있습니다."}
-
     common = _load_common()
+
+    # 데이터 로드 및 샘플링
+    data, original_count, sampled, error = common.load_and_sample(data, data_file)
+    if error:
+        return {"success": False, "error": error}
 
     try:
         return _create_with_plotly(data, title, show_volume, ma_periods,
-                                   output_format, output_path, common)
+                                   output_format, output_path, common, sampled, original_count)
     except ImportError:
         return _create_with_matplotlib(data, title, show_volume, ma_periods,
-                                       output_format, output_path, common)
+                                       output_format, output_path, common, sampled, original_count)
 
 
 def _calculate_ma(close_prices: list, period: int):
@@ -58,7 +61,7 @@ def _calculate_ma(close_prices: list, period: int):
     return ma
 
 
-def _create_with_plotly(data, title, show_volume, ma_periods, output_format, output_path, common):
+def _create_with_plotly(data, title, show_volume, ma_periods, output_format, output_path, common, sampled=False, original_count=0):
     """Plotly로 캔들스틱 차트 생성"""
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
@@ -139,15 +142,24 @@ def _create_with_plotly(data, title, show_volume, ma_periods, output_format, out
 
     result = common.save_plotly_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    if sampled:
+        summary = f"캔들스틱 차트 생성 완료 (원본 {original_count}개 → {len(data)}개로 샘플링)"
+    else:
+        summary = f"캔들스틱 차트 생성 완료 ({len(data)}개 데이터)"
+    if ma_periods:
+        summary += f", MA{ma_periods}"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"캔들스틱 차트 생성 완료 ({len(data)}개 데이터)" +
-                   (f", MA{ma_periods}" if ma_periods else "")
+        "summary": summary
     }
 
 
-def _create_with_matplotlib(data, title, show_volume, ma_periods, output_format, output_path, common):
+def _create_with_matplotlib(data, title, show_volume, ma_periods, output_format, output_path, common, sampled=False, original_count=0):
     """matplotlib로 캔들스틱 차트 생성"""
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
@@ -235,8 +247,16 @@ def _create_with_matplotlib(data, title, show_volume, ma_periods, output_format,
 
     result = common.save_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    if sampled:
+        summary = f"캔들스틱 차트 생성 완료 (원본 {original_count}개 → {len(data)}개로 샘플링)"
+    else:
+        summary = f"캔들스틱 차트 생성 완료 ({len(data)}개 데이터)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"캔들스틱 차트 생성 완료 ({len(data)}개 데이터)"
+        "summary": summary
     }

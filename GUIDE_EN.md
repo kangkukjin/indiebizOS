@@ -167,6 +167,29 @@ You explain medical terminology in everyday language.
 **Selecting AI Model:**
 Each agent can use a different AI. In settings, select the provider (Anthropic, OpenAI, Google, Ollama) and model.
 
+### AI's Long-term Memory: Using Memos
+
+Each AI in IndieBiz OS has a "memo" feature. This serves as the AI's long-term memory. No matter how long the conversation gets, the content in the memo is always passed to the AI.
+
+**Types of Memos:**
+- **System Memo**: Content for the System AI to remember (edit in Settings)
+- **Notes**: Content for project agents to remember (edit in Agent Settings)
+- **Work Guidelines**: Content for auto-response AI to remember (edit in Business Settings)
+
+**Good things to write in memos:**
+- User preferences or circumstances (e.g., "I have diabetes", "I live in Seoul Gangnam")
+- Context you don't want to repeat (e.g., "This is a React project", "Target customers are women in their 20s")
+- Rules the AI should follow (e.g., "Always respond in Korean", "Confirm price info before answering")
+
+**Caution: Shorter is Better**
+
+Memos are passed to the AI with every conversation. Long memos cause:
+- Token waste → increased cost, slower responses
+- AI confusion → too many instructions actually reduce quality
+- Diluted focus → important content gets buried
+
+**Recommendation:** Keep memos to 5-10 lines, only the truly important stuff. Content that's "nice to have" is better communicated through conversation when needed.
+
 ### Assigning Tools
 
 Configure which tools an agent can use.

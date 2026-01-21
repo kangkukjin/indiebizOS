@@ -1,30 +1,36 @@
-# 비즈니스 자동응답 시스템
+# 비즈니스 자동응답 시스템 V3
 
 ## 개요
 
 비즈니스 자동응답 시스템은 외부 정보채널(Gmail, Nostr 등)로 들어온 메시지를 자동으로 분석하고, 비즈니스 관련 문의에 대해 AI가 응답을 생성하는 시스템입니다.
+
+**V3 변경사항 (2026-01-21):**
+- 기존 2단계 AI 호출 → 1단계 Tool Use 방식으로 통합
+- AI가 도구를 직접 호출하여 판단, 검색, 발송을 한 번에 처리
+- 응답 즉시 발송 (polling 대기 없음)
+
+---
 
 ## 시스템 구성요소
 
 ### 1. Channel Poller (`backend/channel_poller.py`)
 - 정보채널에서 새 메시지를 주기적으로 폴링
 - 받은 메시지를 `messages` 테이블에 저장
-- `pending` 상태의 응답 메시지를 실제로 전송
+- 사용자 명령 감지 시 시스템 AI 호출
+- 응답 메시지 전송 (`_send_response`)
 
 ### 2. Auto Response Service (`backend/auto_response.py`)
 - 새 메시지에 대한 자동응답 처리
-- AI 판단 → 비즈니스 검색 → 응답 생성 플로우 관리
+- Tool Use 기반 단일 AI 호출
+- 3가지 도구: `search_business_items`, `no_response_needed`, `send_response`
 
-### 3. AI Judgment Service (`backend/ai_judgment.py`)
-- 메시지 의도 분석 및 응답 필요 여부 판단
-- 검색할 비즈니스 카테고리 결정
-
-### 4. Response Generator (`backend/response_generator.py`)
-- 최종 응답 텍스트 생성
+### 3. 프롬프트 (`data/common_prompts/base_prompt_autoresponse.md`)
+- 자동응답 AI의 역할 및 판단 기준 정의
+- 도구 사용 지침
 
 ---
 
-## 자동응답 플로우
+## 자동응답 플로우 (V3)
 
 ```
 [외부 메시지 수신]
@@ -33,192 +39,92 @@
        ↓
 [messages 테이블에 저장 (is_from_user=0)]
        ↓
-[AutoResponseService.process_new_message() 호출]
+[AutoResponseService._process_message() 호출]
        ↓
 [컨텍스트 수집]
   - 이웃 정보
   - 근무지침
   - 비즈니스 문서
   - 대화 기록
-  - 비즈니스 목록 ← 실제 DB에서 조회
        ↓
-[AI 판단 (1차 AI 호출)]
-  - action: NO_RESPONSE | BUSINESS_RESPONSE
-  - no_matching_business: 요청한 서비스가 목록에 없는지
-  - requested_service: 요청한 서비스명
-  - searches: 검색할 비즈니스 목록
+[AI 호출 (Tool Use 포함)]
        ↓
-[action == NO_RESPONSE?] → 종료 (사용자가 직접 응답)
+[AI가 도구 선택 및 실행]
+  ├─ search_business_items → 비즈니스 DB 검색
+  ├─ no_response_needed → 응답 불필요 처리
+  └─ send_response → 응답 즉시 발송
        ↓
-[비즈니스 DB 검색]
-  - searches에 지정된 비즈니스 이름으로 검색
-  - 관련 비즈니스 정보 수집
-       ↓
-[응답 생성 (2차 AI 호출)]
-  - 컨텍스트 + 검색 결과 + 판단 정보 전달
-  - no_matching_business=true면 해당 서비스 없음 안내
-       ↓
-[messages 테이블에 응답 저장 (status='pending')]
-       ↓
-[Pending Message Sender가 10초마다 폴링]
-       ↓
-[실제 메시지 전송]
-       ↓
-[status='sent'로 업데이트]
+[완료]
 ```
 
 ---
 
-## AI 판단 (AIJudgmentService)
+## 도구 정의
 
-### 입력 컨텍스트
-```python
-{
-    'message': {
-        'subject': '제목',
-        'content': '내용'
-    },
-    'neighbor': {
-        'name': '발신자 이름',
-        'pubkey': '...'
-    },
-    'work_guideline': '근무지침 텍스트',
-    'business_doc': '비즈니스 소개 문서',
-    'conversation_history': [...],
-    'business_list': [
-        {'id': 1, 'name': '중고 자전거 판매', 'description': '...'},
-        {'id': 2, 'name': '번역 서비스', 'description': '...'}
-    ]
-}
-```
+### 1. search_business_items
+비즈니스 데이터베이스에서 상품/서비스 검색
 
-### 출력 판단
 ```json
 {
-    "action": "BUSINESS_RESPONSE",
-    "confidence": 0.9,
-    "reasoning": "자전거 구매 문의",
-    "no_matching_business": false,
-    "requested_service": "",
-    "searches": [
-        {
-            "category": "중고 자전거 판매",
-            "keywords": ["자전거", "구매"],
-            "confidence": 0.9
-        }
-    ]
+  "category": "팔아요",
+  "keywords": ["자전거", "중고"]
 }
 ```
 
-### 판단 기준
+### 2. no_response_needed
+자동응답이 부적절한 경우 호출 (스팸, 광고, 개인적 대화)
 
-| 메시지 유형 | action | searches |
-|------------|--------|----------|
-| 비즈니스 문의/거래 | BUSINESS_RESPONSE | 관련 비즈니스 |
-| 공식적 인사/감사 | BUSINESS_RESPONSE | [] |
-| 개인적 대화/잡담 | NO_RESPONSE | [] |
-| 스팸/광고 | NO_RESPONSE | [] |
-
-### 비즈니스 매칭 실패 처리
-
-`no_matching_business: true`인 경우:
-- 상대방이 요청한 서비스가 비즈니스 목록에 없음
-- `requested_service`에 요청한 서비스명 기록
-- 응답 생성 시 "해당 서비스를 제공하지 않습니다" 안내
-
----
-
-## 응답 생성
-
-### 프롬프트 구성요소
-
-1. **시스템 설정**
-   - 응답 톤/스타일
-   - 언어 설정
-
-2. **비즈니스 컨텍스트**
-   - 근무지침
-   - 비즈니스 문서
-   - 검색된 비즈니스 상세정보
-
-3. **대화 컨텍스트**
-   - 최근 대화 기록
-   - 현재 메시지
-
-4. **특별 지시** (조건부)
-   - 비즈니스 매칭 실패 시: 해당 서비스 없음 안내 지시
-
-### XML 구조 (2026-01-20 통일)
-AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 적용:
-
-**응답 프롬프트 (auto_response.py)**
-```xml
-<response_examples>...</response_examples>
-<current_context>
-  <work_guideline>...</work_guideline>
-  <business_doc>...</business_doc>
-  <searched_business>...</searched_business>
-  <conversation_history>...</conversation_history>
-  <current_message>...</current_message>
-</current_context>
-<no_matching_business>...</no_matching_business>  <!-- 조건부 -->
-<response_instructions>...</response_instructions>
-```
-
-**판단 프롬프트 (ai_judgment.py)**
-```xml
-<judgment_examples>...</judgment_examples>
-<current_context>
-  <message>...</message>
-  <neighbor>...</neighbor>
-  <business_list>...</business_list>
-  <conversation_history>...</conversation_history>
-</current_context>
-<judgment_instructions>...</judgment_instructions>
-```
-
-### 응답 저장
-
-```python
-# messages 테이블에 저장
+```json
 {
-    'contact_value': '수신자 주소',
-    'channel_type': 'gmail',
-    'subject': 'Re: 원본 제목',
-    'content': '생성된 응답',
-    'is_from_user': 1,
-    'status': 'pending'  # 아직 전송 안됨
+  "reason": "스팸 메시지"
+}
+```
+
+### 3. send_response
+응답 메시지를 발신자에게 즉시 전송
+
+```json
+{
+  "subject": "RE: 문의사항",
+  "body": "안녕하세요. 문의하신 내용에 답변드립니다..."
 }
 ```
 
 ---
 
-## Pending Message Sender
+## 메시지 유형별 처리
 
-### 동작 방식
+| 메시지 유형 | AI 동작 |
+|------------|--------|
+| 비즈니스 문의 | `search_business_items` → `send_response` |
+| 공식적 인사/감사 | `send_response` (검색 없이) |
+| 개인적 대화/잡담 | `no_response_needed` |
+| 스팸/광고 | `no_response_needed` |
 
-1. 10초마다 `pending` 상태 메시지 조회
-2. 채널 타입별 전송 처리
-3. 성공 시 `status='sent'` 업데이트
-4. 실패 시 `status='failed'` 업데이트
+---
 
-### 전송 실패 처리
+## 응답 발송 처리
 
-- 최대 재시도 횟수 제한 (향후 구현)
-- 실패 로그 기록
-- 사용자에게 알림 (향후 구현)
+### send_response 도구 실행 흐름
+1. 메시지 컨텍스트에서 발신자 정보 조회
+2. Channel Poller의 `_send_response()` 호출하여 즉시 발송
+3. DB에 발송 기록 저장 (`status='sent'`)
+4. 원본 메시지 `replied=1`로 업데이트
+
+### 제목 포맷
+- 응답 제목: `Re: {원본 제목}`
+- DB 저장 제목: `(IN)agent: {AI가 지정한 제목}`
 
 ---
 
 ## 채널별 구현
 
-### Gmail (`channels/gmail.py`)
+### Gmail
 - OAuth2 인증
 - `poll_messages()`: 읽지 않은 메시지 조회
-- `send_message()`: 이메일 전송
-- `mark_as_read()`: 읽음 표시
+- `send_email()`: 이메일 전송
 
-### Nostr (`channels/nostr.py`)
+### Nostr
 - 개인키 기반 인증
 - 실시간 WebSocket 연결
 - DM(Direct Message) 송수신
@@ -230,48 +136,34 @@ AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 적용:
 ### `data/system_ai_config.json`
 ```json
 {
-    "enabled": true,
-    "provider": "anthropic",
-    "model": "claude-sonnet-4-20250514",
-    "apiKey": "sk-..."
+  "enabled": true,
+  "provider": "anthropic",
+  "model": "claude-sonnet-4-20250514",
+  "apiKey": "sk-..."
 }
 ```
 
-### `data/work_guideline.txt`
-- 자동응답 시 참조할 근무지침
-- 응답 스타일, 업무 시간, 특별 안내사항 등
-
-### `data/business_doc.txt`
-- 비즈니스 전체 소개 문서
-- AI가 컨텍스트로 참조
-
 ---
 
-## 주의사항
+## V2 → V3 변경사항
 
-1. **런처 채널 vs 프로젝트 에이전트 채널**
-   - 런처의 정보채널은 `business.db` 사용
-   - 프로젝트 외부 에이전트는 별도 메모리 기반 (독립적)
-
-2. **AI 호출 비용**
-   - 판단 1회 + 응답 생성 1회 = 총 2회 API 호출
-   - `NO_RESPONSE` 판단 시 응답 생성 호출 없음
-
-3. **에러 처리**
-   - AI 호출 실패 시 폴백 로직 (키워드 기반 판단)
-   - 메시지 전송 실패 시 `status='failed'`로 표시
+| 항목 | V2 (이전) | V3 (현재) |
+|------|----------|----------|
+| AI 호출 횟수 | 2회 (판단 + 응답) | 1회 (Tool Use) |
+| 판단 로직 | 별도 AI 호출 | AI가 도구로 직접 처리 |
+| 응답 발송 | pending → polling → 발송 | send_response 도구로 즉시 발송 |
+| 관련 파일 | ai_judgment.py, response_generator.py | auto_response.py 통합 |
 
 ---
 
 ## 관련 파일
 
+- `backend/auto_response.py` - 자동응답 서비스 (Tool Use 통합)
 - `backend/channel_poller.py` - 메시지 폴링 및 전송
-- `backend/auto_response.py` - 자동응답 서비스
-- `backend/ai_judgment.py` - AI 판단 서비스
-- `backend/response_generator.py` - 응답 생성
-- `backend/channels/base.py` - 채널 기본 인터페이스
-- `backend/channels/gmail.py` - Gmail 채널
-- `backend/channels/nostr.py` - Nostr 채널
+- `backend/business_manager.py` - 비즈니스 데이터 관리
+- `data/common_prompts/base_prompt_autoresponse.md` - 자동응답 프롬프트
 - `data/system_ai_config.json` - AI 설정
-- `data/work_guideline.txt` - 근무지침
-- `data/business_doc.txt` - 비즈니스 문서
+
+---
+
+*마지막 업데이트: 2026-01-21*

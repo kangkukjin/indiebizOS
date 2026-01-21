@@ -1,0 +1,8 @@
+{
+  "name": "investment",
+  "version": "1.0.0",
+  "description": "주식, 암호화폐, ETF 등 투자 자산 정보 조회 도구",
+  "main": "handler.py",
+  "author": "IndieBiz",
+  "license": "MIT"
+}

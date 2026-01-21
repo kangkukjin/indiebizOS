@@ -1,22 +1,14 @@
 /**
- * IndieNet - Nostr 기반 P2P 커뮤니티 게시판
+ * IndieNet - Nostr 기반 P2P 커뮤니티 게시판 (커스텀 해시태그 보드 지원)
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Globe, Send, RefreshCw, Settings, Copy, Check, X, MessageCircle, Edit2, Save, Key, RotateCcw, AlertTriangle, ArrowLeft, Mail } from 'lucide-react';
+import { Globe, Send, RefreshCw, Settings, Copy, Check, X, MessageCircle, Edit2, Save, Key, RotateCcw, AlertTriangle, ArrowLeft, Plus, Trash2, Hash } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface IndieNetPost {
   id: string;
   author: string;
-  content: string;
-  created_at: number;
-  tags: string[][];
-}
-
-interface IndieNetDM {
-  id: string;
-  from: string;
   content: string;
   created_at: number;
   tags: string[][];
@@ -33,6 +25,12 @@ interface IndieNetSettings {
   default_tags: string[];
   auto_refresh: boolean;
   refresh_interval: number;
+}
+
+interface Board {
+  name: string;
+  hashtag: string;
+  created_at: string;
 }
 
 export function IndieNet() {
@@ -60,17 +58,15 @@ export function IndieNet() {
   // 선택된 게시글 (상세보기)
   const [selectedPost, setSelectedPost] = useState<IndieNetPost | null>(null);
 
-  // 탭 (게시판/DM)
-  const [activeTab, setActiveTab] = useState<'posts' | 'dms'>('posts');
-
-  // DM 관련
-  const [dms, setDms] = useState<IndieNetDM[]>([]);
-  const [selectedDm, setSelectedDm] = useState<IndieNetDM | null>(null);
-  const [isLoadingDms, setIsLoadingDms] = useState(false);
-  const [showSendDmDialog, setShowSendDmDialog] = useState(false);
-  const [dmRecipient, setDmRecipient] = useState('');
-  const [dmContent, setDmContent] = useState('');
-  const [isSendingDm, setIsSendingDm] = useState(false);
+  // 보드 관련
+  const [boards, setBoards] = useState<Board[]>([]);
+  const [activeBoard, setActiveBoard] = useState<string | null>(null); // null = 기본 IndieNet
+  const [showCreateBoardDialog, setShowCreateBoardDialog] = useState(false);
+  const [newBoardName, setNewBoardName] = useState('');
+  const [newBoardHashtag, setNewBoardHashtag] = useState('');
+  const [isCreatingBoard, setIsCreatingBoard] = useState(false);
+  const [createBoardError, setCreateBoardError] = useState<string | null>(null);
+  const [showDeleteBoardConfirm, setShowDeleteBoardConfirm] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -78,8 +74,13 @@ export function IndieNet() {
   // 초기 로드
   useEffect(() => {
     loadStatus();
-    loadPosts();
+    loadBoards();
   }, []);
+
+  // 활성 보드 변경 시 게시글 로드
+  useEffect(() => {
+    loadPosts();
+  }, [activeBoard]);
 
   // 자동 새로고침
   useEffect(() => {
@@ -93,7 +94,7 @@ export function IndieNet() {
         clearInterval(refreshIntervalRef.current);
       }
     };
-  }, [settings?.auto_refresh, settings?.refresh_interval]);
+  }, [settings?.auto_refresh, settings?.refresh_interval, activeBoard]);
 
   const loadStatus = async () => {
     try {
@@ -110,46 +111,31 @@ export function IndieNet() {
     }
   };
 
+  const loadBoards = async () => {
+    try {
+      const result = await api.getIndieNetBoards();
+      setBoards(result.boards || []);
+      setActiveBoard(result.active_board || null);
+    } catch (err: any) {
+      console.error('보드 목록 로드 실패:', err);
+    }
+  };
+
   const loadPosts = async () => {
     try {
       setIsLoading(true);
-      const result = await api.getIndieNetPosts(50);
+      let result;
+      if (activeBoard) {
+        result = await api.getIndieNetBoardPosts(activeBoard, 50);
+      } else {
+        result = await api.getIndieNetPosts(50);
+      }
       setPosts(result.posts || []);
       setError(null);
     } catch (err: any) {
       setError(err.message || '게시글 로드 실패');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const loadDms = async () => {
-    try {
-      setIsLoadingDms(true);
-      const result = await api.getIndieNetDMs(50);
-      setDms(result.dms || []);
-    } catch (err: any) {
-      console.error('DM 로드 실패:', err);
-    } finally {
-      setIsLoadingDms(false);
-    }
-  };
-
-  const handleSendDm = async () => {
-    if (!dmRecipient.trim() || !dmContent.trim() || isSendingDm) return;
-
-    try {
-      setIsSendingDm(true);
-      await api.sendIndieNetDM(dmRecipient.trim(), dmContent.trim());
-      setShowSendDmDialog(false);
-      setDmRecipient('');
-      setDmContent('');
-      // DM 목록 새로고침
-      loadDms();
-    } catch (err: any) {
-      setError(err.message || 'DM 전송 실패');
-    } finally {
-      setIsSendingDm(false);
     }
   };
 
@@ -160,17 +146,23 @@ export function IndieNet() {
 
     try {
       setIsPosting(true);
-      const result = await api.createIndieNetPost(content);
+      let result;
+      if (activeBoard) {
+        result = await api.postToIndieNetBoard(content, activeBoard);
+      } else {
+        result = await api.createIndieNetPost(content);
+      }
 
       // 낙관적 업데이트: 게시 성공 시 로컬 목록에 바로 추가
       const resultAny = result as any;
       if (resultAny.event_id) {
+        const hashtag = activeBoard || 'indienet';
         const newPost: IndieNetPost = {
           id: resultAny.event_id,
           author: resultAny.pubkey || identity?.npub || '',
-          content: content + '\n\n#IndieNet',
+          content: content + `\n\n#${hashtag}`,
           created_at: resultAny.created_at || Math.floor(Date.now() / 1000),
-          tags: [['t', 'indienet']]
+          tags: [['t', hashtag]]
         };
 
         // 중복 제거하며 맨 앞에 추가
@@ -182,6 +174,48 @@ export function IndieNet() {
       setError(err.message || '게시 실패');
     } finally {
       setIsPosting(false);
+    }
+  };
+
+  const handleCreateBoard = async () => {
+    if (!newBoardName.trim() || !newBoardHashtag.trim() || isCreatingBoard) return;
+
+    try {
+      setIsCreatingBoard(true);
+      setCreateBoardError(null);
+      await api.createIndieNetBoard(newBoardName.trim(), newBoardHashtag.trim().toLowerCase());
+      await loadBoards();
+      setShowCreateBoardDialog(false);
+      setNewBoardName('');
+      setNewBoardHashtag('');
+    } catch (err: any) {
+      setCreateBoardError(err.message || '보드 생성 실패');
+    } finally {
+      setIsCreatingBoard(false);
+    }
+  };
+
+  const handleDeleteBoard = async (hashtag: string) => {
+    try {
+      await api.deleteIndieNetBoard(hashtag);
+      // 삭제된 보드가 활성 보드였으면 기본 보드로 전환
+      if (activeBoard === hashtag) {
+        setActiveBoard(null);
+      }
+      await loadBoards();
+      setShowDeleteBoardConfirm(null);
+    } catch (err: any) {
+      console.error('보드 삭제 실패:', err);
+    }
+  };
+
+  const handleSelectBoard = async (hashtag: string | null) => {
+    setActiveBoard(hashtag);
+    setSelectedPost(null);
+    try {
+      await api.setActiveIndieNetBoard(hashtag);
+    } catch (err: any) {
+      console.error('활성 보드 설정 실패:', err);
     }
   };
 
@@ -252,10 +286,10 @@ export function IndieNet() {
     return pubkey.substring(0, 8) + '...' + pubkey.substring(pubkey.length - 8);
   };
 
-  // 컨텐츠에서 #IndieNet 태그 제거
+  // 컨텐츠에서 해시태그 제거
   const cleanContent = (content: string) => {
     return content
-      .replace(/#IndieNet/gi, '')
+      .replace(/#[a-zA-Z0-9_]+/gi, '')
       .replace(/\n\n\s*$/g, '')
       .trim();
   };
@@ -267,6 +301,13 @@ export function IndieNet() {
     return cleaned.substring(0, 150) + '...';
   };
 
+  // 현재 보드 이름 가져오기
+  const getCurrentBoardName = () => {
+    if (!activeBoard) return 'IndieNet';
+    const board = boards.find(b => b.hashtag === activeBoard);
+    return board?.name || activeBoard;
+  };
+
   return (
     <div className="h-full flex flex-col bg-[#F5F1EB]">
       {/* 헤더 */}
@@ -274,17 +315,22 @@ export function IndieNet() {
         <div className="flex items-center gap-3 no-drag">
           <Globe size={24} className="text-[#D97706]" />
           <span className="text-lg font-bold text-[#6B5B4F]">
-            IndieNet
+            {getCurrentBoardName()}
           </span>
+          {activeBoard && (
+            <span className="text-xs text-[#9CA3AF] bg-[#EAE4DA] px-2 py-0.5 rounded">
+              #{activeBoard}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 no-drag">
           <button
-            onClick={() => activeTab === 'posts' ? loadPosts() : loadDms()}
-            disabled={isLoading || isLoadingDms}
+            onClick={loadPosts}
+            disabled={isLoading}
             className="p-2 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F] disabled:opacity-50"
             title="새로고침"
           >
-            <RefreshCw size={18} className={(isLoading || isLoadingDms) ? 'animate-spin' : ''} />
+            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
           </button>
           <button
             onClick={() => setShowSettings(true)}
@@ -296,248 +342,165 @@ export function IndieNet() {
         </div>
       </div>
 
-      {/* 탭 */}
-      <div className="flex border-b border-[#E5DFD5] bg-white">
+      {/* 보드 선택 탭 */}
+      <div className="flex items-center gap-1 px-2 py-2 border-b border-[#E5DFD5] bg-white overflow-x-auto">
+        {/* 기본 IndieNet 보드 */}
         <button
-          onClick={() => { setActiveTab('posts'); setSelectedPost(null); }}
-          className={`flex-1 py-2 text-sm font-medium transition-colors ${
-            activeTab === 'posts'
-              ? 'text-[#D97706] border-b-2 border-[#D97706]'
-              : 'text-[#6B5B4F] hover:text-[#D97706]'
+          onClick={() => handleSelectBoard(null)}
+          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+            activeBoard === null
+              ? 'bg-[#D97706] text-white'
+              : 'bg-[#F5F1EB] text-[#6B5B4F] hover:bg-[#EAE4DA]'
           }`}
         >
-          <div className="flex items-center justify-center gap-2">
-            <MessageCircle size={16} />
-            게시판
-          </div>
+          <Hash size={14} />
+          IndieNet
         </button>
-        <button
-          onClick={() => { setActiveTab('dms'); setSelectedDm(null); loadDms(); }}
-          className={`flex-1 py-2 text-sm font-medium transition-colors ${
-            activeTab === 'dms'
-              ? 'text-[#D97706] border-b-2 border-[#D97706]'
-              : 'text-[#6B5B4F] hover:text-[#D97706]'
-          }`}
-        >
-          <div className="flex items-center justify-center gap-2">
-            <Mail size={16} />
-            DM
+
+        {/* 커스텀 보드들 */}
+        {boards.map((board) => (
+          <div key={board.hashtag} className="flex items-center">
+            <button
+              onClick={() => handleSelectBoard(board.hashtag)}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-l-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                activeBoard === board.hashtag
+                  ? 'bg-[#D97706] text-white'
+                  : 'bg-[#F5F1EB] text-[#6B5B4F] hover:bg-[#EAE4DA]'
+              }`}
+            >
+              <Hash size={14} />
+              {board.name}
+            </button>
+            <button
+              onClick={() => setShowDeleteBoardConfirm(board.hashtag)}
+              className={`p-1.5 rounded-r-lg transition-colors ${
+                activeBoard === board.hashtag
+                  ? 'bg-[#B45309] text-white hover:bg-[#92400E]'
+                  : 'bg-[#EAE4DA] text-[#9CA3AF] hover:bg-red-100 hover:text-red-500'
+              }`}
+              title="보드 삭제"
+            >
+              <X size={14} />
+            </button>
           </div>
+        ))}
+
+        {/* 새 보드 추가 버튼 */}
+        <button
+          onClick={() => setShowCreateBoardDialog(true)}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap bg-[#F5F1EB] text-[#6B5B4F] hover:bg-[#EAE4DA] transition-colors border border-dashed border-[#D1C7B7]"
+        >
+          <Plus size={14} />
+          새 보드
         </button>
       </div>
 
-      {/* 게시판 탭 */}
-      {activeTab === 'posts' && (
-        <>
-          {/* 글쓰기 영역 */}
-          <div className="px-4 py-3 border-b border-[#E5DFD5] bg-white">
-            <div className="flex gap-2">
-              <textarea
-                ref={textareaRef}
-                value={newPostContent}
-                onChange={(e) => setNewPostContent(e.target.value)}
-                placeholder="무슨 생각을 하고 계세요?"
-                className="flex-1 bg-[#F5F1EB] border border-[#E5DFD5] rounded-lg px-3 py-2 text-sm text-[#3D3D3D] placeholder-[#9CA3AF] focus:outline-none focus:border-[#D97706] resize-none"
-                rows={2}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                    handlePost();
-                  }
-                }}
-              />
+      {/* 글쓰기 영역 */}
+      <div className="px-4 py-3 border-b border-[#E5DFD5] bg-white">
+        <div className="flex gap-2">
+          <textarea
+            ref={textareaRef}
+            value={newPostContent}
+            onChange={(e) => setNewPostContent(e.target.value)}
+            placeholder={`${getCurrentBoardName()}에 글쓰기...`}
+            className="flex-1 bg-[#F5F1EB] border border-[#E5DFD5] rounded-lg px-3 py-2 text-sm text-[#3D3D3D] placeholder-[#9CA3AF] focus:outline-none focus:border-[#D97706] resize-none"
+            rows={2}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                handlePost();
+              }
+            }}
+          />
+          <button
+            onClick={handlePost}
+            disabled={!newPostContent.trim() || isPosting}
+            className="px-4 py-2 bg-[#D97706] text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B45309] transition-colors"
+          >
+            {isPosting ? (
+              <RefreshCw size={18} className="animate-spin" />
+            ) : (
+              <Send size={18} />
+            )}
+          </button>
+        </div>
+        <p className="text-xs text-[#9CA3AF] mt-1">Cmd/Ctrl + Enter로 게시 • #{activeBoard || 'indienet'} 태그로 자동 게시됩니다</p>
+      </div>
+
+      {/* 게시글 목록 / 상세보기 */}
+      <div className="flex-1 overflow-y-auto bg-white">
+        {error && (
+          <div className="m-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* 상세보기 */}
+        {selectedPost ? (
+          <div className="h-full flex flex-col">
+            {/* 상세보기 헤더 */}
+            <div className="px-4 py-3 border-b border-[#E5DFD5] bg-[#F9F7F4]">
               <button
-                onClick={handlePost}
-                disabled={!newPostContent.trim() || isPosting}
-                className="px-4 py-2 bg-[#D97706] text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#B45309] transition-colors"
+                onClick={() => setSelectedPost(null)}
+                className="flex items-center gap-2 text-sm text-[#6B5B4F] hover:text-[#D97706] transition-colors"
               >
-                {isPosting ? (
-                  <RefreshCw size={18} className="animate-spin" />
-                ) : (
-                  <Send size={18} />
-                )}
+                <ArrowLeft size={16} />
+                목록으로 돌아가기
               </button>
             </div>
-            <p className="text-xs text-[#9CA3AF] mt-1">Cmd/Ctrl + Enter로 게시</p>
-          </div>
-
-          {/* 게시글 목록 / 상세보기 */}
-          <div className="flex-1 overflow-y-auto bg-white">
-            {error && (
-              <div className="m-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                {error}
+            {/* 게시글 내용 */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm text-[#D97706] font-medium">
+                  {shortenPubkey(selectedPost.author)}
+                </span>
+                <span className="text-xs text-[#9CA3AF]">
+                  {formatTimestamp(selectedPost.created_at)}
+                </span>
               </div>
-            )}
-
-            {/* 상세보기 */}
-            {selectedPost ? (
-              <div className="h-full flex flex-col">
-                {/* 상세보기 헤더 */}
-                <div className="px-4 py-3 border-b border-[#E5DFD5] bg-[#F9F7F4]">
-                  <button
-                    onClick={() => setSelectedPost(null)}
-                    className="flex items-center gap-2 text-sm text-[#6B5B4F] hover:text-[#D97706] transition-colors"
-                  >
-                    <ArrowLeft size={16} />
-                    목록으로 돌아가기
-                  </button>
-                </div>
-                {/* 게시글 내용 */}
-                <div className="flex-1 overflow-y-auto p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-[#D97706] font-medium">
-                      {shortenPubkey(selectedPost.author)}
-                    </span>
-                    <span className="text-xs text-[#9CA3AF]">
-                      {formatTimestamp(selectedPost.created_at)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-[#3D3D3D] whitespace-pre-wrap break-words leading-relaxed">
-                    {cleanContent(selectedPost.content)}
-                  </p>
-                </div>
+              <p className="text-sm text-[#3D3D3D] whitespace-pre-wrap break-words leading-relaxed">
+                {cleanContent(selectedPost.content)}
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* 목록 보기 */
+          <>
+            {isLoading && posts.length === 0 ? (
+              <div className="flex items-center justify-center h-32">
+                <RefreshCw size={24} className="animate-spin text-[#D97706]" />
+              </div>
+            ) : posts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-[#9CA3AF]">
+                <MessageCircle size={32} className="mb-2" />
+                <p>아직 게시글이 없습니다</p>
+                <p className="text-sm">첫 번째 글을 작성해보세요!</p>
               </div>
             ) : (
-              /* 목록 보기 */
-              <>
-                {isLoading && posts.length === 0 ? (
-                  <div className="flex items-center justify-center h-32">
-                    <RefreshCw size={24} className="animate-spin text-[#D97706]" />
+              <div className="divide-y divide-[#E5DFD5]">
+                {posts.map((post) => (
+                  <div
+                    key={post.id}
+                    onClick={() => setSelectedPost(post)}
+                    className="px-4 py-3 hover:bg-[#F9F7F4] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-[#D97706] font-medium">
+                        {shortenPubkey(post.author)}
+                      </span>
+                      <span className="text-xs text-[#9CA3AF]">
+                        {formatTimestamp(post.created_at)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-[#3D3D3D] line-clamp-2">
+                      {getPreviewContent(post.content)}
+                    </p>
                   </div>
-                ) : posts.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-32 text-[#9CA3AF]">
-                    <MessageCircle size={32} className="mb-2" />
-                    <p>아직 게시글이 없습니다</p>
-                    <p className="text-sm">첫 번째 글을 작성해보세요!</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-[#E5DFD5]">
-                    {posts.map((post) => (
-                      <div
-                        key={post.id}
-                        onClick={() => setSelectedPost(post)}
-                        className="px-4 py-3 hover:bg-[#F9F7F4] transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-[#D97706] font-medium">
-                            {shortenPubkey(post.author)}
-                          </span>
-                          <span className="text-xs text-[#9CA3AF]">
-                            {formatTimestamp(post.created_at)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-[#3D3D3D] line-clamp-2">
-                          {getPreviewContent(post.content)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* DM 탭 */}
-      {activeTab === 'dms' && (
-        <>
-          {/* DM 작성 버튼 */}
-          <div className="px-4 py-3 border-b border-[#E5DFD5] bg-white">
-            <button
-              onClick={() => setShowSendDmDialog(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#D97706] text-white rounded-lg font-medium hover:bg-[#B45309] transition-colors"
-            >
-              <Send size={16} />
-              새 DM 보내기
-            </button>
-          </div>
-
-          {/* DM 목록 / 상세보기 */}
-          <div className="flex-1 overflow-y-auto bg-white">
-            {error && (
-              <div className="m-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                {error}
+                ))}
               </div>
             )}
-
-            {/* DM 상세보기 */}
-            {selectedDm ? (
-              <div className="h-full flex flex-col">
-                <div className="px-4 py-3 border-b border-[#E5DFD5] bg-[#F9F7F4]">
-                  <button
-                    onClick={() => setSelectedDm(null)}
-                    className="flex items-center gap-2 text-sm text-[#6B5B4F] hover:text-[#D97706] transition-colors"
-                  >
-                    <ArrowLeft size={16} />
-                    목록으로 돌아가기
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm text-[#D97706] font-medium">
-                      {shortenPubkey(selectedDm.from)}
-                    </span>
-                    <span className="text-xs text-[#9CA3AF]">
-                      {formatTimestamp(selectedDm.created_at)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-[#3D3D3D] whitespace-pre-wrap break-words leading-relaxed">
-                    {selectedDm.content}
-                  </p>
-                  {/* 답장 버튼 */}
-                  <button
-                    onClick={() => {
-                      setDmRecipient(selectedDm.from);
-                      setShowSendDmDialog(true);
-                    }}
-                    className="mt-4 flex items-center gap-2 px-4 py-2 bg-[#F5F1EB] border border-[#E5DFD5] rounded-lg text-sm text-[#6B5B4F] hover:bg-[#EAE4DA] transition-colors"
-                  >
-                    <Send size={14} />
-                    답장하기
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* DM 목록 */
-              <>
-                {isLoadingDms && dms.length === 0 ? (
-                  <div className="flex items-center justify-center h-32">
-                    <RefreshCw size={24} className="animate-spin text-[#D97706]" />
-                  </div>
-                ) : dms.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-32 text-[#9CA3AF]">
-                    <Mail size={32} className="mb-2" />
-                    <p>받은 DM이 없습니다</p>
-                    <p className="text-sm">공개 게시글에서 다른 사용자가 DM을 보내면 여기에 표시됩니다</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-[#E5DFD5]">
-                    {dms.map((dm) => (
-                      <div
-                        key={dm.id}
-                        onClick={() => setSelectedDm(dm)}
-                        className="px-4 py-3 hover:bg-[#F9F7F4] transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm text-[#D97706] font-medium">
-                            {shortenPubkey(dm.from)}
-                          </span>
-                          <span className="text-xs text-[#9CA3AF]">
-                            {formatTimestamp(dm.created_at)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-[#3D3D3D] line-clamp-2">
-                          {dm.content.length > 150 ? dm.content.substring(0, 150) + '...' : dm.content}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
 
       {/* 설정 다이얼로그 */}
       {showSettings && (
@@ -772,17 +735,18 @@ export function IndieNet() {
         </div>
       )}
 
-      {/* DM 전송 다이얼로그 */}
-      {showSendDmDialog && (
+      {/* 새 보드 생성 다이얼로그 */}
+      {showCreateBoardDialog && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white border border-[#E5DFD5] rounded-xl w-96 overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5DFD5] bg-[#F5F1EB]">
-              <h3 className="font-bold text-lg text-[#6B5B4F]">DM 보내기</h3>
+              <h3 className="font-bold text-lg text-[#6B5B4F]">새 보드 만들기</h3>
               <button
                 onClick={() => {
-                  setShowSendDmDialog(false);
-                  setDmRecipient('');
-                  setDmContent('');
+                  setShowCreateBoardDialog(false);
+                  setNewBoardName('');
+                  setNewBoardHashtag('');
+                  setCreateBoardError(null);
                 }}
                 className="p-1 hover:bg-[#EAE4DA] rounded-lg transition-colors text-[#6B5B4F]"
               >
@@ -792,46 +756,97 @@ export function IndieNet() {
             <div className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[#6B5B4F] mb-1">
-                  받는 사람 (npub 또는 hex)
+                  보드 이름
                 </label>
                 <input
                   type="text"
-                  value={dmRecipient}
-                  onChange={(e) => setDmRecipient(e.target.value)}
-                  placeholder="npub1... 또는 hex 공개키"
-                  className="w-full bg-[#F5F1EB] border border-[#E5DFD5] rounded-lg px-3 py-2 text-sm text-[#3D3D3D] font-mono focus:outline-none focus:border-[#D97706]"
+                  value={newBoardName}
+                  onChange={(e) => setNewBoardName(e.target.value)}
+                  placeholder="예: 내 비밀 게시판"
+                  className="w-full bg-[#F5F1EB] border border-[#E5DFD5] rounded-lg px-3 py-2 text-sm text-[#3D3D3D] focus:outline-none focus:border-[#D97706]"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#6B5B4F] mb-1">
-                  메시지
+                  해시태그 (영문, 숫자만)
                 </label>
-                <textarea
-                  value={dmContent}
-                  onChange={(e) => setDmContent(e.target.value)}
-                  placeholder="메시지를 입력하세요..."
-                  className="w-full bg-[#F5F1EB] border border-[#E5DFD5] rounded-lg px-3 py-2 text-sm text-[#3D3D3D] focus:outline-none focus:border-[#D97706] resize-none"
-                  rows={4}
-                />
+                <div className="flex items-center gap-1">
+                  <span className="text-lg text-[#9CA3AF]">#</span>
+                  <input
+                    type="text"
+                    value={newBoardHashtag}
+                    onChange={(e) => setNewBoardHashtag(e.target.value)}
+                    onBlur={(e) => {
+                      const filtered = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                      setNewBoardHashtag(filtered);
+                    }}
+                    placeholder="indienetkukjin"
+                    className="flex-1 bg-[#F5F1EB] border border-[#E5DFD5] rounded-lg px-3 py-2 text-sm text-[#3D3D3D] font-mono focus:outline-none focus:border-[#D97706]"
+                  />
+                </div>
+                <p className="text-xs text-[#9CA3AF] mt-1">
+                  영문, 숫자만 사용 가능합니다. 이 해시태그를 아는 사람만 게시판에 접근할 수 있습니다.
+                </p>
               </div>
+
+              {createBoardError && (
+                <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                  <AlertTriangle size={16} />
+                  {createBoardError}
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <button
                   onClick={() => {
-                    setShowSendDmDialog(false);
-                    setDmRecipient('');
-                    setDmContent('');
+                    setShowCreateBoardDialog(false);
+                    setNewBoardName('');
+                    setNewBoardHashtag('');
+                    setCreateBoardError(null);
                   }}
                   className="flex-1 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600 hover:bg-gray-200 transition-colors"
                 >
                   취소
                 </button>
                 <button
-                  onClick={handleSendDm}
-                  disabled={!dmRecipient.trim() || !dmContent.trim() || isSendingDm}
+                  onClick={handleCreateBoard}
+                  disabled={!newBoardName.trim() || !newBoardHashtag.trim() || isCreatingBoard}
                   className="flex-1 px-3 py-2 bg-[#D97706] text-white rounded-lg text-sm font-medium disabled:opacity-50 hover:bg-[#B45309] transition-colors"
                 >
-                  {isSendingDm ? '전송 중...' : '전송'}
+                  {isCreatingBoard ? '생성 중...' : '만들기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 보드 삭제 확인 다이얼로그 */}
+      {showDeleteBoardConfirm && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white border border-[#E5DFD5] rounded-xl w-80 overflow-hidden shadow-2xl">
+            <div className="p-4 space-y-4">
+              <div className="flex items-center gap-3 text-red-600">
+                <Trash2 size={24} />
+                <h3 className="font-bold text-lg">보드 삭제</h3>
+              </div>
+              <p className="text-sm text-[#3D3D3D]">
+                <span className="font-medium">#{showDeleteBoardConfirm}</span> 보드를 삭제하시겠습니까?
+                <br />
+                <span className="text-[#9CA3AF]">게시글은 Nostr 네트워크에 남아있습니다.</span>
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowDeleteBoardConfirm(null)}
+                  className="flex-1 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600 hover:bg-gray-200 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={() => handleDeleteBoard(showDeleteBoardConfirm)}
+                  className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                >
+                  삭제
                 </button>
               </div>
             </div>

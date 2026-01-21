@@ -297,8 +297,6 @@ async def get_agent_note(project_id: str, agent_id: str):
 @router.put("/projects/{project_id}/agents/{agent_id}/note")
 async def save_agent_note(project_id: str, agent_id: str, note_data: AgentNote):
     """에이전트 메모 저장"""
-    from api_helpers import update_agent_rules_json
-
     try:
         project_path = project_manager.get_project_path(project_id)
         agents_file = project_path / "agents.yaml"
@@ -314,9 +312,6 @@ async def save_agent_note(project_id: str, agent_id: str, note_data: AgentNote):
                 agent_name = agent.get("name", agent_id)
                 note_file = project_path / f"agent_{agent_name}_note.txt"
                 note_file.write_text(note_data.note, encoding='utf-8')
-
-                # rules.json 자동 업데이트
-                update_agent_rules_json(agent_name, project_path)
 
                 return {"status": "saved"}
 
@@ -361,8 +356,6 @@ async def get_agent_role(project_id: str, agent_id: str):
 @router.put("/projects/{project_id}/agents/{agent_id}/role")
 async def update_agent_role(project_id: str, agent_id: str, role_data: AgentRole):
     """에이전트 역할 저장"""
-    from api_helpers import update_agent_rules_json
-
     try:
         project_path = project_manager.get_project_path(project_id)
         agents_file = project_path / "agents.yaml"
@@ -378,9 +371,6 @@ async def update_agent_role(project_id: str, agent_id: str, role_data: AgentRole
                 agent_name = agent.get("name", agent_id)
                 role_file = project_path / f"agent_{agent_name}_role.txt"
                 role_file.write_text(role_data.role, encoding='utf-8')
-
-                # rules.json 자동 업데이트
-                update_agent_rules_json(agent_name, project_path)
 
                 return {"status": "saved", "agent_name": agent_name}
 

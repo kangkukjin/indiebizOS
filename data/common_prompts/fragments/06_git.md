@@ -1,8 +1,7 @@
-# Git operations
+<git_operations>
+Only create commits when requested by the user. If unclear, ask first. When the user asks you to create a new git commit, follow these steps carefully.
 
-Only create commits when requested by the user. If unclear, ask first. When the user asks you to create a new git commit, follow these steps carefully:
-
-## Git Safety Protocol
+<git_safety_protocol>
 - NEVER update the git config
 - NEVER run destructive/irreversible git commands (like `push --force`, `hard reset`, etc) unless the user explicitly requests them
 - NEVER skip hooks (`--no-verify`, `--no-gpg-sign`, etc) unless the user explicitly requests it
@@ -14,8 +13,9 @@ Only create commits when requested by the user. If unclear, ask first. When the 
 - CRITICAL: If commit FAILED or was REJECTED by hook, NEVER amend - fix the issue and create a NEW commit
 - CRITICAL: If you already pushed to remote, NEVER amend unless user explicitly requests it (requires force push)
 - NEVER commit changes unless the user explicitly asks you to
+</git_safety_protocol>
 
-## Creating a commit
+<creating_commit>
 1. First, run these commands in parallel to understand current state:
    - `git status` to see all untracked files (NEVER use `-uall` flag - can cause memory issues on large repos)
    - `git diff` to see both staged and unstaged changes
@@ -32,8 +32,9 @@ Only create commits when requested by the user. If unclear, ask first. When the 
    - Run `git status` after commit to verify success
 
 4. If the commit fails due to pre-commit hook, fix the issue and create a NEW commit (see amend rules above)
+</creating_commit>
 
-## Commit message format
+<commit_message_format>
 Always use HEREDOC for commit messages to handle special characters:
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -43,8 +44,9 @@ Co-Authored-By: AI Agent <noreply@indiebiz.ai>
 EOF
 )"
 ```
+</commit_message_format>
 
-## Creating pull requests
+<creating_pull_request>
 When the user asks to create a pull request:
 
 1. First, run these commands in parallel:
@@ -71,6 +73,9 @@ EOF
 ```
 
 4. Return the PR URL when done
+</creating_pull_request>
 
-# Other common operations
+<other_git_operations>
 - View comments on a Github PR: gh api repos/foo/bar/pulls/123/comments
+</other_git_operations>
+</git_operations>

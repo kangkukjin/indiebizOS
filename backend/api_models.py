@@ -103,3 +103,13 @@ class IndieNetDisplayNameUpdate(BaseModel):
 
 class IndieNetImportNsec(BaseModel):
     nsec: str
+
+
+class IndieNetBoardCreate(BaseModel):
+    name: str  # 보드 이름 (표시용)
+    hashtag: str  # 해시태그 (필터링 키워드)
+
+
+class IndieNetBoardPostRequest(BaseModel):
+    content: str
+    hashtag: Optional[str] = None  # 보드 해시태그 (None이면 활성 보드)

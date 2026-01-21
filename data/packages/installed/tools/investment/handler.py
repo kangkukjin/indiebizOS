@@ -126,6 +126,40 @@ def execute(tool_name: str, params: dict, project_path: str = None):
                 end_date=params.get("end_date")
             )
 
+        # Yahoo Finance / CoinGecko 도구
+        elif tool_name == "yf_stock_price":
+            tool = load_module("tool_yfinance")
+            return tool.get_stock_price(
+                symbol=params.get("symbol"),
+                period=params.get("period", "5d"),
+                interval=params.get("interval", "1d")
+            )
+
+        elif tool_name == "yf_stock_info":
+            tool = load_module("tool_yfinance")
+            return tool.get_stock_info(
+                symbol=params.get("symbol")
+            )
+
+        elif tool_name == "yf_search_stock":
+            tool = load_module("tool_yfinance")
+            return tool.search_stock(
+                query=params.get("query"),
+                search_type=params.get("search_type", "quotes")
+            )
+
+        elif tool_name == "yf_stock_news":
+            tool = load_module("tool_yfinance")
+            return tool.get_stock_news(
+                symbol=params.get("symbol")
+            )
+
+        elif tool_name == "crypto_price":
+            tool = load_module("tool_yfinance")
+            return tool.get_crypto_price(
+                coin_id=params.get("coin_id", "bitcoin")
+            )
+
         else:
             return {
                 "success": False,

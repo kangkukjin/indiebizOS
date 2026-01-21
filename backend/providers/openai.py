@@ -119,11 +119,17 @@ class OpenAIProvider(BaseProvider):
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
 
-        # 히스토리
+        # 히스토리 (XML 태그로 구분)
         for h in history:
+            role = h["role"]
+            content = h["content"]
+            if role == "user":
+                tagged_content = f"<user_message>\n{content}\n</user_message>"
+            else:
+                tagged_content = f"<assistant_message>\n{content}\n</assistant_message>"
             messages.append({
-                "role": h["role"],
-                "content": h["content"]
+                "role": role,
+                "content": tagged_content
             })
 
         # 현재 메시지 (이미지 포함 가능) - 태그로 명확히 구분

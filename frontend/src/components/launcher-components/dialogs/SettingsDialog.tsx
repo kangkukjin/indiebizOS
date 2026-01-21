@@ -464,6 +464,75 @@ export function SettingsDialog({
                           {/* Gmail 설정 */}
                           {channel.channel_type === 'gmail' && (
                             <>
+                              <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                                📧 Gmail API를 사용하여 이메일을 송수신합니다. Google Cloud Console에서 OAuth 2.0 클라이언트를 생성하세요.
+                              </p>
+
+                              {/* OAuth 클라이언트 ID */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  OAuth 클라이언트 ID
+                                </label>
+                                <input
+                                  type="text"
+                                  value={channelConfigs.gmail?.client_id || ''}
+                                  onChange={(e) => handleUpdateChannelConfig('gmail', {
+                                    ...channelConfigs.gmail,
+                                    client_id: e.target.value
+                                  })}
+                                  placeholder="xxxxx.apps.googleusercontent.com"
+                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 text-sm"
+                                />
+                              </div>
+
+                              {/* OAuth 클라이언트 Secret */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  OAuth 클라이언트 Secret
+                                </label>
+                                <input
+                                  type="password"
+                                  value={channelConfigs.gmail?.client_secret || ''}
+                                  onChange={(e) => handleUpdateChannelConfig('gmail', {
+                                    ...channelConfigs.gmail,
+                                    client_secret: e.target.value
+                                  })}
+                                  placeholder="GOCSPX-xxxxx"
+                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 text-sm"
+                                />
+                              </div>
+
+                              {/* 인증 상태 및 버튼 */}
+                              <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${channelConfigs.gmail?.authenticated ? 'bg-green-500' : 'bg-red-500'}`} />
+                                  <span className="text-sm text-gray-700">
+                                    {channelConfigs.gmail?.authenticated ? `인증됨 (${channelConfigs.gmail?.email || ''})` : '인증 필요'}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const result = await api.authenticateGmail();
+                                      if (result.auth_url) {
+                                        window.open(result.auth_url, '_blank');
+                                      }
+                                      loadChannels();
+                                    } catch (err) {
+                                      console.error('Gmail 인증 시작 실패:', err);
+                                    }
+                                  }}
+                                  disabled={!channelConfigs.gmail?.client_id || !channelConfigs.gmail?.client_secret}
+                                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                                    channelConfigs.gmail?.client_id && channelConfigs.gmail?.client_secret
+                                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  }`}
+                                >
+                                  {channelConfigs.gmail?.authenticated ? '재인증' : 'Google 인증'}
+                                </button>
+                              </div>
+
                               {/* 폴링 주기 */}
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -481,9 +550,7 @@ export function SettingsDialog({
                                   최소 10초, 최대 3600초 (1시간)
                                 </p>
                               </div>
-                              <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                                📧 읽지 않은 모든 이메일을 비즈니스 메시지로 수신합니다
-                              </p>
+
                               {/* 즉시 확인 버튼 */}
                               <div className="flex items-center justify-between">
                                 <button
@@ -495,9 +562,9 @@ export function SettingsDialog({
                                       console.error('즉시 폴링 실패:', err);
                                     }
                                   }}
-                                  disabled={channel.enabled !== 1}
+                                  disabled={channel.enabled !== 1 || !channelConfigs.gmail?.authenticated}
                                   className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                                    channel.enabled === 1
+                                    channel.enabled === 1 && channelConfigs.gmail?.authenticated
                                       ? 'bg-[#D97706] text-white hover:bg-[#B45309]'
                                       : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                   }`}

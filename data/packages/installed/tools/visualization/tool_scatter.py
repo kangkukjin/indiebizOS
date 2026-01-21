@@ -16,14 +16,15 @@ def _load_common():
     return module
 
 
-def create_scatter_plot(data: list, title: str = None, x_label: str = None,
-                        y_label: str = None, show_trendline: bool = False,
+def create_scatter_plot(data: list = None, data_file: str = None, title: str = None,
+                        x_label: str = None, y_label: str = None, show_trendline: bool = False,
                         output_format: str = "png", output_path: str = None):
     """
     산점도 생성
 
     Args:
         data: 데이터 배열 [{x: 10, y: 20, label: '항목1', size: 5}, ...]
+        data_file: 데이터 파일 경로 (JSON/CSV) - 대량 데이터에 권장
         title: 차트 제목
         x_label: X축 레이블
         y_label: Y축 레이블
@@ -34,21 +35,23 @@ def create_scatter_plot(data: list, title: str = None, x_label: str = None,
     Returns:
         dict: 결과 정보
     """
-    if not data:
-        return {"success": False, "error": "데이터가 비어있습니다."}
-
     common = _load_common()
+
+    # 데이터 로드 및 샘플링
+    data, original_count, sampled, error = common.load_and_sample(data, data_file)
+    if error:
+        return {"success": False, "error": error}
 
     try:
         return _create_with_plotly(data, title, x_label, y_label, show_trendline,
-                                   output_format, output_path, common)
+                                   output_format, output_path, common, sampled, original_count)
     except ImportError:
         return _create_with_matplotlib(data, title, x_label, y_label, show_trendline,
-                                       output_format, output_path, common)
+                                       output_format, output_path, common, sampled, original_count)
 
 
 def _create_with_plotly(data, title, x_label, y_label, show_trendline,
-                        output_format, output_path, common):
+                        output_format, output_path, common, sampled=False, original_count=0):
     """Plotly로 산점도 생성"""
     import plotly.graph_objects as go
 
@@ -107,15 +110,23 @@ def _create_with_plotly(data, title, x_label, y_label, show_trendline,
 
     result = common.save_plotly_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    if sampled:
+        summary = f"산점도 생성 완료 (원본 {original_count}개 → {len(data)}개로 샘플링)"
+    else:
+        summary = f"산점도 생성 완료 ({len(data)}개 데이터 포인트)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"산점도 생성 완료 ({len(data)}개 데이터 포인트)"
+        "summary": summary
     }
 
 
 def _create_with_matplotlib(data, title, x_label, y_label, show_trendline,
-                            output_format, output_path, common):
+                            output_format, output_path, common, sampled=False, original_count=0):
     """matplotlib로 산점도 생성"""
     import matplotlib.pyplot as plt
     import numpy as np
@@ -166,8 +177,16 @@ def _create_with_matplotlib(data, title, x_label, y_label, show_trendline,
 
     result = common.save_figure(fig, output_path, output_format)
 
+    image_tag = result.get("image_tag", "")
+    if sampled:
+        summary = f"산점도 생성 완료 (원본 {original_count}개 → {len(data)}개로 샘플링)"
+    else:
+        summary = f"산점도 생성 완료 ({len(data)}개 데이터 포인트)"
+    if image_tag:
+        summary += f"\n\n{image_tag}"
+
     return {
         "success": True,
         "data": result,
-        "summary": f"산점도 생성 완료 ({len(data)}개 데이터 포인트)"
+        "summary": summary
     }

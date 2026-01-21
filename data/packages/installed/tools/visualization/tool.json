@@ -6,13 +6,17 @@
   "tools": [
     {
       "name": "line_chart",
-      "description": "라인 차트 생성. x-y 데이터를 선으로 연결하여 시각화. 수학 함수, 시계열, 가격 추이 등 모든 연속 데이터에 사용.\n\n데이터 형식: [{x: 값, y: 값}, ...] 또는 [{x: 값, series1: 값, series2: 값}, ...]\n\n예시: data=[{x:1, y:1}, {x:2, y:4}, {x:3, y:9}]",
+      "description": "라인 차트 생성. x-y 데이터를 선으로 연결하여 시각화. 수학 함수, 시계열, 가격 추이 등 모든 연속 데이터에 사용.\n\n입력 방식: data_file (권장) 또는 data 중 하나 사용. 데이터가 많으면 반드시 파일로 전달.\n\n자동 샘플링: 300개 초과 시 자동으로 샘플링됨.",
       "input_schema": {
         "type": "object",
         "properties": {
+          "data_file": {
+            "type": "string",
+            "description": "데이터 파일 경로 (JSON/CSV). 권장 방식. [{x: 값, y: 값}, ...] 형식의 JSON 또는 x,y 컬럼의 CSV"
+          },
           "data": {
             "type": "array",
-            "description": "데이터 배열. [{x: 값, y: 값}, ...] 또는 여러 시리즈: [{x: 값, gold: 100, silver: 50}, ...]",
+            "description": "데이터 배열 (소량일 때만 사용). [{x: 값, y: 값}, ...] 또는 여러 시리즈: [{x: 값, gold: 100, silver: 50}, ...]",
             "items": {"type": "object"}
           },
           "title": {
@@ -43,13 +47,17 @@
     },
     {
       "name": "bar_chart",
-      "description": "막대 차트 생성. 카테고리별 값을 막대로 비교. 항목별 비교, 순위, 분포 등 이산 데이터에 사용.\n\n데이터 형식: [{label: '항목명', value: 값}, ...] 또는 [{label: '항목명', a: 값, b: 값}, ...]\n\n예시: data=[{label:'A', value:100}, {label:'B', value:200}]",
+      "description": "막대 차트 생성. 카테고리별 값을 막대로 비교. 항목별 비교, 순위, 분포 등 이산 데이터에 사용.\n\n입력 방식: data_file (권장) 또는 data 중 하나 사용.",
       "input_schema": {
         "type": "object",
         "properties": {
+          "data_file": {
+            "type": "string",
+            "description": "데이터 파일 경로 (JSON/CSV). 권장 방식."
+          },
           "data": {
             "type": "array",
-            "description": "데이터 배열. [{label: '항목1', value: 100}, ...] 또는 [{label: '항목1', value1: 100, value2: 200}, ...]",
+            "description": "데이터 배열 (소량일 때만 사용). [{label: '항목1', value: 100}, ...]",
             "items": {"type": "object"}
           },
           "title": {
@@ -94,13 +102,17 @@
     },
     {
       "name": "candlestick_chart",
-      "description": "캔들스틱 차트 생성. OHLC(시가/고가/저가/종가) 데이터를 캔들 형태로 시각화.\n\n데이터 형식: [{date: '날짜', open: 시가, high: 고가, low: 저가, close: 종가, volume: 거래량}, ...]\n\n예시: data=[{date:'2024-01-01', open:100, high:110, low:95, close:105}]",
+      "description": "캔들스틱 차트 생성. OHLC(시가/고가/저가/종가) 데이터를 캔들 형태로 시각화.\n\n입력 방식: data_file (권장) 또는 data 중 하나 사용. 자동 샘플링: 300개 초과 시 자동으로 샘플링됨.",
       "input_schema": {
         "type": "object",
         "properties": {
+          "data_file": {
+            "type": "string",
+            "description": "데이터 파일 경로 (JSON/CSV). OHLC 데이터 권장 방식."
+          },
           "data": {
             "type": "array",
-            "description": "OHLC 데이터 배열. [{date: '2024-01-01', open: 100, high: 110, low: 95, close: 105, volume: 1000}, ...]",
+            "description": "OHLC 데이터 배열 (소량일 때만 사용). [{date, open, high, low, close, volume}, ...]",
             "items": {"type": "object"}
           },
           "title": {
@@ -170,13 +182,17 @@
     },
     {
       "name": "scatter_plot",
-      "description": "산점도 생성. x-y 좌표에 점을 찍어 두 변수 간의 관계나 분포를 시각화.\n\n데이터 형식: [{x: 값, y: 값}, ...]\n\n예시: data=[{x:10, y:20}, {x:15, y:25}, {x:20, y:35}]",
+      "description": "산점도 생성. x-y 좌표에 점을 찍어 두 변수 간의 관계나 분포를 시각화.\n\n입력 방식: data_file (권장) 또는 data 중 하나 사용. 자동 샘플링: 300개 초과 시 자동으로 샘플링됨.",
       "input_schema": {
         "type": "object",
         "properties": {
+          "data_file": {
+            "type": "string",
+            "description": "데이터 파일 경로 (JSON/CSV). 권장 방식."
+          },
           "data": {
             "type": "array",
-            "description": "데이터 배열. [{x: 10, y: 20, label: '항목1', size: 5}, ...]",
+            "description": "데이터 배열 (소량일 때만 사용). [{x: 10, y: 20}, ...]",
             "items": {"type": "object"}
           },
           "title": {

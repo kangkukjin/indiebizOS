@@ -707,45 +707,38 @@ class ChannelPoller:
         return {"enabled": False, "provider": "", "model": "", "apiKey": ""}
 
     def _execute_system_ai(self, command: str, history: list, config: dict) -> str:
-        """시스템 AI로 명령 실행"""
+        """시스템 AI로 명령 실행 - 실제 시스템 AI 호출 (모든 도구 포함)"""
         try:
-            from prompt_builder import PromptBuilder
-            from providers.gemini import GeminiProvider
-            from providers.anthropic import AnthropicProvider
+            from api_system_ai import process_system_ai_message
 
-            # 프롬프트 빌더로 시스템 프롬프트 생성
-            builder = PromptBuilder()
-            system_prompt = builder.build_prompt(agent_name="시스템")
+            # 히스토리 형식 변환 (conversation_db → api_system_ai 형식)
+            # conversation_db: [{"role": "user", "content": "..."}, ...]
+            # api_system_ai: 동일한 형식 사용
+            formatted_history = []
+            if history:
+                for h in history:
+                    role = h.get("role", "user")
+                    # assistant가 아닌 다른 role은 user로 통일
+                    if role not in ["user", "assistant"]:
+                        role = "user"
+                    formatted_history.append({
+                        "role": role,
+                        "content": h.get("content", "")
+                    })
 
-            # 프로바이더 선택
-            provider_name = config.get('provider', 'gemini')
-            api_key = config.get('apiKey', '')
-            model = config.get('model', '')
+            # 실제 시스템 AI 호출 (모든 도구 포함)
+            response = process_system_ai_message(
+                message=command,
+                history=formatted_history,
+                images=None
+            )
 
-            if provider_name == 'anthropic':
-                provider = AnthropicProvider(
-                    api_key=api_key,
-                    model=model,
-                    system_prompt=system_prompt,
-                    agent_name="시스템"
-                )
-            else:
-                provider = GeminiProvider(
-                    api_key=api_key,
-                    model=model,
-                    system_prompt=system_prompt,
-                    agent_name="시스템"
-                )
-
-            if not provider.init_client():
-                return "AI 초기화 실패"
-
-            # 메시지 처리
-            response = provider.process_message(command, history)
             return response
 
         except Exception as e:
             self._log(f"시스템 AI 실행 오류: {e}")
+            import traceback
+            traceback.print_exc()
             return f"명령 처리 중 오류: {e}"
 
     def _send_response(self, contact_type: str, contact_value: str, subject: str, body: str):
@@ -768,32 +761,38 @@ class ChannelPoller:
             self._log(f"응답 전송 실패: {e}")
 
     def _send_nostr_dm(self, recipient_pubkey: str, message: str):
-        """Nostr DM 전송"""
+        """Nostr DM 전송 (NIP-04 암호화)"""
         try:
             from pynostr.event import Event, EventKind
-            from pynostr.encrypted_dm import EncryptedDM
+            from pynostr.key import PublicKey
+            import websocket
 
             # npub → hex 변환
             if recipient_pubkey.startswith('npub'):
-                from pynostr.key import PublicKey
                 recipient_hex = PublicKey.from_npub(recipient_pubkey).hex()
             else:
                 recipient_hex = recipient_pubkey
 
-            # 암호화된 DM 생성
-            dm = EncryptedDM(
-                kind=EventKind.ENCRYPTED_DIRECT_MESSAGE,
-                content=message,
-                pubkey=recipient_hex,
+            # NIP-04 암호화: 개인키로 메시지 암호화
+            encrypted_content = self._nostr_private_key.encrypt_message(
+                message, recipient_hex
             )
-            dm.sign(self._nostr_private_key)
 
-            # 릴레이로 전송 (첫 번째 릴레이 사용)
-            import websocket
+            # Event 생성 (kind=4: Encrypted Direct Message)
+            event = Event(
+                kind=EventKind.ENCRYPTED_DIRECT_MESSAGE,
+                content=encrypted_content,
+                tags=[['p', recipient_hex]],
+            )
+            # public key 설정
+            event.public_key = self._nostr_public_key.hex()
+            # 서명 (sign 메서드 사용 - hex 형식의 private key 전달)
+            event.sign(self._nostr_private_key.hex())
+
+            # 릴레이로 전송
             relay_url = "wss://relay.damus.io"
-
             ws = websocket.create_connection(relay_url, timeout=10)
-            ws.send(json.dumps(["EVENT", dm.to_message()[1]]))
+            ws.send(json.dumps(["EVENT", event.to_message()[1]]))
             ws.close()
 
         except Exception as e:
@@ -887,7 +886,7 @@ class ChannelPoller:
         self._log(f"메시지 발송 시작: {contact_type} → {contact_value[:30]}...")
 
         try:
-            if contact_type == 'gmail':
+            if contact_type in ('gmail', 'email'):
                 self._send_gmail_message(contact_value, subject, content, attachment_path)
             elif contact_type == 'nostr':
                 self._send_nostr_dm(contact_value, content)
@@ -913,16 +912,16 @@ class ChannelPoller:
         if self._gmail_client is None:
             raise Exception("Gmail 클라이언트 초기화 실패")
 
-        # 이메일 발송
+        # 이메일 발송 (send_message 메서드 사용)
         if attachment_path:
-            self._gmail_client.send_email(
+            self._gmail_client.send_message(
                 to=to,
                 subject=subject,
                 body=body,
                 attachment_path=attachment_path
             )
         else:
-            self._gmail_client.send_email(
+            self._gmail_client.send_message(
                 to=to,
                 subject=subject,
                 body=body

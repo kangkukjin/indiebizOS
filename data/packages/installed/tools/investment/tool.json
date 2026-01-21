@@ -1,8 +1,8 @@
 {
   "id": "investment",
   "name": "Investment Tools",
-  "description": "한국/미국 기업의 주가, 재무제표, 공시정보, 뉴스를 조회하는 투자 분석 도구",
-  "version": "1.0.0",
+  "description": "한국/미국 기업의 주가, 재무제표, 공시정보, 뉴스 및 암호화폐 정보를 조회하는 투자 분석 도구",
+  "version": "1.1.0",
   "tools": [
     {
       "name": "kr_company_info",
@@ -24,7 +24,7 @@
     },
     {
       "name": "kr_financial_statements",
-      "description": "한국 기업의 재무제표를 조회합니다. (DART OpenAPI)\n\n## 반환 정보\n- 재무상태표: 자산, 부채, 자본 항목\n- 손익계산서: 매출, 영업이익, 당기순이익\n- 현금흐름표: 영업/투자/재무 현금흐름\n\n## 사용법\n- corp_name='삼성전자', year='2024'\n\n## report_type 옵션\n- 11011: 사업보고서 (연간, 기본값)\n- 11012: 반기보고서\n- 11013: 1분기보고서\n- 11014: 3분기보고서\n\n## 예시\n삼성전자 2024년 재무제표 → corp_name='삼성전자', year='2024'",
+      "description": "한국 기업의 재무제표를 조회합니다. (DART OpenAPI)\n\n## 반환 정보\n- 30개 항목 초과시: file_path(전체 데이터 JSON 파일), sample(각 5개씩)\n- 30개 항목 이하시: balance_sheet, income_statement, cash_flow (전체)\n\n## 대량 데이터 활용법\nfile_path가 반환되면 execute_python에서 파일을 읽어 사용:\n```python\nimport json\nwith open(file_path) as f:\n    data = json.load(f)\n# data['balance_sheet'], data['income_statement'], data['cash_flow']\n```\n\n## report_type: 11011(연간), 11012(반기), 11013(1분기), 11014(3분기)\n\n## 예시\n삼성전자 2024년 재무제표 → corp_name='삼성전자', year='2024'",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -86,7 +86,7 @@
     },
     {
       "name": "kr_stock_price",
-      "description": "한국 주식의 현재가 및 과거 주가를 조회합니다.\n\n## 반환 정보\n- 현재가, 시가, 고가, 저가\n- 거래량, 등락률\n- 기간별 일봉 데이터 (최근 30일)\n\n## 사용법\n- 종목명: symbol='삼성전자'\n- 종목코드: symbol='005930'\n\n## 주요 종목코드\n- 삼성전자: 005930\n- SK하이닉스: 000660\n- NAVER: 035420\n- 카카오: 035720\n- 현대차: 005380\n\n## 예시\n삼성전자 최근 주가 → symbol='삼성전자'",
+      "description": "한국 주식의 현재가 및 과거 주가를 조회합니다.\n\n## 반환 정보\n- 현재가(latest), 요약(summary)\n- 50거래일 초과시: file_path(전체 데이터 JSON 파일), sample(10개 샘플)\n- 50거래일 이하시: prices(전체 데이터)\n\n## 대량 데이터 활용법\nfile_path가 반환되면 execute_python에서 파일을 읽어 사용:\n```python\nimport json\nwith open(file_path) as f:\n    prices = json.load(f)\n# prices = [{\"date\": \"2023-01-25\", \"open\": 62000, \"high\": 63500, \"low\": 61800, \"close\": 62600, \"volume\": 12345678}, ...]\n```\n\n## 차트 그리기 예시\n```python\nimport json\nwith open(file_path) as f:\n    prices = json.load(f)\ndata = [{\"x\": p[\"date\"], \"y\": p[\"close\"]} for p in prices]\n# 이 data를 line_chart 도구에 전달\n```\n\n## 주요 종목코드\n삼성전자:005930, SK하이닉스:000660, NAVER:035420, 카카오:035720, 현대차:005380",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -174,7 +174,7 @@
     },
     {
       "name": "us_stock_price",
-      "description": "미국 주식의 현재가 및 과거 주가를 조회합니다. (Financial Modeling Prep)\n\n## 반환 정보\n- 현재가, 시가, 고가, 저가\n- 거래량, 등락률, 수정주가\n- 기간별 일봉 데이터\n\n## 사용법\n- symbol='AAPL'\n- 기간 지정 가능\n\n## 참고\n- 15분 지연 시세 (무료 티어)\n\n## 예시\n애플 최근 주가 → symbol='AAPL'",
+      "description": "미국 주식의 현재가 및 과거 주가를 조회합니다. (Financial Modeling Prep)\n\n## 반환 정보\n- 현재가(latest), 요약(summary)\n- 50거래일 초과시: file_path(전체 데이터 JSON 파일), sample(10개 샘플)\n- 50거래일 이하시: prices(전체 데이터)\n\n## 대량 데이터 활용법\nfile_path가 반환되면 execute_python에서 파일을 읽어 사용:\n```python\nimport json\nwith open(file_path) as f:\n    prices = json.load(f)\n# prices = [{\"date\": \"...\", \"open\": ..., \"close\": ..., ...}, ...]\n# 차트용: data = [{\"x\": p[\"date\"], \"y\": p[\"close\"]} for p in prices]\n```\n\n## 참고\n- 15분 지연 시세 (무료 티어)",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -196,7 +196,7 @@
     },
     {
       "name": "company_news",
-      "description": "기업 관련 최신 뉴스를 조회합니다. (Finnhub)\n\n## 반환 정보\n- 뉴스 제목, 요약 (영문)\n- 출처, 발행일\n- 원문 URL\n\n## 사용법\n- 미국 기업: symbol='AAPL'\n- 한국 기업: symbol='005930.KS'\n\n## 주의사항\n- 영문 뉴스 위주\n- 한국 기업은 결과가 제한적일 수 있음\n\n## 예시\n애플 최근 뉴스 → symbol='AAPL'",
+      "description": "기업 관련 최신 뉴스를 조회합니다. (Finnhub)\n\n## 반환 정보\n- 20건 초과시: file_path(전체 데이터 JSON 파일), sample(최근 5건)\n- 20건 이하시: news(전체 뉴스 목록)\n\n## 대량 데이터 활용법\nfile_path가 반환되면 execute_python에서 파일을 읽어 사용:\n```python\nimport json\nwith open(file_path) as f:\n    news = json.load(f)\n# news = [{\"headline\": \"...\", \"summary\": \"...\", \"url\": \"...\", \"datetime\": \"...\"}, ...]\n```\n\n## 사용법\n- 미국: symbol='AAPL', 한국: symbol='005930.KS'",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -236,6 +236,64 @@
           }
         },
         "required": []
+      }
+    },
+    {
+      "name": "yf_stock_price",
+      "description": "Yahoo Finance에서 글로벌 주식/ETF/원자재 가격을 조회합니다.\n\n## 심볼 형식\n- 미국주식: AAPL, TSLA, MSFT, GOOGL\n- 한국주식: 005930.KS (삼성전자), 000660.KS (SK하이닉스)\n- ETF: SPY, QQQ, VOO, GLD(금), SLV(은)\n- 원자재 선물: GC=F(금), SI=F(은), CL=F(원유), NG=F(천연가스)\n- 환율: USDKRW=X, EURUSD=X, USDJPY=X\n\n## 반환 정보\n- 현재가, 변동률, 거래량\n- 시가, 고가, 저가\n- 기간별 차트 데이터\n\n## 암호화폐\n- 암호화폐 심볼(BTC, ETH 등) 입력 시 자동으로 CoinGecko API로 전환",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": { "type": "string", "description": "종목 심볼 (예: AAPL, 005930.KS)" },
+          "period": { "type": "string", "enum": ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"], "description": "조회 기간 (기본: 5d)" },
+          "interval": { "type": "string", "enum": ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"], "description": "데이터 간격 (기본: 1d)" }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "yf_stock_info",
+      "description": "Yahoo Finance에서 종목 상세 정보를 조회합니다.\n\n## 반환 정보\n- 시가총액, 52주 최고/최저가\n- 50일/200일 이동평균\n- 거래량",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": { "type": "string", "description": "종목 심볼 (예: AAPL, 005930.KS)" }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "yf_search_stock",
+      "description": "Yahoo Finance에서 종목을 검색합니다.\n\n## 사용 시점\n- 정확한 심볼을 모를 때\n- 회사명으로 종목 찾기\n\n## 사용 예시\n- 'Apple' → AAPL 찾기\n- '삼성' → 005930.KS 찾기",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "검색어 (종목명 또는 회사명)" },
+          "search_type": { "type": "string", "enum": ["all", "quotes", "news"], "description": "검색 유형 (기본: quotes)" }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "yf_stock_news",
+      "description": "Yahoo Finance에서 종목 관련 뉴스를 조회합니다.\n\n## 반환 정보\n- 뉴스 제목, 요약, 링크\n- 발행 시간, 출처",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": { "type": "string", "description": "종목 심볼 (예: AAPL, TSLA)" }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
+      "name": "crypto_price",
+      "description": "CoinGecko API로 암호화폐 가격을 조회합니다 (무료, API 키 불필요).\n\n## 장점\n- API 키 불필요, 완전 무료\n- USD/KRW 동시 조회\n\n## 지원 코인\n- bitcoin (BTC), ethereum (ETH), ripple (XRP)\n- dogecoin (DOGE), solana (SOL), cardano (ADA)\n- 심볼(BTC, ETH)도 자동 변환\n\n## 반환 정보\n- USD/KRW 현재가, 24시간 변동률\n- 시가총액, 거래량, 역대 최고가",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "coin_id": { "type": "string", "description": "코인 ID 또는 심볼 (bitcoin, BTC 등)" }
+        },
+        "required": ["coin_id"]
       }
     }
   ]

@@ -136,6 +136,7 @@ Examples:
 - **investment**: Korea/US stock prices, financial statements, disclosure lookup
 - **real-estate**: Apartment/house transaction prices
 - **web**: Web search, crawling
+- **media_producer**: HTML-based slides (12 themes), video production, AI image generation
 
 ---
 
@@ -358,6 +359,30 @@ Assign only necessary tools to each agent. Give the drug interaction tool to the
 **Step 3 - Configure Agents**
 - **Code Reviewer**: "You are a senior developer. You check for bugs, performance issues, and readability in code."
 - **Documentation Writer**: "You are a technical writer. You organize complex code into clear documentation."
+
+### Example 4: Building a Content Creation Environment
+
+**Goal**: An environment to auto-generate slides and promotional videos
+
+**Step 1 - Install Tools**
+- Install the `media_producer` package
+- Optionally install the `web` package (for image search)
+
+**Step 2 - Create Project**
+- Create a project named "Content"
+
+**Step 3 - Configure Agent**
+- **Designer**: "You are a presentation designer. You create slides reflecting 2025-2026 design trends."
+- Assign tools: create_slides, render_html_to_image, generate_ai_image, create_video
+
+**Step 4 - Usage Examples**
+- "Create 5 company intro slides. Use dark theme."
+- "Make a promotional video with narration from these slides."
+- "Generate a futuristic city background with AI image."
+
+**media_producer Theme Types**:
+- Basic: `modern`, `tech`, `business`
+- Trend: `title_bold`(large title), `dark_tech`(neon), `glassmorphism`(glass effect), `gradient_modern`(gradient), `split_asymmetric`(asymmetric), `minimal_white`(minimal), `image_fullscreen`(full background), `data_card`(data emphasis)
 
 ### Core Principles
 

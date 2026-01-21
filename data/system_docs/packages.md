@@ -70,6 +70,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | information | Information & Publishing | API Ninjas, 여행 정보, 맛집 검색 등 |
 | investment | Investment | KRX, DART, SEC 글로벌 금융 데이터 분석 |
 | kosis | KOSIS | 통계청 데이터 조회 |
+| media_producer | Media Producer | HTML 기반 슬라이드(12종 테마), 영상 제작, AI 이미지 생성 |
 | nodejs | Nodejs | JavaScript/Node.js 코드 실행 |
 | pc-manager | PC Manager | 파일 및 저장소 관리, 시스템 분석 |
 | photo-manager | Photo Manager | 사진 라이브러리 관리 |
@@ -99,4 +100,4 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 - `GET /tools` - 활성 도구 목록
 
 ---
-*마지막 업데이트: 2026-01-20*
+*마지막 업데이트: 2026-01-21*

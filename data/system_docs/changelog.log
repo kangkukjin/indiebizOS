@@ -189,3 +189,17 @@
 [2026-01-21 11:00:00] DOCS_UPDATED: system_docs 업데이트
   - auto_response.md: V3 Tool Use 방식으로 전면 개정
   - inventory.md: system_essentials 도구 설명 갱신, 자동응답 V3 반영
+[2026-01-21 23:00:00] TOOL_UPDATED: media_producer 대규모 업데이트
+  - 2025-2026 디자인 트렌드 기반 8개 신규 템플릿 추가
+    - title_bold: 대형 타이포그래피 (120px 제목)
+    - dark_tech: 다크모드 + 네온 강조
+    - glassmorphism: 유리 효과 (backdrop-filter)
+    - gradient_modern: 그라데이션 배경
+    - split_asymmetric: 비대칭 분할 레이아웃
+    - minimal_white: 미니멀 화이트
+    - image_fullscreen: 전체 배경 이미지 + 오버레이
+    - data_card: 데이터/숫자 강조 카드
+  - 폰트 시스템 개선: 시스템 폰트 우선 사용 (Apple SD Gothic Neo, Malgun Gothic)
+  - create_video: 이미지 자동 리사이즈 로직 추가 (잘림 현상 해결)
+  - create_video: width/height 옵션 추가 (비디오 크기 지정)
+  - tool.json: 테마 목록 및 테마별 추가 옵션 반영

@@ -124,6 +124,10 @@
         {
           "from": "../build/python-mac",
           "to": "runtime/python"
+        },
+        {
+          "from": "../build/node-mac",
+          "to": "runtime/node"
         }
       ]
     },
@@ -140,6 +144,10 @@
         {
           "from": "../build/python-win",
           "to": "runtime/python"
+        },
+        {
+          "from": "../build/node-win",
+          "to": "runtime/node"
         }
       ]
     },

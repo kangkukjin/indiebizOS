@@ -54,12 +54,75 @@ jobs:
           # 패키지 설치
           & "$pythonDir/python.exe" -m pip install -r backend/requirements-core.txt --target "$pythonDir/Lib/site-packages" --no-warn-script-location
 
+          # 검증
+          Write-Host "=== Python Bundle Verification ==="
+          Write-Host "Python binary:"
+          Get-Item "$pythonDir/python.exe"
+          Write-Host "Python version:"
+          & "$pythonDir/python.exe" --version
+          Write-Host "Installed packages:"
+          & "$pythonDir/python.exe" -m pip list
+          Write-Host "Total size:"
+          (Get-ChildItem -Recurse $pythonDir | Measure-Object -Property Length -Sum).Sum / 1MB
+
+      - name: Prepare Node.js
+        shell: powershell
+        run: |
+          # Node.js 다운로드
+          $nodeVersion = "20.18.1"
+          $nodeUrl = "https://nodejs.org/dist/v$nodeVersion/node-v$nodeVersion-win-x64.zip"
+          $buildDir = "build"
+          $nodeDir = "$buildDir/node-win"
+
+          New-Item -ItemType Directory -Force -Path $nodeDir
+
+          Write-Host "Downloading Node.js from: $nodeUrl"
+          Invoke-WebRequest -Uri $nodeUrl -OutFile "$buildDir/node.zip"
+
+          # 압축 해제
+          Expand-Archive -Path "$buildDir/node.zip" -DestinationPath $buildDir -Force
+          Remove-Item "$buildDir/node.zip"
+
+          # 폴더 이동
+          $nodeExtracted = Get-ChildItem -Path $buildDir -Directory -Filter "node-v*" | Select-Object -First 1
+          if ($nodeExtracted) {
+            Move-Item -Path "$($nodeExtracted.FullName)/*" -Destination $nodeDir -Force
+            Remove-Item -Path $nodeExtracted.FullName -Recurse -Force
+          }
+
+          # 검증
+          Write-Host "=== Node.js Bundle Verification ==="
+          Write-Host "Node binary:"
+          Get-Item "$nodeDir/node.exe"
+          Write-Host "Node version:"
+          & "$nodeDir/node.exe" --version
+          Write-Host "Total size:"
+          (Get-ChildItem -Recurse $nodeDir | Measure-Object -Property Length -Sum).Sum / 1MB
+
       - name: Create Required Directories
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path "projects"
           New-Item -ItemType Directory -Force -Path "tokens"
           New-Item -ItemType Directory -Force -Path "templates"
+
+      - name: Verify Runtime Bundles Before Build
+        shell: powershell
+        run: |
+          Write-Host "=== Pre-build Runtime verification ==="
+          if (Test-Path "build/python-win/python.exe") {
+            Write-Host "Python bundle exists: OK"
+          } else {
+            Write-Host "ERROR: Python bundle not found!"
+            exit 1
+          }
+
+          if (Test-Path "build/node-win/node.exe") {
+            Write-Host "Node.js bundle exists: OK"
+          } else {
+            Write-Host "ERROR: Node.js bundle not found!"
+            exit 1
+          }
 
       - name: Install Dependencies
         working-directory: frontend
@@ -70,6 +133,14 @@ jobs:
         run: npm run electron:build:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Python in Built App
+        shell: powershell
+        run: |
+          Write-Host "=== Post-build verification ==="
+          $exePath = Get-ChildItem -Path "frontend/release" -Filter "*.exe" | Select-Object -First 1
+          Write-Host "Built installer: $($exePath.FullName)"
+          Write-Host "Installer size: $([math]::Round($exePath.Length / 1MB, 2)) MB"
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
@@ -104,21 +175,86 @@ jobs:
 
           mkdir -p $PYTHON_DIR
 
-          # macOS용 standalone Python (ARM64 + x64 둘 다 지원하려면 universal2 필요)
+          # macOS용 standalone Python
+          # GitHub Actions macos-latest는 ARM64 (M1)
           ARCH=$(uname -m)
+          echo "Detected architecture: $ARCH"
+
           if [ "$ARCH" = "arm64" ]; then
             PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/$PYTHON_BUILD/cpython-${PYTHON_VERSION}+${PYTHON_BUILD}-aarch64-apple-darwin-install_only.tar.gz"
           else
             PYTHON_URL="https://github.com/indygreg/python-build-standalone/releases/download/$PYTHON_BUILD/cpython-${PYTHON_VERSION}+${PYTHON_BUILD}-x86_64-apple-darwin-install_only.tar.gz"
           fi
 
+          echo "Downloading Python from: $PYTHON_URL"
           curl -L -o $BUILD_DIR/python.tar.gz $PYTHON_URL
+
+          # 압축 해제 - python/ 폴더가 생성됨
           tar -xzf $BUILD_DIR/python.tar.gz -C $BUILD_DIR
-          mv $BUILD_DIR/python/* $PYTHON_DIR/ || true
-          rm -rf $BUILD_DIR/python.tar.gz
+
+          # python/ 폴더 내용물을 python-mac/으로 이동
+          if [ -d "$BUILD_DIR/python" ]; then
+            mv $BUILD_DIR/python/* $PYTHON_DIR/
+            rm -rf $BUILD_DIR/python
+          fi
+          rm -f $BUILD_DIR/python.tar.gz
 
           # pip로 패키지 설치
+          echo "Installing Python packages..."
+          $PYTHON_DIR/bin/python3 -m pip install --upgrade pip
           $PYTHON_DIR/bin/python3 -m pip install -r backend/requirements-core.txt
+
+          # 검증
+          echo "=== Python Bundle Verification ==="
+          echo "Python binary:"
+          ls -la $PYTHON_DIR/bin/python3
+          echo "Python version:"
+          $PYTHON_DIR/bin/python3 --version
+          echo "Installed packages:"
+          $PYTHON_DIR/bin/python3 -m pip list
+          echo "Total size:"
+          du -sh $PYTHON_DIR
+
+      - name: Prepare Node.js Standalone
+        run: |
+          # Node.js 다운로드
+          NODE_VERSION="20.18.1"
+          BUILD_DIR="build"
+          NODE_DIR="$BUILD_DIR/node-mac"
+
+          mkdir -p $NODE_DIR
+
+          ARCH=$(uname -m)
+          echo "Detected architecture: $ARCH"
+
+          if [ "$ARCH" = "arm64" ]; then
+            NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-darwin-arm64.tar.gz"
+          else
+            NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-darwin-x64.tar.gz"
+          fi
+
+          echo "Downloading Node.js from: $NODE_URL"
+          curl -L -o $BUILD_DIR/node.tar.gz $NODE_URL
+
+          # 압축 해제
+          tar -xzf $BUILD_DIR/node.tar.gz -C $BUILD_DIR
+
+          # 폴더 이동
+          NODE_EXTRACTED=$(ls -d $BUILD_DIR/node-v* 2>/dev/null | head -1)
+          if [ -d "$NODE_EXTRACTED" ]; then
+            mv $NODE_EXTRACTED/* $NODE_DIR/
+            rm -rf $NODE_EXTRACTED
+          fi
+          rm -f $BUILD_DIR/node.tar.gz
+
+          # 검증
+          echo "=== Node.js Bundle Verification ==="
+          echo "Node binary:"
+          ls -la $NODE_DIR/bin/node
+          echo "Node version:"
+          $NODE_DIR/bin/node --version
+          echo "Total size:"
+          du -sh $NODE_DIR
 
       - name: Create Required Directories
         run: |
@@ -130,11 +266,42 @@ jobs:
         working-directory: frontend
         run: npm install
 
+      - name: Verify Runtime Bundles Before Build
+        run: |
+          echo "=== Pre-build Runtime verification ==="
+          echo "Checking build/python-mac exists..."
+          ls -la build/python-mac/bin/ || { echo "ERROR: Python bundle not found!"; exit 1; }
+          echo "Python binary exists: OK"
+
+          echo "Checking build/node-mac exists..."
+          ls -la build/node-mac/bin/ || { echo "ERROR: Node.js bundle not found!"; exit 1; }
+          echo "Node.js binary exists: OK"
+
       - name: Build macOS
         working-directory: frontend
         run: npm run electron:build:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Runtimes in Built App
+        run: |
+          echo "=== Post-build verification ==="
+          APP_PATH="frontend/release/mac-arm64/IndieBiz.app/Contents/Resources"
+          if [ -d "frontend/release/mac" ]; then
+            APP_PATH="frontend/release/mac/IndieBiz.app/Contents/Resources"
+          fi
+
+          echo "Checking runtime/python in app bundle..."
+          ls -la "$APP_PATH/runtime/python/bin/" 2>/dev/null || echo "WARNING: runtime/python not found in app bundle!"
+
+          echo "Checking runtime/node in app bundle..."
+          ls -la "$APP_PATH/runtime/node/bin/" 2>/dev/null || echo "WARNING: runtime/node not found in app bundle!"
+
+          echo "Checking backend in app bundle..."
+          ls -la "$APP_PATH/backend/" | head -10
+
+          echo "Total app size:"
+          du -sh "$APP_PATH/../.." 2>/dev/null || true
 
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4

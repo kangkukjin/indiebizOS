@@ -1,5 +1,5 @@
 """
-Culture 패키지 핸들러 - 공연, 전시, 영화 등 문화 정보 도구 모음
+Culture 패키지 핸들러 - 공연, 도서, 전시 등 문화 정보 도구 모음
 """
 import json
 import os
@@ -84,17 +84,72 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
             from tool_kopis import get_region_list
             result = get_region_list()
 
-        # 국립중앙도서관 서지정보 도구들
+        # 도서관 정보나루 도서 검색 도구들
         elif tool_name == "library_search_books":
             from tool_library import search_books
             result = search_books(
-                title=tool_input.get("title"),
-                author=tool_input.get("author"),
-                publisher=tool_input.get("publisher"),
-                isbn=tool_input.get("isbn"),
-                subject=tool_input.get("subject"),
-                rows=tool_input.get("rows", 10),
-                page=tool_input.get("page", 1)
+                keyword=tool_input.get("keyword"),
+                page=tool_input.get("page", 1),
+                page_size=tool_input.get("rows", 10)
+            )
+
+        elif tool_name == "library_get_book_detail":
+            from tool_library import get_book_detail
+            result = get_book_detail(
+                isbn13=tool_input.get("isbn13"),
+                loan_info=tool_input.get("loan_info", True)
+            )
+
+        elif tool_name == "library_get_popular_books":
+            from tool_library import get_popular_books
+            result = get_popular_books(
+                start_date=tool_input.get("start_date"),
+                end_date=tool_input.get("end_date"),
+                gender=tool_input.get("gender"),
+                from_age=tool_input.get("from_age"),
+                to_age=tool_input.get("to_age"),
+                region=tool_input.get("region"),
+                kdc=tool_input.get("kdc"),
+                page=tool_input.get("page", 1),
+                page_size=tool_input.get("rows", 10)
+            )
+
+        elif tool_name == "library_get_trending_books":
+            from tool_library import get_trending_books
+            result = get_trending_books(
+                base_date=tool_input.get("base_date")
+            )
+
+        elif tool_name == "library_get_recommended_books":
+            from tool_library import get_recommended_books
+            result = get_recommended_books(
+                isbn13=tool_input.get("isbn13"),
+                rec_type=tool_input.get("rec_type", "mania")
+            )
+
+        elif tool_name == "library_search_libraries":
+            from tool_library import search_libraries
+            result = search_libraries(
+                name=tool_input.get("name"),
+                region=tool_input.get("region"),
+                page=tool_input.get("page", 1),
+                page_size=tool_input.get("rows", 10)
+            )
+
+        elif tool_name == "library_search_by_book":
+            from tool_library import search_libraries_by_book
+            result = search_libraries_by_book(
+                isbn13=tool_input.get("isbn13"),
+                region=tool_input.get("region"),
+                page=tool_input.get("page", 1),
+                page_size=tool_input.get("rows", 10)
+            )
+
+        elif tool_name == "library_quick_search":
+            from tool_library import quick_search
+            result = quick_search(
+                keyword=tool_input.get("keyword"),
+                rows=tool_input.get("rows", 10)
             )
 
         elif tool_name == "library_get_book_by_isbn":
@@ -103,19 +158,13 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
                 isbn=tool_input.get("isbn")
             )
 
-        elif tool_name == "library_search_by_title":
-            from tool_library import search_by_title
-            result = search_by_title(
-                title=tool_input.get("title"),
-                rows=tool_input.get("rows", 10)
-            )
+        elif tool_name == "library_get_regions":
+            from tool_library import get_region_list
+            result = get_region_list()
 
-        elif tool_name == "library_search_by_author":
-            from tool_library import search_by_author
-            result = search_by_author(
-                author=tool_input.get("author"),
-                rows=tool_input.get("rows", 10)
-            )
+        elif tool_name == "library_get_kdc":
+            from tool_library import get_kdc_list
+            result = get_kdc_list()
 
         # KCISA 문화정보 도구들
         elif tool_name == "kcisa_search_culture":

@@ -12,6 +12,7 @@ import { BusinessManager } from './components/BusinessManager';
 import { MultiChat } from './components/MultiChat';
 import { PCManager } from './components/PCManager';
 import { PhotoManager } from './components/PhotoManager';
+import { AndroidManager } from './components/AndroidManager';
 import { api } from './lib/api';
 
 function App() {
@@ -25,6 +26,9 @@ function App() {
   const [pcManagerPath, setPCManagerPath] = useState<string | null>(null);
   const [isPhotoManager, setIsPhotoManager] = useState(false);
   const [photoManagerPath, setPhotoManagerPath] = useState<string | null>(null);
+  const [isAndroidManager, setIsAndroidManager] = useState(false);
+  const [androidDeviceId, setAndroidDeviceId] = useState<string | null>(null);
+  const [androidProjectId, setAndroidProjectId] = useState<string | null>(null);
 
   // URL 해시에서 프로젝트/폴더/IndieNet 확인
   useEffect(() => {
@@ -77,6 +81,7 @@ function App() {
         setIsPCManager(false);
         setIsIndieNet(false);
         setIsBusiness(false);
+        setIsAndroidManager(false);
         setProjectId(null);
         setFolderId(null);
         setMultiChatRoomId(null);
@@ -86,6 +91,33 @@ function App() {
           setPhotoManagerPath(decodeURIComponent(pathMatch[1]));
         } else {
           setPhotoManagerPath(null);
+        }
+        return;
+      }
+
+      // Android Manager 체크
+      if (hash.startsWith('#/android')) {
+        setIsAndroidManager(true);
+        setIsPhotoManager(false);
+        setIsPCManager(false);
+        setIsIndieNet(false);
+        setIsBusiness(false);
+        setProjectId(null);
+        setFolderId(null);
+        setMultiChatRoomId(null);
+        // device_id 파라미터 추출
+        const deviceIdMatch = hash.match(/device_id=([^&]+)/);
+        if (deviceIdMatch) {
+          setAndroidDeviceId(decodeURIComponent(deviceIdMatch[1]));
+        } else {
+          setAndroidDeviceId(null);
+        }
+        // project_id 파라미터 추출
+        const projectIdMatch = hash.match(/project_id=([^&]+)/);
+        if (projectIdMatch) {
+          setAndroidProjectId(decodeURIComponent(projectIdMatch[1]));
+        } else {
+          setAndroidProjectId(null);
         }
         return;
       }
@@ -130,6 +162,7 @@ function App() {
       setIsBusiness(false);
       setIsPCManager(false);
       setIsPhotoManager(false);
+      setIsAndroidManager(false);
       setMultiChatRoomId(null);
     };
 
@@ -223,6 +256,17 @@ function App() {
       <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
         <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
           <PhotoManager initialPath={photoManagerPath} />
+        </div>
+      </div>
+    );
+  }
+
+  // Android Manager 창인 경우
+  if (isAndroidManager) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+          <AndroidManager deviceId={androidDeviceId} projectId={androidProjectId} />
         </div>
       </div>
     );

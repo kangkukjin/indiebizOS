@@ -115,8 +115,14 @@ export function IndieNet() {
     try {
       const result = await api.getIndieNetBoards();
       setBoards(result.boards || []);
-      setActiveBoard(result.active_board || null);
-    } catch (err: any) {
+      // active_board가 string 또는 Board 객체일 수 있음
+      const activeB = result.active_board;
+      if (activeB) {
+        setActiveBoard(typeof activeB === 'string' ? activeB : activeB.hashtag);
+      } else {
+        setActiveBoard(null);
+      }
+    } catch (err: unknown) {
       console.error('보드 목록 로드 실패:', err);
     }
   };

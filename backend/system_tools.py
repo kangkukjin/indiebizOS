@@ -337,11 +337,13 @@ def _create_child_task(parent_task_id: str, target_name: str, message: str, proj
         db.update_task_delegation(parent_task_id, delegation_context, increment_pending=True)
 
         # 자식 태스크 생성
+        # requester_channel은 "나에게 직접 위임한 부모가 누구인가"를 나타냄
+        # 프로젝트 내부 에이전트 간 위임이므로 'internal'
         db.create_task(
             task_id=new_task_id,
-            requester=parent_task.get('requester', ''),
-            requester_channel=parent_task.get('requester_channel', 'gui'),
-            original_request=parent_task.get('original_request', ''),
+            requester=from_agent,  # 나에게 위임한 에이전트
+            requester_channel='internal',  # 프로젝트 내부 위임
+            original_request=message,  # 부모가 나에게 보낸 위임 메시지
             delegated_to=target_name,
             parent_task_id=parent_task_id
         )

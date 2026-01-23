@@ -13,6 +13,7 @@ export interface Project {
   parent_folder: string | null;
   last_opened: string | null;
   items?: string[]; // 폴더인 경우
+  in_trash?: boolean; // 휴지통 여부
 }
 
 // 스위치
@@ -175,6 +176,9 @@ export interface ElectronAPI {
   openBusinessWindow: () => Promise<void>;
   openMultiChatWindow: (roomId: string, roomName: string) => Promise<void>;
   openPCManagerWindow: (initialPath?: string | null) => Promise<void>;
+  openPhotoManagerWindow: (initialPath?: string | null) => Promise<void>;
+  openAndroidManagerWindow: (deviceId?: string | null, projectId?: string | null) => Promise<void>;
+  openPath: (path: string) => Promise<void>;
 
   // 창 간 드래그 드롭 API
   dropItemToLauncher: (itemId: string, itemType: string, sourceFolderId: string) => Promise<boolean>;

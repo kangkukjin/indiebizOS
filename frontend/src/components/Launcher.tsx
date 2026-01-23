@@ -128,8 +128,11 @@ export function Launcher() {
     try {
       const rooms = await api.getMultiChatRooms();
       // 아이콘 위치가 없으면 기본 위치 할당
-      const roomsWithPosition = rooms.map((room, index) => ({
-        ...room,
+      const roomsWithPosition: MultiChatRoom[] = rooms.map((room, index) => ({
+        id: room.id,
+        name: room.name,
+        description: room.description,
+        participant_count: room.participant_count,
         icon_position: room.icon_position || [600 + (index % 5) * 100, 100 + Math.floor(index / 5) * 100] as [number, number],
       }));
       setMultiChatRooms(roomsWithPosition);
@@ -185,6 +188,28 @@ export function Launcher() {
     };
 
     const interval = setInterval(pollPhotoWindows, 300);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Android Manager 창 열기 요청 폴링
+  useEffect(() => {
+    const pollAndroidWindows = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8765/android/pending-windows');
+        if (response.ok) {
+          const data = await response.json();
+          for (const req of data.requests || []) {
+            if (window.electron?.openAndroidManagerWindow) {
+              window.electron.openAndroidManagerWindow(req.device_id || null, req.project_id || null);
+            }
+          }
+        }
+      } catch {
+        // 서버 연결 실패 무시
+      }
+    };
+
+    const interval = setInterval(pollAndroidWindows, 300);
     return () => clearInterval(interval);
   }, []);
 
@@ -671,15 +696,20 @@ export function Launcher() {
     setRenamingItem(null);
   };
 
-  // 휴지통 열기
-  const handleOpenTrash = async () => {
+  // 휴지통 아이템 로드
+  const loadTrashItems = async () => {
     try {
       const data = await api.getTrash();
       setTrashItems({ projects: data.projects, switches: data.switches, chat_rooms: data.chat_rooms || [] });
-      setShowTrashDialog(true);
     } catch (error) {
       console.error('휴지통 로드 실패:', error);
     }
+  };
+
+  // 휴지통 열기
+  const handleOpenTrash = async () => {
+    await loadTrashItems();
+    setShowTrashDialog(true);
   };
 
   // 휴지통에서 복원
@@ -808,7 +838,7 @@ export function Launcher() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (renamingItem) return;
 
-      if (showNewProjectDialog || showNewFolderDialog || showProfileDialog || showSchedulerDialog || showTaskEditDialog) {
+      if (showNewProjectDialog || showNewFolderDialog || showProfileDialog || showSchedulerDialog || showTaskEditDialog || showSystemAIChatDialog) {
         return;
       }
 
@@ -838,7 +868,7 @@ export function Launcher() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItem, clipboard, renamingItem, projects, switches, showNewProjectDialog, showNewFolderDialog, showProfileDialog, showSchedulerDialog, showTaskEditDialog]);
+  }, [selectedItem, clipboard, renamingItem, projects, switches, showNewProjectDialog, showNewFolderDialog, showProfileDialog, showSchedulerDialog, showTaskEditDialog, showSystemAIChatDialog]);
 
   return (
     <div className="h-full flex flex-col bg-[#F5F1EB]">

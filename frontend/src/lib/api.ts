@@ -536,7 +536,7 @@ class APIClient {
     provider: string;
     model: string;
     apiKey: string;
-    role: string;
+    role?: string;
   }) {
     return this.request<{ status: string; config: typeof config }>('/system-ai', {
       method: 'PUT',
@@ -1021,6 +1021,49 @@ class APIClient {
       method: 'DELETE',
       body: JSON.stringify({}),
     });
+  }
+
+  // ============ 패키지 공개/검색 (Nostr) ============
+
+  async publishPackageToNostr(packageId: string, installInstructions?: string, signature?: string) {
+    return this.request<{
+      status: string;
+      package_id: string;
+      message: string;
+    }>(`/packages/${packageId}/publish`, {
+      method: 'POST',
+      body: JSON.stringify({
+        package_id: packageId,
+        install_instructions: installInstructions,
+        signature: signature,
+      }),
+    });
+  }
+
+  async generateInstallInstructions(packageId: string) {
+    return this.request<{
+      instructions: string;
+    }>(`/packages/${packageId}/generate-install`);
+  }
+
+  async searchPackagesOnNostr(query?: string, limit = 20) {
+    const params = new URLSearchParams();
+    if (query) params.append('query', query);
+    params.append('limit', String(limit));
+    return this.request<{
+      packages: Array<{
+        id: string;
+        name: string;
+        description: string;
+        version: string;
+        install: string;
+        author: string;
+        timestamp: number;
+        raw_content: string;
+      }>;
+      count: number;
+      query: string | null;
+    }>(`/packages/nostr/search?${params}`);
   }
 
   // ============ 음성 모드 ============
@@ -1523,6 +1566,7 @@ class APIClient {
       participant_count: number;
       created_at: string;
       updated_at: string;
+      icon_position?: [number, number];
     }> }>('/multi-chat/rooms');
     return data.rooms;
   }
@@ -1609,7 +1653,12 @@ class APIClient {
     return data.messages;
   }
 
-  async sendMultiChatMessage(roomId: string, message: string, responseCount = 2) {
+  async sendMultiChatMessage(
+    roomId: string,
+    message: string,
+    responseCount = 2,
+    images?: Array<{ base64: string; media_type: string }>
+  ) {
     return this.request<{
       user_message: string;
       responses: Array<{
@@ -1618,7 +1667,11 @@ class APIClient {
       }>;
     }>(`/multi-chat/rooms/${roomId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ message, response_count: responseCount }),
+      body: JSON.stringify({
+        message,
+        response_count: responseCount,
+        images: images
+      }),
     });
   }
 
@@ -1663,7 +1716,7 @@ export function createChatWebSocket(clientId: string, onReconnect?: () => void) 
         reconnectAttempts++;
         console.log(`[WS] 재연결 시도 ${reconnectAttempts}/${maxReconnectAttempts}...`);
         setTimeout(() => {
-          const newWs = connect();
+          connect();
           // 원래 핸들러들 복원
           if (onReconnect) onReconnect();
         }, reconnectDelay);

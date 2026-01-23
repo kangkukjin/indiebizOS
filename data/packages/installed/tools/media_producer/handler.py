@@ -28,9 +28,9 @@ MODERN_TEMPLATE = """
 <html>
 <head>
 <style>
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
     .slide { 
-        width: 1280px; height: 720px; padding: 80px; box-sizing: border-box; 
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; padding: 80px; box-sizing: border-box; 
         background: {{bg_color}}; color: {{text_color}};
         display: flex; flex-direction: column; justify-content: center; position: relative;
     }
@@ -65,9 +65,9 @@ TECH_TEMPLATE = """
 <html>
 <head>
 <style>
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; font-family: 'Courier New', monospace; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; font-family: 'Courier New', monospace; }
     .slide { 
-        width: 1280px; height: 720px; padding: 60px; box-sizing: border-box; 
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; padding: 60px; box-sizing: border-box; 
         background: #0a0a0b; color: #00f2ff;
         display: flex; flex-direction: column; border: 4px solid #00f2ff;
         background-image: radial-gradient(#1a1a1c 1px, transparent 1px); background-size: 40px 40px;
@@ -99,9 +99,9 @@ BUSINESS_TEMPLATE = """
 <html>
 <head>
 <style>
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; font-family: 'Arial', sans-serif; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; font-family: 'Arial', sans-serif; }
     .slide {
-        width: 1280px; height: 720px; background: white; border-top: 15px solid #1a237e;
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; background: white; border-top: 15px solid #1a237e;
         padding: 80px 100px; box-sizing: border-box; display: flex; flex-direction: column;
     }
     .title { font-size: 60px; color: #1a237e; font-weight: 900; margin-bottom: 60px; border-left: 10px solid #1a237e; padding-left: 30px; }
@@ -138,9 +138,9 @@ TITLE_BOLD_TEMPLATE = """
 <head>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; }
     .slide {
-        width: 1280px; height: 720px; box-sizing: border-box;
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; box-sizing: border-box;
         background: {{bg_color|default('#0f0f0f')}};
         display: flex; flex-direction: column; justify-content: center; align-items: center;
         padding: 60px;
@@ -182,9 +182,9 @@ DARK_TECH_TEMPLATE = """
 <head>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; }
     .slide {
-        width: 1280px; height: 720px; box-sizing: border-box;
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; box-sizing: border-box;
         background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
         padding: 70px 80px; position: relative;
     }
@@ -259,9 +259,9 @@ GLASSMORPHISM_TEMPLATE = """
 <head>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; }
     .slide {
-        width: 1280px; height: 720px; box-sizing: border-box;
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; box-sizing: border-box;
         background: linear-gradient(135deg, {{bg_color1|default('#667eea')}} 0%, {{bg_color2|default('#764ba2')}} 100%);
         display: flex; align-items: center; justify-content: center;
         position: relative;
@@ -327,9 +327,9 @@ GRADIENT_MODERN_TEMPLATE = """
 <head>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;800&display=swap');
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; }
     .slide {
-        width: 1280px; height: 720px; box-sizing: border-box;
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; box-sizing: border-box;
         background: linear-gradient(135deg, {{bg_color1|default('#f093fb')}} 0%, {{bg_color2|default('#f5576c')}} 100%);
         padding: 80px; display: flex; flex-direction: column; justify-content: center;
     }
@@ -381,9 +381,9 @@ SPLIT_ASYMMETRIC_TEMPLATE = """
 <head>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; }
     .slide {
-        width: 1280px; height: 720px; display: flex;
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; display: flex;
     }
     .left-panel {
         width: 55%; height: 100%;
@@ -447,9 +447,9 @@ MINIMAL_WHITE_TEMPLATE = """
 <head>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;700&display=swap');
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; }
     .slide {
-        width: 1280px; height: 720px; box-sizing: border-box;
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; box-sizing: border-box;
         background: #fafafa;
         padding: 100px 120px;
         display: flex; flex-direction: column; justify-content: center;
@@ -500,9 +500,9 @@ IMAGE_FULLSCREEN_TEMPLATE = """
 <head>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;900&display=swap');
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; }
     .slide {
-        width: 1280px; height: 720px; position: relative;
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; position: relative;
     }
     .bg-image {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -560,9 +560,9 @@ DATA_CARD_TEMPLATE = """
 <head>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
-    body { margin: 0; padding: 0; width: 1280px; height: 720px; overflow: hidden; }
+    body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; }
     .slide {
-        width: 1280px; height: 720px; box-sizing: border-box;
+        width: {{width|default(1280)}}px; height: {{height|default(720)}}px; box-sizing: border-box;
         background: {{bg_color|default('#0f0f0f')}};
         padding: 70px 80px;
         display: flex; flex-direction: column;
@@ -640,6 +640,42 @@ TEMPLATES = {
     "minimal_white": MINIMAL_WHITE_TEMPLATE,
     "image_fullscreen": IMAGE_FULLSCREEN_TEMPLATE,
     "data_card": DATA_CARD_TEMPLATE,
+    "tailwind": """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 추가 라이브러리: 애니메이션 및 아이콘 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+    </style>
+</head>
+<body class="bg-white">
+    <div class="w-[{{width|default(1280)}}px] h-[{{height|default(720)}}px] overflow-hidden">
+        {{custom_html|safe if custom_html else ""}}
+        {% if not custom_html %}
+        <div class="flex flex-col justify-center h-full p-20 {{bg_class|default('bg-white')}}">
+            <h1 class="text-7xl font-black tracking-tighter mb-8 {{title_class|default('text-slate-900')}}">{{title}}</h1>
+            <p class="text-3xl leading-relaxed max-w-4xl {{body_class|default('text-slate-600')}}">{{body}}</p>
+            {% if image_data %}
+            <div class="mt-12 rounded-3xl overflow-hidden shadow-2xl w-2/3 border-8 border-white">
+                <img src="{{image_data}}" class="w-full h-auto object-cover">
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    <script>
+        // Lucide 아이콘 초기화 (i data-lucide="..." 태그 자동 변환)
+        lucide.createIcons();
+    </script>
+</body>
+</html>
+""",
 }
 
 def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
@@ -661,6 +697,8 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 def create_slides(tool_input, output_base):
     slides_data = tool_input.get("slides", [])
     custom_output_dir = tool_input.get("output_dir")
+    width = tool_input.get("width", 1280)
+    height = tool_input.get("height", 720)
     
     output_dir = custom_output_dir if custom_output_dir else os.path.join(output_base, f"slides_{uuid.uuid4().hex[:8]}")
     os.makedirs(output_dir, exist_ok=True)
@@ -672,28 +710,28 @@ def create_slides(tool_input, output_base):
         
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": 1280, "height": 720})
+            page = browser.new_page(viewport={"width": width, "height": height})
             
             for i, slide in enumerate(slides_data):
                 theme_name = slide.get("theme", "modern")
-                template_str = TEMPLATES.get(theme_name, MODERN_TEMPLATE)
+                template_str = TEMPLATES.get(theme_name, TEMPLATES.get("default", MODERN_TEMPLATE))
                 
                 # 데이터 준비
                 img_path = slide.get("image_path")
                 abs_img_path = os.path.abspath(img_path) if img_path and os.path.exists(img_path) else None
                 image_data = get_image_base64(abs_img_path) if abs_img_path else None
                 
-                render_data = {
-                    "title": slide.get("title", ""),
-                    "body": slide.get("body", ""),
-                    "bg_color": slide.get("bg_color", "#FFFFFF"),
-                    "text_color": slide.get("text_color", "#000000"),
+                render_data = slide.copy()
+                render_data.update({
                     "image_data": image_data,
-                    "uuid_val": uuid.uuid4().hex[:8]
-                }
+                    "uuid_val": uuid.uuid4().hex[:8],
+                    "width": width,
+                    "height": height
+                })
                 
                 html = Template(template_str).render(**render_data)
                 page.set_content(html)
+                page.wait_for_load_state("networkidle")
                 
                 file_path = os.path.join(output_dir, f"slide_{i+1:02d}.png")
                 page.screenshot(path=file_path)
@@ -706,9 +744,9 @@ def create_slides(tool_input, output_base):
     except Exception as e:
         # 실패 시 기존 Pillow 로직으로 폴백
         print(f"HTML 렌더링 실패, Pillow로 전환: {e}")
-        return create_slides_pillow(slides_data, output_dir)
+        return create_slides_pillow(slides_data, output_dir, width, height)
 
-def create_slides_pillow(slides_data, output_dir):
+def create_slides_pillow(slides_data, output_dir, width=1280, height=720):
     generated_paths = []
     # 폰트 설정
     font_paths = [
@@ -725,7 +763,7 @@ def create_slides_pillow(slides_data, output_dir):
         text_color = slide.get("text_color", "#000000")
         image_path = slide.get("image_path")
         
-        img = Image.new("RGB", (1280, 720), color=bg_color)
+        img = Image.new("RGB", (width, height), color=bg_color)
         draw = ImageDraw.Draw(img)
         
         try:
@@ -744,8 +782,8 @@ def create_slides_pillow(slides_data, output_dir):
         if image_path and os.path.exists(image_path):
             try:
                 overlay = Image.open(image_path)
-                overlay.thumbnail((400, 400))
-                img.paste(overlay, (800, 200))
+                overlay.thumbnail((int(width * 0.3), int(height * 0.5)))
+                img.paste(overlay, (int(width * 0.6), int(height * 0.3)))
             except:
                 pass
                 
@@ -796,7 +834,7 @@ def create_video(tool_input, output_base):
                 slide_duration = slide_audio.duration + 0.5 # 약간의 여유
 
             # 이미지를 정확한 비디오 크기로 리사이즈하여 클립 생성
-            img = Image.open(img_path)
+            img = Image.open(img_path).convert("RGB")
 
             # 이미지가 비디오 크기와 다르면 리사이즈 (비율 유지하며 중앙 크롭 또는 패딩)
             if img.size != (video_width, video_height):
@@ -816,7 +854,13 @@ def create_video(tool_input, output_base):
                     new_height = video_height
                     new_width = int(video_height * img_ratio)
 
-                img_resized = img.resize((new_width, new_height), Image.LANCZOS)
+                # 최신 Pillow 버전 대응
+                try:
+                    resample_filter = Image.Resampling.LANCZOS
+                except AttributeError:
+                    resample_filter = Image.LANCZOS
+
+                img_resized = img.resize((new_width, new_height), resample_filter)
 
                 # 중앙 배치
                 x_offset = (video_width - new_width) // 2
@@ -933,7 +977,14 @@ def render_html_to_image(tool_input):
 
                 html = re.sub(r'url\(["\']?([^"\')\s]+)["\']?\)', replace_bg_url, html)
 
-            page.set_content(html)
+            # 스타일 추가: 여백 제거 및 크기 강제
+            html_with_style = f"""
+            <style>
+                body, html {{ margin: 0; padding: 0; width: {width}px; height: {height}px; overflow: hidden; }}
+            </style>
+            {html}
+            """
+            page.set_content(html_with_style)
 
             # 이미지 로딩 대기
             page.wait_for_load_state("networkidle")

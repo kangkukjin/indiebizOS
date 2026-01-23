@@ -1,0 +1,27 @@
+[
+  {
+    "name": "search_shopping",
+    "description": "상품 검색을 수행합니다. 네이버 쇼핑(API)과 다나와(크롤링)를 지원합니다.\n\n지원 사이트: naver, danawa, all\n\n데이터 형식: {items: [{name, price, mall, link, image, category, site}], total}",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "검색할 상품명"
+        },
+        "site": {
+          "type": "string",
+          "description": "검색할 사이트 (naver, danawa, all)",
+          "enum": ["naver", "danawa", "all"],
+          "default": "all"
+        },
+        "display": {
+          "type": "integer",
+          "description": "검색 결과 개수 (최대 10)",
+          "default": 5
+        }
+      },
+      "required": ["query"]
+    }
+  }
+]

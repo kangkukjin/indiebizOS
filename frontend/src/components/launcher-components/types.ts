@@ -70,6 +70,7 @@ export interface SystemAISettings {
   provider: string;
   model: string;
   apiKey: string;
+  role?: string;
 }
 
 // DraggableIcon props 타입

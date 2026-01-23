@@ -203,3 +203,26 @@
   - create_video: 이미지 자동 리사이즈 로직 추가 (잘림 현상 해결)
   - create_video: width/height 옵션 추가 (비디오 크기 지정)
   - tool.json: 테마 목록 및 테마별 추가 옵션 반영
+[2026-01-22 10:30:47] PROJECT_CREATED: 구매 (ID: 구매)
+[2026-01-22 10:30:47] PROJECT_CREATED: 구매 (ID: 구매)
+[2026-01-22 14:00:00] FEATURE_ADDED: 도구 상자 패키지 공유 시스템 (Nostr)
+  - api_packages.py: AI 기반 설치 방법 자동 생성 기능
+    - 패키지 전체 분석 (tool.json, handler.py, requirements.txt, package.json)
+    - Anthropic, OpenAI, Google Gemini API 지원
+    - 다른 AI 개발자가 같은 기능을 구현할 수 있는 정보 생성
+  - channels/nostr.py: 패키지 공개/검색 기능
+    - publish_package_to_nostr: #indiebizOS-package 해시태그로 공개
+    - search_packages_on_nostr: 공개된 패키지 검색
+  - ToolSearchDialog.tsx: 패키지 검색 UI 신규
+  - ToolboxDialog.tsx: "Nostr에 공개", "도구 검색" 버튼 추가
+[2026-01-22 14:30:00] TOOL_ADDED: shopping-assistant (상품 검색)
+  - 네이버 쇼핑 API 기반 상품 검색
+  - 다나와 크롤링 기반 가격 비교
+  - 지원 사이트: naver, danawa, all
+[2026-01-22 15:00:00] DOCS_UPDATED: 문서 전체 업데이트
+  - GUIDE.md: 도구 패키지 공유 (Nostr) 섹션 추가
+  - GUIDE_EN.md: Sharing Tool Packages (Nostr) 섹션 추가
+  - README.md: Toolbox & Package Sharing 섹션, shopping-assistant 추가
+  - README.ko.md: 도구 상자 & 패키지 공유 섹션 추가
+  - system_docs/packages.md: 패키지 공유 기능, API 엔드포인트 추가
+  - system_docs/inventory.md: 도구 패키지 20개, 프로젝트 목록 갱신

@@ -6,11 +6,22 @@ IndieBiz OS Core
 """
 
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 
 # 프롬프트 파일 경로
 PROMPTS_PATH = Path(__file__).parent.parent / "data" / "common_prompts"
+
+# 싱글톤 인스턴스
+_prompt_builder_instance: Optional['PromptBuilder'] = None
+
+
+def get_prompt_builder() -> 'PromptBuilder':
+    """싱글톤 PromptBuilder 인스턴스 반환"""
+    global _prompt_builder_instance
+    if _prompt_builder_instance is None:
+        _prompt_builder_instance = PromptBuilder()
+    return _prompt_builder_instance
 
 
 class PromptBuilder:
@@ -99,6 +110,7 @@ def build_agent_prompt(
     agent_name: str,
     role: str = "",
     agent_count: int = 1,
+    project_settings: str = "",
     agent_notes: str = "",
     git_enabled: bool = False
 ) -> str:
@@ -110,13 +122,14 @@ def build_agent_prompt(
         agent_name: 에이전트 이름
         role: 개별역할
         agent_count: 프로젝트 내 에이전트 수
+        project_settings: 프로젝트 공통 설정
         agent_notes: 영구메모
         git_enabled: Git 관련 프롬프트 포함 여부
 
     Returns:
         조합된 시스템 프롬프트
     """
-    builder = PromptBuilder()
+    builder = get_prompt_builder()  # 싱글톤 사용
 
     # 개별역할 구성
     role_parts = [f"당신은 '{agent_name}'입니다."]
@@ -124,10 +137,13 @@ def build_agent_prompt(
         role_parts.append(role)
     role_prompt = "\n".join(role_parts)
 
-    # 영구메모
-    additional_context = ""
+    # 추가 컨텍스트 구성
+    additional_parts = []
+    if project_settings:
+        additional_parts.append(f"# Project Guidelines\n{project_settings}")
     if agent_notes:
-        additional_context = f"# Notes\n{agent_notes}"
+        additional_parts.append(f"# Notes\n{agent_notes}")
+    additional_context = "\n\n".join(additional_parts)
 
     return builder.build(
         agent_count=agent_count,
@@ -156,7 +172,7 @@ def build_system_ai_prompt(
     role_path = Path(__file__).parent.parent / "data" / "system_ai_role.txt"
     role = role_path.read_text(encoding='utf-8') if role_path.exists() else ""
 
-    builder = PromptBuilder()
+    builder = get_prompt_builder()  # 싱글톤 사용
 
     # 시스템 AI 기본 프롬프트 (git_enabled 조건부)
     prompt = builder.build(

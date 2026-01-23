@@ -369,12 +369,17 @@ class AgentRunner:
                             except Exception as e:
                                 self._log(f"채널 폴링 오류 ({channel.__class__.__name__}): {e}")
 
-                # 대기 (1초마다 내부 메시지 확인)
-                for _ in range(polling_interval):
-                    if not self.running or self.cancel_event.is_set():
+                # 대기 (Event 기반 - 스핀락 대신)
+                # cancel_event.wait()는 이벤트가 set되거나 timeout이 만료될 때까지 블로킹
+                # 중간에 내부 메시지를 확인하기 위해 짧은 간격으로 나눔
+                wait_interval = min(polling_interval, 5)  # 최대 5초 단위로 대기
+                remaining = polling_interval
+                while remaining > 0 and self.running and not self.cancel_event.is_set():
+                    self.cancel_event.wait(timeout=wait_interval)
+                    if self.cancel_event.is_set():
                         break
-                    time.sleep(1)
                     self._check_internal_messages()
+                    remaining -= wait_interval
 
             except Exception as e:
                 self._log(f"루프 에러: {e}")
@@ -795,7 +800,9 @@ class AgentRunner:
 
             # 1. parent_task_id가 있으면 → 부모 태스크에 응답 누적 + 조건부 보고
             if parent_task_id:
-                # 시스템 AI 채널인 경우 시스템 AI DB에서 부모 태스크 조회
+                # requester_channel에 따라 부모 태스크가 있는 DB에서 조회
+                # - 'system_ai': 시스템 AI가 직접 위임 → system_ai_memory.db
+                # - 'internal', 'gui' 등: 같은 프로젝트 내부 → conversations.db
                 if channel == 'system_ai':
                     from system_ai_memory import get_task as get_system_ai_task
                     parent_task = get_system_ai_task(parent_task_id)
@@ -911,8 +918,13 @@ class AgentRunner:
                         # ws_client_id가 없으면 발신자에게 응답
                         self._send_response_to_sender(from_agent, result_summary)
                 elif channel == 'system_ai':
-                    # 시스템 AI 채널: 시스템 AI에게 결과 전송
-                    self._send_to_system_ai(task_id, result_summary, from_agent)
+                    # 시스템 AI가 위임한 태스크인데 parent_task_id가 없으면 비정상
+                    print(f"[자동 보고] 오류: system_ai 채널인데 parent_task_id가 없음 (task: {task_id})")
+                    self._send_response_to_sender(from_agent, result_summary)
+                elif channel == 'internal':
+                    # 프로젝트 내부 위임인데 parent_task_id가 없으면 비정상
+                    print(f"[자동 보고] 오류: internal 채널인데 parent_task_id가 없음 (task: {task_id})")
+                    self._send_response_to_sender(from_agent, result_summary)
                 elif channel in ('gmail', 'nostr'):
                     # 외부 채널: Gmail/Nostr로 전송
                     self._send_to_external_channel(channel, requester, result_summary, task_id)

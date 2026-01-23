@@ -25,6 +25,7 @@ let indieNetWindow = null; // IndieNet 창
 let businessWindow = null; // 비즈니스 관리 창
 let pcManagerWindow = null; // PC Manager 창
 let photoManagerWindow = null; // Photo Manager 창
+let androidManagerWindow = null; // Android Manager 창
 
 // API 포트
 const API_PORT = 8765;
@@ -587,6 +588,69 @@ function createPhotoManagerWindow(initialPath = null) {
 }
 
 /**
+ * Android Manager 창 생성
+ */
+function createAndroidManagerWindow(deviceId = null, projectId = null) {
+  // 이미 열려있으면 포커스
+  if (androidManagerWindow && !androidManagerWindow.isDestroyed()) {
+    androidManagerWindow.focus();
+    return;
+  }
+
+  androidManagerWindow = new BrowserWindow({
+    width: 450,
+    height: 700,
+    minWidth: 400,
+    minHeight: 600,
+    title: 'Android Manager',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    trafficLightPosition: process.platform === 'darwin' ? { x: 15, y: 15 } : undefined,
+    frame: process.platform !== 'darwin',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  // URL에 device_id, project_id 파라미터 전달
+  const params = [];
+  if (deviceId) params.push(`device_id=${encodeURIComponent(deviceId)}`);
+  if (projectId) params.push(`project_id=${encodeURIComponent(projectId)}`);
+  const hashPath = params.length > 0 ? `/android?${params.join('&')}` : '/android';
+
+  if (isDev) {
+    androidManagerWindow.loadURL(`http://localhost:5173/#${hashPath}`);
+  } else {
+    androidManagerWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
+      hash: hashPath
+    });
+  }
+
+  // 외부 링크는 기본 브라우저에서 열기
+  androidManagerWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  androidManagerWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  androidManagerWindow.on('closed', () => {
+    androidManagerWindow = null;
+  });
+
+  // 우클릭 컨텍스트 메뉴 설정
+  setupContextMenu(androidManagerWindow);
+
+  return androidManagerWindow;
+}
+
+/**
  * 다중채팅방 창 생성
  */
 function createMultiChatWindow(roomId, roomName) {
@@ -707,6 +771,11 @@ function setupIPC() {
   // Photo Manager 창 열기
   ipcMain.handle('open-photo-manager-window', (_, initialPath) => {
     createPhotoManagerWindow(initialPath);
+  });
+
+  // Android Manager 창 열기
+  ipcMain.handle('open-android-manager-window', (_, deviceId, projectId) => {
+    createAndroidManagerWindow(deviceId, projectId);
   });
 
   // 폴더에서 아이템을 밖으로 드래그할 때 (런처에 드롭)

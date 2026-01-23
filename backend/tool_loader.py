@@ -6,6 +6,7 @@ IndieBiz OS Core
 """
 
 import json
+import time
 import importlib.util
 from pathlib import Path
 from typing import Dict, List, Any, Optional
@@ -15,6 +16,12 @@ from typing import Dict, List, Any, Optional
 _tool_handlers_cache: Dict[str, Any] = {}
 # 도구 이름 -> 패키지 ID 매핑
 _tool_to_package_map: Dict[str, str] = {}
+# 전체 도구 정의 캐시
+_all_tools_cache: List[Dict] = []
+_all_tools_cache_time: float = 0
+# agents.yaml 캐시 (project_path -> (캐시시간, 데이터))
+_agents_yaml_cache: Dict[str, tuple] = {}
+_CACHE_TTL: float = 60.0  # 60초 캐시
 
 
 def get_base_path() -> Path:
@@ -132,7 +139,7 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
 
 def load_agent_tools(project_path: str, agent_id: str = None) -> List[Dict]:
     """
-    에이전트별 도구 로드
+    에이전트별 도구 로드 (캐싱 지원)
 
     기본: 설치된 모든 도구 사용 가능
     제한: agents.yaml의 allowed_tools가 있으면 해당 도구만 사용
@@ -144,20 +151,30 @@ def load_agent_tools(project_path: str, agent_id: str = None) -> List[Dict]:
     Returns:
         도구 정의 리스트
     """
-    tools_path = get_tools_path()
-    all_tools = []
+    global _all_tools_cache, _all_tools_cache_time
 
-    if tools_path.exists():
-        for pkg_dir in tools_path.iterdir():
-            if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
-                continue
-            tool_json_path = pkg_dir / "tool.json"
-            if tool_json_path.exists():
-                try:
-                    tool_def = json.loads(tool_json_path.read_text(encoding='utf-8'))
-                    all_tools.extend(_extract_tools_from_definition(tool_def))
-                except Exception as e:
-                    print(f"[도구 스캔 실패] {pkg_dir.name}: {e}")
+    # 캐시가 유효하면 캐시 사용
+    if _all_tools_cache and time.time() - _all_tools_cache_time < _CACHE_TTL:
+        all_tools = _all_tools_cache.copy()
+    else:
+        tools_path = get_tools_path()
+        all_tools = []
+
+        if tools_path.exists():
+            for pkg_dir in tools_path.iterdir():
+                if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
+                    continue
+                tool_json_path = pkg_dir / "tool.json"
+                if tool_json_path.exists():
+                    try:
+                        tool_def = json.loads(tool_json_path.read_text(encoding='utf-8'))
+                        all_tools.extend(_extract_tools_from_definition(tool_def))
+                    except Exception as e:
+                        print(f"[도구 스캔 실패] {pkg_dir.name}: {e}")
+
+        # 캐시 업데이트
+        _all_tools_cache = all_tools.copy()
+        _all_tools_cache_time = time.time()
 
     # agents.yaml에서 에이전트별 allowed_tools 확인
     if agent_id and project_path:
@@ -183,14 +200,30 @@ def _extract_tools_from_definition(tool_def: Any) -> List[Dict]:
 
 
 def _get_allowed_tools(project_path: str, agent_id: str) -> List[str]:
-    """agents.yaml에서 에이전트의 allowed_tools 조회"""
+    """agents.yaml에서 에이전트의 allowed_tools 조회 (캐싱 지원)"""
+    global _agents_yaml_cache
+
     agents_yaml = Path(project_path) / "agents.yaml"
     if not agents_yaml.exists():
         return []
 
+    # 캐시 확인
+    cache_key = str(project_path)
+    if cache_key in _agents_yaml_cache:
+        cache_time, agents_data = _agents_yaml_cache[cache_key]
+        if time.time() - cache_time < _CACHE_TTL:
+            for agent in agents_data.get("agents", []):
+                if agent.get("id") == agent_id:
+                    return agent.get("allowed_tools", [])
+            return []
+
     try:
         import yaml
         agents_data = yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
+
+        # 캐시 업데이트
+        _agents_yaml_cache[cache_key] = (time.time(), agents_data)
+
         for agent in agents_data.get("agents", []):
             if agent.get("id") == agent_id:
                 return agent.get("allowed_tools", [])
@@ -234,6 +267,9 @@ def get_all_tool_names() -> List[str]:
 
 def clear_cache():
     """캐시 초기화 (테스트/리로드용)"""
-    global _tool_handlers_cache, _tool_to_package_map
+    global _tool_handlers_cache, _tool_to_package_map, _all_tools_cache, _all_tools_cache_time, _agents_yaml_cache
     _tool_handlers_cache.clear()
     _tool_to_package_map.clear()
+    _all_tools_cache = []
+    _all_tools_cache_time = 0
+    _agents_yaml_cache.clear()

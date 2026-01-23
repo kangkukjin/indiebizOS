@@ -6,8 +6,8 @@
 import { useEffect, useState } from 'react';
 import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-  LineChart, Line, CartesianGrid,
+  PieChart, Pie, Cell,
+  CartesianGrid,
   ScatterChart, Scatter, ZAxis,
   Treemap,
   BarChart, Bar
@@ -29,7 +29,7 @@ const COLORS = [
 
 // 볼륨 정보 인터페이스
 interface VolumeInfo {
-  id: number;
+  id?: number;
   name: string;
   root_path: string;
   file_count: number;
@@ -367,11 +367,12 @@ export function PCManagerAnalyze() {
   };
 
   // 막대 클릭으로 줌인
-  const handleBarClick = (data: any, index: number, event: any) => {
+  const handleBarClick = (data: unknown, index: number) => {
     console.log('Bar clicked:', data, index);
 
     // data가 직접 period를 가지거나, payload 안에 있을 수 있음
-    const period = data?.period || data?.payload?.period;
+    const d = data as { period?: string; payload?: { period?: string } };
+    const period = d?.period || d?.payload?.period;
     if (!period) {
       console.log('No period found in data');
       return;
@@ -525,9 +526,10 @@ export function PCManagerAnalyze() {
               <YAxis yAxisId="click" hide domain={[0, 1]} />
               <Tooltip
                 contentStyle={{ backgroundColor: '#FAFAF8', border: '1px solid #E5E0D8' }}
-                formatter={(value: number, name: string) => {
-                  if (name === '_clickArea') return null;
-                  return [name === 'file_count' ? `${value.toLocaleString()} 개` : `${value.toLocaleString()} MB`, name === 'file_count' ? '파일 수' : '용량'];
+                formatter={(value, name) => {
+                  if (name === '_clickArea' || value === undefined) return null;
+                  const v = Number(value);
+                  return [name === 'file_count' ? `${v.toLocaleString()} 개` : `${v.toLocaleString()} MB`, name === 'file_count' ? '파일 수' : '용량'];
                 }}
                 filterNull={true}
               />
@@ -845,7 +847,7 @@ export function PCManagerAnalyze() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    deleteScan(volume.id);
+                    if (volume.id !== undefined) deleteScan(volume.id);
                   }}
                   className={`ml-1 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
                     selectedPath === volume.root_path

@@ -1,7 +1,7 @@
 [
   {
     "name": "create_slides",
-    "description": "텍스트와 이미지를 조합하여 홍보용 슬라이드 이미지들을 생성합니다. HTML/Playwright 기반 고품질 렌더링을 지원합니다.\n\n사용 가능한 테마:\n- 기본: modern, tech, business, default\n- 2025-2026 트렌드: title_bold(대형 타이포), dark_tech(다크 네온), glassmorphism(유리 효과), gradient_modern(그라데이션), split_asymmetric(비대칭 분할), minimal_white(미니멀), image_fullscreen(전체 배경 이미지), data_card(데이터 강조)",
+    "description": "텍스트와 이미지를 조합하여 홍보용 슬라이드 이미지들을 생성합니다. HTML/Playwright 기반 고품질 렌더링을 지원합니다.\n\n사용 가능한 테마:\n- 기본: modern, tech, business, default\n- 2025-2026 트렌드: title_bold(대형 타이포), dark_tech(다크 네온), glassmorphism(유리 효과), gradient_modern(그라데이션), split_asymmetric(비대칭 분할), minimal_white(미니멀), image_fullscreen(전체 배경 이미지), data_card(데이터 강조), tailwind(Tailwind CSS 자유 디자인)\n\n* tailwind 테마 특별 기능:\n  1. Tailwind CSS 완벽 지원\n  2. Lucide Icons 지원: <i data-lucide=\"아이콘명\"></i> 사용 가능\n  3. Animate.css 지원: animate__animated 클래스로 요소에 애니메이션 추가 가능\n  4. GSAP 라이브러리 포함: 복잡한 레이아웃 및 상호작용 설계 가능",
     "input_schema": {
       "type": "object",
       "properties": {
@@ -17,9 +17,13 @@
               "text_color": {"type": "string", "description": "텍스트 색상 (예: #000000)"},
               "theme": {
                 "type": "string",
-                "enum": ["modern", "tech", "business", "default", "title_bold", "dark_tech", "glassmorphism", "gradient_modern", "split_asymmetric", "minimal_white", "image_fullscreen", "data_card"],
+                "enum": ["modern", "tech", "business", "default", "title_bold", "dark_tech", "glassmorphism", "gradient_modern", "split_asymmetric", "minimal_white", "image_fullscreen", "data_card", "tailwind"],
                 "description": "디자인 테마"
               },
+              "bg_class": {"type": "string", "description": "Tailwind 배경 클래스 (tailwind 테마 전용, 예: bg-gradient-to-br from-blue-500 to-purple-600)"},
+              "title_class": {"type": "string", "description": "Tailwind 제목 클래스 (tailwind 테마 전용, 예: text-white drop-shadow-lg)"},
+              "body_class": {"type": "string", "description": "Tailwind 본문 클래스 (tailwind 테마 전용, 예: text-blue-100)"},
+              "custom_html": {"type": "string", "description": "사용자 정의 HTML (tailwind 테마 전용, title/body 대신 전체 레이아웃을 직접 구성할 때 사용)"},
               "accent_color": {"type": "string", "description": "강조색 (일부 테마에서 사용)"},
               "bg_color1": {"type": "string", "description": "그라데이션 시작색 (glassmorphism, gradient_modern)"},
               "bg_color2": {"type": "string", "description": "그라데이션 끝색 (glassmorphism, gradient_modern)"},
@@ -33,7 +37,9 @@
             "required": ["title", "body"]
           }
         },
-        "output_dir": {"type": "string", "description": "결과물을 저장할 디렉토리 경로 (선택)"}
+        "output_dir": {"type": "string", "description": "결과물을 저장할 디렉토리 경로 (선택)"},
+        "width": {"type": "integer", "description": "슬라이드 가로 크기 (기본: 1280)", "default": 1280},
+        "height": {"type": "integer", "description": "슬라이드 세로 크기 (기본: 720)", "default": 720}
       },
       "required": ["slides"]
     }

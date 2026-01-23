@@ -1,13 +1,12 @@
 # IndieBiz OS 인벤토리
 
-## 프로젝트 (활성) - 16개
+## 프로젝트 (활성) - 15개
 
 | ID | 이름 | 설명 |
 |----|------|------|
-| my_space | my_space | 개인 공간 |
 | study | study | 학습 및 연구 프로젝트 |
+| 구매 | 구매 | 상품 검색 및 구매 지원 |
 | 부동산 | 부동산 | 건물 관리 및 부동산 투자 정보 분석 |
-| 블로그 | 블로그 | 블로그 포스팅 및 관리 |
 | 사진 | 사진 | 사진 관리 및 아카이빙 |
 | 오락실 | 오락실 | 게임/엔터테인먼트 |
 | 의료 | 의료 | 건강 정보 관리 및 병원/약국 행정 안내 |
@@ -19,10 +18,11 @@
 | 하드웨어 | 하드웨어 | 하드웨어 관리 프로젝트 |
 | 해외 | 해외 | 한류 소식 및 해외 비즈니스 정보 수집 |
 | 행정_서비스 | 행정_서비스 | 정부24 및 민원 서비스 지원 |
+| 홍보 | 홍보 | 홍보/마케팅 콘텐츠 제작 |
 
 ---
 
-## 도구 패키지 (Tools) - 19개
+## 도구 패키지 (Tools) - 20개
 에이전트가 사용할 수 있는 유틸리티
 
 | ID | 이름 | 설명 |
@@ -34,12 +34,14 @@
 | information | Information & Publishing | API Ninjas, 맛집 검색 등 |
 | investment | Investment | KRX, DART, SEC 글로벌 금융 데이터 분석 |
 | kosis | KOSIS | 통계청 데이터 조회 |
+| media_producer | Media Producer | HTML 기반 슬라이드(12종 테마), 영상 제작, AI 이미지 생성 |
 | nodejs | Nodejs | JavaScript/Node.js 코드 실행 |
 | pc-manager | PC Manager | 파일 및 저장소 관리, 시스템 분석 |
 | photo-manager | Photo Manager | 사진 라이브러리 관리 |
 | python-exec | Python Exec | Python 코드 실행 |
 | read-and-see | Read and See | 문서 읽기 및 시각적 분석 |
 | real-estate | Real Estate | 부동산 실거래가 조회 |
+| shopping-assistant | Shopping Assistant | 상품 검색 (네이버 쇼핑, 다나와) |
 | startup | Startup | 창업 지원 정보 |
 | study | Study Helper | 학습 및 논문 요약 지원 |
 | system_essentials | System Essentials | 파일 관리, 시스템 유틸리티, 이웃 조회 |
@@ -119,4 +121,16 @@ AI 호출 1회로 판단, 검색, 발송을 한 번에 처리:
 - **프로젝트1** - 에이전트 팀 템플릿 (집사, 직원1, 대장장이, 출판, 영상담당)
 
 ---
-*마지막 업데이트: 2026-01-21*
+
+## 도구 상자 & 패키지 공유 (Nostr)
+자신이 만든 도구 패키지를 Nostr 네트워크를 통해 공유하고, 다른 사용자의 패키지를 검색/설치할 수 있습니다.
+
+### 주요 기능
+- **패키지 공개**: AI가 패키지 전체를 분석하여 설치 방법 자동 생성
+- **패키지 검색**: Nostr 네트워크에서 공개된 패키지 검색
+- **설치 전 검토**: 시스템 AI가 보안/품질/호환성 검토
+
+자세한 내용은 `packages.md` 참조.
+
+---
+*마지막 업데이트: 2026-01-22 15:00*

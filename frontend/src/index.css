@@ -63,6 +63,14 @@ body {
   -webkit-user-select: none;
 }
 
+/* 텍스트 선택 활성화 (대화창 메시지 등) */
+.selectable-text,
+.selectable-text * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text;
+}
+
 /* 채팅 마크다운 스타일 */
 .chat-markdown {
   line-height: 1.6;

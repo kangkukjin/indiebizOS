@@ -59,7 +59,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 ---
 
-## 현재 설치된 도구 패키지 (19개)
+## 현재 설치된 도구 패키지 (20개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -77,6 +77,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | python-exec | Python Exec | Python 코드 실행 |
 | read-and-see | Read and See | 문서 읽기 및 시각적 분석 |
 | real-estate | Real Estate | 부동산 실거래가 조회 |
+| shopping-assistant | Shopping Assistant | 상품 검색 (네이버 쇼핑, 다나와) |
 | startup | Startup | 창업 지원 정보 |
 | study | Study Helper | 학습 및 논문 요약 지원 |
 | system_essentials | System Essentials | 파일 관리, 검색, 시스템 유틸리티 |
@@ -91,6 +92,28 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 ---
 
+## 도구 상자 & 패키지 공유 (Nostr)
+
+내가 만든 도구 패키지를 다른 IndieBiz 사용자들과 공유할 수 있습니다.
+
+### 패키지 공개하기
+1. 도구 상자에서 설치된 패키지의 "Nostr에 공개" 버튼 클릭
+2. 설치 방법이 AI에 의해 자동 생성됨 (수정 가능)
+   - AI가 패키지 전체(tool.json, handler.py, requirements.txt 등)를 분석
+   - 다른 AI 개발자가 같은 기능을 구현할 수 있는 정보 생성
+3. 선택적으로 사인(서명) 추가
+4. 공개 버튼 클릭
+
+공개된 패키지는 `#indiebizOS-package` 해시태그로 Nostr 네트워크에 게시됩니다.
+
+### 다른 사용자의 패키지 검색/설치
+1. 도구 상자에서 "도구 검색" 버튼 클릭
+2. Nostr 네트워크에서 공개된 패키지 검색
+3. 패키지 선택하여 상세 정보 확인
+4. "설치" 클릭 시 시스템 AI가 보안/품질/호환성 검토 후 설치
+
+---
+
 ## API 엔드포인트
 - `GET /packages` - 전체 패키지 목록
 - `GET /packages/installed` - 설치된 패키지
@@ -98,6 +121,9 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 - `POST /packages/{id}/install` - 설치
 - `POST /packages/{id}/uninstall` - 제거
 - `GET /tools` - 활성 도구 목록
+- `POST /packages/{id}/generate-install-instructions` - AI 기반 설치 방법 생성
+- `POST /packages/publish-to-nostr` - Nostr에 패키지 공개
+- `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-01-21*
+*마지막 업데이트: 2026-01-22*

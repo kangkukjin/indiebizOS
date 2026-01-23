@@ -905,3 +905,319 @@ class NostrChannel(Channel):
             print(f"⚠️  DM 처리 실패: {e}")
             import traceback
             traceback.print_exc()
+
+    def publish_package(self, package_info: dict, hashtag: str = "indiebizOS-package") -> bool:
+        """
+        패키지 정보를 nostr에 공개 노트로 발행
+        Args:
+            package_info: 패키지 정보 딕셔너리 (name, description, install 등)
+            hashtag: 사용할 해시태그 (기본값: indiebizOS-package)
+        Returns:
+            성공 여부
+        """
+        if not self.private_key:
+            print(f"⚠️  Nostr 발행 실패: private_key가 없습니다")
+            return False
+
+        try:
+            import websocket
+            import json
+            import threading
+
+            # 패키지 정보를 노트 내용으로 포맷팅
+            signature = package_info.get('signature', '')
+            signature_line = f"\n\n✍️ {signature}" if signature else ""
+
+            content = f"""📦 IndieBiz OS 도구 패키지
+
+이름: {package_info.get('name', 'Unknown')}
+설명: {package_info.get('description', '설명 없음')}
+버전: {package_info.get('version', '1.0.0')}
+
+설치 방법:
+{package_info.get('install', '설치 방법이 명시되지 않았습니다.')}{signature_line}
+
+#{hashtag}"""
+
+            print(f"✓ Nostr: 패키지 발행 시작 - {package_info.get('name', 'Unknown')}")
+
+            # 퍼블릭 노트 (kind 1) 이벤트 생성
+            event = Event(
+                kind=EventKind.TEXT_NOTE,  # kind 1
+                content=content,
+                pubkey=self.public_key.hex(),
+                tags=[['t', hashtag]]  # 해시태그
+            )
+
+            # 이벤트 서명
+            event.sign(self.private_key.hex())
+
+            # WebSocket으로 전송
+            published = threading.Event()
+            error_msg = [None]
+
+            def on_message(ws, message):
+                try:
+                    data = json.loads(message)
+                    if data[0] == "OK" and data[1] == event.id:
+                        if data[2]:
+                            published.set()
+                        else:
+                            error_msg[0] = data[3] if len(data) > 3 else "Unknown error"
+                except:
+                    pass
+
+            def on_error(ws, error):
+                error_msg[0] = str(error)
+
+            def on_close(ws, close_status_code, close_msg):
+                pass
+
+            def on_open(ws):
+                event_msg = json.dumps([
+                    "EVENT",
+                    {
+                        "id": event.id,
+                        "pubkey": event.pubkey,
+                        "created_at": event.created_at,
+                        "kind": event.kind,
+                        "tags": event.tags,
+                        "content": event.content,
+                        "sig": event.sig
+                    }
+                ])
+                ws.send(event_msg)
+
+            # 여러 릴레이에 발행
+            success_count = 0
+            for relay_url in self.relays[:3]:  # 최대 3개 릴레이
+                try:
+                    ws = websocket.WebSocketApp(
+                        relay_url,
+                        on_open=on_open,
+                        on_message=on_message,
+                        on_error=on_error,
+                        on_close=on_close
+                    )
+
+                    wst = threading.Thread(target=ws.run_forever, daemon=True)
+                    wst.start()
+
+                    if published.wait(timeout=5):
+                        success_count += 1
+                        print(f"  - {relay_url}: 발행 성공")
+                    else:
+                        print(f"  - {relay_url}: 발행 실패 ({error_msg[0] or 'timeout'})")
+
+                    ws.close()
+                    wst.join(timeout=1)
+                    published.clear()
+
+                except Exception as e:
+                    print(f"  - {relay_url}: 오류 ({e})")
+
+            if success_count > 0:
+                print(f"✓ Nostr: 패키지 발행 완료 ({success_count}개 릴레이)")
+                return True
+            else:
+                print(f"✗ Nostr: 패키지 발행 실패 (모든 릴레이)")
+                return False
+
+        except Exception as e:
+            print(f"✗ Nostr 패키지 발행 오류: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def search_packages(self, query: str = None, limit: int = 20, hashtag: str = "indiebizOS-package") -> list:
+        """
+        nostr에서 패키지 검색
+        Args:
+            query: 검색 키워드 (None이면 전체)
+            limit: 최대 결과 수
+            hashtag: 검색할 해시태그
+        Returns:
+            패키지 목록
+        """
+        try:
+            import websocket
+            import json
+            import uuid
+            import threading
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            all_events = []
+            events_lock = threading.Lock()
+
+            def fetch_from_relay(relay_url: str) -> list:
+                """단일 릴레이에서 패키지 노트 가져오기"""
+                received = []
+                connected = threading.Event()
+
+                def on_message(ws, message):
+                    try:
+                        data = json.loads(message)
+                        if data[0] == "EVENT":
+                            event = data[2]
+                            if event.get('kind') != 1:
+                                return
+
+                            content = event.get('content', '')
+
+                            # 해시태그 확인
+                            has_hashtag = False
+                            for tag in event.get('tags', []):
+                                if len(tag) >= 2 and tag[0] == 't' and tag[1] == hashtag:
+                                    has_hashtag = True
+                                    break
+
+                            # 콘텐츠에서 해시태그 확인
+                            if not has_hashtag and f"#{hashtag}" in content:
+                                has_hashtag = True
+
+                            if not has_hashtag:
+                                return
+
+                            # query 필터링
+                            if query and query.lower() not in content.lower():
+                                return
+
+                            received.append(event)
+                    except:
+                        pass
+
+                def on_error(ws, error):
+                    pass
+
+                def on_close(ws, close_status_code, close_msg):
+                    pass
+
+                def on_open(ws):
+                    connected.set()
+                    req_filter = {
+                        "kinds": [1],
+                        "#t": [hashtag],
+                        "limit": limit * 3
+                    }
+                    req_id = f"pkg_{uuid.uuid4().hex[:8]}"
+                    ws.send(json.dumps(["REQ", req_id, req_filter]))
+
+                try:
+                    ws = websocket.WebSocketApp(
+                        relay_url,
+                        on_open=on_open,
+                        on_message=on_message,
+                        on_error=on_error,
+                        on_close=on_close
+                    )
+
+                    wst = threading.Thread(target=ws.run_forever, daemon=True)
+                    wst.start()
+
+                    if not connected.wait(timeout=5):
+                        ws.close()
+                        return []
+
+                    for _ in range(30):
+                        if len(received) >= limit:
+                            break
+                        time.sleep(0.1)
+
+                    ws.close()
+                    wst.join(timeout=1)
+                    return received
+
+                except Exception:
+                    return []
+
+            # 릴레이 목록
+            relays_to_use = self.relays.copy()
+            extra_relays = ['wss://relay.nostr.band', 'wss://nos.lol', 'wss://relay.damus.io']
+            for r in extra_relays:
+                if r not in relays_to_use:
+                    relays_to_use.append(r)
+            relays_to_use = relays_to_use[:5]
+
+            print(f"✓ Nostr: {len(relays_to_use)}개 릴레이에서 패키지 검색 (hashtag={hashtag}, query={query})")
+
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                futures = {executor.submit(fetch_from_relay, relay): relay for relay in relays_to_use}
+                for future in as_completed(futures, timeout=10):
+                    relay = futures[future]
+                    try:
+                        events = future.result()
+                        if events:
+                            with events_lock:
+                                all_events.extend(events)
+                            print(f"  - {relay}: {len(events)}개 수신")
+                    except Exception as e:
+                        print(f"  - {relay}: 오류 ({e})")
+
+            # 중복 제거
+            seen_ids = set()
+            unique_events = []
+            for event in all_events:
+                event_id = event.get('id')
+                if event_id not in seen_ids:
+                    seen_ids.add(event_id)
+                    unique_events.append(event)
+
+            # 시간순 정렬 (최신순)
+            unique_events.sort(key=lambda x: x.get('created_at', 0), reverse=True)
+
+            # 패키지 정보 파싱
+            results = []
+            for event in unique_events[:limit]:
+                content = event.get('content', '')
+
+                # 패키지 정보 파싱 시도
+                pkg_info = self._parse_package_content(content)
+                pkg_info['id'] = event.get('id', 'N/A')
+                pkg_info['author'] = event.get('pubkey', 'N/A')
+                pkg_info['timestamp'] = event.get('created_at', 0)
+                pkg_info['raw_content'] = content
+
+                results.append(pkg_info)
+
+            print(f"✓ Nostr 패키지 검색 완료: {len(results)}개 발견")
+            return results
+
+        except Exception as e:
+            print(f"⚠️  Nostr 패키지 검색 오류: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+    def _parse_package_content(self, content: str) -> dict:
+        """
+        노트 내용에서 패키지 정보 파싱
+        """
+        result = {
+            'name': 'Unknown',
+            'description': '',
+            'version': '1.0.0',
+            'install': ''
+        }
+
+        lines = content.split('\n')
+        current_section = None
+        install_lines = []
+
+        for line in lines:
+            line_stripped = line.strip()
+
+            if line_stripped.startswith('이름:'):
+                result['name'] = line_stripped[3:].strip()
+            elif line_stripped.startswith('설명:'):
+                result['description'] = line_stripped[3:].strip()
+            elif line_stripped.startswith('버전:'):
+                result['version'] = line_stripped[3:].strip()
+            elif line_stripped.startswith('설치 방법:'):
+                current_section = 'install'
+            elif current_section == 'install' and line_stripped and not line_stripped.startswith('#'):
+                install_lines.append(line_stripped)
+
+        if install_lines:
+            result['install'] = '\n'.join(install_lines)
+
+        return result

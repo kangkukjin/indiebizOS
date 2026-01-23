@@ -6,8 +6,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import {
-  Users, X, Search, MessageSquare, User, Phone, Mail, Plus, Trash2, Edit2, Send,
-  ChevronLeft, Star, FileText, Share2, ToggleLeft, ToggleRight
+  Users, X, Search, User, Plus, Trash2, Edit2, Send,
+  Star, FileText, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -20,7 +20,7 @@ interface Neighbor {
   additional_info: string | null;
   business_doc: string | null;
   info_share: number;
-  favorite: number;
+  favorite?: number;
   created_at: string;
   updated_at: string;
 }

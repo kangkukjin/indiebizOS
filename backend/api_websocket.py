@@ -67,6 +67,95 @@ def init_manager(pm):
 
 # ============ WebSocket 채팅 ============
 
+@router.websocket("/ws/android/{agent_id}")
+async def websocket_android(websocket: WebSocket, agent_id: str):
+    """안드로이드 전용 에이전트 WebSocket 엔드포인트"""
+    # agent_id는 이미 "android_xxx" 형식으로 전달됨 - 접두사 추가하지 않음
+    print(f"[WS Android] 연결: {agent_id}")
+    await manager.connect(websocket, agent_id)
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            message_type = data.get("type", "chat")
+
+            if message_type == "chat":
+                await handle_android_chat(agent_id, data)
+            elif message_type == "ping":
+                await manager.send_message(agent_id, {"type": "pong"})
+
+    except WebSocketDisconnect:
+        manager.disconnect(agent_id)
+        print(f"[WS Android] 연결 해제: {agent_id}")
+    except Exception as e:
+        print(f"[WS Android 에러] {agent_id}: {e}")
+        manager.disconnect(agent_id)
+
+
+async def handle_android_chat(client_id: str, data: dict):
+    """안드로이드 에이전트 채팅 처리"""
+    message = data.get("message", "")
+
+    try:
+        from api_android import get_android_agent
+        agent = get_android_agent()
+
+        if not agent:
+            await manager.send_message(client_id, {
+                "type": "error",
+                "message": "안드로이드 에이전트가 실행 중이 아닙니다."
+            })
+            return
+
+        # 시작 알림
+        await manager.send_message(client_id, {"type": "start"})
+
+        # 동기 제너레이터를 별도 스레드에서 실행하고 Queue로 결과 전달
+        queue = asyncio.Queue()
+        loop = asyncio.get_event_loop()
+
+        def run_stream():
+            """별도 스레드에서 동기 스트림 실행"""
+            try:
+                for chunk in agent.chat_stream_sync(message):
+                    loop.call_soon_threadsafe(queue.put_nowait, ("chunk", chunk))
+                loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                loop.call_soon_threadsafe(queue.put_nowait, ("error", str(e)))
+
+        # 스레드 풀에서 스트림 실행
+        executor.submit(run_stream)
+
+        # Queue에서 메시지 수신하여 WebSocket으로 전송
+        while True:
+            msg_type, content = await queue.get()
+
+            if msg_type == "chunk":
+                await manager.send_message(client_id, {
+                    "type": "chunk",
+                    "content": content
+                })
+            elif msg_type == "done":
+                await manager.send_message(client_id, {"type": "done"})
+                break
+            elif msg_type == "error":
+                await manager.send_message(client_id, {
+                    "type": "error",
+                    "message": content
+                })
+                break
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        await manager.send_message(client_id, {
+            "type": "error",
+            "message": str(e)
+        })
+
+
 @router.websocket("/ws/chat/{client_id}")
 async def websocket_chat(websocket: WebSocket, client_id: str):
     """채팅 WebSocket 엔드포인트"""
@@ -278,13 +367,15 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         with open(agents_file, 'r', encoding='utf-8') as f:
             agents_data = yaml.safe_load(f)
 
-        # 에이전트 찾기
+        # 에이전트 찾기 (이름 또는 ID로)
         agent_config = None
         agent_id = None
         for agent in agents_data.get("agents", []):
-            if agent.get("name") == agent_name:
+            if agent.get("name") == agent_name or agent.get("id") == agent_name:
                 agent_config = agent
                 agent_id = agent.get("id")
+                # agent_name이 ID였다면 실제 이름으로 교체
+                agent_name = agent.get("name", agent_name)
                 break
 
         if not agent_config:
@@ -355,24 +446,33 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         def run_stream():
             """스레드에서 스트리밍 실행"""
             nonlocal final_content
+            # 별도 스레드이므로 컨텍스트 재설정 필요
+            set_current_agent_id(agent_id)
+            set_current_agent_name(agent_name)
+            set_current_task_id(task_id)
             try:
                 for event in runner.ai.process_message_stream(
                     message_content=message,
                     history=history,
                     images=images
                 ):
+                    event_type = event.get("type", "unknown")
+                    print(f"[WS run_stream] 이벤트 수신: {event_type}")
                     asyncio.run_coroutine_threadsafe(
                         event_queue.put(event),
                         loop
                     )
-                    if event["type"] == "final":
+                    if event_type == "final":
                         final_content = event["content"]
+                        print(f"[WS run_stream] final_content 설정됨 (len={len(final_content)})")
             except Exception as e:
+                print(f"[WS run_stream] 예외 발생: {e}")
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put({"type": "error", "content": str(e)}),
                     loop
                 )
             finally:
+                print(f"[WS run_stream] 스트림 종료, None 전송")
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put(None),  # 종료 신호
                     loop
@@ -382,13 +482,15 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         executor.submit(run_stream)
 
         # 이벤트 수신 및 클라이언트 전송
+        # 영상 제작 등 오래 걸리는 작업을 위해 타임아웃을 10분으로 설정
         while True:
             try:
-                event = await asyncio.wait_for(event_queue.get(), timeout=120)
+                event = await asyncio.wait_for(event_queue.get(), timeout=600)
             except asyncio.TimeoutError:
+                print(f"[WS] 에이전트 타임아웃 발생 (600초), final_content 길이: {len(final_content)}")
                 await manager.send_message(client_id, {
                     "type": "error",
-                    "message": "응답 시간 초과"
+                    "message": "응답 시간 초과 (10분)"
                 })
                 break
 
@@ -443,6 +545,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 
             elif event_type == "final":
                 final_content = event["content"]
+                print(f"[WS while루프] final 이벤트 수신 (len={len(final_content)})")
 
             elif event_type == "error":
                 await manager.send_message(client_id, {
@@ -452,6 +555,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 break
 
         # AI 응답 저장 (final_content 사용)
+        print(f"[WS] while 루프 종료, final_content 길이: {len(final_content)}")
         if final_content:
             # 내부 시스템 마커 필터링
             final_content = filter_internal_markers(final_content)
@@ -601,13 +705,15 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         executor.submit(run_stream)
 
         # 이벤트 수신 및 클라이언트 전송
+        # 영상 제작 등 오래 걸리는 작업을 위해 타임아웃을 10분으로 설정
         while True:
             try:
-                event = await asyncio.wait_for(event_queue.get(), timeout=120)
+                event = await asyncio.wait_for(event_queue.get(), timeout=600)
             except asyncio.TimeoutError:
+                print(f"[WS] 시스템AI 타임아웃 발생 (600초), final_content 길이: {len(final_content)}")
                 await manager.send_message(client_id, {
                     "type": "error",
-                    "message": "응답 시간 초과"
+                    "message": "응답 시간 초과 (10분)"
                 })
                 break
 

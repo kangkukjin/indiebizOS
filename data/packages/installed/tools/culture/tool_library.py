@@ -1,206 +1,625 @@
 """
-tool_library.py - 국립중앙도서관 서지정보 API 도구
+tool_library.py - 도서관 정보나루 API 도서검색 도구
 Culture 패키지
 
-공공데이터포털(data.go.kr)에서 제공하는 국립중앙도서관 서지 정보 서비스입니다.
-ISBN, 제목, 저자 등으로 도서 정보를 검색할 수 있습니다.
+도서관 정보나루(data4library.kr) Open API
+- 전국 공공도서관의 장서, 대출 정보 제공
+- 도서 검색, 인기대출도서, 도서 상세정보 등
 
-API 키: DATA_GO_KR_API_KEY 환경변수 사용
+API 엔드포인트:
+- /api/srchBooks: 도서 검색
+- /api/srchDtlList: 도서 상세조회
+- /api/loanItemSrch: 인기대출도서 조회
+- /api/libSrch: 도서관 검색
+- /api/libSrchByBook: 도서 소장 도서관 검색
+- /api/hotTrend: 대출 급상승 도서
+- /api/recommandList: 추천도서 (마니아/다독자)
+
+API 키: DATA4LIBRARY_API_KEY 환경변수 사용
 """
 
 import os
 import requests
-from urllib.parse import quote
+import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta
 
-BASE_URL = "https://apis.data.go.kr/1371029/BookInformationService"
+BASE_URL = "http://data4library.kr/api"
 
 
 def get_api_key():
-    return os.environ.get("DATA_GO_KR_API_KEY", "")
+    """API 키 가져오기 (환경변수에서 로드)"""
+    return os.environ.get("DATA4LIBRARY_API_KEY", "")
+
+
+def parse_xml_response(xml_text):
+    """XML 응답을 파싱하여 딕셔너리로 변환"""
+    # JSON 응답인 경우 처리
+    if xml_text.strip().startswith('{'):
+        try:
+            import json
+            data = json.loads(xml_text)
+            # JSON 에러 응답 처리
+            if "response" in data and "error" in data["response"]:
+                return {
+                    "error": f"API 오류: {data['response']['error']}",
+                    "help": "도서관 정보나루에서 API 활성화 상태를 확인하세요. (https://www.data4library.kr)"
+                }
+            return data
+        except json.JSONDecodeError:
+            pass
+
+    try:
+        root = ET.fromstring(xml_text)
+
+        # 에러 체크
+        err_code = root.find('.//errCode')
+        err_msg = root.find('.//errMsg')
+
+        if err_code is not None and err_code.text:
+            return {
+                "error": f"API 오류: {err_msg.text if err_msg is not None else '알 수 없는 오류'}",
+                "code": err_code.text
+            }
+
+        return root
+    except ET.ParseError as e:
+        return {"error": f"XML 파싱 실패: {str(e)}", "raw": xml_text[:500]}
 
 
 def call_library_api(endpoint, params):
-    """국립중앙도서관 API 호출"""
+    """
+    도서관 정보나루 API 호출
+
+    Args:
+        endpoint: API 엔드포인트 (예: srchBooks)
+        params: 요청 파라미터
+
+    Returns:
+        API 응답 데이터 (XML Element 또는 에러 딕셔너리)
+    """
     api_key = get_api_key()
     if not api_key:
         return {
-            "error": "DATA_GO_KR_API_KEY 환경변수가 설정되지 않았습니다.",
-            "help": "공공데이터포털(data.go.kr)에서 API 키를 발급받으세요."
+            "error": "API 키가 설정되지 않았습니다.",
+            "help": "DATA4LIBRARY_API_KEY 환경변수를 설정하거나 도서관 정보나루에서 API 키를 발급받으세요."
         }
 
-    params["serviceKey"] = api_key
+    # 인증키 추가
+    params["authKey"] = api_key
+
     url = f"{BASE_URL}/{endpoint}"
 
     try:
-        response = requests.get(url, params=params, timeout=15)
+        headers = {
+            "Accept": "application/xml",
+            "User-Agent": "IndieBizOS/1.0"
+        }
+
+        response = requests.get(url, params=params, headers=headers, timeout=30)
+
+        # 디버깅용 출력
+        print(f"[Library API] URL: {response.url}")
+        print(f"[Library API] Status: {response.status_code}")
 
         if response.status_code != 200:
-            return {"error": f"API 호출 실패 (상태 코드: {response.status_code})"}
-
-        # JSON 응답 파싱
-        try:
-            data = response.json()
-        except:
-            # XML 응답일 수 있음
-            return {"error": "응답 파싱 실패", "raw": response.text[:500]}
-
-        # 응답 구조 확인
-        if "response" in data:
-            resp = data["response"]
-            header = resp.get("header", {})
-
-            if header.get("resultCode") != "00":
-                return {
-                    "error": f"API 오류: {header.get('resultMsg', '알 수 없는 오류')}",
-                    "code": header.get("resultCode")
-                }
-
-            body = resp.get("body", {})
-            items = body.get("items", {})
-
-            # items가 비어있는 경우 처리
-            if not items:
-                return {"count": 0, "data": [], "message": "검색 결과가 없습니다."}
-
-            # item이 리스트가 아닌 경우 처리
-            item_list = items.get("item", [])
-            if isinstance(item_list, dict):
-                item_list = [item_list]
-
             return {
-                "count": body.get("totalCount", len(item_list)),
-                "page": body.get("pageNo", 1),
-                "rows": body.get("numOfRows", 10),
-                "data": item_list
+                "error": f"API 호출 실패 (상태 코드: {response.status_code})",
+                "url": response.url,
+                "response": response.text[:500] if response.text else None
             }
 
-        return data
+        return parse_xml_response(response.text)
 
     except requests.exceptions.Timeout:
-        return {"error": "API 요청 시간 초과"}
+        return {"error": "API 요청 시간 초과 (30초)"}
+    except requests.exceptions.ConnectionError as e:
+        return {"error": f"연결 오류: {str(e)}"}
     except Exception as e:
         return {"error": f"조회 실패: {str(e)}"}
 
 
-def search_books(title=None, author=None, publisher=None, isbn=None,
-                 subject=None, rows=10, page=1):
+def extract_books_from_xml(root, item_tag="doc"):
+    """XML에서 도서 목록 추출"""
+    books = []
+
+    for item in root.findall(f'.//{item_tag}'):
+        book = {}
+        for child in item:
+            if child.text:
+                book[child.tag] = child.text.strip()
+        if book:
+            books.append(book)
+
+    return books
+
+
+def extract_libs_from_xml(root):
+    """XML에서 도서관 목록 추출"""
+    libs = []
+
+    for lib in root.findall('.//lib'):
+        lib_info = {}
+        for child in lib:
+            if child.text:
+                lib_info[child.tag] = child.text.strip()
+        if lib_info:
+            libs.append(lib_info)
+
+    return libs
+
+
+# ==================== 도서 검색 API ====================
+
+def search_books(keyword, page=1, page_size=10):
     """
-    도서 검색
+    도서 검색 (키워드 기반)
+
+    도서관 정보나루의 이용분석 대상 도서를 검색합니다.
 
     Args:
-        title: 도서 제목 (부분 일치)
-        author: 저자명
-        publisher: 출판사
-        isbn: ISBN (10자리 또는 13자리)
-        subject: 주제 분류
-        rows: 결과 수 (최대 100)
-        page: 페이지 번호
+        keyword: 검색 키워드 (제목, 저자, 출판사 등)
+        page: 페이지 번호 (기본값: 1)
+        page_size: 한 페이지당 결과 수 (기본값: 10, 최대: 100)
 
     Returns:
         검색 결과 목록
     """
+    if not keyword:
+        return {"error": "검색 키워드를 입력해주세요."}
+
     params = {
-        "numOfRows": min(rows, 100),
+        "keyword": keyword,
         "pageNo": page,
-        "resultType": "json"
+        "pageSize": min(page_size, 100)
     }
 
-    # 검색 조건 추가
-    if title:
-        params["title"] = title
-    if author:
-        params["author"] = author
-    if publisher:
-        params["publisher"] = publisher
-    if isbn:
-        # ISBN에서 하이픈 제거
-        params["isbn"] = isbn.replace("-", "")
-    if subject:
-        params["subject"] = subject
+    result = call_library_api("srchBooks", params)
 
-    # 검색 조건이 하나도 없으면 에러
-    if not any([title, author, publisher, isbn, subject]):
-        return {"error": "검색 조건을 하나 이상 입력해주세요. (title, author, publisher, isbn, subject)"}
+    if isinstance(result, dict) and "error" in result:
+        return result
 
-    result = call_library_api("getbookList", params)
+    # XML 파싱
+    books = extract_books_from_xml(result, "doc")
 
-    if "error" not in result:
-        result["search_params"] = {
-            "title": title,
-            "author": author,
-            "publisher": publisher,
-            "isbn": isbn,
-            "subject": subject
+    # 총 결과 수 추출
+    num_found = result.find('.//numFound')
+    total = int(num_found.text) if num_found is not None and num_found.text else len(books)
+
+    return {
+        "count": total,
+        "page": page,
+        "pageSize": page_size,
+        "data": books,
+        "message": f"'{keyword}' 검색 결과: 총 {total}건"
+    }
+
+
+def get_book_detail(isbn13, loan_info=True):
+    """
+    도서 상세 정보 조회
+
+    ISBN13으로 도서의 상세 정보를 조회합니다.
+
+    Args:
+        isbn13: ISBN 13자리
+        loan_info: 대출 정보 포함 여부 (기본값: True)
+
+    Returns:
+        도서 상세 정보 (책소개, 대출 통계 등)
+    """
+    if not isbn13:
+        return {"error": "ISBN을 입력해주세요."}
+
+    # ISBN 정규화 (하이픈 제거)
+    clean_isbn = isbn13.replace("-", "").replace(" ", "")
+
+    if len(clean_isbn) != 13:
+        return {
+            "error": "ISBN 13자리를 입력해주세요.",
+            "input": isbn13,
+            "help": "ISBN-13 형식 (예: 9788937460494)"
         }
-        result["message"] = f"총 {result.get('count', 0)}건의 도서를 찾았습니다."
 
-    return result
+    params = {
+        "isbn13": clean_isbn,
+        "loaninfoYN": "Y" if loan_info else "N"
+    }
+
+    result = call_library_api("srchDtlList", params)
+
+    if isinstance(result, dict) and "error" in result:
+        return result
+
+    # 도서 정보 추출
+    detail = result.find('.//detail')
+    if detail is None:
+        return {
+            "error": f"ISBN '{isbn13}'에 해당하는 도서를 찾을 수 없습니다.",
+            "suggestion": "ISBN을 확인하거나 키워드로 검색해보세요."
+        }
+
+    book_info = {}
+    for child in detail:
+        if child.text:
+            book_info[child.tag] = child.text.strip()
+
+    # 대출 정보 추출
+    if loan_info:
+        loan_data = {
+            "by_region": [],
+            "by_age": []
+        }
+
+        # 지역별 대출
+        for loan in result.findall('.//loanInfo'):
+            loan_entry = {}
+            for child in loan:
+                if child.text:
+                    loan_entry[child.tag] = child.text.strip()
+            if loan_entry:
+                loan_data["by_region"].append(loan_entry)
+
+        # 연령별 대출
+        for age_loan in result.findall('.//loanInfoByAge'):
+            age_entry = {}
+            for child in age_loan:
+                if child.text:
+                    age_entry[child.tag] = child.text.strip()
+            if age_entry:
+                loan_data["by_age"].append(age_entry)
+
+        book_info["loan_stats"] = loan_data
+
+    return {
+        "book": book_info,
+        "message": "도서 상세 정보를 조회했습니다."
+    }
+
+
+# ==================== 인기대출도서 API ====================
+
+def get_popular_books(start_date=None, end_date=None, gender=None,
+                     from_age=None, to_age=None, region=None,
+                     kdc=None, page=1, page_size=10):
+    """
+    인기대출도서 조회
+
+    기간, 성별, 연령대, 지역, 주제분류별 인기 대출 도서를 조회합니다.
+
+    Args:
+        start_date: 시작일 (YYYY-MM-DD, 기본: 7일 전)
+        end_date: 종료일 (YYYY-MM-DD, 기본: 어제)
+        gender: 성별 (0: 남성, 1: 여성)
+        from_age: 시작 연령 (예: 20)
+        to_age: 종료 연령 (예: 29)
+        region: 지역코드 (예: 11=서울)
+        kdc: KDC 분류코드 (예: 8=문학)
+        page: 페이지 번호
+        page_size: 결과 수
+
+    Returns:
+        인기대출도서 목록
+    """
+    # 기본 날짜 설정
+    if not end_date:
+        end_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    if not start_date:
+        start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+
+    params = {
+        "startDt": start_date,
+        "endDt": end_date,
+        "pageNo": page,
+        "pageSize": min(page_size, 100)
+    }
+
+    # 선택 파라미터 추가
+    if gender is not None:
+        params["gender"] = gender
+    if from_age is not None:
+        params["from_age"] = from_age
+    if to_age is not None:
+        params["to_age"] = to_age
+    if region:
+        params["region"] = region
+    if kdc:
+        params["kdc"] = kdc
+
+    result = call_library_api("loanItemSrch", params)
+
+    if isinstance(result, dict) and "error" in result:
+        return result
+
+    # 도서 목록 추출
+    books = extract_books_from_xml(result, "doc")
+
+    # 총 결과 수
+    num_found = result.find('.//numFound')
+    total = int(num_found.text) if num_found is not None and num_found.text else len(books)
+
+    # 필터 정보
+    filters = {}
+    if gender is not None:
+        filters["gender"] = "남성" if gender == 0 else "여성"
+    if from_age and to_age:
+        filters["age_range"] = f"{from_age}~{to_age}세"
+    if region:
+        filters["region"] = region
+    if kdc:
+        filters["kdc"] = kdc
+
+    return {
+        "count": total,
+        "page": page,
+        "pageSize": page_size,
+        "period": f"{start_date} ~ {end_date}",
+        "filters": filters if filters else None,
+        "data": books,
+        "message": f"인기대출도서 {total}건 조회"
+    }
+
+
+def get_trending_books(base_date=None):
+    """
+    대출 급상승 도서 조회
+
+    최근 대출이 급상승한 도서를 조회합니다.
+
+    Args:
+        base_date: 기준일 (YYYY-MM-DD, 기본: 어제)
+
+    Returns:
+        대출 급상승 도서 목록
+    """
+    if not base_date:
+        base_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    params = {
+        "searchDt": base_date
+    }
+
+    result = call_library_api("hotTrend", params)
+
+    if isinstance(result, dict) and "error" in result:
+        return result
+
+    # 도서 목록 추출
+    books = extract_books_from_xml(result, "doc")
+
+    return {
+        "base_date": base_date,
+        "count": len(books),
+        "data": books,
+        "message": f"{base_date} 기준 대출 급상승 도서 {len(books)}건"
+    }
+
+
+# ==================== 추천도서 API ====================
+
+def get_recommended_books(isbn13, rec_type="mania"):
+    """
+    추천도서 조회
+
+    특정 도서와 관련된 추천도서를 조회합니다.
+
+    Args:
+        isbn13: 기준 도서의 ISBN13
+        rec_type: 추천 유형 (mania: 마니아 추천, reader: 다독자 추천)
+
+    Returns:
+        추천도서 목록
+    """
+    if not isbn13:
+        return {"error": "기준 도서의 ISBN을 입력해주세요."}
+
+    clean_isbn = isbn13.replace("-", "").replace(" ", "")
+
+    params = {
+        "isbn13": clean_isbn,
+        "type": rec_type
+    }
+
+    result = call_library_api("recommandList", params)
+
+    if isinstance(result, dict) and "error" in result:
+        return result
+
+    # 도서 목록 추출
+    books = extract_books_from_xml(result, "doc")
+
+    rec_type_name = "마니아" if rec_type == "mania" else "다독자"
+
+    return {
+        "base_isbn": isbn13,
+        "rec_type": rec_type_name,
+        "count": len(books),
+        "data": books,
+        "message": f"'{rec_type_name}' 추천도서 {len(books)}건"
+    }
+
+
+# ==================== 도서관 검색 API ====================
+
+def search_libraries(name=None, region=None, page=1, page_size=10):
+    """
+    도서관 검색
+
+    전국 공공도서관 정보를 검색합니다.
+
+    Args:
+        name: 도서관명 (부분 일치)
+        region: 지역코드 (예: 11=서울, 26=부산)
+        page: 페이지 번호
+        page_size: 결과 수
+
+    Returns:
+        도서관 목록
+    """
+    params = {
+        "pageNo": page,
+        "pageSize": min(page_size, 100)
+    }
+
+    if name:
+        params["libName"] = name
+    if region:
+        params["region"] = region
+
+    result = call_library_api("libSrch", params)
+
+    if isinstance(result, dict) and "error" in result:
+        return result
+
+    # 도서관 목록 추출
+    libs = extract_libs_from_xml(result)
+
+    # 총 결과 수
+    num_found = result.find('.//numFound')
+    total = int(num_found.text) if num_found is not None and num_found.text else len(libs)
+
+    return {
+        "count": total,
+        "page": page,
+        "pageSize": page_size,
+        "data": libs,
+        "message": f"도서관 {total}건 검색됨"
+    }
+
+
+def search_libraries_by_book(isbn13, region=None, page=1, page_size=10):
+    """
+    도서 소장 도서관 검색
+
+    특정 도서를 소장하고 있는 도서관을 검색합니다.
+
+    Args:
+        isbn13: 도서의 ISBN13
+        region: 지역코드 (선택)
+        page: 페이지 번호
+        page_size: 결과 수
+
+    Returns:
+        소장 도서관 목록
+    """
+    if not isbn13:
+        return {"error": "ISBN을 입력해주세요."}
+
+    clean_isbn = isbn13.replace("-", "").replace(" ", "")
+
+    params = {
+        "isbn": clean_isbn,
+        "pageNo": page,
+        "pageSize": min(page_size, 100)
+    }
+
+    if region:
+        params["region"] = region
+
+    result = call_library_api("libSrchByBook", params)
+
+    if isinstance(result, dict) and "error" in result:
+        return result
+
+    # 도서관 목록 추출
+    libs = extract_libs_from_xml(result)
+
+    # 총 결과 수
+    num_found = result.find('.//numFound')
+    total = int(num_found.text) if num_found is not None and num_found.text else len(libs)
+
+    return {
+        "isbn": isbn13,
+        "count": total,
+        "page": page,
+        "pageSize": page_size,
+        "data": libs,
+        "message": f"'{isbn13}' 소장 도서관 {total}건"
+    }
+
+
+# ==================== 편의 함수 ====================
+
+def quick_search(keyword, rows=10):
+    """
+    빠른 도서 검색 (편의 함수)
+
+    키워드로 도서를 빠르게 검색합니다.
+
+    Args:
+        keyword: 검색 키워드
+        rows: 결과 수
+    """
+    return search_books(keyword=keyword, page_size=rows)
 
 
 def get_book_by_isbn(isbn):
     """
-    ISBN으로 도서 상세 정보 조회
+    ISBN으로 도서 조회 (편의 함수)
+
+    ISBN으로 도서 상세 정보를 조회합니다.
 
     Args:
-        isbn: ISBN (10자리 또는 13자리, 하이픈 포함 가능)
-
-    Returns:
-        도서 상세 정보
+        isbn: ISBN (10자리 또는 13자리)
     """
-    if not isbn:
-        return {"error": "ISBN이 필요합니다."}
-
-    # ISBN 정규화 (하이픈 제거)
+    # 10자리 ISBN을 13자리로 변환
     clean_isbn = isbn.replace("-", "").replace(" ", "")
 
-    # ISBN 유효성 검사
-    if len(clean_isbn) not in [10, 13]:
-        return {"error": f"유효하지 않은 ISBN입니다. 10자리 또는 13자리여야 합니다. (입력: {clean_isbn})"}
+    if len(clean_isbn) == 10:
+        # ISBN-10 → ISBN-13 변환
+        isbn13 = "978" + clean_isbn[:-1]
+        # 체크섬 계산
+        total = 0
+        for i, digit in enumerate(isbn13):
+            weight = 1 if i % 2 == 0 else 3
+            total += int(digit) * weight
+        check = (10 - (total % 10)) % 10
+        isbn13 += str(check)
+        clean_isbn = isbn13
 
-    result = search_books(isbn=clean_isbn, rows=1)
-
-    if "error" in result:
-        return result
-
-    if result.get("count", 0) == 0:
-        return {"error": f"ISBN '{isbn}'에 해당하는 도서를 찾을 수 없습니다."}
-
-    # 첫 번째 결과 반환
-    book = result["data"][0] if result["data"] else None
-    if book:
-        return {"book": book, "message": "도서 정보를 찾았습니다."}
-
-    return {"error": "도서 정보를 찾을 수 없습니다."}
+    return get_book_detail(isbn13=clean_isbn, loan_info=True)
 
 
-def search_by_title(title, rows=10):
-    """
-    제목으로 도서 검색 (편의 함수)
+# ==================== 지역코드 참조 ====================
 
-    Args:
-        title: 도서 제목 (부분 일치)
-        rows: 결과 수
-    """
-    return search_books(title=title, rows=rows)
-
-
-def search_by_author(author, rows=10):
-    """
-    저자명으로 도서 검색 (편의 함수)
-
-    Args:
-        author: 저자명
-        rows: 결과 수
-    """
-    return search_books(author=author, rows=rows)
+REGION_CODES = {
+    "서울": "11", "부산": "26", "대구": "27", "인천": "28",
+    "광주": "29", "대전": "30", "울산": "31", "세종": "36",
+    "경기": "41", "강원": "42", "충북": "43", "충남": "44",
+    "전북": "45", "전남": "46", "경북": "47", "경남": "48",
+    "제주": "50"
+}
 
 
-def search_by_publisher(publisher, rows=10):
-    """
-    출판사로 도서 검색 (편의 함수)
+def get_region_code(region_name):
+    """지역명을 지역코드로 변환"""
+    if region_name in REGION_CODES:
+        return REGION_CODES[region_name]
+    # 이미 코드인 경우
+    if region_name in REGION_CODES.values():
+        return region_name
+    return None
 
-    Args:
-        publisher: 출판사명
-        rows: 결과 수
-    """
-    return search_books(publisher=publisher, rows=rows)
+
+def get_region_list():
+    """지역코드 목록 반환"""
+    return {
+        "regions": REGION_CODES,
+        "message": "지역코드 목록입니다. 지역명 또는 코드를 사용할 수 있습니다."
+    }
+
+
+# ==================== KDC 분류코드 참조 ====================
+
+KDC_CODES = {
+    "총류": "0", "철학": "1", "종교": "2", "사회과학": "3",
+    "자연과학": "4", "기술과학": "5", "예술": "6", "언어": "7",
+    "문학": "8", "역사": "9"
+}
+
+
+def get_kdc_list():
+    """KDC 분류코드 목록 반환"""
+    return {
+        "kdc_codes": KDC_CODES,
+        "message": "KDC 주제분류코드 목록입니다."
+    }

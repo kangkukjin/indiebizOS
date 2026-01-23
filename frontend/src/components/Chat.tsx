@@ -7,7 +7,7 @@ import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Camera, FileText, C
 import { CameraPreview } from './CameraPreview';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { createChatWebSocket, cancelAllAgents, api } from '../lib/api';
+import { createChatWebSocket, cancelAllAgents } from '../lib/api';
 import type { Agent } from '../types';
 import { RouteMap, type RouteMapData } from './RouteMap';
 import { LocationMap, type LocationMapData } from './LocationMap';
@@ -67,7 +67,7 @@ export function Chat({ projectId, agent }: ChatProps) {
 
   // 스트리밍 상태
   const [streamingContent, setStreamingContent] = useState('');
-  const [currentToolActivity, setCurrentToolActivity] = useState<ToolActivity | null>(null);
+  const [, setCurrentToolActivity] = useState<ToolActivity | null>(null);
   const [toolHistory, setToolHistory] = useState<ToolActivity[]>([]);
   const [thinkingText, setThinkingText] = useState('');
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -217,7 +217,7 @@ export function Chat({ projectId, agent }: ChatProps) {
   // WebSocket 재연결 관리
   const reconnectAttemptRef = useRef(0);
   const maxReconnectAttempts = 5;
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // WebSocket 연결 함수
   const connectWebSocket = (isRetry = false) => {

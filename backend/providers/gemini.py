@@ -288,7 +288,34 @@ class GeminiProvider(BaseProvider):
             # 전체 응답 parts 수집 (thought signature 보존을 위해)
             all_response_parts = []
 
-            for chunk in stream:
+            # 스트리밍 중 500 에러 재시도를 위한 래퍼
+            def iterate_stream_with_retry():
+                nonlocal stream
+                stream_retry = 0
+                max_stream_retries = 3
+
+                while True:
+                    try:
+                        for chunk in stream:
+                            yield chunk
+                        break  # 정상 완료
+                    except Exception as e:
+                        error_str = str(e)
+                        if ("500" in error_str or "INTERNAL" in error_str) and stream_retry < max_stream_retries:
+                            stream_retry += 1
+                            print(f"[Gemini] 스트리밍 중 500 에러, 재시도 {stream_retry}/{max_stream_retries}...")
+                            time.sleep(1 * stream_retry)
+                            # 스트림 재생성
+                            stream = self._genai_client.models.generate_content_stream(
+                                model=self.model,
+                                contents=contents,
+                                config=config
+                            )
+                            continue
+                        else:
+                            raise e
+
+            for chunk in iterate_stream_with_retry():
                 # 스트리밍 중 중단 체크
                 if cancel_check and cancel_check():
                     print(f"[Gemini] 스트리밍 중 중단 (depth={depth})")
@@ -444,8 +471,8 @@ class GeminiProvider(BaseProvider):
                 # 텍스트 없이 도구만 호출된 경우 카운터 증가
                 next_consecutive = 0 if collected_text.strip() else consecutive_tool_only + 1
 
-                # 응답 강제 유도: consecutive가 10에 도달하면 응답 요청 메시지 추가
-                if next_consecutive >= 10:
+                # 응답 강제 유도: consecutive가 29에 도달하면 응답 요청 메시지 추가 (30번 강제종료 전)
+                if next_consecutive >= 29:
                     print(f"[Gemini] 응답 강제 유도 (consecutive_tool_only={next_consecutive})")
                     contents.append(types.Content(
                         role="user",

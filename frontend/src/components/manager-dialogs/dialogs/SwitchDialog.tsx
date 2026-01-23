@@ -1,9 +1,9 @@
 /**
- * SwitchDialog - 스위치 생성 다이얼로그
+ * SwitchDialog - 스위치 생성/편집 다이얼로그
  */
 
 import { X } from 'lucide-react';
-import type { Agent } from '../../../types';
+import type { Agent, Switch } from '../../../types';
 import type { SwitchForm } from '../types';
 
 interface SwitchDialogProps {
@@ -13,6 +13,11 @@ interface SwitchDialogProps {
   setSwitchForm: (form: SwitchForm) => void;
   agents: Agent[];
   onCreateSwitch: () => void;
+  onUpdateSwitch?: () => void;
+  editingSwitch?: Switch | null;
+  projectSwitches?: Switch[];
+  onEditSwitch?: (sw: Switch) => void;
+  onCancelEdit?: () => void;
 }
 
 export function SwitchDialog({
@@ -22,6 +27,8 @@ export function SwitchDialog({
   setSwitchForm,
   agents,
   onCreateSwitch,
+  onUpdateSwitch,
+  editingSwitch,
 }: SwitchDialogProps) {
   if (!show) return null;
 
@@ -30,7 +37,7 @@ export function SwitchDialog({
       <div className="bg-white rounded-xl shadow-2xl w-[500px] overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
           <h2 className="text-xl font-bold text-gray-800">
-            ⚡ 새 스위치 만들기
+            {editingSwitch ? '⚡ 스위치 수정' : '⚡ 새 스위치 만들기'}
           </h2>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded-lg">
             <X size={20} className="text-gray-500" />
@@ -99,10 +106,10 @@ export function SwitchDialog({
             취소
           </button>
           <button
-            onClick={onCreateSwitch}
+            onClick={editingSwitch && onUpdateSwitch ? onUpdateSwitch : onCreateSwitch}
             className="px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#B45309] transition-colors"
           >
-            ✅ 스위치 만들기
+            {editingSwitch ? '✅ 스위치 수정' : '✅ 스위치 만들기'}
           </button>
         </div>
       </div>

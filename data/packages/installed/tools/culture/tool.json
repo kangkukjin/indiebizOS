@@ -1,8 +1,8 @@
 {
   "id": "culture",
   "name": "Culture & Arts",
-  "description": "공연, 도서, 영화 등 문화 예술 정보 조회 도구. KOPIS API로 공연/박스오피스/공연장 정보를, 국립중앙도서관 API로 도서 서지정보를 제공합니다.",
-  "version": "1.2.0",
+  "description": "공연, 도서, 전시 등 문화 예술 정보 조회 도구. KOPIS API로 공연/박스오피스/공연장 정보를, 도서관 정보나루 API로 도서 검색/인기대출/추천도서 정보를 제공합니다.",
+  "version": "2.0.0",
   "tools": [
     {
       "name": "kopis_quick_search",
@@ -107,23 +107,111 @@
     },
     {
       "name": "library_search_books",
-      "description": "국립중앙도서관 서지정보에서 도서를 검색합니다. 제목, 저자, 출판사, ISBN, 주제 등으로 검색 가능합니다.\n\n## 사용 예시\n- 제목으로 검색: title='파이썬'\n- 저자로 검색: author='김영하'\n- 출판사로 검색: publisher='민음사'\n- ISBN으로 검색: isbn='9788937460494'",
+      "description": "도서관 정보나루 API로 도서를 검색합니다. 전국 공공도서관의 도서 정보를 키워드로 검색합니다.\n\n## 사용 예시\n- '인공지능' 도서 검색: keyword='인공지능'\n- '파이썬' 책 검색: keyword='파이썬'\n- '무라카미 하루키' 검색: keyword='무라카미 하루키'",
       "input_schema": {
         "type": "object",
         "properties": {
-          "title": { "type": "string", "description": "도서 제목 (부분 일치)" },
-          "author": { "type": "string", "description": "저자명" },
-          "publisher": { "type": "string", "description": "출판사" },
-          "isbn": { "type": "string", "description": "ISBN (10자리 또는 13자리)" },
-          "subject": { "type": "string", "description": "주제 분류" },
-          "rows": { "type": "integer", "description": "결과 수 (최대 100)", "default": 10 },
-          "page": { "type": "integer", "description": "페이지 번호", "default": 1 }
+          "keyword": { "type": "string", "description": "검색 키워드 (제목, 저자, 출판사 등)" },
+          "page": { "type": "integer", "description": "페이지 번호", "default": 1 },
+          "rows": { "type": "integer", "description": "결과 수 (최대 100)", "default": 10 }
+        },
+        "required": ["keyword"]
+      }
+    },
+    {
+      "name": "library_get_book_detail",
+      "description": "ISBN13으로 도서 상세 정보를 조회합니다. 책소개, 지역별/연령별 대출 통계 등을 제공합니다.\n\n## 반환 정보\n- 도서명, 저자, 출판사\n- 책소개\n- 지역별 대출 통계\n- 연령별 대출 통계",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "isbn13": { "type": "string", "description": "ISBN 13자리 (하이픈 포함 가능)" },
+          "loan_info": { "type": "boolean", "description": "대출 통계 포함 여부", "default": true }
+        },
+        "required": ["isbn13"]
+      }
+    },
+    {
+      "name": "library_get_popular_books",
+      "description": "인기대출도서를 조회합니다. 기간, 성별, 연령대, 지역, 주제분류별로 필터링 가능합니다.\n\n## 사용 예시\n- 최근 7일 인기도서: (기본값)\n- 20대 여성 인기도서: gender=1, from_age=20, to_age=29\n- 서울 지역 문학 분야: region='11', kdc='8'\n\n## 지역코드\n서울=11, 부산=26, 대구=27, 인천=28, 광주=29, 대전=30, 울산=31, 세종=36, 경기=41, 강원=42, 충북=43, 충남=44, 전북=45, 전남=46, 경북=47, 경남=48, 제주=50\n\n## KDC 분류\n0=총류, 1=철학, 2=종교, 3=사회과학, 4=자연과학, 5=기술과학, 6=예술, 7=언어, 8=문학, 9=역사",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "start_date": { "type": "string", "description": "시작일 (YYYY-MM-DD, 기본: 7일 전)" },
+          "end_date": { "type": "string", "description": "종료일 (YYYY-MM-DD, 기본: 어제)" },
+          "gender": { "type": "integer", "description": "성별 (0: 남성, 1: 여성)" },
+          "from_age": { "type": "integer", "description": "시작 연령 (예: 20)" },
+          "to_age": { "type": "integer", "description": "종료 연령 (예: 29)" },
+          "region": { "type": "string", "description": "지역코드 (예: 11=서울)" },
+          "kdc": { "type": "string", "description": "KDC 분류코드 (예: 8=문학)" },
+          "page": { "type": "integer", "description": "페이지 번호", "default": 1 },
+          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
         }
       }
     },
     {
+      "name": "library_get_trending_books",
+      "description": "대출 급상승 도서를 조회합니다. 최근 대출이 급증한 주목할 만한 도서 목록입니다.\n\n## 사용 예시\n- 오늘 급상승 도서: (기본값)\n- 특정 날짜 급상승: base_date='2024-01-15'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "base_date": { "type": "string", "description": "기준일 (YYYY-MM-DD, 기본: 어제)" }
+        }
+      }
+    },
+    {
+      "name": "library_get_recommended_books",
+      "description": "특정 도서와 관련된 추천도서를 조회합니다. 마니아 추천 또는 다독자 추천 중 선택할 수 있습니다.\n\n## 추천 유형\n- mania: 해당 도서를 좋아한 마니아들이 함께 읽은 책\n- reader: 해당 도서를 읽은 다독자들이 함께 읽은 책",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "isbn13": { "type": "string", "description": "기준 도서의 ISBN13" },
+          "rec_type": { "type": "string", "description": "추천 유형 (mania: 마니아 추천, reader: 다독자 추천)", "default": "mania" }
+        },
+        "required": ["isbn13"]
+      }
+    },
+    {
+      "name": "library_search_libraries",
+      "description": "전국 공공도서관 정보를 검색합니다.\n\n## 사용 예시\n- 도서관명으로 검색: name='국립중앙'\n- 서울 지역 도서관: region='11'\n\n## 반환 정보\n- 도서관명, 주소\n- 전화번호, 홈페이지\n- 운영시간, 휴관일",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "도서관명 (부분 일치)" },
+          "region": { "type": "string", "description": "지역코드 (예: 11=서울)" },
+          "page": { "type": "integer", "description": "페이지 번호", "default": 1 },
+          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+        }
+      }
+    },
+    {
+      "name": "library_search_by_book",
+      "description": "특정 도서를 소장하고 있는 도서관을 검색합니다. 원하는 책을 빌릴 수 있는 가까운 도서관을 찾을 때 유용합니다.\n\n## 사용 예시\n- 전국에서 찾기: isbn13='9788937460494'\n- 서울에서 찾기: isbn13='9788937460494', region='11'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "isbn13": { "type": "string", "description": "도서의 ISBN13" },
+          "region": { "type": "string", "description": "지역코드 (선택)" },
+          "page": { "type": "integer", "description": "페이지 번호", "default": 1 },
+          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+        },
+        "required": ["isbn13"]
+      }
+    },
+    {
+      "name": "library_quick_search",
+      "description": "키워드로 도서를 빠르게 검색합니다. 간단한 검색에 적합한 편의 도구입니다.\n\n## 사용 예시\n- keyword='삼체' → 삼체 관련 도서 검색",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": { "type": "string", "description": "검색 키워드" },
+          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+        },
+        "required": ["keyword"]
+      }
+    },
+    {
       "name": "library_get_book_by_isbn",
-      "description": "ISBN으로 도서 상세 정보를 조회합니다. 10자리 또는 13자리 ISBN을 입력하세요.\n\n## 반환 정보\n- 제목, 저자, 출판사\n- ISBN, 발행년도\n- 페이지 수, 가격\n- 주제 분류 정보",
+      "description": "ISBN으로 도서 상세 정보를 조회합니다. 10자리 또는 13자리 ISBN 모두 지원합니다.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -133,27 +221,19 @@
       }
     },
     {
-      "name": "library_search_by_title",
-      "description": "도서 제목으로 간편하게 검색합니다.\n\n## 사용 예시\n- '삼체' 검색: title='삼체'\n- '인공지능' 관련 도서: title='인공지능'",
+      "name": "library_get_regions",
+      "description": "도서관 정보나루 API에서 사용하는 지역코드 목록을 조회합니다.",
       "input_schema": {
         "type": "object",
-        "properties": {
-          "title": { "type": "string", "description": "도서 제목 (부분 일치)" },
-          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
-        },
-        "required": ["title"]
+        "properties": {}
       }
     },
     {
-      "name": "library_search_by_author",
-      "description": "저자명으로 도서를 검색합니다.\n\n## 사용 예시\n- '무라카미 하루키' 작품: author='무라카미 하루키'\n- '정유정' 작품: author='정유정'",
+      "name": "library_get_kdc",
+      "description": "KDC(한국십진분류) 주제분류코드 목록을 조회합니다. 인기대출도서 필터링에 사용합니다.",
       "input_schema": {
         "type": "object",
-        "properties": {
-          "author": { "type": "string", "description": "저자명" },
-          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
-        },
-        "required": ["author"]
+        "properties": {}
       }
     },
     {

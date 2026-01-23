@@ -25,9 +25,15 @@ class AddAgentRequest(BaseModel):
     agent_id: str
 
 
+class ImageData(BaseModel):
+    base64: str
+    media_type: str
+
+
 class SendMessageRequest(BaseModel):
     message: str
     response_count: int = 2  # 응답할 에이전트 수
+    images: Optional[List[ImageData]] = None  # 첨부 이미지
 
 
 class UpdatePositionRequest(BaseModel):
@@ -257,11 +263,17 @@ async def send_message(room_id: str, request: SendMessageRequest):
         if not room:
             raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
 
+        # 이미지 데이터 변환
+        images = None
+        if request.images:
+            images = [{"base64": img.base64, "media_type": img.media_type} for img in request.images]
+
         # 메시지 전송 및 응답 받기
         responses = manager.send_message(
             room_id=room_id,
             message=request.message,
-            response_count=request.response_count
+            response_count=request.response_count,
+            images=images
         )
 
         return {

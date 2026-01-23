@@ -3,10 +3,14 @@
  * 렌더러 프로세스에서 안전하게 사용할 수 있는 API 노출
  */
 
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, clipboard } = require('electron');
 
 // 렌더러 프로세스에 노출할 API
 contextBridge.exposeInMainWorld('electron', {
+  // 클립보드 기능
+  copyToClipboard: (text) => clipboard.writeText(text),
+  readFromClipboard: () => clipboard.readText(),
+
   // API 포트 가져오기
   getApiPort: () => ipcRenderer.invoke('get-api-port'),
 
@@ -43,6 +47,10 @@ contextBridge.exposeInMainWorld('electron', {
   // Photo Manager 창 열기
   openPhotoManagerWindow: (initialPath) =>
     ipcRenderer.invoke('open-photo-manager-window', initialPath),
+
+  // Android Manager 창 열기
+  openAndroidManagerWindow: (deviceId, projectId) =>
+    ipcRenderer.invoke('open-android-manager-window', deviceId, projectId),
 
   // 폴더에서 아이템을 런처로 드롭
   dropItemToLauncher: (itemId, itemType, sourceFolderId) =>

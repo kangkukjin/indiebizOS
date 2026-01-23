@@ -523,7 +523,14 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
             // 해당 도구의 결과 업데이트
             setToolHistory(prev => {
               const updated = [...prev];
-              const idx = updated.findLastIndex(t => t.name === data.name && t.status === 'running');
+              // findLastIndex 대신 역방향 순회 사용 (ES2023 호환성)
+              let idx = -1;
+              for (let i = updated.length - 1; i >= 0; i--) {
+                if (updated[i].name === data.name && updated[i].status === 'running') {
+                  idx = i;
+                  break;
+                }
+              }
               if (idx !== -1) {
                 updated[idx] = { ...updated[idx], result: data.result, status: 'completed' };
               }
@@ -1027,7 +1034,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
         )}
 
         {/* 메시지 영역 */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 selectable-text">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
               <Bot size={48} className="mb-3 opacity-50" />
@@ -1078,7 +1085,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
                       // 이미지 제거 후 지도 파싱
                       const parsedMaps = parseMapData(parsedImages.text);
                       return (
-                        <>
+                        <div className="selectable-text">
                           {/* 생성된 이미지 표시 (차트 등) */}
                           {parsedImages.images.length > 0 && (
                             <div className="mb-2 space-y-2">
@@ -1116,11 +1123,11 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsedMaps.text}</ReactMarkdown>
                             </div>
                           )}
-                        </>
+                        </div>
                       );
                     })()
                   ) : (
-                    msg.content && <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    msg.content && <p className="text-sm whitespace-pre-wrap selectable-text">{msg.content}</p>
                   )}
                 </div>
               </div>
@@ -1196,7 +1203,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
                 )}
                 {/* 스트리밍 텍스트 표시 */}
                 {streamingContent ? (
-                  <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
+                  <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 selectable-text">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingContent}</ReactMarkdown>
                     <span className="inline-block w-2 h-4 bg-amber-400 animate-pulse ml-0.5" />
                   </div>

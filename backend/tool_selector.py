@@ -9,6 +9,7 @@ AI 감독관(Director)을 통해 에이전트의 역할에 맞는 도구를 배�
 import re
 import yaml
 import json
+import time
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -17,9 +18,31 @@ BACKEND_PATH = Path(__file__).parent
 DATA_PATH = BACKEND_PATH.parent / "data"
 INSTALLED_TOOLS_PATH = DATA_PATH / "packages" / "installed" / "tools"
 
+# 캐시 설정
+_tools_cache: List[Dict[str, Any]] = []
+_tools_cache_time: float = 0
+_packages_cache: List[Dict[str, Any]] = []
+_packages_cache_time: float = 0
+_CACHE_TTL: float = 60.0  # 60초 캐시
 
-def get_installed_tools() -> List[Dict[str, Any]]:
-    """설치된 도구 목록 반환 (tool.json에서 로드)"""
+
+def invalidate_tool_cache():
+    """도구 캐시 무효화 (패키지 설치/제거 시 호출)"""
+    global _tools_cache, _tools_cache_time, _packages_cache, _packages_cache_time
+    _tools_cache = []
+    _tools_cache_time = 0
+    _packages_cache = []
+    _packages_cache_time = 0
+
+
+def get_installed_tools(use_cache: bool = True) -> List[Dict[str, Any]]:
+    """설치된 도구 목록 반환 (tool.json에서 로드, 캐싱 지원)"""
+    global _tools_cache, _tools_cache_time
+
+    # 캐시가 유효하면 캐시 반환
+    if use_cache and _tools_cache and time.time() - _tools_cache_time < _CACHE_TTL:
+        return _tools_cache
+
     tools = []
 
     if not INSTALLED_TOOLS_PATH.exists():
@@ -52,11 +75,21 @@ def get_installed_tools() -> List[Dict[str, Any]]:
         except Exception as e:
             print(f"[tool_selector] Failed to load {tool_json}: {e}")
 
+    # 캐시 업데이트
+    _tools_cache = tools
+    _tools_cache_time = time.time()
+
     return tools
 
 
-def get_installed_packages() -> List[Dict[str, Any]]:
-    """설치된 패키지 목록 반환 (패키지 단위 정보 포함)"""
+def get_installed_packages(use_cache: bool = True) -> List[Dict[str, Any]]:
+    """설치된 패키지 목록 반환 (패키지 단위 정보 포함, 캐싱 지원)"""
+    global _packages_cache, _packages_cache_time
+
+    # 캐시가 유효하면 캐시 반환
+    if use_cache and _packages_cache and time.time() - _packages_cache_time < _CACHE_TTL:
+        return _packages_cache
+
     packages = []
 
     if not INSTALLED_TOOLS_PATH.exists():
@@ -119,6 +152,10 @@ def get_installed_packages() -> List[Dict[str, Any]]:
             pass
 
         packages.append(pkg_info)
+
+    # 캐시 업데이트
+    _packages_cache = packages
+    _packages_cache_time = time.time()
 
     return packages
 

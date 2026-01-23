@@ -10,6 +10,7 @@ IndieBiz OS Core
 
 import sqlite3
 import json
+import threading
 from pathlib import Path
 from datetime import datetime
 from contextlib import contextmanager
@@ -21,6 +22,11 @@ HISTORY_LIMIT_USER = 5       # 사용자 ↔ 에이전트 대화 히스토리
 HISTORY_LIMIT_AGENT = 4      # 에이전트 ↔ 에이전트 내부 메시지 히스토리
 RECENT_TURNS_RAW = 2         # 최근 N턴은 원본 유지 (마스킹 안 함)
 MASK_THRESHOLD = 500         # 이 길이 이상이면 마스킹
+
+# ============ 연결 풀 설정 ============
+_connection_pools: Dict[str, List[sqlite3.Connection]] = {}  # db_path -> [connections]
+_pool_lock = threading.Lock()
+_MAX_POOL_SIZE = 5  # DB당 최대 연결 수
 
 
 class ConversationDB:
@@ -94,6 +100,30 @@ class ConversationDB:
 
     def _migrate_tables(self, cursor):
         """기존 DB 마이그레이션 (SQL 인젝션 방지를 위한 화이트리스트 사용)"""
+        # tasks 테이블 존재 여부 확인
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks'")
+        if not cursor.fetchone():
+            # tasks 테이블이 없으면 생성
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS tasks (
+                    task_id TEXT PRIMARY KEY,
+                    requester TEXT,
+                    requester_channel TEXT,
+                    original_request TEXT,
+                    delegated_to TEXT,
+                    delegation_context TEXT,
+                    parent_task_id TEXT,
+                    pending_delegations INTEGER DEFAULT 0,
+                    status TEXT DEFAULT 'pending',
+                    result TEXT,
+                    ws_client_id TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    completed_at TIMESTAMP
+                )
+            """)
+            print("[DB 마이그레이션] tasks 테이블 생성됨")
+            return  # 새로 생성했으므로 컬럼 추가 불필요
+
         # 현재 테이블의 컬럼 정보 조회 (안전한 방식)
         cursor.execute("PRAGMA table_info(tasks)")
         existing_columns = {row[1] for row in cursor.fetchall()}
@@ -113,16 +143,43 @@ class ConversationDB:
                 cursor.execute(safe_query)
                 print(f"[DB 마이그레이션] tasks.{column_name} 열 추가됨")
 
-    @contextmanager
-    def get_connection(self):
-        """컨텍스트 매니저로 연결 관리"""
-        conn = sqlite3.connect(self.db_path, timeout=30.0)
+    def _get_pooled_connection(self) -> sqlite3.Connection:
+        """연결 풀에서 연결 가져오기"""
+        with _pool_lock:
+            pool = _connection_pools.get(self.db_path, [])
+            if pool:
+                conn = pool.pop()
+                # 연결 유효성 확인
+                try:
+                    conn.execute("SELECT 1")
+                    return conn
+                except sqlite3.Error:
+                    # 연결이 끊어졌으면 새로 생성
+                    pass
+
+        # 새 연결 생성
+        conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
         conn.execute("PRAGMA journal_mode=WAL")
         conn.row_factory = sqlite3.Row
+        return conn
+
+    def _return_to_pool(self, conn: sqlite3.Connection):
+        """연결을 풀에 반환"""
+        with _pool_lock:
+            pool = _connection_pools.setdefault(self.db_path, [])
+            if len(pool) < _MAX_POOL_SIZE:
+                pool.append(conn)
+            else:
+                conn.close()  # 풀이 가득 차면 연결 닫기
+
+    @contextmanager
+    def get_connection(self):
+        """컨텍스트 매니저로 연결 관리 (연결 풀 사용)"""
+        conn = self._get_pooled_connection()
         try:
             yield conn
         finally:
-            conn.close()
+            self._return_to_pool(conn)
 
     @contextmanager
     def get_exclusive_connection(self):

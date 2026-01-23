@@ -6,6 +6,17 @@ api.py - IndieBiz OS Core API Server
 import os
 import sys
 from pathlib import Path
+
+# PATH 환경변수 보강 (ADB 등 외부 도구 접근용)
+# Homebrew, Android SDK 등의 경로를 추가
+_extra_paths = [
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    os.path.expanduser("~/Library/Android/sdk/platform-tools"),
+]
+for _p in _extra_paths:
+    if os.path.exists(_p) and _p not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = _p + ":" + os.environ.get("PATH", "")
 from datetime import datetime
 from contextlib import asynccontextmanager
 
@@ -111,6 +122,7 @@ from api_business import router as business_router, init_manager as init_busines
 from api_multi_chat import router as multi_chat_router, init_manager as init_multi_chat_manager
 from api_pcmanager import router as pcmanager_router
 from api_photo import router as photo_router
+from api_android import router as android_router
 
 # 매니저 주입
 init_projects_managers(project_manager, switch_manager)
@@ -145,6 +157,7 @@ app.include_router(business_router, tags=["business"])
 app.include_router(multi_chat_router, tags=["multi-chat"])
 app.include_router(pcmanager_router, tags=["pcmanager"])
 app.include_router(photo_router, tags=["photo"])
+app.include_router(android_router, tags=["android"])
 
 
 # ============ 헬스 체크 ============

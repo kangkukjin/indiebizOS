@@ -1006,11 +1006,12 @@ function TimelineView({
             <YAxis yAxisId="click" hide domain={[0, 1]} />
             <Tooltip
               contentStyle={{ backgroundColor: '#FAFAF8', border: '1px solid #E8E4DC' }}
-              formatter={(value: number, name: string) => {
-                if (name === '_clickArea') return null;
-                if (name === 'photos') return [`${value.toLocaleString()} 장`, '사진'];
-                if (name === 'videos') return [`${value.toLocaleString()} 개`, '동영상'];
-                return [value.toLocaleString(), name];
+              formatter={(value, name) => {
+                if (name === '_clickArea' || value === undefined) return null;
+                const v = Number(value);
+                if (name === 'photos') return [`${v.toLocaleString()} 장`, '사진'];
+                if (name === 'videos') return [`${v.toLocaleString()} 개`, '동영상'];
+                return [v.toLocaleString(), String(name)];
               }}
               filterNull={true}
             />

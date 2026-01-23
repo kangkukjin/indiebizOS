@@ -8,8 +8,9 @@
  */
 
 import { useState, useEffect } from 'react';
-import { X, Package, Download, Trash2, Check, AlertCircle, FolderOpen, ChevronDown, ChevronRight, FolderPlus, XCircle, Sparkles, Loader2 } from 'lucide-react';
+import { X, Package, Download, Trash2, Check, AlertCircle, FolderOpen, ChevronDown, ChevronRight, FolderPlus, XCircle, Sparkles, Loader2, Search, Globe } from 'lucide-react';
 import { api } from '../../../lib/api';
+import { ToolSearchDialog } from './ToolSearchDialog';
 
 interface PackageInfo {
   id: string;
@@ -17,7 +18,7 @@ interface PackageInfo {
   description: string;
   version?: string;
   author?: string;
-  type: 'tools';
+  type?: 'tools';
   icon?: string;
   installed: boolean;
   package_type?: string;
@@ -72,6 +73,27 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
     name: '',
     description: '',
     readmeContent: '',
+  });
+
+  // 도구 검색 다이얼로그 상태
+  const [showSearchDialog, setShowSearchDialog] = useState(false);
+
+  // 패키지 공개 로딩 상태
+  const [publishLoading, setPublishLoading] = useState<string | null>(null);
+
+  // 패키지 공개 다이얼로그 상태
+  const [publishDialog, setPublishDialog] = useState<{
+    show: boolean;
+    package: PackageInfo | null;
+    installInstructions: string;
+    signature: string;
+    isGenerating: boolean;
+  }>({
+    show: false,
+    package: null,
+    installInstructions: '',
+    signature: '',
+    isGenerating: false,
   });
 
   useEffect(() => {
@@ -158,6 +180,57 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
       description: '',
       readmeContent: '',
     });
+  };
+
+  // 패키지 공개 다이얼로그 열기
+  const openPublishDialog = async (pkg: PackageInfo) => {
+    setPublishDialog({
+      show: true,
+      package: pkg,
+      installInstructions: '',
+      signature: '',
+      isGenerating: true,
+    });
+
+    // AI로 설치 방법 자동 생성
+    try {
+      const result = await api.generateInstallInstructions(pkg.id);
+      setPublishDialog(prev => ({
+        ...prev,
+        installInstructions: result.instructions,
+        isGenerating: false,
+      }));
+    } catch (error) {
+      // 실패 시 기본 텍스트
+      setPublishDialog(prev => ({
+        ...prev,
+        installInstructions: `indiebizOS 도구 관리에서 '${pkg.name}' 검색 후 설치`,
+        isGenerating: false,
+      }));
+    }
+  };
+
+  // 패키지 공개 실행 (Nostr)
+  const handlePublishPackage = async () => {
+    const pkg = publishDialog.package;
+    if (!pkg) return;
+
+    setPublishLoading(pkg.id);
+    setMessage(null);
+
+    try {
+      const result = await api.publishPackageToNostr(
+        pkg.id,
+        publishDialog.installInstructions || undefined,
+        publishDialog.signature || undefined
+      );
+      setMessage({ type: 'success', text: result.message });
+      setPublishDialog({ show: false, package: null, installInstructions: '', signature: '', isGenerating: false });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || '공개 실패' });
+    } finally {
+      setPublishLoading(null);
+    }
   };
 
   // AI로 폴더 분석
@@ -276,6 +349,14 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSearchDialog(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+              title="Nostr에서 도구 검색"
+            >
+              <Search size={16} />
+              <span>도구 검색</span>
+            </button>
             <button
               onClick={openRegisterDialog}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"
@@ -475,6 +556,17 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
                         <Download size={18} />
                       )}
                       {actionLoading === selectedPackage.id ? '설치 중...' : '설치하기'}
+                    </button>
+                  )}
+
+                  {/* 패키지 공개 버튼 (설치된 패키지만) */}
+                  {selectedPackage.installed && (
+                    <button
+                      onClick={() => openPublishDialog(selectedPackage)}
+                      className="w-full px-4 py-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 flex items-center justify-center gap-2 transition-colors text-sm font-medium"
+                    >
+                      <Globe size={16} />
+                      Nostr에 공개
                     </button>
                   )}
 
@@ -705,6 +797,107 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
                   )}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 도구 검색 다이얼로그 */}
+      <ToolSearchDialog
+        show={showSearchDialog}
+        onClose={() => setShowSearchDialog(false)}
+      />
+
+      {/* 패키지 공개 다이얼로그 */}
+      {publishDialog.show && publishDialog.package && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-60">
+          <div className="bg-white rounded-xl shadow-2xl w-[500px] max-w-[90vw]">
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div className="flex items-center gap-2">
+                <Globe size={20} className="text-purple-500" />
+                <h3 className="font-bold text-gray-800">Nostr에 공개</h3>
+              </div>
+              <button
+                onClick={() => setPublishDialog({ show: false, package: null, installInstructions: '', signature: '', isGenerating: false })}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X size={18} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="p-4 bg-purple-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Package size={24} className="text-purple-500" />
+                  <div>
+                    <p className="font-medium text-gray-800">{publishDialog.package.name}</p>
+                    <p className="text-sm text-gray-600">{publishDialog.package.description || '설명 없음'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  설치 방법
+                </label>
+                {publishDialog.isGenerating ? (
+                  <div className="w-full px-3 py-4 border rounded-lg bg-gray-50 flex items-center justify-center gap-2 text-gray-600">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="text-sm font-medium">AI가 설치 방법을 생성하고 있습니다...</span>
+                  </div>
+                ) : (
+                  <textarea
+                    value={publishDialog.installInstructions}
+                    onChange={(e) => setPublishDialog(prev => ({ ...prev, installInstructions: e.target.value }))}
+                    placeholder="AI가 설치 방법을 자동으로 생성합니다. 필요하면 편집하세요."
+                    rows={4}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none text-sm text-gray-800 placeholder:text-gray-400"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  사인 <span className="text-gray-500 font-normal">(선택사항)</span>
+                </label>
+                <input
+                  type="text"
+                  value={publishDialog.signature}
+                  onChange={(e) => setPublishDialog(prev => ({ ...prev, signature: e.target.value }))}
+                  placeholder="예: Made by KukJin"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-gray-800 placeholder:text-gray-400"
+                />
+              </div>
+
+              <p className="text-xs text-gray-500">
+                이 패키지 정보가 Nostr 네트워크에 공개됩니다. 다른 indiebizOS 사용자들이 이 패키지를 검색하고 설치할 수 있게 됩니다.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 px-5 py-4 border-t bg-gray-50">
+              <button
+                onClick={() => setPublishDialog({ show: false, package: null, installInstructions: '', signature: '', isGenerating: false })}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handlePublishPackage}
+                disabled={publishLoading === publishDialog.package.id}
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 transition-colors flex items-center gap-2"
+              >
+                {publishLoading === publishDialog.package.id ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    공개 중...
+                  </>
+                ) : (
+                  <>
+                    <Globe size={16} />
+                    공개하기
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

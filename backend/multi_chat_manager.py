@@ -235,7 +235,8 @@ class MultiChatManager:
     # ============ 대화 진행 ============
 
     def send_message(self, room_id: str, message: str,
-                     response_count: int = 2) -> List[Dict]:
+                     response_count: int = 2,
+                     images: List[Dict] = None) -> List[Dict]:
         """
         사용자 메시지 전송 및 에이전트 응답 받기
 
@@ -243,6 +244,7 @@ class MultiChatManager:
             room_id: 채팅방 ID
             message: 사용자 메시지
             response_count: 응답할 에이전트 수 (기본 2명)
+            images: 첨부 이미지 [{"base64": "...", "media_type": "..."}]
 
         Returns:
             [{"speaker": "...", "content": "..."}, ...]
@@ -270,7 +272,7 @@ class MultiChatManager:
         # 각 에이전트 응답 생성
         responses = []
         for participant in responders:
-            response = self._get_agent_response(room_id, participant)
+            response = self._get_agent_response(room_id, participant, images)
             if response:
                 responses.append({
                     "speaker": participant['agent_name'],
@@ -296,7 +298,7 @@ class MultiChatManager:
 
         return mentioned
 
-    def _get_agent_response(self, room_id: str, participant: Dict) -> str:
+    def _get_agent_response(self, room_id: str, participant: Dict, images: List[Dict] = None) -> str:
         """개별 에이전트 응답 생성"""
         try:
             # 히스토리 로드
@@ -334,7 +336,8 @@ class MultiChatManager:
 
             response = agent.process_message_with_history(
                 message_content=last_user_msg,
-                history=history[:-1] if history else []  # 마지막 메시지 제외
+                history=history[:-1] if history else [],  # 마지막 메시지 제외
+                images=images  # 이미지 전달
             )
 
             return response

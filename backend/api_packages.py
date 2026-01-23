@@ -12,7 +12,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
-from package_manager import package_manager, INSTALLED_PATH, NOT_INSTALLED_PATH
+from package_manager import (
+    package_manager, INSTALLED_PATH, NOT_INSTALLED_PATH,
+    encode_package, decode_package, install_package_from_text
+)
 
 router = APIRouter()
 
@@ -45,6 +48,29 @@ class RegisterFolderRequest(BaseModel):
 
 class RemovePackageRequest(BaseModel):
     package_type: Optional[str] = "tools"  # 하위 호환성, 무시됨
+
+
+class PublishPackageRequest(BaseModel):
+    """패키지 공개 요청"""
+    package_id: str
+    install_instructions: Optional[str] = None  # 커스텀 설치 방법
+    signature: Optional[str] = None  # 사인
+
+
+class SearchPackagesRequest(BaseModel):
+    """패키지 검색 요청"""
+    query: Optional[str] = None
+    limit: int = 20
+
+
+class EncodePackageRequest(BaseModel):
+    """패키지 인코딩 요청 (Nostr 공유용)"""
+    package_id: str
+
+
+class DecodePackageRequest(BaseModel):
+    """패키지 디코딩 요청 (Nostr에서 수신)"""
+    encoded_text: str
 
 
 # ============ 패키지 목록 API ============
@@ -289,6 +315,123 @@ async def remove_package(package_id: str, request: RemovePackageRequest = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============ 패키지 공개/검색 API (Nostr 기반) ============
+
+@router.post("/packages/{package_id}/publish")
+async def publish_package_to_nostr(package_id: str, request: PublishPackageRequest = None):
+    """
+    패키지를 Nostr에 공개 발행
+    - 패키지 정보를 #indiebizOS-package 해시태그와 함께 발행
+    """
+    try:
+        # 패키지 정보 가져오기
+        info = package_manager.get_package_info(package_id)
+        if not info:
+            raise HTTPException(status_code=404, detail=f"패키지를 찾을 수 없습니다: {package_id}")
+
+        # Nostr 채널 초기화
+        from channels.nostr import NostrChannel
+        nostr = NostrChannel({})
+        if not nostr.authenticate():
+            raise HTTPException(status_code=500, detail="Nostr 인증 실패")
+
+        # 풍부한 설명 생성
+        description_parts = []
+
+        # 기본 설명
+        if info.get('description'):
+            description_parts.append(info.get('description'))
+
+        # 도구 목록이 있으면 추가
+        tools = info.get('tools', [])
+        if tools:
+            tool_names = [t.get('name', '') for t in tools if t.get('name')]
+            if tool_names:
+                description_parts.append(f"제공 도구: {', '.join(tool_names)}")
+
+        final_description = ' | '.join(description_parts) if description_parts else '설명 없음'
+
+        # 패키지 정보 구성
+        package_info = {
+            'name': info.get('name', package_id),
+            'description': final_description,
+            'version': info.get('version', '1.0.0'),
+            'install': request.install_instructions if request and request.install_instructions else f"indiebizOS 도구 관리에서 '{info.get('name', package_id)}' 검색 후 설치",
+            'signature': request.signature if request and request.signature else None
+        }
+
+        # 발행
+        success = nostr.publish_package(package_info)
+
+        if success:
+            return {
+                "status": "published",
+                "package_id": package_id,
+                "message": f"'{info.get('name', package_id)}' 패키지가 Nostr에 공개되었습니다."
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Nostr 발행 실패")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/packages/nostr/search")
+async def search_packages_on_nostr(query: str = None, limit: int = 20):
+    """
+    Nostr에서 공개된 패키지 검색
+    - #indiebizOS-package 해시태그로 필터링
+    """
+    try:
+        # Nostr 채널 초기화
+        from channels.nostr import NostrChannel
+        nostr = NostrChannel({})
+        if not nostr.authenticate():
+            raise HTTPException(status_code=500, detail="Nostr 인증 실패")
+
+        # 검색
+        packages = nostr.search_packages(query=query, limit=limit)
+
+        return {
+            "packages": packages,
+            "count": len(packages),
+            "query": query
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/packages/nostr/search")
+async def search_packages_on_nostr_post(request: SearchPackagesRequest):
+    """Nostr에서 공개된 패키지 검색 (POST)"""
+    return await search_packages_on_nostr(query=request.query, limit=request.limit)
+
+
+@router.get("/packages/{package_id}/generate-install")
+async def generate_install_instructions(package_id: str):
+    """
+    패키지를 Nostr 공유용 텍스트로 인코딩
+    코드 파일 전체가 포함되어 다른 IndieBiz OS에서 바로 디코딩 가능
+    """
+    try:
+        encoded = encode_package(package_id)
+        return {
+            "instructions": encoded,
+            "format": "encoded_package",
+            "package_id": package_id,
+            "length": len(encoded)
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============ 도구 API (에이전트용) ============
 
 def _load_tool_definitions(tools_path: Path) -> List[Dict[str, Any]]:
@@ -409,5 +552,102 @@ async def get_available_tools():
             "tools": all_tools,
             "total": len(all_tools)
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ 패키지 인코더/디코더 API (Nostr 공유용) ============
+
+@router.post("/packages/encode")
+async def encode_package_api(request: EncodePackageRequest):
+    """
+    패키지를 Nostr 공유용 텍스트로 인코딩
+
+    인코딩된 텍스트는 다른 IndieBiz OS 인스턴스에서
+    decode API로 패키지 폴더로 복원할 수 있습니다.
+    """
+    try:
+        encoded = encode_package(request.package_id)
+        return {
+            "success": True,
+            "package_id": request.package_id,
+            "encoded_text": encoded,
+            "length": len(encoded),
+            "message": f"'{request.package_id}' 패키지가 인코딩되었습니다. Nostr에 게시할 수 있습니다."
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/packages/{package_id}/encode")
+async def encode_package_get(package_id: str):
+    """패키지 인코딩 (GET 방식)"""
+    try:
+        encoded = encode_package(package_id)
+        return {
+            "success": True,
+            "package_id": package_id,
+            "encoded_text": encoded,
+            "length": len(encoded)
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/packages/decode")
+async def decode_package_api(request: DecodePackageRequest):
+    """
+    인코딩된 텍스트를 패키지 폴더로 디코딩
+
+    Nostr에서 받은 패키지 텍스트를 not_installed/tools/ 폴더에
+    패키지로 저장합니다.
+    """
+    try:
+        result = decode_package(request.encoded_text)
+
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+        return {
+            "success": True,
+            "package_id": result["package_id"],
+            "package_path": result["package_path"],
+            "files_created": result["files_created"],
+            "message": f"'{result['package_id']}' 패키지가 생성되었습니다. 설치하려면 install API를 사용하세요."
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/packages/install-from-text")
+async def install_from_text_api(request: DecodePackageRequest):
+    """
+    인코딩된 텍스트에서 패키지 디코딩 + 검증
+
+    Nostr에서 받은 패키지를 바로 설치 준비 상태로 만듭니다.
+    """
+    try:
+        result = install_package_from_text(request.encoded_text)
+
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+        return {
+            "success": True,
+            "package_id": result["package_id"],
+            "package_path": result["package_path"],
+            "files_created": result["files_created"],
+            "validation": result.get("validation"),
+            "warnings": result.get("warnings", []),
+            "message": f"'{result['package_id']}' 패키지가 준비되었습니다."
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

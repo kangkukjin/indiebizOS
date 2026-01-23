@@ -34,8 +34,8 @@ export function FolderView({ folderId }: FolderViewProps) {
 
   const folderRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  // 폴더 목록 로드 함수
-  const loadFolderItems = async () => {
+  // 폴더 목록 로드 함수 (나중에 사용될 수 있음)
+  const _loadFolderItems = async () => {
     try {
       const folderItems = await api.getFolderItems(folderId);
       setItems(folderItems);
@@ -43,6 +43,7 @@ export function FolderView({ folderId }: FolderViewProps) {
       console.error('폴더 아이템 로드 실패:', err);
     }
   };
+  void _loadFolderItems; // unused variable 경고 방지
 
   // 폴더 정보 로드
   useEffect(() => {

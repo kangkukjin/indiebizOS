@@ -167,7 +167,9 @@ def save_figure(fig, output_path: str = None, output_format: str = "png"):
         fig.savefig(output_path, dpi=150, bbox_inches='tight',
                     facecolor='white', edgecolor='none')
         plt.close(fig)
-        return {"format": "png", "path": output_path, "image_tag": f"[IMAGE:{output_path}]"}
+        # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
+        abs_path = os.path.abspath(output_path)
+        return {"format": "png", "path": abs_path, "image_tag": f"[IMAGE:{abs_path}]"}
 
     else:
         plt.close(fig)
@@ -179,7 +181,8 @@ def save_plotly_figure(fig, output_path: str = None, output_format: str = "png")
     if output_format == "html":
         output_path = generate_output_path("chart", "html")
         fig.write_html(output_path)
-        return {"format": "html", "path": output_path}
+        # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
+        return {"format": "html", "path": os.path.abspath(output_path)}
 
     elif output_format == "base64":
         img_bytes = fig.to_image(format="png", scale=2)
@@ -189,7 +192,9 @@ def save_plotly_figure(fig, output_path: str = None, output_format: str = "png")
     elif output_format == "png":
         output_path = generate_output_path("chart", "png")
         fig.write_image(output_path, scale=2)
-        return {"format": "png", "path": output_path, "image_tag": f"[IMAGE:{output_path}]"}
+        # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
+        abs_path = os.path.abspath(output_path)
+        return {"format": "png", "path": abs_path, "image_tag": f"[IMAGE:{abs_path}]"}
 
     else:
         return {"format": output_format, "error": f"지원하지 않는 형식: {output_format}"}

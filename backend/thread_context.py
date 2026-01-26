@@ -24,6 +24,25 @@ def get_current_agent_id() -> str:
     return getattr(_thread_local, 'agent_id', None)
 
 
+def set_current_project_id(project_id: str):
+    """현재 스레드의 프로젝트 ID 설정"""
+    _thread_local.project_id = project_id
+
+
+def get_current_project_id() -> str:
+    """현재 스레드의 프로젝트 ID 가져오기"""
+    return getattr(_thread_local, 'project_id', None)
+
+
+def get_current_registry_key() -> str:
+    """현재 스레드의 레지스트리 키 가져오기 (project_id:agent_id 형식)"""
+    project_id = get_current_project_id()
+    agent_id = get_current_agent_id()
+    if not agent_id:
+        return None
+    return f"{project_id}:{agent_id}" if project_id else agent_id
+
+
 def get_current_agent_name() -> str:
     """현재 스레드의 에이전트 이름 가져오기"""
     return getattr(_thread_local, 'agent_name', None)
@@ -80,6 +99,7 @@ def clear_all_context():
     """모든 스레드 로컬 컨텍스트 초기화"""
     _thread_local.agent_id = None
     _thread_local.agent_name = None
+    _thread_local.project_id = None
     _thread_local.task_id = None
     _thread_local.called_agent = False
 
@@ -89,6 +109,8 @@ def get_context_summary() -> dict:
     return {
         "agent_id": get_current_agent_id(),
         "agent_name": get_current_agent_name(),
+        "project_id": get_current_project_id(),
+        "registry_key": get_current_registry_key(),
         "task_id": get_current_task_id(),
         "called_agent": did_call_agent()
     }

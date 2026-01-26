@@ -110,12 +110,15 @@ class AIAgent:
 
         history = history or []
 
+        # 커스텀 execute_tool이 있으면 사용, 없으면 기본 execute_tool 사용
+        tool_executor = self._custom_execute_tool if self._custom_execute_tool else execute_tool
+
         try:
             return self._provider.process_message(
                 message=message_content,
                 history=history,
                 images=images,
-                execute_tool=execute_tool
+                execute_tool=tool_executor
             )
         except Exception as e:
             import traceback

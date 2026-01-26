@@ -436,6 +436,19 @@ class ConversationDB:
             row = cursor.fetchone()
             return row[0] if row else 0
 
+    def clear_delegation_context(self, task_id: str) -> bool:
+        """위임 컨텍스트 완전 클리어 (태스크 완료 시 사용)"""
+        with self.get_exclusive_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE tasks
+                SET delegation_context = NULL,
+                    pending_delegations = 0
+                WHERE task_id = ?
+            """, (task_id,))
+            print(f"[ConversationDB] 위임 컨텍스트 클리어: {task_id}")
+            return cursor.rowcount > 0
+
     def get_pending_tasks(self, delegated_to: str = None) -> List[Dict]:
         """대기 중인 작업 목록 조회"""
         with self.get_connection() as conn:

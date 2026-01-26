@@ -63,9 +63,17 @@ def init_memory_db():
             role TEXT NOT NULL,
             content TEXT NOT NULL,
             summary TEXT,
-            importance INTEGER DEFAULT 0
+            importance INTEGER DEFAULT 0,
+            source TEXT
         )
     """)
+
+    # 기존 테이블 마이그레이션 (source 컬럼 추가)
+    cursor.execute("PRAGMA table_info(conversations)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if 'source' not in columns:
+        cursor.execute("ALTER TABLE conversations ADD COLUMN source TEXT")
+        print("[system_ai_memory] conversations.source 컬럼 추가됨")
 
     # 중요 기억 테이블 (시스템 AI가 기억해야 할 것들)
     cursor.execute("""
@@ -103,17 +111,27 @@ def init_memory_db():
     conn.close()
 
 
-def save_conversation(role: str, content: str, importance: int = 0) -> int:
-    """대화 저장"""
+def save_conversation(role: str, content: str, importance: int = 0, source: str = None) -> int:
+    """대화 저장
+
+    Args:
+        role: 역할 ('user', 'assistant', 'agent')
+        content: 대화 내용
+        importance: 중요도 (0-10)
+        source: 발신자 정보 (예: 'user@gui', '스토리텔러@홍보', 'system_ai')
+
+    Returns:
+        저장된 대화 ID
+    """
     init_memory_db()
 
     conn = _get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO conversations (timestamp, role, content, importance)
-        VALUES (?, ?, ?, ?)
-    """, (datetime.now().isoformat(), role, content, importance))
+        INSERT INTO conversations (timestamp, role, content, importance, source)
+        VALUES (?, ?, ?, ?, ?)
+    """, (datetime.now().isoformat(), role, content, importance, source))
 
     conversation_id = cursor.lastrowid
     conn.commit()
@@ -385,6 +403,21 @@ def decrement_pending_and_update_context(task_id: str,
         cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
         row = cursor.fetchone()
         return row[0] if row else 0
+
+
+def clear_delegation_context(task_id: str) -> bool:
+    """위임 컨텍스트 완전 클리어 (태스크 완료 시 사용)"""
+    init_memory_db()
+    with _get_exclusive_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE tasks
+            SET delegation_context = NULL,
+                pending_delegations = 0
+            WHERE task_id = ?
+        """, (task_id,))
+        print(f"[시스템 AI 메모리] 위임 컨텍스트 클리어: {task_id}")
+        return cursor.rowcount > 0
 
 
 def get_pending_tasks(delegated_to: str = None) -> List[Dict]:

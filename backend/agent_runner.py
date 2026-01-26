@@ -17,8 +17,8 @@ from typing import Dict, Any, Optional, List
 from ai_agent import AIAgent
 from conversation_db import ConversationDB, HISTORY_LIMIT_AGENT
 from thread_context import (
-    set_current_agent_id, set_current_agent_name,
-    get_current_agent_id, get_current_agent_name,
+    set_current_agent_id, set_current_agent_name, set_current_project_id,
+    get_current_agent_id, get_current_agent_name, get_current_registry_key,
     set_current_task_id, get_current_task_id, clear_current_task_id,
     set_called_agent, did_call_agent, clear_called_agent
 )
@@ -34,9 +34,10 @@ class AgentRunner:
     # (예: 메시지 처리 중 call_agent 호출 시 다시 Lock 획득 필요한 경우)
     _lock = threading.RLock()
 
-    def __init__(self, agent_config: dict, common_config: dict = None):
+    def __init__(self, agent_config: dict, common_config: dict = None, delegated_from_system_ai: bool = False):
         self.config = agent_config
         self.common_config = common_config or {}
+        self.delegated_from_system_ai = delegated_from_system_ai
 
         self.running = False
         self.thread: Optional[threading.Thread] = None
@@ -157,13 +158,27 @@ class AgentRunner:
         if note_file.exists():
             agent_notes = note_file.read_text(encoding='utf-8').strip()
 
+        # 시스템 AI 위임 여부 확인
+        # 1) 생성자에서 전달된 플래그 확인
+        # 2) 또는 DB에 system_ai 채널의 태스크가 있는지 확인
+        is_delegated_from_system_ai = self.delegated_from_system_ai
+        if not is_delegated_from_system_ai:
+            try:
+                pending = self.db.get_pending_tasks(delegated_to=agent_name)
+                is_delegated_from_system_ai = any(
+                    t.get('requester_channel') == 'system_ai' for t in pending
+                )
+            except Exception:
+                pass
+
         # 동적 프롬프트 빌드
         return build_agent_prompt(
             agent_name=agent_name,
             role=role,
             agent_count=agent_count,
             agent_notes=agent_notes,
-            git_enabled=git_enabled
+            git_enabled=git_enabled,
+            delegated_from_system_ai=is_delegated_from_system_ai
         )
 
     def _get_agent_count(self) -> int:
@@ -297,6 +312,7 @@ class AgentRunner:
         # 스레드별 에이전트 컨텍스트 설정
         set_current_agent_id(self.config.get("id"))
         set_current_agent_name(self.config.get("name"))
+        set_current_project_id(self.project_id)
 
         # 에이전트 타입 확인
         agent_type = self.config.get('type', 'internal')
@@ -544,6 +560,14 @@ class AgentRunner:
                 print(f"[AgentRunner] {my_name} 내부 메시지 수신: {from_agent}로부터")
                 print(f"   내용: {content[:100]}..." if len(content) > 100 else f"   내용: {content}")
 
+                # 에이전트 간 수신 메시지 DB 기록
+                try:
+                    from_agent_db_id = self.db.get_or_create_agent(from_agent, "ai_agent")
+                    my_agent_db_id = self.db.get_or_create_agent(my_name, "ai_agent")
+                    self.db.save_message(from_agent_db_id, my_agent_db_id, content, contact_type='agent_to_agent')
+                except Exception as db_err:
+                    print(f"[AgentRunner] 수신 메시지 DB 기록 실패: {db_err}")
+
                 # 태스크 ID 설정 (메시지에서 추출 또는 전달받은 것 사용)
                 extracted_task_id = task_id
                 if not extracted_task_id:
@@ -557,6 +581,13 @@ class AgentRunner:
 
                 # call_agent 호출 플래그 초기화
                 clear_called_agent()
+
+                # 시스템 AI 위임 여부 확인
+                is_from_system_ai = False
+                if extracted_task_id:
+                    task_info = self.db.get_task(extracted_task_id)
+                    if task_info and task_info.get('requester_channel') == 'system_ai':
+                        is_from_system_ai = True
 
                 # 위임 컨텍스트 복원 (보고 메시지인 경우)
                 delegation_context = None
@@ -581,50 +612,53 @@ class AgentRunner:
                 if self.ai:
                     # 위임 컨텍스트가 있으면 메시지에 컨텍스트 리마인더 추가
                     ai_message = content
+                    history = []
+
+                    # 시스템 AI 위임인 경우 파일 경로 원칙 추가
+                    if is_from_system_ai:
+                        ai_message = f"""[시스템 AI 위임 작업]
+{content}
+
+[중요: 파일 경로 원칙]
+파일 위치를 보고할 때는 반드시 절대경로를 사용하세요.
+시스템 AI와 프로젝트 에이전트의 작업 디렉토리가 다르므로, 상대경로로 보고하면 파일을 찾을 수 없습니다."""
+
                     if delegation_context:
-                        # 새 형식 (delegations 배열) vs 구 형식 분기
-                        if 'delegations' in delegation_context:
-                            delegations = delegation_context.get('delegations', [])
-                            responses = delegation_context.get('responses', [])
+                        original_request = delegation_context.get('original_request', '')
+                        completed = delegation_context.get('completed', [])
 
-                            # 위임 내역 요약
-                            delegation_summary = ""
-                            for i, d in enumerate(delegations, 1):
-                                delegation_summary += f"  {i}. {d.get('delegated_to', '?')}: {d.get('delegation_message', '')[:100]}\n"
+                        # 완료된 위임 기록을 히스토리로 변환
+                        history = self._build_history_from_completed(completed)
 
-                            context_reminder = f"""[시스템 알림 - 위임 컨텍스트 복원]
-당신이 이전에 {len(delegations)}개의 작업을 위임했을 때의 상황입니다:
-- 원래 요청자: {delegation_context.get('requester', '?')}
-- 원래 요청 내용: {delegation_context.get('original_request', '?')}
-- 위임 내역:
-{delegation_summary}
-이제 모든 위임한 작업의 결과가 도착했습니다. 이 컨텍스트와 결과들을 바탕으로 원래 요청을 완료하세요.
+                        # 완료된 작업 목록 포맷팅
+                        completed_summary = self._format_completed_delegations(completed)
+
+                        ai_message = f"""[위임 결과]
+{content}
 
 ---
-[위임 결과 보고]
-{content}"""
-                        else:
-                            # 구 형식 (단일 위임)
-                            context_reminder = f"""[시스템 알림 - 위임 컨텍스트 복원]
-당신이 이전에 '{delegation_context.get('delegated_to', '?')}'에게 작업을 위임했을 때의 상황입니다:
-- 원래 요청자: {delegation_context.get('requester', '?')}
-- 원래 요청 내용: {delegation_context.get('original_request', '?')}
-- 위임 시 메시지: {delegation_context.get('delegation_message', '?')}
+{completed_summary}
+원래 요청: {original_request}
 
-이제 위임한 작업의 결과가 도착했습니다. 이 컨텍스트를 바탕으로 원래 요청을 완료하세요.
-
----
-[{from_agent}의 결과 보고]
-{content}"""
-                        ai_message = context_reminder
+위 결과를 바탕으로:
+- 추가 작업이 필요하면 다른 에이전트에게 위임하세요.
+- 모든 작업이 완료되었으면 요청자에게 결과를 보고하세요."""
 
                     response = self.ai.process_message_with_history(
                         message_content=ai_message,
                         from_email=f"{from_agent}@internal",
-                        history=[],
+                        history=history,
                         reply_to=f"{from_agent}@internal"
                     )
                     print(f"[AgentRunner] {my_name} 응답 생성: {len(response)}자")
+
+                    # 에이전트 간 응답 메시지 DB 기록
+                    try:
+                        my_agent_db_id = self.db.get_or_create_agent(my_name, "ai_agent")
+                        from_agent_db_id = self.db.get_or_create_agent(from_agent, "ai_agent")
+                        self.db.save_message(my_agent_db_id, from_agent_db_id, response, contact_type='agent_to_agent')
+                    except Exception as db_err:
+                        print(f"[AgentRunner] 응답 메시지 DB 기록 실패: {db_err}")
 
                     # call_agent 호출 여부 확인
                     called_another = did_call_agent()
@@ -633,7 +667,7 @@ class AgentRunner:
                         # 다른 에이전트에게 위임함 → 자동 보고 스킵
                         print(f"[AgentRunner] {my_name} call_agent 호출됨 - 자동 보고 스킵, 위임 결과 대기")
                     else:
-                        # 직접 처리 완료 → 자동 보고
+                        # 직접 처리 완료 → 자동 보고 (태스크 삭제됨)
                         if extracted_task_id:
                             self._auto_report_to_chain(extracted_task_id, response, from_agent)
                         else:
@@ -735,9 +769,11 @@ class AgentRunner:
             SystemAIRunner.send_message(
                 content=report_msg,
                 from_agent=my_name,
-                task_id=task_id
+                task_id=task_id,
+                project_id=self.project_id
             )
-            print(f"[시스템 AI 전송] {my_name} → 시스템 AI: {task_id}")
+            print(f"[시스템 AI 전송] {my_name}@{self.project_id} → 시스템 AI: {task_id}")
+            # DB 기록은 659번(agent_to_agent)에서 이미 수행됨 - 중복 저장 방지
 
         except Exception as e:
             print(f"[시스템 AI 전송] 실패: {e}")
@@ -773,6 +809,47 @@ class AgentRunner:
         else:
             print(f"[AgentRunner] {my_name} 응답 (발신자 '{from_agent}' 미발견): {response[:200]}...")
 
+    def _build_history_from_completed(self, completed: list) -> list:
+        """완료된 위임 기록을 AI 히스토리 형식으로 변환"""
+        history = []
+        for entry in completed:
+            to_agent = entry.get('to', '')
+            message = entry.get('message', '')
+            result = entry.get('result', '')
+
+            # 내가 위임한 내역
+            history.append({
+                "role": "assistant",
+                "content": f"[위임] {to_agent}에게 요청: {message}"
+            })
+
+            # 에이전트의 응답
+            if result:
+                history.append({
+                    "role": "user",
+                    "content": f"[{to_agent} 응답] {result[:500]}..." if len(result) > 500 else f"[{to_agent} 응답] {result}"
+                })
+
+        return history
+
+    def _format_completed_delegations(self, completed: list) -> str:
+        """완료된 위임 기록을 텍스트로 포맷팅"""
+        if not completed:
+            return ""
+
+        lines = ["[이미 완료된 작업]"]
+        for i, entry in enumerate(completed, 1):
+            to_agent = entry.get('to', '')
+            result = entry.get('result', '')
+            # 파일 경로가 포함된 결과는 그대로 표시, 아니면 500자로 요약
+            if '파일로 저장' in result or '/outputs/' in result:
+                result_summary = result[:800] if len(result) > 800 else result
+            else:
+                result_summary = result[:500] + "..." if len(result) > 500 else result
+            lines.append(f"{i}. {to_agent}: {result_summary}")
+
+        return "\n".join(lines) + "\n"
+
     def _auto_report_to_chain(self, task_id: str, response: str, from_agent: str):
         """
         자동 보고 체인: 작업 완료 시 위임 체인을 따라 결과 전달
@@ -795,8 +872,17 @@ class AgentRunner:
             requester = task.get('requester', '')
             channel = task.get('requester_channel', 'gui')
 
-            # 결과 요약
-            result_summary = response[:500] if len(response) > 500 else response
+            # 결과 요약 (긴 응답은 파일로 저장)
+            if len(response) > 2000:
+                # 긴 응답은 파일로 저장하고 경로만 전달
+                outputs_dir = self.project_path / "outputs"
+                outputs_dir.mkdir(exist_ok=True)
+                result_file = outputs_dir / f"result_{task_id}.txt"
+                result_file.write_text(response, encoding='utf-8')
+                result_summary = f"[작업 완료] 상세 결과가 파일로 저장되었습니다: {result_file}\n\n요약:\n{response[:500]}..."
+                print(f"[자동 보고] 긴 응답({len(response)}자) → 파일 저장: {result_file}")
+            else:
+                result_summary = response
 
             # 1. parent_task_id가 있으면 → 부모 태스크에 응답 누적 + 조건부 보고
             if parent_task_id:
@@ -849,22 +935,29 @@ class AgentRunner:
 
                                 print(f"[자동 보고] 응답 누적: {task_id} → {parent_task_id} (남은 위임: {remaining}/{total_delegations})")
 
-                                # ✅ 병렬 위임 수집 모드: 2개 이상 위임이면 모든 응답 도착 시까지 대기
-                                if total_delegations >= 2:
+                                # ✅ 병렬 위임 수집 모드: 동시에 2개 이상 위임이 진행 중일 때만
+                                # 순차 위임: A 완료 → B 위임 → B 완료 (각 시점에서 pending은 항상 0 또는 1)
+                                # 병렬 위임: A, B 동시 위임 → pending=2 → A 완료(pending=1) → B 완료(pending=0)
+                                # 구분 방법: 현재 응답 도착 전 pending이 2 이상이었으면 병렬
+                                pending_before_decrement = remaining + 1  # 감소 전 값
+
+                                if pending_before_decrement >= 2:
+                                    # 병렬 위임 모드 (이 응답 도착 전에 2개 이상 대기 중이었음)
                                     if remaining > 0:
-                                        print(f"[자동 보고] 수집 모드 - 대기 중: {remaining}개 응답 더 필요")
+                                        print(f"[자동 보고] 병렬 수집 모드 - 대기 중: {remaining}개 응답 더 필요")
                                         # 현재 태스크 삭제 후 리턴
                                         self.db.complete_task(task_id, result_summary)
                                         print(f"[자동 보고] 태스크 삭제: {task_id}")
                                         return  # 아직 다 안 모임 → 보고 스킵
                                     else:
-                                        print(f"[자동 보고] 수집 모드 - 모든 응답 도착! 통합 보고 전송")
+                                        print(f"[자동 보고] 병렬 수집 모드 - 모든 응답 도착! 통합 보고 전송")
                                         # 모든 응답을 통합해서 보고
                                         all_responses = delegation_context.get('responses', [])
                                         combined_report = "[병렬 위임 결과 통합 보고]\n\n"
                                         for resp in all_responses:
                                             combined_report += f"◆ {resp['from_agent']}:\n{resp['response']}\n\n"
                                         result_summary = combined_report
+                                # else: 순차 위임 모드 - 각 응답을 개별적으로 보고
                             else:
                                 # 구버전 형식 - 기존 로직 사용
                                 total_delegations = 1

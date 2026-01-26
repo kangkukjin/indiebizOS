@@ -732,14 +732,18 @@ def create_slides(tool_input, output_base):
                 html = Template(template_str).render(**render_data)
                 page.set_content(html)
                 page.wait_for_load_state("networkidle")
-                
+                page.wait_for_timeout(500)  # Tailwind/폰트 로딩 대기
+
                 file_path = os.path.join(output_dir, f"slide_{i+1:02d}.png")
                 page.screenshot(path=file_path)
                 generated_paths.append(file_path)
             
             browser.close()
             
-        return f"슬라이드 생성 완료 (HTML 엔진): {len(generated_paths)}개의 이미지가 {output_dir}에 저장되었습니다.\n파일 목록: {', '.join(generated_paths)}"
+        # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
+        abs_output_dir = os.path.abspath(output_dir)
+        abs_paths = [os.path.abspath(p) for p in generated_paths]
+        return f"슬라이드 생성 완료 (HTML 엔진): {len(abs_paths)}개의 이미지가 {abs_output_dir}에 저장되었습니다.\n파일 목록: {', '.join(abs_paths)}"
         
     except Exception as e:
         # 실패 시 기존 Pillow 로직으로 폴백
@@ -791,7 +795,10 @@ def create_slides_pillow(slides_data, output_dir, width=1280, height=720):
         img.save(file_path)
         generated_paths.append(file_path)
         
-    return f"슬라이드 생성 완료 (Pillow 엔진): {len(generated_paths)}개의 이미지가 {output_dir}에 저장되었습니다.\n파일 목록: {', '.join(generated_paths)}"
+    # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
+    abs_output_dir = os.path.abspath(output_dir)
+    abs_paths = [os.path.abspath(p) for p in generated_paths]
+    return f"슬라이드 생성 완료 (Pillow 엔진): {len(abs_paths)}개의 이미지가 {abs_output_dir}에 저장되었습니다.\n파일 목록: {', '.join(abs_paths)}"
 
 async def generate_tts(text, output_path, voice="ko-KR-SunHiNeural"):
     communicate = edge_tts.Communicate(text, voice)
@@ -810,7 +817,9 @@ def create_video(tool_input, output_base):
     if not images:
         return "오류: 이미지 리스트가 비어 있습니다."
 
-    valid_images = [img for img in images if os.path.exists(img)]
+    # 상대 경로를 절대 경로로 변환
+    abs_images = [os.path.abspath(img) for img in images]
+    valid_images = [img for img in abs_images if os.path.exists(img)]
     if not valid_images:
         return "오류: 유효한 이미지 경로가 없습니다."
 
@@ -882,7 +891,9 @@ def create_video(tool_input, output_base):
         # 클립 합치기 - 모든 이미지가 동일 크기이므로 method 불필요
         final_video = concatenate_videoclips(clips)
         
-        # 배경음악 추가
+        # 배경음악 추가 (상대 경로를 절대 경로로 변환)
+        if bgm_path:
+            bgm_path = os.path.abspath(bgm_path)
         if bgm_path and os.path.exists(bgm_path):
             bgm = AudioFileClip(bgm_path).with_duration(final_video.duration)
             # 나레이션이 있을 경우 BGM 볼륨 조절 (더킹)
@@ -903,7 +914,8 @@ def create_video(tool_input, output_base):
         import shutil
         shutil.rmtree(temp_dir)
         
-        return f"영상 제작 완료: {output_path}"
+        # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
+        return f"영상 제작 완료: {os.path.abspath(output_path)}"
     except Exception as e:
         return f"영상 제작 중 오류 발생: {str(e)}"
 
@@ -988,6 +1000,7 @@ def render_html_to_image(tool_input):
 
             # 이미지 로딩 대기
             page.wait_for_load_state("networkidle")
+            page.wait_for_timeout(500)  # Tailwind/폰트 로딩 대기
 
             if selector:
                 element = page.query_selector(selector)
@@ -999,7 +1012,8 @@ def render_html_to_image(tool_input):
             else:
                 page.screenshot(path=output_path)
             browser.close()
-        return f"렌더링 완료: {output_path}"
+        # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
+        return f"렌더링 완료: {os.path.abspath(output_path)}"
     except Exception as e:
         return f"렌더링 중 오류 발생: {str(e)}"
 
@@ -1027,6 +1041,7 @@ def generate_ai_image(tool_input, output_base):
             response.raise_for_status()
             with open(output_path, "wb") as f:
                 f.write(response.content)
-        return f"AI 이미지 생성 완료: {output_path}\n프롬프트: {prompt}"
+        # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
+        return f"AI 이미지 생성 완료: {os.path.abspath(output_path)}\n프롬프트: {prompt}"
     except Exception as e:
         return f"이미지 생성 중 오류 발생: {str(e)}"

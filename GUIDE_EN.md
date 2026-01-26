@@ -32,10 +32,19 @@ A single AI can't do great things alone. It needs tools to actually take action.
 
 IndieBiz OS provides three types of connections:
 - **Connection to tools**: Users can create their own tools for infinite expansion
-- **Connection between agents**: Collaboration through delegation chains
+- **Connection between agents**: Collaboration through delegation chains (single/sequential/parallel)
 - **Connection to the outside world**: Communication with other users via IndieNet
 
 Unlike MCP servers, tools are assigned per-agent, so there's no limit on the number of tools. Give 50 tools to an investment agent and 40 to a real estate agent—they won't interfere with each other.
+
+### Agents Collaborate Autonomously
+
+**Delegation Chain** enables agents to work like a team:
+- **Single Delegation**: Investment Agent → Information Agent (data collection request)
+- **Sequential Delegation**: Planning → Production → Marketing (relay-style step-by-step processing)
+- **Parallel Delegation**: Content Agent simultaneously requests from Investment, Real Estate, and Startup Agents
+
+Delegated agents automatically report results after completing tasks. For complex work, you just receive the results.
 
 ### It Starts Like an Empty PC
 
@@ -268,7 +277,22 @@ A decentralized network based on the Nostr protocol.
 ### Business Network
 
 - **Neighbor Management**: Register business partners
-- **Auto-response**: AI automatically responds to incoming messages (toggle on/off)
+- **Auto-Response V3**: Single AI call using Tool Use for judgment/search/send integration
+  - Message received → AI judges intent → Search business DB → Send response immediately
+  - Spam/ads are automatically filtered (no response sent)
+  - Same logic processes both Gmail and Nostr
+
+### Multi-Chat Rooms
+
+Invite multiple agents to one chat room to discuss complex topics together.
+
+- **Separate Windows**: Each chat room opens in its own window
+- **Summon Agents**: Invite agents from any project into the conversation
+- **@Mentions**: Call specific agents with @name syntax
+- **Tool Assignment**: Assign specific tools to each agent
+
+**Example**: "Gap investment in real estate vs stock investment—which is better considering taxes?"
+→ Investment, Real Estate, and Tax agents each provide opinions from their perspectives.
 
 ---
 

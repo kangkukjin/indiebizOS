@@ -161,7 +161,7 @@ Each project is **completely isolated**. Delete a project, and everything relate
 - **Search & install**: Find and install packages published by other IndieBiz users
 - **AI review**: System AI reviews security, quality, and compatibility before installation
 
-**Installed Tool Packages (20):**
+**Installed Tool Packages (21):**
 
 | Package | Description |
 |---------|-------------|
@@ -201,16 +201,13 @@ Each project is **completely isolated**. Delete a project, and everything relate
 - **Gmail Integration**: Receive and process emails
 - **Nostr Integration**: Decentralized messaging
 - **Neighbor Management**: Track business partners
-- **Auto-Response V2**: Intelligent two-stage AI response system:
-  - **Stage 1 - AI Judgment**: Analyzes incoming messages to determine response necessity
-    - Message intent classification (business inquiry vs. personal chat vs. spam)
-    - Business matching from your registered business list
-    - Detects when requested service doesn't exist in your offerings
-  - **Stage 2 - Response Generation**: Creates contextual replies using:
-    - Chain-of-Thought reasoning + Few-shot learning
-    - Work guidelines + business documents + conversation history
-    - Graceful handling when no matching business found
-  - **Pending Message Queue**: Auto-sends generated responses via background worker
+- **Auto-Response V3**: Intelligent single-call AI response system using Tool Use:
+  - **Unified Processing**: AI judgment, business search, and response sending in a single API call
+  - **Built-in Tools**:
+    - `search_business_items`: Search business database for relevant matches
+    - `no_response_needed`: Mark as spam/ad/irrelevant (no response sent)
+    - `send_response`: Generate and send response immediately
+  - **Simpler Architecture**: Eliminates the need for pending queue and two-stage processing
   - **Multi-Channel Support**: Same logic works across Gmail and Nostr
 
 ### Multi-Chat Rooms
@@ -384,10 +381,11 @@ The human is part of the system:
 
 **This project is under active development.**
 
-- 16 active projects in production use
-- 19 installed tool packages
+- 15 active projects in production use
+- 21 installed tool packages
+- 9 installed extension packages
 - Functional scheduler, switches, and business network
-- Advanced Auto-Response V2: AI judgment → business search → response generation → pending queue → auto-send
+- Advanced Auto-Response V3: Single AI call with Tool Use for judgment/search/send
 - System AI delegation to project agents
 
 ### Your OS, Your Way

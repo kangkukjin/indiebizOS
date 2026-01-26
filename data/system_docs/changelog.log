@@ -228,3 +228,22 @@
   - system_docs/inventory.md: 도구 패키지 20개, 프로젝트 목록 갱신
 [2026-01-24 07:31:40] PROJECT_CREATED: 비판 (ID: 비판)
 [2026-01-24 07:31:40] PROJECT_CREATED: 비판 (ID: 비판)
+[2026-01-26 21:00:00] HOMEPAGE_UPDATED: indiebiz-homepage 개선
+  - 에이전트 협업 (Collaboration) 섹션 신규 추가
+    - 위임 체인 설명: 단일/순차/병렬 위임
+    - 자동 보고, 컨텍스트 유지, 병렬 처리 기능 소개
+  - 다중채팅방 기능 소개 추가 (Expert Network 섹션)
+    - 여러 에이전트가 한 방에서 협업하는 기능
+  - 자동응답 V3 업데이트 반영
+    - Tool Use 기반 통합 처리, DB 검색, 즉시 발송
+  - 비교 테이블 보강
+    - "다중 에이전트 채팅", "스트리밍 응답" 행 추가
+  - FAQ 업데이트
+    - 설치 안내: Windows/macOS 설치 파일에 Python/Node.js 포함
+  - 네비게이션에 Collaboration 링크 추가
+  - Footer 글자 색상 가독성 개선
+  - Homepage 링크 변경: kangkukjin.vercel.app
+  - 배포: https://indiebiz-homepage.vercel.app
+[2026-01-26 21:00:00] DOCS_UPDATED: system_docs 업데이트
+  - overview.md: V3 반영, 위임 체인 링크 추가, 통계 갱신
+  - inventory.md: 도구 패키지 21개로 수정

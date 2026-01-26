@@ -294,6 +294,15 @@ def _send_to_running_agent(target_runner, message: str, project_path: str) -> st
     )
 
     if success:
+        # 에이전트 간 위임 메시지 DB 기록
+        try:
+            db = ConversationDB(str(Path(project_path) / "conversations.db"))
+            from_agent_id = db.get_or_create_agent(from_agent, "ai_agent")
+            to_agent_id = db.get_or_create_agent(target_name, "ai_agent")
+            db.save_message(from_agent_id, to_agent_id, message, contact_type='delegation')
+        except Exception as e:
+            print(f"[call_agent] 위임 메시지 DB 기록 실패: {e}")
+
         return json.dumps({
             "success": True,
             "message": f"'{target_name}'에게 메시지를 전송했습니다. 비동기로 처리됩니다.",
@@ -363,7 +372,9 @@ def _create_child_task(parent_task_id: str, target_name: str, message: str, proj
 def _get_or_create_delegation_context(parent_task: dict) -> dict:
     """위임 컨텍스트 가져오기 또는 생성
 
-    이전 위임 사이클이 완료된 경우(모든 응답 수신) 새 컨텍스트로 초기화
+    이전 위임 사이클이 완료된 경우:
+    - completed 배열은 유지 (이전 작업 기록)
+    - delegations, responses는 비움 (새 사이클용)
 
     Note:
         pending_delegations 카운터를 기준으로 완료 여부 판단 (Race Condition 방지)
@@ -376,10 +387,11 @@ def _get_or_create_delegation_context(parent_task: dict) -> dict:
         try:
             existing_context = json.loads(existing_context_str)
             if 'delegations' not in existing_context:
-                # 구 형식 → 새 형식으로 변환
+                # 구 형식 → 새 형식으로 변환 (completed 유지)
                 existing_context = {
                     'original_request': existing_context.get('original_request', ''),
                     'requester': existing_context.get('requester', ''),
+                    'completed': existing_context.get('completed', []),
                     'delegations': [],
                     'responses': []
                 }
@@ -390,12 +402,16 @@ def _get_or_create_delegation_context(parent_task: dict) -> dict:
             delegations = existing_context.get('delegations', [])
 
             # pending_delegations == 0 이고 이전 위임이 있었으면 → 새 사이클 시작
+            # 단, completed 배열은 유지!
             if len(delegations) > 0 and pending == 0:
-                # 모든 응답이 도착함 → 새 위임 사이클 시작 → 컨텍스트 초기화
-                print(f"   [위임 컨텍스트] 이전 사이클 완료 (pending=0, delegations={len(delegations)}) → 초기화")
+                # 모든 응답이 도착함 → 새 위임 사이클 시작
+                # delegations/responses만 초기화, completed는 유지
+                print(f"   [위임 컨텍스트] 이전 사이클 완료 (pending=0, delegations={len(delegations)}) → 새 사이클 준비")
+                completed = existing_context.get('completed', [])
                 return {
                     'original_request': parent_task.get('original_request', ''),
                     'requester': parent_task.get('requester', ''),
+                    'completed': completed,  # 이전 작업 기록 유지
                     'delegations': [],
                     'responses': []
                 }
@@ -407,6 +423,7 @@ def _get_or_create_delegation_context(parent_task: dict) -> dict:
     return {
         'original_request': parent_task.get('original_request', ''),
         'requester': parent_task.get('requester', ''),
+        'completed': [],
         'delegations': [],
         'responses': []
     }
@@ -545,17 +562,17 @@ def execute_get_my_tools(tool_input: dict, project_path: str) -> str:
     """get_my_tools 도구 실행"""
     try:
         from agent_runner import AgentRunner
-        from thread_context import get_current_agent_id
+        from thread_context import get_current_registry_key
 
-        current_agent_id = get_current_agent_id()
-        if not current_agent_id:
+        registry_key = get_current_registry_key()
+        if not registry_key:
             return json.dumps({
                 "success": False,
                 "tools": [],
                 "message": "현재 에이전트를 식별할 수 없습니다"
             }, ensure_ascii=False)
 
-        runner = AgentRunner.agent_registry.get(current_agent_id)
+        runner = AgentRunner.agent_registry.get(registry_key)
         if not runner:
             return json.dumps({
                 "success": False,

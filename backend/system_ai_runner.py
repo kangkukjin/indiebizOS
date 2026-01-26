@@ -61,17 +61,25 @@ class SystemAIRunner:
         return cls._instance
 
     @classmethod
-    def send_message(cls, content: str, from_agent: str, task_id: str = None):
-        """시스템 AI에게 메시지 전송 (외부에서 호출)"""
+    def send_message(cls, content: str, from_agent: str, task_id: str = None, project_id: str = None):
+        """시스템 AI에게 메시지 전송 (외부에서 호출)
+
+        Args:
+            content: 메시지 내용
+            from_agent: 발신 에이전트 이름
+            task_id: 태스크 ID
+            project_id: 프로젝트 ID (에이전트 식별용)
+        """
         msg_dict = {
             'content': content,
             'from_agent': from_agent,
             'task_id': task_id,
+            'project_id': project_id,
             'timestamp': datetime.now().isoformat()
         }
         with cls._lock:
             cls.internal_messages.append(msg_dict)
-        print(f"[SystemAIRunner] 메시지 수신 대기열 추가: {from_agent}")
+        print(f"[SystemAIRunner] 메시지 수신 대기열 추가: {from_agent}@{project_id}")
 
     def start(self):
         """시스템 AI 시작"""
@@ -255,7 +263,26 @@ class SystemAIRunner:
         set_called_agent(True)
 
         agent_name = target.config.get('name', agent_id)
+        project_id = target.project_id
         print(f"[SystemAIRunner] 위임: 시스템 AI → {agent_name} (task: {child_task_id})")
+
+        # 시스템 AI → 프로젝트 에이전트 위임 메시지 DB 기록 (system_ai_memory.db)
+        try:
+            save_conversation(
+                role="delegation",
+                content=f"[위임] 시스템 AI → {agent_name}@{project_id}: {message}",
+                source=f"system_ai→{agent_name}@{project_id}"
+            )
+        except Exception as e:
+            print(f"[SystemAIRunner] 위임 메시지 system_ai_memory DB 기록 실패: {e}")
+
+        # 프로젝트 conversations.db에도 기록 (중복 기록)
+        try:
+            system_ai_id = target.db.get_or_create_agent("시스템 AI", "system")
+            agent_db_id = target.db.get_or_create_agent(agent_name, "ai_agent")
+            target.db.save_message(system_ai_id, agent_db_id, message, contact_type='system_ai_delegation')
+        except Exception as e:
+            print(f"[SystemAIRunner] 위임 메시지 프로젝트 DB 기록 실패: {e}")
 
         return f"'{agent_name}'에게 작업을 위임했습니다. 결과를 기다리세요."
 
@@ -295,9 +322,23 @@ class SystemAIRunner:
                 from_agent = msg_dict.get('from_agent', 'unknown')
                 content = msg_dict.get('content', '')
                 task_id = msg_dict.get('task_id')
+                project_id = msg_dict.get('project_id', '')
 
-                print(f"[SystemAIRunner] 메시지 수신: {from_agent}")
+                # 에이전트 식별자: 에이전트명@프로젝트ID
+                agent_identifier = f"{from_agent}@{project_id}" if project_id else from_agent
+
+                print(f"[SystemAIRunner] 메시지 수신: {agent_identifier}")
                 print(f"   내용: {content[:100]}..." if len(content) > 100 else f"   내용: {content}")
+
+                # 프로젝트 에이전트 → 시스템 AI 메시지 DB 기록
+                try:
+                    save_conversation(
+                        role="agent_report",
+                        content=f"[수신] {agent_identifier} → 시스템 AI: {content}",
+                        source=f"{agent_identifier}→system_ai"
+                    )
+                except Exception as e:
+                    print(f"[SystemAIRunner] 수신 메시지 DB 기록 실패: {e}")
 
                 # 태스크 ID 추출
                 extracted_task_id = task_id
@@ -326,27 +367,29 @@ class SystemAIRunner:
                 # AI 처리
                 if self.ai:
                     ai_message = content
+                    history = []
 
-                    # 컨텍스트 리마인더 추가
+                    # 컨텍스트 리마인더 및 히스토리 구성
                     if delegation_context:
-                        delegations = delegation_context.get('delegations', [])
-                        responses = delegation_context.get('responses', [])
+                        original_request = delegation_context.get('original_request', '')
+                        completed = delegation_context.get('completed', [])
 
-                        delegation_summary = ""
-                        for i, d in enumerate(delegations, 1):
-                            delegation_summary += f"  {i}. {d.get('delegated_to', '?')}: {d.get('delegation_message', '')[:100]}\n"
+                        # 완료된 위임 기록을 히스토리로 변환
+                        history = self._build_history_from_completed(completed)
 
-                        ai_message = f"""[시스템 알림 - 위임 컨텍스트 복원]
-당신이 이전에 {len(delegations)}개의 작업을 위임했을 때의 상황입니다:
-- 원래 요청자: {delegation_context.get('requester', '?')}
-- 원래 요청 내용: {delegation_context.get('original_request', '?')}
-- 위임 내역:
-{delegation_summary}
-이제 모든 위임한 작업의 결과가 도착했습니다. 이 컨텍스트와 결과들을 바탕으로 원래 요청을 완료하세요.
+                        # 완료된 작업 목록 포맷팅
+                        completed_summary = self._format_completed_delegations(completed)
+
+                        ai_message = f"""[위임 결과]
+{content}
 
 ---
-[위임 결과 보고]
-{content}"""
+{completed_summary}
+원래 요청: {original_request}
+
+위 결과를 바탕으로:
+- 추가 작업이 필요하면 다른 에이전트에게 위임하세요.
+- 모든 작업이 완료되었으면 사용자에게 최종 결과를 전달하세요."""
 
                     from thread_context import set_current_task_id, clear_current_task_id, set_called_agent, did_call_agent, clear_called_agent
 
@@ -357,17 +400,22 @@ class SystemAIRunner:
                     response = self.ai.process_message_with_history(
                         message_content=ai_message,
                         from_email=f"{from_agent}@internal",
-                        history=[],
+                        history=history,
                         reply_to=f"{from_agent}@internal"
                     )
                     print(f"[SystemAIRunner] 응답 생성: {len(response)}자")
 
+                    # 시스템 AI가 에이전트 보고를 받아 처리한 결과는 사용자에게 전달됨
+                    # (에이전트에게 응답하는 것이 아님 - 시스템 AI는 위임만 하고 위임받지 않음)
+                    # 최종 응답은 _finalize_task()에서 save_conversation("assistant", response)로 기록됨
+
                     called_another = did_call_agent()
 
                     if called_another:
-                        print(f"[SystemAIRunner] call_project_agent 호출됨 - 자동 보고 스킵, 위임 결과 대기")
+                        # 새 위임이 발생함 → 태스크 유지, 위임 결과 대기
+                        print(f"[SystemAIRunner] call_project_agent 호출됨 - 새 위임 사이클 시작")
                     else:
-                        # 최종 응답 처리
+                        # 새 위임 없음 → 최종 응답, 태스크 완료 (삭제됨)
                         if extracted_task_id:
                             self._finalize_task(extracted_task_id, response)
                         else:
@@ -387,6 +435,61 @@ class SystemAIRunner:
                     break
                 msg_dict = SystemAIRunner.internal_messages.pop(0)
 
+    def _build_history_from_completed(self, completed: list) -> list:
+        """완료된 위임 기록을 AI 히스토리 형식으로 변환
+
+        Args:
+            completed: 완료된 위임 기록 리스트
+
+        Returns:
+            AI 히스토리 형식의 리스트 [{"role": "...", "content": "..."}]
+        """
+        history = []
+        for entry in completed:
+            to_agent = entry.get('to', '')
+            message = entry.get('message', '')
+            result = entry.get('result', '')
+
+            # 내가 위임한 내역 (assistant 역할)
+            history.append({
+                "role": "assistant",
+                "content": f"[위임] {to_agent}에게 요청: {message}"
+            })
+
+            # 에이전트의 응답 (user 역할로 표현 - 외부 입력이므로)
+            if result:
+                history.append({
+                    "role": "user",
+                    "content": f"[{to_agent} 응답] {result[:500]}..." if len(result) > 500 else f"[{to_agent} 응답] {result}"
+                })
+
+        return history
+
+    def _format_completed_delegations(self, completed: list) -> str:
+        """완료된 위임 기록을 텍스트로 포맷팅
+
+        Args:
+            completed: 완료된 위임 기록 리스트
+
+        Returns:
+            포맷팅된 문자열
+        """
+        if not completed:
+            return ""
+
+        lines = ["[이미 완료된 작업]"]
+        for i, entry in enumerate(completed, 1):
+            to_agent = entry.get('to', '')
+            result = entry.get('result', '')
+            # 파일 경로가 포함된 결과는 그대로 표시, 아니면 500자로 요약
+            if '파일로 저장' in result or '/outputs/' in result:
+                result_summary = result[:800] if len(result) > 800 else result
+            else:
+                result_summary = result[:500] + "..." if len(result) > 500 else result
+            lines.append(f"{i}. {to_agent}: {result_summary}")
+
+        return "\n".join(lines) + "\n"
+
     def _finalize_task(self, task_id: str, response: str):
         """태스크 완료 처리 및 사용자에게 응답"""
         task = get_task(task_id)
@@ -398,17 +501,16 @@ class SystemAIRunner:
         channel = task.get('requester_channel', 'gui')
         ws_client_id = task.get('ws_client_id')
 
-        result_summary = response[:500] if len(response) > 500 else response
-
         if channel == 'gui' and ws_client_id:
-            self._send_to_gui(ws_client_id, result_summary)
+            self._send_to_gui(ws_client_id, response)  # 전체 응답 전송
         else:
-            print(f"[SystemAIRunner] 최종 응답: {result_summary[:200]}...")
+            print(f"[SystemAIRunner] 최종 응답: {response[:200]}...")
 
         # 대화 히스토리에 저장
         save_conversation("assistant", response)
 
-        # 태스크 삭제
+        # 태스크 완료 (요약본 저장)
+        result_summary = response[:500] if len(response) > 500 else response
         complete_task(task_id, result_summary)
         print(f"[SystemAIRunner] 태스크 완료: {task_id}")
 

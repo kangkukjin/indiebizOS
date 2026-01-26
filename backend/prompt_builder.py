@@ -53,6 +53,7 @@ class PromptBuilder:
     def build(self,
               agent_count: int = 1,
               git_enabled: bool = False,
+              delegated_from_system_ai: bool = False,
               role_prompt: str = "",
               additional_context: str = "") -> str:
         """시스템 프롬프트 조합
@@ -60,6 +61,7 @@ class PromptBuilder:
         Args:
             agent_count: 프로젝트 내 에이전트 수 (2 이상이면 위임 프롬프트 포함)
             git_enabled: Git 관련 프롬프트 포함 여부
+            delegated_from_system_ai: 시스템 AI로부터 위임받은 경우 (파일 경로 원칙 포함)
             role_prompt: 에이전트 역할 프롬프트
             additional_context: 추가 컨텍스트 (프로젝트 설정 등)
 
@@ -79,8 +81,8 @@ class PromptBuilder:
             if git:
                 parts.append(git)
 
-        # 3. 위임 프롬프트 (에이전트가 2개 이상일 때)
-        if agent_count > 1:
+        # 3. 위임 프롬프트 (에이전트가 2개 이상이거나 시스템 AI가 위임한 경우)
+        if agent_count > 1 or delegated_from_system_ai:
             delegation = self._load_file("fragments/09_delegation.md")
             if delegation:
                 parts.append(delegation)
@@ -112,7 +114,8 @@ def build_agent_prompt(
     agent_count: int = 1,
     project_settings: str = "",
     agent_notes: str = "",
-    git_enabled: bool = False
+    git_enabled: bool = False,
+    delegated_from_system_ai: bool = False
 ) -> str:
     """프로젝트 에이전트용 시스템 프롬프트 생성
 
@@ -125,6 +128,7 @@ def build_agent_prompt(
         project_settings: 프로젝트 공통 설정
         agent_notes: 영구메모
         git_enabled: Git 관련 프롬프트 포함 여부
+        delegated_from_system_ai: 시스템 AI로부터 위임받은 경우
 
     Returns:
         조합된 시스템 프롬프트
@@ -148,6 +152,7 @@ def build_agent_prompt(
     return builder.build(
         agent_count=agent_count,
         git_enabled=git_enabled,
+        delegated_from_system_ai=delegated_from_system_ai,
         role_prompt=role_prompt,
         additional_context=additional_context
     )

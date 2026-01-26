@@ -76,7 +76,9 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(tool_input["content"])
-            return f"Successfully wrote to {tool_input['file_path']}"
+            # 절대 경로로 반환 (에이전트 간 경로 혼동 방지)
+            abs_path = os.path.abspath(path)
+            return f"Successfully wrote to {abs_path}"
 
         elif tool_name == "list_directory":
             dir_path = os.path.join(project_path, tool_input.get("dir_path", "."))
@@ -133,13 +135,13 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
             # recursive glob 지원
             matches = glob.glob(os.path.join(root, pattern), recursive=True)
 
-            # 상대 경로로 변환하고 정렬
-            relative_paths = sorted([
-                os.path.relpath(m, project_path) for m in matches
+            # 절대 경로로 변환하고 정렬 (에이전트 간 경로 혼동 방지)
+            absolute_paths = sorted([
+                os.path.abspath(m) for m in matches
             ])
 
-            if relative_paths:
-                return "\n".join(relative_paths)
+            if absolute_paths:
+                return "\n".join(absolute_paths)
             else:
                 return f"No files matching pattern: {pattern}"
 
@@ -168,7 +170,8 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(new_content)
 
-            return f"Successfully edited {tool_input['file_path']}"
+            # 절대 경로로 반환 (에이전트 간 경로 혼동 방지)
+            return f"Successfully edited {os.path.abspath(file_path)}"
 
         elif tool_name == "open_in_browser":
             import sys

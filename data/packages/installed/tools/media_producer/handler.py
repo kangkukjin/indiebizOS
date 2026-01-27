@@ -691,6 +691,16 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         return render_html_to_image(tool_input)
     elif tool_name == "generate_ai_image":
         return generate_ai_image(tool_input, output_base)
+    elif tool_name == "create_shadcn_slides":
+        # shadcn 스타일 슬라이드 생성 (별도 모듈)
+        import importlib.util
+        import sys
+        module_path = os.path.join(os.path.dirname(__file__), "shadcn_slides.py")
+        spec = importlib.util.spec_from_file_location("shadcn_slides", module_path)
+        shadcn_slides = importlib.util.module_from_spec(spec)
+        sys.modules["shadcn_slides"] = shadcn_slides
+        spec.loader.exec_module(shadcn_slides)
+        return shadcn_slides.create_shadcn_slides(tool_input, output_base)
 
     return f"알 수 없는 도구: {tool_name}"
 

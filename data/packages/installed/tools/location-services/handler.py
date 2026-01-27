@@ -553,77 +553,6 @@ def get_api_ninjas_data(endpoint: str, params: dict = None) -> dict:
         return {"error": f"API Ninjas 조회 실패: {str(e)}"}
 
 
-def search_public_apis(title: str = None, category: str = None) -> dict:
-    """
-    Public APIs 라이브러리에서 API 검색
-
-    Args:
-        title: API 이름으로 검색
-        category: 카테고리로 검색 (예: Weather, Finance, Games 등)
-
-    Note: api.publicapis.org 서비스가 중단되어 현재 제한적으로 동작합니다.
-    """
-    # 내장 API 목록 (자주 사용되는 무료 API들)
-    builtin_apis = [
-        {"API": "Open-Meteo", "Description": "Free weather API with hourly forecasts", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Weather", "Link": "https://open-meteo.com/"},
-        {"API": "OpenWeatherMap", "Description": "Weather data and forecasts", "Auth": "apiKey", "HTTPS": True, "Cors": "unknown", "Category": "Weather", "Link": "https://openweathermap.org/api"},
-        {"API": "CoinGecko", "Description": "Cryptocurrency data API", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Cryptocurrency", "Link": "https://www.coingecko.com/en/api"},
-        {"API": "ExchangeRate-API", "Description": "Free currency exchange rates", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Currency", "Link": "https://www.exchangerate-api.com/"},
-        {"API": "REST Countries", "Description": "Country information", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Geography", "Link": "https://restcountries.com/"},
-        {"API": "JSONPlaceholder", "Description": "Fake data for testing and prototyping", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Development", "Link": "https://jsonplaceholder.typicode.com/"},
-        {"API": "Random User", "Description": "Random user data generator", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Development", "Link": "https://randomuser.me/"},
-        {"API": "PokéAPI", "Description": "Pokemon data API", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Games", "Link": "https://pokeapi.co/"},
-        {"API": "OMDB", "Description": "Movie database", "Auth": "apiKey", "HTTPS": True, "Cors": "unknown", "Category": "Movies", "Link": "http://www.omdbapi.com/"},
-        {"API": "NewsAPI", "Description": "News articles from various sources", "Auth": "apiKey", "HTTPS": True, "Cors": "unknown", "Category": "News", "Link": "https://newsapi.org/"},
-        {"API": "NASA", "Description": "NASA data including imagery", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Science", "Link": "https://api.nasa.gov/"},
-        {"API": "Wikipedia", "Description": "Wikipedia content API", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Reference", "Link": "https://www.mediawiki.org/wiki/API:Main_page"},
-        {"API": "Dog API", "Description": "Random dog images", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Animals", "Link": "https://dog.ceo/dog-api/"},
-        {"API": "Cat Facts", "Description": "Random cat facts", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Animals", "Link": "https://catfact.ninja/"},
-        {"API": "JokeAPI", "Description": "Programming and misc jokes", "Auth": "", "HTTPS": True, "Cors": "yes", "Category": "Entertainment", "Link": "https://jokeapi.dev/"},
-        {"API": "Quotable", "Description": "Random quotes API", "Auth": "", "HTTPS": True, "Cors": "unknown", "Category": "Quotes", "Link": "https://quotable.io/"},
-        {"API": "IP-API", "Description": "IP geolocation", "Auth": "", "HTTPS": False, "Cors": "unknown", "Category": "Network", "Link": "http://ip-api.com/"},
-        {"API": "GitHub", "Description": "GitHub repository and user data", "Auth": "OAuth", "HTTPS": True, "Cors": "yes", "Category": "Development", "Link": "https://docs.github.com/en/rest"},
-        {"API": "Unsplash", "Description": "Free high-resolution photos", "Auth": "OAuth", "HTTPS": True, "Cors": "unknown", "Category": "Photography", "Link": "https://unsplash.com/developers"},
-        {"API": "Spotify", "Description": "Music streaming data", "Auth": "OAuth", "HTTPS": True, "Cors": "unknown", "Category": "Music", "Link": "https://developer.spotify.com/documentation/web-api/"}
-    ]
-
-    # 필터링
-    filtered = []
-    for api in builtin_apis:
-        # 카테고리 필터
-        if category and api.get("Category", "").lower() != category.lower():
-            continue
-        # 이름 필터
-        if title and title.lower() not in api.get("API", "").lower():
-            continue
-        filtered.append({
-            "name": api.get("API", ""),
-            "description": api.get("Description", ""),
-            "auth": api.get("Auth", ""),
-            "https": api.get("HTTPS", False),
-            "cors": api.get("Cors", ""),
-            "category": api.get("Category", ""),
-            "link": api.get("Link", "")
-        })
-
-    # 카테고리 목록 (검색어 없을 때)
-    if not title and not category:
-        categories = sorted(list(set(api.get("Category", "") for api in builtin_apis)))
-        return {
-            "type": "categories",
-            "count": len(categories),
-            "categories": categories,
-            "message": "카테고리 목록입니다. category 매개변수로 특정 카테고리의 API를 검색하세요. (내장 목록, 전체 목록은 https://github.com/public-apis/public-apis 참조)"
-        }
-
-    return {
-        "query": title or category,
-        "count": len(filtered),
-        "apis": filtered,
-        "note": "내장 API 목록입니다. 더 많은 API는 https://github.com/public-apis/public-apis 참조"
-    }
-
-
 def amadeus_travel_search(endpoint: str, params: dict) -> dict:
     """
     Amadeus API를 통한 여행 정보 검색
@@ -699,13 +628,6 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         if not endpoint:
             return json.dumps({"error": "endpoint 매개변수가 필요합니다."}, ensure_ascii=False)
         result = get_api_ninjas_data(endpoint, tool_input.get("params"))
-        return json.dumps(result, ensure_ascii=False, indent=2)
-
-    elif tool_name == "search_public_apis":
-        result = search_public_apis(
-            title=tool_input.get("title"),
-            category=tool_input.get("category")
-        )
         return json.dumps(result, ensure_ascii=False, indent=2)
 
     elif tool_name == "amadeus_travel_search":

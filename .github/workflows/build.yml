@@ -102,9 +102,19 @@ jobs:
       - name: Create Required Directories
         shell: powershell
         run: |
+          # electron-builder가 frontend/에서 실행되므로 루트 기준으로 생성
           New-Item -ItemType Directory -Force -Path "projects"
           New-Item -ItemType Directory -Force -Path "tokens"
           New-Item -ItemType Directory -Force -Path "templates"
+
+          # 빈 폴더는 electron-builder에서 복사 시 에러 발생 - 더미 파일 추가
+          "# IndieBiz Projects" | Out-File -FilePath "projects/.gitkeep" -Encoding utf8
+          "# IndieBiz Tokens" | Out-File -FilePath "tokens/.gitkeep" -Encoding utf8
+          "# IndieBiz Templates" | Out-File -FilePath "templates/.gitkeep" -Encoding utf8
+
+          # 경로 확인
+          Write-Host "=== Directory Structure ==="
+          Get-ChildItem -Path . -Directory | ForEach-Object { Write-Host $_.FullName }
 
       - name: Verify Runtime Bundles Before Build
         shell: powershell
@@ -261,6 +271,15 @@ jobs:
           mkdir -p projects
           mkdir -p tokens
           mkdir -p templates
+
+          # 빈 폴더는 electron-builder에서 복사 시 에러 발생 - 더미 파일 추가
+          echo "# IndieBiz Projects" > projects/.gitkeep
+          echo "# IndieBiz Tokens" > tokens/.gitkeep
+          echo "# IndieBiz Templates" > templates/.gitkeep
+
+          # 경로 확인
+          echo "=== Directory Structure ==="
+          ls -la
 
       - name: Install Dependencies
         working-directory: frontend

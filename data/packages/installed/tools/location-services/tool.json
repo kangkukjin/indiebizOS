@@ -1,30 +1,19 @@
 {
-  "id": "information",
-  "name": "Information Tools",
-  "description": "외부 API를 통한 정보 조회 도구 (명언, 여행, 맛집, 지도, 길찾기 등)",
-  "version": "1.2.0",
+  "id": "location-services",
+  "name": "Location Services",
+  "description": "위치 기반 서비스 도구. 날씨/대기질 조회, 맛집 검색, 자동차 길찾기, 지도 표시, 여행 정보(항공권/호텔/관광지) 검색을 제공합니다.",
+  "version": "1.3.0",
   "tools": [
     {
       "name": "get_api_ninjas_data",
-      "description": "API Ninjas에서 다양한 지식 정보를 조회합니다.\n\n## 지원 endpoint\n- quotes: 명언 (category로 필터링)\n- facts: 역사적 사실\n- weather: 날씨 정보 (city 필요)\n- dictionary: 사전 정의 (word 필요)\n- trivia: 상식 퀴즈\n\n## 사용 예시\n- 명언: endpoint='quotes', params={category: 'inspirational'}\n- 날씨: endpoint='weather', params={city: 'Seoul'}",
+      "description": "API Ninjas에서 다양한 정보를 조회합니다.\n\n## 지원 endpoint\n- weather: 날씨 (params: {city: '도시명'})\n- airquality: 대기질/미세먼지 (params: {city: '도시명'})\n- geocoding: 도시명→좌표 (params: {city: '도시명'})\n- reversegeocoding: 좌표→도시명 (params: {lat: 위도, lon: 경도})\n- recipe: 레시피 검색 (params: {query: '음식명'})\n- cocktail: 칵테일 레시피 (params: {name: '칵테일명'} 또는 {ingredients: '재료'})\n\n## 사용 예시\n- 날씨: endpoint='weather', params={city: 'Seoul'}\n- 레시피: endpoint='recipe', params={query: 'pasta'}",
       "input_schema": {
         "type": "object",
         "properties": {
-          "endpoint": { "type": "string", "description": "데이터 종류 (quotes, facts, weather, dictionary 등)" },
-          "params": { "type": "object", "description": "필터링 매개변수" }
+          "endpoint": { "type": "string", "description": "데이터 종류 (weather, airquality, geocoding, reversegeocoding, recipe, cocktail)" },
+          "params": { "type": "object", "description": "검색 매개변수" }
         },
         "required": ["endpoint"]
-      }
-    },
-    {
-      "name": "search_public_apis",
-      "description": "전 세계 공개 API 목록에서 검색합니다.\n\n## 사용 시점\n- 특정 기능의 API 찾기\n- 개발에 활용할 무료 API 탐색\n\n## 검색 방법\n- title: API 이름으로 검색\n- category: 카테고리로 필터링 (Weather, Finance, Music 등)",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "title": { "type": "string", "description": "API 이름 검색어" },
-          "category": { "type": "string", "description": "카테고리 필터" }
-        }
       }
     },
     {

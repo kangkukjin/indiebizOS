@@ -1,169 +1,271 @@
-[
-  {
-    "name": "create_slides",
-    "description": "텍스트와 이미지를 조합하여 홍보용 슬라이드 이미지들을 생성합니다. HTML/Playwright 기반 고품질 렌더링을 지원합니다.\n\n⚠️ 중요: 뷰포트는 1280x720px 고정입니다. custom_html 사용 시 모든 콘텐츠가 이 영역 안에 들어와야 합니다.\n\n사용 가능한 테마:\n- 기본: modern, tech, business, default\n- 2025-2026 트렌드: title_bold(대형 타이포), dark_tech(다크 네온), glassmorphism(유리 효과), gradient_modern(그라데이션), split_asymmetric(비대칭 분할), minimal_white(미니멀), image_fullscreen(전체 배경 이미지), data_card(데이터 강조), tailwind(Tailwind CSS 자유 디자인)\n\n* tailwind 테마 + custom_html 사용 시 필수 규칙:\n  1. 최상위에 w-full h-full overflow-hidden 적용\n  2. 가로 배치는 요소 3개 이하 또는 flex-wrap 사용\n  3. absolute 위치보다 flex/grid 권장\n  4. Lucide Icons: <i data-lucide=\"아이콘명\"></i>\n  5. Animate.css: animate__animated 클래스 사용 가능",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "slides": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "title": {"type": "string", "description": "슬라이드 제목"},
-              "body": {"type": "string", "description": "슬라이드 본문 내용"},
-              "image_path": {"type": "string", "description": "삽입할 이미지 파일 경로 (선택)"},
-              "bg_color": {"type": "string", "description": "배경색 (예: #FFFFFF)"},
-              "text_color": {"type": "string", "description": "텍스트 색상 (예: #000000)"},
-              "theme": {
-                "type": "string",
-                "enum": ["modern", "tech", "business", "default", "title_bold", "dark_tech", "glassmorphism", "gradient_modern", "split_asymmetric", "minimal_white", "image_fullscreen", "data_card", "tailwind"],
-                "description": "디자인 테마"
+{
+  "id": "media_producer",
+  "name": "Media Producer",
+  "description": "홍보용 슬라이드 이미지, MP4 영상, AI 이미지 생성 도구. 마케팅 콘텐츠, 프레젠테이션, 소셜미디어 홍보물 제작에 활용합니다.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "create_slides",
+      "description": "텍스트와 이미지를 조합하여 홍보용 슬라이드 이미지들을 생성합니다. HTML/Playwright 기반 고품질 렌더링을 지원합니다.\n\n⚠️ 중요: 뷰포트는 1280x720px 고정입니다. custom_html 사용 시 모든 콘텐츠가 이 영역 안에 들어와야 합니다.\n\n사용 가능한 테마:\n- 기본: modern, tech, business, default\n- 2025-2026 트렌드: title_bold(대형 타이포), dark_tech(다크 네온), glassmorphism(유리 효과), gradient_modern(그라데이션), split_asymmetric(비대칭 분할), minimal_white(미니멀), image_fullscreen(전체 배경 이미지), data_card(데이터 강조), tailwind(Tailwind CSS 자유 디자인)\n\n* tailwind 테마 + custom_html 사용 시 필수 규칙:\n  1. 최상위에 w-full h-full overflow-hidden 적용\n  2. 가로 배치는 요소 3개 이하 또는 flex-wrap 사용\n  3. absolute 위치보다 flex/grid 권장\n  4. Lucide Icons: <i data-lucide=\"아이콘명\"></i>\n  5. Animate.css: animate__animated 클래스 사용 가능",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "slides": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {"type": "string", "description": "슬라이드 제목"},
+                "body": {"type": "string", "description": "슬라이드 본문 내용"},
+                "image_path": {"type": "string", "description": "삽입할 이미지 파일 경로 (선택)"},
+                "bg_color": {"type": "string", "description": "배경색 (예: #FFFFFF)"},
+                "text_color": {"type": "string", "description": "텍스트 색상 (예: #000000)"},
+                "theme": {
+                  "type": "string",
+                  "enum": ["modern", "tech", "business", "default", "title_bold", "dark_tech", "glassmorphism", "gradient_modern", "split_asymmetric", "minimal_white", "image_fullscreen", "data_card", "tailwind"],
+                  "description": "디자인 테마"
+                },
+                "bg_class": {"type": "string", "description": "Tailwind 배경 클래스 (tailwind 테마 전용, 예: bg-gradient-to-br from-blue-500 to-purple-600)"},
+                "title_class": {"type": "string", "description": "Tailwind 제목 클래스 (tailwind 테마 전용, 예: text-white drop-shadow-lg)"},
+                "body_class": {"type": "string", "description": "Tailwind 본문 클래스 (tailwind 테마 전용, 예: text-blue-100)"},
+                "custom_html": {"type": "string", "description": "사용자 정의 HTML (tailwind 테마 전용). 중요: 뷰포트는 1280x720px 고정입니다. 반드시 w-full h-full과 overflow-hidden을 최상위에 적용하고, 모든 콘텐츠가 화면 안에 들어오도록 설계하세요. 가로 배치 시 flex-wrap 또는 요소 개수를 3개 이하로 제한하세요. 절대 위치(absolute)보다 flex/grid 레이아웃을 권장합니다."},
+                "accent_color": {"type": "string", "description": "강조색 (일부 테마에서 사용)"},
+                "bg_color1": {"type": "string", "description": "그라데이션 시작색 (glassmorphism, gradient_modern)"},
+                "bg_color2": {"type": "string", "description": "그라데이션 끝색 (glassmorphism, gradient_modern)"},
+                "data1_value": {"type": "string", "description": "데이터 카드 1 값 (data_card 테마)"},
+                "data1_label": {"type": "string", "description": "데이터 카드 1 라벨 (data_card 테마)"},
+                "data2_value": {"type": "string", "description": "데이터 카드 2 값 (data_card 테마)"},
+                "data2_label": {"type": "string", "description": "데이터 카드 2 라벨 (data_card 테마)"},
+                "data3_value": {"type": "string", "description": "데이터 카드 3 값 (data_card 테마)"},
+                "data3_label": {"type": "string", "description": "데이터 카드 3 라벨 (data_card 테마)"}
               },
-              "bg_class": {"type": "string", "description": "Tailwind 배경 클래스 (tailwind 테마 전용, 예: bg-gradient-to-br from-blue-500 to-purple-600)"},
-              "title_class": {"type": "string", "description": "Tailwind 제목 클래스 (tailwind 테마 전용, 예: text-white drop-shadow-lg)"},
-              "body_class": {"type": "string", "description": "Tailwind 본문 클래스 (tailwind 테마 전용, 예: text-blue-100)"},
-              "custom_html": {"type": "string", "description": "사용자 정의 HTML (tailwind 테마 전용). 중요: 뷰포트는 1280x720px 고정입니다. 반드시 w-full h-full과 overflow-hidden을 최상위에 적용하고, 모든 콘텐츠가 화면 안에 들어오도록 설계하세요. 가로 배치 시 flex-wrap 또는 요소 개수를 3개 이하로 제한하세요. 절대 위치(absolute)보다 flex/grid 레이아웃을 권장합니다."},
-              "accent_color": {"type": "string", "description": "강조색 (일부 테마에서 사용)"},
-              "bg_color1": {"type": "string", "description": "그라데이션 시작색 (glassmorphism, gradient_modern)"},
-              "bg_color2": {"type": "string", "description": "그라데이션 끝색 (glassmorphism, gradient_modern)"},
-              "data1_value": {"type": "string", "description": "데이터 카드 1 값 (data_card 테마)"},
-              "data1_label": {"type": "string", "description": "데이터 카드 1 라벨 (data_card 테마)"},
-              "data2_value": {"type": "string", "description": "데이터 카드 2 값 (data_card 테마)"},
-              "data2_label": {"type": "string", "description": "데이터 카드 2 라벨 (data_card 테마)"},
-              "data3_value": {"type": "string", "description": "데이터 카드 3 값 (data_card 테마)"},
-              "data3_label": {"type": "string", "description": "데이터 카드 3 라벨 (data_card 테마)"}
-            },
-            "required": ["title", "body"]
+              "required": ["title", "body"]
+            }
+          },
+          "output_dir": {"type": "string", "description": "결과물을 저장할 디렉토리 경로 (선택)"},
+          "width": {"type": "integer", "description": "슬라이드 가로 크기 (기본: 1280)", "default": 1280},
+          "height": {"type": "integer", "description": "슬라이드 세로 크기 (기본: 720)", "default": 720}
+        },
+        "required": ["slides"]
+      }
+    },
+    {
+      "name": "create_video",
+      "description": "이미지 파일들을 합쳐서 나레이션, 배경음악이 포함된 MP4 홍보 영상을 제작합니다.\n\n- 나레이션 텍스트 제공 시 AI 음성 자동 생성 (edge-tts)\n- 슬라이드 재생 시간은 음성 길이에 맞춰 자동 조절\n- 이미지 크기가 다르면 자동으로 비디오 크기에 맞게 리사이즈 (비율 유지, 중앙 배치)\n- BGM 볼륨은 나레이션 유무에 따라 자동 조절 (더킹)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "images": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "영상으로 합칠 이미지 경로 리스트"
+          },
+          "narration_texts": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "각 슬라이드별 나레이션 텍스트 (이미지 개수와 일치해야 함)"
+          },
+          "duration_per_slide": {
+            "type": "number",
+            "description": "슬라이드당 재생 시간 (초, 나레이션이 없을 때 사용)",
+            "default": 3
+          },
+          "bgm_path": {
+            "type": "string",
+            "description": "배경음악 파일 경로 (선택)"
+          },
+          "voice": {
+            "type": "string",
+            "description": "나레이션 목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성)",
+            "default": "ko-KR-SunHiNeural"
+          },
+          "output_filename": {
+            "type": "string",
+            "description": "저장할 파일 이름 (예: promo.mp4)",
+            "default": "promotion_video.mp4"
+          },
+          "width": {
+            "type": "integer",
+            "description": "비디오 가로 크기 (기본: 1280)",
+            "default": 1280
+          },
+          "height": {
+            "type": "integer",
+            "description": "비디오 세로 크기 (기본: 720)",
+            "default": 720
           }
         },
-        "output_dir": {"type": "string", "description": "결과물을 저장할 디렉토리 경로 (선택)"},
-        "width": {"type": "integer", "description": "슬라이드 가로 크기 (기본: 1280)", "default": 1280},
-        "height": {"type": "integer", "description": "슬라이드 세로 크기 (기본: 720)", "default": 720}
-      },
-      "required": ["slides"]
+        "required": ["images"]
+      }
+    },
+    {
+      "name": "render_html_to_image",
+      "description": "HTML/CSS 코드를 이미지(PNG)로 렌더링합니다. Playwright 브라우저 엔진을 사용하여 고품질 렌더링을 지원합니다.\n\n로컬 이미지 사용: base_path를 지정하면 HTML 내 상대 경로 이미지와 CSS background-image가 자동으로 Base64 변환되어 로드됩니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "렌더링할 전체 HTML 코드 (CSS 포함 권장)"
+          },
+          "output_path": {
+            "type": "string",
+            "description": "저장할 이미지 파일 경로"
+          },
+          "base_path": {
+            "type": "string",
+            "description": "HTML 내 상대 경로 이미지의 기준 디렉토리. 예: /Users/.../project 지정 시 <img src=\"images/photo.jpg\">가 자동 로드됨"
+          },
+          "width": {
+            "type": "integer",
+            "description": "이미지 가로 크기 (기본: 1280)",
+            "default": 1280
+          },
+          "height": {
+            "type": "integer",
+            "description": "이미지 세로 크기 (기본: 720)",
+            "default": 720
+          },
+          "selector": {
+            "type": "string",
+            "description": "특정 요소만 캡처하고 싶은 경우의 CSS 셀렉터 (선택)"
+          }
+        },
+        "required": ["html", "output_path"]
+      }
+    },
+    {
+      "name": "generate_ai_image",
+      "description": "텍스트 프롬프트로 AI 이미지를 생성합니다. Pollinations.ai 무료 API를 사용합니다.\n\n사용 가능한 모델: flux(기본), flux-realism(사실적), flux-anime(애니메이션), flux-3d(3D), turbo(빠름)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "이미지를 설명하는 텍스트 프롬프트 (영어 권장)"
+          },
+          "output_path": {
+            "type": "string",
+            "description": "저장할 이미지 파일 경로 (지정하지 않으면 자동 생성)"
+          },
+          "width": {
+            "type": "integer",
+            "description": "이미지 너비 (기본: 1024, 최대: 2048)",
+            "default": 1024
+          },
+          "height": {
+            "type": "integer",
+            "description": "이미지 높이 (기본: 1024, 최대: 2048)",
+            "default": 1024
+          },
+          "model": {
+            "type": "string",
+            "description": "사용할 모델 (flux, flux-realism, flux-anime, flux-3d, turbo)",
+            "default": "flux"
+          },
+          "seed": {
+            "type": "integer",
+            "description": "재현성을 위한 시드값 (같은 시드로 같은 이미지 생성)"
+          }
+        },
+        "required": ["prompt"]
+      }
+    },
+    {
+      "name": "create_shadcn_slides",
+      "description": "shadcn/ui 스타일의 고품질 슬라이드를 생성합니다. web-builder 패키지와 동일한 테마/디자인 시스템을 사용하여 홈페이지와 일관된 디자인의 슬라이드를 만들 수 있습니다.\n\n사용 가능한 테마: default, blue, green, purple, orange, dark\n\n사용 가능한 레이아웃:\n- hero: 중앙 정렬 히어로 (배지, 제목, 부제목, CTA)\n- hero_image: 좌우 분할 히어로 (텍스트 + 이미지)\n- features: 기능 그리드 (3열 카드)\n- stats: 통계 (4열 숫자)\n- testimonial: 인용/후기\n- pricing: 가격표 (3열)\n- cta: CTA 배너\n- content_image: 콘텐츠 + 이미지\n- steps: 단계/타임라인\n- custom: Tailwind 자유 작성",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "slides": {
+            "type": "array",
+            "description": "슬라이드 목록",
+            "items": {
+              "type": "object",
+              "properties": {
+                "layout": {
+                  "type": "string",
+                  "enum": ["hero", "hero_image", "features", "stats", "testimonial", "pricing", "cta", "content_image", "steps", "custom"],
+                  "description": "슬라이드 레이아웃 타입"
+                },
+                "title": {"type": "string", "description": "제목"},
+                "subtitle": {"type": "string", "description": "부제목"},
+                "badge": {"type": "string", "description": "배지 텍스트 (hero 레이아웃)"},
+                "cta_text": {"type": "string", "description": "CTA 버튼 텍스트"},
+                "image_path": {"type": "string", "description": "이미지 파일 경로"},
+                "image_position": {"type": "string", "enum": ["left", "right"], "description": "이미지 위치 (content_image 레이아웃)"},
+                "content": {"type": "string", "description": "본문 내용 (content_image 레이아웃)"},
+                "features": {
+                  "type": "array",
+                  "description": "기능 목록 (features 레이아웃)",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "icon": {"type": "string", "description": "이모지 또는 아이콘"},
+                      "title": {"type": "string"},
+                      "description": {"type": "string"}
+                    }
+                  }
+                },
+                "stats": {
+                  "type": "array",
+                  "description": "통계 목록 (stats 레이아웃)",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {"type": "string"},
+                      "label": {"type": "string"}
+                    }
+                  }
+                },
+                "quote": {"type": "string", "description": "인용문 (testimonial 레이아웃)"},
+                "author": {"type": "string", "description": "인용 작성자"},
+                "role": {"type": "string", "description": "작성자 역할"},
+                "avatar_path": {"type": "string", "description": "아바타 이미지 경로"},
+                "plans": {
+                  "type": "array",
+                  "description": "가격 플랜 (pricing 레이아웃)",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {"type": "string"},
+                      "price": {"type": "string"},
+                      "period": {"type": "string", "default": "/월"},
+                      "description": {"type": "string"},
+                      "features": {"type": "array", "items": {"type": "string"}},
+                      "cta_text": {"type": "string"},
+                      "highlighted": {"type": "boolean"}
+                    }
+                  }
+                },
+                "steps": {
+                  "type": "array",
+                  "description": "단계 목록 (steps 레이아웃)",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {"type": "string"},
+                      "description": {"type": "string"}
+                    }
+                  }
+                },
+                "custom_html": {"type": "string", "description": "커스텀 HTML (custom 레이아웃, Tailwind 사용 가능)"}
+              },
+              "required": ["layout"]
+            }
+          },
+          "theme": {
+            "type": "string",
+            "enum": ["default", "blue", "green", "purple", "orange", "dark"],
+            "description": "전체 테마 (web-builder와 동일)",
+            "default": "default"
+          },
+          "output_dir": {"type": "string", "description": "결과물 저장 디렉토리"},
+          "width": {"type": "integer", "description": "슬라이드 너비 (기본: 1280)", "default": 1280},
+          "height": {"type": "integer", "description": "슬라이드 높이 (기본: 720)", "default": 720}
+        },
+        "required": ["slides"]
+      }
     }
-  },
-  {
-    "name": "create_video",
-    "description": "이미지 파일들을 합쳐서 나레이션, 배경음악이 포함된 MP4 홍보 영상을 제작합니다.\n\n- 나레이션 텍스트 제공 시 AI 음성 자동 생성 (edge-tts)\n- 슬라이드 재생 시간은 음성 길이에 맞춰 자동 조절\n- 이미지 크기가 다르면 자동으로 비디오 크기에 맞게 리사이즈 (비율 유지, 중앙 배치)\n- BGM 볼륨은 나레이션 유무에 따라 자동 조절 (더킹)",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "images": {
-          "type": "array",
-          "items": {"type": "string"},
-          "description": "영상으로 합칠 이미지 경로 리스트"
-        },
-        "narration_texts": {
-          "type": "array",
-          "items": {"type": "string"},
-          "description": "각 슬라이드별 나레이션 텍스트 (이미지 개수와 일치해야 함)"
-        },
-        "duration_per_slide": {
-          "type": "number",
-          "description": "슬라이드당 재생 시간 (초, 나레이션이 없을 때 사용)",
-          "default": 3
-        },
-        "bgm_path": {
-          "type": "string",
-          "description": "배경음악 파일 경로 (선택)"
-        },
-        "voice": {
-          "type": "string",
-          "description": "나레이션 목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성)",
-          "default": "ko-KR-SunHiNeural"
-        },
-        "output_filename": {
-          "type": "string",
-          "description": "저장할 파일 이름 (예: promo.mp4)",
-          "default": "promotion_video.mp4"
-        },
-        "width": {
-          "type": "integer",
-          "description": "비디오 가로 크기 (기본: 1280)",
-          "default": 1280
-        },
-        "height": {
-          "type": "integer",
-          "description": "비디오 세로 크기 (기본: 720)",
-          "default": 720
-        }
-      },
-      "required": ["images"]
-    }
-  },
-  {
-    "name": "render_html_to_image",
-    "description": "HTML/CSS 코드를 이미지(PNG)로 렌더링합니다. Playwright 브라우저 엔진을 사용하여 고품질 렌더링을 지원합니다.\n\n로컬 이미지 사용: base_path를 지정하면 HTML 내 상대 경로 이미지와 CSS background-image가 자동으로 Base64 변환되어 로드됩니다.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "html": {
-          "type": "string",
-          "description": "렌더링할 전체 HTML 코드 (CSS 포함 권장)"
-        },
-        "output_path": {
-          "type": "string",
-          "description": "저장할 이미지 파일 경로"
-        },
-        "base_path": {
-          "type": "string",
-          "description": "HTML 내 상대 경로 이미지의 기준 디렉토리. 예: /Users/.../project 지정 시 <img src=\"images/photo.jpg\">가 자동 로드됨"
-        },
-        "width": {
-          "type": "integer",
-          "description": "이미지 가로 크기 (기본: 1280)",
-          "default": 1280
-        },
-        "height": {
-          "type": "integer",
-          "description": "이미지 세로 크기 (기본: 720)",
-          "default": 720
-        },
-        "selector": {
-          "type": "string",
-          "description": "특정 요소만 캡처하고 싶은 경우의 CSS 셀렉터 (선택)"
-        }
-      },
-      "required": ["html", "output_path"]
-    }
-  },
-  {
-    "name": "generate_ai_image",
-    "description": "텍스트 프롬프트로 AI 이미지를 생성합니다. Pollinations.ai 무료 API를 사용합니다.\n\n사용 가능한 모델: flux(기본), flux-realism(사실적), flux-anime(애니메이션), flux-3d(3D), turbo(빠름)",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "prompt": {
-          "type": "string",
-          "description": "이미지를 설명하는 텍스트 프롬프트 (영어 권장)"
-        },
-        "output_path": {
-          "type": "string",
-          "description": "저장할 이미지 파일 경로 (지정하지 않으면 자동 생성)"
-        },
-        "width": {
-          "type": "integer",
-          "description": "이미지 너비 (기본: 1024, 최대: 2048)",
-          "default": 1024
-        },
-        "height": {
-          "type": "integer",
-          "description": "이미지 높이 (기본: 1024, 최대: 2048)",
-          "default": 1024
-        },
-        "model": {
-          "type": "string",
-          "description": "사용할 모델 (flux, flux-realism, flux-anime, flux-3d, turbo)",
-          "default": "flux"
-        },
-        "seed": {
-          "type": "integer",
-          "description": "재현성을 위한 시드값 (같은 시드로 같은 이미지 생성)"
-        }
-      },
-      "required": ["prompt"]
-    }
-  }
-]
+  ]
+}

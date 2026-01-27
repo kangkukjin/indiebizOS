@@ -558,13 +558,24 @@ def execute_get_project_info(tool_input: dict, project_path: str) -> str:
         return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
 
 
-def execute_get_my_tools(tool_input: dict, project_path: str) -> str:
+def execute_get_my_tools(tool_input: dict, project_path: str, agent_id: str = None) -> str:
     """get_my_tools 도구 실행"""
     try:
         from agent_runner import AgentRunner
-        from thread_context import get_current_registry_key
+        from thread_context import get_current_registry_key, get_current_project_id
 
+        # 1. thread_context에서 시도
         registry_key = get_current_registry_key()
+
+        # 2. thread_context 실패 시 agent_id + project_path로 구성
+        if not registry_key and agent_id:
+            # project_path에서 project_id 추출 (/path/to/projects/홍보 -> 홍보)
+            project_id = get_current_project_id()
+            if not project_id and project_path:
+                from pathlib import Path
+                project_id = Path(project_path).name
+            registry_key = f"{project_id}:{agent_id}" if project_id else agent_id
+
         if not registry_key:
             return json.dumps({
                 "success": False,
@@ -654,7 +665,7 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
         elif tool_name == "get_project_info":
             return execute_get_project_info(tool_input, project_path)
         elif tool_name == "get_my_tools":
-            return execute_get_my_tools(tool_input, project_path)
+            return execute_get_my_tools(tool_input, project_path, agent_id)
 
         # 동적 로딩된 도구 패키지에서 실행
         handler = load_tool_handler(tool_name)

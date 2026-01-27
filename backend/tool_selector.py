@@ -195,6 +195,7 @@ Rules:
 - Match package purpose to agent's role description
 - Multiple agents can share the same package
 - Only assign packages clearly relevant to the role
+- IMPORTANT: Keep total tools per agent under 50. If exceeding, assign only the most essential packages.
 
 Output: Return only valid JSON in the specified format."""
 

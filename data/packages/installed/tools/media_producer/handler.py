@@ -685,12 +685,14 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
     if tool_name == "create_slides":
         return create_slides(tool_input, output_base)
-    elif tool_name == "create_video":
-        return create_video(tool_input, output_base)
+    elif tool_name == "create_html_video":
+        return create_html_video(tool_input, output_base)
     elif tool_name == "render_html_to_image":
         return render_html_to_image(tool_input)
     elif tool_name == "generate_ai_image":
         return generate_ai_image(tool_input, output_base)
+    elif tool_name == "generate_gemini_image":
+        return generate_gemini_image(tool_input, output_base)
     elif tool_name == "create_shadcn_slides":
         # shadcn 스타일 슬라이드 생성 (별도 모듈)
         import importlib.util
@@ -814,120 +816,344 @@ async def generate_tts(text, output_path, voice="ko-KR-SunHiNeural"):
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(output_path)
 
-def create_video(tool_input, output_base):
-    images = tool_input.get("images", [])
-    narration_texts = tool_input.get("narration_texts", [])
-    duration_per_slide = tool_input.get("duration_per_slide", 3)
-    bgm_path = tool_input.get("bgm_path")
-    voice = tool_input.get("voice", "ko-KR-SunHiNeural")
-    output_filename = tool_input.get("output_filename", "promotion_video.mp4")
-    video_width = tool_input.get("width", 1280)
-    video_height = tool_input.get("height", 720)
+def _prepare_scene_html(html, base_path, video_width, video_height):
+    """씬 HTML을 렌더링 가능하도록 전처리 (이미지 Base64 변환, 뷰포트 설정)"""
+    import re
 
-    if not images:
-        return "오류: 이미지 리스트가 비어 있습니다."
+    # base_path가 있으면 HTML 내 상대 경로를 Base64로 변환
+    if base_path:
+        base_path = os.path.abspath(base_path)
 
-    # 상대 경로를 절대 경로로 변환
-    abs_images = [os.path.abspath(img) for img in images]
-    valid_images = [img for img in abs_images if os.path.exists(img)]
-    if not valid_images:
-        return "오류: 유효한 이미지 경로가 없습니다."
+        def replace_img_src(match):
+            src = match.group(1)
+            if src.startswith(('data:', 'http://', 'https://', 'file://')):
+                return match.group(0)
+            abs_path = os.path.join(base_path, src) if not os.path.isabs(src) else src
+            base64_data = get_image_base64(abs_path)
+            if base64_data:
+                return f'src="{base64_data}"'
+            return match.group(0)
 
-    output_path = os.path.join(output_base, output_filename)
-    temp_dir = os.path.join(output_base, f"temp_{uuid.uuid4().hex[:8]}")
-    os.makedirs(temp_dir, exist_ok=True)
+        html = re.sub(r'src=["\']([^"\']+)["\']', replace_img_src, html)
+
+        def replace_bg_url(match):
+            url = match.group(1)
+            if url.startswith(('data:', 'http://', 'https://', 'file://')):
+                return match.group(0)
+            abs_path = os.path.join(base_path, url) if not os.path.isabs(url) else url
+            base64_data = get_image_base64(abs_path)
+            if base64_data:
+                return f'url("{base64_data}")'
+            return match.group(0)
+
+        html = re.sub(r'url\(["\']?([^"\')\s]+)["\']?\)', replace_bg_url, html)
+
+    # 이미 완전한 HTML 문서인 경우 그대로 사용
+    if html.strip().lower().startswith("<!doctype") or html.strip().lower().startswith("<html"):
+        return html
+
+    # 그렇지 않으면 래핑
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>body,html{{margin:0;padding:0;width:{video_width}px;height:{video_height}px;overflow:hidden;}}</style>
+</head><body>{html}</body></html>"""
+
+
+def _auto_split_scenes(scenes, narration_texts, default_duration):
+    """단일 HTML에 여러 씬이 들어있는 경우 자동 분리.
+
+    AI 에이전트가 모든 씬을 하나의 HTML에 <div id="scene1">, <div id="scene2">... 형태로
+    넣는 경우를 감지하여 각 씬을 독립 HTML 문서로 분리합니다.
+    """
+    import re
+    from bs4 import BeautifulSoup
+
+    if len(scenes) != 1:
+        return scenes, narration_texts
+
+    html = scenes[0].get("html", "")
+    duration = scenes[0].get("duration", default_duration)
+    base_path = scenes[0].get("base_path")
+
+    # scene/씬 패턴의 id를 가진 div 요소가 2개 이상인지 확인
+    scene_id_pattern = re.compile(r'id=["\'](?:scene|씬)\s*(\d+)["\']', re.IGNORECASE)
+    scene_matches = scene_id_pattern.findall(html)
+
+    if len(scene_matches) < 2:
+        return scenes, narration_texts
+
+    print(f"[create_html_video] 단일 HTML에 {len(scene_matches)}개의 씬 감지 → 자동 분리")
 
     try:
-        clips = []
-        audio_clips = []
+        soup = BeautifulSoup(html, 'html.parser')
 
-        for i, img_path in enumerate(valid_images):
-            # 나레이션 처리
-            slide_audio = None
-            slide_duration = duration_per_slide
+        # <head> 내용 추출 (공통 스타일/스크립트)
+        head_tag = soup.find('head')
+        head_content = str(head_tag) if head_tag else "<head><meta charset='UTF-8'></head>"
 
+        # 씬 div 찾기 (id="scene1", id="scene2", ...)
+        scene_divs = []
+        for match in scene_matches:
+            div = soup.find(id=re.compile(f'^(?:scene|씬)\\s*{match}$', re.IGNORECASE))
+            if div:
+                scene_divs.append(div)
+
+        if len(scene_divs) < 2:
+            return scenes, narration_texts
+
+        # body의 style 추출 (배경색, 폰트 등)
+        body_tag = soup.find('body')
+        body_attrs = ""
+        if body_tag and body_tag.attrs:
+            attrs_str = " ".join(f'{k}="{v}"' if isinstance(v, str) else f'{k}="{" ".join(v)}"' for k, v in body_tag.attrs.items())
+            body_attrs = f" {attrs_str}"
+
+        # 각 씬을 독립 HTML 문서로 구성
+        new_scenes = []
+        per_scene_duration = duration / len(scene_divs) if duration else default_duration
+
+        for i, div in enumerate(scene_divs):
+            # 씬 div에 overflow:hidden과 뷰포트 크기 강제 적용
+            div_style = div.get('style', '')
+            if 'overflow' not in div_style:
+                div['style'] = div_style + '; overflow: hidden;' if div_style else 'overflow: hidden;'
+
+            scene_html = f"""<!DOCTYPE html>
+<html lang="ko">
+{head_content}
+<body{body_attrs}>
+{str(div)}
+</body>
+</html>"""
+            new_scenes.append({
+                "html": scene_html,
+                "duration": per_scene_duration,
+                "base_path": base_path
+            })
+
+        # narration_texts가 원래 씬 개수와 맞지 않으면 조정
+        new_narrations = narration_texts
+        if len(narration_texts) == 1 and len(new_scenes) > 1:
+            # 하나의 나레이션만 있으면 첫 씬에만 적용
+            new_narrations = narration_texts + [""] * (len(new_scenes) - 1)
+        elif len(narration_texts) == 0:
+            new_narrations = []
+
+        print(f"[create_html_video] 자동 분리 완료: {len(new_scenes)}개 씬, 각 {per_scene_duration:.1f}초")
+        return new_scenes, new_narrations
+
+    except Exception as e:
+        print(f"[create_html_video] 자동 분리 실패, 원본 유지: {e}")
+        return scenes, narration_texts
+
+
+def create_html_video(tool_input, output_base):
+    """HTML 씬들을 프레임별 스크린샷으로 캡처하여 MP4 동영상을 생성합니다.
+
+    각 씬은 독립된 HTML 문서와 재생 시간(duration)으로 구성됩니다.
+    CSS 애니메이션, GSAP, Animate.css 등 브라우저에서 렌더링 가능한 모든 애니메이션이 지원됩니다.
+
+    파이프라인:
+      1) 나레이션 TTS 먼저 생성
+      2) 나레이션 길이에 맞게 씬 duration 자동 조정 (겹침 방지)
+      3) HTML → Playwright 프레임 캡처(PNG)
+      4) FFmpeg MP4 인코딩
+      5) 나레이션/BGM 합성 → 최종 MP4
+    """
+    import subprocess
+    import shutil
+    from playwright.sync_api import sync_playwright
+
+    scenes = tool_input.get("scenes", [])
+    narration_texts = tool_input.get("narration_texts", [])
+    bgm_path = tool_input.get("bgm_path")
+    voice = tool_input.get("voice", "ko-KR-SunHiNeural")
+    output_filename = tool_input.get("output_filename", "html_video.mp4")
+    video_width = tool_input.get("width", 1280)
+    video_height = tool_input.get("height", 720)
+    fps = tool_input.get("fps", 24)
+    default_duration = tool_input.get("duration_per_scene", 5)
+
+    if not scenes:
+        return "오류: scenes 리스트가 비어 있습니다."
+
+    # 자동 씬 분리: 단일 HTML에 여러 씬이 들어있는 경우 감지 및 분리
+    scenes, narration_texts = _auto_split_scenes(scenes, narration_texts, default_duration)
+
+    output_path = os.path.join(output_base, output_filename)
+    temp_dir = os.path.join(output_base, f"temp_htmlvideo_{uuid.uuid4().hex[:8]}")
+    frames_dir = os.path.join(temp_dir, "frames")
+    os.makedirs(frames_dir, exist_ok=True)
+
+    try:
+        # ============================================================
+        # 1단계: 나레이션 TTS를 먼저 생성 (씬 duration 조정을 위해)
+        # ============================================================
+        narration_audio_paths = []
+        narration_durations = []  # 각 나레이션의 실제 재생 시간
+        has_narration = False
+
+        for i, scene in enumerate(scenes):
             if i < len(narration_texts) and narration_texts[i]:
                 tts_path = os.path.join(temp_dir, f"narration_{i}.mp3")
                 asyncio.run(generate_tts(narration_texts[i], tts_path, voice))
-                slide_audio = AudioFileClip(tts_path)
-                slide_duration = slide_audio.duration + 0.5 # 약간의 여유
+                narration_audio_paths.append(tts_path)
+                has_narration = True
 
-            # 이미지를 정확한 비디오 크기로 리사이즈하여 클립 생성
-            img = Image.open(img_path).convert("RGB")
-
-            # 이미지가 비디오 크기와 다르면 리사이즈 (비율 유지하며 중앙 크롭 또는 패딩)
-            if img.size != (video_width, video_height):
-                # 비율 유지하며 비디오 크기에 맞게 조정 (배경색으로 패딩)
-                resized_img = Image.new("RGB", (video_width, video_height), (0, 0, 0))
-
-                # 비율 계산
-                img_ratio = img.width / img.height
-                target_ratio = video_width / video_height
-
-                if img_ratio > target_ratio:
-                    # 이미지가 더 넓음 - 너비 기준 맞춤
-                    new_width = video_width
-                    new_height = int(video_width / img_ratio)
-                else:
-                    # 이미지가 더 높음 - 높이 기준 맞춤
-                    new_height = video_height
-                    new_width = int(video_height * img_ratio)
-
-                # 최신 Pillow 버전 대응
-                try:
-                    resample_filter = Image.Resampling.LANCZOS
-                except AttributeError:
-                    resample_filter = Image.LANCZOS
-
-                img_resized = img.resize((new_width, new_height), resample_filter)
-
-                # 중앙 배치
-                x_offset = (video_width - new_width) // 2
-                y_offset = (video_height - new_height) // 2
-                resized_img.paste(img_resized, (x_offset, y_offset))
-
-                # 임시 파일로 저장
-                temp_img_path = os.path.join(temp_dir, f"resized_{i}.png")
-                resized_img.save(temp_img_path)
-                img_clip = ImageClip(temp_img_path).with_duration(slide_duration)
+                # 나레이션 길이 측정
+                from moviepy import AudioFileClip as MpAudioClip
+                narr_clip = MpAudioClip(tts_path)
+                narration_durations.append(narr_clip.duration)
+                narr_clip.close()
             else:
-                img_clip = ImageClip(img_path).with_duration(slide_duration)
+                narration_audio_paths.append(None)
+                narration_durations.append(0)
 
-            if slide_audio:
-                img_clip = img_clip.with_audio(slide_audio)
+        # ============================================================
+        # 2단계: 나레이션 길이에 맞게 씬 duration 자동 조정
+        #   나레이션이 씬보다 길면 → 씬을 나레이션 + 여유시간으로 늘림
+        #   이렇게 해야 나레이션끼리 겹치지 않음
+        # ============================================================
+        NARRATION_PADDING = 0.5  # 나레이션 끝나고 다음 씬 시작까지 여유 시간(초)
 
-            clips.append(img_clip)
+        for i, scene in enumerate(scenes):
+            original_dur = scene.get("duration", default_duration)
+            narr_dur = narration_durations[i] if i < len(narration_durations) else 0
 
-        # 클립 합치기 - 모든 이미지가 동일 크기이므로 method 불필요
-        final_video = concatenate_videoclips(clips)
-        
-        # 배경음악 추가 (상대 경로를 절대 경로로 변환)
+            if narr_dur > 0:
+                needed_dur = narr_dur + NARRATION_PADDING
+                if needed_dur > original_dur:
+                    print(f"[create_html_video] 씬 {i+1}: duration {original_dur:.1f}s → {needed_dur:.1f}s (나레이션 {narr_dur:.1f}s에 맞춤)")
+                    scene["duration"] = needed_dur
+
+        # ============================================================
+        # 3단계: 모든 씬의 프레임을 순차적으로 캡처
+        # ============================================================
+        global_frame = 0
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": video_width, "height": video_height})
+
+            for i, scene in enumerate(scenes):
+                html = scene.get("html", "")
+                duration = scene.get("duration", default_duration)
+                base_path_opt = scene.get("base_path")
+
+                if not html:
+                    continue
+
+                html_ready = _prepare_scene_html(html, base_path_opt, video_width, video_height)
+
+                # 씬 HTML을 임시 파일로 저장 후 file:// 프로토콜로 로딩
+                # set_content()는 메모리 로드라 로컬 이미지 경로를 해석할 수 없으므로
+                # goto(file://)를 사용하여 파일 시스템 기준으로 이미지 경로가 동작하도록 함
+                scene_html_path = os.path.join(temp_dir, f"scene_{i}.html")
+                with open(scene_html_path, "w", encoding="utf-8") as sf:
+                    sf.write(html_ready)
+                page.goto(f"file://{scene_html_path}")
+
+                # 모든 애니메이션을 즉시 일시정지
+                page.evaluate("""() => {
+                    const style = document.createElement('style');
+                    style.id = '__anim_pause__';
+                    style.textContent = '*, *::before, *::after { animation-play-state: paused !important; }';
+                    document.head.appendChild(style);
+                }""")
+
+                # 외부 리소스(CDN, 폰트 등) 로딩 대기
+                page.wait_for_load_state("networkidle")
+                page.wait_for_timeout(800)  # Tailwind CDN, 폰트, CSS 렌더링 완료 대기
+
+                # 리소스 로딩 완료 후 애니메이션 재개 → 이제부터 캡처 시작
+                page.evaluate("""() => {
+                    const pauseStyle = document.getElementById('__anim_pause__');
+                    if (pauseStyle) pauseStyle.remove();
+                }""")
+
+                # 이 씬에서 캡처할 프레임 수
+                total_frames = int(duration * fps)
+                # 프레임 간격 (ms)
+                frame_interval_ms = 1000.0 / fps
+
+                for f in range(total_frames):
+                    frame_path = os.path.join(frames_dir, f"frame_{global_frame:06d}.png")
+                    page.screenshot(path=frame_path)
+                    global_frame += 1
+                    # 다음 프레임까지 대기 (브라우저의 실시간 애니메이션 진행)
+                    page.wait_for_timeout(int(frame_interval_ms))
+
+            browser.close()
+
+        if global_frame == 0:
+            shutil.rmtree(temp_dir)
+            return "오류: 캡처된 프레임이 없습니다."
+
+        # ============================================================
+        # 4단계: 프레임 시퀀스를 MP4로 인코딩
+        # ============================================================
+        merged_video = os.path.join(temp_dir, "merged.mp4")
+        ffmpeg_result = subprocess.run([
+            "ffmpeg", "-y",
+            "-framerate", str(fps),
+            "-i", os.path.join(frames_dir, "frame_%06d.png"),
+            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+            "-pix_fmt", "yuv420p",
+            merged_video
+        ], capture_output=True)
+
+        if ffmpeg_result.returncode != 0:
+            shutil.rmtree(temp_dir)
+            return f"FFmpeg 인코딩 오류: {ffmpeg_result.stderr.decode()}"
+
+        # ============================================================
+        # 5단계: 나레이션과 BGM 합성
+        # ============================================================
         if bgm_path:
             bgm_path = os.path.abspath(bgm_path)
-        if bgm_path and os.path.exists(bgm_path):
-            bgm = AudioFileClip(bgm_path).with_duration(final_video.duration)
-            # 나레이션이 있을 경우 BGM 볼륨 조절 (더킹)
-            if narration_texts:
-                bgm = bgm.multiply_volume(0.2) # 나레이션이 주가 되도록 배경음은 작게
-            else:
-                bgm = bgm.multiply_volume(0.5)
-            
-            if final_video.audio:
-                final_audio = CompositeAudioClip([bgm, final_video.audio])
-            else:
-                final_audio = bgm
-            final_video = final_video.with_audio(final_audio)
-            
-        final_video.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac")
-        
-        # 임시 파일 삭제 (선택 사항)
-        import shutil
+        has_bgm = bgm_path and os.path.exists(bgm_path)
+
+        if has_narration or has_bgm:
+            from moviepy import AudioFileClip as MpAudioClip, CompositeAudioClip as MpCompositeAudioClip, VideoFileClip
+
+            video_clip = VideoFileClip(merged_video)
+            audio_layers = []
+
+            if has_narration:
+                scene_start = 0.0
+                for i, scene in enumerate(scenes):
+                    dur = scene.get("duration", default_duration)
+                    if i < len(narration_audio_paths) and narration_audio_paths[i]:
+                        narr = MpAudioClip(narration_audio_paths[i])
+                        narr = narr.with_start(scene_start)
+                        audio_layers.append(narr)
+                    scene_start += dur
+
+            if has_bgm:
+                bgm_clip = MpAudioClip(bgm_path).with_duration(video_clip.duration)
+                if has_narration:
+                    bgm_clip = bgm_clip.multiply_volume(0.2)
+                else:
+                    bgm_clip = bgm_clip.multiply_volume(0.5)
+                audio_layers.append(bgm_clip)
+
+            if audio_layers:
+                final_audio = MpCompositeAudioClip(audio_layers)
+                video_clip = video_clip.with_audio(final_audio)
+
+            video_clip.write_videofile(output_path, fps=fps, codec="libx264", audio_codec="aac")
+            video_clip.close()
+        else:
+            shutil.copy2(merged_video, output_path)
+
+        # 임시 파일 정리
         shutil.rmtree(temp_dir)
-        
-        # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
-        return f"영상 제작 완료: {os.path.abspath(output_path)}"
+
+        return f"HTML 동영상 제작 완료: {os.path.abspath(output_path)}"
+    except subprocess.CalledProcessError as e:
+        return f"FFmpeg 오류: {e.stderr.decode() if e.stderr else str(e)}"
     except Exception as e:
-        return f"영상 제작 중 오류 발생: {str(e)}"
+        return f"HTML 동영상 제작 중 오류 발생: {str(e)}"
 
 def render_html_to_image(tool_input):
     """HTML을 이미지로 렌더링
@@ -1055,3 +1281,79 @@ def generate_ai_image(tool_input, output_base):
         return f"AI 이미지 생성 완료: {os.path.abspath(output_path)}\n프롬프트: {prompt}"
     except Exception as e:
         return f"이미지 생성 중 오류 발생: {str(e)}"
+
+
+def generate_gemini_image(tool_input, output_base):
+    """Gemini API를 사용하여 이미지를 생성합니다."""
+    import httpx
+    import base64
+
+    prompt = tool_input.get("prompt")
+    if not prompt:
+        return "오류: prompt는 필수입니다."
+
+    api_key = tool_input.get("api_key") or os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return "오류: GEMINI_API_KEY 환경변수가 설정되지 않았거나 api_key 파라미터가 필요합니다."
+
+    output_path = tool_input.get("output_path")
+    aspect_ratio = tool_input.get("aspect_ratio", "1:1")
+
+    if not output_path:
+        output_path = os.path.join(output_base, f"gemini_image_{uuid.uuid4().hex[:8]}.png")
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+
+    model = "gemini-2.5-flash-image"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseModalities": ["IMAGE", "TEXT"],
+            "imageConfig": {
+                "aspectRatio": aspect_ratio
+            }
+        }
+    }
+
+    try:
+        with httpx.Client(timeout=120.0) as client:
+            response = client.post(
+                url,
+                params={"key": api_key},
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        # 응답에서 이미지 데이터 추출
+        candidates = data.get("candidates", [])
+        if not candidates:
+            return f"오류: Gemini API 응답에 결과가 없습니다. 응답: {data}"
+
+        parts = candidates[0].get("content", {}).get("parts", [])
+        image_saved = False
+        description = ""
+
+        for part in parts:
+            if "inlineData" in part:
+                img_data = base64.b64decode(part["inlineData"]["data"])
+                with open(output_path, "wb") as f:
+                    f.write(img_data)
+                image_saved = True
+            elif "text" in part:
+                description = part["text"]
+
+        if not image_saved:
+            return f"오류: 응답에 이미지 데이터가 없습니다. 텍스트 응답: {description or data}"
+
+        result = f"Gemini 이미지 생성 완료: {os.path.abspath(output_path)}\n프롬프트: {prompt}"
+        if description:
+            result += f"\n설명: {description}"
+        return result
+
+    except httpx.HTTPStatusError as e:
+        return f"Gemini API 오류 ({e.response.status_code}): {e.response.text}"
+    except Exception as e:
+        return f"Gemini 이미지 생성 중 오류 발생: {str(e)}"

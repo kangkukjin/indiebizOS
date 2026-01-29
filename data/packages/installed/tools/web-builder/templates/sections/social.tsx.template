@@ -1,0 +1,150 @@
+// Social Proof Section Templates
+
+// ============================================
+// testimonials
+// ============================================
+export const Testimonials = `
+import { Card, CardContent } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Quote } from "lucide-react"
+
+interface Testimonial {
+  quote: string
+  author: string
+  role: string
+  avatarUrl?: string
+}
+
+interface TestimonialsProps {
+  title?: string
+  testimonials: Testimonial[]
+}
+
+export function Testimonials({ title = "고객 후기", testimonials }: TestimonialsProps) {
+  return (
+    <section className="py-16 px-4 md:py-24 bg-muted/30">
+      <div className="container mx-auto">
+        <h2 className="text-3xl font-bold tracking-tight text-center mb-12 sm:text-4xl">
+          {title}
+        </h2>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {testimonials.map((testimonial, index) => (
+            <Card key={index} className="bg-background">
+              <CardContent className="pt-6">
+                <Quote className="w-8 h-8 text-primary/20 mb-4" />
+                <p className="text-muted-foreground mb-6 italic">
+                  "{testimonial.quote}"
+                </p>
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarImage src={testimonial.avatarUrl} alt={testimonial.author} />
+                    <AvatarFallback>
+                      {testimonial.author.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold">{testimonial.author}</p>
+                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+`
+
+// ============================================
+// logo-cloud
+// ============================================
+export const LogoCloud = `
+import Image from "next/image"
+
+interface Logo {
+  name: string
+  imageUrl: string
+  link?: string
+}
+
+interface LogoCloudProps {
+  title?: string
+  logos: Logo[]
+}
+
+export function LogoCloud({ title = "신뢰하는 기업들", logos }: LogoCloudProps) {
+  return (
+    <section className="py-12 px-4 md:py-16">
+      <div className="container mx-auto">
+        {title && (
+          <p className="text-center text-muted-foreground mb-8">{title}</p>
+        )}
+        <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+          {logos.map((logo, index) => (
+            <div key={index} className="grayscale hover:grayscale-0 transition-all opacity-60 hover:opacity-100">
+              {logo.link ? (
+                <a href={logo.link} target="_blank" rel="noopener noreferrer">
+                  <Image
+                    src={logo.imageUrl}
+                    alt={logo.name}
+                    width={120}
+                    height={40}
+                    className="h-8 w-auto object-contain"
+                  />
+                </a>
+              ) : (
+                <Image
+                  src={logo.imageUrl}
+                  alt={logo.name}
+                  width={120}
+                  height={40}
+                  className="h-8 w-auto object-contain"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+`
+
+// ============================================
+// stats
+// ============================================
+export const Stats = `
+interface Stat {
+  value: string
+  label: string
+}
+
+interface StatsProps {
+  title?: string
+  stats: Stat[]
+}
+
+export function Stats({ title, stats }: StatsProps) {
+  return (
+    <section className="py-16 px-4 md:py-24 bg-primary text-primary-foreground">
+      <div className="container mx-auto">
+        {title && (
+          <h2 className="text-3xl font-bold tracking-tight text-center mb-12 sm:text-4xl">
+            {title}
+          </h2>
+        )}
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat, index) => (
+            <div key={index} className="text-center">
+              <p className="text-4xl font-bold md:text-5xl">{stat.value}</p>
+              <p className="mt-2 text-primary-foreground/80">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+`

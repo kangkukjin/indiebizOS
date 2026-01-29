@@ -1,0 +1,73 @@
+{
+  "name": "web-builder",
+  "version": "1.0.0",
+  "description": "AI가 shadcn/ui를 활용해 홈페이지를 제작하는 도구 패키지.\n\n포함된 도구:\n- create_project: Next.js + shadcn/ui 프로젝트 생성\n- add_component: shadcn/ui 컴포넌트 추가 (button, card, dialog 등 50+개)\n- list_components: 사용 가능한 컴포넌트 목록 조회\n- create_page: 섹션 템플릿 조합으로 페이지 생성 (hero, features, pricing 등)\n- list_sections: 사용 가능한 섹션 템플릿 목록\n- edit_styles: 테마/색상 수정 (default, blue, green, purple, orange, red)\n- preview_site: 로컬 개발 서버 실행\n- build_site: 프로덕션 빌드\n- deploy_vercel: Vercel 배포\n- analyze_site: Lighthouse 품질 분석\n- fetch_component: shadcn 레지스트리에서 최신 컴포넌트 코드 가져오기\n\n사용 시나리오: 홈페이지 제작, 랜딩페이지, 회사 소개 사이트, 포트폴리오",
+  "author": "IndieBiz",
+  "category": "tools",
+  "tags": ["web", "homepage", "shadcn", "nextjs", "react"],
+  "dependencies": {
+    "system": ["node", "npm", "npx"],
+    "optional": ["vercel"]
+  },
+  "tools": [
+    {
+      "name": "create_project",
+      "description": "Next.js + shadcn/ui 프로젝트를 생성합니다",
+      "file": "tools/create_project.py"
+    },
+    {
+      "name": "add_component",
+      "description": "shadcn/ui 컴포넌트를 프로젝트에 추가합니다",
+      "file": "tools/add_component.py"
+    },
+    {
+      "name": "list_components",
+      "description": "사용 가능한 shadcn/ui 컴포넌트 목록을 반환합니다",
+      "file": "tools/list_components.py"
+    },
+    {
+      "name": "create_page",
+      "description": "섹션을 조합하여 페이지를 생성합니다",
+      "file": "tools/create_page.py"
+    },
+    {
+      "name": "list_sections",
+      "description": "사용 가능한 섹션 템플릿 목록을 반환합니다",
+      "file": "tools/list_sections.py"
+    },
+    {
+      "name": "edit_styles",
+      "description": "프로젝트 스타일(색상, 폰트 등)을 수정합니다",
+      "file": "tools/edit_styles.py"
+    },
+    {
+      "name": "preview_site",
+      "description": "로컬에서 사이트를 미리보기합니다",
+      "file": "tools/preview_site.py"
+    },
+    {
+      "name": "build_site",
+      "description": "프로덕션 빌드를 생성합니다",
+      "file": "tools/build_site.py"
+    },
+    {
+      "name": "deploy_vercel",
+      "description": "Vercel에 사이트를 배포합니다",
+      "file": "tools/deploy_vercel.py"
+    },
+    {
+      "name": "analyze_site",
+      "description": "Lighthouse로 사이트 품질을 분석합니다",
+      "file": "tools/analyze_site.py"
+    },
+    {
+      "name": "fetch_component",
+      "description": "shadcn/ui 레지스트리에서 최신 컴포넌트 코드를 가져옵니다",
+      "file": "tools/fetch_component.py"
+    }
+  ],
+  "config": {
+    "default_output_dir": "/Users/kangkukjin/Desktop/AI/outputs/web-projects",
+    "node_version": ">=18.0.0"
+  }
+}

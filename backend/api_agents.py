@@ -208,7 +208,7 @@ async def stop_all_agents(project_id: str):
 async def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
     """에이전트에게 명령 전송"""
     from conversation_db import ConversationDB
-    from thread_context import set_current_agent_id, set_current_agent_name, clear_all_context
+    from thread_context import set_current_agent_id, set_current_agent_name, set_current_project_id, clear_all_context
 
     try:
         # 에이전트 실행 중인지 확인
@@ -227,6 +227,7 @@ async def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
         # 스레드 컨텍스트 설정 (call_agent 등에서 발신자 정보로 사용)
         set_current_agent_id(agent_id)
         set_current_agent_name(agent_name)
+        set_current_project_id(project_id)
 
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))

@@ -186,25 +186,23 @@
       }
     },
     {
-      "name": "get_neighbors",
-      "description": "이웃(연락처) 목록을 조회합니다.\n\n반환 정보:\n- id: 이웃 ID\n- name: 이름\n- info_level: 정보 공개 레벨 (0-4)\n- rating: 평가 (0-5)\n- favorite: 즐겨찾기 여부\n\n사용 예시:\n- 모든 이웃 목록: get_neighbors()\n- 이름 검색: get_neighbors(search='홍길동')\n- 레벨별 필터: get_neighbors(info_level=2)",
+      "name": "save_agent_note",
+      "description": "영구 메모를 저장합니다. 대화가 끝나도 다음 대화에서 읽을 수 있습니다.\n\n## 반드시 메모해야 하는 순간 (하나라도 해당되면 즉시 저장!)\n- 폴더를 새로 만들었을 때 → 절대 경로 기록\n- 백업을 만들었을 때 → 원본 경로와 백업 경로 둘 다 기록\n- 파일을 이동/복사했을 때 → 원래 위치와 새 위치 기록\n- npm install, 빌드 등 환경을 변경했을 때 → 무엇을 했는지 기록\n- 작업 대상 폴더를 처음 확인했을 때 → 절대 경로 기록\n- 에러를 해결했을 때 → 원인과 해결법 기록\n- 사용자가 중요한 결정을 내렸을 때 → 결정 내용 기록\n- 작업이 끝났을 때 → 현재 상태와 다음에 할 일 정리\n\n## 작성 규칙\n- **각 항목에 반드시 날짜를 적을 것** (나중에 오래된 정보와 최신 정보를 구분하기 위해)\n- get_current_time으로 현재 시간을 확인해서 기록\n\n## 사용법\n- append=true: 기존 메모에 추가\n- append=false: 전체를 정리해서 덮어쓰기 (메모가 커졌을 때)\n\n## 예시\n```\n[작업 폴더] /Users/user/HomePages/my-site (01/28 확인)\n[백업] /Users/user/HomePages/my-site_backup (01/28 생성)\n[환경] npm install 완료, next 16.1.6 (01/27)\n[상태] hero 섹션 완료 → 다음: features (01/28)\n```",
       "input_schema": {
         "type": "object",
         "properties": {
-          "search": { "type": "string", "description": "이름으로 검색 (부분 일치)" },
-          "info_level": { "type": "integer", "description": "정보 공개 레벨로 필터링 (0-4)" }
-        }
+          "content": { "type": "string", "description": "저장할 메모 내용" },
+          "append": { "type": "boolean", "description": "기존 메모에 추가할지 여부 (기본: false = 덮어쓰기)" }
+        },
+        "required": ["content"]
       }
     },
     {
-      "name": "get_neighbor_detail",
-      "description": "특정 이웃의 상세 정보를 조회합니다.\n\n반환 정보:\n- 기본 정보: id, name, info_level, rating, favorite\n- 연락처 목록: contacts (email, phone, telegram, nostr 등)\n- 추가 정보: additional_info (메모)\n- 비즈니스 문서: business_doc (이웃별 비즈니스 정보)\n- 최근 메시지: recent_messages (최근 5개)\n\n사용법:\n- ID로 조회: get_neighbor_detail(neighbor_id=1)\n- 이름으로 조회: get_neighbor_detail(name='홍길동')",
+      "name": "read_agent_note",
+      "description": "저장된 영구 메모를 읽습니다.\n\n## 언제 읽을까?\n- 작업 시작 전: 이전에 무슨 작업을 했는지 확인\n- 경로가 기억나지 않을 때: 저장해둔 절대 경로 확인\n- 백업 위치 확인 필요 시\n\n주의: 대화 초반에 반드시 이 도구로 메모를 확인하세요. 이전 대화에서 중요한 정보를 저장해뒀을 수 있습니다.",
       "input_schema": {
         "type": "object",
-        "properties": {
-          "neighbor_id": { "type": "integer", "description": "이웃 ID" },
-          "name": { "type": "string", "description": "이웃 이름 (정확히 일치)" }
-        }
+        "properties": {}
       }
     }
   ]

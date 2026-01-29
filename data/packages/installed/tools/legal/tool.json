@@ -1,0 +1,102 @@
+{
+  "id": "legal",
+  "name": "Legal",
+  "description": "대한민국 법률 정보 검색 도구. 국가법령정보센터(law.go.kr) API를 통해 법령, 판례, 행정규칙, 자치법규, 법령해석, 헌재결정례 등을 검색하고 상세 내용을 조회합니다.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "search_legal_info",
+      "description": "대한민국 통합 법률 정보 검색. 법령, 판례뿐만 아니라 행정규칙, 자치법규, 법령해석, 헌재결정례 등을 모두 검색할 수 있습니다.\n\n데이터 형식: {query: \"검색어\", target: \"대상\"}\n\n대상(target) 옵션:\n- law: 법령 (기본값)\n- prec: 판례\n- admrul: 행정규칙\n- ordin: 자치법규\n- exp: 법령해석\n- detc: 헌재결정\n- trty: 조약\n- eng_law: 영문법령\n- law_term: 법률용어\n- law_form: 법률서식",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색할 키워드"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색 대상 (law, prec, admrul, ordin, exp, detc, trty, eng_law, law_term, law_form)",
+            "default": "law"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "get_legal_detail",
+      "description": "특정 법률 항목의 상세 본문 조회. ID와 대상을 지정하여 상세 내용을 가져옵니다.\n\n데이터 형식: {id: \"ID\", target: \"대상\"}\n\n대상(target) 옵션은 search_legal_info와 동일합니다 (eng_law, law_term, law_form 포함).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "조회할 항목의 고유 ID"
+          },
+          "target": {
+            "type": "string",
+            "description": "대상 구분 (law, prec, admrul, ordin, exp, detc, trty, eng_law, law_term, law_form)",
+            "default": "law"
+          }
+        },
+        "required": ["id"]
+      }
+    },
+    {
+      "name": "search_laws",
+      "description": "대한민국 법령 검색. 키워드를 입력하여 관련 법령 목록을 가져옵니다.\n\n데이터 형식: {query: \"검색어\"}\n\n예시: query=\"근로기준법\"",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색할 법령 키워드"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "get_law_detail",
+      "description": "특정 법령의 상세 본문 조회. 법령 ID를 사용하여 최신 조문을 가져옵니다.\n\n데이터 형식: {law_id: \"법령ID\"}\n\n예시: law_id=\"001234\"",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "law_id": {
+            "type": "string",
+            "description": "조회할 법령의 고유 ID"
+          }
+        },
+        "required": ["law_id"]
+      }
+    },
+    {
+      "name": "search_precedents",
+      "description": "판례 검색. 키워드나 사건번호를 입력하여 관련 판례 목록을 가져옵니다.\n\n데이터 형식: {query: \"검색어\"}\n\n예시: query=\"통상임금\"",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색할 판례 키워드 또는 사건번호"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "get_precedent_detail",
+      "description": "특정 판례의 상세 본문 조회. 판례 ID를 사용하여 판결 요지 및 본문을 가져옵니다.\n\n데이터 형식: {precedent_id: \"판례ID\"}\n\n예시: precedent_id=\"456789\"",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "precedent_id": {
+            "type": "string",
+            "description": "조회할 판례의 고유 ID"
+          }
+        },
+        "required": ["precedent_id"]
+      }
+    }
+  ]
+}

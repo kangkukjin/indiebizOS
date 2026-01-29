@@ -1,12 +1,12 @@
 {
   "id": "media_producer",
   "name": "Media Producer",
-  "description": "홍보용 슬라이드 이미지, MP4 영상, AI 이미지 생성 도구. 마케팅 콘텐츠, 프레젠테이션, 소셜미디어 홍보물 제작에 활용합니다.",
+  "description": "홍보용 슬라이드 이미지, HTML 기반 MP4 동영상, AI 이미지 생성 도구. HTML+CSS 애니메이션을 Playwright로 녹화하여 동영상을 제작합니다.",
   "version": "1.0.0",
   "tools": [
     {
       "name": "create_slides",
-      "description": "텍스트와 이미지를 조합하여 홍보용 슬라이드 이미지들을 생성합니다. HTML/Playwright 기반 고품질 렌더링을 지원합니다.\n\n⚠️ 중요: 뷰포트는 1280x720px 고정입니다. custom_html 사용 시 모든 콘텐츠가 이 영역 안에 들어와야 합니다.\n\n사용 가능한 테마:\n- 기본: modern, tech, business, default\n- 2025-2026 트렌드: title_bold(대형 타이포), dark_tech(다크 네온), glassmorphism(유리 효과), gradient_modern(그라데이션), split_asymmetric(비대칭 분할), minimal_white(미니멀), image_fullscreen(전체 배경 이미지), data_card(데이터 강조), tailwind(Tailwind CSS 자유 디자인)\n\n* tailwind 테마 + custom_html 사용 시 필수 규칙:\n  1. 최상위에 w-full h-full overflow-hidden 적용\n  2. 가로 배치는 요소 3개 이하 또는 flex-wrap 사용\n  3. absolute 위치보다 flex/grid 권장\n  4. Lucide Icons: <i data-lucide=\"아이콘명\"></i>\n  5. Animate.css: animate__animated 클래스 사용 가능",
+      "description": "텍스트와 이미지를 조합하여 홍보용 슬라이드 이미지들을 생성합니다. HTML/Playwright 기반 고품질 렌더링을 지원합니다.\n\n⚠️ 중요: 뷰포트는 1280x720px 고정입니다. custom_html 사용 시 모든 콘텐츠가 이 영역 안에 들어와야 합니다.\n\n사용 가능한 테마:\n- 기본: modern, tech, business, default\n- 2025-2026 트렌드: title_bold(대형 타이포), dark_tech(다크 네온), glassmorphism(유리 효과), gradient_modern(그라데이션), split_asymmetric(비대칭 분할), minimal_white(미니멀), image_fullscreen(전체 배경 이미지), data_card(데이터 강조), tailwind(Tailwind CSS 자유 디자인)\n\n* tailwind 테마 + custom_html 사용 시 필수 규칙:\n  1. body에 width:1280px; height:720px; overflow:hidden; margin:0; 고정 (w-full h-full만으로는 부족)\n  2. 최상위 래퍼에 w-[1280px] h-[720px] flex flex-col items-center justify-center p-[60px] box-border 적용\n  3. 가로 배치는 요소 3개 이하 또는 flex-wrap 사용\n  4. absolute 위치보다 flex/grid 권장\n  5. 콘텐츠가 720px 높이를 초과하지 않도록 요소 크기/개수 조절\n  6. 한국어 텍스트는 영어보다 공간을 더 차지하므로 폰트를 한 단계 작게\n  7. Lucide Icons: <i data-lucide=\"아이콘명\"></i>\n  8. Animate.css: animate__animated 클래스 사용 가능",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -50,39 +50,62 @@
       }
     },
     {
-      "name": "create_video",
-      "description": "이미지 파일들을 합쳐서 나레이션, 배경음악이 포함된 MP4 홍보 영상을 제작합니다.\n\n- 나레이션 텍스트 제공 시 AI 음성 자동 생성 (edge-tts)\n- 슬라이드 재생 시간은 음성 길이에 맞춰 자동 조절\n- 이미지 크기가 다르면 자동으로 비디오 크기에 맞게 리사이즈 (비율 유지, 중앙 배치)\n- BGM 볼륨은 나레이션 유무에 따라 자동 조절 (더킹)",
+      "name": "create_html_video",
+      "description": "HTML 씬(scenes)을 Playwright 브라우저로 렌더링하여 MP4 동영상을 생성합니다.\n\nCSS 애니메이션, Tailwind, GSAP, Animate.css 등 브라우저에서 렌더링 가능한 모든 애니메이션을 영상으로 만들 수 있습니다.\n\n파이프라인: HTML(씬별) → Playwright 프레임 캡처 → FFmpeg MP4 인코딩 → 나레이션/BGM 합성\n\n⚠️ 필수 규칙 - 씬 분리:\n- **각 씬(scene)은 반드시 독립된 HTML 문서**여야 합니다.\n- 절대로 여러 씬을 하나의 HTML에 <div id='scene1'>, <div id='scene2'>처럼 넣지 마세요!\n- 각 씬의 html 필드에는 해당 장면만의 완전한 HTML 문서(<!DOCTYPE html>~</html>)를 넣으세요.\n- 씬이 7개면 scenes 배열에 7개의 객체가 있어야 합니다. 하나의 HTML에 7개 div를 넣는 것이 아닙니다.\n\n⚠️ 필수 규칙 - HTML 레이아웃 (정렬 깨짐 방지):\n모든 씬의 HTML은 반드시 아래 규칙을 지켜야 합니다:\n\n1. body 고정 크기: body에 반드시 width: 1280px; height: 720px; overflow: hidden; margin: 0; padding: 0;을 CSS로 지정하세요.\n   예: body { width: 1280px; height: 720px; overflow: hidden; margin: 0; padding: 0; }\n   Tailwind의 w-full h-full만으로는 부족합니다. 반드시 CSS에서 px 단위로 고정하세요.\n\n2. 통일된 레이아웃 패턴: 모든 씬에서 동일한 레이아웃 패턴을 사용하세요.\n   권장 패턴: body 안에 최상위 래퍼 div 하나를 두고 flex 중앙 정렬:\n   <div style=\"width:1280px; height:720px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px; box-sizing:border-box;\">\n     ... 콘텐츠 ...\n   </div>\n   또는 Tailwind: <div class=\"w-[1280px] h-[720px] flex flex-col items-center justify-center p-[60px] box-border\">\n\n3. 콘텐츠 오버플로우 금지: 모든 콘텐츠가 1280x720px 영역 안에 들어와야 합니다.\n   - 그리드/카드를 배치할 때 개수와 크기를 계산하여 720px 높이를 초과하지 않도록 하세요.\n   - 제목 + 카드 그리드 + 하단 텍스트를 모두 넣는 경우, 요소 크기를 줄이거나 개수를 제한하세요.\n   - padding이 큰 경우(p-20 = 80px) 실제 콘텐츠 영역은 1120x560px임을 고려하세요.\n\n4. absolute 포지셔닝 최소화: position:absolute 대신 flex/grid를 사용하세요.\n   absolute를 사용해야 하는 경우 반드시 부모에 position:relative를 두고, top/left 값이 720px을 초과하지 않는지 확인하세요.\n\n5. 폰트 크기 기준:\n   - 메인 제목: text-6xl~text-7xl (48~72px), text-8xl(96px)은 짧은 텍스트만 가능\n   - 부제목/설명: text-2xl~text-3xl (24~30px)\n   - 본문/라벨: text-lg~text-xl (18~20px)\n   - 한국어 텍스트는 영어보다 공간을 더 차지하므로 한 단계 작은 크기를 사용하세요.\n\n예시 (올바른 사용법):\nscenes: [\n  {html: '<!DOCTYPE html><html>...<body><h1>인트로</h1></body></html>', duration: 5},\n  {html: '<!DOCTYPE html><html>...<body><h1>기능 소개</h1></body></html>', duration: 7},\n  {html: '<!DOCTYPE html><html>...<body><h1>마무리</h1></body></html>', duration: 5}\n]\n\n사용 팁:\n- 각 씬의 html에 CSS @keyframes, transition, animate.css 클래스 등을 넣으면 자동 녹화됩니다\n- 나레이션은 씬 시작 시점에 맞춰 자동 배치됩니다\n- duration은 해당 씬의 애니메이션이 완료되는 시간보다 길게 설정하세요\n- Tailwind CDN, Google Fonts 등 외부 리소스도 사용 가능합니다",
       "input_schema": {
         "type": "object",
         "properties": {
-          "images": {
+          "scenes": {
             "type": "array",
-            "items": {"type": "string"},
-            "description": "영상으로 합칠 이미지 경로 리스트"
+            "description": "동영상을 구성하는 씬(장면) 목록. 각 씬은 독립된 HTML 문서와 재생 시간으로 구성됩니다. 반드시 씬마다 별도의 HTML을 작성하세요. 하나의 HTML에 모든 씬을 넣지 마세요!",
+            "items": {
+              "type": "object",
+              "properties": {
+                "html": {
+                  "type": "string",
+                  "description": "이 씬 하나의 완전한 HTML 문서(<!DOCTYPE html>~</html>). 이 HTML 하나가 하나의 장면입니다. 뷰포트 1280x720px에 맞게 디자인하세요. 여러 씬을 하나의 HTML에 넣지 말고, 씬마다 별도의 HTML 문서를 작성하세요."
+                },
+                "duration": {
+                  "type": "number",
+                  "description": "이 씬의 재생 시간(초). 애니메이션이 완료되는 시간보다 길게 설정하세요.",
+                  "default": 5
+                },
+                "base_path": {
+                  "type": "string",
+                  "description": "HTML 내 상대 경로 이미지의 기준 디렉토리 (선택)"
+                }
+              },
+              "required": ["html"]
+            }
           },
           "narration_texts": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "각 슬라이드별 나레이션 텍스트 (이미지 개수와 일치해야 함)"
+            "description": "각 씬별 나레이션 텍스트. 씬 시작 시점에 맞춰 자동 배치됩니다. 빈 문자열(\"\")로 해당 씬을 건너뛸 수 있습니다."
           },
-          "duration_per_slide": {
+          "duration_per_scene": {
             "type": "number",
-            "description": "슬라이드당 재생 시간 (초, 나레이션이 없을 때 사용)",
-            "default": 3
+            "description": "씬에 duration이 지정되지 않았을 때의 기본 재생 시간(초)",
+            "default": 5
           },
           "bgm_path": {
             "type": "string",
-            "description": "배경음악 파일 경로 (선택)"
+            "description": "배경음악 파일 경로 (선택). 나레이션이 있으면 BGM 볼륨이 자동으로 낮아집니다."
           },
           "voice": {
             "type": "string",
-            "description": "나레이션 목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성)",
+            "description": "나레이션 TTS 목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성)",
             "default": "ko-KR-SunHiNeural"
           },
           "output_filename": {
             "type": "string",
-            "description": "저장할 파일 이름 (예: promo.mp4)",
-            "default": "promotion_video.mp4"
+            "description": "저장할 파일 이름 (예: my_video.mp4)",
+            "default": "html_video.mp4"
+          },
+          "fps": {
+            "type": "integer",
+            "description": "프레임레이트 (기본: 24)",
+            "default": 24
           },
           "width": {
             "type": "integer",
@@ -95,7 +118,7 @@
             "default": 720
           }
         },
-        "required": ["images"]
+        "required": ["scenes"]
       }
     },
     {
@@ -166,6 +189,33 @@
           "seed": {
             "type": "integer",
             "description": "재현성을 위한 시드값 (같은 시드로 같은 이미지 생성)"
+          }
+        },
+        "required": ["prompt"]
+      }
+    },
+    {
+      "name": "generate_gemini_image",
+      "description": "Google Gemini API로 AI 이미지를 생성합니다. 고품질 이미지 생성에 적합하며, 텍스트 렌더링 성능이 뛰어납니다.\n\n환경변수 GEMINI_API_KEY를 설정하거나 api_key 파라미터로 전달하세요.\n\n비율 옵션: 1:1(기본), 16:9, 9:16, 4:3, 3:4",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "이미지를 설명하는 텍스트 프롬프트 (영어 권장)"
+          },
+          "output_path": {
+            "type": "string",
+            "description": "저장할 이미지 파일 경로 (지정하지 않으면 자동 생성)"
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "description": "이미지 비율 (1:1, 16:9, 9:16, 4:3, 3:4)",
+            "default": "1:1"
+          },
+          "api_key": {
+            "type": "string",
+            "description": "Gemini API 키 (환경변수 GEMINI_API_KEY가 없을 때 사용)"
           }
         },
         "required": ["prompt"]

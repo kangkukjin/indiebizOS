@@ -584,11 +584,20 @@ def execute_get_my_tools(tool_input: dict, project_path: str, agent_id: str = No
             }, ensure_ascii=False)
 
         runner = AgentRunner.agent_registry.get(registry_key)
+
+        # 3. registry_key로 못 찾으면 agent_id로 직접 검색 (fallback)
+        if not runner and agent_id:
+            with AgentRunner._lock:
+                for key, r in AgentRunner.agent_registry.items():
+                    if key.endswith(f":{agent_id}"):
+                        runner = r
+                        break
+
         if not runner:
             return json.dumps({
                 "success": False,
                 "tools": [],
-                "message": "에이전트 정보를 찾을 수 없습니다"
+                "message": f"에이전트 정보를 찾을 수 없습니다 (key: {registry_key})"
             }, ensure_ascii=False)
 
         allowed_tools = runner.config.get('allowed_tools', [])

@@ -76,6 +76,35 @@ build/
 frontend/dist/
 frontend/release/
 
+# Remotion 런타임
+data/packages/installed/tools/remotion-video/remotion_project/node_modules/
+data/packages/installed/tools/remotion-video/remotion_project/package-lock.json
+data/packages/installed/tools/remotion-video/remotion_project/.install_done
+data/packages/installed/tools/remotion-video/.render_workspaces/
+
+# 임시 생성 이미지/슬라이드 (backend에 생성된 것들)
+backend/*.png
+backend/slide_images/
+backend/slides_v1/
+backend/final_slides/
+backend/promotion_slides/
+backend/turtle_story_slides/
+
+# FUSE 임시 파일
+data/.fuse_hidden*
+
+# 임시 테스트/데이터 파일
+data/test_*.png
+data/packages/installed/photo_index.db-shm
+data/packages/installed/photo_index.db-wal
+
+# 민감 파일 (credentials)
+data/packages/installed/extensions/gmail/credentials.json
+data/packages/installed/extensions/gmail/credentials_token.json
+
+# 백업 파일
+data/packages/media_producer_backup/
+
 # OS 파일
 .DS_Store
 Thumbs.db

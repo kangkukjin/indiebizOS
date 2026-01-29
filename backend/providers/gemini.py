@@ -21,8 +21,8 @@ class GeminiProvider(BaseProvider):
     """Google Gemini 프로바이더 (최적화된 도구 호출)"""
 
     # 도구 호출 제한
-    MAX_TOOL_ITERATIONS = 15  # 최대 도구 호출 라운드
-    MAX_CONSECUTIVE_TOOL_ONLY = 10  # 텍스트 없이 도구만 연속 호출 허용 횟수
+    MAX_TOOL_ITERATIONS = 30  # 최대 도구 호출 라운드
+    MAX_CONSECUTIVE_TOOL_ONLY = 30  # 텍스트 없이 도구만 연속 호출 허용 횟수
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -1,0 +1,85 @@
+{
+  "id": "remotion-video",
+  "name": "Remotion Video",
+  "description": "React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프레임워크를 사용하여 React/TSX 컴포넌트를 MP4 동영상으로 렌더링합니다.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "create_remotion_video",
+      "description": "React/TSX 코드를 Remotion으로 렌더링하여 MP4 동영상을 생성합니다.\n\n## 개요\nReact 컴포넌트를 동영상으로 변환합니다. useCurrentFrame(), interpolate(), spring() 등 Remotion API를 사용하여 프레임 단위 애니메이션을 구현합니다.\n\n## composition_code 작성 규칙\n1. React 컴포넌트를 export default로 내보내야 합니다\n2. Remotion의 useCurrentFrame, useVideoConfig, interpolate, spring 등을 import하여 사용\n3. CSS-in-JS (inline style) 권장\n\n## 사용 가능한 Remotion API\n- useCurrentFrame(): 현재 프레임 번호 (0부터 시작)\n- useVideoConfig(): {fps, width, height, durationInFrames}\n- interpolate(frame, inputRange, outputRange, options): 프레임 보간\n- spring({frame, fps, config}): 스프링 물리 애니메이션\n- Sequence: 시간 기반 시퀀스 배치 (from, durationInFrames props)\n- AbsoluteFill: 전체 화면 채우기\n- Img: 이미지 컴포넌트\n\n## 예시 (페이드인 텍스트)\n```tsx\nimport {useCurrentFrame, interpolate, AbsoluteFill} from 'remotion';\n\nexport default function MyVideo() {\n  const frame = useCurrentFrame();\n  const opacity = interpolate(frame, [0, 30], [0, 1], {extrapolateRight: 'clamp'});\n  return (\n    <AbsoluteFill style={{backgroundColor: '#0f0f0f', justifyContent: 'center', alignItems: 'center'}}>\n      <h1 style={{color: 'white', fontSize: 80, opacity}}>Hello World</h1>\n    </AbsoluteFill>\n  );\n}\n```\n\n## 예시 (여러 씬 시퀀스)\n```tsx\nimport {useCurrentFrame, interpolate, AbsoluteFill, Sequence} from 'remotion';\n\nconst Scene1 = () => {\n  const frame = useCurrentFrame();\n  const opacity = interpolate(frame, [0, 20], [0, 1], {extrapolateRight: 'clamp'});\n  return (\n    <AbsoluteFill style={{backgroundColor: '#1a1a2e', justifyContent: 'center', alignItems: 'center'}}>\n      <h1 style={{color: '#00E8FF', fontSize: 72, opacity}}>인트로</h1>\n    </AbsoluteFill>\n  );\n};\n\nconst Scene2 = () => {\n  const frame = useCurrentFrame();\n  const scale = interpolate(frame, [0, 30], [0.5, 1], {extrapolateRight: 'clamp'});\n  return (\n    <AbsoluteFill style={{backgroundColor: '#16213e', justifyContent: 'center', alignItems: 'center'}}>\n      <div style={{transform: `scale(${scale})`, color: 'white', fontSize: 48}}>본문</div>\n    </AbsoluteFill>\n  );\n};\n\nexport default function MyVideo() {\n  return (\n    <AbsoluteFill>\n      <Sequence durationInFrames={60}><Scene1 /></Sequence>\n      <Sequence from={60} durationInFrames={90}><Scene2 /></Sequence>\n    </AbsoluteFill>\n  );\n}\n```\n\n## 이미지 사용법 (asset_paths + staticFile)\nasset_paths에 이미지 파일 경로를 전달하면 자동으로 public/ 폴더에 복사됩니다.\ncomposition_code에서 staticFile('파일명')으로 참조하세요.\n\n예시:\n- asset_paths: [\"/path/to/hero.png\", \"/path/to/logo.png\"]\n- composition_code에서: <Img src={staticFile('hero.png')} />\n\n주의: 절대경로나 file:// URL은 동작하지 않습니다. 반드시 staticFile()을 사용하세요.\n\n## 나레이션 사용법 (narration_texts)\nnarration_texts에 텍스트 배열을 전달하면 edge-tts로 음성을 생성하여 동영상에 믹싱합니다.\n나레이션 총 길이가 영상보다 길면 자동으로 영상 길이가 조정됩니다.\n\n## 주의사항\n- 첫 실행 시 npm install이 수행되어 시간이 소요됩니다\n- 이후 실행은 렌더링 시간만 소요됩니다\n- composition_code는 유효한 TSX여야 합니다\n- 한국어 텍스트 사용 가능\n- 이미지는 반드시 asset_paths로 전달 후 staticFile()로 참조",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "composition_code": {
+            "type": "string",
+            "description": "React/TSX 동영상 컴포지션 코드. export default로 메인 컴포넌트를 내보내야 합니다."
+          },
+          "duration_in_frames": {
+            "type": "integer",
+            "description": "총 프레임 수 (기본: 150, 즉 30fps에서 5초)",
+            "default": 150
+          },
+          "fps": {
+            "type": "integer",
+            "description": "초당 프레임 수 (기본: 30)",
+            "default": 30
+          },
+          "width": {
+            "type": "integer",
+            "description": "동영상 가로 크기 (기본: 1280)",
+            "default": 1280
+          },
+          "height": {
+            "type": "integer",
+            "description": "동영상 세로 크기 (기본: 720)",
+            "default": 720
+          },
+          "output_filename": {
+            "type": "string",
+            "description": "저장할 파일 이름 (예: my_video.mp4)",
+            "default": "remotion_video.mp4"
+          },
+          "props": {
+            "type": "object",
+            "description": "컴포지션에 전달할 동적 props (JSON 객체)"
+          },
+          "asset_paths": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "동영상에 사용할 이미지/파일의 절대 경로 목록. public/ 폴더에 자동 복사되며 composition_code에서 staticFile('파일명')으로 참조합니다."
+          },
+          "narration_texts": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "씬별 나레이션 텍스트 목록. edge-tts로 음성 생성 후 동영상에 믹싱됩니다."
+          },
+          "voice": {
+            "type": "string",
+            "description": "나레이션 음성 (기본: ko-KR-SunHiNeural). 한국어: ko-KR-SunHiNeural(여), ko-KR-InJoonNeural(남). 영어: en-US-AriaNeural(여), en-US-GuyNeural(남)",
+            "default": "ko-KR-SunHiNeural"
+          },
+          "bgm_path": {
+            "type": "string",
+            "description": "배경음악 파일 절대 경로 (MP3). 나레이션과 함께 사용 시 자동으로 볼륨이 줄어듭니다."
+          }
+        },
+        "required": ["composition_code"]
+      }
+    },
+    {
+      "name": "check_remotion_status",
+      "description": "Remotion 환경 상태를 확인합니다. Node.js, npm, Remotion 설치 여부를 점검합니다.\n\naction='status': 현재 상태 확인\naction='setup': npm install 실행 (첫 설정 또는 재설치)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["status", "setup"],
+            "description": "status: 상태 확인, setup: npm install 실행",
+            "default": "status"
+          }
+        }
+      }
+    }
+  ]
+}

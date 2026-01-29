@@ -261,9 +261,10 @@ async def handle_chat_message(client_id: str, data: dict):
             return
 
         # 스레드 컨텍스트 설정 (call_agent 등에서 발신자 정보로 사용)
-        from thread_context import set_current_agent_id, set_current_agent_name
+        from thread_context import set_current_agent_id, set_current_agent_name, set_current_project_id
         set_current_agent_id(agent_id)
         set_current_agent_name(agent_name)
+        set_current_project_id(project_id)
 
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
@@ -405,9 +406,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             return
 
         # 스레드 컨텍스트 설정
-        from thread_context import set_current_agent_id, set_current_agent_name, set_current_task_id
+        from thread_context import set_current_agent_id, set_current_agent_name, set_current_project_id, set_current_task_id
         set_current_agent_id(agent_id)
         set_current_agent_name(agent_name)
+        set_current_project_id(project_id)
 
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
@@ -449,6 +451,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             # 별도 스레드이므로 컨텍스트 재설정 필요
             set_current_agent_id(agent_id)
             set_current_agent_name(agent_name)
+            set_current_project_id(project_id)
             set_current_task_id(task_id)
             try:
                 for event in runner.ai.process_message_stream(

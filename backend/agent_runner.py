@@ -181,6 +181,39 @@ class AgentRunner:
             delegated_from_system_ai=is_delegated_from_system_ai
         )
 
+    def _load_system_essentials_tools(self) -> list:
+        """system_essentials 패키지에서 도구 이름 목록 로드
+
+        system_essentials에 새 도구가 추가되면 자동으로 default tools가 됨
+        """
+        import json
+        from pathlib import Path
+
+        tool_names = []
+
+        # system_essentials tool.json 경로
+        data_path = Path(__file__).parent.parent / "data"
+        tool_json_path = data_path / "packages" / "installed" / "tools" / "system_essentials" / "tool.json"
+
+        try:
+            if tool_json_path.exists():
+                with open(tool_json_path, 'r', encoding='utf-8') as f:
+                    tool_def = json.load(f)
+                    tools = tool_def.get("tools", [])
+                    tool_names = [t["name"] for t in tools if "name" in t]
+        except Exception as e:
+            # 실패 시 하드코딩된 기본 도구로 폴백
+            print(f"[Warning] system_essentials 로드 실패, 기본 도구 사용: {e}")
+            tool_names = [
+                "read_file", "write_file", "edit_file", "list_directory",
+                "glob_files", "grep_files", "run_command",
+                "todo_write", "ask_user_question",
+                "enter_plan_mode", "exit_plan_mode",
+                "save_agent_note", "read_agent_note"
+            ]
+
+        return tool_names
+
     def _get_agent_count(self) -> int:
         """프로젝트 내 에이전트 수 반환"""
         try:
@@ -199,13 +232,9 @@ class AgentRunner:
         """에이전트가 사용할 수 있는 도구 목록 반환"""
         tools = []
 
-        # 기본 시스템 도구들
-        default_tools = [
-            "read_file", "write_file", "edit_file", "list_directory",
-            "glob_files", "grep_files", "run_command",
-            "todo_write", "ask_user_question",
-            "enter_plan_mode", "exit_plan_mode"
-        ]
+        # system_essentials 패키지에서 기본 도구 자동 로드
+        # (system_essentials에 새 도구 추가 시 자동으로 default가 됨)
+        default_tools = self._load_system_essentials_tools()
         tools.extend(default_tools)
 
         # 에이전트가 2명 이상이면 위임 도구 추가

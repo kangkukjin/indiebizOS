@@ -114,15 +114,23 @@ def ensure_remotion_project():
         "name": "indiebiz-remotion-renderer",
         "version": "1.0.0",
         "private": True,
+        "sideEffects": ["*.css"],
         "dependencies": {
             "remotion": "^4.0.0",
-            "@remotion/cli": "^4.0.0"
+            "@remotion/cli": "^4.0.0",
+            "@remotion/google-fonts": "^4.0.0",
+            "@remotion/lottie": "^4.0.0",
+            "lottie-web": "^5.12.0"
         },
         "devDependencies": {
             "typescript": "^5.5.0",
             "@types/react": "^18.3.0",
             "react": "^18.3.1",
-            "react-dom": "^18.3.1"
+            "react-dom": "^18.3.1",
+            "@remotion/tailwind": "^4.0.0",
+            "tailwindcss": "^3.4.0",
+            "postcss": "^8.4.0",
+            "autoprefixer": "^10.4.0"
         }
     }
     _write_json(REMOTION_PROJECT_DIR / "package.json", package_json)
@@ -144,6 +152,35 @@ def ensure_remotion_project():
         "include": ["src/**/*"]
     }
     _write_json(REMOTION_PROJECT_DIR / "tsconfig.json", tsconfig)
+
+    # tailwind.config.js
+    tailwind_config = """/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./src/**/*.{ts,tsx}'],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+"""
+    _write_text(REMOTION_PROJECT_DIR / "tailwind.config.js", tailwind_config)
+
+    # postcss.config.js (Tailwind v3용)
+    postcss_config = """module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+"""
+    _write_text(REMOTION_PROJECT_DIR / "postcss.config.js", postcss_config)
+
+    # src/style.css (Tailwind directives)
+    style_css = """@tailwind base;
+@tailwind components;
+@tailwind utilities;
+"""
+    _write_text(src_dir / "style.css", style_css)
 
     # npm install 필요 여부 확인
     node_modules = REMOTION_PROJECT_DIR / "node_modules"
@@ -285,6 +322,7 @@ def _mix_audio_to_video(video_path: str, narration_files: list, bgm_path: str,
                          public_dir: Path, output_path: str) -> bool:
     """
     ffmpeg로 동영상에 오디오 믹싱 (나레이션 + BGM)
+    동영상 길이에 맞춰 오디오를 패딩/트리밍합니다.
 
     Returns:
         성공 여부
@@ -294,6 +332,9 @@ def _mix_audio_to_video(video_path: str, narration_files: list, bgm_path: str,
 
     if not has_narration and not has_bgm:
         return False
+
+    # 동영상 길이 측정
+    video_duration = _get_audio_duration(video_path)
 
     try:
         # 나레이션 파일들을 하나로 합치기
@@ -314,41 +355,47 @@ def _mix_audio_to_video(video_path: str, narration_files: list, bgm_path: str,
                     capture_output=True, timeout=60
                 )
 
-        # 오디오 믹싱
+        # 오디오 믹싱 (동영상 길이 기준, -shortest 제거)
         if narration_merged and has_bgm:
             # 나레이션 + BGM 믹싱
+            # apad로 나레이션이 짧으면 무음 패딩, atrim으로 동영상 길이에 맞춤
             subprocess.run(
                 ["ffmpeg", "-y",
                  "-i", video_path,
                  "-i", narration_merged,
                  "-i", bgm_path,
                  "-filter_complex",
-                 "[1:a]volume=1.0[narr];[2:a]volume=0.2[bgm];[narr][bgm]amix=inputs=2:duration=first[aout]",
+                 f"[1:a]apad,atrim=0:{video_duration},volume=1.0[narr];"
+                 f"[2:a]aloop=loop=-1:size=2e+09,atrim=0:{video_duration},volume=0.2[bgm];"
+                 f"[narr][bgm]amix=inputs=2:duration=first[aout]",
                  "-map", "0:v", "-map", "[aout]",
-                 "-c:v", "copy", "-c:a", "aac", "-shortest",
+                 "-c:v", "copy", "-c:a", "aac",
                  output_path],
                 capture_output=True, timeout=120
             )
         elif narration_merged:
-            # 나레이션만
+            # 나레이션만 — 나레이션이 짧으면 무음 패딩, 길면 트림
             subprocess.run(
                 ["ffmpeg", "-y",
                  "-i", video_path,
                  "-i", narration_merged,
-                 "-map", "0:v", "-map", "1:a",
-                 "-c:v", "copy", "-c:a", "aac", "-shortest",
+                 "-filter_complex",
+                 f"[1:a]apad,atrim=0:{video_duration}[aout]",
+                 "-map", "0:v", "-map", "[aout]",
+                 "-c:v", "copy", "-c:a", "aac",
                  output_path],
                 capture_output=True, timeout=120
             )
         elif has_bgm:
-            # BGM만
+            # BGM만 — 루프 + 트림으로 동영상 길이에 맞춤
             subprocess.run(
                 ["ffmpeg", "-y",
                  "-i", video_path,
                  "-i", bgm_path,
-                 "-filter_complex", "[1:a]volume=0.5[bgm]",
+                 "-filter_complex",
+                 f"[1:a]aloop=loop=-1:size=2e+09,atrim=0:{video_duration},volume=0.5[bgm]",
                  "-map", "0:v", "-map", "[bgm]",
-                 "-c:v", "copy", "-c:a", "aac", "-shortest",
+                 "-c:v", "copy", "-c:a", "aac",
                  output_path],
                 capture_output=True, timeout=120
             )
@@ -402,11 +449,26 @@ def create_remotion_video(tool_input: dict, output_base: str) -> str:
         node_modules_source = REMOTION_PROJECT_DIR / "node_modules"
         os.symlink(str(node_modules_source), str(node_modules_link))
 
-        # 설정 파일 복사
-        for fname in ["package.json", "tsconfig.json"]:
+        # 설정 파일 복사 (Tailwind 포함)
+        for fname in ["package.json", "tsconfig.json", "tailwind.config.js", "postcss.config.js"]:
             src_file = REMOTION_PROJECT_DIR / fname
             if src_file.exists():
                 shutil.copy2(str(src_file), str(workspace / fname))
+
+        # Tailwind CSS 파일 복사
+        style_src = REMOTION_PROJECT_DIR / "src" / "style.css"
+        if style_src.exists():
+            shutil.copy2(str(style_src), str(src_dir / "style.css"))
+
+        # remotion.config.ts (Tailwind webpack override)
+        remotion_config = """import {Config} from '@remotion/cli/config';
+import {enableTailwind} from '@remotion/tailwind';
+
+Config.overrideWebpackConfig((currentConfiguration) => {
+  return enableTailwind(currentConfiguration);
+});
+"""
+        _write_text(workspace / "remotion.config.ts", remotion_config)
 
         # 3. 에셋 파일 복사 → public/
         asset_mapping = _copy_assets_to_public(asset_paths, public_dir)
@@ -425,8 +487,37 @@ def create_remotion_video(tool_input: dict, output_base: str) -> str:
                 duration_in_frames = required_frames
                 log_parts.append(f"프레임 수 자동 조정: {duration_in_frames} ({total_dur + 1:.1f}초)")
 
-        # 5. composition_code 작성
+            # 나레이션 타이밍 정보를 props에 주입
+            # → composition_code에서 props.narrationTimings로 씬 길이 조정 가능
+            narration_timings = []
+            cumulative_frame = 0
+            for nf in narration_files:
+                frame_count = int(nf["duration"] * fps)
+                narration_timings.append({
+                    "index": nf["index"],
+                    "startFrame": cumulative_frame,
+                    "durationInFrames": frame_count,
+                    "durationSec": round(nf["duration"], 2),
+                    "text": nf["text"][:50]  # 요약용
+                })
+                cumulative_frame += frame_count
+            props["narrationTimings"] = narration_timings
+            props["totalNarrationFrames"] = cumulative_frame
+            props["totalNarrationDuration"] = round(total_dur, 2)
+
+        # 5. composition_code 나레이션 동기화 검증 및 보정
+        if narration_files and "narrationTimings" not in composition_code:
+            # composition_code가 narrationTimings를 사용하지 않음 → 자동 래퍼 적용
+            print("[Remotion] composition_code에 narrationTimings 참조 없음 → 래퍼 적용")
+            composition_code = _wrap_with_narration_timings(composition_code, len(narration_files))
+            log_parts.append("나레이션 타이밍 자동 동기화 적용")
+
         _write_text(src_dir / "Composition.tsx", composition_code)
+
+        # composition_code를 출력 디렉토리에 보존 (디버깅용)
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        code_backup_name = output_filename.replace(".mp4", ".tsx")
+        _write_text(OUTPUT_DIR / code_backup_name, composition_code)
 
         # 6. Root.tsx 생성
         root_tsx = _generate_root_tsx(duration_in_frames, fps, width, height, props)
@@ -464,7 +555,10 @@ registerRoot(RemotionRoot);
 
         if result.returncode != 0:
             error_msg = result.stderr or result.stdout
-            return f"Remotion 렌더링 실패:\n{error_msg[-2000:]}"
+            # esbuild 에러는 앞부분에 구문 오류 위치가 표시되므로 앞+뒤 모두 포함
+            if len(error_msg) > 3000:
+                return f"Remotion 렌더링 실패:\n{error_msg[:1500]}\n\n... (중략) ...\n\n{error_msg[-1500:]}"
+            return f"Remotion 렌더링 실패:\n{error_msg}"
 
         if not silent_output.exists():
             return f"오류: 렌더링은 완료되었으나 출력 파일이 없습니다.\nstdout: {result.stdout[-1000:]}"
@@ -498,6 +592,20 @@ registerRoot(RemotionRoot);
             result_msg += "\n\n[에셋 매핑] composition_code에서 staticFile()로 참조:\n"
             for orig, copied in asset_mapping.items():
                 result_msg += f"  staticFile(\"{copied}\") ← {orig}\n"
+        if narration_files:
+            result_msg += "\n\n[나레이션 타이밍] props.narrationTimings로 전달됨:\n"
+            cum = 0.0
+            for nf in narration_files:
+                start_f = int(cum * fps)
+                dur_f = int(nf["duration"] * fps)
+                result_msg += f"  씬{nf['index']}: {cum:.1f}s~{cum + nf['duration']:.1f}s "
+                result_msg += f"(frame {start_f}~{start_f + dur_f}, {nf['duration']:.1f}초) "
+                result_msg += f"- \"{nf['text'][:30]}...\"\n"
+                cum += nf["duration"]
+            result_msg += f"\n[팁] composition_code에서 씬별 길이를 나레이션에 맞추려면:\n"
+            result_msg += f"  const {{narrationTimings}} = props; 로 타이밍 정보를 가져와서\n"
+            result_msg += f"  <Sequence from={{narrationTimings[i].startFrame}} "
+            result_msg += f"durationInFrames={{narrationTimings[i].durationInFrames}}> 사용\n"
 
         return result_msg
 
@@ -518,15 +626,20 @@ registerRoot(RemotionRoot);
 # ============================================================
 
 def _generate_root_tsx(duration_in_frames, fps, width, height, props):
-    default_props_line = ""
+    # props가 있으면 변수로 선언하여 JSX에서 참조 (인라인 JSON은 esbuild JSX 파서를 깨뜨림)
     if props:
         props_json = json.dumps(props, ensure_ascii=False)
-        default_props_line = f"\n        defaultProps={{{props_json}}},"
+        props_declaration = f"\nconst defaultVideoProps = {props_json};\n"
+        default_props_attr = "\n        defaultProps={defaultVideoProps}"
+    else:
+        props_declaration = ""
+        default_props_attr = ""
 
     return f"""import React from 'react';
 import {{Composition}} from 'remotion';
 import MyComposition from './Composition';
-
+import './style.css';
+{props_declaration}
 export const RemotionRoot: React.FC = () => {{
   return (
     <>
@@ -536,7 +649,7 @@ export const RemotionRoot: React.FC = () => {{
         durationInFrames={{{duration_in_frames}}}
         fps={{{fps}}}
         width={{{width}}}
-        height={{{height}}}{default_props_line}
+        height={{{height}}}{default_props_attr}
       />
     </>
   );
@@ -615,6 +728,150 @@ def check_remotion_status(tool_input: dict) -> str:
         parts.append("Remotion 패키지: 미설치 (action='setup'으로 설치하세요)")
 
     return "\n".join(parts)
+
+
+# ============================================================
+# 나레이션 동기화 래퍼
+# ============================================================
+
+def _wrap_with_narration_timings(composition_code: str, scene_count: int) -> str:
+    """
+    composition_code가 narrationTimings를 사용하지 않을 때,
+    export default 컴포넌트가 props에서 narrationTimings를 읽어
+    Sequence 타이밍을 동적으로 결정하도록 코드를 변환.
+
+    전략:
+    1. export default function을 찾아서 props 파라미터를 추가
+    2. 함수 본문 시작에 narrationTimings 디코딩 코드 삽입
+    3. 하드코딩된 SCENE_DURATION/씬 길이를 타이밍 배열 참조로 교체
+    """
+    import re
+
+    # export default function 이름 추출
+    match = re.search(r'export\s+default\s+function\s+(\w+)\s*\(([^)]*)\)', composition_code)
+    if not match:
+        print("[Remotion] export default function 패턴이 아님 → 래핑 생략")
+        return composition_code
+
+    func_name = match.group(1)
+    existing_params = match.group(2).strip()
+
+    # props 파라미터가 없으면 추가
+    if not existing_params:
+        new_params = "props: any"
+    elif "props" not in existing_params:
+        new_params = f"props: any"
+    else:
+        new_params = existing_params
+
+    # 기본 타이밍 (나레이션 없을 때 폴백)
+    default_dur = 240
+    fallback_items = []
+    for i in range(scene_count):
+        fallback_items.append(
+            f"    {{index: {i}, startFrame: {i * default_dur}, "
+            f"durationInFrames: {default_dur}, durationSec: 8, text: ''}}"
+        )
+    fallback_str = ",\n".join(fallback_items)
+
+    # 함수 시작 부분에 삽입할 타이밍 코드
+    timing_injection = f"""
+  // === 나레이션 타이밍 자동 주입 (handler.py) ===
+  const _narrationTimings = (props && props.narrationTimings) || [
+{fallback_str}
+  ];
+  const SCENE_DURATION_FN = (i: number) => _narrationTimings[i] ? _narrationTimings[i].durationInFrames : {default_dur};
+  const SCENE_START_FN = (i: number) => _narrationTimings[i] ? _narrationTimings[i].startFrame : i * {default_dur};
+"""
+
+    # 1단계: 함수 시그니처 교체 (props 추가)
+    modified = composition_code.replace(
+        match.group(0),
+        f'export default function {func_name}({new_params})'
+    )
+
+    # 2단계: 함수 본문 시작 위치에 타이밍 코드 삽입
+    # 함수 시그니처 뒤 첫 번째 { 를 찾아 그 바로 뒤에 삽입
+    func_sig = f'export default function {func_name}({new_params})'
+    sig_idx = modified.find(func_sig)
+    if sig_idx >= 0:
+        brace_idx = modified.find('{', sig_idx + len(func_sig))
+        if brace_idx >= 0:
+            modified = modified[:brace_idx + 1] + timing_injection + modified[brace_idx + 1:]
+
+    # 3단계: Sequence/Series.Sequence 내 하드코딩 타이밍을 동적으로 교체
+    #
+    # AI가 생성할 수 있는 다양한 패턴:
+    # (a) <Sequence from={i * SCENE_DURATION} durationInFrames={SCENE_DURATION}>
+    # (b) <Sequence from={i * 240} durationInFrames={240}>
+    # (c) <Series.Sequence durationInFrames={sceneDuration}>  (from 없음)
+    # (d) <Sequence from={i * sceneDuration} durationInFrames={sceneDuration}>
+
+    # from={변수 * 상수/변수} → from={SCENE_START_FN(변수)}
+    modified = re.sub(
+        r'from=\{(\w+)\s*\*\s*\w+\}',
+        r'from={SCENE_START_FN(\1)}',
+        modified
+    )
+    # from={i * 숫자} (리터럴) → from={SCENE_START_FN(i)}
+    modified = re.sub(
+        r'from=\{(\w+)\s*\*\s*\d+\}',
+        r'from={SCENE_START_FN(\1)}',
+        modified
+    )
+
+    # durationInFrames={변수 또는 상수 또는 숫자} → durationInFrames={SCENE_DURATION_FN(i)}
+    # 단, 이미 SCENE_DURATION_FN이 들어간 것은 건드리지 않음
+    # 또한 Scene 컴포넌트 호출의 durationInFrames prop도 교체 (씬 내부 애니메이션용)
+    modified = re.sub(
+        r'(<(?:Sequence|Series\.Sequence)\s[^>]*?)durationInFrames=\{(?!SCENE_DURATION_FN)(\w+)\}',
+        r'\1durationInFrames={SCENE_DURATION_FN(i)}',
+        modified
+    )
+    # 리터럴 숫자 버전
+    modified = re.sub(
+        r'(<(?:Sequence|Series\.Sequence)\s[^>]*?)durationInFrames=\{(?!SCENE_DURATION_FN)(\d+)\}',
+        r'\1durationInFrames={SCENE_DURATION_FN(i)}',
+        modified
+    )
+
+    # Series.Sequence에는 from이 없으므로, Series를 Sequence로 교체해야 함
+    # Series는 자동으로 순차 배치하므로 from이 불필요하지만,
+    # narrationTimings 기반으로는 명시적 from이 필요
+    if 'Series' in modified and 'Series.Sequence' in modified:
+        # Series import를 제거하고 Sequence로 통일
+        # <Series> ... <Series.Sequence ...> → <> ... <Sequence from={...} ...>
+        modified = modified.replace('<Series>', '<>')
+        modified = modified.replace('</Series>', '</>')
+        modified = re.sub(
+            r'<Series\.Sequence(\s)',
+            r'<Sequence from={SCENE_START_FN(i)}\1',
+            modified
+        )
+        modified = modified.replace('</Series.Sequence>', '</Sequence>')
+        # import 수정: Series → Sequence (이미 Sequence가 있으면 Series만 제거)
+        import_match = re.search(r"import\s*\{([^}]+)\}\s*from\s*'remotion'", modified)
+        if import_match:
+            imports_str = import_match.group(1)
+            import_names = [n.strip() for n in imports_str.split(',')]
+            has_sequence = 'Sequence' in import_names
+            if not has_sequence:
+                # Series를 Sequence로 교체
+                new_imports = imports_str.replace('Series', 'Sequence')
+                modified = modified.replace(import_match.group(0),
+                    f"import {{{new_imports}}} from 'remotion'")
+
+    # Scene 컴포넌트에 전달되는 durationInFrames prop도 동적으로 교체
+    # 예: <Scene ... durationInFrames={sceneDuration} /> → durationInFrames={SCENE_DURATION_FN(i)}
+    modified = re.sub(
+        r'(<Scene\s[^>]*?)durationInFrames=\{(?!SCENE_DURATION_FN)(\w+)\}',
+        r'\1durationInFrames={SCENE_DURATION_FN(i)}',
+        modified
+    )
+
+    # SCENE_DURATION 등 하드코딩 상수 선언은 그대로 유지 (씬 내부 interpolate 등에서 사용)
+
+    return modified
 
 
 # ============================================================

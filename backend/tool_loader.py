@@ -168,7 +168,10 @@ def load_agent_tools(project_path: str, agent_id: str = None) -> List[Dict]:
                 if tool_json_path.exists():
                     try:
                         tool_def = json.loads(tool_json_path.read_text(encoding='utf-8'))
-                        all_tools.extend(_extract_tools_from_definition(tool_def))
+                        tools = _extract_tools_from_definition(tool_def)
+                        # guide_file 필드는 AI에게 전달하지 않고 제거 (on-demand 로딩)
+                        tools = _strip_guide_file_field(tools)
+                        all_tools.extend(tools)
                     except Exception as e:
                         print(f"[도구 스캔 실패] {pkg_dir.name}: {e}")
 
@@ -197,6 +200,113 @@ def _extract_tools_from_definition(tool_def: Any) -> List[Dict]:
     elif isinstance(tool_def, dict) and "name" in tool_def:
         return [tool_def]
     return []
+
+
+# 가이드 파일 내용 캐시 (파일 경로 -> 내용)
+_guide_content_cache: Dict[str, str] = {}
+
+
+def _strip_guide_file_field(tools: List[Dict]) -> List[Dict]:
+    """도구 정의에서 guide_file 필드를 제거 (AI에게 불필요한 필드)"""
+    stripped = []
+    for tool in tools:
+        if "guide_file" in tool:
+            tool = dict(tool)
+            tool.pop("guide_file", None)
+        stripped.append(tool)
+    return stripped
+
+
+# 도구 이름 -> guide_file 매핑 캐시
+_tool_guide_map: Dict[str, str] = {}
+_tool_guide_map_built: bool = False
+
+
+def _build_tool_guide_map():
+    """tool.json의 guide_file 필드에서 도구 이름 -> 가이드 파일 경로 매핑 구축"""
+    global _tool_guide_map, _tool_guide_map_built
+
+    if _tool_guide_map_built:
+        return
+
+    tools_path = get_tools_path()
+    if not tools_path.exists():
+        _tool_guide_map_built = True
+        return
+
+    for pkg_dir in tools_path.iterdir():
+        if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
+            continue
+
+        tool_json = pkg_dir / "tool.json"
+        if not tool_json.exists():
+            continue
+
+        try:
+            tool_def = json.loads(tool_json.read_text(encoding='utf-8'))
+
+            # 패키지 레벨 guide_file
+            pkg_guide_file = None
+            if isinstance(tool_def, dict):
+                pkg_guide_file = tool_def.get("guide_file")
+
+            # 개별 도구에서 guide_file 매핑
+            tools = _extract_tools_from_definition(tool_def)
+            for t in tools:
+                guide_file = t.get("guide_file") or pkg_guide_file
+                if guide_file:
+                    guide_path = str(pkg_dir / guide_file)
+                    _tool_guide_map[t["name"]] = guide_path
+        except Exception:
+            pass
+
+    _tool_guide_map_built = True
+
+
+def get_tool_guide(tool_name: str) -> Optional[str]:
+    """도구의 가이드 파일 내용을 반환 (on-demand 로딩)
+
+    tool.json에 guide_file이 지정된 도구의 가이드 내용을 반환합니다.
+    가이드가 없으면 None을 반환합니다.
+
+    Args:
+        tool_name: 도구 이름
+
+    Returns:
+        가이드 파일 내용 또는 None
+    """
+    _build_tool_guide_map()
+
+    guide_path_str = _tool_guide_map.get(tool_name)
+    if not guide_path_str:
+        return None
+
+    guide_path = Path(guide_path_str)
+    return _load_guide_content(guide_path)
+
+
+def _load_guide_content(guide_path: Path) -> Optional[str]:
+    """가이드 파일 내용을 로드 (캐싱 지원)"""
+    global _guide_content_cache
+
+    path_str = str(guide_path)
+
+    if path_str in _guide_content_cache:
+        return _guide_content_cache[path_str]
+
+    if not guide_path.exists():
+        _guide_content_cache[path_str] = None
+        return None
+
+    try:
+        content = guide_path.read_text(encoding='utf-8')
+        _guide_content_cache[path_str] = content
+        print(f"[도구 가이드 로드] {guide_path.name}")
+        return content
+    except Exception as e:
+        print(f"[도구 가이드 로드 실패] {guide_path}: {e}")
+        _guide_content_cache[path_str] = None
+        return None
 
 
 def _get_allowed_tools(project_path: str, agent_id: str) -> List[str]:
@@ -250,6 +360,7 @@ def load_installed_tools(base_path: str = None) -> List[Dict]:
                     try:
                         tool_def = json.loads(tool_json.read_text(encoding='utf-8'))
                         tools = _extract_tools_from_definition(tool_def)
+                        tools = _strip_guide_file_field(tools)
                         for t in tools:
                             extra_tools.append(t)
                             print(f"[도구 로드] {t.get('name')}")
@@ -267,9 +378,12 @@ def get_all_tool_names() -> List[str]:
 
 def clear_cache():
     """캐시 초기화 (테스트/리로드용)"""
-    global _tool_handlers_cache, _tool_to_package_map, _all_tools_cache, _all_tools_cache_time, _agents_yaml_cache
+    global _tool_handlers_cache, _tool_to_package_map, _all_tools_cache, _all_tools_cache_time, _agents_yaml_cache, _guide_content_cache, _tool_guide_map, _tool_guide_map_built
     _tool_handlers_cache.clear()
     _tool_to_package_map.clear()
     _all_tools_cache = []
     _all_tools_cache_time = 0
     _agents_yaml_cache.clear()
+    _guide_content_cache.clear()
+    _tool_guide_map.clear()
+    _tool_guide_map_built = False

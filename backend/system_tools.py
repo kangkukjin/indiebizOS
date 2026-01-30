@@ -12,7 +12,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any
 
-from tool_loader import build_tool_package_map, load_tool_handler, get_all_tool_names
+from tool_loader import build_tool_package_map, load_tool_handler, get_all_tool_names, get_tool_guide
+
+# 가이드가 이미 주입된 도구 추적 (agent_id:tool_name)
+_guide_injected: set = set()
 
 
 # ============ 시스템 도구 정의 ============
@@ -646,6 +649,54 @@ def execute_request_user_approval(tool_input: dict, project_path: str) -> str:
     return "[[APPROVAL_REQUESTED]]" + "\n".join(result_parts)
 
 
+def _inject_guide_if_needed(tool_name: str, result: str, agent_id: str = None) -> str:
+    """도구 실행 결과에 가이드를 주입 (첫 호출 시에만)
+
+    tool.json에 guide_file이 지정된 도구를 처음 호출할 때,
+    도구 실행 결과 앞에 가이드 내용을 붙여서 반환합니다.
+    같은 에이전트가 같은 도구를 다시 호출하면 가이드를 생략합니다.
+
+    이 방식은 Claude Code의 스킬과 유사한 on-demand 가이드 주입입니다:
+    - 도구 description에는 간략한 설명만 포함 (토큰 절약)
+    - 도구가 실제로 호출될 때만 상세 가이드가 컨텍스트에 주입됨
+    - 이후 호출에서는 이미 컨텍스트에 가이드가 있으므로 생략
+    """
+    global _guide_injected
+
+    # 추적 키: 에이전트별로 가이드 주입 여부 관리
+    guide_key = f"{agent_id or 'default'}:{tool_name}"
+
+    if guide_key in _guide_injected:
+        return result
+
+    # 가이드 내용 조회
+    guide_content = get_tool_guide(tool_name)
+    if not guide_content:
+        # 가이드가 없는 도구는 추적할 필요 없음
+        return result
+
+    # 가이드 주입 기록
+    _guide_injected.add(guide_key)
+    print(f"[도구 가이드 주입] {tool_name} (agent: {agent_id})")
+
+    # 결과 앞에 가이드를 붙여서 반환
+    guide_header = f"=== {tool_name} 사용 가이드 ===\n{guide_content}\n{'=' * 40}\n\n"
+    return guide_header + result
+
+
+def reset_guide_injection(agent_id: str = None):
+    """가이드 주입 추적 초기화 (새 대화 시작 시 호출)
+
+    Args:
+        agent_id: 특정 에이전트만 초기화. None이면 전체 초기화.
+    """
+    global _guide_injected
+    if agent_id:
+        _guide_injected = {k for k in _guide_injected if not k.startswith(f"{agent_id}:")}
+    else:
+        _guide_injected.clear()
+
+
 def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
     """
     도구 실행 (시스템 도구 + 동적 로딩)
@@ -708,6 +759,9 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
                         result = json.dumps(result_data, ensure_ascii=False, indent=2) + map_tag
                 except (json.JSONDecodeError, TypeError):
                     pass
+
+            # 가이드 주입: 도구에 guide_file이 있으면 첫 호출 시 결과 앞에 가이드 포함
+            result = _inject_guide_if_needed(tool_name, result, agent_id)
 
             return result
         else:

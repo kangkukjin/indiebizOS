@@ -1,8 +1,26 @@
 """
 Yahoo Finance & CoinGecko 기반 주식/암호화폐 도구
 """
+import json
 import requests
 from datetime import datetime
+from pathlib import Path
+
+# 대량 데이터 저장 경로
+DATA_OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "outputs" / "investment"
+DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _save_large_data(data: list, prefix: str, symbol: str) -> str:
+    """대량 데이터를 파일로 저장하고 경로 반환"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{prefix}_{symbol}_{timestamp}.json"
+    filepath = DATA_OUTPUT_DIR / filename
+
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    return str(filepath)
 
 
 def _format_number(num):
@@ -132,10 +150,11 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d") -> di
             change = 0
             change_percent = 0
 
-        history_data = []
-        for idx, row in hist.tail(5).iterrows():
-            history_data.append({
-                "date": idx.strftime("%Y-%m-%d %H:%M"),
+        # 전체 히스토리 데이터 구성
+        all_history = []
+        for idx, row in hist.iterrows():
+            all_history.append({
+                "date": idx.strftime("%Y-%m-%d"),
                 "open": round(row["Open"], 2),
                 "high": round(row["High"], 2),
                 "low": round(row["Low"], 2),
@@ -145,25 +164,55 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d") -> di
 
         direction = "▲" if change >= 0 else "▼"
         currency = "KRW" if symbol.endswith((".KS", ".KQ")) else "USD"
+        total_days = len(all_history)
 
-        return {
-            "success": True,
-            "data": {
-                "symbol": symbol.upper(),
-                "current_price": round(current_price, 2),
-                "currency": currency,
-                "change": round(change, 2),
-                "change_percent": round(change_percent, 2),
-                "previous_close": round(prev_close, 2),
-                "open": round(latest.get("Open", 0), 2),
-                "high": round(latest.get("High", 0), 2),
-                "low": round(latest.get("Low", 0), 2),
-                "volume": int(latest.get("Volume", 0)),
-                "history": history_data,
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            },
-            "message": f"{symbol.upper()}: {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%)"
+        base_data = {
+            "symbol": symbol.upper(),
+            "current_price": round(current_price, 2),
+            "currency": currency,
+            "change": round(change, 2),
+            "change_percent": round(change_percent, 2),
+            "previous_close": round(prev_close, 2),
+            "open": round(latest.get("Open", 0), 2),
+            "high": round(latest.get("High", 0), 2),
+            "low": round(latest.get("Low", 0), 2),
+            "volume": int(latest.get("Volume", 0)),
+            "period": period,
+            "total_days": total_days,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
+
+        msg = f"{symbol.upper()}: {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%)"
+
+        # 50개 초과 시 파일로 저장 + 샘플 제공
+        if total_days > 50:
+            file_path = _save_large_data(all_history, "yf_prices", symbol.upper().replace("=", "_"))
+
+            # 시각화용 샘플 (10개 포인트)
+            step = max(1, total_days // 10)
+            sample = all_history[::step]
+            if sample[-1] != all_history[-1]:
+                sample.append(all_history[-1])
+            sample_compact = [{"date": p["date"], "close": p["close"]} for p in sample]
+
+            base_data["file_path"] = file_path
+            base_data["sample"] = sample_compact
+
+            return {
+                "success": True,
+                "data": base_data,
+                "summary": f"{msg}, 기간: {all_history[0]['date']} ~ {all_history[-1]['date']}, 총 {total_days}거래일. 전체 데이터: {file_path}. 차트 생성 시 line_chart 도구에 data_file 파라미터로 이 경로를 전달하세요."
+            }
+        else:
+            # 50개 이하: 직접 prices 배열 반환
+            compact_prices = [{"date": p["date"], "close": p["close"]} for p in all_history]
+            base_data["prices"] = compact_prices
+
+            return {
+                "success": True,
+                "data": base_data,
+                "summary": f"{msg}, 총 {total_days}거래일. 차트 생성 시 line_chart 도구의 data 파라미터에 prices 배열을 전달하세요."
+            }
 
     except Exception as e:
         return {"success": False, "error": f"주식 정보 조회 실패: {str(e)}"}

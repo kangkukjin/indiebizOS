@@ -7,7 +7,7 @@ import { Send, Loader2, Bot, User, StopCircle, Paperclip, X, Camera, FileText, C
 import { CameraPreview } from './CameraPreview';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { createChatWebSocket, cancelAllAgents } from '../lib/api';
+import { createChatWebSocket, cancelAllAgents, api } from '../lib/api';
 import type { Agent } from '../types';
 import { RouteMap, type RouteMapData } from './RouteMap';
 import { LocationMap, type LocationMapData } from './LocationMap';
@@ -370,6 +370,36 @@ export function Chat({ projectId, agent }: ChatProps) {
       websocket.close();
     };
   }, [projectId, agent.id]);
+
+  // 미전달 메시지 폴링 (WS 타임아웃 복구)
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const undelivered = await api.getUndeliveredMessages(projectId, agent.name);
+        if (undelivered && undelivered.length > 0) {
+          setMessages((prev) => [
+            ...prev,
+            ...undelivered.map((msg) => ({
+              id: String(msg.id),
+              role: 'assistant' as const,
+              content: msg.content,
+              timestamp: new Date(msg.timestamp),
+            })),
+          ]);
+          setIsLoading(false);
+          setStreamingContent('');
+          setCurrentToolActivity(null);
+          setToolHistory([]);
+          setThinkingText('');
+          setTodos([]);
+        }
+      } catch {
+        // 폴링 실패는 무시 (네트워크 일시적 문제 등)
+      }
+    }, 60000);
+
+    return () => clearInterval(pollInterval);
+  }, [projectId, agent.name]);
 
   // 컴포넌트 언마운트 시 첨부 이미지 ObjectURL 정리 (메모리 누수 방지)
   useEffect(() => {

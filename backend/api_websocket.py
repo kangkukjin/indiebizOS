@@ -443,6 +443,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 스트리밍 처리를 위한 큐
         event_queue = asyncio.Queue()
         final_content = ""
+        timed_out = False  # 타임아웃 발생 여부 (워커 스레드에서 확인)
         loop = asyncio.get_running_loop()
 
         def run_stream():
@@ -466,7 +467,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         loop
                     )
                     if event_type == "final":
-                        final_content = event["content"]
+                        final_content = event.get("content", "")
                         print(f"[WS run_stream] final_content 설정됨 (len={len(final_content)})")
             except Exception as e:
                 print(f"[WS run_stream] 예외 발생: {e}")
@@ -475,7 +476,15 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     loop
                 )
             finally:
-                print(f"[WS run_stream] 스트림 종료, None 전송")
+                print(f"[WS run_stream] 스트림 종료, final_content len={len(final_content)}, timed_out={timed_out}")
+                if timed_out and final_content:
+                    # 타임아웃 이후 워커가 결과를 완성한 경우: DB에 미전달로 저장
+                    try:
+                        filtered = filter_internal_markers(final_content)
+                        msg_id = db.save_message_undelivered(target_agent_id, user_id, filtered)
+                        print(f"[WS run_stream] 타임아웃 후 미전달 메시지 저장 완료: message_id={msg_id}")
+                    except Exception as save_err:
+                        print(f"[WS run_stream] 타임아웃 후 메시지 저장 실패: {save_err}")
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put(None),  # 종료 신호
                     loop
@@ -490,10 +499,11 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             try:
                 event = await asyncio.wait_for(event_queue.get(), timeout=600)
             except asyncio.TimeoutError:
+                timed_out = True
                 print(f"[WS] 에이전트 타임아웃 발생 (600초), final_content 길이: {len(final_content)}")
                 await manager.send_message(client_id, {
                     "type": "error",
-                    "message": "응답 시간 초과 (10분)"
+                    "message": "응답 시간 초과 (10분). 작업이 완료되면 자동으로 표시됩니다."
                 })
                 break
 
@@ -506,7 +516,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 # 텍스트 청크 전송
                 await manager.send_message(client_id, {
                     "type": "stream_chunk",
-                    "content": event["content"],
+                    "content": event.get("content", ""),
                     "agent": agent_name
                 })
 
@@ -514,13 +524,13 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 # 도구 시작 알림
                 await manager.send_message(client_id, {
                     "type": "tool_start",
-                    "name": event["name"],
+                    "name": event.get("name", "unknown"),
                     "agent": agent_name
                 })
 
             elif event_type == "tool_result":
                 # 도구 결과 알림
-                tool_name = event["name"]
+                tool_name = event.get("name", "unknown")
                 tool_input = event.get("input", {})
 
                 message_data = {
@@ -542,18 +552,18 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 # AI 사고 과정 알림
                 await manager.send_message(client_id, {
                     "type": "thinking",
-                    "content": event["content"],
+                    "content": event.get("content", ""),
                     "agent": agent_name
                 })
 
             elif event_type == "final":
-                final_content = event["content"]
+                final_content = event.get("content", "")
                 print(f"[WS while루프] final 이벤트 수신 (len={len(final_content)})")
 
             elif event_type == "error":
                 await manager.send_message(client_id, {
                     "type": "error",
-                    "message": event["content"]
+                    "message": event.get("content", "알 수 없는 오류")
                 })
                 break
 
@@ -668,6 +678,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         event_queue = asyncio.Queue()
         final_content = ""
         tool_results_list = []  # 도구 실행 결과 기록용
+        timed_out = False  # 타임아웃 발생 여부 (워커 스레드에서 확인)
         loop = asyncio.get_running_loop()
 
         # 중단 플래그 초기화
@@ -694,14 +705,22 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                         )
                         break
                     asyncio.run_coroutine_threadsafe(event_queue.put(event), loop)
-                    if event["type"] == "final":
-                        final_content = event["content"]
+                    if event.get("type") == "final":
+                        final_content = event.get("content", "")
             except Exception as e:
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put({"type": "error", "content": str(e)}),
                     loop
                 )
             finally:
+                if timed_out and final_content:
+                    # 타임아웃 이후 워커가 결과를 완성한 경우: 시스템 AI 대화 저장
+                    try:
+                        filtered = filter_internal_markers(final_content)
+                        save_conversation("assistant", filtered)
+                        print(f"[WS run_stream] 시스템AI 타임아웃 후 대화 저장 완료")
+                    except Exception as save_err:
+                        print(f"[WS run_stream] 시스템AI 타임아웃 후 저장 실패: {save_err}")
                 asyncio.run_coroutine_threadsafe(event_queue.put(None), loop)
 
         # 스레드에서 스트리밍 시작
@@ -713,10 +732,11 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             try:
                 event = await asyncio.wait_for(event_queue.get(), timeout=600)
             except asyncio.TimeoutError:
+                timed_out = True
                 print(f"[WS] 시스템AI 타임아웃 발생 (600초), final_content 길이: {len(final_content)}")
                 await manager.send_message(client_id, {
                     "type": "error",
-                    "message": "응답 시간 초과 (10분)"
+                    "message": "응답 시간 초과 (10분). 작업이 완료되면 자동으로 표시됩니다."
                 })
                 break
 
@@ -736,21 +756,21 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             if event_type == "text":
                 await manager.send_message(client_id, {
                     "type": "stream_chunk",
-                    "content": event["content"],
+                    "content": event.get("content", ""),
                     "agent": "system_ai"
                 })
 
             elif event_type == "tool_start":
                 await manager.send_message(client_id, {
                     "type": "tool_start",
-                    "name": event["name"],
+                    "name": event.get("name", "unknown"),
                     "input": event.get("input", {}),
                     "agent": "system_ai"
                 })
 
             elif event_type == "tool_result":
                 tool_result = event.get("result", "")
-                tool_name = event["name"]
+                tool_name = event.get("name", "unknown")
 
                 # 도구 결과 기록 (final이 비어있을 때 사용)
                 tool_results_list.append({
@@ -779,17 +799,17 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             elif event_type == "thinking":
                 await manager.send_message(client_id, {
                     "type": "thinking",
-                    "content": event["content"],
+                    "content": event.get("content", ""),
                     "agent": "system_ai"
                 })
 
             elif event_type == "final":
-                final_content = event["content"]
+                final_content = event.get("content", "")
 
             elif event_type == "error":
                 await manager.send_message(client_id, {
                     "type": "error",
-                    "message": event["content"]
+                    "message": event.get("content", "알 수 없는 오류")
                 })
                 break
 

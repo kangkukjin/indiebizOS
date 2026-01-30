@@ -646,12 +646,17 @@ TEMPLATES = {
 <head>
     <meta charset="UTF-8">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 추가 라이브러리: 애니메이션 및 아이콘 -->
+    <!-- Google Fonts (한국어 + 영문 디자인 폰트) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Gothic+A1:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Sunflower:wght@300;500;700&family=Jua&family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@400;600;700;800;900&family=Playfair+Display:wght@400;600;700;900&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- 추가 라이브러리: 애니메이션, 아이콘, Lottie -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@2/dist/lottie-player.js"></script>
     <style>
-        body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+        body { margin: 0; padding: 0; width: {{width|default(1280)}}px; height: {{height|default(720)}}px; overflow: hidden; font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
     </style>
 </head>
 <body class="bg-white">
@@ -852,10 +857,18 @@ def _prepare_scene_html(html, base_path, video_width, video_height):
     if html.strip().lower().startswith("<!doctype") or html.strip().lower().startswith("<html"):
         return html
 
-    # 그렇지 않으면 래핑
+    # 그렇지 않으면 래핑 (Google Fonts + Lottie CDN 포함)
     return f"""<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
-<style>body,html{{margin:0;padding:0;width:{video_width}px;height:{video_height}px;overflow:hidden;}}</style>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Gothic+A1:wght@400;700;900&family=Noto+Sans+KR:wght@300;400;500;700;900&family=Sunflower:wght@300;500;700&family=Jua&family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@400;600;700;800;900&family=Playfair+Display:wght@400;600;700;900&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://unpkg.com/@lottiefiles/lottie-player@2/dist/lottie-player.js"></script>
+<style>body,html{{margin:0;padding:0;width:{video_width}px;height:{video_height}px;overflow:hidden;font-family:'Noto Sans KR',sans-serif;}}</style>
 </head><body>{html}</body></html>"""
 
 

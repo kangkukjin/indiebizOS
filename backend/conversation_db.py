@@ -98,6 +98,11 @@ class ConversationDB:
         'ws_client_id': 'TEXT'
     }
 
+    # messages 테이블 마이그레이션 컬럼 화이트리스트
+    ALLOWED_MESSAGE_COLUMNS = {
+        'delivered': 'INTEGER DEFAULT 1',
+    }
+
     def _migrate_tables(self, cursor):
         """기존 DB 마이그레이션 (SQL 인젝션 방지를 위한 화이트리스트 사용)"""
         # tasks 테이블 존재 여부 확인
@@ -142,6 +147,18 @@ class ConversationDB:
                 safe_query = f'ALTER TABLE tasks ADD COLUMN {column_name} {column_type}'
                 cursor.execute(safe_query)
                 print(f"[DB 마이그레이션] tasks.{column_name} 열 추가됨")
+
+        # messages 테이블 마이그레이션
+        cursor.execute("PRAGMA table_info(messages)")
+        existing_msg_columns = {row[1] for row in cursor.fetchall()}
+
+        for column_name, column_type in self.ALLOWED_MESSAGE_COLUMNS.items():
+            if not column_name.replace('_', '').isalnum():
+                continue
+            if column_name not in existing_msg_columns:
+                safe_query = f'ALTER TABLE messages ADD COLUMN {column_name} {column_type}'
+                cursor.execute(safe_query)
+                print(f"[DB 마이그레이션] messages.{column_name} 열 추가됨")
 
     def _get_pooled_connection(self) -> sqlite3.Connection:
         """연결 풀에서 연결 가져오기"""
@@ -242,6 +259,50 @@ class ConversationDB:
             """, (from_agent_id, to_agent_id, content, tool_calls, contact_type))
             conn.commit()
             return cursor.lastrowid
+
+    def save_message_undelivered(self, from_agent_id: int, to_agent_id: int, content: str,
+                                 tool_calls: str = None, contact_type: str = 'gui') -> int:
+        """미전달 메시지 저장 (WS 타임아웃 시 워커 스레드에서 호출)"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO messages (from_agent_id, to_agent_id, content, tool_calls, contact_type, delivered)
+                VALUES (?, ?, ?, ?, ?, 0)
+            """, (from_agent_id, to_agent_id, content, tool_calls, contact_type))
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_undelivered_messages(self, agent_id: int, user_id: int) -> list:
+        """미전달 메시지 조회 (특정 에이전트 → 사용자)"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, from_agent_id, to_agent_id, content, message_time
+                FROM messages
+                WHERE from_agent_id = ? AND to_agent_id = ? AND delivered = 0
+                ORDER BY message_time ASC
+            """, (agent_id, user_id))
+            return [{
+                "id": row[0],
+                "from_agent_id": row[1],
+                "to_agent_id": row[2],
+                "content": row[3],
+                "timestamp": row[4]
+            } for row in cursor.fetchall()]
+
+    def mark_messages_delivered(self, message_ids: list) -> int:
+        """메시지를 전달됨으로 표시"""
+        if not message_ids:
+            return 0
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            placeholders = ','.join('?' * len(message_ids))
+            cursor.execute(f"""
+                UPDATE messages SET delivered = 1
+                WHERE id IN ({placeholders})
+            """, message_ids)
+            conn.commit()
+            return cursor.rowcount
 
     def get_messages(self, agent_id: int, limit: int = 50, offset: int = 0) -> list:
         """에이전트의 메시지 조회"""

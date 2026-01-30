@@ -116,6 +116,7 @@ class GeminiProvider(BaseProvider):
         accumulated_text = ""
         iteration = 0
         consecutive_tool_only = 0
+        empty_response_retries = 0  # 빈 응답 재시도 횟수
 
         while iteration < self.MAX_TOOL_ITERATIONS:
             # 중단 체크
@@ -140,6 +141,18 @@ class GeminiProvider(BaseProvider):
 
             # 도구 호출이 없으면 완료
             if not function_calls:
+                # 텍스트도 없고 도구도 없는 빈 응답인 경우, 도구 결과 기반 응답 강제 유도 (최대 2회)
+                if not collected_text.strip() and not accumulated_text.strip() and iteration > 0 and empty_response_retries < 2:
+                    empty_response_retries += 1
+                    print(f"[Gemini] 빈 응답 감지 (iteration={iteration}), 응답 강제 유도 (retry={empty_response_retries})")
+                    contents.append(types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(
+                            text="도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
+                        )]
+                    ))
+                    iteration += 1
+                    continue
                 print(f"[Gemini] 도구 호출 없음, 완료 (iteration={iteration})")
                 break
 

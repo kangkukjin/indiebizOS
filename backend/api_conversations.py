@@ -133,6 +133,41 @@ async def get_conversation_partners(project_id: str, agent_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/conversations/{project_id}/{agent_name}/undelivered")
+async def get_undelivered_messages(project_id: str, agent_name: str):
+    """미전달 메시지 조회 및 전달 완료 처리
+
+    WS 타임아웃 이후 워커 스레드가 저장한 메시지를 프론트엔드에 전달
+    """
+    try:
+        project_path = project_manager.get_project_path(project_id)
+        db_path = project_path / "conversations.db"
+
+        if not db_path.exists():
+            return {"messages": []}
+
+        db = ConversationDB(str(db_path))
+
+        agent = db.get_agent_by_name(agent_name)
+        user = db.get_agent_by_name("user")
+
+        if not agent or not user:
+            return {"messages": []}
+
+        agent_id = agent["id"]
+        user_id = user["id"]
+
+        undelivered = db.get_undelivered_messages(agent_id, user_id)
+
+        if undelivered:
+            message_ids = [m["id"] for m in undelivered]
+            db.mark_messages_delivered(message_ids)
+
+        return {"messages": undelivered}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/conversations/{project_id}/between/{agent1_id}/{agent2_id}")
 async def get_messages_between(project_id: str, agent1_id: int, agent2_id: int, limit: int = 100, offset: int = 0):
     """두 에이전트 간의 대화 메시지"""

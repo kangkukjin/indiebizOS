@@ -1,0 +1,113 @@
+{
+  "id": "browser-action",
+  "name": "Browser Action",
+  "description": "Playwright 기반 브라우저 자동화 도구. 웹 페이지를 열고, 클릭/입력/스크롤 등 상호작용을 수행하며, 콘텐츠를 추출합니다.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "browser_open",
+      "description": "브라우저를 열고 URL로 이동합니다.\n\n## 반환값\n- title: 페이지 제목\n- url: 현재 URL\n- text_preview: 페이지 텍스트 미리보기 (앞 2000자)\n\n## 사용 시점\n- JavaScript 렌더링이 필요한 동적 페이지\n- 로그인이 필요한 사이트 작업 시작\n- 클릭/입력 등 상호작용이 필요한 웹 작업\n\n## 주의\n- 단순 텍스트 추출은 crawl_website가 더 빠름\n- 브라우저 세션은 60초 비활성 시 자동 종료\n\n## 작업 흐름 예시\n1. browser_open → 페이지 열기\n2. browser_get_interactive → 상호작용 요소 확인\n3. browser_click / browser_type → 페이지 조작\n4. browser_get_content → 결과 텍스트 추출\n5. browser_close → 종료",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string", "description": "이동할 URL (https:// 생략 가능)" },
+          "headless": { "type": "boolean", "default": true, "description": "헤드리스 모드 (기본: true, 브라우저 창 숨김)" },
+          "wait_for": { "type": "string", "enum": ["load", "domcontentloaded", "networkidle"], "default": "load", "description": "페이지 로드 대기 조건" }
+        },
+        "required": ["url"]
+      }
+    },
+    {
+      "name": "browser_click",
+      "description": "현재 페이지에서 요소를 클릭합니다.\n\n## 요소 지정 방법 (하나만 사용)\n- text: 화면에 보이는 텍스트로 찾기 (가장 직관적, 부분 일치)\n- selector: CSS 선택자로 찾기 (정확한 지정)\n- role + name: ARIA 역할과 이름으로 찾기 (접근성 기반)\n\n## 사용 전 권장\n- browser_get_interactive로 페이지의 클릭 가능한 요소 목록을 먼저 확인\n\n## 반환값\n- clicked: 클릭한 요소 정보\n- current_url: 클릭 후 현재 URL (네비게이션 발생 시 변경됨)\n- current_title: 클릭 후 페이지 제목",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": { "type": "string", "description": "클릭할 요소의 보이는 텍스트 (부분 일치)" },
+          "selector": { "type": "string", "description": "CSS 선택자 (예: button.submit, #login-btn)" },
+          "role": { "type": "string", "description": "ARIA 역할 (button, link, tab, menuitem 등)" },
+          "name": { "type": "string", "description": "ARIA 이름 (role과 함께 사용)" }
+        }
+      }
+    },
+    {
+      "name": "browser_type",
+      "description": "입력 필드에 텍스트를 입력합니다.\n\n## 입력 필드 지정\n- selector: CSS 선택자 (예: input[name='q'], #email)\n- label: 입력 필드의 라벨 텍스트 (예: '이메일', '검색어')\n- 둘 다 없으면 현재 포커스된 요소에 입력\n\n## 옵션\n- clear: true로 설정하면 기존 내용을 지우고 입력\n- press_enter: true로 설정하면 입력 후 Enter 키 전송 (검색 폼 등)\n\n## 반환값\n- typed_text: 입력한 텍스트\n- field: 입력한 필드 정보\n- current_url: 현재 URL (Enter 후 변경될 수 있음)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": { "type": "string", "description": "입력할 텍스트" },
+          "selector": { "type": "string", "description": "CSS 선택자 (예: input[name='q'])" },
+          "label": { "type": "string", "description": "입력 필드의 라벨 텍스트" },
+          "clear": { "type": "boolean", "default": false, "description": "기존 내용 지우고 입력" },
+          "press_enter": { "type": "boolean", "default": false, "description": "입력 후 Enter 키 전송" }
+        },
+        "required": ["text"]
+      }
+    },
+    {
+      "name": "browser_screenshot",
+      "description": "현재 페이지의 스크린샷을 PNG 파일로 저장합니다.\n\n## 반환값\n- file_path: 저장된 스크린샷 절대 경로\n\n## 사용 시점\n- 페이지 상태를 시각적으로 확인할 때\n- 클릭할 요소의 위치를 파악할 때\n- 작업 결과를 기록할 때\n\n## 옵션\n- full_page: true면 스크롤 전체 페이지 캡처\n- selector: 특정 요소만 캡처 (CSS 선택자)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "full_page": { "type": "boolean", "default": false, "description": "전체 페이지 캡처 (스크롤 포함)" },
+          "selector": { "type": "string", "description": "특정 요소만 캡처할 CSS 선택자" }
+        }
+      }
+    },
+    {
+      "name": "browser_get_content",
+      "description": "현재 페이지의 텍스트 내용을 추출합니다. JavaScript 렌더링 후의 동적 콘텐츠도 포함됩니다.\n\n## 반환값\n- title: 페이지 제목\n- url: 현재 URL\n- text: 추출된 텍스트 (max_length까지)\n- length: 텍스트 전체 길이\n\n## crawl_website와 차이\n- crawl_website: HTTP 요청으로 정적 HTML만 파싱 (빠르지만 JS 콘텐츠 없음)\n- browser_get_content: 브라우저 렌더링 후 텍스트 추출 (JS 동적 콘텐츠 포함)\n\n## 옵션\n- selector: 특정 영역만 추출 (예: '.article-body', '#content')\n- max_length: 최대 반환 텍스트 길이",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "selector": { "type": "string", "description": "특정 영역만 추출할 CSS 선택자 (기본: 전체 body)" },
+          "max_length": { "type": "integer", "default": 10000, "description": "최대 텍스트 길이 (기본: 10000)" }
+        }
+      }
+    },
+    {
+      "name": "browser_get_interactive",
+      "description": "현재 페이지의 상호작용 가능한 요소(버튼, 링크, 입력필드 등) 목록을 반환합니다.\n\n## 반환값\n- elements: 요소 목록 (최대 50개)\n  - tag: HTML 태그 (a, button, input 등)\n  - type: 요소 타입 또는 ARIA 역할\n  - text: 보이는 텍스트 (최대 80자)\n  - selector: CSS 선택자 (browser_click/browser_type에서 사용 가능)\n  - href: 링크 URL (a 태그)\n  - name: name 속성 또는 aria-label\n  - placeholder: placeholder 텍스트\n- count: 총 요소 수\n\n## 사용 시점\n- browser_click 전에 어떤 요소를 클릭할 수 있는지 확인\n- browser_type 전에 어떤 입력 필드가 있는지 확인\n- 페이지 구조를 텍스트로 파악 (스크린샷 대안)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "selector": { "type": "string", "description": "특정 영역 내의 요소만 조회할 CSS 선택자" }
+        }
+      }
+    },
+    {
+      "name": "browser_scroll",
+      "description": "현재 페이지를 스크롤합니다.\n\n## 반환값\n- scroll_position: 현재 스크롤 Y 위치 (px)\n- page_height: 전체 페이지 높이 (px)\n- viewport_height: 화면 높이 (px)\n\n## 사용법\n- direction + amount: 지정 방향으로 지정량만큼 스크롤\n- to_bottom: 페이지 맨 아래로\n- to_top: 페이지 맨 위로",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "direction": { "type": "string", "enum": ["down", "up"], "default": "down", "description": "스크롤 방향" },
+          "amount": { "type": "integer", "default": 500, "description": "스크롤량 (픽셀)" },
+          "to_bottom": { "type": "boolean", "default": false, "description": "페이지 끝까지 스크롤" },
+          "to_top": { "type": "boolean", "default": false, "description": "페이지 맨 위로 스크롤" }
+        }
+      }
+    },
+    {
+      "name": "browser_evaluate",
+      "description": "현재 페이지에서 JavaScript 코드를 실행하고 결과를 반환합니다.\n\n## 반환값\n- result: JavaScript 실행 결과 (JSON 직렬화 가능한 값)\n\n## 사용 시점\n- 페이지의 JavaScript 변수 값 확인\n- DOM 조작 (요소 추가/변경/삭제)\n- 페이지 상태 확인 (localStorage, cookie 등)\n- 복잡한 데이터 추출 (테이블, 목록 등)\n\n## 예시\n- document.title\n- document.querySelectorAll('a').length\n- JSON.parse(localStorage.getItem('settings'))\n\n## 주의\n- 동기 JavaScript만 지원 (async/await 불가)\n- 반환값은 JSON 직렬화 가능해야 함 (DOM 노드 직접 반환 불가)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "expression": { "type": "string", "description": "실행할 JavaScript 표현식" }
+        },
+        "required": ["expression"]
+      }
+    },
+    {
+      "name": "browser_close",
+      "description": "브라우저 세션을 종료하고 리소스를 해제합니다.\n\n60초간 브라우저 도구를 사용하지 않으면 자동으로 종료되므로, 수동 호출은 선택사항입니다.\n즉시 리소스를 해제하고 싶을 때 사용하세요.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}

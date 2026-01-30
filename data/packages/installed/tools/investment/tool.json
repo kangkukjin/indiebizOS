@@ -240,7 +240,7 @@
     },
     {
       "name": "yf_stock_price",
-      "description": "Yahoo Finance에서 글로벌 주식/ETF/원자재 가격을 조회합니다.\n\n## 심볼 형식\n- 미국주식: AAPL, TSLA, MSFT, GOOGL\n- 한국주식: 005930.KS (삼성전자), 000660.KS (SK하이닉스)\n- ETF: SPY, QQQ, VOO, GLD(금), SLV(은)\n- 원자재 선물: GC=F(금), SI=F(은), CL=F(원유), NG=F(천연가스)\n- 환율: USDKRW=X, EURUSD=X, USDJPY=X\n\n## 반환 정보\n- 현재가, 변동률, 거래량\n- 시가, 고가, 저가\n- 기간별 차트 데이터\n\n## 암호화폐\n- 암호화폐 심볼(BTC, ETH 등) 입력 시 자동으로 CoinGecko API로 전환",
+      "description": "Yahoo Finance에서 글로벌 주식/ETF/원자재 가격 및 시계열 데이터를 조회합니다.\n\n## 심볼 형식\n- 미국주식: AAPL, TSLA, MSFT, GOOGL\n- 한국주식: 005930.KS (삼성전자), 000660.KS (SK하이닉스)\n- ETF: SPY, QQQ, VOO, GLD(금), SLV(은)\n- 원자재 선물: GC=F(금), SI=F(은), CL=F(원유), NG=F(천연가스)\n- 환율: USDKRW=X, EURUSD=X, USDJPY=X\n\n## 반환 정보\n- 현재가, 변동률, 거래량, 시가, 고가, 저가\n- **시계열 데이터**: 기간별 전체 가격 히스토리\n  - 50거래일 이하: prices 배열 (직접 line_chart data로 사용 가능)\n  - 50거래일 초과: file_path (JSON 파일, line_chart data_file로 사용) + sample (10개 포인트)\n\n## 차트 생성 워크플로우\n1. yf_stock_price로 데이터 조회 (period='3mo' 등)\n2. 결과의 file_path 또는 prices를 line_chart 도구에 전달하여 차트 생성\n\n## 암호화폐\n- 암호화폐 심볼(BTC, ETH 등) 입력 시 자동으로 CoinGecko API로 전환",
       "input_schema": {
         "type": "object",
         "properties": {

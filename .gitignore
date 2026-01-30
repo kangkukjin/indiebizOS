@@ -8,6 +8,8 @@ data/switches.json
 tokens/
 **/api_key.json
 **/config.json
+**/config.yaml
+data/ai_desktop_map.json
 
 # 개인정보 파일
 data/my_profile.txt
@@ -21,7 +23,6 @@ data/system_ai_role.txt
 data/system_ai_memo.txt
 data/packages/system_ai_state/
 data/plan.md
-data/ai_desktop_map.json
 
 # 캐시 및 임시 파일
 data/thumbnail_cache/
@@ -83,7 +84,8 @@ data/packages/installed/tools/remotion-video/remotion_project/.install_done
 data/packages/installed/tools/remotion-video/.render_workspaces/
 
 # 임시 생성 이미지/슬라이드 (backend에 생성된 것들)
-backend/*.png
+backend/*.png*
+backend/*.jpg*
 backend/slide_images/
 backend/slides_v1/
 backend/final_slides/

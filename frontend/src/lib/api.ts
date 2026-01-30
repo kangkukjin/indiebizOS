@@ -254,6 +254,19 @@ class APIClient {
     return data.messages;
   }
 
+  async getUndeliveredMessages(projectId: string, agentName: string) {
+    const data = await this.request<{
+      messages: Array<{
+        id: number;
+        from_agent_id: number;
+        to_agent_id: number;
+        content: string;
+        timestamp: string;
+      }>;
+    }>(`/conversations/${projectId}/${encodeURIComponent(agentName)}/undelivered`);
+    return data.messages;
+  }
+
   // ============ 도구 ============
 
   async getTools() {

@@ -110,8 +110,8 @@
 - `POST /business/channels/{type}/poll` - 즉시 폴링
 - `GET /business/channels/poller/status` - 폴러 상태
 
-### 자동응답 V2 (/business/auto-response)
-2단계 처리: AI 판단 → 비즈니스 검색 → 응답 생성
+### 자동응답 V3 (/business/auto-response)
+Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 
 - `GET /business/auto-response/status` - 자동응답 상태
 - `POST /business/auto-response/start` - 자동응답 시작
@@ -160,8 +160,8 @@
 - `backend/`: 서버 소스 코드
 - `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (17개)
-- `projects/`: 사용자 프로젝트 데이터 (17개)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (25개)
+- `projects/`: 사용자 프로젝트 데이터 (16개)
 
 ## 프롬프트 구조
 
@@ -188,4 +188,4 @@
 - `<judgment_instructions>` - 판단 지시사항
 
 ---
-*마지막 업데이트: 2026-01-20*
+*마지막 업데이트: 2026-01-31*

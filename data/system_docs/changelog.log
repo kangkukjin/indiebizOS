@@ -247,3 +247,12 @@
 [2026-01-26 21:00:00] DOCS_UPDATED: system_docs 업데이트
   - overview.md: V3 반영, 위임 체인 링크 추가, 통계 갱신
   - inventory.md: 도구 패키지 21개로 수정
+[2026-01-31 09:18:41] PROJECT_CREATED: 페르소나 (ID: 페르소나)
+[2026-01-31 09:18:41] PROJECT_CREATED: 페르소나 (ID: 페르소나)
+[2026-01-31 23:00:00] DOCS_UPDATED: system_docs 전체 업데이트
+  - overview.md: 시스템 통계 갱신 (프로젝트 16개, 도구 25개)
+  - architecture.md: API 라우터 18개로 수정, 도구 25개/프로젝트 16개, 자동응답 V3 반영, 가이드 파일 시스템 링크 추가
+  - packages.md: 설치된 도구 패키지 25개로 갱신 (신규: browser-action, business, legal, location-services, remotion-video, web-builder / 삭제: information, read-and-see)
+  - technical.md: 자동응답 V3 반영, 도구 25개/프로젝트 16개 수정
+  - inventory.md: 프로젝트 16개 (법률 추가), 도구 패키지 25개로 전면 갱신
+  - communication.md: API 호출 비용 V3 반영

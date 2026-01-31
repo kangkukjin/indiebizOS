@@ -64,31 +64,35 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 ---
 
-## 현재 설치된 도구 패키지 (20개)
+## 현재 설치된 도구 패키지 (25개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
-| android | Android | 안드로이드 기기 관리 (adb) |
+| android | Android | ADB를 통한 안드로이드 기기 관리 (SMS, 통화기록, 연락처, 앱) |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
-| culture | Culture | KCISA 문화정보(전시, 축제) 조회 |
-| health-record | Health Record Manager | 개인 건강 정보 저장/관리 |
-| information | Information & Publishing | API Ninjas, 여행 정보, 맛집 검색 등 |
-| investment | Investment | KRX, DART, SEC 글로벌 금융 데이터 분석 |
-| kosis | KOSIS | 통계청 데이터 조회 |
-| media_producer | Media Producer | HTML 기반 슬라이드(12종 테마), 영상 제작, AI 이미지 생성 |
-| nodejs | Nodejs | JavaScript/Node.js 코드 실행 |
-| pc-manager | PC Manager | 파일 및 저장소 관리, 시스템 분석 |
-| photo-manager | Photo Manager | 사진 라이브러리 관리 |
+| browser-action | Browser Action | Playwright 기반 브라우저 자동화 (클릭/입력/스크롤/콘텐츠 추출) |
+| business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
+| culture | Culture | 공연(KOPIS), 도서(도서관 정보나루) 등 문화예술 정보 조회 |
+| health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
+| investment | Investment | 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석 |
+| kosis | KOSIS | 통계청 KOSIS API 국가통계 조회 |
+| legal | Legal | 대한민국 법률 정보 검색 (법령, 판례, 행정규칙, 자치법규 등) |
+| location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
+| media_producer | Media Producer | 홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지 생성 |
+| nodejs | Nodejs | Node.js/JavaScript 코드 실행 |
+| pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |
+| photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 |
 | python-exec | Python Exec | Python 코드 실행 |
-| read-and-see | Read and See | 문서 읽기 및 시각적 분석 |
-| real-estate | Real Estate | 부동산 실거래가 조회 |
-| shopping-assistant | Shopping Assistant | 상품 검색 (네이버 쇼핑, 다나와) |
-| startup | Startup | 창업 지원 정보 |
-| study | Study Helper | 학습 및 논문 요약 지원 |
-| system_essentials | System Essentials | 파일 관리, 검색, 시스템 유틸리티 |
-| visualization | Visualization | 라인/막대/캔들스틱/파이/산점도/히트맵 차트 생성 |
-| web | Web Tools | 웹 검색 및 크롤링 |
-| youtube | Youtube | 유튜브 동영상/오디오 관리 |
+| real-estate | Real Estate | 국토교통부 부동산 실거래가 API |
+| remotion-video | Remotion Video | React/Remotion 기반 프로그래밍 방식 동영상 생성 (TSX → MP4) |
+| shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 가격 비교 |
+| startup | Startup | 창업지원 사업공고 검색 (K-Startup, 중소벤처기업부) |
+| study | Study Helper | 학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) |
+| system_essentials | System Essentials | 파일 읽기/쓰기/검색, todo, 계획 모드, 이웃 조회 |
+| visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
+| web | Web Tools | 웹 검색, 크롤링, 뉴스, 신문 생성, 즐겨찾기 |
+| web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
+| youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 
 ---
 
@@ -131,4 +135,4 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-01-22*
+*마지막 업데이트: 2026-01-31*

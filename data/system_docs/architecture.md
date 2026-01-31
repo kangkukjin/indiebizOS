@@ -6,7 +6,7 @@
 indiebizOS/
 ├── backend/              # Python FastAPI 백엔드
 │   ├── api.py           # 메인 서버 (포트 8765)
-│   ├── api_*.py         # 각 모듈 라우터 (28개)
+│   ├── api_*.py         # 각 모듈 라우터 (18개)
 │   ├── *_manager.py     # 비즈니스 로직 매니저
 │   ├── ai_agent.py      # AI 에이전트 코어
 │   ├── agent_runner.py  # 에이전트 실행기
@@ -25,13 +25,13 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/   # 설치된 패키지
-│   │   │   └── tools/      # 도구 (17개)
+│   │   │   └── tools/      # 도구 (25개)
 │   │   └── not_installed/  # 미설치 패키지
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억)
 │   ├── business.db      # 비즈니스 DB
 │   └── multi_chat.db    # 다중채팅방 DB
 │
-├── projects/            # 사용자 프로젝트 (17개)
+├── projects/            # 사용자 프로젝트 (16개)
 │   ├── projects.json    # 프로젝트 목록 및 설정
 │   └── {project_id}/    # 개별 프로젝트 폴더
 │
@@ -120,15 +120,16 @@ AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 구조 적용
 - AI가 코드와 README를 읽고 직접 사용법 파악
 - `tool.json` + `handler.py` 구조
 - 도구 설명 구조: 한줄 요약 + 데이터 형식 + 예시
+- 가이드 파일 시스템: 복잡한 도구에 on-demand 가이드 주입 → [상세 문서](guide_file.md)
 
-### 자동응답 서비스 V2
-- AI 판단 → 비즈니스 검색 → 응답 생성의 2단계 처리로 정확도 향상
-- 비즈니스 목록 기반 검색으로 실제 DB와 매칭
-- Pending 메시지 자동 전송 시스템
+### 자동응답 서비스 V3
+- Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
+- `search_business_items`, `no_response_needed`, `send_response` 도구
+- 응답 즉시 발송 (polling 대기 없음)
 → 상세 문서: [auto_response.md](auto_response.md)
 
 ### 다중채팅방 시스템
 - 독립 창에서 여러 프로젝트의 에이전트를 소환하여 그룹 대화 수행
 
 ---
-*마지막 업데이트: 2026-01-20*
+*마지막 업데이트: 2026-01-31*

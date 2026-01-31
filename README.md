@@ -161,31 +161,35 @@ Each project is **completely isolated**. Delete a project, and everything relate
 - **Search & install**: Find and install packages published by other IndieBiz users
 - **AI review**: System AI reviews security, quality, and compatibility before installation
 
-**Installed Tool Packages (21):**
+**Installed Tool Packages (25):**
 
 | Package | Description |
 |---------|-------------|
 | android | Android device management (adb) |
 | blog | Blog RAG search and insights |
+| browser-action | Playwright-based browser automation (click/input/scroll/extract) |
+| business | Business relationships and contact (neighbor) management |
 | culture | Korean cultural data (performances, libraries, exhibitions) |
 | health-record | Personal health data management |
-| information | API Ninjas, travel info, restaurant search |
 | investment | Global financial data (KRX, DART, SEC, Yahoo Finance) |
 | kosis | Korean Statistics (KOSIS) data retrieval |
+| legal | Korean legal information search (laws, precedents, regulations) |
+| location-services | Location-based services (weather, restaurants, directions, travel) |
 | media_producer | HTML-based slides (12 themes), video production, AI image generation |
 | nodejs | JavaScript/Node.js execution |
 | pc-manager | File and storage management, system analysis |
 | photo-manager | Photo library management |
 | python-exec | Python code execution |
-| read-and-see | Document reading and visual analysis |
 | real-estate | Korean real estate data |
+| remotion-video | React/Remotion-based programmatic video generation |
+| shopping-assistant | Shopping search (Naver, Danawa price comparison) |
 | startup | Korean startup support |
 | study | Study helper and paper summarization |
-| system_essentials | File management, search, utilities |
+| system_essentials | File management, todo, plan mode, neighbor lookup |
 | visualization | Charts (line, bar, candlestick, pie, scatter, heatmap) |
-| web | Web search and crawling |
+| web | Web search, crawling, news, newspaper generation, bookmarks |
+| web-builder | Website builder and generator |
 | youtube | YouTube video/audio management |
-| shopping-assistant | Shopping search (Naver, Danawa) |
 
 ### Scheduler & Switches
 
@@ -318,9 +322,20 @@ cd frontend && npm run electron:dev
 
 ```bash
 cd frontend
-npm run electron:build:mac   # macOS
-npm run electron:build:win   # Windows
+
+# macOS
+npm run prepare:python:mac   # Bundle Python runtime
+npm run electron:build:mac
+
+# Windows
+npm run prepare:python:win   # Bundle Python runtime
+npm run electron:build:win
 ```
+
+**Data Storage (Production):**
+- macOS: `~/Library/Application Support/IndieBiz/`
+- Windows: `%APPDATA%/IndieBiz/`
+- Data persists across app updates
 
 ---
 
@@ -381,8 +396,8 @@ The human is part of the system:
 
 **This project is under active development.**
 
-- 15 active projects in production use
-- 21 installed tool packages
+- 16 active projects in production use
+- 25 installed tool packages
 - 9 installed extension packages
 - Functional scheduler, switches, and business network
 - Advanced Auto-Response V3: Single AI call with Tool Use for judgment/search/send

@@ -50,7 +50,8 @@ class SystemAIRunner:
 
         # 경로 설정
         self.backend_path = Path(__file__).parent
-        self.data_path = self.backend_path.parent / "data"
+        from runtime_utils import get_base_path
+        self.data_path = get_base_path() / "data"
 
         # 싱글톤 등록
         SystemAIRunner._instance = self

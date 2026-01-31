@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 # 설정 파일 경로
-BASE_PATH = Path(__file__).parent.parent
+from runtime_utils import get_base_path
+BASE_PATH = get_base_path()
 DATA_PATH = BASE_PATH / "data"
 SCHEDULE_CONFIG_PATH = DATA_PATH / "program_schedule.json"
 

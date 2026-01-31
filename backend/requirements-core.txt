@@ -4,6 +4,8 @@
 # 서버
 fastapi
 uvicorn[standard]
+pydantic
+python-dotenv
 pyyaml
 
 # AI 프로바이더 (3개 모두 지원)

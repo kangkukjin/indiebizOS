@@ -11,7 +11,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 # Gmail 확장 경로 추가
-GMAIL_PATH = Path(__file__).parent.parent / "data" / "packages" / "installed" / "extensions" / "gmail"
+from runtime_utils import get_base_path as _get_base_path
+GMAIL_PATH = _get_base_path() / "data" / "packages" / "installed" / "extensions" / "gmail"
 sys.path.insert(0, str(GMAIL_PATH))
 
 router = APIRouter()

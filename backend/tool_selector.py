@@ -15,7 +15,8 @@ from typing import List, Dict, Any
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent
-DATA_PATH = BACKEND_PATH.parent / "data"
+from runtime_utils import get_base_path as _get_base_path
+DATA_PATH = _get_base_path() / "data"
 INSTALLED_TOOLS_PATH = DATA_PATH / "packages" / "installed" / "tools"
 
 # 캐시 설정

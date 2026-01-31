@@ -29,7 +29,8 @@ from typing import Dict, Any, List, Optional
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent
-DATA_PATH = BACKEND_PATH.parent / "data"
+from runtime_utils import get_base_path as _get_base_path
+DATA_PATH = _get_base_path() / "data"
 PACKAGES_PATH = DATA_PATH / "packages"
 NOT_INSTALLED_PATH = PACKAGES_PATH / "not_installed"
 INSTALLED_PATH = PACKAGES_PATH / "installed"

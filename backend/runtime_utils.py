@@ -6,9 +6,29 @@ Electron 앱으로 배포될 때 번들된 Python/Node.js 런타임을 사용하
 개발 환경에서는 시스템에 설치된 런타임을 사용합니다.
 """
 
+import os
 import sys
 import platform
 from pathlib import Path
+
+
+def get_base_path() -> Path:
+    """
+    IndieBiz OS 기본 경로 반환
+    프로덕션에서는 INDIEBIZ_BASE_PATH 환경변수 (userData),
+    개발 모드에서는 backend의 상위 폴더 (indiebizOS root)
+    """
+    env_path = os.environ.get("INDIEBIZ_BASE_PATH")
+    if env_path:
+        return Path(env_path)
+    return Path(__file__).parent.parent
+
+
+def get_data_path() -> Path:
+    """데이터 경로 반환 (base_path/data)"""
+    p = get_base_path() / "data"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
 
 
 def get_runtime_paths() -> dict:

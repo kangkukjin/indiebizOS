@@ -15,7 +15,8 @@ from typing import List, Dict, Generator
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent
-DATA_PATH = BACKEND_PATH.parent / "data"
+from runtime_utils import get_base_path as _get_base_path
+DATA_PATH = _get_base_path() / "data"
 ANDROID_TOOL_PATH = DATA_PATH / "packages" / "installed" / "tools" / "android"
 
 # 안드로이드 전용 역할 프롬프트

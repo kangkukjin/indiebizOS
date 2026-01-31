@@ -6,6 +6,7 @@
 import { app, BrowserWindow, ipcMain, shell, dialog, Menu } from 'electron';
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import net from 'net';
 
@@ -65,6 +66,37 @@ function isPortAvailable(port) {
 }
 
 /**
+ * 프로덕션 데이터 디렉토리 초기화
+ * 앱 번들(resources/) 내의 데이터를 사용자 폴더(userData)로 복사
+ * 이미 존재하면 건너뜀 (업데이트 시 사용자 데이터 보존)
+ */
+function initUserData() {
+  const userDataPath = app.getPath('userData'); // Windows: %APPDATA%/IndieBiz, macOS: ~/Library/Application Support/IndieBiz
+  const resourcesPath = process.resourcesPath;
+
+  const dirsToSync = ['data', 'projects', 'templates', 'tokens'];
+
+  for (const dir of dirsToSync) {
+    const src = path.join(resourcesPath, dir);
+    const dest = path.join(userDataPath, dir);
+
+    if (!fs.existsSync(dest) && fs.existsSync(src)) {
+      console.log(`[Init] 초기 데이터 복사: ${dir}`);
+      fs.cpSync(src, dest, { recursive: true });
+    }
+  }
+
+  // .env 파일도 복사
+  const envSrc = path.join(resourcesPath, 'backend', '.env');
+  const envDest = path.join(userDataPath, '.env');
+  if (!fs.existsSync(envDest) && fs.existsSync(envSrc)) {
+    fs.copyFileSync(envSrc, envDest);
+  }
+
+  return userDataPath;
+}
+
+/**
  * Python 백엔드 시작
  */
 async function startPythonBackend() {
@@ -79,15 +111,19 @@ async function startPythonBackend() {
   let backendPath;
   let pythonPath;
   let pythonArgs;
+  let basePath; // 데이터가 저장될 기본 경로
 
   if (isDev) {
     // 개발 모드: 상대 경로
     backendPath = path.join(__dirname, '..', '..', 'backend');
+    basePath = path.join(__dirname, '..', '..'); // indiebizOS root
     pythonPath = process.platform === 'win32' ? 'python' : 'python3';
     pythonArgs = [path.join(backendPath, 'api.py')];
   } else {
     // 프로덕션: extraResources에서
     backendPath = path.join(process.resourcesPath, 'backend');
+    // 데이터는 사용자 폴더에 저장 (권한 문제 방지, 업데이트 시 보존)
+    basePath = initUserData();
 
     if (process.platform === 'win32') {
       // Windows: 임베디드 Python 사용
@@ -96,7 +132,6 @@ async function startPythonBackend() {
     } else if (process.platform === 'darwin') {
       // macOS: 시스템 Python 또는 번들된 Python
       const bundledPython = path.join(process.resourcesPath, 'runtime', 'python', 'bin', 'python3');
-      const fs = require('fs');
       if (fs.existsSync(bundledPython)) {
         pythonPath = bundledPython;
       } else {
@@ -111,6 +146,7 @@ async function startPythonBackend() {
   }
 
   console.log(`[Python] 백엔드 시작: ${pythonPath} ${pythonArgs.join(' ')}`);
+  console.log(`[Python] 데이터 경로: ${basePath}`);
 
   // Python 프로세스 시작
   pythonProcess = spawn(pythonPath, pythonArgs, {
@@ -118,6 +154,8 @@ async function startPythonBackend() {
     env: {
       ...process.env,
       INDIEBIZ_API_PORT: API_PORT.toString(),
+      INDIEBIZ_BASE_PATH: basePath,
+      INDIEBIZ_PRODUCTION: isDev ? '' : '1',
       PYTHONUNBUFFERED: '1'
     },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -178,7 +216,12 @@ async function waitForServer(maxAttempts = 30) {
 function stopPythonBackend() {
   if (pythonProcess) {
     console.log('[Python] 백엔드 종료 중...');
-    pythonProcess.kill('SIGTERM');
+    if (process.platform === 'win32') {
+      // Windows: SIGTERM이 지원되지 않으므로 taskkill로 프로세스 트리 전체 종료
+      spawn('taskkill', ['/pid', pythonProcess.pid.toString(), '/f', '/t']);
+    } else {
+      pythonProcess.kill('SIGTERM');
+    }
     pythonProcess = null;
   }
 }

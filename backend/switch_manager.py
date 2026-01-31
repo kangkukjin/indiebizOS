@@ -16,8 +16,10 @@ class SwitchManager:
     """스위치 저장/로드/관리"""
 
     def __init__(self):
-        # 데이터 경로
-        self.data_path = Path(__file__).parent.parent / "data"
+        # 데이터 경로 (프로덕션에서는 환경변수 사용)
+        import os
+        base = Path(os.environ.get("INDIEBIZ_BASE_PATH", str(Path(__file__).parent.parent)))
+        self.data_path = base / "data"
         self.switches_file = self.data_path / "switches.json"
 
         # 디렉토리 생성

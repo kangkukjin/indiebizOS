@@ -19,7 +19,8 @@ import re
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent
-GMAIL_PATH = BACKEND_PATH.parent / "data" / "packages" / "installed" / "extensions" / "gmail"
+from runtime_utils import get_base_path as _get_base_path
+GMAIL_PATH = _get_base_path() / "data" / "packages" / "installed" / "extensions" / "gmail"
 NOSTR_KEYS_PATH = BACKEND_PATH / "data" / "nostr_keys"
 sys.path.insert(0, str(GMAIL_PATH))
 
@@ -36,7 +37,7 @@ except ImportError:
 def _load_owner_identities() -> Dict[str, set]:
     """환경변수에서 사용자 식별 정보 로드"""
     from dotenv import load_dotenv
-    load_dotenv(BACKEND_PATH.parent / ".env")
+    load_dotenv(_get_base_path() / ".env")
 
     identities = {
         'emails': set(),
@@ -653,7 +654,7 @@ class ChannelPoller:
             from prompt_builder import PromptBuilder
 
             # conversation_db 연결
-            db_path = BACKEND_PATH.parent / "data" / "conversation.db"
+            db_path = _get_base_path() / "data" / "conversation.db"
             db = ConversationDB(str(db_path))
 
             # 시스템 AI 에이전트와 사용자 ID 가져오기
@@ -697,7 +698,7 @@ class ChannelPoller:
 
     def _load_system_ai_config(self) -> dict:
         """시스템 AI 설정 로드"""
-        config_path = BACKEND_PATH.parent / "data" / "system_ai_config.json"
+        config_path = _get_base_path() / "data" / "system_ai_config.json"
         if config_path.exists():
             try:
                 with open(config_path, 'r', encoding='utf-8') as f:

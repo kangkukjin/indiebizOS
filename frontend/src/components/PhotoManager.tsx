@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { FiCamera, FiVideo, FiCopy, FiGrid, FiCalendar, FiBarChart2, FiFolder, FiRefreshCw, FiChevronRight, FiImage, FiTrash2, FiMapPin, FiZoomIn, FiZoomOut, FiRotateCcw, FiChevronLeft, FiX } from 'react-icons/fi';
+import { Camera, Video, Copy, Grid3x3, Calendar, BarChart2, Folder, RefreshCw, ChevronRight, Image, Trash2, MapPin, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, X } from 'lucide-react';
 import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, BarChart, Bar
@@ -376,7 +376,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div className="flex items-center gap-3 pl-16">
-          <FiCamera className="text-[#8B7355] text-xl" />
+          <Camera className="text-[#8B7355] text-xl" />
           <h1 className="text-lg font-semibold text-[#5C5347]">Photo Manager</h1>
         </div>
 
@@ -388,7 +388,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
             onClick={handleSelectFolder}
             className="flex items-center gap-2 px-3 py-1.5 bg-[#8B7355] text-white rounded-lg hover:bg-[#7A6349] transition-colors text-sm"
           >
-            <FiFolder size={14} />
+            <Folder size={14} />
             새 폴더 스캔
           </button>
         </div>
@@ -417,22 +417,22 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <FiFolder className="flex-shrink-0 text-[#8B7355]" />
+                      <Folder className="flex-shrink-0 text-[#8B7355]" />
                       <span className="text-sm font-medium truncate flex-1">{scan.name}</span>
                       <button
                         onClick={(e) => handleDeleteScan(scan, e)}
                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all"
                         title="스캔 데이터 삭제"
                       >
-                        <FiTrash2 size={12} className="text-red-500" />
+                        <Trash2 size={12} className="text-red-500" />
                       </button>
                     </div>
                     <div className="flex items-center gap-3 mt-1 ml-6 text-xs text-[#9B8B7A]">
                       <span className="flex items-center gap-1">
-                        <FiImage size={10} /> {scan.photo_count}
+                        <Image size={10} /> {scan.photo_count}
                       </span>
                       <span className="flex items-center gap-1">
-                        <FiVideo size={10} /> {scan.video_count}
+                        <Video size={10} /> {scan.video_count}
                       </span>
                     </div>
                   </div>
@@ -456,7 +456,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                       : 'text-[#6B5D4D] hover:bg-[#E8E4DC]'
                   }`}
                 >
-                  <FiGrid size={14} />
+                  <Grid3x3 size={14} />
                   갤러리
                 </button>
                 <button
@@ -467,7 +467,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                       : 'text-[#6B5D4D] hover:bg-[#E8E4DC]'
                   }`}
                 >
-                  <FiCalendar size={14} />
+                  <Calendar size={14} />
                   타임라인
                 </button>
                 <button
@@ -478,7 +478,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                       : 'text-[#6B5D4D] hover:bg-[#E8E4DC]'
                   }`}
                 >
-                  <FiCopy size={14} />
+                  <Copy size={14} />
                   중복
                 </button>
                 <button
@@ -489,7 +489,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                       : 'text-[#6B5D4D] hover:bg-[#E8E4DC]'
                   }`}
                 >
-                  <FiBarChart2 size={14} />
+                  <BarChart2 size={14} />
                   통계
                 </button>
                 <button
@@ -500,7 +500,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                       : 'text-[#6B5D4D] hover:bg-[#E8E4DC]'
                   }`}
                 >
-                  <FiMapPin size={14} />
+                  <MapPin size={14} />
                   지도
                 </button>
 
@@ -536,7 +536,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                   disabled={isScanning}
                   className="flex items-center gap-1 px-2 py-1.5 text-sm text-[#6B5D4D] hover:bg-[#E8E4DC] rounded-lg"
                 >
-                  <FiRefreshCw size={14} className={isScanning ? 'animate-spin' : ''} />
+                  <RefreshCw size={14} className={isScanning ? 'animate-spin' : ''} />
                   재스캔
                 </button>
               </div>
@@ -591,7 +591,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <FiCamera className="mx-auto text-6xl text-[#D4C8B8] mb-4" />
+                <Camera className="mx-auto text-6xl text-[#D4C8B8] mb-4" />
                 <h2 className="text-lg font-medium text-[#6B5D4D] mb-2">사진 관리를 시작하세요</h2>
                 <p className="text-sm text-[#9B8B7A] mb-4">
                   왼쪽에서 스캔된 폴더를 선택하거나<br />
@@ -681,7 +681,7 @@ function GalleryView({
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center">
-                    <FiVideo className="text-white text-lg" />
+                    <Video className="text-white text-lg" />
                   </div>
                 </div>
               </div>
@@ -894,7 +894,7 @@ function TimelineView({
   if (timelineLoading && !timelineData) {
     return (
       <div className="flex items-center justify-center h-full">
-        <FiRefreshCw className="w-8 h-8 text-[#8B7355] animate-spin" />
+        <RefreshCw className="w-8 h-8 text-[#8B7355] animate-spin" />
       </div>
     );
   }
@@ -937,7 +937,7 @@ function TimelineView({
             className="p-1.5 rounded bg-[#8B7355] text-white hover:bg-[#7A6349]"
             title="적용"
           >
-            <FiZoomIn size={14} />
+            <ZoomIn size={14} />
           </button>
           <button
             onClick={zoomOut}
@@ -945,14 +945,14 @@ function TimelineView({
             className="p-1.5 rounded bg-[#6B9B8B] text-white hover:bg-[#5B8B7B] disabled:opacity-50 disabled:cursor-not-allowed"
             title={`한 단계 뒤로 (${zoomHistory.length})`}
           >
-            <FiZoomOut size={14} />
+            <ZoomOut size={14} />
           </button>
           <button
             onClick={resetTimeline}
             className="p-1.5 rounded bg-[#9B8B7A] text-white hover:bg-[#8B7B6A]"
             title="초기화"
           >
-            <FiRotateCcw size={14} />
+            <RotateCcw size={14} />
           </button>
         </div>
       </div>
@@ -967,11 +967,11 @@ function TimelineView({
             </span>
           </div>
           <div className="text-sm flex items-center gap-1">
-            <FiCamera size={12} className="text-[#8B7355]" />
+            <Camera size={12} className="text-[#8B7355]" />
             <span className="font-medium text-[#8B7355]">{stats.photo_count?.toLocaleString()}</span>
           </div>
           <div className="text-sm flex items-center gap-1">
-            <FiVideo size={12} className="text-[#6B9B8B]" />
+            <Video size={12} className="text-[#6B9B8B]" />
             <span className="font-medium text-[#6B9B8B]">{stats.video_count?.toLocaleString()}</span>
           </div>
           <div className="text-sm">
@@ -1035,7 +1035,7 @@ function TimelineView({
         <div className="flex-1 overflow-hidden flex flex-col">
           <div className="text-xs text-[#9B8B7A] mb-2 px-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FiZoomIn size={12} />
+              <ZoomIn size={12} />
               미디어 파일 ({files.length}개) - 클릭: 미리보기 / 더블클릭: 파일 열기
             </div>
             {files.length > 50 && (
@@ -1079,15 +1079,15 @@ function TimelineView({
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-[#2D2A26]">
-                      <FiVideo className="w-8 h-8 text-white opacity-70" />
+                      <Video className="w-8 h-8 text-white opacity-70" />
                     </div>
                   )}
                   {/* 타입 아이콘 오버레이 */}
                   <div className="absolute top-1 right-1 p-1 bg-black/50 rounded text-white">
                     {file.media_type === 'photo' ? (
-                      <FiCamera size={10} />
+                      <Camera size={10} />
                     ) : (
-                      <FiVideo size={10} />
+                      <Video size={10} />
                     )}
                   </div>
                   {/* 파일명 오버레이 (호버시) */}
@@ -1106,7 +1106,7 @@ function TimelineView({
       {!show_files && stats?.file_count > 0 && (
         <div className="flex-1 flex items-center justify-center text-[#9B8B7A]">
           <div className="text-center">
-            <FiZoomIn className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <ZoomIn className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>파일이 {stats.file_count.toLocaleString()}개 있습니다.</p>
             <p className="text-xs mt-1">더 좁은 기간을 선택하면 개별 파일을 볼 수 있습니다.</p>
           </div>
@@ -1158,7 +1158,7 @@ function DuplicatesView({
                 className="w-full flex items-center justify-between p-3 hover:bg-[#FAF9F7] transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <FiCopy className="text-[#8B7355]" />
+                  <Copy className="text-[#8B7355]" />
                   <span className="text-sm font-medium text-[#5C5347]">
                     {group.count}개 동일 파일
                   </span>
@@ -1170,7 +1170,7 @@ function DuplicatesView({
                   <span className="text-sm text-[#D97706]">
                     {group.wasted_mb.toLocaleString()} MB 낭비
                   </span>
-                  <FiChevronRight
+                  <ChevronRight
                     className={`text-[#9B8B7A] transition-transform ${expandedGroup === group.hash ? 'rotate-90' : ''}`}
                   />
                 </div>
@@ -1359,14 +1359,14 @@ function MediaDetailModal({
             className="p-2 hover:bg-white/20 rounded-lg transition-colors ml-2"
             title="정보 보기 (I)"
           >
-            <FiImage size={18} />
+            <Image size={18} />
           </button>
           <button
             onClick={onClose}
             className="p-2 hover:bg-white/20 rounded-lg transition-colors"
             title="닫기 (ESC)"
           >
-            <FiX size={20} />
+            <X size={20} />
           </button>
         </div>
       </div>
@@ -1378,7 +1378,7 @@ function MediaDetailModal({
           className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
           title="이전 (←)"
         >
-          <FiChevronLeft size={32} />
+          <ChevronLeft size={32} />
         </button>
       )}
 
@@ -1389,7 +1389,7 @@ function MediaDetailModal({
           className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
           title="다음 (→)"
         >
-          <FiChevronRight size={32} />
+          <ChevronRight size={32} />
         </button>
       )}
 
@@ -1554,7 +1554,7 @@ function MapView({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <FiMapPin className="mx-auto text-5xl text-[#D4C8B8] mb-3" />
+          <MapPin className="mx-auto text-5xl text-[#D4C8B8] mb-3" />
           <p className="text-[#9B8B7A]">위치 정보가 있는 사진이 없습니다</p>
         </div>
       </div>

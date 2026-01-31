@@ -33,7 +33,6 @@
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-icons": "^5.5.0",
     "react-leaflet": "^5.0.0",
     "react-leaflet-cluster": "^4.0.0",
     "react-markdown": "^10.1.0",
@@ -64,6 +63,7 @@
   "build": {
     "appId": "com.indiebiz.app",
     "productName": "IndieBiz",
+    "asar": false,
     "directories": {
       "output": "release"
     },

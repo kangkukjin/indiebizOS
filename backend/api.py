@@ -8,20 +8,27 @@ import sys
 from pathlib import Path
 
 # PATH 환경변수 보강 (ADB 등 외부 도구 접근용)
-# Homebrew, Android SDK 등의 경로를 추가
-_extra_paths = [
-    "/opt/homebrew/bin",
-    "/usr/local/bin",
-    os.path.expanduser("~/Library/Android/sdk/platform-tools"),
-]
+if sys.platform != "win32":
+    _extra_paths = [
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+        os.path.expanduser("~/Library/Android/sdk/platform-tools"),
+    ]
+else:
+    _extra_paths = [
+        os.path.expanduser("~\\AppData\\Local\\Android\\Sdk\\platform-tools"),
+    ]
 for _p in _extra_paths:
     if os.path.exists(_p) and _p not in os.environ.get("PATH", ""):
-        os.environ["PATH"] = _p + ":" + os.environ.get("PATH", "")
+        os.environ["PATH"] = _p + os.pathsep + os.environ.get("PATH", "")
 from datetime import datetime
 from contextlib import asynccontextmanager
 
 # .env 파일 로드 (python-dotenv)
 from dotenv import load_dotenv
+_base_for_env = Path(os.environ.get("INDIEBIZ_BASE_PATH", str(Path(__file__).parent.parent)))
+load_dotenv(_base_for_env / ".env")
+# 개발 모드에서는 기존 위치의 .env도 로드 시도
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 from fastapi import FastAPI
@@ -29,10 +36,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 # 경로 설정
-BASE_PATH = Path(__file__).parent.parent
 BACKEND_PATH = Path(__file__).parent
-DATA_PATH = BACKEND_PATH / "data"
-DATA_PATH.mkdir(exist_ok=True)
+# 프로덕션에서는 Electron이 INDIEBIZ_BASE_PATH를 사용자 데이터 폴더로 지정
+# 개발 모드에서는 기존처럼 backend의 상위 폴더 사용
+BASE_PATH = Path(os.environ.get("INDIEBIZ_BASE_PATH", str(BACKEND_PATH.parent)))
+DATA_PATH = BASE_PATH / "data"
+DATA_PATH.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(BACKEND_PATH))
 
 # 매니저 임포트
@@ -206,7 +215,7 @@ async def serve_image(path: str):
     # 환경변수로 추가 허용 경로 설정 가능
     extra_paths = os.environ.get("ALLOWED_IMAGE_PATHS", "")
     if extra_paths:
-        allowed_bases.extend(extra_paths.split(":"))
+        allowed_bases.extend(extra_paths.split(os.pathsep))
 
     # 허용된 경로인지 확인
     is_allowed = any(
@@ -248,10 +257,13 @@ if __name__ == "__main__":
 
     print(f"🚀 IndieBiz OS 서버 시작: http://localhost:{port}")
 
+    # 프로덕션(패키징)에서는 reload 비활성화 (파일 감시자 오류 방지)
+    is_production = os.environ.get("INDIEBIZ_PRODUCTION", "").lower() in ("1", "true")
+
     uvicorn.run(
         "api:app",
         host="127.0.0.1",
         port=port,
-        reload=True,
+        reload=not is_production,
         log_level="warning"
     )

@@ -10,7 +10,8 @@ from typing import List, Dict, Optional
 
 
 # 프롬프트 파일 경로
-PROMPTS_PATH = Path(__file__).parent.parent / "data" / "common_prompts"
+from runtime_utils import get_base_path
+PROMPTS_PATH = get_base_path() / "data" / "common_prompts"
 
 # 싱글톤 인스턴스
 _prompt_builder_instance: Optional['PromptBuilder'] = None
@@ -174,7 +175,7 @@ def build_system_ai_prompt(
         조합된 시스템 프롬프트
     """
     # 개별역할 파일에서 로드
-    role_path = Path(__file__).parent.parent / "data" / "system_ai_role.txt"
+    role_path = get_base_path() / "data" / "system_ai_role.txt"
     role = role_path.read_text(encoding='utf-8') if role_path.exists() else ""
 
     builder = get_prompt_builder()  # 싱글톤 사용

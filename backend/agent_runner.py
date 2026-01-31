@@ -192,7 +192,8 @@ class AgentRunner:
         tool_names = []
 
         # system_essentials tool.json 경로
-        data_path = Path(__file__).parent.parent / "data"
+        from runtime_utils import get_base_path
+        data_path = get_base_path() / "data"
         tool_json_path = data_path / "packages" / "installed" / "tools" / "system_essentials" / "tool.json"
 
         try:
@@ -306,7 +307,8 @@ class AgentRunner:
         from dotenv import load_dotenv
 
         # 환경변수 로드
-        env_path = Path(__file__).parent.parent / ".env"
+        from runtime_utils import get_base_path
+        env_path = get_base_path() / ".env"
         load_dotenv(env_path)
 
         from_addr_lower = from_addr.lower().strip()

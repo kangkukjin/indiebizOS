@@ -10,8 +10,8 @@ from typing import Optional, List, Dict, Any
 
 # DB 경로
 BACKEND_PATH = Path(__file__).parent
-DATA_PATH = BACKEND_PATH / "data"
-DATA_PATH.mkdir(exist_ok=True)
+from runtime_utils import get_data_path as _get_data_path
+DATA_PATH = _get_data_path()
 DB_PATH = DATA_PATH / "business.db"
 
 

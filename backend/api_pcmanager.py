@@ -563,12 +563,16 @@ async def get_timeline_zoom_data(
         "total_files": range_row['total_files']
     }
 
-    # 2. 날짜 조건 생성 (mtime은 ISO 형식: 2002-08-15T10:30:00)
+    # 2. 날짜 조건 생성 (파라미터 바인딩으로 SQL Injection 방지)
+    # mtime은 ISO 형식: 2002-08-15T10:30:00
     date_condition = "mtime IS NOT NULL"
+    params = []
     if start_date:
-        date_condition += f" AND substr(mtime, 1, 10) >= '{start_date}'"
+        date_condition += " AND substr(mtime, 1, 10) >= ?"
+        params.append(start_date)
     if end_date:
-        date_condition += f" AND substr(mtime, 1, 10) <= '{end_date}'"
+        date_condition += " AND substr(mtime, 1, 10) <= ?"
+        params.append(end_date)
 
     # 3. 선택 범위 통계
     cursor.execute(f"""
@@ -578,7 +582,7 @@ async def get_timeline_zoom_data(
                MAX(mtime) as range_end
         FROM files
         WHERE {date_condition}
-    """)
+    """, params)
     stats_row = cursor.fetchone()
     stats = {
         "file_count": stats_row['file_count'],
@@ -622,7 +626,7 @@ async def get_timeline_zoom_data(
         WHERE {date_condition}
         GROUP BY period
         ORDER BY period
-    """)
+    """, params)
 
     density = []
     for row in cursor.fetchall():
@@ -641,8 +645,8 @@ async def get_timeline_zoom_data(
             FROM files
             WHERE {date_condition}
             ORDER BY mtime
-            LIMIT {limit}
-        """)
+            LIMIT ?
+        """, params + [limit])
         for row in cursor.fetchall():
             files.append({
                 "filename": row['filename'],

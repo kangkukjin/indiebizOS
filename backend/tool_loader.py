@@ -25,7 +25,11 @@ _CACHE_TTL: float = 60.0  # 60초 캐시
 
 
 def get_base_path() -> Path:
-    """기본 경로 반환"""
+    """기본 경로 반환 (프로덕션: 환경변수, 개발: 상위 폴더)"""
+    import os
+    env_path = os.environ.get("INDIEBIZ_BASE_PATH")
+    if env_path:
+        return Path(env_path)
     return Path(__file__).parent.parent
 
 

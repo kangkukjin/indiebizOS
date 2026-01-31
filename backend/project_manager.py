@@ -14,7 +14,8 @@ class ProjectManager:
 
     def __init__(self, base_path: Path = None):
         if base_path is None:
-            base_path = Path(__file__).parent.parent  # indiebizOS root
+            import os
+            base_path = Path(os.environ.get("INDIEBIZ_BASE_PATH", str(Path(__file__).parent.parent)))
 
         self.base_path = Path(base_path)
         self.templates_path = self.base_path / "templates"

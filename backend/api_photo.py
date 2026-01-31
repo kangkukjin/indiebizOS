@@ -13,10 +13,8 @@ from fastapi.responses import FileResponse, Response
 router = APIRouter(prefix="/photo", tags=["photo"])
 
 # 썸네일 캐시 디렉토리
-THUMBNAIL_CACHE_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)),
-    "data", "thumbnail_cache"
-)
+from runtime_utils import get_base_path as _get_base_path
+THUMBNAIL_CACHE_DIR = os.path.join(str(_get_base_path()), "data", "thumbnail_cache")
 
 
 def _get_photo_modules():
@@ -456,12 +454,15 @@ async def get_timeline_zoom_data(
         "total_files": range_row['total_files']
     }
 
-    # 2. 날짜 조건 생성
+    # 2. 날짜 조건 생성 (파라미터 바인딩으로 SQL Injection 방지)
     date_condition = f"{date_field} IS NOT NULL"
+    params = []
     if start_date:
-        date_condition += f" AND substr({date_field}, 1, 10) >= '{start_date}'"
+        date_condition += f" AND substr({date_field}, 1, 10) >= ?"
+        params.append(start_date)
     if end_date:
-        date_condition += f" AND substr({date_field}, 1, 10) <= '{end_date}'"
+        date_condition += f" AND substr({date_field}, 1, 10) <= ?"
+        params.append(end_date)
 
     # 3. 선택 범위 통계
     cursor.execute(f"""
@@ -473,7 +474,7 @@ async def get_timeline_zoom_data(
                SUM(CASE WHEN media_type = 'video' THEN 1 ELSE 0 END) as video_count
         FROM media_files
         WHERE {date_condition}
-    """)
+    """, params)
     stats_row = cursor.fetchone()
     stats = {
         "file_count": stats_row['file_count'],
@@ -518,7 +519,7 @@ async def get_timeline_zoom_data(
         WHERE {date_condition}
         GROUP BY period
         ORDER BY period
-    """)
+    """, params)
 
     density = []
     for row in cursor.fetchall():
@@ -539,8 +540,8 @@ async def get_timeline_zoom_data(
             FROM media_files
             WHERE {date_condition}
             ORDER BY {date_field}
-            LIMIT {limit}
-        """)
+            LIMIT ?
+        """, params + [limit])
         for row in cursor.fetchall():
             files.append({
                 "id": row['id'],

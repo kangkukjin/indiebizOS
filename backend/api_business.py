@@ -198,7 +198,8 @@ async def authenticate_gmail():
             raise HTTPException(status_code=400, detail="OAuth 클라이언트 ID/Secret이 설정되지 않았습니다")
 
         # Gmail 확장 경로의 config.yaml 생성
-        gmail_path = Path(__file__).parent.parent / "data" / "packages" / "installed" / "extensions" / "gmail"
+        from runtime_utils import get_base_path
+        gmail_path = get_base_path() / "data" / "packages" / "installed" / "extensions" / "gmail"
         gmail_path.mkdir(parents=True, exist_ok=True)
         config_path = gmail_path / "config.yaml"
 

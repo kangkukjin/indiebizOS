@@ -161,29 +161,34 @@ IndieBiz OS
 - **검색 & 설치**: 다른 IndieBiz 사용자가 공개한 패키지 검색 및 설치
 - **AI 검토**: 설치 전 시스템 AI가 보안, 품질, 호환성 검토
 
-**설치된 도구 패키지 (21개):**
+**설치된 도구 패키지 (25개):**
 
 | 패키지 | 설명 |
 |--------|------|
 | android | 안드로이드 기기 관리 (adb) |
 | blog | 블로그 RAG 검색 및 인사이트 |
+| browser-action | Playwright 기반 브라우저 자동화 (클릭/입력/스크롤/추출) |
+| business | 비즈니스 관계 및 연락처(이웃) 관리 |
 | culture | 한국 문화 데이터 (공연, 도서관, 전시회) |
 | health-record | 개인 건강 데이터 관리 |
-| information | API Ninjas, 여행 정보, 맛집 검색 |
 | investment | 글로벌 금융 데이터 (KRX, DART, SEC, Yahoo Finance) |
 | kosis | 통계청 데이터 조회 (KOSIS) |
+| legal | 대한민국 법률 정보 검색 (법령, 판례, 행정규칙) |
+| location-services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
 | media_producer | HTML 기반 슬라이드(12종 테마), 영상 제작, AI 이미지 생성 |
 | nodejs | JavaScript/Node.js 실행 |
 | pc-manager | 파일 및 저장소 관리, 시스템 분석 |
 | photo-manager | 사진 라이브러리 관리 |
 | python-exec | Python 코드 실행 |
-| read-and-see | 문서 읽기 및 시각적 분석 |
 | real-estate | 한국 부동산 데이터 |
+| remotion-video | React/Remotion 기반 프로그래밍 방식 동영상 생성 |
+| shopping-assistant | 쇼핑 검색 (네이버 쇼핑, 다나와 가격비교) |
 | startup | 한국 창업 지원 |
 | study | 학습 도우미 및 논문 요약 |
-| system_essentials | 파일 관리, 검색, 유틸리티 |
+| system_essentials | 파일 관리, todo, 계획 모드, 이웃 조회 |
 | visualization | 차트 (라인, 막대, 캔들스틱, 파이, 산점도, 히트맵) |
-| web | 웹 검색 및 크롤링 |
+| web | 웹 검색, 크롤링, 뉴스, 신문 생성, 즐겨찾기 |
+| web-builder | 웹사이트 빌더 및 생성 도구 |
 | youtube | YouTube 동영상/오디오 관리 |
 
 ### 스케줄러 & 스위치
@@ -317,9 +322,20 @@ cd frontend && npm run electron:dev
 
 ```bash
 cd frontend
-npm run electron:build:mac   # macOS
-npm run electron:build:win   # Windows
+
+# macOS
+npm run prepare:python:mac   # Python 런타임 번들링
+npm run electron:build:mac
+
+# Windows
+npm run prepare:python:win   # Python 런타임 번들링
+npm run electron:build:win
 ```
+
+**데이터 저장 경로 (프로덕션):**
+- macOS: `~/Library/Application Support/IndieBiz/`
+- Windows: `%APPDATA%/IndieBiz/`
+- 앱 업데이트 시에도 데이터 유지됨
 
 ---
 
@@ -380,8 +396,8 @@ npm run electron:build:win   # Windows
 
 **이 프로젝트는 활발히 개발 중입니다.**
 
-- 15개의 활성 프로젝트 운영 중
-- 21개의 도구 패키지 설치됨
+- 16개의 활성 프로젝트 운영 중
+- 25개의 도구 패키지 설치됨
 - 9개의 확장 패키지 설치됨
 - 스케줄러, 스위치, 비즈니스 네트워크 작동 중
 - 고급 자동응답 V3: Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합

@@ -52,13 +52,23 @@ def _load_owner_identities() -> Dict[str, set]:
             if email:
                 identities['emails'].add(email)
 
-    # Nostr 공개키 로드 (쉼표 구분)
+    # Nostr 공개키 로드 (쉼표 구분, npub→hex 변환)
     owner_nostr = os.getenv('OWNER_NOSTR_PUBKEYS', '')
     if owner_nostr:
         for pubkey in owner_nostr.split(','):
-            pubkey = pubkey.strip().lower()
-            if pubkey:
-                identities['nostr_pubkeys'].add(pubkey)
+            pubkey = pubkey.strip()
+            if not pubkey:
+                continue
+            # npub 형식이면 hex로 변환
+            if pubkey.startswith('npub'):
+                try:
+                    from pynostr.key import PublicKey
+                    hex_key = PublicKey.from_npub(pubkey).hex().lower()
+                    identities['nostr_pubkeys'].add(hex_key)
+                except Exception:
+                    identities['nostr_pubkeys'].add(pubkey.lower())
+            else:
+                identities['nostr_pubkeys'].add(pubkey.lower())
 
     return identities
 
@@ -300,7 +310,7 @@ class ChannelPoller:
                 time.sleep(5)
 
     def _init_nostr_keys(self) -> bool:
-        """Nostr 키 초기화 - DB config에서 nsec 로드 또는 IndieNet 연동 또는 새로 생성"""
+        """Nostr 키 초기화 - IndieNet identity를 항상 우선 사용"""
         if self._nostr_private_key:
             return True
 
@@ -312,42 +322,42 @@ class ChannelPoller:
                 return False
 
             config = json.loads(channel.get('config', '{}'))
-            nsec = config.get('nsec', '')
-            private_key_hex = config.get('private_key_hex', '')
 
-            if nsec:
-                # nsec 형식으로 저장된 경우
-                if nsec.startswith('nsec'):
-                    self._nostr_private_key = PrivateKey.from_nsec(nsec)
-                else:
-                    # hex 형식으로 저장된 경우
-                    self._nostr_private_key = PrivateKey(bytes.fromhex(nsec))
-                self._log(f"Nostr 키 로드: {self._nostr_private_key.public_key.bech32()[:20]}...")
-            elif private_key_hex:
-                # 이전 버전 호환
-                self._nostr_private_key = PrivateKey(bytes.fromhex(private_key_hex))
-                self._log(f"Nostr 키 로드 (hex): {self._nostr_private_key.public_key.bech32()[:20]}...")
-            else:
-                # IndieNet identity.json에서 키 가져오기 시도
-                indienet_identity = Path.home() / '.indiebiz' / 'indienet' / 'identity.json'
-                if indienet_identity.exists():
-                    try:
-                        with open(indienet_identity, 'r') as f:
-                            identity_data = json.load(f)
-                        indienet_nsec = identity_data.get('nsec', '')
-                        if indienet_nsec and indienet_nsec.startswith('nsec'):
-                            self._nostr_private_key = PrivateKey.from_nsec(indienet_nsec)
-                            self._log(f"IndieNet 키 연동: {self._nostr_private_key.public_key.bech32()[:20]}...")
-                        elif identity_data.get('private_key_hex'):
-                            self._nostr_private_key = PrivateKey(bytes.fromhex(identity_data['private_key_hex']))
-                            self._log(f"IndieNet 키 연동 (hex): {self._nostr_private_key.public_key.bech32()[:20]}...")
-                    except Exception as e:
-                        self._log(f"IndieNet 키 로드 실패: {e}")
+            # IndieNet identity 우선 사용 (시스템 전체 단일 Nostr 주소)
+            indienet_identity = Path.home() / '.indiebiz' / 'indienet' / 'identity.json'
+            if indienet_identity.exists():
+                try:
+                    with open(indienet_identity, 'r') as f:
+                        identity_data = json.load(f)
+                    indienet_nsec = identity_data.get('nsec', '')
+                    if indienet_nsec and indienet_nsec.startswith('nsec'):
+                        self._nostr_private_key = PrivateKey.from_nsec(indienet_nsec)
+                        self._log(f"IndieNet 키 사용: {self._nostr_private_key.public_key.bech32()[:20]}...")
+                    elif identity_data.get('private_key_hex'):
+                        self._nostr_private_key = PrivateKey(bytes.fromhex(identity_data['private_key_hex']))
+                        self._log(f"IndieNet 키 사용 (hex): {self._nostr_private_key.public_key.bech32()[:20]}...")
+                except Exception as e:
+                    self._log(f"IndieNet 키 로드 실패: {e}")
 
-                # 여전히 키가 없으면 새로 생성
-                if self._nostr_private_key is None:
-                    self._nostr_private_key = PrivateKey()
-                    self._log(f"Nostr 새 키 생성: {self._nostr_private_key.public_key.bech32()}")
+            # IndieNet 키가 없으면 DB config에서 fallback
+            if self._nostr_private_key is None:
+                nsec = config.get('nsec', '')
+                private_key_hex = config.get('private_key_hex', '')
+
+                if nsec:
+                    if nsec.startswith('nsec'):
+                        self._nostr_private_key = PrivateKey.from_nsec(nsec)
+                    else:
+                        self._nostr_private_key = PrivateKey(bytes.fromhex(nsec))
+                    self._log(f"Nostr 키 로드 (DB): {self._nostr_private_key.public_key.bech32()[:20]}...")
+                elif private_key_hex:
+                    self._nostr_private_key = PrivateKey(bytes.fromhex(private_key_hex))
+                    self._log(f"Nostr 키 로드 (hex): {self._nostr_private_key.public_key.bech32()[:20]}...")
+
+            # 여전히 키가 없으면 새로 생성
+            if self._nostr_private_key is None:
+                self._nostr_private_key = PrivateKey()
+                self._log(f"Nostr 새 키 생성: {self._nostr_private_key.public_key.bech32()}")
 
             self._nostr_public_key = self._nostr_private_key.public_key
 
@@ -650,16 +660,7 @@ class ChannelPoller:
                                subject: str, content: str):
         """사용자 명령을 시스템 AI로 처리 (GUI와 동일하게)"""
         try:
-            from conversation_db import ConversationDB
-            from prompt_builder import PromptBuilder
-
-            # conversation_db 연결
-            db_path = _get_base_path() / "data" / "conversation.db"
-            db = ConversationDB(str(db_path))
-
-            # 시스템 AI 에이전트와 사용자 ID 가져오기
-            agent_id = db.get_or_create_agent("시스템", "ai_agent")
-            user_id = db.get_or_create_agent("user", "user")
+            from system_ai_memory import save_conversation, get_recent_conversations
 
             # 메시지 내용 (본문이 비어있으면 제목 사용)
             message_content = content or subject
@@ -667,11 +668,18 @@ class ChannelPoller:
                 self._log("빈 명령 무시")
                 return
 
-            # 사용자 메시지를 conversation_db에 저장
-            db.save_message(user_id, agent_id, message_content, contact_type=contact_type)
+            # 사용자 메시지를 system_ai_memory.db에 저장 (GUI와 동일)
+            source = f"user@{contact_type}"
+            save_conversation("user", message_content, source=source)
 
-            # 히스토리 로드 (GUI와 동일한 마스킹 적용)
-            history = db.get_history_for_ai(agent_id, user_id)
+            # 히스토리 로드 (system_ai_memory.db에서 - GUI와 동일)
+            recent = get_recent_conversations(limit=10)
+            history = []
+            for conv in recent:
+                role = conv.get("role", "user")
+                if role not in ["user", "assistant"]:
+                    role = "user"
+                history.append({"role": role, "content": conv.get("content", "")})
 
             # 시스템 AI 설정 로드
             config = self._load_system_ai_config()
@@ -683,8 +691,8 @@ class ChannelPoller:
             response = self._execute_system_ai(message_content, history, config)
 
             if response:
-                # AI 응답도 conversation_db에 저장
-                db.save_message(agent_id, user_id, response, contact_type=contact_type)
+                # AI 응답도 system_ai_memory.db에 저장 (GUI와 동일)
+                save_conversation("assistant", response, source=f"system_ai@{contact_type}")
 
                 # 외부 채널로 응답 전송
                 self._send_response(contact_type, contact_value, f"Re: {subject}", response)
@@ -710,16 +718,28 @@ class ChannelPoller:
     def _execute_system_ai(self, command: str, history: list, config: dict) -> str:
         """시스템 AI로 명령 실행 - 실제 시스템 AI 호출 (모든 도구 포함)"""
         try:
+            import uuid
             from api_system_ai import process_system_ai_message
+            from thread_context import set_current_task_id, clear_current_task_id, clear_called_agent
+            from system_ai_memory import create_task as create_system_ai_task, complete_task as complete_system_ai_task
 
-            # 히스토리 형식 변환 (conversation_db → api_system_ai 형식)
-            # conversation_db: [{"role": "user", "content": "..."}, ...]
-            # api_system_ai: 동일한 형식 사용
+            # 태스크 ID 생성 (GUI와 동일하게 - call_project_agent 등 위임 도구에 필요)
+            task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
+            create_system_ai_task(
+                task_id=task_id,
+                requester="user@channel",
+                requester_channel="channel",
+                original_request=command,
+                delegated_to="system_ai"
+            )
+            set_current_task_id(task_id)
+            clear_called_agent()
+
+            # 히스토리 형식 변환
             formatted_history = []
             if history:
                 for h in history:
                     role = h.get("role", "user")
-                    # assistant가 아닌 다른 role은 user로 통일
                     if role not in ["user", "assistant"]:
                         role = "user"
                     formatted_history.append({
@@ -734,19 +754,30 @@ class ChannelPoller:
                 images=None
             )
 
+            # 태스크 완료 처리
+            complete_system_ai_task(task_id, response[:500] if response else "")
+            clear_current_task_id()
+            clear_called_agent()
+
             return response
 
         except Exception as e:
             self._log(f"시스템 AI 실행 오류: {e}")
             import traceback
             traceback.print_exc()
+            # 태스크 정리
+            try:
+                clear_current_task_id()
+                clear_called_agent()
+            except:
+                pass
             return f"명령 처리 중 오류: {e}"
 
     def _send_response(self, contact_type: str, contact_value: str, subject: str, body: str):
         """외부 채널로 응답 전송"""
         try:
             if contact_type == 'gmail' and self._gmail_client:
-                self._gmail_client.send_email(
+                self._gmail_client.send_message(
                     to=contact_value,
                     subject=subject,
                     body=body
@@ -762,39 +793,19 @@ class ChannelPoller:
             self._log(f"응답 전송 실패: {e}")
 
     def _send_nostr_dm(self, recipient_pubkey: str, message: str):
-        """Nostr DM 전송 (NIP-04 암호화)"""
+        """Nostr DM 전송 - IndieNet의 다중 릴레이 발행 사용"""
         try:
-            from pynostr.event import Event, EventKind
-            from pynostr.key import PublicKey
-            import websocket
+            from indienet import get_indienet
+            indienet = get_indienet()
 
-            # npub → hex 변환
-            if recipient_pubkey.startswith('npub'):
-                recipient_hex = PublicKey.from_npub(recipient_pubkey).hex()
+            if indienet._initialized:
+                event_id = indienet.send_dm(to_pubkey=recipient_pubkey, content=message)
+                if event_id:
+                    self._log(f"Nostr DM 발행 완료 (IndieNet): {event_id[:16]}...")
+                else:
+                    self._log("Nostr DM 발행 실패 (IndieNet)")
             else:
-                recipient_hex = recipient_pubkey
-
-            # NIP-04 암호화: 개인키로 메시지 암호화
-            encrypted_content = self._nostr_private_key.encrypt_message(
-                message, recipient_hex
-            )
-
-            # Event 생성 (kind=4: Encrypted Direct Message)
-            event = Event(
-                kind=EventKind.ENCRYPTED_DIRECT_MESSAGE,
-                content=encrypted_content,
-                tags=[['p', recipient_hex]],
-            )
-            # public key 설정
-            event.public_key = self._nostr_public_key.hex()
-            # 서명 (sign 메서드 사용 - hex 형식의 private key 전달)
-            event.sign(self._nostr_private_key.hex())
-
-            # 릴레이로 전송
-            relay_url = "wss://relay.damus.io"
-            ws = websocket.create_connection(relay_url, timeout=10)
-            ws.send(json.dumps(["EVENT", event.to_message()[1]]))
-            ws.close()
+                self._log("IndieNet 미초기화 - Nostr DM 전송 불가")
 
         except Exception as e:
             self._log(f"Nostr DM 전송 실패: {e}")

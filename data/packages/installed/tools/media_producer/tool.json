@@ -135,7 +135,7 @@
           },
           "output_path": {
             "type": "string",
-            "description": "저장할 이미지 파일 경로"
+            "description": "저장할 파일명 (예: slide.png). 경로는 자동으로 프로젝트 outputs 폴더에 저장됨"
           },
           "base_path": {
             "type": "string",
@@ -156,7 +156,7 @@
             "description": "특정 요소만 캡처하고 싶은 경우의 CSS 셀렉터 (선택)"
           }
         },
-        "required": ["html", "output_path"]
+        "required": ["html"]
       }
     },
     {
@@ -171,7 +171,7 @@
           },
           "output_path": {
             "type": "string",
-            "description": "저장할 이미지 파일 경로 (지정하지 않으면 자동 생성)"
+            "description": "저장할 파일명 (예: hero.png). 경로는 자동으로 프로젝트 outputs 폴더에 저장됨. 지정하지 않으면 자동 생성"
           },
           "width": {
             "type": "integer",
@@ -208,7 +208,7 @@
           },
           "output_path": {
             "type": "string",
-            "description": "저장할 이미지 파일 경로 (지정하지 않으면 자동 생성)"
+            "description": "저장할 파일명 (예: cover.png). 경로는 자동으로 프로젝트 outputs 폴더에 저장됨. 지정하지 않으면 자동 생성"
           },
           "aspect_ratio": {
             "type": "string",

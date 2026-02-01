@@ -607,50 +607,74 @@ class IndieNet:
             return None
 
     def _publish_event(self, event: Event) -> Optional[str]:
-        """이벤트를 릴레이에 발행"""
-        event_id = None
+        """이벤트를 모든 릴레이에 발행"""
+        relays = self.settings.relays if self.settings.relays else DEFAULT_RELAYS
+        event_message = json.dumps(["EVENT", event.to_dict()])
+
+        first_event_id = None
         success = threading.Event()
+        ok_count = [0]
 
-        def on_message(ws, message):
-            nonlocal event_id
+        def _send_to_relay(relay_url: str):
+            nonlocal first_event_id
+
+            relay_success = threading.Event()
+
+            def on_message(ws, message):
+                nonlocal first_event_id
+                try:
+                    data = json.loads(message)
+                    if data[0] == "OK":
+                        if first_event_id is None:
+                            first_event_id = data[1]
+                        ok_count[0] += 1
+                        relay_success.set()
+                        success.set()
+                except:
+                    pass
+
+            def on_open(ws):
+                ws.send(event_message)
+
+            def on_error(ws, error):
+                relay_success.set()
+
+            def on_close(ws, close_status_code, close_msg):
+                relay_success.set()
+
             try:
-                data = json.loads(message)
-                if data[0] == "OK":
-                    event_id = data[1]
-                    success.set()
-            except:
-                pass
+                ws = websocket.WebSocketApp(
+                    relay_url,
+                    on_open=on_open,
+                    on_message=on_message,
+                    on_error=on_error,
+                    on_close=on_close
+                )
+                wst = threading.Thread(target=ws.run_forever, daemon=True)
+                wst.start()
+                relay_success.wait(timeout=5)
+                ws.close()
+            except Exception as e:
+                print(f"  릴레이 전송 실패 ({relay_url}): {e}")
 
-        def on_open(ws):
-            # EVENT 메시지 전송
-            event_message = json.dumps(["EVENT", event.to_dict()])
-            ws.send(event_message)
+        # 모든 릴레이에 병렬 전송
+        threads = []
+        for relay_url in relays:
+            t = threading.Thread(target=_send_to_relay, args=(relay_url,), daemon=True)
+            t.start()
+            threads.append(t)
 
-        def on_error(ws, error):
-            pass
-
-        def on_close(ws, close_status_code, close_msg):
-            pass
-
-        # 첫 번째 릴레이에 발행
-        relay_url = self.settings.relays[0] if self.settings.relays else DEFAULT_RELAYS[0]
-
-        ws = websocket.WebSocketApp(
-            relay_url,
-            on_open=on_open,
-            on_message=on_message,
-            on_error=on_error,
-            on_close=on_close
-        )
-
-        wst = threading.Thread(target=ws.run_forever, daemon=True)
-        wst.start()
-
-        # 5초 대기
+        # 첫 번째 OK 응답 대기 (최대 5초)
         success.wait(timeout=5)
-        ws.close()
 
-        return event_id
+        # 나머지 릴레이도 잠시 대기 (최대 2초 추가)
+        for t in threads:
+            t.join(timeout=2)
+
+        if ok_count[0] > 0:
+            print(f"  릴레이 {ok_count[0]}/{len(relays)}개 발행 성공")
+
+        return first_event_id
 
     def fetch_posts(self, limit: int = 50, since: int = None) -> List[dict]:
         """

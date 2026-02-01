@@ -3,6 +3,7 @@ api_config.py - 설정/프로필/스케줄러 API
 IndieBiz OS Core
 """
 
+import os
 import json
 from pathlib import Path
 from datetime import datetime
@@ -12,6 +13,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 import yaml
 
 from scheduler import get_scheduler
+from runtime_utils import get_base_path as _get_base_path
 
 router = APIRouter()
 
@@ -19,6 +21,7 @@ router = APIRouter()
 BACKEND_PATH = Path(__file__).parent
 from runtime_utils import get_data_path as _get_data_path
 DATA_PATH = _get_data_path()
+ENV_PATH = _get_base_path() / ".env"
 
 SYSTEM_MEMO_PATH = DATA_PATH / "system_ai_memo.txt"
 SCHEDULE_CONFIG_PATH = DATA_PATH / "program_schedule.json"
@@ -625,4 +628,79 @@ async def init_tools_if_needed(project_id: str):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+
+# ============ 소유자 식별 정보 API ============
+
+def _read_env_value(key: str) -> str:
+    """`.env` 파일에서 특정 키 값 읽기"""
+    if not ENV_PATH.exists():
+        return ""
+    for line in ENV_PATH.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if line.startswith(f"{key}="):
+            return line[len(key) + 1:]
+    return ""
+
+
+def _write_env_value(key: str, value: str):
+    """`.env` 파일에서 특정 키 값 업데이트 (없으면 추가)"""
+    if not ENV_PATH.exists():
+        ENV_PATH.write_text(f"{key}={value}\n", encoding='utf-8')
+        return
+
+    lines = ENV_PATH.read_text(encoding='utf-8').splitlines()
+    found = False
+    for i, line in enumerate(lines):
+        if line.strip().startswith(f"{key}="):
+            lines[i] = f"{key}={value}"
+            found = True
+            break
+    if not found:
+        lines.append(f"{key}={value}")
+
+    ENV_PATH.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+    # 환경변수도 즉시 반영
+    os.environ[key] = value
+
+
+@router.get("/owner-identities")
+async def get_owner_identities():
+    """소유자 식별 정보 조회"""
+    try:
+        emails = _read_env_value("OWNER_EMAILS")
+        nostr_pubkeys = _read_env_value("OWNER_NOSTR_PUBKEYS")
+        system_ai_gmail = _read_env_value("SYSTEM_AI_GMAIL")
+        return {
+            "owner_emails": emails,
+            "owner_nostr_pubkeys": nostr_pubkeys,
+            "system_ai_gmail": system_ai_gmail
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/owner-identities")
+async def update_owner_identities(data: Dict[str, str]):
+    """소유자 식별 정보 업데이트"""
+    try:
+        if "owner_emails" in data:
+            _write_env_value("OWNER_EMAILS", data["owner_emails"])
+        if "owner_nostr_pubkeys" in data:
+            _write_env_value("OWNER_NOSTR_PUBKEYS", data["owner_nostr_pubkeys"])
+        if "system_ai_gmail" in data:
+            _write_env_value("SYSTEM_AI_GMAIL", data["system_ai_gmail"])
+
+        # channel_poller의 소유자 캐시 갱신
+        try:
+            from channel_poller import _poller_instance
+            if _poller_instance:
+                from channel_poller import _load_owner_identities
+                _poller_instance._owner_identities = _load_owner_identities()
+        except Exception:
+            pass
+
+        return {"status": "updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 

@@ -59,18 +59,20 @@ class GmailChannel(Channel):
             print(f"[GmailChannel] 메시지 폴링 실패: {e}")
             return []
     
-    def send_message(self, to: str, subject: str, body: str) -> bool:
+    def send_message(self, to: str, subject: str, body: str, attachment_path: str = None) -> bool:
         """
         이메일 전송
         Args:
             to: 수신자 이메일
             subject: 제목
             body: 본문
+            attachment_path: 첨부할 파일의 절대 경로 (선택)
         Returns:
             성공 여부
         """
         try:
-            self.client.send_message(to=to, subject=subject, body=body)
+            self.client.send_message(to=to, subject=subject, body=body,
+                                     attachment_path=attachment_path)
             return True
         except Exception as e:
             print(f"[GmailChannel] 메시지 전송 실패: {e}")

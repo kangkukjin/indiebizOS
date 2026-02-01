@@ -103,6 +103,71 @@
         },
         "required": ["url"]
       }
+    },
+    {
+      "name": "play_youtube",
+      "description": "유튜브 검색 후 PC 스피커로 음악 재생 (URL/링크 보여주지 말 것). count로 여러 곡 지정 시 검색 1회로 첫 곡 바로 재생 + 나머지 자동 대기열 추가. 이미 재생 중이면 자동으로 대기열에 추가됨. mode=video면 브라우저에서 영상.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색어 또는 YouTube URL. 예: 'bach cello suite', '아이유 좋은날'"
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["audio", "video"],
+            "description": "재생 모드. audio: 소리만 (기본), video: 브라우저에서 영상"
+          },
+          "count": {
+            "type": "integer",
+            "description": "재생할 곡 수 (1-10, 기본 5). 첫 곡 바로 재생, 나머지는 대기열 자동 추가"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "add_to_queue",
+      "description": "재생 대기열에 곡 추가. play_youtube로 재생 시작 후 사용. 현재 곡이 끝나면 자동으로 다음 곡 재생. 여러 곡을 연속 재생하려면 이 도구를 반복 호출.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색어 또는 YouTube URL"
+          },
+          "count": {
+            "type": "integer",
+            "description": "검색 결과 수 (1-5, 기본 3)"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "skip_youtube",
+      "description": "현재 재생 중인 곡을 건너뛰고 대기열의 다음 곡을 재생합니다. 대기열이 비어있으면 재생을 종료합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get_queue",
+      "description": "현재 재생 대기열을 조회합니다. 현재 재생 중인 곡과 대기 중인 곡 목록을 반환합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "stop_youtube",
+      "description": "현재 재생 중인 유튜브 오디오를 중지하고 대기열을 모두 비웁니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
     }
   ]
 }

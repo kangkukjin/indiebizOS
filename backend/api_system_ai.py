@@ -140,7 +140,7 @@ def _get_call_project_agent_tool() -> Dict:
 
 
 def get_all_system_ai_tools() -> List[Dict]:
-    """시스템 AI가 사용할 모든 도구 로드 (패키지 도구 + 위임 도구)
+    """시스템 AI가 사용할 모든 도구 로드 (패키지 도구 + 위임 도구 + 메시징 도구)
 
     NOTE: 시스템 AI는 일반 에이전트와 동일한 도구를 사용하며,
     추가로 call_project_agent 도구를 통해 프로젝트 에이전트에게 위임할 수 있습니다.
@@ -151,6 +151,10 @@ def get_all_system_ai_tools() -> List[Dict]:
     # 위임 관련 도구 추가
     tools.append(_get_list_project_agents_tool())
     tools.append(_get_call_project_agent_tool())
+
+    # 메시징 도구 추가 (Nostr DM, Gmail 전송)
+    from system_ai import get_messaging_tools
+    tools.extend(get_messaging_tools())
 
     return tools
 
@@ -277,6 +281,14 @@ def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None, 
         return _execute_list_project_agents(tool_input)
     if tool_name == "call_project_agent":
         return _execute_call_project_agent(tool_input)
+
+    # 메시징 도구 처리
+    if tool_name == "send_nostr_message":
+        from system_ai import execute_send_nostr_message
+        return execute_send_nostr_message(tool_input)
+    if tool_name == "send_gmail_message":
+        from system_ai import execute_send_gmail_message
+        return execute_send_gmail_message(tool_input)
 
     if work_dir is None:
         work_dir = str(DATA_PATH)

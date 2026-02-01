@@ -28,7 +28,8 @@ from system_ai_memory import (
 from system_ai import (
     SYSTEM_AI_DEFAULT_PACKAGES,
     load_tools_from_packages,
-    execute_system_tool
+    execute_system_tool,
+    get_messaging_tools
 )
 from prompt_builder import build_system_ai_prompt
 
@@ -128,6 +129,9 @@ class SystemAIRunner:
         from api_system_ai import _get_list_project_agents_tool, _get_call_project_agent_tool
         tools.append(_get_list_project_agents_tool())
         tools.append(_get_call_project_agent_tool())
+
+        # 메시징 도구 추가 (Nostr DM, Gmail 전송)
+        tools.extend(get_messaging_tools())
 
         # Git 활성화 조건: run_command 도구가 있고 .git 폴더가 있을 때
         tool_names = [t.get("name") for t in tools]

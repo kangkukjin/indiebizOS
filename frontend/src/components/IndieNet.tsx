@@ -43,6 +43,7 @@ export function IndieNet() {
   const [error, setError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [copiedNpub, setCopiedNpub] = useState(false);
+  const [copiedAuthorPubkey, setCopiedAuthorPubkey] = useState<string | null>(null);
 
   // 설정에서 이름 편집
   const [editingName, setEditingName] = useState(false);
@@ -231,6 +232,13 @@ export function IndieNet() {
       setCopiedNpub(true);
       setTimeout(() => setCopiedNpub(false), 2000);
     }
+  };
+
+  const copyAuthorPubkey = (pubkey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(pubkey);
+    setCopiedAuthorPubkey(pubkey);
+    setTimeout(() => setCopiedAuthorPubkey(null), 2000);
   };
 
   const handleSaveDisplayName = async () => {
@@ -456,8 +464,15 @@ export function IndieNet() {
             {/* 게시글 내용 */}
             <div className="flex-1 overflow-y-auto p-4">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-sm text-[#D97706] font-medium">
+                <span
+                  className="text-sm text-[#D97706] font-medium cursor-pointer hover:underline flex items-center gap-1"
+                  onClick={(e) => copyAuthorPubkey(selectedPost.author, e)}
+                  title={selectedPost.author}
+                >
                   {shortenPubkey(selectedPost.author)}
+                  {copiedAuthorPubkey === selectedPost.author
+                    ? <Check size={12} className="text-green-500" />
+                    : <Copy size={12} className="opacity-40" />}
                 </span>
                 <span className="text-xs text-[#9CA3AF]">
                   {formatTimestamp(selectedPost.created_at)}
@@ -490,8 +505,15 @@ export function IndieNet() {
                     className="px-4 py-3 hover:bg-[#F9F7F4] transition-colors cursor-pointer"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-[#D97706] font-medium">
+                      <span
+                        className="text-sm text-[#D97706] font-medium cursor-pointer hover:underline flex items-center gap-1"
+                        onClick={(e) => copyAuthorPubkey(post.author, e)}
+                        title={post.author}
+                      >
                         {shortenPubkey(post.author)}
+                        {copiedAuthorPubkey === post.author
+                          ? <Check size={12} className="text-green-500" />
+                          : <Copy size={12} className="opacity-40" />}
                       </span>
                       <span className="text-xs text-[#9CA3AF]">
                         {formatTimestamp(post.created_at)}

@@ -336,8 +336,8 @@ class NostrChannel(Channel):
         
         return messages
     
-    def send_message(self, to: str, subject: str, body: str) -> bool:
-        """메시지 전송 (WebSocket 직접 구현)"""
+    def send_message(self, to: str, subject: str, body: str, attachment_path: str = None) -> bool:
+        """메시지 전송 (WebSocket 직접 구현, Nostr DM은 첨부파일 미지원)"""
         if not self.private_key:
             print(f"⚠️  Nostr 전송 실패: private_key={self.private_key is not None}")
             return False

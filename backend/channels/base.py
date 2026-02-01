@@ -47,13 +47,14 @@ class Channel(ABC):
         pass
     
     @abstractmethod
-    def send_message(self, to: str, subject: str, body: str) -> bool:
+    def send_message(self, to: str, subject: str, body: str, attachment_path: str = None) -> bool:
         """
         메시지 전송
         Args:
             to: 수신자
             subject: 제목
             body: 본문
+            attachment_path: 첨부할 파일의 절대 경로 (선택, 채널이 지원하는 경우)
         Returns:
             bool: 전송 성공 여부
         """

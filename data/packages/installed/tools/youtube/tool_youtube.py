@@ -4,12 +4,14 @@ YouTube 다운로드 도구
 - 동영상 정보 조회
 - 자막/트랜스크립트 가져오기
 - 동영상 요약 (AI 사용)
+- 유튜브 검색 및 재생
 """
 
 import os
 import shutil
 import re
 import json
+import subprocess
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 # AI 설정 경로
@@ -633,6 +635,516 @@ def summarize_youtube(
         'duration': duration,
         'summary_length': len(summary_content),
         'message': f'YouTube 영상 요약이 완료되었습니다. 파일: {html_filepath}'
+    }
+
+
+# ============================================================
+# YouTube 검색 & 재생 (ffplay + yt-dlp 기반, 플레이리스트 큐 지원)
+# ============================================================
+
+import threading
+
+# ffplay 기반 오디오 플레이어
+_player_process = None   # ffplay subprocess.Popen
+_player_video_id = None  # 현재 재생 중인 video_id
+_player_title = None     # 현재 재생 중인 제목
+_player_queue = []       # 재생 대기열: [{'video_id', 'title', 'channel', 'duration'}, ...]
+_player_mode = "audio"   # 현재 재생 모드
+_player_lock = threading.Lock()  # 큐/상태 동시접근 보호
+
+
+def _get_audio_url(video_id):
+    """yt-dlp로 video_id에서 오디오 스트림 URL 추출"""
+    import yt_dlp
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    with yt_dlp.YoutubeDL({
+        'quiet': True, 'no_warnings': True,
+        'format': 'bestaudio/best',
+    }) as ydl:
+        info = ydl.extract_info(url, download=False)
+        return info.get('url', '')
+
+
+def _start_ffplay(audio_url):
+    """ffplay로 오디오 스트림 재생 (백그라운드 프로세스)"""
+    global _player_process
+    _player_process = subprocess.Popen(
+        ['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet',
+         '-reconnect', '1',
+         '-reconnect_streamed', '1',
+         '-reconnect_delay_max', '5',
+         audio_url],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+
+
+def _queue_monitor():
+    """ffplay 프로세스 종료 감시 → 큐 자동 진행 (별도 스레드)"""
+    global _player_process, _player_video_id, _player_title
+    while True:
+        proc = None
+        with _player_lock:
+            proc = _player_process
+        if proc is None:
+            break
+        proc.wait()  # ffplay 종료 대기
+        with _player_lock:
+            # 프로세스가 바뀌었으면 (skip 등) 이 스레드는 종료
+            if _player_process is not proc:
+                break
+            if not _player_queue:
+                _player_process = None
+                _player_video_id = None
+                _player_title = None
+                break
+            # 다음 곡 재생
+            _play_next_in_queue_locked()
+
+
+def _play_next_in_queue_locked():
+    """큐에서 다음 곡 재생 (_player_lock 잡힌 상태에서 호출)"""
+    global _player_process, _player_video_id, _player_title
+    if not _player_queue:
+        return False
+    next_item = _player_queue.pop(0)
+    _player_video_id = next_item['video_id']
+    _player_title = next_item.get('title', '')
+    try:
+        audio_url = _get_audio_url(next_item['video_id'])
+        if not audio_url:
+            _player_process = None
+            _player_video_id = None
+            _player_title = None
+            return False
+        _start_ffplay(audio_url)
+        return True
+    except Exception:
+        _player_process = None
+        _player_video_id = None
+        _player_title = None
+        return False
+
+
+def _close_player():
+    """재생 중지 + 큐 초기화"""
+    global _player_process, _player_video_id, _player_title, _player_queue
+    with _player_lock:
+        if _player_process:
+            try:
+                _player_process.terminate()
+                _player_process.wait(timeout=3)
+            except Exception:
+                try:
+                    _player_process.kill()
+                except Exception:
+                    pass
+        _player_process = None
+        _player_video_id = None
+        _player_title = None
+        _player_queue = []
+
+
+def _format_duration(seconds):
+    """초를 M:SS 또는 H:MM:SS로 변환"""
+    if not seconds:
+        return "?"
+    seconds = int(seconds)
+    if seconds >= 3600:
+        h = seconds // 3600
+        m = (seconds % 3600) // 60
+        s = seconds % 60
+        return f"{h}:{m:02d}:{s:02d}"
+    else:
+        m = seconds // 60
+        s = seconds % 60
+        return f"{m}:{s:02d}"
+
+
+def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
+    """유튜브 검색 후 재생
+
+    Args:
+        query: 검색어 또는 YouTube URL
+        mode: 재생 모드 - "audio" (소리만, 기본), "video" (브라우저)
+        count: 검색 결과 수 (1-10, 기본 5). URL 직접 지정 시 무시됨
+
+    Returns:
+        dict: {success, video_id, title, channel, duration, mode, message}
+    """
+    try:
+        import yt_dlp
+    except ImportError:
+        return {
+            'success': False,
+            'message': 'yt-dlp 패키지가 설치되지 않았습니다. pip install yt-dlp'
+        }
+
+    mode = (mode or "audio").lower()
+    count = max(1, min(10, int(count or 5)))
+
+    # URL인지 검색어인지 판단
+    is_url = bool(re.match(r'https?://', query)) or 'youtu' in query
+
+    if is_url:
+        video_url = query
+        # URL에서 직접 정보 가져오기
+        try:
+            with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
+                info = ydl.extract_info(video_url, download=False)
+                video_id = info.get('id', '')
+                title = info.get('title', '')
+                channel = info.get('channel', info.get('uploader', ''))
+                duration = info.get('duration', 0)
+        except Exception as e:
+            return {'success': False, 'message': f'영상 정보 조회 실패: {str(e)}'}
+    else:
+        # 검색
+        try:
+            search_query = f"ytsearch{count}:{query}"
+            with yt_dlp.YoutubeDL({
+                'quiet': True, 'no_warnings': True,
+                'extract_flat': True,
+            }) as ydl:
+                result = ydl.extract_info(search_query, download=False)
+                entries = result.get('entries', [])
+
+            if not entries:
+                return {'success': False, 'message': f'"{query}" 검색 결과가 없습니다.'}
+
+            # 채널/플레이리스트 ID 필터링 (video ID만 남김: 11자, UC로 시작하지 않음)
+            entries = [e for e in entries if e.get('id') and not e['id'].startswith('UC') and len(e['id']) <= 16]
+            if not entries:
+                return {'success': False, 'message': f'"{query}" 검색 결과에서 재생 가능한 영상을 찾지 못했습니다.'}
+
+            # 검색 결과 목록 생성
+            search_results = []
+            for i, e in enumerate(entries):
+                search_results.append({
+                    'index': i + 1,
+                    'video_id': e.get('id', ''),
+                    'title': e.get('title', ''),
+                    'channel': e.get('channel', e.get('uploader', '')),
+                    'duration': _format_duration(e.get('duration')),
+                })
+
+            # 첫 번째 결과 → 바로 재생
+            selected = entries[0]
+            video_id = selected.get('id', '')
+            title = selected.get('title', '')
+            channel = selected.get('channel', selected.get('uploader', ''))
+            duration = selected.get('duration', 0)
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+
+            # ★ 나머지 결과 → 플레이어 시작 후 큐에 추가할 목록 준비
+            pending_queue = []
+            for e in entries[1:]:
+                eid = e.get('id', '')
+                if eid:
+                    pending_queue.append({
+                        'video_id': eid,
+                        'title': e.get('title', ''),
+                        'channel': e.get('channel', e.get('uploader', '')),
+                        'duration': e.get('duration', 0),
+                        'url': f"https://www.youtube.com/watch?v={eid}",
+                    })
+
+        except Exception as e:
+            return {'success': False, 'message': f'검색 실패: {str(e)}'}
+
+    global _player_video_id, _player_mode, _player_title, _player_process
+
+    # ★ 이미 재생 중이면 자동으로 큐에 추가 (play_youtube 반복 호출 대응)
+    with _player_lock:
+        if _player_process and _player_video_id:
+            queue_item = {
+                'video_id': video_id,
+                'title': title,
+                'channel': channel,
+                'duration': duration,
+            }
+            _player_queue.append(queue_item)
+            result = {
+                'success': True,
+                'video_id': video_id,
+                'title': title,
+                'channel': channel,
+                'duration': _format_duration(duration),
+                'mode': _player_mode,
+                'queued': True,
+                'queue_position': len(_player_queue),
+                'message': f'대기열에 추가: {title} - {channel} ({_format_duration(duration)}). 대기열 {len(_player_queue)}곡. 사용자에게 URL이나 링크를 보여주지 마세요.',
+            }
+            if not is_url:
+                try:
+                    result['search_results'] = search_results
+                except NameError:
+                    pass
+            return result
+
+    # 이전 재생 종료
+    _close_player()
+    _player_mode = mode
+
+    if mode == "video":
+        # video 모드: 기본 브라우저로 열기 (큰 화면)
+        watch_url = f"https://www.youtube.com/watch?v={video_id}"
+        try:
+            subprocess.Popen(['open', watch_url],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            return {'success': False, 'message': f'브라우저 열기 실패: {str(e)}'}
+        _player_video_id = video_id
+        _player_title = title
+        result = {
+            'success': True,
+            'video_id': video_id,
+            'title': title,
+            'channel': channel,
+            'duration': _format_duration(duration),
+            'mode': 'video',
+            'message': f'브라우저에서 영상을 재생합니다: {title} - {channel} ({_format_duration(duration)})',
+        }
+    else:
+        # audio 모드: yt-dlp + ffplay로 오디오 스트림 재생
+        try:
+            audio_url = _get_audio_url(video_id)
+            if not audio_url:
+                return {'success': False, 'message': '오디오 스트림 URL을 가져올 수 없습니다.'}
+            _start_ffplay(audio_url)
+            _player_video_id = video_id
+            _player_title = title
+            # 큐 모니터링 스레드 시작 (곡 끝나면 자동 다음곡)
+            t = threading.Thread(target=_queue_monitor, daemon=True)
+            t.start()
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'오디오 재생 실패: {str(e)}',
+            }
+
+        result = {
+            'success': True,
+            'video_id': video_id,
+            'title': title,
+            'channel': channel,
+            'duration': _format_duration(duration),
+            'mode': 'audio',
+            'message': f'음악을 재생합니다: {title} - {channel} ({_format_duration(duration)}). 사용자에게 URL이나 링크를 보여주지 마세요. 중지: stop_youtube, 건너뛰기: skip_youtube',
+        }
+
+    # 검색 결과가 있으면 포함
+    if not is_url:
+        try:
+            result['search_results'] = search_results
+        except NameError:
+            pass
+
+    # ★ 플레이어 시작 후 나머지 검색 결과를 큐에 추가
+    if not is_url:
+        try:
+            if pending_queue:
+                with _player_lock:
+                    for item in pending_queue:
+                        _player_queue.append(item)
+                result['auto_queued'] = [{
+                    'title': q['title'],
+                    'channel': q['channel'],
+                    'duration': _format_duration(q['duration']),
+                } for q in pending_queue]
+                result['queue_length'] = len(_player_queue)
+                result['message'] += f' 대기열에 {len(pending_queue)}곡 추가됨 (총 {len(_player_queue)}곡 대기).'
+        except NameError:
+            pass
+
+    return result
+
+
+def stop_youtube() -> dict:
+    """현재 재생 중인 유튜브 중지 (큐도 모두 초기화)"""
+    with _player_lock:
+        vid = _player_video_id
+        remaining = len(_player_queue)
+    if vid or _player_process:
+        _close_player()
+        msg = '재생을 중지했습니다.'
+        if remaining > 0:
+            msg += f' (대기열 {remaining}곡도 취소됨)'
+        return {
+            'success': True,
+            'message': msg,
+            'video_id': vid,
+        }
+    else:
+        return {'success': True, 'message': '재생 중인 항목이 없습니다.'}
+
+
+def add_to_queue(query: str, count: int = 3) -> dict:
+    """재생 대기열에 곡 추가. 현재 재생 중일 때 사용.
+
+    Args:
+        query: 검색어 또는 YouTube URL
+        count: 검색 결과 수 (1-5, 기본 3)
+
+    Returns:
+        dict: {success, video_id, title, queue_position, queue_length, message}
+    """
+    with _player_lock:
+        if not _player_video_id and not _player_process:
+            return {
+                'success': False,
+                'message': '현재 재생 중인 곡이 없습니다. play_youtube로 먼저 재생을 시작하세요.'
+            }
+
+    try:
+        import yt_dlp
+    except ImportError:
+        return {'success': False, 'message': 'yt-dlp 패키지가 없습니다.'}
+
+    count = max(1, min(5, int(count or 3)))
+    is_url = bool(re.match(r'https?://', query)) or 'youtu' in query
+
+    if is_url:
+        try:
+            with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True, 'extract_flat': True}) as ydl:
+                info = ydl.extract_info(query, download=False)
+                video_id = info.get('id', '')
+                title = info.get('title', '')
+                channel = info.get('channel', info.get('uploader', ''))
+                duration = info.get('duration', 0)
+        except Exception as e:
+            return {'success': False, 'message': f'영상 정보 조회 실패: {str(e)}'}
+    else:
+        try:
+            search_query = f"ytsearch{count}:{query}"
+            with yt_dlp.YoutubeDL({
+                'quiet': True, 'no_warnings': True,
+                'extract_flat': True,
+            }) as ydl:
+                result = ydl.extract_info(search_query, download=False)
+                entries = result.get('entries', [])
+            if not entries:
+                return {'success': False, 'message': f'"{query}" 검색 결과가 없습니다.'}
+            # 채널/플레이리스트 ID 필터링
+            entries = [e for e in entries if e.get('id') and not e['id'].startswith('UC') and len(e['id']) <= 16]
+            if not entries:
+                return {'success': False, 'message': f'"{query}" 검색 결과에서 재생 가능한 영상을 찾지 못했습니다.'}
+            selected = entries[0]
+            video_id = selected.get('id', '')
+            title = selected.get('title', '')
+            channel = selected.get('channel', selected.get('uploader', ''))
+            duration = selected.get('duration', 0)
+        except Exception as e:
+            return {'success': False, 'message': f'검색 실패: {str(e)}'}
+
+    # 큐에 추가
+    with _player_lock:
+        queue_item = {
+            'video_id': video_id,
+            'title': title,
+            'channel': channel,
+            'duration': duration,
+        }
+        _player_queue.append(queue_item)
+        qlen = len(_player_queue)
+
+    return {
+        'success': True,
+        'video_id': video_id,
+        'title': title,
+        'channel': channel,
+        'duration': _format_duration(duration),
+        'queue_position': qlen,
+        'queue_length': qlen,
+        'message': f'대기열에 추가: {title} - {channel} ({_format_duration(duration)}). 대기열 {qlen}곡.',
+    }
+
+
+def skip_youtube() -> dict:
+    """현재 곡 건너뛰고 대기열의 다음 곡 재생"""
+    global _player_process, _player_video_id, _player_title
+
+    with _player_lock:
+        if not _player_video_id and not _player_process:
+            return {'success': True, 'message': '재생 중인 항목이 없습니다.'}
+        skipped_id = _player_video_id
+
+        # 현재 ffplay 프로세스 종료
+        if _player_process:
+            try:
+                _player_process.terminate()
+                _player_process.wait(timeout=3)
+            except Exception:
+                try:
+                    _player_process.kill()
+                except Exception:
+                    pass
+            _player_process = None
+
+        if _player_queue:
+            next_item = _player_queue[0]  # peek
+            if _play_next_in_queue_locked():
+                # 새 모니터 스레드 시작
+                t = threading.Thread(target=_queue_monitor, daemon=True)
+                t.start()
+                return {
+                    'success': True,
+                    'message': f'건너뛰었습니다. 다음 곡 재생: {next_item["title"]}',
+                    'skipped_video_id': skipped_id,
+                    'now_playing': {
+                        'video_id': next_item['video_id'],
+                        'title': next_item['title'],
+                        'channel': next_item['channel'],
+                        'duration': _format_duration(next_item['duration']),
+                    },
+                    'queue_remaining': len(_player_queue),
+                }
+            else:
+                _player_video_id = None
+                _player_title = None
+                _player_queue.clear()
+                return {
+                    'success': True,
+                    'message': '건너뛰었으나 다음 곡 재생에 실패했습니다. 재생 종료.',
+                    'skipped_video_id': skipped_id,
+                }
+        else:
+            _player_video_id = None
+            _player_title = None
+            return {
+                'success': True,
+                'message': '건너뛰었습니다. 대기열이 비어 재생을 종료합니다.',
+                'skipped_video_id': skipped_id,
+            }
+
+
+def get_queue() -> dict:
+    """현재 재생 대기열 조회"""
+    with _player_lock:
+        now_playing = None
+        if _player_video_id:
+            now_playing = {
+                'video_id': _player_video_id,
+                'title': _player_title or '',
+            }
+
+        queue_list = []
+        for i, item in enumerate(_player_queue):
+            queue_list.append({
+                'position': i + 1,
+                'video_id': item['video_id'],
+                'title': item['title'],
+                'channel': item['channel'],
+                'duration': _format_duration(item['duration']),
+            })
+
+        vid = _player_video_id
+
+    return {
+        'success': True,
+        'now_playing': now_playing,
+        'queue': queue_list,
+        'queue_length': len(queue_list),
+        'message': f'현재 재생 중: {vid or "없음"}, 대기열: {len(queue_list)}곡',
     }
 
 

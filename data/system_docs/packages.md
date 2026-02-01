@@ -64,7 +64,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 ---
 
-## 현재 설치된 도구 패키지 (25개)
+## 현재 설치된 도구 패키지 (26개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -92,6 +92,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
 | web | Web Tools | 웹 검색, 크롤링, 뉴스, 신문 생성, 즐겨찾기 |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
+| music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 
 ---
@@ -135,4 +136,4 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-01-31*
+*마지막 업데이트: 2026-02-01*

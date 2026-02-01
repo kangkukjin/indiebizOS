@@ -23,7 +23,7 @@
 
 ---
 
-## 도구 패키지 (Tools) - 25개
+## 도구 패키지 (Tools) - 26개
 에이전트가 사용할 수 있는 유틸리티
 
 | ID | 이름 | 설명 |
@@ -52,6 +52,7 @@
 | visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
 | web | Web Tools | 웹 검색, 크롤링, 뉴스, 신문 생성, 즐겨찾기 |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
+| music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 
 ---
@@ -138,4 +139,4 @@ AI 호출 1회로 판단, 검색, 발송을 한 번에 처리:
 자세한 내용은 `packages.md` 참조.
 
 ---
-*마지막 업데이트: 2026-01-31 23:30*
+*마지막 업데이트: 2026-02-01*

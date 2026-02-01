@@ -62,8 +62,7 @@ Nostr 키는 IndieNet identity와 연동 가능:
 | `channels/gmail.py` | Gmail 구현 |
 | `channels/nostr.py` | Nostr 구현 |
 | `business_manager.py` | 비즈니스/이웃/메시지 DB 관리 |
-| `auto_response.py` | 자동응답 서비스 |
-| `ai_judgment.py` | AI 판단 서비스 |
+| `auto_response.py` | 자동응답 서비스 V3 (Tool Use 통합) |
 
 ---
 
@@ -110,98 +109,61 @@ OWNER_NOSTR_PUBKEYS=npub1xxx...,npub1yyy...
 
 ---
 
-## 자동응답 시스템
+## 자동응답 시스템 V3 (Tool Use 통합)
+
+→ 상세 문서: [auto_response.md](auto_response.md)
 
 ### 처리 흐름
 
+V3에서는 판단과 응답을 한 번의 AI 호출로 처리합니다 (Tool Use 방식):
+
 ```
-새 메시지 도착 (is_from_user=0, status=null)
+새 메시지 도착 (is_from_user=0)
          │
          ▼
-┌─────────────────────────────────────────┐
-│        AI 판단 (ai_judgment.py)          │
-│  - 의도 분석                              │
-│  - 비즈니스 관련성 판단                   │
-│  - 검색 카테고리/키워드 추출               │
-└────────────────────┬────────────────────┘
-                     │
-         ┌───────────┴───────────┐
-         ▼                       ▼
-   NO_RESPONSE              BUSINESS_RESPONSE
-   (개인대화/스팸)              (비즈니스 문의)
-         │                       │
-         ▼                       ▼
-   status='skipped'        비즈니스 DB 검색
-                                 │
-                                 ▼
-                    ┌─────────────────────────────┐
-                    │  응답 생성 (auto_response.py) │
-                    │  - 컨텍스트: 근무지침, 문서   │
-                    │  - 검색 결과                 │
-                    │  - 대화 기록                 │
-                    └──────────────┬──────────────┘
-                                   │
-                                   ▼
-                          messages 테이블에 저장
-                          (is_from_user=1, status='pending')
-                                   │
-                                   ▼
-                          Pending Sender가 발송
-                                   │
-                                   ▼
-                          status='sent'
+[AutoResponseService._process_message()]
+         │
+         ▼
+[컨텍스트 수집: 이웃 정보, 근무지침, 비즈니스 문서, 대화 기록]
+         │
+         ▼
+[AI 호출 (Tool Use 포함) - 1회]
+         │
+         ▼
+[AI가 도구 선택 및 실행]
+  ├─ search_business_items → 비즈니스 DB 검색
+  ├─ no_response_needed → 응답 불필요 (스팸/광고/개인대화)
+  └─ send_response → 응답 즉시 발송
+         │
+         ▼
+[완료]
 ```
 
-### AI 판단 결과
+### 도구
 
-```json
-{
-  "action": "BUSINESS_RESPONSE",
-  "confidence": 0.9,
-  "reasoning": "자전거 구매 문의",
-  "no_matching_business": false,
-  "requested_service": "",
-  "searches": [
-    {
-      "category": "중고 자전거 판매",
-      "keywords": ["자전거", "구매"],
-      "confidence": 0.9
-    }
-  ]
-}
-```
+| 도구 | 용도 |
+|------|------|
+| `search_business_items` | 비즈니스 DB에서 상품/서비스 검색 |
+| `no_response_needed` | 응답 불필요 시 (스팸, 광고, 개인적 대화) |
+| `send_response` | 응답 메시지를 발신자에게 즉시 전송 |
 
-| action | 의미 |
-|--------|------|
-| `NO_RESPONSE` | 응답 불필요 (개인대화, 스팸, 등) |
-| `BUSINESS_RESPONSE` | 비즈니스 응답 필요 |
+### V2 → V3 변경사항
 
-### 비즈니스 매칭 실패
-
-`no_matching_business: true`인 경우:
-- 요청한 서비스가 비즈니스 목록에 없음
-- `requested_service`에 요청 서비스명 기록
-- 응답에 "해당 서비스를 제공하지 않습니다" 포함
+| 항목 | V2 (이전) | V3 (현재) |
+|------|----------|----------|
+| AI 호출 횟수 | 2회 (판단 + 응답) | 1회 (Tool Use) |
+| 판단 로직 | 별도 ai_judgment.py | auto_response.py에 통합 |
+| 응답 발송 | pending → polling → 발송 | send_response 도구로 즉시 발송 |
 
 ---
 
 ## 메시지 발송
 
-### Pending Message Sender
+### 자동응답 발송 (V3)
 
-10초마다 pending 상태의 발신 메시지를 조회하여 발송:
-
-```
-messages 테이블 (status='pending', is_from_user=1)
-         │
-         ▼
-    채널별 발송
-    - Gmail: SMTP
-    - Nostr: NIP-04 DM
-         │
-         ▼
-    status='sent' 또는 'failed'
-```
+V3에서는 `send_response` 도구가 즉시 발송합니다 (pending 대기 없음):
+- Channel Poller의 `_send_response()` 호출
+- DB에 발송 기록 저장 (`status='sent'`)
 
 ### 수동 메시지 발송
 
@@ -311,33 +273,12 @@ gmail:
 
 ---
 
-## 프롬프트 XML 구조 (2026-01-20)
+## 프롬프트 구조
 
-### 판단 프롬프트 (ai_judgment.py)
-```xml
-<judgment_examples>...</judgment_examples>
-<current_context>
-  <message>...</message>
-  <neighbor>...</neighbor>
-  <business_list>...</business_list>
-  <conversation_history>...</conversation_history>
-</current_context>
-<judgment_instructions>...</judgment_instructions>
-```
-
-### 응답 프롬프트 (auto_response.py)
-```xml
-<response_examples>...</response_examples>
-<current_context>
-  <work_guideline>...</work_guideline>
-  <business_doc>...</business_doc>
-  <searched_business>...</searched_business>
-  <conversation_history>...</conversation_history>
-  <current_message>...</current_message>
-</current_context>
-<no_matching_business>...</no_matching_business>
-<response_instructions>...</response_instructions>
-```
+### 자동응답 프롬프트 (V3 - Tool Use 통합)
+`data/common_prompts/base_prompt_autoresponse.md` 기반:
+- 역할, 판단 기준, 도구 사용 지침을 하나의 프롬프트로 통합
+- AI가 컨텍스트(이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)를 참조하여 도구를 직접 선택
 
 ---
 
@@ -349,4 +290,4 @@ gmail:
 4. **Nostr 키 관리**: nsec는 채널 설정 또는 IndieNet에서 관리
 
 ---
-*마지막 업데이트: 2026-01-31*
+*마지막 업데이트: 2026-02-01*

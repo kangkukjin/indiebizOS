@@ -160,7 +160,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `backend/`: 서버 소스 코드
 - `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (25개)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (26개)
 - `projects/`: 사용자 프로젝트 데이터 (16개)
 
 ## 프롬프트 구조
@@ -177,15 +177,9 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `<assistant_message>` - AI 응답
 - `<current_user_request>` - 현재 요청
 
-**자동응답 (auto_response.py)**
-- `<response_examples>` - 응답 예시
-- `<current_context>` - 현재 컨텍스트
-- `<response_instructions>` - 응답 지시사항
-
-**판단 AI (ai_judgment.py)**
-- `<judgment_examples>` - 판단 예시
-- `<current_context>` - 현재 컨텍스트
-- `<judgment_instructions>` - 판단 지시사항
+**자동응답 V3 (auto_response.py - Tool Use 통합)**
+- `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
+- Tool Use 기반으로 판단/검색/발송을 단일 AI 호출로 처리
 
 ---
-*마지막 업데이트: 2026-01-31*
+*마지막 업데이트: 2026-02-01*

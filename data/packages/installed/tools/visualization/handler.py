@@ -65,6 +65,19 @@ def execute(tool_name: str, params: dict, project_path: str = None):
     # data_file 경로 해석
     data_file = _resolve_data_file(params.get("data_file"), project_path)
 
+    # output_path를 프로젝트 outputs 폴더 기준으로 강제
+    if project_path:
+        import os
+        output_base = os.path.join(project_path, "outputs")
+        os.makedirs(output_base, exist_ok=True)
+        raw_output = params.get("output_path")
+        if raw_output:
+            # 파일명만 추출하여 프로젝트 outputs에 저장
+            params["output_path"] = os.path.join(output_base, os.path.basename(raw_output))
+        else:
+            # output_path 미지정 시 프로젝트 outputs 폴더 사용
+            params["output_path"] = output_base
+
     try:
         if tool_name == "line_chart":
             tool = load_module("tool_line")

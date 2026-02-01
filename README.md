@@ -382,13 +382,88 @@ The human is part of the system:
 
 ---
 
-## Use Cases
+## Real-World Use Cases
 
-- **Solopreneur**: Automate customer communication, research, content creation
-- **Consultant**: Separate projects per client, specialized agent teams
-- **Developer**: Code execution, documentation, testing agents
-- **Investor**: Market research, portfolio analysis, news monitoring
-- **Healthcare**: Separate medical domains, privacy-respecting isolation
+### 🔧 Hardware Management
+- **PC File Management**: Organize files through conversation with an agent — AI assesses deletion necessity and risks
+- **Android Phone Control**: Device management through an agent
+- **ESP32 IoT**: Agent uploads code to ESP32 board + creates a web app → control LED switches from your phone
+
+### ⚖️ Legal Research
+- **Law Verification**: Check whether a specific tax exemption law was actually enacted by querying official government legislation databases
+- **Inheritance Tax**: Search inheritance tax regulations and get consultation
+- Reliable answers based on official government publications, not just news articles
+
+### 🎬 Video / Slides / Homepage Production
+- **Quick Videos**: Family photos + YouTube BGM → photo slideshow videos
+- **Professional Videos**: Book review-based introduction videos (React/Remotion)
+- **Presentations**: Rapidly generate slide decks
+- **Homepage Management**: Remembers file locations of multiple websites, updates with modern Tailwind CSS
+
+### 🛒 Smart Shopping
+- Naver Shopping + Danawa price comparison combined with AI judgment
+- Vague questions like "What should I get for my wife's birthday?" → AI selects items → searches and compares actual products
+
+### 📚 Deep Learning & Research
+- Multiple sources connected (academic papers, The Guardian, etc.) for in-depth study conversations
+- "Why is fine dust bad in Korea?" → answers based on latest paper searches
+- "US policy changes toward Korea after Trump's election" → report writing based on primary sources
+
+### 🎯 Personalized Recommendations
+- Assign personas to recommendation agents for restaurants, exhibitions, movies
+- "50-year-old scientist" or "30-something female drama writer" perspectives → diverse viewpoints on the same question
+
+### 🎵 Music
+- **ABC Notation Composing**: "Play a lively 2-minute waltz as a quartet" → LLM generates sheet music and plays it
+- **YouTube Music Playback**: "Play 3 IU songs" → AI curates selection → playback. Like having an infinite playlist
+
+### 📷 Photo Management
+- Scan photo folders → chronological view, map view
+- "Where did I go in October 2024?" → answers with GPS data from photos
+- "Show me photos from when I visited Suwon" → displays matching photos in browser
+
+### 📰 Personal Newspaper
+- One switch click → searches Google News with preset keywords → auto-edits into newspaper format → displays in browser
+- Custom news briefing every day with a single click
+
+### 🎥 Content
+- YouTube video subtitle extraction and summary generation
+- YouTube music video MP3 extraction and saving
+
+### 💬 Multi-Chat Rooms
+- Freely gather agents from any project into one chat room
+- Creative uses like a three-way conversation between Admiral Yi Sun-sin, General Won Gyun, and yourself
+
+### 🏥 Health Management
+- Multiple specialist agents (internal medicine, surgery, etc.)
+- Automatically records health information from conversations → personalized health consultations based on accumulated records
+
+### 🏠 Real Estate Analysis
+- Apartment and multi-family actual transaction prices, monthly/yearly rent lookup + map visualization
+- Regional analysis like "How's the commercial district in Oseong, Cheongju?"
+
+### 📈 Investment Consulting
+- Investment consultation based on your stock portfolio
+- Stock, gold, and cryptocurrency price graph visualization
+
+### 📱 Remote Commands & Auto-Response
+- Send commands to IndieBiz OS on your PC while on the go, via Gmail or smartphone apps like Norst
+- Example: Send a Norst message "Publish a newspaper and email it to me as an attachment" → System AI executes the task
+- Built-in auto-response system: When someone other than the owner sends a message, AI responds appropriately (but does not execute commands from them)
+- This auto-response system serves as the foundation for automated business operations such as customer inquiry handling and reservation guidance
+
+### 🔄 Tool Package Sharing
+- Share tool package installation info via Norst public messages
+- Other users receive the info and ask their System AI to install the package adapted to their own PC
+- Instead of downloading the program itself, the shared information (description, structure, dependencies, etc.) is sufficient for the System AI to build and install it
+
+### #️⃣ Hashtag Bulletin Boards
+- IndieNet hashtag-based boards: create a board with any hashtag among people who want to participate
+- Semi-open structure — public for those who know the hashtag, but inaccessible without it
+- Use cases include interest-based communities, small group communication, and tool package sharing channels
+
+### ⚡ Quick Contacts
+- Send messages instantly to registered contacts with a quick contact button
 
 ---
 

@@ -162,8 +162,15 @@ def save_figure(fig, output_path: str = None, output_format: str = "png"):
         }
 
     elif output_format == "png":
-        # 항상 기본 디렉토리에 저장
-        output_path = generate_output_path("chart", "png")
+        if not output_path:
+            output_path = generate_output_path("chart", "png")
+        else:
+            # output_path가 디렉토리면 그 안에 파일 생성
+            if os.path.isdir(output_path):
+                from datetime import datetime as dt
+                timestamp = dt.now().strftime("%Y%m%d_%H%M%S")
+                output_path = os.path.join(output_path, f"chart_{timestamp}.png")
+            os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
         fig.savefig(output_path, dpi=150, bbox_inches='tight',
                     facecolor='white', edgecolor='none')
         plt.close(fig)
@@ -179,7 +186,14 @@ def save_figure(fig, output_path: str = None, output_format: str = "png"):
 def save_plotly_figure(fig, output_path: str = None, output_format: str = "png"):
     """Plotly figure 저장"""
     if output_format == "html":
-        output_path = generate_output_path("chart", "html")
+        if not output_path:
+            output_path = generate_output_path("chart", "html")
+        else:
+            if os.path.isdir(output_path):
+                from datetime import datetime as dt
+                timestamp = dt.now().strftime("%Y%m%d_%H%M%S")
+                output_path = os.path.join(output_path, f"chart_{timestamp}.html")
+            os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
         fig.write_html(output_path)
         # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
         return {"format": "html", "path": os.path.abspath(output_path)}
@@ -190,7 +204,14 @@ def save_plotly_figure(fig, output_path: str = None, output_format: str = "png")
         return {"format": "base64", "data": img_base64, "mime_type": "image/png"}
 
     elif output_format == "png":
-        output_path = generate_output_path("chart", "png")
+        if not output_path:
+            output_path = generate_output_path("chart", "png")
+        else:
+            if os.path.isdir(output_path):
+                from datetime import datetime as dt
+                timestamp = dt.now().strftime("%Y%m%d_%H%M%S")
+                output_path = os.path.join(output_path, f"chart_{timestamp}.png")
+            os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
         fig.write_image(output_path, scale=2)
         # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
         abs_path = os.path.abspath(output_path)

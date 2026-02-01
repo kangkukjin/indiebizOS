@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Mail, Globe, ChevronDown, ChevronRight, FileText, Edit3 } from 'lucide-react';
+import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Mail, Globe, ChevronDown, ChevronRight, FileText, Edit3, User } from 'lucide-react';
 import type { SystemAISettings } from '../types';
 import { api } from '../../../lib/api';
 
@@ -49,6 +49,12 @@ export function SettingsDialog({
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
   const [channelConfigs, setChannelConfigs] = useState<Record<string, any>>({});
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
+
+  // 소유자 식별 정보
+  const [ownerEmails, setOwnerEmails] = useState('');
+  const [ownerNostrPubkeys, setOwnerNostrPubkeys] = useState('');
+  const [systemAiGmail, setSystemAiGmail] = useState('');
+  const [ownerDirty, setOwnerDirty] = useState(false);
 
   // 프롬프트 템플릿 상태
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
@@ -114,8 +120,34 @@ export function SettingsDialog({
   useEffect(() => {
     if (show && activeTab === 'channels') {
       loadChannels();
+      loadOwnerIdentities();
     }
   }, [show, activeTab]);
+
+  const loadOwnerIdentities = async () => {
+    try {
+      const data = await api.getOwnerIdentities();
+      setOwnerEmails(data.owner_emails || '');
+      setOwnerNostrPubkeys(data.owner_nostr_pubkeys || '');
+      setSystemAiGmail(data.system_ai_gmail || '');
+      setOwnerDirty(false);
+    } catch (err) {
+      console.error('Failed to load owner identities:', err);
+    }
+  };
+
+  const saveOwnerIdentities = async () => {
+    try {
+      await api.updateOwnerIdentities({
+        owner_emails: ownerEmails.trim(),
+        owner_nostr_pubkeys: ownerNostrPubkeys.trim(),
+        system_ai_gmail: systemAiGmail.trim(),
+      });
+      setOwnerDirty(false);
+    } catch (err) {
+      console.error('Failed to save owner identities:', err);
+    }
+  };
 
   const loadChannels = async () => {
     try {
@@ -414,7 +446,62 @@ export function SettingsDialog({
 
           {activeTab === 'channels' && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-700 mb-4">
+              {/* 소유자 식별 정보 */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <User size={16} className="text-[#D97706]" />
+                  <span className="font-medium text-gray-900 text-sm">소유자 식별 정보</span>
+                </div>
+                <p className="text-xs text-gray-600">
+                  외부 채널에서 아래 주소로 오는 메시지만 사용자 명령으로 처리됩니다.
+                </p>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    소유자 이메일 (쉼표로 구분)
+                  </label>
+                  <input
+                    type="text"
+                    value={ownerEmails}
+                    onChange={(e) => { setOwnerEmails(e.target.value); setOwnerDirty(true); }}
+                    placeholder="user@gmail.com"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    소유자 Nostr 주소 (npub, 쉼표로 구분)
+                  </label>
+                  <input
+                    type="text"
+                    value={ownerNostrPubkeys}
+                    onChange={(e) => { setOwnerNostrPubkeys(e.target.value); setOwnerDirty(true); }}
+                    placeholder="npub1..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    시스템 AI Gmail 발신 주소
+                  </label>
+                  <input
+                    type="email"
+                    value={systemAiGmail}
+                    onChange={(e) => { setSystemAiGmail(e.target.value); setOwnerDirty(true); }}
+                    placeholder="system-ai@gmail.com"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
+                  />
+                </div>
+                {ownerDirty && (
+                  <button
+                    onClick={saveOwnerIdentities}
+                    className="px-4 py-1.5 bg-[#D97706] text-white text-sm rounded-lg hover:bg-[#B45309] transition-colors"
+                  >
+                    저장
+                  </button>
+                )}
+              </div>
+
+              <p className="text-sm text-gray-700">
                 비즈니스 메시지 수신을 위한 통신채널 설정입니다. 활성화된 채널은 주기적으로 메시지를 확인합니다.
               </p>
 

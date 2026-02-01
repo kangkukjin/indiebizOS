@@ -186,6 +186,41 @@
       }
     },
     {
+      "name": "copy_path",
+      "description": "파일 또는 폴더를 복사합니다.\n\n사용법:\n- 파일 복사: 단일 파일을 다른 위치로 복사\n- 폴더 복사: 폴더 전체를 하위 내용 포함하여 복사\n- 대상 경로의 상위 디렉토리가 없으면 자동 생성\n\n사용 예시:\n- 사진 파일 복사: source='/Photos/IMG_001.jpg', destination='~/Desktop/backup/IMG_001.jpg'\n- 폴더 통째로 복사: source='/data/project', destination='/backup/project'\n\n주의사항:\n- 대상 경로에 이미 파일/폴더가 있으면 덮어씁니다\n- 매우 큰 폴더 복사는 시간이 걸릴 수 있습니다",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "source": { "type": "string", "description": "원본 파일 또는 폴더 경로" },
+          "destination": { "type": "string", "description": "복사 대상 경로" }
+        },
+        "required": ["source", "destination"]
+      }
+    },
+    {
+      "name": "move_path",
+      "description": "파일 또는 폴더를 이동합니다 (이름 변경 포함).\n\n사용법:\n- 파일/폴더를 다른 위치로 이동\n- 같은 디렉토리 내에서 이름 변경에도 사용 가능\n- 대상 경로의 상위 디렉토리가 없으면 자동 생성\n\n사용 예시:\n- 파일 이동: source='./temp/report.pdf', destination='./docs/report.pdf'\n- 이름 변경: source='./old_name.txt', destination='./new_name.txt'\n\n주의사항:\n- 원본이 삭제됩니다 (이동이므로)\n- 대상 경로에 이미 파일이 있으면 덮어씁니다",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "source": { "type": "string", "description": "원본 파일 또는 폴더 경로" },
+          "destination": { "type": "string", "description": "이동 대상 경로" }
+        },
+        "required": ["source", "destination"]
+      }
+    },
+    {
+      "name": "delete_path",
+      "description": "파일 또는 폴더를 삭제합니다.\n\n사용법:\n- 파일 삭제: 단일 파일 제거\n- 폴더 삭제: 폴더와 하위 내용 전체 제거\n\n주의사항:\n- 이 작업은 되돌릴 수 없습니다 (휴지통으로 이동하지 않음)\n- 사용자에게 반드시 확인 후 실행하세요",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "삭제할 파일 또는 폴더 경로" }
+        },
+        "required": ["path"]
+      }
+    },
+    {
       "name": "save_agent_note",
       "description": "영구 메모를 저장합니다. 대화가 끝나도 다음 대화에서 읽을 수 있습니다.\n\n## 반드시 메모해야 하는 순간 (하나라도 해당되면 즉시 저장!)\n- 폴더를 새로 만들었을 때 → 절대 경로 기록\n- 백업을 만들었을 때 → 원본 경로와 백업 경로 둘 다 기록\n- 파일을 이동/복사했을 때 → 원래 위치와 새 위치 기록\n- npm install, 빌드 등 환경을 변경했을 때 → 무엇을 했는지 기록\n- 작업 대상 폴더를 처음 확인했을 때 → 절대 경로 기록\n- 에러를 해결했을 때 → 원인과 해결법 기록\n- 사용자가 중요한 결정을 내렸을 때 → 결정 내용 기록\n- 작업이 끝났을 때 → 현재 상태와 다음에 할 일 정리\n\n## 작성 규칙\n- **각 항목에 반드시 날짜를 적을 것** (나중에 오래된 정보와 최신 정보를 구분하기 위해)\n- get_current_time으로 현재 시간을 확인해서 기록\n\n## 사용법\n- append=true: 기존 메모에 추가\n- append=false: 전체를 정리해서 덮어쓰기 (메모가 커졌을 때)\n\n## 예시\n```\n[작업 폴더] /Users/user/HomePages/my-site (01/28 확인)\n[백업] /Users/user/HomePages/my-site_backup (01/28 생성)\n[환경] npm install 완료, next 16.1.6 (01/27)\n[상태] hero 섹션 완료 → 다음: features (01/28)\n```",
       "input_schema": {

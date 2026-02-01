@@ -1,0 +1,161 @@
+{
+  "id": "music-composer",
+  "name": "Music Composer",
+  "description": "ABC Notation 기반 음악 작곡 도구. ABC → MIDI → 오디오(WAV/MP3) 변환.",
+  "version": "1.0.0",
+  "guide_file": "music_composer_guide.md",
+  "tools": [
+    {
+      "name": "abc_to_midi",
+      "description": "ABC Notation을 MIDI 파일로 변환. 악기/볼륨/패닝/리버브/코러스 설정 가능.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "abc_notation": {
+            "type": "string",
+            "description": "ABC Notation 형식의 악보 텍스트"
+          },
+          "instruments": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "파트별 악기 이름 리스트. V:1부터 순서대로 매칭"
+          },
+          "volumes": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "파트별 볼륨 (0-127). 생략 시 자동 밸런스"
+          },
+          "panning": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "파트별 좌우 패닝 (0=좌, 64=중앙, 127=우). 생략 시 자동 분배"
+          },
+          "reverb": {
+            "type": "integer",
+            "description": "리버브 깊이 (0-127, 기본: 60)"
+          },
+          "chorus": {
+            "type": "integer",
+            "description": "코러스 깊이 (0-127, 기본: 30)"
+          },
+          "filename": {
+            "type": "string",
+            "description": "출력 파일명 (확장자 제외)"
+          }
+        },
+        "required": ["abc_notation"]
+      }
+    },
+    {
+      "name": "midi_to_audio",
+      "description": "MIDI를 오디오(WAV/MP3)로 변환. EQ 프리셋으로 음색 조절 가능.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "midi_path": {
+            "type": "string",
+            "description": "MIDI 파일 절대 경로"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["wav", "mp3"],
+            "description": "출력 포맷 (기본: wav)"
+          },
+          "gain": {
+            "type": "number",
+            "description": "음량 (0.1~5.0, 기본: 0.5)"
+          },
+          "eq_preset": {
+            "type": "string",
+            "enum": ["balanced", "warm", "bright", "powerful", "flat"],
+            "description": "EQ 프리셋 (기본: balanced)"
+          }
+        },
+        "required": ["midi_path"]
+      }
+    },
+    {
+      "name": "compose_and_export",
+      "description": "ABC Notation → MIDI → 오디오 한번에 생성. 악기/믹싱/EQ 모두 설정 가능.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "abc_notation": {
+            "type": "string",
+            "description": "ABC Notation 형식의 악보 텍스트"
+          },
+          "instruments": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "파트별 악기 이름 리스트. V:1부터 순서대로 매칭"
+          },
+          "volumes": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "파트별 볼륨 (0-127). 생략 시 자동 밸런스"
+          },
+          "panning": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "파트별 좌우 패닝 (0=좌, 64=중앙, 127=우)"
+          },
+          "reverb": {
+            "type": "integer",
+            "description": "리버브 깊이 (0-127, 기본: 60)"
+          },
+          "chorus": {
+            "type": "integer",
+            "description": "코러스 깊이 (0-127, 기본: 30)"
+          },
+          "eq_preset": {
+            "type": "string",
+            "enum": ["balanced", "warm", "bright", "powerful", "flat"],
+            "description": "EQ 프리셋 (기본: balanced)"
+          },
+          "title": {
+            "type": "string",
+            "description": "곡 제목 (파일명에 사용)"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["wav", "mp3"],
+            "description": "출력 포맷 (기본: wav)"
+          }
+        },
+        "required": ["abc_notation"]
+      }
+    },
+    {
+      "name": "search_abc_tunes",
+      "description": "abcnotation.com에서 ABC 악보 검색 (~80만곡). 반드시 영문으로 검색해야 함 (예: bach cello suite, amazing grace).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "영문 검색어 (곡명/작곡가). 예: bach cello suite, amazing grace, fur elise"
+          },
+          "page": {
+            "type": "integer",
+            "description": "페이지 번호 (0부터 시작, 기본 0). 페이지당 10건"
+          }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "get_abc_tune",
+      "description": "검색된 곡의 ABC Notation을 가져옴. compose_and_export로 바로 연주 가능.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "tune_id": {
+            "type": "string",
+            "description": "곡 ID (search_abc_tunes 결과의 tune_id)"
+          }
+        },
+        "required": ["tune_id"]
+      }
+    }
+  ]
+}

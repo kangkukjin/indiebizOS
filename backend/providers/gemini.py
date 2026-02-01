@@ -22,7 +22,7 @@ class GeminiProvider(BaseProvider):
 
     # 도구 호출 제한
     MAX_TOOL_ITERATIONS = 30  # 최대 도구 호출 라운드
-    MAX_CONSECUTIVE_TOOL_ONLY = 30  # 텍스트 없이 도구만 연속 호출 허용 횟수
+    MAX_CONSECUTIVE_TOOL_ONLY = 20  # 텍스트 없이 도구만 연속 호출 허용 횟수
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -162,12 +162,12 @@ class GeminiProvider(BaseProvider):
             else:
                 consecutive_tool_only += 1
                 if consecutive_tool_only >= self.MAX_CONSECUTIVE_TOOL_ONLY:
-                    print(f"[Gemini] 텍스트 없이 도구만 {consecutive_tool_only}번 연속 호출, 응답 강제 유도")
-                    # 응답 강제 유도 메시지 추가
+                    print(f"[Gemini] 텍스트 없이 도구만 {consecutive_tool_only}번 연속 호출, 상황 판단 강제 유도")
+                    # 상황 판단 강제 유도 메시지 추가
                     contents.append(types.Content(
                         role="user",
                         parts=[types.Part.from_text(
-                            text="지금까지 수집한 정보를 바탕으로 사용자의 질문에 답변해주세요. 추가 도구 호출 없이 응답을 생성해주세요."
+                            text="도구만 연속 호출하고 있습니다. 반드시 멈추고 다음을 텍스트로 작성하세요:\n1. 지금까지 알아낸 것 요약\n2. 현재 작업의 진행 상황 (완료된 것 / 남은 것)\n3. 해결이 안 되는 문제가 있다면 원인 분석\n4. 다음 단계 계획 또는 사용자에게 보고할 내용\n\n텍스트 응답 없이 도구만 호출하지 마세요."
                         )]
                     ))
                     iteration += 1

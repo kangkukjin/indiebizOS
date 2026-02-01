@@ -216,6 +216,103 @@ def _run_npm_install():
 # 에셋 처리
 # ============================================================
 
+def _auto_resolve_image_paths(composition_code: str, public_dir: Path, existing_mapping: dict) -> tuple:
+    """
+    composition_code에서 절대 경로 이미지 참조를 자동 감지하여:
+    1. 해당 파일을 public/에 복사
+    2. 코드의 경로를 staticFile('파일명')으로 변환
+
+    AI가 asset_paths를 빠뜨리거나, src="/abs/path/image.png" 형태로
+    직접 절대 경로를 사용한 경우를 자동 보정합니다.
+
+    Returns:
+        (변환된 composition_code, 변환된 이미지 수)
+    """
+    import re
+
+    # 이미 매핑된 파일명 세트 (중복 복사 방지)
+    existing_names = set(existing_mapping.values()) if existing_mapping else set()
+
+    auto_count = 0
+    image_exts = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp'}
+
+    # 패턴: 절대 경로로 된 이미지 참조 (src=, url(, staticFile( 외의 직접 경로)
+    # 예: src="/Users/.../outputs/hero.png"
+    #     src={"/Users/.../outputs/hero.png"}
+    #     url("/Users/.../outputs/bg.jpg")
+    abs_path_pattern = re.compile(
+        r'''(?:src\s*=\s*(?:\{?\s*)?|url\(\s*)["'](/[^"']+?)["']'''
+    )
+
+    def replace_with_static(match):
+        nonlocal auto_count
+        full_match = match.group(0)
+        abs_path = match.group(1)
+
+        # 이미지 파일인지 확인
+        ext = Path(abs_path).suffix.lower()
+        if ext not in image_exts:
+            return full_match
+
+        # 파일이 실제로 존재하는지 확인
+        if not Path(abs_path).exists():
+            print(f"[Remotion 경로 자동변환] 파일 없음, 스킵: {abs_path}")
+            return full_match
+
+        # public/에 복사
+        filename = Path(abs_path).name
+        if filename not in existing_names:
+            dst = public_dir / filename
+            shutil.copy2(abs_path, str(dst))
+            existing_names.add(filename)
+            print(f"[Remotion 경로 자동변환] {abs_path} → staticFile('{filename}')")
+
+        auto_count += 1
+
+        # src= 형태인지 url( 형태인지에 따라 변환
+        if 'src' in full_match:
+            return f"src={{staticFile('{filename}')}}"
+        else:
+            return f"url(staticFile('{filename}'))"
+
+    composition_code = abs_path_pattern.sub(replace_with_static, composition_code)
+
+    # 추가 패턴: JSX 내 문자열 리터럴로 절대 경로가 사용된 경우
+    # 예: const img = "/Users/.../image.png"
+    #     backgroundImage: `url(/Users/.../image.png)`
+    string_path_pattern = re.compile(
+        r'''(["'`])(/[^\s"'`]+?\.(?:png|jpg|jpeg|gif|webp|svg))\1'''
+    )
+
+    def replace_string_path(match):
+        nonlocal auto_count
+        quote = match.group(1)
+        abs_path = match.group(2)
+
+        if not Path(abs_path).exists():
+            return match.group(0)
+
+        # staticFile()로 이미 변환된 것은 스킵
+        pos = match.start()
+        before = composition_code[max(0, pos - 15):pos]
+        if 'staticFile' in before:
+            return match.group(0)
+
+        filename = Path(abs_path).name
+        if filename not in existing_names:
+            dst = public_dir / filename
+            shutil.copy2(abs_path, str(dst))
+            existing_names.add(filename)
+            print(f"[Remotion 경로 자동변환] {abs_path} → staticFile('{filename}')")
+
+        auto_count += 1
+        return f"staticFile('{filename}')"
+
+    composition_code = string_path_pattern.sub(replace_string_path, composition_code)
+
+    return composition_code, auto_count
+
+
 def _copy_assets_to_public(asset_paths: list, public_dir: Path) -> dict:
     """
     에셋 파일들을 workspace의 public/ 폴더로 복사.
@@ -417,7 +514,7 @@ def create_remotion_video(tool_input: dict, output_base: str) -> str:
     fps = tool_input.get("fps", 30)
     width = tool_input.get("width", 1280)
     height = tool_input.get("height", 720)
-    output_filename = tool_input.get("output_filename", "remotion_video.mp4")
+    output_filename = os.path.basename(tool_input.get("output_filename", "remotion_video.mp4"))
     props = tool_input.get("props", {})
     asset_paths = tool_input.get("asset_paths", [])
     narration_texts = tool_input.get("narration_texts", [])
@@ -475,6 +572,11 @@ Config.overrideWebpackConfig((currentConfiguration) => {
         if asset_mapping:
             log_parts.append(f"에셋 {len(asset_mapping)}개 로드")
 
+        # 3-1. composition_code에서 절대 경로 이미지를 자동 감지하여 public/에 복사 + staticFile() 변환
+        composition_code, auto_assets = _auto_resolve_image_paths(composition_code, public_dir, asset_mapping)
+        if auto_assets:
+            log_parts.append(f"이미지 경로 자동 변환 {auto_assets}개")
+
         # 4. 나레이션 TTS 생성 → public/
         narration_files = _generate_tts_files(narration_texts, voice, public_dir)
         if narration_files:
@@ -498,7 +600,7 @@ Config.overrideWebpackConfig((currentConfiguration) => {
                     "startFrame": cumulative_frame,
                     "durationInFrames": frame_count,
                     "durationSec": round(nf["duration"], 2),
-                    "text": nf["text"][:50]  # 요약용
+                    "text": nf["text"]
                 })
                 cumulative_frame += frame_count
             props["narrationTimings"] = narration_timings
@@ -511,6 +613,23 @@ Config.overrideWebpackConfig((currentConfiguration) => {
             print("[Remotion] composition_code에 narrationTimings 참조 없음 → 래퍼 적용")
             composition_code = _wrap_with_narration_timings(composition_code, len(narration_files))
             log_parts.append("나레이션 타이밍 자동 동기화 적용")
+
+        # 5-1. Sequence 내부 useCurrentFrame() 이중 차감 자동 보정
+        # AI가 흔히 하는 실수: Sequence 내부에서 frame - timing.startFrame 을 하면
+        # 두 번째 씬부터 음수가 되어 검은 화면이 됨 (Sequence가 이미 프레임을 리셋하므로)
+        composition_code = _fix_double_frame_subtraction(composition_code)
+
+        # staticFile이 사용되는데 import가 없으면 자동 추가
+        if "staticFile" in composition_code:
+            import re as _re
+            remotion_import = _re.search(r"import\s*\{([^}]+)\}\s*from\s*['\"]remotion['\"]", composition_code)
+            if remotion_import:
+                if 'staticFile' not in remotion_import.group(1):
+                    old = remotion_import.group(0)
+                    new_imports = remotion_import.group(1).strip().rstrip(',') + ', staticFile'
+                    composition_code = composition_code.replace(old, f"import {{{new_imports}}} from 'remotion'", 1)
+            else:
+                composition_code = "import {staticFile} from 'remotion';\n" + composition_code
 
         _write_text(src_dir / "Composition.tsx", composition_code)
 
@@ -564,8 +683,8 @@ registerRoot(RemotionRoot);
             return f"오류: 렌더링은 완료되었으나 출력 파일이 없습니다.\nstdout: {result.stdout[-1000:]}"
 
         # 9. 오디오 믹싱 (나레이션/BGM이 있으면)
-        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        final_output = str(OUTPUT_DIR / output_filename)
+        os.makedirs(output_base, exist_ok=True)
+        final_output = os.path.join(output_base, output_filename)
 
         audio_mixed = False
         if narration_files or (bgm_path and Path(bgm_path).exists()):
@@ -728,6 +847,48 @@ def check_remotion_status(tool_input: dict) -> str:
         parts.append("Remotion 패키지: 미설치 (action='setup'으로 설치하세요)")
 
     return "\n".join(parts)
+
+
+# ============================================================
+# Sequence 이중 프레임 차감 자동 보정
+# ============================================================
+
+def _fix_double_frame_subtraction(composition_code: str) -> str:
+    """
+    AI가 흔히 하는 실수를 자동 보정:
+    Sequence 내부에서 useCurrentFrame()은 이미 0부터 시작하는데,
+    추가로 timing.startFrame을 빼면 두 번째 씬부터 음수 → 검은 화면.
+
+    감지 패턴:
+    - frame - timing.startFrame
+    - frame - t.startFrame
+    - frame - props.narrationTimings[i].startFrame
+    - 변수명이 relativeFrame인 경우
+    """
+    import re
+
+    original = composition_code
+
+    # 패턴 1: const relativeFrame = frame - timing.startFrame;
+    # → const relativeFrame = frame;
+    composition_code = re.sub(
+        r'(const\s+\w*[Rr]elative\w*\s*=\s*)(\w+)\s*-\s*\w+\.startFrame\b',
+        r'\1\2',
+        composition_code
+    )
+
+    # 패턴 2: frame - timing.startFrame (인라인 사용)
+    # 예: interpolate(frame - timing.startFrame, ...)
+    composition_code = re.sub(
+        r'(\bframe\b)\s*-\s*\w+\.startFrame\b',
+        r'\1',
+        composition_code
+    )
+
+    if composition_code != original:
+        print("[Remotion] ⚠️ Sequence 내부 이중 프레임 차감 자동 보정 적용 (frame - *.startFrame 제거)")
+
+    return composition_code
 
 
 # ============================================================

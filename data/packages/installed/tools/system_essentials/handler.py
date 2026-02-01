@@ -3,6 +3,7 @@ import glob
 import re
 import subprocess
 import shlex
+import shutil
 import json
 from datetime import datetime
 from pathlib import Path
@@ -228,6 +229,64 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
                 return f"Error: 명령어 실행 시간 초과 ({timeout}초)"
             except Exception as e:
                 return f"Error: 명령어 실행 실패: {e}"
+
+        elif tool_name == "copy_path":
+            src = os.path.join(project_path, tool_input["source"])
+            dst = os.path.join(project_path, tool_input["destination"])
+
+            if not os.path.exists(src):
+                return f"Error: 원본이 존재하지 않습니다: {src}"
+
+            # 대상 상위 디렉토리 생성
+            os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
+
+            if os.path.isdir(src):
+                # 폴더 복사 (대상이 이미 있으면 삭제 후 복사)
+                if os.path.exists(dst):
+                    shutil.rmtree(dst)
+                shutil.copytree(src, dst)
+                count = sum(len(files) for _, _, files in os.walk(dst))
+                return f"폴더를 복사했습니다: {os.path.abspath(dst)} ({count}개 파일)"
+            else:
+                # 파일 복사
+                shutil.copy2(src, dst)
+                return f"파일을 복사했습니다: {os.path.abspath(dst)}"
+
+        elif tool_name == "move_path":
+            src = os.path.join(project_path, tool_input["source"])
+            dst = os.path.join(project_path, tool_input["destination"])
+
+            if not os.path.exists(src):
+                return f"Error: 원본이 존재하지 않습니다: {src}"
+
+            # 대상 상위 디렉토리 생성
+            os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
+
+            # 대상이 이미 있으면 삭제
+            if os.path.exists(dst):
+                if os.path.isdir(dst):
+                    shutil.rmtree(dst)
+                else:
+                    os.remove(dst)
+
+            shutil.move(src, dst)
+            return f"이동 완료: {os.path.abspath(dst)}"
+
+        elif tool_name == "delete_path":
+            target = os.path.join(project_path, tool_input["path"])
+
+            if not os.path.exists(target):
+                return f"Error: 경로가 존재하지 않습니다: {target}"
+
+            abs_target = os.path.abspath(target)
+
+            if os.path.isdir(target):
+                count = sum(len(files) for _, _, files in os.walk(target))
+                shutil.rmtree(target)
+                return f"폴더를 삭제했습니다: {abs_target} ({count}개 파일 포함)"
+            else:
+                os.remove(target)
+                return f"파일을 삭제했습니다: {abs_target}"
 
         elif tool_name == "todo_write":
             todos = tool_input.get("todos", [])

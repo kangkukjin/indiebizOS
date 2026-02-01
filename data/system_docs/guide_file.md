@@ -97,10 +97,12 @@ AI가 도구 호출 → system_tools.execute_tool()
 
 ## 적용 사례
 
-| 도구 | 가이드 파일 | 내용 |
-|------|------------|------|
-| create_html_video | html_video_guide.md | HTML 영상 제작 규칙, GSAP 애니메이션, 레이아웃 패턴 |
-| (Remotion은 별도 방식) | visual_guide.md | check_remotion_status 결과에 직접 포함 |
+| 패키지 | 도구 | guide_file 위치 | 가이드 파일 | 내용 |
+|--------|------|-----------------|------------|------|
+| media_producer | create_html_video | 도구 레벨 | html_video_guide.md | HTML 영상 제작 규칙, GSAP 애니메이션, 레이아웃 패턴 |
+| media_producer | create_slides | 도구 레벨 | slides_guide.md | 슬라이드 제작 가이드 |
+| music-composer | abc_to_midi, midi_to_audio, compose_and_export | 패키지 레벨 | music_composer_guide.md | ABC Notation 문법, GM 악기 목록, 믹싱 옵션, EQ 프리셋 가이드 |
+| (Remotion은 별도 방식) | — | — | visual_guide.md | check_remotion_status 결과에 직접 포함 |
 
 ## 비교: 다른 방식들
 
@@ -111,4 +113,4 @@ AI가 도구 호출 → system_tools.execute_tool()
 | **guide_file 시스템** (현재) | 범용적, 토큰 절약, 설정만으로 적용 | 첫 호출 결과가 길어짐 |
 
 ---
-*마지막 업데이트: 2026-01-29*
+*마지막 업데이트: 2026-01-31*

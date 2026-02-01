@@ -1330,6 +1330,27 @@ class APIClient {
     }>('/business/channels/poller/status');
   }
 
+  // ============ 소유자 식별 정보 ============
+
+  async getOwnerIdentities() {
+    return this.request<{
+      owner_emails: string;
+      owner_nostr_pubkeys: string;
+      system_ai_gmail: string;
+    }>('/owner-identities');
+  }
+
+  async updateOwnerIdentities(data: {
+    owner_emails?: string;
+    owner_nostr_pubkeys?: string;
+    system_ai_gmail?: string;
+  }) {
+    return this.request<{ status: string }>('/owner-identities', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // ============ 이웃 (비즈니스 파트너) ============
 
   async getNeighbors(search?: string, infoLevel?: number) {

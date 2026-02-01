@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import importlib.util
 from pathlib import Path
@@ -6,10 +7,17 @@ from pathlib import Path
 # 같은 디렉토리의 모듈을 동적으로 로드
 current_dir = Path(__file__).parent
 
+# sys.modules에 등록하여 tool_loader.py가 handler.py를 여러 번 exec_module해도
+# tool_youtube 모듈은 단 한 번만 로드되고 글로벌 상태(재생 프로세스, 큐 등)가 유지됨
+_MODULE_KEY = "tool_youtube_singleton"
+
 def load_tool_youtube():
+    if _MODULE_KEY in sys.modules:
+        return sys.modules[_MODULE_KEY]
     module_path = current_dir / "tool_youtube.py"
-    spec = importlib.util.spec_from_file_location("tool_youtube", module_path)
+    spec = importlib.util.spec_from_file_location(_MODULE_KEY, module_path)
     module = importlib.util.module_from_spec(spec)
+    sys.modules[_MODULE_KEY] = module
     spec.loader.exec_module(module)
     return module
 
@@ -51,5 +59,22 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
             summary_length=summary_length,
             languages=languages
         )
+    elif tool_name == 'play_youtube':
+        return tool_youtube.play_youtube(
+            query=arguments.get('query', ''),
+            mode=arguments.get('mode', 'audio'),
+            count=arguments.get('count', 5),
+        )
+    elif tool_name == 'add_to_queue':
+        return tool_youtube.add_to_queue(
+            query=arguments.get('query', ''),
+            count=arguments.get('count', 3),
+        )
+    elif tool_name == 'skip_youtube':
+        return tool_youtube.skip_youtube()
+    elif tool_name == 'get_queue':
+        return tool_youtube.get_queue()
+    elif tool_name == 'stop_youtube':
+        return tool_youtube.stop_youtube()
     else:
         raise ValueError(f'Unknown tool: {tool_name}')

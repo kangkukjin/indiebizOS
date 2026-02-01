@@ -327,10 +327,22 @@ class AgentRunner:
             return False
 
         elif contact_type == 'nostr':
-            # 환경변수에서 소유자 Nostr 공개키 목록 확인
+            # 환경변수에서 소유자 Nostr 공개키 목록 확인 (npub→hex 변환)
             owner_nostr = os.getenv('OWNER_NOSTR_PUBKEYS', '')
             if owner_nostr:
-                pubkeys = {p.strip().lower() for p in owner_nostr.split(',') if p.strip()}
+                pubkeys = set()
+                for p in owner_nostr.split(','):
+                    p = p.strip()
+                    if not p:
+                        continue
+                    if p.startswith('npub'):
+                        try:
+                            from pynostr.key import PublicKey
+                            pubkeys.add(PublicKey.from_npub(p).hex().lower())
+                        except Exception:
+                            pubkeys.add(p.lower())
+                    else:
+                        pubkeys.add(p.lower())
                 return from_addr_lower in pubkeys
             return False
 

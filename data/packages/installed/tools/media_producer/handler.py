@@ -693,7 +693,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
     elif tool_name == "create_html_video":
         return create_html_video(tool_input, output_base)
     elif tool_name == "render_html_to_image":
-        return render_html_to_image(tool_input)
+        return render_html_to_image(tool_input, output_base)
     elif tool_name == "generate_ai_image":
         return generate_ai_image(tool_input, output_base)
     elif tool_name == "generate_gemini_image":
@@ -825,36 +825,63 @@ def _prepare_scene_html(html, base_path, video_width, video_height):
     """씬 HTML을 렌더링 가능하도록 전처리 (이미지 Base64 변환, 뷰포트 설정)"""
     import re
 
-    # base_path가 있으면 HTML 내 상대 경로를 Base64로 변환
-    if base_path:
-        base_path = os.path.abspath(base_path)
+    # 항상 이미지 경로를 Base64로 변환 (절대 경로 포함)
+    resolved_base = os.path.abspath(base_path) if base_path else None
 
-        def replace_img_src(match):
-            src = match.group(1)
-            if src.startswith(('data:', 'http://', 'https://', 'file://')):
-                return match.group(0)
-            abs_path = os.path.join(base_path, src) if not os.path.isabs(src) else src
-            base64_data = get_image_base64(abs_path)
-            if base64_data:
-                return f'src="{base64_data}"'
+    def replace_img_src(match):
+        src = match.group(1)
+        if src.startswith(('data:', 'http://', 'https://')):
             return match.group(0)
+        # file:// 프로토콜 처리
+        if src.startswith('file://'):
+            src = src[7:]  # file:// 제거
+        # 절대 경로이면 바로 사용, 상대 경로이면 base_path 기준
+        if os.path.isabs(src):
+            abs_path = src
+        elif resolved_base:
+            abs_path = os.path.join(resolved_base, src)
+        else:
+            return match.group(0)  # base_path도 없고 상대 경로면 스킵
+        base64_data = get_image_base64(abs_path)
+        if base64_data:
+            return f'src="{base64_data}"'
+        return match.group(0)
 
-        html = re.sub(r'src=["\']([^"\']+)["\']', replace_img_src, html)
+    html = re.sub(r'src=["\']([^"\']+)["\']', replace_img_src, html)
 
-        def replace_bg_url(match):
-            url = match.group(1)
-            if url.startswith(('data:', 'http://', 'https://', 'file://')):
-                return match.group(0)
-            abs_path = os.path.join(base_path, url) if not os.path.isabs(url) else url
-            base64_data = get_image_base64(abs_path)
-            if base64_data:
-                return f'url("{base64_data}")'
+    def replace_bg_url(match):
+        url = match.group(1)
+        if url.startswith(('data:', 'http://', 'https://')):
             return match.group(0)
+        if url.startswith('file://'):
+            url = url[7:]
+        if os.path.isabs(url):
+            abs_path = url
+        elif resolved_base:
+            abs_path = os.path.join(resolved_base, url)
+        else:
+            return match.group(0)
+        base64_data = get_image_base64(abs_path)
+        if base64_data:
+            return f'url("{base64_data}")'
+        return match.group(0)
 
-        html = re.sub(r'url\(["\']?([^"\')\s]+)["\']?\)', replace_bg_url, html)
+    html = re.sub(r'url\(["\']?([^"\')\s]+)["\']?\)', replace_bg_url, html)
 
-    # 이미 완전한 HTML 문서인 경우 그대로 사용
+    # 한글 폰트 보장을 위한 CSS (Google Fonts 로드 실패 시에도 시스템 폰트 fallback)
+    korean_font_css = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+* { font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕', sans-serif !important; }
+</style>"""
+
+    # 이미 완전한 HTML 문서인 경우 한글 폰트 CSS만 주입
     if html.strip().lower().startswith("<!doctype") or html.strip().lower().startswith("<html"):
+        # </head> 앞에 폰트 CSS 삽입
+        if '</head>' in html:
+            html = html.replace('</head>', korean_font_css + '\n</head>', 1)
+        elif '<body' in html:
+            html = html.replace('<body', korean_font_css + '\n<body', 1)
         return html
 
     # 그렇지 않으면 래핑 (Google Fonts + Lottie CDN 포함)
@@ -1051,17 +1078,20 @@ def create_html_video(tool_input, output_base):
             for i, scene in enumerate(scenes):
                 html = scene.get("html", "")
                 duration = scene.get("duration", default_duration)
-                base_path_opt = scene.get("base_path")
+                # base_path: scene에 지정되지 않으면 output_base를 기본값으로 사용
+                # (같은 폴더에 생성된 이미지를 자동으로 찾을 수 있도록)
+                base_path_opt = scene.get("base_path") or output_base
 
                 if not html:
                     continue
 
                 html_ready = _prepare_scene_html(html, base_path_opt, video_width, video_height)
 
-                # 씬 HTML을 임시 파일로 저장 후 file:// 프로토콜로 로딩
-                # set_content()는 메모리 로드라 로컬 이미지 경로를 해석할 수 없으므로
-                # goto(file://)를 사용하여 파일 시스템 기준으로 이미지 경로가 동작하도록 함
-                scene_html_path = os.path.join(temp_dir, f"scene_{i}.html")
+                # 씬 HTML을 base_path 기준 디렉토리에 저장 후 file:// 프로토콜로 로딩
+                # base_path에 저장하면 상대 경로 이미지(예: "hero.png")가 같은 폴더에서 자동으로 로드됨
+                # Base64 변환은 보험으로 유지 (절대 경로/상대 경로 모두 대응)
+                scene_html_dir = base_path_opt if base_path_opt and os.path.isdir(base_path_opt) else temp_dir
+                scene_html_path = os.path.join(scene_html_dir, f"_scene_{i}_{uuid.uuid4().hex[:6]}.html")
                 with open(scene_html_path, "w", encoding="utf-8") as sf:
                     sf.write(html_ready)
                 page.goto(f"file://{scene_html_path}")
@@ -1076,7 +1106,8 @@ def create_html_video(tool_input, output_base):
 
                 # 외부 리소스(CDN, 폰트 등) 로딩 대기
                 page.wait_for_load_state("networkidle")
-                page.wait_for_timeout(800)  # Tailwind CDN, 폰트, CSS 렌더링 완료 대기
+                # 첫 씬은 폰트 다운로드가 필요하므로 넉넉하게 대기
+                page.wait_for_timeout(1500 if i == 0 else 500)
 
                 # 리소스 로딩 완료 후 애니메이션 재개 → 이제부터 캡처 시작
                 page.evaluate("""() => {
@@ -1161,6 +1192,13 @@ def create_html_video(tool_input, output_base):
 
         # 임시 파일 정리
         shutil.rmtree(temp_dir)
+        # output_base에 생성된 임시 씬 HTML 파일도 정리
+        import glob
+        for tmp_html in glob.glob(os.path.join(output_base, "_scene_*_*.html")):
+            try:
+                os.remove(tmp_html)
+            except OSError:
+                pass
 
         return f"HTML 동영상 제작 완료: {os.path.abspath(output_path)}"
     except subprocess.CalledProcessError as e:
@@ -1168,7 +1206,7 @@ def create_html_video(tool_input, output_base):
     except Exception as e:
         return f"HTML 동영상 제작 중 오류 발생: {str(e)}"
 
-def render_html_to_image(tool_input):
+def render_html_to_image(tool_input, output_base="."):
     """HTML을 이미지로 렌더링
 
     로컬 이미지 사용 방법:
@@ -1188,8 +1226,15 @@ def render_html_to_image(tool_input):
     selector = tool_input.get("selector")
     base_path = tool_input.get("base_path")  # 로컬 파일 기준 경로
 
-    if not html or not output_path:
-        return "오류: html과 output_path는 필수입니다."
+    if not html:
+        return "오류: html은 필수입니다."
+
+    # output_path가 지정되면 파일명만 추출하여 output_base에 저장
+    if output_path:
+        filename = os.path.basename(output_path)
+        output_path = os.path.join(output_base, filename)
+    else:
+        output_path = os.path.join(output_base, f"rendered_{uuid.uuid4().hex[:8]}.png")
 
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
@@ -1277,7 +1322,11 @@ def generate_ai_image(tool_input, output_base):
     height = min(tool_input.get("height", 1024), 2048)
     model = tool_input.get("model", "flux")
     seed = tool_input.get("seed")
-    if not output_path:
+    # output_path가 지정되면 파일명만 추출하여 output_base에 저장
+    if output_path:
+        filename = os.path.basename(output_path)
+        output_path = os.path.join(output_base, filename)
+    else:
         output_path = os.path.join(output_base, f"ai_image_{uuid.uuid4().hex[:8]}.png")
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     encoded_prompt = urllib.parse.quote(prompt)
@@ -1312,7 +1361,11 @@ def generate_gemini_image(tool_input, output_base):
     output_path = tool_input.get("output_path")
     aspect_ratio = tool_input.get("aspect_ratio", "1:1")
 
-    if not output_path:
+    # output_path가 지정되면 파일명만 추출하여 output_base에 저장
+    if output_path:
+        filename = os.path.basename(output_path)
+        output_path = os.path.join(output_base, filename)
+    else:
         output_path = os.path.join(output_base, f"gemini_image_{uuid.uuid4().hex[:8]}.png")
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 

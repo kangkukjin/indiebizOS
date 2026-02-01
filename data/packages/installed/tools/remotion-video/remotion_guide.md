@@ -50,6 +50,20 @@ const SCENE_DURATION = 240;
 ```tsx
 type Timing = {index: number; startFrame: number; durationInFrames: number; durationSec: number; text: string};
 
+// ⚠️ 핵심: Sequence 내부에서 useCurrentFrame()은 항상 0부터 시작합니다!
+// Sequence가 자동으로 프레임을 리셋하므로, Scene 안에서 timing.startFrame을 빼면 안 됩니다!
+const Scene = ({title, durationInFrames}: {title: string; durationInFrames: number}) => {
+  const frame = useCurrentFrame(); // Sequence 내부이므로 0부터 시작!
+  // ❌ 절대 하지 마세요: const relativeFrame = frame - timing.startFrame;
+  // ✅ 그냥 frame을 바로 사용하세요 (이미 0부터 시작)
+  const opacity = interpolate(frame, [0, 15, durationInFrames - 15, durationInFrames], [0, 1, 1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  return (
+    <AbsoluteFill style={{opacity}}>
+      <h1>{title}</h1>
+    </AbsoluteFill>
+  );
+};
+
 export default function MyVideo(props: {narrationTimings?: Timing[]}) {
   const timings = props.narrationTimings || [
     {index: 0, startFrame: 0, durationInFrames: 90, durationSec: 3, text: ''},
@@ -59,7 +73,8 @@ export default function MyVideo(props: {narrationTimings?: Timing[]}) {
     <AbsoluteFill>
       {timings.map((t, i) => (
         <Sequence key={i} from={t.startFrame} durationInFrames={t.durationInFrames}>
-          <Scene index={i} timing={t} />
+          {/* Scene에는 durationInFrames만 전달. startFrame은 Sequence가 처리함 */}
+          <Scene title={`씬 ${i+1}`} durationInFrames={t.durationInFrames} />
         </Sequence>
       ))}
     </AbsoluteFill>
@@ -67,7 +82,20 @@ export default function MyVideo(props: {narrationTimings?: Timing[]}) {
 }
 ```
 
-**핵심 규칙**: narration_texts가 있으면 → export default 함수에 `props` 파라미터 필수 → `props.narrationTimings`로 Sequence의 `from`과 `durationInFrames` 설정 → 하드코딩된 씬 길이 사용 금지
+**⚠️ 가장 흔한 실수 (검은 화면의 원인):**
+```tsx
+// ❌ 이 코드는 두 번째 씬부터 검은 화면이 됩니다!
+const Scene = ({timing}) => {
+  const frame = useCurrentFrame();
+  const relativeFrame = frame - timing.startFrame; // ← 이미 0부터인데 또 빼면 음수!
+  const opacity = interpolate(relativeFrame, [0, 15, ...], [0, 1, ...]);
+  // 두 번째 씬: frame=0, startFrame=300 → relativeFrame=-300 → opacity=0 → 검은 화면!
+};
+```
+Sequence 내부의 useCurrentFrame()은 이미 **해당 Sequence의 시작 프레임 기준 0부터** 카운트됩니다.
+Scene 컴포넌트에서 `timing.startFrame`을 빼는 이중 차감을 하면 안 됩니다!
+
+**핵심 규칙**: narration_texts가 있으면 → export default 함수에 `props` 파라미터 필수 → `props.narrationTimings`로 Sequence의 `from`과 `durationInFrames` 설정 → 하드코딩된 씬 길이 사용 금지 → **Scene 내부에서 startFrame을 빼지 말 것**
 
 추가 props: totalNarrationFrames, totalNarrationDuration
 
@@ -120,6 +148,27 @@ Tailwind CSS가 설치되어 있으므로 className으로 스타일링하세요.
   <h1 className="text-6xl font-bold leading-tight">제목 텍스트</h1>
 </div>
 ```
+
+**나레이션 자막 표시 (narrationTimings.text 사용 시)**:
+- narrationTimings의 text는 전체 나레이션 문장이므로 길 수 있음 (100자 이상)
+- 반드시 세로 넘침을 방지하는 스타일을 적용할 것:
+```tsx
+// 자막/나레이션 텍스트 컨테이너 권장 스타일
+<div style={{
+  maxWidth: '85%',
+  maxHeight: '40%',        // 화면 높이의 40% 이하
+  overflow: 'hidden',
+  fontSize: 'clamp(20px, 2.5vw, 34px)',  // 반응형 폰트 크기
+  wordBreak: 'keep-all',
+  overflowWrap: 'break-word',
+  lineHeight: 1.5,
+}}>
+  {text}
+</div>
+```
+- `maxHeight`로 세로 넘침 방지
+- `fontSize: clamp()`로 긴 텍스트에 자동 축소 (최소 20px, 최대 34px)
+- 텍스트가 100자 이상이면 fontSize를 24~28px로 줄이기
 
 **텍스트 넘침 확인 체크**:
 - 한글 제목이 24자 이상이면 text-5xl 이하로 줄이기

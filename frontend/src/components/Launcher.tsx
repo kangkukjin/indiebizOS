@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact } from 'lucide-react';
+import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 import type { Project, Switch, SchedulerTask, SchedulerAction } from '../types';
@@ -943,6 +943,13 @@ export function Launcher() {
             title="설정"
           >
             <Settings size={16} />
+          </button>
+          <button
+            onClick={() => window.electron?.openLogWindow()}
+            className="p-2 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
+            title="로그 보기"
+          >
+            <ScrollText size={16} />
           </button>
         </div>
       </div>

@@ -93,5 +93,34 @@ contextBridge.exposeInMainWorld('electron', {
   selectFolder: () => ipcRenderer.invoke('select-folder'),
 
   // 이미지 파일 선택 다이얼로그 (다중 선택)
-  selectImages: () => ipcRenderer.invoke('select-images')
+  selectImages: () => ipcRenderer.invoke('select-images'),
+
+  // === 로그 뷰어 관련 ===
+  // 로그 창 열기
+  openLogWindow: () => ipcRenderer.invoke('open-log-window'),
+
+  // 로그 클리어
+  clearLogs: () => ipcRenderer.invoke('clear-logs'),
+
+  // 로그 메시지 수신 (실시간)
+  onLogMessage: (callback) => {
+    ipcRenderer.on('log-message', (_, message) => callback(message));
+  },
+
+  // 로그 히스토리 수신 (창 열 때)
+  onLogHistory: (callback) => {
+    ipcRenderer.on('log-history', (_, logs) => callback(logs));
+  },
+
+  // 로그 클리어 이벤트 수신
+  onLogCleared: (callback) => {
+    ipcRenderer.on('log-cleared', () => callback());
+  },
+
+  // 로그 리스너 제거
+  removeLogListeners: () => {
+    ipcRenderer.removeAllListeners('log-message');
+    ipcRenderer.removeAllListeners('log-history');
+    ipcRenderer.removeAllListeners('log-cleared');
+  }
 });

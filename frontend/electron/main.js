@@ -156,7 +156,9 @@ async function startPythonBackend() {
       INDIEBIZ_API_PORT: API_PORT.toString(),
       INDIEBIZ_BASE_PATH: basePath,
       INDIEBIZ_PRODUCTION: isDev ? '' : '1',
-      PYTHONUNBUFFERED: '1'
+      PYTHONUNBUFFERED: '1',
+      PYTHONIOENCODING: 'utf-8',
+      PYTHONUTF8: '1'
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });

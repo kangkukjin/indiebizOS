@@ -27,9 +27,83 @@ let businessWindow = null; // 비즈니스 관리 창
 let pcManagerWindow = null; // PC Manager 창
 let photoManagerWindow = null; // Photo Manager 창
 let androidManagerWindow = null; // Android Manager 창
+let logWindow = null; // 로그 뷰어 창
+
+// 로그 버퍼 (최근 500줄 유지)
+const MAX_LOG_LINES = 500;
+let logBuffer = [];
 
 // API 포트
 const API_PORT = 8765;
+
+/**
+ * 로그 메시지 추가 및 브로드캐스트
+ */
+function addLog(message) {
+  const timestamp = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+  const logEntry = `[${timestamp}] ${message}`;
+
+  // 버퍼에 추가
+  logBuffer.push(logEntry);
+  if (logBuffer.length > MAX_LOG_LINES) {
+    logBuffer.shift(); // 오래된 로그 제거
+  }
+
+  // 로그 창이 열려있으면 전송
+  if (logWindow && !logWindow.isDestroyed()) {
+    logWindow.webContents.send('log-message', logEntry);
+  }
+}
+
+/**
+ * 로그 뷰어 창 생성
+ */
+function createLogWindow() {
+  // 이미 열려있으면 포커스
+  if (logWindow && !logWindow.isDestroyed()) {
+    logWindow.focus();
+    return;
+  }
+
+  logWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    minWidth: 500,
+    minHeight: 400,
+    title: 'IndieBiz 로그',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    trafficLightPosition: process.platform === 'darwin' ? { x: 15, y: 15 } : undefined,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  if (isDev) {
+    logWindow.loadURL('http://localhost:5173/#/log-viewer');
+  } else {
+    logWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
+      hash: '/log-viewer'
+    });
+  }
+
+  // 창이 로드되면 기존 로그 전송
+  logWindow.webContents.on('did-finish-load', () => {
+    if (logWindow && !logWindow.isDestroyed()) {
+      logWindow.webContents.send('log-history', logBuffer);
+    }
+  });
+
+  logWindow.on('closed', () => {
+    logWindow = null;
+  });
+
+  // 우클릭 컨텍스트 메뉴 설정
+  setupContextMenu(logWindow);
+
+  return logWindow;
+}
 
 /**
  * 우클릭 컨텍스트 메뉴 설정 (복사/붙여넣기 등)
@@ -229,7 +303,9 @@ async function startPythonBackend() {
 
   pythonProcess.stdout.on('data', (data) => {
     try {
-      console.log(`[Python] ${data.toString().trim()}`);
+      const msg = `[Python] ${data.toString().trim()}`;
+      console.log(msg);
+      addLog(msg);
     } catch (e) {
       // 파이프 에러 무시
     }
@@ -237,14 +313,18 @@ async function startPythonBackend() {
 
   pythonProcess.stderr.on('data', (data) => {
     try {
-      console.error(`[Python Error] ${data.toString().trim()}`);
+      const msg = `[Python Error] ${data.toString().trim()}`;
+      console.error(msg);
+      addLog(msg);
     } catch (e) {
       // 파이프 에러 무시
     }
   });
 
   pythonProcess.on('close', (code) => {
-    console.log(`[Python] 프로세스 종료: ${code}`);
+    const msg = `[Python] 프로세스 종료: ${code}`;
+    console.log(msg);
+    addLog(msg);
 
     // 비정상 종료 시 사용자에게 알림 (앱 시작 직후 종료된 경우)
     if (code !== 0 && code !== null) {
@@ -913,6 +993,19 @@ function setupIPC() {
     createAndroidManagerWindow(deviceId, projectId);
   });
 
+  // 로그 뷰어 창 열기
+  ipcMain.handle('open-log-window', () => {
+    createLogWindow();
+  });
+
+  // 로그 버퍼 클리어
+  ipcMain.handle('clear-logs', () => {
+    logBuffer = [];
+    if (logWindow && !logWindow.isDestroyed()) {
+      logWindow.webContents.send('log-cleared');
+    }
+  });
+
   // 폴더에서 아이템을 밖으로 드래그할 때 (런처에 드롭)
   ipcMain.handle('drop-item-to-launcher', (event, itemId, itemType, sourceFolderId) => {
     // 런처 창에 이벤트 전송
@@ -993,6 +1086,7 @@ function setupIPC() {
 // 앱 준비
 app.whenReady().then(async () => {
   console.log('[Electron] 앱 시작');
+  addLog('[Electron] IndieBiz 앱 시작');
 
   // macOS 기본 메뉴 설정 (복사/붙여넣기 등)
   const template = [
@@ -1059,10 +1153,11 @@ app.whenReady().then(async () => {
 
   // Python 백엔드 시작
   try {
-    console.log('[Electron] Python 백엔드 시작 시도...');
+    addLog('[Electron] Python 백엔드 시작 시도...');
     await startPythonBackend();
-    console.log('[Electron] Python 백엔드 시작 완료');
+    addLog('[Electron] Python 백엔드 시작 완료');
   } catch (err) {
+    addLog(`[Electron] Python 백엔드 시작 실패: ${err.message}`);
     console.error('[Electron] Python 백엔드 시작 실패:', err);
     dialog.showErrorBox(
       '백엔드 시작 오류',

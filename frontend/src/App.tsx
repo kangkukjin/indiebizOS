@@ -13,6 +13,7 @@ import { MultiChat } from './components/MultiChat';
 import { PCManager } from './components/PCManager';
 import { PhotoManager } from './components/PhotoManager';
 import { AndroidManager } from './components/AndroidManager';
+import { LogViewer } from './components/LogViewer';
 import { api } from './lib/api';
 
 function App() {
@@ -29,14 +30,30 @@ function App() {
   const [isAndroidManager, setIsAndroidManager] = useState(false);
   const [androidDeviceId, setAndroidDeviceId] = useState<string | null>(null);
   const [androidProjectId, setAndroidProjectId] = useState<string | null>(null);
+  const [isLogViewer, setIsLogViewer] = useState(false);
 
   // URL 해시에서 프로젝트/폴더/IndieNet 확인
   useEffect(() => {
     const checkHash = () => {
       const hash = window.location.hash;
 
+      // 로그 뷰어 체크
+      if (hash === '#/log-viewer') {
+        setIsLogViewer(true);
+        setIsIndieNet(false);
+        setIsBusiness(false);
+        setIsPCManager(false);
+        setIsPhotoManager(false);
+        setIsAndroidManager(false);
+        setProjectId(null);
+        setFolderId(null);
+        setMultiChatRoomId(null);
+        return;
+      }
+
       // IndieNet 체크
       if (hash === '#/indienet') {
+        setIsLogViewer(false);
         setIsIndieNet(true);
         setIsBusiness(false);
         setProjectId(null);
@@ -163,6 +180,7 @@ function App() {
       setIsPCManager(false);
       setIsPhotoManager(false);
       setIsAndroidManager(false);
+      setIsLogViewer(false);
       setMultiChatRoomId(null);
     };
 
@@ -218,6 +236,11 @@ function App() {
     const interval = setInterval(checkConnection, 10000);
     return () => clearInterval(interval);
   }, [setIsConnected, setError]);
+
+  // 로그 뷰어 창인 경우
+  if (isLogViewer) {
+    return <LogViewer />;
+  }
 
   // IndieNet 창인 경우
   if (isIndieNet) {

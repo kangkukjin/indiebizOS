@@ -1,13 +1,13 @@
 """
 tool_browser_direct.py - Playwright 직접 제어 브라우저 도구
 
-browser-use 없이 Playwright sync API를 직접 사용.
+Playwright Async API를 사용하여 asyncio 환경(FastAPI)과 호환.
 BrowserSession 싱글톤으로 세션 유지, 60초 비활성 시 자동 종료.
 """
 
 import os
 import json
-import threading
+import asyncio
 import time
 from datetime import datetime
 from pathlib import Path
@@ -19,8 +19,8 @@ _playwright_module = None
 def _get_playwright():
     global _playwright_module
     if _playwright_module is None:
-        from playwright.sync_api import sync_playwright
-        _playwright_module = sync_playwright
+        from playwright.async_api import async_playwright
+        _playwright_module = async_playwright
     return _playwright_module
 
 
@@ -28,7 +28,7 @@ class BrowserSession:
     """싱글톤 브라우저 세션. 60초 비활성 시 자동 종료."""
 
     _instance = None
-    _lock = threading.Lock()
+    _lock = asyncio.Lock() if hasattr(asyncio, 'Lock') else None
 
     def __init__(self):
         self._playwright = None
@@ -37,53 +37,52 @@ class BrowserSession:
         self._page = None
         self._last_activity = 0.0
         self._timeout_seconds = 60
-        self._cleanup_timer = None
+        self._cleanup_task = None
         self._headless = True
 
     @classmethod
     def get_instance(cls):
         if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = BrowserSession()
+            cls._instance = BrowserSession()
         return cls._instance
 
     def _reset_timer(self):
         """활동 시 자동 종료 타이머 리셋"""
-        if self._cleanup_timer:
-            self._cleanup_timer.cancel()
+        if self._cleanup_task and not self._cleanup_task.done():
+            self._cleanup_task.cancel()
         self._last_activity = time.time()
-        self._cleanup_timer = threading.Timer(self._timeout_seconds, self._auto_close)
-        self._cleanup_timer.daemon = True
-        self._cleanup_timer.start()
+        try:
+            loop = asyncio.get_event_loop()
+            self._cleanup_task = loop.create_task(self._auto_close())
+        except RuntimeError:
+            pass
 
-    def _auto_close(self):
+    async def _auto_close(self):
         """비활성 타임아웃 시 자동 종료"""
-        with self._lock:
-            if time.time() - self._last_activity >= self._timeout_seconds:
-                print("[브라우저] 60초 비활성 — 자동 종료")
-                self._close_internal()
+        await asyncio.sleep(self._timeout_seconds)
+        if time.time() - self._last_activity >= self._timeout_seconds:
+            print("[브라우저] 60초 비활성 — 자동 종료")
+            await self._close_internal()
 
-    def ensure_browser(self, headless=True):
+    async def ensure_browser(self, headless=True):
         """브라우저가 실행 중인지 확인하고, 없으면 생성. Page 반환."""
-        with self._lock:
-            if self._page is None or self._page.is_closed():
-                self._start_browser(headless)
-            elif self._browser and not self._browser.is_connected():
-                self._close_internal()
-                self._start_browser(headless)
-            self._reset_timer()
-            return self._page
+        if self._page is None or self._page.is_closed():
+            await self._start_browser(headless)
+        elif self._browser and not self._browser.is_connected():
+            await self._close_internal()
+            await self._start_browser(headless)
+        self._reset_timer()
+        return self._page
 
-    def _start_browser(self, headless=True):
+    async def _start_browser(self, headless=True):
         """Playwright 브라우저 시작"""
         self._headless = headless
-        sync_playwright = _get_playwright()
+        async_playwright = _get_playwright()
 
         if self._playwright is None:
-            self._playwright = sync_playwright().start()
+            self._playwright = await async_playwright().start()
 
-        self._browser = self._playwright.chromium.launch(
+        self._browser = await self._playwright.chromium.launch(
             headless=headless,
             args=[
                 '--disable-blink-features=AutomationControlled',
@@ -91,12 +90,12 @@ class BrowserSession:
                 '--no-default-browser-check',
             ]
         )
-        self._context = self._browser.new_context(
+        self._context = await self._browser.new_context(
             viewport={'width': 1280, 'height': 720},
             locale='ko-KR',
             timezone_id='Asia/Seoul',
         )
-        self._page = self._context.new_page()
+        self._page = await self._context.new_page()
         print(f"[브라우저] 시작 (headless={headless})")
 
     @property
@@ -115,34 +114,33 @@ class BrowserSession:
         except Exception:
             return False
 
-    def close(self):
+    async def close(self):
         """외부 호출용 종료"""
-        with self._lock:
-            self._close_internal()
+        await self._close_internal()
 
-    def _close_internal(self):
-        """실제 리소스 정리 (lock 내부에서 호출)"""
-        if self._cleanup_timer:
-            self._cleanup_timer.cancel()
-            self._cleanup_timer = None
+    async def _close_internal(self):
+        """실제 리소스 정리"""
+        if self._cleanup_task and not self._cleanup_task.done():
+            self._cleanup_task.cancel()
+            self._cleanup_task = None
         try:
             if self._page and not self._page.is_closed():
-                self._page.close()
+                await self._page.close()
         except Exception:
             pass
         try:
             if self._context:
-                self._context.close()
+                await self._context.close()
         except Exception:
             pass
         try:
             if self._browser:
-                self._browser.close()
+                await self._browser.close()
         except Exception:
             pass
         try:
             if self._playwright:
-                self._playwright.stop()
+                await self._playwright.stop()
         except Exception:
             pass
         self._page = None
@@ -165,7 +163,7 @@ def _ensure_active():
     return None
 
 
-def browser_open(params: dict, project_path: str = ".") -> dict:
+async def browser_open(params: dict, project_path: str = ".") -> dict:
     """브라우저를 열고 URL로 이동"""
     url = params.get("url", "")
     headless = params.get("headless", True)
@@ -179,14 +177,14 @@ def browser_open(params: dict, project_path: str = ".") -> dict:
 
     try:
         session = BrowserSession.get_instance()
-        page = session.ensure_browser(headless=headless)
+        page = await session.ensure_browser(headless=headless)
 
-        page.goto(url, wait_until=wait_for, timeout=30000)
+        await page.goto(url, wait_until=wait_for, timeout=30000)
 
-        title = page.title()
+        title = await page.title()
         text = ""
         try:
-            text = page.inner_text('body')
+            text = await page.inner_text('body')
         except Exception:
             pass
         text_preview = text[:2000] if len(text) > 2000 else text
@@ -201,7 +199,7 @@ def browser_open(params: dict, project_path: str = ".") -> dict:
         return {"success": False, "error": f"페이지 열기 실패: {str(e)}"}
 
 
-def browser_click(params: dict) -> dict:
+async def browser_click(params: dict) -> dict:
     """페이지에서 요소 클릭"""
     err = _ensure_active()
     if err:
@@ -226,12 +224,12 @@ def browser_click(params: dict) -> dict:
         else:
             return {"success": False, "error": "text, selector, 또는 role 중 하나를 지정하세요."}
 
-        locator.wait_for(state="visible", timeout=10000)
-        locator.click(timeout=10000)
+        await locator.wait_for(state="visible", timeout=10000)
+        await locator.click(timeout=10000)
 
         # 네비게이션이 발생할 수 있으므로 잠시 대기
         try:
-            page.wait_for_load_state("load", timeout=5000)
+            await page.wait_for_load_state("load", timeout=5000)
         except Exception:
             pass
 
@@ -239,13 +237,13 @@ def browser_click(params: dict) -> dict:
             "success": True,
             "clicked": text or selector or f"{role}:{name}",
             "current_url": page.url,
-            "current_title": page.title()
+            "current_title": await page.title()
         }
     except Exception as e:
         return {"success": False, "error": f"클릭 실패: {str(e)}"}
 
 
-def browser_type(params: dict) -> dict:
+async def browser_type(params: dict) -> dict:
     """입력 필드에 텍스트 입력"""
     err = _ensure_active()
     if err:
@@ -271,25 +269,25 @@ def browser_type(params: dict) -> dict:
             locator = None
 
         if locator:
-            locator.wait_for(state="visible", timeout=10000)
+            await locator.wait_for(state="visible", timeout=10000)
             if clear:
-                locator.clear()
-            locator.fill(text)
+                await locator.clear()
+            await locator.fill(text)
             if press_enter:
-                locator.press("Enter")
+                await locator.press("Enter")
         else:
             # selector/label 없으면 키보드로 직접 입력
             if clear:
-                page.keyboard.press("Control+a")
-                page.keyboard.press("Backspace")
-            page.keyboard.type(text)
+                await page.keyboard.press("Control+a")
+                await page.keyboard.press("Backspace")
+            await page.keyboard.type(text)
             if press_enter:
-                page.keyboard.press("Enter")
+                await page.keyboard.press("Enter")
 
         # 엔터 후 페이지 로드 대기
         if press_enter:
             try:
-                page.wait_for_load_state("load", timeout=5000)
+                await page.wait_for_load_state("load", timeout=5000)
             except Exception:
                 pass
 
@@ -303,7 +301,7 @@ def browser_type(params: dict) -> dict:
         return {"success": False, "error": f"입력 실패: {str(e)}"}
 
 
-def browser_screenshot(params: dict, project_path: str = ".") -> dict:
+async def browser_screenshot(params: dict, project_path: str = ".") -> dict:
     """현재 페이지 스크린샷 저장"""
     err = _ensure_active()
     if err:
@@ -330,9 +328,9 @@ def browser_screenshot(params: dict, project_path: str = ".") -> dict:
 
         if selector:
             element = page.locator(selector).first
-            element.screenshot(path=str(filepath))
+            await element.screenshot(path=str(filepath))
         else:
-            page.screenshot(path=str(filepath), full_page=full_page)
+            await page.screenshot(path=str(filepath), full_page=full_page)
 
         abs_path = str(filepath.resolve())
         return {
@@ -344,7 +342,7 @@ def browser_screenshot(params: dict, project_path: str = ".") -> dict:
         return {"success": False, "error": f"스크린샷 실패: {str(e)}"}
 
 
-def browser_get_content(params: dict) -> dict:
+async def browser_get_content(params: dict) -> dict:
     """현재 페이지 텍스트 추출"""
     err = _ensure_active()
     if err:
@@ -356,16 +354,16 @@ def browser_get_content(params: dict) -> dict:
 
     try:
         if selector:
-            text = page.locator(selector).first.inner_text(timeout=10000)
+            text = await page.locator(selector).first.inner_text(timeout=10000)
         else:
-            text = page.inner_text('body')
+            text = await page.inner_text('body')
 
         if len(text) > max_length:
             text = text[:max_length] + f"\n\n... (총 {len(text)}자 중 {max_length}자까지 표시)"
 
         return {
             "success": True,
-            "title": page.title(),
+            "title": await page.title(),
             "url": page.url,
             "text": text,
             "length": len(text)
@@ -374,7 +372,7 @@ def browser_get_content(params: dict) -> dict:
         return {"success": False, "error": f"콘텐츠 추출 실패: {str(e)}"}
 
 
-def browser_get_interactive(params: dict) -> dict:
+async def browser_get_interactive(params: dict) -> dict:
     """페이지의 상호작용 가능한 요소 목록 반환"""
     err = _ensure_active()
     if err:
@@ -384,7 +382,7 @@ def browser_get_interactive(params: dict) -> dict:
     scope = params.get("selector", "body")
 
     try:
-        elements = page.evaluate('''(scope) => {
+        elements = await page.evaluate('''(scope) => {
             const container = scope === 'body'
                 ? document.body
                 : document.querySelector(scope);
@@ -461,7 +459,7 @@ def browser_get_interactive(params: dict) -> dict:
         return {"success": False, "error": f"요소 조회 실패: {str(e)}"}
 
 
-def browser_scroll(params: dict) -> dict:
+async def browser_scroll(params: dict) -> dict:
     """페이지 스크롤"""
     err = _ensure_active()
     if err:
@@ -475,15 +473,15 @@ def browser_scroll(params: dict) -> dict:
 
     try:
         if to_bottom:
-            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
         elif to_top:
-            page.evaluate("window.scrollTo(0, 0)")
+            await page.evaluate("window.scrollTo(0, 0)")
         else:
             delta = amount if direction == "down" else -amount
-            page.evaluate(f"window.scrollBy(0, {delta})")
+            await page.evaluate(f"window.scrollBy(0, {delta})")
 
         # 스크롤 위치 반환
-        scroll_info = page.evaluate('''() => ({
+        scroll_info = await page.evaluate('''() => ({
             scrollY: Math.round(window.scrollY),
             scrollHeight: document.body.scrollHeight,
             viewportHeight: window.innerHeight
@@ -499,7 +497,7 @@ def browser_scroll(params: dict) -> dict:
         return {"success": False, "error": f"스크롤 실패: {str(e)}"}
 
 
-def browser_evaluate(params: dict) -> dict:
+async def browser_evaluate(params: dict) -> dict:
     """페이지에서 JavaScript 실행"""
     err = _ensure_active()
     if err:
@@ -512,7 +510,7 @@ def browser_evaluate(params: dict) -> dict:
         return {"success": False, "error": "expression이 필요합니다."}
 
     try:
-        result = page.evaluate(expression)
+        result = await page.evaluate(expression)
         # JSON 직렬화 가능 여부 확인
         try:
             json.dumps(result, ensure_ascii=False)
@@ -527,12 +525,12 @@ def browser_evaluate(params: dict) -> dict:
         return {"success": False, "error": f"JavaScript 실행 실패: {str(e)}"}
 
 
-def browser_close(params: dict = None) -> dict:
+async def browser_close(params: dict = None) -> dict:
     """브라우저 세션 종료"""
     try:
         session = BrowserSession.get_instance()
         was_active = session.is_active
-        session.close()
+        await session.close()
         return {
             "success": True,
             "message": "브라우저 종료 완료" if was_active else "브라우저가 이미 종료 상태입니다."

@@ -33,7 +33,7 @@ class GeminiProvider(BaseProvider):
 
     # 도구 호출 제한
     MAX_TOOL_ITERATIONS = 50  # 최대 도구 호출 라운드
-    MAX_CONSECUTIVE_TOOL_ONLY = 30  # 텍스트 없이 도구만 연속 호출 허용 횟수
+    MAX_CONSECUTIVE_TOOL_ONLY = 50  # 텍스트 없이 도구만 연속 호출 허용 횟수
 
     # 강제 프롬프트 (설정 가능)
     FORCE_RESPONSE_PROMPT = "도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."

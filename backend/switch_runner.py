@@ -56,7 +56,6 @@ class SwitchRunner:
             # 에이전트 이름과 역할
             agent_name = self.config.get("agent_name", "스위치 에이전트")
             agent_role = self.config.get("agent_role", "")
-            common_prompt = self.config.get("common_prompt", "")
             allowed_tools = self.config.get("tools", [])
 
             # 도구 로드
@@ -81,7 +80,6 @@ class SwitchRunner:
                 agent_name=agent_name,
                 role=agent_role or "",
                 agent_count=1,  # 스위치는 단독 실행
-                project_settings=common_prompt or "",
                 agent_notes="",
                 git_enabled=False  # 스위치는 Git 비활성화
             )

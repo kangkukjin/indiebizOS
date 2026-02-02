@@ -1,20 +1,5 @@
 [
   {
-    "id": "indiebiz-homepage",
-    "name": "IndieBiz 홈페이지",
-    "local_path": "/Users/kangkukjin/Desktop/AI/HomePages/indiebiz-homepage",
-    "repo_url": "",
-    "deploy_url": "https://indiebiz-homepage.vercel.app/",
-    "tech_stack": [
-      "vercel",
-      "html",
-      "css"
-    ],
-    "description": "IndieBiz 소개 정적 페이지",
-    "registered_at": "2026-01-28T12:00:00",
-    "last_checked": "2026-01-29T04:22:29.996201"
-  },
-  {
     "id": "irepublic-brain",
     "name": "iRepublic Brain",
     "local_path": "/Users/kangkukjin/Desktop/AI/HomePages/irepublic-brain",
@@ -30,7 +15,7 @@
     ],
     "description": "iRepublic AI Brain 프로젝트",
     "registered_at": "2026-01-28T12:00:00",
-    "last_checked": "2026-01-28T15:22:44.725104"
+    "last_checked": "2026-02-02T19:29:02.855125"
   },
   {
     "id": "www",
@@ -47,23 +32,13 @@
     "last_checked": "2026-01-28T15:22:58.929840"
   },
   {
-    "id": "indiebiz-vitepress-홈페이지",
-    "name": "IndieBiz VitePress 홈페이지",
-    "local_path": "/Users/kangkukjin/Desktop/AI/HomePages/indiebiz-vitepress/docs",
-    "repo_url": "",
-    "deploy_url": "",
-    "tech_stack": [],
-    "description": "",
-    "registered_at": "2026-01-29T02:52:20.801395",
-    "last_checked": null
-  },
-  {
-    "id": "indiebiz-next-homepage",
-    "name": "IndieBiz Next Homepage",
-    "local_path": "/Users/kangkukjin/Desktop/AI/HomePages/indiebiz-next-homepage",
+    "id": "indiebiz-os-홈페이지",
+    "name": "IndieBiz OS 홈페이지",
+    "local_path": "/Users/kangkukjin/Desktop/AI/HomePages/indiebiz-homepage",
     "repo_url": "",
     "deploy_url": "https://indiebiz-homepage.vercel.app/",
     "tech_stack": [
+      "vercel",
       "nextjs",
       "typescript",
       "react",
@@ -71,7 +46,7 @@
       "css"
     ],
     "description": "",
-    "registered_at": "2026-01-29T04:15:42.534590",
-    "last_checked": "2026-01-29T04:26:48.301643"
+    "registered_at": "2026-02-02T18:41:38.435843",
+    "last_checked": "2026-02-02T18:41:46.635182"
   }
 ]

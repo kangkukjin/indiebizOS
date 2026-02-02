@@ -1,6 +1,6 @@
 """
 browser-action 패키지 핸들러
-Playwright 직접 제어 브라우저 도구
+Playwright Async API를 사용한 브라우저 도구
 """
 
 import json
@@ -25,8 +25,8 @@ def _load_module(module_name):
     return module
 
 
-def execute(tool_name: str, params: dict, project_path: str = None):
-    """메인 핸들러"""
+async def execute(tool_name: str, params: dict, project_path: str = None):
+    """메인 핸들러 (async)"""
     mod = _load_module("tool_browser_direct")
 
     func_map = {
@@ -44,5 +44,6 @@ def execute(tool_name: str, params: dict, project_path: str = None):
     if tool_name not in func_map:
         return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
 
-    result = func_map[tool_name]()
+    # async 함수 호출
+    result = await func_map[tool_name]()
     return json.dumps(result, ensure_ascii=False, indent=2)

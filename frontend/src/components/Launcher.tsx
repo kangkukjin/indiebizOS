@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, RefreshCw, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact } from 'lucide-react';
+import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 import type { Project, Switch, SchedulerTask, SchedulerAction } from '../types';
@@ -317,12 +317,6 @@ export function Launcher() {
     } else {
       window.location.hash = `/multichat/${room.id}`;
     }
-  };
-
-  const handleRefresh = () => {
-    loadProjects();
-    loadSwitches();
-    loadMultiChatRooms();
   };
 
   const handleOpenMyProfile = async () => {
@@ -942,13 +936,6 @@ export function Launcher() {
           >
             <User size={16} />
             <span className="text-sm">시스템 메모</span>
-          </button>
-          <button
-            onClick={handleRefresh}
-            className="p-2 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="새로고침"
-          >
-            <RefreshCw size={16} />
           </button>
           <button
             onClick={handleOpenSettings}

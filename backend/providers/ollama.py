@@ -8,6 +8,12 @@ Ollama 공식 베스트 프랙티스 기반 에이전틱 루프 구현:
 - finish_reason 기반 도구 사용 판단
 - role="tool" 형식으로 도구 결과 전달
 
+개선 사항 (v2):
+- 연결 실패 재시도 로직
+- 도구 미지원 모델에 대한 개선된 처리
+- 성능 메트릭 추적
+- 도구 결과 검증
+
 참고:
 - https://docs.ollama.com/capabilities/tool-calling
 - https://deepwiki.com/ollama/ollama-python/4.2-function-calling-with-tools
@@ -22,6 +28,7 @@ Ollama 공식 베스트 프랙티스 기반 에이전틱 루프 구현:
 
 import json
 import re
+import time
 from typing import List, Dict, Callable, Generator, Any
 from .base import BaseProvider
 
@@ -67,13 +74,20 @@ class OllamaProvider(BaseProvider):
         return False
 
     def init_client(self) -> bool:
-        """Ollama 클라이언트 초기화 (OpenAI 호환)"""
+        """Ollama 클라이언트 초기화 (OpenAI 호환, 연결 테스트 포함)"""
         try:
             import openai
             self._client = openai.OpenAI(
                 base_url="http://localhost:11434/v1",
                 api_key="ollama"
             )
+
+            # 연결 테스트 (재시도 포함)
+            connection_ok = self._test_connection()
+            if not connection_ok:
+                print(f"[OllamaProvider] {self.agent_name}: Ollama 서버 연결 실패. 서버가 실행 중인지 확인하세요.")
+                return False
+
             tool_status = f"도구 지원: {'O' if self._supports_tools else 'X'}"
             print(f"[OllamaProvider] {self.agent_name}: 초기화 완료 (모델: {self.model}, 도구 {len(self.tools)}개, {tool_status})")
             return True
@@ -83,6 +97,25 @@ class OllamaProvider(BaseProvider):
         except Exception as e:
             print(f"[OllamaProvider] 초기화 실패: {e}")
             return False
+
+    def _test_connection(self) -> bool:
+        """Ollama 서버 연결 테스트 (재시도 포함)"""
+        for attempt in range(self.retry_config.max_retries + 1):
+            try:
+                # 간단한 모델 목록 조회로 연결 테스트
+                self._client.models.list()
+                return True
+            except Exception as e:
+                if attempt < self.retry_config.max_retries:
+                    delay = self.retry_config.get_delay(attempt)
+                    self.metrics.record_retry()
+                    print(f"[OllamaProvider] 연결 재시도 {attempt + 1}/{self.retry_config.max_retries} "
+                          f"({delay:.1f}s 후): {str(e)[:50]}")
+                    time.sleep(delay)
+                else:
+                    self.metrics.record_error()
+                    return False
+        return False
 
     def process_message(
         self,
@@ -213,15 +246,35 @@ class OllamaProvider(BaseProvider):
         self,
         messages: List[Dict]
     ) -> Generator[Dict[str, Any], None, None]:
-        """기본 스트리밍 응답 처리 (도구 미지원 모델용)"""
+        """기본 스트리밍 응답 처리 (도구 미지원 모델용, 재시도 포함)"""
+        start_time = time.time()
+
         try:
             collected_text = ""
 
-            stream = self._client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                stream=True
-            )
+            # 재시도 로직으로 스트림 생성
+            stream = None
+            for attempt in range(self.retry_config.max_retries + 1):
+                try:
+                    stream = self._client.chat.completions.create(
+                        model=self.model,
+                        messages=messages,
+                        stream=True
+                    )
+                    break
+                except Exception as e:
+                    if attempt < self.retry_config.max_retries and self.retry_config.is_retryable(e):
+                        delay = self.retry_config.get_delay(attempt)
+                        self.metrics.record_retry()
+                        print(f"[Ollama] 재시도 {attempt + 1}/{self.retry_config.max_retries} "
+                              f"({delay:.1f}s 후): {str(e)[:50]}")
+                        time.sleep(delay)
+                    else:
+                        raise
+
+            if stream is None:
+                yield {"type": "error", "content": "Ollama 연결 실패: 재시도 한도 초과"}
+                return
 
             for chunk in stream:
                 delta = chunk.choices[0].delta if chunk.choices else None
@@ -232,9 +285,15 @@ class OllamaProvider(BaseProvider):
                     collected_text += delta.content
                     yield {"type": "text", "content": delta.content}
 
+            # 메트릭 기록
+            latency_ms = (time.time() - start_time) * 1000
+            estimated_output_tokens = len(collected_text) // 4
+            self.metrics.record_request(latency_ms, 0, estimated_output_tokens)
+
             yield {"type": "final", "content": collected_text}
 
         except Exception as e:
+            self.metrics.record_error()
             import traceback
             traceback.print_exc()
             yield {"type": "error", "content": f"Ollama 응답 오류: {str(e)}"}
@@ -244,7 +303,8 @@ class OllamaProvider(BaseProvider):
         messages: List[Dict],
         openai_tools: List[Dict],
         execute_tool: Callable,
-        depth: int = 0
+        depth: int = 0,
+        empty_response_retries: int = 0
     ) -> Generator[Dict[str, Any], None, None]:
         """
         Ollama 에이전틱 루프 패턴
@@ -252,6 +312,11 @@ class OllamaProvider(BaseProvider):
         tool_calls 여부에 따른 처리:
         - 없음: 완료, 최종 응답 반환
         - 있음: 도구 실행 후 결과와 함께 재귀 호출
+
+        개선 사항:
+        - 메트릭 추적
+        - 재시도 로직
+        - 빈 응답 복구 처리
         """
         if depth > MAX_TOOL_DEPTH:
             yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
@@ -271,9 +336,27 @@ class OllamaProvider(BaseProvider):
             tool_calls = {}  # id -> {id, name, arguments}
             current_tool_id = None
             finish_reason = None
+            start_time = time.time()
 
-            # 스트리밍 응답 수신
-            stream = self._client.chat.completions.create(**create_params)
+            # 재시도 로직으로 스트림 생성
+            stream = None
+            for attempt in range(self.retry_config.max_retries + 1):
+                try:
+                    stream = self._client.chat.completions.create(**create_params)
+                    break
+                except Exception as e:
+                    if attempt < self.retry_config.max_retries and self.retry_config.is_retryable(e):
+                        delay = self.retry_config.get_delay(attempt)
+                        self.metrics.record_retry()
+                        print(f"[Ollama] 재시도 {attempt + 1}/{self.retry_config.max_retries} "
+                              f"({delay:.1f}s 후): {str(e)[:50]}")
+                        time.sleep(delay)
+                    else:
+                        raise
+
+            if stream is None:
+                yield {"type": "error", "content": "Ollama 연결 실패: 재시도 한도 초과"}
+                return
 
             for chunk in stream:
                 if not chunk.choices:
@@ -314,6 +397,21 @@ class OllamaProvider(BaseProvider):
                             if current_tool_id and current_tool_id in tool_calls:
                                 tool_calls[current_tool_id]["arguments"] += tc.function.arguments
 
+            # 메트릭 기록
+            latency_ms = (time.time() - start_time) * 1000
+            estimated_output_tokens = len(collected_text) // 4
+            self.metrics.record_request(latency_ms, 0, estimated_output_tokens)
+
+            # 빈 응답 복구 처리 (도구 결과 후 빈 응답인 경우)
+            if not collected_text.strip() and not tool_calls and depth > 0 and empty_response_retries < 2:
+                print(f"[Ollama] 빈 응답 감지 (depth={depth}), 응답 강제 유도 (retry={empty_response_retries + 1})")
+                messages.append({
+                    "role": "user",
+                    "content": "도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
+                })
+                yield from self._agentic_loop(messages, openai_tools, execute_tool, depth + 1, empty_response_retries + 1)
+                return
+
             # tool_calls 여부에 따른 처리
             if finish_reason == "tool_calls" or tool_calls:
                 # 도구 실행 필요
@@ -331,9 +429,11 @@ class OllamaProvider(BaseProvider):
                     final_result += "\n\n" + "\n".join(self._pending_map_tags)
                     self._pending_map_tags = []
 
+                print(f"[Ollama] 최종 응답 (depth={depth}, len={len(final_result)}, latency={latency_ms:.0f}ms)")
                 yield {"type": "final", "content": final_result}
 
         except Exception as e:
+            self.metrics.record_error()
             import traceback
             traceback.print_exc()
             yield {"type": "error", "content": f"Ollama 응답 오류: {str(e)}"}
@@ -397,6 +497,8 @@ class OllamaProvider(BaseProvider):
             if execute_tool and not is_error:
                 try:
                     tool_output = execute_tool(tool_name, tool_input, self.project_path, self.agent_id)
+                    # 도구 결과 검증
+                    tool_output, is_error = self._verify_tool_result(tool_name, tool_input, tool_output)
                 except Exception as e:
                     tool_output = f"도구 실행 오류: {str(e)}"
                     is_error = True
@@ -405,6 +507,9 @@ class OllamaProvider(BaseProvider):
             else:
                 tool_output = '{"error": "도구 실행 함수가 없습니다"}'
                 is_error = True
+
+            # 도구 호출 메트릭 기록
+            self.metrics.record_tool_call()
 
             # 승인 요청 감지
             if tool_output.startswith("[[APPROVAL_REQUESTED]]"):

@@ -499,9 +499,15 @@ class IndieNet:
                         ) or f'#{target_tag}' in content.lower()
 
                         if has_tag:
+                            # hex pubkey → npub 변환
+                            author_hex = event.get('pubkey', '')
+                            try:
+                                author_npub = PublicKey(bytes.fromhex(author_hex)).bech32()
+                            except Exception:
+                                author_npub = author_hex
                             posts.append({
                                 'id': event.get('id'),
-                                'author': event.get('pubkey'),
+                                'author': author_npub,
                                 'content': content,
                                 'created_at': event.get('created_at'),
                                 'tags': tags
@@ -710,9 +716,15 @@ class IndieNet:
                         )
 
                         if has_indienet or '#indienet' in content.lower():
+                            # hex pubkey → npub 변환
+                            author_hex = event.get('pubkey', '')
+                            try:
+                                author_npub = PublicKey(bytes.fromhex(author_hex)).bech32()
+                            except Exception:
+                                author_npub = author_hex
                             posts.append({
                                 'id': event.get('id'),
-                                'author': event.get('pubkey'),
+                                'author': author_npub,
                                 'content': content,
                                 'created_at': event.get('created_at'),
                                 'tags': tags

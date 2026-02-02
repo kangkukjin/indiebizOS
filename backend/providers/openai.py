@@ -9,6 +9,12 @@ OpenAI 공식 베스트 프랙티스 기반 에이전틱 루프 구현:
 - role="tool" 형식으로 도구 결과 전달
 - strict mode 지원 (스키마 검증)
 
+개선 사항 (v2):
+- 성능 메트릭 추적 (토큰 사용량, 지연시간)
+- API 호출 재시도 로직 (rate limit, 5xx 에러)
+- 빈 응답 복구 처리
+- 도구 결과 검증
+
 참고:
 - https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models
 - https://platform.openai.com/docs/guides/function-calling
@@ -16,6 +22,7 @@ OpenAI 공식 베스트 프랙티스 기반 에이전틱 루프 구현:
 
 import json
 import re
+import time
 from typing import List, Dict, Callable, Generator, Any
 from .base import BaseProvider
 
@@ -197,7 +204,8 @@ class OpenAIProvider(BaseProvider):
         openai_tools: List[Dict],
         execute_tool: Callable,
         depth: int = 0,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
+        empty_response_retries: int = 0
     ) -> Generator[Dict[str, Any], None, None]:
         """
         OpenAI 공식 에이전틱 루프 패턴
@@ -206,6 +214,11 @@ class OpenAIProvider(BaseProvider):
         - "stop": 완료, 최종 응답 반환
         - "tool_calls": 도구 실행 후 결과와 함께 재귀 호출
         - "length": 더 큰 max_tokens로 재시도
+
+        개선 사항:
+        - 토큰 사용량 추적
+        - API 재시도 로직
+        - 빈 응답 복구 처리
         """
         if depth > MAX_TOOL_DEPTH:
             yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
@@ -217,7 +230,8 @@ class OpenAIProvider(BaseProvider):
                 "model": self.model,
                 "messages": messages,
                 "max_tokens": max_tokens,
-                "stream": True
+                "stream": True,
+                "stream_options": {"include_usage": True}  # 토큰 사용량 포함
             }
             if openai_tools:
                 create_params["tools"] = openai_tools
@@ -226,9 +240,14 @@ class OpenAIProvider(BaseProvider):
             tool_calls = {}  # id -> {id, name, arguments}
             current_tool_id = None
             finish_reason = None
+            usage_info = None
+            start_time = time.time()
 
-            # 스트리밍 응답 수신
-            stream = self._client.chat.completions.create(**create_params)
+            # 재시도 로직으로 스트림 생성
+            stream = self._create_stream_with_retry(create_params)
+            if stream is None:
+                yield {"type": "error", "content": "API 호출 실패: 재시도 한도 초과"}
+                return
 
             for chunk in stream:
                 if not chunk.choices:
@@ -269,6 +288,30 @@ class OpenAIProvider(BaseProvider):
                             if current_tool_id and current_tool_id in tool_calls:
                                 tool_calls[current_tool_id]["arguments"] += tc.function.arguments
 
+                # 토큰 사용량 (스트리밍 마지막 청크에 포함)
+                if hasattr(chunk, 'usage') and chunk.usage:
+                    usage_info = chunk.usage
+
+            # 토큰 사용량 추적
+            latency_ms = (time.time() - start_time) * 1000
+            if usage_info:
+                input_tokens = getattr(usage_info, 'prompt_tokens', 0)
+                output_tokens = getattr(usage_info, 'completion_tokens', 0)
+                self.metrics.record_request(latency_ms, input_tokens, output_tokens)
+                print(f"[OpenAI] 토큰: 입력={input_tokens}, 출력={output_tokens}, 지연={latency_ms:.0f}ms")
+            else:
+                self.metrics.record_request(latency_ms)
+
+            # 빈 응답 복구 처리 (도구 결과 후 빈 응답인 경우)
+            if not collected_text.strip() and not tool_calls and depth > 0 and empty_response_retries < 2:
+                print(f"[OpenAI] 빈 응답 감지 (depth={depth}), 응답 강제 유도 (retry={empty_response_retries + 1})")
+                messages.append({
+                    "role": "user",
+                    "content": "도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
+                })
+                yield from self._agentic_loop(messages, openai_tools, execute_tool, depth + 1, max_tokens, empty_response_retries + 1)
+                return
+
             # finish_reason에 따른 처리 (OpenAI 공식 패턴)
             if finish_reason == "length":
                 # length 초과 - 더 큰 값으로 재시도
@@ -303,6 +346,32 @@ class OpenAIProvider(BaseProvider):
             import traceback
             traceback.print_exc()
             yield {"type": "error", "content": f"API 호출 실패: {str(e)}"}
+
+    def _create_stream_with_retry(self, create_params: Dict):
+        """재시도 로직으로 스트림 생성
+
+        Rate limit, 5xx 에러 시 exponential backoff로 재시도
+        """
+        last_error = None
+
+        for attempt in range(self.retry_config.max_retries + 1):
+            try:
+                return self._client.chat.completions.create(**create_params)
+            except Exception as e:
+                last_error = e
+                self.metrics.record_error()
+
+                if attempt < self.retry_config.max_retries and self.retry_config.is_retryable(e):
+                    delay = self.retry_config.get_delay(attempt)
+                    self.metrics.record_retry()
+                    print(f"[OpenAI] 재시도 {attempt + 1}/{self.retry_config.max_retries} "
+                          f"({delay:.1f}s 후): {str(e)[:100]}")
+                    time.sleep(delay)
+                else:
+                    print(f"[OpenAI] API 에러 (재시도 불가): {str(e)[:200]}")
+                    raise
+
+        return None
 
     def _execute_tools_and_continue(
         self,
@@ -363,6 +432,8 @@ class OpenAIProvider(BaseProvider):
             if execute_tool and not is_error:
                 try:
                     tool_output = execute_tool(tool_name, tool_input, self.project_path, self.agent_id)
+                    # 도구 결과 검증
+                    tool_output, is_error = self._verify_tool_result(tool_name, tool_input, tool_output)
                 except Exception as e:
                     tool_output = f"도구 실행 오류: {str(e)}"
                     is_error = True
@@ -371,6 +442,9 @@ class OpenAIProvider(BaseProvider):
             else:
                 tool_output = '{"error": "도구 실행 함수가 없습니다"}'
                 is_error = True
+
+            # 도구 호출 메트릭 기록
+            self.metrics.record_tool_call()
 
             # 승인 요청 감지
             if tool_output.startswith("[[APPROVAL_REQUESTED]]"):

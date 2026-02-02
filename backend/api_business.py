@@ -3,10 +3,128 @@ api_business.py - 비즈니스 관리 API
 kvisual-mcp의 비즈니스 기능을 indiebizOS에 통합
 """
 
+import json
+import shutil
+import httpx
+import logging
+from pathlib import Path
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Optional, List
 from business_manager import BusinessManager
+from runtime_utils import get_data_path
+
+logger = logging.getLogger(__name__)
+
+# ============ nostr.build 이미지 업로드 ============
+
+NOSTR_BUILD_UPLOAD_URL = "https://nostr.build/api/v2/upload/files"
+IMAGE_SECTION_SEPARATOR = "\n\n📷 상품 이미지:\n"
+
+
+async def upload_to_nostr_build(file_path: str) -> Optional[str]:
+    """로컬 이미지를 nostr.build에 업로드하고 URL 반환"""
+    path = Path(file_path)
+    if not path.exists() or not path.is_file():
+        logger.warning(f"[nostr.build] 파일 없음: {file_path}")
+        return None
+
+    # 10MB 제한
+    if path.stat().st_size > 10 * 1024 * 1024:
+        logger.warning(f"[nostr.build] 파일 크기 초과 (10MB): {file_path}")
+        return None
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            with open(file_path, "rb") as f:
+                files = {"file": (path.name, f, f"image/{path.suffix.lstrip('.').lower()}")}
+                resp = await client.post(NOSTR_BUILD_UPLOAD_URL, files=files)
+
+            if resp.status_code != 200:
+                logger.error(f"[nostr.build] 업로드 실패 HTTP {resp.status_code}: {resp.text[:200]}")
+                return None
+
+            data = resp.json()
+            # NIP-94 응답에서 URL 추출
+            if data.get("status") == "success":
+                nip94 = data.get("data", [])
+                for item in nip94:
+                    tags = item.get("tags", [])
+                    for tag in tags:
+                        if isinstance(tag, list) and len(tag) >= 2 and tag[0] == "url":
+                            logger.info(f"[nostr.build] 업로드 성공: {tag[1]}")
+                            return tag[1]
+
+            logger.error(f"[nostr.build] URL 추출 실패: {json.dumps(data)[:300]}")
+            return None
+    except Exception as e:
+        logger.error(f"[nostr.build] 업로드 예외: {e}")
+        return None
+
+
+def build_details_with_images(details: Optional[str], image_urls: List[str]) -> str:
+    """details 텍스트에 이미지 URL 섹션을 추가/갱신"""
+    # 기존 사용자 설명과 이미지 섹션 분리
+    user_text = strip_image_section(details)
+
+    if not image_urls:
+        return user_text
+
+    url_lines = "\n".join(f"- {url}" for url in image_urls)
+    return f"{user_text}{IMAGE_SECTION_SEPARATOR}{url_lines}"
+
+
+def strip_image_section(details: Optional[str]) -> str:
+    """details에서 이미지 URL 섹션을 제거하고 사용자 텍스트만 반환"""
+    if not details:
+        return ""
+    idx = details.find(IMAGE_SECTION_SEPARATOR)
+    if idx >= 0:
+        return details[:idx]
+    return details
+
+
+def extract_image_urls(details: Optional[str]) -> List[str]:
+    """details에서 기존 nostr.build 이미지 URL 추출"""
+    if not details:
+        return []
+    idx = details.find(IMAGE_SECTION_SEPARATOR)
+    if idx < 0:
+        return []
+    section = details[idx + len(IMAGE_SECTION_SEPARATOR):]
+    urls = []
+    for line in section.strip().split("\n"):
+        line = line.strip()
+        if line.startswith("- "):
+            url = line[2:].strip()
+            if url.startswith("https://"):
+                urls.append(url)
+    return urls
+
+
+def _delete_local_images(attachment_path: Optional[str]):
+    """attachment_path(JSON 배열 or 단일 경로)에서 로컬 이미지 파일 삭제"""
+    if not attachment_path:
+        return
+    try:
+        paths = json.loads(attachment_path)
+        if not isinstance(paths, list):
+            paths = [attachment_path]
+    except (json.JSONDecodeError, TypeError):
+        paths = [attachment_path]
+
+    images_dir = get_data_path() / "business_images"
+    for p in paths:
+        fp = Path(p)
+        # business_images 폴더 내 파일만 삭제 (안전장치)
+        try:
+            if fp.exists() and fp.is_file() and images_dir in fp.parents:
+                fp.unlink()
+                logger.info(f"[이미지 정리] 삭제: {fp.name}")
+        except Exception as e:
+            logger.warning(f"[이미지 정리] 삭제 실패 {fp}: {e}")
 
 router = APIRouter(prefix="/business")
 
@@ -35,11 +153,16 @@ class BusinessItemCreate(BaseModel):
     title: str
     details: Optional[str] = None
     attachment_path: Optional[str] = None
+    attachment_paths: Optional[List[str]] = None  # 다중 이미지
 
 class BusinessItemUpdate(BaseModel):
     title: Optional[str] = None
     details: Optional[str] = None
     attachment_path: Optional[str] = None
+    attachment_paths: Optional[List[str]] = None  # 다중 이미지
+
+class ImageCopyRequest(BaseModel):
+    source_paths: List[str]
 
 class DocumentUpdate(BaseModel):
     title: str
@@ -282,15 +405,101 @@ async def create_business(data: BusinessCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/items/copy-images")
+async def copy_images_for_item(data: ImageCopyRequest):
+    """이미지 파일들을 business_images 디렉토리로 복사"""
+    try:
+        images_dir = get_data_path() / "business_images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+
+        copied_paths = []
+        allowed_exts = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+
+        for src_path in data.source_paths:
+            src = Path(src_path)
+            if not src.exists() or not src.is_file():
+                continue
+            if src.suffix.lower() not in allowed_exts:
+                continue
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            safe_name = src.name.replace(" ", "_")
+            dest_name = f"{timestamp}_{safe_name}"
+            dest_path = images_dir / dest_name
+
+            shutil.copy2(str(src), str(dest_path))
+            copied_paths.append(str(dest_path))
+
+        return {"status": "success", "paths": copied_paths}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.put("/items/{item_id}")
 async def update_business_item(item_id: int, data: BusinessItemUpdate):
-    """비즈니스 아이템 수정"""
+    """비즈니스 아이템 수정 (이미지 변경 시 nostr.build 재업로드)"""
     try:
+        attachment_path = data.attachment_path
+        if data.attachment_paths is not None:
+            attachment_path = json.dumps(data.attachment_paths)
+
+        details = data.details
+
+        # attachment_paths가 제공되면 이미지 URL 섹션 갱신
+        if data.attachment_paths is not None:
+            # 기존 아이템의 details에서 이미 업로드된 URL 확인
+            existing_item = business_manager.get_business_item(item_id)
+            old_urls = extract_image_urls(existing_item.get("details") if existing_item else None)
+
+            # 기존 attachment_paths 파악
+            old_att = existing_item.get("attachment_path", "") if existing_item else ""
+            try:
+                old_paths = json.loads(old_att) if old_att else []
+            except (json.JSONDecodeError, TypeError):
+                old_paths = [old_att] if old_att else []
+
+            new_paths = data.attachment_paths or []
+
+            # 제거된 이미지 로컬 파일 삭제
+            removed = set(old_paths) - set(new_paths)
+            for rp in removed:
+                fp = Path(rp)
+                images_dir = get_data_path() / "business_images"
+                try:
+                    if fp.exists() and fp.is_file() and images_dir in fp.parents:
+                        fp.unlink()
+                        logger.info(f"[이미지 정리] 삭제: {fp.name}")
+                except Exception as e:
+                    logger.warning(f"[이미지 정리] 삭제 실패 {fp}: {e}")
+
+            if len(new_paths) == 0:
+                # 이미지 전부 삭제 → URL 섹션 제거
+                details = strip_image_section(details)
+            else:
+                # 기존 경로와 URL을 매핑 (순서 기반)
+                path_url_map = {}
+                for i, p in enumerate(old_paths):
+                    if i < len(old_urls):
+                        path_url_map[p] = old_urls[i]
+
+                # 새 경로 목록 처리
+                image_urls = []
+                for fp in new_paths:
+                    if fp in path_url_map:
+                        # 기존 이미지 유지 → 기존 URL 재사용
+                        image_urls.append(path_url_map[fp])
+                    else:
+                        # 새 이미지 → nostr.build 업로드
+                        url = await upload_to_nostr_build(fp)
+                        if url:
+                            image_urls.append(url)
+
+                details = build_details_with_images(details, image_urls)
+
         item = business_manager.update_business_item(
             item_id,
             title=data.title,
-            details=data.details,
-            attachment_path=data.attachment_path
+            details=details,
+            attachment_path=attachment_path
         )
         return item
     except Exception as e:
@@ -298,8 +507,13 @@ async def update_business_item(item_id: int, data: BusinessItemUpdate):
 
 @router.delete("/items/{item_id}")
 async def delete_business_item(item_id: int):
-    """비즈니스 아이템 삭제"""
+    """비즈니스 아이템 삭제 (로컬 이미지도 정리)"""
     try:
+        # 삭제 전에 이미지 경로 확인
+        item = business_manager.get_business_item(item_id)
+        if item:
+            _delete_local_images(item.get("attachment_path"))
+
         business_manager.delete_business_item(item_id)
         return {"status": "success"}
     except Exception as e:
@@ -673,8 +887,13 @@ async def update_business(business_id: int, data: BusinessUpdate):
 
 @router.delete("/{business_id}")
 async def delete_business(business_id: int):
-    """비즈니스 삭제"""
+    """비즈니스 삭제 (하위 아이템의 로컬 이미지도 정리)"""
     try:
+        # 삭제 전에 하위 아이템들의 이미지 정리
+        items = business_manager.get_business_items(business_id)
+        for item in items:
+            _delete_local_images(item.get("attachment_path"))
+
         business_manager.delete_business(business_id)
         return {"status": "success"}
     except Exception as e:
@@ -691,13 +910,28 @@ async def get_business_items(business_id: int):
 
 @router.post("/{business_id}/items")
 async def create_business_item(business_id: int, data: BusinessItemCreate):
-    """비즈니스 아이템 생성"""
+    """비즈니스 아이템 생성 (이미지 → nostr.build 자동 업로드)"""
     try:
+        attachment_path = data.attachment_path
+        if data.attachment_paths is not None:
+            attachment_path = json.dumps(data.attachment_paths)
+
+        # 이미지가 있으면 nostr.build에 업로드하고 URL을 details에 추가
+        details = data.details
+        if data.attachment_paths:
+            image_urls = []
+            for fp in data.attachment_paths:
+                url = await upload_to_nostr_build(fp)
+                if url:
+                    image_urls.append(url)
+            if image_urls:
+                details = build_details_with_images(details, image_urls)
+
         item = business_manager.create_business_item(
             business_id=business_id,
             title=data.title,
-            details=data.details,
-            attachment_path=data.attachment_path
+            details=details,
+            attachment_path=attachment_path
         )
         return item
     except Exception as e:

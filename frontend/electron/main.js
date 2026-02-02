@@ -203,7 +203,7 @@ async function startPythonBackend() {
         '필요한 Python 패키지가 설치되어 있는지 확인해주세요:\n' +
         'pip install fastapi uvicorn aiofiles python-dotenv\n\n' +
         '또는 requirements.txt를 사용하여 설치:\n' +
-        'pip install -r backend/requirements.txt'
+        'pip install -r backend/requirements-core.txt'
       );
     }
 

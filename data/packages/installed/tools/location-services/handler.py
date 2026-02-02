@@ -206,6 +206,61 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
     return results
 
 
+def reverse_geocode_kakao(x: float, y: float):
+    """
+    카카오 로컬 API로 좌표를 행정구역 명칭으로 변환
+
+    Args:
+        x: 경도 (longitude)
+        y: 위도 (latitude)
+    """
+    if not KAKAO_REST_API_KEY:
+        return {"error": "KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다."}
+
+    url = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json"
+    headers = {
+        "Authorization": f"KakaoAK {KAKAO_REST_API_KEY}"
+    }
+    params = {
+        "x": x,
+        "y": y
+    }
+
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        if response.status_code != 200:
+            return {"error": f"카카오 API 오류: {response.status_code}"}
+
+        data = response.json()
+        documents = data.get("documents", [])
+
+        # 행정동(H) 또는 법정동(B) 중 하나 선택 (보통 H가 행정구역 명칭으로 적합)
+        for doc in documents:
+            if doc.get("region_type") == "H":
+                return {
+                    "address": doc.get("address_name", ""),
+                    "region_1depth": doc.get("region_1depth_name", ""),
+                    "region_2depth": doc.get("region_2depth_name", ""),
+                    "region_3depth": doc.get("region_3depth_name", ""),
+                    "region_4depth": doc.get("region_4depth_name", "")
+                }
+
+        if documents:
+            doc = documents[0]
+            return {
+                "address": doc.get("address_name", ""),
+                "region_1depth": doc.get("region_1depth_name", ""),
+                "region_2depth": doc.get("region_2depth_name", ""),
+                "region_3depth": doc.get("region_3depth_name", ""),
+                "region_4depth": doc.get("region_4depth_name", "")
+            }
+
+        return {"error": "결과가 없습니다."}
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def generate_route_map_data(origin_coord: tuple, dest_coord: tuple,
                             path_coords: list, origin_name: str = "출발",
                             dest_name: str = "도착", summary_info: dict = None) -> dict:

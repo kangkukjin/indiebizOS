@@ -196,6 +196,9 @@ export interface ElectronAPI {
 
   // 폴더 선택 다이얼로그
   selectFolder: () => Promise<string | null>;
+
+  // 이미지 파일 선택 다이얼로그 (다중 선택)
+  selectImages: () => Promise<string[] | null>;
 }
 
 declare global {

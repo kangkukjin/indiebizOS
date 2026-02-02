@@ -72,7 +72,7 @@ class PromptBuilder:
         parts = []
 
         # 1. 기본 프롬프트 (항상 포함)
-        base = self._load_file("base_prompt_v2.md")
+        base = self._load_file("base_prompt_v3.md")
         if base:
             parts.append(base)
 
@@ -113,7 +113,6 @@ def build_agent_prompt(
     agent_name: str,
     role: str = "",
     agent_count: int = 1,
-    project_settings: str = "",
     agent_notes: str = "",
     git_enabled: bool = False,
     delegated_from_system_ai: bool = False
@@ -126,7 +125,6 @@ def build_agent_prompt(
         agent_name: 에이전트 이름
         role: 개별역할
         agent_count: 프로젝트 내 에이전트 수
-        project_settings: 프로젝트 공통 설정
         agent_notes: 영구메모
         git_enabled: Git 관련 프롬프트 포함 여부
         delegated_from_system_ai: 시스템 AI로부터 위임받은 경우
@@ -142,13 +140,10 @@ def build_agent_prompt(
         role_parts.append(role)
     role_prompt = "\n".join(role_parts)
 
-    # 추가 컨텍스트 구성
-    additional_parts = []
-    if project_settings:
-        additional_parts.append(f"# Project Guidelines\n{project_settings}")
+    # 추가 컨텍스트 구성 (영구메모)
+    additional_context = ""
     if agent_notes:
-        additional_parts.append(f"# Notes\n{agent_notes}")
-    additional_context = "\n\n".join(additional_parts)
+        additional_context = f"# Notes\n{agent_notes}"
 
     return builder.build(
         agent_count=agent_count,

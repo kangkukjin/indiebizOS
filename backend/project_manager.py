@@ -105,11 +105,6 @@ class ProjectManager:
             self._create_default_project_files(project_path)
             return
 
-        # common_settings.txt
-        src = template_path / "common_settings.txt"
-        if src.exists():
-            shutil.copy2(src, project_path / "common_settings.txt")
-
         # agent_roles 폴더 (폴더 전체 복사 + 프로젝트 루트에도 복사)
         roles_src = template_path / "agent_roles"
         if roles_src.exists():
@@ -154,9 +149,6 @@ agents:
     role: ""
 """
         (project_path / "agents.yaml").write_text(agents_content, encoding='utf-8')
-
-        # common_settings.txt
-        (project_path / "common_settings.txt").write_text("", encoding='utf-8')
 
     def delete_project(self, name: str, move_to_trash: bool = True):
         """프로젝트/폴더 삭제"""

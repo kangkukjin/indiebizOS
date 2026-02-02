@@ -9,11 +9,18 @@ Anthropic 공식 베스트 프랙티스 기반 에이전틱 루프 구현:
 - is_error 플래그를 통한 도구 에러 처리
 - 프롬프트 캐싱 (5분 TTL, 최소 1024 토큰)
 
+개선 사항:
+- 성능 메트릭 추적 (토큰 사용량, 지연시간)
+- API 호출 재시도 로직 (rate limit, 5xx 에러)
+- 빈 응답 복구 처리
+- 도구 결과 검증
+
 참고: https://docs.anthropic.com/en/docs/build-with-claude/tool-use
 """
 
 import json
 import re
+import time
 from typing import List, Dict, Callable, Generator, Any, Optional
 from .base import BaseProvider
 
@@ -192,7 +199,8 @@ class AnthropicProvider(BaseProvider):
         messages: List[Dict],
         execute_tool: Callable,
         depth: int = 0,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
+        empty_response_retries: int = 0
     ) -> Generator[Dict[str, Any], None, None]:
         """
         Anthropic 공식 에이전틱 루프 패턴
@@ -201,6 +209,11 @@ class AnthropicProvider(BaseProvider):
         - "end_turn": 완료, 최종 응답 반환
         - "tool_use": 도구 실행 후 결과와 함께 재귀 호출
         - "max_tokens": 더 큰 max_tokens로 재시도
+
+        개선 사항:
+        - 토큰 사용량 추적
+        - API 재시도 로직
+        - 빈 응답 복구 처리
         """
         if depth > MAX_TOOL_DEPTH:
             yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
@@ -225,9 +238,16 @@ class AnthropicProvider(BaseProvider):
             current_tool = None
             current_tool_input = ""
             stop_reason = None
+            start_time = time.time()
+
+            # 재시도 로직으로 스트림 생성
+            stream = self._create_stream_with_retry(create_params)
+            if stream is None:
+                yield {"type": "error", "content": "API 호출 실패: 재시도 한도 초과"}
+                return
 
             # 스트리밍 응답 수신
-            with self._client.messages.stream(**create_params) as stream:
+            with stream:
                 for event in stream:
                     event_type = event.type
 
@@ -275,6 +295,24 @@ class AnthropicProvider(BaseProvider):
                 final_message = stream.get_final_message()
                 stop_reason = final_message.stop_reason
 
+                # 토큰 사용량 추적
+                if hasattr(final_message, 'usage') and final_message.usage:
+                    latency_ms = (time.time() - start_time) * 1000
+                    input_tokens = getattr(final_message.usage, 'input_tokens', 0)
+                    output_tokens = getattr(final_message.usage, 'output_tokens', 0)
+                    self.metrics.record_request(latency_ms, input_tokens, output_tokens)
+                    print(f"[Anthropic] 토큰: 입력={input_tokens}, 출력={output_tokens}, 지연={latency_ms:.0f}ms")
+
+            # 빈 응답 복구 처리 (도구 결과 후 빈 응답인 경우)
+            if not collected_text.strip() and not tool_uses and depth > 0 and empty_response_retries < 2:
+                print(f"[Anthropic] 빈 응답 감지 (depth={depth}), 응답 강제 유도 (retry={empty_response_retries + 1})")
+                messages.append({
+                    "role": "user",
+                    "content": "도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
+                })
+                yield from self._agentic_loop(messages, execute_tool, depth + 1, max_tokens, empty_response_retries + 1)
+                return
+
             # stop_reason에 따른 처리 (Anthropic 공식 패턴)
             if stop_reason == "max_tokens":
                 # max_tokens 초과 - 더 큰 값으로 재시도
@@ -311,6 +349,33 @@ class AnthropicProvider(BaseProvider):
             traceback.print_exc()
             yield {"type": "error", "content": f"API 호출 실패: {str(e)}"}
 
+    def _create_stream_with_retry(self, create_params: Dict):
+        """재시도 로직으로 스트림 생성
+
+        Rate limit, 5xx 에러 시 exponential backoff로 재시도
+        """
+        last_error = None
+
+        for attempt in range(self.retry_config.max_retries + 1):
+            try:
+                return self._client.messages.stream(**create_params)
+            except Exception as e:
+                last_error = e
+                self.metrics.record_error()
+
+                if attempt < self.retry_config.max_retries and self.retry_config.is_retryable(e):
+                    delay = self.retry_config.get_delay(attempt)
+                    self.metrics.record_retry()
+                    print(f"[Anthropic] 재시도 {attempt + 1}/{self.retry_config.max_retries} "
+                          f"({delay:.1f}s 후): {str(e)[:100]}")
+                    import time
+                    time.sleep(delay)
+                else:
+                    print(f"[Anthropic] API 에러 (재시도 불가): {str(e)[:200]}")
+                    raise
+
+        return None
+
     def _execute_tools_and_continue(
         self,
         messages: List[Dict],
@@ -343,12 +408,17 @@ class AnthropicProvider(BaseProvider):
             if execute_tool:
                 try:
                     tool_output = execute_tool(tool["name"], tool["input"], self.project_path, self.agent_id)
+                    # 도구 결과 검증
+                    tool_output, is_error = self._verify_tool_result(tool["name"], tool["input"], tool_output)
                 except Exception as e:
                     tool_output = f"도구 실행 오류: {str(e)}"
                     is_error = True
             else:
                 tool_output = '{"error": "도구 실행 함수가 없습니다"}'
                 is_error = True
+
+            # 도구 호출 메트릭 기록
+            self.metrics.record_tool_call()
 
             # 승인 요청 감지
             if tool_output.startswith("[[APPROVAL_REQUESTED]]"):

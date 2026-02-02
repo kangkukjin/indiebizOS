@@ -19,8 +19,9 @@ THUMBNAIL_CACHE_DIR = os.path.join(str(_get_base_path()), "data", "thumbnail_cac
 
 def _get_photo_modules():
     """photo-manager 패키지 모듈 동적 임포트"""
+    base_path = os.path.dirname(os.path.dirname(__file__))
     photo_manager_path = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
+        base_path,
         "data", "packages", "installed", "tools", "photo-manager"
     )
     if photo_manager_path not in sys.path:
@@ -29,6 +30,20 @@ def _get_photo_modules():
     import photo_db
     import scanner
     return photo_db, scanner
+
+
+def _get_location_handler():
+    """location-services 패키지 핸들러 동적 임포트"""
+    base_path = os.path.dirname(os.path.dirname(__file__))
+    location_path = os.path.join(
+        base_path,
+        "data", "packages", "installed", "tools", "location-services"
+    )
+    if location_path not in sys.path:
+        sys.path.insert(0, location_path)
+
+    import handler
+    return handler
 
 
 # ============ 스캔 관련 ============
@@ -468,8 +483,8 @@ async def get_timeline_zoom_data(
     cursor.execute(f"""
         SELECT COUNT(*) as file_count,
                COALESCE(SUM(size), 0) as total_size,
-               MIN({date_field}) as range_start,
-               MAX({date_field}) as range_end,
+               REPLACE(substr(MIN({date_field}), 1, 10), ':', '-') as range_start,
+               REPLACE(substr(MAX({date_field}), 1, 10), ':', '-') as range_end,
                SUM(CASE WHEN media_type = 'photo' THEN 1 ELSE 0 END) as photo_count,
                SUM(CASE WHEN media_type = 'video' THEN 1 ELSE 0 END) as video_count
         FROM media_files
@@ -496,19 +511,31 @@ async def get_timeline_zoom_data(
     else:
         days_diff = 3650  # 약 10년으로 가정
 
-    if days_diff <= 31:
+    if days_diff <= 32:  # 한 달(31일) 클릭 시 확실히 day 레벨로 진입하도록 32로 조정
         # 일 단위
-        group_expr = f"substr({date_field}, 1, 10)"
+        group_expr = f"REPLACE(substr({date_field}, 1, 10), ':', '-')"
         density_label = "day"
-    elif days_diff <= 365:
+    elif days_diff <= 366:
         # 월 단위
-        group_expr = f"substr({date_field}, 1, 7)"
+        group_expr = f"REPLACE(substr({date_field}, 1, 7), ':', '-')"
         density_label = "month"
     else:
         # 년 단위
         group_expr = f"substr({date_field}, 1, 4)"
         density_label = "year"
 
+    # 날짜 비교 시에도 콜론을 하이픈으로 치환하여 비교
+    normalized_date = f"REPLACE(substr({date_field}, 1, 10), ':', '-')"
+    date_condition = f"{date_field} IS NOT NULL"
+    params = []
+    if start_date:
+        date_condition += f" AND {normalized_date} >= ?"
+        params.append(start_date)
+    if end_date:
+        date_condition += f" AND {normalized_date} <= ?"
+        params.append(end_date)
+
+    density = []
     cursor.execute(f"""
         SELECT {group_expr} as period,
                COUNT(*) as file_count,
@@ -520,8 +547,7 @@ async def get_timeline_zoom_data(
         GROUP BY period
         ORDER BY period
     """, params)
-
-    density = []
+    
     for row in cursor.fetchall():
         density.append({
             "period": row['period'],
@@ -568,6 +594,237 @@ async def get_timeline_zoom_data(
         "files": files,
         "show_files": len(files) > 0
     }
+
+
+@router.get("/timemap-regions")
+async def get_timemap_regions(
+    path: str = Query(...),
+    start_date: str = Query(...),
+    end_date: str = Query(...)
+):
+    """
+    특정 기간의 사진들을 지역별로 그룹화하여 반환 (타임지도용)
+    """
+    import unicodedata
+    import sqlite3
+    import json
+    from datetime import datetime
+
+    photo_db, _ = _get_photo_modules()
+    location_handler = _get_location_handler()
+
+    path = os.path.expanduser(path)
+    path = os.path.abspath(path)
+    path = unicodedata.normalize('NFC', path)
+
+    # 스캔 찾기
+    result = photo_db.list_scans()
+    scan = None
+    for s in result.get('scans', []):
+        scan_path = unicodedata.normalize('NFC', s.get('root_path', ''))
+        if scan_path == path:
+            scan = s
+            break
+
+    if not scan:
+        return {"success": False, "error": "스캔 데이터가 없습니다."}
+
+    scan_id = scan['id']
+    db_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "data", "packages", "photo_scans", f"scan_{scan_id}.db"
+    )
+
+    if not os.path.exists(db_path):
+        return {"success": False, "error": "데이터베이스 파일을 찾을 수 없습니다."}
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    date_field = "COALESCE(taken_date, mtime)"
+    normalized_date = f"REPLACE(substr({date_field}, 1, 10), ':', '-')"
+    
+    # GPS 정보가 있는 미디어 조회
+    cursor.execute(f"""
+        SELECT id, path, gps_lat, gps_lon, {date_field} as taken_date
+        FROM media_files
+        WHERE {date_field} IS NOT NULL 
+          AND gps_lat IS NOT NULL AND gps_lon IS NOT NULL
+          AND {normalized_date} >= ?
+          AND {normalized_date} <= ?
+    """, [start_date, end_date])
+    
+    rows = cursor.fetchall()
+    
+    # 좌표 클러스터링 (소수점 2자리, 약 1km)
+    clusters = {}
+    for row in rows:
+        lat = round(row['gps_lat'], 2)
+        lon = round(row['gps_lon'], 2)
+        key = (lat, lon)
+        if key not in clusters:
+            clusters[key] = {
+                "lat": row['gps_lat'],
+                "lon": row['gps_lon'],
+                "count": 0,
+                "representative_path": row['path'],
+                "ids": []
+            }
+        clusters[key]["count"] += 1
+        clusters[key]["ids"].append(row['id'])
+
+    # 지역명 캐시 로드
+    base_path = os.path.dirname(os.path.dirname(__file__))
+    cache_dir = os.path.join(base_path, "data")
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_path = os.path.join(cache_dir, "location_cache.json")
+    
+    location_cache = {}
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, 'r', encoding='utf-8') as f:
+                location_cache = json.load(f)
+        except:
+            pass
+
+    regions = []
+    cache_updated = False
+    
+    for key, cluster in clusters.items():
+        cache_key = f"{key[0]},{key[1]}"
+        if cache_key in location_cache:
+            region_name = location_cache[cache_key]
+        else:
+            # 역지오코딩 수행
+            try:
+                res = location_handler.reverse_geocode_kakao(cluster['lon'], cluster['lat'])
+                if "error" not in res:
+                    # '서울시 강남구 삼성동' -> '서울시 강남구' 정도로 요약
+                    region_1 = res.get('region_1depth', '')
+                    region_2 = res.get('region_2depth', '')
+                    region_name = f"{region_1} {region_2}".strip()
+                    if not region_name:
+                        region_name = res.get('address', '알 수 없는 지역')
+                else:
+                    region_name = "알 수 없는 지역"
+            except:
+                region_name = "알 수 없는 지역"
+            
+            location_cache[cache_key] = region_name
+            cache_updated = True
+        
+        regions.append({
+            "region_name": region_name,
+            "count": cluster['count'],
+            "lat": cluster['lat'],
+            "lon": cluster['lon'],
+            "representative_path": cluster['representative_path'],
+            "ids": cluster['ids']
+        })
+
+    if cache_updated:
+        try:
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(location_cache, f, ensure_ascii=False, indent=2)
+        except:
+            pass
+
+    conn.close()
+    
+    # 지역명으로 다시 그룹화 (다른 좌표지만 같은 지역명일 수 있음)
+    final_regions = {}
+    for r in regions:
+        name = r['region_name']
+        if name not in final_regions:
+            final_regions[name] = {
+                "region_name": name,
+                "count": 0,
+                "representative_path": r['representative_path'],
+                "ids": []
+            }
+        final_regions[name]["count"] += r['count']
+        final_regions[name]["ids"].extend(r['ids'])
+
+    return {
+        "success": True,
+        "regions": sorted(list(final_regions.values()), key=lambda x: x['count'], reverse=True)
+    }
+
+
+@router.get("/list-by-ids")
+async def get_media_list_by_ids(
+    path: str = Query(...),
+    ids: str = Query(...)  # 쉼표로 구분된 ID 목록
+):
+    """ID 목록으로 미디어 정보 조회"""
+    import unicodedata
+    import sqlite3
+
+    photo_db, _ = _get_photo_modules()
+
+    path = os.path.expanduser(path)
+    path = os.path.abspath(path)
+    path = unicodedata.normalize('NFC', path)
+
+    # 스캔 찾기
+    result = photo_db.list_scans()
+    scan = None
+    for s in result.get('scans', []):
+        scan_path = unicodedata.normalize('NFC', s.get('root_path', ''))
+        if scan_path == path:
+            scan = s
+            break
+
+    if not scan:
+        return {"success": False, "error": "스캔 데이터가 없습니다."}
+
+    scan_id = scan['id']
+    db_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "data", "packages", "photo_scans", f"scan_{scan_id}.db"
+    )
+
+    if not os.path.exists(db_path):
+        return {"success": False, "error": "데이터베이스 파일을 찾을 수 없습니다."}
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    id_list = [int(i.strip()) for i in ids.split(',') if i.strip().isdigit()]
+    if not id_list:
+        return {"success": True, "files": []}
+
+    placeholders = ','.join(['?'] * len(id_list))
+    date_field = "COALESCE(taken_date, mtime)"
+    
+    cursor.execute(f"""
+        SELECT id, filename, path, size, mtime, taken_date, media_type, extension,
+               width, height, camera_make, camera_model
+        FROM media_files
+        WHERE id IN ({placeholders})
+        ORDER BY {date_field} DESC
+    """, id_list)
+    
+    files = []
+    for row in cursor.fetchall():
+        files.append({
+            "id": row['id'],
+            "filename": row['filename'],
+            "path": row['path'],
+            "size_mb": round(row['size'] / (1024 * 1024), 2),
+            "mtime": row['mtime'],
+            "taken_date": row['taken_date'],
+            "media_type": row['media_type'],
+            "extension": row['extension'] or '',
+            "width": row['width'],
+            "height": row['height'],
+            "camera": f"{row['camera_make'] or ''} {row['camera_model'] or ''}".strip() or None
+        })
+
+    conn.close()
+    return {"success": True, "files": files}
 
 
 # ============ 외부 플레이어 ============

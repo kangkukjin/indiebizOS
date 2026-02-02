@@ -1178,7 +1178,14 @@ class APIClient {
     }>>(`/business/${businessId}/items`);
   }
 
-  async createBusinessItem(businessId: number, data: { title: string; details?: string; attachment_path?: string }) {
+  async copyImagesForBusinessItem(sourcePaths: string[]) {
+    return this.request<{ status: string; paths: string[] }>('/business/items/copy-images', {
+      method: 'POST',
+      body: JSON.stringify({ source_paths: sourcePaths }),
+    });
+  }
+
+  async createBusinessItem(businessId: number, data: { title: string; details?: string; attachment_path?: string; attachment_paths?: string[] }) {
     return this.request<{
       id: number;
       business_id: number;
@@ -1193,7 +1200,7 @@ class APIClient {
     });
   }
 
-  async updateBusinessItem(itemId: number, data: { title?: string; details?: string; attachment_path?: string }) {
+  async updateBusinessItem(itemId: number, data: { title?: string; details?: string; attachment_path?: string; attachment_paths?: string[] }) {
     return this.request<{
       id: number;
       business_id: number;

@@ -7,6 +7,11 @@ IndieBiz OS Core
 - 병렬 도구 호출 지원 (한 번의 응답에서 여러 도구 실행)
 - 도구 호출 횟수 제한으로 무한 루프 방지
 - 스트리밍 지원 유지
+
+추가 개선 (v2):
+- 성능 메트릭 추적 (토큰 사용량, 지연시간)
+- 설정 가능한 강제 프롬프트
+- 도구 결과 검증
 """
 
 import re
@@ -18,17 +23,32 @@ from .base import BaseProvider
 
 
 class GeminiProvider(BaseProvider):
-    """Google Gemini 프로바이더 (최적화된 도구 호출)"""
+    """Google Gemini 프로바이더 (최적화된 도구 호출)
+
+    개선 사항:
+    - 성능 메트릭 추적
+    - 설정 가능한 강제 프롬프트
+    - 도구 결과 검증
+    """
 
     # 도구 호출 제한
-    MAX_TOOL_ITERATIONS = 30  # 최대 도구 호출 라운드
-    MAX_CONSECUTIVE_TOOL_ONLY = 20  # 텍스트 없이 도구만 연속 호출 허용 횟수
+    MAX_TOOL_ITERATIONS = 50  # 최대 도구 호출 라운드
+    MAX_CONSECUTIVE_TOOL_ONLY = 30  # 텍스트 없이 도구만 연속 호출 허용 횟수
+
+    # 강제 프롬프트 (설정 가능)
+    FORCE_RESPONSE_PROMPT = "도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
+    FORCE_STATUS_PROMPT = """도구만 연속 호출하고 있습니다. 반드시 멈추고 다음을 텍스트로 작성하세요:
+1. 지금까지 알아낸 것 요약
+2. 현재 작업의 진행 상황 (완료된 것 / 남은 것)
+3. 해결이 안 되는 문제가 있다면 원인 분석
+4. 다음 단계 계획 또는 사용자에게 보고할 내용
+
+텍스트 응답 없이 도구만 호출하지 마세요."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._genai_client = None
         self._genai_types = None
-        self._pending_map_tags = []
 
     def init_client(self) -> bool:
         """Gemini 클라이언트 초기화"""
@@ -117,6 +137,7 @@ class GeminiProvider(BaseProvider):
         iteration = 0
         consecutive_tool_only = 0
         empty_response_retries = 0  # 빈 응답 재시도 횟수
+        loop_start_time = time.time()
 
         while iteration < self.MAX_TOOL_ITERATIONS:
             # 중단 체크
@@ -147,9 +168,7 @@ class GeminiProvider(BaseProvider):
                     print(f"[Gemini] 빈 응답 감지 (iteration={iteration}), 응답 강제 유도 (retry={empty_response_retries})")
                     contents.append(types.Content(
                         role="user",
-                        parts=[types.Part.from_text(
-                            text="도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
-                        )]
+                        parts=[types.Part.from_text(text=self.FORCE_RESPONSE_PROMPT)]
                     ))
                     iteration += 1
                     continue
@@ -166,9 +185,7 @@ class GeminiProvider(BaseProvider):
                     # 상황 판단 강제 유도 메시지 추가
                     contents.append(types.Content(
                         role="user",
-                        parts=[types.Part.from_text(
-                            text="도구만 연속 호출하고 있습니다. 반드시 멈추고 다음을 텍스트로 작성하세요:\n1. 지금까지 알아낸 것 요약\n2. 현재 작업의 진행 상황 (완료된 것 / 남은 것)\n3. 해결이 안 되는 문제가 있다면 원인 분석\n4. 다음 단계 계획 또는 사용자에게 보고할 내용\n\n텍스트 응답 없이 도구만 호출하지 마세요."
-                        )]
+                        parts=[types.Part.from_text(text=self.FORCE_STATUS_PROMPT)]
                     ))
                     iteration += 1
                     continue
@@ -256,7 +273,13 @@ class GeminiProvider(BaseProvider):
             print(f"[Gemini] 도구 호출 횟수 제한 도달 ({self.MAX_TOOL_ITERATIONS}회)")
             final_result += f"\n\n(도구 호출 횟수 제한({self.MAX_TOOL_ITERATIONS}회)에 도달하여 응답을 종료합니다.)"
 
-        print(f"[Gemini] 최종 응답 생성 (iteration={iteration}, len={len(final_result)})")
+        # 전체 루프 지연시간 기록
+        total_latency_ms = (time.time() - loop_start_time) * 1000
+        # Gemini는 토큰 수를 직접 제공하지 않으므로 추정 (4자당 1토큰)
+        estimated_output_tokens = len(final_result) // 4
+        self.metrics.record_request(total_latency_ms, 0, estimated_output_tokens)
+
+        print(f"[Gemini] 최종 응답 생성 (iteration={iteration}, len={len(final_result)}, latency={total_latency_ms:.0f}ms)")
         yield {"type": "final", "content": final_result}
 
     def _stream_single_response(
@@ -374,7 +397,7 @@ class GeminiProvider(BaseProvider):
                     raise e
 
     def _execute_single_tool(self, fc, execute_tool: Callable, iteration: int) -> str:
-        """단일 도구 실행"""
+        """단일 도구 실행 (검증 및 메트릭 포함)"""
         tool_input = dict(fc.args) if fc.args else {}
 
         # 로깅
@@ -383,6 +406,9 @@ class GeminiProvider(BaseProvider):
             input_preview = input_preview[:200] + "..."
         print(f"[Gemini][round={iteration}] 도구 호출: {fc.name}")
         print(f"[Gemini][round={iteration}]   입력: {input_preview}")
+
+        # 도구 호출 메트릭 기록
+        self.metrics.record_tool_call()
 
         if not execute_tool:
             return "도구 실행 함수가 제공되지 않았습니다."
@@ -399,6 +425,11 @@ class GeminiProvider(BaseProvider):
             if isinstance(tool_output, (dict, list)):
                 tool_output = json.dumps(tool_output, ensure_ascii=False)
 
+            # 도구 결과 검증
+            tool_output, is_error = self._verify_tool_result(fc.name, tool_input, str(tool_output))
+            if is_error:
+                print(f"[Gemini][round={iteration}] 도구 결과 검증 실패: {fc.name}")
+
             # 로깅
             output_len = len(str(tool_output))
             output_preview = str(tool_output)[:200] + "..." if output_len > 200 else str(tool_output)
@@ -407,6 +438,7 @@ class GeminiProvider(BaseProvider):
             return tool_output
 
         except Exception as tool_err:
+            self.metrics.record_error()
             print(f"[Gemini][round={iteration}] 도구 실행 예외: {fc.name} - {tool_err}")
             return f"도구 실행 실패: {fc.name} - {str(tool_err)}. 다른 방법을 시도하거나 사용자에게 알려주세요."
 

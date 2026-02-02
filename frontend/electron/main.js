@@ -878,6 +878,24 @@ function setupIPC() {
 
     return result.filePaths[0];
   });
+
+  // 이미지 파일 선택 다이얼로그 (다중 선택)
+  ipcMain.handle('select-images', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      title: '이미지 파일 선택',
+      buttonLabel: '선택',
+      filters: [
+        { name: '이미지', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }
+      ]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+
+    return result.filePaths;
+  });
 }
 
 // 앱 준비

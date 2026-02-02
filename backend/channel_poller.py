@@ -26,12 +26,32 @@ sys.path.insert(0, str(GMAIL_PATH))
 
 # Nostr 라이브러리 확인
 try:
-    from pynostr.key import PrivateKey
+    from pynostr.key import PrivateKey, PublicKey
     from pynostr.event import EventKind
     import websocket
     HAS_NOSTR = True
 except ImportError:
     HAS_NOSTR = False
+
+
+def _hex_to_npub(hex_pubkey: str) -> str:
+    """hex 공개키를 npub(bech32) 형식으로 변환. 실패 시 원본 반환."""
+    if not hex_pubkey or hex_pubkey.startswith('npub'):
+        return hex_pubkey
+    try:
+        return PublicKey(bytes.fromhex(hex_pubkey)).bech32()
+    except Exception:
+        return hex_pubkey
+
+
+def _npub_to_hex(npub: str) -> str:
+    """npub(bech32)를 hex로 변환. 실패 시 원본 반환."""
+    if not npub or not npub.startswith('npub'):
+        return npub
+    try:
+        return PublicKey.from_npub(npub).hex().lower()
+    except Exception:
+        return npub
 
 
 def _load_owner_identities() -> Dict[str, set]:
@@ -52,23 +72,21 @@ def _load_owner_identities() -> Dict[str, set]:
             if email:
                 identities['emails'].add(email)
 
-    # Nostr 공개키 로드 (쉼표 구분, npub→hex 변환)
+    # Nostr 공개키 로드 (쉼표 구분, hex와 npub 양쪽 모두 저장)
     owner_nostr = os.getenv('OWNER_NOSTR_PUBKEYS', '')
     if owner_nostr:
         for pubkey in owner_nostr.split(','):
             pubkey = pubkey.strip()
             if not pubkey:
                 continue
-            # npub 형식이면 hex로 변환
             if pubkey.startswith('npub'):
-                try:
-                    from pynostr.key import PublicKey
-                    hex_key = PublicKey.from_npub(pubkey).hex().lower()
-                    identities['nostr_pubkeys'].add(hex_key)
-                except Exception:
-                    identities['nostr_pubkeys'].add(pubkey.lower())
+                hex_key = _npub_to_hex(pubkey)
+                identities['nostr_pubkeys'].add(hex_key.lower())
+                identities['nostr_pubkeys'].add(pubkey.lower())
             else:
                 identities['nostr_pubkeys'].add(pubkey.lower())
+                npub_key = _hex_to_npub(pubkey)
+                identities['nostr_pubkeys'].add(npub_key.lower())
 
     return identities
 
@@ -90,6 +108,7 @@ class ChannelPoller:
         self._nostr_public_key = None
         self._nostr_ws = None
         self._nostr_seen_ids = set()
+        self._nostr_last_active = time.time()  # 하이버네이션 감지용
 
         # 비즈니스 매니저 참조
         self._business_manager = None
@@ -386,6 +405,8 @@ class ChannelPoller:
         import uuid
 
         connected = threading.Event()
+        HIBERNATION_THRESHOLD = 30  # 30초 이상 점프하면 하이버네이션으로 판단
+        PING_INTERVAL = 20  # 20초마다 ping
 
         def on_message(ws, message):
             try:
@@ -408,7 +429,7 @@ class ChannelPoller:
 
         def on_open(ws):
             connected.set()
-            # 나에게 온 DM 구독
+            # 나에게 온 DM 구독 (현재 시점부터)
             req = json.dumps([
                 "REQ",
                 f"dm_{uuid.uuid4().hex[:8]}",
@@ -419,6 +440,7 @@ class ChannelPoller:
                 }
             ])
             ws.send(req)
+            self._nostr_last_active = time.time()
             # 최초 연결 시에만 로그
             if not hasattr(self, '_nostr_connected_once'):
                 self._log(f"Nostr 연결됨: {relay_url}")
@@ -433,17 +455,30 @@ class ChannelPoller:
             on_close=on_close
         )
 
-        # 별도 스레드에서 WebSocket 실행
-        ws_thread = threading.Thread(target=self._nostr_ws.run_forever, daemon=True)
+        # 별도 스레드에서 WebSocket 실행 (ping으로 좀비 연결 감지)
+        ws_thread = threading.Thread(
+            target=self._nostr_ws.run_forever,
+            kwargs={"ping_interval": PING_INTERVAL, "ping_timeout": 10},
+            daemon=True
+        )
         ws_thread.start()
 
         # 연결 대기
         connected.wait(timeout=10)
 
-        # stop_event가 설정될 때까지 대기
+        # stop_event가 설정될 때까지 대기 + 하이버네이션 감지
         while not stop_event.is_set() and self.running:
             if not ws_thread.is_alive():
                 break
+
+            # 하이버네이션 감지: 시간 점프 체크
+            now = time.time()
+            elapsed = now - self._nostr_last_active
+            if elapsed > HIBERNATION_THRESHOLD:
+                self._log(f"하이버네이션 감지 ({int(elapsed)}초 경과) - Nostr 재연결")
+                break  # while 탈출 → ws.close() → _nostr_realtime_loop에서 재연결
+
+            self._nostr_last_active = now
             time.sleep(1)
 
         # 종료
@@ -485,15 +520,16 @@ class ChannelPoller:
             kst = timezone(timedelta(hours=9))
             dt = datetime.fromtimestamp(timestamp, tz=timezone.utc).astimezone(kst)
 
-            sender_pubkey = event.get('pubkey', '')
-            sender_short = sender_pubkey[:16] + '...' if len(sender_pubkey) > 16 else sender_pubkey
+            sender_hex = event.get('pubkey', '')
+            sender_npub = _hex_to_npub(sender_hex)
+            sender_short = sender_npub[:20] + '...' if len(sender_npub) > 20 else sender_npub
 
             self._log(f"Nostr DM 수신: from={sender_short}")
 
-            # DB에 저장 (Gmail과 동일한 방식)
+            # DB에 저장 (npub 형식으로 통일)
             self._save_message_to_db(
                 contact_type='nostr',
-                contact_value=sender_pubkey,
+                contact_value=sender_npub,
                 subject='Nostr DM',
                 content=decrypted,
                 external_id=event_id,
@@ -628,7 +664,7 @@ class ChannelPoller:
                 if contact_type == 'gmail':
                     name = contact_value.split('@')[0] if '@' in contact_value else contact_value
                 elif contact_type == 'nostr':
-                    name = contact_value[:16] + '...' if len(contact_value) > 16 else contact_value
+                    name = contact_value[:20] + '...' if len(contact_value) > 20 else contact_value
                 else:
                     name = contact_value
 

@@ -215,6 +215,65 @@ class BusinessManager:
         conn.commit()
         conn.close()
 
+        # Nostr hex pubkey → npub 마이그레이션 (한 번만 실행)
+        self._migrate_nostr_hex_to_npub()
+
+    def _migrate_nostr_hex_to_npub(self):
+        """DB의 nostr contact_value가 hex면 npub로 변환"""
+        try:
+            from pynostr.key import PublicKey
+        except ImportError:
+            return
+
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        updated = 0
+
+        # contacts 테이블
+        cursor.execute("SELECT id, contact_value FROM contacts WHERE contact_type = 'nostr'")
+        for row in cursor.fetchall():
+            cid, val = row['id'], row['contact_value']
+            if val and not val.startswith('npub') and len(val) == 64:
+                try:
+                    npub = PublicKey(bytes.fromhex(val)).bech32()
+                    cursor.execute("UPDATE contacts SET contact_value = ? WHERE id = ?", (npub, cid))
+                    updated += 1
+                except Exception:
+                    pass
+
+        # messages 테이블
+        cursor.execute("SELECT id, contact_value FROM messages WHERE contact_type = 'nostr'")
+        for row in cursor.fetchall():
+            mid, val = row['id'], row['contact_value']
+            if val and not val.startswith('npub') and len(val) == 64:
+                try:
+                    npub = PublicKey(bytes.fromhex(val)).bech32()
+                    cursor.execute("UPDATE messages SET contact_value = ? WHERE id = ?", (npub, mid))
+                    updated += 1
+                except Exception:
+                    pass
+
+        # neighbors 이름도 hex 기반이면 npub로 갱신
+        cursor.execute("""
+            SELECT n.id, n.name, c.contact_value FROM neighbors n
+            JOIN contacts c ON c.neighbor_id = n.id
+            WHERE c.contact_type = 'nostr' AND c.contact_value LIKE 'npub%'
+        """)
+        for row in cursor.fetchall():
+            nid, name, npub_val = row['id'], row['name'], row['contact_value']
+            # 이름이 hex 패턴(16자+...)이면 npub 기반으로 갱신
+            if name and not name.startswith('npub') and '...' in name:
+                prefix = name.replace('...', '')
+                if len(prefix) == 16 and all(c in '0123456789abcdef' for c in prefix.lower()):
+                    new_name = npub_val[:20] + '...' if len(npub_val) > 20 else npub_val
+                    cursor.execute("UPDATE neighbors SET name = ? WHERE id = ?", (new_name, nid))
+                    updated += 1
+
+        if updated > 0:
+            conn.commit()
+            print(f"[BusinessManager] Nostr hex→npub 마이그레이션 완료: {updated}건")
+        conn.close()
+
     def _row_to_dict(self, row: sqlite3.Row) -> Dict[str, Any]:
         """Row 객체를 딕셔너리로 변환"""
         return dict(row) if row else None

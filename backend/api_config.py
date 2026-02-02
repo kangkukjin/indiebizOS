@@ -92,7 +92,6 @@ async def get_project_config(project_id: str):
 
         result = {
             "system_ai": {},
-            "common_settings": "",
             "agents": [],
             "default_tools": [],
         }
@@ -129,10 +128,6 @@ async def get_project_config(project_id: str):
 
             if 'common' in data:
                 result['common'] = data['common']
-
-        common_file = project_path / "common_settings.txt"
-        if common_file.exists():
-            result['common_settings'] = common_file.read_text(encoding='utf-8')
 
         return {"config": result}
     except Exception as e:

@@ -8,7 +8,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Phone, MessageSquare, Users, Clock, PhoneIncoming, PhoneOutgoing,
   PhoneMissed, Trash2, Search, Send, RefreshCw, Smartphone,
-  ChevronDown, X, Loader2, Package, HardDrive, Clock3, Edit3, Plus
+  X, Loader2, Package, HardDrive, Clock3, Edit3, Plus
 } from 'lucide-react';
 
 // API 기본 URL
@@ -68,7 +68,7 @@ interface AndroidManagerProps {
   projectId?: string | null;
 }
 
-export function AndroidManager({ deviceId: initialDeviceId, projectId }: AndroidManagerProps) {
+export function AndroidManager(_props: AndroidManagerProps) {
   // 탭 상태
   const [activeTab, setActiveTab] = useState<TabType>('recent');
 

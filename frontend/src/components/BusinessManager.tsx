@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import {
   Building2, Plus, Search, FileText, ClipboardList,
-  Edit2, Trash2, Save, X, Package, RefreshCw, Users, Briefcase, Zap
+  Edit2, Trash2, Save, X, Package, RefreshCw, Users, Briefcase, Zap, ImagePlus
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { NeighborManagerDialog } from './NeighborManagerDialog';
@@ -38,6 +38,20 @@ interface BusinessDocument {
   content: string;
   updated_at: string;
 }
+
+// 이미지 경로 파싱 (JSON 배열 or 레거시 단일 경로)
+function parseImagePaths(attachmentPath: string | null): string[] {
+  if (!attachmentPath) return [];
+  try {
+    const parsed = JSON.parse(attachmentPath);
+    if (Array.isArray(parsed)) return parsed;
+  } catch {
+    // 레거시 단일 경로
+  }
+  return [attachmentPath];
+}
+
+const IMAGE_EXTS = /\.(jpg|jpeg|png|gif|webp)$/i;
 
 const LEVEL_NAMES = ['폐쇄중', '레벨 0', '레벨 1', '레벨 2', '레벨 3', '레벨 4'];
 const LEVEL_COLORS: Record<number, string> = {
@@ -71,7 +85,7 @@ export function BusinessManager() {
 
   // 폼 상태
   const [businessForm, setBusinessForm] = useState({ name: '', level: 0, description: '' });
-  const [itemForm, setItemForm] = useState({ title: '', details: '', attachment_path: '' });
+  const [itemForm, setItemForm] = useState({ title: '', details: '', attachment_paths: [] as string[] });
 
   // 문서 상태
   const [documents, setDocuments] = useState<Record<number, BusinessDocument>>({});
@@ -80,6 +94,9 @@ export function BusinessManager() {
 
   // 이웃관리 다이얼로그
   const [showNeighborManager, setShowNeighborManager] = useState(false);
+
+  // 아이템 저장 로딩 (nostr.build 업로드 포함)
+  const [isSavingItem, setIsSavingItem] = useState(false);
 
   // 자동응답 상태
   const [autoResponseRunning, setAutoResponseRunning] = useState(false);
@@ -187,23 +204,58 @@ export function BusinessManager() {
     }
   };
 
-  // 아이템 저장
+  // 아이템 저장 (이미지 업로드 포함 - 시간 소요 가능)
   const handleSaveItem = async () => {
     if (!selectedBusiness) return;
     try {
+      setIsSavingItem(true);
+      const payload = {
+        title: itemForm.title,
+        details: itemForm.details || undefined,
+        attachment_paths: itemForm.attachment_paths.length > 0 ? itemForm.attachment_paths : undefined,
+      };
       if (editingItem) {
-        await api.updateBusinessItem(editingItem.id, itemForm);
+        await api.updateBusinessItem(editingItem.id, payload);
       } else {
-        await api.createBusinessItem(selectedBusiness.id, itemForm);
+        await api.createBusinessItem(selectedBusiness.id, payload);
       }
       setShowItemModal(false);
       setEditingItem(null);
-      setItemForm({ title: '', details: '', attachment_path: '' });
+      setItemForm({ title: '', details: '', attachment_paths: [] });
       loadBusinessItems(selectedBusiness.id);
     } catch (err) {
       console.error('Failed to save item:', err);
       alert('아이템 저장에 실패했습니다.');
+    } finally {
+      setIsSavingItem(false);
     }
+  };
+
+  // 이미지 파일 선택
+  const handleSelectImages = async () => {
+    if (!window.electron?.selectImages) return;
+    const filePaths = await window.electron.selectImages();
+    if (!filePaths || filePaths.length === 0) return;
+    try {
+      const result = await api.copyImagesForBusinessItem(filePaths);
+      if (result.paths.length > 0) {
+        setItemForm(prev => ({
+          ...prev,
+          attachment_paths: [...prev.attachment_paths, ...result.paths]
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to copy images:', err);
+      alert('이미지 복사에 실패했습니다.');
+    }
+  };
+
+  // 이미지 제거
+  const handleRemoveImage = (index: number) => {
+    setItemForm(prev => ({
+      ...prev,
+      attachment_paths: prev.attachment_paths.filter((_, i) => i !== index)
+    }));
   };
 
   // 아이템 삭제
@@ -336,7 +388,7 @@ export function BusinessManager() {
     setItemForm({
       title: item.title,
       details: item.details || '',
-      attachment_path: item.attachment_path || ''
+      attachment_paths: parseImagePaths(item.attachment_path)
     });
     setShowItemModal(true);
   };
@@ -564,12 +616,33 @@ export function BusinessManager() {
                     {item.details && (
                       <p className="text-sm text-[#6B5B4F] whitespace-pre-wrap leading-relaxed">{item.details}</p>
                     )}
-                    {item.attachment_path && (
-                      <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E5DFD5] rounded-lg text-xs text-[#6B5B4F]">
-                        <FileText size={14} className="text-[#D97706]" />
-                        {item.attachment_path.split('/').pop()}
-                      </div>
-                    )}
+                    {item.attachment_path && (() => {
+                      const paths = parseImagePaths(item.attachment_path);
+                      const images = paths.filter(p => IMAGE_EXTS.test(p));
+                      const files = paths.filter(p => !IMAGE_EXTS.test(p));
+                      return (
+                        <div className="mt-3">
+                          {images.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              {images.map((imgPath, idx) => (
+                                <img
+                                  key={idx}
+                                  src={`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`}
+                                  alt=""
+                                  className="w-24 h-24 object-cover rounded-lg border border-[#E5DFD5]"
+                                />
+                              ))}
+                            </div>
+                          )}
+                          {files.map((filePath, idx) => (
+                            <div key={idx} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-[#E5DFD5] rounded-lg text-xs text-[#6B5B4F] mr-2">
+                              <FileText size={14} className="text-[#D97706]" />
+                              {filePath.split('/').pop()}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     <div className="mt-3 pt-3 border-t border-[#E5DFD5] text-xs text-[#A99B8E]">
                       수정: {new Date(item.updated_at).toLocaleString('ko-KR')}
                     </div>
@@ -585,7 +658,7 @@ export function BusinessManager() {
               <button
                 onClick={() => {
                   setEditingItem(null);
-                  setItemForm({ title: '', details: '', attachment_path: '' });
+                  setItemForm({ title: '', details: '', attachment_paths: [] });
                   setShowItemModal(true);
                 }}
                 className="px-5 py-3 bg-[#D97706] text-white font-medium rounded-full shadow-lg hover:bg-[#B45309] transition-colors flex items-center gap-2"
@@ -697,14 +770,43 @@ export function BusinessManager() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#4A4035] mb-1.5">첨부파일 경로</label>
-                <input
-                  type="text"
-                  value={itemForm.attachment_path}
-                  onChange={(e) => setItemForm(prev => ({ ...prev, attachment_path: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-[#F5F1EB] border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D97706]/30 text-[#4A4035] placeholder-[#A99B8E]"
-                  placeholder="파일 경로를 입력하세요 (선택사항)"
-                />
+                <label className="block text-sm font-medium text-[#4A4035] mb-1.5">
+                  이미지 ({itemForm.attachment_paths.length}개)
+                </label>
+                {itemForm.attachment_paths.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {itemForm.attachment_paths.map((imgPath, idx) => (
+                      <div key={idx} className="relative group">
+                        {IMAGE_EXTS.test(imgPath) ? (
+                          <img
+                            src={`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`}
+                            alt=""
+                            className="w-20 h-20 object-cover rounded-lg border border-[#E5DFD5]"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 flex items-center justify-center rounded-lg border border-[#E5DFD5] bg-[#F5F1EB]">
+                            <FileText size={20} className="text-[#6B5B4F]" />
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(idx)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSelectImages}
+                  className="w-full py-2.5 bg-[#F5F1EB] border-2 border-dashed border-[#D9D2C7] rounded-xl text-sm text-[#6B5B4F] hover:bg-[#EAE4DA] hover:border-[#C5BFB5] transition-colors flex items-center justify-center gap-2"
+                >
+                  <ImagePlus size={16} />
+                  이미지 추가
+                </button>
               </div>
             </div>
             <div className="flex justify-end gap-2 px-5 py-4 border-t border-[#E5DFD5]">
@@ -716,10 +818,15 @@ export function BusinessManager() {
               </button>
               <button
                 onClick={handleSaveItem}
-                disabled={!itemForm.title.trim()}
-                className="px-5 py-2 bg-[#D97706] text-white rounded-lg font-medium hover:bg-[#B45309] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={!itemForm.title.trim() || isSavingItem}
+                className="px-5 py-2 bg-[#D97706] text-white rounded-lg font-medium hover:bg-[#B45309] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
               >
-                저장
+                {isSavingItem ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    {itemForm.attachment_paths.length > 0 ? '이미지 업로드 중...' : '저장 중...'}
+                  </>
+                ) : '저장'}
               </button>
             </div>
           </div>

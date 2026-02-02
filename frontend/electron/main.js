@@ -68,12 +68,17 @@ function isPortAvailable(port) {
 /**
  * 프로덕션 데이터 디렉토리 초기화
  * 앱 번들(resources/) 내의 데이터를 사용자 폴더(userData)로 복사
- * 이미 존재하면 건너뜀 (업데이트 시 사용자 데이터 보존)
+ * - 기본 폴더: 없으면 복사 (사용자 데이터 보존)
+ * - 패키지 폴더: 항상 새 패키지 동기화 (업데이트 지원)
  */
 function initUserData() {
   const userDataPath = app.getPath('userData'); // Windows: %APPDATA%/IndieBiz, macOS: ~/Library/Application Support/IndieBiz
   const resourcesPath = process.resourcesPath;
 
+  console.log(`[Init] userData 경로: ${userDataPath}`);
+  console.log(`[Init] resources 경로: ${resourcesPath}`);
+
+  // 1. 기본 폴더들 - 없으면 복사 (사용자 데이터 보존)
   const dirsToSync = ['data', 'projects', 'templates', 'tokens'];
 
   for (const dir of dirsToSync) {
@@ -86,7 +91,46 @@ function initUserData() {
     }
   }
 
-  // .env 파일도 복사
+  // 2. 패키지 폴더 동기화 - 새 패키지 추가 (기존 패키지 보존, 새 패키지만 추가)
+  const packagesSrc = path.join(resourcesPath, 'data', 'packages', 'installed', 'tools');
+  const packagesDest = path.join(userDataPath, 'data', 'packages', 'installed', 'tools');
+
+  if (fs.existsSync(packagesSrc)) {
+    // 대상 폴더가 없으면 생성
+    if (!fs.existsSync(packagesDest)) {
+      fs.mkdirSync(packagesDest, { recursive: true });
+    }
+
+    // 소스의 각 패키지를 확인하고 없는 것만 복사
+    const srcPackages = fs.readdirSync(packagesSrc);
+    for (const pkg of srcPackages) {
+      const pkgSrc = path.join(packagesSrc, pkg);
+      const pkgDest = path.join(packagesDest, pkg);
+
+      // 디렉토리만 처리 (.DS_Store 등 파일 제외)
+      if (fs.statSync(pkgSrc).isDirectory()) {
+        if (!fs.existsSync(pkgDest)) {
+          console.log(`[Init] 새 패키지 복사: ${pkg}`);
+          fs.cpSync(pkgSrc, pkgDest, { recursive: true });
+        }
+      }
+    }
+  }
+
+  // 3. common_prompts 폴더 동기화 (프롬프트 업데이트 지원)
+  const promptsSrc = path.join(resourcesPath, 'data', 'common_prompts');
+  const promptsDest = path.join(userDataPath, 'data', 'common_prompts');
+
+  if (fs.existsSync(promptsSrc)) {
+    // 프롬프트 폴더는 항상 최신으로 덮어쓰기 (사용자 커스텀 없음)
+    if (fs.existsSync(promptsDest)) {
+      fs.rmSync(promptsDest, { recursive: true });
+    }
+    fs.cpSync(promptsSrc, promptsDest, { recursive: true });
+    console.log('[Init] 프롬프트 파일 업데이트 완료');
+  }
+
+  // 4. .env 파일 복사 (없으면)
   const envSrc = path.join(resourcesPath, 'backend', '.env');
   const envDest = path.join(userDataPath, '.env');
   if (!fs.existsSync(envDest) && fs.existsSync(envSrc)) {

@@ -126,16 +126,26 @@ async function startPythonBackend() {
     basePath = initUserData();
 
     if (process.platform === 'win32') {
-      // Windows: 임베디드 Python 사용
-      pythonPath = path.join(process.resourcesPath, 'runtime', 'python', 'python.exe');
+      // Windows: 임베디드 Python 우선, 없으면 시스템 Python
+      const embeddedPython = path.join(process.resourcesPath, 'runtime', 'python', 'python.exe');
+      if (fs.existsSync(embeddedPython)) {
+        pythonPath = embeddedPython;
+        console.log('[Python] 임베디드 Python 사용');
+      } else {
+        // 시스템 Python 사용 (python 또는 python3)
+        pythonPath = 'python';
+        console.log('[Python] 시스템 Python 사용');
+      }
       pythonArgs = [path.join(backendPath, 'api.py')];
     } else if (process.platform === 'darwin') {
-      // macOS: 시스템 Python 또는 번들된 Python
+      // macOS: 번들된 Python 우선, 없으면 시스템 Python
       const bundledPython = path.join(process.resourcesPath, 'runtime', 'python', 'bin', 'python3');
       if (fs.existsSync(bundledPython)) {
         pythonPath = bundledPython;
+        console.log('[Python] 번들된 Python 사용');
       } else {
         pythonPath = 'python3';
+        console.log('[Python] 시스템 Python 사용');
       }
       pythonArgs = [path.join(backendPath, 'api.py')];
     } else {
@@ -181,11 +191,37 @@ async function startPythonBackend() {
 
   pythonProcess.on('close', (code) => {
     console.log(`[Python] 프로세스 종료: ${code}`);
+
+    // 비정상 종료 시 사용자에게 알림 (앱 시작 직후 종료된 경우)
+    if (code !== 0 && code !== null) {
+      console.error(`[Python] 백엔드가 비정상 종료되었습니다 (코드: ${code})`);
+
+      // 모듈 에러일 가능성 (의존성 미설치)
+      dialog.showErrorBox(
+        '백엔드 시작 실패',
+        `Python 백엔드가 시작되지 않았습니다 (종료 코드: ${code}).\n\n` +
+        '필요한 Python 패키지가 설치되어 있는지 확인해주세요:\n' +
+        'pip install fastapi uvicorn aiofiles python-dotenv\n\n' +
+        '또는 requirements.txt를 사용하여 설치:\n' +
+        'pip install -r backend/requirements.txt'
+      );
+    }
+
     pythonProcess = null;
   });
 
   pythonProcess.on('error', (err) => {
     console.error(`[Python] 프로세스 에러: ${err.message}`);
+
+    // Python을 찾을 수 없는 경우 사용자에게 알림
+    if (err.code === 'ENOENT') {
+      dialog.showErrorBox(
+        'Python을 찾을 수 없습니다',
+        'IndieBiz를 실행하려면 Python이 설치되어 있어야 합니다.\n\n' +
+        'Python 3.8 이상을 설치한 후 다시 시도해주세요.\n' +
+        'https://www.python.org/downloads/'
+      );
+    }
   });
 
   // 서버 준비 대기

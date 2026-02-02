@@ -7,6 +7,15 @@ import os
 import sys
 from pathlib import Path
 
+# Windows 인코딩 문제 해결 (한글 등 비-ASCII 문자 처리)
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except AttributeError:
+        pass  # Python 3.6 이하
+    os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
+
 # PATH 환경변수 보강 (ADB 등 외부 도구 접근용)
 if sys.platform != "win32":
     _extra_paths = [

@@ -90,15 +90,10 @@
           "**/*",
           "!system_ai_config.json",
           "!system_ai_memory.db",
-          "!packages/installed/**",
-          "packages/installed/tools/time/**",
-          "packages/installed/tools/file-ops/**",
-          "packages/installed/tools/file-search/**",
-          "packages/installed/tools/python-exec/**",
-          "packages/installed/tools/nodejs/**",
-          "packages/installed/tools/web-request/**",
-          "packages/installed/tools/browser/**",
-          "packages/installed/extensions/ai-agent/**"
+          "!packages/installed/tools/remotion-video/**",
+          "!**/__pycache__/**",
+          "!**/*.pyc",
+          "!**/.DS_Store"
         ]
       },
       {

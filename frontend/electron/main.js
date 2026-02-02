@@ -128,13 +128,15 @@ async function startPythonBackend() {
     if (process.platform === 'win32') {
       // Windows: 임베디드 Python 우선, 없으면 시스템 Python
       const embeddedPython = path.join(process.resourcesPath, 'runtime', 'python', 'python.exe');
+      console.log(`[Python] 임베디드 Python 경로: ${embeddedPython}`);
+      console.log(`[Python] 임베디드 Python 존재 여부: ${fs.existsSync(embeddedPython)}`);
       if (fs.existsSync(embeddedPython)) {
         pythonPath = embeddedPython;
         console.log('[Python] 임베디드 Python 사용');
       } else {
         // 시스템 Python 사용 (python 또는 python3)
         pythonPath = 'python';
-        console.log('[Python] 시스템 Python 사용');
+        console.log('[Python] 시스템 Python으로 폴백');
       }
       pythonArgs = [path.join(backendPath, 'api.py')];
     } else if (process.platform === 'darwin') {
@@ -155,8 +157,16 @@ async function startPythonBackend() {
     }
   }
 
-  console.log(`[Python] 백엔드 시작: ${pythonPath} ${pythonArgs.join(' ')}`);
-  console.log(`[Python] 데이터 경로: ${basePath}`);
+  console.log(`[Python] ========== 백엔드 시작 디버그 ==========`);
+  console.log(`[Python] resourcesPath: ${process.resourcesPath}`);
+  console.log(`[Python] pythonPath: ${pythonPath}`);
+  console.log(`[Python] pythonPath 존재: ${fs.existsSync(pythonPath)}`);
+  console.log(`[Python] backendPath: ${backendPath}`);
+  console.log(`[Python] backendPath 존재: ${fs.existsSync(backendPath)}`);
+  console.log(`[Python] api.py 경로: ${pythonArgs[0]}`);
+  console.log(`[Python] api.py 존재: ${fs.existsSync(pythonArgs[0])}`);
+  console.log(`[Python] basePath: ${basePath}`);
+  console.log(`[Python] ===========================================`);
 
   // Python 프로세스 시작
   pythonProcess = spawn(pythonPath, pythonArgs, {
@@ -1004,7 +1014,17 @@ app.whenReady().then(async () => {
   setupIPC();
 
   // Python 백엔드 시작
-  await startPythonBackend();
+  try {
+    console.log('[Electron] Python 백엔드 시작 시도...');
+    await startPythonBackend();
+    console.log('[Electron] Python 백엔드 시작 완료');
+  } catch (err) {
+    console.error('[Electron] Python 백엔드 시작 실패:', err);
+    dialog.showErrorBox(
+      '백엔드 시작 오류',
+      `Python 백엔드를 시작하는 중 오류가 발생했습니다.\n\n${err.message}`
+    );
+  }
 
   // 윈도우 생성
   createWindow();

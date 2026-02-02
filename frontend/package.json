@@ -90,7 +90,7 @@
           "**/*",
           "!system_ai_config.json",
           "!system_ai_memory.db",
-          "!packages/installed/tools/remotion-video/**",
+          "!packages/installed/tools/remotion-video/remotion_project/node_modules/**",
           "!**/__pycache__/**",
           "!**/*.pyc",
           "!**/.DS_Store"

@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText } from 'lucide-react';
+import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText, HelpCircle } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 import type { Project, Switch, SchedulerTask, SchedulerAction } from '../types';
@@ -23,6 +23,7 @@ import {
   SwitchEditDialog,
 } from './launcher-components';
 import { ContactsDialog } from './ContactsDialog';
+import { GuideDialog } from './GuideDialog';
 import type {
   ContextMenuState,
   ClipboardItem,
@@ -55,6 +56,7 @@ export function Launcher() {
   const [showToolboxDialog, setShowToolboxDialog] = useState(false);
   const [showSwitchEditDialog, setShowSwitchEditDialog] = useState(false);
   const [showContactsDialog, setShowContactsDialog] = useState(false);
+  const [showGuideDialog, setShowGuideDialog] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [newMultiChatName, setNewMultiChatName] = useState('');
@@ -146,6 +148,19 @@ export function Launcher() {
     loadSwitches();
     loadMultiChatRooms();
   }, [loadProjects, loadSwitches]);
+
+  // 첫 실행 시 가이드 표시
+  useEffect(() => {
+    const hasSeenGuide = localStorage.getItem('indiebiz_has_seen_guide');
+    if (!hasSeenGuide) {
+      // 약간의 딜레이 후 가이드 표시 (앱이 로드된 후)
+      const timer = setTimeout(() => {
+        setShowGuideDialog(true);
+        localStorage.setItem('indiebiz_has_seen_guide', 'true');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // PC Manager 창 열기 요청 폴링
   useEffect(() => {
@@ -951,6 +966,13 @@ export function Launcher() {
           >
             <ScrollText size={16} />
           </button>
+          <button
+            onClick={() => setShowGuideDialog(true)}
+            className="p-2 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
+            title="시작 가이드"
+          >
+            <HelpCircle size={16} />
+          </button>
         </div>
       </div>
 
@@ -1271,6 +1293,12 @@ export function Launcher() {
       <ContactsDialog
         show={showContactsDialog}
         onClose={() => setShowContactsDialog(false)}
+      />
+
+      {/* 시작 가이드 다이얼로그 */}
+      <GuideDialog
+        show={showGuideDialog}
+        onClose={() => setShowGuideDialog(false)}
       />
     </div>
   );

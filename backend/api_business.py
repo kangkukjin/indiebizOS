@@ -276,6 +276,30 @@ async def update_channel_setting(channel_type: str, data: ChannelSettingUpdate):
             polling_interval=data.polling_interval
         )
 
+        # Gmail 채널의 경우 config.yaml도 업데이트 (유일한 출처)
+        if channel_type == 'gmail' and data.config:
+            try:
+                import yaml
+                from runtime_utils import get_base_path
+                config = json.loads(data.config)
+
+                gmail_path = get_base_path() / "data" / "packages" / "installed" / "extensions" / "gmail"
+                gmail_path.mkdir(parents=True, exist_ok=True)
+                config_yaml_path = gmail_path / "config.yaml"
+
+                # config.yaml 업데이트 (토큰 파일은 email 기반으로 자동 결정)
+                gmail_yaml = {
+                    'gmail': {
+                        'client_id': config.get('client_id', ''),
+                        'client_secret': config.get('client_secret', ''),
+                        'email': config.get('email', ''),
+                    }
+                }
+                with open(config_yaml_path, 'w', encoding='utf-8') as f:
+                    yaml.dump(gmail_yaml, f, default_flow_style=False, allow_unicode=True)
+            except Exception as e:
+                print(f"[API] Gmail config.yaml 업데이트 실패: {e}")
+
         # 채널 폴러에 설정 변경 알림
         try:
             from channel_poller import get_channel_poller
@@ -331,7 +355,7 @@ async def authenticate_gmail():
             'gmail': {
                 'client_id': client_id,
                 'client_secret': client_secret,
-                'token_path': str(gmail_path / 'token.json'),
+                'token_file': 'tokens/token.json',
                 'credentials_path': str(gmail_path / 'credentials.json'),
             }
         }
@@ -365,7 +389,7 @@ async def authenticate_gmail():
 
             # 인증 성공 시 config 업데이트
             config['authenticated'] = True
-            config['email'] = gmail_client.get_user_email() if hasattr(gmail_client, 'get_user_email') else ''
+            # 이메일은 사용자가 미리 지정한 값(config['email']) 유지
             bm.update_channel_setting('gmail', config=json.dumps(config))
 
             return {"status": "success", "message": "Gmail 인증 완료"}

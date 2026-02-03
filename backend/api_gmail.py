@@ -54,6 +54,42 @@ def get_gmail_client(config: dict, client_key: str = "default"):
     return _gmail_clients[client_key]
 
 
+def get_gmail_client_for_email(email: str):
+    """
+    특정 이메일 주소용 Gmail 클라이언트 반환.
+    공통 OAuth 설정(config.yaml)을 사용하고, 이메일별 토큰 파일 사용.
+    에이전트, 시스템 AI 등 어디서든 사용 가능.
+    """
+    global _gmail_clients
+
+    if email in _gmail_clients:
+        return _gmail_clients[email]
+
+    import yaml
+
+    # 공통 OAuth 설정 로드
+    config_path = GMAIL_PATH / "config.yaml"
+    if not config_path.exists():
+        raise Exception("Gmail config.yaml 없음. 먼저 Gmail 채널 설정을 완료하세요.")
+
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+    gmail_config = config.get('gmail', {})
+    if not gmail_config.get('client_id') or not gmail_config.get('client_secret'):
+        raise Exception("Gmail OAuth 설정 없음. 먼저 Gmail 채널 설정을 완료하세요.")
+
+    # 이메일 지정 (토큰 파일명으로 사용됨)
+    gmail_config['email'] = email
+
+    from gmail import GmailClient
+    client = GmailClient(gmail_config)
+    client.authenticate()
+    _gmail_clients[email] = client
+
+    return client
+
+
 @router.get("/gmail/status")
 async def get_gmail_status():
     """Gmail 확장 상태 확인"""

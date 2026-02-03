@@ -20,16 +20,22 @@ from googleapiclient.discovery import build
 
 class GmailClient:
     """Gmail API 클라이언트"""
-    
+
     def __init__(self, config: dict):
         self.config = config
-        # config에서 token_file 경로 읽기 (기본값: tokens/token.json)
-        token_file = config.get('token_file', 'tokens/token.json')
+
+        # 이메일 기반으로 토큰 파일 경로 결정
+        email = config.get('email', '')
+        if email:
+            # 이메일 주소가 토큰 파일명
+            token_file = f"tokens/{email}.json"
+        else:
+            token_file = config.get('token_file', 'tokens/token.json')
+
         self.token_path = Path(__file__).parent / token_file
-        
-        # 에이전트별 credentials 파일 (토큰 파일명을 기반으로)
-        token_name = Path(token_file).stem  # "직원1_token" 같은 형식
-        self.credentials_path = Path(__file__).parent / f"credentials_{token_name}.json"
+
+        # credentials.json은 공통 사용
+        self.credentials_path = Path(__file__).parent / "credentials.json"
         
         self.scopes = config.get('scopes', [
             'https://www.googleapis.com/auth/gmail.readonly',

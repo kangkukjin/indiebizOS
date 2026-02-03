@@ -202,8 +202,8 @@ export function AgentEditDialog({
                     <span className="font-medium text-gray-900">Gmail 채널</span>
                   </label>
                   {agentForm.hasGmail && (
-                    <div className="grid grid-cols-2 gap-4 mt-3">
-                      <div className="col-span-2">
+                    <div className="space-y-3 mt-3">
+                      <div>
                         <label className="block text-sm font-medium text-gray-800 mb-1">이메일</label>
                         <input
                           type="email"
@@ -213,25 +213,14 @@ export function AgentEditDialog({
                           className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-800 mb-1">Client ID</label>
-                        <input
-                          type="text"
-                          value={agentForm.gmailClientId}
-                          onChange={(e) => setAgentForm({ ...agentForm, gmailClientId: e.target.value })}
-                          placeholder="Google OAuth Client ID"
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-800 mb-1">Client Secret</label>
-                        <input
-                          type="password"
-                          value={agentForm.gmailClientSecret}
-                          onChange={(e) => setAgentForm({ ...agentForm, gmailClientSecret: e.target.value })}
-                          placeholder="Google OAuth Client Secret"
-                          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                        />
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                          <strong>OAuth 인증</strong>은 전역 Gmail 설정(설정 → 채널 → Gmail)을 사용합니다.
+                          에이전트별로 별도 OAuth 설정은 필요 없습니다.
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1">
+                          처음 이메일 발송 시 브라우저에서 해당 이메일 계정으로 인증이 필요합니다.
+                        </p>
                       </div>
                     </div>
                   )}

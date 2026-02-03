@@ -223,17 +223,56 @@ V3에서는 `send_response` 도구가 즉시 발송합니다 (pending 대기 없
 
 ## 설정 파일
 
-### Gmail OAuth 설정
+### Gmail OAuth 설정 (전역 + 이메일별 토큰)
+
+Gmail은 **전역 OAuth 설정**과 **이메일별 토큰**으로 구성됩니다.
+
+#### 1. 전역 OAuth 설정
 `data/packages/installed/extensions/gmail/config.yaml`:
 ```yaml
 gmail:
   client_id: "xxx.apps.googleusercontent.com"
   client_secret: "xxx"
-  scopes:
-    - "https://www.googleapis.com/auth/gmail.readonly"
-    - "https://www.googleapis.com/auth/gmail.send"
-    - "https://www.googleapis.com/auth/gmail.modify"
+  email: "system-ai@gmail.com"  # 시스템 AI 이메일
 ```
+
+- `client_id`, `client_secret`: Google Cloud Console에서 발급받은 OAuth 인증 정보
+- `email`: 시스템 AI가 사용할 이메일 주소
+- 이 설정은 **모든 이메일 계정에서 공유**됩니다
+
+#### 2. 이메일별 토큰 파일
+`data/packages/installed/extensions/gmail/tokens/`:
+```
+tokens/
+├── system-ai@gmail.com.json      # 시스템 AI용
+├── marketer@gmail.com.json       # 마케터 에이전트용
+└── support@gmail.com.json        # 고객지원 에이전트용
+```
+
+- 각 이메일 주소별로 별도의 OAuth 토큰 파일이 생성됩니다
+- 처음 해당 이메일로 발송 시 브라우저에서 Google 계정 인증 필요
+
+#### 3. 에이전트 Gmail 설정
+프로젝트의 `agents.yaml`에서 에이전트별 이메일 지정:
+```yaml
+agents:
+  - name: 마케터
+    type: external
+    channel: gmail
+    email: marketer@gmail.com  # 에이전트 전용 이메일
+    allowed_tools:
+      - send_email  # 이메일 발송 도구 필수
+```
+
+**중요**: 에이전트별 `client_id`/`client_secret`은 설정하지 않습니다.
+모든 이메일 계정이 전역 OAuth 설정을 공유합니다.
+
+#### 4. 설정 순서
+1. **설정 → 채널 → Gmail**에서 OAuth 정보(client_id, client_secret) 입력
+2. 시스템 AI 이메일 주소 입력 및 저장
+3. 앱 재시작 시 브라우저에서 해당 계정 OAuth 인증
+4. 에이전트 설정에서 이메일 주소만 입력 (OAuth 정보 불필요)
+5. 에이전트 첫 이메일 발송 시 해당 계정 OAuth 인증
 
 ### 시스템 AI 설정
 `data/system_ai_config.json`:

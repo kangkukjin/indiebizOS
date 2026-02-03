@@ -38,6 +38,39 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
 
             return "\n".join(result_lines)
 
+        elif tool_name == "send_email":
+            # Gmail로 이메일 전송
+            to = tool_input.get("to")
+            subject = tool_input.get("subject")
+            body = tool_input.get("body")
+            attachment_path = tool_input.get("attachment_path")
+
+            if not to or not subject or not body:
+                return "Error: to, subject, body는 필수입니다."
+
+            # 에이전트의 이메일 주소 가져오기
+            agent_email = None
+            if agent_id and project_path:
+                import yaml
+                agents_file = Path(project_path) / "agents.yaml"
+                if agents_file.exists():
+                    with open(agents_file, 'r', encoding='utf-8') as f:
+                        data = yaml.safe_load(f)
+                    for agent in data.get("agents", []):
+                        if agent.get("id") == agent_id:
+                            agent_email = agent.get("email")
+                            break
+
+            if not agent_email:
+                return "Error: 에이전트에 이메일이 설정되어 있지 않습니다. 에이전트 설정에서 이메일을 먼저 설정하세요."
+
+            # Gmail 클라이언트로 발송
+            from api_gmail import get_gmail_client_for_email
+            client = get_gmail_client_for_email(agent_email)
+            client.send_message(to=to, subject=subject, body=body, attachment_path=attachment_path)
+
+            return f"이메일 발송 완료: {to}에게 '{subject}' 제목으로 발송했습니다."
+
         elif tool_name == "get_neighbor_detail":
             # 이웃 상세 조회
             neighbor_id = tool_input.get("neighbor_id")

@@ -109,6 +109,12 @@
         "to": "tokens"
       }
     ],
+    "extraFiles": [
+      {
+        "from": "../INSTALL_DEPENDENCIES.md",
+        "to": "INSTALL_DEPENDENCIES.md"
+      }
+    ],
     "mac": {
       "category": "public.app-category.productivity",
       "target": [

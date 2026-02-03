@@ -52,10 +52,11 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       title: 'API 키 설정',
       icon: <Key className="w-10 h-10 text-red-500" />,
       content: (
-        <div className="space-y-3">
-          <div className="bg-red-50 p-2 rounded-lg border border-red-200">
-            <p className="text-red-700 font-medium text-center text-sm">
-              ⚠️ 가장 중요한 첫 단계!
+        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+          <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+            <p className="text-red-800 text-sm">
+              가장 중요한 첫 단계는 <strong>AI의 API 키를 얻는 것</strong>입니다.
+              Claude건 ChatGPT건 Gemini건 상관없지만, 추천하는 프로바이더는 있습니다.
             </p>
           </div>
           <div className="bg-green-50 p-3 rounded-lg border border-green-200">
@@ -73,10 +74,25 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
               <p>• <strong>gemini-3-pro-preview</strong> - 더 강력하지만 느리고 비쌈</p>
             </div>
           </div>
-          <p className="text-gray-600 text-sm">
-            API 키 발급이 어려우면 아무 AI에게<br/>
-            "Gemini API 키 발급 방법" 물어보세요.
-          </p>
+          <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+            <p className="text-amber-800 text-sm">
+              <strong>API 키를 설정했다면</strong> 이제 대화창에서 시스템 AI와 대화할 수 있습니다.
+            </p>
+            <p className="text-amber-700 text-sm mt-2">
+              처음 IndieBiz OS를 사용한다면 여러 도구에 필요한 라이브러리가 없을 수 있습니다.
+              시스템 AI에게 <strong>"IndieBiz OS의 파이썬을 써서 필요한 라이브러리들을 깔아줘"</strong>라고 하세요.
+              필요한 목록은 <code>INSTALL_DEPENDENCIES.md</code>에 있습니다.
+            </p>
+            <p className="text-amber-600 text-sm mt-2">
+              ⏳ 시간이 오래 걸릴 수 있으니 기다리세요.
+            </p>
+          </div>
+          <div className="bg-gray-100 p-3 rounded-lg">
+            <p className="text-gray-700 text-sm">
+              💡 <strong>안경 메뉴 → 로그 보기</strong>를 켜두면 AI가 뭘 하는지 알 수 있습니다.
+              문제가 생기면 로그 메시지를 복사해서 AI에게 물어볼 수도 있습니다.
+            </p>
+          </div>
         </div>
       )
     },

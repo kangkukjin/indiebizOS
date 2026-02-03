@@ -23,7 +23,9 @@
     "electron:build:linux": "vite build && electron-builder --linux",
     "electron:preview": "vite build && electron .",
     "prepare:python:win": "node scripts/prepare-python-win.js",
-    "prepare:python:mac": "node scripts/prepare-python-mac.js"
+    "prepare:python:mac": "node scripts/prepare-python-mac.js",
+    "prepare:node:win": "node scripts/prepare-node-win.js",
+    "prepare:runtime:win": "npm run prepare:python:win && npm run prepare:node:win"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",

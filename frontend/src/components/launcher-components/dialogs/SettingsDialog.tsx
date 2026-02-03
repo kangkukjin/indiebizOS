@@ -182,6 +182,24 @@ export function SettingsDialog({
     }
   };
 
+  // 로컬 상태만 업데이트 (타이핑 중)
+  const handleLocalChannelConfig = (channelType: string, config: any) => {
+    setChannelConfigs(prev => ({ ...prev, [channelType]: config }));
+  };
+
+  // API에 저장 (onBlur 시)
+  const handleSaveChannelConfig = async (channelType: string) => {
+    try {
+      const config = channelConfigs[channelType];
+      if (config) {
+        await api.updateChannelSetting(channelType, { config: JSON.stringify(config) });
+      }
+    } catch (err) {
+      console.error('Failed to update channel config:', err);
+    }
+  };
+
+  // 즉시 저장 (체크박스 등)
   const handleUpdateChannelConfig = async (channelType: string, config: any) => {
     try {
       await api.updateChannelSetting(channelType, { config: JSON.stringify(config) });
@@ -479,18 +497,6 @@ export function SettingsDialog({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    시스템 AI Gmail 발신 주소
-                  </label>
-                  <input
-                    type="email"
-                    value={systemAiGmail}
-                    onChange={(e) => { setSystemAiGmail(e.target.value); setOwnerDirty(true); }}
-                    placeholder="system-ai@gmail.com"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
-                  />
-                </div>
                 {ownerDirty && (
                   <button
                     onClick={saveOwnerIdentities}
@@ -563,10 +569,11 @@ export function SettingsDialog({
                                 <input
                                   type="text"
                                   value={channelConfigs.gmail?.client_id || ''}
-                                  onChange={(e) => handleUpdateChannelConfig('gmail', {
+                                  onChange={(e) => handleLocalChannelConfig('gmail', {
                                     ...channelConfigs.gmail,
                                     client_id: e.target.value
                                   })}
+                                  onBlur={() => handleSaveChannelConfig('gmail')}
                                   placeholder="xxxxx.apps.googleusercontent.com"
                                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 text-sm"
                                 />
@@ -580,13 +587,35 @@ export function SettingsDialog({
                                 <input
                                   type="password"
                                   value={channelConfigs.gmail?.client_secret || ''}
-                                  onChange={(e) => handleUpdateChannelConfig('gmail', {
+                                  onChange={(e) => handleLocalChannelConfig('gmail', {
                                     ...channelConfigs.gmail,
                                     client_secret: e.target.value
                                   })}
+                                  onBlur={() => handleSaveChannelConfig('gmail')}
                                   placeholder="GOCSPX-xxxxx"
                                   className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 text-sm"
                                 />
+                              </div>
+
+                              {/* 시스템 AI Gmail 주소 */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  시스템 AI Gmail 주소
+                                </label>
+                                <input
+                                  type="email"
+                                  value={channelConfigs.gmail?.email || ''}
+                                  onChange={(e) => handleLocalChannelConfig('gmail', {
+                                    ...channelConfigs.gmail,
+                                    email: e.target.value
+                                  })}
+                                  onBlur={() => handleSaveChannelConfig('gmail')}
+                                  placeholder="system-ai@gmail.com"
+                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 text-sm"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  시스템 AI가 사용할 Gmail 주소 (인증 시 이 계정으로 로그인)
+                                </p>
                               </div>
 
                               {/* 인증 상태 및 버튼 */}
@@ -594,7 +623,7 @@ export function SettingsDialog({
                                 <div className="flex items-center gap-2">
                                   <div className={`w-2 h-2 rounded-full ${channelConfigs.gmail?.authenticated ? 'bg-green-500' : 'bg-red-500'}`} />
                                   <span className="text-sm text-gray-700">
-                                    {channelConfigs.gmail?.authenticated ? `인증됨 (${channelConfigs.gmail?.email || ''})` : '인증 필요'}
+                                    {channelConfigs.gmail?.authenticated ? '인증됨' : '인증 필요'}
                                   </span>
                                 </div>
                                 <button

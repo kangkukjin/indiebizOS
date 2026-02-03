@@ -324,7 +324,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       title: '원격 명령 & 자동 비지니스',
       icon: <Mail className="w-12 h-12 text-indigo-600" />,
       content: (
-        <div className="space-y-4 text-base">
+        <div className="space-y-4 text-base max-h-[420px] overflow-y-auto pr-1">
           <div className="bg-indigo-50 p-4 rounded-lg">
             <p className="text-indigo-800 font-medium mb-2">지원 채널</p>
             <div className="grid grid-cols-2 gap-2">
@@ -366,6 +366,44 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             </div>
             <div className="bg-white p-2 rounded mt-2 text-sm text-green-600">
               <strong>💼 자동 비즈니스의 핵심!</strong> 고객 문의, 예약, 상담을 24시간 자동 처리
+            </div>
+          </div>
+
+          <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Mail className="w-6 h-6 text-red-600" />
+              <strong className="text-red-800">📧 Gmail 설정 방법</strong>
+            </div>
+            <div className="text-sm text-red-700 space-y-2">
+              <p><strong>1. Google Cloud Console에서 OAuth 앱 생성</strong></p>
+              <p className="pl-3">• console.cloud.google.com → API 및 서비스 → OAuth 클라이언트 ID 생성</p>
+              <p className="pl-3">• 데스크톱 앱 선택 → <code>client_id</code>와 <code>client_secret</code> 발급</p>
+              <p><strong>2. IndieBiz OS에서 설정 (설정 → 채널 → Gmail)</strong></p>
+              <p className="pl-3">• Client ID, Client Secret 입력 (모든 이메일 계정 공유)</p>
+              <p className="pl-3">• 시스템 AI용 이메일 주소 입력</p>
+              <p><strong>3. 에이전트별 이메일은 프로젝트 설정에서 추가</strong></p>
+              <p className="pl-3">• 에이전트 설정 → Gmail 채널 체크 → 이메일 주소만 입력</p>
+              <p className="pl-3">• OAuth 정보는 전역 설정 공유 (별도 입력 불필요)</p>
+              <p><strong>4. 처음 사용 시 브라우저에서 Google 계정 인증</strong></p>
+            </div>
+          </div>
+
+          <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Key className="w-6 h-6 text-purple-600" />
+              <strong className="text-purple-800">🔐 Nostr 설정 방법</strong>
+            </div>
+            <div className="text-sm text-purple-700 space-y-2">
+              <p><strong>가입이 필요 없습니다!</strong></p>
+              <p>Nostr는 탈중앙화 프로토콜로, 키를 직접 생성하면 즉시 신원(identity)이 됩니다.</p>
+              <div className="bg-white p-2 rounded mt-2 space-y-1">
+                <p>• <strong>비밀키 (nsec)</strong>: 나만 알고 있는 키 → 절대 공유 금지</p>
+                <p>• <strong>공개키 (npub)</strong>: 다른 사람에게 알려주는 주소</p>
+              </div>
+              <p className="mt-2"><strong>설정 방법:</strong></p>
+              <p className="pl-3">1. 설정 → 채널 → Nostr에서 "새 키 생성" 또는 기존 nsec 입력</p>
+              <p className="pl-3">2. 생성된 npub을 다른 사람에게 공유하면 DM 수신 가능</p>
+              <p className="pl-3">3. IndieNet에서도 같은 신원으로 게시글 작성 가능</p>
             </div>
           </div>
 

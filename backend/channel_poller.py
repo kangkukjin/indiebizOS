@@ -72,6 +72,19 @@ def _load_owner_identities() -> Dict[str, set]:
             if email:
                 identities['emails'].add(email)
 
+    # 시스템 AI Gmail도 소유자 이메일에 추가 (config.yaml에서 읽기)
+    try:
+        import yaml
+        gmail_config_path = _get_base_path() / "data" / "packages" / "installed" / "extensions" / "gmail" / "config.yaml"
+        if gmail_config_path.exists():
+            with open(gmail_config_path) as f:
+                gmail_config = yaml.safe_load(f)
+            system_ai_gmail = gmail_config.get('gmail', {}).get('email', '')
+            if system_ai_gmail:
+                identities['emails'].add(system_ai_gmail.strip().lower())
+    except:
+        pass
+
     # Nostr 공개키 로드 (쉼표 구분, hex와 npub 양쪽 모두 저장)
     owner_nostr = os.getenv('OWNER_NOSTR_PUBKEYS', '')
     if owner_nostr:
@@ -611,6 +624,11 @@ class ChannelPoller:
             gmail_config = config.get('gmail', {})
             if not gmail_config.get('client_id') or not gmail_config.get('client_secret'):
                 self._log("Gmail OAuth 설정 없음 - 폴링 건너뜀")
+                return
+
+            # config.yaml의 email 사용 (유일한 출처)
+            if not gmail_config.get('email'):
+                self._log("Gmail 이메일 주소 없음 - 폴링 건너뜀")
                 return
 
             self._gmail_client = GmailClient(gmail_config)

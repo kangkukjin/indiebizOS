@@ -27,6 +27,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 
+from runtime_utils import get_python_cmd
+
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent
 from runtime_utils import get_base_path as _get_base_path
@@ -486,13 +488,14 @@ class PackageManager:
 
         installation_log = []
 
-        # 4. pip 패키지 설치
+        # 4. pip 패키지 설치 (번들된 Python 사용)
         pip_packages = install_plan.get("pip_packages", [])
         if pip_packages:
             installation_log.append(f"pip 패키지 설치: {', '.join(pip_packages)}")
             try:
+                python_cmd = get_python_cmd()
                 subprocess.run(
-                    ["pip3", "install"] + pip_packages,
+                    [python_cmd, "-m", "pip", "install"] + pip_packages,
                     capture_output=True,
                     text=True,
                     timeout=120

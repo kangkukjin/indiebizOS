@@ -286,6 +286,25 @@ async function startPythonBackend() {
   console.log(`[Python] basePath: ${basePath}`);
   console.log(`[Python] ===========================================`);
 
+  // 런타임 경로 (번들된 Python/Node 위치)
+  const runtimePath = isDev
+    ? path.join(__dirname, '..', '..', 'runtime')  // 개발: indiebizOS/runtime
+    : path.join(process.resourcesPath, 'runtime');  // 프로덕션: resources/runtime
+
+  // Node.js 경로 계산 (도구 핸들러용)
+  let nodePath = 'node';  // 기본값
+  if (process.platform === 'win32') {
+    const embeddedNode = path.join(runtimePath, 'node', 'node.exe');
+    if (fs.existsSync(embeddedNode)) {
+      nodePath = embeddedNode;
+    }
+  } else if (process.platform === 'darwin') {
+    const bundledNode = path.join(runtimePath, 'node', 'bin', 'node');
+    if (fs.existsSync(bundledNode)) {
+      nodePath = bundledNode;
+    }
+  }
+
   // Python 프로세스 시작
   pythonProcess = spawn(pythonPath, pythonArgs, {
     cwd: backendPath,
@@ -293,6 +312,9 @@ async function startPythonBackend() {
       ...process.env,
       INDIEBIZ_API_PORT: API_PORT.toString(),
       INDIEBIZ_BASE_PATH: basePath,
+      INDIEBIZ_RUNTIME_PATH: runtimePath,  // 도구 핸들러가 번들 런타임 찾을 때 사용
+      INDIEBIZ_PYTHON_PATH: pythonPath,    // 직접 Python 경로 전달
+      INDIEBIZ_NODE_PATH: nodePath,        // 직접 Node.js 경로 전달
       INDIEBIZ_PRODUCTION: isDev ? '' : '1',
       PYTHONUNBUFFERED: '1',
       PYTHONIOENCODING: 'utf-8',

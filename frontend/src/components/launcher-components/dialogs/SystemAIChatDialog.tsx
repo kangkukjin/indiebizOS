@@ -274,6 +274,17 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
     return () => clearInterval(interval);
   }, [show]);
 
+  // 다이얼로그 닫을 때 실행 중인 작업 취소
+  useEffect(() => {
+    return () => {
+      // 언마운트 시 또는 show가 false가 될 때 취소
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'cancel' }));
+        wsRef.current.close();
+      }
+    };
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);

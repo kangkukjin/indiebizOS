@@ -367,6 +367,8 @@ export function Chat({ projectId, agent }: ChatProps) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       reconnectAttemptRef.current = maxReconnectAttempts; // cleanup 시 재연결 방지
+      // 창 닫을 때 실행 중인 작업 취소
+      cancelAllAgents(projectId).catch(() => {});
       websocket.close();
     };
   }, [projectId, agent.id]);

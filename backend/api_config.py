@@ -699,3 +699,266 @@ async def update_owner_identities(data: Dict[str, str]):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ============ 설정 내보내기/가져오기 API ============
+
+import tempfile
+import shutil
+import zipfile
+from fastapi import UploadFile, File
+from fastapi.responses import FileResponse as FastAPIFileResponse
+
+
+@router.post("/config/export")
+async def export_config():
+    """
+    설정 및 프로젝트를 ZIP 파일로 내보내기
+
+    포함:
+    - projects/ 폴더 (agents.yaml, agent_*_role.txt, project.json 등)
+    - data/system_ai_state/system_ai_role.txt (시스템 AI 역할)
+    - 소유자 정보 (.env에서 OWNER_* 만)
+
+    제외:
+    - API 키, OAuth 토큰
+    - .db 파일 (대화 기록)
+    - tokens/ 폴더
+    """
+    try:
+        base_path = _get_base_path()
+        projects_path = base_path / "projects"
+
+        # 임시 디렉토리에 내보낼 파일 준비
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            export_path = temp_path / "indiebiz-export"
+            export_path.mkdir()
+
+            # 1. 프로젝트 폴더 복사 (민감 정보 제외)
+            if projects_path.exists():
+                export_projects = export_path / "projects"
+                export_projects.mkdir()
+
+                for project_dir in projects_path.iterdir():
+                    if not project_dir.is_dir():
+                        continue
+
+                    project_export = export_projects / project_dir.name
+                    project_export.mkdir()
+
+                    # 복사할 파일 패턴
+                    include_patterns = [
+                        "agents.yaml",
+                        "project.json",
+                        "config.yaml",
+                        "agent_*_role.txt",
+                        "agent_*_note.txt",
+                        "README.md",
+                    ]
+
+                    for pattern in include_patterns:
+                        for file in project_dir.glob(pattern):
+                            if file.is_file():
+                                # agents.yaml에서 API 키 제거
+                                if file.name == "agents.yaml":
+                                    _copy_agents_yaml_without_secrets(file, project_export / file.name)
+                                else:
+                                    shutil.copy2(file, project_export / file.name)
+
+            # 2. 시스템 AI 역할 프롬프트
+            system_ai_state = DATA_PATH / "system_ai_state"
+            if system_ai_state.exists():
+                export_state = export_path / "data" / "system_ai_state"
+                export_state.mkdir(parents=True)
+
+                for file_name in ["system_ai_role.txt", "system_ai_note.txt"]:
+                    src = system_ai_state / file_name
+                    if src.exists():
+                        shutil.copy2(src, export_state / file_name)
+
+            # 3. 소유자 정보 (민감 정보 제외)
+            if ENV_PATH.exists():
+                owner_info = {}
+                for line in ENV_PATH.read_text(encoding='utf-8').splitlines():
+                    line = line.strip()
+                    if line.startswith("OWNER_EMAILS="):
+                        owner_info["OWNER_EMAILS"] = line.split("=", 1)[1]
+                    elif line.startswith("OWNER_NOSTR_PUBKEYS="):
+                        owner_info["OWNER_NOSTR_PUBKEYS"] = line.split("=", 1)[1]
+
+                if owner_info:
+                    env_export = export_path / "owner_info.json"
+                    with open(env_export, 'w', encoding='utf-8') as f:
+                        json.dump(owner_info, f, ensure_ascii=False, indent=2)
+
+            # 4. ZIP 파일 생성
+            zip_path = temp_path / "export.zip"
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for file in export_path.rglob('*'):
+                    if file.is_file():
+                        arcname = file.relative_to(export_path)
+                        zf.write(file, arcname)
+
+            # 응답용 임시 파일 생성
+            response_zip = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+            shutil.copy2(zip_path, response_zip.name)
+
+            return FastAPIFileResponse(
+                path=response_zip.name,
+                media_type='application/zip',
+                filename=f"indiebiz-config-{datetime.now().strftime('%Y%m%d')}.zip"
+            )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _copy_agents_yaml_without_secrets(src: Path, dst: Path):
+    """agents.yaml에서 API 키 등 민감 정보 제거 후 복사"""
+    with open(src, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f) or {}
+
+    # system_ai에서 API 키 제거
+    if 'system_ai' in data and 'api_key' in data['system_ai']:
+        data['system_ai']['api_key'] = ""
+
+    # 각 에이전트에서 API 키 제거
+    for agent in data.get('agents', []):
+        if 'ai' in agent and 'api_key' in agent['ai']:
+            agent['ai']['api_key'] = ""
+        # OAuth 정보도 제거
+        if 'client_id' in agent:
+            del agent['client_id']
+        if 'client_secret' in agent:
+            del agent['client_secret']
+
+    with open(dst, 'w', encoding='utf-8') as f:
+        yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
+
+
+@router.post("/config/import")
+async def import_config(file: UploadFile = File(...)):
+    """
+    ZIP 파일에서 설정 및 프로젝트 가져오기
+
+    - 기존 프로젝트와 병합 (같은 이름은 덮어쓰기)
+    - API 키는 가져오지 않음 (사용자가 직접 설정)
+    """
+    try:
+        base_path = _get_base_path()
+        projects_path = base_path / "projects"
+        projects_path.mkdir(exist_ok=True)
+
+        # 업로드된 파일을 임시 저장
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        projects_imported = 0
+
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # ZIP 압축 해제
+                with zipfile.ZipFile(tmp_path, 'r') as zf:
+                    zf.extractall(temp_dir)
+
+                temp_path = Path(temp_dir)
+
+                # 1. 프로젝트 가져오기
+                import_projects = temp_path / "projects"
+                if import_projects.exists():
+                    for project_dir in import_projects.iterdir():
+                        if not project_dir.is_dir():
+                            continue
+
+                        target_project = projects_path / project_dir.name
+
+                        # 기존 프로젝트가 있으면 병합, 없으면 생성
+                        if not target_project.exists():
+                            target_project.mkdir()
+
+                        # 파일 복사 (기존 API 키 보존)
+                        for file in project_dir.iterdir():
+                            if file.is_file():
+                                if file.name == "agents.yaml" and (target_project / "agents.yaml").exists():
+                                    # 기존 agents.yaml의 API 키 보존하며 병합
+                                    _merge_agents_yaml(file, target_project / "agents.yaml")
+                                else:
+                                    shutil.copy2(file, target_project / file.name)
+
+                        projects_imported += 1
+
+                # 2. 시스템 AI 상태 가져오기
+                import_state = temp_path / "data" / "system_ai_state"
+                if import_state.exists():
+                    target_state = DATA_PATH / "system_ai_state"
+                    target_state.mkdir(parents=True, exist_ok=True)
+
+                    for file in import_state.iterdir():
+                        if file.is_file():
+                            shutil.copy2(file, target_state / file.name)
+
+                # 3. 소유자 정보 가져오기 (기존 값이 없을 때만)
+                owner_info_file = temp_path / "owner_info.json"
+                if owner_info_file.exists():
+                    with open(owner_info_file, 'r', encoding='utf-8') as f:
+                        owner_info = json.load(f)
+
+                    # 기존 값이 없을 때만 설정
+                    if owner_info.get("OWNER_EMAILS") and not _read_env_value("OWNER_EMAILS"):
+                        _write_env_value("OWNER_EMAILS", owner_info["OWNER_EMAILS"])
+                    if owner_info.get("OWNER_NOSTR_PUBKEYS") and not _read_env_value("OWNER_NOSTR_PUBKEYS"):
+                        _write_env_value("OWNER_NOSTR_PUBKEYS", owner_info["OWNER_NOSTR_PUBKEYS"])
+
+        finally:
+            # 임시 파일 삭제
+            os.unlink(tmp_path)
+
+        return {
+            "status": "success",
+            "projects_imported": projects_imported,
+            "message": f"{projects_imported}개 프로젝트를 가져왔습니다."
+        }
+
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="유효하지 않은 ZIP 파일입니다.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _merge_agents_yaml(src: Path, dst: Path):
+    """agents.yaml 병합 (기존 API 키 보존)"""
+    # 기존 파일 읽기
+    with open(dst, 'r', encoding='utf-8') as f:
+        existing = yaml.safe_load(f) or {}
+
+    # 새 파일 읽기
+    with open(src, 'r', encoding='utf-8') as f:
+        new_data = yaml.safe_load(f) or {}
+
+    # 기존 API 키 백업
+    existing_api_keys = {}
+    if 'system_ai' in existing and existing['system_ai'].get('api_key'):
+        existing_api_keys['system_ai'] = existing['system_ai']['api_key']
+
+    for agent in existing.get('agents', []):
+        if agent.get('ai', {}).get('api_key'):
+            existing_api_keys[agent['name']] = agent['ai']['api_key']
+
+    # 새 데이터로 덮어쓰기
+    merged = new_data.copy()
+
+    # API 키 복원
+    if 'system_ai' in merged and 'system_ai' in existing_api_keys:
+        merged['system_ai']['api_key'] = existing_api_keys['system_ai']
+
+    for agent in merged.get('agents', []):
+        if agent['name'] in existing_api_keys:
+            if 'ai' not in agent:
+                agent['ai'] = {}
+            agent['ai']['api_key'] = existing_api_keys[agent['name']]
+
+    # 저장
+    with open(dst, 'w', encoding='utf-8') as f:
+        yaml.dump(merged, f, allow_unicode=True, default_flow_style=False)

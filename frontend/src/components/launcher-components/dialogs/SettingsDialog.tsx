@@ -2,8 +2,8 @@
  * SettingsDialog - 시스템 설정 다이얼로그
  */
 
-import { useEffect, useState } from 'react';
-import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Mail, Globe, ChevronDown, ChevronRight, FileText, Edit3, User } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Mail, Globe, ChevronDown, ChevronRight, FileText, Edit3, User, Download, Upload, Package, CheckCircle, AlertCircle } from 'lucide-react';
 import type { SystemAISettings } from '../types';
 import { api } from '../../../lib/api';
 
@@ -44,11 +44,18 @@ export function SettingsDialog({
   onSave,
   onClose,
 }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'ai' | 'channels'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'channels' | 'data'>('ai');
   const [channels, setChannels] = useState<ChannelSetting[]>([]);
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
   const [channelConfigs, setChannelConfigs] = useState<Record<string, any>>({});
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
+
+  // 데이터 내보내기/가져오기 상태
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [exportResult, setExportResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 소유자 식별 정보
   const [ownerEmails, setOwnerEmails] = useState('');
@@ -289,6 +296,19 @@ export function SettingsDialog({
             <div className="flex items-center justify-center gap-2">
               <Radio size={16} />
               통신채널
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('data')}
+            className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'data'
+                ? 'text-[#D97706] border-b-2 border-[#D97706] bg-white'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Package size={16} />
+              데이터
             </div>
           </button>
         </div>
@@ -793,6 +813,143 @@ export function SettingsDialog({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'data' && (
+            <div className="space-y-6">
+              <p className="text-sm text-gray-700">
+                설정과 프로젝트를 내보내거나 가져와서 다른 PC에서 동일한 환경을 구성할 수 있습니다.
+              </p>
+
+              {/* 내보내기 섹션 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Download size={20} className="text-blue-600" />
+                  <h3 className="font-semibold text-gray-900">설정 내보내기</h3>
+                </div>
+                <p className="text-sm text-gray-600">
+                  프로젝트, 에이전트 설정, 역할 프롬프트를 ZIP 파일로 내보냅니다.
+                </p>
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>✓ 프로젝트 폴더 (에이전트 설정, 역할 프롬프트)</p>
+                  <p>✓ 시스템 AI 역할 프롬프트</p>
+                  <p>✓ 소유자 정보 (이메일, Nostr 주소)</p>
+                  <p className="text-red-500">✗ API 키, OAuth 토큰 (보안상 제외)</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      setIsExporting(true);
+                      setExportResult(null);
+                      const response = await fetch('/api/config/export', { method: 'POST' });
+                      if (!response.ok) throw new Error('내보내기 실패');
+
+                      const blob = await response.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `indiebiz-config-${new Date().toISOString().split('T')[0]}.zip`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+
+                      setExportResult({ success: true, message: '설정이 내보내졌습니다!' });
+                    } catch (err) {
+                      console.error('Export failed:', err);
+                      setExportResult({ success: false, message: '내보내기 실패: ' + (err as Error).message });
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  }}
+                  disabled={isExporting}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {isExporting ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  ZIP 파일로 내보내기
+                </button>
+                {exportResult && (
+                  <div className={`flex items-center gap-2 text-sm ${exportResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                    {exportResult.success ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                    {exportResult.message}
+                  </div>
+                )}
+              </div>
+
+              {/* 가져오기 섹션 */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Upload size={20} className="text-amber-600" />
+                  <h3 className="font-semibold text-gray-900">설정 가져오기</h3>
+                </div>
+                <p className="text-sm text-gray-600">
+                  다른 PC에서 내보낸 설정 파일을 가져와 적용합니다.
+                </p>
+                <div className="text-xs text-amber-700 bg-amber-100 p-2 rounded">
+                  ⚠️ 가져오면 기존 프로젝트와 병합됩니다. 같은 이름의 프로젝트가 있으면 덮어씁니다.
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".zip"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    try {
+                      setIsImporting(true);
+                      setImportResult(null);
+
+                      const formData = new FormData();
+                      formData.append('file', file);
+
+                      const response = await fetch('/api/config/import', {
+                        method: 'POST',
+                        body: formData,
+                      });
+
+                      const result = await response.json();
+
+                      if (response.ok) {
+                        setImportResult({
+                          success: true,
+                          message: `가져오기 완료! ${result.projects_imported || 0}개 프로젝트 추가됨. API 키를 설정해주세요.`
+                        });
+                      } else {
+                        throw new Error(result.detail || '가져오기 실패');
+                      }
+                    } catch (err) {
+                      console.error('Import failed:', err);
+                      setImportResult({ success: false, message: '가져오기 실패: ' + (err as Error).message });
+                    } finally {
+                      setIsImporting(false);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isImporting}
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                >
+                  {isImporting ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <Upload size={16} />
+                  )}
+                  ZIP 파일에서 가져오기
+                </button>
+                {importResult && (
+                  <div className={`flex items-center gap-2 text-sm ${importResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                    {importResult.success ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                    {importResult.message}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -3,13 +3,14 @@
  * 처음 사용하는 사람들을 위한 앱 소개 및 사용법 안내
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   X, ChevronLeft, ChevronRight,
   Folder, Bot, Zap, Package,
-  Users, Globe, Building2, ScrollText,
-  Monitor, Image, Smartphone
+  Users, Globe, Building2, Key,
+  MessageSquare, FileText, Settings
 } from 'lucide-react';
+import guideExampleImage from '../assets/guide-example.jpg';
 
 interface GuideDialogProps {
   show: boolean;
@@ -35,15 +36,47 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             <strong>IndieBiz OS</strong>에 오신 것을 환영합니다!
           </p>
           <p className="text-gray-600 text-center">
-            IndieBiz는 개인과 소규모 비즈니스를 위한<br/>
-            <strong>AI 기반 운영 시스템</strong>입니다.
+            하나의 "만능 AI"가 아닌,<br/>
+            <strong>전문가 팀처럼 협력하는 AI 시스템</strong>입니다.
           </p>
-          <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-            <p className="text-amber-800 text-sm text-center">
-              여러 AI 에이전트가 협력하여<br/>
-              다양한 업무를 자동화하고 도와줍니다.
+          <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+            <img src={guideExampleImage} alt="IndieBiz OS 사용 예시" className="w-full" />
+          </div>
+          <p className="text-gray-600 text-sm text-center">
+            ▲ 프로젝트와 스위치를 구성한 예시 화면
+          </p>
+        </div>
+      )
+    },
+    {
+      title: 'API 키 설정',
+      icon: <Key className="w-10 h-10 text-red-500" />,
+      content: (
+        <div className="space-y-3">
+          <div className="bg-red-50 p-2 rounded-lg border border-red-200">
+            <p className="text-red-700 font-medium text-center text-sm">
+              ⚠️ 가장 중요한 첫 단계!
             </p>
           </div>
+          <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+            <p className="text-green-800 text-sm">
+              <strong>추천: Google Gemini API (무료)</strong><br/>
+              1. <span className="text-blue-600 underline">aistudio.google.com</span> 방문<br/>
+              2. API 키 발급<br/>
+              3. 안경 메뉴 → 설정 → API 키 입력
+            </p>
+          </div>
+          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <p className="text-blue-800 text-sm font-medium mb-2">모델 이름 (2026.1 현재)</p>
+            <div className="space-y-1 text-blue-700 text-sm">
+              <p>• <strong>gemini-3-flash-preview</strong> - 빠르고 가벼움 (추천)</p>
+              <p>• <strong>gemini-3-pro-preview</strong> - 더 강력하지만 느리고 비쌈</p>
+            </div>
+          </div>
+          <p className="text-gray-600 text-sm">
+            API 키 발급이 어려우면 아무 AI에게<br/>
+            "Gemini API 키 발급 방법" 물어보세요.
+          </p>
         </div>
       )
     },
@@ -53,81 +86,52 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       content: (
         <div className="space-y-4">
           <p className="text-gray-600">
-            <strong>프로젝트</strong>는 작업 공간입니다.
+            <strong>프로젝트</strong>는 독립된 작업 공간입니다.<br/>
+            프로젝트끼리 대화와 맥락이 섞이지 않습니다.
           </p>
-          <ul className="space-y-2 text-gray-600">
-            <li className="flex items-start gap-2">
-              <span className="text-amber-500">•</span>
-              <span>바탕화면을 <strong>우클릭</strong>하여 새 프로젝트 생성</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-amber-500">•</span>
-              <span>프로젝트 안에 여러 <strong>AI 에이전트</strong>를 배치</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-amber-500">•</span>
-              <span>에이전트들이 <strong>협력</strong>하여 작업 수행</span>
-            </li>
-          </ul>
-          <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
-            💡 예: "홈페이지 제작" 프로젝트에 디자이너, 개발자, 기획자 에이전트 배치
+          <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="bg-blue-50 p-2 rounded text-center">
+              <span className="text-xl">💰</span>
+              <p className="text-blue-700">투자</p>
+            </div>
+            <div className="bg-green-50 p-2 rounded text-center">
+              <span className="text-xl">🏠</span>
+              <p className="text-green-700">부동산</p>
+            </div>
+            <div className="bg-pink-50 p-2 rounded text-center">
+              <span className="text-xl">🏥</span>
+              <p className="text-pink-700">의료</p>
+            </div>
+          </div>
+          <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-700">
+            💡 바탕화면을 <strong>우클릭</strong> → "새 프로젝트"로 생성
           </div>
         </div>
       )
     },
     {
-      title: 'AI 에이전트',
+      title: '에이전트와 페르소나',
       icon: <Bot className="w-10 h-10 text-purple-600" />,
       content: (
         <div className="space-y-4">
           <p className="text-gray-600">
-            <strong>에이전트</strong>는 특정 역할을 수행하는 AI입니다.
+            <strong>에이전트</strong>는 특정 역할의 AI입니다.<br/>
+            <strong>페르소나</strong>에 따라 답변이 달라집니다!
           </p>
-          <ul className="space-y-2 text-gray-600">
-            <li className="flex items-start gap-2">
-              <span className="text-purple-500">•</span>
-              <span>각 에이전트에 <strong>역할</strong>을 부여 (예: "웹 개발자")</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-purple-500">•</span>
-              <span><strong>도구</strong>를 할당하여 실제 작업 수행</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-purple-500">•</span>
-              <span>에이전트끼리 <strong>대화하며 협력</strong></span>
-            </li>
-          </ul>
-          <div className="bg-purple-50 p-3 rounded-lg text-sm text-purple-700">
-            💡 시스템 AI가 적절한 에이전트에게 작업을 위임합니다
+          <div className="bg-purple-50 p-3 rounded-lg text-sm">
+            <p className="text-purple-800 font-medium mb-2">
+              "서울에서 좋은 레스토랑 추천해줘"
+            </p>
+            <div className="space-y-1 text-purple-700">
+              <p>• <strong>30대 드라마 작가</strong> → 분위기 있는 곳</p>
+              <p>• <strong>50대 과학자</strong> → 조용한 곳, 음식 퀄리티</p>
+              <p>• <strong>미국 철학자</strong> → 낯선 시선의 독특한 장소</p>
+            </div>
           </div>
-        </div>
-      )
-    },
-    {
-      title: '스위치',
-      icon: <Zap className="w-10 h-10 text-yellow-600" />,
-      content: (
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            <strong>스위치</strong>는 원클릭 자동화 버튼입니다.
+          <p className="text-gray-500 text-sm text-center">
+            범용 AI의 평균적인 답 대신,<br/>
+            <strong>구체적이고 개성 있는 답</strong>을 받을 수 있습니다.
           </p>
-          <ul className="space-y-2 text-gray-600">
-            <li className="flex items-start gap-2">
-              <span className="text-yellow-500">•</span>
-              <span>자주 하는 작업을 <strong>한 번의 클릭</strong>으로 실행</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-yellow-500">•</span>
-              <span>바탕화면 우클릭 → <strong>새 스위치</strong>로 생성</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-yellow-500">•</span>
-              <span>자연어로 명령 작성 (예: "오늘의 뉴스 요약해줘")</span>
-            </li>
-          </ul>
-          <div className="bg-yellow-50 p-3 rounded-lg text-sm text-yellow-700">
-            ⚡ 예: "매일 아침 뉴스 요약", "주간 보고서 작성" 등
-          </div>
         </div>
       )
     },
@@ -137,56 +141,87 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       content: (
         <div className="space-y-4">
           <p className="text-gray-600">
-            <strong>도구</strong>는 에이전트가 실제 작업을 수행하는 능력입니다.
+            <strong>도구</strong>는 에이전트가 실제 행동하는 능력입니다.<br/>
+            필요한 것만 설치해서 사용합니다.
           </p>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-gray-50 p-2 rounded flex items-center gap-2">
-              <Globe className="w-4 h-4 text-blue-500" />
-              <span>웹 검색/크롤링</span>
+            <div className="bg-gray-50 p-2 rounded text-gray-900">
+              <strong>investment</strong>
+              <p className="text-gray-700 text-sm">주가, 재무제표, 공시</p>
             </div>
-            <div className="bg-gray-50 p-2 rounded flex items-center gap-2">
-              <Monitor className="w-4 h-4 text-purple-500" />
-              <span>브라우저 자동화</span>
+            <div className="bg-gray-50 p-2 rounded text-gray-900">
+              <strong>real-estate</strong>
+              <p className="text-gray-700 text-sm">실거래가 조회</p>
             </div>
-            <div className="bg-gray-50 p-2 rounded flex items-center gap-2">
-              <Image className="w-4 h-4 text-pink-500" />
-              <span>이미지/영상 제작</span>
+            <div className="bg-gray-50 p-2 rounded text-gray-900">
+              <strong>web</strong>
+              <p className="text-gray-700 text-sm">웹 검색, 크롤링</p>
             </div>
-            <div className="bg-gray-50 p-2 rounded flex items-center gap-2">
-              <Smartphone className="w-4 h-4 text-green-500" />
-              <span>안드로이드 연결</span>
+            <div className="bg-gray-50 p-2 rounded text-gray-900">
+              <strong>media_producer</strong>
+              <p className="text-gray-700 text-sm">슬라이드, 영상 제작</p>
             </div>
           </div>
           <div className="bg-green-50 p-3 rounded-lg text-sm text-green-700">
-            📦 상단 "도구" 버튼에서 설치된 도구 확인 및 관리
+            📦 안경 메뉴 → <strong>도구 상점</strong>에서 설치/제거
           </div>
         </div>
       )
     },
     {
-      title: '시스템 AI',
-      icon: <span className="text-4xl">🤖</span>,
+      title: '스위치 (원클릭 자동화)',
+      icon: <Zap className="w-10 h-10 text-yellow-600" />,
       content: (
         <div className="space-y-4">
           <p className="text-gray-600">
-            <strong>시스템 AI</strong>는 당신의 개인 비서입니다.
+            <strong>스위치</strong>는 반복 작업을 저장해두고<br/>
+            원클릭으로 실행하는 버튼입니다.
           </p>
-          <ul className="space-y-2 text-gray-600">
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500">•</span>
-              <span>바탕화면의 <strong>🤖 아이콘</strong>을 클릭</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500">•</span>
-              <span>무엇이든 <strong>대화</strong>로 요청하세요</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500">•</span>
-              <span>적절한 에이전트와 도구를 <strong>자동 선택</strong></span>
-            </li>
-          </ul>
-          <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
-            💬 "오늘 할 일 정리해줘", "경쟁사 분석해줘" 등 자유롭게 대화
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded text-gray-900">
+              <Zap className="w-4 h-4 text-yellow-600" />
+              <div>
+                <strong>오늘의 뉴스</strong>
+                <p className="text-gray-700 text-sm">"AI, 블록체인 뉴스 5줄 요약해줘"</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded text-gray-900">
+              <Zap className="w-4 h-4 text-yellow-600" />
+              <div>
+                <strong>관심종목 체크</strong>
+                <p className="text-gray-700 text-sm">"삼성전자, 애플 현재가 알려줘"</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-yellow-50 p-3 rounded-lg text-sm text-yellow-700">
+            ⚡ 바탕화면 우클릭 → <strong>새 스위치</strong>로 생성
+          </div>
+        </div>
+      )
+    },
+    {
+      title: '메모 (AI의 장기 기억)',
+      icon: <FileText className="w-10 h-10 text-blue-600" />,
+      content: (
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            <strong>메모</strong>는 AI가 항상 기억하는 내용입니다.<br/>
+            대화가 길어져도 메모는 계속 전달됩니다.
+          </p>
+          <div className="space-y-2 text-sm">
+            <div className="bg-blue-50 p-2 rounded text-gray-900">
+              <strong>시스템 메모</strong> - 시스템 AI용
+            </div>
+            <div className="bg-purple-50 p-2 rounded text-gray-900">
+              <strong>노트</strong> - 프로젝트 에이전트용
+            </div>
+            <div className="bg-indigo-50 p-2 rounded text-gray-900">
+              <strong>근무지침</strong> - 자동응답 AI용
+            </div>
+          </div>
+          <div className="bg-orange-50 p-3 rounded-lg text-sm text-orange-700">
+            ⚠️ <strong>짧을수록 좋습니다!</strong><br/>
+            5~10줄 이내로, 정말 중요한 것만.
           </div>
         </div>
       )
@@ -195,38 +230,33 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       title: '추가 기능',
       icon: <Building2 className="w-10 h-10 text-indigo-600" />,
       content: (
-        <div className="space-y-4">
-          <p className="text-gray-600 mb-3">
-            더 많은 기능들이 있습니다:
-          </p>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-              <Users className="w-5 h-5 text-indigo-500" />
-              <div>
-                <strong>다중채팅방</strong>
-                <p className="text-gray-500 text-xs">여러 에이전트와 동시 대화</p>
-              </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded text-gray-900">
+            <Users className="w-5 h-5 text-purple-500" />
+            <div>
+              <strong>다중채팅방</strong>
+              <p className="text-gray-700 text-sm">여러 에이전트와 동시 대화, 토론</p>
             </div>
-            <div className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-              <Building2 className="w-5 h-5 text-indigo-500" />
-              <div>
-                <strong>비즈니스 관리</strong>
-                <p className="text-gray-500 text-xs">고객, 채널, 일정 통합 관리</p>
-              </div>
+          </div>
+          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded text-gray-900">
+            <MessageSquare className="w-5 h-5 text-amber-500" />
+            <div>
+              <strong>위임 체인</strong>
+              <p className="text-gray-700 text-sm">에이전트끼리 자동 협업 (단일/순차/병렬)</p>
             </div>
-            <div className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-              <Globe className="w-5 h-5 text-indigo-500" />
-              <div>
-                <strong>IndieNet</strong>
-                <p className="text-gray-500 text-xs">P2P 네트워크로 다른 사용자와 연결</p>
-              </div>
+          </div>
+          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded text-gray-900">
+            <Globe className="w-5 h-5 text-green-500" />
+            <div>
+              <strong>IndieNet</strong>
+              <p className="text-gray-700 text-sm">P2P 네트워크, 도구 패키지 공유</p>
             </div>
-            <div className="flex items-center gap-3 p-2 bg-gray-50 rounded">
-              <ScrollText className="w-5 h-5 text-indigo-500" />
-              <div>
-                <strong>로그 뷰어</strong>
-                <p className="text-gray-500 text-xs">시스템 동작 실시간 확인</p>
-              </div>
+          </div>
+          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded text-gray-900">
+            <Building2 className="w-5 h-5 text-blue-500" />
+            <div>
+              <strong>비즈니스 관리</strong>
+              <p className="text-gray-700 text-sm">고객 관리, 자동응답 AI</p>
             </div>
           </div>
         </div>
@@ -237,24 +267,61 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       icon: <span className="text-4xl">🚀</span>,
       content: (
         <div className="space-y-4">
-          <p className="text-gray-600 text-center">
-            이제 시작할 준비가 되었습니다!
-          </p>
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200">
-            <p className="text-amber-800 font-medium mb-2">첫 번째로 해볼 것:</p>
-            <ol className="text-amber-700 text-sm space-y-1">
-              <li>1. 바탕화면의 <strong>🤖 시스템 AI</strong> 클릭</li>
-              <li>2. "안녕, 넌 뭘 할 수 있어?" 라고 물어보기</li>
-              <li>3. AI의 안내에 따라 탐험하기!</li>
-            </ol>
+            <p className="text-amber-800 font-medium mb-2">Step 1: API 키 설정</p>
+            <p className="text-amber-700 text-sm">
+              안경 메뉴 → <strong>설정</strong> → Gemini API 키 입력
+            </p>
           </div>
-          <p className="text-center text-gray-500 text-sm">
-            궁금한 점은 언제든 시스템 AI에게 물어보세요 😊
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <p className="text-blue-800 font-medium mb-2">Step 2: 시스템 AI에게 설치 요청</p>
+            <p className="text-blue-700 text-sm mb-2">
+              상단의 <strong>🤖 시스템 AI</strong> 버튼을 클릭하고 이렇게 말하세요:
+            </p>
+            <div className="bg-white p-2 rounded border border-blue-300 text-blue-900 text-sm">
+              "나는 이게 처음이야. 필요한 것들을 하나씩 설치해줘."
+            </div>
+          </div>
+          <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+            <p className="text-orange-800 text-sm">
+              <strong>⏳ 처음에는 시간이 걸립니다!</strong><br/>
+              시스템 AI가 필요한 라이브러리들을 설치합니다.<br/>
+              설치할 것이 많으니 <strong>잠시 기다려주세요</strong>.
+            </p>
+          </div>
+          <p className="text-gray-600 text-sm text-center">
+            설치가 완료되면 프로젝트를 만들고<br/>
+            에이전트와 대화할 수 있어요! 🎉
           </p>
         </div>
       )
     }
   ];
+
+  // 키보드 네비게이션 핸들러
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (!show) return;
+
+    switch (e.key) {
+      case 'ArrowLeft':
+        setCurrentPage(p => Math.max(0, p - 1));
+        break;
+      case 'ArrowRight':
+        setCurrentPage(p => Math.min(pages.length - 1, p + 1));
+        break;
+      case 'Escape':
+        onClose();
+        break;
+    }
+  }, [show, pages.length, onClose]);
+
+  // 키보드 이벤트 리스너 등록
+  useEffect(() => {
+    if (show) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [show, handleKeyDown]);
 
   if (!show) return null;
 
@@ -264,7 +331,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-[480px] max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-[640px] max-h-[90vh] overflow-hidden">
         {/* 헤더 */}
         <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-amber-50 to-orange-50">
           <div className="flex items-center gap-3">
@@ -280,7 +347,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
         </div>
 
         {/* 콘텐츠 */}
-        <div className="p-6 min-h-[300px]">
+        <div className="p-6 min-h-[380px] overflow-y-auto">
           {currentGuide.content}
         </div>
 

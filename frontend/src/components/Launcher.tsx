@@ -3,7 +3,8 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText, HelpCircle } from 'lucide-react';
+import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText, HelpCircle, Info, ChevronDown, BookOpen } from 'lucide-react';
+import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 import type { Project, Switch, SchedulerTask, SchedulerAction } from '../types';
@@ -24,6 +25,7 @@ import {
 } from './launcher-components';
 import { ContactsDialog } from './ContactsDialog';
 import { GuideDialog } from './GuideDialog';
+import { UserManualDialog } from './UserManualDialog';
 import type {
   ContextMenuState,
   ClipboardItem,
@@ -57,6 +59,9 @@ export function Launcher() {
   const [showSwitchEditDialog, setShowSwitchEditDialog] = useState(false);
   const [showContactsDialog, setShowContactsDialog] = useState(false);
   const [showGuideDialog, setShowGuideDialog] = useState(false);
+  const [showUserManualDialog, setShowUserManualDialog] = useState(false);
+  const [showMainMenu, setShowMainMenu] = useState(false);
+  const mainMenuRef = useRef<HTMLDivElement>(null);
   const [newProjectName, setNewProjectName] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [newMultiChatName, setNewMultiChatName] = useState('');
@@ -161,6 +166,19 @@ export function Launcher() {
       return () => clearTimeout(timer);
     }
   }, []);
+
+  // 메인 메뉴 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mainMenuRef.current && !mainMenuRef.current.contains(event.target as Node)) {
+        setShowMainMenu(false);
+      }
+    };
+    if (showMainMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMainMenu]);
 
   // PC Manager 창 열기 요청 폴링
   useEffect(() => {
@@ -929,14 +947,6 @@ export function Launcher() {
             <span className="text-sm font-medium text-amber-700">시스템 AI</span>
           </button>
           <button
-            onClick={() => setShowToolboxDialog(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="설치/제거 - 패키지 관리"
-          >
-            <Package size={16} />
-            <span className="text-sm">설치/제거</span>
-          </button>
-          <button
             onClick={handleOpenScheduler}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
             title="예약작업"
@@ -952,27 +962,83 @@ export function Launcher() {
             <User size={16} />
             <span className="text-sm">시스템 메모</span>
           </button>
-          <button
-            onClick={handleOpenSettings}
-            className="p-2 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="설정"
-          >
-            <Settings size={16} />
-          </button>
-          <button
-            onClick={() => window.electron?.openLogWindow()}
-            className="p-2 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="로그 보기"
-          >
-            <ScrollText size={16} />
-          </button>
-          <button
-            onClick={() => setShowGuideDialog(true)}
-            className="p-2 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="시작 가이드"
-          >
-            <HelpCircle size={16} />
-          </button>
+          {/* 메인 메뉴 (드롭다운) */}
+          <div className="relative" ref={mainMenuRef}>
+            <button
+              onClick={() => setShowMainMenu(!showMainMenu)}
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
+              title="메뉴"
+            >
+              <img src={logoImage} alt="IndieBiz" className="w-12 h-12 object-contain" style={{ mixBlendMode: 'multiply' }} />
+              <ChevronDown size={12} className={`transition-transform ${showMainMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showMainMenu && (
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[180px] z-50">
+                <button
+                  onClick={() => {
+                    setShowToolboxDialog(true);
+                    setShowMainMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                >
+                  <Package size={16} />
+                  <span className="text-sm">도구 상점</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleOpenSettings();
+                    setShowMainMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                >
+                  <Settings size={16} />
+                  <span className="text-sm">설정</span>
+                </button>
+                <button
+                  onClick={() => {
+                    window.electron?.openLogWindow();
+                    setShowMainMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                >
+                  <ScrollText size={16} />
+                  <span className="text-sm">로그 보기</span>
+                </button>
+                <div className="border-t border-gray-200 my-1" />
+                <button
+                  onClick={() => {
+                    setShowGuideDialog(true);
+                    setShowMainMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                >
+                  <HelpCircle size={16} />
+                  <span className="text-sm">시작 가이드</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUserManualDialog(true);
+                    setShowMainMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                >
+                  <BookOpen size={16} />
+                  <span className="text-sm">사용자 메뉴얼</span>
+                </button>
+                <button
+                  onClick={() => {
+                    alert(`IndieBiz OS\n버전: 1.0.0\n\n개인과 소규모 비즈니스를 위한 AI 운영체제`);
+                    setShowMainMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                >
+                  <Info size={16} />
+                  <span className="text-sm">버전 정보</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1299,6 +1365,12 @@ export function Launcher() {
       <GuideDialog
         show={showGuideDialog}
         onClose={() => setShowGuideDialog(false)}
+      />
+
+      {/* 사용자 메뉴얼 다이얼로그 */}
+      <UserManualDialog
+        show={showUserManualDialog}
+        onClose={() => setShowUserManualDialog(false)}
       />
     </div>
   );

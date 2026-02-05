@@ -1,0 +1,93 @@
+{
+  "id": "cctv",
+  "name": "CCTV 교통정보",
+  "description": "ITS 국가교통정보센터 API를 통해 전국 고속도로 및 국도의 실시간 CCTV 영상 정보를 조회합니다.\n\n## 기능\n- 위치 기반 CCTV 검색\n- 가장 가까운 CCTV 찾기\n- 실시간 영상 URL 제공\n\n## 필요 환경변수\n- ITS_API_KEY: 국가교통정보센터 API 키",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "search_cctv",
+      "description": "지정한 영역 내의 CCTV 목록을 조회합니다.\n\n## 사용 예시\n- 서울 지역: search_cctv(min_x=126.8, max_x=127.2, min_y=37.4, max_y=37.7)\n- 고속도로만: search_cctv(..., road_type='ex')\n\n## 도로 유형\n- 'ex': 고속도로\n- 'its': 국도\n- 'all': 전체 (기본값)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "min_x": {
+            "type": "number",
+            "description": "최소 경도 (예: 126.8)"
+          },
+          "max_x": {
+            "type": "number",
+            "description": "최대 경도 (예: 127.2)"
+          },
+          "min_y": {
+            "type": "number",
+            "description": "최소 위도 (예: 37.4)"
+          },
+          "max_y": {
+            "type": "number",
+            "description": "최대 위도 (예: 37.7)"
+          },
+          "road_type": {
+            "type": "string",
+            "enum": ["ex", "its", "all"],
+            "description": "도로 유형 (ex: 고속도로, its: 국도, all: 전체)"
+          }
+        },
+        "required": ["min_x", "max_x", "min_y", "max_y"]
+      }
+    },
+    {
+      "name": "get_nearby_cctv",
+      "description": "특정 좌표에서 가장 가까운 CCTV를 찾습니다.\n\n## 사용 예시\n- get_nearby_cctv(lat=37.5665, lng=126.9780)  # 서울시청 근처\n- get_nearby_cctv(lat=35.1796, lng=129.0756, count=5)  # 부산역 근처 5개\n\n## 반환 정보\n- CCTV명, 영상 URL, 거리",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "description": "위도 (예: 37.5665)"
+          },
+          "lng": {
+            "type": "number",
+            "description": "경도 (예: 126.9780)"
+          },
+          "radius": {
+            "type": "number",
+            "description": "검색 반경 (도 단위, 기본값 0.1 = 약 10km)"
+          },
+          "count": {
+            "type": "integer",
+            "description": "반환할 CCTV 수 (기본값 1)"
+          },
+          "road_type": {
+            "type": "string",
+            "enum": ["ex", "its", "all"],
+            "description": "도로 유형"
+          }
+        },
+        "required": ["lat", "lng"]
+      }
+    },
+    {
+      "name": "get_cctv_by_name",
+      "description": "CCTV 이름으로 검색합니다.\n\n## 사용 예시\n- get_cctv_by_name(keyword='경부')  # 경부고속도로 CCTV\n- get_cctv_by_name(keyword='강남')  # 강남 포함된 CCTV\n\n## 주의\n- 전국 범위 검색으로 시간이 걸릴 수 있음",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "description": "검색 키워드 (CCTV 이름에 포함된 문자열)"
+          },
+          "road_type": {
+            "type": "string",
+            "enum": ["ex", "its", "all"],
+            "description": "도로 유형"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "최대 결과 수 (기본값 10)"
+          }
+        },
+        "required": ["keyword"]
+      }
+    }
+  ]
+}

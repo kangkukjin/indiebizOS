@@ -1,7 +1,7 @@
 {
   "id": "real-estate",
   "name": "Real Estate",
-  "description": "국토교통부 부동산 실거래가 API 도구",
+  "description": "국토교통부 부동산 실거래가 API 도구. 아파트/주택의 매매·전월세 실거래가 조회, 지역코드 검색, 상권 분석 기능을 제공합니다. 시세 파악, 가격 추이 분석, 투자 검토에 활용.",
   "version": "1.1.0",
   "tools": [
     {

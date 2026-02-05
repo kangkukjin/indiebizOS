@@ -1,0 +1,94 @@
+{
+  "id": "blog",
+  "name": "Blog Tools",
+  "description": "개인 블로그(K의 생각) RAG 검색 및 분석 도구. 티스토리 블로그 글 검색, 전문 조회, 카테고리별 필터링, 글 기반 인사이트 생성 기능을 제공합니다. 과거 글 검색, 블로그 트렌드 분석에 활용.",
+  "version": "2.2.0",
+  "tools": [
+    {
+      "name": "search_blog_rag",
+      "description": "내 티스토리 블로그 'K의 생각'에서 RAG 검색을 수행합니다.\n\n## 중요\n- 이 도구는 내 블로그 검색 전용입니다\n- 일반 웹/뉴스 검색은 ddgs_search 사용\n\n## 사용 시점\n- 내가 쓴 글에서 정보 찾기\n- 과거에 작성한 내용 확인\n- 블로그 글 기반 대화\n\n## 반환 정보\n- 관련 포스트 목록 (최대 5개)\n- 제목, 내용 미리보기, 관련도 점수",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "검색 질문/키워드" },
+          "limit": { "type": "integer", "description": "최대 결과 수 (기본 5)" }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "get_post_content_rag",
+      "description": "블로그 포스트의 전체 내용을 조회합니다.\n\n## 사용 시점\n- search_blog_rag에서 찾은 글의 전체 내용 확인\n- 특정 포스트 상세 읽기\n\n## 주의사항\n- post_id는 search_blog_rag 결과에서 확인",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "post_id": { "type": "string", "description": "포스트 ID 또는 제목 일부" }
+        },
+        "required": ["post_id"]
+      }
+    },
+    {
+      "name": "blog_check_new_posts",
+      "description": "RSS에서 새 글을 확인하고 DB에 저장합니다.\n\n## 사용 시점\n- 블로그 DB 업데이트\n- 최신 글 동기화\n\n## 주의사항\n- 자동으로 새 글만 추가됨 (중복 방지)",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "blog_get_posts",
+      "description": "블로그 글 목록을 조회합니다.\n\n## 사용 시점\n- 전체 글 목록 확인\n- 카테고리별 글 필터링\n- 요약 없는 글 찾기\n\n## 반환 정보\n- 글 목록 (ID, 제목, 날짜, 카테고리)\n- 요약 포함 옵션",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "count": { "type": "integer", "description": "글 수 (기본 20, 최대 100)" },
+          "offset": { "type": "integer", "description": "시작 위치 (페이징)" },
+          "category": { "type": "string", "description": "카테고리 필터" },
+          "with_summary": { "type": "boolean", "description": "요약 포함 여부" },
+          "only_without_summary": { "type": "boolean", "description": "요약 없는 글만" }
+        }
+      }
+    },
+    {
+      "name": "blog_get_post",
+      "description": "특정 글의 전체 내용을 조회합니다.\n\n## get_post_content_rag와의 차이\n- 이 도구: 단순 ID로 조회\n- get_post_content_rag: RAG 시스템 통해 조회",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "post_id": { "type": "string", "description": "포스트 ID" }
+        },
+        "required": ["post_id"]
+      }
+    },
+    {
+      "name": "blog_stats",
+      "description": "블로그 DB 통계를 조회합니다.\n\n## 반환 정보\n- 총 글 수, 요약 완료 수\n- 카테고리별 분포\n- 최근 글 날짜",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "kinsight",
+      "description": "최신 블로그 글 기반 인사이트를 생성합니다.\n\n## 처리 과정\n1. 최신 10개 글 분석\n2. 커뮤니티/콘텐츠 추천 생성\n3. HTML 파일로 저장\n\n## 사용 시점\n- 블로그 트렌드 분석\n- 관련 콘텐츠 아이디어 얻기",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "before_date": { "type": "string", "description": "이 날짜 이전 글 분석 (YYYY-MM-DD)" }
+        }
+      }
+    },
+    {
+      "name": "kinsight2",
+      "description": "대량 블로그 글 분석으로 인사이트를 생성합니다.\n\n## kinsight와의 차이\n- kinsight: 최신 10개 고정\n- kinsight2: 글 개수 지정 가능\n\n## 사용 시점\n- 전체 블로그 분석\n- 특정 기간 대량 분석",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "count": { "type": "integer", "description": "분석할 글 개수" },
+          "before_date": { "type": "string", "description": "이 날짜 이전 글 (YYYY-MM-DD)" }
+        },
+        "required": ["count"]
+      }
+    }
+  ]
+}

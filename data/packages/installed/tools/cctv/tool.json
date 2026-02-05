@@ -88,6 +88,31 @@
         },
         "required": ["keyword"]
       }
+    },
+    {
+      "name": "open_cctv",
+      "description": "CCTV 영상을 브라우저에서 엽니다.\n\n## 사용 방법 (택1)\n- url: CCTV URL 직접 지정\n- name: CCTV 이름으로 검색하여 열기\n- lat/lng: 좌표 근처 CCTV 열기\n\n## 사용 예시\n- open_cctv(url='http://...')  # URL 직접\n- open_cctv(name='경부')  # 이름 검색\n- open_cctv(lat=37.5, lng=127.0)  # 좌표 근처",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "CCTV 영상 URL (직접 지정)"
+          },
+          "name": {
+            "type": "string",
+            "description": "CCTV 이름 키워드 (검색하여 열기)"
+          },
+          "lat": {
+            "type": "number",
+            "description": "위도 (근처 CCTV 열기)"
+          },
+          "lng": {
+            "type": "number",
+            "description": "경도 (근처 CCTV 열기)"
+          }
+        }
+      }
     }
   ]
 }

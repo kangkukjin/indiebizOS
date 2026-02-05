@@ -60,10 +60,11 @@ def _call_cctv_api(min_x: float, max_x: float, min_y: float, max_y: float,
 
             if "response" in data and "data" in data["response"]:
                 cctv_list = data["response"]["data"]
-                if cctv_list:
+                if cctv_list and isinstance(cctv_list, list):
                     for cctv in cctv_list:
-                        cctv["road_type"] = rtype
-                    results.extend(cctv_list)
+                        if isinstance(cctv, dict):
+                            cctv["road_type"] = rtype
+                            results.append(cctv)
         except requests.exceptions.RequestException as e:
             print(f"[CCTV] API 호출 오류 ({rtype}): {e}")
         except json.JSONDecodeError as e:
@@ -248,6 +249,68 @@ def get_cctv_by_name(keyword: str, road_type: str = "all", limit: int = 10) -> s
         }, ensure_ascii=False)
 
 
+def open_cctv(url: str = None, name: str = None, lat: float = None, lng: float = None) -> str:
+    """CCTV 영상을 브라우저에서 열기"""
+    import webbrowser
+
+    try:
+        # URL이 직접 주어진 경우
+        if url:
+            webbrowser.open(url)
+            return json.dumps({
+                "success": True,
+                "message": f"CCTV 영상을 브라우저에서 열었습니다.",
+                "url": url
+            }, ensure_ascii=False)
+
+        # 이름으로 검색해서 열기
+        if name:
+            result = json.loads(get_cctv_by_name(name, limit=1))
+            if result.get("cctvs"):
+                cctv = result["cctvs"][0]
+                webbrowser.open(cctv["url"])
+                return json.dumps({
+                    "success": True,
+                    "message": f"'{cctv['name']}' CCTV 영상을 열었습니다.",
+                    "url": cctv["url"],
+                    "cctv": cctv
+                }, ensure_ascii=False)
+            else:
+                return json.dumps({
+                    "success": False,
+                    "error": f"'{name}' CCTV를 찾을 수 없습니다."
+                }, ensure_ascii=False)
+
+        # 좌표로 가장 가까운 CCTV 열기
+        if lat is not None and lng is not None:
+            result = json.loads(get_nearby_cctv(lat, lng, count=1))
+            if result.get("cctvs"):
+                cctv = result["cctvs"][0]
+                webbrowser.open(cctv["url"])
+                return json.dumps({
+                    "success": True,
+                    "message": f"'{cctv['name']}' CCTV 영상을 열었습니다. (거리: {cctv.get('distance_km', '?')}km)",
+                    "url": cctv["url"],
+                    "cctv": cctv
+                }, ensure_ascii=False)
+            else:
+                return json.dumps({
+                    "success": False,
+                    "error": "근처에 CCTV를 찾을 수 없습니다."
+                }, ensure_ascii=False)
+
+        return json.dumps({
+            "success": False,
+            "error": "url, name, 또는 lat/lng 중 하나를 지정해야 합니다."
+        }, ensure_ascii=False)
+
+    except Exception as e:
+        return json.dumps({
+            "success": False,
+            "error": str(e)
+        }, ensure_ascii=False)
+
+
 def execute(tool_name: str, tool_input: dict, project_path: str = None) -> str:
     """
     도구 실행 진입점
@@ -289,6 +352,14 @@ def execute(tool_name: str, tool_input: dict, project_path: str = None) -> str:
                 limit=tool_input.get("limit", 10)
             )
 
+        elif tool_name == "open_cctv":
+            return open_cctv(
+                url=tool_input.get("url"),
+                name=tool_input.get("name"),
+                lat=tool_input.get("lat"),
+                lng=tool_input.get("lng")
+            )
+
         else:
             return json.dumps({
                 "success": False,
@@ -304,7 +375,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = None) -> str:
 
 
 # 도구 목록
-TOOLS = ["search_cctv", "get_nearby_cctv", "get_cctv_by_name"]
+TOOLS = ["search_cctv", "get_nearby_cctv", "get_cctv_by_name", "open_cctv"]
 
 
 if __name__ == "__main__":

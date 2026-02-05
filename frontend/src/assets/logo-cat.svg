@@ -1,0 +1,21 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 고양이 - 독립적이고 영리한 -->
+  <!-- 얼굴 -->
+  <circle cx="12" cy="13" r="8" fill="#D97706"/>
+  <!-- 귀 -->
+  <path d="M6 7L4 2L9 6Z" fill="#D97706"/>
+  <path d="M18 7L20 2L15 6Z" fill="#D97706"/>
+  <!-- 귀 안쪽 -->
+  <path d="M6.5 6L5.5 3.5L8 5.5Z" fill="#FCD34D"/>
+  <path d="M17.5 6L18.5 3.5L16 5.5Z" fill="#FCD34D"/>
+  <!-- 눈 -->
+  <ellipse cx="9" cy="12" rx="1.5" ry="2" fill="#1F2937"/>
+  <ellipse cx="15" cy="12" rx="1.5" ry="2" fill="#1F2937"/>
+  <!-- 눈 반짝임 -->
+  <circle cx="9.5" cy="11.5" r="0.5" fill="white"/>
+  <circle cx="15.5" cy="11.5" r="0.5" fill="white"/>
+  <!-- 코 -->
+  <path d="M12 15L10.5 17L13.5 17Z" fill="#92400E"/>
+  <!-- 입 -->
+  <path d="M10.5 17.5Q12 19 13.5 17.5" stroke="#92400E" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+</svg>

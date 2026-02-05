@@ -1,6 +1,8 @@
 """
 browser-action 패키지 핸들러
-Playwright Async API를 사용한 브라우저 도구
+Playwright MCP 스타일 브라우저 자동화 도구
+
+Version: 2.0.0
 """
 
 import json
@@ -29,20 +31,52 @@ async def execute(tool_name: str, params: dict, project_path: str = None):
     """메인 핸들러 (async)"""
     mod = _load_module("tool_browser_direct")
 
+    # 프로젝트 경로 기본값
+    proj_path = project_path or "."
+
+    # 도구 함수 매핑
     func_map = {
-        "browser_open": lambda: mod.browser_open(params, project_path or "."),
+        # 네비게이션
+        "browser_navigate": lambda: mod.browser_navigate(params, proj_path),
+        "browser_navigate_back": lambda: mod.browser_navigate_back(params),
+        "browser_navigate_forward": lambda: mod.browser_navigate_forward(params),
+
+        # Accessibility Snapshot (핵심!)
+        "browser_snapshot": lambda: mod.browser_snapshot(params),
+
+        # 상호작용 (ref 기반)
         "browser_click": lambda: mod.browser_click(params),
         "browser_type": lambda: mod.browser_type(params),
-        "browser_screenshot": lambda: mod.browser_screenshot(params, project_path or "."),
-        "browser_get_content": lambda: mod.browser_get_content(params),
-        "browser_get_interactive": lambda: mod.browser_get_interactive(params),
+        "browser_select_option": lambda: mod.browser_select_option(params),
+        "browser_hover": lambda: mod.browser_hover(params),
+        "browser_drag": lambda: mod.browser_drag(params),
+        "browser_press_key": lambda: mod.browser_press_key(params),
+
+        # 스크롤 및 대기
         "browser_scroll": lambda: mod.browser_scroll(params),
+        "browser_wait_for": lambda: mod.browser_wait_for(params),
+
+        # 콘텐츠 및 출력
+        "browser_screenshot": lambda: mod.browser_screenshot(params, proj_path),
+        "browser_get_content": lambda: mod.browser_get_content(params),
+        "browser_console_logs": lambda: mod.browser_console_logs(params),
+        "browser_save_pdf": lambda: mod.browser_save_pdf(params, proj_path),
         "browser_evaluate": lambda: mod.browser_evaluate(params),
+
+        # 종료
         "browser_close": lambda: mod.browser_close(params),
+
+        # 하위 호환성 (기존 도구 이름)
+        "browser_open": lambda: mod.browser_open(params, proj_path),
+        "browser_get_interactive": lambda: mod.browser_get_interactive(params),
     }
 
     if tool_name not in func_map:
-        return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
+        return json.dumps({
+            "success": False,
+            "error": f"알 수 없는 도구: {tool_name}",
+            "available_tools": list(func_map.keys())
+        }, ensure_ascii=False)
 
     # async 함수 호출
     result = await func_map[tool_name]()

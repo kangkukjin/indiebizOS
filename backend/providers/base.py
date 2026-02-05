@@ -206,6 +206,182 @@ class BaseProvider(ABC):
 
         raise last_error if last_error else Exception("Unknown error")
 
+    # ========== Session Pruning (OpenClaw 스타일) ==========
+    # 컨텍스트 관리를 위한 설정
+    TOOL_RESULT_SOFT_LIMIT = 4000  # 이 이상이면 soft-trim
+    TOOL_RESULT_HEAD = 1500  # head 유지 길이
+    TOOL_RESULT_TAIL = 1500  # tail 유지 길이
+    KEEP_RECENT_TOOL_RESULTS = 3  # 최근 N개의 도구 결과만 전체 유지
+
+    def _soft_trim_content(self, content: str) -> str:
+        """긴 텍스트를 head + tail로 soft-trim"""
+        if len(content) <= self.TOOL_RESULT_SOFT_LIMIT:
+            return content
+
+        head = content[:self.TOOL_RESULT_HEAD]
+        tail = content[-self.TOOL_RESULT_TAIL:]
+        original_len = len(content)
+        return f"{head}\n\n... [중략: 원본 {original_len}자] ...\n\n{tail}"
+
+    def _prune_messages_anthropic(self, messages: List[Dict], keep_recent: int = None) -> List[Dict]:
+        """Anthropic 형식 메시지에서 오래된 도구 결과를 마스킹
+
+        Anthropic 형식:
+        - assistant: [{"type": "text", ...}, {"type": "tool_use", ...}]
+        - user: [{"type": "tool_result", "content": "...", ...}]
+        """
+        keep_recent = keep_recent or self.KEEP_RECENT_TOOL_RESULTS
+
+        # tool_result가 포함된 user 메시지 인덱스 찾기
+        tool_result_indices = []
+        for i, msg in enumerate(messages):
+            if msg.get("role") == "user":
+                content = msg.get("content", [])
+                if isinstance(content, list):
+                    if any(c.get("type") == "tool_result" for c in content):
+                        tool_result_indices.append(i)
+
+        # 오래된 도구 결과 마스킹 (최근 N개 제외)
+        indices_to_mask = tool_result_indices[:-keep_recent] if len(tool_result_indices) > keep_recent else []
+
+        pruned = []
+        for i, msg in enumerate(messages):
+            if i in indices_to_mask:
+                # 도구 결과를 마스킹
+                new_content = []
+                for c in msg.get("content", []):
+                    if c.get("type") == "tool_result":
+                        new_content.append({
+                            **c,
+                            "content": "[이전 도구 결과 생략됨]"
+                        })
+                    else:
+                        new_content.append(c)
+                pruned.append({"role": msg["role"], "content": new_content})
+            else:
+                # soft-trim 적용 (최근 결과에도)
+                if msg.get("role") == "user":
+                    content = msg.get("content", [])
+                    if isinstance(content, list):
+                        new_content = []
+                        for c in content:
+                            if c.get("type") == "tool_result" and isinstance(c.get("content"), str):
+                                new_content.append({
+                                    **c,
+                                    "content": self._soft_trim_content(c["content"])
+                                })
+                            else:
+                                new_content.append(c)
+                        pruned.append({"role": msg["role"], "content": new_content})
+                    else:
+                        pruned.append(msg)
+                else:
+                    pruned.append(msg)
+
+        return pruned
+
+    def _prune_messages_openai(self, messages: List[Dict], keep_recent: int = None) -> List[Dict]:
+        """OpenAI/Ollama 형식 메시지에서 오래된 도구 결과를 마스킹
+
+        OpenAI 형식:
+        - role: "tool", tool_call_id: "...", content: "..."
+        """
+        keep_recent = keep_recent or self.KEEP_RECENT_TOOL_RESULTS
+
+        # role="tool" 메시지 인덱스 찾기
+        tool_result_indices = []
+        for i, msg in enumerate(messages):
+            if msg.get("role") == "tool":
+                tool_result_indices.append(i)
+
+        # 오래된 도구 결과 마스킹 (최근 N개 제외)
+        indices_to_mask = tool_result_indices[:-keep_recent] if len(tool_result_indices) > keep_recent else []
+
+        pruned = []
+        for i, msg in enumerate(messages):
+            if i in indices_to_mask:
+                # 도구 결과를 마스킹
+                pruned.append({
+                    **msg,
+                    "content": "[이전 도구 결과 생략됨]"
+                })
+            elif msg.get("role") == "tool":
+                # soft-trim 적용
+                content = msg.get("content", "")
+                if isinstance(content, str):
+                    pruned.append({
+                        **msg,
+                        "content": self._soft_trim_content(content)
+                    })
+                else:
+                    pruned.append(msg)
+            else:
+                pruned.append(msg)
+
+        return pruned
+
+    def _prune_messages_gemini(self, contents: List, keep_recent: int = None) -> List:
+        """Gemini 형식 메시지에서 오래된 도구 결과를 마스킹
+
+        Gemini 형식 (dict 또는 Content 객체):
+        - role: "user", parts: [{"functionResponse": {"name": "...", "response": {...}}}]
+
+        Content 객체와 dict를 모두 처리합니다.
+        """
+        keep_recent = keep_recent or self.KEEP_RECENT_TOOL_RESULTS
+
+        def _get_parts(msg):
+            """메시지에서 parts 추출 (dict 또는 Content 객체 모두 지원)"""
+            if isinstance(msg, dict):
+                return msg.get("parts", [])
+            else:
+                # Pydantic Content 객체
+                return getattr(msg, "parts", [])
+
+        def _has_function_response(part):
+            """part에 functionResponse가 있는지 확인"""
+            if isinstance(part, dict):
+                return "functionResponse" in part
+            else:
+                # Pydantic Part 객체
+                return getattr(part, "function_response", None) is not None
+
+        # functionResponse가 포함된 메시지 인덱스 찾기
+        tool_result_indices = []
+        for i, msg in enumerate(contents):
+            parts = _get_parts(msg)
+            if any(_has_function_response(p) for p in parts):
+                tool_result_indices.append(i)
+
+        # 오래된 도구 결과 마스킹 (최근 N개 제외)
+        indices_to_mask = tool_result_indices[:-keep_recent] if len(tool_result_indices) > keep_recent else []
+
+        pruned = []
+        for i, msg in enumerate(contents):
+            if i in indices_to_mask:
+                # Content 객체는 그대로 유지 (immutable일 수 있음)
+                # dict만 마스킹 처리
+                if isinstance(msg, dict):
+                    new_parts = []
+                    for p in msg.get("parts", []):
+                        if "functionResponse" in p:
+                            new_parts.append({
+                                "functionResponse": {
+                                    "name": p["functionResponse"].get("name", "unknown"),
+                                    "response": {"result": "[이전 도구 결과 생략됨]"}
+                                }
+                            })
+                        else:
+                            new_parts.append(p)
+                    pruned.append({"role": msg.get("role"), "parts": new_parts})
+                else:
+                    # Content 객체는 그대로 추가 (마스킹 스킵)
+                    pruned.append(msg)
+            else:
+                pruned.append(msg)
+
+        return pruned
+
     def _verify_tool_result(self, tool_name: str, tool_input: Dict, tool_output: str) -> tuple[str, bool]:
         """도구 결과 검증 (기본 구현)
 

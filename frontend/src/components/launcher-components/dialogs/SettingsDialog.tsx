@@ -842,7 +842,7 @@ export function SettingsDialog({
                     try {
                       setIsExporting(true);
                       setExportResult(null);
-                      const response = await fetch('/api/config/export', { method: 'POST' });
+                      const response = await fetch('http://127.0.0.1:8765/config/export', { method: 'POST' });
                       if (!response.ok) throw new Error('내보내기 실패');
 
                       const blob = await response.blob();
@@ -907,7 +907,7 @@ export function SettingsDialog({
                       const formData = new FormData();
                       formData.append('file', file);
 
-                      const response = await fetch('/api/config/import', {
+                      const response = await fetch('http://127.0.0.1:8765/config/import', {
                         method: 'POST',
                         body: formData,
                       });

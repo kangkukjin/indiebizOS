@@ -89,7 +89,7 @@ export function LogViewer() {
     <div className="h-screen w-screen flex flex-col bg-gray-900 text-white">
       {/* 타이틀바 (macOS 트래픽 라이트 공간) */}
       {isMac && (
-        <div className="h-8 bg-gray-800 flex items-center justify-center drag-region">
+        <div className="h-8 bg-gray-800 flex items-center justify-center drag">
           <span className="text-sm text-gray-400">IndieBiz 로그</span>
         </div>
       )}

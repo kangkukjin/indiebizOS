@@ -90,7 +90,8 @@ class AnthropicProvider(BaseProvider):
         message: str,
         history: List[Dict] = None,
         images: List[Dict] = None,
-        execute_tool: Callable = None
+        execute_tool: Callable = None,
+        cancel_check: Callable = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
         Claude로 메시지 처리 (스트리밍 모드)
@@ -219,16 +220,21 @@ class AnthropicProvider(BaseProvider):
             yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
             return
 
+        print(f"[Anthropic] 라운드 {depth + 1}/{MAX_TOOL_DEPTH} 시작")
+
         try:
             # 시스템 프롬프트 캐싱 적용
             system_with_cache = self._build_system_with_cache()
+
+            # Session Pruning: 오래된 도구 결과 마스킹 (depth > 0일 때만)
+            if depth > 0:
+                messages = self._prune_messages_anthropic(messages)
 
             create_params = {
                 "model": self.model,
                 "max_tokens": max_tokens,
                 "system": system_with_cache,
-                "messages": messages,
-                "stream": True
+                "messages": messages
             }
             if self.tools:
                 create_params["tools"] = self.tools
@@ -247,8 +253,8 @@ class AnthropicProvider(BaseProvider):
                 return
 
             # 스트리밍 응답 수신
-            with stream:
-                for event in stream:
+            with stream as event_stream:
+                for event in event_stream:
                     event_type = event.type
 
                     if event_type == "content_block_start":
@@ -292,7 +298,7 @@ class AnthropicProvider(BaseProvider):
                         pass
 
                 # 스트림 완료 후 최종 메시지 정보 가져오기
-                final_message = stream.get_final_message()
+                final_message = event_stream.get_final_message()
                 stop_reason = final_message.stop_reason
 
                 # 토큰 사용량 추적
@@ -341,6 +347,9 @@ class AnthropicProvider(BaseProvider):
                 if hasattr(self, '_pending_map_tags') and self._pending_map_tags:
                     final_result += "\n\n" + "\n".join(self._pending_map_tags)
                     self._pending_map_tags = []
+
+                total_latency_ms = (time.time() - start_time) * 1000
+                print(f"[Anthropic] 최종 응답 생성 (depth={depth}, len={len(final_result)}, latency={total_latency_ms:.0f}ms)")
 
                 yield {"type": "final", "content": final_result}
 
@@ -397,7 +406,14 @@ class AnthropicProvider(BaseProvider):
         approval_message = ""
 
         # 모든 도구 실행 (병렬 도구 호출 대응)
+        print(f"[Anthropic] {len(tool_uses)}개 도구 실행 중...")
+
         for tool in tool_uses:
+            # 도구 호출 로그
+            input_preview = str(tool["input"])[:100] + "..." if len(str(tool["input"])) > 100 else str(tool["input"])
+            print(f"[Anthropic][depth={depth}] 도구 호출: {tool['name']}")
+            print(f"[Anthropic][depth={depth}]   입력: {input_preview}")
+
             yield {
                 "type": "thinking",
                 "content": f"도구 실행 중: {tool['name']}"
@@ -436,6 +452,11 @@ class AnthropicProvider(BaseProvider):
 
             # 도구 결과 길이 제한
             truncated_output = self._truncate_tool_result(tool_output)
+
+            # 도구 결과 로그
+            output_len = len(truncated_output)
+            output_preview = truncated_output[:100] + "..." if output_len > 100 else truncated_output
+            print(f"[Anthropic][depth={depth}]   결과({output_len}자): {output_preview}")
 
             # 클라이언트에 도구 결과 전달
             yield {

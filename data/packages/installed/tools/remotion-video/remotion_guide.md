@@ -28,6 +28,19 @@ composition_code에서 staticFile('파일명')으로 참조하세요.
 - composition_code에서: `<Img src={staticFile('hero.png')} />`
 - 절대경로나 file:// URL은 동작하지 않습니다. 반드시 staticFile() 사용
 
+### ⚠️ 필수: 모든 이미지 사용 규칙
+
+**asset_paths에 제공된 모든 이미지는 반드시 동영상에 포함되어야 합니다!**
+
+```tsx
+// ❌ 잘못된 예: 이미지 5개 중 3개만 사용
+// asset_paths: [img1.png, img2.png, img3.png, img4.png, img5.png]
+const images = ['img1.png', 'img2.png', 'img3.png']; // 2개 누락!
+
+// ✅ 올바른 예: 모든 이미지 사용
+const images = ['img1.png', 'img2.png', 'img3.png', 'img4.png', 'img5.png'];
+```
+
 ## 나레이션 사용법 (narration_texts)
 
 narration_texts에 텍스트 배열을 전달하면 edge-tts로 음성을 생성하여 동영상에 믹싱합니다.
@@ -98,6 +111,88 @@ Scene 컴포넌트에서 `timing.startFrame`을 빼는 이중 차감을 하면 �
 **핵심 규칙**: narration_texts가 있으면 → export default 함수에 `props` 파라미터 필수 → `props.narrationTimings`로 Sequence의 `from`과 `durationInFrames` 설정 → 하드코딩된 씬 길이 사용 금지 → **Scene 내부에서 startFrame을 빼지 말 것**
 
 추가 props: totalNarrationFrames, totalNarrationDuration
+
+---
+
+## ⚠️ 이미지-나레이션-씬 1:1:1 매칭 (필수!)
+
+이미지와 나레이션을 함께 사용할 때 **반드시 개수를 맞춰야** 합니다.
+
+### 황금 규칙: 이미지 N개 = 나레이션 N개 = 씬 N개
+
+```
+이미지 5개 생성 → 나레이션 5개 작성 → 씬 5개 생성
+각 씬[i]에서: 이미지[i] 표시 + 나레이션[i] 재생
+```
+
+### ❌ 흔한 실수들
+
+```tsx
+// 실수 1: 이미지 5개인데 나레이션 3개
+asset_paths: [img1, img2, img3, img4, img5]  // 5개
+narration_texts: [text1, text2, text3]        // 3개 → 불일치!
+
+// 실수 2: 이미지 5개인데 씬 3개만 생성
+const scenes = images.slice(0, 3);  // 2개 누락!
+
+// 실수 3: 나레이션 타이밍과 이미지 순서 불일치
+// 나레이션 1이 재생될 때 이미지 3이 표시됨 → 내용 불일치
+```
+
+### ✅ 올바른 패턴
+
+```tsx
+// 이미지와 나레이션 개수가 같다고 가정
+const images = ['scene1.png', 'scene2.png', 'scene3.png', 'scene4.png', 'scene5.png'];
+
+export default function MyVideo(props: {narrationTimings?: Timing[]}) {
+  const timings = props.narrationTimings || [];
+
+  // 검증: 이미지 수와 나레이션 수가 같아야 함
+  const sceneCount = Math.min(images.length, timings.length);
+
+  return (
+    <AbsoluteFill>
+      {timings.slice(0, sceneCount).map((timing, i) => (
+        <Sequence key={i} from={timing.startFrame} durationInFrames={timing.durationInFrames}>
+          {/* 씬 i에서 이미지 i와 나레이션 i가 함께 표시됨 */}
+          <SceneWithImage
+            image={images[i]}
+            narrationText={timing.text}
+            durationInFrames={timing.durationInFrames}
+          />
+        </Sequence>
+      ))}
+    </AbsoluteFill>
+  );
+}
+
+const SceneWithImage = ({image, narrationText, durationInFrames}) => {
+  const frame = useCurrentFrame();
+  const opacity = interpolate(frame, [0, 15, durationInFrames-15, durationInFrames], [0,1,1,0], {extrapolateLeft:'clamp',extrapolateRight:'clamp'});
+
+  return (
+    <AbsoluteFill style={{opacity}}>
+      <Img src={staticFile(image)} className="w-full h-full object-cover" />
+      {/* 자막 표시 */}
+      <div className="absolute bottom-20 left-0 right-0 text-center">
+        <p className="text-2xl text-white bg-black/50 px-4 py-2 inline-block rounded">
+          {narrationText}
+        </p>
+      </div>
+    </AbsoluteFill>
+  );
+};
+```
+
+### 영상 제작 전 체크리스트
+
+동영상 제작 전에 반드시 확인하세요:
+
+1. **개수 확인**: `이미지 수 === 나레이션 수` 인가?
+2. **순서 확인**: 이미지[0]의 내용이 나레이션[0]과 맞는가?
+3. **전체 사용**: 모든 이미지가 코드에서 사용되는가?
+4. **타이밍 사용**: narrationTimings를 사용해 씬 길이를 결정하는가?
 
 ---
 
@@ -290,13 +385,21 @@ LottieFiles.com에서 무료 JSON 애니메이션 URL을 찾아 사용하세요.
 
 ## 핵심 원칙 체크리스트
 
-1. **배경**: 항상 그라데이션 또는 동적 그라데이션 사용 (단색 금지)
-2. **텍스트 등장**: 단순 페이드 외에 슬라이드/스케일/타이핑/글자별 중 택1
-3. **장식 요소**: 도형, 라인, SVG, 파티클, 프로그레스바 중 최소 1개
-4. **씬 전환**: 이전 씬 fadeOut + 다음 씬 슬라이드/와이프/줌 인 조합
-5. **색상**: 씬마다 다른 컬러 팔레트, 최소 3색 이상
-6. **카드/컨테이너**: 글래스모피즘 또는 그라데이션 배경 카드 활용
-7. **Tailwind 우선**: 정적 스타일은 className, 동적 애니메이션만 style prop
-8. **커스텀 폰트**: 제목에 디자인 폰트, 본문에 NotoSansKR 사용
-9. **텍스트 넘침 없음**: 모든 텍스트가 화면 안에 완전히 표시됨 (한글 제목 24자, 본문 40자 이내)
-10. **나레이션 동기화**: narration_texts 사용 시 반드시 `props.narrationTimings`로 Sequence 타이밍 결정 (하드코딩 금지)
+### 🔴 최우선 (이것부터 확인!)
+1. **이미지 전부 사용**: asset_paths의 모든 이미지가 동영상에 포함되는가?
+2. **1:1:1 매칭**: 이미지 수 = 나레이션 수 = 씬 수 인가?
+3. **순서 일치**: 이미지[i]와 나레이션[i]의 내용이 서로 맞는가?
+4. **나레이션 동기화**: narration_texts 사용 시 반드시 `props.narrationTimings`로 Sequence 타이밍 결정 (하드코딩 금지)
+
+### 🟡 시각 품질
+5. **배경**: 항상 그라데이션 또는 동적 그라데이션 사용 (단색 금지)
+6. **텍스트 등장**: 단순 페이드 외에 슬라이드/스케일/타이핑/글자별 중 택1
+7. **장식 요소**: 도형, 라인, SVG, 파티클, 프로그레스바 중 최소 1개
+8. **씬 전환**: 이전 씬 fadeOut + 다음 씬 슬라이드/와이프/줌 인 조합
+9. **색상**: 씬마다 다른 컬러 팔레트, 최소 3색 이상
+10. **카드/컨테이너**: 글래스모피즘 또는 그라데이션 배경 카드 활용
+
+### 🟢 코드 품질
+11. **Tailwind 우선**: 정적 스타일은 className, 동적 애니메이션만 style prop
+12. **커스텀 폰트**: 제목에 디자인 폰트, 본문에 NotoSansKR 사용
+13. **텍스트 넘침 없음**: 모든 텍스트가 화면 안에 완전히 표시됨 (한글 제목 24자, 본문 40자 이내)

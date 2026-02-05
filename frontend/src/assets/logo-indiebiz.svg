@@ -1,0 +1,11 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- IndieBiz 로고 - 세 점이 연결된 네트워크 -->
+  <!-- 연결선 -->
+  <line x1="12" y1="5" x2="5" y2="18" stroke="currentColor" stroke-width="1.5"/>
+  <line x1="12" y1="5" x2="19" y2="18" stroke="currentColor" stroke-width="1.5"/>
+  <line x1="5" y1="18" x2="19" y2="18" stroke="currentColor" stroke-width="1.5"/>
+  <!-- 노드 (점) -->
+  <circle cx="12" cy="5" r="3" fill="currentColor"/>
+  <circle cx="5" cy="18" r="3" fill="currentColor"/>
+  <circle cx="19" cy="18" r="3" fill="currentColor"/>
+</svg>

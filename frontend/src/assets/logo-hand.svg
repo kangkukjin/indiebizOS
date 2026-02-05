@@ -1,0 +1,14 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 손 - 도움과 협력 -->
+  <!-- 손바닥 -->
+  <path d="M12 22C8 22 5 19 5 15V10C5 9.4 5.4 9 6 9C6.6 9 7 9.4 7 10V13" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round"/>
+  <!-- 손가락들 -->
+  <path d="M7 13V6C7 5.4 7.4 5 8 5C8.6 5 9 5.4 9 6V12" stroke="#D97706" stroke-width="2" stroke-linecap="round"/>
+  <path d="M9 12V4C9 3.4 9.4 3 10 3C10.6 3 11 3.4 11 4V12" stroke="#D97706" stroke-width="2" stroke-linecap="round"/>
+  <path d="M11 12V4C11 3.4 11.4 3 12 3C12.6 3 13 3.4 13 4V12" stroke="#D97706" stroke-width="2" stroke-linecap="round"/>
+  <path d="M13 12V6C13 5.4 13.4 5 14 5C14.6 5 15 5.4 15 6V12" stroke="#D97706" stroke-width="2" stroke-linecap="round"/>
+  <!-- 엄지 -->
+  <path d="M15 12C15 12 17 11 18 12C19 13 19 15 19 15C19 19 16 22 12 22" stroke="#D97706" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- 별 포인트 (도움의 손길) -->
+  <circle cx="10.5" cy="8" r="1" fill="#FCD34D"/>
+</svg>

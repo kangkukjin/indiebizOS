@@ -89,7 +89,8 @@ class OpenAIProvider(BaseProvider):
         message: str,
         history: List[Dict] = None,
         images: List[Dict] = None,
-        execute_tool: Callable = None
+        execute_tool: Callable = None,
+        cancel_check: Callable = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
         GPT로 메시지 처리 (스트리밍 모드)
@@ -225,6 +226,10 @@ class OpenAIProvider(BaseProvider):
             return
 
         try:
+            # Session Pruning: 오래된 도구 결과 마스킹 (depth > 0일 때만)
+            if depth > 0:
+                messages = self._prune_messages_openai(messages)
+
             # API 호출 파라미터 구성
             create_params = {
                 "model": self.model,

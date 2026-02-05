@@ -148,6 +148,10 @@ class GeminiProvider(BaseProvider):
 
             print(f"[Gemini] 라운드 {iteration + 1}/{self.MAX_TOOL_ITERATIONS} 시작")
 
+            # Session Pruning: 오래된 도구 결과 마스킹 (iteration > 0일 때만)
+            if iteration > 0:
+                contents = self._prune_messages_gemini(contents)
+
             # API 호출 및 스트리밍
             try:
                 collected_text, function_calls, response_content = yield from self._stream_single_response(

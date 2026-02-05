@@ -702,11 +702,12 @@ async def update_owner_identities(data: Dict[str, str]):
 
 # ============ 설정 내보내기/가져오기 API ============
 
+import io
 import tempfile
 import shutil
 import zipfile
 from fastapi import UploadFile, File
-from fastapi.responses import FileResponse as FastAPIFileResponse
+from fastapi.responses import StreamingResponse
 
 
 @router.post("/config/export")
@@ -728,23 +729,17 @@ async def export_config():
         base_path = _get_base_path()
         projects_path = base_path / "projects"
 
-        # 임시 디렉토리에 내보낼 파일 준비
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            export_path = temp_path / "indiebiz-export"
-            export_path.mkdir()
+        # 메모리에 ZIP 파일 생성
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            exported_files = 0
 
             # 1. 프로젝트 폴더 복사 (민감 정보 제외)
             if projects_path.exists():
-                export_projects = export_path / "projects"
-                export_projects.mkdir()
-
                 for project_dir in projects_path.iterdir():
                     if not project_dir.is_dir():
                         continue
-
-                    project_export = export_projects / project_dir.name
-                    project_export.mkdir()
 
                     # 복사할 파일 패턴
                     include_patterns = [
@@ -759,22 +754,29 @@ async def export_config():
                     for pattern in include_patterns:
                         for file in project_dir.glob(pattern):
                             if file.is_file():
-                                # agents.yaml에서 API 키 제거
-                                if file.name == "agents.yaml":
-                                    _copy_agents_yaml_without_secrets(file, project_export / file.name)
-                                else:
-                                    shutil.copy2(file, project_export / file.name)
+                                try:
+                                    arcname = f"projects/{project_dir.name}/{file.name}"
+
+                                    if file.name == "agents.yaml":
+                                        # agents.yaml에서 API 키 제거
+                                        content = _get_agents_yaml_without_secrets(file)
+                                        zf.writestr(arcname, content)
+                                    else:
+                                        zf.write(file, arcname)
+
+                                    exported_files += 1
+                                except Exception as e:
+                                    print(f"[export] 파일 복사 실패: {file} - {e}")
 
             # 2. 시스템 AI 역할 프롬프트
             system_ai_state = DATA_PATH / "system_ai_state"
             if system_ai_state.exists():
-                export_state = export_path / "data" / "system_ai_state"
-                export_state.mkdir(parents=True)
-
                 for file_name in ["system_ai_role.txt", "system_ai_note.txt"]:
                     src = system_ai_state / file_name
                     if src.exists():
-                        shutil.copy2(src, export_state / file_name)
+                        arcname = f"data/system_ai_state/{file_name}"
+                        zf.write(src, arcname)
+                        exported_files += 1
 
             # 3. 소유자 정보 (민감 정보 제외)
             if ENV_PATH.exists():
@@ -787,34 +789,37 @@ async def export_config():
                         owner_info["OWNER_NOSTR_PUBKEYS"] = line.split("=", 1)[1]
 
                 if owner_info:
-                    env_export = export_path / "owner_info.json"
-                    with open(env_export, 'w', encoding='utf-8') as f:
-                        json.dump(owner_info, f, ensure_ascii=False, indent=2)
+                    zf.writestr("owner_info.json", json.dumps(owner_info, ensure_ascii=False, indent=2))
+                    exported_files += 1
 
-            # 4. ZIP 파일 생성
-            zip_path = temp_path / "export.zip"
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-                for file in export_path.rglob('*'):
-                    if file.is_file():
-                        arcname = file.relative_to(export_path)
-                        zf.write(file, arcname)
+            # 내보낼 파일이 없는 경우
+            if exported_files == 0:
+                raise HTTPException(status_code=400, detail="내보낼 설정이 없습니다.")
 
-            # 응답용 임시 파일 생성
-            response_zip = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
-            shutil.copy2(zip_path, response_zip.name)
+        # 버퍼 위치를 처음으로
+        zip_buffer.seek(0)
 
-            return FastAPIFileResponse(
-                path=response_zip.name,
-                media_type='application/zip',
-                filename=f"indiebiz-config-{datetime.now().strftime('%Y%m%d')}.zip"
-            )
+        filename = f"indiebiz-config-{datetime.now().strftime('%Y%m%d')}.zip"
 
+        return StreamingResponse(
+            zip_buffer,
+            media_type='application/zip',
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"'
+            }
+        )
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[export] 오류: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"내보내기 실패: {str(e)}")
 
 
-def _copy_agents_yaml_without_secrets(src: Path, dst: Path):
-    """agents.yaml에서 API 키 등 민감 정보 제거 후 복사"""
+def _get_agents_yaml_without_secrets(src: Path) -> str:
+    """agents.yaml에서 API 키 등 민감 정보 제거 후 문자열 반환"""
     with open(src, 'r', encoding='utf-8') as f:
         data = yaml.safe_load(f) or {}
 
@@ -832,8 +837,14 @@ def _copy_agents_yaml_without_secrets(src: Path, dst: Path):
         if 'client_secret' in agent:
             del agent['client_secret']
 
+    return yaml.dump(data, allow_unicode=True, default_flow_style=False)
+
+
+def _copy_agents_yaml_without_secrets(src: Path, dst: Path):
+    """agents.yaml에서 API 키 등 민감 정보 제거 후 복사"""
+    content = _get_agents_yaml_without_secrets(src)
     with open(dst, 'w', encoding='utf-8') as f:
-        yaml.dump(data, f, allow_unicode=True, default_flow_style=False)
+        f.write(content)
 
 
 @router.post("/config/import")

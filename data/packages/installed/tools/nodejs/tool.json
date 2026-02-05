@@ -1,7 +1,7 @@
 {
   "id": "nodejs",
   "name": "Node.js Executor",
-  "description": "Node.js/JavaScript 코드 실행 환경",
+  "description": "Node.js/JavaScript 코드 실행 환경. JSON 처리, 비동기 작업, npm 패키지 활용, 프론트엔드 로직 검증에 사용합니다. fs, path, crypto 등 내장 모듈과 설치된 npm 패키지 사용 가능.",
   "version": "1.1.0",
   "tools": [
     {

@@ -1,7 +1,7 @@
 {
   "id": "startup",
   "name": "Startup Support",
-  "description": "창업지원 사업공고 검색 도구 (K-Startup, 중소벤처기업부)",
+  "description": "정부 창업지원 사업공고 검색 도구. K-Startup(창업진흥원)과 중소벤처기업부 사업공고를 검색합니다. 예비창업패키지, 초기창업패키지, R&D 지원, 수출지원, 정책자금 등 창업/중소기업 지원사업 찾기에 활용.",
   "version": "1.1.0",
   "tools": [
     {

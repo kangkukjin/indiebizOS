@@ -1,7 +1,7 @@
 {
   "id": "youtube",
   "name": "YouTube Tools",
-  "description": "YouTube 영상 정보 조회, 자막 추출, 다운로드 도구",
+  "description": "YouTube 영상 도구. 영상 정보 조회, 자막 추출 및 요약, MP3 다운로드, PC 스피커 음악 재생 기능을 제공합니다. 영상 내용 분석, 음악 감상, 팟캐스트 청취, 영상 요약 문서화에 활용.",
   "version": "1.1.0",
   "tools": [
     {

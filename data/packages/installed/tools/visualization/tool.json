@@ -1,7 +1,7 @@
 {
   "id": "visualization",
   "name": "Visualization Tools",
-  "description": "범용 데이터 시각화 도구. 차트, 그래프를 PNG/HTML로 생성합니다.",
+  "description": "데이터 시각화 도구. 라인차트, 막대차트, 파이차트, 산점도, 히트맵, 캔들스틱 등 다양한 차트를 PNG/HTML로 생성합니다. 데이터 분석 결과 시각화, 주가 차트, 비교 그래프, 대시보드 제작에 활용.",
   "version": "1.0.0",
   "tools": [
     {

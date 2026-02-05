@@ -222,7 +222,7 @@ class PackageManager:
                  if f.is_file() and not f.name.startswith('.')]
         metadata["files"] = files
 
-        # tool.json에서 도구 목록 추출
+        # tool.json에서 패키지 설명 및 도구 목록 추출
         tool_json_path = pkg_path / "tool.json"
         if tool_json_path.exists():
             try:
@@ -231,9 +231,20 @@ class PackageManager:
                 if isinstance(tool_data, list):
                     tools = tool_data
                 elif isinstance(tool_data, dict):
+                    # 패키지 레벨 description 추출 (README보다 우선)
+                    if tool_data.get("description"):
+                        metadata["description"] = tool_data["description"][:500]
+                    # 패키지 레벨 name 추출
+                    if tool_data.get("name"):
+                        metadata["name"] = tool_data["name"]
+                    # 패키지 레벨 version 추출
+                    if tool_data.get("version"):
+                        metadata["version"] = tool_data["version"]
+
                     if "tools" in tool_data:
                         tools = tool_data["tools"]
-                    elif "name" in tool_data:
+                    elif "name" in tool_data and "input_schema" in tool_data:
+                        # 단일 도구 형식
                         tools = [tool_data]
 
                 metadata["tools"] = [

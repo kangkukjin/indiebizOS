@@ -752,21 +752,37 @@ async def export_config():
                     ]
 
                     for pattern in include_patterns:
-                        for file in project_dir.glob(pattern):
-                            if file.is_file():
+                        for matched_file in project_dir.glob(pattern):
+                            if matched_file.is_file():
                                 try:
-                                    arcname = f"projects/{project_dir.name}/{file.name}"
+                                    arcname = f"projects/{project_dir.name}/{matched_file.name}"
 
-                                    if file.name == "agents.yaml":
+                                    if matched_file.name == "agents.yaml":
                                         # agents.yaml에서 API 키 제거
-                                        content = _get_agents_yaml_without_secrets(file)
+                                        content = _get_agents_yaml_without_secrets(matched_file)
                                         zf.writestr(arcname, content)
                                     else:
-                                        zf.write(file, arcname)
+                                        zf.write(matched_file, arcname)
 
                                     exported_files += 1
                                 except Exception as e:
-                                    print(f"[export] 파일 복사 실패: {file} - {e}")
+                                    print(f"[export] 파일 복사 실패: {matched_file} - {e}")
+
+                    # 하위 디렉토리 복사 (agent_roles 등, 대화기록 제외)
+                    include_dirs = ["agent_roles"]
+                    exclude_extensions = {".db", ".db-shm", ".db-wal", ".sqlite", ".sqlite3"}
+                    for dir_name in include_dirs:
+                        sub_dir = project_dir / dir_name
+                        if sub_dir.exists() and sub_dir.is_dir():
+                            for sub_file in sub_dir.rglob("*"):
+                                if sub_file.is_file() and sub_file.suffix.lower() not in exclude_extensions:
+                                    try:
+                                        rel_path = sub_file.relative_to(project_dir)
+                                        arcname = f"projects/{project_dir.name}/{rel_path}"
+                                        zf.write(sub_file, arcname)
+                                        exported_files += 1
+                                    except Exception as e:
+                                        print(f"[export] 하위 파일 복사 실패: {sub_file} - {e}")
 
             # 2. 시스템 AI 역할 프롬프트
             system_ai_state = DATA_PATH / "system_ai_state"
@@ -854,6 +870,7 @@ async def import_config(file: UploadFile = File(...)):
 
     - 기존 프로젝트와 병합 (같은 이름은 덮어쓰기)
     - API 키는 가져오지 않음 (사용자가 직접 설정)
+    - projects.json 마스터 목록 자동 업데이트
     """
     try:
         base_path = _get_base_path()
@@ -862,11 +879,12 @@ async def import_config(file: UploadFile = File(...)):
 
         # 업로드된 파일을 임시 저장
         with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp:
-            content = await file.read()
-            tmp.write(content)
+            upload_content = await file.read()
+            tmp.write(upload_content)
             tmp_path = tmp.name
 
         projects_imported = 0
+        imported_project_names = []
 
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -886,35 +904,74 @@ async def import_config(file: UploadFile = File(...)):
                         target_project = projects_path / project_dir.name
 
                         # 기존 프로젝트가 있으면 병합, 없으면 생성
-                        if not target_project.exists():
+                        is_new_project = not target_project.exists()
+                        if is_new_project:
                             target_project.mkdir()
 
-                        # 파일 복사 (기존 API 키 보존)
-                        for file in project_dir.iterdir():
-                            if file.is_file():
-                                if file.name == "agents.yaml" and (target_project / "agents.yaml").exists():
+                        # 파일 및 하위 디렉토리 복사 (기존 API 키 보존)
+                        for item in project_dir.iterdir():
+                            if item.is_file():
+                                if item.name == "agents.yaml" and (target_project / "agents.yaml").exists():
                                     # 기존 agents.yaml의 API 키 보존하며 병합
-                                    _merge_agents_yaml(file, target_project / "agents.yaml")
+                                    _merge_agents_yaml(item, target_project / "agents.yaml")
                                 else:
-                                    shutil.copy2(file, target_project / file.name)
+                                    shutil.copy2(item, target_project / item.name)
+                            elif item.is_dir():
+                                # 하위 디렉토리도 복사 (agent_roles 등)
+                                target_subdir = target_project / item.name
+                                if target_subdir.exists():
+                                    shutil.rmtree(target_subdir)
+                                shutil.copytree(item, target_subdir)
 
+                        imported_project_names.append(project_dir.name)
                         projects_imported += 1
 
-                # 2. 시스템 AI 상태 가져오기
+                # 2. projects.json 마스터 목록 업데이트
+                projects_json_path = projects_path / "projects.json"
+                existing_projects = []
+                if projects_json_path.exists():
+                    try:
+                        with open(projects_json_path, 'r', encoding='utf-8') as pf:
+                            existing_projects = json.load(pf)
+                    except Exception:
+                        existing_projects = []
+
+                existing_names = {p.get("name") for p in existing_projects}
+
+                for proj_name in imported_project_names:
+                    if proj_name not in existing_names:
+                        # 새 프로젝트를 목록에 추가
+                        project_info = {
+                            "id": proj_name,
+                            "name": proj_name,
+                            "type": "project",
+                            "path": str(projects_path / proj_name),
+                            "created_at": datetime.now().isoformat(),
+                            "icon_position": [100 + len(existing_projects) * 20, 100 + len(existing_projects) * 20],
+                            "parent_folder": None,
+                            "last_opened": None
+                        }
+                        existing_projects.append(project_info)
+                        print(f"[import] 프로젝트 목록에 추가: {proj_name}")
+
+                with open(projects_json_path, 'w', encoding='utf-8') as pf:
+                    json.dump(existing_projects, pf, ensure_ascii=False, indent=2)
+
+                # 3. 시스템 AI 상태 가져오기
                 import_state = temp_path / "data" / "system_ai_state"
                 if import_state.exists():
                     target_state = DATA_PATH / "system_ai_state"
                     target_state.mkdir(parents=True, exist_ok=True)
 
-                    for file in import_state.iterdir():
-                        if file.is_file():
-                            shutil.copy2(file, target_state / file.name)
+                    for state_file in import_state.iterdir():
+                        if state_file.is_file():
+                            shutil.copy2(state_file, target_state / state_file.name)
 
-                # 3. 소유자 정보 가져오기 (기존 값이 없을 때만)
+                # 4. 소유자 정보 가져오기 (기존 값이 없을 때만)
                 owner_info_file = temp_path / "owner_info.json"
                 if owner_info_file.exists():
-                    with open(owner_info_file, 'r', encoding='utf-8') as f:
-                        owner_info = json.load(f)
+                    with open(owner_info_file, 'r', encoding='utf-8') as oi_f:
+                        owner_info = json.load(oi_f)
 
                     # 기존 값이 없을 때만 설정
                     if owner_info.get("OWNER_EMAILS") and not _read_env_value("OWNER_EMAILS"):
@@ -935,6 +992,9 @@ async def import_config(file: UploadFile = File(...)):
     except zipfile.BadZipFile:
         raise HTTPException(status_code=400, detail="유효하지 않은 ZIP 파일입니다.")
     except Exception as e:
+        print(f"[import] 오류: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -36,19 +36,13 @@ projects/
 # 패키지 설치 정보 (개인 경로 포함)
 **/.install_info.json
 
-# 개인용 도구 패키지
-data/packages/installed/tools/blog/
-data/packages/installed/tools/android/
-data/packages/installed/tools/pc-manager/
-data/packages/installed/tools/photo-manager/
-data/packages/installed/tools/read-and-see/
-data/packages/installed/tools/study/
-data/packages/installed/tools/web/
-data/packages/installed/tools/health-record/
-
-data/packages/available/tools/blog/
-data/packages/available/tools/android/
-data/packages/available/tools/pc-manager/
+# 도구 패키지 런타임 생성 파일 (코드는 모두 추적)
+data/packages/available/
+data/packages/installed/tools/**/*.db
+data/packages/installed/tools/**/*.db-shm
+data/packages/installed/tools/**/*.db-wal
+data/packages/installed/tools/**/*.db.bak
+data/packages/installed/tools/**/_temp_*
 
 # 스캔/인덱스 데이터 (개인 파일 경로 포함)
 data/packages/photo_scans/

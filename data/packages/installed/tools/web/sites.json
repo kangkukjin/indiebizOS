@@ -1,0 +1,78 @@
+[
+  {
+    "name": "Stratechery",
+    "url": "https://stratechery.com/"
+  },
+  {
+    "name": "Aeon",
+    "url": "https://aeon.co/"
+  },
+  {
+    "name": "Hacker News",
+    "url": "https://news.ycombinator.com/"
+  },
+  {
+    "name": "Reddit LocalLLM",
+    "url": "https://www.reddit.com/r/LocalLLaMA/"
+  },
+  {
+    "name": "Lex Fridman (YouTube)",
+    "url": "https://www.youtube.com/@lexfridman"
+  },
+  {
+    "name": "GeekNews",
+    "url": "https://news.hada.io/"
+  },
+  {
+    "name": "GPTERS",
+    "url": "https://www.gpters.org/"
+  },
+  {
+    "name": "K의 생각 (Naver)",
+    "url": "https://blog.naver.com/kukjinkang"
+  },
+  {
+    "name": "IndieBiz (Tistory)",
+    "url": "https://irepublic.tistory.com/"
+  },
+  {
+    "name": "오늘의유머",
+    "url": "https://www.todayhumor.co.kr/board/list.php?kind=total"
+  },
+  {
+    "name": "딴지일보",
+    "url": "https://www.ddanzi.com/free"
+  },
+  {
+    "name": "Google Cloud Billing",
+    "url": "https://console.cloud.google.com/billing/01DBFC-202897-C8ECFF?project=indienet--community"
+  },
+  {
+    "name": "Gemini",
+    "url": "https://gemini.google.com/app"
+  },
+  {
+    "name": "Grok (X)",
+    "url": "https://x.com/i/grok"
+  },
+  {
+    "name": "네이버 카페",
+    "url": "https://cafe.naver.com/f-e/cafes/26681849/popular"
+  },
+  {
+    "name": "다음",
+    "url": "https://www.daum.net/"
+  },
+  {
+    "name": "K의 생각 (Vercel)",
+    "url": "https://kangkukjin.vercel.app/"
+  },
+  {
+    "name": "Netflix",
+    "url": "https://www.netflix.com/"
+  },
+  {
+    "name": "GitHub",
+    "url": "https://github.com/"
+  }
+]

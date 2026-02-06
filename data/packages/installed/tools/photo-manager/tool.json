@@ -1,0 +1,85 @@
+{
+  "id": "photo-manager",
+  "name": "Photo Manager",
+  "description": "사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 도구.\n\n## 스캔 DB 직접 활용\n제공된 도구만으로 부족할 때 python-exec로 DB에 직접 SQL 쿼리가 가능합니다.\n- list_scans 결과의 DB 경로로 sqlite3.connect() 하여 사용\n- 테이블: media_files\n- 주요 컬럼: path(파일경로), filename, taken_date(촬영일 ISO8601), gps_lat(위도), gps_lon(경도), media_type('photo'/'video'), size, camera_model\n- 예: 특정 기간 사진 조회, GPS 좌표 범위로 장소별 필터링, 조건에 맞는 파일 경로 추출 후 copy_path로 복사 등",
+  "version": "1.1.0",
+  "tools": [
+    {
+      "name": "scan_photos",
+      "description": "폴더의 사진/동영상을 스캔하여 메타데이터를 수집합니다.\n\n## 수집 정보\n- EXIF: 촬영일, 카메라 모델, GPS 좌표\n- 파일 정보: 크기, 수정일, 확장자\n- MD5 해시 (중복 탐지용)\n\n## 사용 시점\n- 사진 폴더 분석 준비\n- 중복 파일 찾기 전\n- 갤러리 기능 사용 전\n\n## 지원 형식\n- 사진: jpg, jpeg, png, heic, raw 등\n- 동영상: mp4, mov, avi 등",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "스캔할 폴더 경로" }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "list_scans",
+      "description": "이전에 스캔한 폴더 목록을 조회합니다.\n\n## 사용 시점\n- 스캔 이력 확인\n- 다른 도구 사용 전 스캔 여부 확인",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "get_gallery",
+      "description": "스캔된 사진/동영상을 갤러리 형태로 조회합니다.\n\n## 전제조건\n- scan_photos로 먼저 스캔 필요\n\n## 정렬 옵션\n- taken_date: 촬영일 순 (기본)\n- mtime: 파일 수정일 순\n- size: 파일 크기 순\n- filename: 파일명 순\n\n## 필터 옵션\n- media_type: photo 또는 video",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "폴더 경로" },
+          "page": { "type": "integer", "description": "페이지 번호 (기본 1)" },
+          "limit": { "type": "integer", "description": "페이지당 항목 수 (기본 50)" },
+          "media_type": { "type": "string", "enum": ["photo", "video"], "description": "미디어 타입 필터" },
+          "sort_by": { "type": "string", "description": "정렬 기준" }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "find_duplicates",
+      "description": "중복된 사진/동영상을 찾습니다 (MD5 해시 기반).\n\n## 사용 시점\n- 중복 파일 정리\n- 저장 공간 확보\n\n## 반환 정보\n- 중복 그룹별 파일 목록\n- 각 파일의 경로, 크기",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "중복 검사할 폴더 경로" }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "get_stats",
+      "description": "스캔된 폴더의 통계를 조회합니다.\n\n## 반환 정보\n- 사진/동영상 개수\n- 총 용량\n- 확장자별 분포\n- 카메라별 분포",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "통계 조회할 폴더 경로" }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "get_timeline",
+      "description": "촬영 현황을 월별 타임라인으로 조회합니다.\n\n## 반환 정보\n- 월별 사진/동영상 개수\n- 활발한 촬영 시기 파악",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "타임라인 조회할 폴더 경로" }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "open_photo_manager",
+      "description": "Photo Manager GUI를 엽니다.\n\n## 사용 시점\n- 시각적으로 사진 관리\n- 갤러리 브라우징",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "초기 경로 (선택)" }
+        }
+      }
+    }
+  ]
+}

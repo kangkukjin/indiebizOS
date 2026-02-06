@@ -441,4 +441,109 @@ Over time, your own projects, agents, and switches accumulate, and that becomes 
 
 ---
 
+## 10. Remote Access (Finder & Launcher)
+
+Turn your home PC into a personal cloud accessible from anywhere. Use Cloudflare Tunnel for file access and AI control.
+
+### Two Remote Features
+
+| Feature | Path | Purpose |
+|---------|------|---------|
+| **Remote Finder** | `/nas/app` | File browsing, video streaming, downloads |
+| **Remote Launcher** | `/launcher/app` | System AI/agent chat, switch execution |
+
+Each feature can be independently enabled with **separate passwords**.
+
+### What Can You Do?
+
+**Remote Finder:**
+- **Browse Files**: Access your home PC's files from any smartphone or computer via browser
+- **Stream Videos**: Watch movies/shows stored at home while traveling
+- **Preview Documents**: Quickly view text file contents
+- **Download Files**: Get any file you need from anywhere
+
+**Remote Launcher:**
+- **System AI Chat**: Give instructions to System AI from anywhere
+- **Agent Chat**: Converse with project-specific AI agents
+- **One-Tap Switch Execution**: Run automated tasks with a single touch
+- **Mobile Optimized**: Dark theme, responsive UI
+
+### Why Cloudflare Tunnel?
+
+Typically, accessing your home PC from outside requires complex network setup: port forwarding, DDNS, SSL certificates. Cloudflare Tunnel handles all of this:
+
+- **No Port Opening**: Connect securely without router configuration
+- **Auto HTTPS**: Cloudflare manages SSL certificates automatically
+- **DDoS Protection**: Cloudflare network blocks attacks
+- **Global Edge**: Fast response from anywhere in the world
+
+### What You Need Before Starting
+
+To use Remote Access, you need a **Cloudflare account**.
+
+**1. Sign Up for Cloudflare**
+- Create a free account at https://dash.cloudflare.com
+- Connect a domain you own to Cloudflare (free)
+  - If you don't have a domain, consider purchasing an inexpensive one
+
+**2. Get API Token**
+- Cloudflare Dashboard → My Profile → API Tokens
+- Click "Create Token"
+- Select "Edit Cloudflare Workers" template or set custom permissions
+- Copy the generated token
+
+**3. Find Account ID**
+- Visible in the right sidebar of Cloudflare Dashboard
+- Or on the Overview page after selecting a domain
+
+**4. Configure IndieBiz OS**
+- Go to Settings → Environment Variables and enter:
+  - `CLOUDFLARE_API_TOKEN`: Your API token
+  - `CLOUDFLARE_ACCOUNT_ID`: Your account ID
+
+### Setup Summary
+
+**Remote Finder Setup:**
+1. **Launcher Settings** → **Remote Finder** tab
+2. Turn on "Enable NAS" toggle
+3. Set a password
+4. Add folders to allow access (e.g., `/Users/me/Videos`)
+
+**Remote Launcher Setup:**
+1. **Launcher Settings** → **Remote Launcher** tab
+2. Turn on "Enable Remote Launcher" toggle
+3. Set a password (can be different from Remote Finder)
+
+**Tunnel Setup:**
+Ask System AI: **"Set up a Cloudflare tunnel for remote access"**
+
+System AI will automatically handle tunnel creation, DNS setup, and config file generation.
+
+### Running the Tunnel
+
+Once setup is complete, you need to run the tunnel:
+
+```bash
+cloudflared tunnel run indiebiz
+```
+
+If using your PC as a 24/7 server, configure this command to run automatically at system startup.
+
+### Accessing
+
+Open your configured addresses in a browser:
+```
+https://home.yourdomain.com/nas/app      # File access
+https://home.yourdomain.com/launcher/app # AI control
+```
+
+### Detailed Documentation
+
+For detailed technical information about Remote Access, see:
+- **System Docs**: `data/system_docs/remote_finder.md`
+
+For detailed usage of the Cloudflare Tunnel tool (`cf_tunnel`), see the cloudflare package documentation.
+
+---
+
 *For detailed technical documentation, see the `data/system_docs/` folder.*

@@ -1,180 +1,36 @@
 {
   "id": "cloudflare",
   "name": "Cloudflare",
-  "description": "Cloudflare 서비스 통합 도구 패키지.\n\nPages, Workers, R2, D1 등 Cloudflare 서비스를 관리합니다.\n\n## 주요 기능\n- Pages: 정적 사이트 배포\n- Workers: 서버리스 함수\n- R2: 오브젝트 스토리지\n- D1: SQLite 데이터베이스\n\n## 시작하기\n1. backend/.env에 환경변수 설정:\n   CLOUDFLARE_API_TOKEN=your_token\n   CLOUDFLARE_ACCOUNT_ID=your_account_id\n2. cf_config(action='test')로 연결 확인\n3. 원하는 서비스 도구 사용",
-  "version": "1.0.0",
+  "description": "Cloudflare API 통합 도구. Pages, Workers, R2, D1, Tunnel 등을 관리합니다.",
+  "version": "2.0.0",
+  "guide_file": "cloudflare_guide.md",
   "tools": [
     {
-      "name": "cf_config",
-      "description": "Cloudflare API 설정 상태를 확인합니다. 환경변수(CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID)에서 로드됩니다.\n\n사용 예시:\n- 설정 조회: action='get'\n- 연결 테스트: action='test'",
+      "name": "cf_api",
+      "description": "Cloudflare API를 인증된 상태로 호출합니다. 첫 호출 시 상세 가이드가 제공됩니다.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "action": {
+          "method": {
             "type": "string",
-            "enum": ["get", "test"],
-            "description": "수행할 작업 (get: 설정 조회, test: API 연결 테스트)"
-          }
-        },
-        "required": ["action"]
-      }
-    },
-    {
-      "name": "cf_pages_deploy",
-      "description": "정적 사이트를 Cloudflare Pages에 배포합니다.\n\n사용 예시:\n- 새 프로젝트: project_name='my-blog', directory='/path/to/dist'\n- 기존 프로젝트 업데이트: project_name='my-blog', directory='/path/to/dist'\n\n## 지원 프레임워크\n- 정적 HTML/CSS/JS\n- Next.js (정적 export)\n- React, Vue, Svelte 등",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_name": {
-            "type": "string",
-            "description": "Pages 프로젝트 이름 (영문, 소문자, 하이픈)"
+            "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+            "default": "GET",
+            "description": "HTTP 메서드"
           },
-          "directory": {
+          "endpoint": {
             "type": "string",
-            "description": "배포할 디렉토리 경로 (빌드 결과물)"
+            "description": "API 엔드포인트 (예: /zones, /accounts/{account_id}/tunnels)"
           },
-          "production": {
-            "type": "boolean",
-            "default": true,
-            "description": "프로덕션 배포 여부"
-          }
-        },
-        "required": ["project_name", "directory"]
-      }
-    },
-    {
-      "name": "cf_pages_list",
-      "description": "Cloudflare Pages 프로젝트 목록을 조회합니다.\n\n사용 예시:\n- 전체 목록: cf_pages_list()\n- 특정 프로젝트: cf_pages_list(project_name='my-blog')",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "project_name": {
-            "type": "string",
-            "description": "특정 프로젝트 이름 (선택사항)"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "cf_worker_deploy",
-      "description": "Cloudflare Worker를 생성/배포합니다.\n\n사용 예시:\n- 코드 직접 배포: worker_name='my-api', code='export default { async fetch(request) { return new Response(\"Hello\"); } }'\n- 파일에서 배포: worker_name='my-api', file_path='/path/to/worker.js'\n\n## Worker 형식\n- ES Modules 형식 권장\n- fetch 핸들러 필수",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "worker_name": {
-            "type": "string",
-            "description": "Worker 이름 (영문, 소문자, 하이픈)"
-          },
-          "code": {
-            "type": "string",
-            "description": "Worker 코드 (JavaScript)"
-          },
-          "file_path": {
-            "type": "string",
-            "description": "Worker 코드 파일 경로 (code 대신 사용)"
-          }
-        },
-        "required": ["worker_name"]
-      }
-    },
-    {
-      "name": "cf_worker_list",
-      "description": "Cloudflare Workers 목록을 조회합니다.\n\n사용 예시:\n- 전체 목록: cf_worker_list()\n- 특정 Worker: cf_worker_list(worker_name='my-api')",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "worker_name": {
-            "type": "string",
-            "description": "특정 Worker 이름 (선택사항)"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "cf_r2_upload",
-      "description": "Cloudflare R2에 파일을 업로드합니다.\n\n사용 예시:\n- 단일 파일: bucket='my-bucket', file_path='/path/to/file.jpg', key='images/photo.jpg'\n- 폴더 업로드: bucket='my-bucket', directory='/path/to/folder', prefix='uploads/'\n\n## R2 특징\n- S3 호환 API\n- 무료 egress (아웃바운드 트래픽)",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "bucket": {
-            "type": "string",
-            "description": "R2 버킷 이름"
-          },
-          "file_path": {
-            "type": "string",
-            "description": "업로드할 파일 경로"
-          },
-          "directory": {
-            "type": "string",
-            "description": "업로드할 디렉토리 경로 (폴더 전체)"
-          },
-          "key": {
-            "type": "string",
-            "description": "R2 내 저장 경로 (파일 업로드 시)"
-          },
-          "prefix": {
-            "type": "string",
-            "description": "R2 내 저장 경로 접두어 (폴더 업로드 시)"
-          }
-        },
-        "required": ["bucket"]
-      }
-    },
-    {
-      "name": "cf_r2_list",
-      "description": "Cloudflare R2 버킷 또는 파일 목록을 조회합니다.\n\n사용 예시:\n- 버킷 목록: cf_r2_list()\n- 파일 목록: cf_r2_list(bucket='my-bucket')\n- 특정 경로: cf_r2_list(bucket='my-bucket', prefix='images/')",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "bucket": {
-            "type": "string",
-            "description": "버킷 이름 (미지정 시 버킷 목록)"
-          },
-          "prefix": {
-            "type": "string",
-            "description": "파일 경로 접두어 (폴더 탐색)"
-          }
-        },
-        "required": []
-      }
-    },
-    {
-      "name": "cf_d1_query",
-      "description": "Cloudflare D1 데이터베이스에 SQL 쿼리를 실행합니다.\n\n사용 예시:\n- 조회: database='my-db', query='SELECT * FROM users'\n- 삽입: database='my-db', query='INSERT INTO users (name) VALUES (?)', params=['홍길동']\n\n## D1 특징\n- SQLite 호환\n- Edge에서 실행",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "database": {
-            "type": "string",
-            "description": "D1 데이터베이스 이름 또는 ID"
-          },
-          "query": {
-            "type": "string",
-            "description": "실행할 SQL 쿼리"
+          "body": {
+            "type": "object",
+            "description": "요청 본문 (POST, PUT, PATCH에 사용)"
           },
           "params": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "쿼리 파라미터 (? 바인딩)"
+            "type": "object",
+            "description": "쿼리 파라미터"
           }
         },
-        "required": ["database", "query"]
-      }
-    },
-    {
-      "name": "cf_d1_list",
-      "description": "Cloudflare D1 데이터베이스 목록을 조회합니다.\n\n사용 예시:\n- 전체 목록: cf_d1_list()\n- 특정 DB 정보: cf_d1_list(database='my-db')",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "database": {
-            "type": "string",
-            "description": "특정 데이터베이스 이름 (선택사항)"
-          }
-        },
-        "required": []
+        "required": ["endpoint"]
       }
     }
   ]

@@ -997,7 +997,7 @@ export function Launcher() {
                 </button>
                 <button
                   onClick={() => {
-                    window.electron?.openLogWindow();
+                    window.electron?.openLogWindow?.();
                     setShowMainMenu(false);
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"

@@ -199,6 +199,15 @@ export interface ElectronAPI {
 
   // 이미지 파일 선택 다이얼로그 (다중 선택)
   selectImages: () => Promise<string[] | null>;
+
+  // 로그 뷰어 관련
+  openLogWindow?: () => Promise<void>;
+  onLogMessage?: (callback: (message: string) => void) => void;
+  onLogHistory?: (callback: (logs: string[]) => void) => void;
+  onLogCleared?: (callback: () => void) => void;
+  removeLogListeners?: () => void;
+  clearLogs?: () => Promise<void>;
+  copyToClipboard?: (text: string) => void;
 }
 
 declare global {

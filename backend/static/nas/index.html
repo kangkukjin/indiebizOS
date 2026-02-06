@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Finder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #86868b;
+        }
+        .breadcrumb a {
+            color: #0066cc;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        .file-list {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .file-item:hover {
+            background: #f9f9f9;
+        }
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        .file-icon {
+            font-size: 24px;
+            margin-right: 16px;
+            width: 32px;
+            text-align: center;
+        }
+        .file-info {
+            flex: 1;
+        }
+        .file-name {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .file-meta {
+            font-size: 13px;
+            color: #86868b;
+        }
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #0066cc;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0055aa;
+        }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #1d1d1f;
+        }
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #86868b;
+        }
+        .error {
+            background: #fff3cd;
+            color: #856404;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📁 Remote Finder</h1>
+            <div class="breadcrumb" id="breadcrumb">
+                <a onclick="navigateTo('/')">Home</a>
+            </div>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div class="file-list" id="fileList">
+            <div class="loading">로딩 중...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentPath = '/';
+        const API_BASE = '/nas';
+
+        function formatSize(bytes) {
+            if (!bytes) return '-';
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let size = bytes;
+            let unitIndex = 0;
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+            return size.toFixed(1) + ' ' + units[unitIndex];
+        }
+
+        function formatDate(timestamp) {
+            if (!timestamp) return '-';
+            return new Date(timestamp * 1000).toLocaleString('ko-KR');
+        }
+
+        function getFileIcon(item) {
+            if (item.type === 'directory') return '📁';
+            const ext = item.name.split('.').pop().toLowerCase();
+            const icons = {
+                'mp4': '🎬', 'avi': '🎬', 'mkv': '🎬', 'mov': '🎬',
+                'mp3': '🎵', 'wav': '🎵', 'flac': '🎵',
+                'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
+                'pdf': '📄', 'doc': '📝', 'docx': '📝', 'txt': '📝',
+                'zip': '🗜️', 'rar': '🗜️', '7z': '🗜️'
+            };
+            return icons[ext] || '📄';
+        }
+
+        function updateBreadcrumb(path) {
+            const parts = path.split('/').filter(p => p);
+            let html = '<a onclick="navigateTo(\'/\')">Home</a>';
+            let accumulated = '';
+            
+            parts.forEach(part => {
+                accumulated += '/' + part;
+                html += ` <span>›</span> <a onclick="navigateTo('${accumulated}')">${part}</a>`;
+            });
+            
+            document.getElementById('breadcrumb').innerHTML = html;
+        }
+
+        async function loadDirectory(path) {
+            try {
+                document.getElementById('error').style.display = 'none';
+                document.getElementById('fileList').innerHTML = '<div class="loading">로딩 중...</div>';
+                
+                const response = await fetch(`${API_BASE}/list?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || '디렉토리 로드 실패');
+                }
+                
+                currentPath = path;
+                updateBreadcrumb(path);
+                renderFileList(data.items);
+                
+            } catch (error) {
+                showError(error.message);
+                document.getElementById('fileList').innerHTML = '<div class="loading">오류 발생</div>';
+            }
+        }
+
+        function renderFileList(items) {
+            if (!items || items.length === 0) {
+                document.getElementById('fileList').innerHTML = '<div class="loading">빈 폴더입니다</div>';
+                return;
+            }
+            
+            // 폴더 우선 정렬
+            items.sort((a, b) => {
+                if (a.type === b.type) return a.name.localeCompare(b.name);
+                return a.type === 'directory' ? -1 : 1;
+            });
+            
+            let html = '';
+            items.forEach(item => {
+                const itemPath = currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`;
+                const onclick = item.type === 'directory' ? `navigateTo('${itemPath}')` : '';
+                
+                html += `
+                    <div class="file-item" ${onclick ? `onclick="${onclick}"` : ''}>
+                        <div class="file-icon">${getFileIcon(item)}</div>
+                        <div class="file-info">
+                            <div class="file-name">${item.name}</div>
+                            <div class="file-meta">
+                                ${item.type === 'file' ? formatSize(item.size) + ' • ' : ''}
+                                ${formatDate(item.modified)}
+                            </div>
+                        </div>
+                        ${item.type === 'file' ? `
+                            <div class="file-actions">
+                                ${isVideo(item.name) ? `<button class="btn btn-primary" onclick="event.stopPropagation(); playVideo('${itemPath}')">재생</button>` : ''}
+                                <button class="btn btn-secondary" onclick="event.stopPropagation(); downloadFile('${itemPath}')">다운로드</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            document.getElementById('fileList').innerHTML = html;
+        }
+
+        function isVideo(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            return ['mp4', 'avi', 'mkv', 'mov', 'webm'].includes(ext);
+        }
+
+        function navigateTo(path) {
+            loadDirectory(path);
+        }
+
+        function downloadFile(path) {
+            window.open(`${API_BASE}/download?path=${encodeURIComponent(path)}`, '_blank');
+        }
+
+        function playVideo(path) {
+            const url = `${API_BASE}/stream?path=${encodeURIComponent(path)}`;
+            const videoWindow = window.open('', '_blank');
+            videoWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>${path.split('/').pop()}</title>
+                    <style>
+                        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
+                        video { max-width: 100%; max-height: 100vh; }
+                    </style>
+                </head>
+                <body>
+                    <video controls autoplay>
+                        <source src="${url}" type="video/mp4">
+                    </video>
+                </body>
+                </html>
+            `);
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        // 초기 로드
+        loadDirectory('/');
+    </script>
+</body>
+</html>

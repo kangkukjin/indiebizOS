@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "auto_start": true,
+  "tunnel_name": "indiebiz-os",
+  "hostname": "",
+  "finder_hostname": "finder.kukjinkang.uk",
+  "launcher_hostname": "launcher.kukjinkang.uk",
+  "config_path": "/Users/kangkukjin/.cloudflared/config.yml"
+}

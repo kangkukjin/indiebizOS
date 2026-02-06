@@ -8,15 +8,13 @@ import {
   X, ChevronLeft, ChevronRight,
   Folder, Bot, Zap, Package,
   Users, Globe, Building2, Key,
-  MessageSquare, FileText, Settings,
+  MessageSquare, FileText,
   Wrench, BookOpen, HardDrive, Scale,
   Video, ShoppingCart, GraduationCap, Music,
   Camera, Newspaper, Heart, Home, TrendingUp,
-  Smartphone, Share2, Hash, Send, Contact,
-  Mail, Bell, UserPlus, Search, Upload,
-  Download, Shield, MessageCircle, Radio,
-  ToggleLeft, Clock, List, Edit, Trash2,
-  Plus, Eye, Lock, Unlock
+  Smartphone, Share2, Hash, Contact,
+  Mail, Shield, Radio,
+  Clock, Monitor, Cloud
 } from 'lucide-react';
 
 interface UserManualDialogProps {
@@ -91,8 +89,12 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
               <strong className="text-base text-gray-900">12. 사용 예시</strong>
               <p className="text-gray-700 text-sm">16가지 실제 활용법</p>
             </button>
-            <button onClick={() => setCurrentPage(13)} className="p-3 bg-gray-100 rounded-lg hover:bg-gray-200 text-left col-span-2">
-              <strong className="text-base text-gray-900">13. 버전 정보</strong>
+            <button onClick={() => setCurrentPage(13)} className="p-3 bg-sky-50 rounded-lg hover:bg-sky-100 text-left">
+              <strong className="text-base text-gray-900">13. 원격 접근</strong>
+              <p className="text-gray-700 text-sm">Finder & 런처</p>
+            </button>
+            <button onClick={() => setCurrentPage(14)} className="p-3 bg-gray-100 rounded-lg hover:bg-gray-200 text-left">
+              <strong className="text-base text-gray-900">14. 버전 정보</strong>
               <p className="text-gray-700 text-sm">현재 상태, 철학, 시스템 문서 안내</p>
             </button>
           </div>
@@ -1080,6 +1082,143 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
               <p>• 아무 프로젝트의 에이전트들을 <strong>하나의 채팅방에 자유롭게</strong> 모으기</p>
               <p>• 창의적 활용: 이순신 장군, 원균 장군, 나의 3자 대화 같은 것도 가능</p>
             </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: '원격 접근 (Finder & 런처)',
+      icon: <Monitor className="w-12 h-12 text-sky-600" />,
+      content: (
+        <div className="space-y-4 text-base max-h-[420px] overflow-y-auto pr-1">
+          <div className="bg-sky-50 p-4 rounded-lg">
+            <p className="text-sky-800 font-medium mb-2">원격 접근 시스템</p>
+            <p className="text-sky-700 text-sm">
+              Cloudflare Tunnel을 통해 <strong>외부에서 안전하게</strong> 홈 서버에 접근합니다.
+              포트 포워딩이나 DDNS 없이도 HTTPS로 보호된 접속이 가능합니다.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Folder className="w-6 h-6 text-cyan-600" />
+                <strong className="text-cyan-800">📁 원격 Finder</strong>
+              </div>
+              <p className="text-cyan-700 text-sm mb-2">
+                파일 탐색, 동영상 스트리밍, 다운로드
+              </p>
+              <div className="bg-white p-2 rounded text-cyan-600 text-sm">
+                경로: <code>/nas/app</code>
+              </div>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Bot className="w-6 h-6 text-purple-600" />
+                <strong className="text-purple-800">🤖 원격 런처</strong>
+              </div>
+              <p className="text-purple-700 text-sm mb-2">
+                시스템 AI 채팅, 에이전트 제어, 스위치 실행
+              </p>
+              <div className="bg-white p-2 rounded text-purple-600 text-sm">
+                경로: <code>/launcher/app</code>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <p className="font-medium text-orange-800 mb-2">📋 사전 준비: Cloudflare 가입</p>
+            <div className="text-sm text-orange-700 space-y-2">
+              <p><strong>1. Cloudflare 계정 가입</strong></p>
+              <p className="pl-3">• <code>dash.cloudflare.com/sign-up</code> 에서 무료 가입</p>
+              <p><strong>2. Workers & Pages 방문 (필수)</strong></p>
+              <p className="pl-3">• 대시보드 → Workers & Pages 한 번 클릭</p>
+              <p className="pl-3">• 자동으로 <code>username.workers.dev</code> 서브도메인 생성</p>
+              <p className="pl-3 text-xs text-orange-600">※ workers.dev는 Tunnel에 직접 사용 불가</p>
+              <p><strong>3. 도메인 추가 (Tunnel용)</strong></p>
+              <p className="pl-3">• 보유 도메인을 Cloudflare에 등록 (네임서버 변경)</p>
+              <p className="pl-3">• 또는 Cloudflare에서 새 도메인 구매</p>
+              <p><strong>4. API 토큰 발급</strong></p>
+              <p className="pl-3">• <code>dash.cloudflare.com/profile/api-tokens</code></p>
+              <p className="pl-3">• Edit Cloudflare Workers 템플릿 + Tunnel 권한</p>
+              <p><strong>5. Account ID 확인</strong></p>
+              <p className="pl-3">• 도메인 선택 → 우측 하단 API 섹션</p>
+              <p><strong>6. cloudflared 설치</strong></p>
+              <p className="pl-3">• macOS: <code>brew install cloudflared</code></p>
+              <p className="pl-3">• Linux: cloudflared.deb 다운로드 설치</p>
+              <p><strong>7. Cloudflare 로그인 (최초 1회)</strong></p>
+              <p className="pl-3">• 터미널에서 <code>cloudflared tunnel login</code></p>
+            </div>
+          </div>
+
+          <div className="bg-indigo-50 p-4 rounded-lg border-2 border-indigo-300">
+            <p className="font-medium text-indigo-800 mb-2">🚀 시스템 AI 명령 (사전 준비 완료 후)</p>
+            <div className="text-sm text-indigo-700 space-y-2">
+              <p><strong>1️⃣ 환경변수 설정</strong></p>
+              <div className="bg-white p-2 rounded text-indigo-600 text-xs">
+                "cloudflare 도구의 환경변수를 설정해줘.<br/>
+                CLOUDFLARE_API_TOKEN: [토큰값]<br/>
+                CLOUDFLARE_ACCOUNT_ID: [Account ID]"
+              </div>
+              <p><strong>2️⃣ IndieBiz OS 재시작</strong></p>
+              <p className="pl-3 text-xs">런처를 닫고 다시 실행</p>
+              <p><strong>3️⃣ 터널 설정 요청</strong></p>
+              <div className="bg-white p-2 rounded text-indigo-600 text-xs">
+                "원격 접근 터널을 설정해줘."
+              </div>
+              <p className="pl-3 text-xs text-indigo-500">💡 도메인을 몰라도 됩니다! 시스템 AI가 자동 조회합니다.</p>
+              <p><strong>4️⃣ 터널 실행</strong> (터미널)</p>
+              <div className="bg-white p-2 rounded text-indigo-600 text-xs">
+                <code>cloudflared tunnel run indiebiz</code>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <p className="font-medium text-blue-800 mb-2">⚙️ IndieBiz OS 설정</p>
+            <div className="text-sm text-blue-700 space-y-2">
+              <p>1. 안경 메뉴 → <strong>설정</strong> 클릭</p>
+              <p>2. <strong>원격 Finder</strong> 또는 <strong>원격 런처</strong> 탭 선택</p>
+              <p>3. 기능 활성화 및 비밀번호 설정</p>
+              <p>4. (원격 Finder만) 접근 허용할 폴더 경로 추가</p>
+            </div>
+          </div>
+
+          <div className="bg-green-50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Cloud className="w-6 h-6 text-green-600" />
+              <strong className="text-green-800">🌐 Cloudflare Tunnel 특징</strong>
+            </div>
+            <div className="text-sm text-green-700 space-y-2">
+              <p>• <strong>포트 포워딩 불필요</strong>: 공유기 설정 없이 외부 접근</p>
+              <p>• <strong>자동 HTTPS</strong>: Cloudflare가 SSL 인증서 관리</p>
+              <p>• <strong>안전한 터널</strong>: 서버 IP 노출 없이 안전하게 연결</p>
+              <p>• <strong>무료</strong>: Cloudflare Free 플랜에서 Tunnel 무료 제공</p>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 p-4 rounded-lg">
+            <p className="font-medium text-amber-800 mb-2">🔐 보안 고려사항</p>
+            <div className="text-sm text-amber-700 space-y-2">
+              <p>• Finder와 런처에 <strong>서로 다른 비밀번호</strong> 설정 권장</p>
+              <p>• 외부 노출되므로 <strong>복잡한 비밀번호</strong> 사용</p>
+              <p>• 원격 Finder에서 <strong>민감한 폴더 제외</strong></p>
+              <p>• 추가 보안이 필요하면 <strong>Cloudflare Zero Trust</strong> 활용</p>
+            </div>
+          </div>
+
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <p className="font-medium text-gray-700 mb-2">📱 사용 예시</p>
+            <div className="text-sm text-gray-800 space-y-2">
+              <p>• 외출 중 스마트폰으로 집 PC의 동영상 스트리밍</p>
+              <p>• 외부에서 시스템 AI에게 작업 지시</p>
+              <p>• 원클릭으로 스위치 실행하여 자동화 작업 수행</p>
+              <p>• 프로젝트 에이전트와 원격 채팅</p>
+            </div>
+          </div>
+
+          <div className="bg-red-50 p-2 rounded-lg text-red-700 text-sm">
+            ⚠️ 원격 접근은 <strong>Electron 앱</strong>이 아닌 <strong>웹 브라우저</strong>에서 작동하는 경량 인터페이스입니다.
           </div>
         </div>
       )

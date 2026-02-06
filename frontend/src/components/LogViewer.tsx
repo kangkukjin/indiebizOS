@@ -4,20 +4,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-declare global {
-  interface Window {
-    electron?: {
-      onLogMessage: (callback: (message: string) => void) => void;
-      onLogHistory: (callback: (logs: string[]) => void) => void;
-      onLogCleared: (callback: () => void) => void;
-      removeLogListeners: () => void;
-      clearLogs: () => Promise<void>;
-      copyToClipboard: (text: string) => void;
-      platform: string;
-    };
-  }
-}
-
 export function LogViewer() {
   const [logs, setLogs] = useState<string[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -29,23 +15,23 @@ export function LogViewer() {
     if (!window.electron) return;
 
     // 기존 로그 히스토리 수신
-    window.electron.onLogHistory((history) => {
+    window.electron.onLogHistory?.((history) => {
       setLogs(history);
     });
 
     // 새 로그 메시지 수신
-    window.electron.onLogMessage((message) => {
+    window.electron.onLogMessage?.((message) => {
       setLogs((prev) => [...prev, message]);
     });
 
     // 로그 클리어 이벤트
-    window.electron.onLogCleared(() => {
+    window.electron.onLogCleared?.(() => {
       setLogs([]);
     });
 
     // 클린업
     return () => {
-      window.electron?.removeLogListeners();
+      window.electron?.removeLogListeners?.();
     };
   }, []);
 
@@ -63,13 +49,13 @@ export function LogViewer() {
 
   // 로그 클리어
   const handleClear = () => {
-    window.electron?.clearLogs();
+    window.electron?.clearLogs?.();
   };
 
   // 로그 복사
   const handleCopy = () => {
     const text = filteredLogs.join('\n');
-    window.electron?.copyToClipboard(text);
+    window.electron?.copyToClipboard?.(text);
   };
 
   // 로그 라인 색상

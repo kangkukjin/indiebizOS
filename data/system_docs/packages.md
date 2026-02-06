@@ -64,7 +64,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 ---
 
-## 현재 설치된 도구 패키지 (26개)
+## 현재 설치된 도구 패키지 (27개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -94,6 +94,9 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
 | music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
+| cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, **Tunnel**) |
+
+**참고**: cloudflare 패키지의 `cf_tunnel` 도구는 원격 Finder 시스템의 Cloudflare Tunnel 설정을 자동화합니다. → [원격 Finder 문서](remote_finder.md)
 
 ---
 
@@ -136,4 +139,4 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-02-01*
+*마지막 업데이트: 2026-02-05*

@@ -160,3 +160,72 @@ def get_node_cmd() -> str:
     if _runtime_paths is None:
         _runtime_paths = get_runtime_paths()
     return _runtime_paths["node"]
+
+
+def setup_bundled_runtime_paths():
+    """
+    백엔드 시작 시 호출 — 번들 Python의 Scripts/bin과 site-packages를
+    os.environ['PATH']와 sys.path에 등록.
+
+    이렇게 하면:
+    - subprocess.run(['yt-dlp', ...]) 등이 번들 Python에 pip 설치된 CLI를 찾음
+    - import yt_dlp 등이 번들 Python의 site-packages에서 모듈을 찾음
+
+    개발 환경(시스템 Python)에서는 해당 경로가 존재하지 않으므로 안전하게 무시됨.
+    """
+    is_windows = platform.system() == "Windows"
+    python_cmd = get_python_cmd()
+    python_path = Path(python_cmd)
+
+    # 시스템 Python이면 설정 불필요 (절대경로가 아닌 명령어 이름만 있는 경우)
+    if not python_path.is_absolute():
+        return
+
+    if not python_path.exists():
+        return
+
+    python_dir = python_path.parent  # python.exe가 있는 폴더
+
+    # --- 1. Scripts/bin 디렉토리를 PATH에 추가 (subprocess용) ---
+    if is_windows:
+        scripts_dir = python_dir / "Scripts"
+    else:
+        scripts_dir = python_dir  # Unix에서는 bin/ 자체가 python이 있는 폴더
+
+    if scripts_dir.exists():
+        scripts_str = str(scripts_dir)
+        current_path = os.environ.get("PATH", "")
+        if scripts_str not in current_path:
+            os.environ["PATH"] = scripts_str + os.pathsep + current_path
+            print(f"[Runtime] PATH에 추가: {scripts_str}")
+
+    # Windows에서는 python.exe가 있는 폴더 자체도 PATH에 추가
+    if is_windows:
+        python_dir_str = str(python_dir)
+        current_path = os.environ.get("PATH", "")
+        if python_dir_str not in current_path:
+            os.environ["PATH"] = python_dir_str + os.pathsep + current_path
+
+    # --- 2. site-packages를 sys.path에 추가 (import용) ---
+    if is_windows:
+        site_packages = python_dir / "Lib" / "site-packages"
+    else:
+        # Unix: python_dir = .../bin/, site-packages = .../lib/pythonX.Y/site-packages
+        py_ver = f"python{sys.version_info.major}.{sys.version_info.minor}"
+        site_packages = python_dir.parent / "lib" / py_ver / "site-packages"
+
+    if site_packages.exists():
+        sp_str = str(site_packages)
+        if sp_str not in sys.path:
+            sys.path.insert(0, sp_str)
+            print(f"[Runtime] sys.path에 추가: {sp_str}")
+
+    # --- 3. Node.js도 PATH에 추가 ---
+    node_cmd = get_node_cmd()
+    node_path = Path(node_cmd)
+    if node_path.is_absolute() and node_path.exists():
+        node_dir = str(node_path.parent)
+        current_path = os.environ.get("PATH", "")
+        if node_dir not in current_path:
+            os.environ["PATH"] = node_dir + os.pathsep + current_path
+            print(f"[Runtime] PATH에 Node.js 추가: {node_dir}")

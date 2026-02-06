@@ -65,6 +65,12 @@ from switch_manager import SwitchManager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """앱 시작/종료 시 실행"""
+
+    # 번들 런타임 PATH 설정 (내장 Python의 Scripts/site-packages를 PATH/sys.path에 등록)
+    # → subprocess에서 yt-dlp 등 pip CLI 도구를 찾을 수 있고, import도 정상 동작
+    from runtime_utils import setup_bundled_runtime_paths
+    setup_bundled_runtime_paths()
+
     print("🚀 IndieBiz OS 서버 시작")
 
     # 스케줄러 자동 시작

@@ -8,7 +8,8 @@ import {
   X, ChevronLeft, ChevronRight,
   Folder, Bot, Zap, Package,
   Users, Globe, Building2, Key,
-  MessageSquare, FileText, Settings
+  MessageSquare, FileText,
+  HardDrive, Cloud
 } from 'lucide-react';
 import guideExampleImage from '../assets/guide-example.jpg';
 
@@ -274,6 +275,53 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
               <strong>비즈니스 관리</strong>
               <p className="text-gray-700 text-sm">고객 관리, 자동응답 AI</p>
             </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: '원격 접근 (Finder & 런처)',
+      icon: <HardDrive className="w-10 h-10 text-cyan-600" />,
+      content: (
+        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+          <p className="text-gray-600">
+            집에 있는 PC를 <strong>어디서든 제어 가능한 개인 서버</strong>로 만드세요.
+          </p>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="bg-cyan-50 p-2 rounded text-center">
+              <span className="text-xl">📁</span>
+              <p className="text-cyan-700 font-medium">원격 Finder</p>
+              <p className="text-cyan-600 text-xs">파일 탐색 & 스트리밍</p>
+            </div>
+            <div className="bg-purple-50 p-2 rounded text-center">
+              <span className="text-xl">🤖</span>
+              <p className="text-purple-700 font-medium">원격 런처</p>
+              <p className="text-purple-600 text-xs">AI 채팅 & 스위치 실행</p>
+            </div>
+          </div>
+          <div className="bg-gray-100 p-3 rounded-lg text-sm">
+            <p className="text-gray-700">
+              <strong>Cloudflare Tunnel</strong>을 사용하면 포트 포워딩이나
+              DDNS 설정 없이 안전하게 외부에서 접근할 수 있습니다.
+            </p>
+          </div>
+          <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+            <p className="text-amber-800 text-sm font-medium mb-2">
+              <Cloud className="w-4 h-4 inline mr-1" />
+              사용하려면 Cloudflare 계정이 필요합니다
+            </p>
+            <div className="text-amber-700 text-sm space-y-1">
+              <p>1. <span className="text-blue-600 underline">dash.cloudflare.com</span>에서 무료 가입</p>
+              <p>2. 자신의 도메인을 Cloudflare에 연결</p>
+              <p>3. <strong>API 토큰</strong>과 <strong>Account ID</strong> 발급</p>
+              <p>4. IndieBiz OS 설정 → 환경변수에 입력</p>
+            </div>
+          </div>
+          <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
+            📖 자세한 설정 방법: <strong>data/system_docs/remote_finder.md</strong>
+          </div>
+          <div className="bg-green-50 p-3 rounded-lg text-sm text-green-700">
+            💡 설정 후 시스템 AI에게 <strong>"원격 접근용 터널을 설정해줘"</strong>라고 하세요.
           </div>
         </div>
       )

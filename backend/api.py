@@ -5,6 +5,7 @@ api.py - IndieBiz OS Core API Server
 
 import os
 import sys
+import json
 from pathlib import Path
 
 # Windows 인코딩 문제 해결 (한글 등 비-ASCII 문자 처리)
@@ -43,6 +44,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent
@@ -79,6 +81,13 @@ async def lifespan(app: FastAPI):
     from system_ai_runner import start_system_ai_runner, stop_system_ai_runner
     system_ai_runner = start_system_ai_runner()
 
+    # Cloudflare 터널 자동 시작 (설정에 따라)
+    try:
+        from api_tunnel import auto_start_if_enabled as tunnel_auto_start
+        tunnel_auto_start()
+    except Exception as e:
+        print(f"[Tunnel] 자동 시작 중 오류: {e}")
+
     yield
 
     # 시스템 AI Runner 종료
@@ -108,6 +117,21 @@ ALLOWED_ORIGINS = os.environ.get("CORS_ORIGINS", "").split(",") if os.environ.ge
     "app://.",                    # Electron 앱
     "file://",                    # Electron 로컬 파일
 ]
+
+# Cloudflare Tunnel 도메인 자동 추가 (원격 접속용)
+try:
+    _tunnel_config_path = os.path.join(os.path.dirname(__file__), "..", "data", "tunnel_config.json")
+    if os.path.exists(_tunnel_config_path):
+        with open(_tunnel_config_path, 'r', encoding='utf-8') as _f:
+            _tunnel_cfg = json.load(_f)
+        for _key in ["finder_hostname", "launcher_hostname", "hostname"]:
+            _host = _tunnel_cfg.get(_key, "")
+            if _host:
+                _origin = f"https://{_host}"
+                if _origin not in ALLOWED_ORIGINS:
+                    ALLOWED_ORIGINS.append(_origin)
+except Exception:
+    pass
 
 app.add_middleware(
     CORSMiddleware,
@@ -141,6 +165,9 @@ from api_multi_chat import router as multi_chat_router, init_manager as init_mul
 from api_pcmanager import router as pcmanager_router
 from api_photo import router as photo_router
 from api_android import router as android_router
+from api_nas import router as nas_router
+from api_launcher_web import router as launcher_web_router
+from api_tunnel import router as tunnel_router, auto_start_if_enabled as tunnel_auto_start
 
 # 매니저 주입
 init_projects_managers(project_manager, switch_manager)
@@ -176,6 +203,15 @@ app.include_router(multi_chat_router, tags=["multi-chat"])
 app.include_router(pcmanager_router, tags=["pcmanager"])
 app.include_router(photo_router, tags=["photo"])
 app.include_router(android_router, tags=["android"])
+app.include_router(nas_router, tags=["nas"])
+app.include_router(launcher_web_router, tags=["launcher-web"])
+app.include_router(tunnel_router, tags=["tunnel"])
+
+# ============ NAS Finder 정적 파일 마운트 ============
+# 주의: 마운트는 반드시 라우터 등록 **후**에 해야 함
+static_path = BACKEND_PATH / "static" / "nas"
+if static_path.exists():
+    app.mount("/nas/app", StaticFiles(directory=str(static_path), html=True), name="nas_app")
 
 
 # ============ 헬스 체크 ============

@@ -6,7 +6,8 @@
 indiebizOS/
 ├── backend/              # Python FastAPI 백엔드
 │   ├── api.py           # 메인 서버 (포트 8765)
-│   ├── api_*.py         # 각 모듈 라우터 (18개)
+│   ├── api_*.py         # 각 모듈 라우터 (19개)
+│   ├── api_nas.py       # 원격 Finder API (파일 접근/스트리밍)
 │   ├── *_manager.py     # 비즈니스 로직 매니저
 │   ├── ai_agent.py      # AI 에이전트 코어
 │   ├── agent_runner.py  # 에이전트 실행기
@@ -131,5 +132,13 @@ AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 구조 적용
 ### 다중채팅방 시스템
 - 독립 창에서 여러 프로젝트의 에이전트를 소환하여 그룹 대화 수행
 
+### 원격 Finder (api_nas.py)
+- Cloudflare Tunnel을 통한 외부 파일 접근
+- 세션 기반 인증 (비밀번호)
+- HTTP Range 요청으로 동영상 스트리밍
+- 허용 경로 기반 접근 제어
+- Finder 스타일 웹 앱 내장
+→ 상세 문서: [remote_finder.md](remote_finder.md)
+
 ---
-*마지막 업데이트: 2026-02-01*
+*마지막 업데이트: 2026-02-05*

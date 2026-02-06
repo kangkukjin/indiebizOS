@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "auto_start": true,
+  "tunnel_name": "indiebiz-os",
+  "hostname": "",
+  "finder_hostname": "TUNNEL_HOST_REDACTED",
+  "launcher_hostname": "TUNNEL_HOST_REDACTED",
+  "config_path": "/Users/kangkukjin/.cloudflared/config.yml"
+}

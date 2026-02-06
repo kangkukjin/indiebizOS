@@ -451,7 +451,7 @@ PC의 파일에 접근하고 동영상을 스트리밍합니다.
 1. 설정 → 원격 Finder 탭
 2. "NAS 활성화" 토글 켜기
 3. 비밀번호 설정
-4. 접근 허용할 경로 추가 (예: `/Users/me/Videos`)
+4. 접근 허용할 경로 추가 (폴더 아이콘 버튼으로 선택 또는 직접 입력)
 
 **접속:** `https://your-tunnel.com/nas/app`
 
@@ -504,22 +504,23 @@ IndieBiz OS 백엔드
    # 브라우저에서 도메인 인증
    ```
 
-3. **터널 생성** (시스템 AI에게 요청하거나 수동)
+3. **터널 생성** (시스템 AI에게 요청)
    ```
    시스템 AI에게: "원격 접근용 터널을 설정해줘"
-   또는 수동: cf_tunnel(action='setup_nas', hostname='home.mydomain.com')
    ```
+   시스템 AI가 기기 구분 이름을 물어본 후 터널과 DNS 라우팅을 자동 설정하고, `tunnel_config.json`에 정보를 저장합니다.
 
-4. **터널 실행**
-   ```bash
-   cloudflared tunnel run indiebiz
-   ```
+4. **터널 실행**: 설정 → 터널 탭에서 토글 ON (자동 시작도 설정 가능)
+
+**다중 PC 지원:**
+같은 Cloudflare 계정으로 여러 PC에 터널을 설정할 수 있습니다. 기기별 고유 호스트명이 자동 지정됩니다 (예: `finder-home.domain.com`, `finder-office.domain.com`).
 
 **보안 특징:**
 - **Cloudflare Tunnel**: 인바운드 포트를 열지 않아 외부 공격에 안전
 - **자동 SSL**: Cloudflare가 HTTPS 인증서 자동 관리
 - **독립 인증**: 원격 Finder와 원격 런처에 각각 다른 비밀번호 설정 가능
 - **경로 보호**: 원격 Finder는 명시적으로 허용한 폴더만 접근 가능
+- **외부 URL 자동 표시**: 터널 설정 완료 시 설정 화면에서 외부 접속 URL이 자동 표시
 
 **활용 시나리오:**
 - 여행 중 호텔에서 집 PC의 영화 감상 (원격 Finder)

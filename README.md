@@ -220,6 +220,8 @@ Control your home server from anywhere via Cloudflare Tunnel:
 - Execute switches with one tap
 - Mobile-friendly dark theme UI
 
+**Multi-PC Support**: Same Cloudflare account can manage tunnels for multiple PCs with unique hostnames per device.
+
 ```
 Your Phone → Cloudflare Edge → Tunnel → IndieBiz OS
                  (HTTPS)        (Secure)    (localhost:8765)
@@ -227,7 +229,7 @@ Your Phone → Cloudflare Edge → Tunnel → IndieBiz OS
                                               └─ /launcher/app (AI Control)
 ```
 
-Each feature uses **separate passwords** for independent access control.
+Each feature uses **separate passwords** for independent access control. External access URLs are automatically displayed in Settings when tunnel is configured.
 
 ### Custom Web Apps
 

@@ -309,12 +309,16 @@ home.mydomain.com 도메인으로 터널을 설정해줘.
 
 시스템 AI가 자동으로:
 1. `cf_api`로 등록된 도메인 목록 조회
-2. bash로 `cloudflared tunnel create indiebiz` 실행
-3. bash로 `cloudflared tunnel route dns indiebiz home.mydomain.com` 실행
-4. `~/.cloudflared/config.yml` 파일 생성
-5. 터널 실행 명령 안내
+2. 사용자에게 **기기 구분 이름** 질문 (예: "home", "office", "macbook")
+3. bash로 `cloudflared tunnel create {터널이름}` 실행
+4. bash로 `cloudflared tunnel route dns {터널이름} finder-{기기이름}.{도메인}` 실행
+5. bash로 `cloudflared tunnel route dns {터널이름} launcher-{기기이름}.{도메인}` 실행
+6. `~/.cloudflared/config.yml` 파일 생성
+7. `data/tunnel_config.json`에 터널 이름, 호스트명 자동 저장
 
-> 💡 **참고**: 도메인을 모르면 시스템 AI가 자동으로 조회합니다.
+> 💡 **다중 PC 지원**: 같은 Cloudflare 계정에서 여러 PC에 터널을 설정할 수 있습니다.
+> 기기 구분 이름으로 호스트명이 겹치지 않도록 합니다.
+> 호스트명 충돌 시 자동으로 `-2`, `-3` 접미사를 붙여 재시도합니다.
 
 ### 12단계: 원격 Finder/런처 활성화
 
@@ -323,18 +327,20 @@ home.mydomain.com 도메인으로 터널을 설정해줘.
 1. **원격 Finder 탭**
    - 활성화 토글 ON
    - 비밀번호 설정 (강력한 비밀번호 사용)
-   - 접근 허용할 폴더 경로 추가
+   - 접근 허용할 폴더 경로 추가 (폴더 아이콘 버튼으로 선택 또는 직접 입력)
+   - 외부 접속 URL이 자동 표시됨 (터널 설정 완료 시)
 
 2. **원격 런처 탭**
    - 활성화 토글 ON
    - 비밀번호 설정 (Finder와 다른 비밀번호 권장)
+   - 외부 접속 URL이 자동 표시됨 (터널 설정 완료 시)
 
 ### 13단계: 터널 실행
 
 런처의 **설정 → 터널 탭**에서 터널을 관리합니다.
 
 1. **터널 탭** 선택 (구름 아이콘)
-2. **터널 이름**: 11단계에서 생성한 터널 이름 입력 (예: `indiebiz`)
+2. **터널 이름**: 11단계에서 자동 저장됨 (수동 입력도 가능)
 3. **터널 실행 토글** ON → 터널 자동 실행
 4. **자동 시작 토글** ON → IndieBiz OS 시작 시 터널 자동 실행
 
@@ -404,14 +410,19 @@ cf_api(
 
 ```bash
 # 터널 생성
-cloudflared tunnel create indiebiz
+cloudflared tunnel create {터널이름}
 
-# DNS 라우팅
-cloudflared tunnel route dns indiebiz home.mydomain.com
+# DNS 라우팅 (기기 구분 이름 포함)
+cloudflared tunnel route dns {터널이름} finder-{기기이름}.{도메인}
+cloudflared tunnel route dns {터널이름} launcher-{기기이름}.{도메인}
 
-# 터널 실행
-cloudflared tunnel run indiebiz
+# 터널 실행 (설정 UI 토글 사용 권장)
+cloudflared --config ~/.cloudflared/config.yml tunnel run {터널이름}
 ```
+
+### CORS 자동 설정
+
+`tunnel_config.json`의 `finder_hostname`, `launcher_hostname` 값이 백엔드 시작 시 CORS 허용 origin에 자동 추가됩니다. 별도 설정 불필요.
 
 ### 수동 설정
 

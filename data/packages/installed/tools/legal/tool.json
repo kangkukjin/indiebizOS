@@ -3,6 +3,7 @@
   "name": "Legal",
   "description": "대한민국 법률 정보 검색 도구. 국가법령정보센터(law.go.kr) API를 통해 법령, 판례, 행정규칙, 자치법규, 법령해석, 헌재결정례 등을 검색하고 상세 내용을 조회합니다.",
   "version": "1.0.0",
+  "guide_file": "legal_guide.md",
   "tools": [
     {
       "name": "search_legal_info",

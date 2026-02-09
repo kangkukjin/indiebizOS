@@ -3,6 +3,7 @@
   "name": "Location Services",
   "description": "위치 기반 서비스 도구. 날씨/대기질 조회, 맛집 검색, 자동차 길찾기, 지도 표시, 여행 정보(항공권/호텔/관광지) 검색을 제공합니다.",
   "version": "1.3.0",
+  "guide_file": "location_services_guide.md",
   "tools": [
     {
       "name": "get_api_ninjas_data",

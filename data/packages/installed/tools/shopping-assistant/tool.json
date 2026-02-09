@@ -3,6 +3,7 @@
   "name": "Shopping Assistant",
   "description": "네이버 쇼핑, 다나와에서 상품 가격 비교 및 검색 도구. 최저가 찾기, 상품 정보 조회에 활용합니다.",
   "version": "1.0.0",
+  "guide_file": "shopping_guide.md",
   "tools": [
     {
       "name": "search_shopping",

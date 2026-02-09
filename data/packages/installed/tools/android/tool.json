@@ -3,6 +3,7 @@
   "name": "Android Device Manager",
   "description": "ADB를 통한 안드로이드 기기 관리 도구 (SMS, 통화기록, 연락처, 앱 읽기/삭제 지원)",
   "version": "1.4.0",
+  "guide_file": "android_guide.md",
   "tools": [
     {
       "name": "android_grant_permissions",

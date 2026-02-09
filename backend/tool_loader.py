@@ -14,6 +14,8 @@ from typing import Dict, List, Any, Optional
 
 # 도구 핸들러 캐시 (도구 이름 -> 핸들러 모듈)
 _tool_handlers_cache: Dict[str, Any] = {}
+# 패키지 ID -> 핸들러 모듈 캐시 (같은 패키지의 도구들이 모듈 인스턴스를 공유)
+_package_handlers_cache: Dict[str, Any] = {}
 # 도구 이름 -> 패키지 ID 매핑
 _tool_to_package_map: Dict[str, str] = {}
 # 전체 도구 정의 캐시
@@ -97,15 +99,18 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
     """
     도구 핸들러를 동적으로 로드
 
+    같은 패키지의 도구들은 하나의 모듈 인스턴스를 공유합니다.
+    (예: browser_navigate와 browser_snapshot은 같은 handler.py 모듈을 공유)
+
     Args:
         tool_name: 도구 이름
 
     Returns:
         핸들러 모듈 또는 None
     """
-    global _tool_handlers_cache
+    global _tool_handlers_cache, _package_handlers_cache
 
-    # 캐시에 있으면 반환
+    # 도구 이름 캐시에 있으면 반환
     if tool_name in _tool_handlers_cache:
         return _tool_handlers_cache[tool_name]
 
@@ -116,6 +121,13 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
     package_id = _tool_to_package_map.get(tool_name)
     if not package_id:
         return None
+
+    # 같은 패키지의 다른 도구가 이미 로드했으면 그 모듈 인스턴스를 재사용
+    if package_id in _package_handlers_cache:
+        module = _package_handlers_cache[package_id]
+        _tool_handlers_cache[tool_name] = module
+        print(f"[도구 핸들러 재사용] {tool_name} <- {package_id} (공유 모듈)")
+        return module
 
     # handler.py 경로
     handler_path = get_tools_path() / package_id / "handler.py"
@@ -130,7 +142,8 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
-        # 캐시에 저장
+        # 패키지 캐시와 도구 캐시 모두에 저장
+        _package_handlers_cache[package_id] = module
         _tool_handlers_cache[tool_name] = module
         print(f"[도구 핸들러 로드] {tool_name} <- {package_id}")
 
@@ -382,8 +395,9 @@ def get_all_tool_names() -> List[str]:
 
 def clear_cache():
     """캐시 초기화 (테스트/리로드용)"""
-    global _tool_handlers_cache, _tool_to_package_map, _all_tools_cache, _all_tools_cache_time, _agents_yaml_cache, _guide_content_cache, _tool_guide_map, _tool_guide_map_built
+    global _tool_handlers_cache, _package_handlers_cache, _tool_to_package_map, _all_tools_cache, _all_tools_cache_time, _agents_yaml_cache, _guide_content_cache, _tool_guide_map, _tool_guide_map_built
     _tool_handlers_cache.clear()
+    _package_handlers_cache.clear()
     _tool_to_package_map.clear()
     _all_tools_cache = []
     _all_tools_cache_time = 0

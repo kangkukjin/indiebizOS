@@ -62,6 +62,13 @@ export interface TaskForm {
   time: string;
   action: string;
   enabled: boolean;
+  repeat: string;  // daily, weekly, once, yearly, interval
+  weekdays?: number[];  // 0=월 ~ 6=일
+  date?: string;  // YYYY-MM-DD
+  month?: number;  // 1-12
+  day?: number;  // 1-31
+  interval_hours?: number;
+  action_params?: Record<string, any>;
 }
 
 // 시스템 AI 설정 타입

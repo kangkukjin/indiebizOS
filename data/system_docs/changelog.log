@@ -262,3 +262,14 @@
 [2026-02-04 23:10:40] PROJECT_CREATED: 에이전트 출판 (ID: 에이전트 출판)
 [2026-02-05 15:33:03] PROJECT_CREATED: CCTV (ID: CCTV)
 [2026-02-05 15:33:03] PROJECT_CREATED: CCTV (ID: CCTV)
+[2026-02-09 18:30:00] PACKAGE_ADDED: radio - 인터넷 라디오 검색 및 재생 도구
+  - Radio Browser API로 전세계 라디오 검색 (한국 88개 포함)
+  - 한국 주요 방송사 직접 API 연동 (KBS/MBC/SBS/TBS/CBS/EBS 15개 채널)
+  - mpv 기반 PC 스피커 재생/중지/볼륨 조절
+  - 즐겨찾기 관리 기능
+  - 도구 9개: search_radio, get_korean_radio, play_radio, stop_radio, radio_status, set_radio_volume, get_radio_favorites, save_radio_favorite, remove_radio_favorite
+[2026-02-09 18:30:00] DOCS_UPDATED: 시스템 문서 업데이트
+  - inventory.md: 도구 패키지 29개로 갱신 (신규: cctv, radio)
+  - packages.md: 도구 패키지 29개로 갱신
+  - INSTALL_DEPENDENCIES.md: requirements-core.txt와 일치하도록 정리
+  - CLAUDE.md: 라디오 패키지 추가, 패키지 수 업데이트

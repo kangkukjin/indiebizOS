@@ -752,7 +752,7 @@ export function Chat({ projectId, agent }: ChatProps) {
             onPaste={handlePaste}
             placeholder={`${agent.name}에게 메시지 보내기... (파일 드래그/붙여넣기 가능)`}
             className="flex-1 px-4 py-3 bg-white rounded-xl border border-[#E5DFD5] focus:border-[#D97706] focus:outline-none resize-none min-h-[48px] max-h-[200px] text-[#4A4035] placeholder:text-[#A09080]"
-            rows={1}
+            rows={2}
             disabled={isLoading}
           />
           {isLoading ? (

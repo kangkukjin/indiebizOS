@@ -117,15 +117,25 @@ export interface Tool {
   is_base_tool?: boolean;
 }
 
-// 스케줄러 작업
+// 통합 이벤트 (캘린더 + 스케줄러)
 export interface SchedulerTask {
   id: string;
-  name: string;
-  description: string;
-  time: string;  // HH:MM format
-  enabled: boolean;
-  action: string;
-  last_run: string | null;
+  title?: string;        // 통합 이벤트 제목
+  name?: string;         // 하위 호환 (title과 동일)
+  description?: string;
+  time?: string;         // HH:MM format
+  date?: string;         // YYYY-MM-DD
+  type?: string;         // anniversary, birthday, appointment, reminder, schedule, other
+  enabled?: boolean;
+  action?: string;       // null이면 순수 캘린더, 있으면 실행 가능
+  last_run?: string | null;
+  repeat?: string;       // none, daily, weekly, monthly, yearly, interval
+  weekdays?: number[];   // 0=월 ~ 6=일 (weekly용)
+  month?: number;        // 1-12 (yearly용)
+  day?: number;          // 1-31 (yearly용)
+  interval_hours?: number;  // 시간 간격 (interval용)
+  action_params?: Record<string, any>;
+  created_at?: string;
 }
 
 // 스케줄러 작업 종류

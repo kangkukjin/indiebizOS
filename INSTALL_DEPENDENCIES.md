@@ -30,7 +30,10 @@ pip install fastapi "uvicorn[standard]" pydantic python-dotenv python-multipart 
 또는 requirements 파일로:
 ```bash
 pip install -r backend/requirements-core.txt
+pip install -r backend/requirements-tools.txt
 ```
+
+> **참고**: 빌드 배포판은 `prepare-python-win.js` / `prepare-python-mac.js`가 두 파일 모두 자동 설치합니다.
 
 ---
 
@@ -171,9 +174,15 @@ pip install requests
 
 ## 3. 전체 한 번에 설치 (권장)
 
-### 필수 + 자주 사용하는 패키지
+### requirements 파일로 (가장 간편)
 ```bash
-pip install fastapi "uvicorn[standard]" pydantic python-dotenv python-multipart pyyaml anthropic openai google-genai pynostr websocket-client yt-dlp youtube-transcript-api beautifulsoup4 requests feedparser pillow matplotlib plotly kaleido numpy duckduckgo-search
+pip install -r backend/requirements-core.txt
+pip install -r backend/requirements-tools.txt
+```
+
+### 또는 한 줄로
+```bash
+pip install fastapi "uvicorn[standard]" pydantic python-dotenv python-multipart pyyaml anthropic openai google-genai pynostr websocket-client yt-dlp youtube-transcript-api beautifulsoup4 requests feedparser pillow matplotlib plotly kaleido numpy duckduckgo-search finance-datareader yfinance moviepy edge-tts jinja2 midiutil arxiv markdown nest-asyncio
 ```
 
 ### Playwright (브라우저 자동화 필요시)

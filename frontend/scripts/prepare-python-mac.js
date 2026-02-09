@@ -95,14 +95,21 @@ function createVenv(pythonPath) {
   console.log('  pip 업그레이드...');
   execSync(`"${venvPython}" -m pip install --upgrade pip`, { stdio: 'inherit' });
 
-  // 패키지 설치
-  const requirementsPath = join(BACKEND_DIR, 'requirements-core.txt');
-  if (existsSync(requirementsPath)) {
-    console.log('  Python 패키지 설치 중...');
-    execSync(`"${venvPython}" -m pip install -r "${requirementsPath}"`, { stdio: 'inherit' });
+  // 코어 패키지 설치
+  const requirementsCore = join(BACKEND_DIR, 'requirements-core.txt');
+  if (existsSync(requirementsCore)) {
+    console.log('  [Core] Python 핵심 패키지 설치 중...');
+    execSync(`"${venvPython}" -m pip install -r "${requirementsCore}"`, { stdio: 'inherit' });
   } else {
     console.log('  [경고] requirements-core.txt 없음, 기본 패키지만 설치');
     execSync(`"${venvPython}" -m pip install fastapi uvicorn httpx aiofiles python-multipart`, { stdio: 'inherit' });
+  }
+
+  // 도구 패키지 의존성 설치
+  const requirementsTools = join(BACKEND_DIR, 'requirements-tools.txt');
+  if (existsSync(requirementsTools)) {
+    console.log('  [Tools] 도구 패키지 의존성 설치 중...');
+    execSync(`"${venvPython}" -m pip install -r "${requirementsTools}"`, { stdio: 'inherit' });
   }
 }
 

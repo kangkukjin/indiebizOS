@@ -1,0 +1,40 @@
+# IndieBiz OS - Tool Package Dependencies
+# 도구 패키지가 사용하는 라이브러리들
+# requirements-core.txt와 함께 설치
+
+# 웹/크롤링
+beautifulsoup4
+requests
+feedparser
+duckduckgo-search
+nest-asyncio
+
+# 데이터/시각화
+matplotlib
+plotly
+kaleido
+numpy
+
+# 투자
+finance-datareader
+yfinance
+
+# 미디어/이미지
+pillow
+moviepy
+edge-tts
+jinja2
+
+# 음악
+midiutil
+
+# 학술
+arxiv
+
+# Gmail 연동
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
+
+# 기타
+markdown

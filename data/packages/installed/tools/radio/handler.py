@@ -26,7 +26,10 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
             name=arguments.get("name"),
             tag=arguments.get("tag"),
             country=arguments.get("country"),
+            state=arguments.get("state"),
             language=arguments.get("language"),
+            order=arguments.get("order"),
+            bitrateMin=arguments.get("bitrateMin"),
             limit=arguments.get("limit", 10),
         )
     elif tool_name == "get_korean_radio":

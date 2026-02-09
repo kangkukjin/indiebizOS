@@ -183,24 +183,35 @@ def _http_get_json(url, timeout=10):
 
 # ─── Radio Browser API ───
 
-def search_radio(name=None, tag=None, country=None, language=None, limit=10):
+def search_radio(name=None, tag=None, country=None, state=None, language=None, order=None, bitrateMin=None, limit=10):
     """Radio Browser API로 방송 검색"""
     limit = min(max(1, limit or 10), 50)
 
+    # 정렬 기준 (기본: votes, random일 때는 reverse 안 함)
+    order = order or "votes"
+    valid_orders = ["votes", "clickcount", "random", "name", "bitrate"]
+    if order not in valid_orders:
+        order = "votes"
+
     params = {
         "limit": str(limit),
-        "order": "votes",
-        "reverse": "true",
+        "order": order,
         "hidebroken": "true",
     }
+    if order != "random":
+        params["reverse"] = "true"
     if name:
         params["name"] = name
     if tag:
         params["tag"] = tag
     if country:
         params["countrycode"] = country.upper()
+    if state:
+        params["state"] = state
     if language:
         params["language"] = language.lower()
+    if bitrateMin and bitrateMin > 0:
+        params["bitrateMin"] = str(bitrateMin)
 
     query = urllib.parse.urlencode(params)
     url = f"{RADIO_BROWSER_API}/json/stations/search?{query}"

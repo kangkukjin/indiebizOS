@@ -6,7 +6,7 @@
   "tools": [
     {
       "name": "search_radio",
-      "description": "전세계 인터넷 라디오 방송을 검색합니다 (Radio Browser API 사용).\n\n## 검색 방법\n- name: 방송국 이름으로 검색 (예: 'KBS', 'BBC')\n- tag: 장르/태그로 검색 (예: 'jazz', 'classical', 'kpop')\n- country: 국가 코드로 필터 (예: 'KR', 'US', 'JP')\n- language: 언어로 필터 (예: 'korean', 'english')\n\n## 반환 정보\n- 방송국 이름, 국가, 태그/장르\n- 스트림 URL, 코덱, 비트레이트\n- 투표수 (인기도)\n\n## 사용 시점\n- 특정 장르의 라디오를 찾을 때\n- 해외 라디오를 탐색할 때\n- 한국 방송은 get_korean_radio가 더 정확함",
+      "description": "전세계 인터넷 라디오 방송을 검색합니다 (Radio Browser API 사용).\n\n## 검색 방법 (파라미터 조합 가능)\n- name: 방송국 이름으로 검색 (예: 'KBS', 'BBC')\n- tag: 장르/태그로 검색 (예: 'jazz', 'classical', 'rock', 'kpop', 'news')\n- country: 국가 코드로 필터 (예: 'KR', 'US', 'JP', 'GB')\n- state: 지역/주/도시로 검색 (예: 'Okinawa', 'California', 'Tokyo')\n- language: 언어로 필터 (예: 'korean', 'english', 'japanese')\n\n## 검색 팁\n- 특정 도시/지역의 라디오: state 파라미터 사용 (예: state='Okinawa', country='JP')\n- 결과가 없으면 country만으로 넓게 검색 후 필터\n- 한국 방송은 get_korean_radio가 더 정확함",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -22,9 +22,21 @@
             "type": "string",
             "description": "국가 코드 (예: 'KR', 'US', 'JP', 'GB')"
           },
+          "state": {
+            "type": "string",
+            "description": "지역/주/도시 (예: 'Okinawa', 'California', 'Tokyo', 'Seoul')"
+          },
           "language": {
             "type": "string",
             "description": "언어 (예: 'korean', 'english', 'japanese')"
+          },
+          "order": {
+            "type": "string",
+            "description": "정렬 기준. votes=인기순(기본), clickcount=최근청취순, random=랜덤발견, name=이름순, bitrate=음질순"
+          },
+          "bitrateMin": {
+            "type": "integer",
+            "description": "최소 비트레이트(kbps). 고음질 필터 (예: 192, 256, 320)"
           },
           "limit": {
             "type": "integer",

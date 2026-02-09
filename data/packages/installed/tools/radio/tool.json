@@ -1,0 +1,144 @@
+{
+  "id": "radio",
+  "name": "Radio Tools",
+  "description": "인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전세계 라디오를 검색하고, 한국 주요 방송사(KBS/MBC/SBS/TBS/CBS) 직접 스트리밍을 지원합니다. PC 스피커로 라디오를 들을 수 있습니다.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "search_radio",
+      "description": "전세계 인터넷 라디오 방송을 검색합니다 (Radio Browser API 사용).\n\n## 검색 방법\n- name: 방송국 이름으로 검색 (예: 'KBS', 'BBC')\n- tag: 장르/태그로 검색 (예: 'jazz', 'classical', 'kpop')\n- country: 국가 코드로 필터 (예: 'KR', 'US', 'JP')\n- language: 언어로 필터 (예: 'korean', 'english')\n\n## 반환 정보\n- 방송국 이름, 국가, 태그/장르\n- 스트림 URL, 코덱, 비트레이트\n- 투표수 (인기도)\n\n## 사용 시점\n- 특정 장르의 라디오를 찾을 때\n- 해외 라디오를 탐색할 때\n- 한국 방송은 get_korean_radio가 더 정확함",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "방송국 이름 검색어 (예: 'KBS', 'Jazz FM')"
+          },
+          "tag": {
+            "type": "string",
+            "description": "장르/태그 (예: 'jazz', 'classical', 'rock', 'kpop', 'news')"
+          },
+          "country": {
+            "type": "string",
+            "description": "국가 코드 (예: 'KR', 'US', 'JP', 'GB')"
+          },
+          "language": {
+            "type": "string",
+            "description": "언어 (예: 'korean', 'english', 'japanese')"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "결과 수 (기본 10, 최대 50)"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_korean_radio",
+      "description": "한국 주요 방송사의 라디오 채널 목록과 스트림 URL을 반환합니다.\n\n## 지원 방송사\n- KBS: 1Radio, Cool FM, Classic FM, Happy FM, 3Radio\n- MBC: Standard FM, FM4U, mini\n- SBS: Power FM, Love FM\n- TBS: FM, eFM\n- CBS: Standard FM, Music FM\n- EBS: FM\n\n## 사용 시점\n- 한국 라디오를 바로 들을 때 (search_radio보다 정확)\n- broadcaster로 특정 방송사만 필터 가능\n\n## 다른 도구와의 관계\n- 목록 확인 후 play_radio로 재생",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "broadcaster": {
+            "type": "string",
+            "description": "방송사 필터 (예: 'KBS', 'MBC', 'SBS', 'TBS', 'CBS', 'EBS'). 생략하면 전체 목록"
+          }
+        }
+      }
+    },
+    {
+      "name": "play_radio",
+      "description": "라디오 방송을 PC 스피커로 재생합니다 (mpv 사용). URL/링크 보여주지 말 것.\n\n## 사용법\n- station_id: get_korean_radio에서 받은 ID (예: 'kbs_coolfm')\n- stream_url: search_radio에서 받은 스트림 URL\n- 둘 중 하나만 지정하면 됨 (station_id 우선)\n\n## 주의사항\n- mpv가 설치되어 있어야 함 (brew install mpv)\n- 이미 재생 중이면 기존 방송 중지 후 새 방송 재생\n- stop_radio로 중지\n\n## 다른 도구와의 관계\n- 한국 방송: get_korean_radio → play_radio\n- 해외 방송: search_radio → play_radio (stream_url 사용)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "station_id": {
+            "type": "string",
+            "description": "한국 방송 ID (예: 'kbs_coolfm', 'mbc_fm4u', 'sbs_powerfm')"
+          },
+          "stream_url": {
+            "type": "string",
+            "description": "스트림 URL (search_radio에서 받은 URL)"
+          },
+          "volume": {
+            "type": "integer",
+            "description": "볼륨 (0-100, 기본 70)"
+          }
+        }
+      }
+    },
+    {
+      "name": "stop_radio",
+      "description": "현재 재생 중인 라디오를 중지합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "radio_status",
+      "description": "현재 라디오 재생 상태를 확인합니다.\n\n## 반환 정보\n- 재생 중 여부\n- 재생 중인 방송국 이름\n- 재생 시간",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "set_radio_volume",
+      "description": "라디오 볼륨을 조절합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "volume": {
+            "type": "integer",
+            "description": "볼륨 (0-100)"
+          }
+        },
+        "required": ["volume"]
+      }
+    },
+    {
+      "name": "get_radio_favorites",
+      "description": "저장된 라디오 즐겨찾기 목록을 조회합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "save_radio_favorite",
+      "description": "현재 재생 중이거나 지정한 방송을 즐겨찾기에 저장합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "station_id": {
+            "type": "string",
+            "description": "한국 방송 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "방송국 이름"
+          },
+          "stream_url": {
+            "type": "string",
+            "description": "스트림 URL"
+          }
+        }
+      }
+    },
+    {
+      "name": "remove_radio_favorite",
+      "description": "즐겨찾기에서 방송을 제거합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "제거할 방송국 이름"
+          }
+        },
+        "required": ["name"]
+      }
+    }
+  ]
+}

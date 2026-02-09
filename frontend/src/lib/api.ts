@@ -494,6 +494,11 @@ class APIClient {
     return data.tasks;
   }
 
+  async getAllEvents() {
+    const data = await this.request<{ events: SchedulerTask[]; count: number }>('/scheduler/calendar/events');
+    return data.events;
+  }
+
   async getSchedulerActions() {
     const data = await this.request<{ actions: SchedulerAction[] }>('/scheduler/actions');
     return data.actions;
@@ -529,6 +534,16 @@ class APIClient {
     return this.request<{ status: string }>(`/scheduler/tasks/${taskId}/run`, {
       method: 'POST',
     });
+  }
+
+  // ============ 캘린더 ============
+
+  async openCalendar(year?: number, month?: number) {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+    if (month) params.append('month', month.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<{ status: string; file: string }>(`/scheduler/calendar/view${query}`);
   }
 
   // ============ 전역 시스템 AI 설정 ============

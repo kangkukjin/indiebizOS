@@ -118,6 +118,7 @@ export function Manager() {
   const [allTools, setAllTools] = useState<Tool[]>([]);
   const [baseTools, setBaseTools] = useState<string[]>([]);
   const [defaultTools, setDefaultTools] = useState<string[]>([]);
+  const [toolPackages, setToolPackages] = useState<{ id: string; name: string; description: string; tool_count: number }[]>([]);
 
   // 도구 AI 설정 다이얼로그 상태
   const [showToolAIDialog, setShowToolAIDialog] = useState(false);
@@ -242,6 +243,7 @@ export function Manager() {
         setTools(toolsResponse.tools);
         setAllTools(toolsResponse.tools);
         setBaseTools(toolsResponse.base_tools || []);
+        setToolPackages(toolsResponse.packages || []);
       }
 
       try {
@@ -530,6 +532,7 @@ export function Manager() {
       if (toolsResponse && toolsResponse.tools) {
         setAllTools(toolsResponse.tools);
         setBaseTools(toolsResponse.base_tools || []);
+        setToolPackages(toolsResponse.packages || []);
       }
     } catch {
       // 무시
@@ -563,6 +566,7 @@ export function Manager() {
       if (toolsResponse && toolsResponse.tools) {
         setAllTools(toolsResponse.tools);
         setBaseTools(toolsResponse.base_tools || []);
+        setToolPackages(toolsResponse.packages || []);
       }
     } catch {
       // 무시
@@ -985,6 +989,7 @@ export function Manager() {
         onDeleteAgentSettings={handleDeleteAgentSettings}
         onAutoAssignTools={handleAutoAssignTools}
         tools={tools}
+        toolPackages={toolPackages}
         toolSettings={toolSettings}
         onEditToolAI={handleEditToolAI}
         defaultTools={defaultTools}
@@ -1010,6 +1015,7 @@ export function Manager() {
         setAgentForm={setAgentForm}
         allTools={allTools}
         baseTools={baseTools}
+        toolPackages={toolPackages}
         onSaveAgentSettings={handleSaveAgentSettings}
       />
 

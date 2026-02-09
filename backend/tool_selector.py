@@ -252,18 +252,17 @@ Output: Return only valid JSON in the specified format."""
             print(f"⚠️ 시스템 AI 호출 실패: {e}")
         return ""
 
-    def _build_package_assignment_prompt(self, agents_info: List[Dict[str, str]]) -> str:
+    def _build_package_assignment_prompt(self, agents_info: List[Dict[str, str]],
+                                         default_tools: List[str] = None) -> str:
         """패키지 단위 배분을 위한 프롬프트 생성"""
         packages = get_installed_packages()
 
-        # 패키지 정보를 간결하게 구성
+        # 패키지 정보를 충분히 구성 (설명 전체 + 모든 도구명)
         packages_list = []
         for pkg in packages:
-            tools_preview = ", ".join(pkg["tools"][:3])
-            if len(pkg["tools"]) > 3:
-                tools_preview += f", ... (+{len(pkg['tools']) - 3})"
-            desc = pkg['description'][:100] if pkg['description'] else 'No description'
-            packages_list.append(f"- {pkg['id']}: {desc} [tools: {tools_preview}]")
+            all_tools = ", ".join(pkg["tools"])
+            desc = pkg['description'] if pkg['description'] else 'No description'
+            packages_list.append(f"- {pkg['id']}: {desc}\n  tools: [{all_tools}]")
         packages_text = "\n".join(packages_list)
 
         # 에이전트 정보를 간결하게 구성
@@ -273,12 +272,17 @@ Output: Return only valid JSON in the specified format."""
         # 패키지 ID 목록 (유효성 검사용)
         valid_pkg_ids = [pkg['id'] for pkg in packages]
 
+        # 기본 도구 정보 (프로젝트에서 이미 기본으로 활성화된 도구)
+        default_tools_text = ""
+        if default_tools:
+            default_tools_text = f"\nDEFAULT TOOLS (already enabled for all agents, do NOT assign these packages again):\n{default_tools}\n"
+
         prompt = f"""PACKAGES:
 {packages_text}
 
 AGENTS:
 {agents_text}
-
+{default_tools_text}
 VALID PACKAGE IDs: {valid_pkg_ids}
 
 Return JSON:
@@ -299,19 +303,52 @@ Return JSON:
             expanded[agent_name] = tools
         return expanded
 
-    def reallocate_tools(self, agents_info: List[Dict[str, str]]):
+    def _extract_json(self, response: str) -> dict:
+        """AI 응답에서 JSON을 안전하게 추출"""
+        # 1차: 전체 응답을 바로 파싱 시도
+        try:
+            return json.loads(response.strip())
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+        # 2차: ```json ... ``` 코드 블록에서 추출
+        code_block = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', response, re.DOTALL)
+        if code_block:
+            try:
+                return json.loads(code_block.group(1).strip())
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        # 3차: 중괄호 매칭으로 JSON 추출 (greedy regex 대신 괄호 카운팅)
+        start_idx = response.find('{')
+        if start_idx == -1:
+            raise ValueError("응답에서 JSON을 찾을 수 없습니다")
+
+        depth = 0
+        for i in range(start_idx, len(response)):
+            if response[i] == '{':
+                depth += 1
+            elif response[i] == '}':
+                depth -= 1
+                if depth == 0:
+                    json_str = response[start_idx:i + 1]
+                    return json.loads(json_str)
+
+        raise ValueError("응답에서 완전한 JSON을 찾을 수 없습니다")
+
+    def reallocate_tools(self, agents_info: List[Dict[str, str]],
+                         default_tools: List[str] = None):
         """
         allowed_tools가 None인 에이전트에게만 도구를 배분합니다.
         패키지 단위로 배분 후 도구로 확장합니다.
         """
-        prompt = self._build_package_assignment_prompt(agents_info)
+        prompt = self._build_package_assignment_prompt(agents_info, default_tools)
         response = self._call_ai(prompt)
         if not response:
             return False
 
         try:
-            json_str = re.search(r'\{.*\}', response, re.DOTALL).group()
-            data = json.loads(json_str)
+            data = self._extract_json(response)
             package_assignments = data.get("배분표", {})
 
             # 패키지 → 도구로 확장
@@ -327,19 +364,19 @@ Return JSON:
             print(f"⚠️ [감독관] 배분표 파싱 실패: {e}")
             return False
 
-    def force_reallocate_tools(self, agents_info: List[Dict[str, str]]) -> bool:
+    def force_reallocate_tools(self, agents_info: List[Dict[str, str]],
+                               default_tools: List[str] = None) -> bool:
         """
         모든 에이전트의 도구를 강제로 재배분합니다. (기존 설정 덮어쓰기)
         설정 화면의 '자동 배분' 버튼용
         """
-        prompt = self._build_package_assignment_prompt(agents_info)
+        prompt = self._build_package_assignment_prompt(agents_info, default_tools)
         response = self._call_ai(prompt)
         if not response:
             return False
 
         try:
-            json_str = re.search(r'\{.*\}', response, re.DOTALL).group()
-            data = json.loads(json_str)
+            data = self._extract_json(response)
             package_assignments = data.get("배분표", {})
 
             # 패키지 → 도구로 확장

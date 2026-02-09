@@ -1,5 +1,5 @@
 """
-api_config.py - 설정/프로필/스케줄러 API
+api_config.py - 설정/프로필 API
 IndieBiz OS Core
 """
 
@@ -12,7 +12,6 @@ from typing import Dict, Any
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 import yaml
 
-from scheduler import get_scheduler
 from runtime_utils import get_base_path as _get_base_path
 
 router = APIRouter()
@@ -24,7 +23,6 @@ DATA_PATH = _get_data_path()
 ENV_PATH = _get_base_path() / ".env"
 
 SYSTEM_MEMO_PATH = DATA_PATH / "system_ai_memo.txt"
-SCHEDULE_CONFIG_PATH = DATA_PATH / "program_schedule.json"
 SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
 
 # 매니저 인스턴스
@@ -207,149 +205,6 @@ async def update_profile(profile: Dict[str, str]):
         SYSTEM_MEMO_PATH.parent.mkdir(parents=True, exist_ok=True)
         SYSTEM_MEMO_PATH.write_text(profile.get('content', ''), encoding='utf-8')
         return {"status": "updated"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# ============ 스케줄러 API ============
-
-def load_schedule_config() -> dict:
-    """스케줄 설정 로드"""
-    if SCHEDULE_CONFIG_PATH.exists():
-        try:
-            with open(SCHEDULE_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            pass
-    return {"tasks": []}
-
-
-def save_schedule_config(config: dict):
-    """스케줄 설정 저장"""
-    SCHEDULE_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(SCHEDULE_CONFIG_PATH, 'w', encoding='utf-8') as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
-
-
-@router.get("/scheduler/tasks")
-async def get_scheduler_tasks():
-    """스케줄러 작업 목록"""
-    try:
-        config = load_schedule_config()
-        return {"tasks": config.get("tasks", [])}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/scheduler/actions")
-async def get_scheduler_actions():
-    """사용 가능한 스케줄러 작업 종류"""
-    return {
-        "actions": [
-            {"id": "custom", "name": "사용자 정의"},
-        ]
-    }
-
-
-@router.post("/scheduler/tasks")
-async def create_scheduler_task(task: Dict[str, Any]):
-    """스케줄러 작업 추가"""
-    try:
-        config = load_schedule_config()
-
-        task_id = f"task_{int(datetime.now().timestamp())}"
-        new_task = {
-            "id": task_id,
-            "name": task.get("name", ""),
-            "description": task.get("description", ""),
-            "time": task.get("time", "09:00"),
-            "enabled": task.get("enabled", True),
-            "action": task.get("action", "custom"),
-            "last_run": None
-        }
-
-        config["tasks"].append(new_task)
-        save_schedule_config(config)
-
-        return new_task
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.put("/scheduler/tasks/{task_id}")
-async def update_scheduler_task(task_id: str, task: Dict[str, Any]):
-    """스케줄러 작업 수정"""
-    try:
-        config = load_schedule_config()
-
-        for t in config["tasks"]:
-            if t["id"] == task_id:
-                for key in ["name", "description", "time", "action", "enabled"]:
-                    if key in task:
-                        t[key] = task[key]
-
-                save_schedule_config(config)
-                return t
-
-        raise HTTPException(status_code=404, detail="Task not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/scheduler/tasks/{task_id}")
-async def delete_scheduler_task(task_id: str):
-    """스케줄러 작업 삭제"""
-    try:
-        config = load_schedule_config()
-        original_len = len(config["tasks"])
-        config["tasks"] = [t for t in config["tasks"] if t["id"] != task_id]
-
-        if len(config["tasks"]) < original_len:
-            save_schedule_config(config)
-            return {"status": "deleted", "task_id": task_id}
-
-        raise HTTPException(status_code=404, detail="Task not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/scheduler/tasks/{task_id}/toggle")
-async def toggle_scheduler_task(task_id: str):
-    """스케줄러 작업 활성화/비활성화 토글"""
-    try:
-        config = load_schedule_config()
-
-        for t in config["tasks"]:
-            if t["id"] == task_id:
-                t["enabled"] = not t.get("enabled", True)
-                save_schedule_config(config)
-                return {"status": "toggled", "enabled": t["enabled"]}
-
-        raise HTTPException(status_code=404, detail="Task not found")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/scheduler/tasks/{task_id}/run")
-async def run_scheduler_task(task_id: str, background_tasks: BackgroundTasks):
-    """스케줄러 작업 즉시 실행"""
-    try:
-        config = load_schedule_config()
-
-        for t in config["tasks"]:
-            if t["id"] == task_id:
-                # TODO: 백그라운드에서 실행
-                return {"status": "started", "task_id": task_id}
-
-        raise HTTPException(status_code=404, detail="Task not found")
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -547,12 +402,23 @@ async def auto_assign_tools(project_id: str):
         if not agents_info:
             return {"status": "no_agents", "message": "배분할 에이전트가 없습니다."}
 
+        # 프로젝트 기본 도구 로드
+        default_tools = []
+        project_json = project_path / "project.json"
+        if project_json.exists():
+            try:
+                with open(project_json, 'r', encoding='utf-8') as f:
+                    project_data = json.load(f)
+                default_tools = project_data.get('default_tools', [])
+            except:
+                pass
+
         # 자동 배분 실행
         try:
             from tool_selector import SystemDirector
 
             director = SystemDirector(project_path)
-            success = director.force_reallocate_tools(agents_info)
+            success = director.force_reallocate_tools(agents_info, default_tools)
 
             if success:
                 return {
@@ -605,12 +471,23 @@ async def init_tools_if_needed(project_id: str):
         if not agents_needing_tools:
             return {"status": "skip", "message": "모든 에이전트에 도구가 이미 배분됨"}
 
+        # 프로젝트 기본 도구 로드
+        default_tools = []
+        project_json = project_path / "project.json"
+        if project_json.exists():
+            try:
+                with open(project_json, 'r', encoding='utf-8') as f:
+                    project_data = json.load(f)
+                default_tools = project_data.get('default_tools', [])
+            except:
+                pass
+
         # 자동 배분 실행 (allowed_tools가 None인 에이전트만)
         try:
             from tool_selector import SystemDirector
 
             director = SystemDirector(project_path)
-            director.reallocate_tools(agents_needing_tools)
+            director.reallocate_tools(agents_needing_tools, default_tools)
 
             return {
                 "status": "success",

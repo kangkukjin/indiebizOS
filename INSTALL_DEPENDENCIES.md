@@ -16,14 +16,20 @@
 
 ### 백엔드 핵심 패키지
 ```bash
-pip install fastapi uvicorn pydantic python-dotenv pyyaml aiofiles
+pip install fastapi "uvicorn[standard]" pydantic python-dotenv python-multipart pyyaml
 pip install anthropic openai google-genai
 pip install pynostr websocket-client
+pip install yt-dlp youtube-transcript-api
 ```
 
 또는 한 줄로:
 ```bash
-pip install fastapi uvicorn pydantic python-dotenv pyyaml aiofiles anthropic openai google-genai pynostr websocket-client
+pip install fastapi "uvicorn[standard]" pydantic python-dotenv python-multipart pyyaml anthropic openai google-genai pynostr websocket-client yt-dlp youtube-transcript-api
+```
+
+또는 requirements 파일로:
+```bash
+pip install -r backend/requirements-core.txt
 ```
 
 ---
@@ -124,7 +130,7 @@ pip install arxiv feedparser requests
 
 **youtube** (유튜브)
 ```bash
-pip install yt-dlp
+pip install yt-dlp youtube-transcript-api
 ```
 
 **location-services** (위치 서비스)
@@ -167,7 +173,7 @@ pip install requests
 
 ### 필수 + 자주 사용하는 패키지
 ```bash
-pip install fastapi uvicorn pydantic python-dotenv pyyaml aiofiles anthropic openai google-genai pynostr websocket-client beautifulsoup4 requests feedparser pillow matplotlib plotly kaleido numpy yt-dlp duckduckgo-search
+pip install fastapi "uvicorn[standard]" pydantic python-dotenv python-multipart pyyaml anthropic openai google-genai pynostr websocket-client yt-dlp youtube-transcript-api beautifulsoup4 requests feedparser pillow matplotlib plotly kaleido numpy duckduckgo-search
 ```
 
 ### Playwright (브라우저 자동화 필요시)
@@ -225,4 +231,4 @@ playwright install --with-deps chromium
 
 ---
 
-*최종 업데이트: 2025-02*
+*최종 업데이트: 2026-02*

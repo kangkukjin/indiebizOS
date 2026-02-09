@@ -139,8 +139,109 @@ def _get_call_project_agent_tool() -> Dict:
     }
 
 
+def _get_manage_events_tool() -> Dict:
+    """manage_events 통합 도구 정의 (캘린더 + 스케줄러)"""
+    return {
+        "name": "manage_events",
+        "description": "캘린더 이벤트와 스케줄 작업을 통합 관리합니다 (기념일, 약속, 생일, 알림, 스케줄 등의 추가/수정/삭제/조회/토글). 첫 호출 시 가이드가 제공됩니다.",
+        "guide_file": "calendar_guide.md",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "description": "수행할 작업: list, add, update, delete, toggle, run_now"
+                },
+                "event_id": {
+                    "type": "string",
+                    "description": "이벤트 ID (update, delete, toggle, run_now 시 필수)"
+                },
+                "title": {
+                    "type": "string",
+                    "description": "이벤트 제목/이름 (add 시 필수)"
+                },
+                "date": {
+                    "type": "string",
+                    "description": "날짜 (YYYY-MM-DD 형식)"
+                },
+                "time": {
+                    "type": "string",
+                    "description": "시간 (HH:MM 형식)"
+                },
+                "type": {
+                    "type": "string",
+                    "description": "이벤트 타입: anniversary, birthday, appointment, reminder, schedule, other"
+                },
+                "repeat": {
+                    "type": "string",
+                    "description": "반복 유형: none, daily, weekly, monthly, yearly, interval"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "이벤트 설명"
+                },
+                "event_action": {
+                    "type": "string",
+                    "description": "실행할 액션 (스케줄 작업일 때): run_switch, send_notification, test. null이면 순수 캘린더 이벤트"
+                },
+                "action_params": {
+                    "type": "object",
+                    "description": "액션 파라미터 (예: {switch_id: '...'} 또는 {message: '...', title: '...'})"
+                },
+                "weekdays": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": "요일 목록 (weekly일 때, 0=월 ~ 6=일)"
+                },
+                "month": {
+                    "type": "integer",
+                    "description": "월 (yearly일 때 1-12, list 시 조회 월)"
+                },
+                "day": {
+                    "type": "integer",
+                    "description": "일 (yearly일 때 1-31)"
+                },
+                "interval_hours": {
+                    "type": "integer",
+                    "description": "반복 간격 시간 (interval일 때)"
+                },
+                "year": {
+                    "type": "integer",
+                    "description": "조회 연도 (list 시 선택)"
+                },
+                "enabled": {
+                    "type": "boolean",
+                    "description": "활성화 여부 (update 시)"
+                }
+            },
+            "required": ["action"]
+        }
+    }
+
+
+def _get_list_switches_tool() -> Dict:
+    """list_switches 도구 정의"""
+    return {
+        "name": "list_switches",
+        "description": """등록된 스위치 목록을 조회합니다. 스케줄에 스위치를 연결할 때 switch_id를 확인하는 용도입니다.
+
+## 반환 정보
+- id: 스위치 ID (스케줄 등록 시 사용)
+- name: 스위치 이름
+- command: 실행 명령어
+- project: 연결된 프로젝트
+- run_count: 총 실행 횟수
+- last_run: 마지막 실행 시간""",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    }
+
+
 def get_all_system_ai_tools() -> List[Dict]:
-    """시스템 AI가 사용할 모든 도구 로드 (패키지 도구 + 위임 도구 + 메시징 도구)
+    """시스템 AI가 사용할 모든 도구 로드 (패키지 도구 + 위임 도구 + 메시징 도구 + 스케줄러 도구)
 
     NOTE: 시스템 AI는 일반 에이전트와 동일한 도구를 사용하며,
     추가로 call_project_agent 도구를 통해 프로젝트 에이전트에게 위임할 수 있습니다.
@@ -155,6 +256,10 @@ def get_all_system_ai_tools() -> List[Dict]:
     # 메시징 도구 추가 (Nostr DM, Gmail 전송)
     from system_ai import get_messaging_tools
     tools.extend(get_messaging_tools())
+
+    # 통합 이벤트 관리 도구 추가
+    tools.append(_get_manage_events_tool())
+    tools.append(_get_list_switches_tool())
 
     return tools
 
@@ -289,6 +394,14 @@ def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None, 
     if tool_name == "send_gmail_message":
         from system_ai import execute_send_gmail_message
         return execute_send_gmail_message(tool_input)
+
+    # 통합 이벤트 관리 도구 처리
+    if tool_name == "manage_events":
+        result = _execute_manage_events(tool_input)
+        result = _inject_system_guide(tool_name, result, agent_id)
+        return result
+    if tool_name == "list_switches":
+        return _execute_list_switches(tool_input)
 
     if work_dir is None:
         work_dir = str(DATA_PATH)
@@ -503,6 +616,170 @@ def _execute_call_project_agent(tool_input: dict) -> str:
     print(f"[시스템 AI] 위임: 시스템 AI → {agent_name} (task: {child_task_id})")
 
     return f"'{agent_name}'에게 작업을 위임했습니다. 결과를 기다리세요."
+
+
+# 시스템 AI 도구 가이드 주입 추적
+_system_guide_injected: set = set()
+
+# 시스템 AI 도구의 가이드 파일 매핑 (도구명 → 파일명)
+_SYSTEM_TOOL_GUIDES = {
+    "manage_events": "calendar_guide.md",
+}
+
+
+def _inject_system_guide(tool_name: str, result: str, agent_id: str = None) -> str:
+    """시스템 AI 도구용 가이드 주입 (첫 호출 시에만)
+
+    tool_loader의 get_tool_guide()는 도구 패키지만 탐색하므로,
+    시스템 AI 전용 도구는 system_docs 폴더에서 직접 가이드를 로드합니다.
+    """
+    global _system_guide_injected
+
+    guide_key = f"{agent_id or 'system_ai'}:{tool_name}"
+    if guide_key in _system_guide_injected:
+        return result
+
+    guide_filename = _SYSTEM_TOOL_GUIDES.get(tool_name)
+    if not guide_filename:
+        return result
+
+    guide_path = DATA_PATH / "system_docs" / guide_filename
+    if not guide_path.exists():
+        return result
+
+    try:
+        guide_content = guide_path.read_text(encoding='utf-8')
+        _system_guide_injected.add(guide_key)
+        print(f"[시스템 AI 가이드 주입] {tool_name}")
+        guide_header = f"=== {tool_name} 사용 가이드 ===\n{guide_content}\n{'=' * 40}\n\n"
+        return guide_header + result
+    except Exception as e:
+        print(f"[시스템 AI 가이드 로드 실패] {guide_path}: {e}")
+        return result
+
+
+def _execute_manage_events(tool_input: dict) -> str:
+    """manage_events 통합 도구 실행 (캘린더 + 스케줄러)"""
+    from calendar_manager import get_calendar_manager
+
+    action = tool_input.get("action", "")
+    cm = get_calendar_manager()
+
+    try:
+        if action == "list":
+            year = tool_input.get("year")
+            month = tool_input.get("month")
+            events = cm.list_events(year=year, month=month)
+            if not events:
+                return json.dumps({"success": True, "events": [], "message": "등록된 이벤트가 없습니다."}, ensure_ascii=False)
+            return json.dumps({"success": True, "events": events, "count": len(events)}, ensure_ascii=False)
+
+        elif action == "add":
+            title = tool_input.get("title")
+            if not title:
+                return json.dumps({"success": False, "error": "title은 필수입니다."}, ensure_ascii=False)
+
+            event_date = tool_input.get("date")
+            event_action = tool_input.get("event_action")
+            repeat = tool_input.get("repeat", "none")
+
+            # 실행 이벤트 (스케줄)인 경우 date 없이도 허용 (daily, interval 등)
+            if not event_date and not event_action:
+                return json.dumps({"success": False, "error": "date는 필수입니다. (YYYY-MM-DD)"}, ensure_ascii=False)
+
+            event = cm.add_event(
+                title=title,
+                event_date=event_date,
+                event_type=tool_input.get("type", "schedule" if event_action else "other"),
+                repeat=repeat,
+                description=tool_input.get("description", ""),
+                event_time=tool_input.get("time"),
+                action=event_action,
+                action_params=tool_input.get("action_params"),
+                enabled=tool_input.get("enabled", True),
+                weekdays=tool_input.get("weekdays"),
+                month=tool_input.get("month"),
+                day=tool_input.get("day"),
+                interval_hours=tool_input.get("interval_hours"),
+            )
+            return json.dumps({"success": True, "event": event, "message": f"이벤트 '{title}' 추가됨"}, ensure_ascii=False)
+
+        elif action == "update":
+            event_id = tool_input.get("event_id")
+            if not event_id:
+                return json.dumps({"success": False, "error": "event_id는 필수입니다."}, ensure_ascii=False)
+
+            updates = {}
+            for key in ["title", "date", "time", "type", "repeat", "description",
+                         "enabled", "weekdays", "month", "day", "interval_hours", "action_params"]:
+                if key in tool_input:
+                    updates[key] = tool_input[key]
+            if "event_action" in tool_input:
+                updates["action"] = tool_input["event_action"]
+
+            if cm.update_event(event_id, **updates):
+                return json.dumps({"success": True, "message": f"이벤트 '{event_id}' 수정됨"}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"이벤트 '{event_id}'를 찾을 수 없습니다."}, ensure_ascii=False)
+
+        elif action == "delete":
+            event_id = tool_input.get("event_id")
+            if not event_id:
+                return json.dumps({"success": False, "error": "event_id는 필수입니다."}, ensure_ascii=False)
+            if cm.delete_event(event_id):
+                return json.dumps({"success": True, "message": f"이벤트 '{event_id}' 삭제됨"}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"이벤트 '{event_id}'를 찾을 수 없습니다."}, ensure_ascii=False)
+
+        elif action == "toggle":
+            event_id = tool_input.get("event_id")
+            if not event_id:
+                return json.dumps({"success": False, "error": "event_id는 필수입니다."}, ensure_ascii=False)
+            result = cm.toggle_task(event_id)
+            if result is not None:
+                status = "활성화" if result else "비활성화"
+                return json.dumps({"success": True, "enabled": result, "message": f"이벤트 {status}됨"}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"이벤트 '{event_id}'를 찾을 수 없습니다."}, ensure_ascii=False)
+
+        elif action == "run_now":
+            event_id = tool_input.get("event_id")
+            if not event_id:
+                return json.dumps({"success": False, "error": "event_id는 필수입니다."}, ensure_ascii=False)
+            if cm.run_task_now(event_id):
+                return json.dumps({"success": True, "message": f"이벤트 '{event_id}' 즉시 실행 시작"}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"이벤트 '{event_id}'를 찾을 수 없습니다. (실행 가능한 이벤트만 run_now 가능)"}, ensure_ascii=False)
+
+        else:
+            return json.dumps({"success": False, "error": f"알 수 없는 action: {action}. list, add, update, delete, toggle, run_now 중 선택하세요."}, ensure_ascii=False)
+
+    except Exception as e:
+        return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
+
+
+def _execute_list_switches(tool_input: dict) -> str:
+    """list_switches 도구 실행"""
+    try:
+        from switch_manager import SwitchManager
+        sm = SwitchManager()
+        switches = sm.list_switches()
+
+        result = []
+        for sw in switches:
+            if sw.get("in_trash"):
+                continue
+            result.append({
+                "id": sw.get("id"),
+                "name": sw.get("name"),
+                "icon": sw.get("icon", ""),
+                "command": sw.get("command", "")[:100],
+                "project": sw.get("config", {}).get("projectId", ""),
+                "agent": sw.get("config", {}).get("agent_name", ""),
+                "run_count": sw.get("run_count", 0),
+                "last_run": sw.get("last_run")
+            })
+
+        return json.dumps({"success": True, "switches": result, "count": len(result)}, ensure_ascii=False)
+
+    except Exception as e:
+        return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
 
 
 class ImageData(BaseModel):

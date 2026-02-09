@@ -247,8 +247,8 @@ function initUserData() {
           ? (JSON.parse(fs.readFileSync(destToolJson, 'utf8')).version || '0.0.0')
           : '0.0.0';
 
-        if (compareVersions(srcVersion, destVersion) > 0) {
-          console.log(`[Init] 패키지 업데이트: ${pkgType}/${pkg} (${destVersion} → ${srcVersion})`);
+        if (compareVersions(srcVersion, destVersion) >= 0) {
+          console.log(`[Init] 패키지 동기화: ${pkgType}/${pkg} (${destVersion} → ${srcVersion})`);
           // 코드 파일만 덮어쓰기 (.py, .js, .json, .md, .txt, .yaml)
           // .db, 캐시, node_modules 등 런타임 데이터는 보존
           syncPackageCode(pkgSrc, pkgDest);

@@ -1328,7 +1328,7 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
               onPaste={handlePaste}
               placeholder="메시지를 입력하세요... (파일 드래그/붙여넣기 가능)"
               className="flex-1 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl focus:border-amber-400 focus:outline-none resize-none text-gray-800 placeholder:text-gray-400"
-              rows={1}
+              rows={2}
               disabled={isLoading}
             />
             {isLoading ? (

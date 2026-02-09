@@ -15,6 +15,8 @@ data/ai_desktop_map.json
 data/my_profile.txt
 data/business.db
 data/multi_chat.db
+data/calendar_events.json
+data/browser_cookies/
 data/outputs/
 data/health/
 data/gomoku_board.png

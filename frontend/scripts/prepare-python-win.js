@@ -125,18 +125,29 @@ async function installPip(pythonDir) {
  * Python 패키지 설치
  */
 function installPackages(pythonDir) {
-  const requirementsPath = join(BACKEND_DIR, 'requirements-core.txt');
+  const requirementsCore = join(BACKEND_DIR, 'requirements-core.txt');
+  const requirementsTools = join(BACKEND_DIR, 'requirements-tools.txt');
   const pythonExe = join(pythonDir, 'python.exe');
   const sitePackages = join(pythonDir, 'Lib', 'site-packages');
 
   ensureDir(sitePackages);
 
   if (process.platform === 'win32') {
-    console.log('  Python 패키지 설치 중...');
+    // 코어 패키지 설치
+    console.log('  [Core] Python 핵심 패키지 설치 중...');
     execSync(
-      `"${pythonExe}" -m pip install -r "${requirementsPath}" --target "${sitePackages}" --no-warn-script-location`,
+      `"${pythonExe}" -m pip install -r "${requirementsCore}" --target "${sitePackages}" --no-warn-script-location`,
       { stdio: 'inherit' }
     );
+
+    // 도구 패키지 의존성 설치
+    if (existsSync(requirementsTools)) {
+      console.log('  [Tools] 도구 패키지 의존성 설치 중...');
+      execSync(
+        `"${pythonExe}" -m pip install -r "${requirementsTools}" --target "${sitePackages}" --no-warn-script-location`,
+        { stdio: 'inherit' }
+      );
+    }
   } else {
     console.log('  [주의] Windows가 아니므로 패키지 설치를 건너뜁니다.');
   }
@@ -194,6 +205,7 @@ async function main() {
     console.log('Windows에서 다음 명령을 실행하여 패키지를 설치하세요:');
     console.log(`  cd ${PYTHON_WIN_DIR}`);
     console.log(`  python.exe -m pip install -r ${join(BACKEND_DIR, 'requirements-core.txt')} --target Lib\\site-packages`);
+    console.log(`  python.exe -m pip install -r ${join(BACKEND_DIR, 'requirements-tools.txt')} --target Lib\\site-packages`);
   }
 }
 

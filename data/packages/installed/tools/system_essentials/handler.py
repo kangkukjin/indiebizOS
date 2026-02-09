@@ -57,6 +57,17 @@ DANGEROUS_PATTERNS = [
 ]
 
 
+def _validate_path_in_scope(path: str, project_path: str) -> str | None:
+    """경로가 프로젝트 범위 내인지 검증. 벗어나면 에러 메시지 반환, 정상이면 None"""
+    abs_path = os.path.abspath(path)
+    abs_project = os.path.abspath(project_path)
+    # 절대 경로로 시작하는 경우 (프로젝트 외부 접근) 허용
+    # 상대 경로가 ../로 프로젝트 밖으로 나가는 경우만 차단
+    if not abs_path.startswith(abs_project + os.sep) and abs_path != abs_project:
+        return f"Error: 프로젝트 범위를 벗어나는 경로입니다: {abs_path}"
+    return None
+
+
 def is_dangerous_command(command: str) -> bool:
     """명령어가 위험한지 검사"""
     command_lower = command.lower()
@@ -69,11 +80,20 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
     try:
         if tool_name == "read_file":
             path = os.path.join(project_path, tool_input["file_path"])
+            # 대용량 파일 방어 (1MB 제한)
+            MAX_READ_SIZE = 1_000_000
+            file_size = os.path.getsize(path)
             with open(path, 'r', encoding='utf-8') as f:
-                return f.read()
+                content = f.read(MAX_READ_SIZE)
+            if file_size > MAX_READ_SIZE:
+                content += f"\n\n... (파일이 {file_size // 1000}KB로 큽니다. 처음 1MB만 표시)"
+            return content
 
         elif tool_name == "write_file":
             path = os.path.join(project_path, tool_input["file_path"])
+            scope_err = _validate_path_in_scope(path, project_path)
+            if scope_err:
+                return scope_err
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(tool_input["content"])
@@ -91,36 +111,54 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
             file_pattern = tool_input.get("file_pattern", "**/*")
             root = os.path.join(project_path, tool_input.get("root_path", "."))
             use_regex = tool_input.get("regex", False)
+            max_results = 100
 
-            # 검색할 파일 목록 가져오기
+            # 검색 제외 디렉토리/확장자 (바이너리, 캐시, VCS)
+            SKIP_DIRS = {'.git', '.svn', '__pycache__', 'node_modules', '.venv', 'venv', '.tox', '.mypy_cache'}
+            SKIP_EXTS = {'.pyc', '.pyo', '.so', '.dylib', '.dll', '.exe', '.bin',
+                         '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.svg',
+                         '.mp3', '.mp4', '.wav', '.avi', '.mov', '.mkv',
+                         '.zip', '.gz', '.tar', '.rar', '.7z', '.bz2',
+                         '.woff', '.woff2', '.ttf', '.eot', '.otf',
+                         '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+                         '.db', '.sqlite', '.sqlite3'}
+
+            # 검색할 파일 목록 가져오기 (불필요 파일 필터링)
             files = glob.glob(os.path.join(root, file_pattern), recursive=True)
-            files = [f for f in files if os.path.isfile(f)]
+            files = [
+                f for f in files
+                if os.path.isfile(f)
+                and os.path.splitext(f)[1].lower() not in SKIP_EXTS
+                and not any(skip in f.split(os.sep) for skip in SKIP_DIRS)
+            ]
 
             results = []
             regex_pattern = re.compile(pattern) if use_regex else None
+            search_done = False
 
             for file_path in files:
+                if search_done:
+                    break
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
                         for line_num, line in enumerate(f, 1):
-                            matched = False
                             if use_regex:
-                                if regex_pattern.search(line):
-                                    matched = True
+                                matched = regex_pattern.search(line)
                             else:
-                                if pattern in line:
-                                    matched = True
+                                matched = pattern in line
 
                             if matched:
                                 rel_path = os.path.relpath(file_path, project_path)
                                 results.append(f"{rel_path}:{line_num}: {line.rstrip()}")
-                except:
+                                if len(results) >= max_results:
+                                    search_done = True
+                                    break
+                except (UnicodeDecodeError, PermissionError, OSError):
                     continue
 
             if results:
-                # 결과가 너무 많으면 제한
-                if len(results) > 100:
-                    return "\n".join(results[:100]) + f"\n... and {len(results) - 100} more matches"
+                if search_done:
+                    return "\n".join(results) + f"\n... (결과가 {max_results}개에 도달하여 검색 중단)"
                 return "\n".join(results)
             else:
                 return f"No matches found for: {pattern}"
@@ -148,6 +186,9 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
 
         elif tool_name == "edit_file":
             file_path = os.path.join(project_path, tool_input["file_path"])
+            scope_err = _validate_path_in_scope(file_path, project_path)
+            if scope_err:
+                return scope_err
             old_string = tool_input["old_string"]
             new_string = tool_input["new_string"]
 
@@ -233,6 +274,9 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
         elif tool_name == "copy_path":
             src = os.path.join(project_path, tool_input["source"])
             dst = os.path.join(project_path, tool_input["destination"])
+            scope_err = _validate_path_in_scope(dst, project_path)
+            if scope_err:
+                return scope_err
 
             if not os.path.exists(src):
                 return f"Error: 원본이 존재하지 않습니다: {src}"
@@ -255,6 +299,9 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
         elif tool_name == "move_path":
             src = os.path.join(project_path, tool_input["source"])
             dst = os.path.join(project_path, tool_input["destination"])
+            scope_err = _validate_path_in_scope(dst, project_path)
+            if scope_err:
+                return scope_err
 
             if not os.path.exists(src):
                 return f"Error: 원본이 존재하지 않습니다: {src}"
@@ -274,6 +321,9 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
 
         elif tool_name == "delete_path":
             target = os.path.join(project_path, tool_input["path"])
+            scope_err = _validate_path_in_scope(target, project_path)
+            if scope_err:
+                return scope_err
 
             if not os.path.exists(target):
                 return f"Error: 경로가 존재하지 않습니다: {target}"

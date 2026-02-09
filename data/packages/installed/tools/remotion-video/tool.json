@@ -3,6 +3,7 @@
   "name": "Remotion Video",
   "description": "React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프레임워크를 사용하여 React/TSX 컴포넌트를 MP4 동영상으로 렌더링합니다.",
   "version": "1.0.0",
+  "guide_file": "visual_guide.md",
   "tools": [
     {
       "name": "create_remotion_video",

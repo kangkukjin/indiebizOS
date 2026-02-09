@@ -3,6 +3,7 @@
   "name": "Blog Tools",
   "description": "개인 블로그(K의 생각) RAG 검색 및 분석 도구. 티스토리 블로그 글 검색, 전문 조회, 카테고리별 필터링, 글 기반 인사이트 생성 기능을 제공합니다. 과거 글 검색, 블로그 트렌드 분석에 활용.",
   "version": "2.2.0",
+  "guide_file": "blog_guide.md",
   "tools": [
     {
       "name": "search_blog_rag",

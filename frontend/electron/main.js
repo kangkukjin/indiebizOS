@@ -140,10 +140,55 @@ function isPortAvailable(port) {
 }
 
 /**
+ * 시맨틱 버전 비교: a > b → 양수, a == b → 0, a < b → 음수
+ */
+function compareVersions(a, b) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na !== nb) return na - nb;
+  }
+  return 0;
+}
+
+/**
+ * 패키지 코드 파일만 동기화 (런타임 데이터 보존)
+ * 번들(src)의 코드 파일을 userData(dest)에 덮어씀
+ * .db, node_modules, __pycache__, 캐시 등은 건드리지 않음
+ */
+function syncPackageCode(srcDir, destDir) {
+  const codeExtensions = new Set(['.py', '.js', '.ts', '.json', '.md', '.txt', '.yaml', '.yml', '.html', '.css']);
+  const skipDirs = new Set(['node_modules', '__pycache__', '.git', '_temp_']);
+
+  const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = path.join(srcDir, entry.name);
+    const destPath = path.join(destDir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (skipDirs.has(entry.name)) continue;
+      // 하위 디렉토리 재귀 동기화
+      if (!fs.existsSync(destPath)) {
+        fs.mkdirSync(destPath, { recursive: true });
+      }
+      syncPackageCode(srcPath, destPath);
+    } else if (entry.isFile()) {
+      const ext = path.extname(entry.name).toLowerCase();
+      // 코드 파일만 덮어쓰기
+      if (codeExtensions.has(ext)) {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    }
+  }
+}
+
+/**
  * 프로덕션 데이터 디렉토리 초기화
  * 앱 번들(resources/) 내의 데이터를 사용자 폴더(userData)로 복사
  * - 기본 폴더: 없으면 복사 (사용자 데이터 보존)
- * - 패키지 폴더: 항상 새 패키지 동기화 (업데이트 지원)
+ * - 패키지 폴더: 새 패키지 추가 + 기존 패키지 버전 업데이트
  */
 function initUserData() {
   const userDataPath = app.getPath('userData'); // Windows: %APPDATA%/IndieBiz, macOS: ~/Library/Application Support/IndieBiz
@@ -165,28 +210,51 @@ function initUserData() {
     }
   }
 
-  // 2. 패키지 폴더 동기화 - 새 패키지 추가 (기존 패키지 보존, 새 패키지만 추가)
-  const packagesSrc = path.join(resourcesPath, 'data', 'packages', 'installed', 'tools');
-  const packagesDest = path.join(userDataPath, 'data', 'packages', 'installed', 'tools');
+  // 2. 패키지 폴더 동기화 - 새 패키지 추가 + 기존 패키지 버전 업데이트
+  const packageTypes = ['tools', 'extensions'];
+  for (const pkgType of packageTypes) {
+    const packagesSrc = path.join(resourcesPath, 'data', 'packages', 'installed', pkgType);
+    const packagesDest = path.join(userDataPath, 'data', 'packages', 'installed', pkgType);
 
-  if (fs.existsSync(packagesSrc)) {
-    // 대상 폴더가 없으면 생성
+    if (!fs.existsSync(packagesSrc)) continue;
+
     if (!fs.existsSync(packagesDest)) {
       fs.mkdirSync(packagesDest, { recursive: true });
     }
 
-    // 소스의 각 패키지를 확인하고 없는 것만 복사
     const srcPackages = fs.readdirSync(packagesSrc);
     for (const pkg of srcPackages) {
       const pkgSrc = path.join(packagesSrc, pkg);
       const pkgDest = path.join(packagesDest, pkg);
 
-      // 디렉토리만 처리 (.DS_Store 등 파일 제외)
-      if (fs.statSync(pkgSrc).isDirectory()) {
-        if (!fs.existsSync(pkgDest)) {
-          console.log(`[Init] 새 패키지 복사: ${pkg}`);
-          fs.cpSync(pkgSrc, pkgDest, { recursive: true });
+      if (!fs.statSync(pkgSrc).isDirectory()) continue;
+
+      // 새 패키지: 통째로 복사
+      if (!fs.existsSync(pkgDest)) {
+        console.log(`[Init] 새 패키지 복사: ${pkgType}/${pkg}`);
+        fs.cpSync(pkgSrc, pkgDest, { recursive: true });
+        continue;
+      }
+
+      // 기존 패키지: tool.json 버전 비교 후 코드 파일만 갱신
+      try {
+        const srcToolJson = path.join(pkgSrc, 'tool.json');
+        const destToolJson = path.join(pkgDest, 'tool.json');
+        if (!fs.existsSync(srcToolJson)) continue;
+
+        const srcVersion = JSON.parse(fs.readFileSync(srcToolJson, 'utf8')).version || '0.0.0';
+        const destVersion = fs.existsSync(destToolJson)
+          ? (JSON.parse(fs.readFileSync(destToolJson, 'utf8')).version || '0.0.0')
+          : '0.0.0';
+
+        if (compareVersions(srcVersion, destVersion) > 0) {
+          console.log(`[Init] 패키지 업데이트: ${pkgType}/${pkg} (${destVersion} → ${srcVersion})`);
+          // 코드 파일만 덮어쓰기 (.py, .js, .json, .md, .txt, .yaml)
+          // .db, 캐시, node_modules 등 런타임 데이터는 보존
+          syncPackageCode(pkgSrc, pkgDest);
         }
+      } catch (e) {
+        console.warn(`[Init] 패키지 버전 비교 실패: ${pkg} - ${e.message}`);
       }
     }
   }

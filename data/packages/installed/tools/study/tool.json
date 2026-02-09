@@ -3,6 +3,7 @@
   "name": "Academic Research",
   "description": "학술 논문 검색, 여론 조사, 뉴스 아카이브 및 글로벌 경제 지표 접근 도구 (OpenAlex, arXiv, Pew Research, The Guardian, World Bank 등)",
   "version": "1.3.0",
+  "guide_file": "study_guide.md",
   "tools": [
     {
       "name": "search_openalex",

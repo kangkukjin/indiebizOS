@@ -305,7 +305,9 @@ class OllamaProvider(BaseProvider):
         openai_tools: List[Dict],
         execute_tool: Callable,
         depth: int = 0,
-        empty_response_retries: int = 0
+        empty_response_retries: int = 0,
+        auto_continues: int = 0,
+        accumulated_text: str = ""
     ) -> Generator[Dict[str, Any], None, None]:
         """
         Ollama 에이전틱 루프 패턴
@@ -318,6 +320,7 @@ class OllamaProvider(BaseProvider):
         - 메트릭 추적
         - 재시도 로직
         - 빈 응답 복구 처리
+        - accumulated_text: auto-continue 호환 (Ollama는 length 미지원이지만 향후 호환)
         """
         if depth > MAX_TOOL_DEPTH:
             yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
@@ -414,7 +417,10 @@ class OllamaProvider(BaseProvider):
                     "role": "user",
                     "content": "도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
                 })
-                yield from self._agentic_loop(messages, openai_tools, execute_tool, depth + 1, empty_response_retries + 1)
+                yield from self._agentic_loop(
+                    messages, openai_tools, execute_tool, depth + 1, empty_response_retries + 1,
+                    auto_continues=auto_continues, accumulated_text=accumulated_text
+                )
                 return
 
             # tool_calls 여부에 따른 처리
@@ -426,8 +432,8 @@ class OllamaProvider(BaseProvider):
                 return
 
             else:
-                # 완료
-                final_result = collected_text
+                # 완료 (누적 텍스트 + 이번 텍스트)
+                final_result = accumulated_text + collected_text
 
                 # 저장된 [MAP:...] 태그 추가
                 if hasattr(self, '_pending_map_tags') and self._pending_map_tags:
@@ -555,5 +561,8 @@ class OllamaProvider(BaseProvider):
             yield {"type": "final", "content": final}
             return
 
-        # 재귀 호출로 후속 응답 처리
-        yield from self._agentic_loop(messages, openai_tools, execute_tool, depth + 1)
+        # 재귀 호출로 후속 응답 처리 (도구 실행 후에는 auto-continue 리셋)
+        yield from self._agentic_loop(
+            messages, openai_tools, execute_tool, depth + 1,
+            auto_continues=0, accumulated_text=""
+        )

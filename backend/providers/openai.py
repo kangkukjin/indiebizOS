@@ -206,7 +206,9 @@ class OpenAIProvider(BaseProvider):
         execute_tool: Callable,
         depth: int = 0,
         max_tokens: int = 4096,
-        empty_response_retries: int = 0
+        empty_response_retries: int = 0,
+        auto_continues: int = 0,
+        accumulated_text: str = ""
     ) -> Generator[Dict[str, Any], None, None]:
         """
         OpenAI 공식 에이전틱 루프 패턴
@@ -214,12 +216,13 @@ class OpenAIProvider(BaseProvider):
         finish_reason에 따른 처리:
         - "stop": 완료, 최종 응답 반환
         - "tool_calls": 도구 실행 후 결과와 함께 재귀 호출
-        - "length": 더 큰 max_tokens로 재시도
+        - "length": 부분 응답을 이어붙이고 계속 (Auto-Continue)
 
         개선 사항:
         - 토큰 사용량 추적
         - API 재시도 로직
         - 빈 응답 복구 처리
+        - Auto-Continue: length 초과 시 이어쓰기 (토큰 낭비 방지)
         """
         if depth > MAX_TOOL_DEPTH:
             yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
@@ -314,19 +317,50 @@ class OpenAIProvider(BaseProvider):
                     "role": "user",
                     "content": "도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
                 })
-                yield from self._agentic_loop(messages, openai_tools, execute_tool, depth + 1, max_tokens, empty_response_retries + 1)
+                yield from self._agentic_loop(
+                    messages, openai_tools, execute_tool, depth + 1, max_tokens,
+                    empty_response_retries + 1,
+                    auto_continues=auto_continues, accumulated_text=accumulated_text
+                )
                 return
 
-            # finish_reason에 따른 처리 (OpenAI 공식 패턴)
+            # finish_reason에 따른 처리 (OpenAI 공식 패턴 + Auto-Continue)
             if finish_reason == "length":
-                # length 초과 - 더 큰 값으로 재시도
-                yield {"type": "thinking", "content": "응답이 길어 재시도 중..."}
-                new_max_tokens = min(max_tokens * 2, 16384)
-                if new_max_tokens > max_tokens:
-                    yield from self._agentic_loop(messages, openai_tools, execute_tool, depth, new_max_tokens)
+                if tool_calls:
+                    # 도구 호출 JSON이 잘린 경우 → 기존 방식: max_tokens 늘려 재시도
+                    yield {"type": "thinking", "content": "도구 호출이 잘려서 다시 시도 중..."}
+                    new_max_tokens = min(max_tokens * 2, 16384)
+                    if new_max_tokens > max_tokens:
+                        yield from self._agentic_loop(
+                            messages, openai_tools, execute_tool, depth, new_max_tokens,
+                            auto_continues=auto_continues, accumulated_text=accumulated_text
+                        )
+                    else:
+                        final = accumulated_text + collected_text + "\n\n(응답이 잘렸습니다)"
+                        yield {"type": "final", "content": final}
+                    return
+
+                # 텍스트만 잘린 경우 → Auto-Continue: 이어쓰기
+                if auto_continues < self.MAX_AUTO_CONTINUES:
+                    print(f"[OpenAI] Auto-Continue {auto_continues + 1}/{self.MAX_AUTO_CONTINUES} "
+                          f"(depth={depth}, 잘린 텍스트 {len(collected_text)}자)")
+                    yield {"type": "thinking", "content": f"응답 이어서 생성 중... ({auto_continues + 1}/{self.MAX_AUTO_CONTINUES})"}
+
+                    # 부분 응답을 assistant 메시지로 추가
+                    messages.append({"role": "assistant", "content": collected_text})
+                    # 이어쓰기 요청
+                    messages.append({"role": "user", "content": self.CONTINUATION_PROMPT})
+
+                    new_accumulated = accumulated_text + collected_text
+                    yield from self._agentic_loop(
+                        messages, openai_tools, execute_tool, depth + 1, max_tokens,
+                        auto_continues=auto_continues + 1,
+                        accumulated_text=new_accumulated
+                    )
                 else:
-                    # 이미 최대치 - 현재까지의 결과 반환
-                    yield {"type": "final", "content": collected_text + "\n\n(응답이 잘렸습니다)"}
+                    # Auto-Continue 한도 초과 → 현재까지 누적 텍스트 반환
+                    final = accumulated_text + collected_text + "\n\n(응답이 최대 연속 길이에 도달했습니다)"
+                    yield {"type": "final", "content": final}
                 return
 
             elif finish_reason == "tool_calls" or tool_calls:
@@ -337,8 +371,8 @@ class OpenAIProvider(BaseProvider):
                 return
 
             else:
-                # stop 또는 기타 - 완료
-                final_result = collected_text
+                # stop 또는 기타 - 완료 (누적 텍스트 + 이번 텍스트)
+                final_result = accumulated_text + collected_text
 
                 # 저장된 [MAP:...] 태그 추가
                 if hasattr(self, '_pending_map_tags') and self._pending_map_tags:
@@ -490,5 +524,8 @@ class OpenAIProvider(BaseProvider):
             yield {"type": "final", "content": final}
             return
 
-        # 재귀 호출로 후속 응답 처리
-        yield from self._agentic_loop(messages, openai_tools, execute_tool, depth + 1)
+        # 재귀 호출로 후속 응답 처리 (도구 실행 후에는 auto-continue 리셋)
+        yield from self._agentic_loop(
+            messages, openai_tools, execute_tool, depth + 1,
+            max_tokens=4096, auto_continues=0, accumulated_text=""
+        )

@@ -4,6 +4,7 @@
   "description": "에이전트 기본 도구 모음. 파일 읽기/쓰기/검색, 작업 목록(todo) 관리, 계획 모드, 사용자 질문, 이웃(연락처) 조회 기능을 제공합니다. 모든 에이전트에게 기본 배분되는 핵심 패키지입니다.",
   "version": "1.1.0",
   "author": "System AI",
+  "guide_file": "system_essentials_guide.md",
   "tools": [
     {
       "name": "read_file",

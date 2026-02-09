@@ -8,11 +8,44 @@ IndieBiz OS Core
 import json
 import re
 import uuid
+import asyncio
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any
 
 from tool_loader import build_tool_package_map, load_tool_handler, get_all_tool_names, get_tool_guide
+
+
+# ============ Async 핸들러 지원: 영구 이벤트 루프 ============
+# Playwright 등 async 도구 패키지가 동일한 이벤트 루프에서 실행되어야
+# 브라우저 세션이 호출 간에 유지됨.
+
+_async_loop: asyncio.AbstractEventLoop = None
+_async_thread: threading.Thread = None
+_async_lock = threading.Lock()
+
+
+def _get_async_loop() -> asyncio.AbstractEventLoop:
+    """전용 async 이벤트 루프를 반환 (없으면 생성)"""
+    global _async_loop, _async_thread
+    with _async_lock:
+        if _async_loop is None or _async_loop.is_closed():
+            _async_loop = asyncio.new_event_loop()
+            _async_thread = threading.Thread(
+                target=_async_loop.run_forever,
+                daemon=True,
+                name="tool-async-loop"
+            )
+            _async_thread.start()
+    return _async_loop
+
+
+def _run_coroutine(coro, timeout=120):
+    """coroutine을 영구 이벤트 루프에서 실행하고 결과를 동기적으로 반환"""
+    loop = _get_async_loop()
+    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    return future.result(timeout=timeout)
 
 # 가이드가 이미 주입된 도구 추적 (agent_id:tool_name)
 _guide_injected: set = set()
@@ -737,6 +770,10 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
                 result = handler.execute(tool_name, tool_input, project_path, agent_id)
             else:
                 result = handler.execute(tool_name, tool_input, project_path)
+
+            # async 핸들러 지원: coroutine이면 영구 이벤트 루프에서 실행
+            if asyncio.iscoroutine(result):
+                result = _run_coroutine(result)
 
             # 승인 필요 여부 확인
             if isinstance(result, str) and result.startswith("__REQUIRES_APPROVAL__:"):

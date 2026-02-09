@@ -3,6 +3,7 @@
   "name": "Investment Tools",
   "description": "한국/미국 기업의 주가, 재무제표, 공시정보, 뉴스 및 암호화폐 정보를 조회하는 투자 분석 도구",
   "version": "1.1.0",
+  "guide_file": "investment_guide.md",
   "tools": [
     {
       "name": "kr_company_info",

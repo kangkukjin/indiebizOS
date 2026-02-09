@@ -3,6 +3,7 @@
   "name": "Web Builder & Homepage Manager",
   "description": "홈페이지 제작과 관리를 위한 통합 도구 패키지.\n\n## 두 가지 시나리오\n\n### A. 새 홈페이지 만들기\ncreate_project → add_component → create_page → edit_styles → preview_site → build_site → deploy_vercel\n\n### B. 기존 홈페이지 개선/수정\n1) site_registry(action='list')로 등록된 사이트 확인\n2) site_snapshot으로 현재 구조 파악\n3) 기존 파일을 직접 읽고 수정\n4) git push → 자동 배포 (또는 deploy_vercel)\n5) site_live_check로 결과 확인\n\n주의: 기존 사이트를 개선할 때 create_project를 호출하지 마세요.",
   "version": "2.0.0",
+  "guide_file": "web_builder_guide.md",
   "tools": [
     {
       "name": "site_registry",

@@ -6,10 +6,14 @@ IndieBiz OS - Remote File Access System
 """
 
 import os
+import stat as stat_module
 import json
 import hashlib
 import secrets
 import mimetypes
+import subprocess
+import shutil
+import time
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, List
@@ -28,6 +32,9 @@ router = APIRouter(prefix="/nas", tags=["nas"])
 DATA_PATH = _get_data_path()
 NAS_CONFIG_PATH = DATA_PATH / "nas_config.json"
 
+# 스트리밍 청크 크기 (64KB - 8KB에서 8배 증가, Cloudflare Tunnel 호환성 유지)
+STREAM_CHUNK_SIZE = 64 * 1024
+
 # 기본 설정
 DEFAULT_CONFIG = {
     "enabled": False,
@@ -40,24 +47,55 @@ DEFAULT_CONFIG = {
 # 세션 저장소 (메모리)
 sessions = {}
 
+# 설정 캐시 (디스크 I/O 감소)
+_config_cache = None
+_config_cache_mtime = 0
+
+# ============ 트랜스코딩 설정 ============
+
+FFMPEG_PATH = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
+FFPROBE_PATH = shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
+
+# 프로브 결과 캐시: {(file_path, mtime): probe_result}
+_probe_cache: dict = {}
+_PROBE_CACHE_MAX = 200
+
+# 활성 트랜스코딩 프로세스 추적
+_active_transcodes: dict = {}
+
+# 브라우저 호환 코덱/컨테이너
+BROWSER_COMPATIBLE_VIDEO = {"h264", "av1", "vp8", "vp9"}
+BROWSER_COMPATIBLE_AUDIO = {"aac", "mp3", "opus", "vorbis", "flac"}
+BROWSER_COMPATIBLE_CONTAINERS = {"mp4", "webm", "ogg", "mov"}
+
 
 # ============ 유틸리티 ============
 
 def load_config() -> dict:
-    """NAS 설정 로드"""
+    """NAS 설정 로드 (mtime 기반 캐시 — 파일 변경 시에만 디스크 읽기)"""
+    global _config_cache, _config_cache_mtime
     if NAS_CONFIG_PATH.exists():
+        current_mtime = NAS_CONFIG_PATH.stat().st_mtime
+        if _config_cache is not None and current_mtime == _config_cache_mtime:
+            return _config_cache
         with open(NAS_CONFIG_PATH, 'r', encoding='utf-8') as f:
             config = json.load(f)
-            # 기본값 병합
-            return {**DEFAULT_CONFIG, **config}
+            merged = {**DEFAULT_CONFIG, **config}
+            _config_cache = merged
+            _config_cache_mtime = current_mtime
+            return merged
     return DEFAULT_CONFIG.copy()
 
 
 def save_config(config: dict):
-    """NAS 설정 저장"""
+    """NAS 설정 저장 (캐시 무효화 포함)"""
+    global _config_cache, _config_cache_mtime
     config['updated_at'] = datetime.now().isoformat()
     with open(NAS_CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
+    # 저장 후 캐시 즉시 갱신
+    _config_cache = {**DEFAULT_CONFIG, **config}
+    _config_cache_mtime = NAS_CONFIG_PATH.stat().st_mtime
 
 
 def hash_password(password: str) -> str:
@@ -117,17 +155,17 @@ def get_safe_path(base_paths: List[str], requested_path: str) -> Optional[Path]:
 
 
 def get_file_info(path: Path) -> dict:
-    """파일/폴더 정보 반환"""
-    stat = path.stat()
-    is_dir = path.is_dir()
+    """파일/폴더 정보 반환 (stat 1회만 호출)"""
+    st = path.stat()
+    is_dir = stat_module.S_ISDIR(st.st_mode)
 
     info = {
         "name": path.name,
         "path": str(path),
         "is_dir": is_dir,
-        "size": stat.st_size if not is_dir else None,
-        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-        "created": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+        "size": st.st_size if not is_dir else None,
+        "modified": datetime.fromtimestamp(st.st_mtime).isoformat(),
+        "created": datetime.fromtimestamp(st.st_ctime).isoformat(),
     }
 
     if not is_dir:
@@ -162,6 +200,95 @@ def format_size(size: int) -> str:
             return f"{size:.1f} {unit}"
         size /= 1024
     return f"{size:.1f} PB"
+
+
+def probe_video(file_path: Path) -> dict:
+    """ffprobe로 동영상 코덱/컨테이너/내장자막 분석 (mtime 기반 캐시)"""
+    path_str = str(file_path)
+    mtime = file_path.stat().st_mtime
+    cache_key = (path_str, mtime)
+
+    if cache_key in _probe_cache:
+        return _probe_cache[cache_key]
+
+    try:
+        result = subprocess.run(
+            [FFPROBE_PATH, "-v", "quiet", "-print_format", "json",
+             "-show_streams", "-show_format", path_str],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.returncode != 0:
+            return {"error": "ffprobe failed", "needs_transcode": True}
+        info = json.loads(result.stdout)
+    except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+        return {"error": str(e), "needs_transcode": True}
+
+    streams = info.get("streams", [])
+    fmt = info.get("format", {})
+
+    video_codec = None
+    audio_codec = None
+    subtitle_tracks = []
+    duration = float(fmt.get("duration", 0))
+
+    for s in streams:
+        codec_type = s.get("codec_type")
+        codec_name = s.get("codec_name", "").lower()
+        if codec_type == "video" and video_codec is None:
+            video_codec = codec_name
+        elif codec_type == "audio" and audio_codec is None:
+            audio_codec = codec_name
+        elif codec_type == "subtitle":
+            track_index = len(subtitle_tracks)
+            lang = s.get("tags", {}).get("language", "")
+            title = s.get("tags", {}).get("title", "")
+            subtitle_tracks.append({
+                "index": track_index,
+                "codec": codec_name,
+                "language": lang,
+                "title": title or LANG_NAMES.get(lang, lang) or f"Track {track_index}",
+            })
+
+    container = file_path.suffix.lower().lstrip(".")
+
+    video_ok = video_codec in BROWSER_COMPATIBLE_VIDEO
+    audio_ok = audio_codec in BROWSER_COMPATIBLE_AUDIO or audio_codec is None
+    container_ok = container in BROWSER_COMPATIBLE_CONTAINERS
+    needs_transcode = not (video_ok and audio_ok and container_ok)
+
+    probe_result = {
+        "video_codec": video_codec,
+        "audio_codec": audio_codec,
+        "container": container,
+        "duration": duration,
+        "needs_transcode": needs_transcode,
+        "video_compatible": video_ok,
+        "audio_compatible": audio_ok,
+        "container_compatible": container_ok,
+        "subtitle_tracks": subtitle_tracks,
+    }
+
+    # 캐시 저장 (최대치 초과 시 절반 삭제)
+    if len(_probe_cache) >= _PROBE_CACHE_MAX:
+        keys = list(_probe_cache.keys())
+        for k in keys[:len(keys) // 2]:
+            del _probe_cache[k]
+    _probe_cache[cache_key] = probe_result
+
+    return probe_result
+
+
+def _kill_transcode(process: subprocess.Popen):
+    """트랜스코딩 FFmpeg 프로세스를 안전하게 종료"""
+    try:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+    except Exception:
+        pass
 
 
 # ============ 인증 데코레이터 ============
@@ -422,7 +549,7 @@ async def get_file(
                 f.seek(start)
                 remaining = content_length
                 while remaining > 0:
-                    chunk_size = min(8192, remaining)
+                    chunk_size = min(STREAM_CHUNK_SIZE, remaining)
                     data = f.read(chunk_size)
                     if not data:
                         break
@@ -484,6 +611,473 @@ async def get_text_file(
         return {"path": str(safe_path), "content": content, "size": len(content)}
     except UnicodeDecodeError:
         raise HTTPException(status_code=400, detail=f"파일을 {encoding}으로 읽을 수 없습니다")
+
+
+# ============ 자막 API ============
+
+# 지원하는 자막 확장자
+SUBTITLE_EXTENSIONS = {'.srt', '.vtt', '.ass', '.ssa', '.smi'}
+
+# 언어 코드 → 표시명
+LANG_NAMES = {
+    'ko': '한국어', 'en': 'English', 'ja': '日本語', 'zh': '中文',
+    'es': 'Español', 'fr': 'Français', 'de': 'Deutsch', 'pt': 'Português',
+    'ru': 'Русский', 'it': 'Italiano', 'th': 'ไทย', 'vi': 'Tiếng Việt',
+}
+
+
+def srt_to_vtt(srt_content: str) -> str:
+    """SRT 자막을 WebVTT 형식으로 변환"""
+    lines = srt_content.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    vtt_lines = ['WEBVTT', '']
+
+    for line in lines:
+        # SRT 타임코드: 00:01:23,456 --> 00:01:25,789
+        # VTT 타임코드: 00:01:23.456 --> 00:01:25.789
+        if '-->' in line:
+            line = line.replace(',', '.')
+        vtt_lines.append(line)
+
+    return '\n'.join(vtt_lines)
+
+
+def ass_to_vtt(ass_content: str) -> str:
+    """ASS/SSA 자막을 WebVTT 형식으로 변환 (기본 텍스트만 추출)"""
+    import re
+    vtt_lines = ['WEBVTT', '']
+    counter = 1
+
+    for line in ass_content.split('\n'):
+        line = line.strip()
+        # Dialogue: 0,0:01:23.45,0:01:25.67,Default,,0,0,0,,자막 텍스트
+        if line.startswith('Dialogue:'):
+            parts = line.split(',', 9)
+            if len(parts) >= 10:
+                start_raw = parts[1].strip()
+                end_raw = parts[2].strip()
+
+                # ASS 타임코드: H:MM:SS.CC → HH:MM:SS.CCC
+                def convert_ass_time(t):
+                    # H:MM:SS.CC 형식
+                    match = re.match(r'(\d+):(\d{2}):(\d{2})\.(\d{2,3})', t)
+                    if match:
+                        h, m, s, cs = match.groups()
+                        ms = cs.ljust(3, '0')[:3]
+                        return f"{int(h):02d}:{m}:{s}.{ms}"
+                    return t
+
+                start = convert_ass_time(start_raw)
+                end = convert_ass_time(end_raw)
+
+                # 텍스트에서 ASS 태그 제거 {\tag} 및 \N → 줄바꿈
+                text = parts[9]
+                text = re.sub(r'\{[^}]*\}', '', text)
+                text = text.replace('\\N', '\n').replace('\\n', '\n').strip()
+
+                if text:
+                    vtt_lines.append(str(counter))
+                    vtt_lines.append(f"{start} --> {end}")
+                    vtt_lines.append(text)
+                    vtt_lines.append('')
+                    counter += 1
+
+    return '\n'.join(vtt_lines)
+
+
+def smi_to_vtt(smi_content: str, lang_class: str = "KRCC") -> str:
+    """SMI(SAMI) 자막을 WebVTT 형식으로 변환. lang_class로 언어 필터링 (기본 한국어)"""
+    import re
+    vtt_lines = ['WEBVTT', '']
+
+    # SYNC + P 블록 추출 (클래스 정보 포함)
+    sync_pattern = re.compile(
+        r'<SYNC\s+Start\s*=\s*(\d+)\s*>\s*<P\s+Class\s*=\s*(\w+)\s*>(.*?)(?=<SYNC|</BODY|$)',
+        re.IGNORECASE | re.DOTALL
+    )
+
+    matches = sync_pattern.findall(smi_content)
+    if not matches:
+        # Class 속성 없는 간단한 SMI → 전체 추출
+        simple_pattern = re.compile(
+            r'<SYNC\s+Start\s*=\s*(\d+)\s*>.*?<P[^>]*>(.*?)(?=<SYNC|</BODY|$)',
+            re.IGNORECASE | re.DOTALL
+        )
+        matches = [(ms, lang_class, text) for ms, text in simple_pattern.findall(smi_content)]
+
+    if not matches:
+        return 'WEBVTT\n'
+
+    # 지정 언어 클래스만 필터링
+    cues = []
+    for ms_str, cls, raw_text in matches:
+        if cls.upper() != lang_class.upper():
+            continue
+        ms = int(ms_str)
+        # HTML 태그 제거
+        text = re.sub(r'<[^>]+>', '', raw_text)
+        # <br> → 줄바꿈 (태그 제거 전에 처리)
+        raw_text_br = re.sub(r'<br\s*/?\s*>', '\n', raw_text, flags=re.IGNORECASE)
+        text = re.sub(r'<[^>]+>', '', raw_text_br)
+        # HTML 엔티티 변환
+        text = text.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+        text = text.strip()
+        if not text or text == ' ':
+            cues.append((ms, ''))
+        else:
+            cues.append((ms, text))
+
+    # 밀리초 → VTT 타임코드
+    def ms_to_vtt_time(ms):
+        h = ms // 3600000
+        m = (ms % 3600000) // 60000
+        s = (ms % 60000) // 1000
+        ms_rem = ms % 1000
+        return f"{h:02d}:{m:02d}:{s:02d}.{ms_rem:03d}"
+
+    counter = 1
+    for i, (start_ms, text) in enumerate(cues):
+        if not text:
+            continue
+        # 다음 큐의 시작을 종료 시간으로 사용
+        end_ms = start_ms + 5000
+        for j in range(i + 1, len(cues)):
+            end_ms = cues[j][0]
+            break
+        if end_ms <= start_ms:
+            end_ms = start_ms + 5000
+
+        vtt_lines.append(str(counter))
+        vtt_lines.append(f"{ms_to_vtt_time(start_ms)} --> {ms_to_vtt_time(end_ms)}")
+        vtt_lines.append(text)
+        vtt_lines.append('')
+        counter += 1
+
+    return '\n'.join(vtt_lines)
+
+
+def _detect_smi_languages(file_path: Path) -> list:
+    """SMI 파일에서 사용 가능한 언어 클래스를 감지"""
+    import re
+    try:
+        raw = file_path.read_bytes()
+        for enc in ['utf-8', 'utf-8-sig', 'cp949', 'euc-kr', 'latin-1']:
+            try:
+                text = raw.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            return [('KRCC', 'ko', '한국어')]
+
+        # .KRCC {Name:Korean; lang:ko-KR; ...} 패턴
+        classes = re.findall(
+            r'\.(\w+)\s*\{[^}]*Name\s*:\s*([^;]*)[^}]*lang\s*:\s*([^;}\s]*)',
+            text, re.IGNORECASE
+        )
+        if classes:
+            results = []
+            for cls_name, name, lang in classes:
+                lang_code = lang.split('-')[0].lower() if lang else ''
+                lang_label = name.strip() or LANG_NAMES.get(lang_code, lang_code)
+                results.append((cls_name, lang_code, lang_label))
+            return results
+    except Exception:
+        pass
+    return [('KRCC', 'ko', '한국어')]
+
+
+def detect_subtitles(video_path: Path) -> list:
+    """동영상 파일과 같은 디렉토리에서 자막 파일 탐지"""
+    video_stem = video_path.stem
+    video_dir = video_path.parent
+    subtitles = []
+
+    if not video_dir.exists():
+        return subtitles
+
+    for f in video_dir.iterdir():
+        if not f.is_file():
+            continue
+        if f.suffix.lower() not in SUBTITLE_EXTENSIONS:
+            continue
+
+        # 동영상 이름으로 시작하는 자막만 (예: movie.srt, movie.ko.srt)
+        if not f.stem.lower().startswith(video_stem.lower()):
+            continue
+
+        # SMI 파일: 내부 언어 클래스별로 별도 항목 생성
+        if f.suffix.lower() == '.smi':
+            langs = _detect_smi_languages(f)
+            for cls_name, lang_code, lang_label in langs:
+                subtitles.append({
+                    'path': str(f),
+                    'filename': f.name,
+                    'format': 'smi',
+                    'lang_code': lang_code,
+                    'lang_label': lang_label,
+                    'smi_class': cls_name,
+                })
+            continue
+
+        # 일반 자막: 언어 태그 추출 (movie.ko.srt → ko)
+        remaining = f.stem[len(video_stem):]
+        lang_code = ''
+        if remaining.startswith('.') and len(remaining) > 1:
+            lang_code = remaining[1:]
+
+        lang_label = LANG_NAMES.get(lang_code, lang_code) if lang_code else '기본'
+
+        subtitles.append({
+            'path': str(f),
+            'filename': f.name,
+            'format': f.suffix.lower().lstrip('.'),
+            'lang_code': lang_code,
+            'lang_label': lang_label,
+        })
+
+    # 정렬: 한국어 우선 → 영어 → 나머지
+    priority = {'ko': 0, '': 1, 'en': 2}
+    subtitles.sort(key=lambda s: (priority.get(s['lang_code'], 99), s['lang_code']))
+
+    return subtitles
+
+
+@router.get("/subtitles")
+async def get_subtitles(
+    request: Request,
+    path: str = Query(..., description="동영상 파일 경로"),
+):
+    """동영상에 연결된 자막 파일 목록 반환"""
+    # 인증 확인
+    config = load_config()
+    if not config.get("enabled"):
+        raise HTTPException(status_code=503, detail="NAS 서비스가 비활성화되어 있습니다")
+
+    session_token = request.cookies.get('nas_session') or request.headers.get('X-NAS-Session')
+    if not session_token or not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="인증이 필요합니다")
+
+    # 경로 검증
+    allowed_paths = config.get("allowed_paths", [])
+    safe_path = get_safe_path(allowed_paths, path)
+
+    if not safe_path or not safe_path.exists():
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+
+    subtitles = detect_subtitles(safe_path)
+
+    return {"video": str(safe_path), "subtitles": subtitles}
+
+
+@router.get("/subtitle")
+async def get_subtitle_file(
+    request: Request,
+    path: str = Query(..., description="자막 파일 경로"),
+    smi_class: str = Query(default="KRCC", description="SMI 언어 클래스"),
+):
+    """자막 파일을 WebVTT 형식으로 반환 (SRT/ASS/SMI 자동 변환)"""
+    # 인증 확인
+    config = load_config()
+    if not config.get("enabled"):
+        raise HTTPException(status_code=503, detail="NAS 서비스가 비활성화되어 있습니다")
+
+    session_token = request.cookies.get('nas_session') or request.headers.get('X-NAS-Session')
+    if not session_token or not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="인증이 필요합니다")
+
+    # 경로 검증
+    allowed_paths = config.get("allowed_paths", [])
+    safe_path = get_safe_path(allowed_paths, path)
+
+    if not safe_path or not safe_path.exists():
+        raise HTTPException(status_code=404, detail="자막 파일을 찾을 수 없습니다")
+
+    suffix = safe_path.suffix.lower()
+    if suffix not in SUBTITLE_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="지원하지 않는 자막 형식입니다")
+
+    # 파일 읽기 (바이트를 한 번만 읽고 여러 인코딩 시도 — 디스크 I/O 1회)
+    raw_bytes = safe_path.read_bytes()
+    content = None
+    for encoding in ['utf-8', 'utf-8-sig', 'cp949', 'euc-kr', 'shift_jis', 'latin-1']:
+        try:
+            content = raw_bytes.decode(encoding)
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    if content is None:
+        raise HTTPException(status_code=400, detail="자막 파일 인코딩을 인식할 수 없습니다")
+
+    # VTT 변환
+    if suffix == '.vtt':
+        vtt_content = content
+    elif suffix == '.srt':
+        vtt_content = srt_to_vtt(content)
+    elif suffix in ('.ass', '.ssa'):
+        vtt_content = ass_to_vtt(content)
+    elif suffix == '.smi':
+        vtt_content = smi_to_vtt(content, lang_class=smi_class)
+    else:
+        raise HTTPException(status_code=400, detail="변환할 수 없는 형식입니다")
+
+    return Response(
+        content=vtt_content,
+        media_type="text/vtt; charset=utf-8",
+        headers={"Content-Type": "text/vtt; charset=utf-8"},
+    )
+
+
+# ============ 트랜스코딩 API ============
+
+@router.get("/probe")
+async def probe_file(
+    request: Request,
+    path: str = Query(..., description="동영상 파일 경로"),
+):
+    """동영상 코덱/컨테이너 분석 (트랜스코딩 필요 여부 판단)"""
+    config = load_config()
+    if not config.get("enabled"):
+        raise HTTPException(status_code=503, detail="NAS 서비스가 비활성화되어 있습니다")
+
+    session_token = request.cookies.get('nas_session') or request.headers.get('X-NAS-Session')
+    if not session_token or not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="인증이 필요합니다")
+
+    allowed_paths = config.get("allowed_paths", [])
+    safe_path = get_safe_path(allowed_paths, path)
+
+    if not safe_path or not safe_path.exists():
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+
+    result = probe_video(safe_path)
+    result["path"] = str(safe_path)
+    return result
+
+
+@router.get("/transcode")
+async def transcode_video(
+    request: Request,
+    path: str = Query(..., description="동영상 파일 경로"),
+    start: float = Query(default=0, description="시작 시간 (초)"),
+):
+    """동영상 실시간 트랜스코딩 (H.264+AAC fMP4 스트림)"""
+    config = load_config()
+    if not config.get("enabled"):
+        raise HTTPException(status_code=503, detail="NAS 서비스가 비활성화되어 있습니다")
+
+    session_token = request.cookies.get('nas_session') or request.headers.get('X-NAS-Session')
+    if not session_token or not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="인증이 필요합니다")
+
+    allowed_paths = config.get("allowed_paths", [])
+    safe_path = get_safe_path(allowed_paths, path)
+
+    if not safe_path or not safe_path.exists():
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+
+    # 코덱 분석 → 스트림별로 copy 가능 여부 판단
+    probe = probe_video(safe_path)
+    v_ok = probe.get("video_compatible")
+    a_ok = probe.get("audio_compatible")
+
+    if v_ok:
+        video_codec_args = ["-c:v", "copy"]
+    else:
+        video_codec_args = ["-c:v", "h264_videotoolbox", "-b:v", "4M"]
+
+    if a_ok:
+        audio_codec_args = ["-c:a", "copy"]
+    else:
+        audio_codec_args = ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]
+
+    # FFmpeg 명령 구성
+    cmd = [FFMPEG_PATH]
+    if start > 0:
+        cmd.extend(["-ss", str(start)])
+    cmd.extend([
+        "-i", str(safe_path),
+        *video_codec_args,
+        *audio_codec_args,
+        "-f", "mp4",
+        "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+        "-v", "quiet",
+        "pipe:1"
+    ])
+
+    try:
+        process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="FFmpeg를 찾을 수 없습니다")
+
+    request_id = f"{id(request)}_{time.time()}"
+    _active_transcodes[request_id] = process
+
+    def stream_ffmpeg():
+        try:
+            while True:
+                chunk = process.stdout.read(STREAM_CHUNK_SIZE)
+                if not chunk:
+                    break
+                yield chunk
+        except GeneratorExit:
+            pass
+        finally:
+            _kill_transcode(process)
+            _active_transcodes.pop(request_id, None)
+
+    return StreamingResponse(
+        stream_ffmpeg(),
+        media_type="video/mp4",
+        headers={
+            "Content-Type": "video/mp4",
+            "Cache-Control": "no-cache",
+            "X-Transcode-Start": str(start),
+        },
+    )
+
+
+@router.get("/embedded-subtitle")
+async def get_embedded_subtitle(
+    request: Request,
+    path: str = Query(..., description="동영상 파일 경로"),
+    track: int = Query(default=0, description="자막 트랙 인덱스"),
+):
+    """내장 자막 추출 (MKV/MP4 → WebVTT 변환)"""
+    config = load_config()
+    if not config.get("enabled"):
+        raise HTTPException(status_code=503, detail="NAS 서비스가 비활성화되어 있습니다")
+
+    session_token = request.cookies.get('nas_session') or request.headers.get('X-NAS-Session')
+    if not session_token or not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="인증이 필요합니다")
+
+    allowed_paths = config.get("allowed_paths", [])
+    safe_path = get_safe_path(allowed_paths, path)
+
+    if not safe_path or not safe_path.exists():
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+
+    try:
+        result = subprocess.run(
+            [FFMPEG_PATH, "-i", str(safe_path),
+             "-map", f"0:s:{track}", "-f", "webvtt", "-v", "quiet", "pipe:1"],
+            capture_output=True, timeout=30
+        )
+        if result.returncode != 0 or not result.stdout:
+            raise HTTPException(status_code=404, detail="자막 트랙을 추출할 수 없습니다")
+
+        return Response(
+            content=result.stdout,
+            media_type="text/vtt; charset=utf-8",
+            headers={"Content-Type": "text/vtt; charset=utf-8"},
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="자막 추출 시간 초과")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="FFmpeg를 찾을 수 없습니다")
 
 
 # ============ 상태 API ============
@@ -768,7 +1362,7 @@ def get_default_webapp_html() -> str:
         }
 
         // 파일 열기
-        function openFile(path, category, name) {
+        async function openFile(path, category, name) {
             const modal = document.getElementById('preview-modal');
             const title = document.getElementById('preview-title');
             const content = document.getElementById('preview-content');
@@ -778,7 +1372,74 @@ def get_default_webapp_html() -> str:
             const fileUrl = API_BASE + '/file?path=' + encodeURIComponent(path);
 
             if (category === 'video') {
-                content.innerHTML = `<video controls autoplay class="w-full"><source src="${fileUrl}"></video>`;
+                // 코덱 분석
+                let probeData = null;
+                try {
+                    const probeRes = await fetch(API_BASE + '/probe?path=' + encodeURIComponent(path), { credentials: 'include' });
+                    if (probeRes.ok) probeData = await probeRes.json();
+                } catch(e) {}
+
+                const needsTranscode = probeData && probeData.needs_transcode;
+
+                // 외부 자막 수집
+                let trackTags = '';
+                try {
+                    const subRes = await fetch(API_BASE + '/subtitles?path=' + encodeURIComponent(path), { credentials: 'include' });
+                    if (subRes.ok) {
+                        const subData = await subRes.json();
+                        if (subData.subtitles && subData.subtitles.length > 0) {
+                            subData.subtitles.forEach((sub, idx) => {
+                                let subUrl = API_BASE + '/subtitle?path=' + encodeURIComponent(sub.path);
+                                if (sub.smi_class) subUrl += '&smi_class=' + encodeURIComponent(sub.smi_class);
+                                const isDefault = idx === 0 ? 'default' : '';
+                                const label = sub.lang_label || sub.filename;
+                                const srclang = sub.lang_code || 'ko';
+                                trackTags += `<track kind="subtitles" src="${subUrl}" srclang="${srclang}" label="${label}" ${isDefault}>`;
+                            });
+                        }
+                    }
+                } catch(e) {}
+
+                // 내장 자막 수집
+                if (probeData && probeData.subtitle_tracks && probeData.subtitle_tracks.length > 0) {
+                    probeData.subtitle_tracks.forEach((st, idx) => {
+                        const stUrl = API_BASE + '/embedded-subtitle?path=' + encodeURIComponent(path) + '&track=' + st.index;
+                        const isDefault = !trackTags && idx === 0 ? 'default' : '';
+                        const label = st.title || st.language || ('Track ' + st.index);
+                        const srclang = st.language || 'und';
+                        trackTags += `<track kind="subtitles" src="${stUrl}" srclang="${srclang}" label="[내장] ${label}" ${isDefault}>`;
+                    });
+                }
+
+                if (needsTranscode) {
+                    // 트랜스코딩 모드
+                    const srcUrl = API_BASE + '/transcode?path=' + encodeURIComponent(path);
+                    content.innerHTML = `
+                        <video id="nas-video" controls autoplay class="w-full" crossorigin="anonymous">
+                            <source src="${srcUrl}" type="video/mp4">
+                            ${trackTags}
+                        </video>
+                        <div id="seek-notice" class="text-center text-sm text-gray-500 mt-2 hidden">탐색 중...</div>
+                    `;
+                    // 탐색(seek) 처리: 새 트랜스코딩 세션
+                    const video = document.getElementById('nas-video');
+                    let isSeeking = false;
+                    video.addEventListener('seeking', () => {
+                        if (isSeeking) return;
+                        isSeeking = true;
+                        const seekTime = video.currentTime;
+                        document.getElementById('seek-notice').classList.remove('hidden');
+                        video.src = API_BASE + '/transcode?path=' + encodeURIComponent(path) + '&start=' + seekTime;
+                        video.play().catch(() => {});
+                        setTimeout(() => {
+                            isSeeking = false;
+                            document.getElementById('seek-notice').classList.add('hidden');
+                        }, 3000);
+                    });
+                } else {
+                    // 직접 재생 (호환 코덱)
+                    content.innerHTML = `<video controls autoplay class="w-full" crossorigin="anonymous"><source src="${fileUrl}">${trackTags}</video>`;
+                }
             } else if (category === 'audio') {
                 content.innerHTML = `<audio controls autoplay class="w-full"><source src="${fileUrl}"></audio>`;
             } else if (category === 'image') {
@@ -802,25 +1463,31 @@ def get_default_webapp_html() -> str:
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
-        // 미리보기 닫기
-        document.getElementById('close-preview').addEventListener('click', () => {
+        // 미디어 요소 정리 (메모리 누수 방지)
+        function cleanupMediaElements() {
+            const container = document.getElementById('preview-content');
+            const videos = container.querySelectorAll('video');
+            const audios = container.querySelectorAll('audio');
+            videos.forEach(v => { v.pause(); v.removeAttribute('src'); v.load(); });
+            audios.forEach(a => { a.pause(); a.removeAttribute('src'); a.load(); });
+        }
+
+        function closePreviewModal() {
+            cleanupMediaElements();
             document.getElementById('preview-modal').classList.add('hidden');
             document.getElementById('preview-content').innerHTML = '';
-        });
+        }
+
+        // 미리보기 닫기
+        document.getElementById('close-preview').addEventListener('click', closePreviewModal);
 
         document.getElementById('preview-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'preview-modal') {
-                document.getElementById('preview-modal').classList.add('hidden');
-                document.getElementById('preview-content').innerHTML = '';
-            }
+            if (e.target.id === 'preview-modal') closePreviewModal();
         });
 
         // ESC 키로 모달 닫기
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                document.getElementById('preview-modal').classList.add('hidden');
-                document.getElementById('preview-content').innerHTML = '';
-            }
+            if (e.key === 'Escape') closePreviewModal();
         });
 
         // 시작

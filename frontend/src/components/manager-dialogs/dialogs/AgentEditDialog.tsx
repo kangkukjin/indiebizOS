@@ -1,12 +1,20 @@
 /**
  * AgentEditDialog - 에이전트 편집 다이얼로그
+ * 도구 선택을 패키지 단위로 묶어서 관리
  */
 
-import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { X, ChevronRight, ChevronDown } from 'lucide-react';
 import type { Agent } from '../../../types';
 import type { AgentForm, Tool } from '../types';
 import { api } from '../../../lib/api';
+
+interface PackageInfo {
+  id: string;
+  name: string;
+  description: string;
+  tool_count: number;
+}
 
 interface AgentEditDialogProps {
   show: boolean;
@@ -16,7 +24,15 @@ interface AgentEditDialogProps {
   setAgentForm: (form: AgentForm) => void;
   allTools: Tool[];
   baseTools: string[];
+  toolPackages: PackageInfo[];
   onSaveAgentSettings: () => void;
+}
+
+interface PackageGroup {
+  id: string;
+  name: string;
+  description: string;
+  tools: Tool[];
 }
 
 export function AgentEditDialog({
@@ -27,10 +43,12 @@ export function AgentEditDialog({
   setAgentForm,
   allTools,
   baseTools,
+  toolPackages,
   onSaveAgentSettings,
 }: AgentEditDialogProps) {
   const [ollamaModels, setOllamaModels] = useState<string[]>([]);
   const [ollamaRunning, setOllamaRunning] = useState(false);
+  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
 
   // Ollama 선택 시 모델 목록 로드
   useEffect(() => {
@@ -48,6 +66,85 @@ export function AgentEditDialog({
       });
     }
   }, [show, agentForm.provider]);
+
+  // 패키지별 도구 그룹핑
+  const { systemTools, packageGroups } = useMemo(() => {
+    const sysTools: Tool[] = [];
+    const groups: Record<string, PackageGroup> = {};
+
+    for (const tool of allTools) {
+      if (tool._is_system) {
+        sysTools.push(tool);
+        continue;
+      }
+      const pkgId = tool._package_id || 'unknown';
+      if (!groups[pkgId]) {
+        const pkgInfo = toolPackages.find(p => p.id === pkgId);
+        groups[pkgId] = {
+          id: pkgId,
+          name: pkgInfo?.name || pkgId,
+          description: pkgInfo?.description || '',
+          tools: [],
+        };
+      }
+      groups[pkgId].tools.push(tool);
+    }
+
+    const sorted = Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
+    return { systemTools: sysTools, packageGroups: sorted };
+  }, [allTools, toolPackages]);
+
+  // 패키지 체크박스 토글
+  const handlePackageToggle = (pkg: PackageGroup) => {
+    const toolNames = pkg.tools.map(t => t.name);
+    const selectedCount = toolNames.filter(n => agentForm.allowedTools.includes(n)).length;
+    const allSelected = selectedCount === toolNames.length;
+
+    if (allSelected) {
+      // 전체 해제
+      setAgentForm({
+        ...agentForm,
+        allowedTools: agentForm.allowedTools.filter(t => !toolNames.includes(t)),
+      });
+    } else {
+      // 전체 선택
+      const newTools = new Set([...agentForm.allowedTools, ...toolNames]);
+      setAgentForm({ ...agentForm, allowedTools: [...newTools] });
+    }
+  };
+
+  // 개별 도구 토글
+  const handleToolToggle = (toolName: string, checked: boolean) => {
+    if (checked) {
+      setAgentForm({ ...agentForm, allowedTools: [...agentForm.allowedTools, toolName] });
+    } else {
+      setAgentForm({ ...agentForm, allowedTools: agentForm.allowedTools.filter(t => t !== toolName) });
+    }
+  };
+
+  // 펼침/접힘 토글
+  const toggleExpand = (pkgId: string) => {
+    setExpandedPackages(prev => {
+      const next = new Set(prev);
+      if (next.has(pkgId)) {
+        next.delete(pkgId);
+      } else {
+        next.add(pkgId);
+      }
+      return next;
+    });
+  };
+
+  // 전체 선택 (시스템 도구 제외)
+  const selectAll = () => {
+    const nonSystemTools = allTools.filter(t => !t._is_system).map(t => t.name);
+    setAgentForm({ ...agentForm, allowedTools: nonSystemTools });
+  };
+
+  // 전체 해제
+  const deselectAll = () => {
+    setAgentForm({ ...agentForm, allowedTools: [] });
+  };
 
   if (!show) return null;
 
@@ -287,59 +384,110 @@ export function AgentEditDialog({
             />
           </div>
 
-          {/* 도구 설정 */}
+          {/* 도구 설정 - 패키지 기반 */}
           <div className="border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-gray-700">사용 도구</h3>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setAgentForm({ ...agentForm, allowedTools: allTools.map(t => t.name) })}
+                  onClick={selectAll}
                   className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                 >
                   전체 선택
                 </button>
                 <button
-                  onClick={() => setAgentForm({ ...agentForm, allowedTools: [] })}
+                  onClick={deselectAll}
                   className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
                 >
                   전체 해제
                 </button>
               </div>
             </div>
-            <div className="max-h-40 overflow-auto border border-gray-200 rounded-lg p-2 bg-gray-50">
-              <div className="grid grid-cols-2 gap-2">
-                {allTools.map((tool) => {
-                  const isBase = baseTools.includes(tool.name);
-                  const isChecked = isBase || agentForm.allowedTools.includes(tool.name);
-                  return (
-                    <label
-                      key={tool.name}
-                      className={`flex items-center gap-2 p-2 rounded ${isBase ? 'bg-blue-50' : 'hover:bg-gray-100'} cursor-pointer`}
-                    >
+            <div className="max-h-64 overflow-auto border border-gray-200 rounded-lg bg-gray-50">
+              {/* 기초 도구 */}
+              {systemTools.length > 0 && (
+                <div className="px-3 py-2 bg-blue-50 border-b border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked disabled className="rounded" />
+                    <span className="text-sm font-medium text-blue-700">
+                      기초 도구 ({systemTools.length})
+                    </span>
+                    <span className="text-xs text-blue-500 ml-auto">항상 활성</span>
+                  </div>
+                </div>
+              )}
+
+              {/* 패키지별 도구 */}
+              {packageGroups.map((pkg) => {
+                const toolNames = pkg.tools.map(t => t.name);
+                const selectedCount = toolNames.filter(n => agentForm.allowedTools.includes(n)).length;
+                const allSelected = selectedCount === toolNames.length;
+                const noneSelected = selectedCount === 0;
+                const isExpanded = expandedPackages.has(pkg.id);
+
+                return (
+                  <div key={pkg.id} className="border-b border-gray-200 last:border-b-0">
+                    {/* 패키지 헤더 */}
+                    <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100">
                       <input
                         type="checkbox"
-                        checked={isChecked}
-                        disabled={isBase}
-                        onChange={(e) => {
-                          if (isBase) return;
-                          if (e.target.checked) {
-                            setAgentForm({ ...agentForm, allowedTools: [...agentForm.allowedTools, tool.name] });
-                          } else {
-                            setAgentForm({ ...agentForm, allowedTools: agentForm.allowedTools.filter(t => t !== tool.name) });
-                          }
+                        checked={allSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = !allSelected && !noneSelected;
                         }}
+                        onChange={() => handlePackageToggle(pkg)}
                         className="rounded"
                       />
-                      <span className={`text-sm ${isBase ? 'text-blue-700' : 'text-gray-800'}`}>
-                        {tool.name}
-                        {isBase && <span className="ml-1 text-xs text-blue-500">(기초)</span>}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
+                      <button
+                        onClick={() => toggleExpand(pkg.id)}
+                        className="flex items-center gap-1 flex-1 text-left"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown size={14} className="text-gray-400 shrink-0" />
+                        ) : (
+                          <ChevronRight size={14} className="text-gray-400 shrink-0" />
+                        )}
+                        <span className="text-sm font-medium text-gray-800">{pkg.name}</span>
+                        <span className="text-xs text-gray-500 ml-1">
+                          {noneSelected
+                            ? `(${pkg.tools.length})`
+                            : allSelected
+                              ? `(${pkg.tools.length})`
+                              : `(${selectedCount}/${pkg.tools.length})`
+                          }
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* 개별 도구 (펼침 시) */}
+                    {isExpanded && (
+                      <div className="pl-9 pr-3 pb-2 bg-white">
+                        {pkg.tools.map((tool) => {
+                          const isChecked = agentForm.allowedTools.includes(tool.name);
+                          return (
+                            <label
+                              key={tool.name}
+                              className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-50 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => handleToolToggle(tool.name, e.target.checked)}
+                                className="rounded"
+                              />
+                              <span className="text-sm text-gray-700">{tool.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <p className="mt-2 text-xs text-gray-500">기초 도구는 항상 제공되며 비활성화할 수 없습니다.</p>
+            <p className="mt-2 text-xs text-gray-500">
+              패키지를 선택하면 포함된 모든 도구가 선택됩니다. 화살표를 눌러 개별 도구를 조정할 수 있습니다.
+            </p>
           </div>
         </div>
 

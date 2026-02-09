@@ -73,10 +73,10 @@ async def lifespan(app: FastAPI):
 
     print("🚀 IndieBiz OS 서버 시작")
 
-    # 스케줄러 자동 시작
-    from scheduler import get_scheduler
-    scheduler = get_scheduler()
-    scheduler.start()
+    # 통합 스케줄러 자동 시작
+    from calendar_manager import get_calendar_manager
+    calendar_manager = get_calendar_manager()
+    calendar_manager.start()
 
     # 채널 폴러 자동 시작
     from channel_poller import get_channel_poller
@@ -102,8 +102,8 @@ async def lifespan(app: FastAPI):
     # 채널 폴러 종료
     poller.stop()
 
-    # 스케줄러 종료
-    scheduler.stop()
+    # 통합 스케줄러 종료
+    calendar_manager.stop()
     print("👋 IndieBiz OS 서버 종료")
 
 app = FastAPI(

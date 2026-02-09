@@ -434,12 +434,13 @@ async def generate_install_instructions(package_id: str):
 
 # ============ 도구 API (에이전트용) ============
 
-def _load_tool_definitions(tools_path: Path) -> List[Dict[str, Any]]:
-    """도구 패키지에서 tool.json을 읽어 도구 정의 목록 반환"""
-    tools = []
+def _load_tool_definitions(tools_path: Path):
+    """도구 패키지에서 tool.json을 읽어 도구 정의 목록과 패키지 메타 정보 반환"""
+    tools: List[Dict[str, Any]] = []
+    packages_info: List[Dict[str, Any]] = []
 
     if not tools_path.exists():
-        return tools
+        return tools, packages_info
 
     for pkg_dir in tools_path.iterdir():
         if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
@@ -458,26 +459,46 @@ def _load_tool_definitions(tools_path: Path) -> List[Dict[str, Any]]:
             # 2. 객체 안에 tools 배열: {"tools": [{...}, {...}]}
             # 3. 단일 도구 객체: {"name": "...", ...}
 
+            pkg_tools_count = 0
+
             if isinstance(tool_data, list):
                 # 형식 1: 직접 배열
                 for tool in tool_data:
                     tool["_package_id"] = pkg_dir.name
                     tools.append(tool)
+                pkg_tools_count = len(tool_data)
+                pkg_name = pkg_dir.name
+                pkg_desc = ""
             elif isinstance(tool_data, dict) and "tools" in tool_data and isinstance(tool_data["tools"], list):
                 # 형식 2: {"tools": [...]} 구조
                 for tool in tool_data["tools"]:
                     tool["_package_id"] = pkg_dir.name
                     tools.append(tool)
+                pkg_tools_count = len(tool_data["tools"])
+                pkg_name = tool_data.get("name", pkg_dir.name)
+                pkg_desc = tool_data.get("description", "")
             elif isinstance(tool_data, dict) and "name" in tool_data:
                 # 형식 3: 단일 도구 객체
                 tool_data["_package_id"] = pkg_dir.name
                 tools.append(tool_data)
+                pkg_tools_count = 1
+                pkg_name = tool_data.get("name", pkg_dir.name)
+                pkg_desc = tool_data.get("description", "")
             else:
                 print(f"[api_packages] Unknown tool.json format in {pkg_dir.name}")
+                continue
+
+            # 패키지 메타 정보 수집
+            packages_info.append({
+                "id": pkg_dir.name,
+                "name": pkg_name,
+                "description": pkg_desc,
+                "tool_count": pkg_tools_count
+            })
         except Exception as e:
             print(f"[api_packages] Failed to load {tool_json}: {e}")
 
-    return tools
+    return tools, packages_info
 
 
 @router.get("/tools")
@@ -515,7 +536,7 @@ async def get_tools():
         ]
 
         # 설치된 도구 패키지에서 tool.json 로드
-        installed_tools = _load_tool_definitions(INSTALLED_PATH / "tools")
+        installed_tools, packages_info = _load_tool_definitions(INSTALLED_PATH / "tools")
 
         # 시스템 기본 도구 이름 목록
         base_tools = [t["name"] for t in system_tools]
@@ -525,7 +546,8 @@ async def get_tools():
 
         return {
             "tools": all_tools,
-            "base_tools": base_tools
+            "base_tools": base_tools,
+            "packages": packages_info
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -537,8 +559,8 @@ async def get_available_tools():
     모든 도구 목록 (not_installed + installed)
     """
     try:
-        not_installed_tools = _load_tool_definitions(NOT_INSTALLED_PATH / "tools")
-        installed_tools = _load_tool_definitions(INSTALLED_PATH / "tools")
+        not_installed_tools, _ = _load_tool_definitions(NOT_INSTALLED_PATH / "tools")
+        installed_tools, _ = _load_tool_definitions(INSTALLED_PATH / "tools")
 
         # 설치 여부 표시
         for tool in not_installed_tools:

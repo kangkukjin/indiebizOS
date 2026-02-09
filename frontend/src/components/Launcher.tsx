@@ -7,7 +7,7 @@ import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Use
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
-import type { Project, Switch, SchedulerTask, SchedulerAction } from '../types';
+import type { Project, Switch, SchedulerTask } from '../types';
 import {
   DraggableIcon,
   DraggableTrash,
@@ -18,7 +18,6 @@ import {
   SettingsDialog,
   TrashDialog,
   SchedulerDialog,
-  TaskEditDialog,
   SystemAIChatDialog,
   ToolboxDialog,
   SwitchEditDialog,
@@ -32,7 +31,6 @@ import type {
   SelectedItem,
   RenamingItem,
   TrashItems,
-  TaskForm,
   SystemAISettings,
 } from './launcher-components';
 
@@ -53,7 +51,6 @@ export function Launcher() {
   const [showNewMultiChatDialog, setShowNewMultiChatDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
-  const [showTaskEditDialog, setShowTaskEditDialog] = useState(false);
   const [showSystemAIChatDialog, setShowSystemAIChatDialog] = useState(false);
   const [showToolboxDialog, setShowToolboxDialog] = useState(false);
   const [showSwitchEditDialog, setShowSwitchEditDialog] = useState(false);
@@ -108,15 +105,6 @@ export function Launcher() {
 
   // 스케줄러 관련 상태
   const [schedulerTasks, setSchedulerTasks] = useState<SchedulerTask[]>([]);
-  const [schedulerActions, setSchedulerActions] = useState<SchedulerAction[]>([]);
-  const [editingTask, setEditingTask] = useState<SchedulerTask | null>(null);
-  const [taskForm, setTaskForm] = useState<TaskForm>({
-    name: '',
-    description: '',
-    time: '06:00',
-    action: 'blog_sync',
-    enabled: true,
-  });
 
   // 설정 다이얼로그 상태
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -400,91 +388,25 @@ export function Launcher() {
 
   const handleOpenScheduler = async () => {
     try {
-      const [tasks, actions] = await Promise.all([
-        api.getSchedulerTasks(),
-        api.getSchedulerActions(),
-      ]);
-      setSchedulerTasks(tasks);
-      setSchedulerActions(actions);
+      const events = await api.getAllEvents();
+      setSchedulerTasks(events);
       setShowSchedulerDialog(true);
     } catch (error) {
-      console.error('Failed to load scheduler:', error);
+      console.error('Failed to load events:', error);
       setSchedulerTasks([]);
-      setSchedulerActions([]);
       setShowSchedulerDialog(true);
     }
   };
 
-  const handleAddTask = () => {
-    setEditingTask(null);
-    setTaskForm({
-      name: '',
-      description: '',
-      time: '06:00',
-      action: schedulerActions[0]?.id || 'blog_sync',
-      enabled: true,
-    });
-    setShowTaskEditDialog(true);
-  };
-
-  const handleEditTask = (task: SchedulerTask) => {
-    setEditingTask(task);
-    setTaskForm({
-      name: task.name,
-      description: task.description,
-      time: task.time,
-      action: task.action,
-      enabled: task.enabled,
-    });
-    setShowTaskEditDialog(true);
-  };
-
-  const handleSaveTask = async () => {
+  const handleOpenCalendar = async () => {
     try {
-      if (editingTask) {
-        await api.updateSchedulerTask(editingTask.id, taskForm);
-      } else {
-        await api.createSchedulerTask(taskForm);
-      }
-      const tasks = await api.getSchedulerTasks();
-      setSchedulerTasks(tasks);
-      setShowTaskEditDialog(false);
+      await api.openCalendar();
     } catch (error) {
-      console.error('Failed to save task:', error);
+      console.error('Failed to open calendar:', error);
     }
   };
 
-  const handleDeleteTask = async (taskId: string) => {
-    if (!confirm('이 작업을 삭제하시겠습니까?')) return;
-    try {
-      await api.deleteSchedulerTask(taskId);
-      setSchedulerTasks(schedulerTasks.filter(t => t.id !== taskId));
-    } catch (error) {
-      console.error('Failed to delete task:', error);
-    }
-  };
-
-  const handleToggleTask = async (taskId: string) => {
-    try {
-      const result = await api.toggleSchedulerTask(taskId);
-      setSchedulerTasks(schedulerTasks.map(t =>
-        t.id === taskId ? { ...t, enabled: result.enabled } : t
-      ));
-    } catch (error) {
-      console.error('Failed to toggle task:', error);
-    }
-  };
-
-  const handleRunTask = async (taskId: string) => {
-    try {
-      await api.runSchedulerTask(taskId);
-      console.log('Task started:', taskId);
-    } catch (error) {
-      console.error('Failed to run task:', error);
-    }
-  };
-
-  const formatLastRun = (lastRun: string | null): string => {
+  const formatLastRun = (lastRun: string | null | undefined): string => {
     if (!lastRun) return '-';
     try {
       const date = new Date(lastRun);
@@ -865,7 +787,7 @@ export function Launcher() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (renamingItem) return;
 
-      if (showNewProjectDialog || showNewFolderDialog || showProfileDialog || showSchedulerDialog || showTaskEditDialog || showSystemAIChatDialog) {
+      if (showNewProjectDialog || showNewFolderDialog || showProfileDialog || showSchedulerDialog || showSystemAIChatDialog) {
         return;
       }
 
@@ -895,7 +817,7 @@ export function Launcher() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItem, clipboard, renamingItem, projects, switches, showNewProjectDialog, showNewFolderDialog, showProfileDialog, showSchedulerDialog, showTaskEditDialog, showSystemAIChatDialog]);
+  }, [selectedItem, clipboard, renamingItem, projects, switches, showNewProjectDialog, showNewFolderDialog, showProfileDialog, showSchedulerDialog, showSystemAIChatDialog]);
 
   return (
     <div className="h-full flex flex-col bg-[#F5F1EB]">
@@ -1306,28 +1228,13 @@ export function Launcher() {
         onClose={() => setShowTrashDialog(false)}
       />
 
-      {/* 예약작업 다이얼로그 */}
+      {/* 예약작업 다이얼로그 (읽기 전용) */}
       <SchedulerDialog
         show={showSchedulerDialog}
         tasks={schedulerTasks}
-        onAddTask={handleAddTask}
-        onEditTask={handleEditTask}
-        onDeleteTask={handleDeleteTask}
-        onToggleTask={handleToggleTask}
-        onRunTask={handleRunTask}
         formatLastRun={formatLastRun}
         onClose={() => setShowSchedulerDialog(false)}
-      />
-
-      {/* 작업 편집 다이얼로그 */}
-      <TaskEditDialog
-        show={showTaskEditDialog}
-        isEditing={!!editingTask}
-        form={taskForm}
-        actions={schedulerActions}
-        onFormChange={setTaskForm}
-        onSave={handleSaveTask}
-        onClose={() => setShowTaskEditDialog(false)}
+        onOpenCalendar={handleOpenCalendar}
       />
 
       {/* 시스템 AI 대화 다이얼로그 */}

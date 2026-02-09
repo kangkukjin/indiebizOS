@@ -64,7 +64,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 ---
 
-## 현재 설치된 도구 패키지 (27개)
+## 현재 설치된 도구 패키지 (29개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -72,6 +72,8 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
 | browser-action | Browser Action | Playwright 기반 브라우저 자동화 (클릭/입력/스크롤/콘텐츠 추출) |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
+| cctv | CCTV | CCTV 관련 도구 |
+| cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel) |
 | culture | Culture | 공연(KOPIS), 도서(도서관 정보나루) 등 문화예술 정보 조회 |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
 | investment | Investment | 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석 |
@@ -79,10 +81,12 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | legal | Legal | 대한민국 법률 정보 검색 (법령, 판례, 행정규칙, 자치법규 등) |
 | location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
 | media_producer | Media Producer | 홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지 생성 |
+| music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | nodejs | Nodejs | Node.js/JavaScript 코드 실행 |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |
 | photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 |
 | python-exec | Python Exec | Python 코드 실행 |
+| radio | Radio | 인터넷 라디오 검색 및 재생 (Radio Browser API + 한국 방송사 직접 스트리밍) |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API |
 | remotion-video | Remotion Video | React/Remotion 기반 프로그래밍 방식 동영상 생성 (TSX → MP4) |
 | shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 가격 비교 |
@@ -92,9 +96,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
 | web | Web Tools | 웹 검색, 크롤링, 뉴스, 신문 생성, 즐겨찾기 |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
-| music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
-| cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, **Tunnel**) |
 
 **참고**: cloudflare 패키지의 `cf_tunnel` 도구는 원격 Finder 시스템의 Cloudflare Tunnel 설정을 자동화합니다. → [원격 Finder 문서](remote_finder.md)
 
@@ -139,4 +141,4 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-02-05*
+*마지막 업데이트: 2026-02-09*

@@ -139,28 +139,30 @@ function isPortAvailable(port) {
   });
 }
 
-/**
- * 시맨틱 버전 비교: a > b → 양수, a == b → 0, a < b → 음수
- */
-function compareVersions(a, b) {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const na = pa[i] || 0;
-    const nb = pb[i] || 0;
-    if (na !== nb) return na - nb;
-  }
-  return 0;
-}
 
 /**
- * 패키지 코드 파일만 동기화 (런타임 데이터 보존)
- * 번들(src)의 코드 파일을 userData(dest)에 덮어씀
- * .db, node_modules, __pycache__, 캐시 등은 건드리지 않음
+ * 번들(src)의 파일을 userData(dest)에 동기화
+ * 앱 코드 파일만 덮어쓰고, 사용자 데이터는 모두 보존
+ * 새 파일(dest에 없는 것)은 무조건 복사
  */
-function syncPackageCode(srcDir, destDir) {
-  const codeExtensions = new Set(['.py', '.js', '.ts', '.json', '.md', '.txt', '.yaml', '.yml', '.html', '.css']);
+function syncDirOverwrite(srcDir, destDir) {
   const skipDirs = new Set(['node_modules', '__pycache__', '.git', '_temp_']);
+  // 덮어쓸 확장자 (앱 코드만)
+  const overwriteExtensions = new Set([
+    '.py', '.js', '.ts', '.jsx', '.tsx',  // 코드
+    '.html', '.css', '.scss',              // 웹
+    '.md',                                  // 문서 (패키지 README 등)
+  ]);
+  // 확장자와 무관하게 항상 덮어쓸 특정 파일명 (패키지 메타데이터)
+  const alwaysOverwriteFiles = new Set([
+    'tool.json',          // 패키지 정의
+    'requirements.txt',   // Python 의존성
+    'package.json',       // Node 의존성 (패키지 내부용)
+  ]);
+
+  if (!fs.existsSync(destDir)) {
+    fs.mkdirSync(destDir, { recursive: true });
+  }
 
   const entries = fs.readdirSync(srcDir, { withFileTypes: true });
   for (const entry of entries) {
@@ -169,15 +171,16 @@ function syncPackageCode(srcDir, destDir) {
 
     if (entry.isDirectory()) {
       if (skipDirs.has(entry.name)) continue;
-      // 하위 디렉토리 재귀 동기화
-      if (!fs.existsSync(destPath)) {
-        fs.mkdirSync(destPath, { recursive: true });
-      }
-      syncPackageCode(srcPath, destPath);
+      syncDirOverwrite(srcPath, destPath);
     } else if (entry.isFile()) {
+      // dest에 없으면 무조건 복사 (새 파일)
+      if (!fs.existsSync(destPath)) {
+        fs.copyFileSync(srcPath, destPath);
+        continue;
+      }
+      // 이미 있으면 코드 파일 또는 패키지 메타데이터만 덮어쓰기
       const ext = path.extname(entry.name).toLowerCase();
-      // 코드 파일만 덮어쓰기
-      if (codeExtensions.has(ext)) {
+      if (overwriteExtensions.has(ext) || alwaysOverwriteFiles.has(entry.name)) {
         fs.copyFileSync(srcPath, destPath);
       }
     }
@@ -186,9 +189,9 @@ function syncPackageCode(srcDir, destDir) {
 
 /**
  * 프로덕션 데이터 디렉토리 초기화
- * 앱 번들(resources/) 내의 데이터를 사용자 폴더(userData)로 복사
- * - 기본 폴더: 없으면 복사 (사용자 데이터 보존)
- * - 패키지 폴더: 새 패키지 추가 + 기존 패키지 버전 업데이트
+ * 앱 번들(resources/) 내의 데이터를 사용자 폴더(userData)로 동기화
+ * - 재설치 시 무조건 최신 파일로 덮어쓰기
+ * - .db 파일만 보존 (사용자 데이터)
  */
 function initUserData() {
   const userDataPath = app.getPath('userData'); // Windows: %APPDATA%/IndieBiz, macOS: ~/Library/Application Support/IndieBiz
@@ -197,20 +200,20 @@ function initUserData() {
   console.log(`[Init] userData 경로: ${userDataPath}`);
   console.log(`[Init] resources 경로: ${resourcesPath}`);
 
-  // 1. 기본 폴더들 - 없으면 복사 (사용자 데이터 보존)
+  // 1. 기본 폴더들 - 무조건 덮어쓰기 (.db 파일만 보존)
   const dirsToSync = ['data', 'projects', 'templates', 'tokens'];
 
   for (const dir of dirsToSync) {
     const src = path.join(resourcesPath, dir);
     const dest = path.join(userDataPath, dir);
 
-    if (!fs.existsSync(dest) && fs.existsSync(src)) {
-      console.log(`[Init] 초기 데이터 복사: ${dir}`);
-      fs.cpSync(src, dest, { recursive: true });
+    if (fs.existsSync(src)) {
+      console.log(`[Init] 데이터 동기화: ${dir}`);
+      syncDirOverwrite(src, dest);
     }
   }
 
-  // 2. 패키지 폴더 동기화 - 새 패키지 추가 + 기존 패키지 버전 업데이트
+  // 2. 패키지 폴더 동기화 - 무조건 덮어쓰기 (.db 파일만 보존)
   const packageTypes = ['tools', 'extensions'];
   for (const pkgType of packageTypes) {
     const packagesSrc = path.join(resourcesPath, 'data', 'packages', 'installed', pkgType);
@@ -229,42 +232,16 @@ function initUserData() {
 
       if (!fs.statSync(pkgSrc).isDirectory()) continue;
 
-      // 새 패키지: 통째로 복사
-      if (!fs.existsSync(pkgDest)) {
-        console.log(`[Init] 새 패키지 복사: ${pkgType}/${pkg}`);
-        fs.cpSync(pkgSrc, pkgDest, { recursive: true });
-        continue;
-      }
-
-      // 기존 패키지: tool.json 버전 비교 후 코드 파일만 갱신
-      try {
-        const srcToolJson = path.join(pkgSrc, 'tool.json');
-        const destToolJson = path.join(pkgDest, 'tool.json');
-        if (!fs.existsSync(srcToolJson)) continue;
-
-        const srcVersion = JSON.parse(fs.readFileSync(srcToolJson, 'utf8')).version || '0.0.0';
-        const destVersion = fs.existsSync(destToolJson)
-          ? (JSON.parse(fs.readFileSync(destToolJson, 'utf8')).version || '0.0.0')
-          : '0.0.0';
-
-        if (compareVersions(srcVersion, destVersion) >= 0) {
-          console.log(`[Init] 패키지 동기화: ${pkgType}/${pkg} (${destVersion} → ${srcVersion})`);
-          // 코드 파일만 덮어쓰기 (.py, .js, .json, .md, .txt, .yaml)
-          // .db, 캐시, node_modules 등 런타임 데이터는 보존
-          syncPackageCode(pkgSrc, pkgDest);
-        }
-      } catch (e) {
-        console.warn(`[Init] 패키지 버전 비교 실패: ${pkg} - ${e.message}`);
-      }
+      console.log(`[Init] 패키지 동기화: ${pkgType}/${pkg}`);
+      syncDirOverwrite(pkgSrc, pkgDest);
     }
   }
 
-  // 3. common_prompts 폴더 동기화 (프롬프트 업데이트 지원)
+  // 3. common_prompts 폴더 동기화 (항상 최신으로 덮어쓰기)
   const promptsSrc = path.join(resourcesPath, 'data', 'common_prompts');
   const promptsDest = path.join(userDataPath, 'data', 'common_prompts');
 
   if (fs.existsSync(promptsSrc)) {
-    // 프롬프트 폴더는 항상 최신으로 덮어쓰기 (사용자 커스텀 없음)
     if (fs.existsSync(promptsDest)) {
       fs.rmSync(promptsDest, { recursive: true });
     }

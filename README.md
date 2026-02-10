@@ -171,7 +171,6 @@ Each project is **completely isolated**. Delete a project, and everything relate
 | blog | Blog RAG search and insights |
 | browser-action | Playwright-based browser automation (click/input/scroll/extract) |
 | business | Business relationships and contact (neighbor) management |
-| cloudflare | Cloudflare services (Pages, Workers, R2, D1, Tunnel) |
 | culture | Korean cultural data (performances, libraries, exhibitions) |
 | health-record | Personal health data management |
 | investment | Global financial data (KRX, DART, SEC, Yahoo Finance) |
@@ -179,7 +178,6 @@ Each project is **completely isolated**. Delete a project, and everything relate
 | legal | Korean legal information search (laws, precedents, regulations) |
 | location-services | Location-based services (weather, restaurants, directions, travel) |
 | media_producer | HTML-based slides (12 themes), video production, AI image generation |
-| music-composer | ABC notation composing, MIDI generation, audio conversion |
 | nodejs | JavaScript/Node.js execution |
 | pc-manager | File and storage management, system analysis |
 | photo-manager | Photo library management |
@@ -194,6 +192,8 @@ Each project is **completely isolated**. Delete a project, and everything relate
 | web | Web search, crawling, news, newspaper generation, bookmarks |
 | web-builder | Website builder and generator |
 | youtube | YouTube video/audio management |
+| cloudflare | Cloudflare services (Pages, Workers, R2, D1, Tunnel) |
+| music-composer | ABC notation composing, MIDI generation, audio conversion |
 
 ### Scheduler & Switches
 
@@ -208,12 +208,11 @@ Each project is **completely isolated**. Delete a project, and everything relate
 
 Control your home server from anywhere via Cloudflare Tunnel:
 
-**Remote Finder** (`/nas/app`) - Personal NAS + Music:
+**Remote Finder** (`/nas/app`) - Personal NAS:
 - Browse files with Finder-style web interface
 - Stream videos with seek support
 - Download files securely
 - Protect specific directories only
-- **Music Streaming**: YouTube audio-only playback via yt-dlp — search, queue, shuffle/repeat, lock screen controls (Media Session API), minimal data usage on mobile
 
 **Remote Launcher** (`/launcher/app`) - AI Control:
 - Chat with System AI remotely
@@ -226,7 +225,7 @@ Control your home server from anywhere via Cloudflare Tunnel:
 ```
 Your Phone → Cloudflare Edge → Tunnel → IndieBiz OS
                  (HTTPS)        (Secure)    (localhost:8765)
-                                              ├─ /nas/app (Files + Music)
+                                              ├─ /nas/app (Files)
                                               └─ /launcher/app (AI Control)
 ```
 
@@ -501,15 +500,12 @@ The human is part of the system:
 - Built-in auto-response system: When someone other than the owner sends a message, AI responds appropriately (but does not execute commands from them)
 - This auto-response system serves as the foundation for automated business operations such as customer inquiry handling and reservation guidance
 
-### 🌐 Remote Access (Personal NAS + Music + AI Control)
-- **Remote Finder**: Access your PC's files from anywhere via Cloudflare Tunnel — stream videos, browse files, download securely
-- **Music Streaming**: YouTube audio-only playback from your phone — yt-dlp extracts audio on your home PC, streams to your phone with minimal data. Queue management, shuffle/repeat, lock screen controls
-- **Remote Launcher**: Chat with System AI and all project agents from your phone — execute switches, run automations remotely
-- Turn your home PC or mini PC into a **personal NAS + music server + AI server** — no port forwarding or complex network setup
-- Use it like a personal cloud: store files at home, access and stream from anywhere
-- Run all your AI agents remotely — get investment analysis, legal research, or news summaries while on the go
-- Finder-style web interface + mobile-friendly dark theme UI
-- Secure with separate passwords for file access and AI control
+### 🌐 Remote Finder (Personal NAS)
+- Access your PC's files from anywhere via Cloudflare Tunnel
+- Stream videos on your phone while traveling — no port forwarding or complex network setup
+- Finder-style web interface for easy navigation
+- Secure with password authentication and path restrictions
+- Turn your mini PC into a personal media server
 
 ### 🔄 Tool Package Sharing
 - Share tool package installation info via Norst public messages
@@ -531,11 +527,12 @@ The human is part of the system:
 **This project is under active development.**
 
 - 16 active projects in production use
-- 27 installed tool packages (+ 9 extension packages)
+- 27 installed tool packages
+- 9 installed extension packages
 - Functional scheduler, switches, and business network
 - Advanced Auto-Response V3: Single AI call with Tool Use for judgment/search/send
 - System AI delegation to project agents
-- Remote Access: Personal NAS + Music Streaming (Remote Finder) + AI Control (Remote Launcher) via Cloudflare Tunnel
+- Remote Finder with Cloudflare Tunnel integration
 
 ### Your OS, Your Way
 

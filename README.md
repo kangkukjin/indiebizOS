@@ -208,11 +208,12 @@ Each project is **completely isolated**. Delete a project, and everything relate
 
 Control your home server from anywhere via Cloudflare Tunnel:
 
-**Remote Finder** (`/nas/app`) - Personal NAS:
+**Remote Finder** (`/nas/app`) - Personal NAS + Music:
 - Browse files with Finder-style web interface
 - Stream videos with seek support
 - Download files securely
 - Protect specific directories only
+- **Music Streaming**: Search YouTube and stream audio directly — yt-dlp extracts audio on server, saving mobile data
 
 **Remote Launcher** (`/launcher/app`) - AI Control:
 - Chat with System AI remotely
@@ -225,7 +226,7 @@ Control your home server from anywhere via Cloudflare Tunnel:
 ```
 Your Phone → Cloudflare Edge → Tunnel → IndieBiz OS
                  (HTTPS)        (Secure)    (localhost:8765)
-                                              ├─ /nas/app (Files)
+                                              ├─ /nas/app (Files + Music)
                                               └─ /launcher/app (AI Control)
 ```
 
@@ -500,9 +501,10 @@ The human is part of the system:
 - Built-in auto-response system: When someone other than the owner sends a message, AI responds appropriately (but does not execute commands from them)
 - This auto-response system serves as the foundation for automated business operations such as customer inquiry handling and reservation guidance
 
-### 🌐 Remote Finder (Personal NAS)
+### 🌐 Remote Finder (Personal NAS + Music)
 - Access your PC's files from anywhere via Cloudflare Tunnel
 - Stream videos on your phone while traveling — no port forwarding or complex network setup
+- **Music Streaming Tab**: Search YouTube and stream audio-only — server-side extraction saves mobile data, with queue and lock screen controls
 - Finder-style web interface for easy navigation
 - Secure with password authentication and path restrictions
 - Turn your mini PC into a personal media server
@@ -532,7 +534,7 @@ The human is part of the system:
 - Functional scheduler, switches, and business network
 - Advanced Auto-Response V3: Single AI call with Tool Use for judgment/search/send
 - System AI delegation to project agents
-- Remote Finder with Cloudflare Tunnel integration
+- Remote Finder with Cloudflare Tunnel integration (file browsing + YouTube music streaming)
 
 ### Your OS, Your Way
 

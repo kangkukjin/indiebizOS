@@ -615,7 +615,23 @@ function toggleRepeat() {
 
 audio.addEventListener('timeupdate',()=>{ if(audio.duration) $('progFill').style.width=(audio.currentTime/audio.duration*100)+'%'; });
 audio.addEventListener('ended',()=>mNext());
-audio.addEventListener('error',()=>setTimeout(()=>mNext(),1500));
+audio.addEventListener('error',(e)=>{
+    console.warn('Audio error:', audio.error?.code, audio.error?.message);
+    setTimeout(()=>mNext(),1500);
+});
+// Windows에서 스트리밍 멈춤 대응: stalled 시 자동 재시도
+let _stalledRetry = 0;
+audio.addEventListener('stalled',()=>{
+    if(ms.playing && _stalledRetry < 3) {
+        _stalledRetry++;
+        console.warn('Audio stalled, retry', _stalledRetry);
+        const t = audio.currentTime;
+        audio.load();
+        audio.currentTime = t;
+        audio.play().catch(()=>{});
+    }
+});
+audio.addEventListener('playing',()=>{ _stalledRetry = 0; });
 function seekAudio(e) { if(!audio.duration) return; const r=$('progBar').getBoundingClientRect(); audio.currentTime=(e.clientX-r.left)/r.width*audio.duration; }
 
 if ('mediaSession' in navigator) {

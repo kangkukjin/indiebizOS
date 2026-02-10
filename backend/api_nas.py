@@ -1140,13 +1140,54 @@ async def music_search(request: Request, q: str = Query(..., min_length=1), coun
 @router.get("/music/stream/{video_id}")
 @require_auth
 async def music_stream(request: Request, video_id: str):
-    """YouTube 오디오 스트리밍 (yt-dlp → stdout → 클라이언트)"""
-    import asyncio, re
+    """YouTube 오디오 스트리밍 (yt-dlp → stdout → 클라이언트)
+
+    Windows/Mac 크로스플랫폼 지원:
+    - yt-dlp로 먼저 실제 포맷을 확인한 뒤 적절한 MIME 타입으로 스트리밍
+    - bestaudio가 webm이 아닐 수 있으므로 (m4a 등) MIME 불일치 방지
+    """
+    import asyncio, re, json, sys
     if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
         raise HTTPException(status_code=400, detail="잘못된 video_id")
 
     url = f"https://www.youtube.com/watch?v={video_id}"
-    cmd = [
+
+    # 1단계: 실제로 선택될 포맷 확인 (ext, acodec)
+    info_cmd = [
+        "yt-dlp",
+        "-f", "bestaudio[ext=webm]/bestaudio",
+        "-j",  # JSON 메타 출력
+        "--no-playlist",
+        "--no-warnings",
+        url,
+    ]
+    ext = "webm"
+    try:
+        info_proc = await asyncio.create_subprocess_exec(
+            *info_cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        info_out, _ = await asyncio.wait_for(info_proc.communicate(), timeout=15)
+        if info_out:
+            info = json.loads(info_out)
+            ext = info.get("ext", "webm")
+    except Exception:
+        pass  # 실패 시 기본값 webm
+
+    # 포맷별 MIME 타입 매핑
+    mime_map = {
+        "webm": "audio/webm",
+        "m4a": "audio/mp4",
+        "mp4": "audio/mp4",
+        "ogg": "audio/ogg",
+        "opus": "audio/ogg",
+        "mp3": "audio/mpeg",
+    }
+    content_type = mime_map.get(ext, "audio/webm")
+
+    # 2단계: 실제 스트리밍
+    stream_cmd = [
         "yt-dlp",
         "-f", "bestaudio[ext=webm]/bestaudio",
         "-o", "-",
@@ -1156,9 +1197,9 @@ async def music_stream(request: Request, video_id: str):
     ]
     try:
         process = await asyncio.create_subprocess_exec(
-            *cmd,
+            *stream_cmd,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
         )
 
         async def audio_gen():
@@ -1171,12 +1212,18 @@ async def music_stream(request: Request, video_id: str):
             finally:
                 if process.returncode is None:
                     process.kill()
+                try:
                     await process.wait()
+                except Exception:
+                    pass
 
         return StreamingResponse(
             audio_gen(),
-            media_type="audio/webm",
-            headers={"Cache-Control": "no-cache"},
+            media_type=content_type,
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Audio-Format": ext,
+            },
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"스트리밍 실패: {str(e)}")

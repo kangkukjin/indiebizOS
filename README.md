@@ -208,11 +208,12 @@ Each project is **completely isolated**. Delete a project, and everything relate
 
 Control your home server from anywhere via Cloudflare Tunnel:
 
-**Remote Finder** (`/nas/app`) - Personal NAS:
+**Remote Finder** (`/nas/app`) - Personal NAS + Music:
 - Browse files with Finder-style web interface
 - Stream videos with seek support
 - Download files securely
 - Protect specific directories only
+- **Music Streaming**: YouTube audio-only playback via yt-dlp — search, queue, shuffle/repeat, lock screen controls (Media Session API), minimal data usage on mobile
 
 **Remote Launcher** (`/launcher/app`) - AI Control:
 - Chat with System AI remotely
@@ -225,7 +226,7 @@ Control your home server from anywhere via Cloudflare Tunnel:
 ```
 Your Phone → Cloudflare Edge → Tunnel → IndieBiz OS
                  (HTTPS)        (Secure)    (localhost:8765)
-                                              ├─ /nas/app (Files)
+                                              ├─ /nas/app (Files + Music)
                                               └─ /launcher/app (AI Control)
 ```
 
@@ -500,10 +501,11 @@ The human is part of the system:
 - Built-in auto-response system: When someone other than the owner sends a message, AI responds appropriately (but does not execute commands from them)
 - This auto-response system serves as the foundation for automated business operations such as customer inquiry handling and reservation guidance
 
-### 🌐 Remote Access (Personal NAS + AI Control)
+### 🌐 Remote Access (Personal NAS + Music + AI Control)
 - **Remote Finder**: Access your PC's files from anywhere via Cloudflare Tunnel — stream videos, browse files, download securely
+- **Music Streaming**: YouTube audio-only playback from your phone — yt-dlp extracts audio on your home PC, streams to your phone with minimal data. Queue management, shuffle/repeat, lock screen controls
 - **Remote Launcher**: Chat with System AI and all project agents from your phone — execute switches, run automations remotely
-- Turn your home PC or mini PC into a **personal NAS + AI server** — no port forwarding or complex network setup
+- Turn your home PC or mini PC into a **personal NAS + music server + AI server** — no port forwarding or complex network setup
 - Use it like a personal cloud: store files at home, access and stream from anywhere
 - Run all your AI agents remotely — get investment analysis, legal research, or news summaries while on the go
 - Finder-style web interface + mobile-friendly dark theme UI
@@ -533,7 +535,7 @@ The human is part of the system:
 - Functional scheduler, switches, and business network
 - Advanced Auto-Response V3: Single AI call with Tool Use for judgment/search/send
 - System AI delegation to project agents
-- Remote Access: Personal NAS (Remote Finder) + AI Control (Remote Launcher) via Cloudflare Tunnel
+- Remote Access: Personal NAS + Music Streaming (Remote Finder) + AI Control (Remote Launcher) via Cloudflare Tunnel
 
 ### Your OS, Your Way
 

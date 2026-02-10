@@ -158,7 +158,6 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "allowDowngrade": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "IndieBiz"

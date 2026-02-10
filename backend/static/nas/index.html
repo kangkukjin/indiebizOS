@@ -412,10 +412,17 @@ function isPdf(n) {
 function updateBread(path) {
     let html = '<a onclick="navTo(\'\')">Home</a>';
     if (path) {
-        const parts = path.split('/').filter(p=>p);
+        // Windows(백슬래시) / Unix(슬래시) 모두 지원
+        const sep = path.includes('\\') ? '\\' : '/';
+        const parts = path.split(/[/\\]/).filter(p=>p);
         let acc = '';
-        parts.forEach(p => {
-            acc += '/' + p;
+        parts.forEach((p, i) => {
+            // Windows 드라이브: "D:" → "D:\"
+            if (i === 0 && /^[A-Za-z]:$/.test(p)) {
+                acc = p + sep;
+            } else {
+                acc += (i === 1 && /^[A-Za-z]:/.test(acc) ? '' : sep) + p;
+            }
             const ep = acc.replace(/'/g, "\\'");
             html += ` <span>&#8250;</span> <a onclick="navTo('${ep}')">${p}</a>`;
         });

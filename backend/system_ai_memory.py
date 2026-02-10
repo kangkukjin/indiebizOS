@@ -172,6 +172,56 @@ def get_recent_conversations(limit: int = 10) -> List[Dict[str, Any]]:
     return conversations
 
 
+def get_history_for_ai(limit: int = 7) -> List[Dict[str, str]]:
+    """시스템 AI용 대화 히스토리 (조회 + 역할 매핑 + Observation Masking 통합)
+
+    모든 시스템 AI 통로(GUI WebSocket, HTTP, 외부 채널)가 이 함수 하나만 호출하면
+    동일한 히스토리를 받습니다.
+
+    처리 내용:
+    1. user/assistant 대화만 조회 (delegation, agent_report 제외)
+    2. role을 Claude API 호환 형식으로 매핑
+    3. Observation Masking: 오래된 긴 대화는 축약
+
+    프론트엔드 히스토리 표시에는 get_recent_conversations()를 사용하세요.
+
+    Returns:
+        [{"role": "user"|"assistant", "content": "..."}] 형식의 리스트
+    """
+    RECENT_TURNS_RAW = 2    # 최근 2턴은 원본 유지
+    MASK_THRESHOLD = 500    # 500자 이상이면 마스킹
+
+    init_memory_db()
+
+    conn = _get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, timestamp, role, content, summary, importance
+        FROM conversations
+        WHERE role IN ('user', 'assistant')
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    history = []
+    for idx, row in enumerate(reversed(rows)):  # 시간순으로 정렬
+        role = row[2]       # 이미 'user' 또는 'assistant'만 조회됨
+        content = row[3]
+
+        # Observation Masking: 최근 2턴은 원본, 오래된 것은 500자 이상이면 축약
+        if idx < len(rows) - RECENT_TURNS_RAW and len(content) > MASK_THRESHOLD:
+            first_line = content.split('\n')[0][:100]
+            content = f"[이전 대화: {first_line}... ({len(content)}자)]"
+
+        history.append({"role": role, "content": content})
+
+    return history
+
+
 def get_important_conversations(min_importance: int = 1, limit: int = 20) -> List[Dict[str, Any]]:
     """중요 대화 조회"""
     init_memory_db()

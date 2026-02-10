@@ -1,11 +1,17 @@
 /**
  * SettingsDialog - 시스템 설정 다이얼로그
+ *
+ * 탭별 서브 컴포넌트:
+ *   SettingsChannelsTab.tsx - 통신채널 설정
+ *   SettingsRemoteTab.tsx   - 원격 Finder / 원격 런처 / Cloudflare 터널
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Mail, Globe, ChevronDown, ChevronRight, FileText, Edit3, User, Download, Upload, Package, CheckCircle, AlertCircle, HardDrive, FolderOpen, Plus, Trash2, Monitor, Cloud } from 'lucide-react';
+import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3 } from 'lucide-react';
 import type { SystemAISettings } from '../types';
 import { api } from '../../../lib/api';
+import { SettingsChannelsTab } from './SettingsChannelsTab';
+import { SettingsRemoteTab } from './SettingsRemoteTab';
 
 interface PromptTemplate {
   id: string;
@@ -13,16 +19,6 @@ interface PromptTemplate {
   description: string;
   tokens: number;
   selected: boolean;
-}
-
-interface ChannelSetting {
-  id: number;
-  channel_type: string;
-  enabled: number;
-  config: string;
-  polling_interval: number;
-  last_poll_at: string | null;
-  updated_at: string;
 }
 
 interface SettingsDialogProps {
@@ -45,39 +41,6 @@ export function SettingsDialog({
   onClose,
 }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<'ai' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel'>('ai');
-  const [channels, setChannels] = useState<ChannelSetting[]>([]);
-
-  // NAS 설정 상태
-  const [nasEnabled, setNasEnabled] = useState(false);
-  const [nasHasPassword, setNasHasPassword] = useState(false);
-  const [nasPassword, setNasPassword] = useState('');
-  const [nasAllowedPaths, setNasAllowedPaths] = useState<string[]>([]);
-  const [nasNewPath, setNasNewPath] = useState('');
-  const [isLoadingNas, setIsLoadingNas] = useState(false);
-  const [nasSaveResult, setNasSaveResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  // 원격 런처 설정 상태
-  const [launcherEnabled, setLauncherEnabled] = useState(false);
-  const [launcherHasPassword, setLauncherHasPassword] = useState(false);
-  const [launcherPassword, setLauncherPassword] = useState('');
-  const [isLoadingLauncher, setIsLoadingLauncher] = useState(false);
-  const [launcherSaveResult, setLauncherSaveResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  // Cloudflare 터널 설정 상태
-  const [tunnelRunning, setTunnelRunning] = useState(false);
-  const [tunnelAutoStart, setTunnelAutoStart] = useState(false);
-  const [tunnelName, setTunnelName] = useState('');
-  const [tunnelHostname, setTunnelHostname] = useState('');
-  const [finderHostname, setFinderHostname] = useState('');
-  const [launcherHostname, setLauncherHostname] = useState('');
-  const [tunnelCloudflaredInstalled, setTunnelCloudflaredInstalled] = useState(false);
-  const [isLoadingTunnel, setIsLoadingTunnel] = useState(false);
-  const [isTunnelToggling, setIsTunnelToggling] = useState(false);
-  const [tunnelSaveResult, setTunnelSaveResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
-  const [channelConfigs, setChannelConfigs] = useState<Record<string, any>>({});
-  const [isLoadingChannels, setIsLoadingChannels] = useState(false);
 
   // 데이터 내보내기/가져오기 상태
   const [isExporting, setIsExporting] = useState(false);
@@ -85,12 +48,6 @@ export function SettingsDialog({
   const [exportResult, setExportResult] = useState<{ success: boolean; message: string } | null>(null);
   const [importResult, setImportResult] = useState<{ success: boolean; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // 소유자 식별 정보
-  const [ownerEmails, setOwnerEmails] = useState('');
-  const [ownerNostrPubkeys, setOwnerNostrPubkeys] = useState('');
-  const [systemAiGmail, setSystemAiGmail] = useState('');
-  const [ownerDirty, setOwnerDirty] = useState(false);
 
   // 프롬프트 템플릿 상태
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
@@ -100,12 +57,36 @@ export function SettingsDialog({
   const [rolePromptContent, setRolePromptContent] = useState('');
   const [isSavingRolePrompt, setIsSavingRolePrompt] = useState(false);
 
+  // Cloudflare 터널 정보 (외부 URL 표시용)
+  const [finderHostname, setFinderHostname] = useState('');
+  const [launcherHostname, setLauncherHostname] = useState('');
+
   // 프롬프트 템플릿 로드
   useEffect(() => {
     if (show && activeTab === 'ai') {
       loadPromptTemplates();
     }
   }, [show, activeTab]);
+
+  // 터널 설정 로드 (다이얼로그가 열릴 때 항상 로드 - 외부 URL 표시를 위해)
+  useEffect(() => {
+    if (show) {
+      loadTunnelHostnames();
+    }
+  }, [show]);
+
+  const loadTunnelHostnames = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8765/tunnel/config');
+      if (response.ok) {
+        const data = await response.json();
+        setFinderHostname(data.finder_hostname || '');
+        setLauncherHostname(data.launcher_hostname || '');
+      }
+    } catch (err) {
+      console.error('Failed to load tunnel config:', err);
+    }
+  };
 
   const loadPromptTemplates = async () => {
     try {
@@ -152,338 +133,6 @@ export function SettingsDialog({
     }
   };
 
-  // 통신채널 설정 로드
-  useEffect(() => {
-    if (show && activeTab === 'channels') {
-      loadChannels();
-      loadOwnerIdentities();
-    }
-  }, [show, activeTab]);
-
-  // NAS 설정 로드
-  useEffect(() => {
-    if (show && activeTab === 'nas') {
-      loadNasConfig();
-    }
-  }, [show, activeTab]);
-
-  // 원격 런처 설정 로드
-  useEffect(() => {
-    if (show && activeTab === 'launcher') {
-      loadLauncherConfig();
-    }
-  }, [show, activeTab]);
-
-  // 터널 설정 로드 (다이얼로그가 열릴 때 항상 로드 - 외부 URL 표시를 위해)
-  useEffect(() => {
-    if (show) {
-      loadTunnelConfig();
-    }
-  }, [show]);
-
-  const loadTunnelConfig = async () => {
-    try {
-      setIsLoadingTunnel(true);
-      const response = await fetch('http://127.0.0.1:8765/tunnel/config');
-      if (response.ok) {
-        const data = await response.json();
-        setTunnelRunning(data.running || false);
-        setTunnelAutoStart(data.auto_start || false);
-        setTunnelName(data.tunnel_name || '');
-        setTunnelHostname(data.hostname || '');
-        setTunnelCloudflaredInstalled(data.cloudflared_installed || false);
-        setFinderHostname(data.finder_hostname || '');
-        setLauncherHostname(data.launcher_hostname || '');
-      }
-    } catch (err) {
-      console.error('Failed to load tunnel config:', err);
-    } finally {
-      setIsLoadingTunnel(false);
-    }
-  };
-
-  const saveTunnelConfig = async () => {
-    try {
-      setTunnelSaveResult(null);
-      const response = await fetch('http://127.0.0.1:8765/tunnel/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          auto_start: tunnelAutoStart,
-          tunnel_name: tunnelName,
-          hostname: tunnelHostname,
-        }),
-      });
-
-      if (response.ok) {
-        setTunnelSaveResult({ success: true, message: '설정이 저장되었습니다' });
-        setTimeout(() => setTunnelSaveResult(null), 3000);
-      } else {
-        const err = await response.json();
-        setTunnelSaveResult({ success: false, message: err.detail || '저장 실패' });
-      }
-    } catch (err) {
-      setTunnelSaveResult({ success: false, message: '저장 실패: ' + (err as Error).message });
-    }
-  };
-
-  const toggleTunnel = async () => {
-    try {
-      setIsTunnelToggling(true);
-      setTunnelSaveResult(null);
-
-      const endpoint = tunnelRunning ? '/tunnel/stop' : '/tunnel/start';
-      const response = await fetch(`http://127.0.0.1:8765${endpoint}`, {
-        method: 'POST',
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setTunnelRunning(!tunnelRunning);
-        setTunnelSaveResult({
-          success: true,
-          message: tunnelRunning ? '터널이 종료되었습니다' : '터널이 시작되었습니다'
-        });
-      } else {
-        const errorMsg = data.details
-          ? `${data.error}: ${data.details}`
-          : (data.error || '실패');
-        setTunnelSaveResult({ success: false, message: errorMsg });
-      }
-      setTimeout(() => setTunnelSaveResult(null), 5000);
-    } catch (err) {
-      setTunnelSaveResult({ success: false, message: '요청 실패: ' + (err as Error).message });
-    } finally {
-      setIsTunnelToggling(false);
-    }
-  };
-
-  const loadNasConfig = async () => {
-    try {
-      setIsLoadingNas(true);
-      const response = await fetch('http://127.0.0.1:8765/nas/config');
-      if (response.ok) {
-        const data = await response.json();
-        setNasEnabled(data.enabled || false);
-        setNasHasPassword(data.has_password || false);
-        setNasAllowedPaths(data.allowed_paths || []);
-      }
-    } catch (err) {
-      console.error('Failed to load NAS config:', err);
-    } finally {
-      setIsLoadingNas(false);
-    }
-  };
-
-  const saveNasConfig = async () => {
-    try {
-      setNasSaveResult(null);
-      const body: any = {
-        enabled: nasEnabled,
-        allowed_paths: nasAllowedPaths,
-      };
-      if (nasPassword) {
-        body.password = nasPassword;
-      }
-
-      const response = await fetch('http://127.0.0.1:8765/nas/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (response.ok) {
-        setNasSaveResult({ success: true, message: '설정이 저장되었습니다' });
-        setNasPassword('');
-        setNasHasPassword(true);
-        setTimeout(() => setNasSaveResult(null), 3000);
-      } else {
-        const err = await response.json();
-        setNasSaveResult({ success: false, message: err.detail || '저장 실패' });
-      }
-    } catch (err) {
-      setNasSaveResult({ success: false, message: '저장 실패: ' + (err as Error).message });
-    }
-  };
-
-  const addNasPath = () => {
-    if (nasNewPath.trim() && !nasAllowedPaths.includes(nasNewPath.trim())) {
-      setNasAllowedPaths([...nasAllowedPaths, nasNewPath.trim()]);
-      setNasNewPath('');
-    }
-  };
-
-  const addNasPathByDialog = async () => {
-    if (window.electron?.selectFolder) {
-      const folderPath = await window.electron.selectFolder();
-      if (folderPath && !nasAllowedPaths.includes(folderPath)) {
-        setNasAllowedPaths([...nasAllowedPaths, folderPath]);
-      }
-    }
-  };
-
-  const removeNasPath = (path: string) => {
-    setNasAllowedPaths(nasAllowedPaths.filter(p => p !== path));
-  };
-
-  const loadLauncherConfig = async () => {
-    try {
-      setIsLoadingLauncher(true);
-      const response = await fetch('http://127.0.0.1:8765/launcher/config');
-      if (response.ok) {
-        const data = await response.json();
-        setLauncherEnabled(data.enabled || false);
-        setLauncherHasPassword(data.has_password || false);
-      }
-    } catch (err) {
-      console.error('Failed to load launcher config:', err);
-    } finally {
-      setIsLoadingLauncher(false);
-    }
-  };
-
-  const saveLauncherConfig = async () => {
-    try {
-      setLauncherSaveResult(null);
-      const body: any = {
-        enabled: launcherEnabled,
-      };
-      if (launcherPassword) {
-        body.password = launcherPassword;
-      }
-
-      const response = await fetch('http://127.0.0.1:8765/launcher/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (response.ok) {
-        setLauncherSaveResult({ success: true, message: '설정이 저장되었습니다' });
-        setLauncherPassword('');
-        setLauncherHasPassword(true);
-        setTimeout(() => setLauncherSaveResult(null), 3000);
-      } else {
-        const err = await response.json();
-        setLauncherSaveResult({ success: false, message: err.detail || '저장 실패' });
-      }
-    } catch (err) {
-      setLauncherSaveResult({ success: false, message: '저장 실패: ' + (err as Error).message });
-    }
-  };
-
-  const loadOwnerIdentities = async () => {
-    try {
-      const data = await api.getOwnerIdentities();
-      setOwnerEmails(data.owner_emails || '');
-      setOwnerNostrPubkeys(data.owner_nostr_pubkeys || '');
-      setSystemAiGmail(data.system_ai_gmail || '');
-      setOwnerDirty(false);
-    } catch (err) {
-      console.error('Failed to load owner identities:', err);
-    }
-  };
-
-  const saveOwnerIdentities = async () => {
-    try {
-      await api.updateOwnerIdentities({
-        owner_emails: ownerEmails.trim(),
-        owner_nostr_pubkeys: ownerNostrPubkeys.trim(),
-        system_ai_gmail: systemAiGmail.trim(),
-      });
-      setOwnerDirty(false);
-    } catch (err) {
-      console.error('Failed to save owner identities:', err);
-    }
-  };
-
-  const loadChannels = async () => {
-    try {
-      setIsLoadingChannels(true);
-      const data = await api.getChannelSettings();
-      setChannels(data);
-      // config JSON 파싱
-      const configs: Record<string, any> = {};
-      data.forEach(ch => {
-        try {
-          configs[ch.channel_type] = JSON.parse(ch.config || '{}');
-        } catch {
-          configs[ch.channel_type] = {};
-        }
-      });
-      setChannelConfigs(configs);
-    } catch (err) {
-      console.error('Failed to load channels:', err);
-    } finally {
-      setIsLoadingChannels(false);
-    }
-  };
-
-  const handleToggleChannel = async (channelType: string, enabled: boolean) => {
-    try {
-      await api.updateChannelSetting(channelType, { enabled });
-      setChannels(prev => prev.map(ch =>
-        ch.channel_type === channelType ? { ...ch, enabled: enabled ? 1 : 0 } : ch
-      ));
-    } catch (err) {
-      console.error('Failed to toggle channel:', err);
-    }
-  };
-
-  // 로컬 상태만 업데이트 (타이핑 중)
-  const handleLocalChannelConfig = (channelType: string, config: any) => {
-    setChannelConfigs(prev => ({ ...prev, [channelType]: config }));
-  };
-
-  // API에 저장 (onBlur 시)
-  const handleSaveChannelConfig = async (channelType: string) => {
-    try {
-      const config = channelConfigs[channelType];
-      if (config) {
-        await api.updateChannelSetting(channelType, { config: JSON.stringify(config) });
-      }
-    } catch (err) {
-      console.error('Failed to update channel config:', err);
-    }
-  };
-
-  // 즉시 저장 (체크박스 등)
-  const handleUpdateChannelConfig = async (channelType: string, config: any) => {
-    try {
-      await api.updateChannelSetting(channelType, { config: JSON.stringify(config) });
-      setChannelConfigs(prev => ({ ...prev, [channelType]: config }));
-    } catch (err) {
-      console.error('Failed to update channel config:', err);
-    }
-  };
-
-  const handleUpdatePollingInterval = async (channelType: string, interval: number) => {
-    try {
-      await api.updateChannelSetting(channelType, { polling_interval: interval });
-      setChannels(prev => prev.map(ch =>
-        ch.channel_type === channelType ? { ...ch, polling_interval: interval } : ch
-      ));
-    } catch (err) {
-      console.error('Failed to update polling interval:', err);
-    }
-  };
-
-  const getChannelIcon = (type: string) => {
-    switch (type) {
-      case 'gmail': return <Mail size={18} className="text-red-500" />;
-      case 'nostr': return <Globe size={18} className="text-purple-500" />;
-      default: return <Radio size={18} className="text-gray-500" />;
-    }
-  };
-
-  const getChannelLabel = (type: string) => {
-    switch (type) {
-      case 'gmail': return 'Gmail';
-      case 'nostr': return 'Nostr';
-      default: return type;
-    }
-  };
-
   if (!show) return null;
 
   return (
@@ -513,84 +162,29 @@ export function SettingsDialog({
 
         {/* 탭 */}
         <div className="flex border-b border-gray-200 bg-gray-50 shrink-0">
-          <button
-            onClick={() => setActiveTab('ai')}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'ai'
-                ? 'text-[#D97706] border-b-2 border-[#D97706] bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <Brain size={16} />
-              시스템 AI
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('channels')}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'channels'
-                ? 'text-[#D97706] border-b-2 border-[#D97706] bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <Radio size={16} />
-              통신채널
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('data')}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'data'
-                ? 'text-[#D97706] border-b-2 border-[#D97706] bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <Package size={16} />
-              데이터
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('nas')}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'nas'
-                ? 'text-[#D97706] border-b-2 border-[#D97706] bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <HardDrive size={16} />
-              원격 Finder
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('launcher')}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'launcher'
-                ? 'text-[#D97706] border-b-2 border-[#D97706] bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <Monitor size={16} />
-              원격 런처
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('tunnel')}
-            className={`flex-1 py-3 text-sm font-medium transition-colors ${
-              activeTab === 'tunnel'
-                ? 'text-[#D97706] border-b-2 border-[#D97706] bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <Cloud size={16} />
-              터널
-            </div>
-          </button>
+          {([
+            { key: 'ai', icon: Brain, label: '시스템 AI' },
+            { key: 'channels', icon: Radio, label: '통신채널' },
+            { key: 'data', icon: Package, label: '데이터' },
+            { key: 'nas', icon: HardDrive, label: '원격 Finder' },
+            { key: 'launcher', icon: Monitor, label: '원격 런처' },
+            { key: 'tunnel', icon: Cloud, label: '터널' },
+          ] as const).map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                activeTab === tab.key
+                  ? 'text-[#D97706] border-b-2 border-[#D97706] bg-white'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <tab.icon size={16} />
+                {tab.label}
+              </div>
+            </button>
+          ))}
         </div>
 
         {/* 내용 */}
@@ -762,340 +356,12 @@ export function SettingsDialog({
             </div>
           )}
 
+          {/* 통신채널 탭 */}
           {activeTab === 'channels' && (
-            <div className="space-y-4">
-              {/* 소유자 식별 정보 */}
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <User size={16} className="text-[#D97706]" />
-                  <span className="font-medium text-gray-900 text-sm">소유자 식별 정보</span>
-                </div>
-                <p className="text-xs text-gray-600">
-                  외부 채널에서 아래 주소로 오는 메시지만 사용자 명령으로 처리됩니다.
-                </p>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    소유자 이메일 (쉼표로 구분)
-                  </label>
-                  <input
-                    type="text"
-                    value={ownerEmails}
-                    onChange={(e) => { setOwnerEmails(e.target.value); setOwnerDirty(true); }}
-                    placeholder="user@gmail.com"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    소유자 Nostr 주소 (npub, 쉼표로 구분)
-                  </label>
-                  <input
-                    type="text"
-                    value={ownerNostrPubkeys}
-                    onChange={(e) => { setOwnerNostrPubkeys(e.target.value); setOwnerDirty(true); }}
-                    placeholder="npub1..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 font-mono focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
-                  />
-                </div>
-                {ownerDirty && (
-                  <button
-                    onClick={saveOwnerIdentities}
-                    className="px-4 py-1.5 bg-[#D97706] text-white text-sm rounded-lg hover:bg-[#B45309] transition-colors"
-                  >
-                    저장
-                  </button>
-                )}
-              </div>
-
-              <p className="text-sm text-gray-700">
-                비즈니스 메시지 수신을 위한 통신채널 설정입니다. 활성화된 채널은 주기적으로 메시지를 확인합니다.
-              </p>
-
-              {isLoadingChannels ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#D97706]" />
-                </div>
-              ) : channels.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  설정된 통신채널이 없습니다
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {channels.map(channel => (
-                    <div key={channel.channel_type} className="bg-gray-50 rounded-lg overflow-hidden">
-                      {/* 채널 헤더 */}
-                      <div
-                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-100"
-                        onClick={() => setExpandedChannel(
-                          expandedChannel === channel.channel_type ? null : channel.channel_type
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          {expandedChannel === channel.channel_type
-                            ? <ChevronDown size={16} className="text-gray-400" />
-                            : <ChevronRight size={16} className="text-gray-400" />
-                          }
-                          {getChannelIcon(channel.channel_type)}
-                          <span className="font-medium text-gray-900">
-                            {getChannelLabel(channel.channel_type)}
-                          </span>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer" onClick={e => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={channel.enabled === 1}
-                            onChange={(e) => handleToggleChannel(channel.channel_type, e.target.checked)}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D97706]"></div>
-                        </label>
-                      </div>
-
-                      {/* 채널 상세 설정 */}
-                      {expandedChannel === channel.channel_type && (
-                        <div className="px-4 pb-4 space-y-4 border-t border-gray-200 pt-4">
-                          {/* Gmail 설정 */}
-                          {channel.channel_type === 'gmail' && (
-                            <>
-                              <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                                📧 Gmail API를 사용하여 이메일을 송수신합니다. Google Cloud Console에서 OAuth 2.0 클라이언트를 생성하세요.
-                              </p>
-
-                              {/* OAuth 클라이언트 ID */}
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  OAuth 클라이언트 ID
-                                </label>
-                                <input
-                                  type="text"
-                                  value={channelConfigs.gmail?.client_id || ''}
-                                  onChange={(e) => handleLocalChannelConfig('gmail', {
-                                    ...channelConfigs.gmail,
-                                    client_id: e.target.value
-                                  })}
-                                  onBlur={() => handleSaveChannelConfig('gmail')}
-                                  placeholder="xxxxx.apps.googleusercontent.com"
-                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 text-sm"
-                                />
-                              </div>
-
-                              {/* OAuth 클라이언트 Secret */}
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  OAuth 클라이언트 Secret
-                                </label>
-                                <input
-                                  type="password"
-                                  value={channelConfigs.gmail?.client_secret || ''}
-                                  onChange={(e) => handleLocalChannelConfig('gmail', {
-                                    ...channelConfigs.gmail,
-                                    client_secret: e.target.value
-                                  })}
-                                  onBlur={() => handleSaveChannelConfig('gmail')}
-                                  placeholder="GOCSPX-xxxxx"
-                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 text-sm"
-                                />
-                              </div>
-
-                              {/* 시스템 AI Gmail 주소 */}
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  시스템 AI Gmail 주소
-                                </label>
-                                <input
-                                  type="email"
-                                  value={channelConfigs.gmail?.email || ''}
-                                  onChange={(e) => handleLocalChannelConfig('gmail', {
-                                    ...channelConfigs.gmail,
-                                    email: e.target.value
-                                  })}
-                                  onBlur={() => handleSaveChannelConfig('gmail')}
-                                  placeholder="system-ai@gmail.com"
-                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 text-sm"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                  시스템 AI가 사용할 Gmail 주소 (인증 시 이 계정으로 로그인)
-                                </p>
-                              </div>
-
-                              {/* 인증 상태 및 버튼 */}
-                              <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${channelConfigs.gmail?.authenticated ? 'bg-green-500' : 'bg-red-500'}`} />
-                                  <span className="text-sm text-gray-700">
-                                    {channelConfigs.gmail?.authenticated ? '인증됨' : '인증 필요'}
-                                  </span>
-                                </div>
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      const result = await api.authenticateGmail();
-                                      if (result.auth_url) {
-                                        window.open(result.auth_url, '_blank');
-                                      }
-                                      loadChannels();
-                                    } catch (err) {
-                                      console.error('Gmail 인증 시작 실패:', err);
-                                    }
-                                  }}
-                                  disabled={!channelConfigs.gmail?.client_id || !channelConfigs.gmail?.client_secret}
-                                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                                    channelConfigs.gmail?.client_id && channelConfigs.gmail?.client_secret
-                                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                  }`}
-                                >
-                                  {channelConfigs.gmail?.authenticated ? '재인증' : 'Google 인증'}
-                                </button>
-                              </div>
-
-                              {/* 폴링 주기 */}
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  폴링 주기 (초)
-                                </label>
-                                <input
-                                  type="number"
-                                  value={channel.polling_interval}
-                                  onChange={(e) => handleUpdatePollingInterval(channel.channel_type, parseInt(e.target.value) || 60)}
-                                  min={10}
-                                  max={3600}
-                                  className="w-32 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                  최소 10초, 최대 3600초 (1시간)
-                                </p>
-                              </div>
-
-                              {/* 즉시 확인 버튼 */}
-                              <div className="flex items-center justify-between">
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      await api.pollChannelNow(channel.channel_type);
-                                      loadChannels();
-                                    } catch (err) {
-                                      console.error('즉시 폴링 실패:', err);
-                                    }
-                                  }}
-                                  disabled={channel.enabled !== 1 || !channelConfigs.gmail?.authenticated}
-                                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                                    channel.enabled === 1 && channelConfigs.gmail?.authenticated
-                                      ? 'bg-[#D97706] text-white hover:bg-[#B45309]'
-                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                  }`}
-                                >
-                                  지금 확인
-                                </button>
-                                {channel.last_poll_at && (
-                                  <p className="text-xs text-gray-500">
-                                    마지막 확인: {new Date(channel.last_poll_at).toLocaleString('ko-KR')}
-                                  </p>
-                                )}
-                              </div>
-                            </>
-                          )}
-
-                          {/* Nostr 설정 */}
-                          {channel.channel_type === 'nostr' && (
-                            <>
-                              <p className="text-xs text-purple-600 bg-purple-50 p-2 rounded">
-                                ⚡ Nostr는 실시간 WebSocket으로 DM을 수신합니다
-                              </p>
-
-                              {/* 내 주소 (npub) 표시 */}
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  내 Nostr 주소 (npub)
-                                </label>
-                                {channelConfigs.nostr?.npub ? (
-                                  <div className="flex gap-2">
-                                    <input
-                                      type="text"
-                                      value={channelConfigs.nostr?.npub || ''}
-                                      readOnly
-                                      className="flex-1 px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-700 font-mono text-xs"
-                                    />
-                                    <button
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(channelConfigs.nostr?.npub || '');
-                                      }}
-                                      className="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700 text-sm"
-                                    >
-                                      복사
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-gray-500">채널을 활성화하면 자동 생성됩니다</p>
-                                )}
-                              </div>
-
-                              {/* 키 가져오기 (접힘) */}
-                              <details className="text-sm">
-                                <summary className="cursor-pointer text-gray-600 hover:text-gray-900">
-                                  다른 키로 변경하기
-                                </summary>
-                                <div className="mt-2 p-3 bg-gray-50 rounded-lg space-y-2">
-                                  <input
-                                    type="password"
-                                    placeholder="nsec1... 또는 hex 형식의 비밀키 입력"
-                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 font-mono text-xs"
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        const input = e.target as HTMLInputElement;
-                                        if (input.value.trim()) {
-                                          handleUpdateChannelConfig('nostr', {
-                                            ...channelConfigs.nostr,
-                                            nsec: input.value.trim(),
-                                            npub: '', // 리셋하여 새로 생성되도록
-                                            private_key_hex: ''
-                                          });
-                                          input.value = '';
-                                        }
-                                      }
-                                    }}
-                                  />
-                                  <p className="text-xs text-red-500">
-                                    ⚠️ 비밀키(nsec)는 절대 타인에게 공유하지 마세요
-                                  </p>
-                                </div>
-                              </details>
-
-                              {/* 릴레이 서버 */}
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  릴레이 서버
-                                </label>
-                                <input
-                                  type="text"
-                                  value={(channelConfigs.nostr?.relays || []).join(', ')}
-                                  onChange={(e) => handleUpdateChannelConfig('nostr', {
-                                    ...channelConfigs.nostr,
-                                    relays: e.target.value.split(',').map(r => r.trim()).filter(r => r)
-                                  })}
-                                  placeholder="wss://relay.damus.io, wss://nos.lol"
-                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 font-mono text-xs"
-                                />
-                              </div>
-
-                              {/* 연결 상태 */}
-                              <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${channel.enabled === 1 ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
-                                <span className="text-sm text-gray-600">
-                                  {channel.enabled === 1 ? '실시간 연결 중' : '비활성화됨'}
-                                </span>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SettingsChannelsTab show={show} />
           )}
 
+          {/* 데이터 탭 */}
           {activeTab === 'data' && (
             <div className="space-y-6">
               <p className="text-sm text-gray-700">
@@ -1169,7 +435,7 @@ export function SettingsDialog({
                   다른 PC에서 내보낸 설정 파일을 가져와 적용합니다.
                 </p>
                 <div className="text-xs text-amber-700 bg-amber-100 p-2 rounded">
-                  ⚠️ 가져오면 기존 프로젝트와 병합됩니다. 같은 이름의 프로젝트가 있으면 덮어씁니다.
+                  가져오면 기존 프로젝트와 병합됩니다. 같은 이름의 프로젝트가 있으면 덮어씁니다.
                 </div>
                 <input
                   ref={fileInputRef}
@@ -1233,394 +499,14 @@ export function SettingsDialog({
             </div>
           )}
 
-          {activeTab === 'nas' && (
-            <div className="space-y-6">
-              <div>
-                <p className="text-sm text-gray-700 mb-4">
-                  원격 Finder를 활성화하면 외부에서 Cloudflare Tunnel을 통해 PC의 파일에 접근할 수 있습니다.
-                </p>
-              </div>
-
-              {isLoadingNas ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#D97706]" />
-                </div>
-              ) : (
-                <>
-                  {/* 활성화 토글 */}
-                  <div className="bg-gray-50 rounded-lg p-5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <HardDrive size={20} className="text-gray-600" />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">원격 Finder 활성화</h3>
-                          <p className="text-xs text-gray-500">외부에서 파일 접근 허용</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setNasEnabled(!nasEnabled)}
-                        className={`relative w-12 h-6 rounded-full transition-colors ${
-                          nasEnabled ? 'bg-[#D97706]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div
-                          className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                            nasEnabled ? 'translate-x-6' : ''
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    {nasEnabled && (
-                      <div className="pt-3 border-t border-gray-200 space-y-4">
-                        {/* 비밀번호 설정 */}
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-900 mb-1">
-                            접근 비밀번호 {nasHasPassword ? '(설정됨)' : '(미설정)'}
-                          </label>
-                          <input
-                            type="password"
-                            value={nasPassword}
-                            onChange={(e) => setNasPassword(e.target.value)}
-                            placeholder={nasHasPassword ? '새 비밀번호로 변경' : '비밀번호 설정'}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">외부 접속 시 이 비밀번호가 필요합니다</p>
-                        </div>
-
-                        {/* 허용 경로 */}
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-900 mb-1">
-                            접근 허용 경로
-                          </label>
-                          <p className="text-xs text-gray-500 mb-2">이 경로들만 외부에서 접근할 수 있습니다</p>
-
-                          {nasAllowedPaths.length > 0 ? (
-                            <div className="space-y-2 mb-3">
-                              {nasAllowedPaths.map((path, idx) => (
-                                <div key={idx} className="flex items-center gap-2 bg-white p-2 rounded-lg border border-gray-200">
-                                  <FolderOpen size={16} className="text-amber-600 shrink-0" />
-                                  <span className="flex-1 text-sm text-gray-700 font-mono truncate">{path}</span>
-                                  <button
-                                    onClick={() => removeNasPath(path)}
-                                    className="p-1 hover:bg-red-100 rounded text-red-500"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-amber-600 mb-3">⚠️ 경로 미지정 시 홈 디렉토리 전체가 접근됩니다</p>
-                          )}
-
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={nasNewPath}
-                              onChange={(e) => setNasNewPath(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && addNasPath()}
-                              placeholder="/Users/username/Videos"
-                              className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 font-mono text-sm"
-                            />
-                            {nasNewPath.trim() && (
-                              <button
-                                onClick={addNasPath}
-                                className="px-3 py-2 bg-[#D97706] rounded-lg hover:bg-[#B45309] text-white"
-                                title="입력한 경로 추가"
-                              >
-                                <Plus size={18} />
-                              </button>
-                            )}
-                            <button
-                              onClick={addNasPathByDialog}
-                              className="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700"
-                              title="폴더 선택"
-                            >
-                              <FolderOpen size={18} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* 웹앱 URL 안내 */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
-                          <p className="text-sm text-blue-800">
-                            <strong>내부 주소:</strong> <code className="bg-blue-100 px-1 rounded">http://localhost:8765/nas/app</code>
-                          </p>
-                          {finderHostname ? (
-                            <p className="text-sm text-green-700">
-                              <strong>외부 주소:</strong> <code className="bg-green-100 px-1 rounded">https://{finderHostname}/nas/app</code>
-                            </p>
-                          ) : (
-                            <p className="text-xs text-blue-600">
-                              Cloudflare Tunnel 설정 후 외부 주소가 자동으로 표시됩니다
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 저장 버튼 */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={saveNasConfig}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#B45309]"
-                    >
-                      <Save size={16} />
-                      설정 저장
-                    </button>
-                    {nasSaveResult && (
-                      <span className={`text-sm ${nasSaveResult.success ? 'text-green-600' : 'text-red-600'}`}>
-                        {nasSaveResult.success ? <CheckCircle size={16} className="inline mr-1" /> : <AlertCircle size={16} className="inline mr-1" />}
-                        {nasSaveResult.message}
-                      </span>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'launcher' && (
-            <div className="space-y-6">
-              <div>
-                <p className="text-sm text-gray-700 mb-4">
-                  원격 런처를 활성화하면 외부에서 Cloudflare Tunnel을 통해 시스템 AI와 프로젝트 에이전트를 제어할 수 있습니다.
-                </p>
-              </div>
-
-              {isLoadingLauncher ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#D97706]" />
-                </div>
-              ) : (
-                <>
-                  {/* 활성화 토글 */}
-                  <div className="bg-gray-50 rounded-lg p-5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Monitor size={20} className="text-gray-600" />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">원격 런처 활성화</h3>
-                          <p className="text-xs text-gray-500">외부에서 시스템 AI 및 에이전트 제어 허용</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setLauncherEnabled(!launcherEnabled)}
-                        className={`relative w-12 h-6 rounded-full transition-colors ${
-                          launcherEnabled ? 'bg-[#D97706]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div
-                          className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                            launcherEnabled ? 'translate-x-6' : ''
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    {launcherEnabled && (
-                      <div className="pt-3 border-t border-gray-200 space-y-4">
-                        {/* 비밀번호 설정 */}
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-900 mb-1">
-                            접근 비밀번호 {launcherHasPassword ? '(설정됨)' : '(미설정)'}
-                          </label>
-                          <input
-                            type="password"
-                            value={launcherPassword}
-                            onChange={(e) => setLauncherPassword(e.target.value)}
-                            placeholder={launcherHasPassword ? '새 비밀번호로 변경' : '비밀번호 설정'}
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">외부 접속 시 이 비밀번호가 필요합니다</p>
-                        </div>
-
-                        {/* 기능 안내 */}
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
-                          <p className="text-sm font-medium text-amber-800">원격 런처 기능:</p>
-                          <ul className="text-xs text-amber-700 space-y-1 ml-4 list-disc">
-                            <li>시스템 AI와 채팅</li>
-                            <li>프로젝트 에이전트와 채팅</li>
-                            <li>스위치 원클릭 실행</li>
-                          </ul>
-                        </div>
-
-                        {/* 웹앱 URL 안내 */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
-                          <p className="text-sm text-blue-800">
-                            <strong>내부 주소:</strong> <code className="bg-blue-100 px-1 rounded">http://localhost:8765/launcher/app</code>
-                          </p>
-                          {launcherHostname ? (
-                            <p className="text-sm text-green-700">
-                              <strong>외부 주소:</strong> <code className="bg-green-100 px-1 rounded">https://{launcherHostname}/launcher/app</code>
-                            </p>
-                          ) : (
-                            <p className="text-xs text-blue-600">
-                              Cloudflare Tunnel 설정 후 외부 주소가 자동으로 표시됩니다
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 저장 버튼 */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={saveLauncherConfig}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#B45309]"
-                    >
-                      <Save size={16} />
-                      설정 저장
-                    </button>
-                    {launcherSaveResult && (
-                      <span className={`text-sm ${launcherSaveResult.success ? 'text-green-600' : 'text-red-600'}`}>
-                        {launcherSaveResult.success ? <CheckCircle size={16} className="inline mr-1" /> : <AlertCircle size={16} className="inline mr-1" />}
-                        {launcherSaveResult.message}
-                      </span>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* 터널 탭 */}
-          {activeTab === 'tunnel' && (
-            <div className="space-y-6">
-              {isLoadingTunnel ? (
-                <div className="text-center py-8 text-gray-500">로딩 중...</div>
-              ) : (
-                <>
-                  <div className="bg-sky-50 border border-sky-200 rounded-lg p-4">
-                    <p className="text-sm text-sky-800">
-                      Cloudflare Tunnel을 통해 외부에서 안전하게 IndieBiz OS에 접근할 수 있습니다.
-                      터널이 실행 중이어야 원격 Finder와 원격 런처가 외부에서 작동합니다.
-                    </p>
-                  </div>
-
-                  {/* cloudflared 설치 상태 */}
-                  {!tunnelCloudflaredInstalled && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="text-red-600" size={20} />
-                        <p className="text-sm font-medium text-red-800">cloudflared가 설치되지 않았습니다</p>
-                      </div>
-                      <p className="text-xs text-red-600 mt-2">
-                        터미널에서 설치하세요: <code className="bg-red-100 px-1 rounded">brew install cloudflared</code> (macOS)
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="bg-gray-50 rounded-lg p-5 space-y-4">
-                    {/* 터널 실행 토글 */}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">터널 실행</h3>
-                        <p className="text-sm text-gray-600">
-                          {tunnelRunning ? (
-                            <span className="text-green-600 font-medium">● 실행 중</span>
-                          ) : (
-                            <span className="text-gray-500">○ 중지됨</span>
-                          )}
-                        </p>
-                      </div>
-                      <button
-                        onClick={toggleTunnel}
-                        disabled={isTunnelToggling || !tunnelCloudflaredInstalled || !tunnelName.trim()}
-                        className={`relative w-14 h-7 rounded-full transition-colors ${
-                          tunnelRunning ? 'bg-green-500' : 'bg-gray-300'
-                        } ${(isTunnelToggling || !tunnelCloudflaredInstalled || !tunnelName.trim()) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                      >
-                        <div
-                          className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                            tunnelRunning ? 'translate-x-7' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    {/* 자동 시작 */}
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">자동 시작</h3>
-                        <p className="text-sm text-gray-600">IndieBiz OS 시작 시 터널 자동 실행</p>
-                      </div>
-                      <button
-                        onClick={() => setTunnelAutoStart(!tunnelAutoStart)}
-                        className={`relative w-14 h-7 rounded-full transition-colors ${
-                          tunnelAutoStart ? 'bg-[#D97706]' : 'bg-gray-300'
-                        }`}
-                      >
-                        <div
-                          className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
-                            tunnelAutoStart ? 'translate-x-7' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </button>
-                    </div>
-
-                    {/* 터널 이름 */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-1">터널 이름</label>
-                      <input
-                        type="text"
-                        value={tunnelName}
-                        onChange={(e) => setTunnelName(e.target.value)}
-                        placeholder="my-tunnel"
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">cloudflared tunnel create로 생성한 터널 이름</p>
-                    </div>
-
-                    {/* 호스트명 */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-1">호스트명 (메모용)</label>
-                      <input
-                        type="text"
-                        value={tunnelHostname}
-                        onChange={(e) => setTunnelHostname(e.target.value)}
-                        placeholder="home.mydomain.com"
-                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">외부에서 접속할 도메인 (참고용)</p>
-                    </div>
-
-                    {/* 접속 URL 안내 */}
-                    {tunnelHostname && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
-                        <p className="text-sm text-blue-800 font-medium">외부 접속 URL:</p>
-                        <p className="text-xs text-blue-700">
-                          원격 Finder: <code className="bg-blue-100 px-1 rounded">https://{tunnelHostname}/nas/app</code>
-                        </p>
-                        <p className="text-xs text-blue-700">
-                          원격 런처: <code className="bg-blue-100 px-1 rounded">https://{tunnelHostname}/launcher/app</code>
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 저장 버튼 */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={saveTunnelConfig}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#B45309]"
-                    >
-                      <Save size={16} />
-                      설정 저장
-                    </button>
-                    {tunnelSaveResult && (
-                      <span className={`text-sm ${tunnelSaveResult.success ? 'text-green-600' : 'text-red-600'}`}>
-                        {tunnelSaveResult.success ? <CheckCircle size={16} className="inline mr-1" /> : <AlertCircle size={16} className="inline mr-1" />}
-                        {tunnelSaveResult.message}
-                      </span>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+          {/* 원격 Finder / 원격 런처 / 터널 탭 */}
+          {(activeTab === 'nas' || activeTab === 'launcher' || activeTab === 'tunnel') && (
+            <SettingsRemoteTab
+              activeTab={activeTab}
+              show={show}
+              finderHostname={finderHostname}
+              launcherHostname={launcherHostname}
+            />
           )}
         </div>
 

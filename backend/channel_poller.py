@@ -714,7 +714,7 @@ class ChannelPoller:
                                subject: str, content: str):
         """사용자 명령을 시스템 AI로 처리 (GUI와 동일하게)"""
         try:
-            from system_ai_memory import save_conversation, get_recent_conversations
+            from system_ai_memory import save_conversation, get_history_for_ai
 
             # 메시지 내용 (본문이 비어있으면 제목 사용)
             message_content = content or subject
@@ -726,14 +726,8 @@ class ChannelPoller:
             source = f"user@{contact_type}"
             save_conversation("user", message_content, source=source)
 
-            # 히스토리 로드 (system_ai_memory.db에서 - GUI와 동일)
-            recent = get_recent_conversations(limit=10)
-            history = []
-            for conv in recent:
-                role = conv.get("role", "user")
-                if role not in ["user", "assistant"]:
-                    role = "user"
-                history.append({"role": role, "content": conv.get("content", "")})
+            # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
+            history = get_history_for_ai(limit=10)
 
             # 시스템 AI 설정 로드
             config = self._load_system_ai_config()

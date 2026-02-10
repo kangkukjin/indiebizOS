@@ -25,6 +25,7 @@ from system_ai_memory import (
     load_user_profile,
     save_conversation,
     get_recent_conversations,
+    get_history_for_ai,
     get_memory_context,
     save_memory,
     get_memories
@@ -889,42 +890,8 @@ async def chat_with_system_ai(chat: ChatMessage):
     set_current_task_id(task_id)
     clear_called_agent()
 
-    # 최근 대화 히스토리 로드 (7회) + Observation Masking 적용
-    RECENT_TURNS_RAW = 2    # 최근 2턴은 원본 유지
-    MASK_THRESHOLD = 500    # 500자 이상이면 마스킹
-
-    recent_conversations = get_recent_conversations(limit=7)
-    history = []
-
-    for idx, conv in enumerate(recent_conversations):
-        original_role = conv["role"]
-        content = conv["content"]
-
-        # Claude API는 role에 "user"와 "assistant"만 허용
-        # delegation, agent_report 등은 맥락 정보를 content에 포함시켜 매핑
-        if original_role == "user":
-            role = "user"
-        elif original_role == "assistant":
-            role = "assistant"
-        elif original_role == "delegation":
-            # 시스템 AI가 에이전트에게 위임한 기록
-            role = "assistant"
-            content = f"[에이전트 위임 기록]\n{content}"
-        elif original_role == "agent_report":
-            # 에이전트가 시스템 AI에게 보고한 기록
-            role = "user"
-            content = f"[에이전트 보고 수신]\n{content}"
-        else:
-            # 기타 (알 수 없는 role)
-            role = "user"
-            content = f"[{original_role}]\n{content}"
-
-        # Observation Masking: 최근 2턴은 원본, 오래된 것은 500자 이상이면 축약
-        if idx >= RECENT_TURNS_RAW and len(content) > MASK_THRESHOLD:
-            first_line = content.split('\n')[0][:100]
-            content = f"[이전 대화: {first_line}... ({len(content)}자)]"
-
-        history.append({"role": role, "content": content})
+    # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
+    history = get_history_for_ai(limit=7)
 
     # 사용자 메시지 저장
     save_conversation("user", chat.message)

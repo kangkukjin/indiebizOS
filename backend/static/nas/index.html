@@ -2,299 +2,634 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a2e">
     <title>Remote Finder</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --bg: #0f0f1a;
+            --card: #1a1a2e;
+            --card-hover: #22223a;
+            --primary: #0066cc;
+            --accent: #6c5ce7;
+            --text: #e0e0e0;
+            --text-dim: #888;
+            --border: #2a2a3e;
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f7;
-            color: #1d1d1f;
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html, body {
+            height:100%; overflow:hidden;
+            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+            background:var(--bg); color:var(--text);
+            -webkit-tap-highlight-color:transparent;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+
+        /* ===== Login ===== */
+        #loginScreen {
+            display:flex; flex-direction:column; align-items:center;
+            justify-content:center; height:100%; padding:30px;
         }
-        .header {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+        #loginScreen h1 { font-size:22px; margin-bottom:24px; }
+        #loginScreen form { width:100%; max-width:320px; }
+        #loginScreen input {
+            width:100%; padding:14px 16px; border:1px solid var(--border);
+            border-radius:12px; background:var(--card); color:var(--text);
+            font-size:16px; outline:none; margin-bottom:12px;
         }
-        .header h1 {
-            font-size: 28px;
-            font-weight: 600;
-            margin-bottom: 10px;
+        #loginScreen input:focus { border-color:var(--accent); }
+        #loginScreen button {
+            width:100%; padding:14px; border:none; border-radius:12px;
+            background:var(--accent); color:#fff; font-size:16px;
+            font-weight:600; cursor:pointer;
         }
-        .breadcrumb {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            color: #86868b;
+        #loginScreen button:active { opacity:0.8; }
+        #loginError { color:#e74c3c; font-size:13px; text-align:center; margin-top:10px; display:none; }
+
+        /* ===== Layout ===== */
+        #app { display:none; flex-direction:column; height:100%; }
+
+        /* ===== Tab Bar ===== */
+        .tab-bar {
+            display:flex; background:var(--card);
+            border-bottom:1px solid var(--border);
+            flex-shrink:0;
         }
-        .breadcrumb a {
-            color: #0066cc;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        .file-list {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        .file-item {
-            display: flex;
-            align-items: center;
-            padding: 16px 20px;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .file-item:hover {
-            background: #f9f9f9;
-        }
-        .file-item:last-child {
-            border-bottom: none;
-        }
-        .file-icon {
-            font-size: 24px;
-            margin-right: 16px;
-            width: 32px;
-            text-align: center;
-        }
-        .file-info {
-            flex: 1;
-        }
-        .file-name {
-            font-size: 16px;
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-        .file-meta {
-            font-size: 13px;
-            color: #86868b;
-        }
-        .file-actions {
-            display: flex;
-            gap: 8px;
-        }
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            cursor: pointer;
+        .tab-btn {
+            flex:1; padding:14px 0; border:none; background:none;
+            color:var(--text-dim); font-size:14px; font-weight:500;
+            cursor:pointer; border-bottom:2px solid transparent;
             transition: all 0.2s;
         }
-        .btn-primary {
-            background: #0066cc;
-            color: white;
+        .tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+        .tab-btn:active { opacity:0.7; }
+
+        /* ===== Tab Content ===== */
+        .tab-content { flex:1; overflow:hidden; display:none; flex-direction:column; }
+        .tab-content.active { display:flex; }
+
+        /* ========== FILES TAB ========== */
+        .files-header {
+            padding:12px 16px; background:var(--card);
+            border-bottom:1px solid var(--border); flex-shrink:0;
+            display:flex; align-items:center; justify-content:space-between;
         }
-        .btn-primary:hover {
-            background: #0055aa;
+        .files-header-left {}
+        .files-header h2 { font-size:18px; font-weight:600; margin-bottom:4px; }
+        .breadcrumb { font-size:13px; color:var(--text-dim); }
+        .breadcrumb a { color:var(--primary); text-decoration:none; cursor:pointer; }
+        .logout-btn {
+            padding:6px 12px; border:1px solid var(--border); border-radius:8px;
+            background:none; color:var(--text-dim); font-size:12px; cursor:pointer;
+            flex-shrink:0;
         }
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #1d1d1f;
+        .logout-btn:active { opacity:0.7; }
+
+        .file-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+
+        .file-item {
+            display:flex; align-items:center; padding:12px 16px;
+            border-bottom:1px solid var(--border); cursor:pointer;
+            transition:background 0.15s;
         }
-        .btn-secondary:hover {
-            background: #e0e0e0;
+        .file-item:active { background:var(--card-hover); }
+        .file-icon { font-size:22px; margin-right:14px; width:28px; text-align:center; flex-shrink:0; }
+        .file-info { flex:1; min-width:0; }
+        .file-name { font-size:15px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .file-meta { font-size:12px; color:var(--text-dim); margin-top:2px; }
+        .file-actions { display:flex; gap:6px; flex-shrink:0; }
+        .btn {
+            padding:7px 14px; border:none; border-radius:8px;
+            font-size:13px; cursor:pointer; font-weight:500;
         }
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #86868b;
+        .btn-primary { background:var(--primary); color:#fff; }
+        .btn-secondary { background:var(--border); color:var(--text); }
+        .btn:active { opacity:0.7; }
+
+        .status-msg { text-align:center; padding:50px 20px; color:var(--text-dim); font-size:14px; }
+
+        /* ========== MUSIC TAB ========== */
+        .music-search {
+            padding:10px 14px; background:var(--card);
+            border-bottom:1px solid var(--border); flex-shrink:0;
         }
-        .error {
-            background: #fff3cd;
-            color: #856404;
-            padding: 16px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        .search-wrap { display:flex; gap:8px; }
+        .search-wrap input {
+            flex:1; padding:11px 14px; border:1px solid var(--border);
+            border-radius:10px; background:var(--bg); color:var(--text);
+            font-size:16px; outline:none;
         }
+        .search-wrap input:focus { border-color:var(--accent); }
+        .search-wrap button {
+            padding:0 16px; border:none; border-radius:10px;
+            background:var(--accent); color:#fff; font-size:17px; cursor:pointer; flex-shrink:0;
+        }
+
+        .music-scroll { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:160px; }
+
+        .result-item {
+            display:flex; align-items:center; padding:10px 14px; gap:10px;
+            border-bottom:1px solid var(--border); cursor:pointer;
+            transition:background 0.15s;
+        }
+        .result-item:active { background:var(--card-hover); }
+        .result-item.playing { background:var(--card); }
+        .result-item .thumb {
+            width:60px; height:45px; border-radius:6px; object-fit:cover;
+            flex-shrink:0; background:var(--card);
+        }
+        .result-item .r-info { flex:1; min-width:0; }
+        .result-item .r-title {
+            font-size:14px; font-weight:500;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        }
+        .result-item .r-meta {
+            font-size:12px; color:var(--text-dim); margin-top:1px;
+            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        }
+        .result-item .add-btn {
+            width:34px; height:34px; border:none; border-radius:50%;
+            background:transparent; color:var(--text-dim); font-size:20px;
+            cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        }
+        .result-item .add-btn:active { color:var(--accent); }
+
+        .section-label {
+            padding:10px 14px 6px; font-size:12px; font-weight:600;
+            color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;
+        }
+        .queue-item {
+            display:flex; align-items:center; padding:7px 14px; gap:8px;
+            border-bottom:1px solid rgba(42,42,62,0.5);
+        }
+        .queue-item .qnum { width:22px; text-align:center; font-size:12px; color:var(--text-dim); flex-shrink:0; }
+        .queue-item .qinfo { flex:1; min-width:0; cursor:pointer; }
+        .queue-item .qtitle { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .queue-item .qch { font-size:11px; color:var(--text-dim); }
+        .queue-item .qrm {
+            width:26px; height:26px; border:none; border-radius:50%; background:transparent;
+            color:var(--text-dim); font-size:15px; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+        }
+
+        .empty-music {
+            text-align:center; padding:70px 30px; color:var(--text-dim);
+        }
+        .empty-music .icon { font-size:42px; margin-bottom:12px; }
+        .empty-music p { font-size:14px; line-height:1.5; }
+
+        /* ===== Player Bar ===== */
+        .player-bar {
+            position:fixed; bottom:0; left:0; right:0;
+            background:var(--card); border-top:1px solid var(--border);
+            padding-bottom:var(--safe-bottom); z-index:30;
+            transform:translateY(100%); transition:transform 0.3s ease;
+        }
+        .player-bar.visible { transform:translateY(0); }
+
+        .prog-bar { height:3px; background:var(--border); cursor:pointer; }
+        .prog-fill { height:100%; background:var(--accent); width:0%; transition:width 0.3s linear; }
+
+        .player-info { display:flex; align-items:center; padding:8px 14px; gap:10px; }
+        .p-thumb { width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0; background:var(--bg); }
+        .p-text { flex:1; min-width:0; }
+        .p-title { font-size:13px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .p-channel { font-size:11px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+        .p-controls { display:flex; align-items:center; gap:2px; flex-shrink:0; }
+        .cbtn {
+            width:40px; height:40px; border:none; border-radius:50%;
+            background:transparent; color:var(--text); font-size:20px;
+            cursor:pointer; display:flex; align-items:center; justify-content:center;
+        }
+        .cbtn.play-btn { background:var(--accent); color:#fff; font-size:18px; }
+        .cbtn:active { opacity:0.7; }
+        .cbtn.on { color:#00cec9; }
+
+        .loading-spinner {
+            display:inline-block; width:22px; height:22px;
+            border:3px solid var(--border); border-top-color:var(--accent);
+            border-radius:50%; animation:spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform:rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📁 Remote Finder</h1>
-            <div class="breadcrumb" id="breadcrumb">
-                <a onclick="navigateTo('/')">Home</a>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="loginScreen">
+    <h1>Remote Finder</h1>
+    <form id="loginForm" onsubmit="return doLogin(event)">
+        <input type="password" id="loginPw" placeholder="Password" autocomplete="current-password">
+        <button type="submit">Login</button>
+        <div id="loginError"></div>
+    </form>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="app">
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('files')">Files</button>
+        <button class="tab-btn" onclick="switchTab('music')">Music</button>
+    </div>
+
+    <!-- ===== FILES TAB ===== -->
+    <div class="tab-content active" id="tab-files">
+        <div class="files-header">
+            <div class="files-header-left">
+                <h2>Remote Finder</h2>
+                <div class="breadcrumb" id="breadcrumb"><a onclick="navTo('')">Home</a></div>
             </div>
+            <button class="logout-btn" onclick="doLogout()">Logout</button>
         </div>
-        
-        <div id="error" class="error" style="display: none;"></div>
-        
-        <div class="file-list" id="fileList">
-            <div class="loading">로딩 중...</div>
+        <div class="file-scroll" id="fileList">
+            <div class="status-msg">Loading...</div>
         </div>
     </div>
 
-    <script>
-        let currentPath = '/';
-        const API_BASE = '/nas';
+    <!-- ===== MUSIC TAB ===== -->
+    <div class="tab-content" id="tab-music">
+        <div class="music-search">
+            <div class="search-wrap">
+                <input type="search" id="musicInput" placeholder="Search music..." enterkeyhint="search">
+                <button onclick="doMusicSearch()" id="musicSearchBtn">&#128269;</button>
+            </div>
+        </div>
+        <div class="music-scroll" id="musicContent">
+            <div class="empty-music" id="musicEmpty">
+                <div class="icon">&#127925;</div>
+                <p>Search for music to start</p>
+            </div>
+        </div>
+    </div>
 
-        function formatSize(bytes) {
-            if (!bytes) return '-';
-            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-            let size = bytes;
-            let unitIndex = 0;
-            while (size >= 1024 && unitIndex < units.length - 1) {
-                size /= 1024;
-                unitIndex++;
-            }
-            return size.toFixed(1) + ' ' + units[unitIndex];
+    <!-- ===== Player Bar ===== -->
+    <div class="player-bar" id="playerBar">
+        <div class="prog-bar" id="progBar" onclick="seekAudio(event)">
+            <div class="prog-fill" id="progFill"></div>
+        </div>
+        <div class="player-info">
+            <img class="p-thumb" id="pThumb" src="" alt="">
+            <div class="p-text">
+                <div class="p-title" id="pTitle">-</div>
+                <div class="p-channel" id="pChannel">-</div>
+            </div>
+            <div class="p-controls">
+                <button class="cbtn" id="shuffleBtn" onclick="toggleShuffle()">&#128256;</button>
+                <button class="cbtn" onclick="mPrev()">&#9198;</button>
+                <button class="cbtn play-btn" id="playBtn" onclick="mToggle()">&#9654;</button>
+                <button class="cbtn" onclick="mNext()">&#9197;</button>
+                <button class="cbtn" id="repeatBtn" onclick="toggleRepeat()">&#128257;</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<audio id="audio" preload="none"></audio>
+
+<script>
+const API = '/nas';
+const $ = id => document.getElementById(id);
+const audio = $('audio');
+
+// ==================== AUTH ====================
+async function checkAuth() {
+    try {
+        const r = await fetch(`${API}/auth/check`, {credentials:'include'});
+        const data = await r.json();
+        if (!data.enabled) {
+            document.body.innerHTML = '<div style="text-align:center;padding:80px 20px;color:#888"><h2>NAS Disabled</h2><p>Enable Remote Finder in settings.</p></div>';
+            return;
         }
-
-        function formatDate(timestamp) {
-            if (!timestamp) return '-';
-            return new Date(timestamp * 1000).toLocaleString('ko-KR');
+        if (data.authenticated) {
+            showApp();
+        } else {
+            showLogin();
         }
+    } catch(e) {
+        showLogin();
+    }
+}
 
-        function getFileIcon(item) {
-            if (item.type === 'directory') return '📁';
-            const ext = item.name.split('.').pop().toLowerCase();
-            const icons = {
-                'mp4': '🎬', 'avi': '🎬', 'mkv': '🎬', 'mov': '🎬',
-                'mp3': '🎵', 'wav': '🎵', 'flac': '🎵',
-                'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
-                'pdf': '📄', 'doc': '📝', 'docx': '📝', 'txt': '📝',
-                'zip': '🗜️', 'rar': '🗜️', '7z': '🗜️'
-            };
-            return icons[ext] || '📄';
+function showLogin() {
+    $('loginScreen').style.display = 'flex';
+    $('app').style.display = 'none';
+    $('loginPw').focus();
+}
+
+function showApp() {
+    $('loginScreen').style.display = 'none';
+    $('app').style.display = 'flex';
+    loadDir('');
+}
+
+async function doLogin(e) {
+    e.preventDefault();
+    const pw = $('loginPw').value;
+    const errEl = $('loginError');
+    errEl.style.display = 'none';
+    try {
+        const r = await fetch(`${API}/auth/login`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({password:pw}),
+            credentials:'include'
+        });
+        if (r.ok) {
+            showApp();
+        } else {
+            errEl.textContent = 'Wrong password';
+            errEl.style.display = 'block';
         }
+    } catch(err) {
+        errEl.textContent = 'Connection error';
+        errEl.style.display = 'block';
+    }
+    return false;
+}
 
-        function updateBreadcrumb(path) {
-            const parts = path.split('/').filter(p => p);
-            let html = '<a onclick="navigateTo(\'/\')">Home</a>';
-            let accumulated = '';
-            
-            parts.forEach(part => {
-                accumulated += '/' + part;
-                html += ` <span>›</span> <a onclick="navigateTo('${accumulated}')">${part}</a>`;
-            });
-            
-            document.getElementById('breadcrumb').innerHTML = html;
+async function doLogout() {
+    await fetch(`${API}/auth/logout`, {method:'POST', credentials:'include'});
+    showLogin();
+}
+
+// ==================== TAB ====================
+function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.toggle('active', b.textContent.toLowerCase().includes(name));
+    });
+    document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.toggle('active', c.id === 'tab-' + name);
+    });
+    if (name === 'music') $('musicInput').focus();
+}
+
+// ==================== FILES ====================
+let curPath = '';
+
+function fmtSize(b) {
+    if (!b) return '-';
+    const u = ['B','KB','MB','GB','TB'];
+    let s=b, i=0;
+    while(s>=1024 && i<u.length-1){s/=1024;i++;}
+    return s.toFixed(1)+' '+u[i];
+}
+function fmtDate(ts) {
+    if (!ts) return '-';
+    return new Date(ts).toLocaleString('ko-KR');
+}
+function fIcon(item) {
+    if (item.is_dir) return '&#128193;';
+    const catIcons = {video:'&#127916;',audio:'&#127925;',image:'&#128444;',text:'&#128221;',pdf:'&#128196;'};
+    if (item.category && catIcons[item.category]) return catIcons[item.category];
+    const ext = item.name.split('.').pop().toLowerCase();
+    const m = {mp4:'&#127916;',avi:'&#127916;',mkv:'&#127916;',mov:'&#127916;',
+        mp3:'&#127925;',wav:'&#127925;',flac:'&#127925;',aac:'&#127925;',
+        jpg:'&#128444;',jpeg:'&#128444;',png:'&#128444;',gif:'&#128444;',
+        pdf:'&#128196;',doc:'&#128221;',docx:'&#128221;',txt:'&#128221;',
+        zip:'&#128230;',rar:'&#128230;'};
+    return m[ext]||'&#128196;';
+}
+function isVideo(n) {
+    return ['mp4','avi','mkv','mov','webm'].includes(n.split('.').pop().toLowerCase());
+}
+
+function updateBread(path) {
+    let html = '<a onclick="navTo(\'\')">Home</a>';
+    if (path) {
+        const parts = path.split('/').filter(p=>p);
+        let acc = '';
+        parts.forEach(p => {
+            acc += '/' + p;
+            const ep = acc.replace(/'/g, "\\'");
+            html += ` <span>&#8250;</span> <a onclick="navTo('${ep}')">${p}</a>`;
+        });
+    }
+    $('breadcrumb').innerHTML = html;
+}
+
+async function loadDir(path) {
+    $('fileList').innerHTML = '<div class="status-msg">Loading...</div>';
+    try {
+        const r = await fetch(`${API}/files?path=${encodeURIComponent(path)}`, {credentials:'include'});
+        if (r.status === 401) { showLogin(); return; }
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail||'Error');
+        curPath = data.path || path;
+        updateBread(curPath);
+        renderFiles(data.items || [], data.parent);
+    } catch(e) {
+        $('fileList').innerHTML = `<div class="status-msg">${esc(e.message)}</div>`;
+    }
+}
+
+function renderFiles(items, parentPath) {
+    let html = '';
+    if (parentPath) {
+        const ep = parentPath.replace(/'/g, "\\'");
+        html += `<div class="file-item" onclick="navTo('${ep}')">
+            <div class="file-icon">&#11014;</div>
+            <div class="file-info"><div class="file-name" style="color:var(--text-dim)">.. Parent</div></div>
+        </div>`;
+    }
+    if (!items||!items.length) {
+        html += '<div class="status-msg">Empty</div>';
+        $('fileList').innerHTML = html;
+        return;
+    }
+    items.sort((a,b) => { if(a.is_dir===b.is_dir) return a.name.localeCompare(b.name); return a.is_dir?-1:1; });
+    items.forEach(item => {
+        const ep = (item.path||'').replace(/'/g, "\\'");
+        const click = item.is_dir ? `onclick="navTo('${ep}')"` : '';
+        html += `<div class="file-item" ${click}>
+            <div class="file-icon">${fIcon(item)}</div>
+            <div class="file-info">
+                <div class="file-name">${esc(item.name)}</div>
+                <div class="file-meta">${!item.is_dir?fmtSize(item.size)+' &middot; ':''}${fmtDate(item.modified)}</div>
+            </div>
+            ${!item.is_dir?`<div class="file-actions">
+                ${isVideo(item.name)?`<button class="btn btn-primary" onclick="event.stopPropagation();playVideo('${ep}')">Play</button>`:''}
+                <button class="btn btn-secondary" onclick="event.stopPropagation();dlFile('${ep}')">DL</button>
+            </div>`:''}
+        </div>`;
+    });
+    $('fileList').innerHTML = html;
+}
+
+function navTo(p) { loadDir(p); }
+function dlFile(p) { window.open(`${API}/file?path=${encodeURIComponent(p)}`, '_blank'); }
+function playVideo(p) {
+    const url = `${API}/file?path=${encodeURIComponent(p)}`;
+    const w = window.open('','_blank');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${p.split('/').pop()}</title><style>body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh}video{max-width:100%;max-height:100vh}</style></head><body><video controls autoplay><source src="${url}"></video></body></html>`);
+}
+
+// ==================== MUSIC ====================
+const ms = { results:[], queue:[], idx:-1, playing:false, shuffle:false, repeat:'none' };
+
+$('musicInput').addEventListener('keydown', e => { if(e.key==='Enter') doMusicSearch(); });
+
+async function doMusicSearch() {
+    const q = $('musicInput').value.trim();
+    if (!q) return;
+    $('musicContent').innerHTML = '<div class="status-msg"><div class="loading-spinner"></div><br>Searching...</div>';
+    try {
+        const r = await fetch(`${API}/music/search?q=${encodeURIComponent(q)}&count=8`, {credentials:'include'});
+        if (r.status===401) { showLogin(); return; }
+        const data = await r.json();
+        ms.results = data.results||[];
+        renderMusic();
+    } catch(e) {
+        $('musicContent').innerHTML = `<div class="status-msg">Error: ${esc(e.message)}</div>`;
+    }
+}
+
+function renderMusic() {
+    if (ms.results.length===0 && ms.queue.length===0) {
+        $('musicContent').innerHTML = '<div class="status-msg">No results</div>';
+        return;
+    }
+    let html = '';
+    if (ms.results.length > 0) {
+        ms.results.forEach((item,i) => {
+            const isP = ms.idx>=0 && ms.queue[ms.idx]?.video_id===item.video_id;
+            html += `<div class="result-item ${isP?'playing':''}" onclick="playResult(${i})">
+                <img class="thumb" src="${item.thumbnail}" loading="lazy" alt="">
+                <div class="r-info">
+                    <div class="r-title">${esc(item.title)}</div>
+                    <div class="r-meta">${esc(item.channel)} ${item.duration?'&middot; '+item.duration:''}</div>
+                </div>
+                <button class="add-btn" onclick="event.stopPropagation();addQueue(${i})" title="Add">+</button>
+            </div>`;
+        });
+    }
+    if (ms.queue.length > 0) {
+        html += `<div class="section-label">Queue (${ms.queue.length})</div>`;
+        ms.queue.forEach((item,i) => {
+            const cur = i===ms.idx;
+            html += `<div class="queue-item" style="${cur?'background:var(--card)':''}">
+                <div class="qnum">${cur?'&#9654;':(i+1)}</div>
+                <div class="qinfo" onclick="jumpQueue(${i})">
+                    <div class="qtitle">${esc(item.title)}</div>
+                    <div class="qch">${esc(item.channel)}</div>
+                </div>
+                <button class="qrm" onclick="rmQueue(${i})">&times;</button>
+            </div>`;
+        });
+    }
+    $('musicContent').innerHTML = html;
+}
+
+function addQueue(ri) {
+    const item = ms.results[ri]; if(!item) return;
+    if (!ms.queue.find(q=>q.video_id===item.video_id)) {
+        ms.queue.push({...item});
+        renderMusic();
+    }
+}
+function rmQueue(i) {
+    if (i===ms.idx) {
+        ms.queue.splice(i,1);
+        if (ms.queue.length===0) { stopMusic(); } else {
+            if (ms.idx>=ms.queue.length) ms.idx=0;
+            loadPlay(ms.idx);
         }
+    } else {
+        if (i<ms.idx) ms.idx--;
+        ms.queue.splice(i,1);
+    }
+    renderMusic();
+}
+function jumpQueue(i) { if(i===ms.idx) mToggle(); else loadPlay(i); }
 
-        async function loadDirectory(path) {
-            try {
-                document.getElementById('error').style.display = 'none';
-                document.getElementById('fileList').innerHTML = '<div class="loading">로딩 중...</div>';
-                
-                const response = await fetch(`${API_BASE}/list?path=${encodeURIComponent(path)}`);
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.detail || '디렉토리 로드 실패');
-                }
-                
-                currentPath = path;
-                updateBreadcrumb(path);
-                renderFileList(data.items);
-                
-            } catch (error) {
-                showError(error.message);
-                document.getElementById('fileList').innerHTML = '<div class="loading">오류 발생</div>';
-            }
-        }
+function playResult(ri) {
+    const item = ms.results[ri]; if(!item) return;
+    const qi = ms.queue.findIndex(q=>q.video_id===item.video_id);
+    if (qi>=0) { loadPlay(qi); return; }
+    ms.queue.push({...item});
+    loadPlay(ms.queue.length-1);
+}
 
-        function renderFileList(items) {
-            if (!items || items.length === 0) {
-                document.getElementById('fileList').innerHTML = '<div class="loading">빈 폴더입니다</div>';
-                return;
-            }
-            
-            // 폴더 우선 정렬
-            items.sort((a, b) => {
-                if (a.type === b.type) return a.name.localeCompare(b.name);
-                return a.type === 'directory' ? -1 : 1;
-            });
-            
-            let html = '';
-            items.forEach(item => {
-                const itemPath = currentPath === '/' ? `/${item.name}` : `${currentPath}/${item.name}`;
-                const onclick = item.type === 'directory' ? `navigateTo('${itemPath}')` : '';
-                
-                html += `
-                    <div class="file-item" ${onclick ? `onclick="${onclick}"` : ''}>
-                        <div class="file-icon">${getFileIcon(item)}</div>
-                        <div class="file-info">
-                            <div class="file-name">${item.name}</div>
-                            <div class="file-meta">
-                                ${item.type === 'file' ? formatSize(item.size) + ' • ' : ''}
-                                ${formatDate(item.modified)}
-                            </div>
-                        </div>
-                        ${item.type === 'file' ? `
-                            <div class="file-actions">
-                                ${isVideo(item.name) ? `<button class="btn btn-primary" onclick="event.stopPropagation(); playVideo('${itemPath}')">재생</button>` : ''}
-                                <button class="btn btn-secondary" onclick="event.stopPropagation(); downloadFile('${itemPath}')">다운로드</button>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            });
-            
-            document.getElementById('fileList').innerHTML = html;
-        }
+function loadPlay(idx) {
+    if (idx<0||idx>=ms.queue.length) return;
+    ms.idx = idx;
+    const item = ms.queue[idx];
+    $('pThumb').src = item.thumbnail;
+    $('pTitle').textContent = item.title;
+    $('pChannel').textContent = item.channel;
+    $('playerBar').classList.add('visible');
+    $('progFill').style.width = '0%';
 
-        function isVideo(filename) {
-            const ext = filename.split('.').pop().toLowerCase();
-            return ['mp4', 'avi', 'mkv', 'mov', 'webm'].includes(ext);
-        }
+    audio.src = `${API}/music/stream/${item.video_id}`;
+    audio.load();
+    audio.play().then(() => {
+        ms.playing = true; updPlayBtn(); renderMusic();
+    }).catch(() => { setTimeout(()=>mNext(),1000); });
 
-        function navigateTo(path) {
-            loadDirectory(path);
-        }
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: item.title, artist: item.channel,
+            artwork: [{src:item.thumbnail, sizes:'320x180', type:'image/jpeg'}]
+        });
+    }
+}
 
-        function downloadFile(path) {
-            window.open(`${API_BASE}/download?path=${encodeURIComponent(path)}`, '_blank');
-        }
+function mToggle() {
+    if (!audio.src) return;
+    if (audio.paused) { audio.play(); ms.playing=true; }
+    else { audio.pause(); ms.playing=false; }
+    updPlayBtn();
+}
+function updPlayBtn() { $('playBtn').innerHTML = ms.playing?'&#9208;':'&#9654;'; }
 
-        function playVideo(path) {
-            const url = `${API_BASE}/stream?path=${encodeURIComponent(path)}`;
-            const videoWindow = window.open('', '_blank');
-            videoWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>${path.split('/').pop()}</title>
-                    <style>
-                        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
-                        video { max-width: 100%; max-height: 100vh; }
-                    </style>
-                </head>
-                <body>
-                    <video controls autoplay>
-                        <source src="${url}" type="video/mp4">
-                    </video>
-                </body>
-                </html>
-            `);
-        }
+function mNext() {
+    if (!ms.queue.length) return;
+    if (ms.repeat==='one') { loadPlay(ms.idx); return; }
+    let n;
+    if (ms.shuffle) { n=Math.floor(Math.random()*ms.queue.length); if(n===ms.idx&&ms.queue.length>1) n=(n+1)%ms.queue.length; }
+    else { n=ms.idx+1; }
+    if (n>=ms.queue.length) { if(ms.repeat==='all') n=0; else { stopMusic(); return; } }
+    loadPlay(n);
+}
+function mPrev() {
+    if (!ms.queue.length) return;
+    if (audio.currentTime>3) { audio.currentTime=0; return; }
+    let p=ms.idx-1; if(p<0) p=ms.repeat==='all'?ms.queue.length-1:0;
+    loadPlay(p);
+}
+function stopMusic() {
+    audio.pause(); audio.src=''; ms.playing=false; ms.idx=-1;
+    $('playerBar').classList.remove('visible'); updPlayBtn(); renderMusic();
+}
+function toggleShuffle() { ms.shuffle=!ms.shuffle; $('shuffleBtn').classList.toggle('on',ms.shuffle); }
+function toggleRepeat() {
+    const modes=['none','all','one'];
+    ms.repeat=modes[(modes.indexOf(ms.repeat)+1)%modes.length];
+    const b=$('repeatBtn');
+    b.classList.toggle('on',ms.repeat!=='none');
+    b.innerHTML=ms.repeat==='one'?'&#128258;':'&#128257;';
+}
 
-        function showError(message) {
-            const errorEl = document.getElementById('error');
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-        }
+audio.addEventListener('timeupdate',()=>{ if(audio.duration) $('progFill').style.width=(audio.currentTime/audio.duration*100)+'%'; });
+audio.addEventListener('ended',()=>mNext());
+audio.addEventListener('error',()=>setTimeout(()=>mNext(),1500));
+function seekAudio(e) { if(!audio.duration) return; const r=$('progBar').getBoundingClientRect(); audio.currentTime=(e.clientX-r.left)/r.width*audio.duration; }
 
-        // 초기 로드
-        loadDirectory('/');
-    </script>
+if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play',()=>mToggle());
+    navigator.mediaSession.setActionHandler('pause',()=>mToggle());
+    navigator.mediaSession.setActionHandler('previoustrack',()=>mPrev());
+    navigator.mediaSession.setActionHandler('nexttrack',()=>mNext());
+}
+
+// ==================== UTIL ====================
+function esc(s) { const el=document.createElement('span'); el.textContent=s||''; return el.innerHTML; }
+
+// ==================== INIT ====================
+checkAuth();
+</script>
 </body>
 </html>

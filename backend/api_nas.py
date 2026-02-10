@@ -1137,57 +1137,33 @@ async def music_search(request: Request, q: str = Query(..., min_length=1), coun
         raise HTTPException(status_code=500, detail=f"검색 실패: {str(e)}")
 
 
+def _detect_audio_mime(header: bytes) -> str:
+    """스트림 첫 바이트의 매직 바이트로 오디오 포맷 감지"""
+    if header[:4] == b'\x1a\x45\xdf\xa3':       # EBML header → WebM/MKV
+        return "audio/webm"
+    if len(header) >= 8 and header[4:8] == b'ftyp':  # MP4/M4A
+        return "audio/mp4"
+    if header[:4] == b'OggS':                     # Ogg (Opus/Vorbis)
+        return "audio/ogg"
+    if header[:3] == b'ID3' or header[:2] in (b'\xff\xfb', b'\xff\xf3', b'\xff\xf2'):
+        return "audio/mpeg"                       # MP3
+    return "audio/webm"  # fallback
+
+
 @router.get("/music/stream/{video_id}")
 @require_auth
 async def music_stream(request: Request, video_id: str):
     """YouTube 오디오 스트리밍 (yt-dlp → stdout → 클라이언트)
 
-    Windows/Mac 크로스플랫폼 지원:
-    - yt-dlp로 먼저 실제 포맷을 확인한 뒤 적절한 MIME 타입으로 스트리밍
-    - bestaudio가 webm이 아닐 수 있으므로 (m4a 등) MIME 불일치 방지
+    yt-dlp를 1회만 호출하고, 첫 청크의 매직 바이트로 포맷을 감지하여
+    올바른 MIME 타입으로 스트리밍. Windows/Mac 모두 동작.
     """
-    import asyncio, re, json, sys
+    import asyncio, re
     if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
         raise HTTPException(status_code=400, detail="잘못된 video_id")
 
     url = f"https://www.youtube.com/watch?v={video_id}"
-
-    # 1단계: 실제로 선택될 포맷 확인 (ext, acodec)
-    info_cmd = [
-        "yt-dlp",
-        "-f", "bestaudio[ext=webm]/bestaudio",
-        "-j",  # JSON 메타 출력
-        "--no-playlist",
-        "--no-warnings",
-        url,
-    ]
-    ext = "webm"
-    try:
-        info_proc = await asyncio.create_subprocess_exec(
-            *info_cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-        info_out, _ = await asyncio.wait_for(info_proc.communicate(), timeout=15)
-        if info_out:
-            info = json.loads(info_out)
-            ext = info.get("ext", "webm")
-    except Exception:
-        pass  # 실패 시 기본값 webm
-
-    # 포맷별 MIME 타입 매핑
-    mime_map = {
-        "webm": "audio/webm",
-        "m4a": "audio/mp4",
-        "mp4": "audio/mp4",
-        "ogg": "audio/ogg",
-        "opus": "audio/ogg",
-        "mp3": "audio/mpeg",
-    }
-    content_type = mime_map.get(ext, "audio/webm")
-
-    # 2단계: 실제 스트리밍
-    stream_cmd = [
+    cmd = [
         "yt-dlp",
         "-f", "bestaudio[ext=webm]/bestaudio",
         "-o", "-",
@@ -1197,13 +1173,23 @@ async def music_stream(request: Request, video_id: str):
     ]
     try:
         process = await asyncio.create_subprocess_exec(
-            *stream_cmd,
+            *cmd,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
         )
+
+        # 첫 청크를 읽어서 매직 바이트로 포맷 감지
+        first_chunk = await process.stdout.read(STREAM_CHUNK_SIZE)
+        if not first_chunk:
+            if process.returncode is None:
+                process.kill()
+            raise HTTPException(status_code=502, detail="오디오 데이터 없음")
+
+        content_type = _detect_audio_mime(first_chunk)
 
         async def audio_gen():
             try:
+                yield first_chunk  # 이미 읽은 첫 청크 먼저 전송
                 while True:
                     chunk = await process.stdout.read(STREAM_CHUNK_SIZE)
                     if not chunk:
@@ -1220,11 +1206,10 @@ async def music_stream(request: Request, video_id: str):
         return StreamingResponse(
             audio_gen(),
             media_type=content_type,
-            headers={
-                "Cache-Control": "no-cache",
-                "X-Audio-Format": ext,
-            },
+            headers={"Cache-Control": "no-cache"},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"스트리밍 실패: {str(e)}")
 

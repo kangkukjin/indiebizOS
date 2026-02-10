@@ -208,12 +208,11 @@ IndieBiz OS
 
 Cloudflare Tunnel로 어디서나 홈 서버를 제어하세요:
 
-**원격 Finder** (`/nas/app`) - 개인 NAS + 음악:
+**원격 Finder** (`/nas/app`) - 개인 NAS:
 - Finder 스타일 웹 인터페이스로 파일 탐색
 - 구간 탐색 지원하는 동영상 스트리밍
 - 파일 안전하게 다운로드
 - 허용한 디렉토리만 노출
-- **음악 스트리밍**: yt-dlp로 YouTube 오디오만 추출 재생 — 검색, 대기열, 셔플/반복, 잠금화면 제어(Media Session API), 모바일 데이터 절약
 
 **원격 런처** (`/launcher/app`) - AI 제어:
 - 시스템 AI와 원격 채팅
@@ -226,7 +225,7 @@ Cloudflare Tunnel로 어디서나 홈 서버를 제어하세요:
 ```
 스마트폰 → Cloudflare Edge → Tunnel → IndieBiz OS
              (HTTPS)        (보안)    (localhost:8765)
-                                        ├─ /nas/app (파일 + 음악)
+                                        ├─ /nas/app (파일)
                                         └─ /launcher/app (AI 제어)
 ```
 
@@ -501,13 +500,12 @@ npm run electron:build:win
 - 자동 응답 시스템 내장: 사용자 이외의 사람이 메시지를 보내면 AI가 적절히 응대 (단, 명령은 수행하지 않음)
 - 이 자동 응답 시스템은 고객 문의 대응, 예약 안내 등 자동 비즈니스 시스템의 기반이 됨
 
-### 🌐 원격 접근 (Finder + 음악 + 런처)
+### 🌐 원격 접근 (Finder & 런처)
 - **원격 Finder**: Cloudflare Tunnel로 어디서나 PC 파일에 접근, 동영상 스트리밍
-- **음악 스트리밍**: 스마트폰에서 YouTube 오디오 재생 — 집 PC의 yt-dlp가 오디오만 추출하여 스트리밍, 모바일 데이터 절약. 대기열, 셔플/반복, 잠금화면 제어 지원
 - **원격 런처**: 스마트폰 브라우저에서 시스템 AI와 채팅, 스위치 원탭 실행
 - 여행 중에도 완전한 AI 제어 — 포트 포워딩이나 복잡한 네트워크 설정 불필요
 - 각 기능별 독립 비밀번호로 세분화된 접근 제어
-- 미니 PC를 개인 AI 서버 + 음악 서버 + 미디어 서버로 활용
+- 미니 PC를 개인 AI 서버 + 미디어 서버로 활용
 
 ### 🔄 도구 패키지 공유
 - Norst 공개 메시지를 통해 도구 패키지 설치 정보를 공유
@@ -534,7 +532,7 @@ npm run electron:build:win
 - 스케줄러, 스위치, 비즈니스 네트워크 작동 중
 - 고급 자동응답 V3: Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - 시스템 AI 프로젝트 에이전트 위임
-- Cloudflare Tunnel 연동 원격 Finder(파일 + 음악 스트리밍) & 원격 런처
+- Cloudflare Tunnel 연동 원격 Finder & 원격 런처
 
 ### 당신의 OS, 당신의 방식
 

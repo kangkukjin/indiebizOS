@@ -208,11 +208,12 @@ IndieBiz OS
 
 Cloudflare Tunnel로 어디서나 홈 서버를 제어하세요:
 
-**원격 Finder** (`/nas/app`) - 개인 NAS:
+**원격 Finder** (`/nas/app`) - 개인 NAS + 음악:
 - Finder 스타일 웹 인터페이스로 파일 탐색
 - 구간 탐색 지원하는 동영상 스트리밍
 - 파일 안전하게 다운로드
 - 허용한 디렉토리만 노출
+- **음악 스트리밍**: YouTube 검색 후 오디오만 스트리밍 — 서버에서 yt-dlp로 추출하여 모바일 데이터 절약
 
 **원격 런처** (`/launcher/app`) - AI 제어:
 - 시스템 AI와 원격 채팅
@@ -225,7 +226,7 @@ Cloudflare Tunnel로 어디서나 홈 서버를 제어하세요:
 ```
 스마트폰 → Cloudflare Edge → Tunnel → IndieBiz OS
              (HTTPS)        (보안)    (localhost:8765)
-                                        ├─ /nas/app (파일)
+                                        ├─ /nas/app (파일 + 음악)
                                         └─ /launcher/app (AI 제어)
 ```
 
@@ -502,6 +503,7 @@ npm run electron:build:win
 
 ### 🌐 원격 접근 (Finder & 런처)
 - **원격 Finder**: Cloudflare Tunnel로 어디서나 PC 파일에 접근, 동영상 스트리밍
+- **음악 스트리밍**: YouTube 검색 → 서버에서 오디오 추출 → 스마트폰으로 스트리밍 (모바일 데이터 절약, 잠금 화면 컨트롤 지원)
 - **원격 런처**: 스마트폰 브라우저에서 시스템 AI와 채팅, 스위치 원탭 실행
 - 여행 중에도 완전한 AI 제어 — 포트 포워딩이나 복잡한 네트워크 설정 불필요
 - 각 기능별 독립 비밀번호로 세분화된 접근 제어
@@ -532,7 +534,7 @@ npm run electron:build:win
 - 스케줄러, 스위치, 비즈니스 네트워크 작동 중
 - 고급 자동응답 V3: Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - 시스템 AI 프로젝트 에이전트 위임
-- Cloudflare Tunnel 연동 원격 Finder & 원격 런처
+- Cloudflare Tunnel 연동 원격 Finder & 원격 런처 (파일 탐색 + YouTube 음악 스트리밍)
 
 ### 당신의 OS, 당신의 방식
 

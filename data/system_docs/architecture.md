@@ -26,7 +26,7 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/   # 설치된 패키지
-│   │   │   └── tools/      # 도구 (26개)
+│   │   │   └── tools/      # 도구 (27개)
 │   │   └── not_installed/  # 미설치 패키지
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억)
 │   ├── business.db      # 비즈니스 DB
@@ -132,13 +132,14 @@ AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 구조 적용
 ### 다중채팅방 시스템
 - 독립 창에서 여러 프로젝트의 에이전트를 소환하여 그룹 대화 수행
 
-### 원격 Finder (api_nas.py)
-- Cloudflare Tunnel을 통한 외부 파일 접근
-- 세션 기반 인증 (비밀번호)
-- HTTP Range 요청으로 동영상 스트리밍
-- 허용 경로 기반 접근 제어
-- Finder 스타일 웹 앱 내장
-→ 상세 문서: [remote_finder.md](remote_finder.md)
+### 원격 접근 시스템
+Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
+
+- **원격 Finder** (`api_nas.py`): 파일 탐색, 동영상 스트리밍, 다운로드 — 개인 NAS처럼 활용
+- **원격 런처** (`api_launcher_web.py`): 시스템 AI/프로젝트 에이전트 채팅, 스위치 실행 — 모든 AI 에이전트를 원격으로 구동
+- 세션 기반 인증 (기능별 별도 비밀번호)
+- 모바일 반응형 다크 테마 UI
+→ 상세 문서: [remote_access.md](remote_access.md)
 
 ---
-*마지막 업데이트: 2026-02-05*
+*마지막 업데이트: 2026-02-10*

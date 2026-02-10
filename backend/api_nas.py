@@ -1095,6 +1095,93 @@ async def get_nas_status():
     }
 
 
+# ============ 음악 스트리밍 ============
+
+def _search_youtube(query: str, count: int = 5) -> list:
+    """yt-dlp로 YouTube 검색"""
+    import yt_dlp
+    results = []
+    with yt_dlp.YoutubeDL({
+        "quiet": True, "no_warnings": True,
+        "extract_flat": True,
+        "default_search": f"ytsearch{count}",
+    }) as ydl:
+        info = ydl.extract_info(f"ytsearch{count}:{query}", download=False)
+        for entry in (info.get("entries") or []):
+            vid = entry.get("id", "")
+            if vid.startswith("UC") or entry.get("_type") == "playlist":
+                continue
+            dur = entry.get("duration") or 0
+            dur_str = f"{int(dur)//60}:{int(dur)%60:02d}" if dur > 0 else ""
+            results.append({
+                "video_id": vid,
+                "title": entry.get("title", ""),
+                "channel": entry.get("uploader", entry.get("channel", "")),
+                "duration": dur_str,
+                "duration_seconds": int(dur),
+                "thumbnail": f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg",
+            })
+    return results
+
+
+@router.get("/music/search")
+@require_auth
+async def music_search(request: Request, q: str = Query(..., min_length=1), count: int = 5):
+    """YouTube 음악 검색"""
+    import asyncio
+    try:
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(None, _search_youtube, q, min(count, 10))
+        return {"results": results, "query": q}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"검색 실패: {str(e)}")
+
+
+@router.get("/music/stream/{video_id}")
+@require_auth
+async def music_stream(request: Request, video_id: str):
+    """YouTube 오디오 스트리밍 (yt-dlp → stdout → 클라이언트)"""
+    import asyncio, re
+    if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
+        raise HTTPException(status_code=400, detail="잘못된 video_id")
+
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    cmd = [
+        "yt-dlp",
+        "-f", "bestaudio[ext=webm]/bestaudio",
+        "-o", "-",
+        "--no-playlist",
+        "--no-warnings",
+        url,
+    ]
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+
+        async def audio_gen():
+            try:
+                while True:
+                    chunk = await process.stdout.read(STREAM_CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    yield chunk
+            finally:
+                if process.returncode is None:
+                    process.kill()
+                    await process.wait()
+
+        return StreamingResponse(
+            audio_gen(),
+            media_type="audio/webm",
+            headers={"Cache-Control": "no-cache"},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"스트리밍 실패: {str(e)}")
+
+
 # ============ 웹앱 서빙 ============
 
 @router.get("/app", response_class=HTMLResponse)
@@ -1115,6 +1202,11 @@ async def serve_nas_webapp(request: Request):
         """, status_code=503)
 
     # 웹앱 HTML 반환 (별도 파일 또는 인라인)
+    # 1) static/nas/index.html 우선
+    static_webapp = Path(__file__).parent / "static" / "nas" / "index.html"
+    if static_webapp.exists():
+        return HTMLResponse(content=static_webapp.read_text(encoding='utf-8'))
+    # 2) nas_webapp.html 폴백
     webapp_path = Path(__file__).parent / "nas_webapp.html"
     if webapp_path.exists():
         return HTMLResponse(content=webapp_path.read_text(encoding='utf-8'))

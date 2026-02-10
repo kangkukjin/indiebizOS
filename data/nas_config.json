@@ -1,10 +1,8 @@
 {
   "enabled": true,
   "password_hash": "cbfad02f9ed2a8d1e08d8f74f5303e9eb93637d47f82ab6f1c15871cf8dd0481",
-  "allowed_paths": [
-    "/Volumes/Seagate Backup Plus Drive"
-  ],
+  "allowed_paths": [],
   "session_timeout_hours": 24,
   "created_at": "2026-02-05T21:37:57.714184",
-  "updated_at": "2026-02-09T07:46:49.462080"
+  "updated_at": "2026-02-10T09:26:03.368854"
 }

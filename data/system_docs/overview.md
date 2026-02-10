@@ -28,7 +28,7 @@ IndieBiz OS의 가장 큰 차별점은 **AI의 인격(페르소나)을 직접 �
 - **비즈니스 관리**: 이웃(파트너) 관리, 메시지 수신/발송
 - **통신 채널**: Gmail, Nostr DM 통한 외부 소통 → [상세 문서](communication.md)
 - **자동응답 V3**: Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합 → [상세 문서](auto_response.md)
-- **원격 Finder**: Cloudflare Tunnel 기반 외부 파일 접근/동영상 스트리밍 → [상세 문서](remote_finder.md)
+- **원격 접근**: Cloudflare Tunnel 기반 원격 Finder(파일/스트리밍) + 원격 런처(AI 제어/스위치 실행) → [상세 문서](remote_access.md)
 
 ## 통합 아키텍처
 시스템 AI와 모든 프로젝트 에이전트가 **동일한 코드베이스**를 공유합니다:
@@ -47,9 +47,9 @@ IndieBiz OS의 가장 큰 차별점은 **AI의 인격(페르소나)을 직접 �
 
 ## 시스템 통계
 - **활성 프로젝트**: 16개
-- **도구 패키지**: 26개 (설치됨)
+- **도구 패키지**: 27개 (설치됨)
 - **확장 패키지**: 9개 (설치됨)
-- **마지막 업데이트**: 2026-02-05
+- **마지막 업데이트**: 2026-02-10
 
 ---
 *IndieBiz OS - Your Personal AI Assistant Team*

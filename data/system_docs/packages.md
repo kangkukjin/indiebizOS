@@ -64,7 +64,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 ---
 
-## 현재 설치된 도구 패키지 (29개)
+## 현재 설치된 도구 패키지 (27개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -72,7 +72,6 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
 | browser-action | Browser Action | Playwright 기반 브라우저 자동화 (클릭/입력/스크롤/콘텐츠 추출) |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
-| cctv | CCTV | CCTV 관련 도구 |
 | cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel) |
 | culture | Culture | 공연(KOPIS), 도서(도서관 정보나루) 등 문화예술 정보 조회 |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
@@ -86,7 +85,6 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |
 | photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 |
 | python-exec | Python Exec | Python 코드 실행 |
-| radio | Radio | 인터넷 라디오 검색 및 재생 (Radio Browser API + 한국 방송사 직접 스트리밍) |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API |
 | remotion-video | Remotion Video | React/Remotion 기반 프로그래밍 방식 동영상 생성 (TSX → MP4) |
 | shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 가격 비교 |
@@ -141,4 +139,4 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-02-09*
+*마지막 업데이트: 2026-02-10*

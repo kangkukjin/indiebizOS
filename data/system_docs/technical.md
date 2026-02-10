@@ -130,18 +130,6 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 | `final` | 최종 응답 |
 | `error` | 에러 발생 |
 
-## 독립형 웹앱 (Standalone Web Apps)
-
-### 음악 웹앱 (Music Web App)
-- **경로**: `data/music-web-app`
-- **플랫폼**: Cloudflare Workers
-- **URL**: [https://music-ai-player.kangkukjin.workers.dev](https://music-ai-player.kangkukjin.workers.dev)
-- **핵심 기능**:
-  - AI 기반 음악 검색 및 플레이리스트 생성 (Llama 3)
-  - Piped API를 통한 YouTube 오디오 스트리밍 (데이터 절약)
-  - 초대형 UI (Giant Text) 및 전체 화면 레이아웃
-  - 연속 재생 및 에러 발생 시 자동 다음 곡 넘기기
-
 ## 에이전트 기본 도구 (System Tools)
 
 | 도구 | 설명 |

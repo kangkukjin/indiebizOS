@@ -629,7 +629,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         )
         from system_ai_memory import (
             save_conversation,
-            get_recent_conversations,
+            get_history_for_ai,
             create_task,
             delete_task
         )
@@ -664,12 +664,8 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             })
             return
 
-        # 히스토리 로드
-        recent_conversations = get_recent_conversations(limit=7)
-        history = []
-        for conv in recent_conversations:
-            role = conv["role"] if conv["role"] in ["user", "assistant"] else "user"
-            history.append({"role": role, "content": conv["content"]})
+        # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
+        history = get_history_for_ai(limit=7)
 
         # 사용자 메시지 저장
         save_conversation("user", message)

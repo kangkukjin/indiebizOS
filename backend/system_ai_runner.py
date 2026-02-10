@@ -18,7 +18,6 @@ from ai_agent import AIAgent
 from system_ai_memory import (
     load_user_profile,
     save_conversation,
-    get_recent_conversations,
     create_task,
     get_task,
     complete_task,

@@ -1,0 +1,187 @@
+{
+  "id": "computer-use",
+  "name": "Computer Use",
+  "description": "macOS 데스크톱 자동화. AI가 화면을 직접 보고 마우스/키보드를 조작합니다. 모든 좌표는 1280x800 가상 해상도 기준이며, 실제 해상도로 자동 변환됩니다.",
+  "version": "1.0.0",
+  "guide_file": "guide.md",
+  "tools": [
+    {
+      "name": "computer_screenshot",
+      "description": "현재 화면의 스크린샷을 캡처합니다. 1280x800으로 리사이즈되어 AI가 직접 볼 수 있습니다. 화면 상태를 파악하려면 이 도구를 먼저 호출하세요.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "region": {
+            "type": "object",
+            "description": "캡처할 영역 (생략 시 전체 화면). 좌표는 1280x800 기준.",
+            "properties": {
+              "x": {"type": "integer", "description": "시작 X 좌표"},
+              "y": {"type": "integer", "description": "시작 Y 좌표"},
+              "width": {"type": "integer", "description": "너비"},
+              "height": {"type": "integer", "description": "높이"}
+            },
+            "required": ["x", "y", "width", "height"]
+          }
+        }
+      }
+    },
+    {
+      "name": "computer_click",
+      "description": "지정 좌표에서 마우스를 클릭합니다. 좌표는 1280x800 기준 (computer_screenshot 이미지 위의 좌표). 클릭 후 자동으로 스크린샷을 반환합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "x": {"type": "integer", "description": "클릭할 X 좌표 (1280x800 기준)"},
+          "y": {"type": "integer", "description": "클릭할 Y 좌표 (1280x800 기준)"},
+          "button": {
+            "type": "string",
+            "enum": ["left", "right", "middle"],
+            "default": "left",
+            "description": "마우스 버튼"
+          },
+          "clicks": {
+            "type": "integer",
+            "default": 1,
+            "description": "클릭 횟수 (2=더블클릭)"
+          },
+          "screenshot_after": {
+            "type": "boolean",
+            "default": true,
+            "description": "클릭 후 자동으로 스크린샷을 캡처하여 반환"
+          }
+        },
+        "required": ["x", "y"]
+      }
+    },
+    {
+      "name": "computer_type",
+      "description": "키보드로 텍스트를 입력합니다. 한글/영어 모두 지원. 먼저 입력할 필드를 클릭한 후 사용하세요.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {"type": "string", "description": "입력할 텍스트"},
+          "interval": {
+            "type": "number",
+            "default": 0.02,
+            "description": "각 키 입력 사이의 간격 (초)"
+          },
+          "screenshot_after": {
+            "type": "boolean",
+            "default": false,
+            "description": "입력 후 스크린샷을 캡처하여 반환"
+          }
+        },
+        "required": ["text"]
+      }
+    },
+    {
+      "name": "computer_key",
+      "description": "키보드 단축키 또는 특수 키를 누릅니다. 조합키는 +로 구분합니다 (예: 'command+c', 'command+shift+s', 'enter', 'tab', 'escape').",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "누를 키. 조합키는 +로 구분. 예: 'enter', 'tab', 'escape', 'command+c', 'command+v', 'command+a', 'alt+tab', 'command+shift+3'"
+          },
+          "screenshot_after": {
+            "type": "boolean",
+            "default": false,
+            "description": "키 입력 후 스크린샷을 캡처하여 반환"
+          }
+        },
+        "required": ["key"]
+      }
+    },
+    {
+      "name": "computer_mouse_move",
+      "description": "마우스를 지정 좌표로 이동합니다 (클릭하지 않음). 좌표는 1280x800 기준.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "x": {"type": "integer", "description": "X 좌표 (1280x800 기준)"},
+          "y": {"type": "integer", "description": "Y 좌표 (1280x800 기준)"},
+          "duration": {
+            "type": "number",
+            "default": 0.3,
+            "description": "이동 소요 시간 (초)"
+          }
+        },
+        "required": ["x", "y"]
+      }
+    },
+    {
+      "name": "computer_drag",
+      "description": "마우스를 드래그합니다 (시작점에서 끝점까지). 좌표는 1280x800 기준. 드래그 후 자동으로 스크린샷을 반환합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "start_x": {"type": "integer", "description": "시작 X 좌표"},
+          "start_y": {"type": "integer", "description": "시작 Y 좌표"},
+          "end_x": {"type": "integer", "description": "끝 X 좌표"},
+          "end_y": {"type": "integer", "description": "끝 Y 좌표"},
+          "duration": {
+            "type": "number",
+            "default": 0.5,
+            "description": "드래그 소요 시간 (초)"
+          },
+          "button": {
+            "type": "string",
+            "enum": ["left", "right"],
+            "default": "left",
+            "description": "마우스 버튼"
+          },
+          "screenshot_after": {
+            "type": "boolean",
+            "default": true,
+            "description": "드래그 후 스크린샷을 캡처하여 반환"
+          }
+        },
+        "required": ["start_x", "start_y", "end_x", "end_y"]
+      }
+    },
+    {
+      "name": "computer_scroll",
+      "description": "마우스 스크롤을 수행합니다. 스크롤 후 자동으로 스크린샷을 반환합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "x": {"type": "integer", "description": "스크롤할 X 좌표 (생략 시 현재 커서 위치)"},
+          "y": {"type": "integer", "description": "스크롤할 Y 좌표 (생략 시 현재 커서 위치)"},
+          "direction": {
+            "type": "string",
+            "enum": ["up", "down", "left", "right"],
+            "default": "down",
+            "description": "스크롤 방향"
+          },
+          "amount": {
+            "type": "integer",
+            "default": 3,
+            "description": "스크롤 양 (노치 단위)"
+          },
+          "screenshot_after": {
+            "type": "boolean",
+            "default": true,
+            "description": "스크롤 후 스크린샷을 캡처하여 반환"
+          }
+        }
+      }
+    },
+    {
+      "name": "computer_cursor_position",
+      "description": "현재 마우스 커서의 위치를 반환합니다. 좌표는 1280x800 가상 해상도 기준으로 변환됩니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "computer_screen_info",
+      "description": "화면 해상도, 스케일 팩터, 디스플레이 정보를 반환합니다. 권한 상태도 확인합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}

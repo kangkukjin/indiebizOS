@@ -205,16 +205,24 @@ class GeminiProvider(BaseProvider):
 
             print(f"[Gemini] {len(function_calls)}개 도구 실행 중...")
 
+            cancelled = False
             for fc in function_calls:
-                # 중단 체크
+                # [steer] 도구 실행 전 사용자 중단 확인
                 if cancel_check and cancel_check():
-                    yield {"type": "cancelled", "content": "사용자가 중단했습니다."}
-                    return
+                    print(f"[Gemini][round={iteration}] 사용자 중단 — 도구 '{fc.name}' 스킵")
+                    function_response_parts.append(
+                        types.Part.from_function_response(
+                            name=fc.name,
+                            response={"result": "[사용자가 중단했습니다]"}
+                        )
+                    )
+                    cancelled = True
+                    continue
 
                 yield {"type": "thinking", "content": f"도구 실행 중: {fc.name}"}
 
-                # 도구 실행
-                tool_output = self._execute_single_tool(fc, execute_tool, iteration)
+                # 도구 실행 (content/details/images 분리 적용)
+                tool_output, ui_details, tool_images = self._execute_single_tool(fc, execute_tool, iteration)
 
                 # 승인 요청 감지
                 if tool_output.startswith("[[APPROVAL_REQUESTED]]"):
@@ -228,16 +236,17 @@ class GeminiProvider(BaseProvider):
                     self._pending_map_tags.append(map_match.group(0).strip())
                     tool_output = tool_output[:map_match.start()].strip()
 
-                # 이벤트 발생
+                # 이벤트 발생 — UI에는 details가 있으면 details 사용
                 tool_input = dict(fc.args) if fc.args else {}
+                ui_result = ui_details if ui_details is not None else tool_output
                 yield {
                     "type": "tool_result",
                     "name": fc.name,
                     "input": tool_input,
-                    "result": tool_output[:3000] + "..." if len(tool_output) > 3000 else tool_output
+                    "result": ui_result[:3000] + "..." if len(str(ui_result)) > 3000 else ui_result
                 }
 
-                # 도구 응답 추가
+                # 도구 응답 추가 (AI에게는 content만)
                 truncated_output = tool_output[:8000] if len(tool_output) > 8000 else tool_output
                 function_response_parts.append(
                     types.Part.from_function_response(
@@ -245,6 +254,26 @@ class GeminiProvider(BaseProvider):
                         response={"result": truncated_output}
                     )
                 )
+
+                # [images] 이미지가 있으면 inline_data Part로 추가 (AI가 볼 수 있도록)
+                if tool_images:
+                    import base64 as b64_module
+                    for img in tool_images:
+                        try:
+                            img_bytes = b64_module.b64decode(img["base64"])
+                            function_response_parts.append(
+                                types.Part.from_bytes(
+                                    data=img_bytes,
+                                    mime_type=img.get("media_type", "image/png")
+                                )
+                            )
+                        except Exception as img_err:
+                            print(f"[Gemini] 이미지 Part 생성 실패: {img_err}")
+
+            # [steer] 중단된 경우 즉시 종료
+            if cancelled:
+                yield {"type": "cancelled", "content": "사용자가 중단했습니다."}
+                return
 
             # 승인 요청 시 즉시 종료
             if approval_requested:
@@ -400,8 +429,14 @@ class GeminiProvider(BaseProvider):
                 else:
                     raise e
 
-    def _execute_single_tool(self, fc, execute_tool: Callable, iteration: int) -> str:
-        """단일 도구 실행 (검증 및 메트릭 포함)"""
+    def _execute_single_tool(self, fc, execute_tool: Callable, iteration: int) -> tuple:
+        """단일 도구 실행 (검증 및 메트릭 포함)
+
+        Returns:
+            (tool_output, ui_details): AI용 결과와 UI용 상세 정보
+            - tool_output: AI에게 전달할 문자열
+            - ui_details: UI에 표시할 상세 정보 (없으면 tool_output과 동일)
+        """
         tool_input = dict(fc.args) if fc.args else {}
 
         # 로깅
@@ -415,10 +450,20 @@ class GeminiProvider(BaseProvider):
         self.metrics.record_tool_call()
 
         if not execute_tool:
-            return "도구 실행 함수가 제공되지 않았습니다."
+            return "도구 실행 함수가 제공되지 않았습니다.", None
 
         try:
-            tool_output = execute_tool(fc.name, tool_input, self.project_path, self.agent_id)
+            raw_output = execute_tool(fc.name, tool_input, self.project_path, self.agent_id)
+
+            # [content/details 분리] dict 반환 시 AI용과 UI용 분리
+            ui_details = None
+            tool_images = None  # [images] 도구가 반환한 이미지 데이터
+            if isinstance(raw_output, dict) and "content" in raw_output:
+                tool_output = raw_output["content"]
+                ui_details = raw_output.get("details", tool_output)
+                tool_images = raw_output.get("images")  # [{base64, media_type}]
+            else:
+                tool_output = raw_output
 
             # None 체크
             if tool_output is None:
@@ -439,12 +484,12 @@ class GeminiProvider(BaseProvider):
             output_preview = str(tool_output)[:200] + "..." if output_len > 200 else str(tool_output)
             print(f"[Gemini][round={iteration}]   결과({output_len}자): {output_preview}")
 
-            return tool_output
+            return tool_output, ui_details, tool_images
 
         except Exception as tool_err:
             self.metrics.record_error()
             print(f"[Gemini][round={iteration}] 도구 실행 예외: {fc.name} - {tool_err}")
-            return f"도구 실행 실패: {fc.name} - {str(tool_err)}. 다른 방법을 시도하거나 사용자에게 알려주세요."
+            return f"도구 실행 실패: {fc.name} - {str(tool_err)}. 다른 방법을 시도하거나 사용자에게 알려주세요.", None, None
 
     def _build_contents(
         self,

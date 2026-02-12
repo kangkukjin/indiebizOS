@@ -112,7 +112,7 @@ class AnthropicProvider(BaseProvider):
         messages = self._build_messages(message, history, images)
 
         # 스트리밍 응답 처리 (에이전틱 루프)
-        yield from self._agentic_loop(messages, execute_tool)
+        yield from self._agentic_loop(messages, execute_tool, cancel_check=cancel_check)
 
     def _build_messages(
         self,
@@ -203,7 +203,8 @@ class AnthropicProvider(BaseProvider):
         max_tokens: int = 4096,
         empty_response_retries: int = 0,
         auto_continues: int = 0,
-        accumulated_text: str = ""
+        accumulated_text: str = "",
+        cancel_check: Callable = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
         Anthropic 공식 에이전틱 루프 패턴
@@ -321,7 +322,8 @@ class AnthropicProvider(BaseProvider):
                 })
                 yield from self._agentic_loop(
                     messages, execute_tool, depth + 1, max_tokens, empty_response_retries + 1,
-                    auto_continues=auto_continues, accumulated_text=accumulated_text
+                    auto_continues=auto_continues, accumulated_text=accumulated_text,
+                    cancel_check=cancel_check
                 )
                 return
 
@@ -334,7 +336,8 @@ class AnthropicProvider(BaseProvider):
                     if new_max_tokens > max_tokens:
                         yield from self._agentic_loop(
                             messages, execute_tool, depth, new_max_tokens,
-                            auto_continues=auto_continues, accumulated_text=accumulated_text
+                            auto_continues=auto_continues, accumulated_text=accumulated_text,
+                            cancel_check=cancel_check
                         )
                     else:
                         final = accumulated_text + collected_text + "\n\n(응답이 잘렸습니다)"
@@ -356,7 +359,8 @@ class AnthropicProvider(BaseProvider):
                     yield from self._agentic_loop(
                         messages, execute_tool, depth + 1, max_tokens,
                         auto_continues=auto_continues + 1,
-                        accumulated_text=new_accumulated
+                        accumulated_text=new_accumulated,
+                        cancel_check=cancel_check
                     )
                 else:
                     # Auto-Continue 한도 초과 → 현재까지 누적 텍스트 반환
@@ -368,7 +372,8 @@ class AnthropicProvider(BaseProvider):
                 # 도구 실행 필요 - 중간 텍스트는 버리고 다음 루프로 진행
                 # (Claude Desktop처럼 최종 응답만 final로 전달)
                 yield from self._execute_tools_and_continue(
-                    messages, collected_text, tool_uses, execute_tool, depth
+                    messages, collected_text, tool_uses, execute_tool, depth,
+                    cancel_check=cancel_check
                 )
                 return
 
@@ -424,7 +429,8 @@ class AnthropicProvider(BaseProvider):
         collected_text: str,
         tool_uses: List[Dict],
         execute_tool: Callable,
-        depth: int
+        depth: int,
+        cancel_check: Callable = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
         도구 실행 후 결과와 함께 에이전틱 루프 계속
@@ -433,15 +439,32 @@ class AnthropicProvider(BaseProvider):
         - 모든 도구 결과를 단일 user 메시지에 포함 (병렬 도구 지원)
         - tool_result가 content 배열의 첫 번째에 위치
         - is_error 플래그로 에러 상태 전달
+
+        pi-agent-core 영감:
+        - cancel_check: 도구 실행 사이에 사용자 중단 확인 (steer 패턴)
+        - content/details 분리: 도구가 dict 반환 시 AI용/UI용 결과 분리
         """
         tool_results = []
         approval_requested = False
         approval_message = ""
+        cancelled = False
 
         # 모든 도구 실행 (병렬 도구 호출 대응)
         print(f"[Anthropic] {len(tool_uses)}개 도구 실행 중...")
 
         for tool in tool_uses:
+            # [steer] 도구 실행 전 사용자 중단 확인
+            if cancel_check and cancel_check():
+                print(f"[Anthropic][depth={depth}] 사용자 중단 — 도구 '{tool['name']}' 스킵")
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool["id"],
+                    "content": "사용자가 작업을 중단했습니다.",
+                    "is_error": True
+                })
+                cancelled = True
+                continue
+
             # 도구 호출 로그
             input_preview = str(tool["input"])[:100] + "..." if len(str(tool["input"])) > 100 else str(tool["input"])
             print(f"[Anthropic][depth={depth}] 도구 호출: {tool['name']}")
@@ -454,9 +477,20 @@ class AnthropicProvider(BaseProvider):
 
             # 도구 실행
             is_error = False
+            ui_details = None  # [content/details] UI용 상세 결과
             if execute_tool:
                 try:
-                    tool_output = execute_tool(tool["name"], tool["input"], self.project_path, self.agent_id)
+                    raw_output = execute_tool(tool["name"], tool["input"], self.project_path, self.agent_id)
+
+                    # [content/details 분리] dict 반환 시 AI용과 UI용 분리
+                    tool_images = None  # [images] 도구가 반환한 이미지 데이터
+                    if isinstance(raw_output, dict) and "content" in raw_output:
+                        tool_output = raw_output["content"]
+                        ui_details = raw_output.get("details", tool_output)
+                        tool_images = raw_output.get("images")  # [{base64, media_type}]
+                    else:
+                        tool_output = raw_output
+
                     # 도구 결과 검증
                     tool_output, is_error = self._verify_tool_result(tool["name"], tool["input"], tool_output)
                 except Exception as e:
@@ -483,7 +517,7 @@ class AnthropicProvider(BaseProvider):
                 self._pending_map_tags.append(map_match.group(0).strip())
                 tool_output = tool_output[:map_match.start()].strip()
 
-            # 도구 결과 길이 제한
+            # 도구 결과 길이 제한 (AI에게 보내는 content)
             truncated_output = self._truncate_tool_result(tool_output)
 
             # 도구 결과 로그
@@ -491,25 +525,70 @@ class AnthropicProvider(BaseProvider):
             output_preview = truncated_output[:100] + "..." if output_len > 100 else truncated_output
             print(f"[Anthropic][depth={depth}]   결과({output_len}자): {output_preview}")
 
+            # [content/details] 클라이언트(UI)에 보낼 결과 결정
+            ui_result = ui_details if ui_details is not None else truncated_output
+            if isinstance(ui_result, (dict, list)):
+                import json as _json
+                ui_result = _json.dumps(ui_result, ensure_ascii=False)
+            ui_result_preview = ui_result[:3000] + "..." if len(str(ui_result)) > 3000 else ui_result
+
             # 클라이언트에 도구 결과 전달
             yield {
                 "type": "tool_result",
                 "name": tool["name"],
                 "input": tool["input"],
-                "result": truncated_output[:3000] + "..." if len(truncated_output) > 3000 else truncated_output,
+                "result": ui_result_preview,
                 "is_error": is_error
             }
 
-            # API에 보낼 tool_result 구성 (Anthropic 형식)
-            tool_result_block = {
-                "type": "tool_result",
-                "tool_use_id": tool["id"],
-                "content": truncated_output
-            }
+            # API에 보낼 tool_result 구성 (Anthropic 형식) — AI에게는 content만
+            # [images] 이미지가 있으면 멀티 콘텐츠 블록으로 구성
+            if tool_images:
+                tool_result_content = []
+                for img in tool_images:
+                    tool_result_content.append({
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": img.get("media_type", "image/png"),
+                            "data": img["base64"]
+                        }
+                    })
+                tool_result_content.append({"type": "text", "text": truncated_output})
+                tool_result_block = {
+                    "type": "tool_result",
+                    "tool_use_id": tool["id"],
+                    "content": tool_result_content
+                }
+            else:
+                tool_result_block = {
+                    "type": "tool_result",
+                    "tool_use_id": tool["id"],
+                    "content": truncated_output
+                }
             if is_error:
                 tool_result_block["is_error"] = True
 
             tool_results.append(tool_result_block)
+
+        # [steer] 사용자 중단 시 루프 종료
+        if cancelled:
+            # 스킵된 도구 결과도 포함해서 AI에게 전달 (API 형식 유지)
+            assistant_content = []
+            if collected_text:
+                assistant_content.append({"type": "text", "text": collected_text})
+            for tool in tool_uses:
+                assistant_content.append({
+                    "type": "tool_use",
+                    "id": tool["id"],
+                    "name": tool["name"],
+                    "input": tool["input"]
+                })
+            messages.append({"role": "assistant", "content": assistant_content})
+            messages.append({"role": "user", "content": tool_results})
+            final = collected_text if collected_text else "사용자가 작업을 중단했습니다."
+            yield {"type": "final", "content": final}
+            return
 
         # 승인 요청 시 루프 중단
         if approval_requested:
@@ -538,5 +617,6 @@ class AnthropicProvider(BaseProvider):
         # 재귀 호출로 후속 응답 처리 (도구 실행 후에는 auto-continue 리셋)
         yield from self._agentic_loop(
             messages, execute_tool, depth + 1, max_tokens=4096,
-            auto_continues=0, accumulated_text=""
+            auto_continues=0, accumulated_text="",
+            cancel_check=cancel_check
         )

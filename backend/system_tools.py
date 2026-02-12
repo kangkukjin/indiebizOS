@@ -775,6 +775,13 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
             if asyncio.iscoroutine(result):
                 result = _run_coroutine(result)
 
+            # [images] 이미지를 포함한 dict 결과는 그대로 반환 (providers가 처리)
+            if isinstance(result, dict) and "images" in result:
+                # 가이드 주입은 content 필드에만 적용
+                if isinstance(result.get("content"), str):
+                    result["content"] = _inject_guide_if_needed(tool_name, result["content"], agent_id)
+                return result
+
             # 승인 필요 여부 확인
             if isinstance(result, str) and result.startswith("__REQUIRES_APPROVAL__:"):
                 command = result.replace("__REQUIRES_APPROVAL__:", "")

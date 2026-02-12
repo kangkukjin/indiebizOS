@@ -6,6 +6,8 @@ IndieBiz OS - Remote File Access System
 """
 
 import os
+import sys
+import platform
 import stat as stat_module
 import json
 import hashlib
@@ -68,6 +70,41 @@ _PROBE_CACHE_MAX = 200
 
 # 활성 트랜스코딩 프로세스 추적
 _active_transcodes: dict = {}
+
+# 플랫폼별 H.264 인코더 자동 감지 (한 번만 실행)
+_hw_encoder: str | None = None
+
+def _detect_h264_encoder() -> str:
+    """사용 가능한 H.264 인코더를 감지하여 반환. HW 가속 우선, 실패 시 libx264 폴백."""
+    global _hw_encoder
+    if _hw_encoder is not None:
+        return _hw_encoder
+
+    # 플랫폼별 HW 인코더 후보 (우선순위 순)
+    candidates = []
+    if sys.platform == "darwin":
+        candidates = ["h264_videotoolbox"]
+    elif sys.platform == "win32":
+        candidates = ["h264_nvenc", "h264_qsv", "h264_amf"]
+    else:  # Linux
+        candidates = ["h264_nvenc", "h264_vaapi", "h264_qsv"]
+
+    for enc in candidates:
+        try:
+            r = subprocess.run(
+                [FFMPEG_PATH, "-hide_banner", "-f", "lavfi", "-i", "nullsrc=s=64x64:d=0.1",
+                 "-c:v", enc, "-f", "null", "-"],
+                capture_output=True, timeout=10
+            )
+            if r.returncode == 0:
+                _hw_encoder = enc
+                return _hw_encoder
+        except Exception:
+            continue
+
+    # 모든 HW 인코더 실패 → 소프트웨어 폴백
+    _hw_encoder = "libx264"
+    return _hw_encoder
 
 # 브라우저 호환 코덱/컨테이너
 BROWSER_COMPATIBLE_VIDEO = {"h264", "av1", "vp8", "vp9"}
@@ -697,7 +734,11 @@ async def transcode_video(
     if v_ok:
         video_codec_args = ["-c:v", "copy"]
     else:
-        video_codec_args = ["-c:v", "h264_videotoolbox", "-b:v", "4M"]
+        encoder = _detect_h264_encoder()
+        video_codec_args = ["-c:v", encoder, "-b:v", "4M"]
+        # libx264는 preset 설정으로 속도/품질 균형
+        if encoder == "libx264":
+            video_codec_args.extend(["-preset", "fast"])
 
     if a_ok:
         audio_codec_args = ["-c:a", "copy"]

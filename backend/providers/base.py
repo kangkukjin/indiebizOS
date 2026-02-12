@@ -377,7 +377,11 @@ class BaseProvider(ABC):
                 new_content = []
                 for c in msg.get("content", []):
                     if c.get("type") == "tool_result":
-                        new_content.append({**c, "content": "[이전 도구 결과 생략됨]"})
+                        # [images] 이미지 포함 tool_result(list)도 텍스트로 대체
+                        if isinstance(c.get("content"), list):
+                            new_content.append({**c, "content": "[이전 스크린샷 및 도구 결과 생략됨]"})
+                        else:
+                            new_content.append({**c, "content": "[이전 도구 결과 생략됨]"})
                     else:
                         new_content.append(c)
                 pruned.append({"role": msg["role"], "content": new_content})
@@ -387,6 +391,15 @@ class BaseProvider(ABC):
                 for c in msg.get("content", []):
                     if c.get("type") == "tool_result" and isinstance(c.get("content"), str):
                         new_content.append({**c, "content": self._soft_trim_content(c["content"])})
+                    elif c.get("type") == "tool_result" and isinstance(c.get("content"), list):
+                        # [images] 이미지 포함 최근 tool_result → 이미지 유지, 텍스트만 trim
+                        trimmed_content = []
+                        for block in c["content"]:
+                            if block.get("type") == "text":
+                                trimmed_content.append({**block, "text": self._soft_trim_content(block["text"])})
+                            else:
+                                trimmed_content.append(block)  # 이미지 블록 유지
+                        new_content.append({**c, "content": trimmed_content})
                     else:
                         new_content.append(c)
                 pruned.append({"role": msg["role"], "content": new_content})
@@ -430,12 +443,26 @@ class BaseProvider(ABC):
         for i, msg in enumerate(messages):
             if i in old_result_indices:
                 # old 그룹의 tool → 마스킹
-                pruned.append({**msg, "content": "[이전 도구 결과 생략됨]"})
+                # [images] 이미지 주입된 user 메시지도 텍스트로 대체
+                content = msg.get("content", "")
+                if isinstance(content, list):
+                    pruned.append({**msg, "content": "[이전 스크린샷 및 도구 결과 생략됨]"})
+                else:
+                    pruned.append({**msg, "content": "[이전 도구 결과 생략됨]"})
             elif i in recent_result_indices:
                 # recent 그룹의 tool → soft-trim
                 content = msg.get("content", "")
                 if isinstance(content, str):
                     pruned.append({**msg, "content": self._soft_trim_content(content)})
+                elif isinstance(content, list):
+                    # [images] 이미지 포함 최근 메시지 → 이미지 유지, 텍스트만 trim
+                    trimmed = []
+                    for block in content:
+                        if isinstance(block, dict) and block.get("type") == "text":
+                            trimmed.append({**block, "text": self._soft_trim_content(block["text"])})
+                        else:
+                            trimmed.append(block)
+                    pruned.append({**msg, "content": trimmed})
                 else:
                     pruned.append(msg)
             else:

@@ -494,11 +494,53 @@ function renderFiles(items, parentPath) {
 
 function navTo(p) { loadDir(p); }
 function dlFile(p) { window.open(`${API}/file?path=${encodeURIComponent(p)}`, '_blank'); }
-function playVideo(p) {
+async function playVideo(p) {
     const url = `${API}/file?path=${encodeURIComponent(p)}`;
     const name = p.split('/').pop();
+
+    // 자막 수집
+    let trackTags = '';
+    try {
+        const subRes = await fetch(`${API}/subtitles?path=${encodeURIComponent(p)}`, {credentials:'include'});
+        if (subRes.ok) {
+            const subData = await subRes.json();
+            if (subData.subtitles && subData.subtitles.length > 0) {
+                subData.subtitles.forEach((sub, idx) => {
+                    let subUrl = `${API}/subtitle?path=${encodeURIComponent(sub.path)}`;
+                    if (sub.smi_class) subUrl += `&smi_class=${encodeURIComponent(sub.smi_class)}`;
+                    const isDefault = idx === 0 ? 'default' : '';
+                    const label = sub.lang_label || sub.filename;
+                    const srclang = sub.lang_code || 'ko';
+                    trackTags += `<track kind="subtitles" src="${subUrl}" srclang="${srclang}" label="${label}" ${isDefault}>`;
+                });
+            }
+        }
+    } catch(e) {}
+
+    // 코덱 분석 및 내장 자막
+    let needsTranscode = false;
+    try {
+        const probeRes = await fetch(`${API}/probe?path=${encodeURIComponent(p)}`, {credentials:'include'});
+        if (probeRes.ok) {
+            const probeData = await probeRes.json();
+            needsTranscode = probeData.needs_transcode;
+            if (probeData.subtitle_tracks && probeData.subtitle_tracks.length > 0) {
+                probeData.subtitle_tracks.forEach((st, idx) => {
+                    const stUrl = `${API}/embedded-subtitle?path=${encodeURIComponent(p)}&track=${st.index}`;
+                    const isDefault = !trackTags && idx === 0 ? 'default' : '';
+                    const label = st.title || st.language || ('Track ' + st.index);
+                    const srclang = st.language || 'und';
+                    trackTags += `<track kind="subtitles" src="${stUrl}" srclang="${srclang}" label="[내장] ${label}" ${isDefault}>`;
+                });
+            }
+        }
+    } catch(e) {}
+
+    const srcUrl = needsTranscode ? `${API}/transcode?path=${encodeURIComponent(p)}` : url;
+    const srcType = needsTranscode ? ' type="video/mp4"' : '';
+
     const w = window.open('','_blank');
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><style>body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh}video{max-width:100%;max-height:100vh}</style></head><body><video controls autoplay><source src="${url}"></video></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;display:flex;justify-content:center;align-items:center;height:100vh}video{max-width:100%;max-height:100vh}video::cue{background:rgba(0,0,0,0.7);color:#fff;font-size:1.1em}</style></head><body><video controls autoplay crossorigin="anonymous"><source src="${srcUrl}"${srcType}>${trackTags}</video></body></html>`);
 }
 
 function viewImage(p) {

@@ -6,10 +6,16 @@ Kinsight - 블로그 기반 개인 인사이트 도구
 """
 
 import os
+import sys
 import json
 import sqlite3
 from datetime import datetime
 from typing import Dict, Any
+
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
 
 # 경로 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

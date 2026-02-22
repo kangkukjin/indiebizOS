@@ -370,11 +370,11 @@ async def get_ollama_models():
         return {"models": [], "running": False}
 
 
-# ============ 자동 도구 배분 API ============
+# ============ 자동 노드 배분 API (Phase 18) ============
 
 @router.post("/projects/{project_id}/auto-assign-tools")
 async def auto_assign_tools(project_id: str):
-    """시스템 AI를 사용하여 에이전트들에게 도구 자동 배분"""
+    """시스템 AI를 사용하여 에이전트들에게 IBL 노드 자동 배분 (Phase 18: allowed_nodes)"""
     try:
         project_path = project_manager.get_project_path(project_id)
         agents_file = project_path / "agents.yaml"
@@ -388,7 +388,6 @@ async def auto_assign_tools(project_id: str):
         # 에이전트 정보 수집
         agents_info = []
         for agent in data.get('agents', []):
-            # 역할 파일 로드
             role_file = project_path / f"agent_{agent['name']}_role.txt"
             role = ""
             if role_file.exists():
@@ -402,32 +401,21 @@ async def auto_assign_tools(project_id: str):
         if not agents_info:
             return {"status": "no_agents", "message": "배분할 에이전트가 없습니다."}
 
-        # 프로젝트 기본 도구 로드
-        default_tools = []
-        project_json = project_path / "project.json"
-        if project_json.exists():
-            try:
-                with open(project_json, 'r', encoding='utf-8') as f:
-                    project_data = json.load(f)
-                default_tools = project_data.get('default_tools', [])
-            except:
-                pass
-
-        # 자동 배분 실행
+        # Phase 18: IBL 노드 배분 실행
         try:
             from tool_selector import SystemDirector
 
             director = SystemDirector(project_path)
-            success = director.force_reallocate_tools(agents_info, default_tools)
+            success = director.force_reallocate_nodes(agents_info)
 
             if success:
                 return {
                     "status": "success",
-                    "message": "도구 배분이 완료되었습니다.",
+                    "message": "노드 배분이 완료되었습니다.",
                     "assignments": director.assignment_map
                 }
             else:
-                raise HTTPException(status_code=500, detail="도구 배분에 실패했습니다.")
+                raise HTTPException(status_code=500, detail="노드 배분에 실패했습니다.")
         except ImportError as e:
             raise HTTPException(status_code=500, detail=f"tool_selector 모듈을 찾을 수 없습니다: {e}")
 
@@ -440,8 +428,8 @@ async def auto_assign_tools(project_id: str):
 @router.post("/projects/{project_id}/init-tools")
 async def init_tools_if_needed(project_id: str):
     """
-    프로젝트 열 때 호출 - allowed_tools가 없는 에이전트만 자동 배분
-    (이미 allowed_tools가 있으면 스킵)
+    Phase 18: 프로젝트 열 때 호출 - allowed_nodes가 없는 에이전트만 자동 배분
+    (이미 allowed_nodes가 있으면 스킵)
     """
     try:
         project_path = project_manager.get_project_path(project_id)
@@ -453,46 +441,34 @@ async def init_tools_if_needed(project_id: str):
         with open(agents_file, 'r', encoding='utf-8') as f:
             data = yaml.safe_load(f) or {}
 
-        # allowed_tools가 None인 에이전트만 필터링
-        agents_needing_tools = []
+        # Phase 18: allowed_nodes가 None인 에이전트만 필터링
+        agents_needing_nodes = []
         for agent in data.get('agents', []):
-            if agent.get('allowed_tools') is None:
-                # 역할 파일 로드
+            if agent.get('allowed_nodes') is None:
                 role_file = project_path / f"agent_{agent['name']}_role.txt"
                 role = ""
                 if role_file.exists():
                     role = role_file.read_text(encoding='utf-8')
 
-                agents_needing_tools.append({
+                agents_needing_nodes.append({
                     'name': agent['name'],
                     'role': role or '역할 미정의'
                 })
 
-        if not agents_needing_tools:
-            return {"status": "skip", "message": "모든 에이전트에 도구가 이미 배분됨"}
+        if not agents_needing_nodes:
+            return {"status": "skip", "message": "모든 에이전트에 노드가 이미 배분됨"}
 
-        # 프로젝트 기본 도구 로드
-        default_tools = []
-        project_json = project_path / "project.json"
-        if project_json.exists():
-            try:
-                with open(project_json, 'r', encoding='utf-8') as f:
-                    project_data = json.load(f)
-                default_tools = project_data.get('default_tools', [])
-            except:
-                pass
-
-        # 자동 배분 실행 (allowed_tools가 None인 에이전트만)
+        # Phase 18: IBL 노드 배분 실행
         try:
             from tool_selector import SystemDirector
 
             director = SystemDirector(project_path)
-            director.reallocate_tools(agents_needing_tools, default_tools)
+            director.reallocate_nodes(agents_needing_nodes)
 
             return {
                 "status": "success",
-                "message": f"{len(agents_needing_tools)}개 에이전트에 도구 배분 완료",
-                "agents": [a['name'] for a in agents_needing_tools]
+                "message": f"{len(agents_needing_nodes)}개 에이전트에 노드 배분 완료",
+                "agents": [a['name'] for a in agents_needing_nodes]
             }
         except ImportError:
             return {"status": "error", "message": "tool_selector 모듈 없음"}

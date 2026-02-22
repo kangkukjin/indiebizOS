@@ -1,0 +1,153 @@
+{
+  "id": "local-info",
+  "name": "Local Info",
+  "description": "동네 가게/상점 정보 검색 및 관리 도구. 네이버 카페(아이러브오송 등), 네이버 지도 API에서 가게 정보를 검색하고, 유용한 정보를 개인 DB에 축적하여 나만의 동네 전화번호부를 만듭니다. 시간이 지날수록 풍부해지는 지역 정보 데이터베이스.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "local_search",
+      "description": "지역 커뮤니티 사이트나 지도 API에서 가게/상점 정보를 검색합니다.\n\n## 지원 사이트\n- **naver_cafe**: 네이버 카페 게시글 검색 (기본: 아이러브오송)\n- **naver_map**: 네이버 지역검색 API (가게 기본정보)\n\n## 사용 시점\n- 동네 가게 정보 찾기 (미용실, 식당, 학원 등)\n- 커뮤니티 후기/추천 검색\n- 새로운 가게 발견\n\n## 워크플로우\n1. local_search로 검색\n2. 유용한 결과를 local_db_save로 DB에 저장\n3. 나중에 local_db_query로 축적된 정보 조회",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색 키워드 (예: '오송 미용실 추천', '맛집', '소아과')"
+          },
+          "site": {
+            "type": "string",
+            "enum": [
+              "naver_cafe",
+              "naver_map"
+            ],
+            "description": "검색 사이트 (기본: naver_cafe)"
+          },
+          "cafe_id": {
+            "type": "string",
+            "description": "네이버 카페 ID (기본: osong1 = 아이러브오송)"
+          },
+          "display": {
+            "type": "integer",
+            "description": "결과 수 (기본 5, 최대 10)"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "local_db_query",
+      "description": "축적된 지역 정보 DB에서 가게/상점을 조회합니다.\n\n## 기능\n- **search**: FTS5 전문 검색 (이름, 카테고리, 주소, 설명)\n- **stats**: DB 통계 (총 가게 수, 카테고리 분포)\n- **recent**: 최근 추가/수정된 가게\n- **detail**: 특정 가게 상세 + 관련 커뮤니티 언급\n\n## 사용 시점\n- 이전에 저장한 가게 정보 찾기\n- 동네 가게 현황 파악\n- 특정 가게의 커뮤니티 평판 확인",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "search",
+              "stats",
+              "recent",
+              "detail"
+            ],
+            "description": "조회 유형 (기본: search)"
+          },
+          "query": {
+            "type": "string",
+            "description": "검색어 (action=search 시)"
+          },
+          "category": {
+            "type": "string",
+            "description": "업종 필터 (예: '미용실', '식당', '병원')"
+          },
+          "area": {
+            "type": "string",
+            "description": "지역 필터 (기본: 오송)"
+          },
+          "store_id": {
+            "type": "integer",
+            "description": "가게 ID (action=detail 시)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "결과 수 (기본 20)"
+          }
+        }
+      }
+    },
+    {
+      "name": "local_db_save",
+      "description": "검색으로 발견한 가게 정보나 커뮤니티 언급을 DB에 저장합니다.\n\n## 모드\n- **store**: 가게 기본 정보 저장 (이름+주소 중복 시 자동 업데이트)\n- **mention**: 커뮤니티 언급 기록 (빈도 추적 - 같은 URL/제목은 중복 저장 안 됨)\n- **delete**: 가게 삭제 (관련 언급도 함께 삭제)\n\n## 사용 시점\n- local_search 결과에서 가게 이름이 언급된 게시글 발견 시\n- 가게 정보 등록 후 관련 게시글을 mention으로 연결\n- 언급 횟수가 많을수록 인기 있는 가게\n\n## 핵심\n- 가게 이름이 나오는 게시글을 발견하면 store 등록 + mention 기록\n- 판단하지 말고 기록만 (빈도가 곧 데이터)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "store",
+              "mention",
+              "delete"
+            ],
+            "description": "저장 모드 (기본: store)"
+          },
+          "name": {
+            "type": "string",
+            "description": "[store] 가게 이름 (필수)"
+          },
+          "category": {
+            "type": "string",
+            "description": "[store] 업종 (예: '미용실', '식당', '카페')"
+          },
+          "address": {
+            "type": "string",
+            "description": "[store] 주소"
+          },
+          "phone": {
+            "type": "string",
+            "description": "[store] 전화번호"
+          },
+          "description": {
+            "type": "string",
+            "description": "[store] 설명"
+          },
+          "area": {
+            "type": "string",
+            "description": "[store] 지역 (기본: 오송)"
+          },
+          "source": {
+            "type": "string",
+            "description": "[store/mention] 출처 (naver_cafe, naver_map, manual)"
+          },
+          "source_url": {
+            "type": "string",
+            "description": "[store/mention] 출처 URL"
+          },
+          "rating": {
+            "type": "number",
+            "description": "[store] 평점"
+          },
+          "notes": {
+            "type": "string",
+            "description": "[store] 개인 메모"
+          },
+          "store_id": {
+            "type": "integer",
+            "description": "[mention/delete] 대상 가게 ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "[mention] 게시글 제목"
+          },
+          "content": {
+            "type": "string",
+            "description": "[mention] 언급 내용"
+          },
+          "post_date": {
+            "type": "string",
+            "description": "[mention] 게시글 날짜"
+          }
+        }
+      }
+    }
+  ]
+}

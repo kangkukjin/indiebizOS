@@ -1,0 +1,38 @@
+node: source
+actions:
+  apt_trade:
+    description: 아파트 매매 실거래가 (국토부)
+    target_description: '지역코드 (5자리, 예: 11680=강남)'
+    router: handler
+    tool: apt_trade_price
+    target_key: region_code
+  apt_rent:
+    description: 아파트 전월세 실거래가
+    target_description: 지역코드
+    router: handler
+    tool: apt_rent_price
+    target_key: region_code
+  house_trade:
+    description: 단독/다세대 주택 매매 실거래가
+    target_description: 지역코드
+    router: handler
+    tool: house_trade_price
+    target_key: region_code
+  house_rent:
+    description: 단독/다세대 주택 전월세 실거래가
+    target_description: 지역코드
+    router: handler
+    tool: house_rent_price
+    target_key: region_code
+  district_codes:
+    description: 법정동 지역코드 조회
+    target_description: 시/도명 (서울, 경기 등)
+    router: handler
+    tool: get_region_codes
+    target_key: city
+  commercial:
+    description: 상권 분석 (업종별 점포, 좌표/행정동 기반)
+    router: handler
+    tool: search_commercial_district
+guides:
+- real-estate/real_estate_guide.md

@@ -26,13 +26,13 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/   # 설치된 패키지
-│   │   │   └── tools/      # 도구 (27개)
+│   │   │   └── tools/      # 도구 (35개)
 │   │   └── not_installed/  # 미설치 패키지
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억)
 │   ├── business.db      # 비즈니스 DB
 │   └── multi_chat.db    # 다중채팅방 DB
 │
-├── projects/            # 사용자 프로젝트 (16개)
+├── projects/            # 사용자 프로젝트 (24개)
 │   ├── projects.json    # 프로젝트 목록 및 설정
 │   └── {project_id}/    # 개별 프로젝트 폴더
 │
@@ -41,8 +41,8 @@ indiebizOS/
 
 ## 핵심 컴포넌트
 
-### 통합 AI 아키텍처
-시스템 AI와 프로젝트 에이전트가 동일한 코드베이스를 공유합니다:
+### 통합 AI 아키텍처 (Phase 22: 6-Node 통합)
+시스템 AI와 프로젝트 에이전트가 동일한 코드베이스와 **동일한 도구 구조**를 공유합니다:
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -51,7 +51,7 @@ indiebizOS/
 ├─────────────────────────────────────────────────────┤
 │  • process_message_stream() - 스트리밍 처리          │
 │  • process_message_with_history() - 동기 처리        │
-│  • 도구 실행 로직 통합                               │
+│  • execute_ibl 단일 도구로 모든 기능 접근            │
 └─────────────────────────────────────────────────────┘
           │                           │
           ▼                           ▼
@@ -59,8 +59,8 @@ indiebizOS/
 │    시스템 AI      │       │  프로젝트 에이전트  │
 │ (api_system_ai)  │       │  (agent_runner)  │
 ├──────────────────┤       ├──────────────────┤
-│ create_system_   │       │ AIAgent 직접     │
-│ ai_agent()       │       │ 인스턴스화        │
+│ execute_ibl      │       │ execute_ibl      │
+│ (전체 노드)       │       │ (허용 노드)       │
 └──────────────────┘       └──────────────────┘
           │                           │
           └───────────┬───────────────┘
@@ -72,8 +72,10 @@ indiebizOS/
 ```
 
 **통합 효과:**
+- 시스템 AI와 프로젝트 에이전트 모두 `execute_ibl` 단일 도구 사용
+- 차이점은 접근 가능한 노드 범위뿐 (시스템 AI: 전체, 프로젝트 에이전트: 허용된 노드)
+- 사용자 소통(질문, 할일, 승인, 알림)도 `[system:*]` 액션으로 통합
 - 프로바이더 코드 1회 작성으로 시스템 AI + 모든 에이전트 지원
-- 스트리밍, 도구 실행 로직 일원화
 - 새 프로바이더 추가 시 자동으로 전체 적용
 
 ### 프롬프트 빌더 (prompt_builder.py)
@@ -83,6 +85,12 @@ indiebizOS/
 ┌─────────────────────────────────────────┐
 │     공통 설정 (base_prompt_v2.md)        │
 │   - AI 행동 원칙, 도구 사용 가이드       │
+├─────────────────────────────────────────┤
+│      IBL 환경 (ibl_access.py)           │
+│   - 사용 가능한 노드/액션 목록           │
+│   - IBL 문법 가이드                     │
+│   - 시스템 AI: 전체 노드                │
+│   - 에이전트: 허용된 노드만             │
 ├─────────────────────────────────────────┤
 │       조건부 프래그먼트 (fragments/)     │
 │   - 06_git.md: git_enabled=true일 때    │
@@ -116,10 +124,22 @@ AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 구조 적용
 에이전트 간 비동기 협업을 위한 핵심 메커니즘. `call_agent()`를 통해 작업을 위임하고 결과를 자동으로 보고받음.
 → 상세 문서: [delegation.md](delegation.md)
 
-### 도구 패키지 시스템
-- 폴더 기반 탐지 및 동적 로딩
-- AI가 코드와 README를 읽고 직접 사용법 파악
-- `tool.json` + `handler.py` 구조
+### IBL (IndieBiz Logic) 시스템
+- 노드 기반 추상화: `[node:action](target) {params}` 문법
+- execute_ibl 단일 도구로 모든 노드 접근
+- **6개 노드, 321 액션** (Phase 22: 10→6 노드 통합)
+  - source(105), interface(79), system(64), forge(46), stream(18), messenger(9)
+- **액션 라우팅 이원화**: api_engine(자동 발견) + handler(수동)
+- `api_registry.yaml`에 `node` 필드 추가 시 자동으로 노드 액션에 병합 — `ibl_nodes.yaml` 편집 불필요
+- 에이전트별 접근 제어: `allowed_nodes`로 노드 필터링
+- 인프라 노드(`system`)는 모든 에이전트에 자동 허용
+→ 상세 문서: [ibl.md](ibl.md)
+
+### 도구 패키지 시스템 (노드 구현체)
+- 폴더 기반 탐지 및 동적 로딩 (35개 설치됨)
+- IBL 노드의 실제 구현체로 동작
+- **두 가지 실행 경로**: handler.py(복잡한 후처리) 또는 api_engine(API+transform)
+- `tool.json` + `handler.py` 구조 (또는 api_registry.yaml 등록)
 - 도구 설명 구조: 한줄 요약 + 데이터 형식 + 예시
 - 가이드 파일 시스템: 복잡한 도구에 on-demand 가이드 주입 → [상세 문서](guide_file.md)
 
@@ -142,4 +162,4 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 → 상세 문서: [remote_access.md](remote_access.md)
 
 ---
-*마지막 업데이트: 2026-02-10*
+*마지막 업데이트: 2026-02-19 (Phase 22: 6-Node 통합)*

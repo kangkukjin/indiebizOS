@@ -10,6 +10,7 @@ Blog Insight Tool for IndieBiz
 """
 
 import os
+import sys
 import json
 import sqlite3
 import requests
@@ -18,6 +19,13 @@ import feedparser
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from bs4 import BeautifulSoup
+
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.html_utils import clean_html
 
 # 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -120,7 +128,7 @@ def get_db() -> sqlite3.Connection:
     os.makedirs(DATA_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS posts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,7 +141,7 @@ def get_db() -> sqlite3.Connection:
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
+
     conn.execute("""
         CREATE TABLE IF NOT EXISTS summaries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -144,9 +152,71 @@ def get_db() -> sqlite3.Connection:
             FOREIGN KEY (post_id) REFERENCES posts(post_id)
         )
     """)
-    
+
+    # FTS5 전문 검색 가상 테이블 (BM25 키워드 검색용)
+    conn.execute("""
+        CREATE VIRTUAL TABLE IF NOT EXISTS posts_fts USING fts5(
+            title, content,
+            content='posts', content_rowid='id'
+        )
+    """)
+
+    # FTS5 자동 동기화 트리거
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS posts_fts_insert
+        AFTER INSERT ON posts BEGIN
+            INSERT INTO posts_fts(rowid, title, content)
+            VALUES (new.id, new.title, new.content);
+        END
+    """)
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS posts_fts_delete
+        AFTER DELETE ON posts BEGIN
+            INSERT INTO posts_fts(posts_fts, rowid, title, content)
+            VALUES ('delete', old.id, old.title, old.content);
+        END
+    """)
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS posts_fts_update
+        AFTER UPDATE ON posts BEGIN
+            INSERT INTO posts_fts(posts_fts, rowid, title, content)
+            VALUES ('delete', old.id, old.title, old.content);
+            INSERT INTO posts_fts(rowid, title, content)
+            VALUES (new.id, new.title, new.content);
+        END
+    """)
+
+    # RAG 검색 인덱스 상태 추적 테이블
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS search_index_status (
+            post_id TEXT PRIMARY KEY,
+            indexed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            embedding_version TEXT DEFAULT 'v1',
+            FOREIGN KEY (post_id) REFERENCES posts(post_id)
+        )
+    """)
+
     conn.commit()
+
+    # 기존 포스트를 FTS5로 마이그레이션 (최초 1회)
+    _migrate_fts5_if_needed(conn)
+
     return conn
+
+
+def _migrate_fts5_if_needed(conn: sqlite3.Connection):
+    """기존 포스트를 FTS5 인덱스로 마이그레이션 (최초 1회)"""
+    try:
+        fts_count = conn.execute("SELECT COUNT(*) FROM posts_fts").fetchone()[0]
+        posts_count = conn.execute("SELECT COUNT(*) FROM posts").fetchone()[0]
+        if fts_count >= posts_count:
+            return  # 이미 동기화됨
+        print(f"[Blog] FTS5 인덱스 마이그레이션 중... ({posts_count}개 포스트)")
+        conn.execute("INSERT INTO posts_fts(posts_fts) VALUES('rebuild')")
+        conn.commit()
+        print(f"[Blog] FTS5 마이그레이션 완료")
+    except Exception as e:
+        print(f"[Blog] FTS5 마이그레이션 스킵: {e}")
 
 
 def parse_rss_date(rss_date: str) -> Optional[str]:
@@ -157,10 +227,8 @@ def parse_rss_date(rss_date: str) -> Optional[str]:
         return None
 
 
-def strip_html(html: str) -> str:
-    soup = BeautifulSoup(html, 'html.parser')
-    text = soup.get_text(separator=' ')
-    return re.sub(r'\s+', ' ', text).strip()
+# strip_html은 common.html_utils.clean_html로 대체
+strip_html = clean_html
 
 
 def fetch_rss_feed() -> List[Dict[str, Any]]:
@@ -221,6 +289,18 @@ def blog_check_new_posts() -> Dict[str, Any]:
         conn.commit()
         total = conn.execute("SELECT COUNT(*) FROM posts").fetchone()[0]
         conn.close()
+
+        # 새 포스트의 벡터 임베딩 생성 (선택적, 실패해도 무시)
+        if new_posts:
+            try:
+                from tool_blog_rag import BlogHybridSearch
+                engine = BlogHybridSearch()
+                indexed = engine.index_new_posts()
+                if indexed > 0:
+                    print(f"[Blog] {indexed}개 새 포스트 RAG 인덱싱 완료")
+            except Exception as e:
+                print(f"[Blog] RAG 인덱싱 스킵: {e}")
+
         return {'success': True, 'new_count': len(new_posts), 'new_posts': new_posts, 'total_posts': total}
     except Exception as e:
         return {'success': False, 'error': str(e)}

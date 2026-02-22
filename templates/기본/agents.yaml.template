@@ -3,13 +3,14 @@
 agents:
   - id: agent_001
     name: 집사
-    type: external
+    type: internal
     active: true
+    ibl_only: true
     ai:
       provider: anthropic
       model: claude-sonnet-4-20250514
       api_key: ""
-    allowed_tools: []
+    allowed_nodes: []    # 빈 배열 = 모든 도메인 접근 가능
     role: ""
     channels: []
 

@@ -4,15 +4,20 @@ Radio Browser API + 한국 방송사 직접 API + mpv 재생
 """
 
 import os
+import sys
 import json
 import time
 import signal
 import subprocess
-import urllib.request
-import urllib.parse
-import urllib.error
 from pathlib import Path
 from threading import Lock
+
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.api_client import api_call_raw
 
 # ─── 상수 ───
 
@@ -162,23 +167,33 @@ _current_station = None
 _play_start_time = None
 
 
-# ─── HTTP 헬퍼 ───
+# ─── HTTP 헬퍼 (common.api_client 사용) ───
 
 def _http_get(url, timeout=10):
-    """간단한 HTTP GET 요청"""
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.read().decode("utf-8")
-    except urllib.error.HTTPError as e:
-        raise Exception(f"HTTP {e.code}: {e.reason}")
-    except urllib.error.URLError as e:
-        raise Exception(f"URL Error: {e.reason}")
+    """간단한 HTTP GET 요청 - api_call_raw 사용"""
+    result = api_call_raw(
+        url,
+        headers={"User-Agent": USER_AGENT},
+        timeout=timeout,
+        raw_response=True,
+    )
+    # api_call_raw는 에러 시 {"error": "..."} dict 반환
+    if isinstance(result, dict) and "error" in result:
+        raise Exception(result["error"])
+    return result
 
 
 def _http_get_json(url, timeout=10):
-    """HTTP GET → JSON"""
-    return json.loads(_http_get(url, timeout))
+    """HTTP GET → JSON - api_call_raw 사용"""
+    result = api_call_raw(
+        url,
+        headers={"User-Agent": USER_AGENT},
+        timeout=timeout,
+    )
+    # api_call_raw는 에러 시 {"error": "..."}, 성공 시 파싱된 JSON 반환
+    if isinstance(result, dict) and "error" in result:
+        raise Exception(result["error"])
+    return result
 
 
 # ─── Radio Browser API ───
@@ -213,10 +228,16 @@ def search_radio(name=None, tag=None, country=None, state=None, language=None, o
     if bitrateMin and bitrateMin > 0:
         params["bitrateMin"] = str(bitrateMin)
 
-    query = urllib.parse.urlencode(params)
-    url = f"{RADIO_BROWSER_API}/json/stations/search?{query}"
-
-    data = _http_get_json(url)
+    url = f"{RADIO_BROWSER_API}/json/stations/search"
+    data = api_call_raw(
+        url,
+        headers={"User-Agent": USER_AGENT},
+        params=params,
+    )
+    if isinstance(data, dict) and "error" in data:
+        return json.dumps({"success": False, "error": data["error"]}, ensure_ascii=False)
+    if isinstance(data, str):
+        data = json.loads(data)
 
     results = []
     for s in data:

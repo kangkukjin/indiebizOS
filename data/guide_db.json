@@ -1,0 +1,152 @@
+{
+  "description": "가이드 파일 DB - data/guides/ 폴더에서 파일 관리",
+  "guides": [
+    {
+      "id": "video_workflow",
+      "name": "동영상 제작 워크플로우",
+      "description": "HTML 기반 영상 또는 Remotion 영상을 만드는 단계별 워크플로우. 이미지 생성, 코드 작성, 미리보기, TTS, 최종 렌더링까지.",
+      "keywords": ["동영상", "영상", "비디오", "video", "mp4", "렌더링", "TTS", "나레이션"],
+      "file": "video_workflow.md"
+    },
+    {
+      "id": "html_video",
+      "name": "HTML 영상 제작 기술 가이드",
+      "description": "Playwright 프레임 캡처 기반 MP4 영상 제작의 기술적 상세. HTML 씬 구조, 애니메이션, 오디오 합성.",
+      "keywords": ["html", "영상", "playwright", "프레임", "씬", "scene", "애니메이션"],
+      "file": "html_video.md"
+    },
+    {
+      "id": "slides",
+      "name": "슬라이드 제작 가이드",
+      "description": "HTML/Playwright 기반 1280x720px PNG 슬라이드 제작. 프레젠테이션, 카드뉴스.",
+      "keywords": ["슬라이드", "프레젠테이션", "카드뉴스", "slides", "발표", "PNG"],
+      "file": "slides.md"
+    },
+    {
+      "id": "remotion",
+      "name": "Remotion 영상 제작 가이드",
+      "description": "React/TSX 기반 Remotion으로 프로그래밍 방식 MP4 영상 제작. 컴포지션 구조, 애니메이션, Tailwind CSS, Google Fonts, Lottie, 시각 기법 포함.",
+      "keywords": ["remotion", "react", "tsx", "프로그래밍", "컴포지션", "composition", "tailwind", "lottie", "폰트", "시각", "디자인"],
+      "file": "remotion.md"
+    },
+    {
+      "id": "music_composer",
+      "name": "작곡 가이드",
+      "description": "ABC Notation 기반 작곡, MIDI 생성, WAV/MP3 오디오 변환 워크플로우.",
+      "keywords": ["음악", "작곡", "악보", "ABC", "MIDI", "WAV", "MP3", "멜로디"],
+      "file": "music_composer.md"
+    },
+    {
+      "id": "web_builder",
+      "name": "웹사이트 빌더 가이드",
+      "description": "홈페이지 만들기 및 관리. Cloudflare Pages 배포, 도메인 연결.",
+      "keywords": ["홈페이지", "웹사이트", "website", "빌더", "배포", "deploy", "pages"],
+      "file": "web_builder.md"
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare 서비스 가이드",
+      "description": "Cloudflare Pages, Workers, R2 스토리지, D1 데이터베이스, Tunnel 설정 및 관리.",
+      "keywords": ["cloudflare", "workers", "r2", "d1", "tunnel", "CDN", "서버"],
+      "file": "cloudflare.md"
+    },
+    {
+      "id": "browser_action",
+      "name": "브라우저 자동화 가이드",
+      "description": "Playwright 기반 브라우저 자동화. Snapshot → Ref → Action 패턴.",
+      "keywords": ["브라우저", "browser", "자동화", "playwright", "클릭", "스크린샷", "크롤링"],
+      "file": "browser_action.md"
+    },
+    {
+      "id": "android",
+      "name": "안드로이드 기기 관리 가이드",
+      "description": "ADB 기반 안드로이드 기기 연결, 앱 설치, 화면 제어.",
+      "keywords": ["안드로이드", "android", "adb", "앱", "기기", "스마트폰"],
+      "file": "android.md"
+    },
+    {
+      "id": "investment",
+      "name": "투자 분석 가이드",
+      "description": "한국 기업 분석 워크플로우. 주식, 재무제표, 공시 정보 조회 및 분석.",
+      "keywords": ["투자", "주식", "기업분석", "재무제표", "공시", "ETF", "채권"],
+      "file": "investment.md"
+    },
+    {
+      "id": "real_estate",
+      "name": "부동산 정보 및 매물 분석 가이드",
+      "description": "네이버 부동산, 국토부 API를 활용한 부동산 정보 조회 및 매물 분석 판단 기준 (126%룰, 수익률, 전세가율).",
+      "keywords": ["부동산", "아파트", "매매", "전세", "국토부", "시세", "매물분석", "수익률", "깡통전세", "126%룰", "다가구"],
+      "file": "real_estate.md"
+    },
+    {
+      "id": "house_designer",
+      "name": "건축 설계 가이드",
+      "description": "2D/3D 건축 설계 도구. 평면도, 입면도, 3D 모델링.",
+      "keywords": ["건축", "설계", "평면도", "3D", "모델링", "도면", "건물"],
+      "file": "house_designer.md"
+    },
+    {
+      "id": "web_collector",
+      "name": "웹 정보 수집 가이드",
+      "description": "웹 정보 수집 후 DB에 축적하는 워크플로우.",
+      "keywords": ["수집", "스크래핑", "DB", "축적", "정보수집", "데이터"],
+      "file": "web_collector.md"
+    },
+    {
+      "id": "blog",
+      "name": "블로그 도구 가이드",
+      "description": "개인 블로그 'K의 생각' RAG 검색 및 인사이트 분석.",
+      "keywords": ["블로그", "blog", "글쓰기", "포스트", "RAG"],
+      "file": "blog.md"
+    },
+    {
+      "id": "cctv",
+      "name": "CCTV 영상 가이드",
+      "description": "한국 교통 CCTV 등 실시간 영상 조회.",
+      "keywords": ["CCTV", "교통", "실시간", "영상", "카메라"],
+      "file": "cctv.md"
+    },
+    {
+      "id": "location_services",
+      "name": "위치 기반 서비스 가이드",
+      "description": "날씨, 맛집, 길찾기, 여행 정보 조회.",
+      "keywords": ["날씨", "맛집", "길찾기", "여행", "위치", "지도"],
+      "file": "location_services.md"
+    },
+    {
+      "id": "local_info",
+      "name": "지역 정보 가이드",
+      "description": "동네 가게/상점 정보 검색 및 DB 관리.",
+      "keywords": ["동네", "가게", "상점", "지역", "로컬"],
+      "file": "local_info.md"
+    },
+    {
+      "id": "memory",
+      "name": "메모리 시스템 가이드",
+      "description": "에이전트 메모리 구조와 스킬 관리.",
+      "keywords": ["메모리", "기억", "스킬", "memory", "skill"],
+      "file": "memory.md"
+    },
+    {
+      "id": "system_essentials",
+      "name": "시스템 기본 도구 가이드",
+      "description": "파일 읽기/쓰기/수정, glob, grep 등 시스템 기본 작업.",
+      "keywords": ["파일", "시스템", "읽기", "쓰기", "수정", "file"],
+      "file": "system_essentials.md"
+    },
+    {
+      "id": "agent_publishing",
+      "name": "에이전트 웹 퍼블리싱 가이드",
+      "description": "IndieBiz OS 에이전트를 Cloudflare Workers 기반 웹앱으로 배포하는 절차. Worker 생성, 시크릿 설정, 프론트엔드 HTML, 배포 및 업데이트.",
+      "keywords": ["퍼블리싱", "배포", "deploy", "workers", "웹앱", "cloudflare", "publishing", "에이전트배포"],
+      "file": "agent_publishing.md"
+    },
+    {
+      "id": "calendar",
+      "name": "캘린더 & 스케줄러 가이드",
+      "description": "캘린더 이벤트(기념일, 생일, 약속)와 스케줄러(반복 작업, 자동 실행) 통합 관리.",
+      "keywords": ["캘린더", "일정", "이벤트", "calendar", "약속", "스케줄", "반복", "자동화", "기념일", "예약", "scheduler"],
+      "file": "calendar.md"
+    }
+  ]
+}

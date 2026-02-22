@@ -698,6 +698,10 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         return generate_ai_image(tool_input, output_base)
     elif tool_name == "generate_gemini_image":
         return generate_gemini_image(tool_input, output_base)
+    elif tool_name == "create_tts":
+        return create_tts(tool_input, output_base)
+    elif tool_name == "render_html_video":
+        return render_html_video(tool_input, output_base)
     elif tool_name == "create_shadcn_slides":
         # shadcn 스타일 슬라이드 생성 (별도 모듈)
         import importlib.util
@@ -1016,6 +1020,21 @@ def create_html_video(tool_input, output_base):
 
     if not scenes:
         return "오류: scenes 리스트가 비어 있습니다."
+
+    # scenes 검증: html 키 필수
+    missing_html = [i for i, s in enumerate(scenes) if isinstance(s, dict) and "html" not in s]
+    if missing_html:
+        wrong_keys = list(scenes[missing_html[0]].keys()) if missing_html else []
+        return (
+            f"오류: scenes[{missing_html[0]}]에 'html' 키가 없습니다. "
+            f"(현재 키: {wrong_keys})\n"
+            f"각 씬은 완전한 HTML 문서가 필요합니다.\n"
+            f"올바른 형식:\n"
+            f'  scenes: [{{"html": "<!DOCTYPE html><html><head><meta charset=\\"utf-8\\"><script src=\\"https://cdn.tailwindcss.com\\"></script></head>'
+            f'<body><div style=\\"width:{video_width}px;height:{video_height}px\\" class=\\"flex items-center justify-center bg-gradient-to-br from-slate-900 to-purple-900\\">'
+            f'<h1 class=\\"text-6xl font-bold text-white\\">제목</h1></div></body></html>", "duration": 5}}]\n'
+            f"narration_texts: [\"나레이션 텍스트\"]  (씬별 나레이션은 별도 배열)"
+        )
 
     # 자동 씬 분리: 단일 HTML에 여러 씬이 들어있는 경우 감지 및 분리
     scenes, narration_texts = _auto_split_scenes(scenes, narration_texts, default_duration)
@@ -1423,3 +1442,214 @@ def generate_gemini_image(tool_input, output_base):
         return f"Gemini API 오류 ({e.response.status_code}): {e.response.text}"
     except Exception as e:
         return f"Gemini 이미지 생성 중 오류 발생: {str(e)}"
+
+
+def create_tts(tool_input, output_base):
+    """텍스트를 음성 파일(MP3)로 변환합니다. (Edge TTS)"""
+    text = tool_input.get("text")
+    if not text:
+        return "오류: text는 필수입니다."
+
+    voice = tool_input.get("voice", "ko-KR-SunHiNeural")
+    output_filename = tool_input.get("output_filename")
+
+    if output_filename:
+        output_path = os.path.join(output_base, os.path.basename(output_filename))
+    else:
+        output_path = os.path.join(output_base, f"tts_{uuid.uuid4().hex[:8]}.mp3")
+
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+
+    try:
+        asyncio.run(generate_tts(text, output_path, voice))
+
+        # 길이 측정
+        from moviepy import AudioFileClip as MpAudioClip
+        clip = MpAudioClip(output_path)
+        duration = clip.duration
+        clip.close()
+
+        abs_path = os.path.abspath(output_path)
+        return f"TTS 생성 완료: {abs_path}\n길이: {duration:.1f}초\n음성: {voice}"
+    except Exception as e:
+        return f"TTS 생성 중 오류 발생: {str(e)}"
+
+
+def render_html_video(tool_input, output_base):
+    """HTML 파일 경로 목록을 받아서 MP4 동영상으로 렌더링합니다.
+
+    코드 작성은 에이전트가 system:write로 미리 해두고,
+    이 함수는 순수 렌더링만 담당합니다.
+
+    입력:
+      scene_files: [{path: "scene1.html", duration: 5}, ...]
+      또는
+      scene_dir: "씬 HTML 파일들이 있는 폴더" (알파벳 순 정렬)
+
+      narration_files: ["narr1.mp3", "narr2.mp3", ...]  (선택)
+      bgm_path: "bgm.mp3"  (선택)
+    """
+    import subprocess
+    import shutil
+    import glob as glob_module
+    from playwright.sync_api import sync_playwright
+
+    scene_files = tool_input.get("scene_files", [])
+    scene_dir = tool_input.get("scene_dir")
+    narration_files = tool_input.get("narration_files", [])
+    bgm_path = tool_input.get("bgm_path")
+    output_filename = tool_input.get("output_filename", "rendered_video.mp4")
+    video_width = tool_input.get("width", 1280)
+    video_height = tool_input.get("height", 720)
+    fps = tool_input.get("fps", 24)
+    default_duration = tool_input.get("duration_per_scene", 5)
+
+    # scene_dir이 지정되면 폴더에서 HTML 파일들을 자동 수집
+    if scene_dir and not scene_files:
+        scene_dir = os.path.abspath(scene_dir)
+        if not os.path.isdir(scene_dir):
+            return f"오류: scene_dir '{scene_dir}'이 존재하지 않습니다."
+        html_paths = sorted(glob_module.glob(os.path.join(scene_dir, "*.html")))
+        if not html_paths:
+            return f"오류: '{scene_dir}'에 HTML 파일이 없습니다."
+        scene_files = [{"path": p, "duration": default_duration} for p in html_paths]
+
+    if not scene_files:
+        return "오류: scene_files 또는 scene_dir이 필요합니다."
+
+    # 경로 검증
+    for i, sf in enumerate(scene_files):
+        path = sf.get("path", "")
+        if not os.path.isabs(path):
+            path = os.path.join(output_base, path)
+            sf["path"] = path
+        if not os.path.exists(path):
+            return f"오류: scene_files[{i}]의 파일이 없습니다: {path}"
+
+    output_path = os.path.join(output_base, output_filename)
+    temp_dir = os.path.join(output_base, f"temp_render_{uuid.uuid4().hex[:8]}")
+    frames_dir = os.path.join(temp_dir, "frames")
+    os.makedirs(frames_dir, exist_ok=True)
+
+    try:
+        # 프레임 캡처
+        global_frame = 0
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": video_width, "height": video_height})
+
+            for i, sf in enumerate(scene_files):
+                html_path = sf["path"]
+                duration = sf.get("duration", default_duration)
+
+                # HTML 파일을 읽어서 전처리 (이미지 Base64 변환 등)
+                with open(html_path, "r", encoding="utf-8") as f:
+                    html = f.read()
+
+                base_path = os.path.dirname(html_path)
+                html_ready = _prepare_scene_html(html, base_path, video_width, video_height)
+
+                # 전처리된 HTML을 임시 파일로 저장 후 로드
+                temp_html = os.path.join(temp_dir, f"_render_scene_{i}.html")
+                with open(temp_html, "w", encoding="utf-8") as f:
+                    f.write(html_ready)
+                page.goto(f"file://{temp_html}")
+
+                # 애니메이션 일시정지 → 리소스 로드 → 재개
+                page.evaluate("""() => {
+                    const style = document.createElement('style');
+                    style.id = '__anim_pause__';
+                    style.textContent = '*, *::before, *::after { animation-play-state: paused !important; }';
+                    document.head.appendChild(style);
+                }""")
+                page.wait_for_load_state("networkidle")
+                page.wait_for_timeout(1500 if i == 0 else 500)
+                page.evaluate("""() => {
+                    const s = document.getElementById('__anim_pause__');
+                    if (s) s.remove();
+                }""")
+
+                total_frames = int(duration * fps)
+                frame_interval_ms = 1000.0 / fps
+
+                for f_idx in range(total_frames):
+                    frame_path = os.path.join(frames_dir, f"frame_{global_frame:06d}.png")
+                    page.screenshot(path=frame_path)
+                    global_frame += 1
+                    page.wait_for_timeout(int(frame_interval_ms))
+
+            browser.close()
+
+        if global_frame == 0:
+            shutil.rmtree(temp_dir)
+            return "오류: 캡처된 프레임이 없습니다."
+
+        # FFmpeg 인코딩
+        merged_video = os.path.join(temp_dir, "merged.mp4")
+        ffmpeg_result = subprocess.run([
+            "ffmpeg", "-y",
+            "-framerate", str(fps),
+            "-i", os.path.join(frames_dir, "frame_%06d.png"),
+            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+            "-pix_fmt", "yuv420p",
+            merged_video
+        ], capture_output=True)
+
+        if ffmpeg_result.returncode != 0:
+            shutil.rmtree(temp_dir)
+            return f"FFmpeg 인코딩 오류: {ffmpeg_result.stderr.decode()}"
+
+        # 오디오 합성 (나레이션 + BGM)
+        if bgm_path:
+            bgm_path = os.path.abspath(bgm_path)
+        has_bgm = bgm_path and os.path.exists(bgm_path)
+        has_narration = any(narration_files)
+
+        if has_narration or has_bgm:
+            from moviepy import AudioFileClip as MpAudioClip, CompositeAudioClip as MpCompositeAudioClip, VideoFileClip
+
+            video_clip = VideoFileClip(merged_video)
+            audio_layers = []
+
+            if has_narration:
+                scene_start = 0.0
+                for i, sf in enumerate(scene_files):
+                    dur = sf.get("duration", default_duration)
+                    if i < len(narration_files) and narration_files[i]:
+                        narr_path = narration_files[i]
+                        if not os.path.isabs(narr_path):
+                            narr_path = os.path.join(output_base, narr_path)
+                        if os.path.exists(narr_path):
+                            narr = MpAudioClip(narr_path)
+                            narr = narr.with_start(scene_start)
+                            audio_layers.append(narr)
+                    scene_start += dur
+
+            if has_bgm:
+                bgm_clip = MpAudioClip(bgm_path).with_duration(video_clip.duration)
+                if has_narration:
+                    bgm_clip = bgm_clip.multiply_volume(0.2)
+                else:
+                    bgm_clip = bgm_clip.multiply_volume(0.5)
+                audio_layers.append(bgm_clip)
+
+            if audio_layers:
+                final_audio = MpCompositeAudioClip(audio_layers)
+                video_clip = video_clip.with_audio(final_audio)
+
+            video_clip.write_videofile(output_path, fps=fps, codec="libx264", audio_codec="aac")
+            video_clip.close()
+        else:
+            shutil.copy2(merged_video, output_path)
+
+        shutil.rmtree(temp_dir)
+        abs_output = os.path.abspath(output_path)
+        scene_count = len(scene_files)
+        total_dur = sum(sf.get("duration", default_duration) for sf in scene_files)
+        return f"HTML 동영상 렌더링 완료: {abs_output}\n씬 수: {scene_count}개, 총 길이: {total_dur:.1f}초"
+
+    except Exception as e:
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        return f"렌더링 중 오류 발생: {str(e)}"

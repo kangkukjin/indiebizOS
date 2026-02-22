@@ -86,6 +86,8 @@ class CalendarManager:
         self.actions: Dict[str, Callable] = {
             "test": self._action_test,
             "run_switch": self._action_run_switch,
+            "run_workflow": self._action_run_workflow,
+            "run_pipeline": self._action_run_pipeline,
             "send_notification": self._action_send_notification,
         }
 
@@ -539,6 +541,114 @@ class CalendarManager:
 
         except Exception as e:
             self._log(f"스위치 실행 오류: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def _action_run_workflow(self, task: dict):
+        """워크플로우 실행 작업"""
+        params = task.get("action_params", {})
+        workflow_id = params.get("workflow_id")
+
+        if not workflow_id:
+            self._log(f"워크플로우 ID가 없습니다: {task.get('title')}")
+            return {"success": False, "error": "workflow_id 누락"}
+
+        try:
+            from workflow_engine import execute_workflow
+
+            self._log(f"워크플로우 실행: {workflow_id}")
+            result = execute_workflow(workflow_id, ".")
+
+            try:
+                from notification_manager import get_notification_manager
+                nm = get_notification_manager()
+                if result.get("success"):
+                    nm.success(
+                        title="워크플로우 실행 완료",
+                        message=f"'{workflow_id}' 워크플로우가 성공적으로 실행되었습니다. ({result.get('steps_completed', 0)}/{result.get('steps_total', 0)} steps)",
+                        source="scheduler"
+                    )
+                else:
+                    nm.warning(
+                        title="워크플로우 실행 실패",
+                        message=f"'{workflow_id}' 워크플로우 실행 중 오류: {result.get('error', '알 수 없는 오류')}",
+                        source="scheduler"
+                    )
+            except Exception:
+                pass
+
+            return result
+
+        except Exception as e:
+            self._log(f"워크플로우 실행 오류: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def _action_run_pipeline(self, task: dict):
+        """IBL 파이프라인 실행 작업 (Phase 8: 이벤트 트리거)"""
+        import time as _time
+
+        params = task.get("action_params", {})
+        pipeline = params.get("pipeline", "")
+        trigger_id = params.get("trigger_id")
+
+        if not pipeline:
+            self._log(f"파이프라인이 없습니다: {task.get('title')}")
+            return {"success": False, "error": "pipeline 누락"}
+
+        try:
+            from ibl_parser import parse as ibl_parse, IBLSyntaxError
+            from workflow_engine import execute_pipeline
+
+            start = _time.time()
+
+            # IBL 코드 파싱
+            try:
+                steps = ibl_parse(pipeline)
+            except IBLSyntaxError as e:
+                self._log(f"IBL 문법 오류: {e}")
+                return {"success": False, "error": f"IBL 문법 오류: {e}"}
+
+            # 파이프라인 실행
+            self._log(f"파이프라인 실행: {pipeline[:60]}...")
+            result = execute_pipeline(steps, ".")
+            duration_ms = int((_time.time() - start) * 1000)
+
+            # 트리거 이력 기록
+            if trigger_id:
+                try:
+                    from event_engine import _add_history
+                    _add_history(
+                        trigger_id=trigger_id,
+                        trigger_name=task.get("title", ""),
+                        success=result.get("success", False),
+                        result_summary=str(result.get("final_result", ""))[:500],
+                        duration_ms=duration_ms
+                    )
+                except Exception:
+                    pass
+
+            # 알림
+            try:
+                from notification_manager import get_notification_manager
+                nm = get_notification_manager()
+                if result.get("success"):
+                    nm.success(
+                        title="IBL 파이프라인 실행 완료",
+                        message=f"'{task.get('title')}' ({result.get('steps_completed', 0)}/{result.get('steps_total', 0)} steps, {duration_ms}ms)",
+                        source="scheduler"
+                    )
+                else:
+                    nm.warning(
+                        title="IBL 파이프라인 실행 실패",
+                        message=f"'{task.get('title')}': {result.get('error', '알 수 없는 오류')}",
+                        source="scheduler"
+                    )
+            except Exception:
+                pass
+
+            return result
+
+        except Exception as e:
+            self._log(f"파이프라인 실행 오류: {str(e)}")
             return {"success": False, "error": str(e)}
 
     def _action_send_notification(self, task: dict):

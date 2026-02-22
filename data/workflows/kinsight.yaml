@@ -1,0 +1,8 @@
+name: "kinsight"
+description: |
+  블로그 인사이트 보고서 생성.
+  1단계: 블로그에서 최근 글 10개 검색
+  2단계: 에이전트가 동기적으로 분석하여 인사이트 보고서 작성
+  3단계: 보고서를 파일로 저장
+pipeline: '[source:search]("최근 글") {type: "blog", count: 10} >> [system:agent_ask_sync]("컨텐츠/컨텐츠") {message: "이 블로그 글들을 분석하여 핵심 인사이트와 트렌드를 정리한 보고서를 작성해주세요."} >> [system:file]("kinsight_report.html") {format: "html"}'
+created: "2026-02-20"

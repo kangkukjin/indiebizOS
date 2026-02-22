@@ -20,7 +20,8 @@ from thread_context import (
     set_current_agent_id, set_current_agent_name, set_current_project_id,
     get_current_agent_id, get_current_agent_name, get_current_registry_key,
     set_current_task_id, get_current_task_id, clear_current_task_id,
-    set_called_agent, did_call_agent, clear_called_agent
+    set_called_agent, did_call_agent, clear_called_agent,
+    set_allowed_nodes
 )
 
 
@@ -87,6 +88,13 @@ class AgentRunner:
 
         print(f"[AgentRunner] {self.config.get('name')} 시작됨")
 
+        # 에이전트 노드 캐시 무효화 (Phase 11)
+        try:
+            from node_registry import invalidate_agent_cache
+            invalidate_agent_cache()
+        except ImportError:
+            pass
+
     def stop(self):
         """에이전트 중지"""
         self.running = False
@@ -104,6 +112,13 @@ class AgentRunner:
                 if registry_key in AgentRunner.internal_messages:
                     del AgentRunner.internal_messages[registry_key]
 
+        # 에이전트 노드 캐시 무효화 (Phase 11)
+        try:
+            from node_registry import invalidate_agent_cache
+            invalidate_agent_cache()
+        except ImportError:
+            pass
+
         print(f"[AgentRunner] {self.config.get('name')} 중지됨")
 
     def cancel(self):
@@ -111,7 +126,11 @@ class AgentRunner:
         self.cancel_event.set()
 
     def _init_ai(self):
-        """AI 에이전트 초기화"""
+        """AI 에이전트 초기화
+
+        Phase 19: IBL-only 모드 — execute_ibl + 시스템 도구만 제공
+        개별 도구 패키지(336개)를 로딩하지 않고, execute_ibl 하나로 모든 노드에 접근
+        """
         ai_config = self.config.get("ai", {})
         agent_name = self.config.get("name", "에이전트")
         agent_id = self.config.get("id")
@@ -125,19 +144,24 @@ class AgentRunner:
         # 시스템 프롬프트 생성
         system_prompt = self._build_system_prompt(role)
 
-        # AIAgent 생성
+        # IBL-only 도구 목록 구성
+        tools = self._build_ibl_tools()
+
+        # AIAgent 생성 (tools 명시 → 336개 로딩 방지)
         self.ai = AIAgent(
             ai_config=ai_config,
             system_prompt=system_prompt,
             agent_name=agent_name,
             agent_id=agent_id,
-            project_path=str(self.project_path)
+            project_path=str(self.project_path),
+            tools=tools
         )
 
     def _build_system_prompt(self, role: str) -> str:
         """시스템 프롬프트 구성 (동적 조합)
 
-        구조: base_prompt_v2.md + (조건부 위임 프롬프트) + 개별역할 + 영구메모
+        구조: base_prompt_v4.md + (조건부 위임 프롬프트) + IBL 환경 + 개별역할 + 영구메모
+        Phase 16: 모든 에이전트가 ibl_only 모드로 통일
         """
         from prompt_builder import build_agent_prompt
 
@@ -146,21 +170,16 @@ class AgentRunner:
         # 1. 프로젝트 내 에이전트 수 파악
         agent_count = self._get_agent_count()
 
-        # 2. 사용 가능한 도구 목록 파악
-        tools = self._get_available_tools()
+        # 2. Git 활성화 여부 (system 노드는 ALWAYS_ALLOWED이므로 .git 존재만 확인)
+        git_enabled = (self.project_path / ".git").exists()
 
-        # 3. Git 활성화 여부 (run_command가 있고 프로젝트에 .git이 있으면)
-        git_enabled = "run_command" in tools and (self.project_path / ".git").exists()
-
-        # 4. 에이전트별 영구메모
+        # 3. 에이전트별 영구메모
         agent_notes = ""
         note_file = self.project_path / f"agent_{agent_name}_note.txt"
         if note_file.exists():
             agent_notes = note_file.read_text(encoding='utf-8').strip()
 
         # 시스템 AI 위임 여부 확인
-        # 1) 생성자에서 전달된 플래그 확인
-        # 2) 또는 DB에 system_ai 채널의 태스크가 있는지 확인
         is_delegated_from_system_ai = self.delegated_from_system_ai
         if not is_delegated_from_system_ai:
             try:
@@ -171,49 +190,22 @@ class AgentRunner:
             except Exception:
                 pass
 
-        # 동적 프롬프트 빌드
+        # 4. allowed_nodes (IBL 노드 접근 제어)
+        allowed_nodes_config = self.config.get("allowed_nodes")
+
+        # 동적 프롬프트 빌드 (Phase 16: ibl_only 단일 경로)
         return build_agent_prompt(
             agent_name=agent_name,
             role=role,
             agent_count=agent_count,
             agent_notes=agent_notes,
             git_enabled=git_enabled,
-            delegated_from_system_ai=is_delegated_from_system_ai
+            delegated_from_system_ai=is_delegated_from_system_ai,
+            ibl_only=True,
+            allowed_nodes=allowed_nodes_config,
+            project_path=str(self.project_path),
+            agent_id=self.config.get("id")
         )
-
-    def _load_system_essentials_tools(self) -> list:
-        """system_essentials 패키지에서 도구 이름 목록 로드
-
-        system_essentials에 새 도구가 추가되면 자동으로 default tools가 됨
-        """
-        import json
-        from pathlib import Path
-
-        tool_names = []
-
-        # system_essentials tool.json 경로
-        from runtime_utils import get_base_path
-        data_path = get_base_path() / "data"
-        tool_json_path = data_path / "packages" / "installed" / "tools" / "system_essentials" / "tool.json"
-
-        try:
-            if tool_json_path.exists():
-                with open(tool_json_path, 'r', encoding='utf-8') as f:
-                    tool_def = json.load(f)
-                    tools = tool_def.get("tools", [])
-                    tool_names = [t["name"] for t in tools if "name" in t]
-        except Exception as e:
-            # 실패 시 하드코딩된 기본 도구로 폴백
-            print(f"[Warning] system_essentials 로드 실패, 기본 도구 사용: {e}")
-            tool_names = [
-                "read_file", "write_file", "edit_file", "list_directory",
-                "glob_files", "grep_files", "run_command",
-                "todo_write", "ask_user_question",
-                "enter_plan_mode", "exit_plan_mode",
-                "save_agent_note", "read_agent_note"
-            ]
-
-        return tool_names
 
     def _get_agent_count(self) -> int:
         """프로젝트 내 에이전트 수 반환"""
@@ -229,32 +221,83 @@ class AgentRunner:
             pass
         return 1
 
-    def _get_available_tools(self) -> list:
-        """에이전트가 사용할 수 있는 도구 목록 반환"""
+    def _build_execute_ibl_tool(self) -> Optional[dict]:
+        """ibl_nodes.yaml에서 execute_ibl 도구 정의를 동적 생성.
+        tool_loader.build_execute_ibl_tool() 공유 함수 사용.
+        에이전트의 allowed_nodes 설정을 반영하여 허용된 노드만 포함.
+        """
+        from tool_loader import build_execute_ibl_tool
+        allowed_nodes = self.config.get("allowed_nodes")
+        return build_execute_ibl_tool(allowed_nodes=allowed_nodes)
+
+    def _build_ibl_tools(self) -> list:
+        """에이전트 도구 구성: IBL + 범용 언어(Python, Node.js, Shell)
+
+        에이전트는 두 종류의 도구를 가진다:
+        1. execute_ibl - 인디비즈 고유 기능 (전문 용어/지름길)
+        2. execute_python, execute_node, run_command - 범용 프로그래밍 언어
+
+        IBL은 인디비즈 도메인 특화 언어이고,
+        Python/Node.js/Shell은 복잡한 로직, 데이터 처리, 워크플로우 구성에 사용.
+        """
+        import json as _json
+
         tools = []
+        pkg_base = Path(__file__).parent.parent / "data" / "packages" / "installed" / "tools"
 
-        # system_essentials 패키지에서 기본 도구 자동 로드
-        # (system_essentials에 새 도구 추가 시 자동으로 default가 됨)
-        default_tools = self._load_system_essentials_tools()
-        tools.extend(default_tools)
+        # 1) IBL 도구 — ibl_nodes.yaml에서 description 동적 생성
+        ibl_tool = self._build_execute_ibl_tool()
+        if ibl_tool:
+            tools.append(ibl_tool)
 
-        # 에이전트가 2명 이상이면 위임 도구 추가
-        if self._get_agent_count() > 1:
-            tools.extend(["list_agents", "call_agent"])
+        # 2) 범용 언어 도구 (일상 언어)
+        lang_tools = [
+            ("python-exec", "execute_python"),
+            ("nodejs", "execute_node"),
+            ("system_essentials", "run_command"),
+        ]
+        for pkg_id, tool_name in lang_tools:
+            tool_json = pkg_base / pkg_id / "tool.json"
+            if tool_json.exists():
+                try:
+                    with open(tool_json, 'r', encoding='utf-8') as f:
+                        pkg_data = _json.load(f)
+                    for tool_def in pkg_data.get("tools", []):
+                        if tool_def.get("name") == tool_name:
+                            tools.append(tool_def)
+                            break
+                except Exception as e:
+                    print(f"[AgentRunner] {pkg_id}/tool.json 로드 실패: {e}")
 
-        # 에이전트 설정에서 추가 패키지 도구 확인
-        agent_packages = self.config.get("packages", [])
-        if agent_packages:
-            from tool_loader import load_tools_for_agent
-            try:
-                package_tools = load_tools_for_agent(agent_packages)
-                for t in package_tools:
-                    if isinstance(t, dict) and "name" in t:
-                        tools.append(t["name"])
-            except Exception:
-                pass
+        # 3) 가이드 검색 도구 (복잡한 작업 전에 매뉴얼 찾기)
+        tools.append({
+            "name": "search_guide",
+            "description": "복잡한 작업 전에 가이드(워크플로우/레시피)를 검색합니다. 동영상 제작, 웹사이트 빌드, 투자 분석 등 복잡한 작업에는 단계별 가이드가 있을 수 있습니다. 작업 시작 전에 검색하세요.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "검색 키워드 (예: 동영상, 투자분석, 홈페이지, 음악)"
+                    },
+                    "read": {
+                        "type": "boolean",
+                        "description": "true(기본): 가이드 내용까지 반환, false: 목록만 반환"
+                    }
+                },
+                "required": ["query"]
+            }
+        })
 
+        print(f"[AgentRunner] {self.config.get('name')}: IBL + 범용언어 모드 (도구 {len(tools)}개)")
         return tools
+
+    def _get_available_tools(self) -> list:
+        """에이전트가 사용할 수 있는 도구 이름 목록 반환
+
+        IBL(도메인 특화) + 범용 프로그래밍 언어 + 가이드 검색
+        """
+        return ["execute_ibl", "execute_python", "execute_node", "run_command", "search_guide"]
 
     def _setup_channels(self) -> List:
         """
@@ -356,6 +399,11 @@ class AgentRunner:
         set_current_agent_id(self.config.get("id"))
         set_current_agent_name(self.config.get("name"))
         set_current_project_id(self.project_id)
+
+        # IBL 노드 접근 제어 설정 (Phase 16: 모든 에이전트)
+        from ibl_access import resolve_allowed_nodes
+        allowed = resolve_allowed_nodes(self.config.get("allowed_nodes"))
+        set_allowed_nodes(allowed)
 
         # 에이전트 타입 확인
         agent_type = self.config.get('type', 'internal')

@@ -18,17 +18,17 @@ API 키: DATA_GO_KR_API_KEY 환경변수 사용
 """
 
 import os
-import requests
+import sys
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 
-# 올바른 엔드포인트 (HTTPS 사용)
-BASE_URL = "https://apis.data.go.kr/B553457/cultureinfo"
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
 
-
-def get_api_key():
-    """API 키 가져오기"""
-    return os.environ.get("DATA_GO_KR_API_KEY", "")
+from common.api_client import api_call
+from common.auth_manager import check_api_key
 
 
 def xml_to_dict(element):
@@ -50,72 +50,74 @@ def xml_to_dict(element):
 
 
 def call_kcisa_api(endpoint, params):
-    """KCISA API 호출"""
-    api_key = get_api_key()
-    if not api_key:
+    """KCISA API 호출 (common api_call 사용)"""
+    # API 키 확인
+    ok, err = check_api_key("data_go_kr")
+    if not ok:
         return {
-            "error": "DATA_GO_KR_API_KEY 환경변수가 설정되지 않았습니다.",
+            "error": err,
             "help": "공공데이터포털(data.go.kr)에서 API 키를 발급받으세요."
         }
 
-    # API 키는 인코딩된 상태로 전달되어야 하는 경우가 많음
-    params["serviceKey"] = api_key
-    url = f"{BASE_URL}/{endpoint}"
+    # api_call로 HTTP 요청 (XML 응답이므로 raw_response=True)
+    # data_go_kr 기본 URL은 https://apis.data.go.kr, KCISA 경로는 /B553457/cultureinfo/{endpoint}
+    response_text = api_call(
+        "data_go_kr",
+        f"/B553457/cultureinfo/{endpoint}",
+        params=params,
+        timeout=15,
+        raw_response=True,
+    )
+
+    # api_call이 에러 dict를 반환한 경우
+    if isinstance(response_text, dict) and "error" in response_text:
+        return response_text
 
     try:
-        # KCISA API는 기본적으로 XML을 반환하는 경우가 많음
-        response = requests.get(url, params=params, timeout=15)
-
-        if response.status_code != 200:
-            return {"error": f"API 호출 실패 (상태 코드: {response.status_code})"}
-
         # 응답이 JSON인지 확인
-        try:
-            if "application/json" in response.headers.get("Content-Type", ""):
-                return response.json()
-            
-            # XML 파싱
-            root = ET.fromstring(response.content)
-            
-            # 에러 체크
-            header = root.find("header")
-            if header is not None:
-                result_code = header.findtext("resultCode")
-                if result_code != "00":
-                    return {
-                        "error": f"API 오류: {header.findtext('resultMsg')}",
-                        "code": result_code
-                    }
+        if response_text.strip().startswith("{"):
+            import json
+            return json.loads(response_text)
 
-            body = root.find("body")
-            if body is not None:
-                items_node = body.find("items")
-                total_count = int(body.findtext("totalCount", "0"))
-                page_no = int(body.findtext("pageNo", "1"))
-                num_of_rows = int(body.findtext("numOfRows", "10"))
+        # XML 파싱
+        root = ET.fromstring(response_text.encode("utf-8") if isinstance(response_text, str) else response_text)
 
-                items = []
-                if items_node is not None:
-                    for item in items_node.findall("item"):
-                        items.append(xml_to_dict(item))
-
+        # 에러 체크
+        header = root.find("header")
+        if header is not None:
+            result_code = header.findtext("resultCode")
+            if result_code != "00":
                 return {
-                    "count": total_count,
-                    "page": page_no,
-                    "rows": num_of_rows,
-                    "data": items
+                    "error": f"API 오류: {header.findtext('resultMsg')}",
+                    "code": result_code
                 }
 
-            return xml_to_dict(root)
+        body = root.find("body")
+        if body is not None:
+            items_node = body.find("items")
+            total_count = int(body.findtext("totalCount", "0"))
+            page_no = int(body.findtext("pageNo", "1"))
+            num_of_rows = int(body.findtext("numOfRows", "10"))
 
-        except ET.ParseError:
-            # 가끔 에러 메시지가 평문으로 올 때가 있음
-            if "SERVICE KEY IS INVALID" in response.text:
-                return {"error": "유효하지 않은 API 키입니다."}
-            return {"error": "응답 파싱 실패", "raw": response.text[:200]}
+            items = []
+            if items_node is not None:
+                for item in items_node.findall("item"):
+                    items.append(xml_to_dict(item))
 
-    except requests.exceptions.Timeout:
-        return {"error": "API 요청 시간 초과"}
+            return {
+                "count": total_count,
+                "page": page_no,
+                "rows": num_of_rows,
+                "data": items
+            }
+
+        return xml_to_dict(root)
+
+    except ET.ParseError:
+        # 가끔 에러 메시지가 평문으로 올 때가 있음
+        if "SERVICE KEY IS INVALID" in response_text:
+            return {"error": "유효하지 않은 API 키입니다."}
+        return {"error": "응답 파싱 실패", "raw": response_text[:200]}
     except Exception as e:
         return {"error": f"조회 실패: {str(e)}"}
 

@@ -3,7 +3,6 @@
   "name": "Cloudflare",
   "description": "Cloudflare API 통합 도구. Pages, Workers, R2, D1, Tunnel 등을 관리합니다.",
   "version": "2.0.0",
-  "guide_file": "cloudflare_guide.md",
   "tools": [
     {
       "name": "cf_api",
@@ -13,7 +12,13 @@
         "properties": {
           "method": {
             "type": "string",
-            "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "DELETE",
+              "PATCH"
+            ],
             "default": "GET",
             "description": "HTTP 메서드"
           },
@@ -30,7 +35,9 @@
             "description": "쿼리 파라미터"
           }
         },
-        "required": ["endpoint"]
+        "required": [
+          "endpoint"
+        ]
       }
     }
   ]

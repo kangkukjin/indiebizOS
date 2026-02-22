@@ -1,0 +1,8 @@
+node: source
+actions:
+  search_shopping:
+    description: 상품 검색 및 가격 비교 (네이버+다나와+중고나라+번개장터)
+    target_description: 상품명
+    router: handler
+    tool: search_shopping
+    target_key: query

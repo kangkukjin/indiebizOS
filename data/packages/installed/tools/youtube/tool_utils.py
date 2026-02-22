@@ -5,6 +5,12 @@ IndieBiz 도구 공통 유틸리티
 """
 
 import os
+import sys
+
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
 
 # 공통 출력 경로
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

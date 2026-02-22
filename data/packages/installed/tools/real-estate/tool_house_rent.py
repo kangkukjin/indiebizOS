@@ -6,9 +6,17 @@ import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
 import os
+import sys
 from datetime import datetime
 
-SERVICE_KEY = os.environ.get('MOLIT_API_KEY', '')
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.auth_manager import get_api_key, check_api_key
+
+SERVICE_KEY = get_api_key('MOLIT_API_KEY') or ''
 BASE_URL = 'https://apis.data.go.kr/1613000/RTMSDataSvcSHRent/getRTMSDataSvcSHRent'
 
 def _get_months_range(start_month: str, end_month: str) -> list:
@@ -81,6 +89,10 @@ def get_house_rent(region_code: str, start_month: str, end_month: str = None, co
     """
     단독/다가구 전월세 실거래가 기간 범위 조회
     """
+    key_ok, key_error = check_api_key("molit")
+    if not key_ok:
+        return {"success": False, "error": key_error}
+
     if not end_month:
         end_month = start_month
 

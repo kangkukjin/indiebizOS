@@ -4,6 +4,11 @@ import json
 import importlib.util
 from pathlib import Path
 
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
 # 같은 디렉토리의 모듈을 동적으로 로드
 current_dir = Path(__file__).parent
 
@@ -29,7 +34,14 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
     tool_youtube = load_tool_youtube()
 
     if tool_name == 'download_youtube_music':
-        return tool_youtube.download_youtube_music(url=arguments['url'], filename=arguments.get('output_path', 'output.mp3'))
+        # AI가 다양한 이름으로 파일명을 전달할 수 있으므로 유연하게 처리
+        fname = (arguments.get('output_path')
+                 or arguments.get('filename')
+                 or arguments.get('path')
+                 or arguments.get('file')
+                 or arguments.get('name')
+                 or 'output.mp3')
+        return tool_youtube.download_youtube_music(url=arguments['url'], filename=fname)
     elif tool_name == 'get_youtube_info':
         return tool_youtube.get_youtube_info(url=arguments['url'])
     elif tool_name == 'get_youtube_transcript':
@@ -58,6 +70,11 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
             url=arguments['url'],
             summary_length=summary_length,
             languages=languages
+        )
+    elif tool_name == 'search_youtube':
+        return tool_youtube.search_youtube(
+            query=arguments.get('query', ''),
+            count=arguments.get('count', 5),
         )
     elif tool_name == 'play_youtube':
         return tool_youtube.play_youtube(

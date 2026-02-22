@@ -1,13 +1,12 @@
 {
   "id": "shopping-assistant",
   "name": "Shopping Assistant",
-  "description": "네이버 쇼핑, 다나와에서 상품 가격 비교 및 검색 도구. 최저가 찾기, 상품 정보 조회에 활용합니다.",
-  "version": "1.0.0",
-  "guide_file": "shopping_guide.md",
+  "description": "네이버 쇼핑, 다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색 도구. 최저가 찾기, 상품 정보 조회에 활용합니다.",
+  "version": "1.1.0",
   "tools": [
     {
       "name": "search_shopping",
-      "description": "상품 검색을 수행합니다. 네이버 쇼핑(API)과 다나와(크롤링)를 지원합니다.\n\n지원 사이트: naver, danawa, all\n\n데이터 형식: {items: [{name, price, mall, link, image, category, site}], total}",
+      "description": "상품 검색을 수행합니다. 네이버 쇼핑(API), 다나와(크롤링), 중고 거래 사이트(중고나라, 번개장터 등)를 지원합니다.\n\n지원 사이트: naver, danawa, used, all\n\n데이터 형식: {items: [{name, price, mall, link, image, category, site}], total}",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -17,8 +16,13 @@
           },
           "site": {
             "type": "string",
-            "description": "검색할 사이트 (naver, danawa, all)",
-            "enum": ["naver", "danawa", "all"],
+            "description": "검색할 사이트 (naver, danawa, used, all)",
+            "enum": [
+              "naver",
+              "danawa",
+              "used",
+              "all"
+            ],
             "default": "all"
           },
           "display": {
@@ -27,7 +31,9 @@
             "default": 5
           }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     }
   ]

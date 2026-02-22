@@ -767,14 +767,15 @@ export function MultiChat({ roomId }: MultiChatProps) {
                         </div>
                       )}
                       {/* 사용자 첨부 이미지 표시 */}
-                      {msg.images && msg.images.length > 0 && (
+                      {msg.images && msg.images.filter(img => img && img.trim() !== '').length > 0 && (
                         <div className="flex gap-2 flex-wrap mb-2">
-                          {msg.images.map((img, index) => (
+                          {msg.images.filter(img => img && img.trim() !== '').map((img, index) => (
                             <img
                               key={index}
                               src={img}
                               alt={`첨부 이미지 ${index + 1}`}
                               className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                             />
                           ))}
                         </div>

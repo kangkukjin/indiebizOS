@@ -96,6 +96,15 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    # Cloudflare 터널 종료
+    try:
+        from api_tunnel import stop_tunnel
+        result = stop_tunnel()
+        if result.get("success"):
+            print("[Tunnel] 터널 종료됨")
+    except Exception as e:
+        print(f"[Tunnel] 종료 중 오류: {e}")
+
     # 시스템 AI Runner 종료
     stop_system_ai_runner()
 

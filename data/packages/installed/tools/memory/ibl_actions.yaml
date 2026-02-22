@@ -1,0 +1,58 @@
+node: source
+actions:
+  save_memory:
+    description: 심층 메모리에 항목 저장
+    target_description: 저장할 내용
+    router: handler
+    tool: memory_save
+    target_key: content
+  memory_search:
+    description: 심층 메모리에서 키워드 검색
+    target_description: 검색 키워드
+    router: handler
+    tool: memory_search
+    target_key: query
+  memory_read:
+    description: 메모리 항목 전체 내용 조회
+    target_description: 메모리 ID
+    router: handler
+    tool: memory_read
+    target_key: memory_id
+  memory_delete:
+    description: 메모리 항목 삭제
+    target_description: 메모리 ID
+    router: handler
+    tool: memory_delete
+    target_key: memory_id
+  skill_search:
+    description: 스킬 DB에서 도메인 지식 검색
+    target_description: 검색 키워드
+    router: handler
+    tool: skill_search
+    target_key: query
+  skill_read:
+    description: 스킬 전체 내용 조회
+    target_description: 스킬 ID
+    router: handler
+    tool: skill_read
+    target_key: skill_id
+  skill_add:
+    description: 새로운 스킬 추가
+    target_description: 스킬 이름
+    router: handler
+    tool: skill_add
+    target_key: name
+  skill_delete:
+    description: 스킬 삭제
+    target_description: 스킬 ID
+    router: handler
+    tool: skill_delete
+    target_key: skill_id
+  skill_import:
+    description: 마크다운 파일에서 스킬 임포트
+    target_description: 파일 경로
+    router: handler
+    tool: skill_import_md
+    target_key: file_path
+guides:
+- memory/memory_guide.md

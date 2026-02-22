@@ -282,8 +282,17 @@ class APIClientBase {
   // ============ 도구 ============
 
   async getTools() {
-    const data = await this.request<{ tools: Tool[]; base_tools: string[] }>('/tools');
+    const data = await this.request<{ tools: Tool[]; base_tools: string[]; packages?: { id: string; name: string; description: string; tool_count: number }[] }>('/tools');
     return data;
+  }
+
+  // IBL 노드 목록 (Phase 16)
+  async getNodes() {
+    return this.request<{
+      nodes: { id: string; description: string; action_count: number; always_allowed: boolean }[];
+      always_allowed: string[];
+      node_groups: Record<string, { description: string; members: string[] }>;
+    }>('/nodes');
   }
 
   // 도구 AI 설정 조회

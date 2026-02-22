@@ -1,30 +1,38 @@
 # IndieBiz OS 인벤토리
 
-## 프로젝트 (활성) - 16개
+## 프로젝트 (활성) - 24개
 
 | ID | 이름 | 설명 |
 |----|------|------|
+| CCTV | CCTV | CCTV/웹캠 관리 |
+| Hand on PC | Hand on PC | PC 원격 제어 |
+| IBL_테스트 | IBL 테스트 | IBL 기능 테스트 |
+| my_space | my_space | 개인 공간 |
 | study | study | 학습 및 연구 프로젝트 |
+| turtle_story | turtle_story | 거북이 이야기 |
+| 건축 | 건축 | 건축 설계 |
 | 구매 | 구매 | 상품 검색 및 구매 지원 |
 | 법률 | 법률 | 법률 정보 및 법령 검색 |
 | 부동산 | 부동산 | 건물 관리 및 부동산 투자 정보 분석 |
 | 사진 | 사진 | 사진 관리 및 아카이빙 |
 | 오락실 | 오락실 | 게임/엔터테인먼트 |
+| 음악 | 음악 | 음악 작곡/관리 |
+| 음악_웹앱 | 음악 웹앱 | 음악 웹 애플리케이션 |
 | 의료 | 의료 | 건강 정보 관리 및 병원/약국 행정 안내 |
 | 정보센터 | 정보센터 | 정보 수집/분석 프로젝트 |
+| 지역정보 | 지역정보 | 지역 정보 조회 |
 | 창업 | 창업 | 새로운 비즈니스 모델 연구 및 창업 지원 |
 | 추천 프로젝트 | 추천 프로젝트 | 추천 시스템 프로젝트 |
 | 컨텐츠 | 컨텐츠 | 콘텐츠 제작 및 관리 |
 | 투자 | 투자 | 주식 및 금융 데이터 분석, 글로벌 시장 조사 |
 | 하드웨어 | 하드웨어 | 하드웨어 관리 프로젝트 |
-| 해외 | 해외 | 한류 소식 및 해외 비즈니스 정보 수집 |
 | 행정_서비스 | 행정_서비스 | 정부24 및 민원 서비스 지원 |
 | 홍보 | 홍보 | 홍보/마케팅 콘텐츠 제작 |
 
 ---
 
-## 도구 패키지 (Tools) - 29개
-에이전트가 사용할 수 있는 유틸리티
+## 도구 패키지 (Tools) - 35개
+에이전트가 사용할 수 있는 유틸리티. handler 라우팅(복잡 후처리) 또는 api_engine 라우팅(API+transform 자동 발견)으로 실행됩니다.
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -32,15 +40,20 @@
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
 | browser-action | Browser Action | Playwright 기반 브라우저 자동화 (클릭/입력/스크롤/콘텐츠 추출) |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
-| cctv | CCTV | CCTV 관련 도구 |
+| cctv | CCTV | CCTV/웹캠 관련 도구 |
 | cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel) |
+| computer-use | Computer Use | 컴퓨터 사용 자동화 |
 | culture | Culture | 공연(KOPIS), 도서(도서관 정보나루) 등 문화예술 정보 조회 |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
+| house-designer | House Designer | 건축 설계 (평면도, 3D뷰) |
+| ibl-core | IBL Core | IBL 핵심 도구 |
 | investment | Investment | 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석 |
 | kosis | KOSIS | 통계청 KOSIS API 국가통계 조회 |
 | legal | Legal | 대한민국 법률 정보 검색 (법령, 판례, 행정규칙, 자치법규 등) |
+| local-info | Local Info | 지역 정보 도구 |
 | location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
 | media_producer | Media Producer | 홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지 생성 |
+| memory | Memory | 대화 이력, 심층 메모리 관리 |
 | music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | nodejs | Nodejs | Node.js/JavaScript 코드 실행 |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |
@@ -52,23 +65,26 @@
 | shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 가격 비교 |
 | startup | Startup | 창업지원 사업공고 검색 (K-Startup, 중소벤처기업부) |
 | study | Study Helper | 학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) |
-| system_essentials | System Essentials | 파일 읽기/쓰기/검색, todo, 계획 모드, 이웃 조회 |
+| system_essentials | System Essentials | 파일 읽기/쓰기/검색, PDF 읽기, todo, 계획 모드, 이웃 조회 |
 | visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
 | web | Web Tools | 웹 검색, 크롤링, 뉴스, 신문 생성, 즐겨찾기 |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
+| web-collector | Web Collector | 웹 데이터 수집/스크래핑 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 
 ---
 
-## 시스템 AI 위임 기능
+## 시스템 AI 위임 기능 (Phase 17→22: IBL 통합 + system 노드)
 
-시스템 AI는 프로젝트의 전문 에이전트에게 작업을 위임할 수 있습니다.
+시스템 AI는 `execute_ibl` 단일 도구를 통해 프로젝트의 전문 에이전트에게 작업을 위임할 수 있습니다.
 
-### 위임 도구
-| 도구 | 설명 |
-|------|------|
-| `list_project_agents` | 모든 프로젝트와 에이전트 목록 조회 |
-| `call_project_agent` | 프로젝트 에이전트에게 작업 위임 |
+### 위임 IBL 액션
+| IBL 액션 | 설명 |
+|----------|------|
+| `[system:list_projects]` | 모든 프로젝트와 에이전트 목록 조회 |
+| `[system:delegate_project]` | 프로젝트 에이전트에게 작업 위임 |
+| `[system:manage_events]` | 이벤트/스케줄 통합 관리 |
+| `[system:list_switches]` | 등록된 스위치 목록 조회 |
 
 ### 위임 조건
 - **사용자가 명시적으로 요청한 경우에만** 위임
@@ -77,16 +93,16 @@
 
 ### 위임 흐름
 ```
-사용자 요청 → 시스템 AI 판단 → call_project_agent 호출
+사용자 요청 → 시스템 AI → [system:delegate_project](agent_id) {message}
     → 프로젝트 에이전트들 자동 활성화 → 작업 수행
     → 결과 자동 보고 → 시스템 AI가 사용자에게 전달
 ```
 
 ### 병렬 위임
 여러 프로젝트에 동시 위임 가능:
-```python
-call_project_agent("의료", "agent_001", "두통 증상 분석")
-call_project_agent("study", "agent_001", "두통 관련 최신 연구 검색")
+```
+[system:delegate_project]("agent_001") {project_id: "의료", message: "두통 증상 분석"}
+[system:delegate_project]("agent_001") {project_id: "study", message: "두통 관련 최신 연구 검색"}
 ```
 
 ---
@@ -142,4 +158,4 @@ AI 호출 1회로 판단, 검색, 발송을 한 번에 처리:
 자세한 내용은 `packages.md` 참조.
 
 ---
-*마지막 업데이트: 2026-02-12 09:19*
+*마지막 업데이트: 2026-02-19 (Phase 22: 6-Node 통합)*

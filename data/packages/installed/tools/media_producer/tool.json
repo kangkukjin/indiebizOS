@@ -6,7 +6,6 @@
   "tools": [
     {
       "name": "create_slides",
-      "guide_file": "slides_guide.md",
       "description": "HTML/Playwright 기반으로 홍보용 슬라이드 이미지(PNG)를 생성합니다. 12종 테마 또는 tailwind 테마 + custom_html로 자유 디자인. 뷰포트 1280x720px 고정. Tailwind CSS, Google Fonts, Lucide Icons, Lottie, GSAP 지원.",
       "input_schema": {
         "type": "object",
@@ -16,73 +15,156 @@
             "items": {
               "type": "object",
               "properties": {
-                "title": {"type": "string", "description": "슬라이드 제목"},
-                "body": {"type": "string", "description": "슬라이드 본문 내용"},
-                "image_path": {"type": "string", "description": "삽입할 이미지 파일 경로 (선택)"},
-                "bg_color": {"type": "string", "description": "배경색 (예: #FFFFFF)"},
-                "text_color": {"type": "string", "description": "텍스트 색상 (예: #000000)"},
+                "title": {
+                  "type": "string",
+                  "description": "슬라이드 제목"
+                },
+                "body": {
+                  "type": "string",
+                  "description": "슬라이드 본문 내용"
+                },
+                "image_path": {
+                  "type": "string",
+                  "description": "삽입할 이미지 파일 경로 (선택)"
+                },
+                "bg_color": {
+                  "type": "string",
+                  "description": "배경색 (예: #FFFFFF)"
+                },
+                "text_color": {
+                  "type": "string",
+                  "description": "텍스트 색상 (예: #000000)"
+                },
                 "theme": {
                   "type": "string",
-                  "enum": ["modern", "tech", "business", "default", "title_bold", "dark_tech", "glassmorphism", "gradient_modern", "split_asymmetric", "minimal_white", "image_fullscreen", "data_card", "tailwind"],
+                  "enum": [
+                    "modern",
+                    "tech",
+                    "business",
+                    "default",
+                    "title_bold",
+                    "dark_tech",
+                    "glassmorphism",
+                    "gradient_modern",
+                    "split_asymmetric",
+                    "minimal_white",
+                    "image_fullscreen",
+                    "data_card",
+                    "tailwind"
+                  ],
                   "description": "디자인 테마"
                 },
-                "bg_class": {"type": "string", "description": "Tailwind 배경 클래스 (tailwind 테마 전용, 예: bg-gradient-to-br from-blue-500 to-purple-600)"},
-                "title_class": {"type": "string", "description": "Tailwind 제목 클래스 (tailwind 테마 전용, 예: text-white drop-shadow-lg)"},
-                "body_class": {"type": "string", "description": "Tailwind 본문 클래스 (tailwind 테마 전용, 예: text-blue-100)"},
-                "custom_html": {"type": "string", "description": "사용자 정의 HTML (tailwind 테마 전용). 중요: 뷰포트는 1280x720px 고정입니다. 반드시 w-full h-full과 overflow-hidden을 최상위에 적용하고, 모든 콘텐츠가 화면 안에 들어오도록 설계하세요. 가로 배치 시 flex-wrap 또는 요소 개수를 3개 이하로 제한하세요. 절대 위치(absolute)보다 flex/grid 레이아웃을 권장합니다."},
-                "accent_color": {"type": "string", "description": "강조색 (일부 테마에서 사용)"},
-                "bg_color1": {"type": "string", "description": "그라데이션 시작색 (glassmorphism, gradient_modern)"},
-                "bg_color2": {"type": "string", "description": "그라데이션 끝색 (glassmorphism, gradient_modern)"},
-                "data1_value": {"type": "string", "description": "데이터 카드 1 값 (data_card 테마)"},
-                "data1_label": {"type": "string", "description": "데이터 카드 1 라벨 (data_card 테마)"},
-                "data2_value": {"type": "string", "description": "데이터 카드 2 값 (data_card 테마)"},
-                "data2_label": {"type": "string", "description": "데이터 카드 2 라벨 (data_card 테마)"},
-                "data3_value": {"type": "string", "description": "데이터 카드 3 값 (data_card 테마)"},
-                "data3_label": {"type": "string", "description": "데이터 카드 3 라벨 (data_card 테마)"}
+                "bg_class": {
+                  "type": "string",
+                  "description": "Tailwind 배경 클래스 (tailwind 테마 전용, 예: bg-gradient-to-br from-blue-500 to-purple-600)"
+                },
+                "title_class": {
+                  "type": "string",
+                  "description": "Tailwind 제목 클래스 (tailwind 테마 전용, 예: text-white drop-shadow-lg)"
+                },
+                "body_class": {
+                  "type": "string",
+                  "description": "Tailwind 본문 클래스 (tailwind 테마 전용, 예: text-blue-100)"
+                },
+                "custom_html": {
+                  "type": "string",
+                  "description": "사용자 정의 HTML (tailwind 테마 전용). 중요: 뷰포트는 1280x720px 고정입니다. 반드시 w-full h-full과 overflow-hidden을 최상위에 적용하고, 모든 콘텐츠가 화면 안에 들어오도록 설계하세요. 가로 배치 시 flex-wrap 또는 요소 개수를 3개 이하로 제한하세요. 절대 위치(absolute)보다 flex/grid 레이아웃을 권장합니다."
+                },
+                "accent_color": {
+                  "type": "string",
+                  "description": "강조색 (일부 테마에서 사용)"
+                },
+                "bg_color1": {
+                  "type": "string",
+                  "description": "그라데이션 시작색 (glassmorphism, gradient_modern)"
+                },
+                "bg_color2": {
+                  "type": "string",
+                  "description": "그라데이션 끝색 (glassmorphism, gradient_modern)"
+                },
+                "data1_value": {
+                  "type": "string",
+                  "description": "데이터 카드 1 값 (data_card 테마)"
+                },
+                "data1_label": {
+                  "type": "string",
+                  "description": "데이터 카드 1 라벨 (data_card 테마)"
+                },
+                "data2_value": {
+                  "type": "string",
+                  "description": "데이터 카드 2 값 (data_card 테마)"
+                },
+                "data2_label": {
+                  "type": "string",
+                  "description": "데이터 카드 2 라벨 (data_card 테마)"
+                },
+                "data3_value": {
+                  "type": "string",
+                  "description": "데이터 카드 3 값 (data_card 테마)"
+                },
+                "data3_label": {
+                  "type": "string",
+                  "description": "데이터 카드 3 라벨 (data_card 테마)"
+                }
               },
-              "required": ["title", "body"]
+              "required": [
+                "title",
+                "body"
+              ]
             }
           },
-          "output_dir": {"type": "string", "description": "결과물을 저장할 디렉토리 경로 (선택)"},
-          "width": {"type": "integer", "description": "슬라이드 가로 크기 (기본: 1280)", "default": 1280},
-          "height": {"type": "integer", "description": "슬라이드 세로 크기 (기본: 720)", "default": 720}
+          "output_dir": {
+            "type": "string",
+            "description": "결과물을 저장할 디렉토리 경로 (선택)"
+          },
+          "width": {
+            "type": "integer",
+            "description": "슬라이드 가로 크기 (기본: 1280)",
+            "default": 1280
+          },
+          "height": {
+            "type": "integer",
+            "description": "슬라이드 세로 크기 (기본: 720)",
+            "default": 720
+          }
         },
-        "required": ["slides"]
+        "required": [
+          "slides"
+        ]
       }
     },
     {
       "name": "create_html_video",
-      "guide_file": "html_video_guide.md",
-      "description": "HTML 씬(scenes)을 Playwright 브라우저로 렌더링하여 MP4 동영상을 생성합니다.\n\nCSS 애니메이션, Tailwind, GSAP, Animate.css 등 브라우저에서 렌더링 가능한 모든 애니메이션을 영상으로 만들 수 있습니다.\n\n파이프라인: HTML(씬별) → Playwright 프레임 캡처 → FFmpeg MP4 인코딩 → 나레이션/BGM 합성",
+      "description": "HTML+CSS 기반 MP4 동영상 생성. 각 씬을 완전한 HTML 문서로 작성하면 Playwright가 프레임을 캡처하여 FFmpeg로 MP4 인코딩. 나레이션(TTS)/BGM 합성 지원.",
       "input_schema": {
         "type": "object",
         "properties": {
           "scenes": {
             "type": "array",
-            "description": "동영상을 구성하는 씬(장면) 목록. 각 씬은 독립된 HTML 문서와 재생 시간으로 구성됩니다. 반드시 씬마다 별도의 HTML을 작성하세요. 하나의 HTML에 모든 씬을 넣지 마세요!",
+            "description": "동영상을 구성하는 씬(장면) 목록. 각 씬은 완전한 HTML 문서를 포함해야 합니다.",
             "items": {
               "type": "object",
               "properties": {
                 "html": {
                   "type": "string",
-                  "description": "이 씬 하나의 완전한 HTML 문서(<!DOCTYPE html>~</html>). 이 HTML 하나가 하나의 장면입니다. 뷰포트 1280x720px에 맞게 디자인하세요. 여러 씬을 하나의 HTML에 넣지 말고, 씬마다 별도의 HTML 문서를 작성하세요."
+                  "description": "완전한 HTML 문서(<!DOCTYPE html>~</html>). Tailwind CSS, Google Fonts, GSAP, Animate.css 등 CDN 사용 가능. body 크기를 1280x720px로 고정할 것."
                 },
                 "duration": {
                   "type": "number",
-                  "description": "이 씬의 재생 시간(초). 애니메이션이 완료되는 시간보다 길게 설정하세요.",
+                  "description": "재생 시간(초). 나레이션이 있으면 자동 조정됨",
                   "default": 5
-                },
-                "base_path": {
-                  "type": "string",
-                  "description": "HTML 내 상대 경로 이미지의 기준 디렉토리 (선택)"
                 }
               },
-              "required": ["html"]
+              "required": [
+                "html"
+              ]
             }
           },
           "narration_texts": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "각 씬별 나레이션 텍스트. 씬 시작 시점에 맞춰 자동 배치됩니다. 빈 문자열(\"\")로 해당 씬을 건너뛸 수 있습니다."
           },
           "duration_per_scene": {
@@ -120,7 +202,9 @@
             "default": 720
           }
         },
-        "required": ["scenes"]
+        "required": [
+          "scenes"
+        ]
       }
     },
     {
@@ -156,7 +240,9 @@
             "description": "특정 요소만 캡처하고 싶은 경우의 CSS 셀렉터 (선택)"
           }
         },
-        "required": ["html"]
+        "required": [
+          "html"
+        ]
       }
     },
     {
@@ -193,7 +279,9 @@
             "description": "재현성을 위한 시드값 (같은 시드로 같은 이미지 생성)"
           }
         },
-        "required": ["prompt"]
+        "required": [
+          "prompt"
+        ]
       }
     },
     {
@@ -220,12 +308,109 @@
             "description": "Gemini API 키 (환경변수 GEMINI_API_KEY가 없을 때 사용)"
           }
         },
-        "required": ["prompt"]
+        "required": [
+          "prompt"
+        ]
+      }
+    },
+    {
+      "name": "create_tts",
+      "description": "텍스트를 음성 파일(MP3)로 변환합니다. Edge TTS 사용. 나레이션 생성용.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "음성으로 변환할 텍스트"
+          },
+          "voice": {
+            "type": "string",
+            "description": "목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성, en-US-AriaNeural: 영어 여성)",
+            "default": "ko-KR-SunHiNeural"
+          },
+          "output_filename": {
+            "type": "string",
+            "description": "저장할 파일명 (예: narration_01.mp3)"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      }
+    },
+    {
+      "name": "render_html_video",
+      "description": "HTML 파일 경로 목록을 받아 MP4 동영상으로 렌더링합니다. 코드 작성은 에이전트가 미리 해두고, 이 도구는 순수 렌더링만 담당합니다. 나레이션/BGM 합성도 지원.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "scene_files": {
+            "type": "array",
+            "description": "씬 파일 목록. 각 요소는 {path, duration}",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "HTML 파일 경로"
+                },
+                "duration": {
+                  "type": "number",
+                  "description": "재생 시간(초)",
+                  "default": 5
+                }
+              },
+              "required": [
+                "path"
+              ]
+            }
+          },
+          "scene_dir": {
+            "type": "string",
+            "description": "씬 HTML 파일들이 있는 폴더 경로 (scene_files 대신 사용 가능, 알파벳순 정렬)"
+          },
+          "narration_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "씬별 나레이션 MP3 파일 경로 (빈 문자열로 건너뛰기 가능)"
+          },
+          "bgm_path": {
+            "type": "string",
+            "description": "배경음악 파일 경로"
+          },
+          "output_filename": {
+            "type": "string",
+            "description": "저장할 파일명 (예: my_video.mp4)",
+            "default": "rendered_video.mp4"
+          },
+          "fps": {
+            "type": "integer",
+            "description": "프레임레이트",
+            "default": 24
+          },
+          "width": {
+            "type": "integer",
+            "description": "비디오 너비",
+            "default": 1280
+          },
+          "height": {
+            "type": "integer",
+            "description": "비디오 높이",
+            "default": 720
+          },
+          "duration_per_scene": {
+            "type": "number",
+            "description": "기본 씬 재생 시간",
+            "default": 5
+          }
+        }
       }
     },
     {
       "name": "create_shadcn_slides",
-      "description": "shadcn/ui 스타일의 고품질 슬라이드를 생성합니다. web-builder 패키지와 동일한 테마/디자인 시스템을 사용하여 홈페이지와 일관된 디자인의 슬라이드를 만들 수 있습니다.\n\n사용 가능한 테마: default, blue, green, purple, orange, dark\n\n사용 가능한 레이아웃:\n- hero: 중앙 정렬 히어로 (배지, 제목, 부제목, CTA)\n- hero_image: 좌우 분할 히어로 (텍스트 + 이미지)\n- features: 기능 그리드 (3열 카드)\n- stats: 통계 (4열 숫자)\n- testimonial: 인용/후기\n- pricing: 가격표 (3열)\n- cta: CTA 배너\n- content_image: 콘텐츠 + 이미지\n- steps: 단계/타임라인\n- custom: Tailwind 자유 작성",
+      "description": "shadcn/ui 스타일 고품질 슬라이드(PNG) 생성. 10종 레이아웃(hero, features, stats, cta, steps, pricing, testimonial, content_image, hero_image, custom) + 6종 테마. slides 배열에 레이아웃별 속성을 지정하면 Playwright로 렌더링.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -237,25 +422,68 @@
               "properties": {
                 "layout": {
                   "type": "string",
-                  "enum": ["hero", "hero_image", "features", "stats", "testimonial", "pricing", "cta", "content_image", "steps", "custom"],
+                  "enum": [
+                    "hero",
+                    "hero_image",
+                    "features",
+                    "stats",
+                    "testimonial",
+                    "pricing",
+                    "cta",
+                    "content_image",
+                    "steps",
+                    "custom"
+                  ],
                   "description": "슬라이드 레이아웃 타입"
                 },
-                "title": {"type": "string", "description": "제목"},
-                "subtitle": {"type": "string", "description": "부제목"},
-                "badge": {"type": "string", "description": "배지 텍스트 (hero 레이아웃)"},
-                "cta_text": {"type": "string", "description": "CTA 버튼 텍스트"},
-                "image_path": {"type": "string", "description": "이미지 파일 경로"},
-                "image_position": {"type": "string", "enum": ["left", "right"], "description": "이미지 위치 (content_image 레이아웃)"},
-                "content": {"type": "string", "description": "본문 내용 (content_image 레이아웃)"},
+                "title": {
+                  "type": "string",
+                  "description": "제목"
+                },
+                "subtitle": {
+                  "type": "string",
+                  "description": "부제목"
+                },
+                "badge": {
+                  "type": "string",
+                  "description": "배지 텍스트 (hero 레이아웃)"
+                },
+                "cta_text": {
+                  "type": "string",
+                  "description": "CTA 버튼 텍스트"
+                },
+                "image_path": {
+                  "type": "string",
+                  "description": "이미지 파일 경로"
+                },
+                "image_position": {
+                  "type": "string",
+                  "enum": [
+                    "left",
+                    "right"
+                  ],
+                  "description": "이미지 위치 (content_image 레이아웃)"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "본문 내용 (content_image 레이아웃)"
+                },
                 "features": {
                   "type": "array",
                   "description": "기능 목록 (features 레이아웃)",
                   "items": {
                     "type": "object",
                     "properties": {
-                      "icon": {"type": "string", "description": "이모지 또는 아이콘"},
-                      "title": {"type": "string"},
-                      "description": {"type": "string"}
+                      "icon": {
+                        "type": "string",
+                        "description": "이모지 또는 아이콘"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
                     }
                   }
                 },
@@ -265,28 +493,62 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "value": {"type": "string"},
-                      "label": {"type": "string"}
+                      "value": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
                     }
                   }
                 },
-                "quote": {"type": "string", "description": "인용문 (testimonial 레이아웃)"},
-                "author": {"type": "string", "description": "인용 작성자"},
-                "role": {"type": "string", "description": "작성자 역할"},
-                "avatar_path": {"type": "string", "description": "아바타 이미지 경로"},
+                "quote": {
+                  "type": "string",
+                  "description": "인용문 (testimonial 레이아웃)"
+                },
+                "author": {
+                  "type": "string",
+                  "description": "인용 작성자"
+                },
+                "role": {
+                  "type": "string",
+                  "description": "작성자 역할"
+                },
+                "avatar_path": {
+                  "type": "string",
+                  "description": "아바타 이미지 경로"
+                },
                 "plans": {
                   "type": "array",
                   "description": "가격 플랜 (pricing 레이아웃)",
                   "items": {
                     "type": "object",
                     "properties": {
-                      "name": {"type": "string"},
-                      "price": {"type": "string"},
-                      "period": {"type": "string", "default": "/월"},
-                      "description": {"type": "string"},
-                      "features": {"type": "array", "items": {"type": "string"}},
-                      "cta_text": {"type": "string"},
-                      "highlighted": {"type": "boolean"}
+                      "name": {
+                        "type": "string"
+                      },
+                      "price": {
+                        "type": "string"
+                      },
+                      "period": {
+                        "type": "string",
+                        "default": "/월"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "features": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "cta_text": {
+                        "type": "string"
+                      },
+                      "highlighted": {
+                        "type": "boolean"
+                      }
                     }
                   }
                 },
@@ -296,27 +558,56 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "title": {"type": "string"},
-                      "description": {"type": "string"}
+                      "title": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
                     }
                   }
                 },
-                "custom_html": {"type": "string", "description": "커스텀 HTML (custom 레이아웃, Tailwind 사용 가능)"}
+                "custom_html": {
+                  "type": "string",
+                  "description": "커스텀 HTML (custom 레이아웃, Tailwind 사용 가능)"
+                }
               },
-              "required": ["layout"]
+              "required": [
+                "layout"
+              ]
             }
           },
           "theme": {
             "type": "string",
-            "enum": ["default", "blue", "green", "purple", "orange", "dark"],
+            "enum": [
+              "default",
+              "blue",
+              "green",
+              "purple",
+              "orange",
+              "dark"
+            ],
             "description": "전체 테마 (web-builder와 동일)",
             "default": "default"
           },
-          "output_dir": {"type": "string", "description": "결과물 저장 디렉토리"},
-          "width": {"type": "integer", "description": "슬라이드 너비 (기본: 1280)", "default": 1280},
-          "height": {"type": "integer", "description": "슬라이드 높이 (기본: 720)", "default": 720}
+          "output_dir": {
+            "type": "string",
+            "description": "결과물 저장 디렉토리"
+          },
+          "width": {
+            "type": "integer",
+            "description": "슬라이드 너비 (기본: 1280)",
+            "default": 1280
+          },
+          "height": {
+            "type": "integer",
+            "description": "슬라이드 높이 (기본: 720)",
+            "default": 720
+          }
         },
-        "required": ["slides"]
+        "required": [
+          "slides"
+        ]
       }
     }
   ]

@@ -596,16 +596,33 @@ export function Chat({ projectId, agent }: ChatProps) {
                     )}
 
                     {/* 결과 */}
-                    {tool.result && (
-                      <div className="px-3 py-2 bg-green-50/30">
-                        <div className="text-[10px] text-green-600 font-medium mb-1 flex items-center gap-1">
-                          <span>📤</span> 결과
+                    {tool.result && (() => {
+                      const parsed = parseImagePaths(tool.result);
+                      return (
+                        <div className="px-3 py-2 bg-green-50/30">
+                          <div className="text-[10px] text-green-600 font-medium mb-1 flex items-center gap-1">
+                            <span>📤</span> 결과
+                          </div>
+                          <pre className="text-[11px] text-[#4A4035] bg-white/80 p-2 rounded border border-[#E5DFD5]/50 overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap break-words">
+                            {tool.result}
+                          </pre>
+                          {parsed.images.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {parsed.images.map((imgPath, idx) => (
+                                <img
+                                  key={idx}
+                                  src={`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`}
+                                  alt={`도구 결과 이미지 ${idx + 1}`}
+                                  className="max-w-full max-h-80 rounded border border-[#E5DFD5] cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => window.open(`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`, '_blank')}
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                />
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <pre className="text-[11px] text-[#4A4035] bg-white/80 p-2 rounded border border-[#E5DFD5]/50 overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap break-words">
-                          {tool.result}
-                        </pre>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* 실행 중일 때 로딩 표시 */}
                     {tool.status === 'running' && !tool.result && (
@@ -828,7 +845,7 @@ function parseImagePaths(content: string): { text: string; images: string[] } {
     }
   }
 
-  return { text: text.trim(), images };
+  return { text: text.trim(), images: images.filter(img => img && img.trim() !== '') };
 }
 
 // 지도 데이터 패턴 감지 및 파싱 (route_map, location_map 모두 지원)
@@ -942,14 +959,15 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         }`}
       >
         {/* 사용자 첨부 이미지 표시 */}
-        {message.images && message.images.length > 0 && (
+        {message.images && message.images.filter(img => img && img.trim() !== '').length > 0 && (
           <div className="flex gap-2 flex-wrap mb-2">
-            {message.images.map((img, index) => (
+            {message.images.filter(img => img && img.trim() !== '').map((img, index) => (
               <img
                 key={index}
                 src={img}
                 alt={`첨부 이미지 ${index + 1}`}
                 className="max-w-[200px] max-h-[200px] rounded-lg object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             ))}
           </div>
@@ -975,6 +993,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                 alt={`캡처 이미지 ${index + 1}`}
                 className="max-w-[300px] max-h-[300px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => window.electron?.openExternal(`file://${imgPath}`)}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 title="클릭하여 원본 보기"
               />
             ))}

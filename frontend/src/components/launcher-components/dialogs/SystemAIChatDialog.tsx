@@ -1179,16 +1179,33 @@ export function SystemAIChatDialog({ show, onClose }: SystemAIChatDialogProps) {
                         )}
 
                         {/* 결과 (항상 표시) */}
-                        {tool.result && (
-                          <div className="px-3 py-2 bg-green-50/30">
-                            <div className="text-[10px] text-green-600 font-medium mb-1 flex items-center gap-1">
-                              <span>📤</span> 결과
+                        {tool.result && (() => {
+                          const parsed = parseImagePaths(tool.result);
+                          return (
+                            <div className="px-3 py-2 bg-green-50/30">
+                              <div className="text-[10px] text-green-600 font-medium mb-1 flex items-center gap-1">
+                                <span>📤</span> 결과
+                              </div>
+                              <pre className="text-[11px] text-gray-700 bg-white/80 p-2 rounded border border-gray-100 overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap break-words">
+                                {tool.result}
+                              </pre>
+                              {parsed.images.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {parsed.images.map((imgPath, idx) => (
+                                    <img
+                                      key={idx}
+                                      src={`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`}
+                                      alt={`도구 결과 이미지 ${idx + 1}`}
+                                      className="max-w-full max-h-80 rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => window.open(`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`, '_blank')}
+                                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                    />
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <pre className="text-[11px] text-gray-700 bg-white/80 p-2 rounded border border-gray-100 overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap break-words">
-                              {tool.result}
-                            </pre>
-                          </div>
-                        )}
+                          );
+                        })()}
 
                         {/* 실행 중일 때 로딩 표시 */}
                         {tool.status === 'running' && !tool.result && (

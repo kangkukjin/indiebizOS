@@ -95,6 +95,148 @@ def _register_tools_from_definition(tool_def: Any, package_name: str):
         _tool_to_package_map[tool_def["name"]] = package_name
 
 
+def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optional[dict]:
+    """ibl_nodes.yaml에서 execute_ibl 도구 정의를 동적 생성.
+
+    tool.json에 하드코딩하지 않고 ibl_nodes.yaml을 단일 진실 소스로 사용.
+    노드가 추가/삭제되면 자동 반영됨.
+
+    Args:
+        allowed_nodes: agents.yaml의 allowed_nodes 설정.
+                       None/[]이면 모든 노드 포함.
+                       지정 시 해당 노드만 description/enum에 포함.
+    """
+    import yaml
+
+    yaml_path = get_base_path() / "data" / "ibl_nodes.yaml"
+    if not yaml_path.exists():
+        return None
+
+    try:
+        with open(yaml_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+    except Exception as e:
+        print(f"[tool_loader] ibl_nodes.yaml 파싱 실패: {e}")
+        return None
+
+    all_nodes = data.get("nodes", {})
+    meta = data.get("meta", {})
+
+    # --- allowed_nodes 필터링 (ibl_access.resolve_allowed_nodes와 동일 로직 활용) ---
+    if allowed_nodes:
+        try:
+            from ibl_access import resolve_allowed_nodes
+            allowed_set = resolve_allowed_nodes(allowed_nodes)
+        except ImportError:
+            allowed_set = None
+    else:
+        allowed_set = None  # None = 모든 노드 허용
+
+    if allowed_set is not None:
+        nodes = {k: v for k, v in all_nodes.items() if k in allowed_set}
+    else:
+        nodes = all_nodes
+
+    # --- 노드 요약 생성 ---
+    node_lines = []
+    node_names = []
+    for name, node_def in nodes.items():
+        node_names.append(name)
+        desc = node_def.get("description", "")
+        actions = node_def.get("actions", {})
+        action_names = list(actions.keys())
+        shown = ", ".join(action_names)
+        node_lines.append(f"- {name}: {desc}\n  액션: {shown}")
+
+    nodes_section = "\n".join(node_lines)
+
+    # --- 사용 예시 ---
+    usage_lines = []
+    for section in meta.get("usage", []):
+        usage_lines.append(section.get("section", ""))
+        for ex in section.get("examples", []):
+            usage_lines.append(f"  {ex}")
+
+    # --- 파이프라인 연산자 ---
+    pipe_lines = []
+    for p in meta.get("pipeline", []):
+        pipe_lines.append(f"{p['op']} ({p['name']}): {p.get('example', '')}")
+
+    # --- description 조합 ---
+    description = (
+        f"IndieBiz 통합 도구. {len(nodes)}개 노드로 모든 기능 실행.\n"
+        f"\n## 노드\n{nodes_section}\n"
+        f"\n## 사용법\n" + "\n".join(usage_lines) + "\n"
+        f"\n## 파이프라인\n" + "\n".join(pipe_lines) + "\n"
+        f"\nnode를 모르면 system:discover로 검색."
+    )
+
+    return {
+        "name": "execute_ibl",
+        "description": description,
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "node": {
+                    "type": "string",
+                    "description": f"노드 이름: {', '.join(node_names)}",
+                    "enum": node_names if node_names else ["system"]
+                },
+                "action": {
+                    "type": "string",
+                    "description": "실행할 액션 (예: web_search, registry, read, play, send)"
+                },
+                "target": {
+                    "type": "string",
+                    "description": "대상 (검색어, URL, 파일 경로, 종목 코드 등)"
+                },
+                "params": {
+                    "type": "object",
+                    "description": "추가 파라미터"
+                },
+                "code": {
+                    "type": "string",
+                    "description": "IBL 코드 (파이프라인 모드: [node:action](target) >> ...)"
+                }
+            }
+        }
+    }
+
+
+def load_tool_schema(tool_name: str) -> Optional[dict]:
+    """도구 스키마(input_schema 포함) 반환 (Phase 17)
+
+    execute_ibl은 ibl_nodes.yaml에서 동적 생성.
+    나머지는 tool.json에서 로드.
+    """
+    # execute_ibl은 동적 생성 (ibl_nodes.yaml 기반)
+    if tool_name == "execute_ibl":
+        return build_execute_ibl_tool()
+
+    pkg_map = build_tool_package_map()
+    pkg_name = pkg_map.get(tool_name)
+    if not pkg_name:
+        return None
+
+    tool_json_path = get_tools_path() / pkg_name / "tool.json"
+    if not tool_json_path.exists():
+        return None
+
+    try:
+        tool_def = json.loads(tool_json_path.read_text(encoding='utf-8'))
+        # {"tools": [...]} 형식
+        if isinstance(tool_def, dict) and "tools" in tool_def:
+            for t in tool_def["tools"]:
+                if t.get("name") == tool_name:
+                    return t
+        # 단일 도구
+        elif isinstance(tool_def, dict) and tool_def.get("name") == tool_name:
+            return tool_def
+    except Exception:
+        pass
+    return None
+
+
 def load_tool_handler(tool_name: str) -> Optional[Any]:
     """
     도구 핸들러를 동적으로 로드
@@ -300,6 +442,22 @@ def get_tool_guide(tool_name: str) -> Optional[str]:
 
     guide_path = Path(guide_path_str)
     return _load_guide_content(guide_path)
+
+
+def get_tool_guide_path(tool_name: str) -> Optional[str]:
+    """도구의 가이드 파일 경로를 반환 (중복 주입 방지용)
+
+    같은 guide_file을 공유하는 도구들은 동일한 경로를 반환하므로,
+    가이드 주입 시 패키지 레벨로 중복을 방지할 수 있습니다.
+
+    Args:
+        tool_name: 도구 이름
+
+    Returns:
+        가이드 파일 경로 문자열 또는 None
+    """
+    _build_tool_guide_map()
+    return _tool_guide_map.get(tool_name)
 
 
 def _load_guide_content(guide_path: Path) -> Optional[str]:

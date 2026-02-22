@@ -578,6 +578,62 @@ async def get_available_tools():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============ IBL 노드 목록 API (Phase 16) ============
+
+@router.get("/nodes")
+async def get_ibl_nodes():
+    """
+    IBL 노드 목록 조회 (Phase 16)
+
+    프론트엔드의 에이전트 편집 다이얼로그에서 allowed_nodes 선택에 사용.
+    ALWAYS_ALLOWED 노드는 별도로 표시.
+
+    Returns:
+        nodes: [{id, description, action_count, always_allowed}]
+        always_allowed: 항상 허용되는 노드 ID 목록
+        node_groups: 타입별 노드 그룹 (info, store, exec, output)
+    """
+    try:
+        import yaml as _yaml
+        from runtime_utils import get_base_path
+
+        nodes_path = get_base_path() / "data" / "ibl_nodes.yaml"
+        if not nodes_path.exists():
+            return {"nodes": [], "always_allowed": [], "node_groups": {}}
+
+        with open(nodes_path, 'r', encoding='utf-8') as f:
+            data = _yaml.safe_load(f) or {}
+
+        # Phase 22: 구 노드명(system, workflow, automation, output)은 모두 system 단일 노드로 통합됨
+        always_allowed = {"system"}
+
+        nodes = []
+        for node_name, node_config in data.get("nodes", {}).items():
+            actions = node_config.get("actions", {})
+            nodes.append({
+                "id": node_name,
+                "description": node_config.get("description", ""),
+                "action_count": len(actions),
+                "always_allowed": node_name in always_allowed,
+            })
+
+        # 타입별 노드 그룹
+        node_groups = {}
+        for group_name, group_config in data.get("nodes", {}).items():
+            node_groups[group_name] = {
+                "description": group_config.get("description", ""),
+                "members": group_config.get("members", []),
+            }
+
+        return {
+            "nodes": nodes,
+            "always_allowed": sorted(always_allowed),
+            "node_groups": node_groups,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============ 패키지 인코더/디코더 API (Nostr 공유용) ============
 
 @router.post("/packages/encode")

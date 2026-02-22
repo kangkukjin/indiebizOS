@@ -53,8 +53,8 @@ export interface AgentForm {
   nostrKeyName: string;
   nostrPrivateKey: string;
   nostrRelays: string;
-  // 도구 설정
-  allowedTools: string[];
+  // IBL 노드 설정 (Phase 16)
+  allowedNodes: string[];
 }
 
 // 도구 AI 폼 타입
@@ -73,6 +73,14 @@ export interface Tool {
   ai_config_key?: string;
   _is_system?: boolean;  // 시스템 기본 도구 (삭제 불가)
   _package_id?: string;  // 패키지 ID
+}
+
+// IBL 노드 타입 (Phase 16)
+export interface IBLNode {
+  id: string;
+  description: string;
+  action_count: number;
+  always_allowed: boolean;
 }
 
 // 도구 설정 타입

@@ -541,10 +541,17 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 }
 
                 # todo_write 도구인 경우 TODO 데이터 추가
+                # Phase 17: execute_ibl 경유 시 params에서 추출
                 if tool_name == "todo_write":
                     todos = tool_input.get("todos", [])
                     if todos:
                         message_data["todos"] = todos
+                elif tool_name == "execute_ibl":
+                    _ibl_params = tool_input.get("params", {})
+                    _ibl_todos = _ibl_params.get("todos", [])
+                    if _ibl_todos:
+                        message_data["todos"] = _ibl_todos
+                        message_data["name"] = "todo_write"  # 프론트엔드 호환
 
                 await manager.send_message(client_id, message_data)
 
@@ -785,10 +792,17 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 }
 
                 # todo_write 도구인 경우 TODO 데이터 추가
+                # Phase 17: execute_ibl 경유 시 params에서 추출
                 if tool_name == "todo_write":
                     todos = tool_input.get("todos", [])
                     if todos:
                         message_data["todos"] = todos
+                elif tool_name == "execute_ibl":
+                    _ibl_params = tool_input.get("params", {})
+                    _ibl_todos = _ibl_params.get("todos", [])
+                    if _ibl_todos:
+                        message_data["todos"] = _ibl_todos
+                        message_data["name"] = "todo_write"  # 프론트엔드 호환
 
                 await manager.send_message(client_id, message_data)
 

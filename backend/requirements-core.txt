@@ -21,3 +21,4 @@ websocket-client
 # 도구 핵심 패키지
 yt-dlp
 youtube-transcript-api
+PyMuPDF

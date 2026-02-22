@@ -6,6 +6,7 @@ API 문서: https://opendart.fss.or.kr/guide/detail.do?apiGrpCd=DS001
 필요 환경변수: DART_API_KEY
 """
 import os
+import sys
 import urllib.request
 import urllib.parse
 import json
@@ -15,36 +16,27 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.api_client import api_call
+from common.auth_manager import check_api_key, get_api_key
+from common.response_formatter import save_large_data
+
 DART_API_KEY = os.environ.get("DART_API_KEY", "")
 BASE_URL = "https://opendart.fss.or.kr/api"
 
 # 기업 코드 캐시 파일 경로
 CORP_CODE_CACHE_PATH = Path(__file__).parent / "corp_code_cache.json"
 
-# 대량 데이터 저장 경로
-DATA_OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "outputs" / "investment"
-DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _save_large_data(data: dict, prefix: str, identifier: str) -> str:
-    """대량 데이터를 파일로 저장하고 경로 반환"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{prefix}_{identifier}_{timestamp}.json"
-    filepath = DATA_OUTPUT_DIR / filename
-
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-    return str(filepath)
-
 
 def _check_api_key():
-    """API 키 확인"""
-    if not DART_API_KEY:
-        return {
-            "success": False,
-            "error": "DART_API_KEY 환경변수가 설정되지 않았습니다. https://opendart.fss.or.kr 에서 API 키를 발급받으세요."
-        }
+    """API 키 확인 (common.auth_manager 위임)"""
+    ok, err = check_api_key("dart")
+    if not ok:
+        return {"success": False, "error": err}
     return None
 
 
@@ -300,7 +292,7 @@ def get_financial_statements(corp_code: str = None, corp_name: str = None,
             "income_statement": income_statement,
             "cash_flow": cash_flow
         }
-        file_path = _save_large_data(full_data, "financial_statements", corp_code)
+        file_path = save_large_data(full_data, "investment", f"financial_{corp_code}")
 
         # 주요 항목만 요약 (각 5개씩)
         return {

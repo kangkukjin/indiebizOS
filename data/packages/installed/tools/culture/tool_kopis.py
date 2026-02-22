@@ -8,12 +8,18 @@ API 키 발급: https://www.kopis.or.kr/por/cs/openapi/openApiInfo.do
 """
 
 import os
-import requests
+import sys
 import xml.etree.ElementTree as ET
 import json
 from datetime import datetime, timedelta
 
-BASE_URL = "http://www.kopis.or.kr/openApi/restful"
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.api_client import api_call
+from common.auth_manager import check_api_key
 
 # 지역 코드 매핑 (한글/영문 모두 지원)
 REGION_CODES = {
@@ -57,8 +63,15 @@ STATUS_CODES = {
 }
 
 
-def get_api_key():
-    return os.environ.get("KOPIS_API_KEY", "")
+def _check_api_key():
+    """API 키 확인 (common 유틸리티 사용)"""
+    ok, err = check_api_key("kopis")
+    if not ok:
+        return {
+            "error": err,
+            "help": "https://www.kopis.or.kr/por/cs/openapi/openApiInfo.do 에서 API 키를 발급받으세요."
+        }
+    return None
 
 
 def _format_date(date_str):
@@ -121,22 +134,26 @@ def xml_to_dict(element):
 
 
 def call_kopis_api(endpoint, params):
-    api_key = get_api_key()
-    if not api_key:
-        return {
-            "error": "KOPIS_API_KEY 환경변수가 설정되지 않았습니다.",
-            "help": "https://www.kopis.or.kr/por/cs/openapi/openApiInfo.do 에서 API 키를 발급받으세요."
-        }
+    # API 키 확인
+    key_err = _check_api_key()
+    if key_err:
+        return key_err
 
-    params["service"] = api_key
-    url = f"{BASE_URL}/{endpoint}"
+    # api_call로 HTTP 요청 (XML 응답이므로 raw_response=True)
+    response_text = api_call(
+        "kopis",
+        f"/{endpoint}",
+        params=params,
+        timeout=15,
+        raw_response=True,
+    )
+
+    # api_call이 에러 dict를 반환한 경우
+    if isinstance(response_text, dict) and "error" in response_text:
+        return response_text
 
     try:
-        response = requests.get(url, params=params, timeout=15)
-        if response.status_code != 200:
-            return {"error": f"API 호출 실패 (상태 코드: {response.status_code})"}
-
-        root = ET.fromstring(response.content)
+        root = ET.fromstring(response_text.encode("utf-8") if isinstance(response_text, str) else response_text)
 
         # 목록형 데이터 (db 태그가 여러개인 경우)
         if endpoint.split("/")[0] in ["pblprfr", "prfsts", "prfplc", "boxoffice", "prffest"]:
@@ -149,9 +166,7 @@ def call_kopis_api(endpoint, params):
         return xml_to_dict(root)
 
     except ET.ParseError as e:
-        return {"error": f"XML 파싱 오류: {str(e)}", "raw": response.text[:200]}
-    except requests.exceptions.Timeout:
-        return {"error": "KOPIS API 요청 시간 초과"}
+        return {"error": f"XML 파싱 오류: {str(e)}", "raw": response_text[:200]}
     except Exception as e:
         return {"error": f"조회 실패: {str(e)}"}
 

@@ -50,7 +50,9 @@ AI가 도구를 정확히 선택하도록 간결하고 범용적인 설명 권�
 description에 모든 내용을 넣지 않고, 도구가 실제 호출될 때만 가이드를 주입하여 토큰을 절약합니다.
 상세 내용은 `guide_file.md` 문서를 참조하세요.
 
-### 2. handler.py - 실행 로직 표준 템플릿
+### 2. 실행 로직 — 두 가지 방식
+
+#### (A) handler.py (복잡한 후처리가 필요한 경우)
 `execute(tool_name, tool_input, project_path)` 함수를 포함해야 합니다.
 
 ```python
@@ -62,9 +64,24 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
     return f"알 수 없는 도구: {tool_name}"
 ```
 
+#### (B) api_registry.yaml 등록 (API 호출 + transform으로 충분한 경우)
+`data/api_registry.yaml`에 도구를 등록하면 handler.py 없이 동작합니다. `node` 필드를 추가하면 IBL 노드 액션으로 자동 병합됩니다.
+
+```yaml
+kosis_search_statistics:
+  service: kosis
+  endpoint: /statisticsList.do
+  transform: kosis_list
+  node: informant            # IBL 자동 병합 (Phase 21: statistics → informant)
+  action_name: search_statistics
+  description: "통계표 목록 검색"
+```
+
+api_engine 라우팅 액션들이 이 방식을 사용합니다.
+
 ---
 
-## 현재 설치된 도구 패키지 (27개)
+## 현재 설치된 도구 패키지 (35개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -72,19 +89,26 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
 | browser-action | Browser Action | Playwright 기반 브라우저 자동화 (클릭/입력/스크롤/콘텐츠 추출) |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
+| cctv | CCTV | CCTV/웹캠 관련 도구 |
 | cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel) |
+| computer-use | Computer Use | 컴퓨터 사용 자동화 |
 | culture | Culture | 공연(KOPIS), 도서(도서관 정보나루) 등 문화예술 정보 조회 |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
+| house-designer | House Designer | 건축 설계 (평면도, 3D뷰) |
+| ibl-core | IBL Core | IBL 핵심 도구 |
 | investment | Investment | 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석 |
 | kosis | KOSIS | 통계청 KOSIS API 국가통계 조회 |
 | legal | Legal | 대한민국 법률 정보 검색 (법령, 판례, 행정규칙, 자치법규 등) |
+| local-info | Local Info | 지역 정보 도구 |
 | location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
 | media_producer | Media Producer | 홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지 생성 |
+| memory | Memory | 대화 이력, 심층 메모리 관리 |
 | music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | nodejs | Nodejs | Node.js/JavaScript 코드 실행 |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |
 | photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 |
 | python-exec | Python Exec | Python 코드 실행 |
+| radio | Radio | 인터넷 라디오 검색 및 재생 |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API |
 | remotion-video | Remotion Video | React/Remotion 기반 프로그래밍 방식 동영상 생성 (TSX → MP4) |
 | shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 가격 비교 |
@@ -94,6 +118,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 | visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
 | web | Web Tools | 웹 검색, 크롤링, 뉴스, 신문 생성, 즐겨찾기 |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
+| web-collector | Web Collector | 웹 데이터 수집/스크래핑 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 
 **참고**: cloudflare 패키지의 `cf_tunnel` 도구는 원격 Finder 시스템의 Cloudflare Tunnel 설정을 자동화합니다. → [원격 Finder 문서](remote_finder.md)
@@ -139,4 +164,4 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-02-10*
+*마지막 업데이트: 2026-02-18*

@@ -1,0 +1,27 @@
+nodes:
+  system:
+    actions:
+      launch:
+        description: 즐겨찾기 사이트 열기/관리
+        router: handler
+        tool: launch_sites
+        target_key: action
+  source:
+    actions:
+      web_search:
+        description: DuckDuckGo 웹 검색
+        router: handler
+        tool: ddgs_search
+        target_key: query
+      crawl:
+        description: 웹페이지 크롤링 (텍스트 추출)
+        router: handler
+        tool: crawl_website
+        target_key: url
+      search_news:
+        description: 구글 뉴스 검색
+        router: handler
+        tool: google_news_search
+        target_key: query
+    guides:
+    - web/web_guide.md

@@ -5,80 +5,40 @@ Financial Modeling Prep (FMP) 도구
 API 문서: https://site.financialmodelingprep.com/developer/docs
 필요 환경변수: FMP_API_KEY
 무료 티어: 일 250회 제한
+
+2026-02: /v3/ 레거시 → /stable/ 신규 API로 마이그레이션
 """
 import os
-import urllib.request
-import urllib.parse
+import sys
 import json
 from datetime import datetime, timedelta
-from pathlib import Path
 
-FMP_API_KEY = os.environ.get("FMP_API_KEY", "")
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
 
-# 대량 데이터 저장 경로
-DATA_OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "outputs" / "investment"
-DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _save_large_data(data: list, prefix: str, symbol: str) -> str:
-    """대량 데이터를 파일로 저장하고 경로 반환"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{prefix}_{symbol}_{timestamp}.json"
-    filepath = DATA_OUTPUT_DIR / filename
-
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-    return str(filepath)
-BASE_URL = "https://financialmodelingprep.com/api/v3"
-
-
-def _check_api_key():
-    """API 키 확인"""
-    if not FMP_API_KEY:
-        return {
-            "success": False,
-            "error": "FMP_API_KEY 환경변수가 설정되지 않았습니다. https://site.financialmodelingprep.com 에서 무료 API 키를 발급받으세요."
-        }
-    return None
+from common.api_client import api_call
+from common.response_formatter import save_large_data
 
 
 def _api_request(endpoint: str, params: dict = None):
-    """FMP API 요청"""
-    error = _check_api_key()
-    if error:
-        return error
+    """FMP API 요청 (/stable/ 엔드포인트 사용)
 
-    if params is None:
-        params = {}
-    params["apikey"] = FMP_API_KEY
-
-    url = f"{BASE_URL}/{endpoint}?" + urllib.parse.urlencode(params)
-
-    try:
-        req = urllib.request.Request(url)
-        req.add_header("User-Agent", "Mozilla/5.0")
-
-        with urllib.request.urlopen(req, timeout=30) as response:
-            data = json.loads(response.read().decode('utf-8'))
-
-        # 에러 응답 확인
-        if isinstance(data, dict) and "Error Message" in data:
-            return {
-                "success": False,
-                "error": data["Error Message"]
-            }
-
-        return {"success": True, "data": data}
-
-    except urllib.error.HTTPError as e:
-        if e.code == 401:
-            return {"success": False, "error": "API 키가 유효하지 않습니다."}
-        elif e.code == 403:
-            return {"success": False, "error": "API 사용 제한을 초과했습니다. (무료 티어: 일 250회)"}
-        return {"success": False, "error": f"HTTP 오류: {e.code}"}
-    except Exception as e:
-        return {"success": False, "error": f"요청 오류: {str(e)}"}
+    2026-02: /v3/ 레거시 폐기 → /stable/ 신규 API 사용
+    base_url을 직접 지정하여 /api/ 접두사 우회
+    """
+    result = api_call(
+        "fmp", f"/{endpoint}",
+        params=params or {},
+        timeout=30,
+        base_url="https://financialmodelingprep.com/stable"
+    )
+    if isinstance(result, dict) and "error" in result:
+        return {"success": False, "error": result["error"]}
+    if isinstance(result, dict) and "Error Message" in result:
+        return {"success": False, "error": result["Error Message"]}
+    return {"success": True, "data": result}
 
 
 def get_company_profile(symbol: str):
@@ -92,7 +52,8 @@ def get_company_profile(symbol: str):
         기업 기본 정보 (업종, 시가총액, CEO, 사업설명 등)
     """
     symbol = symbol.upper()
-    result = _api_request(f"profile/{symbol}")
+    # /stable/profile?symbol=PLTR
+    result = _api_request("profile", {"symbol": symbol})
 
     if not result.get("success"):
         return result
@@ -112,30 +73,27 @@ def get_company_profile(symbol: str):
             "symbol": company.get("symbol"),
             "company_name": company.get("companyName"),
             "price": company.get("price"),
-            "market_cap": company.get("mktCap"),
+            "market_cap": company.get("marketCap"),
             "beta": company.get("beta"),
-            "volume_avg": company.get("volAvg"),
-            "last_dividend": company.get("lastDiv"),
+            "volume_avg": company.get("averageVolume"),
+            "last_dividend": company.get("lastDividend"),
             "range_52week": company.get("range"),
-            "changes": company.get("changes"),
+            "change": company.get("change"),
+            "change_percent": company.get("changePercentage"),
             "currency": company.get("currency"),
-            "exchange": company.get("exchangeShortName"),
+            "exchange": company.get("exchange"),
             "industry": company.get("industry"),
             "sector": company.get("sector"),
             "country": company.get("country"),
             "employees": company.get("fullTimeEmployees"),
             "ceo": company.get("ceo"),
-            "phone": company.get("phone"),
-            "address": company.get("address"),
-            "city": company.get("city"),
-            "state": company.get("state"),
             "website": company.get("website"),
             "description": company.get("description"),
             "ipo_date": company.get("ipoDate"),
             "is_etf": company.get("isEtf"),
             "is_actively_trading": company.get("isActivelyTrading")
         },
-        "summary": f"{company.get('companyName')} ({symbol}) - {company.get('sector')}/{company.get('industry')}, 시가총액: ${company.get('mktCap', 0):,.0f}"
+        "summary": f"{company.get('companyName')} ({symbol}) - {company.get('sector')}/{company.get('industry')}, 시가총액: ${company.get('marketCap', 0):,.0f}"
     }
 
 
@@ -155,7 +113,7 @@ def get_financial_statements(symbol: str, statement_type: str = "income",
     """
     symbol = symbol.upper()
 
-    # 엔드포인트 결정
+    # /stable/ 엔드포인트
     endpoint_map = {
         "income": "income-statement",
         "balance": "balance-sheet-statement",
@@ -164,11 +122,11 @@ def get_financial_statements(symbol: str, statement_type: str = "income",
 
     endpoint = endpoint_map.get(statement_type, "income-statement")
 
-    params = {"limit": limit}
+    params = {"symbol": symbol, "limit": limit}
     if period == "quarter":
         params["period"] = "quarter"
 
-    result = _api_request(f"{endpoint}/{symbol}", params)
+    result = _api_request(endpoint, params)
 
     if not result.get("success"):
         return result
@@ -267,38 +225,39 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None):
     if not start_date:
         start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
+    # /stable/historical-price-eod/full?symbol=PLTR&from=...&to=...
     params = {
+        "symbol": symbol,
         "from": start_date,
         "to": end_date
     }
 
-    result = _api_request(f"historical-price-full/{symbol}", params)
+    result = _api_request("historical-price-eod/full", params)
 
     if not result.get("success"):
         return result
 
     data = result["data"]
-    if not data or "historical" not in data:
+    # 신규 API: 배열 직접 반환 (historical 래핑 없음)
+    if not data:
         return {
             "success": False,
             "error": f"'{symbol}'의 주가 데이터를 찾을 수 없습니다."
         }
 
-    historical = data.get("historical", [])
-
     # 데이터 정리 (최신 순 → 오래된 순)
     prices = []
-    for item in reversed(historical):
+    for item in reversed(data):
         prices.append({
             "date": item.get("date"),
             "open": item.get("open"),
             "high": item.get("high"),
             "low": item.get("low"),
             "close": item.get("close"),
-            "adj_close": item.get("adjClose"),
             "volume": item.get("volume"),
             "change": item.get("change"),
-            "change_percent": item.get("changePercent")
+            "change_percent": item.get("changePercent"),
+            "vwap": item.get("vwap")
         })
 
     latest = prices[-1] if prices else {}
@@ -306,7 +265,7 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None):
 
     # 대량 데이터는 파일로 저장 (50개 초과시)
     if total_days > 50:
-        file_path = _save_large_data(prices, "us_stock_prices", symbol)
+        file_path = save_large_data(prices, "investment", f"us_prices_{symbol}")
 
         # 요약용 샘플 (10개 포인트만)
         step = max(1, total_days // 10)
@@ -356,7 +315,8 @@ def get_stock_quote(symbol: str):
         실시간 시세
     """
     symbol = symbol.upper()
-    result = _api_request(f"quote/{symbol}")
+    # /stable/profile이 가격 정보 포함
+    result = _api_request("profile", {"symbol": symbol})
 
     if not result.get("success"):
         return result
@@ -374,26 +334,20 @@ def get_stock_quote(symbol: str):
         "success": True,
         "data": {
             "symbol": quote.get("symbol"),
-            "name": quote.get("name"),
+            "name": quote.get("companyName"),
             "price": quote.get("price"),
             "change": quote.get("change"),
-            "change_percent": quote.get("changesPercentage"),
-            "day_low": quote.get("dayLow"),
-            "day_high": quote.get("dayHigh"),
-            "year_low": quote.get("yearLow"),
-            "year_high": quote.get("yearHigh"),
+            "change_percent": quote.get("changePercentage"),
             "market_cap": quote.get("marketCap"),
             "volume": quote.get("volume"),
-            "avg_volume": quote.get("avgVolume"),
-            "open": quote.get("open"),
-            "previous_close": quote.get("previousClose"),
-            "eps": quote.get("eps"),
-            "pe": quote.get("pe"),
-            "earnings_announcement": quote.get("earningsAnnouncement"),
-            "shares_outstanding": quote.get("sharesOutstanding"),
-            "timestamp": quote.get("timestamp")
+            "avg_volume": quote.get("averageVolume"),
+            "beta": quote.get("beta"),
+            "range_52week": quote.get("range"),
+            "last_dividend": quote.get("lastDividend"),
+            "exchange": quote.get("exchange"),
+            "currency": quote.get("currency")
         },
-        "summary": f"{quote.get('name')} ({symbol}): ${quote.get('price')} ({'+' if quote.get('change', 0) >= 0 else ''}{quote.get('change')}, {'+' if quote.get('changesPercentage', 0) >= 0 else ''}{quote.get('changesPercentage'):.2f}%)"
+        "summary": f"{quote.get('companyName')} ({symbol}): ${quote.get('price')} ({'+' if quote.get('change', 0) >= 0 else ''}{quote.get('change')}, {'+' if quote.get('changePercentage', 0) >= 0 else ''}{quote.get('changePercentage'):.2f}%)"
     }
 
 
@@ -411,11 +365,11 @@ def get_key_metrics(symbol: str, period: str = "annual", limit: int = 5):
     """
     symbol = symbol.upper()
 
-    params = {"limit": limit}
+    params = {"symbol": symbol, "limit": limit}
     if period == "quarter":
         params["period"] = "quarter"
 
-    result = _api_request(f"key-metrics/{symbol}", params)
+    result = _api_request("key-metrics", params)
 
     if not result.get("success"):
         return result
@@ -458,4 +412,42 @@ def get_key_metrics(symbol: str, period: str = "annual", limit: int = 5):
             "metrics": metrics
         },
         "summary": f"{symbol} 주요지표 - PER: {latest.get('pe_ratio', 'N/A')}, PBR: {latest.get('pb_ratio', 'N/A')}, ROE: {latest.get('roe', 'N/A')}"
+    }
+
+
+def search_company(query: str):
+    """
+    기업/종목 검색
+
+    Args:
+        query: 검색어 (기업명)
+
+    Returns:
+        검색 결과 목록
+    """
+    result = _api_request("search-name", {"query": query})
+
+    if not result.get("success"):
+        return result
+
+    data = result["data"]
+    if not data:
+        return {
+            "success": False,
+            "error": f"'{query}' 검색 결과가 없습니다."
+        }
+
+    results = []
+    for item in data[:10]:
+        results.append({
+            "symbol": item.get("symbol"),
+            "name": item.get("name"),
+            "currency": item.get("currency"),
+            "exchange": item.get("exchangeFullName") or item.get("exchange")
+        })
+
+    return {
+        "success": True,
+        "data": results,
+        "summary": f"'{query}' 검색 결과 {len(results)}건"
     }

@@ -263,10 +263,10 @@ function initUserData() {
  * Python 백엔드 시작
  */
 async function startPythonBackend() {
-  // 포트 확인
+  // 포트 확인 - 이미 사용 중이면 기존 서버를 그대로 사용 (start.sh가 먼저 띄운 경우)
   const available = await isPortAvailable(API_PORT);
   if (!available) {
-    console.log(`[Python] 포트 ${API_PORT} 이미 사용 중 - 기존 서버 사용`);
+    console.log(`[Python] 포트 ${API_PORT} 사용 중 - 기존 서버 사용`);
     return;
   }
 

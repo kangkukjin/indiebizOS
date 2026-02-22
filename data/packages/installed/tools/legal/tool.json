@@ -3,7 +3,6 @@
   "name": "Legal",
   "description": "대한민국 법률 정보 검색 도구. 국가법령정보센터(law.go.kr) API를 통해 법령, 판례, 행정규칙, 자치법규, 법령해석, 헌재결정례 등을 검색하고 상세 내용을 조회합니다.",
   "version": "1.0.0",
-  "guide_file": "legal_guide.md",
   "tools": [
     {
       "name": "search_legal_info",
@@ -21,7 +20,9 @@
             "default": "law"
           }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -40,7 +41,9 @@
             "default": "law"
           }
         },
-        "required": ["id"]
+        "required": [
+          "id"
+        ]
       }
     },
     {
@@ -54,7 +57,9 @@
             "description": "검색할 법령 키워드"
           }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -68,7 +73,9 @@
             "description": "조회할 법령의 고유 ID"
           }
         },
-        "required": ["law_id"]
+        "required": [
+          "law_id"
+        ]
       }
     },
     {
@@ -82,7 +89,9 @@
             "description": "검색할 판례 키워드 또는 사건번호"
           }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -96,7 +105,9 @@
             "description": "조회할 판례의 고유 ID"
           }
         },
-        "required": ["precedent_id"]
+        "required": [
+          "precedent_id"
+        ]
       }
     }
   ]

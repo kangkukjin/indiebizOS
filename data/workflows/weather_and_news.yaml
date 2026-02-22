@@ -1,0 +1,4 @@
+name: "아침 알림"
+description: "날씨와 오늘 주요 뉴스를 함께 조회"
+pipeline: '[location:get]("서울") & [web:search]("오늘 주요 뉴스")'
+created: "2026-02-17"

@@ -1,0 +1,49 @@
+node: forge
+actions:
+  slide:
+    description: 프레젠테이션 슬라이드 생성
+    router: handler
+    tool: create_slides
+    target_key: topic
+  video:
+    description: 'HTML+CSS 기반 MP4 영상 생성. 각 씬을 완전한 HTML 문서로 작성. {scenes: [{html: "<!DOCTYPE
+      html>...", duration: 5}], narration_texts: ["나레이션"]}. guide_file 참조 필수.'
+    router: handler
+    tool: create_html_video
+    target_key: topic
+  image:
+    description: AI 이미지 생성
+    router: handler
+    tool: generate_ai_image
+    target_key: prompt
+  tts:
+    description: 텍스트를 음성 파일(MP3)로 변환 (Edge TTS). 동영상 나레이션 등에 활용.
+    router: handler
+    tool: create_tts
+    target_key: text
+  render_video:
+    description: 파일로 저장된 HTML 씬들을 MP4로 렌더링. scene_files(경로+duration 배열) 또는 scene_dir
+      지정. narration_files, bgm_path 옵션.
+    router: handler
+    tool: render_html_video
+    target_key: scene_dir
+  slide_shadcn:
+    description: 'Shadcn UI 스타일 고품질 슬라이드(PNG) 생성. {slides: [{layout: "hero", title:
+      "제목"}, {layout: "features", title: "기능", features: [{icon: "🤖", title: "AI",
+      description: "설명"}]}], theme: "blue"}. layout: hero/features/stats/cta/steps/pricing/testimonial/content_image/custom.'
+    router: handler
+    tool: create_shadcn_slides
+    target_key: topic
+  image_gemini:
+    description: Gemini AI 이미지 생성
+    router: handler
+    tool: generate_gemini_image
+    target_key: prompt
+  render_html:
+    description: HTML을 이미지로 렌더링
+    router: handler
+    tool: render_html_to_image
+    target_key: html
+guides:
+- media_producer/video_workflow_guide.md
+- media_producer/slides_guide.md

@@ -9,22 +9,34 @@ https://kosis.kr/openapi/
 - 통합검색
 - 주요지표 조회
 """
-import requests
+import os
+import sys
 import json
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
-# KOSIS API 인증키
-API_KEY = "NjcyYjY5ODFkMTU2MzU2MDM4YzcwNTA5NDNhMjhlMWE="
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
 
-# KOSIS API 엔드포인트
-BASE_URL = "https://kosis.kr/openapi"
+from common.api_client import api_call
+
+# KOSIS API 인증키 (하드코딩)
+# TODO: KOSIS_API_KEY 환경변수로 전환 필요. auth_manager.py에 이미 등록됨.
+_HARDCODED_API_KEY = "NjcyYjY5ODFkMTU2MzU2MDM4YzcwNTA5NDNhMjhlMWE="
+
+# 환경변수가 없으면 하드코딩 키를 fallback으로 설정
+if not os.environ.get("KOSIS_API_KEY"):
+    os.environ["KOSIS_API_KEY"] = _HARDCODED_API_KEY
+
+# KOSIS API 엔드포인트 (api_client의 BASE_URL: "https://kosis.kr/openapi")
 ENDPOINTS = {
-    "statistics_list": f"{BASE_URL}/statisticsList.do",
-    "statistics_data": f"{BASE_URL}/Param/statisticsParameterData.do",
-    "statistics_info": f"{BASE_URL}/statisticsInfo.do",
-    "integrated_search": f"{BASE_URL}/search/search.do",
-    "indicators": f"{BASE_URL}/indicator/indicator.do"
+    "statistics_list": "/statisticsList.do",
+    "statistics_data": "/Param/statisticsParameterData.do",
+    "statistics_info": "/statisticsInfo.do",
+    "integrated_search": "/search/search.do",
+    "indicators": "/indicator/indicator.do"
 }
 
 # 서비스뷰 코드 설명
@@ -44,30 +56,27 @@ VIEW_CODES = {
 }
 
 
-def _make_request(url: str, params: Dict[str, Any]) -> Dict[str, Any]:
-    """API 요청 공통 함수"""
+def _make_request(endpoint_key: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """API 요청 공통 함수 - common.api_client 사용"""
     try:
-        response = requests.get(url, params=params, timeout=30)
-        response.raise_for_status()
+        endpoint = ENDPOINTS.get(endpoint_key, endpoint_key)
+        result = api_call("kosis", endpoint, params=params, timeout=30)
 
-        # JSON 응답 파싱
-        try:
-            data = response.json()
-        except json.JSONDecodeError:
-            # 일부 API는 JSONP 형식으로 반환할 수 있음
-            text = response.text
+        # api_call은 에러 시 {"error": "..."} 반환, 성공 시 파싱된 JSON 반환
+        if isinstance(result, dict) and "error" in result:
+            return {"success": False, "error": result["error"]}
+
+        # 문자열 응답인 경우 (JSONP 등) 추가 파싱 시도
+        if isinstance(result, str):
+            text = result
             if text.startswith("(") and text.endswith(")"):
                 text = text[1:-1]
-            data = json.loads(text)
+            result = json.loads(text)
 
         return {
             "success": True,
-            "data": data
+            "data": result
         }
-    except requests.exceptions.Timeout:
-        return {"success": False, "error": "요청 시간 초과"}
-    except requests.exceptions.RequestException as e:
-        return {"success": False, "error": f"API 요청 실패: {str(e)}"}
     except Exception as e:
         return {"success": False, "error": f"오류 발생: {str(e)}"}
 
@@ -90,7 +99,6 @@ def search_statistics(
     """
     params = {
         "method": "getList",
-        "apiKey": API_KEY,
         "vwCd": vw_cd,
         "format": "json",
         "jsonVD": "Y"
@@ -102,7 +110,7 @@ def search_statistics(
     if parent_list_id:
         params["parentListId"] = parent_list_id
 
-    result = _make_request(ENDPOINTS["statistics_list"], params)
+    result = _make_request("statistics_list", params)
 
     if result["success"] and result.get("data"):
         data = result["data"]
@@ -164,7 +172,6 @@ def get_statistics_data(
 
     params = {
         "method": "getList",
-        "apiKey": API_KEY,
         "orgId": org_id,
         "tblId": tbl_id,
         "itmId": itm_id,
@@ -182,7 +189,7 @@ def get_statistics_data(
     if obj_l3 and obj_l3 != "ALL":
         params["objL3"] = obj_l3
 
-    result = _make_request(ENDPOINTS["statistics_data"], params)
+    result = _make_request("statistics_data", params)
 
     if result["success"] and result.get("data"):
         data = result["data"]
@@ -240,14 +247,13 @@ def get_statistics_info(
     """
     params = {
         "method": "getList",
-        "apiKey": API_KEY,
         "orgId": org_id,
         "tblId": tbl_id,
         "format": "json",
         "jsonVD": "Y"
     }
 
-    result = _make_request(ENDPOINTS["statistics_info"], params)
+    result = _make_request("statistics_info", params)
 
     if result["success"] and result.get("data"):
         data = result["data"]
@@ -285,14 +291,13 @@ def integrated_search(
     """
     params = {
         "method": "getList",
-        "apiKey": API_KEY,
         "searchNm": keyword,
         "resultCount": min(count, 100),
         "format": "json",
         "jsonVD": "Y"
     }
 
-    result = _make_request(ENDPOINTS["integrated_search"], params)
+    result = _make_request("integrated_search", params)
 
     if result["success"] and result.get("data"):
         data = result["data"]
@@ -333,7 +338,6 @@ def get_indicators(
     """
     params = {
         "method": "getList",
-        "apiKey": API_KEY,
         "format": "json",
         "jsonVD": "Y"
     }
@@ -345,7 +349,7 @@ def get_indicators(
         if end_prd_de:
             params["endPrdDe"] = end_prd_de
 
-    result = _make_request(ENDPOINTS["indicators"], params)
+    result = _make_request("indicators", params)
 
     if result["success"] and result.get("data"):
         data = result["data"]

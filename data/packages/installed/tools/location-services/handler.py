@@ -1,17 +1,23 @@
 import os
+import sys
 import json
 import requests
 from datetime import datetime
 import re
 
-# API Keys (환경변수에서 로드)
-NINJAS_API_KEY = os.environ.get("NINJAS_API_KEY", "")
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.api_client import api_call, api_call_raw
+from common.auth_manager import check_api_key
+from common.response_formatter import error_response
+
+# Amadeus OAuth2 토큰용 (직접 관리 필요)
 AMADEUS_API_KEY = os.environ.get("AMADEUS_API_KEY", "")
 AMADEUS_API_SECRET = os.environ.get("AMADEUS_API_SECRET", "")
 AMADEUS_BASE_URL = "https://test.api.amadeus.com"
-KAKAO_REST_API_KEY = os.environ.get("KAKAO_REST_API_KEY", "")
-NAVER_CLIENT_ID = os.environ.get("NAVER_CLIENT_ID", "")
-NAVER_CLIENT_SECRET = os.environ.get("NAVER_CLIENT_SECRET", "")
 
 def get_amadeus_token():
     auth_url = f"{AMADEUS_BASE_URL}/v1/security/oauth2/token"
@@ -43,13 +49,10 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
         size: 결과 수 (최대 15)
         sort: 정렬 (accuracy: 정확도순, distance: 거리순)
     """
-    if not KAKAO_REST_API_KEY:
-        return {"error": "KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다. https://developers.kakao.com 에서 발급받으세요."}
+    key_ok, key_error = check_api_key("kakao")
+    if not key_ok:
+        return {"error": f"{key_error} https://developers.kakao.com 에서 발급받으세요."}
 
-    url = "https://dapi.kakao.com/v2/local/search/keyword.json"
-    headers = {
-        "Authorization": f"KakaoAK {KAKAO_REST_API_KEY}"
-    }
     params = {
         "query": query,
         "category_group_code": "FD6",  # 음식점 카테고리
@@ -62,37 +65,30 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
         params["y"] = y
         params["radius"] = min(radius, 20000)
 
-    try:
-        response = requests.get(url, headers=headers, params=params, timeout=10)
-        if response.status_code != 200:
-            return {"error": f"카카오 API 오류: {response.status_code} - {response.text}"}
+    data = api_call("kakao", "/v2/local/search/keyword.json", params=params, timeout=10)
+    if isinstance(data, dict) and "error" in data:
+        return data
 
-        data = response.json()
-        documents = data.get("documents", [])
+    documents = data.get("documents", [])
 
-        restaurants = []
-        for doc in documents:
-            restaurants.append({
-                "name": doc.get("place_name", ""),
-                "category": doc.get("category_name", ""),
-                "address": doc.get("road_address_name") or doc.get("address_name", ""),
-                "phone": doc.get("phone", ""),
-                "url": doc.get("place_url", ""),
-                "distance": doc.get("distance", ""),
-                "x": doc.get("x", ""),
-                "y": doc.get("y", "")
-            })
+    restaurants = []
+    for doc in documents:
+        restaurants.append({
+            "name": doc.get("place_name", ""),
+            "category": doc.get("category_name", ""),
+            "address": doc.get("road_address_name") or doc.get("address_name", ""),
+            "phone": doc.get("phone", ""),
+            "url": doc.get("place_url", ""),
+            "distance": doc.get("distance", ""),
+            "x": doc.get("x", ""),
+            "y": doc.get("y", "")
+        })
 
-        return {
-            "total": data.get("meta", {}).get("total_count", 0),
-            "restaurants": restaurants,
-            "message": f"'{query}' 검색 결과 {len(restaurants)}개의 맛집을 찾았습니다."
-        }
-
-    except requests.exceptions.Timeout:
-        return {"error": "카카오 API 요청 시간 초과"}
-    except Exception as e:
-        return {"error": f"맛집 검색 실패: {str(e)}"}
+    return {
+        "total": data.get("meta", {}).get("total_count", 0),
+        "restaurants": restaurants,
+        "message": f"'{query}' 검색 결과 {len(restaurants)}개의 맛집을 찾았습니다."
+    }
 
 
 def search_naver_local(query: str, display: int = 5, sort: str = "random"):
@@ -104,55 +100,44 @@ def search_naver_local(query: str, display: int = 5, sort: str = "random"):
         display: 결과 수 (최대 5)
         sort: 정렬 (random: 정확도순, comment: 리뷰순)
     """
-    if not NAVER_CLIENT_ID or not NAVER_CLIENT_SECRET:
-        return {"error": "네이버 API 키가 설정되지 않았습니다. https://developers.naver.com 에서 발급받으세요."}
+    key_ok, key_error = check_api_key("naver")
+    if not key_ok:
+        return {"error": f"{key_error} https://developers.naver.com 에서 발급받으세요."}
 
-    url = "https://openapi.naver.com/v1/search/local.json"
-    headers = {
-        "X-Naver-Client-Id": NAVER_CLIENT_ID,
-        "X-Naver-Client-Secret": NAVER_CLIENT_SECRET
-    }
     params = {
         "query": query,
         "display": min(display, 5),
         "sort": sort
     }
 
-    try:
-        response = requests.get(url, headers=headers, params=params, timeout=10)
-        if response.status_code != 200:
-            return {"error": f"네이버 API 오류: {response.status_code} - {response.text}"}
+    data = api_call("naver", "/v1/search/local.json", params=params, timeout=10)
+    if isinstance(data, dict) and "error" in data:
+        return data
 
-        data = response.json()
-        items = data.get("items", [])
+    items = data.get("items", [])
 
-        # HTML 태그 제거 함수
-        def clean_html(text):
-            return re.sub('<[^<]+?>', '', text) if text else ""
+    # HTML 태그 제거 함수
+    def clean_html(text):
+        return re.sub('<[^<]+?>', '', text) if text else ""
 
-        restaurants = []
-        for item in items:
-            restaurants.append({
-                "name": clean_html(item.get("title", "")),
-                "category": item.get("category", ""),
-                "address": item.get("roadAddress") or item.get("address", ""),
-                "phone": item.get("telephone", ""),
-                "url": item.get("link", ""),
-                "description": clean_html(item.get("description", "")),
-                "mapx": item.get("mapx", ""),
-                "mapy": item.get("mapy", "")
-            })
+    restaurants = []
+    for item in items:
+        restaurants.append({
+            "name": clean_html(item.get("title", "")),
+            "category": item.get("category", ""),
+            "address": item.get("roadAddress") or item.get("address", ""),
+            "phone": item.get("telephone", ""),
+            "url": item.get("link", ""),
+            "description": clean_html(item.get("description", "")),
+            "mapx": item.get("mapx", ""),
+            "mapy": item.get("mapy", "")
+        })
 
-        return {
-            "total": data.get("total", 0),
-            "restaurants": restaurants,
-            "message": f"[네이버] '{query}' 검색 결과 {len(restaurants)}개를 찾았습니다."
-        }
-
-    except requests.exceptions.Timeout:
-        return {"error": "네이버 API 요청 시간 초과"}
-    except Exception as e:
-        return {"error": f"네이버 검색 실패: {str(e)}"}
+    return {
+        "total": data.get("total", 0),
+        "restaurants": restaurants,
+        "message": f"[네이버] '{query}' 검색 결과 {len(restaurants)}개를 찾았습니다."
+    }
 
 
 def search_restaurants_combined(query: str, x: str = None, y: str = None,
@@ -214,39 +199,24 @@ def reverse_geocode_kakao(x: float, y: float):
         x: 경도 (longitude)
         y: 위도 (latitude)
     """
-    if not KAKAO_REST_API_KEY:
-        return {"error": "KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다."}
+    key_ok, key_error = check_api_key("kakao")
+    if not key_ok:
+        return {"error": key_error}
 
-    url = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json"
-    headers = {
-        "Authorization": f"KakaoAK {KAKAO_REST_API_KEY}"
-    }
     params = {
         "x": x,
         "y": y
     }
 
-    try:
-        response = requests.get(url, headers=headers, params=params, timeout=10)
-        if response.status_code != 200:
-            return {"error": f"카카오 API 오류: {response.status_code}"}
+    data = api_call("kakao", "/v2/local/geo/coord2regioncode.json", params=params, timeout=10)
+    if isinstance(data, dict) and "error" in data:
+        return data
 
-        data = response.json()
-        documents = data.get("documents", [])
+    documents = data.get("documents", [])
 
-        # 행정동(H) 또는 법정동(B) 중 하나 선택 (보통 H가 행정구역 명칭으로 적합)
-        for doc in documents:
-            if doc.get("region_type") == "H":
-                return {
-                    "address": doc.get("address_name", ""),
-                    "region_1depth": doc.get("region_1depth_name", ""),
-                    "region_2depth": doc.get("region_2depth_name", ""),
-                    "region_3depth": doc.get("region_3depth_name", ""),
-                    "region_4depth": doc.get("region_4depth_name", "")
-                }
-
-        if documents:
-            doc = documents[0]
+    # 행정동(H) 또는 법정동(B) 중 하나 선택 (보통 H가 행정구역 명칭으로 적합)
+    for doc in documents:
+        if doc.get("region_type") == "H":
             return {
                 "address": doc.get("address_name", ""),
                 "region_1depth": doc.get("region_1depth_name", ""),
@@ -255,10 +225,17 @@ def reverse_geocode_kakao(x: float, y: float):
                 "region_4depth": doc.get("region_4depth_name", "")
             }
 
-        return {"error": "결과가 없습니다."}
+    if documents:
+        doc = documents[0]
+        return {
+            "address": doc.get("address_name", ""),
+            "region_1depth": doc.get("region_1depth_name", ""),
+            "region_2depth": doc.get("region_2depth_name", ""),
+            "region_3depth": doc.get("region_3depth_name", ""),
+            "region_4depth": doc.get("region_4depth_name", "")
+        }
 
-    except Exception as e:
-        return {"error": str(e)}
+    return {"error": "결과가 없습니다."}
 
 
 def generate_route_map_data(origin_coord: tuple, dest_coord: tuple,
@@ -328,14 +305,9 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
     Returns:
         경로 정보 (거리, 시간, 요금, 구간별 안내, 지도 파일 경로)
     """
-    if not KAKAO_REST_API_KEY:
-        return {"error": "KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다."}
-
-    url = "https://apis-navi.kakaomobility.com/v1/directions"
-    headers = {
-        "Authorization": f"KakaoAK {KAKAO_REST_API_KEY}",
-        "Content-Type": "application/json"
-    }
+    key_ok, key_error = check_api_key("kakao")
+    if not key_ok:
+        return {"error": key_error}
 
     params = {
         "origin": origin,
@@ -350,13 +322,14 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
     if avoid:
         params["avoid"] = avoid
 
+    data = api_call("kakao", "/v1/directions",
+                    params=params, timeout=15,
+                    base_url="https://apis-navi.kakaomobility.com",
+                    extra_headers={"Content-Type": "application/json"})
+    if isinstance(data, dict) and "error" in data:
+        return data
+
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=15)
-
-        if response.status_code != 200:
-            return {"error": f"카카오 네비 API 오류: {response.status_code} - {response.text}"}
-
-        data = response.json()
         routes = data.get("routes", [])
 
         if not routes:
@@ -473,8 +446,6 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
 
         return result
 
-    except requests.exceptions.Timeout:
-        return {"error": "카카오 네비 API 요청 시간 초과"}
     except Exception as e:
         return {"error": f"길찾기 실패: {str(e)}"}
 
@@ -500,27 +471,22 @@ def show_location_map(query: str = None, lat: float = None, lng: float = None,
 
     # 장소명으로 검색
     if query and (lat is None or lng is None):
-        if not KAKAO_REST_API_KEY:
-            return {"error": "KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다."}
+        key_ok, key_error = check_api_key("kakao")
+        if not key_ok:
+            return {"error": key_error}
 
-        try:
-            url = "https://dapi.kakao.com/v2/local/search/keyword.json"
-            headers = {"Authorization": f"KakaoAK {KAKAO_REST_API_KEY}"}
-            params = {"query": query, "size": 1}
+        data = api_call("kakao", "/v2/local/search/keyword.json",
+                        params={"query": query, "size": 1}, timeout=10)
+        if isinstance(data, dict) and "error" in data:
+            return data
 
-            response = requests.get(url, headers=headers, params=params, timeout=10)
-            data = response.json()
-
-            if data.get("documents"):
-                place = data["documents"][0]
-                center_lng = float(place["x"])
-                center_lat = float(place["y"])
-                center_name = place.get("place_name", query)
-            else:
-                return {"error": f"'{query}' 장소를 찾을 수 없습니다."}
-
-        except Exception as e:
-            return {"error": f"장소 검색 실패: {str(e)}"}
+        if data.get("documents"):
+            place = data["documents"][0]
+            center_lng = float(place["x"])
+            center_lat = float(place["y"])
+            center_name = place.get("place_name", query)
+        else:
+            return {"error": f"'{query}' 장소를 찾을 수 없습니다."}
 
     if center_lat is None or center_lng is None:
         return {"error": "위치 정보가 필요합니다. query 또는 lat/lng를 지정하세요."}
@@ -567,45 +533,26 @@ def get_api_ninjas_data(endpoint: str, params: dict = None) -> dict:
         - riddles: 수수께끼
         - historicalevents: 역사적 사건 (day, month, year)
     """
-    if not NINJAS_API_KEY:
-        return {"error": "NINJAS_API_KEY 환경변수가 설정되지 않았습니다. https://api-ninjas.com 에서 발급받으세요."}
+    key_ok, key_error = check_api_key("ninjas")
+    if not key_ok:
+        return {"error": f"{key_error} https://api-ninjas.com 에서 발급받으세요."}
 
-    base_url = "https://api.api-ninjas.com/v1"
-    url = f"{base_url}/{endpoint}"
+    data = api_call("ninjas", f"/{endpoint}", params=params or {}, timeout=15)
+    if isinstance(data, dict) and "error" in data:
+        return data
 
-    headers = {
-        "X-Api-Key": NINJAS_API_KEY
-    }
-
-    try:
-        response = requests.get(url, headers=headers, params=params or {}, timeout=15)
-
-        if response.status_code == 401:
-            return {"error": "API Ninjas 인증 실패. API 키를 확인하세요."}
-        elif response.status_code == 400:
-            return {"error": f"잘못된 요청: {response.text}"}
-        elif response.status_code != 200:
-            return {"error": f"API Ninjas 오류: {response.status_code} - {response.text}"}
-
-        data = response.json()
-
-        # 결과가 리스트인 경우 (대부분의 엔드포인트)
-        if isinstance(data, list):
-            return {
-                "endpoint": endpoint,
-                "count": len(data),
-                "results": data
-            }
-        else:
-            return {
-                "endpoint": endpoint,
-                "result": data
-            }
-
-    except requests.exceptions.Timeout:
-        return {"error": "API Ninjas 요청 시간 초과"}
-    except Exception as e:
-        return {"error": f"API Ninjas 조회 실패: {str(e)}"}
+    # 결과가 리스트인 경우 (대부분의 엔드포인트)
+    if isinstance(data, list):
+        return {
+            "endpoint": endpoint,
+            "count": len(data),
+            "results": data
+        }
+    else:
+        return {
+            "endpoint": endpoint,
+            "result": data
+        }
 
 
 def amadeus_travel_search(endpoint: str, params: dict) -> dict:
@@ -624,57 +571,51 @@ def amadeus_travel_search(endpoint: str, params: dict) -> dict:
         호텔: endpoint="hotel-list", params={"cityCode": "PAR"}
         관광지: endpoint="points-of-interest", params={"latitude": 48.8566, "longitude": 2.3522}
     """
-    if not AMADEUS_API_KEY or not AMADEUS_API_SECRET:
-        return {"error": "AMADEUS_API_KEY/AMADEUS_API_SECRET 환경변수가 설정되지 않았습니다. https://developers.amadeus.com 에서 발급받으세요."}
+    key_ok, key_error = check_api_key("amadeus")
+    if not key_ok:
+        return {"error": f"{key_error} https://developers.amadeus.com 에서 발급받으세요."}
 
     # 토큰 획득
     token = get_amadeus_token()
     if not token:
         return {"error": "Amadeus API 인증 실패. API 키를 확인하세요."}
 
-    headers = {
-        "Authorization": f"Bearer {token}"
+    # 엔드포인트별 URL 매핑
+    endpoint_urls = {
+        "flight-offers": f"{AMADEUS_BASE_URL}/v2/shopping/flight-offers",
+        "hotel-list": f"{AMADEUS_BASE_URL}/v1/reference-data/locations/hotels/by-city",
+        "points-of-interest": f"{AMADEUS_BASE_URL}/v1/reference-data/locations/pois",
+        "airport-routes": f"{AMADEUS_BASE_URL}/v1/airport/direct-destinations",
+        "city-search": f"{AMADEUS_BASE_URL}/v1/reference-data/locations"
     }
 
-    try:
-        # 엔드포인트별 URL 매핑
-        endpoint_urls = {
-            "flight-offers": f"{AMADEUS_BASE_URL}/v2/shopping/flight-offers",
-            "hotel-list": f"{AMADEUS_BASE_URL}/v1/reference-data/locations/hotels/by-city",
-            "points-of-interest": f"{AMADEUS_BASE_URL}/v1/reference-data/locations/pois",
-            "airport-routes": f"{AMADEUS_BASE_URL}/v1/airport/direct-destinations",
-            "city-search": f"{AMADEUS_BASE_URL}/v1/reference-data/locations"
-        }
+    url = endpoint_urls.get(endpoint)
+    if not url:
+        available = ", ".join(endpoint_urls.keys())
+        return {"error": f"지원하지 않는 엔드포인트: {endpoint}. 사용 가능: {available}"}
 
-        url = endpoint_urls.get(endpoint)
-        if not url:
-            available = ", ".join(endpoint_urls.keys())
-            return {"error": f"지원하지 않는 엔드포인트: {endpoint}. 사용 가능: {available}"}
+    data = api_call_raw(url, headers={"Authorization": f"Bearer {token}"},
+                        params=params, timeout=20)
 
-        response = requests.get(url, headers=headers, params=params, timeout=20)
+    # api_call_raw returns parsed JSON or error dict
+    if isinstance(data, dict) and "error" in data:
+        return data
 
-        if response.status_code == 401:
-            return {"error": "Amadeus API 인증 만료. 다시 시도하세요."}
-        elif response.status_code == 400:
-            error_detail = response.json().get("errors", [{}])[0].get("detail", response.text)
-            return {"error": f"잘못된 요청: {error_detail}"}
-        elif response.status_code != 200:
-            return {"error": f"Amadeus API 오류: {response.status_code} - {response.text[:500]}"}
+    # data가 문자열이면 JSON 파싱 시도
+    if isinstance(data, str):
+        try:
+            data = json.loads(data)
+        except json.JSONDecodeError:
+            return {"error": f"Amadeus API 응답 파싱 실패: {data[:500]}"}
 
-        data = response.json()
-        results = data.get("data", [])
+    results = data.get("data", [])
 
-        return {
-            "endpoint": endpoint,
-            "count": len(results) if isinstance(results, list) else 1,
-            "results": results[:20] if isinstance(results, list) else results,  # 최대 20개
-            "meta": data.get("meta", {})
-        }
-
-    except requests.exceptions.Timeout:
-        return {"error": "Amadeus API 요청 시간 초과"}
-    except Exception as e:
-        return {"error": f"Amadeus 여행 검색 실패: {str(e)}"}
+    return {
+        "endpoint": endpoint,
+        "count": len(results) if isinstance(results, list) else 1,
+        "results": results[:20] if isinstance(results, list) else results,  # 최대 20개
+        "meta": data.get("meta", {})
+    }
 
 
 def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:

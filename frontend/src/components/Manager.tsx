@@ -26,7 +26,6 @@ import {
   AgentCard,
   SwitchDialog,
   NoteDialog,
-  ToolAIDialog,
   AgentEditDialog,
   TeamChatDialog,
   SettingsDialog,
@@ -37,9 +36,6 @@ import type {
   TeamChatMessage,
   SwitchForm,
   AgentForm,
-  ToolAIForm,
-  Tool,
-  ToolSettings,
 } from './manager-dialogs';
 
 export function Manager() {
@@ -95,7 +91,6 @@ export function Manager() {
 
   // 설정 다이얼로그 상태
   const [settingsTab, setSettingsTab] = useState<'channels' | 'tools' | 'agents'>('agents');
-  const [tools, setTools] = useState<Tool[]>([]);
   const [showAgentEditDialog, setShowAgentEditDialog] = useState(false);
   const [editingAgentData, setEditingAgentData] = useState<Agent | null>(null);
   const [agentForm, setAgentForm] = useState<AgentForm>({
@@ -113,22 +108,9 @@ export function Manager() {
     nostrKeyName: '',
     nostrPrivateKey: '',
     nostrRelays: 'wss://relay.damus.io,wss://relay.nostr.band,wss://nos.lol',
-    allowedTools: [],
+    allowedNodes: [],
   });
-  const [allTools, setAllTools] = useState<Tool[]>([]);
-  const [baseTools, setBaseTools] = useState<string[]>([]);
   const [defaultTools, setDefaultTools] = useState<string[]>([]);
-  const [toolPackages, setToolPackages] = useState<{ id: string; name: string; description: string; tool_count: number }[]>([]);
-
-  // 도구 AI 설정 다이얼로그 상태
-  const [showToolAIDialog, setShowToolAIDialog] = useState(false);
-  const [editingToolAI, setEditingToolAI] = useState<{ name: string; config_key: string } | null>(null);
-  const [toolAIForm, setToolAIForm] = useState<ToolAIForm>({
-    provider: 'gemini',
-    model: 'gemini-2.0-flash',
-    apiKey: '',
-  });
-  const [toolSettings, setToolSettings] = useState<ToolSettings>({});
 
 
   // ============ useEffect 훅들 ============
@@ -238,23 +220,8 @@ export function Manager() {
     if (!currentProject) return;
 
     try {
-      const toolsResponse = await api.getTools();
-      if (toolsResponse && toolsResponse.tools) {
-        setTools(toolsResponse.tools);
-        setAllTools(toolsResponse.tools);
-        setBaseTools(toolsResponse.base_tools || []);
-        setToolPackages(toolsResponse.packages || []);
-      }
-
-      try {
-        const settings = await api.getToolSettings();
-        setToolSettings(settings);
-      } catch {
-        // 설정 없으면 무시
-      }
-
       const config = await api.getProjectConfig(currentProject.id);
-      // 프로젝트 기본 도구 로드
+      // 프로젝트 기본 노드 로드
       if (config.default_tools) {
         setDefaultTools(config.default_tools as string[]);
       } else {
@@ -445,11 +412,11 @@ export function Manager() {
     if (!currentProject) return;
     try {
       await api.updateProjectConfig(currentProject.id, { default_tools: defaultTools });
-      addLog(`[설정] 기본 도구가 저장되었습니다. (${defaultTools.length}개)`);
+      addLog(`[설정] 기본 노드가 저장되었습니다. (${defaultTools.length}개)`);
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message :
         (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
-      addLog(`[오류] 기본 도구 저장 실패: ${errMsg}`);
+      addLog(`[오류] 기본 노드 저장 실패: ${errMsg}`);
     }
   };
 
@@ -524,19 +491,8 @@ export function Manager() {
       nostrKeyName,
       nostrPrivateKey,
       nostrRelays,
-      allowedTools: [...new Set([...defaultTools, ...(agent.allowed_tools || [])])],
+      allowedNodes: [...(agent.allowed_nodes || [])],
     });
-
-    try {
-      const toolsResponse = await api.getTools();
-      if (toolsResponse && toolsResponse.tools) {
-        setAllTools(toolsResponse.tools);
-        setBaseTools(toolsResponse.base_tools || []);
-        setToolPackages(toolsResponse.packages || []);
-      }
-    } catch {
-      // 무시
-    }
 
     setShowAgentEditDialog(true);
   };
@@ -558,19 +514,8 @@ export function Manager() {
       nostrKeyName: '',
       nostrPrivateKey: '',
       nostrRelays: 'wss://relay.damus.io,wss://relay.nostr.band,wss://nos.lol',
-      allowedTools: [...defaultTools],
+      allowedNodes: [],
     });
-
-    try {
-      const toolsResponse = await api.getTools();
-      if (toolsResponse && toolsResponse.tools) {
-        setAllTools(toolsResponse.tools);
-        setBaseTools(toolsResponse.base_tools || []);
-        setToolPackages(toolsResponse.packages || []);
-      }
-    } catch {
-      // 무시
-    }
 
     setShowAgentEditDialog(true);
   };
@@ -625,7 +570,7 @@ export function Manager() {
         model: agentForm.model,
         api_key: agentForm.apiKey || undefined,
         role: agentForm.role || undefined,
-        allowed_tools: agentForm.allowedTools.length > 0 ? agentForm.allowedTools : undefined,
+        allowed_nodes: agentForm.allowedNodes.length > 0 ? agentForm.allowedNodes : undefined,
         channel: primaryChannel,
         email: agentForm.email || undefined,
         gmail,
@@ -668,65 +613,21 @@ export function Manager() {
   const handleAutoAssignTools = async () => {
     if (!currentProject) return;
 
-    if (!confirm('시스템 AI가 모든 에이전트의 도구를 재배분합니다.\n기존에 수동으로 설정한 도구도 덮어씌워집니다.\n\n계속하시겠습니까?')) return;
+    if (!confirm('시스템 AI가 모든 에이전트의 노드를 재배분합니다.\n기존에 수동으로 설정한 노드도 덮어씌워집니다.\n\n계속하시겠습니까?')) return;
 
     try {
-      addLog('[설정] 도구 자동 배분 시작...');
+      addLog('[설정] 노드 자동 배분 시작...');
       const result = await api.autoAssignTools(currentProject.id);
       if (result.status === 'success') {
-        addLog('[설정] 도구 자동 배분이 완료되었습니다.');
+        addLog('[설정] 노드 자동 배분이 완료되었습니다.');
         loadAgents(currentProject.id);
       } else {
         addLog(`[오류] ${result.status}`);
       }
     } catch (error) {
-      addLog(`[오류] 도구 자동 배분 실패: ${error}`);
+      addLog(`[오류] 노드 자동 배분 실패: ${error}`);
     }
   };
-
-  const handleEditToolAI = async (tool: Tool) => {
-    const configKey = tool.ai_config_key || tool.name;
-    setEditingToolAI({ name: tool.name, config_key: configKey });
-
-    try {
-      const settings = await api.getToolSetting(configKey);
-      setToolAIForm({
-        provider: settings.provider || 'gemini',
-        model: settings.model || 'gemini-2.0-flash',
-        apiKey: settings.api_key || '',
-      });
-    } catch {
-      setToolAIForm({
-        provider: 'gemini',
-        model: 'gemini-2.0-flash',
-        apiKey: '',
-      });
-    }
-
-    setShowToolAIDialog(true);
-  };
-
-  const handleSaveToolAI = async () => {
-    if (!editingToolAI) return;
-
-    try {
-      await api.updateToolSetting(editingToolAI.config_key, {
-        provider: toolAIForm.provider,
-        model: toolAIForm.model,
-        api_key: toolAIForm.apiKey,
-      });
-      addLog(`[설정] ${editingToolAI.name} 도구 AI 설정이 저장되었습니다.`);
-      setShowToolAIDialog(false);
-      setEditingToolAI(null);
-      const settings = await api.getToolSettings();
-      setToolSettings(settings);
-    } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message :
-        (typeof error === 'object' && error !== null ? (error as Record<string, unknown>).detail || (error as Record<string, unknown>).message || '알 수 없는 오류' : String(error));
-      addLog(`[오류] 도구 AI 설정 저장 실패: ${errMsg}`);
-    }
-  };
-
 
   const handleCreateSwitch = async () => {
     if (!switchForm.name || !switchForm.command || !switchForm.agentName) {
@@ -988,24 +889,10 @@ export function Manager() {
         onEditAgentSettings={handleEditAgentSettings}
         onDeleteAgentSettings={handleDeleteAgentSettings}
         onAutoAssignTools={handleAutoAssignTools}
-        tools={tools}
-        toolPackages={toolPackages}
-        toolSettings={toolSettings}
-        onEditToolAI={handleEditToolAI}
         defaultTools={defaultTools}
         onToggleDefaultTool={handleToggleDefaultTool}
         onSaveDefaultTools={handleSaveDefaultTools}
       />
-
-      <ToolAIDialog
-        show={showToolAIDialog}
-        onClose={() => setShowToolAIDialog(false)}
-        editingToolAI={editingToolAI}
-        toolAIForm={toolAIForm}
-        setToolAIForm={setToolAIForm}
-        onSaveToolAI={handleSaveToolAI}
-      />
-
 
       <AgentEditDialog
         show={showAgentEditDialog}
@@ -1013,9 +900,6 @@ export function Manager() {
         editingAgentData={editingAgentData}
         agentForm={agentForm}
         setAgentForm={setAgentForm}
-        allTools={allTools}
-        baseTools={baseTools}
-        toolPackages={toolPackages}
         onSaveAgentSettings={handleSaveAgentSettings}
       />
 

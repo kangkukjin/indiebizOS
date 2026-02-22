@@ -1,0 +1,78 @@
+node: forge
+actions:
+  registry:
+    description: 사이트 레지스트리 관리 (등록/목록/삭제/업데이트)
+    target_description: 사이트 ID
+    router: handler
+    tool: site_registry
+    target_key: site_id
+  snapshot:
+    description: 사이트 스냅샷 (현재 상태 캡처)
+    target_description: 사이트 ID
+    router: handler
+    tool: site_snapshot
+    target_key: site_id
+  live_check:
+    description: 사이트 상태 확인 (Lighthouse 품질 검사)
+    target_description: 사이트 ID 또는 URL
+    router: handler
+    tool: site_live_check
+    target_key: site_id
+  create_site:
+    description: '새 프로젝트 생성 (템플릿: blank/landing/portfolio/blog/business)'
+    target_description: 프로젝트명
+    router: handler
+    tool: create_project
+    target_key: name
+  add_component:
+    description: shadcn/ui 컴포넌트 추가
+    target_description: 프로젝트 경로
+    router: handler
+    tool: add_component
+    target_key: project_path
+  list_components:
+    description: 사용 가능한 컴포넌트 목록
+    router: handler
+    tool: list_components
+  list_sections:
+    description: 사용 가능한 섹션 템플릿 목록
+    router: handler
+    tool: list_sections
+  create_page:
+    description: 페이지 생성 (섹션 조합)
+    target_description: 프로젝트 경로
+    router: handler
+    tool: create_page
+    target_key: project_path
+  edit_styles:
+    description: 테마/스타일 변경 (색상, 라운딩 등)
+    target_description: 프로젝트 경로
+    router: handler
+    tool: edit_styles
+    target_key: project_path
+  preview:
+    description: 로컬 미리보기 서버 (start/stop/status)
+    target_description: 프로젝트 경로
+    router: handler
+    tool: preview_site
+    target_key: project_path
+  build:
+    description: 프로덕션 빌드
+    target_description: 프로젝트 경로
+    router: handler
+    tool: build_site
+    target_key: project_path
+  deploy:
+    description: Vercel 배포
+    target_description: 프로젝트 경로
+    router: handler
+    tool: deploy_vercel
+    target_key: project_path
+  fetch_component:
+    description: 외부 컴포넌트 가져오기
+    target_description: 컴포넌트명
+    router: handler
+    tool: fetch_component
+    target_key: component
+guides:
+- web-builder/web_builder_guide.md

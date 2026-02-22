@@ -1,0 +1,49 @@
+node: forge
+actions:
+  chart:
+    description: 데이터 차트 생성 (line, bar, pie 등)
+    router: handler
+    tool: line_chart
+    target_key: title
+  line:
+    description: 라인 차트
+    target_description: 차트 제목
+    router: handler
+    tool: line_chart
+    target_key: title
+  bar:
+    description: 바 차트 (수평/수직, 스택)
+    target_description: 차트 제목
+    router: handler
+    tool: bar_chart
+    target_key: title
+  candlestick:
+    description: 캔들스틱 차트 (OHLCV, 이동평균)
+    target_description: 차트 제목
+    router: handler
+    tool: candlestick_chart
+    target_key: title
+  pie:
+    description: 파이/도넛 차트
+    target_description: 차트 제목
+    router: handler
+    tool: pie_chart
+    target_key: title
+  scatter:
+    description: 산점도 (추세선 옵션)
+    target_description: 차트 제목
+    router: handler
+    tool: scatter_plot
+    target_key: title
+  heatmap:
+    description: 히트맵
+    target_description: 차트 제목
+    router: handler
+    tool: heatmap
+    target_key: title
+  multi:
+    description: 복합 차트 대시보드 (여러 차트 조합)
+    target_description: 대시보드 제목
+    router: handler
+    tool: multi_chart
+    target_key: title

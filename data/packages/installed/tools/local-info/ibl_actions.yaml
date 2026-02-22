@@ -1,0 +1,18 @@
+node: source
+actions:
+  search_local:
+    description: 지역 가게/상점 정보 검색 (카페/지도)
+    target_description: 검색어
+    router: handler
+    tool: local_search
+    target_key: query
+  local_query:
+    description: 축적된 지역 정보 DB 조회
+    target_description: 검색어
+    router: handler
+    tool: local_db_query
+    target_key: query
+  save:
+    description: 가게 정보/커뮤니티 언급 DB 저장
+    router: handler
+    tool: local_db_save

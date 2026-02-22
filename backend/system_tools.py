@@ -14,7 +14,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any
 
-from tool_loader import build_tool_package_map, load_tool_handler, get_all_tool_names, get_tool_guide
+from tool_loader import load_tool_handler, get_all_tool_names, get_tool_guide, get_tool_guide_path
+from api_engine import is_registry_tool, execute_tool as registry_execute_tool
 
 
 # ============ Async 핸들러 지원: 영구 이벤트 루프 ============
@@ -49,6 +50,122 @@ def _run_coroutine(coro, timeout=120):
 
 # 가이드가 이미 주입된 도구 추적 (agent_id:tool_name)
 _guide_injected: set = set()
+
+
+# ============ IBL 형식 로깅 ============
+
+# ibl_* 도구 → 노드 매핑 (현재 6개 노드: system, interface, messenger, source, stream, forge)
+_IBL_TOOL_PREFIX_MAP = {
+    # 현재 노드
+    "ibl_system": "system", "ibl_interface": "interface",
+    "ibl_messenger": "messenger", "ibl_source": "source",
+    "ibl_stream": "stream", "ibl_forge": "forge",
+    # 하위 호환: 구 도구명 → 현재 노드
+    "ibl_android": "interface", "ibl_browser": "interface", "ibl_desktop": "interface",
+    "ibl_youtube": "stream", "ibl_radio": "stream",
+    "ibl_informant": "source", "ibl_librarian": "source",
+    "ibl_photo": "source", "ibl_blog": "source",
+    "ibl_memory": "source", "ibl_health": "source",
+    "ibl_finance": "source", "ibl_culture": "source", "ibl_study": "source",
+    "ibl_legal": "source", "ibl_statistics": "source",
+    "ibl_commerce": "source", "ibl_location": "source",
+    "ibl_web": "source", "ibl_info": "source",
+    "ibl_creator": "forge", "ibl_webdev": "forge", "ibl_design": "forge",
+    "ibl_orchestrator": "system", "ibl_workflow": "system",
+    "ibl_automation": "system", "ibl_output": "system",
+    "ibl_user": "system", "ibl_filesystem": "system", "ibl_fs": "system",
+    # 특수
+    "execute_ibl": "ibl",
+}
+
+# 시스템 도구 → IBL 표기 매핑
+_SYSTEM_IBL_MAP = {
+    "call_agent": ("system", "delegate"),
+    "list_agents": ("system", "list_agents"),
+    "send_notification": ("system", "send_notify"),
+    "get_project_info": ("system", "agent_info"),
+    "get_my_tools": ("system", "tools"),
+    "request_user_approval": ("system", "approval"),
+}
+
+# 개별 도구 → (node, action) 역매핑 캐시
+_reverse_node_map: dict = None
+
+
+def _build_reverse_node_map() -> dict:
+    """ibl_nodes.yaml에서 도구 이름 → (node, action) 역매핑 구축"""
+    import yaml
+    from runtime_utils import get_base_path
+
+    result = {}
+    path = get_base_path() / "data" / "ibl_nodes.yaml"
+    if not path.exists():
+        return result
+
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for node_name, node_config in data.get("nodes", {}).items():
+            for action_name, action_config in node_config.get("actions", {}).items():
+                mapped_tool = action_config.get("tool")
+                if mapped_tool:
+                    result[mapped_tool] = (node_name, action_name)
+    except Exception:
+        pass
+
+    return result
+
+
+def _tool_to_ibl_notation(tool_name: str, tool_input: dict) -> tuple:
+    """도구 이름을 IBL node:action 표기로 변환"""
+    # ibl_* 도구
+    if tool_name in _IBL_TOOL_PREFIX_MAP:
+        node = _IBL_TOOL_PREFIX_MAP[tool_name]
+        action = tool_input.get("action", "?")
+        return node, action
+
+    # 시스템 도구
+    if tool_name in _SYSTEM_IBL_MAP:
+        return _SYSTEM_IBL_MAP[tool_name]
+
+    # 개별 도구 → ibl_nodes.yaml 역매핑
+    global _reverse_node_map
+    if _reverse_node_map is None:
+        _reverse_node_map = _build_reverse_node_map()
+
+    if tool_name in _reverse_node_map:
+        return _reverse_node_map[tool_name]
+
+    return ("tool", tool_name)
+
+
+def _extract_target(tool_input: dict) -> str:
+    """tool_input에서 대표 target 값 추출"""
+    # IBL 도구의 target
+    if "target" in tool_input:
+        val = str(tool_input["target"])
+        return val[:60] if len(val) > 60 else val
+
+    # 개별 도구의 주요 파라미터
+    for key in ("query", "path", "url", "pattern", "command", "code", "agent_id", "message"):
+        if key in tool_input:
+            val = str(tool_input[key])
+            return val[:60] if len(val) > 60 else val
+
+    return ""
+
+
+def _log_ibl(tool_name: str, tool_input: dict, duration_ms: float,
+             agent_id: str = None, success: bool = True):
+    """도구 실행을 IBL 형식으로 콘솔 로그"""
+    node, action = _tool_to_ibl_notation(tool_name, tool_input)
+    target = _extract_target(tool_input)
+
+    status = "OK" if success else "ERR"
+    agent_tag = f"[{agent_id}] " if agent_id else ""
+    timestamp = datetime.now().strftime("%H:%M:%S")
+
+    target_str = f"({target})" if target else ""
+    print(f"[{timestamp}] {agent_tag}[{node}:{action}]{target_str} -> {status} ({duration_ms:.0f}ms)")
 
 
 # ============ 시스템 도구 정의 ============
@@ -237,7 +354,7 @@ call_agent 호출 후 바로 응답하지 마세요. 결과 보고가 도착할 
 ## 위임 결정 기준
 1. get_my_tools로 내 도구 확인
 2. 필요한 작업이 내 도구로 가능하면 → 직접 처리
-3. 내 도구로 불가능하면 → list_agents로 적합한 에이전트 찾아 위임""",
+3. 내 도구로 불가능하면 → list_agents로 적합한 에이전트 찾아 call_agent로 위임""",
         "input_schema": {
             "type": "object",
             "properties": {},
@@ -595,7 +712,11 @@ def execute_get_project_info(tool_input: dict, project_path: str) -> str:
 
 
 def execute_get_my_tools(tool_input: dict, project_path: str, agent_id: str = None) -> str:
-    """get_my_tools 도구 실행"""
+    """get_my_tools 도구 실행
+
+    Phase 16: ibl_only 모드에서는 IBL 환경(allowed_nodes)을 기반으로
+    에이전트의 도구를 보여줌. execute_ibl이 유일한 실행 도구.
+    """
     try:
         from agent_runner import AgentRunner
         from thread_context import get_current_registry_key, get_current_project_id
@@ -605,7 +726,6 @@ def execute_get_my_tools(tool_input: dict, project_path: str, agent_id: str = No
 
         # 2. thread_context 실패 시 agent_id + project_path로 구성
         if not registry_key and agent_id:
-            # project_path에서 project_id 추출 (/path/to/projects/홍보 -> 홍보)
             project_id = get_current_project_id()
             if not project_id and project_path:
                 from pathlib import Path
@@ -636,21 +756,18 @@ def execute_get_my_tools(tool_input: dict, project_path: str, agent_id: str = No
                 "message": f"에이전트 정보를 찾을 수 없습니다 (key: {registry_key})"
             }, ensure_ascii=False)
 
-        allowed_tools = runner.config.get('allowed_tools', [])
-        base_tools = SYSTEM_TOOL_NAMES
-
-        if not allowed_tools:
-            all_installed = get_all_tool_names()
-            all_tools = list(base_tools) + all_installed
-        else:
-            all_tools = list(base_tools) + allowed_tools
+        # Phase 16: ibl_only 모드 - allowed_nodes 기반
+        allowed_nodes = runner.config.get('allowed_nodes', [])
+        ibl_tools = ["execute_ibl", "ask_user_question", "todo_write", "request_user_approval"]
+        if runner._get_agent_count() > 1:
+            ibl_tools.append("list_agents")
 
         return json.dumps({
             "success": True,
-            "tools": all_tools,
-            "base_tools": base_tools,
-            "allowed_tools": allowed_tools if allowed_tools else "all (제한 없음)",
-            "message": f"기본 도구 {len(base_tools)}개 + 허용 도구 {len(allowed_tools) if allowed_tools else '전체'}개"
+            "mode": "ibl_only",
+            "tools": ibl_tools,
+            "allowed_nodes": allowed_nodes if allowed_nodes else "all (제한 없음)",
+            "message": f"IBL 모드: execute_ibl 1개 + 시스템 도구 {len(ibl_tools) - 1}개, 접근 가능 노드: {len(allowed_nodes) if allowed_nodes else '전체'}개"
         }, ensure_ascii=False)
 
     except Exception as e:
@@ -662,6 +779,168 @@ def execute_get_my_tools(tool_input: dict, project_path: str, agent_id: str = No
 
 
 # ============ 통합 도구 실행 함수 ============
+
+def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = None) -> str:
+    """execute_ibl 통합 실행기 (Phase 13)
+
+    두 가지 호출 방식 지원:
+    1. code: IBL 코드 문자열 → 파서 → 파이프라인 실행
+    2. node + action: 직접 노드 실행
+    """
+    from ibl_engine import execute_ibl
+    from thread_context import get_allowed_nodes
+    from ibl_access import check_node_access, get_denied_message
+
+    # 노드 접근 제어 (allowed_nodes)
+    allowed = get_allowed_nodes()
+
+    code = tool_input.get("code")
+
+    # 디버그: 에이전트 입력 추적
+    print(f"[IBL_DEBUG] tool_input keys={list(tool_input.keys())}, code={bool(code)}, node={tool_input.get('node')}, action={tool_input.get('action')}")
+
+    if code:
+        # IBL 코드 파싱 + 실행
+        try:
+            from ibl_parser import parse as parse_ibl
+            parsed = parse_ibl(code)
+
+            if not parsed:
+                return json.dumps({"error": f"IBL 파싱 실패: {code}"}, ensure_ascii=False)
+
+            # 노드 접근 체크 (code 모드)
+            if allowed is not None:
+                for step in parsed:
+                    d = step.get("_node", step.get("node", ""))
+                    if d and not check_node_access(d, allowed):
+                        return json.dumps(get_denied_message(d, allowed), ensure_ascii=False)
+
+            # 실행 분기 결정
+            # 1) 병렬(_parallel) 또는 fallback(_fallback_chain)이 포함된 경우 → workflow_engine
+            # 2) 파이프라인(2개 이상 step) → workflow_engine
+            # 3) 단일 일반 step → 직접 execute_ibl
+            has_special = any(
+                s.get("_parallel") or "_fallback_chain" in s
+                for s in parsed
+            )
+
+            if len(parsed) == 1 and not has_special:
+                # 단일 일반 step 직접 실행
+                step = parsed[0]
+                ibl_input = {
+                    "_node": step.get("_node", step.get("node", "")),
+                    "action": step.get("action", ""),
+                    "target": step.get("target", ""),
+                    "params": step.get("params", {}),
+                }
+                # 노드 타입 처리 (info, store, exec, output)
+                node = step.get("_node", step.get("node", ""))
+                if node in ("info", "store", "exec", "output"):
+                    ibl_input["_node_type"] = node
+                    if node == "info":
+                        ibl_input["source"] = step.get("action", "")
+                        sub_action = step.get("params", {}).get("action", "")
+                        if sub_action:
+                            ibl_input["action"] = sub_action
+                    elif node == "store":
+                        ibl_input["store"] = step.get("action", "")
+                        sub_action = step.get("params", {}).get("action", "")
+                        if sub_action:
+                            ibl_input["action"] = sub_action
+
+                result = execute_ibl(ibl_input, project_path, agent_id)
+            else:
+                # 파이프라인 / 병렬 / fallback → workflow_engine으로 위임
+                from workflow_engine import execute_workflow_action
+                result = execute_workflow_action(
+                    "run_pipeline", None,
+                    {"code": code},
+                    project_path
+                )
+
+            if isinstance(result, dict):
+                return json.dumps(result, ensure_ascii=False, indent=2)
+            return str(result)
+
+        except Exception as e:
+            return json.dumps({"error": f"IBL 실행 오류: {str(e)}"}, ensure_ascii=False)
+
+    # node + action 직접 호출
+    node = tool_input.get("node")
+    action = tool_input.get("action")
+
+    if not node or not action:
+        return json.dumps({
+            "error": "code 또는 node+action이 필요합니다.",
+            "usage": {
+                "code": '[source:web_search]("AI 뉴스") >> [system:file]("result.md")',
+                "node_action": {"node": "source", "action": "web_search", "target": "AI 뉴스"}
+            }
+        }, ensure_ascii=False)
+
+    # 노드 접근 체크 (direct 모드)
+    check_node = node
+    if node in ("info", "store"):
+        # 타입 노드는 하위 소스/스토어 이름으로 체크
+        if node == "info":
+            check_node = tool_input.get("source", action)
+        elif node == "store":
+            check_node = tool_input.get("store", action)
+    if allowed is not None and not check_node_access(check_node, allowed):
+        return json.dumps(get_denied_message(check_node, allowed), ensure_ascii=False)
+
+    ibl_input = {
+        "_node": node,
+        "action": action,
+        "target": tool_input.get("target", ""),
+        "params": tool_input.get("params", {}),
+    }
+
+    # 노드 타입 처리
+    if node in ("info", "store", "exec", "output"):
+        ibl_input["_node_type"] = node
+        if node == "info":
+            ibl_input["source"] = tool_input.get("source", action)
+            ibl_input["action"] = tool_input.get("sub_action", tool_input.get("action", ""))
+        elif node == "store":
+            ibl_input["store"] = tool_input.get("store", action)
+            ibl_input["action"] = tool_input.get("sub_action", tool_input.get("action", ""))
+
+    result = execute_ibl(ibl_input, project_path, agent_id)
+    if isinstance(result, dict):
+        return json.dumps(result, ensure_ascii=False, indent=2)
+    return str(result)
+
+
+def execute_ask_user_question(tool_input: dict, project_path: str) -> str:
+    """ask_user_question 실행 - 사용자에게 질문 (Phase 17: IBL user 노드)
+
+    이 도구는 AI가 호출하면 input이 웹소켓을 통해 프론트엔드에 전달됩니다.
+    실행 결과는 사용자 응답이 올 때까지 대기하는 마커를 반환합니다.
+    """
+    questions = tool_input.get("questions", [])
+    if not questions:
+        return json.dumps({"status": "no_questions"}, ensure_ascii=False)
+    # 프론트엔드가 이 결과를 감지하여 질문 UI를 표시
+    return json.dumps({
+        "_ibl_user_action": "ask_user_question",
+        "questions": questions
+    }, ensure_ascii=False)
+
+
+def execute_todo_write(tool_input: dict, project_path: str) -> str:
+    """todo_write 실행 - 할일 목록 관리 (Phase 17: IBL user 노드)
+
+    이 도구는 AI가 호출하면 input이 웹소켓을 통해 프론트엔드에 전달됩니다.
+    """
+    todos = tool_input.get("todos", [])
+    return json.dumps({
+        "_ibl_user_action": "todo_write",
+        "todos": todos,
+        "status": "updated",
+        "count": len(todos)
+    }, ensure_ascii=False)
+
 
 def execute_request_user_approval(tool_input: dict, project_path: str) -> str:
     """request_user_approval 도구 실행 - 사용자 승인 요청"""
@@ -682,39 +961,19 @@ def execute_request_user_approval(tool_input: dict, project_path: str) -> str:
     return "[[APPROVAL_REQUESTED]]" + "\n".join(result_parts)
 
 
-def _inject_guide_if_needed(tool_name: str, result: str, agent_id: str = None) -> str:
-    """도구 실행 결과에 가이드를 주입 (첫 호출 시에만)
+def _inject_guide_if_needed(tool_name: str, result, agent_id: str = None) -> str:
+    """도구 실행 결과에 가이드를 주입 — 비활성화됨
 
-    tool.json에 guide_file이 지정된 도구를 처음 호출할 때,
-    도구 실행 결과 앞에 가이드 내용을 붙여서 반환합니다.
-    같은 에이전트가 같은 도구를 다시 호출하면 가이드를 생략합니다.
-
-    이 방식은 Claude Code의 스킬과 유사한 on-demand 가이드 주입입니다:
-    - 도구 description에는 간략한 설명만 포함 (토큰 절약)
-    - 도구가 실제로 호출될 때만 상세 가이드가 컨텍스트에 주입됨
-    - 이후 호출에서는 이미 컨텍스트에 가이드가 있으므로 생략
+    가이드 시스템이 search_guide 독립 도구로 통합되었으므로,
+    패키지 가이드 자동 주입은 더 이상 사용하지 않습니다.
+    에이전트가 필요할 때 search_guide()를 직접 호출합니다.
     """
-    global _guide_injected
+    # dict 결과는 JSON 문자열로 변환만 수행
+    if isinstance(result, dict):
+        result.pop("_ibl_guide", None)  # 잔여 메타데이터 제거
+        result = json.dumps(result, ensure_ascii=False, indent=2)
 
-    # 추적 키: 에이전트별로 가이드 주입 여부 관리
-    guide_key = f"{agent_id or 'default'}:{tool_name}"
-
-    if guide_key in _guide_injected:
-        return result
-
-    # 가이드 내용 조회
-    guide_content = get_tool_guide(tool_name)
-    if not guide_content:
-        # 가이드가 없는 도구는 추적할 필요 없음
-        return result
-
-    # 가이드 주입 기록
-    _guide_injected.add(guide_key)
-    print(f"[도구 가이드 주입] {tool_name} (agent: {agent_id})")
-
-    # 결과 앞에 가이드를 붙여서 반환
-    guide_header = f"=== {tool_name} 사용 가이드 ===\n{guide_content}\n{'=' * 40}\n\n"
-    return guide_header + result
+    return result
 
 
 def reset_guide_injection(agent_id: str = None):
@@ -730,9 +989,10 @@ def reset_guide_injection(agent_id: str = None):
         _guide_injected.clear()
 
 
-def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
+
+def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None):
     """
-    도구 실행 (시스템 도구 + 동적 로딩)
+    도구 실행 (IBL 형식 로깅 래퍼)
 
     Args:
         tool_name: 도구 이름
@@ -741,12 +1001,55 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
         agent_id: 에이전트 ID (에이전트별 상태 저장용)
 
     Returns:
-        실행 결과 (JSON 문자열)
+        실행 결과 (JSON 문자열 또는 dict)
+    """
+    import time as _time
+    start = _time.time()
+    success = True
+
+    try:
+        result = _execute_tool_inner(tool_name, tool_input, project_path, agent_id)
+
+        # 결과에서 성공/실패 판단
+        if isinstance(result, str):
+            try:
+                r = json.loads(result)
+                if isinstance(r, dict) and r.get("success") is False:
+                    success = False
+            except (json.JSONDecodeError, TypeError):
+                pass
+        elif isinstance(result, dict) and result.get("success") is False:
+            success = False
+
+        return result
+    except Exception as e:
+        success = False
+        raise
+    finally:
+        duration_ms = (_time.time() - start) * 1000
+        _log_ibl(tool_name, tool_input, duration_ms, agent_id, success)
+
+
+def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
+    """
+    도구 실행 내부 구현 (시스템 도구 + 동적 로딩)
     """
     try:
         # 승인 요청 도구 (가장 먼저 처리)
         if tool_name == "request_user_approval":
             return execute_request_user_approval(tool_input, project_path)
+
+        # 가이드 검색 (독립 도구 — IBL/Python 어디서든 사용 가능)
+        if tool_name == "search_guide":
+            from ibl_engine import _search_guide
+            query = tool_input.get("query", "")
+            read = tool_input.get("read", True)
+            result = _search_guide(query, {"read": read})
+            return json.dumps(result, ensure_ascii=False, indent=2)
+
+        # IBL 통합 실행기 (Phase 13)
+        if tool_name == "execute_ibl":
+            return _execute_ibl_unified(tool_input, project_path, agent_id)
 
         # 시스템 도구 처리
         if tool_name == "call_agent":
@@ -759,8 +1062,20 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
             return execute_get_project_info(tool_input, project_path)
         elif tool_name == "get_my_tools":
             return execute_get_my_tools(tool_input, project_path, agent_id)
+        # API 레지스트리 기반 실행 (Phase 1)
+        if is_registry_tool(tool_name):
+            result = registry_execute_tool(tool_name, tool_input, project_path)
+            if isinstance(result, dict) and "images" in result:
+                if isinstance(result.get("content"), str):
+                    result["content"] = _inject_guide_if_needed(tool_name, result["content"], agent_id)
+                return result
+            if isinstance(result, dict):
+                result = json.dumps(result, ensure_ascii=False, indent=2)
+            if isinstance(result, str):
+                result = _inject_guide_if_needed(tool_name, result, agent_id)
+            return result
 
-        # 동적 로딩된 도구 패키지에서 실행
+        # 동적 로딩된 도구 패키지에서 실행 (레지스트리 미등록 도구용)
         handler = load_tool_handler(tool_name)
         if handler and hasattr(handler, 'execute'):
             # handler.execute의 시그니처에 따라 agent_id 전달
@@ -781,6 +1096,13 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
                 if isinstance(result.get("content"), str):
                     result["content"] = _inject_guide_if_needed(tool_name, result["content"], agent_id)
                 return result
+
+            # Phase 12: IBL 가이드 메타데이터가 있는 dict는 _inject_guide_if_needed에서 처리
+            if isinstance(result, dict) and "_ibl_guide" in result:
+                result = _inject_guide_if_needed(tool_name, result, agent_id)
+            # dict 결과를 JSON 문자열로 변환 (이미지 없는 dict - android 도구 등)
+            elif isinstance(result, dict):
+                result = json.dumps(result, ensure_ascii=False, indent=2)
 
             # 승인 필요 여부 확인
             if isinstance(result, str) and result.startswith("__REQUIRES_APPROVAL__:"):

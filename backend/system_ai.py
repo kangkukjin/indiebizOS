@@ -19,7 +19,7 @@ DATA_PATH = _get_base_path() / "data"
 INSTALLED_TOOLS_PATH = DATA_PATH / "packages" / "installed" / "tools"
 
 # 시스템 AI 기본 패키지 목록
-SYSTEM_AI_DEFAULT_PACKAGES = ["system_essentials", "python-exec", "nodejs", "cloudflare"]
+SYSTEM_AI_DEFAULT_PACKAGES = ["system_essentials", "memory", "python-exec", "nodejs", "cloudflare"]
 
 
 # ============ 메시징 도구 정의 ============

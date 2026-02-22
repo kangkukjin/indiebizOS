@@ -1,0 +1,94 @@
+node: source
+actions:
+  price:
+    description: '주가 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F)'
+    target_description: 종목 코드/티커 (자동으로 시장 판별)
+    router: handler
+    tool: yf_stock_price
+    target_key: symbol
+  info:
+    description: 종목 상세 정보 (시가총액, 52주 최고/최저 등)
+    target_description: 종목 코드/티커
+    router: handler
+    tool: yf_stock_info
+    target_key: symbol
+  search_stock:
+    description: 종목 심볼 검색 (이름으로 코드 찾기)
+    target_description: 회사명 또는 키워드
+    router: handler
+    tool: yf_search_stock
+    target_key: query
+  kr_company:
+    description: '한국 기업 정보 (DART: 대표자, 업종, 주소, IR)'
+    target_description: 기업명 또는 DART 코드
+    router: handler
+    tool: kr_company_info
+    target_key: corp_name
+  us_company:
+    description: '미국 기업 프로필 (FMP: CEO, 시총, 섹터, 설명)'
+    target_description: 티커 (AAPL, MSFT 등)
+    router: handler
+    tool: us_company_profile
+    target_key: symbol
+  kr_financial:
+    description: '한국 재무제표 (DART: 재무상태표, 손익계산서, 현금흐름표)'
+    target_description: 기업명 또는 DART 코드
+    router: handler
+    tool: kr_financial_statements
+    target_key: corp_name
+  us_financial:
+    description: '미국 재무제표 (FMP: income, balance, cashflow)'
+    target_description: 티커 (AAPL 등)
+    router: handler
+    tool: us_financial_statements
+    target_key: symbol
+  kr_disclosure:
+    description: '한국 공시 검색 (DART: 정기공시, 대량보유, 거래소공시)'
+    target_description: 기업명 또는 DART 코드
+    router: handler
+    tool: kr_disclosures
+    target_key: corp_name
+  us_filing:
+    description: 미국 SEC 공시 검색 (10-K, 10-Q, 8-K, DEF 14A)
+    target_description: 티커
+    router: handler
+    tool: us_sec_filings
+    target_key: symbol
+  news:
+    description: 종목 관련 뉴스 (Finnhub)
+    target_description: '티커 (US: AAPL, KR: 005930.KS)'
+    router: handler
+    tool: company_news
+    target_key: symbol
+  stock_news:
+    description: 종목 뉴스 (Yahoo Finance)
+    target_description: 티커
+    router: handler
+    tool: yf_stock_news
+    target_key: symbol
+  earnings:
+    description: '실적 발표 일정 (Finnhub: EPS/매출 예상 vs 실적)'
+    target_description: 티커 (선택, 비우면 전체 시장)
+    router: handler
+    tool: earnings_calendar
+    target_key: symbol
+  crypto:
+    description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
+    target_description: 코인 심볼 (BTC, ETH, SOL 등)
+    router: handler
+    tool: crypto_price
+    target_key: coin_id
+  kr_price:
+    description: 한국 주가 (KRX/FinanceDataReader, 기간 지정)
+    target_description: 종목 코드 또는 기업명
+    router: handler
+    tool: kr_stock_price
+    target_key: symbol
+  us_price:
+    description: 미국 주가 (FMP, 기간 지정)
+    target_description: 티커
+    router: handler
+    tool: us_stock_price
+    target_key: symbol
+guides:
+- investment/investment_guide.md

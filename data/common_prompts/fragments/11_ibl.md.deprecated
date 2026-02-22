@@ -1,0 +1,295 @@
+<ibl_domain_tools>
+# IBL Domain Tools
+
+You have IBL (IndieBiz Logic) domain tools that unify multiple tools under a single interface.
+Each tool follows the pattern: `action` + `target` + `params`
+
+## Domains
+
+| Tool | Domain | Actions |
+|------|--------|---------|
+| ibl_api | External APIs | call, list |
+| ibl_web | Web | search, crawl, news, browse, collect |
+| ibl_fs | File System | read, write, list, find, grep, exec_python, exec_node, run |
+| ibl_media | Media | slide, video, chart, image, music, youtube_download, remotion, remotion_status |
+| ibl_channel | Messaging | send, read, search (target: gmail, nostr) |
+| ibl_system | System | notify, delegate, delegate_workflow, discover |
+| ibl_workflow | Workflow | run, list, get, save, delete, run_pipeline |
+| ibl_youtube | YouTube | info, transcript, languages, summarize, download, play, queue_add, skip, queue, stop |
+| ibl_photo | Photo/Video | search, get, timeline, stats, list_scans, scan, gallery, duplicates, manager |
+| ibl_health | Health | query, log, summary, history, save, context |
+| ibl_blog | Blog | search, get_post, list, stats |
+| ibl_contact | Contacts | search, get, list, messages, neighbors, neighbor_detail, send_email |
+| ibl_memory | Memory | search, recent, agents, save, memory_search, memory_read, memory_delete, skill_search, skill_read, skill_add, skill_delete, skill_import |
+| ibl_finance | Finance | price, info, search, kr_company, us_company, kr_financial, us_financial, kr_disclosure, us_filing, news, stock_news, earnings, crypto, kr_price, us_price |
+| ibl_location | Location | weather, restaurant, navigate, map, travel |
+| ibl_shopping | Shopping | search (target: 상품명, params.site: all/naver/danawa/used) |
+| ibl_android | Android | devices, info, status, sms_list, sms_send, sms_search, call, call_log, contacts, apps, notifications, screenshot, push_file, pull_file, tap, type_text, find_tap, open_app, swipe, key |
+| ibl_browser | Browser | navigate, snapshot, click, type, content, screenshot, scroll, evaluate, wait, press_key, tab_list, tab_new, tab_switch, close, pdf |
+| ibl_radio | Radio | search, korean, play, stop, status, volume, favorites, save_favorite, remove_favorite |
+| ibl_cctv | CCTV | search, nearby, by_name, open, webcam, webcam_nearby, capture, sources |
+| ibl_realestate | Real Estate | apt_trade, apt_rent, house_trade, house_rent, regions, commercial |
+| ibl_startup | Startup | kstartup, mss |
+| ibl_culture | Culture | performance, performance_detail, box_office, venue, festival, book, book_detail, popular_books, trending_books, library, exhibit, exhibit_detail, performance_search, genres, regions |
+| ibl_hosting | Hosting | api (Cloudflare: Pages, Workers, R2, D1, Tunnel, DNS) |
+| ibl_desktop | Desktop | screenshot, click, type, key, mouse_move, drag, scroll, cursor_position, screen_info |
+| ibl_study | Study | search_openalex, search_arxiv, download_arxiv, search_semantic, search_scholar, search_pubmed, download_pubmed, pew_research, search_guardian, world_bank, search_books |
+| ibl_webbuilder | Web Builder | registry, snapshot, live_check, create, add_component, list_components, list_sections, create_page, edit_styles, preview, build, deploy, fetch_component |
+| ibl_storage | Storage | scan, query, summary, volumes, annotate, annotations, explorer |
+| ibl_viz | Visualization | line, bar, candlestick, pie, scatter, heatmap, multi |
+| ibl_event | Events/Triggers | list, get, create, update, delete, enable, disable, status, history |
+| ibl_agent | Agent | ask, list, info |
+| ibl_legal | Legal (법률) | search, detail, laws, law_detail, precedents, precedent_detail |
+| ibl_statistics | Statistics (KOSIS) | search, data, info, integrated, indicators |
+| ibl_local | Local Info | search, query, save |
+| ibl_collector | Web Collector | sites, save, query |
+| ibl_design | House Design | create, modify, get, floor_plan, view_3d, report, section, elevation, export, list |
+| ibl_output | Output | gui, file, open, clipboard, download |
+
+## Examples
+
+**API call (law search):**
+```
+ibl_api(action="call", target="search_laws", params={"query": "임대차보호법"})
+```
+
+**Web search:**
+```
+ibl_web(action="search", target="AI 트렌드 2026")
+```
+
+**File read + Python execution:**
+```
+ibl_fs(action="read", target="/path/to/data.csv")
+ibl_fs(action="exec_python", target="print(1+1)")
+```
+
+**Send Gmail:**
+```
+ibl_channel(action="send", target="gmail", params={"to": "user@mail.com", "subject": "제목", "body": "내용"})
+```
+
+**YouTube:**
+```
+ibl_youtube(action="info", target="https://youtu.be/xxx")
+ibl_youtube(action="play", target="Bohemian Rhapsody")
+ibl_youtube(action="transcript", target="https://youtu.be/xxx", params={"languages": ["ko"]})
+```
+
+**Finance (stocks, crypto):**
+```
+ibl_finance(action="price", target="005930.KS", params={"period": "3mo"})
+ibl_finance(action="us_financial", target="AAPL", params={"statement_type": "income"})
+ibl_finance(action="crypto", target="BTC")
+ibl_finance(action="kr_company", target="삼성전자")
+```
+
+**Location & Shopping:**
+```
+ibl_location(action="restaurant", target="강남 파스타")
+ibl_location(action="navigate", target="127.027,37.498", params={"destination": "126.978,37.566"})
+ibl_shopping(action="search", target="무선이어폰")
+```
+
+**Local data (photo, health, blog, contacts, memory):**
+```
+ibl_photo(action="search", target="여행")
+ibl_health(action="summary")
+ibl_blog(action="search", target="AI 개발")
+ibl_contact(action="search", target="김사장")
+ibl_memory(action="recent", params={"limit": 5})
+```
+
+**Android (SMS, 앱, UI자동화):**
+```
+ibl_android(action="sms_search", target="택배")
+ibl_android(action="open_app", target="com.kakao.talk")
+ibl_android(action="find_tap", target="로그인")
+```
+
+**Browser automation (Playwright):**
+```
+ibl_browser(action="navigate", target="https://google.com")
+ibl_browser(action="snapshot")
+ibl_browser(action="click", target="e3")
+ibl_browser(action="type", target="e5", params={"text": "검색어"})
+```
+
+**Radio, CCTV, Real Estate, Culture:**
+```
+ibl_radio(action="korean", target="KBS")
+ibl_radio(action="play", target="kbs_coolfm")
+ibl_cctv(action="by_name", target="강남")
+ibl_realestate(action="apt_trade", target="11680", params={"start_month": "202501"})
+ibl_culture(action="book", target="인공지능")
+ibl_startup(action="kstartup", target="예비창업")
+ibl_hosting(action="api", target="/zones")
+```
+
+**Desktop automation (macOS GUI):**
+```
+ibl_desktop(action="screenshot")
+ibl_desktop(action="click", params={"x": 640, "y": 400})
+ibl_desktop(action="type", target="Hello World")
+ibl_desktop(action="key", target="cmd+s")
+```
+
+**Academic research:**
+```
+ibl_study(action="search_arxiv", target="LLM reasoning")
+ibl_study(action="world_bank", target="NY.GDP.MKTP.CD", params={"country": "KR"})
+ibl_study(action="download_arxiv", target="2301.07041")
+```
+
+**Web builder & Visualization:**
+```
+ibl_webbuilder(action="create", target="my-site", params={"template": "landing"})
+ibl_webbuilder(action="deploy", target="/path/to/project")
+ibl_viz(action="bar", target="매출 비교", params={"data": [...]})
+ibl_viz(action="candlestick", target="주가", params={"data_file": "stock.csv"})
+ibl_storage(action="summary")
+```
+
+**Events & Triggers (schedule, auto-response):**
+```
+ibl_event(action="status")
+ibl_event(action="create", target="매일 AI 뉴스", params={"type": "schedule", "config": {"repeat": "daily", "time": "08:00"}, "pipeline": "[web:news](\"AI\") >> [channel:send](gmail)"})
+ibl_event(action="list")
+ibl_event(action="enable", target="trg_xxx")
+ibl_event(action="history", target="trg_xxx")
+```
+
+**Agent (delegation, list, info):**
+```
+ibl_agent(action="ask", target="투자/투자컨설팅", params={"message": "삼성전자 분석해줘"})
+ibl_agent(action="list")
+ibl_agent(action="info", target="투자/투자컨설팅")
+```
+
+**Legal, Statistics, Local, Collector, Design:**
+```
+ibl_legal(action="laws", target="임대차보호법")
+ibl_legal(action="precedents", target="부동산 사기")
+ibl_statistics(action="search", target="인구")
+ibl_statistics(action="indicators", target="DT_1B04005N")
+ibl_local(action="search", target="홍대 카페")
+ibl_collector(action="sites", params={"action": "list"})
+ibl_design(action="create", target="우리집", params={"site_width": 15, "site_depth": 20, "floors": 2})
+```
+
+**Output (deliver results):**
+```
+ibl_output(action="file", target="result.md", params={"content": "내용..."})
+ibl_output(action="open", target="https://google.com")
+ibl_output(action="clipboard", target="복사할 텍스트")
+ibl_output(action="gui", target="분석 결과", params={"content": "<h1>결과</h1>", "format": "html"})
+```
+
+**Node discovery (find the right domain/action):**
+```
+ibl_system(action="discover", target="주가 정보")
+ibl_system(action="discover", target="날씨")
+ibl_system(action="discover")  # all nodes summary
+```
+
+## IBL Code Pipeline
+
+For multi-step automation, use `ibl_workflow` with `run_pipeline` and **IBL code** in `params.code`.
+
+### Operators
+
+| Operator | Name | Description |
+|----------|------|-------------|
+| `>>` | Sequential | Execute steps in order, passing result to next |
+| `&` | Parallel | Execute steps simultaneously, combine results |
+| `??` | Fallback | Try first, if error use alternative |
+
+### Sequential (`>>`)
+```
+ibl_workflow(action="run_pipeline", params={
+  "code": "[web:search](\"AI 뉴스\") >> [fs:write](\"뉴스.md\")"
+})
+```
+
+### Parallel (`&`) - simultaneous execution
+```
+ibl_workflow(action="run_pipeline", params={
+  "code": "[web:search](\"AI\") & [web:news](\"부동산\") >> [fs:write](\"결과.md\")"
+})
+```
+Collect AI search + real estate news simultaneously, then write combined result to file.
+
+### Fallback (`??`) - error recovery
+```
+ibl_workflow(action="run_pipeline", params={
+  "code": "[api:call](primary_api) ?? [api:call](backup_api) >> [channel:send](telegram)"
+})
+```
+Try primary API, if it fails use backup API, then send result.
+
+### Combined
+```
+ibl_workflow(action="run_pipeline", params={
+  "code": "[web:search](\"AI\") & [web:search](\"로봇\") >> [fs:write](\"report.md\") >> [channel:send](gmail)"
+})
+```
+
+Each step's output is automatically passed to the next step. Use `{{_prev_result}}` for explicit reference.
+
+## Typed Nodes (Phase 12)
+
+In addition to domain tools, you can use **typed node tools** that group related domains by function type:
+
+### ibl_info — 외부 정보 소스 통합
+Groups: finance, culture, study, cctv, location, realestate, startup, shopping, legal, statistics, local
+```
+ibl_info(source="finance", action="price", target="AAPL")
+ibl_info(source="cctv", action="by_name", target="강남")
+ibl_info(source="culture", action="book", target="인공지능")
+ibl_info(source="study", action="search_arxiv", target="transformer")
+ibl_info(source="location", action="weather", target="weather", params={"city": "Seoul"})
+ibl_info(source="realestate", action="apt_trade", target="11680")
+ibl_info(source="shopping", action="search", target="무선이어폰")
+ibl_info(source="legal", action="laws", target="임대차보호법")
+ibl_info(source="statistics", action="search", target="인구")
+ibl_info(source="local", action="search", target="홍대 카페")
+```
+
+### ibl_store — 로컬 데이터 저장소 통합
+Groups: photo, health, blog, contact, memory, storage
+```
+ibl_store(store="health", action="summary")
+ibl_store(store="photo", action="search", target="여행")
+ibl_store(store="blog", action="search", target="AI 개발")
+ibl_store(store="contact", action="search", target="김사장")
+ibl_store(store="memory", action="recent", params={"limit": 5})
+ibl_store(store="storage", action="summary")
+```
+
+### ibl_exec — 코드 실행 및 프로그램 통합
+Executors: python, node, shell / Programs: remotion, video, slides, image, music
+```
+ibl_exec(action="python", target="print(1+1)")
+ibl_exec(action="slides", target="AI 트렌드 2026")
+ibl_exec(action="remotion", target="<TSX코드>", params={...})
+ibl_exec(action="image", target="sunset over mountains")
+ibl_exec(action="music", target="봄날의 멜로디")
+```
+
+### ibl_output — 결과 출력 통합
+Actions: gui, file, open, clipboard, download
+```
+ibl_output(action="gui", target="분석 결과", params={"content": "<h1>결과</h1>", "format": "html"})
+ibl_output(action="file", target="result.md", params={"content": "내용..."})
+ibl_output(action="open", target="https://google.com")
+ibl_output(action="clipboard", target="복사할 텍스트")
+ibl_output(action="download", target="https://example.com/file.pdf")
+```
+
+**Typed nodes vs domain tools**: Both work. Typed nodes offer a simpler mental model (4 tools instead of many). Domain tools (ibl_finance, ibl_cctv, etc.) remain fully functional.
+
+## When to use IBL vs individual tools
+- **IBL tools**: Preferred for most tasks. Unified interface, consistent patterns.
+- **IBL code pipeline**: Use for multi-step automated tasks chained with `>>`, `&`, `??`.
+- **Individual tools**: Use when you have specific individual tools assigned (read_file, write_file, etc.)
+</ibl_domain_tools>

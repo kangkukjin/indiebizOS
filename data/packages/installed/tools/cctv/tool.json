@@ -1,23 +1,39 @@
 {
   "id": "cctv",
   "name": "CCTV 실시간 영상",
-  "description": "CCTV 및 실시간 웹캠 통합 도구\n\n## 소스\n- ITS 국가교통정보센터 (한국 교통 CCTV)\n- Windy Webcams (전세계 웹캠)\n- 해양수산부 연안 CCTV (한국 해안/해변)\n- 국립공원 CCTV (한국 국립공원)\n\n## 주요 기능\n- 위치/키워드 기반 CCTV 검색\n- 가장 가까운 CCTV 찾기\n- 실시간 영상 URL 제공\n- 화면 캡처 (AI 분석용)\n\n## 필요 환경변수\n- ITS_API_KEY: 국가교통정보센터 API 키\n- WINDY_API_KEY: Windy Webcams API 키 (선택)",
+  "description": "CCTV 및 실시간 웹캠 통합 도구\n\n## 소스\n- ITS 국가교통정보센터 (한국 교통 CCTV)\n- Windy Webcams (전세계 웹캠)\n\n## 주요 기능\n- 위치/키워드 기반 CCTV 검색\n- 가장 가까운 CCTV 찾기\n- 실시간 영상 URL 제공\n- 화면 캡처 (ffmpeg/이미지)\n\n## 해안/국립공원 등 추가 CCTV\n- 가이드 파일(cctv_guide.md) 참조\n- browser-action 패키지로 CCTV 사이트에 직접 접속하여 캡처\n\n## 필요 환경변수\n- ITS_API_KEY: 국가교통정보센터 API 키\n- WINDY_API_KEY: Windy Webcams API 키 (선택)",
   "version": "2.0.0",
-  "guide_file": "cctv_guide.md",
   "tools": [
     {
       "name": "search_cctv",
-      "description": "ITS 국가교통정보센터 - 지정한 영역 내의 교통 CCTV 목록을 조회합니다.\n\n## 사용 예시\n- search_cctv(min_x=126.8, max_x=127.2, min_y=37.4, max_y=37.7)\n- search_cctv(..., road_type='ex')  # 고속도로만\n\n## 도로 유형\n- 'ex': 고속도로\n- 'its': 국도\n- 'all': 전체 (기본값)",
+      "description": "CCTV/웹캠 통합 검색+자동캡처 - ITS 교통 CCTV 검색 후 결과 없으면 Windy 웹캠 자동 폴백. 첫 번째 결과의 이미지를 자동 캡처하여 file_path 반환.\n브라우저 접속 불필요 - auto_capture.file_path의 이미지를 직접 분석하면 됩니다.\n한국+해외 주요 지명(한라산, 맨하탄, 도쿄, 파리 등) 자동 좌표 매핑.\n\n## 사용 예시\n- search_cctv(query='경부')  # ITS 교통 CCTV + 자동 캡처\n- search_cctv(query='한라산')  # Windy mountain 웹캠 + 자동 캡처\n- search_cctv(query='Manhattan')  # 뉴욕 맨하탄 웹캠 + 자동 캡처",
       "input_schema": {
         "type": "object",
         "properties": {
-          "min_x": {"type": "number", "description": "최소 경도 (예: 126.8)"},
-          "max_x": {"type": "number", "description": "최대 경도 (예: 127.2)"},
-          "min_y": {"type": "number", "description": "최소 위도 (예: 37.4)"},
-          "max_y": {"type": "number", "description": "최대 위도 (예: 37.7)"},
-          "road_type": {"type": "string", "enum": ["ex", "its", "all"], "description": "도로 유형"}
+          "query": {
+            "type": "string",
+            "description": "검색 키워드 (한라산, 경부, 해운대 등)"
+          },
+          "lat": {
+            "type": "number",
+            "description": "위도 (Windy 검색 시 좌표 직접 지정)"
+          },
+          "lon": {
+            "type": "number",
+            "description": "경도 (Windy 검색 시 좌표 직접 지정)"
+          },
+          "category": {
+            "type": "string",
+            "description": "Windy 카테고리 (mountain, beach, city, airport 등)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "최대 결과 수 (기본 10)"
+          }
         },
-        "required": ["min_x", "max_x", "min_y", "max_y"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -26,13 +42,36 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lat": {"type": "number", "description": "위도"},
-          "lng": {"type": "number", "description": "경도"},
-          "radius": {"type": "number", "description": "검색 반경 (도 단위, 기본값 0.1 = 약 10km)"},
-          "count": {"type": "integer", "description": "반환할 CCTV 수 (기본값 1)"},
-          "road_type": {"type": "string", "enum": ["ex", "its", "all"], "description": "도로 유형"}
+          "lat": {
+            "type": "number",
+            "description": "위도"
+          },
+          "lng": {
+            "type": "number",
+            "description": "경도"
+          },
+          "radius": {
+            "type": "number",
+            "description": "검색 반경 (도 단위, 기본값 0.1 = 약 10km)"
+          },
+          "count": {
+            "type": "integer",
+            "description": "반환할 CCTV 수 (기본값 1)"
+          },
+          "road_type": {
+            "type": "string",
+            "enum": [
+              "ex",
+              "its",
+              "all"
+            ],
+            "description": "도로 유형"
+          }
         },
-        "required": ["lat", "lng"]
+        "required": [
+          "lat",
+          "lng"
+        ]
       }
     },
     {
@@ -41,11 +80,27 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": {"type": "string", "description": "검색 키워드"},
-          "road_type": {"type": "string", "enum": ["ex", "its", "all"], "description": "도로 유형"},
-          "limit": {"type": "integer", "description": "최대 결과 수 (기본값 10)"}
+          "keyword": {
+            "type": "string",
+            "description": "검색 키워드"
+          },
+          "road_type": {
+            "type": "string",
+            "enum": [
+              "ex",
+              "its",
+              "all"
+            ],
+            "description": "도로 유형"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "최대 결과 수 (기본값 10)"
+          }
         },
-        "required": ["keyword"]
+        "required": [
+          "keyword"
+        ]
       }
     },
     {
@@ -54,10 +109,22 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "url": {"type": "string", "description": "CCTV 영상 URL (직접 지정)"},
-          "name": {"type": "string", "description": "CCTV 이름 키워드"},
-          "lat": {"type": "number", "description": "위도"},
-          "lng": {"type": "number", "description": "경도"}
+          "url": {
+            "type": "string",
+            "description": "CCTV 영상 URL (직접 지정)"
+          },
+          "name": {
+            "type": "string",
+            "description": "CCTV 이름 키워드"
+          },
+          "lat": {
+            "type": "number",
+            "description": "위도"
+          },
+          "lng": {
+            "type": "number",
+            "description": "경도"
+          }
         }
       }
     },
@@ -67,12 +134,30 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lat": {"type": "number", "description": "위도 (근처 검색 시)"},
-          "lon": {"type": "number", "description": "경도 (근처 검색 시)"},
-          "radius_km": {"type": "number", "description": "검색 반경 km (기본 50, 최대 250)"},
-          "category": {"type": "string", "description": "카테고리 (beach, mountain, city 등)"},
-          "country": {"type": "string", "description": "국가 코드 (KR, JP, US 등)"},
-          "limit": {"type": "integer", "description": "최대 결과 수 (기본 10, 최대 50)"}
+          "lat": {
+            "type": "number",
+            "description": "위도 (근처 검색 시)"
+          },
+          "lon": {
+            "type": "number",
+            "description": "경도 (근처 검색 시)"
+          },
+          "radius_km": {
+            "type": "number",
+            "description": "검색 반경 km (기본 50, 최대 250)"
+          },
+          "category": {
+            "type": "string",
+            "description": "카테고리 (beach, mountain, city 등)"
+          },
+          "country": {
+            "type": "string",
+            "description": "국가 코드 (KR, JP, US 등)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "최대 결과 수 (기본 10, 최대 50)"
+          }
         }
       }
     },
@@ -82,34 +167,27 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lat": {"type": "number", "description": "위도"},
-          "lon": {"type": "number", "description": "경도"},
-          "radius_km": {"type": "number", "description": "검색 반경 km (기본 50)"},
-          "count": {"type": "integer", "description": "반환할 웹캠 수 (기본 3)"}
+          "lat": {
+            "type": "number",
+            "description": "위도"
+          },
+          "lon": {
+            "type": "number",
+            "description": "경도"
+          },
+          "radius_km": {
+            "type": "number",
+            "description": "검색 반경 km (기본 50)"
+          },
+          "count": {
+            "type": "integer",
+            "description": "반환할 웹캠 수 (기본 3)"
+          }
         },
-        "required": ["lat", "lon"]
-      }
-    },
-    {
-      "name": "search_coastal_cctv",
-      "description": "해양수산부 연안 CCTV - 전국 해수욕장 및 해안 CCTV를 검색합니다.\n\n## 사용 예시\n- search_coastal_cctv()  # 전체 목록\n- search_coastal_cctv(keyword='해운대')\n- search_coastal_cctv(region='제주')\n\n## 참고\n- 스크래핑 기반으로 일부 URL이 변경될 수 있습니다\n- 약 20개소 해변/해안 CCTV 제공",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "region": {"type": "string", "description": "지역명 필터 (예: 부산, 제주, 강원)"},
-          "keyword": {"type": "string", "description": "검색 키워드"}
-        }
-      }
-    },
-    {
-      "name": "search_park_cctv",
-      "description": "국립공원 실시간 CCTV - 전국 17개 국립공원 CCTV를 검색합니다.\n\n## 국립공원 목록\n지리산, 계룡산, 설악산, 속리산, 내장산, 가야산, 덕유산, 오대산, 주왕산, 치악산, 월악산, 북한산, 소백산, 월출산, 무등산, 태백산, 한라산\n\n## 사용 예시\n- search_park_cctv(park_name='설악산')\n- search_park_cctv(keyword='봉')\n- search_park_cctv()  # 전체\n\n## 참고\n- 기상/통신 상황에 따라 영상 중단 가능",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "park_name": {"type": "string", "description": "국립공원 이름 (예: 설악산, 한라산)"},
-          "keyword": {"type": "string", "description": "검색 키워드 (CCTV 이름 내)"}
-        }
+        "required": [
+          "lat",
+          "lon"
+        ]
       }
     },
     {
@@ -118,15 +196,27 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "url": {"type": "string", "description": "CCTV 영상/이미지 URL"},
+          "url": {
+            "type": "string",
+            "description": "CCTV 영상/이미지 URL"
+          },
           "source_type": {
             "type": "string",
-            "enum": ["auto", "hls", "image"],
+            "enum": [
+              "auto",
+              "hls",
+              "image"
+            ],
             "description": "소스 타입 (기본 auto: URL로 자동 판별)"
           },
-          "filename": {"type": "string", "description": "저장 파일명 (기본: cctv_capture_타임스탬프.jpg)"}
+          "filename": {
+            "type": "string",
+            "description": "저장 파일명 (기본: cctv_capture_타임스탬프.jpg)"
+          }
         },
-        "required": ["url"]
+        "required": [
+          "url"
+        ]
       }
     },
     {

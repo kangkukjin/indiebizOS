@@ -1,0 +1,206 @@
+{
+  "id": "memory",
+  "name": "Memory & Skill",
+  "description": "에이전트 심층 메모리와 도메인 지식(스킬) 관리. 에이전트가 스스로 저장하고 필요할 때 검색/조회하는 심층 메모리와, 모든 에이전트가 공유하는 스킬 DB를 제공합니다.",
+  "version": "1.1.0",
+  "tools": [
+    {
+      "name": "memory_save",
+      "description": "에이전트 심층 메모리에 항목을 저장합니다. 대화가 끝나도 DB에 영구 보존됩니다.\n\n## 언제 저장할까?\n- 중요한 작업 결과, 에러 해결 과정\n- 사용자 선호, 반복 패턴 발견\n- 긴 분석 결과, 의사결정 근거\n- 다음 세션에서 참조할 맥락\n\n## 영구메모(노트)와의 차이\n영구메모는 항상 프롬프트에 포함되는 간결한 메모이고, 심층 메모리는 필요할 때 검색해서 읽는 상세 기록입니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "저장할 내용"
+          },
+          "keywords": {
+            "type": "string",
+            "description": "검색용 키워드 (쉼표 구분)"
+          },
+          "category": {
+            "type": "string",
+            "description": "분류 (예: 작업기록, 사용자선호, 에러해결, 분석결과)"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      }
+    },
+    {
+      "name": "memory_search",
+      "description": "심층 메모리에서 키워드로 검색합니다. 미리보기(100자)만 반환하므로 전문은 memory_read로 조회하세요.\n\n## 사용 시점\n- 이전 작업 내용이나 맥락이 필요할 때\n- 비슷한 문제를 이전에 해결한 적이 있는지 확인할 때\n- 사용자 선호나 패턴을 찾을 때",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색 키워드 (공백 구분 시 OR 검색)"
+          },
+          "category": {
+            "type": "string",
+            "description": "카테고리 필터 (선택)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "최대 결과 수 (기본 10)"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "memory_read",
+      "description": "심층 메모리 항목의 전체 내용을 조회합니다.\n\n## 사용 시점\n- memory_search로 찾은 항목의 상세 내용을 읽을 때",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "memory_id": {
+            "type": "integer",
+            "description": "메모리 ID (memory_search 결과에서 확인)"
+          }
+        },
+        "required": [
+          "memory_id"
+        ]
+      }
+    },
+    {
+      "name": "memory_delete",
+      "description": "심층 메모리 항목을 삭제합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "memory_id": {
+            "type": "integer",
+            "description": "삭제할 메모리 ID"
+          }
+        },
+        "required": [
+          "memory_id"
+        ]
+      }
+    },
+    {
+      "name": "skill_search",
+      "description": "스킬 DB에서 키워드로 스킬을 검색합니다.\n\n## 사용 시점\n- 특정 주제에 대한 도메인 지식이나 가이드가 필요할 때\n- 작업 수행 전 관련 절차/판단기준을 찾을 때\n\n## 반환\n매칭된 스킬 목록 (id, name, category, description). 전문은 skill_read로 조회.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색 키워드 (공백 구분 시 OR 검색)"
+          },
+          "category": {
+            "type": "string",
+            "description": "카테고리 필터 (선택)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "최대 결과 수 (기본 10)"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "skill_read",
+      "description": "스킬의 전체 내용을 조회합니다.\n\n## 사용 시점\n- skill_search로 찾은 스킬의 상세 내용을 읽을 때\n\n## 반환\n스킬 전체 내용 (마크다운 형식)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "skill_id": {
+            "type": "integer",
+            "description": "스킬 ID (skill_search 결과에서 확인)"
+          }
+        },
+        "required": [
+          "skill_id"
+        ]
+      }
+    },
+    {
+      "name": "skill_add",
+      "description": "새로운 스킬을 DB에 추가합니다. 같은 이름이면 업데이트합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "스킬 이름"
+          },
+          "content": {
+            "type": "string",
+            "description": "스킬 본문 (마크다운)"
+          },
+          "keywords": {
+            "type": "string",
+            "description": "검색 키워드 (쉼표 구분)"
+          },
+          "description": {
+            "type": "string",
+            "description": "스킬 요약"
+          },
+          "category": {
+            "type": "string",
+            "description": "카테고리"
+          },
+          "source": {
+            "type": "string",
+            "description": "출처"
+          }
+        },
+        "required": [
+          "name",
+          "content"
+        ]
+      }
+    },
+    {
+      "name": "skill_delete",
+      "description": "스킬을 DB에서 삭제합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "skill_id": {
+            "type": "integer",
+            "description": "삭제할 스킬 ID"
+          }
+        },
+        "required": [
+          "skill_id"
+        ]
+      }
+    },
+    {
+      "name": "skill_import_md",
+      "description": "마크다운 파일에서 스킬을 임포트합니다. YAML frontmatter 형식과 일반 마크다운 모두 지원.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "마크다운 파일 경로"
+          },
+          "category": {
+            "type": "string",
+            "description": "카테고리 지정"
+          },
+          "keywords": {
+            "type": "string",
+            "description": "추가 키워드"
+          },
+          "import_all": {
+            "type": "boolean",
+            "description": "true이면 data/skills/ 전체 임포트"
+          }
+        }
+      }
+    }
+  ]
+}

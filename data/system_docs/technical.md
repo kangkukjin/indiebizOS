@@ -130,15 +130,62 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 | `final` | 최종 응답 |
 | `error` | 에러 발생 |
 
-## 에이전트 기본 도구 (System Tools)
+## IBL 도구 아키텍처 (Phase 22: 6-Node 통합)
 
-| 도구 | 설명 |
-|------|------|
-| `call_agent(agent_name, message)` | 다른 에이전트에게 작업 위임 (비동기) |
-| `list_agents()` | 사용 가능한 에이전트 목록 조회 |
-| `get_my_tools()` | 현재 에이전트의 도구 목록 확인 |
-| `send_notification(title, message)` | 시스템 알림 전송 |
-| `get_project_info()` | 현재 프로젝트 정보 조회 |
+모든 에이전트(시스템 AI 포함)는 `execute_ibl` 단일 도구만 사용합니다.
+
+### execute_ibl
+IBL 문법을 통해 모든 노드의 기능에 접근하는 통합 실행기입니다.
+
+```
+execute_ibl(node, action, target, params)
+→ [node:action](target) {params}
+```
+
+### 액션 라우팅 이원화
+IBL 액션은 두 경로로 실행됩니다:
+
+| 라우터 | 개수 | 특성 | 등록 방식 |
+|--------|------|------|----------|
+| api_engine | 26 | API 호출 + transform 후처리 | api_registry.yaml에 node 필드 (자동 병합) |
+| handler | 261 | 복잡한 후처리 (캐싱, 코드 매핑 등) | ibl_nodes.yaml에 수동 등록 |
+
+**자동 발견**: `ibl_engine.py`의 `_merge_api_registry_actions()`가 로드 시 api_registry의 node 바인딩 도구를 노드 액션에 자동 병합합니다.
+
+### 주요 IBL 노드 액션 (기존 시스템 도구 대응)
+
+Phase 19→22: 인프라 노드 → system, 정보 수집 → source, 기기 → interface, 미디어 → stream, 제작 → forge
+
+| IBL 액션 | 기존 도구명 | 설명 |
+|----------|-----------|------|
+| `[system:delegate]` | `call_agent` | 다른 에이전트에게 작업 위임 |
+| `[system:agent_ask]` | `call_agent` | 에이전트에게 질문/위임 |
+| `[system:delegate_project]` | `call_project_agent` | 프로젝트 간 위임 (시스템AI) |
+| `[system:ask_user]` | `ask_user_question` | 사용자에게 질문 |
+| `[system:todo]` | `todo_write` | 할일 목록 관리 |
+| `[system:approve]` | `request_user_approval` | 사용자 승인 요청 |
+| `[system:notify_user]` | `send_notification` | 사용자 알림 전송 |
+| `[system:send_notify]` | `send_notification` | 시스템 알림 전송 |
+| `[system:read]` | `read_file` | 파일 읽기 |
+| `[system:write]` | `write_file` | 파일 쓰기 |
+| `[system:run_command]` | `run_command` | 코드/명령 실행 |
+| `[source:web_search]` | `web_search` | 웹 검색 |
+| `[source:price]` | `get_stock_price` | 주가 조회 |
+| `[interface:navigate]` | `browser_navigate` | 브라우저 탐색 |
+| `[forge:slide]` | `create_slide` | 슬라이드 생성 |
+
+### 인프라 노드 (항상 허용)
+`system` — 모든 에이전트에 자동 제공 (시스템 관리, 사용자 소통, 워크플로우, 파일시스템 통합)
+
+### 6-Node 구조 (Phase 22)
+| 노드 | 액션 수 | 설명 |
+|------|---------|------|
+| `system` | 64 | 시스템 관리, 사용자 소통, 워크플로우, 자동화, 결과 출력, 파일시스템 |
+| `interface` | 79 | UI 조작 (브라우저, 안드로이드, 데스크탑) |
+| `source` | 105 | 데이터 검색/조회 (외부 정보 + 내부 저장소) |
+| `forge` | 46 | 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 웹사이트) |
+| `stream` | 18 | 미디어 재생 (유튜브, 라디오) |
+| `messenger` | 9 | 연락처 관리, 메시지 전송 |
 
 ## 설정 파일 위치
 - **시스템 AI 설정**: `data/system_ai_config.json`
@@ -160,8 +207,9 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `backend/`: 서버 소스 코드
 - `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (26개)
-- `projects/`: 사용자 프로젝트 데이터 (16개)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (35개)
+- `data/api_registry.yaml`: API 도구 정의 (node 필드로 IBL 자동 병합)
+- `projects/`: 사용자 프로젝트 데이터 (24개)
 
 ## 프롬프트 구조
 
@@ -182,4 +230,4 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - Tool Use 기반으로 판단/검색/발송을 단일 AI 호출로 처리
 
 ---
-*마지막 업데이트: 2026-02-01*
+*마지막 업데이트: 2026-02-19 (Phase 22: 6-Node 통합)*

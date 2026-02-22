@@ -7,78 +7,26 @@ API 문서: https://finnhub.io/docs/api
 무료 티어: 분당 60회 제한
 """
 import os
-import urllib.request
-import urllib.parse
+import sys
 import json
 from datetime import datetime, timedelta
-from pathlib import Path
 
-FINNHUB_API_KEY = os.environ.get("FINNHUB_API_KEY", "")
-BASE_URL = "https://finnhub.io/api/v1"
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
 
-# 대량 데이터 저장 경로
-DATA_OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "outputs" / "investment"
-DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _save_large_data(data: list, prefix: str, identifier: str) -> str:
-    """대량 데이터를 파일로 저장하고 경로 반환"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{prefix}_{identifier}_{timestamp}.json"
-    filepath = DATA_OUTPUT_DIR / filename
-
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-    return str(filepath)
-
-
-def _check_api_key():
-    """API 키 확인"""
-    if not FINNHUB_API_KEY:
-        return {
-            "success": False,
-            "error": "FINNHUB_API_KEY 환경변수가 설정되지 않았습니다. https://finnhub.io 에서 무료 API 키를 발급받으세요."
-        }
-    return None
+from common.api_client import api_call
+from common.response_formatter import save_large_data
 
 
 def _api_request(endpoint: str, params: dict = None):
-    """Finnhub API 요청"""
-    error = _check_api_key()
-    if error:
-        return error
-
-    if params is None:
-        params = {}
-    params["token"] = FINNHUB_API_KEY
-
-    url = f"{BASE_URL}/{endpoint}?" + urllib.parse.urlencode(params)
-
-    try:
-        req = urllib.request.Request(url)
-        req.add_header("User-Agent", "Mozilla/5.0")
-
-        with urllib.request.urlopen(req, timeout=30) as response:
-            data = json.loads(response.read().decode('utf-8'))
-
-        # 에러 응답 확인
-        if isinstance(data, dict) and "error" in data:
-            return {
-                "success": False,
-                "error": data["error"]
-            }
-
-        return {"success": True, "data": data}
-
-    except urllib.error.HTTPError as e:
-        if e.code == 401:
-            return {"success": False, "error": "API 키가 유효하지 않습니다."}
-        elif e.code == 429:
-            return {"success": False, "error": "API 요청 제한을 초과했습니다. (무료 티어: 분당 60회)"}
-        return {"success": False, "error": f"HTTP 오류: {e.code}"}
-    except Exception as e:
-        return {"success": False, "error": f"요청 오류: {str(e)}"}
+    """Finnhub API 요청 (common.api_client 위임)"""
+    result = api_call("finnhub", f"/{endpoint}", params=params or {}, timeout=30)
+    # api_call은 에러 시 {"error": "..."} 반환
+    if isinstance(result, dict) and "error" in result:
+        return {"success": False, "error": result["error"]}
+    return {"success": True, "data": result}
 
 
 def get_company_news(symbol: str, start_date: str = None, end_date: str = None):
@@ -142,7 +90,7 @@ def get_company_news(symbol: str, start_date: str = None, end_date: str = None):
 
     # 대량 데이터는 파일로 저장 (20개 초과시)
     if total_count > 20:
-        file_path = _save_large_data(news, "company_news", symbol)
+        file_path = save_large_data(news, "investment", f"company_news_{symbol}")
 
         # 최근 5개만 요약으로 반환
         return {
@@ -241,7 +189,7 @@ def get_earnings_calendar(symbol: str = None, start_date: str = None, end_date: 
 
     # 대량 데이터는 파일로 저장 (30개 초과시)
     if total_count > 30:
-        file_path = _save_large_data(calendar, "earnings_calendar", symbol or "market")
+        file_path = save_large_data(calendar, "investment", f"earnings_{symbol or 'market'}")
 
         return {
             "success": True,
@@ -315,7 +263,7 @@ def get_market_news(category: str = "general"):
 
     # 대량 데이터는 파일로 저장 (20개 초과시)
     if total_count > 20:
-        file_path = _save_large_data(news, "market_news", category)
+        file_path = save_large_data(news, "investment", f"market_news_{category}")
 
         return {
             "success": True,

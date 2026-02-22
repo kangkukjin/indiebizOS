@@ -1,0 +1,47 @@
+node: stream
+actions:
+  search_radio:
+    description: 전세계 인터넷 라디오 검색 (Radio Browser API)
+    target_description: 방송국명
+    router: handler
+    tool: search_radio
+    target_key: name
+  korean:
+    description: 한국 주요 방송사 라디오 채널 목록 (KBS/MBC/SBS/TBS/CBS/EBS)
+    target_description: 방송사명 (선택)
+    router: handler
+    tool: get_korean_radio
+    target_key: broadcaster
+  radio_play:
+    description: 라디오 재생 (mpv)
+    target_description: station_id 또는 stream_url
+    router: handler
+    tool: play_radio
+    target_key: station_id
+  radio_stop:
+    description: 라디오 재생 중지
+    router: handler
+    tool: stop_radio
+  status:
+    description: 현재 재생 상태 확인
+    router: handler
+    tool: radio_status
+  volume:
+    description: 볼륨 조절
+    router: handler
+    tool: set_radio_volume
+    target_key: volume
+  favorites:
+    description: 즐겨찾기 목록 조회
+    router: handler
+    tool: get_radio_favorites
+  save_favorite:
+    description: 즐겨찾기에 추가
+    router: handler
+    tool: save_radio_favorite
+  remove_favorite:
+    description: 즐겨찾기에서 제거
+    target_description: 방송국명
+    router: handler
+    tool: remove_radio_favorite
+    target_key: name

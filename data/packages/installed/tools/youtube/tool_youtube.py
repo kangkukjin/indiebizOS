@@ -8,12 +8,19 @@ YouTube 다운로드 도구
 """
 
 import os
+import sys
 import shutil
 import re
 import json
 import subprocess
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
 # AI 설정 경로
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -758,6 +765,66 @@ def _format_duration(seconds):
         m = seconds // 60
         s = seconds % 60
         return f"{m}:{s:02d}"
+
+
+def search_youtube(query: str, count: int = 5) -> dict:
+    """유튜브 검색 (재생하지 않고 결과만 반환)
+
+    Args:
+        query: 검색어
+        count: 검색 결과 수 (1-10, 기본 5)
+
+    Returns:
+        dict: {success, count, results: [{video_id, title, channel, duration, url}, ...]}
+    """
+    try:
+        import yt_dlp
+    except ImportError:
+        return {
+            'success': False,
+            'message': 'yt-dlp 패키지가 설치되지 않았습니다. pip install yt-dlp'
+        }
+
+    count = max(1, min(10, int(count or 5)))
+
+    try:
+        search_query = f"ytsearch{count}:{query}"
+        with yt_dlp.YoutubeDL({
+            'quiet': True, 'no_warnings': True,
+            'extract_flat': True,
+        }) as ydl:
+            result = ydl.extract_info(search_query, download=False)
+            entries = result.get('entries', [])
+
+        if not entries:
+            return {'success': False, 'message': f'"{query}" 검색 결과가 없습니다.'}
+
+        # 채널/플레이리스트 ID 필터링 (video ID만 남김)
+        entries = [e for e in entries if e.get('id') and not e['id'].startswith('UC') and len(e['id']) <= 16]
+        if not entries:
+            return {'success': False, 'message': f'"{query}" 검색 결과에서 영상을 찾지 못했습니다.'}
+
+        results = []
+        for i, e in enumerate(entries):
+            vid = e.get('id', '')
+            results.append({
+                'index': i + 1,
+                'video_id': vid,
+                'title': e.get('title', ''),
+                'channel': e.get('channel', e.get('uploader', '')),
+                'duration': _format_duration(e.get('duration')),
+                'url': f"https://www.youtube.com/watch?v={vid}",
+            })
+
+        return {
+            'success': True,
+            'query': query,
+            'count': len(results),
+            'results': results,
+        }
+
+    except Exception as e:
+        return {'success': False, 'message': f'검색 실패: {str(e)}'}
 
 
 def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:

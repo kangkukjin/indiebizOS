@@ -7,7 +7,7 @@
  * 앱 정리 탭 → AndroidAppsTab.tsx
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Phone, MessageSquare, Users, Clock, PhoneIncoming, PhoneOutgoing,
   PhoneMissed, Trash2, Search, Send, RefreshCw, Smartphone,
@@ -383,7 +383,7 @@ export function AndroidManager(_props: AndroidManagerProps) {
     }
   };
 
-  // 전화번호 → 연락처 이름 매핑 (최근기록 & 연락처 탭용)
+  /* 추후 연락처 이름 표시에 사용
   const contactMap = useMemo(() => {
     const map: Record<string, string> = {};
     contacts.forEach(c => {
@@ -400,7 +400,7 @@ export function AndroidManager(_props: AndroidManagerProps) {
     if (!phone) return phone;
     const normalized = phone.replace(/[-\s]/g, '');
     return contactMap[normalized] || contactMap[phone] || phone;
-  };
+  }; */
 
   // 검색 필터링 (최근기록 & 연락처 탭)
   const filteredCallLog = callLog.filter(c =>

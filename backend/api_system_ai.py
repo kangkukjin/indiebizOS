@@ -35,12 +35,8 @@ from system_docs import (
     read_doc,
     init_all_docs
 )
-# 도구 로딩
-from system_ai import (
-    SYSTEM_AI_DEFAULT_PACKAGES,
-    load_tools_from_packages,
-    execute_system_tool as execute_system_ai_tool
-)
+# Phase 17: execute_ibl 단일 도구 (기존 패키지 로딩 제거)
+from tool_loader import load_tool_schema
 # 통합: AIAgent 클래스 사용
 from ai_agent import AIAgent
 # 통합: 프롬프트 빌더 사용
@@ -144,8 +140,7 @@ def _get_manage_events_tool() -> Dict:
     """manage_events 통합 도구 정의 (캘린더 + 스케줄러)"""
     return {
         "name": "manage_events",
-        "description": "캘린더 이벤트와 스케줄 작업을 통합 관리합니다 (기념일, 약속, 생일, 알림, 스케줄 등의 추가/수정/삭제/조회/토글). 첫 호출 시 가이드가 제공됩니다.",
-        "guide_file": "calendar_guide.md",
+        "description": "캘린더 이벤트와 스케줄 작업을 통합 관리합니다 (기념일, 약속, 생일, 알림, 스케줄 등의 추가/수정/삭제/조회/토글).",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -242,25 +237,30 @@ def _get_list_switches_tool() -> Dict:
 
 
 def get_all_system_ai_tools() -> List[Dict]:
-    """시스템 AI가 사용할 모든 도구 로드 (패키지 도구 + 위임 도구 + 메시징 도구 + 스케줄러 도구)
+    """시스템 AI 도구: execute_ibl + search_guide
 
-    NOTE: 시스템 AI는 일반 에이전트와 동일한 도구를 사용하며,
-    추가로 call_project_agent 도구를 통해 프로젝트 에이전트에게 위임할 수 있습니다.
+    프로젝트 에이전트와 동일한 구조. 차이는 접근 가능한 노드 범위뿐.
+    모든 기능은 IBL 노드 액션으로 접근.
+    search_guide로 복잡한 작업 전 가이드 검색 가능.
     """
-    # 패키지에서 동적 로딩 (system_essentials, python-exec, nodejs 등)
-    tools = load_tools_from_packages(SYSTEM_AI_DEFAULT_PACKAGES)
+    tools = []
+    ibl_schema = load_tool_schema("execute_ibl")
+    if ibl_schema:
+        tools.append(ibl_schema)
 
-    # 위임 관련 도구 추가
-    tools.append(_get_list_project_agents_tool())
-    tools.append(_get_call_project_agent_tool())
-
-    # 메시징 도구 추가 (Nostr DM, Gmail 전송)
-    from system_ai import get_messaging_tools
-    tools.extend(get_messaging_tools())
-
-    # 통합 이벤트 관리 도구 추가
-    tools.append(_get_manage_events_tool())
-    tools.append(_get_list_switches_tool())
+    # 가이드 검색 도구
+    tools.append({
+        "name": "search_guide",
+        "description": "복잡한 작업 전에 가이드(워크플로우/레시피)를 검색합니다. 캘린더, 스케줄, 영상 제작 등 절차가 있는 작업 전에 호출하세요.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "검색 키워드 (예: 캘린더, 스케줄, 영상)"},
+                "read": {"type": "boolean", "description": "true(기본): 가이드 내용까지 반환, false: 목록만"}
+            },
+            "required": ["query"]
+        }
+    })
 
     return tools
 
@@ -268,10 +268,10 @@ def get_all_system_ai_tools() -> List[Dict]:
 def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAgent:
     """시스템 AI용 AIAgent 인스턴스 생성
 
-    **통합 아키텍처**: 프로젝트 에이전트와 동일한 AIAgent 클래스를 사용합니다.
-    - 동일한 프로바이더 코드 (anthropic, openai, gemini, ollama)
-    - 동일한 스트리밍 로직
-    - 동일한 도구 실행 로직
+    **Phase 17 통합 아키텍처**: 프로젝트 에이전트와 동일한 구조.
+    - execute_ibl 단일 도구
+    - IBL 환경 프롬프트로 노드/액션 인식
+    - 차이점: 모든 노드 접근 가능 + 프로젝트 간 위임
 
     Args:
         config: 시스템 AI 설정 (None이면 자동 로드)
@@ -290,20 +290,19 @@ def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAge
         "api_key": config.get("apiKey", "")
     }
 
-    # 시스템 AI 전용 도구 로드
+    # Phase 17: execute_ibl 단일 도구
     tools = get_all_system_ai_tools()
 
-    # Git 활성화 조건: run_command 도구가 있고 .git 폴더가 있을 때
-    tool_names = [t.get("name") for t in tools]
-    git_enabled = "run_command" in tool_names and (DATA_PATH / ".git").exists()
+    # Git 활성화: .git 폴더 존재 여부로 판단
+    git_enabled = (DATA_PATH / ".git").exists()
 
-    # 시스템 프롬프트 생성 (공통 프롬프트 빌더 사용)
+    # 시스템 프롬프트 생성 (IBL 환경 포함)
     system_prompt = build_system_ai_prompt(
         user_profile=user_profile,
         git_enabled=git_enabled
     )
 
-    # AIAgent 인스턴스 생성 (시스템 AI 전용 도구 실행 함수 전달)
+    # AIAgent 인스턴스 생성 (execute_ibl → IBL 경로)
     agent = AIAgent(
         ai_config=ai_config,
         system_prompt=system_prompt,
@@ -373,40 +372,20 @@ def process_system_ai_message_stream(
 
 
 def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None, agent_id: str = None) -> str:
-    """
-    시스템 AI 도구 실행
+    """Phase 17: 시스템 AI 도구 실행 (execute_ibl 단일 경로)
 
     Args:
-        tool_name: 도구 이름
+        tool_name: 도구 이름 (execute_ibl)
         tool_input: 도구 입력
         work_dir: 작업 디렉토리
-        agent_id: 에이전트 ID (프로바이더에서 전달, 시스템 AI는 "system_ai")
+        agent_id: 에이전트 ID
     """
-    # 위임 관련 도구 처리
-    if tool_name == "list_project_agents":
-        return _execute_list_project_agents(tool_input)
-    if tool_name == "call_project_agent":
-        return _execute_call_project_agent(tool_input)
-
-    # 메시징 도구 처리
-    if tool_name == "send_nostr_message":
-        from system_ai import execute_send_nostr_message
-        return execute_send_nostr_message(tool_input)
-    if tool_name == "send_gmail_message":
-        from system_ai import execute_send_gmail_message
-        return execute_send_gmail_message(tool_input)
-
-    # 통합 이벤트 관리 도구 처리
-    if tool_name == "manage_events":
-        result = _execute_manage_events(tool_input)
-        result = _inject_system_guide(tool_name, result, agent_id)
-        return result
-    if tool_name == "list_switches":
-        return _execute_list_switches(tool_input)
-
-    if work_dir is None:
-        work_dir = str(DATA_PATH)
-    return execute_system_ai_tool(tool_name, tool_input, work_dir)
+    from system_tools import execute_tool
+    return execute_tool(
+        tool_name, tool_input,
+        project_path=work_dir or str(DATA_PATH),
+        agent_id=agent_id or "system_ai"
+    )
 
 
 def _execute_list_project_agents(tool_input: dict) -> str:
@@ -619,44 +598,8 @@ def _execute_call_project_agent(tool_input: dict) -> str:
     return f"'{agent_name}'에게 작업을 위임했습니다. 결과를 기다리세요."
 
 
-# 시스템 AI 도구 가이드 주입 추적
-_system_guide_injected: set = set()
-
-# 시스템 AI 도구의 가이드 파일 매핑 (도구명 → 파일명)
-_SYSTEM_TOOL_GUIDES = {
-    "manage_events": "calendar_guide.md",
-}
-
-
-def _inject_system_guide(tool_name: str, result: str, agent_id: str = None) -> str:
-    """시스템 AI 도구용 가이드 주입 (첫 호출 시에만)
-
-    tool_loader의 get_tool_guide()는 도구 패키지만 탐색하므로,
-    시스템 AI 전용 도구는 system_docs 폴더에서 직접 가이드를 로드합니다.
-    """
-    global _system_guide_injected
-
-    guide_key = f"{agent_id or 'system_ai'}:{tool_name}"
-    if guide_key in _system_guide_injected:
-        return result
-
-    guide_filename = _SYSTEM_TOOL_GUIDES.get(tool_name)
-    if not guide_filename:
-        return result
-
-    guide_path = DATA_PATH / "system_docs" / guide_filename
-    if not guide_path.exists():
-        return result
-
-    try:
-        guide_content = guide_path.read_text(encoding='utf-8')
-        _system_guide_injected.add(guide_key)
-        print(f"[시스템 AI 가이드 주입] {tool_name}")
-        guide_header = f"=== {tool_name} 사용 가이드 ===\n{guide_content}\n{'=' * 40}\n\n"
-        return guide_header + result
-    except Exception as e:
-        print(f"[시스템 AI 가이드 로드 실패] {guide_path}: {e}")
-        return result
+# 시스템 AI 가이드 주입 — 비활성화됨
+# 가이드 시스템이 search_guide 독립 도구로 통합됨 (data/guides/ + guide_db.json)
 
 
 def _execute_manage_events(tool_input: dict) -> str:
@@ -811,26 +754,8 @@ def get_system_prompt(user_profile: str = "", git_enabled: bool = False) -> str:
 
 
 def get_anthropic_tools():
-    """Anthropic 형식의 도구 정의 (동적 로딩)"""
-    all_tools = get_all_system_ai_tools()
-
-    # Anthropic 형식으로 변환 (parameters -> input_schema)
-    anthropic_tools = []
-    for tool in all_tools:
-        t = {
-            "name": tool["name"],
-            "description": tool.get("description", "")
-        }
-        # input_schema 또는 parameters 사용
-        if "input_schema" in tool:
-            t["input_schema"] = tool["input_schema"]
-        elif "parameters" in tool:
-            t["input_schema"] = tool["parameters"]
-        else:
-            t["input_schema"] = {"type": "object", "properties": {}}
-        anthropic_tools.append(t)
-
-    return anthropic_tools
+    """Phase 17: Anthropic 형식의 도구 정의 (execute_ibl 단일)"""
+    return get_all_system_ai_tools()  # 이미 올바른 형식
 
 
 # 시스템 문서 초기화 플래그

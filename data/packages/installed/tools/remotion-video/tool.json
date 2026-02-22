@@ -3,11 +3,9 @@
   "name": "Remotion Video",
   "description": "React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프레임워크를 사용하여 React/TSX 컴포넌트를 MP4 동영상으로 렌더링합니다.",
   "version": "1.0.0",
-  "guide_file": "visual_guide.md",
   "tools": [
     {
       "name": "create_remotion_video",
-      "guide_file": "remotion_guide.md",
       "description": "React/TSX 코드를 Remotion으로 렌더링하여 MP4 동영상을 생성합니다. composition_code에 React 컴포넌트를 작성하면 프레임 단위 애니메이션 동영상으로 변환됩니다. Tailwind CSS, Google Fonts, Lottie 애니메이션, 나레이션(edge-tts), BGM 믹싱을 지원합니다.",
       "input_schema": {
         "type": "object",
@@ -47,12 +45,16 @@
           },
           "asset_paths": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "동영상에 사용할 이미지/파일의 절대 경로 목록. public/ 폴더에 자동 복사되며 composition_code에서 staticFile('파일명')으로 참조합니다."
           },
           "narration_texts": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "씬별 나레이션 텍스트 목록. edge-tts로 음성 생성 후 동영상에 믹싱됩니다."
           },
           "voice": {
@@ -65,7 +67,61 @@
             "description": "배경음악 파일 절대 경로 (MP3). 나레이션과 함께 사용 시 자동으로 볼륨이 줄어듭니다."
           }
         },
-        "required": ["composition_code"]
+        "required": [
+          "composition_code"
+        ]
+      }
+    },
+    {
+      "name": "render_remotion_video",
+      "description": "TSX 파일 경로를 받아 Remotion으로 MP4를 렌더링합니다. 코드를 직접 전달하지 않고, 이미 파일로 저장된 TSX 컴포지션을 렌더링할 때 사용합니다. 에이전트가 system:write로 코드를 작성한 뒤 이 도구로 렌더링하는 워크플로우에 적합합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "composition_file": {
+            "type": "string",
+            "description": "렌더링할 TSX 파일의 절대 경로"
+          },
+          "duration_in_frames": {
+            "type": "integer",
+            "description": "총 프레임 수 (기본: 150, 즉 30fps에서 5초)",
+            "default": 150
+          },
+          "fps": {
+            "type": "integer",
+            "description": "초당 프레임 수 (기본: 30)",
+            "default": 30
+          },
+          "width": {
+            "type": "integer",
+            "description": "동영상 가로 크기 (기본: 1280)",
+            "default": 1280
+          },
+          "height": {
+            "type": "integer",
+            "description": "동영상 세로 크기 (기본: 720)",
+            "default": 720
+          },
+          "output_filename": {
+            "type": "string",
+            "description": "저장할 파일 이름 (예: my_video.mp4)",
+            "default": "remotion_video.mp4"
+          },
+          "props": {
+            "type": "object",
+            "description": "컴포지션에 전달할 동적 props (JSON 객체)"
+          },
+          "asset_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "동영상에 사용할 이미지/파일의 절대 경로 목록"
+          }
+        },
+        "required": [
+          "composition_file"
+        ]
       }
     },
     {
@@ -76,7 +132,10 @@
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["status", "setup"],
+            "enum": [
+              "status",
+              "setup"
+            ],
             "description": "status: 상태 확인, setup: npm install 실행",
             "default": "status"
           }

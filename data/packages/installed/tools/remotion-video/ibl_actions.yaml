@@ -1,0 +1,17 @@
+node: forge
+actions:
+  remotion:
+    description: React/Remotion 기반 프로그래밍 방식 영상 생성
+    target_description: TSX 컴포지션 코드
+    router: handler
+    tool: create_remotion_video
+    target_key: composition_code
+  render_remotion:
+    description: 파일로 저장된 TSX 컴포지션을 Remotion으로 MP4 렌더링. composition_file(절대경로) 필수.
+    router: handler
+    tool: render_remotion_video
+    target_key: composition_file
+  remotion_status:
+    description: Remotion 설치 상태 및 렌더링 상태 확인
+    router: handler
+    tool: check_remotion_status

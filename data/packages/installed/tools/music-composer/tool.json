@@ -3,7 +3,6 @@
   "name": "Music Composer",
   "description": "ABC Notation 기반 음악 작곡 도구. ABC → MIDI → 오디오(WAV/MP3) 변환.",
   "version": "1.0.0",
-  "guide_file": "music_composer_guide.md",
   "tools": [
     {
       "name": "abc_to_midi",
@@ -17,17 +16,23 @@
           },
           "instruments": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "파트별 악기 이름 리스트. V:1부터 순서대로 매칭"
           },
           "volumes": {
             "type": "array",
-            "items": {"type": "integer"},
+            "items": {
+              "type": "integer"
+            },
             "description": "파트별 볼륨 (0-127). 생략 시 자동 밸런스"
           },
           "panning": {
             "type": "array",
-            "items": {"type": "integer"},
+            "items": {
+              "type": "integer"
+            },
             "description": "파트별 좌우 패닝 (0=좌, 64=중앙, 127=우). 생략 시 자동 분배"
           },
           "reverb": {
@@ -43,7 +48,9 @@
             "description": "출력 파일명 (확장자 제외)"
           }
         },
-        "required": ["abc_notation"]
+        "required": [
+          "abc_notation"
+        ]
       }
     },
     {
@@ -58,7 +65,10 @@
           },
           "format": {
             "type": "string",
-            "enum": ["wav", "mp3"],
+            "enum": [
+              "wav",
+              "mp3"
+            ],
             "description": "출력 포맷 (기본: wav)"
           },
           "gain": {
@@ -67,11 +77,19 @@
           },
           "eq_preset": {
             "type": "string",
-            "enum": ["balanced", "warm", "bright", "powerful", "flat"],
+            "enum": [
+              "balanced",
+              "warm",
+              "bright",
+              "powerful",
+              "flat"
+            ],
             "description": "EQ 프리셋 (기본: balanced)"
           }
         },
-        "required": ["midi_path"]
+        "required": [
+          "midi_path"
+        ]
       }
     },
     {
@@ -86,17 +104,23 @@
           },
           "instruments": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "파트별 악기 이름 리스트. V:1부터 순서대로 매칭"
           },
           "volumes": {
             "type": "array",
-            "items": {"type": "integer"},
+            "items": {
+              "type": "integer"
+            },
             "description": "파트별 볼륨 (0-127). 생략 시 자동 밸런스"
           },
           "panning": {
             "type": "array",
-            "items": {"type": "integer"},
+            "items": {
+              "type": "integer"
+            },
             "description": "파트별 좌우 패닝 (0=좌, 64=중앙, 127=우)"
           },
           "reverb": {
@@ -109,7 +133,13 @@
           },
           "eq_preset": {
             "type": "string",
-            "enum": ["balanced", "warm", "bright", "powerful", "flat"],
+            "enum": [
+              "balanced",
+              "warm",
+              "bright",
+              "powerful",
+              "flat"
+            ],
             "description": "EQ 프리셋 (기본: balanced)"
           },
           "title": {
@@ -118,11 +148,16 @@
           },
           "format": {
             "type": "string",
-            "enum": ["wav", "mp3"],
+            "enum": [
+              "wav",
+              "mp3"
+            ],
             "description": "출력 포맷 (기본: wav)"
           }
         },
-        "required": ["abc_notation"]
+        "required": [
+          "abc_notation"
+        ]
       }
     },
     {
@@ -140,7 +175,9 @@
             "description": "페이지 번호 (0부터 시작, 기본 0). 페이지당 10건"
           }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -154,7 +191,9 @@
             "description": "곡 ID (search_abc_tunes 결과의 tune_id)"
           }
         },
-        "required": ["tune_id"]
+        "required": [
+          "tune_id"
+        ]
       }
     }
   ]

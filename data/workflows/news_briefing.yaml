@@ -1,0 +1,4 @@
+name: "뉴스 브리핑"
+description: "AI와 부동산 뉴스를 동시 수집"
+pipeline: '[web:search]("AI 뉴스") & [web:search]("부동산 뉴스")'
+created: "2026-02-17"

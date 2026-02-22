@@ -1,0 +1,7 @@
+name: "주가 확인"
+description: "주식 종목 검색 및 가격 조회"
+steps:
+  - node: finance
+    action: search
+    target: "{{query}}"
+created: "2026-02-17"

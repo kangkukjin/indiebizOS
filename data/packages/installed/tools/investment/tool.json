@@ -3,7 +3,6 @@
   "name": "Investment Tools",
   "description": "한국/미국 기업의 주가, 재무제표, 공시정보, 뉴스 및 암호화폐 정보를 조회하는 투자 분석 도구",
   "version": "1.1.0",
-  "guide_file": "investment_guide.md",
   "tools": [
     {
       "name": "kr_company_info",
@@ -47,7 +46,9 @@
             "default": "11011"
           }
         },
-        "required": ["year"]
+        "required": [
+          "year"
+        ]
       }
     },
     {
@@ -104,7 +105,9 @@
             "description": "조회 종료일 (YYYY-MM-DD). 기본값: 오늘"
           }
         },
-        "required": ["symbol"]
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -118,7 +121,9 @@
             "description": "티커 심볼 (예: AAPL, MSFT, GOOGL)"
           }
         },
-        "required": ["symbol"]
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -147,7 +152,9 @@
             "default": 5
           }
         },
-        "required": ["symbol"]
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -170,7 +177,9 @@
             "default": 10
           }
         },
-        "required": ["symbol"]
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -192,7 +201,9 @@
             "description": "조회 종료일 (YYYY-MM-DD). 기본값: 오늘"
           }
         },
-        "required": ["symbol"]
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -214,7 +225,9 @@
             "description": "검색 종료일 (YYYY-MM-DD). 기본값: 오늘"
           }
         },
-        "required": ["symbol"]
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -245,11 +258,45 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "symbol": { "type": "string", "description": "종목 심볼 (예: AAPL, 005930.KS)" },
-          "period": { "type": "string", "enum": ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"], "description": "조회 기간 (기본: 5d)" },
-          "interval": { "type": "string", "enum": ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"], "description": "데이터 간격 (기본: 1d)" }
+          "symbol": {
+            "type": "string",
+            "description": "종목 심볼 (예: AAPL, 005930.KS)"
+          },
+          "period": {
+            "type": "string",
+            "enum": [
+              "1d",
+              "5d",
+              "1mo",
+              "3mo",
+              "6mo",
+              "1y",
+              "2y",
+              "5y",
+              "10y",
+              "ytd",
+              "max"
+            ],
+            "description": "조회 기간 (기본: 5d)"
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "1m",
+              "5m",
+              "15m",
+              "30m",
+              "1h",
+              "1d",
+              "1wk",
+              "1mo"
+            ],
+            "description": "데이터 간격 (기본: 1d)"
+          }
         },
-        "required": ["symbol"]
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -258,9 +305,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "symbol": { "type": "string", "description": "종목 심볼 (예: AAPL, 005930.KS)" }
+          "symbol": {
+            "type": "string",
+            "description": "종목 심볼 (예: AAPL, 005930.KS)"
+          }
         },
-        "required": ["symbol"]
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -269,10 +321,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "query": { "type": "string", "description": "검색어 (종목명 또는 회사명)" },
-          "search_type": { "type": "string", "enum": ["all", "quotes", "news"], "description": "검색 유형 (기본: quotes)" }
+          "query": {
+            "type": "string",
+            "description": "검색어 (종목명 또는 회사명)"
+          },
+          "search_type": {
+            "type": "string",
+            "enum": [
+              "all",
+              "quotes",
+              "news"
+            ],
+            "description": "검색 유형 (기본: quotes)"
+          }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -281,9 +346,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "symbol": { "type": "string", "description": "종목 심볼 (예: AAPL, TSLA)" }
+          "symbol": {
+            "type": "string",
+            "description": "종목 심볼 (예: AAPL, TSLA)"
+          }
         },
-        "required": ["symbol"]
+        "required": [
+          "symbol"
+        ]
       }
     },
     {
@@ -292,9 +362,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "coin_id": { "type": "string", "description": "코인 ID 또는 심볼 (bitcoin, BTC 등)" }
+          "coin_id": {
+            "type": "string",
+            "description": "코인 ID 또는 심볼 (bitcoin, BTC 등)"
+          }
         },
-        "required": ["coin_id"]
+        "required": [
+          "coin_id"
+        ]
       }
     }
   ]

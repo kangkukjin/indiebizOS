@@ -1,0 +1,966 @@
+{
+  "id": "ibl-core",
+  "name": "IBL Core",
+  "description": "IBL(IndieBiz Logic) 노드-액션 통합 도구. 여러 도구를 노드별로 묶어 하나의 인터페이스로 사용할 수 있습니다.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "execute_ibl",
+      "description": "IBL 통합 실행기. 6개 노드로 모든 기능을 실행합니다.\n\n## 방법 1: node/action 직접 호출\nexecute_ibl(node='source', action='web_search', target='AI 뉴스')\nexecute_ibl(node='forge', action='registry', params={'action': 'list'})\n\n## 방법 2: IBL 코드 (파이프라인)\nexecute_ibl(code='[source:web_search](\"AI\") >> [system:file](\"result.md\")')\n\n## 6개 노드\n- system: 알림, 위임, 워크플로우, 파일(read/write/list/find/grep), 시간, 이벤트, 결과출력(gui/file/open/clipboard)\n- interface: 브라우저 자동화(navigate/snapshot/click/type), 안드로이드(adb), 데스크탑(macOS GUI)\n- messenger: 연락처(search/list), 이웃, Gmail/Nostr 메시지 발송/검색\n- source: 웹검색, 크롤링, 뉴스, 주가, 재무제표, 부동산, 법률, 통계, 문화, 쇼핑, 사진, 건강, 블로그, 메모리, CCTV\n- stream: 유튜브(info/transcript/download/play), 라디오(search/play/stop)\n- forge: 슬라이드, 영상(HTML/Remotion), 차트, AI이미지, 음악, 홈페이지관리(registry/snapshot/live_check/create/deploy), 건축설계\n\n## 파이프라인: >> 순차, & 병렬, ?? 폴백\n## 모르면: system:discover 또는 search_guide 호출",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "IBL 코드 (예: '[source:web_search](\"AI 뉴스\") >> [system:file](\"result.md\")'). code가 주어지면 node/action은 무시됩니다."
+          },
+          "node": {
+            "type": "string",
+            "description": "노드 이름 (code 미사용 시). 예: system, interface, messenger, source, stream, forge"
+          },
+          "action": {
+            "type": "string",
+            "description": "액션 이름 (code 미사용 시). 예: web_search, registry, read, play"
+          },
+          "target": {
+            "type": "string",
+            "description": "대상 (검색어, URL, 파일경로 등)"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터"
+          }
+        }
+      }
+    },
+    {
+      "name": "ibl_api",
+      "description": "외부 API 호출 노드. 법률, 통계, 투자, 쇼핑, 맛집 등 API 레지스트리에 등록된 모든 API를 통합 호출합니다.\n\n## 액션\n- call: API 도구 실행 (target에 도구 이름, params에 파라미터)\n- list: 등록된 API 도구 목록 조회\n\n## 사용 예시\n법령 검색: action='call', target='search_laws', params={'query': '임대차'}\n도구 목록: action='list'\n\n## 등록된 API 도구\nsearch_laws, get_law_detail, search_precedents, get_precedent_detail, search_legal_info, get_legal_detail, kosis_search_statistics, kosis_get_data, kosis_get_statistics_info, kosis_integrated_search, kosis_get_indicators, search_shopping, search_restaurants, get_api_ninjas_data, search_kstartup, search_mss_biz, apt_trade_price, apt_rent_price",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["call", "list"],
+            "description": "실행할 액션 (call: API 호출, list: 목록 조회)"
+          },
+          "target": {
+            "type": "string",
+            "description": "호출할 API 도구 이름 (action=call일 때 필수)"
+          },
+          "params": {
+            "type": "object",
+            "description": "API 도구에 전달할 파라미터"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_web",
+      "description": "웹 검색/크롤링 노드 (informant로 통합됨). 웹 검색, 페이지 크롤링, 뉴스 검색을 통합합니다.\n\n## 액션\n- search/web_search: DuckDuckGo 웹 검색 (target=검색어)\n- crawl: 웹페이지 크롤링 (target=URL)\n- news/search_news: 구글 뉴스 검색 (target=검색어)\n- browse: 브라우저로 URL 열기 (target=URL) → orchestrator로 라우팅\n\n## 사용 예시\n웹 검색: action='web_search', target='AI 트렌드 2026'\n크롤링: action='crawl', target='https://example.com'\n뉴스: action='search_news', target='삼성전자'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search", "crawl", "news", "browse"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색어 또는 URL"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (display, region 등)"
+          }
+        },
+        "required": ["action", "target"]
+      }
+    },
+    {
+      "name": "ibl_fs",
+      "description": "파일시스템 및 코드 실행 노드. 파일 읽기/쓰기, 검색, Python/Node.js 코드 실행을 통합합니다.\n\n## 액션\n- read: 파일 읽기 (target=파일경로)\n- write: 파일 쓰기 (target=파일경로, params.content=내용)\n- list: 디렉토리 조회 (target=경로)\n- find: 파일 검색 (target=glob패턴)\n- grep: 파일 내용 검색 (target=검색어, params.path=경로)\n- exec_python: Python 코드 실행 (target=코드)\n- exec_node: Node.js 코드 실행 (target=코드)\n- run: 시스템 명령 실행 (target=명령어)\n\n## 사용 예시\n파일 읽기: action='read', target='/path/to/file.txt'\nPython 실행: action='exec_python', target='print(1+1)'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["read", "write", "list", "find", "grep", "exec_python", "exec_node", "run"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "파일 경로, glob 패턴, 코드, 또는 명령어"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (content, encoding 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_media",
+      "description": "미디어 생성 노드. 슬라이드, 영상, 차트, AI 이미지, 음악을 통합합니다.\n\n## 액션\n- slide: 프레젠테이션 슬라이드 생성 (target=주제)\n- video: HTML 기반 영상 생성 (target=주제)\n- chart: 데이터 차트 생성 (target=제목, params에 data/type 등)\n- image: AI 이미지 생성 (target=프롬프트)\n- music: ABC 악보 작곡 및 오디오 변환 (target=제목)\n- youtube_download: 유튜브 오디오 다운로드 (target=URL)\n\n## 사용 예시\n차트: action='chart', target='매출 추이', params={'data': [...], 'type': 'line'}\n이미지: action='image', target='sunset over mountains'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["slide", "video", "chart", "image", "music", "youtube_download"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "주제, 프롬프트, URL 등"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (data, type, style 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_channel",
+      "description": "메시징 채널 노드. Gmail, Nostr 등 메시징 서비스를 통합합니다.\n\n## 액션\n- send: 메시지 발송 (target=채널타입, params에 to, subject, body 등)\n- read: 메시지 읽기 (target=채널타입)\n- search: 메시지 검색 (target=채널타입, params.query=검색어)\n\n## 지원 채널\n- gmail: 이메일 발송/읽기/검색\n- nostr: Nostr 프로토콜 메시징\n\n## 사용 예시\nGmail 발송: action='send', target='gmail', params={'to': 'user@mail.com', 'subject': '제목', 'body': '내용'}\n메일 검색: action='search', target='gmail', params={'query': '회의록'}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["send", "read", "search"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "채널 타입 (gmail, nostr)"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_system",
+      "description": "시스템 관리 노드 (orchestrator로 통합됨). 알림 전송, 에이전트 위임, 노드 탐색을 통합합니다.\n\n## 액션\n- send_notify: 사용자에게 알림 전송 (target=메시지 또는 params.message)\n- delegate: 다른 에이전트에게 작업 위임 (target=에이전트ID, params.message=지시)\n- delegate_workflow: 다른 에이전트에게 IBL 파이프라인 위임 (target=에이전트ID, params.steps=파이프라인)\n- discover: 키워드로 적합한 노드/액션 탐색 (target=검색어). target 없으면 전체 노드 요약 반환\n\n## 사용 예시\n알림: action='send_notify', target='분석이 완료되었습니다'\n위임: action='delegate', target='agent_002', params={'message': '보고서 작성해줘'}\n노드 탐색: action='discover', target='주가 정보'\n전체 요약: action='discover'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["notify", "delegate", "delegate_workflow", "discover", "schedule"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "대상 (메시지, 에이전트ID 등)"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_workflow",
+      "description": "워크플로우 관리 및 파이프라인 실행 노드 (orchestrator로 통합됨). 여러 IBL 액션을 순차 연결하여 파이프라인으로 실행하고, YAML로 저장/로드하여 반복 실행할 수 있습니다.\n\n## 액션\n- run/run_pipeline: 저장된 워크플로우 또는 파이프라인 실행 (target=워크플로우ID 또는 params.code)\n- list/list_workflows: 저장된 워크플로우 목록 조회\n- get/get_workflow: 워크플로우 상세 조회 (target=워크플로우ID)\n- save/save_workflow: 워크플로우 저장 (params에 name, steps 등)\n- delete/delete_workflow: 워크플로우 삭제 (target=워크플로우ID)\n\n## IBL 코드로 파이프라인 실행 (권장)\naction='run_pipeline', params={'code': '[informant:web_search](\"AI 뉴스\") >> [fs:write](\"결과.md\")'}\n\n## IBL 문법\n- 단일: [node:action](target) { \"key\": \"value\" }\n- 파이프: [a:b](\"x\") >> [c:d](\"y\") >> [e:f](\"z\")\n- 이전 결과는 자동으로 다음 단계에 전달됨\n- {{_prev_result}}로 명시적 참조 가능\n\n## step 배열로 실행 (기존 방식)\naction='run_pipeline', params={'steps': [{'node': 'fs', 'action': 'exec_python', 'target': 'print(42)'}]}\n\n## 기타 예시\n워크플로우 실행: action='run_pipeline', target='daily_news'\n목록 조회: action='list_workflows'\n워크플로우 저장: action='save_workflow', target='my_workflow', params={'name': '내 워크플로우', 'steps': [...]}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["run", "list", "get", "save", "delete", "run_pipeline"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "워크플로우 ID 또는 이름"
+          },
+          "params": {
+            "type": "object",
+            "description": "워크플로우 정의(save) 또는 파이프라인 steps(run_pipeline)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_photo",
+      "description": "사진/동영상 메타데이터 노드. 로컬에 스캔된 사진/동영상의 메타데이터를 검색, 조회, 통계합니다.\n\n## 액션\n- search: 사진/동영상 검색 (target=검색어, params: media_type, limit, sort_by)\n- get: 미디어 상세 정보 (target=미디어ID)\n- timeline: 월별 촬영 통계\n- stats: 전체 사진/동영상 통계\n- list_scans: 스캔된 폴더 목록\n\n## 사용 예시\n사진 검색: action='search', target='여행'\n통계: action='stats'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search", "get", "timeline", "stats", "list_scans", "scan", "gallery", "duplicates", "manager"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색어 또는 미디어 ID"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (scan_id, media_type, limit 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_health",
+      "description": "건강 기록 노드. 혈압, 혈당, 체중, 증상, 약물 등 건강 데이터를 조회/기록합니다.\n\n## 액션\n- query: 건강 기록 조회 (target=카테고리: blood_pressure, blood_sugar, weight, symptoms, medications)\n- log: 측정값 기록 (target=카테고리, params: value, note, measured_at)\n- summary: 건강 요약 (활성 증상, 현재 약물, 최근 측정)\n- history: 특정 카테고리 이력 조회 (target=카테고리)\n\n## 사용 예시\n혈압 조회: action='query', target='blood_pressure'\n체중 기록: action='log', target='weight', params={'value': {'kg': 72.5}}\n건강 요약: action='summary'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["query", "log", "summary", "history", "save", "context"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "카테고리 (blood_pressure, blood_sugar, weight, symptoms, medications)"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (value, days, person 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_blog",
+      "description": "블로그 노드. 개인 블로그 글을 전문 검색(FTS5)하고 조회합니다.\n\n## 액션\n- search: 블로그 글 검색 (target=검색어, FTS5 전문검색)\n- get_post: 블로그 글 전문 조회 (target=포스트ID)\n- list: 블로그 글 목록 (params: category, limit)\n- stats: 블로그 통계 (총 글 수, 카테고리별)\n\n## 사용 예시\n글 검색: action='search', target='AI 개발'\n글 조회: action='get_post', target='post_123'\n통계: action='stats'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search", "get_post", "list", "stats"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색어 또는 포스트 ID"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (category, limit 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_contact",
+      "description": "연락처 노드. 이웃/연락처를 검색, 조회하고 메시지 이력을 확인합니다.\n\n## 액션\n- search: 연락처 검색 (target=검색어, 이름/메모 검색)\n- get: 연락처 상세 조회 (target=연락처ID, 연락 수단 포함)\n- list: 전체 연락처 목록 (params: favorite, limit)\n- messages: 특정 연락처의 메시지 이력 (target=연락처ID)\n\n## 사용 예시\n연락처 검색: action='search', target='김사장'\n메시지 이력: action='messages', target='neighbor_id_123'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search", "get", "list", "messages", "neighbors", "neighbor_detail", "send_email"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색어, 연락처 ID, 이웃 이름, 이메일 주소"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (favorite, limit 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_memory",
+      "description": "대화 기억 노드. 에이전트 대화 이력을 검색하고 최근 대화를 조회합니다.\n\n## 액션\n- search: 대화 내용 검색 (target=검색 키워드, params: agent)\n- recent: 최근 대화 조회 (params: agent, limit)\n- agents: 등록된 에이전트 목록\n\n## 사용 예시\n대화 검색: action='search', target='보고서'\n최근 대화: action='recent', params={'limit': 5}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search", "recent", "agents", "save", "memory_search", "memory_read", "memory_delete", "skill_search", "skill_read", "skill_add", "skill_delete", "skill_import"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색 키워드"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (agent, limit 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_youtube",
+      "description": "유튜브 통합 노드. 동영상 정보 조회, 자막 추출, AI 요약, MP3 다운로드, 재생/큐 관리를 통합합니다.\n\n## 액션\n- info: 동영상 메타데이터 조회 (target=URL)\n- transcript: 자막/스크립트 추출 (target=URL, params: languages, include_timestamps)\n- languages: 사용 가능한 자막 언어 목록 (target=URL)\n- summarize: AI 요약 HTML 생성 (target=URL, params: summary_length)\n- download: MP3 다운로드 (target=URL, params: output_path)\n- play: 검색 후 재생 (target=검색어/URL, params: mode, count)\n- queue_add: 재생 큐에 추가 (target=검색어)\n- skip: 현재 곡 건너뛰기\n- queue: 재생 큐 상태 조회\n- stop: 재생 중지\n\n## 사용 예시\n정보 조회: action='info', target='https://youtu.be/xxx'\n자막 추출: action='transcript', target='https://youtu.be/xxx'\n음악 재생: action='play', target='Bohemian Rhapsody'\n다운로드: action='download', target='https://youtu.be/xxx'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["info", "transcript", "languages", "summarize", "download", "play", "queue_add", "skip", "queue", "stop"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "유튜브 URL 또는 검색어"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (languages, mode, count, summary_length, output_path 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_finance",
+      "description": "금융/투자 통합 노드. 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐를 하나의 인터페이스로 통합합니다.\n\n## 액션\n- price: 주가 조회 - Yahoo Finance (target=심볼, params: period, interval)\n- info: 종목 상세 정보 (target=심볼)\n- search: 종목 심볼 검색 (target=회사명)\n- kr_company: 한국 기업 정보 - DART (target=기업명)\n- us_company: 미국 기업 프로필 - FMP (target=티커)\n- kr_financial: 한국 재무제표 - DART (target=기업명, params: year, report_type)\n- us_financial: 미국 재무제표 - FMP (target=티커, params: statement_type, period)\n- kr_disclosure: 한국 공시 검색 - DART (target=기업명, params: start_date, end_date)\n- us_filing: 미국 SEC 공시 (target=티커, params: filing_type)\n- news: 종목 뉴스 - Finnhub (target=티커)\n- stock_news: 종목 뉴스 - Yahoo (target=티커)\n- earnings: 실적 발표 일정 (target=티커, 비우면 전체)\n- crypto: 암호화폐 시세 - CoinGecko (target=코인심볼 BTC/ETH 등)\n- kr_price: 한국 주가 - KRX (target=종목코드, params: start_date, end_date)\n- us_price: 미국 주가 - FMP (target=티커, params: start_date, end_date)\n\n## 사용 예시\n삼성전자 주가: action='price', target='005930.KS'\n애플 재무제표: action='us_financial', target='AAPL', params={'statement_type': 'income'}\n비트코인 시세: action='crypto', target='BTC'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["price", "info", "search", "kr_company", "us_company", "kr_financial", "us_financial", "kr_disclosure", "us_filing", "news", "stock_news", "earnings", "crypto", "kr_price", "us_price"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "종목 코드/티커/기업명/코인심볼"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (year, period, statement_type, filing_type, start_date, end_date 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_location",
+      "description": "위치/생활 통합 노드. 날씨, 맛집, 길찾기, 지도, 여행 정보를 통합합니다.\n\n## 액션\n- weather: 날씨 조회 (target=도시명, API Ninjas)\n- restaurant: 맛집 검색 (target=검색어, params: x, y, radius)\n- navigate: 길찾기 (target=출발지, params: destination, priority, waypoints)\n- map: 지도 표시 (target=장소명 또는 params: lat, lng, zoom, markers)\n- travel: 여행 검색 (target=엔드포인트, params: 항공/호텔/관광지 파라미터)\n\n## 사용 예시\n날씨: action='weather', target='weather', params={'city': 'Seoul'}\n맛집: action='restaurant', target='강남 파스타'\n길찾기: action='navigate', target='127.027,37.498', params={'destination': '126.978,37.566'}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["weather", "restaurant", "navigate", "map", "travel"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "장소명, 검색어, 좌표, 엔드포인트"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (city, destination, radius 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_shopping",
+      "description": "쇼핑 노드. 네이버 쇼핑, 다나와, 중고나라, 번개장터에서 상품을 검색하고 가격을 비교합니다.\n\n## 액션\n- search: 상품 검색 및 가격 비교 (target=상품명, params: site, display)\n\n## params.site 옵션\n- all (기본): 모든 소스 통합\n- naver: 네이버 쇼핑만\n- danawa: 다나와만\n- used: 중고 (중고나라+번개장터)\n\n## 사용 예시\n상품 검색: action='search', target='무선이어폰'\n다나와만: action='search', target='RTX 4090', params={'site': 'danawa'}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "상품명"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (site: all|naver|danawa|used, display: 결과 수)"
+          }
+        },
+        "required": ["action", "target"]
+      }
+    },
+    {
+      "name": "ibl_android",
+      "description": "안드로이드 기기 관리 도메인 (ADB 기반). 기기정보, SMS, 통화, 연락처, 앱, 파일전송, UI자동화를 통합합니다.\n\n## 액션\n- devices: 연결된 기기 목록\n- info: 기기 상세 정보 (target=device_id)\n- status: 배터리/온도/저장소 (target=device_id)\n- sms_list: SMS 목록 (params: box, limit)\n- sms_send: SMS 발송 (target=전화번호, params: message)\n- sms_search: SMS/MMS/RCS 검색 (target=검색어)\n- call: 전화 걸기 (target=전화번호)\n- call_log: 통화 이력 (params: call_type, limit)\n- contacts: 연락처 검색 (target=검색어)\n- apps: 설치된 앱 목록 (크기/사용량)\n- notifications: 알림 읽기\n- screenshot: 화면 캡처 (AI 분석용)\n- push_file: PC→폰 전송 (target=로컬경로)\n- pull_file: 폰→PC 전송 (target=원격경로)\n- tap: 좌표 탭 (params: x, y)\n- type_text: 텍스트 입력 (target=텍스트)\n- find_tap: 텍스트로 찾아 탭 (target=찾을텍스트)\n- open_app: 앱 실행 (target=패키지명)\n- swipe: 스와이프 (params: x1,y1,x2,y2)\n- key: 시스템 키 (target=HOME/BACK/RECENT 등)\n\n## 사용 예시\nSMS 검색: action='sms_search', target='택배'\n앱 실행: action='open_app', target='com.kakao.talk'\n버튼 탭: action='find_tap', target='로그인'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["devices", "info", "status", "sms_list", "sms_send", "sms_search", "call", "call_log", "contacts", "apps", "notifications", "screenshot", "push_file", "pull_file", "tap", "type_text", "find_tap", "open_app", "swipe", "key"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "device_id, 전화번호, 검색어, 파일경로, 패키지명, 키코드 등"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (device_id, message, box, limit, x, y 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_browser",
+      "description": "Playwright 브라우저 자동화 노드. 접근성 스냅샷 기반으로 웹 요소를 탐색하고 조작합니다.\n\n## 액션\n- navigate: URL 열기 (target=URL)\n- snapshot: 접근성 스냅샷 (ref 생성: e1, e2...)\n- click: 요소 클릭 (target=ref)\n- type: 텍스트 입력 (target=ref, params: text)\n- content: 페이지 텍스트 추출\n- screenshot: 스크린샷 PNG 저장\n- scroll: 스크롤 (params: direction=up/down)\n- evaluate: JavaScript 실행 (target=JS코드)\n- wait: 조건 대기 (params: selector/text/url)\n- press_key: 키 입력 (target=Enter/Tab 등)\n- tab_list: 열린 탭 목록\n- tab_new: 새 탭 (target=URL)\n- tab_switch: 탭 전환 (target=tab_id)\n- close: 브라우저 종료\n- pdf: PDF 저장\n\n## 워크플로우: snapshot → ref 확인 → click/type → snapshot\n\n## 사용 예시\nURL 열기: action='navigate', target='https://google.com'\n스냅샷: action='snapshot'\n클릭: action='click', target='e3'\n입력: action='type', target='e5', params={'text': '검색어'}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["navigate", "snapshot", "click", "type", "content", "screenshot", "scroll", "evaluate", "wait", "press_key", "tab_list", "tab_new", "tab_switch", "close", "pdf"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "URL, ref ID, JS코드, tab_id, 키 이름"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (text, direction, selector, format 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_radio",
+      "description": "인터넷 라디오 노드. 전세계 라디오 검색 (Radio Browser API), 한국 방송사 채널, 재생/정지/볼륨 제어를 통합합니다.\n\n## 액션\n- search: 전세계 라디오 검색 (target=방송국명, params: tag, country, language)\n- korean: 한국 방송사 채널 목록 (target=KBS/MBC/SBS 등)\n- play: 재생 (target=station_id, params: stream_url, volume)\n- stop: 정지\n- status: 현재 재생 상태\n- volume: 볼륨 조절 (target=0~100)\n- favorites: 즐겨찾기 목록\n- save_favorite: 즐겨찾기 추가\n- remove_favorite: 즐겨찾기 제거 (target=방송국명)\n\n## 사용 예시\nKBS 채널: action='korean', target='KBS'\n재생: action='play', target='kbs_coolfm'\n검색: action='search', target='jazz', params={'country': 'US'}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search", "korean", "play", "stop", "status", "volume", "favorites", "save_favorite", "remove_favorite"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "방송국명, station_id, 볼륨값 등"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (tag, country, language, stream_url, volume 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_cctv",
+      "description": "CCTV/웹캠 노드. 한국 교통 CCTV(ITS)와 전세계 웹캠(Windy)을 검색하고 영상 캡처를 지원합니다.\n\n## 액션\n- search: 교통 CCTV 검색 (params: min_x, max_x, min_y, max_y, road_type)\n- nearby: 가까운 CCTV (params: lat, lng, radius)\n- by_name: 이름 검색 (target=키워드, 예: 경부, 강남)\n- open: 브라우저로 열기 (target=이름/URL)\n- webcam: 전세계 웹캠 검색 (params: lat, lon, category, country)\n- webcam_nearby: 가까운 웹캠 (params: lat, lon)\n- capture: 프레임 캡처 이미지 저장 (target=URL)\n- sources: 사용 가능한 소스 확인\n\n## 사용 예시\nCCTV 검색: action='by_name', target='강남'\n웹캠 검색: action='webcam', params={'country': 'KR', 'category': 'traffic'}\n캡처: action='capture', target='https://cctv-url.com/stream'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search", "nearby", "by_name", "open", "webcam", "webcam_nearby", "capture", "sources"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "키워드, URL, 이름"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (min_x, max_x, min_y, max_y, lat, lng, category 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_realestate",
+      "description": "부동산 노드. 아파트/주택 매매·전월세 실거래가 조회 및 상권 분석을 통합합니다 (국토교통부, 소상공인진흥공단).\n\n## 액션\n- apt_trade: 아파트 매매 실거래가 (target=지역코드, params: start_month, end_month)\n- apt_rent: 아파트 전월세 실거래가 (target=지역코드, params: start_month, end_month)\n- house_trade: 주택 매매 실거래가 (target=지역코드)\n- house_rent: 주택 전월세 실거래가 (target=지역코드)\n- regions: 지역코드 조회 (target=시도명)\n- commercial: 상권 분석 (params: lat, lng, radius, indsLclsCd)\n\n## 지역코드: 5자리 (11680=강남, 11305=강북 등)\n\n## 사용 예시\n강남 아파트 매매: action='apt_trade', target='11680', params={'start_month': '202501'}\n지역코드 조회: action='regions', target='서울'\n상권 분석: action='commercial', params={'lat': 37.498, 'lng': 127.027, 'radius': 500}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["apt_trade", "apt_rent", "house_trade", "house_rent", "regions", "commercial"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "지역코드 (5자리) 또는 시도명"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (start_month, end_month, count_per_month, lat, lng 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_startup",
+      "description": "창업지원 노드. 정부 창업지원 사업공고를 검색합니다 (K-Startup 창업진흥원, 중소벤처기업부).\n\n## 액션\n- kstartup: K-Startup 사업공고 검색 (target=키워드)\n- mss: 중소벤처기업부 사업공고 검색 (target=키워드)\n\n## 사용 예시\n예비창업: action='kstartup', target='예비창업'\nR&D 지원: action='mss', target='R&D'\n기술창업: action='kstartup', target='기술창업', params={'count': 20}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["kstartup", "mss"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색 키워드"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (count 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_culture",
+      "description": "문화/예술 노드. 공연(KOPIS), 도서(도서관정보나루), 전시(KCISA) 정보를 통합 조회합니다.\n\n## 액션\n- performance: 공연 검색 (target=키워드, params: genre, region)\n- performance_detail: 공연 상세 (target=공연ID)\n- box_office: 인기 공연 순위 (params: period=day/week/month)\n- venue: 공연장 검색 (target=공연장명)\n- festival: 축제/행사 검색 (params: stdate, eddate)\n- book: 도서 검색 (target=제목/저자/출판사)\n- book_detail: 도서 상세 (target=ISBN13)\n- popular_books: 인기 대출 도서 (params: gender, age, region)\n- trending_books: 대출 급증 도서\n- library: 도서관 검색 (target=도서관명)\n- exhibit: 전시/문화행사 검색 (target=키워드)\n- exhibit_detail: 전시 상세 (target=행사seq)\n\n## 사용 예시\n뮤지컬 검색: action='performance', target='뮤지컬'\n도서 검색: action='book', target='인공지능'\n인기 도서: action='popular_books'\n전시 검색: action='exhibit', target='현대미술'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["performance", "performance_detail", "box_office", "venue", "festival", "book", "book_detail", "popular_books", "trending_books", "library", "exhibit", "exhibit_detail", "performance_search", "genres", "regions"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색어, 공연ID, ISBN13, 도서관명, 행사seq"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (genre, region, period, gender, age, stdate, eddate 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_hosting",
+      "description": "호스팅/인프라 노드. Cloudflare API를 통해 Pages, Workers, R2, D1, Tunnel, DNS를 관리합니다.\n\n## 액션\n- api: Cloudflare API 호출 (target=엔드포인트, params: method, body)\n\n## 엔드포인트 예시\n- /zones: 도메인 목록\n- /accounts/{account_id}/pages/projects: Pages 프로젝트\n- /accounts/{account_id}/workers/scripts: Workers 스크립트\n- /accounts/{account_id}/r2/buckets: R2 버킷\n- /accounts/{account_id}/d1/database: D1 데이터베이스\n- /accounts/{account_id}/tunnels: Tunnel\n\n## 사용 예시\n도메인 목록: action='api', target='/zones'\nPages 목록: action='api', target='/accounts/{account_id}/pages/projects'\nDNS 레코드: action='api', target='/zones/{zone_id}/dns_records'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["api"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "API 엔드포인트 (예: /zones)"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (method: GET/POST/PUT/DELETE, body: 요청 본문)"
+          }
+        },
+        "required": ["action", "target"]
+      }
+    },
+    {
+      "name": "ibl_desktop",
+      "description": "데스크탑(macOS) 자동화 노드. 스크린샷 기반 시각 AI로 GUI 앱을 직접 조작합니다.\n\n## 액션\n- screenshot: 화면 캡처 (params: region)\n- click: 좌표 클릭 (params: x, y, button, clicks)\n- type: 텍스트 입력 (target=텍스트)\n- key: 키보드 입력 (target=키, 예: cmd+c, enter)\n- mouse_move: 마우스 이동 (params: x, y)\n- drag: 드래그 (params: start_x, start_y, end_x, end_y)\n- scroll: 스크롤 (params: direction, amount)\n- cursor_position: 현재 커서 위치\n- screen_info: 화면 해상도/스케일\n\n## 좌표 시스템\n1280x800 가상 해상도 기준, 자동 스케일링.\n\n## 사용 예시\n화면 캡처 후 클릭: screenshot → 분석 → click (x, y)\n단축키: action='key', target='cmd+shift+4'\n텍스트 입력: action='type', target='Hello World'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["screenshot", "click", "type", "key", "mouse_move", "drag", "scroll", "cursor_position", "screen_info"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "텍스트(type), 키(key)"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (x, y, button, clicks, direction, amount, region 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_study",
+      "description": "학술/리서치 노드. 다양한 학술 DB와 데이터 소스에서 논문, 도서, 통계를 검색합니다.\n\n## 액션\n- search_openalex: OpenAlex 논문 검색 (인용수/OA 필터)\n- search_arxiv: arXiv 프리프린트 검색\n- download_arxiv: arXiv PDF 다운로드 (target=ID)\n- search_semantic: Semantic Scholar 검색\n- search_scholar: Google Scholar 검색\n- search_pubmed: PubMed 생의학 논문 검색\n- download_pubmed: PMC 논문 PDF 다운로드 (target=PMC ID)\n- pew_research: Pew Research 여론조사 데이터\n- search_guardian: Guardian 뉴스 아카이브\n- world_bank: 세계은행 경제지표 (target=지표코드)\n- search_books: Google Books 도서 검색\n\n## 사용 예시\nAI 논문: action='search_arxiv', target='transformer attention mechanism'\n경제지표: action='world_bank', target='NY.GDP.MKTP.CD', params={'country': 'KR'}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search_openalex", "search_arxiv", "download_arxiv", "search_semantic", "search_scholar", "search_pubmed", "download_pubmed", "pew_research", "search_guardian", "world_bank", "search_books"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색어, arXiv ID, PMC ID, 지표 코드"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (max_results, year_from, year_to, country, date 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_webbuilder",
+      "description": "웹사이트 빌더 노드. Next.js + shadcn/ui 기반 웹사이트 생성부터 Vercel 배포까지 전체 라이프사이클을 관리합니다.\n\n## 액션\n- registry: 사이트 레지스트리 관리 (params: action=register/list/remove)\n- snapshot: 사이트 스냅샷\n- live_check: 사이트 품질 검사 (Lighthouse)\n- create: 프로젝트 생성 (target=이름, params: template)\n- add_component: shadcn/ui 컴포넌트 추가\n- list_components: 컴포넌트 카탈로그\n- list_sections: 섹션 템플릿 목록\n- create_page: 페이지 생성 (섹션 조합)\n- edit_styles: 테마/스타일 변경\n- preview: 로컬 미리보기\n- build: 프로덕션 빌드\n- deploy: Vercel 배포\n- fetch_component: 외부 컴포넌트 가져오기\n\n## 사용 예시\n프로젝트 생성: action='create', target='my-site', params={'template': 'landing'}\n배포: action='deploy', target='/path/to/project'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["registry", "snapshot", "live_check", "create", "add_component", "list_components", "list_sections", "create_page", "edit_styles", "preview", "build", "deploy", "fetch_component"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "사이트ID, 프로젝트 경로, 컴포넌트명"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (template, components[], sections[], theme, port 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_storage",
+      "description": "저장소 관리 노드. PC 디스크/볼륨 스캔, 파일 검색, 용량 분석, 폴더 주석 관리.\n\n## 액션\n- scan: 디스크/볼륨 스캔 (인덱싱, target=경로)\n- query: 파일 검색 (이름, 확장자, 크기)\n- summary: 저장소 사용량 요약\n- volumes: 마운트된 볼륨 목록\n- annotate: 폴더에 메모 추가 (target=경로)\n- annotations: 폴더 주석 조회\n- explorer: Finder에서 열기 (target=경로)\n\n## 사용 예시\n용량 확인: action='summary'\n큰 파일 찾기: action='query', params={'min_size_mb': 100}\n폴더 메모: action='annotate', target='/path', params={'note': '중요 데이터'}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["scan", "query", "summary", "volumes", "annotate", "annotations", "explorer"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "파일/폴더 경로"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (volume_name, search_term, extension, min_size_mb, note 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_viz",
+      "description": "데이터 시각화 노드. 다양한 차트 생성 (PNG/HTML/base64 출력).\n\n## 액션\n- line: 라인 차트 (시계열, 추세)\n- bar: 바 차트 (수평/수직, 스택)\n- candlestick: 캔들스틱 (OHLCV, 이동평균)\n- pie: 파이/도넛 차트\n- scatter: 산점도 (추세선 옵션)\n- heatmap: 히트맵 (상관관계, 분포)\n- multi: 복합 차트 대시보드\n\n## 데이터 형식\n- data: 직접 데이터 전달 (JSON 배열)\n- data_file: CSV/JSON 파일 경로\n\n## 사용 예시\n주가 차트: action='candlestick', target='삼성전자', params={'data_file': 'stock.csv'}\n비교 바: action='bar', target='매출 비교', params={'data': [...], 'horizontal': true}",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["line", "bar", "candlestick", "pie", "scatter", "heatmap", "multi"],
+            "description": "실행할 차트 타입"
+          },
+          "target": {
+            "type": "string",
+            "description": "차트 제목"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (data, data_file, x_label, y_label, series_names, output_format 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_event",
+      "description": "이벤트/트리거 관리. 스케줄 트리거(cron), 메시지 수신 트리거, 파일 변경 트리거 등을 등록하고 IBL 파이프라인과 연결합니다.\n\n예시:\n- ibl_event(action=\"create\", target=\"매일 AI 뉴스\", params={\"type\": \"schedule\", \"config\": {\"repeat\": \"daily\", \"time\": \"08:00\"}, \"pipeline\": \"[web:news](\\\"AI\\\") >> [channel:send](gmail)\"})\n- ibl_event(action=\"list\")\n- ibl_event(action=\"status\")\n- ibl_event(action=\"enable\", target=\"trg_xxx\")\n- ibl_event(action=\"history\", target=\"trg_xxx\")",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["list", "get", "create", "update", "delete", "enable", "disable", "status", "history"],
+            "description": "실행할 이벤트 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "트리거 ID, 이름, 또는 새 트리거 이름"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터. create 시: type(schedule/channel/webhook/file), config(반복/시간 설정), pipeline(IBL 코드). history 시: limit"
+          }
+        },
+        "required": ["action"]
+      }
+    }
+    ,
+    {
+      "name": "ibl_legal",
+      "description": "법률 정보 노드. 대한민국 법령, 판례, 행정규칙을 통합 검색합니다.\n\n## 액션\n- search: 법률 정보 통합 검색 (target=키워드)\n- detail: 법률 항목 상세 본문 (target=ID)\n- laws: 법령 검색 (target=키워드)\n- law_detail: 특정 법령 상세 (target=법령ID)\n- precedents: 판례 검색 (target=키워드)\n- precedent_detail: 판례 상세 (target=판례ID)\n\n## 사용 예시\n법령 검색: action='laws', target='임대차보호법'\n판례 검색: action='precedents', target='부동산 사기'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search", "detail", "laws", "law_detail", "precedents", "precedent_detail"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색 키워드 또는 ID"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (target 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_statistics",
+      "description": "국가통계 노드. KOSIS 통계포털에서 통계표 검색, 데이터 조회, 주요 지표를 제공합니다.\n\n## 액션\n- search: 통계표 목록 검색 (target=키워드)\n- data: 통계 데이터 조회 (target=tbl_id)\n- info: 통계표 메타데이터 (target=tbl_id)\n- integrated: 통합 검색 (target=키워드)\n- indicators: 주요 경제/사회 지표 (target=지표ID)\n\n## 사용 예시\n인구 통계: action='search', target='인구'\n지표 조회: action='indicators', target='DT_1B04005N'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search", "data", "info", "integrated", "indicators"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색 키워드 또는 통계표 ID"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (org_id, itm_id, prd_se 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_local",
+      "description": "지역정보 노드. 지역 커뮤니티/지도에서 가게 정보를 검색하고 DB로 관리합니다.\n\n## 액션\n- search: 지역 가게/상점 검색 (target=검색어)\n- query: 축적된 지역정보 DB 조회 (target=검색어)\n- save: 가게 정보 DB 저장\n\n## 사용 예시\n맛집 검색: action='search', target='홍대 카페'\nDB 조회: action='query', target='피자'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["search", "query", "save"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색어"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (site, category, area 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_collector",
+      "description": "웹수집 노드. 사이트 프로필 기반으로 웹 데이터를 정기 수집하고 DB로 관리합니다.\n\n## 액션\n- sites: 사이트 수집 가이드 관리 (target=사이트ID)\n- save: 수집 데이터 DB 저장 (target=사이트ID)\n- query: 수집 데이터 DB 조회 (target=검색어)\n\n## 사용 예시\n사이트 목록: action='sites', params={'action': 'list'}\n데이터 조회: action='query', target='부동산'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["sites", "save", "query"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "사이트 ID 또는 검색어"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_design",
+      "description": "건축설계 노드. 집 설계 생성, 수정, 2D/3D 뷰, 물량 산출, 도면 출력을 통합합니다.\n\n## 액션\n- create: 새 설계 초기화 (target=설계명)\n- modify: 설계 수정 (target=설계ID, params: action, element)\n- get: 설계 상태 조회 (target=설계ID)\n- floor_plan: 2D 평면도 PNG (target=설계ID)\n- view_3d: 3D 시각화 HTML (target=설계ID)\n- report: 면적/물량 보고서 (target=설계ID)\n- section: 단면도 PNG (target=설계ID)\n- elevation: 입면도 PNG (target=설계ID)\n- export: PDF/SVG/DXF 출력 (target=설계ID)\n- list: 설계 목록\n\n## 사용 예시\n새 설계: action='create', target='우리집', params={'site_width': 15, 'site_depth': 20, 'floors': 2}\n평면도: action='floor_plan', target='design_001'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["create", "modify", "get", "floor_plan", "view_3d", "report", "section", "elevation", "export", "list"],
+            "description": "실행할 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "설계명 또는 설계 ID"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (site_width, site_depth, floors, action, element, format 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_output",
+      "description": "결과 출력 노드 (orchestrator로 통합됨). AI 작업 결과를 사용자에게 전달하는 최종 단계입니다. 파이프라인의 마지막에 사용합니다.\n\n## 액션\n- gui: UI에 HTML/카드/테이블로 결과 표시 (target=제목, params.content=내용, params.format=html|card|table|markdown)\n- file: 결과를 파일로 저장 (target=파일경로, params.content=내용). 상대경로는 outputs/ 기준\n- open: URL을 브라우저로 열거나 파일을 Finder로 열기 (target=URL 또는 경로)\n- clipboard: 결과를 클립보드에 복사 (target=텍스트 또는 params.content=내용)\n- download: URL에서 파일 다운로드 (target=URL, params.filename=저장파일명)\n\n## 파이프라인 예시\n[informant:web_search](\"AI 뉴스\") >> [orchestrator:file](\"ai_news.md\")\n[cctv:by_name](\"설악산\") >> [orchestrator:open]({{_prev_result.url}})\n[finance:price](\"AAPL\") >> [orchestrator:clipboard]",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["gui", "file", "open", "clipboard", "download"],
+            "description": "출력 방식 (gui: UI표시, file: 파일저장, open: 브라우저/Finder, clipboard: 클립보드, download: 다운로드)"
+          },
+          "target": {
+            "type": "string",
+            "description": "제목, 파일경로, URL, 텍스트 등 (액션별 상이)"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터 (content, format, filename, save_dir 등)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_agent",
+      "description": "AI 에이전트 노드. 에이전트에게 질문/위임하거나 에이전트 목록을 조회합니다.\n\n## 액션\n- ask: 에이전트에게 질문/위임 (target: 프로젝트/에이전트이름)\n- list: 모든 에이전트 노드 목록\n- info: 특정 에이전트 상세 정보\n\n## 사용 예시\n위임: action='ask', target='투자/투자컨설팅', params={'message': '삼성전자 분석해줘'}\n목록: action='list'\n상세: action='info', target='투자/투자컨설팅'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["ask", "list", "info"],
+            "description": "실행할 액션 (ask: 위임, list: 목록, info: 상세)"
+          },
+          "target": {
+            "type": "string",
+            "description": "프로젝트/에이전트이름 (ask, info 시 필수)"
+          },
+          "params": {
+            "type": "object",
+            "description": "파라미터 (ask 시 message 필수)"
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    {
+      "name": "ibl_info",
+      "description": "외부 정보 소스 통합 노드 (Phase 12). 여러 정보 도메인을 source로 통합 접근합니다.\n\n## Sources\n- finance: 주가(Yahoo/KRX/FMP), 재무제표(DART/FMP), 공시, 뉴스, 암호화폐\n- culture: 공연(KOPIS), 도서(도서관정보나루), 전시(KCISA)\n- study: 학술 논문(arXiv/OpenAlex/Semantic/PubMed/Scholar), 데이터(WorldBank/Pew)\n- cctv: 교통 CCTV(ITS), 전세계 웹캠(Windy)\n- location: 날씨, 맛집, 길찾기, 지도, 여행\n- realestate: 아파트/주택 실거래가(국토부), 상권(소상공인)\n- startup: 창업지원 사업공고(K-Startup, 중기부)\n- shopping: 상품 검색/가격 비교(네이버/다나와/중고)\n\n각 source의 action은 기존 ibl_finance, ibl_cctv 등과 동일합니다.\n\n## 예시\nibl_info(source='finance', action='price', target='AAPL')\nibl_info(source='cctv', action='by_name', target='강남')\nibl_info(source='culture', action='book', target='인공지능')\nibl_info(source='study', action='search_arxiv', target='transformer')",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["finance", "culture", "study", "cctv", "location", "realestate", "startup", "shopping", "legal", "statistics", "local"],
+            "description": "정보 소스 (finance: 금융, culture: 문화, study: 학술, cctv: CCTV/웹캠, location: 위치/생활, realestate: 부동산, startup: 창업, shopping: 쇼핑, legal: 법률, statistics: 국가통계, local: 지역정보)"
+          },
+          "action": {
+            "type": "string",
+            "description": "소스별 액션 (각 소스의 기존 도메인 액션과 동일)"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색어, 심볼, URL, 지역코드 등"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터"
+          }
+        },
+        "required": ["source", "action"]
+      }
+    },
+    {
+      "name": "ibl_store",
+      "description": "로컬 데이터 저장소 통합 노드 (Phase 12). 로컬에 저장된 다양한 데이터를 store로 통합 접근합니다.\n\n## Stores\n- photo: 사진/동영상 메타데이터 (search, get, timeline, stats, list_scans)\n- health: 건강 기록 (query, log, summary, history)\n- blog: 블로그 글 검색 (search, get_post, list, stats)\n- contact: 연락처/이웃 (search, get, list, messages)\n- memory: 대화 기억 (search, recent, agents)\n- storage: PC 저장소 (scan, query, summary, volumes, annotate, annotations, explorer)\n\n## 예시\nibl_store(store='health', action='summary')\nibl_store(store='photo', action='search', target='여행')\nibl_store(store='blog', action='search', target='AI 개발')\nibl_store(store='contact', action='search', target='김사장')",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "store": {
+            "type": "string",
+            "enum": ["photo", "health", "blog", "contact", "memory", "storage"],
+            "description": "데이터 저장소 (photo: 사진, health: 건강, blog: 블로그, contact: 연락처, memory: 대화기억, storage: PC저장소)"
+          },
+          "action": {
+            "type": "string",
+            "description": "저장소별 액션"
+          },
+          "target": {
+            "type": "string",
+            "description": "검색어, ID 등"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터"
+          }
+        },
+        "required": ["store", "action"]
+      }
+    },
+    {
+      "name": "ibl_exec",
+      "description": "코드 실행 및 프로그램 통합 노드 (Phase 12). 코드 실행기와 미디어 생성 프로그램을 통합합니다.\n\n## Executors (코드 실행)\n- python: Python 코드 실행 (target=코드)\n- node: Node.js 코드 실행 (target=코드)\n- shell: 시스템 명령 실행 (target=명령어)\n\n## Programs (미디어/콘텐츠 생성)\n- remotion: Remotion 프로그래밍 영상 (target=TSX 코드)\n- remotion_status: Remotion 렌더링 상태 확인\n- video: HTML 기반 영상 생성 (target=주제)\n- slides: 프레젠테이션 슬라이드 (target=주제)\n- image: AI 이미지 생성 (target=프롬프트)\n- music: ABC 악보 작곡 (target=제목)\n\n## 예시\nibl_exec(action='python', target='print(1+1)')\nibl_exec(action='slides', target='AI 트렌드 2026')\nibl_exec(action='remotion', target='<TSX코드>', params={...})\nibl_exec(action='image', target='sunset over mountains')",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["python", "node", "shell", "remotion", "remotion_status", "video", "slides", "image", "music"],
+            "description": "실행기 또는 프로그램 (python/node/shell: 코드 실행, remotion/video/slides/image/music: 콘텐츠 생성)"
+          },
+          "target": {
+            "type": "string",
+            "description": "코드, 명령어, 주제, 프롬프트, TSX 등"
+          },
+          "params": {
+            "type": "object",
+            "description": "추가 파라미터"
+          }
+        },
+        "required": ["action"]
+      }
+    }
+  ]
+}

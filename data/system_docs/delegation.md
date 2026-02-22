@@ -8,7 +8,7 @@
 사용자 → 에이전트A → call_agent(B) → 에이전트B → 작업 완료 → 자동 보고 → 에이전트A → 사용자
 ```
 
-- `call_agent()` 도구로 다른 에이전트에게 작업 위임
+- `[orchestrator:delegate]` IBL 액션으로 다른 에이전트에게 작업 위임 (기존 `call_agent()` 도구)
 - 위임받은 에이전트가 작업 완료 시 자동으로 결과 보고
 - 위임한 에이전트는 결과를 받아 최종 처리 후 사용자에게 응답
 
@@ -483,8 +483,8 @@ C 완료 → pending=0, 통합 보고 → 시스템AI
 4. **환각 방지**: 결과 없이 "검토했습니다" 등 표현 금지
 
 ---
-*마지막 업데이트: 2026-01-26*
-*변경: 긴 응답 파일 저장 정책 추가, 컨텍스트 클리어 → 태스크 삭제로 정리*
+*마지막 업데이트: 2026-02-18*
+*Phase 17→19: 모든 위임이 IBL 경로(`execute_ibl`)를 통해 실행됨. `call_agent` → `[orchestrator:delegate]`, `call_project_agent` → `[orchestrator:delegate_project]`.*
 
 > 참고: 위임 프롬프트 파일
 > - `fragments/09_delegation.md`: 프로젝트 내 에이전트 간 위임 가이드

@@ -1,0 +1,213 @@
+node: interface
+actions:
+  devices:
+    description: 연결된 기기 목록 조회
+    router: handler
+    tool: android_list_devices
+  android_info:
+    description: 기기 상세 정보 (모델, OS, 배터리, 저장소)
+    target_description: device_id (선택)
+    router: handler
+    tool: android_device_info
+    target_key: device_id
+  android_status:
+    description: 기기 시스템 상태 (배터리, 온도, 저장소)
+    target_description: device_id (선택)
+    router: handler
+    tool: android_system_status
+    target_key: device_id
+  sms_list:
+    description: SMS 목록 조회 (inbox/sent/all)
+    router: handler
+    tool: android_get_sms
+  sms_send:
+    description: SMS 발송
+    target_description: 수신 전화번호
+    router: handler
+    tool: android_send_sms
+    target_key: phone_number
+  sms_search:
+    description: SMS/MMS/RCS 검색
+    target_description: 검색어
+    router: handler
+    tool: android_search_sms
+    target_key: query
+  call:
+    description: 전화 걸기
+    target_description: 전화번호
+    router: handler
+    tool: android_make_call
+    target_key: phone_number
+  call_log:
+    description: 통화 이력 조회
+    router: handler
+    tool: android_get_call_log
+  contacts:
+    description: 연락처 검색
+    target_description: 검색어
+    router: handler
+    tool: android_search_contacts
+    target_key: query
+  apps:
+    description: 설치된 앱 목록 (크기, 사용량 포함)
+    router: handler
+    tool: android_apps_with_details
+  notifications:
+    description: 알림 목록 읽기
+    router: handler
+    tool: android_notifications
+  android_screenshot:
+    description: 안드로이드 화면 캡처 (AI 분석용)
+    router: handler
+    tool: android_ui_screenshot
+  push_file:
+    description: PC→안드로이드 파일 전송
+    target_description: 로컬 파일 경로
+    router: handler
+    tool: android_push_file
+    target_key: local_path
+  pull_file:
+    description: 안드로이드→PC 파일 전송
+    target_description: 원격 파일 경로
+    router: handler
+    tool: android_pull_file
+    target_key: remote_path
+  tap:
+    description: 화면 좌표 탭 (UI 자동화)
+    router: handler
+    tool: android_ui_tap
+  type_text:
+    description: 텍스트 입력 (UI 자동화)
+    target_description: 입력할 텍스트
+    router: handler
+    tool: android_ui_type_text
+    target_key: text
+  find_tap:
+    description: UI 요소 찾아서 탭 (텍스트 기반)
+    target_description: 찾을 텍스트
+    router: handler
+    tool: android_ui_find_and_tap
+    target_key: query
+  open_app:
+    description: 앱 실행
+    target_description: 패키지명
+    router: handler
+    tool: android_ui_open_app
+    target_key: package_name
+  swipe:
+    description: 스와이프/스크롤 (UI 자동화)
+    router: handler
+    tool: android_ui_swipe
+  android_key:
+    description: 시스템 키 입력 (HOME/BACK/RECENT 등)
+    target_description: 키코드
+    router: handler
+    tool: android_ui_press_key
+    target_key: keycode
+  app_info:
+    description: 앱 상세 정보 (버전, 크기, 권한)
+    target_description: 패키지명
+    router: handler
+    tool: android_app_info
+    target_key: package_name
+  app_sizes:
+    description: 설치된 앱 크기 정보
+    router: handler
+    tool: android_app_sizes
+  app_usage:
+    description: 앱 사용 시간 통계
+    router: handler
+    tool: android_app_usage
+  capture:
+    description: 화면 캡처 (대안)
+    router: handler
+    tool: android_capture_screen
+  permissions:
+    description: 앱 권한 확인
+    target_description: 패키지명
+    router: handler
+    tool: android_check_permissions
+    target_key: package_name
+  grant_permissions:
+    description: 앱 권한 부여
+    target_description: 패키지명
+    router: handler
+    tool: android_grant_permissions
+    target_key: package_name
+  delete_call_log:
+    description: 통화 이력 삭제
+    router: handler
+    tool: android_delete_call_log
+  delete_contact:
+    description: 연락처 삭제
+    router: handler
+    tool: android_delete_contact
+    target_key: contact_id
+  delete_messages:
+    description: 메시지 삭제
+    router: handler
+    tool: android_delete_messages
+  delete_mms:
+    description: MMS 삭제
+    router: handler
+    tool: android_delete_mms_by_content
+  delete_sms:
+    description: SMS 삭제
+    router: handler
+    tool: android_delete_sms
+    target_key: message_id
+  end_call:
+    description: 통화 종료
+    router: handler
+    tool: android_end_call
+  all_messages:
+    description: 전체 메시지 조회 (SMS+MMS+RCS)
+    router: handler
+    tool: android_get_all_messages
+  get_contacts:
+    description: 전체 연락처 목록
+    router: handler
+    tool: android_get_contacts
+  mms:
+    description: MMS 메시지 조회
+    router: handler
+    tool: android_get_mms
+  list_apps:
+    description: 설치된 앱 목록 (간단)
+    router: handler
+    tool: android_list_apps
+  send_text:
+    description: 텍스트 전송 (키보드 입력)
+    router: handler
+    tool: android_send_text
+    target_key: text
+  find_element:
+    description: UI 요소 찾기 (텍스트/속성)
+    target_description: 검색어
+    router: handler
+    tool: android_ui_find_element
+    target_key: query
+  hierarchy:
+    description: UI 트리 구조 덤프
+    router: handler
+    tool: android_ui_hierarchy
+  long_press:
+    description: 길게 누르기 (UI 자동화)
+    router: handler
+    tool: android_ui_long_press
+  android_screen_info:
+    description: 안드로이드 화면 정보 (해상도, 밀도)
+    router: handler
+    tool: android_ui_screen_info
+  uninstall:
+    description: 앱 삭제
+    target_description: 패키지명
+    router: handler
+    tool: android_uninstall_app
+    target_key: package_name
+  manager:
+    description: Android Manager GUI 실행
+    router: handler
+    tool: open_android_manager
+guides:
+- android/android_guide.md

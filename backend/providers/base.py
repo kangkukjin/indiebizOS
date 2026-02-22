@@ -214,6 +214,26 @@ class BaseProvider(ABC):
     KEEP_RECENT_TOOL_ROUNDS = 3  # 최근 N 라운드의 도구 호출-결과 쌍을 전체 유지
     KEEP_RECENT_TOOL_RESULTS = KEEP_RECENT_TOOL_ROUNDS  # 하위 호환 alias
 
+    # ========== Rolling Compaction 설정 ==========
+    # Claude Code 참고: 컨텍스트의 80%에서 compaction 트리거
+    # 글자 수 기반 임계값 (토큰 추정: 한글 2자≈1토큰, 영문 4자≈1토큰)
+    # 각 프로바이더에서 모델의 컨텍스트 윈도우에 맞게 오버라이드 가능
+    COMPACTION_CHAR_THRESHOLD = 640000  # 기본값: ~160K 토큰 (Claude 200K의 80%)
+    COMPACTION_MIN_ROUNDS = 5  # 최소 이 라운드 이후에만 compaction 수행
+
+    COMPACTION_PROMPT = """아래는 사용자의 요청을 처리하기 위해 지금까지 진행한 작업 기록입니다.
+이 기록을 요약해주세요. 요약의 목적은 이후 작업을 이어갈 때 핵심 정보를 유지하는 것입니다.
+
+반드시 포함할 내용:
+1. 원래 사용자 요청의 핵심
+2. 지금까지 완료된 작업 (성공/실패 구분)
+3. 현재 페이지/화면의 상태 (URL, 선택된 값, 보이는 요소 등)
+4. 중요한 식별자 (ref ID, 요소 이름, 선택한 옵션값 등)
+5. 다음에 해야 할 작업
+6. 실패한 접근법과 그 이유 (같은 실수 반복 방지)
+
+<summary> 태그로 감싸서 작성하세요."""
+
     # ========== Auto-Continue 설정 ==========
     MAX_AUTO_CONTINUES = 3  # max_tokens 초과 시 이어쓰기 최대 횟수
     CONTINUATION_PROMPT = "이전 응답이 잘렸습니다. 중단된 곳에서 이어서 작성해주세요."
@@ -543,3 +563,123 @@ class BaseProvider(ABC):
         is_error = any(pattern in output_lower for pattern in error_patterns)
 
         return tool_output, is_error
+
+    # ========== Rolling Compaction ==========
+
+    def _estimate_content_size(self, messages_or_contents) -> int:
+        """메시지/컨텐츠의 총 글자 수 추정
+
+        Gemini Content 객체, OpenAI dict, Anthropic dict 모두 처리
+        """
+        import json as _json
+        total = 0
+        for msg in messages_or_contents:
+            if isinstance(msg, dict):
+                total += len(_json.dumps(msg, ensure_ascii=False, default=str))
+            else:
+                # Gemini Content 객체
+                parts = getattr(msg, "parts", [])
+                for part in parts:
+                    if hasattr(part, "text") and part.text:
+                        total += len(part.text)
+                    elif hasattr(part, "function_call") and part.function_call:
+                        total += len(str(part.function_call))
+                    elif hasattr(part, "function_response") and part.function_response:
+                        total += len(str(part.function_response))
+                    else:
+                        total += 100  # 이미지 등 기타
+        return total
+
+    def _should_compact(self, messages_or_contents, iteration: int) -> bool:
+        """Compaction이 필요한지 판단
+
+        조건:
+        1. 최소 라운드 이상 진행
+        2. 컨텐츠 크기가 임계값 초과
+        """
+        if iteration < self.COMPACTION_MIN_ROUNDS:
+            return False
+
+        content_size = self._estimate_content_size(messages_or_contents)
+        should = content_size >= self.COMPACTION_CHAR_THRESHOLD
+        if should:
+            print(f"[Compaction] 임계값 도달: {content_size:,}자 >= {self.COMPACTION_CHAR_THRESHOLD:,}자 (iteration={iteration})")
+        return should
+
+    def _extract_text_for_summary(self, messages_or_contents, keep_recent: int = 3) -> tuple:
+        """요약 대상 텍스트 추출 및 최근 메시지 분리
+
+        Returns:
+            (summary_text: str, recent_messages: list)
+            - summary_text: 오래된 메시지들을 텍스트로 변환한 것
+            - recent_messages: 유지할 최근 메시지들
+        """
+        import json as _json
+        total = len(messages_or_contents)
+
+        if total <= keep_recent:
+            return "", messages_or_contents
+
+        old_messages = messages_or_contents[:-keep_recent]
+        recent_messages = messages_or_contents[-keep_recent:]
+
+        # 오래된 메시지를 텍스트로 변환
+        lines = []
+        for msg in old_messages:
+            if isinstance(msg, dict):
+                role = msg.get("role", "unknown")
+                content = msg.get("content", "")
+                if isinstance(content, list):
+                    # Anthropic/OpenAI의 복합 content
+                    text_parts = []
+                    for c in content:
+                        if isinstance(c, dict):
+                            if c.get("type") == "text":
+                                text_parts.append(c.get("text", ""))
+                            elif c.get("type") == "tool_result":
+                                tr_content = c.get("content", "")
+                                if isinstance(tr_content, str):
+                                    text_parts.append(f"[도구결과:{c.get('tool_use_id','')}] {tr_content[:500]}")
+                                else:
+                                    text_parts.append(f"[도구결과:{c.get('tool_use_id','')}] (복합데이터)")
+                            elif c.get("type") == "tool_use":
+                                text_parts.append(f"[도구호출:{c.get('name','')}] {_json.dumps(c.get('input',{}), ensure_ascii=False)[:300]}")
+                        elif isinstance(c, str):
+                            text_parts.append(c)
+                    content = "\n".join(text_parts)
+                elif isinstance(content, str) and "[이전 도구 결과 생략됨]" in content:
+                    content = "(생략됨)"
+
+                # content가 None인 경우 빈 문자열로 처리
+                if content is None:
+                    content = ""
+
+                # OpenAI tool_calls
+                if msg.get("tool_calls"):
+                    tc_names = [tc.get("function", {}).get("name", "") for tc in msg["tool_calls"]]
+                    content += f" [도구호출: {', '.join(tc_names)}]"
+
+                lines.append(f"[{role}] {content[:1000]}")
+            else:
+                # Gemini Content 객체
+                role = getattr(msg, "role", "unknown")
+                parts = getattr(msg, "parts", [])
+                part_texts = []
+                for part in parts:
+                    if hasattr(part, "text") and part.text:
+                        part_texts.append(part.text[:1000])
+                    elif hasattr(part, "function_call") and part.function_call:
+                        fc = part.function_call
+                        part_texts.append(f"[도구호출:{getattr(fc, 'name', '')}]")
+                    elif hasattr(part, "function_response") and part.function_response:
+                        fr = part.function_response
+                        result = getattr(fr, "response", {})
+                        if isinstance(result, dict):
+                            result_text = str(result.get("result", ""))[:500]
+                        else:
+                            result_text = str(result)[:500]
+                        part_texts.append(f"[도구결과:{getattr(fr, 'name', '')}] {result_text}")
+                lines.append(f"[{role}] {' | '.join(part_texts)}")
+
+        summary_text = "\n".join(lines)
+        return summary_text, recent_messages

@@ -1,0 +1,60 @@
+node: source
+actions:
+  performance:
+    description: 공연 검색 (KOPIS - 연극, 뮤지컬, 음악회 등)
+    target_description: 검색 키워드
+    router: handler
+    tool: kopis_quick_search
+    target_key: keyword
+  venue:
+    description: 공연장/시설 검색
+    target_description: 공연장명
+    router: handler
+    tool: kopis_search_facilities
+    target_key: keyword
+  book:
+    description: 도서 검색 (도서관정보나루)
+    target_description: 검색어 (제목/저자/출판사)
+    router: handler
+    tool: library_quick_search
+    target_key: keyword
+  book_detail:
+    description: 도서 상세 정보 (대출 통계 포함)
+    target_description: ISBN13
+    router: handler
+    tool: library_get_book_detail
+    target_key: isbn13
+  exhibit:
+    description: 전시/문화행사 검색 (KCISA - 박물관, 미술관)
+    target_description: 검색어
+    router: handler
+    tool: kcisa_quick_search
+    target_key: keyword
+  genres:
+    description: 공연 장르 코드 목록 조회
+    router: handler
+    tool: kopis_get_genres
+  performance_regions:
+    description: 공연 지역 코드 목록 조회
+    router: handler
+    tool: kopis_get_regions
+  book_by_isbn:
+    description: ISBN으로 도서 조회 (10자리/13자리)
+    target_description: ISBN
+    router: handler
+    tool: library_get_book_by_isbn
+    target_key: isbn
+  kdc:
+    description: KDC(한국십진분류) 주제분류코드 목록
+    router: handler
+    tool: library_get_kdc
+  recommended_books:
+    description: 특정 도서 기반 추천도서 (마니아/다독자 추천)
+    target_description: 기준 도서 ISBN13
+    router: handler
+    tool: library_get_recommended_books
+    target_key: isbn13
+  library_regions:
+    description: 도서관 정보나루 지역코드 목록
+    router: handler
+    tool: library_get_regions

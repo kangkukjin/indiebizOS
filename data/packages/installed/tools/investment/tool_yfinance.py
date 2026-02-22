@@ -1,26 +1,18 @@
 """
 Yahoo Finance & CoinGecko 기반 주식/암호화폐 도구
 """
+import os
+import sys
 import json
 import requests
 from datetime import datetime
-from pathlib import Path
 
-# 대량 데이터 저장 경로
-DATA_OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "outputs" / "investment"
-DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
 
-
-def _save_large_data(data: list, prefix: str, symbol: str) -> str:
-    """대량 데이터를 파일로 저장하고 경로 반환"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{prefix}_{symbol}_{timestamp}.json"
-    filepath = DATA_OUTPUT_DIR / filename
-
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-    return str(filepath)
+from common.response_formatter import save_large_data
 
 
 def _format_number(num):
@@ -186,7 +178,7 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d") -> di
 
         # 50개 초과 시 파일로 저장 + 샘플 제공
         if total_days > 50:
-            file_path = _save_large_data(all_history, "yf_prices", symbol.upper().replace("=", "_"))
+            file_path = save_large_data(all_history, "investment", f"yf_prices_{symbol.upper().replace('=', '_')}")
 
             # 시각화용 샘플 (10개 포인트)
             step = max(1, total_days // 10)

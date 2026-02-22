@@ -3,7 +3,6 @@
   "name": "Web Builder & Homepage Manager",
   "description": "홈페이지 제작과 관리를 위한 통합 도구 패키지.\n\n## 두 가지 시나리오\n\n### A. 새 홈페이지 만들기\ncreate_project → add_component → create_page → edit_styles → preview_site → build_site → deploy_vercel\n\n### B. 기존 홈페이지 개선/수정\n1) site_registry(action='list')로 등록된 사이트 확인\n2) site_snapshot으로 현재 구조 파악\n3) 기존 파일을 직접 읽고 수정\n4) git push → 자동 배포 (또는 deploy_vercel)\n5) site_live_check로 결과 확인\n\n주의: 기존 사이트를 개선할 때 create_project를 호출하지 마세요.",
   "version": "2.0.0",
-  "guide_file": "web_builder_guide.md",
   "tools": [
     {
       "name": "site_registry",
@@ -13,7 +12,12 @@
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["register", "list", "remove", "update"],
+            "enum": [
+              "register",
+              "list",
+              "remove",
+              "update"
+            ],
             "description": "수행할 작업"
           },
           "site_id": {
@@ -41,7 +45,9 @@
             "description": "사이트 설명"
           }
         },
-        "required": ["action"]
+        "required": [
+          "action"
+        ]
       }
     },
     {
@@ -55,7 +61,9 @@
             "description": "스냅샷을 생성할 사이트 ID"
           }
         },
-        "required": ["site_id"]
+        "required": [
+          "site_id"
+        ]
       }
     },
     {
@@ -76,7 +84,11 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["status", "lighthouse", "screenshot"]
+              "enum": [
+                "status",
+                "lighthouse",
+                "screenshot"
+              ]
             },
             "description": "수행할 점검 항목. 기본값: 전체 수행"
           }
@@ -96,14 +108,32 @@
           },
           "template": {
             "type": "string",
-            "enum": ["blank", "landing", "portfolio", "blog", "business"],
+            "enum": [
+              "blank",
+              "landing",
+              "portfolio",
+              "blog",
+              "business"
+            ],
             "default": "blank",
             "description": "프로젝트 템플릿"
           },
           "features": {
             "type": "array",
-            "items": {"type": "string", "enum": ["dark_mode", "i18n", "analytics", "seo", "pwa"]},
-            "default": ["dark_mode", "seo"],
+            "items": {
+              "type": "string",
+              "enum": [
+                "dark_mode",
+                "i18n",
+                "analytics",
+                "seo",
+                "pwa"
+              ]
+            },
+            "default": [
+              "dark_mode",
+              "seo"
+            ],
             "description": "추가 기능 (dark_mode, i18n, analytics, seo, pwa)"
           },
           "output_dir": {
@@ -111,7 +141,9 @@
             "description": "프로젝트 생성 경로"
           }
         },
-        "required": ["name"]
+        "required": [
+          "name"
+        ]
       }
     },
     {
@@ -126,11 +158,16 @@
           },
           "components": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "추가할 컴포넌트 목록 (예: [\"button\", \"card\", \"dialog\"])"
           }
         },
-        "required": ["project_path", "components"]
+        "required": [
+          "project_path",
+          "components"
+        ]
       }
     },
     {
@@ -145,7 +182,15 @@
           },
           "category": {
             "type": "string",
-            "enum": ["all", "layout", "form", "data", "feedback", "navigation", "overlay"],
+            "enum": [
+              "all",
+              "layout",
+              "form",
+              "data",
+              "feedback",
+              "navigation",
+              "overlay"
+            ],
             "default": "all",
             "description": "컴포넌트 카테고리"
           }
@@ -161,7 +206,16 @@
         "properties": {
           "category": {
             "type": "string",
-            "enum": ["all", "hero", "content", "feature", "social", "commerce", "form", "navigation"],
+            "enum": [
+              "all",
+              "hero",
+              "content",
+              "feature",
+              "social",
+              "commerce",
+              "form",
+              "navigation"
+            ],
             "default": "all",
             "description": "섹션 카테고리"
           }
@@ -189,8 +243,14 @@
             "items": {
               "type": "object",
               "properties": {
-                "type": {"type": "string", "description": "섹션 타입 (예: hero-simple, features-grid)"},
-                "props": {"type": "object", "description": "섹션 속성"}
+                "type": {
+                  "type": "string",
+                  "description": "섹션 타입 (예: hero-simple, features-grid)"
+                },
+                "props": {
+                  "type": "object",
+                  "description": "섹션 속성"
+                }
               }
             }
           },
@@ -199,7 +259,11 @@
             "description": "페이지 메타데이터 (title, description)"
           }
         },
-        "required": ["project_path", "page_name", "sections"]
+        "required": [
+          "project_path",
+          "page_name",
+          "sections"
+        ]
       }
     },
     {
@@ -214,7 +278,15 @@
           },
           "theme": {
             "type": "string",
-            "enum": ["default", "blue", "green", "purple", "orange", "red", "custom"],
+            "enum": [
+              "default",
+              "blue",
+              "green",
+              "purple",
+              "orange",
+              "red",
+              "custom"
+            ],
             "default": "default",
             "description": "테마 프리셋"
           },
@@ -224,12 +296,20 @@
           },
           "border_radius": {
             "type": "string",
-            "enum": ["none", "sm", "md", "lg", "full"],
+            "enum": [
+              "none",
+              "sm",
+              "md",
+              "lg",
+              "full"
+            ],
             "default": "md",
             "description": "테두리 반경"
           }
         },
-        "required": ["project_path"]
+        "required": [
+          "project_path"
+        ]
       }
     },
     {
@@ -249,12 +329,18 @@
           },
           "action": {
             "type": "string",
-            "enum": ["start", "stop", "status"],
+            "enum": [
+              "start",
+              "stop",
+              "status"
+            ],
             "default": "start",
             "description": "액션 (start: 시작, stop: 중지, status: 상태 확인)"
           }
         },
-        "required": ["project_path"]
+        "required": [
+          "project_path"
+        ]
       }
     },
     {
@@ -273,7 +359,9 @@
             "description": "번들 분석 포함 여부"
           }
         },
-        "required": ["project_path"]
+        "required": [
+          "project_path"
+        ]
       }
     },
     {
@@ -296,7 +384,9 @@
             "description": "Vercel 프로젝트 이름 (선택사항, 미지정 시 폴더명 사용)"
           }
         },
-        "required": ["project_path"]
+        "required": [
+          "project_path"
+        ]
       }
     },
     {
@@ -311,7 +401,10 @@
           },
           "style": {
             "type": "string",
-            "enum": ["new-york", "default"],
+            "enum": [
+              "new-york",
+              "default"
+            ],
             "default": "new-york",
             "description": "스타일 (new-york 또는 default)"
           },
@@ -321,12 +414,18 @@
           },
           "output_format": {
             "type": "string",
-            "enum": ["code", "json", "save"],
+            "enum": [
+              "code",
+              "json",
+              "save"
+            ],
             "default": "code",
             "description": "출력 형식"
           }
         },
-        "required": ["component"]
+        "required": [
+          "component"
+        ]
       }
     }
   ]

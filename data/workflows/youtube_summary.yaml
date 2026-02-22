@@ -1,0 +1,10 @@
+name: "유튜브 영상 요약"
+description: |
+  summarize_youtube 도구를 대체하는 워크플로우.
+  1단계: 자막 추출 (youtube:transcript)
+  2단계: 에이전트가 자막을 읽고 요약 (에이전트 본연의 능력)
+  3단계: 결과를 HTML로 저장 (output:file)
+steps:
+  - node: youtube
+    action: transcript
+    target: "{{url}}"

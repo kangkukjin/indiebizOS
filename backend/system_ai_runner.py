@@ -24,12 +24,6 @@ from system_ai_memory import (
     update_task_delegation,
     decrement_pending_and_update_context
 )
-from system_ai import (
-    SYSTEM_AI_DEFAULT_PACKAGES,
-    load_tools_from_packages,
-    execute_system_tool,
-    get_messaging_tools
-)
 from prompt_builder import build_system_ai_prompt
 
 
@@ -110,8 +104,13 @@ class SystemAIRunner:
         print("[SystemAIRunner] 시스템 AI 중지됨")
 
     def _init_ai(self):
-        """AI 에이전트 초기화"""
+        """AI 에이전트 초기화
+
+        Phase 17: execute_ibl 단일 도구로 전환
+        시스템 AI도 프로젝트 에이전트와 같은 IBL 구조 사용
+        """
         from api_system_ai import load_system_ai_config
+        from tool_loader import load_tool_schema
 
         config = load_system_ai_config()
         user_profile = load_user_profile()
@@ -122,21 +121,16 @@ class SystemAIRunner:
             "api_key": config.get("apiKey", "")
         }
 
-        tools = load_tools_from_packages(SYSTEM_AI_DEFAULT_PACKAGES)
+        # Phase 17: execute_ibl 단일 도구
+        ibl_schema = load_tool_schema("execute_ibl")
+        tools = [ibl_schema] if ibl_schema else []
 
-        # 위임 관련 도구 추가 (api_system_ai.py에서 가져옴)
-        from api_system_ai import _get_list_project_agents_tool, _get_call_project_agent_tool
-        tools.append(_get_list_project_agents_tool())
-        tools.append(_get_call_project_agent_tool())
+        git_enabled = (self.data_path / ".git").exists()
 
-        # 메시징 도구 추가 (Nostr DM, Gmail 전송)
-        tools.extend(get_messaging_tools())
-
-        # Git 활성화 조건: run_command 도구가 있고 .git 폴더가 있을 때
-        tool_names = [t.get("name") for t in tools]
-        git_enabled = "run_command" in tool_names and (self.data_path / ".git").exists()
-
-        system_prompt = build_system_ai_prompt(user_profile=user_profile, git_enabled=git_enabled)
+        system_prompt = build_system_ai_prompt(
+            user_profile=user_profile,
+            git_enabled=git_enabled
+        )
 
         self.ai = AIAgent(
             ai_config=ai_config,
@@ -182,9 +176,13 @@ class SystemAIRunner:
         }
 
     def _execute_tool(self, tool_name: str, tool_input: dict, work_dir: str = None, agent_id: str = None) -> str:
-        """도구 실행 (api_system_ai.py의 execute_system_tool 재사용)"""
-        from api_system_ai import execute_system_tool as execute_system_ai_tool
-        return execute_system_ai_tool(tool_name, tool_input, work_dir or str(self.data_path), agent_id)
+        """도구 실행 (Phase 17: execute_ibl 단일 경로)"""
+        from system_tools import execute_tool
+        return execute_tool(
+            tool_name, tool_input,
+            project_path=work_dir or str(self.data_path),
+            agent_id=agent_id or "system_ai"
+        )
 
     def _execute_call_project_agent(self, tool_input: dict) -> str:
         """프로젝트 에이전트 호출 실행"""

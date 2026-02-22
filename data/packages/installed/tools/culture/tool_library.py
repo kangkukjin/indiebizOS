@@ -19,16 +19,17 @@ API 키: DATA4LIBRARY_API_KEY 환경변수 사용
 """
 
 import os
-import requests
+import sys
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 
-BASE_URL = "http://data4library.kr/api"
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
 
-
-def get_api_key():
-    """API 키 가져오기 (환경변수에서 로드)"""
-    return os.environ.get("DATA4LIBRARY_API_KEY", "")
+from common.api_client import api_call
+from common.auth_manager import check_api_key
 
 
 def parse_xml_response(xml_text):
@@ -68,7 +69,7 @@ def parse_xml_response(xml_text):
 
 def call_library_api(endpoint, params):
     """
-    도서관 정보나루 API 호출
+    도서관 정보나루 API 호출 (common api_call 사용)
 
     Args:
         endpoint: API 엔드포인트 (예: srchBooks)
@@ -77,45 +78,32 @@ def call_library_api(endpoint, params):
     Returns:
         API 응답 데이터 (XML Element 또는 에러 딕셔너리)
     """
-    api_key = get_api_key()
-    if not api_key:
+    # API 키 확인
+    ok, err = check_api_key("data4library")
+    if not ok:
         return {
-            "error": "API 키가 설정되지 않았습니다.",
+            "error": err,
             "help": "DATA4LIBRARY_API_KEY 환경변수를 설정하거나 도서관 정보나루에서 API 키를 발급받으세요."
         }
 
-    # 인증키 추가
-    params["authKey"] = api_key
-
-    url = f"{BASE_URL}/{endpoint}"
-
-    try:
-        headers = {
+    # api_call로 HTTP 요청 (XML 응답이므로 raw_response=True)
+    response_text = api_call(
+        "data4library",
+        f"/{endpoint}",
+        params=params,
+        extra_headers={
             "Accept": "application/xml",
             "User-Agent": "IndieBizOS/1.0"
-        }
+        },
+        timeout=30,
+        raw_response=True,
+    )
 
-        response = requests.get(url, params=params, headers=headers, timeout=30)
+    # api_call이 에러 dict를 반환한 경우
+    if isinstance(response_text, dict) and "error" in response_text:
+        return response_text
 
-        # 디버깅용 출력
-        print(f"[Library API] URL: {response.url}")
-        print(f"[Library API] Status: {response.status_code}")
-
-        if response.status_code != 200:
-            return {
-                "error": f"API 호출 실패 (상태 코드: {response.status_code})",
-                "url": response.url,
-                "response": response.text[:500] if response.text else None
-            }
-
-        return parse_xml_response(response.text)
-
-    except requests.exceptions.Timeout:
-        return {"error": "API 요청 시간 초과 (30초)"}
-    except requests.exceptions.ConnectionError as e:
-        return {"error": f"연결 오류: {str(e)}"}
-    except Exception as e:
-        return {"error": f"조회 실패: {str(e)}"}
+    return parse_xml_response(response_text)
 
 
 def extract_books_from_xml(root, item_tag="doc"):

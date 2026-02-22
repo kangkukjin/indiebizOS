@@ -1,8 +1,15 @@
 """
 KOSIS (국가통계포털) API 도구 패키지 핸들러
 """
+import os
+import sys
 import importlib.util
 from pathlib import Path
+
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
 
 current_dir = Path(__file__).parent
 

@@ -46,6 +46,10 @@ class AnthropicProvider(BaseProvider):
     3. 도구 결과는 단일 user 메시지에 모두 포함 (병렬 처리 지원)
     """
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._compaction_summary = None  # Rolling Compaction 요약 저장
+
     def init_client(self) -> bool:
         """Anthropic 클라이언트 초기화"""
         if not self.api_key:
@@ -229,6 +233,10 @@ class AnthropicProvider(BaseProvider):
         try:
             # 시스템 프롬프트 캐싱 적용
             system_with_cache = self._build_system_with_cache()
+
+            # Rolling Compaction: 컨텍스트가 임계값을 넘으면 요약으로 압축
+            if depth > 0 and self._should_compact(messages, depth):
+                messages = self._compact_anthropic(messages)
 
             # Session Pruning: 오래된 도구 결과 마스킹 (depth > 0일 때만)
             if depth > 0:
@@ -620,3 +628,83 @@ class AnthropicProvider(BaseProvider):
             auto_continues=0, accumulated_text="",
             cancel_check=cancel_check
         )
+
+    def _compact_anthropic(self, messages: List[Dict]) -> List[Dict]:
+        """Rolling Compaction: 오래된 대화를 AI 요약으로 압축 (Anthropic)
+
+        1. 오래된 메시지를 텍스트로 추출
+        2. AI에게 요약 요청 (비스트리밍)
+        3. 요약 메시지 + 최근 메시지로 교체
+        """
+        # 최근 유지할 메시지 수
+        keep_recent = self.KEEP_RECENT_TOOL_ROUNDS * 2 + 2
+
+        summary_text, recent_messages = self._extract_text_for_summary(messages, keep_recent)
+        if not summary_text:
+            return messages
+
+        print(f"[Compaction][Anthropic] 요약 시작: {len(summary_text):,}자 → AI 요약 요청")
+
+        # 이전 요약이 있으면 포함
+        prev_summary = ""
+        if self._compaction_summary:
+            prev_summary = f"\n\n[이전 요약]\n{self._compaction_summary}\n\n"
+
+        try:
+            summary_input = f"{prev_summary}[작업 기록]\n{summary_text}"
+            if len(summary_input) > 100000:
+                summary_input = summary_input[:50000] + "\n\n... (중략) ...\n\n" + summary_input[-50000:]
+
+            response = self._client.messages.create(
+                model=self.model,
+                max_tokens=2048,
+                system=self.COMPACTION_PROMPT,
+                messages=[{"role": "user", "content": summary_input}],
+                temperature=0.3
+            )
+
+            summary = ""
+            for block in response.content:
+                if hasattr(block, "text"):
+                    summary += block.text
+
+            # <summary> 태그 추출
+            import re
+            summary_match = re.search(r'<summary>(.*?)</summary>', summary, re.DOTALL)
+            if summary_match:
+                summary = summary_match.group(1).strip()
+
+            if not summary:
+                print(f"[Compaction][Anthropic] 요약 생성 실패, 프루닝으로 대체")
+                return messages
+
+            self._compaction_summary = summary
+            print(f"[Compaction][Anthropic] 요약 완료: {len(summary):,}자")
+
+            # 새 messages 구성: [요약 메시지] + [최근 메시지들]
+            compacted = []
+
+            # 요약을 user 메시지로 삽입
+            compacted.append({
+                "role": "user",
+                "content": f"<compaction_summary>\n{summary}\n</compaction_summary>\n\n위 요약은 이전 작업 기록의 압축본입니다. 이 맥락을 유지하면서 작업을 계속하세요."
+            })
+
+            # assistant 확인 응답 (Anthropic은 user→assistant 교차 필수)
+            compacted.append({
+                "role": "assistant",
+                "content": "이전 작업 요약을 확인했습니다. 요약된 맥락을 유지하며 작업을 계속하겠습니다."
+            })
+
+            # 최근 메시지 추가
+            compacted.extend(recent_messages)
+
+            before_size = self._estimate_content_size(messages)
+            after_size = self._estimate_content_size(compacted)
+            print(f"[Compaction][Anthropic] 크기 변화: {before_size:,}자 → {after_size:,}자 ({(1 - after_size/before_size)*100:.0f}% 감소)")
+
+            return compacted
+
+        except Exception as e:
+            print(f"[Compaction][Anthropic] 요약 생성 예외: {e}, 프루닝으로 대체")
+            return messages

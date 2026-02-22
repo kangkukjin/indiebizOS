@@ -2,11 +2,20 @@
 Investment Tools Handler
 한국/미국 기업의 주가, 재무제표, 공시정보, 뉴스를 조회하는 투자 분석 도구
 """
+import os
+import sys
 import json
 import importlib.util
 from pathlib import Path
 
 current_dir = Path(__file__).parent
+
+# common 유틸리티 경로
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.response_formatter import error_response
 
 
 def load_module(module_name: str):
@@ -161,18 +170,9 @@ def execute(tool_name: str, params: dict, project_path: str = None):
             )
 
         else:
-            return {
-                "success": False,
-                "error": f"알 수 없는 도구입니다: {tool_name}"
-            }
+            return error_response(f"알 수 없는 도구입니다: {tool_name}")
 
     except FileNotFoundError as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return error_response(str(e))
     except Exception as e:
-        return {
-            "success": False,
-            "error": f"도구 실행 중 오류 발생: {str(e)}"
-        }
+        return error_response(f"도구 실행 중 오류 발생: {str(e)}")

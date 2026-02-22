@@ -45,7 +45,9 @@ export interface Agent {
     api_key?: string;
     model: string;
   };
-  allowed_tools?: string[];
+  allowed_tools?: string[];   // deprecated (하위 호환)
+  allowed_nodes?: string[];   // Phase 16: IBL 노드 기반
+  ibl_only?: boolean;
   channels?: Channel[];
   // 단일 채널 형식 (기존 호환)
   channel?: 'gmail' | 'nostr' | null;

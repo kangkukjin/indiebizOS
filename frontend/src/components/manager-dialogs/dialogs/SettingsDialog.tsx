@@ -1,38 +1,23 @@
 /**
  * SettingsDialog - 설정 다이얼로그
- * 도구 탭: 패키지 단위로 기본 도구를 선택
+ * Phase 16: 도구 탭 → 노드 탭 (프로젝트 기본 노드)
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   X,
   Bot,
   Radio,
-  Wrench,
+  Settings,
   Plus,
   Trash2,
   Edit2,
   Zap,
   Save,
-  ChevronRight,
-  ChevronDown,
 } from 'lucide-react';
 import type { Agent } from '../../../types';
-import type { Tool, ToolSettings } from '../types';
-
-interface PackageInfo {
-  id: string;
-  name: string;
-  description: string;
-  tool_count: number;
-}
-
-interface PackageGroup {
-  id: string;
-  name: string;
-  description: string;
-  tools: Tool[];
-}
+import type { IBLNode } from '../types';
+import { api } from '../../../lib/api';
 
 interface SettingsDialogProps {
   show: boolean;
@@ -46,11 +31,7 @@ interface SettingsDialogProps {
   onEditAgentSettings: (agent: Agent) => void;
   onDeleteAgentSettings: (agent: Agent) => void;
   onAutoAssignTools: () => void;
-  // 도구 탭
-  tools: Tool[];
-  toolPackages: PackageInfo[];
-  toolSettings: ToolSettings;
-  onEditToolAI: (tool: Tool) => void;
+  // 설정 탭 (기본 노드)
   defaultTools: string[];
   onToggleDefaultTool: (toolName: string) => void;
   onSaveDefaultTools: () => void;
@@ -68,68 +49,30 @@ export function SettingsDialog({
   onEditAgentSettings,
   onDeleteAgentSettings,
   onAutoAssignTools,
-  // 도구 탭
-  tools,
-  toolPackages,
-  toolSettings,
-  onEditToolAI,
+  // 설정 탭
   defaultTools,
   onToggleDefaultTool,
   onSaveDefaultTools,
 }: SettingsDialogProps) {
-  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
+  const [iblNodes, setIblNodes] = useState<IBLNode[]>([]);
 
-  // 패키지별 도구 그룹핑
-  const packageGroups = useMemo(() => {
-    const groups: Record<string, PackageGroup> = {};
-
-    for (const tool of tools) {
-      if (tool._is_system) continue;
-      const pkgId = tool._package_id || 'unknown';
-      if (!groups[pkgId]) {
-        const pkgInfo = toolPackages.find(p => p.id === pkgId);
-        groups[pkgId] = {
-          id: pkgId,
-          name: pkgInfo?.name || pkgId,
-          description: pkgInfo?.description || '',
-          tools: [],
-        };
-      }
-      groups[pkgId].tools.push(tool);
+  // IBL 노드 목록 로드
+  useEffect(() => {
+    if (show && settingsTab === 'tools') {
+      api.getNodes().then((data) => {
+        setIblNodes(data.nodes || []);
+      }).catch(() => {
+        setIblNodes([]);
+      });
     }
+  }, [show, settingsTab]);
 
-    return Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
-  }, [tools, toolPackages]);
-
-  // 패키지 체크박스 토글 - 전체 선택/해제
-  const handlePackageToggle = (pkg: PackageGroup) => {
-    const toolNames = pkg.tools.map(t => t.name);
-    const selectedCount = toolNames.filter(n => defaultTools.includes(n)).length;
-    const allSelected = selectedCount === toolNames.length;
-
-    // 전부 선택 → 전부 해제, 아니면 → 전부 선택
-    for (const name of toolNames) {
-      const isCurrentlyDefault = defaultTools.includes(name);
-      if (allSelected && isCurrentlyDefault) {
-        onToggleDefaultTool(name); // 해제
-      } else if (!allSelected && !isCurrentlyDefault) {
-        onToggleDefaultTool(name); // 선택
-      }
-    }
-  };
-
-  // 펼침/접힘 토글
-  const toggleExpand = (pkgId: string) => {
-    setExpandedPackages(prev => {
-      const next = new Set(prev);
-      if (next.has(pkgId)) {
-        next.delete(pkgId);
-      } else {
-        next.add(pkgId);
-      }
-      return next;
-    });
-  };
+  // 인프라 노드와 선택 가능 노드 분리
+  const { infraNodes, selectableNodes } = useMemo(() => {
+    const infra = iblNodes.filter(n => n.always_allowed);
+    const selectable = iblNodes.filter(n => !n.always_allowed);
+    return { infraNodes: infra, selectableNodes: selectable };
+  }, [iblNodes]);
 
   if (!show) return null;
 
@@ -182,8 +125,8 @@ export function SettingsDialog({
                   settingsTab === 'tools' ? 'bg-[#D97706] text-white' : 'hover:bg-gray-200 text-gray-700'
                 }`}
               >
-                <Wrench size={16} />
-                도구
+                <Settings size={16} />
+                노드
               </button>
             </nav>
           </div>
@@ -241,14 +184,14 @@ export function SettingsDialog({
               </div>
             )}
 
-            {/* 도구 탭 - 패키지 기반 */}
+            {/* 설정 탭 - 프로젝트 기본 노드 */}
             {settingsTab === 'tools' && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-800 mb-2">프로젝트 기본 도구</h3>
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">프로젝트 기본 노드</h3>
                     <p className="text-sm text-gray-500">
-                      체크한 도구는 모든 에이전트에게 기본으로 제공됩니다.
+                      체크한 노드는 새 에이전트 생성 시 기본으로 할당됩니다.
                     </p>
                   </div>
                   <button
@@ -260,120 +203,57 @@ export function SettingsDialog({
                   </button>
                 </div>
 
-                {tools.length === 0 ? (
+                {iblNodes.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-gray-500 mb-4">설치된 도구가 없습니다.</p>
-                    <p className="text-sm text-gray-400">
-                      런처로 돌아가서 <span className="font-semibold">도구상자</span>를 열고<br />
-                      원하는 도구 패키지를 설치하세요.
-                    </p>
+                    <p className="text-gray-500">노드 목록을 불러오는 중...</p>
                   </div>
                 ) : (
                   <div className="border border-gray-200 rounded-lg bg-gray-50">
-                    {packageGroups.map((pkg) => {
-                      const toolNames = pkg.tools.map(t => t.name);
-                      const selectedCount = toolNames.filter(n => defaultTools.includes(n)).length;
-                      const allSelected = selectedCount === toolNames.length;
-                      const noneSelected = selectedCount === 0;
-                      const isExpanded = expandedPackages.has(pkg.id);
-
-                      return (
-                        <div key={pkg.id} className="border-b border-gray-200 last:border-b-0">
-                          {/* 패키지 헤더 */}
-                          <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 transition-colors">
-                            <input
-                              type="checkbox"
-                              checked={allSelected}
-                              ref={(el) => {
-                                if (el) el.indeterminate = !allSelected && !noneSelected;
-                              }}
-                              onChange={() => handlePackageToggle(pkg)}
-                              className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                            />
-                            <button
-                              onClick={() => toggleExpand(pkg.id)}
-                              className="flex items-center gap-2 flex-1 text-left"
-                            >
-                              {isExpanded ? (
-                                <ChevronDown size={16} className="text-gray-400 shrink-0" />
-                              ) : (
-                                <ChevronRight size={16} className="text-gray-400 shrink-0" />
-                              )}
-                              <Wrench size={14} className="text-[#D97706] shrink-0" />
-                              <span className="text-sm font-medium text-gray-800">{pkg.name}</span>
-                              <span className="text-xs text-gray-500">
-                                {noneSelected
-                                  ? `(${pkg.tools.length})`
-                                  : allSelected
-                                    ? `(${pkg.tools.length})`
-                                    : `(${selectedCount}/${pkg.tools.length})`
-                                }
-                              </span>
-                              {allSelected && (
-                                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded ml-auto">기본</span>
-                              )}
-                            </button>
-                          </div>
-
-                          {/* 개별 도구 (펼침 시) */}
-                          {isExpanded && (
-                            <div className="pl-10 pr-4 pb-3 bg-white">
-                              {pkg.description && (
-                                <p className="text-xs text-gray-500 mb-2 pl-2">{pkg.description}</p>
-                              )}
-                              {pkg.tools.map((tool) => {
-                                const isDefault = defaultTools.includes(tool.name);
-                                const configKey = tool.ai_config_key || tool.name;
-                                const aiConfig = toolSettings[configKey]?.report_ai;
-
-                                return (
-                                  <div
-                                    key={tool.name}
-                                    className={`flex items-center gap-2 py-2 px-2 rounded transition-colors cursor-pointer ${
-                                      isDefault ? 'bg-green-50' : 'hover:bg-gray-50'
-                                    }`}
-                                    onClick={() => onToggleDefaultTool(tool.name)}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={isDefault}
-                                      onChange={() => onToggleDefaultTool(tool.name)}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <span className={`text-sm ${isDefault ? 'text-green-700 font-medium' : 'text-gray-700'}`}>
-                                          {tool.name}
-                                        </span>
-                                        {tool.uses_ai && (
-                                          <span className="text-xs bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded">AI</span>
-                                        )}
-                                      </div>
-                                      {tool.description && (
-                                        <p className="text-xs text-gray-500 mt-0.5">{tool.description}</p>
-                                      )}
-                                      {tool.uses_ai && aiConfig && (
-                                        <p className="text-xs text-green-600 mt-0.5">AI: {aiConfig.provider} / {aiConfig.model}</p>
-                                      )}
-                                    </div>
-                                    {tool.uses_ai && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onEditToolAI(tool);
-                                        }}
-                                        className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 shrink-0"
-                                      >
-                                        AI 설정
-                                      </button>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                    {/* 인프라 노드 (항상 활성) */}
+                    {infraNodes.length > 0 && (
+                      <div className="px-4 py-3 bg-blue-50 border-b border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" checked disabled className="w-4 h-4 rounded" />
+                          <span className="text-sm font-medium text-blue-700">
+                            인프라 노드 ({infraNodes.length})
+                          </span>
+                          <span className="text-xs text-blue-500 ml-auto">항상 활성</span>
                         </div>
+                        <div className="mt-1 pl-6 text-xs text-blue-600">
+                          {infraNodes.map(n => `${n.id} (${n.description.split(' ')[0]})`).join(', ')}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 선택 가능한 도메인 노드 */}
+                    {selectableNodes.map((node) => {
+                      const isDefault = defaultTools.includes(node.id);
+                      return (
+                        <label
+                          key={node.id}
+                          className={`flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 last:border-b-0 cursor-pointer transition-colors ${
+                            isDefault ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isDefault}
+                            onChange={() => onToggleDefaultTool(node.id)}
+                            className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm font-medium ${isDefault ? 'text-green-700' : 'text-gray-800'}`}>
+                                {node.id}
+                              </span>
+                              <span className="text-xs text-gray-400">({node.action_count})</span>
+                              {isDefault && (
+                                <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">기본</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 truncate">{node.description}</p>
+                          </div>
+                        </label>
                       );
                     })}
                   </div>
@@ -381,7 +261,7 @@ export function SettingsDialog({
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-sm text-blue-700">
-                    기본 도구는 모든 에이전트에게 자동으로 제공됩니다. 개별 에이전트에게 추가 도구를 할당하려면 에이전트 편집에서 설정하세요.
+                    인프라 노드(system, workflow, automation, output)는 모든 에이전트에게 항상 제공됩니다. 개별 에이전트에게 접근 노드를 제한하려면 에이전트 편집에서 설정하세요.
                   </p>
                 </div>
               </div>
@@ -401,7 +281,7 @@ export function SettingsDialog({
                       className="flex items-center gap-1 px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 text-sm"
                     >
                       <Zap size={14} />
-                      도구 자동 배분
+                      노드 자동 배분
                     </button>
                     <button
                       onClick={onAddAgentSettings}
@@ -450,9 +330,15 @@ export function SettingsDialog({
                           <p>
                             AI: {agent.ai?.provider || 'google'} / {agent.ai?.model || '미설정'}
                           </p>
-                          {agent.allowed_tools && (
+                          {agent.allowed_nodes && agent.allowed_nodes.length > 0 && (
                             <p className="mt-1">
-                              도구: {agent.allowed_tools.slice(0, 3).join(', ')}
+                              노드: {agent.allowed_nodes.slice(0, 4).join(', ')}
+                              {agent.allowed_nodes.length > 4 && ` 외 ${agent.allowed_nodes.length - 4}개`}
+                            </p>
+                          )}
+                          {!agent.allowed_nodes && agent.allowed_tools && (
+                            <p className="mt-1 text-orange-500">
+                              구형 도구: {agent.allowed_tools.slice(0, 3).join(', ')}
                               {agent.allowed_tools.length > 3 && ` 외 ${agent.allowed_tools.length - 3}개`}
                             </p>
                           )}

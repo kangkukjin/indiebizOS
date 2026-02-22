@@ -2,8 +2,7 @@
   "id": "android",
   "name": "Android Device Manager",
   "description": "ADB를 통한 안드로이드 기기 관리 도구 (SMS, 통화기록, 연락처, 앱 읽기/삭제 지원)",
-  "version": "1.4.0",
-  "guide_file": "android_guide.md",
+  "version": "1.6.0",
   "tools": [
     {
       "name": "android_grant_permissions",
@@ -11,7 +10,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID (생략시 첫 번째 기기)" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID (생략시 첫 번째 기기)"
+          }
         }
       }
     },
@@ -21,7 +23,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID (생략시 첫 번째 기기)" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID (생략시 첫 번째 기기)"
+          }
         }
       }
     },
@@ -31,7 +36,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "특정 기기 ID (생략시 전체 목록)" }
+          "device_id": {
+            "type": "string",
+            "description": "특정 기기 ID (생략시 전체 목록)"
+          }
         }
       }
     },
@@ -41,7 +49,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID (생략시 첫 번째 기기)" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID (생략시 첫 번째 기기)"
+          }
         }
       }
     },
@@ -51,7 +62,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -61,8 +75,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID" },
-          "third_party_only": { "type": "boolean", "description": "사용자 설치 앱만 (기본: true)" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          },
+          "third_party_only": {
+            "type": "boolean",
+            "description": "사용자 설치 앱만 (기본: true)"
+          }
         }
       }
     },
@@ -72,8 +92,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID" },
-          "limit": { "type": "integer", "description": "조회 개수 (기본: 20)" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "조회 개수 (기본: 20)"
+          }
         }
       }
     },
@@ -83,7 +109,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -93,10 +122,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "package_name": { "type": "string", "description": "앱 패키지명 (예: com.example.app)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "package_name": {
+            "type": "string",
+            "description": "앱 패키지명 (예: com.example.app)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["package_name"]
+        "required": [
+          "package_name"
+        ]
       }
     },
     {
@@ -105,10 +142,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "package_name": { "type": "string", "description": "삭제할 앱 패키지명" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "package_name": {
+            "type": "string",
+            "description": "삭제할 앱 패키지명"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["package_name"]
+        "required": [
+          "package_name"
+        ]
       }
     },
     {
@@ -117,8 +162,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID" },
-          "limit": { "type": "integer", "description": "조회 개수 (기본: 50)" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "조회 개수 (기본: 50)"
+          }
         }
       }
     },
@@ -128,7 +179,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -138,10 +192,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "text": { "type": "string", "description": "전송할 텍스트" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "text": {
+            "type": "string",
+            "description": "전송할 텍스트"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["text"]
+        "required": [
+          "text"
+        ]
       }
     },
     {
@@ -150,7 +212,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -160,11 +225,22 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "local_path": { "type": "string", "description": "PC의 파일 경로" },
-          "remote_path": { "type": "string", "description": "기기 저장 경로 (기본: /sdcard/Download/)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "local_path": {
+            "type": "string",
+            "description": "PC의 파일 경로"
+          },
+          "remote_path": {
+            "type": "string",
+            "description": "기기 저장 경로 (기본: /sdcard/Download/)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["local_path"]
+        "required": [
+          "local_path"
+        ]
       }
     },
     {
@@ -173,11 +249,22 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "remote_path": { "type": "string", "description": "기기 내 파일 경로" },
-          "local_path": { "type": "string", "description": "PC 저장 경로 (생략시 자동)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "remote_path": {
+            "type": "string",
+            "description": "기기 내 파일 경로"
+          },
+          "local_path": {
+            "type": "string",
+            "description": "PC 저장 경로 (생략시 자동)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["remote_path"]
+        "required": [
+          "remote_path"
+        ]
       }
     },
     {
@@ -186,9 +273,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "box": { "type": "string", "description": "inbox(수신함), sent(발신함), all(전체)", "default": "inbox" },
-          "limit": { "type": "integer", "description": "조회 개수 (기본: 50)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "box": {
+            "type": "string",
+            "description": "inbox(수신함), sent(발신함), all(전체)",
+            "default": "inbox"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "조회 개수 (기본: 50)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -198,11 +295,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "phone_number": { "type": "string", "description": "수신 전화번호" },
-          "message": { "type": "string", "description": "보낼 메시지 내용" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "phone_number": {
+            "type": "string",
+            "description": "수신 전화번호"
+          },
+          "message": {
+            "type": "string",
+            "description": "보낼 메시지 내용"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["phone_number", "message"]
+        "required": [
+          "phone_number",
+          "message"
+        ]
       }
     },
     {
@@ -211,12 +320,30 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "sms_id": { "type": "string", "description": "삭제할 SMS ID (단일 삭제)" },
-          "address": { "type": "string", "description": "발신자 번호/이름 (일괄 삭제, %로 와일드카드 가능)" },
-          "body_contains": { "type": "string", "description": "본문에 포함된 문자열 (일괄 삭제)" },
-          "before_date": { "type": "string", "description": "이 날짜 이전 메시지 삭제 (YYYY-MM-DD)" },
-          "dry_run": { "type": "boolean", "description": "true면 삭제 대상만 미리보기 (기본: false)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "sms_id": {
+            "type": "string",
+            "description": "삭제할 SMS ID (단일 삭제)"
+          },
+          "address": {
+            "type": "string",
+            "description": "발신자 번호/이름 (일괄 삭제, %로 와일드카드 가능)"
+          },
+          "body_contains": {
+            "type": "string",
+            "description": "본문에 포함된 문자열 (일괄 삭제)"
+          },
+          "before_date": {
+            "type": "string",
+            "description": "이 날짜 이전 메시지 삭제 (YYYY-MM-DD)"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "true면 삭제 대상만 미리보기 (기본: false)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -226,9 +353,24 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "sms_ids": { "type": "array", "items": { "type": "string" }, "description": "삭제할 SMS ID 목록" },
-          "mms_ids": { "type": "array", "items": { "type": "string" }, "description": "삭제할 MMS ID 목록" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "sms_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "삭제할 SMS ID 목록"
+          },
+          "mms_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "삭제할 MMS ID 목록"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -238,11 +380,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "body_contains": { "type": "string", "description": "본문에 포함된 문자열 (필수)" },
-          "dry_run": { "type": "boolean", "description": "true면 삭제 대상만 미리보기 (기본: true)", "default": true },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "body_contains": {
+            "type": "string",
+            "description": "본문에 포함된 문자열 (필수)"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "true면 삭제 대상만 미리보기 (기본: true)",
+            "default": true
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["body_contains"]
+        "required": [
+          "body_contains"
+        ]
       }
     },
     {
@@ -251,11 +405,22 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "query": { "type": "string", "description": "검색어 (전화번호 또는 내용)" },
-          "limit": { "type": "integer", "description": "검색 결과 개수 (기본: 30)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "query": {
+            "type": "string",
+            "description": "검색어 (전화번호 또는 내용)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "검색 결과 개수 (기본: 30)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -264,10 +429,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "box": { "type": "string", "description": "inbox(수신함), sent(발신함), all(전체)", "default": "inbox" },
-          "limit": { "type": "integer", "description": "조회 개수 (기본: 50)" },
-          "offset": { "type": "integer", "description": "건너뛸 개수 (기본: 0)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "box": {
+            "type": "string",
+            "description": "inbox(수신함), sent(발신함), all(전체)",
+            "default": "inbox"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "조회 개수 (기본: 50)"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "건너뛸 개수 (기본: 0)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -277,10 +455,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "box": { "type": "string", "description": "inbox(수신함), sent(발신함), all(전체)", "default": "inbox" },
-          "limit": { "type": "integer", "description": "조회 개수 (기본: 50)" },
-          "offset": { "type": "integer", "description": "건너뛸 개수 (기본: 0)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "box": {
+            "type": "string",
+            "description": "inbox(수신함), sent(발신함), all(전체)",
+            "default": "inbox"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "조회 개수 (기본: 50)"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "건너뛸 개수 (기본: 0)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -290,10 +481,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "phone_number": { "type": "string", "description": "전화번호" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "phone_number": {
+            "type": "string",
+            "description": "전화번호"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["phone_number"]
+        "required": [
+          "phone_number"
+        ]
       }
     },
     {
@@ -302,7 +501,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -312,9 +514,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "call_type": { "type": "string", "description": "all(전체), incoming(수신), outgoing(발신), missed(부재중)", "default": "all" },
-          "limit": { "type": "integer", "description": "조회 개수 (기본: 50)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "call_type": {
+            "type": "string",
+            "description": "all(전체), incoming(수신), outgoing(발신), missed(부재중)",
+            "default": "all"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "조회 개수 (기본: 50)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -324,10 +536,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "call_id": { "type": "string", "description": "삭제할 통화 기록 ID" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "call_id": {
+            "type": "string",
+            "description": "삭제할 통화 기록 ID"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["call_id"]
+        "required": [
+          "call_id"
+        ]
       }
     },
     {
@@ -336,8 +556,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "limit": { "type": "integer", "description": "조회 개수 (기본: 100)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "limit": {
+            "type": "integer",
+            "description": "조회 개수 (기본: 100)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -347,10 +573,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "query": { "type": "string", "description": "검색어 (이름 또는 전화번호)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "query": {
+            "type": "string",
+            "description": "검색어 (이름 또는 전화번호)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -359,9 +593,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "contact_id": { "type": "string", "description": "삭제할 연락처 ID" },
-          "phone_number": { "type": "string", "description": "삭제할 연락처 전화번호 (contact_id 없을 때 사용)" },
-          "device_id": { "type": "string", "description": "기기 ID" }
+          "contact_id": {
+            "type": "string",
+            "description": "삭제할 연락처 ID"
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "삭제할 연락처 전화번호 (contact_id 없을 때 사용)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
         }
       }
     },
@@ -371,9 +614,251 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "device_id": { "type": "string", "description": "기기 ID (생략시 첫 번째 기기)" },
-          "project_id": { "type": "string", "description": "프로젝트 ID (전달시 해당 프로젝트 에이전트와 대화 가능)" }
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID (생략시 첫 번째 기기)"
+          },
+          "project_id": {
+            "type": "string",
+            "description": "프로젝트 ID (전달시 해당 프로젝트 에이전트와 대화 가능)"
+          }
         }
+      }
+    },
+    {
+      "name": "android_ui_screenshot",
+      "description": "현재 안드로이드 화면을 캡처하여 AI가 직접 볼 수 있는 이미지로 반환합니다.\n\n## 핵심 도구 (Computer-Use 패턴)\n이 도구의 결과 이미지를 AI가 직접 분석하여 화면 상태를 파악합니다.\n\n## 사용 패턴 (반드시 따를 것)\n1. android_ui_screenshot → 화면 확인\n2. 화면 분석 (어떤 요소가 있는지, 위치 파악)\n3. 적절한 UI 동작 수행 (tap, swipe, type 등)\n4. android_ui_screenshot → 결과 확인\n5. 목표 달성될 때까지 2-4 반복\n\n## 주의사항\n- 동작 수행 후 반드시 스크린샷으로 결과를 확인하세요\n- 화면 로딩에 시간이 필요할 수 있으므로 빠른 연속 호출은 피하세요",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID (생략시 첫 번째 기기)"
+          }
+        }
+      }
+    },
+    {
+      "name": "android_ui_tap",
+      "description": "화면의 지정 좌표를 터치합니다.\n\n## 사용 시점\n- 버튼, 링크, 아이콘 등을 클릭할 때\n- android_ui_screenshot으로 확인한 좌표에 터치\n\n## 좌표 확인 방법\n- android_ui_screenshot으로 화면을 캡처하고 이미지에서 대상 위치를 추정\n- android_ui_hierarchy로 정확한 좌표 확인 가능\n\n## 주의사항\n- 터치 후 android_ui_screenshot으로 결과를 확인하세요",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "integer",
+            "description": "X 좌표 (픽셀)"
+          },
+          "y": {
+            "type": "integer",
+            "description": "Y 좌표 (픽셀)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ]
+      }
+    },
+    {
+      "name": "android_ui_swipe",
+      "description": "화면에서 스와이프 제스처를 수행합니다.\n\n## 사용 시점\n- 스크롤 (위로/아래로/좌우)\n- 화면 넘기기\n- 드래그 동작\n\n## 스크롤 예시 (해상도 1080x2400 기준)\n- 아래로 스크롤: x1=540, y1=1500, x2=540, y2=500\n- 위로 스크롤: x1=540, y1=500, x2=540, y2=1500\n- 왼쪽으로 넘기기: x1=900, y1=1200, x2=200, y2=1200\n\n## duration_ms\n- 빠른 스와이프: 100-200ms\n- 보통 스크롤: 300ms (기본값)\n- 느린/정밀 스와이프: 500-1000ms",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "x1": {
+            "type": "integer",
+            "description": "시작 X 좌표"
+          },
+          "y1": {
+            "type": "integer",
+            "description": "시작 Y 좌표"
+          },
+          "x2": {
+            "type": "integer",
+            "description": "끝 X 좌표"
+          },
+          "y2": {
+            "type": "integer",
+            "description": "끝 Y 좌표"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "description": "스와이프 시간 (ms, 기본: 300)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        },
+        "required": [
+          "x1",
+          "y1",
+          "x2",
+          "y2"
+        ]
+      }
+    },
+    {
+      "name": "android_ui_long_press",
+      "description": "화면의 지정 좌표를 길게 누릅니다.\n\n## 사용 시점\n- 컨텍스트 메뉴 열기\n- 텍스트 선택 시작\n- 아이콘/위젯 이동 모드 진입\n\n## duration_ms\n- 일반 롱프레스: 1000ms (기본값)\n- 짧은 롱프레스: 500ms\n- 긴 롱프레스 (위젯 이동 등): 2000ms",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "integer",
+            "description": "X 좌표"
+          },
+          "y": {
+            "type": "integer",
+            "description": "Y 좌표"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "description": "누르는 시간 (ms, 기본: 1000)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ]
+      }
+    },
+    {
+      "name": "android_ui_press_key",
+      "description": "하드웨어/시스템 키를 누릅니다.\n\n## 자주 사용하는 키 이름\n- HOME: 홈 버튼\n- BACK: 뒤로가기\n- RECENT: 최근 앱\n- ENTER: 엔터/확인\n- DELETE: 백스페이스\n- VOLUME_UP / VOLUME_DOWN: 볼륨\n- POWER: 전원\n- TAB: 탭\n- SPACE: 스페이스\n- MENU: 메뉴\n- SEARCH: 검색\n\n## 사용 방법\n- 키 이름 문자열 또는 키코드 숫자 모두 사용 가능\n- 예: keycode=\"HOME\" 또는 keycode=\"3\"",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keycode": {
+            "type": "string",
+            "description": "키 이름 (HOME, BACK, ENTER 등) 또는 키코드 숫자"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        },
+        "required": [
+          "keycode"
+        ]
+      }
+    },
+    {
+      "name": "android_ui_type_text",
+      "description": "텍스트를 입력합니다. 현재 포커스된 입력 필드에 문자를 입력합니다.\n\n## 영문/숫자\n- 직접 입력 (빠름)\n\n## 한글/특수문자\n- Clipper 앱을 통한 클립보드 방식\n- Clipper 앱이 설치되어 있어야 함\n\n## 사용 전 확인\n- 입력 필드가 포커스되어 있는지 확인\n- 필요시 먼저 android_ui_tap으로 입력 필드를 터치\n\n## android_send_text와의 차이\n- android_send_text: 클립보드에 복사만 함\n- android_ui_type_text: 실제로 입력 필드에 텍스트를 입력",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "입력할 텍스트"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      }
+    },
+    {
+      "name": "android_ui_screen_info",
+      "description": "화면 해상도와 밀도 정보를 조회합니다.\n\n## 반환 정보\n- width, height: 화면 크기 (픽셀)\n- density: 화면 밀도 (dpi)\n\n## 사용 시점\n- UI 제어 시작 전 화면 크기 파악\n- 스와이프 좌표 계산의 기준값으로 활용\n- 스크린샷 이미지 좌표 매핑에 활용",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        }
+      }
+    },
+    {
+      "name": "android_ui_hierarchy",
+      "description": "현재 화면의 UI 요소 목록을 덤프합니다 (uiautomator).\n\n## 반환 정보\n- 각 UI 요소의 text, content_desc, resource_id\n- class: 요소 유형 (Button, TextView, EditText 등)\n- bounds: 요소의 좌표 영역 (x1,y1,x2,y2)\n- center: 요소 중심 좌표 (터치에 활용)\n- clickable, enabled: 상호작용 가능 여부\n\n## 사용 시점\n- 스크린샷만으로 요소 위치를 파악하기 어려울 때\n- 정확한 버튼/입력 필드 좌표가 필요할 때\n\n## 주의사항\n- 실행에 2-3초 소요\n- 최대 100개 요소 반환\n- 일부 앱은 보안상 UI 덤프를 차단할 수 있음",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        }
+      }
+    },
+    {
+      "name": "android_ui_open_app",
+      "description": "지정한 패키지의 앱을 실행합니다.\n\n## 사용 시점\n- 특정 앱을 열어야 할 때\n- UI 자동화 시작 전 대상 앱 실행\n\n## 패키지명 확인\n- android_list_apps로 설치된 앱 목록 확인\n\n## 주의사항\n- 앱 실행 후 로딩 시간이 필요할 수 있음\n- 스크린샷으로 앱이 완전히 로드되었는지 확인 권장",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "package_name": {
+            "type": "string",
+            "description": "앱 패키지명 (예: com.android.settings)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        },
+        "required": [
+          "package_name"
+        ]
+      }
+    },
+    {
+      "name": "android_ui_find_element",
+      "description": "화면에서 텍스트, 설명, resource_id로 UI 요소를 검색합니다.\n\n## 핵심 도구 - 요소 찾기\n스크린샷으로 좌표를 추정하기 어려울 때 이 도구를 사용하세요.\n텍스트 부분 일치로 검색하여 정확한 좌표를 반환합니다.\n\n## 사용 예시\n- query=\"보내기\" → 보내기 버튼의 정확한 좌표\n- query=\"전송\" → 전송 버튼 찾기\n- query=\"검색\" → 검색 입력 필드 찾기\n- query=\"send\" → 영문 텍스트 요소 찾기\n\n## 반환 정보\n- 일치하는 요소들의 text, content_desc, class\n- bounds (x1,y1,x2,y2), center (중심 좌표)\n- clickable, enabled 상태\n\n## 주의사항\n- 부분 일치 검색 (대소문자 구분 안함)\n- 일부 앱은 보안상 UI 덤프를 차단할 수 있음\n- 검색 결과가 없으면 다른 검색어 시도",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색할 텍스트 (text, content_desc, resource_id에서 부분 일치)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "android_ui_find_and_tap",
+      "description": "화면에서 텍스트/설명으로 요소를 찾아 자동으로 터치합니다.\n\n## 핵심 도구 - 찾아서 터치 (한 번에!)\n좌표를 추정할 필요 없이, 텍스트로 찾아서 바로 터치합니다.\n보내기 버튼, 확인 버튼 등 정확한 좌표를 모를 때 매우 유용합니다.\n\n## 사용 예시\n- query=\"보내기\" → 보내기 버튼을 찾아 터치\n- query=\"전송\" → 전송 버튼을 찾아 터치\n- query=\"확인\" → 확인 버튼을 찾아 터치\n- query=\"send\" → send 버튼을 찾아 터치\n\n## index 파라미터\n- 같은 텍스트가 여러 개일 때 몇 번째를 터치할지 (0부터 시작)\n- 기본값: 0 (첫 번째 일치 요소)\n\n## 주의사항\n- 터치 후 android_ui_screenshot으로 결과를 확인하세요\n- 검색 결과가 없으면 다른 검색어를 시도하세요\n- android_ui_find_element로 먼저 어떤 요소가 있는지 확인 가능",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "찾을 텍스트 (text, content_desc, resource_id에서 부분 일치)"
+          },
+          "index": {
+            "type": "integer",
+            "description": "여러 결과 중 몇 번째를 터치할지 (0부터, 기본: 0)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        },
+        "required": [
+          "query"
+        ]
       }
     }
   ]

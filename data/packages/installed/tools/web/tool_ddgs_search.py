@@ -4,8 +4,16 @@ AI 에이전트가 웹에서 정보를 검색할 수 있음 (무료 DuckDuckGo �
 검색 결과를 직접 반환합니다 (파일 저장 없음).
 """
 
+import os
+import sys
+
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
 from ddgs import DDGS
-import json
+from common.response_formatter import format_json
 
 
 def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
@@ -42,19 +50,19 @@ def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
                 "snippet": r.get("body", "설명 없음")
             })
 
-        return json.dumps({
+        return format_json({
             "success": True,
             "query": query,
             "count": len(formatted_results),
             "results": formatted_results
-        }, ensure_ascii=False, indent=2)
+        })
 
     except Exception as e:
-        return json.dumps({
+        return format_json({
             "success": False,
             "query": query,
             "error": f"검색 실패: {str(e)}"
-        }, ensure_ascii=False)
+        })
 
 
 def use_tool(tool_input: dict) -> str:
@@ -64,9 +72,9 @@ def use_tool(tool_input: dict) -> str:
     country = tool_input.get('country', 'kr-kr')
 
     if not query:
-        return json.dumps({
+        return format_json({
             "success": False,
             "error": "query 파라미터가 필요합니다"
-        }, ensure_ascii=False)
+        })
 
     return search_web(query, count, country)

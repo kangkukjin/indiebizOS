@@ -1,0 +1,7 @@
+name: "유튜브 정보"
+description: "유튜브 영상 정보 조회"
+steps:
+  - node: youtube
+    action: info
+    target: "{{url}}"
+created: "2026-02-17"

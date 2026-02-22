@@ -3,7 +3,6 @@
   "name": "Browser Action",
   "description": "Playwright 기반 브라우저 자동화. Accessibility Snapshot + ref 타겟팅, 다중 탭, iframe, 쿠키 관리 지원.",
   "version": "3.0.0",
-  "guide_file": "browser_guide.md",
   "tools": [
     {
       "name": "browser_navigate",
@@ -11,22 +10,46 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "url": { "type": "string", "description": "이동할 URL (https:// 생략 가능)" },
-          "headless": { "type": "boolean", "default": true, "description": "헤드리스 모드" },
-          "wait_for": { "type": "string", "enum": ["load", "domcontentloaded", "networkidle"], "default": "load", "description": "페이지 로드 대기 조건" }
+          "url": {
+            "type": "string",
+            "description": "이동할 URL (https:// 생략 가능)"
+          },
+          "headless": {
+            "type": "boolean",
+            "default": true,
+            "description": "헤드리스 모드"
+          },
+          "wait_for": {
+            "type": "string",
+            "enum": [
+              "load",
+              "domcontentloaded",
+              "networkidle"
+            ],
+            "default": "load",
+            "description": "페이지 로드 대기 조건"
+          }
         },
-        "required": ["url"]
+        "required": [
+          "url"
+        ]
       }
     },
     {
       "name": "browser_navigate_back",
       "description": "브라우저 히스토리 이전 페이지로 이동합니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "name": "browser_navigate_forward",
       "description": "브라우저 히스토리 다음 페이지로 이동합니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "name": "browser_snapshot",
@@ -34,7 +57,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "selector": { "type": "string", "description": "특정 영역만 스냅샷할 CSS 선택자" }
+          "selector": {
+            "type": "string",
+            "description": "특정 영역만 스냅샷할 CSS 선택자"
+          }
         }
       }
     },
@@ -44,10 +70,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "element": { "type": "string", "description": "클릭할 요소 설명" },
-          "ref": { "type": "string", "description": "browser_snapshot에서 얻은 ref (예: e1)" }
+          "element": {
+            "type": "string",
+            "description": "클릭할 요소 설명"
+          },
+          "ref": {
+            "type": "string",
+            "description": "browser_snapshot에서 얻은 ref (예: e1)"
+          }
         },
-        "required": ["element", "ref"]
+        "required": [
+          "element",
+          "ref"
+        ]
       }
     },
     {
@@ -56,13 +91,34 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "element": { "type": "string", "description": "입력 필드 설명" },
-          "ref": { "type": "string", "description": "browser_snapshot에서 얻은 ref" },
-          "text": { "type": "string", "description": "입력할 텍스트" },
-          "submit": { "type": "boolean", "default": false, "description": "입력 후 Enter 전송" },
-          "clear": { "type": "boolean", "default": true, "description": "기존 내용 삭제 후 입력" }
+          "element": {
+            "type": "string",
+            "description": "입력 필드 설명"
+          },
+          "ref": {
+            "type": "string",
+            "description": "browser_snapshot에서 얻은 ref"
+          },
+          "text": {
+            "type": "string",
+            "description": "입력할 텍스트"
+          },
+          "submit": {
+            "type": "boolean",
+            "default": false,
+            "description": "입력 후 Enter 전송"
+          },
+          "clear": {
+            "type": "boolean",
+            "default": true,
+            "description": "기존 내용 삭제 후 입력"
+          }
         },
-        "required": ["element", "ref", "text"]
+        "required": [
+          "element",
+          "ref",
+          "text"
+        ]
       }
     },
     {
@@ -71,11 +127,27 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "element": { "type": "string", "description": "select 요소 설명" },
-          "ref": { "type": "string", "description": "browser_snapshot에서 얻은 ref" },
-          "values": { "type": "array", "items": { "type": "string" }, "description": "선택할 옵션 값 배열" }
+          "element": {
+            "type": "string",
+            "description": "select 요소 설명"
+          },
+          "ref": {
+            "type": "string",
+            "description": "browser_snapshot에서 얻은 ref"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "선택할 옵션 값 배열"
+          }
         },
-        "required": ["element", "ref", "values"]
+        "required": [
+          "element",
+          "ref",
+          "values"
+        ]
       }
     },
     {
@@ -84,10 +156,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "element": { "type": "string", "description": "hover할 요소 설명" },
-          "ref": { "type": "string", "description": "browser_snapshot에서 얻은 ref" }
+          "element": {
+            "type": "string",
+            "description": "hover할 요소 설명"
+          },
+          "ref": {
+            "type": "string",
+            "description": "browser_snapshot에서 얻은 ref"
+          }
         },
-        "required": ["element", "ref"]
+        "required": [
+          "element",
+          "ref"
+        ]
       }
     },
     {
@@ -96,12 +177,29 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "source_element": { "type": "string", "description": "드래그할 요소 설명" },
-          "source_ref": { "type": "string", "description": "소스 요소의 ref" },
-          "target_element": { "type": "string", "description": "드롭할 위치 요소 설명" },
-          "target_ref": { "type": "string", "description": "타겟 요소의 ref" }
+          "source_element": {
+            "type": "string",
+            "description": "드래그할 요소 설명"
+          },
+          "source_ref": {
+            "type": "string",
+            "description": "소스 요소의 ref"
+          },
+          "target_element": {
+            "type": "string",
+            "description": "드롭할 위치 요소 설명"
+          },
+          "target_ref": {
+            "type": "string",
+            "description": "타겟 요소의 ref"
+          }
         },
-        "required": ["source_element", "source_ref", "target_element", "target_ref"]
+        "required": [
+          "source_element",
+          "source_ref",
+          "target_element",
+          "target_ref"
+        ]
       }
     },
     {
@@ -110,9 +208,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "key": { "type": "string", "description": "누를 키 (예: Enter, Tab, Control+a)" }
+          "key": {
+            "type": "string",
+            "description": "누를 키 (예: Enter, Tab, Control+a)"
+          }
         },
-        "required": ["key"]
+        "required": [
+          "key"
+        ]
       }
     },
     {
@@ -121,10 +224,30 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "direction": { "type": "string", "enum": ["down", "up"], "default": "down", "description": "스크롤 방향" },
-          "amount": { "type": "integer", "default": 500, "description": "스크롤량 (px)" },
-          "to_bottom": { "type": "boolean", "default": false, "description": "페이지 맨 아래로" },
-          "to_top": { "type": "boolean", "default": false, "description": "페이지 맨 위로" }
+          "direction": {
+            "type": "string",
+            "enum": [
+              "down",
+              "up"
+            ],
+            "default": "down",
+            "description": "스크롤 방향"
+          },
+          "amount": {
+            "type": "integer",
+            "default": 500,
+            "description": "스크롤량 (px)"
+          },
+          "to_bottom": {
+            "type": "boolean",
+            "default": false,
+            "description": "페이지 맨 아래로"
+          },
+          "to_top": {
+            "type": "boolean",
+            "default": false,
+            "description": "페이지 맨 위로"
+          }
         }
       }
     },
@@ -134,10 +257,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "selector": { "type": "string", "description": "대기할 CSS 선택자" },
-          "text": { "type": "string", "description": "대기할 텍스트" },
-          "url": { "type": "string", "description": "대기할 URL 패턴 (정규식)" },
-          "timeout": { "type": "integer", "default": 30000, "description": "최대 대기 시간 (ms)" }
+          "selector": {
+            "type": "string",
+            "description": "대기할 CSS 선택자"
+          },
+          "text": {
+            "type": "string",
+            "description": "대기할 텍스트"
+          },
+          "url": {
+            "type": "string",
+            "description": "대기할 URL 패턴 (정규식)"
+          },
+          "timeout": {
+            "type": "integer",
+            "default": 30000,
+            "description": "최대 대기 시간 (ms)"
+          }
         }
       }
     },
@@ -147,8 +283,15 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "full_page": { "type": "boolean", "default": false, "description": "전체 페이지 캡처" },
-          "selector": { "type": "string", "description": "특정 요소만 캡처할 CSS 선택자" }
+          "full_page": {
+            "type": "boolean",
+            "default": false,
+            "description": "전체 페이지 캡처"
+          },
+          "selector": {
+            "type": "string",
+            "description": "특정 요소만 캡처할 CSS 선택자"
+          }
         }
       }
     },
@@ -158,8 +301,15 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "selector": { "type": "string", "description": "특정 영역만 추출할 CSS 선택자" },
-          "max_length": { "type": "integer", "default": 10000, "description": "최대 텍스트 길이" }
+          "selector": {
+            "type": "string",
+            "description": "특정 영역만 추출할 CSS 선택자"
+          },
+          "max_length": {
+            "type": "integer",
+            "default": 10000,
+            "description": "최대 텍스트 길이"
+          }
         }
       }
     },
@@ -169,10 +319,32 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "type": { "type": "string", "enum": ["all", "log", "error", "warning", "info"], "default": "all", "description": "로그 타입 필터" },
-          "search": { "type": "string", "description": "검색 텍스트" },
-          "limit": { "type": "integer", "default": 100, "description": "최대 로그 수" },
-          "clear": { "type": "boolean", "default": false, "description": "조회 후 삭제" }
+          "type": {
+            "type": "string",
+            "enum": [
+              "all",
+              "log",
+              "error",
+              "warning",
+              "info"
+            ],
+            "default": "all",
+            "description": "로그 타입 필터"
+          },
+          "search": {
+            "type": "string",
+            "description": "검색 텍스트"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 100,
+            "description": "최대 로그 수"
+          },
+          "clear": {
+            "type": "boolean",
+            "default": false,
+            "description": "조회 후 삭제"
+          }
         }
       }
     },
@@ -182,9 +354,27 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "format": { "type": "string", "enum": ["A4", "Letter", "Legal", "A3"], "default": "A4", "description": "용지 크기" },
-          "landscape": { "type": "boolean", "default": false, "description": "가로 방향" },
-          "print_background": { "type": "boolean", "default": true, "description": "배경 인쇄" }
+          "format": {
+            "type": "string",
+            "enum": [
+              "A4",
+              "Letter",
+              "Legal",
+              "A3"
+            ],
+            "default": "A4",
+            "description": "용지 크기"
+          },
+          "landscape": {
+            "type": "boolean",
+            "default": false,
+            "description": "가로 방향"
+          },
+          "print_background": {
+            "type": "boolean",
+            "default": true,
+            "description": "배경 인쇄"
+          }
         }
       }
     },
@@ -194,20 +384,31 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "expression": { "type": "string", "description": "실행할 JavaScript 표현식" }
+          "expression": {
+            "type": "string",
+            "description": "실행할 JavaScript 표현식"
+          }
         },
-        "required": ["expression"]
+        "required": [
+          "expression"
+        ]
       }
     },
     {
       "name": "browser_close",
       "description": "브라우저 세션을 종료합니다. 120초 비활성 시 자동 종료됨.",
-      "input_schema": { "type": "object", "properties": {} }
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "name": "browser_tab_list",
       "description": "현재 열린 모든 탭의 목록(tab_id, title, url, active)을 반환합니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "name": "browser_tab_new",
@@ -215,7 +416,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "url": { "type": "string", "description": "이동할 URL (비워두면 빈 탭)" }
+          "url": {
+            "type": "string",
+            "description": "이동할 URL (비워두면 빈 탭)"
+          }
         }
       }
     },
@@ -225,9 +429,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "tab_id": { "type": "string", "description": "전환할 탭 ID (예: t1, t2)" }
+          "tab_id": {
+            "type": "string",
+            "description": "전환할 탭 ID (예: t1, t2)"
+          }
         },
-        "required": ["tab_id"]
+        "required": [
+          "tab_id"
+        ]
       }
     },
     {
@@ -236,14 +445,20 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "tab_id": { "type": "string", "description": "닫을 탭 ID (비워두면 현재 탭)" }
+          "tab_id": {
+            "type": "string",
+            "description": "닫을 탭 ID (비워두면 현재 탭)"
+          }
         }
       }
     },
     {
       "name": "browser_iframe_list",
       "description": "현재 페이지의 iframe 목록(index, name, url)을 반환합니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "name": "browser_iframe_switch",
@@ -251,16 +466,28 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "name": { "type": "string", "description": "iframe name 속성" },
-          "index": { "type": "integer", "description": "iframe 인덱스" },
-          "url": { "type": "string", "description": "iframe URL 패턴 (부분 일치)" }
+          "name": {
+            "type": "string",
+            "description": "iframe name 속성"
+          },
+          "index": {
+            "type": "integer",
+            "description": "iframe 인덱스"
+          },
+          "url": {
+            "type": "string",
+            "description": "iframe URL 패턴 (부분 일치)"
+          }
         }
       }
     },
     {
       "name": "browser_iframe_reset",
       "description": "iframe에서 메인 페이지로 돌아갑니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "name": "browser_cookies_save",
@@ -268,7 +495,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "name": { "type": "string", "description": "저장 이름 (비워두면 도메인명 사용)" }
+          "name": {
+            "type": "string",
+            "description": "저장 이름 (비워두면 도메인명 사용)"
+          }
         }
       }
     },
@@ -278,9 +508,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "name": { "type": "string", "description": "복원할 저장 이름" }
+          "name": {
+            "type": "string",
+            "description": "복원할 저장 이름"
+          }
         },
-        "required": ["name"]
+        "required": [
+          "name"
+        ]
       }
     }
   ]

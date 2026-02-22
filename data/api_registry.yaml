@@ -1,0 +1,1869 @@
+# IBL Phase 1 - API Registry
+# 모든 외부 API 서비스와 도구 매핑을 정의합니다.
+#
+# 구조:
+#   services: API 서비스 정의 (URL, 인증)
+#   tools: 도구 이름 → API 엔드포인트 매핑
+#
+# 새 API 추가 = 이 파일에 항목 추가 (코드 작성 불필요)
+
+services:
+
+  # === 법률 ===
+  law:
+    base_url: "http://www.law.go.kr/DRF"
+    auth:
+      type: query_param
+      key_name: OC
+      env_var: LAW_API_KEY
+      config_fallback: true  # 패키지 config.json에서도 조회
+    timeout: 15
+
+  # === 통계 ===
+  kosis:
+    base_url: "https://kosis.kr/openapi"
+    auth:
+      type: query_param
+      key_name: apiKey
+      env_var: KOSIS_API_KEY
+    timeout: 30
+
+  # === 카카오 ===
+  kakao:
+    base_url: "https://dapi.kakao.com"
+    auth:
+      type: header
+      header_name: Authorization
+      prefix: "KakaoAK "
+      env_var: KAKAO_REST_API_KEY
+    timeout: 10
+
+  kakao-navi:
+    base_url: "https://apis-navi.kakaomobility.com"
+    auth:
+      type: header
+      header_name: Authorization
+      prefix: "KakaoAK "
+      env_var: KAKAO_REST_API_KEY
+    timeout: 15
+
+  # === 네이버 ===
+  naver:
+    base_url: "https://openapi.naver.com"
+    auth:
+      type: header_pair
+      headers:
+        X-Naver-Client-Id: NAVER_CLIENT_ID
+        X-Naver-Client-Secret: NAVER_CLIENT_SECRET
+    timeout: 10
+
+  # === API Ninjas ===
+  ninjas:
+    base_url: "https://api.api-ninjas.com/v1"
+    auth:
+      type: header
+      header_name: X-Api-Key
+      env_var: NINJAS_API_KEY
+    timeout: 15
+
+  # === 기업 공시 (DART) ===
+  dart:
+    base_url: "https://opendart.fss.or.kr/api"
+    auth:
+      type: query_param
+      key_name: crtfc_key
+      env_var: DART_API_KEY
+    timeout: 20
+
+  # === 미국 주식 (Financial Modeling Prep) ===
+  fmp:
+    base_url: "https://financialmodelingprep.com/api"
+    auth:
+      type: query_param
+      key_name: apikey
+      env_var: FMP_API_KEY
+    timeout: 20
+
+  # === 뉴스/실적 (Finnhub) ===
+  finnhub:
+    base_url: "https://finnhub.io/api/v1"
+    auth:
+      type: query_param
+      key_name: token
+      env_var: FINNHUB_API_KEY
+    timeout: 15
+
+  # === 공연 정보 (KOPIS) ===
+  kopis:
+    base_url: "http://www.kopis.or.kr/openApi/restful"
+    auth:
+      type: query_param
+      key_name: service
+      env_var: KOPIS_API_KEY
+    timeout: 15
+    response_format: xml
+
+  # === 도서관 ===
+  data4library:
+    base_url: "http://data4library.kr/api"
+    auth:
+      type: query_param
+      key_name: authKey
+      env_var: DATA4LIBRARY_API_KEY
+    timeout: 15
+    response_format: xml
+
+  # === 공공데이터포털 ===
+  data-go-kr:
+    base_url: "https://apis.data.go.kr"
+    auth:
+      type: query_param
+      key_name: serviceKey
+      env_var: DATA_GO_KR_API_KEY
+    timeout: 20
+    response_format: xml
+
+  # === 부동산 (국토부) ===
+  molit:
+    base_url: "https://apis.data.go.kr/1613000"
+    auth:
+      type: query_param
+      key_name: serviceKey
+      env_var: MOLIT_API_KEY
+    timeout: 20
+    response_format: xml
+
+  # === SEC EDGAR (미국) ===
+  sec-edgar:
+    base_url: "https://data.sec.gov"
+    auth:
+      type: header
+      header_name: User-Agent
+      static_value: "IndieBizOS/1.0 (contact@indiebiz.kr)"
+    timeout: 15
+
+  # === CoinGecko (암호화폐) ===
+  coingecko:
+    base_url: "https://api.coingecko.com/api/v3"
+    auth:
+      type: none
+    timeout: 15
+
+  # === Amadeus (여행) ===
+  amadeus:
+    base_url: "https://test.api.amadeus.com"
+    auth:
+      type: oauth2
+      token_url: "/v1/security/oauth2/token"
+      env_vars:
+        client_id: AMADEUS_API_KEY
+        client_secret: AMADEUS_API_SECRET
+    timeout: 20
+
+  # === Semantic Scholar (학술 논문) ===
+  semantic-scholar:
+    base_url: "https://api.semanticscholar.org/graph/v1"
+    auth:
+      type: none
+    timeout: 15
+
+  # === OpenAlex (학술 논문) ===
+  openalex:
+    base_url: "https://api.openalex.org"
+    auth:
+      type: none
+    timeout: 30
+
+  # === PubMed (의학 논문) ===
+  pubmed:
+    base_url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+    auth:
+      type: none
+    timeout: 15
+
+  # === Guardian (영국 뉴스) ===
+  guardian:
+    base_url: "https://content.guardianapis.com"
+    auth:
+      type: query_param
+      key_name: api-key
+      env_var: GUARDIAN_API_KEY
+    timeout: 15
+
+  # === World Bank (세계은행 데이터) ===
+  world-bank:
+    base_url: "http://api.worldbank.org/v2"
+    auth:
+      type: none
+    timeout: 15
+
+  # === Google Books (도서 검색) ===
+  google-books:
+    base_url: "https://www.googleapis.com/books/v1"
+    auth:
+      type: none
+    timeout: 15
+
+  # === ITS 국가교통정보센터 (교통 CCTV) ===
+  its:
+    base_url: "https://openapi.its.go.kr:9443"
+    auth:
+      type: query_param
+      key_name: apiKey
+      env_var: ITS_API_KEY
+    timeout: 15
+
+  # === Windy Webcams (전세계 웹캠) ===
+  windy:
+    base_url: "https://webcams.windy.com/webcams/api/v3/webcams"
+    auth:
+      type: header
+      header_name: x-windy-api-key
+      env_var: WINDY_API_KEY
+    timeout: 15
+
+  # === 국토부 - 연립다세대(단독/다가구) 매매 ===
+  molit-house:
+    base_url: "https://apis.data.go.kr/1613000/RTMSDataSvcSHTrade"
+    auth:
+      type: query_param
+      key_name: serviceKey
+      env_var: MOLIT_API_KEY
+    timeout: 20
+
+  # === 국토부 - 연립다세대(단독/다가구) 전월세 ===
+  molit-house-rent:
+    base_url: "https://apis.data.go.kr/1613000/RTMSDataSvcSHRent"
+    auth:
+      type: query_param
+      key_name: serviceKey
+      env_var: MOLIT_API_KEY
+    timeout: 20
+
+
+# =====================================================
+# 도구 → API 매핑
+# =====================================================
+# 각 도구가 어떤 서비스의 어떤 엔드포인트를 호출하는지 정의
+#
+# 필드 설명:
+#   service: 위 services에서 정의한 서비스 이름
+#   endpoint: URL 경로
+#   method: GET/POST (기본: GET)
+#   default_params: 항상 포함되는 기본 파라미터
+#   param_map: tool_input 키 → API 파라미터 키 매핑
+#   response_type: json (기본) / xml / raw
+#   transform: 응답 변환 함수 이름 (transforms/ 디렉토리 참조)
+
+tools:
+
+  # === 법률 도구 ===
+  search_legal_info:
+    service: law
+    endpoint: /lawSearch.do
+    default_params:
+      type: JSON
+    param_map:
+      query: query
+      target: target
+    defaults:
+      target: law
+    response_type: raw
+    # IBL node binding
+    node: source
+    action_name: search_legal
+    description: "법률 정보 통합 검색 (법령+판례+행정규칙)"
+    target_key: query
+    target_description: "검색 키워드"
+
+  get_legal_detail:
+    service: law
+    endpoint: /lawService.do
+    default_params:
+      type: JSON
+    param_map:
+      id: ID
+      target: target
+    defaults:
+      target: law
+    response_type: raw
+    # IBL node binding
+    node: source
+    action_name: detail
+    description: "법률 항목 상세 본문 조회"
+    target_key: id
+    target_description: "법률 항목 ID"
+
+  search_laws:
+    service: law
+    endpoint: /lawSearch.do
+    default_params:
+      type: JSON
+      target: law
+    param_map:
+      query: query
+    response_type: raw
+    # IBL node binding
+    node: source
+    action_name: laws
+    description: "법령 검색"
+    target_key: query
+    target_description: "검색 키워드"
+
+  get_law_detail:
+    service: law
+    endpoint: /lawService.do
+    default_params:
+      type: JSON
+      target: law
+    param_map:
+      law_id: ID
+    response_type: raw
+    # IBL node binding
+    node: source
+    action_name: law_detail
+    description: "특정 법령 상세 조회"
+    target_key: law_id
+    target_description: "법령 ID"
+
+  search_precedents:
+    service: law
+    endpoint: /lawSearch.do
+    default_params:
+      type: JSON
+      target: prec
+    param_map:
+      query: query
+    response_type: raw
+    # IBL node binding
+    node: source
+    action_name: precedents
+    description: "판례 검색"
+    target_key: query
+    target_description: "검색 키워드"
+
+  get_precedent_detail:
+    service: law
+    endpoint: /lawService.do
+    default_params:
+      type: JSON
+      target: prec
+    param_map:
+      precedent_id: ID
+    response_type: raw
+    # IBL node binding
+    node: source
+    action_name: precedent_detail
+    description: "특정 판례 상세 조회"
+    target_key: precedent_id
+    target_description: "판례 ID"
+
+  # === KOSIS 통계 도구 ===
+  kosis_search_statistics:
+    service: kosis
+    endpoint: /statisticsList.do
+    default_params:
+      method: getList
+      format: json
+      jsonVD: "Y"
+    param_map:
+      keyword: searchNm
+      vw_cd: vwCd
+      parent_list_id: parentListId
+    defaults:
+      vw_cd: MT_ZTITLE
+    response:
+      wrap: {success: true, count: _count, data: _results}
+    # IBL node binding
+    node: source
+    action_name: search_kosis
+    description: "통계표 목록 검색"
+    target_key: keyword
+    target_description: "검색 키워드"
+
+  kosis_get_data:
+    service: kosis
+    endpoint: /Param/statisticsParameterData.do
+    default_params:
+      method: getList
+      format: json
+      jsonVD: "Y"
+    param_map:
+      org_id: orgId
+      tbl_id: tblId
+      itm_id: itmId
+      obj_l1: objL1
+      obj_l2: objL2
+      obj_l3: objL3
+      prd_se: prdSe
+      start_prd_de: startPrdDe
+      end_prd_de: endPrdDe
+    defaults:
+      itm_id: ALL
+      obj_l1: ALL
+      obj_l2: ALL
+      obj_l3: ALL
+      prd_se: "Y"
+    response:
+      wrap: {success: true, count: _count, data: _results}
+    # IBL node binding
+    node: source
+    action_name: data
+    description: "통계 데이터 조회"
+    target_key: tbl_id
+    target_description: "통계표 ID (org_id/tbl_id)"
+
+  kosis_get_statistics_info:
+    service: kosis
+    endpoint: /statisticsInfo.do
+    default_params:
+      method: getList
+      format: json
+      jsonVD: "Y"
+    param_map:
+      org_id: orgId
+      tbl_id: tblId
+    response:
+      wrap: {success: true, count: _count, data: _results}
+    # IBL node binding
+    node: source
+    action_name: info
+    description: "통계표 메타데이터 조회"
+    target_key: tbl_id
+    target_description: "통계표 ID"
+
+  kosis_integrated_search:
+    service: kosis
+    endpoint: /search/search.do
+    default_params:
+      format: json
+    param_map:
+      keyword: searchNm
+      count: resultCount
+    defaults:
+      count: 10
+    response:
+      wrap: {success: true, count: _count, data: _results}
+    # IBL node binding
+    node: source
+    action_name: integrated
+    description: "KOSIS 통합 검색"
+    target_key: keyword
+    target_description: "검색 키워드"
+
+  kosis_get_indicators:
+    service: kosis
+    endpoint: /indicator/indicator.do
+    default_params:
+      format: json
+    param_map:
+      indicator_id: indicatorId
+      start_prd_de: startPrdDe
+      end_prd_de: endPrdDe
+    response:
+      wrap: {success: true, count: _count, data: _results}
+    # IBL node binding
+    node: source
+    action_name: indicators
+    description: "주요 경제/사회 지표 조회"
+    target_key: indicator_id
+    target_description: "지표 ID"
+
+  # === 네이버 쇼핑 ===
+  search_shopping:
+    service: naver
+    endpoint: /v1/search/shop.json
+    param_map:
+      query: query
+      display: display
+    defaults:
+      display: 5
+      sort: sim
+    response:
+      extract: items
+      fields:
+        name: {from: title, clean_html: true}
+        price: {from: lprice}
+        mall: {from: mallName, default: "네이버"}
+        link: {from: link}
+        image: {from: image}
+        category: {template: "{category1} > {category2}"}
+        site: {value: "naver"}
+      wrap:
+        total: {from_root: total}
+        items: _results
+
+  # === 카카오+네이버 병합 검색 (파이프라인) ===
+  search_restaurants_combined:
+    pipeline:
+      - id: kakao
+        service: kakao
+        endpoint: /v2/local/search/keyword.json
+        param_map:
+          query: query
+          x: x
+          y: y
+          radius: radius
+          size: kakao_size
+        default_params:
+          category_group_code: FD6
+        defaults:
+          kakao_size: 10
+        response:
+          extract: documents
+          fields:
+            name: {from: place_name}
+            category: {from: category_name}
+            address: {from: road_address_name}
+            phone: {from: phone}
+            url: {from: place_url}
+            distance: {from: distance}
+            x: {from: x}
+            y: {from: y}
+        on_error: continue
+
+      - id: naver
+        service: naver
+        endpoint: /v1/search/local.json
+        param_map:
+          query: query
+          display: naver_size
+          sort: naver_sort
+        defaults:
+          naver_size: 5
+          naver_sort: comment
+        response:
+          extract: items
+          fields:
+            name: {from: title, clean_html: true}
+            category: {from: category}
+            address: {from: roadAddress}
+            phone: {from: telephone}
+            url: {from: link}
+            description: {from: description, clean_html: true}
+            mapx: {from: mapx}
+            mapy: {from: mapy}
+        on_error: continue
+
+    merge:
+      mode: concat
+      source_tag: true
+      wrap:
+        success: true
+        count: _count
+        data: _results
+        message: {template: "'{query}' 검색 결과 {_count}개"}
+    # IBL node binding
+    node: source
+    action_name: restaurants_combined
+    description: "카카오+네이버 맛집 병합 검색"
+    target_key: query
+    target_description: "검색 키워드"
+
+  # === 카카오 위치 서비스 ===
+  search_restaurants:
+    service: kakao
+    endpoint: /v2/local/search/keyword.json
+    param_map:
+      query: query
+      x: x
+      y: y
+      radius: radius
+    default_params:
+      category_group_code: FD6
+    defaults:
+      size: 10
+    response:
+      extract: documents
+      fields:
+        name: {from: place_name}
+        category: {from: category_name}
+        address: {from: road_address_name}
+        phone: {from: phone}
+        url: {from: place_url}
+        distance: {from: distance}
+        x: {from: x}
+        y: {from: y}
+      wrap:
+        total: {from_root: "meta.total_count"}
+        restaurants: _results
+        message: {template: "'{query}' 검색 결과 {_count}개의 맛집을 찾았습니다."}
+
+  # === API Ninjas ===
+  get_api_ninjas_data:
+    service: ninjas
+    endpoint: "/{endpoint}"  # 동적 엔드포인트
+    param_map:
+      params: _spread  # params dict를 쿼리 파라미터로 풀어서 전달
+    response:
+      wrap:
+        endpoint: {from_input: endpoint}
+        count: _count
+        results: _results
+
+  # === 창업 지원 ===
+  search_kstartup:
+    service: data-go-kr
+    endpoint: /B552735/kisedKstartupService01/getAnnouncementInformation01
+    default_params:
+      returnType: json
+    param_map:
+      page: page
+      per_page: perPage
+    defaults:
+      page: 1
+      per_page: 20
+    response:
+      extract: data
+      wrap:
+        success: true
+        count: _count
+        items: _results
+    # IBL node binding
+    node: source
+    action_name: kstartup
+    description: "K-Startup 창업지원 사업공고 검색"
+    target_key: keyword
+    target_description: "검색 키워드"
+
+  search_mss_biz:
+    service: data-go-kr
+    endpoint: /1421000/mssBizService_v2/getMssBizList
+    param_map:
+      rows: numOfRows
+      page: pageNo
+    defaults:
+      rows: 20
+      page: 1
+    response_type: xml
+    response:
+      extract: item
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: mss
+    description: "중소벤처기업부 사업공고 검색"
+    target_key: keyword
+    target_description: "검색 키워드"
+
+  # === 부동산 ===
+  apt_trade_price:
+    service: molit
+    endpoint: /RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade
+    param_map:
+      region_code: LAWD_CD
+      deal_date: DEAL_YMD
+      rows: numOfRows
+    defaults:
+      rows: 100
+    response_type: xml
+    response:
+      extract: item
+      wrap:
+        success: true
+        count: _count
+        data: _results
+
+  apt_rent_price:
+    service: molit
+    endpoint: /RTMSDataSvcAptRent/getRTMSDataSvcAptRent
+    param_map:
+      region_code: LAWD_CD
+      deal_date: DEAL_YMD
+      rows: numOfRows
+    defaults:
+      rows: 100
+    response_type: xml
+    response:
+      extract: item
+      wrap:
+        success: true
+        count: _count
+        data: _results
+
+  # === 투자 - FMP (/stable/ 엔드포인트) ===
+  us_company_profile:
+    service: fmp
+    base_url: "https://financialmodelingprep.com/stable"
+    endpoint: /profile
+    param_map:
+      symbol: symbol
+    response:
+      first: true
+      fields:
+        symbol: {from: symbol}
+        company_name: {from: companyName}
+        price: {from: price}
+        market_cap: {from: marketCap}
+        beta: {from: beta}
+        volume_avg: {from: averageVolume}
+        last_dividend: {from: lastDividend}
+        range_52week: {from: range}
+        change: {from: change}
+        change_percent: {from: changePercentage}
+        currency: {from: currency}
+        exchange: {from: exchange}
+        industry: {from: industry}
+        sector: {from: sector}
+        country: {from: country}
+        employees: {from: fullTimeEmployees}
+        ceo: {from: ceo}
+        website: {from: website}
+        description: {from: description}
+        ipo_date: {from: ipoDate}
+        is_etf: {from: isEtf}
+        is_actively_trading: {from: isActivelyTrading}
+      wrap:
+        success: true
+        data: _results
+
+  us_stock_quote:
+    service: fmp
+    base_url: "https://financialmodelingprep.com/stable"
+    endpoint: /profile
+    param_map:
+      symbol: symbol
+    response:
+      first: true
+      fields:
+        symbol: {from: symbol}
+        name: {from: companyName}
+        price: {from: price}
+        change: {from: change}
+        change_percent: {from: changePercentage}
+        market_cap: {from: marketCap}
+        volume: {from: volume}
+        avg_volume: {from: averageVolume}
+        beta: {from: beta}
+        range_52week: {from: range}
+        last_dividend: {from: lastDividend}
+        exchange: {from: exchange}
+        currency: {from: currency}
+      wrap:
+        success: true
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: us_quote
+    description: "미국 주식 실시간 시세 조회"
+    target_key: symbol
+    target_description: "티커 심볼 (예: AAPL)"
+
+  us_company_search:
+    service: fmp
+    base_url: "https://financialmodelingprep.com/stable"
+    endpoint: /search-name
+    param_map:
+      query: query
+    response:
+      limit: 10
+      fields:
+        symbol: {from: symbol}
+        name: {from: name}
+        currency: {from: currency}
+        exchange: {from: exchangeFullName}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: us_search
+    description: "미국 기업/종목 검색"
+    target_key: query
+    target_description: "검색어 (기업명)"
+
+  us_key_metrics:
+    service: fmp
+    base_url: "https://financialmodelingprep.com/stable"
+    endpoint: /key-metrics
+    param_map:
+      symbol: symbol
+      limit: limit
+      period: period
+    defaults:
+      limit: 5
+    response:
+      fields:
+        date: {from: date}
+        period: {from: period}
+        revenue_per_share: {from: revenuePerShare}
+        eps: {from: netIncomePerShare}
+        book_value_per_share: {from: bookValuePerShare}
+        pe_ratio: {from: peRatio}
+        pb_ratio: {from: pbRatio}
+        ps_ratio: {from: priceToSalesRatio}
+        ev_to_ebitda: {from: enterpriseValueOverEBITDA}
+        roe: {from: roe}
+        roa: {from: returnOnTangibleAssets}
+        debt_to_equity: {from: debtToEquity}
+        current_ratio: {from: currentRatio}
+        dividend_yield: {from: dividendYield}
+        payout_ratio: {from: payoutRatio}
+        free_cash_flow_per_share: {from: freeCashFlowPerShare}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: us_metrics
+    description: "미국 기업 주요 재무 비율 (ROE, PER, PBR 등)"
+    target_key: symbol
+    target_description: "티커 심볼"
+
+  us_income_statement:
+    service: fmp
+    base_url: "https://financialmodelingprep.com/stable"
+    endpoint: /income-statement
+    param_map:
+      symbol: symbol
+      limit: limit
+      period: period
+    defaults:
+      limit: 5
+    response:
+      fields:
+        date: {from: date}
+        period: {from: period}
+        revenue: {from: revenue}
+        cost_of_revenue: {from: costOfRevenue}
+        gross_profit: {from: grossProfit}
+        operating_expenses: {from: operatingExpenses}
+        operating_income: {from: operatingIncome}
+        net_income: {from: netIncome}
+        eps: {from: eps}
+        eps_diluted: {from: epsdiluted}
+        ebitda: {from: ebitda}
+        gross_margin: {from: grossProfitRatio}
+        operating_margin: {from: operatingIncomeRatio}
+        net_margin: {from: netIncomeRatio}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: us_income
+    description: "미국 기업 손익계산서"
+    target_key: symbol
+    target_description: "티커 심볼"
+
+  us_balance_sheet:
+    service: fmp
+    base_url: "https://financialmodelingprep.com/stable"
+    endpoint: /balance-sheet-statement
+    param_map:
+      symbol: symbol
+      limit: limit
+      period: period
+    defaults:
+      limit: 5
+    response:
+      fields:
+        date: {from: date}
+        period: {from: period}
+        total_assets: {from: totalAssets}
+        total_current_assets: {from: totalCurrentAssets}
+        cash_and_equivalents: {from: cashAndCashEquivalents}
+        total_liabilities: {from: totalLiabilities}
+        total_current_liabilities: {from: totalCurrentLiabilities}
+        long_term_debt: {from: longTermDebt}
+        total_debt: {from: totalDebt}
+        total_equity: {from: totalStockholdersEquity}
+        retained_earnings: {from: retainedEarnings}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: us_balance
+    description: "미국 기업 재무상태표"
+    target_key: symbol
+    target_description: "티커 심볼"
+
+  us_cash_flow:
+    service: fmp
+    base_url: "https://financialmodelingprep.com/stable"
+    endpoint: /cash-flow-statement
+    param_map:
+      symbol: symbol
+      limit: limit
+      period: period
+    defaults:
+      limit: 5
+    response:
+      fields:
+        date: {from: date}
+        period: {from: period}
+        operating_cash_flow: {from: operatingCashFlow}
+        investing_cash_flow: {from: netCashUsedForInvestingActivites}
+        financing_cash_flow: {from: netCashUsedProvidedByFinancingActivities}
+        free_cash_flow: {from: freeCashFlow}
+        capital_expenditure: {from: capitalExpenditure}
+        dividends_paid: {from: dividendsPaid}
+        stock_repurchase: {from: commonStockRepurchased}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: us_cashflow
+    description: "미국 기업 현금흐름표"
+    target_key: symbol
+    target_description: "티커 심볼"
+
+  # === 투자 - Finnhub ===
+  finnhub_company_profile:
+    service: finnhub
+    endpoint: /stock/profile2
+    param_map:
+      symbol: symbol
+    response:
+      fields:
+        symbol: {from: ticker}
+        name: {from: name}
+        country: {from: country}
+        currency: {from: currency}
+        exchange: {from: exchange}
+        industry: {from: finnhubIndustry}
+        ipo_date: {from: ipo}
+        logo: {from: logo}
+        market_cap: {from: marketCapitalization}
+        shares_outstanding: {from: shareOutstanding}
+        phone: {from: phone}
+        website: {from: weburl}
+      wrap:
+        success: true
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: finnhub_profile
+    description: "Finnhub 기업 프로필 조회"
+    target_key: symbol
+    target_description: "티커 심볼"
+
+  finnhub_price_target:
+    service: finnhub
+    endpoint: /stock/price-target
+    param_map:
+      symbol: symbol
+    response:
+      fields:
+        symbol: {from: symbol}
+        target_high: {from: targetHigh}
+        target_low: {from: targetLow}
+        target_mean: {from: targetMean}
+        target_median: {from: targetMedian}
+        last_updated: {from: lastUpdated}
+      wrap:
+        success: true
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: price_target
+    description: "애널리스트 목표가 조회"
+    target_key: symbol
+    target_description: "티커 심볼"
+
+  finnhub_recommendations:
+    service: finnhub
+    endpoint: /stock/recommendation
+    param_map:
+      symbol: symbol
+    response:
+      limit: 6
+      fields:
+        period: {from: period}
+        strong_buy: {from: strongBuy}
+        buy: {from: buy}
+        hold: {from: hold}
+        sell: {from: sell}
+        strong_sell: {from: strongSell}
+      wrap:
+        success: true
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: recommendations
+    description: "애널리스트 추천 동향 (매수/보유/매도)"
+    target_key: symbol
+    target_description: "티커 심볼"
+
+  finnhub_market_news:
+    service: finnhub
+    endpoint: /news
+    param_map:
+      category: category
+    defaults:
+      category: general
+    response:
+      limit: 20
+      fields:
+        headline: {from: headline}
+        summary: {from: summary, default: ""}
+        source: {from: source}
+        url: {from: url}
+        datetime: {from: datetime, timestamp_to_str: "%Y-%m-%d %H:%M"}
+        category: {from: category}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: market_news
+    description: "시장 뉴스 조회 (general/forex/crypto/merger)"
+    target_key: category
+    target_description: "뉴스 카테고리"
+
+  # === 투자 - Finnhub (기존) ===
+  company_news:
+    service: finnhub
+    endpoint: /company-news
+    param_map:
+      symbol: symbol
+      start_date: from
+      end_date: to
+    response:
+      limit: 20
+      fields:
+        headline: {from: headline}
+        summary: {from: summary, default: ""}
+        source: {from: source}
+        url: {from: url}
+        datetime: {from: datetime, timestamp_to_str: "%Y-%m-%d %H:%M"}
+        category: {from: category}
+        related: {from: related}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+
+  earnings_calendar:
+    service: finnhub
+    endpoint: /calendar/earnings
+    param_map:
+      start_date: from
+      end_date: to
+      symbol: symbol
+    response:
+      extract: earningsCalendar
+      sort: {by: date, order: asc}
+      limit: 30
+      fields:
+        symbol: {from: symbol}
+        date: {from: date}
+        hour: {from: hour}
+        eps_estimate: {from: epsEstimate}
+        eps_actual: {from: epsActual}
+        revenue_estimate: {from: revenueEstimate}
+        revenue_actual: {from: revenueActual}
+        quarter: {from: quarter}
+        year: {from: year}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+
+  # === 공연 - KOPIS ===
+  kopis_get_performance:
+    service: kopis
+    endpoint: /pblprfr/{performance_id}
+    response_type: xml
+    response:
+      extract: db
+      first: true
+      wrap:
+        success: true
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: performance_detail
+    description: "공연 상세 정보 조회"
+    target_key: performance_id
+    target_description: "공연 ID"
+
+  kopis_search_performances:
+    service: kopis
+    endpoint: /pblprfr
+    param_map:
+      keyword: shprfnm
+      genre: shcate
+      region: signgucode
+      status: prfstate
+      start_date: stdate
+      end_date: eddate
+      rows: rows
+      page: cpage
+    defaults:
+      status: "02"
+      rows: 20
+      page: 1
+    response_type: xml
+    response:
+      extract: db
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: performance_search
+    description: "공연 상세 검색 (기간, 장르, 지역 필터)"
+    target_key: keyword
+    target_description: "검색 키워드"
+
+  kopis_box_office:
+    service: kopis
+    endpoint: /boxoffice
+    param_map:
+      period: ststype
+      date: date
+      genre: catecode
+      region: area
+    defaults:
+      period: day
+    response_type: xml
+    response:
+      extract: db
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: box_office
+    description: "인기 공연/박스오피스 순위"
+
+  kopis_search_festivals:
+    service: kopis
+    endpoint: /prffest
+    param_map:
+      start_date: stdate
+      end_date: eddate
+      genre: shcate
+      region: signgucode
+      rows: rows
+      page: cpage
+    defaults:
+      rows: 20
+      page: 1
+    response_type: xml
+    response:
+      extract: db
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: festival
+    description: "축제/특별 행사 검색"
+
+  # === 도서관 ===
+  library_search_books:
+    service: data4library
+    endpoint: /srchBooks
+    param_map:
+      keyword: keyword
+      page: pageNo
+      rows: pageSize
+    defaults:
+      page: 1
+      rows: 10
+    response_type: xml
+    response:
+      extract: doc
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: book_search
+    description: "도서관 정보나루 도서 상세 검색"
+    target_key: keyword
+    target_description: "검색 키워드"
+
+  library_search_libraries:
+    service: data4library
+    endpoint: /libSrch
+    param_map:
+      name: libName
+      region: region
+      page: pageNo
+      rows: pageSize
+    defaults:
+      page: 1
+      rows: 10
+    response_type: xml
+    response:
+      extract: lib
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: library
+    description: "전국 도서관 검색"
+    target_key: name
+    target_description: "도서관명"
+
+  library_search_by_book:
+    service: data4library
+    endpoint: /libSrchByBook
+    param_map:
+      isbn13: isbn
+      region: region
+      page: pageNo
+      rows: pageSize
+    defaults:
+      page: 1
+      rows: 10
+    response_type: xml
+    response:
+      extract: lib
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: book_library
+    description: "특정 도서를 소장한 도서관 찾기"
+    target_key: isbn13
+    target_description: "도서 ISBN13"
+
+  library_get_popular_books:
+    service: data4library
+    endpoint: /loanItemSrch
+    param_map:
+      start_date: startDt
+      end_date: endDt
+      gender: gender
+      from_age: from_age
+      to_age: to_age
+      region: region
+      kdc: kdc
+      page: pageNo
+      rows: pageSize
+    defaults:
+      page: 1
+      rows: 10
+    response_type: xml
+    response:
+      extract: doc
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: popular_books
+    description: "인기 대출 도서"
+
+  library_get_trending_books:
+    service: data4library
+    endpoint: /hotTrend
+    param_map:
+      base_date: searchDt
+    response_type: xml
+    response:
+      extract: doc
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: trending_books
+    description: "대출 급증 도서"
+
+  # === 문화정보 - KCISA ===
+  kcisa_get_event_detail:
+    service: data-go-kr
+    endpoint: /B553457/cultureinfo/detail2
+    param_map:
+      seq: seq
+    default_params:
+      type: json
+    response_type: xml
+    response:
+      extract: item
+      first: true
+      wrap:
+        success: true
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: exhibit_detail
+    description: "전시/문화행사 상세 정보"
+    target_key: seq
+    target_description: "행사 seq"
+
+  kcisa_search_culture:
+    service: data-go-kr
+    endpoint: /B553457/cultureinfo/period2
+    param_map:
+      start_date: from
+      end_date: to
+      keyword: keyword
+      area: sido
+      rows: numOfrows
+      page: PageNo
+    defaults:
+      rows: 10
+      page: 1
+    response_type: xml
+    response:
+      extract: item
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    # IBL node binding
+    node: source
+    action_name: exhibit_search
+    description: "KCISA 전시/문화행사 상세 검색 (기간, 지역 필터)"
+    target_key: keyword
+    target_description: "검색어"
+
+
+  # =====================================================
+  # 학술/연구 도구 (Study)
+  # =====================================================
+
+  # --- Semantic Scholar ---
+  search_semantic_scholar:
+    service: semantic-scholar
+    endpoint: /paper/search
+    param_map:
+      query: query
+      max_results: limit
+      year_from: year
+    defaults:
+      limit: 5
+      fields: "title,authors,year,citationCount,abstract,url,openAccessPdf"
+    response:
+      extract: data
+      limit: 10
+      fields:
+        title: {from: title}
+        authors: {from: authors}
+        year: {from: year}
+        citations: {from: citationCount, default: 0}
+        abstract: {from: abstract, default: ""}
+        url: {from: url}
+        pdf_url: {from: "openAccessPdf.url", default: ""}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    node: source
+    action_name: semantic_scholar
+    description: "Semantic Scholar 학술 논문 검색"
+    target_key: query
+    target_description: "검색어 (영어 권장)"
+
+  # --- OpenAlex ---
+  search_openalex:
+    service: openalex
+    endpoint: /works
+    param_map:
+      query: search
+      max_results: per-page
+      sort_by: sort
+    defaults:
+      per-page: 10
+      sort: "relevance_score:desc"
+      select: "id,title,authorships,publication_year,cited_by_count,doi,open_access,primary_location"
+    response:
+      extract: results
+      limit: 20
+      fields:
+        title: {from: title}
+        authors: {from: authorships}
+        year: {from: publication_year}
+        citations: {from: cited_by_count, default: 0}
+        doi: {from: doi, default: ""}
+        is_open_access: {from: "open_access.is_oa", default: false}
+        oa_url: {from: "open_access.oa_url", default: ""}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    node: source
+    action_name: openalex
+    description: "OpenAlex 학술 논문 검색 (오픈 학술 데이터)"
+    target_key: query
+    target_description: "검색어 (영어 권장)"
+
+  # --- PubMed (2단계 파이프라인: ID 검색 → 상세 조회) ---
+  search_pubmed:
+    pipeline:
+      - id: search
+        service: pubmed
+        endpoint: /esearch.fcgi
+        param_map:
+          query: term
+          max_results: retmax
+        default_params:
+          db: pubmed
+          retmode: json
+          retmax: 5
+        response:
+          extract: "esearchresult.idlist"
+        on_error: stop
+
+      - id: fetch
+        service: pubmed
+        endpoint: /esummary.fcgi
+        # search 결과(ID 리스트)를 콤마 구분 문자열로 id 파라미터에 전달
+        default_params:
+          db: pubmed
+          retmode: json
+          id: "{search._result}"
+        response:
+          extract: result
+        on_error: stop
+
+    merge:
+      mode: last
+    node: source
+    action_name: pubmed
+    description: "PubMed 의학/생명과학 논문 검색"
+    target_key: query
+    target_description: "검색어 (영어 권장)"
+
+  # --- Guardian (영국 뉴스) ---
+  search_guardian:
+    service: guardian
+    endpoint: /search
+    param_map:
+      query: q
+      max_results: page-size
+      from_date: from-date
+      to_date: to-date
+    defaults:
+      page-size: 10
+      show-fields: "trailText,headline,shortUrl"
+    response:
+      extract: "response.results"
+      limit: 20
+      fields:
+        title: {from: webTitle}
+        url: {from: webUrl}
+        published: {from: webPublicationDate}
+        section: {from: sectionName}
+        summary: {from: "fields.trailText", clean_html: true, default: ""}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    node: source
+    action_name: guardian_news
+    description: "Guardian 영국 뉴스 검색"
+    target_key: query
+    target_description: "검색어 (영어)"
+
+  # --- World Bank (세계은행 경제 데이터) ---
+  search_world_bank:
+    service: world-bank
+    endpoint: "/country/{country}/indicator/{indicator}"
+    param_map:
+      country: country
+      indicator: indicator
+      date_range: date
+    defaults:
+      country: "all"
+      format: json
+      per_page: 50
+    response:
+      # World Bank 응답은 [metadata, data_array] 형태
+      extract: 1
+      fields:
+        country: {from: "country.value"}
+        year: {from: date}
+        value: {from: value}
+        indicator: {from: "indicator.value"}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    node: source
+    action_name: world_bank
+    description: "세계은행 경제 지표 데이터 조회"
+    target_key: indicator
+    target_description: "지표 코드 (예: NY.GDP.MKTP.CD)"
+
+  # --- Google Books (도서 검색) ---
+  search_books:
+    service: google-books
+    endpoint: /volumes
+    param_map:
+      query: q
+      max_results: maxResults
+      sort_by: orderBy
+    defaults:
+      maxResults: 5
+      orderBy: relevance
+      printType: books
+    response:
+      extract: items
+      limit: 10
+      fields:
+        title: {from: "volumeInfo.title"}
+        authors: {from: "volumeInfo.authors"}
+        publisher: {from: "volumeInfo.publisher", default: ""}
+        published_date: {from: "volumeInfo.publishedDate", default: ""}
+        description: {from: "volumeInfo.description", default: ""}
+        page_count: {from: "volumeInfo.pageCount", default: 0}
+        categories: {from: "volumeInfo.categories", default: []}
+        thumbnail: {from: "volumeInfo.imageLinks.thumbnail", default: ""}
+        info_link: {from: "volumeInfo.infoLink", default: ""}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    node: source
+    action_name: books
+    description: "Google Books 도서 검색"
+    target_key: query
+    target_description: "검색어 (도서명, 저자 등)"
+
+
+  # =====================================================
+  # 문화 추가 도구
+  # =====================================================
+
+  # --- KOPIS 공연시설 검색 ---
+  kopis_search_facilities:
+    service: kopis
+    endpoint: /prfplc
+    param_map:
+      keyword: shprfnmfct
+      region: signgucode
+      rows: rows
+      page: cpage
+    defaults:
+      rows: 20
+      cpage: 1
+    response_type: xml
+    response:
+      extract: db
+      fields:
+        facility_id: {from: mt10id}
+        name: {from: fcltynm}
+        address: {from: adres}
+        phone: {from: telno}
+        seats: {from: seatscale}
+        region: {from: sidonm}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    node: source
+    action_name: facilities
+    description: "KOPIS 공연시설 검색"
+    target_key: keyword
+    target_description: "시설명 검색어"
+
+  # --- 도서관 도서 상세 ---
+  library_get_book_detail:
+    service: data4library
+    endpoint: /srchDtlList
+    param_map:
+      isbn: isbn13
+    defaults:
+      loaninfoYN: "Y"
+    response_type: xml
+    response:
+      extract: detail
+      first: true
+      wrap:
+        success: true
+        data: _results
+    node: source
+    action_name: book_detail
+    description: "도서 상세 정보 조회 (대출 통계 포함)"
+    target_key: isbn
+    target_description: "ISBN13"
+
+  # --- 도서관 추천 도서 ---
+  library_get_recommended_books:
+    service: data4library
+    endpoint: /recommandList
+    param_map:
+      isbn: isbn13
+      rec_type: type
+    defaults:
+      type: "mania"
+    response_type: xml
+    response:
+      extract: doc
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    node: source
+    action_name: book_recommend
+    description: "비슷한 도서 추천 (ISBN 기반)"
+    target_key: isbn
+    target_description: "기준 도서의 ISBN13"
+
+
+  # =====================================================
+  # 위치/지역 추가 도구
+  # =====================================================
+
+  # --- 네이버 지역 검색 ---
+  search_naver_local:
+    service: naver
+    endpoint: /v1/search/local.json
+    param_map:
+      query: query
+      display: display
+      sort: sort
+    defaults:
+      display: 5
+      sort: random
+    response:
+      extract: items
+      fields:
+        name: {from: title, clean_html: true}
+        category: {from: category}
+        address: {from: roadAddress}
+        phone: {from: telephone, default: ""}
+        url: {from: link, default: ""}
+        description: {from: description, clean_html: true, default: ""}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    node: source
+    action_name: naver_local
+    description: "네이버 지역 검색 (장소, 업체)"
+    target_key: query
+    target_description: "검색어 (장소명, 업종 등)"
+
+  # --- 카카오 역지오코딩 ---
+  reverse_geocode_kakao:
+    service: kakao
+    endpoint: /v2/local/geo/coord2regioncode.json
+    param_map:
+      longitude: x
+      latitude: y
+    response:
+      extract: documents
+      first: true
+      fields:
+        address: {from: address_name}
+        region_1: {from: region_1depth_name}
+        region_2: {from: region_2depth_name}
+        region_3: {from: region_3depth_name}
+        type: {from: region_type}
+      wrap:
+        success: true
+        data: _results
+    node: source
+    action_name: reverse_geocode
+    description: "좌표를 주소로 변환 (역지오코딩)"
+    target_key: longitude
+    target_description: "경도"
+
+
+  # =====================================================
+  # 투자 추가 도구
+  # =====================================================
+
+  # --- CoinGecko 암호화폐 시세 ---
+  crypto_price:
+    service: coingecko
+    endpoint: "/coins/{coin_id}"
+    param_map:
+      coin_id: coin_id
+    defaults:
+      localization: "false"
+      tickers: "false"
+      market_data: "true"
+      community_data: "false"
+      developer_data: "false"
+    response:
+      fields:
+        symbol: {from: symbol}
+        name: {from: name}
+        price_usd: {from: "market_data.current_price.usd"}
+        price_krw: {from: "market_data.current_price.krw"}
+        change_24h: {from: "market_data.price_change_percentage_24h"}
+        market_cap_usd: {from: "market_data.market_cap.usd"}
+        volume_24h_usd: {from: "market_data.total_volume.usd"}
+        high_24h: {from: "market_data.high_24h.usd"}
+        low_24h: {from: "market_data.low_24h.usd"}
+        rank: {from: market_cap_rank}
+      wrap:
+        success: true
+        data: _results
+    node: source
+    action_name: crypto
+    description: "암호화폐 시세 조회 (CoinGecko)"
+    target_key: coin_id
+    target_description: "코인 ID (예: bitcoin, ethereum, solana)"
+
+
+  # =====================================================
+  # CCTV / 웹캠 도구
+  # =====================================================
+
+  # --- ITS 교통 CCTV 검색 ---
+  search_its_cctv:
+    service: its
+    endpoint: /cctvInfo
+    param_map:
+      min_x: minX
+      max_x: maxX
+      min_y: minY
+      max_y: maxY
+      road_type: type
+    defaults:
+      road_type: "ex"
+    default_params:
+      cctvType: "1"
+      getType: json
+    response:
+      extract: "response.data"
+      fields:
+        name: {from: cctvname}
+        url: {from: cctvurl}
+        lat: {from: coordy}
+        lng: {from: coordx}
+        format: {from: cctvformat}
+        resolution: {from: cctvresolution}
+      wrap:
+        success: true
+        source: its_traffic
+        count: _count
+        data: _results
+    node: source
+    action_name: cctv_search
+    description: "ITS 교통 CCTV 검색 (좌표 영역)"
+    target_key: min_x
+    target_description: "최소 경도 (minX)"
+
+  # --- Windy 웹캠 검색 ---
+  search_windy_webcam:
+    service: windy
+    endpoint: ""
+    param_map:
+      lat_lon_radius: nearby
+      category: categories
+      country: countries
+      limit: limit
+    defaults:
+      limit: 10
+    default_params:
+      include: "categories,images,location,player,urls"
+    response:
+      extract: webcams
+      fields:
+        id: {from: webcamId}
+        title: {from: title}
+        status: {from: status}
+        lat: {from: "location.latitude"}
+        lon: {from: "location.longitude"}
+        city: {from: "location.city", default: ""}
+        country: {from: "location.country", default: ""}
+        image_url: {from: "images.current.preview", default: ""}
+        last_updated: {from: lastUpdatedOn}
+      wrap:
+        success: true
+        source: windy_webcams
+        count: _count
+        data: _results
+    node: source
+    action_name: webcam
+    description: "전세계 웹캠 검색 (Windy)"
+    target_key: lat_lon_radius
+    target_description: "위도,경도,반경km (예: 37.5,127.0,50)"
+
+
+  # =====================================================
+  # 부동산 추가 도구
+  # =====================================================
+
+  # --- 연립다세대 매매 실거래가 ---
+  house_trade_price:
+    service: molit-house
+    endpoint: /getRTMSDataSvcSHTrade
+    param_map:
+      region_code: LAWD_CD
+      deal_date: DEAL_YMD
+      rows: numOfRows
+    defaults:
+      rows: 30
+    response_type: xml
+    response:
+      extract: "body.items.item"
+      fields:
+        주택유형: {from: houseType, default: ""}
+        거래금액: {from: dealAmount}
+        대지면적: {from: plottageAr}
+        연면적: {from: totalFloorAr}
+        건축년도: {from: buildYear}
+        년: {from: dealYear}
+        월: {from: dealMonth}
+        일: {from: dealDay}
+        법정동: {from: umdNm}
+        지번: {from: jibun}
+        매수자: {from: buyerGbn, default: ""}
+        거래유형: {from: dealingGbn, default: ""}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    node: source
+    action_name: house_trade
+    description: "연립다세대 매매 실거래가 (단일 월)"
+    target_key: region_code
+    target_description: "법정동 코드 5자리"
+
+  # --- 연립다세대 전월세 실거래가 ---
+  house_rent_price:
+    service: molit-house-rent
+    endpoint: /getRTMSDataSvcSHRent
+    param_map:
+      region_code: LAWD_CD
+      deal_date: DEAL_YMD
+      rows: numOfRows
+    defaults:
+      rows: 30
+    response_type: xml
+    response:
+      extract: "body.items.item"
+      fields:
+        주택유형: {from: houseType, default: ""}
+        보증금: {from: deposit}
+        월세: {from: monthlyRent}
+        연면적: {from: totalFloorAr}
+        건축년도: {from: buildYear}
+        년: {from: dealYear}
+        월: {from: dealMonth}
+        일: {from: dealDay}
+        법정동: {from: umdNm}
+      wrap:
+        success: true
+        count: _count
+        data: _results
+    node: source
+    action_name: house_rent
+    description: "연립다세대 전월세 실거래가 (단일 월)"
+    target_key: region_code
+    target_description: "법정동 코드 5자리"
+
+  # 소상공인 상가정보 API: 현재 서비스 중단(404). 추후 복구시 YAML 추가 예정.

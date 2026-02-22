@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Save, HardDrive, FolderOpen, Plus, Trash2, Monitor, Cloud, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, HardDrive, FolderOpen, Plus, Trash2, Monitor, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface SettingsRemoteTabProps {
   activeTab: 'nas' | 'launcher' | 'tunnel';

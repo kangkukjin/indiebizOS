@@ -5,30 +5,22 @@ FinanceDataReader 또는 KRX API를 통해 한국 주식 시세를 조회합니�
 의존성: pip install finance-datareader
 """
 import os
+import sys
 import urllib.request
 import urllib.parse
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.response_formatter import save_large_data
+
 # 종목 코드 캐시
 STOCK_CODE_CACHE_PATH = Path(__file__).parent / "stock_code_cache.json"
-
-# 대량 데이터 저장 경로
-DATA_OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "outputs" / "investment"
-DATA_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _save_large_data(data: list, prefix: str, symbol: str) -> str:
-    """대량 데이터를 파일로 저장하고 경로 반환"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{prefix}_{symbol}_{timestamp}.json"
-    filepath = DATA_OUTPUT_DIR / filename
-
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-    return str(filepath)
 
 
 def _get_fallback_stocks():
@@ -322,7 +314,7 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None):
     # 대량 데이터는 파일로 저장 (50개 초과시)
     if total_days > 50:
         # 전체 데이터를 파일로 저장
-        file_path = _save_large_data(prices, "stock_prices", code)
+        file_path = save_large_data(prices, "investment", f"kr_prices_{code}")
 
         # 요약용 샘플 (10개 포인트만)
         step = max(1, total_days // 10)

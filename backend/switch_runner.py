@@ -3,11 +3,13 @@ switch_runner.py - 스위치 실행 엔진
 IndieBiz OS Core
 
 스위치에 저장된 설정으로 에이전트를 실행합니다.
+Phase 17: execute_ibl 단일 도구 + IBL 환경 프롬프트 방식
 """
 
 import threading
 from datetime import datetime
-from typing import Dict, Any, Optional, Callable
+from pathlib import Path
+from typing import Dict, Any, Optional, Callable, List
 
 from ai_agent import AIAgent
 
@@ -32,9 +34,63 @@ class SwitchRunner:
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.on_status(f"[{timestamp}] {message}")
 
+    def _resolve_allowed_nodes(self) -> Optional[List[str]]:
+        """스위치의 allowed_nodes를 결정.
+
+        우선순위:
+        1. 스위치 config에 allowed_nodes가 있으면 사용
+        2. projectId로 프로젝트의 agents.yaml에서 가져옴
+        3. 둘 다 없으면 None (전체 노드)
+        """
+        # 1. 스위치 자체 설정
+        nodes = self.config.get("allowed_nodes")
+        if nodes:
+            return nodes
+
+        # 2. 프로젝트 에이전트에서 가져오기
+        project_id = self.config.get("projectId")
+        agent_name = self.config.get("agentName") or self.config.get("agent_name")
+
+        if project_id:
+            try:
+                from runtime_utils import get_base_path
+                import yaml
+
+                agents_yaml = get_base_path() / "projects" / project_id / "agents.yaml"
+                if agents_yaml.exists():
+                    data = yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
+                    agents = data.get("agents", [])
+
+                    # 이름이 일치하는 에이전트 찾기
+                    for agent in agents:
+                        if agent.get("name") == agent_name or agent.get("id") == agent_name:
+                            return agent.get("allowed_nodes")
+
+                    # 이름 매칭 실패 시 첫 번째 활성 에이전트
+                    for agent in agents:
+                        if agent.get("active", True) and agent.get("allowed_nodes"):
+                            return agent.get("allowed_nodes")
+            except Exception as e:
+                print(f"[SwitchRunner] allowed_nodes 조회 실패: {e}")
+
+        return None  # 전체 노드
+
+    def _get_project_path(self) -> str:
+        """스위치가 속한 프로젝트 경로 반환"""
+        project_id = self.config.get("projectId")
+        if project_id:
+            try:
+                from runtime_utils import get_base_path
+                project_path = get_base_path() / "projects" / project_id
+                if project_path.exists():
+                    return str(project_path)
+            except Exception:
+                pass
+        return "."
+
     def run(self) -> Dict[str, Any]:
         """
-        스위치 동기 실행
+        스위치 동기 실행 (Phase 17: execute_ibl 단일 도구)
 
         Returns:
             {"success": bool, "message": str, "result": Any}
@@ -56,33 +112,38 @@ class SwitchRunner:
             # 에이전트 이름과 역할
             agent_name = self.config.get("agent_name", "스위치 에이전트")
             agent_role = self.config.get("agent_role", "")
-            allowed_tools = self.config.get("tools", [])
 
-            # 도구 로드
-            from tool_loader import load_installed_tools
-            all_tools = load_installed_tools()
+            # Phase 17: execute_ibl 단일 도구 로드
+            from tool_loader import load_tool_schema
+            ibl_schema = load_tool_schema("execute_ibl")
+            tools = [ibl_schema] if ibl_schema else []
 
-            # allowed_tools가 있으면 필터링, 없으면 전체 사용
-            if allowed_tools:
-                tools = [t for t in all_tools if t.get("name") in allowed_tools]
-            else:
-                tools = all_tools
+            self._status(f"IBL 도구 로드됨 (execute_ibl)")
 
-            self._status(f"도구 {len(tools)}개 로드됨")
-
-            # 시스템 프롬프트 구성 (동적 빌더 사용)
+            # Phase 17: IBL 환경 프롬프트 구성
             from prompt_builder import build_agent_prompt
+            from ibl_access import build_environment
 
-            # 도구 이름 목록 추출
-            tool_names = [t["name"] for t in tools if isinstance(t, dict) and "name" in t]
+            # allowed_nodes 결정
+            allowed_nodes = self._resolve_allowed_nodes()
+            project_path = self._get_project_path()
 
+            # 기본 프롬프트
             system_prompt = build_agent_prompt(
                 agent_name=agent_name,
                 role=agent_role or "",
-                agent_count=1,  # 스위치는 단독 실행
+                agent_count=1,
                 agent_notes="",
-                git_enabled=False  # 스위치는 Git 비활성화
+                git_enabled=False
             )
+
+            # IBL 환경 주입
+            ibl_env = build_environment(
+                allowed_nodes=allowed_nodes,
+                project_path=project_path
+            )
+            if ibl_env:
+                system_prompt = system_prompt + "\n\n" + ibl_env
 
             # AI 에이전트 생성
             agent = AIAgent(

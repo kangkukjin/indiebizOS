@@ -1,0 +1,68 @@
+node: source
+actions:
+  search_openalex:
+    description: OpenAlex 학술 논문 검색 (인용수, OA 필터)
+    target_description: 검색 쿼리
+    router: handler
+    tool: search_openalex
+    target_key: query
+  search_arxiv:
+    description: arXiv 프리프린트 논문 검색
+    target_description: 검색 쿼리
+    router: handler
+    tool: search_arxiv
+    target_key: query
+  download_arxiv:
+    description: arXiv 논문 PDF 다운로드
+    target_description: 'arXiv ID (예: 2301.07041)'
+    router: handler
+    tool: download_arxiv_pdf
+    target_key: arxiv_id
+  search_semantic:
+    description: Semantic Scholar 논문 검색 (AI 분야 특화)
+    target_description: 검색 쿼리
+    router: handler
+    tool: search_semantic_scholar
+    target_key: query
+  search_scholar:
+    description: Google Scholar 학술 검색
+    target_description: 검색 쿼리
+    router: handler
+    tool: search_google_scholar
+    target_key: query
+  search_pubmed:
+    description: PubMed 생의학 논문 검색
+    target_description: 검색 쿼리
+    router: handler
+    tool: search_pubmed
+    target_key: query
+  download_pubmed:
+    description: PubMed Central 논문 PDF 다운로드
+    target_description: PMC ID
+    router: handler
+    tool: download_pubmed_pdf
+    target_key: pmcid
+  pew_research:
+    description: Pew Research 여론조사/리서치 데이터
+    router: handler
+    tool: fetch_pew_research
+  search_guardian:
+    description: Guardian 뉴스 아카이브 검색
+    target_description: 검색 쿼리
+    router: handler
+    tool: search_guardian
+    target_key: query
+  world_bank:
+    description: 세계은행 경제/사회 지표 데이터
+    target_description: '지표 코드 (예: NY.GDP.MKTP.CD)'
+    router: handler
+    tool: fetch_world_bank_data
+    target_key: indicator
+  search_books:
+    description: Google Books 도서 검색
+    target_description: 검색 쿼리
+    router: handler
+    tool: search_books
+    target_key: query
+guides:
+- study/study_guide.md

@@ -74,6 +74,19 @@ from file_utils import (
     get_notifications,
     open_android_manager_window,
 )
+from ui_control import (
+    tap,
+    swipe,
+    long_press,
+    press_key,
+    type_text,
+    get_screen_info,
+    get_ui_hierarchy,
+    capture_screen_base64,
+    open_app,
+    find_element,
+    find_and_tap,
+)
 
 
 def use_tool(tool_name: str, tool_input: dict) -> dict:
@@ -140,6 +153,30 @@ def use_tool(tool_name: str, tool_input: dict) -> dict:
         "android_delete_contact": lambda: delete_contact(tool_input.get("contact_id"), tool_input.get("phone_number"), device_id),
         # UI 창 열기 (백엔드 API 통해 요청)
         "open_android_manager": lambda: open_android_manager_window(device_id, tool_input.get("project_id")),
+        # UI 제어 (Computer-Use)
+        "android_ui_tap": lambda: tap(tool_input.get("x", 0), tool_input.get("y", 0), device_id),
+        "android_ui_swipe": lambda: swipe(
+            tool_input.get("x1", 0), tool_input.get("y1", 0),
+            tool_input.get("x2", 0), tool_input.get("y2", 0),
+            tool_input.get("duration_ms", 300), device_id
+        ),
+        "android_ui_long_press": lambda: long_press(
+            tool_input.get("x", 0), tool_input.get("y", 0),
+            tool_input.get("duration_ms", 1000), device_id
+        ),
+        "android_ui_press_key": lambda: press_key(tool_input.get("keycode", ""), device_id),
+        "android_ui_type_text": lambda: type_text(tool_input.get("text", ""), device_id),
+        "android_ui_screen_info": lambda: get_screen_info(device_id),
+        "android_ui_hierarchy": lambda: get_ui_hierarchy(device_id),
+        "android_ui_screenshot": lambda: capture_screen_base64(device_id),
+        "android_ui_open_app": lambda: open_app(tool_input.get("package_name", ""), device_id),
+        # UI 요소 검색 및 터치
+        "android_ui_find_element": lambda: find_element(tool_input.get("query", ""), device_id),
+        "android_ui_find_and_tap": lambda: find_and_tap(
+            tool_input.get("query", ""),
+            tool_input.get("index", 0),
+            device_id
+        ),
     }
 
     if tool_name in dispatch:

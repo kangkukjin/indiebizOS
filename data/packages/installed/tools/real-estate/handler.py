@@ -15,36 +15,33 @@ def execute(tool_name: str, params: dict, project_path: str = None):
     IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러
     모든 도구가 기간 범위 조회를 지원 (start_month/end_month)
     """
-    if tool_name == "apt_trade_price":
-        tool = load_module("tool_apt_trade_range")
+    if tool_name in ("apt_trade_price", "apt_rent_price", "house_trade_price", "house_rent_price"):
         region_code = params.get("region_code")
         start_month = params.get("start_month")
         end_month = params.get("end_month")
         count_per_month = params.get("count_per_month", 30)
+
+        # 필수 파라미터 검증
+        if not region_code:
+            return {"success": False, "error": "region_code(법정동 코드 5자리)가 필요합니다. get_region_codes로 먼저 지역코드를 확인하세요."}
+        if not start_month:
+            from datetime import datetime
+            start_month = datetime.now().strftime("%Y%m")
+
+    if tool_name == "apt_trade_price":
+        tool = load_module("tool_apt_trade_range")
         return tool.get_apt_trade_range(region_code, start_month, end_month, count_per_month)
 
     elif tool_name == "apt_rent_price":
         tool = load_module("tool_apt_rent")
-        region_code = params.get("region_code")
-        start_month = params.get("start_month")
-        end_month = params.get("end_month")
-        count_per_month = params.get("count_per_month", 30)
         return tool.get_apt_rent(region_code, start_month, end_month, count_per_month)
 
     elif tool_name == "house_trade_price":
         tool = load_module("tool_house_trade_range")
-        region_code = params.get("region_code")
-        start_month = params.get("start_month")
-        end_month = params.get("end_month")
-        count_per_month = params.get("count_per_month", 30)
         return tool.get_house_trade_range(region_code, start_month, end_month, count_per_month)
 
     elif tool_name == "house_rent_price":
         tool = load_module("tool_house_rent")
-        region_code = params.get("region_code")
-        start_month = params.get("start_month")
-        end_month = params.get("end_month")
-        count_per_month = params.get("count_per_month", 30)
         return tool.get_house_rent(region_code, start_month, end_month, count_per_month)
 
     elif tool_name == "get_region_codes":

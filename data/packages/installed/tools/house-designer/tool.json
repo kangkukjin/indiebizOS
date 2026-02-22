@@ -1,0 +1,480 @@
+{
+  "id": "house-designer",
+  "name": "House Designer",
+  "description": "대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중 지붕, 필로티, 건물 프로파일, 계단(직선/L자/U턴/나선형/Winder), 발코니 난간, 축선 그리드, 방 마감재, 복사/미러/배열을 지원합니다. 전문 건축 심볼의 2D 평면도(지붕 평면 포함), 단면도, 입면도(4방향)와 고품질 3D 시각화를 생성합니다. PDF/SVG/DXF 도면 출력, 제목란, 면적표/물량 산출, Undo/Redo, 스냅샷, 사용자 지정 치수선, 좌표 기반 문/창문 배치를 지원합니다.",
+  "version": "4.2.0",
+  "tools": [
+    {
+      "name": "create_house_design",
+      "description": "새로운 집 설계를 초기화합니다. 대지 크기, 층수 등 기본 파라미터를 설정합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "설계 이름 (예: '내 드림하우스')"
+          },
+          "site_width": {
+            "type": "number",
+            "description": "대지 너비 (미터, 기본: 20)",
+            "default": 20
+          },
+          "site_depth": {
+            "type": "number",
+            "description": "대지 깊이 (미터, 기본: 15)",
+            "default": 15
+          },
+          "floors": {
+            "type": "integer",
+            "description": "층수 (기본: 1)",
+            "default": 1
+          },
+          "floor_height": {
+            "type": "number",
+            "description": "층고 (미터, 기본: 2.8)",
+            "default": 2.8
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    },
+    {
+      "name": "modify_house_design",
+      "description": "설계를 수정합니다. 방, 문, 창문, 가구, 기둥, 보, 벽(커스텀/곡선/이중벽), 계단(나선형/Winder 포함)을 추가/제거/수정하고, 벽 자동 생성, 재질 설정, 지붕/필로티/프로파일, 축선 그리드, 방 마감재, 복사/미러/배열, 좌표 기반 문/창문 배치를 지원합니다. 레이어 가시성/스타일 제어, Undo/Redo와 스냅샷도 지원합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "design_id": {
+            "type": "string",
+            "description": "수정할 설계 ID"
+          },
+          "action": {
+            "type": "string",
+            "description": "수행할 작업",
+            "enum": [
+              "add_room",
+              "remove_room",
+              "modify_room",
+              "add_door",
+              "remove_door",
+              "add_window",
+              "remove_window",
+              "add_furniture",
+              "remove_furniture",
+              "modify_furniture",
+              "add_floor",
+              "remove_floor",
+              "auto_walls",
+              "add_wall",
+              "remove_wall",
+              "move_wall",
+              "modify_wall",
+              "split_wall",
+              "add_column",
+              "remove_column",
+              "modify_column",
+              "add_beam",
+              "remove_beam",
+              "add_stairs",
+              "remove_stairs",
+              "modify_stairs",
+              "set_wall_material",
+              "set_roof",
+              "set_floor_piloti",
+              "set_floor_profile",
+              "set_facade_defaults",
+              "add_dimension",
+              "remove_dimension",
+              "set_project_info",
+              "get_layers",
+              "set_layer_visibility",
+              "set_layer_style",
+              "apply_layer_preset",
+              "add_window_batch",
+              "validate_openings",
+              "set_column_grid",
+              "auto_place_columns_on_grid",
+              "set_load_bearing_wall",
+              "set_room_finishes",
+              "copy_room",
+              "mirror_rooms",
+              "array_copy",
+              "copy_floor",
+              "undo",
+              "redo",
+              "create_snapshot",
+              "restore_snapshot",
+              "list_history",
+              "compare_snapshots"
+            ]
+          },
+          "floor_id": {
+            "type": "string",
+            "description": "대상 층 ID (기본: 'floor_1')",
+            "default": "floor_1"
+          },
+          "element": {
+            "type": "object",
+            "description": "추가/수정할 요소 데이터. action에 따라 구조가 다릅니다.\nadd_room: {name, type, x, y, width, depth} 또는 {name, type, vertices: [[x,y],...]}.\nadd_door: {wall_id, position, width, type?}.\nadd_window: {wall_id, position, width, height?, sill_height?}.\nadd_furniture: {name, type, room_id, x, y, width, depth, rotation?}.\nadd_column: {x, y, width?, depth?, shape?('rect'|'round')}.\nadd_beam: {start:[x,y], end:[x,y], width?, depth?}.\nset_wall_material: {wall_id|wall_ids|wall_type, material, color?}.\nset_roof: {type('hip'|'gable'|'flat'|'mansard'|'gable_glass'), height?, direction?, overhang?}.\nset_floor_piloti: {is_piloti, piloti_height?}.\nset_floor_profile: {offset_x, offset_y}.\nset_facade_defaults: {material, color?}.\nadd_stairs: {name?, type('straight'|'l_shape'|'u_turn'|'spiral'|'winder'), start:[x,y], direction(0|90|180|270), width?, num_treads?, tread_depth?, riser_height?, landing_depth?, turn_direction?('left'|'right'), handrail?('both'|'left'|'right'|'none'|'outer'), connects_to?}. spiral: {center:[x,y], radius?, inner_radius?, total_angle?(90~720), rotation?('cw'|'ccw')}. winder: {winder_count?(2~4), turn_angle?(90|180)}.\nadd_dimension: {start:[x1,y1], end:[x2,y2], offset?, label?}.\nremove_dimension: {id}.\nset_project_info: {project_name?, designer?, company?, north_direction?}.\nadd_wall: {start:[x,y], end:[x,y], thickness?, type?('exterior'|'interior'), material?, wall_type?('custom'|'curved'|'double'), is_load_bearing?, curve?:{center:[x,y],radius,start_angle,end_angle}, insulation?:{thickness,material}}.\nremove_wall: {id}.\nmove_wall: {id, start?:[x,y], end?:[x,y], dx?, dy?}.\nmodify_wall: {id, thickness?, type?, material?, color?, is_load_bearing?}.\nsplit_wall: {id, position?(0~1) 또는 point?:[x,y]}.\nget_layers: element 불필요.\nset_layer_visibility: {layer_id 또는 layer_ids:[], visible:bool}.\nset_layer_style: {layer_id, color?, lineweight?, opacity?}.\napply_layer_preset: {preset:('all_on'|'structure_only'|'presentation'|'dimensions_only')}.\ncreate_snapshot: {name}.\nrestore_snapshot: {name}.\ncompare_snapshots: {name_a, name_b}.\nundo/redo/list_history: element 불필요.\nadd_window_batch: {wall_id, spacing, count, width, height?, sill_height?} 창문 연속 배치.\nvalidate_openings: {} 현재 층의 문/창문 겹침 검증.\nset_column_grid: {x_spacings:[n,...], y_spacings:[n,...], origin?:[x,y]} 또는 {x_axes:[{label,value},...], y_axes:[...]} 축선 그리드 설정.\nauto_place_columns_on_grid: {size?:[w,d], shape?('rect'|'round'), material?, exclude_intersections?:['X1-Y1',...]} 축선 교차점에 기둥 자동 배치.\nset_load_bearing_wall: {wall_ids:[], is_load_bearing:bool} 내력벽 지정.\nset_room_finishes: {id? 또는 room_ids?:[], floor_material?, wall_finish?, ceiling_finish?, ceiling_height?} 방 마감재 설정.\ncopy_room: {source_id, dx?, dy?, new_name?} 방 복사.\nmirror_rooms: {room_ids:[], axis:('x'|'y'), axis_value:number, new_names?:[]} 방 미러 복사.\narray_copy: {source_id, dx, dy, count, naming?('number'|'letter')} 배열 복사.\ncopy_floor: {source_floor_id, new_level?, new_name?, include_furniture?:bool} 층 복사.\nmodify_*/remove_*: {id, ...수정할 필드들}."
+          }
+        },
+        "required": [
+          "design_id",
+          "action"
+        ]
+      }
+    },
+    {
+      "name": "get_house_design",
+      "description": "현재 설계 상태를 조회합니다. 전체 JSON 또는 요약 정보를 반환합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "design_id": {
+            "type": "string",
+            "description": "조회할 설계 ID"
+          },
+          "floor_id": {
+            "type": "string",
+            "description": "특정 층만 조회 (생략 시 전체)"
+          },
+          "summary": {
+            "type": "boolean",
+            "description": "true면 요약 텍스트 반환 (기본: false)",
+            "default": false
+          }
+        },
+        "required": [
+          "design_id"
+        ]
+      }
+    },
+    {
+      "name": "generate_floor_plan",
+      "description": "2D 컬러 평면도를 PNG 이미지로 생성합니다. 방, 벽, 문, 창문, 가구, 기둥, 보, 라벨, 치수가 표시됩니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "design_id": {
+            "type": "string",
+            "description": "설계 ID"
+          },
+          "floor_id": {
+            "type": "string",
+            "description": "렌더링할 층 ID (기본: 'floor_1')",
+            "default": "floor_1"
+          },
+          "show_dimensions": {
+            "type": "boolean",
+            "description": "치수 표시 (기본: true)",
+            "default": true
+          },
+          "show_furniture": {
+            "type": "boolean",
+            "description": "가구 표시 (기본: true)",
+            "default": true
+          },
+          "show_labels": {
+            "type": "boolean",
+            "description": "방 이름 라벨 표시 (기본: true)",
+            "default": true
+          }
+        },
+        "required": [
+          "design_id"
+        ]
+      }
+    },
+    {
+      "name": "generate_3d_view",
+      "description": "인터랙티브 3D 시각화 HTML을 생성하고 브라우저에서 엽니다. Three.js 기반으로 마우스로 회전/줌/팬이 가능합니다. 재질 텍스처, 다중 지붕, 필로티, 건물 프로파일을 지원합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "design_id": {
+            "type": "string",
+            "description": "설계 ID"
+          },
+          "show_furniture": {
+            "type": "boolean",
+            "description": "가구 표시 (기본: true)",
+            "default": true
+          },
+          "show_roof": {
+            "type": "boolean",
+            "description": "지붕 표시 (기본: true)",
+            "default": true
+          },
+          "open_in_browser": {
+            "type": "boolean",
+            "description": "생성 후 브라우저에서 열기 (기본: true)",
+            "default": true
+          }
+        },
+        "required": [
+          "design_id"
+        ]
+      }
+    },
+    {
+      "name": "generate_quantity_report",
+      "description": "면적표, 건폐율/용적률, 벽체/창호/바닥 물량 산출 보고서를 생성합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "design_id": {
+            "type": "string",
+            "description": "설계 ID"
+          },
+          "report_type": {
+            "type": "string",
+            "description": "보고서 타입",
+            "enum": [
+              "area_schedule",
+              "coverage_ratio",
+              "floor_area_ratio",
+              "wall_schedule",
+              "door_schedule",
+              "window_schedule",
+              "flooring",
+              "full_report"
+            ],
+            "default": "full_report"
+          },
+          "floor_id": {
+            "type": "string",
+            "description": "특정 층만 대상 (생략 시 전체)"
+          }
+        },
+        "required": [
+          "design_id"
+        ]
+      }
+    },
+    {
+      "name": "generate_section_view",
+      "description": "건물 단면도를 PNG 이미지로 생성합니다. 절단선을 지정하면 해당 위치의 횡단면을 보여줍니다. 벽체 재질 해칭, 슬라브, 계단 단면, 창문/문, 층고 치수, GL/FL 레벨 마커가 표시됩니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "design_id": {
+            "type": "string",
+            "description": "설계 ID"
+          },
+          "cut_start": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "절단선 시작점 [x, y] (평면 좌표)"
+          },
+          "cut_end": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "절단선 끝점 [x, y] (평면 좌표)"
+          },
+          "view_direction": {
+            "type": "string",
+            "description": "절단면 보는 방향 ('right' 또는 'left', 기본: 'right')",
+            "default": "right"
+          },
+          "show_dimensions": {
+            "type": "boolean",
+            "description": "치수/FL 마커 표시 (기본: true)",
+            "default": true
+          }
+        },
+        "required": [
+          "design_id",
+          "cut_start",
+          "cut_end"
+        ]
+      }
+    },
+    {
+      "name": "generate_elevation_view",
+      "description": "건물 입면도를 PNG 이미지로 생성합니다. 4방향(전면/후면/좌측/우측) 외관을 투영합니다. 외벽 재질, 창문/문, 지붕 프로파일, 층 레벨선, 전체 높이 치수가 표시됩니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "design_id": {
+            "type": "string",
+            "description": "설계 ID"
+          },
+          "direction": {
+            "type": "string",
+            "description": "보는 방향",
+            "enum": [
+              "front",
+              "rear",
+              "left",
+              "right"
+            ],
+            "default": "front"
+          },
+          "show_dimensions": {
+            "type": "boolean",
+            "description": "치수 표시 (기본: true)",
+            "default": true
+          }
+        },
+        "required": [
+          "design_id"
+        ]
+      }
+    },
+    {
+      "name": "export_drawing",
+      "description": "설계 도면을 PDF, SVG, DXF 형식으로 출력합니다. PDF는 다중 페이지(평면도+단면도+입면도)를 지원하고, 제목란과 면적표를 포함할 수 있습니다. SVG는 벡터 형식, DXF는 AutoCAD 호환 형식입니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "design_id": {
+            "type": "string",
+            "description": "설계 ID"
+          },
+          "format": {
+            "type": "string",
+            "description": "출력 형식",
+            "enum": [
+              "pdf",
+              "svg",
+              "dxf"
+            ],
+            "default": "pdf"
+          },
+          "paper_size": {
+            "type": "string",
+            "description": "용지 크기 (기본: 'A3')",
+            "enum": [
+              "A4",
+              "A3",
+              "A2",
+              "A1"
+            ],
+            "default": "A3"
+          },
+          "scale": {
+            "type": "string",
+            "description": "축척 (기본: '1:100')",
+            "enum": [
+              "1:50",
+              "1:100",
+              "1:200"
+            ],
+            "default": "1:100"
+          },
+          "include_title_block": {
+            "type": "boolean",
+            "description": "제목란 포함 (기본: true)",
+            "default": true
+          },
+          "include_area_table": {
+            "type": "boolean",
+            "description": "면적표 포함 (기본: true, PDF만)",
+            "default": true
+          },
+          "floor_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "출력할 층 ID 목록 (생략 시 전체, PDF용)"
+          },
+          "floor_id": {
+            "type": "string",
+            "description": "단일 층 ID (SVG/DXF용, 기본: 'floor_1')",
+            "default": "floor_1"
+          },
+          "include_sections": {
+            "type": "boolean",
+            "description": "단면도 포함 (PDF용, 기본: false)",
+            "default": false
+          },
+          "section_cuts": {
+            "type": "array",
+            "description": "절단선 목록 [[시작점,끝점], ...] (PDF용, 예: [[[5,0],[5,15]]])",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "include_elevations": {
+            "type": "boolean",
+            "description": "입면도 포함 (PDF용, 기본: false)",
+            "default": false
+          },
+          "elevation_directions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "front",
+                "rear",
+                "left",
+                "right"
+              ]
+            },
+            "description": "입면도 방향 목록 (PDF용, 기본: ['front'])"
+          },
+          "drawing_type": {
+            "type": "string",
+            "description": "도면 타입 (SVG용)",
+            "enum": [
+              "floor_plan",
+              "section",
+              "elevation"
+            ],
+            "default": "floor_plan"
+          },
+          "direction": {
+            "type": "string",
+            "description": "입면도 방향 (SVG elevation용)",
+            "enum": [
+              "front",
+              "rear",
+              "left",
+              "right"
+            ],
+            "default": "front"
+          },
+          "cut_start": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "절단선 시작점 (SVG section용)"
+          },
+          "cut_end": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "절단선 끝점 (SVG section용)"
+          }
+        },
+        "required": [
+          "design_id"
+        ]
+      }
+    },
+    {
+      "name": "list_house_designs",
+      "description": "저장된 집 설계 목록을 조회합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ]
+}

@@ -15,7 +15,9 @@
             "description": "YouTube URL (전체 URL 또는 youtu.be 단축 URL)"
           }
         },
-        "required": ["url"]
+        "required": [
+          "url"
+        ]
       }
     },
     {
@@ -30,7 +32,9 @@
           },
           "languages": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "선호 언어 순서 (예: ['ko', 'en'])"
           },
           "include_timestamps": {
@@ -46,7 +50,9 @@
             "description": "최대 문자 수 (생략시 제한 없음)"
           }
         },
-        "required": ["url"]
+        "required": [
+          "url"
+        ]
       }
     },
     {
@@ -60,30 +66,9 @@
             "description": "YouTube URL"
           }
         },
-        "required": ["url"]
-      }
-    },
-    {
-      "name": "summarize_youtube",
-      "description": "YouTube 영상을 AI로 요약하고 HTML 파일로 저장합니다.\n\n## 처리 과정\n1. 자막 자동 추출\n2. AI 요약 생성\n3. HTML 파일로 저장\n\n## 사용 시점\n- 긴 영상의 핵심 내용 파악\n- 영상 내용 문서화\n- 여러 영상 비교 분석\n\n## 주의사항\n- 자막이 있는 영상만 가능\n- 처리 시간이 길 수 있음 (영상 길이에 따라)\n- summary_length로 요약 길이 조절 가능",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "YouTube URL"
-          },
-          "summary_length": {
-            "type": "integer",
-            "description": "요약 길이 (기본 3000자)"
-          },
-          "languages": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "선호 자막 언어"
-          }
-        },
-        "required": ["url"]
+        "required": [
+          "url"
+        ]
       }
     },
     {
@@ -101,7 +86,29 @@
             "description": "저장 경로 (기본: 바탕화면/output.mp3)"
           }
         },
-        "required": ["url"]
+        "required": [
+          "url"
+        ]
+      }
+    },
+    {
+      "name": "search_youtube",
+      "description": "유튜브 검색 (재생하지 않고 결과 목록만 반환). 검색어로 영상을 찾고 video_id, title, channel, duration, url 정보를 포함한 결과 목록을 반환합니다. 재생/다운로드/자막추출 전에 원하는 영상을 먼저 찾을 때 사용.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색어. 예: '김필 너무 아픈 사랑은', '빅뱅 판타스틱베이비'"
+          },
+          "count": {
+            "type": "integer",
+            "description": "검색 결과 수 (1-10, 기본 5)"
+          }
+        },
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -116,7 +123,10 @@
           },
           "mode": {
             "type": "string",
-            "enum": ["audio", "video"],
+            "enum": [
+              "audio",
+              "video"
+            ],
             "description": "재생 모드. audio: 소리만 (기본), video: 브라우저에서 영상"
           },
           "count": {
@@ -124,7 +134,9 @@
             "description": "재생할 곡 수 (1-10, 기본 5). 첫 곡 바로 재생, 나머지는 대기열 자동 추가"
           }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -142,7 +154,9 @@
             "description": "검색 결과 수 (1-5, 기본 3)"
           }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {

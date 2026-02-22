@@ -2,8 +2,16 @@ import urllib.request
 import urllib.parse
 import json
 import os
+import sys
 
-SERVICE_KEY = os.environ.get('DATA_GO_KR_API_KEY', '')
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.auth_manager import get_api_key, check_api_key
+
+SERVICE_KEY = get_api_key('DATA_GO_KR_API_KEY') or ''
 BASE_URL = 'https://apis.data.go.kr/B553077/api/open/sdsc2'
 
 def search_commercial_district(lat: float = None, lng: float = None, radius: int = 500, region_code: str = None, indsLclsCd: str = None):
@@ -20,6 +28,10 @@ def search_commercial_district(lat: float = None, lng: float = None, radius: int
     Returns:
         dict: 상가 목록 및 통계 정보
     """
+    key_ok, key_error = check_api_key("data_go_kr")
+    if not key_ok:
+        return {"success": False, "error": key_error}
+
     try:
         if lat and lng:
             # 반경 기반 검색

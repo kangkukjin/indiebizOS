@@ -1,20 +1,13 @@
 /**
  * AgentEditDialog - 에이전트 편집 다이얼로그
- * 도구 선택을 패키지 단위로 묶어서 관리
+ * Phase 16: IBL 노드 기반 접근 제어 (allowed_nodes)
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { X, ChevronRight, ChevronDown } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { Agent } from '../../../types';
-import type { AgentForm, Tool } from '../types';
+import type { AgentForm, IBLNode } from '../types';
 import { api } from '../../../lib/api';
-
-interface PackageInfo {
-  id: string;
-  name: string;
-  description: string;
-  tool_count: number;
-}
 
 interface AgentEditDialogProps {
   show: boolean;
@@ -22,17 +15,7 @@ interface AgentEditDialogProps {
   editingAgentData: Agent | null;
   agentForm: AgentForm;
   setAgentForm: (form: AgentForm) => void;
-  allTools: Tool[];
-  baseTools: string[];
-  toolPackages: PackageInfo[];
   onSaveAgentSettings: () => void;
-}
-
-interface PackageGroup {
-  id: string;
-  name: string;
-  description: string;
-  tools: Tool[];
 }
 
 export function AgentEditDialog({
@@ -41,14 +24,11 @@ export function AgentEditDialog({
   editingAgentData,
   agentForm,
   setAgentForm,
-  allTools,
-  baseTools,
-  toolPackages,
   onSaveAgentSettings,
 }: AgentEditDialogProps) {
   const [ollamaModels, setOllamaModels] = useState<string[]>([]);
   const [ollamaRunning, setOllamaRunning] = useState(false);
-  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
+  const [iblNodes, setIblNodes] = useState<IBLNode[]>([]);
 
   // Ollama 선택 시 모델 목록 로드
   useEffect(() => {
@@ -56,7 +36,6 @@ export function AgentEditDialog({
       api.getOllamaModels().then((data) => {
         setOllamaModels(data.models);
         setOllamaRunning(data.running);
-        // 모델이 하나뿐이면 자동 선택
         if (data.models.length === 1 && !agentForm.model) {
           setAgentForm({ ...agentForm, model: data.models[0] });
         }
@@ -67,83 +46,42 @@ export function AgentEditDialog({
     }
   }, [show, agentForm.provider]);
 
-  // 패키지별 도구 그룹핑
-  const { systemTools, packageGroups } = useMemo(() => {
-    const sysTools: Tool[] = [];
-    const groups: Record<string, PackageGroup> = {};
-
-    for (const tool of allTools) {
-      if (tool._is_system) {
-        sysTools.push(tool);
-        continue;
-      }
-      const pkgId = tool._package_id || 'unknown';
-      if (!groups[pkgId]) {
-        const pkgInfo = toolPackages.find(p => p.id === pkgId);
-        groups[pkgId] = {
-          id: pkgId,
-          name: pkgInfo?.name || pkgId,
-          description: pkgInfo?.description || '',
-          tools: [],
-        };
-      }
-      groups[pkgId].tools.push(tool);
-    }
-
-    const sorted = Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
-    return { systemTools: sysTools, packageGroups: sorted };
-  }, [allTools, toolPackages]);
-
-  // 패키지 체크박스 토글
-  const handlePackageToggle = (pkg: PackageGroup) => {
-    const toolNames = pkg.tools.map(t => t.name);
-    const selectedCount = toolNames.filter(n => agentForm.allowedTools.includes(n)).length;
-    const allSelected = selectedCount === toolNames.length;
-
-    if (allSelected) {
-      // 전체 해제
-      setAgentForm({
-        ...agentForm,
-        allowedTools: agentForm.allowedTools.filter(t => !toolNames.includes(t)),
+  // IBL 노드 목록 로드
+  useEffect(() => {
+    if (show) {
+      api.getNodes().then((data) => {
+        setIblNodes(data.nodes || []);
+      }).catch(() => {
+        setIblNodes([]);
       });
-    } else {
-      // 전체 선택
-      const newTools = new Set([...agentForm.allowedTools, ...toolNames]);
-      setAgentForm({ ...agentForm, allowedTools: [...newTools] });
     }
-  };
+  }, [show]);
 
-  // 개별 도구 토글
-  const handleToolToggle = (toolName: string, checked: boolean) => {
+  // 인프라 노드와 선택 가능 노드 분리
+  const { infraNodes, selectableNodes } = useMemo(() => {
+    const infra = iblNodes.filter(n => n.always_allowed);
+    const selectable = iblNodes.filter(n => !n.always_allowed);
+    return { infraNodes: infra, selectableNodes: selectable };
+  }, [iblNodes]);
+
+  // 노드 토글
+  const handleNodeToggle = (nodeId: string, checked: boolean) => {
     if (checked) {
-      setAgentForm({ ...agentForm, allowedTools: [...agentForm.allowedTools, toolName] });
+      setAgentForm({ ...agentForm, allowedNodes: [...agentForm.allowedNodes, nodeId] });
     } else {
-      setAgentForm({ ...agentForm, allowedTools: agentForm.allowedTools.filter(t => t !== toolName) });
+      setAgentForm({ ...agentForm, allowedNodes: agentForm.allowedNodes.filter(n => n !== nodeId) });
     }
   };
 
-  // 펼침/접힘 토글
-  const toggleExpand = (pkgId: string) => {
-    setExpandedPackages(prev => {
-      const next = new Set(prev);
-      if (next.has(pkgId)) {
-        next.delete(pkgId);
-      } else {
-        next.add(pkgId);
-      }
-      return next;
-    });
-  };
-
-  // 전체 선택 (시스템 도구 제외)
+  // 전체 선택 (인프라 노드 제외)
   const selectAll = () => {
-    const nonSystemTools = allTools.filter(t => !t._is_system).map(t => t.name);
-    setAgentForm({ ...agentForm, allowedTools: nonSystemTools });
+    const allSelectableIds = selectableNodes.map(n => n.id);
+    setAgentForm({ ...agentForm, allowedNodes: allSelectableIds });
   };
 
   // 전체 해제
   const deselectAll = () => {
-    setAgentForm({ ...agentForm, allowedTools: [] });
+    setAgentForm({ ...agentForm, allowedNodes: [] });
   };
 
   if (!show) return null;
@@ -211,7 +149,7 @@ export function AgentEditDialog({
                 </select>
               </div>
 
-              {/* 모델 - Ollama일 때는 드롭다운 */}
+              {/* 모델 */}
               <div>
                 <label className="block text-sm font-medium text-gray-800 mb-1">모델</label>
                 {agentForm.provider === 'ollama' ? (
@@ -384,10 +322,10 @@ export function AgentEditDialog({
             />
           </div>
 
-          {/* 도구 설정 - 패키지 기반 */}
+          {/* IBL 노드 설정 (Phase 16) */}
           <div className="border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-gray-700">사용 도구</h3>
+              <h3 className="text-sm font-bold text-gray-700">접근 노드</h3>
               <div className="flex gap-2">
                 <button
                   onClick={selectAll}
@@ -404,89 +342,49 @@ export function AgentEditDialog({
               </div>
             </div>
             <div className="max-h-64 overflow-auto border border-gray-200 rounded-lg bg-gray-50">
-              {/* 기초 도구 */}
-              {systemTools.length > 0 && (
+              {/* 인프라 노드 (항상 활성) */}
+              {infraNodes.length > 0 && (
                 <div className="px-3 py-2 bg-blue-50 border-b border-gray-200">
                   <div className="flex items-center gap-2">
                     <input type="checkbox" checked disabled className="rounded" />
                     <span className="text-sm font-medium text-blue-700">
-                      기초 도구 ({systemTools.length})
+                      인프라 노드 ({infraNodes.length})
                     </span>
                     <span className="text-xs text-blue-500 ml-auto">항상 활성</span>
+                  </div>
+                  <div className="mt-1 pl-6 text-xs text-blue-600">
+                    {infraNodes.map(n => n.id).join(', ')}
                   </div>
                 </div>
               )}
 
-              {/* 패키지별 도구 */}
-              {packageGroups.map((pkg) => {
-                const toolNames = pkg.tools.map(t => t.name);
-                const selectedCount = toolNames.filter(n => agentForm.allowedTools.includes(n)).length;
-                const allSelected = selectedCount === toolNames.length;
-                const noneSelected = selectedCount === 0;
-                const isExpanded = expandedPackages.has(pkg.id);
-
+              {/* 선택 가능한 도메인 노드 */}
+              {selectableNodes.map((node) => {
+                const isChecked = agentForm.allowedNodes.includes(node.id);
                 return (
-                  <div key={pkg.id} className="border-b border-gray-200 last:border-b-0">
-                    {/* 패키지 헤더 */}
-                    <div className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100">
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        ref={(el) => {
-                          if (el) el.indeterminate = !allSelected && !noneSelected;
-                        }}
-                        onChange={() => handlePackageToggle(pkg)}
-                        className="rounded"
-                      />
-                      <button
-                        onClick={() => toggleExpand(pkg.id)}
-                        className="flex items-center gap-1 flex-1 text-left"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown size={14} className="text-gray-400 shrink-0" />
-                        ) : (
-                          <ChevronRight size={14} className="text-gray-400 shrink-0" />
-                        )}
-                        <span className="text-sm font-medium text-gray-800">{pkg.name}</span>
-                        <span className="text-xs text-gray-500 ml-1">
-                          {noneSelected
-                            ? `(${pkg.tools.length})`
-                            : allSelected
-                              ? `(${pkg.tools.length})`
-                              : `(${selectedCount}/${pkg.tools.length})`
-                          }
-                        </span>
-                      </button>
-                    </div>
-
-                    {/* 개별 도구 (펼침 시) */}
-                    {isExpanded && (
-                      <div className="pl-9 pr-3 pb-2 bg-white">
-                        {pkg.tools.map((tool) => {
-                          const isChecked = agentForm.allowedTools.includes(tool.name);
-                          return (
-                            <label
-                              key={tool.name}
-                              className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-50 cursor-pointer"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => handleToolToggle(tool.name, e.target.checked)}
-                                className="rounded"
-                              />
-                              <span className="text-sm text-gray-700">{tool.name}</span>
-                            </label>
-                          );
-                        })}
+                  <label
+                    key={node.id}
+                    className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 last:border-b-0 hover:bg-gray-100 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => handleNodeToggle(node.id, e.target.checked)}
+                      className="rounded shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-800">{node.id}</span>
+                        <span className="text-xs text-gray-400">({node.action_count})</span>
                       </div>
-                    )}
-                  </div>
+                      <p className="text-xs text-gray-500 truncate">{node.description}</p>
+                    </div>
+                  </label>
                 );
               })}
             </div>
             <p className="mt-2 text-xs text-gray-500">
-              패키지를 선택하면 포함된 모든 도구가 선택됩니다. 화살표를 눌러 개별 도구를 조정할 수 있습니다.
+              비워두면 모든 노드에 접근할 수 있습니다. 노드를 선택하면 선택한 노드만 사용 가능합니다.
             </p>
           </div>
         </div>

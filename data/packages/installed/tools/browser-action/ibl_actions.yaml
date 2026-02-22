@@ -1,0 +1,137 @@
+nodes:
+  system:
+    actions:
+      browse:
+        description: 브라우저로 페이지 열기
+        router: handler
+        tool: browser_navigate
+        target_key: url
+  interface:
+    actions:
+      navigate:
+        description: URL 열기 (Playwright 브라우저)
+        target_description: URL
+        router: handler
+        tool: browser_navigate
+        target_key: url
+      snapshot:
+        description: 접근성 스냅샷 (요소 ref 생성)
+        router: handler
+        tool: browser_snapshot
+      click:
+        description: 요소 클릭 (ref 기반)
+        target_description: ref ID (e1, e2 등)
+        router: handler
+        tool: browser_click
+        target_key: ref
+      type:
+        description: 입력 필드에 텍스트 입력
+        target_description: ref ID
+        router: handler
+        tool: browser_type
+        target_key: ref
+      content:
+        description: 페이지 텍스트 콘텐츠 추출
+        router: handler
+        tool: browser_get_content
+      screenshot:
+        description: 페이지 스크린샷 (PNG 저장)
+        router: handler
+        tool: browser_screenshot
+      scroll:
+        description: 페이지 스크롤 (up/down)
+        router: handler
+        tool: browser_scroll
+      evaluate:
+        description: JavaScript 실행
+        target_description: JS 표현식
+        router: handler
+        tool: browser_evaluate
+        target_key: expression
+      wait:
+        description: 조건 대기 (selector/text/url)
+        router: handler
+        tool: browser_wait_for
+      press_key:
+        description: 키보드 키 입력 (Enter, Tab 등)
+        target_description: 키 이름
+        router: handler
+        tool: browser_press_key
+        target_key: key
+      tab_list:
+        description: 열린 탭 목록 조회
+        router: handler
+        tool: browser_tab_list
+      tab_new:
+        description: 새 탭 열기
+        router: handler
+        tool: browser_tab_new
+      tab_switch:
+        description: 탭 전환
+        target_description: tab_id
+        router: handler
+        tool: browser_tab_switch
+        target_key: tab_id
+      close:
+        description: 브라우저 세션 종료
+        router: handler
+        tool: browser_close
+      pdf:
+        description: 페이지를 PDF로 저장
+        router: handler
+        tool: browser_save_pdf
+      back:
+        description: 이전 페이지로 이동
+        router: handler
+        tool: browser_navigate_back
+      forward:
+        description: 다음 페이지로 이동
+        router: handler
+        tool: browser_navigate_forward
+      hover:
+        description: 요소에 마우스 호버
+        target_description: ref ID
+        router: handler
+        tool: browser_hover
+        target_key: ref
+      drag:
+        description: 요소 드래그 앤 드롭
+        router: handler
+        tool: browser_drag
+      select:
+        description: 셀렉트 옵션 선택
+        target_description: ref ID
+        router: handler
+        tool: browser_select_option
+        target_key: ref
+      console:
+        description: 브라우저 콘솔 로그 확인
+        router: handler
+        tool: browser_console_logs
+      cookies_save:
+        description: 쿠키 저장
+        router: handler
+        tool: browser_cookies_save
+      cookies_load:
+        description: 쿠키 로드
+        router: handler
+        tool: browser_cookies_load
+      iframe_list:
+        description: iframe 목록 조회
+        router: handler
+        tool: browser_iframe_list
+      iframe_switch:
+        description: iframe 전환
+        router: handler
+        tool: browser_iframe_switch
+        target_key: index
+      iframe_reset:
+        description: iframe에서 메인 프레임으로 복귀
+        router: handler
+        tool: browser_iframe_reset
+      tab_close:
+        description: 현재 탭 닫기
+        router: handler
+        tool: browser_tab_close
+    guides:
+    - browser-action/browser_guide.md

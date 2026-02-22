@@ -45,6 +45,13 @@ class OpenAIProvider(BaseProvider):
     3. 도구 결과는 role="tool"로 전달
     """
 
+    # GPT-4o: 128K 토큰 컨텍스트 → 80% = 102K 토큰 → ~410,000자
+    COMPACTION_CHAR_THRESHOLD = 410000
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._compaction_summary = None  # Rolling Compaction 요약 저장
+
     def init_client(self) -> bool:
         """OpenAI 클라이언트 초기화"""
         if not self.api_key:
@@ -230,6 +237,10 @@ class OpenAIProvider(BaseProvider):
             return
 
         try:
+            # Rolling Compaction: 컨텍스트가 임계값을 넘으면 요약으로 압축
+            if depth > 0 and self._should_compact(messages, depth):
+                messages = self._compact_openai(messages)
+
             # Session Pruning: 오래된 도구 결과 마스킹 (depth > 0일 때만)
             if depth > 0:
                 messages = self._prune_messages_openai(messages)
@@ -588,3 +599,86 @@ class OpenAIProvider(BaseProvider):
             max_tokens=4096, auto_continues=0, accumulated_text="",
             cancel_check=cancel_check
         )
+
+    def _compact_openai(self, messages: List[Dict]) -> List[Dict]:
+        """Rolling Compaction: 오래된 대화를 AI 요약으로 압축 (OpenAI)
+
+        1. 오래된 메시지를 텍스트로 추출
+        2. AI에게 요약 요청 (비스트리밍)
+        3. 요약 메시지 + 최근 메시지로 교체
+        """
+        # 최근 유지할 메시지 수
+        keep_recent = self.KEEP_RECENT_TOOL_ROUNDS * 2 + 2
+
+        # system 메시지는 항상 유지
+        system_messages = [m for m in messages if m.get("role") == "system"]
+        non_system = [m for m in messages if m.get("role") != "system"]
+
+        summary_text, recent_messages = self._extract_text_for_summary(non_system, keep_recent)
+        if not summary_text:
+            return messages
+
+        print(f"[Compaction][OpenAI] 요약 시작: {len(summary_text):,}자 → AI 요약 요청")
+
+        # 이전 요약이 있으면 포함
+        prev_summary = ""
+        if self._compaction_summary:
+            prev_summary = f"\n\n[이전 요약]\n{self._compaction_summary}\n\n"
+
+        try:
+            summary_input = f"{prev_summary}[작업 기록]\n{summary_text}"
+            if len(summary_input) > 100000:
+                summary_input = summary_input[:50000] + "\n\n... (중략) ...\n\n" + summary_input[-50000:]
+
+            response = self._client.chat.completions.create(
+                model=self.model,
+                max_tokens=2048,
+                messages=[
+                    {"role": "system", "content": self.COMPACTION_PROMPT},
+                    {"role": "user", "content": summary_input}
+                ],
+                temperature=0.3
+            )
+
+            summary = response.choices[0].message.content if response.choices else ""
+
+            # <summary> 태그 추출
+            import re
+            summary_match = re.search(r'<summary>(.*?)</summary>', summary, re.DOTALL)
+            if summary_match:
+                summary = summary_match.group(1).strip()
+
+            if not summary:
+                print(f"[Compaction][OpenAI] 요약 생성 실패, 프루닝으로 대체")
+                return messages
+
+            self._compaction_summary = summary
+            print(f"[Compaction][OpenAI] 요약 완료: {len(summary):,}자")
+
+            # 새 messages 구성: [system] + [요약] + [assistant 확인] + [최근 메시지들]
+            compacted = list(system_messages)
+
+            # 요약을 user 메시지로 삽입
+            compacted.append({
+                "role": "user",
+                "content": f"<compaction_summary>\n{summary}\n</compaction_summary>\n\n위 요약은 이전 작업 기록의 압축본입니다. 이 맥락을 유지하면서 작업을 계속하세요."
+            })
+
+            # assistant 확인 응답
+            compacted.append({
+                "role": "assistant",
+                "content": "이전 작업 요약을 확인했습니다. 요약된 맥락을 유지하며 작업을 계속하겠습니다."
+            })
+
+            # 최근 메시지 추가
+            compacted.extend(recent_messages)
+
+            before_size = self._estimate_content_size(messages)
+            after_size = self._estimate_content_size(compacted)
+            print(f"[Compaction][OpenAI] 크기 변화: {before_size:,}자 → {after_size:,}자 ({(1 - after_size/before_size)*100:.0f}% 감소)")
+
+            return compacted
+
+        except Exception as e:
+            print(f"[Compaction][OpenAI] 요약 생성 예외: {e}, 프루닝으로 대체")
+            return messages

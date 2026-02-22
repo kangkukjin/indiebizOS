@@ -3,7 +3,6 @@
   "name": "Real Estate",
   "description": "국토교통부 부동산 실거래가 API 도구. 아파트/주택의 매매·전월세 실거래가 조회, 지역코드 검색, 상권 분석 기능을 제공합니다. 시세 파악, 가격 추이 분석, 투자 검토에 활용.",
   "version": "1.1.0",
-  "guide_file": "real_estate_guide.md",
   "tools": [
     {
       "name": "apt_trade_price",
@@ -11,12 +10,28 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "region_code": { "type": "string", "description": "법정동 코드 5자리 (강남=11680, 서초=11650)" },
-          "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
-          "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
-          "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
+          "region_code": {
+            "type": "string",
+            "description": "법정동 코드 5자리 (강남=11680, 서초=11650)"
+          },
+          "start_month": {
+            "type": "string",
+            "description": "시작 년월 (YYYYMM)"
+          },
+          "end_month": {
+            "type": "string",
+            "description": "종료 년월 (생략시 1개월)"
+          },
+          "count_per_month": {
+            "type": "integer",
+            "default": 30,
+            "description": "월별 최대 건수"
+          }
         },
-        "required": ["region_code", "start_month"]
+        "required": [
+          "region_code",
+          "start_month"
+        ]
       }
     },
     {
@@ -25,12 +40,28 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "region_code": { "type": "string", "description": "법정동 코드 5자리" },
-          "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
-          "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
-          "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
+          "region_code": {
+            "type": "string",
+            "description": "법정동 코드 5자리"
+          },
+          "start_month": {
+            "type": "string",
+            "description": "시작 년월 (YYYYMM)"
+          },
+          "end_month": {
+            "type": "string",
+            "description": "종료 년월 (생략시 1개월)"
+          },
+          "count_per_month": {
+            "type": "integer",
+            "default": 30,
+            "description": "월별 최대 건수"
+          }
         },
-        "required": ["region_code", "start_month"]
+        "required": [
+          "region_code",
+          "start_month"
+        ]
       }
     },
     {
@@ -39,12 +70,28 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "region_code": { "type": "string", "description": "법정동 코드 5자리" },
-          "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
-          "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
-          "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
+          "region_code": {
+            "type": "string",
+            "description": "법정동 코드 5자리"
+          },
+          "start_month": {
+            "type": "string",
+            "description": "시작 년월 (YYYYMM)"
+          },
+          "end_month": {
+            "type": "string",
+            "description": "종료 년월 (생략시 1개월)"
+          },
+          "count_per_month": {
+            "type": "integer",
+            "default": 30,
+            "description": "월별 최대 건수"
+          }
         },
-        "required": ["region_code", "start_month"]
+        "required": [
+          "region_code",
+          "start_month"
+        ]
       }
     },
     {
@@ -53,12 +100,28 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "region_code": { "type": "string", "description": "법정동 코드 5자리" },
-          "start_month": { "type": "string", "description": "시작 년월 (YYYYMM)" },
-          "end_month": { "type": "string", "description": "종료 년월 (생략시 1개월)" },
-          "count_per_month": { "type": "integer", "default": 30, "description": "월별 최대 건수" }
+          "region_code": {
+            "type": "string",
+            "description": "법정동 코드 5자리"
+          },
+          "start_month": {
+            "type": "string",
+            "description": "시작 년월 (YYYYMM)"
+          },
+          "end_month": {
+            "type": "string",
+            "description": "종료 년월 (생략시 1개월)"
+          },
+          "count_per_month": {
+            "type": "integer",
+            "default": 30,
+            "description": "월별 최대 건수"
+          }
         },
-        "required": ["region_code", "start_month"]
+        "required": [
+          "region_code",
+          "start_month"
+        ]
       }
     },
     {
@@ -67,7 +130,11 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "city": { "type": "string", "description": "도시명 (서울, 경기, 부산 등). 생략시 전체", "default": "" }
+          "city": {
+            "type": "string",
+            "description": "도시명 (서울, 경기, 부산 등). 생략시 전체",
+            "default": ""
+          }
         }
       }
     },
@@ -77,11 +144,27 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lat": { "type": "number", "description": "위도 (예: 37.498)" },
-          "lng": { "type": "number", "description": "경도 (예: 127.028)" },
-          "radius": { "type": "integer", "description": "검색 반경 (m), 기본 500m", "default": 500 },
-          "region_code": { "type": "string", "description": "행정동 코드 10자리" },
-          "indsLclsCd": { "type": "string", "description": "업종 대분류 코드 (I: 음식, Q: 숙박, R: 학문/교육, S: 소매, T: 생활서비스, U: 의료, V: 부동산, W: 관광/여가/오락)" }
+          "lat": {
+            "type": "number",
+            "description": "위도 (예: 37.498)"
+          },
+          "lng": {
+            "type": "number",
+            "description": "경도 (예: 127.028)"
+          },
+          "radius": {
+            "type": "integer",
+            "description": "검색 반경 (m), 기본 500m",
+            "default": 500
+          },
+          "region_code": {
+            "type": "string",
+            "description": "행정동 코드 10자리"
+          },
+          "indsLclsCd": {
+            "type": "string",
+            "description": "업종 대분류 코드 (I: 음식, Q: 숙박, R: 학문/교육, S: 소매, T: 생활서비스, U: 의료, V: 부동산, W: 관광/여가/오락)"
+          }
         }
       }
     }

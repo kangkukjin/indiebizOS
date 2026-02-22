@@ -121,6 +121,8 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
     if tool_name == "create_remotion_video":
         return create_remotion_video(tool_input, output_base)
+    elif tool_name == "render_remotion_video":
+        return render_remotion_video(tool_input, output_base)
     elif tool_name == "check_remotion_status":
         return check_remotion_status(tool_input)
 
@@ -1072,3 +1074,46 @@ def _write_json(path: Path, data: dict):
 
 def _write_text(path: Path, content: str):
     path.write_text(content, encoding="utf-8")
+
+
+# ============================================================
+# render_remotion_video - 파일 경로 기반 렌더링 (원자적 액션)
+# ============================================================
+
+def render_remotion_video(tool_input: dict, output_base: str) -> str:
+    """TSX 파일 경로를 받아 Remotion으로 MP4를 렌더링합니다.
+
+    에이전트가 system:write로 미리 TSX 코드를 파일에 저장해두고,
+    이 함수는 해당 파일을 읽어 렌더링만 담당합니다.
+
+    입력:
+      composition_file: TSX 파일 경로 (필수)
+      나머지는 create_remotion_video와 동일
+    """
+    composition_file = tool_input.get("composition_file", "")
+
+    if not composition_file:
+        return "오류: composition_file(TSX 파일 경로)은 필수입니다."
+
+    if not os.path.isabs(composition_file):
+        composition_file = os.path.join(output_base, composition_file)
+
+    if not os.path.exists(composition_file):
+        return f"오류: 파일이 존재하지 않습니다: {composition_file}"
+
+    # 파일에서 코드 읽기
+    try:
+        with open(composition_file, "r", encoding="utf-8") as f:
+            composition_code = f.read()
+    except Exception as e:
+        return f"파일 읽기 오류: {str(e)}"
+
+    if not composition_code.strip():
+        return f"오류: 파일이 비어 있습니다: {composition_file}"
+
+    # create_remotion_video에 위임 (composition_code를 직접 전달)
+    delegated_input = dict(tool_input)
+    delegated_input["composition_code"] = composition_code
+    del delegated_input["composition_file"]
+
+    return create_remotion_video(delegated_input, output_base)

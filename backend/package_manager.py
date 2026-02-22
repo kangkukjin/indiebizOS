@@ -387,6 +387,13 @@ class PackageManager:
         # 캐시 무효화
         self.invalidate_cache()
 
+        # IBL 액션 자동 등록
+        try:
+            from ibl_action_manager import register_actions
+            register_actions(package_id)
+        except Exception as e:
+            print(f"[PackageManager] IBL 액션 등록 실패 (무시): {e}")
+
         # inventory.md 자동 업데이트
         self._update_inventory()
 
@@ -577,6 +584,13 @@ class PackageManager:
         # 이름 먼저 가져오기
         pkg_info = self._scan_package(src_path)
         pkg_name = pkg_info.get("name", package_id)
+
+        # IBL 액션 자동 해제 (폴더 이동 전에 실행)
+        try:
+            from ibl_action_manager import unregister_actions
+            unregister_actions(package_id)
+        except Exception as e:
+            print(f"[PackageManager] IBL 액션 해제 실패 (무시): {e}")
 
         # 설치 정보 파일 제거
         install_info_path = src_path / ".install_info.json"

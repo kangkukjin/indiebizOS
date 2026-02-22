@@ -1,0 +1,27 @@
+node: forge
+actions:
+  music:
+    description: ABC 악보 작곡 및 오디오 변환
+    router: handler
+    tool: compose_and_export
+    target_key: title
+  abc_to_midi:
+    description: ABC 악보를 MIDI 파일로 변환
+    router: handler
+    tool: abc_to_midi
+    target_key: abc_notation
+  midi_to_audio:
+    description: MIDI를 오디오(WAV/MP3)로 변환
+    router: handler
+    tool: midi_to_audio
+    target_key: midi_path
+  abc_search:
+    description: ABC 악보 검색
+    router: handler
+    tool: search_abc_tunes
+    target_key: query
+  abc_get:
+    description: ABC 악보 상세 조회
+    router: handler
+    tool: get_abc_tune
+    target_key: tune_id

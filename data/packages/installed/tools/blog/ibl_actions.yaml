@@ -1,0 +1,51 @@
+node: source
+actions:
+  rag_search:
+    description: 블로그 RAG 검색 (의미 기반 벡터 검색)
+    router: handler
+    tool: search_blog_rag
+    target_key: query
+  semantic_search:
+    description: 블로그 시맨틱 검색
+    router: handler
+    tool: search_blog_semantic
+    target_key: query
+  rag_content:
+    description: RAG 기반 블로그 글 전문 조회
+    router: handler
+    tool: get_post_content_rag
+    target_key: post_id
+  posts:
+    description: 블로그 글 목록 (handler)
+    router: handler
+    tool: blog_get_posts
+    target_key: category
+  post_detail:
+    description: 블로그 글 상세 (handler)
+    router: handler
+    tool: blog_get_post
+    target_key: post_id
+  blog_stats:
+    description: 블로그 통계 (handler)
+    router: handler
+    tool: blog_stats
+  check_new:
+    description: 새 블로그 글 확인
+    router: handler
+    tool: blog_check_new_posts
+  insight:
+    description: 블로그 인사이트 분석
+    router: handler
+    tool: kinsight
+    target_key: query
+  insight2:
+    description: 블로그 인사이트 분석 v2
+    router: handler
+    tool: kinsight2
+    target_key: query
+  rebuild_index:
+    description: 블로그 검색 인덱스 재구축
+    router: handler
+    tool: rebuild_search_index
+guides:
+- blog/blog_guide.md

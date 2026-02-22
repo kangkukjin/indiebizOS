@@ -2,13 +2,17 @@
 중소벤처기업부 사업공고 조회 모듈
 공공데이터 API 사용
 """
-import urllib.request
-import urllib.parse
-import xml.etree.ElementTree as ET
 import os
+import sys
+import xml.etree.ElementTree as ET
 
-SERVICE_KEY = os.environ.get('DATA_GO_KR_API_KEY', '')
-BASE_URL = 'https://apis.data.go.kr/1421000/mssBizService_v2'
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.api_client import api_call
+from common.auth_manager import check_api_key
 
 def get_tool_definition():
     return {
@@ -45,21 +49,30 @@ def search_mss_biz(keyword: str = "", count: int = 10):
         dict: 조회 결과
     """
     try:
-        endpoint = f"{BASE_URL}/getMssBizList"
+        # API 키 확인
+        ok, err = check_api_key("data_go_kr")
+        if not ok:
+            return {"success": False, "error": err}
 
+        # api_call로 HTTP 요청 (XML 응답이므로 raw_response=True)
         params = {
-            'serviceKey': SERVICE_KEY,
             'numOfRows': str(count),
             'pageNo': '1'
         }
 
-        url = endpoint + '?' + urllib.parse.urlencode(params)
-        req = urllib.request.Request(url)
+        response_text = api_call(
+            "data_go_kr",
+            "/1421000/mssBizService_v2/getMssBizList",
+            params=params,
+            timeout=30,
+            raw_response=True,
+        )
 
-        with urllib.request.urlopen(req, timeout=30) as response:
-            data = response.read().decode('utf-8')
+        # api_call이 에러 dict를 반환한 경우
+        if isinstance(response_text, dict) and "error" in response_text:
+            return {"success": False, "error": response_text["error"]}
 
-        root = ET.fromstring(data)
+        root = ET.fromstring(response_text.encode("utf-8") if isinstance(response_text, str) else response_text)
         result_code = root.find('.//resultCode')
 
         if result_code is None or result_code.text != '000':
@@ -102,11 +115,6 @@ def search_mss_biz(keyword: str = "", count: int = 10):
             "data": announcements
         }
 
-    except urllib.error.HTTPError as e:
-        return {
-            "success": False,
-            "error": f"HTTP Error {e.code}: {e.reason}"
-        }
     except Exception as e:
         return {
             "success": False,

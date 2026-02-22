@@ -9,10 +9,17 @@ import re
 import sys
 import webbrowser
 import importlib.util
-from html import unescape
 from datetime import datetime
 from urllib.parse import quote_plus
 from pathlib import Path
+
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.html_utils import clean_html
+from common.response_formatter import format_json
 
 try:
     import feedparser
@@ -35,15 +42,7 @@ def load_module(module_name):
 
 
 # ============== 뉴스 검색 관련 함수 ==============
-
-def clean_html(text: str) -> str:
-    """HTML 태그 제거 및 엔티티 디코딩"""
-    if not text:
-        return ""
-    text = re.sub(r'<[^>]+>', '', text)
-    text = unescape(text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
+# clean_html은 common.html_utils에서 임포트
 
 
 def search_google_news(query: str, count: int = 10, language: str = "ko") -> dict:
@@ -529,33 +528,33 @@ def execute(tool_name: str, params: dict, project_path: str = None):
         max_length = params.get("max_length", 10000)
 
         if not url:
-            return json.dumps({"success": False, "error": "URL이 제공되지 않았습니다."}, ensure_ascii=False)
+            return format_json({"success": False, "error": "URL이 제공되지 않았습니다."})
 
         try:
             tool_webcrawl = load_module("tool_webcrawl")
             result = tool_webcrawl.crawl_website(url, max_length)
-            return json.dumps(result, ensure_ascii=False, indent=2)
+            return format_json(result)
         except Exception as e:
-            return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
+            return format_json({"success": False, "error": str(e)})
 
     # Google News 검색
     elif tool_name == "google_news_search":
         query = params.get("query", "")
         if not query:
-            return json.dumps({"success": False, "error": "검색어(query)가 필요합니다."}, ensure_ascii=False)
+            return format_json({"success": False, "error": "검색어(query)가 필요합니다."})
 
         result = search_google_news(
             query=query,
             count=params.get("count", 10),
             language=params.get("language", "ko")
         )
-        return json.dumps(result, ensure_ascii=False, indent=2)
+        return format_json(result)
 
     # 신문 생성
     elif tool_name == "generate_newspaper":
         keywords = params.get("keywords", [])
         if not keywords:
-            return json.dumps({"success": False, "error": "키워드(keywords)가 필요합니다."}, ensure_ascii=False)
+            return format_json({"success": False, "error": "키워드(keywords)가 필요합니다."})
 
         result = generate_newspaper(
             keywords=keywords,
@@ -563,7 +562,7 @@ def execute(tool_name: str, params: dict, project_path: str = None):
             exclude_sources=params.get("exclude_sources", []),
             project_path=project_path or "."
         )
-        return json.dumps(result, ensure_ascii=False, indent=2)
+        return format_json(result)
 
     # 사이트 런처
     elif tool_name == "launch_sites":
@@ -573,7 +572,7 @@ def execute(tool_name: str, params: dict, project_path: str = None):
         return launch_sites(action, name, url, project_path or ".")
 
     else:
-        return json.dumps({
+        return format_json({
             "success": False,
             "error": f"Unknown tool: {tool_name}"
-        }, ensure_ascii=False)
+        })

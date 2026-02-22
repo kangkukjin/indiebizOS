@@ -1,0 +1,7 @@
+name: "뉴스 신문 만들기"
+description: |
+  generate_newspaper 도구를 대체하는 워크플로우.
+  1단계: 여러 키워드로 뉴스 병렬 수집 (web:news)
+  2단계: 에이전트가 결과를 모아 HTML 신문으로 포매팅 (에이전트 본연의 능력)
+  3단계: 결과를 HTML로 저장 (output:file)
+pipeline: '[web:news]("{{keyword1}}") & [web:news]("{{keyword2}}") & [web:news]("{{keyword3}}")'

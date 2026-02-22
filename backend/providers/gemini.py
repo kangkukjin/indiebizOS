@@ -32,8 +32,11 @@ class GeminiProvider(BaseProvider):
     """
 
     # 도구 호출 제한
-    MAX_TOOL_ITERATIONS = 50  # 최대 도구 호출 라운드
-    MAX_CONSECUTIVE_TOOL_ONLY = 50  # 텍스트 없이 도구만 연속 호출 허용 횟수
+    MAX_TOOL_ITERATIONS = 70  # 최대 도구 호출 라운드
+    MAX_CONSECUTIVE_TOOL_ONLY = 70  # 텍스트 없이 도구만 연속 호출 허용 횟수
+
+    # Gemini 2.5: 1M 토큰 컨텍스트 → 80% = 800K 토큰 → ~3,200,000자
+    COMPACTION_CHAR_THRESHOLD = 3200000
 
     # 강제 프롬프트 (설정 가능)
     FORCE_RESPONSE_PROMPT = "도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
@@ -49,6 +52,7 @@ class GeminiProvider(BaseProvider):
         super().__init__(**kwargs)
         self._genai_client = None
         self._genai_types = None
+        self._compaction_summary = None  # Rolling Compaction 요약 저장
 
     def init_client(self) -> bool:
         """Gemini 클라이언트 초기화"""
@@ -147,6 +151,10 @@ class GeminiProvider(BaseProvider):
                 return
 
             print(f"[Gemini] 라운드 {iteration + 1}/{self.MAX_TOOL_ITERATIONS} 시작")
+
+            # Rolling Compaction: 컨텍스트가 임계값을 넘으면 요약으로 압축
+            if iteration > 0 and self._should_compact(contents, iteration):
+                contents = self._compact_gemini(contents, config)
 
             # Session Pruning: 오래된 도구 결과 마스킹 (iteration > 0일 때만)
             if iteration > 0:
@@ -543,6 +551,96 @@ class GeminiProvider(BaseProvider):
             )
 
         return gemini_functions
+
+    def _compact_gemini(self, contents: List, config) -> List:
+        """Rolling Compaction: 오래된 대화를 AI 요약으로 압축
+
+        1. 오래된 메시지를 텍스트로 추출
+        2. AI에게 요약 요청 (비스트리밍)
+        3. 요약 메시지 + 최근 메시지로 교체
+        """
+        types = self._genai_types
+
+        # 최근 메시지 수: KEEP_RECENT_TOOL_ROUNDS * 2 (tool_call + tool_result 쌍)
+        keep_recent = self.KEEP_RECENT_TOOL_ROUNDS * 2 + 2  # +2는 여유분
+
+        summary_text, recent_messages = self._extract_text_for_summary(contents, keep_recent)
+        if not summary_text:
+            return contents
+
+        print(f"[Compaction][Gemini] 요약 시작: {len(summary_text):,}자 → AI 요약 요청")
+
+        # 이전 요약이 있으면 포함
+        prev_summary = ""
+        if self._compaction_summary:
+            prev_summary = f"\n\n[이전 요약]\n{self._compaction_summary}\n\n"
+
+        # 요약 요청 (비스트리밍, 도구 없음)
+        try:
+            summary_config = types.GenerateContentConfig(
+                system_instruction=self.COMPACTION_PROMPT,
+                temperature=0.3  # 사실적 요약을 위해 낮은 temperature
+            )
+
+            summary_request = f"{prev_summary}[작업 기록]\n{summary_text}"
+            # 요약 입력도 너무 길면 자르기
+            if len(summary_request) > 100000:
+                summary_request = summary_request[:50000] + "\n\n... (중략) ...\n\n" + summary_request[-50000:]
+
+            response = self._genai_client.models.generate_content(
+                model=self.model,
+                contents=summary_request,
+                config=summary_config
+            )
+
+            summary = response.text if response.text else ""
+
+            # <summary> 태그 추출
+            import re
+            summary_match = re.search(r'<summary>(.*?)</summary>', summary, re.DOTALL)
+            if summary_match:
+                summary = summary_match.group(1).strip()
+
+            if not summary:
+                print(f"[Compaction][Gemini] 요약 생성 실패, 프루닝으로 대체")
+                return contents
+
+            self._compaction_summary = summary
+            print(f"[Compaction][Gemini] 요약 완료: {len(summary):,}자")
+
+            # 새 contents 구성: [요약 메시지] + [최근 메시지들]
+            compacted = []
+
+            # 요약을 user 메시지로 삽입 (model이 참조할 수 있도록)
+            summary_content = types.Content(
+                role="user",
+                parts=[types.Part.from_text(
+                    text=f"<compaction_summary>\n{summary}\n</compaction_summary>\n\n위 요약은 이전 작업 기록의 압축본입니다. 이 맥락을 유지하면서 작업을 계속하세요."
+                )]
+            )
+            compacted.append(summary_content)
+
+            # model의 확인 응답 (Gemini는 user→model 교차 필수)
+            ack_content = types.Content(
+                role="model",
+                parts=[types.Part.from_text(
+                    text="이전 작업 요약을 확인했습니다. 요약된 맥락을 유지하며 작업을 계속하겠습니다."
+                )]
+            )
+            compacted.append(ack_content)
+
+            # 최근 메시지 추가
+            compacted.extend(recent_messages)
+
+            before_size = self._estimate_content_size(contents)
+            after_size = self._estimate_content_size(compacted)
+            print(f"[Compaction][Gemini] 크기 변화: {before_size:,}자 → {after_size:,}자 ({(1 - after_size/before_size)*100:.0f}% 감소)")
+
+            return compacted
+
+        except Exception as e:
+            print(f"[Compaction][Gemini] 요약 생성 예외: {e}, 프루닝으로 대체")
+            return contents
 
     def _convert_json_schema(self, schema: dict) -> Any:
         """JSON Schema를 Gemini Schema로 재귀 변환"""

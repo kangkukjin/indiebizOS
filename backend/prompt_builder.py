@@ -55,6 +55,10 @@ class PromptBuilder:
               agent_count: int = 1,
               git_enabled: bool = False,
               delegated_from_system_ai: bool = False,
+              ibl_only: bool = False,
+              allowed_nodes: list = None,
+              project_path: str = None,
+              agent_id: str = None,
               role_prompt: str = "",
               additional_context: str = "") -> str:
         """시스템 프롬프트 조합
@@ -63,6 +67,10 @@ class PromptBuilder:
             agent_count: 프로젝트 내 에이전트 수 (2 이상이면 위임 프롬프트 포함)
             git_enabled: Git 관련 프롬프트 포함 여부
             delegated_from_system_ai: 시스템 AI로부터 위임받은 경우 (파일 경로 원칙 포함)
+            ibl_only: IBL 전용 모드 (execute_ibl만 사용)
+            allowed_nodes: IBL 노드 접근 제어
+            project_path: 프로젝트 경로 (동료 에이전트 탐색용)
+            agent_id: 현재 에이전트 ID (환경에서 자신 제외용)
             role_prompt: 에이전트 역할 프롬프트
             additional_context: 추가 컨텍스트 (프로젝트 설정 등)
 
@@ -72,7 +80,7 @@ class PromptBuilder:
         parts = []
 
         # 1. 기본 프롬프트 (항상 포함)
-        base = self._load_file("base_prompt_v3.md")
+        base = self._load_file("base_prompt_v4.md")
         if base:
             parts.append(base)
 
@@ -88,11 +96,18 @@ class PromptBuilder:
             if delegation:
                 parts.append(delegation)
 
-        # 4. 역할 프롬프트
+        # 4. IBL 환경 프롬프트 (Phase 16: 단일 경로)
+        if ibl_only:
+            from ibl_access import build_environment
+            ibl = build_environment(allowed_nodes, project_path, agent_id)
+            if ibl:
+                parts.append(ibl)
+
+        # 5. 역할 프롬프트
         if role_prompt:
             parts.append(f"\n# Role\n{role_prompt}")
 
-        # 5. 추가 컨텍스트
+        # 6. 추가 컨텍스트
         if additional_context:
             parts.append(f"\n{additional_context}")
 
@@ -115,11 +130,16 @@ def build_agent_prompt(
     agent_count: int = 1,
     agent_notes: str = "",
     git_enabled: bool = False,
-    delegated_from_system_ai: bool = False
+    delegated_from_system_ai: bool = False,
+    ibl_only: bool = True,
+    allowed_nodes: list = None,
+    project_path: str = None,
+    agent_id: str = None,
+    **kwargs  # ibl_enabled 등 하위 호환 파라미터 무시
 ) -> str:
     """프로젝트 에이전트용 시스템 프롬프트 생성
 
-    구조: base_prompt_v2.md + (조건부 위임) + 개별역할 + 영구메모
+    구조: base_prompt_v4.md + (조건부 위임) + IBL 환경 + 개별역할 + 영구메모
 
     Args:
         agent_name: 에이전트 이름
@@ -128,6 +148,10 @@ def build_agent_prompt(
         agent_notes: 영구메모
         git_enabled: Git 관련 프롬프트 포함 여부
         delegated_from_system_ai: 시스템 AI로부터 위임받은 경우
+        ibl_only: IBL 전용 모드 (기본값 True, Phase 16 이후 모든 에이전트)
+        allowed_nodes: IBL 노드 접근 제어 리스트
+        project_path: 프로젝트 경로 (동료 에이전트 탐색용)
+        agent_id: 현재 에이전트 ID (환경에서 자신 제외용)
 
     Returns:
         조합된 시스템 프롬프트
@@ -149,6 +173,10 @@ def build_agent_prompt(
         agent_count=agent_count,
         git_enabled=git_enabled,
         delegated_from_system_ai=delegated_from_system_ai,
+        ibl_only=ibl_only,
+        allowed_nodes=allowed_nodes,
+        project_path=project_path,
+        agent_id=agent_id,
         role_prompt=role_prompt,
         additional_context=additional_context
     )
@@ -182,6 +210,12 @@ def build_system_ai_prompt(
     )
 
     parts = [prompt]
+
+    # Phase 17: IBL 환경 주입 (시스템 AI는 모든 노드 접근 가능)
+    from ibl_access import build_environment
+    ibl_env = build_environment(allowed_nodes=None)  # None = 전체 노드
+    if ibl_env:
+        parts.append(ibl_env)
 
     # 시스템 AI 전용 위임 프롬프트 추가
     delegation_prompt = builder._load_file("fragments/10_system_ai_delegation.md")

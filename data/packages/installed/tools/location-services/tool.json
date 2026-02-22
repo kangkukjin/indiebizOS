@@ -3,7 +3,6 @@
   "name": "Location Services",
   "description": "위치 기반 서비스 도구. 날씨/대기질 조회, 맛집 검색, 자동차 길찾기, 지도 표시, 여행 정보(항공권/호텔/관광지) 검색을 제공합니다.",
   "version": "1.3.0",
-  "guide_file": "location_services_guide.md",
   "tools": [
     {
       "name": "get_api_ninjas_data",
@@ -11,10 +10,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "endpoint": { "type": "string", "description": "데이터 종류 (weather, airquality, geocoding, reversegeocoding, recipe, cocktail)" },
-          "params": { "type": "object", "description": "검색 매개변수" }
+          "endpoint": {
+            "type": "string",
+            "description": "데이터 종류 (weather, airquality, geocoding, reversegeocoding, recipe, cocktail)"
+          },
+          "params": {
+            "type": "object",
+            "description": "검색 매개변수"
+          }
         },
-        "required": ["endpoint"]
+        "required": [
+          "endpoint"
+        ]
       }
     },
     {
@@ -23,10 +30,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "endpoint": { "type": "string", "description": "조회 유형" },
-          "params": { "type": "object", "description": "검색 매개변수" }
+          "endpoint": {
+            "type": "string",
+            "description": "조회 유형"
+          },
+          "params": {
+            "type": "object",
+            "description": "검색 매개변수"
+          }
         },
-        "required": ["endpoint", "params"]
+        "required": [
+          "endpoint",
+          "params"
+        ]
       }
     },
     {
@@ -35,12 +51,26 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "query": { "type": "string", "description": "검색 키워드 (예: '강남 파스타')" },
-          "x": { "type": "string", "description": "중심 경도 (선택)" },
-          "y": { "type": "string", "description": "중심 위도 (선택)" },
-          "radius": { "type": "integer", "description": "검색 반경 미터 (기본 5000, 최대 20000)" }
+          "query": {
+            "type": "string",
+            "description": "검색 키워드 (예: '강남 파스타')"
+          },
+          "x": {
+            "type": "string",
+            "description": "중심 경도 (선택)"
+          },
+          "y": {
+            "type": "string",
+            "description": "중심 위도 (선택)"
+          },
+          "radius": {
+            "type": "integer",
+            "description": "검색 반경 미터 (기본 5000, 최대 20000)"
+          }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -49,16 +79,48 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "origin": { "type": "string", "description": "출발지 좌표 (경도,위도)" },
-          "destination": { "type": "string", "description": "목적지 좌표 (경도,위도)" },
-          "waypoints": { "type": "string", "description": "경유지 (|로 구분, 최대 5개)" },
-          "priority": { "type": "string", "enum": ["RECOMMEND", "TIME", "DISTANCE"], "description": "경로 우선순위" },
-          "avoid": { "type": "string", "description": "회피 옵션 (toll, motorway 등)" },
-          "alternatives": { "type": "boolean", "description": "대안 경로 제공" },
-          "summary": { "type": "boolean", "description": "요약만 반환 (지도 생략)" },
-          "generate_map": { "type": "boolean", "description": "HTML 지도 생성 (기본 true)" }
+          "origin": {
+            "type": "string",
+            "description": "출발지 좌표 (경도,위도)"
+          },
+          "destination": {
+            "type": "string",
+            "description": "목적지 좌표 (경도,위도)"
+          },
+          "waypoints": {
+            "type": "string",
+            "description": "경유지 (|로 구분, 최대 5개)"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "RECOMMEND",
+              "TIME",
+              "DISTANCE"
+            ],
+            "description": "경로 우선순위"
+          },
+          "avoid": {
+            "type": "string",
+            "description": "회피 옵션 (toll, motorway 등)"
+          },
+          "alternatives": {
+            "type": "boolean",
+            "description": "대안 경로 제공"
+          },
+          "summary": {
+            "type": "boolean",
+            "description": "요약만 반환 (지도 생략)"
+          },
+          "generate_map": {
+            "type": "boolean",
+            "description": "HTML 지도 생성 (기본 true)"
+          }
         },
-        "required": ["origin", "destination"]
+        "required": [
+          "origin",
+          "destination"
+        ]
       }
     },
     {
@@ -67,11 +129,26 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "query": { "type": "string", "description": "장소명 (예: '강남역')" },
-          "lat": { "type": "number", "description": "위도 (직접 지정시)" },
-          "lng": { "type": "number", "description": "경도 (직접 지정시)" },
-          "zoom": { "type": "integer", "description": "줌 레벨 (기본 15, 1-18)" },
-          "markers": { "type": "array", "description": "추가 마커 [{name, lat, lng}, ...]" }
+          "query": {
+            "type": "string",
+            "description": "장소명 (예: '강남역')"
+          },
+          "lat": {
+            "type": "number",
+            "description": "위도 (직접 지정시)"
+          },
+          "lng": {
+            "type": "number",
+            "description": "경도 (직접 지정시)"
+          },
+          "zoom": {
+            "type": "integer",
+            "description": "줌 레벨 (기본 15, 1-18)"
+          },
+          "markers": {
+            "type": "array",
+            "description": "추가 마커 [{name, lat, lng}, ...]"
+          }
         }
       }
     }

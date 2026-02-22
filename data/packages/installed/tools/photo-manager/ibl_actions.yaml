@@ -1,0 +1,26 @@
+node: source
+actions:
+  scan:
+    description: 폴더의 사진/동영상 메타데이터 수집 (인덱싱)
+    target_description: 스캔할 폴더 경로
+    router: handler
+    tool: scan_photos
+    target_key: path
+  gallery:
+    description: 스캔된 사진/동영상 갤러리 조회 (페이지네이션, 필터)
+    target_description: 폴더 경로
+    router: handler
+    tool: get_gallery
+    target_key: path
+  duplicates:
+    description: 중복 사진/동영상 탐지 (MD5 기반)
+    target_description: 폴더 경로
+    router: handler
+    tool: find_duplicates
+    target_key: path
+  photo_manager:
+    description: Photo Manager GUI 실행
+    target_description: 폴더 경로 (선택)
+    router: handler
+    tool: open_photo_manager
+    target_key: path

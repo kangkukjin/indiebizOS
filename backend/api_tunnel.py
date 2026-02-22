@@ -145,11 +145,12 @@ def start_tunnel(tunnel_name: str, config_path: str = None) -> dict:
         cmd.extend(["tunnel", "run", tunnel_name])
 
         # 백그라운드 프로세스로 실행
+        # start_new_session 사용하지 않음 → 부모(FastAPI)와 같은 프로세스 그룹
+        # → Ctrl+C(SIGINT) 시 cloudflared도 함께 시그널 수신하여 종료됨
         _tunnel_process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            start_new_session=True  # 부모 프로세스와 분리
         )
 
         # 잠시 대기 후 상태 확인

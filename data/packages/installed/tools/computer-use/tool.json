@@ -3,7 +3,6 @@
   "name": "Computer Use",
   "description": "macOS 데스크톱 자동화. AI가 화면을 직접 보고 마우스/키보드를 조작합니다. 모든 좌표는 1280x800 가상 해상도 기준이며, 실제 해상도로 자동 변환됩니다.",
   "version": "1.0.0",
-  "guide_file": "guide.md",
   "tools": [
     {
       "name": "computer_screenshot",
@@ -15,12 +14,29 @@
             "type": "object",
             "description": "캡처할 영역 (생략 시 전체 화면). 좌표는 1280x800 기준.",
             "properties": {
-              "x": {"type": "integer", "description": "시작 X 좌표"},
-              "y": {"type": "integer", "description": "시작 Y 좌표"},
-              "width": {"type": "integer", "description": "너비"},
-              "height": {"type": "integer", "description": "높이"}
+              "x": {
+                "type": "integer",
+                "description": "시작 X 좌표"
+              },
+              "y": {
+                "type": "integer",
+                "description": "시작 Y 좌표"
+              },
+              "width": {
+                "type": "integer",
+                "description": "너비"
+              },
+              "height": {
+                "type": "integer",
+                "description": "높이"
+              }
             },
-            "required": ["x", "y", "width", "height"]
+            "required": [
+              "x",
+              "y",
+              "width",
+              "height"
+            ]
           }
         }
       }
@@ -31,11 +47,21 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "x": {"type": "integer", "description": "클릭할 X 좌표 (1280x800 기준)"},
-          "y": {"type": "integer", "description": "클릭할 Y 좌표 (1280x800 기준)"},
+          "x": {
+            "type": "integer",
+            "description": "클릭할 X 좌표 (1280x800 기준)"
+          },
+          "y": {
+            "type": "integer",
+            "description": "클릭할 Y 좌표 (1280x800 기준)"
+          },
           "button": {
             "type": "string",
-            "enum": ["left", "right", "middle"],
+            "enum": [
+              "left",
+              "right",
+              "middle"
+            ],
             "default": "left",
             "description": "마우스 버튼"
           },
@@ -50,7 +76,10 @@
             "description": "클릭 후 자동으로 스크린샷을 캡처하여 반환"
           }
         },
-        "required": ["x", "y"]
+        "required": [
+          "x",
+          "y"
+        ]
       }
     },
     {
@@ -59,7 +88,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "text": {"type": "string", "description": "입력할 텍스트"},
+          "text": {
+            "type": "string",
+            "description": "입력할 텍스트"
+          },
           "interval": {
             "type": "number",
             "default": 0.02,
@@ -71,7 +103,9 @@
             "description": "입력 후 스크린샷을 캡처하여 반환"
           }
         },
-        "required": ["text"]
+        "required": [
+          "text"
+        ]
       }
     },
     {
@@ -90,7 +124,9 @@
             "description": "키 입력 후 스크린샷을 캡처하여 반환"
           }
         },
-        "required": ["key"]
+        "required": [
+          "key"
+        ]
       }
     },
     {
@@ -99,15 +135,24 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "x": {"type": "integer", "description": "X 좌표 (1280x800 기준)"},
-          "y": {"type": "integer", "description": "Y 좌표 (1280x800 기준)"},
+          "x": {
+            "type": "integer",
+            "description": "X 좌표 (1280x800 기준)"
+          },
+          "y": {
+            "type": "integer",
+            "description": "Y 좌표 (1280x800 기준)"
+          },
           "duration": {
             "type": "number",
             "default": 0.3,
             "description": "이동 소요 시간 (초)"
           }
         },
-        "required": ["x", "y"]
+        "required": [
+          "x",
+          "y"
+        ]
       }
     },
     {
@@ -116,10 +161,22 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "start_x": {"type": "integer", "description": "시작 X 좌표"},
-          "start_y": {"type": "integer", "description": "시작 Y 좌표"},
-          "end_x": {"type": "integer", "description": "끝 X 좌표"},
-          "end_y": {"type": "integer", "description": "끝 Y 좌표"},
+          "start_x": {
+            "type": "integer",
+            "description": "시작 X 좌표"
+          },
+          "start_y": {
+            "type": "integer",
+            "description": "시작 Y 좌표"
+          },
+          "end_x": {
+            "type": "integer",
+            "description": "끝 X 좌표"
+          },
+          "end_y": {
+            "type": "integer",
+            "description": "끝 Y 좌표"
+          },
           "duration": {
             "type": "number",
             "default": 0.5,
@@ -127,7 +184,10 @@
           },
           "button": {
             "type": "string",
-            "enum": ["left", "right"],
+            "enum": [
+              "left",
+              "right"
+            ],
             "default": "left",
             "description": "마우스 버튼"
           },
@@ -137,7 +197,12 @@
             "description": "드래그 후 스크린샷을 캡처하여 반환"
           }
         },
-        "required": ["start_x", "start_y", "end_x", "end_y"]
+        "required": [
+          "start_x",
+          "start_y",
+          "end_x",
+          "end_y"
+        ]
       }
     },
     {
@@ -146,11 +211,22 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "x": {"type": "integer", "description": "스크롤할 X 좌표 (생략 시 현재 커서 위치)"},
-          "y": {"type": "integer", "description": "스크롤할 Y 좌표 (생략 시 현재 커서 위치)"},
+          "x": {
+            "type": "integer",
+            "description": "스크롤할 X 좌표 (생략 시 현재 커서 위치)"
+          },
+          "y": {
+            "type": "integer",
+            "description": "스크롤할 Y 좌표 (생략 시 현재 커서 위치)"
+          },
           "direction": {
             "type": "string",
-            "enum": ["up", "down", "left", "right"],
+            "enum": [
+              "up",
+              "down",
+              "left",
+              "right"
+            ],
             "default": "down",
             "description": "스크롤 방향"
           },

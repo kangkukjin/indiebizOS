@@ -1,0 +1,44 @@
+node: interface
+actions:
+  desktop_screenshot:
+    description: macOS 화면 캡처 (전체 또는 영역 지정)
+    router: handler
+    tool: computer_screenshot
+  desktop_click:
+    description: macOS 좌표 클릭 (left/right/middle, 더블클릭 가능)
+    router: handler
+    tool: computer_click
+  desktop_type:
+    description: macOS 텍스트 입력
+    target_description: 입력할 텍스트
+    router: handler
+    tool: computer_type
+    target_key: text
+  desktop_key:
+    description: 'macOS 키보드 키 입력 (단축키 포함, 예: cmd+c, enter)'
+    target_description: 키 이름
+    router: handler
+    tool: computer_key
+    target_key: key
+  mouse_move:
+    description: 마우스 커서 이동
+    router: handler
+    tool: computer_mouse_move
+  desktop_drag:
+    description: macOS 드래그 (시작점→끝점)
+    router: handler
+    tool: computer_drag
+  desktop_scroll:
+    description: macOS 스크롤 (up/down/left/right)
+    router: handler
+    tool: computer_scroll
+  cursor_position:
+    description: 현재 커서 위치 확인
+    router: handler
+    tool: computer_cursor_position
+  desktop_screen_info:
+    description: macOS 화면 해상도 및 스케일 정보
+    router: handler
+    tool: computer_screen_info
+guides:
+- computer-use/guide.md

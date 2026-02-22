@@ -1,0 +1,62 @@
+node: system
+actions:
+  time:
+    description: 현재 시간 조회
+    router: handler
+    tool: get_current_time
+  open_url:
+    description: URL을 기본 브라우저로 열기
+    router: handler
+    tool: open_in_browser
+    target_key: url
+    phase: 5
+  read:
+    description: 파일 읽기
+    router: handler
+    tool: read_file
+    target_key: path
+  write:
+    description: 파일 쓰기
+    router: handler
+    tool: write_file
+    target_key: path
+  list:
+    description: 디렉토리 내용 조회
+    router: handler
+    tool: list_directory
+    target_key: path
+  find:
+    description: 파일 검색 (glob 패턴)
+    router: handler
+    tool: glob_files
+    target_key: pattern
+  grep:
+    description: 파일 내용 검색
+    router: handler
+    tool: grep_files
+    target_key: pattern
+  edit:
+    description: 파일 부분 편집 (old_string → new_string 교체)
+    router: handler
+    tool: edit_file
+    target_key: path
+  copy:
+    description: 파일/폴더 복사
+    router: handler
+    tool: copy_path
+    target_key: source
+  move:
+    description: 파일/폴더 이동 또는 이름 변경
+    router: handler
+    tool: move_path
+    target_key: source
+  delete:
+    description: 파일/폴더 삭제
+    router: handler
+    tool: delete_path
+    target_key: path
+  read_pdf:
+    description: PDF 파일 읽기 (텍스트 추출)
+    router: handler
+    tool: read_pdf
+    target_key: path

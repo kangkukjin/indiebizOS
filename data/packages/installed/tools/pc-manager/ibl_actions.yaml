@@ -1,0 +1,39 @@
+node: system
+actions:
+  scan:
+    description: 디스크/볼륨 스캔 (인덱싱)
+    target_description: 스캔 경로
+    router: handler
+    tool: scan_storage
+    target_key: path
+  fs_query:
+    description: 파일 검색 (이름, 확장자, 크기)
+    router: handler
+    tool: query_storage
+    target_key: search_term
+  summary:
+    description: 저장소 사용량 요약
+    router: handler
+    tool: get_storage_summary
+  volumes:
+    description: 마운트된 볼륨 목록
+    router: handler
+    tool: list_volumes
+  annotate:
+    description: 폴더에 메모/주석 추가
+    target_description: 폴더 경로
+    router: handler
+    tool: annotate_folder
+    target_key: folder_path
+  annotations:
+    description: 폴더 주석 조회
+    router: handler
+    tool: get_folder_annotations
+  explorer:
+    description: 파일 탐색기에서 열기 (Finder)
+    target_description: 경로
+    router: handler
+    tool: open_file_explorer
+    target_key: path
+guides:
+- pc-manager/pc_manager_guide.md

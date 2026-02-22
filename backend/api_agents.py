@@ -40,7 +40,8 @@ class AgentUpdate(BaseModel):
     model: str = "claude-sonnet-4-20250514"
     api_key: str = None
     role: str = None
-    allowed_tools: list = None
+    allowed_tools: list = None  # deprecated (하위 호환)
+    allowed_nodes: list = None  # Phase 16: IBL 노드 기반
     channel: str = None
     email: str = None
     channels: list = None
@@ -414,7 +415,11 @@ async def create_agent(project_id: str, agent_data: AgentUpdate):
         if agent_data.api_key:
             new_agent["ai"]["api_key"] = agent_data.api_key
 
-        if agent_data.allowed_tools is not None:
+        # Phase 16: allowed_nodes 우선, 하위 호환으로 allowed_tools도 지원
+        if agent_data.allowed_nodes is not None:
+            new_agent["allowed_nodes"] = agent_data.allowed_nodes
+            new_agent["ibl_only"] = True
+        elif agent_data.allowed_tools is not None:
             new_agent["allowed_tools"] = agent_data.allowed_tools
 
         if agent_data.type == "external" and agent_data.channel:
@@ -501,7 +506,12 @@ async def update_agent(project_id: str, agent_id: str, agent_data: AgentUpdate):
                 if agent_data.api_key:
                     agent["ai"]["api_key"] = agent_data.api_key
 
-                if agent_data.allowed_tools is not None:
+                # Phase 16: allowed_nodes 우선, 하위 호환으로 allowed_tools도 지원
+                if agent_data.allowed_nodes is not None:
+                    agent["allowed_nodes"] = agent_data.allowed_nodes
+                    agent["ibl_only"] = True
+                    agent.pop("allowed_tools", None)  # 구 필드 제거
+                elif agent_data.allowed_tools is not None:
                     agent["allowed_tools"] = agent_data.allowed_tools
 
                 if agent_data.type == "external" and agent_data.channel:

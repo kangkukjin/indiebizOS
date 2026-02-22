@@ -1,0 +1,44 @@
+node: source
+actions:
+  nearby:
+    description: 가까운 CCTV 찾기
+    router: handler
+    tool: get_nearby_cctv
+  by_name:
+    description: CCTV/웹캠 통합 검색+자동캡처 (→ cctv_search 동일). auto_capture.file_path로 이미지
+      분석 가능. 브라우저 접속 불필요.
+    target_description: 검색 키워드 (한라산, 맨하탄, 경부 등)
+    router: handler
+    tool: search_cctv
+    target_key: query
+  open:
+    description: CCTV 영상을 브라우저에서 열기
+    target_description: 이름 또는 URL
+    router: handler
+    tool: open_cctv
+    target_key: name
+  webcam:
+    description: 전세계 웹캠 검색 (Windy)
+    router: handler
+    tool: search_webcam
+  webcam_nearby:
+    description: 가까운 웹캠 찾기
+    router: handler
+    tool: get_nearby_webcam
+  cctv_capture:
+    description: CCTV/웹캠 프레임 캡처 (이미지 저장)
+    target_description: 영상/이미지 URL
+    router: handler
+    tool: capture_cctv
+    target_key: url
+  sources:
+    description: 사용 가능한 CCTV/웹캠 소스 및 상태 확인
+    router: handler
+    tool: list_cctv_sources
+  cctv_search:
+    description: CCTV/웹캠 통합 검색+자동캡처 (ITS교통→Windy웹캠 폴백, 첫 결과 이미지 자동저장). auto_capture.file_path로
+      이미지 분석 가능. 브라우저 접속 불필요.
+    target_description: 검색 키워드 (한라산, 맨하탄, 해운대, 경부 등)
+    router: handler
+    tool: search_cctv
+    target_key: query

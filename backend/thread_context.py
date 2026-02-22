@@ -93,6 +93,18 @@ def clear_called_agent():
     _thread_local.called_agent = False
 
 
+# ============ Allowed Nodes (IBL Node Access Control) ============
+
+def set_allowed_nodes(allowed):
+    """현재 스레드의 allowed_nodes 설정 (ibl_only 모드용)"""
+    _thread_local.allowed_nodes = allowed
+
+
+def get_allowed_nodes():
+    """현재 스레드의 allowed_nodes 가져오기. None이면 제한 없음."""
+    return getattr(_thread_local, 'allowed_nodes', None)
+
+
 # ============ 컨텍스트 일괄 관리 ============
 
 def clear_all_context():
@@ -102,6 +114,7 @@ def clear_all_context():
     _thread_local.project_id = None
     _thread_local.task_id = None
     _thread_local.called_agent = False
+    _thread_local.allowed_nodes = None
 
 
 def get_context_summary() -> dict:
@@ -112,5 +125,6 @@ def get_context_summary() -> dict:
         "project_id": get_current_project_id(),
         "registry_key": get_current_registry_key(),
         "task_id": get_current_task_id(),
-        "called_agent": did_call_agent()
+        "called_agent": did_call_agent(),
+        "allowed_nodes": get_allowed_nodes()
     }

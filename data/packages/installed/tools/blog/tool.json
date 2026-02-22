@@ -2,19 +2,26 @@
   "id": "blog",
   "name": "Blog Tools",
   "description": "개인 블로그(K의 생각) RAG 검색 및 분석 도구. 티스토리 블로그 글 검색, 전문 조회, 카테고리별 필터링, 글 기반 인사이트 생성 기능을 제공합니다. 과거 글 검색, 블로그 트렌드 분석에 활용.",
-  "version": "2.2.0",
-  "guide_file": "blog_guide.md",
+  "version": "3.0.0",
   "tools": [
     {
       "name": "search_blog_rag",
-      "description": "내 티스토리 블로그 'K의 생각'에서 RAG 검색을 수행합니다.\n\n## 중요\n- 이 도구는 내 블로그 검색 전용입니다\n- 일반 웹/뉴스 검색은 ddgs_search 사용\n\n## 사용 시점\n- 내가 쓴 글에서 정보 찾기\n- 과거에 작성한 내용 확인\n- 블로그 글 기반 대화\n\n## 반환 정보\n- 관련 포스트 목록 (최대 5개)\n- 제목, 내용 미리보기, 관련도 점수",
+      "description": "내 티스토리 블로그 'K의 생각'에서 하이브리드 RAG 검색을 수행합니다. 시맨틱(의미 기반) + BM25(키워드) 결합 검색.\n\n## 중요\n- 이 도구는 내 블로그 검색 전용입니다\n- 일반 웹/뉴스 검색은 ddgs_search 사용\n- sentence-transformers 미설치 시 키워드 검색만 동작\n\n## 사용 시점\n- 내가 쓴 글에서 정보 찾기\n- 과거에 작성한 내용 확인\n- 블로그 글 기반 대화\n\n## 반환 정보\n- 관련 포스트 목록 (최대 5개)\n- 제목, 내용 미리보기, 관련도 점수",
       "input_schema": {
         "type": "object",
         "properties": {
-          "query": { "type": "string", "description": "검색 질문/키워드" },
-          "limit": { "type": "integer", "description": "최대 결과 수 (기본 5)" }
+          "query": {
+            "type": "string",
+            "description": "검색 질문/키워드"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "최대 결과 수 (기본 5)"
+          }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -23,9 +30,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "post_id": { "type": "string", "description": "포스트 ID 또는 제목 일부" }
+          "post_id": {
+            "type": "string",
+            "description": "포스트 ID 또는 제목 일부"
+          }
         },
-        "required": ["post_id"]
+        "required": [
+          "post_id"
+        ]
       }
     },
     {
@@ -42,11 +54,26 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "count": { "type": "integer", "description": "글 수 (기본 20, 최대 100)" },
-          "offset": { "type": "integer", "description": "시작 위치 (페이징)" },
-          "category": { "type": "string", "description": "카테고리 필터" },
-          "with_summary": { "type": "boolean", "description": "요약 포함 여부" },
-          "only_without_summary": { "type": "boolean", "description": "요약 없는 글만" }
+          "count": {
+            "type": "integer",
+            "description": "글 수 (기본 20, 최대 100)"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "시작 위치 (페이징)"
+          },
+          "category": {
+            "type": "string",
+            "description": "카테고리 필터"
+          },
+          "with_summary": {
+            "type": "boolean",
+            "description": "요약 포함 여부"
+          },
+          "only_without_summary": {
+            "type": "boolean",
+            "description": "요약 없는 글만"
+          }
         }
       }
     },
@@ -56,9 +83,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "post_id": { "type": "string", "description": "포스트 ID" }
+          "post_id": {
+            "type": "string",
+            "description": "포스트 ID"
+          }
         },
-        "required": ["post_id"]
+        "required": [
+          "post_id"
+        ]
       }
     },
     {
@@ -75,7 +107,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "before_date": { "type": "string", "description": "이 날짜 이전 글 분석 (YYYY-MM-DD)" }
+          "before_date": {
+            "type": "string",
+            "description": "이 날짜 이전 글 분석 (YYYY-MM-DD)"
+          }
         }
       }
     },
@@ -85,10 +120,46 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "count": { "type": "integer", "description": "분석할 글 개수" },
-          "before_date": { "type": "string", "description": "이 날짜 이전 글 (YYYY-MM-DD)" }
+          "count": {
+            "type": "integer",
+            "description": "분석할 글 개수"
+          },
+          "before_date": {
+            "type": "string",
+            "description": "이 날짜 이전 글 (YYYY-MM-DD)"
+          }
         },
-        "required": ["count"]
+        "required": [
+          "count"
+        ]
+      }
+    },
+    {
+      "name": "search_blog_semantic",
+      "description": "의미 기반 검색만 사용합니다. 키워드가 정확히 일치하지 않아도 의미적으로 유사한 글을 찾습니다.\n\n## 사용 시점\n- 추상적인 개념으로 글 찾기\n- 키워드가 정확하지 않을 때\n\n## 주의사항\n- sentence-transformers + sqlite-vec 필요\n- 미설치 시 FTS5 키워드 검색으로 대체",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색 질문"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "최대 결과 수 (기본 5)"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "rebuild_search_index",
+      "description": "블로그 RAG 검색 인덱스를 재구축합니다.\n\n## 사용 시점\n- 검색 결과가 부정확할 때\n- 대량의 새 글이 추가된 후\n- 시스템 업데이트 후\n\n## 주의사항\n- sentence-transformers + sqlite-vec 필요\n- 약 3000개 글 기준 수 분 소요",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
       }
     }
   ]

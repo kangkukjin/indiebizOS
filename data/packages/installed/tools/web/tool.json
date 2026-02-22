@@ -3,7 +3,6 @@
   "name": "Web Tools",
   "description": "웹 검색 및 크롤링 도구. DuckDuckGo 웹 검색, 웹페이지 텍스트 추출, Google 뉴스 검색, HTML 신문 자동 생성, 즐겨찾기 사이트 관리 기능을 제공합니다. 정보 수집, 뉴스 모니터링, 웹 리서치에 활용.",
   "version": "1.2.0",
-  "guide_file": "web_guide.md",
   "tools": [
     {
       "name": "ddgs_search",
@@ -28,7 +27,9 @@
             "description": "국가/언어 코드 (기본: kr-kr)"
           }
         },
-        "required": ["query"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -47,7 +48,9 @@
             "default": 10000
           }
         },
-        "required": ["url"]
+        "required": [
+          "url"
+        ]
       }
     },
     {
@@ -56,24 +59,26 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "query": { "type": "string", "description": "검색 키워드" },
-          "count": { "type": "integer", "description": "결과 개수 (기본 10, 최대 30)" },
-          "language": { "type": "string", "enum": ["ko", "en"], "description": "언어 (기본 ko)" }
+          "query": {
+            "type": "string",
+            "description": "검색 키워드"
+          },
+          "count": {
+            "type": "integer",
+            "description": "결과 개수 (기본 10, 최대 30)"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ko",
+              "en"
+            ],
+            "description": "언어 (기본 ko)"
+          }
         },
-        "required": ["query"]
-      }
-    },
-    {
-      "name": "generate_newspaper",
-      "description": "키워드 기반으로 뉴스를 수집하여 HTML 신문을 생성합니다.\n\n## 처리 과정\n1. 키워드별로 Google News 검색\n2. 섹션별로 정리\n3. HTML 파일로 저장 (outputs/)\n\n## 장점\n- AI 토큰 소비 없음 (단순 수집)\n- 여러 키워드 동시 처리\n\n## 사용 시점\n- 관심 분야 뉴스 모아보기\n- 정기적 뉴스 브리핑 생성",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "keywords": { "type": "array", "items": {"type": "string"}, "description": "섹션 키워드 목록 (예: ['AI', '경제', '스포츠'])" },
-          "title": { "type": "string", "description": "신문 제목 (기본: IndieBiz Daily)" },
-          "exclude_sources": { "type": "array", "items": {"type": "string"}, "description": "제외할 언론사 목록" }
-        },
-        "required": ["keywords"]
+        "required": [
+          "query"
+        ]
       }
     },
     {
@@ -82,9 +87,25 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "action": { "type": "string", "enum": ["open_ui", "open_all", "list", "add", "remove"], "description": "실행할 작업" },
-          "name": { "type": "string", "description": "사이트 이름 (add/remove용)" },
-          "url": { "type": "string", "description": "사이트 URL (add용)" }
+          "action": {
+            "type": "string",
+            "enum": [
+              "open_ui",
+              "open_all",
+              "list",
+              "add",
+              "remove"
+            ],
+            "description": "실행할 작업"
+          },
+          "name": {
+            "type": "string",
+            "description": "사이트 이름 (add/remove용)"
+          },
+          "url": {
+            "type": "string",
+            "description": "사이트 URL (add용)"
+          }
         }
       }
     }

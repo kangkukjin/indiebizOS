@@ -42,19 +42,24 @@ def get_state_paths(project_path: str, agent_id: str = None) -> dict:
     }
 
 
-# 위험한 명령어 패턴 (사용자 승인 필요)
-DANGEROUS_PATTERNS = [
+# 위험한 명령어 패턴 (정규식, 사용자 승인 필요)
+# 단어 경계(\b)를 사용하여 'add'에서 'dd'가 매칭되는 등의 오탐 방지
+import re
+
+DANGEROUS_PATTERNS_RE = [
     # 파일 삭제/수정
-    'rm ', 'rm\t', 'rmdir', 'unlink',
+    r'\brm\s', r'\brmdir\b', r'\bunlink\b',
     # 권한 관련
-    'sudo', 'chmod', 'chown', 'chgrp',
+    r'\bsudo\b', r'\bchmod\b', r'\bchown\b', r'\bchgrp\b',
     # 디스크 관련 위험 명령어
-    'dd ', 'mkfs', 'format', 'diskutil erase', 'diskutil partitionDisk',
+    r'\bdd\s', r'\bmkfs\b', r'\bformat\b', r'\bdiskutil\s+erase\b', r'\bdiskutil\s+partitionDisk\b',
     # 시스템 종료/재시작
-    'shutdown', 'reboot', 'halt',
+    r'\bshutdown\b', r'\breboot\b', r'\bhalt\b',
     # 프로세스 종료
-    'kill ', 'killall', 'pkill',
+    r'\bkill\s', r'\bkillall\b', r'\bpkill\b',
 ]
+
+_DANGEROUS_RE = re.compile('|'.join(DANGEROUS_PATTERNS_RE), re.IGNORECASE)
 
 
 def _validate_path_in_scope(path: str, project_path: str) -> str | None:
@@ -69,12 +74,8 @@ def _validate_path_in_scope(path: str, project_path: str) -> str | None:
 
 
 def is_dangerous_command(command: str) -> bool:
-    """명령어가 위험한지 검사"""
-    command_lower = command.lower()
-    for pattern in DANGEROUS_PATTERNS:
-        if pattern.lower() in command_lower:
-            return True
-    return False
+    """명령어가 위험한지 검사 (정규식 단어 경계 사용)"""
+    return bool(_DANGEROUS_RE.search(command))
 
 def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
     try:
@@ -338,6 +339,51 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
                 os.remove(target)
                 return f"파일을 삭제했습니다: {abs_target}"
 
+        elif tool_name == "read_pdf":
+            import fitz  # PyMuPDF
+            file_path = tool_input.get("file_path")
+            pages = tool_input.get("pages")
+
+            if not file_path:
+                return json.dumps({"success": False, "error": "file_path가 제공되지 않았습니다."}, ensure_ascii=False)
+
+            path = Path(file_path)
+            if not path.is_absolute():
+                path = Path(project_path) / path
+
+            if not path.exists():
+                return json.dumps({"success": False, "error": f"파일을 찾을 수 없습니다: {path}"}, ensure_ascii=False)
+
+            try:
+                doc = fitz.open(str(path))
+                metadata = doc.metadata
+                total_pages = doc.page_count
+
+                if pages is not None and isinstance(pages, list):
+                    target_pages = [p for p in pages if 0 <= p < total_pages]
+                else:
+                    target_pages = range(total_pages)
+
+                extracted_text = ""
+                for pno in target_pages:
+                    page = doc.load_page(pno)
+                    extracted_text += f"\n--- Page {pno + 1} ---\n"
+                    extracted_text += page.get_text()
+
+                doc.close()
+
+                res = {
+                    "success": True,
+                    "metadata": metadata,
+                    "total_pages": total_pages,
+                    "extracted_pages_count": len(list(target_pages)),
+                    "text": extracted_text
+                }
+                return json.dumps(res, ensure_ascii=False)
+
+            except Exception as e:
+                return json.dumps({"success": False, "error": f"PDF를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
+
         elif tool_name == "todo_write":
             todos = tool_input.get("todos", [])
             paths = get_state_paths(project_path, agent_id)
@@ -429,62 +475,6 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
                 json.dump(state, f, ensure_ascii=False, indent=2)
 
             return f"[[PLAN_APPROVAL_REQUESTED]]계획 수립이 완료되었습니다. 사용자 승인을 기다리는 중...\n\n---\n{plan_content}"
-
-        elif tool_name == "save_agent_note":
-            # 에이전트 영구 메모 저장
-            content = tool_input.get("content", "")
-            append = tool_input.get("append", False)
-
-            # 프로젝트 경로에서 note 파일 경로 결정
-            project_dir = Path(project_path).resolve()
-
-            # 시스템 AI인지 확인
-            if str(project_dir).endswith("data") or project_dir == Path(".").resolve():
-                note_file = SYSTEM_AI_STATE_PATH / "system_ai_note.txt"
-            else:
-                # 프로젝트 에이전트
-                agent_name = agent_id.replace("agent_", "") if agent_id and agent_id.startswith("agent_") else agent_id
-                note_file = project_dir / f"agent_{agent_name}_note.txt"
-
-            note_file.parent.mkdir(parents=True, exist_ok=True)
-
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-            if append and note_file.exists():
-                # 기존 내용에 추가
-                existing = note_file.read_text(encoding='utf-8')
-                new_content = f"{existing}\n\n---\n[{timestamp}]\n{content}"
-                note_file.write_text(new_content.strip(), encoding='utf-8')
-            else:
-                # 덮어쓰기 (맨 위에 갱신 시간 기록)
-                new_content = f"[최종 갱신: {timestamp}]\n\n{content}"
-                note_file.write_text(new_content, encoding='utf-8')
-
-            # 파일 크기 경고 (5KB 초과 시)
-            file_size = note_file.stat().st_size
-            size_warning = ""
-            if file_size > 5000:
-                size_warning = f"\n\n⚠️ 메모가 {file_size // 1000}KB로 커졌습니다. read_agent_note로 현재 내용을 확인하고, 필요한 정보만 정리해서 append=false로 덮어쓰기하세요."
-
-            return f"메모가 저장되었습니다: {note_file}{size_warning}"
-
-        elif tool_name == "read_agent_note":
-            # 에이전트 영구 메모 읽기
-            project_dir = Path(project_path).resolve()
-
-            # 시스템 AI인지 확인
-            if str(project_dir).endswith("data") or project_dir == Path(".").resolve():
-                note_file = SYSTEM_AI_STATE_PATH / "system_ai_note.txt"
-            else:
-                # 프로젝트 에이전트
-                agent_name = agent_id.replace("agent_", "") if agent_id and agent_id.startswith("agent_") else agent_id
-                note_file = project_dir / f"agent_{agent_name}_note.txt"
-
-            if not note_file.exists():
-                return "저장된 메모가 없습니다. save_agent_note로 메모를 저장하세요."
-
-            content = note_file.read_text(encoding='utf-8')
-            return f"=== 내 영구 메모 ===\n{content}"
 
         else:
             return f"Unknown tool: {tool_name}"

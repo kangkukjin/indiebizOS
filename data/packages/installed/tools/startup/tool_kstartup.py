@@ -2,20 +2,24 @@
 K-Startup 창업지원 사업공고 조회 모듈
 창업진흥원 공공데이터 API 사용 (2024년 신규 API)
 """
-import urllib.request
-import urllib.parse
-import json
 import os
+import sys
+import json
 
-SERVICE_KEY = os.environ.get('DATA_GO_KR_API_KEY', '')
-BASE_URL = 'https://apis.data.go.kr/B552735/kisedKstartupService01'
+# common 유틸리티 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.api_client import api_call
+from common.auth_manager import check_api_key
 
 # 신규 API 엔드포인트 (2024~)
 ENDPOINTS = {
-    'announcement': '/getAnnouncementInformation01',  # 지원사업 공고
-    'business': '/getBusinessInformation01',          # 통합공고 지원사업
-    'content': '/getContentInformation01',            # 콘텐츠 정보
-    'statistics': '/getStatisticalInformation01',     # 통계보고서
+    'announcement': '/B552735/kisedKstartupService01/getAnnouncementInformation01',  # 지원사업 공고
+    'business': '/B552735/kisedKstartupService01/getBusinessInformation01',          # 통합공고 지원사업
+    'content': '/B552735/kisedKstartupService01/getContentInformation01',            # 콘텐츠 정보
+    'statistics': '/B552735/kisedKstartupService01/getStatisticalInformation01',     # 통계보고서
 }
 
 def get_tool_definition():
@@ -53,24 +57,33 @@ def search_kstartup(keyword: str = "", count: int = 10):
         dict: 조회 결과
     """
     try:
-        # 신규 API 엔드포인트 사용
-        endpoint = f"{BASE_URL}{ENDPOINTS['announcement']}"
+        # API 키 확인
+        ok, err = check_api_key("data_go_kr")
+        if not ok:
+            return {"success": False, "error": err}
 
+        # api_call로 HTTP 요청 (JSON 응답)
         params = {
-            'serviceKey': SERVICE_KEY,
             'page': '1',
             'perPage': str(count),
             'returnType': 'json'
         }
 
-        url = endpoint + '?' + urllib.parse.urlencode(params)
-        req = urllib.request.Request(url)
-        req.add_header('Accept', 'application/json')
+        result = api_call(
+            "data_go_kr",
+            ENDPOINTS['announcement'],
+            params=params,
+            extra_headers={'Accept': 'application/json'},
+            timeout=30,
+        )
 
-        with urllib.request.urlopen(req, timeout=30) as response:
-            data = response.read().decode('utf-8')
+        # api_call이 에러 dict를 반환한 경우
+        if isinstance(result, dict) and "error" in result:
+            return {"success": False, "error": result["error"]}
 
-        result = json.loads(data)
+        # 문자열 응답인 경우 JSON 파싱
+        if isinstance(result, str):
+            result = json.loads(result)
 
         # 신규 API 응답 구조
         items = result.get('data', [])
@@ -102,11 +115,6 @@ def search_kstartup(keyword: str = "", count: int = 10):
             "data": announcements
         }
 
-    except urllib.error.HTTPError as e:
-        return {
-            "success": False,
-            "error": f"HTTP Error {e.code}: {e.reason}"
-        }
     except Exception as e:
         return {
             "success": False,

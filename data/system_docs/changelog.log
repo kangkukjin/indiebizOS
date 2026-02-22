@@ -275,3 +275,134 @@
   - CLAUDE.md: 라디오 패키지 추가, 패키지 수 업데이트
 [2026-02-12 09:19:30] PROJECT_CREATED: Hand on PC (ID: Hand on PC)
 [2026-02-12 09:19:30] PROJECT_CREATED: Hand on PC (ID: Hand on PC)
+[2026-02-13 07:51:35] PROJECT_RENAMED: 에이전트 출판 -> 웹앱
+[2026-02-14 11:27:40] PROJECT_CREATED: 지역정보 (ID: 지역정보)
+[2026-02-14 11:27:40] PROJECT_CREATED: 지역정보 (ID: 지역정보)
+[2026-02-15 04:15:08] PROJECT_CREATED: 건축 (ID: 건축)
+[2026-02-15 04:15:08] PROJECT_CREATED: 건축 (ID: 건축)
+[2026-02-17 00:00:00] PHASE_16: IBL 통합 - 프론트엔드 정리
+  - Manager.tsx: 미사용 도구 관련 코드 제거 (ToolAIDialog, tools state 등)
+  - SettingsDialog.tsx: 탭 이름 "도구" → "노드"로 변경
+  - dialogs/index.ts: ToolAIDialog export 제거
+[2026-02-18 00:00:00] PHASE_17: IBL 완전 통합 - 시스템 AI + 사용자 노드
+  - 설계 원칙: "사용자도 하나의 노드", "시스템 AI도 프로젝트 AI와 동일 구조"
+  - ibl_nodes.yaml: user 노드 추가 (ask, approve, todo, notify), system 노드에 시스템AI 전용 액션 추가
+  - system_tools.py: execute_ask_user_question(), execute_todo_write() 함수 추가
+  - ibl_engine.py: _route_system()에 user 노드 + 시스템AI 라우팅 추가
+  - agent_runner.py: _get_available_tools() → execute_ibl만 반환 (ask_user_question, todo_write 등 제거)
+  - ibl_access.py: _ALWAYS_ALLOWED에 "user" 추가
+  - system_ai_runner.py: 패키지 기반 130+ 도구 → execute_ibl 단일 도구로 전환
+  - prompt_builder.py: build_system_ai_prompt()에 IBL 환경 주입 (build_environment(None))
+  - api_system_ai.py: get_all_system_ai_tools() → execute_ibl 스키마만 반환, execute_system_tool() → IBL 경로 통일
+  - api_websocket.py: todo_write 감지를 execute_ibl 경유 시에도 동작하도록 확장
+  - tool_loader.py: load_tool_schema() 함수 추가
+[2026-02-18 00:30:00] DOCS_UPDATED: Phase 17 시스템 문서 전체 업데이트
+  - architecture.md: IBL 완전 통합 아키텍처 반영, execute_ibl 단일 도구 구조
+  - ibl.md: user 노드 섹션 추가, 시스템 AI IBL 통합 섹션 추가, 27개 노드
+  - overview.md: IBL 통합 아키텍처 반영, 위임 IBL 액션 업데이트
+  - technical.md: 에이전트 기본 도구 → IBL 도구 아키텍처로 재구성
+  - delegation.md: IBL 경로 통합 반영
+  - inventory.md: 위임 도구 → IBL 액션으로 업데이트
+[2026-02-19 00:00:00] PHASE_22: 6-Node 최종 통합 (10→6 노드)
+  - 4단계 통합 실행:
+    - Step 1: youtube + radio → stream (18 액션)
+    - Step 2: browser + android + desktop → interface (79 액션)
+    - Step 3: informant + librarian → source (105 액션)
+    - Step 4: orchestrator → system, creator → forge (이름 변경)
+  - ibl_nodes.yaml: 10개 노드 섹션 → 6개 노드 섹션으로 재구성
+  - ibl_access.py: _ALWAYS_ALLOWED → {"system"}, _MERGED_TO_* 매핑 추가, 역호환 체인 유지
+  - tool_selector.py: INFRA_NODES → {"system"}, 프롬프트 텍스트 업데이트
+  - api_packages.py: always_allowed → {"system"}
+  - migrate_nodes.py: 신규 생성 — agents.yaml 자동 변환 스크립트
+  - 전체 프로젝트 agents.yaml 마이그레이션 완료 (allowed_nodes 치환)
+  - 변경 불필요: ibl_engine.py, ibl_parser.py, node_registry.py, 35개 handler.py, 프론트엔드
+  - 최종 구조: source(105), interface(79), system(64), forge(46), stream(18), messenger(9) = 321 액션
+[2026-02-19 00:30:00] DOCS_UPDATED: Phase 22 시스템 문서 전체 업데이트
+  - overview.md: 6-Node 통합 반영, system 노드 위임 액션 업데이트
+  - architecture.md: Phase 22 아키텍처, 6개 노드 구조 반영
+  - technical.md: IBL 노드 액션 테이블 6-Node로 업데이트
+  - ibl.md: 전체 재작성 — 6개 노드 상세 설명, 모든 예시 업데이트
+  - inventory.md: 위임 액션 orchestrator → system 업데이트
+  - ibl_development_plan.md: Phase 22 섹션 추가, 실행 우선순위 업데이트
+[2026-02-20 00:00:00] PHASE_22_STABILIZE: Phase 22 후속 안정화 (4건)
+  1. ibl_nodes.yaml: meta.constraint 추가 — IBL 언어 자체에 노드 제약조건 선언
+     (AI가 존재하지 않는 구 노드명을 사용하는 문제 방지, 모든 프로바이더 공통)
+  2. ibl_access.py: How to Use를 Mode 1(Direct) / Mode 2(Code)로 분리
+     (code 모드에서 params={} 문법 대신 {key: value} 문법 사용 안내)
+  3. frontend/electron/main.js: 기존 서버 재사용으로 변경
+     (start.sh와 Electron 동시 시작 시 서버 충돌 → 포트 사용 중이면 기존 서버 사용)
+  4. ibl_nodes.yaml: meta 섹션에 usage, pipeline, principles 추가
+     ibl_access.py: build_environment()가 YAML meta에서 동적 로드
+     (IBL 언어 정의를 Python 코드와 분리 — "언어설명은 언어 부분에서")
+[2026-02-20 01:00:00] IBL_BUG_FIX: 파이프라인 & 파서 핵심 버그 2건 수정
+  1. workflow_engine.py: 파이프라인 >> 자동 데이터 전달 구현
+     - _auto_inject_prev() 함수 신규: prev_result를 다음 step의 params._prev_result로 자동 주입
+     - _has_prev_ref() 함수 신규: {{_prev_result}} 명시 참조 확인
+     - execute_pipeline(), _execute_parallel(), _execute_fallback() 모두 적용
+     - 기존 {{_prev_result}} 명시 참조 방식도 하위 호환 유지
+     (이전: step 2가 step 1 결과를 받으려면 {{_prev_result}} 필수 → AI가 모르면 데이터 유실)
+     (이후: 자동으로 params._prev_result에 주입, 명시 참조 없어도 데이터 전달)
+  2. ibl_parser.py: _parse_relaxed_params() 완전 재작성 — 중첩 구조 지원
+     - 기존 정규식(스칼라만) → 토크나이저 방식(배열/객체/중첩 지원)
+     - _extract_value(), _extract_string(), _extract_bracket(), _extract_number(), _extract_unquoted() 신규
+     - {data: [1, 2, 3]}, {items: [{name: "A"}, {name: "B"}]}, {nested: {a: 1}} 모두 파싱 가능
+     (이전: {data: [{...}]} → "파싱 실패: data: [" 에러)
+     (이후: 배열, 중첩 객체, 혼합 타입 모두 정상 파싱)
+[2026-02-20 02:00:00] IBL_FIX: stream 노드 verb default 제거 — API 낭비 방지
+  1. ibl_nodes.yaml: stream verbs에서 모든 default 키 삭제
+     - play, stop, search, get, control 5개 verb 전부
+     - routes에 youtube/radio 양쪽 명시 (기존: 한쪽만 default)
+     - search verb: youtube → play, radio → search_radio, korean → korean
+     (문제: default가 있으면 반대편 호출 시 항상 1회 API 낭비)
+     (해결: source 노드처럼 직접 액션명 호출 또는 type 지정 필수)
+  2. ibl_nodes.yaml: download 액션 description에 output_path 파라미터 명시
+     (문제: handler는 output_path 지원하나 AI가 모름 → 항상 output.mp3로 저장)
+     (해결: description에 "output_path로 저장 경로/파일명 지정 가능" 추가)
+[2026-02-20 03:00:00] STREAM_FIX: search_youtube 원자적 액션 추가 — 복합 액션 분리
+  1. tool_youtube.py: search_youtube() 함수 신규 추가
+     - play_youtube()의 검색 로직(yt-dlp ytsearch)을 분리한 순수 검색 함수
+     - 반환: {success, count, results: [{video_id, title, channel, duration, url}, ...]}
+     - 재생하지 않고 결과 목록만 반환 → 파이프라인 연결 가능
+  2. handler.py: search_youtube 라우팅 추가
+  3. ibl_nodes.yaml: search_youtube 액션 등록, search verb youtube 라우트 변경
+     - search verb: youtube → search_youtube (기존: play → 검색+재생 복합)
+     (문제: 유튜브에 검색 전용 액션이 없었음 — play가 검색+재생 복합)
+     (문제: download는 URL만 받아서 "검색→다운로드" 워크플로우 불가)
+     (해결: search_youtube로 검색 → 결과의 URL로 download/play/transcript 연결)
+     (비교: 라디오는 이미 search_radio + radio_play로 분리되어 있었음)
+  4. tool.json: search_youtube 도구 정의 등록 (근본 원인 수정)
+     - tool_loader.py가 tool.json에서 tool_name → package_id 매핑을 빌드
+     - search_youtube가 tool.json에 없으면 load_tool_handler() → None → "도구 핸들러를 찾을 수 없습니다"
+     - tool.json에 search_youtube 도구 정의 추가 → 정상 라우팅
+  5. handler.py: download_youtube_music 파일명 파라미터 다중 이름 지원
+     - 기존: arguments.get('output_path')만 확인
+     - 변경: output_path → filename → path → file → name 순서 폴백
+     (문제: AI가 filename, path 등 다양한 이름으로 전달 → 항상 output.mp3)
+     (해결: 다중 이름 폴백 체인으로 AI 출력 유연 수용)
+[2026-02-20 05:00:00] IBL_FIX: build_environment() verb-only 버그 수정 — 숨겨진 액션 노출
+  - ibl_access.py: verbs가 있는 노드에서 verb 테이블만 표시 → 액션 테이블 누락 수정
+  - 기존: verbs 정의된 노드 → verb 테이블만 → verb routes에 없는 액션은 AI에게 invisible
+  - 변경: Verbs (shortcut) + Direct actions (verb 미커버 액션) 양쪽 모두 표시
+  - 영향: system 52개, interface 34개, source 24개, forge 19개, stream 2개, messenger 1개 액션 복원
+  (문제: 시스템 AI가 run_command, exec_python, read, write 등 핵심 액션 존재를 모름)
+  (문제: "프로세스 죽여줘" 요청에 쉘 명령 실행 불가 — run_command가 invisible)
+  (해결: verb 미커버 액션도 Direct actions 테이블로 표시, ~2300 토큰으로 적정 크기)
+[2026-02-20 06:00:00] IBL_FIX: 환경 프롬프트 마크다운 → XML 구조 전환
+  - ibl_access.py: build_environment() 출력 형식 전면 변경
+  - 기존: <ibl_executor> 바깥껍데기만 XML, 안은 마크다운 (# 헤더, | 테이블 |)
+  - 변경: 순수 XML 중첩 구조 (<nodes> → <node> → <verbs>/<actions> → <verb>/<action>)
+  - Anthropic 공식 가이드: Claude는 XML 태그를 프롬프트 구조 인식 메커니즘으로 훈련됨
+  - 마크다운 테이블은 길어지면 뒤쪽 행을 경시, XML은 닫는 태그까지 하나의 단위로 인식
+  - 토큰: ~2300 (마크다운, 128개 액션 누락) → ~3300 (XML, 전체 액션 표시)
+  - 실질 증가분은 숨겨진 128개 액션 노출 때문이지 XML 전환 자체가 아님
+[2026-02-20 07:00:00] IBL_FEATURE: agent_ask_sync — 동기 에이전트 호출 (파이프라인용)
+  - ibl_engine.py: _agent_ask_sync() 함수 추가
+    - 대상 에이전트의 설정(agents.yaml)을 로드하여 임시 AI 에이전트 생성
+    - process_message_with_history()로 동기 호출 — 응답 완료까지 대기
+    - _prev_result 자동 첨부 (파이프라인에서 이전 step 결과 전달)
+    - switch_runner.py와 동일한 패턴 (AI 에이전트 생성 → 동기 처리 → 결과 반환)
+  - ibl_nodes.yaml: agent_ask_sync 액션 등록
+  - kinsight.yaml: 예시 워크플로우 생성
+    - [source:search]("최근 글") >> [system:agent_ask_sync]("컨텐츠/컨텐츠") >> [system:file]
+    (기존 agent_ask는 비동기 — 큐에 넣고 즉시 반환 → 파이프라인에서 결과 없음)
+    (agent_ask_sync는 동기 — 응답 완료까지 대기 → 파이프라인 다음 step으로 전달)

@@ -1,0 +1,60 @@
+node: forge
+actions:
+  create_design:
+    description: 새 집 설계 초기화 (부지 크기, 층수 설정)
+    target_description: 설계명
+    router: handler
+    tool: create_house_design
+    target_key: name
+  modify:
+    description: 설계 수정 (방, 문, 창, 벽, 계단 등)
+    target_description: 설계 ID
+    router: handler
+    tool: modify_house_design
+    target_key: design_id
+  get_design:
+    description: 현재 설계 상태 조회
+    target_description: 설계 ID
+    router: handler
+    tool: get_house_design
+    target_key: design_id
+  floor_plan:
+    description: 2D 평면도 PNG 생성
+    target_description: 설계 ID
+    router: handler
+    tool: generate_floor_plan
+    target_key: design_id
+  view_3d:
+    description: 인터랙티브 3D 시각화 HTML 생성
+    target_description: 설계 ID
+    router: handler
+    tool: generate_3d_view
+    target_key: design_id
+  report:
+    description: 면적표, 건폐율, 물량 산출 보고서
+    target_description: 설계 ID
+    router: handler
+    tool: generate_quantity_report
+    target_key: design_id
+  section:
+    description: 건물 단면도 PNG 생성
+    target_description: 설계 ID
+    router: handler
+    tool: generate_section_view
+    target_key: design_id
+  elevation:
+    description: 건물 입면도 PNG 생성 (4방향)
+    target_description: 설계 ID
+    router: handler
+    tool: generate_elevation_view
+    target_key: design_id
+  export:
+    description: 도면을 PDF/SVG/DXF로 출력
+    target_description: 설계 ID
+    router: handler
+    tool: export_drawing
+    target_key: design_id
+  list_designs:
+    description: 저장된 집 설계 목록 조회
+    router: handler
+    tool: list_house_designs

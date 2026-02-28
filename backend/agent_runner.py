@@ -112,6 +112,14 @@ class AgentRunner:
                 if registry_key in AgentRunner.internal_messages:
                     del AgentRunner.internal_messages[registry_key]
 
+        # 프로바이더 캐시 정리 (Gemini 컨텍스트 캐시 등)
+        provider = getattr(self.ai, '_provider', None) if self.ai else None
+        if provider and hasattr(provider, 'cleanup'):
+            try:
+                provider.cleanup()
+            except Exception:
+                pass
+
         # 에이전트 노드 캐시 무효화 (Phase 11)
         try:
             from node_registry import invalidate_agent_cache
@@ -298,6 +306,25 @@ class AgentRunner:
         IBL(도메인 특화) + 범용 프로그래밍 언어 + 가이드 검색
         """
         return ["execute_ibl", "execute_python", "execute_node", "run_command", "search_guide"]
+
+    def augment_with_ibl_references(self, user_message: str) -> str:
+        """사용자 메시지에 IBL 참조 용례를 주입 (RAG)
+
+        유사한 과거 IBL 용례를 검색하여 AI가 참고할 수 있도록 메시지 앞에 추가.
+        실패 시 원본 메시지 그대로 반환 (graceful degradation).
+        """
+        try:
+            from ibl_usage_rag import IBLUsageRAG
+            rag = IBLUsageRAG()
+            allowed_nodes = self.config.get("allowed_nodes")
+            if allowed_nodes:
+                from ibl_access import resolve_allowed_nodes
+                allowed_set = resolve_allowed_nodes(allowed_nodes)
+            else:
+                allowed_set = None
+            return rag.inject_references(user_message, allowed_set)
+        except Exception:
+            return user_message
 
     def _setup_channels(self) -> List:
         """
@@ -701,8 +728,8 @@ class AgentRunner:
 
                 # AI 처리
                 if self.ai:
-                    # 위임 컨텍스트가 있으면 메시지에 컨텍스트 리마인더 추가
-                    ai_message = content
+                    # IBL 용례 참조 주입 (RAG)
+                    ai_message = self.augment_with_ibl_references(content)
                     history = []
 
                     # 시스템 AI 위임인 경우 파일 경로 원칙 추가

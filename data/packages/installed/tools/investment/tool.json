@@ -111,6 +111,51 @@
       }
     },
     {
+      "name": "kr_market_investor_trading",
+      "description": "한국 주식시장 투자자별 매매동향을 조회합니다. (KRX)\n\n## 반환 정보\n- 외국인, 기관(금융투자/보험/투신/사모/은행/연기금 등), 개인의 일별 순매수 금액\n- 기간 합계 및 최근 거래일 데이터\n- 단위: 백만원\n\n## market 옵션\n- STK: 코스피 (기본값)\n- KSQ: 코스닥\n- ALL: 전체\n\n## 예시\n코스피 외국인 순매수 → market='STK'\n코스닥 최근 1개월 → market='KSQ'\n전체시장 특정기간 → market='ALL', start_date='2025-01-01'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "market": {
+            "type": "string",
+            "description": "시장 구분: STK(코스피), KSQ(코스닥), ALL(전체). 기본: STK",
+            "default": "STK"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "조회 시작일 (YYYY-MM-DD). 기본: 1개월 전"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "조회 종료일 (YYYY-MM-DD). 기본: 오늘"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "kr_stock_investor_trading",
+      "description": "개별종목의 투자자별 매매동향을 조회합니다. (KRX)\n\n## 반환 정보\n- 해당 종목의 외국인, 기관, 개인 등 투자자별 일별 순매수 금액\n- 기간 합계 및 최근 거래일 데이터\n- 단위: 백만원\n\n## 예시\n삼성전자 외국인 매매동향 → symbol='삼성전자'\nSK하이닉스 1월 매매동향 → symbol='000660', start_date='2025-01-01', end_date='2025-01-31'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "종목코드 (005930) 또는 종목명 (삼성전자)"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "조회 시작일 (YYYY-MM-DD). 기본: 1개월 전"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "조회 종료일 (YYYY-MM-DD). 기본: 오늘"
+          }
+        },
+        "required": ["symbol"]
+      }
+    },
+    {
       "name": "us_company_profile",
       "description": "미국 기업의 프로필을 조회합니다. (Financial Modeling Prep)\n\n## 반환 정보\n- 회사명, CEO, 직원수\n- 업종(sector), 산업(industry)\n- 시가총액, 베타, 52주 범위\n- 사업 설명 (영문)\n\n## 주요 티커\n- AAPL(애플), MSFT(MS), GOOGL(구글)\n- AMZN(아마존), NVDA(엔비디아)\n- META(메타), TSLA(테슬라)\n\n## 예시\n애플 기업정보 → symbol='AAPL'",
       "input_schema": {

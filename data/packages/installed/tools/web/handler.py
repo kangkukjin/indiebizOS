@@ -553,6 +553,9 @@ def execute(tool_name: str, params: dict, project_path: str = None):
     # 신문 생성
     elif tool_name == "generate_newspaper":
         keywords = params.get("keywords", [])
+        # 문자열이면 쉼표 구분 리스트로 변환 (IBL target → keywords 매핑 시 문자열로 전달됨)
+        if isinstance(keywords, str):
+            keywords = [k.strip() for k in keywords.split(",") if k.strip()]
         if not keywords:
             return format_json({"success": False, "error": "키워드(keywords)가 필요합니다."})
 

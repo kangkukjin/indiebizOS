@@ -394,6 +394,13 @@ class PackageManager:
         except Exception as e:
             print(f"[PackageManager] IBL 액션 등록 실패 (무시): {e}")
 
+        # IBL 용례 자동 생성 (새 액션의 기본 용례를 RAG 사전에 추가)
+        try:
+            from ibl_usage_generator import generate_for_package
+            generate_for_package(package_id)
+        except Exception as e:
+            print(f"[PackageManager] IBL 용례 생성 실패 (무시): {e}")
+
         # inventory.md 자동 업데이트
         self._update_inventory()
 

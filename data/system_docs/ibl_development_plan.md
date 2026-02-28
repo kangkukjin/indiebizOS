@@ -1406,4 +1406,23 @@ Phase 19에서 인프라 노드를 orchestrator로 통합하고, Phase 20에서 
 
 *현재 상태: Phase 22 완료 — 6-Node 최종 통합 (6 노드, 321 액션). source(105), interface(79), system(64), forge(46), stream(18), messenger(9).*
 *Phase 22 통합: youtube+radio→stream, browser+android+desktop→interface, informant+librarian→source, orchestrator→system, creator→forge.*
-*최종 업데이트: 2026-02-19*
+
+---
+
+### IBL 용례 RAG 시스템 (Phase 22 이후)
+
+Phase 22의 6-Node 통합 이후, 에이전트의 IBL 생성 품질을 높이기 위한 용례 참조 시스템이 추가되었다.
+
+**문제**: 321개 액션의 목록만으로는 AI가 정확한 파라미터, 파이프라인 패턴을 추론하기 어려움
+**해결**: 과거 성공 사례를 하이브리드 검색(시맨틱+BM25)으로 찾아 프롬프트에 참조 주입
+
+| 구성 요소 | 파일 | 역할 |
+|-----------|------|------|
+| 용례 사전 DB | `ibl_usage_db.py` | ~970개 용례 저장, 하이브리드 검색, 실행 로그 관리 |
+| RAG 모듈 | `ibl_usage_rag.py` | 사용자 메시지에 유사 용례 XML 주입 |
+| 데이터 생성기 | `ibl_usage_generator.py` | 합성 용례 생성 (규칙/템플릿/AI 3단계) |
+| 자동 승격 | `ibl_usage_db.py` | 성공 실행 로그 → 용례 자동 변환 |
+
+→ 상세 문서: [ibl_rag.md](ibl_rag.md)
+
+*최종 업데이트: 2026-02-23*

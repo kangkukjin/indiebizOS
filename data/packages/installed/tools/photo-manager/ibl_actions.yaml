@@ -6,11 +6,27 @@ actions:
     router: handler
     tool: scan_photos
     target_key: path
+  list_scans:
+    description: 스캔된 폴더 목록 및 DB 경로 조회
+    router: handler
+    tool: list_scans
   gallery:
     description: 스캔된 사진/동영상 갤러리 조회 (페이지네이션, 필터)
     target_description: 폴더 경로
     router: handler
     tool: get_gallery
+    target_key: path
+  photo_stats:
+    description: 스캔된 폴더의 통계 (사진/동영상 수, 용량, 카메라별)
+    target_description: 폴더 경로
+    router: handler
+    tool: get_stats
+    target_key: path
+  timeline:
+    description: 월별 촬영 현황 타임라인
+    target_description: 폴더 경로
+    router: handler
+    tool: get_timeline
     target_key: path
   duplicates:
     description: 중복 사진/동영상 탐지 (MD5 기반)

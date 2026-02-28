@@ -86,6 +86,22 @@ def execute(tool_name: str, params: dict, project_path: str = None):
                 end_date=params.get("end_date")
             )
 
+        elif tool_name == "kr_market_investor_trading":
+            tool = load_module("tool_krx_investor")
+            return tool.get_market_investor_trading(
+                market=params.get("market", "STK"),
+                start_date=params.get("start_date"),
+                end_date=params.get("end_date"),
+            )
+
+        elif tool_name == "kr_stock_investor_trading":
+            tool = load_module("tool_krx_investor")
+            return tool.get_stock_investor_trading(
+                symbol=params.get("symbol"),
+                start_date=params.get("start_date"),
+                end_date=params.get("end_date"),
+            )
+
         # 미국 기업 관련 도구
         elif tool_name == "us_company_profile":
             tool = load_module("tool_fmp")

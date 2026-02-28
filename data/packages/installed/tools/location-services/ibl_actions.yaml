@@ -13,11 +13,11 @@ actions:
     tool: search_restaurants
     target_key: query
   source_navigate:
-    description: 길찾기/경로 안내 (카카오 내비)
-    target_description: 출발지 (경도,위도 형식)
+    description: 길찾기/경로 안내 (카카오 내비, 장소명 또는 좌표)
+    target_description: 목적지 (장소명 또는 경도,위도)
     router: handler
     tool: kakao_navigation
-    target_key: origin
+    target_key: destination
   map:
     description: 지도에 위치 표시
     target_description: 장소명 또는 좌표
@@ -30,5 +30,9 @@ actions:
     router: handler
     tool: amadeus_travel_search
     target_key: endpoint
+  reverse_geocode:
+    description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
+    router: handler
+    tool: reverse_geocode
 guides:
 - location-services/location_services_guide.md

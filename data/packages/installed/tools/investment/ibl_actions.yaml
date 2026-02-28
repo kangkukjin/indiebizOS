@@ -84,6 +84,18 @@ actions:
     router: handler
     tool: kr_stock_price
     target_key: symbol
+  kr_investor:
+    description: 한국 시장 투자자별 매매동향 (외국인/기관/개인 순매수, 코스피/코스닥)
+    target_description: 시장 구분 (STK=코스피, KSQ=코스닥, ALL=전체)
+    router: handler
+    tool: kr_market_investor_trading
+    target_key: market
+  kr_stock_investor:
+    description: 개별종목 투자자별 매매동향 (외국인/기관/개인 순매수)
+    target_description: 종목 코드 또는 기업명
+    router: handler
+    tool: kr_stock_investor_trading
+    target_key: symbol
   us_price:
     description: 미국 주가 (FMP, 기간 지정)
     target_description: 티커

@@ -220,6 +220,27 @@ steps:
 | `backend/ibl_access.py` | 에이전트별 노드 접근 제어, 환경 프롬프트 |
 | `backend/workflow_engine.py` | 파이프라인 실행, 워크플로우 관리 |
 | `data/workflows/` | 저장된 워크플로우 YAML |
+| `backend/ibl_usage_db.py` | IBL 용례 사전 DB + 하이브리드 검색 |
+| `backend/ibl_usage_rag.py` | 용례 RAG 참조 모듈 |
+| `data/ibl_usage.db` | 용례 사전 + 실행 로그 DB |
+
+---
+
+## 용례 RAG 참조 시스템
+
+에이전트가 IBL 코드를 생성할 때, 유사한 과거 성공 사례를 자동으로 참조한다.
+
+사용자 메시지가 들어오면 용례 사전에서 하이브리드 검색(시맨틱 70% + BM25 30%)으로 유사 용례를 찾아 XML 형태로 프롬프트에 주입한다. AI는 이 참조를 기계적으로 복사하지 않고, 현재 상황에 맞게 변형한다.
+
+```xml
+<ibl_references note="참고만 하고 현재 요청에 맞게 변형하세요.">
+  <ref intent="아파트 매매 실거래가" code='[source:apt_trade]("지역코드")' score="0.88"/>
+</ibl_references>
+```
+
+성공한 도구 실행 로그는 자동으로 용례 사전에 승격되어, 시스템이 사용할수록 참조 품질이 향상된다.
+
+→ 상세 문서: [ibl_rag.md](ibl_rag.md)
 
 ---
 

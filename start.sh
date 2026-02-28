@@ -14,9 +14,16 @@ fi
 echo "🚀 IndieBiz OS 시작..."
 
 # 기존 프로세스 정리 (포트 8765 사용 중인 프로세스 종료)
+# Python 3.14 (Homebrew)는 바이너리명이 "Python"이므로 python3 패턴뿐 아니라 모두 포함
 lsof -ti :8765 | xargs kill -9 2>/dev/null
-pkill -f "python3 api.py" 2>/dev/null
+pkill -9 -f "python3 api.py" 2>/dev/null
+pkill -9 -f "Python api.py" 2>/dev/null
 sleep 1
+# 포트가 아직 사용 중이면 한 번 더 정리
+if lsof -ti :8765 > /dev/null 2>&1; then
+    lsof -ti :8765 | xargs kill -9 2>/dev/null
+    sleep 1
+fi
 
 # 백엔드 시작
 cd backend

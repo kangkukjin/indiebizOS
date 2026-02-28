@@ -7,9 +7,9 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   X, ChevronLeft, ChevronRight,
   Folder, Bot, Zap, Package,
-  Users, Globe, Building2, Key,
+  Users, Building2, Key,
   MessageSquare, FileText,
-  HardDrive, Cloud
+  HardDrive, Cloud, Mail
 } from 'lucide-react';
 import guideExampleImage from '../assets/guide-example.jpg';
 
@@ -69,10 +69,11 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             </p>
           </div>
           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-            <p className="text-blue-800 text-sm font-medium mb-2">모델 이름 (2026.1 현재)</p>
+            <p className="text-blue-800 text-sm font-medium mb-2">모델 이름 (2026.2 현재)</p>
             <div className="space-y-1 text-blue-700 text-sm">
               <p>• <strong>gemini-3-flash-preview</strong> - 빠르고 가벼움 (추천)</p>
-              <p>• <strong>gemini-3-pro-preview</strong> - 더 강력하지만 느리고 비쌈</p>
+              <p>• <strong>gemini-3.1-pro-preview</strong> - 최신, 가장 강력</p>
+              <p>• <strong>gemini-2.5-flash</strong> - 안정적, 가성비 좋음</p>
             </div>
           </div>
           <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
@@ -153,31 +154,45 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       )
     },
     {
-      title: '도구 패키지',
+      title: 'IBL 노드 & 도구 패키지',
       icon: <Package className="w-10 h-10 text-green-600" />,
       content: (
-        <div className="space-y-4">
+        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
           <p className="text-gray-600">
-            <strong>도구</strong>는 에이전트가 실제 행동하는 능력입니다.<br/>
-            필요한 것만 설치해서 사용합니다.
+            에이전트는 <strong>IBL(IndieBiz Logic)</strong>이라는 통합 명령어로<br/>
+            6개 노드의 <strong>321가지 액션</strong>을 실행합니다.
           </p>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-gray-50 p-2 rounded text-gray-900">
-              <strong>investment</strong>
-              <p className="text-gray-700 text-sm">주가, 재무제표, 공시</p>
+          <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="bg-blue-50 p-2 rounded text-center">
+              <p className="text-blue-700 font-medium">source</p>
+              <p className="text-blue-600 text-xs">정보 검색/수집</p>
             </div>
-            <div className="bg-gray-50 p-2 rounded text-gray-900">
-              <strong>real-estate</strong>
-              <p className="text-gray-700 text-sm">실거래가 조회</p>
+            <div className="bg-purple-50 p-2 rounded text-center">
+              <p className="text-purple-700 font-medium">interface</p>
+              <p className="text-purple-600 text-xs">사용자 상호작용</p>
             </div>
-            <div className="bg-gray-50 p-2 rounded text-gray-900">
-              <strong>web</strong>
-              <p className="text-gray-700 text-sm">웹 검색, 크롤링</p>
+            <div className="bg-green-50 p-2 rounded text-center">
+              <p className="text-green-700 font-medium">system</p>
+              <p className="text-green-600 text-xs">시스템 제어</p>
             </div>
-            <div className="bg-gray-50 p-2 rounded text-gray-900">
-              <strong>media_producer</strong>
-              <p className="text-gray-700 text-sm">슬라이드, 영상 제작</p>
+            <div className="bg-amber-50 p-2 rounded text-center">
+              <p className="text-amber-700 font-medium">forge</p>
+              <p className="text-amber-600 text-xs">콘텐츠 생성</p>
             </div>
+            <div className="bg-cyan-50 p-2 rounded text-center">
+              <p className="text-cyan-700 font-medium">stream</p>
+              <p className="text-cyan-600 text-xs">미디어 스트리밍</p>
+            </div>
+            <div className="bg-pink-50 p-2 rounded text-center">
+              <p className="text-pink-700 font-medium">messenger</p>
+              <p className="text-pink-600 text-xs">외부 통신</p>
+            </div>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-lg text-sm">
+            <p className="text-gray-700">
+              각 노드는 <strong>도구 패키지</strong>로 확장됩니다.<br/>
+              현재 <strong>35개</strong>의 도구 패키지가 설치되어 있습니다.
+            </p>
           </div>
           <div className="bg-green-50 p-3 rounded-lg text-sm text-green-700">
             📦 안경 메뉴 → <strong>도구 상점</strong>에서 설치/제거
@@ -263,17 +278,17 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             </div>
           </div>
           <div className="flex items-center gap-3 p-2 bg-gray-50 rounded text-gray-900">
-            <Globe className="w-5 h-5 text-green-500" />
+            <Mail className="w-5 h-5 text-red-500" />
             <div>
-              <strong>IndieNet</strong>
-              <p className="text-gray-700 text-sm">P2P 네트워크, 도구 패키지 공유</p>
+              <strong>통신 채널</strong>
+              <p className="text-gray-700 text-sm">Gmail, Nostr DM으로 외부 소통 & 자동응답</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-2 bg-gray-50 rounded text-gray-900">
             <Building2 className="w-5 h-5 text-blue-500" />
             <div>
               <strong>비즈니스 관리</strong>
-              <p className="text-gray-700 text-sm">고객 관리, 자동응답 AI</p>
+              <p className="text-gray-700 text-sm">이웃(파트너) 관리, 자동응답 AI</p>
             </div>
           </div>
         </div>
@@ -338,25 +353,28 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             </p>
           </div>
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <p className="text-blue-800 font-medium mb-2">Step 2: 시스템 AI에게 설치 요청</p>
+            <p className="text-blue-800 font-medium mb-2">Step 2: 시스템 AI와 대화</p>
             <p className="text-blue-700 text-sm mb-2">
-              상단의 <strong>🤖 시스템 AI</strong> 버튼을 클릭하고 이렇게 말하세요:
+              상단의 <strong>시스템 AI</strong> 버튼을 클릭하고 이렇게 말하세요:
             </p>
             <div className="bg-white p-2 rounded border border-blue-300 text-blue-900 text-sm">
               "나는 이게 처음이야. 필요한 것들을 하나씩 설치해줘."
             </div>
           </div>
+          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <p className="text-green-800 font-medium mb-2">Step 3: 프로젝트 만들기</p>
+            <p className="text-green-700 text-sm">
+              바탕화면 <strong>우클릭</strong> → "새 프로젝트"로<br/>
+              관심 분야의 작업 공간을 만들어보세요.
+            </p>
+          </div>
           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
             <p className="text-orange-800 text-sm">
               <strong>⏳ 처음에는 시간이 걸립니다!</strong><br/>
               시스템 AI가 필요한 라이브러리들을 설치합니다.<br/>
-              설치할 것이 많으니 <strong>잠시 기다려주세요</strong>.
+              안경 메뉴 → <strong>로그 보기</strong>로 진행 상황을 확인하세요.
             </p>
           </div>
-          <p className="text-gray-600 text-sm text-center">
-            설치가 완료되면 프로젝트를 만들고<br/>
-            에이전트와 대화할 수 있어요! 🎉
-          </p>
         </div>
       )
     }

@@ -17,6 +17,7 @@ IndieBiz OS Core
 import re
 import json
 import time
+import threading
 import base64 as b64
 from typing import List, Dict, Callable, Any, Generator
 from .base import BaseProvider
@@ -53,9 +54,15 @@ class GeminiProvider(BaseProvider):
         self._genai_client = None
         self._genai_types = None
         self._compaction_summary = None  # Rolling Compaction 요약 저장
+        self._cache_name = None  # Gemini 컨텍스트 캐시 이름
+        self._cached_system_prompt = None  # 캐시된 프롬프트 (변경 감지용)
+        self._cached_gemini_tools = None  # 변환된 도구 캐시
+        self._cache_thread = None  # 백그라운드 캐시 생성 스레드
+        self._cache_ready = threading.Event()  # 캐시 준비 완료 시그널
+        self._cache_lock = threading.Lock()  # 캐시 생성/삭제 동시성 보호
 
     def init_client(self) -> bool:
-        """Gemini 클라이언트 초기화"""
+        """Gemini 클라이언트 초기화 + 백그라운드 캐시 생성"""
         if not self.api_key:
             print(f"[GeminiProvider] {self.agent_name}: API 키 없음")
             return False
@@ -67,7 +74,15 @@ class GeminiProvider(BaseProvider):
             self._genai_client = genai.Client(api_key=self.api_key)
             self._genai_types = types
             self._client = self._genai_client
+
+            # 도구 변환 캐싱 (한 번만 수행)
+            if self.tools:
+                self._cached_gemini_tools = [types.Tool(function_declarations=self._convert_tools())]
             print(f"[GeminiProvider] {self.agent_name}: 초기화 완료 (도구 {len(self.tools)}개)")
+
+            # 백그라운드 캐시 생성 시작 (첫 메시지를 블로킹하지 않음)
+            self._start_background_cache()
+
             return True
         except ImportError:
             print("[GeminiProvider] google-genai 라이브러리 없음")
@@ -75,6 +90,120 @@ class GeminiProvider(BaseProvider):
         except Exception as e:
             print(f"[GeminiProvider] 초기화 실패: {e}")
             return False
+
+    def _start_background_cache(self):
+        """백그라운드 스레드에서 캐시 생성 (논블로킹)"""
+        if not self.system_prompt:
+            self._cache_ready.set()  # 캐시 불필요 → 즉시 ready
+            return
+
+        def _create():
+            try:
+                self._create_cache_internal(self._cached_gemini_tools)
+            except Exception as e:
+                print(f"[Gemini Cache] 백그라운드 생성 실패: {e}")
+            finally:
+                self._cache_ready.set()
+
+        self._cache_thread = threading.Thread(target=_create, daemon=True)
+        self._cache_thread.start()
+        print(f"[Gemini Cache] {self.agent_name}: 백그라운드 생성 시작")
+
+    # ── 컨텍스트 캐싱 ──────────────────────────────────────
+
+    def _create_cache_internal(self, gemini_tools=None):
+        """캐시 실제 생성 로직 (스레드 안전)
+
+        Gemini 제약: cachedContent 사용 시 system_instruction, tools를
+        GenerateContent 요청에 넣을 수 없음. 모두 캐시에 포함해야 함.
+        """
+        with self._cache_lock:
+            if not self._genai_client or not self.system_prompt:
+                return
+
+            # 시스템 프롬프트가 변경되지 않았으면 기존 캐시 유지
+            if self._cache_name and self._cached_system_prompt == self.system_prompt:
+                return
+
+            # 이전 캐시 삭제
+            self._delete_cache_internal()
+
+            try:
+                t0 = time.time()
+                types = self._genai_types
+                cache_config = types.CreateCachedContentConfig(
+                    displayName=f"indiebiz-{self.agent_name}",
+                    systemInstruction=self.system_prompt,
+                    ttl="3600s",  # 1시간
+                )
+                # 도구도 캐시에 포함 (Gemini 제약)
+                if gemini_tools:
+                    cache_config.tools = gemini_tools
+
+                cache = self._genai_client.caches.create(
+                    model=self.model,
+                    config=cache_config
+                )
+                self._cache_name = cache.name
+                self._cached_system_prompt = self.system_prompt
+                elapsed = time.time() - t0
+                prompt_tokens = len(self.system_prompt) // 3
+                print(f"[Gemini Cache] 생성 완료: ~{prompt_tokens:,} 토큰 캐시됨 ({elapsed:.2f}s, TTL=1h)")
+            except Exception as e:
+                print(f"[Gemini Cache] 생성 실패 (일반 모드로 동작): {e}")
+                self._cache_name = None
+                self._cached_system_prompt = None
+
+    def _ensure_cache(self, gemini_tools=None):
+        """캐시가 준비됐는지 논블로킹 확인. 없으면 그냥 진행."""
+        # 시스템 프롬프트 변경 감지 → 캐시 무효화 + 백그라운드 재생성
+        if self._cache_name and self._cached_system_prompt != self.system_prompt:
+            with self._cache_lock:
+                self._delete_cache_internal()
+            self._cache_ready.clear()
+            self._start_background_cache()
+
+        # 백그라운드 캐시가 준비될 때까지 최대 100ms만 대기
+        # 첫 메시지에서 캐시가 아직 안 됐으면 캐시 없이 진행
+        self._cache_ready.wait(timeout=0.1)
+
+    def _delete_cache_internal(self):
+        """기존 캐시 삭제 (lock 없이, 호출자가 lock 관리)"""
+        if self._cache_name and self._genai_client:
+            try:
+                self._genai_client.caches.delete(name=self._cache_name)
+                print(f"[Gemini Cache] 삭제: {self._cache_name}")
+            except Exception:
+                pass
+        self._cache_name = None
+        self._cached_system_prompt = None
+
+    def _build_config(self, gemini_tools):
+        """GenerateContentConfig 생성 (캐시 있으면 캐시만, 없으면 일반)"""
+        types = self._genai_types
+
+        if self._cache_name:
+            # 캐시에 system_instruction + tools 포함됨 → 여기선 제외
+            return types.GenerateContentConfig(
+                cachedContent=self._cache_name,
+                temperature=0.5
+            )
+        else:
+            return types.GenerateContentConfig(
+                system_instruction=self.system_prompt,
+                tools=gemini_tools,
+                temperature=0.5
+            )
+
+    def cleanup(self):
+        """프로바이더 정리 (에이전트 종료 시 호출)"""
+        # 백그라운드 스레드 대기
+        if self._cache_thread and self._cache_thread.is_alive():
+            self._cache_ready.wait(timeout=3)
+        with self._cache_lock:
+            self._delete_cache_internal()
+
+    # ── 메시지 처리 ──────────────────────────────────────
 
     def process_message(
         self,
@@ -124,17 +253,12 @@ class GeminiProvider(BaseProvider):
         # 대화 히스토리 구성
         contents = self._build_contents(message, history, images)
 
-        # 도구 설정
-        gemini_tools = None
-        if self.tools:
-            gemini_tools = [types.Tool(function_declarations=self._convert_tools())]
+        # 도구 설정 (캐시된 결과 사용)
+        gemini_tools = self._cached_gemini_tools
 
-        # 설정 (temperature 0.5: 지시 준수 강화)
-        config = types.GenerateContentConfig(
-            system_instruction=self.system_prompt,
-            tools=gemini_tools,
-            temperature=0.5
-        )
+        # 캐시 확인 (논블로킹, 최대 100ms 대기)
+        self._ensure_cache(gemini_tools)
+        config = self._build_config(gemini_tools)
 
         # 도구 호출 루프 (재귀 대신 while)
         accumulated_text = ""

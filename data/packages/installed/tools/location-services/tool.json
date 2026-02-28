@@ -75,7 +75,7 @@
     },
     {
       "name": "kakao_navigation",
-      "description": "카카오모빌리티 API로 자동차 길찾기를 수행합니다.\n\n## 반환 정보\n- 거리, 예상 소요시간, 톨비\n- 턴바이턴 안내\n- 경로가 표시된 HTML 지도 파일\n\n## 좌표 형식\n- '경도,위도' (예: '127.0276,37.4979')\n- '경도,위도,name=장소명' 형식도 가능\n\n## 경로 옵션\n- priority: RECOMMEND(추천), TIME(최단시간), DISTANCE(최단거리)\n- avoid: toll(유료도로), motorway(고속도로) 회피",
+      "description": "카카오모빌리티 API로 자동차 길찾기를 수행합니다.\n\n## 반환 정보\n- 거리, 예상 소요시간, 톨비\n- 경로 지도 (map_data)\n- 주요 구간 안내\n\n## 출발지/목적지 형식\n- 장소명: '오송역', '수원 포레파크원' (자동 좌표 변환)\n- 좌표: '127.0276,37.4979'\n\n## 경로 옵션\n- priority: RECOMMEND(추천), TIME(최단시간), DISTANCE(최단거리)\n- avoid: toll(유료도로), motorway(고속도로) 회피",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -150,6 +150,24 @@
             "description": "추가 마커 [{name, lat, lng}, ...]"
           }
         }
+      }
+    },
+    {
+      "name": "reverse_geocode",
+      "description": "GPS 좌표를 행정구역 주소로 변환합니다 (카카오 로컬 API).\n\n## 반환 정보\n- address: 전체 주소 (예: '부산광역시 기장군 기장읍')\n- region_1depth~4depth: 시/도, 시/군/구, 읍/면/동, 리\n\n## 사용 예시\n- lat=35.32, lon=129.27 → '경상남도 울산광역시 울주군'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "description": "위도 (latitude)"
+          },
+          "lon": {
+            "type": "number",
+            "description": "경도 (longitude)"
+          }
+        },
+        "required": ["lat", "lon"]
       }
     }
   ]

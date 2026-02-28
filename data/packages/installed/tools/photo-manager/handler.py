@@ -22,6 +22,37 @@ import scanner
 API_BASE_URL = "http://127.0.0.1:8765"
 
 
+def _resolve_scan_path(params: Dict[str, Any]) -> str:
+    """
+    스캔 경로 자동 해석.
+    1. params["path"]가 기존 스캔 경로와 일치하면 그대로 사용
+    2. 유효한 디렉토리이면 사용
+    3. 위 모두 실패 시 사진 수가 가장 많은 스캔 자동 선택
+    반환: 스캔 경로 문자열 또는 None
+    """
+    path = params.get("path")
+
+    result = photo_db.list_scans()
+    scans = result.get("scans", []) if result.get("success") else []
+
+    if path:
+        expanded = os.path.abspath(os.path.expanduser(path))
+        # 스캔된 경로와 정확히 매칭?
+        for scan in scans:
+            if scan["root_path"] == expanded:
+                return expanded
+        # 유효한 디렉토리이면 사용
+        if os.path.isdir(expanded):
+            return expanded
+
+    # 자동 선택: 사진 수가 가장 많은 스캔
+    if scans:
+        best = max(scans, key=lambda s: s.get("photo_count", 0))
+        return best["root_path"]
+
+    return None
+
+
 def execute(command: str, params: Dict[str, Any], project_path: str = ".") -> Dict[str, Any]:
     """
     도구 명령 실행
@@ -128,7 +159,9 @@ def list_scans(params: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "success": True,
             "message": f"{len(scans)}개의 스캔된 폴더가 있습니다.",
-            "scans": summary
+            "scans": summary,
+            "tip": "특정 기간/장소 사진 검색은 Python으로 DB에 직접 SQL 쿼리하세요. "
+                   "예: sqlite3.connect(DB경로) → SELECT filename, taken_date, gps_lat, gps_lon FROM media_files WHERE taken_date LIKE '2021-04%'"
         }
     else:
         return {
@@ -139,12 +172,9 @@ def list_scans(params: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_gallery(params: Dict[str, Any]) -> Dict[str, Any]:
     """갤러리 조회"""
-    path = params.get("path")
+    path = _resolve_scan_path(params)
     if not path:
-        return {"success": False, "error": "경로를 지정해주세요."}
-
-    path = os.path.expanduser(path)
-    path = os.path.abspath(path)
+        return {"success": False, "error": "스캔 데이터가 없습니다. 먼저 scan_photos로 폴더를 스캔하세요."}
 
     page = params.get("page", 1)
     limit = params.get("limit", 50)
@@ -230,12 +260,9 @@ def find_duplicates(params: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_stats(params: Dict[str, Any]) -> Dict[str, Any]:
     """통계 조회"""
-    path = params.get("path")
+    path = _resolve_scan_path(params)
     if not path:
-        return {"success": False, "error": "경로를 지정해주세요."}
-
-    path = os.path.expanduser(path)
-    path = os.path.abspath(path)
+        return {"success": False, "error": "스캔 데이터가 없습니다. 먼저 scan_photos로 폴더를 스캔하세요."}
 
     result = photo_db.get_stats(path)
 
@@ -268,12 +295,9 @@ def get_stats(params: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_timeline(params: Dict[str, Any]) -> Dict[str, Any]:
     """타임라인 조회"""
-    path = params.get("path")
+    path = _resolve_scan_path(params)
     if not path:
-        return {"success": False, "error": "경로를 지정해주세요."}
-
-    path = os.path.expanduser(path)
-    path = os.path.abspath(path)
+        return {"success": False, "error": "스캔 데이터가 없습니다. 먼저 scan_photos로 폴더를 스캔하세요."}
 
     result = photo_db.get_timeline(path)
 

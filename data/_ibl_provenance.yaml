@@ -198,6 +198,8 @@ source:
   house_rent: real-estate
   district_codes: real-estate
   commercial: real-estate
+  kr_investor: investment
+  kr_stock_investor: investment
 stream:
   info: youtube
   transcript: youtube
@@ -222,7 +224,6 @@ forge:
   slide: media_producer
   video: media_producer
   chart: visualization
-  image: media_producer
   music: music-composer
   youtube_download: youtube
   remotion: remotion-video

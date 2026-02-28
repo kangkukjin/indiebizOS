@@ -108,6 +108,30 @@
           }
         }
       }
+    },
+    {
+      "name": "generate_newspaper",
+      "description": "키워드 목록으로 Google News 검색 후 신문(HTML) 자동 생성. 키워드별 7개 기사를 수집하여 반응형 HTML 신문으로 조합.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keywords": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "검색할 키워드 목록 (예: [\"AI\", \"경제\", \"문화\"])"
+          },
+          "title": {
+            "type": "string",
+            "description": "신문 제목 (기본: IndieBiz Daily)"
+          },
+          "exclude_sources": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "제외할 뉴스 출처 목록"
+          }
+        },
+        "required": ["keywords"]
+      }
     }
   ]
 }

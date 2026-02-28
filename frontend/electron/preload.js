@@ -52,6 +52,15 @@ contextBridge.exposeInMainWorld('electron', {
   openAndroidManagerWindow: (deviceId, projectId) =>
     ipcRenderer.invoke('open-android-manager-window', deviceId, projectId),
 
+  // 런처 새로고침 요청
+  refreshLauncher: () => ipcRenderer.invoke('refresh-launcher'),
+  onLauncherRefresh: (callback) => {
+    ipcRenderer.on('refresh-launcher', () => callback());
+  },
+  removeLauncherRefresh: () => {
+    ipcRenderer.removeAllListeners('refresh-launcher');
+  },
+
   // 폴더에서 아이템을 런처로 드롭
   dropItemToLauncher: (itemId, itemType, sourceFolderId) =>
     ipcRenderer.invoke('drop-item-to-launcher', itemId, itemType, sourceFolderId),

@@ -192,6 +192,11 @@ export interface ElectronAPI {
   openAndroidManagerWindow: (deviceId?: string | null, projectId?: string | null) => Promise<void>;
   openPath: (path: string) => Promise<void>;
 
+  // 런처 새로고침
+  refreshLauncher: () => Promise<boolean>;
+  onLauncherRefresh: (callback: () => void) => void;
+  removeLauncherRefresh: () => void;
+
   // 창 간 드래그 드롭 API
   dropItemToLauncher: (itemId: string, itemType: string, sourceFolderId: string) => Promise<boolean>;
   dropItemToFolder: (itemId: string, itemType: string, targetFolderId: string, sourceFolderId: string) => Promise<boolean>;

@@ -2,7 +2,8 @@
   "id": "photo-manager",
   "name": "Photo Manager",
   "description": "사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 도구.\n\n## 스캔 DB 직접 활용\n제공된 도구만으로 부족할 때 python-exec로 DB에 직접 SQL 쿼리가 가능합니다.\n- list_scans 결과의 DB 경로로 sqlite3.connect() 하여 사용\n- 테이블: media_files\n- 주요 컬럼: path(파일경로), filename, taken_date(촬영일 ISO8601), gps_lat(위도), gps_lon(경도), media_type('photo'/'video'), size, camera_model\n- 예: 특정 기간 사진 조회, GPS 좌표 범위로 장소별 필터링, 조건에 맞는 파일 경로 추출 후 copy_path로 복사 등",
-  "version": "1.1.0",
+  "version": "1.2.0",
+  "guide_file": "guide.md",
   "tools": [
     {
       "name": "scan_photos",

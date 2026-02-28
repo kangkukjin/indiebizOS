@@ -1,6 +1,17 @@
 # Web Builder & Homepage Manager 사용 가이드
 
-## 두 가지 시나리오 명확 구분
+홈페이지/웹사이트를 만들거나 수정하라는 요청을 받으면 이 가이드를 따른다.
+
+- **기술**: Next.js + shadcn/ui + TypeScript
+- **배포**: Vercel
+- **강점**: 완전한 코드 제어, 컴포넌트 단위 설계, React 생태계 활용
+- **적합**: 홈페이지, 블로그, 포트폴리오, 랜딩 페이지, 웹앱 등 모든 웹사이트
+
+---
+
+## Web-builder (forge 노드) 상세 가이드
+
+### 두 가지 시나리오 명확 구분
 
 ### A. 새 홈페이지 만들기
 
@@ -8,29 +19,34 @@
 create_project → add_component → create_page → edit_styles → preview_site → build_site → deploy_vercel
 ```
 
-1. **create_project**: 새 Next.js + shadcn/ui 프로젝트 생성
-2. **add_component**: 필요한 UI 컴포넌트 추가
-3. **create_page**: 섹션 조합으로 페이지 생성
+1. **create_project**: 새 Next.js + shadcn/ui 프로젝트 생성 → 실패 시: npm 설치 오류 확인, 디스크 공간/네트워크 확인 후 재시도
+2. **add_component**: 필요한 UI 컴포넌트 추가 → 실패 시: 컴포넌트 이름 확인, list_components로 사용 가능 목록 재확인
+3. **create_page**: 섹션 조합으로 페이지 생성 → 실패 시: 섹션 타입/props 확인 후 재시도
 4. **edit_styles**: 테마/색상 적용
-5. **preview_site**: 로컬에서 미리보기
-6. **build_site**: 프로덕션 빌드
+5. **preview_site**: 로컬에서 미리보기 → 실패 시: 에러 로그 확인, 코드 수정 후 재시도
+6. **build_site**: 프로덕션 빌드 → 실패 시: 빌드 에러 분석, 타입 에러/import 오류 수정 후 재빌드. **빌드 실패 상태에서 배포하지 마세요.**
 7. **deploy_vercel**: Vercel에 배포
 
 ### B. 기존 홈페이지 수정
 
+⚠️ **중요: 홈페이지 수정 요청을 받으면 반드시 첫 번째로 site_registry(action='list')를 호출하세요.**
+파일 시스템을 탐색하거나 ls/cat 명령으로 파일을 찾지 마세요. registry에 모든 사이트 정보(경로, 배포 URL, 기술 스택)가 있습니다.
+
 ```
+[반드시 이 순서대로]
 site_registry(list) → site_snapshot → 파일 직접 읽기/수정 → git push → site_live_check
 ```
 
-1. **site_registry(action='list')**: 등록된 사이트 목록 확인
+1. **site_registry(action='list')**: 등록된 사이트 목록 확인 — ⚠️ 반드시 첫 번째! 이 결과에 local_path, repo_url, deploy_url, tech_stack 모두 포함됨
 2. **site_snapshot**: 현재 구조 파악 (파일, 커밋, 페이지, 의존성)
 3. **파일 직접 읽기/수정**: read_file → edit_file로 기존 코드 수정
 4. **git push**: 변경사항 푸시 (자동 배포 설정 시 자동 반영)
 5. **site_live_check**: 배포된 사이트 상태 점검
 
 ### 핵심 주의사항
-**기존 사이트를 수정할 때 절대 `create_project`를 호출하지 마세요.**
-기존 사이트 개선은 반드시: `site_snapshot` → 파일 읽기 → 직접 수정 → git push
+- **기존 사이트를 수정할 때 절대 `create_project`를 호출하지 마세요.**
+- **절대 run_command로 ls, cat, find 등을 사용해 사이트 파일을 찾지 마세요.** registry에 경로가 있습니다.
+- 기존 사이트 개선은 반드시: `site_registry(list)` → `site_snapshot` → 파일 읽기 → 직접 수정 → git push
 
 ---
 
@@ -319,21 +335,28 @@ deploy_vercel(project_path="/path", production=True, project_name="my-site")
 ### 새 랜딩 페이지 만들기
 ```
 1. create_project(name="my-landing", template="landing")
+   → 실패 시: 에러 확인 후 재시도. 프로젝트 생성 없이는 다음 단계 불가.
 2. add_component(project_path="...", components=["button", "card"])
+   → 실패 시: 컴포넌트 이름/경로 확인
 3. create_page(project_path="...", page_name="index", sections=[...])
 4. edit_styles(project_path="...", theme="blue")
 5. preview_site(project_path="...", action="start")
+   → 문제 발견 시: 코드 수정 → 재확인 반복
 6. (확인 후) build_site(project_path="...")
+   → 빌드 실패 시: 에러 수정 후 재빌드. 빌드 성공 전까지 배포 금지.
 7. deploy_vercel(project_path="...", production=True)
 8. site_registry(action="register", name="My Landing", local_path="...")
 ```
 
 ### 기존 사이트 수정하기
+⚠️ **절대 파일 시스템을 탐색하지 마세요. registry가 모든 정보를 알려줍니다.**
 ```
-1. site_registry(action='list')              → 사이트 목록 확인
-2. site_snapshot(site_id='my-site')          → 현재 구조 파악
-3. read_file('/path/to/page.tsx')            → 파일 읽기
+1. site_registry(action='list')              → ⚠️ 반드시 첫 번째! 사이트 목록 + 경로 + URL 확인
+2. site_snapshot(site_id='my-site')          → 현재 구조 파악 (어떤 파일이 있는지 여기서 확인)
+3. read_file('/path/to/page.tsx')            → 파일 읽기 (경로는 1,2단계에서 이미 알고 있음)
 4. edit_file('/path/to/page.tsx', ...)       → 코드 수정
 5. run_command('cd /path && git add -A && git commit -m "update" && git push')
 6. site_live_check(site_id='my-site')        → 배포 결과 확인
 ```
+❌ 나쁜 예: run_command('ls ~/Desktop/AI/HomePages/') → 이렇게 하지 마세요!
+✅ 좋은 예: site_registry(action='list') → registry가 local_path를 알려줌

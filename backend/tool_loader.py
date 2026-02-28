@@ -120,7 +120,6 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
         return None
 
     all_nodes = data.get("nodes", {})
-    meta = data.get("meta", {})
 
     # --- allowed_nodes 필터링 (ibl_access.resolve_allowed_nodes와 동일 로직 활용) ---
     if allowed_nodes:
@@ -137,38 +136,13 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
     else:
         nodes = all_nodes
 
-    # --- 노드 요약 생성 ---
-    node_lines = []
-    node_names = []
-    for name, node_def in nodes.items():
-        node_names.append(name)
-        desc = node_def.get("description", "")
-        actions = node_def.get("actions", {})
-        action_names = list(actions.keys())
-        shown = ", ".join(action_names)
-        node_lines.append(f"- {name}: {desc}\n  액션: {shown}")
+    # --- 노드 이름만 수집 (enum용) ---
+    node_names = sorted(nodes.keys())
 
-    nodes_section = "\n".join(node_lines)
-
-    # --- 사용 예시 ---
-    usage_lines = []
-    for section in meta.get("usage", []):
-        usage_lines.append(section.get("section", ""))
-        for ex in section.get("examples", []):
-            usage_lines.append(f"  {ex}")
-
-    # --- 파이프라인 연산자 ---
-    pipe_lines = []
-    for p in meta.get("pipeline", []):
-        pipe_lines.append(f"{p['op']} ({p['name']}): {p.get('example', '')}")
-
-    # --- description 조합 ---
+    # --- description: 환경 프롬프트(<ibl_executor>)에 상세 정보가 있으므로 최소한으로 ---
     description = (
-        f"IndieBiz 통합 도구. {len(nodes)}개 노드로 모든 기능 실행.\n"
-        f"\n## 노드\n{nodes_section}\n"
-        f"\n## 사용법\n" + "\n".join(usage_lines) + "\n"
-        f"\n## 파이프라인\n" + "\n".join(pipe_lines) + "\n"
-        f"\nnode를 모르면 system:discover로 검색."
+        f"IBL 명령 실행. {len(nodes)}개 노드 사용 가능. "
+        f"노드/액션 상세는 시스템 프롬프트의 <ibl_executor> 참조."
     )
 
     return {
@@ -184,7 +158,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                 },
                 "action": {
                     "type": "string",
-                    "description": "실행할 액션 (예: web_search, registry, read, play, send)"
+                    "description": "실행할 액션 (예: web_search, kr_investor, play, send)"
                 },
                 "target": {
                     "type": "string",
@@ -192,13 +166,14 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                 },
                 "params": {
                     "type": "object",
-                    "description": "추가 파라미터"
+                    "description": "추가 파라미터 (start_date, end_date 등)"
                 },
-                "code": {
+                "pipeline": {
                     "type": "string",
-                    "description": "IBL 코드 (파이프라인 모드: [node:action](target) >> ...)"
+                    "description": "IBL 파이프라인 ([node:action](target) >> ...)"
                 }
-            }
+            },
+            "required": ["node", "action"]
         }
     }
 

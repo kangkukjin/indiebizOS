@@ -644,6 +644,7 @@ export function Manager() {
       addLog(`[스위치 생성] '${switchForm.name}' 스위치가 생성되었습니다!`);
       setSwitchForm({ name: '', icon: '⚡', command: '', agentName: '' });
       loadSwitches();  // 목록 새로고침
+      window.electron?.refreshLauncher();  // 런처 새로고침
     } catch (error) {
       addLog(`[오류] 스위치 생성 실패: ${error}`);
     }
@@ -665,6 +666,7 @@ export function Manager() {
       setEditingSwitch(null);
       setSwitchForm({ name: '', icon: '⚡', command: '', agentName: '' });
       loadSwitches();  // 목록 새로고침
+      window.electron?.refreshLauncher();  // 런처 새로고침
     } catch (error) {
       addLog(`[오류] 스위치 수정 실패: ${error}`);
     }

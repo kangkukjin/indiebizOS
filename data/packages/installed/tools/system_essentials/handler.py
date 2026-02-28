@@ -77,10 +77,14 @@ def is_dangerous_command(command: str) -> bool:
     """명령어가 위험한지 검사 (정규식 단어 경계 사용)"""
     return bool(_DANGEROUS_RE.search(command))
 
+def _get_path(tool_input: dict) -> str:
+    """file_path, path, target 중 사용 가능한 경로 반환"""
+    return tool_input.get("file_path") or tool_input.get("path") or tool_input.get("target") or ""
+
 def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
     try:
         if tool_name == "read_file":
-            path = os.path.join(project_path, tool_input["file_path"])
+            path = os.path.join(project_path, _get_path(tool_input))
             # 대용량 파일 방어 (1MB 제한)
             MAX_READ_SIZE = 1_000_000
             file_size = os.path.getsize(path)
@@ -91,7 +95,16 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
             return content
 
         elif tool_name == "write_file":
-            path = os.path.join(project_path, tool_input["file_path"])
+            raw_path = _get_path(tool_input)
+            path = os.path.join(project_path, raw_path)
+
+            # 새 파일 + bare 파일명(디렉토리 없음) → outputs/ 폴더로 자동 리다이렉트
+            if (not os.path.isabs(raw_path)
+                    and os.sep not in raw_path and '/' not in raw_path
+                    and not os.path.exists(path)):
+                raw_path = os.path.join("outputs", raw_path)
+                path = os.path.join(project_path, raw_path)
+
             scope_err = _validate_path_in_scope(path, project_path)
             if scope_err:
                 return scope_err
@@ -103,7 +116,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
             return f"Successfully wrote to {abs_path}"
 
         elif tool_name == "list_directory":
-            dir_path = os.path.join(project_path, tool_input.get("dir_path", "."))
+            dir_path = os.path.join(project_path, tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or ".")
             items = os.listdir(dir_path)
             return "\n".join(items)
 
@@ -186,7 +199,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
                 return f"No files matching pattern: {pattern}"
 
         elif tool_name == "edit_file":
-            file_path = os.path.join(project_path, tool_input["file_path"])
+            file_path = os.path.join(project_path, _get_path(tool_input))
             scope_err = _validate_path_in_scope(file_path, project_path)
             if scope_err:
                 return scope_err
@@ -195,7 +208,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
 
             # 파일 읽기
             if not os.path.exists(file_path):
-                return f"Error: 파일이 존재하지 않습니다: {tool_input['file_path']}"
+                return f"Error: 파일이 존재하지 않습니다: {_get_path(tool_input)}"
 
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()

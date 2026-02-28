@@ -541,12 +541,12 @@ def execute_workflow_action(action: str, target: str, params: dict,
         return {"error": f"워크플로우를 찾을 수 없습니다: {target}"}
 
     elif action == "run_pipeline":
-        # IBL 코드 텍스트 모드: code 파라미터가 있으면 파서로 파싱
-        code = params.get("code", "")
-        if code:
+        # IBL 파이프라인 모드: pipeline 파라미터가 있으면 파서로 파싱
+        pipeline = params.get("pipeline", "")
+        if pipeline:
             from ibl_parser import parse as ibl_parse, IBLSyntaxError
             try:
-                steps = ibl_parse(code)
+                steps = ibl_parse(pipeline)
             except IBLSyntaxError as e:
                 return {"error": f"IBL 문법 오류: {str(e)}"}
         else:

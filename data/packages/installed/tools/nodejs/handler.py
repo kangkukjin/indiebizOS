@@ -70,14 +70,18 @@ def execute(tool_name, args, project_path=None):
         return {"error": f"Unknown tool: {tool_name}"}
 
     code = args.get("code", "")
+    work_dir = project_path or os.getcwd()
+    temp_path = None
     try:
-        # 임시 JavaScript 파일 생성
-        with open('temp.js', 'w') as f:
+        # 임시 JavaScript 파일 생성 (project_path 내에 생성)
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False, dir=work_dir) as f:
+            temp_path = f.name
             f.write(code)
 
         # Node.js를 사용하여 JavaScript 코드 실행 (제한 시간 30초)
         node_cmd = get_node_cmd()
-        result = subprocess.run([node_cmd, 'temp.js'], capture_output=True, text=True, timeout=30, check=True, cwd=os.getcwd())
+        result = subprocess.run([node_cmd, temp_path], capture_output=True, text=True, timeout=30, check=True, cwd=work_dir)
 
         # 결과 반환
         return {"result": result.stdout.strip()}
@@ -90,7 +94,8 @@ def execute(tool_name, args, project_path=None):
         return {"error": f"An unexpected error occurred: {str(e)}"}
     finally:
         # 임시 파일 삭제
-        try:
-            os.remove('temp.js')
-        except FileNotFoundError:
-            pass
+        if temp_path:
+            try:
+                os.remove(temp_path)
+            except FileNotFoundError:
+                pass

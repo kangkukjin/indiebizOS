@@ -79,6 +79,103 @@ kosis_search_statistics:
 
 api_engine 라우팅 액션들이 이 방식을 사용합니다.
 
+### 3. ibl_actions.yaml - IBL 노드 액션 등록 (선택)
+
+패키지의 도구를 IBL 노드 액션으로 노출하려면 `ibl_actions.yaml`을 작성해야 한다.
+이 파일은 에이전트가 `execute_ibl`로 호출하는 노드 액션(예: `forge.create_site`, `source.search`)을 정의한다.
+
+```yaml
+node: forge               # 어떤 노드에 등록할지 (forge, source, system 등 기존 노드)
+actions:
+  create_site:             # 액션 이름 (노드 내에서 유일해야 함)
+    description: 웹사이트 프로젝트 생성
+    router: handler        # handler.py로 라우팅
+    tool: site_manager     # handler.py에서 매핑할 도구명
+    target_key: site_name  # 자연어에서 추출한 대상이 매핑될 파라미터
+    default_input:         # 기본 입력값 (선택)
+      action: create
+  add_component:
+    description: 웹사이트에 컴포넌트 추가
+    target_description: 컴포넌트 이름
+    router: handler
+    tool: component_manager
+    target_key: component_name
+    default_input:
+      action: add
+guides:                    # 이 노드에서 사용할 가이드 파일 (선택)
+- web-builder/web_builder_guide.md
+```
+
+**중요**: `ibl_actions.yaml`을 작성하는 것만으로는 등록이 완료되지 않는다.
+반드시 `register_actions()`를 호출하여 `ibl_nodes.yaml`에 병합해야 한다.
+
+### 4. 가이드 파일 - 에이전트용 사용 설명서 (선택)
+
+복잡한 워크플로우를 가진 패키지는 가이드 파일을 작성하여 에이전트가 올바른 순서로 도구를 사용하도록 한다.
+
+**두 가지 레벨**:
+
+#### (A) 패키지 레벨 가이드 (도구 호출 시 자동 주입)
+- tool.json에 `"guide_file": "파일명.md"` 추가
+- 에이전트가 이 패키지의 도구를 처음 호출할 때 자동으로 가이드 내용이 주입됨
+- 파일 위치: 패키지 폴더 내 (예: `installed/tools/web-builder/web_builder_guide.md`)
+
+#### (B) 시스템 레벨 가이드 (search_guide로 검색 가능)
+- `data/guides/` 폴더에 마크다운 파일 작성
+- `data/guide_db.json`에 항목 추가 (id, name, description, keywords, file)
+- 에이전트가 `search_guide("키워드")`로 검색하여 참조
+- 여러 패키지에 걸친 워크플로우 설명에 적합
+
+---
+
+## 패키지 설치 — 완전한 등록 절차
+
+### UI를 통한 설치 (일반적인 경우)
+`POST /packages/{id}/install` API 또는 UI 도구 상자에서 설치하면 `package_manager.py`가 자동으로:
+1. 패키지 폴더를 `not_installed/` → `installed/`로 이동
+2. tool.json, handler.py 검증
+3. **`register_actions(package_id)` 호출** → ibl_actions.yaml의 액션을 ibl_nodes.yaml에 병합
+4. inventory.md 자동 업데이트
+
+### 수동 설치 (패키지 폴더를 직접 생성한 경우)
+패키지 폴더를 `installed/tools/`에 직접 만들면 된다.
+
+**필수 파일 구조:**
+```
+installed/tools/{package_id}/
+├── tool.json          # 필수 — 도구 정의
+├── handler.py         # 필수 — execute(tool_name, tool_input, project_path) 함수
+├── manifest.json      # 권장 — 패키지 메타데이터
+├── ibl_actions.yaml   # IBL 액션 사용 시 필수
+└── tools/             # 실제 도구 모듈들
+```
+
+**IBL 액션 자동 등록:**
+서버 시작 시 `_auto_register_packages()`가 자동 실행되어, `ibl_actions.yaml`이 있지만 아직 `_ibl_provenance.yaml`에 등록되지 않은 패키지를 감지하고 `register_actions()`를 호출한다. **폴더만 넣고 서버를 재시작하면 IBL 액션이 자동 등록된다.**
+
+서버 재시작 없이 즉시 등록하려면:
+```bash
+cd /path/to/indiebizOS/backend
+python3 -c "from ibl_action_manager import register_actions; print(register_actions('패키지ID'))"
+```
+
+**가이드 파일 등록** (있는 경우):
+- 패키지 레벨: tool.json에 `"guide_file": "가이드파일명.md"` 필드 추가
+- 시스템 레벨: `data/guide_db.json`에 항목 추가 + `data/guides/`에 파일 작성
+
+### 패키지 제거
+```bash
+# IBL 액션 해제
+python3 -c "from ibl_action_manager import unregister_actions; print(unregister_actions('패키지ID'))"
+```
+- `_ibl_provenance.yaml`에서 해당 패키지 소유 액션을 찾아 `ibl_nodes.yaml`에서 제거
+- guides도 함께 제거됨
+
+### 주의사항
+- **ibl_actions.yaml의 node 값은 기존 노드여야 한다** (forge, source, system 등). 존재하지 않는 노드를 지정하면 경고 후 건너뜀.
+- **액션 이름 충돌**: 같은 노드에 이미 같은 이름의 액션이 다른 패키지 소유로 등록되어 있으면 건너뜀. 접두사를 붙여 구분할 것 (예: `radio_play`, `radio_search`).
+- **register_actions() 없이 ibl_actions.yaml만 편집하면 아무 효과 없음**. 반드시 호출해야 함.
+
 ---
 
 ## 현재 설치된 도구 패키지 (35개)
@@ -164,4 +261,4 @@ api_engine 라우팅 액션들이 이 방식을 사용합니다.
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-02-18*
+*마지막 업데이트: 2026-02-22*

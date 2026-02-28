@@ -178,8 +178,18 @@
           },
           "voice": {
             "type": "string",
-            "description": "나레이션 TTS 목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성)",
+            "description": "나레이션 TTS 목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성, ko-KR-HyunsuMultilingualNeural: 중성/멀티링구얼)",
             "default": "ko-KR-SunHiNeural"
+          },
+          "rate": {
+            "type": "string",
+            "description": "말하기 속도 (예: +0%, -10%, +20%)",
+            "default": "+0%"
+          },
+          "pitch": {
+            "type": "string",
+            "description": "목소리 톤/피치 (예: +0Hz, -5Hz, +10Hz)",
+            "default": "+0Hz"
           },
           "output_filename": {
             "type": "string",
@@ -245,45 +255,7 @@
         ]
       }
     },
-    {
-      "name": "generate_ai_image",
-      "description": "텍스트 프롬프트로 AI 이미지를 생성합니다. Pollinations.ai 무료 API를 사용합니다.\n\n사용 가능한 모델: flux(기본), flux-realism(사실적), flux-anime(애니메이션), flux-3d(3D), turbo(빠름)",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "prompt": {
-            "type": "string",
-            "description": "이미지를 설명하는 텍스트 프롬프트 (영어 권장)"
-          },
-          "output_path": {
-            "type": "string",
-            "description": "저장할 파일명 (예: hero.png). 경로는 자동으로 프로젝트 outputs 폴더에 저장됨. 지정하지 않으면 자동 생성"
-          },
-          "width": {
-            "type": "integer",
-            "description": "이미지 너비 (기본: 1024, 최대: 2048)",
-            "default": 1024
-          },
-          "height": {
-            "type": "integer",
-            "description": "이미지 높이 (기본: 1024, 최대: 2048)",
-            "default": 1024
-          },
-          "model": {
-            "type": "string",
-            "description": "사용할 모델 (flux, flux-realism, flux-anime, flux-3d, turbo)",
-            "default": "flux"
-          },
-          "seed": {
-            "type": "integer",
-            "description": "재현성을 위한 시드값 (같은 시드로 같은 이미지 생성)"
-          }
-        },
-        "required": [
-          "prompt"
-        ]
-      }
-    },
+
     {
       "name": "generate_gemini_image",
       "description": "Google Gemini API로 AI 이미지를 생성합니다. 고품질 이미지 생성에 적합하며, 텍스트 렌더링 성능이 뛰어납니다.\n\n환경변수 GEMINI_API_KEY를 설정하거나 api_key 파라미터로 전달하세요.\n\n비율 옵션: 1:1(기본), 16:9, 9:16, 4:3, 3:4",
@@ -325,8 +297,18 @@
           },
           "voice": {
             "type": "string",
-            "description": "목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성, en-US-AriaNeural: 영어 여성)",
+            "description": "목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성, ko-KR-HyunsuMultilingualNeural: 중성/멀티링구얼)",
             "default": "ko-KR-SunHiNeural"
+          },
+          "rate": {
+            "type": "string",
+            "description": "말하기 속도 (예: +0%, -10%, +20%)",
+            "default": "+0%"
+          },
+          "pitch": {
+            "type": "string",
+            "description": "목소리 톤/피치 (예: +0Hz, -5Hz, +10Hz)",
+            "default": "+0Hz"
           },
           "output_filename": {
             "type": "string",

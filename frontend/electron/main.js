@@ -1073,6 +1073,15 @@ function setupIPC() {
     }
   });
 
+  // 런처 새로고침 요청 (프로젝트 창에서 스위치 생성/수정/삭제 시)
+  ipcMain.handle('refresh-launcher', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('refresh-launcher');
+      return true;
+    }
+    return false;
+  });
+
   // 폴더에서 아이템을 밖으로 드래그할 때 (런처에 드롭)
   ipcMain.handle('drop-item-to-launcher', (event, itemId, itemType, sourceFolderId) => {
     // 런처 창에 이벤트 전송

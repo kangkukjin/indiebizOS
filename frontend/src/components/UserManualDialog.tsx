@@ -59,7 +59,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             </button>
             <button onClick={() => setCurrentPage(5)} className="p-3 bg-cyan-50 rounded-lg hover:bg-cyan-100 text-left">
               <strong className="text-base text-gray-900">5. IndieNet</strong>
-              <p className="text-gray-700 text-sm">P2P 네트워크, 게시판</p>
+              <p className="text-gray-700 text-sm">Nostr 기반 탈중앙화 네트워크</p>
             </button>
             <button onClick={() => setCurrentPage(6)} className="p-3 bg-orange-50 rounded-lg hover:bg-orange-100 text-left">
               <strong className="text-base text-gray-900">6. 비즈니스 관리창</strong>
@@ -727,10 +727,11 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             </table>
           </div>
           <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-blue-800 font-medium mb-2">Gemini 모델 (2026.1 현재)</p>
+            <p className="text-blue-800 font-medium mb-2">Gemini 모델 (2026.2 현재)</p>
             <div className="space-y-2 text-blue-700">
-              <p>• <strong>gemini-2.5-flash-preview</strong> - 빠르고 경제적 (추천)</p>
-              <p>• <strong>gemini-2.5-pro-preview</strong> - 더 강력, 느리고 비쌈</p>
+              <p>• <strong>gemini-3-flash-preview</strong> - 빠르고 경제적 (추천)</p>
+              <p>• <strong>gemini-3.1-pro-preview</strong> - 최신, 가장 강력</p>
+              <p>• <strong>gemini-2.5-flash</strong> - 안정적, 가성비 좋음</p>
             </div>
           </div>
 
@@ -761,7 +762,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
               <p>2. <strong>설정</strong> 선택</p>
               <p>3. <strong>AI 프로바이더</strong> 탭에서 원하는 프로바이더 선택</p>
               <p>4. API 키 입력 후 저장</p>
-              <p>5. 사용할 모델 선택 (예: gemini-2.5-flash-preview)</p>
+              <p>5. 사용할 모델 선택 (예: gemini-3-flash-preview)</p>
             </div>
             <div className="bg-white p-2 rounded mt-2 text-amber-600 text-sm">
               💡 설정 후 시스템 AI와 대화하면 API가 정상 작동하는지 확인할 수 있습니다
@@ -785,10 +786,11 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       content: (
         <div className="space-y-4 text-base">
           <div className="bg-green-50 p-4 rounded-lg">
-            <p className="text-green-800 font-medium mb-2">도구 패키지란?</p>
+            <p className="text-green-800 font-medium mb-2">IBL 노드 & 도구 패키지</p>
             <p className="text-green-700 text-sm">
-              에이전트가 실제 "행동"하는 능력입니다.
-              <strong>있는 것만 쓰는 게 아니라</strong>, 필요하면 <strong>직접 만들 수도</strong> 있습니다.
+              에이전트는 <strong>IBL(IndieBiz Logic)</strong> 통합 명령어로 6개 노드(source, interface, system, forge, stream, messenger)의
+              <strong>321가지 액션</strong>을 실행합니다. 각 노드는 <strong>도구 패키지</strong>로 확장되며,
+              현재 <strong>35개</strong>의 도구가 설치되어 있습니다.
             </p>
             <p className="text-green-700 text-sm mt-2">
               자신이 쓸 도구를 직접 만들고 수리할 수 있다는 것은 <strong>AI 시대의 특징</strong>입니다.
@@ -800,7 +802,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             <p className="font-medium text-gray-700 mb-2">🔧 도구 패키지 직접 만들기</p>
             <div className="text-sm text-gray-800 space-y-2">
               <p>• 시스템 AI에게 <strong>"○○ 도구 패키지 만들어줘"</strong>라고 요청</p>
-              <p>• AI가 <code>tool.json</code> (도구 정의)와 <code>handler.py</code> (실행 로직) 생성</p>
+              <p>• AI가 <code>tool.json</code> (도구 정의)와 실행 로직 파일 생성</p>
               <p>• 필요한 Python 라이브러리도 자동 설치</p>
               <p>• 나만의 워크플로우에 맞는 커스텀 도구 제작 가능</p>
             </div>
@@ -838,8 +840,8 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             <div className="bg-gray-50 p-1 rounded text-center">investment</div>
             <div className="bg-gray-50 p-1 rounded text-center">youtube</div>
             <div className="bg-gray-50 p-1 rounded text-center">legal</div>
-            <div className="bg-gray-50 p-1 rounded text-center">health-record</div>
-            <div className="bg-gray-50 p-1 rounded text-center">+21개 더</div>
+            <div className="bg-gray-50 p-1 rounded text-center">web-collector</div>
+            <div className="bg-gray-50 p-1 rounded text-center">+30개 더</div>
           </div>
 
           <div className="bg-amber-50 p-2 rounded-lg text-amber-700 text-sm">
@@ -1233,19 +1235,19 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="bg-white p-2 rounded">
                 <p className="text-gray-700">활성 프로젝트</p>
-                <p className="text-xl font-bold text-amber-600">16개</p>
+                <p className="text-xl font-bold text-amber-600">24개</p>
               </div>
               <div className="bg-white p-2 rounded">
                 <p className="text-gray-700">도구 패키지</p>
-                <p className="text-xl font-bold text-green-600">26개</p>
+                <p className="text-xl font-bold text-green-600">35개</p>
+              </div>
+              <div className="bg-white p-2 rounded">
+                <p className="text-gray-700">IBL 노드</p>
+                <p className="text-xl font-bold text-purple-600">6개 (321 액션)</p>
               </div>
               <div className="bg-white p-2 rounded">
                 <p className="text-gray-700">확장 패키지</p>
                 <p className="text-xl font-bold text-blue-600">9개</p>
-              </div>
-              <div className="bg-white p-2 rounded">
-                <p className="text-gray-700">마지막 업데이트</p>
-                <p className="text-lg font-bold text-gray-800">2026-02</p>
               </div>
             </div>
           </div>

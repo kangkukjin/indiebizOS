@@ -93,6 +93,18 @@ def clear_called_agent():
     _thread_local.called_agent = False
 
 
+# ============ User Input 추적 (IBL 용례 학습용) ============
+
+def set_user_input(text: str):
+    """현재 스레드의 사용자 원본 입력 저장 (IBL 실행 로그에 사용)"""
+    _thread_local.user_input = text
+
+
+def get_user_input() -> str:
+    """현재 스레드의 사용자 원본 입력 가져오기"""
+    return getattr(_thread_local, 'user_input', '')
+
+
 # ============ Allowed Nodes (IBL Node Access Control) ============
 
 def set_allowed_nodes(allowed):
@@ -115,6 +127,7 @@ def clear_all_context():
     _thread_local.task_id = None
     _thread_local.called_agent = False
     _thread_local.allowed_nodes = None
+    _thread_local.user_input = ''
 
 
 def get_context_summary() -> dict:
@@ -126,5 +139,6 @@ def get_context_summary() -> dict:
         "registry_key": get_current_registry_key(),
         "task_id": get_current_task_id(),
         "called_agent": did_call_agent(),
-        "allowed_nodes": get_allowed_nodes()
+        "allowed_nodes": get_allowed_nodes(),
+        "user_input": get_user_input()
     }

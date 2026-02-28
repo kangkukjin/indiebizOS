@@ -413,6 +413,9 @@ def _parse_step(text: str) -> Optional[Dict]:
 
     [node:action](target) { params }
 
+    AI가 [node:action]("target", {"key": "val"}) 형태로 params를 괄호 안에
+    넣는 경우도 자동 분리하여 처리합니다.
+
     Returns:
         {_node, action, target, params} 또는 None
     """
@@ -429,8 +432,14 @@ def _parse_step(text: str) -> Optional[Dict]:
 
     # target 처리: 따옴표 제거
     target = ""
+    inline_params = {}
     if target_raw is not None:
-        target = target_raw.strip().strip('"').strip("'")
+        # AI가 ("target", {params}) 형태로 쓴 경우 분리
+        split = _split_target_and_params(target_raw)
+        if split:
+            target, inline_params = split
+        else:
+            target = target_raw.strip().strip('"').strip("'")
 
     # params 처리: regex 이후 남은 텍스트에서 { 를 찾아 _extract_bracket으로 추출
     params = {}
@@ -442,12 +451,87 @@ def _parse_step(text: str) -> Optional[Dict]:
         elif isinstance(extracted, str):
             params = _parse_params(extracted)
 
+    # 인라인 params 병합 (외부 params가 우선)
+    if inline_params:
+        for k, v in inline_params.items():
+            if k not in params:
+                params[k] = v
+
     return {
         "_node": node,
         "action": action,
         "target": target,
         "params": params,
     }
+
+
+def _split_target_and_params(target_raw: str) -> Optional[tuple]:
+    """
+    target_raw에서 인라인 params를 분리.
+
+    AI가 [node:action]("target", {"key": "val"}) 형태로 쓴 경우:
+        "STK", {"start_date": "2026-02-26"} → ("STK", {"start_date": ...})
+
+    일반 target이면 None 반환.
+    """
+    # { 위치 찾기 (문자열 리터럴 내부 무시)
+    brace_pos = -1
+    in_string = False
+    string_char = None
+    i = 0
+    while i < len(target_raw):
+        ch = target_raw[i]
+        if not in_string:
+            if ch in ('"', "'"):
+                in_string = True
+                string_char = ch
+            elif ch == '{':
+                brace_pos = i
+                break
+        else:
+            if ch == '\\' and i + 1 < len(target_raw):
+                i += 1  # 이스케이프 건너뛰기
+            elif ch == string_char:
+                in_string = False
+        i += 1
+
+    if brace_pos < 1:
+        return None
+
+    # { 앞에 쉼표가 있는지 확인
+    before = target_raw[:brace_pos].rstrip()
+    if not before.endswith(','):
+        return None
+
+    # target 추출 (쉼표 앞)
+    actual_target = before[:-1].strip().strip('"').strip("'")
+
+    # params JSON 추출 ({ 부터 끝까지)
+    params_str = target_raw[brace_pos:].strip()
+
+    # JSON 파싱
+    try:
+        parsed = json.loads(params_str)
+        if isinstance(parsed, dict):
+            return (actual_target, parsed)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # 작은따옴표 변환 후 재시도
+    try:
+        converted = params_str.replace("'", '"')
+        parsed = json.loads(converted)
+        if isinstance(parsed, dict):
+            return (actual_target, parsed)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # 느슨한 파싱
+    parsed = _parse_relaxed_params(params_str)
+    if parsed:
+        return (actual_target, parsed)
+
+    return None
 
 
 def _parse_params(text: str) -> dict:
@@ -887,5 +971,52 @@ if __name__ == "__main__":
     print(f"19. 혼합 역변환:\n{f19}")
     assert '&' in f19
     assert '>>' in f19
+
+    # === 인라인 params 테스트 (AI가 params를 괄호 안에 넣는 경우) ===
+    print("\n--- Inline Params Tests ---")
+
+    # 20. 인라인 params: ("target", {params})
+    s20 = parse_step('[source:kr_investor]("STK", {"start_date": "2026-02-26"})')
+    print(f"20. 인라인 params: {s20}")
+    assert s20["_node"] == "source"
+    assert s20["action"] == "kr_investor"
+    assert s20["target"] == "STK"
+    assert s20["params"]["start_date"] == "2026-02-26"
+
+    # 21. 인라인 params 병렬 파이프라인
+    p21 = parse('[source:kr_investor]("STK", {"start_date": "2026-02-26"}) & [source:kr_investor]("KSQ", {"start_date": "2026-02-26"})')
+    print(f"21. 인라인 params 병렬: {p21}")
+    assert p21[0]["_parallel"] == True
+    assert len(p21[0]["branches"]) == 2
+    assert p21[0]["branches"][0]["target"] == "STK"
+    assert p21[0]["branches"][0]["params"]["start_date"] == "2026-02-26"
+    assert p21[0]["branches"][1]["target"] == "KSQ"
+    assert p21[0]["branches"][1]["params"]["start_date"] == "2026-02-26"
+
+    # 22. 인라인 params 여러 키
+    s22 = parse_step('[source:kr_investor]("STK", {"start_date": "2026-02-01", "end_date": "2026-02-26"})')
+    print(f"22. 인라인 params 여러 키: {s22}")
+    assert s22["target"] == "STK"
+    assert s22["params"]["start_date"] == "2026-02-01"
+    assert s22["params"]["end_date"] == "2026-02-26"
+
+    # 23. 외부 params와 인라인 params 동시 (외부 우선)
+    s23 = parse_step('[source:kr_investor]("STK", {"start_date": "2026-02-01"}) {"end_date": "2026-02-28"}')
+    print(f"23. 외부+인라인 params: {s23}")
+    assert s23["target"] == "STK"
+    assert s23["params"]["start_date"] == "2026-02-01"
+    assert s23["params"]["end_date"] == "2026-02-28"
+
+    # 24. 일반 target (인라인 params 없음) — 기존 동작 유지
+    s24 = parse_step('[source:web_search]("AI 뉴스 2026")')
+    print(f"24. 일반 target: {s24}")
+    assert s24["target"] == "AI 뉴스 2026"
+    assert s24["params"] == {}
+
+    # 25. target에 쉼표가 있지만 { 없음 — 기존 동작 유지
+    s25 = parse_step('[forge:newspaper]("AI, 경제, 문화")')
+    print(f"25. 쉼표 포함 target: {s25}")
+    assert s25["target"] == "AI, 경제, 문화"
+    assert s25["params"] == {}
 
     print("\n=== 모든 테스트 통과 ===")

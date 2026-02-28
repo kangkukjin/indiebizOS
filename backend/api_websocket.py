@@ -261,10 +261,11 @@ async def handle_chat_message(client_id: str, data: dict):
             return
 
         # 스레드 컨텍스트 설정 (call_agent 등에서 발신자 정보로 사용)
-        from thread_context import set_current_agent_id, set_current_agent_name, set_current_project_id
+        from thread_context import set_current_agent_id, set_current_agent_name, set_current_project_id, set_user_input
         set_current_agent_id(agent_id)
         set_current_agent_name(agent_name)
         set_current_project_id(project_id)
+        set_user_input(message)
 
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
@@ -297,9 +298,12 @@ async def handle_chat_message(client_id: str, data: dict):
         from thread_context import set_current_task_id
         set_current_task_id(task_id)
 
+        # IBL 용례 참조 주입 (RAG)
+        augmented_message = runner.augment_with_ibl_references(message)
+
         # AI 응답 생성
         response = runner.ai.process_message_with_history(
-            message_content=message,
+            message_content=augmented_message,
             from_email="user@gui",
             history=history,
             reply_to="user@gui",
@@ -323,6 +327,13 @@ async def handle_chat_message(client_id: str, data: dict):
             "type": "end",
             "agent": agent_name
         })
+
+        # IBL 자동 승격 비활성화 — 수작업 용례만 사용
+        # try:
+        #     from ibl_usage_db import IBLUsageDB
+        #     IBLUsageDB().try_promote_session(message)
+        # except Exception as promote_err:
+        #     print(f"[IBL Auto] 승격 실패 (무시): {promote_err}")
 
         # 컨텍스트 정리
         from thread_context import clear_all_context
@@ -450,13 +461,17 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             """스레드에서 스트리밍 실행"""
             nonlocal final_content
             # 별도 스레드이므로 컨텍스트 재설정 필요
+            from thread_context import set_user_input as _set_user_input
             set_current_agent_id(agent_id)
             set_current_agent_name(agent_name)
             set_current_project_id(project_id)
             set_current_task_id(task_id)
+            _set_user_input(message)
+            # IBL 용례 참조 주입 (RAG)
+            augmented_msg = runner.augment_with_ibl_references(message)
             try:
                 for event in runner.ai.process_message_stream(
-                    message_content=message,
+                    message_content=augmented_msg,
                     history=history,
                     images=images
                 ):
@@ -485,6 +500,13 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         print(f"[WS run_stream] 타임아웃 후 미전달 메시지 저장 완료: message_id={msg_id}")
                     except Exception as save_err:
                         print(f"[WS run_stream] 타임아웃 후 메시지 저장 실패: {save_err}")
+                # IBL 자동 승격 비활성화 — 수작업 용례만 사용
+                # try:
+                #     from ibl_usage_db import IBLUsageDB
+                #     IBLUsageDB().try_promote_session(message)
+                # except Exception as promote_err:
+                #     print(f"[IBL Auto] 승격 실패 (무시): {promote_err}")
+
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put(None),  # 종료 신호
                     loop
@@ -692,10 +714,17 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             nonlocal final_content
             # 스레드별로 컨텍스트를 다시 설정해야 함 (thread-local storage)
             set_current_task_id(task_id)
+            # IBL 용례 참조 주입 (RAG)
+            try:
+                from ibl_usage_rag import IBLUsageRAG
+                rag = IBLUsageRAG()
+                augmented_msg = rag.inject_references(message)
+            except Exception:
+                augmented_msg = message
             try:
                 # 통합된 스트리밍 함수 사용 - 모든 프로바이더 지원
                 for event in process_system_ai_message_stream(
-                    message=message,
+                    message=augmented_msg,
                     history=history,
                     images=images if images else None,
                     cancel_check=lambda: is_cancelled(client_id)  # 중단 체크 함수 전달

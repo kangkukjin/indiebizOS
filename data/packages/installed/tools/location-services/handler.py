@@ -258,10 +258,11 @@ def generate_route_map_data(origin_coord: tuple, dest_coord: tuple,
     # 경로 좌표를 [위도, 경도] 형식으로 변환 (Leaflet 형식)
     path_latlng = [[coord[1], coord[0]] for coord in path_coords]
 
-    # 좌표 샘플링 (너무 많으면 성능 저하, 최대 200개)
-    if len(path_latlng) > 200:
-        step = len(path_latlng) // 200
+    # 좌표 샘플링 (최대 50개) + 정밀도 제한 (소수점 5자리 ≈ 1m 정확도)
+    if len(path_latlng) > 50:
+        step = len(path_latlng) // 50
         path_latlng = path_latlng[::step]
+    path_latlng = [[round(c[0], 5), round(c[1], 5)] for c in path_latlng]
 
     return {
         "type": "route_map",
@@ -284,6 +285,39 @@ def generate_route_map_data(origin_coord: tuple, dest_coord: tuple,
     }
 
 
+def _geocode_place(place_str: str) -> tuple:
+    """
+    장소명 또는 좌표 문자열을 (경도,위도,이름) 튜플로 변환.
+    - "127.0,37.5" → (127.0, 37.5, "")
+    - "127.0,37.5,name=강남역" → (127.0, 37.5, "강남역")
+    - "오송역" → 카카오 키워드 검색 → (경도, 위도, "오송역")
+    """
+    if not place_str:
+        return None
+
+    parts = place_str.split(",")
+    # 좌표 형식인지 확인 (첫 두 파트가 숫자)
+    try:
+        x = float(parts[0].strip())
+        y = float(parts[1].strip())
+        name = ""
+        if len(parts) > 2 and "name=" in parts[2]:
+            name = parts[2].strip().replace("name=", "")
+        return (x, y, name)
+    except (ValueError, IndexError):
+        pass
+
+    # 장소명으로 카카오 키워드 검색
+    data = api_call("kakao", "/v2/local/search/keyword.json",
+                    params={"query": place_str, "size": 1}, timeout=10)
+    if isinstance(data, dict) and data.get("documents"):
+        place = data["documents"][0]
+        return (float(place["x"]), float(place["y"]),
+                place.get("place_name", place_str))
+
+    return None
+
+
 def kakao_navigation(origin: str, destination: str, waypoints: str = None,
                       priority: str = "RECOMMEND", avoid: str = None,
                       alternatives: bool = False, summary: bool = False,
@@ -292,9 +326,9 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
     카카오모빌리티 길찾기 API
 
     Args:
-        origin: 출발지 좌표 "경도,위도" 또는 "경도,위도,name=장소명"
-        destination: 목적지 좌표 "경도,위도" 또는 "경도,위도,name=장소명"
-        waypoints: 경유지 (최대 5개, "|"로 구분) "경도1,위도1|경도2,위도2"
+        origin: 출발지 — 좌표("경도,위도") 또는 장소명("오송역")
+        destination: 목적지 — 좌표("경도,위도") 또는 장소명("수원 포레파크원")
+        waypoints: 경유지 (최대 5개, "|"로 구분)
         priority: 경로 우선순위 (RECOMMEND: 추천, TIME: 최단시간, DISTANCE: 최단거리)
         avoid: 회피 옵션 (쉼표 구분: toll,motorway,ferries,schoolzone,uturn)
         alternatives: 대안 경로 제공 여부
@@ -303,15 +337,27 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
         project_path: 출력 경로
 
     Returns:
-        경로 정보 (거리, 시간, 요금, 구간별 안내, 지도 파일 경로)
+        경로 정보 (거리, 시간, 요금, 지도 데이터)
     """
     key_ok, key_error = check_api_key("kakao")
     if not key_ok:
         return {"error": key_error}
 
+    # 장소명 → 좌표 자동 변환
+    origin_info = _geocode_place(origin)
+    if not origin_info:
+        return {"error": f"출발지를 찾을 수 없습니다: {origin}"}
+
+    dest_info = _geocode_place(destination)
+    if not dest_info:
+        return {"error": f"목적지를 찾을 수 없습니다: {destination}"}
+
+    origin_coord_str = f"{origin_info[0]},{origin_info[1]}"
+    dest_coord_str = f"{dest_info[0]},{dest_info[1]}"
+
     params = {
-        "origin": origin,
-        "destination": destination,
+        "origin": origin_coord_str,
+        "destination": dest_coord_str,
         "priority": priority,
         "alternatives": str(alternatives).lower(),
         "summary": str(summary).lower()
@@ -363,37 +409,33 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
                     "priority": summary_data.get("priority")
                 }
 
-            # 구간별 상세 정보 (summary=False일 때)
+            # 구간별: 경로 좌표 수집 + 주요 안내만 추출
             sections = route.get("sections", [])
             if sections:
-                route_info["sections"] = []
+                key_guides = []
                 for section in sections:
-                    section_info = {
-                        "distance": section.get("distance"),
-                        "duration": section.get("duration"),
-                        "guides": []
-                    }
-
-                    # 턴바이턴 안내
-                    guides = section.get("guides", [])
-                    for guide in guides:
-                        section_info["guides"].append({
-                            "name": guide.get("name"),
-                            "guidance": guide.get("guidance"),
-                            "type": guide.get("type"),
-                            "distance": guide.get("distance")
-                        })
-
-                    route_info["sections"].append(section_info)
-
                     # 경로 좌표 수집 (roads의 vertexes)
                     roads = section.get("roads", [])
                     for road in roads:
                         vertexes = road.get("vertexes", [])
-                        # vertexes는 [경도1, 위도1, 경도2, 위도2, ...] 형태
                         for i in range(0, len(vertexes), 2):
                             if i + 1 < len(vertexes):
                                 all_path_coords.append((vertexes[i], vertexes[i+1]))
+
+                    # 주요 안내만 (고속도로 진입/출구, 톨게이트 등)
+                    guides = section.get("guides", [])
+                    for guide in guides:
+                        g_type = guide.get("type", 0)
+                        # 주요 타입만: 고속도로(8,9), 톨게이트(6), IC/JC(5), 도착(100,101)
+                        if g_type in (5, 6, 8, 9, 100, 101) or guide.get("name"):
+                            key_guides.append({
+                                "name": guide.get("name", ""),
+                                "guidance": guide.get("guidance", ""),
+                                "distance": guide.get("distance")
+                            })
+
+                if key_guides:
+                    route_info["key_guides"] = key_guides[:15]  # 최대 15개
 
             result["routes"].append(route_info)
 
@@ -409,22 +451,12 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
 
         # 지도 데이터 생성 (프론트엔드 렌더링용)
         if generate_map and all_path_coords and not summary:
-            # 출발지/목적지 좌표 파싱
-            origin_parts = origin.split(",")
-            dest_parts = destination.split(",")
+            origin_coord = (origin_info[0], origin_info[1])
+            dest_coord = (dest_info[0], dest_info[1])
 
-            origin_coord = (float(origin_parts[0]), float(origin_parts[1]))
-            dest_coord = (float(dest_parts[0]), float(dest_parts[1]))
-
-            # 장소명 추출
-            origin_name = "출발지"
-            dest_name = "목적지"
-            if len(origin_parts) > 2 and "name=" in origin_parts[2]:
-                origin_name = origin_parts[2].replace("name=", "")
-            if len(dest_parts) > 2 and "name=" in dest_parts[2]:
-                dest_name = dest_parts[2].replace("name=", "")
-
-            # 요약 정보에서 이름 가져오기
+            # 장소명: geocode 결과 > API 응답 > 기본값
+            origin_name = origin_info[2] or "출발지"
+            dest_name = dest_info[2] or "목적지"
             if result["routes"] and result["routes"][0].get("summary"):
                 s = result["routes"][0]["summary"]
                 if s.get("origin", {}).get("name"):
@@ -432,7 +464,6 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
                 if s.get("destination", {}).get("name"):
                     dest_name = s["destination"]["name"]
 
-            # 지도 데이터 생성
             map_data = generate_route_map_data(
                 origin_coord=origin_coord,
                 dest_coord=dest_coord,
@@ -639,6 +670,23 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         if not query:
             return json.dumps({"error": "검색 키워드(query)가 필요합니다."}, ensure_ascii=False)
 
+        # 쿼리 전처리: 장문 자연어 → 짧은 API 검색어
+        # "전주 맛집 분위기 좋고 정갈한 곳" → "전주 맛집"
+        if len(query) > 15:
+            # 수식어/형용사 제거, 장소명 + 핵심 키워드만 추출
+            food_keywords = ["맛집", "식당", "음식점", "카페", "레스토랑", "밥집", "술집",
+                             "한식", "중식", "일식", "양식", "분식", "치킨", "피자", "파스타",
+                             "고기", "삼겹살", "회", "초밥", "국밥", "냉면", "칼국수", "떡볶이"]
+            words = query.split()
+            essential = []
+            for w in words:
+                # 장소명 (첫 1-2 단어) 또는 음식 키워드만 유지
+                if len(essential) < 2 or any(kw in w for kw in food_keywords):
+                    essential.append(w)
+            simplified = " ".join(essential[:4])  # 최대 4단어
+            if simplified != query:
+                query = simplified
+
         # 카카오 + 네이버 병합 검색
         result = search_restaurants_combined(
             query=query,
@@ -651,8 +699,16 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
     elif tool_name == "kakao_navigation":
         origin = tool_input.get("origin", "")
         destination = tool_input.get("destination", "")
+
+        # 자연어 파싱: "A에서 B까지" 형식을 origin/destination으로 분리
+        if destination and not origin:
+            route_match = re.search(r'(.+?)에서\s+(.+?)(?:까지|으로|로|$)', destination)
+            if route_match:
+                origin = route_match.group(1).strip()
+                destination = route_match.group(2).strip()
+
         if not origin or not destination:
-            return json.dumps({"error": "출발지(origin)와 목적지(destination) 좌표가 필요합니다."}, ensure_ascii=False)
+            return json.dumps({"error": "출발지(origin)와 목적지(destination)가 필요합니다. 장소명 또는 '경도,위도' 형식."}, ensure_ascii=False)
 
         result = kakao_navigation(
             origin=origin,
@@ -665,6 +721,26 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
             generate_map=tool_input.get("generate_map", True),
             project_path=project_path
         )
+
+        # 응답 압축: map_data를 최상위로, 불필요한 route raw 데이터 제거
+        if isinstance(result, dict) and "error" not in result:
+            compact = {"message": result.get("message", "길찾기 완료")}
+            # 요약 정보
+            if result.get("routes") and result["routes"][0].get("summary"):
+                s = result["routes"][0]["summary"]
+                compact["summary"] = {
+                    "distance_km": s.get("distance_km", 0),
+                    "duration_min": s.get("duration_min", 0),
+                    "toll": s.get("fare", {}).get("toll", 0)
+                }
+            # 주요 안내 (최대 10개)
+            if result.get("routes") and result["routes"][0].get("key_guides"):
+                compact["key_guides"] = result["routes"][0]["key_guides"][:10]
+            # 지도 데이터 (프론트엔드 렌더링용) — 반드시 포함
+            if result.get("map_data"):
+                compact["map_data"] = result["map_data"]
+            return json.dumps(compact, ensure_ascii=False, indent=2)
+
         return json.dumps(result, ensure_ascii=False, indent=2)
 
     elif tool_name == "show_location_map":
@@ -675,6 +751,15 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
             zoom=tool_input.get("zoom", 15),
             markers=tool_input.get("markers")
         )
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "reverse_geocode":
+        lat = tool_input.get("lat")
+        lon = tool_input.get("lon") or tool_input.get("lng")
+        if lat is None or lon is None:
+            return json.dumps({"error": "lat(위도)과 lon(경도)이 필요합니다."}, ensure_ascii=False)
+        # 카카오 API는 x=경도, y=위도
+        result = reverse_geocode_kakao(x=float(lon), y=float(lat))
         return json.dumps(result, ensure_ascii=False, indent=2)
 
     return f"Unknown tool: {tool_name}"

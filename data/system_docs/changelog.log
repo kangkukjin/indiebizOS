@@ -406,3 +406,18 @@
     - [source:search]("최근 글") >> [system:agent_ask_sync]("컨텐츠/컨텐츠") >> [system:file]
     (기존 agent_ask는 비동기 — 큐에 넣고 즉시 반환 → 파이프라인에서 결과 없음)
     (agent_ask_sync는 동기 — 응답 완료까지 대기 → 파이프라인 다음 step으로 전달)
+[2026-02-23 00:00:00] NEW_FEATURE: IBL 용례 RAG 시스템
+  - ibl_usage_db.py: 용례 사전 DB + 하이브리드 검색 (시맨틱 70% + BM25 30%)
+    - jhgan/ko-sroberta-multitask 768차원 임베딩, sqlite-vec 벡터 인덱스
+    - 용례 ~970개 (합성 965 + 실행 로그 자동 승격)
+    - 서버 시작 시 백그라운드 모델 로딩 (비동기, 블로킹 없음)
+  - ibl_usage_rag.py: RAG 참조 모듈
+    - 사용자 메시지 수신 시 유사 용례 3개 검색 → XML로 프롬프트 주입
+    - 캐시 TTL 5분, 최소 점수 0.25 필터링
+  - ibl_usage_generator.py: 합성 데이터 생성기 (Stage 1+2+3)
+  - 실행 로그 자동 승격: try_promote_session() — 에이전트 대화 완료 후 성공 로그를 용례로 변환
+  - api_websocket.py: 스트리밍/비스트리밍 양 경로에 자동 승격 호출 연동
+  - 실측 효과: 에이전트 라운드 수 13회 → 3회 (부동산 실거래가 조회)
+  → 문서: system_docs/ibl_rag.md
+[2026-02-24 07:48:11] PROJECT_CREATED: 학교 (ID: 학교)
+[2026-02-24 07:48:11] PROJECT_CREATED: 학교 (ID: 학교)

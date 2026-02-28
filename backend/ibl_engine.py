@@ -155,6 +155,15 @@ def reload_nodes():
     _load_nodes_config()
 
 
+def get_node_actions(node_name: str) -> set:
+    """특정 노드의 유효한 액션 이름 set 반환"""
+    config = _load_nodes_config()
+    nodes = config.get("nodes", {})
+    node_def = nodes.get(node_name, {})
+    actions = node_def.get("actions", {})
+    return set(actions.keys())
+
+
 # === 공개 API ===
 
 def list_ibl_nodes() -> List[Dict]:
@@ -325,6 +334,13 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
     router = action_config.get("router")
     target = tool_input.get("target", "")
     params = tool_input.get("params", {})
+
+    # default_input 병합: 액션에 정의된 기본값을 params에 적용 (사용자 값 우선)
+    default_input = action_config.get("default_input")
+    if default_input and isinstance(default_input, dict):
+        for k, v in default_input.items():
+            if k not in params:
+                params[k] = v
 
     # 라우터별 실행
     if router == "api_engine":
@@ -785,9 +801,30 @@ def _search_guide(query: str, params: dict) -> Any:
             "message": "가이드 전체 목록입니다. 키워드로 검색하세요.",
         }
 
+    # 한국어 조사 제거 (매칭 정확도 향상)
+    _korean_suffixes = [
+        "을", "를", "이", "가", "은", "는", "에서", "에게", "으로", "로",
+        "와", "과", "의", "도", "만", "에", "해줘", "해주세요", "좀", "하고",
+        "할", "하는", "하기", "하자", "해", "한", "된", "인",
+    ]
+
+    def _strip_korean_suffix(word: str) -> str:
+        """단어에서 한국어 조사/어미 제거하여 어근 추출"""
+        for suffix in sorted(_korean_suffixes, key=len, reverse=True):
+            if word.endswith(suffix) and len(word) > len(suffix):
+                return word[:-len(suffix)]
+        return word
+
     # 키워드 매칭
     query_lower = query.lower()
     query_words = query_lower.split()
+    # 조사 제거된 단어도 함께 검색 (원본 + 어근)
+    query_stems = []
+    for w in query_words:
+        query_stems.append(w)
+        stripped = _strip_korean_suffix(w)
+        if stripped != w and stripped:
+            query_stems.append(stripped)
 
     scored = []
     for g in guides:
@@ -798,7 +835,7 @@ def _search_guide(query: str, params: dict) -> Any:
             " ".join(g.get("keywords", [])),
         ]).lower()
 
-        for word in query_words:
+        for word in query_stems:
             if word in search_text:
                 score += 1
             if word in [kw.lower() for kw in g.get("keywords", [])]:

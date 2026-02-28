@@ -11,11 +11,7 @@ actions:
     router: handler
     tool: create_html_video
     target_key: topic
-  image:
-    description: AI 이미지 생성
-    router: handler
-    tool: generate_ai_image
-    target_key: prompt
+
   tts:
     description: 텍스트를 음성 파일(MP3)로 변환 (Edge TTS). 동영상 나레이션 등에 활용.
     router: handler

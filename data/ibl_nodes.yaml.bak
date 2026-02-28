@@ -5,13 +5,11 @@ meta:
     examples:
     - execute_ibl(node="source", action="web_search", target="AI news")
     - 'execute_ibl(node="source", action="get", target="AAPL", params={"type": "price"})'
-  - section: 'Mode 2: Code (pipeline, IBL syntax)'
+  - section: 'Mode 2: Pipeline'
     examples:
-    - execute_ibl(code='[source:web_search]("AI") >> [system:file]("result.md")')
-    - 'execute_ibl(code=''[source:get]("AAPL") {type: "price"}'')'
-    - 'execute_ibl(code=''[source:get]("AAPL") {type: "price"} & [source:get]("MSFT")
-      {type: "price"}'')'
-    note: 'In code mode, params use {key: value} after target, NOT params={} syntax.'
+    - execute_ibl(pipeline='[source:web_search]("AI") >> [system:file]("result.md")')
+    - 'execute_ibl(pipeline=''[source:get]("AAPL") {type: "price"}'')'
+    note: 'In pipeline mode, params use {key: value} after target, NOT params={} syntax.'
   pipeline:
   - op: '>>'
     name: Sequential
@@ -23,13 +21,6 @@ meta:
     name: Fallback
     example: '[api:call](primary) ?? [api:call](backup)'
   principles:
-  - 'You have two types of tools: IBL (domain shortcuts) and general-purpose languages
-    (Python, Node.js, Shell)'
-  - 'IBL (execute_ibl) is for IndieBiz-specific operations: messaging, search, content
-    creation, system management'
-  - Python/Node.js/Shell (execute_python, execute_node, run_command) are for complex
-    logic, data processing, custom workflows
-  - Use [system:search_guide] before complex tasks to find step-by-step workflows
   - Use system:discover when unsure which IBL node to use
 nodes:
   system:
@@ -37,10 +28,6 @@ nodes:
     guides:
     - pc-manager/pc_manager_guide.md
     actions:
-      send_notify:
-        description: 사용자에게 알림 전송
-        router: system
-        func: send_notification
       delegate:
         description: 다른 에이전트에게 작업 위임
         router: system
@@ -50,7 +37,7 @@ nodes:
         router: system
         func: delegate_workflow
       discover:
-        description: 키워드로 적합한 노드/액션 자동 탐색 (Phase 10 노드 추상화)
+        description: 키워드로 적합한 노드/액션 자동 탐색
         target_description: '검색 키워드 (예: 주가, 날씨, 사진)'
         router: system
         func: discover
@@ -314,17 +301,81 @@ nodes:
         tool: open_file_explorer
         target_key: path
     verbs:
+      fs:
+        description: 파일 읽기/쓰기/검색/편집
+        default: read
+        routes:
+          write: write
+          edit: edit
+          copy: copy
+          move: move
+          delete: delete
+          find: find
+          grep: grep
+          dir: list
+          pdf: read_pdf
+      storage:
+        description: 저장소/볼륨 관리
+        default: fs_query
+        routes:
+          scan: scan
+          summary: summary
+          volumes: volumes
+          annotate: annotate
+          annotations: annotations
+          explorer: explorer
+      io:
+        description: 결과 출력/전달
+        default: gui
+        routes:
+          file: file
+          open: open
+          clipboard: clipboard
+          download: download
+          browse: browse
+          launch: launch
+          url: open_url
+      delegate:
+        description: 에이전트 위임/정보
+        default: agent_ask
+        routes:
+          sync: agent_ask_sync
+          workflow: delegate_workflow
+          direct: delegate
+          project: delegate_project
+          info: agent_info
+          projects: list_projects
+      notify:
+        description: 사용자 소통
+        default: ask_user
+        routes:
+          approve: approve
+          todo: todo
+          send: notify_user
+      event:
+        description: 이벤트/트리거 관리
+        default: manage_events
+        routes:
+          create: create
+          update: update
+          delete: delete_event
+          save: save_event
+          query: query
       run:
         description: 워크플로우 실행
         default: run
         routes:
           pipeline: run_pipeline
+          schedule: schedule
       list:
-        description: 워크플로우 목록 조회
+        description: 목록 조회
         default: list_workflows
-        routes: {}
+        routes:
+          events: list_events
+          switches: list_switches
+          api: list_api
       get:
-        description: 워크플로우/트리거 조회
+        description: 워크플로우/트리거/시스템 조회
         default: get_workflow
         routes:
           save: save_workflow
@@ -333,6 +384,7 @@ nodes:
           status: status
           history: history
           sites: sites
+          time: time
       control:
         description: 트리거 활성화/비활성화
         default: enable
@@ -803,17 +855,6 @@ nodes:
         description: 메시지 검색
         target_description: 채널 타입 (gmail, nostr)
         router: channel_engine
-      get:
-        description: 연락처 상세 조회 (연락 수단 포함)
-        target_description: 연락처 ID
-        router: driver
-        driver: sqlite
-        driver_node: contact
-      list:
-        description: 전체 연락처 목록
-        router: driver
-        driver: sqlite
-        driver_node: contact
       messages:
         description: 특정 연락처의 메시지 이력
         target_description: 연락처 ID
@@ -855,7 +896,7 @@ nodes:
           channel: search
       get:
         description: 연락처 상세 조회
-        default: get
+        default: neighbor_detail
         routes:
           neighbor: neighbor_detail
           messages: messages
@@ -877,6 +918,8 @@ nodes:
     - web/web_guide.md
     - blog/blog_guide.md
     - memory/memory_guide.md
+    - real-estate/real_estate_guide.md
+    - photo-manager/guide.md
     actions:
       price:
         description: '주가 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F)'
@@ -1109,17 +1152,21 @@ nodes:
         tool: search_restaurants
         target_key: query
       source_navigate:
-        description: 길찾기/경로 안내 (카카오 내비)
-        target_description: 출발지 (경도,위도 형식)
+        description: 자동차 길찾기 (카카오 내비)
+        target_description: "목적지 장소명. 또는 'A에서 B까지' 형식"
         router: handler
         tool: kakao_navigation
-        target_key: origin
+        target_key: destination
       map:
         description: 지도에 위치 표시
         target_description: 장소명 또는 좌표
         router: handler
         tool: show_location_map
         target_key: query
+      reverse_geocode:
+        description: GPS 좌표를 주소로 변환
+        router: handler
+        tool: reverse_geocode
       travel:
         description: 여행 검색 - 항공, 호텔, 관광지 (Amadeus)
         target_description: 검색 엔드포인트 (flight-offers, hotel-list 등)
@@ -1136,13 +1183,6 @@ nodes:
         description: 가까운 CCTV 찾기
         router: handler
         tool: get_nearby_cctv
-      by_name:
-        description: CCTV/웹캠 통합 검색+자동캡처 (→ cctv_search 동일). auto_capture.file_path로
-          이미지 분석 가능. 브라우저 접속 불필요.
-        target_description: 검색 키워드 (한라산, 맨하탄, 경부 등)
-        router: handler
-        tool: search_cctv
-        target_key: query
       open:
         description: CCTV 영상을 브라우저에서 열기
         target_description: 이름 또는 URL
@@ -1178,8 +1218,7 @@ nodes:
         router: handler
         tool: local_db_save
       cctv_search:
-        description: CCTV/웹캠 통합 검색+자동캡처 (ITS교통→Windy웹캠 폴백, 첫 결과 이미지 자동저장). auto_capture.file_path로
-          이미지 분석 가능. 브라우저 접속 불필요.
+        description: CCTV/웹캠 통합 검색+자동캡처
         target_description: 검색 키워드 (한라산, 맨하탄, 해운대, 경부 등)
         router: handler
         tool: search_cctv
@@ -1217,19 +1256,20 @@ nodes:
         driver_node: photo
       timeline:
         description: 월별 사진/동영상 촬영 통계
-        router: driver
-        driver: sqlite
-        driver_node: photo
+        target_description: 폴더 경로
+        router: handler
+        tool: get_timeline
+        target_key: path
       photo_stats:
         description: 전체 사진/동영상 통계
-        router: driver
-        driver: sqlite
-        driver_node: photo
+        target_description: 폴더 경로
+        router: handler
+        tool: get_stats
+        target_key: path
       list_scans:
         description: 스캔된 폴더 목록 조회
-        router: driver
-        driver: sqlite
-        driver_node: photo
+        router: handler
+        tool: list_scans
       scan:
         description: 폴더의 사진/동영상 메타데이터 수집 (인덱싱)
         target_description: 스캔할 폴더 경로
@@ -1254,28 +1294,6 @@ nodes:
         router: handler
         tool: open_photo_manager
         target_key: path
-      search_blog:
-        description: 블로그 글 검색 (전문 검색)
-        target_description: 검색어
-        router: driver
-        driver: sqlite
-        driver_node: blog
-      get_post:
-        description: 블로그 글 전문 조회
-        target_description: 포스트 ID
-        router: driver
-        driver: sqlite
-        driver_node: blog
-      list:
-        description: 블로그 글 목록
-        router: driver
-        driver: sqlite
-        driver_node: blog
-      blog_overview:
-        description: 블로그 통계 요약 (총 글 수, 카테고리별)
-        router: driver
-        driver: sqlite
-        driver_node: blog
       rag_search:
         description: 블로그 RAG 검색 (의미 기반 벡터 검색)
         router: handler
@@ -1399,17 +1417,6 @@ nodes:
         router: driver
         driver: sqlite
         driver_node: health
-      log:
-        description: 건강 측정값 기록
-        target_description: 카테고리
-        router: driver
-        driver: sqlite
-        driver_node: health
-      summary:
-        description: 건강 요약 (활성 증상, 현재 약물, 최근 측정)
-        router: driver
-        driver: sqlite
-        driver_node: health
       history:
         description: 특정 카테고리의 이력 조회
         target_description: 카테고리
@@ -1429,6 +1436,40 @@ nodes:
         router: handler
         tool: get_health_context
         target_key: query_type
+      apt_trade:
+        description: 아파트 매매 실거래가 (국토부)
+        target_description: '지역코드 (5자리, 예: 11680=강남)'
+        router: handler
+        tool: apt_trade_price
+        target_key: region_code
+      apt_rent:
+        description: 아파트 전월세 실거래가
+        target_description: 지역코드
+        router: handler
+        tool: apt_rent_price
+        target_key: region_code
+      house_trade:
+        description: 단독/다세대 주택 매매 실거래가
+        target_description: 지역코드
+        router: handler
+        tool: house_trade_price
+        target_key: region_code
+      house_rent:
+        description: 단독/다세대 주택 전월세 실거래가
+        target_description: 지역코드
+        router: handler
+        tool: house_rent_price
+        target_key: region_code
+      district_codes:
+        description: 법정동 지역코드 조회
+        target_description: 시/도명 (서울, 경기 등)
+        router: handler
+        tool: get_region_codes
+        target_key: city
+      commercial:
+        description: 상권 분석 (업종별 점포, 좌표/행정동 기반)
+        router: handler
+        tool: search_commercial_district
     verbs:
       search:
         description: 통합 검색 (웹/사진/블로그/메모리/학술/금융/위치)
@@ -1438,7 +1479,7 @@ nodes:
           news: search_news
           stock: search_stock
           photos: search_photos
-          blog: search_blog
+          blog: rag_search
           memory: search_memory
           duplicates: duplicates
           rag: rag_search
@@ -1492,16 +1533,17 @@ nodes:
           timeline: timeline
           photo_stats: photo_stats
           gallery: gallery
-          post: get_post
+          post: rag_content
           rag: rag_content
           detail: post_detail
+          blog: blog_stats
           blog_stats: blog_stats
-          blog_overview: blog_overview
+          blog_overview: blog_stats
           recent: recent
           memory: memory_read
           skill: skill_read
           health: health_query
-          summary: summary
+          summary: context
           history: history
           context: context
           weather: weather
@@ -1509,7 +1551,7 @@ nodes:
           map: map
       list:
         description: 목록 조회
-        default: list
+        default: posts
         routes:
           posts: posts
           new: check_new
@@ -1534,7 +1576,7 @@ nodes:
         description: 건강 기록/지역 정보 저장
         default: save_health
         routes:
-          log: log
+          log: save_health
           local: save
   stream:
     description: 미디어 스트리밍 (유튜브 동영상/오디오, 인터넷 라디오)
@@ -1674,15 +1716,18 @@ nodes:
   forge:
     description: 콘텐츠 제작, 웹개발/배포, 건축설계
     actions:
+      newspaper:
+        description: 키워드 기반 뉴스 신문(HTML) 자동 생성
+        router: handler
+        tool: generate_newspaper
+        target_key: keywords
       slide:
         description: 프레젠테이션 슬라이드 생성
         router: handler
         tool: create_slides
         target_key: topic
       video:
-        description: 'HTML+CSS 기반 MP4 영상 생성. 각 씬을 완전한 HTML 문서로 작성. {scenes: [{html:
-          "<!DOCTYPE html>...", duration: 5}], narration_texts: ["나레이션"]}. guide_file
-          참조 필수.'
+        description: HTML+CSS 기반 MP4 영상 생성 (guide 참조)
         router: handler
         tool: create_html_video
         target_key: topic
@@ -1691,21 +1736,12 @@ nodes:
         router: handler
         tool: line_chart
         target_key: title
-      image:
-        description: AI 이미지 생성
-        router: handler
-        tool: generate_ai_image
-        target_key: prompt
+
       music:
         description: ABC 악보 작곡 및 오디오 변환
         router: handler
         tool: compose_and_export
         target_key: title
-      youtube_download:
-        description: 유튜브 오디오 다운로드 (→ youtube:download 권장)
-        router: handler
-        tool: download_youtube_music
-        target_key: url
       remotion:
         description: React/Remotion 기반 프로그래밍 방식 영상 생성
         target_description: TSX 컴포지션 코드
@@ -1718,8 +1754,7 @@ nodes:
         tool: create_tts
         target_key: text
       render_video:
-        description: 파일로 저장된 HTML 씬들을 MP4로 렌더링. scene_files(경로+duration 배열) 또는 scene_dir
-          지정. narration_files, bgm_path 옵션.
+        description: 저장된 HTML 씬들을 MP4로 렌더링
         router: handler
         tool: render_html_video
         target_key: scene_dir
@@ -1734,9 +1769,7 @@ nodes:
         router: handler
         tool: check_remotion_status
       slide_shadcn:
-        description: 'Shadcn UI 스타일 고품질 슬라이드(PNG) 생성. {slides: [{layout: "hero", title:
-          "제목"}, {layout: "features", title: "기능", features: [{icon: "🤖", title: "AI",
-          description: "설명"}]}], theme: "blue"}. layout: hero/features/stats/cta/steps/pricing/testimonial/content_image/custom.'
+        description: Shadcn UI 스타일 고품질 슬라이드(PNG) 생성 (guide 참조)
         router: handler
         tool: create_shadcn_slides
         target_key: topic
@@ -1959,6 +1992,7 @@ nodes:
         description: 콘텐츠/사이트/설계 생성
         default: slide
         routes:
+          newspaper: newspaper
           video: video
           chart: chart
           image: image

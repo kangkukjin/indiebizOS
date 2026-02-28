@@ -821,8 +821,8 @@ def create_slides_pillow(slides_data, output_dir, width=1280, height=720):
     abs_paths = [os.path.abspath(p) for p in generated_paths]
     return f"슬라이드 생성 완료 (Pillow 엔진): {len(abs_paths)}개의 이미지가 {abs_output_dir}에 저장되었습니다.\n파일 목록: {', '.join(abs_paths)}"
 
-async def generate_tts(text, output_path, voice="ko-KR-SunHiNeural"):
-    communicate = edge_tts.Communicate(text, voice)
+async def generate_tts(text, output_path, voice="ko-KR-SunHiNeural", rate="+0%", pitch="+0Hz"):
+    communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
     await communicate.save(output_path)
 
 def _prepare_scene_html(html, base_path, video_width, video_height):
@@ -1012,6 +1012,8 @@ def create_html_video(tool_input, output_base):
     narration_texts = tool_input.get("narration_texts", [])
     bgm_path = tool_input.get("bgm_path")
     voice = tool_input.get("voice", "ko-KR-SunHiNeural")
+    rate = tool_input.get("rate", "+0%")
+    pitch = tool_input.get("pitch", "+0Hz")
     output_filename = tool_input.get("output_filename", "html_video.mp4")
     video_width = tool_input.get("width", 1280)
     video_height = tool_input.get("height", 720)
@@ -1055,7 +1057,7 @@ def create_html_video(tool_input, output_base):
         for i, scene in enumerate(scenes):
             if i < len(narration_texts) and narration_texts[i]:
                 tts_path = os.path.join(temp_dir, f"narration_{i}.mp3")
-                asyncio.run(generate_tts(narration_texts[i], tts_path, voice))
+                asyncio.run(generate_tts(narration_texts[i], tts_path, voice, rate, pitch))
                 narration_audio_paths.append(tts_path)
                 has_narration = True
 
@@ -1451,6 +1453,8 @@ def create_tts(tool_input, output_base):
         return "오류: text는 필수입니다."
 
     voice = tool_input.get("voice", "ko-KR-SunHiNeural")
+    rate = tool_input.get("rate", "+0%")
+    pitch = tool_input.get("pitch", "+0Hz")
     output_filename = tool_input.get("output_filename")
 
     if output_filename:
@@ -1461,7 +1465,7 @@ def create_tts(tool_input, output_base):
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
     try:
-        asyncio.run(generate_tts(text, output_path, voice))
+        asyncio.run(generate_tts(text, output_path, voice, rate, pitch))
 
         # 길이 측정
         from moviepy import AudioFileClip as MpAudioClip

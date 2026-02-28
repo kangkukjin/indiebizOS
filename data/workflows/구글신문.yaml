@@ -1,0 +1,8 @@
+content: '[source:search_news]("AI") {count: 7} & [source:search_news]("청주") {count:
+  7} & [source:search_news]("세종") {count: 7} & [source:search_news]("문화") {count:
+  7} & [source:search_news]("여행") {count: 7} & [source:search_news]("과학") {count:
+  7} & [source:search_news]("경제") {count: 7} & [source:search_news]("주식") {count:
+  7} & [source:search_news]("만화") {count: 7} & [source:search_news]("영화") {count:
+  7} & [source:search_news]("드라마") {count: 7} & [source:search_news]("책") {count:
+  7} >> [forge:create]("newspaper") >> [system:io]("browse")'
+updated: '2026-02-25T11:32:17.923449'

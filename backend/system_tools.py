@@ -117,6 +117,21 @@ def _build_reverse_node_map() -> dict:
 
 def _tool_to_ibl_notation(tool_name: str, tool_input: dict) -> tuple:
     """도구 이름을 IBL node:action 표기로 변환"""
+    # execute_ibl: 에이전트가 지정한 실제 node를 사용 (pipeline 모드는 "ibl")
+    if tool_name == "execute_ibl":
+        action = tool_input.get("action", "?")
+        # Direct 모드: node 파라미터가 있으면 그대로 사용
+        node = tool_input.get("node", "")
+        if node:
+            return node, action
+        # Pipeline 모드: pipeline 파라미터 사용 시 파서에서 노드 추출 시도
+        pipeline = tool_input.get("pipeline", "")
+        if pipeline:
+            import re
+            m = re.search(r'\[(\w+):', pipeline)
+            return (m.group(1) if m else "ibl"), "?"
+        return "ibl", action
+
     # ibl_* 도구
     if tool_name in _IBL_TOOL_PREFIX_MAP:
         node = _IBL_TOOL_PREFIX_MAP[tool_name]
@@ -146,7 +161,7 @@ def _extract_target(tool_input: dict) -> str:
         return val[:60] if len(val) > 60 else val
 
     # 개별 도구의 주요 파라미터
-    for key in ("query", "path", "url", "pattern", "command", "code", "agent_id", "message"):
+    for key in ("query", "path", "url", "pattern", "command", "pipeline", "code", "agent_id", "message"):
         if key in tool_input:
             val = str(tool_input[key])
             return val[:60] if len(val) > 60 else val
@@ -156,7 +171,7 @@ def _extract_target(tool_input: dict) -> str:
 
 def _log_ibl(tool_name: str, tool_input: dict, duration_ms: float,
              agent_id: str = None, success: bool = True):
-    """도구 실행을 IBL 형식으로 콘솔 로그"""
+    """도구 실행을 IBL 형식으로 콘솔 로그 + DB 저장"""
     node, action = _tool_to_ibl_notation(tool_name, tool_input)
     target = _extract_target(tool_input)
 
@@ -166,6 +181,25 @@ def _log_ibl(tool_name: str, tool_input: dict, duration_ms: float,
 
     target_str = f"({target})" if target else ""
     print(f"[{timestamp}] {agent_tag}[{node}:{action}]{target_str} -> {status} ({duration_ms:.0f}ms)")
+
+    # 실행 로그 비활성화 — 자동 승격 중단에 따라 로그 수집도 불필요
+    # try:
+    #     from ibl_usage_db import IBLUsageDB
+    #     from thread_context import get_user_input, get_current_project_id
+    #     db = IBLUsageDB()
+    #     ibl_str = f"[{node}:{action}]" + (f'("{target}")' if target else "")
+    #     db.log_execution(
+    #         user_input=get_user_input() or "",
+    #         generated_ibl=ibl_str,
+    #         node=node, action=action, target=target,
+    #         params=tool_input.get("params", {}),
+    #         success=success,
+    #         duration_ms=int(duration_ms),
+    #         agent_id=agent_id or "",
+    #         project_id=get_current_project_id() or "",
+    #     )
+    # except Exception:
+    #     pass
 
 
 # ============ 시스템 도구 정의 ============
@@ -784,7 +818,7 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     """execute_ibl 통합 실행기 (Phase 13)
 
     두 가지 호출 방식 지원:
-    1. code: IBL 코드 문자열 → 파서 → 파이프라인 실행
+    1. pipeline: IBL 파이프라인 문자열 → 파서 → 파이프라인 실행
     2. node + action: 직접 노드 실행
     """
     from ibl_engine import execute_ibl
@@ -794,21 +828,25 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     # 노드 접근 제어 (allowed_nodes)
     allowed = get_allowed_nodes()
 
-    code = tool_input.get("code")
+    # verb → action 호환 (레거시)
+    if "verb" in tool_input and "action" not in tool_input:
+        tool_input["action"] = tool_input.pop("verb")
+
+    pipeline = tool_input.get("pipeline")
 
     # 디버그: 에이전트 입력 추적
-    print(f"[IBL_DEBUG] tool_input keys={list(tool_input.keys())}, code={bool(code)}, node={tool_input.get('node')}, action={tool_input.get('action')}")
+    print(f"[IBL_DEBUG] tool_input keys={list(tool_input.keys())}, pipeline={bool(pipeline)}, node={tool_input.get('node')}, action={tool_input.get('action')}")
 
-    if code:
+    if pipeline:
         # IBL 코드 파싱 + 실행
         try:
             from ibl_parser import parse as parse_ibl
-            parsed = parse_ibl(code)
+            parsed = parse_ibl(pipeline)
 
             if not parsed:
-                return json.dumps({"error": f"IBL 파싱 실패: {code}"}, ensure_ascii=False)
+                return json.dumps({"error": f"IBL 파싱 실패: {pipeline}"}, ensure_ascii=False)
 
-            # 노드 접근 체크 (code 모드)
+            # 노드 접근 체크 (pipeline 모드)
             if allowed is not None:
                 for step in parsed:
                     d = step.get("_node", step.get("node", ""))
@@ -854,9 +892,25 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 from workflow_engine import execute_workflow_action
                 result = execute_workflow_action(
                     "run_pipeline", None,
-                    {"code": code},
+                    {"pipeline": pipeline},
                     project_path
                 )
+
+            # 파이프라인 결과에서 map_data를 최상위로 승격
+            # (중첩된 step result 안의 map_data를 execute_tool 래퍼가 찾을 수 있도록)
+            if isinstance(result, dict) and "results" in result:
+                for step_result in result.get("results", []):
+                    step_str = step_result.get("result", "")
+                    if isinstance(step_str, str) and "map_data" in step_str:
+                        try:
+                            step_data = json.loads(step_str)
+                            if isinstance(step_data, dict) and "map_data" in step_data:
+                                result["map_data"] = step_data["map_data"]
+                                del step_data["map_data"]
+                                step_result["result"] = json.dumps(step_data, ensure_ascii=False, indent=2)
+                                break  # 첫 번째 map_data만 사용
+                        except (json.JSONDecodeError, TypeError):
+                            pass
 
             if isinstance(result, dict):
                 return json.dumps(result, ensure_ascii=False, indent=2)
@@ -871,9 +925,9 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
 
     if not node or not action:
         return json.dumps({
-            "error": "code 또는 node+action이 필요합니다.",
+            "error": "pipeline 또는 node+action이 필요합니다.",
             "usage": {
-                "code": '[source:web_search]("AI 뉴스") >> [system:file]("result.md")',
+                "pipeline": '[source:web_search]("AI 뉴스") >> [system:file]("result.md")',
                 "node_action": {"node": "source", "action": "web_search", "target": "AI 뉴스"}
             }
         }, ensure_ascii=False)
@@ -1010,6 +1064,19 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
     try:
         result = _execute_tool_inner(tool_name, tool_input, project_path, agent_id)
 
+        # [MAP:...] 태그 변환 — 모든 도구 결과에서 map_data를 프론트엔드용 태그로 변환
+        # (동적 핸들러 경로에서 이미 처리된 경우, json.loads가 실패하므로 안전하게 건너뜀)
+        if isinstance(result, str):
+            try:
+                result_data = json.loads(result)
+                if isinstance(result_data, dict) and "map_data" in result_data:
+                    map_data = result_data["map_data"]
+                    map_tag = f"\n\n[MAP:{json.dumps(map_data, ensure_ascii=False)}]"
+                    del result_data["map_data"]
+                    result = json.dumps(result_data, ensure_ascii=False, indent=2) + map_tag
+            except (json.JSONDecodeError, TypeError):
+                pass
+
         # 결과에서 성공/실패 판단
         if isinstance(result, str):
             try:
@@ -1113,18 +1180,7 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".
                     "message": f"⚠️ 위험한 명령어가 감지되었습니다:\n\n`{command}`\n\n이 명령어를 실행하려면 '승인' 또는 'yes'라고 답해주세요."
                 }, ensure_ascii=False)
 
-            # 지도 데이터가 있으면 [MAP:...] 형식으로 변환하여 추가
-            if isinstance(result, str):
-                try:
-                    result_data = json.loads(result)
-                    if isinstance(result_data, dict) and "map_data" in result_data:
-                        map_data = result_data["map_data"]
-                        map_tag = f"\n\n[MAP:{json.dumps(map_data, ensure_ascii=False)}]"
-                        # map_data 필드 제거 (중복 방지)
-                        del result_data["map_data"]
-                        result = json.dumps(result_data, ensure_ascii=False, indent=2) + map_tag
-                except (json.JSONDecodeError, TypeError):
-                    pass
+            # [MAP:...] 변환은 execute_tool() 래퍼에서 통합 처리 (모든 도구 경로에 적용)
 
             # 가이드 주입: 도구에 guide_file이 있으면 첫 호출 시 결과 앞에 가이드 포함
             result = _inject_guide_if_needed(tool_name, result, agent_id)

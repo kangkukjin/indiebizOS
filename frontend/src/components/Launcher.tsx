@@ -251,6 +251,21 @@ export function Launcher() {
     };
   }, [loadProjects, loadSwitches]);
 
+  // 프로젝트 창에서 스위치 변경 시 런처 새로고침
+  useEffect(() => {
+    if (window.electron?.onLauncherRefresh) {
+      window.electron.onLauncherRefresh(() => {
+        loadSwitches();
+      });
+    }
+
+    return () => {
+      if (window.electron?.removeLauncherRefresh) {
+        window.electron.removeLauncherRefresh();
+      }
+    };
+  }, [loadSwitches]);
+
   // 루트 레벨 아이템만 표시 (휴지통 제외)
   const displayProjects = projects.filter((p) => !p.parent_folder && !p.in_trash);
   const displaySwitches = switches.filter((s) => !s.parent_folder && !s.in_trash);

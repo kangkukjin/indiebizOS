@@ -435,14 +435,15 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
     키워드로 적합한 노드/액션 자동 탐색 (노드 + 에이전트)
 
     "이 작업을 할 수 있는 노드가 뭐야?"를 해결.
+    액션 이름 직접 매칭, verb 라우팅 참조, 사용 예시 구문을 포함한 상세 결과를 제공.
 
     Args:
-        query: 검색 키워드 (예: "주가", "날씨", "사진", "뉴스")
+        query: 검색 키워드 (예: "주가", "날씨", "사진", "블로그 검색")
         limit: 최대 결과 수
 
     Returns:
         매칭 결과 리스트 (점수순):
-        [{node, description, score, matching_actions, suggestion}]
+        [{node, description, score, matching_actions, suggestion, action_details}]
     """
     if not query:
         return []
@@ -456,9 +457,13 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
     # 일반적 토큰 (많은 노드에 나타나는 단어) - 가중치 축소
     _GENERIC_TOKENS = {"정보", "관리", "검색", "조회", "데이터", "목록", "실행", "서비스", "기능"}
 
+    # verb 라우팅 정보 로드 (lazy)
+    verb_routes = _load_verb_routes()
+
     for node in nodes:
         score = 0
         matching_actions = []
+        action_details = []  # 상세 액션 정보
 
         # 노드 ID 매칭 (가장 강력)
         if query_lower in node["id"].lower():
@@ -480,22 +485,47 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
                 elif token in tag_lower:
                     score += 8   # 부분 매칭
 
-        # 각 액션 설명 매칭 (보조 신호, 상한 적용)
-        action_score = 0
-        max_action_score = 15  # 액션 매칭 점수 상한
+        # 각 액션 매칭 (이름 직접 매칭 + 설명 매칭)
         for action in node["actions"]:
+            action_name = action["name"]
+            action_name_lower = action_name.lower()
             action_desc_lower = action.get("description", "").lower()
-            action_target_lower = action.get("target", "").lower()
+            action_target = action.get("target", "")
+            action_target_lower = action_target.lower()
+            action_matched = False
+            action_score = 0
 
+            # (1) 액션 이름 직접 매칭 — 가장 정확한 신호
             for token in tokens:
-                weight = 2 if token in _GENERIC_TOKENS else 4
+                if token in action_name_lower:
+                    action_score += 18  # 이름에 토큰 포함: 강한 신호
+                    action_matched = True
+            # 전체 쿼리가 액션 이름에 포함
+            if query_lower.replace(" ", "_") == action_name_lower:
+                action_score += 25  # 정확 일치 보너스
+                action_matched = True
+
+            # (2) 액션 설명 매칭
+            for token in tokens:
+                weight = 2 if token in _GENERIC_TOKENS else 5
                 if token in action_desc_lower:
                     action_score += weight
-                    matching_actions.append(action["name"])
+                    action_matched = True
                 elif token in action_target_lower:
                     action_score += weight
-                    matching_actions.append(action["name"])
-        score += min(action_score, max_action_score)
+                    action_matched = True
+
+            if action_matched:
+                score += action_score
+                matching_actions.append(action_name)
+                # 사용 예시 구문 생성
+                target_hint = action_target if action_target else "대상"
+                action_details.append({
+                    "action": action_name,
+                    "description": action.get("description", ""),
+                    "example": f'[{node["id"]}:{action_name}]("{target_hint}")',
+                    "score": action_score,
+                })
 
         # 에이전트 노드: capabilities 매칭 (보너스)
         if node["type"] == "agent":
@@ -505,18 +535,166 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
                         score += 6
 
         if score > 0:
-            matching_actions = list(dict.fromkeys(matching_actions))  # 중복 제거, 순서 유지
-            best_action = matching_actions[0] if matching_actions else node["actions"][0]["name"] if node["actions"] else "?"
-            results.append({
+            matching_actions = list(dict.fromkeys(matching_actions))
+            # 액션 상세를 점수순 정렬
+            action_details.sort(key=lambda x: x["score"], reverse=True)
+            best_action = action_details[0]["action"] if action_details else (
+                matching_actions[0] if matching_actions else (
+                    node["actions"][0]["name"] if node["actions"] else "?"
+                )
+            )
+            best_target = ""
+            if action_details:
+                best_target = action_details[0].get("description", "")
+
+            # verb 라우팅 힌트
+            verb_hints = _find_verb_hints(tokens, verb_routes, node["id"])
+
+            # suggestion: verb 힌트가 있으면 그 액션을 우선 사용
+            suggestion_action = best_action
+            if verb_hints:
+                suggestion_action = verb_hints[0]["action"]
+
+            result = {
                 "node": node["id"],
                 "description": node["description"],
                 "score": score,
                 "matching_actions": matching_actions[:5],
-                "suggestion": f'[{node["id"]}:{best_action}]',
-            })
+                "suggestion": f'[{node["id"]}:{suggestion_action}]',
+                "action_details": action_details[:5],
+            }
+
+            if verb_hints:
+                result["verb_hints"] = verb_hints
+
+            results.append(result)
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return results[:limit]
+
+
+# === discover 보조 함수 ===
+
+_verb_routes_cache: Optional[Dict] = None
+
+def _load_verb_routes() -> Dict:
+    """ibl_nodes.yaml에서 verb 라우팅 정보를 로드 (캐시)"""
+    global _verb_routes_cache
+    if _verb_routes_cache is not None:
+        return _verb_routes_cache
+
+    path = _get_nodes_path()
+    if not path.exists():
+        _verb_routes_cache = {}
+        return _verb_routes_cache
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except Exception:
+        _verb_routes_cache = {}
+        return _verb_routes_cache
+
+    verbs = {}
+    # source 노드의 verbs 섹션
+    source = data.get("nodes", {}).get("source", {})
+    for verb_name, verb_cfg in source.get("verbs", {}).items():
+        routes = verb_cfg.get("routes", {})
+        default = verb_cfg.get("default", "")
+        description = verb_cfg.get("description", "")
+        verbs[verb_name] = {
+            "description": description,
+            "default": default,
+            "routes": routes,
+        }
+
+    _verb_routes_cache = verbs
+    return _verb_routes_cache
+
+
+def _find_verb_hints(tokens: List[str], verb_routes: Dict, node_id: str) -> List[Dict]:
+    """토큰에서 verb 라우팅 힌트를 찾아 반환"""
+    hints = []
+    # 한글 → verb 매핑
+    _KO_VERB_MAP = {
+        "검색": "search", "찾기": "search", "찾아": "search", "찾아줘": "search",
+        "조회": "get", "확인": "get", "보기": "get", "보여": "get",
+        "목록": "list", "리스트": "list",
+        "생성": "create", "만들기": "create", "만들어": "create",
+        "저장": "save", "기록": "save",
+        "삭제": "delete",
+    }
+
+    # 한글 type → 영어 route key 매핑
+    _KO_TYPE_MAP = {
+        "블로그": "blog", "메모리": "memory", "기억": "memory",
+        "뉴스": "news", "주식": "stock", "사진": "photos",
+        "날씨": "weather", "맛집": "restaurant", "건강": "health",
+        "스킬": "skill", "웹": "web", "학술": "openalex",
+        "법률": "legal", "통계": "kosis", "라디오": "radio",
+        "지역": "local", "쇼핑": "shopping", "투자": "stock",
+        "혈압": "health", "혈당": "health", "체중": "health",
+    }
+
+    # 토큰에서 verb 및 type 후보 추출
+    found_verbs = set()
+    type_candidates = set()  # 영어 route key로 정규화된 타입
+
+    for token in tokens:
+        is_verb = False
+        # 한글 verb 탐지
+        for ko, en in _KO_VERB_MAP.items():
+            if ko in token:
+                found_verbs.add(en)
+                is_verb = True
+        # 영어 verb 직접 매칭
+        if token in verb_routes:
+            found_verbs.add(token)
+            is_verb = True
+        # type 후보: 한글은 영어로 변환 (조사 포함 부분 매칭), 영어는 그대로
+        if not is_verb:
+            matched_type = False
+            for ko, en in _KO_TYPE_MAP.items():
+                if ko in token:  # "블로그에서" → "블로그" 매칭
+                    type_candidates.add(en)
+                    matched_type = True
+                    break
+            if not matched_type:
+                type_candidates.add(token)
+
+    # verb가 없으면 search를 기본으로
+    if not found_verbs and type_candidates:
+        found_verbs.add("search")
+
+    for verb in found_verbs:
+        if verb not in verb_routes:
+            continue
+        vr = verb_routes[verb]
+        routes = vr.get("routes", {})
+        default_action = vr.get("default", "")
+
+        # type 후보와 routes 매칭
+        for tc in type_candidates:
+            tc_lower = tc.lower()
+            if tc_lower in routes:
+                action = routes[tc_lower]
+                hints.append({
+                    "verb": verb,
+                    "type": tc_lower,
+                    "action": action,
+                    "syntax": f'{verb}("query") {{type: "{tc_lower}"}} → [{node_id}:{action}]',
+                })
+
+        # type 매칭이 없으면 기본 액션 안내
+        if not type_candidates and default_action:
+            hints.append({
+                "verb": verb,
+                "type": "default",
+                "action": default_action,
+                "syntax": f'{verb}("query") → [{node_id}:{default_action}]',
+            })
+
+    return hints
 
 
 def node_summary() -> Dict:

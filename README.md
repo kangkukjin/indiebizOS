@@ -126,15 +126,15 @@ Each project is **completely isolated**. Delete a project, and everything relate
 
 IndieBiz OS uses a domain-specific language called **IBL** as its unified interface between AI agents and the system. Instead of giving each agent hundreds of individual tools, every agent receives a **single tool** (`execute_ibl`) and an XML-structured environment prompt describing available nodes and actions.
 
-### 6 Nodes, ~330 Atomic Actions
+### 6 Nodes, 321 Atomic Actions
 
 ```
-system    (~65 actions)  - System management, workflows, files, notifications, code execution
-interface (~79 actions)  - UI automation (browser / Android / macOS desktop)
-source    (~100 actions) - Data retrieval (web, finance, photos, blog, memory, health)
-stream    (~22 actions)  - Media playback (YouTube / internet radio)
-forge     (~58 actions)  - Content creation (slides, video, charts, images, music, websites)
-messenger (~9 actions)   - Contacts and messaging
+source    (105 actions) - Data retrieval (web, finance, photos, blog, memory, health)
+interface  (79 actions) - UI automation (browser / Android / macOS desktop)
+system     (64 actions) - System management, workflows, files, notifications, code execution
+forge      (46 actions) - Content creation (slides, video, charts, images, music, websites)
+stream     (18 actions) - Media playback (YouTube / internet radio)
+messenger   (9 actions) - Contacts and messaging
 ```
 
 ### How It Works
@@ -151,6 +151,7 @@ IBL Engine: parse -> dispatch to handler -> return result
 - **One tool, one language** - AI agents learn one syntax, not 300+ tool schemas
 - **Dynamic tool definition** - `execute_ibl` description is generated at runtime from `ibl_nodes.yaml`, so it always reflects installed packages
 - **Per-agent filtering** - Each agent's `allowed_nodes` restricts which nodes appear in the tool definition, system prompt, and runtime — three consistent layers
+- **Usage RAG** - Past successful IBL examples are searched and injected as references, reducing agent trial-and-error (13 rounds → 3 rounds)
 - **Atomic actions** - 97% of actions are single API/DB calls (true atoms)
 - **Verb abstraction** - Common verbs like `search`, `get`, `create` route to specific actions by type
 - **Two ways to extend** - Save IBL pipelines as workflows (no code) or write Python packages (new atoms)
@@ -194,12 +195,37 @@ Execute by name: `[system:run]("kinsight")`
 - Each specialist only sees the nodes they need
 - XML-structured environment prompt with verb tables and action catalogs
 
-### Self-Contained Action Packages (30 installed)
+### IBL Usage RAG (Learning from Experience)
 
-Each package is **self-contained**: it includes its own `ibl_actions.yaml` declaring which IBL actions it provides. When a package is installed, its actions are **automatically registered** into `ibl_nodes.yaml`. When uninstalled, they are **automatically removed**. This means:
+Agents improve over time through a RAG (Retrieval-Augmented Generation) system that learns from successful IBL executions:
+
+- **Usage Dictionary**: ~970 examples (synthetic data + auto-promoted execution logs)
+- **Hybrid Search**: 70% Semantic (ko-sroberta, 768-dim) + 30% BM25 (FTS5)
+- **Prompt Injection**: Top 3 similar examples injected as XML references when user message arrives
+- **Auto-Learning**: Successful tool executions are automatically promoted to usage examples
+- **Auto-Generation**: New packages automatically generate baseline usage examples on install
+
+```
+User: "Search Daejeon apartment prices"
+         |
+    [RAG Search] → Similar past examples found
+         |
+    <ibl_references>
+      <ref intent="apartment trade data" code='[source:apt_trade]("region_code")' score="0.88"/>
+    </ibl_references>
+         |
+    AI generates correct IBL on first try (no trial-and-error)
+```
+
+**Measured impact**: Agent rounds reduced from 13 to 3 for real estate queries.
+
+### Self-Contained Action Packages (35 installed)
+
+Each package is **self-contained**: it includes its own `ibl_actions.yaml` declaring which IBL actions it provides. When a package is installed, its actions are **automatically registered** into `ibl_nodes.yaml` and baseline usage examples are **automatically generated** for the RAG system. When uninstalled, actions are **automatically removed**. This means:
 
 - **No manual YAML editing** — install a package and its actions are immediately available
 - **Clean uninstall** — removing a package cleanly removes only its actions
+- **Instant RAG coverage** — new actions get baseline usage examples on install (no cold-start gap)
 - **Shareable via Nostr** — packages can be shared over the P2P network; recipients just install and actions work
 - **Provenance tracking** — `_ibl_provenance.yaml` tracks which package owns each action
 
@@ -327,7 +353,10 @@ indiebizOS/
 |   |-- agent_runner.py  # Delegation chain executor
 |   |-- tool_loader.py   # Dynamic execute_ibl tool builder + package loader
 |   |-- ibl_action_manager.py # Auto-register/unregister actions on package install/uninstall
-|   |-- package_manager.py # Package install/uninstall (triggers action registration)
+|   |-- ibl_usage_db.py  # IBL usage dictionary DB + hybrid search engine
+|   |-- ibl_usage_rag.py # RAG reference module (search → XML → prompt injection)
+|   |-- ibl_usage_generator.py # Synthetic usage data generator + package auto-generation
+|   |-- package_manager.py # Package install/uninstall (triggers action + usage registration)
 |   |-- workflow_engine.py # Workflow CRUD + pipeline executor
 |   |-- system_ai.py     # System AI core
 |   |-- scheduler.py     # Task scheduler
@@ -339,16 +368,17 @@ indiebizOS/
 |   +-- src/             # React components
 |
 |-- data/
-|   |-- ibl_nodes.yaml   # IBL language definition (6 nodes, ~330 actions, verbs)
+|   |-- ibl_nodes.yaml   # IBL language definition (6 nodes, 321 actions, verbs)
+|   |-- ibl_usage.db     # Usage dictionary DB (~970 examples + execution logs + vector index)
 |   |-- _ibl_provenance.yaml # Action ownership tracking (action -> package mapping)
 |   |-- packages/        # Action packages (Python handlers)
-|   |   |-- installed/   # Active packages (30 tools + 9 extensions)
+|   |   |-- installed/   # Active packages (35 tools + 9 extensions)
 |   |   |   +-- tools/*/ibl_actions.yaml  # Per-package action declarations
 |   |   +-- not_installed/ # Available packages
 |   |-- workflows/       # Saved IBL workflows (YAML)
 |   +-- system_docs/     # System AI memory
 |
-+-- projects/            # User projects (20 active)
++-- projects/            # User projects (24 active)
     +-- {project_id}/
         |-- agents.yaml  # Agent definitions (AI config, allowed_nodes)
         +-- conversations.db # Conversation history
@@ -464,12 +494,14 @@ The human is part of the system:
 
 **This project is under active development.**
 
-- 20 active projects in production use
-- 6 IBL nodes with ~330 atomic actions
-- 30 installed action packages + 9 extension packages
+- 24 active projects in production use
+- 6 IBL nodes with 321 atomic actions
+- 35 installed action packages + 9 extension packages
 - Self-contained packages with `ibl_actions.yaml` — automatic action registration on install/uninstall
 - Dynamic `execute_ibl` tool definition generated from `ibl_nodes.yaml` at runtime
 - Per-agent node filtering across tool definition, system prompt, and runtime (3-layer consistency)
+- IBL Usage RAG with ~970 examples — hybrid search (semantic + BM25) for reference injection
+- Auto-learning from successful executions + auto-generation on package install
 - IBL workflow engine with pipeline operators (>>, &, ??)
 - Synchronous agent delegation for AI-powered workflow steps
 - XML-structured environment prompts for optimal AI recognition

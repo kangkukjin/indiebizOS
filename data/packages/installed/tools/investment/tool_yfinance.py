@@ -108,6 +108,35 @@ def get_crypto_price(coin_id: str = "bitcoin") -> dict:
         return {"success": False, "error": f"암호화폐 정보 조회 실패: {str(e)}"}
 
 
+def _normalize_symbol(symbol: str) -> str:
+    """AI가 자주 틀리는 심볼을 자동 보정
+
+    - 한국 시장 지수명 → yfinance 심볼 (KOSPI → ^KS11)
+    - 한국 6자리 종목코드 → .KS 접미사 (005930 → 005930.KS)
+    - 이미 올바른 심볼은 그대로 반환
+    """
+    s = symbol.strip()
+
+    # 1) 시장 지수 별명 → yfinance 심볼
+    _INDEX_MAP = {
+        "KOSPI": "^KS11", "코스피": "^KS11", "KS11": "^KS11",
+        "KOSDAQ": "^KQ11", "코스닥": "^KQ11", "KQ11": "^KQ11",
+        "KS200": "^KS200", "KOSPI200": "^KS200",
+        "001": "^KS11",   # KRX 내부 코드
+        "101": "^KQ11",   # KRX 내부 코드
+    }
+    mapped = _INDEX_MAP.get(s.upper()) or _INDEX_MAP.get(s)
+    if mapped:
+        return mapped
+
+    # 2) 한국 종목코드 (6자리 숫자) → .KS 자동 붙이기
+    #    이미 .KS/.KQ 있으면 패스, ^로 시작하면 지수이므로 패스
+    if s.replace(".", "").isdigit() and len(s) == 6 and not s.startswith("^"):
+        return f"{s}.KS"
+
+    return s
+
+
 def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d") -> dict:
     """
     Yahoo Finance를 통해 주식/ETF 가격 조회
@@ -118,6 +147,12 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d") -> di
     symbol_upper = symbol.upper().replace("-USD", "").replace("-KRW", "")
     if symbol_upper in crypto_symbols or "-USD" in symbol.upper() or "-KRW" in symbol.upper():
         return get_crypto_price(symbol)
+
+    # 심볼 자동 보정 (KOSPI → ^KS11, 005930 → 005930.KS 등)
+    original_symbol = symbol
+    symbol = _normalize_symbol(symbol)
+    if symbol != original_symbol:
+        print(f"[yfinance] 심볼 보정: {original_symbol} → {symbol}")
 
     try:
         import yfinance as yf
@@ -214,6 +249,8 @@ def get_stock_info(symbol: str) -> dict:
     """
     Yahoo Finance를 통해 종목 상세 정보 조회
     """
+    symbol = _normalize_symbol(symbol)
+
     try:
         import yfinance as yf
     except ImportError:

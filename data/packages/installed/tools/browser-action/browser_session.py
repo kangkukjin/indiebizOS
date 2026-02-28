@@ -61,6 +61,7 @@ class BrowserSession:
         self._last_activity = 0.0
         self._timeout_seconds = AUTO_CLOSE_SECONDS
         self._cleanup_task = None
+        self._close_generation = 0  # auto_close 세대 번호 (경쟁 조건 방지)
         self._headless = True
 
         # 탭 관리
@@ -89,20 +90,31 @@ class BrowserSession:
         if self._cleanup_task and not self._cleanup_task.done():
             self._cleanup_task.cancel()
         self._last_activity = time.time()
+        self._close_generation += 1  # 세대 번호 갱신 → 이전 타이머 무효화
         try:
             loop = asyncio.get_event_loop()
-            self._cleanup_task = loop.create_task(self._auto_close())
+            self._cleanup_task = loop.create_task(
+                self._auto_close(self._close_generation)
+            )
         except RuntimeError:
             pass
 
-    async def _auto_close(self):
+    async def _auto_close(self, generation: int):
         await asyncio.sleep(self._timeout_seconds)
+        # 세대 불일치 → 이 타이머는 이미 무효 (새 작업이 시작됨)
+        if generation != self._close_generation:
+            return
         if time.time() - self._last_activity >= self._timeout_seconds:
             print(f"[브라우저] {self._timeout_seconds}초 비활성 — 자동 종료")
             await self._close_internal()
 
     async def ensure_browser(self, headless=True):
         """브라우저가 실행 중인지 확인하고, 없으면 생성. Page 반환."""
+        # 진입 즉시 활동 시간 갱신 + 세대 번호 증가
+        # → 이전 세대의 _auto_close가 실행되어도 세대 불일치로 무시됨
+        self._last_activity = time.time()
+        self._close_generation += 1
+
         if not self._pages or self._active_tab_id not in self._pages:
             await self._start_browser(headless)
         elif self._browser and not self._browser.is_connected():

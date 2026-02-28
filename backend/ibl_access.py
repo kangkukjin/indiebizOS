@@ -169,22 +169,27 @@ def build_environment(
         parts.append(f'<node name="{node_name}" description="{desc}">')
 
         if verbs:
-            # verb 테이블
-            parts.append("<verbs>")
+            # 액션 그룹 (action 파라미터에 사용할 수 있는 단축 이름)
+            parts.append("<action-groups>")
             verb_covered = set()
             for verb_name, verb_config in verbs.items():
                 verb_desc = verb_config.get("description", "")
                 routes = verb_config.get("routes", {})
-                types = ", ".join(routes.keys()) if routes else ""
+                route_keys = list(routes.keys())
+                if len(route_keys) > 10:
+                    # 10개 초과 시 앞 7개 + 잔여 수 표시
+                    types = ", ".join(route_keys[:7]) + f" 등 {len(route_keys)}개"
+                else:
+                    types = ", ".join(route_keys) if route_keys else ""
                 type_attr = f' types="{types}"' if types else ""
-                parts.append(f'  <verb name="{verb_name}" description="{verb_desc}"{type_attr}/>')
+                parts.append(f'  <action name="{verb_name}" description="{verb_desc}"{type_attr}/>')
                 # 커버된 액션 추적
                 default = verb_config.get("default")
                 if default:
                     verb_covered.add(default)
                 for route_target in routes.values():
                     verb_covered.add(route_target)
-            parts.append("</verbs>")
+            parts.append("</action-groups>")
 
             # verb 미커버 액션
             uncovered = {k: v for k, v in actions.items() if k not in verb_covered}

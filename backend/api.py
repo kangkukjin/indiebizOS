@@ -62,6 +62,47 @@ from switch_manager import SwitchManager
 
 # ============ 앱 초기화 ============
 
+def _auto_register_packages():
+    """서버 시작 시 수동 설치된 패키지의 IBL 액션을 자동 등록.
+
+    installed/tools/ 내 ibl_actions.yaml이 있지만 _ibl_provenance.yaml에
+    등록되지 않은 패키지를 찾아 자동으로 register_actions() 호출.
+    """
+    import yaml
+    from ibl_action_manager import register_actions, _load_provenance
+
+    tools_dir = DATA_PATH / "packages" / "installed" / "tools"
+    if not tools_dir.exists():
+        return
+
+    # provenance에서 이미 등록된 패키지 집합
+    prov = _load_provenance()
+    registered_pkgs = set()
+    for node_actions in prov.values():
+        if isinstance(node_actions, dict):
+            for owner in node_actions.values():
+                registered_pkgs.add(owner)
+
+    # 미등록 패키지 탐색 및 등록
+    count = 0
+    for pkg_dir in sorted(tools_dir.iterdir()):
+        if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
+            continue
+        if pkg_dir.name in registered_pkgs:
+            continue
+        if not (pkg_dir / "ibl_actions.yaml").exists():
+            continue
+
+        result = register_actions(pkg_dir.name)
+        registered = result.get("registered", 0)
+        if registered > 0:
+            count += 1
+            print(f"  → {pkg_dir.name}: {registered}개 액션 자동 등록")
+
+    if count > 0:
+        print(f"[AutoRegister] {count}개 패키지 자동 등록 완료")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """앱 시작/종료 시 실행"""
@@ -87,12 +128,25 @@ async def lifespan(app: FastAPI):
     from system_ai_runner import start_system_ai_runner, stop_system_ai_runner
     system_ai_runner = start_system_ai_runner()
 
+    # 패키지 IBL 액션 자동 등록 (수동 설치된 패키지 감지)
+    try:
+        _auto_register_packages()
+    except Exception as e:
+        print(f"[AutoRegister] 오류: {e}")
+
     # Cloudflare 터널 자동 시작 (설정에 따라)
     try:
         from api_tunnel import auto_start_if_enabled as tunnel_auto_start
         tunnel_auto_start()
     except Exception as e:
         print(f"[Tunnel] 자동 시작 중 오류: {e}")
+
+    # IBL 용례 임베딩 모델 백그라운드 로딩 (서버 블로킹 없음)
+    try:
+        from ibl_usage_db import IBLUsageDB
+        IBLUsageDB._start_background_model_load()
+    except Exception as e:
+        print(f"[IBL] 모델 로딩 시작 실패 (무시): {e}")
 
     yield
 

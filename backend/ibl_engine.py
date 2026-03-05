@@ -201,64 +201,6 @@ def list_actions(node: str) -> List[Dict]:
     return result
 
 
-def _resolve_verb(node_config: dict, verb: str, params: dict,
-                   target: str = "") -> tuple:
-    """
-    Phase 13: verbs 섹션에서 공통 동사 → 실제 액션으로 해석.
-
-    3-tier resolution의 2단계:
-      1단계: actions에서 정확 매칭 (이미 시도됨)
-      2단계: verbs 섹션에서 동사 매핑 + type 파라미터로 분기 ← 여기
-      3단계: 둘 다 없으면 에러
-
-    Phase 22: target 기반 자동 라우팅 추가.
-      AI가 [source:get]("us_price", "PLTR") 형태로 보내는 경우,
-      target의 첫 토큰이 verb routes 키와 일치하면 자동 분기.
-
-    Args:
-        node_config: 노드 설정 (actions, verbs 포함)
-        verb: 공통 동사 (search, get, list, create, delete 등)
-        params: 사용자 파라미터 (type 키로 분기)
-        target: 대상 문자열 (verb route 키 자동 감지용)
-
-    Returns:
-        (action_config, action_name, adjusted_target) 또는 (None, None, None)
-    """
-    verbs = node_config.get("verbs", {})
-    verb_config = verbs.get(verb)
-    if not verb_config:
-        return None, None, None
-
-    type_hint = params.get("type", "")
-    routes = verb_config.get("routes", {})
-    adjusted_target = None  # target 조정이 필요한 경우
-
-    if type_hint and type_hint in routes:
-        action_name = routes[type_hint]
-    else:
-        # Phase 22: target에서 verb route 키 자동 감지
-        # 예: target="us_price", "PLTR" → route_key="us_price", new_target="PLTR"
-        if target and not type_hint:
-            # 쉼표로 분리: "us_price", "PLTR" → ["us_price", "PLTR"]
-            parts = [p.strip().strip('"').strip("'") for p in target.split(",")]
-            if len(parts) >= 2 and parts[0] in routes:
-                action_name = routes[parts[0]]
-                adjusted_target = ", ".join(parts[1:]).strip().strip('"').strip("'")
-            elif len(parts) == 1 and parts[0] in routes:
-                # target 자체가 route 키: [source:get]("price") → price 액션
-                action_name = routes[parts[0]]
-                adjusted_target = ""
-            else:
-                action_name = verb_config.get("default")
-        else:
-            action_name = verb_config.get("default")
-
-    if not action_name:
-        return None, None, None
-
-    action_config = node_config.get("actions", {}).get(action_name)
-    return (action_config, action_name, adjusted_target) if action_config else (None, None, None)
-
 
 def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None) -> Any:
     """
@@ -313,23 +255,9 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
 
     action_config = node_config.get("actions", {}).get(action)
     if not action_config:
-        # Phase 13/22: verb resolution - 공통 동사로 액션 매핑 (target 기반 자동 라우팅 포함)
-        params = tool_input.get("params", {})
-        raw_target = tool_input.get("target", "")
-        action_config, resolved_action, adj_target = _resolve_verb(
-            node_config, action, params, target=raw_target)
-        if action_config:
-            action = resolved_action
-            if adj_target is not None:
-                tool_input["target"] = adj_target  # target 조정 반영
-        else:
-            available = list(node_config.get("actions", {}).keys())
-            verbs = list(node_config.get("verbs", {}).keys())
-            err = {"error": f"노드 '{node}'에 '{action}' 액션/동사가 없습니다.",
-                   "available_actions": available}
-            if verbs:
-                err["available_verbs"] = verbs
-            return err
+        available = list(node_config.get("actions", {}).keys())
+        return {"error": f"노드 '{node}'에 '{action}' 액션이 없습니다.",
+                "available_actions": available}
 
     router = action_config.get("router")
     target = tool_input.get("target", "")
@@ -726,8 +654,17 @@ def _route_system(func_name: str, target: str, params: dict, project_path: str) 
     elif func_name == "call_project_agent":
         from api_system_ai import _execute_call_project_agent
         merged = dict(params)
-        if target and "agent_id" not in merged:
-            merged["agent_id"] = target
+        if target:
+            # "프로젝트/에이전트" 형식 파싱
+            parts = target.split("/", 1)
+            if len(parts) == 2:
+                if "project_id" not in merged:
+                    merged["project_id"] = parts[0]
+                if "agent_id" not in merged:
+                    merged["agent_id"] = parts[1]
+            else:
+                if "agent_id" not in merged:
+                    merged["agent_id"] = target
         return _execute_call_project_agent(merged)
 
     elif func_name == "manage_events":
@@ -947,8 +884,8 @@ def _agent_ask_sync(target: str, params: dict, project_path: str) -> Any:
     비동기 agent_ask와 달리, 임시 AI 에이전트를 생성하여
     메시지를 처리하고 결과 텍스트를 직접 반환합니다.
 
-    사용: [system:agent_ask_sync]("프로젝트/에이전트") {message: "분석해줘"}
-    파이프라인: [source:search_blog]("AI") >> [system:agent_ask_sync]("컨텐츠/컨텐츠") {message: "요약해줘"}
+    사용: [team:ask_sync]("프로젝트/에이전트") {message: "분석해줘"}
+    파이프라인: [source:search_blog]("AI") >> [team:ask_sync]("컨텐츠/컨텐츠") {message: "요약해줘"}
     """
     if not target:
         return {"error": "target(프로젝트/에이전트이름)이 필요합니다."}

@@ -27,47 +27,40 @@ IBL 표현 계층:     [node:action](target) {params}
 
 ---
 
-## 동사 (Verbs)
+## 액션 카테고리
 
-에이전트는 321개 개별 액션 이름 대신 **10개 공통 동사**로 모든 노드를 다룰 수 있다.
+~320개 액션은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
 
-| 동사 | 의미 | 사용 예시 |
-|------|------|----------|
-| `search` | 찾기 | `[source:search]("뮤지컬") {type: "performance"}` |
-| `get` | 가져오기 | `[source:get]("AAPL")` |
-| `list` | 나열하기 | `[source:list]()` |
-| `create` | 만들기 | `[forge:create]("발표자료") {type: "slide"}` |
-| `control` | 조작하기 | `[interface:control]("설정 앱 열기")` |
-| `write` | 저장하기 | `[system:write]("memo.md") {content: "..."}` |
-| `read` | 읽기 | `[system:read]("report.pdf")` |
-| `delete` | 지우기 | `[source:delete]("오래된 대화") {type: "memory"}` |
-| `run` | 실행하기 | `[system:run_command]("ls -la")` |
-| `send` | 보내기 | `[messenger:send]("안녕하세요") {type: "email"}` |
+| 카테고리 | 의미 | 올바른 사용 예시 |
+|---------|------|----------------|
+| `search` | 찾기 | `[source:web_search]("AI 뉴스")` |
+| `get` | 가져오기 | `[source:price]("AAPL")` |
+| `list` | 나열하기 | `[source:posts]()` |
+| `create` | 만들기 | `[forge:slide]("발표자료")` |
+| `control` | 조작하기 | `[interface:open_app]("설정")` |
+| `fs` | 파일 조작 | `[system:read]("report.pdf")` |
+| `io` | 결과 출력 | `[system:file]("result.md")` |
+| `send` | 보내기 | `[messenger:send_email]("제목")` |
 
-동사는 `type` 파라미터로 세분화된다. 예를 들어 `[source:search]`에서:
-- `{type: "performance"}` → 공연 검색
-- `{type: "stock"}` → 주식 검색
-- `{type: "news"}` → 뉴스 검색
-- type 없이 → 기본 웹 검색
-
-기존 액션 이름(`[source:search_stock]`)도 그대로 동작한다. 동사는 정확한 액션이 없을 때 fallback으로 해석된다.
+프롬프트에서 `<action-categories>` 태그로 표시되며, 각 카테고리에 속한 구체적 액션명이 나열된다. RAG 시스템이 정확한 액션명을 안내하므로, 에이전트는 카테고리명이 아닌 액션명을 직접 써야 한다.
 
 ---
 
-## 노드 (Phase 22: 6-Node 통합)
+## 노드 (Phase 23: 7-Node — team 분리)
 
-### 인프라 노드 — system (항상 허용)
+### 인프라 노드 — system + team (항상 허용)
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `system` | 64 | 시스템 관리, 사용자 소통, 워크플로우, 자동화, 결과 출력, 파일시스템 | delegate, agent_ask, ask_user, approve, todo, notify_user, send_notify, run_pipeline, list_workflows, list_events, file, open, clipboard, run_command, fs_query |
+| `system` | ~57 | 시스템 관리, 사용자 소통, 워크플로우, 자동화, 결과 출력, 파일시스템 | ask_user, approve, todo, notify_user, send_notify, run_pipeline, list_workflows, list_events, file, open, clipboard, run_command, fs_query |
+| `team` | 7 | 에이전트 간 위임/협업 전용 | delegate, ask, ask_sync, delegate_workflow, delegate_project, info, list_projects |
 
-Phase 19→22에서 기존 인프라 노드(system, user, workflow, automation, output, filesystem)를 `system`(구 orchestrator)으로 통합.
+Phase 19→22에서 기존 인프라 노드를 `system`으로 통합. Phase 23에서 위임 관련 액션을 `team` 노드로 분리.
+
+**system 주요 액션:**
 
 | 주요 액션 | 설명 | 예시 |
 |----------|------|------|
-| `delegate` | 다른 에이전트에게 작업 위임 | `[system:delegate]("에이전트B") {message: "..."}` |
-| `agent_ask` | 에이전트에게 질문/위임 | `[system:agent_ask]("투자/투자컨설팅") {message: "..."}` |
 | `ask_user` | 사용자에게 질문 | `[system:ask_user]("어떤 형식을 원하시나요?")` |
 | `approve` | 위험 작업 전 승인 요청 | `[system:approve]("파일을 삭제합니다")` |
 | `todo` | 할일 목록 생성/관리 | `[system:todo]() {todos: [...]}` |
@@ -76,9 +69,20 @@ Phase 19→22에서 기존 인프라 노드(system, user, workflow, automation, 
 | `file` | 결과물 파일 저장 | `[system:file]("result.md") {content: "..."}` |
 | `open` | URL/파일 열기 | `[system:open]("https://google.com")` |
 
+**team 주요 액션:**
+
+| 주요 액션 | 설명 | 예시 |
+|----------|------|------|
+| `delegate` | 동료 에이전트에게 작업 위임 | `[team:delegate]("심장전문") {message: "..."}` |
+| `ask` | 에이전트에게 질문 (비동기) | `[team:ask]("투자컨설팅") {message: "..."}` |
+| `ask_sync` | 에이전트에게 질문 (동기) | `[team:ask_sync]("투자컨설팅") {message: "..."}` |
+| `delegate_project` | 다른 프로젝트 에이전트에게 위임 | `[team:delegate_project]("투자/투자컨설팅") {message: "..."}` |
+| `info` | 에이전트/프로젝트 정보 조회 | `[team:info]("의료")` |
+| `list_projects` | 프로젝트/에이전트 목록 조회 | `[team:list_projects]()` |
+
 ### 인터페이스 노드 — interface (browser + android + desktop 통합)
 
-| 노드 | 액션 수 | 설명 | 주요 동사 |
+| 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
 | `interface` | 79 | UI 조작 통합: 브라우저 자동화, 안드로이드 기기 관리, macOS 데스크탑 자동화 | navigate, snapshot, click, type, control, devices 등 |
 
@@ -94,9 +98,9 @@ Phase 22에서 browser(27) + android(43) + desktop(9) → `interface`로 통합.
 
 ### 소스 노드 — source (informant + librarian 통합)
 
-| 노드 | 액션 수 | 설명 | 주요 동사 |
+| 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `source` | 105 | 외부 정보 조사 + 내부 데이터 관리 통합: 금융, 문화, 학술, 법률, 통계, 부동산/쇼핑, 위치/CCTV, 웹검색/크롤링/뉴스, 사진/블로그/메모리/건강기록 | web_search, search_news, price, crawl, search, get, search_photos, search_blog, search_memory, save_health |
+| `source` | 105 | 외부 정보 조사 + 내부 데이터 관리 통합: 금융, 문화, 학술, 법률, 통계, 부동산/쇼핑, 위치/CCTV, 웹검색/크롤링/뉴스, 사진/블로그/메모리/건강기록 | web_search, search_news, price, crawl, search_photos, rag_search, search_memory, save_health |
 
 Phase 22에서 informant(64) + librarian(41) → `source`로 통합.
 
@@ -106,15 +110,15 @@ Phase 22에서 informant(64) + librarian(41) → `source`로 통합.
 | `search_news` | 뉴스 검색 | `[source:search_news]("부동산")` |
 | `price` | 주가 조회 | `[source:price]("삼성전자")` |
 | `crawl` | 웹 크롤링 | `[source:crawl]("https://...")` |
-| `search` | 범용 검색 (type으로 분야 지정) | `[source:search]("뮤지컬") {type: "performance"}` |
+| `performance` | 공연 검색 | `[source:performance]("뮤지컬")` |
 | `search_photos` | 사진 검색 | `[source:search_photos]("가족")` |
-| `search_blog` | 블로그 검색 | `[source:search_blog]("AI")` |
+| `rag_search` | 블로그 RAG 검색 | `[source:rag_search]("AI")` |
 | `search_memory` | 대화 기억 검색 | `[source:search_memory]("지난 약속")` |
 | `save_health` | 건강 기록 저장 | `[source:save_health]() {type: "blood_pressure", ...}` |
 
 ### 제작 노드 — forge (구 creator)
 
-| 노드 | 액션 수 | 설명 | 주요 동사 |
+| 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
 | `forge` | 46 | 슬라이드, 영상, 차트, 이미지, 음악, 웹사이트, 건축설계 | create, create_site, create_design, list, run, get |
 
@@ -122,7 +126,7 @@ Phase 22에서 creator → `forge`로 이름 변경.
 
 ### 미디어 노드 — stream (youtube + radio 통합)
 
-| 노드 | 액션 수 | 설명 | 주요 동사 |
+| 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
 | `stream` | 18 | 유튜브 + 라디오 재생/관리 통합 | play, info, transcript, download, radio_play, radio_stop, search |
 
@@ -130,7 +134,7 @@ Phase 22에서 youtube(9) + radio(9) → `stream`으로 통합.
 
 ### 연락 노드 — messenger (유지)
 
-| 노드 | 액션 수 | 설명 | 주요 동사 |
+| 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
 | `messenger` | 9 | 연락처 관리, 메시지 전송 | search, get, send, read |
 
@@ -198,13 +202,12 @@ steps:
 
 ---
 
-## 해석 순서 (3-tier Resolution)
+## 해석 순서
 
-에이전트가 `[source:search]("뮤지컬")`을 호출하면:
+에이전트가 `[source:web_search]("AI")`을 호출하면:
 
-1. **정확한 액션 매칭**: `source.actions.search`가 있는가? → 있으면 바로 실행
-2. **동사 해석**: `source.verbs.search`에서 `type` 파라미터로 라우팅 → 실제 액션 결정
-3. **에러**: 사용 가능한 액션과 동사 목록 반환
+1. **액션 매칭**: `source.actions.web_search`가 있는가? → 있으면 실행
+2. **에러**: 없으면 사용 가능한 액션 목록 반환
 
 ---
 
@@ -285,20 +288,24 @@ performance:
 
 Phase 17에서 시스템 AI도 프로젝트 에이전트와 동일한 `execute_ibl` 단일 도구 구조로 통합되었습니다.
 Phase 19에서 인프라 노드가 `orchestrator`로 통합, Phase 22에서 `system`으로 이름 변경되었습니다.
-Phase 22에서 최종 6개 노드 구조가 완성되었습니다: system(64), interface(79), source(105), forge(46), stream(18), messenger(9).
+Phase 23에서 위임 관련 액션을 `team` 노드로 분리하여 최종 7개 노드 구조: system(~57), team(7), interface(79), source(105), forge(46), stream(18), messenger(9).
 
 **차이점은 접근 범위뿐:**
 - 프로젝트 에이전트: `allowed_nodes`에 지정된 노드만 접근 가능
-- 시스템 AI: 모든 노드 접근 가능 + 프로젝트 간 위임(`[system:delegate_project]`)
+- 시스템 AI: 모든 노드 접근 가능 + 프로젝트 간 위임(`[team:delegate_project]`)
 
 **항상 허용되는 인프라 노드 (`_ALWAYS_ALLOWED`):**
-`system` — 모든 에이전트에 자동 제공 (기존 orchestrator → system으로 이름 변경)
+`system`, `team` — 모든 에이전트에 자동 제공. system은 시스템 관리, team은 위임/협업 전담.
 
-**시스템 AI 전용 system 액션:**
+**시스템 AI 전용 team 액션:**
 | 액션 | 설명 |
 |------|------|
 | `list_projects` | 모든 프로젝트/에이전트 목록 조회 |
 | `delegate_project` | 다른 프로젝트의 에이전트에게 작업 위임 |
+
+**시스템 AI 전용 system 액션:**
+| 액션 | 설명 |
+|------|------|
 | `manage_events` | 이벤트/스케줄 통합 관리 |
 | `list_switches` | 등록된 스위치 목록 조회 |
 
@@ -306,5 +313,7 @@ Phase 22에서 최종 6개 노드 구조가 완성되었습니다: system(64), i
 
 *Phase 20: filesystem→orchestrator, webdev+design→creator, photo+blog+memory+health→librarian 통합.*
 *Phase 21: finance+culture+study+legal+statistics+commerce+location+web(search/crawl/news)→informant 통합.*
-*Phase 22: youtube+radio→stream, browser+android+desktop→interface, informant+librarian→source, orchestrator→system, creator→forge. 최종 6개 노드, 321 액션.*
-*최종 업데이트: 2026-02-19*
+*Phase 22: youtube+radio→stream, browser+android+desktop→interface, informant+librarian→source, orchestrator→system, creator→forge. 6개 노드, 321 액션.*
+*Phase 23: system에서 위임 관련 7개 액션을 team 노드로 분리. 최종 7개 노드(system, team, interface, source, forge, stream, messenger). team은 _ALWAYS_ALLOWED로 모든 에이전트에 자동 제공.*
+*Phase 24: verb 시스템 제거. 런타임 verb→action 해석 삭제. 프롬프트 가독성을 위해 category 태그로 대체 (순수 표시용). 에이전트는 항상 구체적 액션명 직접 사용.*
+*최종 업데이트: 2026-03-05*

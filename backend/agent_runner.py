@@ -1026,29 +1026,26 @@ class AgentRunner:
                             if 'delegations' in delegation_context:
                                 total_delegations = len(delegation_context['delegations'])
 
-                                # 응답 누적
-                                if 'responses' not in delegation_context:
-                                    delegation_context['responses'] = []
-
-                                delegation_context['responses'].append({
+                                # 새 응답 항목 구성
+                                new_response = {
                                     'child_task_id': task_id,
                                     'from_agent': my_name,
                                     'response': result_summary,
                                     'completed_at': datetime.now().isoformat()
-                                })
+                                }
 
-                                # pending_delegations 감소 및 컨텍스트 업데이트 (원자적 수행)
-                                # Race Condition 방지: EXCLUSIVE 트랜잭션 사용
+                                # pending_delegations 감소 및 응답 누적 (원자적 수행)
+                                # Race Condition 방지: DB 트랜잭션 내에서 read-append-write
                                 if channel == 'system_ai':
                                     from system_ai_memory import decrement_pending_and_update_context as sys_decrement
                                     remaining = sys_decrement(
                                         parent_task_id,
-                                        json.dumps(delegation_context, ensure_ascii=False)
+                                        new_response=new_response
                                     )
                                 else:
                                     remaining = self.db.decrement_pending_and_update_context(
                                         parent_task_id,
-                                        json.dumps(delegation_context, ensure_ascii=False)
+                                        new_response=new_response
                                     )
 
                                 print(f"[자동 보고] 응답 누적: {task_id} → {parent_task_id} (남은 위임: {remaining}/{total_delegations})")
@@ -1069,8 +1066,17 @@ class AgentRunner:
                                         return  # 아직 다 안 모임 → 보고 스킵
                                     else:
                                         print(f"[자동 보고] 병렬 수집 모드 - 모든 응답 도착! 통합 보고 전송")
-                                        # 모든 응답을 통합해서 보고
-                                        all_responses = delegation_context.get('responses', [])
+                                        # DB에서 최신 컨텍스트를 읽어 모든 응답 통합
+                                        if channel == 'system_ai':
+                                            from system_ai_memory import get_task as get_sys_task
+                                            updated_parent = get_sys_task(parent_task_id)
+                                        else:
+                                            updated_parent = self.db.get_task(parent_task_id)
+                                        if updated_parent and updated_parent.get('delegation_context'):
+                                            updated_ctx = json.loads(updated_parent['delegation_context'])
+                                            all_responses = updated_ctx.get('responses', [])
+                                        else:
+                                            all_responses = [new_response]
                                         combined_report = "[병렬 위임 결과 통합 보고]\n\n"
                                         for resp in all_responses:
                                             combined_report += f"◆ {resp['from_agent']}:\n{resp['response']}\n\n"

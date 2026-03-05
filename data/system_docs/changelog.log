@@ -421,3 +421,42 @@
   → 문서: system_docs/ibl_rag.md
 [2026-02-24 07:48:11] PROJECT_CREATED: 학교 (ID: 학교)
 [2026-02-24 07:48:11] PROJECT_CREATED: 학교 (ID: 학교)
+[2026-03-04 00:00:00] PHASE_23: team 노드 분리 — 위임 전용 노드
+  - ibl_nodes.yaml: system 노드에서 위임 관련 7개 액션을 team 노드로 분리
+    - delegate, ask, ask_sync, delegate_project, delegate_workflow, info, list_projects
+  - ibl_access.py: _ALWAYS_ALLOWED = {"system", "team"} (기존: {"system"})
+  - system_tools.py: team 노드 핸들러 라우팅 추가
+  - 최종 구조: 6-Node → 7-Node (source, interface, system, forge, stream, messenger, team)
+[2026-03-05 00:00:00] BUG_FIX: 위임 시스템 안정화 (3건)
+  1. completed[] 사이클 병합 — 순차 위임 컨텍스트 보존
+     - system_tools.py: _get_or_create_delegation_context()에서 사이클 완료 감지 후 병합
+     - api_system_ai.py: _execute_call_project_agent()에서 동일 로직 적용
+     - 이전 위임 결과(delegations+responses)를 completed[]에 자동 병합
+  2. 병렬 위임 원자적 응답 추가 — race condition 방지
+     - conversation_db.py: decrement_pending_and_update_context()에 new_response 파라미터 추가
+     - system_ai_memory.py: 동일 패턴 적용
+     - agent_runner.py: _auto_report_to_chain()에서 new_response 사용, DB 재조회로 통합 보고
+     - EXCLUSIVE 트랜잭션 내 원자적 read-append-write
+  3. WebSocket 3-레이어 위임 감지 — 시스템 AI 태스크 조기 삭제 방지
+     - api_websocket.py: call_project_agent 직접 매칭 + IBL 결과 문자열 매칭 + DB pending 확인
+     - 시스템 AI가 execute_ibl로 위임 시에도 태스크 유지
+[2026-03-05 01:00:00] UI_UPDATED: 시스템 AI 대화창 드래그 이동 기능
+  - ChatView.tsx: 다이얼로그 모드에서 헤더를 드래그하여 위치 변경 가능
+  - 위치 localStorage 저장/복원
+  - 리사이즈와 드래그 호환 처리
+[2026-03-05 02:00:00] DOCS_UPDATED: 시스템 문서 업데이트 (Phase 23 반영)
+  - delegation.md: completed[] 병합, 원자적 응답, WebSocket 3-레이어 감지 문서화
+  - architecture.md: 6-Node → 7-Node 반영, team 노드 추가, 위임 시스템 요약 보강
+  - technical.md: 7-Node 구조, team 노드 액션 7개 추가, 노드 테이블 갱신
+[2026-03-05 03:00:00] SYSTEM_AI: 시스템 AI 도구 확장
+  - api_system_ai.py: execute_python, execute_node, run_command 3개 도구 추가 (프로젝트 에이전트와 동일)
+  - ibl_nodes.yaml: system 노드에서 레거시 액션 3개 제거 (delegate, agent_ask, schedule)
+[2026-03-05 04:00:00] UI_FIX: 시스템 AI 창 드래그 수정
+  - ChatView.tsx: fullpage 모드에서 -webkit-app-region: drag 적용 (Electron 네이티브 드래그)
+  - 헤더 버튼에 no-drag 클래스 추가하여 클릭 가능 유지
+[2026-03-05 05:00:00] PHASE_24: IBL verb 시스템 제거
+  - ibl_nodes.yaml: 6개 노드의 verbs 섹션 삭제, 229개 액션에 category 태그 추가
+  - ibl_engine.py: _resolve_verb() 함수 및 verb resolution 호출 제거
+  - ibl_access.py: build_environment()를 <action-categories> 기반 표시로 변경
+  - ibl_usage_db.py: verb→node 매핑 코드 제거
+  - ibl.md: 동사 섹션 → 액션 카테고리 섹션으로 교체, 해석 순서 단순화

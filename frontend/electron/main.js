@@ -28,6 +28,7 @@ let pcManagerWindow = null; // PC Manager 창
 let photoManagerWindow = null; // Photo Manager 창
 let androidManagerWindow = null; // Android Manager 창
 let logWindow = null; // 로그 뷰어 창
+let systemAIWindow = null; // 시스템 AI 창
 
 // 로그 버퍼 (최근 500줄 유지)
 const MAX_LOG_LINES = 500;
@@ -700,6 +701,59 @@ function createIndieNetWindow() {
 }
 
 /**
+ * 시스템 AI 창 생성
+ */
+function createSystemAIWindow() {
+  // 이미 열려있으면 포커스
+  if (systemAIWindow && !systemAIWindow.isDestroyed()) {
+    systemAIWindow.focus();
+    return;
+  }
+
+  systemAIWindow = new BrowserWindow({
+    width: 700,
+    height: 850,
+    minWidth: 400,
+    minHeight: 500,
+    title: '시스템 AI',
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 15, y: 15 },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  if (isDev) {
+    systemAIWindow.loadURL('http://localhost:5173/#/system-ai');
+  } else {
+    systemAIWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
+      hash: '/system-ai'
+    });
+  }
+
+  // 외부 링크는 기본 브라우저에서 열기
+  systemAIWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  systemAIWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  systemAIWindow.on('closed', () => {
+    systemAIWindow = null;
+  });
+
+  return systemAIWindow;
+}
+
+/**
  * 비즈니스 관리 창 생성
  */
 function createBusinessWindow() {
@@ -1033,6 +1087,11 @@ function setupIPC() {
   // IndieNet 창 열기
   ipcMain.handle('open-indienet-window', () => {
     createIndieNetWindow();
+  });
+
+  // 시스템 AI 창 열기
+  ipcMain.handle('open-system-ai-window', () => {
+    createSystemAIWindow();
   });
 
   // 비즈니스 관리 창 열기

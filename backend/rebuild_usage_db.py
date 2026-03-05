@@ -66,12 +66,39 @@ EXAMPLES = [
     ("저장소 용량 보여줘", '[system:summary]()', "system", "single", 1, "system,summary"),
     ("볼륨 목록 보여줘", '[system:volumes]()', "system", "single", 1, "system,volumes"),
 
-    # agent delegation
-    ("투자 에이전트한테 물어봐", '[system:agent_ask]("투자/투자컨설팅")', "system", "single", 1, "system,agent_ask"),
-    ("컨텐츠 에이전트한테 부탁해", '[system:agent_ask]("컨텐츠/컨텐츠")', "system", "single", 1, "system,agent_ask"),
-    ("정보센터에 분석 요청해", '[system:agent_ask]("정보센터/정보수집")', "system", "single", 1, "system,agent_ask"),
-    ("프로젝트 목록 보여줘", '[system:list_projects]()', "system", "single", 1, "system,list_projects"),
-    ("에이전트 정보 알려줘", '[system:agent_info]("투자/투자컨설팅")', "system", "single", 1, "system,agent_info"),
+    # =========================================================================
+    # team 노드 — 에이전트 간 위임/협업 (Phase 23)
+    # =========================================================================
+
+    # delegate — 같은 프로젝트 내 동료 에이전트에게 위임
+    ("심장전문에게 심장 검사 요청해", '[team:delegate]("심장전문") {message: "환자의 심장 관련 증상을 분석해주세요"}', "team", "single", 1, "team,delegate"),
+    ("내과에게 두통 증상 분석 맡겨", '[team:delegate]("내과") {message: "두통 증상 분석해주세요"}', "team", "single", 1, "team,delegate"),
+    ("스토리텔러에게 슬라이드 만들어달라고 해", '[team:delegate]("스토리텔러") {message: "AI 트렌드 발표자료 만들어줘"}', "team", "single", 1, "team,delegate"),
+    ("정보수집 에이전트에게 자료 조사 맡겨", '[team:delegate]("정보수집") {message: "최신 AI 뉴스 정리해줘"}', "team", "single", 1, "team,delegate"),
+
+    # ask — 다른 프로젝트 에이전트에게 질문/위임 (비동기)
+    ("투자 에이전트한테 물어봐", '[team:ask]("투자/투자컨설팅") {message: "삼성전자 투자 의견 알려줘"}', "team", "single", 1, "team,ask"),
+    ("컨텐츠 에이전트한테 부탁해", '[team:ask]("컨텐츠/컨텐츠") {message: "블로그 글 분석해줘"}', "team", "single", 1, "team,ask"),
+    ("정보센터에 분석 요청해", '[team:ask]("정보센터/정보수집") {message: "AI 트렌드 조사해줘"}', "team", "single", 1, "team,ask"),
+    ("의료팀에게 건강 상담 요청해", '[team:ask]("의료/가정의학과") {message: "두통이 자주 발생하는 원인을 알려줘"}', "team", "single", 1, "team,ask"),
+    ("법률 에이전트한테 임대차 관련 질문해", '[team:ask]("법률/법률") {message: "임대차보호법 관련 질문입니다"}', "team", "single", 1, "team,ask"),
+
+    # ask_sync — 동기 질문 (파이프라인/워크플로우용)
+    ("투자 에이전트에게 동기적으로 분석 요청", '[team:ask_sync]("투자/투자컨설팅") {message: "이 데이터를 분석해줘"}', "team", "single", 1, "team,ask_sync"),
+    ("컨텐츠 에이전트에게 즉시 답변 요청", '[team:ask_sync]("컨텐츠/컨텐츠") {message: "이 글을 요약해줘"}', "team", "single", 1, "team,ask_sync"),
+
+    # delegate_project — 시스템 AI가 프로젝트 에이전트에게 위임
+    ("의료 프로젝트 내과에게 위임해", '[team:delegate_project]("의료/내과") {message: "두통 증상 분석해주세요"}', "team", "single", 1, "team,delegate_project"),
+    ("투자 프로젝트에 분석 맡겨", '[team:delegate_project]("투자/투자컨설팅") {message: "포트폴리오 리밸런싱 분석"}', "team", "single", 1, "team,delegate_project"),
+    ("홍보팀에게 슬라이드 제작 위임해", '[team:delegate_project]("홍보/storyteller") {message: "분기 실적 발표 슬라이드 만들어줘"}', "team", "single", 1, "team,delegate_project"),
+
+    # info — 에이전트/프로젝트 정보 조회
+    ("에이전트 정보 알려줘", '[team:info]("투자/투자컨설팅")', "team", "single", 1, "team,info"),
+    ("의료 프로젝트 에이전트들 뭐 있어?", '[team:info]("의료")', "team", "single", 1, "team,info"),
+
+    # list_projects — 프로젝트/에이전트 목록
+    ("프로젝트 목록 보여줘", '[team:list_projects]()', "team", "single", 1, "team,list_projects"),
+    ("어떤 에이전트들이 있어?", '[team:list_projects]()', "team", "single", 1, "team,list_projects"),
 
     # workflow
     ("저장된 워크플로우 목록 보여줘", '[system:list_workflows]()', "system", "single", 1, "system,list_workflows"),
@@ -304,8 +331,10 @@ EXAMPLES = [
     # 유튜브 → 저장
     ("유튜브 자막 추출해서 파일로 저장해", '[stream:transcript]("https://youtube.com/watch?v=example") >> [system:file]("transcript.md")', "stream,system", "pipeline", 2, "pipeline,sequential"),
 
-    # 검색 → 에이전트 분석
-    ("AI 뉴스 찾아서 투자 에이전트에게 분석 요청해", '[source:web_search]("AI 뉴스") >> [system:agent_ask_sync]("투자/투자컨설팅")', "source,system", "pipeline", 2, "pipeline,sequential"),
+    # 검색 → 에이전트 분석 (team 노드 파이프라인)
+    ("AI 뉴스 찾아서 투자 에이전트에게 분석 요청해", '[source:web_search]("AI 뉴스") >> [team:ask_sync]("투자/투자컨설팅") {message: "이 뉴스를 투자 관점에서 분석해줘"}', "source,team", "pipeline", 2, "pipeline,sequential"),
+    ("부동산 뉴스 찾아서 부동산 에이전트에게 넘겨줘", '[source:search_news]("부동산") >> [team:ask_sync]("부동산/부동산") {message: "이 뉴스에서 시장 동향을 분석해줘"}', "source,team", "pipeline", 2, "pipeline,sequential"),
+    ("블로그 글 찾아서 컨텐츠 에이전트에게 분석 맡겨", '[source:rag_search]("AI") >> [team:ask_sync]("컨텐츠/컨텐츠") {message: "이 글들의 핵심 인사이트를 정리해줘"}', "source,team", "pipeline", 2, "pipeline,sequential"),
 
     # 크롤링 → 저장
     ("웹페이지 크롤링해서 저장해", '[source:crawl]("https://example.com") >> [system:file]("crawled.md")', "source,system", "pipeline", 2, "pipeline,sequential"),
@@ -344,8 +373,12 @@ EXAMPLES = [
     # 병렬 → 저장
     ("AI랑 부동산 뉴스 찾아서 브리핑 파일로 만들어줘", '[source:web_search]("AI 뉴스") & [source:web_search]("부동산 뉴스") >> [system:file]("briefing.md")', "source,system", "complex", 3, "pipeline,complex"),
 
-    # 3단 파이프라인
-    ("삼성전자 뉴스 찾아서 분석하고 결과 저장해", '[source:search_news]("삼성전자") >> [system:agent_ask_sync]("투자/투자컨설팅") >> [system:file]("분석결과.md")', "source,system", "complex", 3, "pipeline,complex"),
+    # 3단 파이프라인 (검색 → 에이전트 분석 → 저장)
+    ("삼성전자 뉴스 찾아서 분석하고 결과 저장해", '[source:search_news]("삼성전자") >> [team:ask_sync]("투자/투자컨설팅") {message: "분석해줘"} >> [system:file]("분석결과.md")', "source,team,system", "complex", 3, "pipeline,complex"),
+    ("블로그 인사이트 보고서 만들어줘", '[source:search]("최근 글") {type: "blog", count: 10} >> [team:ask_sync]("컨텐츠/컨텐츠") {message: "인사이트 보고서 작성해줘"} >> [system:file]("insight_report.html") {format: "html"}', "source,team,system", "complex", 3, "pipeline,complex"),
+
+    # 병렬 위임 (여러 프로젝트에 동시 요청)
+    ("의료팀이랑 투자팀 동시에 물어봐", '[team:delegate_project]("의료/내과") {message: "건강 분석"} & [team:delegate_project]("투자/투자컨설팅") {message: "투자 분석"}', "team", "complex", 2, "team,parallel_delegation"),
 
     # Fallback
     ("삼성전자 주가 조회하되 실패하면 종목 검색해", '[source:price]("삼성전자") ?? [source:search_stock]("삼성전자")', "source", "pipeline", 2, "pipeline,fallback"),

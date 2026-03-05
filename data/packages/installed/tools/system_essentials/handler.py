@@ -63,13 +63,20 @@ _DANGEROUS_RE = re.compile('|'.join(DANGEROUS_PATTERNS_RE), re.IGNORECASE)
 
 
 def _validate_path_in_scope(path: str, project_path: str) -> str | None:
-    """경로가 프로젝트 범위 내인지 검증. 벗어나면 에러 메시지 반환, 정상이면 None"""
-    abs_path = os.path.abspath(path)
+    """경로가 프로젝트 범위 내인지 검증. 벗어나면 에러 메시지 반환, 정상이면 None
+
+    - 절대 경로: 허용 (에이전트가 명시적으로 지정한 시스템 파일 수정 등)
+    - 상대 경로가 ../로 프로젝트 밖으로 나가는 경우만 차단
+    """
+    # 원래 입력이 절대 경로면 허용 (시스템 파일 수정, 다른 프로젝트 파일 접근 등)
+    if os.path.isabs(path):
+        return None
+
+    # 상대 경로: 프로젝트 범위 안에 있는지 확인
+    abs_path = os.path.abspath(os.path.join(project_path, path))
     abs_project = os.path.abspath(project_path)
-    # 절대 경로로 시작하는 경우 (프로젝트 외부 접근) 허용
-    # 상대 경로가 ../로 프로젝트 밖으로 나가는 경우만 차단
     if not abs_path.startswith(abs_project + os.sep) and abs_path != abs_project:
-        return f"Error: 프로젝트 범위를 벗어나는 경로입니다: {abs_path}"
+        return f"Error: 프로젝트 범위를 벗어나는 상대 경로입니다: {path} → {abs_path}"
     return None
 
 

@@ -28,7 +28,7 @@ from pydantic import BaseModel
 from runtime_utils import get_data_path as _get_data_path
 from nas_subtitle import (
     detect_subtitles, srt_to_vtt, ass_to_vtt, smi_to_vtt,
-    SUBTITLE_EXTENSIONS, api_get_subtitles, api_get_subtitle_file,
+    SUBTITLE_EXTENSIONS, LANG_NAMES, api_get_subtitles, api_get_subtitle_file,
 )
 from nas_music import api_music_search, api_music_stream
 from nas_webapp import get_default_webapp_html

@@ -32,6 +32,10 @@ contextBridge.exposeInMainWorld('electron', {
   openIndieNetWindow: () =>
     ipcRenderer.invoke('open-indienet-window'),
 
+  // 시스템 AI 창 열기
+  openSystemAIWindow: () =>
+    ipcRenderer.invoke('open-system-ai-window'),
+
   // 비즈니스 관리 창 열기
   openBusinessWindow: () =>
     ipcRenderer.invoke('open-business-window'),

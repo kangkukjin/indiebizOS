@@ -18,7 +18,6 @@ import {
   SettingsDialog,
   TrashDialog,
   SchedulerDialog,
-  SystemAIChatDialog,
   ToolboxDialog,
   SwitchEditDialog,
 } from './launcher-components';
@@ -51,7 +50,6 @@ export function Launcher() {
   const [showNewMultiChatDialog, setShowNewMultiChatDialog] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
-  const [showSystemAIChatDialog, setShowSystemAIChatDialog] = useState(false);
   const [showToolboxDialog, setShowToolboxDialog] = useState(false);
   const [showSwitchEditDialog, setShowSwitchEditDialog] = useState(false);
   const [showContactsDialog, setShowContactsDialog] = useState(false);
@@ -802,7 +800,7 @@ export function Launcher() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (renamingItem) return;
 
-      if (showNewProjectDialog || showNewFolderDialog || showProfileDialog || showSchedulerDialog || showSystemAIChatDialog) {
+      if (showNewProjectDialog || showNewFolderDialog || showProfileDialog || showSchedulerDialog) {
         return;
       }
 
@@ -832,7 +830,7 @@ export function Launcher() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItem, clipboard, renamingItem, projects, switches, showNewProjectDialog, showNewFolderDialog, showProfileDialog, showSchedulerDialog, showSystemAIChatDialog]);
+  }, [selectedItem, clipboard, renamingItem, projects, switches, showNewProjectDialog, showNewFolderDialog, showProfileDialog, showSchedulerDialog]);
 
   return (
     <div className="h-full flex flex-col bg-[#F5F1EB]">
@@ -876,7 +874,7 @@ export function Launcher() {
             <span className="text-sm">빠른 연락처</span>
           </button>
           <button
-            onClick={() => setShowSystemAIChatDialog(true)}
+            onClick={() => { window.electron?.openSystemAIWindow?.(); }}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F] bg-gradient-to-r from-amber-50 to-orange-50"
             title="시스템 AI와 대화"
           >
@@ -1250,12 +1248,6 @@ export function Launcher() {
         formatLastRun={formatLastRun}
         onClose={() => setShowSchedulerDialog(false)}
         onOpenCalendar={handleOpenCalendar}
-      />
-
-      {/* 시스템 AI 대화 다이얼로그 */}
-      <SystemAIChatDialog
-        show={showSystemAIChatDialog}
-        onClose={() => setShowSystemAIChatDialog(false)}
       />
 
       {/* 도구함 다이얼로그 */}

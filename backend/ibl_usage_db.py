@@ -699,10 +699,6 @@ class IBLUsageDB:
             for node_name, node_config in data.get("nodes", {}).items():
                 for action_name in node_config.get("actions", {}):
                     result[action_name] = node_name
-                # verb도 매핑
-                for verb_name in node_config.get("verbs", {}):
-                    if verb_name not in result:
-                        result[verb_name] = node_name
         except Exception:
             pass
         cls._action_to_node_cache = result

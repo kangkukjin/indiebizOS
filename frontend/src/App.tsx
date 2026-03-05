@@ -14,6 +14,7 @@ import { PCManager } from './components/PCManager';
 import { PhotoManager } from './components/PhotoManager';
 import { AndroidManager } from './components/AndroidManager';
 import { LogViewer } from './components/LogViewer';
+import { SystemAIView } from './components/SystemAIView';
 import { api } from './lib/api';
 
 function App() {
@@ -31,14 +32,31 @@ function App() {
   const [androidDeviceId, setAndroidDeviceId] = useState<string | null>(null);
   const [androidProjectId, setAndroidProjectId] = useState<string | null>(null);
   const [isLogViewer, setIsLogViewer] = useState(false);
+  const [isSystemAI, setIsSystemAI] = useState(false);
 
   // URL 해시에서 프로젝트/폴더/IndieNet 확인
   useEffect(() => {
     const checkHash = () => {
       const hash = window.location.hash;
 
+      // 시스템 AI 체크
+      if (hash === '#/system-ai') {
+        setIsSystemAI(true);
+        setIsLogViewer(false);
+        setIsIndieNet(false);
+        setIsBusiness(false);
+        setIsPCManager(false);
+        setIsPhotoManager(false);
+        setIsAndroidManager(false);
+        setProjectId(null);
+        setFolderId(null);
+        setMultiChatRoomId(null);
+        return;
+      }
+
       // 로그 뷰어 체크
       if (hash === '#/log-viewer') {
+        setIsSystemAI(false);
         setIsLogViewer(true);
         setIsIndieNet(false);
         setIsBusiness(false);
@@ -181,6 +199,7 @@ function App() {
       setIsPhotoManager(false);
       setIsAndroidManager(false);
       setIsLogViewer(false);
+      setIsSystemAI(false);
       setMultiChatRoomId(null);
     };
 
@@ -240,6 +259,17 @@ function App() {
   // 로그 뷰어 창인 경우
   if (isLogViewer) {
     return <LogViewer />;
+  }
+
+  // 시스템 AI 창인 경우
+  if (isSystemAI) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+          <SystemAIView />
+        </div>
+      </div>
+    );
   }
 
   // IndieNet 창인 경우

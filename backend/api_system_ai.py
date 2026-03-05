@@ -237,16 +237,37 @@ def _get_list_switches_tool() -> Dict:
 
 
 def get_all_system_ai_tools() -> List[Dict]:
-    """시스템 AI 도구: execute_ibl + search_guide
+    """시스템 AI 도구: execute_ibl + 범용 언어 도구 + search_guide
 
-    프로젝트 에이전트와 동일한 구조. 차이는 접근 가능한 노드 범위뿐.
-    모든 기능은 IBL 노드 액션으로 접근.
-    search_guide로 복잡한 작업 전 가이드 검색 가능.
+    프로젝트 에이전트와 동일한 도구 구조.
+    차이는 IBL에서 접근 가능한 노드 범위뿐 (시스템 AI: 전체 노드).
     """
+    import json as _json
+
     tools = []
     ibl_schema = load_tool_schema("execute_ibl")
     if ibl_schema:
         tools.append(ibl_schema)
+
+    # 범용 언어 도구 (프로젝트 에이전트와 동일)
+    pkg_base = Path(__file__).parent.parent / "data" / "packages" / "installed" / "tools"
+    lang_tools = [
+        ("python-exec", "execute_python"),
+        ("nodejs", "execute_node"),
+        ("system_essentials", "run_command"),
+    ]
+    for pkg_id, tool_name in lang_tools:
+        tool_json = pkg_base / pkg_id / "tool.json"
+        if tool_json.exists():
+            try:
+                with open(tool_json, 'r', encoding='utf-8') as f:
+                    pkg_data = _json.load(f)
+                for tool_def in pkg_data.get("tools", []):
+                    if tool_def.get("name") == tool_name:
+                        tools.append(tool_def)
+                        break
+            except Exception as e:
+                print(f"[시스템AI] {pkg_id}/tool.json 로드 실패: {e}")
 
     # 가이드 검색 도구
     tools.append({
@@ -462,8 +483,17 @@ def _execute_call_project_agent(tool_input: dict) -> str:
         return "오류: project_id, agent_id, message가 모두 필요합니다."
 
     # 대상 에이전트 찾기 (실행 중인지 확인)
+    # agent_id는 id 또는 name일 수 있음 → 먼저 id로, 없으면 name으로 검색
     registry_key = f"{project_id}:{agent_id}"
     target = AgentRunner.agent_registry.get(registry_key)
+    if not target:
+        # name으로 검색 (registry는 project_id:agent_id 형식이므로 순회)
+        for rkey, runner in AgentRunner.agent_registry.items():
+            if rkey.startswith(f"{project_id}:") and runner.config.get("name") == agent_id:
+                target = runner
+                agent_id = runner.config.get("id", agent_id)
+                registry_key = rkey
+                break
 
     # 에이전트가 실행 중이 아니면 프로젝트 전체 에이전트 시작
     if not target:
@@ -479,11 +509,13 @@ def _execute_call_project_agent(tool_input: dict) -> str:
             data = yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
             agents = data.get("agents", [])
 
-            # 대상 에이전트 확인
+            # 대상 에이전트 확인 (id 또는 name으로 검색)
             target_config = None
             for agent in agents:
-                if agent.get("id") == agent_id:
+                if agent.get("id") == agent_id or agent.get("name") == agent_id:
                     target_config = agent
+                    # agent_id를 실제 id로 통일 (registry_key 매칭용)
+                    agent_id = agent.get("id", agent_id)
                     break
 
             if not target_config:
@@ -523,7 +555,8 @@ def _execute_call_project_agent(tool_input: dict) -> str:
             if started_agents:
                 print(f"[시스템 AI] 프로젝트 '{project_id}' 에이전트 시작 완료: {', '.join(started_agents)}")
 
-            # 대상 에이전트 다시 조회
+            # 대상 에이전트 다시 조회 (agent_id는 실제 id로 통일됨)
+            registry_key = f"{project_id}:{agent_id}"
             target = AgentRunner.agent_registry.get(registry_key)
             if not target:
                 return f"오류: 에이전트 '{agent_id}' 시작 실패"
@@ -543,12 +576,46 @@ def _execute_call_project_agent(tool_input: dict) -> str:
     parent_task = get_task(parent_task_id)
     if parent_task:
         delegation_context_str = parent_task.get('delegation_context')
+        pending = parent_task.get('pending_delegations', 0)
+
         if delegation_context_str:
             delegation_context = json.loads(delegation_context_str)
+
+            # 이전 사이클 완료 감지: delegations 있고 pending==0 → completed로 병합
+            prev_delegations = delegation_context.get('delegations', [])
+            if len(prev_delegations) > 0 and pending == 0:
+                completed = delegation_context.get('completed', [])
+                responses = delegation_context.get('responses', [])
+
+                # 이전 사이클 결과를 completed에 병합
+                response_map = {}
+                for resp in responses:
+                    child_id = resp.get('child_task_id', '')
+                    response_map[child_id] = resp
+
+                for deleg in prev_delegations:
+                    child_id = deleg.get('child_task_id', '')
+                    resp = response_map.get(child_id, {})
+                    completed.append({
+                        'to': deleg.get('delegated_to', ''),
+                        'message': deleg.get('delegation_message', ''),
+                        'result': resp.get('response', '(응답 없음)'),
+                        'completed_at': resp.get('completed_at', deleg.get('delegation_time', ''))
+                    })
+
+                print(f"   [시스템 AI 위임 컨텍스트] 이전 사이클 {len(prev_delegations)}개 → completed 병합 (총 {len(completed)}개)")
+                delegation_context = {
+                    'original_request': parent_task.get('original_request', ''),
+                    'requester': parent_task.get('requester', 'user@gui'),
+                    'completed': completed,
+                    'delegations': [],
+                    'responses': []
+                }
         else:
             delegation_context = {
                 'original_request': parent_task.get('original_request', ''),
                 'requester': parent_task.get('requester', 'user@gui'),
+                'completed': [],
                 'delegations': [],
                 'responses': []
             }

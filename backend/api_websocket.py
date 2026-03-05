@@ -660,7 +660,8 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             save_conversation,
             get_history_for_ai,
             create_task,
-            delete_task
+            delete_task,
+            get_task
         )
         from thread_context import set_current_task_id, clear_all_context
 
@@ -880,8 +881,30 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             "agent": "system_ai"
         })
 
-        # 위임이 발생했는지 확인 (call_project_agent 도구 사용 여부)
+        # 위임이 발생했는지 확인
+        # 1) 도구 이름으로 직접 호출 감지
+        # 2) execute_ibl 도구로 간접 호출 감지 (team:delegate_project 등)
+        # 3) DB에서 pending_delegations > 0 확인 (가장 확실)
         delegated = any(r.get("name") == "call_project_agent" for r in tool_results_list)
+
+        if not delegated:
+            # IBL 엔진을 통한 간접 위임 감지: execute_ibl 결과에서 위임 키워드 확인
+            for r in tool_results_list:
+                if r.get("name") == "execute_ibl":
+                    result_str = r.get("result", "")
+                    if "에게 작업을 위임했습니다" in result_str or '"delegated": true' in result_str:
+                        delegated = True
+                        break
+
+        if not delegated:
+            # 최종 확인: DB에서 pending_delegations 체크
+            try:
+                task_data = get_task(task_id)
+                if task_data and task_data.get('pending_delegations', 0) > 0:
+                    delegated = True
+                    print(f"[WS] DB pending_delegations로 위임 감지: {task_id}")
+            except Exception:
+                pass
 
         if delegated:
             # 위임된 경우: "delegated" 타입으로 전송 (프론트엔드가 연결 유지)

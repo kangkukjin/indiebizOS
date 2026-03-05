@@ -25,7 +25,7 @@ from typing import List, Optional, Set, Dict
 # 항상 허용되는 인프라 노드
 # Phase 19: 6개 노드(system, user, workflow, automation, output, web 일부) → orchestrator로 통합
 # Phase 22: orchestrator → system으로 리네임
-_ALWAYS_ALLOWED = {"system"}
+_ALWAYS_ALLOWED = {"system", "team"}
 
 
 # ============ 접근 제어 ============
@@ -162,48 +162,35 @@ def build_environment(
     for node_name, node_config in visible.items():
         desc = node_config.get("description", "")
         actions = node_config.get("actions", {})
-        verbs = node_config.get("verbs", {})
         if not actions:
             continue
 
         parts.append(f'<node name="{node_name}" description="{desc}">')
 
-        if verbs:
-            # 액션 그룹 (action 파라미터에 사용할 수 있는 단축 이름)
-            parts.append("<action-groups>")
-            verb_covered = set()
-            for verb_name, verb_config in verbs.items():
-                verb_desc = verb_config.get("description", "")
-                routes = verb_config.get("routes", {})
-                route_keys = list(routes.keys())
-                if len(route_keys) > 10:
-                    # 10개 초과 시 앞 7개 + 잔여 수 표시
-                    types = ", ".join(route_keys[:7]) + f" 등 {len(route_keys)}개"
-                else:
-                    types = ", ".join(route_keys) if route_keys else ""
-                type_attr = f' types="{types}"' if types else ""
-                parts.append(f'  <action name="{verb_name}" description="{verb_desc}"{type_attr}/>')
-                # 커버된 액션 추적
-                default = verb_config.get("default")
-                if default:
-                    verb_covered.add(default)
-                for route_target in routes.values():
-                    verb_covered.add(route_target)
-            parts.append("</action-groups>")
+        # category별 그룹화 (프롬프트 가독성용, 런타임 매핑 없음)
+        categorized = {}  # category -> [action_name, ...]
+        uncategorized = []  # [(action_name, action_config), ...]
+        for action_name, action_config in actions.items():
+            cat = action_config.get("category") if isinstance(action_config, dict) else None
+            if cat:
+                categorized.setdefault(cat, []).append(action_name)
+            else:
+                uncategorized.append((action_name, action_config))
 
-            # verb 미커버 액션
-            uncovered = {k: v for k, v in actions.items() if k not in verb_covered}
-            if uncovered:
-                parts.append("<actions>")
-                for action_name, action_config in uncovered.items():
-                    action_desc = action_config.get("description", "")
-                    parts.append(f'  <action name="{action_name}" description="{action_desc}"/>')
-                parts.append("</actions>")
-        else:
-            # verbs 없는 노드: 전체 액션
+        if categorized:
+            parts.append("<action-categories>")
+            for cat_name, action_names in categorized.items():
+                if len(action_names) > 10:
+                    names_str = ", ".join(action_names[:7]) + f" 등 {len(action_names)}개"
+                else:
+                    names_str = ", ".join(action_names)
+                parts.append(f'  <category name="{cat_name}" actions="{names_str}"/>')
+            parts.append("</action-categories>")
+
+        if uncategorized:
             parts.append("<actions>")
-            for action_name, action_config in actions.items():
-                action_desc = action_config.get("description", "")
+            for action_name, action_config in uncategorized:
+                action_desc = action_config.get("description", "") if isinstance(action_config, dict) else ""
                 parts.append(f'  <action name="{action_name}" description="{action_desc}"/>')
             parts.append("</actions>")
 
@@ -218,7 +205,7 @@ def build_environment(
         for peer in peers:
             name = peer["name"]
             role = peer.get("role", "")
-            parts.append(f'  <agent name="{name}" role="{role}" call=\'[agent:ask]("{name}") {{message: "..."}}\'/>')
+            parts.append(f'  <agent name="{name}" role="{role}" call=\'[team:delegate]("{name}") {{message: "..."}}\'/>')
         parts.append("</peers>")
 
     # 파이프라인: YAML meta.pipeline에서 동적 로드
@@ -236,7 +223,7 @@ def build_environment(
         for p in principles:
             parts.append(f"  <rule>{p}</rule>")
         if peers:
-            parts.append(f"  <rule>Use [agent:ask] to delegate tasks to peer agents ({len(peers)} available)</rule>")
+            parts.append(f"  <rule>Use [team:delegate] to delegate tasks to peer agents ({len(peers)} available)</rule>")
         parts.append("</principles>")
 
     parts.append("</ibl_executor>")
@@ -254,7 +241,7 @@ def _load_peer_agents(project_path: Optional[str], agent_id: Optional[str]) -> L
     """
     같은 프로젝트의 다른 에이전트 목록 로드.
 
-    에이전트는 동료 에이전트를 노드로 인식하여 [agent:ask]로 위임할 수 있다.
+    에이전트는 동료 에이전트를 인식하여 [team:delegate]로 위임할 수 있다.
     자기 자신은 제외한다.
 
     Args:

@@ -139,9 +139,11 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
     # --- 노드 이름만 수집 (enum용) ---
     node_names = sorted(nodes.keys())
 
-    # --- description: 환경 프롬프트(<ibl_executor>)에 상세 정보가 있으므로 최소한으로 ---
+    # --- description: IBL 코드 기반 실행 ---
+    node_list = ', '.join(node_names)
     description = (
-        f"IBL 명령 실행. {len(nodes)}개 노드 사용 가능. "
+        f"IBL 코드를 실행합니다. "
+        f"사용 가능한 노드: {node_list}. "
         f"노드/액션 상세는 시스템 프롬프트의 <ibl_executor> 참조."
     )
 
@@ -151,29 +153,19 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
         "input_schema": {
             "type": "object",
             "properties": {
-                "node": {
+                "code": {
                     "type": "string",
-                    "description": f"노드 이름: {', '.join(node_names)}",
-                    "enum": node_names if node_names else ["system"]
-                },
-                "action": {
-                    "type": "string",
-                    "description": "실행할 액션 (예: web_search, kr_investor, play, send)"
-                },
-                "target": {
-                    "type": "string",
-                    "description": "대상 (검색어, URL, 파일 경로, 종목 코드 등)"
-                },
-                "params": {
-                    "type": "object",
-                    "description": "추가 파라미터 (start_date, end_date 등)"
-                },
-                "pipeline": {
-                    "type": "string",
-                    "description": "IBL 파이프라인 ([node:action](target) >> ...)"
+                    "description": (
+                        "IBL 코드. "
+                        '단일: [source:web_search]("AI 뉴스") / '
+                        '파라미터: [source:kr_investor]("STK") {"start_date": "2026-01"} / '
+                        '파이프라인: [source:web_search]("AI") >> [system:file]("result.md") / '
+                        '병렬: [source:web_search]("AI") & [source:news]("tech") / '
+                        '폴백: [source:api]("data") ?? [source:web_search]("data")'
+                    )
                 }
             },
-            "required": ["node", "action"]
+            "required": ["code"]
         }
     }
 

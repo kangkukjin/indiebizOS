@@ -54,10 +54,10 @@ _guide_injected: set = set()
 
 # ============ IBL 형식 로깅 ============
 
-# ibl_* 도구 → 노드 매핑 (현재 6개 노드: system, interface, messenger, source, stream, forge)
+# ibl_* 도구 → 노드 매핑 (현재 7개 노드: system, team, interface, messenger, source, stream, forge)
 _IBL_TOOL_PREFIX_MAP = {
     # 현재 노드
-    "ibl_system": "system", "ibl_interface": "interface",
+    "ibl_system": "system", "ibl_team": "team", "ibl_interface": "interface",
     "ibl_messenger": "messenger", "ibl_source": "source",
     "ibl_stream": "stream", "ibl_forge": "forge",
     # 하위 호환: 구 도구명 → 현재 노드
@@ -80,10 +80,10 @@ _IBL_TOOL_PREFIX_MAP = {
 
 # 시스템 도구 → IBL 표기 매핑
 _SYSTEM_IBL_MAP = {
-    "call_agent": ("system", "delegate"),
-    "list_agents": ("system", "list_agents"),
+    "call_agent": ("team", "delegate"),
+    "list_agents": ("team", "list_projects"),
     "send_notification": ("system", "send_notify"),
-    "get_project_info": ("system", "agent_info"),
+    "get_project_info": ("team", "info"),
     "get_my_tools": ("system", "tools"),
     "request_user_approval": ("system", "approval"),
 }
@@ -117,19 +117,20 @@ def _build_reverse_node_map() -> dict:
 
 def _tool_to_ibl_notation(tool_name: str, tool_input: dict) -> tuple:
     """도구 이름을 IBL node:action 표기로 변환"""
-    # execute_ibl: 에이전트가 지정한 실제 node를 사용 (pipeline 모드는 "ibl")
+    # execute_ibl: code 파라미터에서 노드/액션 추출
     if tool_name == "execute_ibl":
-        action = tool_input.get("action", "?")
-        # Direct 모드: node 파라미터가 있으면 그대로 사용
+        import re
+        code = tool_input.get("code") or tool_input.get("pipeline", "")
+        if code:
+            m = re.search(r'\[(\w+):(\w+)\]', code)
+            if m:
+                return m.group(1), m.group(2)
+            return "ibl", "?"
+        # 레거시 호환: node+action 파라미터
         node = tool_input.get("node", "")
+        action = tool_input.get("action", "?")
         if node:
             return node, action
-        # Pipeline 모드: pipeline 파라미터 사용 시 파서에서 노드 추출 시도
-        pipeline = tool_input.get("pipeline", "")
-        if pipeline:
-            import re
-            m = re.search(r'\[(\w+):', pipeline)
-            return (m.group(1) if m else "ibl"), "?"
         return "ibl", action
 
     # ibl_* 도구
@@ -592,13 +593,33 @@ def _get_or_create_delegation_context(parent_task: dict) -> dict:
             # 단, completed 배열은 유지!
             if len(delegations) > 0 and pending == 0:
                 # 모든 응답이 도착함 → 새 위임 사이클 시작
-                # delegations/responses만 초기화, completed는 유지
+                # 이전 사이클의 delegations+responses를 completed로 병합
                 print(f"   [위임 컨텍스트] 이전 사이클 완료 (pending=0, delegations={len(delegations)}) → 새 사이클 준비")
                 completed = existing_context.get('completed', [])
+                responses = existing_context.get('responses', [])
+
+                # 이전 사이클 결과를 completed에 병합
+                response_map = {}
+                for resp in responses:
+                    child_id = resp.get('child_task_id', '')
+                    response_map[child_id] = resp
+
+                for deleg in delegations:
+                    child_id = deleg.get('child_task_id', '')
+                    resp = response_map.get(child_id, {})
+                    completed.append({
+                        'to': deleg.get('delegated_to', ''),
+                        'message': deleg.get('delegation_message', ''),
+                        'result': resp.get('response', '(응답 없음)'),
+                        'completed_at': resp.get('completed_at', deleg.get('delegation_time', ''))
+                    })
+
+                print(f"   [위임 컨텍스트] {len(delegations)}개 위임 → completed에 병합 (총 {len(completed)}개)")
+
                 return {
                     'original_request': parent_task.get('original_request', ''),
                     'requester': parent_task.get('requester', ''),
-                    'completed': completed,  # 이전 작업 기록 유지
+                    'completed': completed,  # 이전 작업 기록 포함
                     'delegations': [],
                     'responses': []
                 }
@@ -815,11 +836,10 @@ def execute_get_my_tools(tool_input: dict, project_path: str, agent_id: str = No
 # ============ 통합 도구 실행 함수 ============
 
 def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = None) -> str:
-    """execute_ibl 통합 실행기 (Phase 13)
+    """execute_ibl 통합 실행기 — IBL 코드 기반
 
-    두 가지 호출 방식 지원:
-    1. pipeline: IBL 파이프라인 문자열 → 파서 → 파이프라인 실행
-    2. node + action: 직접 노드 실행
+    AI가 IBL 코드 문자열을 생성하면, 파서가 해석하고 엔진이 실행한다.
+    code 파라미터를 우선 사용하며, 레거시(pipeline, node+action)도 호환 지원.
     """
     from ibl_engine import execute_ibl
     from thread_context import get_allowed_nodes
@@ -828,142 +848,118 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     # 노드 접근 제어 (allowed_nodes)
     allowed = get_allowed_nodes()
 
-    # verb → action 호환 (레거시)
-    if "verb" in tool_input and "action" not in tool_input:
-        tool_input["action"] = tool_input.pop("verb")
+    # --- IBL 코드 결정: code > pipeline > node+action 레거시 변환 ---
+    code = tool_input.get("code") or tool_input.get("pipeline")
 
-    pipeline = tool_input.get("pipeline")
-
-    # 디버그: 에이전트 입력 추적
-    print(f"[IBL_DEBUG] tool_input keys={list(tool_input.keys())}, pipeline={bool(pipeline)}, node={tool_input.get('node')}, action={tool_input.get('action')}")
-
-    if pipeline:
-        # IBL 코드 파싱 + 실행
-        try:
-            from ibl_parser import parse as parse_ibl
-            parsed = parse_ibl(pipeline)
-
-            if not parsed:
-                return json.dumps({"error": f"IBL 파싱 실패: {pipeline}"}, ensure_ascii=False)
-
-            # 노드 접근 체크 (pipeline 모드)
-            if allowed is not None:
-                for step in parsed:
-                    d = step.get("_node", step.get("node", ""))
-                    if d and not check_node_access(d, allowed):
-                        return json.dumps(get_denied_message(d, allowed), ensure_ascii=False)
-
-            # 실행 분기 결정
-            # 1) 병렬(_parallel) 또는 fallback(_fallback_chain)이 포함된 경우 → workflow_engine
-            # 2) 파이프라인(2개 이상 step) → workflow_engine
-            # 3) 단일 일반 step → 직접 execute_ibl
-            has_special = any(
-                s.get("_parallel") or "_fallback_chain" in s
-                for s in parsed
-            )
-
-            if len(parsed) == 1 and not has_special:
-                # 단일 일반 step 직접 실행
-                step = parsed[0]
-                ibl_input = {
-                    "_node": step.get("_node", step.get("node", "")),
-                    "action": step.get("action", ""),
-                    "target": step.get("target", ""),
-                    "params": step.get("params", {}),
-                }
-                # 노드 타입 처리 (info, store, exec, output)
-                node = step.get("_node", step.get("node", ""))
-                if node in ("info", "store", "exec", "output"):
-                    ibl_input["_node_type"] = node
-                    if node == "info":
-                        ibl_input["source"] = step.get("action", "")
-                        sub_action = step.get("params", {}).get("action", "")
-                        if sub_action:
-                            ibl_input["action"] = sub_action
-                    elif node == "store":
-                        ibl_input["store"] = step.get("action", "")
-                        sub_action = step.get("params", {}).get("action", "")
-                        if sub_action:
-                            ibl_input["action"] = sub_action
-
-                result = execute_ibl(ibl_input, project_path, agent_id)
+    if not code:
+        # 레거시 호환: node+action → IBL 코드로 변환
+        node = tool_input.get("node")
+        action = tool_input.get("action") or tool_input.get("verb")
+        if node and action:
+            target = tool_input.get("target", "")
+            params = tool_input.get("params", {})
+            # IBL 코드로 조립
+            if target:
+                code = f'[{node}:{action}]("{target}")'
             else:
-                # 파이프라인 / 병렬 / fallback → workflow_engine으로 위임
-                from workflow_engine import execute_workflow_action
-                result = execute_workflow_action(
-                    "run_pipeline", None,
-                    {"pipeline": pipeline},
-                    project_path
-                )
+                code = f'[{node}:{action}]()'
+            if params:
+                code += f' {json.dumps(params, ensure_ascii=False)}'
+            print(f"[IBL_LEGACY] node+action → code 변환: {code}")
 
-            # 파이프라인 결과에서 map_data를 최상위로 승격
-            # (중첩된 step result 안의 map_data를 execute_tool 래퍼가 찾을 수 있도록)
-            if isinstance(result, dict) and "results" in result:
-                for step_result in result.get("results", []):
-                    step_str = step_result.get("result", "")
-                    if isinstance(step_str, str) and "map_data" in step_str:
-                        try:
-                            step_data = json.loads(step_str)
-                            if isinstance(step_data, dict) and "map_data" in step_data:
-                                result["map_data"] = step_data["map_data"]
-                                del step_data["map_data"]
-                                step_result["result"] = json.dumps(step_data, ensure_ascii=False, indent=2)
-                                break  # 첫 번째 map_data만 사용
-                        except (json.JSONDecodeError, TypeError):
-                            pass
-
-            if isinstance(result, dict):
-                return json.dumps(result, ensure_ascii=False, indent=2)
-            return str(result)
-
-        except Exception as e:
-            return json.dumps({"error": f"IBL 실행 오류: {str(e)}"}, ensure_ascii=False)
-
-    # node + action 직접 호출
-    node = tool_input.get("node")
-    action = tool_input.get("action")
-
-    if not node or not action:
+    if not code:
         return json.dumps({
-            "error": "pipeline 또는 node+action이 필요합니다.",
+            "error": "code 파라미터가 필요합니다.",
             "usage": {
-                "pipeline": '[source:web_search]("AI 뉴스") >> [system:file]("result.md")',
-                "node_action": {"node": "source", "action": "web_search", "target": "AI 뉴스"}
+                "단일": '[source:web_search]("AI 뉴스")',
+                "파이프라인": '[source:web_search]("AI 뉴스") >> [system:file]("result.md")',
+                "병렬": '[source:web_search]("AI") & [source:news]("tech")',
+                "폴백": '[source:api]("data") ?? [source:web_search]("data")'
             }
         }, ensure_ascii=False)
 
-    # 노드 접근 체크 (direct 모드)
-    check_node = node
-    if node in ("info", "store"):
-        # 타입 노드는 하위 소스/스토어 이름으로 체크
-        if node == "info":
-            check_node = tool_input.get("source", action)
-        elif node == "store":
-            check_node = tool_input.get("store", action)
-    if allowed is not None and not check_node_access(check_node, allowed):
-        return json.dumps(get_denied_message(check_node, allowed), ensure_ascii=False)
+    # 디버그
+    print(f"[IBL_DEBUG] code={code[:100]}")
 
-    ibl_input = {
-        "_node": node,
-        "action": action,
-        "target": tool_input.get("target", ""),
-        "params": tool_input.get("params", {}),
-    }
+    # --- IBL 코드 파싱 + 실행 ---
+    try:
+        from ibl_parser import parse as parse_ibl
+        parsed = parse_ibl(code)
 
-    # 노드 타입 처리
-    if node in ("info", "store", "exec", "output"):
-        ibl_input["_node_type"] = node
-        if node == "info":
-            ibl_input["source"] = tool_input.get("source", action)
-            ibl_input["action"] = tool_input.get("sub_action", tool_input.get("action", ""))
-        elif node == "store":
-            ibl_input["store"] = tool_input.get("store", action)
-            ibl_input["action"] = tool_input.get("sub_action", tool_input.get("action", ""))
+        if not parsed:
+            return json.dumps({"error": f"IBL 파싱 실패: {code}"}, ensure_ascii=False)
 
-    result = execute_ibl(ibl_input, project_path, agent_id)
-    if isinstance(result, dict):
-        return json.dumps(result, ensure_ascii=False, indent=2)
-    return str(result)
+        # 노드 접근 체크
+        if allowed is not None:
+            for step in parsed:
+                d = step.get("_node", step.get("node", ""))
+                if d and not check_node_access(d, allowed):
+                    return json.dumps(get_denied_message(d, allowed), ensure_ascii=False)
+
+        # 실행 분기 결정
+        # 1) 병렬(_parallel) 또는 fallback(_fallback_chain) → workflow_engine
+        # 2) 파이프라인(2개 이상 step) → workflow_engine
+        # 3) 단일 step → 직접 execute_ibl
+        has_special = any(
+            s.get("_parallel") or "_fallback_chain" in s
+            for s in parsed
+        )
+
+        if len(parsed) == 1 and not has_special:
+            # 단일 step 직접 실행
+            step = parsed[0]
+            ibl_input = {
+                "_node": step.get("_node", step.get("node", "")),
+                "action": step.get("action", ""),
+                "target": step.get("target", ""),
+                "params": step.get("params", {}),
+            }
+            # 노드 타입 처리 (info, store, exec, output)
+            node = step.get("_node", step.get("node", ""))
+            if node in ("info", "store", "exec", "output"):
+                ibl_input["_node_type"] = node
+                if node == "info":
+                    ibl_input["source"] = step.get("action", "")
+                    sub_action = step.get("params", {}).get("action", "")
+                    if sub_action:
+                        ibl_input["action"] = sub_action
+                elif node == "store":
+                    ibl_input["store"] = step.get("action", "")
+                    sub_action = step.get("params", {}).get("action", "")
+                    if sub_action:
+                        ibl_input["action"] = sub_action
+
+            result = execute_ibl(ibl_input, project_path, agent_id)
+        else:
+            # 파이프라인 / 병렬 / fallback → workflow_engine
+            from workflow_engine import execute_workflow_action
+            result = execute_workflow_action(
+                "run_pipeline", None,
+                {"pipeline": code},
+                project_path
+            )
+
+        # 파이프라인 결과에서 map_data를 최상위로 승격
+        if isinstance(result, dict) and "results" in result:
+            for step_result in result.get("results", []):
+                step_str = step_result.get("result", "")
+                if isinstance(step_str, str) and "map_data" in step_str:
+                    try:
+                        step_data = json.loads(step_str)
+                        if isinstance(step_data, dict) and "map_data" in step_data:
+                            result["map_data"] = step_data["map_data"]
+                            del step_data["map_data"]
+                            step_result["result"] = json.dumps(step_data, ensure_ascii=False, indent=2)
+                            break
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+        if isinstance(result, dict):
+            return json.dumps(result, ensure_ascii=False, indent=2)
+        return str(result)
+
+    except Exception as e:
+        return json.dumps({"error": f"IBL 실행 오류: {str(e)}"}, ensure_ascii=False)
 
 
 def execute_ask_user_question(tool_input: dict, project_path: str) -> str:

@@ -300,8 +300,8 @@ _PIPELINE_TEMPLATES = [
     # 검색 → 에이전트 분석
     (
         "AI 뉴스 검색해서 투자 에이전트한테 분석 요청해줘",
-        '[source:web_search]("AI 뉴스") >> [system:agent_ask]("투자/투자컨설팅") {message: "이 뉴스를 투자 관점에서 분석해주세요"}',
-        "source,system", "pipeline"
+        '[source:web_search]("AI 뉴스") >> [team:ask]("투자/투자컨설팅") {message: "이 뉴스를 투자 관점에서 분석해주세요"}',
+        "source,team", "pipeline"
     ),
     # 검색 → 메신저 전송
     (
@@ -342,8 +342,8 @@ _PIPELINE_TEMPLATES = [
     # 3단 파이프라인
     (
         "삼성전자 뉴스 검색 후 분석 에이전트에게 보내고 결과 저장해줘",
-        '[source:search_news]("삼성전자") >> [system:agent_ask_sync]("투자/투자컨설팅") {message: "분석해줘"} >> [system:file]("분석결과.md")',
-        "source,system", "complex"
+        '[source:search_news]("삼성전자") >> [team:ask_sync]("투자/투자컨설팅") {message: "분석해줘"} >> [system:file]("분석결과.md")',
+        "source,team,system", "complex"
     ),
     # 블로그 검색 → 저장
     (

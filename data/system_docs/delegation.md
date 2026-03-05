@@ -8,7 +8,7 @@
 사용자 → 에이전트A → call_agent(B) → 에이전트B → 작업 완료 → 자동 보고 → 에이전트A → 사용자
 ```
 
-- `[orchestrator:delegate]` IBL 액션으로 다른 에이전트에게 작업 위임 (기존 `call_agent()` 도구)
+- `[team:delegate]` IBL 액션으로 다른 에이전트에게 작업 위임 (기존 `call_agent()` 도구, Phase 23: orchestrator→system→team)
 - 위임받은 에이전트가 작업 완료 시 자동으로 결과 보고
 - 위임한 에이전트는 결과를 받아 최종 처리 후 사용자에게 응답
 
@@ -47,6 +47,14 @@
 {
   "original_request": "사용자의 원래 요청",
   "requester": "user@gui",
+  "completed": [
+    {
+      "to": "에이전트A",
+      "message": "이전에 위임했던 요청",
+      "result": "이전 위임의 결과",
+      "completed_at": "2026-01-18T09:55:00"
+    }
+  ],
   "delegations": [
     {
       "child_task_id": "task_001",
@@ -72,12 +80,52 @@
 
 | 시점 | 동작 |
 |------|------|
-| 위임 발생 | `delegation_context`에 위임 정보 누적 |
-| 위임 결과 도착 | `responses`에 결과 누적, `pending_delegations` 감소 |
+| 위임 발생 | `delegations[]`에 위임 정보 누적, `pending_delegations++` |
+| 위임 결과 도착 | `responses[]`에 결과 원자적 추가, `pending_delegations--` |
+| 사이클 완료 후 새 위임 | `delegations[]` + `responses[]` → `completed[]`로 병합, 새 사이클 시작 |
 | 추가 위임 없음 | 태스크 삭제 (`complete_task`) → 컨텍스트도 삭제 |
-| 추가 위임 발생 | 태스크 유지, 새 위임 정보 누적 |
 
 **핵심**: 태스크가 삭제되면 컨텍스트도 함께 삭제됨. 별도의 클리어 호출 불필요.
+
+### completed[] 사이클 병합
+
+순차 위임 시 이전 위임 결과를 보존하기 위한 메커니즘:
+
+```
+1차 위임: delegations=[B], responses=[B결과], pending=0
+    ↓ 새 위임 발생 (2차)
+사이클 완료 감지 (pending=0, delegations>0)
+    ↓
+completed에 병합: [{to: B, message: "...", result: "B결과"}]
+    ↓
+delegations=[], responses=[] 초기화
+    ↓
+2차 위임 시작: delegations=[C], pending=1
+```
+
+이 병합은 `_get_or_create_delegation_context()` (프로젝트 에이전트)와 `_execute_call_project_agent()` (시스템 AI) 양쪽에서 수행됨.
+
+### 병렬 위임 원자적 응답 추가
+
+병렬 위임 시 두 에이전트가 동시에 완료되면 race condition 발생 가능:
+
+```
+# 문제: 동시 완료 시 responses[] 유실
+에이전트B 완료 → read context → append B결과 → write
+에이전트C 완료 → read context → append C결과 → write  ← B결과 덮어씀!
+```
+
+**해결**: `decrement_pending_and_update_context()`에 `new_response` 파라미터 추가.
+DB의 EXCLUSIVE 트랜잭션 안에서 read-append-write를 원자적으로 수행:
+
+```python
+# conversation_db.py / system_ai_memory.py
+def decrement_pending_and_update_context(task_id, new_response=None):
+    with get_exclusive_connection() as conn:
+        # 1. DB에서 현재 delegation_context 읽기
+        # 2. new_response를 responses[]에 추가
+        # 3. pending_delegations-- 와 함께 저장
+```
 
 ## 위임 흐름
 
@@ -125,7 +173,7 @@ C 완료 → 에이전트A가 결과 수신 및 처리
 추가 위임 없음 → 최종 응답, 태스크 삭제
 ```
 
-**핵심**: 위임 결과가 컨텍스트에 누적되어 AI가 이전 작업 내역을 참조할 수 있음. 추가 위임이 없으면 태스크가 삭제되며 컨텍스트도 함께 삭제됨.
+**핵심**: 위임 결과가 `completed[]`에 병합되어 AI가 이전 사이클 작업 내역을 참조할 수 있음. 추가 위임이 없으면 태스크가 삭제되며 컨텍스트도 함께 삭제됨.
 
 ### 3. 병렬 위임 (2개 이상, 동시)
 
@@ -162,11 +210,11 @@ A → B → C → D
 ### _auto_report_to_chain() 동작
 
 1. **parent_task_id 있음** (위임받은 태스크)
-   - 부모 태스크의 `delegation_context`에 응답 누적
-   - `pending_delegations` 감소
+   - `new_response` 파라미터로 부모 태스크의 `responses[]`에 원자적 추가
+   - `pending_delegations` 감소 (EXCLUSIVE 트랜잭션 내에서 동시 수행)
    - 병렬 위임 수집 모드:
      - 남은 위임 있음 → 현재 태스크만 삭제, 보고 스킵
-     - 모든 응답 도착 → 통합 보고 전송
+     - 모든 응답 도착 → DB에서 최신 컨텍스트 재조회 → 통합 보고 전송
    - 부모 태스크의 `delegated_to` 에이전트에게 보고
 
 2. **parent_task_id 없음** (최초 태스크)
@@ -473,6 +521,20 @@ C 완료 → pending=0, 통합 보고 → 시스템AI
 | 자동 보고 | ✓ | ✓ |
 | 컨텍스트 복원 | ✓ | ✓ |
 
+### WebSocket 위임 감지 (시스템 AI)
+
+시스템 AI의 WebSocket 핸들러(`api_websocket.py`)는 위임 발생 시 태스크를 유지해야 합니다.
+IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용:
+
+| 레이어 | 감지 방법 | 설명 |
+|--------|----------|------|
+| 1 | 도구 이름 매칭 | `call_project_agent` 직접 호출 감지 |
+| 2 | IBL 결과 문자열 매칭 | `execute_ibl` 결과에서 위임 키워드 감지 |
+| 3 | DB pending_delegations 확인 | DB에서 pending > 0 확인 (최종 안전망) |
+
+위임 감지 시: 태스크 유지 (삭제 스킵)
+위임 미감지 시: 태스크 삭제 → 사용자에게 응답
+
 ### 주의사항
 
 1. **일방향만 가능**: 프로젝트 에이전트는 시스템 AI에게 위임 불가
@@ -483,8 +545,10 @@ C 완료 → pending=0, 통합 보고 → 시스템AI
 4. **환각 방지**: 결과 없이 "검토했습니다" 등 표현 금지
 
 ---
-*마지막 업데이트: 2026-02-18*
-*Phase 17→19: 모든 위임이 IBL 경로(`execute_ibl`)를 통해 실행됨. `call_agent` → `[orchestrator:delegate]`, `call_project_agent` → `[orchestrator:delegate_project]`.*
+*마지막 업데이트: 2026-03-05*
+*Phase 17→19: 모든 위임이 IBL 경로(`execute_ibl`)를 통해 실행됨.*
+*Phase 23: 위임 액션을 system에서 team 노드로 분리. `[team:delegate]` (프로젝트 내), `[team:delegate_project]` (프로젝트 간). team은 _ALWAYS_ALLOWED로 모든 에이전트에 자동 제공.*
+*Phase 23 안정화: completed[] 사이클 병합, 병렬 위임 원자적 응답 추가, WebSocket 3-레이어 위임 감지.*
 
 > 참고: 위임 프롬프트 파일
 > - `fragments/09_delegation.md`: 프로젝트 내 에이전트 간 위임 가이드

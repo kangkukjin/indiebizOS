@@ -50,7 +50,7 @@ agents:
 **워크플로우** - IBL 문법으로 여러 액션을 재사용 가능한 파이프라인으로 연결:
 ```
 [source:search]("AI 뉴스") {type: "news"}
-  >> [system:agent_ask_sync]("컨텐츠/컨텐츠") {message: "이 기사들을 요약해줘"}
+  >> [team:ask_sync]("컨텐츠/컨텐츠") {message: "이 기사들을 요약해줘"}
   >> [system:file]("news_report.html") {format: "html"}
 ```
 
@@ -163,7 +163,7 @@ IBL 엔진: 파싱 → 핸들러 디스패치 → 결과 반환
 name: "kinsight"
 pipeline: >
   [source:search]("최근 글") {type: "blog", count: 10}
-  >> [system:agent_ask_sync]("컨텐츠/컨텐츠") {message: "분석하여 인사이트 보고서를 작성해주세요"}
+  >> [team:ask_sync]("컨텐츠/컨텐츠") {message: "분석하여 인사이트 보고서를 작성해주세요"}
   >> [system:file]("kinsight_report.html") {format: "html"}
 ```
 

@@ -434,22 +434,52 @@ def update_task_delegation(task_id: str, delegation_context: str,
 
 
 def decrement_pending_and_update_context(task_id: str,
-                                          delegation_context: str) -> int:
+                                          delegation_context: str = None,
+                                          new_response: dict = None) -> int:
     """
     pending_delegations 감소 + 컨텍스트 업데이트를 원자적으로 수행
+
+    Args:
+        task_id: 작업 ID
+        delegation_context: 업데이트할 위임 컨텍스트 JSON (하위 호환용)
+        new_response: 새 응답 항목 dict (원자적 append용, delegation_context보다 우선)
 
     Returns:
         감소 후 남은 pending_delegations 값
     """
+    import json as _json
+
     init_memory_db()
     with _get_exclusive_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE tasks
-            SET delegation_context = ?,
-                pending_delegations = MAX(0, COALESCE(pending_delegations, 0) - 1)
-            WHERE task_id = ?
-        """, (delegation_context, task_id))
+
+        if new_response:
+            # 원자적 read-modify-write: 트랜잭션 내에서 현재 컨텍스트를 읽고 response 추가
+            cursor.execute('SELECT delegation_context FROM tasks WHERE task_id = ?', (task_id,))
+            row = cursor.fetchone()
+            if row and row[0]:
+                try:
+                    ctx = _json.loads(row[0])
+                    if 'responses' not in ctx:
+                        ctx['responses'] = []
+                    ctx['responses'].append(new_response)
+                    delegation_context = _json.dumps(ctx, ensure_ascii=False)
+                except _json.JSONDecodeError:
+                    pass  # fallback to provided delegation_context
+
+        if delegation_context:
+            cursor.execute("""
+                UPDATE tasks
+                SET delegation_context = ?,
+                    pending_delegations = MAX(0, COALESCE(pending_delegations, 0) - 1)
+                WHERE task_id = ?
+            """, (delegation_context, task_id))
+        else:
+            cursor.execute("""
+                UPDATE tasks
+                SET pending_delegations = MAX(0, COALESCE(pending_delegations, 0) - 1)
+                WHERE task_id = ?
+            """, (task_id,))
 
         cursor.execute('SELECT pending_delegations FROM tasks WHERE task_id = ?', (task_id,))
         row = cursor.fetchone()

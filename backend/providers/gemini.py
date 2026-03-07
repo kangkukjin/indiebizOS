@@ -515,7 +515,7 @@ class GeminiProvider(BaseProvider):
         return (collected_text, function_calls, response_content)
 
     def _create_stream_with_retry(self, contents: List, config, max_retries: int = 3):
-        """스트림 생성 (500 에러 재시도)"""
+        """스트림 생성 (500 에러 재시도, 캐시 만료 시 자동 복구)"""
         last_error = None
 
         for attempt in range(max_retries):
@@ -532,13 +532,21 @@ class GeminiProvider(BaseProvider):
                     print(f"[Gemini] 500 에러, 재시도 {attempt + 1}/{max_retries}...")
                     time.sleep(1 * (attempt + 1))
                     continue
+                elif ("403" in error_str or "PERMISSION_DENIED" in error_str) and "CachedContent" in error_str:
+                    # 캐시 만료/삭제 → 캐시 무효화 후 일반 모드로 재시도
+                    print(f"[Gemini] 캐시 만료/삭제 감지, 캐시 무효화 후 일반 모드로 재시도")
+                    with self._cache_lock:
+                        self._cache_name = None
+                        self._cached_system_prompt = None
+                    config = self._build_config(self._cached_gemini_tools)
+                    continue
                 else:
                     raise e
 
         raise last_error if last_error else Exception("스트림 생성 실패")
 
     def _iterate_stream_with_retry(self, stream, contents: List, config, max_retries: int = 3):
-        """스트림 반복 (500 에러 재시도)"""
+        """스트림 반복 (500 에러 재시도, 캐시 만료 시 자동 복구)"""
         retry_count = 0
 
         while True:
@@ -552,6 +560,20 @@ class GeminiProvider(BaseProvider):
                     retry_count += 1
                     print(f"[Gemini] 스트리밍 중 500 에러, 재시도 {retry_count}/{max_retries}...")
                     time.sleep(1 * retry_count)
+                    stream = self._genai_client.models.generate_content_stream(
+                        model=self.model,
+                        contents=contents,
+                        config=config
+                    )
+                    continue
+                elif ("403" in error_str or "PERMISSION_DENIED" in error_str) and "CachedContent" in error_str and retry_count < max_retries:
+                    # 캐시 만료/삭제 → 캐시 무효화 후 일반 모드로 재시도
+                    retry_count += 1
+                    print(f"[Gemini] 스트리밍 중 캐시 만료 감지, 일반 모드로 재시도 {retry_count}/{max_retries}")
+                    with self._cache_lock:
+                        self._cache_name = None
+                        self._cached_system_prompt = None
+                    config = self._build_config(self._cached_gemini_tools)
                     stream = self._genai_client.models.generate_content_stream(
                         model=self.model,
                         contents=contents,

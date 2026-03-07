@@ -14,6 +14,10 @@ TOOLS_DIR = PACKAGE_DIR / "tools"
 # homepage-manager 도구는 모듈 파일명과 도구 이름이 다름
 _TOOL_MODULE_MAP = {
     "site_registry": "registry",
+    "site_list": "registry",
+    "site_register": "registry",
+    "site_remove": "registry",
+    "site_update": "registry",
     "site_snapshot": "snapshot",
     "site_live_check": "live_check",
 }
@@ -56,8 +60,18 @@ def execute(tool_name: str, tool_input: dict, project_path: str = None) -> str:
                 "available_tools": TOOLS
             }, ensure_ascii=False)
 
-        # === 사이트 관리 도구 (package_dir 전달 방식) ===
-        if tool_name in ("site_registry", "site_snapshot", "site_live_check"):
+        # === 사이트 관리 — 원자 액션 (각각 직접 호출) ===
+        if tool_name == "site_list":
+            result = module.list_sites(PACKAGE_DIR)
+        elif tool_name == "site_register":
+            result = module.register_site(tool_input, PACKAGE_DIR)
+        elif tool_name == "site_remove":
+            result = module.remove_site(tool_input.get("site_id"), PACKAGE_DIR)
+        elif tool_name == "site_update":
+            result = module.update_site(tool_input, PACKAGE_DIR)
+
+        # === 사이트 관리 — 레거시 + snapshot/live_check ===
+        elif tool_name in ("site_registry", "site_snapshot", "site_live_check"):
             result = module.run(tool_input, PACKAGE_DIR)
 
         # === 웹 빌더 도구 (개별 파라미터 전달 방식) ===
@@ -155,7 +169,11 @@ def execute(tool_name: str, tool_input: dict, project_path: str = None) -> str:
 # 도구 목록 (검색용)
 TOOLS = [
     # 사이트 관리
-    "site_registry",
+    "site_list",
+    "site_register",
+    "site_remove",
+    "site_update",
+    "site_registry",  # 레거시 호환
     "site_snapshot",
     "site_live_check",
     # 웹 빌더

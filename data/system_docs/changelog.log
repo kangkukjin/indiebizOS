@@ -460,3 +460,28 @@
   - ibl_access.py: build_environment()를 <action-categories> 기반 표시로 변경
   - ibl_usage_db.py: verb→node 매핑 코드 제거
   - ibl.md: 동사 섹션 → 액션 카테고리 섹션으로 교체, 해석 순서 단순화
+[2026-03-07 09:00:00] PACKAGE_OVERHAUL: browser-action v4.0 전면 개정 (28→36개 도구)
+  - browser_session.py: Stealth 모드 (User-Agent, webdriver 숨김, chrome runtime 위장)
+  - browser_session.py: Dialog(alert/confirm/prompt) 자동 dismiss + 기록
+  - browser_session.py: 쿠키 동의 팝업 자동 처리 (YouTube/Google/GDPR, MutationObserver 기반)
+  - browser_session.py: 네트워크 요청 캡처 인프라, 자동 종료 120→180초
+  - browser_session.py: find_locator CSS→XPath→role+name 우선순위 + 0.5초 retry
+  - browser_navigate.py: HTTP 상태코드 반환, 리다이렉트 체인 추적, 에러 분류 (DNS/SSL/timeout 등)
+  - browser_interact.py: browser_dblclick, browser_rightclick, browser_check, browser_upload_file 추가
+  - browser_interact.py: 모든 액션에 selector 파라미터 추가 (ref 없이 CSS selector 직접 지정)
+  - browser_content.py: browser_get_html (HTML 소스 추출), browser_network_logs (캡처 제어/조회)
+  - browser_content.py: browser_dialog_info, browser_resize (뷰포트 크기 변경)
+  - browser_content.py: browser_vision (base64 스크린샷 → 멀티모달 AI 인식용)
+  - browser_content.py: browser_wait_for에 state/network_idle 옵션, evaluate에 타임아웃 적용
+  - browser_content.py: browser_scroll에 selector(컨테이너 내 스크롤) 지원
+  - browser_snapshot.py: CDP DOM.describeNode으로 CSS selector 자동 생성, required/expanded 속성 추출
+  - tool.json: 워크플로우 가이드 7줄 추가 (에이전트 실수 방지), 레거시 별칭 제거
+  - handler.py: 36개 도구 라우팅, 버전 4.0.0
+[2026-03-07 09:30:00] TOOL_FIX: cctv 패키지 수정
+  - handler.py: _LANDMARKS에 65+ 한국 랜드마크 추가 (서울 38, 수도권 6, 부산 5, 제주 4, 기타 13)
+  - handler.py: ITS 좌표 기반 get_nearby_cctv 폴백 추가 (이름 검색 실패 시)
+  - handler.py: 좌표 해석을 _unified_search_cctv 최상단으로 이동
+[2026-03-07 09:30:00] TOOL_FIX: photo-manager 패키지 수정
+  - photo_db.py, handler.py: get_gallery/get_timeline에 start_date/end_date 필터 추가
+  - photo_db.py, handler.py: 갤러리에 gps_lat/gps_lon 좌표 포함
+  - sqlite_driver.py: 사진 스캔 경로 수정 (data/photo_scans → data/packages/photo_scans)

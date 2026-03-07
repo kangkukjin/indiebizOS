@@ -1,4 +1,4 @@
-node: interface
+node: tools
 actions:
   devices:
     description: 연결된 기기 목록 조회

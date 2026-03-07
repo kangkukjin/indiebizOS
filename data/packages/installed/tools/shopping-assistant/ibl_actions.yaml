@@ -1,4 +1,4 @@
-node: source
+node: sense
 actions:
   search_shopping:
     description: 상품 검색 및 가격 비교 (네이버+다나와+중고나라+번개장터)

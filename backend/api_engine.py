@@ -814,9 +814,3 @@ def _apply_transform(name: str, data: Any, tool_input: dict) -> Any:
     return data
 
 
-# 레거시 변환 함수 등록 (하위 호환 — 현재 사용되지 않음)
-try:
-    from api_transforms_legacy import register_legacy_transforms
-    register_legacy_transforms(_transforms)
-except ImportError:
-    pass

@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any
 
-from tool_loader import load_tool_handler, get_all_tool_names, get_tool_guide, get_tool_guide_path
+from tool_loader import load_tool_handler, get_all_tool_names
 from api_engine import is_registry_tool, execute_tool as registry_execute_tool
 
 
@@ -48,8 +48,6 @@ def _run_coroutine(coro, timeout=120):
     future = asyncio.run_coroutine_threadsafe(coro, loop)
     return future.result(timeout=timeout)
 
-# 가이드가 이미 주입된 도구 추적 (agent_id:tool_name)
-_guide_injected: set = set()
 
 
 # ============ IBL 형식 로깅 ============
@@ -59,7 +57,7 @@ _IBL_TOOL_PREFIX_MAP = {
     # 현재 노드
     "ibl_system": "system", "ibl_team": "team", "ibl_interface": "interface",
     "ibl_messenger": "messenger", "ibl_source": "source",
-    "ibl_stream": "stream", "ibl_forge": "forge",
+    "ibl_stream": "stream", "ibl_forge": "engines",
     # 하위 호환: 구 도구명 → 현재 노드
     "ibl_android": "interface", "ibl_browser": "interface", "ibl_desktop": "interface",
     "ibl_youtube": "stream", "ibl_radio": "stream",
@@ -70,7 +68,7 @@ _IBL_TOOL_PREFIX_MAP = {
     "ibl_legal": "source", "ibl_statistics": "source",
     "ibl_commerce": "source", "ibl_location": "source",
     "ibl_web": "source", "ibl_info": "source",
-    "ibl_creator": "forge", "ibl_webdev": "forge", "ibl_design": "forge",
+    "ibl_creator": "engines", "ibl_webdev": "engines", "ibl_design": "engines",
     "ibl_orchestrator": "system", "ibl_workflow": "system",
     "ibl_automation": "system", "ibl_output": "system",
     "ibl_user": "system", "ibl_filesystem": "system", "ibl_fs": "system",
@@ -154,17 +152,15 @@ def _tool_to_ibl_notation(tool_name: str, tool_input: dict) -> tuple:
     return ("tool", tool_name)
 
 
-def _extract_target(tool_input: dict) -> str:
-    """tool_input에서 대표 target 값 추출"""
-    # IBL 도구의 target
-    if "target" in tool_input:
-        val = str(tool_input["target"])
-        return val[:60] if len(val) > 60 else val
+def _extract_hint(tool_input: dict) -> str:
+    """tool_input에서 대표 파라미터 값 추출 (로그용)"""
+    # params 내부에서 주요 값 찾기
+    params = tool_input.get("params", {})
+    search_in = {**params, **tool_input}
 
-    # 개별 도구의 주요 파라미터
     for key in ("query", "path", "url", "pattern", "command", "pipeline", "code", "agent_id", "message"):
-        if key in tool_input:
-            val = str(tool_input[key])
+        if key in search_in:
+            val = str(search_in[key])
             return val[:60] if len(val) > 60 else val
 
     return ""
@@ -174,14 +170,14 @@ def _log_ibl(tool_name: str, tool_input: dict, duration_ms: float,
              agent_id: str = None, success: bool = True):
     """도구 실행을 IBL 형식으로 콘솔 로그 + DB 저장"""
     node, action = _tool_to_ibl_notation(tool_name, tool_input)
-    target = _extract_target(tool_input)
+    hint = _extract_hint(tool_input)
 
     status = "OK" if success else "ERR"
     agent_tag = f"[{agent_id}] " if agent_id else ""
     timestamp = datetime.now().strftime("%H:%M:%S")
 
-    target_str = f"({target})" if target else ""
-    print(f"[{timestamp}] {agent_tag}[{node}:{action}]{target_str} -> {status} ({duration_ms:.0f}ms)")
+    hint_str = f" ({hint})" if hint else ""
+    print(f"[{timestamp}] {agent_tag}[{node}:{action}]{hint_str} -> {status} ({duration_ms:.0f}ms)")
 
     # 실행 로그 비활성화 — 자동 승격 중단에 따라 로그 수집도 불필요
     # try:
@@ -848,33 +844,17 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     # 노드 접근 제어 (allowed_nodes)
     allowed = get_allowed_nodes()
 
-    # --- IBL 코드 결정: code > pipeline > node+action 레거시 변환 ---
+    # --- IBL 코드 결정 ---
     code = tool_input.get("code") or tool_input.get("pipeline")
-
-    if not code:
-        # 레거시 호환: node+action → IBL 코드로 변환
-        node = tool_input.get("node")
-        action = tool_input.get("action") or tool_input.get("verb")
-        if node and action:
-            target = tool_input.get("target", "")
-            params = tool_input.get("params", {})
-            # IBL 코드로 조립
-            if target:
-                code = f'[{node}:{action}]("{target}")'
-            else:
-                code = f'[{node}:{action}]()'
-            if params:
-                code += f' {json.dumps(params, ensure_ascii=False)}'
-            print(f"[IBL_LEGACY] node+action → code 변환: {code}")
 
     if not code:
         return json.dumps({
             "error": "code 파라미터가 필요합니다.",
             "usage": {
-                "단일": '[source:web_search]("AI 뉴스")',
-                "파이프라인": '[source:web_search]("AI 뉴스") >> [system:file]("result.md")',
-                "병렬": '[source:web_search]("AI") & [source:news]("tech")',
-                "폴백": '[source:api]("data") ?? [source:web_search]("data")'
+                "단일": '[sense:web_search]{query: "AI 뉴스"}',
+                "파이프라인": '[sense:web_search]{query: "AI 뉴스"} >> [self:file]{path: "result.md"}',
+                "병렬": '[sense:web_search]{query: "AI"} & [sense:search_news]{query: "tech"}',
+                "폴백": '[sense:price]{symbol: "AAPL"} ?? [sense:web_search]{query: "AAPL stock"}'
             }
         }, ensure_ascii=False)
 
@@ -911,7 +891,6 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             ibl_input = {
                 "_node": step.get("_node", step.get("node", "")),
                 "action": step.get("action", ""),
-                "target": step.get("target", ""),
                 "params": step.get("params", {}),
             }
             # 노드 타입 처리 (info, store, exec, output)
@@ -934,7 +913,7 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             # 파이프라인 / 병렬 / fallback → workflow_engine
             from workflow_engine import execute_workflow_action
             result = execute_workflow_action(
-                "run_pipeline", None,
+                "run_pipeline",
                 {"pipeline": code},
                 project_path
             )
@@ -1011,32 +990,12 @@ def execute_request_user_approval(tool_input: dict, project_path: str) -> str:
     return "[[APPROVAL_REQUESTED]]" + "\n".join(result_parts)
 
 
-def _inject_guide_if_needed(tool_name: str, result, agent_id: str = None) -> str:
-    """도구 실행 결과에 가이드를 주입 — 비활성화됨
-
-    가이드 시스템이 search_guide 독립 도구로 통합되었으므로,
-    패키지 가이드 자동 주입은 더 이상 사용하지 않습니다.
-    에이전트가 필요할 때 search_guide()를 직접 호출합니다.
-    """
-    # dict 결과는 JSON 문자열로 변환만 수행
+def _dict_to_json(result) -> str:
+    """dict 결과를 JSON 문자열로 변환, _ibl_guide 잔여 메타데이터 제거"""
     if isinstance(result, dict):
-        result.pop("_ibl_guide", None)  # 잔여 메타데이터 제거
-        result = json.dumps(result, ensure_ascii=False, indent=2)
-
+        result.pop("_ibl_guide", None)
+        return json.dumps(result, ensure_ascii=False, indent=2)
     return result
-
-
-def reset_guide_injection(agent_id: str = None):
-    """가이드 주입 추적 초기화 (새 대화 시작 시 호출)
-
-    Args:
-        agent_id: 특정 에이전트만 초기화. None이면 전체 초기화.
-    """
-    global _guide_injected
-    if agent_id:
-        _guide_injected = {k for k in _guide_injected if not k.startswith(f"{agent_id}:")}
-    else:
-        _guide_injected.clear()
 
 
 
@@ -1129,13 +1088,8 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".
         if is_registry_tool(tool_name):
             result = registry_execute_tool(tool_name, tool_input, project_path)
             if isinstance(result, dict) and "images" in result:
-                if isinstance(result.get("content"), str):
-                    result["content"] = _inject_guide_if_needed(tool_name, result["content"], agent_id)
                 return result
-            if isinstance(result, dict):
-                result = json.dumps(result, ensure_ascii=False, indent=2)
-            if isinstance(result, str):
-                result = _inject_guide_if_needed(tool_name, result, agent_id)
+            result = _dict_to_json(result)
             return result
 
         # 동적 로딩된 도구 패키지에서 실행 (레지스트리 미등록 도구용)
@@ -1155,17 +1109,10 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".
 
             # [images] 이미지를 포함한 dict 결과는 그대로 반환 (providers가 처리)
             if isinstance(result, dict) and "images" in result:
-                # 가이드 주입은 content 필드에만 적용
-                if isinstance(result.get("content"), str):
-                    result["content"] = _inject_guide_if_needed(tool_name, result["content"], agent_id)
                 return result
 
-            # Phase 12: IBL 가이드 메타데이터가 있는 dict는 _inject_guide_if_needed에서 처리
-            if isinstance(result, dict) and "_ibl_guide" in result:
-                result = _inject_guide_if_needed(tool_name, result, agent_id)
-            # dict 결과를 JSON 문자열로 변환 (이미지 없는 dict - android 도구 등)
-            elif isinstance(result, dict):
-                result = json.dumps(result, ensure_ascii=False, indent=2)
+            # dict → JSON 변환 (_ibl_guide 잔여 메타데이터 제거 포함)
+            result = _dict_to_json(result)
 
             # 승인 필요 여부 확인
             if isinstance(result, str) and result.startswith("__REQUIRES_APPROVAL__:"):
@@ -1175,11 +1122,6 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".
                     "command": command,
                     "message": f"⚠️ 위험한 명령어가 감지되었습니다:\n\n`{command}`\n\n이 명령어를 실행하려면 '승인' 또는 'yes'라고 답해주세요."
                 }, ensure_ascii=False)
-
-            # [MAP:...] 변환은 execute_tool() 래퍼에서 통합 처리 (모든 도구 경로에 적용)
-
-            # 가이드 주입: 도구에 guide_file이 있으면 첫 호출 시 결과 앞에 가이드 포함
-            result = _inject_guide_if_needed(tool_name, result, agent_id)
 
             return result
         else:

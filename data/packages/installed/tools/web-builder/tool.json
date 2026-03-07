@@ -1,36 +1,31 @@
 {
   "id": "web-builder",
   "name": "Web Builder & Homepage Manager",
-  "description": "홈페이지 제작과 관리를 위한 통합 도구 패키지.\n\n## 두 가지 시나리오\n\n### A. 새 홈페이지 만들기\ncreate_project → add_component → create_page → edit_styles → preview_site → build_site → deploy_vercel\n\n### B. 기존 홈페이지 개선/수정\n1) site_registry(action='list')로 등록된 사이트 확인\n2) site_snapshot으로 현재 구조 파악\n3) 기존 파일을 직접 읽고 수정\n4) git push → 자동 배포 (또는 deploy_vercel)\n5) site_live_check로 결과 확인\n\n주의: 기존 사이트를 개선할 때 create_project를 호출하지 마세요.",
+  "description": "홈페이지 제작과 관리를 위한 통합 도구 패키지.\n\n## 두 가지 시나리오\n\n### A. 새 홈페이지 만들기\ncreate_project → add_component → create_page → edit_styles → preview_site → build_site → deploy_vercel\n\n### B. 기존 홈페이지 개선/수정\n1) site_list로 등록된 사이트 확인\n2) site_snapshot으로 현재 구조 파악\n3) 기존 파일을 직접 읽고 수정\n4) git push → 자동 배포 (또는 deploy_vercel)\n5) site_live_check로 결과 확인\n\n주의: 기존 사이트를 개선할 때 create_project를 호출하지 마세요.",
   "version": "2.0.0",
   "tools": [
     {
-      "name": "site_registry",
-      "description": "홈페이지 등록/조회/삭제/수정. 사이트의 로컬 경로, GitHub repo, 배포 URL, 기술 스택을 관리합니다.\n\n사용 예시:\n- 새 사이트 등록: action='register', name='내 블로그', local_path='/path/to/site'\n- 목록 조회: action='list'\n- 삭제: action='remove', site_id='my-blog'\n- 수정: action='update', site_id='my-blog', deploy_url='https://new-url.vercel.app'",
+      "name": "site_list",
+      "description": "등록된 홈페이지 목록을 조회합니다. 각 사이트의 ID, 이름, 배포 URL, 기술 스택을 반환합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "site_register",
+      "description": "새 홈페이지를 레지스트리에 등록합니다. 로컬 경로에서 기술 스택을 자동 감지합니다.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "action": {
-            "type": "string",
-            "enum": [
-              "register",
-              "list",
-              "remove",
-              "update"
-            ],
-            "description": "수행할 작업"
-          },
-          "site_id": {
-            "type": "string",
-            "description": "사이트 ID (remove, update 시 필수)"
-          },
           "name": {
             "type": "string",
-            "description": "사이트 이름 (register 시 필수)"
+            "description": "사이트 이름"
           },
           "local_path": {
             "type": "string",
-            "description": "로컬 프로젝트 경로 (register 시 필수). 기술 스택을 자동 감지합니다."
+            "description": "로컬 프로젝트 경로. 기술 스택을 자동 감지합니다."
           },
           "repo_url": {
             "type": "string",
@@ -45,9 +40,55 @@
             "description": "사이트 설명"
           }
         },
-        "required": [
-          "action"
-        ]
+        "required": ["name", "local_path"]
+      }
+    },
+    {
+      "name": "site_remove",
+      "description": "등록된 홈페이지를 레지스트리에서 삭제합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "description": "삭제할 사이트 ID"
+          }
+        },
+        "required": ["site_id"]
+      }
+    },
+    {
+      "name": "site_update",
+      "description": "등록된 홈페이지 정보를 수정합니다. 변경할 필드만 지정하면 됩니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "description": "수정할 사이트 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "새 사이트 이름"
+          },
+          "local_path": {
+            "type": "string",
+            "description": "새 로컬 경로"
+          },
+          "repo_url": {
+            "type": "string",
+            "description": "새 GitHub URL"
+          },
+          "deploy_url": {
+            "type": "string",
+            "description": "새 배포 URL"
+          },
+          "description": {
+            "type": "string",
+            "description": "새 설명"
+          }
+        },
+        "required": ["site_id"]
       }
     },
     {

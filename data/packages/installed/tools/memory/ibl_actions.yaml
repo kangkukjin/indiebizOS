@@ -1,4 +1,4 @@
-node: source
+node: self
 actions:
   save_memory:
     description: 심층 메모리에 항목 저장

@@ -159,7 +159,7 @@ class IBLUsageRAG:
                 return ""
 
             # 상위 3개 노드, 각 노드당 상위 2개 액션만
-            lines = ['<ibl_discover note="키워드 기반 추천 도구입니다. web_search 대신 전문 도구가 있으면 그것을 우선 사용하세요.">']
+            lines = ['<ibl_discover note="키워드 기반 추천 도구입니다. 전문 데이터 액션(health_query, health_context 등)이 있으면 파일 직접 탐색([self:list]/[self:read])이나 web_search보다 반드시 우선 사용하세요.">']
             for r in results[:3]:
                 details = r.get("action_details", [])[:2]
                 for d in details:

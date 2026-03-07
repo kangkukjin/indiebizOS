@@ -19,7 +19,7 @@ DB_PATH = os.path.join(DATA_DIR, 'health_records.db')
 IMAGES_DIR = os.path.join(DATA_DIR, 'images')
 
 # 기본 사용자 (명시하지 않을 경우)
-DEFAULT_PERSON = "나"
+DEFAULT_PERSON = "강국진"
 
 
 def get_db_connection():
@@ -152,7 +152,7 @@ def list_persons() -> List[Dict]:
 
 def get_person_id(person: str = None) -> int:
     """사용자 이름으로 ID 조회 (없으면 기본 사용자)"""
-    if not person:
+    if not person or person == "나":
         person = DEFAULT_PERSON
     return get_or_create_person(person)
 

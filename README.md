@@ -24,7 +24,7 @@ agents:
       You explain medical terms in everyday language.
       You end every consultation with clear next steps and reassurance.
     model: claude-sonnet
-    allowed_nodes: [source, system, forge, interface, stream, messenger]
+    allowed_nodes: [sense, self, limbs, others, engines]
 ```
 
 | Generic AI | IndieBiz Persona |
@@ -49,484 +49,102 @@ Stop repeating the same AI conversations. **Save them as Switches or Workflows**
 
 **Workflows** - Chain multiple actions into reusable pipelines using IBL syntax:
 ```
-[source:search]("AI news") {type: "news"}
-  >> [system:agent_ask_sync]("컨텐츠/컨텐츠") {message: "Summarize these articles"}
-  >> [system:file]("news_report.html") {format: "html"}
+[sense:web_search]("AI news")
+  >> [others:ask_sync]("content/content") {message: "Summarize these articles"}
+  >> [self:file]("news_report.html") {format: "html"}
 ```
 
 **Features:**
 - **Natural language or IBL code** - Write prompts or program action chains
-- **Scheduled execution** - Run daily at 8 AM, weekly on Fridays
+- **Scheduled execution** - Run daily at 8 AM, weekly on Fridays via the new **Scheduler**
 - **Agent assignment** - Specify which agent handles the task
 - **Pipeline operators** - Sequential (>>), Parallel (&), Fallback (??)
-- **Alias execution** - Run saved workflows by name: `[system:run]("kinsight")`
+- **Alias execution** - Run saved workflows by name: `[self:run]("kinsight")`
 
-### 3. P2P Network (IndieNet)
+### 3. P2P Network (IndieNet) & Remote Access
 
-Connect with others through decentralized, censorship-resistant networks.
+Connect with others through decentralized networks and access your system from anywhere.
 
-- **Nostr Protocol** - No central server, no data collection
-- **Public Board** - Share and discover with other IndieBiz users
-- **Encrypted DMs** - Private messages only you and the recipient can read
-- **Business Network** - Manage partners, auto-respond to inquiries
+- **Nostr Protocol** - No central server, no data collection for decentralized DMs and public boards
+- **Remote Access (Phase 25)** - Cloudflare Tunnel based Remote Finder (file streaming) and Remote Launcher (AI control/switches)
+- **Business Network** - Manage partners, auto-respond to inquiries with **Auto-response V3** (Tool-use based)
 
 ---
 
-## Why IndieBiz OS?
+## Unified AI Architecture (Phase 25: 5-Node Integration)
 
-### The Problem with "Universal AI"
+IndieBiz OS features a unified AI core where the **System AI** and **Project Agents** share the same codebase and tool structure.
 
-Most AI systems try to be one all-knowing assistant. This approach fails because:
-
-- **Context pollution**: Your medical consultation gets mixed with your hardware projects
-- **No personalization**: Every AI sounds the same, generic responses
-- **No automation**: You must manually trigger every action
-- **Platform lock-in**: Your data lives on their servers
-
-### The IndieBiz Approach
-
-> "Many purpose-built AIs beat one universal AI"
-
-![IndieBiz OS Launcher](fig1.jpg)
-*Project folders as an OS desktop - each folder is an isolated AI workspace*
-
-![Agent Team](fig2.jpg)
-*Medical project with specialized agents (Internal Medicine, Urology, Cardiology, Family Medicine)*
-
-![Tool Packages](fig3.jpg)
-*Dynamic action loading - agents only see the actions they need*
-
-![Business Manager](fig4.jpg)
-*Business network with auto-response toggle and neighbor management*
-
-![IndieNet](fig5.jpg)
-*Decentralized communication via Nostr protocol*
-
-```
-IndieBiz OS
-|-- Medical Project
-|   |-- Dr. Kim (empathetic internist)
-|   |-- Dr. Park (detail-oriented urologist)
-|   +-- Dr. Lee (family medicine)
-|
-|-- Real Estate Project
-|   |-- Tax Advisor (conservative, thorough)
-|   +-- Legal Advisor (fact-focused)
-|
-+-- Startup Project
-    |-- Marketing Agent (creative)
-    +-- Developer Agent (practical)
-```
-
-Each project is **completely isolated**. Delete a project, and everything related disappears cleanly.
+- **execute_ibl 단일 도구**: All AI entities use a single `execute_ibl` tool to access the system's capabilities.
+- **Node Abstraction**: 5 nodes (sense, self, limbs, others, engines) with 321 atomic actions.
+- **Action Routing**: Dual-path routing via `api_engine` (automatic API discovery) and `handler` (complex logic).
+- **User Interaction as self**: Questions (`[self:ask_user]`), Todos (`[self:todo]`), Approvals (`[self:approve]`), and Notifications (`[self:notify_user]`) are all integrated into the `self` node.
 
 ---
 
 ## Core Architecture: IBL (IndieBiz Logic)
 
-IndieBiz OS uses a domain-specific language called **IBL** as its unified interface between AI agents and the system. Instead of giving each agent hundreds of individual tools, every agent receives a **single tool** (`execute_ibl`) and an XML-structured environment prompt describing available nodes and actions.
+IndieBiz OS uses a domain-specific language called **IBL** as its unified interface.
 
-### 6 Nodes, 321 Atomic Actions
+### 5 Nodes, 321 Atomic Actions
 
-```
-source    (105 actions) - Data retrieval (web, finance, photos, blog, memory, health)
-interface  (79 actions) - UI automation (browser / Android / macOS desktop)
-system     (64 actions) - System management, workflows, files, notifications, code execution
-forge      (46 actions) - Content creation (slides, video, charts, images, music, websites)
-stream     (18 actions) - Media playback (YouTube / internet radio)
-messenger   (9 actions) - Contacts and messaging
-```
+| Node | Actions | Description |
+|------|---------|-------------|
+| **sense** | 105 | Data retrieval (web, finance, photos, blog, memory, health, real estate) |
+| **self** | 57 | System management, workflows, files, notifications, code execution, health |
+| **limbs** | 97 | UI automation (browser, Android, macOS), media playback (YouTube, radio) |
+| **others** | 16 | Collaboration, delegation, email, contacts, messaging |
+| **engines** | 46 | Content creation (slides, video, charts, images, music, websites, architecture) |
 
 ### How It Works
 
 ```
 User: "Search AI news and save to file"
          |
-AI decides: execute_ibl(code='[source:web_search]("AI news") >> [system:file]("result.md")')
+AI decides: execute_ibl(code='[sense:web_search]("AI news") >> [self:file]("result.md")')
          |
-IBL Engine: parse -> dispatch to handler -> return result
+IBL Engine: parse -> dispatch to handler/api_engine -> return result
 ```
 
 **Key design principles:**
 - **One tool, one language** - AI agents learn one syntax, not 300+ tool schemas
-- **Dynamic tool definition** - `execute_ibl` description is generated at runtime from `ibl_nodes.yaml`, so it always reflects installed packages
-- **Per-agent filtering** - Each agent's `allowed_nodes` restricts which nodes appear in the tool definition, system prompt, and runtime — three consistent layers
-- **Usage RAG** - Past successful IBL examples are searched and injected as references, reducing agent trial-and-error (13 rounds → 3 rounds)
-- **Atomic actions** - 97% of actions are single API/DB calls (true atoms)
-- **Verb abstraction** - Common verbs like `search`, `get`, `create` route to specific actions by type
-- **Two ways to extend** - Save IBL pipelines as workflows (no code) or write Python packages (new atoms)
-
-### Workflows as Reusable Actions
-
-```yaml
-# data/workflows/kinsight.yaml
-name: "kinsight"
-pipeline: >
-  [source:search]("recent posts") {type: "blog", count: 10}
-  >> [system:agent_ask_sync]("content/content") {message: "Analyze and write insight report"}
-  >> [system:file]("kinsight_report.html") {format: "html"}
-```
-
-Execute by name: `[system:run]("kinsight")`
+- **Dynamic tool definition** - `execute_ibl` description is generated at runtime
+- **Per-agent filtering** - Each agent's `allowed_nodes` restricts access
+- **Usage RAG** - Past successful IBL examples are searched and injected as references
+- **Atomic actions** - 97% of actions are single API/DB calls
 
 ---
 
 ## Core Features
 
 ### Project System (Unlimited Workspaces)
-
-- Create as many projects as you need
+- Create as many projects as you need (24 active projects currently)
 - Each project has its own conversation history, agents, and context
-- Copy projects to create variations
-- Delete projects without affecting others
 
 ### Agent Teams (Delegation Chain)
-
 - Define multiple agents per project with different personalities
-- Agents can delegate tasks to each other (async or sync)
-- Parallel delegation: one agent can dispatch to multiple agents simultaneously
-- Automatic result reporting back through the chain
-
-### Dynamic Action Loading
-
-- Actions are filtered **per-agent** via `allowed_nodes` in agents.yaml
-- The `execute_ibl` tool definition itself is dynamically generated — each agent's tool description only shows their permitted nodes
-- Add hundreds of actions without overwhelming any single agent
-- Each specialist only sees the nodes they need
-- XML-structured environment prompt with verb tables and action catalogs
+- Agents can delegate tasks to each other (async or sync) or even across projects
 
 ### IBL Usage RAG (Learning from Experience)
-
-Agents improve over time through a RAG (Retrieval-Augmented Generation) system that learns from successful IBL executions:
-
+Agents improve over time through a RAG system that learns from successful IBL executions:
 - **Usage Dictionary**: ~970 examples (synthetic data + auto-promoted execution logs)
-- **Hybrid Search**: 70% Semantic (ko-sroberta, 768-dim) + 30% BM25 (FTS5)
-- **Prompt Injection**: Top 3 similar examples injected as XML references when user message arrives
-- **Auto-Learning**: Successful tool executions are automatically promoted to usage examples
-- **Auto-Generation**: New packages automatically generate baseline usage examples on install
+- **Hybrid Search**: Semantic (ko-sroberta) + BM25 (FTS5)
+- **Prompt Injection**: Top 3 similar examples injected as XML references
 
-```
-User: "Search Daejeon apartment prices"
-         |
-    [RAG Search] → Similar past examples found
-         |
-    <ibl_references>
-      <ref intent="apartment trade data" code='[source:apt_trade]("region_code")' score="0.88"/>
-    </ibl_references>
-         |
-    AI generates correct IBL on first try (no trial-and-error)
-```
-
-**Measured impact**: Agent rounds reduced from 13 to 3 for real estate queries.
-
-### Self-Contained Action Packages (35 installed)
-
-Each package is **self-contained**: it includes its own `ibl_actions.yaml` declaring which IBL actions it provides. When a package is installed, its actions are **automatically registered** into `ibl_nodes.yaml` and baseline usage examples are **automatically generated** for the RAG system. When uninstalled, actions are **automatically removed**. This means:
-
-- **No manual YAML editing** — install a package and its actions are immediately available
-- **Clean uninstall** — removing a package cleanly removes only its actions
-- **Instant RAG coverage** — new actions get baseline usage examples on install (no cold-start gap)
-- **Shareable via Nostr** — packages can be shared over the P2P network; recipients just install and actions work
-- **Provenance tracking** — `_ibl_provenance.yaml` tracks which package owns each action
-
-| Package | Description |
-|---------|-------------|
-| android | Android device management (adb) |
-| blog | Blog RAG search and insights |
-| browser-action | Playwright-based browser automation (click/input/scroll/extract) |
-| business | Business relationships and contact (neighbor) management |
-| cctv | CCTV monitoring and management |
-| cloudflare | Cloudflare services (Pages, Workers, R2, D1, Tunnel) |
-| computer-use | Computer use automation (screen capture, mouse/keyboard control) |
-| culture | Korean cultural data (performances, libraries, exhibitions) |
-| health-record | Personal health data management |
-| investment | Global financial data (KRX, DART, SEC, Yahoo Finance) |
-| kosis | Korean Statistics (KOSIS) data retrieval |
-| legal | Korean legal information search (laws, precedents, regulations) |
-| location-services | Location-based services (weather, restaurants, directions, travel) |
-| media_producer | HTML-based slides (12 themes), video production, AI image generation |
-| music-composer | ABC notation composing, MIDI generation, audio conversion |
-| nodejs | JavaScript/Node.js execution |
-| pc-manager | File and storage management, system analysis |
-| photo-manager | Photo library management |
-| python-exec | Python code execution |
-| radio | Internet radio search and playback (Radio Browser API + Korean broadcasters) |
-| real-estate | Korean real estate data |
-| remotion-video | React/Remotion-based programmatic video generation |
-| shopping-assistant | Shopping search (Naver, Danawa price comparison) |
-| startup | Korean startup support |
-| study | Study helper and paper summarization |
-| system_essentials | File management, todo, plan mode, neighbor lookup |
-| visualization | Charts (line, bar, candlestick, pie, scatter, heatmap) |
-| web | Web search, crawling, news, newspaper generation, bookmarks |
-| web-builder | Website builder and generator |
-| youtube | YouTube video/audio management |
-
-### Scheduler, Switches & Workflows
-
-- **Switches**: Save any prompt + agent as a reusable one-click automation
-- **Workflows**: Chain IBL actions into reusable pipelines (with AI thinking steps via `agent_ask_sync`)
-- **Scheduler**: Run switches/workflows automatically with cron expressions
-- **Examples**:
-  - Daily news summary at 9 AM
-  - Blog insight report generation
-  - Weekly investment analysis
-
-### Remote Access (Finder & Launcher)
-
-Control your home server from anywhere via Cloudflare Tunnel:
-
-**Remote Finder** (`/nas/app`) - Personal NAS + Music:
-- Browse files with Finder-style web interface
-- Stream videos with seek support
-- Download files securely
-- Protect specific directories only
-- **Music Streaming**: Search YouTube and stream audio directly
-
-**Remote Launcher** (`/launcher/app`) - AI Control:
-- Chat with System AI remotely
-- Control project agents from your phone
-- Execute switches with one tap
-- Mobile-friendly dark theme UI
-
-```
-Your Phone -> Cloudflare Edge -> Tunnel -> IndieBiz OS
-                 (HTTPS)        (Secure)    (localhost:8765)
-                                              |-- /nas/app (Files + Music)
-                                              +-- /launcher/app (AI Control)
-```
-
-### Custom Web Apps
-
-Build and serve web apps directly from IndieBiz OS:
-
-- **Inline Web Apps**: API endpoints can serve complete HTML/CSS/JS applications
-- **No Separate Deployment**: Web apps run alongside IndieBiz backend
-- **Cloudflare Integration**: Expose apps globally via Tunnel, or deploy to Pages/Workers
-- **AI-Generated**: Agents can create web apps (dashboards, tools, games) on request
-
-### Business Network
-
-- **Gmail Integration**: Receive and process emails
-- **Nostr Integration**: Decentralized messaging
-- **Neighbor Management**: Track business partners
-- **Auto-Response V3**: Single AI call with Tool Use for judgment/search/send
-
-### Multi-Chat Rooms
-
-- **Separate windows**: Each chat room opens in its own window
-- **Summon agents**: Bring agents from any project into a conversation
-- **@mentions**: Target specific agents with @name syntax
-
-### System AI (Meta-Controller)
-
-- Sits above all projects with access to all 6 IBL nodes
-- Manages system-wide settings
-- References system documentation as long-term memory
-- Can delegate tasks to any project agent
+### Advanced Automation
+- **Scheduler**: Automate repetitive tasks with cron-like scheduling
+- **Auto-response V3**: Intelligent message handling using Tool-use based judgment
+- **Remote Finder/Launcher**: Access your files and control your AI remotely via secure tunnels
 
 ---
 
-## Data Sovereignty
+## Technical Stack
 
-**Your data stays on your computer.**
-
-| Cloud AI | IndieBiz OS |
-|----------|-------------|
-| Data on their servers | Data on your PC |
-| Internet required | Offline capable (Ollama) |
-| Platform lock-in | Freedom of choice |
-| Subscription fees | Pay per API call (or free with local LLMs) |
+- **Backend**: Python FastAPI (19+ module routers, AI Agent Core, System AI Core)
+- **Frontend**: Electron + React (Real-time streaming via WebSocket)
+- **AI Providers**: Anthropic (Claude), OpenAI (GPT), Google (Gemini), Ollama (Local)
+- **Database**: SQLite (Business, Multi-chat, IBL RAG)
+- **Deployment**: Local execution with optional Cloudflare Tunnel for remote access
 
 ---
-
-## Architecture
-
-```
-indiebizOS/
-|-- backend/              # Python FastAPI (port 8765)
-|   |-- api.py           # Main server (21 API routers)
-|   |-- ibl_engine.py    # IBL dispatcher (node/action routing)
-|   |-- ibl_parser.py    # IBL syntax parser (pipelines, parallel, fallback)
-|   |-- ibl_access.py    # Node access control + XML environment builder
-|   |-- ai_agent.py      # Agent core (single execute_ibl tool)
-|   |-- agent_runner.py  # Delegation chain executor
-|   |-- tool_loader.py   # Dynamic execute_ibl tool builder + package loader
-|   |-- ibl_action_manager.py # Auto-register/unregister actions on package install/uninstall
-|   |-- ibl_usage_db.py  # IBL usage dictionary DB + hybrid search engine
-|   |-- ibl_usage_rag.py # RAG reference module (search → XML → prompt injection)
-|   |-- ibl_usage_generator.py # Synthetic usage data generator + package auto-generation
-|   |-- package_manager.py # Package install/uninstall (triggers action + usage registration)
-|   |-- workflow_engine.py # Workflow CRUD + pipeline executor
-|   |-- system_ai.py     # System AI core
-|   |-- scheduler.py     # Task scheduler
-|   |-- auto_response.py # Auto-response service
-|   +-- prompt_builder.py # Agent prompt + IBL environment injection
-|
-|-- frontend/            # Electron + React (TypeScript)
-|   |-- electron/        # Main/preload
-|   +-- src/             # React components
-|
-|-- data/
-|   |-- ibl_nodes.yaml   # IBL language definition (6 nodes, 321 actions, verbs)
-|   |-- ibl_usage.db     # Usage dictionary DB (~970 examples + execution logs + vector index)
-|   |-- _ibl_provenance.yaml # Action ownership tracking (action -> package mapping)
-|   |-- packages/        # Action packages (Python handlers)
-|   |   |-- installed/   # Active packages (35 tools + 9 extensions)
-|   |   |   +-- tools/*/ibl_actions.yaml  # Per-package action declarations
-|   |   +-- not_installed/ # Available packages
-|   |-- workflows/       # Saved IBL workflows (YAML)
-|   +-- system_docs/     # System AI memory
-|
-+-- projects/            # User projects (24 active)
-    +-- {project_id}/
-        |-- agents.yaml  # Agent definitions (AI config, allowed_nodes)
-        +-- conversations.db # Conversation history
-```
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.10+
-- Node.js 18+
-- API keys for AI providers (Claude, Gemini, etc.) or Ollama for local LLMs
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/kangkukjin/indiebizOS.git
-cd indiebizOS
-
-# Backend setup
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Frontend setup
-cd ../frontend
-npm install
-```
-
-### Running
-
-```bash
-# Option 1: Use start script
-./start.sh
-
-# Option 2: Run separately
-# Terminal 1 - Backend
-cd backend && python api.py
-
-# Terminal 2 - Frontend
-cd frontend && npm run electron:dev
-```
-
-### Building
-
-```bash
-cd frontend
-
-# macOS
-npm run prepare:python:mac   # Bundle Python runtime
-npm run electron:build:mac
-
-# Windows
-npm run prepare:python:win   # Bundle Python runtime
-npm run electron:build:win
-```
-
-**Data Storage (Production):**
-- macOS: `~/Library/Application Support/IndieBiz/`
-- Windows: `%APPDATA%/IndieBiz/`
-- Data persists across app updates
-
----
-
-## Philosophy
-
-### Human-in-the-Loop Intelligence
-
-We don't believe in a single, all-knowing AGI. Instead:
-
-> **Practical AI = Federation of Specialized AIs + Human Oversight**
-
-```
-        +----------------------------------+
-        |            HUMAN                 |
-        |   (Connector, Judge, Owner)      |
-        +--------------+------------------+
-                       |
-        +--------------+--------------+
-        |              |              |
-   +---------+   +---------+   +---------+
-   | Medical |   | Finance |   | Startup |
-   |  Team   |   |  Team   |   |  Team   |
-   +---------+   +---------+   +---------+
-```
-
-The human is part of the system:
-- Connects insights across domains
-- Makes final decisions
-- Takes responsibility
-- Provides ethical judgment
-
-### Compared to Alternatives
-
-| Feature | Claude Desktop | ChatGPT | IndieBiz OS |
-|---------|---------------|---------|-------------|
-| Custom personas | Limited | Limited | **Full control** |
-| One-click automation | No | No | **Yes (Switches + Workflows)** |
-| Project isolation | No | No | **Yes** |
-| Unified action language | No | No | **Yes (IBL)** |
-| Scheduler | No | No | **Yes** |
-| P2P Network | No | No | **Yes (IndieNet)** |
-| Local data | No | No | **Yes** |
-| Offline capable | No | No | **Yes (Ollama)** |
-
----
-
-## Status
-
-**This project is under active development.**
-
-- 24 active projects in production use
-- 6 IBL nodes with 321 atomic actions
-- 35 installed action packages + 9 extension packages
-- Self-contained packages with `ibl_actions.yaml` — automatic action registration on install/uninstall
-- Dynamic `execute_ibl` tool definition generated from `ibl_nodes.yaml` at runtime
-- Per-agent node filtering across tool definition, system prompt, and runtime (3-layer consistency)
-- IBL Usage RAG with ~970 examples — hybrid search (semantic + BM25) for reference injection
-- Auto-learning from successful executions + auto-generation on package install
-- IBL workflow engine with pipeline operators (>>, &, ??)
-- Synchronous agent delegation for AI-powered workflow steps
-- XML-structured environment prompts for optimal AI recognition
-- Remote Finder + Launcher via Cloudflare Tunnel
-
-### Your OS, Your Way
-
-IndieBiz OS is designed to be **customized by each user**.
-
-- **Fork and modify**: This is your personal operating system
-- **Add your own actions**: Create IBL workflows (no code) or Python packages with `ibl_actions.yaml` (auto-registered on install)
-- **Share packages via Nostr**: Publish packages to the P2P network; recipients install and actions work immediately
-- **Define your own personas**: Build agents that match your needs
-- **No prescribed structure**: Organize however makes sense to you
-
-The goal is not a product everyone uses the same way, but a foundation you adapt to your unique needs.
-
-Contributions and feedback welcome.
-
----
-
-## License
-
-MIT License
-
----
-
-*IndieBiz OS - Design. Automate. Connect.*
+*IndieBiz OS - Your Personal AI Assistant Team*

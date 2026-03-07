@@ -1,4 +1,4 @@
-node: source
+node: sense
 actions:
   weather:
     description: 날씨 조회 (API Ninjas)

@@ -4,49 +4,38 @@ ibl_parser.py - IBL 텍스트 파서
 IBL 코드 텍스트를 파싱하여 실행 가능한 step 리스트로 변환합니다.
 
 문법:
-    # 단일 명령
-    [node:action](target) { "key": "value" }
+    # 단일 명령 — 모든 값은 named parameter
+    [node:action]{key: "value"}
 
     # 파이프라인 (>> 로 연결, 순차 실행)
-    [source:web_search]("AI 뉴스") >> [system:file]("결과.md")
+    [sense:web_search]{query: "AI 뉴스"} >> [self:file]{path: "결과.md"}
 
     # 병렬 실행 (& 로 연결, 동시 실행)
-    [source:web_search]("AI") & [source:search_news]("부동산")
+    [sense:web_search]{query: "AI"} & [sense:search_news]{query: "부동산"}
 
     # Fallback (?? 로 연결, 실패 시 대체)
-    [source:web_search](primary) ?? [source:crawl](backup)
-
-    # 혼합 파이프라인
-    [source:web_search]("AI") & [source:search_news]("부동산") >> [system:file]("결과.md")
-    [source:web_search](main) ?? [source:crawl](fallback) >> [messenger:send](telegram)
+    [sense:web_search]{query: "main"} ?? [sense:crawl]{url: "backup"}
 
     # 멀티라인 파이프라인
-    [source:web_search](search_laws) { "query": "근로기준법" }
-      >> [system:file]("법률검색.md")
-      >> [messenger:send]("telegram") { "to": "me" }
+    [sense:web_search]{query: "근로기준법"}
+      >> [self:file]{path: "법률검색.md"}
+      >> [others:channel_send]{channel_type: "telegram", to: "me"}
 
     # 변수 바인딩
-    $result = [source:web_search]("AI 뉴스")
-    [messenger:send]("telegram") { "body": "$result" }
+    $result = [sense:web_search]{query: "AI 뉴스"}
+    [others:channel_send]{channel_type: "telegram", body: "$result"}
+
+    # (target) 문법은 폐지됨 — 사용 시 IBLSyntaxError 발생
 
 사용법:
     from ibl_parser import parse, parse_step
 
     # 파이프라인 파싱
-    steps = parse('[source:web_search]("AI") >> [system:file]("out.md")')
-    # → [{"_node": "source", ...}, {"_node": "system", ...}]
-
-    # 병렬 파싱
-    steps = parse('[source:web_search]("AI") & [source:search_news]("부동산")')
-    # → [{"_parallel": True, "branches": [step1, step2]}]
-
-    # Fallback 파싱
-    steps = parse('[source:web_search](main) ?? [source:crawl](backup)')
-    # → [{"_fallback_chain": [step1, step2]}]
+    steps = parse('[sense:web_search]{query: "AI"} >> [self:file]{path: "out.md"}')
 
     # 단일 명령 파싱
-    step = parse_step('[source:web_search](search_laws) { "query": "임대차" }')
-    # → {"_node": "source", "action": "web_search", "target": "search_laws", "params": {"query": "임대차"}}
+    step = parse_step('[sense:web_search]{query: "임대차"}')
+    # → {"_node": "sense", "action": "web_search", "params": {"query": "임대차"}}
 """
 
 import re
@@ -122,13 +111,13 @@ class IBLSyntaxError(Exception):
 
 # === 내부 구현 ===
 
-# 단일 명령 패턴: [node:action](target)
+# 단일 명령 패턴: [node:action]{params}
 # - [node:action] 필수
-# - (target) 선택
-# - { params } 는 regex가 아닌 _extract_bracket으로 추출 (따옴표 인식)
+# - {params} 는 regex가 아닌 _extract_bracket으로 추출
+# - (target)은 감지하여 에러 메시지 제공 (폐지됨)
 _STEP_PATTERN = re.compile(
     r'\[(\w+):(\w+)\]'           # [node:action]
-    r'(?:\s*\(([^)]*)\))?',      # (target) - 선택적
+    r'(?:\s*\(([^)]*)\))?',      # (target) - 감지용 (사용 시 에러)
     re.DOTALL
 )
 
@@ -411,10 +400,7 @@ def _parse_step(text: str) -> Optional[Dict]:
     """
     단일 IBL 명령 파싱
 
-    [node:action](target) { params }
-
-    AI가 [node:action]("target", {"key": "val"}) 형태로 params를 괄호 안에
-    넣는 경우도 자동 분리하여 처리합니다.
+    [node:action]{params}
 
     Returns:
         {_node, action, target, params} 또는 None
@@ -430,16 +416,17 @@ def _parse_step(text: str) -> Optional[Dict]:
     action = m.group(2)
     target_raw = m.group(3)
 
-    # target 처리: 따옴표 제거
-    target = ""
-    inline_params = {}
+    # (target) 구문 감지 → 에러 (폐지됨)
     if target_raw is not None:
-        # AI가 ("target", {params}) 형태로 쓴 경우 분리
-        split = _split_target_and_params(target_raw)
-        if split:
-            target, inline_params = split
-        else:
-            target = target_raw.strip().strip('"').strip("'")
+        stripped = target_raw.strip().strip('"').strip("'")
+        if stripped:
+            raise IBLSyntaxError(
+                f"(target) 문법은 폐지되었습니다. params를 사용하세요.\n"
+                f"  잘못된 코드: [{node}:{action}](\"{stripped}\")\n"
+                f"  올바른 코드: [{node}:{action}]{{key: \"{stripped}\"}}\n"
+                f"  (key는 액션에 맞는 파라미터 이름으로 바꾸세요)"
+            )
+        # 빈 괄호 ()는 허용 (파라미터 없는 호출)
 
     # params 처리: regex 이후 남은 텍스트에서 { 를 찾아 _extract_bracket으로 추출
     params = {}
@@ -451,87 +438,13 @@ def _parse_step(text: str) -> Optional[Dict]:
         elif isinstance(extracted, str):
             params = _parse_params(extracted)
 
-    # 인라인 params 병합 (외부 params가 우선)
-    if inline_params:
-        for k, v in inline_params.items():
-            if k not in params:
-                params[k] = v
-
     return {
         "_node": node,
         "action": action,
-        "target": target,
+        "target": "",
         "params": params,
     }
 
-
-def _split_target_and_params(target_raw: str) -> Optional[tuple]:
-    """
-    target_raw에서 인라인 params를 분리.
-
-    AI가 [node:action]("target", {"key": "val"}) 형태로 쓴 경우:
-        "STK", {"start_date": "2026-02-26"} → ("STK", {"start_date": ...})
-
-    일반 target이면 None 반환.
-    """
-    # { 위치 찾기 (문자열 리터럴 내부 무시)
-    brace_pos = -1
-    in_string = False
-    string_char = None
-    i = 0
-    while i < len(target_raw):
-        ch = target_raw[i]
-        if not in_string:
-            if ch in ('"', "'"):
-                in_string = True
-                string_char = ch
-            elif ch == '{':
-                brace_pos = i
-                break
-        else:
-            if ch == '\\' and i + 1 < len(target_raw):
-                i += 1  # 이스케이프 건너뛰기
-            elif ch == string_char:
-                in_string = False
-        i += 1
-
-    if brace_pos < 1:
-        return None
-
-    # { 앞에 쉼표가 있는지 확인
-    before = target_raw[:brace_pos].rstrip()
-    if not before.endswith(','):
-        return None
-
-    # target 추출 (쉼표 앞)
-    actual_target = before[:-1].strip().strip('"').strip("'")
-
-    # params JSON 추출 ({ 부터 끝까지)
-    params_str = target_raw[brace_pos:].strip()
-
-    # JSON 파싱
-    try:
-        parsed = json.loads(params_str)
-        if isinstance(parsed, dict):
-            return (actual_target, parsed)
-    except (json.JSONDecodeError, ValueError):
-        pass
-
-    # 작은따옴표 변환 후 재시도
-    try:
-        converted = params_str.replace("'", '"')
-        parsed = json.loads(converted)
-        if isinstance(parsed, dict):
-            return (actual_target, parsed)
-    except (json.JSONDecodeError, ValueError):
-        pass
-
-    # 느슨한 파싱
-    parsed = _parse_relaxed_params(params_str)
-    if parsed:
-        return (actual_target, parsed)
-
-    return None
 
 
 def _parse_params(text: str) -> dict:
@@ -806,14 +719,12 @@ def format_step(step: dict) -> str:
     # 일반 step
     node = step.get("_node", step.get("node", "?"))
     action = step.get("action", "?")
-    target = step.get("target", "")
     params = step.get("params", {})
 
     result = f"[{node}:{action}]"
-    if target:
-        result += f'("{target}")'
+    # target은 더 이상 출력하지 않음 (params에 병합됨)
     if params:
-        result += " " + json.dumps(params, ensure_ascii=False)
+        result += json.dumps(params, ensure_ascii=False)
 
     return result
 
@@ -837,39 +748,40 @@ def format_pipeline(steps: list) -> str:
 if __name__ == "__main__":
     print("=== IBL Parser Tests ===\n")
 
-    # 1. 단일 명령
-    s1 = parse_step('[api:call](search_laws) { "query": "근로기준법" }')
+    # 1. 단일 명령 (named params)
+    s1 = parse_step('[limbs:call]{tool: "search_laws", query: "근로기준법"}')
     print(f"1. 단일: {s1}")
-    assert s1["_node"] == "api"
+    assert s1["_node"] == "limbs"
     assert s1["action"] == "call"
-    assert s1["target"] == "search_laws"
+    assert s1["params"]["tool"] == "search_laws"
     assert s1["params"]["query"] == "근로기준법"
 
-    # 2. target 없는 명령
-    s2 = parse_step('[api:list]')
-    print(f"2. target 없음: {s2}")
-    assert s2["_node"] == "api"
+    # 2. params 없는 명령
+    s2 = parse_step('[limbs:list]')
+    print(f"2. params 없음: {s2}")
+    assert s2["_node"] == "limbs"
     assert s2["action"] == "list"
     assert s2["target"] == ""
+    assert s2["params"] == {}
 
-    # 3. params 없는 명령
-    s3 = parse_step('[web:search]("AI 뉴스")')
-    print(f"3. params 없음: {s3}")
-    assert s3["target"] == "AI 뉴스"
-    assert s3["params"] == {}
+    # 3. 단일 param
+    s3 = parse_step('[sense:web_search]{query: "AI 뉴스"}')
+    print(f"3. 단일 param: {s3}")
+    assert s3["params"]["query"] == "AI 뉴스"
+    assert s3["target"] == ""
 
     # 4. 파이프라인
-    p1 = parse('[web:search]("AI") >> [fs:write]("결과.md")')
+    p1 = parse('[sense:web_search]{query: "AI"} >> [self:file]{path: "결과.md"}')
     print(f"4. 파이프라인: {len(p1)} steps")
     assert len(p1) == 2
-    assert p1[0]["_node"] == "web"
-    assert p1[1]["_node"] == "fs"
+    assert p1[0]["_node"] == "sense"
+    assert p1[1]["_node"] == "self"
 
     # 5. 멀티라인 파이프라인
     code5 = """
-    [api:call](search_laws) { "query": "임대차" }
-      >> [fs:write]("법률.md")
-      >> [channel:send]("telegram") { "to": "me" }
+    [limbs:call]{tool: "search_laws", query: "임대차"}
+      >> [self:file]{path: "법률.md"}
+      >> [others:channel_send]{channel_type: "telegram", to: "me"}
     """
     p2 = parse(code5)
     print(f"5. 멀티라인: {len(p2)} steps")
@@ -877,7 +789,7 @@ if __name__ == "__main__":
     assert p2[2]["params"]["to"] == "me"
 
     # 6. 느슨한 params (따옴표 없는 키)
-    s6 = parse_step("[api:call](search_laws) { query: \"임대차\", page: 1 }")
+    s6 = parse_step('[limbs:call]{tool: "search_laws", query: "임대차", page: 1}')
     print(f"6. 느슨한 params: {s6}")
     assert s6["params"]["query"] == "임대차"
     assert s6["params"]["page"] == 1
@@ -885,9 +797,9 @@ if __name__ == "__main__":
     # 7. 주석 + 여러 명령문
     code7 = """
     # 첫 번째 검색
-    [web:search]("뉴스")
+    [sense:web_search]{query: "뉴스"}
     # 두 번째 검색
-    [api:call](search_laws) { "query": "민법" }
+    [limbs:call]{tool: "search_laws", query: "민법"}
     """
     p3 = parse(code7)
     print(f"7. 여러 명령: {len(p3)} steps")
@@ -911,50 +823,50 @@ if __name__ == "__main__":
     except IBLSyntaxError as e:
         print(f"10. 문법 에러: {e}")
 
-    # === Phase 9: 병렬 & Fallback 테스트 ===
-    print("\n--- Phase 9 Tests ---")
+    # === 병렬 & Fallback 테스트 ===
+    print("\n--- 병렬 & Fallback Tests ---")
 
     # 11. 병렬 실행 (&)
-    p11 = parse('[web:search]("AI") & [web:news]("부동산")')
+    p11 = parse('[sense:web_search]{query: "AI"} & [sense:search_news]{query: "부동산"}')
     print(f"11. 병렬: {p11}")
     assert len(p11) == 1
     assert p11[0]["_parallel"] == True
     assert len(p11[0]["branches"]) == 2
-    assert p11[0]["branches"][0]["_node"] == "web"
-    assert p11[0]["branches"][0]["action"] == "search"
-    assert p11[0]["branches"][1]["action"] == "news"
+    assert p11[0]["branches"][0]["_node"] == "sense"
+    assert p11[0]["branches"][0]["action"] == "web_search"
+    assert p11[0]["branches"][1]["action"] == "search_news"
 
     # 12. 3개 병렬
-    p12 = parse('[web:search]("A") & [web:search]("B") & [web:search]("C")')
+    p12 = parse('[sense:web_search]{query: "A"} & [sense:web_search]{query: "B"} & [sense:web_search]{query: "C"}')
     print(f"12. 3개 병렬: branches={len(p12[0]['branches'])}")
     assert p12[0]["_parallel"] == True
     assert len(p12[0]["branches"]) == 3
 
     # 13. Fallback (??)
-    p13 = parse('[api:call](primary) ?? [api:call](backup)')
+    p13 = parse('[limbs:call]{tool: "primary"} ?? [limbs:call]{tool: "backup"}')
     print(f"13. Fallback: {p13}")
     assert len(p13) == 1
     assert "_fallback_chain" in p13[0]
     assert len(p13[0]["_fallback_chain"]) == 2
 
     # 14. 3개 Fallback 체인
-    p14 = parse('[api:call](a) ?? [api:call](b) ?? [api:call](c)')
+    p14 = parse('[limbs:call]{tool: "a"} ?? [limbs:call]{tool: "b"} ?? [limbs:call]{tool: "c"}')
     print(f"14. 3개 Fallback: chain={len(p14[0]['_fallback_chain'])}")
     assert len(p14[0]["_fallback_chain"]) == 3
 
     # 15. 병렬 >> 순차 혼합
-    p15 = parse('[web:search]("AI") & [web:news]("부동산") >> [fs:write]("결과.md")')
+    p15 = parse('[sense:web_search]{query: "AI"} & [sense:search_news]{query: "부동산"} >> [self:file]{path: "결과.md"}')
     print(f"15. 병렬+순차: {len(p15)} steps")
     assert len(p15) == 2
     assert p15[0]["_parallel"] == True
-    assert p15[1]["_node"] == "fs"
+    assert p15[1]["_node"] == "self"
 
     # 16. Fallback >> 순차 혼합
-    p16 = parse('[api:call](main) ?? [api:call](backup) >> [channel:send](telegram)')
+    p16 = parse('[limbs:call]{tool: "main"} ?? [limbs:call]{tool: "backup"} >> [others:channel_send]{channel_type: "telegram"}')
     print(f"16. Fallback+순차: {len(p16)} steps")
     assert len(p16) == 2
     assert "_fallback_chain" in p16[0]
-    assert p16[1]["_node"] == "channel"
+    assert p16[1]["_node"] == "others"
 
     # 17. 역변환 (병렬)
     f17 = format_step(p11[0])
@@ -972,51 +884,37 @@ if __name__ == "__main__":
     assert '&' in f19
     assert '>>' in f19
 
-    # === 인라인 params 테스트 (AI가 params를 괄호 안에 넣는 경우) ===
-    print("\n--- Inline Params Tests ---")
+    # === (target) 폐지 확인 테스트 ===
+    print("\n--- (target) 폐지 확인 Tests ---")
 
-    # 20. 인라인 params: ("target", {params})
-    s20 = parse_step('[source:kr_investor]("STK", {"start_date": "2026-02-26"})')
-    print(f"20. 인라인 params: {s20}")
-    assert s20["_node"] == "source"
-    assert s20["action"] == "kr_investor"
-    assert s20["target"] == "STK"
-    assert s20["params"]["start_date"] == "2026-02-26"
+    # 20. (target) 사용 시 에러 발생
+    try:
+        parse_step('[sense:web_search]("AI 뉴스")')
+        assert False, "IBLSyntaxError가 발생해야 함"
+    except IBLSyntaxError as e:
+        print(f"20. target 에러: {e}")
+        assert "폐지" in str(e)
 
-    # 21. 인라인 params 병렬 파이프라인
-    p21 = parse('[source:kr_investor]("STK", {"start_date": "2026-02-26"}) & [source:kr_investor]("KSQ", {"start_date": "2026-02-26"})')
-    print(f"21. 인라인 params 병렬: {p21}")
-    assert p21[0]["_parallel"] == True
-    assert len(p21[0]["branches"]) == 2
-    assert p21[0]["branches"][0]["target"] == "STK"
-    assert p21[0]["branches"][0]["params"]["start_date"] == "2026-02-26"
-    assert p21[0]["branches"][1]["target"] == "KSQ"
-    assert p21[0]["branches"][1]["params"]["start_date"] == "2026-02-26"
+    # 21. 빈 괄호 ()는 허용
+    s21 = parse_step('[self:open]()')
+    print(f"21. 빈 괄호: {s21}")
+    assert s21["_node"] == "self"
+    assert s21["target"] == ""
 
-    # 22. 인라인 params 여러 키
-    s22 = parse_step('[source:kr_investor]("STK", {"start_date": "2026-02-01", "end_date": "2026-02-26"})')
-    print(f"22. 인라인 params 여러 키: {s22}")
-    assert s22["target"] == "STK"
+    # 22. 여러 params
+    s22 = parse_step('[sense:kr_investor]{market: "STK", start_date: "2026-02-01", end_date: "2026-02-26"}')
+    print(f"22. 여러 params: {s22}")
+    assert s22["params"]["market"] == "STK"
     assert s22["params"]["start_date"] == "2026-02-01"
     assert s22["params"]["end_date"] == "2026-02-26"
 
-    # 23. 외부 params와 인라인 params 동시 (외부 우선)
-    s23 = parse_step('[source:kr_investor]("STK", {"start_date": "2026-02-01"}) {"end_date": "2026-02-28"}')
-    print(f"23. 외부+인라인 params: {s23}")
-    assert s23["target"] == "STK"
-    assert s23["params"]["start_date"] == "2026-02-01"
-    assert s23["params"]["end_date"] == "2026-02-28"
-
-    # 24. 일반 target (인라인 params 없음) — 기존 동작 유지
-    s24 = parse_step('[source:web_search]("AI 뉴스 2026")')
-    print(f"24. 일반 target: {s24}")
-    assert s24["target"] == "AI 뉴스 2026"
-    assert s24["params"] == {}
-
-    # 25. target에 쉼표가 있지만 { 없음 — 기존 동작 유지
-    s25 = parse_step('[forge:newspaper]("AI, 경제, 문화")')
-    print(f"25. 쉼표 포함 target: {s25}")
-    assert s25["target"] == "AI, 경제, 문화"
-    assert s25["params"] == {}
+    # 23. 변수 바인딩
+    code23 = """
+    $result = [sense:web_search]{query: "AI 뉴스"}
+    [others:channel_send]{channel_type: "telegram", body: "$result"}
+    """
+    p23 = parse(code23)
+    print(f"23. 변수 바인딩: {len(p23)} steps")
+    assert len(p23) == 2
 
     print("\n=== 모든 테스트 통과 ===")

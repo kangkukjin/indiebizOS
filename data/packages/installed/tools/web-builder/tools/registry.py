@@ -207,6 +207,27 @@ def update_site(tool_input: dict, package_dir: Path) -> dict:
 def run(tool_input: dict, package_dir: Path) -> dict:
     action = tool_input.get("action")
 
+    # target(site_id)에 action을 넣는 경우 자동 보정
+    # 예: [engines:registry]("list") → site_id="list", action=None
+    if not action:
+        site_id = tool_input.get("site_id", "")
+        _VALID_ACTIONS = {"register", "list", "remove", "update"}
+        _KO_ACTION_MAP = {
+            "목록": "list", "조회": "list", "리스트": "list",
+            "등록": "register", "추가": "register",
+            "삭제": "remove", "제거": "remove",
+            "수정": "update", "업데이트": "update",
+        }
+        if site_id in _VALID_ACTIONS:
+            action = site_id
+            tool_input.pop("site_id", None)
+        elif site_id in _KO_ACTION_MAP:
+            action = _KO_ACTION_MAP[site_id]
+            tool_input.pop("site_id", None)
+        else:
+            # action 없고 site_id도 action이 아니면 기본 list
+            action = "list"
+
     if action == "register":
         return register_site(tool_input, package_dir)
     elif action == "list":

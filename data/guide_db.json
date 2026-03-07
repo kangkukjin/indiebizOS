@@ -378,6 +378,31 @@
       "file": "newspaper_guide.md"
     },
     {
+      "id": "deep_research",
+      "name": "심층연구 가이드",
+      "description": "전문가 수준의 심층 분석과 보고서 작성 방법론. 다관점 리서치, 비판적 사고, 구조화된 논증, 자기검토 프로세스를 포함.",
+      "keywords": [
+        "심층연구",
+        "심층분석",
+        "분석",
+        "보고서",
+        "리서치",
+        "research",
+        "report",
+        "전문가",
+        "깊이",
+        "다관점",
+        "논문",
+        "조사",
+        "검토",
+        "analysis",
+        "deep",
+        "전망",
+        "시사점"
+      ],
+      "file": "deep_research.md"
+    },
+    {
       "id": "workflow",
       "name": "워크플로우 저장 & 실행",
       "description": "자주 쓰는 IBL 파이프라인을 이름 붙여 저장하고, 이름만으로 실행하는 방법.",

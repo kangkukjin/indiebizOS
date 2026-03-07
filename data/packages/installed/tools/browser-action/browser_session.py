@@ -4,7 +4,7 @@ browser_session.py - BrowserSession 싱글톤 + 공통 유틸리티
 브라우저 세션 관리, ref 매핑, locator 탐색, 출력 경로 등
 모든 브라우저 도구 모듈이 공유하는 핵심 컴포넌트.
 
-Version: 3.0.0
+Version: 4.0.0
 """
 
 import os
@@ -21,13 +21,91 @@ from urllib.parse import urlparse
 # ─────────────────────────────────────────────
 # 상수
 # ─────────────────────────────────────────────
-NAVIGATE_TIMEOUT = 30000
+NAVIGATE_TIMEOUT = 15000
 LOCATOR_TIMEOUT = 5000
 ACTION_TIMEOUT = 10000
-WAIT_DEFAULT_TIMEOUT = 30000
-AUTO_CLOSE_SECONDS = 120
+WAIT_DEFAULT_TIMEOUT = 10000
+AUTO_CLOSE_SECONDS = 180
 MAX_CONSOLE_LOGS = 1000
+MAX_NETWORK_LOGS = 500
 BLOCKED_URL_SCHEMES = {"javascript:", "data:", "file:", "vbscript:"}
+
+# Stealth User-Agent (일반 Chrome처럼 보이도록)
+STEALTH_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/131.0.0.0 Safari/537.36"
+)
+
+# Stealth + 쿠키 동의 팝업 자동 처리 init script
+STEALTH_INIT_SCRIPT = """
+    // --- Stealth ---
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+    window.chrome = { runtime: {} };
+
+    // --- 쿠키 동의 팝업 자동 닫기 ---
+    // 페이지 로드 후 주요 쿠키 동의 버튼들을 자동 클릭
+    const _autoDismissCookieConsent = () => {
+        const selectors = [
+            // YouTube / Google
+            'button[aria-label*="Accept"]',
+            'button[aria-label*="동의"]',
+            'button[aria-label*="모두 수락"]',
+            'tp-yt-paper-button#button[aria-label*="Accept"]',
+            'form[action*="consent"] button[type="submit"]',
+            '[data-consent-accept]',
+            // 일반적인 쿠키 배너
+            'button[id*="accept"]',
+            'button[class*="accept"]',
+            'button[class*="consent"]',
+            'button[class*="agree"]',
+            'a[id*="accept"]',
+            '[class*="cookie"] button:first-child',
+            '[class*="consent"] button:first-child',
+            '[id*="cookie-banner"] button',
+            '[id*="consent-banner"] button',
+            // GDPR 스타일
+            '.fc-cta-consent',
+            '#onetrust-accept-btn-handler',
+            '.cc-btn.cc-dismiss',
+        ];
+        for (const sel of selectors) {
+            try {
+                const btn = document.querySelector(sel);
+                if (btn && btn.offsetParent !== null) {
+                    btn.click();
+                    return true;
+                }
+            } catch(e) {}
+        }
+        return false;
+    };
+    // 로드 후 시도 (여러 타이밍)
+    if (document.readyState === 'complete') {
+        setTimeout(_autoDismissCookieConsent, 500);
+        setTimeout(_autoDismissCookieConsent, 2000);
+    } else {
+        window.addEventListener('load', () => {
+            setTimeout(_autoDismissCookieConsent, 500);
+            setTimeout(_autoDismissCookieConsent, 2000);
+        });
+    }
+    // DOM 변경 감지로 늦게 나타나는 팝업도 처리
+    const _cookieObserver = new MutationObserver(() => {
+        _autoDismissCookieConsent();
+    });
+    if (document.body) {
+        _cookieObserver.observe(document.body, { childList: true, subtree: true });
+        // 10초 후 옵저버 정리
+        setTimeout(() => _cookieObserver.disconnect(), 10000);
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            _cookieObserver.observe(document.body, { childList: true, subtree: true });
+            setTimeout(() => _cookieObserver.disconnect(), 10000);
+        });
+    }
+"""
 
 # Playwright lazy import
 _playwright_module = None
@@ -43,13 +121,16 @@ def _get_playwright():
 
 class BrowserSession:
     """
-    싱글톤 브라우저 세션.
+    싱글톤 브라우저 세션. v4.0
 
-    - 120초 비활성 시 자동 종료
+    - 180초 비활성 시 자동 종료
     - 다중 탭 관리 (tab_id → Page)
     - iframe 전환 지원
     - ref 매핑 저장 (스냅샷에서 생성된 ref → 요소 정보)
     - 콘솔 로그 수집
+    - 네트워크 요청 캡처
+    - Dialog(alert/confirm/prompt) 자동 처리
+    - Stealth 모드 (봇 감지 우회)
     """
 
     _instance = None
@@ -61,7 +142,7 @@ class BrowserSession:
         self._last_activity = 0.0
         self._timeout_seconds = AUTO_CLOSE_SECONDS
         self._cleanup_task = None
-        self._close_generation = 0  # auto_close 세대 번호 (경쟁 조건 방지)
+        self._close_generation = 0
         self._headless = True
 
         # 탭 관리
@@ -80,6 +161,13 @@ class BrowserSession:
         # 콘솔 로그
         self._console_logs: deque = deque(maxlen=MAX_CONSOLE_LOGS)
 
+        # 네트워크 요청 캡처
+        self._network_logs: deque = deque(maxlen=MAX_NETWORK_LOGS)
+        self._capture_network = False
+
+        # Dialog 기록
+        self._last_dialog: Optional[dict] = None
+
     @classmethod
     def get_instance(cls):
         if cls._instance is None:
@@ -90,7 +178,7 @@ class BrowserSession:
         if self._cleanup_task and not self._cleanup_task.done():
             self._cleanup_task.cancel()
         self._last_activity = time.time()
-        self._close_generation += 1  # 세대 번호 갱신 → 이전 타이머 무효화
+        self._close_generation += 1
         try:
             loop = asyncio.get_event_loop()
             self._cleanup_task = loop.create_task(
@@ -101,7 +189,6 @@ class BrowserSession:
 
     async def _auto_close(self, generation: int):
         await asyncio.sleep(self._timeout_seconds)
-        # 세대 불일치 → 이 타이머는 이미 무효 (새 작업이 시작됨)
         if generation != self._close_generation:
             return
         if time.time() - self._last_activity >= self._timeout_seconds:
@@ -110,8 +197,6 @@ class BrowserSession:
 
     async def ensure_browser(self, headless=True):
         """브라우저가 실행 중인지 확인하고, 없으면 생성. Page 반환."""
-        # 진입 즉시 활동 시간 갱신 + 세대 번호 증가
-        # → 이전 세대의 _auto_close가 실행되어도 세대 불일치로 무시됨
         self._last_activity = time.time()
         self._close_generation += 1
 
@@ -140,12 +225,16 @@ class BrowserSession:
                 '--disable-blink-features=AutomationControlled',
                 '--no-first-run',
                 '--no-default-browser-check',
+                '--disable-infobars',
+                '--disable-extensions',
+                '--disable-dev-shm-usage',
             ]
         )
         self._context = await self._browser.new_context(
             viewport={'width': 1280, 'height': 720},
             locale='ko-KR',
             timezone_id='Asia/Seoul',
+            user_agent=STEALTH_UA,
         )
 
         # 새 탭(팝업) 자동 감지
@@ -159,15 +248,25 @@ class BrowserSession:
         self._active_tab_id = tab_id
         self._active_frame = None
 
-        # 콘솔 로그 수집 설정
+        # Stealth + 쿠키 동의 팝업 자동 처리
+        await page.add_init_script(STEALTH_INIT_SCRIPT)
+
+        # 콘솔/네트워크/Dialog 설정
         self._console_logs = deque(maxlen=MAX_CONSOLE_LOGS)
-        page.on("console", self._on_console_message)
+        self._network_logs = deque(maxlen=MAX_NETWORK_LOGS)
+        self._setup_page_hooks(page)
 
         # ref 맵 초기화
         self._ref_map = {}
         self._ref_counter = 0
 
         print(f"[브라우저] 시작 (headless={headless})")
+
+    def _setup_page_hooks(self, page):
+        """페이지에 콘솔/네트워크/Dialog 훅 설정"""
+        page.on("console", self._on_console_message)
+        page.on("dialog", self._on_dialog)
+        page.on("response", self._on_response)
 
     def _on_new_page(self, page):
         """새 탭/팝업 자동 감지 핸들러"""
@@ -176,7 +275,7 @@ class BrowserSession:
         self._pages[tab_id] = page
         self._active_tab_id = tab_id
         self._active_frame = None
-        page.on("console", self._on_console_message)
+        self._setup_page_hooks(page)
         print(f"[브라우저] 새 탭 감지: {tab_id}")
 
     def _on_console_message(self, msg):
@@ -185,6 +284,33 @@ class BrowserSession:
             "text": msg.text,
             "timestamp": datetime.now().isoformat(),
         })
+
+    def _on_dialog(self, dialog):
+        """Alert/Confirm/Prompt 자동 처리 — 기본 dismiss, 내용 기록"""
+        self._last_dialog = {
+            "type": dialog.type,
+            "message": dialog.message,
+            "default_value": dialog.default_value,
+            "timestamp": datetime.now().isoformat(),
+        }
+        print(f"[브라우저] Dialog 감지 ({dialog.type}): {dialog.message[:100]}")
+        # 비동기로 dismiss (accept도 가능하지만 기본은 dismiss)
+        asyncio.ensure_future(dialog.dismiss())
+
+    def _on_response(self, response):
+        """네트워크 응답 캡처"""
+        if not self._capture_network:
+            return
+        try:
+            self._network_logs.append({
+                "url": response.url,
+                "status": response.status,
+                "method": response.request.method,
+                "resource_type": response.request.resource_type,
+                "timestamp": datetime.now().isoformat(),
+            })
+        except Exception:
+            pass
 
     @property
     def page(self):
@@ -250,7 +376,11 @@ class BrowserSession:
         self._pages[tab_id] = page
         self._active_tab_id = tab_id
         self._active_frame = None
-        page.on("console", self._on_console_message)
+        self._setup_page_hooks(page)
+
+        # Stealth + 쿠키 동의 팝업 자동 처리
+        await page.add_init_script(STEALTH_INIT_SCRIPT)
+
         self.clear_refs()
 
         if url:
@@ -260,12 +390,11 @@ class BrowserSession:
                     return tab_id
             if not url.startswith(('http://', 'https://')):
                 url = 'https://' + url
-            await page.goto(url, wait_until="load", timeout=NAVIGATE_TIMEOUT)
+            await page.goto(url, wait_until="domcontentloaded", timeout=NAVIGATE_TIMEOUT)
 
         return tab_id
 
     def switch_tab(self, tab_id: str) -> bool:
-        """탭 전환. 성공 여부 반환."""
         if tab_id not in self._pages:
             return False
         page = self._pages[tab_id]
@@ -278,7 +407,6 @@ class BrowserSession:
         return True
 
     async def close_tab(self, tab_id: str = None) -> bool:
-        """탭 닫기. 활성 탭이면 다른 탭으로 전환."""
         target_id = tab_id or self._active_tab_id
         if target_id not in self._pages:
             return False
@@ -291,7 +419,6 @@ class BrowserSession:
             pass
         del self._pages[target_id]
 
-        # 활성 탭이 닫혔으면 다른 탭으로 전환
         if target_id == self._active_tab_id:
             self._active_frame = None
             if self._pages:
@@ -311,6 +438,21 @@ class BrowserSession:
     def reset_frame(self):
         self._active_frame = None
         self.clear_refs()
+
+    # ── 네트워크 캡처 제어 ──
+
+    def start_network_capture(self):
+        self._capture_network = True
+        self._network_logs.clear()
+
+    def stop_network_capture(self):
+        self._capture_network = False
+
+    def get_network_logs(self, url_pattern: str = None, limit: int = 50) -> list:
+        logs = list(self._network_logs)
+        if url_pattern:
+            logs = [l for l in logs if url_pattern in l.get("url", "")]
+        return logs[-limit:]
 
     # ── 종료 ──
 
@@ -353,6 +495,9 @@ class BrowserSession:
         self._ref_counter = 0
         self._snapshot_url = None
         self._console_logs = deque(maxlen=MAX_CONSOLE_LOGS)
+        self._network_logs = deque(maxlen=MAX_NETWORK_LOGS)
+        self._last_dialog = None
+        self._capture_network = False
         print("[브라우저] 종료 완료")
 
 
@@ -390,15 +535,60 @@ def check_stale_ref(session, ref: str) -> Optional[dict]:
     return None
 
 
-async def find_locator(page, element_info: dict, input_mode: bool = False):
+async def find_locator(page, element_info: dict, input_mode: bool = False, retry: bool = True):
     """
-    공통 locator 찾기 로직.
-    element_info에서 role/name을 기반으로 다양한 전략으로 요소를 찾는다.
+    공통 locator 찾기 로직 (v4.0).
+
+    탐색 우선순위:
+    1. CSS selector (가장 정확)
+    2. XPath
+    3. role + name (접근성 트리)
+    4. text 매칭
+    5. label/placeholder (입력 필드)
+    6. role만
+
+    retry=True이면 첫 시도 실패 시 0.5초 대기 후 한 번 더 시도.
     """
+    locator = await _find_locator_once(page, element_info, input_mode)
+    if locator:
+        return locator
+
+    # 재시도: 동적 페이지에서 요소가 아직 렌더링되지 않았을 수 있음
+    if retry:
+        await asyncio.sleep(0.5)
+        locator = await _find_locator_once(page, element_info, input_mode)
+        if locator:
+            return locator
+
+    return None
+
+
+async def _find_locator_once(page, element_info: dict, input_mode: bool = False):
+    """단일 시도 locator 탐색"""
     role = element_info.get("role", "")
     name = element_info.get("name", "")
+    selector = element_info.get("selector", "")
+    xpath = element_info.get("xpath", "")
 
-    # 1. role + name으로 시도
+    # 1. CSS selector (가장 정확, 스냅샷에서 생성 가능)
+    if selector:
+        try:
+            locator = page.locator(selector).first
+            await locator.wait_for(state="visible", timeout=LOCATOR_TIMEOUT)
+            return locator
+        except Exception:
+            pass
+
+    # 2. XPath
+    if xpath:
+        try:
+            locator = page.locator(f"xpath={xpath}").first
+            await locator.wait_for(state="visible", timeout=LOCATOR_TIMEOUT)
+            return locator
+        except Exception:
+            pass
+
+    # 3. role + name (접근성 기반 — 기본 전략)
     if role and name:
         try:
             locator = page.get_by_role(role, name=name).first
@@ -407,7 +597,7 @@ async def find_locator(page, element_info: dict, input_mode: bool = False):
         except Exception:
             pass
 
-    # 2. 입력 필드 전용: role만으로 시도
+    # 4. 입력 필드 전용: role만으로 시도
     if input_mode and role in ("textbox", "searchbox", "combobox", "spinbutton"):
         try:
             locator = page.get_by_role(role).first
@@ -416,7 +606,7 @@ async def find_locator(page, element_info: dict, input_mode: bool = False):
         except Exception:
             pass
 
-    # 3. 텍스트로 시도
+    # 5. 텍스트로 시도
     if name:
         try:
             locator = page.get_by_text(name, exact=False).first
@@ -425,7 +615,7 @@ async def find_locator(page, element_info: dict, input_mode: bool = False):
         except Exception:
             pass
 
-    # 4. 입력 필드 전용: label, placeholder
+    # 6. 입력 필드 전용: label, placeholder
     if input_mode and name:
         for getter in (page.get_by_label, page.get_by_placeholder):
             try:
@@ -435,7 +625,7 @@ async def find_locator(page, element_info: dict, input_mode: bool = False):
             except Exception:
                 pass
 
-    # 5. 역할만으로 시도 (비입력 모드)
+    # 7. 역할만으로 시도 (비입력 모드)
     if not input_mode and role:
         try:
             locator = page.get_by_role(role).first
@@ -445,6 +635,20 @@ async def find_locator(page, element_info: dict, input_mode: bool = False):
             pass
 
     return None
+
+
+async def find_by_selector(page, selector: str, timeout: int = LOCATOR_TIMEOUT):
+    """CSS selector 또는 XPath로 직접 요소 찾기 (ref 없이)"""
+    try:
+        if selector.startswith("//") or selector.startswith("xpath="):
+            sel = selector if selector.startswith("xpath=") else f"xpath={selector}"
+            locator = page.locator(sel).first
+        else:
+            locator = page.locator(selector).first
+        await locator.wait_for(state="visible", timeout=timeout)
+        return locator
+    except Exception:
+        return None
 
 
 def get_output_dir(project_path: str, subdir: str = "") -> Path:
@@ -474,7 +678,6 @@ def get_cookies_dir() -> Path:
             cookies_dir = parent / "data" / "browser_cookies"
             cookies_dir.mkdir(parents=True, exist_ok=True)
             return cookies_dir
-    # 폴백
     cookies_dir = pkg_dir / "cookies"
     cookies_dir.mkdir(parents=True, exist_ok=True)
     return cookies_dir

@@ -1,4 +1,4 @@
-node: source
+node: sense
 actions:
   nearby:
     description: 가까운 CCTV 찾기

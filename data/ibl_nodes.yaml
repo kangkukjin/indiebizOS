@@ -1,104 +1,664 @@
 meta:
   constraint: ONLY the nodes listed below exist. No other node names are valid.
   usage:
-  - section: 'IBL 코드 문법: [node:action](target) {params}'
+  - section: 'IBL 코드 문법: [node:action]{params}'
     examples:
-    - '[system:time]()  # 현재 시간'
-    - '[system:discover]("주가")  # 모르면 discover'
-    - '[system:open]("/path/to/file.html")  # 파일 열기'
-    - '[system:open_url]("https://example.com")  # URL 열기'
-    - '[source:price]("005930")  # 삼성전자 주가'
-    - '[source:price]("AAPL")  # 미국 주가'
-    - '[source:web_search]("AI news")  # 웹 검색'
-    - '[source:news]("삼성전자")  # 종목 뉴스'
-    - '[source:kr_investor]("STK") {"start_date": "2026-02-01"}  # 투자자 매매동향'
-    - '[stream:play]("슬픈 피아노곡")  # 음악 재생'
-    - '[stream:search_radio]("KBS")  # 라디오 검색'
-    - '[forge:newspaper]("AI, 경제, 문화")  # 신문 생성'
-    - '[forge:line_chart]("Stock Price")  # 차트 생성'
-    note: 'execute_ibl의 code 파라미터에 IBL 코드를 전달. action에는 구체적 액션명을 직접 지정.'
-  - section: 'Common mistakes — NEVER do these'
+    - '[self:time]  # 현재 시간'
+    - '[self:discover]{query: "주가"}  # 모르면 discover'
+    - '[self:open]{path: "/path/to/file.html"}  # 파일 열기'
+    - '[limbs:open_url]{url: "https://example.com"}  # URL 열기'
+    - '[sense:price]{symbol: "005930"}  # 삼성전자 주가'
+    - '[sense:price]{symbol: "AAPL"}  # 미국 주가'
+    - '[sense:web_search]{query: "AI news"}  # 웹 검색'
+    - '[sense:news]{query: "삼성전자"}  # 종목 뉴스'
+    - '[sense:kr_investor]{symbol: "STK", start_date: "2026-02-01"}  # 투자자 매매동향'
+    - '[limbs:play]{query: "슬픈 피아노곡"}  # 음악 재생'
+    - '[sense:search_radio]{query: "KBS"}  # 라디오 검색'
+    - '[engines:newspaper]{keywords: "AI, 경제, 문화"}  # 신문 생성'
+    - '[engines:line]{title: "Stock Price"}  # 차트 생성'
+    note: 'execute_ibl의 code 파라미터에 IBL 코드를 전달. 모든 값은 {params} 안에 named parameter로. (target) 문법은 폐지됨.'
+  - section: Common mistakes — NEVER do these
     examples:
-    - 'WRONG: [system:workflow]()  # workflow는 액션이 아님'
-    - 'WRONG: [system:get]() {"type": "time"}  # get은 액션이 아님. [system:time]()을 써야 함'
-    - 'WRONG: [source:search]("AAPL")  # search는 액션이 아님. [source:web_search]("AAPL")를 써야 함'
-    - 'RIGHT: [system:time]()  # 직접 액션명 사용'
-    - 'RIGHT: [source:price]("AAPL")  # 직접 액션명 사용'
-    note: 'action-categories는 참고용 분류. 항상 구체적 액션명을 사용하라.'
-  - section: 'params — 추가 파라미터는 () 바깥 {} 에 작성'
+    - 'WRONG: [self:workflow]  # workflow는 액션이 아님'
+    - 'WRONG: [self:get]{type: "time"}  # get은 액션이 아님. [self:time]을 써야 함'
+    - 'WRONG: [sense:search]{query: "AAPL"}  # search는 액션이 아님. [sense:web_search]{query: "AAPL"}를 써야 함'
+    - 'WRONG: [sense:price]("AAPL")  # (target) 문법은 폐지됨! {params}를 사용할 것'
+    - 'RIGHT: [self:time]  # 직접 액션명 사용'
+    - 'RIGHT: [sense:price]{symbol: "AAPL"}  # 모든 값은 named parameter'
+    note: 'action-categories는 참고용 분류. 항상 구체적 액션명을 사용하라. (target) 문법은 에러 발생함.'
+  - section: 'params — 모든 값은 {key: val} 형태의 named parameter'
     examples:
-    - 'RIGHT: [source:kr_investor]("STK") {"start_date": "2026-02-01"}  # params는 () 바깥'
-    - 'RIGHT: [source:kr_investor]("STK") {"start_date": "2026-02-01", "end_date": "2026-02-28"}'
-    - 'WRONG: [source:kr_investor]("STK", {"start_date": "2026-02-01"})  # () 안에 params 넣지 말 것'
-    - 'RIGHT: [source:price]("005930")  # params 불필요하면 생략'
-    note: '추가 파라미터는 반드시 (target) 뒤에 {key: val} 형태로. 함수호출처럼 (target, {params}) 쓰지 말 것.'
-  - section: 'Pipeline — 다중 스텝은 >> 또는 & 연산자 사용'
+    - 'RIGHT: [sense:kr_investor]{symbol: "STK", start_date: "2026-02-01"}'
+    - 'RIGHT: [sense:kr_investor]{symbol: "STK", start_date: "2026-02-01", end_date: "2026-02-28"}'
+    - 'WRONG: [sense:kr_investor]("STK") {"start_date": "2026-02-01"}  # (target) 문법 폐지됨!'
+    - 'RIGHT: [sense:price]{symbol: "005930"}  # 파라미터가 하나여도 named'
+    note: '모든 값은 {key: val} 안에 작성. (target) 문법은 폐지되어 에러 발생함.'
+  - section: Pipeline — 다중 스텝은 >> 또는 & 연산자 사용
     examples:
-    - '[source:web_search]("AI") >> [system:file]("result.md")  # 순차 실행'
-    - '[source:price]("AAPL") & [source:price]("MSFT")  # 병렬 실행'
-    - '[system:time]() & [source:price]("005930") & [source:news]("한국 증시")  # 병렬 3개'
-    - '[source:price]("AAPL") ?? [source:kr_price]("AAPL")  # 폴백: 실패시 대안'
-    note: '>> 순차, & 병렬, ?? 폴백. 단일/다중 모두 동일한 IBL 코드 문법 사용.'
+    - '[sense:web_search]{query: "AI"} >> [self:file]{path: "result.md"}  # 순차: step1 결과가 step2에 자동 전달'
+    - '[engines:newspaper]{keywords: "AI, 경제"} >> [self:open]  # 신문 생성 후 브라우저 열기'
+    - '[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}  # 병렬 실행'
+    - '[self:time] & [sense:price]{symbol: "005930"} & [sense:news]{query: "한국 증시"}  # 병렬 3개'
+    - '[sense:price]{symbol: "AAPL"} ?? [sense:kr_price]{symbol: "AAPL"}  # 폴백: 실패시 대안'
+    - 'WRONG: [engines:newspaper]{keywords: "AI"} >> [self:open]{path: $prev.file}  # $prev 문법 없음!'
+    note: '>> 사용 시 이전 step의 결과가 다음 step에 자동 전달됨. $prev, $result 같은 변수 참조 문법은 없다.'
   pipeline:
   - op: '>>'
     name: Sequential
-    example: '[source:web_search]("AI") >> [system:file]("result.md")'
+    example: '[sense:web_search]{query: "AI"} >> [self:file]{path: "result.md"}'
   - op: '&'
     name: Parallel
-    example: '[source:price]("AAPL") & [source:price]("MSFT")'
+    example: '[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}'
   - op: ??
     name: Fallback
-    example: '[source:price]("AAPL") ?? [source:kr_price]("AAPL")'
+    example: '[sense:price]{symbol: "AAPL"} ?? [sense:kr_price]{symbol: "AAPL"}'
   principles:
-  - 'IBL 코드를 execute_ibl의 code 파라미터로 전달. 예: execute_ibl(code=''[source:price]("AAPL")'')'
-  - '구체적 액션명을 직접 지정 (time, price, play 등). action-categories의 이름(get, run 등)은 쓰지 말 것.'
-  - Use [system:discover]("키워드") when unsure which action to use.
-  - '추가 파라미터는 (target) 뒤에 {key: val}. 단일/파이프라인 모두 동일한 IBL 문법 사용.'
+  - 'IBL 코드를 execute_ibl의 code 파라미터로 전달. 예: execute_ibl(code=''[sense:price]{symbol: "AAPL"}'')'
+  - 구체적 액션명을 직접 지정 (time, price, play 등). action-categories의 이름(get, run 등)은 쓰지 말 것.
+  - '[self:discover]{query: "키워드"} — 어떤 액션을 쓸지 모를 때 사용.'
+  - '모든 값은 {key: val} 형태의 named parameter. (target) 문법은 폐지됨 — 사용 시 에러 발생.'
+  - '전문 데이터 액션이 있으면 파일 직접 탐색([self:list]+[self:read])보다 반드시 우선 사용. 예: 건강기록→[self:health_query], 메모리→[self:recall]'
 nodes:
-  team:
-    description: 에이전트 간 협업 및 위임 — 다른 에이전트에게 작업을 맡기거나 정보를 조회
+  sense:
     actions:
-      delegate:
-        description: 같은 프로젝트의 에이전트에게 작업 위임 (비동기)
-        target_description: '에이전트 이름 (예: 심장전문, 내과)'
-        router: system
-        func: call_agent
-      ask:
-        description: 에이전트에게 질문 또는 작업 위임 (비동기 — 결과를 기다리지 않음)
-        target_description: '프로젝트/에이전트이름 (예: 투자/투자컨설팅)'
-        router: system
-        func: agent_ask
-      ask_sync:
-        description: 에이전트에게 동기 질문 (응답을 기다려서 반환 — 파이프라인/워크플로우용)
-        target_description: '프로젝트/에이전트이름 (예: 컨텐츠/컨텐츠)'
-        router: system
-        func: agent_ask_sync
-      delegate_workflow:
-        description: 다른 에이전트에게 IBL 파이프라인 위임
-        router: system
-        func: delegate_workflow
-      delegate_project:
-        description: 다른 프로젝트의 에이전트에게 작업 위임
-        router: system
-        func: call_project_agent
-      info:
-        description: 특정 에이전트 노드 상세 정보
-        target_description: 프로젝트/에이전트이름
-        router: system
-        func: agent_info
-      list_projects:
-        description: 모든 프로젝트와 에이전트 목록 조회
-        router: system
-        func: list_project_agents
-
-  system:
-    description: 시스템 관리, 사용자 소통, 워크플로우, 자동화, 결과 출력, 파일시스템
+      price:
+        description: '주가 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F, 지수: ^KS11=코스피 ^KQ11=코스닥)'
+        category: get
+        router: handler
+        tool: yf_stock_price
+        target_key: symbol
+      stock_info:
+        description: 종목 상세 정보 (시가총액, 52주 최고/최저 등)
+        category: get
+        router: handler
+        tool: yf_stock_info
+        target_key: symbol
+      search_stock:
+        description: 종목 심볼 검색 (이름으로 코드 찾기)
+        category: search
+        router: handler
+        tool: yf_search_stock
+        target_key: query
+      kr_company:
+        description: '한국 기업 정보 (DART: 대표자, 업종, 주소, IR)'
+        category: get
+        router: handler
+        tool: kr_company_info
+        target_key: corp_name
+      us_company:
+        description: '미국 기업 프로필 (FMP: CEO, 시총, 섹터, 설명)'
+        category: get
+        router: handler
+        tool: us_company_profile
+        target_key: symbol
+      kr_financial:
+        description: '한국 재무제표 (DART: 재무상태표, 손익계산서, 현금흐름표)'
+        category: get
+        router: handler
+        tool: kr_financial_statements
+        target_key: corp_name
+      us_financial:
+        description: '미국 재무제표 (FMP: income, balance, cashflow)'
+        category: get
+        router: handler
+        tool: us_financial_statements
+        target_key: symbol
+      kr_disclosure:
+        description: '한국 공시 검색 (DART: 정기공시, 대량보유, 거래소공시)'
+        category: get
+        router: handler
+        tool: kr_disclosures
+        target_key: corp_name
+      us_filing:
+        description: 미국 SEC 공시 검색 (10-K, 10-Q, 8-K, DEF 14A)
+        category: get
+        router: handler
+        tool: us_sec_filings
+        target_key: symbol
+      news:
+        description: 종목 관련 뉴스 (Finnhub)
+        category: get
+        router: handler
+        tool: company_news
+        target_key: symbol
+      stock_news:
+        description: 종목 뉴스 (Yahoo Finance)
+        category: get
+        router: handler
+        tool: yf_stock_news
+        target_key: symbol
+      earnings:
+        description: '실적 발표 일정 (Finnhub: EPS/매출 예상 vs 실적)'
+        category: get
+        router: handler
+        tool: earnings_calendar
+        target_key: symbol
+      crypto:
+        description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
+        category: get
+        router: handler
+        tool: crypto_price
+        target_key: coin_id
+      kr_price:
+        description: 한국 주가 (KRX/FinanceDataReader, 기간 지정)
+        category: get
+        router: handler
+        tool: kr_stock_price
+        target_key: symbol
+      us_price:
+        description: 미국 주가 (FMP, 기간 지정)
+        category: get
+        router: handler
+        tool: us_stock_price
+        target_key: symbol
+      kr_investor:
+        description: 한국 시장 투자자별 매매동향 (외국인/기관/개인 순매수, 코스피/코스닥)
+        router: handler
+        tool: kr_market_investor_trading
+        target_key: market
+      kr_stock_investor:
+        description: 개별종목 투자자별 매매동향 (외국인/기관/개인 순매수)
+        router: handler
+        tool: kr_stock_investor_trading
+        target_key: symbol
+      performance:
+        description: 공연 검색 (KOPIS - 연극, 뮤지컬, 음악회 등)
+        category: search
+        router: handler
+        tool: kopis_quick_search
+        target_key: keyword
+      venue:
+        description: 공연장/시설 검색
+        category: get
+        router: handler
+        tool: kopis_search_facilities
+        target_key: keyword
+      book:
+        description: 도서 검색 (도서관정보나루)
+        category: search
+        router: handler
+        tool: library_quick_search
+        target_key: keyword
+      book_detail:
+        description: 도서 상세 정보 (대출 통계 포함)
+        category: get
+        router: handler
+        tool: library_get_book_detail
+        target_key: isbn13
+      exhibit:
+        description: 전시/문화행사 검색 (KCISA - 박물관, 미술관)
+        category: search
+        router: handler
+        tool: kcisa_quick_search
+        target_key: keyword
+      genres:
+        description: 공연 장르 코드 목록 조회
+        category: get
+        router: handler
+        tool: kopis_get_genres
+      performance_regions:
+        description: 공연 지역 코드 목록 조회
+        category: list
+        router: handler
+        tool: kopis_get_regions
+      book_by_isbn:
+        description: ISBN으로 도서 조회 (10자리/13자리)
+        router: handler
+        tool: library_get_book_by_isbn
+        target_key: isbn
+      kdc:
+        description: KDC(한국십진분류) 주제분류코드 목록
+        category: get
+        router: handler
+        tool: library_get_kdc
+      recommended_books:
+        description: 특정 도서 기반 추천도서 (마니아/다독자 추천)
+        category: get
+        router: handler
+        tool: library_get_recommended_books
+        target_key: isbn13
+      library_regions:
+        description: 도서관 정보나루 지역코드 목록
+        category: list
+        router: handler
+        tool: library_get_regions
+      search_openalex:
+        description: OpenAlex 학술 논문 검색 (인용수, OA 필터)
+        category: search
+        router: handler
+        tool: search_openalex
+        target_key: query
+      search_arxiv:
+        description: arXiv 프리프린트 논문 검색
+        category: search
+        router: handler
+        tool: search_arxiv
+        target_key: query
+      download_arxiv:
+        description: arXiv 논문 PDF 다운로드
+        router: handler
+        tool: download_arxiv_pdf
+        target_key: arxiv_id
+      search_semantic:
+        description: Semantic Scholar 논문 검색 (AI 분야 특화)
+        router: handler
+        tool: search_semantic_scholar
+        target_key: query
+      search_scholar:
+        description: Google Scholar 학술 검색
+        category: search
+        router: handler
+        tool: search_google_scholar
+        target_key: query
+      search_pubmed:
+        description: PubMed 생의학 논문 검색
+        category: search
+        router: handler
+        tool: search_pubmed
+        target_key: query
+      download_pubmed:
+        description: PubMed Central 논문 PDF 다운로드
+        router: handler
+        tool: download_pubmed_pdf
+        target_key: pmcid
+      pew_research:
+        description: Pew Research 여론조사/리서치 데이터
+        router: handler
+        tool: fetch_pew_research
+      search_guardian:
+        description: Guardian 뉴스 아카이브 검색
+        category: search
+        router: handler
+        tool: search_guardian
+        target_key: query
+      world_bank:
+        description: 세계은행 경제/사회 지표 데이터
+        router: handler
+        tool: fetch_world_bank_data
+        target_key: indicator
+      search_books:
+        description: Google Books 도서 검색
+        category: search
+        router: handler
+        tool: search_books
+        target_key: query
+      search_shopping:
+        description: 상품 검색 및 가격 비교 (네이버+다나와+중고나라+번개장터)
+        category: search
+        router: handler
+        tool: search_shopping
+        target_key: query
+      weather:
+        description: 날씨 조회 (API Ninjas)
+        category: get
+        router: handler
+        tool: get_api_ninjas_data
+        target_key: endpoint
+      restaurant:
+        description: 맛집/음식점 검색 (카카오+네이버)
+        category: get
+        router: handler
+        tool: search_restaurants
+        target_key: query
+      navigate_route:
+        description: 자동차 길찾기 (카카오 내비)
+        router: handler
+        tool: kakao_navigation
+        target_key: destination
+      map:
+        description: 지도에 위치 표시
+        category: get
+        router: handler
+        tool: show_location_map
+        target_key: query
+      reverse_geocode:
+        description: GPS 좌표를 주소로 변환
+        router: handler
+        tool: reverse_geocode
+      travel:
+        description: 여행 검색 - 항공, 호텔, 관광지 (Amadeus)
+        router: handler
+        tool: amadeus_travel_search
+        target_key: endpoint
+      search_local:
+        description: 지역 가게/상점 정보 검색 (카페/지도)
+        category: search
+        router: handler
+        tool: local_search
+        target_key: query
+      nearby:
+        description: 좌표 근처 CCTV 찾기 (lat/lng 필수, 모르면 cctv_search 사용)
+        router: handler
+        tool: get_nearby_cctv
+      cctv_open:
+        description: CCTV 실시간 영상을 브라우저에서 열기
+        router: handler
+        tool: open_cctv
+        target_key: name
+      webcam:
+        description: 전세계 웹캠 실시간 영상 검색 (Windy) — 해외 장소 모습 보기
+        category: search
+        router: handler
+        tool: search_webcam
+      webcam_nearby:
+        description: 가까운 웹캠 찾기
+        router: handler
+        tool: get_nearby_webcam
+      cctv_capture:
+        description: CCTV/웹캠 현재 화면 캡처 (이미지 저장, AI 분석용)
+        router: handler
+        tool: capture_cctv
+        target_key: url
+      cctv_sources:
+        description: 사용 가능한 CCTV/웹캠 소스 및 상태 확인
+        category: list
+        router: handler
+        tool: list_cctv_sources
+      local_query:
+        description: 축적된 지역 정보 DB 조회
+        router: handler
+        tool: local_db_query
+        target_key: query
+      cctv_search:
+        description: 실시간 CCTV/웹캠 영상 검색 — 장소의 지금 모습, 교통 상황, 날씨를 보여줘
+        category: search
+        router: handler
+        tool: search_cctv
+        target_key: query
+      commercial:
+        description: 상권 분석 (업종별 점포, 좌표/행정동 기반)
+        router: handler
+        tool: search_commercial_district
+      web_search:
+        description: DuckDuckGo 웹 검색
+        category: search
+        router: handler
+        tool: ddgs_search
+        target_key: query
+      crawl:
+        description: 웹페이지 크롤링 (텍스트 추출)
+        router: handler
+        tool: crawl_website
+        target_key: url
+      search_news:
+        description: 구글 뉴스 검색
+        category: search
+        router: handler
+        tool: google_news_search
+        target_key: query
+      collect:
+        description: 사이트 프로필 기반 구조화된 데이터 수집
+        router: web_collector
+      apt_trade:
+        description: 아파트 매매 실거래가 (국토부)
+        router: handler
+        tool: apt_trade_price
+        target_key: region_code
+      apt_rent:
+        description: 아파트 전월세 실거래가
+        router: handler
+        tool: apt_rent_price
+        target_key: region_code
+      house_trade:
+        description: 단독/다세대 주택 매매 실거래가
+        router: handler
+        tool: house_trade_price
+        target_key: region_code
+      house_rent:
+        description: 단독/다세대 주택 전월세 실거래가
+        router: handler
+        tool: house_rent_price
+        target_key: region_code
+      district_codes:
+        description: 법정동 지역코드 조회
+        category: list
+        router: handler
+        tool: get_region_codes
+        target_key: city
+      video_info:
+        description: 동영상 메타데이터 조회 (제목, 조회수, 채널 등)
+        category: get
+        router: handler
+        tool: get_youtube_info
+        target_key: url
+      video_transcript:
+        description: 동영상 자막/스크립트 추출
+        category: get
+        router: handler
+        tool: get_youtube_transcript
+        target_key: url
+      video_languages:
+        description: 사용 가능한 자막 언어 목록 조회
+        category: get
+        router: handler
+        tool: list_available_transcripts
+        target_key: url
+      search_youtube:
+        description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
+        category: search
+        router: handler
+        tool: search_youtube
+        target_key: query
+      search_radio:
+        description: 전세계 인터넷 라디오 검색 (Radio Browser API)
+        category: search
+        router: handler
+        tool: search_radio
+        target_key: name
+      korean_radio:
+        description: 한국 주요 방송사 라디오 채널 목록 (KBS/MBC/SBS/TBS/CBS/EBS)
+        category: search
+        router: handler
+        tool: get_korean_radio
+        target_key: broadcaster
+    description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어 등 외부 API 및 데이터 소스 접근'
     guides:
-    - pc-manager/pc_manager_guide.md
+    - investment/investment_guide.md
+    - study/study_guide.md
+    - location-services/location_services_guide.md
+    - web/web_guide.md
+    - real-estate/real_estate_guide.md
+  self:
     actions:
+      search_photos:
+        description: 사진/동영상 검색 (파일명, 카메라 모델 등)
+        category: search
+        router: driver
+        driver: sqlite
+        driver_node: photo
+      photo_detail:
+        description: 미디어 파일 상세 정보 조회
+        category: get
+        router: driver
+        driver: sqlite
+        driver_node: photo
+      timeline:
+        description: 월별 사진/동영상 촬영 통계
+        category: get
+        router: handler
+        tool: get_timeline
+        target_key: path
+      photo_stats:
+        description: 전체 사진/동영상 통계
+        category: get
+        router: handler
+        tool: get_stats
+        target_key: path
+      list_scans:
+        description: 스캔된 폴더 목록 조회
+        category: list
+        router: handler
+        tool: list_scans
+      photo_scan:
+        description: 폴더의 사진/동영상 메타데이터 수집 (인덱싱)
+        router: handler
+        tool: scan_photos
+        target_key: path
+      gallery:
+        description: 스캔된 사진/동영상 갤러리 조회 (페이지네이션, 필터)
+        category: get
+        router: handler
+        tool: get_gallery
+        target_key: path
+      duplicates:
+        description: 중복 사진/동영상 탐지 (MD5 기반)
+        category: search
+        router: handler
+        tool: find_duplicates
+        target_key: path
+      photo_manager:
+        description: Photo Manager GUI 실행
+        router: handler
+        tool: open_photo_manager
+        target_key: path
+      rag_search:
+        description: 블로그 RAG 검색 (의미 기반 벡터 검색)
+        category: search
+        router: handler
+        tool: search_blog_rag
+        target_key: query
+      semantic_search:
+        description: 블로그 시맨틱 검색
+        category: search
+        router: handler
+        tool: search_blog_semantic
+        target_key: query
+      rag_content:
+        description: RAG 기반 블로그 글 전문 조회
+        category: get
+        router: handler
+        tool: get_post_content_rag
+        target_key: post_id
+      posts:
+        description: 블로그 글 목록 (handler)
+        category: list
+        router: handler
+        tool: blog_get_posts
+        target_key: category
+      post_detail:
+        description: 블로그 글 상세 (handler)
+        category: get
+        router: handler
+        tool: blog_get_post
+        target_key: post_id
+      blog_stats:
+        description: 블로그 통계 (handler)
+        category: get
+        router: handler
+        tool: blog_stats
+      check_new:
+        description: 새 블로그 글 확인
+        category: list
+        router: handler
+        tool: blog_check_new_posts
+      insight:
+        description: 블로그 인사이트 분석
+        category: search
+        router: handler
+        tool: kinsight
+        target_key: query
+      insight2:
+        description: 블로그 인사이트 분석 v2
+        category: search
+        router: handler
+        tool: kinsight2
+        target_key: query
+      rebuild_index:
+        description: 블로그 검색 인덱스 재구축
+        router: handler
+        tool: rebuild_search_index
+      search_memory:
+        description: 대화 내용 검색
+        category: search
+        router: driver
+        driver: sqlite
+        driver_node: memory
+      recent:
+        description: 최근 대화 조회
+        category: get
+        router: driver
+        driver: sqlite
+        driver_node: memory
+      agents:
+        description: 등록된 에이전트 목록
+        category: list
+        router: driver
+        driver: sqlite
+        driver_node: memory
+      save_memory:
+        description: 심층 메모리에 항목 저장
+        category: create
+        router: handler
+        tool: memory_save
+        target_key: content
+      memory_search:
+        description: 심층 메모리에서 키워드 검색
+        category: search
+        router: handler
+        tool: memory_search
+        target_key: query
+      memory_read:
+        description: 메모리 항목 전체 내용 조회
+        category: get
+        router: handler
+        tool: memory_read
+        target_key: memory_id
+      memory_delete:
+        description: 메모리 항목 삭제
+        category: delete
+        router: handler
+        tool: memory_delete
+        target_key: memory_id
+      skill_search:
+        description: 스킬 DB에서 도메인 지식 검색
+        category: search
+        router: handler
+        tool: skill_search
+        target_key: query
+      skill_read:
+        description: 스킬 전체 내용 조회
+        category: get
+        router: handler
+        tool: skill_read
+        target_key: skill_id
+      skill_add:
+        description: 새로운 스킬 추가
+        category: create
+        router: handler
+        tool: skill_add
+        target_key: name
+      skill_delete:
+        description: 스킬 삭제
+        category: delete
+        router: handler
+        tool: skill_delete
+        target_key: skill_id
+      skill_import:
+        description: 마크다운 파일에서 스킬 임포트
+        category: create
+        router: handler
+        tool: skill_import_md
+        target_key: file_path
+      health_save:
+        description: 건강 정보 저장 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 투약, 의료문서를 DB에 기록
+        category: write
+        router: handler
+        tool: save_health_info
+        target_key: info_type
+      health_query:
+        description: 건강 기록 조회 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 약물 이력, 건강 요약, 키워드 검색
+        category: get
+        router: handler
+        tool: get_health_context
+        target_key: query_type
+      local_save:
+        description: 가게 정보/커뮤니티 언급 DB 저장
+        category: write
+        router: handler
+        tool: local_db_save
       discover:
         description: 키워드로 적합한 노드/액션 자동 탐색
-        target_description: '검색 키워드 (예: 주가, 날씨, 사진)'
+        target_key: query
         router: system
         func: discover
       time:
@@ -106,21 +666,12 @@ nodes:
         category: get
         router: handler
         tool: get_current_time
-      open_url:
-        description: URL을 기본 브라우저로 열기
-        category: io
-        router: handler
-        tool: open_in_browser
-        target_key: url
-        phase: 5
       list_api:
         description: 등록된 API 도구 목록 조회
         category: list
         router: api_engine
       call:
         description: API 레지스트리에 등록된 도구 실행
-        target_description: 레지스트리 도구 이름 (search_laws, kosis_get_data, search_shopping
-          등)
         router: api_engine
       manage_events:
         description: 이벤트/스케줄 통합 관리 (생성/조회/삭제)
@@ -150,12 +701,13 @@ nodes:
       notify_user:
         description: 사용자에게 알림 전송
         category: notify
+        target_key: message
         router: system
         func: send_notification
       run:
         description: 저장된 워크플로우 실행
         category: run
-        target_description: 워크플로우 ID
+        target_key: workflow_id
         router: workflow_engine
       list_workflows:
         description: 저장된 워크플로우 목록 조회
@@ -164,14 +716,17 @@ nodes:
       get_workflow:
         description: 워크플로우 상세 조회
         category: get
+        target_key: workflow_id
         router: workflow_engine
       save_workflow:
         description: 워크플로우 저장
         category: get
+        target_key: workflow_id
         router: workflow_engine
       delete_workflow:
         description: 워크플로우 삭제
         category: get
+        target_key: workflow_id
         router: workflow_engine
       run_pipeline:
         description: 파이프라인 직접 실행 (steps를 params로 전달)
@@ -184,91 +739,89 @@ nodes:
       get_event:
         description: 트리거 상세 정보
         category: get
-        target_description: 트리거 ID 또는 이름
+        target_key: trigger_id
         router: event_engine
       create:
         description: 새 트리거 등록 (schedule/channel/webhook/file)
         category: event
-        target_description: 트리거 이름
+        target_key: trigger_id
         router: event_engine
       update:
         description: 트리거 수정
         category: event
-        target_description: 트리거 ID
+        target_key: trigger_id
         router: event_engine
       delete_event:
         description: 트리거 삭제
         category: event
-        target_description: 트리거 ID 또는 이름
+        target_key: trigger_id
         router: event_engine
       enable:
         description: 트리거 활성화
         category: control
-        target_description: 트리거 ID 또는 이름
+        target_key: trigger_id
         router: event_engine
       disable:
         description: 트리거 비활성화
         category: control
-        target_description: 트리거 ID 또는 이름
+        target_key: trigger_id
         router: event_engine
-      status:
+      event_status:
         description: 이벤트 시스템 전체 상태 (폴러, 스케줄러, 자동응답)
         category: get
         router: event_engine
-      history:
+      event_history:
         description: 트리거 실행 이력 조회
         category: get
-        target_description: 트리거 ID (생략 시 전체)
+        target_key: trigger_id
         router: event_engine
       sites:
         description: 사이트 수집 가이드 관리 (등록/조회/삭제)
         category: get
-        target_description: 사이트 ID
+        target_key: site_id
         router: handler
         tool: wc_sites
         target_key: site_id
-      save_event:
+      wc_save:
         description: 수집 데이터 DB 저장
         category: event
-        target_description: 사이트 ID
         router: handler
         tool: wc_save
         target_key: site_id
       query:
         description: 수집 데이터 DB 조회
         category: event
-        target_description: 검색어
         router: handler
         tool: wc_query
         target_key: query
       gui:
         description: UI에 결과를 HTML/카드/테이블 형태로 표시
         category: io
-        target_description: 표시할 제목 또는 내용 요약
+        target_key: content
         router: system
         func: output_gui
       file:
         description: 결과를 파일로 저장 (텍스트, JSON, CSV, HTML 등)
         category: io
-        target_description: 저장할 파일 경로
+        target_key: path
         router: system
         func: output_file
       open:
         description: URL을 브라우저로 열거나 파일을 Finder/탐색기로 열기
         category: io
-        target_description: URL 또는 파일 경로
+        target_key: path
         router: system
         func: output_open
       clipboard:
         description: 결과를 클립보드에 복사
         category: io
-        target_description: 복사할 텍스트
+        target_key: content
         router: system
         func: output_clipboard
       download:
         description: URL에서 파일을 다운로드하여 로컬에 저장
         category: io
-        target_description: 다운로드 URL
+        target_key: url
         router: system
         func: output_download
       browse:
@@ -343,10 +896,9 @@ nodes:
         router: handler
         tool: read_pdf
         target_key: path
-      scan:
+      storage_scan:
         description: 디스크/볼륨 스캔 (인덱싱)
         category: storage
-        target_description: 스캔 경로
         router: handler
         tool: scan_storage
         target_key: path
@@ -369,7 +921,6 @@ nodes:
       annotate:
         description: 폴더에 메모/주석 추가
         category: storage
-        target_description: 폴더 경로
         router: handler
         tool: annotate_folder
         target_key: folder_path
@@ -381,38 +932,35 @@ nodes:
       explorer:
         description: 파일 탐색기에서 열기 (Finder)
         category: storage
-        target_description: 경로
         router: handler
         tool: open_file_explorer
         target_key: path
-  interface:
-    description: UI 상호작용 (브라우저 자동화, 안드로이드 기기 제어, macOS 데스크탑 자동화)
+    description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
     guides:
-    - browser-action/browser_guide.md
-    - android/android_guide.md
-    - computer-use/guide.md
+    - pc-manager/pc_manager_guide.md
+    - blog/blog_guide.md
+    - memory/memory_guide.md
+    - photo-manager/guide.md
+  limbs:
     actions:
       navigate:
         description: URL 열기 (Playwright 브라우저)
-        target_description: URL
         router: handler
         tool: browser_navigate
         target_key: url
-      snapshot:
+      browser_snapshot:
         description: 접근성 스냅샷 (요소 ref 생성)
         router: handler
         tool: browser_snapshot
       click:
         description: 요소 클릭 (ref 기반)
         category: click
-        target_description: ref ID (e1, e2 등)
         router: handler
         tool: browser_click
         target_key: ref
       type:
         description: 입력 필드에 텍스트 입력
         category: type
-        target_description: ref ID
         router: handler
         tool: browser_type
         target_key: ref
@@ -433,7 +981,6 @@ nodes:
         tool: browser_scroll
       evaluate:
         description: JavaScript 실행
-        target_description: JS 표현식
         router: handler
         tool: browser_evaluate
         target_key: expression
@@ -443,7 +990,6 @@ nodes:
         tool: browser_wait_for
       press_key:
         description: 키보드 키 입력 (Enter, Tab 등)
-        target_description: 키 이름
         router: handler
         tool: browser_press_key
         target_key: key
@@ -458,7 +1004,6 @@ nodes:
         tool: browser_tab_new
       tab_switch:
         description: 탭 전환
-        target_description: tab_id
         router: handler
         tool: browser_tab_switch
         target_key: tab_id
@@ -480,7 +1025,6 @@ nodes:
         tool: browser_navigate_forward
       hover:
         description: 요소에 마우스 호버
-        target_description: ref ID
         router: handler
         tool: browser_hover
         target_key: ref
@@ -490,7 +1034,6 @@ nodes:
         tool: browser_drag
       select:
         description: 셀렉트 옵션 선택
-        target_description: ref ID
         router: handler
         tool: browser_select_option
         target_key: ref
@@ -531,82 +1074,15 @@ nodes:
       android_info:
         description: 기기 상세 정보 (모델, OS, 배터리, 저장소)
         category: get
-        target_description: device_id (선택)
         router: handler
         tool: android_device_info
         target_key: device_id
       android_status:
         description: 기기 시스템 상태 (배터리, 온도, 저장소)
         category: get
-        target_description: device_id (선택)
         router: handler
         tool: android_system_status
         target_key: device_id
-      sms_list:
-        description: SMS 목록 조회 (inbox/sent/all)
-        category: read
-        router: handler
-        tool: android_get_sms
-      sms_send:
-        description: SMS 발송
-        category: send
-        target_description: 수신 전화번호
-        router: handler
-        tool: android_send_sms
-        target_key: phone_number
-      sms_search:
-        description: SMS/MMS/RCS 검색
-        category: search
-        target_description: 검색어
-        router: handler
-        tool: android_search_sms
-        target_key: query
-      call:
-        description: 전화 걸기
-        target_description: 전화번호
-        router: handler
-        tool: android_make_call
-        target_key: phone_number
-      call_log:
-        description: 통화 이력 조회
-        category: get
-        router: handler
-        tool: android_get_call_log
-      contacts:
-        description: 연락처 검색
-        category: search
-        target_description: 검색어
-        router: handler
-        tool: android_search_contacts
-        target_key: query
-      apps:
-        description: 설치된 앱 목록 (크기, 사용량 포함)
-        category: list
-        router: handler
-        tool: android_apps_with_details
-      notifications:
-        description: 알림 목록 읽기
-        category: list
-        router: handler
-        tool: android_notifications
-      android_screenshot:
-        description: 안드로이드 화면 캡처 (AI 분석용)
-        category: screenshot
-        router: handler
-        tool: android_ui_screenshot
-      push_file:
-        description: PC→안드로이드 파일 전송
-        category: send
-        target_description: 로컬 파일 경로
-        router: handler
-        tool: android_push_file
-        target_key: local_path
-      pull_file:
-        description: 안드로이드→PC 파일 전송
-        target_description: 원격 파일 경로
-        router: handler
-        tool: android_pull_file
-        target_key: remote_path
       tap:
         description: 화면 좌표 탭 (UI 자동화)
         category: control
@@ -615,21 +1091,18 @@ nodes:
       type_text:
         description: 텍스트 입력 (UI 자동화)
         category: type
-        target_description: 입력할 텍스트
         router: handler
         tool: android_ui_type_text
         target_key: text
       find_tap:
         description: UI 요소 찾아서 탭 (텍스트 기반)
         category: control
-        target_description: 찾을 텍스트
         router: handler
         tool: android_ui_find_and_tap
         target_key: query
       open_app:
         description: 앱 실행
         category: control
-        target_description: 패키지명
         router: handler
         tool: android_ui_open_app
         target_key: package_name
@@ -641,14 +1114,12 @@ nodes:
       android_key:
         description: 시스템 키 입력 (HOME/BACK/RECENT 등)
         category: control
-        target_description: 키코드
         router: handler
         tool: android_ui_press_key
         target_key: keycode
       app_info:
         description: 앱 상세 정보 (버전, 크기, 권한)
         category: get
-        target_description: 패키지명
         router: handler
         tool: android_app_info
         target_key: package_name
@@ -668,16 +1139,144 @@ nodes:
         tool: android_capture_screen
       permissions:
         description: 앱 권한 확인
-        target_description: 패키지명
         router: handler
         tool: android_check_permissions
         target_key: package_name
       grant_permissions:
         description: 앱 권한 부여
-        target_description: 패키지명
         router: handler
         tool: android_grant_permissions
         target_key: package_name
+      android_screenshot:
+        description: 안드로이드 화면 캡처 (AI 분석용)
+        category: screenshot
+        router: handler
+        tool: android_ui_screenshot
+      push_file:
+        description: PC→안드로이드 파일 전송
+        category: send
+        router: handler
+        tool: android_push_file
+        target_key: local_path
+      pull_file:
+        description: 안드로이드→PC 파일 전송
+        router: handler
+        tool: android_pull_file
+        target_key: remote_path
+      find_element:
+        description: UI 요소 찾기 (텍스트/속성)
+        category: search
+        router: handler
+        tool: android_ui_find_element
+        target_key: query
+      hierarchy:
+        description: UI 트리 구조 덤프
+        category: get
+        router: handler
+        tool: android_ui_hierarchy
+      long_press:
+        description: 길게 누르기 (UI 자동화)
+        category: control
+        router: handler
+        tool: android_ui_long_press
+      android_screen_info:
+        description: 안드로이드 화면 정보 (해상도, 밀도)
+        category: get
+        router: handler
+        tool: android_ui_screen_info
+      uninstall:
+        description: 앱 삭제
+        router: handler
+        tool: android_uninstall_app
+        target_key: package_name
+      manager:
+        description: Android Manager GUI 실행
+        router: handler
+        tool: open_android_manager
+      list_apps:
+        description: 설치된 앱 목록 (간단)
+        router: handler
+        tool: android_list_apps
+      send_text:
+        description: 텍스트 전송 (키보드 입력)
+        category: send
+        router: handler
+        tool: android_send_text
+        target_key: text
+      desktop_screenshot:
+        description: macOS 화면 캡처 (전체 또는 영역 지정)
+        category: screenshot
+        router: handler
+        tool: computer_screenshot
+      desktop_click:
+        description: macOS 좌표 클릭 (left/right/middle, 더블클릭 가능)
+        category: click
+        router: handler
+        tool: computer_click
+      desktop_type:
+        description: macOS 텍스트 입력
+        category: type
+        router: handler
+        tool: computer_type
+        target_key: text
+      desktop_key:
+        description: 'macOS 키보드 키 입력 (단축키 포함, 예: cmd+c, enter)'
+        router: handler
+        tool: computer_key
+        target_key: key
+      mouse_move:
+        description: 마우스 커서 이동
+        router: handler
+        tool: computer_mouse_move
+      desktop_drag:
+        description: macOS 드래그 (시작점→끝점)
+        router: handler
+        tool: computer_drag
+      desktop_scroll:
+        description: macOS 스크롤 (up/down/left/right)
+        category: control
+        router: handler
+        tool: computer_scroll
+      cursor_position:
+        description: 현재 커서 위치 확인
+        router: handler
+        tool: computer_cursor_position
+      desktop_screen_info:
+        description: macOS 화면 해상도 및 스케일 정보
+        category: get
+        router: handler
+        tool: computer_screen_info
+      apps:
+        description: 설치된 앱 목록 (크기, 사용량 포함)
+        category: list
+        router: handler
+        tool: android_apps_with_details
+      notifications:
+        description: 알림 목록 읽기
+        category: list
+        router: handler
+        tool: android_notifications
+      all_messages:
+        description: 전체 메시지 조회 (SMS+MMS+RCS)
+        category: read
+        router: handler
+        tool: android_get_all_messages
+      contacts:
+        description: 연락처 검색
+        category: search
+        router: handler
+        tool: android_search_contacts
+        target_key: query
+      get_contacts:
+        description: 전체 연락처 목록
+        category: list
+        router: handler
+        tool: android_get_contacts
+      mms:
+        description: MMS 메시지 조회
+        category: read
+        router: handler
+        tool: android_get_mms
       delete_call_log:
         description: 통화 이력 삭제
         category: delete
@@ -705,855 +1304,53 @@ nodes:
         router: handler
         tool: android_delete_sms
         target_key: message_id
+      sms_list:
+        description: SMS 목록 조회 (inbox/sent/all)
+        category: read
+        router: handler
+        tool: android_get_sms
+      sms_send:
+        description: SMS 발송
+        category: send
+        router: handler
+        tool: android_send_sms
+        target_key: phone_number
+      sms_search:
+        description: SMS/MMS/RCS 검색
+        category: search
+        router: handler
+        tool: android_search_sms
+        target_key: query
+      call:
+        description: 전화 걸기
+        router: handler
+        tool: android_make_call
+        target_key: phone_number
+      call_log:
+        description: 통화 이력 조회
+        category: get
+        router: handler
+        tool: android_get_call_log
       end_call:
         description: 통화 종료
         router: handler
         tool: android_end_call
-      all_messages:
-        description: 전체 메시지 조회 (SMS+MMS+RCS)
-        category: read
-        router: handler
-        tool: android_get_all_messages
-      get_contacts:
-        description: 전체 연락처 목록
-        category: list
-        router: handler
-        tool: android_get_contacts
-      mms:
-        description: MMS 메시지 조회
-        category: read
-        router: handler
-        tool: android_get_mms
-      list_apps:
-        description: 설치된 앱 목록 (간단)
-        router: handler
-        tool: android_list_apps
-      send_text:
-        description: 텍스트 전송 (키보드 입력)
-        category: send
-        router: handler
-        tool: android_send_text
-        target_key: text
-      find_element:
-        description: UI 요소 찾기 (텍스트/속성)
-        category: search
-        target_description: 검색어
-        router: handler
-        tool: android_ui_find_element
-        target_key: query
-      hierarchy:
-        description: UI 트리 구조 덤프
-        category: get
-        router: handler
-        tool: android_ui_hierarchy
-      long_press:
-        description: 길게 누르기 (UI 자동화)
-        category: control
-        router: handler
-        tool: android_ui_long_press
-      android_screen_info:
-        description: 안드로이드 화면 정보 (해상도, 밀도)
-        category: get
-        router: handler
-        tool: android_ui_screen_info
-      uninstall:
-        description: 앱 삭제
-        target_description: 패키지명
-        router: handler
-        tool: android_uninstall_app
-        target_key: package_name
-      manager:
-        description: Android Manager GUI 실행
-        router: handler
-        tool: open_android_manager
-      desktop_screenshot:
-        description: macOS 화면 캡처 (전체 또는 영역 지정)
-        category: screenshot
-        router: handler
-        tool: computer_screenshot
-      desktop_click:
-        description: macOS 좌표 클릭 (left/right/middle, 더블클릭 가능)
-        category: click
-        router: handler
-        tool: computer_click
-      desktop_type:
-        description: macOS 텍스트 입력
-        category: type
-        target_description: 입력할 텍스트
-        router: handler
-        tool: computer_type
-        target_key: text
-      desktop_key:
-        description: 'macOS 키보드 키 입력 (단축키 포함, 예: cmd+c, enter)'
-        target_description: 키 이름
-        router: handler
-        tool: computer_key
-        target_key: key
-      mouse_move:
-        description: 마우스 커서 이동
-        router: handler
-        tool: computer_mouse_move
-      desktop_drag:
-        description: macOS 드래그 (시작점→끝점)
-        router: handler
-        tool: computer_drag
-      desktop_scroll:
-        description: macOS 스크롤 (up/down/left/right)
-        category: control
-        router: handler
-        tool: computer_scroll
-      cursor_position:
-        description: 현재 커서 위치 확인
-        router: handler
-        tool: computer_cursor_position
-      desktop_screen_info:
-        description: macOS 화면 해상도 및 스케일 정보
-        category: get
-        router: handler
-        tool: computer_screen_info
-  messenger:
-    description: 연락처 관리 및 메시지 전송
-    actions:
-      search:
-        description: 메시지 검색
-        category: search
-        target_description: 채널 타입 (gmail, nostr)
-        router: channel_engine
-      messages:
-        description: 특정 연락처의 메시지 이력
-        category: get
-        target_description: 연락처 ID
-        router: driver
-        driver: sqlite
-        driver_node: contact
-      neighbors:
-        description: 비즈니스 이웃 목록 조회 (검색, 상세도 조절)
-        category: search
-        target_description: 검색어 (선택)
-        router: handler
-        tool: get_neighbors
-        target_key: search
-      neighbor_detail:
-        description: 특정 이웃의 상세 정보 조회
-        category: get
-        target_description: 이웃 이름 또는 ID
-        router: handler
-        tool: get_neighbor_detail
-        target_key: name
-      send_email:
-        description: 이메일 발송 (Gmail)
-        category: send
-        target_description: 수신자 이메일
-        router: handler
-        tool: send_email
-        target_key: to
-      send:
-        description: 메시지 발송
-        category: send
-        target_description: 채널 타입 (gmail, nostr)
-        router: channel_engine
-      read:
-        description: 메시지 읽기
-        category: read
-        target_description: 채널 타입 (gmail, nostr)
-        router: channel_engine
-  source:
-    description: 데이터 조사/검색/관리 (외부 정보 + 로컬 데이터)
-    guides:
-    - investment/investment_guide.md
-    - study/study_guide.md
-    - location-services/location_services_guide.md
-    - web/web_guide.md
-    - blog/blog_guide.md
-    - memory/memory_guide.md
-    - real-estate/real_estate_guide.md
-    - photo-manager/guide.md
-    actions:
-      price:
-        description: '주가 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F, 지수: ^KS11=코스피 ^KQ11=코스닥)'
-        category: get
-        target_description: 종목 코드/티커 (자동으로 시장 판별)
-        router: handler
-        tool: yf_stock_price
-        target_key: symbol
-      info:
-        description: 종목 상세 정보 (시가총액, 52주 최고/최저 등)
-        category: get
-        target_description: 종목 코드/티커
-        router: handler
-        tool: yf_stock_info
-        target_key: symbol
-      search_stock:
-        description: 종목 심볼 검색 (이름으로 코드 찾기)
-        category: search
-        target_description: 회사명 또는 키워드
-        router: handler
-        tool: yf_search_stock
-        target_key: query
-      kr_company:
-        description: '한국 기업 정보 (DART: 대표자, 업종, 주소, IR)'
-        category: get
-        target_description: 기업명 또는 DART 코드
-        router: handler
-        tool: kr_company_info
-        target_key: corp_name
-      us_company:
-        description: '미국 기업 프로필 (FMP: CEO, 시총, 섹터, 설명)'
-        category: get
-        target_description: 티커 (AAPL, MSFT 등)
-        router: handler
-        tool: us_company_profile
-        target_key: symbol
-      kr_financial:
-        description: '한국 재무제표 (DART: 재무상태표, 손익계산서, 현금흐름표)'
-        category: get
-        target_description: 기업명 또는 DART 코드
-        router: handler
-        tool: kr_financial_statements
-        target_key: corp_name
-      us_financial:
-        description: '미국 재무제표 (FMP: income, balance, cashflow)'
-        category: get
-        target_description: 티커 (AAPL 등)
-        router: handler
-        tool: us_financial_statements
-        target_key: symbol
-      kr_disclosure:
-        description: '한국 공시 검색 (DART: 정기공시, 대량보유, 거래소공시)'
-        category: get
-        target_description: 기업명 또는 DART 코드
-        router: handler
-        tool: kr_disclosures
-        target_key: corp_name
-      us_filing:
-        description: 미국 SEC 공시 검색 (10-K, 10-Q, 8-K, DEF 14A)
-        category: get
-        target_description: 티커
-        router: handler
-        tool: us_sec_filings
-        target_key: symbol
-      news:
-        description: 종목 관련 뉴스 (Finnhub)
-        category: get
-        target_description: '티커 (US: AAPL, KR: 005930.KS)'
-        router: handler
-        tool: company_news
-        target_key: symbol
-      stock_news:
-        description: 종목 뉴스 (Yahoo Finance)
-        category: get
-        target_description: 티커
-        router: handler
-        tool: yf_stock_news
-        target_key: symbol
-      earnings:
-        description: '실적 발표 일정 (Finnhub: EPS/매출 예상 vs 실적)'
-        category: get
-        target_description: 티커 (선택, 비우면 전체 시장)
-        router: handler
-        tool: earnings_calendar
-        target_key: symbol
-      crypto:
-        description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
-        category: get
-        target_description: 코인 심볼 (BTC, ETH, SOL 등)
-        router: handler
-        tool: crypto_price
-        target_key: coin_id
-      kr_price:
-        description: 한국 주가 (KRX/FinanceDataReader, 기간 지정)
-        category: get
-        target_description: 종목 코드 또는 기업명
-        router: handler
-        tool: kr_stock_price
-        target_key: symbol
-      us_price:
-        description: 미국 주가 (FMP, 기간 지정)
-        category: get
-        target_description: 티커
-        router: handler
-        tool: us_stock_price
-        target_key: symbol
-      performance:
-        description: 공연 검색 (KOPIS - 연극, 뮤지컬, 음악회 등)
-        category: search
-        target_description: 검색 키워드
-        router: handler
-        tool: kopis_quick_search
-        target_key: keyword
-      venue:
-        description: 공연장/시설 검색
-        category: get
-        target_description: 공연장명
-        router: handler
-        tool: kopis_search_facilities
-        target_key: keyword
-      book:
-        description: 도서 검색 (도서관정보나루)
-        category: search
-        target_description: 검색어 (제목/저자/출판사)
-        router: handler
-        tool: library_quick_search
-        target_key: keyword
-      book_detail:
-        description: 도서 상세 정보 (대출 통계 포함)
-        category: get
-        target_description: ISBN13
-        router: handler
-        tool: library_get_book_detail
-        target_key: isbn13
-      exhibit:
-        description: 전시/문화행사 검색 (KCISA - 박물관, 미술관)
-        category: search
-        target_description: 검색어
-        router: handler
-        tool: kcisa_quick_search
-        target_key: keyword
-      genres:
-        description: 공연 장르 코드 목록 조회
-        category: get
-        router: handler
-        tool: kopis_get_genres
-      performance_regions:
-        description: 공연 지역 코드 목록 조회
-        category: list
-        router: handler
-        tool: kopis_get_regions
-      book_by_isbn:
-        description: ISBN으로 도서 조회 (10자리/13자리)
-        target_description: ISBN
-        router: handler
-        tool: library_get_book_by_isbn
-        target_key: isbn
-      kdc:
-        description: KDC(한국십진분류) 주제분류코드 목록
-        category: get
-        router: handler
-        tool: library_get_kdc
-      recommended_books:
-        description: 특정 도서 기반 추천도서 (마니아/다독자 추천)
-        category: get
-        target_description: 기준 도서 ISBN13
-        router: handler
-        tool: library_get_recommended_books
-        target_key: isbn13
-      library_regions:
-        description: 도서관 정보나루 지역코드 목록
-        category: list
-        router: handler
-        tool: library_get_regions
-      search_openalex:
-        description: OpenAlex 학술 논문 검색 (인용수, OA 필터)
-        category: search
-        target_description: 검색 쿼리
-        router: handler
-        tool: search_openalex
-        target_key: query
-      search_arxiv:
-        description: arXiv 프리프린트 논문 검색
-        category: search
-        target_description: 검색 쿼리
-        router: handler
-        tool: search_arxiv
-        target_key: query
-      download_arxiv:
-        description: arXiv 논문 PDF 다운로드
-        target_description: 'arXiv ID (예: 2301.07041)'
-        router: handler
-        tool: download_arxiv_pdf
-        target_key: arxiv_id
-      search_semantic:
-        description: Semantic Scholar 논문 검색 (AI 분야 특화)
-        target_description: 검색 쿼리
-        router: handler
-        tool: search_semantic_scholar
-        target_key: query
-      search_scholar:
-        description: Google Scholar 학술 검색
-        category: search
-        target_description: 검색 쿼리
-        router: handler
-        tool: search_google_scholar
-        target_key: query
-      search_pubmed:
-        description: PubMed 생의학 논문 검색
-        category: search
-        target_description: 검색 쿼리
-        router: handler
-        tool: search_pubmed
-        target_key: query
-      download_pubmed:
-        description: PubMed Central 논문 PDF 다운로드
-        target_description: PMC ID
-        router: handler
-        tool: download_pubmed_pdf
-        target_key: pmcid
-      pew_research:
-        description: Pew Research 여론조사/리서치 데이터
-        router: handler
-        tool: fetch_pew_research
-      search_guardian:
-        description: Guardian 뉴스 아카이브 검색
-        category: search
-        target_description: 검색 쿼리
-        router: handler
-        tool: search_guardian
-        target_key: query
-      world_bank:
-        description: 세계은행 경제/사회 지표 데이터
-        target_description: '지표 코드 (예: NY.GDP.MKTP.CD)'
-        router: handler
-        tool: fetch_world_bank_data
-        target_key: indicator
-      search_books:
-        description: Google Books 도서 검색
-        category: search
-        target_description: 검색 쿼리
-        router: handler
-        tool: search_books
-        target_key: query
-      search_shopping:
-        description: 상품 검색 및 가격 비교 (네이버+다나와+중고나라+번개장터)
-        category: search
-        target_description: 상품명
-        router: handler
-        tool: search_shopping
-        target_key: query
-      weather:
-        description: 날씨 조회 (API Ninjas)
-        category: get
-        target_description: 도시명 (Seoul, Tokyo 등)
-        router: handler
-        tool: get_api_ninjas_data
-        target_key: endpoint
-      restaurant:
-        description: 맛집/음식점 검색 (카카오+네이버)
-        category: get
-        target_description: 검색어 (강남 파스타 등)
-        router: handler
-        tool: search_restaurants
-        target_key: query
-      source_navigate:
-        description: 자동차 길찾기 (카카오 내비)
-        target_description: 목적지 장소명. 또는 'A에서 B까지' 형식
-        router: handler
-        tool: kakao_navigation
-        target_key: destination
-      map:
-        description: 지도에 위치 표시
-        category: get
-        target_description: 장소명 또는 좌표
-        router: handler
-        tool: show_location_map
-        target_key: query
-      reverse_geocode:
-        description: GPS 좌표를 주소로 변환
-        router: handler
-        tool: reverse_geocode
-      travel:
-        description: 여행 검색 - 항공, 호텔, 관광지 (Amadeus)
-        target_description: 검색 엔드포인트 (flight-offers, hotel-list 등)
-        router: handler
-        tool: amadeus_travel_search
-        target_key: endpoint
-      search_local:
-        description: 지역 가게/상점 정보 검색 (카페/지도)
-        category: search
-        target_description: 검색어
-        router: handler
-        tool: local_search
-        target_key: query
-      nearby:
-        description: 가까운 CCTV 찾기
-        router: handler
-        tool: get_nearby_cctv
-      open:
-        description: CCTV 영상을 브라우저에서 열기
-        target_description: 이름 또는 URL
-        router: handler
-        tool: open_cctv
-        target_key: name
-      webcam:
-        description: 전세계 웹캠 검색 (Windy)
-        category: search
-        router: handler
-        tool: search_webcam
-      webcam_nearby:
-        description: 가까운 웹캠 찾기
-        router: handler
-        tool: get_nearby_webcam
-      cctv_capture:
-        description: CCTV/웹캠 프레임 캡처 (이미지 저장)
-        target_description: 영상/이미지 URL
-        router: handler
-        tool: capture_cctv
+      open_url:
+        description: URL을 기본 브라우저로 열기
+        category: io
+        router: handler
+        tool: open_in_browser
         target_key: url
-      sources:
-        description: 사용 가능한 CCTV/웹캠 소스 및 상태 확인
-        category: list
-        router: handler
-        tool: list_cctv_sources
-      local_query:
-        description: 축적된 지역 정보 DB 조회
-        target_description: 검색어
-        router: handler
-        tool: local_db_query
-        target_key: query
-      save:
-        description: 가게 정보/커뮤니티 언급 DB 저장
-        category: write
-        router: handler
-        tool: local_db_save
-      cctv_search:
-        description: CCTV/웹캠 통합 검색+자동캡처
-        category: search
-        target_description: 검색 키워드 (한라산, 맨하탄, 해운대, 경부 등)
-        router: handler
-        tool: search_cctv
-        target_key: query
-      web_search:
-        description: DuckDuckGo 웹 검색
-        category: search
-        router: handler
-        tool: ddgs_search
-        target_key: query
-      crawl:
-        description: 웹페이지 크롤링 (텍스트 추출)
-        router: handler
-        tool: crawl_website
-        target_key: url
-      search_news:
-        description: 구글 뉴스 검색
-        category: search
-        router: handler
-        tool: google_news_search
-        target_key: query
-      collect:
-        description: 사이트 프로필 기반 구조화된 데이터 수집
-        target_description: 사이트 프로필 ID 또는 URL
-        router: web_collector
-      search_photos:
-        description: 사진/동영상 검색 (파일명, 카메라 모델 등)
-        category: search
-        target_description: 검색어
-        router: driver
-        driver: sqlite
-        driver_node: photo
-      photo_detail:
-        description: 미디어 파일 상세 정보 조회
-        category: get
-        target_description: 미디어 ID
-        router: driver
-        driver: sqlite
-        driver_node: photo
-      timeline:
-        description: 월별 사진/동영상 촬영 통계
-        category: get
-        target_description: 폴더 경로
-        router: handler
-        tool: get_timeline
-        target_key: path
-      photo_stats:
-        description: 전체 사진/동영상 통계
-        category: get
-        target_description: 폴더 경로
-        router: handler
-        tool: get_stats
-        target_key: path
-      list_scans:
-        description: 스캔된 폴더 목록 조회
-        category: list
-        router: handler
-        tool: list_scans
-      scan:
-        description: 폴더의 사진/동영상 메타데이터 수집 (인덱싱)
-        target_description: 스캔할 폴더 경로
-        router: handler
-        tool: scan_photos
-        target_key: path
-      gallery:
-        description: 스캔된 사진/동영상 갤러리 조회 (페이지네이션, 필터)
-        category: get
-        target_description: 폴더 경로
-        router: handler
-        tool: get_gallery
-        target_key: path
-      duplicates:
-        description: 중복 사진/동영상 탐지 (MD5 기반)
-        category: search
-        target_description: 폴더 경로
-        router: handler
-        tool: find_duplicates
-        target_key: path
-      photo_manager:
-        description: Photo Manager GUI 실행
-        target_description: 폴더 경로 (선택)
-        router: handler
-        tool: open_photo_manager
-        target_key: path
-      rag_search:
-        description: 블로그 RAG 검색 (의미 기반 벡터 검색)
-        category: search
-        router: handler
-        tool: search_blog_rag
-        target_key: query
-      semantic_search:
-        description: 블로그 시맨틱 검색
-        category: search
-        router: handler
-        tool: search_blog_semantic
-        target_key: query
-      rag_content:
-        description: RAG 기반 블로그 글 전문 조회
-        category: get
-        router: handler
-        tool: get_post_content_rag
-        target_key: post_id
-      posts:
-        description: 블로그 글 목록 (handler)
-        category: list
-        router: handler
-        tool: blog_get_posts
-        target_key: category
-      post_detail:
-        description: 블로그 글 상세 (handler)
-        category: get
-        router: handler
-        tool: blog_get_post
-        target_key: post_id
-      blog_stats:
-        description: 블로그 통계 (handler)
-        category: get
-        router: handler
-        tool: blog_stats
-      check_new:
-        description: 새 블로그 글 확인
-        category: list
-        router: handler
-        tool: blog_check_new_posts
-      insight:
-        description: 블로그 인사이트 분석
-        category: search
-        router: handler
-        tool: kinsight
-        target_key: query
-      insight2:
-        description: 블로그 인사이트 분석 v2
-        category: search
-        router: handler
-        tool: kinsight2
-        target_key: query
-      rebuild_index:
-        description: 블로그 검색 인덱스 재구축
-        router: handler
-        tool: rebuild_search_index
-      search_memory:
-        description: 대화 내용 검색
-        category: search
-        target_description: 검색 키워드
-        router: driver
-        driver: sqlite
-        driver_node: memory
-      recent:
-        description: 최근 대화 조회
-        category: get
-        router: driver
-        driver: sqlite
-        driver_node: memory
-      agents:
-        description: 등록된 에이전트 목록
-        category: list
-        router: driver
-        driver: sqlite
-        driver_node: memory
-      save_memory:
-        description: 심층 메모리에 항목 저장
-        category: create
-        target_description: 저장할 내용
-        router: handler
-        tool: memory_save
-        target_key: content
-      memory_search:
-        description: 심층 메모리에서 키워드 검색
-        category: search
-        target_description: 검색 키워드
-        router: handler
-        tool: memory_search
-        target_key: query
-      memory_read:
-        description: 메모리 항목 전체 내용 조회
-        category: get
-        target_description: 메모리 ID
-        router: handler
-        tool: memory_read
-        target_key: memory_id
-      memory_delete:
-        description: 메모리 항목 삭제
-        category: delete
-        target_description: 메모리 ID
-        router: handler
-        tool: memory_delete
-        target_key: memory_id
-      skill_search:
-        description: 스킬 DB에서 도메인 지식 검색
-        category: search
-        target_description: 검색 키워드
-        router: handler
-        tool: skill_search
-        target_key: query
-      skill_read:
-        description: 스킬 전체 내용 조회
-        category: get
-        target_description: 스킬 ID
-        router: handler
-        tool: skill_read
-        target_key: skill_id
-      skill_add:
-        description: 새로운 스킬 추가
-        category: create
-        target_description: 스킬 이름
-        router: handler
-        tool: skill_add
-        target_key: name
-      skill_delete:
-        description: 스킬 삭제
-        category: delete
-        target_description: 스킬 ID
-        router: handler
-        tool: skill_delete
-        target_key: skill_id
-      skill_import:
-        description: 마크다운 파일에서 스킬 임포트
-        category: create
-        target_description: 파일 경로
-        router: handler
-        tool: skill_import_md
-        target_key: file_path
-      health_query:
-        description: 건강 기록 조회 (혈압, 혈당, 체중, 증상, 약물)
-        category: get
-        target_description: 카테고리 (blood_pressure, blood_sugar, weight, symptoms, medications)
-        router: driver
-        driver: sqlite
-        driver_node: health
-      history:
-        description: 특정 카테고리의 이력 조회
-        category: get
-        target_description: 카테고리
-        router: driver
-        driver: sqlite
-        driver_node: health
-      save_health:
-        description: 건강 정보 저장 (혈압, 혈당, 체중, 증상, 투약, 문서)
-        category: write
-        target_description: info_type (blood_pressure, blood_sugar, weight, symptom,
-          medication, document)
-        router: handler
-        tool: save_health_info
-        target_key: info_type
-      context:
-        description: 건강 기록 컨텍스트 조회 (최근, 통계, 특정 카테고리)
-        category: get
-        target_description: query_type (recent, summary, search, category)
-        router: handler
-        tool: get_health_context
-        target_key: query_type
-      apt_trade:
-        description: 아파트 매매 실거래가 (국토부)
-        target_description: '지역코드 (5자리, 예: 11680=강남)'
-        router: handler
-        tool: apt_trade_price
-        target_key: region_code
-      apt_rent:
-        description: 아파트 전월세 실거래가
-        target_description: 지역코드
-        router: handler
-        tool: apt_rent_price
-        target_key: region_code
-      house_trade:
-        description: 단독/다세대 주택 매매 실거래가
-        target_description: 지역코드
-        router: handler
-        tool: house_trade_price
-        target_key: region_code
-      house_rent:
-        description: 단독/다세대 주택 전월세 실거래가
-        target_description: 지역코드
-        router: handler
-        tool: house_rent_price
-        target_key: region_code
-      district_codes:
-        description: 법정동 지역코드 조회
-        category: list
-        target_description: 시/도명 (서울, 경기 등)
-        router: handler
-        tool: get_region_codes
-        target_key: city
-      commercial:
-        description: 상권 분석 (업종별 점포, 좌표/행정동 기반)
-        router: handler
-        tool: search_commercial_district
-      kr_investor:
-        description: 한국 시장 투자자별 매매동향 (외국인/기관/개인 순매수, 코스피/코스닥)
-        target_description: 시장 구분 (STK=코스피, KSQ=코스닥, ALL=전체)
-        router: handler
-        tool: kr_market_investor_trading
-        target_key: market
-      kr_stock_investor:
-        description: 개별종목 투자자별 매매동향 (외국인/기관/개인 순매수)
-        target_description: 종목 코드 또는 기업명
-        router: handler
-        tool: kr_stock_investor_trading
-        target_key: symbol
-  stream:
-    description: 미디어 스트리밍 (유튜브 동영상/오디오, 인터넷 라디오)
-    actions:
-      info:
-        description: 동영상 메타데이터 조회 (제목, 조회수, 채널 등)
-        category: get
-        target_description: 유튜브 URL
-        router: handler
-        tool: get_youtube_info
-        target_key: url
-      transcript:
-        description: 동영상 자막/스크립트 추출
-        category: get
-        target_description: 유튜브 URL
-        router: handler
-        tool: get_youtube_transcript
-        target_key: url
-      languages:
-        description: 사용 가능한 자막 언어 목록 조회
-        category: get
-        target_description: 유튜브 URL
-        router: handler
-        tool: list_available_transcripts
-        target_key: url
-      download:
-        description: 동영상 오디오를 MP3로 다운로드 (output_path로 저장 경로/파일명 지정 가능, 기본값 ~/Desktop/output.mp3)
-        category: control
-        target_description: 유튜브 URL
-        router: handler
-        tool: download_youtube_music
-        target_key: url
-      search_youtube:
-        description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
-        category: search
-        target_description: 검색어
-        router: handler
-        tool: search_youtube
-        target_key: query
+        phase: 5
       play:
         description: 유튜브 검색 후 바로 재생 (검색+재생 복합. 검색만 원하면 search_youtube 사용)
         category: play
-        target_description: 검색어 또는 유튜브 URL
         router: handler
         tool: play_youtube
         target_key: query
       queue_add:
         description: 재생 큐에 곡 추가
         category: control
-        target_description: 검색어
         router: handler
         tool: add_to_queue
         target_key: query
@@ -1572,24 +1369,15 @@ nodes:
         category: stop
         router: handler
         tool: stop_youtube
-      search_radio:
-        description: 전세계 인터넷 라디오 검색 (Radio Browser API)
-        category: search
-        target_description: 방송국명
+      youtube_download:
+        description: 동영상 오디오를 MP3로 다운로드 (output_path로 저장 경로/파일명 지정 가능, 기본값 ~/Desktop/output.mp3)
+        category: control
         router: handler
-        tool: search_radio
-        target_key: name
-      korean:
-        description: 한국 주요 방송사 라디오 채널 목록 (KBS/MBC/SBS/TBS/CBS/EBS)
-        category: search
-        target_description: 방송사명 (선택)
-        router: handler
-        tool: get_korean_radio
-        target_key: broadcaster
+        tool: download_youtube_music
+        target_key: url
       radio_play:
         description: 라디오 재생 (mpv)
         category: play
-        target_description: station_id 또는 stream_url
         router: handler
         tool: play_radio
         target_key: station_id
@@ -1598,7 +1386,7 @@ nodes:
         category: stop
         router: handler
         tool: stop_radio
-      status:
+      player_status:
         description: 현재 재생 상태 확인
         category: get
         router: handler
@@ -1620,12 +1408,91 @@ nodes:
         tool: save_radio_favorite
       remove_favorite:
         description: 즐겨찾기에서 제거
-        target_description: 방송국명
         router: handler
         tool: remove_radio_favorite
         target_key: name
-  forge:
-    description: 콘텐츠 제작, 웹개발/배포, 건축설계
+    description: '수족: 작업 도구 및 기기 제어 — 브라우저 자동화, 안드로이드, 데스크톱, 미디어 재생, URL/파일 열기'
+    guides:
+    - browser-action/browser_guide.md
+    - android/android_guide.md
+    - computer-use/guide.md
+  others:
+    actions:
+      delegate:
+        description: 같은 프로젝트의 에이전트에게 작업 위임 (비동기)
+        target_key: agent_id
+        router: system
+        func: call_agent
+      ask:
+        description: 에이전트에게 질문 또는 작업 위임 (비동기 — 결과를 기다리지 않음)
+        target_key: agent_id
+        router: system
+        func: agent_ask
+      ask_sync:
+        description: 에이전트에게 동기 질문 (응답을 기다려서 반환 — 파이프라인/워크플로우용)
+        target_key: agent_id
+        router: system
+        func: agent_ask_sync
+      delegate_workflow:
+        description: 다른 에이전트에게 IBL 파이프라인 위임
+        router: system
+        func: delegate_workflow
+      delegate_project:
+        description: 다른 프로젝트의 에이전트에게 작업 위임
+        target_key: agent_id
+        router: system
+        func: call_project_agent
+      agent_info:
+        description: 특정 에이전트 노드 상세 정보
+        target_key: agent_id
+        router: system
+        func: agent_info
+      list_projects:
+        description: 모든 프로젝트와 에이전트 목록 조회
+        router: system
+        func: list_project_agents
+      channel_search:
+        description: 메시지 검색
+        category: search
+        target_key: channel_type
+        router: channel_engine
+      messages:
+        description: 특정 연락처의 메시지 이력
+        category: get
+        target_key: neighbor_id
+        router: driver
+        driver: sqlite
+        driver_node: contact
+      neighbors:
+        description: 비즈니스 이웃 목록 조회 (검색, 상세도 조절)
+        category: search
+        router: handler
+        tool: get_neighbors
+        target_key: search
+      neighbor_detail:
+        description: 특정 이웃의 상세 정보 조회
+        category: get
+        router: handler
+        tool: get_neighbor_detail
+        target_key: name
+      send_email:
+        description: 이메일 발송 (Gmail)
+        category: send
+        router: handler
+        tool: send_email
+        target_key: to
+      channel_send:
+        description: 메시지 발송
+        category: send
+        target_key: channel_type
+        router: channel_engine
+      channel_read:
+        description: 메시지 읽기
+        category: read
+        target_key: channel_type
+        router: channel_engine
+    description: '타자: 외부 에이전트 및 사용자와의 소통 — 위임, 메시징, SMS, 이메일, 연락처, 협업'
+  engines:
     actions:
       newspaper:
         description: 키워드 기반 뉴스 신문(HTML) 자동 생성
@@ -1660,7 +1527,6 @@ nodes:
       remotion:
         description: React/Remotion 기반 프로그래밍 방식 영상 생성
         category: create
-        target_description: TSX 컴포지션 코드
         router: handler
         tool: create_remotion_video
         target_key: composition_code
@@ -1727,87 +1593,86 @@ nodes:
       line:
         description: 라인 차트
         category: create
-        target_description: 차트 제목
         router: handler
         tool: line_chart
         target_key: title
       bar:
         description: 바 차트 (수평/수직, 스택)
         category: create
-        target_description: 차트 제목
         router: handler
         tool: bar_chart
         target_key: title
       candlestick:
         description: 캔들스틱 차트 (OHLCV, 이동평균)
         category: create
-        target_description: 차트 제목
         router: handler
         tool: candlestick_chart
         target_key: title
       pie:
         description: 파이/도넛 차트
         category: create
-        target_description: 차트 제목
         router: handler
         tool: pie_chart
         target_key: title
       scatter:
         description: 산점도 (추세선 옵션)
         category: create
-        target_description: 차트 제목
         router: handler
         tool: scatter_plot
         target_key: title
       heatmap:
         description: 히트맵
         category: create
-        target_description: 차트 제목
         router: handler
         tool: heatmap
         target_key: title
       multi:
         description: 복합 차트 대시보드 (여러 차트 조합)
         category: create
-        target_description: 대시보드 제목
         router: handler
         tool: multi_chart
         target_key: title
-      registry:
-        description: 사이트 레지스트리 관리 (등록/목록/삭제/업데이트)
-        category: get
-        target_description: 사이트 ID
+      site_list:
+        description: 등록된 사이트 목록 조회
+        category: list
         router: handler
-        tool: site_registry
+        tool: site_list
+      site_register:
+        description: 새 사이트 등록 (이름, 경로 필수)
+        category: create
+        router: handler
+        tool: site_register
+        target_key: name
+      site_remove:
+        description: 등록된 사이트 삭제
+        category: delete
+        router: handler
+        tool: site_remove
         target_key: site_id
-      snapshot:
+      site_update:
+        description: 등록된 사이트 정보 수정
+        category: control
+        router: handler
+        tool: site_update
+        target_key: site_id
+      site_snapshot:
         description: 사이트 스냅샷 (현재 상태 캡처)
         category: get
-        target_description: 사이트 ID
         router: handler
         tool: site_snapshot
         target_key: site_id
       live_check:
         description: 사이트 상태 확인 (Lighthouse 품질 검사)
         category: get
-        target_description: 사이트 ID 또는 URL
         router: handler
         tool: site_live_check
         target_key: site_id
       create_site:
         description: '새 프로젝트 생성 (템플릿: blank/landing/portfolio/blog/business)'
         category: create
-        target_description: 프로젝트명
         router: handler
         tool: create_project
         target_key: name
-      add_component:
-        description: shadcn/ui 컴포넌트 추가
-        category: create
-        target_description: 프로젝트 경로
-        router: handler
-        tool: add_component
-        target_key: project_path
       list_components:
         description: 사용 가능한 컴포넌트 목록
         category: list
@@ -1821,103 +1686,70 @@ nodes:
       create_page:
         description: 페이지 생성 (섹션 조합)
         category: create
-        target_description: 프로젝트 경로
         router: handler
         tool: create_page
-        target_key: project_path
-      edit_styles:
-        description: 테마/스타일 변경 (색상, 라운딩 등)
-        target_description: 프로젝트 경로
-        router: handler
-        tool: edit_styles
         target_key: project_path
       preview:
         description: 로컬 미리보기 서버 (start/stop/status)
         category: run
-        target_description: 프로젝트 경로
         router: handler
         tool: preview_site
-        target_key: project_path
-      build:
-        description: 프로덕션 빌드
-        category: run
-        target_description: 프로젝트 경로
-        router: handler
-        tool: build_site
-        target_key: project_path
-      deploy:
-        description: Vercel 배포
-        category: run
-        target_description: 프로젝트 경로
-        router: handler
-        tool: deploy_vercel
         target_key: project_path
       fetch_component:
         description: 외부 컴포넌트 가져오기
         category: create
-        target_description: 컴포넌트명
         router: handler
         tool: fetch_component
         target_key: component
       api:
         description: Cloudflare API 호출 (모든 서비스 통합)
-        target_description: 'API 엔드포인트 (예: /zones, /accounts/{account_id}/tunnels)'
         router: handler
         tool: cf_api
         target_key: endpoint
       create_design:
         description: 새 집 설계 초기화 (부지 크기, 층수 설정)
         category: create
-        target_description: 설계명
         router: handler
         tool: create_house_design
         target_key: name
       modify:
         description: 설계 수정 (방, 문, 창, 벽, 계단 등)
-        target_description: 설계 ID
         router: handler
         tool: modify_house_design
         target_key: design_id
       get_design:
         description: 현재 설계 상태 조회
         category: get
-        target_description: 설계 ID
         router: handler
         tool: get_house_design
         target_key: design_id
       floor_plan:
         description: 2D 평면도 PNG 생성
-        target_description: 설계 ID
         router: handler
         tool: generate_floor_plan
         target_key: design_id
       view_3d:
         description: 인터랙티브 3D 시각화 HTML 생성
-        target_description: 설계 ID
         router: handler
         tool: generate_3d_view
         target_key: design_id
       report:
         description: 면적표, 건폐율, 물량 산출 보고서
-        target_description: 설계 ID
         router: handler
         tool: generate_quantity_report
         target_key: design_id
       section:
         description: 건물 단면도 PNG 생성
-        target_description: 설계 ID
         router: handler
         tool: generate_section_view
         target_key: design_id
       elevation:
         description: 건물 입면도 PNG 생성 (4방향)
-        target_description: 설계 ID
         router: handler
         tool: generate_elevation_view
         target_key: design_id
       export:
         description: 도면을 PDF/SVG/DXF로 출력
-        target_description: 설계 ID
         router: handler
         tool: export_drawing
         target_key: design_id
@@ -1926,6 +1758,7 @@ nodes:
         category: list
         router: handler
         tool: list_house_designs
+    description: '작업장: 콘텐츠 생성 및 변환 — 신문, 슬라이드, 영상, 차트, 음악, 웹사이트, 디자인'
     guides:
     - media_producer/video_workflow_guide.md
     - media_producer/slides_guide.md

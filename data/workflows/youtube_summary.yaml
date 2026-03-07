@@ -5,6 +5,6 @@ description: |
   2단계: 에이전트가 자막을 읽고 요약 (에이전트 본연의 능력)
   3단계: 결과를 HTML로 저장 (output:file)
 steps:
-  - node: youtube
+  - node: limbs
     action: transcript
     target: "{{url}}"

@@ -8,7 +8,7 @@
 사용자 → 에이전트A → call_agent(B) → 에이전트B → 작업 완료 → 자동 보고 → 에이전트A → 사용자
 ```
 
-- `[team:delegate]` IBL 액션으로 다른 에이전트에게 작업 위임 (기존 `call_agent()` 도구, Phase 23: orchestrator→system→team)
+- `[others:delegate]` IBL 액션으로 다른 에이전트에게 작업 위임 (기존 `call_agent()` 도구, Phase 25: others 노드)
 - 위임받은 에이전트가 작업 완료 시 자동으로 결과 보고
 - 위임한 에이전트는 결과를 받아 최종 처리 후 사용자에게 응답
 
@@ -549,6 +549,7 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
 *Phase 17→19: 모든 위임이 IBL 경로(`execute_ibl`)를 통해 실행됨.*
 *Phase 23: 위임 액션을 system에서 team 노드로 분리. `[team:delegate]` (프로젝트 내), `[team:delegate_project]` (프로젝트 간). team은 _ALWAYS_ALLOWED로 모든 에이전트에 자동 제공.*
 *Phase 23 안정화: completed[] 사이클 병합, 병렬 위임 원자적 응답 추가, WebSocket 3-레이어 위임 감지.*
+*Phase 25: others 노드로 통합. `[others:delegate]` (프로젝트 내), `[others:delegate_project]` (프로젝트 간), `[others:send_email]` (통신). others는 _ALWAYS_ALLOWED로 모든 에이전트에 자동 제공.*
 
 > 참고: 위임 프롬프트 파일
 > - `fragments/09_delegation.md`: 프로젝트 내 에이전트 간 위임 가이드

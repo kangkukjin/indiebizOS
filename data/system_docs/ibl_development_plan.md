@@ -3,11 +3,15 @@
 > indiebizOS를 위한 정보 흐름 추상화 언어
 > 최종 업데이트: 2026-02-18
 
+> **⚠️ 주의**: 이 문서의 예제 중 일부가 `[node:action]("target")` 구 문법을 사용합니다.
+> **현재 유효한 문법은 `[node:action]{key: "value"}` 입니다.** `(target)` 문법은 폐지되어 에러가 발생합니다.
+> 모든 값은 `{params}` 안에 named parameter로 전달하세요.
+
 ---
 
 ## 1. IBL이란
 
-**IBL은 정보의 흐름을 위한 언어다.** 모든 정보 소스를 `[node:action](target)` 하나의 패턴으로 표현한다.
+**IBL은 정보의 흐름을 위한 언어다.** 모든 정보 소스를 `[node:action]{params}` 하나의 패턴으로 표현한다.
 
 ```
 [정보 수집] → AI 사고/가공 → [정보 전달]
@@ -27,7 +31,7 @@
 API든 크롤링이든 안드로이드든 DB든, IBL에서는 전부 같은 패턴이다:
 
 ```
-IBL 표현 계층:     [node:action](target) { params }
+IBL 표현 계층:     [node:action]{params}
                          |
 드라이버 계층:     http | websocket | adb | cdp | sqlite | file_io
                          |
@@ -84,7 +88,7 @@ IBL 표현 계층:     [node:action](target) { params }
 
 ### Phase 7: 모든 정보 소스를 IBL로 통합
 
-**목표**: API 이외의 정보 소스들 - 로컬 DB, 하드웨어, 브라우저, 스트림 - 을 전부 같은 `[node:action](target)` 패턴으로 사용할 수 있게 만든다.
+**목표**: API 이외의 정보 소스들 - 로컬 DB, 하드웨어, 브라우저, 스트림 - 을 전부 같은 `[node:action]{params}` 패턴으로 사용할 수 있게 만든다.
 
 #### 7-1. 드라이버 계층 만들기
 
@@ -551,7 +555,7 @@ PC 자체    → 노드  (프로토콜: 시스템 콜)
 사용자/AI
     |
     v
-[IBL 표현]  ──── [node:action](target) { params }
+[IBL 표현]  ──── [node:action]{params}
     |
     v
 [IBL 엔진]  ──── ibl_engine.py: 노드 → 드라이버 라우팅
@@ -1396,7 +1400,7 @@ Phase 19에서 인프라 노드를 orchestrator로 통합하고, Phase 20에서 
 | `source` | 105 | 데이터 검색/조회 (외부 정보 + 내부 저장소) |
 | `interface` | 79 | UI 조작 (브라우저, 안드로이드, 데스크탑) |
 | `system` | 64 | 시스템 관리, 사용자 소통, 워크플로우, 파일시스템 |
-| `forge` | 46 | 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 웹사이트) |
+| `engines` | 46 | 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 웹사이트) |
 | `stream` | 18 | 미디어 재생 (유튜브, 라디오) |
 | `messenger` | 9 | 연락처 관리 및 메시지 전송 |
 

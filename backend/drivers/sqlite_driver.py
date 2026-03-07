@@ -32,7 +32,7 @@ class SqliteDriver(Driver):
     def __init__(self):
         self._base_path = get_base_path()
 
-    def execute(self, action: str, target: str, params: dict) -> dict:
+    def execute(self, action: str, params: dict) -> dict:
         """노드별 핸들러에 위임"""
         node = params.pop("_node", None)
         if not node:
@@ -42,7 +42,7 @@ class SqliteDriver(Driver):
         if not handler:
             return self._err(f"지원하지 않는 노드: {node}")
 
-        return handler(self, action, target, params)
+        return handler(self, action, params)
 
     def list_actions(self) -> list:
         return list(_NODE_HANDLERS.keys())
@@ -58,8 +58,8 @@ class SqliteDriver(Driver):
     # ─────────────────────────────────────────
     # photo 노드
     # ─────────────────────────────────────────
-    def _handle_photo(self, action: str, target: str, params: dict) -> dict:
-        scan_dir = self._base_path / "data" / "photo_scans"
+    def _handle_photo(self, action: str, params: dict) -> dict:
+        scan_dir = self._base_path / "data" / "packages" / "photo_scans"
         scans_json = scan_dir / "scans.json"
 
         if not scans_json.exists():
@@ -88,9 +88,11 @@ class SqliteDriver(Driver):
 
         try:
             if action in ("search", "search_photos"):
-                return self._photo_search(conn, target, params)
+                query = params.get("query", "")
+                return self._photo_search(conn, query, params)
             elif action in ("get", "photo_detail"):
-                return self._photo_get(conn, target)
+                media_id = params.get("media_id", "")
+                return self._photo_get(conn, media_id)
             elif action == "timeline":
                 return self._photo_timeline(conn, params)
             elif action == "stats":
@@ -104,8 +106,10 @@ class SqliteDriver(Driver):
         media_type = params.get("media_type", "all")
         limit = params.get("limit", 20)
         sort_by = params.get("sort_by", "taken_date DESC")
+        start_date = params.get("start_date")
+        end_date = params.get("end_date")
 
-        sql = "SELECT id, path, filename, media_type, taken_date, camera_model, width, height, size FROM media_files WHERE 1=1"
+        sql = "SELECT id, path, filename, media_type, taken_date, gps_lat, gps_lon, camera_model, width, height, size FROM media_files WHERE 1=1"
         args = []
 
         if query:
@@ -114,6 +118,12 @@ class SqliteDriver(Driver):
         if media_type != "all":
             sql += " AND media_type = ?"
             args.append(media_type)
+        if start_date:
+            sql += " AND COALESCE(taken_date, mtime) >= ?"
+            args.append(start_date)
+        if end_date:
+            sql += " AND COALESCE(taken_date, mtime) <= ?"
+            args.append(end_date)
 
         sql += f" ORDER BY {sort_by} LIMIT ?"
         args.append(limit)
@@ -129,13 +139,25 @@ class SqliteDriver(Driver):
         return self._ok(dict(row))
 
     def _photo_timeline(self, conn, params: dict) -> dict:
-        rows = conn.execute("""
+        start_date = params.get("start_date")
+        end_date = params.get("end_date")
+
+        where = "WHERE taken_date IS NOT NULL"
+        args = []
+        if start_date:
+            where += " AND taken_date >= ?"
+            args.append(start_date)
+        if end_date:
+            where += " AND taken_date <= ?"
+            args.append(end_date)
+
+        rows = conn.execute(f"""
             SELECT strftime('%Y-%m', taken_date) as month, COUNT(*) as count, media_type
             FROM media_files
-            WHERE taken_date IS NOT NULL
+            {where}
             GROUP BY month, media_type
             ORDER BY month DESC
-        """).fetchall()
+        """, args).fetchall()
         items = [dict(r) for r in rows]
         return self._ok(items, f"타임라인 {len(items)}개 월")
 
@@ -151,7 +173,7 @@ class SqliteDriver(Driver):
     # ─────────────────────────────────────────
     # health 노드
     # ─────────────────────────────────────────
-    def _handle_health(self, action: str, target: str, params: dict) -> dict:
+    def _handle_health(self, action: str, params: dict) -> dict:
         db_path = self._base_path / "data" / "health" / "health_records.db"
         conn = self._get_db(str(db_path))
         if not conn:
@@ -160,15 +182,16 @@ class SqliteDriver(Driver):
         try:
             person = params.get("person", "기본")
             person_id = self._get_person_id(conn, person)
+            category = params.get("category", "")
 
             if action == "query":
-                return self._health_query(conn, target, params, person_id)
+                return self._health_query(conn, category, params, person_id)
             elif action == "log":
-                return self._health_log(conn, target, params, person_id)
+                return self._health_log(conn, category, params, person_id)
             elif action == "summary":
                 return self._health_summary(conn, params, person_id, person)
             elif action == "history":
-                return self._health_history(conn, target, params, person_id)
+                return self._health_history(conn, category, params, person_id)
             else:
                 return self._err(f"health 노드에 '{action}' 액션이 없습니다")
         finally:
@@ -306,7 +329,7 @@ class SqliteDriver(Driver):
     # ─────────────────────────────────────────
     # blog 노드
     # ─────────────────────────────────────────
-    def _handle_blog(self, action: str, target: str, params: dict) -> dict:
+    def _handle_blog(self, action: str, params: dict) -> dict:
         # blog RAG DB
         blog_db_path = self._base_path / "data" / "packages" / "installed" / "tools" / "blog" / "data" / "blog_insight.db"
         conn = self._get_db(str(blog_db_path))
@@ -315,9 +338,11 @@ class SqliteDriver(Driver):
 
         try:
             if action == "search":
-                return self._blog_search(conn, target, params)
+                query = params.get("query", "")
+                return self._blog_search(conn, query, params)
             elif action == "get_post":
-                return self._blog_get_post(conn, target)
+                post_id = params.get("post_id", "")
+                return self._blog_get_post(conn, post_id)
             elif action == "list":
                 return self._blog_list(conn, params)
             elif action == "stats":
@@ -398,7 +423,7 @@ class SqliteDriver(Driver):
     # ─────────────────────────────────────────
     # contact 노드
     # ─────────────────────────────────────────
-    def _handle_contact(self, action: str, target: str, params: dict) -> dict:
+    def _handle_contact(self, action: str, params: dict) -> dict:
         db_path = self._base_path / "data" / "business.db"
         conn = self._get_db(str(db_path))
         if not conn:
@@ -406,13 +431,16 @@ class SqliteDriver(Driver):
 
         try:
             if action == "search":
-                return self._contact_search(conn, target, params)
+                query = params.get("query", "")
+                return self._contact_search(conn, query, params)
             elif action == "get":
-                return self._contact_get(conn, target)
+                neighbor_id = params.get("neighbor_id", "")
+                return self._contact_get(conn, neighbor_id)
             elif action == "list":
                 return self._contact_list(conn, params)
             elif action == "messages":
-                return self._contact_messages(conn, target, params)
+                neighbor_id = params.get("neighbor_id", "")
+                return self._contact_messages(conn, neighbor_id, params)
             else:
                 return self._err(f"contact 노드에 '{action}' 액션이 없습니다")
         finally:
@@ -485,7 +513,7 @@ class SqliteDriver(Driver):
     # ─────────────────────────────────────────
     # memory 노드
     # ─────────────────────────────────────────
-    def _handle_memory(self, action: str, target: str, params: dict) -> dict:
+    def _handle_memory(self, action: str, params: dict) -> dict:
         project_path = params.get("project_path", "")
         if not project_path:
             return self._err("project_path가 필요합니다 (대화 DB 위치)")
@@ -497,7 +525,8 @@ class SqliteDriver(Driver):
 
         try:
             if action == "search":
-                return self._memory_search(conn, target, params)
+                keyword = params.get("query", params.get("keyword", ""))
+                return self._memory_search(conn, keyword, params)
             elif action == "recent":
                 return self._memory_recent(conn, params)
             elif action == "agents":

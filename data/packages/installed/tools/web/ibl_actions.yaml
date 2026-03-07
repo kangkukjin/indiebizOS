@@ -1,12 +1,12 @@
 nodes:
-  system:
+  self:
     actions:
       launch:
         description: 즐겨찾기 사이트 열기/관리
         router: handler
         tool: launch_sites
         target_key: action
-  source:
+  sense:
     actions:
       web_search:
         description: DuckDuckGo 웹 검색

@@ -429,31 +429,32 @@ def _build_extraction_js(selectors: dict, transform: dict) -> str:
 
 # === IBL 노드 액션 핸들러 ===
 
-def execute_web_collect_action(action: str, target: str, params: dict,
+def execute_web_collect_action(action: str, params: dict,
                                project_path: str) -> Any:
     """
     ibl_engine에서 호출되는 web:collect 액션 핸들러
 
     Args:
         action: "collect"
-        target: 사이트 프로필 ID 또는 URL
-        params: 추가 파라미터 (selectors, max_items 등)
+        params: source(프로필 ID 또는 URL), selectors, max_items 등
     """
     if action == "collect":
-        # target이 URL이면 ad-hoc 수집
-        if target and (target.startswith("http://") or target.startswith("https://")):
+        source = params.get("source", params.get("url", ""))
+
+        # source가 URL이면 ad-hoc 수집
+        if source and (source.startswith("http://") or source.startswith("https://")):
             selectors = params.get("selectors", {})
             max_items = params.get("max_items", 20)
-            return collect_ad_hoc(target, selectors, max_items)
+            return collect_ad_hoc(source, selectors, max_items)
 
-        # target이 프로필 ID이면 프로필 기반 수집
-        if target:
-            return collect_with_profile(target, params)
+        # source가 프로필 ID이면 프로필 기반 수집
+        if source:
+            return collect_with_profile(source, params)
 
-        # target이 없으면 프로필 목록 반환
+        # source가 없으면 프로필 목록 반환
         profiles = list_profiles()
         return {
-            "message": "프로필 ID 또는 URL을 target으로 지정하세요.",
+            "message": "source(프로필 ID 또는 URL)를 지정하세요.",
             "available_profiles": profiles,
             "count": len(profiles)
         }

@@ -66,36 +66,27 @@ _DESC_HINTS = {
 # Stage 1: 단일 액션 (규칙 기반)
 # =============================================================================
 
-def _get_target_for_action(action_config: dict) -> str:
-    """액션 설정에서 현실적인 타겟 값 생성"""
+def _get_primary_param_value(action_config: dict) -> tuple:
+    """액션 설정에서 주요 파라미터의 (key, value) 생성
+
+    Returns:
+        (param_key, param_value) 또는 ("", "") if 없음
+    """
     target_key = action_config.get('target_key', '')
-    target_desc = action_config.get('target_description', '')
     description = action_config.get('description', '')
 
     # 1. target_key로 매칭
     if target_key and target_key in _EXAMPLE_TARGETS:
-        return random.choice(_EXAMPLE_TARGETS[target_key])
+        return (target_key, random.choice(_EXAMPLE_TARGETS[target_key]))
 
-    # 2. target_description에서 힌트 추출
-    if target_desc:
-        for hint_key, values in _EXAMPLE_TARGETS.items():
-            if hint_key in target_desc.lower():
-                return random.choice(values)
-        # target_description 자체의 예시 추출 (괄호 안)
-        import re
-        example_match = re.search(r'[예예시:]?\s*[:：]?\s*([^)）\]]+)', target_desc)
-        if example_match:
-            examples = example_match.group(1).split(',')
-            cleaned = [e.strip().strip("'\"") for e in examples if e.strip()]
-            if cleaned:
-                return cleaned[0]
+    # 2. description에서 힌트
+    if target_key:
+        for hint, default_target in _DESC_HINTS.items():
+            if hint in description:
+                return (target_key, default_target)
+        return (target_key, "")
 
-    # 3. description에서 힌트
-    for hint, default_target in _DESC_HINTS.items():
-        if hint in description:
-            return default_target
-
-    return ""
+    return ("", "")
 
 
 def _make_intent_from_description(description: str, node: str) -> str:
@@ -128,12 +119,12 @@ def generate_stage1(nodes_data: dict) -> List[Dict]:
                 continue
 
             description = action_config.get('description', action_name)
-            target = _get_target_for_action(action_config)
+            param_key, param_val = _get_primary_param_value(action_config)
             intent = _make_intent_from_description(description, node_name)
 
-            # IBL 코드 생성
-            if target:
-                ibl_code = f'[{node_name}:{action_name}]("{target}")'
+            # IBL 코드 생성 (params-only 문법)
+            if param_key and param_val:
+                ibl_code = f'[{node_name}:{action_name}]{{{param_key}: "{param_val}"}}'
             else:
                 ibl_code = f'[{node_name}:{action_name}]()'
 
@@ -199,11 +190,12 @@ def generate_for_package(package_id: str) -> int:
             continue
 
         description = action_config.get('description', action_name)
-        target = _get_target_for_action(action_config)
+        param_key, param_val = _get_primary_param_value(action_config)
         intent = _make_intent_from_description(description, node_name)
 
-        if target:
-            ibl_code = f'[{node_name}:{action_name}]("{target}")'
+        # IBL 코드 생성 (params-only 문법)
+        if param_key and param_val:
+            ibl_code = f'[{node_name}:{action_name}]{{{param_key}: "{param_val}"}}'
         else:
             ibl_code = f'[{node_name}:{action_name}]()'
 
@@ -263,225 +255,225 @@ _PIPELINE_TEMPLATES = [
     # 검색 → 저장
     (
         "AI 뉴스를 검색해서 파일로 저장해줘",
-        '[source:web_search]("AI 뉴스") >> [system:file]("ai_news.md")',
-        "source,system", "pipeline"
+        '[sense:web_search]{query: "AI 뉴스"} >> [self:file]{path: "ai_news.md"}',
+        "sense,self", "pipeline"
     ),
     (
         "부동산 뉴스 검색해서 마크다운으로 저장",
-        '[source:search_news]("부동산") >> [system:file]("부동산뉴스.md")',
-        "source,system", "pipeline"
+        '[sense:search_news]{query: "부동산"} >> [self:file]{path: "부동산뉴스.md"}',
+        "sense,self", "pipeline"
     ),
     (
         "반도체 관련 뉴스 찾아서 저장해줘",
-        '[source:search_news]("반도체") >> [system:file]("반도체뉴스.md")',
-        "source,system", "pipeline"
+        '[sense:search_news]{query: "반도체"} >> [self:file]{path: "반도체뉴스.md"}',
+        "sense,self", "pipeline"
     ),
     # 병렬 검색
     (
         "삼성전자랑 SK하이닉스 주가 동시에 확인해줘",
-        '[source:price]("삼성전자") & [source:price]("SK하이닉스")',
-        "source", "pipeline"
+        '[sense:price]{symbol: "삼성전자"} & [sense:price]{symbol: "SK하이닉스"}',
+        "sense", "pipeline"
     ),
     (
         "애플이랑 마이크로소프트 주가 비교해줘",
-        '[source:price]("AAPL") & [source:price]("MSFT")',
-        "source", "pipeline"
+        '[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}',
+        "sense", "pipeline"
     ),
     (
         "AI 뉴스랑 부동산 뉴스 동시에 검색해줘",
-        '[source:web_search]("AI 뉴스") & [source:web_search]("부동산 뉴스")',
-        "source", "pipeline"
+        '[sense:web_search]{query: "AI 뉴스"} & [sense:web_search]{query: "부동산 뉴스"}',
+        "sense", "pipeline"
     ),
     (
         "서울이랑 부산 날씨 같이 알려줘",
-        '[source:weather]("서울") & [source:weather]("부산")',
-        "source", "pipeline"
+        '[sense:weather]{city: "서울"} & [sense:weather]{city: "부산"}',
+        "sense", "pipeline"
     ),
     # 검색 → 에이전트 분석
     (
         "AI 뉴스 검색해서 투자 에이전트한테 분석 요청해줘",
-        '[source:web_search]("AI 뉴스") >> [team:ask]("투자/투자컨설팅") {message: "이 뉴스를 투자 관점에서 분석해주세요"}',
-        "source,team", "pipeline"
+        '[sense:web_search]{query: "AI 뉴스"} >> [others:ask]{agent_id: "투자/투자컨설팅", message: "이 뉴스를 투자 관점에서 분석해주세요"}',
+        "sense,others", "pipeline"
     ),
     # 검색 → 메신저 전송
     (
         "오늘 뉴스 검색해서 텔레그램으로 보내줘",
-        '[source:search_news]("오늘 뉴스") >> [messenger:send]("telegram")',
-        "source,messenger", "pipeline"
+        '[sense:search_news]{query: "오늘 뉴스"} >> [others:channel_send]{channel: "telegram"}',
+        "sense,others", "pipeline"
     ),
     # Fallback 패턴
     (
         "삼성전자 주가 조회하되, 실패하면 종목 검색으로 찾아봐",
-        '[source:price]("삼성전자") ?? [source:search_stock]("삼성전자")',
-        "source", "pipeline"
+        '[sense:price]{symbol: "삼성전자"} ?? [sense:search_stock]{query: "삼성전자"}',
+        "sense", "pipeline"
     ),
     # 크롤링 → 저장
     (
         "이 웹페이지 내용 크롤링해서 파일로 저장해줘",
-        '[source:crawl]("https://example.com/article") >> [system:file]("crawled.md")',
-        "source,system", "pipeline"
+        '[sense:crawl]{url: "https://example.com/article"} >> [self:file]{path: "crawled.md"}',
+        "sense,self", "pipeline"
     ),
     # 검색 → 시각화
     (
         "삼성전자 주가 조회해서 차트로 그려줘",
-        '[source:price]("삼성전자") >> [forge:create]("삼성전자 주가 차트") {type: "chart"}',
-        "source,forge", "pipeline"
+        '[sense:price]{symbol: "삼성전자"} >> [engines:create]{name: "삼성전자 주가 차트", type: "chart"}',
+        "sense,engines", "pipeline"
     ),
     # 유튜브 → 저장
     (
         "유튜브 영상 자막 추출해서 파일로 저장해줘",
-        '[stream:transcript]("https://youtube.com/watch?v=example") >> [system:file]("transcript.md")',
-        "stream,system", "pipeline"
+        '[sense:video_transcript]{url: "https://youtube.com/watch?v=example"} >> [self:file]{path: "transcript.md"}',
+        "sense,self", "pipeline"
     ),
     # 복합 병렬 → 저장
     (
         "AI 뉴스랑 부동산 뉴스 동시에 찾아서 브리핑 파일로 만들어줘",
-        '[source:web_search]("AI 뉴스") & [source:web_search]("부동산 뉴스") >> [system:file]("briefing.md")',
-        "source,system", "pipeline"
+        '[sense:web_search]{query: "AI 뉴스"} & [sense:web_search]{query: "부동산 뉴스"} >> [self:file]{path: "briefing.md"}',
+        "sense,self", "pipeline"
     ),
     # 3단 파이프라인
     (
         "삼성전자 뉴스 검색 후 분석 에이전트에게 보내고 결과 저장해줘",
-        '[source:search_news]("삼성전자") >> [team:ask_sync]("투자/투자컨설팅") {message: "분석해줘"} >> [system:file]("분석결과.md")',
-        "source,team,system", "complex"
+        '[sense:search_news]{query: "삼성전자"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:file]{path: "분석결과.md"}',
+        "sense,others,self", "complex"
     ),
     # 블로그 검색 → 저장
     (
         "블로그에서 AI 관련 글 찾아서 정리해줘",
-        '[source:rag_search]("AI 인공지능") >> [system:file]("blog_ai.md")',
-        "source,system", "pipeline"
+        '[self:rag_search]{query: "AI 인공지능"} >> [self:file]{path: "blog_ai.md"}',
+        "self", "pipeline"
     ),
     # 법률 검색
     (
         "임대차보호법 관련 법령 검색해줘",
-        '[source:search_laws]("임대차보호법")',
-        "source", "single"
+        '[sense:search_laws]{keyword: "임대차보호법"}',
+        "sense", "single"
     ),
     # 사진 검색
     (
         "여행 사진 검색해줘",
-        '[source:search_photos]("여행")',
-        "source", "single"
+        '[self:search_photos]{keyword: "여행"}',
+        "self", "single"
     ),
     # 포지 콘텐츠 생성
     (
         "AI 트렌드 발표 슬라이드 만들어줘",
-        '[forge:create]("AI 트렌드 2024") {type: "slide"}',
-        "forge", "single"
+        '[engines:create]{name: "AI 트렌드 2024", type: "slide"}',
+        "engines", "single"
     ),
     (
         "배경음악 작곡해줘",
-        '[forge:create]("편안한 피아노 음악") {type: "music"}',
-        "forge", "single"
+        '[engines:create]{name: "편안한 피아노 음악", type: "music"}',
+        "engines", "single"
     ),
     # 인터페이스
     (
         "구글 홈페이지 열어줘",
-        '[interface:navigate]("https://google.com")',
-        "interface", "single"
+        '[limbs:navigate]{url: "https://google.com"}',
+        "limbs", "single"
     ),
     (
         "화면 스크린샷 찍어줘",
-        '[interface:snapshot]()',
-        "interface", "single"
+        '[limbs:browser_snapshot]{}',
+        "limbs", "single"
     ),
     # 스트림
     (
         "재즈 음악 틀어줘",
-        '[stream:play]("jazz music")',
-        "stream", "single"
+        '[limbs:play]{query: "jazz music"}',
+        "limbs", "single"
     ),
     (
         "라디오 KBS 클래식 FM 틀어줘",
-        '[stream:radio_play]("KBS 클래식FM")',
-        "stream", "single"
+        '[limbs:radio_play]{station: "KBS 클래식FM"}',
+        "limbs", "single"
     ),
     # 메신저
     (
         "이메일로 보고서 보내줘",
-        '[messenger:send]("report@example.com") {type: "email", subject: "보고서"}',
-        "messenger", "single"
+        '[others:channel_send]{channel: "report@example.com", type: "email", subject: "보고서"}',
+        "others", "single"
     ),
     # 투자 병렬
     (
         "한국과 미국 시장 주요 종목 동시 확인",
-        '[source:price]("005930") & [source:price]("AAPL") & [source:price]("SPY")',
-        "source", "pipeline"
+        '[sense:price]{symbol: "005930"} & [sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "SPY"}',
+        "sense", "pipeline"
     ),
     # 웹사이트 생성
     (
         "카페 홈페이지 만들어줘",
-        '[forge:create_site]("카페 홈페이지") {type: "website"}',
-        "forge", "single"
+        '[engines:create_site]{name: "카페 홈페이지", type: "website"}',
+        "engines", "single"
     ),
     # 건강 기록
     (
         "오늘 운동 기록 저장해줘",
-        '[source:save_health]("운동") {type: "exercise", duration: "30분"}',
-        "source", "single"
+        '[sense:save_health]{name: "운동", type: "exercise", duration: "30분"}',
+        "sense", "single"
     ),
     # 시스템 도구
     (
         "할일 목록 만들어줘",
-        '[system:todo]("프로젝트 진행상황 정리")',
-        "system", "single"
+        '[self:todo]{name: "프로젝트 진행상황 정리"}',
+        "self", "single"
     ),
     (
         "현재 시간 알려줘",
-        '[system:time]()',
-        "system", "single"
+        '[self:time]{}',
+        "self", "single"
     ),
     # 검색 + Fallback + 저장
     (
         "뉴스 검색 시도하고, 안 되면 웹 검색하고, 결과 저장",
-        '[source:search_news]("AI") ?? [source:web_search]("AI 뉴스") >> [system:file]("news.md")',
-        "source,system", "complex"
+        '[sense:search_news]{query: "AI"} ?? [sense:web_search]{query: "AI 뉴스"} >> [self:file]{path: "news.md"}',
+        "sense,self", "complex"
     ),
     # 워크플로우 관련
     (
         "저장된 워크플로우 목록 보여줘",
-        '[system:list_workflows]()',
-        "system", "single"
+        '[self:list_workflows]{}',
+        "self", "single"
     ),
     (
         "뉴스 브리핑 워크플로우 실행해줘",
-        '[system:run]("news_briefing")',
-        "system", "single"
+        '[self:run]{name: "news_briefing"}',
+        "self", "single"
     ),
     # 통계 (KOSIS)
     (
         "인구 통계 검색해줘",
-        '[source:search_statistics]("인구")',
-        "source", "single"
+        '[sense:search_statistics]{query: "인구"}',
+        "sense", "single"
     ),
     # 쇼핑
     (
         "노트북 가격 비교해줘",
-        '[source:compare_prices]("맥북 프로 14인치")',
-        "source", "single"
+        '[sense:compare_prices]{query: "맥북 프로 14인치"}',
+        "sense", "single"
     ),
     # 위치 서비스
     (
         "강남역 근처 맛집 찾아줘",
-        '[source:restaurant]("강남역")',
-        "source", "single"
+        '[sense:restaurant]{city: "강남역"}',
+        "sense", "single"
     ),
     (
         "서울에서 부산까지 길찾기",
-        '[source:directions]("서울") {destination: "부산"}',
-        "source", "single"
+        '[sense:directions]{start: "서울", destination: "부산"}',
+        "sense", "single"
     ),
     # 병렬 크롤링
     (
         "네이버랑 다음 메인 동시에 크롤링해줘",
-        '[source:crawl]("https://naver.com") & [source:crawl]("https://daum.net")',
-        "source", "pipeline"
+        '[sense:crawl]{url: "https://naver.com"} & [sense:crawl]{url: "https://daum.net"}',
+        "sense", "pipeline"
     ),
     # 파일 관리
     (
         "데스크탑 파일 목록 보여줘",
-        '[system:file]("~/Desktop") {action: "list"}',
-        "system", "single"
+        '[self:file]{path: "~/Desktop", action: "list"}',
+        "self", "single"
     ),
 ]
 

@@ -1,4 +1,4 @@
-node: source
+node: sense
 actions:
   search_local:
     description: 지역 가게/상점 정보 검색 (카페/지도)

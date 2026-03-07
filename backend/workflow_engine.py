@@ -358,7 +358,7 @@ def _auto_inject_prev(tool_input: dict, prev_result: str) -> dict:
     prev_result가 있고, step에 {{_prev_result}} 명시 참조가 없으면
     params._prev_result로 자동 주입.
 
-    이를 통해 [source:get]("A") >> [forge:create]("B") 같은 파이프라인에서
+    이를 통해 [sense:web_search]{query: "A"} >> [engines:newspaper]{query: "B"} 같은 파이프라인에서
     step 2가 step 1의 결과를 자동으로 받을 수 있다.
     """
     if not prev_result:
@@ -492,7 +492,7 @@ def execute_workflow(workflow_id: str, project_path: str = ".") -> dict:
 
 # === IBL 노드 액션 핸들러 ===
 
-def execute_workflow_action(action: str, target: str, params: dict,
+def execute_workflow_action(action: str, params: dict,
                             project_path: str) -> Any:
     """
     ibl_engine에서 호출되는 워크플로우 노드 액션 핸들러
@@ -500,45 +500,42 @@ def execute_workflow_action(action: str, target: str, params: dict,
     Args:
         action: run, list/list_workflows, get/get_workflow, save/save_workflow,
                 delete/delete_workflow, run_pipeline
-        target: 워크플로우 ID 또는 이름
-        params: 추가 파라미터
-
-    Phase 19: orchestrator 통합으로 action 이름 변경됨
-              (list→list_workflows, get→get_workflow, save→save_workflow, delete→delete_workflow)
-              구 이름도 하위 호환 유지
+        params: 파라미터 (workflow_id 등 포함)
     """
+    workflow_id = params.get("workflow_id", "")
+
     if action in ("list", "list_workflows"):
         return {"workflows": list_workflows(), "count": len(list_workflows())}
 
     elif action in ("get", "get_workflow"):
-        if not target:
-            return {"error": "워크플로우 ID가 필요합니다."}
-        wf = get_workflow(target)
+        if not workflow_id:
+            return {"error": "workflow_id가 필요합니다."}
+        wf = get_workflow(workflow_id)
         if not wf:
-            return {"error": f"워크플로우를 찾을 수 없습니다: {target}"}
+            return {"error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}
         return wf
 
     elif action == "run":
-        if not target:
-            return {"error": "워크플로우 ID가 필요합니다.", "available": [w["id"] for w in list_workflows()]}
-        return execute_workflow(target, project_path)
+        if not workflow_id:
+            return {"error": "workflow_id가 필요합니다.", "available": [w["id"] for w in list_workflows()]}
+        return execute_workflow(workflow_id, project_path)
 
     elif action in ("save", "save_workflow"):
         if not params:
             return {"error": "워크플로우 정의(params)가 필요합니다."}
         wf_data = dict(params)
-        if target:
-            wf_data["id"] = target
+        if workflow_id:
+            wf_data["id"] = workflow_id
         wf_id = save_workflow(wf_data)
         return {"success": True, "workflow_id": wf_id, "message": f"워크플로우 '{wf_id}' 저장 완료"}
 
     elif action in ("delete", "delete_workflow"):
-        if not target:
-            return {"error": "워크플로우 ID가 필요합니다."}
-        ok = delete_workflow(target)
+        if not workflow_id:
+            return {"error": "workflow_id가 필요합니다."}
+        ok = delete_workflow(workflow_id)
         if ok:
-            return {"success": True, "message": f"워크플로우 '{target}' 삭제 완료"}
-        return {"error": f"워크플로우를 찾을 수 없습니다: {target}"}
+            return {"success": True, "message": f"워크플로우 '{workflow_id}' 삭제 완료"}
+        return {"error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}
 
     elif action == "run_pipeline":
         # IBL 파이프라인 모드: pipeline 파라미터가 있으면 파서로 파싱

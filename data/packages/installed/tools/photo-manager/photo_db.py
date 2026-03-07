@@ -308,8 +308,9 @@ def list_scans() -> Dict:
 
 
 def get_gallery(root_path: str, page: int = 1, limit: int = 50,
-                media_type: Optional[str] = None, sort_by: str = "taken_date") -> Dict:
-    """갤러리 조회 (페이지네이션)"""
+                media_type: Optional[str] = None, sort_by: str = "taken_date",
+                start_date: Optional[str] = None, end_date: Optional[str] = None) -> Dict:
+    """갤러리 조회 (페이지네이션, 날짜 필터링 지원)"""
     # macOS NFD -> NFC 정규화
     root_path = _normalize_path(root_path)
 
@@ -344,6 +345,14 @@ def get_gallery(root_path: str, page: int = 1, limit: int = 50,
         where_clause += " AND media_type = ?"
         params.append(media_type)
 
+    if start_date:
+        where_clause += " AND COALESCE(taken_date, mtime) >= ?"
+        params.append(start_date)
+
+    if end_date:
+        where_clause += " AND COALESCE(taken_date, mtime) <= ?"
+        params.append(end_date)
+
     # 정렬 (taken_date가 NULL인 경우 mtime 사용, 그것도 NULL이면 id 역순)
     order_by = {
         'taken_date': 'COALESCE(taken_date, mtime) DESC, id DESC',
@@ -359,7 +368,7 @@ def get_gallery(root_path: str, page: int = 1, limit: int = 50,
     # 데이터 조회
     cursor.execute(f"""
         SELECT id, path, filename, extension, size, mtime, media_type,
-               width, height, taken_date, camera_model
+               width, height, taken_date, camera_model, gps_lat, gps_lon
         FROM media_files
         {where_clause}
         ORDER BY {order_by}
@@ -379,7 +388,9 @@ def get_gallery(root_path: str, page: int = 1, limit: int = 50,
             "width": row['width'],
             "height": row['height'],
             "taken_date": row['taken_date'],
-            "camera": row['camera_model']
+            "camera": row['camera_model'],
+            "gps_lat": row['gps_lat'],
+            "gps_lon": row['gps_lon']
         })
 
     conn.close()
@@ -646,8 +657,9 @@ def get_stats(root_path: str) -> Dict:
     }
 
 
-def get_timeline(root_path: str) -> Dict:
-    """타임라인 (월별 촬영 통계)"""
+def get_timeline(root_path: str, start_date: Optional[str] = None,
+                  end_date: Optional[str] = None) -> Dict:
+    """타임라인 (월별 촬영 통계, 날짜 필터링 지원)"""
     # macOS NFD -> NFC 정규화
     root_path = _normalize_path(root_path)
 
@@ -672,16 +684,28 @@ def get_timeline(root_path: str) -> Dict:
     conn = _get_connection(scan_id)
     cursor = conn.cursor()
 
-    cursor.execute("""
+    where_clause = "WHERE 1=1"
+    query_params = []
+
+    if start_date:
+        where_clause += " AND COALESCE(taken_date, mtime) >= ?"
+        query_params.append(start_date)
+
+    if end_date:
+        where_clause += " AND COALESCE(taken_date, mtime) <= ?"
+        query_params.append(end_date)
+
+    cursor.execute(f"""
         SELECT
             substr(COALESCE(taken_date, mtime), 1, 7) as month,
             media_type,
             COUNT(*) as cnt,
             SUM(size) as total_size
         FROM media_files
+        {where_clause}
         GROUP BY month, media_type
         ORDER BY month DESC
-    """)
+    """, query_params)
 
     # 월별로 그룹화
     timeline = {}

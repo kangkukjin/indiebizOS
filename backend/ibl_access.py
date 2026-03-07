@@ -23,9 +23,9 @@ from typing import List, Optional, Set, Dict
 
 
 # 항상 허용되는 인프라 노드
-# Phase 19: 6개 노드(system, user, workflow, automation, output, web 일부) → orchestrator로 통합
-# Phase 22: orchestrator → system으로 리네임
-_ALWAYS_ALLOWED = {"system", "team"}
+# Phase 19-22: system, team
+# Phase 23: 5-노드 체계 (system→self, team→others)
+_ALWAYS_ALLOWED = {"self", "others"}
 
 
 # ============ 접근 제어 ============
@@ -39,15 +39,9 @@ def resolve_allowed_nodes(allowed_nodes: Optional[List[str]]) -> Optional[Set[st
 
     Examples:
         None / []           → None (제한 없음)
-        ["informant"]       → {"source", "system"}  (하위 호환: informant → source)
-        ["librarian"]       → {"source", "system"}  (하위 호환: librarian → source)
-        ["orchestrator"]    → {"system"}  (하위 호환: orchestrator → system)
-        ["creator"]         → {"forge", "system"}  (하위 호환: creator → forge)
-        ["info:*"]          → {"source", "system"}  (하위 호환)
-        ["info:legal"]      → {"source", "system"}  (하위 호환)
-        ["webdev"]          → {"forge", "system"}  (하위 호환: webdev → forge)
-        ["photo"]           → {"source", "system"}  (하위 호환: photo → source)
-        ["web"]             → {"system", "source"}  (하위 호환: web → 양쪽)
+        ["sense"]           → {"sense", "self", "others"}
+        ["sense", "engines"]  → {"sense", "engines", "self", "others"}
+        ["limbs"]           → {"limbs", "self", "others"}
     """
     if not allowed_nodes:
         return None
@@ -60,18 +54,11 @@ def resolve_allowed_nodes(allowed_nodes: Optional[List[str]]) -> Optional[Set[st
         if entry in groups:
             resolved.update(groups[entry])
         elif entry.startswith("info:") or entry.startswith("store:"):
-            # 하위 호환: "info:legal", "store:photo" 등 → source
-            resolved.add("source")
+            # 하위 호환: "info:legal", "store:photo" 등 → sense
+            resolved.add("sense")
         elif ":" in entry and not entry.endswith(":*"):
             _, sub = entry.split(":", 1)
             resolved.add(sub)
-        elif entry in _NODE_MAP:
-            # 구 노드명 → 새 노드명 (단일 소스: ibl_engine._LEGACY_NODE_MAP)
-            resolved.add(_NODE_MAP[entry])
-        elif entry == "web":
-            # 하위 호환: web → system + source (양쪽 매핑)
-            resolved.add("system")
-            resolved.add("source")
         else:
             resolved.add(entry)
 
@@ -205,7 +192,7 @@ def build_environment(
         for peer in peers:
             name = peer["name"]
             role = peer.get("role", "")
-            parts.append(f'  <agent name="{name}" role="{role}" call=\'[team:delegate]("{name}") {{message: "..."}}\'/>')
+            parts.append(f'  <agent name="{name}" role="{role}" call=\'[others:delegate]{{agent_id: "{name}", message: "..."}}\'/>')
         parts.append("</peers>")
 
     # 파이프라인: YAML meta.pipeline에서 동적 로드
@@ -223,7 +210,7 @@ def build_environment(
         for p in principles:
             parts.append(f"  <rule>{p}</rule>")
         if peers:
-            parts.append(f"  <rule>Use [team:delegate] to delegate tasks to peer agents ({len(peers)} available)</rule>")
+            parts.append(f"  <rule>Use [others:delegate] to delegate tasks to peer agents ({len(peers)} available)</rule>")
         parts.append("</principles>")
 
     parts.append("</ibl_executor>")
@@ -241,7 +228,7 @@ def _load_peer_agents(project_path: Optional[str], agent_id: Optional[str]) -> L
     """
     같은 프로젝트의 다른 에이전트 목록 로드.
 
-    에이전트는 동료 에이전트를 인식하여 [team:delegate]로 위임할 수 있다.
+    에이전트는 동료 에이전트를 인식하여 [others:delegate]로 위임할 수 있다.
     자기 자신은 제외한다.
 
     Args:
@@ -319,8 +306,7 @@ def _load_node_groups() -> dict:
 
     하위 호환:
       - "info:*", "store:*" 등 그룹 접두어 → resolve_allowed_nodes에서 처리
-      - 구 노드명 매핑 → ibl_engine._LEGACY_NODE_MAP 단일 소스 참조
-      - "web" 특수 처리 → system + source 양쪽 매핑
+      - 5-노드 체계: sense, self, limbs, others, engines
     """
     global _node_groups_cache
     if _node_groups_cache is not None:
@@ -333,23 +319,19 @@ def _load_node_groups() -> dict:
     for node_name, node_config in nodes.items():
         ntype = node_config.get("type")
         if ntype == "store":
-            # 하위 호환: store:* → source (Phase 22: librarian → source로 통합됨)
-            groups["store:*"] = ["source"]
+            # 하위 호환: store:* → self (Phase 25: librarian → self로 통합됨)
+            groups["store:*"] = ["self"]
         elif ntype == "exec":
             groups["exec:*"] = ["fs"]
         elif ntype == "output":
             groups["output:*"] = ["output"]
 
-    # 하위 호환: info 그룹 → source 노드로 매핑
-    # (info 타입 노드 → informant → source로 통합됨, Phase 22)
-    groups["info:*"] = ["source"]
+    # 하위 호환: info 그룹 → sense 노드로 매핑
+    # (info 타입 노드 → informant → sense로 통합됨, Phase 25)
+    groups["info:*"] = ["sense"]
 
     _node_groups_cache = groups
     return groups
-
-
-# Phase 22: 구 노드명 매핑은 ibl_engine._LEGACY_NODE_MAP 단일 소스에서 관리
-from ibl_engine import _LEGACY_NODE_MAP as _NODE_MAP
 
 
 def invalidate_cache():

@@ -9,23 +9,23 @@
 
 ---
 
-## Web-builder (forge 노드) 상세 가이드
+## Web-builder (engines 노드) 상세 가이드
 
 ### 두 가지 시나리오 명확 구분
 
 ### A. 새 홈페이지 만들기
 
 ```
-create_project → add_component → create_page → edit_styles → preview_site → build_site → deploy_vercel
+create_project → 컴포넌트 추가(CLI) → create_page → 스타일 직접 수정 → preview_site → 빌드(CLI) → 배포(CLI)
 ```
 
 1. **create_project**: 새 Next.js + shadcn/ui 프로젝트 생성 → 실패 시: npm 설치 오류 확인, 디스크 공간/네트워크 확인 후 재시도
-2. **add_component**: 필요한 UI 컴포넌트 추가 → 실패 시: 컴포넌트 이름 확인, list_components로 사용 가능 목록 재확인
+2. **컴포넌트 추가**: `run_command('cd {project_path} && npx shadcn@latest add {component_names} --yes')` → 실패 시: `list_components`로 사용 가능 목록 확인. 여러 개 한꺼번에: `npx shadcn@latest add button card dialog --yes`
 3. **create_page**: 섹션 조합으로 페이지 생성 → 실패 시: 섹션 타입/props 확인 후 재시도
-4. **edit_styles**: 테마/색상 적용
+4. **스타일 수정**: `read_file`로 `{project_path}/src/app/globals.css` 읽기 → CSS 변수(--primary, --secondary 등) 직접 수정 → `edit_file`로 저장. 테마 프리셋은 아래 참조.
 5. **preview_site**: 로컬에서 미리보기 → 실패 시: 에러 로그 확인, 코드 수정 후 재시도
-6. **build_site**: 프로덕션 빌드 → 실패 시: 빌드 에러 분석, 타입 에러/import 오류 수정 후 재빌드. **빌드 실패 상태에서 배포하지 마세요.**
-7. **deploy_vercel**: Vercel에 배포
+6. **빌드**: `run_command('cd {project_path} && npm run build')` → 실패 시: 에러 로그 분석, 타입 에러/import 오류 수정 후 재빌드. **빌드 실패 상태에서 배포하지 마세요.**
+7. **배포**: `run_command('cd {project_path} && vercel --prod --yes')` → 출력에서 배포 URL 확인. 실패 시: `vercel --version`으로 CLI 설치 확인, `vercel whoami`로 로그인 확인.
 
 ### B. 기존 홈페이지 수정
 
@@ -34,14 +34,15 @@ create_project → add_component → create_page → edit_styles → preview_sit
 
 ```
 [반드시 이 순서대로]
-site_registry(list) → site_snapshot → 파일 직접 읽기/수정 → git push → site_live_check
+site_registry(list) → 현재 페이지 확인 → site_snapshot → 파일 직접 읽기/수정 → git push → site_live_check
 ```
 
 1. **site_registry(action='list')**: 등록된 사이트 목록 확인 — ⚠️ 반드시 첫 번째! 이 결과에 local_path, repo_url, deploy_url, tech_stack 모두 포함됨
-2. **site_snapshot**: 현재 구조 파악 (파일, 커밋, 페이지, 의존성)
-3. **파일 직접 읽기/수정**: read_file → edit_file로 기존 코드 수정
-4. **git push**: 변경사항 푸시 (자동 배포 설정 시 자동 반영)
-5. **site_live_check**: 배포된 사이트 상태 점검
+2. **현재 배포된 페이지 내용 확인**: `[sense:crawl]{url: "배포URL"}`로 현재 페이지 내용을 크롤링. ⚠️ **브라우저 자동화(`[limbs:navigate]`, `[limbs:content]`)를 사용하지 마세요.** 크롤링이 훨씬 빠르고 가볍습니다.
+3. **site_snapshot**: 현재 구조 파악 (파일, 커밋, 페이지, 의존성)
+4. **파일 직접 읽기/수정**: read_file → edit_file로 기존 코드 수정
+5. **git push**: 변경사항 푸시 (자동 배포 설정 시 자동 반영)
+6. **site_live_check**: 배포된 사이트 상태 점검
 
 ### 핵심 주의사항
 - **기존 사이트를 수정할 때 절대 `create_project`를 호출하지 마세요.**
@@ -144,7 +145,7 @@ create_project(
 
 ## shadcn/ui 컴포넌트 카테고리
 
-### add_component에서 사용 가능한 주요 컴포넌트
+### 사용 가능한 주요 컴포넌트
 
 | 카테고리 | 컴포넌트 |
 |---------|---------|
@@ -157,17 +158,14 @@ create_project(
 `all`, `layout`, `form`, `data`, `feedback`, `navigation`, `overlay`
 
 ### 사용 예시
-```python
-# 여러 컴포넌트 한 번에 추가
-add_component(
-    project_path="/path/to/project",
-    components=["button", "card", "dialog", "tabs"]
-)
+```bash
+# 여러 컴포넌트 한 번에 추가 (run_command 사용)
+cd /path/to/project && npx shadcn@latest add button card dialog tabs --yes
 
-# 카테고리별 목록 조회
+# 카테고리별 목록 조회 (액션 사용)
 list_components(category='form')
 
-# 프로젝트에 설치된 컴포넌트 확인
+# 프로젝트에 설치된 컴포넌트 확인 (액션 사용)
 list_components(project_path="/path/to/project")
 ```
 
@@ -213,7 +211,7 @@ list_components(project_path="/path/to/project")
 
 ---
 
-## 테마 프리셋 (edit_styles)
+## 테마 프리셋 (CSS 변수 직접 수정)
 
 | 프리셋 | 설명 |
 |--------|------|
@@ -228,18 +226,25 @@ list_components(project_path="/path/to/project")
 ### 테두리 반경 (border_radius)
 `none`, `sm`, `md`, `lg`, `full`
 
-### 사용 예시
-```python
-# 프리셋 테마 적용
-edit_styles(project_path="/path", theme="blue", border_radius="lg")
+### 스타일 수정 방법
+`read_file`로 `{project_path}/src/app/globals.css`를 읽고, CSS 변수를 직접 수정한 뒤 `edit_file`로 저장합니다.
 
-# 커스텀 색상
-edit_styles(
-    project_path="/path",
-    theme="custom",
-    custom_colors={"primary": "#3b82f6", "secondary": "#10b981"}
-)
+```css
+/* globals.css에서 수정할 주요 CSS 변수 */
+:root {
+  --primary: 221.2 83.2% 53.3%;      /* HSL 값 */
+  --secondary: 210 40% 96.1%;
+  --accent: 210 40% 96.1%;
+  --radius: 0.5rem;                   /* border-radius: none=0, sm=0.25rem, md=0.375rem, lg=0.5rem, full=9999px */
+}
 ```
+
+프리셋별 대표 primary 색상:
+- `blue`: 221.2 83.2% 53.3%
+- `green`: 142.1 76.2% 36.3%
+- `purple`: 262.1 83.3% 57.8%
+- `orange`: 24.6 95% 53.1%
+- `red`: 0 84.2% 60.2%
 
 ---
 
@@ -302,31 +307,38 @@ fetch_component(component="dialog", style="new-york")  # 또는 "default"
 
 ## 빌드 및 배포
 
-### build_site
-```python
-build_site(project_path="/path")
+### 빌드 (run_command)
+```bash
+# 프로덕션 빌드
+cd /path/to/project && npm run build
 # → .next/ 디렉토리에 빌드 파일 생성
-# → 빌드 크기 및 라우트 정보 제공
+# → 에러 발생 시 출력 로그를 분석하여 타입 에러/import 오류 수정 후 재빌드
 
-# 번들 분석 포함
-build_site(project_path="/path", analyze=True)
+# 빌드 결과 확인
+ls -la /path/to/project/.next/
 ```
 
-### deploy_vercel
-```python
-# 미리보기 배포 (기본)
-deploy_vercel(project_path="/path")
-
+### 배포 (run_command)
+```bash
 # 프로덕션 배포
-deploy_vercel(project_path="/path", production=True)
+cd /path/to/project && vercel --prod --yes
+# → 출력에서 "Production: https://..." URL 확인
+
+# 미리보기 배포
+cd /path/to/project && vercel --yes
 
 # 프로젝트 이름 지정
-deploy_vercel(project_path="/path", production=True, project_name="my-site")
+cd /path/to/project && vercel --prod --yes --name my-site
 ```
 
-**전제조건:**
-- Vercel CLI 설치: `npm install -g vercel`
-- Vercel 계정 로그인: `vercel login`
+**전제조건 (실패 시 확인):**
+```bash
+# Vercel CLI 설치 확인/설치
+vercel --version || npm install -g vercel
+
+# Vercel 로그인 확인
+vercel whoami || vercel login
+```
 
 ---
 
@@ -336,15 +348,15 @@ deploy_vercel(project_path="/path", production=True, project_name="my-site")
 ```
 1. create_project(name="my-landing", template="landing")
    → 실패 시: 에러 확인 후 재시도. 프로젝트 생성 없이는 다음 단계 불가.
-2. add_component(project_path="...", components=["button", "card"])
-   → 실패 시: 컴포넌트 이름/경로 확인
+2. run_command('cd {path} && npx shadcn@latest add button card --yes')
+   → 실패 시: 컴포넌트 이름 확인, list_components로 목록 재확인
 3. create_page(project_path="...", page_name="index", sections=[...])
-4. edit_styles(project_path="...", theme="blue")
+4. read_file → globals.css의 CSS 변수 직접 수정 → edit_file
 5. preview_site(project_path="...", action="start")
    → 문제 발견 시: 코드 수정 → 재확인 반복
-6. (확인 후) build_site(project_path="...")
-   → 빌드 실패 시: 에러 수정 후 재빌드. 빌드 성공 전까지 배포 금지.
-7. deploy_vercel(project_path="...", production=True)
+6. run_command('cd {path} && npm run build')
+   → 빌드 실패 시: 에러 로그 분석 후 수정, 재빌드. 빌드 성공 전까지 배포 금지.
+7. run_command('cd {path} && vercel --prod --yes')
 8. site_registry(action="register", name="My Landing", local_path="...")
 ```
 

@@ -270,7 +270,7 @@ tools:
       target: law
     response_type: raw
     # IBL node binding
-    node: source
+    node: sense
     action_name: search_legal
     description: "법률 정보 통합 검색 (법령+판례+행정규칙)"
     target_key: query
@@ -288,7 +288,7 @@ tools:
       target: law
     response_type: raw
     # IBL node binding
-    node: source
+    node: sense
     action_name: detail
     description: "법률 항목 상세 본문 조회"
     target_key: id
@@ -304,7 +304,7 @@ tools:
       query: query
     response_type: raw
     # IBL node binding
-    node: source
+    node: sense
     action_name: laws
     description: "법령 검색"
     target_key: query
@@ -320,7 +320,7 @@ tools:
       law_id: ID
     response_type: raw
     # IBL node binding
-    node: source
+    node: sense
     action_name: law_detail
     description: "특정 법령 상세 조회"
     target_key: law_id
@@ -336,7 +336,7 @@ tools:
       query: query
     response_type: raw
     # IBL node binding
-    node: source
+    node: sense
     action_name: precedents
     description: "판례 검색"
     target_key: query
@@ -352,7 +352,7 @@ tools:
       precedent_id: ID
     response_type: raw
     # IBL node binding
-    node: source
+    node: sense
     action_name: precedent_detail
     description: "특정 판례 상세 조회"
     target_key: precedent_id
@@ -375,7 +375,7 @@ tools:
     response:
       wrap: {success: true, count: _count, data: _results}
     # IBL node binding
-    node: source
+    node: sense
     action_name: search_kosis
     description: "통계표 목록 검색"
     target_key: keyword
@@ -407,7 +407,7 @@ tools:
     response:
       wrap: {success: true, count: _count, data: _results}
     # IBL node binding
-    node: source
+    node: sense
     action_name: data
     description: "통계 데이터 조회"
     target_key: tbl_id
@@ -426,7 +426,7 @@ tools:
     response:
       wrap: {success: true, count: _count, data: _results}
     # IBL node binding
-    node: source
+    node: sense
     action_name: info
     description: "통계표 메타데이터 조회"
     target_key: tbl_id
@@ -445,7 +445,7 @@ tools:
     response:
       wrap: {success: true, count: _count, data: _results}
     # IBL node binding
-    node: source
+    node: sense
     action_name: integrated
     description: "KOSIS 통합 검색"
     target_key: keyword
@@ -463,7 +463,7 @@ tools:
     response:
       wrap: {success: true, count: _count, data: _results}
     # IBL node binding
-    node: source
+    node: sense
     action_name: indicators
     description: "주요 경제/사회 지표 조회"
     target_key: indicator_id
@@ -554,7 +554,7 @@ tools:
         data: _results
         message: {template: "'{query}' 검색 결과 {_count}개"}
     # IBL node binding
-    node: source
+    node: sense
     action_name: restaurants_combined
     description: "카카오+네이버 맛집 병합 검색"
     target_key: query
@@ -620,7 +620,7 @@ tools:
         count: _count
         items: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: kstartup
     description: "K-Startup 창업지원 사업공고 검색"
     target_key: keyword
@@ -643,7 +643,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: mss
     description: "중소벤처기업부 사업공고 검색"
     target_key: keyword
@@ -746,7 +746,7 @@ tools:
         success: true
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: us_quote
     description: "미국 주식 실시간 시세 조회"
     target_key: symbol
@@ -770,7 +770,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: us_search
     description: "미국 기업/종목 검색"
     target_key: query
@@ -809,7 +809,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: us_metrics
     description: "미국 기업 주요 재무 비율 (ROE, PER, PBR 등)"
     target_key: symbol
@@ -846,7 +846,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: us_income
     description: "미국 기업 손익계산서"
     target_key: symbol
@@ -880,7 +880,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: us_balance
     description: "미국 기업 재무상태표"
     target_key: symbol
@@ -912,7 +912,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: us_cashflow
     description: "미국 기업 현금흐름표"
     target_key: symbol
@@ -942,7 +942,7 @@ tools:
         success: true
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: finnhub_profile
     description: "Finnhub 기업 프로필 조회"
     target_key: symbol
@@ -965,7 +965,7 @@ tools:
         success: true
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: price_target
     description: "애널리스트 목표가 조회"
     target_key: symbol
@@ -989,7 +989,7 @@ tools:
         success: true
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: recommendations
     description: "애널리스트 추천 동향 (매수/보유/매도)"
     target_key: symbol
@@ -1016,7 +1016,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: market_news
     description: "시장 뉴스 조회 (general/forex/crypto/merger)"
     target_key: category
@@ -1083,7 +1083,7 @@ tools:
         success: true
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: performance_detail
     description: "공연 상세 정보 조회"
     target_key: performance_id
@@ -1113,7 +1113,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: performance_search
     description: "공연 상세 검색 (기간, 장르, 지역 필터)"
     target_key: keyword
@@ -1137,7 +1137,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: box_office
     description: "인기 공연/박스오피스 순위"
 
@@ -1162,7 +1162,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: festival
     description: "축제/특별 행사 검색"
 
@@ -1185,7 +1185,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: book_search
     description: "도서관 정보나루 도서 상세 검색"
     target_key: keyword
@@ -1210,7 +1210,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: library
     description: "전국 도서관 검색"
     target_key: name
@@ -1235,7 +1235,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: book_library
     description: "특정 도서를 소장한 도서관 찾기"
     target_key: isbn13
@@ -1265,7 +1265,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: popular_books
     description: "인기 대출 도서"
 
@@ -1282,7 +1282,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: trending_books
     description: "대출 급증 도서"
 
@@ -1302,7 +1302,7 @@ tools:
         success: true
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: exhibit_detail
     description: "전시/문화행사 상세 정보"
     target_key: seq
@@ -1329,7 +1329,7 @@ tools:
         count: _count
         data: _results
     # IBL node binding
-    node: source
+    node: sense
     action_name: exhibit_search
     description: "KCISA 전시/문화행사 상세 검색 (기간, 지역 필터)"
     target_key: keyword
@@ -1366,7 +1366,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: semantic_scholar
     description: "Semantic Scholar 학술 논문 검색"
     target_key: query
@@ -1399,7 +1399,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: openalex
     description: "OpenAlex 학술 논문 검색 (오픈 학술 데이터)"
     target_key: query
@@ -1436,7 +1436,7 @@ tools:
 
     merge:
       mode: last
-    node: source
+    node: sense
     action_name: pubmed
     description: "PubMed 의학/생명과학 논문 검색"
     target_key: query
@@ -1467,7 +1467,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: guardian_news
     description: "Guardian 영국 뉴스 검색"
     target_key: query
@@ -1497,7 +1497,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: world_bank
     description: "세계은행 경제 지표 데이터 조회"
     target_key: indicator
@@ -1532,7 +1532,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: books
     description: "Google Books 도서 검색"
     target_key: query
@@ -1569,7 +1569,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: facilities
     description: "KOPIS 공연시설 검색"
     target_key: keyword
@@ -1590,7 +1590,7 @@ tools:
       wrap:
         success: true
         data: _results
-    node: source
+    node: sense
     action_name: book_detail
     description: "도서 상세 정보 조회 (대출 통계 포함)"
     target_key: isbn
@@ -1612,7 +1612,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: book_recommend
     description: "비슷한 도서 추천 (ISBN 기반)"
     target_key: isbn
@@ -1647,7 +1647,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: naver_local
     description: "네이버 지역 검색 (장소, 업체)"
     target_key: query
@@ -1672,7 +1672,7 @@ tools:
       wrap:
         success: true
         data: _results
-    node: source
+    node: sense
     action_name: reverse_geocode
     description: "좌표를 주소로 변환 (역지오코딩)"
     target_key: longitude
@@ -1710,7 +1710,7 @@ tools:
       wrap:
         success: true
         data: _results
-    node: source
+    node: sense
     action_name: crypto
     description: "암호화폐 시세 조회 (CoinGecko)"
     target_key: coin_id
@@ -1750,7 +1750,7 @@ tools:
         source: its_traffic
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: cctv_search
     description: "ITS 교통 CCTV 검색 (좌표 영역)"
     target_key: min_x
@@ -1786,7 +1786,7 @@ tools:
         source: windy_webcams
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: webcam
     description: "전세계 웹캠 검색 (Windy)"
     target_key: lat_lon_radius
@@ -1827,7 +1827,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: house_trade
     description: "연립다세대 매매 실거래가 (단일 월)"
     target_key: region_code
@@ -1860,7 +1860,7 @@ tools:
         success: true
         count: _count
         data: _results
-    node: source
+    node: sense
     action_name: house_rent
     description: "연립다세대 전월세 실거래가 (단일 월)"
     target_key: region_code

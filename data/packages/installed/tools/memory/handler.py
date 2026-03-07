@@ -12,9 +12,8 @@ if CURRENT_DIR not in sys.path:
 
 def _get_agent_id():
     """현재 에이전트 ID 가져오기"""
-    from thread_context import get_current_context
-    ctx = get_current_context()
-    return ctx.get("agent_id", "") if ctx else ""
+    from thread_context import get_current_agent_id
+    return get_current_agent_id()
 
 
 def execute(tool_name: str, args: dict, project_path: str = ".") -> str:

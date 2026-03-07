@@ -249,7 +249,7 @@ class SystemDirector:
 
 Your task: Assign IBL nodes to AI agents based on role relevance.
 
-IBL nodes are functional areas (like "source", "forge", "stream", "interface").
+IBL nodes are functional areas (like "source", "engines", "stream", "interface").
 Each node contains actions that agents can execute.
 The "system" node is auto-granted to all agents (it includes workflow, automation, output, user, and filesystem capabilities).
 

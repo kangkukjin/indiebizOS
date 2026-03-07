@@ -1,4 +1,4 @@
-node: system
+node: self
 actions:
   time:
     description: 현재 시간 조회

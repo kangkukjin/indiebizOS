@@ -72,7 +72,7 @@ kosis_search_statistics:
   service: kosis
   endpoint: /statisticsList.do
   transform: kosis_list
-  node: informant            # IBL 자동 병합 (Phase 21: statistics → informant)
+  node: sense                # IBL 자동 병합 (Phase 25: statistics → sense)
   action_name: search_statistics
   description: "통계표 목록 검색"
 ```
@@ -82,10 +82,10 @@ api_engine 라우팅 액션들이 이 방식을 사용합니다.
 ### 3. ibl_actions.yaml - IBL 노드 액션 등록 (선택)
 
 패키지의 도구를 IBL 노드 액션으로 노출하려면 `ibl_actions.yaml`을 작성해야 한다.
-이 파일은 에이전트가 `execute_ibl`로 호출하는 노드 액션(예: `forge.create_site`, `source.search`)을 정의한다.
+이 파일은 에이전트가 `execute_ibl`로 호출하는 노드 액션(예: `engines.create_site`, `sense.search`)을 정의한다.
 
 ```yaml
-node: forge               # 어떤 노드에 등록할지 (forge, source, system 등 기존 노드)
+node: engines             # 어떤 노드에 등록할지 (sense, self, limbs, others, engines 등 기존 노드)
 actions:
   create_site:             # 액션 이름 (노드 내에서 유일해야 함)
     description: 웹사이트 프로젝트 생성
@@ -172,7 +172,7 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 - guides도 함께 제거됨
 
 ### 주의사항
-- **ibl_actions.yaml의 node 값은 기존 노드여야 한다** (forge, source, system 등). 존재하지 않는 노드를 지정하면 경고 후 건너뜀.
+- **ibl_actions.yaml의 node 값은 기존 노드여야 한다** (sense, self, limbs, others, engines 등). 존재하지 않는 노드를 지정하면 경고 후 건너뜀.
 - **액션 이름 충돌**: 같은 노드에 이미 같은 이름의 액션이 다른 패키지 소유로 등록되어 있으면 건너뜀. 접두사를 붙여 구분할 것 (예: `radio_play`, `radio_search`).
 - **register_actions() 없이 ibl_actions.yaml만 편집하면 아무 효과 없음**. 반드시 호출해야 함.
 
@@ -184,7 +184,7 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 |----|------|------|
 | android | Android | ADB를 통한 안드로이드 기기 관리 (SMS, 통화기록, 연락처, 앱) |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
-| browser-action | Browser Action | Playwright 기반 브라우저 자동화 (클릭/입력/스크롤/콘텐츠 추출) |
+| browser-action | Browser Action | Playwright 기반 브라우저 자동화 v4.0 (36개 도구: ref/CSS selector, stealth, 쿠키 동의 자동처리, 네트워크 캡처, vision 모드, 다중 탭/iframe) |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
 | cctv | CCTV | CCTV/웹캠 관련 도구 |
 | cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel) |
@@ -261,4 +261,4 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-02-22*
+*마지막 업데이트: 2026-03-07*

@@ -1,4 +1,4 @@
-node: source
+node: sense
 actions:
   performance:
     description: 공연 검색 (KOPIS - 연극, 뮤지컬, 음악회 등)

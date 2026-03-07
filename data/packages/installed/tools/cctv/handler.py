@@ -72,6 +72,76 @@ _LANDMARKS = {
     "대전": (36.35, 127.38, "city"),
     "대구": (35.87, 128.60, "city"),
     "광주": (35.16, 126.85, "city"),
+    # --- 서울 주요 랜드마크 ---
+    "광화문": (37.5759, 126.9769, "city"),
+    "경복궁": (37.5796, 126.9770, "city"),
+    "덕수궁": (37.5658, 126.9751, "city"),
+    "창덕궁": (37.5794, 126.9910, "city"),
+    "창경궁": (37.5787, 126.9948, "city"),
+    "종묘": (37.5743, 126.9941, "city"),
+    "남산타워": (37.5512, 126.9882, "city"),
+    "남산": (37.5512, 126.9882, "mountain"),
+    "명동": (37.5636, 126.9827, "city"),
+    "남대문": (37.5594, 126.9770, "city"),
+    "동대문": (37.5711, 126.9988, "city"),
+    "홍대": (37.5563, 126.9236, "city"),
+    "홍대앞": (37.5563, 126.9236, "city"),
+    "신촌": (37.5553, 126.9365, "city"),
+    "이태원": (37.5345, 126.9946, "city"),
+    "강남역": (37.4979, 127.0276, "city"),
+    "강남": (37.4979, 127.0276, "city"),
+    "잠실": (37.5133, 127.1001, "city"),
+    "롯데타워": (37.5126, 127.1026, "city"),
+    "여의도": (37.5219, 126.9245, "city"),
+    "63빌딩": (37.5196, 126.9401, "city"),
+    "용산": (37.5299, 126.9648, "city"),
+    "서울역": (37.5547, 126.9707, "city"),
+    "종로": (37.5700, 126.9832, "city"),
+    "을지로": (37.5660, 126.9910, "city"),
+    "성수": (37.5445, 127.0563, "city"),
+    "북촌한옥마을": (37.5826, 126.9850, "city"),
+    "인사동": (37.5731, 126.9856, "city"),
+    "청계천": (37.5694, 126.9782, "city"),
+    "동작대교": (37.5088, 126.9808, "city"),
+    "한강": (37.5172, 126.9958, "city"),
+    "반포대교": (37.5071, 126.9958, "city"),
+    "마포대교": (37.5326, 126.9462, "city"),
+    "노량진": (37.5133, 126.9428, "city"),
+    "가로수길": (37.5185, 127.0230, "city"),
+    "코엑스": (37.5121, 127.0590, "city"),
+    "올림픽공원": (37.5209, 127.1218, "city"),
+    "월드컵경기장": (37.5682, 126.8972, "city"),
+    # --- 수도권 주요 지점 ---
+    "판교": (37.3947, 127.1112, "city"),
+    "분당": (37.3827, 127.1195, "city"),
+    "일산": (37.6583, 126.7719, "city"),
+    "수원": (37.2636, 127.0286, "city"),
+    "화성": (37.2000, 126.8319, "city"),
+    "파주": (37.7600, 126.7800, "city"),
+    # --- 부산 주요 지점 ---
+    "감천문화마을": (35.0975, 129.0107, "city"),
+    "자갈치시장": (35.0966, 129.0303, "city"),
+    "해운대해수욕장": (35.1587, 129.1604, "beach"),
+    "광안대교": (35.1383, 129.1253, "city"),
+    "태종대": (35.0515, 129.0848, "landscape"),
+    # --- 제주 주요 지점 ---
+    "성산일출봉": (33.4582, 126.9425, "mountain"),
+    "천지연폭포": (33.2461, 126.5547, "landscape"),
+    "협재해수욕장": (33.3940, 126.2395, "beach"),
+    "만장굴": (33.5275, 126.7713, "landscape"),
+    # --- 기타 도시 주요 지점 ---
+    "울산": (35.5384, 129.3114, "city"),
+    "세종": (36.4800, 127.2550, "city"),
+    "춘천": (37.8813, 127.7298, "city"),
+    "강릉": (37.7519, 128.8760, "city"),
+    "속초": (38.2070, 128.5918, "city"),
+    "전주": (35.8242, 127.1480, "city"),
+    "경주": (35.8562, 129.2250, "city"),
+    "여수": (34.7604, 127.6622, "city"),
+    "통영": (34.8544, 128.4331, "city"),
+    "안동": (36.5684, 128.7294, "city"),
+    "포항": (36.0190, 129.3435, "city"),
+    "목포": (34.8118, 126.3922, "city"),
     # --- 한국 공항 ---
     "인천공항": (37.46, 126.44, "airport"),
     "김포공항": (37.56, 126.80, "airport"),
@@ -146,18 +216,42 @@ def _unified_search_cctv(query: str, lat: float = None, lon: float = None,
 
     print(f"[CCTV] 통합검색 시작: query='{query}', lat={lat}, lon={lon}, category={category}")
 
-    # --- 1단계: ITS 교통 CCTV 이름 검색 ---
+    # --- 좌표 사전 해석 (랜드마크/파라미터) ---
+    resolved_lat, resolved_lon, resolved_cat = lat, lon, category
+    if resolved_lat is None or resolved_lon is None:
+        query_lower = query.strip().lower()
+        for name, (plat, plon, pcat) in _LANDMARKS.items():
+            if name.lower() in query_lower:
+                resolved_lat, resolved_lon = plat, plon
+                if not resolved_cat:
+                    resolved_cat = pcat
+                break
+
+    # --- 1단계: ITS 교통 CCTV 검색 ---
     its_key = bool(os.environ.get("ITS_API_KEY", ""))
     print(f"[CCTV] ITS_API_KEY 설정: {its_key}")
     if its_key:
         try:
             its = load_module("its_traffic")
+            # 1-1: 이름 검색
             its_result = json.loads(its.get_cctv_by_name(keyword=query, limit=limit))
             sources_tried.append("its_traffic")
             if its_result.get("success") and its_result.get("count", 0) > 0:
                 for cctv in its_result.get("cctvs", []):
                     cctv["source"] = "its_traffic"
                     all_results.append(cctv)
+
+            # 1-2: 이름 검색 실패 + 좌표 있으면 → 좌표 기반 근처 CCTV 검색
+            if not all_results and resolved_lat is not None and resolved_lon is not None:
+                print(f"[CCTV] ITS 이름 검색 실패, 좌표 기반 검색: ({resolved_lat}, {resolved_lon})")
+                nearby_result = json.loads(its.get_nearby_cctv(
+                    lat=resolved_lat, lng=resolved_lon,
+                    radius=0.05, count=limit
+                ))
+                if nearby_result.get("success") and nearby_result.get("count", 0) > 0:
+                    for cctv in nearby_result.get("cctvs", []):
+                        cctv["source"] = "its_traffic"
+                        all_results.append(cctv)
         except Exception as e:
             print(f"[CCTV] ITS 검색 실패: {e}")
 
@@ -169,18 +263,8 @@ def _unified_search_cctv(query: str, lat: float = None, lon: float = None,
             windy = load_module("windy_webcam")
             sources_tried.append("windy_webcams")
 
-            # 좌표 결정: 파라미터 > 지명 매핑 > 없으면 스킵
-            search_lat, search_lon, auto_category = lat, lon, category
-
-            if search_lat is None or search_lon is None:
-                # 지명 매핑에서 좌표 찾기 (대소문자 무시)
-                query_lower = query.strip().lower()
-                for name, (plat, plon, pcat) in _LANDMARKS.items():
-                    if name.lower() in query_lower:
-                        search_lat, search_lon = plat, plon
-                        if not auto_category:
-                            auto_category = pcat
-                        break
+            # 좌표는 이미 상단에서 해석됨
+            search_lat, search_lon, auto_category = resolved_lat, resolved_lon, resolved_cat
 
             print(f"[CCTV] Windy 좌표: lat={search_lat}, lon={search_lon}, category={auto_category}")
             if search_lat is not None and search_lon is not None:

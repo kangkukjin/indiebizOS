@@ -5,6 +5,8 @@ IndieBiz OS Core
 기본 프롬프트 + 조건부 프롬프트(git, delegation)를 조합합니다.
 """
 
+import json
+import logging
 from pathlib import Path
 from typing import List, Dict, Optional
 
@@ -12,6 +14,8 @@ from typing import List, Dict, Optional
 # 프롬프트 파일 경로
 from runtime_utils import get_base_path
 PROMPTS_PATH = get_base_path() / "data" / "common_prompts"
+
+logger = logging.getLogger(__name__)
 
 # 싱글톤 인스턴스
 _prompt_builder_instance: Optional['PromptBuilder'] = None
@@ -50,6 +54,51 @@ class PromptBuilder:
             self._cache[filename] = content
             return content
         return ""
+
+    def _load_guide_file(self, guide_filename: str) -> str:
+        """data/guides/ 폴더에서 가이드 파일 로드 (캐시 사용)"""
+        cache_key = f"__guide__{guide_filename}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
+        guide_path = get_base_path() / "data" / "guides" / guide_filename
+        if guide_path.exists():
+            content = guide_path.read_text(encoding='utf-8')
+            self._cache[cache_key] = content
+            return content
+        return ""
+
+    def _build_resource_list(self) -> str:
+        """자원 목록 생성 — guide_db.json에서 가이드 제목을 읽어 한 줄 목록으로 반환
+
+        에이전트가 '어떤 가이드가 존재하는지' 배경 지식으로 기억하게 하여,
+        능동적 검색(search_guide) 없이도 관련 가이드를 떠올릴 수 있게 합니다.
+        """
+        cache_key = "__resource_list__"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
+        guide_db_path = get_base_path() / "data" / "guide_db.json"
+        if not guide_db_path.exists():
+            return ""
+
+        try:
+            data = json.loads(guide_db_path.read_text(encoding='utf-8'))
+            guides = data.get("guides", [])
+            if not guides:
+                return ""
+
+            names = [g["name"] for g in guides if g.get("name")]
+            if not names:
+                return ""
+
+            resource_text = "# 자원 목록\n참고 가능한 가이드: " + " / ".join(names)
+            self._cache[cache_key] = resource_text
+            logger.debug(f"[PromptBuilder] 자원 목록 생성: {len(names)}개 가이드, ~{len(resource_text)}자")
+            return resource_text
+        except Exception as e:
+            logger.warning(f"[PromptBuilder] 자원 목록 생성 실패: {e}")
+            return ""
 
     def build(self,
               agent_count: int = 1,
@@ -102,6 +151,11 @@ class PromptBuilder:
             ibl = build_environment(allowed_nodes, project_path, agent_id)
             if ibl:
                 parts.append(ibl)
+
+        # 4.5 자원 목록 (가이드 제목 배경 지식)
+        resource_list = self._build_resource_list()
+        if resource_list:
+            parts.append(resource_list)
 
         # 5. 역할 프롬프트
         if role_prompt:
@@ -216,6 +270,11 @@ def build_system_ai_prompt(
     ibl_env = build_environment(allowed_nodes=None)  # None = 전체 노드
     if ibl_env:
         parts.append(ibl_env)
+
+    # 자원 목록 (가이드 제목 배경 지식)
+    resource_list = builder._build_resource_list()
+    if resource_list:
+        parts.append(resource_list)
 
     # 시스템 AI 전용 위임 프롬프트 추가
     delegation_prompt = builder._load_file("fragments/10_system_ai_delegation.md")

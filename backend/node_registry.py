@@ -19,11 +19,11 @@ node_registry.py - IBL 노드 레지스트리 (Phase 11)
     nodes = list_nodes(include_agents=False)
 
     # 특정 노드 상세
-    node = get_node("source")
+    node = get_node("sense")
 
     # 디스커버리: "이 작업을 할 수 있는 노드가 뭐야?"
     results = discover("주가 정보")
-    # → [{"node": "source", ...}, {"node": "투자/투자컨설팅", ...}]
+    # → [{"node": "sense", ...}, {"node": "투자/투자컨설팅", ...}]
 """
 
 import os
@@ -112,8 +112,8 @@ def _build_node_descriptor(node_name: str, node_config: dict) -> dict:
             "description": action_cfg.get("description", ""),
             "router": action_cfg.get("router", ""),
         }
-        if action_cfg.get("target_description"):
-            action_desc["target"] = action_cfg["target_description"]
+        if action_cfg.get("target_key"):
+            action_desc["target_key"] = action_cfg["target_key"]
         if action_cfg.get("tool"):
             action_desc["mapped_tool"] = action_cfg["tool"]
         actions.append(action_desc)
@@ -418,7 +418,7 @@ def get_node(node_id: str) -> Optional[Dict]:
     특정 노드의 상세 디스크립터
 
     Args:
-        node_id: 노드 이름 (예: "source", "forge", "stream") 또는
+        node_id: 노드 이름 (예: "source", "engines", "stream") 또는
                 에이전트 ID (예: "투자/투자컨설팅")
 
     Returns:
@@ -449,8 +449,9 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
         return []
 
     query_lower = query.lower()
-    # 한글/영어 토큰 분리
-    tokens = re.findall(r'[\w가-힣]+', query_lower)
+    # 한글/영어 토큰 분리 + 조사 제거 + 복합어 분리
+    raw_tokens = re.findall(r'[\w가-힣]+', query_lower)
+    tokens = _normalize_korean_tokens(raw_tokens)
     nodes = list_nodes()
     results = []
 
@@ -518,12 +519,15 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
             if action_matched:
                 score += action_score
                 matching_actions.append(action_name)
-                # 사용 예시 구문 생성
+                # 사용 예시 구문 생성 (새 문법)
                 target_hint = action_target if action_target else "대상"
+                # action_details의 target_key 정보는 ibl_nodes.yaml에서 추출되어야 함
+                # 여기서는 generic한 예시 제공
+                example = f'[{node["id"]}:{action_name}]{{...}}'
                 action_details.append({
                     "action": action_name,
                     "description": action.get("description", ""),
-                    "example": f'[{node["id"]}:{action_name}]("{target_hint}")',
+                    "example": example,
                     "score": action_score,
                 })
 
@@ -575,6 +579,10 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
 
 # === discover 보조 함수 ===
 
+# 한국어 정규화는 korean_utils 공통 모듈 사용
+from korean_utils import normalize_korean_tokens as _normalize_korean_tokens
+
+
 _verb_routes_cache: Optional[Dict] = None
 
 def _load_verb_routes() -> Dict:
@@ -596,17 +604,17 @@ def _load_verb_routes() -> Dict:
         return _verb_routes_cache
 
     verbs = {}
-    # source 노드의 verbs 섹션
-    source = data.get("nodes", {}).get("source", {})
-    for verb_name, verb_cfg in source.get("verbs", {}).items():
-        routes = verb_cfg.get("routes", {})
-        default = verb_cfg.get("default", "")
-        description = verb_cfg.get("description", "")
-        verbs[verb_name] = {
-            "description": description,
-            "default": default,
-            "routes": routes,
-        }
+    # 모든 노드의 verbs 섹션 탐색 (Phase 23: sense 등)
+    for node_name, node_cfg in data.get("nodes", {}).items():
+        for verb_name, verb_cfg in node_cfg.get("verbs", {}).items():
+            routes = verb_cfg.get("routes", {})
+            default = verb_cfg.get("default", "")
+            description = verb_cfg.get("description", "")
+            verbs[verb_name] = {
+                "description": description,
+                "default": default,
+                "routes": routes,
+            }
 
     _verb_routes_cache = verbs
     return _verb_routes_cache

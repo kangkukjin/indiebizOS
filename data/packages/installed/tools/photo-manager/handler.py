@@ -180,8 +180,11 @@ def get_gallery(params: Dict[str, Any]) -> Dict[str, Any]:
     limit = params.get("limit", 50)
     media_type = params.get("media_type")
     sort_by = params.get("sort_by", "taken_date")
+    start_date = params.get("start_date")
+    end_date = params.get("end_date")
 
-    result = photo_db.get_gallery(path, page, limit, media_type, sort_by)
+    result = photo_db.get_gallery(path, page, limit, media_type, sort_by,
+                                  start_date=start_date, end_date=end_date)
 
     if result.get("success"):
         items = result.get("items", [])
@@ -190,13 +193,18 @@ def get_gallery(params: Dict[str, Any]) -> Dict[str, Any]:
         # 요약 정보
         summary = []
         for item in items[:10]:  # 최대 10개만 표시
-            summary.append({
+            entry = {
                 "파일명": item["filename"],
                 "타입": "사진" if item["media_type"] == "photo" else "동영상",
                 "크기": f"{item['size_mb']} MB",
                 "촬영일": item["taken_date"] or item["mtime"],
                 "카메라": item.get("camera") or "-"
-            })
+            }
+            # GPS 좌표가 있으면 포함
+            if item.get("gps_lat") and item.get("gps_lon"):
+                entry["위도"] = item["gps_lat"]
+                entry["경도"] = item["gps_lon"]
+            summary.append(entry)
 
         return {
             "success": True,
@@ -299,7 +307,10 @@ def get_timeline(params: Dict[str, Any]) -> Dict[str, Any]:
     if not path:
         return {"success": False, "error": "스캔 데이터가 없습니다. 먼저 scan_photos로 폴더를 스캔하세요."}
 
-    result = photo_db.get_timeline(path)
+    start_date = params.get("start_date")
+    end_date = params.get("end_date")
+
+    result = photo_db.get_timeline(path, start_date=start_date, end_date=end_date)
 
     if result.get("success"):
         data = result.get("data", [])

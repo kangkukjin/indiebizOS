@@ -74,17 +74,17 @@
 
 ---
 
-## 시스템 AI 위임 기능 (Phase 17→22: IBL 통합 + system 노드)
+## 시스템 AI 위임 기능 (Phase 17→25: IBL 통합 + others 노드)
 
 시스템 AI는 `execute_ibl` 단일 도구를 통해 프로젝트의 전문 에이전트에게 작업을 위임할 수 있습니다.
 
-### 위임 IBL 액션 (team 노드)
+### 위임 IBL 액션 (others 노드)
 | IBL 액션 | 설명 |
 |----------|------|
-| `[team:list_projects]` | 모든 프로젝트와 에이전트 목록 조회 |
-| `[team:delegate_project]` | 프로젝트 에이전트에게 작업 위임 |
-| `[system:manage_events]` | 이벤트/스케줄 통합 관리 |
-| `[system:list_switches]` | 등록된 스위치 목록 조회 |
+| `[others:list_projects]` | 모든 프로젝트와 에이전트 목록 조회 |
+| `[others:delegate_project]` | 프로젝트 에이전트에게 작업 위임 |
+| `[self:manage_events]` | 이벤트/스케줄 통합 관리 |
+| `[self:list_switches]` | 등록된 스위치 목록 조회 |
 
 ### 위임 조건
 - **사용자가 명시적으로 요청한 경우에만** 위임
@@ -93,7 +93,7 @@
 
 ### 위임 흐름
 ```
-사용자 요청 → 시스템 AI → [team:delegate_project](agent_id) {message}
+사용자 요청 → 시스템 AI → [others:delegate_project]{project_path: "프로젝트/에이전트", message: "..."}
     → 프로젝트 에이전트들 자동 활성화 → 작업 수행
     → 결과 자동 보고 → 시스템 AI가 사용자에게 전달
 ```
@@ -101,8 +101,8 @@
 ### 병렬 위임
 여러 프로젝트에 동시 위임 가능:
 ```
-[team:delegate_project]("agent_001") {project_id: "의료", message: "두통 증상 분석"}
-[team:delegate_project]("agent_001") {project_id: "study", message: "두통 관련 최신 연구 검색"}
+[others:delegate_project]{project_path: "의료/내과", message: "두통 증상 분석"}
+[others:delegate_project]{project_path: "study/학습", message: "두통 관련 최신 연구 검색"}
 ```
 
 ---
@@ -158,4 +158,4 @@ AI 호출 1회로 판단, 검색, 발송을 한 번에 처리:
 자세한 내용은 `packages.md` 참조.
 
 ---
-*마지막 업데이트: 2026-02-24 07:48*
+*마지막 업데이트: 2026-03-06 (Phase 25: 5-Node 노드 업데이트)*

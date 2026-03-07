@@ -1,4 +1,4 @@
-node: system
+node: self
 actions:
   scan:
     description: 디스크/볼륨 스캔 (인덱싱)

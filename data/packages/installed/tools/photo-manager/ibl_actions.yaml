@@ -1,4 +1,4 @@
-node: source
+node: self
 actions:
   scan:
     description: 폴더의 사진/동영상 메타데이터 수집 (인덱싱)

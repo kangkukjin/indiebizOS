@@ -1,15 +1,14 @@
-node: source
+node: self
 actions:
-  save_health:
-    description: 건강 정보 저장 (혈압, 혈당, 체중, 증상, 투약, 문서)
-    target_description: info_type (blood_pressure, blood_sugar, weight, symptom, medication,
-      document)
+  health_save:
+    description: 건강 정보 저장 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 투약, 의료문서를 DB에 기록
+    target_description: "저장 유형: 혈압, 혈당, 체중, 증상, 투약, 문서"
     router: handler
     tool: save_health_info
     target_key: info_type
-  context:
-    description: 건강 기록 컨텍스트 조회 (최근, 통계, 특정 카테고리)
-    target_description: query_type (recent, summary, search, category)
+  health_query:
+    description: 건강 기록 조회 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 약물 이력, 건강 요약, 키워드 검색
+    target_description: "조회 유형: 요약, 검색, 측정기록, 증상, 투약, 문서 또는 혈압/혈당/체중 등 카테고리명"
     router: handler
     tool: get_health_context
     target_key: query_type

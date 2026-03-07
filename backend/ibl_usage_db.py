@@ -712,7 +712,7 @@ class IBLUsageDB:
 
         def _replace(m):
             action = m.group(1)
-            proper_node = action_map.get(action, "system")
+            proper_node = action_map.get(action, "self")
             return f'[{proper_node}:{action}]'
 
         return re.sub(r'\[ibl:(\w+)\]', _replace, ibl_code)
@@ -777,7 +777,7 @@ class IBLUsageDB:
                 actual_node = node
                 if node == 'ibl':
                     action_map = self._get_action_to_node_map()
-                    actual_node = action_map.get(action, 'system')
+                    actual_node = action_map.get(action, 'self')
                 entry = f'[{actual_node}:{action}]'
                 # target: 절대경로는 축약, 긴 것은 잘라냄
                 if target:
@@ -834,7 +834,7 @@ class IBLUsageDB:
     def _extract_inner_code(self, ibl_str: str) -> Optional[str]:
         """[ibl:?]("...코드...") 에서 내부 IBL 코드 추출"""
         import re
-        # [ibl:?](" 이후의 내용 추출 (또는 [source:?] 등)
+        # [ibl:?](" 이후의 내용 추출 (또는 [sense:?] 등)
         m = re.match(r'\[\w+:\?\]\("', ibl_str)
         if m:
             inner = ibl_str[m.end():]
@@ -1008,10 +1008,9 @@ class IBLUsageDB:
         """FTS5 BM25 키워드 검색. (id, bm25_score) 리스트 반환"""
         with self._get_connection() as conn:
             try:
-                safe_query = re.sub(r'[^\w\s가-힣]', ' ', query)
-                # 한국어 조사 제거 후 토큰화
-                stripped = self._strip_korean_particles(safe_query)
-                tokens = [t for t in stripped.split() if len(t) >= 2]
+                from korean_utils import tokenize_korean
+                # 한국어 정규화 토큰화: 조사 제거 + 복합어 분리
+                tokens = [t for t in tokenize_korean(query) if len(t) >= 2]
                 if not tokens:
                     return []
                 fts_query = ' OR '.join(tokens)

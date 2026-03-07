@@ -36,6 +36,41 @@ def save_health_info(input_data: dict, project_path: str = ".") -> str:
     note = input_data.get('note')
     person = input_data.get('person')  # 대상자
 
+    # AI가 info_type에 한국어나 카테고리명을 넣는 경우 자동 보정
+    _VALID_INFO_TYPES = {'measurement', 'symptom', 'medication', 'document'}
+
+    # 한국어 info_type → 영어 매핑
+    _KO_INFO_TYPE_MAP = {
+        '측정': 'measurement', '측정값': 'measurement',
+        '증상': 'symptom',
+        '투약': 'medication', '약': 'medication', '약물': 'medication',
+        '문서': 'document', '검사': 'document',
+    }
+
+    # 카테고리명 매핑 (영어/한국어)
+    _KNOWN_CATEGORIES = {
+        'blood_pressure', 'blood_sugar', 'blood_glucose', 'weight',
+        'blood_count', 'body_composition', 'kidney_function', 'liver_function',
+        'cholesterol', 'thyroid', 'hemoglobin',
+    }
+    _KO_CATEGORY_MAP = {
+        '혈압': 'blood_pressure', '혈당': 'blood_sugar', '체중': 'weight',
+        '혈액검사': 'blood_count', '콜레스테롤': 'cholesterol',
+        '심박수': 'heart_rate', '체온': 'temperature', '산소포화도': 'oxygen_saturation',
+    }
+
+    if info_type and info_type not in _VALID_INFO_TYPES:
+        if info_type in _KO_INFO_TYPE_MAP:
+            info_type = _KO_INFO_TYPE_MAP[info_type]
+        elif info_type in _KNOWN_CATEGORIES:
+            if 'category' not in data:
+                data['category'] = info_type
+            info_type = 'measurement'
+        elif info_type in _KO_CATEGORY_MAP:
+            if 'category' not in data:
+                data['category'] = _KO_CATEGORY_MAP[info_type]
+            info_type = 'measurement'
+
     try:
         if info_type == 'measurement':
             # 측정값 저장 (혈압, 혈당, 체중 등)
@@ -141,10 +176,56 @@ def get_health_context(input_data: dict) -> str:
     """건강 컨텍스트 조회"""
     query_type = input_data.get('query_type', 'summary')
     category = input_data.get('category')
-    days = input_data.get('days', 30)
+    days = input_data.get('days', 365)
     keyword = input_data.get('keyword')
     include_images = input_data.get('include_images', False)
     person = input_data.get('person')  # 대상자
+
+    # AI가 query_type에 한국어나 카테고리명을 넣는 경우 자동 보정
+    _VALID_QUERY_TYPES = {'summary', 'measurements', 'symptoms', 'medications', 'documents', 'search', 'list_persons'}
+
+    # 한국어 query_type → 영어 query_type 매핑
+    _KO_QUERY_TYPE_MAP = {
+        '요약': 'summary', '전체': 'summary',
+        '측정기록': 'measurements', '측정': 'measurements', '측정값': 'measurements',
+        '증상': 'symptoms',
+        '투약': 'medications', '약': 'medications', '약물': 'medications',
+        '문서': 'documents', '검사': 'documents',
+        '검색': 'search',
+        '목록': 'list_persons', '사람목록': 'list_persons',
+    }
+
+    # 영어/한국어 카테고리명 매핑
+    _KNOWN_CATEGORIES = {
+        'blood_pressure', 'blood_sugar', 'blood_glucose', 'weight',
+        'blood_count', 'body_composition', 'kidney_function', 'liver_function',
+        'cholesterol', 'thyroid', 'hemoglobin',
+    }
+    _KO_CATEGORY_MAP = {
+        '혈압': 'blood_pressure', '혈당': 'blood_sugar', '체중': 'weight',
+        '혈액검사': 'blood_count', '콜레스테롤': 'cholesterol',
+        '심박수': 'heart_rate', '체온': 'temperature', '산소포화도': 'oxygen_saturation',
+    }
+
+    if query_type not in _VALID_QUERY_TYPES:
+        if query_type in _KO_QUERY_TYPE_MAP:
+            # 한국어 query_type → 영어 변환
+            query_type = _KO_QUERY_TYPE_MAP[query_type]
+        elif query_type in _KNOWN_CATEGORIES:
+            # 영어 카테고리명 → measurements로 보정
+            if not category:
+                category = query_type
+            query_type = 'measurements'
+        elif query_type in _KO_CATEGORY_MAP:
+            # 한국어 카테고리명 → 영어 변환 + measurements
+            if not category:
+                category = _KO_CATEGORY_MAP[query_type]
+            query_type = 'measurements'
+        else:
+            # 알 수 없는 값 → 키워드 검색으로 폴백
+            if not keyword:
+                keyword = query_type
+            query_type = 'search'
 
     try:
         if query_type == 'list_persons':

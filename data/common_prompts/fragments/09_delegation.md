@@ -1,13 +1,13 @@
 <agent_delegation>
-프로젝트에 여러 에이전트가 있을 때, **team** 노드를 사용하여 작업을 위임할 수 있습니다.
+프로젝트에 여러 에이전트가 있을 때, **others** 노드를 사용하여 작업을 위임할 수 있습니다.
 
 <delegation_tools>
-IBL 위임 액션 (team 노드):
-- **[team:delegate]("에이전트이름") {message: "..."}**: 같은 프로젝트의 에이전트에게 작업 위임 (비동기)
-- **[team:ask]("프로젝트/에이전트") {message: "..."}**: 다른 프로젝트 에이전트에게 질문/위임 (비동기)
-- **[team:ask_sync]("프로젝트/에이전트") {message: "..."}**: 동기 질문 (파이프라인용)
-- **[team:info]("에이전트이름")**: 에이전트 상세 정보 조회
-- **[team:list_projects]**: 모든 프로젝트와 에이전트 목록 조회
+IBL 위임 액션 (others 노드):
+- **[others:delegate]{agent_id: "에이전트이름", message: "..."}**: 같은 프로젝트의 에이전트에게 작업 위임 (비동기)
+- **[others:ask]{agent_id: "프로젝트/에이전트", message: "..."}**: 다른 프로젝트 에이전트에게 질문/위임 (비동기)
+- **[others:ask_sync]{agent_id: "프로젝트/에이전트", message: "..."}**: 동기 질문 (파이프라인용)
+- **[others:info]{agent_id: "에이전트이름"}**: 에이전트 상세 정보 조회
+- **[others:list_projects]**: 모든 프로젝트와 에이전트 목록 조회
 </delegation_tools>
 
 <delegation_principles>
@@ -24,7 +24,7 @@ IBL 위임 액션 (team 노드):
 # 예: <agent name="심장전문" role="심장전문과 의사" />
 
 # 2. 정확한 이름으로 위임
-[team:delegate]("심장전문") {message: "환자의 증상을 분석하고 진단 의견을 주세요: ..."}
+[others:delegate]{agent_id: "심장전문", message: "환자의 증상을 분석하고 진단 의견을 주세요: ..."}
 ```
 </delegation_example>
 
@@ -33,8 +33,8 @@ IBL 위임 액션 (team 노드):
 
 서로 의존성이 없는 작업은 동시에 위임 가능:
 ```
-[team:delegate]("내과") {message: "두통 증상 분석"}
-[team:delegate]("외과") {message: "무릎 통증 검사 의뢰"}
+[others:delegate]{agent_id: "내과", message: "두통 증상 분석"}
+[others:delegate]{agent_id: "외과", message: "무릎 통증 검사 의뢰"}
 ```
 모든 결과가 도착하면 통합 보고를 받습니다.
 </parallel_delegation>
@@ -50,7 +50,7 @@ IBL 위임 액션 (team 노드):
 3. **실제 결과가 도착할 때까지 대기** (다음 위임 보류)
 4. 결과 도착 후 TODO 업데이트하고 두 번째 위임 실행
 
-**중요**: `[team:delegate]`가 반환하는 "위임했습니다"는 **접수 확인**일 뿐입니다.
+**중요**: `[others:delegate]`가 반환하는 "위임했습니다"는 **접수 확인**일 뿐입니다.
 에이전트의 **실제 결과가 도착하기 전에 다음 위임을 보내면 안 됩니다.**
 
 **절대 금지 사항:**
@@ -60,11 +60,11 @@ IBL 위임 액션 (team 노드):
 
 ```
 # ❌ 잘못된 예 - 결과 없이 검토/피드백 전송 (환각)
-[team:delegate]("내과") {message: "혈압 측정해줘"}
-[team:delegate]("내과") {message: "결과 확인했습니다. 약 처방해줘"}  # 결과 없음!
+[others:delegate]{agent_id: "내과", message: "혈압 측정해줘"}
+[others:delegate]{agent_id: "내과", message: "결과 확인했습니다. 약 처방해줘"}  # 결과 없음!
 
 # ✅ 올바른 예 - 결과 대기 후 다음 위임
-[team:delegate]("내과") {message: "혈압 측정해줘"}
+[others:delegate]{agent_id: "내과", message: "혈압 측정해줘"}
 # → 여기서 멈추고 실제 결과 대기 → 결과 도착 후 다음 위임
 ```
 </sequential_delegation>

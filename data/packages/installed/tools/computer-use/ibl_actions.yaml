@@ -1,4 +1,4 @@
-node: interface
+node: tools
 actions:
   desktop_screenshot:
     description: macOS 화면 캡처 (전체 또는 영역 지정)

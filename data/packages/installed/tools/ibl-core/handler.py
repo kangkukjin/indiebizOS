@@ -20,7 +20,7 @@ _TOOL_NODE_MAP = {
     # 현재 노드 직접 매핑
     "ibl_system": "system", "ibl_interface": "interface",
     "ibl_messenger": "messenger", "ibl_source": "source",
-    "ibl_stream": "stream", "ibl_forge": "forge",
+    "ibl_stream": "stream", "ibl_forge": "engines",
     # 구 도구명 → 현재 노드 (직접 매핑, 이중 변환 없음)
     "ibl_android": "interface", "ibl_browser": "interface", "ibl_desktop": "interface",
     "ibl_youtube": "stream", "ibl_radio": "stream",
@@ -32,16 +32,16 @@ _TOOL_NODE_MAP = {
     "ibl_photo": "source", "ibl_blog": "source",
     "ibl_memory": "source", "ibl_health": "source",
     "ibl_cctv": "source", "ibl_realestate": "source",
-    "ibl_creator": "forge", "ibl_webdev": "forge", "ibl_design": "forge",
+    "ibl_creator": "engines", "ibl_webdev": "engines", "ibl_design": "engines",
     "ibl_orchestrator": "system", "ibl_workflow": "system",
     "ibl_automation": "system", "ibl_output": "system",
     "ibl_user": "system", "ibl_filesystem": "system", "ibl_fs": "system",
     # 기타 레거시
     "ibl_channel": "messenger", "ibl_contact": "messenger",
-    "ibl_media": "forge", "ibl_viz": "forge",
+    "ibl_media": "engines", "ibl_viz": "engines",
     "ibl_api": "source", "ibl_shopping": "source",
-    "ibl_startup": "source", "ibl_hosting": "forge",
-    "ibl_webbuilder": "forge", "ibl_storage": "system",
+    "ibl_startup": "source", "ibl_hosting": "engines",
+    "ibl_webbuilder": "engines", "ibl_storage": "system",
     "ibl_event": "system", "ibl_agent": "system",
 }
 

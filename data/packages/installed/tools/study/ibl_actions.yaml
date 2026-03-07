@@ -1,4 +1,4 @@
-node: source
+node: sense
 actions:
   search_openalex:
     description: OpenAlex 학술 논문 검색 (인용수, OA 필터)

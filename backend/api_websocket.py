@@ -19,6 +19,41 @@ router = APIRouter()
 # 매니저 인스턴스
 project_manager = None
 
+# 심층연구 가이드 캐시
+_deep_research_guide_cache: str | None = None
+
+
+def _get_deep_research_guide() -> str:
+    """심층연구 가이드 파일 로드 (캐시 사용)"""
+    global _deep_research_guide_cache
+    if _deep_research_guide_cache is not None:
+        return _deep_research_guide_cache
+
+    from runtime_utils import get_base_path
+    guide_path = get_base_path() / "data" / "guides" / "deep_research.md"
+    if guide_path.exists():
+        _deep_research_guide_cache = guide_path.read_text(encoding='utf-8')
+    else:
+        _deep_research_guide_cache = ""
+    return _deep_research_guide_cache
+
+
+def inject_deep_research(message: str) -> str:
+    """메시지 앞에 심층연구 가이드를 주입"""
+    guide = _get_deep_research_guide()
+    if not guide:
+        return message
+    prefix = (
+        "<deep_research_mode>\n"
+        "사용자가 심층연구 모드를 활성화했습니다. 아래 가이드라인을 반드시 따르세요.\n"
+        "일반적인 '간결하게 답변' 원칙을 적용하지 마세요. "
+        "충분한 깊이와 다각적 관점을 갖춘 전문가 수준의 결과물을 만드세요.\n\n"
+        f"{guide}\n"
+        "</deep_research_mode>\n\n"
+    )
+    print(f"[WS] 심층연구 가이드 주입됨")
+    return prefix + message
+
 # 스트리밍을 위한 스레드 풀
 executor = ThreadPoolExecutor(max_workers=4)
 
@@ -357,6 +392,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     agent_name = data.get("agent_name", "")
     project_id = data.get("project_id", "")
     images = data.get("images", [])
+    deep_research = data.get("deep_research", False)
 
     try:
         # 시작 알림
@@ -469,6 +505,9 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             _set_user_input(message)
             # IBL 용례 참조 주입 (RAG)
             augmented_msg = runner.augment_with_ibl_references(message)
+            # 심층연구 모드: 가이드 주입
+            if deep_research:
+                augmented_msg = inject_deep_research(augmented_msg)
             try:
                 for event in runner.ai.process_message_stream(
                     message_content=augmented_msg,
@@ -643,6 +682,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
     """
     message = data.get("message", "")
     images = data.get("images", [])
+    deep_research = data.get("deep_research", False)
 
     try:
         # 시작 알림
@@ -722,6 +762,9 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 augmented_msg = rag.inject_references(message)
             except Exception:
                 augmented_msg = message
+            # 심층연구 모드: 가이드 주입
+            if deep_research:
+                augmented_msg = inject_deep_research(augmented_msg)
             try:
                 # 통합된 스트리밍 함수 사용 - 모든 프로바이더 지원
                 for event in process_system_ai_message_stream(

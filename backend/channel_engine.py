@@ -22,29 +22,29 @@ SUPPORTED_CHANNELS = ["gmail", "nostr"]
 
 # === IBL 노드 액션 핸들러 (ibl_engine에서 호출) ===
 
-def execute_channel_action(action: str, target: str, params: dict,
+def execute_channel_action(action: str, params: dict,
                            project_path: str) -> Any:
     """
     ibl_engine에서 호출되는 채널 노드 액션 핸들러
 
     Args:
         action: send, read, search
-        target: 채널 타입 (gmail, nostr)
-        params: 액션별 파라미터
+        params: 액션별 파라미터 (channel_type 포함)
         project_path: 프로젝트 경로
     """
-    if not target:
+    channel_type_raw = params.get("channel_type", "")
+    if not channel_type_raw:
         return {
-            "error": "채널 타입(target)이 필요합니다.",
+            "error": "channel_type이 필요합니다.",
             "supported_channels": SUPPORTED_CHANNELS,
             "usage": {
-                "send": '[channel:send](gmail) { "to": "user@mail.com", "subject": "제목", "body": "내용" }',
-                "read": '[channel:read](gmail) { "max_results": 10 }',
-                "search": '[channel:search](gmail) { "query": "from:someone" }',
+                "send": '[others:channel_send]{channel_type: "gmail", to: "user@mail.com", subject: "제목", body: "내용"}',
+                "read": '[others:channel_read]{channel_type: "gmail", max_results: 10}',
+                "search": '[others:channel_search]{channel_type: "gmail", query: "from:someone"}',
             }
         }
 
-    channel_type = target.lower().strip()
+    channel_type = channel_type_raw.lower().strip()
     if channel_type not in SUPPORTED_CHANNELS:
         return {
             "error": f"지원하지 않는 채널: {channel_type}",

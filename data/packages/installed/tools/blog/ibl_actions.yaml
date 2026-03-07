@@ -1,4 +1,4 @@
-node: source
+node: self
 actions:
   rag_search:
     description: 블로그 RAG 검색 (의미 기반 벡터 검색)

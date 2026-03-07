@@ -1,4 +1,4 @@
-node: stream
+node: tools
 actions:
   search_radio:
     description: 전세계 인터넷 라디오 검색 (Radio Browser API)

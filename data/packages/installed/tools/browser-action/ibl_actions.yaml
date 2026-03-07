@@ -1,12 +1,12 @@
 nodes:
-  system:
+  self:
     actions:
       browse:
         description: 브라우저로 페이지 열기
         router: handler
         tool: browser_navigate
         target_key: url
-  interface:
+  limbs:
     actions:
       navigate:
         description: URL 열기 (Playwright 브라우저)
@@ -14,7 +14,7 @@ nodes:
         router: handler
         tool: browser_navigate
         target_key: url
-      snapshot:
+      browser_snapshot:
         description: 접근성 스냅샷 (요소 ref 생성)
         router: handler
         tool: browser_snapshot

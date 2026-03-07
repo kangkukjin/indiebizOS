@@ -1,29 +1,23 @@
 nodes:
-  stream:
+  sense:
     actions:
-      info:
+      video_info:
         description: 동영상 메타데이터 조회 (제목, 조회수, 채널 등)
         target_description: 유튜브 URL
         router: handler
         tool: get_youtube_info
         target_key: url
-      transcript:
+      video_transcript:
         description: 동영상 자막/스크립트 추출
         target_description: 유튜브 URL
         router: handler
         tool: get_youtube_transcript
         target_key: url
-      languages:
+      video_languages:
         description: 사용 가능한 자막 언어 목록 조회
         target_description: 유튜브 URL
         router: handler
         tool: list_available_transcripts
-        target_key: url
-      download:
-        description: 동영상 오디오를 MP3로 다운로드 (output_path로 저장 경로/파일명 지정 가능, 기본값 ~/Desktop/output.mp3)
-        target_description: 유튜브 URL
-        router: handler
-        tool: download_youtube_music
         target_key: url
       search_youtube:
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
@@ -31,6 +25,8 @@ nodes:
         router: handler
         tool: search_youtube
         target_key: query
+  limbs:
+    actions:
       play:
         description: 유튜브 검색 후 바로 재생 (검색+재생 복합. 검색만 원하면 search_youtube 사용)
         target_description: 검색어 또는 유튜브 URL
@@ -55,10 +51,9 @@ nodes:
         description: 재생 중지 및 큐 초기화
         router: handler
         tool: stop_youtube
-  forge:
-    actions:
       youtube_download:
-        description: 유튜브 오디오 다운로드 (→ youtube:download 권장)
+        description: 동영상 오디오를 MP3로 다운로드 (output_path로 저장 경로/파일명 지정 가능, 기본값 ~/Desktop/output.mp3)
+        target_description: 유튜브 URL
         router: handler
         tool: download_youtube_music
         target_key: url

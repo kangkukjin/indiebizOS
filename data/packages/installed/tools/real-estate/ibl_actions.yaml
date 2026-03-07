@@ -1,4 +1,4 @@
-node: source
+node: sense
 actions:
   apt_trade:
     description: 아파트 매매 실거래가 (국토부)

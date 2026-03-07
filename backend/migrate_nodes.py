@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """
-Phase 22 노드 마이그레이션 스크립트
-10노드 → 6노드 통합을 위한 agents.yaml 자동 변환
+Phase 23 노드 마이그레이션 스크립트
+7노드 → 5노드 통합을 위한 agents.yaml 자동 변환
+
+5노드 체계 (신체 은유):
+  sense  — 감각: 외부 세계 관찰/조회
+  self   — 내부: 개인 영역 (파일, 기억, 설정)
+  limbs  — 수족: 도구 조작 (브라우저, 기기, 미디어)
+  others — 타자: 에이전트/사람 소통
+  engines  — 작업장: 콘텐츠 생성/변환
 
 사용법:
-  python migrate_nodes.py --step 1          # stream (youtube+radio)
-  python migrate_nodes.py --step 2          # interface (browser+android+desktop)
-  python migrate_nodes.py --step 3          # source (informant+librarian)
-  python migrate_nodes.py --step 4          # rename (orchestrator→system, creator→forge)
-  python migrate_nodes.py --step all        # 전체
-  python migrate_nodes.py --step 1 --dry-run  # 미리보기
-  python migrate_nodes.py --step 1 --reverse  # 되돌리기
+  python migrate_nodes.py --step 5          # Phase 23: 7노드→5노드
+  python migrate_nodes.py --step all        # 전체 (1-5)
+  python migrate_nodes.py --step 5 --dry-run  # 미리보기
+  python migrate_nodes.py --step 5 --reverse  # 되돌리기
 """
 
 import argparse
@@ -24,10 +28,40 @@ PROJECTS_DIR = os.path.join(BASE, "projects")
 
 # 각 Step별 매핑 (old → new)
 STEP_MAPPINGS = {
+    # Phase 22 레거시 (이미 적용됨)
     1: {"youtube": "stream", "radio": "stream"},
     2: {"browser": "interface", "android": "interface", "desktop": "interface"},
     3: {"informant": "source", "librarian": "source"},
-    4: {"orchestrator": "system", "creator": "forge"},
+    4: {"orchestrator": "system", "creator": "engines"},
+    # Phase 23: 7노드 → 5노드
+    5: {
+        "source": "sense",
+        "system": "self",
+        "interface": "limbs",
+        "stream": "limbs",
+        "team": "others",
+        "messenger": "others",
+        # 레거시 직접 매핑 (이전 단계 건너뛴 경우)
+        "youtube": "limbs",
+        "radio": "limbs",
+        "browser": "limbs",
+        "android": "limbs",
+        "desktop": "limbs",
+        "informant": "sense",
+        "librarian": "self",
+        "orchestrator": "self",
+        "photo": "self",
+        "blog": "self",
+        "memory": "self",
+        "health": "self",
+        "finance": "sense",
+        "culture": "sense",
+        "study": "sense",
+        "legal": "sense",
+        "statistics": "sense",
+        "commerce": "sense",
+        "location": "sense",
+    },
 }
 
 
@@ -95,7 +129,7 @@ def migrate_file(filepath, mapping, dry_run=False, reverse=False):
 def run_migration(step, dry_run=False, reverse=False):
     """마이그레이션 실행"""
     if step == "all":
-        steps = [1, 2, 3, 4]
+        steps = [1, 2, 3, 4, 5]
     else:
         steps = [int(step)]
 
@@ -128,8 +162,8 @@ def run_migration(step, dry_run=False, reverse=False):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Phase 22 노드 마이그레이션")
-    parser.add_argument("--step", required=True, help="1|2|3|4|all")
+    parser = argparse.ArgumentParser(description="Phase 23 노드 마이그레이션")
+    parser.add_argument("--step", required=True, help="1|2|3|4|5|all")
     parser.add_argument("--dry-run", action="store_true", help="미리보기만")
     parser.add_argument("--reverse", action="store_true", help="되돌리기")
     args = parser.parse_args()

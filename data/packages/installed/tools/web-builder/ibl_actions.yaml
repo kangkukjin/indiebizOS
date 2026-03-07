@@ -1,10 +1,26 @@
 node: forge
 actions:
-  registry:
-    description: 사이트 레지스트리 관리 (등록/목록/삭제/업데이트)
+  site_list:
+    description: 등록된 사이트 목록 조회
+    router: handler
+    tool: site_list
+  site_register:
+    description: 새 사이트 등록 (이름, 경로 필수)
+    target_description: 사이트 이름
+    router: handler
+    tool: site_register
+    target_key: name
+  site_remove:
+    description: 등록된 사이트 삭제
     target_description: 사이트 ID
     router: handler
-    tool: site_registry
+    tool: site_remove
+    target_key: site_id
+  site_update:
+    description: 등록된 사이트 정보 수정
+    target_description: 사이트 ID
+    router: handler
+    tool: site_update
     target_key: site_id
   snapshot:
     description: 사이트 스냅샷 (현재 상태 캡처)

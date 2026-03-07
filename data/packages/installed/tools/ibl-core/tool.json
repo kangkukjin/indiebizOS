@@ -6,7 +6,7 @@
   "tools": [
     {
       "name": "execute_ibl",
-      "description": "IBL 코드 실행기. 6개 노드로 모든 기능을 실행합니다.\n\n## IBL 코드 문법\nexecute_ibl(code='[node:action](target) {params}')\n\n## 예시\n[source:web_search](\"AI 뉴스\")\n[source:price](\"AAPL\")\n[forge:newspaper](\"AI, 경제\")\n[system:discover](\"주가\")\n\n## 6개 노드\n- system: 알림, 위임, 워크플로우, 파일(read/write/list/find/grep), 시간, 이벤트, 결과출력(gui/file/open/clipboard)\n- interface: 브라우저 자동화(navigate/snapshot/click/type), 안드로이드(adb), 데스크탑(macOS GUI)\n- messenger: 연락처(search/list), 이웃, Gmail/Nostr 메시지 발송/검색\n- source: 웹검색, 크롤링, 뉴스, 주가, 재무제표, 부동산, 법률, 통계, 문화, 쇼핑, 사진, 건강, 블로그, 메모리, CCTV\n- stream: 유튜브(info/transcript/download/play), 라디오(search/play/stop)\n- forge: 슬라이드, 영상(HTML/Remotion), 차트, AI이미지, 음악, 홈페이지관리(registry/snapshot/live_check/create/deploy), 건축설계\n\n## 파이프라인: >> 순차, & 병렬, ?? 폴백\n## 모르면: [system:discover](\"키워드\")",
+      "description": "IBL 코드 실행기. 6개 노드로 모든 기능을 실행합니다.\n\n## IBL 코드 문법\nexecute_ibl(code='[node:action](target) {params}')\n\n## 예시\n[source:web_search](\"AI 뉴스\")\n[source:price](\"AAPL\")\n[engines:newspaper](\"AI, 경제\")\n[system:discover](\"주가\")\n\n## 6개 노드\n- system: 알림, 위임, 워크플로우, 파일(read/write/list/find/grep), 시간, 이벤트, 결과출력(gui/file/open/clipboard)\n- interface: 브라우저 자동화(navigate/snapshot/click/type), 안드로이드(adb), 데스크탑(macOS GUI)\n- messenger: 연락처(search/list), 이웃, Gmail/Nostr 메시지 발송/검색\n- source: 웹검색, 크롤링, 뉴스, 주가, 재무제표, 부동산, 법률, 통계, 문화, 쇼핑, 사진, 건강, 블로그, 메모리, CCTV\n- stream: 유튜브(info/transcript/download/play), 라디오(search/play/stop)\n- engines: 슬라이드, 영상(HTML/Remotion), 차트, AI이미지, 음악, 홈페이지관리(registry/snapshot/live_check/create/deploy), 건축설계\n\n## 파이프라인: >> 순차, & 병렬, ?? 폴백\n## 모르면: [system:discover](\"키워드\")",
       "input_schema": {
         "type": "object",
         "properties": {

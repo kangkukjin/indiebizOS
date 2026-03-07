@@ -46,9 +46,9 @@ cur.execute("""
 rows = cur.fetchall()
 ```
 
-3. GPS 좌표를 지역명으로 변환 — `[source:reverse_geocode]` 사용:
+3. GPS 좌표를 지역명으로 변환 — `[sense:reverse_geocode]` 사용:
 ```
-[source:reverse_geocode] {lat: 35.32, lon: 129.27}
+[sense:reverse_geocode] {lat: 35.32, lon: 129.27}
 → {"address": "경상남도 울산광역시 울주군 ...", "region_1depth": "울산광역시", ...}
 ```
 
@@ -101,6 +101,6 @@ cur.execute("""
 ## 주의사항
 
 - `get_gallery`, `get_stats`, `get_timeline`은 경로 없이 호출하면 가장 큰 스캔을 자동 선택합니다.
-- GPS 좌표 → 도시명 변환은 `[source:reverse_geocode] {lat: 위도, lon: 경도}` 사용 (카카오 API).
+- GPS 좌표 → 도시명 변환은 `[sense:reverse_geocode] {lat: 위도, lon: 경도}` 사용 (카카오 API).
 - GPS 정보가 없는 사진도 많습니다. GPS 검색 시 결과가 적을 수 있습니다.
 - 여러 스캔 DB가 있을 수 있습니다. 필요하면 모든 DB를 순회하세요.

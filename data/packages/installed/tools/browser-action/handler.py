@@ -2,7 +2,7 @@
 browser-action 패키지 핸들러
 Playwright MCP 스타일 브라우저 자동화 도구
 
-Version: 3.0.0
+Version: 4.0.0
 """
 
 import json
@@ -29,7 +29,6 @@ def _load(module_name):
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     module = importlib.util.module_from_spec(spec)
 
-    # sys.modules에 등록하여 다른 모듈에서 import 가능하게 함
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
 
@@ -43,28 +42,35 @@ _TOOL_ROUTING = {
     "browser_navigate":         ("browser_navigate", "browser_navigate", True),
     "browser_navigate_back":    ("browser_navigate", "browser_navigate_back", False),
     "browser_navigate_forward": ("browser_navigate", "browser_navigate_forward", False),
-    "browser_open":             ("browser_navigate", "browser_open", True),
 
     # 스냅샷
     "browser_snapshot":         ("browser_snapshot", "browser_snapshot", False),
-    "browser_get_interactive":  ("browser_snapshot", "browser_get_interactive", False),
 
     # 상호작용
     "browser_click":            ("browser_interact", "browser_click", False),
+    "browser_dblclick":         ("browser_interact", "browser_dblclick", False),
+    "browser_rightclick":       ("browser_interact", "browser_rightclick", False),
     "browser_type":             ("browser_interact", "browser_type", False),
     "browser_select_option":    ("browser_interact", "browser_select_option", False),
+    "browser_check":            ("browser_interact", "browser_check", False),
     "browser_hover":            ("browser_interact", "browser_hover", False),
     "browser_drag":             ("browser_interact", "browser_drag", False),
     "browser_press_key":        ("browser_interact", "browser_press_key", False),
+    "browser_upload_file":      ("browser_interact", "browser_upload_file", False),
 
     # 콘텐츠 및 출력
     "browser_scroll":           ("browser_content", "browser_scroll", False),
     "browser_wait_for":         ("browser_content", "browser_wait_for", False),
     "browser_screenshot":       ("browser_content", "browser_screenshot", True),
     "browser_get_content":      ("browser_content", "browser_get_content", False),
+    "browser_get_html":         ("browser_content", "browser_get_html", False),
     "browser_console_logs":     ("browser_content", "browser_console_logs", False),
+    "browser_network_logs":     ("browser_content", "browser_network_logs", False),
+    "browser_dialog_info":      ("browser_content", "browser_dialog_info", False),
     "browser_save_pdf":         ("browser_content", "browser_save_pdf", True),
     "browser_evaluate":         ("browser_content", "browser_evaluate", False),
+    "browser_resize":           ("browser_content", "browser_resize", False),
+    "browser_vision":           ("browser_content", "browser_vision", True),
     "browser_close":            ("browser_content", "browser_close", False),
 
     # 탭/iframe 관리

@@ -77,6 +77,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
+  const [deepResearch, setDeepResearch] = useState(false);
 
   // 스트리밍
   const [streamingContent, setStreamingContent] = useState('');
@@ -525,12 +526,14 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         agent_name: agentName,
         project_id: projectId,
         images: imageData.length > 0 ? imageData : undefined,
+        deep_research: deepResearch || undefined,
       }));
     } else {
       ws.send(JSON.stringify({
         type: 'system_ai_stream',
         message: messageContent,
         images: imageData.length > 0 ? imageData : undefined,
+        deep_research: deepResearch || undefined,
       }));
     }
 
@@ -628,7 +631,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       <div
         className={isDialog
           ? 'flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50 shrink-0 select-none'
-          : 'h-14 px-4 flex items-center justify-between border-b border-[#E5DFD5] bg-[#EAE4DA] drag'
+          : 'h-14 px-4 flex items-center justify-between border-b border-[#E5DFD5] bg-[#EAE4DA] shrink-0 drag'
         }
         style={isDialog ? { cursor: isDragging ? 'grabbing' : 'grab' } : undefined}
         onMouseDown={isDialog ? handleDragStart : undefined}
@@ -655,6 +658,22 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           </div>
         </div>
         <div className={`flex items-center gap-2${isDialog ? '' : ' no-drag'}`}>
+          {/* 심층연구 토글 */}
+          <button
+            onClick={() => setDeepResearch(prev => !prev)}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+              deepResearch
+                ? isDialog
+                  ? 'bg-blue-500 text-white hover:bg-blue-600'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                : isDialog
+                  ? 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  : 'bg-[#DDD5C8] text-[#6B5B4F] hover:bg-[#D0C8BB]'
+            }`}
+            title={deepResearch ? '심층연구 모드 켜짐 — 클릭하여 끄기' : '심층연구 모드 — 클릭하여 켜기'}
+          >
+            {deepResearch ? '심층연구 ON' : '심층연구'}
+          </button>
           {/* 히스토리/초기화 (시스템 AI일 때) */}
           {!isAgent && (
             <>
@@ -686,8 +705,11 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       {/* 계획 모드 패널 */}
       <PlanModePanel planMode={planMode} onApprove={handleApprovePlan} onReject={handleRejectPlan} />
 
+      {/* 메시지+입력 래퍼 — flex-1 min-h-0으로 남은 공간 전부 차지, 내부에서 메시지 스크롤 */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+
       {/* 메시지 영역 */}
-      <div className={`flex-1 overflow-auto p-4 space-y-4 ${isDialog ? 'bg-gray-50 selectable-text' : ''}`}>
+      <div className={`flex-1 min-h-0 overflow-y-auto p-4 space-y-4 ${isDialog ? 'bg-gray-50 selectable-text dialog-messages-scroll' : ''}`}>
         {messages.length === 0 && !isLoading ? (
           <div className={`h-full flex items-center justify-center ${isDialog ? 'text-gray-400' : 'text-[#A09080]'}`}>
             <div className="text-center">
@@ -800,6 +822,8 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         showHelpText={isDialog}
       />
 
+      </div>{/* 메시지+입력 래퍼 닫기 */}
+
       {/* 카메라 */}
       <CameraPreview
         isOpen={fileAttachments.isCameraOpen}
@@ -853,7 +877,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   // 풀페이지 모드
   return (
-    <div className="flex-1 flex flex-col bg-[#F5F1EB]">
+    <div className="flex-1 min-h-0 flex flex-col bg-[#F5F1EB]">
       {chatContent}
     </div>
   );

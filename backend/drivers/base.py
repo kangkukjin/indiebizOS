@@ -13,14 +13,13 @@ class Driver(ABC):
     """IBL 드라이버 기본 인터페이스"""
 
     @abstractmethod
-    def execute(self, action: str, target: str, params: dict) -> dict:
+    def execute(self, action: str, params: dict) -> dict:
         """
         정보 소스에 요청을 보내고 결과를 반환한다.
 
         Args:
             action: 수행할 동작 (search, query, get, list 등)
-            target: 대상 (검색어, ID, 경로 등)
-            params: 추가 파라미터
+            params: 파라미터 (검색어, ID 등 모두 포함)
 
         Returns:
             {"success": True, "data": ..., "summary": "..."}

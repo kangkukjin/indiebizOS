@@ -264,8 +264,8 @@ function App() {
   // 시스템 AI 창인 경우
   if (isSystemAI) {
     return (
-      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
-        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+      <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#F5F1EB] p-3">
+        <div className="flex-1 min-h-0 flex flex-col rounded-xl overflow-hidden shadow-lg">
           <SystemAIView />
         </div>
       </div>

@@ -1,4 +1,4 @@
-node: source
+node: sense
 actions:
   price:
     description: '주가 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F)'

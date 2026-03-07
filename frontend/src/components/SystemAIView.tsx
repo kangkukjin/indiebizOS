@@ -11,7 +11,7 @@ export function SystemAIView() {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col">
       <ChatView
         chatTarget={{ type: 'system_ai' }}
         layout="fullpage"

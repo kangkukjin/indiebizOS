@@ -22,7 +22,7 @@ IndieBiz OS Core - Phase 8
     execute_event("create", "매일 AI 뉴스", {
         "type": "schedule",
         "config": {"repeat": "daily", "time": "08:00"},
-        "pipeline": '[informant:search_news]("AI") >> [channel:send](gmail) {"to": "me"}'
+        "pipeline": '[sense:search_news]{query: "AI"} >> [others:channel_send]{channel: "gmail", to: "me"}'
     }, ".")
 """
 
@@ -402,52 +402,49 @@ def _trigger_history(target: str, params: dict) -> dict:
 
 # === 메인 실행 함수 ===
 
-def execute_event(action: str, target: str, params: dict,
+def execute_event(action: str, params: dict,
                   project_path: str = ".") -> dict:
     """이벤트 노드 라우팅
 
     Args:
         action: list/list_events, get/get_event, create, update,
                 delete/delete_event, enable, disable, status, history, save/save_event
-        target: 트리거 ID 또는 이름
-        params: 추가 파라미터
+        params: 파라미터 (trigger_id 등 포함)
         project_path: 프로젝트 경로
 
     Returns:
         결과 dict
-
-    Phase 19: orchestrator 통합으로 action 이름 변경됨
-              (list→list_events, get→get_event, delete→delete_event, save→save_event)
-              구 이름도 하위 호환 유지
     """
+    trigger_id = params.get("trigger_id", "")
+
     if action in ("list", "list_events"):
         return _list_triggers(params)
     elif action in ("get", "get_event"):
-        if not target:
-            return {"error": "트리거 ID 또는 이름이 필요합니다."}
-        return _get_trigger(target)
+        if not trigger_id:
+            return {"error": "trigger_id가 필요합니다."}
+        return _get_trigger(trigger_id)
     elif action in ("create", "save_event"):
-        return _create_trigger(target, params)
+        return _create_trigger(trigger_id, params)
     elif action == "update":
-        if not target:
-            return {"error": "트리거 ID가 필요합니다."}
-        return _update_trigger(target, params)
+        if not trigger_id:
+            return {"error": "trigger_id가 필요합니다."}
+        return _update_trigger(trigger_id, params)
     elif action in ("delete", "delete_event"):
-        if not target:
-            return {"error": "트리거 ID 또는 이름이 필요합니다."}
-        return _delete_trigger(target)
+        if not trigger_id:
+            return {"error": "trigger_id가 필요합니다."}
+        return _delete_trigger(trigger_id)
     elif action == "enable":
-        if not target:
-            return {"error": "트리거 ID 또는 이름이 필요합니다."}
-        return _enable_trigger(target)
+        if not trigger_id:
+            return {"error": "trigger_id가 필요합니다."}
+        return _enable_trigger(trigger_id)
     elif action == "disable":
-        if not target:
-            return {"error": "트리거 ID 또는 이름이 필요합니다."}
-        return _disable_trigger(target)
+        if not trigger_id:
+            return {"error": "trigger_id가 필요합니다."}
+        return _disable_trigger(trigger_id)
     elif action == "status":
         return _event_status()
     elif action == "history":
-        return _trigger_history(target, params)
+        return _trigger_history(trigger_id, params)
     else:
         return {
             "error": f"알 수 없는 이벤트 액션: {action}",

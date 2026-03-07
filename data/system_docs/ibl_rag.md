@@ -38,7 +38,7 @@ ibl_nodes.yaml ──→ [Generator] ──→ ibl_usage.db (용례 사전: ~970
 ibl_examples (
   id, intent TEXT,        -- 사용자 의도 (자연어)
   ibl_code TEXT,          -- IBL 코드 (정답)
-  nodes TEXT,             -- 관련 노드 (source, system 등)
+  nodes TEXT,             -- 관련 노드 (sense, self 등)
   category TEXT,          -- single / pipeline / complex
   difficulty INT,         -- 난이도 (1-5)
   source TEXT,            -- synthetic / synthetic_v3 / auto_log / manual
@@ -148,11 +148,11 @@ AI에게 전달 (시스템 프롬프트 + 참조 + 사용자 메시지)
 
 ```xml
 <ibl_references note="아래는 유사한 과거 용례입니다. 참고만 하고 현재 요청에 맞게 변형하세요.">
-  <ref intent="아파트 매매 실거래가" code='[source:apt_trade]("지역코드")' score="0.88"/>
+  <ref intent="아파트 매매 실거래가" code='[sense:apt_trade]{region_code: "지역코드"}' score="0.88"/>
   <ref intent="부산 반여동의 최신 아파트 실거래가를 알려줘."
-       code='[source:district_codes]("해운대구") >> [system:todo]("지역코드 확인")'
+       code='[sense:district_codes]{name: "해운대구"} >> [self:todo]{description: "지역코드 확인"}'
        score="0.87"/>
-  <ref intent="아파트 전월세 실거래가" code='[source:apt_rent]("지역코드")' score="0.92"/>
+  <ref intent="아파트 전월세 실거래가" code='[sense:apt_rent]{region_code: "지역코드"}' score="0.92"/>
 </ibl_references>
 
 대전 유성구 아파트 가격 검색해줘
@@ -195,7 +195,7 @@ IBLUsageDB.try_promote_session(user_input)
 
 ### IBL 코드 추출 전략
 
-1. **파이프라인 코드 모드**: `[ibl:?]("코드")` 형태로 실행된 경우, 내부 코드를 추출
+1. **파이프라인 코드 모드**: 파이프라인으로 실행된 경우, 내부 코드를 추출
 2. **개별 호출 조합**: 성공한 개별 도구 호출들을 `>>` 파이프라인으로 연결
 3. **중복 제거**: 같은 `[node:action]` 호출은 1개만 유지
 

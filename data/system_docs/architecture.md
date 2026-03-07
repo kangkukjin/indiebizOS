@@ -41,7 +41,7 @@ indiebizOS/
 
 ## 핵심 컴포넌트
 
-### 통합 AI 아키텍처 (Phase 23: 7-Node 구조)
+### 통합 AI 아키텍처 (Phase 25: 5-Node 구조)
 시스템 AI와 프로젝트 에이전트가 동일한 코드베이스와 **동일한 도구 구조**를 공유합니다:
 
 ```
@@ -74,7 +74,7 @@ indiebizOS/
 **통합 효과:**
 - 시스템 AI와 프로젝트 에이전트 모두 `execute_ibl` 단일 도구 사용
 - 차이점은 접근 가능한 노드 범위뿐 (시스템 AI: 전체, 프로젝트 에이전트: 허용된 노드)
-- 사용자 소통(질문, 할일, 승인, 알림)도 `[system:*]` 액션으로 통합
+- 사용자 소통(질문, 할일, 승인, 알림)도 `[self:*]` 액션으로 통합
 - 프로바이더 코드 1회 작성으로 시스템 AI + 모든 에이전트 지원
 - 새 프로바이더 추가 시 자동으로 전체 적용
 
@@ -89,7 +89,7 @@ indiebizOS/
 │      IBL 환경 (ibl_access.py)           │
 │   - 사용 가능한 노드/액션 목록           │
 │   - IBL 문법 가이드                     │
-│   - 시스템 AI: 전체 노드                │
+│   - 시스템 AI: 5개 노드 전체            │
 │   - 에이전트: 허용된 노드만             │
 ├─────────────────────────────────────────┤
 │       조건부 프래그먼트 (fragments/)     │
@@ -125,23 +125,23 @@ AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 구조 적용
 - WebSocket을 통해 프론트엔드로 실시간 전달
 
 ### 위임 체인 시스템 (Delegation Chain)
-에이전트 간 비동기 협업을 위한 핵심 메커니즘. `[team:delegate]`/`[team:delegate_project]`를 통해 작업을 위임하고 결과를 자동으로 보고받음.
+에이전트 간 비동기 협업을 위한 핵심 메커니즘. `[others:delegate]`/`[others:delegate_project]`를 통해 작업을 위임하고 결과를 자동으로 보고받음.
 - 순차 위임: `completed[]` 사이클 병합으로 이전 결과 보존
 - 병렬 위임: EXCLUSIVE 트랜잭션 내 원자적 `responses[]` 추가로 race condition 방지
 - 시스템 AI 위임: 3-레이어 감지 (도구명 / IBL 결과 / DB pending)
 → 상세 문서: [delegation.md](delegation.md)
 
 ### IBL (IndieBiz Logic) 시스템
-- 노드 기반 추상화: `[node:action](target) {params}` 문법
+- 노드 기반 추상화: `[node:action]{params}` 문법
 - execute_ibl 단일 도구로 모든 노드 접근
-- **7개 노드, ~320 액션** (Phase 24: verb 제거, category 태그로 대체)
-  - source(105), interface(79), system(~54), forge(46), stream(18), messenger(9), team(7)
+- **5개 노드, ~320 액션** (Phase 25: 노드 재구조화)
+  - sense(105), limbs(97), self(~57), others(16), engines(46)
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
 - **프롬프트 가독성**: 액션에 category 태그 부여 → `<action-categories>`로 그룹 표시 (순수 표시용)
 - **액션 라우팅 이원화**: api_engine(자동 발견) + handler(수동)
 - `api_registry.yaml`에 `node` 필드 추가 시 자동으로 노드 액션에 병합 — `ibl_nodes.yaml` 편집 불필요
 - 에이전트별 접근 제어: `allowed_nodes`로 노드 필터링
-- 인프라 노드(`system`, `team`)는 모든 에이전트에 자동 허용 (`_ALWAYS_ALLOWED`)
+- 인프라 노드(`self`, `others`)는 모든 에이전트에 자동 허용 (`_ALWAYS_ALLOWED`)
 → 상세 문서: [ibl.md](ibl.md)
 
 ### IBL 용례 RAG 시스템
@@ -186,4 +186,4 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 → 상세 문서: [remote_access.md](remote_access.md)
 
 ---
-*마지막 업데이트: 2026-03-05 (Phase 24: verb 시스템 제거, category 태그 도입)*
+*마지막 업데이트: 2026-03-06 (Phase 25: 5-Node 재구조화)*

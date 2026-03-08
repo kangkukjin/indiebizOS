@@ -1,8 +1,8 @@
-content: '[sense:search_news]("AI") {count: 7} & [sense:search_news]("청주") {count:
-  7} & [sense:search_news]("세종") {count: 7} & [sense:search_news]("문화") {count:
-  7} & [sense:search_news]("여행") {count: 7} & [sense:search_news]("과학") {count:
-  7} & [sense:search_news]("경제") {count: 7} & [sense:search_news]("주식") {count:
-  7} & [sense:search_news]("만화") {count: 7} & [sense:search_news]("영화") {count:
-  7} & [sense:search_news]("드라마") {count: 7} & [sense:search_news]("책") {count:
-  7} >> [engines:newspaper]("newspaper") >> [self:open]("browse")'
-updated: '2026-02-25T11:32:17.923449'
+content: '[sense:search_news]{query: "AI", count: 7} & [sense:search_news]{query: "청주",
+  count: 7} & [sense:search_news]{query: "세종", count: 7} & [sense:search_news]{query:
+  "문화", count: 7} & [sense:search_news]{query: "여행", count: 7} & [sense:search_news]{query:
+  "과학", count: 7} & [sense:search_news]{query: "경제", count: 7} & [sense:search_news]{query:
+  "주식", count: 7} & [sense:search_news]{query: "만화", count: 7} & [sense:search_news]{query:
+  "영화", count: 7} & [sense:search_news]{query: "드라마", count: 7} & [sense:search_news]{query:
+  "책", count: 7} >> [engines:newspaper] >> [self:open]'
+updated: '2026-03-08T12:00:00.000000'

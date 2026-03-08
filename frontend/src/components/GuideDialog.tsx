@@ -160,32 +160,28 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
         <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
           <p className="text-gray-600">
             에이전트는 <strong>IBL(IndieBiz Logic)</strong>이라는 통합 명령어로<br/>
-            6개 노드의 <strong>321가지 액션</strong>을 실행합니다.
+            5개 노드의 <strong>321가지 액션</strong>을 실행합니다.
           </p>
           <div className="grid grid-cols-3 gap-2 text-sm">
             <div className="bg-blue-50 p-2 rounded text-center">
-              <p className="text-blue-700 font-medium">source</p>
-              <p className="text-blue-600 text-xs">정보 검색/수집</p>
-            </div>
-            <div className="bg-purple-50 p-2 rounded text-center">
-              <p className="text-purple-700 font-medium">interface</p>
-              <p className="text-purple-600 text-xs">사용자 상호작용</p>
+              <p className="text-blue-700 font-medium">sense</p>
+              <p className="text-blue-600 text-xs">감각 (정보 수집)</p>
             </div>
             <div className="bg-green-50 p-2 rounded text-center">
-              <p className="text-green-700 font-medium">system</p>
-              <p className="text-green-600 text-xs">시스템 제어</p>
+              <p className="text-green-700 font-medium">self</p>
+              <p className="text-green-600 text-xs">자기 관리/소통</p>
             </div>
-            <div className="bg-amber-50 p-2 rounded text-center">
-              <p className="text-amber-700 font-medium">forge</p>
-              <p className="text-amber-600 text-xs">콘텐츠 생성</p>
+            <div className="bg-purple-50 p-2 rounded text-center">
+              <p className="text-purple-700 font-medium">limbs</p>
+              <p className="text-purple-600 text-xs">장치 제어/미디어</p>
             </div>
             <div className="bg-cyan-50 p-2 rounded text-center">
-              <p className="text-cyan-700 font-medium">stream</p>
-              <p className="text-cyan-600 text-xs">미디어 스트리밍</p>
+              <p className="text-cyan-700 font-medium">others</p>
+              <p className="text-cyan-600 text-xs">협업/통신</p>
             </div>
-            <div className="bg-pink-50 p-2 rounded text-center">
-              <p className="text-pink-700 font-medium">messenger</p>
-              <p className="text-pink-600 text-xs">외부 통신</p>
+            <div className="bg-amber-50 p-2 rounded text-center">
+              <p className="text-amber-700 font-medium">engines</p>
+              <p className="text-amber-600 text-xs">콘텐츠 생성</p>
             </div>
           </div>
           <div className="bg-gray-50 p-3 rounded-lg text-sm">
@@ -333,7 +329,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             </div>
           </div>
           <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
-            📖 자세한 설정 방법: <strong>data/system_docs/remote_finder.md</strong>
+            📖 자세한 설정 방법: <strong>data/system_docs/remote_access.md</strong>
           </div>
           <div className="bg-green-50 p-3 rounded-lg text-sm text-green-700">
             💡 설정 후 시스템 AI에게 <strong>"원격 접근용 터널을 설정해줘"</strong>라고 하세요.

@@ -206,34 +206,8 @@ class ToolExecutorMixin:
 
     def _execute_legacy_tool(self, tool_name: str, tool_input: dict) -> str:
         """레거시 도구 실행 (이메일, Nostr, YouTube, 블로그 등)"""
-        # Gmail
-        if tool_name == "send_email":
-            if hasattr(self, "gmail") and self.gmail:
-                to = tool_input.get("to", "")
-                if "@indiebiz.local" in to or to == "gui":
-                    return json.dumps({
-                        "success": False,
-                        "message": f"{to}는 GUI 주소로 이메일을 보낼 수 없습니다."
-                    }, ensure_ascii=False)
-
-                subject = tool_input.get("subject", "")
-                body = tool_input.get("body", "")
-                attachment_path = tool_input.get("attachment_path")
-
-                try:
-                    self.gmail.send_message(to=to, subject=subject, body=body, attachment_path=attachment_path)
-                    if attachment_path:
-                        result = {"success": True, "message": f"{to}에게 이메일을 첨부파일과 함께 전송했습니다."}
-                    else:
-                        result = {"success": True, "message": f"{to}에게 이메일을 전송했습니다."}
-                except Exception as e:
-                    result = {"success": False, "message": f"이메일 전송 실패: {str(e)}"}
-                return json.dumps(result, ensure_ascii=False)
-            else:
-                return json.dumps({"success": False, "message": "이 에이전트는 이메일 전송 권한이 없습니다."}, ensure_ascii=False)
-
         # Nostr
-        elif tool_name == "send_nostr_message":
+        if tool_name == "send_nostr_message":
             if hasattr(self, "nostr") and self.nostr:
                 to = tool_input.get("to", "")
                 message = tool_input.get("message", "")

@@ -218,9 +218,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
     }
 
 
+# 병렬 실행 브랜치별 타임아웃 (초)
+PARALLEL_BRANCH_TIMEOUT = 90
+
+
 def _execute_parallel(branches: list, project_path: str, prev_result: str) -> list:
     """
     병렬 실행 - 여러 IBL 액션을 동시에 실행 (Phase 9)
+    각 브랜치에 타임아웃 적용 — 한 브랜치가 멈춰도 전체가 멈추지 않음.
 
     Args:
         branches: 병렬로 실행할 step 리스트
@@ -231,7 +236,7 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str) -> li
         각 branch 결과를 리스트로 합침
     """
     from ibl_engine import execute_ibl
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
     def _run_branch(branch):
         tool_input = dict(branch)
@@ -245,19 +250,35 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str) -> li
             return {"error": str(e), "_node": tool_input.get("_node", "?"),
                     "action": tool_input.get("action", "?")}
 
-    # ThreadPoolExecutor로 동시 실행
+    # ThreadPoolExecutor로 동시 실행 (타임아웃 적용)
     branch_results = [None] * len(branches)
     with ThreadPoolExecutor(max_workers=min(len(branches), 8)) as executor:
         future_to_idx = {
             executor.submit(_run_branch, branch): idx
             for idx, branch in enumerate(branches)
         }
-        for future in as_completed(future_to_idx):
+        for future in as_completed(future_to_idx, timeout=PARALLEL_BRANCH_TIMEOUT):
             idx = future_to_idx[future]
             try:
-                branch_results[idx] = future.result()
+                branch_results[idx] = future.result(timeout=PARALLEL_BRANCH_TIMEOUT)
+            except FuturesTimeoutError:
+                node = branches[idx].get("node", branches[idx].get("_node", "?"))
+                action = branches[idx].get("action", "?")
+                print(f"[IBL] 병렬 브랜치 타임아웃: [{node}:{action}] ({PARALLEL_BRANCH_TIMEOUT}초)")
+                branch_results[idx] = {
+                    "error": f"실행 시간 초과 ({PARALLEL_BRANCH_TIMEOUT}초): [{node}:{action}]. 다른 방법을 시도하세요."
+                }
             except Exception as e:
                 branch_results[idx] = {"error": str(e)}
+
+    # as_completed 자체가 타임아웃된 경우 미완료 브랜치 처리
+    for idx, result in enumerate(branch_results):
+        if result is None:
+            node = branches[idx].get("node", branches[idx].get("_node", "?"))
+            action = branches[idx].get("action", "?")
+            branch_results[idx] = {
+                "error": f"실행 시간 초과 ({PARALLEL_BRANCH_TIMEOUT}초): [{node}:{action}]. 다른 방법을 시도하세요."
+            }
 
     return branch_results
 

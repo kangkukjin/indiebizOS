@@ -68,6 +68,32 @@ class PromptBuilder:
             return content
         return ""
 
+    def _load_world_pulse(self) -> str:
+        """World Pulse 로드 — 오늘의 세계 상태 요약
+
+        data/guides/world_pulse.md가 존재하면 내용을 반환합니다.
+        대화 시작 시 1회 주입되어 에이전트가 세계 맥락을 알고 시작합니다.
+        파일이 없거나 비어있으면 빈 문자열을 반환합니다.
+
+        주의: 캐시하지 않음 — 백그라운드 수집 완료 후 파일이 갱신될 수 있으므로
+        매번 디스크에서 읽습니다. (대화 시작 시 1회만 호출되어 성능 영향 없음)
+        """
+        pulse_path = get_base_path() / "data" / "guides" / "world_pulse.md"
+        if not pulse_path.exists():
+            logger.debug("[PromptBuilder] World Pulse 파일 없음")
+            return ""
+
+        try:
+            content = pulse_path.read_text(encoding='utf-8').strip()
+            if not content:
+                logger.debug("[PromptBuilder] World Pulse 파일이 비어있음")
+                return ""
+            logger.info(f"[PromptBuilder] World Pulse 주입: ~{len(content)}자")
+            return content
+        except Exception as e:
+            logger.warning(f"[PromptBuilder] World Pulse 로드 실패: {e}")
+            return ""
+
     def _build_resource_list(self) -> str:
         """자원 목록 생성 — guide_db.json에서 가이드 제목을 읽어 한 줄 목록으로 반환
 
@@ -128,6 +154,12 @@ class PromptBuilder:
         """
         parts = []
 
+        # 0. 현재 날짜/시간 (모든 에이전트가 현재 시점을 알도록)
+        from datetime import datetime
+        now = datetime.now()
+        date_info = f"# 현재 시점\n현재 날짜: {now.strftime('%Y년 %m월 %d일 %A')}\n현재 시간: {now.strftime('%H:%M')}"
+        parts.append(date_info)
+
         # 1. 기본 프롬프트 (항상 포함)
         base = self._load_file("base_prompt_v4.md")
         if base:
@@ -156,6 +188,11 @@ class PromptBuilder:
         resource_list = self._build_resource_list()
         if resource_list:
             parts.append(resource_list)
+
+        # 4.6 World Pulse (세계 상태 배경 지식 — 대화 시작 시 1회 주입)
+        world_pulse = self._load_world_pulse()
+        if world_pulse:
+            parts.append(world_pulse)
 
         # 5. 역할 프롬프트
         if role_prompt:

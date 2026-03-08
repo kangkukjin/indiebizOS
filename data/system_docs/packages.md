@@ -184,7 +184,7 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 |----|------|------|
 | android | Android | ADB를 통한 안드로이드 기기 관리 (SMS, 통화기록, 연락처, 앱) |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
-| browser-action | Browser Action | Playwright 기반 브라우저 자동화 v4.0 (36개 도구: ref/CSS selector, stealth, 쿠키 동의 자동처리, 네트워크 캡처, vision 모드, 다중 탭/iframe) |
+| browser-action | Browser Action | Playwright 기반 브라우저 자동화 v5.0 (36개 도구: ref/CSS selector, stealth, 쿠키 동의 자동처리, 네트워크 캡처, vision 모드, 다중 탭/iframe, 동적 콘텐츠 대기, 다단계 폴백 추출, CDP 타임아웃) |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
 | cctv | CCTV | CCTV/웹캠 관련 도구 |
 | cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel) |

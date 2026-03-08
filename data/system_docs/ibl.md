@@ -41,7 +41,7 @@ IBL 표현 계층:     [node:action]{params}
 | `control` | 조작하기 | `[limbs:open_app]{name: "설정"}` |
 | `fs` | 파일 조작 | `[self:read]{path: "report.pdf"}` |
 | `io` | 결과 출력 | `[self:file]{path: "result.md"}` |
-| `send` | 보내기 | `[others:send_email]{subject: "제목"}` |
+| `send` | 보내기 | `[others:channel_send]{channel_type: "gmail", to: "user@mail.com", subject: "제목", body: "내용"}` |
 
 프롬프트에서 `<action-categories>` 태그로 표시되며, 각 카테고리에 속한 구체적 액션명이 나열된다. RAG 시스템이 정확한 액션명을 안내하므로, 에이전트는 카테고리명이 아닌 액션명을 직접 써야 한다.
 
@@ -56,7 +56,7 @@ IBL 표현 계층:     [node:action]{params}
 | `self` | ~57 | 개인 도메인: 시스템 관리, 파일, 설정, 사용자 소통, 워크플로우 | ask_user, approve, todo, notify_user, file, open, clipboard, run_command |
 | `limbs` | 97 | 장치 제어: UI 조작(브라우저, 안드로이드, 데스크톱) + 미디어 재생 | navigate, snapshot, click, devices, play, stream, download, radio_play |
 | `sense` | 105 | 감각 확장: 외부 정보 수집 + 내부 데이터 관리 | web_search, search_news, price, crawl, search_photos, rag_search, save_health |
-| `others` | 16 | 협업 통신: 에이전트 위임 + 메시지 송수신 | delegate, ask, ask_sync, delegate_project, send_email, search_contact, read_message |
+| `others` | 15 | 협업 통신: 에이전트 위임 + 메시지 송수신 | delegate, ask, ask_sync, delegate_project, channel_send, channel_read, search_contact |
 | `engines` | 46 | 창작: 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 음악, 웹사이트, 설계) | create, create_site, create_design, run, get |
 
 **Phase 25 통합 맥락:**
@@ -86,7 +86,7 @@ IBL 표현 계층:     [node:action]{params}
 | `ask` | 에이전트에게 질문 (비동기) | `[others:ask]{agent_id: "투자컨설팅", message: "..."}` |
 | `ask_sync` | 에이전트에게 질문 (동기) | `[others:ask_sync]{agent_id: "투자컨설팅", message: "..."}` |
 | `delegate_project` | 다른 프로젝트 에이전트에게 위임 | `[others:delegate_project]{project_path: "투자/투자컨설팅", message: "..."}` |
-| `send_email` | 이메일 전송 | `[others:send_email]{subject: "제목", to: "..."}` |
+| `channel_send` | 메시지 발송 (gmail/nostr) | `[others:channel_send]{channel_type: "gmail", to: "user@mail.com", subject: "제목", body: "내용"}` |
 | `search_contact` | 연락처 검색 | `[others:search_contact]{name: "김사장"}` |
 
 ### 수족 노드 — limbs (장치 제어 + 미디어 재생)

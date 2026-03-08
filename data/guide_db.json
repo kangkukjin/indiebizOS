@@ -416,6 +416,24 @@
         "자동화"
       ],
       "file": "workflow.md"
+    },
+    {
+      "id": "world_pulse",
+      "name": "세계 상태 감각 (World Pulse)",
+      "description": "하루 1회 자동 수집되는 세계 상태 요약. 경제 지표, 주요 뉴스, 기술 동향, 날씨. 시스템 기동 시 자동 갱신.",
+      "keywords": [
+        "세계",
+        "뉴스",
+        "경제",
+        "시장",
+        "날씨",
+        "world",
+        "pulse",
+        "요즘",
+        "상황",
+        "동향"
+      ],
+      "file": "world_pulse.md"
     }
   ]
 }

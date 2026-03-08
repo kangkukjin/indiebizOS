@@ -2,8 +2,9 @@
 browser_navigate.py - 브라우저 네비게이션 도구
 
 URL 이동, 히스토리 앞/뒤 이동, HTTP 상태코드 반환, 리다이렉트 추적.
+동적 콘텐츠 대기, 재시도 로직 포함.
 
-Version: 4.0.0
+Version: 5.0.0
 """
 
 import asyncio
@@ -11,6 +12,53 @@ from browser_session import (
     BrowserSession, ensure_active,
     NAVIGATE_TIMEOUT, BLOCKED_URL_SCHEMES,
 )
+
+# 동적 콘텐츠 대기 관련 상수
+DYNAMIC_CONTENT_WAIT = 3000       # 동적 콘텐츠 최대 대기 (ms)
+DYNAMIC_CONTENT_INTERVAL = 300    # 콘텐츠 변화 체크 간격 (ms)
+MIN_MEANINGFUL_LENGTH = 50        # 의미 있는 콘텐츠 최소 길이
+
+
+async def _wait_for_dynamic_content(page, timeout_ms=DYNAMIC_CONTENT_WAIT):
+    """
+    페이지의 동적 콘텐츠가 로드될 때까지 스마트 대기.
+
+    전략:
+    1. networkidle을 짧은 타임아웃으로 시도 (가장 신뢰성 높음)
+    2. 실패하면 body 텍스트 길이가 안정화될 때까지 폴링
+    """
+    # 1차: networkidle 시도 (짧은 타임아웃)
+    try:
+        await page.wait_for_load_state("networkidle", timeout=timeout_ms)
+        return
+    except Exception:
+        pass
+
+    # 2차: body 텍스트 안정화 대기
+    try:
+        prev_len = 0
+        stable_count = 0
+        elapsed = 0
+        interval_sec = DYNAMIC_CONTENT_INTERVAL / 1000
+
+        while elapsed < timeout_ms:
+            await asyncio.sleep(interval_sec)
+            elapsed += DYNAMIC_CONTENT_INTERVAL
+
+            try:
+                cur_len = await page.evaluate("document.body?.innerText?.length || 0")
+            except Exception:
+                break
+
+            if cur_len >= MIN_MEANINGFUL_LENGTH and cur_len == prev_len:
+                stable_count += 1
+                if stable_count >= 2:  # 연속 2회 동일하면 안정화 판정
+                    return
+            else:
+                stable_count = 0
+            prev_len = cur_len
+    except Exception:
+        pass
 
 
 async def browser_navigate(params: dict, project_path: str = ".") -> dict:
@@ -80,8 +128,18 @@ async def browser_navigate(params: dict, project_path: str = ".") -> dict:
             except Exception:
                 pass
 
+        # 동적 콘텐츠 대기 (SPA, JS 렌더링 페이지 대응)
+        await _wait_for_dynamic_content(page_raw)
+
         title = await page_raw.title()
         final_url = page_raw.url
+
+        # 콘텐츠 길이 힌트 (후속 작업에 유용한 정보)
+        content_length = 0
+        try:
+            content_length = await page_raw.evaluate("document.body?.innerText?.length || 0")
+        except Exception:
+            pass
 
         result = {
             "success": True,
@@ -89,6 +147,7 @@ async def browser_navigate(params: dict, project_path: str = ".") -> dict:
             "url": final_url,
             "status_code": status_code,
             "tab_id": session.active_tab_id,
+            "content_length": content_length,
         }
 
         if redirects:
@@ -99,6 +158,13 @@ async def browser_navigate(params: dict, project_path: str = ".") -> dict:
 
         if status_code >= 400:
             result["warning"] = f"HTTP {status_code} 에러가 발생했습니다."
+
+        if content_length < MIN_MEANINGFUL_LENGTH:
+            result["warning"] = (
+                f"페이지 텍스트가 매우 짧습니다 ({content_length}자). "
+                "JS 렌더링 페이지이거나 봇 차단일 수 있습니다. "
+                "browser_evaluate로 직접 확인하세요."
+            )
 
         return result
     except Exception as e:

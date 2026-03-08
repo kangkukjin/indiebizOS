@@ -137,8 +137,8 @@ call_agent("출판", "잡지 만들어줘")
 
 ## 채널별 발송 방법
 - **GUI 응답**: 텍스트로 직접 응답
-- **이메일 발송**: send_email(to, subject, body, attachments)
-- **Nostr 발송**: send_nostr_message(recipient_pubkey, content)
+- **이메일 발송**: [others:channel_send]{channel_type: "gmail", to: "...", subject: "...", body: "..."}
+- **Nostr 발송**: [others:channel_send]{channel_type: "nostr", to: "npub...", content: "..."}
 
 ## 파일 경로 규칙
 파일 전달 시 **반드시 전체 경로** 포함:
@@ -463,8 +463,8 @@ call_agent("출판", "잡지 만들어줘")
 
 3. **external 에이전트는 채널별 발송 방법 포함**:
    - GUI 응답: 텍스트로 직접
-   - 이메일: send_email(to, subject, body, attachments)
-   - Nostr: send_nostr_message(recipient_pubkey, content)
+   - 이메일: [others:channel_send]{channel_type: "gmail", to: "...", subject: "...", body: "..."}
+   - Nostr: [others:channel_send]{channel_type: "nostr", to: "npub...", content: "..."}
 
 4. **파일 경로 규칙 (운반책 원칙)**:
    - 파일 생성/전달 시 반드시 전체 경로 포함

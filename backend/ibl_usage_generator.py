@@ -126,7 +126,7 @@ def generate_stage1(nodes_data: dict) -> List[Dict]:
             if param_key and param_val:
                 ibl_code = f'[{node_name}:{action_name}]{{{param_key}: "{param_val}"}}'
             else:
-                ibl_code = f'[{node_name}:{action_name}]()'
+                ibl_code = f'[{node_name}:{action_name}]'
 
             examples.append({
                 'intent': intent,
@@ -197,7 +197,7 @@ def generate_for_package(package_id: str) -> int:
         if param_key and param_val:
             ibl_code = f'[{node_name}:{action_name}]{{{param_key}: "{param_val}"}}'
         else:
-            ibl_code = f'[{node_name}:{action_name}]()'
+            ibl_code = f'[{node_name}:{action_name}]'
 
         examples.append({
             'intent': intent,

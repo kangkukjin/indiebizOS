@@ -1,0 +1,35 @@
+{
+  "enabled": true,
+  "location": "Cheongju",
+  "profile": {
+    "name": "강국진",
+    "occupation": "은퇴한 물리학자, 작가, ",
+    "interests": "AI OS 개발, 정치, 물리학, 철학",
+    "memo": ""
+  },
+  "economy": {
+    "enabled": true,
+    "symbols": {
+      "kospi": "^KS11",
+      "kosdaq": "^KQ11",
+      "sp500": "^GSPC",
+      "nasdaq": "^IXIC",
+      "usd_krw": "KRW=X",
+      "gold": "GC=F",
+      "wti": "CL=F"
+    }
+  },
+  "news": {
+    "enabled": true,
+    "query": "오늘 주요 뉴스",
+    "count": 8
+  },
+  "tech": {
+    "enabled": true,
+    "query": "AI technology news today",
+    "count": 5
+  },
+  "weather": {
+    "enabled": true
+  }
+}

@@ -148,6 +148,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[IBL] 모델 로딩 시작 실패 (무시): {e}")
 
+    # World Pulse: 오늘의 세계 상태 스냅샷 확인 (없으면 백그라운드 수집)
+    try:
+        from world_pulse import ensure_today_pulse
+        result = ensure_today_pulse()
+        status = result.get("status", "unknown")
+        if status == "exists":
+            print(f"[WorldPulse] 오늘 스냅샷 확인됨 ({result.get('date')})")
+        elif status == "collected":
+            print(f"[WorldPulse] 오늘 스냅샷 신규 수집 완료 ({result.get('date')})")
+        elif status == "error":
+            print(f"[WorldPulse] 수집 실패: {result.get('detail')}")
+    except Exception as e:
+        print(f"[WorldPulse] 초기화 실패 (무시): {e}")
+
     yield
 
     # Cloudflare 터널 종료

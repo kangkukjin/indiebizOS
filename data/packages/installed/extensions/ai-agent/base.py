@@ -62,7 +62,7 @@ class AIAgent(ToolExecutorMixin, AnthropicMixin, OpenAIMixin, GoogleMixin, Ollam
             if self.agent_type == 'external':
                 filtered = TOOLS
             else:
-                filtered = [tool for tool in TOOLS if tool['name'] != 'send_email']
+                filtered = list(TOOLS)
         else:
             for tool in TOOLS:
                 if tool['name'] in allowed_tools and tool not in filtered:

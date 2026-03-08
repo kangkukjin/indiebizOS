@@ -143,15 +143,50 @@ browser_cookies_load(name="naver")
 → 페이지가 동적으로 변경되었을 수 있음. `browser_snapshot` 재호출 후 새 ref로 재시도
 
 ### "브라우저가 열려있지 않습니다"
-→ 120초 비활성으로 자동 종료됨. `browser_navigate`로 재시작
+→ 180초 비활성으로 자동 종료됨. `browser_navigate`로 재시작
+
+### "도구 실행 시간 초과" (60초)
+→ IBL 엔진이 60초 내에 완료되지 않는 도구를 강제 중단함. 이 에러가 나오면:
+1. 해당 사이트가 봇 차단/JS 렌더링 문제일 가능성 높음
+2. **브라우저 대신 `sense:web_search`로 대체** 시도
+3. 같은 브라우저 작업을 반복하지 말 것
 
 ### 스냅샷에 원하는 요소가 없을 때
 1. `browser_scroll`로 해당 영역까지 스크롤 후 다시 스냅샷
 2. `browser_wait_for`로 동적 콘텐츠 로드 대기
 3. iframe 내부 요소라면 `browser_iframe_switch` 후 스냅샷
 
+### 콘텐츠 추출 실패 / 빈 페이지
+→ v5.0에서 `browser_get_content`가 4단계 폴백을 자동 시도함:
+1. Playwright inner_text → 2. JS innerText → 3. JS textContent → 4. Readability (article/main 영역)
+→ 모든 방법이 실패하면 진단 정보가 반환됨 (봇 차단 징후, SPA 여부 등)
+→ 이 경우 `browser_evaluate`로 직접 JS를 실행하거나, 브라우저를 포기하고 다른 방법 사용
+
 ### 클릭 후 새 페이지/팝업이 열렸을 때
 → `browser_tab_list`로 새 탭 확인 → `browser_tab_switch`로 전환
+
+---
+
+## v5.0 주요 변경사항
+
+### navigate 개선
+- 동적 콘텐츠 스마트 대기: `domcontentloaded` 후 자동으로 `networkidle` + body 텍스트 안정화 폴링 (최대 3초)
+- 빈 페이지 경고: 텍스트 50자 미만이면 "JS 렌더링/봇 차단" 경고 반환
+- `content_length` 힌트 포함
+
+### get_content 개선
+- 4단계 폴백 추출 (위 참조)
+- 모든 단계에 타임아웃 적용 (절대 무한 대기 불가)
+- 빈 페이지 진단 기능 (봇 차단 징후, SPA 여부 자동 분석)
+
+### snapshot 개선
+- CDP 전체 작업 10초 타임아웃
+- CDP 실패 시 JS 폴백 (interactive 요소 수집)
+- 개별 노드 조회 0.5초 타임아웃, 최대 100개
+
+### IBL 엔진 레벨 보호
+- 모든 async 도구 실행에 60초 타임아웃 (엔진이 멈추는 일 방지)
+- 병렬 실행 브랜치별 90초 타임아웃 (한 브랜치 hang → 해당 브랜치만 에러)
 
 ---
 

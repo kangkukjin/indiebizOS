@@ -241,7 +241,7 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
         return execute_workflow_action(action, params, project_path)
     elif router == "channel_engine":
         from channel_engine import execute_channel_action
-        return execute_channel_action(action, params, project_path)
+        return execute_channel_action(action, params, project_path, agent_id=agent_id)
     elif router == "web_collector":
         from web_collector import execute_web_collect_action
         return execute_web_collect_action(action, params, project_path)
@@ -306,9 +306,13 @@ def _route_api_engine(action: str, params: dict, project_path: str,
     return {"error": f"api 노드에 '{action}' 액션이 없습니다."}
 
 
+# 도구 실행 타임아웃 (초) — 이 시간을 초과하면 강제로 에러 반환
+TOOL_EXECUTION_TIMEOUT = 60
+
+
 def _route_handler(mapped_tool: str, params: dict,
                    project_path: str, agent_id: str = None) -> Any:
-    """handler.py로 위임"""
+    """handler.py로 위임 (타임아웃 적용)"""
     from tool_loader import load_tool_handler
 
     if not mapped_tool:
@@ -328,8 +332,11 @@ def _route_handler(mapped_tool: str, params: dict,
     else:
         result = handler.execute(mapped_tool, merged_params, project_path)
 
-    # async 핸들러 지원
+    # async 핸들러 지원 (타임아웃 적용)
     if asyncio.iscoroutine(result):
+        async def _run_with_timeout(coro):
+            return await asyncio.wait_for(coro, timeout=TOOL_EXECUTION_TIMEOUT)
+
         try:
             # 현재 스레드에 실행 중인 이벤트 루프가 있는지 안전하게 확인
             try:
@@ -341,19 +348,41 @@ def _route_handler(mapped_tool: str, params: dict,
                 # 이미 실행 중인 루프가 있으면 별도 스레드에서 실행
                 import concurrent.futures
                 with concurrent.futures.ThreadPoolExecutor() as pool:
-                    result = pool.submit(asyncio.run, result).result()
+                    result = pool.submit(
+                        asyncio.run, _run_with_timeout(result)
+                    ).result(timeout=TOOL_EXECUTION_TIMEOUT + 5)
             else:
                 # 실행 중인 루프가 없으면 새로 생성하여 실행
-                result = asyncio.run(result)
+                result = asyncio.run(_run_with_timeout(result))
+        except asyncio.TimeoutError:
+            print(f"[IBL] 도구 실행 타임아웃 ({TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}")
+            result = json.dumps({
+                "success": False,
+                "error": f"도구 실행 시간 초과 ({TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}. 다른 방법을 시도하세요."
+            })
+        except concurrent.futures.TimeoutError:
+            print(f"[IBL] 도구 스레드 타임아웃 ({TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}")
+            result = json.dumps({
+                "success": False,
+                "error": f"도구 실행 시간 초과 ({TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}. 다른 방법을 시도하세요."
+            })
         except RuntimeError as e:
             # 최종 폴백: 새 이벤트 루프 생성
             try:
                 new_loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(new_loop)
                 try:
-                    result = new_loop.run_until_complete(result)
+                    result = new_loop.run_until_complete(
+                        _run_with_timeout(result)
+                    )
                 finally:
                     new_loop.close()
+            except asyncio.TimeoutError:
+                print(f"[IBL] 도구 실행 타임아웃 ({TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}")
+                result = json.dumps({
+                    "success": False,
+                    "error": f"도구 실행 시간 초과 ({TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}. 다른 방법을 시도하세요."
+                })
             except Exception as e2:
                 print(f"[IBL] async 핸들러 실행 실패: {e} → {e2}")
                 result = json.dumps({"success": False, "error": f"async 실행 오류: {str(e2)}"})
@@ -429,6 +458,12 @@ def _route_system(func_name: str, params: dict, project_path: str) -> Any:
     elif func_name == "list_switches":
         from api_system_ai import _execute_list_switches
         return _execute_list_switches(params)
+
+    # World Pulse: 세계 상태 감각
+    elif func_name in ("world_pulse", "world_trend", "world_refresh"):
+        from world_pulse import execute_world_pulse
+        action_name = func_name  # world_pulse, world_trend, world_refresh
+        return execute_world_pulse(action_name, dict(params))
 
     return {"error": f"알 수 없는 시스템 함수: {func_name}"}
 
@@ -1036,7 +1071,7 @@ def _extract_path_from_prev(prev_result: str) -> Optional[str]:
 def _output_open(path: str, params: dict, project_path: str = ".") -> Any:
     """URL을 브라우저로, 파일을 Finder로 열기
 
-    파이프라인에서 사용 시: >> [self:open]()
+    파이프라인에서 사용 시: >> [self:open]
     _prev_result에서 file/path/url 필드를 자동 추출하여 열어준다.
     상대경로는 project_path 기준으로 절대경로로 자동 변환된다.
     """
@@ -1052,7 +1087,7 @@ def _output_open(path: str, params: dict, project_path: str = ".") -> Any:
         else:
             prev = params.get("_prev_result", "")
             return {"error": "열 대상을 찾을 수 없습니다. 이전 step이 file/path/url 키를 포함한 결과를 반환해야 합니다.",
-                    "hint": "파이프라인: [도구]{...} >> [self:open]() — 이전 도구가 경로/URL을 반환해야 동작합니다.",
+                    "hint": "파이프라인: [도구]{...} >> [self:open] — 이전 도구가 경로/URL을 반환해야 동작합니다.",
                     "_prev_result_preview": prev[:300] if prev else "(empty)"}
 
     if not path:

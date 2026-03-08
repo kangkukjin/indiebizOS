@@ -49,9 +49,9 @@ agents:
 
 **워크플로우** - IBL 문법으로 여러 액션을 재사용 가능한 파이프라인으로 연결:
 ```
-[sense:web_search]("AI 뉴스")
-  >> [others:ask_sync]("컨텐츠/컨텐츠") {message: "이 기사들을 요약해줘"}
-  >> [self:file]("news_report.html") {format: "html"}
+[sense:web_search]{query: "AI 뉴스"}
+  >> [others:ask_sync]{agent_id: "컨텐츠/컨텐츠", message: "이 기사들을 요약해줘"}
+  >> [self:file]{path: "news_report.html", format: "html"}
 ```
 
 **기능:**
@@ -59,7 +59,7 @@ agents:
 - **예약 실행** - 새로운 **스케줄러**를 통해 매일 오전 8시, 매주 금요일 자동 실행
 - **에이전트 지정** - 어떤 에이전트가 처리할지 지정
 - **파이프라인 연산자** - 순차(>>), 병렬(&), 폴백(??)
-- **별칭 실행** - 저장된 워크플로우를 이름으로 실행: `[self:run]("kinsight")`
+- **별칭 실행** - 저장된 워크플로우를 이름으로 실행: `[self:run]{workflow_id: "kinsight"}`
 
 ### 3. P2P 네트워크 (IndieNet) & 원격 접근
 
@@ -101,7 +101,7 @@ IndieBiz OS는 AI 에이전트와 시스템 사이의 통합 인터페이스로 
 ```
 사용자: "AI 뉴스 검색하고 파일로 저장해"
          ↓
-AI 판단: execute_ibl(code='[sense:web_search]("AI 뉴스") >> [self:file]("result.md")')
+AI 판단: execute_ibl(code='[sense:web_search]{query: "AI 뉴스"} >> [self:file]{path: "result.md"}')
          ↓
 IBL 엔진: 파싱 → 핸들러/API 엔진 디스패치 → 결과 반환
 ```

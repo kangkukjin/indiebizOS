@@ -166,7 +166,7 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 | `[others:ask]` | `call_agent` | 에이전트에게 질문/위임 |
 | `[others:ask_sync]` | - | 동기 에이전트 호출 (파이프라인용) |
 | `[others:delegate_project]` | `call_project_agent` | 프로젝트 간 위임 (시스템AI 전용) |
-| `[others:send_email]` | - | 이메일 전송 |
+| `[others:channel_send]` | - | 메시지 발송 (gmail, nostr 등) |
 | `[others:search_contact]` | - | 연락처 검색 |
 | `[self:ask_user]` | `ask_user_question` | 사용자에게 질문 |
 | `[self:todo]` | `todo_write` | 할일 목록 관리 |

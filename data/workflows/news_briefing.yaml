@@ -1,4 +1,4 @@
 name: "뉴스 브리핑"
 description: "AI와 부동산 뉴스를 동시 수집"
-pipeline: '[sense:web_search]("AI 뉴스") & [sense:web_search]("부동산 뉴스")'
+pipeline: '[sense:web_search]{query: "AI 뉴스"} & [sense:web_search]{query: "부동산 뉴스"}'
 created: "2026-02-17"

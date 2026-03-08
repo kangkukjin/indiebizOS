@@ -477,6 +477,17 @@
   - browser_snapshot.py: CDP DOM.describeNode으로 CSS selector 자동 생성, required/expanded 속성 추출
   - tool.json: 워크플로우 가이드 7줄 추가 (에이전트 실수 방지), 레거시 별칭 제거
   - handler.py: 36개 도구 라우팅, 버전 4.0.0
+[2026-03-08 14:00:00] PACKAGE_OVERHAUL: browser-action v5.0 안정성 대폭 강화
+  - browser_navigate.py: 동적 콘텐츠 스마트 대기 (networkidle + body 텍스트 안정화 폴링), 빈 페이지 경고, content_length 힌트
+  - browser_content.py: browser_get_content 4단계 폴백 (Playwright inner_text → JS innerText → JS textContent → Readability), 모든 단계 타임아웃 적용, 빈 페이지 진단 (봇 차단/SPA 자동 분석)
+  - browser_snapshot.py: CDP 전체 작업 10초 타임아웃, 개별 노드 0.5초 타임아웃, CDP 실패 시 JS 폴백, selector 추출 최대 노드 300→100개 축소
+  - handler.py, tool.json: 버전 5.0.0
+[2026-03-08 14:00:00] ENGINE_FIX: IBL 엔진 도구 실행 타임아웃 추가
+  - ibl_engine.py: _route_handler에 60초 타임아웃 적용 (async 도구가 멈춰도 에이전트에게 제어권 반환)
+  - workflow_engine.py: _execute_parallel에 브랜치별 90초 타임아웃 (한 브랜치 hang → 해당 브랜치만 에러, 나머지 정상)
+[2026-03-08 12:00:00] SYNTAX_CLEANUP: IBL 구문법 전체 정리
+  - 가이드 5개, 워크플로우 5개, README 2개, 엔진/파서 코드, tool.json, 코드 생성기 등 deprecated ("target") 문법 → {key: "value"} 문법으로 전면 교체
+  - RAG 용례 DB 232개 예제 재구축
 [2026-03-07 09:30:00] TOOL_FIX: cctv 패키지 수정
   - handler.py: _LANDMARKS에 65+ 한국 랜드마크 추가 (서울 38, 수도권 6, 부산 5, 제주 4, 기타 13)
   - handler.py: ITS 좌표 기반 get_nearby_cctv 폴백 추가 (이름 검색 실패 시)

@@ -1,12 +1,14 @@
 """
 channel_engine.py - IBL 채널 노드 실행 엔진
 
-IBL Phase 2의 핵심.
-[channel:send](gmail) { to, subject, body }
-[channel:read](nostr) { limit, since }
-[channel:search](gmail) { query, max_results }
+[others:channel_send]{channel_type: "gmail", to: "user@mail.com", subject: "제목", body: "내용"}
+[others:channel_read]{channel_type: "gmail", max_results: 10}
+[others:channel_search]{channel_type: "gmail", query: "from:someone"}
 
-기존 Gmail, Nostr(IndieNet) 인프라에 위임합니다.
+에이전트 identity 기반 발송:
+- 외부 에이전트: 에이전트에 설정된 주소(email/nostr)를 사용
+- 내부 에이전트: 외부 채널 사용 불가 (실패 반환)
+- account 파라미터로 명시적 주소 지정 가능 (예: 사용자 이메일 확인)
 """
 
 import os
@@ -20,10 +22,78 @@ from typing import Any, Dict, List, Optional
 SUPPORTED_CHANNELS = ["gmail", "nostr"]
 
 
+# === 에이전트 identity 조회 ===
+
+def _resolve_agent_identity(channel_type: str, params: dict,
+                            project_path: str, agent_id: str = None) -> dict:
+    """
+    채널 사용 시 에이전트의 identity를 결정한다.
+
+    우선순위:
+    1. params에 account가 명시되면 그 주소를 사용
+    2. agent_id가 있으면 agents.yaml에서 해당 에이전트의 주소를 조회
+    3. 둘 다 없으면 에러
+
+    Returns:
+        {"email": "..."} 또는 {"npub": "..."} 또는 {"error": "..."}
+    """
+    # 1) 명시적 account 지정
+    account = params.get("account")
+    if account:
+        if channel_type == "gmail":
+            return {"email": account}
+        elif channel_type == "nostr":
+            return {"npub": account}
+
+    # 2) 에이전트 설정에서 조회
+    if not agent_id:
+        return {"error": "에이전트 정보가 없습니다. 채널 사용에는 에이전트 identity가 필요합니다."}
+
+    agents_file = Path(project_path) / "agents.yaml"
+    if not agents_file.exists():
+        return {"error": f"agents.yaml을 찾을 수 없습니다: {agents_file}"}
+
+    try:
+        with open(agents_file, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+    except Exception as e:
+        return {"error": f"agents.yaml 읽기 실패: {e}"}
+
+    # 에이전트 찾기
+    agent_config = None
+    for agent in data.get("agents", []):
+        if agent.get("id") == agent_id:
+            agent_config = agent
+            break
+
+    if not agent_config:
+        return {"error": f"에이전트 '{agent_id}'를 찾을 수 없습니다."}
+
+    # 내부 에이전트 체크
+    if agent_config.get("type") == "internal":
+        return {"error": f"내부 에이전트 '{agent_id}'는 외부 채널을 사용할 수 없습니다."}
+
+    # 채널별 주소 조회
+    if channel_type == "gmail":
+        email = agent_config.get("email")
+        if not email:
+            return {"error": f"에이전트 '{agent_id}'에 email이 설정되어 있지 않습니다."}
+        return {"email": email}
+
+    elif channel_type == "nostr":
+        npub = agent_config.get("npub") or agent_config.get("nostr")
+        if not npub:
+            # nostr는 시스템 공용 identity를 fallback으로 사용
+            return {"npub": None, "use_system": True}
+        return {"npub": npub}
+
+    return {"error": f"identity 조회 미지원 채널: {channel_type}"}
+
+
 # === IBL 노드 액션 핸들러 (ibl_engine에서 호출) ===
 
 def execute_channel_action(action: str, params: dict,
-                           project_path: str) -> Any:
+                           project_path: str, agent_id: str = None) -> Any:
     """
     ibl_engine에서 호출되는 채널 노드 액션 핸들러
 
@@ -31,6 +101,7 @@ def execute_channel_action(action: str, params: dict,
         action: send, read, search
         params: 액션별 파라미터 (channel_type 포함)
         project_path: 프로젝트 경로
+        agent_id: 에이전트 ID (identity 결정에 사용)
     """
     channel_type_raw = params.get("channel_type", "")
     if not channel_type_raw:
@@ -51,12 +122,17 @@ def execute_channel_action(action: str, params: dict,
             "supported_channels": SUPPORTED_CHANNELS
         }
 
+    # 에이전트 identity 결정
+    identity = _resolve_agent_identity(channel_type, params, project_path, agent_id)
+    if "error" in identity:
+        return {"success": False, "channel": channel_type, "error": identity["error"]}
+
     if action == "send":
-        return _channel_send(channel_type, params)
+        return _channel_send(channel_type, params, identity)
     elif action == "read":
-        return _channel_read(channel_type, params)
+        return _channel_read(channel_type, params, identity)
     elif action == "search":
-        return _channel_search(channel_type, params)
+        return _channel_search(channel_type, params, identity)
     else:
         return {
             "error": f"알 수 없는 채널 액션: {action}",
@@ -66,9 +142,18 @@ def execute_channel_action(action: str, params: dict,
 
 # === Gmail 클라이언트 ===
 
-def _get_gmail_client():
-    """Gmail 클라이언트 가져오기 (api_gmail 재사용)"""
-    # Gmail 확장 경로 추가
+def _get_gmail_client(email: str = None):
+    """Gmail 클라이언트 가져오기
+
+    Args:
+        email: 사용할 Gmail 주소. None이면 extension config에서 읽음.
+    """
+    from api_gmail import get_gmail_client_for_email
+
+    if email:
+        return get_gmail_client_for_email(email)
+
+    # fallback: extension config
     env_path = os.environ.get("INDIEBIZ_BASE_PATH")
     if env_path:
         base = Path(env_path)
@@ -85,12 +170,11 @@ def _get_gmail_client():
         config = yaml.safe_load(f)
 
     gmail_config = config.get("gmail", {})
-    email = gmail_config.get("email", "")
-    if not email:
+    default_email = gmail_config.get("email", "")
+    if not default_email:
         raise Exception("Gmail 이메일 주소가 설정되지 않았습니다.")
 
-    from api_gmail import get_gmail_client_for_email
-    return get_gmail_client_for_email(email)
+    return get_gmail_client_for_email(default_email)
 
 
 # === IndieNet ===
@@ -106,7 +190,7 @@ def _get_indienet():
 
 # === 내부 구현 ===
 
-def _channel_send(channel_type: str, params: dict) -> dict:
+def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
     """메시지 발송"""
     if channel_type == "gmail":
         to = params.get("to")
@@ -118,7 +202,7 @@ def _channel_send(channel_type: str, params: dict) -> dict:
             return {"error": "수신자(to) 이메일이 필요합니다."}
 
         try:
-            client = _get_gmail_client()
+            client = _get_gmail_client(email=identity.get("email"))
             result = client.send_message(
                 to=to, subject=subject, body=body,
                 attachment_path=attachment_path
@@ -126,6 +210,7 @@ def _channel_send(channel_type: str, params: dict) -> dict:
             return {
                 "success": True,
                 "channel": "gmail",
+                "from": identity.get("email"),
                 "message_id": result.get("id"),
                 "thread_id": result.get("threadId"),
                 "to": to,
@@ -160,14 +245,14 @@ def _channel_send(channel_type: str, params: dict) -> dict:
     return {"error": f"send 미지원 채널: {channel_type}"}
 
 
-def _channel_read(channel_type: str, params: dict) -> dict:
+def _channel_read(channel_type: str, params: dict, identity: dict) -> dict:
     """메시지 읽기"""
     if channel_type == "gmail":
         query = params.get("query")
         max_results = params.get("max_results", 10)
 
         try:
-            client = _get_gmail_client()
+            client = _get_gmail_client(email=identity.get("email"))
             messages = client.get_messages(query=query, max_results=max_results)
 
             simplified = []
@@ -186,6 +271,7 @@ def _channel_read(channel_type: str, params: dict) -> dict:
             return {
                 "success": True,
                 "channel": "gmail",
+                "account": identity.get("email"),
                 "count": len(simplified),
                 "query": query,
                 "messages": simplified
@@ -212,7 +298,7 @@ def _channel_read(channel_type: str, params: dict) -> dict:
     return {"error": f"read 미지원 채널: {channel_type}"}
 
 
-def _channel_search(channel_type: str, params: dict) -> dict:
+def _channel_search(channel_type: str, params: dict, identity: dict) -> dict:
     """메시지 검색"""
     if channel_type == "gmail":
         query = params.get("query", "")
@@ -222,7 +308,7 @@ def _channel_search(channel_type: str, params: dict) -> dict:
             return {"error": "검색어(query)가 필요합니다."}
 
         try:
-            client = _get_gmail_client()
+            client = _get_gmail_client(email=identity.get("email"))
             messages = client.get_messages(query=query, max_results=max_results)
 
             simplified = []
@@ -240,6 +326,7 @@ def _channel_search(channel_type: str, params: dict) -> dict:
             return {
                 "success": True,
                 "channel": "gmail",
+                "account": identity.get("email"),
                 "query": query,
                 "count": len(simplified),
                 "messages": simplified

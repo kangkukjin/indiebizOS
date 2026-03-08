@@ -116,6 +116,8 @@ def _build_node_descriptor(node_name: str, node_config: dict) -> dict:
             action_desc["target_key"] = action_cfg["target_key"]
         if action_cfg.get("tool"):
             action_desc["mapped_tool"] = action_cfg["tool"]
+        if action_cfg.get("keywords"):
+            action_desc["keywords"] = action_cfg["keywords"]
         actions.append(action_desc)
 
     # 설명에서 태그 추출
@@ -483,8 +485,8 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
             for token in tokens:
                 if token == tag_lower:
                     score += 15  # 정확 매칭
-                elif token in tag_lower:
-                    score += 8   # 부분 매칭
+                elif token in tag_lower or tag_lower in token:
+                    score += 8   # 부분 매칭 (양방향)
 
         # 각 액션 매칭 (이름 직접 매칭 + 설명 매칭)
         for action in node["actions"]:
@@ -501,10 +503,22 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
                 if token in action_name_lower:
                     action_score += 18  # 이름에 토큰 포함: 강한 신호
                     action_matched = True
+                elif action_name_lower in token:
+                    action_score += 14  # 역방향: 액션 이름이 토큰에 포함 (launcher→launch)
+                    action_matched = True
             # 전체 쿼리가 액션 이름에 포함
             if query_lower.replace(" ", "_") == action_name_lower:
                 action_score += 25  # 정확 일치 보너스
                 action_matched = True
+
+            # (1.5) 액션 키워드 매칭 — 동의어/다국어 지원
+            action_keywords = action.get("keywords", [])
+            for kw in action_keywords:
+                kw_lower = kw.lower()
+                for token in tokens:
+                    if token in kw_lower or kw_lower in token:
+                        action_score += 15
+                        action_matched = True
 
             # (2) 액션 설명 매칭
             for token in tokens:

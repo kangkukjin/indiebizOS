@@ -2,7 +2,7 @@
 browser-action 패키지 핸들러
 Playwright MCP 스타일 브라우저 자동화 도구
 
-Version: 4.0.0
+Version: 5.0.0
 """
 
 import json

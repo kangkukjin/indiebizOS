@@ -299,7 +299,7 @@ def _unified_search_cctv(query: str, lat: float = None, lon: float = None,
         return common.error_response(
             f"'{query}'에 해당하는 CCTV/웹캠을 찾을 수 없습니다.",
             sources_tried=sources_tried,
-            hint="좌표(lat, lon)를 직접 지정하거나, [source:webcam]()으로 Windy 웹캠을 검색해보세요."
+            hint="좌표(lat, lon)를 직접 지정하거나, [sense:webcam]{query: \"장소명\"}으로 Windy 웹캠을 검색해보세요."
         )
 
     # --- 3단계: 첫 번째 결과의 이미지를 자동 캡처 ---

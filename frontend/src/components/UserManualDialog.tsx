@@ -788,7 +788,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
           <div className="bg-green-50 p-4 rounded-lg">
             <p className="text-green-800 font-medium mb-2">IBL 노드 & 도구 패키지</p>
             <p className="text-green-700 text-sm">
-              에이전트는 <strong>IBL(IndieBiz Logic)</strong> 통합 명령어로 6개 노드(source, interface, system, forge, stream, messenger)의
+              에이전트는 <strong>IBL(IndieBiz Logic)</strong> 통합 명령어로 5개 노드(sense, self, limbs, others, engines)의
               <strong>321가지 액션</strong>을 실행합니다. 각 노드는 <strong>도구 패키지</strong>로 확장되며,
               현재 <strong>35개</strong>의 도구가 설치되어 있습니다.
             </p>
@@ -1243,7 +1243,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
               </div>
               <div className="bg-white p-2 rounded">
                 <p className="text-gray-700">IBL 노드</p>
-                <p className="text-xl font-bold text-purple-600">6개 (321 액션)</p>
+                <p className="text-xl font-bold text-purple-600">5개 (321 액션)</p>
               </div>
               <div className="bg-white p-2 rounded">
                 <p className="text-gray-700">확장 패키지</p>

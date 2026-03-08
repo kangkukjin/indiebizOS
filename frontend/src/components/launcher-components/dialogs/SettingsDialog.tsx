@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3 } from 'lucide-react';
+import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw } from 'lucide-react';
 import type { SystemAISettings } from '../types';
 import { api } from '../../../lib/api';
 import { SettingsChannelsTab } from './SettingsChannelsTab';
@@ -40,7 +40,7 @@ export function SettingsDialog({
   onSave,
   onClose,
 }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'ai' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel' | 'world'>('ai');
 
   // 데이터 내보내기/가져오기 상태
   const [isExporting, setIsExporting] = useState(false);
@@ -61,10 +61,24 @@ export function SettingsDialog({
   const [finderHostname, setFinderHostname] = useState('');
   const [launcherHostname, setLauncherHostname] = useState('');
 
+  // World Pulse 설정 상태
+  const [worldConfig, setWorldConfig] = useState<any>(null);
+  const [isLoadingWorld, setIsLoadingWorld] = useState(false);
+  const [isSavingWorld, setIsSavingWorld] = useState(false);
+  const [isRefreshingWorld, setIsRefreshingWorld] = useState(false);
+  const [worldSaveResult, setWorldSaveResult] = useState<{ success: boolean; message: string } | null>(null);
+
   // 프롬프트 템플릿 로드
   useEffect(() => {
     if (show && activeTab === 'ai') {
       loadPromptTemplates();
+    }
+  }, [show, activeTab]);
+
+  // World Pulse 설정 로드
+  useEffect(() => {
+    if (show && activeTab === 'world') {
+      loadWorldConfig();
     }
   }, [show, activeTab]);
 
@@ -85,6 +99,58 @@ export function SettingsDialog({
       }
     } catch (err) {
       console.error('Failed to load tunnel config:', err);
+    }
+  };
+
+  const loadWorldConfig = async () => {
+    try {
+      setIsLoadingWorld(true);
+      const response = await fetch('http://127.0.0.1:8765/world-pulse/config');
+      if (response.ok) {
+        const data = await response.json();
+        setWorldConfig(data);
+      }
+    } catch (err) {
+      console.error('Failed to load world pulse config:', err);
+    } finally {
+      setIsLoadingWorld(false);
+    }
+  };
+
+  const saveWorldConfig = async () => {
+    if (!worldConfig) return;
+    try {
+      setIsSavingWorld(true);
+      const response = await fetch('http://127.0.0.1:8765/world-pulse/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(worldConfig),
+      });
+      if (response.ok) {
+        setWorldSaveResult({ success: true, message: '설정이 저장되었습니다.' });
+      } else {
+        setWorldSaveResult({ success: false, message: '저장에 실패했습니다.' });
+      }
+    } catch (err) {
+      setWorldSaveResult({ success: false, message: '저장 오류: ' + (err as Error).message });
+    } finally {
+      setIsSavingWorld(false);
+      setTimeout(() => setWorldSaveResult(null), 3000);
+    }
+  };
+
+  const refreshWorldPulse = async () => {
+    try {
+      setIsRefreshingWorld(true);
+      const response = await fetch('http://127.0.0.1:8765/world-pulse/refresh', { method: 'POST' });
+      if (response.ok) {
+        setWorldSaveResult({ success: true, message: '세계 상태가 새로 수집되었습니다.' });
+      }
+    } catch (err) {
+      setWorldSaveResult({ success: false, message: '수집 실패: ' + (err as Error).message });
+    } finally {
+      setIsRefreshingWorld(false);
+      setTimeout(() => setWorldSaveResult(null), 3000);
     }
   };
 
@@ -140,10 +206,10 @@ export function SettingsDialog({
       <div
         className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
         style={{
-          width: 'min(600px, 90vw)',
-          height: 'min(550px, 85vh)',
-          minWidth: '350px',
-          minHeight: '400px',
+          width: 'min(750px, 90vw)',
+          height: 'min(650px, 88vh)',
+          minWidth: '400px',
+          minHeight: '450px',
         }}
       >
         {/* 헤더 */}
@@ -169,6 +235,7 @@ export function SettingsDialog({
             { key: 'nas', icon: HardDrive, label: '원격 Finder' },
             { key: 'launcher', icon: Monitor, label: '원격 런처' },
             { key: 'tunnel', icon: Cloud, label: '터널' },
+            { key: 'world', icon: Globe, label: '월드센싱' },
           ] as const).map(tab => (
             <button
               key={tab.key}
@@ -507,6 +574,208 @@ export function SettingsDialog({
               finderHostname={finderHostname}
               launcherHostname={launcherHostname}
             />
+          )}
+
+          {/* 월드센싱 탭 */}
+          {activeTab === 'world' && (
+            <div className="space-y-6">
+              {isLoadingWorld ? (
+                <div className="text-center py-8 text-gray-500">설정 로드 중...</div>
+              ) : worldConfig ? (
+                <>
+                  {/* 활성화 토글 */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">월드센싱</h3>
+                      <p className="text-sm text-gray-500 mt-1">하루 1회 세계 상태를 자동 수집하여 에이전트에게 배경 지식으로 제공합니다.</p>
+                    </div>
+                    <button
+                      onClick={() => setWorldConfig({ ...worldConfig, enabled: !worldConfig.enabled })}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        worldConfig.enabled ? 'bg-[#D97706]' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        worldConfig.enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+
+                  {/* 사용자 프로필 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">사용자 프로필</label>
+                    <p className="text-xs text-gray-400 mb-2">에이전트가 대화 시작 시 참고하는 기본 정보입니다.</p>
+                    <div className="space-y-2">
+                      {[
+                        { key: 'name', label: '이름', placeholder: '홍길동' },
+                        { key: 'occupation', label: '직업/역할', placeholder: '개발자, 사업가 등' },
+                        { key: 'interests', label: '관심사', placeholder: 'AI, 투자, 음악 등' },
+                      ].map(field => (
+                        <div key={field.key} className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600 w-20 shrink-0">{field.label}</span>
+                          <input
+                            type="text"
+                            value={worldConfig.profile?.[field.key] || ''}
+                            onChange={(e) => setWorldConfig({
+                              ...worldConfig,
+                              profile: { ...worldConfig.profile, [field.key]: e.target.value }
+                            })}
+                            placeholder={field.placeholder}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
+                          />
+                        </div>
+                      ))}
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm text-gray-600 w-20 shrink-0 pt-1.5">메모</span>
+                        <textarea
+                          value={worldConfig.profile?.memo || ''}
+                          onChange={(e) => setWorldConfig({
+                            ...worldConfig,
+                            profile: { ...worldConfig.profile, memo: e.target.value }
+                          })}
+                          placeholder="에이전트에게 알려줄 기타 정보"
+                          rows={2}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-[#D97706] focus:border-transparent resize-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 위치 설정 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">위치 (날씨 기준)</label>
+                    <input
+                      type="text"
+                      value={worldConfig.location || ''}
+                      onChange={(e) => setWorldConfig({ ...worldConfig, location: e.target.value })}
+                      placeholder="Cheongju"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* 카테고리별 토글 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">수집 카테고리</label>
+                    <div className="space-y-3">
+                      {[
+                        { key: 'economy', label: '경제 지표', desc: '코스피, 나스닥, 환율, 금, 유가' },
+                        { key: 'news', label: '주요 뉴스', desc: '구글 뉴스 헤드라인' },
+                        { key: 'tech', label: '기술 동향', desc: 'AI/기술 뉴스' },
+                        { key: 'weather', label: '날씨', desc: '설정된 위치의 현재 날씨' },
+                      ].map(cat => (
+                        <div key={cat.key} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <span className="text-sm font-medium text-gray-900">{cat.label}</span>
+                            <span className="text-xs text-gray-500 ml-2">{cat.desc}</span>
+                          </div>
+                          <button
+                            onClick={() => setWorldConfig({
+                              ...worldConfig,
+                              [cat.key]: { ...worldConfig[cat.key], enabled: !worldConfig[cat.key]?.enabled }
+                            })}
+                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                              worldConfig[cat.key]?.enabled !== false ? 'bg-[#D97706]' : 'bg-gray-300'
+                            }`}
+                          >
+                            <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                              worldConfig[cat.key]?.enabled !== false ? 'translate-x-5' : 'translate-x-1'
+                            }`} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 경제 지표 커스터마이즈 */}
+                  {worldConfig.economy?.enabled !== false && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">경제 지표 심볼</label>
+                      <p className="text-xs text-gray-500 mb-2">key=표시이름, value=Yahoo Finance 심볼. 쉼표로 구분하여 추가/제거 가능.</p>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(worldConfig.economy?.symbols || {}).map(([label, symbol]) => (
+                          <span key={label} className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+                            {label}: {symbol as string}
+                            <button
+                              onClick={() => {
+                                const newSymbols = { ...worldConfig.economy.symbols };
+                                delete newSymbols[label];
+                                setWorldConfig({
+                                  ...worldConfig,
+                                  economy: { ...worldConfig.economy, symbols: newSymbols }
+                                });
+                              }}
+                              className="ml-1 text-amber-600 hover:text-red-600"
+                            >
+                              <X size={12} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 뉴스 검색어 */}
+                  {worldConfig.news?.enabled !== false && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">뉴스 검색 키워드</label>
+                      <input
+                        type="text"
+                        value={worldConfig.news?.query || ''}
+                        onChange={(e) => setWorldConfig({
+                          ...worldConfig,
+                          news: { ...worldConfig.news, query: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
+                      />
+                    </div>
+                  )}
+
+                  {/* 기술 검색어 */}
+                  {worldConfig.tech?.enabled !== false && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">기술 뉴스 검색 키워드</label>
+                      <input
+                        type="text"
+                        value={worldConfig.tech?.query || ''}
+                        onChange={(e) => setWorldConfig({
+                          ...worldConfig,
+                          tech: { ...worldConfig.tech, query: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D97706] focus:border-transparent"
+                      />
+                    </div>
+                  )}
+
+                  {/* 액션 버튼 */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      onClick={saveWorldConfig}
+                      disabled={isSavingWorld}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#B45309] disabled:opacity-50 transition-colors"
+                    >
+                      <Save size={16} />
+                      {isSavingWorld ? '저장 중...' : '설정 저장'}
+                    </button>
+                    <button
+                      onClick={refreshWorldPulse}
+                      disabled={isRefreshingWorld}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                    >
+                      <RefreshCw size={16} className={isRefreshingWorld ? 'animate-spin' : ''} />
+                      {isRefreshingWorld ? '수집 중...' : '지금 수집'}
+                    </button>
+                    {worldSaveResult && (
+                      <div className={`flex items-center gap-1 text-sm ${worldSaveResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                        {worldSaveResult.success ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+                        {worldSaveResult.message}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-gray-500">설정을 불러올 수 없습니다.</div>
+              )}
+            </div>
           )}
         </div>
 

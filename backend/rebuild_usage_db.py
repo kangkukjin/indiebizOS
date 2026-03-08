@@ -30,9 +30,9 @@ EXAMPLES = [
     # =========================================================================
 
     # time
-    ("현재 시간 알려줘", '[self:time]()', "self", "single", 1, "self,time"),
-    ("지금 몇 시야?", '[self:time]()', "self", "single", 1, "self,time"),
-    ("오늘 날짜 알려줘", '[self:time]()', "self", "single", 1, "self,time"),
+    ("현재 시간 알려줘", '[self:time]', "self", "single", 1, "self,time"),
+    ("지금 몇 시야?", '[self:time]', "self", "single", 1, "self,time"),
+    ("오늘 날짜 알려줘", '[self:time]', "self", "single", 1, "self,time"),
 
     # discover
     ("주가 관련 도구 찾아봐", '[self:discover]{query: "주가"}', "self", "single", 1, "self,discover"),
@@ -44,9 +44,9 @@ EXAMPLES = [
     # open / open_url
     ("이 파일 열어줘", '[self:open]{path: "/path/to/file.html"}', "self", "single", 1, "self,open"),
     ("파일 탐색기 열어줘", '[self:explorer]{path: "~/Desktop"}', "self", "single", 1, "self,explorer"),
-    ("이 URL 열어줘", '[limbs:open_url]{url: "https://example.com"}', "limbs", "single", 1, "limbs,open_url"),
-    ("구글 열어줘", '[limbs:open_url]{url: "https://google.com"}', "limbs", "single", 1, "limbs,open_url"),
-    ("이 사이트 브라우저로 열어", '[limbs:open_url]{url: "https://example.com"}', "limbs", "single", 1, "limbs,open_url"),
+    ("이 URL 열어줘", '[limbs:open_url]{path: "https://example.com"}', "limbs", "single", 1, "limbs,open_url"),
+    ("구글 열어줘", '[limbs:open_url]{path: "https://google.com"}', "limbs", "single", 1, "limbs,open_url"),
+    ("이 사이트 브라우저로 열어", '[limbs:open_url]{path: "https://example.com"}', "limbs", "single", 1, "limbs,open_url"),
 
     # CCTV / 실시간 영상
     ("광화문 CCTV 보여줘", '[sense:cctv_search]{query: "광화문"}', "sense", "single", 1, "sense,cctv_search"),
@@ -56,7 +56,7 @@ EXAMPLES = [
     ("타임스퀘어 웹캠 검색", '[sense:webcam]{query: "Times Square", category: "city"}', "sense", "single", 1, "sense,webcam"),
     ("서울역 근처 CCTV", '[sense:cctv_search]{query: "서울역"}', "sense", "single", 1, "sense,cctv_search"),
     ("CCTV 영상 열어줘", '[sense:cctv_open]{name: "CCTV이름"}', "sense", "single", 1, "sense,cctv_open"),
-    ("CCTV 소스 상태 확인", '[sense:cctv_sources]()', "sense", "single", 1, "sense,cctv_sources"),
+    ("CCTV 소스 상태 확인", '[sense:cctv_sources]', "sense", "single", 1, "sense,cctv_sources"),
 
     # file / output
     ("결과를 파일로 저장해", '[self:local_save]{path: "result.md"}', "self", "single", 1, "self,file"),
@@ -73,8 +73,8 @@ EXAMPLES = [
     ("파일에서 에러 찾아줘", '[limbs:grep]{pattern: "error"}', "limbs", "single", 1, "limbs,grep"),
     ("파일 복사해줘", '[self:local_save]{path: "source.txt"}', "self", "single", 1, "self,copy"),
     ("파일 이름 바꿔줘", '[self:local_save]{path: "old_name.txt"}', "self", "single", 1, "self,move"),
-    ("저장소 용량 보여줘", '[self:storage_scan]()', "self", "single", 1, "self,summary"),
-    ("볼륨 목록 보여줘", '[self:storage_scan]()', "self", "single", 1, "self,volumes"),
+    ("저장소 용량 보여줘", '[self:storage_scan]', "self", "single", 1, "self,summary"),
+    ("볼륨 목록 보여줘", '[self:storage_scan]', "self", "single", 1, "self,volumes"),
 
     # =========================================================================
     # others 노드 — 에이전트 간 위임/협업 (Phase 23)
@@ -107,23 +107,23 @@ EXAMPLES = [
     ("의료 프로젝트 에이전트들 뭐 있어?", '[others:agent_info]{agent_id: "의료"}', "others", "single", 1, "others,info"),
 
     # list_projects — 프로젝트/에이전트 목록
-    ("프로젝트 목록 보여줘", '[others:list_projects]()', "others", "single", 1, "others,list_projects"),
-    ("어떤 에이전트들이 있어?", '[others:list_projects]()', "others", "single", 1, "others,list_projects"),
+    ("프로젝트 목록 보여줘", '[others:list_projects]', "others", "single", 1, "others,list_projects"),
+    ("어떤 에이전트들이 있어?", '[others:list_projects]', "others", "single", 1, "others,list_projects"),
 
     # workflow
-    ("저장된 워크플로우 목록 보여줘", '[self:event_status]()', "self", "single", 1, "self,list_workflows"),
+    ("저장된 워크플로우 목록 보여줘", '[self:event_status]', "self", "single", 1, "self,list_workflows"),
     ("뉴스 브리핑 워크플로우 실행해", '[limbs:run]{name: "news_briefing"}', "limbs", "single", 1, "limbs,run"),
 
     # switches / events
-    ("스위치 목록 보여줘", '[self:event_status]()', "self", "single", 1, "self,list_switches"),
-    ("트리거 목록 보여줘", '[self:event_history]()', "self", "single", 1, "self,list_events"),
-    ("이벤트 시스템 상태 확인", '[self:event_status]()', "self", "single", 1, "self,status"),
+    ("스위치 목록 보여줘", '[self:event_status]', "self", "single", 1, "self,list_switches"),
+    ("트리거 목록 보여줘", '[self:event_history]', "self", "single", 1, "self,list_events"),
+    ("이벤트 시스템 상태 확인", '[self:event_status]', "self", "single", 1, "self,status"),
 
     # user interaction
     ("할일 목록 만들어줘", '[limbs:todo]{content: "할일 정리"}', "limbs", "single", 1, "limbs,todo"),
     ("사용자에게 알림 보내줘", '[limbs:notify_user]{message: "작업 완료"}', "limbs", "single", 1, "limbs,notify_user"),
     ("사용자에게 확인 요청해", '[limbs:ask_user]{question: "계속 진행할까요?"}', "limbs", "single", 1, "limbs,ask_user"),
-    ("API 도구 목록 보여줘", '[limbs:list_api]()', "limbs", "single", 1, "limbs,list_api"),
+    ("API 도구 목록 보여줘", '[limbs:list_api]', "limbs", "single", 1, "limbs,list_api"),
     ("다운로드해줘", '[limbs:download]{url: "https://example.com/file.zip"}', "limbs", "single", 1, "limbs,download"),
 
     # =========================================================================
@@ -198,19 +198,19 @@ EXAMPLES = [
 
     # 사진
     ("여행 사진 검색해줘", '[self:photo_scan]{query: "여행"}', "self", "single", 1, "self,search_photos"),
-    ("사진 통계 보여줘", '[self:photo_scan]()', "self", "single", 1, "self,photo_stats"),
-    ("사진 갤러리 열어줘", '[self:photo_scan]()', "self", "single", 1, "self,gallery"),
-    ("사진관리창 열어줘", '[self:photo_scan]()', "self", "single", 1, "self,photo_manager"),
+    ("사진 통계 보여줘", '[self:photo_scan]', "self", "single", 1, "self,photo_stats"),
+    ("사진 갤러리 열어줘", '[self:photo_scan]', "self", "single", 1, "self,gallery"),
+    ("사진관리창 열어줘", '[self:photo_scan]', "self", "single", 1, "self,photo_manager"),
 
     # 블로그
     ("블로그에서 AI 글 검색", '[self:photo_scan]{query: "인공지능"}', "self", "single", 1, "self,rag_search"),
-    ("블로그 글 목록 보여줘", '[self:photo_scan]()', "self", "single", 1, "self,posts"),
-    ("블로그 통계 보여줘", '[self:photo_scan]()', "self", "single", 1, "self,blog_stats"),
-    ("새 블로그 글 있어?", '[self:photo_scan]()', "self", "single", 1, "self,check_new"),
+    ("블로그 글 목록 보여줘", '[self:photo_scan]', "self", "single", 1, "self,posts"),
+    ("블로그 통계 보여줘", '[self:photo_scan]', "self", "single", 1, "self,blog_stats"),
+    ("새 블로그 글 있어?", '[self:photo_scan]', "self", "single", 1, "self,check_new"),
     ("블로그 인사이트 분석해줘", '[self:photo_scan]{query: "AI 트렌드"}', "self", "single", 1, "self,insight"),
 
     # 메모리/대화
-    ("최근 대화 보여줘", '[self:photo_scan]()', "self", "single", 1, "self,recent"),
+    ("최근 대화 보여줘", '[self:photo_scan]', "self", "single", 1, "self,recent"),
     ("대화 내용 검색해줘", '[self:photo_scan]{query: "주식"}', "self", "single", 1, "self,search_memory"),
     ("메모리에 저장해줘", '[self:photo_scan]{query: "중요한 정보"}', "self", "single", 1, "self,save_memory"),
     ("메모리에서 검색해줘", '[self:photo_scan]{query: "투자"}', "self", "single", 1, "self,memory_search"),
@@ -228,8 +228,8 @@ EXAMPLES = [
     ("체중 기록해줘", '[self:health_save]{category: "체중", value: 75}', "self", "single", 1, "self,health_save"),
 
     # 홈페이지/웹 관리
-    ("관리하는 홈페이지 목록 보여줘", '[engines:site_list]()', "engines", "single", 1, "engines,site_list"),
-    ("등록된 사이트 몇 개야?", '[engines:site_list]()', "engines", "single", 1, "engines,site_list"),
+    ("관리하는 홈페이지 목록 보여줘", '[engines:site_list]', "engines", "single", 1, "engines,site_list"),
+    ("등록된 사이트 몇 개야?", '[engines:site_list]', "engines", "single", 1, "engines,site_list"),
     ("새 사이트 등록해줘", '[engines:site_register]{name: "내 사이트", local_path: "/path/to/site"}', "engines", "single", 1, "engines,site_register"),
     ("사이트 삭제해줘", '[engines:site_remove]{site_id: "my-site"}', "engines", "single", 1, "engines,site_remove"),
 
@@ -256,10 +256,10 @@ EXAMPLES = [
     ("영상 오디오 다운로드해줘", '[limbs:youtube_download]{url: "https://youtube.com/watch?v=example"}', "limbs", "single", 1, "limbs,download"),
 
     # 재생 컨트롤
-    ("다음 곡으로 넘겨줘", '[limbs:skip]()', "limbs", "single", 1, "limbs,skip"),
-    ("음악 정지해", '[limbs:stop]()', "limbs", "single", 1, "limbs,stop"),
-    ("현재 재생 목록 보여줘", '[limbs:queue]()', "limbs", "single", 1, "limbs,queue"),
-    ("재생 상태 확인", '[limbs:player_status]()', "limbs", "single", 1, "limbs,status"),
+    ("다음 곡으로 넘겨줘", '[limbs:skip]', "limbs", "single", 1, "limbs,skip"),
+    ("음악 정지해", '[limbs:stop]', "limbs", "single", 1, "limbs,stop"),
+    ("현재 재생 목록 보여줘", '[limbs:queue]', "limbs", "single", 1, "limbs,queue"),
+    ("재생 상태 확인", '[limbs:player_status]', "limbs", "single", 1, "limbs,status"),
     ("볼륨 올려줘", '[limbs:volume]{volume: "80"}', "limbs", "single", 1, "limbs,volume"),
     ("이 곡 큐에 추가해줘", '[limbs:queue_add]{query: "아이유"}', "limbs", "single", 1, "limbs,queue_add"),
 
@@ -267,8 +267,8 @@ EXAMPLES = [
     ("KBS 라디오 찾아줘", '[sense:search_radio]{query: "KBS"}', "sense", "single", 1, "sense,search_radio"),
     ("한국 라디오 채널 목록", '[sense:korean_radio]{query: "KBS"}', "sense", "single", 1, "sense,korean"),
     ("라디오 틀어줘", '[limbs:play]{query: "KBS 클래식FM"}', "limbs", "single", 1, "limbs,radio_play"),
-    ("라디오 꺼줘", '[limbs:stop]()', "limbs", "single", 1, "limbs,radio_stop"),
-    ("즐겨찾기 라디오 보여줘", '[limbs:queue]()', "limbs", "single", 1, "limbs,favorites"),
+    ("라디오 꺼줘", '[limbs:stop]', "limbs", "single", 1, "limbs,radio_stop"),
+    ("즐겨찾기 라디오 보여줘", '[limbs:queue]', "limbs", "single", 1, "limbs,favorites"),
 
     # =========================================================================
     # forge 노드 — 콘텐츠 생성
@@ -317,28 +317,28 @@ EXAMPLES = [
 
     # 브라우저
     ("이 사이트 Playwright로 열어", '[limbs:navigate]{url: "https://google.com"}', "limbs", "single", 1, "limbs,navigate"),
-    ("페이지 스냅샷 찍어", '[limbs:browser_snapshot]()', "limbs", "single", 1, "limbs,snapshot"),
-    ("스크린샷 찍어줘", '[limbs:screenshot]()', "limbs", "single", 1, "limbs,screenshot"),
-    ("페이지 내용 추출해", '[limbs:content]()', "limbs", "single", 1, "limbs,content"),
+    ("페이지 스냅샷 찍어", '[limbs:browser_snapshot]', "limbs", "single", 1, "limbs,snapshot"),
+    ("스크린샷 찍어줘", '[limbs:screenshot]', "limbs", "single", 1, "limbs,screenshot"),
+    ("페이지 내용 추출해", '[limbs:content]', "limbs", "single", 1, "limbs,content"),
     ("JavaScript 실행해줘", '[limbs:evaluate]{expression: "document.title"}', "limbs", "single", 1, "limbs,evaluate"),
 
     # 안드로이드
-    ("연결된 기기 목록 보여줘", '[limbs:devices]()', "limbs", "single", 1, "limbs,devices"),
-    ("안드로이드 화면 캡처", '[limbs:android_screenshot]()', "limbs", "single", 1, "limbs,android_screenshot"),
-    ("문자 목록 보여줘", '[limbs:sms_list]()', "limbs", "single", 1, "limbs,sms_list"),
-    ("통화 이력 보여줘", '[limbs:call_log]()', "limbs", "single", 1, "limbs,call_log"),
+    ("연결된 기기 목록 보여줘", '[limbs:devices]', "limbs", "single", 1, "limbs,devices"),
+    ("안드로이드 화면 캡처", '[limbs:android_screenshot]', "limbs", "single", 1, "limbs,android_screenshot"),
+    ("문자 목록 보여줘", '[limbs:sms_list]', "limbs", "single", 1, "limbs,sms_list"),
+    ("통화 이력 보여줘", '[limbs:call_log]', "limbs", "single", 1, "limbs,call_log"),
     ("연락처 검색해줘", '[limbs:contacts]{query: "홍길동"}', "limbs", "single", 1, "limbs,contacts"),
-    ("안드로이드 관리창 열어줘", '[limbs:manager]()', "limbs", "single", 1, "limbs,manager"),
+    ("안드로이드 관리창 열어줘", '[limbs:manager]', "limbs", "single", 1, "limbs,manager"),
 
     # 데스크탑
-    ("Mac 화면 캡처해줘", '[limbs:desktop_screenshot]()', "limbs", "single", 1, "limbs,desktop_screenshot"),
+    ("Mac 화면 캡처해줘", '[limbs:desktop_screenshot]', "limbs", "single", 1, "limbs,desktop_screenshot"),
 
     # =========================================================================
     # others 노드 — 통신
     # =========================================================================
 
     ("이메일 보내줘", '[others:channel_send]{to: "user@example.com"}', "others", "single", 1, "others,send_email"),
-    ("이웃 목록 보여줘", '[others:channel_read]()', "others", "single", 1, "others,neighbors"),
+    ("이웃 목록 보여줘", '[others:channel_read]', "others", "single", 1, "others,neighbors"),
     ("이웃 상세 정보 조회", '[others:channel_read]{query: "홍길동"}', "others", "single", 1, "others,neighbor_detail"),
     ("메시지 검색해줘", '[others:channel_search]{query: "미팅"}', "others", "single", 1, "others,search"),
 
@@ -385,8 +385,8 @@ EXAMPLES = [
     ("서울이랑 부산 날씨 같이 알려줘", '[sense:navigate_route]{query: "서울"} & [sense:navigate_route]{query: "부산"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # ★ 시간 + 주가 + 뉴스 (스위치에서 자주 쓰는 패턴!)
-    ("현재 시간과 코스피 주가와 뉴스를 동시에 조회해줘", '[self:time]() & [sense:stock_info]{symbol: "^KS11"} & [sense:web_search]{query: "한국 증시"}', "self,sense", "pipeline", 2, "pipeline,parallel"),
-    ("시간이랑 삼성전자 주가 같이 알려줘", '[self:time]() & [sense:stock_info]{symbol: "005930"}', "self,sense", "pipeline", 2, "pipeline,parallel"),
+    ("현재 시간과 코스피 주가와 뉴스를 동시에 조회해줘", '[self:time] & [sense:stock_info]{symbol: "^KS11"} & [sense:web_search]{query: "한국 증시"}', "self,sense", "pipeline", 2, "pipeline,parallel"),
+    ("시간이랑 삼성전자 주가 같이 알려줘", '[self:time] & [sense:stock_info]{symbol: "005930"}', "self,sense", "pipeline", 2, "pipeline,parallel"),
     ("코스피 코스닥 동시 조회", '[sense:stock_info]{symbol: "^KS11"} & [sense:stock_info]{symbol: "^KQ11"}', "sense", "pipeline", 2, "pipeline,parallel"),
     ("외국인 매매동향과 뉴스 같이 확인", '[sense:stock_info]{symbol: "STK"} & [sense:web_search]{query: "외국인 매매"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
@@ -412,10 +412,10 @@ EXAMPLES = [
     ("뉴스 검색 시도하고 안 되면 웹 검색해", '[sense:web_search]{query: "AI"} ?? [sense:web_search]{query: "AI 뉴스"}', "sense", "pipeline", 2, "pipeline,fallback"),
 
     # 유튜브 → 재생
-    ("피아노곡 검색해서 재생해", '[sense:search_youtube]{query: "피아노곡"} >> [limbs:play]($)', "sense,tools", "pipeline", 2, "pipeline,sequential"),
+    ("피아노곡 검색해서 재생해", '[sense:search_youtube]{query: "피아노곡"} >> [limbs:play]', "sense,tools", "pipeline", 2, "pipeline,sequential"),
 
     # 시간 + 주가 + 뉴스 + 외국인 (종합 증시 체크)
-    ("종합 증시 상황 확인해줘", '[self:time]() & [sense:stock_info]{symbol: "^KS11"} & [sense:stock_info]{symbol: "^KQ11"} & [sense:stock_info]{symbol: "STK"} & [sense:web_search]{query: "한국 증시"}', "self,sense", "complex", 3, "pipeline,complex"),
+    ("종합 증시 상황 확인해줘", '[self:time] & [sense:stock_info]{symbol: "^KS11"} & [sense:stock_info]{symbol: "^KQ11"} & [sense:stock_info]{symbol: "STK"} & [sense:web_search]{query: "한국 증시"}', "self,sense", "complex", 3, "pipeline,complex"),
 ]
 
 

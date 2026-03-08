@@ -12,9 +12,3 @@ actions:
     router: handler
     tool: get_neighbor_detail
     target_key: name
-  send_email:
-    description: 이메일 발송 (Gmail)
-    target_description: 수신자 이메일
-    router: handler
-    tool: send_email
-    target_key: to

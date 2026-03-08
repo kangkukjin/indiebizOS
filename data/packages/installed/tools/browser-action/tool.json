@@ -2,7 +2,7 @@
   "id": "browser-action",
   "name": "Browser Action",
   "description": "Playwright 기반 브라우저 자동화. ref/CSS selector 타겟팅, 다중 탭, iframe, 쿠키, stealth, 네트워크 캡처 지원.\n\n[워크플로우]\n1. navigate → snapshot → ref 확인 → click/type (이 순서 필수)\n2. 페이지 이동/클릭 후 반드시 snapshot 재호출 (ref가 무효화됨)\n3. 복잡한 페이지(500+요소)에서는 evaluate로 JS 직접 실행하여 데이터 추출\n4. selector 파라미터로 ref 없이 CSS selector 직접 지정 가능\n5. 로그인 유지: cookies_save → 다음 세션에서 cookies_load\n6. API 분석: network_logs(action=start) → 페이지 조작 → network_logs(action=get)\n7. 요소를 못 찾으면 scroll 후 snapshot 재시도, evaluate로 존재 여부 확인",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "tools": [
     {
       "name": "browser_navigate",

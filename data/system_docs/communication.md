@@ -261,7 +261,7 @@ agents:
     channel: gmail
     email: marketer@gmail.com  # 에이전트 전용 이메일
     allowed_tools:
-      - send_email  # 이메일 발송 도구 필수
+      - channel_send  # 채널 발송 도구
 ```
 
 **중요**: 에이전트별 `client_id`/`client_secret`은 설정하지 않습니다.

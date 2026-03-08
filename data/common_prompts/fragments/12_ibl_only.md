@@ -47,4 +47,7 @@ execute_ibl(code='[self:discover]{query: "stock prices"}')
 3. Use `[self:discover]` when unsure which action to use
 4. Use `>>` for sequential steps, `&` for parallel, `??` for fallback
 5. All parameters (including target) go in braces: `[node:action]{target_key: "value", other_key: "value"}`
+
+## ⚠️ Critical Output Rule
+**NEVER include IBL code (`[node:action]{...}`) in your text responses to the user.** IBL code is ONLY for the `execute_ibl` tool's `code` parameter. The user should see natural language — analysis, explanations, results — not IBL syntax. If you need to plan which actions to use, do so internally and execute them via `execute_ibl`, never by writing IBL code as text.
 </ibl_executor>

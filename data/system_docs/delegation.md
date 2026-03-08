@@ -549,7 +549,7 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
 *Phase 17→19: 모든 위임이 IBL 경로(`execute_ibl`)를 통해 실행됨.*
 *Phase 23: 위임 액션을 system에서 team 노드로 분리. `[team:delegate]` (프로젝트 내), `[team:delegate_project]` (프로젝트 간). team은 _ALWAYS_ALLOWED로 모든 에이전트에 자동 제공.*
 *Phase 23 안정화: completed[] 사이클 병합, 병렬 위임 원자적 응답 추가, WebSocket 3-레이어 위임 감지.*
-*Phase 25: others 노드로 통합. `[others:delegate]` (프로젝트 내), `[others:delegate_project]` (프로젝트 간), `[others:send_email]` (통신). others는 _ALWAYS_ALLOWED로 모든 에이전트에 자동 제공.*
+*Phase 25: others 노드로 통합. `[others:delegate]` (프로젝트 내), `[others:delegate_project]` (프로젝트 간), `[others:channel_send]` (통신). others는 _ALWAYS_ALLOWED로 모든 에이전트에 자동 제공.*
 
 > 참고: 위임 프롬프트 파일
 > - `fragments/09_delegation.md`: 프로젝트 내 에이전트 간 위임 가이드

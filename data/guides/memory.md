@@ -1,4 +1,4 @@
-# Memory & Skill 가이드
+# Memory 가이드
 
 ## 메모리 구조
 
@@ -6,8 +6,6 @@
 영구메모 (핫)          항상 프롬프트에 포함. UI에서 편집. 간결하게.
   │
 심층 메모리 (에이전트별)  필요할 때 검색. memory_save/search/read.
-  │
-스킬 DB (공유)          전 에이전트 공유 지식. skill_search/read.
 ```
 
 영구메모에는 현재 상태, 핵심 약칭 정도만 넣는다.
@@ -119,37 +117,6 @@ memory_save(
 
 ---
 
-## 스킬 시스템
-
-심층 메모리가 "내가 한 일, 내가 알게 된 것"이라면,
-스킬은 **"이런 일은 이렇게 하라"는 작업 절차에 대한 장기 기억**이다.
-모든 에이전트가 공유한다.
-
-- 복잡한 작업의 단계별 절차
-- 도메인별 판단 기준이나 체크리스트
-- 반복되는 작업의 베스트 프랙티스
-
-### 언제 검색하는가
-
-처음 하거나 복잡한 작업 전에 관련 스킬이 있는지 확인한다.
-
-```
-skill_search(query="계약서 검토")
-  → 관련 스킬 목록
-skill_read(skill_id=N)
-  → 전문 읽기, 참조하여 작업 수행
-```
-
-### 스킬 등록
-
-스킬은 주로 사용자나 관리자가 등록한다.
-
-- 직접: `skill_add(name, content, keywords, ...)`
-- 파일: `skill_import_md(file_path="경로")`
-- 일괄: `skill_import_md(import_all=true)` → data/skills/ 전체 임포트
-
----
-
 ## 도구 레퍼런스
 
 | 도구 | 용도 |
@@ -158,8 +125,3 @@ skill_read(skill_id=N)
 | `memory_search(query, category?, limit?)` | 키워드 검색 (미리보기 반환) |
 | `memory_read(memory_id)` | 전문 읽기 + used_at 갱신 |
 | `memory_delete(memory_id)` | 삭제 |
-| `skill_search(query, category?, limit?)` | 스킬 검색 |
-| `skill_read(skill_id)` | 스킬 전문 읽기 |
-| `skill_add(name, content, keywords?, ...)` | 스킬 등록 |
-| `skill_delete(skill_id)` | 스킬 삭제 |
-| `skill_import_md(file_path?, import_all?)` | 마크다운에서 스킬 임포트 |

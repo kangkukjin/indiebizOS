@@ -108,7 +108,6 @@ interface:
 messenger:
   neighbors: business
   neighbor_detail: business
-  send_email: business
 source:
   price: investment
   info: investment
@@ -185,11 +184,6 @@ source:
   memory_search: memory
   memory_read: memory
   memory_delete: memory
-  skill_search: memory
-  skill_read: memory
-  skill_add: memory
-  skill_delete: memory
-  skill_import: memory
   save_health: health-record
   context: health-record
   apt_trade: real-estate

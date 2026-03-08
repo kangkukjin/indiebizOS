@@ -118,7 +118,7 @@ IBL 위임 액션 (others 노드):
 "방금 결과를 개선해줘"
 
 # ✅ 올바른 예 (완전한 정보 제공)
-[others:delegate_project]("홍보/storyteller") {message: "다음 슬라이드 파일을 수정해줘:
+[others:delegate_project]{agent_id: "홍보/storyteller", message: "다음 슬라이드 파일을 수정해줘:
 - 경로: /Users/.../outputs/slides_abc123
 - 수정사항: 3번 슬라이드의 제목을 '새로운 시작'으로 변경"}
 ```

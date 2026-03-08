@@ -39,19 +39,20 @@ def _get_deep_research_guide() -> str:
 
 
 def inject_deep_research(message: str) -> str:
-    """메시지 앞에 심층연구 가이드를 주입"""
+    """메시지 앞에 심층연구 가이드를 주입 (현재 날짜 포함)"""
+    from datetime import datetime
     guide = _get_deep_research_guide()
     if not guide:
         return message
+    now = datetime.now()
+    date_str = now.strftime("%Y년 %m월 %d일 %A")
     prefix = (
         "<deep_research_mode>\n"
-        "사용자가 심층연구 모드를 활성화했습니다. 아래 가이드라인을 반드시 따르세요.\n"
-        "일반적인 '간결하게 답변' 원칙을 적용하지 마세요. "
-        "충분한 깊이와 다각적 관점을 갖춘 전문가 수준의 결과물을 만드세요.\n\n"
+        f"현재 날짜: {date_str}\n\n"
         f"{guide}\n"
         "</deep_research_mode>\n\n"
     )
-    print(f"[WS] 심층연구 가이드 주입됨")
+    print(f"[WS] 심층연구 가이드 주입됨 (날짜: {date_str})")
     return prefix + message
 
 # 스트리밍을 위한 스레드 풀

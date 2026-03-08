@@ -49,9 +49,9 @@ Stop repeating the same AI conversations. **Save them as Switches or Workflows**
 
 **Workflows** - Chain multiple actions into reusable pipelines using IBL syntax:
 ```
-[sense:web_search]("AI news")
-  >> [others:ask_sync]("content/content") {message: "Summarize these articles"}
-  >> [self:file]("news_report.html") {format: "html"}
+[sense:web_search]{query: "AI news"}
+  >> [others:ask_sync]{agent_id: "content/content", message: "Summarize these articles"}
+  >> [self:file]{path: "news_report.html", format: "html"}
 ```
 
 **Features:**
@@ -59,7 +59,7 @@ Stop repeating the same AI conversations. **Save them as Switches or Workflows**
 - **Scheduled execution** - Run daily at 8 AM, weekly on Fridays via the new **Scheduler**
 - **Agent assignment** - Specify which agent handles the task
 - **Pipeline operators** - Sequential (>>), Parallel (&), Fallback (??)
-- **Alias execution** - Run saved workflows by name: `[self:run]("kinsight")`
+- **Alias execution** - Run saved workflows by name: `[self:run]{workflow_id: "kinsight"}`
 
 ### 3. P2P Network (IndieNet) & Remote Access
 
@@ -101,7 +101,7 @@ IndieBiz OS uses a domain-specific language called **IBL** as its unified interf
 ```
 User: "Search AI news and save to file"
          |
-AI decides: execute_ibl(code='[sense:web_search]("AI news") >> [self:file]("result.md")')
+AI decides: execute_ibl(code='[sense:web_search]{query: "AI news"} >> [self:file]{path: "result.md"}')
          |
 IBL Engine: parse -> dispatch to handler/api_engine -> return result
 ```

@@ -122,7 +122,7 @@
 ### Gmail
 - OAuth2 인증
 - `poll_messages()`: 읽지 않은 메시지 조회
-- `send_email()`: 이메일 전송
+- `channel_send()`: 메시지 발송 (gmail, nostr 등)
 
 ### Nostr
 - 개인키 기반 인증

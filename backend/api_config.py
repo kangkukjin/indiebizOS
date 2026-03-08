@@ -886,3 +886,64 @@ def _merge_agents_yaml(src: Path, dst: Path):
     # 저장
     with open(dst, 'w', encoding='utf-8') as f:
         yaml.dump(merged, f, allow_unicode=True, default_flow_style=False)
+
+
+# ============ World Pulse (세계 상태 감각) ============
+
+@router.get("/world-pulse/config")
+async def get_world_pulse_config():
+    """World Pulse 설정 조회"""
+    try:
+        from world_pulse import get_config
+        return get_config()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/world-pulse/config")
+async def update_world_pulse_config(config: Dict[str, Any]):
+    """World Pulse 설정 저장"""
+    try:
+        from world_pulse import save_config
+        save_config(config)
+        return {"status": "saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/world-pulse/refresh")
+async def refresh_world_pulse():
+    """World Pulse 강제 재수집"""
+    try:
+        from world_pulse import collect_snapshot, save_snapshot, generate_guide
+        snapshot = collect_snapshot()
+        if "error" in snapshot:
+            return snapshot
+        save_snapshot(snapshot)
+        generate_guide()
+        return {"status": "refreshed", "date": snapshot.get("date")}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/world-pulse/today")
+async def get_world_pulse_today():
+    """오늘의 World Pulse 스냅샷 조회"""
+    try:
+        from world_pulse import get_today_pulse
+        pulse = get_today_pulse()
+        if pulse:
+            return pulse
+        return {"message": "오늘 수집된 데이터가 없습니다."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/world-pulse/trend")
+async def get_world_pulse_trend(days: int = 7):
+    """최근 N일간 World Pulse 추이 조회"""
+    try:
+        from world_pulse import get_pulse_trend
+        return {"days": days, "trend": get_pulse_trend(days)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

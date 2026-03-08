@@ -5,10 +5,10 @@ actions:
     router: handler
     tool: get_current_time
   open_url:
-    description: URL을 기본 브라우저로 열기
+    description: URL 또는 로컬 파일을 기본 브라우저로 열기
     router: handler
     tool: open_in_browser
-    target_key: url
+    target_key: path
     phase: 5
   read:
     description: 파일 읽기

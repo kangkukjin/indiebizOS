@@ -6,7 +6,7 @@ meta:
     - '[self:time]  # 현재 시간'
     - '[self:discover]{query: "주가"}  # 모르면 discover'
     - '[self:open]{path: "/path/to/file.html"}  # 파일 열기'
-    - '[limbs:open_url]{url: "https://example.com"}  # URL 열기'
+    - '[limbs:open_url]{path: "https://example.com"}  # URL 열기'
     - '[sense:price]{symbol: "005930"}  # 삼성전자 주가'
     - '[sense:price]{symbol: "AAPL"}  # 미국 주가'
     - '[sense:web_search]{query: "AI news"}  # 웹 검색'
@@ -58,6 +58,8 @@ meta:
   - '[self:discover]{query: "키워드"} — 어떤 액션을 쓸지 모를 때 사용.'
   - '모든 값은 {key: val} 형태의 named parameter. (target) 문법은 폐지됨 — 사용 시 에러 발생.'
   - '전문 데이터 액션이 있으면 파일 직접 탐색([self:list]+[self:read])보다 반드시 우선 사용. 예: 건강기록→[self:health_query], 메모리→[self:recall]'
+  - 'CRITICAL: 절대로 IBL 코드([node:action]{...})를 텍스트 응답에 포함하지 말 것. IBL은 반드시 execute_ibl 도구의 code 파라미터로만 실행. 사용자에게는 자연어로 응답.'
+  - '작업을 계획만 하고 끝내지 말 것. 계획했으면 반드시 execute_ibl로 실행까지 완료할 것.'
 nodes:
   sense:
     actions:
@@ -451,13 +453,23 @@ nodes:
         router: handler
         tool: get_korean_radio
         target_key: broadcaster
-    description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어 등 외부 API 및 데이터 소스 접근'
-    guides:
-    - investment/investment_guide.md
-    - study/study_guide.md
-    - location-services/location_services_guide.md
-    - web/web_guide.md
-    - real-estate/real_estate_guide.md
+      world_pulse:
+        description: '세계 상태 스냅샷 조회 — 오늘의 경제 지표, 주요 뉴스, 기술 동향, 날씨 (하루 1회 자동 수집)'
+        category: get
+        router: system
+        func: world_pulse
+      world_trend:
+        description: '최근 N일간 세계 상태 추이 조회 — 경제 지표 변화, 뉴스 흐름 비교'
+        category: get
+        router: system
+        func: world_trend
+        target_key: days
+      world_refresh:
+        description: '세계 상태 강제 재수집 (오늘 이미 수집된 데이터를 덮어씁니다)'
+        category: get
+        router: system
+        func: world_refresh
+    description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 세계 상태 등 외부 API 및 데이터 소스 접근'
   self:
     actions:
       search_photos:
@@ -517,12 +529,14 @@ nodes:
         router: handler
         tool: search_blog_rag
         target_key: query
+        keywords: [blog search, 블로그 검색, semantic, vector, 의미검색, AI검색]
       semantic_search:
         description: 블로그 시맨틱 검색
         category: search
         router: handler
         tool: search_blog_semantic
         target_key: query
+        keywords: [blog search, 블로그 검색, 의미검색, concept search]
       rag_content:
         description: RAG 기반 블로그 글 전문 조회
         category: get
@@ -609,36 +623,6 @@ nodes:
         router: handler
         tool: memory_delete
         target_key: memory_id
-      skill_search:
-        description: 스킬 DB에서 도메인 지식 검색
-        category: search
-        router: handler
-        tool: skill_search
-        target_key: query
-      skill_read:
-        description: 스킬 전체 내용 조회
-        category: get
-        router: handler
-        tool: skill_read
-        target_key: skill_id
-      skill_add:
-        description: 새로운 스킬 추가
-        category: create
-        router: handler
-        tool: skill_add
-        target_key: name
-      skill_delete:
-        description: 스킬 삭제
-        category: delete
-        router: handler
-        tool: skill_delete
-        target_key: skill_id
-      skill_import:
-        description: 마크다운 파일에서 스킬 임포트
-        category: create
-        router: handler
-        tool: skill_import_md
-        target_key: file_path
       health_save:
         description: 건강 정보 저장 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 투약, 의료문서를 DB에 기록
         category: write
@@ -806,12 +790,7 @@ nodes:
         target_key: path
         router: system
         func: output_file
-      open:
-        description: URL을 브라우저로 열거나 파일을 Finder/탐색기로 열기
-        category: io
-        target_key: path
-        router: system
-        func: output_open
+      # open → limbs:os_open 으로 이동됨
       clipboard:
         description: 결과를 클립보드에 복사
         category: io
@@ -824,18 +803,14 @@ nodes:
         target_key: url
         router: system
         func: output_download
-      browse:
-        description: 브라우저로 페이지 열기
-        category: io
-        router: handler
-        tool: browser_navigate
-        target_key: url
+      # browse 삭제 — limbs:navigate와 완전 중복 (같은 browser_navigate 핸들러)
       launch:
         description: 즐겨찾기 사이트 열기/관리
         category: io
         router: handler
         tool: launch_sites
         target_key: action
+        keywords: [launcher, 런처, 즐겨찾기, favorite, bookmark, 좋아하는 사이트, 자주가는]
       read:
         description: 파일 읽기
         category: fs
@@ -936,11 +911,6 @@ nodes:
         tool: open_file_explorer
         target_key: path
     description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
-    guides:
-    - pc-manager/pc_manager_guide.md
-    - blog/blog_guide.md
-    - memory/memory_guide.md
-    - photo-manager/guide.md
   limbs:
     actions:
       navigate:
@@ -952,6 +922,7 @@ nodes:
         description: 접근성 스냅샷 (요소 ref 생성)
         router: handler
         tool: browser_snapshot
+        keywords: [accessibility, tree, dom, 요소목록, page structure, element list]
       click:
         description: 요소 클릭 (ref 기반)
         category: click
@@ -1041,6 +1012,7 @@ nodes:
         description: 브라우저 콘솔 로그 확인
         router: handler
         tool: browser_console_logs
+        keywords: [logs, debug, 디버그, javascript errors, 에러로그, dev tools]
       cookies_save:
         description: 쿠키 저장
         router: handler
@@ -1336,11 +1308,11 @@ nodes:
         router: handler
         tool: android_end_call
       open_url:
-        description: URL을 기본 브라우저로 열기
+        description: URL 또는 로컬 파일을 기본 브라우저로 열기
         category: io
         router: handler
         tool: open_in_browser
-        target_key: url
+        target_key: path
         phase: 5
       play:
         description: 유튜브 검색 후 바로 재생 (검색+재생 복합. 검색만 원하면 search_youtube 사용)
@@ -1411,11 +1383,13 @@ nodes:
         router: handler
         tool: remove_radio_favorite
         target_key: name
+      os_open:
+        description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
+        category: io
+        target_key: path
+        router: system
+        func: output_open
     description: '수족: 작업 도구 및 기기 제어 — 브라우저 자동화, 안드로이드, 데스크톱, 미디어 재생, URL/파일 열기'
-    guides:
-    - browser-action/browser_guide.md
-    - android/android_guide.md
-    - computer-use/guide.md
   others:
     actions:
       delegate:
@@ -1428,6 +1402,7 @@ nodes:
         target_key: agent_id
         router: system
         func: agent_ask
+        keywords: [delegate, 위임, 에이전트 질문, collaborate, async task]
       ask_sync:
         description: 에이전트에게 동기 질문 (응답을 기다려서 반환 — 파이프라인/워크플로우용)
         target_key: agent_id
@@ -1475,12 +1450,6 @@ nodes:
         router: handler
         tool: get_neighbor_detail
         target_key: name
-      send_email:
-        description: 이메일 발송 (Gmail)
-        category: send
-        router: handler
-        tool: send_email
-        target_key: to
       channel_send:
         description: 메시지 발송
         category: send
@@ -1536,6 +1505,7 @@ nodes:
         router: handler
         tool: create_tts
         target_key: text
+        keywords: [speech, voice, 음성, 읽어줘, narration, text to speech, 목소리]
       render_video:
         description: 저장된 HTML 씬들을 MP4로 렌더링
         category: create
@@ -1564,6 +1534,7 @@ nodes:
         router: handler
         tool: generate_gemini_image
         target_key: prompt
+        keywords: [image generation, 이미지 만들기, AI 이미지, 그림, picture, 사진생성, text to image]
       render_html:
         description: HTML을 이미지로 렌더링
         category: create
@@ -1759,7 +1730,3 @@ nodes:
         router: handler
         tool: list_house_designs
     description: '작업장: 콘텐츠 생성 및 변환 — 신문, 슬라이드, 영상, 차트, 음악, 웹사이트, 디자인'
-    guides:
-    - media_producer/video_workflow_guide.md
-    - media_producer/slides_guide.md
-    - web-builder/web_builder_guide.md

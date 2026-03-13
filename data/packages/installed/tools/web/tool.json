@@ -83,7 +83,7 @@
     },
     {
       "name": "launch_sites",
-      "description": "즐겨찾기 사이트를 관리하고 열어봅니다.\n\n## 기능 (action)\n- open_ui: 대시보드 GUI 열기\n- open_all: 모든 사이트 브라우저에서 열기\n- list: 저장된 사이트 목록 확인\n- add: 새 사이트 추가\n- remove: 사이트 삭제\n\n## 사용 시점\n- 자주 방문하는 사이트 한 번에 열기\n- 즐겨찾기 관리",
+      "description": "즐겨찾기 사이트 런처(대시보드) 및 관리.\n\n## 기능 (action)\n- open_ui (기본값): 즐겨찾기 대시보드 페이지를 브라우저에 띄움\n- list: 저장된 사이트 목록 텍스트로 확인\n- add: 새 사이트 추가 (name, url 필요)\n- remove: 사이트 삭제 (name 필요)",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -91,7 +91,6 @@
             "type": "string",
             "enum": [
               "open_ui",
-              "open_all",
               "list",
               "add",
               "remove"

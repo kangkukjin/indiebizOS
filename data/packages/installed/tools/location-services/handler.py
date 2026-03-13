@@ -649,12 +649,152 @@ def amadeus_travel_search(endpoint: str, params: dict) -> dict:
     }
 
 
+# ============== 날씨 (Open-Meteo, 무료/키불필요) ==============
+
+# 주요 도시 좌표 캐시
+_CITY_COORDS = {
+    "seoul": (37.5665, 126.9780), "서울": (37.5665, 126.9780),
+    "suwon": (37.2636, 127.0286), "수원": (37.2636, 127.0286),
+    "incheon": (37.4563, 126.7052), "인천": (37.4563, 126.7052),
+    "busan": (35.1796, 129.0756), "부산": (35.1796, 129.0756),
+    "daegu": (35.8714, 128.6014), "대구": (35.8714, 128.6014),
+    "daejeon": (36.3504, 127.3845), "대전": (36.3504, 127.3845),
+    "gwangju": (35.1595, 126.8526), "광주": (35.1595, 126.8526),
+    "ulsan": (35.5384, 129.3114), "울산": (35.5384, 129.3114),
+    "jeju": (33.4996, 126.5312), "제주": (33.4996, 126.5312),
+    "sejong": (36.4800, 127.2890), "세종": (36.4800, 127.2890),
+    "tokyo": (35.6762, 139.6503), "도쿄": (35.6762, 139.6503),
+    "osaka": (34.6937, 135.5023), "오사카": (34.6937, 135.5023),
+    "new york": (40.7128, -74.0060), "뉴욕": (40.7128, -74.0060),
+    "london": (51.5074, -0.1278), "런던": (51.5074, -0.1278),
+    "paris": (48.8566, 2.3522), "파리": (48.8566, 2.3522),
+    "beijing": (39.9042, 116.4074), "베이징": (39.9042, 116.4074),
+    "shanghai": (31.2304, 121.4737), "상하이": (31.2304, 121.4737),
+    "singapore": (1.3521, 103.8198), "싱가포르": (1.3521, 103.8198),
+    "bangkok": (13.7563, 100.5018), "방콕": (13.7563, 100.5018),
+    "sydney": (-33.8688, 151.2093), "시드니": (-33.8688, 151.2093),
+}
+
+_WMO_CODES = {
+    0: "맑음", 1: "대체로 맑음", 2: "구름 조금", 3: "흐림",
+    45: "안개", 48: "상고대 안개",
+    51: "가벼운 이슬비", 53: "이슬비", 55: "짙은 이슬비",
+    61: "약한 비", 63: "비", 65: "강한 비",
+    71: "약한 눈", 73: "눈", 75: "강한 눈", 77: "싸락눈",
+    80: "약한 소나기", 81: "소나기", 82: "강한 소나기",
+    85: "약한 눈소나기", 86: "강한 눈소나기",
+    95: "뇌우", 96: "우박 뇌우", 99: "강한 우박 뇌우",
+}
+
+
+def _resolve_city_coords(city: str) -> tuple:
+    """도시명 → (lat, lon) 변환. 캐시 → Open-Meteo geocoding 순서"""
+    key = city.lower().strip()
+    if key in _CITY_COORDS:
+        return _CITY_COORDS[key]
+
+    # Open-Meteo geocoding API (무료)
+    try:
+        resp = requests.get(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            params={"name": city, "count": 1, "language": "ko"},
+            timeout=5
+        )
+        if resp.ok:
+            results = resp.json().get("results", [])
+            if results:
+                r = results[0]
+                coords = (r["latitude"], r["longitude"])
+                _CITY_COORDS[key] = coords  # 캐시
+                return coords
+    except Exception:
+        pass
+    return None
+
+
+def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None,
+                          days: int = 3) -> dict:
+    """Open-Meteo로 날씨 조회 (무료, API 키 불필요)"""
+    # 좌표 결정
+    if lat is not None and lon is not None:
+        resolved_city = f"{lat},{lon}"
+    elif city:
+        coords = _resolve_city_coords(city)
+        if not coords:
+            return {"error": f"'{city}' 도시를 찾을 수 없습니다."}
+        lat, lon = coords
+        resolved_city = city
+    else:
+        return {"error": "city(도시명) 또는 lat/lon(좌표)이 필요합니다."}
+
+    try:
+        resp = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": lat, "longitude": lon,
+                "current": "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m",
+                "daily": "temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum,sunrise,sunset",
+                "timezone": "auto",
+                "forecast_days": min(days, 7),
+            },
+            timeout=10
+        )
+        if not resp.ok:
+            return {"error": f"Open-Meteo API 오류: HTTP {resp.status_code}"}
+
+        data = resp.json()
+        current = data.get("current", {})
+        daily = data.get("daily", {})
+
+        result = {
+            "city": resolved_city,
+            "current": {
+                "temp": current.get("temperature_2m"),
+                "feels_like": current.get("apparent_temperature"),
+                "humidity": current.get("relative_humidity_2m"),
+                "wind_speed": current.get("wind_speed_10m"),
+                "condition": _WMO_CODES.get(current.get("weather_code", -1), "알 수 없음"),
+            },
+            "forecast": []
+        }
+
+        times = daily.get("time", [])
+        for i, date in enumerate(times):
+            result["forecast"].append({
+                "date": date,
+                "max_temp": daily["temperature_2m_max"][i],
+                "min_temp": daily["temperature_2m_min"][i],
+                "condition": _WMO_CODES.get(daily["weather_code"][i], "알 수 없음"),
+                "precipitation_mm": daily["precipitation_sum"][i],
+            })
+
+        return result
+
+    except requests.Timeout:
+        return {"error": "날씨 API 타임아웃"}
+    except Exception as e:
+        return {"error": f"날씨 조회 실패: {str(e)}"}
+
+
 def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    if tool_name == "get_api_ninjas_data":
+    if tool_name == "get_weather":
+        result = get_weather_openmeteo(
+            city=tool_input.get("city"),
+            lat=tool_input.get("lat"),
+            lon=tool_input.get("lon"),
+            days=tool_input.get("days", 3)
+        )
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "get_api_ninjas_data":
         endpoint = tool_input.get("endpoint", "")
         if not endpoint:
             return json.dumps({"error": "endpoint 매개변수가 필요합니다."}, ensure_ascii=False)
-        result = get_api_ninjas_data(endpoint, tool_input.get("params"))
+        # params 키가 있으면 사용, 없으면 endpoint 제외한 나머지 파라미터를 params로 사용
+        params = tool_input.get("params")
+        if params is None:
+            params = {k: v for k, v in tool_input.items() if k not in ("endpoint", "project_path")}
+        result = get_api_ninjas_data(endpoint, params)
         return json.dumps(result, ensure_ascii=False, indent=2)
 
     elif tool_name == "amadeus_travel_search":

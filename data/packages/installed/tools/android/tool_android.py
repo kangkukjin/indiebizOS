@@ -86,6 +86,8 @@ from ui_control import (
     open_app,
     find_element,
     find_and_tap,
+    screenshot_with_grid,
+    tap_grid,
 )
 
 
@@ -169,6 +171,13 @@ def use_tool(tool_name: str, tool_input: dict) -> dict:
         "android_ui_screen_info": lambda: get_screen_info(device_id),
         "android_ui_hierarchy": lambda: get_ui_hierarchy(device_id),
         "android_ui_screenshot": lambda: capture_screen_base64(device_id),
+        "android_ui_screenshot_grid": lambda: screenshot_with_grid(
+            tool_input.get("rows", 10), tool_input.get("cols", 5), device_id
+        ),
+        "android_ui_tap_grid": lambda: tap_grid(
+            tool_input.get("cell", ""), tool_input.get("rows", 10),
+            tool_input.get("cols", 5), device_id
+        ),
         "android_ui_open_app": lambda: open_app(tool_input.get("package_name", ""), device_id),
         # UI 요소 검색 및 터치
         "android_ui_find_element": lambda: find_element(tool_input.get("query", ""), device_id),

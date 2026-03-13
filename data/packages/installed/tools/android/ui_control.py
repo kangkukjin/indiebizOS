@@ -247,20 +247,48 @@ def get_screen_info(device_id: Optional[str] = None) -> dict:
 # ============ UI 계층 구조 ============
 
 def get_ui_hierarchy(device_id: Optional[str] = None) -> dict:
-    """현재 화면의 UI 계층 구조를 덤프합니다 (uiautomator)."""
+    """현재 화면의 UI 계층 구조를 덤프합니다 (uiautomator).
+
+    uiautomator dump는 일부 화면(보안 앱, 전환 중)에서 실패할 수 있습니다.
+    최대 2회 재시도하며, 실패 시 android_screenshot + tap(좌표) 사용을 권장합니다.
+    """
+    import time
+
     remote_path = "/sdcard/ui_dump.xml"
+    max_retries = 2
 
-    dump_res = run_adb(["shell", "uiautomator", "dump", remote_path], device_id, timeout=15)
-    if not dump_res["success"]:
-        return dump_res
+    for attempt in range(max_retries + 1):
+        # 기존 파일 정리
+        run_adb(["shell", "rm", "-f", remote_path], device_id)
 
-    local_dir = tempfile.gettempdir()
-    local_path = os.path.join(local_dir, "ui_dump.xml")
-    pull_res = run_adb(["pull", remote_path, local_path], device_id)
-    if not pull_res["success"]:
-        return pull_res
+        dump_res = run_adb(["shell", "uiautomator", "dump", remote_path], device_id, timeout=15)
+        if not dump_res["success"]:
+            if attempt < max_retries:
+                time.sleep(1)
+                continue
+            return {
+                "success": False,
+                "message": f"UI 덤프 실패 ({max_retries + 1}회 시도). 보안 앱이나 화면 전환 중일 수 있습니다.",
+                "hint": "android_screenshot + tap(좌표)으로 대체하세요.",
+                "error": dump_res.get("message", "")
+            }
 
-    run_adb(["shell", "rm", remote_path], device_id)
+        local_dir = tempfile.gettempdir()
+        local_path = os.path.join(local_dir, "ui_dump.xml")
+        pull_res = run_adb(["pull", remote_path, local_path], device_id)
+        if not pull_res["success"]:
+            if attempt < max_retries:
+                time.sleep(1)
+                continue
+            return {
+                "success": False,
+                "message": f"UI 덤프 파일 전송 실패. FLAG_SECURE 앱이거나 파일이 생성되지 않았습니다.",
+                "hint": "android_screenshot + tap(좌표)으로 대체하세요.",
+                "error": pull_res.get("message", "")
+            }
+
+        run_adb(["shell", "rm", "-f", remote_path], device_id)
+        break  # 성공
 
     try:
         tree = ElementTree.parse(local_path)
@@ -368,20 +396,32 @@ def capture_screen_base64(device_id: Optional[str] = None) -> dict:
 # ============ UI 요소 검색 및 터치 ============
 
 def _parse_ui_elements(device_id: Optional[str] = None) -> list:
-    """UI hierarchy를 파싱하여 요소 리스트 반환 (내부용)."""
+    """UI hierarchy를 파싱하여 요소 리스트 반환 (내부용).
+
+    재시도 포함. 실패 시 빈 리스트 반환.
+    """
+    import time
+
     remote_path = "/sdcard/ui_dump.xml"
 
-    dump_res = run_adb(["shell", "uiautomator", "dump", remote_path], device_id, timeout=15)
-    if not dump_res["success"]:
-        return []
+    for attempt in range(2):
+        run_adb(["shell", "rm", "-f", remote_path], device_id)
+        dump_res = run_adb(["shell", "uiautomator", "dump", remote_path], device_id, timeout=15)
+        if not dump_res["success"]:
+            time.sleep(1)
+            continue
 
-    local_dir = tempfile.gettempdir()
-    local_path = os.path.join(local_dir, "ui_dump_find.xml")
-    pull_res = run_adb(["pull", remote_path, local_path], device_id)
-    if not pull_res["success"]:
-        return []
+        local_dir = tempfile.gettempdir()
+        local_path = os.path.join(local_dir, "ui_dump_find.xml")
+        pull_res = run_adb(["pull", remote_path, local_path], device_id)
+        if not pull_res["success"]:
+            time.sleep(1)
+            continue
 
-    run_adb(["shell", "rm", remote_path], device_id)
+        run_adb(["shell", "rm", "-f", remote_path], device_id)
+        break
+    else:
+        return []
 
     try:
         tree = ElementTree.parse(local_path)
@@ -436,7 +476,11 @@ def find_element(query: str, device_id: Optional[str] = None) -> dict:
 
     elements = _parse_ui_elements(device_id)
     if not elements:
-        return {"success": False, "message": "UI 계층을 가져올 수 없습니다."}
+        return {
+            "success": False,
+            "message": "UI 계층을 가져올 수 없습니다. uiautomator dump 실패.",
+            "hint": "android_screenshot_grid로 화면을 확인하고 tap(좌표) 또는 tap_grid(셀ID)를 사용하세요."
+        }
 
     query_lower = query.lower()
     matched = []
@@ -511,6 +555,153 @@ def find_and_tap(query: str, index: int = 0, device_id: Optional[str] = None) ->
         },
         "message": f"'{query}' 요소를 찾아 ({center['x']}, {center['y']})를 터치했습니다."
     }
+
+
+# ============ 캘리브레이션 (그리드 오버레이) ============
+
+def screenshot_with_grid(rows: int = 10, cols: int = 5, device_id: Optional[str] = None) -> dict:
+    """스크린샷에 좌표 그리드를 오버레이하여 반환합니다.
+
+    AI가 화면의 정확한 좌표를 파악할 수 있도록
+    격자선과 좌표 라벨을 그린 이미지를 생성합니다.
+
+    Args:
+        rows: 세로 격자 수 (기본 10)
+        cols: 가로 격자 수 (기본 5)
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        return {"success": False, "message": "Pillow 라이브러리가 필요합니다. pip install Pillow"}
+
+    # 스크린샷 캡처
+    phone_path = "/sdcard/screenshot_grid_temp.png"
+    cap_res = run_adb(["shell", "screencap", "-p", phone_path], device_id)
+    if not cap_res["success"]:
+        return cap_res
+
+    local_dir = tempfile.gettempdir()
+    local_raw = os.path.join(local_dir, "android_grid_raw.png")
+    pull_res = run_adb(["pull", phone_path, local_raw], device_id)
+    if not pull_res["success"]:
+        return pull_res
+    run_adb(["shell", "rm", phone_path], device_id)
+
+    # 이미지에 그리드 오버레이
+    img = Image.open(local_raw)
+    draw = ImageDraw.Draw(img)
+    w, h = img.size
+
+    cell_w = w // cols
+    cell_h = h // rows
+
+    # 폰트 (없으면 기본 폰트)
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 28)
+        font_small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 22)
+    except Exception:
+        font = ImageFont.load_default()
+        font_small = font
+
+    # 격자선 그리기
+    for r in range(rows + 1):
+        y = r * cell_h
+        draw.line([(0, y), (w, y)], fill=(255, 0, 0, 180), width=2)
+    for c in range(cols + 1):
+        x = c * cell_w
+        draw.line([(x, 0), (x, h)], fill=(255, 0, 0, 180), width=2)
+
+    # 각 셀 중심에 좌표 라벨 표시
+    col_labels = "ABCDEFGHIJ"
+    for r in range(rows):
+        for c in range(cols):
+            cx = c * cell_w + cell_w // 2
+            cy = r * cell_h + cell_h // 2
+            label = f"{col_labels[c]}{r}"
+            # 반투명 배경
+            bbox = draw.textbbox((cx, cy), label, font=font, anchor="mm")
+            pad = 4
+            draw.rectangle(
+                [bbox[0] - pad, bbox[1] - pad, bbox[2] + pad, bbox[3] + pad],
+                fill=(0, 0, 0, 160)
+            )
+            draw.text((cx, cy), label, fill=(255, 255, 0), font=font, anchor="mm")
+            # 실제 좌표 표시 (작은 글씨)
+            coord_text = f"({cx},{cy})"
+            draw.text((cx, cy + 20), coord_text, fill=(200, 200, 200), font=font_small, anchor="mm")
+
+    # 저장 및 base64 인코딩
+    local_grid = os.path.join(local_dir, "android_grid_overlay.png")
+    img.save(local_grid)
+
+    with open(local_grid, "rb") as f:
+        img_base64 = base64.b64encode(f.read()).decode("utf-8")
+
+    # 셀 좌표 맵 생성
+    grid_map = {}
+    for r in range(rows):
+        for c in range(cols):
+            cell_id = f"{col_labels[c]}{r}"
+            grid_map[cell_id] = {
+                "center": {"x": c * cell_w + cell_w // 2, "y": r * cell_h + cell_h // 2},
+                "bounds": {
+                    "x1": c * cell_w, "y1": r * cell_h,
+                    "x2": (c + 1) * cell_w, "y2": (r + 1) * cell_h
+                }
+            }
+
+    try:
+        os.remove(local_raw)
+        os.remove(local_grid)
+    except OSError:
+        pass
+
+    return {
+        "content": f"그리드 오버레이 스크린샷 ({cols}x{rows}). 셀 ID(예: B3)로 위치를 지정하거나, 표시된 좌표를 사용하세요.",
+        "screen_size": {"width": w, "height": h},
+        "grid": {"rows": rows, "cols": cols, "cell_size": {"w": cell_w, "h": cell_h}},
+        "grid_map": grid_map,
+        "images": [{"base64": img_base64, "media_type": "image/png"}]
+    }
+
+
+def tap_grid(cell: str, rows: int = 10, cols: int = 5, device_id: Optional[str] = None) -> dict:
+    """그리드 셀 ID를 지정하여 해당 위치를 탭합니다.
+
+    Args:
+        cell: 그리드 셀 ID (예: "B3", "A0", "D7")
+        rows: 그리드 세로 분할 수 (screenshot_with_grid와 동일하게)
+        cols: 그리드 가로 분할 수
+    """
+    # 화면 크기 가져오기
+    info = get_screen_info(device_id)
+    if not info.get("success"):
+        return info
+
+    w, h = info["width"], info["height"]
+    cell_w = w // cols
+    cell_h = h // rows
+
+    col_labels = "ABCDEFGHIJ"
+    if not cell or len(cell) < 2:
+        return {"success": False, "message": "셀 ID 형식: 열문자+행숫자 (예: B3)"}
+
+    col_char = cell[0].upper()
+    try:
+        row_num = int(cell[1:])
+    except ValueError:
+        return {"success": False, "message": f"잘못된 셀 ID: {cell}"}
+
+    if col_char not in col_labels[:cols]:
+        return {"success": False, "message": f"열 '{col_char}'는 범위 밖 (A-{col_labels[cols-1]})"}
+    if row_num < 0 or row_num >= rows:
+        return {"success": False, "message": f"행 {row_num}은 범위 밖 (0-{rows-1})"}
+
+    c = col_labels.index(col_char)
+    cx = c * cell_w + cell_w // 2
+    cy = row_num * cell_h + cell_h // 2
+
+    return tap(cx, cy, device_id)
 
 
 # ============ 앱 실행 ============

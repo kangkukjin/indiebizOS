@@ -1019,6 +1019,9 @@ def create_html_video(tool_input, output_base):
     video_height = tool_input.get("height", 720)
     fps = tool_input.get("fps", 24)
     default_duration = tool_input.get("duration_per_scene", 5)
+    # 씬 전환 효과 설정
+    transition_type = tool_input.get("transition", "fade")  # fade, wipeleft, wiperight, slidedown, slideup, circleopen, dissolve, none
+    transition_duration = tool_input.get("transition_duration", 0.5)  # 전환 시간(초)
 
     if not scenes:
         return "오류: scenes 리스트가 비어 있습니다."
@@ -1088,9 +1091,10 @@ def create_html_video(tool_input, output_base):
                     scene["duration"] = needed_dur
 
         # ============================================================
-        # 3단계: 모든 씬의 프레임을 순차적으로 캡처
+        # 3단계: 씬별 프레임 캡처 및 개별 MP4 인코딩
         # ============================================================
-        global_frame = 0
+        scene_videos = []  # 씬별 MP4 경로 리스트
+        scene_durations = []  # 씬별 실제 duration 리스트
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
@@ -1099,8 +1103,6 @@ def create_html_video(tool_input, output_base):
             for i, scene in enumerate(scenes):
                 html = scene.get("html", "")
                 duration = scene.get("duration", default_duration)
-                # base_path: scene에 지정되지 않으면 output_base를 기본값으로 사용
-                # (같은 폴더에 생성된 이미지를 자동으로 찾을 수 있도록)
                 base_path_opt = scene.get("base_path") or output_base
 
                 if not html:
@@ -1108,9 +1110,6 @@ def create_html_video(tool_input, output_base):
 
                 html_ready = _prepare_scene_html(html, base_path_opt, video_width, video_height)
 
-                # 씬 HTML을 base_path 기준 디렉토리에 저장 후 file:// 프로토콜로 로딩
-                # base_path에 저장하면 상대 경로 이미지(예: "hero.png")가 같은 폴더에서 자동으로 로드됨
-                # Base64 변환은 보험으로 유지 (절대 경로/상대 경로 모두 대응)
                 scene_html_dir = base_path_opt if base_path_opt and os.path.isdir(base_path_opt) else temp_dir
                 scene_html_path = os.path.join(scene_html_dir, f"_scene_{i}_{uuid.uuid4().hex[:6]}.html")
                 with open(scene_html_path, "w", encoding="utf-8") as sf:
@@ -1125,51 +1124,148 @@ def create_html_video(tool_input, output_base):
                     document.head.appendChild(style);
                 }""")
 
-                # 외부 리소스(CDN, 폰트 등) 로딩 대기
                 page.wait_for_load_state("networkidle")
-                # 첫 씬은 폰트 다운로드가 필요하므로 넉넉하게 대기
                 page.wait_for_timeout(1500 if i == 0 else 500)
 
-                # 리소스 로딩 완료 후 애니메이션 재개 → 이제부터 캡처 시작
+                # 리소스 로딩 완료 후 애니메이션 재개
                 page.evaluate("""() => {
                     const pauseStyle = document.getElementById('__anim_pause__');
                     if (pauseStyle) pauseStyle.remove();
                 }""")
 
-                # 이 씬에서 캡처할 프레임 수
+                # 씬별 프레임 디렉토리
+                scene_frames_dir = os.path.join(temp_dir, f"frames_scene_{i}")
+                os.makedirs(scene_frames_dir, exist_ok=True)
+
                 total_frames = int(duration * fps)
-                # 프레임 간격 (ms)
                 frame_interval_ms = 1000.0 / fps
 
                 for f in range(total_frames):
-                    frame_path = os.path.join(frames_dir, f"frame_{global_frame:06d}.png")
+                    frame_path = os.path.join(scene_frames_dir, f"frame_{f:06d}.png")
                     page.screenshot(path=frame_path)
-                    global_frame += 1
-                    # 다음 프레임까지 대기 (브라우저의 실시간 애니메이션 진행)
                     page.wait_for_timeout(int(frame_interval_ms))
+
+                if total_frames == 0:
+                    continue
+
+                # 씬별 MP4 인코딩
+                scene_mp4 = os.path.join(temp_dir, f"scene_{i}.mp4")
+                enc_result = subprocess.run([
+                    "ffmpeg", "-y",
+                    "-framerate", str(fps),
+                    "-i", os.path.join(scene_frames_dir, "frame_%06d.png"),
+                    "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                    "-pix_fmt", "yuv420p",
+                    scene_mp4
+                ], capture_output=True)
+
+                if enc_result.returncode != 0:
+                    print(f"[create_html_video] 씬 {i} 인코딩 실패: {enc_result.stderr.decode()}")
+                    continue
+
+                scene_videos.append(scene_mp4)
+                scene_durations.append(duration)
 
             browser.close()
 
-        if global_frame == 0:
+        if not scene_videos:
             shutil.rmtree(temp_dir)
             return "오류: 캡처된 프레임이 없습니다."
 
         # ============================================================
-        # 4단계: 프레임 시퀀스를 MP4로 인코딩
+        # 4단계: 씬 전환 효과 적용 및 병합
         # ============================================================
         merged_video = os.path.join(temp_dir, "merged.mp4")
-        ffmpeg_result = subprocess.run([
-            "ffmpeg", "-y",
-            "-framerate", str(fps),
-            "-i", os.path.join(frames_dir, "frame_%06d.png"),
-            "-c:v", "libx264", "-preset", "fast", "-crf", "20",
-            "-pix_fmt", "yuv420p",
-            merged_video
-        ], capture_output=True)
+        use_transition = transition_type != "none" and len(scene_videos) > 1 and transition_duration > 0
 
-        if ffmpeg_result.returncode != 0:
-            shutil.rmtree(temp_dir)
-            return f"FFmpeg 인코딩 오류: {ffmpeg_result.stderr.decode()}"
+        if use_transition:
+            # FFmpeg xfade 필터를 사용하여 씬 간 전환 효과 적용
+            # 유효한 xfade 전환 효과 목록
+            valid_transitions = {
+                "fade", "wipeleft", "wiperight", "wipeup", "wipedown",
+                "slidedown", "slideup", "slideleft", "slideright",
+                "circleopen", "circleclose", "dissolve", "pixelize",
+                "radial", "hblur", "fadegrays", "squeezeh", "squeezev",
+            }
+            if transition_type not in valid_transitions:
+                transition_type = "fade"
+
+            td = min(transition_duration, min(scene_durations) * 0.4)  # 전환이 씬 길이의 40%를 넘지 않도록
+
+            if len(scene_videos) == 2:
+                # 2개 씬: 단일 xfade
+                offset = scene_durations[0] - td
+                ffmpeg_cmd = [
+                    "ffmpeg", "-y",
+                    "-i", scene_videos[0], "-i", scene_videos[1],
+                    "-filter_complex",
+                    f"[0:v][1:v]xfade=transition={transition_type}:duration={td}:offset={offset},format=yuv420p[v]",
+                    "-map", "[v]", "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                    merged_video
+                ]
+            else:
+                # 3개 이상 씬: xfade 체이닝
+                inputs = []
+                for sv in scene_videos:
+                    inputs.extend(["-i", sv])
+
+                filter_parts = []
+                cumulative_offset = 0.0
+
+                # 첫 번째 xfade
+                cumulative_offset = scene_durations[0] - td
+                filter_parts.append(
+                    f"[0:v][1:v]xfade=transition={transition_type}:duration={td}:offset={cumulative_offset}[v1]"
+                )
+
+                # 나머지 xfade 체이닝
+                for j in range(2, len(scene_videos)):
+                    prev_label = f"v{j-1}"
+                    out_label = f"v{j}"
+                    # 이전까지의 총 길이 = 이전 누적 + 현재 씬 duration - 전환 겹침
+                    cumulative_offset += scene_durations[j-1] - td
+                    filter_parts.append(
+                        f"[{prev_label}][{j}:v]xfade=transition={transition_type}:duration={td}:offset={cumulative_offset}[{out_label}]"
+                    )
+
+                final_label = f"v{len(scene_videos)-1}"
+                filter_complex = ";".join(filter_parts) + f";[{final_label}]format=yuv420p[vout]"
+
+                ffmpeg_cmd = [
+                    "ffmpeg", "-y",
+                    *inputs,
+                    "-filter_complex", filter_complex,
+                    "-map", "[vout]", "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                    merged_video
+                ]
+
+            print(f"[create_html_video] 씬 전환 적용: {transition_type}, {td:.2f}초")
+            xfade_result = subprocess.run(ffmpeg_cmd, capture_output=True)
+
+            if xfade_result.returncode != 0:
+                # xfade 실패 시 fallback: 전환 없이 단순 concat
+                print(f"[create_html_video] xfade 실패, concat으로 대체: {xfade_result.stderr.decode()[:300]}")
+                use_transition = False
+
+        if not use_transition:
+            # 전환 효과 없이 단순 연결 (1개 씬이거나 transition=none이거나 xfade 실패 시)
+            if len(scene_videos) == 1:
+                shutil.copy2(scene_videos[0], merged_video)
+            else:
+                concat_list = os.path.join(temp_dir, "concat.txt")
+                with open(concat_list, "w") as cl:
+                    for sv in scene_videos:
+                        cl.write(f"file '{sv}'\n")
+                concat_result = subprocess.run([
+                    "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+                    "-i", concat_list,
+                    "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                    "-pix_fmt", "yuv420p",
+                    merged_video
+                ], capture_output=True)
+                if concat_result.returncode != 0:
+                    shutil.rmtree(temp_dir)
+                    return f"FFmpeg concat 오류: {concat_result.stderr.decode()}"
 
         # ============================================================
         # 5단계: 나레이션과 BGM 합성
@@ -1185,6 +1281,11 @@ def create_html_video(tool_input, output_base):
             audio_layers = []
 
             if has_narration:
+                # 씬 전환 시 xfade 겹침만큼 시작 타이밍을 앞당김
+                actual_td = 0.0
+                if use_transition and len(scene_videos) > 1:
+                    actual_td = min(transition_duration, min(scene_durations) * 0.4)
+
                 scene_start = 0.0
                 for i, scene in enumerate(scenes):
                     dur = scene.get("duration", default_duration)
@@ -1192,7 +1293,11 @@ def create_html_video(tool_input, output_base):
                         narr = MpAudioClip(narration_audio_paths[i])
                         narr = narr.with_start(scene_start)
                         audio_layers.append(narr)
-                    scene_start += dur
+                    # xfade 적용 시 씬 간 겹침을 반영
+                    if i < len(scenes) - 1 and actual_td > 0:
+                        scene_start += dur - actual_td
+                    else:
+                        scene_start += dur
 
             if has_bgm:
                 bgm_clip = MpAudioClip(bgm_path).with_duration(video_clip.duration)
@@ -1221,7 +1326,12 @@ def create_html_video(tool_input, output_base):
             except OSError:
                 pass
 
-        return f"HTML 동영상 제작 완료: {os.path.abspath(output_path)}"
+        transition_info = ""
+        if use_transition and len(scene_videos) > 1:
+            actual_td = min(transition_duration, min(scene_durations) * 0.4)
+            transition_info = f" | 씬 전환: {transition_type} ({actual_td:.1f}초)"
+
+        return f"HTML 동영상 제작 완료: {os.path.abspath(output_path)}{transition_info}"
     except subprocess.CalledProcessError as e:
         return f"FFmpeg 오류: {e.stderr.decode() if e.stderr else str(e)}"
     except Exception as e:

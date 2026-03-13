@@ -256,3 +256,172 @@ android_send_text(text='전송할 텍스트')
 open_android_manager()
 # 전화, 문자, 연락처를 관리할 수 있는 UI 열기
 ```
+
+---
+
+## UI 자동화 (Computer-Use 패턴)
+
+ADB를 통해 안드로이드 화면을 직접 제어하는 기능이다.
+AI가 스크린샷을 보고 → 분석하고 → 조작하는 루프를 반복한다.
+
+### 기본 루프
+
+```
+android_ui_screenshot → 화면 분석 → android_ui_tap / type_text / swipe → 확인
+```
+
+### 핵심 원칙 (반드시 준수)
+
+1. **앱 실행은 반드시 `open_app`** 사용 (패키지명 기반, 가장 안정적)
+2. **`find_tap`/`find_element`/`hierarchy`는 사용하지 마라** — uiautomator가 불안정하여 대부분 실패한다. 반드시 `android_screenshot` + `tap`(좌표)으로 조작한다.
+3. **좌표 추정이 어려우면 `android_screenshot_grid` 사용** (그리드 오버레이)
+4. **매 동작 후 반드시 `android_screenshot`으로 결과 확인** — 스크린샷 없이 다음 동작 금지
+5. **한글 입력은 `type_text`** — IndieBiz IME가 자동으로 처리
+6. **실패한 방법은 다시 시도하지 마라** — `find_element`가 한 번 실패하면 다시 시도해도 실패한다. 즉시 스크린샷 기반으로 전환한다.
+7. **완료하지 못한 작업을 완료했다고 보고하지 마라** — 작업이 끝나지 않았으면 현재 상황과 막힌 부분을 솔직하게 보고한다.
+
+### 실패 시 행동 규칙
+
+```
+hierarchy 실패 → screenshot_grid로 전환 (find_element/find_tap 재시도 금지)
+screenshot 실패 → FLAG_SECURE 앱일 수 있음 → 사용자에게 보고
+tap 후 화면 변화 없음 → 좌표가 잘못됨 → screenshot_grid로 재확인
+작업 완료 불가 → 현재까지 진행 상황 + 막힌 이유를 솔직하게 보고
+```
+
+### 앱 실행
+
+```python
+# 패키지명으로 실행 (가장 확실)
+open_app(package_name='com.tempdiary')
+
+# 패키지명 모르면 검색
+# adb shell pm list packages | grep 키워드
+```
+
+**주의: 홈 화면 아이콘 탭은 비추천** — 좌표가 부정확하고 페이지에 따라 다름
+
+### 화면 캡처 및 좌표 파악
+
+```python
+# 일반 스크린샷 (AI 비전 분석용)
+android_ui_screenshot()
+
+# 그리드 오버레이 스크린샷 (좌표 캘리브레이션)
+android_ui_screenshot_grid(rows=10, cols=5)
+# → 셀 ID(A0~E9)와 실제 좌표가 오버레이된 이미지 반환
+# → grid_map에 각 셀의 center/bounds 좌표 포함
+```
+
+### 화면 조작
+
+```python
+# 좌표 탭 (스크린샷에서 추정한 좌표)
+android_ui_tap(x=540, y=1800)
+
+# 그리드 셀 탭 (screenshot_grid로 확인한 셀 ID)
+android_ui_tap_grid(cell='C7')
+
+# 스와이프 (스크롤, 페이지 넘기기)
+android_ui_swipe(x1=900, y1=1200, x2=200, y2=1200, duration_ms=300)  # 왼쪽으로
+android_ui_swipe(x1=200, y1=1200, x2=900, y2=1200, duration_ms=300)  # 오른쪽으로
+android_ui_swipe(x1=540, y1=2000, x2=540, y2=800, duration_ms=300)   # 위로 스크롤
+
+# 길게 누르기
+android_ui_long_press(x=540, y=1200, duration_ms=1000)
+
+# 시스템 키
+android_ui_press_key(keycode='HOME')    # 홈
+android_ui_press_key(keycode='BACK')    # 뒤로 (키보드 닫기에도 유용)
+android_ui_press_key(keycode='RECENT')  # 최근 앱
+android_ui_press_key(keycode='ENTER')   # 엔터
+```
+
+### 텍스트 입력
+
+```python
+# 입력 필드를 먼저 탭한 후
+android_ui_tap(x=270, y=1810)
+
+# 텍스트 입력 (한글/영문 자동 처리)
+android_ui_type_text(text='코스트코 방문, 머리깍음')
+# → 영문/숫자: ADB input text 직접 입력
+# → 한글: IndieBiz IME commitText() 주입
+
+# 키보드 닫기
+android_ui_press_key(keycode='BACK')
+```
+
+### UI 요소 검색 (hierarchy/find_element/find_tap)
+
+`uiautomator dump`는 `waitForIdle()`에 의존하며, 아래 조건에서 실패한다:
+
+| 상황 | dump 결과 | 원인 |
+|------|-----------|------|
+| **삼성 홈 런처** | ❌ 항상 실패 | 위젯(Tesla, 시계 등)이 주기적 UI 업데이트 → idle 불가 |
+| **앱 전환 직후** | ❌ 실패 확률 높음 | 전환 애니메이션이 끝나지 않음 |
+| **일반 앱 (3초+ 대기 후)** | ✅ 대부분 성공 | 정적 화면은 idle 도달 |
+| **FLAG_SECURE 앱** | ❌ 항상 실패 | 보안 정책으로 차단 |
+
+**사용 규칙:**
+- 홈 화면에서는 **절대 사용하지 마라** (항상 실패)
+- 앱 내에서는 **open_app 후 3초 이상 대기한 뒤** 시도 가능
+- **한 번 실패하면 재시도하지 말고** screenshot + tap(좌표)로 전환
+- 가장 안정적인 패턴은 항상 `screenshot` + `tap`(좌표)
+
+```python
+# ⚠️ 홈 화면에서 사용 금지, 앱 내에서만 사용
+android_ui_find_element(query='저장하기')
+android_ui_find_and_tap(query='확인', index=0)
+android_ui_hierarchy()
+```
+
+### 실전 예시: TempDiary 앱에서 일기 작성
+
+**올바른 패턴** (스크린샷 → 분석 → 탭 반복):
+```
+1. [limbs:open_app]{package_name: "com.tempdiary"}  # 앱 실행
+2. (2~3초 대기)
+3. [limbs:android_screenshot]                        # ✅ 화면 확인 (일기 목록 보임)
+4. [limbs:tap]{x: 980, y: 2150}                      # 우하단 + 버튼 탭
+5. [limbs:android_screenshot]                        # ✅ 화면 확인 (일기 작성 폼)
+6. [limbs:tap]{x: 270, y: 1810}                      # "제목을 입력하세요" 필드 탭
+7. [limbs:type_text]{text: "오늘의 일기"}             # 제목 입력
+8. [limbs:android_key]{keycode: "BACK"}              # 키보드 닫기
+9. [limbs:android_screenshot]                        # ✅ 화면 확인 (제목 입력 확인)
+10. [limbs:tap]{x: 270, y: 2020}                     # "오늘 하루는..." 본문 필드 탭
+11. [limbs:type_text]{text: "내용 작성"}              # 본문 입력
+12. [limbs:android_key]{keycode: "BACK"}             # 키보드 닫기
+13. [limbs:swipe]{x1:540, y1:2000, x2:540, y2:800}  # 아래로 스크롤 (저장 버튼 찾기)
+14. [limbs:android_screenshot]                       # ✅ 화면 확인 (저장하기 보임)
+15. [limbs:tap]{x: 360, y: 2060}                     # 저장하기 탭
+16. [limbs:android_screenshot]                       # ✅ 결과 확인 ("저장되었습니다" 다이얼로그)
+```
+
+**잘못된 패턴** (❌ 절대 하지 마라):
+```
+❌ hierarchy 실패 → find_element 시도 → 또 find_tap 시도  (같은 방법 반복)
+❌ 스크린샷 확인 없이 연속 탭  (어디를 탭하는지 모름)
+❌ 실패했는데 "완료했습니다"라고 보고  (거짓 보고)
+❌ 좌표를 확인 안 하고 추측으로 탭  (screenshot_grid 사용하라)
+```
+
+### 알려진 제약사항
+
+| 제약 | 설명 | 대응 |
+|------|------|------|
+| **FLAG_SECURE 앱** | 정부24, 은행 앱 등은 screencap/uiautomator 차단 | 사용자에게 수동 조작 안내 |
+| **uiautomator 불안정** | hierarchy/find_tap/find_element가 대부분 실패 | **사용 금지** — screenshot + tap(좌표) 사용 |
+| **좌표 추정 오차** | AI 스크린샷 분석 시 축소로 인한 오차 | screenshot_grid(그리드 캘리브레이션) 사용 |
+| **홈 화면 페이지** | 홈 화면 아이콘은 페이지마다 다른 위치 | open_app(패키지명)으로 실행 |
+| **앱 로딩 시간** | 앱이 열리기까지 대기 필요 | 2~4초 대기 후 스크린샷 확인 |
+| **실패 반복** | 같은 방법으로 재시도해도 동일 실패 | 즉시 대안으로 전환, 재시도 금지 |
+| **거짓 완료 보고** | 완료하지 못한 작업을 완료라고 보고 | 현재 상황 + 막힌 이유를 솔직하게 보고 |
+
+### 화면 크기 참고
+
+```python
+android_ui_screen_info()
+# → 일반적으로 1080x2400 (FHD+), 밀도 480dpi
+# → 그리드 기본(5x10): 셀 크기 216x240px
+```

@@ -16,12 +16,14 @@ meta:
     - '[sense:search_radio]{query: "KBS"}  # 라디오 검색'
     - '[engines:newspaper]{keywords: "AI, 경제, 문화"}  # 신문 생성'
     - '[engines:line]{title: "Stock Price"}  # 차트 생성'
-    note: execute_ibl의 code 파라미터에 IBL 코드를 전달. 모든 값은 {params} 안에 named parameter로. (target) 문법은 폐지됨.
+    note: execute_ibl의 code 파라미터에 IBL 코드를 전달. 모든 값은 {params} 안에 named parameter로.
+      (target) 문법은 폐지됨.
   - section: Common mistakes — NEVER do these
     examples:
     - 'WRONG: [self:workflow]  # workflow는 액션이 아님'
     - 'WRONG: [self:get]{type: "time"}  # get은 액션이 아님. [self:time]을 써야 함'
-    - 'WRONG: [sense:search]{query: "AAPL"}  # search는 액션이 아님. [sense:web_search]{query: "AAPL"}를 써야 함'
+    - 'WRONG: [sense:search]{query: "AAPL"}  # search는 액션이 아님. [sense:web_search]{query:
+      "AAPL"}를 써야 함'
     - 'WRONG: [sense:price]("AAPL")  # (target) 문법은 폐지됨! {params}를 사용할 것'
     - 'RIGHT: [self:time]  # 직접 액션명 사용'
     - 'RIGHT: [sense:price]{symbol: "AAPL"}  # 모든 값은 named parameter'
@@ -29,18 +31,24 @@ meta:
   - section: 'params — 모든 값은 {key: val} 형태의 named parameter'
     examples:
     - 'RIGHT: [sense:kr_investor]{symbol: "STK", start_date: "2026-02-01"}'
-    - 'RIGHT: [sense:kr_investor]{symbol: "STK", start_date: "2026-02-01", end_date: "2026-02-28"}'
-    - 'WRONG: [sense:kr_investor]("STK") {"start_date": "2026-02-01"}  # (target) 문법 폐지됨!'
+    - 'RIGHT: [sense:kr_investor]{symbol: "STK", start_date: "2026-02-01", end_date:
+      "2026-02-28"}'
+    - 'WRONG: [sense:kr_investor]("STK") {"start_date": "2026-02-01"}  # (target)
+      문법 폐지됨!'
     - 'RIGHT: [sense:price]{symbol: "005930"}  # 파라미터가 하나여도 named'
     note: '모든 값은 {key: val} 안에 작성. (target) 문법은 폐지되어 에러 발생함.'
   - section: Pipeline — 다중 스텝은 >> 또는 & 연산자 사용
     examples:
-    - '[sense:web_search]{query: "AI"} >> [self:file]{path: "result.md"}  # 순차: step1 결과가 step2에 자동 전달'
+    - '[sense:web_search]{query: "AI"} >> [self:file]{path: "result.md"}  # 순차: step1
+      결과가 step2에 자동 전달'
     - '[engines:newspaper]{keywords: "AI, 경제"} >> [self:open]  # 신문 생성 후 브라우저 열기'
     - '[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}  # 병렬 실행'
-    - '[self:time] & [sense:price]{symbol: "005930"} & [sense:news]{query: "한국 증시"}  # 병렬 3개'
-    - '[sense:price]{symbol: "AAPL"} ?? [sense:kr_price]{symbol: "AAPL"}  # 폴백: 실패시 대안'
-    - 'WRONG: [engines:newspaper]{keywords: "AI"} >> [self:open]{path: $prev.file}  # $prev 문법 없음!'
+    - '[self:time] & [sense:price]{symbol: "005930"} & [sense:news]{query: "한국 증시"}  #
+      병렬 3개'
+    - '[sense:price]{symbol: "AAPL"} ?? [sense:kr_price]{symbol: "AAPL"}  # 폴백: 실패시
+      대안'
+    - 'WRONG: [engines:newspaper]{keywords: "AI"} >> [self:open]{path: $prev.file}  #
+      $prev 문법 없음!'
     note: '>> 사용 시 이전 step의 결과가 다음 step에 자동 전달됨. $prev, $result 같은 변수 참조 문법은 없다.'
   pipeline:
   - op: '>>'
@@ -53,18 +61,23 @@ meta:
     name: Fallback
     example: '[sense:price]{symbol: "AAPL"} ?? [sense:kr_price]{symbol: "AAPL"}'
   principles:
-  - 'IBL 코드를 execute_ibl의 code 파라미터로 전달. 예: execute_ibl(code=''[sense:price]{symbol: "AAPL"}'')'
-  - 구체적 액션명을 직접 지정 (time, price, play 등). action-categories의 이름(get, run 등)은 쓰지 말 것.
+  - 'IBL 코드를 execute_ibl의 code 파라미터로 전달. 예: execute_ibl(code=''[sense:price]{symbol:
+    "AAPL"}'')'
+  - 구체적 액션명을 직접 지정 (time, price, play 등). action-categories의 이름(get, run 등)은 쓰지 말
+    것.
   - '[self:discover]{query: "키워드"} — 어떤 액션을 쓸지 모를 때 사용.'
   - '모든 값은 {key: val} 형태의 named parameter. (target) 문법은 폐지됨 — 사용 시 에러 발생.'
-  - '전문 데이터 액션이 있으면 파일 직접 탐색([self:list]+[self:read])보다 반드시 우선 사용. 예: 건강기록→[self:health_query], 메모리→[self:recall]'
-  - 'CRITICAL: 절대로 IBL 코드([node:action]{...})를 텍스트 응답에 포함하지 말 것. IBL은 반드시 execute_ibl 도구의 code 파라미터로만 실행. 사용자에게는 자연어로 응답.'
+  - '전문 데이터 액션이 있으면 파일 직접 탐색([self:list]+[self:read])보다 반드시 우선 사용. 예: 건강기록→[self:health_query],
+    메모리→[self:recall]'
+  - 'CRITICAL: 절대로 IBL 코드([node:action]{...})를 텍스트 응답에 포함하지 말 것. IBL은 반드시 execute_ibl
+    도구의 code 파라미터로만 실행. 사용자에게는 자연어로 응답.'
   - 작업을 계획만 하고 끝내지 말 것. 계획했으면 반드시 execute_ibl로 실행까지 완료할 것.
 nodes:
   sense:
     actions:
       price:
-        description: '주가 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F, 지수: ^KS11=코스피 ^KQ11=코스닥)'
+        description: '주가 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F, 지수: ^KS11=코스피
+          ^KQ11=코스닥)'
         group: investment
         category: get
         router: handler
@@ -498,12 +511,12 @@ nodes:
         - 상품
         - 최저가
       weather:
-        description: 날씨 조회 (API Ninjas)
+        description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat:
+          37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
         group: location
         category: get
         router: handler
-        tool: get_api_ninjas_data
-        target_key: endpoint
+        tool: get_weather
         keywords:
         - 날씨
         - 기온
@@ -859,7 +872,8 @@ nodes:
         - 세계
         - 재수집
         - 갱신
-    description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 세계 상태 등 외부 API 및 데이터 소스 접근'
+    description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 세계 상태 등 외부 API 및 데이터
+      소스 접근'
     tags:
     - 검색
     - 조회
@@ -1516,7 +1530,8 @@ nodes:
         - 다운로드
         - 파일받기
       launch:
-        description: 즐겨찾기 사이트 열기/관리
+        description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. '런처 띄워줘' → 대시보드 UI 표시. 전부 열기는
+          명시 요청 시에만
         group: output
         category: io
         router: handler
@@ -1527,6 +1542,7 @@ nodes:
         - 런처
         - 즐겨찾기
         - favorite
+        - 좋아하는 사이트
         - bookmark
         - 좋아하는 사이트
         - 자주가는
@@ -2629,6 +2645,16 @@ nodes:
         - Workers
         - R2
         - Pages
+      android_screenshot_grid:
+        description: 좌표 그리드 오버레이 스크린샷 (캘리브레이션용)
+        router: handler
+        tool: android_ui_screenshot_grid
+      tap_grid:
+        description: '그리드 셀 ID로 탭 (예: B3)'
+        target_description: '그리드 셀 ID (예: B3, A0, D7)'
+        router: handler
+        tool: android_ui_tap_grid
+        target_key: cell
     description: '수족: 작업 도구 및 기기 제어 — 브라우저 자동화, 안드로이드, 데스크톱, 미디어 재생, URL/파일 열기'
     tags:
     - 브라우저
@@ -2787,7 +2813,8 @@ nodes:
   engines:
     actions:
       newspaper:
-        description: Google News RSS에서 키워드별 기사를 자체 수집하여 HTML 신문 생성. 외부 기사 데이터 입력 불가. language="en"으로 영문 뉴스 가능
+        description: Google News RSS에서 키워드별 기사를 자체 수집하여 HTML 신문 생성. 외부 기사 데이터 입력 불가.
+          language="en"으로 영문 뉴스 가능
         group: media_produce
         category: create
         router: handler
@@ -2887,7 +2914,8 @@ nodes:
         - MP4
         - HTML영상
       render_remotion:
-        description: 파일로 저장된 TSX 컴포지션을 Remotion으로 MP4 렌더링. composition_file(절대경로) 필수.
+        description: 파일로 저장된 TSX 컴포지션을 Remotion으로 MP4 렌더링. composition_file(절대경로)
+          필수.
         group: media_produce
         category: create
         router: handler

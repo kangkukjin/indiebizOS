@@ -860,6 +860,55 @@
           "query"
         ]
       }
+    },
+    {
+      "name": "android_ui_screenshot_grid",
+      "description": "좌표 그리드 오버레이 스크린샷을 캡처합니다.\n\n화면을 격자로 나누고 각 셀에 ID(예: A0, B3)와 실제 좌표를 표시합니다.\nAI가 정확한 탭 위치를 파악하기 위한 캘리브레이션 도구입니다.\n\n## 사용 패턴\n1. android_ui_screenshot_grid로 그리드 확인\n2. 원하는 셀 ID를 android_ui_tap_grid에 전달\n   또는 표시된 좌표를 android_ui_tap에 전달",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "integer",
+            "description": "세로 격자 수 (기본: 10)"
+          },
+          "cols": {
+            "type": "integer",
+            "description": "가로 격자 수 (기본: 5)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        }
+      }
+    },
+    {
+      "name": "android_ui_tap_grid",
+      "description": "그리드 셀 ID를 지정하여 해당 위치를 탭합니다.\n\n## 사용법\nandroid_ui_screenshot_grid로 확인한 셀 ID(예: B3, A0, D7)를 전달합니다.\n셀의 중심 좌표를 자동 계산하여 탭합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "cell": {
+            "type": "string",
+            "description": "그리드 셀 ID (예: B3, A0, D7)"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "세로 격자 수 (기본: 10)"
+          },
+          "cols": {
+            "type": "integer",
+            "description": "가로 격자 수 (기본: 5)"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID"
+          }
+        },
+        "required": [
+          "cell"
+        ]
+      }
     }
   ]
 }

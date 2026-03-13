@@ -1,4 +1,4 @@
-node: tools
+node: limbs
 actions:
   devices:
     description: 연결된 기기 목록 조회
@@ -60,6 +60,16 @@ actions:
     description: 안드로이드 화면 캡처 (AI 분석용)
     router: handler
     tool: android_ui_screenshot
+  android_screenshot_grid:
+    description: 좌표 그리드 오버레이 스크린샷 (캘리브레이션용)
+    router: handler
+    tool: android_ui_screenshot_grid
+  tap_grid:
+    description: 그리드 셀 ID로 탭 (예 B3)
+    target_description: 그리드 셀 ID (예 B3, A0, D7)
+    router: handler
+    tool: android_ui_tap_grid
+    target_key: cell
   push_file:
     description: PC→안드로이드 파일 전송
     target_description: 로컬 파일 경로
@@ -210,4 +220,4 @@ actions:
     router: handler
     tool: open_android_manager
 guides:
-- android/android_guide.md
+- android.md

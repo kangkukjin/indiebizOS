@@ -1,11 +1,10 @@
 node: sense
 actions:
   weather:
-    description: 날씨 조회 (API Ninjas)
-    target_description: 도시명 (Seoul, Tokyo 등)
+    description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
+    target_description: 도시명 또는 좌표
     router: handler
-    tool: get_api_ninjas_data
-    target_key: endpoint
+    tool: get_weather
   restaurant:
     description: 맛집/음식점 검색 (카카오+네이버)
     target_description: 검색어 (강남 파스타 등)

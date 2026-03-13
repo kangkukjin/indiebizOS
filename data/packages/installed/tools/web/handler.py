@@ -416,7 +416,7 @@ def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
 
 # ============== 사이트 런처 관련 함수 ==============
 
-def launch_sites(action: str = "open_all", name: str = None, url: str = None, project_path: str = ".") -> str:
+def launch_sites(action: str = "open_ui", name: str = None, url: str = None, project_path: str = ".") -> str:
     """자주 가는 사이트 런처 및 관리"""
     sites_path = current_dir / "sites.json"
 
@@ -429,14 +429,7 @@ def launch_sites(action: str = "open_all", name: str = None, url: str = None, pr
     except Exception as e:
         return f"사이트 목록을 읽는 중 오류 발생: {str(e)}"
 
-    if action == "open_all":
-        opened = []
-        for site in sites:
-            webbrowser.open(site["url"])
-            opened.append(site["name"])
-        return f"다음 사이트들을 브라우저에서 열었습니다: {', '.join(opened)}"
-
-    elif action == "list":
+    if action == "list":
         if not sites:
             return "등록된 사이트가 없습니다."
         list_str = "\n".join([f"- {s['name']}: {s['url']}" for s in sites])
@@ -601,7 +594,7 @@ def execute(tool_name: str, params: dict, project_path: str = None):
 
     # 사이트 런처
     elif tool_name == "launch_sites":
-        action = params.get("action", "open_all")
+        action = params.get("action", "open_ui")
         name = params.get("name")
         url = params.get("url")
         return launch_sites(action, name, url, project_path or ".")

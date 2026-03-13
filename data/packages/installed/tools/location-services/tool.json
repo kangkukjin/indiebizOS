@@ -5,6 +5,31 @@
   "version": "1.3.0",
   "tools": [
     {
+      "name": "get_weather",
+      "description": "날씨 조회 (Open-Meteo, 무료/키불필요). 도시명(한글/영문) 또는 좌표로 현재 날씨 + 예보 조회.\n\n## 사용 예시\n- city='수원' 또는 city='Seoul'\n- lat=37.26, lon=127.03\n- days=3 (예보 일수, 기본 3, 최대 7)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "description": "도시명 (한글 또는 영문)"
+          },
+          "lat": {
+            "type": "number",
+            "description": "위도"
+          },
+          "lon": {
+            "type": "number",
+            "description": "경도"
+          },
+          "days": {
+            "type": "integer",
+            "description": "예보 일수 (기본 3, 최대 7)"
+          }
+        }
+      }
+    },
+    {
       "name": "get_api_ninjas_data",
       "description": "API Ninjas에서 다양한 정보를 조회합니다.\n\n## 지원 endpoint\n- weather: 날씨 (params: {city: '도시명'})\n- airquality: 대기질/미세먼지 (params: {city: '도시명'})\n- geocoding: 도시명→좌표 (params: {city: '도시명'})\n- reversegeocoding: 좌표→도시명 (params: {lat: 위도, lon: 경도})\n- recipe: 레시피 검색 (params: {query: '음식명'})\n- cocktail: 칵테일 레시피 (params: {name: '칵테일명'} 또는 {ingredients: '재료'})\n\n## 사용 예시\n- 날씨: endpoint='weather', params={city: 'Seoul'}\n- 레시피: endpoint='recipe', params={query: 'pasta'}",
       "input_schema": {

@@ -16,7 +16,7 @@ meta:
     - '[sense:search_radio]{query: "KBS"}  # 라디오 검색'
     - '[engines:newspaper]{keywords: "AI, 경제, 문화"}  # 신문 생성'
     - '[engines:line]{title: "Stock Price"}  # 차트 생성'
-    note: 'execute_ibl의 code 파라미터에 IBL 코드를 전달. 모든 값은 {params} 안에 named parameter로. (target) 문법은 폐지됨.'
+    note: execute_ibl의 code 파라미터에 IBL 코드를 전달. 모든 값은 {params} 안에 named parameter로. (target) 문법은 폐지됨.
   - section: Common mistakes — NEVER do these
     examples:
     - 'WRONG: [self:workflow]  # workflow는 액션이 아님'
@@ -25,7 +25,7 @@ meta:
     - 'WRONG: [sense:price]("AAPL")  # (target) 문법은 폐지됨! {params}를 사용할 것'
     - 'RIGHT: [self:time]  # 직접 액션명 사용'
     - 'RIGHT: [sense:price]{symbol: "AAPL"}  # 모든 값은 named parameter'
-    note: 'action-categories는 참고용 분류. 항상 구체적 액션명을 사용하라. (target) 문법은 에러 발생함.'
+    note: action-categories는 참고용 분류. 항상 구체적 액션명을 사용하라. (target) 문법은 에러 발생함.
   - section: 'params — 모든 값은 {key: val} 형태의 named parameter'
     examples:
     - 'RIGHT: [sense:kr_investor]{symbol: "STK", start_date: "2026-02-01"}'
@@ -59,1674 +59,3230 @@ meta:
   - '모든 값은 {key: val} 형태의 named parameter. (target) 문법은 폐지됨 — 사용 시 에러 발생.'
   - '전문 데이터 액션이 있으면 파일 직접 탐색([self:list]+[self:read])보다 반드시 우선 사용. 예: 건강기록→[self:health_query], 메모리→[self:recall]'
   - 'CRITICAL: 절대로 IBL 코드([node:action]{...})를 텍스트 응답에 포함하지 말 것. IBL은 반드시 execute_ibl 도구의 code 파라미터로만 실행. 사용자에게는 자연어로 응답.'
-  - '작업을 계획만 하고 끝내지 말 것. 계획했으면 반드시 execute_ibl로 실행까지 완료할 것.'
+  - 작업을 계획만 하고 끝내지 말 것. 계획했으면 반드시 execute_ibl로 실행까지 완료할 것.
 nodes:
   sense:
     actions:
       price:
         description: '주가 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F, 지수: ^KS11=코스피 ^KQ11=코스닥)'
+        group: investment
         category: get
         router: handler
         tool: yf_stock_price
         target_key: symbol
+        keywords:
+        - 주가
+        - 시세
+        - 주식
+        - 가격
+        - stock
       stock_info:
         description: 종목 상세 정보 (시가총액, 52주 최고/최저 등)
+        group: investment
         category: get
         router: handler
         tool: yf_stock_info
         target_key: symbol
+        keywords:
+        - 종목
+        - 주식정보
+        - 시가총액
       search_stock:
         description: 종목 심볼 검색 (이름으로 코드 찾기)
+        group: investment
         category: search
         router: handler
         tool: yf_search_stock
         target_key: query
+        keywords:
+        - 종목검색
+        - 주식찾기
+        - 코드
       kr_company:
         description: '한국 기업 정보 (DART: 대표자, 업종, 주소, IR)'
+        group: investment
         category: get
         router: handler
         tool: kr_company_info
         target_key: corp_name
+        keywords:
+        - 기업정보
+        - 회사
+        - DART
+        - 한국기업
       us_company:
         description: '미국 기업 프로필 (FMP: CEO, 시총, 섹터, 설명)'
+        group: investment
         category: get
         router: handler
         tool: us_company_profile
         target_key: symbol
+        keywords:
+        - 미국기업
+        - 미국회사
       kr_financial:
         description: '한국 재무제표 (DART: 재무상태표, 손익계산서, 현금흐름표)'
+        group: investment
         category: get
         router: handler
         tool: kr_financial_statements
         target_key: corp_name
+        keywords:
+        - 재무제표
+        - 재무
+        - 손익
+        - 한국재무
       us_financial:
         description: '미국 재무제표 (FMP: income, balance, cashflow)'
+        group: investment
         category: get
         router: handler
         tool: us_financial_statements
         target_key: symbol
+        keywords:
+        - 미국재무
+        - 재무제표
       kr_disclosure:
         description: '한국 공시 검색 (DART: 정기공시, 대량보유, 거래소공시)'
+        group: investment
         category: get
         router: handler
         tool: kr_disclosures
         target_key: corp_name
+        keywords:
+        - 공시
+        - DART
+        - 한국공시
       us_filing:
         description: 미국 SEC 공시 검색 (10-K, 10-Q, 8-K, DEF 14A)
+        group: investment
         category: get
         router: handler
         tool: us_sec_filings
         target_key: symbol
+        keywords:
+        - SEC
+        - 미국공시
       news:
         description: 종목 관련 뉴스 (Finnhub)
+        group: investment
         category: get
         router: handler
         tool: company_news
         target_key: symbol
+        keywords:
+        - 뉴스
+        - 종목뉴스
+        - 기업뉴스
+        - Finnhub
       stock_news:
         description: 종목 뉴스 (Yahoo Finance)
+        group: investment
         category: get
         router: handler
         tool: yf_stock_news
         target_key: symbol
+        keywords:
+        - 뉴스
+        - 종목뉴스
+        - Yahoo
+        - 야후
       earnings:
         description: '실적 발표 일정 (Finnhub: EPS/매출 예상 vs 실적)'
+        group: investment
         category: get
         router: handler
         tool: earnings_calendar
         target_key: symbol
+        keywords:
+        - 실적
+        - 어닝
+        - EPS
+        - 매출
       crypto:
         description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
+        group: investment
         category: get
         router: handler
         tool: crypto_price
         target_key: coin_id
+        keywords:
+        - 암호화폐
+        - 비트코인
+        - 코인
+        - 이더리움
       kr_price:
         description: 한국 주가 (KRX/FinanceDataReader, 기간 지정)
+        group: investment
         category: get
         router: handler
         tool: kr_stock_price
         target_key: symbol
+        keywords:
+        - 한국주가
+        - 코스피
+        - 코스닥
       us_price:
         description: 미국 주가 (FMP, 기간 지정)
+        group: investment
         category: get
         router: handler
         tool: us_stock_price
         target_key: symbol
+        keywords:
+        - 미국주가
+        - 나스닥
+        - S&P
+        - 다우
       kr_investor:
         description: 한국 시장 투자자별 매매동향 (외국인/기관/개인 순매수, 코스피/코스닥)
+        group: investment
         router: handler
         tool: kr_market_investor_trading
         target_key: market
+        keywords:
+        - 투자자
+        - 외국인
+        - 기관
+        - 개인
+        - 매매동향
       kr_stock_investor:
         description: 개별종목 투자자별 매매동향 (외국인/기관/개인 순매수)
+        group: investment
         router: handler
         tool: kr_stock_investor_trading
         target_key: symbol
+        keywords:
+        - 종목투자자
+        - 순매수
       performance:
         description: 공연 검색 (KOPIS - 연극, 뮤지컬, 음악회 등)
+        group: culture
         category: search
         router: handler
         tool: kopis_quick_search
         target_key: keyword
+        keywords:
+        - 공연
+        - 연극
+        - 뮤지컬
+        - 음악회
+        - 콘서트
       venue:
         description: 공연장/시설 검색
+        group: culture
         category: get
         router: handler
         tool: kopis_search_facilities
         target_key: keyword
+        keywords:
+        - 공연장
+        - 극장
+        - 시설
       book:
         description: 도서 검색 (도서관정보나루)
+        group: culture
         category: search
         router: handler
         tool: library_quick_search
         target_key: keyword
+        keywords:
+        - 도서
+        - 책
+        - 서적
+        - 도서관
       book_detail:
         description: 도서 상세 정보 (대출 통계 포함)
+        group: culture
         category: get
         router: handler
         tool: library_get_book_detail
         target_key: isbn13
+        keywords:
+        - 도서상세
+        - 책정보
       exhibit:
         description: 전시/문화행사 검색 (KCISA - 박물관, 미술관)
+        group: culture
         category: search
         router: handler
         tool: kcisa_quick_search
         target_key: keyword
+        keywords:
+        - 전시
+        - 박물관
+        - 미술관
+        - 문화행사
       genres:
         description: 공연 장르 코드 목록 조회
+        group: culture
         category: get
         router: handler
         tool: kopis_get_genres
+        keywords:
+        - 장르
+        - 공연장르
+        - 코드
       performance_regions:
         description: 공연 지역 코드 목록 조회
+        group: culture
         category: list
         router: handler
         tool: kopis_get_regions
+        keywords:
+        - 지역
+        - 공연지역
       book_by_isbn:
         description: ISBN으로 도서 조회 (10자리/13자리)
+        group: culture
         router: handler
         tool: library_get_book_by_isbn
         target_key: isbn
+        keywords:
+        - ISBN
+        - 도서조회
+        - 책
       kdc:
         description: KDC(한국십진분류) 주제분류코드 목록
+        group: culture
         category: get
         router: handler
         tool: library_get_kdc
+        keywords:
+        - 분류
+        - 주제분류
+        - KDC
       recommended_books:
         description: 특정 도서 기반 추천도서 (마니아/다독자 추천)
+        group: culture
         category: get
         router: handler
         tool: library_get_recommended_books
         target_key: isbn13
+        keywords:
+        - 추천도서
+        - 추천책
       library_regions:
         description: 도서관 정보나루 지역코드 목록
+        group: culture
         category: list
         router: handler
         tool: library_get_regions
+        keywords:
+        - 도서관
+        - 지역코드
       search_openalex:
         description: OpenAlex 학술 논문 검색 (인용수, OA 필터)
+        group: research
         category: search
         router: handler
         tool: search_openalex
         target_key: query
+        keywords:
+        - 논문
+        - 학술
+        - 연구
       search_arxiv:
         description: arXiv 프리프린트 논문 검색
+        group: research
         category: search
         router: handler
         tool: search_arxiv
         target_key: query
+        keywords:
+        - 논문
+        - arXiv
+        - 프리프린트
       download_arxiv:
         description: arXiv 논문 PDF 다운로드
+        group: research
         router: handler
         tool: download_arxiv_pdf
         target_key: arxiv_id
+        keywords:
+        - 논문다운
+        - PDF
+        - arXiv
       search_semantic:
         description: Semantic Scholar 논문 검색 (AI 분야 특화)
+        group: research
         router: handler
         tool: search_semantic_scholar
         target_key: query
+        keywords:
+        - 논문
+        - AI논문
       search_scholar:
         description: Google Scholar 학술 검색
+        group: research
         category: search
         router: handler
         tool: search_google_scholar
         target_key: query
+        keywords:
+        - 논문
+        - 구글학술
       search_pubmed:
         description: PubMed 생의학 논문 검색
+        group: research
         category: search
         router: handler
         tool: search_pubmed
         target_key: query
+        keywords:
+        - 의학논문
+        - 생의학
+        - PubMed
       download_pubmed:
         description: PubMed Central 논문 PDF 다운로드
+        group: research
         router: handler
         tool: download_pubmed_pdf
         target_key: pmcid
+        keywords:
+        - 논문다운
+        - PDF
+        - PubMed
       pew_research:
         description: Pew Research 여론조사/리서치 데이터
+        group: research
         router: handler
         tool: fetch_pew_research
+        keywords:
+        - 여론조사
+        - 리서치
+        - 설문
       search_guardian:
         description: Guardian 뉴스 아카이브 검색
+        group: research
         category: search
         router: handler
         tool: search_guardian
         target_key: query
+        keywords:
+        - 뉴스
+        - 영국뉴스
+        - 가디언
+        - Guardian
+        - 해외뉴스
       world_bank:
         description: 세계은행 경제/사회 지표 데이터
+        group: research
         router: handler
         tool: fetch_world_bank_data
         target_key: indicator
+        keywords:
+        - 세계은행
+        - 경제지표
+        - 사회지표
       search_books:
         description: Google Books 도서 검색
+        group: research
         category: search
         router: handler
         tool: search_books
         target_key: query
+        keywords:
+        - 도서검색
+        - 구글북스
       search_shopping:
         description: 상품 검색 및 가격 비교 (네이버+다나와+중고나라+번개장터)
+        group: shopping
         category: search
         router: handler
         tool: search_shopping
         target_key: query
+        keywords:
+        - 쇼핑
+        - 가격비교
+        - 상품
+        - 최저가
       weather:
         description: 날씨 조회 (API Ninjas)
+        group: location
         category: get
         router: handler
         tool: get_api_ninjas_data
         target_key: endpoint
+        keywords:
+        - 날씨
+        - 기온
+        - 습도
+        - 강수
       restaurant:
         description: 맛집/음식점 검색 (카카오+네이버)
+        group: location
         category: get
         router: handler
         tool: search_restaurants
         target_key: query
+        keywords:
+        - 맛집
+        - 음식점
+        - 식당
+        - 레스토랑
       navigate_route:
         description: 자동차 길찾기 (카카오 내비)
+        group: location
         router: handler
         tool: kakao_navigation
         target_key: destination
+        keywords:
+        - 길찾기
+        - 내비
+        - 경로
+        - 네비게이션
       map:
         description: 지도에 위치 표시
+        group: location
         category: get
         router: handler
         tool: show_location_map
         target_key: query
+        keywords:
+        - 지도
+        - 위치
+        - 좌표
       reverse_geocode:
         description: GPS 좌표를 주소로 변환
+        group: location
         router: handler
         tool: reverse_geocode
+        keywords:
+        - 좌표
+        - 주소변환
+        - GPS
       travel:
         description: 여행 검색 - 항공, 호텔, 관광지 (Amadeus)
+        group: location
         router: handler
         tool: amadeus_travel_search
         target_key: endpoint
+        keywords:
+        - 여행
+        - 항공
+        - 호텔
+        - 관광
       search_local:
         description: 지역 가게/상점 정보 검색 (카페/지도)
+        group: location
         category: search
         router: handler
         tool: local_search
         target_key: query
+        keywords:
+        - 가게
+        - 상점
+        - 카페
+        - 지역검색
       nearby:
         description: 좌표 근처 CCTV 찾기 (lat/lng 필수, 모르면 cctv_search 사용)
+        group: cctv
         router: handler
         tool: get_nearby_cctv
+        keywords:
+        - CCTV
+        - 근처
+        - 주변
       cctv_open:
         description: CCTV 실시간 영상을 브라우저에서 열기
+        group: cctv
         router: handler
         tool: open_cctv
         target_key: name
+        keywords:
+        - CCTV
+        - 실시간
+        - 영상보기
       webcam:
         description: 전세계 웹캠 실시간 영상 검색 (Windy) — 해외 장소 모습 보기
+        group: cctv
         category: search
         router: handler
         tool: search_webcam
+        keywords:
+        - 웹캠
+        - 실시간
+        - 해외
       webcam_nearby:
         description: 가까운 웹캠 찾기
+        group: cctv
         router: handler
         tool: get_nearby_webcam
+        keywords:
+        - 웹캠
+        - 근처
+        - 주변
       cctv_capture:
         description: CCTV/웹캠 현재 화면 캡처 (이미지 저장, AI 분석용)
+        group: cctv
         router: handler
         tool: capture_cctv
         target_key: url
+        keywords:
+        - CCTV
+        - 캡처
+        - 스크린샷
       cctv_sources:
         description: 사용 가능한 CCTV/웹캠 소스 및 상태 확인
+        group: cctv
         category: list
         router: handler
         tool: list_cctv_sources
+        keywords:
+        - CCTV
+        - 소스
+        - 상태
       local_query:
         description: 축적된 지역 정보 DB 조회
+        group: location
         router: handler
         tool: local_db_query
         target_key: query
+        keywords:
+        - 지역
+        - 가게
+        - DB조회
       cctv_search:
         description: 실시간 CCTV/웹캠 영상 검색 — 장소의 지금 모습, 교통 상황, 날씨를 보여줘
+        group: cctv
         category: search
         router: handler
         tool: search_cctv
         target_key: query
+        keywords:
+        - CCTV
+        - 교통
+        - 실시간
+        - 검색
       commercial:
         description: 상권 분석 (업종별 점포, 좌표/행정동 기반)
+        group: location
         router: handler
         tool: search_commercial_district
+        keywords:
+        - 상권
+        - 상권분석
+        - 업종
       web_search:
         description: DuckDuckGo 웹 검색
+        group: web
         category: search
         router: handler
         tool: ddgs_search
         target_key: query
+        keywords:
+        - 검색
+        - 웹검색
+        - 인터넷
       crawl:
         description: 웹페이지 크롤링 (텍스트 추출)
+        group: web
         router: handler
         tool: crawl_website
         target_key: url
+        keywords:
+        - 크롤링
+        - 웹페이지
+        - 텍스트추출
       search_news:
         description: 구글 뉴스 검색
+        group: web
         category: search
         router: handler
         tool: google_news_search
         target_key: query
+        keywords:
+        - 뉴스
+        - 뉴스검색
+        - 구글뉴스
+        - 최신뉴스
+        - 기사
       collect:
         description: 사이트 프로필 기반 구조화된 데이터 수집
+        group: web
         router: web_collector
+        keywords:
+        - 수집
+        - 크롤링
+        - 구조화
       apt_trade:
         description: 아파트 매매 실거래가 (국토부)
+        group: real_estate
         router: handler
         tool: apt_trade_price
         target_key: region_code
+        keywords:
+        - 아파트
+        - 매매
+        - 실거래가
+        - 부동산
       apt_rent:
         description: 아파트 전월세 실거래가
+        group: real_estate
         router: handler
         tool: apt_rent_price
         target_key: region_code
+        keywords:
+        - 전세
+        - 월세
+        - 임대
+        - 아파트
       house_trade:
         description: 단독/다세대 주택 매매 실거래가
+        group: real_estate
         router: handler
         tool: house_trade_price
         target_key: region_code
+        keywords:
+        - 주택
+        - 단독
+        - 다세대
+        - 매매
       house_rent:
         description: 단독/다세대 주택 전월세 실거래가
+        group: real_estate
         router: handler
         tool: house_rent_price
         target_key: region_code
+        keywords:
+        - 주택
+        - 전세
+        - 월세
       district_codes:
         description: 법정동 지역코드 조회
+        group: real_estate
         category: list
         router: handler
         tool: get_region_codes
         target_key: city
+        keywords:
+        - 법정동
+        - 지역코드
+        - 행정구역
       video_info:
         description: 동영상 메타데이터 조회 (제목, 조회수, 채널 등)
+        group: youtube
         category: get
         router: handler
         tool: get_youtube_info
         target_key: url
+        keywords:
+        - 유튜브
+        - 동영상
+        - 영상정보
       video_transcript:
         description: 동영상 자막/스크립트 추출
+        group: youtube
         category: get
         router: handler
         tool: get_youtube_transcript
         target_key: url
+        keywords:
+        - 자막
+        - 스크립트
+        - 유튜브
       video_languages:
         description: 사용 가능한 자막 언어 목록 조회
+        group: youtube
         category: get
         router: handler
         tool: list_available_transcripts
         target_key: url
+        keywords:
+        - 자막언어
+        - 유튜브
       search_youtube:
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
+        group: youtube
         category: search
         router: handler
         tool: search_youtube
         target_key: query
+        keywords:
+        - 유튜브검색
+        - 영상검색
       search_radio:
         description: 전세계 인터넷 라디오 검색 (Radio Browser API)
+        group: radio
         category: search
         router: handler
         tool: search_radio
         target_key: name
+        keywords:
+        - 라디오
+        - 인터넷라디오
       korean_radio:
         description: 한국 주요 방송사 라디오 채널 목록 (KBS/MBC/SBS/TBS/CBS/EBS)
+        group: radio
         category: search
         router: handler
         tool: get_korean_radio
         target_key: broadcaster
+        keywords:
+        - 한국라디오
+        - KBS
+        - MBC
+        - SBS
       world_pulse:
-        description: '세계 상태 스냅샷 조회 — 오늘의 경제 지표, 주요 뉴스, 기술 동향, 날씨 (하루 1회 자동 수집)'
+        description: 세계 상태 스냅샷 조회 — 오늘의 경제 지표, 주요 뉴스, 기술 동향, 날씨 (하루 1회 자동 수집)
+        group: world
         category: get
         router: system
         func: world_pulse
+        keywords:
+        - 세계
+        - 오늘뉴스
+        - 경제
+        - 동향
+        - 주요뉴스
+        - 뉴스
       world_trend:
-        description: '최근 N일간 세계 상태 추이 조회 — 경제 지표 변화, 뉴스 흐름 비교'
+        description: 최근 N일간 세계 상태 추이 조회 — 경제 지표 변화, 뉴스 흐름 비교
+        group: world
         category: get
         router: system
         func: world_trend
         target_key: days
+        keywords:
+        - 추이
+        - 트렌드
+        - 변화
+        - 뉴스흐름
       world_refresh:
-        description: '세계 상태 강제 재수집 (오늘 이미 수집된 데이터를 덮어씁니다)'
+        description: 세계 상태 강제 재수집 (오늘 이미 수집된 데이터를 덮어씁니다)
+        group: world
         category: get
         router: system
         func: world_refresh
+        keywords:
+        - 세계
+        - 재수집
+        - 갱신
     description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 세계 상태 등 외부 API 및 데이터 소스 접근'
+    tags:
+    - 검색
+    - 조회
+    - 정보
+    - 외부
+    - 실시간
+    - 주가
+    - 날씨
+    - 뉴스
+    - 논문
+    - 부동산
+    - 유튜브
+    - CCTV
+    - 쇼핑
+    - 맛집
+    - 여행
+    - 라디오
+    - 세계
   self:
     actions:
       search_photos:
         description: 사진/동영상 검색 (파일명, 카메라 모델 등)
+        group: photo
         category: search
         router: driver
         driver: sqlite
         driver_node: photo
+        keywords:
+        - 사진
+        - 동영상
+        - 사진검색
+        - 미디어
       photo_detail:
         description: 미디어 파일 상세 정보 조회
+        group: photo
         category: get
         router: driver
         driver: sqlite
         driver_node: photo
+        keywords:
+        - 사진
+        - 상세
+        - 메타데이터
       timeline:
         description: 월별 사진/동영상 촬영 통계
+        group: photo
         category: get
         router: handler
         tool: get_timeline
         target_key: path
+        keywords:
+        - 사진
+        - 타임라인
+        - 월별
+        - 통계
       photo_stats:
         description: 전체 사진/동영상 통계
+        group: photo
         category: get
         router: handler
         tool: get_stats
         target_key: path
+        keywords:
+        - 사진
+        - 통계
+        - 전체
       list_scans:
         description: 스캔된 폴더 목록 조회
+        group: photo
         category: list
         router: handler
         tool: list_scans
+        keywords:
+        - 사진
+        - 스캔
+        - 폴더
       photo_scan:
         description: 폴더의 사진/동영상 메타데이터 수집 (인덱싱)
+        group: photo
         router: handler
         tool: scan_photos
         target_key: path
+        keywords:
+        - 사진
+        - 인덱싱
+        - 스캔
+        - 메타데이터
       gallery:
         description: 스캔된 사진/동영상 갤러리 조회 (페이지네이션, 필터)
+        group: photo
         category: get
         router: handler
         tool: get_gallery
         target_key: path
+        keywords:
+        - 갤러리
+        - 사진
+        - 동영상
+        - 앨범
       duplicates:
         description: 중복 사진/동영상 탐지 (MD5 기반)
+        group: photo
         category: search
         router: handler
         tool: find_duplicates
         target_key: path
+        keywords:
+        - 중복
+        - 사진
+        - 정리
       photo_manager:
         description: Photo Manager GUI 실행
+        group: photo
         router: handler
         tool: open_photo_manager
         target_key: path
+        keywords:
+        - 사진관리
+        - GUI
       rag_search:
         description: 블로그 RAG 검색 (의미 기반 벡터 검색)
+        group: blog
         category: search
         router: handler
         tool: search_blog_rag
         target_key: query
-        keywords: [blog search, 블로그 검색, semantic, vector, 의미검색, AI검색]
+        keywords:
+        - blog search
+        - 블로그 검색
+        - semantic
+        - vector
+        - 의미검색
+        - AI검색
       semantic_search:
         description: 블로그 시맨틱 검색
+        group: blog
         category: search
         router: handler
         tool: search_blog_semantic
         target_key: query
-        keywords: [blog search, 블로그 검색, 의미검색, concept search]
+        keywords:
+        - blog search
+        - 블로그 검색
+        - 의미검색
+        - concept search
       rag_content:
         description: RAG 기반 블로그 글 전문 조회
+        group: blog
         category: get
         router: handler
         tool: get_post_content_rag
         target_key: post_id
+        keywords:
+        - 블로그
+        - 글
+        - 전문
       posts:
         description: 블로그 글 목록 (handler)
+        group: blog
         category: list
         router: handler
         tool: blog_get_posts
         target_key: category
+        keywords:
+        - 블로그
+        - 글목록
+        - 포스트
       post_detail:
         description: 블로그 글 상세 (handler)
+        group: blog
         category: get
         router: handler
         tool: blog_get_post
         target_key: post_id
+        keywords:
+        - 블로그
+        - 글상세
       blog_stats:
         description: 블로그 통계 (handler)
+        group: blog
         category: get
         router: handler
         tool: blog_stats
+        keywords:
+        - 블로그
+        - 통계
       check_new:
         description: 새 블로그 글 확인
+        group: blog
         category: list
         router: handler
         tool: blog_check_new_posts
+        keywords:
+        - 블로그
+        - 새글
+        - 업데이트
       insight:
         description: 블로그 인사이트 분석
+        group: blog
         category: search
         router: handler
         tool: kinsight
         target_key: query
+        keywords:
+        - 블로그
+        - 인사이트
+        - 분석
       insight2:
         description: 블로그 인사이트 분석 v2
+        group: blog
         category: search
         router: handler
         tool: kinsight2
         target_key: query
+        keywords:
+        - 블로그
+        - 인사이트
+        - 분석
       rebuild_index:
         description: 블로그 검색 인덱스 재구축
+        group: blog
         router: handler
         tool: rebuild_search_index
+        keywords:
+        - 블로그
+        - 인덱스
+        - 재구축
       search_memory:
         description: 대화 내용 검색
+        group: memory
         category: search
         router: driver
         driver: sqlite
         driver_node: memory
+        keywords:
+        - 기억
+        - 대화내용
+        - 이전대화
       recent:
         description: 최근 대화 조회
+        group: memory
         category: get
         router: driver
         driver: sqlite
         driver_node: memory
+        keywords:
+        - 최근대화
+        - 대화이력
+        - 이전
       agents:
         description: 등록된 에이전트 목록
+        group: memory
         category: list
         router: driver
         driver: sqlite
         driver_node: memory
+        keywords:
+        - 에이전트
+        - 목록
+        - 팀
       save_memory:
         description: 심층 메모리에 항목 저장
+        group: memory
         category: create
         router: handler
         tool: memory_save
         target_key: content
+        keywords:
+        - 메모리
+        - 저장
+        - 기억
       memory_search:
         description: 심층 메모리에서 키워드 검색
+        group: memory
         category: search
         router: handler
         tool: memory_search
         target_key: query
+        keywords:
+        - 메모리
+        - 검색
+        - 기억
       memory_read:
         description: 메모리 항목 전체 내용 조회
+        group: memory
         category: get
         router: handler
         tool: memory_read
         target_key: memory_id
+        keywords:
+        - 메모리
+        - 읽기
+        - 조회
       memory_delete:
         description: 메모리 항목 삭제
+        group: memory
         category: delete
         router: handler
         tool: memory_delete
         target_key: memory_id
+        keywords:
+        - 메모리
+        - 삭제
       health_save:
         description: 건강 정보 저장 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 투약, 의료문서를 DB에 기록
+        group: health
         category: write
         router: handler
         tool: save_health_info
         target_key: info_type
+        keywords:
+        - 건강
+        - 혈압
+        - 혈당
+        - 체중
+        - 투약
       health_query:
         description: 건강 기록 조회 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 약물 이력, 건강 요약, 키워드 검색
+        group: health
         category: get
         router: handler
         tool: get_health_context
         target_key: query_type
+        keywords:
+        - 건강기록
+        - 건강조회
+        - 혈액검사
       local_save:
         description: 가게 정보/커뮤니티 언급 DB 저장
+        group: system
         category: write
         router: handler
         tool: local_db_save
+        keywords:
+        - 가게
+        - 지역
+        - 커뮤니티
+        - 저장
       discover:
         description: 키워드로 적합한 노드/액션 자동 탐색
+        group: system
         target_key: query
         router: system
         func: discover
+        keywords:
+        - 탐색
+        - 찾기
+        - 도구검색
+        - 액션
       time:
         description: 현재 시간 조회
+        group: system
         category: get
         router: handler
         tool: get_current_time
+        keywords:
+        - 시간
+        - 현재시간
+        - 날짜
       list_api:
         description: 등록된 API 도구 목록 조회
+        group: system
         category: list
         router: api_engine
+        keywords:
+        - API
+        - 도구목록
       call:
         description: API 레지스트리에 등록된 도구 실행
+        group: system
         router: api_engine
+        keywords:
+        - API
+        - 실행
+        - 호출
       manage_events:
         description: 이벤트/스케줄 통합 관리 (생성/조회/삭제)
+        group: schedule
         category: event
         router: system
         func: manage_events
+        keywords:
+        - 일정
+        - 스케줄관리
+        - 예약관리
       list_switches:
         description: 등록된 스위치 목록 조회
+        group: schedule
         category: list
         router: system
         func: list_switches
+        keywords:
+        - 스위치
+        - 목록
       ask_user:
         description: 사용자에게 질문
+        group: system
         category: notify
         router: system
         func: ask_user_question
+        keywords:
+        - 질문
+        - 사용자
+        - 확인
       approve:
         description: 위험한 작업 전 사용자 승인 요청
+        group: system
         category: notify
         router: system
         func: request_user_approval
+        keywords:
+        - 승인
+        - 확인
+        - 허가
       todo:
         description: 할일 목록 생성/관리
+        group: system
         category: notify
         router: system
         func: todo_write
+        keywords:
+        - 할일
+        - 투두
+        - TODO
+        - 작업관리
       notify_user:
         description: 사용자에게 알림 전송
+        group: system
         category: notify
         target_key: message
         router: system
         func: send_notification
+        keywords:
+        - 알림
+        - 통지
+        - 메시지
       run:
         description: 저장된 워크플로우 실행
+        group: workflow
         category: run
         target_key: workflow_id
         router: workflow_engine
+        keywords:
+        - 워크플로우
+        - 실행
       list_workflows:
         description: 저장된 워크플로우 목록 조회
+        group: workflow
         category: list
         router: workflow_engine
+        keywords:
+        - 워크플로우
+        - 목록
       get_workflow:
         description: 워크플로우 상세 조회
+        group: workflow
         category: get
         target_key: workflow_id
         router: workflow_engine
+        keywords:
+        - 워크플로우
+        - 상세
       save_workflow:
         description: 워크플로우 저장
+        group: workflow
         category: get
         target_key: workflow_id
         router: workflow_engine
+        keywords:
+        - 워크플로우
+        - 저장
       delete_workflow:
         description: 워크플로우 삭제
+        group: workflow
         category: get
         target_key: workflow_id
         router: workflow_engine
+        keywords:
+        - 워크플로우
+        - 삭제
       run_pipeline:
         description: 파이프라인 직접 실행 (steps를 params로 전달)
+        group: workflow
         category: run
         router: workflow_engine
+        keywords:
+        - 파이프라인
+        - 실행
+        - 단계
       list_events:
         description: 등록된 트리거 목록 조회
+        group: event
         category: list
         router: event_engine
+        keywords:
+        - 트리거
+        - 이벤트
+        - 목록
       get_event:
         description: 트리거 상세 정보
+        group: event
         category: get
         target_key: trigger_id
         router: event_engine
+        keywords:
+        - 트리거
+        - 이벤트
+        - 상세
       create:
         description: 새 트리거 등록 (schedule/channel/webhook/file)
+        group: event
         category: event
         target_key: trigger_id
         router: event_engine
+        keywords:
+        - 트리거
+        - 이벤트
+        - 등록
+        - 생성
       update:
         description: 트리거 수정
+        group: event
         category: event
         target_key: trigger_id
         router: event_engine
+        keywords:
+        - 트리거
+        - 이벤트
+        - 수정
       delete_event:
         description: 트리거 삭제
+        group: event
         category: event
         target_key: trigger_id
         router: event_engine
+        keywords:
+        - 트리거
+        - 이벤트
+        - 삭제
       enable:
         description: 트리거 활성화
+        group: event
         category: control
         target_key: trigger_id
         router: event_engine
+        keywords:
+        - 트리거
+        - 활성화
+        - 켜기
       disable:
         description: 트리거 비활성화
+        group: event
         category: control
         target_key: trigger_id
         router: event_engine
+        keywords:
+        - 트리거
+        - 비활성화
+        - 끄기
       event_status:
         description: 이벤트 시스템 전체 상태 (폴러, 스케줄러, 자동응답)
+        group: event
         category: get
         router: event_engine
+        keywords:
+        - 이벤트
+        - 상태
+        - 폴러
       event_history:
         description: 트리거 실행 이력 조회
+        group: event
         category: get
         target_key: trigger_id
         router: event_engine
+        keywords:
+        - 이벤트
+        - 실행이력
+        - 기록
       sites:
         description: 사이트 수집 가이드 관리 (등록/조회/삭제)
+        group: collect
         category: get
         target_key: site_id
         router: handler
         tool: wc_sites
-        target_key: site_id
+        keywords:
+        - 수집
+        - 사이트
+        - 가이드
       wc_save:
         description: 수집 데이터 DB 저장
+        group: collect
         category: event
         router: handler
         tool: wc_save
         target_key: site_id
+        keywords:
+        - 수집
+        - 저장
+        - DB
       query:
         description: 수집 데이터 DB 조회
+        group: collect
         category: event
         router: handler
         tool: wc_query
         target_key: query
+        keywords:
+        - 수집
+        - 조회
+        - DB검색
       gui:
         description: UI에 결과를 HTML/카드/테이블 형태로 표시
+        group: output
         category: io
         target_key: content
         router: system
         func: output_gui
+        keywords:
+        - UI
+        - 출력
+        - HTML
+        - 카드
       file:
         description: 결과를 파일로 저장 (텍스트, JSON, CSV, HTML 등)
+        group: output
         category: io
         target_key: path
         router: system
         func: output_file
-      # open → limbs:os_open 으로 이동됨
+        keywords:
+        - 파일저장
+        - 출력
+        - CSV
+        - JSON
       clipboard:
         description: 결과를 클립보드에 복사
+        group: output
         category: io
         target_key: content
         router: system
         func: output_clipboard
+        keywords:
+        - 클립보드
+        - 복사
       download:
         description: URL에서 파일을 다운로드하여 로컬에 저장
+        group: output
         category: io
         target_key: url
         router: system
         func: output_download
-      # browse 삭제 — limbs:navigate와 완전 중복 (같은 browser_navigate 핸들러)
+        keywords:
+        - 다운로드
+        - 파일받기
       launch:
         description: 즐겨찾기 사이트 열기/관리
+        group: output
         category: io
         router: handler
         tool: launch_sites
         target_key: action
-        keywords: [launcher, 런처, 즐겨찾기, favorite, bookmark, 좋아하는 사이트, 자주가는]
+        keywords:
+        - launcher
+        - 런처
+        - 즐겨찾기
+        - favorite
+        - bookmark
+        - 좋아하는 사이트
+        - 자주가는
       read:
         description: 파일 읽기
+        group: file
         category: fs
         router: handler
         tool: read_file
         target_key: path
+        keywords:
+        - 파일읽기
+        - 파일
+        - 텍스트
       write:
         description: 파일 쓰기
+        group: file
         category: fs
         router: handler
         tool: write_file
         target_key: path
+        keywords:
+        - 파일쓰기
+        - 파일
+        - 저장
       list:
         description: 디렉토리 내용 조회
+        group: file
         category: fs
         router: handler
         tool: list_directory
         target_key: path
+        keywords:
+        - 디렉토리
+        - 폴더
+        - 파일목록
       find:
         description: 파일 검색 (glob 패턴)
+        group: file
         category: fs
         router: handler
         tool: glob_files
         target_key: pattern
+        keywords:
+        - 파일찾기
+        - glob
+        - 패턴
       grep:
         description: 파일 내용 검색
+        group: file
         category: fs
         router: handler
         tool: grep_files
         target_key: pattern
+        keywords:
+        - 파일검색
+        - 내용검색
+        - 텍스트찾기
       edit:
         description: 파일 부분 편집 (old_string → new_string 교체)
+        group: file
         category: fs
         router: handler
         tool: edit_file
         target_key: path
+        keywords:
+        - 파일편집
+        - 수정
+        - 교체
       copy:
         description: 파일/폴더 복사
+        group: file
         category: fs
         router: handler
         tool: copy_path
         target_key: source
+        keywords:
+        - 복사
+        - 파일복사
+        - 폴더복사
       move:
         description: 파일/폴더 이동 또는 이름 변경
+        group: file
         category: fs
         router: handler
         tool: move_path
         target_key: source
+        keywords:
+        - 이동
+        - 이름변경
+        - 파일이동
       delete:
         description: 파일/폴더 삭제
+        group: file
         category: fs
         router: handler
         tool: delete_path
         target_key: path
+        keywords:
+        - 삭제
+        - 파일삭제
+        - 폴더삭제
       read_pdf:
         description: PDF 파일 읽기 (텍스트 추출)
+        group: file
         category: fs
         router: handler
         tool: read_pdf
         target_key: path
+        keywords:
+        - PDF
+        - 읽기
+        - 텍스트추출
       storage_scan:
         description: 디스크/볼륨 스캔 (인덱싱)
+        group: storage
         category: storage
         router: handler
         tool: scan_storage
         target_key: path
+        keywords:
+        - 디스크
+        - 스캔
+        - 인덱싱
       fs_query:
         description: 파일 검색 (이름, 확장자, 크기)
+        group: storage
         category: storage
         router: handler
         tool: query_storage
         target_key: search_term
+        keywords:
+        - 파일검색
+        - 확장자
+        - 크기
       summary:
         description: 저장소 사용량 요약
+        group: storage
         category: storage
         router: handler
         tool: get_storage_summary
+        keywords:
+        - 저장소
+        - 용량
+        - 사용량
       volumes:
         description: 마운트된 볼륨 목록
+        group: storage
         category: storage
         router: handler
         tool: list_volumes
+        keywords:
+        - 볼륨
+        - 디스크
+        - 마운트
       annotate:
         description: 폴더에 메모/주석 추가
+        group: storage
         category: storage
         router: handler
         tool: annotate_folder
         target_key: folder_path
+        keywords:
+        - 주석
+        - 메모
+        - 폴더
       annotations:
         description: 폴더 주석 조회
+        group: storage
         category: storage
         router: handler
         tool: get_folder_annotations
+        keywords:
+        - 주석조회
+        - 메모
       explorer:
         description: 파일 탐색기에서 열기 (Finder)
+        group: storage
         category: storage
         router: handler
         tool: open_file_explorer
         target_key: path
+        keywords:
+        - Finder
+        - 탐색기
+        - 열기
     description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
+    tags:
+    - 파일
+    - 메모리
+    - 기억
+    - 건강
+    - 사진
+    - 블로그
+    - 스케줄
+    - 워크플로우
+    - 이벤트
+    - 할일
+    - 알림
+    - 저장소
+    - 수집
   limbs:
     actions:
       navigate:
         description: URL 열기 (Playwright 브라우저)
+        group: browser
         router: handler
         tool: browser_navigate
         target_key: url
+        keywords:
+        - 브라우저
+        - 웹페이지
+        - URL
       browser_snapshot:
         description: 접근성 스냅샷 (요소 ref 생성)
+        group: browser
         router: handler
         tool: browser_snapshot
-        keywords: [accessibility, tree, dom, 요소목록, page structure, element list]
+        keywords:
+        - accessibility
+        - tree
+        - dom
+        - 요소목록
+        - page structure
+        - element list
       click:
         description: 요소 클릭 (ref 기반)
+        group: browser
         category: click
         router: handler
         tool: browser_click
         target_key: ref
+        keywords:
+        - 클릭
+        - 브라우저
+        - 요소
       type:
         description: 입력 필드에 텍스트 입력
+        group: browser
         category: type
         router: handler
         tool: browser_type
         target_key: ref
+        keywords:
+        - 입력
+        - 타이핑
+        - 텍스트
       content:
         description: 페이지 텍스트 콘텐츠 추출
+        group: browser
         category: get
         router: handler
         tool: browser_get_content
+        keywords:
+        - 텍스트추출
+        - 페이지내용
       screenshot:
         description: 페이지 스크린샷 (PNG 저장)
+        group: browser
         category: screenshot
         router: handler
         tool: browser_screenshot
+        keywords:
+        - 스크린샷
+        - 캡처
+        - 브라우저
       scroll:
         description: 페이지 스크롤 (up/down)
+        group: browser
         category: control
         router: handler
         tool: browser_scroll
+        keywords:
+        - 스크롤
+        - 페이지
       evaluate:
         description: JavaScript 실행
+        group: browser
         router: handler
         tool: browser_evaluate
         target_key: expression
+        keywords:
+        - 자바스크립트
+        - JS
+        - 실행
       wait:
         description: 조건 대기 (selector/text/url)
+        group: browser
         router: handler
         tool: browser_wait_for
+        keywords:
+        - 대기
+        - 조건
       press_key:
         description: 키보드 키 입력 (Enter, Tab 등)
+        group: browser
         router: handler
         tool: browser_press_key
         target_key: key
+        keywords:
+        - 키보드
+        - 키입력
+        - Enter
       tab_list:
         description: 열린 탭 목록 조회
+        group: browser
         category: list
         router: handler
         tool: browser_tab_list
+        keywords:
+        - 탭
+        - 목록
       tab_new:
         description: 새 탭 열기
+        group: browser
         router: handler
         tool: browser_tab_new
+        keywords:
+        - 새탭
+        - 탭열기
       tab_switch:
         description: 탭 전환
+        group: browser
         router: handler
         tool: browser_tab_switch
         target_key: tab_id
+        keywords:
+        - 탭전환
+        - 탭이동
       close:
         description: 브라우저 세션 종료
+        group: browser
         router: handler
         tool: browser_close
+        keywords:
+        - 브라우저닫기
+        - 종료
       pdf:
         description: 페이지를 PDF로 저장
+        group: browser
         router: handler
         tool: browser_save_pdf
+        keywords:
+        - PDF
+        - 저장
+        - 브라우저
       back:
         description: 이전 페이지로 이동
+        group: browser
         router: handler
         tool: browser_navigate_back
+        keywords:
+        - 뒤로
+        - 이전페이지
       forward:
         description: 다음 페이지로 이동
+        group: browser
         router: handler
         tool: browser_navigate_forward
+        keywords:
+        - 앞으로
+        - 다음페이지
       hover:
         description: 요소에 마우스 호버
+        group: browser
         router: handler
         tool: browser_hover
         target_key: ref
+        keywords:
+        - 호버
+        - 마우스오버
       drag:
         description: 요소 드래그 앤 드롭
+        group: browser
         router: handler
         tool: browser_drag
+        keywords:
+        - 드래그
+        - 끌기
       select:
         description: 셀렉트 옵션 선택
+        group: browser
         router: handler
         tool: browser_select_option
         target_key: ref
+        keywords:
+        - 선택
+        - 셀렉트
+        - 옵션
       console:
         description: 브라우저 콘솔 로그 확인
+        group: browser
         router: handler
         tool: browser_console_logs
-        keywords: [logs, debug, 디버그, javascript errors, 에러로그, dev tools]
+        keywords:
+        - logs
+        - debug
+        - 디버그
+        - javascript errors
+        - 에러로그
+        - dev tools
       cookies_save:
         description: 쿠키 저장
+        group: browser
         router: handler
         tool: browser_cookies_save
+        keywords:
+        - 쿠키
+        - 저장
       cookies_load:
         description: 쿠키 로드
+        group: browser
         router: handler
         tool: browser_cookies_load
+        keywords:
+        - 쿠키
+        - 로드
       iframe_list:
         description: iframe 목록 조회
+        group: browser
         router: handler
         tool: browser_iframe_list
+        keywords:
+        - iframe
+        - 목록
       iframe_switch:
         description: iframe 전환
+        group: browser
         router: handler
         tool: browser_iframe_switch
         target_key: index
+        keywords:
+        - iframe
+        - 전환
       iframe_reset:
         description: iframe에서 메인 프레임으로 복귀
+        group: browser
         router: handler
         tool: browser_iframe_reset
+        keywords:
+        - iframe
+        - 복귀
       tab_close:
         description: 현재 탭 닫기
+        group: browser
         router: handler
         tool: browser_tab_close
+        keywords:
+        - 탭닫기
       devices:
         description: 연결된 기기 목록 조회
+        group: android
         category: list
         router: handler
         tool: android_list_devices
+        keywords:
+        - 기기
+        - 디바이스
+        - 안드로이드
       android_info:
         description: 기기 상세 정보 (모델, OS, 배터리, 저장소)
+        group: android
         category: get
         router: handler
         tool: android_device_info
         target_key: device_id
+        keywords:
+        - 기기정보
+        - 안드로이드
+        - 모델
       android_status:
         description: 기기 시스템 상태 (배터리, 온도, 저장소)
+        group: android
         category: get
         router: handler
         tool: android_system_status
         target_key: device_id
+        keywords:
+        - 배터리
+        - 온도
+        - 저장소
+        - 상태
       tap:
         description: 화면 좌표 탭 (UI 자동화)
+        group: android
         category: control
         router: handler
         tool: android_ui_tap
+        keywords:
+        - 탭
+        - 터치
+        - 좌표
       type_text:
         description: 텍스트 입력 (UI 자동화)
+        group: android
         category: type
         router: handler
         tool: android_ui_type_text
         target_key: text
+        keywords:
+        - 텍스트입력
+        - 타이핑
+        - 안드로이드
       find_tap:
         description: UI 요소 찾아서 탭 (텍스트 기반)
+        group: android
         category: control
         router: handler
         tool: android_ui_find_and_tap
         target_key: query
+        keywords:
+        - 요소찾기
+        - 터치
+        - UI
       open_app:
         description: 앱 실행
+        group: android
         category: control
         router: handler
         tool: android_ui_open_app
         target_key: package_name
+        keywords:
+        - 앱실행
+        - 앱열기
       swipe:
         description: 스와이프/스크롤 (UI 자동화)
+        group: android
         category: control
         router: handler
         tool: android_ui_swipe
+        keywords:
+        - 스와이프
+        - 스크롤
+        - 안드로이드
       android_key:
         description: 시스템 키 입력 (HOME/BACK/RECENT 등)
+        group: android
         category: control
         router: handler
         tool: android_ui_press_key
         target_key: keycode
+        keywords:
+        - 키입력
+        - HOME
+        - BACK
       app_info:
         description: 앱 상세 정보 (버전, 크기, 권한)
+        group: android
         category: get
         router: handler
         tool: android_app_info
         target_key: package_name
+        keywords:
+        - 앱정보
+        - 버전
+        - 권한
       app_sizes:
         description: 설치된 앱 크기 정보
+        group: android
         category: get
         router: handler
         tool: android_app_sizes
+        keywords:
+        - 앱크기
+        - 용량
       app_usage:
         description: 앱 사용 시간 통계
+        group: android
         category: get
         router: handler
         tool: android_app_usage
+        keywords:
+        - 앱사용시간
+        - 사용량
       capture:
         description: 화면 캡처 (대안)
+        group: android
         router: handler
         tool: android_capture_screen
+        keywords:
+        - 화면캡처
+        - 안드로이드
       permissions:
         description: 앱 권한 확인
+        group: android
         router: handler
         tool: android_check_permissions
         target_key: package_name
+        keywords:
+        - 권한
+        - 앱권한
       grant_permissions:
         description: 앱 권한 부여
+        group: android
         router: handler
         tool: android_grant_permissions
         target_key: package_name
+        keywords:
+        - 권한부여
+        - 허가
       android_screenshot:
         description: 안드로이드 화면 캡처 (AI 분석용)
+        group: android
         category: screenshot
         router: handler
         tool: android_ui_screenshot
+        keywords:
+        - 스크린샷
+        - 안드로이드
+        - 화면
       push_file:
         description: PC→안드로이드 파일 전송
+        group: android
         category: send
         router: handler
         tool: android_push_file
         target_key: local_path
+        keywords:
+        - 파일전송
+        - PC에서폰으로
       pull_file:
         description: 안드로이드→PC 파일 전송
+        group: android
         router: handler
         tool: android_pull_file
         target_key: remote_path
+        keywords:
+        - 파일전송
+        - 폰에서PC로
       find_element:
         description: UI 요소 찾기 (텍스트/속성)
+        group: android
         category: search
         router: handler
         tool: android_ui_find_element
         target_key: query
+        keywords:
+        - UI요소
+        - 찾기
       hierarchy:
         description: UI 트리 구조 덤프
+        group: android
         category: get
         router: handler
         tool: android_ui_hierarchy
+        keywords:
+        - UI트리
+        - 구조
       long_press:
         description: 길게 누르기 (UI 자동화)
+        group: android
         category: control
         router: handler
         tool: android_ui_long_press
+        keywords:
+        - 길게누르기
+        - 롱프레스
       android_screen_info:
         description: 안드로이드 화면 정보 (해상도, 밀도)
+        group: android
         category: get
         router: handler
         tool: android_ui_screen_info
+        keywords:
+        - 해상도
+        - 화면정보
       uninstall:
         description: 앱 삭제
+        group: android
         router: handler
         tool: android_uninstall_app
         target_key: package_name
+        keywords:
+        - 앱삭제
+        - 앱제거
       manager:
         description: Android Manager GUI 실행
+        group: android
         router: handler
         tool: open_android_manager
+        keywords:
+        - 안드로이드매니저
+        - GUI
       list_apps:
         description: 설치된 앱 목록 (간단)
+        group: android
         router: handler
         tool: android_list_apps
+        keywords:
+        - 앱목록
+        - 설치앱
       send_text:
         description: 텍스트 전송 (키보드 입력)
+        group: android
         category: send
         router: handler
         tool: android_send_text
         target_key: text
+        keywords:
+        - 텍스트전송
+        - 입력
       desktop_screenshot:
         description: macOS 화면 캡처 (전체 또는 영역 지정)
+        group: desktop
         category: screenshot
         router: handler
         tool: computer_screenshot
+        keywords:
+        - 스크린샷
+        - macOS
+        - 화면캡처
       desktop_click:
         description: macOS 좌표 클릭 (left/right/middle, 더블클릭 가능)
+        group: desktop
         category: click
         router: handler
         tool: computer_click
+        keywords:
+        - 클릭
+        - macOS
+        - 좌표
       desktop_type:
         description: macOS 텍스트 입력
+        group: desktop
         category: type
         router: handler
         tool: computer_type
         target_key: text
+        keywords:
+        - 텍스트입력
+        - macOS
       desktop_key:
         description: 'macOS 키보드 키 입력 (단축키 포함, 예: cmd+c, enter)'
+        group: desktop
         router: handler
         tool: computer_key
         target_key: key
+        keywords:
+        - 키보드
+        - macOS
+        - 단축키
+        - cmd
       mouse_move:
         description: 마우스 커서 이동
+        group: desktop
         router: handler
         tool: computer_mouse_move
+        keywords:
+        - 마우스
+        - 커서이동
       desktop_drag:
         description: macOS 드래그 (시작점→끝점)
+        group: desktop
         router: handler
         tool: computer_drag
+        keywords:
+        - 드래그
+        - macOS
       desktop_scroll:
         description: macOS 스크롤 (up/down/left/right)
+        group: desktop
         category: control
         router: handler
         tool: computer_scroll
+        keywords:
+        - 스크롤
+        - macOS
       cursor_position:
         description: 현재 커서 위치 확인
+        group: desktop
         router: handler
         tool: computer_cursor_position
+        keywords:
+        - 커서위치
+        - 마우스
       desktop_screen_info:
         description: macOS 화면 해상도 및 스케일 정보
+        group: desktop
         category: get
         router: handler
         tool: computer_screen_info
+        keywords:
+        - 해상도
+        - macOS
+        - 화면
       apps:
         description: 설치된 앱 목록 (크기, 사용량 포함)
+        group: android
         category: list
         router: handler
         tool: android_apps_with_details
+        keywords:
+        - 앱목록
+        - 설치앱
+        - 크기
       notifications:
         description: 알림 목록 읽기
+        group: android
         category: list
         router: handler
         tool: android_notifications
+        keywords:
+        - 알림
+        - 노티
+        - 안드로이드
       all_messages:
         description: 전체 메시지 조회 (SMS+MMS+RCS)
+        group: android
         category: read
         router: handler
         tool: android_get_all_messages
+        keywords:
+        - 메시지
+        - 전체
+        - SMS
+        - MMS
       contacts:
         description: 연락처 검색
+        group: android
         category: search
         router: handler
         tool: android_search_contacts
         target_key: query
+        keywords:
+        - 연락처
+        - 전화번호
+        - 주소록
       get_contacts:
         description: 전체 연락처 목록
+        group: android
         category: list
         router: handler
         tool: android_get_contacts
+        keywords:
+        - 연락처
+        - 전체
+        - 주소록
       mms:
         description: MMS 메시지 조회
+        group: android
         category: read
         router: handler
         tool: android_get_mms
+        keywords:
+        - MMS
+        - 멀티미디어메시지
       delete_call_log:
         description: 통화 이력 삭제
+        group: android
         category: delete
         router: handler
         tool: android_delete_call_log
+        keywords:
+        - 통화이력삭제
       delete_contact:
         description: 연락처 삭제
+        group: android
         category: delete
         router: handler
         tool: android_delete_contact
         target_key: contact_id
+        keywords:
+        - 연락처삭제
       delete_messages:
         description: 메시지 삭제
+        group: android
         category: delete
         router: handler
         tool: android_delete_messages
+        keywords:
+        - 메시지삭제
       delete_mms:
         description: MMS 삭제
+        group: android
         category: delete
         router: handler
         tool: android_delete_mms_by_content
+        keywords:
+        - MMS삭제
       delete_sms:
         description: SMS 삭제
+        group: android
         category: delete
         router: handler
         tool: android_delete_sms
         target_key: message_id
+        keywords:
+        - SMS삭제
       sms_list:
         description: SMS 목록 조회 (inbox/sent/all)
+        group: android
         category: read
         router: handler
         tool: android_get_sms
+        keywords:
+        - 문자목록
+        - 문자함
       sms_send:
         description: SMS 발송
+        group: android
         category: send
         router: handler
         tool: android_send_sms
         target_key: phone_number
+        keywords:
+        - 문자
+        - SMS
+        - 메시지보내기
       sms_search:
         description: SMS/MMS/RCS 검색
+        group: android
         category: search
         router: handler
         tool: android_search_sms
         target_key: query
+        keywords:
+        - 문자검색
+        - SMS검색
+        - 메시지검색
       call:
         description: 전화 걸기
+        group: android
         router: handler
         tool: android_make_call
         target_key: phone_number
+        keywords:
+        - 전화
+        - 통화
       call_log:
         description: 통화 이력 조회
+        group: android
         category: get
         router: handler
         tool: android_get_call_log
+        keywords:
+        - 통화이력
+        - 통화기록
       end_call:
         description: 통화 종료
+        group: android
         router: handler
         tool: android_end_call
+        keywords:
+        - 통화종료
+        - 끊기
       open_url:
         description: URL 또는 로컬 파일을 기본 브라우저로 열기
+        group: general
         category: io
         router: handler
         tool: open_in_browser
         target_key: path
         phase: 5
+        keywords:
+        - URL
+        - 브라우저
+        - 열기
       play:
         description: 유튜브 검색 후 바로 재생 (검색+재생 복합. 검색만 원하면 search_youtube 사용)
+        group: media
         category: play
         router: handler
         tool: play_youtube
         target_key: query
+        keywords:
+        - 재생
+        - 음악
+        - 유튜브재생
       queue_add:
         description: 재생 큐에 곡 추가
+        group: media
         category: control
         router: handler
         tool: add_to_queue
         target_key: query
+        keywords:
+        - 큐추가
+        - 재생목록
       skip:
         description: 현재 곡 건너뛰고 다음 곡 재생
+        group: media
         category: control
         router: handler
         tool: skip_youtube
+        keywords:
+        - 건너뛰기
+        - 다음곡
       queue:
         description: 현재 재생 큐 상태 조회
+        group: media
         category: get
         router: handler
         tool: get_queue
+        keywords:
+        - 재생큐
+        - 재생목록
       stop:
         description: 재생 중지 및 큐 초기화
+        group: media
         category: stop
         router: handler
         tool: stop_youtube
+        keywords:
+        - 정지
+        - 재생중지
       youtube_download:
         description: 동영상 오디오를 MP3로 다운로드 (output_path로 저장 경로/파일명 지정 가능, 기본값 ~/Desktop/output.mp3)
+        group: media
         category: control
         router: handler
         tool: download_youtube_music
         target_key: url
+        keywords:
+        - 유튜브다운
+        - MP3
+        - 다운로드
       radio_play:
         description: 라디오 재생 (mpv)
+        group: media
         category: play
         router: handler
         tool: play_radio
         target_key: station_id
+        keywords:
+        - 라디오재생
+        - 라디오듣기
       radio_stop:
         description: 라디오 재생 중지
+        group: media
         category: stop
         router: handler
         tool: stop_radio
+        keywords:
+        - 라디오중지
       player_status:
         description: 현재 재생 상태 확인
+        group: media
         category: get
         router: handler
         tool: radio_status
+        keywords:
+        - 재생상태
+        - 플레이어
       volume:
         description: 볼륨 조절
+        group: media
         category: control
         router: handler
         tool: set_radio_volume
         target_key: volume
+        keywords:
+        - 볼륨
+        - 소리
+        - 음량
       favorites:
         description: 즐겨찾기 목록 조회
+        group: media
         category: get
         router: handler
         tool: get_radio_favorites
+        keywords:
+        - 즐겨찾기
+        - 좋아요
       save_favorite:
         description: 즐겨찾기에 추가
+        group: media
         router: handler
         tool: save_radio_favorite
+        keywords:
+        - 즐겨찾기추가
       remove_favorite:
         description: 즐겨찾기에서 제거
+        group: media
         router: handler
         tool: remove_radio_favorite
         target_key: name
+        keywords:
+        - 즐겨찾기삭제
       os_open:
         description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
+        group: general
         category: io
         target_key: path
         router: system
         func: output_open
+        keywords:
+        - 열기
+        - Finder
+        - 기본앱
+      cloudflare_api:
+        description: Cloudflare API 호출 (모든 서비스 통합)
+        group: cloudflare
+        category: control
+        router: handler
+        tool: cf_api
+        target_key: endpoint
+        keywords:
+        - 클라우드플레어
+        - CDN
+        - Workers
+        - R2
+        - Pages
     description: '수족: 작업 도구 및 기기 제어 — 브라우저 자동화, 안드로이드, 데스크톱, 미디어 재생, URL/파일 열기'
+    tags:
+    - 브라우저
+    - 안드로이드
+    - 데스크톱
+    - 재생
+    - 음악
+    - 전화
+    - 문자
+    - 클릭
+    - 입력
+    - URL
+    - 클라우드플레어
   others:
     actions:
       delegate:
         description: 같은 프로젝트의 에이전트에게 작업 위임 (비동기)
+        group: delegation
         target_key: agent_id
         router: system
         func: call_agent
+        keywords:
+        - 위임
+        - 에이전트
+        - 작업
       ask:
         description: 에이전트에게 질문 또는 작업 위임 (비동기 — 결과를 기다리지 않음)
+        group: delegation
         target_key: agent_id
         router: system
         func: agent_ask
-        keywords: [delegate, 위임, 에이전트 질문, collaborate, async task]
+        keywords:
+        - delegate
+        - 위임
+        - 에이전트 질문
+        - collaborate
+        - async task
       ask_sync:
         description: 에이전트에게 동기 질문 (응답을 기다려서 반환 — 파이프라인/워크플로우용)
+        group: delegation
         target_key: agent_id
         router: system
         func: agent_ask_sync
+        keywords:
+        - 질문
+        - 동기
+        - 에이전트
       delegate_workflow:
         description: 다른 에이전트에게 IBL 파이프라인 위임
+        group: delegation
         router: system
         func: delegate_workflow
+        keywords:
+        - 위임
+        - 파이프라인
+        - IBL
       delegate_project:
         description: 다른 프로젝트의 에이전트에게 작업 위임
+        group: delegation
         target_key: agent_id
         router: system
         func: call_project_agent
+        keywords:
+        - 프로젝트위임
+        - 다른프로젝트
       agent_info:
         description: 특정 에이전트 노드 상세 정보
+        group: delegation
         target_key: agent_id
         router: system
         func: agent_info
+        keywords:
+        - 에이전트정보
+        - 상세
       list_projects:
         description: 모든 프로젝트와 에이전트 목록 조회
+        group: delegation
         router: system
         func: list_project_agents
+        keywords:
+        - 프로젝트목록
+        - 에이전트목록
       channel_search:
         description: 메시지 검색
+        group: channel
         category: search
         target_key: channel_type
         router: channel_engine
+        keywords:
+        - 메시지검색
+        - 채널
       messages:
         description: 특정 연락처의 메시지 이력
+        group: channel
         category: get
         target_key: neighbor_id
         router: driver
         driver: sqlite
         driver_node: contact
+        keywords:
+        - 메시지
+        - 대화
+        - 이력
       neighbors:
         description: 비즈니스 이웃 목록 조회 (검색, 상세도 조절)
+        group: business
         category: search
         router: handler
         tool: get_neighbors
         target_key: search
+        keywords:
+        - 이웃
+        - 비즈니스
+        - 연락처
       neighbor_detail:
         description: 특정 이웃의 상세 정보 조회
+        group: business
         category: get
         router: handler
         tool: get_neighbor_detail
         target_key: name
+        keywords:
+        - 이웃상세
+        - 비즈니스
       channel_send:
         description: 메시지 발송
+        group: channel
         category: send
         target_key: channel_type
         router: channel_engine
+        keywords:
+        - 메시지보내기
+        - 발송
+        - 텔레그램
+        - 이메일
       channel_read:
         description: 메시지 읽기
+        group: channel
         category: read
         target_key: channel_type
         router: channel_engine
+        keywords:
+        - 메시지읽기
+        - 수신
     description: '타자: 외부 에이전트 및 사용자와의 소통 — 위임, 메시징, SMS, 이메일, 연락처, 협업'
+    tags:
+    - 위임
+    - 에이전트
+    - 메시지
+    - 텔레그램
+    - 이메일
+    - 이웃
+    - 비즈니스
+    - 협업
+    - 소통
   engines:
     actions:
       newspaper:
-        description: 키워드 기반 뉴스 신문(HTML) 자동 생성
+        description: Google News RSS에서 키워드별 기사를 자체 수집하여 HTML 신문 생성. 외부 기사 데이터 입력 불가. language="en"으로 영문 뉴스 가능
+        group: media_produce
         category: create
         router: handler
         tool: generate_newspaper
         target_key: keywords
+        keywords:
+        - 뉴스
+        - 신문
+        - 기사
+        - 뉴스모음
+        - 영문뉴스
+        - English
+        - world news
       slide:
         description: 프레젠테이션 슬라이드 생성
+        group: media_produce
         category: create
         router: handler
         tool: create_slides
         target_key: topic
+        keywords:
+        - 슬라이드
+        - 프레젠테이션
+        - PPT
       video:
         description: HTML+CSS 기반 MP4 영상 생성 (guide 참조)
+        group: media_produce
         category: create
         router: handler
         tool: create_html_video
         target_key: topic
+        keywords:
+        - 영상
+        - 동영상
+        - MP4
       chart:
         description: 데이터 차트 생성 (line, bar, pie 등)
+        group: chart
         category: create
         router: handler
         tool: line_chart
         target_key: title
+        keywords:
+        - 차트
+        - 그래프
+        - 시각화
       music:
         description: ABC 악보 작곡 및 오디오 변환
+        group: music
         category: create
         router: handler
         tool: compose_and_export
         target_key: title
+        keywords:
+        - 작곡
+        - 악보
+        - ABC
+        - MIDI
       remotion:
         description: React/Remotion 기반 프로그래밍 방식 영상 생성
+        group: media_produce
         category: create
         router: handler
         tool: create_remotion_video
         target_key: composition_code
+        keywords:
+        - 영상
+        - React
+        - Remotion
       tts:
         description: 텍스트를 음성 파일(MP3)로 변환 (Edge TTS). 동영상 나레이션 등에 활용.
+        group: media_produce
         category: create
         router: handler
         tool: create_tts
         target_key: text
-        keywords: [speech, voice, 음성, 읽어줘, narration, text to speech, 목소리]
+        keywords:
+        - speech
+        - voice
+        - 음성
+        - 읽어줘
+        - narration
+        - text to speech
+        - 목소리
+        - 텍스트음성
+        - TTS
+        - 나레이션
       render_video:
         description: 저장된 HTML 씬들을 MP4로 렌더링
+        group: media_produce
         category: create
         router: handler
         tool: render_html_video
         target_key: scene_dir
+        keywords:
+        - 렌더링
+        - MP4
+        - HTML영상
       render_remotion:
         description: 파일로 저장된 TSX 컴포지션을 Remotion으로 MP4 렌더링. composition_file(절대경로) 필수.
+        group: media_produce
         category: create
         router: handler
         tool: render_remotion_video
         target_key: composition_file
+        keywords:
+        - 렌더링
+        - Remotion
+        - TSX
       remotion_status:
         description: Remotion 설치 상태 및 렌더링 상태 확인
+        group: media_produce
         router: handler
         tool: check_remotion_status
+        keywords:
+        - Remotion
+        - 상태
       slide_shadcn:
         description: Shadcn UI 스타일 고품질 슬라이드(PNG) 생성 (guide 참조)
+        group: media_produce
         category: create
         router: handler
         tool: create_shadcn_slides
         target_key: topic
+        keywords:
+        - 슬라이드
+        - Shadcn
+        - PNG
       image_gemini:
         description: Gemini AI 이미지 생성
+        group: media_produce
         category: create
         router: handler
         tool: generate_gemini_image
         target_key: prompt
-        keywords: [image generation, 이미지 만들기, AI 이미지, 그림, picture, 사진생성, text to image]
+        keywords:
+        - image generation
+        - 이미지 만들기
+        - AI 이미지
+        - 그림
+        - picture
+        - 사진생성
+        - text to image
+        - 이미지생성
+        - AI이미지
       render_html:
         description: HTML을 이미지로 렌더링
+        group: media_produce
         category: create
         router: handler
         tool: render_html_to_image
         target_key: html
+        keywords:
+        - HTML
+        - 이미지
+        - 렌더링
       abc_to_midi:
         description: ABC 악보를 MIDI 파일로 변환
+        group: music
         router: handler
         tool: abc_to_midi
         target_key: abc_notation
+        keywords:
+        - 악보
+        - MIDI
+        - ABC변환
       midi_to_audio:
         description: MIDI를 오디오(WAV/MP3)로 변환
+        group: music
         router: handler
         tool: midi_to_audio
         target_key: midi_path
+        keywords:
+        - MIDI
+        - 오디오
+        - WAV
+        - MP3
       abc_search:
         description: ABC 악보 검색
+        group: music
         router: handler
         tool: search_abc_tunes
         target_key: query
+        keywords:
+        - 악보검색
+        - ABC
       abc_get:
         description: ABC 악보 상세 조회
+        group: music
         router: handler
         tool: get_abc_tune
         target_key: tune_id
+        keywords:
+        - 악보조회
+        - ABC
       line:
         description: 라인 차트
+        group: chart
         category: create
         router: handler
         tool: line_chart
         target_key: title
+        keywords:
+        - 라인차트
+        - 선그래프
+        - 추이
       bar:
         description: 바 차트 (수평/수직, 스택)
+        group: chart
         category: create
         router: handler
         tool: bar_chart
         target_key: title
+        keywords:
+        - 바차트
+        - 막대그래프
       candlestick:
         description: 캔들스틱 차트 (OHLCV, 이동평균)
+        group: chart
         category: create
         router: handler
         tool: candlestick_chart
         target_key: title
+        keywords:
+        - 캔들
+        - 주식차트
+        - OHLCV
       pie:
         description: 파이/도넛 차트
+        group: chart
         category: create
         router: handler
         tool: pie_chart
         target_key: title
+        keywords:
+        - 파이차트
+        - 원그래프
+        - 비율
       scatter:
         description: 산점도 (추세선 옵션)
+        group: chart
         category: create
         router: handler
         tool: scatter_plot
         target_key: title
+        keywords:
+        - 산점도
+        - 분포
+        - 추세선
       heatmap:
         description: 히트맵
+        group: chart
         category: create
         router: handler
         tool: heatmap
         target_key: title
+        keywords:
+        - 히트맵
+        - 열지도
       multi:
         description: 복합 차트 대시보드 (여러 차트 조합)
+        group: chart
         category: create
         router: handler
         tool: multi_chart
         target_key: title
+        keywords:
+        - 대시보드
+        - 복합차트
       site_list:
         description: 등록된 사이트 목록 조회
+        group: web_builder
         category: list
         router: handler
         tool: site_list
+        keywords:
+        - 사이트
+        - 웹사이트목록
       site_register:
         description: 새 사이트 등록 (이름, 경로 필수)
+        group: web_builder
         category: create
         router: handler
         tool: site_register
         target_key: name
+        keywords:
+        - 사이트등록
+        - 웹사이트
       site_remove:
         description: 등록된 사이트 삭제
+        group: web_builder
         category: delete
         router: handler
         tool: site_remove
         target_key: site_id
+        keywords:
+        - 사이트삭제
       site_update:
         description: 등록된 사이트 정보 수정
+        group: web_builder
         category: control
         router: handler
         tool: site_update
         target_key: site_id
+        keywords:
+        - 사이트수정
       site_snapshot:
         description: 사이트 스냅샷 (현재 상태 캡처)
+        group: web_builder
         category: get
         router: handler
         tool: site_snapshot
         target_key: site_id
+        keywords:
+        - 사이트스냅샷
+        - 캡처
       live_check:
         description: 사이트 상태 확인 (Lighthouse 품질 검사)
+        group: web_builder
         category: get
         router: handler
         tool: site_live_check
         target_key: site_id
+        keywords:
+        - 사이트상태
+        - Lighthouse
       create_site:
         description: '새 프로젝트 생성 (템플릿: blank/landing/portfolio/blog/business)'
+        group: web_builder
         category: create
         router: handler
         tool: create_project
         target_key: name
+        keywords:
+        - 웹사이트
+        - 프로젝트생성
+        - 템플릿
       list_components:
         description: 사용 가능한 컴포넌트 목록
+        group: web_builder
         category: list
         router: handler
         tool: list_components
+        keywords:
+        - 컴포넌트
+        - 목록
       list_sections:
         description: 사용 가능한 섹션 템플릿 목록
+        group: web_builder
         category: list
         router: handler
         tool: list_sections
+        keywords:
+        - 섹션
+        - 템플릿
       create_page:
         description: 페이지 생성 (섹션 조합)
+        group: web_builder
         category: create
         router: handler
         tool: create_page
         target_key: project_path
+        keywords:
+        - 페이지생성
+        - 섹션조합
       preview:
         description: 로컬 미리보기 서버 (start/stop/status)
+        group: web_builder
         category: run
         router: handler
         tool: preview_site
         target_key: project_path
+        keywords:
+        - 미리보기
+        - 로컬서버
       fetch_component:
         description: 외부 컴포넌트 가져오기
+        group: web_builder
         category: create
         router: handler
         tool: fetch_component
         target_key: component
-      api:
-        description: Cloudflare API 호출 (모든 서비스 통합)
-        router: handler
-        tool: cf_api
-        target_key: endpoint
+        keywords:
+        - 컴포넌트
+        - 가져오기
       create_design:
         description: 새 집 설계 초기화 (부지 크기, 층수 설정)
+        group: architecture
         category: create
         router: handler
         tool: create_house_design
         target_key: name
+        keywords:
+        - 집설계
+        - 건축
+        - 초기화
       modify:
         description: 설계 수정 (방, 문, 창, 벽, 계단 등)
+        group: architecture
         router: handler
         tool: modify_house_design
         target_key: design_id
+        keywords:
+        - 설계수정
+        - 방
+        - 문
+        - 창
       get_design:
         description: 현재 설계 상태 조회
+        group: architecture
         category: get
         router: handler
         tool: get_house_design
         target_key: design_id
+        keywords:
+        - 설계조회
+        - 현재상태
       floor_plan:
         description: 2D 평면도 PNG 생성
+        group: architecture
         router: handler
         tool: generate_floor_plan
         target_key: design_id
+        keywords:
+        - 평면도
+        - 2D
+        - 도면
       view_3d:
         description: 인터랙티브 3D 시각화 HTML 생성
+        group: architecture
         router: handler
         tool: generate_3d_view
         target_key: design_id
+        keywords:
+        - 3D
+        - 시각화
+        - 입체
       report:
         description: 면적표, 건폐율, 물량 산출 보고서
+        group: architecture
         router: handler
         tool: generate_quantity_report
         target_key: design_id
+        keywords:
+        - 보고서
+        - 면적표
+        - 건폐율
       section:
         description: 건물 단면도 PNG 생성
+        group: architecture
         router: handler
         tool: generate_section_view
         target_key: design_id
+        keywords:
+        - 단면도
+        - 건물
       elevation:
         description: 건물 입면도 PNG 생성 (4방향)
+        group: architecture
         router: handler
         tool: generate_elevation_view
         target_key: design_id
+        keywords:
+        - 입면도
+        - 외관
       export:
         description: 도면을 PDF/SVG/DXF로 출력
+        group: architecture
         router: handler
         tool: export_drawing
         target_key: design_id
+        keywords:
+        - 도면출력
+        - PDF
+        - DXF
       list_designs:
         description: 저장된 집 설계 목록 조회
+        group: architecture
         category: list
         router: handler
         tool: list_house_designs
+        keywords:
+        - 설계목록
+        - 집설계
     description: '작업장: 콘텐츠 생성 및 변환 — 신문, 슬라이드, 영상, 차트, 음악, 웹사이트, 디자인'
+    tags:
+    - 생성
+    - 제작
+    - 신문
+    - 슬라이드
+    - 영상
+    - 차트
+    - 음악
+    - 작곡
+    - 웹사이트
+    - 건축
+    - 이미지
+    - 시각화

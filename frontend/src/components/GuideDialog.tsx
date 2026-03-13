@@ -263,7 +263,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             <Users className="w-5 h-5 text-purple-500" />
             <div>
               <strong>다중채팅방</strong>
-              <p className="text-gray-700 text-sm">여러 에이전트와 동시 대화, 토론</p>
+              <p className="text-gray-700 text-sm">여러 프로젝트의 에이전트를 모아 그룹 대화. @멘션, 프로젝트 도구 자동 적용, 파일 첨부 지원</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-2 bg-gray-50 rounded text-gray-900">

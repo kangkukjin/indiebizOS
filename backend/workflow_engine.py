@@ -45,7 +45,7 @@ def _get_workflows_path() -> Path:
 # === 파이프라인 실행 ===
 
 def execute_pipeline(steps: list, project_path: str = ".",
-                     context: dict = None) -> dict:
+                     context: dict = None, agent_id: str = None) -> dict:
     """
     파이프라인 실행 - 여러 IBL 액션을 순차 연결
 
@@ -55,6 +55,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
             {node, action, target, params} (YAML에서 로드 시)
         project_path: 프로젝트 경로
         context: 초기 컨텍스트 (첫 step의 _prev_result로 사용)
+        agent_id: 실행 주체 에이전트 ID (schedule, execute_plan 등에서 사용)
 
     Returns:
         {
@@ -159,7 +160,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
 
         # IBL 실행
         try:
-            result = execute_ibl(tool_input, project_path)
+            result = execute_ibl(tool_input, project_path, agent_id=agent_id)
         except Exception as e:
             results.append({
                 "step": i + 1,
@@ -238,7 +239,33 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str) -> li
     from ibl_engine import execute_ibl
     from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
+    # 부모 스레드의 thread_context를 캡처 (자식 스레드에 전파하기 위함)
+    from thread_context import (
+        get_current_task_id, set_current_task_id,
+        get_current_agent_id, set_current_agent_id,
+        get_current_agent_name, set_current_agent_name,
+        get_current_project_id, set_current_project_id,
+        get_allowed_nodes, set_allowed_nodes,
+    )
+    _parent_task_id = get_current_task_id()
+    _parent_agent_id = get_current_agent_id()
+    _parent_agent_name = get_current_agent_name()
+    _parent_project_id = get_current_project_id()
+    _parent_allowed_nodes = get_allowed_nodes()
+
     def _run_branch(branch):
+        # 부모 스레드의 thread_context를 자식 스레드에 복원
+        if _parent_task_id:
+            set_current_task_id(_parent_task_id)
+        if _parent_agent_id:
+            set_current_agent_id(_parent_agent_id)
+        if _parent_agent_name:
+            set_current_agent_name(_parent_agent_name)
+        if _parent_project_id:
+            set_current_project_id(_parent_project_id)
+        if _parent_allowed_nodes is not None:
+            set_allowed_nodes(_parent_allowed_nodes)
+
         tool_input = dict(branch)
         if "node" in tool_input and "_node" not in tool_input:
             tool_input["_node"] = tool_input.pop("node")
@@ -309,7 +336,7 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str) -> tuple
 
         start = time.time()
         try:
-            result = execute_ibl(tool_input, project_path)
+            result = execute_ibl(tool_input, project_path, agent_id=agent_id)
         except Exception as e:
             duration_ms = int((time.time() - start) * 1000)
             log.append({

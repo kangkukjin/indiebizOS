@@ -117,6 +117,11 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `POST /business/auto-response/start` - 자동응답 시작
 - `POST /business/auto-response/stop` - 자동응답 중지
 
+### 의식 시스템 (/world-pulse)
+- `GET /world-pulse/consciousness` - 최근 의식 펄스 조회 (hours 파라미터로 시간 범위 지정)
+- `GET /world-pulse/self-checks` - 최근 자가점검 결과 (hours 파라미터로 시간 범위 지정)
+- `GET /world-pulse/health` - 시스템 건강 요약 (서비스 상태, 액션 성공률, 최근 펄스)
+
 ### WebSocket (실시간 스트리밍)
 - `ws://127.0.0.1:8765/ws/chat/{client_id}` - 실시간 채팅 (스트리밍)
 
@@ -202,6 +207,7 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 - **프로젝트 목록**: `projects/projects.json`
 - **프로젝트 에이전트**: `projects/{id}/agents.yaml`
 - **시스템 AI 메모리**: `data/system_ai_memory.db` (SQLite)
+- **의식 펄스 DB**: `data/consciousness_pulse.db` (SQLite — pulse_log, self_checks 테이블)
 - **대화 이력**: `projects/{id}/conversations.db` (SQLite)
 - **도구 패키지**: `data/packages/installed/tools/`
 - **비즈니스 DB**: `data/business.db` (SQLite)
@@ -239,4 +245,4 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 - Tool Use 기반으로 판단/검색/발송을 단일 AI 호출로 처리
 
 ---
-*마지막 업데이트: 2026-03-06 (Phase 25: 5-Node 구조 재설계)*
+*마지막 업데이트: 2026-03-12 (의식 시스템: Consciousness Pulse & Self-Check)*

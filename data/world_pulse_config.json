@@ -5,7 +5,7 @@
     "name": "강국진",
     "occupation": "은퇴한 물리학자, 작가, ",
     "interests": "AI OS 개발, 정치, 물리학, 철학",
-    "memo": ""
+    "memo": "시스템에는 사용자가 작성해온 블로그 데이터를 볼 수 있는 기능이 있다. "
   },
   "economy": {
     "enabled": true,
@@ -31,5 +31,20 @@
   },
   "weather": {
     "enabled": true
+  },
+  "consciousness_pulse": {
+    "enabled": true,
+    "interval_hours": 1,
+    "world_news_interval_hours": 6,
+    "retention_days": 30
+  },
+  "self_check": {
+    "enabled": true,
+    "interval_hours": 6,
+    "actions_per_check": 2,
+    "safe_nodes": ["sense"],
+    "excluded_actions": ["world_refresh"],
+    "failure_alert_threshold": 3,
+    "retention_days": 30
   }
 }

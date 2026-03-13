@@ -223,7 +223,10 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
                 <strong className="text-blue-800">다중채팅방</strong>
               </div>
               <p className="text-blue-700 text-sm">
-                여러 에이전트와 동시 대화. 협업 작업에 유용.
+                여러 프로젝트의 에이전트를 하나의 방에 모아 그룹 대화.
+                독립 창에서 열리며, <strong>@멘션</strong>으로 특정 에이전트 지정 가능.
+                에이전트는 <strong>프로젝트 도구를 자동 적용</strong>받아 대화와 작업 모두 수행.
+                이미지·파일 첨부도 지원.
               </p>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg">
@@ -1082,6 +1085,8 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             </div>
             <div className="text-sm text-rose-800 space-y-1">
               <p>• 아무 프로젝트의 에이전트들을 <strong>하나의 채팅방에 자유롭게</strong> 모으기</p>
+              <p>• <strong>@멘션</strong>으로 특정 에이전트 지정, 응답 수(1~5) 조절 가능</p>
+              <p>• 에이전트는 <strong>프로젝트 도구가 자동 적용</strong>되어 대화와 작업 모두 수행</p>
               <p>• 창의적 활용: 이순신 장군, 원균 장군, 나의 3자 대화 같은 것도 가능</p>
             </div>
           </div>

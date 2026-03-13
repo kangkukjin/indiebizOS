@@ -18,6 +18,7 @@
 |----------|------|------|
 | keywords | ✅ | 키워드 (쉼표 구분) |
 | title | - | 신문 제목 (기본: "IndieBiz Daily") |
+| language | - | 뉴스 언어: "ko" (한국어, 기본), "en" (영어), "ja" (일본어) |
 | exclude_sources | - | 제외할 뉴스 출처 배열 |
 | count | - | 키워드당 기사 수 (기본: 7) |
 
@@ -36,6 +37,16 @@
 제목 지정 + 출처 제외:
 ```
 [engines:newspaper]{keywords: "AI, 경제, 주식", title: "투자 뉴스", exclude_sources: ["조선일보"]} >> [self:open]
+```
+
+영문 뉴스 신문:
+```
+[engines:newspaper]{keywords: "AI, quantum computing, climate", language: "en"} >> [self:open]
+```
+
+영문 뉴스 + 제목 지정:
+```
+[engines:newspaper]{keywords: "Iran, oil prices, tech stocks", language: "en", title: "World News Today"} >> [self:open]
 ```
 
 ---
@@ -60,4 +71,4 @@ RIGHT: [engines:newspaper]{keywords: "AI"} >> [self:open]
 
 ---
 
-*최종 업데이트: 2026-03-08*
+*최종 업데이트: 2026-03-13*

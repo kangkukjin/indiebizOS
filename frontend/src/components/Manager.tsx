@@ -38,7 +38,11 @@ import type {
   AgentForm,
 } from './manager-dialogs';
 
-export function Manager() {
+interface ManagerProps {
+  initialAgent?: string | null;
+}
+
+export function Manager({ initialAgent }: ManagerProps = {}) {
   const {
     currentProject,
     agents,
@@ -135,6 +139,54 @@ export function Manager() {
       loadDefaultTools();
     }
   }, [currentProject, loadAgents, loadSwitches]);
+
+  // 에이전트 자동 활성화 헬퍼: 선택 + 시작 + 연결
+  const autoActivateAgent = async (target: Agent) => {
+    setCurrentAgent(target);
+    // 에이전트가 아직 시작되지 않았으면 시작
+    if (!runningAgents.has(target.id) && currentProject) {
+      try {
+        await api.startAgent(currentProject.id, target.id);
+        setRunningAgents(prev => new Set([...prev, target.id]));
+        addLog(`[자동 시작] ${target.name} 에이전트 (스케줄 결과 전달)`);
+      } catch {
+        // 이미 백엔드에서 시작된 경우 무시 (registry에 이미 있을 수 있음)
+        setRunningAgents(prev => new Set([...prev, target.id]));
+      }
+    }
+    // 대화 연결
+    setConnectedAgentId(target.id);
+  };
+
+  // initialAgent가 있으면 해당 에이전트 자동 활성화 (스케줄 결과 전달용)
+  useEffect(() => {
+    if (initialAgent && agents.length > 0) {
+      const target = agents.find(a => a.name === initialAgent || a.id === initialAgent);
+      if (target && connectedAgentId !== target.id) {
+        autoActivateAgent(target);
+      }
+    }
+  }, [initialAgent, agents]);
+
+  // Electron IPC: select-agent 메시지 수신 (이미 열린 창에서 에이전트 전환)
+  useEffect(() => {
+    const electronApi = (window as any).electron;
+    if (!electronApi?.onSelectAgent) return;
+
+    const handleSelectAgent = (agentName: string) => {
+      if (agentName && agents.length > 0) {
+        const target = agents.find(a => a.name === agentName || a.id === agentName);
+        if (target) {
+          autoActivateAgent(target);
+        }
+      }
+    };
+
+    electronApi.onSelectAgent(handleSelectAgent);
+    return () => {
+      electronApi.removeSelectAgentListener?.();
+    };
+  }, [agents]);
 
   useEffect(() => {
     const checkOllamaStatus = async () => {

@@ -4,10 +4,11 @@
 import { FileText, CheckCircle2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { parseImagePaths, parseMapData } from './chatUtils';
+import { parseImagePaths, parseMapData, parseStreamData } from './chatUtils';
 import type { ToolActivity } from './types';
 import { RouteMap } from '../RouteMap';
 import { LocationMap } from '../LocationMap';
+import { StreamPlayer } from '../StreamPlayer';
 
 interface MessageContentProps {
   content: string;
@@ -21,9 +22,10 @@ interface MessageContentProps {
 export function MessageContent({ content, role, images, textFiles, toolActivities, variant = 'warm' }: MessageContentProps) {
   const isUser = role === 'user';
 
-  // AI 응답에서 이미지 경로 및 지도 데이터 파싱
+  // AI 응답에서 이미지, 지도, 스트림 데이터 파싱
   const parsedContent = !isUser ? parseImagePaths(content) : { text: content, images: [] };
-  const parsedMaps = !isUser ? parseMapData(parsedContent.text) : { text: parsedContent.text, routeMaps: [], locationMaps: [] };
+  const parsedStreams = !isUser ? parseStreamData(parsedContent.text) : { text: parsedContent.text, streams: [] };
+  const parsedMaps = !isUser ? parseMapData(parsedStreams.text) : { text: parsedStreams.text, routeMaps: [], locationMaps: [] };
   const finalText = !isUser ? parsedMaps.text : content;
 
   const userBgClass = variant === 'warm' ? 'bg-blue-400/30' : 'bg-amber-400/30';
@@ -104,6 +106,15 @@ export function MessageContent({ content, role, images, textFiles, toolActivitie
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               title="클릭하여 원본 보기"
             />
+          ))}
+        </div>
+      )}
+
+      {/* 실시간 스트림 표시 */}
+      {!isUser && parsedStreams.streams.length > 0 && (
+        <div className="mb-2 space-y-2">
+          {parsedStreams.streams.map((streamData, index) => (
+            <StreamPlayer key={`stream-${index}`} data={streamData} variant={variant} />
           ))}
         </div>
       )}

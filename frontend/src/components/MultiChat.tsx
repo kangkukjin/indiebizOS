@@ -7,7 +7,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Send, Loader2, Bot, X, Users, MessageSquare,
-  Trash2, UserPlus, Play, Square, Wrench, ChevronDown,
+  Trash2, UserPlus,
   Paperclip, Camera, FileText
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -63,12 +63,6 @@ interface TextAttachment {
 // 텍스트 파일 확장자 목록
 const TEXT_EXTENSIONS = ['.txt', '.md', '.json', '.yaml', '.yml', '.xml', '.csv', '.log', '.py', '.js', '.ts', '.tsx', '.jsx', '.html', '.css', '.sql', '.sh', '.env', '.ini', '.conf', '.toml'];
 
-interface Tool {
-  name: string;
-  description: string;
-  package_id?: string;
-}
-
 interface MultiChatProps {
   roomId?: string;
 }
@@ -92,21 +86,12 @@ export function MultiChat({ roomId }: MultiChatProps) {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   // 에이전트 활성화 상태
-  const [, setActiveAgents] = useState<Set<string>>(new Set());
-  const [allActive, setAllActive] = useState(false);
-
   // 올라마 상태
   const [ollamaRunning, setOllamaRunning] = useState(false);
   const [ollamaLoading, setOllamaLoading] = useState(false);
 
-  // 도구 선택 상태
-  const [showToolSelector, setShowToolSelector] = useState(false);
-  const [availableTools, setAvailableTools] = useState<Tool[]>([]);
-  const [selectedTools, setSelectedTools] = useState<string[]>([]);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const toolSelectorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 파일을 base64로 변환
@@ -288,40 +273,6 @@ export function MultiChat({ roomId }: MultiChatProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // 도구 목록 로드
-  useEffect(() => {
-    const loadTools = async () => {
-      try {
-        const data = await api.getTools();
-        // 도구 목록 변환 - API는 직접 도구 배열을 반환
-        interface RawTool { name: string; description: string; _package_id?: string; _is_system?: boolean; }
-        const tools: Tool[] = (data.tools as RawTool[])
-          .filter((t) => !t._is_system)  // 시스템 도구 제외
-          .map((t) => ({
-            name: t.name,
-            description: t.description,
-          }));
-        setAvailableTools(tools);
-      } catch (error) {
-        console.error('도구 목록 로드 실패:', error);
-      }
-    };
-    loadTools();
-  }, []);
-
-  // 도구 선택 드롭다운 외부 클릭 시 닫기
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (toolSelectorRef.current && !toolSelectorRef.current.contains(e.target as Node)) {
-        setShowToolSelector(false);
-      }
-    };
-    if (showToolSelector) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showToolSelector]);
-
   const loadRoomData = async (roomId: string) => {
     try {
       const [room, msgs] = await Promise.all([
@@ -454,30 +405,6 @@ export function MultiChat({ roomId }: MultiChatProps) {
     }
   };
 
-  // 전체 시작
-  const handleStartAll = async () => {
-    if (!selectedRoom) return;
-    try {
-      await api.activateAllMultiChatAgents(selectedRoom.id, selectedTools);
-      setAllActive(true);
-      setActiveAgents(new Set(participants.map(p => p.agent_name)));
-    } catch (error) {
-      console.error('전체 시작 실패:', error);
-    }
-  };
-
-  // 전체 중단
-  const handleStopAll = async () => {
-    if (!selectedRoom) return;
-    try {
-      await api.deactivateAllMultiChatAgents(selectedRoom.id);
-      setAllActive(false);
-      setActiveAgents(new Set());
-    } catch (error) {
-      console.error('전체 중단 실패:', error);
-    }
-  };
-
   // 올라마 토글
   const handleToggleOllama = async () => {
     setOllamaLoading(true);
@@ -490,15 +417,6 @@ export function MultiChat({ roomId }: MultiChatProps) {
     } finally {
       setOllamaLoading(false);
     }
-  };
-
-  // 도구 선택 토글
-  const toggleToolSelection = (toolName: string) => {
-    setSelectedTools(prev =>
-      prev.includes(toolName)
-        ? prev.filter(t => t !== toolName)
-        : [...prev, toolName]
-    );
   };
 
   // 에이전트별 색상
@@ -547,28 +465,6 @@ export function MultiChat({ roomId }: MultiChatProps) {
         </div>
 
         <div className="flex items-center gap-1 no-drag">
-          {/* 전체 시작/중단 버튼 */}
-          {allActive ? (
-            <button
-              onClick={handleStopAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 transition-colors text-white"
-              title="전체 중단"
-            >
-              <Square className="w-4 h-4" />
-              <span className="text-sm">전체 중단</span>
-            </button>
-          ) : (
-            <button
-              onClick={handleStartAll}
-              disabled={participants.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white"
-              title="전체 시작"
-            >
-              <Play className="w-4 h-4" />
-              <span className="text-sm">전체 시작</span>
-            </button>
-          )}
-
           {/* 올라마 버튼 */}
           <button
             onClick={handleToggleOllama}
@@ -587,51 +483,6 @@ export function MultiChat({ roomId }: MultiChatProps) {
             )}
             <span className="text-sm">{ollamaRunning ? 'Ollama 실행중' : 'Ollama 시작'}</span>
           </button>
-
-          {/* 도구 선택 버튼 */}
-          <div className="relative" ref={toolSelectorRef}>
-            <button
-              onClick={() => setShowToolSelector(!showToolSelector)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#DDD5C8] transition-colors text-[#6B5B4F]"
-              title="도구 선택"
-            >
-              <Wrench className="w-4 h-4" />
-              <span className="text-sm">도구 ({selectedTools.length})</span>
-              <ChevronDown className={`w-3 h-3 transition-transform ${showToolSelector ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* 도구 선택 드롭다운 */}
-            {showToolSelector && (
-              <div className="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-80 overflow-auto">
-                <div className="p-2 border-b border-gray-100">
-                  <p className="text-xs text-gray-500">선택한 도구는 모든 에이전트에게 제공됩니다</p>
-                </div>
-                <div className="p-2 space-y-1">
-                  {availableTools.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-4">사용 가능한 도구가 없습니다</p>
-                  ) : (
-                    availableTools.map(tool => (
-                      <label
-                        key={tool.name}
-                        className="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedTools.includes(tool.name)}
-                          onChange={() => toggleToolSelection(tool.name)}
-                          className="mt-1 rounded border-gray-300 text-indigo-500 focus:ring-indigo-500"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{tool.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{tool.description}</p>
-                        </div>
-                      </label>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
 
           <div className="w-px h-6 bg-[#DDD5C8] mx-1" />
 

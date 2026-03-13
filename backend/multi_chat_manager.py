@@ -192,7 +192,7 @@ class MultiChatManager:
 
 [다중채팅 규칙]
 - 이것은 여러 에이전트와 사용자가 함께하는 다중채팅방이다.
-- 대화만 가능하다. 도구 사용, 파일 접근, 검색 등은 할 수 없다.
+- 프로젝트에서 할당된 도구를 그대로 사용할 수 있다.
 - 다른 참여자의 의견에 동의하거나 반박할 수 있다.
 - 자신의 역할과 관점에서 의견을 제시하라.
 - 대화 히스토리에서 [이름] 형식으로 누가 말했는지 확인할 수 있다.
@@ -319,12 +319,35 @@ class MultiChatManager:
             if ai_api_key:
                 agent_ai_config['api_key'] = ai_api_key
 
-            # AI 에이전트 생성 (도구 없음)
+            # agent_source에서 project_id 추출, agents.yaml에서 agent_id 조회
+            agent_source = participant.get('agent_source', '')
+            agent_name = participant.get('agent_name', '')
+            project_id = agent_source.split('/')[0] if '/' in agent_source else ''
+            project_path = str(self.projects_path / project_id) if project_id else '.'
+
+            # agents.yaml에서 agent_id 찾기
+            agent_id = None
+            if project_id:
+                agents_yaml = self.projects_path / project_id / "agents.yaml"
+                if agents_yaml.exists():
+                    try:
+                        with open(agents_yaml, encoding='utf-8') as f:
+                            data = yaml.safe_load(f) or {}
+                        for ag in data.get("agents", []):
+                            if ag.get("name") == agent_name:
+                                agent_id = ag.get("id")
+                                break
+                    except Exception:
+                        pass
+
+            # AI 에이전트 생성 (프로젝트 도구 자동 로드: tools=None)
             agent = AIAgent(
                 ai_config=agent_ai_config,
                 system_prompt=participant.get('system_prompt', ''),
-                agent_name=participant.get('agent_name', ''),
-                tools=[]  # 도구 없음!
+                agent_name=agent_name,
+                agent_id=agent_id,
+                project_path=project_path
+                # tools 파라미터 생략 → AIAgent가 프로젝트 설정에서 자동 로드
             )
 
             # 응답 생성
@@ -359,65 +382,4 @@ class MultiChatManager:
         """채팅방 메시지 삭제"""
         return self.db.clear_messages(room_id)
 
-    # ============ 에이전트 활성화/비활성화 ============
-
-    def activate_all_agents(self, room_id: str, tools: List[str] = None) -> List[str]:
-        """
-        채팅방의 모든 에이전트 활성화
-
-        Args:
-            room_id: 채팅방 ID
-            tools: 에이전트에게 부여할 도구 목록
-
-        Returns:
-            활성화된 에이전트 이름 목록
-        """
-        participants = self.db.get_participants(room_id)
-        activated = []
-
-        for participant in participants:
-            agent_name = participant.get('agent_name', '')
-            # 도구가 제공된 경우 시스템 프롬프트 업데이트
-            if tools:
-                current_prompt = participant.get('system_prompt', '')
-                # 도구 사용 가능 안내 추가
-                tools_str = ', '.join(tools)
-                updated_prompt = current_prompt.replace(
-                    "대화만 가능하다. 도구 사용, 파일 접근, 검색 등은 할 수 없다.",
-                    f"다음 도구들을 사용할 수 있다: {tools_str}"
-                )
-                self.db.update_participant_prompt(room_id, agent_name, updated_prompt)
-
-            activated.append(agent_name)
-            print(f"[MultiChatManager] 에이전트 활성화됨: {agent_name}")
-
-        return activated
-
-    def deactivate_all_agents(self, room_id: str) -> List[str]:
-        """
-        채팅방의 모든 에이전트 비활성화
-
-        Returns:
-            비활성화된 에이전트 이름 목록
-        """
-        participants = self.db.get_participants(room_id)
-        deactivated = []
-
-        for participant in participants:
-            agent_name = participant.get('agent_name', '')
-            # 시스템 프롬프트에서 도구 제거
-            current_prompt = participant.get('system_prompt', '')
-            if '다음 도구들을 사용할 수 있다:' in current_prompt:
-                # 원래 문구로 복원
-                import re
-                updated_prompt = re.sub(
-                    r'다음 도구들을 사용할 수 있다: [^\n]+',
-                    '대화만 가능하다. 도구 사용, 파일 접근, 검색 등은 할 수 없다.',
-                    current_prompt
-                )
-                self.db.update_participant_prompt(room_id, agent_name, updated_prompt)
-
-            deactivated.append(agent_name)
-            print(f"[MultiChatManager] 에이전트 비활성화됨: {agent_name}")
-
-        return deactivated
+    # 도구는 프로젝트 설정에서 자동 로드 (별도 활성화/비활성화 불필요)

@@ -87,6 +87,66 @@ export function parseImagePaths(content: string): { text: string; images: string
   return { text: text.trim(), images: images.filter(img => img && img.trim() !== '') };
 }
 
+// 스트림 데이터 타입
+export interface StreamData {
+  url: string;
+  name?: string;
+  type?: string;  // "hls" 등
+  source?: string;
+  lat?: number;
+  lng?: number;
+}
+
+// 스트림 데이터 패턴 감지 및 파싱
+export function parseStreamData(content: string): { text: string; streams: StreamData[] } {
+  const streams: StreamData[] = [];
+  let text = content;
+
+  // [STREAM:{...}] 패턴 찾기
+  const streamStart = '[STREAM:';
+  let startIdx = text.indexOf(streamStart);
+
+  while (startIdx !== -1) {
+    const jsonStart = startIdx + streamStart.length;
+    let braceCount = 0;
+    let jsonEnd = -1;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = jsonStart; i < text.length; i++) {
+      const char = text[i];
+      if (escaped) { escaped = false; continue; }
+      if (char === '\\' && inString) { escaped = true; continue; }
+      if (char === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (char === '{') braceCount++;
+      else if (char === '}') {
+        braceCount--;
+        if (braceCount === 0 && text[i + 1] === ']') {
+          jsonEnd = i + 2;
+          break;
+        }
+      }
+    }
+
+    if (jsonEnd !== -1) {
+      const jsonStr = text.substring(jsonStart, jsonEnd - 1);
+      try {
+        const streamData = JSON.parse(jsonStr) as StreamData;
+        if (streamData.url) {
+          streams.push(streamData);
+        }
+      } catch { /* 파싱 실패 시 무시 */ }
+      text = text.substring(0, startIdx) + text.substring(jsonEnd);
+      startIdx = text.indexOf(streamStart);
+    } else {
+      break;
+    }
+  }
+
+  return { text: text.trim(), streams };
+}
+
 // 지도 데이터 패턴 감지 및 파싱 (route_map, location_map 모두 지원)
 export function parseMapData(content: string): { text: string; routeMaps: RouteMapData[]; locationMaps: LocationMapData[] } {
   const routeMaps: RouteMapData[] = [];

@@ -124,12 +124,19 @@ AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 구조 적용
 - 이벤트 타입: `text`, `tool_start`, `tool_result`, `thinking`, `final`, `error`
 - WebSocket을 통해 프론트엔드로 실시간 전달
 
-### 위임 체인 시스템 (Delegation Chain)
-에이전트 간 비동기 협업을 위한 핵심 메커니즘. `[others:delegate]`/`[others:delegate_project]`를 통해 작업을 위임하고 결과를 자동으로 보고받음.
+### 위임 체인 시스템 (Delegation Chain) — Phase 27: 3단계 위임
+에이전트 간 협업을 위한 핵심 메커니즘. 세 가지 위임 방식을 지원합니다:
+
+**1. 동기/비동기 위임** (기존)
+- `[others:delegate]`/`[others:delegate_project]`를 통해 작업을 위임하고 결과를 자동으로 보고받음
 - 순차 위임: `completed[]` 사이클 병합으로 이전 결과 보존
 - 병렬 위임: EXCLUSIVE 트랜잭션 내 원자적 `responses[]` 추가로 race condition 방지
 - 시스템 AI 위임: 3-레이어 감지 (도구명 / IBL 결과 / DB pending)
-→ 상세 문서: [delegation.md](delegation.md)
+
+**2. 스케줄 기반 위임** (Phase 27)
+- 에이전트 소유 스케줄: 모든 스케줄 이벤트에 `owner_project_id`/`owner_agent_id` 부여
+- 크로스 위임: `target_project_id`/`target_agent_id` 지정 시 대상 에이전트 소유로 등록
+- `calendar_manager.py`가 실행 시 소유 에이전트의 컨텍스트로 파이프라인 실행
 
 ### IBL (IndieBiz Logic) 시스템
 - 노드 기반 추상화: `[node:action]{params}` 문법
@@ -176,6 +183,36 @@ AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 구조 적용
 ### 다중채팅방 시스템
 - 독립 창에서 여러 프로젝트의 에이전트를 소환하여 그룹 대화 수행
 
+### 의식 시스템 (Consciousness Pulse & Self-Check)
+시스템에 자기인식을 부여하는 주기적 상태 수집 및 자가 점검 시스템:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              Consciousness Pulse (매 1시간)               │
+├──────────────┬──────────────────┬────────────────────────┤
+│  World Delta │   User State     │     Self State          │
+│  경제 지표    │   최근 대화 수   │   서비스 alive 체크     │
+│  날씨 (매시간)│   미처리 태스크   │   디스크/메모리         │
+│  뉴스 (6시간) │   다가오는 일정   │   최근 자가점검 결과    │
+└──────────────┴──────────────────┴────────────────────────┘
+                           ↓
+              consciousness_pulse.db (SQLite)
+                           ↓
+              world_pulse.md 가이드 파일 갱신
+```
+
+**Self-Check (매 6시간)**: IBL 액션 랜덤 자가 점검 (면역 순찰)
+- sense 노드의 안전한(읽기 전용) 액션을 랜덤 선택하여 실행
+- LLM 호출 없이 응답 코드/데이터 유무/응답 시간으로 평가
+- 연속 3회 실패 시 알림 발송
+
+**서버 시작 시**: 최근 1시간 내 펄스가 없으면 즉시 수집, 있으면 건너뜀
+
+- 비용: 사용자/자신 상태는 DB 쿼리만 (비용 0), 세계 정보는 경량 API 호출
+- 파일: `backend/world_pulse.py`, `data/consciousness_pulse.db`
+- 설정: `data/world_pulse_config.json`
+- API: `/world-pulse/consciousness`, `/world-pulse/self-checks`, `/world-pulse/health`
+
 ### 원격 접근 시스템
 Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 
@@ -186,4 +223,4 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 → 상세 문서: [remote_access.md](remote_access.md)
 
 ---
-*마지막 업데이트: 2026-03-06 (Phase 25: 5-Node 재구조화)*
+*마지막 업데이트: 2026-03-12 (의식 시스템: Consciousness Pulse & Self-Check)*

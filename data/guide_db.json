@@ -434,6 +434,49 @@
         "동향"
       ],
       "file": "world_pulse.md"
+    },
+    {
+      "id": "delegation_agent",
+      "name": "프로젝트 에이전트 위임 가이드",
+      "description": "같은 프로젝트 내 동료 에이전트에게 작업을 위임하는 방법. 병렬/순차 위임, 스테이트리스 원칙, 크로스 위임.",
+      "keywords": [
+        "동료 위임",
+        "delegate",
+        "동료",
+        "작업분배",
+        "병렬위임",
+        "순차위임",
+        "peers"
+      ],
+      "file": "delegation_agent.md"
+    },
+    {
+      "id": "delegation_system_ai",
+      "name": "시스템 AI 위임 가이드",
+      "description": "시스템 AI가 프로젝트 에이전트에게 작업을 위임하는 방법. delegate_project 사용법, 병렬/순차 위임, 크로스 위임.",
+      "keywords": [
+        "시스템 위임",
+        "delegate_project",
+        "시스템AI",
+        "프로젝트 위임",
+        "list_projects"
+      ],
+      "file": "delegation_system_ai.md"
+    },
+    {
+      "id": "work_plan_writing",
+      "name": "작업계획서 작성 가이드",
+      "description": "여러 에이전트를 활용한 작업계획서를 자연어로 작성하는 방법. 목표 설정, 에이전트 배정, 의존성 파악, 실패 대응.",
+      "keywords": [
+        "작업계획서",
+        "계획",
+        "plan",
+        "work plan",
+        "프로젝트 계획",
+        "작업 분배",
+        "멀티에이전트"
+      ],
+      "file": "work_plan_writing.md"
     }
   ]
 }

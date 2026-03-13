@@ -89,6 +89,7 @@ class CalendarManager:
             "run_workflow": self._action_run_workflow,
             "run_pipeline": self._action_run_pipeline,
             "send_notification": self._action_send_notification,
+            "run_goal": self._action_run_goal,  # Phase 26: 목표 반복 실행
         }
 
     def _log(self, message: str):
@@ -120,6 +121,18 @@ class CalendarManager:
     # =========================================================================
     # 이벤트 CRUD (캘린더 + 스케줄 통합)
     # =========================================================================
+
+    def list_agent_schedules(self, owner_project_id: str, owner_agent_id: str = None) -> List[dict]:
+        """특정 에이전트의 스케줄만 조회"""
+        events = self.config.get("events", [])
+        result = []
+        for evt in events:
+            if evt.get("owner_project_id") != owner_project_id:
+                continue
+            if owner_agent_id and evt.get("owner_agent_id") != owner_agent_id:
+                continue
+            result.append(evt)
+        return result
 
     def list_events(self, year: int = None, month: int = None) -> List[dict]:
         """이벤트 목록 조회"""
@@ -172,8 +185,14 @@ class CalendarManager:
                   action: str = None, action_params: dict = None,
                   enabled: bool = True, weekdays: List[int] = None,
                   month: int = None, day: int = None,
-                  interval_hours: int = None) -> dict:
-        """이벤트 추가 (캘린더 이벤트 + 실행 가능 이벤트 모두)"""
+                  interval_hours: int = None,
+                  owner_project_id: str = None, owner_agent_id: str = None) -> dict:
+        """이벤트 추가 (캘린더 이벤트 + 실행 가능 이벤트 모두)
+
+        owner_project_id / owner_agent_id: 이 스케줄의 주체.
+        - 프로젝트 에이전트: project_id + agent_id
+        - 시스템 AI: "__system_ai__" + "system_ai"
+        """
         event_id = f"evt_{uuid.uuid4().hex[:12]}"
         event = {
             "id": event_id,
@@ -185,6 +204,11 @@ class CalendarManager:
             "created_at": datetime.now().isoformat(),
             "enabled": enabled,
         }
+        # 스케줄 소유자 (주체)
+        if owner_project_id:
+            event["owner_project_id"] = owner_project_id
+        if owner_agent_id:
+            event["owner_agent_id"] = owner_agent_id
         if event_time:
             event["time"] = event_time
 
@@ -216,7 +240,8 @@ class CalendarManager:
         """이벤트 수정"""
         valid_keys = ("title", "date", "type", "repeat", "description", "time",
                       "action", "action_params", "enabled", "weekdays",
-                      "month", "day", "interval_hours")
+                      "month", "day", "interval_hours",
+                      "owner_project_id", "owner_agent_id")
         events = self.config.get("events", [])
         for evt in events:
             if evt["id"] == event_id:
@@ -225,6 +250,99 @@ class CalendarManager:
                         evt[key] = value
                 self._save_config()
                 return True
+        return False
+
+    def add_goal_schedule(self, goal_id: str, goal_name: str,
+                         every_frequency: str = None, schedule_at: str = None) -> dict:
+        """Phase 26: Goal의 every/schedule 설정을 캘린더 이벤트로 등록
+
+        Args:
+            goal_id: 목표 ID
+            goal_name: 목표 이름
+            every_frequency: 반복 주기 (예: "1h", "30m", "1d", "1w")
+            schedule_at: 1회 실행 시간 (ISO format, 예: "2026-03-10T09:00:00")
+
+        Returns:
+            생성된 이벤트 dict
+        """
+        action_params = {"goal_id": goal_id}
+
+        if schedule_at:
+            # 1회 실행: schedule_at 시간에 실행
+            try:
+                dt = datetime.fromisoformat(schedule_at)
+                return self.add_event(
+                    title=f"[Goal] {goal_name}",
+                    event_date=dt.strftime("%Y-%m-%d"),
+                    event_time=dt.strftime("%H:%M"),
+                    event_type="schedule",
+                    repeat="none",
+                    action="run_goal",
+                    action_params=action_params,
+                    description=f"목표 실행: {goal_name}",
+                )
+            except ValueError:
+                return {"error": f"잘못된 schedule_at 형식: {schedule_at}"}
+
+        if every_frequency:
+            # 반복 실행: every_frequency를 interval로 변환
+            freq = every_frequency.strip().lower()
+            interval_hours = self._parse_frequency_to_hours(freq)
+
+            if interval_hours is None:
+                return {"error": f"지원하지 않는 빈도 형식: {every_frequency}"}
+
+            now = datetime.now()
+            return self.add_event(
+                title=f"[Goal] {goal_name}",
+                event_date=now.strftime("%Y-%m-%d"),
+                event_time=now.strftime("%H:%M"),
+                event_type="schedule",
+                repeat="interval",
+                interval_hours=interval_hours,
+                action="run_goal",
+                action_params=action_params,
+                description=f"목표 반복 실행: {goal_name} (매 {every_frequency})",
+            )
+
+        return {"error": "every_frequency 또는 schedule_at 중 하나가 필요합니다."}
+
+    def _parse_frequency_to_hours(self, freq: str) -> Optional[int]:
+        """빈도 문자열을 시간(hours) 단위로 변환
+
+        지원 형식: "30m", "1h", "2h", "6h", "12h", "1d", "1w", "2d" 등
+        """
+        import re
+        m = re.match(r'^(\d+)\s*(m|min|h|hr|hour|d|day|w|week)s?$', freq)
+        if not m:
+            return None
+
+        value = int(m.group(1))
+        unit = m.group(2)
+
+        if unit in ("m", "min"):
+            # 최소 1시간 단위 (분은 시간으로 올림)
+            return max(1, value // 60) if value >= 60 else 1
+        elif unit in ("h", "hr", "hour"):
+            return max(1, value)
+        elif unit in ("d", "day"):
+            return value * 24
+        elif unit in ("w", "week"):
+            return value * 24 * 7
+        return None
+
+    def remove_goal_schedule(self, goal_id: str) -> bool:
+        """특정 goal의 스케줄 이벤트 제거"""
+        events = self.config.get("events", [])
+        original_len = len(events)
+        self.config["events"] = [
+            e for e in events
+            if not (e.get("action") == "run_goal" and
+                    e.get("action_params", {}).get("goal_id") == goal_id)
+        ]
+        if len(self.config["events"]) < original_len:
+            self._save_config()
+            return True
         return False
 
     def delete_event(self, event_id: str) -> bool:
@@ -340,6 +458,22 @@ class CalendarManager:
             # 1분마다 체크
             time.sleep(60)
 
+    @staticmethod
+    def _normalize_time(raw: str) -> str:
+        """어떤 형태의 시간이든 HH:MM으로 정규화.
+        '09:00', '09:00:00', '2026-03-10 09:00:00', '2026-03-10T09:00' 모두 → '09:00'
+        """
+        if not raw:
+            return ""
+        raw = raw.strip()
+        # full datetime (공백 또는 T 구분)
+        for sep in (" ", "T"):
+            if sep in raw:
+                raw = raw.split(sep)[-1]  # 시간 부분만
+                break
+        # HH:MM:SS → HH:MM
+        return raw[:5]
+
     def _should_run_task(self, task: dict, now: datetime) -> bool:
         """작업 실행 여부 판단"""
         if not task.get("enabled", True):
@@ -348,8 +482,9 @@ class CalendarManager:
         current_time = now.strftime("%H:%M")
         repeat = task.get("repeat", "daily")
 
-        # 시간 체크 (interval 제외)
-        if repeat != "interval" and task.get("time") != current_time:
+        # 시간 체크 (interval 제외) — 정규화된 시간으로 비교
+        task_time = self._normalize_time(task.get("time", ""))
+        if repeat != "interval" and task_time != current_time:
             return False
 
         last_run = task.get("last_run")
@@ -583,33 +718,58 @@ class CalendarManager:
             return {"success": False, "error": str(e)}
 
     def _action_run_pipeline(self, task: dict):
-        """IBL 파이프라인 실행 작업 (Phase 8: 이벤트 트리거)"""
+        """IBL 파이프라인 실행 — 창을 열고 에이전트가 보이는 곳에서 실행
+
+        흐름:
+        1. 프로젝트 창(또는 시스템 AI 창) 열기
+        2. 에이전트 활성화 + WS 연결 대기
+        3. WS를 통해 메시지 주입 → 에이전트가 채팅창에서 실시간으로 작업
+        4. 요청/응답/도구실행 과정이 모두 사용자에게 보임
+        """
         import time as _time
+        import asyncio
 
         params = task.get("action_params", {})
         pipeline = params.get("pipeline", "")
         trigger_id = params.get("trigger_id")
 
+        owner_project_id = task.get("owner_project_id", "")
+        owner_agent_id = task.get("owner_agent_id", "")
+        is_system_ai = (owner_project_id == "__system_ai__")
+
         if not pipeline:
             self._log(f"파이프라인이 없습니다: {task.get('title')}")
             return {"success": False, "error": "pipeline 누락"}
 
-        try:
-            from ibl_parser import parse as ibl_parse, IBLSyntaxError
-            from workflow_engine import execute_pipeline
+        # 사용자 메시지 생성 (에이전트에게 보낼 내용)
+        user_message = (
+            f"[스케줄 작업] 다음을 실행하고 결과를 보고해주세요:\n\n"
+            f"`{pipeline}`"
+        )
 
+        try:
             start = _time.time()
 
-            # IBL 코드 파싱
-            try:
-                steps = ibl_parse(pipeline)
-            except IBLSyntaxError as e:
-                self._log(f"IBL 문법 오류: {e}")
-                return {"success": False, "error": f"IBL 문법 오류: {e}"}
+            if is_system_ai:
+                result = self._execute_visible_system_ai(user_message, task)
+            elif owner_project_id and owner_agent_id:
+                result = self._execute_visible_agent(
+                    owner_project_id, owner_agent_id, user_message, task
+                )
+            else:
+                # ── 소유자 없는 스케줄: 파이프라인 직접 실행 (레거시) ──
+                from ibl_parser import parse as ibl_parse, IBLSyntaxError
+                from workflow_engine import execute_pipeline
 
-            # 파이프라인 실행
-            self._log(f"파이프라인 실행: {pipeline[:60]}...")
-            result = execute_pipeline(steps, ".")
+                try:
+                    steps = ibl_parse(pipeline)
+                except IBLSyntaxError as e:
+                    self._log(f"IBL 문법 오류: {e}")
+                    return {"success": False, "error": f"IBL 문법 오류: {e}"}
+
+                self._log(f"[레거시] 파이프라인 직접 실행: {pipeline[:60]}...")
+                result = execute_pipeline(steps, ".", agent_id=owner_agent_id)
+
             duration_ms = int((_time.time() - start) * 1000)
 
             # 트리거 이력 기록
@@ -626,19 +786,20 @@ class CalendarManager:
                 except Exception:
                     pass
 
-            # 알림
+            # 알림 (성공/실패)
             try:
                 from notification_manager import get_notification_manager
                 nm = get_notification_manager()
+                owner_label = f"{owner_project_id}/{owner_agent_id}" if owner_project_id else ""
                 if result.get("success"):
                     nm.success(
-                        title="IBL 파이프라인 실행 완료",
-                        message=f"'{task.get('title')}' ({result.get('steps_completed', 0)}/{result.get('steps_total', 0)} steps, {duration_ms}ms)",
+                        title=f"스케줄 실행 완료{' — ' + owner_label if owner_label else ''}",
+                        message=f"'{task.get('title')}'",
                         source="scheduler"
                     )
                 else:
                     nm.warning(
-                        title="IBL 파이프라인 실행 실패",
+                        title=f"스케줄 실행 실패{' — ' + owner_label if owner_label else ''}",
                         message=f"'{task.get('title')}': {result.get('error', '알 수 없는 오류')}",
                         source="scheduler"
                     )
@@ -648,8 +809,277 @@ class CalendarManager:
             return result
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             self._log(f"파이프라인 실행 오류: {str(e)}")
             return {"success": False, "error": str(e)}
+
+    # =========================================================================
+    # 스케줄 실행: "보이는 실행" — 창을 열고 에이전트가 채팅에서 작업
+    # =========================================================================
+
+    def _run_async(self, async_fn):
+        """sync 스레드에서 async 함수 실행 헬퍼"""
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                future = asyncio.run_coroutine_threadsafe(async_fn(), loop)
+                return future.result(timeout=30)
+            else:
+                return asyncio.run(async_fn())
+        except RuntimeError:
+            return asyncio.run(async_fn())
+
+    def _open_window_and_wait_ws(self, project_id: str, agent_id: str,
+                                  agent_name: str, is_system_ai: bool) -> str:
+        """창을 열고 WS 연결이 생길 때까지 대기. client_id 반환.
+
+        Returns:
+            WS client_id (성공) 또는 None (실패)
+        """
+        import time as _t
+        from websocket_manager import manager as ws_manager
+        from api_websocket import send_launcher_command
+
+        # 1) 이미 WS 연결이 있으면 바로 반환
+        if is_system_ai:
+            existing = ws_manager.find_system_ai_connections()
+        else:
+            existing = ws_manager.find_agent_connections(project_id, agent_id)
+
+        if existing:
+            self._log(f"WS 이미 연결됨: {existing[0]}")
+            return existing[0]
+
+        # 2) 창 열기 명령
+        if is_system_ai:
+            self._log("시스템 AI 창 열기 →")
+            self._run_async(lambda: send_launcher_command("open_system_ai_window", {}))
+        else:
+            self._log(f"프로젝트 창 열기 → {project_id}/{agent_name}")
+            self._run_async(lambda: send_launcher_command(
+                "open_project_window",
+                {"project_id": project_id, "project_name": project_id,
+                 "agent_id": agent_id, "agent_name": agent_name}
+            ))
+
+        # 3) WS 연결 대기 (최대 30초)
+        #    React StrictMode는 마운트→언마운트→재마운트를 하므로
+        #    첫 번째 연결이 바로 죽을 수 있음. 안정화 대기 필요.
+        first_found_at = None
+        stable_client_id = None
+
+        for i in range(60):
+            _t.sleep(0.5)
+            if is_system_ai:
+                connections = ws_manager.find_system_ai_connections()
+            else:
+                connections = ws_manager.find_agent_connections(project_id, agent_id)
+
+            if connections:
+                latest = connections[-1]  # 가장 최신 연결 사용
+                if first_found_at is None:
+                    first_found_at = i
+                    stable_client_id = latest
+                    self._log(f"WS 연결 감지, 안정화 대기: {latest} ({(i+1)*0.5:.1f}초)")
+                    continue  # 바로 반환하지 않고 안정화 대기
+
+                # 첫 감지 후 2초(4틱) 이상 지났으면 안정적
+                stable_client_id = latest  # 항상 최신으로 갱신
+                if i - first_found_at >= 4:
+                    self._log(f"WS 연결 안정화 확인: {stable_client_id} ({(i+1)*0.5:.1f}초)")
+                    return stable_client_id
+            else:
+                # 연결이 있었다가 사라짐 (StrictMode 언마운트)
+                if first_found_at is not None:
+                    self._log(f"WS 연결 일시 해제 감지 (StrictMode), 재연결 대기...")
+                    first_found_at = None
+                    stable_client_id = None
+
+        # 타임아웃이지만 연결이 있으면 반환
+        if stable_client_id:
+            self._log(f"WS 안정화 대기 타임아웃, 마지막 연결 사용: {stable_client_id}")
+            return stable_client_id
+
+        self._log("WS 연결 타임아웃 (30초)")
+        return None
+
+    def _ensure_agent_running(self, project_id: str, agent_id: str) -> bool:
+        """에이전트가 agent_runners에 등록되어 있는지 확인하고, 없으면 시작.
+        프론트엔드가 에이전트를 시작할 때까지 대기하거나 직접 시작.
+        """
+        import time as _t
+        from api_agents import get_agent_runners
+
+        # 프론트엔드가 autoActivateAgent로 시작할 시간 기다림
+        for i in range(20):
+            runners = get_agent_runners()
+            if project_id in runners and agent_id in runners[project_id]:
+                runner_info = runners[project_id][agent_id]
+                runner = runner_info.get("runner")
+                if runner and runner.running and runner.ai:
+                    self._log(f"에이전트 준비 완료: {project_id}/{agent_id} ({(i+1)*0.5:.1f}초)")
+                    return True
+            _t.sleep(0.5)
+
+        self._log(f"에이전트 자동 시작 타임아웃, 직접 시작 시도: {project_id}/{agent_id}")
+        # 프론트엔드가 시작하지 않았으면 백엔드에서 직접 시작
+        try:
+            import yaml
+            from project_manager import ProjectManager
+            from agent_runner import AgentRunner
+
+            pm = ProjectManager()
+            project_path = pm.get_project_path(project_id)
+            agents_yaml = project_path / "agents.yaml"
+            if not agents_yaml.exists():
+                return False
+
+            data = yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
+            agents = data.get("agents", [])
+            common_config = data.get("common", {})
+
+            agent_config = None
+            for ag in agents:
+                if ag.get("id") == agent_id or ag.get("name") == agent_id:
+                    agent_config = ag
+                    agent_id = ag.get("id", agent_id)
+                    break
+
+            if not agent_config:
+                active = [a for a in agents if a.get("active", True)]
+                if active:
+                    agent_config = active[0]
+                    agent_id = agent_config.get("id", agent_id)
+
+            if not agent_config:
+                return False
+
+            agent_config["_project_path"] = str(project_path)
+            agent_config["_project_id"] = project_id
+
+            runner = AgentRunner(agent_config, common_config)
+            runner.start()
+
+            runners = get_agent_runners()
+            if project_id not in runners:
+                runners[project_id] = {}
+            runners[project_id][agent_id] = {
+                "runner": runner,
+                "config": agent_config,
+                "running": True,
+                "started_at": __import__('datetime').datetime.now().isoformat()
+            }
+
+            _t.sleep(1.0)
+            self._log(f"에이전트 직접 시작 완료: {agent_config.get('name', agent_id)}")
+            return True
+
+        except Exception as e:
+            self._log(f"에이전트 직접 시작 실패: {e}")
+            return False
+
+    def _inject_message_via_ws(self, client_id: str, project_id: str,
+                                agent_id: str, agent_name: str,
+                                message: str, is_system_ai: bool) -> dict:
+        """WS를 통해 메시지를 주입 — handle_chat_message_stream / handle_system_ai_chat_stream 호출.
+
+        프론트엔드의 ChatView가 보낸 것과 동일한 경로를 타서
+        스트리밍, 도구 실행, 응답이 모두 채팅창에 실시간으로 보임.
+
+        fire-and-forget: 코루틴을 이벤트 루프에 스케줄링하고 즉시 반환.
+        에이전트 작업은 비동기로 실행되며, 결과는 WS를 통해 프론트엔드에 전달됨.
+        """
+        import asyncio
+
+        try:
+            if is_system_ai:
+                from api_websocket import handle_system_ai_chat_stream
+                data = {
+                    "type": "system_ai_stream",
+                    "message": message,
+                }
+                self._log(f"시스템 AI WS 메시지 주입: {message[:60]}...")
+                coro = handle_system_ai_chat_stream(client_id, data)
+            else:
+                from api_websocket import handle_chat_message_stream
+                data = {
+                    "type": "chat_stream",
+                    "message": message,
+                    "agent_name": agent_name,
+                    "project_id": project_id,
+                }
+                self._log(f"에이전트 WS 메시지 주입: {project_id}/{agent_name} — {message[:60]}...")
+                coro = handle_chat_message_stream(client_id, data)
+
+            # fire-and-forget: 이벤트 루프에 코루틴 스케줄링 (완료를 기다리지 않음)
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.run_coroutine_threadsafe(coro, loop)
+                else:
+                    asyncio.run(coro)
+            except RuntimeError:
+                asyncio.run(coro)
+
+            self._log("WS 메시지 주입 완료 (에이전트 작업 시작됨)")
+            return {"success": True, "final_result": "WS를 통해 실행됨 (채팅창에 표시)", "visible": True}
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            self._log(f"WS 메시지 주입 실패: {e}")
+            return {"success": False, "error": str(e)}
+
+    def _execute_visible_agent(self, project_id: str, agent_id: str,
+                                message: str, task: dict) -> dict:
+        """프로젝트 에이전트: 창 열기 → 에이전트 활성화 → WS로 메시지 주입"""
+
+        # 에이전트 이름 조회
+        agent_name = agent_id
+        try:
+            import yaml
+            agents_yaml = BASE_PATH / "projects" / project_id / "agents.yaml"
+            if agents_yaml.exists():
+                data = yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
+                for ag in data.get("agents", []):
+                    if ag.get("id") == agent_id or ag.get("name") == agent_id:
+                        agent_name = ag.get("name", agent_id)
+                        agent_id = ag.get("id", agent_id)
+                        break
+        except Exception:
+            pass
+
+        self._log(f"[{project_id}/{agent_name}] 보이는 실행 시작")
+
+        # 1. 창 열기 + WS 연결 대기
+        client_id = self._open_window_and_wait_ws(project_id, agent_id, agent_name, False)
+        if not client_id:
+            self._log("창/WS 연결 실패 → 보이는 실행 불가")
+            return {"success": False, "error": "프로젝트 창/WS 연결 실패"}
+
+        # 2. 에이전트가 agent_runners에 등록되기 대기
+        if not self._ensure_agent_running(project_id, agent_id):
+            self._log("에이전트 시작 실패")
+            return {"success": False, "error": "에이전트 시작 실패"}
+
+        # 3. WS로 메시지 주입 → 채팅창에 실시간 표시
+        return self._inject_message_via_ws(client_id, project_id, agent_id, agent_name, message, False)
+
+    def _execute_visible_system_ai(self, message: str, task: dict) -> dict:
+        """시스템 AI: 창 열기 → WS 연결 대기 → WS로 메시지 주입"""
+
+        self._log("[시스템 AI] 보이는 실행 시작")
+
+        # 1. 창 열기 + WS 연결 대기
+        client_id = self._open_window_and_wait_ws("__system_ai__", "system_ai", "시스템 AI", True)
+        if not client_id:
+            self._log("시스템 AI 창/WS 연결 실패")
+            return {"success": False, "error": "시스템 AI 창/WS 연결 실패"}
+
+        # 2. WS로 메시지 주입 → 채팅창에 실시간 표시
+        return self._inject_message_via_ws(client_id, "__system_ai__", "system_ai", "시스템 AI", message, True)
 
     def _action_send_notification(self, task: dict):
         """알림 전송 작업"""
@@ -671,6 +1101,77 @@ class CalendarManager:
             return {"success": True, "notification_id": notification["id"]}
         except Exception as e:
             self._log(f"알림 전송 실패: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    def _action_run_goal(self, task: dict):
+        """Phase 26: 목표 반복 실행 (every/schedule에 의해 트리거)
+
+        CalendarManager가 every 주기에 맞춰 goal의 다음 라운드를 실행합니다.
+        goal_id로 DB에서 목표를 조회하고, agent_runner를 통해 판단 루프 1회를 실행합니다.
+        """
+        params = task.get("action_params", {})
+        goal_id = params.get("goal_id")
+
+        if not goal_id:
+            self._log(f"Goal ID가 없습니다: {task.get('title')}")
+            return {"success": False, "error": "goal_id 누락"}
+
+        try:
+            from conversation_db import ConversationDB
+            db = ConversationDB()
+            goal = db.get_goal(goal_id)
+
+            if not goal:
+                self._log(f"목표를 찾을 수 없습니다: {goal_id}")
+                return {"success": False, "error": f"목표 없음: {goal_id}"}
+
+            # 이미 종료된 목표면 스킵
+            if goal["status"] in ("achieved", "expired", "limit_reached", "cancelled"):
+                self._log(f"종료된 목표 스킵: {goal['name']} ({goal['status']})")
+                # 이벤트도 비활성화
+                task["enabled"] = False
+                self._save_config()
+                return {"success": True, "skipped": True, "reason": goal["status"]}
+
+            # agent_runner를 통해 판단 루프 실행
+            from agent_runner import AgentRunner
+
+            # 활성 에이전트 찾기 (registry에서 running 상태인 에이전트)
+            runner = None
+            for aid, agent in AgentRunner.agent_registry.items():
+                if agent.running:
+                    runner = agent
+                    break
+
+            if runner:
+                runner._activate_and_run_goal(goal_id)
+            else:
+                self._log(f"활성 에이전트 없음, Goal 실행 스킵: {goal_id}")
+                return {"success": False, "error": "활성 에이전트 없음"}
+
+            # 실행 후 상태 재확인
+            updated_goal = db.get_goal(goal_id)
+            if updated_goal and updated_goal["status"] in ("achieved", "expired", "limit_reached"):
+                task["enabled"] = False
+                self._save_config()
+                self._log(f"목표 완료, 스케줄 비활성화: {goal['name']} ({updated_goal['status']})")
+
+            try:
+                from notification_manager import get_notification_manager
+                nm = get_notification_manager()
+                nm.info(
+                    title="목표 라운드 실행",
+                    message=f"'{goal['name']}' 라운드 {goal.get('current_round', 0) + 1} 실행됨",
+                    source="scheduler"
+                )
+            except Exception:
+                pass
+
+            self._log(f"목표 라운드 실행 완료: {goal['name']}")
+            return {"success": True, "goal_id": goal_id, "name": goal["name"]}
+
+        except Exception as e:
+            self._log(f"목표 실행 실패: {goal_id} - {str(e)}")
             return {"success": False, "error": str(e)}
 
     # =========================================================================

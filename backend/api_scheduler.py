@@ -202,6 +202,148 @@ async def run_task_now(task_id: str):
     raise HTTPException(status_code=404, detail="작업을 찾을 수 없습니다.")
 
 
+# ============ Goal 관리 (Phase 26) ============
+
+class GoalApproval(BaseModel):
+    project_id: str
+    goal_id: str
+
+
+@router.get("/goals")
+async def list_goals(status: Optional[str] = None, project_id: Optional[str] = None):
+    """Goal 목록 조회"""
+    from conversation_db import ConversationDB
+    import os
+
+    db_path = _resolve_project_db(project_id)
+    if not db_path:
+        return {"goals": [], "message": "프로젝트 DB를 찾을 수 없습니다."}
+
+    db = ConversationDB(db_path)
+    goals = db.list_goals(status=status)
+    return {"goals": goals or [], "total": len(goals or [])}
+
+
+@router.post("/goals/approve")
+async def approve_goal(body: GoalApproval):
+    """
+    사용자 승인 후 Goal 활성화
+
+    pending_approval 상태의 Goal을 승인하여 실행/스케줄링한다.
+    """
+    from agent_runner import AgentRunner
+    import threading
+
+    goal_id = body.goal_id
+    project_id = body.project_id
+
+    # 해당 프로젝트의 활성 에이전트 찾기
+    agent = _find_agent_for_project(project_id)
+    if not agent:
+        return {"error": "활성 에이전트를 찾을 수 없습니다."}
+
+    # 백그라운드에서 Goal 활성화 (판단 루프가 블로킹될 수 있으므로)
+    def _run_goal():
+        try:
+            result = agent.approve_goal(goal_id)
+            agent._log(f"[Goal] 승인 결과: {result}")
+        except Exception as e:
+            agent._log(f"[Goal] 승인 실행 오류: {e}")
+
+    thread = threading.Thread(target=_run_goal, daemon=True)
+    thread.start()
+
+    return {"status": "approved", "goal_id": goal_id, "message": "Goal 활성화 시작"}
+
+
+@router.post("/goals/{goal_id}/kill")
+async def kill_goal(goal_id: str, project_id: Optional[str] = None):
+    """Goal 중단"""
+    from conversation_db import ConversationDB
+
+    db_path = _resolve_project_db(project_id)
+    if not db_path:
+        return {"error": "프로젝트 DB를 찾을 수 없습니다."}
+
+    db = ConversationDB(db_path)
+    goal = db.get_goal(goal_id)
+    if not goal:
+        return {"error": f"Goal을 찾을 수 없습니다: {goal_id}"}
+
+    db.update_goal_status(goal_id, "cancelled")
+    return {"status": "cancelled", "goal_id": goal_id}
+
+
+@router.get("/goals/{goal_id}")
+async def get_goal_detail(goal_id: str, project_id: Optional[str] = None):
+    """Goal 상세 조회"""
+    from conversation_db import ConversationDB
+    import json
+
+    db_path = _resolve_project_db(project_id)
+    if not db_path:
+        return {"error": "프로젝트 DB를 찾을 수 없습니다."}
+
+    db = ConversationDB(db_path)
+    goal = db.get_goal(goal_id)
+    if not goal:
+        return {"error": f"Goal을 찾을 수 없습니다: {goal_id}"}
+
+    # rounds_data 파싱
+    rounds = []
+    if goal.get("rounds_data"):
+        try:
+            rounds = json.loads(goal["rounds_data"]) if isinstance(goal["rounds_data"], str) else goal["rounds_data"]
+        except Exception:
+            pass
+
+    return {
+        "goal": goal,
+        "rounds": rounds,
+        "progress": {
+            "round_pct": round(goal["current_round"] / goal["max_rounds"] * 100, 1) if goal["max_rounds"] > 0 else 0,
+            "cost_pct": round(goal["cumulative_cost"] / goal["max_cost"] * 100, 1) if goal["max_cost"] > 0 else 0,
+        }
+    }
+
+
+def _resolve_project_db(project_id: Optional[str] = None) -> Optional[str]:
+    """프로젝트 DB 경로 해석"""
+    import os
+    import glob
+
+    if project_id:
+        # 프로젝트 ID로 찾기
+        base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "projects")
+        for project_dir in glob.glob(os.path.join(base, "*")):
+            if os.path.basename(project_dir) == project_id or project_id in project_dir:
+                db_path = os.path.join(project_dir, "conversations.db")
+                if os.path.exists(db_path):
+                    return db_path
+
+    # 기본: 모든 프로젝트 DB 중 첫 번째
+    base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "projects")
+    if os.path.exists(base):
+        for project_dir in sorted(os.listdir(base)):
+            db_path = os.path.join(base, project_dir, "conversations.db")
+            if os.path.exists(db_path):
+                return db_path
+    return None
+
+
+def _find_agent_for_project(project_id: str):
+    """프로젝트의 활성 에이전트 찾기"""
+    from agent_runner import AgentRunner
+
+    for agent_id, agent in AgentRunner.agent_registry.items():
+        if agent.running and (
+            agent.project_id == project_id or
+            str(agent.project_path).endswith(project_id)
+        ):
+            return agent
+    return None
+
+
 # ============ 캘린더 ============
 
 @router.get("/calendar/events")
@@ -210,6 +352,22 @@ async def get_calendar_events(year: int = None, month: int = None):
     cm = get_calendar_manager()
     events = cm.list_events(year=year, month=month)
     return {"events": events, "count": len(events)}
+
+
+@router.get("/calendar/events/by-agent")
+async def get_agent_schedules(project_id: str, agent_id: str = None):
+    """특정 에이전트의 스케줄 목록 조회
+
+    에이전트별 자기 스케줄을 확인할 수 있는 API.
+    - project_id: 프로젝트 ID 또는 "__system_ai__"
+    - agent_id: 에이전트 ID (선택, 없으면 프로젝트 전체)
+    """
+    cm = get_calendar_manager()
+    events = cm.list_agent_schedules(
+        owner_project_id=project_id,
+        owner_agent_id=agent_id
+    )
+    return {"events": events, "count": len(events), "owner": {"project_id": project_id, "agent_id": agent_id}}
 
 
 @router.get("/calendar/view")

@@ -545,12 +545,109 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
 4. **환각 방지**: 결과 없이 "검토했습니다" 등 표현 금지
 
 ---
-*마지막 업데이트: 2026-03-05*
-*Phase 17→19: 모든 위임이 IBL 경로(`execute_ibl`)를 통해 실행됨.*
-*Phase 23: 위임 액션을 system에서 team 노드로 분리. `[team:delegate]` (프로젝트 내), `[team:delegate_project]` (프로젝트 간). team은 _ALWAYS_ALLOWED로 모든 에이전트에 자동 제공.*
-*Phase 23 안정화: completed[] 사이클 병합, 병렬 위임 원자적 응답 추가, WebSocket 3-레이어 위임 감지.*
-*Phase 25: others 노드로 통합. `[others:delegate]` (프로젝트 내), `[others:delegate_project]` (프로젝트 간), `[others:channel_send]` (통신). others는 _ALWAYS_ALLOWED로 모든 에이전트에 자동 제공.*
 
-> 참고: 위임 프롬프트 파일
-> - `fragments/09_delegation.md`: 프로젝트 내 에이전트 간 위임 가이드
-> - `fragments/10_system_ai_delegation.md`: 시스템 AI → 프로젝트 에이전트 위임 가이드
+## 스케줄 기반 위임 (Schedule-based Delegation)
+
+기존의 동기적 위임(`call_agent`, `call_project_agent`)에 더해, **시간 기반 비동기 위임** 시스템.
+
+### 개요: 두 가지 위임 경로
+
+| 구분 | 동기 위임 | 스케줄 위임 |
+|------|----------|------------|
+| 방식 | `[others:delegate]`, `call_project_agent` | `[self:schedule]` + 크로스 위임 |
+| 시점 | 즉시 (작업 도중) | 미래 시간 (스케줄러가 트리거) |
+| 용도 | A가 일하다가 B에게 분담 | "매일 9시에 B가 이걸 해라" |
+| 결과 전달 | 자동 보고 체인 | 대화창 자동 열기 + WS push |
+
+두 경로는 조합 가능: 스케줄로 에이전트가 활성화된 후, 작업 중 동기 위임 사용 가능.
+
+### 에이전트 소유 스케줄 (Owner-based Scheduling)
+
+모든 스케줄 이벤트에는 소유자(owner)가 명시됨:
+
+```json
+{
+  "id": "evt_abc123",
+  "title": "매일 뉴스 수집",
+  "action": "run_pipeline",
+  "action_params": {"pipeline": "[sense:web_search]{query: 'AI 뉴스'}"},
+  "owner_project_id": "투자",
+  "owner_agent_id": "researcher"
+}
+```
+
+- `owner_project_id`: 소유 프로젝트 (시스템 AI일 때 `__system_ai__`)
+- `owner_agent_id`: 소유 에이전트 ID
+- 실행 시 owner의 project_path에서 파이프라인이 실행됨
+- 결과는 owner의 대화창에 전달 (열려있으면 WS push, 닫혀있으면 창 자동 열기)
+
+### 셀프 스케줄 vs 크로스 위임
+
+**셀프 스케줄** — 자기 자신의 스케줄 등록:
+```
+[self:schedule]{at: "09:00", pipeline: "[sense:web_search]{query: '오늘 뉴스'}"}
+```
+
+**크로스 위임** — 다른 에이전트의 스케줄에 등록:
+```
+[self:schedule]{at: "09:00", target_project_id: "투자", target_agent_id: "analyst",
+  pipeline: "[sense:web_search]{query: '오늘 주요 뉴스'}"}
+```
+
+`target_project_id`/`target_agent_id`를 지정하면 해당 에이전트가 owner가 되어, 그 에이전트의 컨텍스트에서 실행되고 결과도 그쪽 대화창에 전달됨.
+
+### 핵심 컴포넌트
+
+| 파일 | 역할 |
+|------|------|
+| `calendar_manager.py` | 에이전트 소유 스케줄 저장/실행, `owner_project_id`/`owner_agent_id` 필드 |
+| `api_system_ai.py` | `_execute_schedule()` — 셀프/크로스 위임 분기, `_execute_plan()` — 계획서 실행 |
+| `api_scheduler.py` | `GET /calendar/events/by-agent` — 에이전트별 스케줄 조회 API |
+| `websocket_manager.py` | `send_to_system_ai_chat()`, `find_system_ai_connections()` |
+| `api_websocket.py` | `/ws/launcher` — 백엔드→Electron 창 제어 (자동 열기) |
+| `Launcher.tsx` | WS 리스너 — 창 열기 명령 수신 |
+| `workflow_engine.py` | `execute_pipeline(agent_id=)` — 파이프라인에 agent_id 전달 |
+
+### 스케줄 실행 흐름
+
+```
+스케줄 시간 도래
+    ↓
+CalendarManager._action_run_pipeline()
+    ↓
+owner_project_id/owner_agent_id 읽기
+    ↓
+ProjectManager로 project_path 해석
+    ↓
+execute_pipeline(steps, project_path, agent_id=owner_agent_id)
+    ↓
+결과 → _deliver_result_to_chat()
+    ↓
+대화창 열림? → WS push (auto_report)
+대화창 닫힘? → Launcher WS로 창 열기 + DB 저장
+```
+
+---
+
+## 위임 시스템 전체 요약
+
+IndieBiz OS의 위임은 두 가지 레이어로 구성:
+
+| 레이어 | 메커니즘 | 특징 |
+|--------|---------|------|
+| **동기 위임** | `[others:delegate]`, `[others:delegate_project]` | 즉시, 작업 도중 분담, 결과 자동 보고 |
+| **스케줄 위임** | `[self:schedule]` + 크로스 위임 | 시간 기반, 에이전트 소유 |
+
+두 레이어는 조합 가능:
+- 스케줄로 활성화된 에이전트가 작업 중 동기 위임 사용
+- 멀티에이전트 작업계획서는 동기 위임을 순차/병렬로 조합하여 실행
+
+---
+*마지막 업데이트: 2026-03-11*
+*Phase 25: others 노드로 통합. `[others:delegate]`, `[others:delegate_project]`.*
+*Phase 28: create_plan/execute_plan 제거. 작업계획서는 자연어로 작성하고 기존 위임 도구로 실행.*
+
+> 참고: 위임 가이드 파일 (guide_db.json에서 검색)
+> - 프로젝트 에이전트용: `delegation_agent.md`
+> - 시스템 AI용: `delegation_system_ai.md`
+> - 작업계획서 작성: `work_plan_writing.md`

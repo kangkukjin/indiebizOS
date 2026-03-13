@@ -112,6 +112,8 @@ def _build_node_descriptor(node_name: str, node_config: dict) -> dict:
             "description": action_cfg.get("description", ""),
             "router": action_cfg.get("router", ""),
         }
+        if action_cfg.get("group"):
+            action_desc["group"] = action_cfg["group"]
         if action_cfg.get("target_key"):
             action_desc["target_key"] = action_cfg["target_key"]
         if action_cfg.get("tool"):
@@ -451,9 +453,28 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
         return []
 
     query_lower = query.lower()
+
+    # URL이 포함된 경우 도메인에서 서비스명 추출 (youtube, naver, daum 등)
+    _URL_SERVICE_MAP = {
+        "youtube": "youtube", "youtu.be": "youtube",
+        "naver": "naver", "daum": "daum", "kakao": "kakao",
+        "github": "github", "arxiv": "arxiv",
+    }
+    url_tokens = []
+    if "://" in query or "www." in query:
+        for domain_key, service in _URL_SERVICE_MAP.items():
+            if domain_key in query_lower:
+                url_tokens.append(service)
+
     # 한글/영어 토큰 분리 + 조사 제거 + 복합어 분리
     raw_tokens = re.findall(r'[\w가-힣]+', query_lower)
     tokens = _normalize_korean_tokens(raw_tokens)
+
+    # URL인 경우: 노이즈 토큰(https, www, com, watch, v 등) 제거하고 서비스명 추가
+    if url_tokens:
+        _URL_NOISE = {"https", "http", "www", "com", "co", "kr", "watch", "v", "org", "io"}
+        tokens = [t for t in tokens if t not in _URL_NOISE and len(t) > 2]
+        tokens.extend(url_tokens)
     nodes = list_nodes()
     results = []
 
@@ -511,7 +532,19 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
                 action_score += 25  # 정확 일치 보너스
                 action_matched = True
 
-            # (1.5) 액션 키워드 매칭 — 동의어/다국어 지원
+            # (1.5) 액션 group 매칭 — 같은 그룹의 액션끼리 묶어서 맥락 제공
+            action_group = action.get("group", "")
+            action_group_lower = action_group.lower()
+            if action_group_lower:
+                for token in tokens:
+                    if token == action_group_lower:
+                        action_score += 20  # group 정확 매칭: 강한 신호
+                        action_matched = True
+                    elif token in action_group_lower or action_group_lower in token:
+                        action_score += 12  # group 부분 매칭
+                        action_matched = True
+
+            # (1.6) 액션 키워드 매칭 — 동의어/다국어 지원
             action_keywords = action.get("keywords", [])
             for kw in action_keywords:
                 kw_lower = kw.lower()
@@ -538,12 +571,15 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
                 # action_details의 target_key 정보는 ibl_nodes.yaml에서 추출되어야 함
                 # 여기서는 generic한 예시 제공
                 example = f'[{node["id"]}:{action_name}]{{...}}'
-                action_details.append({
+                detail = {
                     "action": action_name,
                     "description": action.get("description", ""),
                     "example": example,
                     "score": action_score,
-                })
+                }
+                if action_group:
+                    detail["group"] = action_group
+                action_details.append(detail)
 
         # 에이전트 노드: capabilities 매칭 (보너스)
         if node["type"] == "agent":
@@ -577,9 +613,9 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
                 "node": node["id"],
                 "description": node["description"],
                 "score": score,
-                "matching_actions": matching_actions[:5],
+                "matching_actions": matching_actions[:8],
                 "suggestion": f'[{node["id"]}:{suggestion_action}]',
-                "action_details": action_details[:5],
+                "action_details": action_details[:8],
             }
 
             if verb_hints:

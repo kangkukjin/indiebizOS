@@ -39,6 +39,14 @@ class GeminiProvider(BaseProvider):
     # Gemini 2.5: 1M 토큰 컨텍스트 → 80% = 800K 토큰 → ~3,200,000자
     COMPACTION_CHAR_THRESHOLD = 3200000
 
+    # IBL 텍스트 출력 감지 패턴
+    _IBL_TEXT_PATTERN = None  # 지연 컴파일
+
+    # IBL 텍스트 출력 감지 시 교정 프롬프트
+    FORCE_EXECUTE_IBL_PROMPT = """당신이 방금 텍스트 응답에 IBL 코드([node:action]{...} 형태)를 포함했습니다. 이것은 실행되지 않습니다.
+IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 합니다.
+방금 텍스트에 쓴 IBL 코드를 execute_ibl 도구로 다시 실행하세요. 텍스트 응답에는 자연어만 사용하세요."""
+
     # 강제 프롬프트 (설정 가능)
     FORCE_RESPONSE_PROMPT = "도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
     FORCE_STATUS_PROMPT = """도구만 연속 호출하고 있습니다. 반드시 멈추고 다음을 텍스트로 작성하세요:
@@ -99,7 +107,7 @@ class GeminiProvider(BaseProvider):
 
         def _create():
             try:
-                self._create_cache_internal(self._cached_gemini_tools)
+                self._create_cache_internal()
             except Exception as e:
                 print(f"[Gemini Cache] 백그라운드 생성 실패: {e}")
             finally:
@@ -111,11 +119,12 @@ class GeminiProvider(BaseProvider):
 
     # ── 컨텍스트 캐싱 ──────────────────────────────────────
 
-    def _create_cache_internal(self, gemini_tools=None):
+    def _create_cache_internal(self):
         """캐시 실제 생성 로직 (스레드 안전)
 
-        Gemini 제약: cachedContent 사용 시 system_instruction, tools를
-        GenerateContent 요청에 넣을 수 없음. 모두 캐시에 포함해야 함.
+        system_instruction + tools를 캐시에 포함.
+        Gemini API 규칙: cachedContent 사용 시 요청에
+        system_instruction/tools/tool_config를 넣을 수 없음.
         """
         with self._cache_lock:
             if not self._genai_client or not self.system_prompt:
@@ -134,11 +143,9 @@ class GeminiProvider(BaseProvider):
                 cache_config = types.CreateCachedContentConfig(
                     displayName=f"indiebiz-{self.agent_name}",
                     systemInstruction=self.system_prompt,
+                    tools=self._cached_gemini_tools,
                     ttl="3600s",  # 1시간
                 )
-                # 도구도 캐시에 포함 (Gemini 제약)
-                if gemini_tools:
-                    cache_config.tools = gemini_tools
 
                 cache = self._genai_client.caches.create(
                     model=self.model,
@@ -147,14 +154,15 @@ class GeminiProvider(BaseProvider):
                 self._cache_name = cache.name
                 self._cached_system_prompt = self.system_prompt
                 elapsed = time.time() - t0
+                tool_count = len(self.tools) if self.tools else 0
                 prompt_tokens = len(self.system_prompt) // 3
-                print(f"[Gemini Cache] 생성 완료: ~{prompt_tokens:,} 토큰 캐시됨 ({elapsed:.2f}s, TTL=1h)")
+                print(f"[Gemini Cache] 생성 완료: ~{prompt_tokens:,} 토큰 + 도구 {tool_count}개 캐시됨 ({elapsed:.2f}s, TTL=1h)")
             except Exception as e:
                 print(f"[Gemini Cache] 생성 실패 (일반 모드로 동작): {e}")
                 self._cache_name = None
                 self._cached_system_prompt = None
 
-    def _ensure_cache(self, gemini_tools=None):
+    def _ensure_cache(self):
         """캐시가 준비됐는지 논블로킹 확인. 없으면 그냥 진행."""
         # 시스템 프롬프트 변경 감지 → 캐시 무효화 + 백그라운드 재생성
         if self._cache_name and self._cached_system_prompt != self.system_prompt:
@@ -179,11 +187,12 @@ class GeminiProvider(BaseProvider):
         self._cached_system_prompt = None
 
     def _build_config(self, gemini_tools):
-        """GenerateContentConfig 생성 (캐시 있으면 캐시만, 없으면 일반)"""
+        """GenerateContentConfig 생성 (캐시 있으면 캐시만, 없으면 전부 직접 전달)"""
         types = self._genai_types
 
         if self._cache_name:
-            # 캐시에 system_instruction + tools 포함됨 → 여기선 제외
+            # 캐시에 system_instruction + tools 포함됨
+            # API 규칙: cachedContent 사용 시 tools/system_instruction 전달 불가
             return types.GenerateContentConfig(
                 cachedContent=self._cache_name,
                 temperature=0.5
@@ -257,7 +266,7 @@ class GeminiProvider(BaseProvider):
         gemini_tools = self._cached_gemini_tools
 
         # 캐시 확인 (논블로킹, 최대 100ms 대기)
-        self._ensure_cache(gemini_tools)
+        self._ensure_cache()
         config = self._build_config(gemini_tools)
 
         # 도구 호출 루프 (재귀 대신 while)
@@ -308,6 +317,23 @@ class GeminiProvider(BaseProvider):
                     ))
                     iteration += 1
                     continue
+
+                # IBL 텍스트 출력 감지: 텍스트에 IBL 코드가 포함되어 있으면 execute_ibl 호출 유도 (최대 1회)
+                if collected_text.strip() and self._detect_ibl_in_text(collected_text) and empty_response_retries < 1:
+                    empty_response_retries += 1
+                    print(f"[Gemini] ⚠️ 텍스트에 IBL 코드 감지 (iteration={iteration}), execute_ibl 호출 유도")
+                    # 텍스트 응답을 모델 응답으로 추가하고 교정 프롬프트 주입
+                    if response_content:
+                        contents.append(response_content)
+                    contents.append(types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(text=self.FORCE_EXECUTE_IBL_PROMPT)]
+                    ))
+                    # 누적 텍스트에서 잘못된 IBL 코드 제거 (교정 후 다시 생성)
+                    accumulated_text = accumulated_text[:-len(collected_text)] if accumulated_text.endswith(collected_text) else accumulated_text
+                    iteration += 1
+                    continue
+
                 print(f"[Gemini] 도구 호출 없음, 완료 (iteration={iteration})")
                 break
 
@@ -423,6 +449,10 @@ class GeminiProvider(BaseProvider):
 
         # 최종 응답 생성
         final_result = accumulated_text
+
+        # IBL 잔여물 정리: 텍스트에 남은 [action]{params} 패턴 제거
+        # (에이전트가 도구 실행 결과를 텍스트에 포함시키는 경우)
+        final_result = self._clean_ibl_from_text(final_result)
 
         # MAP 태그 추가
         if self._pending_map_tags:
@@ -644,6 +674,59 @@ class GeminiProvider(BaseProvider):
             self.metrics.record_error()
             print(f"[Gemini][round={iteration}] 도구 실행 예외: {fc.name} - {tool_err}")
             return f"도구 실행 실패: {fc.name} - {str(tool_err)}. 다른 방법을 시도하거나 사용자에게 알려주세요.", None, None
+
+    def _clean_ibl_from_text(self, text: str) -> str:
+        """텍스트 응답에서 실행되지 않은 IBL 코드 잔여물 제거
+
+        에이전트가 execute_ibl로 실행한 후에도 텍스트에 IBL 코드를
+        남기는 경우가 있음. 사용자에게 보이지 않도록 정리.
+        코드블록(```) 안의 IBL은 유지 (설명 목적).
+        """
+        if not text:
+            return text
+
+        # 코드블록 영역 보존하면서 바깥의 IBL 패턴 제거
+        # 코드블록 위치를 기록
+        code_blocks = [(m.start(), m.end()) for m in re.finditer(r'```[\s\S]*?```', text)]
+
+        def in_code_block(pos):
+            return any(s <= pos < e for s, e in code_blocks)
+
+        # [node:action]{...} 패턴 찾기
+        ibl_pattern = re.compile(
+            r'\[(?:self|sense|limbs|engines|others):[a-z_]+\]\s*\{[^}]*\}'
+        )
+
+        result = text
+        for m in reversed(list(ibl_pattern.finditer(text))):
+            if not in_code_block(m.start()):
+                result = result[:m.start()] + result[m.end():]
+
+        # 빈 줄 정리
+        result = re.sub(r'\n{3,}', '\n\n', result)
+        return result.strip() if result.strip() else text
+
+    def _detect_ibl_in_text(self, text: str) -> bool:
+        """텍스트 응답에 실행되지 않은 IBL 코드가 포함되어 있는지 감지
+
+        [node:action]{params} 패턴이 텍스트에 있으면 True.
+        코드블록(```) 안이나 인용("로 감싼) 설명은 제외.
+        """
+        if not text:
+            return False
+
+        # 지연 컴파일
+        if self.__class__._IBL_TEXT_PATTERN is None:
+            self.__class__._IBL_TEXT_PATTERN = re.compile(
+                r'\[(?:self|sense|limbs|engines|others):[a-z_]+\]'
+            )
+
+        # 코드블록 제거 (설명/인용 목적의 IBL은 무시)
+        cleaned = re.sub(r'```[\s\S]*?```', '', text)
+        # 인라인 코드 제거
+        cleaned = re.sub(r'`[^`]+`', '', cleaned)
+
+        return bool(self.__class__._IBL_TEXT_PATTERN.search(cleaned))
 
     def _build_contents(
         self,

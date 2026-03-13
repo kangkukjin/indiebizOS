@@ -518,12 +518,16 @@ function createWindow() {
 /**
  * 프로젝트 창 생성
  */
-function createProjectWindow(projectId, projectName) {
+function createProjectWindow(projectId, projectName, agentName) {
   // 이미 열려있으면 포커스
   if (projectWindows.has(projectId)) {
     const existingWindow = projectWindows.get(projectId);
     if (!existingWindow.isDestroyed()) {
       existingWindow.focus();
+      // 이미 열린 창에 에이전트 선택 명령 전달 (스케줄 결과 등)
+      if (agentName) {
+        existingWindow.webContents.send('select-agent', agentName);
+      }
       return;
     }
   }
@@ -544,12 +548,14 @@ function createProjectWindow(projectId, projectName) {
   });
 
   // URL에 프로젝트 ID 전달 (한글 등 특수문자 인코딩)
+  // agentName이 있으면 쿼리 파라미터로 전달 → 해당 에이전트 자동 선택
   const encodedProjectId = encodeURIComponent(projectId);
+  const agentQuery = agentName ? `?agent=${encodeURIComponent(agentName)}` : '';
   if (isDev) {
-    projectWindow.loadURL(`http://localhost:5173/#/project/${encodedProjectId}`);
+    projectWindow.loadURL(`http://localhost:5173/#/project/${encodedProjectId}${agentQuery}`);
   } else {
     projectWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
-      hash: `/project/${encodedProjectId}`
+      hash: `/project/${encodedProjectId}${agentQuery}`
     });
   }
 
@@ -1041,14 +1047,6 @@ function createMultiChatWindow(roomId, roomName) {
   multiChatWindows.set(roomId, multiChatWindow);
 
   multiChatWindow.on('closed', () => {
-    // 다중채팅방 창 닫을 때 해당 방의 모든 에이전트 비활성화
-    fetch(`http://localhost:${API_PORT}/multi-chat/rooms/${roomId}/deactivate-all`, {
-      method: 'POST'
-    }).then(() => {
-      console.log(`[Electron] 다중채팅방 ${roomId} 에이전트 비활성화됨`);
-    }).catch(err => {
-      console.warn(`[Electron] 에이전트 비활성화 실패: ${err.message}`);
-    });
     multiChatWindows.delete(roomId);
   });
 
@@ -1218,6 +1216,92 @@ function setupIPC() {
   });
 }
 
+// ─── Launcher WS 브릿지 (메인 프로세스 상주) ───
+let _launcherWS = null;
+let _launcherReconnectTimer = null;
+
+function startLauncherWS() {
+  if (_launcherWS) return;
+
+  try {
+    _launcherWS = new WebSocket('ws://127.0.0.1:8765/ws/launcher');
+  } catch (e) {
+    console.log('[Launcher WS] WebSocket 생성 실패, 3초 후 재시도');
+    _launcherReconnectTimer = setTimeout(startLauncherWS, 3000);
+    return;
+  }
+
+  _launcherWS.onopen = () => {
+    console.log('[Launcher WS] 메인 프로세스 연결됨');
+  };
+
+  _launcherWS.onmessage = (event) => {
+    try {
+      const data = JSON.parse(typeof event.data === 'string' ? event.data : event.data.toString());
+      if (data.type === 'pong') return;
+
+      if (data.type === 'launcher_command') {
+        const { command, params } = data;
+        console.log('[Launcher WS] 명령 수신:', command, params);
+
+        switch (command) {
+          case 'open_project_window':
+            createProjectWindow(
+              params?.project_id || '',
+              params?.project_name || params?.project_id || '',
+              params?.agent_name || ''
+            );
+            break;
+          case 'open_system_ai_window':
+            createSystemAIWindow();
+            break;
+          case 'open_indienet_window':
+            createIndieNetWindow();
+            break;
+          case 'open_business_window':
+            createBusinessWindow();
+            break;
+          case 'open_multichat_window':
+            createMultiChatWindow(
+              params?.room_id || '',
+              params?.room_name || ''
+            );
+            break;
+          case 'open_folder_window':
+            createFolderWindow(
+              params?.folder_id || '',
+              params?.folder_name || ''
+            );
+            break;
+          default:
+            console.warn('[Launcher WS] 알 수 없는 명령:', command);
+        }
+      }
+    } catch (e) {
+      console.error('[Launcher WS] 메시지 파싱 오류:', e);
+    }
+  };
+
+  _launcherWS.onclose = () => {
+    console.log('[Launcher WS] 연결 끊김, 3초 후 재연결...');
+    _launcherWS = null;
+    _launcherReconnectTimer = setTimeout(startLauncherWS, 3000);
+  };
+
+  _launcherWS.onerror = () => {
+    // onclose에서 재연결 처리
+  };
+
+  // 30초마다 ping으로 연결 유지
+  const pingInterval = setInterval(() => {
+    if (_launcherWS?.readyState === WebSocket.OPEN) {
+      _launcherWS.send(JSON.stringify({ type: 'ping' }));
+    } else {
+      clearInterval(pingInterval);
+    }
+  }, 30000);
+}
+
 // 앱 준비
 app.whenReady().then(async () => {
   console.log('[Electron] 앱 시작');
@@ -1303,6 +1387,10 @@ app.whenReady().then(async () => {
   // 윈도우 생성
   createWindow();
 
+  // Launcher WS 브릿지: 백엔드 → Electron 메인 프로세스 직접 연결
+  // 메인 프로세스에서 유지하므로 어떤 창이 열려있든 항상 활성화
+  startLauncherWS();
+
   // macOS: 독에서 클릭 시 윈도우 재생성
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -1320,6 +1408,13 @@ app.on('window-all-closed', () => {
 
 // 앱 종료 전
 app.on('before-quit', () => {
+  // Launcher WS 정리
+  if (_launcherReconnectTimer) clearTimeout(_launcherReconnectTimer);
+  if (_launcherWS) {
+    _launcherWS.onclose = null;
+    _launcherWS.close();
+    _launcherWS = null;
+  }
   stopPythonBackend();
 });
 

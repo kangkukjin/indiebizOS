@@ -1,12 +1,21 @@
 # Browser Action 사용 가이드
 
-## 핵심 원리: Snapshot → Ref → Action
+## 핵심 원리: Screenshot → 판단 → Action
 
-이 패키지는 비전 모델 없이 **Accessibility Snapshot**으로 페이지를 구조화합니다.
+**모르는 사이트를 방문할 때는 반드시 시각적 피드백(screenshot)을 먼저 사용하라.**
+screenshot 없이 CSS 셀렉터나 ref를 추측하면 높은 확률로 실패한다.
 
+### 기본 흐름 (모르는 사이트)
+```
+browser_navigate(url) → browser_screenshot() → 화면을 보고 판단 → browser_snapshot()으로 ref 확보 → browser_click/type(ref) → browser_screenshot()으로 결과 확인 → 반복
+```
+
+### 익숙한 사이트 (구조를 아는 경우)
 ```
 browser_navigate(url) → browser_snapshot() → ref 확인 → browser_click/type(ref) → browser_snapshot() → 반복
 ```
+
+**원칙: 확인하지 않은 것을 추측하지 마라. 페이지 구조를 모르면 screenshot으로 먼저 확인하라.**
 
 ### ref란?
 - `browser_snapshot` 호출 시 각 요소에 `e1`, `e2`, `e3` ... 형태의 고유 ID가 부여됨
@@ -147,9 +156,10 @@ browser_cookies_load(name="naver")
 
 ### "도구 실행 시간 초과" (60초)
 → IBL 엔진이 60초 내에 완료되지 않는 도구를 강제 중단함. 이 에러가 나오면:
-1. 해당 사이트가 봇 차단/JS 렌더링 문제일 가능성 높음
-2. **브라우저 대신 `sense:web_search`로 대체** 시도
-3. 같은 브라우저 작업을 반복하지 말 것
+1. `browser_screenshot`으로 현재 페이지 상태를 시각적으로 확인
+2. 페이지가 로드되었다면 `browser_get_content`로 텍스트만 추출 시도
+3. 페이지 자체가 안 열리면 URL을 단순화하거나 다른 경로로 접근
+4. 사용자가 "사이트를 방문하라"고 지시한 경우, web_search로 대체하지 말고 브라우저 전략을 바꿔서 재시도할 것. 방문 실패 시 사용자에게 솔직히 보고
 
 ### 스냅샷에 원하는 요소가 없을 때
 1. `browser_scroll`로 해당 영역까지 스크롤 후 다시 스냅샷

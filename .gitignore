@@ -114,3 +114,27 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# 추가 보안 및 데이터 필터링
+data/*.db*
+data/*.json
+!data/guide_db.json
+!data/world_pulse_config.json
+!data/ibl_nodes.yaml
+data/system_ai_state/
+data/consciousness_pulse.db
+data/conversations.db*
+.bfg-report/
+
+# 재귀적 데이터 보호
+data/**/*.db*
+data/**/*.json
+!data/guide_db.json
+!data/world_pulse_config.json
+!data/ibl_nodes.yaml
+!**/tool.json
+!**/ibl_actions.yaml
+
+# 특수 폴더 및 파일
+..bfg-report/
+data/_ibl_provenance.yaml

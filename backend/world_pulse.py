@@ -1,32 +1,28 @@
 """
-world_pulse.py - 세계 상태 감각 모듈
+world_pulse.py - 의식 모듈 (Consciousness Module)
 IndieBiz OS Core
 
-하루 한 번 세계의 현재 상태를 스냅샷으로 수집하고 DB에 축적합니다.
-에이전트는 대화 시작 시 이 정보를 배경 지식으로 받아 세계 맥락을 알고 대화합니다.
+세계/사용자/자기 자신의 상태를 주기적으로 감지하고 축적합니다.
 
-수집 카테고리:
-- 경제: 주요 지수, 환율
-- 시사: 주요 뉴스 헤드라인
-- 기술: 테크 뉴스
-- 날씨: 현재 날씨
+기능:
+1. World Pulse: 세계 상태 스냅샷 (경제, 뉴스, 기술, 날씨)
+2. Consciousness Pulse: 매시간 세계/사용자/자신 상태 업데이트
+3. Self-Check: 주기적 IBL 액션 자가 점검 (면역 순찰)
 
 사용:
-    from world_pulse import ensure_today_pulse, get_today_pulse, get_pulse_trend
+    from world_pulse import ensure_today_pulse, collect_consciousness_pulse, run_self_check
 
-    # 시스템 기동 시 (오늘치 없으면 수집)
-    ensure_today_pulse()
-
-    # 오늘 스냅샷 조회
-    pulse = get_today_pulse()
-
-    # 최근 N일 추이
-    trend = get_pulse_trend(days=7)
+    ensure_today_pulse()           # 시스템 기동 시
+    collect_consciousness_pulse()  # 매시간 의식 펄스
+    run_self_check()               # 매 6시간 자가 점검
 """
 
 import json
 import logging
+import random
+import sqlite3
 import threading
+import time as _time
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
@@ -40,6 +36,7 @@ DATA_PATH = BASE_PATH / "data"
 PULSE_DB_PATH = DATA_PATH / "world_pulse_db.json"
 PULSE_CONFIG_PATH = DATA_PATH / "world_pulse_config.json"
 PULSE_GUIDE_PATH = DATA_PATH / "guides" / "world_pulse.md"
+CONSCIOUSNESS_DB_PATH = DATA_PATH / "consciousness_pulse.db"
 
 # 수집 중 플래그 (중복 실행 방지)
 _collecting = False
@@ -47,6 +44,64 @@ _collecting_lock = threading.Lock()
 
 # 설정 캐시
 _config_cache: Optional[Dict] = None
+
+
+# ============================================================
+# Consciousness DB (SQLite)
+# ============================================================
+
+def _init_consciousness_db():
+    """의식 DB 초기화 — pulse_log + self_checks 테이블"""
+    conn = sqlite3.connect(str(CONSCIOUSNESS_DB_PATH), timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS pulse_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            world TEXT,
+            user_state TEXT,
+            self_state TEXT,
+            status TEXT DEFAULT 'healthy'
+        );
+        CREATE TABLE IF NOT EXISTS self_checks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            node TEXT NOT NULL,
+            action TEXT NOT NULL,
+            success INTEGER DEFAULT 0,
+            response_ms INTEGER,
+            error_message TEXT,
+            data_quality TEXT
+        );
+    """)
+    conn.close()
+
+
+def _get_consciousness_db():
+    """의식 DB 연결 반환"""
+    if not CONSCIOUSNESS_DB_PATH.exists():
+        _init_consciousness_db()
+    conn = sqlite3.connect(str(CONSCIOUSNESS_DB_PATH), timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _cleanup_old_data():
+    """오래된 의식 데이터 정리 (retention_days 기준)"""
+    config = _load_config()
+    cp_config = config.get("consciousness_pulse", {})
+    retention = cp_config.get("retention_days", 30)
+    cutoff = (datetime.now() - timedelta(days=retention)).isoformat()
+
+    try:
+        conn = _get_consciousness_db()
+        conn.execute("DELETE FROM pulse_log WHERE timestamp < ?", (cutoff,))
+        conn.execute("DELETE FROM self_checks WHERE timestamp < ?", (cutoff,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.debug(f"[Consciousness] 정리 실패: {e}")
 
 
 def _load_config() -> Dict:
@@ -560,6 +615,47 @@ def generate_guide():
             lines.append(f"- 저장소 여유: {sys_status['disk_free_gb']}GB")
         lines.append("")
 
+    # ── 사용자 현황 (의식 펄스) ──
+    try:
+        user_state = _collect_user_state()
+        if user_state:
+            lines.append("## 사용자 현황")
+            conv_count = user_state.get("recent_conversations", 0)
+            lines.append(f"- 최근 1시간 대화: {conv_count}건")
+            pending = user_state.get("pending_tasks", 0)
+            if pending > 0:
+                lines.append(f"- 미처리 태스크: {pending}건")
+            upcoming = user_state.get("upcoming_events", [])
+            if upcoming:
+                lines.append(f"- 예정 일정: {', '.join(upcoming)}")
+            topics = user_state.get("recent_topics", [])
+            if topics:
+                lines.append(f"- 최근 주제: {' / '.join(topics)}")
+            lines.append("")
+    except Exception:
+        pass
+
+    # ── 시스템 건강 (의식 펄스) ──
+    try:
+        self_state = _collect_self_state()
+        services = self_state.get("services", {})
+        if services:
+            lines.append("## 시스템 건강")
+            for svc, alive in services.items():
+                mark = "정상" if alive else "중단"
+                lines.append(f"- {svc}: {mark}")
+            # 자가점검 요약
+            sc_summary = self_state.get("self_check_summary", {})
+            if sc_summary:
+                ok_count = sum(1 for v in sc_summary.values() if v.get("success_rate", 0) >= 80)
+                lines.append(f"- 자가점검: {ok_count}/{len(sc_summary)}개 액션 정상")
+                failing = [k for k, v in sc_summary.items() if v.get("success_rate", 100) < 80]
+                if failing:
+                    lines.append(f"- 주의 필요: {', '.join(failing)}")
+            lines.append("")
+    except Exception:
+        pass
+
     # 경제
     economy = today.get("economy", {})
     if economy:
@@ -721,3 +817,580 @@ def get_world_pulse_for_prompt() -> str:
         if content:
             return content
     return ""
+
+
+# ============================================================
+# Consciousness Pulse — 매시간 세계/사용자/자신 상태 업데이트
+# ============================================================
+
+def _collect_user_state() -> Dict:
+    """사용자 상태 수집 (DB 쿼리만, API 호출 없음)"""
+    state = {}
+
+    # 1) 최근 1시간 대화 수 및 주제
+    try:
+        from system_ai_memory import get_recent_conversations
+        recent = get_recent_conversations(limit=20)
+        one_hour_ago = (datetime.now() - timedelta(hours=1)).isoformat()
+        recent_convs = [c for c in recent
+                        if isinstance(c, dict) and c.get("timestamp", "") >= one_hour_ago]
+        state["recent_conversations"] = len(recent_convs)
+
+        topics = []
+        for c in recent_convs:
+            if c.get("role") == "user":
+                topic = c.get("content", "")[:40].replace("\n", " ").strip()
+                if topic:
+                    topics.append(topic)
+        state["recent_topics"] = topics[:3]
+    except Exception as e:
+        logger.debug(f"[Consciousness] 대화 수집 실패: {e}")
+
+    # 2) 미처리 메시지 (시스템 AI 태스크)
+    try:
+        from system_ai_memory import get_pending_tasks
+        tasks = get_pending_tasks()
+        state["pending_tasks"] = len(tasks) if tasks else 0
+    except Exception as e:
+        logger.debug(f"[Consciousness] 태스크 수집 실패: {e}")
+        state["pending_tasks"] = 0
+
+    # 3) 다가오는 일정
+    try:
+        from calendar_manager import get_calendar_manager
+        cm = get_calendar_manager()
+        all_events = cm.list_events()
+        now = datetime.now()
+        upcoming = []
+        for evt in all_events:
+            if not evt.get("enabled", True):
+                continue
+            evt_date = evt.get("date", "")
+            evt_time = evt.get("time", "")
+            if evt_date == now.strftime("%Y-%m-%d") and evt_time > now.strftime("%H:%M"):
+                upcoming.append(evt.get("title", ""))
+        state["upcoming_events"] = upcoming[:5]
+    except Exception as e:
+        logger.debug(f"[Consciousness] 일정 수집 실패: {e}")
+
+    return state
+
+
+def _collect_self_state() -> Dict:
+    """시스템 자기 상태 (내부 체크만, API 호출 없음)"""
+    state = {}
+
+    # 1) 서비스 alive 체크
+    services = {}
+    try:
+        from calendar_manager import get_calendar_manager
+        cm = get_calendar_manager()
+        services["scheduler"] = cm.is_running()
+    except Exception:
+        services["scheduler"] = False
+
+    try:
+        from channel_poller import get_channel_poller
+        poller = get_channel_poller()
+        services["channel_poller"] = poller.running if hasattr(poller, "running") else False
+    except Exception:
+        services["channel_poller"] = False
+
+    try:
+        from system_ai_runner import SystemAIRunner
+        instance = SystemAIRunner.get_instance()
+        services["system_ai_runner"] = instance.running if instance else False
+    except Exception:
+        services["system_ai_runner"] = False
+
+    state["services"] = services
+
+    # 2) 디스크 여유 공간
+    try:
+        import shutil
+        usage = shutil.disk_usage(str(BASE_PATH))
+        state["disk_free_gb"] = round(usage.free / (1024**3), 1)
+    except Exception:
+        pass
+
+    # 3) 최근 자가점검 결과 요약
+    try:
+        summary = get_action_health_summary()
+        state["self_check_summary"] = summary
+    except Exception:
+        pass
+
+    return state
+
+
+def _collect_world_delta() -> Dict:
+    """세계 변화분 수집 (경량 버전 — 경제 + 날씨만)"""
+    delta = {}
+
+    # 경제 지표 (매시간)
+    economy = _collect_economy()
+    if economy:
+        delta["economy"] = economy
+
+    # 날씨 (매시간)
+    weather = _collect_weather()
+    if weather:
+        delta["weather"] = weather
+
+    # 뉴스는 설정된 간격으로만 (기본 6시간)
+    config = _load_config()
+    cp_config = config.get("consciousness_pulse", {})
+    news_interval = cp_config.get("world_news_interval_hours", 6)
+
+    should_collect_news = False
+    try:
+        conn = _get_consciousness_db()
+        row = conn.execute(
+            "SELECT timestamp FROM pulse_log WHERE world LIKE '%news%' ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        conn.close()
+        if row:
+            last_news = datetime.fromisoformat(row[0])
+            elapsed = (datetime.now() - last_news).total_seconds() / 3600
+            should_collect_news = elapsed >= news_interval
+        else:
+            should_collect_news = True
+    except Exception:
+        should_collect_news = True
+
+    if should_collect_news:
+        news = _collect_news()
+        if news:
+            delta["news"] = news
+        tech = _collect_tech_news()
+        if tech:
+            delta["tech"] = tech
+
+    return delta
+
+
+def collect_consciousness_pulse() -> Dict:
+    """매시간 의식 펄스 수집 — 세계/사용자/자신 통합"""
+    config = _load_config()
+    cp_config = config.get("consciousness_pulse", {})
+    if not cp_config.get("enabled", True):
+        return {"status": "disabled"}
+
+    logger.info("[Consciousness] 의식 펄스 수집 시작")
+
+    pulse = {
+        "timestamp": datetime.now().isoformat(),
+        "world": _collect_world_delta(),
+        "user_state": _collect_user_state(),
+        "self_state": _collect_self_state(),
+    }
+
+    # 상태 판정
+    services = pulse["self_state"].get("services", {})
+    all_alive = all(services.values()) if services else True
+    pulse["status"] = "healthy" if all_alive else "degraded"
+
+    # DB 저장
+    save_pulse(pulse)
+
+    # 가이드 파일 갱신 (세계 스냅샷도 갱신)
+    world = pulse["world"]
+    if world.get("economy"):
+        # 오늘의 daily 스냅샷도 갱신
+        today = get_today_pulse()
+        if today:
+            today["economy"] = world["economy"]
+            if world.get("weather"):
+                today["weather"] = world["weather"]
+            if world.get("news"):
+                today["news"] = world["news"]
+            if world.get("tech"):
+                today["tech"] = world["tech"]
+            today["collected_at"] = datetime.now().isoformat()
+            save_snapshot(today)
+
+    generate_guide()
+
+    # 오래된 데이터 정리 (낮은 빈도로)
+    if random.random() < 0.04:  # ~하루에 한번
+        _cleanup_old_data()
+
+    logger.info(f"[Consciousness] 의식 펄스 완료: {pulse['status']}")
+    return pulse
+
+
+def save_pulse(pulse: Dict):
+    """의식 펄스 기록 저장"""
+    try:
+        conn = _get_consciousness_db()
+        conn.execute(
+            "INSERT INTO pulse_log (timestamp, world, user_state, self_state, status) VALUES (?, ?, ?, ?, ?)",
+            (
+                pulse["timestamp"],
+                json.dumps(pulse.get("world", {}), ensure_ascii=False),
+                json.dumps(pulse.get("user_state", {}), ensure_ascii=False),
+                json.dumps(pulse.get("self_state", {}), ensure_ascii=False),
+                pulse.get("status", "healthy"),
+            )
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"[Consciousness] 펄스 저장 실패: {e}")
+
+
+def get_recent_pulses(hours: int = 24) -> List[Dict]:
+    """최근 N시간 의식 펄스 조회"""
+    cutoff = (datetime.now() - timedelta(hours=hours)).isoformat()
+    try:
+        conn = _get_consciousness_db()
+        rows = conn.execute(
+            "SELECT * FROM pulse_log WHERE timestamp >= ? ORDER BY id DESC",
+            (cutoff,)
+        ).fetchall()
+        conn.close()
+        return [
+            {
+                "id": r["id"],
+                "timestamp": r["timestamp"],
+                "world": json.loads(r["world"]) if r["world"] else {},
+                "user_state": json.loads(r["user_state"]) if r["user_state"] else {},
+                "self_state": json.loads(r["self_state"]) if r["self_state"] else {},
+                "status": r["status"],
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        logger.warning(f"[Consciousness] 펄스 조회 실패: {e}")
+        return []
+
+
+# ============================================================
+# Self-Check — 주기적 IBL 액션 자가 점검 (면역 순찰)
+# ============================================================
+
+def _get_safe_actions() -> List[Dict]:
+    """부작용 없는 안전한 테스트용 액션 목록"""
+    config = _load_config()
+    sc_config = config.get("self_check", {})
+    safe_nodes = sc_config.get("safe_nodes", ["sense"])
+    excluded = set(sc_config.get("excluded_actions", ["world_refresh"]))
+
+    actions = []
+    try:
+        from ibl_engine import list_actions
+        for node in safe_nodes:
+            for action_info in list_actions(node):
+                name = action_info.get("action", "")
+                if name and name not in excluded:
+                    actions.append({"node": node, "action": name, **action_info})
+    except Exception as e:
+        logger.warning(f"[SelfCheck] 액션 목록 조회 실패: {e}")
+
+    return actions
+
+
+def _evaluate_result(result, elapsed_ms: int) -> Dict:
+    """LLM 없이 결과 평가"""
+    is_error = isinstance(result, dict) and "error" in result
+    is_empty = (result is None or result == "" or result == {} or result == [])
+
+    if is_error:
+        return {
+            "success": False,
+            "response_ms": elapsed_ms,
+            "data_quality": "error",
+            "error_message": str(result.get("error", ""))[:200],
+        }
+    elif is_empty:
+        return {
+            "success": True,
+            "response_ms": elapsed_ms,
+            "data_quality": "empty",
+            "error_message": None,
+        }
+    else:
+        return {
+            "success": True,
+            "response_ms": elapsed_ms,
+            "data_quality": "ok",
+            "error_message": None,
+        }
+
+
+def run_self_check() -> Dict:
+    """랜덤 IBL 액션 자가 점검 (면역 순찰)"""
+    config = _load_config()
+    sc_config = config.get("self_check", {})
+    if not sc_config.get("enabled", True):
+        return {"status": "disabled"}
+
+    actions_per_check = sc_config.get("actions_per_check", 2)
+    failure_threshold = sc_config.get("failure_alert_threshold", 3)
+
+    safe_actions = _get_safe_actions()
+    if not safe_actions:
+        return {"status": "no_safe_actions"}
+
+    # 랜덤 선택
+    selected = random.sample(safe_actions, min(actions_per_check, len(safe_actions)))
+    results = []
+
+    for action_info in selected:
+        node = action_info["node"]
+        action = action_info["action"]
+
+        logger.info(f"[SelfCheck] 점검 중: [{node}:{action}]")
+
+        start = _time.time()
+        try:
+            from ibl_engine import execute_ibl
+            result = execute_ibl(
+                {"_node": node, "action": action, "params": {}},
+                ".",
+                agent_id="__self_check__"
+            )
+        except Exception as e:
+            result = {"error": str(e)}
+
+        elapsed_ms = int((_time.time() - start) * 1000)
+        evaluation = _evaluate_result(result, elapsed_ms)
+        evaluation["node"] = node
+        evaluation["action"] = action
+
+        # DB 저장
+        save_self_check(evaluation)
+        results.append(evaluation)
+
+        logger.info(
+            f"[SelfCheck] [{node}:{action}] "
+            f"{'OK' if evaluation['success'] else 'FAIL'} "
+            f"({elapsed_ms}ms, {evaluation['data_quality']})"
+        )
+
+    # 연속 실패 알림 체크
+    _check_failure_alerts(failure_threshold)
+
+    return {
+        "status": "completed",
+        "checked": len(results),
+        "results": results,
+    }
+
+
+def save_self_check(result: Dict):
+    """자가점검 결과 저장"""
+    try:
+        conn = _get_consciousness_db()
+        conn.execute(
+            "INSERT INTO self_checks (timestamp, node, action, success, response_ms, error_message, data_quality) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                datetime.now().isoformat(),
+                result.get("node", ""),
+                result.get("action", ""),
+                1 if result.get("success") else 0,
+                result.get("response_ms"),
+                result.get("error_message"),
+                result.get("data_quality"),
+            )
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"[SelfCheck] 저장 실패: {e}")
+
+
+def _check_failure_alerts(threshold: int = 3):
+    """연속 실패 액션 감지 및 알림"""
+    try:
+        conn = _get_consciousness_db()
+        # 각 액션의 최근 N회 결과 확인
+        rows = conn.execute("""
+            SELECT node, action, GROUP_CONCAT(success) as recent
+            FROM (
+                SELECT node, action, success,
+                       ROW_NUMBER() OVER (PARTITION BY node, action ORDER BY id DESC) as rn
+                FROM self_checks
+            ) WHERE rn <= ?
+            GROUP BY node, action
+        """, (threshold,)).fetchall()
+        conn.close()
+
+        failing = []
+        for row in rows:
+            recent = row["recent"]  # e.g. "0,0,0"
+            if recent:
+                successes = [int(x) for x in recent.split(",")]
+                if len(successes) >= threshold and all(s == 0 for s in successes):
+                    failing.append(f"[{row['node']}:{row['action']}]")
+
+        if failing:
+            try:
+                from notification_manager import get_notification_manager
+                nm = get_notification_manager()
+                nm.create(
+                    title="자가점검 경고",
+                    message=f"연속 {threshold}회 실패: {', '.join(failing)}",
+                    type="warning",
+                    source="self_check"
+                )
+            except Exception as e:
+                logger.warning(f"[SelfCheck] 알림 발송 실패: {e}")
+    except Exception as e:
+        logger.debug(f"[SelfCheck] 실패 알림 체크 오류: {e}")
+
+
+def get_action_health_summary() -> Dict:
+    """액션별 건강 상태 요약"""
+    try:
+        conn = _get_consciousness_db()
+        rows = conn.execute("""
+            SELECT node, action,
+                   COUNT(*) as total,
+                   SUM(success) as successes,
+                   AVG(response_ms) as avg_ms
+            FROM self_checks
+            WHERE timestamp >= ?
+            GROUP BY node, action
+        """, ((datetime.now() - timedelta(days=7)).isoformat(),)).fetchall()
+        conn.close()
+
+        summary = {}
+        for row in rows:
+            key = f"{row['node']}:{row['action']}"
+            total = row["total"]
+            successes = row["successes"] or 0
+            summary[key] = {
+                "total": total,
+                "success_rate": round(successes / total * 100, 1) if total > 0 else 0,
+                "avg_response_ms": round(row["avg_ms"]) if row["avg_ms"] else None,
+            }
+        return summary
+    except Exception as e:
+        logger.debug(f"[SelfCheck] 요약 조회 실패: {e}")
+        return {}
+
+
+def get_recent_self_checks(limit: int = 20) -> List[Dict]:
+    """최근 자가점검 결과 조회"""
+    try:
+        conn = _get_consciousness_db()
+        rows = conn.execute(
+            "SELECT * FROM self_checks ORDER BY id DESC LIMIT ?", (limit,)
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        logger.warning(f"[SelfCheck] 조회 실패: {e}")
+        return []
+
+
+def get_system_health() -> Dict:
+    """시스템 전체 건강 요약 — API용"""
+    self_state = _collect_self_state()
+    health_summary = get_action_health_summary()
+    recent_pulses = get_recent_pulses(hours=6)
+
+    # 전체 상태 판정
+    services = self_state.get("services", {})
+    all_services_ok = all(services.values()) if services else True
+
+    # 자가점검 성공률
+    if health_summary:
+        avg_rate = sum(v["success_rate"] for v in health_summary.values()) / len(health_summary)
+    else:
+        avg_rate = 100.0
+
+    if not all_services_ok:
+        overall = "degraded"
+    elif avg_rate < 80:
+        overall = "warning"
+    else:
+        overall = "healthy"
+
+    return {
+        "overall": overall,
+        "services": services,
+        "disk_free_gb": self_state.get("disk_free_gb"),
+        "self_check_avg_success_rate": round(avg_rate, 1),
+        "self_check_actions": health_summary,
+        "pulse_count_6h": len(recent_pulses),
+        "last_pulse": recent_pulses[0]["timestamp"] if recent_pulses else None,
+    }
+
+
+# ============================================================
+# CalendarManager 연동 — 스케줄 등록
+# ============================================================
+
+def register_consciousness_tasks():
+    """CalendarManager에 의식 펄스와 자가점검을 등록"""
+    global _config_cache
+    _config_cache = None  # 설정 캐시 무효화 (새 설정 반영)
+    config = _load_config()
+    cp_config = config.get("consciousness_pulse", {})
+    sc_config = config.get("self_check", {})
+
+    try:
+        from calendar_manager import get_calendar_manager
+        cm = get_calendar_manager()
+
+        # 커스텀 액션 등록
+        cm.actions["consciousness_pulse"] = lambda task: collect_consciousness_pulse()
+        cm.actions["self_check"] = lambda task: run_self_check()
+
+        # 기존에 등록된 의식 이벤트가 있는지 확인
+        existing = {evt.get("title"): evt for evt in cm.list_events()}
+
+        # 1) 의식 펄스 (매시간)
+        if cp_config.get("enabled", True) and "[Consciousness] 의식 펄스" not in existing:
+            interval = cp_config.get("interval_hours", 1)
+            cm.add_event(
+                title="[Consciousness] 의식 펄스",
+                event_type="schedule",
+                repeat="interval",
+                interval_hours=interval,
+                event_time=datetime.now().strftime("%H:%M"),
+                action="consciousness_pulse",
+                enabled=True,
+                owner_project_id="__system_ai__",
+                owner_agent_id="system_ai",
+            )
+            logger.info(f"[Consciousness] 의식 펄스 등록 (매 {interval}시간)")
+
+        # 2) 자가점검 (매 6시간)
+        if sc_config.get("enabled", True) and "[Consciousness] 자가점검" not in existing:
+            interval = sc_config.get("interval_hours", 6)
+            cm.add_event(
+                title="[Consciousness] 자가점검",
+                event_type="schedule",
+                repeat="interval",
+                interval_hours=interval,
+                event_time=datetime.now().strftime("%H:%M"),
+                action="self_check",
+                enabled=True,
+                owner_project_id="__system_ai__",
+                owner_agent_id="system_ai",
+            )
+            logger.info(f"[Consciousness] 자가점검 등록 (매 {interval}시간)")
+
+        # DB 초기화
+        _init_consciousness_db()
+
+        # 서버 시작 시: 최근 1시간 내 펄스가 없으면 수집
+        import threading
+        def _initial_pulse_if_needed():
+            try:
+                recent = get_recent_pulses(hours=1)
+                if recent:
+                    logger.info(f"[Consciousness] 최근 펄스 있음 ({len(recent)}건) — 건너뜀")
+                    return
+                collect_consciousness_pulse()
+                logger.info("[Consciousness] 최근 펄스 없어서 수집 완료")
+            except Exception as e:
+                logger.error(f"[Consciousness] 시작 시 펄스 체크 실패: {e}")
+        threading.Thread(target=_initial_pulse_if_needed, daemon=True, name="initial-consciousness").start()
+
+    except Exception as e:
+        logger.error(f"[Consciousness] 스케줄 등록 실패: {e}")

@@ -18,8 +18,8 @@ IndieBiz OS Core - Phase 8
     # 트리거 목록
     execute_event("list", None, {}, ".")
 
-    # 스케줄 트리거 생성
-    execute_event("create", "매일 AI 뉴스", {
+    # 감시 트리거 등록
+    execute_event("watch", "매일 AI 뉴스", {
         "type": "schedule",
         "config": {"repeat": "daily", "time": "08:00"},
         "pipeline": '[sense:search_news]{query: "AI"} >> [others:channel_send]{channel: "gmail", to: "me"}'
@@ -407,8 +407,8 @@ def execute_event(action: str, params: dict,
     """이벤트 노드 라우팅
 
     Args:
-        action: list/list_events, get/get_event, create, update,
-                delete/delete_event, enable, disable, status, history, save/save_event
+        action: list/list_events, get/get_event, watch, update,
+                delete/delete_event, enable, disable, status, history
         params: 파라미터 (trigger_id 등 포함)
         project_path: 프로젝트 경로
 
@@ -423,7 +423,7 @@ def execute_event(action: str, params: dict,
         if not trigger_id:
             return {"error": "trigger_id가 필요합니다."}
         return _get_trigger(trigger_id)
-    elif action in ("create", "save_event"):
+    elif action == "watch":
         return _create_trigger(trigger_id, params)
     elif action == "update":
         if not trigger_id:
@@ -448,7 +448,7 @@ def execute_event(action: str, params: dict,
     else:
         return {
             "error": f"알 수 없는 이벤트 액션: {action}",
-            "available_actions": ["list_events", "get_event", "create", "update",
-                                  "delete_event", "save_event", "enable", "disable",
+            "available_actions": ["list_events", "get_event", "watch", "update",
+                                  "delete_event", "enable", "disable",
                                   "status", "history"]
         }

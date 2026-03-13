@@ -39,8 +39,10 @@
 - time: HH:MM (24시간제)
 
 ### 실행 가능 이벤트 (event_action)
-- **send_notification**: 알림 전송 (action_params: {title, message})
+- **run_pipeline**: IBL 코드 직접 실행 (action_params: {pipeline: "[node:action]{params}"}) ← **가장 유연한 방식**
 - **run_switch**: 스위치 실행 (action_params: {switch_id})
+- **send_notification**: 알림 전송 (action_params: {title, message})
+- **run_workflow**: 저장된 워크플로우 실행 (action_params: {workflow_id})
 - **test**: 테스트 실행
 
 ### 호출 예시
@@ -68,11 +70,67 @@
 {"action": "list"}
 {"action": "list", "year": 2026, "month": 5}
 
-// 수정 / 삭제 / 토글 / 즉시 실행
+// 수정 / 삭제 / 토글
 {"action": "update", "event_id": "evt_xxx", "title": "새 제목"}
 {"action": "delete", "event_id": "evt_xxx"}
 {"action": "toggle", "event_id": "evt_xxx"}
+
+// 즉시 실행 (이미 등록된 이벤트를 지금 당장 실행)
 {"action": "run_now", "event_id": "evt_xxx"}
+```
+
+### ⚠️ 시간 지연 실행 시 주의사항 (중요)
+
+**`run_now`는 예약 시간을 무시하고 즉시 실행합니다.** "N분 후에 실행"을 원하면 절대 `run_now`를 호출하지 마세요.
+
+```
+❌ 잘못된 패턴 — 이렇게 하면 즉시 실행됨:
+  1. manage_events add → time: "11:56" (1분 후)
+  2. manage_events run_now           ← 11:56을 무시하고 지금 실행!
+
+✅ 올바른 패턴 — 스케줄러가 자동 실행:
+  1. [self:time]                      ← 현재 시간 확인
+  2. manage_events add → time: "11:56", repeat: "none", event_action: "run_switch"
+  3. 사용자에게 "11:56에 실행 예약했습니다" 안내
+  (끝. run_now 호출하지 않음. 스케줄러가 11:56에 자동 실행)
+```
+
+**`run_now`를 쓰는 경우**: 사용자가 "지금 당장 실행해"라고 명시적으로 요청할 때만.
+
+### ⚠️ 스위치 남용 금지
+
+일회성 작업에 새 스위치를 만들지 마세요. `event_action`으로 직접 실행하세요.
+
+```
+❌ "1분 후에 음악 틀어줘" → 스위치 생성 → 스위치 실행 예약 (불필요한 2단계)
+✅ "1분 후에 음악 틀어줘" → manage_events add (event_action: "run_switch", 기존 스위치 or send_notification)
+
+❌ switches.json을 직접 읽고 쓰기 (cat, execute_python)
+✅ [self:list_switches]로 조회, manage_events로 예약
+```
+
+### 시간 지연 워크플로우 예시
+
+**"N분 후에 ~해줘" 패턴 (run_pipeline 사용):**
+```
+1. [self:time]  →  현재 시각 확인
+2. 현재 시각 + N분 계산
+3. [self:manage_events]{action: "add", title: "작업명", date: "YYYY-MM-DD", time: "HH:MM", type: "schedule", repeat: "none", event_action: "run_pipeline", action_params: {pipeline: "[node:action]{params}"}}
+4. 텍스트 응답으로 예약 완료 안내
+```
+
+**"N분 후에 음악 틀어줘" 패턴:**
+```
+1. [self:time]  →  현재 시각 확인 (예: 11:55)
+2. [self:manage_events]{action: "add", title: "아이유 밤편지 재생", date: "2026-03-09", time: "11:56", type: "schedule", repeat: "none", event_action: "run_pipeline", action_params: {pipeline: "[limbs:play]{query: '아이유 밤편지'}"}}
+3. 텍스트 응답: "11:56에 아이유 밤편지를 재생합니다"
+```
+
+**"N분 후에 알림 보내줘" 패턴:**
+```
+1. [self:time]  →  현재 시각 확인
+2. [self:manage_events]{action: "add", title: "알림", date: "YYYY-MM-DD", time: "HH:MM", type: "schedule", repeat: "none", event_action: "send_notification", action_params: {title: "리마인더", message: "알림 내용"}}
+3. 텍스트 응답으로 예약 완료 안내
 ```
 
 ---

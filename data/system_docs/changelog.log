@@ -496,3 +496,61 @@
   - photo_db.py, handler.py: get_gallery/get_timeline에 start_date/end_date 필터 추가
   - photo_db.py, handler.py: 갤러리에 gps_lat/gps_lon 좌표 포함
   - sqlite_driver.py: 사진 스캔 경로 수정 (data/photo_scans → data/packages/photo_scans)
+[2026-03-09 00:00:00] PHASE_26: 목표/시간/조건 시스템 (Goal/Time/Condition)
+  - conversation_db.py: goal_context 테이블 (태스크별 goal/time_limit/conditions 구조화 저장)
+  - ibl_nodes.yaml: set_goal, check_goal, update_goal, clear_goal 액션 (self 노드)
+  - ibl_engine.py: _set_goal(), _check_goal(), _update_goal(), _clear_goal() 핸들러
+  - ibl_access.py: <goal_context> 동적 XML 주입 (에이전트 프롬프트에 목표/시간/조건 자동 삽입)
+  - 에이전트가 목표 달성 여부, 시간 초과, 조건 충족을 자체 판단하여 태스크 종료
+[2026-03-09 01:00:00] PHASE_26b: 전략 에스컬레이션 + 라운드 메모리
+  - conversation_db.py: attempt_log 테이블 + log_attempt/get_attempt_history/get_consecutive_failures/get_failed_categories 메서드
+  - ibl_nodes.yaml: log_attempt, get_attempts 액션 (self 노드)
+  - ibl_engine.py: _log_attempt(), _get_attempts() 핸들러 (자동 에스컬레이션 경고 포함)
+  - ibl_access.py: <strategy_rules> 정적 규칙 5개 + <attempt_history> 동적 XML 주입
+  - 같은 범주 3회 연속 실패 시 escalation_required, 모든 범주 소진 시 all_exhausted 자동 반환
+  (문제: Gemini 에이전트가 CCTV 67라운드 반복 실패 — 같은 접근 반복)
+  (해결: 범주별 실패 추적 → 강제 전략 전환 → 소진 시 사용자 보고)
+[2026-03-09 02:00:00] PACKAGE_OVERHAUL: cctv v3.0.0 — UTIC 실시간 API 통합
+  - utic_traffic.py: 전면 재작성 — UTIC API (http://www.utic.go.kr/map/mapcctv.do) 실시간 연동
+    - 16,233 CCTV (기존 로컬 캐시 ~2,000 → 실시간 API 16,000+)
+    - Referer 헤더 필수, 10분 TTL 메모리 캐시, API 실패 시 로컬 JSON 폴백
+    - get_nearby_cctv() 반경 km 단위, get_cctv_by_name() CCTVNAME+CENTERNAME 검색
+  - handler.py: cctv_refresh(), cctv_stats() 추가, cctv_sources() UTIC 상태 포함
+  - ibl_actions.yaml: refresh, stats 액션 추가
+  - ibl_nodes.yaml: cctv_refresh, cctv_stats 액션 (sense 노드)
+  - tool.json: v3.0.0, cctv_refresh/cctv_stats 도구 정의 추가
+  - .env: UTIC_API_KEY 추가, .env.example: CCTV/교통 API 섹션 추가
+[2026-03-12 00:00:00] FEATURE_ADDED: 의식 시스템 (Consciousness Pulse & Self-Check)
+  - world_pulse.py: Consciousness Pulse 구현 (~300줄 추가, 724→1390줄)
+    - collect_consciousness_pulse(): 매시간 세계/사용자/자신 3차원 상태 수집
+    - _collect_world_delta(): 경제 지표 + 날씨 (매시간), 뉴스 (6시간마다)
+    - _collect_user_state(): 최근 대화 수, 미처리 태스크, 다가오는 일정 (DB 쿼리만)
+    - _collect_self_state(): 서비스 alive 체크, 디스크 사용량, 자가점검 결과 (내부 체크만)
+    - run_self_check(): 랜덤 IBL 액션 자가 점검 (면역 순찰)
+    - _get_safe_actions(): sense 노드의 읽기 전용 액션 필터링
+    - _evaluate_result(): LLM 없이 응답 코드/데이터 유무/응답 시간으로 평가
+    - 연속 3회 실패 시 NotificationManager 알림
+    - consciousness_pulse.db: pulse_log + self_checks 테이블 (30일 보존)
+    - generate_guide() 확장: 사용자 현황 + 시스템 건강 섹션 추가
+    - register_consciousness_tasks(): CalendarManager에 매시간/6시간 스케줄 등록
+    - 서버 시작 시 최근 1시간 내 펄스 없으면 즉시 수집, 있으면 건너뜀
+  - api_config.py: 의식 API 3개 추가
+    - GET /world-pulse/consciousness: 최근 의식 펄스 조회
+    - GET /world-pulse/self-checks: 최근 자가점검 결과
+    - GET /world-pulse/health: 시스템 건강 요약
+  - api.py: lifespan에 의식 시스템 등록 코드 추가
+  - world_pulse_config.json: consciousness_pulse, self_check 설정 추가
+  - 비용 영향: 사용자/자신 = DB 쿼리 (비용 0), 세계 = 경량 API (경제 7회 + 날씨 1회/시간), LLM 호출 0
+[2026-03-12 00:30:00] DOCS_UPDATED: 시스템 문서 업데이트 (의식 시스템)
+  - architecture.md: 의식 시스템 섹션 추가 (다이어그램, 동작 설명)
+  - overview.md: 주요 기능에 의식 시스템 항목 추가
+  - technical.md: 의식 API 엔드포인트 3개, consciousness_pulse.db 설정 파일 추가
+  - changelog.log: 변경 이력 기록
+[2026-03-09 03:00:00] DOCS_UPDATED: Phase 26b + CCTV UTIC 문서 업데이트
+  - phase26_goal_time_condition.md: Phase 26b 섹션 추가 (전략 에스컬레이션, 라운드 메모리)
+  - cctv.md: UTIC 1순위 검색, 데이터 소스 설명, cctv_refresh/cctv_stats 추가, UTIC API 구조 섹션
+  - .env.example: ITS_API_KEY, UTIC_API_KEY, WINDY_API_KEY 섹션 추가
+  - README.md, README.ko.md: Phase 26 에이전트 자기조절, 실시간 CCTV 추가
+  - overview.md: Phase 26 + CCTV 링크 추가
+  - ibl.md: log_attempt, get_attempts, cctv_search/refresh/stats 액션 추가
+  - technical.md: 업데이트 날짜 갱신

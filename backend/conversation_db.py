@@ -6,6 +6,7 @@ IndieBiz OS Core
 - agents: AI 에이전트 및 사용자
 - messages: 에이전트 간 메시지
 - tasks: 비동기 작업 추적 (위임 체인 지원)
+- goals: 목적 기반 실행 관리 (Phase 26)
 """
 
 import sqlite3
@@ -83,6 +84,59 @@ class ConversationDB:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     completed_at TIMESTAMP
                 )
+            """)
+
+            # 목표 테이블 (Phase 26: Goal/Time/Condition)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS goals (
+                    goal_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    success_condition TEXT,
+                    resources TEXT,
+                    report_to TEXT,
+                    deadline TEXT,
+                    until_condition TEXT,
+                    within_duration TEXT,
+                    by_time TEXT,
+                    every_frequency TEXT,
+                    schedule_at TEXT,
+                    max_rounds INTEGER NOT NULL,
+                    max_cost REAL NOT NULL,
+                    current_round INTEGER DEFAULT 0,
+                    cumulative_cost REAL DEFAULT 0.0,
+                    rounds_data TEXT,
+                    strategy TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    started_at TIMESTAMP,
+                    completed_at TIMESTAMP
+                )
+            """)
+
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(status)
+            """)
+
+            # 시도 기록 테이블 (Phase 26b: 전략 전환 + 라운드 메모리)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS attempt_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id TEXT NOT NULL,
+                    agent_id TEXT,
+                    round_num INTEGER DEFAULT 1,
+                    approach_category TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    result TEXT DEFAULT 'failure',
+                    lesson TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_attempt_task ON attempt_log(task_id)
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_attempt_category ON attempt_log(task_id, approach_category)
             """)
 
             # 기존 DB 마이그레이션
@@ -566,4 +620,325 @@ class ConversationDB:
                 ORDER BY created_at ASC
             """, (parent_task_id,))
             return [dict(row) for row in cursor.fetchall()]
+
+    # ============ Goal 관리 (Phase 26) ============
+
+    def create_goal(self, goal_id: str, goal_data: dict) -> bool:
+        """
+        새 목표 생성
+
+        Args:
+            goal_id: 목표 ID (예: "goal_20260309_001")
+            goal_data: 목표 데이터
+                - name: 목표 이름
+                - success_condition: 달성 조건
+                - resources: 리소스 목록 (JSON array)
+                - report_to: 보고 대상
+                - deadline, until_condition, within_duration, by_time: 종료 통제
+                - every_frequency, schedule_at: 빈도 통제
+                - max_rounds: 최대 반복 횟수 (필수)
+                - max_cost: 최대 비용 한도 USD (필수)
+                - strategy: 전략 (if/case 등, JSON)
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO goals (
+                    goal_id, name, status, success_condition, resources,
+                    report_to, deadline, until_condition, within_duration,
+                    by_time, every_frequency, schedule_at,
+                    max_rounds, max_cost, strategy
+                ) VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                goal_id,
+                goal_data.get('name', ''),
+                goal_data.get('success_condition'),
+                json.dumps(goal_data.get('resources', []), ensure_ascii=False)
+                    if goal_data.get('resources') else None,
+                goal_data.get('report_to'),
+                goal_data.get('deadline'),
+                goal_data.get('until_condition') or goal_data.get('until'),
+                goal_data.get('within_duration') or goal_data.get('within'),
+                goal_data.get('by_time') or goal_data.get('by'),
+                goal_data.get('every_frequency') or goal_data.get('every'),
+                goal_data.get('schedule_at') or goal_data.get('schedule'),
+                goal_data.get('max_rounds', 100),
+                goal_data.get('max_cost', 10.0),
+                json.dumps(goal_data.get('strategy'), ensure_ascii=False)
+                    if goal_data.get('strategy') else None
+            ))
+            conn.commit()
+            return True
+
+    def get_goal(self, goal_id: str) -> Optional[Dict]:
+        """목표 조회"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM goals WHERE goal_id = ?', (goal_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            result = dict(row)
+            # JSON 필드 파싱
+            if result.get('resources'):
+                try:
+                    result['resources'] = json.loads(result['resources'])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            if result.get('rounds_data'):
+                try:
+                    result['rounds_data'] = json.loads(result['rounds_data'])
+                except (json.JSONDecodeError, TypeError):
+                    result['rounds_data'] = []
+            if result.get('strategy'):
+                try:
+                    result['strategy'] = json.loads(result['strategy'])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            return result
+
+    def list_goals(self, status: str = None) -> List[Dict]:
+        """
+        목표 목록 조회
+
+        Args:
+            status: 상태 필터 ('pending', 'active', 'achieved', 'expired',
+                    'limit_reached', 'cancelled'). None이면 전체 조회.
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if status:
+                cursor.execute("""
+                    SELECT goal_id, name, status, success_condition,
+                           current_round, max_rounds, cumulative_cost, max_cost,
+                           deadline, until_condition, every_frequency,
+                           created_at, started_at, completed_at
+                    FROM goals WHERE status = ?
+                    ORDER BY created_at DESC
+                """, (status,))
+            else:
+                cursor.execute("""
+                    SELECT goal_id, name, status, success_condition,
+                           current_round, max_rounds, cumulative_cost, max_cost,
+                           deadline, until_condition, every_frequency,
+                           created_at, started_at, completed_at
+                    FROM goals
+                    ORDER BY created_at DESC
+                """)
+            return [dict(row) for row in cursor.fetchall()]
+
+    def update_goal_status(self, goal_id: str, status: str) -> bool:
+        """
+        목표 상태 업데이트
+
+        Args:
+            goal_id: 목표 ID
+            status: 새 상태 ('pending', 'active', 'achieved', 'expired',
+                    'limit_reached', 'cancelled')
+        """
+        valid_statuses = {'pending', 'active', 'achieved', 'expired',
+                          'limit_reached', 'cancelled'}
+        if status not in valid_statuses:
+            return False
+
+        now = datetime.now().isoformat()
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if status == 'active':
+                cursor.execute("""
+                    UPDATE goals SET status = ?, started_at = ?
+                    WHERE goal_id = ?
+                """, (status, now, goal_id))
+            elif status in ('achieved', 'expired', 'limit_reached', 'cancelled'):
+                cursor.execute("""
+                    UPDATE goals SET status = ?, completed_at = ?
+                    WHERE goal_id = ?
+                """, (status, now, goal_id))
+            else:
+                cursor.execute("""
+                    UPDATE goals SET status = ? WHERE goal_id = ?
+                """, (status, goal_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def add_goal_round(self, goal_id: str, round_num: int,
+                       cost: float, result: str) -> bool:
+        """
+        목표 라운드 실행 기록 추가
+
+        Args:
+            goal_id: 목표 ID
+            round_num: 라운드 번호
+            cost: 이번 라운드 비용 (USD)
+            result: 라운드 실행 결과 요약
+        """
+        with self.get_exclusive_connection() as conn:
+            cursor = conn.cursor()
+
+            # 현재 rounds_data 읽기
+            cursor.execute(
+                'SELECT rounds_data FROM goals WHERE goal_id = ?', (goal_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+
+            rounds = []
+            if row[0]:
+                try:
+                    rounds = json.loads(row[0])
+                except (json.JSONDecodeError, TypeError):
+                    rounds = []
+
+            # 새 라운드 추가
+            rounds.append({
+                'round': round_num,
+                'cost': cost,
+                'result': result,
+                'timestamp': datetime.now().isoformat()
+            })
+
+            # DB 업데이트 (라운드 데이터 + 라운드 카운터 + 비용 합산)
+            cursor.execute("""
+                UPDATE goals
+                SET rounds_data = ?,
+                    current_round = ?,
+                    cumulative_cost = cumulative_cost + ?
+                WHERE goal_id = ?
+            """, (json.dumps(rounds, ensure_ascii=False),
+                  round_num, cost, goal_id))
+
+            return cursor.rowcount > 0
+
+    def increment_goal_cost(self, goal_id: str, cost_delta: float) -> bool:
+        """목표 누적 비용 증가 (판단 루프 비용 등 별도 합산용)"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE goals
+                SET cumulative_cost = cumulative_cost + ?
+                WHERE goal_id = ?
+            """, (cost_delta, goal_id))
+            conn.commit()
+            return cursor.rowcount > 0
+
+    # ============ Attempt Log (Phase 26b: 전략 전환 + 라운드 메모리) ============
+
+    def log_attempt(self, task_id: str, agent_id: str,
+                    approach_category: str, description: str,
+                    result: str = "failure", lesson: str = None) -> int:
+        """
+        시도 기록 추가
+
+        Args:
+            task_id: 태스크/대화 ID (같은 작업의 시도를 묶는 키)
+            agent_id: 실행 에이전트
+            approach_category: 접근 범주 (예: "cv2_import", "code_modification", "library_install")
+            description: 구체적으로 무엇을 시도했는지
+            result: "success" 또는 "failure"
+            lesson: 이 시도에서 배운 점
+
+        Returns:
+            자동 부여된 round_num
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 해당 task의 현재 최대 round_num 조회
+            cursor.execute("""
+                SELECT COALESCE(MAX(round_num), 0) FROM attempt_log
+                WHERE task_id = ?
+            """, (task_id,))
+            max_round = cursor.fetchone()[0]
+            round_num = max_round + 1
+
+            cursor.execute("""
+                INSERT INTO attempt_log
+                (task_id, agent_id, round_num, approach_category, description, result, lesson)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (task_id, agent_id, round_num, approach_category,
+                  description, result, lesson))
+            conn.commit()
+            return round_num
+
+    def get_attempt_history(self, task_id: str, limit: int = 20) -> List[Dict]:
+        """
+        시도 이력 조회 (최신순)
+
+        Args:
+            task_id: 태스크 ID
+            limit: 최대 조회 수
+
+        Returns:
+            시도 기록 리스트
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT round_num, approach_category, description, result, lesson, created_at
+                FROM attempt_log
+                WHERE task_id = ?
+                ORDER BY round_num DESC
+                LIMIT ?
+            """, (task_id, limit))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_consecutive_failures(self, task_id: str, category: str) -> int:
+        """
+        특정 범주의 연속 실패 횟수 계산
+
+        가장 최근의 성공 이후 해당 category의 연속 실패 수를 반환.
+        한 번도 성공한 적 없으면 해당 category의 전체 실패 수.
+
+        Args:
+            task_id: 태스크 ID
+            category: 접근 범주
+
+        Returns:
+            연속 실패 횟수
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 해당 카테고리의 마지막 성공 round_num
+            cursor.execute("""
+                SELECT MAX(round_num) FROM attempt_log
+                WHERE task_id = ? AND approach_category = ? AND result = 'success'
+            """, (task_id, category))
+            row = cursor.fetchone()
+            last_success = row[0] if row and row[0] else 0
+
+            # 그 이후의 실패 수
+            cursor.execute("""
+                SELECT COUNT(*) FROM attempt_log
+                WHERE task_id = ? AND approach_category = ?
+                  AND result = 'failure' AND round_num > ?
+            """, (task_id, category, last_success))
+            return cursor.fetchone()[0]
+
+    def get_failed_categories(self, task_id: str, threshold: int = 3) -> List[str]:
+        """
+        연속 실패 임계값을 넘은 접근 범주 목록
+
+        Args:
+            task_id: 태스크 ID
+            threshold: 연속 실패 임계값 (기본 3)
+
+        Returns:
+            포기해야 할 접근 범주 리스트
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+
+            # 모든 고유 카테고리 조회
+            cursor.execute("""
+                SELECT DISTINCT approach_category FROM attempt_log
+                WHERE task_id = ?
+            """, (task_id,))
+            categories = [row[0] for row in cursor.fetchall()]
+
+        failed = []
+        for cat in categories:
+            if self.get_consecutive_failures(task_id, cat) >= threshold:
+                failed.append(cat)
+        return failed
 

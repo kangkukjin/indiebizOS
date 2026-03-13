@@ -94,7 +94,7 @@ class IBLUsageRAG:
 
     def _format_references(self, examples: list) -> str:
         """검색 결과를 프롬프트 주입용 XML로 포맷팅"""
-        lines = ['<ibl_references note="아래는 유사한 과거 용례입니다. 참고만 하고 현재 요청에 맞게 변형하세요.">']
+        lines = ['<ibl_references note="아래는 유사한 과거 용례입니다. code의 IBL 코드를 참고하되, 반드시 execute_ibl 도구의 code 파라미터로 실행하세요. 절대 텍스트 응답에 IBL 코드를 포함하지 마세요.">']
         for ex in examples:
             # XML 속성용 이스케이프
             intent = ex.intent.replace('"', '&quot;').replace("'", "&apos;")
@@ -159,7 +159,7 @@ class IBLUsageRAG:
                 return ""
 
             # 상위 3개 노드, 각 노드당 상위 2개 액션만
-            lines = ['<ibl_discover note="키워드 기반 추천 도구입니다. 전문 데이터 액션(health_query, health_context 등)이 있으면 파일 직접 탐색([self:list]/[self:read])이나 web_search보다 반드시 우선 사용하세요.">']
+            lines = ['<ibl_discover note="키워드 기반 추천 도구입니다. 전문 데이터 액션이 있으면 우선 사용하세요. 반드시 execute_ibl 도구를 호출하여 실행하세요. IBL 코드를 텍스트로 출력하면 아무 일도 일어나지 않습니다.">']
             for r in results[:3]:
                 details = r.get("action_details", [])[:2]
                 for d in details:

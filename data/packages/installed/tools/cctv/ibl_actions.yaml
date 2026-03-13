@@ -1,44 +1,50 @@
 node: sense
 actions:
-  nearby:
-    description: 가까운 CCTV 찾기
-    router: handler
-    tool: get_nearby_cctv
-  by_name:
-    description: CCTV/웹캠 통합 검색+자동캡처 (→ cctv_search 동일). auto_capture.file_path로 이미지
-      분석 가능. 브라우저 접속 불필요.
-    target_description: 검색 키워드 (한라산, 맨하탄, 경부 등)
+  cctv_search:
+    description: 실시간 CCTV/웹캠 영상 검색 — 결과의 stream_tags를 응답에 그대로 포함하면 채팅창에서 스트리밍 재생
+    keywords: [cctv, 교통, 실시간, 카메라, 보여줘, 봐줘, traffic, camera, 영상]
+    target_description: 검색 키워드 (전주, 해운대, 제주, 경부 등)
     router: handler
     tool: search_cctv
     target_key: query
-  open:
-    description: CCTV 영상을 브라우저에서 열기
+  nearby:
+    description: 좌표 근처 CCTV 찾기 (lat/lng 필수, 모르면 cctv_search 사용)
+    keywords: [cctv, 근처, 주변, 가까운, nearby, 부근]
+    router: handler
+    tool: get_nearby_cctv
+  cctv_open:
+    description: CCTV 실시간 영상을 브라우저에서 열기
+    keywords: [cctv, 열기, open, 브라우저]
     target_description: 이름 또는 URL
     router: handler
     tool: open_cctv
     target_key: name
-  webcam:
-    description: 전세계 웹캠 검색 (Windy)
-    router: handler
-    tool: search_webcam
-  webcam_nearby:
-    description: 가까운 웹캠 찾기
-    router: handler
-    tool: get_nearby_webcam
   cctv_capture:
-    description: CCTV/웹캠 프레임 캡처 (이미지 저장)
+    description: CCTV/웹캠 현재 화면 캡처 (이미지 저장, AI 분석용)
+    keywords: [cctv, 캡처, 스크린샷, capture, 찍어]
     target_description: 영상/이미지 URL
     router: handler
     tool: capture_cctv
     target_key: url
+  webcam:
+    description: 전세계 웹캠 실시간 영상 검색 (Windy) — 해외 장소 모습 보기
+    keywords: [webcam, 웹캠, 해외, windy]
+    router: handler
+    tool: search_webcam
+  webcam_nearby:
+    description: 가까운 웹캠 찾기
+    keywords: [webcam, 웹캠, 근처]
+    router: handler
+    tool: get_nearby_webcam
   sources:
     description: 사용 가능한 CCTV/웹캠 소스 및 상태 확인
     router: handler
     tool: list_cctv_sources
-  cctv_search:
-    description: CCTV/웹캠 통합 검색+자동캡처 (ITS교통→Windy웹캠 폴백, 첫 결과 이미지 자동저장). auto_capture.file_path로
-      이미지 분석 가능. 브라우저 접속 불필요.
-    target_description: 검색 키워드 (한라산, 맨하탄, 해운대, 경부 등)
+  refresh:
+    description: UTIC 실시간 API에서 최신 CCTV 목록 갱신
     router: handler
-    tool: search_cctv
-    target_key: query
+    tool: cctv_refresh
+  stats:
+    description: CCTV 데이터 소스 상태 및 센터별 통계 조회
+    router: handler
+    tool: cctv_stats

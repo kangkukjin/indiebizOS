@@ -45,8 +45,13 @@ def load_module(module_name):
 # clean_html은 common.html_utils에서 임포트
 
 
-def search_google_news(query: str, count: int = 10, language: str = "ko") -> dict:
-    """Google News RSS 검색"""
+def search_google_news(query: str, count: int = 10, language: str = "ko", region: str = None) -> dict:
+    """Google News RSS 검색
+
+    Args:
+        language: "ko" (한국어) 또는 "en" (영어) 등
+        region: 국가 코드. None이면 language에서 자동 결정 (ko→KR, en→US)
+    """
     if feedparser is None:
         return {
             "success": False,
@@ -58,7 +63,10 @@ def search_google_news(query: str, count: int = 10, language: str = "ko") -> dic
     try:
         count = min(max(1, count), 30)
         encoded_query = quote_plus(query)
-        rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl={language}&gl=KR&ceid=KR:{language}"
+        # region 자동 결정
+        if region is None:
+            region = {"ko": "KR", "en": "US", "ja": "JP", "zh": "CN"}.get(language, "US")
+        rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl={language}&gl={region}&ceid={region}:{language}"
 
         feed = feedparser.parse(rss_url)
 
@@ -97,13 +105,14 @@ def search_google_news(query: str, count: int = 10, language: str = "ko") -> dic
         }
 
 
-def generate_section(keyword: str, news_count: int = 7, exclude_sources: list = None) -> dict:
+def generate_section(keyword: str, news_count: int = 7, exclude_sources: list = None,
+                     language: str = "ko", region: str = None) -> dict:
     """키워드로 뉴스 검색하여 섹션 생성"""
     if exclude_sources is None:
         exclude_sources = []
 
     fetch_count = news_count * 3 if exclude_sources else news_count
-    result = search_google_news(query=keyword, count=fetch_count, language='ko')
+    result = search_google_news(query=keyword, count=fetch_count, language=language, region=region)
 
     if not result['success'] or not result['results']:
         return {
@@ -141,12 +150,16 @@ def generate_section(keyword: str, news_count: int = 7, exclude_sources: list = 
     for i, item in enumerate(filtered_results, 1):
         section += "[CARD_START]\n\n"
         section += f"### {i}. {item['title']}\n\n"
-        section += f"**출처**: {item['source']} | **발행**: {item['published']}\n\n"
+        if language == "ko":
+            section += f"**출처**: {item['source']} | **발행**: {item['published']}\n\n"
+        else:
+            section += f"**Source**: {item['source']} | **Published**: {item['published']}\n\n"
 
         if item.get('summary') and item['summary'] != item['title']:
             section += f"{item['summary']}\n\n"
 
-        section += f"[기사 보기]({item['url']})\n\n"
+        link_text = "기사 보기" if language == "ko" else "Read Article"
+        section += f"[{link_text}]({item['url']})\n\n"
         section += "[CARD_END]\n\n"
 
     section += "[GRID_END]\n\n"
@@ -160,7 +173,7 @@ def generate_section(keyword: str, news_count: int = 7, exclude_sources: list = 
     }
 
 
-def markdown_to_html(markdown_content: str, title: str, date_str: str) -> str:
+def markdown_to_html(markdown_content: str, title: str, date_str: str, language: str = "ko") -> str:
     """Markdown을 HTML로 변환"""
     html_body = markdown_content
 
@@ -197,8 +210,16 @@ def markdown_to_html(markdown_content: str, title: str, date_str: str) -> str:
 
     html_body = '\n'.join(processed_lines)
 
+    html_lang = "ko" if language == "ko" else "en"
+    font_family = "'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif" if language == "ko" else "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    meta_labels = {
+        "ko": {"date": "발행일", "publisher": "발행처", "source": "출처", "generated": "생성 시각", "ai_note": "AI 사용: 없음 (토큰 소비 0)"},
+        "en": {"date": "Date", "publisher": "Publisher", "source": "Source", "generated": "Generated", "ai_note": "AI usage: None (0 tokens)"},
+    }
+    labels = meta_labels.get(language, meta_labels["en"])
+
     return f"""<!DOCTYPE html>
-<html lang="ko">
+<html lang="{html_lang}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -206,7 +227,7 @@ def markdown_to_html(markdown_content: str, title: str, date_str: str) -> str:
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: {font_family};
             line-height: 1.6;
             color: #333;
             background: #f0f2f5;
@@ -306,14 +327,14 @@ def markdown_to_html(markdown_content: str, title: str, date_str: str) -> str:
     <div class="container">
         <h1>{title}</h1>
         <div class="meta">
-            <strong>발행일:</strong> {date_str} |
-            <strong>발행처:</strong> IndieBiz AI |
-            <strong>출처:</strong> Google News RSS
+            <strong>{labels['date']}:</strong> {date_str} |
+            <strong>{labels['publisher']}:</strong> IndieBiz AI |
+            <strong>{labels['source']}:</strong> Google News RSS
         </div>
         {html_body}
         <div class="footer">
-            <p>생성 시각: {datetime.now().strftime('%Y년 %m월 %d일 %H시 %M분')}</p>
-            <p>AI 사용: 없음 (토큰 소비 0)</p>
+            <p>{labels['generated']}: {datetime.now().strftime('%Y-%m-%d %H:%M') if language != 'ko' else datetime.now().strftime('%Y년 %m월 %d일 %H시 %M분')}</p>
+            <p>{labels['ai_note']}</p>
         </div>
     </div>
 </body>
@@ -321,21 +342,30 @@ def markdown_to_html(markdown_content: str, title: str, date_str: str) -> str:
 
 
 def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
-                       exclude_sources: list = None, project_path: str = ".") -> dict:
-    """Google News 기반 신문 자동 생성"""
+                       exclude_sources: list = None, project_path: str = ".",
+                       language: str = "ko") -> dict:
+    """Google News 기반 신문 자동 생성
+
+    Args:
+        language: "ko" (한국어, 기본) 또는 "en" (영어) 등
+    """
     if not keywords:
         return {'success': False, 'error': '키워드가 필요합니다.'}
 
     if exclude_sources is None:
         exclude_sources = []
 
+    # region 자동 결정
+    region = {"ko": "KR", "en": "US", "ja": "JP", "zh": "CN"}.get(language, "US")
+
     today = datetime.now()
-    date_str = today.strftime('%Y년 %m월 %d일')
+    date_str = today.strftime('%B %d, %Y') if language != "ko" else today.strftime('%Y년 %m월 %d일')
     date_filename = today.strftime('%Y%m%d_%H%M%S')
 
     sections = []
     for keyword in keywords:
-        section = generate_section(keyword, news_count=7, exclude_sources=exclude_sources)
+        section = generate_section(keyword, news_count=7, exclude_sources=exclude_sources,
+                                   language=language, region=region)
         sections.append(section)
 
     toc_items = []
@@ -367,7 +397,7 @@ def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
     out_dir = os.path.join(project_path, OUTPUTS_DIR)
     os.makedirs(out_dir, exist_ok=True)
 
-    html_content = markdown_to_html(newspaper_md, title, date_str)
+    html_content = markdown_to_html(newspaper_md, title, date_str, language=language)
     filename = f"newspaper_{date_filename}.html"
     filepath = os.path.join(out_dir, filename)
 
@@ -559,11 +589,13 @@ def execute(tool_name: str, params: dict, project_path: str = None):
         if not keywords:
             return format_json({"success": False, "error": "키워드(keywords)가 필요합니다."})
 
+        language = params.get("language", "ko")
         result = generate_newspaper(
             keywords=keywords,
             title=params.get("title", "IndieBiz Daily"),
             exclude_sources=params.get("exclude_sources", []),
-            project_path=project_path or "."
+            project_path=project_path or ".",
+            language=language
         )
         return format_json(result)
 

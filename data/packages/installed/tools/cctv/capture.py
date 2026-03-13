@@ -50,19 +50,27 @@ def _detect_source_type(url: str) -> str:
     """URL에서 소스 타입 자동 감지"""
     url_lower = url.lower()
 
+    # HLS 스트림
     if ".m3u8" in url_lower:
         return "hls"
 
+    # ITS 고속도로 CCTV — 확장자 없지만 HLS (cctvsec.ktict.co.kr)
+    if "cctvsec.ktict.co.kr" in url_lower:
+        return "hls"
+
+    # Wowza/기타 스트리밍 서버의 HLS
+    if ":1935/" in url_lower or "streamlock.net" in url_lower:
+        return "hls"
+
+    # 이미지 URL
     if any(url_lower.endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"]):
         return "image"
 
-    if "images-webcams.windy.com" in url_lower or "webcams.windy.com" in url_lower:
+    # Windy 웹캠 이미지
+    if "images-webcams.windy.com" in url_lower or "imgproxy.windy.com" in url_lower:
         return "image"
 
-    if "cctvurl" in url_lower or "cctv" in url_lower:
-        return "hls"
-
-    # HTML 사이트 (스트리밍 플레이어가 내장된 웹페이지)
+    # HTML 사이트 (스트리밍 플레이어 내장)
     if any(domain in url_lower for domain in [
         "skylinewebcams.com", "earthcam.com", "insecam.org",
         "webcamtaxi.com", "opentopia.com", "windy.com/webcams",
@@ -70,10 +78,8 @@ def _detect_source_type(url: str) -> str:
     ]):
         return "browser"
 
-    # 일반 웹페이지 URL이면 브라우저 캡처 시도
-    if url_lower.startswith("http") and not any(
-        ext in url_lower for ext in [".m3u8", ".mp4", ".ts", ".jpg", ".png"]
-    ):
+    # UTIC JSP 페이지 — 직접 캡처 불가, 호출자가 m3u8으로 변환해야 함
+    if "utic.go.kr" in url_lower:
         return "browser"
 
     return "auto"

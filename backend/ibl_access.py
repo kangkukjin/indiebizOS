@@ -154,29 +154,36 @@ def build_environment(
 
         parts.append(f'<node name="{node_name}" description="{desc}">')
 
-        # category별 그룹화 (프롬프트 가독성용, 런타임 매핑 없음)
-        categorized = {}  # category -> [action_name, ...]
-        uncategorized = []  # [(action_name, action_config), ...]
+        # group 또는 category별 그룹화 (프롬프트 가독성용)
+        # group 필드가 있으면 group 기준, 없으면 category 기준
+        has_groups = any(
+            isinstance(ac, dict) and ac.get("group")
+            for ac in actions.values()
+        )
+
+        grouped = {}  # group/category -> [(action_name, action_config), ...]
+        ungrouped = []  # [(action_name, action_config), ...]
         for action_name, action_config in actions.items():
-            cat = action_config.get("category") if isinstance(action_config, dict) else None
-            if cat:
-                categorized.setdefault(cat, []).append(action_name)
+            if not isinstance(action_config, dict):
+                ungrouped.append((action_name, action_config))
+                continue
+            key = action_config.get("group") if has_groups else action_config.get("category")
+            if key:
+                grouped.setdefault(key, []).append((action_name, action_config))
             else:
-                uncategorized.append((action_name, action_config))
+                ungrouped.append((action_name, action_config))
 
-        if categorized:
-            parts.append("<action-categories>")
-            for cat_name, action_names in categorized.items():
-                if len(action_names) > 10:
-                    names_str = ", ".join(action_names[:7]) + f" 등 {len(action_names)}개"
-                else:
-                    names_str = ", ".join(action_names)
-                parts.append(f'  <category name="{cat_name}" actions="{names_str}"/>')
-            parts.append("</action-categories>")
+        if grouped:
+            for grp_name, grp_actions in grouped.items():
+                parts.append(f'<group name="{grp_name}">')
+                for action_name, action_config in grp_actions:
+                    action_desc = action_config.get("description", "")
+                    parts.append(f'  <action name="{action_name}" description="{action_desc}"/>')
+                parts.append("</group>")
 
-        if uncategorized:
+        if ungrouped:
             parts.append("<actions>")
-            for action_name, action_config in uncategorized:
+            for action_name, action_config in ungrouped:
                 action_desc = action_config.get("description", "") if isinstance(action_config, dict) else ""
                 parts.append(f'  <action name="{action_name}" description="{action_desc}"/>')
             parts.append("</actions>")
@@ -212,6 +219,87 @@ def build_environment(
         if peers:
             parts.append(f"  <rule>Use [others:delegate] to delegate tasks to peer agents ({len(peers)} available)</rule>")
         parts.append("</principles>")
+
+    # Phase 26b: 전략 전환 규칙 (Strategy Escalation)
+    parts.append("<strategy_rules>")
+    parts.append("  <rule priority=\"1\">매 시도 후 반드시 [self:log_attempt]로 기록하라. "
+                 "task_id, approach_category(접근 범주), description(무엇을 시도했는지), "
+                 "result(success/failure), lesson(배운 점)을 포함하라.</rule>")
+    parts.append("  <rule priority=\"2\">동일 approach_category가 3회 연속 실패하면, "
+                 "그 범주를 포기하고 근본적으로 다른 접근으로 전환하라. "
+                 "예: 'cv2_import'가 3회 실패 → 'pillow_alternative'나 'ffmpeg_cli' 등 전혀 다른 방법 시도.</rule>")
+    parts.append("  <rule priority=\"3\">시도 가능한 모든 접근 범주가 소진되면, "
+                 "사용자에게 상황을 보고하고 판단을 요청하라. 무한히 반복하지 마라.</rule>")
+    parts.append("  <rule priority=\"4\">새 시도 전에 [self:get_attempts]로 이전 이력을 확인하라. "
+                 "같은 실수를 반복하지 마라.</rule>")
+    parts.append("  <rule priority=\"5\">파일을 수정하기 전에 현재 상태를 백업하거나 기록하라. "
+                 "수정이 실패하면 원래 상태로 복원할 수 있어야 한다.</rule>")
+    parts.append("</strategy_rules>")
+
+    # Phase 26: 활성 Goal 컨텍스트 주입 (DB에서 동적 로드)
+    try:
+        from conversation_db import ConversationDB
+        _db_path = _resolve_db_path(project_path)
+        if _db_path:
+            db = ConversationDB(_db_path)
+            active_goals = db.list_goals(status="active")
+            pending_goals = db.list_goals(status="pending")
+            all_goals = (active_goals or []) + (pending_goals or [])
+
+            if all_goals:
+                parts.append("<goal_context>")
+                parts.append("  <!-- 현재 진행 중인 목표. 각 라운드에서 success_condition 달성 여부를 판단하라. -->")
+                for g in all_goals:
+                    attrs = f'id="{g["goal_id"]}" name="{g["name"]}" status="{g["status"]}"'
+                    attrs += f' round="{g["current_round"]}/{g["max_rounds"]}"'
+                    attrs += f' cost="${g["cumulative_cost"]:.4f}/${g["max_cost"]:.2f}"'
+                    if g.get("success_condition"):
+                        attrs += f' success_condition="{g["success_condition"]}"'
+                    if g.get("deadline"):
+                        attrs += f' deadline="{g["deadline"]}"'
+                    if g.get("every_frequency"):
+                        attrs += f' every="{g["every_frequency"]}"'
+                    if g.get("until_condition"):
+                        attrs += f' until="{g["until_condition"]}"'
+                    parts.append(f"  <goal {attrs}/>")
+                parts.append("  <instruction>목표의 success_condition이 충족되었다고 판단되면 [self:goal_status]로 보고하라. "
+                              "비용 한도(max_cost)에 근접하면 효율적인 전략을 선택하라.</instruction>")
+                parts.append("</goal_context>")
+    except Exception:
+        pass  # Goal DB 접근 실패 시 조용히 무시
+
+    # Phase 26b: 현재 태스크의 시도 이력 주입 (라운드 메모리)
+    try:
+        from conversation_db import ConversationDB
+        from thread_context import get_current_task_id
+        _db_path = _resolve_db_path(project_path)
+        current_task = get_current_task_id()
+
+        if _db_path and current_task:
+            db = ConversationDB(_db_path)
+            history = db.get_attempt_history(current_task, limit=10)
+            failed_cats = db.get_failed_categories(current_task, threshold=3)
+
+            if history:
+                parts.append("<attempt_history>")
+                parts.append(f'  <!-- task_id="{current_task}" 최근 시도 이력. 같은 실수를 반복하지 마라. -->')
+
+                if failed_cats:
+                    parts.append(f'  <exhausted_categories categories="{", ".join(failed_cats)}">'
+                                 f'이 범주들은 3회 이상 연속 실패했으므로 더 이상 시도하지 마라.'
+                                 f'</exhausted_categories>')
+
+                for h in reversed(history):  # 시간순 (오래된 것 먼저)
+                    result_icon = "✓" if h.get("result") == "success" else "✗"
+                    attrs = (f'round="{h["round_num"]}" '
+                             f'category="{h["approach_category"]}" '
+                             f'result="{h["result"]}"')
+                    lesson_text = f' lesson="{h["lesson"]}"' if h.get("lesson") else ""
+                    parts.append(f'  <attempt {attrs}{lesson_text}>{result_icon} {h["description"]}</attempt>')
+
+                parts.append("</attempt_history>")
+    except Exception:
+        pass  # 시도 이력 접근 실패 시 조용히 무시
 
     parts.append("</ibl_executor>")
 
@@ -332,6 +420,20 @@ def _load_node_groups() -> dict:
 
     _node_groups_cache = groups
     return groups
+
+
+def _resolve_db_path(project_path: Optional[str]) -> Optional[str]:
+    """프로젝트 경로에서 conversations.db 경로를 찾는다."""
+    if project_path:
+        db_file = Path(project_path) / "conversations.db"
+        if db_file.exists():
+            return str(db_file)
+    # 환경변수에서 기본 경로 시도
+    base = _get_base_path()
+    default_db = base / "conversations.db"
+    if default_db.exists():
+        return str(default_db)
+    return None
 
 
 def invalidate_cache():

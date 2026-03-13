@@ -20,6 +20,7 @@ import { api } from './lib/api';
 function App() {
   const { currentView, setCurrentProject, setIsConnected, setError } = useAppStore();
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [initialAgent, setInitialAgent] = useState<string | null>(null);
   const [folderId, setFolderId] = useState<string | null>(null);
   const [multiChatRoomId, setMultiChatRoomId] = useState<string | null>(null);
   const [isIndieNet, setIsIndieNet] = useState(false);
@@ -168,10 +169,13 @@ function App() {
         return;
       }
 
-      // 프로젝트 체크 (URL 인코딩된 ID 디코딩)
-      const projectMatch = hash.match(/^#\/project\/(.+)$/);
+      // 프로젝트 체크 (URL 인코딩된 ID 디코딩, ?agent= 쿼리 파라미터 지원)
+      const projectMatch = hash.match(/^#\/project\/([^?]+)(\?.*)?$/);
       if (projectMatch) {
         setProjectId(decodeURIComponent(projectMatch[1]));
+        // ?agent= 쿼리에서 초기 에이전트 추출 (스케줄 결과 전달용)
+        const agentMatch = projectMatch[2]?.match(/agent=([^&]+)/);
+        setInitialAgent(agentMatch ? decodeURIComponent(agentMatch[1]) : null);
         setFolderId(null);
         setIsIndieNet(false);
         setIsBusiness(false);
@@ -352,7 +356,7 @@ function App() {
     return (
       <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
         <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
-          <Manager />
+          <Manager initialAgent={initialAgent} />
         </div>
       </div>
     );

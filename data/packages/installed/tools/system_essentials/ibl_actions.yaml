@@ -27,11 +27,13 @@ actions:
     target_key: path
   find:
     description: 파일 검색 (glob 패턴)
+    keywords: [파일, 찾기, 검색, find, search, 파일찾기]
     router: handler
     tool: glob_files
     target_key: pattern
   grep:
     description: 파일 내용 검색
+    keywords: [검색, 내용검색, grep, 코드검색]
     router: handler
     tool: grep_files
     target_key: pattern

@@ -1,8 +1,8 @@
 {
   "id": "cctv",
   "name": "CCTV 실시간 영상",
-  "description": "CCTV 및 실시간 웹캠 통합 도구\n\n## 소스\n- ITS 국가교통정보센터 (한국 교통 CCTV)\n- Windy Webcams (전세계 웹캠)\n\n## 주요 기능\n- 위치/키워드 기반 CCTV 검색\n- 가장 가까운 CCTV 찾기\n- 실시간 영상 URL 제공\n- 화면 캡처 (ffmpeg/이미지)\n\n## 해안/국립공원 등 추가 CCTV\n- 가이드 파일(cctv_guide.md) 참조\n- browser-action 패키지로 CCTV 사이트에 직접 접속하여 캡처\n\n## 필요 환경변수\n- ITS_API_KEY: 국가교통정보센터 API 키\n- WINDY_API_KEY: Windy Webcams API 키 (선택)",
-  "version": "2.0.0",
+  "description": "CCTV 및 실시간 웹캠 통합 도구\n\n## 소스\n- UTIC 도시교통정보센터 (한국 시내도로 CCTV, 16,000+대 실시간 API)\n- ITS 국가교통정보센터 (한국 고속도로/국도 CCTV)\n- Windy Webcams (전세계 웹캠)\n\n## 주요 기능\n- 위치/키워드 기반 CCTV 검색 (UTIC+ITS+Windy 통합)\n- 가장 가까운 CCTV 찾기\n- 실시간 영상 URL 제공\n- 화면 캡처 (ffmpeg/이미지)\n- UTIC 실시간 API 연동 (캐시 자동 갱신)\n\n## 필요 환경변수\n- UTIC_API_KEY: 도시교통정보센터 API 키\n- ITS_API_KEY: 국가교통정보센터 API 키\n- WINDY_API_KEY: Windy Webcams API 키 (선택)",
+  "version": "3.0.0",
   "tools": [
     {
       "name": "search_cctv",
@@ -221,7 +221,23 @@
     },
     {
       "name": "list_cctv_sources",
-      "description": "사용 가능한 모든 CCTV/웹캠 소스와 현재 상태를 확인합니다.\n각 소스의 API 키 설정 여부, 도구 목록, 커버리지 정보를 반환합니다.\nffmpeg 설치 여부도 확인합니다.",
+      "description": "사용 가능한 모든 CCTV/웹캠 소스와 현재 상태를 확인합니다.\n각 소스의 API 키 설정 여부, 도구 목록, 커버리지 정보를 반환합니다.\nUTIC 실시간 API 연결 상태 포함.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "cctv_refresh",
+      "description": "UTIC 실시간 API에서 최신 CCTV 목록을 가져와 로컬 캐시를 갱신합니다.\n16,000+대 전국 CCTV 데이터를 최신화합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "cctv_stats",
+      "description": "CCTV 데이터 소스 상태 및 센터별 통계를 조회합니다.\n현재 데이터 소스(API/캐시), 전체 CCTV 수, 주요 센터별 분포를 반환합니다.",
       "input_schema": {
         "type": "object",
         "properties": {}

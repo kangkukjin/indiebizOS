@@ -232,6 +232,10 @@ export function Launcher() {
     return () => clearInterval(interval);
   }, []);
 
+  // ─── Launcher WS: Electron 메인 프로세스로 이전됨 (Phase 27) ───
+  // 백엔드 → Electron 창 제어는 main.js의 startLauncherWS()에서 처리
+  // 컴포넌트 lifecycle과 무관하게 항상 연결 유지
+
   // 폴더에서 아이템이 드롭되었을 때 이벤트 수신
   useEffect(() => {
     if (window.electron?.onItemDroppedFromFolder) {

@@ -227,13 +227,18 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         case 'response':
         case 'auto_report': {
           const savedTools = toolHistoryRef.current.length > 0 ? [...toolHistoryRef.current] : undefined;
-          setMessages(prev => [...prev, {
-            id: data.message_id ? String(data.message_id) : Date.now().toString(),
-            role: 'assistant',
-            content: data.content,
-            timestamp: new Date(),
-            toolActivities: savedTools,
-          }]);
+          const newMsgId = data.message_id ? String(data.message_id) : Date.now().toString();
+          setMessages(prev => {
+            // id 기반 중복 방지 (이력 로드 후 동일 메시지가 WS로 다시 올 수 있음)
+            if (data.message_id && prev.some(m => m.id === newMsgId)) return prev;
+            return [...prev, {
+              id: newMsgId,
+              role: 'assistant',
+              content: data.content,
+              timestamp: new Date(),
+              toolActivities: savedTools,
+            }];
+          });
           resetStreamingState();
           setIsLoading(false);
           break;
@@ -344,11 +349,11 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
     };
   }, [show, targetKey]);
 
-  // 미전달 메시지 폴링 (에이전트 전용)
+  // 미전달 메시지 폴링 (에이전트 전용) — 마운트 즉시 + 30초 간격
   useEffect(() => {
     if (!projectId || !agentName) return;
 
-    const pollInterval = setInterval(async () => {
+    const fetchUndelivered = async () => {
       try {
         const undelivered = await api.getUndeliveredMessages(projectId, agentName);
         if (undelivered && undelivered.length > 0) {
@@ -367,10 +372,38 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       } catch {
         // 폴링 실패는 무시
       }
-    }, 60000);
+    };
+
+    // 마운트 시 즉시 체크
+    fetchUndelivered();
+    // 이후 30초 간격으로 폴링
+    const pollInterval = setInterval(fetchUndelivered, 30000);
 
     return () => clearInterval(pollInterval);
   }, [projectId, agentName]);
+
+  // 시스템 AI 대화 이력 로드 (마운트 시 1회)
+  useEffect(() => {
+    if (isAgent) return; // 프로젝트 에이전트는 별도 이력 로드 있음
+
+    const loadSystemAIHistory = async () => {
+      try {
+        const data = await api.getSystemAIRecentConversations?.(10);
+        if (data?.conversations && data.conversations.length > 0) {
+          setMessages(data.conversations.map((msg: { id: number; timestamp: string; role: string; content: string }) => ({
+            id: String(msg.id),
+            role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
+            content: msg.content,
+            timestamp: new Date(msg.timestamp),
+          })));
+        }
+      } catch {
+        // 이력 로드 실패는 무시
+      }
+    };
+
+    loadSystemAIHistory();
+  }, [isAgent, targetKey]);
 
   // TODO/질문/계획 모드 상태 폴링
   useEffect(() => {

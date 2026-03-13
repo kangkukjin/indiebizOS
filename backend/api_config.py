@@ -947,3 +947,33 @@ async def get_world_pulse_trend(days: int = 7):
         return {"days": days, "trend": get_pulse_trend(days)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/world-pulse/consciousness")
+async def get_consciousness_pulse(hours: int = 24):
+    """최근 N시간 의식 펄스 조회"""
+    try:
+        from world_pulse import get_recent_pulses
+        return {"hours": hours, "pulses": get_recent_pulses(hours)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/world-pulse/self-checks")
+async def get_self_checks(limit: int = 20):
+    """최근 자가점검 결과 조회"""
+    try:
+        from world_pulse import get_recent_self_checks
+        return {"checks": get_recent_self_checks(limit)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/world-pulse/health")
+async def get_health():
+    """시스템 전체 건강 요약"""
+    try:
+        from world_pulse import get_system_health
+        return get_system_health()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

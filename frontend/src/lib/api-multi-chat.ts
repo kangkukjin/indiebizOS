@@ -133,19 +133,6 @@ export function applyMultiChatMethods<T extends APIClientCore>(client: T) {
       });
     },
 
-    // 다중채팅방 에이전트 전체 활성화
-    async activateAllMultiChatAgents(roomId: string, tools: string[] = []) {
-      return client.request<{ success: boolean; activated: string[] }>(`/multi-chat/rooms/${roomId}/activate-all`, {
-        method: 'POST',
-        body: JSON.stringify({ tools }),
-      });
-    },
-
-    // 다중채팅방 에이전트 전체 비활성화
-    async deactivateAllMultiChatAgents(roomId: string) {
-      return client.request<{ success: boolean; deactivated: string[] }>(`/multi-chat/rooms/${roomId}/deactivate-all`, {
-        method: 'POST',
-      });
-    },
+    // 도구는 프로젝트 설정에서 자동 로드 (별도 활성화/비활성화 불필요)
   });
 }

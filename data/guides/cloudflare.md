@@ -237,7 +237,69 @@ cf_api(
 
 ---
 
-## 8. 계정 정보
+## 8. Browser Rendering - Crawl (웹사이트 크롤링)
+
+단일 API 호출로 웹사이트 전체를 크롤링합니다. 비동기 방식으로 동작하며, HTML/Markdown/JSON 포맷을 지원합니다.
+
+> ⚠️ API 토큰에 **"Browser Rendering - Edit"** 권한이 필요합니다.
+
+### 크롤링 시작
+```python
+cf_api(
+    method="POST",
+    endpoint="/accounts/{account_id}/browser-rendering/crawl",
+    body={
+        "url": "https://example.com",
+        "limit": 50,          # 최대 페이지 수 (기본 10, 최대 100,000)
+        "depth": 2,            # 링크 탐색 깊이
+        "formats": ["markdown"],  # html, markdown, json
+        "render": True,        # JS 실행 여부 (기본 True)
+        "source": "all"        # URL 발견 소스: all, sitemaps, links
+    }
+)
+# 응답: {"success": true, "result": "job-id-xxx"}
+```
+
+### 결과 조회
+```python
+cf_api(
+    method="GET",
+    endpoint="/accounts/{account_id}/browser-rendering/crawl/{job_id}"
+)
+# status: running, completed, errored, cancelled_by_user 등
+```
+
+### 크롤링 취소
+```python
+cf_api(
+    method="DELETE",
+    endpoint="/accounts/{account_id}/browser-rendering/crawl/{job_id}"
+)
+```
+
+### 주요 파라미터
+
+| 파라미터 | 설명 |
+|----------|------|
+| `url` | (필수) 시작 URL |
+| `limit` | 최대 크롤링 페이지 수 (기본 10) |
+| `depth` | 최대 링크 깊이 |
+| `formats` | 응답 포맷: html, markdown, json |
+| `render` | JS 실행 여부 (기본 true) |
+| `source` | URL 발견 소스: all, sitemaps, links |
+| `maxAge` | 캐시 유지 시간(초, 기본 86400) |
+| `options.includePatterns` | 포함할 URL 와일드카드 패턴 |
+| `options.excludePatterns` | 제외할 URL 와일드카드 패턴 |
+
+### 제약사항
+- 최대 실행 시간: 7일
+- 결과 보관: 완료 후 14일
+- robots.txt 자동 준수
+- Free 플랜은 추가 제한 있음
+
+---
+
+## 9. 계정 정보
 
 ### API 토큰 확인
 ```python

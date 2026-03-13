@@ -149,18 +149,31 @@ async def lifespan(app: FastAPI):
         print(f"[IBL] 모델 로딩 시작 실패 (무시): {e}")
 
     # World Pulse: 오늘의 세계 상태 스냅샷 확인 (없으면 백그라운드 수집)
+    # 서버 시작을 블로킹하지 않도록 별도 스레드에서 실행
+    import threading
+    def _deferred_world_pulse():
+        try:
+            from world_pulse import ensure_today_pulse
+            result = ensure_today_pulse()
+            status = result.get("status", "unknown")
+            if status == "exists":
+                print(f"[WorldPulse] 오늘 스냅샷 확인됨 ({result.get('date')})")
+            elif status == "collected":
+                print(f"[WorldPulse] 오늘 스냅샷 신규 수집 완료 ({result.get('date')})")
+            elif status == "error":
+                print(f"[WorldPulse] 수집 실패: {result.get('detail')}")
+        except Exception as e:
+            print(f"[WorldPulse] 초기화 실패 (무시): {e}")
+    threading.Thread(target=_deferred_world_pulse, daemon=True).start()
+    print("[WorldPulse] 백그라운드 수집 스레드 시작")
+
+    # Consciousness Pulse: 의식 시스템 등록 (매시간 펄스 + 자가점검)
     try:
-        from world_pulse import ensure_today_pulse
-        result = ensure_today_pulse()
-        status = result.get("status", "unknown")
-        if status == "exists":
-            print(f"[WorldPulse] 오늘 스냅샷 확인됨 ({result.get('date')})")
-        elif status == "collected":
-            print(f"[WorldPulse] 오늘 스냅샷 신규 수집 완료 ({result.get('date')})")
-        elif status == "error":
-            print(f"[WorldPulse] 수집 실패: {result.get('detail')}")
+        from world_pulse import register_consciousness_tasks
+        register_consciousness_tasks()
+        print("[Consciousness] 의식 펄스 & 자가점검 스케줄 등록")
     except Exception as e:
-        print(f"[WorldPulse] 초기화 실패 (무시): {e}")
+        print(f"[Consciousness] 등록 실패 (무시): {e}")
 
     yield
 

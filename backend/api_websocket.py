@@ -101,6 +101,53 @@ def init_manager(pm):
     project_manager = pm
 
 
+# ============ Launcher WebSocket ============
+
+_launcher_ws = None  # Launcher 전용 WS 연결 (1개)
+
+@router.websocket("/ws/launcher")
+async def websocket_launcher(websocket: WebSocket):
+    """런처 전용 WebSocket — 백엔드→런처 명령 전달 채널"""
+    global _launcher_ws
+    await websocket.accept()
+    _launcher_ws = websocket
+    print("[WS] Launcher 연결됨")
+
+    try:
+        while True:
+            # Launcher→백엔드 메시지 (ping/ack 등)
+            data = await websocket.receive_json()
+            if data.get("type") == "ping":
+                await websocket.send_json({"type": "pong"})
+    except (WebSocketDisconnect, Exception):
+        _launcher_ws = None
+        print("[WS] Launcher 연결 해제")
+
+
+async def send_launcher_command(command: str, params: dict = None) -> bool:
+    """백엔드에서 Launcher로 명령 전송 (예: 프로젝트 창 열기)"""
+    global _launcher_ws
+    if not _launcher_ws:
+        print(f"[WS] Launcher 미연결, 명령 전달 불가: {command}")
+        return False
+    try:
+        await _launcher_ws.send_json({
+            "type": "launcher_command",
+            "command": command,
+            "params": params or {}
+        })
+        return True
+    except Exception as e:
+        print(f"[WS] Launcher 명령 전달 실패: {e}")
+        _launcher_ws = None
+        return False
+
+
+def get_launcher_ws():
+    """Launcher WS 연결 상태 확인 (동기 호출용)"""
+    return _launcher_ws
+
+
 # ============ WebSocket 채팅 ============
 
 @router.websocket("/ws/android/{agent_id}")
@@ -976,7 +1023,6 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        # 에러 시에도 컨텍스트 정리
         try:
             from thread_context import clear_all_context
             clear_all_context()

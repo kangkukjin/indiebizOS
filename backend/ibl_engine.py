@@ -19,9 +19,35 @@ ibl_engine.py - IBL 노드-액션 실행 엔진
 import os
 import json
 import asyncio
+import threading
 import yaml
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+
+# === Persistent 이벤트 루프 (async 핸들러용) ===
+# browser-action 등 async 도구가 파이프라인에서 연속 호출될 때,
+# 같은 이벤트 루프를 공유해야 Playwright 객체가 유효함.
+_persistent_loop: Optional[asyncio.AbstractEventLoop] = None
+_persistent_thread: Optional[threading.Thread] = None
+
+
+def _get_persistent_loop() -> asyncio.AbstractEventLoop:
+    """async 핸들러 전용 이벤트 루프를 반환 (없으면 생성)"""
+    global _persistent_loop, _persistent_thread
+
+    if _persistent_loop and not _persistent_loop.is_closed():
+        return _persistent_loop
+
+    _persistent_loop = asyncio.new_event_loop()
+
+    def _run_loop(loop):
+        asyncio.set_event_loop(loop)
+        loop.run_forever()
+
+    _persistent_thread = threading.Thread(target=_run_loop, args=(_persistent_loop,), daemon=True)
+    _persistent_thread.start()
+    return _persistent_loop
 
 
 # === 노드 레지스트리 로딩 ===
@@ -177,6 +203,18 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
     Returns:
         실행 결과
     """
+    # Phase 26: Goal Block 실행
+    if tool_input.get("_goal"):
+        return _execute_goal_block(tool_input, project_path, agent_id)
+
+    # Phase 26: 조건문 (if/else) 실행
+    if tool_input.get("_condition"):
+        return _execute_condition(tool_input, project_path, agent_id)
+
+    # Phase 26: Case문 실행
+    if tool_input.get("_case"):
+        return _execute_case(tool_input, project_path, agent_id)
+
     # Phase 12: 노드 타입 모드
     node_type = tool_input.get("_node_type")
     if node_type:
@@ -235,7 +273,7 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
         return _route_handler(mapped_tool, params, project_path, agent_id)
     elif router == "system":
         func_name = action_config.get("func")
-        return _route_system(func_name, params, project_path)
+        return _route_system(func_name, params, project_path, agent_id=agent_id)
     elif router == "workflow_engine":
         from workflow_engine import execute_workflow_action
         return execute_workflow_action(action, params, project_path)
@@ -332,28 +370,19 @@ def _route_handler(mapped_tool: str, params: dict,
     else:
         result = handler.execute(mapped_tool, merged_params, project_path)
 
-    # async 핸들러 지원 (타임아웃 적용)
+    # async 핸들러 지원 (persistent 이벤트 루프 + 타임아웃)
     if asyncio.iscoroutine(result):
         async def _run_with_timeout(coro):
             return await asyncio.wait_for(coro, timeout=TOOL_EXECUTION_TIMEOUT)
 
         try:
-            # 현재 스레드에 실행 중인 이벤트 루프가 있는지 안전하게 확인
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-
-            if loop and loop.is_running():
-                # 이미 실행 중인 루프가 있으면 별도 스레드에서 실행
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as pool:
-                    result = pool.submit(
-                        asyncio.run, _run_with_timeout(result)
-                    ).result(timeout=TOOL_EXECUTION_TIMEOUT + 5)
-            else:
-                # 실행 중인 루프가 없으면 새로 생성하여 실행
-                result = asyncio.run(_run_with_timeout(result))
+            import concurrent.futures
+            loop = _get_persistent_loop()
+            # persistent 루프에 코루틴을 제출하고 결과를 기다림
+            future = asyncio.run_coroutine_threadsafe(
+                _run_with_timeout(result), loop
+            )
+            result = future.result(timeout=TOOL_EXECUTION_TIMEOUT + 5)
         except asyncio.TimeoutError:
             print(f"[IBL] 도구 실행 타임아웃 ({TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}")
             result = json.dumps({
@@ -366,32 +395,15 @@ def _route_handler(mapped_tool: str, params: dict,
                 "success": False,
                 "error": f"도구 실행 시간 초과 ({TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}. 다른 방법을 시도하세요."
             })
-        except RuntimeError as e:
-            # 최종 폴백: 새 이벤트 루프 생성
-            try:
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    result = new_loop.run_until_complete(
-                        _run_with_timeout(result)
-                    )
-                finally:
-                    new_loop.close()
-            except asyncio.TimeoutError:
-                print(f"[IBL] 도구 실행 타임아웃 ({TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}")
-                result = json.dumps({
-                    "success": False,
-                    "error": f"도구 실행 시간 초과 ({TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}. 다른 방법을 시도하세요."
-                })
-            except Exception as e2:
-                print(f"[IBL] async 핸들러 실행 실패: {e} → {e2}")
-                result = json.dumps({"success": False, "error": f"async 실행 오류: {str(e2)}"})
+        except Exception as e:
+            print(f"[IBL] async 핸들러 실행 실패: {e}")
+            result = json.dumps({"success": False, "error": f"async 실행 오류: {str(e)}"})
 
     return result
 
 
 
-def _route_system(func_name: str, params: dict, project_path: str) -> Any:
+def _route_system(func_name: str, params: dict, project_path: str, agent_id: str = None) -> Any:
     """system_tools 내장 함수 직접 호출"""
     if func_name == "send_notification":
         from system_tools import execute_send_notification
@@ -451,9 +463,16 @@ def _route_system(func_name: str, params: dict, project_path: str) -> Any:
         from api_system_ai import _execute_call_project_agent
         return _execute_call_project_agent(dict(params))
 
+    elif func_name == "schedule":
+        from api_system_ai import _execute_schedule
+        return _execute_schedule(params, agent_id=agent_id, project_path=project_path)
+
     elif func_name == "manage_events":
         from api_system_ai import _execute_manage_events
         return _execute_manage_events(params)
+
+    elif func_name == "launcher_command":
+        return _execute_launcher_command(action, params)
 
     elif func_name == "list_switches":
         from api_system_ai import _execute_list_switches
@@ -465,7 +484,71 @@ def _route_system(func_name: str, params: dict, project_path: str) -> Any:
         action_name = func_name  # world_pulse, world_trend, world_refresh
         return execute_world_pulse(action_name, dict(params))
 
+    # Phase 26: Goal 프로세스 관리
+    elif func_name == "list_goals":
+        return _goal_list(params, project_path)
+    elif func_name == "get_goal_status":
+        return _goal_status(params.get("goal_id", ""), params, project_path)
+    elif func_name == "kill_goal":
+        return _goal_kill(params.get("goal_id", ""), params, project_path)
+
+    # Phase 26b: 시도 기록 (전략 전환 + 라운드 메모리)
+    elif func_name == "log_attempt":
+        return _log_attempt(params, project_path)
+    elif func_name == "get_attempts":
+        return _get_attempts(params, project_path)
+
     return {"error": f"알 수 없는 시스템 함수: {func_name}"}
+
+
+def _execute_launcher_command(action: str, params: dict) -> dict:
+    """Launcher(Electron) 창 제어 명령 실행 (Phase 27)
+
+    WS로 Launcher에 명령을 보내 프로젝트 창 열기, 포커스 등 수행.
+    """
+    import asyncio
+
+    # action 이름 → Launcher 명령 매핑
+    command_map = {
+        "open_project": "open_project_window",
+        "open_system_ai": "open_system_ai_window",
+        "open_indienet": "open_indienet_window",
+        "open_business": "open_business_window",
+        "open_multichat": "open_multichat_window",
+        "open_folder": "open_folder_window",
+    }
+
+    command = command_map.get(action)
+    if not command:
+        return {"success": False, "error": f"알 수 없는 launcher 액션: {action}"}
+
+    try:
+        from api_websocket import send_launcher_command, get_launcher_ws
+
+        if not get_launcher_ws():
+            return {"success": False, "error": "Launcher WS 미연결"}
+
+        # 비동기 함수를 동기 컨텍스트에서 실행
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                future = asyncio.run_coroutine_threadsafe(
+                    send_launcher_command(command, dict(params)),
+                    loop
+                )
+                sent = future.result(timeout=5)
+            else:
+                sent = asyncio.run(send_launcher_command(command, dict(params)))
+        except RuntimeError:
+            sent = asyncio.run(send_launcher_command(command, dict(params)))
+
+        if sent:
+            return {"success": True, "message": f"Launcher 명령 전달: {command}"}
+        else:
+            return {"success": False, "error": "Launcher 명령 전달 실패"}
+
+    except Exception as e:
+        return {"success": False, "error": f"Launcher 명령 오류: {str(e)}"}
 
 
 def _discover_nodes(query: str, params: dict) -> Any:
@@ -1203,3 +1286,454 @@ def _route_by_config(action_config, params, node, action,
         dn = action_config.get("driver_node")  # Phase 22: 하위 핸들러 지정
         return _route_driver(driver_type, node, action, params, project_path, driver_node=dn)
     return {"error": f"지원하지 않는 라우터: {router}"}
+
+
+# ===========================================================================
+# Phase 26: Goal 프로세스 관리 함수
+# ===========================================================================
+
+def _goal_list(params: dict, project_path: str = "") -> dict:
+    """등록된 목표 목록 조회 (상태별 필터 가능)"""
+    try:
+        from conversation_db import ConversationDB
+        db_path = str(Path(project_path) / "conversations.db")
+        db = ConversationDB(db_path)
+        status_filter = params.get("status")  # "active", "pending", "achieved" 등
+        goals = db.list_goals(status=status_filter)
+
+        if not goals:
+            return {"success": True, "goals": [], "message": "등록된 목표가 없습니다."}
+
+        result_goals = []
+        for g in goals:
+            result_goals.append({
+                "goal_id": g["goal_id"],
+                "name": g["name"],
+                "status": g["status"],
+                "current_round": g["current_round"],
+                "max_rounds": g["max_rounds"],
+                "cumulative_cost": g["cumulative_cost"],
+                "max_cost": g["max_cost"],
+                "every_frequency": g.get("every_frequency"),
+                "deadline": g.get("deadline"),
+                "created_at": g.get("created_at"),
+            })
+
+        return {
+            "success": True,
+            "goals": result_goals,
+            "total": len(result_goals),
+        }
+    except Exception as e:
+        return {"error": f"목표 목록 조회 실패: {str(e)}"}
+
+
+def _goal_status(goal_id: str, params: dict, project_path: str = "") -> dict:
+    """목표 상태 및 진행도 상세 조회"""
+    if not goal_id:
+        return {"error": "goal_id가 필요합니다."}
+
+    try:
+        from conversation_db import ConversationDB
+        db_path = str(Path(project_path) / "conversations.db")
+        db = ConversationDB(db_path)
+        goal = db.get_goal(goal_id)
+
+        if not goal:
+            return {"error": f"목표를 찾을 수 없습니다: {goal_id}"}
+
+        # rounds_data JSON 파싱
+        rounds_data = []
+        if goal.get("rounds_data"):
+            try:
+                rounds_data = json.loads(goal["rounds_data"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        progress_pct = 0
+        if goal["max_rounds"] > 0:
+            progress_pct = round(goal["current_round"] / goal["max_rounds"] * 100, 1)
+
+        cost_pct = 0
+        if goal["max_cost"] > 0:
+            cost_pct = round(goal["cumulative_cost"] / goal["max_cost"] * 100, 1)
+
+        return {
+            "success": True,
+            "goal_id": goal["goal_id"],
+            "name": goal["name"],
+            "status": goal["status"],
+            "success_condition": goal.get("success_condition"),
+            "progress": {
+                "current_round": goal["current_round"],
+                "max_rounds": goal["max_rounds"],
+                "progress_pct": progress_pct,
+            },
+            "cost": {
+                "cumulative_cost": goal["cumulative_cost"],
+                "max_cost": goal["max_cost"],
+                "cost_pct": cost_pct,
+            },
+            "time": {
+                "deadline": goal.get("deadline"),
+                "every_frequency": goal.get("every_frequency"),
+                "until_condition": goal.get("until_condition"),
+                "within_duration": goal.get("within_duration"),
+            },
+            "rounds_history": rounds_data[-5:],  # 최근 5라운드만
+            "created_at": goal.get("created_at"),
+            "started_at": goal.get("started_at"),
+            "completed_at": goal.get("completed_at"),
+        }
+    except Exception as e:
+        return {"error": f"목표 상태 조회 실패: {str(e)}"}
+
+
+def _goal_kill(goal_id: str, params: dict, project_path: str = "") -> dict:
+    """실행 중인 목표 취소/중단"""
+    if not goal_id:
+        return {"error": "goal_id가 필요합니다."}
+
+    try:
+        from conversation_db import ConversationDB
+        db_path = str(Path(project_path) / "conversations.db")
+        db = ConversationDB(db_path)
+        goal = db.get_goal(goal_id)
+
+        if not goal:
+            return {"error": f"목표를 찾을 수 없습니다: {goal_id}"}
+
+        if goal["status"] in ("achieved", "expired", "limit_reached", "cancelled"):
+            return {
+                "success": False,
+                "message": f"이미 종료된 목표입니다 (상태: {goal['status']})",
+            }
+
+        reason = params.get("reason", "사용자 요청에 의한 취소")
+        db.update_goal_status(goal_id, "cancelled")
+
+        return {
+            "success": True,
+            "goal_id": goal_id,
+            "name": goal["name"],
+            "previous_status": goal["status"],
+            "new_status": "cancelled",
+            "reason": reason,
+            "rounds_completed": goal["current_round"],
+            "total_cost": goal["cumulative_cost"],
+        }
+    except Exception as e:
+        return {"error": f"목표 취소 실패: {str(e)}"}
+
+
+# ============ Phase 26b: 시도 기록 (전략 전환 + 라운드 메모리) ============
+
+def _log_attempt(params: dict, project_path: str = ".") -> dict:
+    """
+    시도 기록 저장
+
+    필수 파라미터:
+        task_id: 태스크 ID (같은 작업의 시도를 묶는 키)
+        approach_category: 접근 범주 (예: "cv2_direct_import", "pillow_fallback", "ffmpeg_cli")
+        description: 구체적으로 무엇을 시도했는지
+
+    선택 파라미터:
+        result: "success" 또는 "failure" (기본값: "failure")
+        lesson: 이 시도에서 배운 점
+    """
+    task_id = params.get("task_id", "")
+    category = params.get("approach_category", params.get("category", ""))
+    description = params.get("description", "")
+
+    if not task_id or not category or not description:
+        return {"error": "task_id, approach_category, description은 필수입니다."}
+
+    result = params.get("result", "failure")
+    lesson = params.get("lesson")
+
+    try:
+        from conversation_db import ConversationDB
+        from thread_context import get_current_agent_id
+        db_path = str(Path(project_path) / "conversations.db")
+        db = ConversationDB(db_path)
+        agent_id = get_current_agent_id() or "unknown"
+
+        round_num = db.log_attempt(
+            task_id=task_id,
+            agent_id=agent_id,
+            approach_category=category,
+            description=description,
+            result=result,
+            lesson=lesson
+        )
+
+        # 연속 실패 횟수 확인 → 전략 전환 경고
+        consecutive = db.get_consecutive_failures(task_id, category)
+        failed_categories = db.get_failed_categories(task_id, threshold=3)
+
+        response = {
+            "success": True,
+            "round_num": round_num,
+            "approach_category": category,
+            "result": result,
+        }
+
+        if consecutive >= 3:
+            response["warning"] = (
+                f"⚠ '{category}' 접근이 {consecutive}회 연속 실패했습니다. "
+                f"이 접근을 포기하고 근본적으로 다른 방법으로 전환하세요."
+            )
+            response["escalation_required"] = True
+
+        if failed_categories:
+            response["exhausted_categories"] = failed_categories
+            all_cats = [row["approach_category"] for row in
+                        db.get_attempt_history(task_id, limit=100)]
+            unique_cats = set(all_cats)
+            active_cats = unique_cats - set(failed_categories)
+            if not active_cats:
+                response["all_exhausted"] = True
+                response["warning"] = (
+                    "⚠ 시도한 모든 접근 범주가 실패 임계값을 넘었습니다. "
+                    "사용자에게 상황을 보고하고 판단을 요청하세요."
+                )
+
+        return response
+    except Exception as e:
+        return {"error": f"시도 기록 실패: {str(e)}"}
+
+
+def _get_attempts(params: dict, project_path: str = ".") -> dict:
+    """
+    시도 이력 조회
+
+    파라미터:
+        task_id: 태스크 ID (필수)
+        limit: 최대 조회 수 (기본 20)
+    """
+    task_id = params.get("task_id", "")
+    if not task_id:
+        return {"error": "task_id가 필요합니다."}
+
+    limit = int(params.get("limit", 20))
+
+    try:
+        from conversation_db import ConversationDB
+        db_path = str(Path(project_path) / "conversations.db")
+        db = ConversationDB(db_path)
+        history = db.get_attempt_history(task_id, limit=limit)
+        failed_categories = db.get_failed_categories(task_id, threshold=3)
+
+        return {
+            "task_id": task_id,
+            "total_attempts": len(history),
+            "attempts": history,
+            "exhausted_categories": failed_categories,
+            "summary": _summarize_attempts(history, failed_categories)
+        }
+    except Exception as e:
+        return {"error": f"시도 이력 조회 실패: {str(e)}"}
+
+
+def _summarize_attempts(history: list, failed_categories: list) -> str:
+    """시도 이력 요약 생성"""
+    if not history:
+        return "시도 이력 없음"
+
+    # 카테고리별 통계
+    cat_stats = {}
+    for h in history:
+        cat = h.get("approach_category", "unknown")
+        if cat not in cat_stats:
+            cat_stats[cat] = {"success": 0, "failure": 0}
+        if h.get("result") == "success":
+            cat_stats[cat]["success"] += 1
+        else:
+            cat_stats[cat]["failure"] += 1
+
+    parts = [f"총 {len(history)}회 시도:"]
+    for cat, stats in cat_stats.items():
+        status = "🚫 포기" if cat in failed_categories else "진행중"
+        parts.append(
+            f"  - {cat}: 성공 {stats['success']}회, 실패 {stats['failure']}회 [{status}]"
+        )
+
+    if failed_categories:
+        parts.append(f"포기된 접근: {', '.join(failed_categories)}")
+
+    return "\n".join(parts)
+
+
+# ===========================================================================
+# Phase 26: Goal/Condition/Case 실행 함수
+# ===========================================================================
+
+def _execute_goal_block(tool_input: dict, project_path: str, agent_id: str) -> dict:
+    """
+    Goal Block 실행 — agent_runner의 execute_goal에 위임
+
+    파서가 생성한 _goal dict를 받아 agent_runner에 전달한다.
+    활성 에이전트가 없으면 DB에 Goal만 생성한다.
+    """
+    from agent_runner import AgentRunner
+
+    goal_name = tool_input.get("name", "unnamed")
+
+    # 활성 에이전트 찾기
+    agent = None
+    for aid, a in AgentRunner.agent_registry.items():
+        if a.running and (
+            str(a.project_path) in str(project_path) or
+            (agent_id and aid == agent_id)
+        ):
+            agent = a
+            break
+
+    if agent:
+        return agent.execute_goal(tool_input)
+
+    # 에이전트 없으면 DB에만 생성 (나중에 approve로 활성화)
+    try:
+        from conversation_db import ConversationDB
+        import os, uuid
+        from datetime import datetime
+
+        db_path = os.path.join(project_path, "conversations.db")
+        db = ConversationDB(db_path)
+        goal_id = f"goal_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+        db.create_goal(goal_id, tool_input)
+
+        return {
+            "goal_id": goal_id,
+            "status": "pending",
+            "name": goal_name,
+            "message": f"Goal '{goal_name}' 생성됨. 활성 에이전트가 없어 대기 상태."
+        }
+    except Exception as e:
+        return {"error": f"Goal 생성 실패: {str(e)}"}
+
+
+def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> Any:
+    """
+    if/else 조건문 실행
+
+    각 분기의 조건을 평가하고, 매칭되는 분기의 action을 실행한다.
+    """
+    branches = tool_input.get("branches", [])
+
+    for branch in branches:
+        condition = branch.get("condition")
+        action = branch.get("action")
+
+        if condition is None:
+            # else 분기
+            if action:
+                return execute_ibl(action, project_path, agent_id)
+            return {"message": "else 분기 실행 (action 없음)"}
+
+        # 조건 평가: sense 노드 실행
+        try:
+            sense_result = _evaluate_sense_condition(condition, project_path, agent_id)
+            if sense_result:
+                if action:
+                    return execute_ibl(action, project_path, agent_id)
+                return {"message": f"조건 충족: {condition}"}
+        except Exception as e:
+            continue  # 조건 평가 실패 시 다음 분기로
+
+    return {"message": "모든 조건 불일치, 실행할 분기 없음"}
+
+
+def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
+    """
+    case문 실행
+
+    source에서 sense 값을 가져온 후 분기를 선택하여 action 실행.
+    """
+    from goal_evaluator import select_case_branch
+
+    source = tool_input.get("source", "")
+    branches = tool_input.get("branches", [])
+    default = tool_input.get("default")
+
+    # source에서 sense 값 가져오기
+    sense_value = _get_sense_value(source, project_path, agent_id)
+
+    if sense_value is not None:
+        action = select_case_branch(sense_value, branches, default)
+    else:
+        action = default
+
+    if action:
+        return execute_ibl(action, project_path, agent_id)
+
+    return {"message": f"case문 실행 완료 (source={source}, value={sense_value})"}
+
+
+def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) -> bool:
+    """
+    조건 표현식에서 sense 노드 실행 후 비교
+
+    Args:
+        condition: "sense:kospi < 2400" 형태
+
+    Returns:
+        조건 충족 여부
+    """
+    import re
+
+    # sense 참조 추출
+    match = re.match(r'(sense:\w+)', condition)
+    if not match:
+        return False
+
+    sense_ref = match.group(1)
+    sense_value = _get_sense_value(sense_ref, project_path, agent_id)
+
+    if sense_value is None:
+        return False
+
+    # 비교 연산자 추출
+    op_match = re.search(r'(==|!=|>=|<=|>|<)\s*(.+)$', condition)
+    if not op_match:
+        return bool(sense_value)
+
+    op = op_match.group(1)
+    compare_raw = op_match.group(2).strip().strip("'\"")
+
+    try:
+        sv = float(sense_value)
+        cv = float(compare_raw)
+        if op == "==": return sv == cv
+        if op == "!=": return sv != cv
+        if op == ">":  return sv > cv
+        if op == ">=": return sv >= cv
+        if op == "<":  return sv < cv
+        if op == "<=": return sv <= cv
+    except (ValueError, TypeError):
+        ss = str(sense_value)
+        if op == "==": return ss == compare_raw
+        if op == "!=": return ss != compare_raw
+
+    return False
+
+
+def _get_sense_value(source: str, project_path: str, agent_id: str) -> Any:
+    """
+    sense 참조 (예: "sense:kospi")에서 실제 값 가져오기
+    """
+    parts = source.split(":")
+    if len(parts) != 2:
+        return None
+
+    node, action = parts[0], parts[1]
+
+    try:
+        step = {"_node": node, "action": action, "params": {}}
+        result = execute_ibl(step, project_path, agent_id)
+
+        if isinstance(result, dict):
+            return result.get("value", result.get("result", str(result)))
+        return result
+    except Exception:
+        return None

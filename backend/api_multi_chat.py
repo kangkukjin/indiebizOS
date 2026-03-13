@@ -41,9 +41,6 @@ class UpdatePositionRequest(BaseModel):
     y: int
 
 
-class ActivateAllRequest(BaseModel):
-    tools: List[str] = []
-
 
 def init_manager(ai_config: dict = None):
     """매니저 인스턴스 초기화"""
@@ -299,38 +296,4 @@ async def clear_messages(room_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ============ 에이전트 활성화/비활성화 ============
-
-@router.post("/multi-chat/rooms/{room_id}/activate-all")
-async def activate_all_agents(room_id: str, request: ActivateAllRequest):
-    """
-    채팅방의 모든 에이전트 활성화
-    - 선택된 도구를 모든 에이전트에게 할당
-    """
-    try:
-        manager = get_manager()
-        room = manager.get_room(room_id)
-        if not room:
-            raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
-
-        activated = manager.activate_all_agents(room_id, request.tools)
-        return {"success": True, "activated": activated}
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/multi-chat/rooms/{room_id}/deactivate-all")
-async def deactivate_all_agents(room_id: str):
-    """채팅방의 모든 에이전트 비활성화"""
-    try:
-        manager = get_manager()
-        deactivated = manager.deactivate_all_agents(room_id)
-        return {"success": True, "deactivated": deactivated}
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+# 도구는 프로젝트 설정에서 자동 로드 (별도 활성화/비활성화 API 불필요)

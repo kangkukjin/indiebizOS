@@ -69,6 +69,14 @@ Connect with others through decentralized networks and access your system from a
 - **Remote Access (Phase 25)** - Cloudflare Tunnel based Remote Finder (file streaming) and Remote Launcher (AI control/switches)
 - **Business Network** - Manage partners, auto-respond to inquiries with **Auto-response V3** (Tool-use based)
 
+### 4. Agent Self-Regulation (Phase 26)
+
+Agents aren't just tools — they **know when to act, when to stop, and when to change strategy**.
+
+- **Goal/Time/Condition System** - Set goals, time limits, and conditional triggers per task. Agents self-terminate when objectives are met or time runs out.
+- **Strategy Escalation** - After 3 consecutive failures in the same approach category, agents are forced to switch strategies. When all categories are exhausted, they report to the user instead of looping.
+- **Round Memory** - Every attempt is logged with approach category, result, and lessons learned. Agents review past attempts before trying again, eliminating redundant approaches.
+
 ---
 
 ## Unified AI Architecture (Phase 25: 5-Node Integration)
@@ -125,6 +133,30 @@ IBL Engine: parse -> dispatch to handler/api_engine -> return result
 - Define multiple agents per project with different personalities
 - Agents can delegate tasks to each other (async or sync) or even across projects
 
+### 3-Layer Delegation System (Phase 27)
+
+| Method | Description | Best For |
+|--------|-------------|----------|
+| **Sync Delegation** (`call_agent`) | Agent calls another agent directly and waits for result | Simple tasks needing immediate response |
+| **Schedule Delegation** (`schedule`) | Register a schedule owned by another agent for time-based delegation | Periodic or delayed tasks |
+| **Plan Delegation** (`create_plan` + `execute_plan`) | Write a natural language plan and agents execute steps in order | Complex multi-step workflows |
+
+**Schedule Delegation** - Specify `target_project_id`/`target_agent_id` to make the target agent own and execute the schedule:
+```
+[self:schedule]{at: "09:00",
+  target_project_id: "investing", target_agent_id: "analyst",
+  pipeline: "[sense:web_search]{query: 'today news'}"}
+```
+
+**Plan Delegation** - Structured plans for multi-agent sequential execution:
+```
+[self:create_plan]{title: "Data Analysis", steps: [...]}
+  → [self:execute_plan]{file: "plan.md"}
+  → Agent executes its part → Updates plan status → Delegates to next agent
+```
+- Per-step status tracking (`pending` → `in_progress` → `completed`/`failed`)
+- Automatic retry on failure with alternative paths
+
 ### IBL Usage RAG (Learning from Experience)
 Agents improve over time through a RAG system that learns from successful IBL executions:
 - **Usage Dictionary**: ~970 examples (synthetic data + auto-promoted execution logs)
@@ -135,6 +167,7 @@ Agents improve over time through a RAG system that learns from successful IBL ex
 - **Scheduler**: Automate repetitive tasks with cron-like scheduling
 - **Auto-response V3**: Intelligent message handling using Tool-use based judgment
 - **Remote Finder/Launcher**: Access your files and control your AI remotely via secure tunnels
+- **Live CCTV (UTIC + ITS + Windy)**: 16,000+ Korean traffic CCTVs via UTIC real-time API, plus ITS highways and Windy global webcams
 
 ---
 
@@ -148,3 +181,4 @@ Agents improve over time through a RAG system that learns from successful IBL ex
 
 ---
 *IndieBiz OS - Your Personal AI Assistant Team*
+*Last updated: 2026-03-10*

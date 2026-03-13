@@ -135,5 +135,13 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.removeAllListeners('log-message');
     ipcRenderer.removeAllListeners('log-history');
     ipcRenderer.removeAllListeners('log-cleared');
+  },
+
+  // === 에이전트 선택 IPC (스케줄 결과 전달용) ===
+  onSelectAgent: (callback) => {
+    ipcRenderer.on('select-agent', (_, agentName) => callback(agentName));
+  },
+  removeSelectAgentListener: () => {
+    ipcRenderer.removeAllListeners('select-agent');
   }
 });

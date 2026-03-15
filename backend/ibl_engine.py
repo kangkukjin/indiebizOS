@@ -283,9 +283,9 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
     elif router == "web_collector":
         from web_collector import execute_web_collect_action
         return execute_web_collect_action(action, params, project_path)
-    elif router == "event_engine":
-        from event_engine import execute_event
-        return execute_event(action, params, project_path)
+    elif router in ("event_engine", "trigger_engine"):
+        from trigger_engine import execute_trigger
+        return execute_trigger(action, params, project_path)
     elif router == "driver":
         driver_type = action_config.get("driver", "sqlite")
         dn = action_config.get("driver_node")  # Phase 22: 하위 핸들러 지정

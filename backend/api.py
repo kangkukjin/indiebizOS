@@ -264,6 +264,7 @@ from api_android import router as android_router
 from api_nas import router as nas_router
 from api_launcher_web import router as launcher_web_router
 from api_tunnel import router as tunnel_router, auto_start_if_enabled as tunnel_auto_start
+from api_ibl import router as ibl_router
 
 # 매니저 주입
 init_projects_managers(project_manager, switch_manager)
@@ -302,6 +303,7 @@ app.include_router(android_router, tags=["android"])
 app.include_router(nas_router, tags=["nas"])
 app.include_router(launcher_web_router, tags=["launcher-web"])
 app.include_router(tunnel_router, tags=["tunnel"])
+app.include_router(ibl_router, tags=["ibl"])
 
 # ============ NAS Finder 정적 파일 마운트 ============
 # 주의: 마운트는 반드시 라우터 등록 **후**에 해야 함

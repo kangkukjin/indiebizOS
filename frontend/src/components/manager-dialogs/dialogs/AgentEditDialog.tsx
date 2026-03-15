@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Eye, EyeOff } from 'lucide-react';
 import type { Agent } from '../../../types';
 import type { AgentForm, IBLNode } from '../types';
 import { api } from '../../../lib/api';
@@ -29,6 +29,7 @@ export function AgentEditDialog({
   const [ollamaModels, setOllamaModels] = useState<string[]>([]);
   const [ollamaRunning, setOllamaRunning] = useState(false);
   const [iblNodes, setIblNodes] = useState<IBLNode[]>([]);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Ollama 선택 시 모델 목록 로드
   useEffect(() => {
@@ -189,13 +190,22 @@ export function AgentEditDialog({
               {agentForm.provider !== 'ollama' && (
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-800 mb-1">API 키</label>
-                  <input
-                    type="password"
-                    value={agentForm.apiKey}
-                    onChange={(e) => setAgentForm({ ...agentForm, apiKey: e.target.value })}
-                    placeholder="API 키 (비워두면 공통 설정 사용)"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type={showApiKey ? 'text' : 'password'}
+                      value={agentForm.apiKey}
+                      onChange={(e) => setAgentForm({ ...agentForm, apiKey: e.target.value })}
+                      placeholder="API 키 (비워두면 공통 설정 사용)"
+                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700"
+                    >
+                      {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
               )}
 

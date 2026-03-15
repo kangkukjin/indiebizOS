@@ -42,7 +42,7 @@ EXAMPLES = [
     ("법률 검색 기능 있어?", '[self:discover]{query: "법률"}', "self", "single", 1, "self,discover"),
 
     # open / open_url
-    ("이 파일 열어줘", '[self:open]{path: "/path/to/file.html"}', "self", "single", 1, "self,open"),
+    ("이 파일 열어줘", '[limbs:os_open]{path: "/path/to/file.html"}', "limbs", "single", 1, "limbs,os_open"),
     ("파일 탐색기 열어줘", '[self:explorer]{path: "~/Desktop"}', "self", "single", 1, "self,explorer"),
     ("이 URL 열어줘", '[limbs:open_url]{path: "https://example.com"}', "limbs", "single", 1, "limbs,open_url"),
     ("구글 열어줘", '[limbs:open_url]{path: "https://google.com"}', "limbs", "single", 1, "limbs,open_url"),
@@ -111,13 +111,13 @@ EXAMPLES = [
     ("어떤 에이전트들이 있어?", '[others:list_projects]', "others", "single", 1, "others,list_projects"),
 
     # workflow
-    ("저장된 워크플로우 목록 보여줘", '[self:event_status]', "self", "single", 1, "self,list_workflows"),
-    ("뉴스 브리핑 워크플로우 실행해", '[limbs:run]{name: "news_briefing"}', "limbs", "single", 1, "limbs,run"),
+    ("저장된 워크플로우 목록 보여줘", '[self:list_workflows]', "self", "single", 1, "self,list_workflows"),
+    ("뉴스 브리핑 워크플로우 실행해", '[self:run]{name: "news_briefing"}', "self", "single", 1, "self,run"),
 
-    # switches / events
-    ("스위치 목록 보여줘", '[self:event_status]', "self", "single", 1, "self,list_switches"),
-    ("트리거 목록 보여줘", '[self:event_history]', "self", "single", 1, "self,list_events"),
-    ("이벤트 시스템 상태 확인", '[self:event_status]', "self", "single", 1, "self,status"),
+    # schedule (스위치 + 트리거)
+    ("스위치 목록 보여줘", '[self:list_switches]', "self", "single", 1, "self,list_switches"),
+    ("트리거 목록 보여줘", '[self:list_triggers]', "self", "single", 1, "self,list_triggers"),
+    ("트리거 시스템 상태 확인", '[self:trigger_status]', "self", "single", 1, "self,trigger_status"),
 
     # user interaction
     ("할일 목록 만들어줘", '[limbs:todo]{content: "할일 정리"}', "limbs", "single", 1, "limbs,todo"),
@@ -161,13 +161,14 @@ EXAMPLES = [
     ("오늘 외국인 순매수 얼마야?", '[sense:stock_info]{symbol: "STK"}', "sense", "single", 1, "sense,kr_investor"),
     ("삼성전자 투자자별 매매동향", '[sense:stock_info]{symbol: "005930"}', "sense", "single", 1, "sense,kr_stock_investor"),
 
-    # 웹 검색/크롤링
-    ("AI 뉴스 검색해줘", '[sense:web_search]{query: "AI 뉴스"}', "sense", "single", 1, "sense,web_search"),
-    ("반도체 뉴스 검색해줘", '[sense:web_search]{query: "반도체"}', "sense", "single", 1, "sense,search_news"),
-    ("부동산 뉴스 찾아줘", '[sense:web_search]{query: "부동산"}', "sense", "single", 1, "sense,search_news"),
-    ("경제 뉴스 검색", '[sense:web_search]{query: "경제"}', "sense", "single", 1, "sense,search_news"),
-    ("이 웹페이지 내용 가져와", '[sense:web_search]{url: "https://example.com/article"}', "sense", "single", 1, "sense,crawl"),
-    ("네이버 메인 크롤링해줘", '[sense:web_search]{url: "https://naver.com"}', "sense", "single", 1, "sense,crawl"),
+    # 종합 검색 (multi 그룹)
+    ("AI 뉴스 검색해줘", '[sense:search]{query: "AI 뉴스"}', "sense", "single", 1, "sense,search"),
+    ("반도체 뉴스 검색해줘", '[sense:search]{query: "반도체"}', "sense", "single", 1, "sense,search"),
+    ("부동산 뉴스 찾아줘", '[sense:search]{query: "부동산"}', "sense", "single", 1, "sense,search"),
+    ("경제 뉴스 검색", '[sense:search]{query: "경제"}', "sense", "single", 1, "sense,search"),
+    # 웹 크롤링
+    ("이 웹페이지 내용 가져와", '[sense:crawl]{url: "https://example.com/article"}', "sense", "single", 1, "sense,crawl"),
+    ("네이버 메인 크롤링해줘", '[sense:crawl]{url: "https://naver.com"}', "sense", "single", 1, "sense,crawl"),
 
     # 날씨/위치
     ("서울 날씨 알려줘", '[sense:navigate_route]{query: "서울"}', "sense", "single", 1, "sense,weather"),
@@ -177,24 +178,24 @@ EXAMPLES = [
     ("지도에 표시해줘", '[sense:navigate_route]{query: "강남역"}', "sense", "single", 1, "sense,map"),
 
     # 법률/통계
-    ("임대차보호법 검색해줘", '[sense:web_search]{query: "임대차보호법"}', "sense", "single", 1, "sense,search_laws"),
-    ("근로기준법 찾아봐", '[sense:web_search]{query: "근로기준법"}', "sense", "single", 1, "sense,search_laws"),
-    ("인구 통계 검색", '[sense:web_search]{query: "인구"}', "sense", "single", 1, "sense,search_kosis"),
+    ("임대차보호법 검색해줘", '[sense:search]{query: "임대차보호법"}', "sense", "single", 1, "sense,search,laws"),
+    ("근로기준법 찾아봐", '[sense:search]{query: "근로기준법"}', "sense", "single", 1, "sense,search,laws"),
+    ("인구 통계 검색", '[sense:search]{query: "인구"}', "sense", "single", 1, "sense,search"),
 
     # 문화/도서
-    ("공연 검색해줘", '[sense:web_search]{query: "뮤지컬"}', "sense", "single", 1, "sense,performance"),
-    ("전시회 정보 찾아줘", '[sense:web_search]{query: "미술"}', "sense", "single", 1, "sense,exhibit"),
-    ("책 검색해줘", '[sense:web_search]{query: "인공지능"}', "sense", "single", 1, "sense,book"),
-    ("도서 상세 정보", '[sense:web_search]{query: "9791192107103"}', "sense", "single", 1, "sense,book_detail"),
+    ("공연 검색해줘", '[sense:search]{query: "뮤지컬"}', "sense", "single", 1, "sense,search"),
+    ("전시회 정보 찾아줘", '[sense:search]{query: "미술"}', "sense", "single", 1, "sense,search"),
+    ("책 검색해줘", '[sense:search]{query: "인공지능"}', "sense", "single", 1, "sense,search"),
+    ("도서 상세 정보", '[sense:book_by_isbn]{isbn: "9791192107103"}', "sense", "single", 1, "sense,book"),
 
     # 쇼핑
-    ("노트북 가격 비교해줘", '[sense:web_search]{query: "맥북 프로 14인치"}', "sense", "single", 1, "sense,search_shopping"),
-    ("에어팟 가격 검색", '[sense:web_search]{query: "에어팟 프로"}', "sense", "single", 1, "sense,search_shopping"),
+    ("노트북 가격 비교해줘", '[sense:search_shopping]{query: "맥북 프로 14인치"}', "sense", "single", 1, "sense,shopping"),
+    ("에어팟 가격 검색", '[sense:search_shopping]{query: "에어팟 프로"}', "sense", "single", 1, "sense,shopping"),
 
     # 부동산
-    ("아파트 매매 실거래가 조회", '[sense:web_search]{query: "11110"}', "sense", "single", 1, "sense,apt_trade"),
-    ("아파트 전월세 조회", '[sense:web_search]{query: "11110"}', "sense", "single", 1, "sense,apt_rent"),
-    ("지역코드 검색", '[sense:web_search]{query: "서울"}', "sense", "single", 1, "sense,district_codes"),
+    ("아파트 매매 실거래가 조회", '[sense:apt_trade]{district_code: "11110"}', "sense", "single", 1, "sense,apt_trade"),
+    ("아파트 전월세 조회", '[sense:apt_rent]{district_code: "11110"}', "sense", "single", 1, "sense,apt_rent"),
+    ("지역코드 검색", '[sense:district_codes]{query: "서울"}', "sense", "single", 1, "sense,district_codes"),
 
     # 사진
     ("여행 사진 검색해줘", '[self:photo_scan]{query: "여행"}', "self", "single", 1, "self,search_photos"),
@@ -234,8 +235,8 @@ EXAMPLES = [
     ("사이트 삭제해줘", '[engines:site_remove]{site_id: "my-site"}', "engines", "single", 1, "engines,site_remove"),
 
     # 학술
-    ("AI 논문 검색해줘", '[sense:web_search]{query: "artificial intelligence"}', "sense", "single", 1, "sense,search_arxiv"),
-    ("학술 논문 찾아줘", '[sense:web_search]{query: "machine learning"}', "sense", "single", 1, "sense,search_scholar"),
+    ("AI 논문 검색해줘", '[sense:search_openalex]{query: "artificial intelligence"}', "sense", "single", 1, "sense,search_openalex"),
+    ("학술 논문 찾아줘", '[sense:search_openalex]{query: "machine learning"}', "sense", "single", 1, "sense,search_openalex"),
 
     # =========================================================================
     # tools 노드 — 음악/라디오/유튜브
@@ -278,9 +279,8 @@ EXAMPLES = [
     ("신문 만들어줘", '[engines:newspaper]{keywords: "AI, 경제, 문화"}', "engines", "single", 1, "engines,newspaper"),
     ("AI 뉴스 신문 만들어", '[engines:newspaper]{keywords: "AI"}', "engines", "single", 1, "engines,newspaper"),
     ("구글뉴스 신문 생성해줘", '[engines:newspaper]{keywords: "AI, 청주, 세종, 문화, 여행, 과학, 경제"}', "engines", "single", 1, "engines,newspaper"),
-    # 신문 파이프라인 (검색 → 생성 → 브라우저)
-    ("이란 전쟁 뉴스 검색해서 신문 만들어줘", '[sense:web_search]{query: "이란 전쟁"} >> [engines:newspaper]{keywords: "이란과 전쟁"} >> [self:open]{path: "browse"}', "sense,forge,self", "pipeline", 3, "sense,web_search,forge,newspaper,self,open"),
-    ("AI 뉴스 신문 만들어서 열어줘", '[engines:newspaper]{keywords: "AI"} >> [self:open]{path: "browse"}', "engines,self", "pipeline", 2, "engines,newspaper,self,open"),
+    # 신문 파이프라인 (생성 → 브라우저)
+    ("AI 뉴스 신문 만들어서 열어줘", '[engines:newspaper]{keywords: "AI"} >> [limbs:os_open]', "engines,limbs", "pipeline", 2, "engines,newspaper,limbs,os_open"),
 
     # 차트/시각화
     ("라인 차트 그려줘", '[engines:line]{title: "주가 추이"}', "engines", "single", 1, "engines,line"),
@@ -347,9 +347,9 @@ EXAMPLES = [
     # =========================================================================
 
     # 검색 → 저장
-    ("AI 뉴스 검색해서 파일로 저장해줘", '[sense:web_search]{query: "AI 뉴스"} >> [self:local_save]{path: "ai_news.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
-    ("부동산 뉴스 찾아서 저장해", '[sense:web_search]{query: "부동산"} >> [self:local_save]{path: "부동산뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
-    ("반도체 뉴스 검색해서 정리해줘", '[sense:web_search]{query: "반도체"} >> [self:local_save]{path: "반도체뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
+    ("AI 뉴스 검색해서 파일로 저장해줘", '[sense:search]{query: "AI 뉴스"} >> [self:local_save]{path: "ai_news.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
+    ("부동산 뉴스 찾아서 저장해", '[sense:search]{query: "부동산"} >> [self:local_save]{path: "부동산뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
+    ("반도체 뉴스 검색해서 정리해줘", '[sense:search]{query: "반도체"} >> [self:local_save]{path: "반도체뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
 
     # 검색 → 차트
     ("삼성전자 주가 조회해서 차트로 그려줘", '[sense:stock_info]{symbol: "삼성전자"} >> [engines:line]{title: "삼성전자 주가 차트"}', "sense,forge", "pipeline", 2, "pipeline,sequential"),
@@ -359,15 +359,11 @@ EXAMPLES = [
     ("유튜브 자막 추출해서 파일로 저장해", '[limbs:youtube_download]{url: "https://youtube.com/watch?v=example"} >> [self:local_save]{path: "transcript.md"}', "limbs,self", "pipeline", 2, "pipeline,sequential"),
 
     # 검색 → 에이전트 분석 (others 노드 파이프라인)
-    ("AI 뉴스 찾아서 투자 에이전트에게 분석 요청해", '[sense:web_search]{query: "AI 뉴스"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "이 뉴스를 투자 관점에서 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
-    ("부동산 뉴스 찾아서 부동산 에이전트에게 넘겨줘", '[sense:web_search]{query: "부동산"} >> [others:ask_sync]{agent_id: "부동산/부동산", message: "이 뉴스에서 시장 동향을 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
-    ("블로그 글 찾아서 컨텐츠 에이전트에게 분석 맡겨", '[self:photo_scan]{query: "AI"} >> [others:ask_sync]{agent_id: "컨텐츠/컨텐츠", message: "이 글들의 핵심 인사이트를 정리해줘"}', "self,others", "pipeline", 2, "pipeline,sequential"),
+    ("AI 뉴스 찾아서 투자 에이전트에게 분석 요청해", '[sense:search]{query: "AI 뉴스"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "이 뉴스를 투자 관점에서 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
+    ("부동산 뉴스 찾아서 부동산 에이전트에게 넘겨줘", '[sense:search]{query: "부동산"} >> [others:ask_sync]{agent_id: "부동산/부동산", message: "이 뉴스에서 시장 동향을 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
 
     # 크롤링 → 저장
-    ("웹페이지 크롤링해서 저장해", '[sense:web_search]{url: "https://example.com"} >> [self:local_save]{path: "crawled.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
-
-    # 블로그 → 저장
-    ("블로그에서 AI 글 찾아서 정리해줘", '[self:photo_scan]{query: "AI"} >> [self:local_save]{path: "blog_ai.md"}', "self,self", "pipeline", 2, "pipeline,sequential"),
+    ("웹페이지 크롤링해서 저장해", '[sense:crawl]{url: "https://example.com"} >> [self:local_save]{path: "crawled.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
 
     # =========================================================================
     # 파이프라인 — 병렬 실행 (&)
@@ -379,43 +375,42 @@ EXAMPLES = [
     ("한미 주요 종목 동시 확인", '[sense:stock_info]{symbol: "005930"} & [sense:stock_info]{symbol: "AAPL"} & [sense:stock_info]{symbol: "SPY"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # 뉴스 동시 검색
-    ("AI 뉴스랑 부동산 뉴스 같이 검색해", '[sense:web_search]{query: "AI 뉴스"} & [sense:web_search]{query: "부동산 뉴스"}', "sense", "pipeline", 2, "pipeline,parallel"),
+    ("AI 뉴스랑 부동산 뉴스 같이 검색해", '[sense:search]{query: "AI 뉴스"} & [sense:search]{query: "부동산 뉴스"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # 날씨 비교
-    ("서울이랑 부산 날씨 같이 알려줘", '[sense:navigate_route]{query: "서울"} & [sense:navigate_route]{query: "부산"}', "sense", "pipeline", 2, "pipeline,parallel"),
+    ("서울이랑 부산 날씨 같이 알려줘", '[sense:weather]{city: "서울"} & [sense:weather]{city: "부산"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # ★ 시간 + 주가 + 뉴스 (스위치에서 자주 쓰는 패턴!)
-    ("현재 시간과 코스피 주가와 뉴스를 동시에 조회해줘", '[self:time] & [sense:stock_info]{symbol: "^KS11"} & [sense:web_search]{query: "한국 증시"}', "self,sense", "pipeline", 2, "pipeline,parallel"),
+    ("현재 시간과 코스피 주가와 뉴스를 동시에 조회해줘", '[self:time] & [sense:stock_info]{symbol: "^KS11"} & [sense:search]{query: "한국 증시"}', "self,sense", "pipeline", 2, "pipeline,parallel"),
     ("시간이랑 삼성전자 주가 같이 알려줘", '[self:time] & [sense:stock_info]{symbol: "005930"}', "self,sense", "pipeline", 2, "pipeline,parallel"),
     ("코스피 코스닥 동시 조회", '[sense:stock_info]{symbol: "^KS11"} & [sense:stock_info]{symbol: "^KQ11"}', "sense", "pipeline", 2, "pipeline,parallel"),
-    ("외국인 매매동향과 뉴스 같이 확인", '[sense:stock_info]{symbol: "STK"} & [sense:web_search]{query: "외국인 매매"}', "sense", "pipeline", 2, "pipeline,parallel"),
+    ("외국인 매매동향과 뉴스 같이 확인", '[sense:stock_info]{symbol: "STK"} & [sense:search]{query: "외국인 매매"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # 크롤링 병렬
-    ("네이버랑 다음 메인 동시에 크롤링", '[sense:web_search]{url: "https://naver.com"} & [sense:web_search]{url: "https://daum.net"}', "sense", "pipeline", 2, "pipeline,parallel"),
+    ("네이버랑 다음 메인 동시에 크롤링", '[sense:crawl]{url: "https://naver.com"} & [sense:crawl]{url: "https://daum.net"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # =========================================================================
     # 파이프라인 — 복합 (병렬 + 순차 + Fallback)
     # =========================================================================
 
     # 병렬 → 저장
-    ("AI랑 부동산 뉴스 찾아서 브리핑 파일로 만들어줘", '[sense:web_search]{query: "AI 뉴스"} & [sense:web_search]{query: "부동산 뉴스"} >> [self:local_save]{path: "briefing.md"}', "sense,self", "complex", 3, "pipeline,complex"),
+    ("AI랑 부동산 뉴스 찾아서 브리핑 파일로 만들어줘", '[sense:search]{query: "AI 뉴스"} & [sense:search]{query: "부동산 뉴스"} >> [self:local_save]{path: "briefing.md"}', "sense,self", "complex", 3, "pipeline,complex"),
 
     # 3단 파이프라인 (검색 → 에이전트 분석 → 저장)
-    ("삼성전자 뉴스 찾아서 분석하고 결과 저장해", '[sense:web_search]{query: "삼성전자"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}', "sense,others,self", "complex", 3, "pipeline,complex"),
-    ("블로그 인사이트 보고서 만들어줘", '[self:photo_scan]{query: "최근 글", type: "blog", count: 10} >> [others:ask_sync]{agent_id: "컨텐츠/컨텐츠", message: "인사이트 보고서 작성해줘"} >> [self:local_save]{path: "insight_report.html", format: "html"}', "self,others,self", "complex", 3, "pipeline,complex"),
+    ("삼성전자 뉴스 찾아서 분석하고 결과 저장해", '[sense:search]{query: "삼성전자"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}', "sense,others,self", "complex", 3, "pipeline,complex"),
 
     # 병렬 위임 (여러 프로젝트에 동시 요청)
     ("의료팀이랑 투자팀 동시에 물어봐", '[others:delegate_project]{agent_id: "의료/내과", message: "건강 분석"} & [others:delegate_project]{agent_id: "투자/투자컨설팅", message: "투자 분석"}', "others", "complex", 2, "others,parallel_delegation"),
 
     # Fallback
-    ("삼성전자 주가 조회하되 실패하면 종목 검색해", '[sense:stock_info]{symbol: "삼성전자"} ?? [sense:stock_info]{symbol: "삼성전자"}', "sense", "pipeline", 2, "pipeline,fallback"),
-    ("뉴스 검색 시도하고 안 되면 웹 검색해", '[sense:web_search]{query: "AI"} ?? [sense:web_search]{query: "AI 뉴스"}', "sense", "pipeline", 2, "pipeline,fallback"),
+    ("삼성전자 주가 조회하되 실패하면 종목 검색해", '[sense:price]{symbol: "삼성전자"} ?? [sense:search_stock]{query: "삼성전자"}', "sense", "pipeline", 2, "pipeline,fallback"),
+    ("뉴스 검색 시도하고 안 되면 웹 검색해", '[sense:search_news]{query: "AI"} ?? [sense:search]{query: "AI 뉴스"}', "sense", "pipeline", 2, "pipeline,fallback"),
 
     # 유튜브 → 재생
     ("피아노곡 검색해서 재생해", '[sense:search_youtube]{query: "피아노곡"} >> [limbs:play]', "sense,tools", "pipeline", 2, "pipeline,sequential"),
 
     # 시간 + 주가 + 뉴스 + 외국인 (종합 증시 체크)
-    ("종합 증시 상황 확인해줘", '[self:time] & [sense:stock_info]{symbol: "^KS11"} & [sense:stock_info]{symbol: "^KQ11"} & [sense:stock_info]{symbol: "STK"} & [sense:web_search]{query: "한국 증시"}', "self,sense", "complex", 3, "pipeline,complex"),
+    ("종합 증시 상황 확인해줘", '[self:time] & [sense:stock_info]{symbol: "^KS11"} & [sense:stock_info]{symbol: "^KQ11"} & [sense:stock_info]{symbol: "STK"} & [sense:search]{query: "한국 증시"}', "self,sense", "complex", 3, "pipeline,complex"),
 ]
 
 

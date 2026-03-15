@@ -775,7 +775,7 @@ class CalendarManager:
             # 트리거 이력 기록
             if trigger_id:
                 try:
-                    from event_engine import _add_history
+                    from trigger_engine import _add_history
                     _add_history(
                         trigger_id=trigger_id,
                         trigger_name=task.get("title", ""),

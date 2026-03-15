@@ -75,6 +75,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
     prev_result = context.get("_prev_result", "") if context else ""
     results = []
     total = len(steps)
+    action_count = 0  # 실제 실행된 액션 수 (병렬 branches 포함)
 
     for i, step in enumerate(steps):
         step_start = time.time()
@@ -99,10 +100,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
             duration_ms = int((time.time() - step_start) * 1000)
             result_str = _to_string(result)
 
+            action_count += len(step["branches"])
             results.append({
                 "step": i + 1, "type": "parallel",
                 "branches": len(step["branches"]),
-                "result": result_str[:500] if len(result_str) > 500 else result_str,
+                "result": result_str,
                 "duration_ms": duration_ms,
             })
             prev_result = result_str
@@ -129,11 +131,12 @@ def execute_pipeline(steps: list, project_path: str = ".",
 
             # fallback 결과에 에러가 있으면 (모든 체인 실패)
             is_err = isinstance(result, dict) and "error" in result and result.get("_all_failed")
+            action_count += 1
             results.append({
                 "step": i + 1, "type": "fallback",
                 "chain_length": len(step["_fallback_chain"]),
                 "attempts": fallback_log,
-                "result": result_str[:500] if len(result_str) > 500 else result_str,
+                "result": result_str,
                 "duration_ms": duration_ms,
             })
 
@@ -189,11 +192,12 @@ def execute_pipeline(steps: list, project_path: str = ".",
             if "error" in result and result.get("status") != "not_implemented":
                 is_err = True
 
+        action_count += 1
         results.append({
             "step": i + 1,
             "node": tool_input.get("_node", "?"),
             "action": tool_input.get("action", "?"),
-            "result": result_str[:500] if len(result_str) > 500 else result_str,
+            "result": result_str,
             "duration_ms": duration_ms,
         })
 
@@ -214,6 +218,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         "success": True,
         "steps_completed": total,
         "steps_total": total,
+        "_action_count": action_count,
         "results": results,
         "final_result": prev_result,
     }

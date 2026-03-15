@@ -5,25 +5,24 @@ meta:
     examples:
     - '[self:time]  # 현재 시간'
     - '[self:discover]{query: "주가"}  # 모르면 discover'
-    - '[self:open]{path: "/path/to/file.html"}  # 파일 열기'
-    - '[limbs:open_url]{path: "https://example.com"}  # URL 열기'
+    - '[limbs:os_open]{path: "/path/to/file.html"}  # 파일 열기'
+    - '[limbs:os_open]{path: "https://example.com"}  # URL 열기'
     - '[sense:price]{symbol: "005930"}  # 삼성전자 주가'
     - '[sense:price]{symbol: "AAPL"}  # 미국 주가'
-    - '[sense:web_search]{query: "AI news"}  # 웹 검색'
+    - '[sense:search]{query: "AI news"}  # 종합 검색 (웹+뉴스+유튜브+논문)'
     - '[sense:news]{query: "삼성전자"}  # 종목 뉴스'
     - '[sense:kr_investor]{symbol: "STK", start_date: "2026-02-01"}  # 투자자 매매동향'
     - '[limbs:play]{query: "슬픈 피아노곡"}  # 음악 재생'
     - '[sense:search_radio]{query: "KBS"}  # 라디오 검색'
-    - '[engines:newspaper]{keywords: "AI, 경제, 문화"}  # 신문 생성'
     - '[engines:line]{title: "Stock Price"}  # 차트 생성'
+    - '[engines:slide]{title: "발표자료", pages: 5}  # 슬라이드 생성'
     note: execute_ibl의 code 파라미터에 IBL 코드를 전달. 모든 값은 {params} 안에 named parameter로.
       (target) 문법은 폐지됨.
   - section: Common mistakes — NEVER do these
     examples:
     - 'WRONG: [self:workflow]  # workflow는 액션이 아님'
     - 'WRONG: [self:get]{type: "time"}  # get은 액션이 아님. [self:time]을 써야 함'
-    - 'WRONG: [sense:search]{query: "AAPL"}  # search는 액션이 아님. [sense:web_search]{query:
-      "AAPL"}를 써야 함'
+    - 'RIGHT: [sense:search]{query: "AAPL"}  # 종합 검색 (웹+뉴스+유튜브+논문 병렬)'
     - 'WRONG: [sense:price]("AAPL")  # (target) 문법은 폐지됨! {params}를 사용할 것'
     - 'RIGHT: [self:time]  # 직접 액션명 사용'
     - 'RIGHT: [sense:price]{symbol: "AAPL"}  # 모든 값은 named parameter'
@@ -39,21 +38,21 @@ meta:
     note: '모든 값은 {key: val} 안에 작성. (target) 문법은 폐지되어 에러 발생함.'
   - section: Pipeline — 다중 스텝은 >> 또는 & 연산자 사용
     examples:
-    - '[sense:web_search]{query: "AI"} >> [self:file]{path: "result.md"}  # 순차: step1
+    - '[sense:search]{query: "AI"} >> [self:file]{path: "result.md"}  # 순차: step1
       결과가 step2에 자동 전달'
-    - '[engines:newspaper]{keywords: "AI, 경제"} >> [self:open]  # 신문 생성 후 브라우저 열기'
+    - '[engines:slide]{title: "보고서"} >> [limbs:os_open]  # 슬라이드 생성 후 열기'
     - '[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}  # 병렬 실행'
     - '[self:time] & [sense:price]{symbol: "005930"} & [sense:news]{query: "한국 증시"}  #
       병렬 3개'
     - '[sense:price]{symbol: "AAPL"} ?? [sense:kr_price]{symbol: "AAPL"}  # 폴백: 실패시
       대안'
-    - 'WRONG: [engines:newspaper]{keywords: "AI"} >> [self:open]{path: $prev.file}  #
+    - 'WRONG: [engines:slide]{title: "AI"} >> [limbs:os_open]{path: $prev.file}  #
       $prev 문법 없음!'
     note: '>> 사용 시 이전 step의 결과가 다음 step에 자동 전달됨. $prev, $result 같은 변수 참조 문법은 없다.'
   pipeline:
   - op: '>>'
     name: Sequential
-    example: '[sense:web_search]{query: "AI"} >> [self:file]{path: "result.md"}'
+    example: '[sense:search]{query: "AI"} >> [self:file]{path: "result.md"}'
   - op: '&'
     name: Parallel
     example: '[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}'
@@ -677,15 +676,26 @@ nodes:
         - 상권
         - 상권분석
         - 업종
+      search:
+        description: 종합 검색 (웹 + 뉴스 + 유튜브 + 논문 병렬 검색). 일반적인 검색에는 이것을 우선 사용
+        group: world
+        category: search
+        router: handler
+        tool: unified_search
+        target_key: query
+        keywords:
+        - 검색
+        - 종합검색
+        - 통합검색
+        - 조사
       web_search:
-        description: DuckDuckGo 웹 검색
+        description: DuckDuckGo 웹 검색 (웹만 검색할 때)
         group: web
         category: search
         router: handler
         tool: ddgs_search
         target_key: query
         keywords:
-        - 검색
         - 웹검색
         - 인터넷
       crawl:
@@ -713,12 +723,45 @@ nodes:
         - 기사
       collect:
         description: 사이트 프로필 기반 구조화된 데이터 수집
-        group: web
+        group: collect
         router: web_collector
         keywords:
         - 수집
         - 크롤링
         - 구조화
+      collect_sites:
+        description: 수집 대상 사이트 프로필 관리 (등록/조회/삭제)
+        group: collect
+        category: get
+        target_key: site_id
+        router: handler
+        tool: wc_sites
+        keywords:
+        - 수집
+        - 사이트
+        - 가이드
+      collect_save:
+        description: 수집 데이터 DB 저장
+        group: collect
+        category: event
+        router: handler
+        tool: wc_save
+        target_key: site_id
+        keywords:
+        - 수집
+        - 저장
+        - DB
+      collect_query:
+        description: 수집 데이터 DB 조회
+        group: collect
+        category: event
+        router: handler
+        tool: wc_query
+        target_key: query
+        keywords:
+        - 수집
+        - 조회
+        - DB검색
       apt_trade:
         description: 아파트 매매 실거래가 (국토부)
         group: real_estate
@@ -1363,128 +1406,90 @@ nodes:
         - 파이프라인
         - 실행
         - 단계
-      list_events:
+      list_triggers:
         description: 등록된 트리거 목록 조회
-        group: event
+        group: schedule
         category: list
-        router: event_engine
+        router: trigger_engine
         keywords:
         - 트리거
-        - 이벤트
         - 목록
-      get_event:
+      get_trigger:
         description: 트리거 상세 정보
-        group: event
+        group: schedule
         category: get
         target_key: trigger_id
-        router: event_engine
+        router: trigger_engine
         keywords:
         - 트리거
-        - 이벤트
         - 상세
       create:
         description: 새 트리거 등록 (schedule/channel/webhook/file)
-        group: event
-        category: event
+        group: schedule
+        category: create
         target_key: trigger_id
-        router: event_engine
+        router: trigger_engine
         keywords:
         - 트리거
-        - 이벤트
         - 등록
         - 생성
       update:
         description: 트리거 수정
-        group: event
-        category: event
+        group: schedule
+        category: control
         target_key: trigger_id
-        router: event_engine
+        router: trigger_engine
         keywords:
         - 트리거
-        - 이벤트
         - 수정
-      delete_event:
+      delete_trigger:
         description: 트리거 삭제
-        group: event
-        category: event
+        group: schedule
+        category: delete
         target_key: trigger_id
-        router: event_engine
+        router: trigger_engine
         keywords:
         - 트리거
-        - 이벤트
         - 삭제
       enable:
         description: 트리거 활성화
-        group: event
+        group: schedule
         category: control
         target_key: trigger_id
-        router: event_engine
+        router: trigger_engine
         keywords:
         - 트리거
         - 활성화
         - 켜기
       disable:
         description: 트리거 비활성화
-        group: event
+        group: schedule
         category: control
         target_key: trigger_id
-        router: event_engine
+        router: trigger_engine
         keywords:
         - 트리거
         - 비활성화
         - 끄기
-      event_status:
-        description: 이벤트 시스템 전체 상태 (폴러, 스케줄러, 자동응답)
-        group: event
+      trigger_status:
+        description: 트리거 시스템 전체 상태 (폴러, 스케줄러, 자동응답)
+        group: schedule
         category: get
-        router: event_engine
+        router: trigger_engine
         keywords:
-        - 이벤트
+        - 트리거
         - 상태
         - 폴러
-      event_history:
+      trigger_history:
         description: 트리거 실행 이력 조회
-        group: event
+        group: schedule
         category: get
         target_key: trigger_id
-        router: event_engine
+        router: trigger_engine
         keywords:
-        - 이벤트
+        - 트리거
         - 실행이력
         - 기록
-      sites:
-        description: 사이트 수집 가이드 관리 (등록/조회/삭제)
-        group: collect
-        category: get
-        target_key: site_id
-        router: handler
-        tool: wc_sites
-        keywords:
-        - 수집
-        - 사이트
-        - 가이드
-      wc_save:
-        description: 수집 데이터 DB 저장
-        group: collect
-        category: event
-        router: handler
-        tool: wc_save
-        target_key: site_id
-        keywords:
-        - 수집
-        - 저장
-        - DB
-      query:
-        description: 수집 데이터 DB 조회
-        group: collect
-        category: event
-        router: handler
-        tool: wc_query
-        target_key: query
-        keywords:
-        - 수집
-        - 조회
-        - DB검색
       gui:
         description: UI에 결과를 HTML/카드/테이블 형태로 표시
         group: output
@@ -1499,7 +1504,7 @@ nodes:
         - 카드
       file:
         description: 결과를 파일로 저장 (텍스트, JSON, CSV, HTML 등)
-        group: output
+        group: file
         category: io
         target_key: path
         router: system
@@ -1521,7 +1526,7 @@ nodes:
         - 복사
       download:
         description: URL에서 파일을 다운로드하여 로컬에 저장
-        group: output
+        group: file
         category: io
         target_key: url
         router: system
@@ -1658,7 +1663,7 @@ nodes:
         - 텍스트추출
       storage_scan:
         description: 디스크/볼륨 스캔 (인덱싱)
-        group: storage
+        group: file
         category: storage
         router: handler
         tool: scan_storage
@@ -1669,7 +1674,7 @@ nodes:
         - 인덱싱
       fs_query:
         description: 파일 검색 (이름, 확장자, 크기)
-        group: storage
+        group: file
         category: storage
         router: handler
         tool: query_storage
@@ -1680,7 +1685,7 @@ nodes:
         - 크기
       summary:
         description: 저장소 사용량 요약
-        group: storage
+        group: file
         category: storage
         router: handler
         tool: get_storage_summary
@@ -1690,7 +1695,7 @@ nodes:
         - 사용량
       volumes:
         description: 마운트된 볼륨 목록
-        group: storage
+        group: file
         category: storage
         router: handler
         tool: list_volumes
@@ -1700,7 +1705,7 @@ nodes:
         - 마운트
       annotate:
         description: 폴더에 메모/주석 추가
-        group: storage
+        group: file
         category: storage
         router: handler
         tool: annotate_folder
@@ -1711,7 +1716,7 @@ nodes:
         - 폴더
       annotations:
         description: 폴더 주석 조회
-        group: storage
+        group: file
         category: storage
         router: handler
         tool: get_folder_annotations
@@ -1720,7 +1725,7 @@ nodes:
         - 메모
       explorer:
         description: 파일 탐색기에서 열기 (Finder)
-        group: storage
+        group: file
         category: storage
         router: handler
         tool: open_file_explorer
@@ -2488,18 +2493,17 @@ nodes:
         keywords:
         - 통화종료
         - 끊기
-      open_url:
-        description: URL 또는 로컬 파일을 기본 브라우저로 열기
+      os_open:
+        description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
         group: general
         category: io
-        router: handler
-        tool: open_in_browser
         target_key: path
-        phase: 5
+        router: system
+        func: output_open
         keywords:
+        - 열기
         - URL
         - 브라우저
-        - 열기
       play:
         description: 유튜브 검색 후 바로 재생 (검색+재생 복합. 검색만 원하면 search_youtube 사용)
         group: media
@@ -2621,16 +2625,6 @@ nodes:
         target_key: name
         keywords:
         - 즐겨찾기삭제
-      os_open:
-        description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
-        group: general
-        category: io
-        target_key: path
-        router: system
-        func: output_open
-        keywords:
-        - 열기
-        - Finder
         - 기본앱
       cloudflare_api:
         description: Cloudflare API 호출 (모든 서비스 통합)
@@ -2647,10 +2641,12 @@ nodes:
         - Pages
       android_screenshot_grid:
         description: 좌표 그리드 오버레이 스크린샷 (캘리브레이션용)
+        group: android
         router: handler
         tool: android_ui_screenshot_grid
       tap_grid:
         description: '그리드 셀 ID로 탭 (예: B3)'
+        group: android
         target_description: '그리드 셀 ID (예: B3, A0, D7)'
         router: handler
         tool: android_ui_tap_grid
@@ -2813,20 +2809,18 @@ nodes:
   engines:
     actions:
       newspaper:
-        description: Google News RSS에서 키워드별 기사를 자체 수집하여 HTML 신문 생성. 외부 기사 데이터 입력 불가.
-          language="en"으로 영문 뉴스 가능
+        description: '"신문 만들어줘"라고 요청할 때만 사용. 키워드별 뉴스 기사를 자동 수집하여 HTML 신문 레이아웃으로 생성. 보고서/분석/요약 요청에는 사용하지 말 것.'
         group: media_produce
         category: create
         router: handler
         tool: generate_newspaper
         target_key: keywords
         keywords:
-        - 뉴스
         - 신문
-        - 기사
-        - 뉴스모음
-        - 영문뉴스
-        - English
+        - 신문만들기
+        - 신문생성
+        - 가디언
+        - guardian
         - world news
       slide:
         description: 프레젠테이션 슬라이드 생성

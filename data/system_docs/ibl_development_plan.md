@@ -58,7 +58,7 @@ IBL 표현 계층:     [node:action]{params}
 | 7-3 | 금융/생활 통합 | finance (15 액션), location (5 액션), shopping (1 액션) |
 | 7-4 | 하드웨어·자동화·서비스 | android (20), browser (15), radio (9), cctv (8), realestate (6), startup (2), culture (12), hosting (1) |
 | 7-5 | 나머지 전체 통합 | desktop (9), study (11), webbuilder (13), storage (7), viz (7), media +2 (remotion, remotion_status) |
-| 8 | 이벤트 & 트리거 | `event_engine.py`, event 노드 (9 액션), `calendar_manager` run_pipeline 연동 |
+| 8 | 트리거 엔진 | `trigger_engine.py`, schedule 그룹 (11 액션), `calendar_manager` run_pipeline 연동 |
 | 9 | 언어 정제 | `&` (병렬 실행), `??` (fallback), ThreadPoolExecutor 병렬 엔진 |
 | 10 | 노드 추상화 | `node_registry.py`, 통일 디스크립터, `discover` 액션 |
 | 11 | Agent as Node | 에이전트 노드 통합, `[agent:ask]`, discover 에이전트 검색 |
@@ -522,7 +522,7 @@ PC 자체    → 노드  (프로토콜: 시스템 콜)
 | PC 저장소 관리 | handler 위임 | orchestrator (구 storage→filesystem) | Phase 7-5→20 |
 | 데이터 시각화 | handler 위임 | creator (구 viz→creator) | Phase 7-5→14 |
 | Remotion 영상 생성 | handler 위임 | creator (구 media→creator) | Phase 7-5→14 |
-| 이벤트/트리거 관리 | event_engine | orchestrator (구 event/automation) | Phase 8→19 |
+| 트리거 관리 | trigger_engine | orchestrator (구 event/automation) | Phase 8→19 |
 
 ### 모든 정보 소스 + 이벤트 시스템 IBL 통합 완료 ✅
 

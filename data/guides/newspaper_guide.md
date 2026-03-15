@@ -1,74 +1,53 @@
 # 신문 제작 가이드
 
-키워드 목록으로 Google News를 검색하고 HTML 신문을 자동 생성합니다.
+뉴스를 수집하여 HTML 신문 형태로 보여줍니다.
 
 ---
 
-## 신문 생성 + 브라우저 열기
+## 핵심 원칙
+
+1. **"신문 만들어"라고 하면 항상 같은 포맷** — 2컬럼 카드 그리드 + 기사 링크
+2. **소스가 달라도 형태는 동일** — 구글 뉴스든, 가디언이든
+3. **기본 기사 수는 7개** (별도 지정하지 않는 한)
+4. **자동으로 브라우저에 띄움** — "브라우저에 띄워"를 명시하지 않아도 반드시 열기
+5. **절대경로 사용** — 브라우저에 띄울 때 반드시 절대경로
+
+---
+
+## 사용법
+
+모든 신문은 `[engines:newspaper]` 하나로 만듭니다.
+
+### 구글 뉴스 (기본)
 
 ```
-[engines:newspaper]{keywords: "AI, 청주, 세종, 문화, 여행, 과학, 경제"} >> [self:open]
+[engines:newspaper]{keywords: "AI, 청주, 경제"} >> [limbs:os_open]
 ```
 
-파이프라인(`>>`)을 쓰면 newspaper의 결과(file 경로 포함)가 자동으로 open에 전달되어 브라우저에서 열립니다.
+### 가디언 뉴스
+
+```
+[engines:newspaper]{keywords: "Iran war, AI", source: "guardian"} >> [limbs:os_open]
+```
 
 ### 파라미터
 
 | 파라미터 | 필수 | 설명 |
 |----------|------|------|
 | keywords | ✅ | 키워드 (쉼표 구분) |
+| source | - | "google" (기본), "guardian" |
 | title | - | 신문 제목 (기본: "IndieBiz Daily") |
-| language | - | 뉴스 언어: "ko" (한국어, 기본), "en" (영어), "ja" (일본어) |
-| exclude_sources | - | 제외할 뉴스 출처 배열 |
+| language | - | 자동 결정 (google→ko, guardian→en). 수동 지정 가능 |
+| exclude_sources | - | 제외할 뉴스 출처 (google만 해당) |
 | count | - | 키워드당 기사 수 (기본: 7) |
 
-### 예시
+---
 
-기본 (생성만):
-```
-[engines:newspaper]{keywords: "AI, 청주, 세종, 경제"}
-```
+## 주의사항
 
-생성 후 브라우저 열기:
-```
-[engines:newspaper]{keywords: "AI, 경제, 주식"} >> [self:open]
-```
-
-제목 지정 + 출처 제외:
-```
-[engines:newspaper]{keywords: "AI, 경제, 주식", title: "투자 뉴스", exclude_sources: ["조선일보"]} >> [self:open]
-```
-
-영문 뉴스 신문:
-```
-[engines:newspaper]{keywords: "AI, quantum computing, climate", language: "en"} >> [self:open]
-```
-
-영문 뉴스 + 제목 지정:
-```
-[engines:newspaper]{keywords: "Iran, oil prices, tech stocks", language: "en", title: "World News Today"} >> [self:open]
-```
+1. **파이프라인 변수 참조 없음** — `$prev.file` 같은 문법은 없습니다
+2. **`>> [limbs:os_open]`을 붙이면** 생성 후 자동으로 브라우저에 열립니다
 
 ---
 
-## 결과
-
-- `outputs/newspaper_{타임스탬프}.html` 파일 생성
-- 반환값에 `file` 경로 포함
-- 반응형 3단 그리드 레이아웃
-
----
-
-## 주의: 파이프라인 변수 참조 금지
-
-`$prev.file`, `$result.path` 같은 변수 참조 문법은 **존재하지 않습니다**.
-`>>` 연산자가 이전 step의 결과를 자동으로 다음 step에 전달합니다.
-
-```
-WRONG: [engines:newspaper]{keywords: "AI"} >> [self:open]{path: $prev.file}
-RIGHT: [engines:newspaper]{keywords: "AI"} >> [self:open]
-```
-
----
-
-*최종 업데이트: 2026-03-13*
+*최종 업데이트: 2026-03-14*

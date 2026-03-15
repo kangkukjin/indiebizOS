@@ -8,6 +8,11 @@ nodes:
         target_key: action
   sense:
     actions:
+      search:
+        description: 종합 검색 (웹 + 뉴스 + 유튜브 + 논문 병렬 검색)
+        router: handler
+        tool: unified_search
+        target_key: query
       web_search:
         description: DuckDuckGo 웹 검색
         router: handler

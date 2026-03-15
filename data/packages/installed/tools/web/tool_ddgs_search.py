@@ -54,7 +54,8 @@ def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
             "success": True,
             "query": query,
             "count": len(formatted_results),
-            "results": formatted_results
+            "results": formatted_results,
+            "_note": "검색 결과는 제목과 요약(snippet)만 포함합니다. 기사/페이지 본문이 필요하면 [sense:crawl]{url: \"...\"}로 URL을 크롤링하세요."
         })
 
     except Exception as e:

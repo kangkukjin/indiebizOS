@@ -341,19 +341,75 @@ def markdown_to_html(markdown_content: str, title: str, date_str: str, language:
 </html>"""
 
 
+def _search_guardian_for_newspaper(query: str, count: int = 7, language: str = "en") -> dict:
+    """Guardian API로 기사를 검색하여 generate_section과 동일한 형태로 반환"""
+    import requests
+    import html as html_mod
+
+    api_key = os.getenv("GUARDIAN_API_KEY")
+    if not api_key:
+        return {'keyword': query, 'markdown': f"## {query}\n\nGUARDIAN_API_KEY 환경 변수가 설정되지 않았습니다.\n\n", 'news_count': 0, 'success': False}
+
+    try:
+        response = requests.get("https://content.guardianapis.com/search", params={
+            "q": query, "api-key": api_key, "page-size": count,
+            "show-fields": "trailText,headline,shortUrl"
+        }, timeout=15)
+        response.raise_for_status()
+        results_list = response.json().get("response", {}).get("results", [])
+
+        if not results_list:
+            return {'keyword': query, 'markdown': f"## {query}\n\n뉴스를 찾을 수 없습니다.\n\n", 'news_count': 0, 'success': False}
+
+        section = f"## {query}\n\n[GRID_START]\n\n"
+        for i, article in enumerate(results_list, 1):
+            fields = article.get("fields", {})
+            headline = fields.get("headline", article.get("webTitle", "No title"))
+            trail_text = re.sub('<[^<]+?>', '', fields.get("trailText", ""))
+            trail_text = html_mod.unescape(trail_text).strip()
+            url = article.get("webUrl", "")
+            date = article.get("webPublicationDate", "")[:10]
+            section_name = article.get("sectionName", "")
+
+            link_text = "기사 보기" if language == "ko" else "Read Article"
+            source_label = "출처" if language == "ko" else "Source"
+            pub_label = "발행" if language == "ko" else "Published"
+
+            section += "[CARD_START]\n\n"
+            section += f"### {i}. {headline}\n\n"
+            section += f"**{source_label}**: The Guardian ({section_name}) | **{pub_label}**: {date}\n\n"
+            if trail_text:
+                section += f"{trail_text}\n\n"
+            section += f"[{link_text}]({url})\n\n"
+            section += "[CARD_END]\n\n"
+
+        section += "[GRID_END]\n\n"
+        return {'keyword': query, 'markdown': section, 'news_count': len(results_list), 'success': True}
+
+    except Exception as e:
+        return {'keyword': query, 'markdown': f"## {query}\n\nGuardian API 오류: {e}\n\n", 'news_count': 0, 'success': False}
+
+
 def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
                        exclude_sources: list = None, project_path: str = ".",
-                       language: str = "ko") -> dict:
-    """Google News 기반 신문 자동 생성
+                       language: str = None, source: str = "google") -> dict:
+    """뉴스 소스별 신문 자동 생성
 
     Args:
-        language: "ko" (한국어, 기본) 또는 "en" (영어) 등
+        keywords: 검색 키워드 목록
+        title: 신문 제목
+        source: 뉴스 소스 - "google" (기본), "guardian"
+        language: "ko", "en" 등. None이면 소스에 따라 자동 결정
     """
     if not keywords:
         return {'success': False, 'error': '키워드가 필요합니다.'}
 
     if exclude_sources is None:
         exclude_sources = []
+
+    # language 자동 결정: 지정 안 하면 소스에 따라
+    if language is None:
+        language = "en" if source == "guardian" else "ko"
 
     # region 자동 결정
     region = {"ko": "KR", "en": "US", "ja": "JP", "zh": "CN"}.get(language, "US")
@@ -364,8 +420,11 @@ def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
 
     sections = []
     for keyword in keywords:
-        section = generate_section(keyword, news_count=7, exclude_sources=exclude_sources,
-                                   language=language, region=region)
+        if source == "guardian":
+            section = _search_guardian_for_newspaper(keyword, count=7, language=language)
+        else:
+            section = generate_section(keyword, news_count=7, exclude_sources=exclude_sources,
+                                       language=language, region=region)
         sections.append(section)
 
     toc_items = []
@@ -573,6 +632,11 @@ def execute(tool_name: str, params: dict, project_path: str = None):
         )
         return format_json(result)
 
+    # 종합 검색
+    elif tool_name == "unified_search":
+        tool_unified = load_module("tool_unified_search")
+        return tool_unified.use_tool(params)
+
     # 신문 생성
     elif tool_name == "generate_newspaper":
         keywords = params.get("keywords", [])
@@ -582,13 +646,15 @@ def execute(tool_name: str, params: dict, project_path: str = None):
         if not keywords:
             return format_json({"success": False, "error": "키워드(keywords)가 필요합니다."})
 
-        language = params.get("language", "ko")
+        language = params.get("language", None)
+        source = params.get("source", "google")
         result = generate_newspaper(
             keywords=keywords,
             title=params.get("title", "IndieBiz Daily"),
             exclude_sources=params.get("exclude_sources", []),
             project_path=project_path or ".",
-            language=language
+            language=language,
+            source=source
         )
         return format_json(result)
 

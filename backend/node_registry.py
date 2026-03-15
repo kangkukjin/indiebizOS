@@ -75,6 +75,7 @@ _ROUTER_TYPE_MAP = {
     "channel_engine": "engine",
     "web_collector": "engine",
     "event_engine": "engine",
+    "trigger_engine": "engine",
     "driver": "driver",
     "stub": "stub",
 }
@@ -88,6 +89,7 @@ _ROUTER_PROTOCOL_MAP = {
     "channel_engine": "http/websocket",
     "web_collector": "http",
     "event_engine": "internal",
+    "trigger_engine": "internal",
     "driver": "varies",
     "stub": "none",
 }

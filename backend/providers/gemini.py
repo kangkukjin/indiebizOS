@@ -405,7 +405,15 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
                 }
 
                 # 도구 응답 추가 (AI에게는 content만)
-                truncated_output = tool_output[:8000] if len(tool_output) > 8000 else tool_output
+                # 파이프라인 결과인 경우 _action_count(병렬 포함 실제 액션 수) × 16KB 허용
+                import re as _re
+                _max_len = 16000
+                _action_match = _re.search(r'"_action_count"\s*:\s*(\d+)', tool_output)
+                if _action_match:
+                    _actions = int(_action_match.group(1))
+                    if _actions > 1:
+                        _max_len = _max_len * _actions
+                truncated_output = tool_output[:_max_len] if len(tool_output) > _max_len else tool_output
                 function_response_parts.append(
                     types.Part.from_function_response(
                         name=fc.name,

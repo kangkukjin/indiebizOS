@@ -26,8 +26,8 @@ import time
 from typing import List, Dict, Callable, Generator, Any
 from .base import BaseProvider
 
-# 도구 결과 최대 길이 (컨텍스트 관리)
-MAX_TOOL_RESULT_LENGTH = 8000
+# 도구 결과 최대 길이 (컨텍스트 관리) — 파이프라인 시 액션 수 × 배수 적용
+MAX_TOOL_RESULT_LENGTH = 16000
 
 # 최대 도구 호출 깊이
 MAX_TOOL_DEPTH = 30
@@ -197,7 +197,17 @@ class OpenAIProvider(BaseProvider):
         return openai_tools
 
     def _truncate_tool_result(self, result: str, max_length: int = MAX_TOOL_RESULT_LENGTH) -> str:
-        """도구 결과 길이 제한 (컨텍스트 관리)"""
+        """도구 결과 길이 제한 (컨텍스트 관리)
+        파이프라인 결과인 경우 액션 수 × 기본 한도 적용 (개별 실행과 동등한 정보량 보장)
+        """
+        # 파이프라인 결과 감지: _action_count(병렬 포함 실제 액션 수)로 한도 확장
+        import re as _re
+        action_match = _re.search(r'"_action_count"\s*:\s*(\d+)', result)
+        if action_match:
+            actions = int(action_match.group(1))
+            if actions > 1:
+                max_length = max_length * actions
+
         if len(result) <= max_length:
             return result
 

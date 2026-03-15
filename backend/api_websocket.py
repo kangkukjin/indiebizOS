@@ -38,22 +38,102 @@ def _get_deep_research_guide() -> str:
     return _deep_research_guide_cache
 
 
-def inject_deep_research(message: str) -> str:
-    """메시지 앞에 심층연구 가이드를 주입 (현재 날짜 포함)"""
+def _run_blog_baseline(query: str) -> str:
+    """블로그 RAG 검색 후 관련도 높은 글의 전문을 가져와 기준선 컨텍스트로 반환."""
+    try:
+        import sys
+        import os
+        blog_pkg_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'packages',
+            'installed', 'tools', 'blog'
+        )
+        blog_pkg_path = os.path.abspath(blog_pkg_path)
+        if blog_pkg_path not in sys.path:
+            sys.path.insert(0, blog_pkg_path)
+
+        from tool_blog_rag import search_blog, get_post_content
+        result = search_blog(query=query, limit=5)
+
+        if not result.get('success') or not result.get('results'):
+            print(f"[WS] 심층연구 블로그 검색: 결과 없음")
+            return ""
+
+        # 관련도 높은 글(유사도 0.7 이상)만 전문 가져오기, 최대 3개
+        high_relevance = [r for r in result['results'] if r.get('similarity', 0) >= 0.7]
+        if not high_relevance:
+            # 0.7 이상이 없으면 최상위 1개라도 전문 가져오기
+            high_relevance = result['results'][:1]
+        high_relevance = high_relevance[:3]
+
+        lines = ["<baseline_from_user_blog>"]
+        lines.append("아래는 사용자의 블로그에서 이 주제와 관련된 기존 글의 전문입니다.")
+        lines.append("이 글들을 통해 사용자의 관점, 분석 깊이, 관심 범위를 파악하고,")
+        lines.append("외부 조사에서 보완/비판/확장할 방향을 설정하세요.\n")
+
+        full_count = 0
+        for item in high_relevance:
+            post_id = item.get('post_id')
+            if not post_id:
+                continue
+            full = get_post_content(post_id)
+            if full.get('success') and full.get('content'):
+                full_count += 1
+                content = full['content']
+                # 글이 너무 길면 4000자로 자르기
+                if len(content) > 4000:
+                    content = content[:4000] + "\n... (이하 생략)"
+                lines.append(f"### [{item['rank']}] {full['title']}")
+                lines.append(f"날짜: {full.get('date', '')} | 카테고리: {full.get('category', '')}")
+                lines.append(f"관련도 점수: {item.get('similarity', '')}\n")
+                lines.append(content)
+                lines.append("")
+
+        # 나머지 결과는 제목+핵심 인사이트만 요약
+        remaining = [r for r in result['results'] if r not in high_relevance]
+        if remaining:
+            lines.append("--- 기타 관련 글 (요약) ---")
+            for item in remaining:
+                insight = item.get('key_insight', item.get('content', '')[:100])
+                lines.append(f"- {item['title']} ({item.get('date', '')}) : {insight}")
+            lines.append("")
+
+        lines.append("</baseline_from_user_blog>")
+
+        print(f"[WS] 심층연구 블로그 검색: {len(result['results'])}개 결과, 전문 {full_count}개")
+        return "\n".join(lines)
+
+    except Exception as e:
+        print(f"[WS] 심층연구 블로그 검색 실패 (무시): {e}")
+        import traceback
+        traceback.print_exc()
+        return ""
+
+
+def inject_deep_research(augmented_msg: str, raw_message: str) -> str:
+    """심층연구: 블로그 RAG 검색을 강제 실행하고 가이드+기준선을 메시지에 주입"""
     from datetime import datetime
     guide = _get_deep_research_guide()
-    if not guide:
-        return message
     now = datetime.now()
     date_str = now.strftime("%Y년 %m월 %d일 %A")
+
+    # 1단계: 블로그 RAG 검색 강제 실행
+    baseline_section = _run_blog_baseline(raw_message)
+
     prefix = (
         "<deep_research_mode>\n"
         f"현재 날짜: {date_str}\n\n"
-        f"{guide}\n"
-        "</deep_research_mode>\n\n"
     )
-    print(f"[WS] 심층연구 가이드 주입됨 (날짜: {date_str})")
-    return prefix + message
+
+    if guide:
+        prefix += f"{guide}\n\n"
+
+    if baseline_section:
+        prefix += f"{baseline_section}\n"
+
+    prefix += "</deep_research_mode>\n\n"
+
+    print(f"[WS] 심층연구 가이드 주입됨 (날짜: {date_str}, 기준선: {'있음' if baseline_section else '없음'})")
+    return prefix + augmented_msg
 
 # 스트리밍을 위한 스레드 풀
 executor = ThreadPoolExecutor(max_workers=4)
@@ -555,7 +635,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             augmented_msg = runner.augment_with_ibl_references(message)
             # 심층연구 모드: 가이드 주입
             if deep_research:
-                augmented_msg = inject_deep_research(augmented_msg)
+                augmented_msg = inject_deep_research(augmented_msg, message)
             try:
                 for event in runner.ai.process_message_stream(
                     message_content=augmented_msg,
@@ -812,7 +892,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 augmented_msg = message
             # 심층연구 모드: 가이드 주입
             if deep_research:
-                augmented_msg = inject_deep_research(augmented_msg)
+                augmented_msg = inject_deep_research(augmented_msg, message)
             try:
                 # 통합된 스트리밍 함수 사용 - 모든 프로바이더 지원
                 for event in process_system_ai_message_stream(

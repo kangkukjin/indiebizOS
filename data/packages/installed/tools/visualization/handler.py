@@ -79,6 +79,16 @@ def execute(tool_name: str, params: dict, project_path: str = None):
             params["output_path"] = output_base
 
     try:
+        # 범용 chart 액션: chart_type으로 분기
+        if tool_name == "chart":
+            chart_type = params.get("chart_type", "line")
+            type_map = {
+                "line": "line_chart", "bar": "bar_chart", "pie": "pie_chart",
+                "scatter": "scatter_plot", "heatmap": "heatmap", "multi": "multi_chart",
+                "candlestick": "candlestick_chart",
+            }
+            tool_name = type_map.get(chart_type, "line_chart")
+
         if tool_name == "line_chart":
             tool = load_module("tool_line")
             return tool.create_line_chart(

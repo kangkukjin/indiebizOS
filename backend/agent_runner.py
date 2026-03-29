@@ -165,10 +165,11 @@ class AgentRunner:
             tools=tools
         )
 
-    def _build_system_prompt(self, role: str) -> str:
+    def _build_system_prompt(self, role: str, consciousness_output: dict = None) -> str:
         """시스템 프롬프트 구성 (동적 조합)
 
-        구조: base_prompt_v4.md + (조건부 위임 프롬프트) + IBL 환경 + 개별역할 + 영구메모
+        구조: base_prompt_v4.md + (조건부 위임 프롬프트) + IBL 환경
+              + 의식 에이전트 출력 + 개별역할 + 영구메모
         Phase 16: 모든 에이전트가 ibl_only 모드로 통일
         """
         from prompt_builder import build_agent_prompt
@@ -212,8 +213,77 @@ class AgentRunner:
             ibl_only=True,
             allowed_nodes=allowed_nodes_config,
             project_path=str(self.project_path),
-            agent_id=self.config.get("id")
+            agent_id=self.config.get("id"),
+            consciousness_output=consciousness_output
         )
+
+    def _run_consciousness(self, user_message: str, history: list) -> dict:
+        """의식 에이전트 실행 — 메타 판단
+
+        사용자 메시지와 히스토리를 분석하여 프롬프트 최적화 지침을 반환합니다.
+        실패 시 None을 반환하고, 기존 방식으로 폴백합니다.
+
+        Returns:
+            의식 에이전트 출력 dict 또는 None
+        """
+        try:
+            from consciousness_agent import (
+                get_consciousness_agent,
+                get_ibl_node_summary,
+                get_guide_list,
+                get_world_pulse_text,
+            )
+
+            agent = get_consciousness_agent()
+            if not agent.is_ready:
+                return None
+
+            allowed_nodes = self.config.get("allowed_nodes")
+            agent_name = self.config.get("name", "")
+
+            # 역할 전문 로드 (잘리지 않고 전체 전달 — self_awareness 판단용)
+            role_file = self.project_path / f"agent_{agent_name}_role.txt"
+            agent_role = ""
+            if role_file.exists():
+                agent_role = role_file.read_text(encoding='utf-8').strip()
+
+            # 영구메모 로드
+            agent_notes = self.config.get("notes", "")
+
+            result = agent.process(
+                user_message=user_message,
+                history=history,
+                ibl_node_summary=get_ibl_node_summary(allowed_nodes, user_message=user_message),
+                guide_list=get_guide_list(user_message),
+                world_pulse=get_world_pulse_text(),
+                agent_name=agent_name,
+                agent_role=agent_role,
+                agent_notes=agent_notes,
+            )
+
+            if result:
+                self._log(f"[의식] 태스크: {result.get('task_framing', '')[:60]}")
+            return result
+
+        except Exception as e:
+            self._log(f"[의식] 실행 실패 (폴백): {e}")
+            return None
+
+    def _apply_consciousness_to_history(self, history: list, consciousness_output: dict) -> list:
+        """의식 에이전트의 판단에 따라 히스토리를 편집합니다.
+
+        history_summary가 있으면 원본 히스토리를 요약으로 대체합니다.
+        요약이 비어있으면 원본 히스토리를 그대로 반환합니다.
+        """
+        if not consciousness_output:
+            return history
+
+        history_summary = consciousness_output.get("history_summary", "")
+        if not history_summary:
+            return history
+
+        # 원본 히스토리를 의식 에이전트의 요약으로 대체
+        return [{"role": "user", "content": f"[이전 대화 요약: {history_summary}]"}]
 
     def _get_agent_count(self) -> int:
         """프로젝트 내 활성 에이전트 수 반환"""
@@ -263,6 +333,11 @@ class AgentRunner:
             ("python-exec", "execute_python"),
             ("nodejs", "execute_node"),
             ("system_essentials", "run_command"),
+            # 에이전트 인지 도구 — IBL 경유 불가 (파라미터 구조 불일치)
+            ("system_essentials", "todo_write"),
+            ("system_essentials", "ask_user_question"),
+            ("system_essentials", "enter_plan_mode"),
+            ("system_essentials", "exit_plan_mode"),
         ]
         for pkg_id, tool_name in lang_tools:
             tool_json = pkg_base / pkg_id / "tool.json"
@@ -279,8 +354,8 @@ class AgentRunner:
 
         # 3) 가이드 검색 도구 (복잡한 작업 전에 매뉴얼 찾기)
         tools.append({
-            "name": "search_guide",
-            "description": "복잡한 작업 전에 가이드(워크플로우/레시피)를 검색합니다. 동영상 제작, 웹사이트 빌드, 투자 분석 등 복잡한 작업에는 단계별 가이드가 있을 수 있습니다. 작업 시작 전에 검색하세요.",
+            "name": "read_guide",
+            "description": "가이드 파일을 읽는 도구. 검색, 투자 분석, 동영상 제작, 웹사이트 빌드 등 복잡한 작업의 단계별 가이드가 저장되어 있다. 작업 전에 이 도구로 가이드를 읽어라. 예: query='검색'이면 검색 가이드를 읽음.",
             "input_schema": {
                 "type": "object",
                 "properties": {
@@ -305,7 +380,8 @@ class AgentRunner:
 
         IBL(도메인 특화) + 범용 프로그래밍 언어 + 가이드 검색
         """
-        return ["execute_ibl", "execute_python", "execute_node", "run_command", "search_guide"]
+        return ["execute_ibl", "execute_python", "execute_node", "run_command", "read_guide",
+                "todo_write", "ask_user_question", "enter_plan_mode", "exit_plan_mode"]
 
     def augment_with_ibl_references(self, user_message: str) -> str:
         """사용자 메시지에 IBL 참조 용례를 주입 (RAG)
@@ -601,6 +677,27 @@ class AgentRunner:
             # AI 처리
             if self.ai:
                 start_time = time_module.time()
+
+                # 무의식 에이전트 — 실행형/판���형 분류 (반사 신경)
+                request_type = self._classify_request(content)
+                self._log(f"[무의식] 분류: {request_type}")
+
+                # 판단형만 의식 에이전트 실행
+                consciousness_output = None
+                if request_type == "THINK":
+                    consciousness_output = self._run_consciousness(content, history)
+                if consciousness_output:
+                    # 시스템 프롬프트 재구성 (의식 에이전트 출력 반영)
+                    role_file = self.project_path / f"agent_{agent_name}_role.txt"
+                    role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
+                    new_prompt = self._build_system_prompt(role, consciousness_output)
+                    self.ai.system_prompt = new_prompt
+                    if self.ai._provider:
+                        self.ai._provider.system_prompt = new_prompt
+
+                    # 히스토리 편집 (의식 에이전트 판단에 따라)
+                    history = self._apply_consciousness_to_history(history, consciousness_output)
+
                 response = self.ai.process_message_with_history(
                     message_content=content,
                     from_email=from_addr,
@@ -610,6 +707,23 @@ class AgentRunner:
                 )
                 process_time = time_module.time() - start_time
                 self._log(f"AI 응답 생성 ({process_time:.1f}초): {len(response)}자")
+
+                # Goal 평가 루프 — 달성 기준이 있으면 평가 후 재시도
+                if consciousness_output:
+                    criteria = self._extract_achievement_criteria(consciousness_output)
+                    if criteria:
+                        from world_pulse import _load_config as _load_wp_config
+                        _goal_cfg = _load_wp_config().get("goal_eval", {})
+                        if _goal_cfg.get("enabled", True):
+                            self._log(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
+                            response = self._run_goal_evaluation_loop(
+                                user_message=content,
+                                criteria=criteria,
+                                initial_response=response,
+                                history=history,
+                                consciousness_output=consciousness_output,
+                                max_rounds=_goal_cfg.get("max_rounds", 3)
+                            )
 
                 # call_agent 호출 여부 확인
                 called_another = did_call_agent()
@@ -1965,3 +2079,262 @@ class AgentRunner:
                     # 일회성 Goal은 다음 루프에서 재개
         except Exception as e:
             self._log(f"[Goal 복구] 오류: {e}")
+
+    # ============================================================
+    # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경)
+    # ============================================================
+
+    def _classify_request(self, user_message: str) -> str:
+        """사용자 요청을 실행형(EXECUTE) 또는 판단형(THINK)으로 분류한다.
+
+        무의식 에이전트 — 의식 에이전트를 호출하기 전의 반사 신경.
+        실행형은 의식/평가 루프를 타지 않고 바로 실행된다.
+        """
+        try:
+            from consciousness_agent import lightweight_ai_call, get_unconscious_prompt
+
+            system_prompt = get_unconscious_prompt()
+            response = lightweight_ai_call(user_message, system_prompt=system_prompt)
+
+            if response is None:
+                return "THINK"  # AI 미준비 시 안전하게 판단형으로
+
+            result = response.strip().upper()
+            if "EXECUTE" in result:
+                return "EXECUTE"
+            return "THINK"
+
+        except Exception as e:
+            self._log(f"[무의식] 분류 실패: {e}")
+            return "THINK"  # 실패 시 안전하게 판단형으로
+
+    # ============================================================
+    # Goal 평가 루프 — 의식 에이전트의 달성 기준 기반 자동 평가
+    # ============================================================
+
+    def _extract_achievement_criteria(self, consciousness_output: dict) -> Optional[str]:
+        """의식 에이전트 출력에서 달성 기준을 추출한다.
+
+        1차: achievement_criteria 필드 (별도 필드)
+        2차: task_framing에서 "달성 기준:" 이후 텍스트 (하위 호환)
+        """
+        if not consciousness_output:
+            return None
+
+        # 1차: 별도 필드 (문자열 또는 리스트)
+        criteria = consciousness_output.get("achievement_criteria", "")
+        if isinstance(criteria, list):
+            criteria = ", ".join(str(c) for c in criteria if c)
+        if criteria and isinstance(criteria, str) and criteria.strip():
+            return criteria.strip()
+
+        # 2차: task_framing에서 추출 (하위 호환)
+        task_framing = consciousness_output.get("task_framing", "")
+        if "달성 기준:" in task_framing:
+            return task_framing.split("달성 기준:")[-1].strip().rstrip(".")
+        if "달성기준:" in task_framing:
+            return task_framing.split("달성기준:")[-1].strip().rstrip(".")
+
+        return None
+
+    def _collect_created_files(self, response: str) -> str:
+        """에이전트 응답에서 생성된 파일 경로를 찾아 내용을 읽는다."""
+        import os
+
+        # 절대 경로 패턴 매칭
+        path_pattern = re.compile(r'(/[^\s"\'<>]+\.\w{1,10})')
+        paths = path_pattern.findall(response)
+
+        files_content = []
+        for path in paths:
+            if os.path.isfile(path):
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    if len(content) > 10000:
+                        content = content[:10000] + "\n\n... (10000자 초과, 생략됨)"
+                    files_content.append(f"### {os.path.basename(path)}\n```\n{content}\n```")
+                except Exception:
+                    pass
+
+        return "\n\n".join(files_content) if files_content else ""
+
+    _evaluator_prompt_cache: str = ""
+
+    @classmethod
+    def _load_evaluator_prompt(cls) -> str:
+        """평가 에이전트 프롬프트 파일을 로드한다 (캐시)."""
+        if not cls._evaluator_prompt_cache:
+            prompt_path = Path(__file__).parent.parent / "data" / "common_prompts" / "evaluator_prompt.md"
+            try:
+                cls._evaluator_prompt_cache = prompt_path.read_text(encoding='utf-8')
+            except FileNotFoundError:
+                cls._evaluator_prompt_cache = "달성 기준의 모든 항목을 엄격히 평가하라."
+        return cls._evaluator_prompt_cache
+
+    def _evaluate_achievement(self, user_message: str, criteria: str,
+                               response: str, created_files: str,
+                               consciousness_output: dict = None,
+                               tool_results_str: str = "") -> tuple:
+        """평가 AI로 달성 기준 충족 여부를 판단한다.
+
+        의식 에이전트의 출력(self_awareness, capability_focus, world_state)을 활용하여
+        결과물뿐 아니라 도구 활용의 적절성까지 평가한다.
+
+        Returns:
+            (achieved: bool, feedback: str)
+        """
+        evaluator_system_prompt = self._load_evaluator_prompt()
+
+        # 메시지에는 평가 대상 데이터만
+        prompt = (
+            f"## 사용자 요청\n{user_message}\n\n"
+            f"## 달성 기준\n{criteria}\n\n"
+        )
+
+        # 의식 에이전트의 자기 인식과 도구 정보를 평가 맥락으로 제공
+        if consciousness_output:
+            self_awareness = consciousness_output.get("self_awareness", "")
+            if self_awareness:
+                prompt += f"## 에이전트 자기 인식 (의식 에이전트 판단)\n{self_awareness}\n\n"
+
+            cap_focus = consciousness_output.get("capability_focus", {})
+            if isinstance(cap_focus, dict):
+                hint = cap_focus.get("hint", "")
+                actions = cap_focus.get("highlight_actions", [])
+                if hint or actions:
+                    prompt += "## 도구 활용 맥락\n"
+                    if actions:
+                        prompt += f"- 추천된 도구: {', '.join(actions)}\n"
+                    if hint:
+                        prompt += f"- 접근 방향: {hint}\n"
+                    prompt += "\n"
+
+            world_state = consciousness_output.get("world_state", "")
+            if world_state:
+                prompt += f"## 세계 상태\n{world_state}\n\n"
+
+        if tool_results_str:
+            prompt += f"## 도구 실행 결과\n{tool_results_str}\n\n"
+
+        prompt += f"## 에이전트 응답\n{response[:8000]}\n\n"
+
+        if created_files:
+            prompt += f"## 생성된 파일 내용\n{created_files}\n\n"
+
+        prompt += "위 정보를 바탕으로 평가하세요. 도구 실행 결과가 있으면 실제로 작업이 수행되었는지 확인하세요."
+
+        try:
+            from consciousness_agent import lightweight_ai_call
+
+            eval_response = lightweight_ai_call(prompt, system_prompt=evaluator_system_prompt)
+            if eval_response is None or not eval_response.strip():
+                self._log("[GoalEval] AI 응답 없음 (API 오류 등), 통과 처리")
+                return True, "평가 스킵 (AI 응답 없음)"
+
+            self._log(f"[GoalEval] 평가 응답: {eval_response[:200]}")
+
+            first_line = eval_response.strip().split('\n')[0].strip().upper()
+            achieved = "ACHIEVED" in first_line and "NOT" not in first_line
+            return achieved, eval_response
+
+        except Exception as e:
+            self._log(f"[GoalEval] 평가 오류: {e}")
+            return True, f"평가 오류 (통과 처리): {e}"
+
+    def _run_goal_evaluation_loop(self, user_message: str, criteria: str,
+                                   initial_response: str, history: list,
+                                   consciousness_output: dict = None,
+                                   max_rounds: int = 2,
+                                   tool_results: list = None) -> str:
+        """달성 기준 기반 평가 루프.
+
+        Args:
+            user_message: 사용자 원래 요청
+            criteria: 달성 기준
+            initial_response: 에이전트 첫 응답
+            history: 대화 히스토리
+            consciousness_output: 의식 에이전트 출력 (self_awareness, capability_focus 등)
+            max_rounds: 최대 평가 횟수 (기본 2)
+            tool_results: 도구 실행 이력 리스트
+
+        Returns:
+            최종 응답 텍스트
+        """
+        import time as _time
+        response = initial_response
+
+        # 도구 실행 이력을 문자열로 변환
+        tool_results_str = ""
+        if tool_results:
+            tool_entries = []
+            for tr in tool_results:
+                if isinstance(tr, str) and tr.strip():
+                    # 너무 긴 결과는 truncate
+                    entry = tr[:2000] if len(tr) > 2000 else tr
+                    tool_entries.append(entry)
+            if tool_entries:
+                tool_results_str = "\n---\n".join(tool_entries[-5:])  # 최근 5개
+
+        for round_num in range(1, max_rounds + 1):
+            self._log(f"[GoalEval] 라운드 {round_num}/{max_rounds} 평가 시작")
+            eval_start = _time.time()
+
+            # 생성된 파일 수집
+            created_files = self._collect_created_files(response)
+
+            # 달성 여부 평가 (의식 에이전트의 자기 인식 + 도구 실행 이력 포함)
+            achieved, feedback = self._evaluate_achievement(
+                user_message, criteria, response, created_files,
+                consciousness_output=consciousness_output,
+                tool_results_str=tool_results_str
+            )
+
+            eval_time = _time.time() - eval_start
+            self._log(
+                f"[GoalEval] 라운드 {round_num}: "
+                f"{'ACHIEVED' if achieved else 'NOT_ACHIEVED'} "
+                f"({eval_time:.1f}초)"
+            )
+
+            if achieved:
+                return response
+
+            # 마지막 라운드면 그냥 반환
+            if round_num >= max_rounds:
+                self._log(f"[GoalEval] 라운드 소진, 현재 응답 반환")
+                return response
+
+            # 피드백을 주입하여 재실행
+            self._log(f"[GoalEval] 재실행 시작 (피드백 주입)")
+            feedback_message = (
+                f"[평가 피드백] 이전 응답이 달성 기준을 충족하지 못했습니다.\n\n"
+                f"달성 기준: {criteria}\n\n"
+                f"부족한 점:\n{feedback}\n\n"
+                f"위 피드백을 반영하여 다시 작업하세요. "
+                f"이전 작업 결과를 최대한 활용하고, 부족한 부분만 보완하세요."
+            )
+
+            # 피드백을 히스토리에 추가하여 재실행
+            retry_history = history + [
+                {"role": "assistant", "content": response[:2000]},
+                {"role": "user", "content": feedback_message}
+            ]
+
+            try:
+                retry_response = self.ai.process_message_with_history(
+                    message_content=feedback_message,
+                    history=retry_history,
+                    task_id=f"goal_retry_{round_num}"
+                )
+                # 재실행 결과가 비어있으면 (503 등) 이전 응답 유지
+                if retry_response and retry_response.strip():
+                    response = retry_response
+                    self._log(f"[GoalEval] 재실행 완료: {len(response)}자")
+                else:
+                    self._log(f"[GoalEval] 재실행 결과 비어있음, 이전 응답 유지 ({len(response)}자)")
+            except Exception as e:
+                self._log(f"[GoalEval] 재실행 실패: {e}")
+                return initial_response
+
+        return response

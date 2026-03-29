@@ -163,6 +163,15 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                         '병렬: [sense:web_search]{query: "AI"} & [sense:search_news]{query: "tech"} / '
                         '폴백: [sense:price]{symbol: "AAPL"} ?? [sense:web_search]{query: "AAPL stock"}'
                     )
+                },
+                "files": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "긴 텍스트/코드 콘텐츠를 IBL 파서 밖에서 전달. "
+                        'IBL 코드에서 $file:0, $file:1 등으로 참조. '
+                        '예: code=[self:write]{path: "app.tsx", content: "$file:0"}, files=["import React..."]'
+                    )
                 }
             },
             "required": ["code"]

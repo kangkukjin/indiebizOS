@@ -131,6 +131,20 @@
 
 ---
 
+## 멀티 프로바이더 지원
+
+자동응답 AI는 3개 프로바이더를 지원합니다. `system_ai_config.json`의 `provider` 설정에 따라 분기:
+
+| 프로바이더 | `provider` 값 | 내부 메서드 |
+|-----------|---------------|------------|
+| Anthropic (Claude) | `anthropic` | `_call_ai_with_tools()` (기본값) |
+| OpenAI (GPT) | `openai` | `_call_openai_with_tools()` |
+| Google (Gemini) | `google` | `_call_google_with_tools()` |
+
+각 프로바이더별로 Tool Use 호출 방식이 다르며, `auto_response.py`에서 통합 처리합니다.
+
+---
+
 ## 설정 파일
 
 ### `data/system_ai_config.json`
@@ -142,6 +156,8 @@
   "apiKey": "sk-..."
 }
 ```
+
+> `provider`를 `"openai"` 또는 `"google"`로 변경하면 해당 프로바이더의 모델과 API 키를 사용합니다.
 
 ---
 
@@ -166,4 +182,4 @@
 
 ---
 
-*마지막 업데이트: 2026-01-21*
+*마지막 업데이트: 2026-03-27*

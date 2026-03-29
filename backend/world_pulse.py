@@ -1,20 +1,20 @@
 """
-world_pulse.py - 의식 모듈 (Consciousness Module)
+world_pulse.py - World Pulse 모듈
 IndieBiz OS Core
 
 세계/사용자/자기 자신의 상태를 주기적으로 감지하고 축적합니다.
 
 기능:
-1. World Pulse: 세계 상태 스냅샷 (경제, 뉴스, 기술, 날씨)
-2. Consciousness Pulse: 매시간 세계/사용자/자신 상태 업데이트
+1. World Pulse 스냅샷: 세계 상태 (경제, 뉴스, 기술, 날씨)
+2. World Pulse 수집: 매시간 세계/사용자/자신 상태 업데이트
 3. Self-Check: 주기적 IBL 액션 자가 점검 (면역 순찰)
 
 사용:
-    from world_pulse import ensure_today_pulse, collect_consciousness_pulse, run_self_check
+    from world_pulse import ensure_today_pulse, collect_world_pulse, run_self_check
 
-    ensure_today_pulse()           # 시스템 기동 시
-    collect_consciousness_pulse()  # 매시간 의식 펄스
-    run_self_check()               # 매 6시간 자가 점검
+    ensure_today_pulse()        # 시스템 기동 시
+    collect_world_pulse()       # 매시간 펄스 수집
+    run_self_check()            # 매 6시간 자가 점검
 """
 
 import json
@@ -36,7 +36,7 @@ DATA_PATH = BASE_PATH / "data"
 PULSE_DB_PATH = DATA_PATH / "world_pulse_db.json"
 PULSE_CONFIG_PATH = DATA_PATH / "world_pulse_config.json"
 PULSE_GUIDE_PATH = DATA_PATH / "guides" / "world_pulse.md"
-CONSCIOUSNESS_DB_PATH = DATA_PATH / "consciousness_pulse.db"
+CONSCIOUSNESS_DB_PATH = DATA_PATH / "world_pulse.db"
 
 # 수집 중 플래그 (중복 실행 방지)
 _collecting = False
@@ -47,10 +47,10 @@ _config_cache: Optional[Dict] = None
 
 
 # ============================================================
-# Consciousness DB (SQLite)
+# World Pulse DB (SQLite)
 # ============================================================
 
-def _init_consciousness_db():
+def _init_pulse_db():
     """의식 DB 초기화 — pulse_log + self_checks 테이블"""
     conn = sqlite3.connect(str(CONSCIOUSNESS_DB_PATH), timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
@@ -77,10 +77,10 @@ def _init_consciousness_db():
     conn.close()
 
 
-def _get_consciousness_db():
+def _get_pulse_db():
     """의식 DB 연결 반환"""
     if not CONSCIOUSNESS_DB_PATH.exists():
-        _init_consciousness_db()
+        _init_pulse_db()
     conn = sqlite3.connect(str(CONSCIOUSNESS_DB_PATH), timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.row_factory = sqlite3.Row
@@ -90,18 +90,18 @@ def _get_consciousness_db():
 def _cleanup_old_data():
     """오래된 의식 데이터 정리 (retention_days 기준)"""
     config = _load_config()
-    cp_config = config.get("consciousness_pulse", {})
+    cp_config = config.get("pulse_schedule", {})
     retention = cp_config.get("retention_days", 30)
     cutoff = (datetime.now() - timedelta(days=retention)).isoformat()
 
     try:
-        conn = _get_consciousness_db()
+        conn = _get_pulse_db()
         conn.execute("DELETE FROM pulse_log WHERE timestamp < ?", (cutoff,))
         conn.execute("DELETE FROM self_checks WHERE timestamp < ?", (cutoff,))
         conn.commit()
         conn.close()
     except Exception as e:
-        logger.debug(f"[Consciousness] 정리 실패: {e}")
+        logger.debug(f"[WorldPulse] 정리 실패: {e}")
 
 
 def _load_config() -> Dict:
@@ -511,19 +511,43 @@ def _collect_system_status() -> Dict:
     except Exception as e:
         logger.debug(f"[WorldPulse] 프로젝트/에이전트 수집 실패: {e}")
 
-    # 2) 최근 대화 주제 (system_ai_memory에서)
+    # 2) 최근 대화 주제 (전체 프로젝트 + 시스템 AI)
     try:
+        all_topics = []
+
+        # 시스템 AI
         from system_ai_memory import get_recent_conversations
-        recent = get_recent_conversations(limit=5)
-        topics = []
-        for conv in recent:
+        for conv in get_recent_conversations(limit=5):
             content = conv.get("content", "") if isinstance(conv, dict) else str(conv)
             if content and conv.get("role") == "user":
-                # 첫 30자만
                 topic = content[:30].replace("\n", " ").strip()
                 if topic:
-                    topics.append(topic)
-        status["recent_topics"] = topics[:3]
+                    all_topics.append({"topic": topic, "project": "시스템 AI", "ts": conv.get("timestamp", "")})
+
+        # 프로젝트별
+        from project_manager import ProjectManager
+        from conversation_db import ConversationDB
+        _pm = ProjectManager()
+        for proj in _pm.list_projects():
+            try:
+                proj_path = pm.projects_path / proj.get("id", "")
+                db_path = proj_path / "conversations.db"
+                if not db_path.exists():
+                    continue
+                db = ConversationDB(str(db_path))
+                conn = db._get_conn()
+                rows = conn.execute(
+                    "SELECT content, timestamp FROM messages WHERE role='user' ORDER BY timestamp DESC LIMIT 2"
+                ).fetchall()
+                for row in rows:
+                    topic = (row[0] or "")[:30].replace("\n", " ").strip()
+                    if topic:
+                        all_topics.append({"topic": topic, "project": proj.get("name", ""), "ts": row[1] or ""})
+            except Exception:
+                continue
+
+        all_topics.sort(key=lambda x: x.get("ts", ""), reverse=True)
+        status["recent_topics"] = [f"{t['topic']} ({t['project']})" for t in all_topics[:3]]
     except Exception as e:
         logger.debug(f"[WorldPulse] 최근 대화 수집 실패: {e}")
 
@@ -577,7 +601,7 @@ def generate_guide():
         "> 이 정보는 대화 시작 시 시스템 프롬프트에 자동 포함됩니다.",
         "> 사용자가 '요즘 세상은 어때', '오늘 경제 상황' 등을 물으면",
         "> 아래 데이터를 바로 활용하여 답하세요.",
-        "> [sense:world_refresh]나 search_guide 호출은 불필요합니다.",
+        "> [sense:world_refresh]나 read_guide 호출은 불필요합니다.",
         "",
     ]
 
@@ -615,27 +639,7 @@ def generate_guide():
             lines.append(f"- 저장소 여유: {sys_status['disk_free_gb']}GB")
         lines.append("")
 
-    # ── 사용자 현황 (의식 펄스) ──
-    try:
-        user_state = _collect_user_state()
-        if user_state:
-            lines.append("## 사용자 현황")
-            conv_count = user_state.get("recent_conversations", 0)
-            lines.append(f"- 최근 1시간 대화: {conv_count}건")
-            pending = user_state.get("pending_tasks", 0)
-            if pending > 0:
-                lines.append(f"- 미처리 태스크: {pending}건")
-            upcoming = user_state.get("upcoming_events", [])
-            if upcoming:
-                lines.append(f"- 예정 일정: {', '.join(upcoming)}")
-            topics = user_state.get("recent_topics", [])
-            if topics:
-                lines.append(f"- 최근 주제: {' / '.join(topics)}")
-            lines.append("")
-    except Exception:
-        pass
-
-    # ── 시스템 건강 (의식 펄스) ──
+    # ── 시스템 건강 (World Pulse) ──
     try:
         self_state = _collect_self_state()
         services = self_state.get("services", {})
@@ -820,42 +824,67 @@ def get_world_pulse_for_prompt() -> str:
 
 
 # ============================================================
-# Consciousness Pulse — 매시간 세계/사용자/자신 상태 업데이트
+# World Pulse 수집 — 매시간 세계/사용자/자신 상태 업데이트
 # ============================================================
 
 def _collect_user_state() -> Dict:
     """사용자 상태 수집 (DB 쿼리만, API 호출 없음)"""
     state = {}
 
-    # 1) 최근 1시간 대화 수 및 주제
+    # 1) 모든 프로젝트 + 시스템 AI에서 최근 대화 수집
     try:
+        all_recent = []
+
+        # 시스템 AI 대화
         from system_ai_memory import get_recent_conversations
-        recent = get_recent_conversations(limit=20)
+        for c in get_recent_conversations(limit=5):
+            if isinstance(c, dict) and c.get("role") == "user":
+                all_recent.append({
+                    "project": "시스템 AI",
+                    "content": c.get("content", "")[:40].replace("\n", " ").strip(),
+                    "timestamp": c.get("timestamp", ""),
+                })
+
+        # 프로젝트별 대화
+        from project_manager import ProjectManager
+        from conversation_db import ConversationDB
+        pm = ProjectManager()
+        for proj in pm.list_projects():
+            try:
+                proj_path = pm.projects_path / proj.get("id", "")
+                db_path = proj_path / "conversations.db"
+                if not db_path.exists():
+                    continue
+                db = ConversationDB(str(db_path))
+                # 최근 user 메시지를 가져오기 위해 직접 쿼리
+                conn = db._get_conn()
+                rows = conn.execute(
+                    "SELECT content, timestamp FROM messages WHERE role='user' ORDER BY timestamp DESC LIMIT 3"
+                ).fetchall()
+                for row in rows:
+                    content = (row[0] or "")[:40].replace("\n", " ").strip()
+                    if content:
+                        all_recent.append({
+                            "project": proj.get("name", proj.get("id", "")),
+                            "content": content,
+                            "timestamp": row[1] or "",
+                        })
+            except Exception:
+                continue
+
+        # 시간순 정렬 후 최근 3개
+        all_recent.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
         one_hour_ago = (datetime.now() - timedelta(hours=1)).isoformat()
-        recent_convs = [c for c in recent
-                        if isinstance(c, dict) and c.get("timestamp", "") >= one_hour_ago]
-        state["recent_conversations"] = len(recent_convs)
+        recent_in_hour = [r for r in all_recent if r.get("timestamp", "") >= one_hour_ago]
 
-        topics = []
-        for c in recent_convs:
-            if c.get("role") == "user":
-                topic = c.get("content", "")[:40].replace("\n", " ").strip()
-                if topic:
-                    topics.append(topic)
-        state["recent_topics"] = topics[:3]
+        state["recent_conversations"] = len(recent_in_hour)
+        state["recent_topics"] = [
+            f"{r['content']} ({r['project']})" for r in all_recent[:3]
+        ]
     except Exception as e:
-        logger.debug(f"[Consciousness] 대화 수집 실패: {e}")
+        logger.debug(f"[WorldPulse] 대화 수집 실패: {e}")
 
-    # 2) 미처리 메시지 (시스템 AI 태스크)
-    try:
-        from system_ai_memory import get_pending_tasks
-        tasks = get_pending_tasks()
-        state["pending_tasks"] = len(tasks) if tasks else 0
-    except Exception as e:
-        logger.debug(f"[Consciousness] 태스크 수집 실패: {e}")
-        state["pending_tasks"] = 0
-
-    # 3) 다가오는 일정
+    # 2) 다가오는 일정
     try:
         from calendar_manager import get_calendar_manager
         cm = get_calendar_manager()
@@ -871,7 +900,7 @@ def _collect_user_state() -> Dict:
                 upcoming.append(evt.get("title", ""))
         state["upcoming_events"] = upcoming[:5]
     except Exception as e:
-        logger.debug(f"[Consciousness] 일정 수집 실패: {e}")
+        logger.debug(f"[WorldPulse] 일정 수집 실패: {e}")
 
     return state
 
@@ -939,12 +968,12 @@ def _collect_world_delta() -> Dict:
 
     # 뉴스는 설정된 간격으로만 (기본 6시간)
     config = _load_config()
-    cp_config = config.get("consciousness_pulse", {})
+    cp_config = config.get("pulse_schedule", {})
     news_interval = cp_config.get("world_news_interval_hours", 6)
 
     should_collect_news = False
     try:
-        conn = _get_consciousness_db()
+        conn = _get_pulse_db()
         row = conn.execute(
             "SELECT timestamp FROM pulse_log WHERE world LIKE '%news%' ORDER BY id DESC LIMIT 1"
         ).fetchone()
@@ -969,14 +998,14 @@ def _collect_world_delta() -> Dict:
     return delta
 
 
-def collect_consciousness_pulse() -> Dict:
-    """매시간 의식 펄스 수집 — 세계/사용자/자신 통합"""
+def collect_world_pulse() -> Dict:
+    """매시간 World Pulse 수집 — 세계/사용자/자신 통합"""
     config = _load_config()
-    cp_config = config.get("consciousness_pulse", {})
+    cp_config = config.get("pulse_schedule", {})
     if not cp_config.get("enabled", True):
         return {"status": "disabled"}
 
-    logger.info("[Consciousness] 의식 펄스 수집 시작")
+    logger.info("[WorldPulse] World Pulse 수집 시작")
 
     pulse = {
         "timestamp": datetime.now().isoformat(),
@@ -1015,14 +1044,14 @@ def collect_consciousness_pulse() -> Dict:
     if random.random() < 0.04:  # ~하루에 한번
         _cleanup_old_data()
 
-    logger.info(f"[Consciousness] 의식 펄스 완료: {pulse['status']}")
+    logger.info(f"[WorldPulse] World Pulse 완료: {pulse['status']}")
     return pulse
 
 
 def save_pulse(pulse: Dict):
-    """의식 펄스 기록 저장"""
+    """World Pulse 기록 저장"""
     try:
-        conn = _get_consciousness_db()
+        conn = _get_pulse_db()
         conn.execute(
             "INSERT INTO pulse_log (timestamp, world, user_state, self_state, status) VALUES (?, ?, ?, ?, ?)",
             (
@@ -1036,14 +1065,14 @@ def save_pulse(pulse: Dict):
         conn.commit()
         conn.close()
     except Exception as e:
-        logger.warning(f"[Consciousness] 펄스 저장 실패: {e}")
+        logger.warning(f"[WorldPulse] 펄스 저장 실패: {e}")
 
 
 def get_recent_pulses(hours: int = 24) -> List[Dict]:
-    """최근 N시간 의식 펄스 조회"""
+    """최근 N시간 World Pulse 조회"""
     cutoff = (datetime.now() - timedelta(hours=hours)).isoformat()
     try:
-        conn = _get_consciousness_db()
+        conn = _get_pulse_db()
         rows = conn.execute(
             "SELECT * FROM pulse_log WHERE timestamp >= ? ORDER BY id DESC",
             (cutoff,)
@@ -1061,7 +1090,7 @@ def get_recent_pulses(hours: int = 24) -> List[Dict]:
             for r in rows
         ]
     except Exception as e:
-        logger.warning(f"[Consciousness] 펄스 조회 실패: {e}")
+        logger.warning(f"[WorldPulse] 펄스 조회 실패: {e}")
         return []
 
 
@@ -1136,17 +1165,23 @@ def run_self_check() -> Dict:
     selected = random.sample(safe_actions, min(actions_per_check, len(safe_actions)))
     results = []
 
+    # 액션별 테스트 파라미터 로드
+    test_params_map = sc_config.get("test_params", {})
+
     for action_info in selected:
         node = action_info["node"]
         action = action_info["action"]
 
-        logger.info(f"[SelfCheck] 점검 중: [{node}:{action}]")
+        # 설정에 테스트 파라미터가 있으면 사용, 없으면 빈 dict
+        params = dict(test_params_map.get(action, {}))
+
+        logger.info(f"[SelfCheck] 점검 중: [{node}:{action}]" + (f" (params: {params})" if params else ""))
 
         start = _time.time()
         try:
             from ibl_engine import execute_ibl
             result = execute_ibl(
-                {"_node": node, "action": action, "params": {}},
+                {"_node": node, "action": action, "params": params},
                 ".",
                 agent_id="__self_check__"
             )
@@ -1181,7 +1216,7 @@ def run_self_check() -> Dict:
 def save_self_check(result: Dict):
     """자가점검 결과 저장"""
     try:
-        conn = _get_consciousness_db()
+        conn = _get_pulse_db()
         conn.execute(
             "INSERT INTO self_checks (timestamp, node, action, success, response_ms, error_message, data_quality) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -1204,7 +1239,7 @@ def save_self_check(result: Dict):
 def _check_failure_alerts(threshold: int = 3):
     """연속 실패 액션 감지 및 알림"""
     try:
-        conn = _get_consciousness_db()
+        conn = _get_pulse_db()
         # 각 액션의 최근 N회 결과 확인
         rows = conn.execute("""
             SELECT node, action, GROUP_CONCAT(success) as recent
@@ -1244,7 +1279,7 @@ def _check_failure_alerts(threshold: int = 3):
 def get_action_health_summary() -> Dict:
     """액션별 건강 상태 요약"""
     try:
-        conn = _get_consciousness_db()
+        conn = _get_pulse_db()
         rows = conn.execute("""
             SELECT node, action,
                    COUNT(*) as total,
@@ -1275,7 +1310,7 @@ def get_action_health_summary() -> Dict:
 def get_recent_self_checks(limit: int = 20) -> List[Dict]:
     """최근 자가점검 결과 조회"""
     try:
-        conn = _get_consciousness_db()
+        conn = _get_pulse_db()
         rows = conn.execute(
             "SELECT * FROM self_checks ORDER BY id DESC LIMIT ?", (limit,)
         ).fetchall()
@@ -1324,12 +1359,12 @@ def get_system_health() -> Dict:
 # CalendarManager 연동 — 스케줄 등록
 # ============================================================
 
-def register_consciousness_tasks():
-    """CalendarManager에 의식 펄스와 자가점검을 등록"""
+def register_pulse_tasks():
+    """CalendarManager에 World Pulse와 자가점검을 등록"""
     global _config_cache
     _config_cache = None  # 설정 캐시 무효화 (새 설정 반영)
     config = _load_config()
-    cp_config = config.get("consciousness_pulse", {})
+    cp_config = config.get("pulse_schedule", {})
     sc_config = config.get("self_check", {})
 
     try:
@@ -1337,33 +1372,33 @@ def register_consciousness_tasks():
         cm = get_calendar_manager()
 
         # 커스텀 액션 등록
-        cm.actions["consciousness_pulse"] = lambda task: collect_consciousness_pulse()
+        cm.actions["world_pulse"] = lambda task: collect_world_pulse()
         cm.actions["self_check"] = lambda task: run_self_check()
 
         # 기존에 등록된 의식 이벤트가 있는지 확인
         existing = {evt.get("title"): evt for evt in cm.list_events()}
 
-        # 1) 의식 펄스 (매시간)
-        if cp_config.get("enabled", True) and "[Consciousness] 의식 펄스" not in existing:
+        # 1) World Pulse (매시간)
+        if cp_config.get("enabled", True) and "[WorldPulse] 펄스 수집" not in existing:
             interval = cp_config.get("interval_hours", 1)
             cm.add_event(
-                title="[Consciousness] 의식 펄스",
+                title="[WorldPulse] 펄스 수집",
                 event_type="schedule",
                 repeat="interval",
                 interval_hours=interval,
                 event_time=datetime.now().strftime("%H:%M"),
-                action="consciousness_pulse",
+                action="world_pulse",
                 enabled=True,
                 owner_project_id="__system_ai__",
                 owner_agent_id="system_ai",
             )
-            logger.info(f"[Consciousness] 의식 펄스 등록 (매 {interval}시간)")
+            logger.info(f"[WorldPulse] World Pulse 등록 (매 {interval}시간)")
 
         # 2) 자가점검 (매 6시간)
-        if sc_config.get("enabled", True) and "[Consciousness] 자가점검" not in existing:
+        if sc_config.get("enabled", True) and "[WorldPulse] 자가점검" not in existing:
             interval = sc_config.get("interval_hours", 6)
             cm.add_event(
-                title="[Consciousness] 자가점검",
+                title="[WorldPulse] 자가점검",
                 event_type="schedule",
                 repeat="interval",
                 interval_hours=interval,
@@ -1373,10 +1408,10 @@ def register_consciousness_tasks():
                 owner_project_id="__system_ai__",
                 owner_agent_id="system_ai",
             )
-            logger.info(f"[Consciousness] 자가점검 등록 (매 {interval}시간)")
+            logger.info(f"[WorldPulse] 자가점검 등록 (매 {interval}시간)")
 
         # DB 초기화
-        _init_consciousness_db()
+        _init_pulse_db()
 
         # 서버 시작 시: 최근 1시간 내 펄스가 없으면 수집
         import threading
@@ -1384,13 +1419,13 @@ def register_consciousness_tasks():
             try:
                 recent = get_recent_pulses(hours=1)
                 if recent:
-                    logger.info(f"[Consciousness] 최근 펄스 있음 ({len(recent)}건) — 건너뜀")
+                    logger.info(f"[WorldPulse] 최근 펄스 있음 ({len(recent)}건) — 건너뜀")
                     return
-                collect_consciousness_pulse()
-                logger.info("[Consciousness] 최근 펄스 없어서 수집 완료")
+                collect_world_pulse()
+                logger.info("[WorldPulse] 최근 펄스 없어서 수집 완료")
             except Exception as e:
-                logger.error(f"[Consciousness] 시작 시 펄스 체크 실패: {e}")
-        threading.Thread(target=_initial_pulse_if_needed, daemon=True, name="initial-consciousness").start()
+                logger.error(f"[WorldPulse] 시작 시 펄스 체크 실패: {e}")
+        threading.Thread(target=_initial_pulse_if_needed, daemon=True, name="initial-world-pulse").start()
 
     except Exception as e:
-        logger.error(f"[Consciousness] 스케줄 등록 실패: {e}")
+        logger.error(f"[WorldPulse] 스케줄 등록 실패: {e}")

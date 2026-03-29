@@ -115,6 +115,8 @@ def _normalize_symbol(symbol: str) -> str:
     - 한국 6자리 종목코드 → .KS 접미사 (005930 → 005930.KS)
     - 이미 올바른 심볼은 그대로 반환
     """
+    if not symbol:
+        raise ValueError("symbol 파라미터가 필요합니다.")
     s = symbol.strip()
 
     # 1) 시장 지수 별명 → yfinance 심볼
@@ -141,6 +143,9 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d") -> di
     """
     Yahoo Finance를 통해 주식/ETF 가격 조회
     """
+    if not symbol:
+        return {"success": False, "error": "symbol 파라미터가 필요합니다."}
+
     # 암호화폐 심볼인 경우 CoinGecko API 사용
     crypto_symbols = ["BTC", "ETH", "XRP", "DOGE", "ADA", "SOL", "DOT", "MATIC", "AVAX",
                       "LINK", "UNI", "ATOM", "LTC", "BCH", "BNB", "SHIB"]
@@ -249,6 +254,8 @@ def get_stock_info(symbol: str) -> dict:
     """
     Yahoo Finance를 통해 종목 상세 정보 조회
     """
+    if not symbol:
+        return {"success": False, "error": "symbol 파라미터가 필요합니다."}
     symbol = _normalize_symbol(symbol)
 
     try:

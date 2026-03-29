@@ -27,7 +27,7 @@ from .imports import (
 from tools import (
     execute_python,
     execute_nodejs,
-    open_in_browser,
+
     read_file,
     write_file,
     list_directory,
@@ -101,10 +101,6 @@ class ToolExecutorMixin:
                 result = execute_nodejs(code)
                 return result
 
-            elif tool_name == "open_in_browser":
-                file_path = tool_input.get("file_path", "")
-                result = open_in_browser(file_path)
-                return result
 
             elif tool_name == "read_file":
                 file_path = tool_input.get("file_path", "")

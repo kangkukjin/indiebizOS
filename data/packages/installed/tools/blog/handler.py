@@ -91,18 +91,13 @@ def execute(tool_name: str, args: dict, project_path: str = ".") -> str:
             from tool_kinsight import kinsight
             result = kinsight(
                 project_path=project_path,
+                count=args.get("count", 15),
                 before_date=args.get("before_date")
             )
             return format_json(result)
 
         elif tool_name == "kinsight2":
-            from tool_kinsight import kinsight2
-            result = kinsight2(
-                project_path=project_path,
-                count=args.get("count", 10),
-                before_date=args.get("before_date")
-            )
-            return format_json(result)
+            return format_json({"success": False, "error": "kinsight2는 kinsight로 통합되었습니다. [self:kinsight]{count: N}을 사용하세요."})
 
         # RAG 검색 도구들
         elif tool_name == "search_blog_rag":

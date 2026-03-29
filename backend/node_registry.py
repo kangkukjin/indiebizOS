@@ -122,6 +122,8 @@ def _build_node_descriptor(node_name: str, node_config: dict) -> dict:
             action_desc["mapped_tool"] = action_cfg["tool"]
         if action_cfg.get("keywords"):
             action_desc["keywords"] = action_cfg["keywords"]
+        if action_cfg.get("implementation"):
+            action_desc["implementation"] = action_cfg["implementation"]
         actions.append(action_desc)
 
     # 설명에서 태그 추출
@@ -436,7 +438,7 @@ def get_node(node_id: str) -> Optional[Dict]:
     return None
 
 
-def discover(query: str, limit: int = 10) -> List[Dict]:
+def discover(query: str, limit: int = 10, allowed_nodes: list = None) -> List[Dict]:
     """
     키워드로 적합한 노드/액션 자동 탐색 (노드 + 에이전트)
 
@@ -446,6 +448,7 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
     Args:
         query: 검색 키워드 (예: "주가", "날씨", "사진", "블로그 검색")
         limit: 최대 결과 수
+        allowed_nodes: 허용된 노드 이름 리스트 (None이면 전체 검색)
 
     Returns:
         매칭 결과 리스트 (점수순):
@@ -478,6 +481,10 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
         tokens = [t for t in tokens if t not in _URL_NOISE and len(t) > 2]
         tokens.extend(url_tokens)
     nodes = list_nodes()
+    # allowed_nodes 필터링
+    if allowed_nodes is not None:
+        allowed_set = set(allowed_nodes)
+        nodes = [n for n in nodes if n["id"] in allowed_set]
     results = []
 
     # 일반적 토큰 (많은 노드에 나타나는 단어) - 가중치 축소
@@ -581,6 +588,8 @@ def discover(query: str, limit: int = 10) -> List[Dict]:
                 }
                 if action_group:
                     detail["group"] = action_group
+                if action.get("implementation"):
+                    detail["implementation"] = action["implementation"]
                 action_details.append(detail)
 
         # 에이전트 노드: capabilities 매칭 (보너스)

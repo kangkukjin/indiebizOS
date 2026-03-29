@@ -122,7 +122,7 @@ data/*.json
 !data/world_pulse_config.json
 !data/ibl_nodes.yaml
 data/system_ai_state/
-data/consciousness_pulse.db
+data/world_pulse.db
 data/conversations.db*
 .bfg-report/
 

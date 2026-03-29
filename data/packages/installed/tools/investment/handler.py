@@ -134,14 +134,30 @@ def execute(tool_name: str, params: dict, project_path: str = None):
                 end_date=params.get("end_date")
             )
 
-        # 공통 도구 (뉴스, 실적)
+        # 종목 뉴스: Finnhub 우선, 실패 시 Yahoo Finance 폴백
         elif tool_name == "company_news":
-            tool = load_module("tool_finnhub")
-            return tool.get_company_news(
-                symbol=params.get("symbol"),
-                start_date=params.get("start_date"),
-                end_date=params.get("end_date")
-            )
+            symbol = params.get("symbol")
+            # 1차: Finnhub (날짜 범위 지정 가능, 전문 금융 뉴스)
+            try:
+                tool = load_module("tool_finnhub")
+                result = tool.get_company_news(
+                    symbol=symbol,
+                    start_date=params.get("start_date"),
+                    end_date=params.get("end_date")
+                )
+                # 결과가 있으면 반환
+                if isinstance(result, dict) and result.get("success") and result.get("data", {}).get("count", 0) > 0:
+                    return result
+                if isinstance(result, str) and "뉴스" in result and "0건" not in result:
+                    return result
+            except Exception:
+                pass
+            # 2차: Yahoo Finance 폴백
+            try:
+                tool = load_module("tool_yfinance")
+                return tool.get_stock_news(symbol=symbol)
+            except Exception as e:
+                return {"success": False, "error": f"뉴스 조회 실패 (Finnhub, Yahoo 모두): {str(e)}"}
 
         elif tool_name == "earnings_calendar":
             tool = load_module("tool_finnhub")
@@ -171,12 +187,6 @@ def execute(tool_name: str, params: dict, project_path: str = None):
             return tool.search_stock(
                 query=params.get("query"),
                 search_type=params.get("search_type", "quotes")
-            )
-
-        elif tool_name == "yf_stock_news":
-            tool = load_module("tool_yfinance")
-            return tool.get_stock_news(
-                symbol=params.get("symbol")
             )
 
         elif tool_name == "crypto_price":

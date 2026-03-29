@@ -117,7 +117,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `POST /business/auto-response/start` - 자동응답 시작
 - `POST /business/auto-response/stop` - 자동응답 중지
 
-### 의식 시스템 (/world-pulse)
+### 의식 시스템 (/world-pulse) — api_config.py에서 라우팅
 - `GET /world-pulse/consciousness` - 최근 의식 펄스 조회 (hours 파라미터로 시간 범위 지정)
 - `GET /world-pulse/self-checks` - 최근 자가점검 결과 (hours 파라미터로 시간 범위 지정)
 - `GET /world-pulse/health` - 시스템 건강 요약 (서비스 상태, 액션 성공률, 최근 펄스)
@@ -147,17 +147,22 @@ execute_ibl(code='[node:action]{params}')
 
 예시:
 execute_ibl(code='[sense:price]{symbol: "AAPL"}')
-execute_ibl(code='[sense:web_search]{query: "AI"} >> [self:file]{path: "result.md"}')
+execute_ibl(code='[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}')
 execute_ibl(code='[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}')
 ```
 
-### 액션 라우팅 이원화
-IBL 액션은 두 경로로 실행됩니다:
+### 액션 라우팅
+IBL 액션은 여러 경로로 실행됩니다:
 
 | 라우터 | 개수 | 특성 | 등록 방식 |
 |--------|------|------|----------|
-| api_engine | 26 | API 호출 + transform 후처리 | api_registry.yaml에 node 필드 (자동 병합) |
-| handler | 261 | 복잡한 후처리 (캐싱, 코드 매핑 등) | ibl_nodes.yaml에 수동 등록 |
+| api_engine | 2 | API 호출 + transform 후처리 | api_registry.yaml에 node 필드 (자동 병합) |
+| handler | 260 | 복잡한 후처리 (캐싱, 코드 매핑 등) | ibl_nodes.yaml에 수동 등록 |
+| system | 22 | 시스템 내장 액션 | 시스템 레벨 직접 등록 |
+| trigger_engine | 9 | 이벤트/트리거 기반 실행 | trigger_engine 등록 |
+| workflow_engine | - | 워크플로우 오케스트레이션 | workflow 정의 |
+| driver | - | 프로토콜 추상화 (HTTP, WebSocket, ADB, CDP 등) | 드라이버 등록 |
+| channel_engine | - | 채널 추상화 계층 | 채널 설정 |
 
 **자동 발견**: `ibl_engine.py`의 `_merge_api_registry_actions()`가 로드 시 api_registry의 node 바인딩 도구를 노드 액션에 자동 병합합니다.
 
@@ -168,7 +173,6 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 | IBL 액션 | 기존 도구명 | 설명 |
 |----------|-----------|------|
 | `[others:delegate]` | `call_agent` | 다른 에이전트에게 작업 위임 |
-| `[others:ask]` | `call_agent` | 에이전트에게 질문/위임 |
 | `[others:ask_sync]` | - | 동기 에이전트 호출 (파이프라인용) |
 | `[others:delegate_project]` | `call_project_agent` | 프로젝트 간 위임 (시스템AI 전용) |
 | `[others:channel_send]` | - | 메시지 발송 (gmail, nostr 등) |
@@ -181,9 +185,9 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 | `[self:read]` | `read_file` | 파일 읽기 |
 | `[self:write]` | `write_file` | 파일 쓰기 |
 | `[self:run_command]` | `run_command` | 코드/명령 실행 |
-| `[sense:web_search]` | `web_search` | 웹 검색 |
+| `[sense:search_ddg]` | `web_search` | 웹 검색 |
 | `[sense:price]` | `get_stock_price` | 주가 조회 |
-| `[limbs:navigate]` | `browser_navigate` | 브라우저 탐색 |
+| `[limbs:browser_navigate]` | `browser_navigate` | 브라우저 탐색 |
 | `[limbs:play]` | `play_media` | 미디어 재생 |
 | `[engines:slide]` | `create_slide` | 슬라이드 생성 |
 
@@ -193,11 +197,11 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 ### 5-Node 구조 (Phase 25: 노드 재구조화)
 | 노드 | 액션 수 | 카테고리 | 설명 |
 |------|---------|---------|------|
-| `sense` | 105 | search, get, list, create, delete, write | 데이터 검색/조회 (외부 정보 + 내부 저장소) |
-| `limbs` | 97 | click, type, get, screenshot, control, play, stream, list | UI 조작 + 미디어 (브라우저, 안드로이드, 데스크탑, 유튜브, 라디오) |
-| `self` | ~57 | get, io, list, event, notify, run, control, fs, storage | 개인 도메인 (시스템 관리, 사용자 소통, 워크플로우, 파일) |
+| `sense` | 78 | search, get, list, create, delete, write | 데이터 검색/조회 (외부 정보 + 내부 저장소) |
+| `limbs` | 96 | click, type, get, screenshot, control, play, stream, list | UI 조작 + 미디어 (브라우저, 안드로이드, 데스크탑, 유튜브, 라디오) |
+| `self` | 75 | get, io, list, event, notify, run, control, fs, storage | 개인 도메인 (시스템 관리, 사용자 소통, 워크플로우, 파일) |
 | `engines` | 46 | create, get, list, run | 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 웹사이트) |
-| `others` | 16 | search, get, send, read, delegate | 협업 통신 (에이전트 위임, 메시지 전송, 연락처) |
+| `others` | 13 | search, get, send, read, delegate | 협업 통신 (에이전트 위임, 메시지 전송, 연락처) |
 
 **카테고리**: 프롬프트 가독성용 분류 (런타임 영향 없음). `<action-categories>`로 표시되며 에이전트는 카테고리명이 아닌 구체적 액션명을 직접 사용해야 함.
 
@@ -207,10 +211,13 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 - **프로젝트 목록**: `projects/projects.json`
 - **프로젝트 에이전트**: `projects/{id}/agents.yaml`
 - **시스템 AI 메모리**: `data/system_ai_memory.db` (SQLite)
-- **의식 펄스 DB**: `data/consciousness_pulse.db` (SQLite — pulse_log, self_checks 테이블)
+- **World Pulse DB**: `data/world_pulse.db` (SQLite — pulse_log, self_checks 테이블)
 - **대화 이력**: `projects/{id}/conversations.db` (SQLite)
 - **도구 패키지**: `data/packages/installed/tools/`
 - **비즈니스 DB**: `data/business.db` (SQLite)
+- **IBL 사용량 DB**: `data/ibl_usage.db` (SQLite)
+- **IBL 노드 정의**: `data/ibl_nodes.yaml`
+- **IBL 출처 추적**: `data/_ibl_provenance.yaml`
 
 ## 지원 AI 프로바이더 (모두 스트리밍 지원)
 - **Anthropic Claude**: claude-sonnet-4-20250514, claude-3-5-haiku-20241022, claude-3-5-sonnet-latest
@@ -218,13 +225,29 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 - **Google Gemini**: gemini-2.0-flash-exp, gemini-1.5-pro, gemini-1.5-flash
 - **Ollama**: 로컬 LLM (llama3.2 등)
 
+### Tool Result 절삭
+- **기본 한도**: 16KB — tool result가 이 크기를 초과하면 절삭
+- **파이프라인 시**: `_action_count × 16KB` 허용 (다중 액션 실행 시 비례 확장)
+
+### 감각 전처리 (Sensory Preprocessing)
+- 정보성 액션의 출력을 경량 AI(flash-lite)로 압축하여 컨텍스트 폭발 방지
+- `ibl_actions.yaml`의 `postprocess` 블록으로 액션별 선언적 설정
+- 적용 액션: `search_ddg`, `crawl`, `search_news`, `travel`
+- 구현: `ibl_engine.py`의 `_postprocess()` → `_pp_compress()`
+
+### 패키지 YAML 자동 동기화
+- 서버 시작 시 `_auto_register_packages()`가 각 패키지 `ibl_actions.yaml`의 mtime을 `ibl_nodes.yaml`과 비교
+- 변경된 패키지만 `register_actions()`로 재등록, 미등록은 항상 등록
+- 패키지 YAML이 source of truth, `ibl_nodes.yaml`은 파생 파일
+
 ## 물리적 구조 (주요 경로)
 - `backend/`: 서버 소스 코드
 - `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
 - `data/packages/installed/tools/`: 설치된 도구 패키지 (35개)
-- `data/api_registry.yaml`: API 도구 정의 (node 필드로 IBL 자동 병합)
-- `projects/`: 사용자 프로젝트 데이터 (24개)
+- `data/api_registry.yaml`: API 도구 정의 (node 필드로 IBL 자동 병합, 현재 2개 액션)
+- `data/packages/installed/extensions/`: 설치된 확장 패키지 (9개)
+- `projects/`: 사용자 프로젝트 데이터 (20개)
 
 ## 프롬프트 구조
 
@@ -245,4 +268,4 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 - Tool Use 기반으로 판단/검색/발송을 단일 AI 호출로 처리
 
 ---
-*마지막 업데이트: 2026-03-12 (의식 시스템: Consciousness Pulse & Self-Check)*
+*마지막 업데이트: 2026-03-29 (감각 전처리 시스템, 패키지 YAML 자동 동기화)*

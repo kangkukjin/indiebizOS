@@ -2,6 +2,16 @@
 
 React/TSX 컴포넌트를 Remotion으로 렌더링하여 MP4 동영상을 생성하는 도구의 사용 가이드입니다.
 
+## ⚠️ 절대 규칙 (코드 작성 전에 읽을 것)
+
+1. **이미지 전부 사용**: asset_paths의 모든 이미지를 동영상에 포함해야 한다. 누락 금지.
+2. **1:1:1 매칭**: 이미지 N개 = 나레이션 N개 = 씬 N개. 개수가 다르면 불일치 발생.
+3. **나레이션 동기화**: `props.narrationTimings`로 Sequence 타이밍을 결정한다. 하드코딩된 `SCENE_DURATION` 금지.
+4. **Sequence 내부 프레임은 0부터**: `useCurrentFrame()`은 Sequence 안에서 자동으로 0부터 시작한다. `timing.startFrame`을 빼면 이중 차감 → 검은 화면.
+5. **staticFile() 필수**: 이미지는 반드시 `staticFile('파일명')`으로 참조. 절대경로나 `file://` 불가.
+
+---
+
 ## composition_code 작성 규칙
 
 1. React 컴포넌트를 export default로 내보내야 합니다

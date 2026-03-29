@@ -1,49 +1,57 @@
 node: forge
 actions:
   chart:
-    description: 데이터 차트 생성 (line, bar, pie 등)
+    description: 범용 차트 생성 (chart_type으로 종류 선택 — line/bar/pie/scatter/heatmap/candlestick/multi)
     router: handler
-    tool: line_chart
+    tool: chart
+    implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. 개별 차트 액션(line, bar, pie 등)으로도 직접 호출 가능
     target_key: title
   line:
     description: 라인 차트
     target_description: 차트 제목
     router: handler
     tool: line_chart
+    implementation: Plotly로 인터랙티브 라인 차트 HTML 생성 (matplotlib 폴백)
     target_key: title
   bar:
     description: 바 차트 (수평/수직, 스택)
     target_description: 차트 제목
     router: handler
     tool: bar_chart
+    implementation: Plotly로 바 차트 HTML 생성 (수평/수직/스택 지원)
     target_key: title
   candlestick:
     description: 캔들스틱 차트 (OHLCV, 이동평균)
     target_description: 차트 제목
     router: handler
     tool: candlestick_chart
+    implementation: Plotly로 OHLCV 캔들스틱 차트 HTML 생성
     target_key: title
   pie:
     description: 파이/도넛 차트
     target_description: 차트 제목
     router: handler
     tool: pie_chart
+    implementation: Plotly로 파이/도넛 차트 HTML 생성
     target_key: title
   scatter:
     description: 산점도 (추세선 옵션)
     target_description: 차트 제목
     router: handler
     tool: scatter_plot
+    implementation: Plotly로 산점도 HTML 생성 (추세선 옵션)
     target_key: title
   heatmap:
     description: 히트맵
     target_description: 차트 제목
     router: handler
     tool: heatmap
+    implementation: Plotly로 히트맵 HTML 생성
     target_key: title
   multi:
     description: 복합 차트 대시보드 (여러 차트 조합)
     target_description: 대시보드 제목
     router: handler
     tool: multi_chart
+    implementation: Plotly subplots로 복합 차트 대시보드 HTML 생성
     target_key: title

@@ -47,6 +47,23 @@
     ],
     "description": "",
     "registered_at": "2026-02-02T18:41:38.435843",
-    "last_checked": "2026-02-23T13:37:54.656520"
+    "last_checked": "2026-03-24T21:48:48.479930"
+  },
+  {
+    "id": "tetris-game",
+    "name": "tetris-game",
+    "local_path": "/Users/kangkukjin/Desktop/AI/projects/tetris-game",
+    "repo_url": "",
+    "deploy_url": "",
+    "tech_stack": [
+      "nextjs",
+      "typescript",
+      "react",
+      "tailwind",
+      "css"
+    ],
+    "description": "",
+    "registered_at": "2026-03-24T11:34:54.107182",
+    "last_checked": null
   }
 ]

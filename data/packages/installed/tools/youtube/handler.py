@@ -45,6 +45,14 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
     elif tool_name == 'get_youtube_info':
         return tool_youtube.get_youtube_info(url=arguments['url'])
     elif tool_name == 'get_youtube_transcript':
+        # url 또는 video_id 파라미터 지원
+        url = arguments.get('url')
+        if not url:
+            video_id = arguments.get('video_id')
+            if video_id:
+                url = f"https://www.youtube.com/watch?v={video_id}"
+            else:
+                return {"error": "url 또는 video_id 파라미터가 필요합니다."}
         # language를 languages 리스트로 변환
         lang = arguments.get('language') or arguments.get('languages')
         if isinstance(lang, str):
@@ -53,9 +61,17 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
             languages = lang
         else:
             languages = ['ko', 'en']
-        return tool_youtube.get_youtube_transcript(url=arguments['url'], languages=languages)
+        return tool_youtube.get_youtube_transcript(url=url, languages=languages)
     elif tool_name == 'list_available_transcripts':
-        return tool_youtube.list_available_transcripts(url=arguments['url'])
+        # url 또는 video_id 파라미터 지원
+        url = arguments.get('url')
+        if not url:
+            video_id = arguments.get('video_id')
+            if video_id:
+                url = f"https://www.youtube.com/watch?v={video_id}"
+            else:
+                return {"error": "url 또는 video_id 파라미터가 필요합니다."}
+        return tool_youtube.list_available_transcripts(url=url)
     elif tool_name == 'summarize_youtube':
         # summary_length와 languages 파라미터 전달
         summary_length = arguments.get('summary_length', 3000)

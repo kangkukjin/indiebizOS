@@ -108,6 +108,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 "duration_ms": duration_ms,
             })
             prev_result = result_str
+
             continue
 
         if "_fallback_chain" in step:
@@ -191,6 +192,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if isinstance(result, dict):
             if "error" in result and result.get("status") != "not_implemented":
                 is_err = True
+        elif isinstance(result, str) and result.startswith("Error:"):
+            is_err = True
 
         action_count += 1
         results.append({
@@ -202,13 +205,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
         })
 
         if is_err:
+            err_msg = result.get("error", "") if isinstance(result, dict) else str(result)
             return {
                 "success": False,
                 "steps_completed": i,
                 "steps_total": total,
                 "results": results,
                 "final_result": result,
-                "error": f"Step {i+1} 에러: {result.get('error', '')}",
+                "error": f"Step {i+1} 에러: {err_msg}",
             }
 
         # 다음 step으로 전달

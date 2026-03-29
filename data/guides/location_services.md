@@ -93,3 +93,36 @@ API Ninjas를 통한 다양한 데이터 조회.
 ## amadeus_travel_search (여행)
 
 항공권, 호텔, 관광지 정보를 검색한다.
+
+### 검색 유형
+
+| type | 설명 | 주요 파라미터 |
+|------|------|---------------|
+| `flights` | 항공권 검색 | origin, destination, date, adults |
+| `hotels` | 호텔 검색 | cityCode, checkIn, checkOut |
+| `poi` | 관광지/명소 | latitude, longitude |
+
+---
+
+## 에러 처리
+
+| 상황 | 대응 |
+|------|------|
+| API 키 미설정 | "API 키가 설정되지 않았습니다" 안내 → 설정 페이지로 유도 |
+| 위치 정보 없음 | `geocoding` endpoint로 좌표 변환 후 재시도 |
+| 검색 결과 0건 | 검색어를 넓히거나 (예: '강남 맛집' → '서울 맛집') 다른 도구 시도 |
+| 네트워크 오류 | 1회 재시도 후 사용자에게 보고 |
+
+## 도구 조합 예시
+
+```
+# 여행 계획: 날씨 확인 → 맛집 검색 → 지도 표시
+1. get_api_ninjas_data(endpoint='weather', city='부산')
+2. search_restaurants(query='부산 해운대 해산물')
+3. show_location_map(query='해운대', markers=[맛집 결과들])
+
+# 길찾기 + 날씨
+1. get_api_ninjas_data(endpoint='geocoding', city='강남역')  → 좌표 획득
+2. kakao_navigation(origin='현재좌표', destination='획득좌표')
+3. get_api_ninjas_data(endpoint='weather', lat=좌표, lon=좌표)
+```

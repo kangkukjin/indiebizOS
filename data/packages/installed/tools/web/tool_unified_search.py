@@ -19,11 +19,19 @@ from common.response_formatter import format_json
 current_dir = Path(__file__).parent
 
 
-def _search_ddg(query: str, count: int = 5, country: str = "kr-kr") -> dict:
-    """DuckDuckGo 웹 검색"""
+def _detect_query_language(query: str) -> str:
+    """쿼리의 주요 언어를 감지 (한글 포함 여부로 판단)"""
+    korean_chars = sum(1 for c in query if '\uac00' <= c <= '\ud7a3' or '\u3131' <= c <= '\u318e')
+    return "ko" if korean_chars > len(query) * 0.2 else "en"
+
+
+def _search_ddg(query: str, count: int = 5, country: str = None) -> dict:
+    """DuckDuckGo 웹 검색 - 쿼리 언어에 따라 region 자동 설정"""
     try:
         from ddgs import DDGS
         count = min(max(1, count), 10)
+        if country is None:
+            country = "kr-kr" if _detect_query_language(query) == "ko" else "wt-wt"
         ddgs = DDGS()
         results = ddgs.text(query, region=country, max_results=count, safesearch='moderate')
         formatted = []
@@ -38,8 +46,8 @@ def _search_ddg(query: str, count: int = 5, country: str = "kr-kr") -> dict:
         return {"source": "web", "success": False, "error": str(e), "results": []}
 
 
-def _search_news(query: str, count: int = 5, language: str = "ko") -> dict:
-    """Google News RSS 검색"""
+def _search_news(query: str, count: int = 5, language: str = "auto") -> dict:
+    """Google News RSS 검색 - 쿼리 언어 자동 감지"""
     try:
         import feedparser
         from common.html_utils import clean_html
@@ -49,6 +57,8 @@ def _search_news(query: str, count: int = 5, language: str = "ko") -> dict:
     try:
         count = min(max(1, count), 20)
         encoded_query = quote_plus(query)
+        if language == "auto":
+            language = _detect_query_language(query)
         region = {"ko": "KR", "en": "US", "ja": "JP", "zh": "CN"}.get(language, "US")
         rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl={language}&gl={region}&ceid={region}:{language}"
 
@@ -97,10 +107,15 @@ def _search_youtube(query: str, count: int = 3) -> dict:
                 duration_str = f"{hours}:{mins:02d}:{secs:02d}" if hours else f"{mins}:{secs:02d}"
             else:
                 duration_str = ""
+            # 영상 설명 (내용 파악용, 최대 300자)
+            description = e.get("description", "") or ""
+            if len(description) > 300:
+                description = description[:300] + "..."
             formatted.append({
                 "title": e.get("title", ""),
                 "channel": e.get("channel", e.get("uploader", "")),
                 "duration": duration_str,
+                "description": description,
                 "url": f"https://www.youtube.com/watch?v={vid}",
                 "video_id": vid,
             })
@@ -149,8 +164,8 @@ def _search_papers(query: str, count: int = 3) -> dict:
                         word_positions.append((pos, word))
                 word_positions.sort()
                 abstract = " ".join(w for _, w in word_positions)
-                if len(abstract) > 200:
-                    abstract = abstract[:200] + "..."
+                if len(abstract) > 500:
+                    abstract = abstract[:500] + "..."
 
             # DOI URL
             doi = work.get("doi", "")
@@ -202,7 +217,7 @@ ALL_SOURCES = list(_SEARCH_FUNCS.keys())
 
 def unified_search(query: str, sources: list = None, web_count: int = None,
                    news_count: int = None, youtube_count: int = None,
-                   papers_count: int = None, language: str = "ko") -> str:
+                   papers_count: int = None, language: str = "auto") -> str:
     """종합 검색 - DuckDuckGo + Google News + YouTube + OpenAlex 논문을 병렬로 검색
 
     Args:
@@ -285,5 +300,5 @@ def use_tool(tool_input: dict) -> str:
         news_count=tool_input.get("news_count"),
         youtube_count=tool_input.get("youtube_count"),
         papers_count=tool_input.get("papers_count"),
-        language=tool_input.get("language", "ko"),
+        language=tool_input.get("language", "auto"),
     )

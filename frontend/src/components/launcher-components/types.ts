@@ -80,6 +80,14 @@ export interface SystemAISettings {
   role?: string;
 }
 
+// 무의식 AI 설정 타입
+export interface UnconsciousAISettings {
+  enabled: boolean;
+  provider: string;
+  model: string;
+  apiKey: string;
+}
+
 // DraggableIcon props 타입
 export interface DraggableIconProps {
   icon: React.ReactNode;

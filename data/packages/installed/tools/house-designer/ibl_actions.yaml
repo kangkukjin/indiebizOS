@@ -1,60 +1,70 @@
 node: forge
 actions:
-  create_design:
+  arch_create:
     description: 새 집 설계 초기화 (부지 크기, 층수 설정)
     target_description: 설계명
     router: handler
     tool: create_house_design
+    implementation: 자체 설계 엔진 — JSON 기반 건축 모델 초기화 (Undo/Redo 지원)
     target_key: name
-  modify:
+  arch_modify:
     description: 설계 수정 (방, 문, 창, 벽, 계단 등)
     target_description: 설계 ID
     router: handler
     tool: modify_house_design
+    implementation: JSON 설계 모델에 방/문/창/벽/계단 추가/수정
     target_key: design_id
-  get_design:
+  arch_get:
     description: 현재 설계 상태 조회
     target_description: 설계 ID
     router: handler
     tool: get_house_design
+    implementation: JSON 설계 모델 현재 상태 반환
     target_key: design_id
-  floor_plan:
+  arch_floor_plan:
     description: 2D 평면도 PNG 생성
     target_description: 설계 ID
     router: handler
     tool: generate_floor_plan
+    implementation: matplotlib/Plotly로 JSON 모델 기반 2D 평면도 PNG 렌더링
     target_key: design_id
-  view_3d:
+  arch_view_3d:
     description: 인터랙티브 3D 시각화 HTML 생성
     target_description: 설계 ID
     router: handler
     tool: generate_3d_view
+    implementation: Plotly 3D 렌더링으로 인터랙티브 3D HTML 생성
     target_key: design_id
-  report:
+  arch_report:
     description: 면적표, 건폐율, 물량 산출 보고서
     target_description: 설계 ID
     router: handler
     tool: generate_quantity_report
+    implementation: JSON 모델에서 면적/건폐율/물량 자동 산출
     target_key: design_id
-  section:
+  arch_section:
     description: 건물 단면도 PNG 생성
     target_description: 설계 ID
     router: handler
     tool: generate_section_view
+    implementation: matplotlib로 JSON 모델 기반 건물 단면도 PNG 렌더링
     target_key: design_id
-  elevation:
+  arch_elevation:
     description: 건물 입면도 PNG 생성 (4방향)
     target_description: 설계 ID
     router: handler
     tool: generate_elevation_view
+    implementation: matplotlib로 JSON 모델 기반 4방향 입면도 PNG 렌더링
     target_key: design_id
-  export:
+  arch_export:
     description: 도면을 PDF/SVG/DXF로 출력
     target_description: 설계 ID
     router: handler
     tool: export_drawing
+    implementation: matplotlib/reportlab으로 도면 PDF/SVG/DXF 출력
     target_key: design_id
-  list_designs:
+  arch_list:
     description: 저장된 집 설계 목록 조회
     router: handler
     tool: list_house_designs
+    implementation: 설계 저장 디렉토리에서 JSON 파일 목록 조회

@@ -207,7 +207,18 @@ def build_environment(
     if pipeline:
         parts.append("<pipeline>")
         for p in pipeline:
-            parts.append(f'  <op symbol="{p["op"]}" name="{p["name"]}" example="{p["example"]}"/>')
+            example = p.get("example", "")
+            # examples(복수)가 있으면 첫 번째를 대표 예제로 사용
+            if not example and "examples" in p:
+                examples = p["examples"]
+                if examples and isinstance(examples, list) and len(examples) > 0:
+                    ex = examples[0]
+                    example = ex.get("code", "") if isinstance(ex, dict) else str(ex)
+            desc = p.get("description", "")
+            if desc:
+                parts.append(f'  <op symbol="{p["op"]}" name="{p["name"]}" description="{desc}" example="{example}"/>')
+            else:
+                parts.append(f'  <op symbol="{p["op"]}" name="{p["name"]}" example="{example}"/>')
         parts.append("</pipeline>")
 
     # 핵심 원칙: YAML meta.principles에서 동적 로드

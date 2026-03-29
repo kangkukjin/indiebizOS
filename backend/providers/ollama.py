@@ -164,6 +164,13 @@ class OllamaProvider(BaseProvider):
         history = history or []
         messages = self._build_messages(message, history, images)
 
+        # cancel_check를 execute_tool에 전달하는 래퍼 (도구 실행 중 중단 지원)
+        if cancel_check and execute_tool:
+            _original_execute_tool = execute_tool
+            def _cancellable_execute_tool(name, inp, path, aid=None):
+                return _original_execute_tool(name, inp, path, aid, cancel_check=cancel_check)
+            execute_tool = _cancellable_execute_tool
+
         # Tool calling 지원 여부에 따라 분기
         if self._supports_tools and self.tools and execute_tool:
             openai_tools = self._convert_tools()

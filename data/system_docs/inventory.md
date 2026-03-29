@@ -1,15 +1,12 @@
 # IndieBiz OS 인벤토리
 
-## 프로젝트 (활성) - 24개
+## 프로젝트 (활성) - 20개
 
 | ID | 이름 | 설명 |
 |----|------|------|
 | CCTV | CCTV | CCTV/웹캠 관리 |
 | Hand on PC | Hand on PC | PC 원격 제어 |
-| IBL_테스트 | IBL 테스트 | IBL 기능 테스트 |
-| my_space | my_space | 개인 공간 |
 | study | study | 학습 및 연구 프로젝트 |
-| turtle_story | turtle_story | 거북이 이야기 |
 | 건축 | 건축 | 건축 설계 |
 | 구매 | 구매 | 상품 검색 및 구매 지원 |
 | 법률 | 법률 | 법률 정보 및 법령 검색 |
@@ -17,7 +14,6 @@
 | 사진 | 사진 | 사진 관리 및 아카이빙 |
 | 오락실 | 오락실 | 게임/엔터테인먼트 |
 | 음악 | 음악 | 음악 작곡/관리 |
-| 음악_웹앱 | 음악 웹앱 | 음악 웹 애플리케이션 |
 | 의료 | 의료 | 건강 정보 관리 및 병원/약국 행정 안내 |
 | 정보센터 | 정보센터 | 정보 수집/분석 프로젝트 |
 | 지역정보 | 지역정보 | 지역 정보 조회 |
@@ -26,6 +22,7 @@
 | 컨텐츠 | 컨텐츠 | 콘텐츠 제작 및 관리 |
 | 투자 | 투자 | 주식 및 금융 데이터 분석, 글로벌 시장 조사 |
 | 하드웨어 | 하드웨어 | 하드웨어 관리 프로젝트 |
+| 학교 | 학교 | 학교 관련 프로젝트 |
 | 행정_서비스 | 행정_서비스 | 정부24 및 민원 서비스 지원 |
 | 홍보 | 홍보 | 홍보/마케팅 콘텐츠 제작 |
 
@@ -71,6 +68,23 @@
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
 | web-collector | Web Collector | 웹 데이터 수집/스크래핑 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
+
+---
+
+## 확장 패키지 (Extensions) - 9개
+백엔드 기능을 확장하는 패키지. 도구 패키지와 달리 에이전트가 직접 호출하지 않고 시스템 레벨에서 동작합니다.
+
+| ID | 이름 | 설명 |
+|----|------|------|
+| ai-agent | AI Agent | AI 에이전트 확장 |
+| conversation | Conversation | 대화 관리 |
+| gmail | Gmail | Gmail 연동 |
+| indienet | IndieNet | 외부 메신저 연동 (Nostr 기반) |
+| notification-system | Notification System | 알림 시스템 |
+| prompt-generator | Prompt Generator | 프롬프트 생성기 |
+| scheduler | Scheduler | 스케줄러 확장 |
+| switch-runner | Switch Runner | 스위치 실행기 |
+| websocket-chat | WebSocket Chat | WebSocket 채팅 |
 
 ---
 
@@ -158,4 +172,4 @@ AI 호출 1회로 판단, 검색, 발송을 한 번에 처리:
 자세한 내용은 `packages.md` 참조.
 
 ---
-*마지막 업데이트: 2026-03-06 (Phase 25: 5-Node 노드 업데이트)*
+*마지막 업데이트: 2026-03-27*

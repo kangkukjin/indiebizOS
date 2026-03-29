@@ -6,13 +6,13 @@
   "tools": [
     {
       "name": "execute_ibl",
-      "description": "IBL 코드 실행기. 5개 노드로 모든 기능을 실행합니다.\n\n## IBL 코드 문법\nexecute_ibl(code='[node:action]{params}')\n\n## 예시\n[sense:web_search]{query: \"AI 뉴스\"}\n[sense:stock_info]{symbol: \"AAPL\"}\n[engines:newspaper]{keywords: \"AI, 경제\"}\n[self:discover]{query: \"주가\"}\n\n## 5개 노드\n- sense: 웹검색, 크롤링, 뉴스, 주가, 재무제표, 부동산, 법률, 통계, 문화, 쇼핑, 사진, 건강, 블로그, 메모리, CCTV\n- self: 알림, 워크플로우, 파일(read/write/list/find/grep), 시간, 이벤트, 결과출력(gui/file/open/clipboard)\n- limbs: 브라우저 자동화(navigate/snapshot/click/type), 안드로이드(adb), 데스크탑(macOS GUI), 유튜브, 라디오, 음악재생\n- others: 에이전트 위임/협업, 연락처, Gmail/Nostr 채널 통신\n- engines: 슬라이드, 영상(HTML/Remotion), 차트, AI이미지, 음악, 홈페이지관리, 건축설계\n\n## 파이프라인: >> 순차, & 병렬, ?? 폴백\n## 모르면: [self:discover]{query: \"키워드\"}",
+      "description": "IBL 코드 실행기. 5개 노드로 모든 기능을 실행합니다.\n\n## IBL 코드 문법\nexecute_ibl(code='[node:action]{params}')\n\n## 예시\n[sense:search_ddg]{query: \"AI 뉴스\"}\n[sense:stock_info]{symbol: \"AAPL\"}\n[engines:newspaper]{keywords: \"AI, 경제\"}\n[self:discover]{query: \"주가\"}\n\n## 5개 노드\n- sense: 웹검색, 크롤링, 뉴스, 주가, 재무제표, 부동산, 법률, 통계, 문화, 쇼핑, 사진, 건강, 블로그, 메모리, CCTV\n- self: 알림, 워크플로우, 파일(read/write/list/find/grep), 시간, 이벤트, 결과출력(gui/file/open/clipboard)\n- limbs: 브라우저 자동화(navigate/snapshot/click/type), 안드로이드(adb), 데스크탑(macOS GUI), 유튜브, 라디오, 음악재생\n- others: 에이전트 위임/협업, 연락처, Gmail/Nostr 채널 통신\n- engines: 슬라이드, 영상(HTML/Remotion), 차트, AI이미지, 음악, 홈페이지관리, 건축설계\n\n## 파이프라인: >> 순차, & 병렬, ?? 폴백\n## 모르면: [self:discover]{query: \"키워드\"}",
       "input_schema": {
         "type": "object",
         "properties": {
           "code": {
             "type": "string",
-            "description": "IBL 코드. 예: [sense:web_search]{query: \"AI 뉴스\"}, [sense:stock_info]{symbol: \"AAPL\"} >> [self:file]{path: \"result.md\"}"
+            "description": "IBL 코드. 예: [sense:search_ddg]{query: \"AI 뉴스\"}, [sense:stock_info]{symbol: \"AAPL\"} >> [self:file]{path: \"result.md\"}"
           }
         },
         "required": ["code"]
@@ -158,7 +158,7 @@
     },
     {
       "name": "ibl_workflow",
-      "description": "워크플로우 관리 및 파이프라인 실행 노드. 여러 IBL 액션을 순차 연결하여 파이프라인으로 실행하고, YAML로 저장/로드하여 반복 실행할 수 있습니다.\n\n## 액션\n- run/run_pipeline: 저장된 워크플로우 또는 파이프라인 실행\n- list/list_workflows: 저장된 워크플로우 목록 조회\n- get/get_workflow: 워크플로우 상세 조회\n- save/save_workflow: 워크플로우 저장\n- delete/delete_workflow: 워크플로우 삭제\n\n## IBL 코드로 파이프라인 실행 (권장)\naction='run_pipeline', params={'code': '[sense:web_search]{query: \"AI 뉴스\"} >> [self:file]{path: \"결과.md\"}'}\n\n## IBL 문법\n- 단일: [node:action]{key: \"value\"}\n- 파이프: [a:b]{x: \"1\"} >> [c:d]{y: \"2\"}\n- 이전 결과는 자동으로 다음 단계에 전달됨\n- (target) 문법은 폐지됨. 모든 값은 {params}로 전달\n\n## 예시\n워크플로우 실행: [self:run]{workflow_id: \"daily_news\"}\n목록 조회: [self:list_workflows]",
+      "description": "워크플로우 관리 및 파이프라인 실행 노드. 여러 IBL 액션을 순차 연결하여 파이프라인으로 실행하고, YAML로 저장/로드하여 반복 실행할 수 있습니다.\n\n## 액션\n- run/run_pipeline: 저장된 워크플로우 또는 파이프라인 실행\n- list/list_workflows: 저장된 워크플로우 목록 조회\n- get/get_workflow: 워크플로우 상세 조회\n- save/save_workflow: 워크플로우 저장\n- delete/delete_workflow: 워크플로우 삭제\n\n## IBL 코드로 파이프라인 실행 (권장)\naction='run_pipeline', params={'code': '[sense:search_ddg]{query: \"AI 뉴스\"} >> [self:file]{path: \"결과.md\"}'}\n\n## IBL 문법\n- 단일: [node:action]{key: \"value\"}\n- 파이프: [a:b]{x: \"1\"} >> [c:d]{y: \"2\"}\n- 이전 결과는 자동으로 다음 단계에 전달됨\n- (target) 문법은 폐지됨. 모든 값은 {params}로 전달\n\n## 예시\n워크플로우 실행: [self:run]{workflow_id: \"daily_news\"}\n목록 조회: [self:list_workflows]",
       "input_schema": {
         "type": "object",
         "properties": {

@@ -98,7 +98,7 @@ class PromptBuilder:
         """자원 목록 생성 — guide_db.json에서 가이드 제목을 읽어 한 줄 목록으로 반환
 
         에이전트가 '어떤 가이드가 존재하는지' 배경 지식으로 기억하게 하여,
-        능동적 검색(search_guide) 없이도 관련 가이드를 떠올릴 수 있게 합니다.
+        능동적 검색(read_guide) 없이도 관련 가이드를 떠올릴 수 있게 합니다.
         """
         cache_key = "__resource_list__"
         if cache_key in self._cache:
@@ -135,7 +135,8 @@ class PromptBuilder:
               project_path: str = None,
               agent_id: str = None,
               role_prompt: str = "",
-              additional_context: str = "") -> str:
+              additional_context: str = "",
+              consciousness_output: dict = None) -> str:
         """시스템 프롬프트 조합
 
         Args:
@@ -148,6 +149,7 @@ class PromptBuilder:
             agent_id: 현재 에이전트 ID (환경에서 자신 제외용)
             role_prompt: 에이전트 역할 프롬프트
             additional_context: 추가 컨텍스트 (프로젝트 설정 등)
+            consciousness_output: 의식 에이전트 출력 (태스크 프레이밍, IBL 포커싱 등)
 
         Returns:
             조합된 시스템 프롬프트 문자열
@@ -161,7 +163,7 @@ class PromptBuilder:
         parts.append(date_info)
 
         # 1. 기본 프롬프트 (항상 포함)
-        base = self._load_file("base_prompt_v4.md")
+        base = self._load_file("base_prompt_v5.md")
         if base:
             parts.append(base)
 
@@ -184,15 +186,62 @@ class PromptBuilder:
             if ibl:
                 parts.append(ibl)
 
+        # 4.3 의식 에이전트 출력 — IBL 포커싱 힌트 + 태스크 프레이밍
+        if consciousness_output:
+            consciousness_parts = []
+
+            # 태스크 프레이밍 (지금 풀어야 할 문제 정의)
+            task_framing = consciousness_output.get("task_framing", "")
+            if task_framing:
+                consciousness_parts.append(f"# 현재 태스크\n{task_framing}")
+            # NOTE: history_summary는 messages 파라미터에서 원본 히스토리를 대체하므로 여기엔 넣지 않음
+
+            # IBL 포커싱 힌트 (제한이 아닌 초점 설정)
+            ibl_focus = consciousness_output.get("ibl_focus", {})
+            if ibl_focus:
+                focus_parts = []
+                primary = ibl_focus.get("primary_nodes", [])
+                highlight = ibl_focus.get("highlight_actions", [])
+                hint = ibl_focus.get("hint", "")
+                if primary:
+                    focus_parts.append(f"주요 노드: {', '.join(primary)}")
+                if highlight:
+                    focus_parts.append(f"주목할 액션: {', '.join(highlight)}")
+                if hint:
+                    focus_parts.append(f"접근 방향: {hint}")
+                if focus_parts:
+                    consciousness_parts.append(
+                        "<focus note=\"참고용 힌트 — 다른 액션도 자유롭게 사용 가능\">\n"
+                        + "\n".join(focus_parts)
+                        + "\n</focus>"
+                    )
+
+            # 상황 메모
+            context_notes = consciousness_output.get("context_notes", "")
+            if context_notes:
+                consciousness_parts.append(f"# 상황 메모\n{context_notes}")
+
+            if consciousness_parts:
+                parts.append("\n".join(consciousness_parts))
+
+            # 의식 에이전트가 지정한 가이드 파일 로드 & 주입
+            guide_files = consciousness_output.get("guide_files", [])
+            for guide in guide_files:
+                content = self._load_guide_file(guide)
+                if content:
+                    parts.append(f"# 가이드: {guide}\n{content}")
+
         # 4.5 자원 목록 (가이드 제목 배경 지식)
         resource_list = self._build_resource_list()
         if resource_list:
             parts.append(resource_list)
 
         # 4.6 World Pulse (세계 상태 배경 지식 — 대화 시작 시 1회 주입)
-        world_pulse = self._load_world_pulse()
-        if world_pulse:
-            parts.append(world_pulse)
+        # 의식 에이전트가 활성이면 world_pulse는 이미 의식 에이전트에서 처리됨
+        if not consciousness_output:
+            world_pulse = self._load_world_pulse()
+            if world_pulse:
+                parts.append(world_pulse)
 
         # 5. 역할 프롬프트
         if role_prompt:
@@ -226,11 +275,12 @@ def build_agent_prompt(
     allowed_nodes: list = None,
     project_path: str = None,
     agent_id: str = None,
+    consciousness_output: dict = None,
     **kwargs  # ibl_enabled 등 하위 호환 파라미터 무시
 ) -> str:
     """프로젝트 에이전트용 시스템 프롬프트 생성
 
-    구조: base_prompt_v4.md + (조건부 위임) + IBL 환경 + 개별역할 + 영구메모
+    구조: base_prompt_v4.md + (조건부 위임) + IBL 환경 + 의식 에이전트 출력 + 개별역할 + 영구메모
 
     Args:
         agent_name: 에이전트 이름
@@ -243,6 +293,7 @@ def build_agent_prompt(
         allowed_nodes: IBL 노드 접근 제어 리스트
         project_path: 프로젝트 경로 (동료 에이전트 탐색용)
         agent_id: 현재 에이전트 ID (환경에서 자신 제외용)
+        consciousness_output: 의식 에이전트 출력 (태스크 프레이밍, IBL 포커싱 등)
 
     Returns:
         조합된 시스템 프롬프트
@@ -269,21 +320,25 @@ def build_agent_prompt(
         project_path=project_path,
         agent_id=agent_id,
         role_prompt=role_prompt,
-        additional_context=additional_context
+        additional_context=additional_context,
+        consciousness_output=consciousness_output
     )
 
 
 def build_system_ai_prompt(
     user_profile: str = "",
-    git_enabled: bool = False
+    git_enabled: bool = False,
+    consciousness_output: dict = None
 ) -> str:
     """시스템 AI용 시스템 프롬프트 생성
 
-    구조: base_prompt_v2.md + (조건부 git) + 위임 프롬프트 + 개별역할 + 시스템메모
+    구조: base_prompt_v2.md + (조건부 git) + IBL 환경 + 의식 에이전트 출력
+          + 위임 프롬프트 + 개별역할 + 시스템메모
 
     Args:
         user_profile: 사용자 프로필 (시스템 메모)
         git_enabled: Git 관련 프롬프트 포함 여부
+        consciousness_output: 의식 에이전트 출력 (태스크 프레이밍, IBL 포커싱 등)
 
     Returns:
         조합된 시스템 프롬프트
@@ -307,6 +362,47 @@ def build_system_ai_prompt(
     ibl_env = build_environment(allowed_nodes=None)  # None = 전체 노드
     if ibl_env:
         parts.append(ibl_env)
+
+    # 의식 에이전트 출력 반영
+    if consciousness_output:
+        consciousness_parts = []
+
+        task_framing = consciousness_output.get("task_framing", "")
+        if task_framing:
+            consciousness_parts.append(f"# 현재 태스크\n{task_framing}")
+
+        ibl_focus = consciousness_output.get("ibl_focus", {})
+        if ibl_focus:
+            focus_parts = []
+            primary = ibl_focus.get("primary_nodes", [])
+            highlight = ibl_focus.get("highlight_actions", [])
+            hint = ibl_focus.get("hint", "")
+            if primary:
+                focus_parts.append(f"주요 노드: {', '.join(primary)}")
+            if highlight:
+                focus_parts.append(f"주목할 액션: {', '.join(highlight)}")
+            if hint:
+                focus_parts.append(f"접근 방향: {hint}")
+            if focus_parts:
+                consciousness_parts.append(
+                    "<focus note=\"참고용 힌트 — 다른 액션도 자유롭게 사용 가능\">\n"
+                    + "\n".join(focus_parts)
+                    + "\n</focus>"
+                )
+
+        context_notes = consciousness_output.get("context_notes", "")
+        if context_notes:
+            consciousness_parts.append(f"# 상황 메모\n{context_notes}")
+
+        if consciousness_parts:
+            parts.append("\n".join(consciousness_parts))
+
+        # 의식 에이전트가 지정한 가이드 파일 로드 & 주입
+        guide_files = consciousness_output.get("guide_files", [])
+        for guide in guide_files:
+            content = builder._load_guide_file(guide)
+            if content:
+                parts.append(f"# 가이드: {guide}\n{content}")
 
     # 자원 목록 (가이드 제목 배경 지식)
     resource_list = builder._build_resource_list()

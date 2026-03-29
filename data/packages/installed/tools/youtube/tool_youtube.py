@@ -425,6 +425,44 @@ def get_youtube_transcript(
                 formatted_lines.append(f"[{timestamp}] {text}")
             formatted_transcript = '\n'.join(formatted_lines)
 
+        # 긴 자막은 파일로 저장하고 경로만 반환
+        LONG_THRESHOLD = 10000  # 10,000자 초과 시 파일 저장
+        if len(full_text) > LONG_THRESHOLD:
+            import os
+            outputs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', 'outputs')
+            outputs_dir = os.path.normpath(outputs_dir)
+            os.makedirs(outputs_dir, exist_ok=True)
+
+            safe_title = re.sub(r'[^\w가-힣\s-]', '', title)[:50].strip()
+            filename = f"transcript_{video_id}_{safe_title}.txt"
+            filepath = os.path.join(outputs_dir, filename)
+
+            # 타임스탬프 포함 버전 저장 (더 유용)
+            save_lines = []
+            for segment in segments:
+                timestamp = format_timestamp(segment['start'])
+                text = segment['text'].strip()
+                save_lines.append(f"[{timestamp}] {text}")
+            save_content = f"# {title}\n# Video ID: {video_id}\n# 언어: {used_language}\n# 세그먼트: {len(segments)}개\n\n" + '\n'.join(save_lines)
+
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(save_content)
+
+            preview = full_text[:2000]
+            return {
+                'success': True,
+                'saved_to_file': True,
+                'file_path': filepath,
+                'total_length': len(full_text),
+                'segment_count': len(segments),
+                'preview': preview,
+                'language': used_language,
+                'title': title,
+                'duration': duration,
+                'video_id': video_id,
+                'message': f'자막이 길어서 파일로 저장했습니다 ({len(full_text):,}자, {len(segments)}개 세그먼트). 파일을 부분적으로 읽어서 요약해주세요: {filepath}'
+            }
+
         return {
             'success': True,
             'transcript': full_text,

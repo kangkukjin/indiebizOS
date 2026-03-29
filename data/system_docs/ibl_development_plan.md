@@ -1,7 +1,7 @@
 # IBL (IndieBiz Logic) 개발 계획
 
 > indiebizOS를 위한 정보 흐름 추상화 언어
-> 최종 업데이트: 2026-02-18
+> 최종 업데이트: 2026-03-27
 
 > **⚠️ 주의**: 이 문서의 예제 중 일부가 `[node:action]("target")` 구 문법을 사용합니다.
 > **현재 유효한 문법은 `[node:action]{key: "value"}` 입니다.** `(target)` 문법은 폐지되어 에러가 발생합니다.
@@ -75,6 +75,7 @@ IBL 표현 계층:     [node:action]{params}
 
 **Phase 0-10 완료 시점**: 30개 노드, 218개 액션, 3가지 연산자. 노드 추상화(discover) 완료.
 **Phase 21 완료 시점**: 10개 노드, 321개 액션. 최종 통합 완료.
+**Phase 25 완료 시점**: 5개 노드(sense, self, limbs, others, engines), 309개 액션. 5-Node 최종 구조.
 
 ---
 
@@ -487,65 +488,65 @@ PC 자체    → 노드  (프로토콜: 시스템 콜)
 
 ## 4. 정보 소스 통합 현황
 
-### IBL로 접근 가능 (완료)
+### IBL로 접근 가능 (완료) — Phase 25 5-Node 체계
 
 | 소스 유형 | 드라이버 | 노드 | 상태 |
 |-----------|---------|--------|------|
 | 외부 API 14개 | http (api_engine) | api | Phase 1 |
-| 웹 검색/크롤링 | http (handler) | informant (구 web) | Phase 3→21 |
-| 파일시스템 | file_io | orchestrator (구 fs→filesystem) | Phase 4→20 |
-| 코드 실행 | process | orchestrator (구 fs→filesystem) | Phase 4→20 |
-| 슬라이드/영상/음악 | 복합 | creator (구 media) | Phase 4→20 |
-| Gmail, Nostr | http, websocket | messenger (구 channel→contact) | Phase 2→14 |
-| 에이전트 위임 | internal | orchestrator (구 system) | Phase 6→19 |
-| 워크플로우 | 내부 | orchestrator (구 workflow) | Phase 5→19 |
-| 사진 DB | sqlite_driver | librarian (구 photo) | Phase 7-1→20 |
-| 건강 기록 DB | sqlite_driver | librarian (구 health) | Phase 7-1→20 |
-| 블로그 검색 | sqlite_driver | librarian (구 blog) | Phase 7-1→20 |
-| 연락처/이웃 | sqlite_driver | messenger (구 contact) | Phase 7-1→14 |
-| 대화 기억 | sqlite_driver | librarian (구 memory) | Phase 7-1→20 |
-| 유튜브 | handler 위임 | youtube | Phase 7-2 |
-| 주식/재무/암호화폐 | handler 위임 | informant (구 finance) | Phase 7-3→21 |
-| 날씨/맛집/길찾기/여행 | handler 위임 | informant (구 location) | Phase 7-3→21 |
-| 쇼핑/가격비교 | handler 위임 | informant (구 shopping) | Phase 7-3→21 |
-| 안드로이드 폰 | handler 위임 | android | Phase 7-4 |
-| 브라우저 자동화 | handler 위임 | browser | Phase 7-4 |
-| 라디오 스트리밍 | handler 위임 | radio | Phase 7-4 |
-| CCTV/웹캠 | handler 위임 | informant (구 cctv→location) | Phase 7-4→21 |
-| 부동산 실거래가 | handler 위임 | informant (구 realestate→commerce) | Phase 7-4→21 |
-| 창업 지원 | handler 위임 | informant (구 startup→commerce) | Phase 7-4→21 |
-| 공연/도서/전시 | handler 위임 | informant (구 culture) | Phase 7-4→21 |
-| Cloudflare 인프라 | handler 위임 | creator (구 hosting→webdev) | Phase 7-4→20 |
-| 데스크탑 GUI | handler 위임 | desktop | Phase 7-5 |
-| 학술 논문/데이터 | handler 위임 | informant (구 study) | Phase 7-5→21 |
-| 웹사이트 생성/배포 | handler 위임 | creator (구 webbuilder→webdev) | Phase 7-5→20 |
-| PC 저장소 관리 | handler 위임 | orchestrator (구 storage→filesystem) | Phase 7-5→20 |
-| 데이터 시각화 | handler 위임 | creator (구 viz→creator) | Phase 7-5→14 |
-| Remotion 영상 생성 | handler 위임 | creator (구 media→creator) | Phase 7-5→14 |
-| 트리거 관리 | trigger_engine | orchestrator (구 event/automation) | Phase 8→19 |
+| 웹 검색/크롤링 | http (handler) | sense (구 web→informant→source) | Phase 3→25 |
+| 파일시스템 | file_io | self (구 fs→filesystem→orchestrator→system) | Phase 4→25 |
+| 코드 실행 | process | self (구 fs→filesystem→orchestrator→system) | Phase 4→25 |
+| 슬라이드/영상/음악 | 복합 | engines (구 media→creator→forge) | Phase 4→25 |
+| Gmail, Nostr | http, websocket | others (구 channel→contact→messenger) | Phase 2→25 |
+| 에이전트 위임 | internal | others (구 system→orchestrator→team) | Phase 6→25 |
+| 워크플로우 | 내부 | self (구 workflow→orchestrator→system) | Phase 5→25 |
+| 사진 DB | sqlite_driver | sense (구 photo→librarian→source) | Phase 7-1→25 |
+| 건강 기록 DB | sqlite_driver | sense (구 health→librarian→source) | Phase 7-1→25 |
+| 블로그 검색 | sqlite_driver | sense (구 blog→librarian→source) | Phase 7-1→25 |
+| 연락처/이웃 | sqlite_driver | others (구 contact→messenger) | Phase 7-1→25 |
+| 대화 기억 | sqlite_driver | sense (구 memory→librarian→source) | Phase 7-1→25 |
+| 유튜브 | handler 위임 | limbs (구 youtube→stream) | Phase 7-2→25 |
+| 주식/재무/암호화폐 | handler 위임 | sense (구 finance→informant→source) | Phase 7-3→25 |
+| 날씨/맛집/길찾기/여행 | handler 위임 | sense (구 location→informant→source) | Phase 7-3→25 |
+| 쇼핑/가격비교 | handler 위임 | sense (구 shopping→informant→source) | Phase 7-3→25 |
+| 안드로이드 폰 | handler 위임 | limbs (구 android→interface) | Phase 7-4→25 |
+| 브라우저 자동화 | handler 위임 | limbs (구 browser→interface) | Phase 7-4→25 |
+| 라디오 스트리밍 | handler 위임 | limbs (구 radio→stream) | Phase 7-4→25 |
+| CCTV/웹캠 | handler 위임 | sense (구 cctv→location→informant→source) | Phase 7-4→25 |
+| 부동산 실거래가 | handler 위임 | sense (구 realestate→commerce→informant→source) | Phase 7-4→25 |
+| 창업 지원 | handler 위임 | sense (구 startup→commerce→informant→source) | Phase 7-4→25 |
+| 공연/도서/전시 | handler 위임 | sense (구 culture→informant→source) | Phase 7-4→25 |
+| Cloudflare 인프라 | handler 위임 | engines (구 hosting→webdev→creator→forge) | Phase 7-4→25 |
+| 데스크탑 GUI | handler 위임 | limbs (구 desktop→interface) | Phase 7-5→25 |
+| 학술 논문/데이터 | handler 위임 | sense (구 study→informant→source) | Phase 7-5→25 |
+| 웹사이트 생성/배포 | handler 위임 | engines (구 webbuilder→webdev→creator→forge) | Phase 7-5→25 |
+| PC 저장소 관리 | handler 위임 | self (구 storage→filesystem→orchestrator→system) | Phase 7-5→25 |
+| 데이터 시각화 | handler 위임 | engines (구 viz→creator→forge) | Phase 7-5→25 |
+| Remotion 영상 생성 | handler 위임 | engines (구 media→creator→forge) | Phase 7-5→25 |
+| 트리거 관리 | trigger_engine | self (구 event/automation→orchestrator→system) | Phase 8→25 |
 
 ### 모든 정보 소스 + 이벤트 시스템 IBL 통합 완료 ✅
 
-모든 도구 패키지(35개)가 IBL 10개 노드로 통합됨. pull(가져오기) + push(트리거) 양방향 통합 완료.
+모든 도구 패키지(35개)가 IBL 5개 노드로 통합됨. pull(가져오기) + push(트리거) 양방향 통합 완료.
 
 ### Phase 7-4/7-5에서 완료
 
 | 소스 유형 | 드라이버 | 노드 | Phase |
 |-----------|---------|--------|------|
-| 안드로이드 폰 | handler 위임 | android | Phase 7-4 |
-| 브라우저 자동화 | handler 위임 | browser | Phase 7-4 |
-| 라디오 | handler 위임 | radio | Phase 7-4 |
-| CCTV | handler 위임 | informant (구 cctv→location) | Phase 7-4→21 |
-| 부동산 | handler 위임 | informant (구 realestate→commerce) | Phase 7-4→21 |
-| 창업 정보 | handler 위임 | informant (구 startup→commerce) | Phase 7-4→21 |
-| 문화/공연 | handler 위임 | informant (구 culture) | Phase 7-4→21 |
-| Cloudflare | handler 위임 | creator (구 hosting→webdev) | Phase 7-4→20 |
-| 데스크탑 자동화 | handler 위임 | desktop | Phase 7-5 |
-| 학술/리서치 | handler 위임 | informant (구 study) | Phase 7-5→21 |
-| 웹사이트 빌더 | handler 위임 | creator (구 webbuilder→webdev) | Phase 7-5→20 |
-| 저장소 관리 | handler 위임 | orchestrator (구 storage→filesystem) | Phase 7-5→20 |
-| 데이터 시각화 | handler 위임 | creator (구 viz→creator) | Phase 7-5→14 |
-| Remotion 영상 | handler 위임 | creator (구 media→creator) | Phase 7-5→14 |
+| 안드로이드 폰 | handler 위임 | limbs (구 android→interface) | Phase 7-4→25 |
+| 브라우저 자동화 | handler 위임 | limbs (구 browser→interface) | Phase 7-4→25 |
+| 라디오 | handler 위임 | limbs (구 radio→stream) | Phase 7-4→25 |
+| CCTV | handler 위임 | sense (구 cctv→location→informant→source) | Phase 7-4→25 |
+| 부동산 | handler 위임 | sense (구 realestate→commerce→informant→source) | Phase 7-4→25 |
+| 창업 정보 | handler 위임 | sense (구 startup→commerce→informant→source) | Phase 7-4→25 |
+| 문화/공연 | handler 위임 | sense (구 culture→informant→source) | Phase 7-4→25 |
+| Cloudflare | handler 위임 | engines (구 hosting→webdev→creator→forge) | Phase 7-4→25 |
+| 데스크탑 자동화 | handler 위임 | limbs (구 desktop→interface) | Phase 7-5→25 |
+| 학술/리서치 | handler 위임 | sense (구 study→informant→source) | Phase 7-5→25 |
+| 웹사이트 빌더 | handler 위임 | engines (구 webbuilder→webdev→creator→forge) | Phase 7-5→25 |
+| 저장소 관리 | handler 위임 | self (구 storage→filesystem→orchestrator→system) | Phase 7-5→25 |
+| 데이터 시각화 | handler 위임 | engines (구 viz→creator→forge) | Phase 7-5→25 |
+| Remotion 영상 | handler 위임 | engines (구 media→creator→forge) | Phase 7-5→25 |
 
 ---
 
@@ -959,6 +960,10 @@ pipeline: '[web:search]("AI 뉴스") & [web:search]("부동산 뉴스")'
 | 9 | **Phase 20** | 높음 | 중간 | ✅ 완료 — 노드 재통합 (filesystem→orchestrator, webdev+design→creator, photo+blog+memory+health→librarian) |
 | 10 | **Phase 21** | 최대 | 중간 | ✅ 완료 — 10-Node 최종 통합 (finance+culture+study+legal+statistics+commerce+location+web → informant, 31→10 노드) |
 | 11 | **Phase 22** | 최대 | 중간 | ✅ 완료 — 6-Node 최종 통합 (10→6 노드: stream, interface, source, system, forge) |
+| 12 | **Phase 23** | 중간 | 낮음 | ✅ 완료 — team 노드 분리 (system에서 위임 7개 액션 → team 독립 노드) |
+| 13 | **Phase 24** | 높음 | 중간 | ✅ 완료 — verb 시스템 제거 (런타임 verb→action 해석 삭제, category 태그로 대체) |
+| 14 | **Phase 25** | 최대 | 높음 | ✅ 완료 — 5-Node 재구조화 (sense, self, limbs, others, engines. 총 309 액션) |
+| 15 | **Phase 26** | 최대 | 중간 | ✅ 완료 — Goal/Time/Condition 시스템 + 전략 에스컬레이션 + 라운드 메모리 |
 
 ---
 
@@ -1400,15 +1405,14 @@ Phase 19에서 인프라 노드를 orchestrator로 통합하고, Phase 20에서 
 | `source` | 105 | 데이터 검색/조회 (외부 정보 + 내부 저장소) |
 | `interface` | 79 | UI 조작 (브라우저, 안드로이드, 데스크탑) |
 | `system` | 64 | 시스템 관리, 사용자 소통, 워크플로우, 파일시스템 |
-| `engines` | 46 | 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 웹사이트) |
+| `forge` | 46 | 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 웹사이트) |
 | `stream` | 18 | 미디어 재생 (유튜브, 라디오) |
 | `messenger` | 9 | 연락처 관리 및 메시지 전송 |
 
-**총 321 액션**, 6개 노드.
+**총 321 액션**, 6개 노드. *(Phase 25에서 5-Node로 재구조화됨)*
 
 ---
 
-*현재 상태: Phase 22 완료 — 6-Node 최종 통합 (6 노드, 321 액션). source(105), interface(79), system(64), forge(46), stream(18), messenger(9).*
 *Phase 22 통합: youtube+radio→stream, browser+android+desktop→interface, informant+librarian→source, orchestrator→system, creator→forge.*
 
 ---
@@ -1429,4 +1433,131 @@ Phase 22의 6-Node 통합 이후, 에이전트의 IBL 생성 품질을 높이기
 
 → 상세 문서: [ibl_rag.md](ibl_rag.md)
 
-*최종 업데이트: 2026-02-23*
+---
+
+## Phase 23: team 노드 분리 ✅ (완료) — "위임은 독립 노드"
+
+### 배경 (2026-03-04)
+
+Phase 22에서 system 노드가 64개 액션을 가진 가장 큰 노드가 되었다. 이 중 위임 관련 7개 액션(delegate, ask, ask_sync, delegate_project, delegate_workflow, info, list_projects)은 "시스템 관리"보다 "에이전트 간 협업"에 해당하여, 독립 노드로 분리하는 것이 의미적으로 자연스러웠다.
+
+### 변경 내용
+
+- `ibl_nodes.yaml`: system 노드에서 위임 관련 7개 액션을 `team` 노드로 분리
+  - delegate, ask, ask_sync, delegate_project, delegate_workflow, info, list_projects
+- `ibl_access.py`: `_ALWAYS_ALLOWED = {"system", "team"}` (기존: `{"system"}`)
+- `system_tools.py`: team 노드 핸들러 라우팅 추가
+
+### 최종 구조
+
+6-Node → 7-Node: source, interface, system, forge, stream, messenger, **team**
+
+---
+
+## Phase 24: IBL verb 시스템 제거 ✅ (완료) — "동사 해석은 사라지고, 카테고리만 남는다"
+
+### 배경 (2026-03-05)
+
+Phase 13에서 도입한 verb 시스템(53개 동사, 141개 라우트)은 에이전트가 10개 동사만으로 모든 노드를 다룰 수 있게 해주었지만, 실제 운용에서 verb→action 런타임 해석이 불필요한 복잡성을 유발했다. 에이전트들이 이미 구체적 액션명을 직접 사용하고 있었고, 용례 RAG 시스템이 정확한 액션명을 안내해주었기 때문이다.
+
+### 변경 내용
+
+- `ibl_nodes.yaml`: 6개 노드(Phase 23 시점 7개 중 messenger 제외)의 `verbs` 섹션 삭제, 229개 액션에 `category` 태그 추가
+- `ibl_engine.py`: `_resolve_verb()` 함수 및 verb resolution 호출 제거
+- `ibl_access.py`: `build_environment()`를 `<action-categories>` 기반 표시로 변경
+- `ibl_usage_db.py`: verb→node 매핑 코드 제거
+- `ibl.md`: 동사 섹션 → 액션 카테고리 섹션으로 교체, 해석 순서 단순화
+
+### 핵심 결정
+
+verb의 "행동 분류" 가치는 유지하되, 런타임 해석은 제거. category 태그는 순수 표시 목적(프롬프트 가독성)으로만 사용되며, 에이전트는 항상 구체적 액션명을 직접 사용한다.
+
+**10개 카테고리**: search, get, list, create, control, fs, io, send, run, delete
+
+---
+
+## Phase 25: 5-Node 재구조화 ✅ (완료) — "신체적 메타포로 IBL을 재설계"
+
+### 배경 (2026-03-05~08)
+
+Phase 22~24를 거치며 7개 노드(source, interface, system, forge, stream, messenger, team)가 안정화되었다. 그러나 노드 이름이 기능 분류(source, interface)에 기반하고 있어, AI 에이전트가 직관적으로 이해하기 어려웠다.
+
+핵심 통찰: **인간 신체의 메타포**로 노드를 재설계하면 AI가 각 노드의 역할을 본능적으로 이해한다.
+
+### 5-Node 구조
+
+| 노드 | 액션 수 | 메타포 | 역할 | 통합 출처 |
+|------|---------|--------|------|-----------|
+| `sense` | 74 | 감각 기관 | 외부 정보 수집 + 내부 데이터 조회 | source(informant+librarian) |
+| `self` | 79 | 자기 중심 | 개인 도메인 관리, 파일, 설정, 사용자 소통, 워크플로우 | system(orchestrator) |
+| `limbs` | 97 | 손발 | 장치 제어 (브라우저, 안드로이드, 데스크톱) + 미디어 재생 | interface + stream |
+| `others` | 13 | 다른 개체 | 에이전트 위임 + 메시지 송수신 | team + messenger |
+| `engines` | 46 | 엔진 | 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 웹사이트, 설계) | forge(creator) |
+
+**총 309 액션**, 5개 노드.
+
+### 주요 변경
+
+- `ibl_nodes.yaml`: 7개 노드 → 5개 노드 재구성, group 필드로 하위 소속 구분
+- `ibl_access.py`: `_ALWAYS_ALLOWED = {"self", "others"}`, 역호환 매핑 체인 업데이트
+- `ibl.md`: 전면 재작성 — 5개 노드 상세 설명, group 체계, 모든 예시 업데이트
+- 모든 프로젝트 `agents.yaml`: `allowed_nodes` 치환
+
+### 역호환성
+
+모든 역사적 노드 이름(31개+)을 현재 5개 노드로 매핑하는 체인 유지:
+- `"source"`, `"informant"`, `"librarian"`, `"finance"`, `"culture"`, `"study"`, `"photo"`, `"blog"` 등 → `"sense"`
+- `"system"`, `"orchestrator"`, `"user"`, `"workflow"`, `"automation"`, `"output"`, `"filesystem"` → `"self"`
+- `"interface"`, `"stream"`, `"browser"`, `"android"`, `"desktop"`, `"youtube"`, `"radio"` → `"limbs"`
+- `"team"`, `"messenger"`, `"contact"`, `"channel"` → `"others"`
+- `"forge"`, `"creator"`, `"webdev"`, `"design"` → `"engines"`
+
+---
+
+## Phase 26: Goal/Time/Condition 시스템 ✅ (완료) — "목적이 있는 에이전트"
+
+### 배경 (2026-03-09)
+
+Phase 25까지의 IBL은 "어디서, 무엇을"에 대한 언어였다. 하지만 에이전트는 "왜(목적)", "언제까지(시간)", "어떤 상황에서(조건)"를 모르기 때문에, 명령을 받아 실행하고 끝내는 도구에 머물러 있었다.
+
+Phase 26은 IBL에 Goal/Time/Condition 레이어를 추가하여 에이전트를 "도구"에서 "동료"로 전환한다.
+
+→ 상세 설계서: [phase26_goal_time_condition.md](phase26_goal_time_condition.md)
+
+### Phase 26a: Goal/Time/Condition 기본 구현
+
+- `conversation_db.py`: `goal_context` 테이블 (태스크별 goal/time_limit/conditions 구조화 저장)
+- `ibl_nodes.yaml`: self 노드에 `set_goal`, `check_goal`, `update_goal`, `clear_goal` 액션 추가
+- `ibl_engine.py`: `_set_goal()`, `_check_goal()`, `_update_goal()`, `_clear_goal()` 핸들러
+- `ibl_access.py`: `<goal_context>` 동적 XML 주입 (에이전트 프롬프트에 목표/시간/조건 자동 삽입)
+- 에이전트가 목표 달성 여부, 시간 초과, 조건 충족을 자체 판단하여 태스크 종료
+
+### Phase 26b: 전략 에스컬레이션 + 라운드 메모리
+
+**문제**: Gemini 에이전트가 CCTV 67라운드 동안 같은 유형의 시도를 미세 변형하며 반복하는 패턴 발견.
+
+**해결**: 범주별 실패 추적 → 강제 전략 전환 → 소진 시 사용자 보고
+
+- `conversation_db.py`: `attempt_log` 테이블 + `log_attempt`/`get_attempt_history`/`get_consecutive_failures`/`get_failed_categories` 메서드
+- `ibl_nodes.yaml`: self 노드에 `log_attempt`, `get_attempts` 액션 추가
+- `ibl_engine.py`: `_log_attempt()`, `_get_attempts()` 핸들러 (자동 에스컬레이션 경고 포함)
+- `ibl_access.py`: `<strategy_rules>` 정적 규칙 5개 + `<attempt_history>` 동적 XML 주입
+- 같은 범주 3회 연속 실패 시 `escalation_required`, 모든 범주 소진 시 `all_exhausted` 자동 반환
+
+### Phase 26 추가 액션 (sense 노드)
+
+- `cctv_refresh`: UTIC 실시간 API 데이터 갱신
+- `cctv_stats`: CCTV 데이터 소스 통계 조회
+
+### 최종 수치 (Phase 26 시점)
+
+- **5개 노드**: sense(74), self(79), limbs(97), others(13), engines(46)
+- **총 309 액션**
+- **Goal 상태**: pending → active → achieved / expired / limit_reached / cancelled
+- **안전장치 3중**: 내부 제한(max_rounds/max_cost) + 목적 검증(success_condition) + 외부 통제(list_goals/kill_goal)
+
+---
+
+*현재 상태: Phase 26 완료 — 5-Node 최종 구조 (5 노드, 309 액션). sense(74), self(79), limbs(97), others(13), engines(46). Goal/Time/Condition + 전략 에스컬레이션 + 라운드 메모리.*
+
+*최종 업데이트: 2026-03-27*

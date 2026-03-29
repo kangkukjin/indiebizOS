@@ -315,7 +315,7 @@ def _get_list_switches_tool() -> Dict:
 
 
 def get_all_system_ai_tools() -> List[Dict]:
-    """시스템 AI 도구: execute_ibl + 범용 언어 도구 + search_guide
+    """시스템 AI 도구: execute_ibl + 범용 언어 도구 + read_guide
 
     프로젝트 에이전트와 동일한 도구 구조.
     차이는 IBL에서 접근 가능한 노드 범위뿐 (시스템 AI: 전체 노드).
@@ -349,8 +349,8 @@ def get_all_system_ai_tools() -> List[Dict]:
 
     # 가이드 검색 도구
     tools.append({
-        "name": "search_guide",
-        "description": "복잡한 작업 전에 가이드(워크플로우/레시피)를 검색합니다. 캘린더, 스케줄, 영상 제작 등 절차가 있는 작업 전에 호출하세요.",
+        "name": "read_guide",
+        "description": "가이드 파일을 읽는 도구. 검색, 투자 분석, 동영상 제작, 웹사이트 빌드 등 복잡한 작업의 단계별 가이드가 저장되어 있다. 작업 전에 이 도구로 가이드를 읽어라. 예: query='검색'이면 검색 가이드를 읽음.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -415,6 +415,68 @@ def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAge
     return agent
 
 
+def _run_consciousness_for_system_ai(message: str, history: List[Dict] = None) -> dict:
+    """시스템 AI용 의식 에이전트 실행"""
+    try:
+        from consciousness_agent import (
+            get_consciousness_agent,
+            get_ibl_node_summary,
+            get_guide_list,
+            get_world_pulse_text,
+        )
+        agent = get_consciousness_agent()
+        if not agent.is_ready:
+            return None
+
+        # 시스템 AI 역할 전문 로드
+        role_path = DATA_PATH / "system_ai_role.txt"
+        agent_role = role_path.read_text(encoding='utf-8').strip() if role_path.exists() else "IndieBiz OS의 관리자이자 안내자"
+
+        # 사용자 프로필 (시스템 AI의 영구메모에 해당)
+        agent_notes = load_user_profile()
+
+        return agent.process(
+            user_message=message,
+            history=history or [],
+            ibl_node_summary=get_ibl_node_summary(user_message=message),  # 시스템 AI는 전체 노드
+            guide_list=get_guide_list(message),
+            world_pulse=get_world_pulse_text(),
+            agent_name="시스템 AI",
+            agent_role=agent_role,
+            agent_notes=agent_notes,
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"[SystemAI 의식] 실행 실패: {e}")
+        return None
+
+
+def _apply_consciousness(agent, message: str, history: List[Dict], consciousness_output: dict):
+    """의식 에이전트 결과를 시스템 AI에 적용 — 프롬프트 갱신 + 히스토리 편집"""
+    if not consciousness_output:
+        return history
+
+    # 시스템 프롬프트 재구성
+    user_profile = load_user_profile()
+    git_enabled = (DATA_PATH / ".git").exists()
+
+    from prompt_builder import build_system_ai_prompt
+    new_prompt = build_system_ai_prompt(
+        user_profile=user_profile,
+        git_enabled=git_enabled,
+        consciousness_output=consciousness_output
+    )
+    agent.system_prompt = new_prompt
+    if agent._provider:
+        agent._provider.system_prompt = new_prompt
+
+    # 히스토리 편집
+    history_summary = consciousness_output.get("history_summary", "")
+    if history_summary:
+        return [{"role": "user", "content": f"[이전 대화 요약: {history_summary}]"}]
+    return history
+
+
 def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None) -> str:
     """시스템 AI 메시지 처리 (AIAgent 사용, 동기 모드)
 
@@ -431,6 +493,10 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     agent = create_system_ai_agent(
         user_profile=user_profile
     )
+
+    # 의식 에이전트 실행
+    consciousness_output = _run_consciousness_for_system_ai(message, history)
+    history = _apply_consciousness(agent, message, history or [], consciousness_output)
 
     return agent.process_message_with_history(
         message_content=message,
@@ -462,6 +528,10 @@ def process_system_ai_message_stream(
         user_profile=user_profile
     )
 
+    # 의식 에이전트 실행
+    consciousness_output = _run_consciousness_for_system_ai(message, history)
+    history = _apply_consciousness(agent, message, history or [], consciousness_output)
+
     yield from agent.process_message_stream(
         message_content=message,
         history=history,
@@ -470,7 +540,7 @@ def process_system_ai_message_stream(
     )
 
 
-def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None, agent_id: str = None) -> str:
+def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None, agent_id: str = None, **kwargs) -> str:
     """Phase 17: 시스템 AI 도구 실행 (execute_ibl 단일 경로)
 
     Args:
@@ -478,6 +548,7 @@ def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = None, 
         tool_input: 도구 입력
         work_dir: 작업 디렉토리
         agent_id: 에이전트 ID
+        **kwargs: 프로바이더가 전달하는 추가 인자 (cancel_check 등)
     """
     from system_tools import execute_tool
     return execute_tool(
@@ -744,7 +815,7 @@ def _execute_call_project_agent(tool_input: dict) -> str:
 
 
 # 시스템 AI 가이드 주입 — 비활성화됨
-# 가이드 시스템이 search_guide 독립 도구로 통합됨 (data/guides/ + guide_db.json)
+# 가이드 시스템이 read_guide 독립 도구로 통합됨 (data/guides/ + guide_db.json)
 
 
 def _execute_manage_events(tool_input: dict) -> str:
@@ -1223,7 +1294,7 @@ def _execute_create_plan(params: dict, agent_id: str = None, project_path: str =
             "error": "작업계획서 단계에 담당 에이전트가 지정되지 않았습니다.",
             "details": errors,
             "hint": "각 step에 agent_project_id(프로젝트 ID)와 agent_id(에이전트 ID)를 반드시 지정하세요. "
-                     "search_guide('작업계획서')로 가이드를 읽고, "
+                     "read_guide('작업계획서')로 가이드를 읽고, "
                      "[others:list_projects]로 프로젝트/에이전트 목록을 확인하세요."
         }, ensure_ascii=False)
 
@@ -1323,7 +1394,7 @@ def _execute_create_plan(params: dict, agent_id: str = None, project_path: str =
             result["quality_warnings"] = quality_warnings
             result["message"] += (
                 f" (품질 경고 {len(quality_warnings)}건 — "
-                f"search_guide('작업계획서')로 가이드를 참고하여 개선하세요)")
+                f"read_guide('작업계획서')로 가이드를 참고하여 개선하세요)")
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
         return json.dumps({"success": False, "error": f"파일 저장 실패: {e}"}, ensure_ascii=False)
@@ -1603,7 +1674,7 @@ def _execute_plan(params: dict, agent_id: str = None, project_path: str = None) 
             "error": f"단계 {step_num}({step_title}): 담당 에이전트가 지정되지 않았습니다. "
                      f"(project='{target_project_id}', agent='{target_agent_id}'). "
                      f"작업계획서를 다시 작성해주세요. "
-                     f"search_guide('작업계획서')로 가이드를 참고하세요.",
+                     f"read_guide('작업계획서')로 가이드를 참고하세요.",
             "plan_file": resolved_path,
             "step": step_num
         }, ensure_ascii=False)

@@ -369,7 +369,7 @@ _PIPELINE_TEMPLATES = [
     # 인터페이스
     (
         "구글 홈페이지 열어줘",
-        '[limbs:navigate]{url: "https://google.com"}',
+        '[limbs:browser_navigate]{url: "https://google.com"}',
         "limbs", "single"
     ),
     (

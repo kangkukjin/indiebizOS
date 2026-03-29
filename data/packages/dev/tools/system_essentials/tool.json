@@ -101,17 +101,6 @@
       }
     },
     {
-      "name": "open_in_browser",
-      "description": "URL 또는 파일을 기본 브라우저에서 엽니다.\n\n사용법:\n- 웹 URL: 'https://example.com'\n- 로컬 파일: '/path/to/file.html'\n\n사용 예시:\n- 문서 페이지 열기\n- 생성한 HTML 파일 미리보기\n- API 문서 참조",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "path": { "type": "string", "description": "URL 또는 파일 경로" }
-        },
-        "required": ["path"]
-      }
-    },
-    {
       "name": "todo_write",
       "description": "작업 목록을 생성하고 관리합니다. 진행 상황을 추적하고 복잡한 작업을 체계적으로 관리합니다.\n\n## 사용 시점\n다음 상황에서 적극 사용:\n1. 3단계 이상의 복잡한 작업\n2. 사용자가 여러 작업을 요청한 경우\n3. 새 지시를 받았을 때 즉시 할 일 목록 작성\n4. 작업 시작 시 in_progress로 표시\n5. 작업 완료 시 즉시 completed로 표시\n\n## 사용하지 않을 때\n1. 단순한 단일 작업\n2. 3단계 미만의 간단한 작업\n3. 대화/정보 요청\n\n## 상태 관리\n- pending: 대기 중\n- in_progress: 진행 중 (한 번에 하나만)\n- completed: 완료\n\n중요: 작업 완료 즉시 상태 업데이트. 일괄 처리 금지.",
       "input_schema": {

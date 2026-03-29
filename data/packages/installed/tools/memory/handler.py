@@ -1,8 +1,10 @@
 """
-Memory Handler - 에이전트 심층 메모리 관리
+Memory Handler - 메모리 통합 관리
+심층 메모리 + 대화 이력을 통합 검색
 """
 import json
 import os
+import sqlite3
 import sys
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -60,22 +62,73 @@ def _memory_save(db, args, project_path, agent_id):
 
 
 def _memory_search(db, args, project_path, agent_id):
+    """통합 검색: 심층 메모리 + 대화 이력"""
     query = args.get("query", "")
     if not query.strip():
         return json.dumps({"error": "query가 필요합니다."}, ensure_ascii=False)
 
-    results = db.search(
+    limit = args.get("limit", 10)
+    results = []
+
+    # 1) 심층 메모리 검색
+    deep_results = db.search(
         project_path=project_path,
         agent_id=agent_id,
         query=query,
         category=args.get("category"),
-        limit=args.get("limit", 10)
+        limit=limit
     )
+    for r in deep_results:
+        r["source"] = "deep_memory"
+    results.extend(deep_results)
+
+    # 2) 대화 이력 검색
+    conv_results = _search_conversations(project_path, query, limit=min(limit, 5))
+    results.extend(conv_results)
 
     return json.dumps({
         "count": len(results),
         "memories": results
     }, ensure_ascii=False, indent=2)
+
+
+def _search_conversations(project_path, query, limit=5):
+    """conversations.db에서 대화 이력 검색"""
+    conv_db_path = os.path.join(project_path, "conversations.db")
+    if not os.path.exists(conv_db_path):
+        return []
+
+    try:
+        conn = sqlite3.connect(conv_db_path, timeout=5.0)
+        conn.row_factory = sqlite3.Row
+
+        rows = conn.execute("""
+            SELECT m.id, a_from.name as from_agent, a_to.name as to_agent,
+                   substr(m.content, 1, 200) as preview,
+                   m.message_time as created_at
+            FROM messages m
+            LEFT JOIN agents a_from ON m.from_agent_id = a_from.id
+            LEFT JOIN agents a_to ON m.to_agent_id = a_to.id
+            WHERE m.content LIKE ?
+            ORDER BY m.message_time DESC
+            LIMIT ?
+        """, (f"%{query}%", limit)).fetchall()
+
+        conn.close()
+
+        results = []
+        for r in rows:
+            results.append({
+                "id": r["id"],
+                "preview": r["preview"],
+                "from_agent": r["from_agent"],
+                "to_agent": r["to_agent"],
+                "created_at": r["created_at"],
+                "source": "conversation"
+            })
+        return results
+    except Exception:
+        return []
 
 
 def _memory_read(db, args, project_path, agent_id):

@@ -38,7 +38,7 @@ site_registry(list) → 현재 페이지 확인 → site_snapshot → 파일 직
 ```
 
 1. **site_registry(action='list')**: 등록된 사이트 목록 확인 — ⚠️ 반드시 첫 번째! 이 결과에 local_path, repo_url, deploy_url, tech_stack 모두 포함됨
-2. **현재 배포된 페이지 내용 확인**: `[sense:crawl]{url: "배포URL"}`로 현재 페이지 내용을 크롤링. ⚠️ **브라우저 자동화(`[limbs:navigate]`, `[limbs:content]`)를 사용하지 마세요.** 크롤링이 훨씬 빠르고 가볍습니다.
+2. **현재 배포된 페이지 내용 확인**: `[sense:crawl]{url: "배포URL"}`로 현재 페이지 내용을 크롤링. ⚠️ **브라우저 자동화(`[limbs:browser_navigate]`, `[limbs:browser_content]`)를 사용하지 마세요.** 크롤링이 훨씬 빠르고 가볍습니다.
 3. **site_snapshot**: 현재 구조 파악 (파일, 커밋, 페이지, 의존성)
 4. **파일 직접 읽기/수정**: read_file → edit_file로 기존 코드 수정
 5. **git push**: 변경사항 푸시 (자동 배포 설정 시 자동 반영)

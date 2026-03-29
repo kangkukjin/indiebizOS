@@ -31,6 +31,7 @@ import type {
   RenamingItem,
   TrashItems,
   SystemAISettings,
+  UnconsciousAISettings,
 } from './launcher-components';
 
 export function Launcher() {
@@ -113,6 +114,13 @@ export function Launcher() {
     model: 'gemini-2.0-flash-exp',
     apiKey: '',
   });
+  const [unconsciousAiSettings, setUnconsciousAiSettings] = useState<UnconsciousAISettings>({
+    enabled: true,
+    provider: 'google',
+    model: 'gemini-2.0-flash-lite',
+    apiKey: '',
+  });
+  const [showUnconsciousApiKey, setShowUnconsciousApiKey] = useState(false);
 
   const trashRef = useRef<HTMLDivElement>(null);
   const desktopRef = useRef<HTMLDivElement>(null);
@@ -387,6 +395,16 @@ export function Launcher() {
         model: config.model ?? 'gemini-2.0-flash-exp',
         apiKey: config.apiKey ?? '',
       });
+      // 무의식 AI 설정도 로드
+      try {
+        const uConfig = await api.getUnconsciousAI();
+        setUnconsciousAiSettings({
+          enabled: uConfig.enabled ?? true,
+          provider: uConfig.provider ?? 'google',
+          model: uConfig.model ?? 'gemini-2.0-flash-lite',
+          apiKey: uConfig.apiKey ?? '',
+        });
+      } catch { /* 무의식 AI 설정 없으면 기본값 유지 */ }
       setShowSettingsDialog(true);
     } catch (error) {
       console.error('Failed to load system AI settings:', error);
@@ -397,9 +415,10 @@ export function Launcher() {
   const handleSaveSystemAi = async () => {
     try {
       await api.updateSystemAI(systemAiSettings);
+      await api.updateUnconsciousAI(unconsciousAiSettings);
       setShowSettingsDialog(false);
     } catch (error) {
-      console.error('Failed to save system AI settings:', error);
+      console.error('Failed to save settings:', error);
     }
   };
 
@@ -1232,6 +1251,10 @@ export function Launcher() {
         showApiKey={showApiKey}
         onSettingsChange={setSystemAiSettings}
         onToggleApiKey={() => setShowApiKey(!showApiKey)}
+        unconsciousSettings={unconsciousAiSettings}
+        showUnconsciousApiKey={showUnconsciousApiKey}
+        onUnconsciousSettingsChange={setUnconsciousAiSettings}
+        onToggleUnconsciousApiKey={() => setShowUnconsciousApiKey(!showUnconsciousApiKey)}
         onSave={handleSaveSystemAi}
         onClose={() => setShowSettingsDialog(false)}
       />

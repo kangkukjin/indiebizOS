@@ -5,4 +5,5 @@ actions:
     target_description: 'API 엔드포인트 (예: /zones, /accounts/{account_id}/tunnels)'
     router: handler
     tool: cf_api
+    implementation: Cloudflare REST API (Pages/Workers/R2/D1/Tunnel) 통합 HTTP 클라이언트
     target_key: endpoint

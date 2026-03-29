@@ -63,17 +63,21 @@ from switch_manager import SwitchManager
 # ============ 앱 초기화 ============
 
 def _auto_register_packages():
-    """서버 시작 시 수동 설치된 패키지의 IBL 액션을 자동 등록.
+    """서버 시작 시 변경된 패키지의 IBL 액션을 ibl_nodes.yaml에 동기화.
 
-    installed/tools/ 내 ibl_actions.yaml이 있지만 _ibl_provenance.yaml에
-    등록되지 않은 패키지를 찾아 자동으로 register_actions() 호출.
+    각 패키지의 ibl_actions.yaml 수정 시간을 ibl_nodes.yaml과 비교하여
+    변경된 패키지만 register_actions()로 재등록한다.
+    미등록 패키지는 항상 등록한다.
     """
-    import yaml
-    from ibl_action_manager import register_actions, _load_provenance
+    from ibl_action_manager import register_actions, _load_provenance, _get_nodes_path
 
     tools_dir = DATA_PATH / "packages" / "installed" / "tools"
     if not tools_dir.exists():
         return
+
+    # ibl_nodes.yaml 수정 시간 (없으면 0 → 모두 등록)
+    nodes_path = _get_nodes_path()
+    nodes_mtime = nodes_path.stat().st_mtime if nodes_path.exists() else 0
 
     # provenance에서 이미 등록된 패키지 집합
     prov = _load_provenance()
@@ -83,24 +87,29 @@ def _auto_register_packages():
             for owner in node_actions.values():
                 registered_pkgs.add(owner)
 
-    # 미등록 패키지 탐색 및 등록
     count = 0
     for pkg_dir in sorted(tools_dir.iterdir()):
         if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
             continue
-        if pkg_dir.name in registered_pkgs:
+        actions_file = pkg_dir / "ibl_actions.yaml"
+        if not actions_file.exists():
             continue
-        if not (pkg_dir / "ibl_actions.yaml").exists():
+
+        # 미등록이거나, 패키지 YAML이 nodes보다 새로우면 등록
+        is_new = pkg_dir.name not in registered_pkgs
+        is_modified = actions_file.stat().st_mtime > nodes_mtime
+        if not is_new and not is_modified:
             continue
 
         result = register_actions(pkg_dir.name)
         registered = result.get("registered", 0)
         if registered > 0:
             count += 1
-            print(f"  → {pkg_dir.name}: {registered}개 액션 자동 등록")
+            label = "신규" if is_new else "변경"
+            print(f"  → {pkg_dir.name}: {registered}개 액션 ({label})")
 
     if count > 0:
-        print(f"[AutoRegister] {count}개 패키지 자동 등록 완료")
+        print(f"[AutoRegister] {count}개 패키지 동기화 완료")
 
 
 @asynccontextmanager
@@ -113,6 +122,14 @@ async def lifespan(app: FastAPI):
     setup_bundled_runtime_paths()
 
     print("🚀 IndieBiz OS 서버 시작")
+
+    # World Pulse: 펄스 수집 & 자가점검 스케줄 등록 (스케줄러 시작 전에 등록해야 함)
+    try:
+        from world_pulse import register_pulse_tasks
+        register_pulse_tasks()
+        print("[WorldPulse] 펄스 수집 & 자가점검 스케줄 등록")
+    except Exception as e:
+        print(f"[WorldPulse] 등록 실패 (무시): {e}")
 
     # 통합 스케줄러 자동 시작
     from calendar_manager import get_calendar_manager
@@ -166,14 +183,6 @@ async def lifespan(app: FastAPI):
             print(f"[WorldPulse] 초기화 실패 (무시): {e}")
     threading.Thread(target=_deferred_world_pulse, daemon=True).start()
     print("[WorldPulse] 백그라운드 수집 스레드 시작")
-
-    # Consciousness Pulse: 의식 시스템 등록 (매시간 펄스 + 자가점검)
-    try:
-        from world_pulse import register_consciousness_tasks
-        register_consciousness_tasks()
-        print("[Consciousness] 의식 펄스 & 자가점검 스케줄 등록")
-    except Exception as e:
-        print(f"[Consciousness] 등록 실패 (무시): {e}")
 
     yield
 

@@ -108,6 +108,25 @@ ingress:
   - service: http_status:404
 ```
 
+### ⚠️ 터널 설정 순서 (반드시 이 순서로)
+
+1. `cloudflared tunnel create` → 터널 ID 획득
+2. `cloudflared tunnel route dns` → DNS 레코드 생성 (터널 ID 필요)
+3. `config.yml` 생성 → 터널 ID + 호스트명 필요 (1, 2 완료 후)
+4. `tunnel_config.json` 저장 → 모든 정보 확보 후
+
+순서가 바뀌면 실패합니다. 특히 2번에서 DNS 레코드가 없으면 터널 실행 시 연결 불가.
+
+### 에러 처리
+
+| 에러 | 원인 | 대응 |
+|------|------|------|
+| `tunnel already exists` | 같은 이름의 터널이 이미 존재 | `cloudflared tunnel list`로 확인 후 기존 것 사용 또는 다른 이름 |
+| `failed to add DNS record` | 호스트명 충돌 또는 zone 권한 부족 | `-2` 접미사 붙여 재시도. 계속 실패하면 Cloudflare 대시보드에서 기존 레코드 확인 |
+| `credentials file not found` | `tunnel login`을 안 했거나 인증 만료 | `cloudflared tunnel login` 재실행 |
+| `config.yml not found` | config 파일 미생성 또는 경로 오류 | `~/.cloudflared/config.yml` 경로 확인 |
+| `tunnel_config.json` 저장 실패 | data/ 디렉토리 권한 문제 | 경로 확인 후 수동 생성 안내 |
+
 ### ⚠️ 중요: IndieBiz OS 설정에 터널 정보 자동 저장
 
 터널 생성과 DNS 라우팅 후 반드시 `data/tunnel_config.json`에 터널 정보를 저장해야 합니다.

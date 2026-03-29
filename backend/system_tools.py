@@ -829,9 +829,62 @@ def execute_get_my_tools(tool_input: dict, project_path: str, agent_id: str = No
         }, ensure_ascii=False)
 
 
+# ============ $file:N 치환 헬퍼 ============
+
+def _replace_file_refs_in_steps(steps: list, files: list):
+    """파싱된 step 리스트의 params에서 $file:N 플레이스홀더를 실제 내용으로 치환.
+
+    코드 문자열 수준에서 치환하면 HTML 등 따옴표/특수문자가 포함된 콘텐츠가
+    IBL 파서를 깨뜨리므로, 파싱 후 params dict 값을 직접 교체한다.
+    """
+    for step in steps:
+        # 일반 step
+        params = step.get("params")
+        if params and isinstance(params, dict):
+            _replace_file_refs_in_dict(params, files)
+        # 병렬 branches
+        branches = step.get("branches")
+        if branches and isinstance(branches, list):
+            _replace_file_refs_in_steps(branches, files)
+        # fallback chain
+        chain = step.get("_fallback_chain")
+        if chain and isinstance(chain, list):
+            _replace_file_refs_in_steps(chain, files)
+
+
+def _replace_file_refs_in_dict(d: dict, files: list):
+    """dict 값에서 $file:N 플레이스홀더를 치환 (재귀)."""
+    for key, val in d.items():
+        if isinstance(val, str):
+            for idx, file_content in enumerate(files):
+                placeholder = f"$file:{idx}"
+                if placeholder in val:
+                    val = val.replace(placeholder, file_content)
+            d[key] = val
+        elif isinstance(val, dict):
+            _replace_file_refs_in_dict(val, files)
+        elif isinstance(val, list):
+            _replace_file_refs_in_list(val, files)
+
+
+def _replace_file_refs_in_list(lst: list, files: list):
+    """list 요소에서 $file:N 플레이스홀더를 치환 (재귀)."""
+    for i, val in enumerate(lst):
+        if isinstance(val, str):
+            for idx, file_content in enumerate(files):
+                placeholder = f"$file:{idx}"
+                if placeholder in val:
+                    val = val.replace(placeholder, file_content)
+            lst[i] = val
+        elif isinstance(val, dict):
+            _replace_file_refs_in_dict(val, files)
+        elif isinstance(val, list):
+            _replace_file_refs_in_list(val, files)
+
+
 # ============ 통합 도구 실행 함수 ============
 
-def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = None) -> str:
+def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = None, cancel_check=None) -> str:
     """execute_ibl 통합 실행기 — IBL 코드 기반
 
     AI가 IBL 코드 문자열을 생성하면, 파서가 해석하고 엔진이 실행한다.
@@ -858,6 +911,9 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             }
         }, ensure_ascii=False)
 
+    # --- files 파라미터: $file:N 참조 정보 보관 (파싱 후 치환) ---
+    files = tool_input.get("files")
+
     # 디버그
     print(f"[IBL_DEBUG] code={code[:100]}")
 
@@ -868,6 +924,11 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
 
         if not parsed:
             return json.dumps({"error": f"IBL 파싱 실패: {code}"}, ensure_ascii=False)
+
+        # $file:N 치환 — 파싱 후 params 레벨에서 수행 (코드 문자열에서 치환하면
+        # HTML 등 따옴표 포함 콘텐츠가 파서를 깨뜨림)
+        if files and isinstance(files, list):
+            _replace_file_refs_in_steps(parsed, files)
 
         # 노드 접근 체크
         if allowed is not None:
@@ -911,12 +972,9 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             result = execute_ibl(ibl_input, project_path, agent_id)
         else:
             # 파이프라인 / 병렬 / fallback → workflow_engine
-            from workflow_engine import execute_workflow_action
-            result = execute_workflow_action(
-                "run_pipeline",
-                {"pipeline": code},
-                project_path
-            )
+            # 이미 파싱 + $file:N 치환된 steps를 직접 전달 (재파싱 방지)
+            from workflow_engine import execute_pipeline
+            result = execute_pipeline(parsed, project_path, agent_id=agent_id)
 
         # 파이프라인 결과에서 map_data를 최상위로 승격
         if isinstance(result, dict) and "results" in result:
@@ -999,15 +1057,29 @@ def _dict_to_json(result) -> str:
 
 
 
-def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None):
+# ============ 도구 중단 지원 ============
+
+# 현재 실행 중인 도구 스레드 추적 (cancel 시 사용)
+_active_tool_threads: dict[str, threading.Thread] = {}
+
+
+class ToolCancelled(Exception):
+    """도구 실행이 사용자에 의해 중단됨"""
+    pass
+
+
+def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None,
+                 cancel_check=None):
     """
     도구 실행 (IBL 형식 로깅 래퍼)
+    cancel_check가 주어지면 별도 스레드에서 실행하고 중단 가능하게 함.
 
     Args:
         tool_name: 도구 이름
         tool_input: 도구 입력
         project_path: 프로젝트 경로
         agent_id: 에이전트 ID (에이전트별 상태 저장용)
+        cancel_check: 중단 여부 확인 함수 (None이면 기존 동기 실행)
 
     Returns:
         실행 결과 (JSON 문자열 또는 dict)
@@ -1017,7 +1089,11 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
     success = True
 
     try:
-        result = _execute_tool_inner(tool_name, tool_input, project_path, agent_id)
+        # cancel_check가 있으면 별도 스레드에서 실행 (중단 가능)
+        if cancel_check:
+            result = _execute_tool_with_cancel(tool_name, tool_input, project_path, agent_id, cancel_check)
+        else:
+            result = _execute_tool_inner(tool_name, tool_input, project_path, agent_id)
 
         # [MAP:...] 태그 변환 — 모든 도구 결과에서 map_data를 프론트엔드용 태그로 변환
         # (동적 핸들러 경로에서 이미 처리된 경우, json.loads가 실패하므로 안전하게 건너뜀)
@@ -1044,6 +1120,9 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
             success = False
 
         return result
+    except ToolCancelled:
+        success = False
+        return json.dumps({"success": False, "error": "사용자가 작업을 중단했습니다."}, ensure_ascii=False)
     except Exception as e:
         success = False
         raise
@@ -1052,7 +1131,39 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
         _log_ibl(tool_name, tool_input, duration_ms, agent_id, success)
 
 
-def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
+def _execute_tool_with_cancel(tool_name, tool_input, project_path, agent_id, cancel_check):
+    """도구를 별도 스레드에서 실행하고, cancel_check로 중단 감지"""
+    result_holder = [None]
+    error_holder = [None]
+
+    def _run():
+        try:
+            result_holder[0] = _execute_tool_inner(tool_name, tool_input, project_path, agent_id, cancel_check=cancel_check)
+        except Exception as e:
+            error_holder[0] = e
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread_key = f"{agent_id or 'system'}_{id(thread)}"
+    _active_tool_threads[thread_key] = thread
+    thread.start()
+
+    # 0.5초 간격으로 cancel 체크하며 스레드 완료 대기
+    while thread.is_alive():
+        thread.join(timeout=0.5)
+        if cancel_check and cancel_check():
+            print(f"[도구 중단] {tool_name} — 사용자 중단 요청, 스레드를 버리고 진행")
+            _active_tool_threads.pop(thread_key, None)
+            # 스레드는 daemon이므로 프로세스 종료 시 자동 정리됨
+            raise ToolCancelled()
+
+    _active_tool_threads.pop(thread_key, None)
+
+    if error_holder[0]:
+        raise error_holder[0]
+    return result_holder[0]
+
+
+def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None, cancel_check=None) -> str:
     """
     도구 실행 내부 구현 (시스템 도구 + 동적 로딩)
     """
@@ -1062,7 +1173,7 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".
             return execute_request_user_approval(tool_input, project_path)
 
         # 가이드 검색 (독립 도구 — IBL/Python 어디서든 사용 가능)
-        if tool_name == "search_guide":
+        if tool_name == "read_guide":
             from ibl_engine import _search_guide
             query = tool_input.get("query", "")
             read = tool_input.get("read", True)
@@ -1071,7 +1182,7 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".
 
         # IBL 통합 실행기 (Phase 13)
         if tool_name == "execute_ibl":
-            return _execute_ibl_unified(tool_input, project_path, agent_id)
+            return _execute_ibl_unified(tool_input, project_path, agent_id, cancel_check=cancel_check)
 
         # 시스템 도구 처리
         if tool_name == "call_agent":
@@ -1099,9 +1210,15 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".
             import inspect
             sig = inspect.signature(handler.execute)
             if 'agent_id' in sig.parameters:
-                result = handler.execute(tool_name, tool_input, project_path, agent_id)
+                if 'cancel_check' in sig.parameters:
+                    result = handler.execute(tool_name, tool_input, project_path, agent_id, cancel_check=cancel_check)
+                else:
+                    result = handler.execute(tool_name, tool_input, project_path, agent_id)
             else:
-                result = handler.execute(tool_name, tool_input, project_path)
+                if 'cancel_check' in sig.parameters:
+                    result = handler.execute(tool_name, tool_input, project_path, cancel_check=cancel_check)
+                else:
+                    result = handler.execute(tool_name, tool_input, project_path)
 
             # async 핸들러 지원: coroutine이면 영구 이벤트 루프에서 실행
             if asyncio.iscoroutine(result):
@@ -1125,6 +1242,17 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".
 
             return result
         else:
+            # IBL 액션 패턴 감지 (node:action) → execute_ibl로 자동 라우팅
+            # 모델이 execute_ibl 대신 "self:todo", "sense:search" 같은 이름으로 직접 호출하는 경우 방어
+            if ':' in tool_name:
+                node, action = tool_name.split(':', 1)
+                ibl_nodes = ['sense', 'self', 'limbs', 'others', 'engines']
+                if node in ibl_nodes:
+                    # tool_input을 IBL params로 변환
+                    params_str = ", ".join(f'{k}: "{v}"' if isinstance(v, str) else f'{k}: {v}' for k, v in tool_input.items()) if tool_input else ""
+                    ibl_code = f"[{tool_name}]{{{params_str}}}" if params_str else f"[{tool_name}]"
+                    print(f"[system_tools] ⚡ IBL 액션 직접 호출 감지: {tool_name} → execute_ibl({ibl_code})")
+                    return _execute_ibl_unified({"code": ibl_code}, project_path, agent_id, cancel_check=cancel_check)
             return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
 
     except Exception as e:

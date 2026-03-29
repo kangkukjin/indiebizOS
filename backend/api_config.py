@@ -24,6 +24,7 @@ ENV_PATH = _get_base_path() / ".env"
 
 SYSTEM_MEMO_PATH = DATA_PATH / "system_ai_memo.txt"
 SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
+UNCONSCIOUS_AI_CONFIG_PATH = DATA_PATH / "unconscious_ai_config.json"
 
 # 매니저 인스턴스
 project_manager = None
@@ -248,6 +249,49 @@ async def update_system_ai_config(config: Dict[str, Any]):
             "role": config.get("role", "")
         }
         with open(SYSTEM_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
+            json.dump(config_dict, f, ensure_ascii=False, indent=2)
+        return {"status": "saved", "config": config_dict}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============ 무의식 AI 설정 API ============
+
+def get_default_unconscious_ai_config() -> dict:
+    """기본 무의식 AI 설정"""
+    return {
+        "enabled": True,
+        "provider": "google",
+        "model": "gemini-2.0-flash-lite",
+        "apiKey": ""
+    }
+
+
+@router.get("/unconscious-ai")
+async def get_unconscious_ai_config():
+    """무의식 AI 설정 조회"""
+    try:
+        if UNCONSCIOUS_AI_CONFIG_PATH.exists():
+            with open(UNCONSCIOUS_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        else:
+            config = get_default_unconscious_ai_config()
+        return {"config": config}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/unconscious-ai")
+async def update_unconscious_ai_config(config: Dict[str, Any]):
+    """무의식 AI 설정 저장"""
+    try:
+        config_dict = {
+            "enabled": config.get("enabled", True),
+            "provider": config.get("provider", "google"),
+            "model": config.get("model", "gemini-2.0-flash-lite"),
+            "apiKey": config.get("apiKey", ""),
+        }
+        with open(UNCONSCIOUS_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, ensure_ascii=False, indent=2)
         return {"status": "saved", "config": config_dict}
     except Exception as e:
@@ -949,9 +993,9 @@ async def get_world_pulse_trend(days: int = 7):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/world-pulse/consciousness")
-async def get_consciousness_pulse(hours: int = 24):
-    """최근 N시간 의식 펄스 조회"""
+@router.get("/world-pulse/pulses")
+async def get_world_pulses(hours: int = 24):
+    """최근 N시간 World Pulse 조회"""
     try:
         from world_pulse import get_recent_pulses
         return {"hours": hours, "pulses": get_recent_pulses(hours)}

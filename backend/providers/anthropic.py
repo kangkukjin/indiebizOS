@@ -115,6 +115,13 @@ class AnthropicProvider(BaseProvider):
         history = history or []
         messages = self._build_messages(message, history, images)
 
+        # cancel_check를 execute_tool에 전달하는 래퍼 (도구 실행 중 중단 지원)
+        if cancel_check and execute_tool:
+            _original_execute_tool = execute_tool
+            def _cancellable_execute_tool(name, inp, path, aid=None):
+                return _original_execute_tool(name, inp, path, aid, cancel_check=cancel_check)
+            execute_tool = _cancellable_execute_tool
+
         # 스트리밍 응답 처리 (에이전틱 루프)
         yield from self._agentic_loop(messages, execute_tool, cancel_check=cancel_check)
 

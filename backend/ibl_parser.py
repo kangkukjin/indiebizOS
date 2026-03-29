@@ -115,12 +115,12 @@ def parse(code: str) -> List[Dict]:
     all_steps = []
     for stmt in statements:
         # >> 로 파이프라인 분리
-        segments = _split_pipeline(stmt)
-        for seg in segments:
+        segments = _split_pipeline(stmt)  # [(text, operator), ...]
+        for idx, (seg_text, operator) in enumerate(segments):
             # 각 세그먼트 내에서 & 또는 ?? 연산자 처리
-            parsed = _parse_group(seg.strip())
+            parsed = _parse_group(seg_text.strip())
             if parsed is None:
-                raise IBLSyntaxError(f"파싱 실패: {seg.strip()}")
+                raise IBLSyntaxError(f"파싱 실패: {seg_text.strip()}")
             # 변수 참조 치환
             parsed = _resolve_variables(parsed, variables)
             all_steps.append(parsed)
@@ -681,15 +681,17 @@ def _extract_statements(lines: List[str]) -> Tuple[List[str], Dict[str, str]]:
     return statements, variables
 
 
-def _split_pipeline(text: str) -> List[str]:
+def _split_pipeline(text: str) -> List[tuple]:
     """
     >> 연산자로 파이프라인 분리
 
-    '[a:b]("x") >> [c:d]("y")' → ['[a:b]("x")', '[c:d]("y")']
+    '[a:b]{} >> [c:d]{}'  → [('[a:b]{}', '>>'), ('[c:d]{}', None)]
+    '[a:b]{} >> [c:d]{} >> [e:f]{}' → [('[a:b]{}', '>>'), ('[c:d]{}', '>>'), ('[e:f]{}', None)]
 
-    중괄호 {} 내부의 >>는 무시 (JSON 문자열 안의 >>)
+    각 튜플: (세그먼트 텍스트, 이 세그먼트 뒤에 오는 연산자)
+    중괄호 {} 내부의 >>는 무시 (JSON 문자열 안)
     """
-    segments = []
+    segments = []  # [(text, operator)]
     current = []
     depth = 0  # { } 깊이 추적
 
@@ -705,10 +707,10 @@ def _split_pipeline(text: str) -> List[str]:
             depth -= 1
             current.append(ch)
         elif ch == '>' and i + 1 < len(chars) and chars[i + 1] == '>' and depth == 0:
-            # >> 발견 (중괄호 밖)
+            # >> 발견 (중괄호 밖) — 기계적 파이프
             seg = ''.join(current).strip()
             if seg:
-                segments.append(seg)
+                segments.append((seg, '>>'))
             current = []
             i += 2  # >> 건너뛰기
             continue
@@ -733,10 +735,10 @@ def _split_pipeline(text: str) -> List[str]:
 
         i += 1
 
-    # 마지막 세그먼트
+    # 마지막 세그먼트 (뒤에 연산자 없음)
     seg = ''.join(current).strip()
     if seg:
-        segments.append(seg)
+        segments.append((seg, None))
 
     return segments
 
@@ -1193,7 +1195,7 @@ def format_pipeline(steps: list) -> str:
         return format_step(steps[0])
 
     parts = [format_step(steps[0])]
-    for step in steps[1:]:
+    for i, step in enumerate(steps[1:], 1):
         parts.append(f"  >> {format_step(step)}")
 
     return "\n".join(parts)

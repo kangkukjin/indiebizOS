@@ -1,37 +1,50 @@
-node: sense
-actions:
-  weather:
-    description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
-    target_description: 도시명 또는 좌표
-    router: handler
-    tool: get_weather
-  restaurant:
-    description: 맛집/음식점 검색 (카카오+네이버)
-    target_description: 검색어 (강남 파스타 등)
-    router: handler
-    tool: search_restaurants
-    target_key: query
-  source_navigate:
-    description: 길찾기/경로 안내 (카카오 내비, 장소명 또는 좌표)
-    target_description: 목적지 (장소명 또는 경도,위도)
-    router: handler
-    tool: kakao_navigation
-    target_key: destination
-  map:
-    description: 지도에 위치 표시
-    target_description: 장소명 또는 좌표
-    router: handler
-    tool: show_location_map
-    target_key: query
-  travel:
-    description: 여행 검색 - 항공, 호텔, 관광지 (Amadeus)
-    target_description: 검색 엔드포인트 (flight-offers, hotel-list 등)
-    router: handler
-    tool: amadeus_travel_search
-    target_key: endpoint
-  reverse_geocode:
-    description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
-    router: handler
-    tool: reverse_geocode
-guides:
-- location-services/location_services_guide.md
+nodes:
+  sense:
+    actions:
+      weather:
+        description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
+        target_description: 도시명 또는 좌표
+        router: handler
+        tool: get_weather
+        implementation: Open-Meteo 무료 API로 날씨 조회 (API키 불필요)
+      restaurant:
+        description: 맛집/음식점 공식 검색 (카카오+네이버 API). 가게 이름·주소·전화·평점 등 공식 DB 기반. 주민 후기/커뮤니티 의견은 sense:search_local 사용.
+        target_description: 검색어 (강남 파스타 등)
+        router: handler
+        tool: search_restaurants
+        implementation: Kakao Local API + Naver Local API 듀얼 검색으로 맛집 공식 정보 집계 (상호명, 주소, 평점)
+        target_key: query
+      travel:
+        description: 여행 검색 - 항공, 호텔, 관광지 (Amadeus)
+        target_description: 검색 엔드포인트 (flight-offers, hotel-list 등)
+        router: handler
+        tool: amadeus_travel_search
+        implementation: Amadeus API(OAuth2)로 항공/호텔/관광지 검색
+        target_key: endpoint
+        postprocess:
+          type: compress
+      reverse_geocode:
+        description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
+        router: handler
+        tool: reverse_geocode
+        implementation: Kakao Map API로 GPS 좌표→주소 변환
+    guides:
+    - location-services/location_services_guide.md
+  limbs:
+    actions:
+      route_navigate:
+        description: 자동차 길찾기 (카카오 내비). 출발지→목적지 경로/거리/시간/톨비 반환. 장소명 또는 좌표 사용 가능.
+        target_description: 목적지 (장소명 또는 경도,위도)
+        router: handler
+        tool: kakao_navigation
+        implementation: Kakao Map API로 자동차 경로 탐색 (거리/시간/톨비 포함)
+        target_key: destination
+      show_map:
+        description: 지도에 위치 마커 표시 (HTML 지도 생성). 장소명 입력 시 자동 좌표 변환.
+        target_description: 장소명 또는 좌표
+        router: handler
+        tool: show_location_map
+        implementation: Kakao Map API로 좌표 기반 지도 HTML 생성 (프론트엔드 렌더링용)
+        target_key: query
+    guides:
+    - location-services/location_services_guide.md

@@ -87,11 +87,11 @@ EXAMPLES = [
     ("정보수집 에이전트에게 자료 조사 맡겨", '[others:delegate]{agent_id: "정보수집", message: "최신 AI 뉴스 정리해줘"}', "others", "single", 1, "others,delegate"),
 
     # ask — 다른 프로젝트 에이전트에게 질문/위임 (비동기)
-    ("투자 에이전트한테 물어봐", '[others:ask]{agent_id: "투자/투자컨설팅", message: "삼성전자 투자 의견 알려줘"}', "others", "single", 1, "others,ask"),
-    ("컨텐츠 에이전트한테 부탁해", '[others:ask]{agent_id: "컨텐츠/컨텐츠", message: "블로그 글 분석해줘"}', "others", "single", 1, "others,ask"),
-    ("정보센터에 분석 요청해", '[others:ask]{agent_id: "정보센터/정보수집", message: "AI 트렌드 조사해줘"}', "others", "single", 1, "others,ask"),
-    ("의료팀에게 건강 상담 요청해", '[others:ask]{agent_id: "의료/가정의학과", message: "두통이 자주 발생하는 원인을 알려줘"}', "others", "single", 1, "others,ask"),
-    ("법률 에이전트한테 임대차 관련 질문해", '[others:ask]{agent_id: "법률/법률", message: "임대차보호법 관련 질문입니다"}', "others", "single", 1, "others,ask"),
+    ("투자 에이전트한테 물어봐", '[others:delegate]{agent_id: "투자/투자컨설팅", message: "삼성전자 투자 의견 알려줘"}', "others", "single", 1, "others,delegate"),
+    ("컨텐츠 에이전트한테 부탁해", '[others:delegate]{agent_id: "컨텐츠/컨텐츠", message: "블로그 글 분석해줘"}', "others", "single", 1, "others,delegate"),
+    ("정보센터에 분석 요청해", '[others:delegate]{agent_id: "정보센터/정보수집", message: "AI 트렌드 조사해줘"}', "others", "single", 1, "others,delegate"),
+    ("의료팀에게 건강 상담 요청해", '[others:delegate]{agent_id: "의료/가정의학과", message: "두통이 자주 발생하는 원인을 알려줘"}', "others", "single", 1, "others,delegate"),
+    ("법률 에이전트한테 임대차 관련 질문해", '[others:delegate]{agent_id: "법률/법률", message: "임대차보호법 관련 질문입니다"}', "others", "single", 1, "others,delegate"),
 
     # ask_sync — 동기 질문 (파이프라인/워크플로우용)
     ("투자 에이전트에게 동기적으로 분석 요청", '[others:ask_sync]{agent_id: "투자/투자컨설팅", message: "이 데이터를 분석해줘"}', "others", "single", 1, "others,ask_sync"),
@@ -144,7 +144,7 @@ EXAMPLES = [
     ("종목 코드 검색해줘", '[sense:stock_info]{query: "반도체"}', "sense", "single", 1, "sense,search_stock"),
     ("삼성전자 종목 상세 정보", '[sense:stock_info]{symbol: "005930"}', "sense", "single", 1, "sense,info"),
     ("삼성전자 뉴스 알려줘", '[sense:stock_info]{symbol: "삼성전자"}', "sense", "single", 1, "sense,news"),
-    ("테슬라 관련 뉴스", '[sense:stock_info]{symbol: "TSLA"}', "sense", "single", 1, "sense,stock_news"),
+    ("테슬라 관련 뉴스", '[sense:stock_info]{symbol: "TSLA"}', "sense", "single", 1, "sense,company_news"),
     ("삼성전자 실적 발표 일정", '[sense:stock_info]{symbol: "005930"}', "sense", "single", 1, "sense,earnings"),
 
     # 기업정보/재무
@@ -161,11 +161,14 @@ EXAMPLES = [
     ("오늘 외국인 순매수 얼마야?", '[sense:stock_info]{symbol: "STK"}', "sense", "single", 1, "sense,kr_investor"),
     ("삼성전자 투자자별 매매동향", '[sense:stock_info]{symbol: "005930"}', "sense", "single", 1, "sense,kr_stock_investor"),
 
-    # 종합 검색 (multi 그룹)
-    ("AI 뉴스 검색해줘", '[sense:search]{query: "AI 뉴스"}', "sense", "single", 1, "sense,search"),
-    ("반도체 뉴스 검색해줘", '[sense:search]{query: "반도체"}', "sense", "single", 1, "sense,search"),
-    ("부동산 뉴스 찾아줘", '[sense:search]{query: "부동산"}', "sense", "single", 1, "sense,search"),
-    ("경제 뉴스 검색", '[sense:search]{query: "경제"}', "sense", "single", 1, "sense,search"),
+    # 웹 검색 (DuckDuckGo)
+    ("AI 관련 정보 검색해줘", '[sense:search_ddg]{query: "AI 뉴스"}', "sense", "single", 1, "sense,search"),
+    ("반도체 정보 검색해줘", '[sense:search_ddg]{query: "반도체"}', "sense", "single", 1, "sense,search"),
+    ("부동산 정보 찾아줘", '[sense:search_ddg]{query: "부동산"}', "sense", "single", 1, "sense,search"),
+    ("경제 정보 검색", '[sense:search_ddg]{query: "경제"}', "sense", "single", 1, "sense,search"),
+    # 뉴스 검색 (Google News)
+    ("AI 뉴스 검색해줘", '[sense:search_news]{query: "AI"}', "sense", "single", 1, "sense,search_news"),
+    ("부동산 뉴스 찾아줘", '[sense:search_news]{query: "부동산"}', "sense", "single", 1, "sense,search_news"),
     # 웹 크롤링
     ("이 웹페이지 내용 가져와", '[sense:crawl]{url: "https://example.com/article"}', "sense", "single", 1, "sense,crawl"),
     ("네이버 메인 크롤링해줘", '[sense:crawl]{url: "https://naver.com"}', "sense", "single", 1, "sense,crawl"),
@@ -178,14 +181,14 @@ EXAMPLES = [
     ("지도에 표시해줘", '[sense:navigate_route]{query: "강남역"}', "sense", "single", 1, "sense,map"),
 
     # 법률/통계
-    ("임대차보호법 검색해줘", '[sense:search]{query: "임대차보호법"}', "sense", "single", 1, "sense,search,laws"),
-    ("근로기준법 찾아봐", '[sense:search]{query: "근로기준법"}', "sense", "single", 1, "sense,search,laws"),
-    ("인구 통계 검색", '[sense:search]{query: "인구"}', "sense", "single", 1, "sense,search"),
+    ("임대차보호법 검색해줘", '[sense:search_ddg]{query: "임대차보호법"}', "sense", "single", 1, "sense,search,laws"),
+    ("근로기준법 찾아봐", '[sense:search_ddg]{query: "근로기준법"}', "sense", "single", 1, "sense,search,laws"),
+    ("인구 통계 검색", '[sense:search_ddg]{query: "인구 통계"}', "sense", "single", 1, "sense,search"),
 
     # 문화/도서
-    ("공연 검색해줘", '[sense:search]{query: "뮤지컬"}', "sense", "single", 1, "sense,search"),
-    ("전시회 정보 찾아줘", '[sense:search]{query: "미술"}', "sense", "single", 1, "sense,search"),
-    ("책 검색해줘", '[sense:search]{query: "인공지능"}', "sense", "single", 1, "sense,search"),
+    ("공연 검색해줘", '[sense:search_ddg]{query: "뮤지컬"}', "sense", "single", 1, "sense,search"),
+    ("전시회 정보 찾아줘", '[sense:search_ddg]{query: "미술 전시회"}', "sense", "single", 1, "sense,search"),
+    ("책 검색해줘", '[sense:search_ddg]{query: "인공지능 도서"}', "sense", "single", 1, "sense,search"),
     ("도서 상세 정보", '[sense:book_by_isbn]{isbn: "9791192107103"}', "sense", "single", 1, "sense,book"),
 
     # 쇼핑
@@ -204,7 +207,7 @@ EXAMPLES = [
     ("사진관리창 열어줘", '[self:photo_scan]', "self", "single", 1, "self,photo_manager"),
 
     # 블로그
-    ("블로그에서 AI 글 검색", '[self:photo_scan]{query: "인공지능"}', "self", "single", 1, "self,rag_search"),
+    ("블로그에서 AI 글 검색", '[self:photo_scan]{query: "인공지능"}', "self", "single", 1, "self,blog_search"),
     ("블로그 글 목록 보여줘", '[self:photo_scan]', "self", "single", 1, "self,posts"),
     ("블로그 통계 보여줘", '[self:photo_scan]', "self", "single", 1, "self,blog_stats"),
     ("새 블로그 글 있어?", '[self:photo_scan]', "self", "single", 1, "self,check_new"),
@@ -213,7 +216,7 @@ EXAMPLES = [
     # 메모리/대화
     ("최근 대화 보여줘", '[self:photo_scan]', "self", "single", 1, "self,recent"),
     ("대화 내용 검색해줘", '[self:photo_scan]{query: "주식"}', "self", "single", 1, "self,search_memory"),
-    ("메모리에 저장해줘", '[self:photo_scan]{query: "중요한 정보"}', "self", "single", 1, "self,save_memory"),
+    ("메모리에 저장해줘", '[self:photo_scan]{query: "중요한 정보"}', "self", "single", 1, "self,memory_save"),
     ("메모리에서 검색해줘", '[self:photo_scan]{query: "투자"}', "self", "single", 1, "self,memory_search"),
 
     # 건강
@@ -229,10 +232,10 @@ EXAMPLES = [
     ("체중 기록해줘", '[self:health_save]{category: "체중", value: 75}', "self", "single", 1, "self,health_save"),
 
     # 홈페이지/웹 관리
-    ("관리하는 홈페이지 목록 보여줘", '[engines:site_list]', "engines", "single", 1, "engines,site_list"),
-    ("등록된 사이트 몇 개야?", '[engines:site_list]', "engines", "single", 1, "engines,site_list"),
-    ("새 사이트 등록해줘", '[engines:site_register]{name: "내 사이트", local_path: "/path/to/site"}', "engines", "single", 1, "engines,site_register"),
-    ("사이트 삭제해줘", '[engines:site_remove]{site_id: "my-site"}', "engines", "single", 1, "engines,site_remove"),
+    ("관리하는 홈페이지 목록 보여줘", '[engines:web_site_list]', "engines", "single", 1, "engines,web_site_list"),
+    ("등록된 사이트 몇 개야?", '[engines:web_site_list]', "engines", "single", 1, "engines,web_site_list"),
+    ("새 사이트 등록해줘", '[engines:web_site_register]{name: "내 사이트", local_path: "/path/to/site"}', "engines", "single", 1, "engines,web_site_register"),
+    ("사이트 삭제해줘", '[engines:web_site_remove]{site_id: "my-site"}', "engines", "single", 1, "engines,web_site_remove"),
 
     # 학술
     ("AI 논문 검색해줘", '[sense:search_openalex]{query: "artificial intelligence"}', "sense", "single", 1, "sense,search_openalex"),
@@ -293,7 +296,7 @@ EXAMPLES = [
     # 슬라이드/영상
     ("발표 슬라이드 만들어줘", '[engines:slide]{topic: "AI 트렌드 2026"}', "engines", "single", 1, "engines,slide"),
     ("고품질 슬라이드 만들어줘", '[engines:slide_shadcn]{topic: "분기 실적"}', "engines", "single", 1, "engines,slide_shadcn"),
-    ("영상 만들어줘", '[engines:video]{topic: "회사 소개"}', "engines", "single", 1, "engines,video"),
+    ("영상 만들어줘", '[engines:html_video]{topic: "회사 소개"}', "engines", "single", 1, "engines,html_video"),
     ("TTS로 음성 변환해줘", '[engines:tts]{text: "안녕하세요, 오늘 뉴스입니다"}', "engines", "single", 1, "engines,tts"),
 
     # 음악/작곡
@@ -308,22 +311,22 @@ EXAMPLES = [
     ("사이트 배포해줘", 'run_command("cd /path/to/site && vercel --prod --yes")', "run_command", "single", 1, "run_command"),
 
     # 설계
-    ("집 설계 시작해줘", '[engines:create_design]{name: "내 집"}', "engines", "single", 1, "engines,create_design"),
-    ("평면도 그려줘", '[engines:floor_plan]{design_id: "design_1"}', "engines", "single", 1, "engines,floor_plan"),
+    ("집 설계 시작해줘", '[engines:arch_create]{name: "내 집"}', "engines", "single", 1, "engines,arch_create"),
+    ("평면도 그려줘", '[engines:arch_floor_plan]{design_id: "design_1"}', "engines", "single", 1, "engines,arch_floor_plan"),
 
     # =========================================================================
     # tools 노드 — 브라우저/안드로이드/데스크탑
     # =========================================================================
 
     # 브라우저
-    ("이 사이트 Playwright로 열어", '[limbs:navigate]{url: "https://google.com"}', "limbs", "single", 1, "limbs,navigate"),
+    ("이 사이트 Playwright로 열어", '[limbs:browser_navigate]{url: "https://google.com"}', "limbs", "single", 1, "limbs,browser_navigate"),
     ("페이지 스냅샷 찍어", '[limbs:browser_snapshot]', "limbs", "single", 1, "limbs,snapshot"),
     ("스크린샷 찍어줘", '[limbs:screenshot]', "limbs", "single", 1, "limbs,screenshot"),
-    ("페이지 내용 추출해", '[limbs:content]', "limbs", "single", 1, "limbs,content"),
+    ("페이지 내용 추출해", '[limbs:browser_content]', "limbs", "single", 1, "limbs,browser_content"),
     ("JavaScript 실행해줘", '[limbs:evaluate]{expression: "document.title"}', "limbs", "single", 1, "limbs,evaluate"),
 
     # 안드로이드
-    ("연결된 기기 목록 보여줘", '[limbs:devices]', "limbs", "single", 1, "limbs,devices"),
+    ("연결된 기기 목록 보여줘", '[limbs:android_devices]', "limbs", "single", 1, "limbs,android_devices"),
     ("안드로이드 화면 캡처", '[limbs:android_screenshot]', "limbs", "single", 1, "limbs,android_screenshot"),
     ("문자 목록 보여줘", '[limbs:sms_list]', "limbs", "single", 1, "limbs,sms_list"),
     ("통화 이력 보여줘", '[limbs:call_log]', "limbs", "single", 1, "limbs,call_log"),
@@ -347,9 +350,9 @@ EXAMPLES = [
     # =========================================================================
 
     # 검색 → 저장
-    ("AI 뉴스 검색해서 파일로 저장해줘", '[sense:search]{query: "AI 뉴스"} >> [self:local_save]{path: "ai_news.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
-    ("부동산 뉴스 찾아서 저장해", '[sense:search]{query: "부동산"} >> [self:local_save]{path: "부동산뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
-    ("반도체 뉴스 검색해서 정리해줘", '[sense:search]{query: "반도체"} >> [self:local_save]{path: "반도체뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
+    ("AI 뉴스 검색해서 파일로 저장해줘", '[sense:search_news]{query: "AI"} >> [self:local_save]{path: "ai_news.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
+    ("부동산 뉴스 찾아서 저장해", '[sense:search_news]{query: "부동산"} >> [self:local_save]{path: "부동산뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
+    ("반도체 뉴스 검색해서 정리해줘", '[sense:search_news]{query: "반도체"} >> [self:local_save]{path: "반도체뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
 
     # 검색 → 차트
     ("삼성전자 주가 조회해서 차트로 그려줘", '[sense:stock_info]{symbol: "삼성전자"} >> [engines:line]{title: "삼성전자 주가 차트"}', "sense,forge", "pipeline", 2, "pipeline,sequential"),
@@ -359,8 +362,8 @@ EXAMPLES = [
     ("유튜브 자막 추출해서 파일로 저장해", '[limbs:youtube_download]{url: "https://youtube.com/watch?v=example"} >> [self:local_save]{path: "transcript.md"}', "limbs,self", "pipeline", 2, "pipeline,sequential"),
 
     # 검색 → 에이전트 분석 (others 노드 파이프라인)
-    ("AI 뉴스 찾아서 투자 에이전트에게 분석 요청해", '[sense:search]{query: "AI 뉴스"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "이 뉴스를 투자 관점에서 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
-    ("부동산 뉴스 찾아서 부동산 에이전트에게 넘겨줘", '[sense:search]{query: "부동산"} >> [others:ask_sync]{agent_id: "부동산/부동산", message: "이 뉴스에서 시장 동향을 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
+    ("AI 뉴스 찾아서 투자 에이전트에게 분석 요청해", '[sense:search_news]{query: "AI"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "이 뉴스를 투자 관점에서 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
+    ("부동산 뉴스 찾아서 부동산 에이전트에게 넘겨줘", '[sense:search_news]{query: "부동산"} >> [others:ask_sync]{agent_id: "부동산/부동산", message: "이 뉴스에서 시장 동향을 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
 
     # 크롤링 → 저장
     ("웹페이지 크롤링해서 저장해", '[sense:crawl]{url: "https://example.com"} >> [self:local_save]{path: "crawled.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
@@ -375,16 +378,16 @@ EXAMPLES = [
     ("한미 주요 종목 동시 확인", '[sense:stock_info]{symbol: "005930"} & [sense:stock_info]{symbol: "AAPL"} & [sense:stock_info]{symbol: "SPY"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # 뉴스 동시 검색
-    ("AI 뉴스랑 부동산 뉴스 같이 검색해", '[sense:search]{query: "AI 뉴스"} & [sense:search]{query: "부동산 뉴스"}', "sense", "pipeline", 2, "pipeline,parallel"),
+    ("AI 뉴스랑 부동산 뉴스 같이 검색해", '[sense:search_news]{query: "AI"} & [sense:search_news]{query: "부동산"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # 날씨 비교
     ("서울이랑 부산 날씨 같이 알려줘", '[sense:weather]{city: "서울"} & [sense:weather]{city: "부산"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # ★ 시간 + 주가 + 뉴스 (스위치에서 자주 쓰는 패턴!)
-    ("현재 시간과 코스피 주가와 뉴스를 동시에 조회해줘", '[self:time] & [sense:stock_info]{symbol: "^KS11"} & [sense:search]{query: "한국 증시"}', "self,sense", "pipeline", 2, "pipeline,parallel"),
+    ("현재 시간과 코스피 주가와 뉴스를 동시에 조회해줘", '[self:time] & [sense:stock_info]{symbol: "^KS11"} & [sense:search_ddg]{query: "한국 증시"}', "self,sense", "pipeline", 2, "pipeline,parallel"),
     ("시간이랑 삼성전자 주가 같이 알려줘", '[self:time] & [sense:stock_info]{symbol: "005930"}', "self,sense", "pipeline", 2, "pipeline,parallel"),
     ("코스피 코스닥 동시 조회", '[sense:stock_info]{symbol: "^KS11"} & [sense:stock_info]{symbol: "^KQ11"}', "sense", "pipeline", 2, "pipeline,parallel"),
-    ("외국인 매매동향과 뉴스 같이 확인", '[sense:stock_info]{symbol: "STK"} & [sense:search]{query: "외국인 매매"}', "sense", "pipeline", 2, "pipeline,parallel"),
+    ("외국인 매매동향과 뉴스 같이 확인", '[sense:stock_info]{symbol: "STK"} & [sense:search_ddg]{query: "외국인 매매"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # 크롤링 병렬
     ("네이버랑 다음 메인 동시에 크롤링", '[sense:crawl]{url: "https://naver.com"} & [sense:crawl]{url: "https://daum.net"}', "sense", "pipeline", 2, "pipeline,parallel"),
@@ -394,23 +397,24 @@ EXAMPLES = [
     # =========================================================================
 
     # 병렬 → 저장
-    ("AI랑 부동산 뉴스 찾아서 브리핑 파일로 만들어줘", '[sense:search]{query: "AI 뉴스"} & [sense:search]{query: "부동산 뉴스"} >> [self:local_save]{path: "briefing.md"}', "sense,self", "complex", 3, "pipeline,complex"),
+    ("AI랑 부동산 뉴스 찾아서 브리핑 파일로 만들어줘", '[sense:search_news]{query: "AI"} & [sense:search_news]{query: "부동산"} >> [self:local_save]{path: "briefing.md"}', "sense,self", "complex", 3, "pipeline,complex"),
 
     # 3단 파이프라인 (검색 → 에이전트 분석 → 저장)
-    ("삼성전자 뉴스 찾아서 분석하고 결과 저장해", '[sense:search]{query: "삼성전자"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}', "sense,others,self", "complex", 3, "pipeline,complex"),
+    ("삼성전자 뉴스 찾아서 분석하고 결과 저장해", '[sense:search_news]{query: "삼성전자"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}', "sense,others,self", "complex", 3, "pipeline,complex"),
 
     # 병렬 위임 (여러 프로젝트에 동시 요청)
     ("의료팀이랑 투자팀 동시에 물어봐", '[others:delegate_project]{agent_id: "의료/내과", message: "건강 분석"} & [others:delegate_project]{agent_id: "투자/투자컨설팅", message: "투자 분석"}', "others", "complex", 2, "others,parallel_delegation"),
 
     # Fallback
     ("삼성전자 주가 조회하되 실패하면 종목 검색해", '[sense:price]{symbol: "삼성전자"} ?? [sense:search_stock]{query: "삼성전자"}', "sense", "pipeline", 2, "pipeline,fallback"),
-    ("뉴스 검색 시도하고 안 되면 웹 검색해", '[sense:search_news]{query: "AI"} ?? [sense:search]{query: "AI 뉴스"}', "sense", "pipeline", 2, "pipeline,fallback"),
+    ("뉴스 검색 시도하고 안 되면 웹 검색해", '[sense:search_news]{query: "AI"} ?? [sense:search_ddg]{query: "AI 뉴스"}', "sense", "pipeline", 2, "pipeline,fallback"),
+    ("웹 검색 안 되면 유튜브에서 찾아", '[sense:search_ddg]{query: "AI 튜토리얼"} ?? [sense:search_youtube]{query: "AI tutorial"}', "sense", "pipeline", 2, "pipeline,fallback"),
 
     # 유튜브 → 재생
     ("피아노곡 검색해서 재생해", '[sense:search_youtube]{query: "피아노곡"} >> [limbs:play]', "sense,tools", "pipeline", 2, "pipeline,sequential"),
 
     # 시간 + 주가 + 뉴스 + 외국인 (종합 증시 체크)
-    ("종합 증시 상황 확인해줘", '[self:time] & [sense:stock_info]{symbol: "^KS11"} & [sense:stock_info]{symbol: "^KQ11"} & [sense:stock_info]{symbol: "STK"} & [sense:search]{query: "한국 증시"}', "self,sense", "complex", 3, "pipeline,complex"),
+    ("종합 증시 상황 확인해줘", '[self:time] & [sense:stock_info]{symbol: "^KS11"} & [sense:stock_info]{symbol: "^KQ11"} & [sense:stock_info]{symbol: "STK"} & [sense:search_ddg]{query: "한국 증시"}', "self,sense", "complex", 3, "pipeline,complex"),
 ]
 
 

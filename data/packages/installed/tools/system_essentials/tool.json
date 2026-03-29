@@ -7,13 +7,21 @@
   "tools": [
     {
       "name": "read_file",
-      "description": "파일 내용을 읽습니다.\n\n사용법:\n- 절대 경로 또는 상대 경로 모두 사용 가능\n- 기본적으로 전체 파일 내용 반환\n- 이미지 파일(PNG, JPG 등)도 읽을 수 있음\n\n주의사항:\n- 수정하려는 파일은 반드시 먼저 read_file로 읽어야 함\n- 대용량 파일(1MB 이상)은 결과가 잘릴 수 있음\n- 디렉토리는 읽을 수 없음 - list_directory 사용",
+      "description": "파일 내용을 읽습니다.\n\n사용법:\n- 절대 경로 또는 상대 경로 모두 사용 가능\n- 기본적으로 전체 파일 내용 반환\n- offset/limit으로 부분 읽기 가능 (대용량 파일 처리에 유용)\n- 이미지 파일(PNG, JPG 등)도 읽을 수 있음\n\n주의사항:\n- 수정하려는 파일은 반드시 먼저 read_file로 읽어야 함\n- 대용량 파일(1MB 이상)은 결과가 잘릴 수 있음 (offset/limit 사용 권장)\n- 디렉토리는 읽을 수 없음 - list_directory 사용",
       "input_schema": {
         "type": "object",
         "properties": {
           "file_path": {
             "type": "string",
             "description": "읽을 파일의 경로 (절대/상대)"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "읽기 시작할 줄 번호 (0부터, 기본값 0)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "읽을 최대 줄 수 (기본값: 전체)"
           }
         },
         "required": [
@@ -163,22 +171,6 @@
           "file_path",
           "old_string",
           "new_string"
-        ]
-      }
-    },
-    {
-      "name": "open_in_browser",
-      "description": "URL 또는 파일을 기본 브라우저에서 엽니다.\n\n사용법:\n- 웹 URL: 'https://example.com'\n- 로컬 파일: '/path/to/file.html'\n\n사용 예시:\n- 문서 페이지 열기\n- 생성한 HTML 파일 미리보기\n- API 문서 참조",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "URL 또는 파일 경로"
-          }
-        },
-        "required": [
-          "path"
         ]
       }
     },

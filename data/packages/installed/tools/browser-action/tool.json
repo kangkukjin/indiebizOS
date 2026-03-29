@@ -1,9 +1,40 @@
 {
   "id": "browser-action",
   "name": "Browser Action",
-  "description": "Playwright 기반 브라우저 자동화. ref/CSS selector 타겟팅, 다중 탭, iframe, 쿠키, stealth, 네트워크 캡처 지원.\n\n[워크플로우]\n1. navigate → snapshot → ref 확인 → click/type (이 순서 필수)\n2. 페이지 이동/클릭 후 반드시 snapshot 재호출 (ref가 무효화됨)\n3. 복잡한 페이지(500+요소)에서는 evaluate로 JS 직접 실행하여 데이터 추출\n4. selector 파라미터로 ref 없이 CSS selector 직접 지정 가능\n5. 로그인 유지: cookies_save → 다음 세션에서 cookies_load\n6. API 분석: network_logs(action=start) → 페이지 조작 → network_logs(action=get)\n7. 요소를 못 찾으면 scroll 후 snapshot 재시도, evaluate로 존재 여부 확인",
-  "version": "5.0.0",
+  "description": "Playwright + Chrome MCP 듀얼 드라이버 브라우저 자동화.\n\n[드라이버]\n- auto (기본): Chrome MCP 연결 시 Chrome 사용, 미연결 시 Playwright 폴백\n- chrome: 실제 Chrome 브라우저 제어 (로그인 상태/쿠키 유지)\n- playwright: 별도 Chromium 인스턴스 (헤드리스, stealth)\n\n[Chrome 드라이버 사용법]\n1. browser_chrome_connect로 Chrome MCP 서버 연결\n2. 이후 모든 도구가 자동으로 Chrome 드라이버 사용\n3. 실제 Chrome의 로그인 세션, 쿠키, 확장 프로그램 그대로 활용\n\n[Playwright 워크플로우]\n1. navigate → snapshot → ref 확인 → click/type (이 순서 필수)\n2. 페이지 이동/클릭 후 반드시 snapshot 재호출 (ref가 무효화됨)\n3. 복잡한 페이지(500+요소)에서는 evaluate로 JS 직접 실행\n4. 로그인 유지: cookies_save → 다음 세션에서 cookies_load",
+  "version": "6.0.0",
   "tools": [
+    {
+      "name": "browser_chrome_connect",
+      "description": "Chrome MCP 서버에 연결합니다. 연결 후 모든 브라우저 도구가 실제 Chrome을 제어합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string", "default": "http://localhost:12306/sse", "description": "Chrome MCP 서버 SSE URL" }
+        }
+      }
+    },
+    {
+      "name": "browser_chrome_disconnect",
+      "description": "Chrome MCP 연결을 해제합니다. 이후 Playwright로 폴백됩니다.",
+      "input_schema": { "type": "object", "properties": {} }
+    },
+    {
+      "name": "browser_chrome_status",
+      "description": "Chrome MCP 연결 상태를 확인합니다.",
+      "input_schema": { "type": "object", "properties": {} }
+    },
+    {
+      "name": "browser_find",
+      "description": "자연어로 페이지 요소를 검색합니다. Chrome 드라이버 전용. (예: '로그인 버튼', '검색창', '장바구니 아이콘')",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "찾을 요소 설명 (자연어)" }
+        },
+        "required": ["query"]
+      }
+    },
     {
       "name": "browser_navigate",
       "description": "브라우저를 열고 URL로 이동합니다. HTTP 상태코드와 리다이렉트 체인을 반환합니다. 이동 후 browser_snapshot으로 페이지 구조를 파악하세요.",
@@ -11,8 +42,9 @@
         "type": "object",
         "properties": {
           "url": { "type": "string", "description": "이동할 URL (https:// 생략 가능)" },
-          "headless": { "type": "boolean", "default": true, "description": "헤드리스 모드" },
-          "wait_for": { "type": "string", "enum": ["domcontentloaded", "load", "networkidle"], "default": "domcontentloaded", "description": "페이지 로드 대기 조건" }
+          "headless": { "type": "boolean", "default": true, "description": "헤드리스 모드 (Playwright 전용)" },
+          "wait_for": { "type": "string", "enum": ["domcontentloaded", "load", "networkidle"], "default": "domcontentloaded", "description": "페이지 로드 대기 조건 (Playwright 전용)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         },
         "required": ["url"]
       }
@@ -20,17 +52,32 @@
     {
       "name": "browser_navigate_back",
       "description": "브라우저 히스토리 이전 페이지로 이동합니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
+        }
+      }
     },
     {
       "name": "browser_navigate_forward",
       "description": "브라우저 히스토리 다음 페이지로 이동합니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
+        }
+      }
     },
     {
       "name": "browser_snapshot",
-      "description": "현재 페이지의 Accessibility Snapshot을 캡처합니다. Shadow DOM도 포함합니다. 각 요소에 ref(e1, e2...)와 CSS selector가 부여되며, 이를 browser_click/type 등에서 사용합니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "description": "현재 페이지의 Accessibility Snapshot을 캡처합니다. 각 요소에 ref(e1, e2...)가 부여되며, 이를 browser_click/type 등에서 사용합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
+        }
+      }
     },
     {
       "name": "browser_click",
@@ -40,7 +87,8 @@
         "properties": {
           "element": { "type": "string", "description": "클릭할 요소 설명" },
           "ref": { "type": "string", "description": "browser_snapshot에서 얻은 ref (예: e1)" },
-          "selector": { "type": "string", "description": "CSS selector (ref 대신 사용 가능)" }
+          "selector": { "type": "string", "description": "CSS selector (ref 대신 사용 가능)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -52,7 +100,8 @@
         "properties": {
           "element": { "type": "string", "description": "더블클릭할 요소 설명" },
           "ref": { "type": "string", "description": "ref" },
-          "selector": { "type": "string", "description": "CSS selector" }
+          "selector": { "type": "string", "description": "CSS selector" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -64,7 +113,8 @@
         "properties": {
           "element": { "type": "string", "description": "우클릭할 요소 설명" },
           "ref": { "type": "string", "description": "ref" },
-          "selector": { "type": "string", "description": "CSS selector" }
+          "selector": { "type": "string", "description": "CSS selector" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -79,7 +129,8 @@
           "selector": { "type": "string", "description": "CSS selector" },
           "text": { "type": "string", "description": "입력할 텍스트" },
           "submit": { "type": "boolean", "default": false, "description": "입력 후 Enter 전송" },
-          "clear": { "type": "boolean", "default": true, "description": "기존 내용 삭제 후 입력" }
+          "clear": { "type": "boolean", "default": true, "description": "기존 내용 삭제 후 입력" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         },
         "required": ["text"]
       }
@@ -93,7 +144,8 @@
           "element": { "type": "string", "description": "select 요소 설명" },
           "ref": { "type": "string", "description": "ref" },
           "selector": { "type": "string", "description": "CSS selector" },
-          "values": { "type": "array", "items": { "type": "string" }, "description": "선택할 옵션 값 배열" }
+          "values": { "type": "array", "items": { "type": "string" }, "description": "선택할 옵션 값 배열" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         },
         "required": ["values"]
       }
@@ -107,7 +159,8 @@
           "element": { "type": "string", "description": "체크박스/라디오 설명" },
           "ref": { "type": "string", "description": "ref" },
           "selector": { "type": "string", "description": "CSS selector" },
-          "checked": { "type": "boolean", "default": true, "description": "true=체크, false=해제" }
+          "checked": { "type": "boolean", "default": true, "description": "true=체크, false=해제" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -120,7 +173,8 @@
           "element": { "type": "string", "description": "파일 input 설명" },
           "ref": { "type": "string", "description": "ref" },
           "selector": { "type": "string", "description": "CSS selector" },
-          "files": { "type": "array", "items": { "type": "string" }, "description": "업로드할 파일 경로 배열" }
+          "files": { "type": "array", "items": { "type": "string" }, "description": "업로드할 파일 경로 배열" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         },
         "required": ["files"]
       }
@@ -133,7 +187,8 @@
         "properties": {
           "element": { "type": "string", "description": "hover할 요소 설명" },
           "ref": { "type": "string", "description": "ref" },
-          "selector": { "type": "string", "description": "CSS selector" }
+          "selector": { "type": "string", "description": "CSS selector" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -146,7 +201,8 @@
           "source_element": { "type": "string", "description": "드래그할 요소 설명" },
           "source_ref": { "type": "string", "description": "소스 ref" },
           "target_element": { "type": "string", "description": "드롭할 위치 설명" },
-          "target_ref": { "type": "string", "description": "타겟 ref" }
+          "target_ref": { "type": "string", "description": "타겟 ref" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         },
         "required": ["source_ref", "target_ref"]
       }
@@ -157,7 +213,8 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "key": { "type": "string", "description": "누를 키 (예: Enter, Tab, Control+a)" }
+          "key": { "type": "string", "description": "누를 키 (예: Enter, Tab, Control+a)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         },
         "required": ["key"]
       }
@@ -172,7 +229,8 @@
           "amount": { "type": "integer", "default": 500, "description": "스크롤량 (px)" },
           "to_bottom": { "type": "boolean", "default": false, "description": "페이지 맨 아래로" },
           "to_top": { "type": "boolean", "default": false, "description": "페이지 맨 위로" },
-          "selector": { "type": "string", "description": "스크롤할 컨테이너 CSS selector" }
+          "selector": { "type": "string", "description": "스크롤할 컨테이너 CSS selector" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -187,7 +245,8 @@
           "url": { "type": "string", "description": "대기할 URL 패턴 (정규식)" },
           "state": { "type": "string", "enum": ["visible", "hidden", "attached", "detached"], "default": "visible", "description": "요소 대기 상태" },
           "network_idle": { "type": "boolean", "default": false, "description": "네트워크 유휴 대기" },
-          "timeout": { "type": "integer", "default": 10000, "description": "최대 대기 시간 (ms)" }
+          "timeout": { "type": "integer", "default": 10000, "description": "최대 대기 시간 (ms)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -198,7 +257,8 @@
         "type": "object",
         "properties": {
           "full_page": { "type": "boolean", "default": false, "description": "전체 페이지 캡처" },
-          "selector": { "type": "string", "description": "특정 요소만 캡처할 CSS 선택자" }
+          "selector": { "type": "string", "description": "특정 요소만 캡처할 CSS 선택자" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -209,7 +269,8 @@
         "type": "object",
         "properties": {
           "selector": { "type": "string", "description": "특정 영역만 추출할 CSS 선택자" },
-          "max_length": { "type": "integer", "default": 10000, "description": "최대 텍스트 길이" }
+          "max_length": { "type": "integer", "default": 10000, "description": "최대 텍스트 길이" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -221,7 +282,8 @@
         "properties": {
           "selector": { "type": "string", "description": "특정 영역만 추출할 CSS 선택자" },
           "outer": { "type": "boolean", "default": true, "description": "true=outerHTML, false=innerHTML" },
-          "max_length": { "type": "integer", "default": 50000, "description": "최대 HTML 길이" }
+          "max_length": { "type": "integer", "default": 50000, "description": "최대 HTML 길이" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -234,26 +296,33 @@
           "type": { "type": "string", "enum": ["all", "log", "error", "warning", "info"], "default": "all", "description": "로그 타입 필터" },
           "search": { "type": "string", "description": "검색 텍스트" },
           "limit": { "type": "integer", "default": 100, "description": "최대 로그 수" },
-          "clear": { "type": "boolean", "default": false, "description": "조회 후 삭제" }
+          "clear": { "type": "boolean", "default": false, "description": "조회 후 삭제" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
     {
       "name": "browser_network_logs",
-      "description": "네트워크 요청 로그를 조회하거나 캡처를 제어합니다. 먼저 action=start로 캡처를 시작해야 합니다.",
+      "description": "네트워크 요청 로그를 조회하거나 캡처를 제어합니다. Playwright: action=start로 시작 필요. Chrome: 항상 캡처 중.",
       "input_schema": {
         "type": "object",
         "properties": {
           "action": { "type": "string", "enum": ["start", "stop", "get", "clear"], "default": "get", "description": "start=캡처시작, stop=중지, get=조회, clear=초기화" },
           "url_filter": { "type": "string", "description": "URL 필터 (부분 일치)" },
-          "limit": { "type": "integer", "default": 50, "description": "최대 로그 수" }
+          "limit": { "type": "integer", "default": 50, "description": "최대 로그 수" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
     {
       "name": "browser_dialog_info",
-      "description": "마지막으로 감지된 Alert/Confirm/Prompt 정보를 조회합니다. Dialog는 자동으로 dismiss됩니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "description": "마지막으로 감지된 Alert/Confirm/Prompt 정보를 조회합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
+        }
+      }
     },
     {
       "name": "browser_save_pdf",
@@ -263,54 +332,68 @@
         "properties": {
           "format": { "type": "string", "enum": ["A4", "Letter", "Legal", "A3"], "default": "A4", "description": "용지 크기" },
           "landscape": { "type": "boolean", "default": false, "description": "가로 방향" },
-          "print_background": { "type": "boolean", "default": true, "description": "배경 인쇄" }
+          "print_background": { "type": "boolean", "default": true, "description": "배경 인쇄" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
     {
       "name": "browser_evaluate",
-      "description": "현재 페이지에서 JavaScript를 실행합니다. 타임아웃 지원. 반환값은 JSON 직렬화 가능해야 합니다.",
+      "description": "현재 페이지에서 JavaScript를 실행합니다.",
       "input_schema": {
         "type": "object",
         "properties": {
           "expression": { "type": "string", "description": "실행할 JavaScript 표현식" },
-          "timeout": { "type": "integer", "default": 10000, "description": "실행 타임아웃 (ms)" }
+          "timeout": { "type": "integer", "default": 10000, "description": "실행 타임아웃 (ms)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         },
         "required": ["expression"]
       }
     },
     {
       "name": "browser_resize",
-      "description": "브라우저 뷰포트 크기를 변경합니다. 반응형 테스트나 모바일 뷰 확인용.",
+      "description": "브라우저 뷰포트 크기를 변경합니다.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "width": { "type": "integer", "default": 1280, "description": "뷰포트 너비 (px, 320-3840)" },
-          "height": { "type": "integer", "default": 720, "description": "뷰포트 높이 (px, 240-2160)" }
+          "width": { "type": "integer", "default": 1280, "description": "뷰포트 너비 (px)" },
+          "height": { "type": "integer", "default": 720, "description": "뷰포트 높이 (px)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
     {
       "name": "browser_vision",
-      "description": "페이지 스크린샷을 base64 이미지로 반환합니다. 멀티모달 AI가 시각적으로 인식할 수 있습니다. snapshot으로 잡히지 않는 요소(canvas, 영상 프레임, 커스텀 UI)를 파악할 때 사용하세요.",
+      "description": "페이지 스크린샷을 base64 이미지로 반환합니다. 멀티모달 AI가 시각적으로 인식할 수 있습니다.",
       "input_schema": {
         "type": "object",
         "properties": {
           "full_page": { "type": "boolean", "default": false, "description": "전체 페이지 캡처" },
           "selector": { "type": "string", "description": "특정 요소만 캡처할 CSS 선택자" },
-          "quality": { "type": "integer", "default": 80, "description": "JPEG 품질 (1-100, 낮을수록 토큰 절약)" }
+          "quality": { "type": "integer", "default": 80, "description": "JPEG 품질 (1-100)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
     {
       "name": "browser_close",
-      "description": "브라우저 세션을 종료합니다. 180초 비활성 시 자동 종료됨.",
-      "input_schema": { "type": "object", "properties": {} }
+      "description": "브라우저 세션을 종료합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
+        }
+      }
     },
     {
       "name": "browser_tab_list",
       "description": "현재 열린 모든 탭의 목록을 반환합니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
+        }
+      }
     },
     {
       "name": "browser_tab_new",
@@ -318,7 +401,8 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "url": { "type": "string", "description": "이동할 URL (비워두면 빈 탭)" }
+          "url": { "type": "string", "description": "이동할 URL (비워두면 빈 탭)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
@@ -328,7 +412,8 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "tab_id": { "type": "string", "description": "전환할 탭 ID (예: t1, t2)" }
+          "tab_id": { "type": "string", "description": "전환할 탭 ID (예: t1, t2)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         },
         "required": ["tab_id"]
       }
@@ -339,14 +424,20 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "tab_id": { "type": "string", "description": "닫을 탭 ID (비워두면 현재 탭)" }
+          "tab_id": { "type": "string", "description": "닫을 탭 ID (비워두면 현재 탭)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
     {
       "name": "browser_iframe_list",
       "description": "현재 페이지의 iframe 목록을 반환합니다.",
-      "input_schema": { "type": "object", "properties": {} }
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
+        }
+      }
     },
     {
       "name": "browser_iframe_switch",
@@ -356,32 +447,40 @@
         "properties": {
           "name": { "type": "string", "description": "iframe name 속성" },
           "index": { "type": "integer", "description": "iframe 인덱스" },
-          "url": { "type": "string", "description": "iframe URL 패턴 (부분 일치)" }
+          "url": { "type": "string", "description": "iframe URL 패턴 (부분 일치)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
     {
       "name": "browser_iframe_reset",
       "description": "iframe에서 메인 페이지로 돌아갑니다.",
-      "input_schema": { "type": "object", "properties": {} }
-    },
-    {
-      "name": "browser_cookies_save",
-      "description": "쿠키와 localStorage를 파일로 저장합니다. 로그인 상태 유지용.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "name": { "type": "string", "description": "저장 이름 (비워두면 도메인명)" }
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
+        }
+      }
+    },
+    {
+      "name": "browser_cookies_save",
+      "description": "쿠키와 localStorage를 파일로 저장합니다. Chrome 드라이버에서는 불필요 (실제 Chrome 세션 사용).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "저장 이름 (비워두면 도메인명)" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         }
       }
     },
     {
       "name": "browser_cookies_load",
-      "description": "저장된 쿠키와 localStorage를 복원합니다.",
+      "description": "저장된 쿠키와 localStorage를 복원합니다. Chrome 드라이버에서는 불필요.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "name": { "type": "string", "description": "복원할 저장 이름" }
+          "name": { "type": "string", "description": "복원할 저장 이름" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto", "description": "드라이버 선택" }
         },
         "required": ["name"]
       }

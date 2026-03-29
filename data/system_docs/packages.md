@@ -8,9 +8,16 @@
 ### 도구 패키지란?
 에이전트가 동적으로 로딩하여 사용하는 확장 기능입니다. 에이전트는 실행 시 필요한 도구를 패키지에서 불러와 사용합니다.
 
+### 패키지 유형
+IndieBiz OS에는 두 가지 유형의 패키지가 있습니다:
+
+- **도구 패키지 (tools)**: 에이전트가 `tool.json` + `handler.py`를 통해 동적으로 로딩하여 사용하는 기능 단위. IBL 액션으로 노출 가능.
+- **확장 패키지 (extensions)**: 백엔드 코어 기능을 확장하는 Python 모듈. 에이전트 실행, 대화 관리, 스케줄러 등 시스템 레벨 기능을 담당. `tool.json`/`handler.py` 없이 백엔드에서 직접 import하여 사용.
+
 ### 폴더 구조
-- **not_installed/tools/**: 설치 가능한 패키지 (아직 설치 안 됨)
-- **installed/tools/**: 설치 완료된 패키지 (에이전트가 사용 가능)
+- **not_installed/tools/**: 설치 가능한 도구 패키지 (아직 설치 안 됨)
+- **installed/tools/**: 설치 완료된 도구 패키지 (에이전트가 사용 가능)
+- **installed/extensions/**: 설치 완료된 확장 패키지 (백엔드 코어 확장)
 - **dev/tools/**: 개발 중인 패키지
 
 ### 설치/제거 원리
@@ -106,6 +113,24 @@ guides:                    # 이 노드에서 사용할 가이드 파일 (선택
 - web-builder/web_builder_guide.md
 ```
 
+#### postprocess 필드 (감각 전처리)
+정보성 액션의 출력이 길 때 경량 AI로 압축하여 에이전틱 루프의 컨텍스트 폭발을 방지한다. 감각기관이 원시 데이터를 전처리해서 뇌에 보내는 것과 같은 원리.
+
+```yaml
+search_ddg:
+  router: handler
+  tool: ddgs_search
+  postprocess:                # 후처리 설정 (선택)
+    type: compress            # 전처리 유형 (현재: compress)
+    threshold: 1500           # 이 글자 수 이상일 때만 압축 (기본: 1500)
+    prompt: "각 검색 결과를 제목, URL, 핵심 내용 1줄로 압축하라."  # 액션별 커스텀 프롬프트 (선택)
+```
+
+- **type**: 전처리 유형. 현재 `compress`만 구현. 향후 `filter`, `structure` 등 추가 가능.
+- **threshold**: 결과가 이 글자 수 미만이면 후처리를 건너뜀 (기본: 1500).
+- **prompt**: 액션 특성에 맞는 압축 지시. 생략 시 범용 프롬프트 사용.
+- engines 등 결과를 보존해야 하는 액션에는 적용하지 않는다.
+
 **중요**: `ibl_actions.yaml`을 작성하는 것만으로는 등록이 완료되지 않는다.
 반드시 `register_actions()`를 호출하여 `ibl_nodes.yaml`에 병합해야 한다.
 
@@ -150,8 +175,8 @@ installed/tools/{package_id}/
 └── tools/             # 실제 도구 모듈들
 ```
 
-**IBL 액션 자동 등록:**
-서버 시작 시 `_auto_register_packages()`가 자동 실행되어, `ibl_actions.yaml`이 있지만 아직 `_ibl_provenance.yaml`에 등록되지 않은 패키지를 감지하고 `register_actions()`를 호출한다. **폴더만 넣고 서버를 재시작하면 IBL 액션이 자동 등록된다.**
+**IBL 액션 자동 동기화:**
+서버 시작 시 `_auto_register_packages()`가 각 패키지의 `ibl_actions.yaml` 수정 시간을 `ibl_nodes.yaml`과 비교하여, 변경된 패키지만 `register_actions()`로 재등록한다. 미등록 패키지는 항상 등록된다. **패키지 YAML을 수정하고 서버를 재시작하면 `postprocess` 등 새 필드가 자동 반영된다.**
 
 서버 재시작 없이 즉시 등록하려면:
 ```bash
@@ -174,7 +199,7 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 ### 주의사항
 - **ibl_actions.yaml의 node 값은 기존 노드여야 한다** (sense, self, limbs, others, engines 등). 존재하지 않는 노드를 지정하면 경고 후 건너뜀.
 - **액션 이름 충돌**: 같은 노드에 이미 같은 이름의 액션이 다른 패키지 소유로 등록되어 있으면 건너뜀. 접두사를 붙여 구분할 것 (예: `radio_play`, `radio_search`).
-- **register_actions() 없이 ibl_actions.yaml만 편집하면 아무 효과 없음**. 반드시 호출해야 함.
+- **register_actions() 없이 ibl_actions.yaml만 편집하면 즉시 반영되지 않음**. 서버 재시작 시 자동 동기화되거나, 수동으로 `register_actions()`를 호출해야 함.
 
 ---
 
@@ -222,6 +247,44 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 
 ---
 
+## 확장 패키지 (Extensions)
+
+확장 패키지는 도구 패키지와 달리 에이전트가 직접 호출하는 도구가 아니라, 백엔드 시스템의 코어 기능을 모듈화한 Python 패키지입니다.
+
+### 도구 패키지와의 차이점
+
+| 구분 | 도구 패키지 (tools) | 확장 패키지 (extensions) |
+|------|-------------------|----------------------|
+| 위치 | `installed/tools/` | `installed/extensions/` |
+| 필수 파일 | `tool.json`, `handler.py` | Python 모듈 (`.py`) |
+| 로딩 방식 | 에이전트 실행 시 동적 로딩 | 백엔드에서 직접 import |
+| IBL 연동 | `ibl_actions.yaml`로 노드 액션 등록 가능 | 해당 없음 |
+| 역할 | 에이전트에게 기능 제공 | 시스템 인프라 확장 |
+
+### 확장 패키지 구조 예시
+```
+installed/extensions/{package_id}/
+├── README.md          # 패키지 설명
+├── module_a.py        # 핵심 로직
+└── module_b.py        # 보조 로직
+```
+
+### 현재 설치된 확장 패키지 (9개)
+
+| ID | 설명 |
+|----|------|
+| ai-agent | AI 에이전트 실행 엔진 (agent_runner, tool_executor, providers) |
+| conversation | 대화 이력 관리 (conversation_db) |
+| gmail | Gmail 연동 |
+| indienet | 외부 메신저 연동 (Telegram, Matrix 등) |
+| notification-system | 알림 시스템 |
+| prompt-generator | 프롬프트 자동 생성 |
+| scheduler | 예약 작업 스케줄러 (program_scheduler, tool_scheduler) |
+| switch-runner | 스위치 실행기 |
+| websocket-chat | WebSocket 기반 실시간 채팅 (api_websocket, websocket_manager) |
+
+---
+
 ## 외부 폴더 등록
 사용자의 기존 폴더를 패키지로 등록할 수 있습니다. AI가 폴더를 분석하여 적절한 `tool.json`과 `handler.py` 생성을 제안할 수 있습니다.
 
@@ -261,4 +324,4 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-03-07*
+*마지막 업데이트: 2026-03-29 (감각 전처리 postprocess 필드 추가, 패키지 YAML 자동 동기화)*

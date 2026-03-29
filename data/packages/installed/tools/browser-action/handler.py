@@ -1,8 +1,8 @@
 """
 browser-action 패키지 핸들러
-Playwright MCP 스타일 브라우저 자동화 도구
+Playwright + Chrome MCP 듀얼 드라이버 브라우저 자동화 도구
 
-Version: 5.0.0
+Version: 6.0.0
 """
 
 import json
@@ -36,7 +36,29 @@ def _load(module_name):
     return module
 
 
-# 도구 이름 → (모듈명, 함수명, project_path 필요 여부)
+def _is_chrome_connected() -> bool:
+    """Chrome MCP 드라이버 연결 상태 확인"""
+    try:
+        mod = _load("browser_chrome")
+        driver = mod.ChromeMCPDriver.get_instance()
+        return driver.is_connected()
+    except Exception:
+        return False
+
+
+# Chrome 전용 도구 (Playwright에 없는 것들)
+_CHROME_ONLY_TOOLS = {
+    "browser_chrome_connect":    ("browser_chrome", "browser_chrome_connect", False),
+    "browser_chrome_disconnect": ("browser_chrome", "browser_chrome_disconnect", False),
+    "browser_chrome_status":     ("browser_chrome", "browser_chrome_status", False),
+    "browser_find":              ("browser_chrome", "browser_find", False),
+}
+
+# Chrome 드라이버에서 project_path가 필요한 도구들
+_CHROME_PROJECT_TOOLS = {"browser_navigate", "browser_screenshot", "browser_save_pdf", "browser_vision",
+                         "browser_cookies_save", "browser_cookies_load"}
+
+# 도구 이름 → (모듈명, 함수명, project_path 필요 여부) — Playwright용
 _TOOL_ROUTING = {
     # 네비게이션
     "browser_navigate":         ("browser_navigate", "browser_navigate", True),
@@ -89,19 +111,52 @@ _TOOL_ROUTING = {
 
 
 async def execute(tool_name: str, params: dict, project_path: str = None):
-    """메인 핸들러 (async)"""
+    """메인 핸들러 (async) — driver 파라미터로 Playwright/Chrome 분기"""
     proj_path = project_path or "."
 
-    if tool_name not in _TOOL_ROUTING:
+    # Chrome 전용 도구는 항상 Chrome 모듈로 라우팅
+    if tool_name in _CHROME_ONLY_TOOLS:
+        module_name, func_name, needs_project = _CHROME_ONLY_TOOLS[tool_name]
+        try:
+            mod = _load(module_name)
+            func = getattr(mod, func_name)
+            result = await func(params, proj_path) if needs_project else await func(params)
+            return json.dumps(result, ensure_ascii=False, indent=2)
+        except Exception as e:
+            return json.dumps({"success": False, "error": f"Chrome 도구 실패 ({tool_name}): {str(e)}"}, ensure_ascii=False)
+
+    # 일반 도구: driver 파라미터로 분기
+    driver = params.pop("driver", "auto")
+
+    if driver == "auto":
+        driver = "chrome" if _is_chrome_connected() else "playwright"
+
+    all_tools = {**_TOOL_ROUTING, **_CHROME_ONLY_TOOLS}
+    if tool_name not in _TOOL_ROUTING and tool_name not in _CHROME_ONLY_TOOLS:
         return json.dumps({
             "success": False,
             "error": f"알 수 없는 도구: {tool_name}",
-            "available_tools": list(_TOOL_ROUTING.keys())
+            "available_tools": list(all_tools.keys())
         }, ensure_ascii=False)
 
-    module_name, func_name, needs_project = _TOOL_ROUTING[tool_name]
-
     try:
+        if driver == "chrome":
+            # Chrome MCP 드라이버로 라우팅
+            mod = _load("browser_chrome")
+            func = getattr(mod, tool_name, None)
+            if func is None:
+                # Chrome에 해당 함수가 없으면 Playwright로 폴백
+                driver = "playwright"
+            else:
+                needs_project = tool_name in _CHROME_PROJECT_TOOLS
+                result = await func(params, proj_path) if needs_project else await func(params)
+                return json.dumps(result, ensure_ascii=False, indent=2)
+
+        # Playwright 드라이버 (기본 또는 폴백)
+        if tool_name not in _TOOL_ROUTING:
+            return json.dumps({"success": False, "error": f"Playwright 드라이버에서 지원하지 않는 도구: {tool_name}"}, ensure_ascii=False)
+
+        module_name, func_name, needs_project = _TOOL_ROUTING[tool_name]
         mod = _load(module_name)
         func = getattr(mod, func_name)
 
@@ -114,5 +169,5 @@ async def execute(tool_name: str, params: dict, project_path: str = None):
     except Exception as e:
         return json.dumps({
             "success": False,
-            "error": f"도구 실행 실패 ({tool_name}): {str(e)}"
+            "error": f"도구 실행 실패 ({tool_name}, driver={driver}): {str(e)}"
         }, ensure_ascii=False)

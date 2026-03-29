@@ -287,7 +287,7 @@ def load_tools_from_packages(package_names: List[str] = None) -> List[Dict]:
     return tools
 
 
-def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = ".") -> str:
+def execute_system_tool(tool_name: str, tool_input: dict, work_dir: str = ".", **kwargs) -> str:
     """
     시스템 AI 도구 실행 - 모든 도구를 패키지에서 동적 로딩
     """

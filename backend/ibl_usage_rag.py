@@ -94,7 +94,7 @@ class IBLUsageRAG:
 
     def _format_references(self, examples: list) -> str:
         """검색 결과를 프롬프트 주입용 XML로 포맷팅"""
-        lines = ['<ibl_references note="아래는 유사한 과거 용례입니다. code의 IBL 코드를 참고하되, 반드시 execute_ibl 도구의 code 파라미터로 실행하세요. 절대 텍스트 응답에 IBL 코드를 포함하지 마세요.">']
+        lines = ['<ibl_references note="아래는 유사한 과거 용례입니다. code의 IBL 코드를 참고하되, 반드시 execute_ibl 도구의 code 파라미터로 실행하세요. 절대 텍스트 응답에 IBL 코드를 포함하지 마세요. 분석/판단/정리가 필요한 작업은 파이프라인(>>)으로 엮지 말고 액션을 하나씩 호출하면서 중간에 생각하세요.">']
         for ex in examples:
             # XML 속성용 이스케이프
             intent = ex.intent.replace('"', '&quot;').replace("'", "&apos;")

@@ -570,7 +570,7 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
   "id": "evt_abc123",
   "title": "매일 뉴스 수집",
   "action": "run_pipeline",
-  "action_params": {"pipeline": "[sense:web_search]{query: 'AI 뉴스'}"},
+  "action_params": {"pipeline": "[sense:search_ddg]{query: 'AI 뉴스'}"},
   "owner_project_id": "투자",
   "owner_agent_id": "researcher"
 }
@@ -585,13 +585,13 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
 
 **셀프 스케줄** — 자기 자신의 스케줄 등록:
 ```
-[self:schedule]{at: "09:00", pipeline: "[sense:web_search]{query: '오늘 뉴스'}"}
+[self:schedule]{at: "09:00", pipeline: "[sense:search_ddg]{query: '오늘 뉴스'}"}
 ```
 
 **크로스 위임** — 다른 에이전트의 스케줄에 등록:
 ```
 [self:schedule]{at: "09:00", target_project_id: "투자", target_agent_id: "analyst",
-  pipeline: "[sense:web_search]{query: '오늘 주요 뉴스'}"}
+  pipeline: "[sense:search_ddg]{query: '오늘 주요 뉴스'}"}
 ```
 
 `target_project_id`/`target_agent_id`를 지정하면 해당 에이전트가 owner가 되어, 그 에이전트의 컨텍스트에서 실행되고 결과도 그쪽 대화창에 전달됨.
@@ -601,12 +601,13 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
 | 파일 | 역할 |
 |------|------|
 | `calendar_manager.py` | 에이전트 소유 스케줄 저장/실행, `owner_project_id`/`owner_agent_id` 필드 |
-| `api_system_ai.py` | `_execute_schedule()` — 셀프/크로스 위임 분기, `_execute_plan()` — 계획서 실행 |
+| `api_system_ai.py` | `_execute_schedule()` — 셀프/크로스 위임 분기 |
 | `api_scheduler.py` | `GET /calendar/events/by-agent` — 에이전트별 스케줄 조회 API |
 | `websocket_manager.py` | `send_to_system_ai_chat()`, `find_system_ai_connections()` |
 | `api_websocket.py` | `/ws/launcher` — 백엔드→Electron 창 제어 (자동 열기) |
 | `Launcher.tsx` | WS 리스너 — 창 열기 명령 수신 |
 | `workflow_engine.py` | `execute_pipeline(agent_id=)` — 파이프라인에 agent_id 전달 |
+| `trigger_engine.py` | 이벤트/트리거 기반 실행 엔진 (구 `event_engine.py`에서 이전) |
 
 ### 스케줄 실행 흐름
 
@@ -643,9 +644,10 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 - 멀티에이전트 작업계획서는 동기 위임을 순차/병렬로 조합하여 실행
 
 ---
-*마지막 업데이트: 2026-03-11*
+*마지막 업데이트: 2026-03-27*
 *Phase 25: others 노드로 통합. `[others:delegate]`, `[others:delegate_project]`.*
-*Phase 28: create_plan/execute_plan 제거. 작업계획서는 자연어로 작성하고 기존 위임 도구로 실행.*
+*Phase 28: `create_plan`/`_execute_plan()` 폐지. 작업계획서는 자연어로 작성하고 기존 위임 도구로 실행.*
+*event_engine.py → trigger_engine.py로 이전 (event_engine.py는 하위 호환 래퍼로 유지).*
 
 > 참고: 위임 가이드 파일 (guide_db.json에서 검색)
 > - 프로젝트 에이전트용: `delegation_agent.md`

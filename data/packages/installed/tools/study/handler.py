@@ -553,10 +553,10 @@ def _search_openalex(tool_input: dict) -> str:
             journal = source.get("display_name", "")
             journal_str = f"\nJournal: {journal}" if journal else ""
 
-            # 초록 복원 (inverted index에서)
+            # 초록 복원 (inverted index에서) — 500자까지 허용
             abstract = _reconstruct_abstract(work.get("abstract_inverted_index"))
             if abstract:
-                abstract = abstract[:300] + "..." if len(abstract) > 300 else abstract
+                abstract = abstract[:500] + "..." if len(abstract) > 500 else abstract
                 abstract_str = f"\nAbstract: {abstract}"
             else:
                 abstract_str = ""

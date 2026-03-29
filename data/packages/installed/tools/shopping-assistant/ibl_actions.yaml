@@ -5,4 +5,7 @@ actions:
     target_description: 상품명
     router: handler
     tool: search_shopping
+    implementation: Naver Shopping API + Playwright로 다나와/중고마켓 비공식 스크래핑 병렬 실행
     target_key: query
+    postprocess:
+      type: compress

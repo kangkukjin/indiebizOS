@@ -722,7 +722,7 @@ class IBLUsageDB:
         # 파일/디렉토리 탐색
         'read', 'read_file', 'list', 'find', 'grep', 'list_projects',
         # 시스템 메타 조회
-        'todo', 'snapshot', 'registry', 'search_guide', 'launch',
+        'todo', 'snapshot', 'registry', 'read_guide', 'launch',
         'agent_info', 'remotion_status', 'live_check', 'list_workflows',
         # 범용 get (type 파라미터에 따라 다양한 조회)
         'get',

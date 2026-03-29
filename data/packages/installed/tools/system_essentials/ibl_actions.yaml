@@ -4,55 +4,66 @@ actions:
     description: 현재 시간 조회
     router: handler
     tool: get_current_time
+    implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
   read:
-    description: 파일 읽기
+    description: 파일 읽기 (offset/limit으로 부분 읽기 가능)
     router: handler
     tool: read_file
+    implementation: Python 파일 I/O로 로컬 파일 읽기. offset(시작 줄, 0부터)과 limit(줄 수)로 대용량 파일을 부분적으로 읽을 수 있다.
     target_key: path
   write:
     description: 파일 쓰기
     router: handler
     tool: write_file
+    implementation: Python 파일 I/O로 로컬 파일 쓰기
     target_key: path
   list:
     description: 디렉토리 내용 조회
     router: handler
     tool: list_directory
+    implementation: os.listdir/pathlib로 디렉토리 내용 조회
     target_key: path
   find:
     description: 파일 검색 (glob 패턴)
     keywords: [파일, 찾기, 검색, find, search, 파일찾기]
     router: handler
     tool: glob_files
+    implementation: pathlib.glob으로 패턴 기반 파일 검색
     target_key: pattern
   grep:
     description: 파일 내용 검색
     keywords: [검색, 내용검색, grep, 코드검색]
     router: handler
     tool: grep_files
+    implementation: subprocess로 grep/ripgrep 실행하여 파일 내용 검색
     target_key: pattern
   edit:
     description: 파일 부분 편집 (old_string → new_string 교체)
     router: handler
     tool: edit_file
+    implementation: Python 문자열 치환으로 파일 부분 편집
     target_key: path
   copy:
     description: 파일/폴더 복사
     router: handler
     tool: copy_path
+    implementation: shutil.copy/copytree로 파일/폴더 복사
     target_key: source
   move:
     description: 파일/폴더 이동 또는 이름 변경
     router: handler
     tool: move_path
+    implementation: shutil.move로 파일/폴더 이동/이름변경
     target_key: source
   delete:
     description: 파일/폴더 삭제
     router: handler
     tool: delete_path
+    implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
     target_key: path
   read_pdf:
     description: PDF 파일 읽기 (텍스트 추출)
     router: handler
     tool: read_pdf
+    implementation: PyPDF2/pdfplumber로 PDF 텍스트 추출
     target_key: path

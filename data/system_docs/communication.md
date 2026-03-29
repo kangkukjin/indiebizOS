@@ -43,13 +43,19 @@ IndieBiz OS는 GUI 외에도 Gmail, Nostr 등 외부 채널을 통해 사용자 
 - **인증**: nsec 개인키 (NIP-01)
 - **수신**: 실시간 WebSocket (릴레이 구독)
 - **발송**: NIP-04 암호화 DM
-- **기본 릴레이**: wss://relay.damus.io, wss://nos.lol, wss://relay.primal.net
+- **기본 릴레이**: wss://relay.damus.io, wss://relay.nostr.band, wss://nos.lol, wss://relay.primal.net, wss://nostr.wine
 
 ### IndieNet 연동
 Nostr 키는 IndieNet identity와 연동 가능:
 - 위치: `~/.indiebiz/indienet/identity.json`
 - Nostr 채널 설정에 nsec가 없으면 IndieNet에서 자동 로드
 - 동일한 Nostr 신원으로 여러 서비스 연동 가능
+
+### IndieNet 보드 (커스텀 해시태그 게시판)
+커스텀 해시태그 기반의 독립 게시판 기능:
+- 보드 생성/삭제/활성 보드 전환
+- 해시태그별 게시글 분리 조회
+- 기본 해시태그: `IndieNet`
 
 ---
 
@@ -112,6 +118,12 @@ OWNER_NOSTR_PUBKEYS=npub1xxx...,npub1yyy...
 ## 자동응답 시스템 V3 (Tool Use 통합)
 
 → 상세 문서: [auto_response.md](auto_response.md)
+
+### 지원 프로바이더
+자동응답은 시스템 AI의 API 설정을 공유하며, 다음 프로바이더를 지원합니다:
+- **Anthropic** (Claude)
+- **OpenAI** (GPT)
+- **Google** (Gemini)
 
 ### 처리 흐름
 
@@ -187,6 +199,7 @@ V3에서는 `send_response` 도구가 즉시 발송합니다 (pending 대기 없
 | content | TEXT | 본문 |
 | is_from_user | INTEGER | 0=수신, 1=발신 |
 | status | TEXT | null, pending, sent, failed, skipped |
+| replied | INTEGER | 응답 완료 여부 (0=미응답, 1=응답 완료) |
 | external_id | TEXT | 외부 메시지 ID (중복 방지) |
 | message_time | TEXT | 메시지 시간 |
 | created_at | TEXT | 저장 시간 |
@@ -310,6 +323,26 @@ agents:
 - `POST /business/messages/{id}/processed` - 처리 완료
 - `POST /business/messages/{id}/replied` - 응답 완료
 
+### IndieNet
+- `GET /indienet/status` - 상태 조회
+- `GET /indienet/identity` - ID 조회
+- `PUT /indienet/identity/display-name` - 표시 이름 변경
+- `POST /indienet/identity/import` - 외부 nsec 키 가져오기
+- `POST /indienet/identity/reset` - ID 초기화
+- `GET /indienet/settings` - 설정 조회
+- `PUT /indienet/settings` - 설정 변경 (릴레이, 자동 새로고침 등)
+- `GET /indienet/posts` - 게시글 조회
+- `POST /indienet/posts` - 글 게시
+- `GET /indienet/user/{pubkey}` - 사용자 정보 조회
+- `GET /indienet/dms` - DM 목록 조회
+- `POST /indienet/dms` - DM 전송
+- `GET /indienet/boards` - 보드 목록 조회
+- `POST /indienet/boards` - 새 보드 생성
+- `DELETE /indienet/boards/{hashtag}` - 보드 삭제
+- `PUT /indienet/boards/active` - 활성 보드 설정
+- `GET /indienet/boards/{hashtag}/posts` - 보드 게시글 조회
+- `POST /indienet/boards/post` - 보드에 글 게시
+
 ---
 
 ## 프롬프트 구조
@@ -325,8 +358,8 @@ agents:
 
 1. **사용자 식별**: `.env`에 `OWNER_EMAILS`, `OWNER_NOSTR_PUBKEYS` 설정 필수
 2. **API 호출 비용**: Tool Use 기반 1회 호출 (V3)
-3. **무한 루프 방지**: 연속 자동응답 5개 초과 시 스킵
+3. **무한 루프 방지**: 연속 자동응답 5개 이상(>=5) 시 스킵
 4. **Nostr 키 관리**: nsec는 채널 설정 또는 IndieNet에서 관리
 
 ---
-*마지막 업데이트: 2026-02-01*
+*마지막 업데이트: 2026-03-27*

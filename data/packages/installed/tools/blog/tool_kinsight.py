@@ -237,18 +237,13 @@ def markdown_to_html(content: str, title: str, date_str: str) -> str:
     return html_template.format(title=title, date_str=date_str, html_body=html_body, blog_url=BLOG_URL)
 
 
-def kinsight(project_path: str = ".", before_date: str = None) -> Dict[str, Any]:
-    """기존 kinsight 함수 (하위 호환성 유지)"""
-    return kinsight2(project_path=project_path, count=10, before_date=before_date)
-
-
-def kinsight2(project_path: str = ".", count: int = 10, before_date: str = None) -> Dict[str, Any]:
+def kinsight(project_path: str = ".", count: int = 15, before_date: str = None) -> Dict[str, Any]:
     """
-    Kinsight2: 블로그 기반 개인 인사이트 생성 (글 개수 지정 가능)
+    Kinsight: 블로그 기반 개인 인사이트 생성
 
     Args:
         project_path: 프로젝트 경로 (outputs 폴더 위치)
-        count: 분석할 글 개수 (기본 10)
+        count: 분석할 글 개수 (기본 15)
         before_date: 이 날짜 이전의 글로 분석 (YYYY-MM-DD 형식, 없으면 최신글)
     """
     try:
@@ -336,16 +331,16 @@ def kinsight2(project_path: str = ".", count: int = 10, before_date: str = None)
         # 6. HTML 생성 및 저장
         now = datetime.now()
         if before_date:
-            title = f"Kinsight2 (글 {len(posts)}개) - {before_date} 이전"
+            title = f"Kinsight (글 {len(posts)}개) - {before_date} 이전"
         else:
-            title = f"Kinsight2 (글 {len(posts)}개) - {now.strftime('%Y년 %m월 %d일')}"
+            title = f"Kinsight (글 {len(posts)}개) - {now.strftime('%Y년 %m월 %d일')}"
 
         html_content = markdown_to_html(full_content, title, now.strftime("%Y-%m-%d %H:%M"))
 
         out_dir = os.path.join(project_path, "outputs")
         os.makedirs(out_dir, exist_ok=True)
 
-        filename = f"kinsight2_{now.strftime('%Y%m%d_%H%M%S')}.html"
+        filename = f"kinsight_{now.strftime('%Y%m%d_%H%M%S')}.html"
         filepath = os.path.join(out_dir, filename)
 
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -354,7 +349,7 @@ def kinsight2(project_path: str = ".", count: int = 10, before_date: str = None)
         return {
             'success': True,
             'report_path': os.path.abspath(filepath),
-            'message': f'Kinsight2 보고서 생성 완료 (분석 글: {len(posts)}개)',
+            'message': f'Kinsight 보고서 생성 완료 (분석 글: {len(posts)}개)',
             'analyzed_posts': len(posts),
             'has_profile': bool(profile),
             'before_date': before_date

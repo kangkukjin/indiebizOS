@@ -1,106 +1,116 @@
 node: sense
 actions:
   price:
-    description: '주가 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F)'
+    description: '현재 시세 빠른 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F). 간단 시세 확인용. 기간별 이력은 kr_price(한국) 또는 us_price(미국) 사용.'
     target_description: 종목 코드/티커 (자동으로 시장 판별)
     router: handler
     tool: yf_stock_price
+    implementation: Yahoo Finance yfinance로 현재/최근 시세 빠른 조회. 기간 이력 조회는 kr_price/us_price 사용.
     target_key: symbol
   info:
-    description: 종목 상세 정보 (시가총액, 52주 최고/최저 등)
+    description: 종목 기본 정보 (시가총액, 52주 최고/최저, PER, 배당 등). 한국/미국 모두 가능. 재무제표가 필요하면 kr_financial 또는 us_financial 사용.
     target_description: 종목 코드/티커
     router: handler
     tool: yf_stock_info
+    implementation: Yahoo Finance yfinance로 종목 메타데이터 조회 (시총, 밸류에이션, 배당 등 요약)
     target_key: symbol
   search_stock:
     description: 종목 심볼 검색 (이름으로 코드 찾기)
     target_description: 회사명 또는 키워드
     router: handler
     tool: yf_search_stock
+    implementation: Yahoo Finance yfinance 심볼 검색
     target_key: query
   kr_company:
     description: '한국 기업 정보 (DART: 대표자, 업종, 주소, IR)'
     target_description: 기업명 또는 DART 코드
     router: handler
     tool: kr_company_info
+    implementation: DART(금융감독원) 공개 API로 기업 기본정보 조회 (API키 필요)
     target_key: corp_name
   us_company:
     description: '미국 기업 프로필 (FMP: CEO, 시총, 섹터, 설명)'
     target_description: 티커 (AAPL, MSFT 등)
     router: handler
     tool: us_company_profile
+    implementation: FMP(Financial Modeling Prep) API로 미국 기업 프로필 조회 (API키 필요)
     target_key: symbol
   kr_financial:
     description: '한국 재무제표 (DART: 재무상태표, 손익계산서, 현금흐름표)'
     target_description: 기업명 또는 DART 코드
     router: handler
     tool: kr_financial_statements
+    implementation: DART API로 한국 기업 재무제표 XML 파싱
     target_key: corp_name
   us_financial:
     description: '미국 재무제표 (FMP: income, balance, cashflow)'
     target_description: 티커 (AAPL 등)
     router: handler
     tool: us_financial_statements
+    implementation: FMP API로 미국 기업 재무제표 JSON 조회
     target_key: symbol
   kr_disclosure:
     description: '한국 공시 검색 (DART: 정기공시, 대량보유, 거래소공시)'
     target_description: 기업명 또는 DART 코드
     router: handler
     tool: kr_disclosures
+    implementation: DART API로 한국 공시 검색 및 XML 파싱
     target_key: corp_name
   us_filing:
     description: 미국 SEC 공시 검색 (10-K, 10-Q, 8-K, DEF 14A)
     target_description: 티커
     router: handler
     tool: us_sec_filings
+    implementation: SEC Edgar 공개 API로 미국 공시 문서 검색
     target_key: symbol
-  news:
-    description: 종목 관련 뉴스 (Finnhub)
+  company_news:
+    description: 특정 종목/기업 관련 뉴스 (티커 필수, 일반 뉴스는 sense:search_news)
     target_description: '티커 (US: AAPL, KR: 005930.KS)'
     router: handler
     tool: company_news
-    target_key: symbol
-  stock_news:
-    description: 종목 뉴스 (Yahoo Finance)
-    target_description: 티커
-    router: handler
-    tool: yf_stock_news
+    implementation: Finnhub → Yahoo Finance 순서로 종목 뉴스 조회. 날짜 범위 지정 가능(start_date, end_date).
     target_key: symbol
   earnings:
     description: '실적 발표 일정 (Finnhub: EPS/매출 예상 vs 실적)'
     target_description: 티커 (선택, 비우면 전체 시장)
     router: handler
     tool: earnings_calendar
+    implementation: Finnhub API로 EPS/매출 실적 일정 조회
     target_key: symbol
   crypto:
     description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
     target_description: 코인 심볼 (BTC, ETH, SOL 등)
     router: handler
     tool: crypto_price
+    implementation: CoinGecko 무료 API로 암호화폐 시세 조회 (requests HTTP)
     target_key: coin_id
   kr_price:
-    description: 한국 주가 (KRX/FinanceDataReader, 기간 지정)
+    description: 한국 주가 기간별 이력 (KRX). start_date/end_date로 기간 지정 가능. 현재 시세만 필요하면 price 사용.
     target_description: 종목 코드 또는 기업명
     router: handler
     tool: kr_stock_price
+    implementation: KRX(한국거래소) API + FinanceDataReader로 한국 주가 시계열 이력 조회. 기간 지정 가능.
     target_key: symbol
   kr_investor:
     description: 한국 시장 투자자별 매매동향 (외국인/기관/개인 순매수, 코스피/코스닥)
     target_description: 시장 구분 (STK=코스피, KSQ=코스닥, ALL=전체)
     router: handler
     tool: kr_market_investor_trading
+    implementation: KRX API로 투자자별 매매동향 XML 파싱
     target_key: market
   kr_stock_investor:
     description: 개별종목 투자자별 매매동향 (외국인/기관/개인 순매수)
     target_description: 종목 코드 또는 기업명
     router: handler
     tool: kr_stock_investor_trading
+    implementation: KRX API로 개별종목 투자자별 매매동향 조회
     target_key: symbol
   us_price:
-    description: 미국 주가 (FMP, 기간 지정)
+    description: 미국 주가 기간별 이력 (FMP). start_date/end_date로 기간 지정 가능. 현재 시세만 필요하면 price 사용.
     target_description: 티커
     router: handler
     tool: us_stock_price
+    implementation: FMP API로 미국 주가 시계열 이력 조회. 기간 지정 가능.
     target_key: symbol
 guides:
 - investment/investment_guide.md

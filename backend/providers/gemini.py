@@ -69,6 +69,27 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
         self._cache_ready = threading.Event()  # 캐시 준비 완료 시그널
         self._cache_lock = threading.Lock()  # 캐시 생성/삭제 동시성 보호
 
+    @staticmethod
+    def _patch_ipv4_preference():
+        """IPv6 연결 실패 시 hang 방지 — IPv4 우선 DNS 해석 패치
+
+        일부 네트워크 환경에서 Python이 IPv6를 우선 시도하면
+        Google API 서버에 연결이 hang되는 문제를 해결한다.
+        socket.getaddrinfo를 패치하여 IPv4 결과를 먼저 반환하도록 한다.
+        """
+        import socket
+        _original_getaddrinfo = socket.getaddrinfo
+
+        def _ipv4_first_getaddrinfo(*args, **kwargs):
+            results = _original_getaddrinfo(*args, **kwargs)
+            # IPv4(AF_INET)를 앞으로, IPv6(AF_INET6)를 뒤로
+            results.sort(key=lambda x: x[0] != socket.AF_INET)
+            return results
+
+        if not getattr(socket.getaddrinfo, '_ipv4_patched', False):
+            socket.getaddrinfo = _ipv4_first_getaddrinfo
+            socket.getaddrinfo._ipv4_patched = True
+
     def init_client(self) -> bool:
         """Gemini 클라이언트 초기화 + 백그라운드 캐시 생성"""
         if not self.api_key:
@@ -76,6 +97,9 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
             return False
 
         try:
+            # IPv6 hang 방지 패치 적용
+            self._patch_ipv4_preference()
+
             from google import genai
             from google.genai import types
 
@@ -173,7 +197,7 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
 
         # 백그라운드 캐시가 준비될 때까지 최대 100ms만 대기
         # 첫 메시지에서 캐시가 아직 안 됐으면 캐시 없이 진행
-        self._cache_ready.wait(timeout=0.1)
+        self._cache_ready.wait(timeout=3)
 
     def _delete_cache_internal(self):
         """기존 캐시 삭제 (lock 없이, 호출자가 lock 관리)"""
@@ -195,13 +219,13 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
             # API 규칙: cachedContent 사용 시 tools/system_instruction 전달 불가
             return types.GenerateContentConfig(
                 cachedContent=self._cache_name,
-                temperature=0.5
+                temperature=0.8
             )
         else:
             return types.GenerateContentConfig(
                 system_instruction=self.system_prompt,
                 tools=gemini_tools,
-                temperature=0.5
+                temperature=0.8
             )
 
     def cleanup(self):
@@ -269,6 +293,13 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
         self._ensure_cache()
         config = self._build_config(gemini_tools)
 
+        # cancel_check를 execute_tool에 전달하는 래퍼 (도구 실행 중 중단 지원)
+        _original_execute_tool = execute_tool
+        if cancel_check and execute_tool:
+            def _cancellable_execute_tool(name, inp, path, aid=None):
+                return _original_execute_tool(name, inp, path, aid, cancel_check=cancel_check)
+            execute_tool = _cancellable_execute_tool
+
         # 도구 호출 루프 (재귀 대신 while)
         accumulated_text = ""
         iteration = 0
@@ -299,6 +330,7 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
                     contents, config, cancel_check, iteration
                 )
             except Exception as e:
+                print(f"[Gemini] 라운드 {iteration+1} API 오류: {type(e).__name__}: {e}")
                 yield {"type": "error", "content": str(e)}
                 return
 
@@ -407,7 +439,7 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
                 # 도구 응답 추가 (AI에게는 content만)
                 # 파이프라인 결과인 경우 _action_count(병렬 포함 실제 액션 수) × 16KB 허용
                 import re as _re
-                _max_len = 16000
+                _max_len = 8000
                 _action_match = _re.search(r'"_action_count"\s*:\s*(\d+)', tool_output)
                 if _action_match:
                     _actions = int(_action_match.group(1))

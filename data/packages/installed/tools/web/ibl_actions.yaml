@@ -1,32 +1,38 @@
 nodes:
-  self:
+  limbs:
     actions:
       launch:
         description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
         router: handler
         tool: launch_sites
+        implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈)
         target_key: action
   sense:
     actions:
-      search:
-        description: 종합 검색 (웹 + 뉴스 + 유튜브 + 논문 병렬 검색)
-        router: handler
-        tool: unified_search
-        target_key: query
-      web_search:
-        description: DuckDuckGo 웹 검색
+      search_ddg:
+        description: 웹 검색 (DuckDuckGo). 뉴스는 search_news, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
         router: handler
         tool: ddgs_search
+        implementation: DuckDuckGo ddgs 라이브러리로 웹 검색. 쿼리 언어 자동 감지(영어→글로벌, 한국어→한국).
         target_key: query
+        postprocess:
+          type: compress
       crawl:
-        description: 웹페이지 크롤링 (텍스트 추출)
+        description: 웹페이지 원문 읽기 (URL 필요). 검색 스니펫으로 부족할 때 상세 내용 확인용.
         router: handler
         tool: crawl_website
+        implementation: 1차 requests+BeautifulSoup 정적 크롤링, 콘텐츠 부족 시 Chrome MCP(실제 브라우저)로 자동 폴백. JS 렌더링 사이트도 처리 가능.
         target_key: url
+        postprocess:
+          type: compress
       search_news:
-        description: 구글 뉴스 검색
+        description: 뉴스만 검색 (Google News). 신문 생성, 뉴스 모니터링 등 뉴스 전용 작업에 사용.
         router: handler
         tool: google_news_search
+        implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
         target_key: query
+        postprocess:
+          type: compress
+          prompt: "같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라."
     guides:
     - web/web_guide.md

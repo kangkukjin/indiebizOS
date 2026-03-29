@@ -625,10 +625,16 @@ def execute(tool_name: str, params: dict, project_path: str = None):
         if not query:
             return format_json({"success": False, "error": "검색어(query)가 필요합니다."})
 
+        # 언어 자동 감지: 명시적 지정이 없으면 쿼리에서 판단
+        language = params.get("language", "auto")
+        if language == "auto":
+            korean_chars = sum(1 for c in query if '\uac00' <= c <= '\ud7a3' or '\u3131' <= c <= '\u318e')
+            language = "ko" if korean_chars > len(query) * 0.2 else "en"
+
         result = search_google_news(
             query=query,
             count=params.get("count", 10),
-            language=params.get("language", "ko")
+            language=language
         )
         return format_json(result)
 

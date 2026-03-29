@@ -5,10 +5,12 @@ actions:
     target_description: 검색어 (선택)
     router: handler
     tool: get_neighbors
+    implementation: 사용자 프로필(my_profile.txt) + 관계 DB 기반 이웃 목록 조회
     target_key: search
   neighbor_detail:
     description: 특정 이웃의 상세 정보 조회
     target_description: 이웃 이름 또는 ID
     router: handler
     tool: get_neighbor_detail
+    implementation: 비즈니스 관계 DB에서 이웃 상세 정보 조회
     target_key: name

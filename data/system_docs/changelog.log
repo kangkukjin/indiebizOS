@@ -554,3 +554,69 @@
   - overview.md: Phase 26 + CCTV 링크 추가
   - ibl.md: log_attempt, get_attempts, cctv_search/refresh/stats 액션 추가
   - technical.md: 업데이트 날짜 갱신
+[2026-03-22 00:00:00] FEATURE_ADDED: 의식 에이전트 (Consciousness Agent) 구현
+  - consciousness_agent.py: 메타인지 프롬프트 편집자 — 히스토리 정제, IBL 포커싱, 태스크 프레이밍, 가이드 파일 선택, 상황 메모
+  - consciousness_prompt.md: 의식 에이전트 역할 프롬프트 (data/common_prompts/)
+  - agent_runner.py: 의식 에이전트 통합 (_run_consciousness, _apply_consciousness_to_history)
+  - api_websocket.py: WebSocket 채팅/스트리밍 핸들러에 의식 에이전트 통합
+  - api_system_ai.py: 시스템 AI에 의식 에이전트 통합 (내부 위임 제외)
+  - prompt_builder.py: consciousness_output 파라미터 추가 (task_framing, ibl_focus, guide_files, context_notes 주입)
+  - 시스템 AI의 API 설정(프로바이더/모델/키) 재사용, 원샷 JSON 응답 방식
+[2026-03-22 00:00:00] DOCS_UPDATED: 의식 에이전트 문서 반영
+  - CLAUDE.md: 데이터 흐름 다이어그램에 의식 에이전트 추가, 핵심 컴포넌트 섹션 추가
+  - architecture.md: 의식 에이전트 섹션 추가 (역할, 적용 범위, 구현 파일)
+  - overview.md: 주요 기능에 의식 에이전트 항목 추가
+  - README.md: Consciousness Agent 섹션 추가 (English)
+  - README.ko.md: 의식 에이전트 섹션 추가 (한국어)
+[2026-03-24 00:00:00] FEATURE_ENHANCED: 의식 에이전트 자기 한계 인식 강화
+  - consciousness_prompt.md: "문제를 정의할 때 도구가 주는 정보의 품질과 한계를 먼저 평가하라" 원칙 추가
+  - consciousness_prompt.md: 관련 액션의 implementation 필드를 참조하여 도구 능력 판단하도록 지시
+  - base_prompt_v5.md: "너 자신을 알라" 철학 반영 — 소스 품질 판단, 결과의 한계 고지, 자기 능력 평가
+  - 핵심 철학: "문제는 나의 한계와 환경의 제약이 만나는 곳에서 생긴다"
+[2026-03-24 00:00:00] FEATURE_ADDED: IBL 액션 implementation 필드
+  - 각 IBL 액션/도구에 기술적 구현 방식을 한 줄로 기술하는 implementation 필드 추가
+  - 의식 에이전트가 도구의 한계를 판단할 근거로 활용
+  - 예: sense:search → "SerpAPI 기반 웹 검색 결과 집계" → AI가 "1차 자료가 아닌 검색 엔진 수준"임을 판단 가능
+[2026-03-24 00:00:00] FEATURE_PLANNED: Chrome MCP 연동 (browser-action 패키지)
+  - browser-action 패키지에 Chrome MCP 드라이버 추가 계획
+  - 기존 Playwright 드라이버와 병렬 구조: 같은 IBL 액션, 다른 백엔드
+  - 수동 연결 방식: 에이전트가 필요할 때 연결, Chrome 미실행 시 Playwright 폴백
+  - Chrome 확장 프로그램(MCP 서버) 필요, SSE/HTTP로 통신
+[2026-03-24 00:00:00] DOCS_UPDATED: 시스템 문서 및 README 업데이트
+  - README.md: 의식 에이전트 섹션에 자기 한계 인식 철학, implementation 필드 설명 추가
+  - README.ko.md: 동일 내용 한국어 반영
+  - architecture.md: 의식 에이전트 섹션 전면 보강 (핵심 철학, 에이전트 베이스 프롬프트 연동)
+  - overview.md: 의식 에이전트 항목에 implementation 필드, 한계 인식 상세 추가
+[2026-03-29 00:00:00] FEATURE_ADDED: 3단 인지 아키텍처 (Phase 28: 무의식/의식/평가)
+  - 무의식 에이전트(Unconscious Agent): gemini-2.5-flash-lite 기반 경량 게이트키퍼
+    - 요청을 EXECUTE(단순) / THINK(복잡)로 분류, 단순 요청은 의식 에이전트 건너뜀
+    - 파일: data/common_prompts/unconscious_prompt.md, agent_runner._classify_request()
+  - 평가 에이전트(Evaluator Agent): 실행 후 achievement_criteria 대비 결과 평가
+    - NOT_ACHIEVED 시 피드백과 함께 재실행, 최대 3라운드
+    - 파일: data/common_prompts/evaluator_prompt.md, agent_runner._run_goal_evaluation_loop()
+  - 의식 에이전트(Consciousness Agent): achievement_criteria를 별도 필드로 출력하도록 변경
+[2026-03-29 00:00:00] FEATURE_CHANGED: 검색 액션 분리 (sense:search 해체)
+  - 기존 4-소스 통합 검색(sense:search) 제거
+  - sense:web_search → sense:search_ddg (DuckDuckGo 전용)로 이름 변경
+  - 개별 소스 분리: search_news, search_youtube, search_openalex, search_shopping
+[2026-03-29 00:00:00] FEATURE_ENHANCED: 크롤링 Chrome MCP 폴백
+  - 정적 크롤링 결과가 불충분할 경우 Chrome MCP를 통해 재크롤링
+[2026-03-29 00:00:00] FEATURE_CHANGED: write_file JSON 반환
+  - 기존 문자열 반환에서 실제 경로를 포함한 JSON 객체 반환으로 변경
+[2026-03-29 00:00:00] FEATURE_ENHANCED: Self-Check 5노드 확대
+  - 기존 sense 노드만 점검 → 전체 5개 노드(sense, self, limbs, others, engines) 대상
+  - 액션별 테스트 파라미터 정의
+[2026-03-29 00:00:00] FEATURE_CHANGED: kinsight2 → kinsight 통합
+  - kinsight2를 kinsight에 병합, count 파라미터 추가 (기본값 15)
+[2026-03-29 00:00:00] BUG_FIX: yfinance null 방어 추가
+  - price/stock_info 함수에 null 방어 로직 추가
+[2026-03-29 00:00:00] FEATURE_ADDED: KOSIS API 키 추가
+  - 통계청 KOSIS API 연동을 위한 API 키 설정
+[2026-03-29 00:00:00] DOCS_ADDED: WHITEPAPER.md 생성
+  - 프로젝트 루트에 백서 문서 추가
+[2026-03-29 00:00:00] DOCS_UPDATED: 시스템 문서 및 README 업데이트
+  - README.md: 3단 인지 아키텍처 섹션 추가, 검색 액션명 search_ddg로 변경, 액션 수 정정
+  - README.ko.md: 동일 내용 한국어 반영
+  - architecture.md: 무의식/의식/평가 에이전트 3단 구조, Self-Check 5노드 확대
+  - overview.md: 3단 인지 아키텍처, Self-Check 5노드 반영
+  - CLAUDE.md: 의식/무의식/평가 에이전트, 검색 분리, WHITEPAPER.md 반영

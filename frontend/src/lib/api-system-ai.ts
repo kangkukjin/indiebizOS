@@ -34,6 +34,32 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
       });
     },
 
+    // ============ 무의식 AI 설정 ============
+
+    async getUnconsciousAI() {
+      const data = await client.request<{ config: {
+        enabled: boolean;
+        provider: string;
+        model: string;
+        apiKey: string;
+      }}>('/unconscious-ai');
+      return data.config;
+    },
+
+    async updateUnconsciousAI(config: {
+      enabled: boolean;
+      provider: string;
+      model: string;
+      apiKey: string;
+    }) {
+      return client.request<{ status: string; config: typeof config }>('/unconscious-ai', {
+        method: 'PUT',
+        body: JSON.stringify(config),
+      });
+    },
+
+    // ============ 시스템 AI 대화 ============
+
     async chatWithSystemAI(message: string, images?: Array<{ base64: string; media_type: string }>) {
       return client.request<{ response: string }>('/system-ai/chat', {
         method: 'POST',

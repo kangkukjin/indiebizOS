@@ -5,56 +5,67 @@ actions:
     target_description: 검색 키워드
     router: handler
     tool: kopis_quick_search
+    implementation: KOPIS(한국공연예술센터) 공개 API로 공연 검색 (XML 파싱)
     target_key: keyword
   venue:
     description: 공연장/시설 검색
     target_description: 공연장명
     router: handler
     tool: kopis_search_facilities
+    implementation: KOPIS API로 공연장/시설 검색
     target_key: keyword
   book:
-    description: 도서 검색 (도서관정보나루)
+    description: 한국 도서 검색 (도서관정보나루). 국내 도서관 소장/대출 정보 포함. 글로벌 도서는 sense:search_books(Google Books) 사용.
     target_description: 검색어 (제목/저자/출판사)
     router: handler
     tool: library_quick_search
+    implementation: 도서관정보나루 공개 API로 한국 도서 검색 (소장 도서관, 대출 통계 포함)
     target_key: keyword
   book_detail:
     description: 도서 상세 정보 (대출 통계 포함)
     target_description: ISBN13
     router: handler
     tool: library_get_book_detail
+    implementation: 도서관정보나루 API로 도서 상세 + 대출 통계 조회
     target_key: isbn13
   exhibit:
     description: 전시/문화행사 검색 (KCISA - 박물관, 미술관)
     target_description: 검색어
     router: handler
     tool: kcisa_quick_search
+    implementation: 한국문화정보원(KCISA) API로 전시/문화행사 검색
     target_key: keyword
   genres:
     description: 공연 장르 코드 목록 조회
     router: handler
     tool: kopis_get_genres
+    implementation: KOPIS API로 장르 코드 목록 조회
   performance_regions:
     description: 공연 지역 코드 목록 조회
     router: handler
     tool: kopis_get_regions
+    implementation: KOPIS API로 지역 코드 목록 조회
   book_by_isbn:
     description: ISBN으로 도서 조회 (10자리/13자리)
     target_description: ISBN
     router: handler
     tool: library_get_book_by_isbn
+    implementation: 도서관정보나루 API로 ISBN 기반 도서 조회
     target_key: isbn
   kdc:
     description: KDC(한국십진분류) 주제분류코드 목록
     router: handler
     tool: library_get_kdc
+    implementation: 도서관정보나루 API로 KDC 분류코드 조회
   recommended_books:
     description: 특정 도서 기반 추천도서 (마니아/다독자 추천)
     target_description: 기준 도서 ISBN13
     router: handler
     tool: library_get_recommended_books
+    implementation: 도서관정보나루 API로 추천도서 조회
     target_key: isbn13
   library_regions:
     description: 도서관 정보나루 지역코드 목록
     router: handler
     tool: library_get_regions
+    implementation: 도서관정보나루 API로 지역코드 목록 조회

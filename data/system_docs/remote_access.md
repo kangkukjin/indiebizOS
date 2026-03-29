@@ -433,6 +433,29 @@ cloudflared tunnel route dns {터널이름} launcher-{기기이름}.{도메인}
 cloudflared --config ~/.cloudflared/config.yml tunnel run {터널이름}
 ```
 
+### cloudflared 자동 감지
+
+백엔드는 `is_cloudflared_installed()` 함수(`api_tunnel.py`)로 cloudflared 설치 여부를 자동 감지합니다.
+- 시스템 PATH 및 일반적인 설치 경로(`/usr/local/bin`, `/opt/homebrew/bin` 등)에서 바이너리를 탐색
+- 터널 상태 API(`/tunnel/status`)에서 `cloudflared_installed` 필드로 설치 여부 반환
+- 미설치 시 터널 시작 요청이 설치 안내 메시지와 함께 거부됨
+
+### finder_hostname / launcher_hostname 분리 설정
+
+`tunnel_config.json`에서 Finder와 Launcher에 별도 호스트명을 지정할 수 있습니다.
+
+```json
+{
+  "tunnel_name": "indiebiz",
+  "finder_hostname": "finder-home.mydomain.com",
+  "launcher_hostname": "launcher-home.mydomain.com"
+}
+```
+
+- **분리 호스트명**: Finder와 Launcher가 각각 독립된 서브도메인을 가짐 (예: `finder-home.example.com`, `launcher-home.example.com`)
+- **단일 호스트명**: `~/.cloudflared/config.yml`에서 하나의 호스트명이 포트 8765로 매핑되면 양쪽 모두 동일한 호스트명을 사용
+- `parse_ingress_hostnames()` 함수가 config.yml의 ingress 규칙을 파싱하여 서비스 포트/경로/호스트명 키워드 기반으로 자동 분류
+
 ### CORS 자동 설정
 
 `tunnel_config.json`의 `finder_hostname`, `launcher_hostname` 값이 백엔드 시작 시 CORS 허용 origin에 자동 추가됩니다. 별도 설정 불필요.
@@ -565,4 +588,4 @@ cloudflared tunnel login
 
 ---
 
-*마지막 업데이트: 2026-02-10*
+*마지막 업데이트: 2026-03-27*

@@ -1,51 +1,43 @@
 node: self
 actions:
-  rag_search:
-    description: 블로그 RAG 검색 (의미 기반 벡터 검색)
+  blog_search:
+    description: 블로그 검색 (하이브리드 — 시맨틱 벡터 70% + 키워드 BM25 30%)
     router: handler
     tool: search_blog_rag
+    implementation: SQLite + 벡터 임베딩 하이브리드 검색. 제목·미리보기·점수 목록 반환 (로컬 블로그 DB)
     target_key: query
-  semantic_search:
-    description: 블로그 시맨틱 검색
-    router: handler
-    tool: search_blog_semantic
-    target_key: query
-  rag_content:
-    description: RAG 기반 블로그 글 전문 조회
+  blog_content:
+    description: 블로그 글 전문 조회 (post_id 또는 제목으로)
     router: handler
     tool: get_post_content_rag
+    implementation: 블로그 SQLite DB에서 포스트 전문·날짜·카테고리·링크 반환
     target_key: post_id
-  posts:
-    description: 블로그 글 목록 (handler)
+  blog_posts:
+    description: 블로그 글 목록 (카테고리별 조회)
     router: handler
     tool: blog_get_posts
+    implementation: 블로그 SQLite DB에서 카테고리별 글 목록 조회
     target_key: category
-  post_detail:
-    description: 블로그 글 상세 (handler)
-    router: handler
-    tool: blog_get_post
-    target_key: post_id
   blog_stats:
-    description: 블로그 통계 (handler)
+    description: 블로그 통계 (글 수, 카테고리별 분포)
     router: handler
     tool: blog_stats
-  check_new:
+    implementation: 블로그 SQLite DB에서 통계 집계 쿼리
+  blog_check_new:
     description: 새 블로그 글 확인
     router: handler
     tool: blog_check_new_posts
-  insight:
-    description: 블로그 인사이트 분석
+    implementation: 블로그 DB와 소스 디렉토리 비교로 새 글 감지
+  kinsight:
+    description: 블로그 인사이트 분석 (기본 15개, count로 개수 지정 가능)
     router: handler
     tool: kinsight
+    implementation: 블로그 최신 포스트 수집 + AI 모델 호출로 인사이트 HTML 생성
     target_key: query
-  insight2:
-    description: 블로그 인사이트 분석 v2
-    router: handler
-    tool: kinsight2
-    target_key: query
-  rebuild_index:
+  blog_rebuild_index:
     description: 블로그 검색 인덱스 재구축
     router: handler
     tool: rebuild_search_index
+    implementation: 블로그 전체 포스트 재인덱싱 (벡터 임베딩 재생성)
 guides:
 - blog/blog_guide.md

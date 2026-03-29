@@ -77,10 +77,11 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [deepResearch, setDeepResearch] = useState(false);
+
 
   // 스트리밍
   const [streamingContent, setStreamingContent] = useState('');
+  const streamingContentRef = useRef('');
   const [toolHistory, setToolHistory] = useState<ToolActivity[]>([]);
   const [thinkingText, setThinkingText] = useState('');
   const [currentToolLabel, setCurrentToolLabel] = useState<string | null>(null);
@@ -141,6 +142,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   const resetStreamingState = () => {
     setStreamingContent('');
+    streamingContentRef.current = '';
     setToolHistory([]);
     toolHistoryRef.current = [];
     setThinkingText('');
@@ -180,10 +182,24 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           break;
 
         case 'stream_chunk':
-          setStreamingContent(prev => prev + data.content);
+          setStreamingContent(prev => {
+            const updated = prev + data.content;
+            streamingContentRef.current = updated;
+            return updated;
+          });
           break;
 
         case 'tool_start': {
+          // 중간 텍스트가 있으면 메시지로 보존 (도구 실행 시 사라지지 않게)
+          const pendingText = streamingContentRef.current.trim();
+          if (pendingText) {
+            setMessages(prev => [...prev, {
+              id: `interim-${Date.now()}`,
+              role: 'assistant',
+              content: pendingText,
+              timestamp: new Date(),
+            }]);
+          }
           const newTool: ToolActivity = { name: data.name, status: 'running', input: data.input };
           setToolHistory(prev => {
             const next = [...prev, newTool];
@@ -193,6 +209,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           setCurrentToolLabel(`🔧 ${data.name} 실행 중...`);
           setThinkingText('');
           setStreamingContent('');
+          streamingContentRef.current = '';
           break;
         }
 
@@ -559,14 +576,12 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         agent_name: agentName,
         project_id: projectId,
         images: imageData.length > 0 ? imageData : undefined,
-        deep_research: deepResearch || undefined,
       }));
     } else {
       ws.send(JSON.stringify({
         type: 'system_ai_stream',
         message: messageContent,
         images: imageData.length > 0 ? imageData : undefined,
-        deep_research: deepResearch || undefined,
       }));
     }
 
@@ -691,22 +706,6 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           </div>
         </div>
         <div className={`flex items-center gap-2${isDialog ? '' : ' no-drag'}`}>
-          {/* 심층연구 토글 */}
-          <button
-            onClick={() => setDeepResearch(prev => !prev)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-              deepResearch
-                ? isDialog
-                  ? 'bg-blue-500 text-white hover:bg-blue-600'
-                  : 'bg-blue-500 text-white hover:bg-blue-600'
-                : isDialog
-                  ? 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                  : 'bg-[#DDD5C8] text-[#6B5B4F] hover:bg-[#D0C8BB]'
-            }`}
-            title={deepResearch ? '심층연구 모드 켜짐 — 클릭하여 끄기' : '심층연구 모드 — 클릭하여 켜기'}
-          >
-            {deepResearch ? '심층연구 ON' : '심층연구'}
-          </button>
           {/* 히스토리/초기화 (시스템 AI일 때) */}
           {!isAgent && (
             <>

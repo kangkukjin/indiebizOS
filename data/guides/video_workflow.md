@@ -142,10 +142,10 @@ TSX 파일 경로를 지정하여 렌더링합니다.
 간단한 영상이라면 기존 복합 액션도 사용 가능합니다:
 ```
 # HTML 영상 - 코드를 직접 전달
-[engines:video]{topic: "주제", scenes: [...], narration_texts: [...]}
+[engines:html_video]{topic: "주제", scenes: [...], narration_texts: [...]}
 
 # Remotion 영상 - 코드를 직접 전달
-[engines:remotion]{composition_code: "<TSX 코드>"}
+[engines:remotion_video]{composition_code: "<TSX 코드>"}
 ```
 단, 이 방식은 코드 오류 수정이 어렵습니다. 품질이 중요한 영상은 위의 단계별 워크플로우를 사용하세요.
 

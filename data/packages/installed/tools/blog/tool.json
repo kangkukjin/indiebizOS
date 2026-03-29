@@ -103,35 +103,19 @@
     },
     {
       "name": "kinsight",
-      "description": "최신 블로그 글 기반 인사이트를 생성합니다.\n\n## 처리 과정\n1. 최신 10개 글 분석\n2. 커뮤니티/콘텐츠 추천 생성\n3. HTML 파일로 저장\n\n## 사용 시점\n- 블로그 트렌드 분석\n- 관련 콘텐츠 아이디어 얻기",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "before_date": {
-            "type": "string",
-            "description": "이 날짜 이전 글 분석 (YYYY-MM-DD)"
-          }
-        }
-      }
-    },
-    {
-      "name": "kinsight2",
-      "description": "대량 블로그 글 분석으로 인사이트를 생성합니다.\n\n## kinsight와의 차이\n- kinsight: 최신 10개 고정\n- kinsight2: 글 개수 지정 가능\n\n## 사용 시점\n- 전체 블로그 분석\n- 특정 기간 대량 분석",
+      "description": "블로그 글 기반 인사이트를 생성합니다.\n\n## 처리 과정\n1. 최신 글 분석 (기본 15개, count로 조절)\n2. 커뮤니티/콘텐츠 추천 생성\n3. HTML 파일로 저장\n\n## 사용 시점\n- 블로그 트렌드 분석\n- 관련 콘텐츠 아이디어 얻기",
       "input_schema": {
         "type": "object",
         "properties": {
           "count": {
             "type": "integer",
-            "description": "분석할 글 개수"
+            "description": "분석할 글 개수 (기본 15)"
           },
           "before_date": {
             "type": "string",
-            "description": "이 날짜 이전 글 (YYYY-MM-DD)"
+            "description": "이 날짜 이전 글 분석 (YYYY-MM-DD)"
           }
-        },
-        "required": [
-          "count"
-        ]
+        }
       }
     },
     {

@@ -19,122 +19,6 @@ router = APIRouter()
 # 매니저 인스턴스
 project_manager = None
 
-# 심층연구 가이드 캐시
-_deep_research_guide_cache: str | None = None
-
-
-def _get_deep_research_guide() -> str:
-    """심층연구 가이드 파일 로드 (캐시 사용)"""
-    global _deep_research_guide_cache
-    if _deep_research_guide_cache is not None:
-        return _deep_research_guide_cache
-
-    from runtime_utils import get_base_path
-    guide_path = get_base_path() / "data" / "guides" / "deep_research.md"
-    if guide_path.exists():
-        _deep_research_guide_cache = guide_path.read_text(encoding='utf-8')
-    else:
-        _deep_research_guide_cache = ""
-    return _deep_research_guide_cache
-
-
-def _run_blog_baseline(query: str) -> str:
-    """블로그 RAG 검색 후 관련도 높은 글의 전문을 가져와 기준선 컨텍스트로 반환."""
-    try:
-        import sys
-        import os
-        blog_pkg_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'packages',
-            'installed', 'tools', 'blog'
-        )
-        blog_pkg_path = os.path.abspath(blog_pkg_path)
-        if blog_pkg_path not in sys.path:
-            sys.path.insert(0, blog_pkg_path)
-
-        from tool_blog_rag import search_blog, get_post_content
-        result = search_blog(query=query, limit=5)
-
-        if not result.get('success') or not result.get('results'):
-            print(f"[WS] 심층연구 블로그 검색: 결과 없음")
-            return ""
-
-        # 관련도 높은 글(유사도 0.7 이상)만 전문 가져오기, 최대 3개
-        high_relevance = [r for r in result['results'] if r.get('similarity', 0) >= 0.7]
-        if not high_relevance:
-            # 0.7 이상이 없으면 최상위 1개라도 전문 가져오기
-            high_relevance = result['results'][:1]
-        high_relevance = high_relevance[:3]
-
-        lines = ["<baseline_from_user_blog>"]
-        lines.append("아래는 사용자의 블로그에서 이 주제와 관련된 기존 글의 전문입니다.")
-        lines.append("이 글들을 통해 사용자의 관점, 분석 깊이, 관심 범위를 파악하고,")
-        lines.append("외부 조사에서 보완/비판/확장할 방향을 설정하세요.\n")
-
-        full_count = 0
-        for item in high_relevance:
-            post_id = item.get('post_id')
-            if not post_id:
-                continue
-            full = get_post_content(post_id)
-            if full.get('success') and full.get('content'):
-                full_count += 1
-                content = full['content']
-                # 글이 너무 길면 4000자로 자르기
-                if len(content) > 4000:
-                    content = content[:4000] + "\n... (이하 생략)"
-                lines.append(f"### [{item['rank']}] {full['title']}")
-                lines.append(f"날짜: {full.get('date', '')} | 카테고리: {full.get('category', '')}")
-                lines.append(f"관련도 점수: {item.get('similarity', '')}\n")
-                lines.append(content)
-                lines.append("")
-
-        # 나머지 결과는 제목+핵심 인사이트만 요약
-        remaining = [r for r in result['results'] if r not in high_relevance]
-        if remaining:
-            lines.append("--- 기타 관련 글 (요약) ---")
-            for item in remaining:
-                insight = item.get('key_insight', item.get('content', '')[:100])
-                lines.append(f"- {item['title']} ({item.get('date', '')}) : {insight}")
-            lines.append("")
-
-        lines.append("</baseline_from_user_blog>")
-
-        print(f"[WS] 심층연구 블로그 검색: {len(result['results'])}개 결과, 전문 {full_count}개")
-        return "\n".join(lines)
-
-    except Exception as e:
-        print(f"[WS] 심층연구 블로그 검색 실패 (무시): {e}")
-        import traceback
-        traceback.print_exc()
-        return ""
-
-
-def inject_deep_research(augmented_msg: str, raw_message: str) -> str:
-    """심층연구: 블로그 RAG 검색을 강제 실행하고 가이드+기준선을 메시지에 주입"""
-    from datetime import datetime
-    guide = _get_deep_research_guide()
-    now = datetime.now()
-    date_str = now.strftime("%Y년 %m월 %d일 %A")
-
-    # 1단계: 블로그 RAG 검색 강제 실행
-    baseline_section = _run_blog_baseline(raw_message)
-
-    prefix = (
-        "<deep_research_mode>\n"
-        f"현재 날짜: {date_str}\n\n"
-    )
-
-    if guide:
-        prefix += f"{guide}\n\n"
-
-    if baseline_section:
-        prefix += f"{baseline_section}\n"
-
-    prefix += "</deep_research_mode>\n\n"
-
-    print(f"[WS] 심층연구 가이드 주입됨 (날짜: {date_str}, 기준선: {'있음' if baseline_section else '없음'})")
-    return prefix + augmented_msg
-
 # 스트리밍을 위한 스레드 풀
 executor = ThreadPoolExecutor(max_workers=4)
 
@@ -461,6 +345,20 @@ async def handle_chat_message(client_id: str, data: dict):
         from thread_context import set_current_task_id
         set_current_task_id(task_id)
 
+        # 의식 에이전트 실행 — 메타 판단
+        consciousness_output = runner._run_consciousness(message, history)
+        if consciousness_output:
+            # 시스템 프롬프트 재구성 (의식 에이전트 출력 반영)
+            role_file = runner.project_path / f"agent_{agent_name}_role.txt"
+            role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
+            new_prompt = runner._build_system_prompt(role, consciousness_output)
+            runner.ai.system_prompt = new_prompt
+            if runner.ai._provider:
+                runner.ai._provider.system_prompt = new_prompt
+
+            # 히스토리 편집 (의식 에이전트 판단에 따라)
+            history = runner._apply_consciousness_to_history(history, consciousness_output)
+
         # IBL 용례 참조 주입 (RAG)
         augmented_message = runner.augment_with_ibl_references(message)
 
@@ -520,7 +418,6 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     agent_name = data.get("agent_name", "")
     project_id = data.get("project_id", "")
     images = data.get("images", [])
-    deep_research = data.get("deep_research", False)
 
     try:
         # 시작 알림
@@ -599,6 +496,23 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 사용자 메시지 저장
         db.save_message(user_id, target_agent_id, message)
 
+        # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경)
+        request_type = runner._classify_request(message)
+        print(f"[무의식] 분류: {request_type}")
+
+        # 판단형만 의식 에이전트 실행
+        consciousness_output = None
+        if request_type == "THINK":
+            consciousness_output = runner._run_consciousness(message, history)
+        if consciousness_output:
+            role_file = runner.project_path / f"agent_{agent_name}_role.txt"
+            role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
+            new_prompt = runner._build_system_prompt(role, consciousness_output)
+            runner.ai.system_prompt = new_prompt
+            if runner.ai._provider:
+                runner.ai._provider.system_prompt = new_prompt
+            history = runner._apply_consciousness_to_history(history, consciousness_output)
+
         # 태스크 생성
         task_id = f"task_{uuid.uuid4().hex[:8]}"
         try:
@@ -621,6 +535,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         timed_out = False  # 타임아웃 발생 여부 (워커 스레드에서 확인)
         loop = asyncio.get_running_loop()
 
+        tool_results_log = []  # 도구 실행 이력 수집
+
         def run_stream():
             """스레드에서 스트리밍 실행"""
             nonlocal final_content
@@ -633,9 +549,6 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             _set_user_input(message)
             # IBL 용례 참조 주입 (RAG)
             augmented_msg = runner.augment_with_ibl_references(message)
-            # 심층연구 모드: 가이드 주입
-            if deep_research:
-                augmented_msg = inject_deep_research(augmented_msg, message)
             try:
                 for event in runner.ai.process_message_stream(
                     message_content=augmented_msg,
@@ -651,6 +564,44 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     if event_type == "final":
                         final_content = event.get("content", "")
                         print(f"[WS run_stream] final_content 설정됨 (len={len(final_content)})")
+                    elif event_type == "tool_result":
+                        # 도구 실행 결과 수집 (평가 루프에서 사용)
+                        tool_results_log.append(event.get("content", ""))
+
+                # Goal 평가 루프 — 달성 기준이 있으면 평가 후 재시도
+                if consciousness_output and final_content:
+                    criteria = runner._extract_achievement_criteria(consciousness_output)
+                    if criteria:
+                        from world_pulse import _load_config as _load_wp_config
+                        _goal_cfg = _load_wp_config().get("goal_eval", {})
+                        if _goal_cfg.get("enabled", True):
+                            print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
+                            evaluated = runner._run_goal_evaluation_loop(
+                                user_message=message,
+                                criteria=criteria,
+                                initial_response=final_content,
+                                history=history,
+                                consciousness_output=consciousness_output,
+                                max_rounds=_goal_cfg.get("max_rounds", 3),
+                                tool_results=tool_results_log
+                            )
+                            if evaluated and evaluated.strip() and evaluated != final_content:
+                                # 평가 후 재실행된 응답을 스트리밍으로 전송
+                                final_content = evaluated
+                                asyncio.run_coroutine_threadsafe(
+                                    event_queue.put({"type": "text", "content": "\n\n---\n[평가 피드백 반영 재실행]\n\n"}),
+                                    loop
+                                )
+                                asyncio.run_coroutine_threadsafe(
+                                    event_queue.put({"type": "text", "content": evaluated}),
+                                    loop
+                                )
+                                asyncio.run_coroutine_threadsafe(
+                                    event_queue.put({"type": "final", "content": evaluated}),
+                                    loop
+                                )
+                                print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
+
             except Exception as e:
                 print(f"[WS run_stream] 예외 발생: {e}")
                 asyncio.run_coroutine_threadsafe(
@@ -736,11 +687,34 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     if todos:
                         message_data["todos"] = todos
                 elif tool_name == "execute_ibl":
+                    # Phase 17: execute_ibl 경유 시 params 또는 result에서 추출
                     _ibl_params = tool_input.get("params", {})
                     _ibl_todos = _ibl_params.get("todos", [])
+
+                    # 입력에 없으면 결과에서 추출 시도 (JSON 문자열인 경우)
+                    if not _ibl_todos:
+                        _res = message_data.get("result", "")
+                        if isinstance(_res, str) and _res.startswith("{"):
+                            try:
+                                import json
+                                _res_data = json.loads(_res)
+                                if isinstance(_res_data, dict):
+                                    # 1) 단일 step 결과인 경우
+                                    if _res_data.get("_ibl_user_action") == "todo_write":
+                                        _ibl_todos = _res_data.get("todos", [])
+                                    # 2) 파이프라인 결과인 경우 (final_result 확인)
+                                    elif "final_result" in _res_data:
+                                        _final = _res_data["final_result"]
+                                        if isinstance(_final, str) and _final.startswith("{"):
+                                            _final_data = json.loads(_final)
+                                            if isinstance(_final_data, dict) and _final_data.get("_ibl_user_action") == "todo_write":
+                                                _ibl_todos = _final_data.get("todos", [])
+                            except:
+                                pass
+
                     if _ibl_todos:
                         message_data["todos"] = _ibl_todos
-                        message_data["name"] = "todo_write"  # 프론트엔드 호환
+                        message_data["name"] = "todo_write"
 
                 await manager.send_message(client_id, message_data)
 
@@ -810,7 +784,6 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
     """
     message = data.get("message", "")
     images = data.get("images", [])
-    deep_research = data.get("deep_research", False)
 
     try:
         # 시작 알림
@@ -890,9 +863,6 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 augmented_msg = rag.inject_references(message)
             except Exception:
                 augmented_msg = message
-            # 심층연구 모드: 가이드 주입
-            if deep_research:
-                augmented_msg = inject_deep_research(augmented_msg, message)
             try:
                 # 통합된 스트리밍 함수 사용 - 모든 프로바이더 지원
                 for event in process_system_ai_message_stream(
@@ -999,11 +969,34 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     if todos:
                         message_data["todos"] = todos
                 elif tool_name == "execute_ibl":
+                    # Phase 17: execute_ibl 경유 시 params 또는 result에서 추출
                     _ibl_params = tool_input.get("params", {})
                     _ibl_todos = _ibl_params.get("todos", [])
+
+                    # 입력에 없으면 결과에서 추출 시도 (JSON 문자열인 경우)
+                    if not _ibl_todos:
+                        _res = message_data.get("result", "")
+                        if isinstance(_res, str) and _res.startswith("{"):
+                            try:
+                                import json
+                                _res_data = json.loads(_res)
+                                if isinstance(_res_data, dict):
+                                    # 1) 단일 step 결과인 경우
+                                    if _res_data.get("_ibl_user_action") == "todo_write":
+                                        _ibl_todos = _res_data.get("todos", [])
+                                    # 2) 파이프라인 결과인 경우 (final_result 확인)
+                                    elif "final_result" in _res_data:
+                                        _final = _res_data["final_result"]
+                                        if isinstance(_final, str) and _final.startswith("{"):
+                                            _final_data = json.loads(_final)
+                                            if isinstance(_final_data, dict) and _final_data.get("_ibl_user_action") == "todo_write":
+                                                _ibl_todos = _final_data.get("todos", [])
+                            except:
+                                pass
+
                     if _ibl_todos:
                         message_data["todos"] = _ibl_todos
-                        message_data["name"] = "todo_write"  # 프론트엔드 호환
+                        message_data["name"] = "todo_write"
 
                 await manager.send_message(client_id, message_data)
 

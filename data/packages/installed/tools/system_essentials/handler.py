@@ -92,35 +92,58 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
     try:
         if tool_name == "read_file":
             path = os.path.join(project_path, _get_path(tool_input))
-            # 대용량 파일 방어 (1MB 제한)
-            MAX_READ_SIZE = 1_000_000
+            offset = tool_input.get("offset", 0) or 0
+            limit = tool_input.get("limit")
             file_size = os.path.getsize(path)
+
             with open(path, 'r', encoding='utf-8') as f:
-                content = f.read(MAX_READ_SIZE)
-            if file_size > MAX_READ_SIZE:
-                content += f"\n\n... (파일이 {file_size // 1000}KB로 큽니다. 처음 1MB만 표시)"
-            return content
+                lines = f.readlines()
+
+            total_lines = len(lines)
+
+            # offset/limit 적용
+            if offset > 0 or limit is not None:
+                end = min(offset + limit, total_lines) if limit else total_lines
+                selected = lines[offset:end]
+                content = ''.join(selected)
+                header = f"[줄 {offset}-{min(end, total_lines)-1} / 전체 {total_lines}줄, {file_size:,}바이트]\n"
+                return header + content
+            else:
+                # 전체 읽기 — 대용량 파일 방어 (1MB 제한)
+                MAX_READ_SIZE = 1_000_000
+                content = ''.join(lines)
+                if len(content) > MAX_READ_SIZE:
+                    content = content[:MAX_READ_SIZE]
+                    content += f"\n\n... (파일이 {file_size // 1000}KB로 큽니다. 처음 1MB만 표시. offset/limit으로 부분 읽기를 사용하세요. 전체 {total_lines}줄)"
+                return content
 
         elif tool_name == "write_file":
             raw_path = _get_path(tool_input)
+            if not raw_path:
+                return json.dumps({"success": False, "error": "파일 경로(path)가 지정되지 않았습니다."}, ensure_ascii=False)
             path = os.path.join(project_path, raw_path)
 
             # 새 파일 + bare 파일명(디렉토리 없음) → outputs/ 폴더로 자동 리다이렉트
+            redirected = False
             if (not os.path.isabs(raw_path)
                     and os.sep not in raw_path and '/' not in raw_path
                     and not os.path.exists(path)):
                 raw_path = os.path.join("outputs", raw_path)
                 path = os.path.join(project_path, raw_path)
+                redirected = True
 
             scope_err = _validate_path_in_scope(path, project_path)
             if scope_err:
                 return scope_err
             os.makedirs(os.path.dirname(path), exist_ok=True)
+            content = tool_input["content"]
             with open(path, 'w', encoding='utf-8') as f:
-                f.write(tool_input["content"])
-            # 절대 경로로 반환 (에이전트 간 경로 혼동 방지)
+                f.write(content)
             abs_path = os.path.abspath(path)
-            return f"Successfully wrote to {abs_path}"
+            result = {"success": True, "path": abs_path, "size": len(content)}
+            if redirected:
+                result["redirected_to"] = "outputs/"
+            return json.dumps(result, ensure_ascii=False)
 
         elif tool_name == "list_directory":
             dir_path = os.path.join(project_path, tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or ".")
@@ -235,23 +258,6 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
 
             # 절대 경로로 반환 (에이전트 간 경로 혼동 방지)
             return f"Successfully edited {os.path.abspath(file_path)}"
-
-        elif tool_name == "open_in_browser":
-            import sys
-            path = tool_input.get("path", "")
-            if not path:
-                return "Error: 경로가 지정되지 않았습니다."
-
-            try:
-                if sys.platform == "darwin":
-                    subprocess.run(["open", path], check=True)
-                elif sys.platform == "win32":
-                    subprocess.run(["start", path], shell=True, check=True)
-                else:
-                    subprocess.run(["xdg-open", path], check=True)
-                return f"브라우저에서 열었습니다: {path}"
-            except Exception as e:
-                return f"Error: 브라우저 열기 실패: {e}"
 
         elif tool_name == "run_command":
             command = tool_input.get("command", "").strip()

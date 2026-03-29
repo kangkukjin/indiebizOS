@@ -264,32 +264,33 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
                 params[k] = v
 
     # 라우터별 실행
+    result = None
     if router == "api_engine":
         mapped_tool = action_config.get("tool")
-        return _route_api_engine(action, params, project_path,
+        result = _route_api_engine(action, params, project_path,
                                  mapped_tool=mapped_tool)
     elif router == "handler":
         mapped_tool = action_config.get("tool")
-        return _route_handler(mapped_tool, params, project_path, agent_id)
+        result = _route_handler(mapped_tool, params, project_path, agent_id)
     elif router == "system":
         func_name = action_config.get("func")
-        return _route_system(func_name, params, project_path, agent_id=agent_id)
+        result = _route_system(func_name, params, project_path, agent_id=agent_id)
     elif router == "workflow_engine":
         from workflow_engine import execute_workflow_action
-        return execute_workflow_action(action, params, project_path)
+        result = execute_workflow_action(action, params, project_path)
     elif router == "channel_engine":
         from channel_engine import execute_channel_action
-        return execute_channel_action(action, params, project_path, agent_id=agent_id)
+        result = execute_channel_action(action, params, project_path, agent_id=agent_id)
     elif router == "web_collector":
         from web_collector import execute_web_collect_action
-        return execute_web_collect_action(action, params, project_path)
+        result = execute_web_collect_action(action, params, project_path)
     elif router in ("event_engine", "trigger_engine"):
         from trigger_engine import execute_trigger
-        return execute_trigger(action, params, project_path)
+        result = execute_trigger(action, params, project_path)
     elif router == "driver":
         driver_type = action_config.get("driver", "sqlite")
         dn = action_config.get("driver_node")  # Phase 22: 하위 핸들러 지정
-        return _route_driver(driver_type, node, action, params, project_path, driver_node=dn)
+        result = _route_driver(driver_type, node, action, params, project_path, driver_node=dn)
     elif router == "stub":
         phase = action_config.get("phase", "?")
         return {
@@ -300,6 +301,70 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
         }
     else:
         return {"error": f"알 수 없는 라우터: {router}"}
+
+    # 후처리 (postprocess): 액션 YAML에 정의된 전처리 수행
+    postprocess = action_config.get("postprocess")
+    if postprocess and result is not None:
+        result = _postprocess(result, action, postprocess)
+
+    return result
+
+
+# === 후처리 시스템 (Postprocessing) ===
+# 액션의 YAML 정의에 postprocess 필드를 두어 결과를 전처리한다.
+# 감각기관이 원시 데이터를 전처리해서 뇌에 보내는 것과 같은 원리.
+#
+# 사용법 (ibl_actions.yaml):
+#   search_ddg:
+#     postprocess:
+#       type: compress
+#       threshold: 1500        # 이 글자 수 이상일 때만 (기본: 1500)
+#       prompt: "커스텀 지시"   # 생략 시 범용 프롬프트 사용
+
+_DEFAULT_COMPRESS_THRESHOLD = 1500
+_DEFAULT_COMPRESS_PROMPT = "불필요한 메타데이터, 중복, 광고성 문구, 포맷팅 잔해를 제거하라. 실질적 정보는 모두 보존하라. URL은 보존하라."
+_COMPRESS_SYSTEM_PROMPT = "너는 노이즈 제거기이다. 도구 출력에서 쓸모없는 부분만 걸러내고 실질적 정보는 모두 보존한다. 요약하거나 판단하지 마라."
+
+
+def _postprocess(result: Any, action: str, config: dict) -> Any:
+    """액션 결과를 후처리한다. config는 YAML의 postprocess 필드."""
+    pp_type = config.get("type")
+    if pp_type == "compress":
+        return _pp_compress(result, action, config)
+    else:
+        print(f"[IBL] 알 수 없는 postprocess 유형: {pp_type} ({action})")
+        return result
+
+
+def _pp_compress(result: Any, action: str, config: dict) -> Any:
+    """경량 AI로 도구 출력을 압축한다."""
+    # 문자열 변환
+    if isinstance(result, dict):
+        text = json.dumps(result, ensure_ascii=False)
+    elif isinstance(result, str):
+        text = result
+    else:
+        return result
+
+    threshold = config.get("threshold", _DEFAULT_COMPRESS_THRESHOLD)
+    if len(text) < threshold:
+        return result
+
+    prompt_instruction = config.get("prompt", _DEFAULT_COMPRESS_PROMPT)
+
+    try:
+        from consciousness_agent import lightweight_ai_call
+        compressed = lightweight_ai_call(
+            prompt=f"다음은 [{action}] 액션의 실행 결과이다. {prompt_instruction}\n\n{text}",
+            system_prompt=_COMPRESS_SYSTEM_PROMPT
+        )
+        if compressed:
+            print(f"[IBL] postprocess:compress ({action}): {len(text)}자 → {len(compressed)}자")
+            return compressed
+    except Exception as e:
+        print(f"[IBL] postprocess:compress 실패 ({action}): {e}")
+
+    return result
 
 
 # === 라우터 구현 ===
@@ -707,7 +772,7 @@ execute_ibl(node="system", action="run_pipeline", params={{"steps": {steps_json}
 
 
 def _agent_ask(agent_id: str, params: dict, project_path: str) -> Any:
-    """에이전트에게 질문/위임 [others:ask]{agent_id: "투자/투자컨설팅"} (Phase 11)"""
+    """에이전트에게 질문/위임 [others:delegate]{agent_id: "투자/투자컨설팅"} (Phase 11)"""
     if not agent_id:
         return {"error": "agent_id가 필요합니다."}
 
@@ -737,7 +802,7 @@ def _agent_ask_sync(agent_id: str, params: dict, project_path: str) -> Any:
     메시지를 처리하고 결과 텍스트를 직접 반환합니다.
 
     사용: [others:ask_sync]{agent_id: "프로젝트/에이전트", message: "분석해줘"}
-    파이프라인: [self:rag_search]{query: "AI"} >> [others:ask_sync]{agent_id: "컨텐츠/컨텐츠", message: "요약해줘"}
+    파이프라인: [self:blog_search]{query: "AI"} >> [others:ask_sync]{agent_id: "컨텐츠/컨텐츠", message: "요약해줘"}
     """
     if not agent_id:
         return {"error": "agent_id가 필요합니다."}

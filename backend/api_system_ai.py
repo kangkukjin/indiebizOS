@@ -398,7 +398,8 @@ def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAge
     # 시스템 프롬프트 생성 (IBL 환경 포함)
     system_prompt = build_system_ai_prompt(
         user_profile=user_profile,
-        git_enabled=git_enabled
+        git_enabled=git_enabled,
+        model_name=ai_config.get("model", ""),
     )
 
     # AIAgent 인스턴스 생성 (execute_ibl → IBL 경로)
@@ -415,12 +416,49 @@ def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAge
     return agent
 
 
-def _run_consciousness_for_system_ai(message: str, history: List[Dict] = None) -> dict:
+def _build_execution_memory_for_system_ai(message: str) -> str:
+    """시스템 AI용 실행기억 생성"""
+    try:
+        from ibl_usage_rag import build_execution_memory
+        result = build_execution_memory(message, allowed_nodes=None)  # 시스템 AI는 전체 노드
+        if not result:
+            print(f"[시스템AI 실행기억] 빈 결과: \"{message[:40]}\"")
+        return result
+    except Exception as e:
+        print(f"[시스템AI 실행기억] 생성 실패: {e}")
+        return ""
+
+
+def _classify_system_ai_request(message: str, execution_memory: str = "") -> str:
+    """시스템 AI용 무의식 에이전트 — 실행형/판단형 분류"""
+    try:
+        from consciousness_agent import lightweight_ai_call, get_unconscious_prompt
+
+        system_prompt = get_unconscious_prompt()
+        input_message = message
+        if execution_memory:
+            input_message = f"{execution_memory}\n\n{message}"
+        response = lightweight_ai_call(input_message, system_prompt=system_prompt)
+
+        if response is None:
+            return "THINK"
+
+        result = response.strip().upper()
+        if "EXECUTE" in result:
+            return "EXECUTE"
+        return "THINK"
+
+    except Exception as e:
+        print(f"[시스템AI 무의식] 분류 실패: {e}")
+        return "THINK"
+
+
+def _run_consciousness_for_system_ai(message: str, history: List[Dict] = None,
+                                     execution_memory: str = "") -> dict:
     """시스템 AI용 의식 에이전트 실행"""
     try:
         from consciousness_agent import (
             get_consciousness_agent,
-            get_ibl_node_summary,
             get_guide_list,
             get_world_pulse_text,
         )
@@ -438,7 +476,7 @@ def _run_consciousness_for_system_ai(message: str, history: List[Dict] = None) -
         return agent.process(
             user_message=message,
             history=history or [],
-            ibl_node_summary=get_ibl_node_summary(user_message=message),  # 시스템 AI는 전체 노드
+            ibl_node_summary=execution_memory,  # 실행기억으로 대체
             guide_list=get_guide_list(message),
             world_pulse=get_world_pulse_text(),
             agent_name="시스템 AI",
@@ -451,9 +489,10 @@ def _run_consciousness_for_system_ai(message: str, history: List[Dict] = None) -
         return None
 
 
-def _apply_consciousness(agent, message: str, history: List[Dict], consciousness_output: dict):
+def _apply_consciousness(agent, message: str, history: List[Dict],
+                         consciousness_output: dict, execution_memory: str = ""):
     """의식 에이전트 결과를 시스템 AI에 적용 — 프롬프트 갱신 + 히스토리 편집"""
-    if not consciousness_output:
+    if not consciousness_output and not execution_memory:
         return history
 
     # 시스템 프롬프트 재구성
@@ -461,19 +500,23 @@ def _apply_consciousness(agent, message: str, history: List[Dict], consciousness
     git_enabled = (DATA_PATH / ".git").exists()
 
     from prompt_builder import build_system_ai_prompt
+    config = load_system_ai_config()
     new_prompt = build_system_ai_prompt(
         user_profile=user_profile,
         git_enabled=git_enabled,
-        consciousness_output=consciousness_output
+        consciousness_output=consciousness_output,
+        model_name=config.get("model", ""),
+        execution_memory=execution_memory,
     )
     agent.system_prompt = new_prompt
     if agent._provider:
         agent._provider.system_prompt = new_prompt
 
     # 히스토리 편집
-    history_summary = consciousness_output.get("history_summary", "")
-    if history_summary:
-        return [{"role": "user", "content": f"[이전 대화 요약: {history_summary}]"}]
+    if consciousness_output:
+        history_summary = consciousness_output.get("history_summary", "")
+        if history_summary:
+            return [{"role": "user", "content": f"[이전 대화 요약: {history_summary}]"}]
     return history
 
 
@@ -494,9 +537,22 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
         user_profile=user_profile
     )
 
-    # 의식 에이전트 실행
-    consciousness_output = _run_consciousness_for_system_ai(message, history)
-    history = _apply_consciousness(agent, message, history or [], consciousness_output)
+    # 실행기억 생성 (1회)
+    execution_memory = _build_execution_memory_for_system_ai(message)
+
+    # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경)
+    request_type = _classify_system_ai_request(message, execution_memory)
+    print(f"[시스템AI 무의식] 분류: {request_type}")
+
+    consciousness_output = None
+    if request_type == "THINK":
+        consciousness_output = _run_consciousness_for_system_ai(
+            message, history, execution_memory
+        )
+    # 실행기억 + 의식출력을 시스템 프롬프트에 반영
+    history = _apply_consciousness(
+        agent, message, history or [], consciousness_output, execution_memory
+    )
 
     return agent.process_message_with_history(
         message_content=message,
@@ -528,9 +584,22 @@ def process_system_ai_message_stream(
         user_profile=user_profile
     )
 
-    # 의식 에이전트 실행
-    consciousness_output = _run_consciousness_for_system_ai(message, history)
-    history = _apply_consciousness(agent, message, history or [], consciousness_output)
+    # 실행기억 생성 (1회)
+    execution_memory = _build_execution_memory_for_system_ai(message)
+
+    # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경)
+    request_type = _classify_system_ai_request(message, execution_memory)
+    print(f"[시스템AI 무의식] 분류: {request_type}")
+
+    consciousness_output = None
+    if request_type == "THINK":
+        consciousness_output = _run_consciousness_for_system_ai(
+            message, history, execution_memory
+        )
+    # 실행기억 + 의식출력을 시스템 프롬프트에 반영
+    history = _apply_consciousness(
+        agent, message, history or [], consciousness_output, execution_memory
+    )
 
     yield from agent.process_message_stream(
         message_content=message,

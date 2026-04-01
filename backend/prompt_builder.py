@@ -136,7 +136,9 @@ class PromptBuilder:
               agent_id: str = None,
               role_prompt: str = "",
               additional_context: str = "",
-              consciousness_output: dict = None) -> str:
+              consciousness_output: dict = None,
+              model_name: str = "",
+              execution_memory: str = "") -> str:
         """시스템 프롬프트 조합
 
         Args:
@@ -150,6 +152,7 @@ class PromptBuilder:
             role_prompt: 에이전트 역할 프롬프트
             additional_context: 추가 컨텍스트 (프로젝트 설정 등)
             consciousness_output: 의식 에이전트 출력 (태스크 프레이밍, IBL 포커싱 등)
+            execution_memory: 실행기억 (IBL 코드 사례 + 추천 도구 + implementation)
 
         Returns:
             조합된 시스템 프롬프트 문자열
@@ -186,6 +189,10 @@ class PromptBuilder:
             if ibl:
                 parts.append(ibl)
 
+        # 4.1 실행기억 (IBL 코드 사례 + 추천 도구 + implementation)
+        if execution_memory:
+            parts.append(execution_memory)
+
         # 4.3 의식 에이전트 출력 — IBL 포커싱 힌트 + 태스크 프레이밍
         if consciousness_output:
             consciousness_parts = []
@@ -194,6 +201,12 @@ class PromptBuilder:
             task_framing = consciousness_output.get("task_framing", "")
             if task_framing:
                 consciousness_parts.append(f"# 현재 태스크\n{task_framing}")
+
+            # 달성 기준 (실행 에이전트가 목표를 알고 행동하도록)
+            achievement_criteria = consciousness_output.get("achievement_criteria", "")
+            if achievement_criteria:
+                consciousness_parts.append(f"# 달성 기준\n{achievement_criteria}")
+
             # NOTE: history_summary는 messages 파라미터에서 원본 히스토리를 대체하므로 여기엔 넣지 않음
 
             # IBL 포커싱 힌트 (제한이 아닌 초점 설정)
@@ -221,6 +234,21 @@ class PromptBuilder:
             if context_notes:
                 consciousness_parts.append(f"# 상황 메모\n{context_notes}")
 
+            # 자기 인식 (의식 에이전트의 메타 판단 — 이 상황에서 나의 능력과 한계)
+            self_awareness = consciousness_output.get("self_awareness", "")
+            if self_awareness:
+                sa_text = f"# 자기 인식\n{self_awareness}"
+                if model_name:
+                    sa_text += f"\n- AI 모델: {model_name}"
+                consciousness_parts.append(sa_text)
+            elif model_name:
+                consciousness_parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
+
+            # 세계 상태 (의식 에이전트가 맥락에 맞게 압축한 world_pulse)
+            world_state = consciousness_output.get("world_state", "")
+            if world_state:
+                consciousness_parts.append(f"# 세계 상태\n{world_state}")
+
             if consciousness_parts:
                 parts.append("\n".join(consciousness_parts))
 
@@ -237,11 +265,14 @@ class PromptBuilder:
             parts.append(resource_list)
 
         # 4.6 World Pulse (세계 상태 배경 지식 — 대화 시작 시 1회 주입)
-        # 의식 에이전트가 활성이면 world_pulse는 이미 의식 에이전트에서 처리됨
+        # 의식 에이전트가 활성이면 world_state로 대체됨 (위에서 주입)
         if not consciousness_output:
             world_pulse = self._load_world_pulse()
             if world_pulse:
                 parts.append(world_pulse)
+            # 의식 에이전트 없을 때도 모델 이름은 주입
+            if model_name:
+                parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
 
         # 5. 역할 프롬프트
         if role_prompt:
@@ -276,11 +307,13 @@ def build_agent_prompt(
     project_path: str = None,
     agent_id: str = None,
     consciousness_output: dict = None,
+    model_name: str = "",
+    execution_memory: str = "",
     **kwargs  # ibl_enabled 등 하위 호환 파라미터 무시
 ) -> str:
     """프로젝트 에이전트용 시스템 프롬프트 생성
 
-    구조: base_prompt_v4.md + (조건부 위임) + IBL 환경 + 의식 에이전트 출력 + 개별역할 + 영구메모
+    구조: base_prompt_v4.md + (조건부 위임) + IBL 환경 + 실행기억 + 의식 에이전트 출력 + 개별역할 + 영구메모
 
     Args:
         agent_name: 에이전트 이름
@@ -294,6 +327,7 @@ def build_agent_prompt(
         project_path: 프로젝트 경로 (동료 에이전트 탐색용)
         agent_id: 현재 에이전트 ID (환경에서 자신 제외용)
         consciousness_output: 의식 에이전트 출력 (태스크 프레이밍, IBL 포커싱 등)
+        execution_memory: 실행기억 (IBL 코드 사례 + 추천 도구 + implementation)
 
     Returns:
         조합된 시스템 프롬프트
@@ -321,24 +355,29 @@ def build_agent_prompt(
         agent_id=agent_id,
         role_prompt=role_prompt,
         additional_context=additional_context,
-        consciousness_output=consciousness_output
+        consciousness_output=consciousness_output,
+        model_name=model_name,
+        execution_memory=execution_memory,
     )
 
 
 def build_system_ai_prompt(
     user_profile: str = "",
     git_enabled: bool = False,
-    consciousness_output: dict = None
+    consciousness_output: dict = None,
+    model_name: str = "",
+    execution_memory: str = "",
 ) -> str:
     """시스템 AI용 시스템 프롬프트 생성
 
-    구조: base_prompt_v2.md + (조건부 git) + IBL 환경 + 의식 에이전트 출력
+    구조: base_prompt_v2.md + (조건부 git) + IBL 환경 + 실행기억 + 의식 에이전트 출력
           + 위임 프롬프트 + 개별역할 + 시스템메모
 
     Args:
         user_profile: 사용자 프로필 (시스템 메모)
         git_enabled: Git 관련 프롬프트 포함 여부
         consciousness_output: 의식 에이전트 출력 (태스크 프레이밍, IBL 포커싱 등)
+        execution_memory: 실행기억 (IBL 코드 사례 + 추천 도구 + implementation)
 
     Returns:
         조합된 시스템 프롬프트
@@ -363,6 +402,10 @@ def build_system_ai_prompt(
     if ibl_env:
         parts.append(ibl_env)
 
+    # 실행기억 (IBL 코드 사례 + 추천 도구 + implementation)
+    if execution_memory:
+        parts.append(execution_memory)
+
     # 의식 에이전트 출력 반영
     if consciousness_output:
         consciousness_parts = []
@@ -370,6 +413,11 @@ def build_system_ai_prompt(
         task_framing = consciousness_output.get("task_framing", "")
         if task_framing:
             consciousness_parts.append(f"# 현재 태스크\n{task_framing}")
+
+        # 달성 기준 (실행 에이전트가 목표를 알고 행동하도록)
+        achievement_criteria = consciousness_output.get("achievement_criteria", "")
+        if achievement_criteria:
+            consciousness_parts.append(f"# 달성 기준\n{achievement_criteria}")
 
         ibl_focus = consciousness_output.get("ibl_focus", {})
         if ibl_focus:
@@ -394,6 +442,21 @@ def build_system_ai_prompt(
         if context_notes:
             consciousness_parts.append(f"# 상황 메모\n{context_notes}")
 
+        # 자기 인식 + 모델 이름
+        self_awareness = consciousness_output.get("self_awareness", "")
+        if self_awareness:
+            sa_text = f"# 자기 인식\n{self_awareness}"
+            if model_name:
+                sa_text += f"\n- AI 모델: {model_name}"
+            consciousness_parts.append(sa_text)
+        elif model_name:
+            consciousness_parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
+
+        # 세계 상태 (의식 에이전트가 맥락에 맞게 압축한 world_pulse)
+        world_state = consciousness_output.get("world_state", "")
+        if world_state:
+            consciousness_parts.append(f"# 세계 상태\n{world_state}")
+
         if consciousness_parts:
             parts.append("\n".join(consciousness_parts))
 
@@ -403,6 +466,11 @@ def build_system_ai_prompt(
             content = builder._load_guide_file(guide)
             if content:
                 parts.append(f"# 가이드: {guide}\n{content}")
+
+    else:
+        # 의식 에이전트 없을 때도 모델 이름은 주입
+        if model_name:
+            parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
 
     # 자원 목록 (가이드 제목 배경 지식)
     resource_list = builder._build_resource_list()

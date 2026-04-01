@@ -636,16 +636,14 @@ nodes:
         implementation: yt-dlp로 유튜브 메타데이터 추출 (공식 API 불필요)
         target_key: url
       video_transcript:
-        description: 유튜브 동영상 자막/스크립트 추출 — 영상 요약의 첫 단계 (url 또는 video_id 사용 가능)
+        description: 유튜브 ��영상 자막/스크립트 추출 (url 또는 video_id 사용 가능). 영상 요약이 목적이면 summarize_video를
+          쓰면 자막 추출+AI 요약+HTML+브라우저 열기를 한 번에 수행한다.
         keywords:
         - youtube
         - 유튜브
         - 자막
-        - 요약
         - 스크립트
         - transcript
-        - 영상요약
-        - 영상내용
         - subtitle
         - 대본
         target_description: 유튜브 URL 또는 video_id
@@ -774,6 +772,40 @@ nodes:
         router: handler
         tool: local_db_save
         implementation: SQLite DB에 가게/지역 정보 구조화 저장
+      search_library_docs:
+        description: 라이브러리/프레임워크 최신 공식 문서 검색 (코드 작성 시 정확한 API 참조용)
+        target_description: 알고 싶은 내용
+        router: handler
+        tool: search_library_docs
+        implementation: Context7 REST API로 최신 공식 문서 검색 및 반환
+        target_key: query
+        postprocess:
+          type: compress
+      resolve_library:
+        description: 라이브러리 이름으로 Context7 ID 조회
+        target_description: 라이브러리 이름
+        router: handler
+        tool: resolve_library
+        implementation: Context7 REST API로 라이브러리 ID 검색
+        target_key: library_name
+      summarize_video:
+        description: 유튜브 동영상을 AI로 요약하여 HTML 보고서를 생성하고 브라우저에 표시 (자막 추출 → AI 요약 → HTML
+          생성 → 브라우저 열기를 한 번에 수행)
+        keywords:
+        - youtube
+        - 유튜브
+        - 요약
+        - 영상요약
+        - 동영상요약
+        - summarize
+        - 리포트
+        - 보고서
+        - 정리
+        target_description: 유튜브 URL
+        router: handler
+        tool: summarize_youtube
+        implementation: 자막 추출 + 시스템 AI 모델로 요약 + HTML 보고서 생성 + 브라우저 자동 열기
+        target_key: url
     description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 세계 상태 등 외부 API 및 데이터
       소스 접근'
     tags:
@@ -800,6 +832,7 @@ nodes:
     - real-estate/real_estate_guide.md
     - study/study_guide.md
     - web/web_guide.md
+    - context7/context7_guide.md
   self:
     actions:
       search_photos:
@@ -1087,6 +1120,18 @@ nodes:
         - 일정
         - 스케줄관리
         - 예약관리
+      show_calendar:
+        description: 캘린더를 HTML로 생성하여 브라우저에서 표시
+        group: schedule
+        category: display
+        router: system
+        func: show_calendar
+        implementation: calendar_manager.open_in_browser() — HTML 캘린더 생성 후 브라우저 자동 열기
+        keywords:
+        - 캘린더
+        - 달력
+        - 일정보기
+        - calendar
       list_switches:
         description: 등록된 스위치 목록 조회
         group: schedule

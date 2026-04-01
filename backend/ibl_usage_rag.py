@@ -229,3 +229,150 @@ class IBLUsageRAG:
         """캐시 전체 초기화"""
         self._cache.clear()
         self._cache_times.clear()
+
+
+# =========================================================================
+# 실행기억 (Execution Memory) — 파이프라인 전체가 공유하는 통합 기억
+# =========================================================================
+
+def build_execution_memory(user_message: str, allowed_nodes: set = None) -> str:
+    """사용자 명령에 대한 실행기억을 생성한다.
+
+    실행기억 = RAG 코드 사례 + discover 추천 도구 + 언급된 액션의 implementation.
+    파이프라인의 모든 에이전트(무의식/의식/실행/평가)가 동일한 실행기억을 공유한다.
+
+    Returns:
+        <execution_memory> XML 블록 문자열. 내용이 없으면 빈 문자열.
+    """
+    rag = IBLUsageRAG()
+
+    if not user_message or not rag._is_ibl_relevant(user_message):
+        return ""
+
+    sections = []
+
+    # 1) RAG — 과거 IBL 코드 사례
+    refs_xml = rag.get_references(user_message, allowed_nodes=allowed_nodes)
+    if refs_xml:
+        sections.append(refs_xml)
+
+    # 2) Discover — 키워드 기반 추천 도구 (implementation 포함)
+    discover_xml = _discover_with_implementation(user_message, allowed_nodes)
+    if discover_xml:
+        sections.append(discover_xml)
+
+    # 3) RAG 코드 사례에서 [node:action] 패턴 추출 → 추가 implementation 조회
+    extra_impl = _extract_implementations_from_refs(refs_xml, discover_xml)
+    if extra_impl:
+        sections.append(extra_impl)
+
+    if not sections:
+        return ""
+
+    inner = "\n".join(sections)
+    result = (
+        '<execution_memory note="실행기억: 과거 코드 사례 + 추천 도구 + 구현 상세. '
+        '반드시 execute_ibl 도구로 실행하세요.">\n'
+        f'{inner}\n'
+        '</execution_memory>'
+    )
+    print(f"[실행기억] 생성 완료: \"{user_message[:40]}...\"")
+    return result
+
+
+def _discover_with_implementation(user_message: str,
+                                   allowed_nodes: set = None) -> str:
+    """discover 호출 + implementation 포함 XML 생성"""
+    try:
+        from node_registry import discover
+
+        results = discover(user_message, limit=5)
+        if not results:
+            return ""
+
+        if allowed_nodes:
+            results = [r for r in results if r["node"] in allowed_nodes]
+
+        results = [r for r in results if r["score"] >= 5]
+        if not results:
+            return ""
+
+        lines = ['<tools note="키워드 기반 추천 도구">']
+        for r in results[:3]:
+            details = r.get("action_details", [])[:2]
+            for d in details:
+                action = d["action"]
+                desc = d.get("description", "")
+                example = d.get("example", "")
+                impl = d.get("implementation", "")
+                # implementation이 없으면 yaml에서 직접 조회
+                if not impl:
+                    impl = _lookup_implementation(r["node"], action)
+                attrs = f'action="{action}" description="{desc}"'
+                if impl:
+                    impl_escaped = impl.replace('"', '&quot;')
+                    attrs += f' implementation="{impl_escaped}"'
+                attrs += f" example='{example}'"
+                lines.append(f'  <tool {attrs}/>')
+        lines.append('</tools>')
+
+        if len(lines) <= 2:
+            return ""
+
+        return '\n'.join(lines)
+
+    except Exception as e:
+        logger.error(f"[실행기억] discover 실패 (무시): {e}")
+        return ""
+
+
+def _extract_implementations_from_refs(refs_xml: str, discover_xml: str) -> str:
+    """RAG 코드 사례에서 [node:action] 패턴을 추출하여,
+    discover에 없는 액션의 implementation을 보충한다."""
+    if not refs_xml:
+        return ""
+
+    # RAG 코드에서 [node:action] 패턴 추출
+    pattern = re.compile(r'\[([a-z_-]+):([a-z_-]+)\]')
+    ref_actions = set(pattern.findall(refs_xml))
+
+    if not ref_actions:
+        return ""
+
+    # discover XML에 이미 있는 액션 제외
+    already_in_discover = set()
+    if discover_xml:
+        # discover의 example 속성에서 [node:action] 추출
+        already_in_discover = set(pattern.findall(discover_xml))
+
+    missing = ref_actions - already_in_discover
+    if not missing:
+        return ""
+
+    # 누락된 액션의 implementation 조회
+    lines = ['<implementations note="코드 사례에 등장하는 도구의 구현 상세">']
+    for node, action in sorted(missing):
+        impl = _lookup_implementation(node, action)
+        if impl:
+            impl_escaped = impl.replace('"', '&quot;')
+            lines.append(f'  <impl action="[{node}:{action}]" implementation="{impl_escaped}"/>')
+    lines.append('</implementations>')
+
+    if len(lines) <= 2:
+        return ""
+
+    return '\n'.join(lines)
+
+
+def _lookup_implementation(node: str, action: str) -> str:
+    """ibl_nodes.yaml에서 특정 액션의 implementation을 조회한다."""
+    try:
+        from ibl_access import _load_nodes_data
+        nodes_data = _load_nodes_data()
+        if not nodes_data:
+            return ""
+        node_config = nodes_data.get("nodes", {}).get(node, {})
+        action_config = node_config.get("actions", {}).get(action, {})
+        return action_config.get("implementation", "")
+    except Exception:
+        return ""

@@ -64,7 +64,8 @@ class IBLUsageDB:
     """
 
     EMBEDDING_DIM = 768
-    EMBEDDING_MODEL = 'jhgan/ko-sroberta-multitask'
+    # 해마 (hippocampus): IBL 도메인 fine-tuned 모델 (Top-5 80.9%, 범용 대비 +28.3%p)
+    EMBEDDING_MODEL = str(Path(__file__).parent.parent / 'data' / 'models' / 'ibl_embedding')
     DEFAULT_ALPHA = 0.7
     BATCH_SIZE = 32
     INTENT_REPEAT = 3  # intent 가중치 (제목 반복과 동일)

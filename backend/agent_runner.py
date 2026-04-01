@@ -165,11 +165,12 @@ class AgentRunner:
             tools=tools
         )
 
-    def _build_system_prompt(self, role: str, consciousness_output: dict = None) -> str:
+    def _build_system_prompt(self, role: str, consciousness_output: dict = None,
+                             execution_memory: str = "") -> str:
         """시스템 프롬프트 구성 (동적 조합)
 
         구조: base_prompt_v4.md + (조건부 위임 프롬프트) + IBL 환경
-              + 의식 에이전트 출력 + 개별역할 + 영구메모
+              + 실행기억 + 의식 에이전트 출력 + 개별역할 + 영구메모
         Phase 16: 모든 에이전트가 ibl_only 모드로 통일
         """
         from prompt_builder import build_agent_prompt
@@ -214,10 +215,36 @@ class AgentRunner:
             allowed_nodes=allowed_nodes_config,
             project_path=str(self.project_path),
             agent_id=self.config.get("id"),
-            consciousness_output=consciousness_output
+            consciousness_output=consciousness_output,
+            model_name=self.config.get("model", ""),
+            execution_memory=execution_memory,
         )
 
-    def _run_consciousness(self, user_message: str, history: list) -> dict:
+    def _build_execution_memory(self, user_message: str) -> str:
+        """실행기억 생성 — RAG + discover + implementation
+
+        파이프라인의 모든 에이전트(무의식/의식/실행/평가)가 공유하는 통합 기억.
+        사용자 명령 당 1회만 생성.
+        """
+        try:
+            from ibl_usage_rag import build_execution_memory
+            allowed_nodes = self.config.get("allowed_nodes")
+            allowed_set = None
+            if allowed_nodes:
+                from ibl_access import resolve_allowed_nodes
+                allowed_set = resolve_allowed_nodes(allowed_nodes)
+            result = build_execution_memory(user_message, allowed_set)
+            if not result:
+                print(f"[실행기억] 빈 결과: \"{user_message[:40]}\"")
+            return result
+        except Exception as e:
+            import traceback
+            print(f"[실행기억] 생성 실패: {e}")
+            traceback.print_exc()
+            return ""
+
+    def _run_consciousness(self, user_message: str, history: list,
+                           execution_memory: str = "") -> dict:
         """의식 에이전트 실행 — 메타 판단
 
         사용자 메시지와 히스토리를 분석하여 프롬프트 최적화 지침을 반환합니다.
@@ -229,7 +256,6 @@ class AgentRunner:
         try:
             from consciousness_agent import (
                 get_consciousness_agent,
-                get_ibl_node_summary,
                 get_guide_list,
                 get_world_pulse_text,
             )
@@ -238,7 +264,6 @@ class AgentRunner:
             if not agent.is_ready:
                 return None
 
-            allowed_nodes = self.config.get("allowed_nodes")
             agent_name = self.config.get("name", "")
 
             # 역할 전문 로드 (잘리지 않고 전체 전달 — self_awareness 판단용)
@@ -253,7 +278,7 @@ class AgentRunner:
             result = agent.process(
                 user_message=user_message,
                 history=history,
-                ibl_node_summary=get_ibl_node_summary(allowed_nodes, user_message=user_message),
+                ibl_node_summary=execution_memory,  # 실행기억으로 대체
                 guide_list=get_guide_list(user_message),
                 world_pulse=get_world_pulse_text(),
                 agent_name=agent_name,
@@ -678,25 +703,42 @@ class AgentRunner:
             if self.ai:
                 start_time = time_module.time()
 
-                # 무의식 에이전트 — 실행형/판���형 분류 (반사 신경)
-                request_type = self._classify_request(content)
+                # 실행기억 생성 (RAG + discover + implementation, 1회)
+                execution_memory = self._build_execution_memory(content)
+
+                # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경)
+                request_type = self._classify_request(content, execution_memory)
                 self._log(f"[무의식] 분류: {request_type}")
 
                 # 판단형만 의식 에이전트 실행
                 consciousness_output = None
                 if request_type == "THINK":
-                    consciousness_output = self._run_consciousness(content, history)
+                    consciousness_output = self._run_consciousness(
+                        content, history, execution_memory
+                    )
                 if consciousness_output:
-                    # 시스템 프롬프트 재구성 (의식 에이전트 출력 반영)
+                    # 시스템 프롬프트 재구성 (의식 에이전트 출력 + 실행기억 반영)
                     role_file = self.project_path / f"agent_{agent_name}_role.txt"
                     role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-                    new_prompt = self._build_system_prompt(role, consciousness_output)
+                    new_prompt = self._build_system_prompt(
+                        role, consciousness_output, execution_memory
+                    )
                     self.ai.system_prompt = new_prompt
                     if self.ai._provider:
                         self.ai._provider.system_prompt = new_prompt
 
                     # 히스토리 편집 (의식 에이전트 판단에 따라)
                     history = self._apply_consciousness_to_history(history, consciousness_output)
+                elif execution_memory:
+                    # EXECUTE 경로: 의식 에이전트 없이 실행기억만 시스템 프롬프트에 반영
+                    role_file = self.project_path / f"agent_{agent_name}_role.txt"
+                    role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
+                    new_prompt = self._build_system_prompt(
+                        role, None, execution_memory
+                    )
+                    self.ai.system_prompt = new_prompt
+                    if self.ai._provider:
+                        self.ai._provider.system_prompt = new_prompt
 
                 response = self.ai.process_message_with_history(
                     message_content=content,
@@ -722,7 +764,8 @@ class AgentRunner:
                                 initial_response=response,
                                 history=history,
                                 consciousness_output=consciousness_output,
-                                max_rounds=_goal_cfg.get("max_rounds", 3)
+                                max_rounds=_goal_cfg.get("max_rounds", 3),
+                                execution_memory=execution_memory,
                             )
 
                 # call_agent 호출 여부 확인
@@ -842,8 +885,9 @@ class AgentRunner:
 
                 # AI 처리
                 if self.ai:
-                    # IBL 용례 참조 주입 (RAG)
-                    ai_message = self.augment_with_ibl_references(content)
+                    # 실행기억 생성 + 메시지 앞에 주입 (에이전트 간 경로)
+                    exec_mem = self._build_execution_memory(content)
+                    ai_message = f"{exec_mem}\n\n{content}" if exec_mem else content
                     history = []
 
                     # 시스템 AI 위임인 경우 파일 경로 원칙 추가
@@ -2084,17 +2128,23 @@ class AgentRunner:
     # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경)
     # ============================================================
 
-    def _classify_request(self, user_message: str) -> str:
+    def _classify_request(self, user_message: str,
+                          execution_memory: str = "") -> str:
         """사용자 요청을 실행형(EXECUTE) 또는 판단형(THINK)으로 분류한다.
 
         무의식 에이전트 — 의식 에이전트를 호출하기 전의 반사 신경.
         실행형은 의식/평가 루프를 타지 않고 바로 실행된다.
+        실행기억이 있으면 관련 액션 정보를 보고 판정할 수 있다.
         """
         try:
             from consciousness_agent import lightweight_ai_call, get_unconscious_prompt
 
             system_prompt = get_unconscious_prompt()
-            response = lightweight_ai_call(user_message, system_prompt=system_prompt)
+            # 실행기억이 있으면 사용자 메시지 앞에 붙여서 무의식이 판정에 활용
+            input_message = user_message
+            if execution_memory:
+                input_message = f"{execution_memory}\n\n{user_message}"
+            response = lightweight_ai_call(input_message, system_prompt=system_prompt)
 
             if response is None:
                 return "THINK"  # AI 미준비 시 안전하게 판단형으로
@@ -2175,10 +2225,12 @@ class AgentRunner:
     def _evaluate_achievement(self, user_message: str, criteria: str,
                                response: str, created_files: str,
                                consciousness_output: dict = None,
-                               tool_results_str: str = "") -> tuple:
+                               tool_results_str: str = "",
+                               execution_memory: str = "") -> tuple:
         """평가 AI로 달성 기준 충족 여부를 판단한다.
 
-        의식 에이전트의 출력(self_awareness, capability_focus, world_state)을 활용하여
+        의식 에이전트의 출력(self_awareness, capability_focus, world_state)과
+        실행기억(사용 가능한 도구, 코드 사례, implementation)을 활용하여
         결과물뿐 아니라 도구 활용의 적절성까지 평가한다.
 
         Returns:
@@ -2192,8 +2244,16 @@ class AgentRunner:
             f"## 달성 기준\n{criteria}\n\n"
         )
 
-        # 의식 에이전트의 자기 인식과 도구 정보를 평가 맥락으로 제공
+        # 의식 에이전트의 메타 판단을 평가 맥락으로 제공
         if consciousness_output:
+            task_framing = consciousness_output.get("task_framing", "")
+            if task_framing:
+                prompt += f"## 문제 정의 (의식 에이전트 판단)\n{task_framing}\n\n"
+
+            history_summary = consciousness_output.get("history_summary", "")
+            if history_summary:
+                prompt += f"## 이전 대화 맥락\n{history_summary}\n\n"
+
             self_awareness = consciousness_output.get("self_awareness", "")
             if self_awareness:
                 prompt += f"## 에이전트 자기 인식 (의식 에이전트 판단)\n{self_awareness}\n\n"
@@ -2213,6 +2273,9 @@ class AgentRunner:
             world_state = consciousness_output.get("world_state", "")
             if world_state:
                 prompt += f"## 세계 상태\n{world_state}\n\n"
+
+        if execution_memory:
+            prompt += f"## 실행기억 (사용 가능한 도구 및 사례)\n{execution_memory}\n\n"
 
         if tool_results_str:
             prompt += f"## 도구 실행 결과\n{tool_results_str}\n\n"
@@ -2246,7 +2309,8 @@ class AgentRunner:
                                    initial_response: str, history: list,
                                    consciousness_output: dict = None,
                                    max_rounds: int = 2,
-                                   tool_results: list = None) -> str:
+                                   tool_results: list = None,
+                                   execution_memory: str = "") -> str:
         """달성 기준 기반 평가 루프.
 
         Args:
@@ -2257,6 +2321,7 @@ class AgentRunner:
             consciousness_output: 의식 에이전트 출력 (self_awareness, capability_focus 등)
             max_rounds: 최대 평가 횟수 (기본 2)
             tool_results: 도구 실행 이력 리스트
+            execution_memory: 실행기억 (도구/사례/implementation)
 
         Returns:
             최종 응답 텍스트
@@ -2283,11 +2348,12 @@ class AgentRunner:
             # 생성된 파일 수집
             created_files = self._collect_created_files(response)
 
-            # 달성 여부 평가 (의식 에이전트의 자기 인식 + 도구 실행 이력 포함)
+            # 달성 여부 평가 (의식 에이전트의 자기 인식 + 도구 실행 이력 + 실행기억)
             achieved, feedback = self._evaluate_achievement(
                 user_message, criteria, response, created_files,
                 consciousness_output=consciousness_output,
-                tool_results_str=tool_results_str
+                tool_results_str=tool_results_str,
+                execution_memory=execution_memory,
             )
 
             eval_time = _time.time() - eval_start
@@ -2317,7 +2383,7 @@ class AgentRunner:
 
             # 피드백을 히스토리에 추가하여 재실행
             retry_history = history + [
-                {"role": "assistant", "content": response[:2000]},
+                {"role": "assistant", "content": response[:8000]},
                 {"role": "user", "content": feedback_message}
             ]
 

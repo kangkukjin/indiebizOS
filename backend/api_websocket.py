@@ -345,13 +345,20 @@ async def handle_chat_message(client_id: str, data: dict):
         from thread_context import set_current_task_id
         set_current_task_id(task_id)
 
+        # 실행기억 생성 (RAG + discover + implementation, 1회)
+        execution_memory = runner._build_execution_memory(message)
+
         # 의식 에이전트 실행 — 메타 판단
-        consciousness_output = runner._run_consciousness(message, history)
+        consciousness_output = runner._run_consciousness(
+            message, history, execution_memory
+        )
         if consciousness_output:
-            # 시스템 프롬프트 재구성 (의식 에이전트 출력 반영)
+            # 시스템 프롬프트 재구성 (의식 에이전트 출력 + 실행기억 반영)
             role_file = runner.project_path / f"agent_{agent_name}_role.txt"
             role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-            new_prompt = runner._build_system_prompt(role, consciousness_output)
+            new_prompt = runner._build_system_prompt(
+                role, consciousness_output, execution_memory
+            )
             runner.ai.system_prompt = new_prompt
             if runner.ai._provider:
                 runner.ai._provider.system_prompt = new_prompt
@@ -359,12 +366,10 @@ async def handle_chat_message(client_id: str, data: dict):
             # 히스토리 편집 (의식 에이전트 판단에 따라)
             history = runner._apply_consciousness_to_history(history, consciousness_output)
 
-        # IBL 용례 참조 주입 (RAG)
-        augmented_message = runner.augment_with_ibl_references(message)
-
+        # 실행기억은 이미 시스템 프롬프트에 반영됨
         # AI 응답 생성
         response = runner.ai.process_message_with_history(
-            message_content=augmented_message,
+            message_content=message,
             from_email="user@gui",
             history=history,
             reply_to="user@gui",
@@ -496,22 +501,37 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 사용자 메시지 저장
         db.save_message(user_id, target_agent_id, message)
 
+        # 실행기억 생성 (RAG + discover + implementation, 1회)
+        execution_memory = runner._build_execution_memory(message)
+
         # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경)
-        request_type = runner._classify_request(message)
+        request_type = runner._classify_request(message, execution_memory)
         print(f"[무의식] 분류: {request_type}")
 
         # 판단형만 의식 에이전트 실행
         consciousness_output = None
         if request_type == "THINK":
-            consciousness_output = runner._run_consciousness(message, history)
+            consciousness_output = runner._run_consciousness(
+                message, history, execution_memory
+            )
         if consciousness_output:
             role_file = runner.project_path / f"agent_{agent_name}_role.txt"
             role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-            new_prompt = runner._build_system_prompt(role, consciousness_output)
+            new_prompt = runner._build_system_prompt(
+                role, consciousness_output, execution_memory
+            )
             runner.ai.system_prompt = new_prompt
             if runner.ai._provider:
                 runner.ai._provider.system_prompt = new_prompt
             history = runner._apply_consciousness_to_history(history, consciousness_output)
+        elif execution_memory:
+            # EXECUTE 경로: 실행기억만 시스템 프롬프트에 반영
+            role_file = runner.project_path / f"agent_{agent_name}_role.txt"
+            role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
+            new_prompt = runner._build_system_prompt(role, None, execution_memory)
+            runner.ai.system_prompt = new_prompt
+            if runner.ai._provider:
+                runner.ai._provider.system_prompt = new_prompt
 
         # 태스크 생성
         task_id = f"task_{uuid.uuid4().hex[:8]}"
@@ -547,11 +567,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             set_current_project_id(project_id)
             set_current_task_id(task_id)
             _set_user_input(message)
-            # IBL 용례 참조 주입 (RAG)
-            augmented_msg = runner.augment_with_ibl_references(message)
+            # 실행기억은 이미 시스템 프롬프트에 반영됨
             try:
                 for event in runner.ai.process_message_stream(
-                    message_content=augmented_msg,
+                    message_content=message,
                     history=history,
                     images=images
                 ):
@@ -583,7 +602,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                                 history=history,
                                 consciousness_output=consciousness_output,
                                 max_rounds=_goal_cfg.get("max_rounds", 3),
-                                tool_results=tool_results_log
+                                tool_results=tool_results_log,
+                                execution_memory=execution_memory,
                             )
                             if evaluated and evaluated.strip() and evaluated != final_content:
                                 # 평가 후 재실행된 응답을 스트리밍으로 전송
@@ -856,17 +876,11 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             nonlocal final_content
             # 스레드별로 컨텍스트를 다시 설정해야 함 (thread-local storage)
             set_current_task_id(task_id)
-            # IBL 용례 참조 주입 (RAG)
-            try:
-                from ibl_usage_rag import IBLUsageRAG
-                rag = IBLUsageRAG()
-                augmented_msg = rag.inject_references(message)
-            except Exception:
-                augmented_msg = message
+            # 실행기억은 process_system_ai_message_stream 내부에서 생성/주입됨
             try:
                 # 통합된 스트리밍 함수 사용 - 모든 프로바이더 지원
                 for event in process_system_ai_message_stream(
-                    message=augmented_msg,
+                    message=message,
                     history=history,
                     images=images if images else None,
                     cancel_check=lambda: is_cancelled(client_id)  # 중단 체크 함수 전달

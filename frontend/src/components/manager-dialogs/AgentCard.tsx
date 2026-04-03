@@ -16,6 +16,7 @@ const providerColors: Record<string, string> = {
   anthropic: 'bg-orange-500',
   openai: 'bg-green-500',
   google: 'bg-blue-500',
+  openrouter: 'bg-purple-500',
 };
 
 export function AgentCard({

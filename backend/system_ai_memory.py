@@ -389,15 +389,36 @@ def get_task(task_id: str) -> Optional[Dict]:
 
 
 def complete_task(task_id: str, result: str = None) -> bool:
-    """작업 완료 처리 - 태스크 삭제"""
+    """작업 완료 처리 — status 업데이트 + 도구 이력 저장"""
+    import json as _json
     init_memory_db()
+
+    # 도구 호출 이력 수집
+    tool_history_json = None
+    try:
+        from thread_context import get_tool_calls
+        calls = get_tool_calls()
+        if calls:
+            tool_history_json = _json.dumps(calls, ensure_ascii=False)
+    except Exception:
+        pass
+
     conn = _get_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM tasks WHERE task_id = ?", (task_id,))
+    # tool_history 컬럼 마이그레이션
+    try:
+        cursor.execute("ALTER TABLE tasks ADD COLUMN tool_history TEXT")
+    except Exception:
+        pass
+    cursor.execute("""
+        UPDATE tasks SET status = 'completed', result = ?,
+                         completed_at = CURRENT_TIMESTAMP, tool_history = ?
+        WHERE task_id = ?
+    """, (result[:500] if result else None, tool_history_json, task_id))
     conn.commit()
-    deleted = cursor.rowcount > 0
+    updated = cursor.rowcount > 0
     conn.close()
-    return deleted
+    return updated
 
 
 # delete_task는 complete_task의 별칭

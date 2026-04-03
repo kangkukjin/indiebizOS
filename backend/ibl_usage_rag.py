@@ -23,7 +23,7 @@ class IBLUsageRAG:
     """IBL 용례 RAG 참조 시스템 (싱글톤)"""
 
     MAX_REFERENCES = 5
-    DEFAULT_K = 3
+    DEFAULT_K = 5
     MIN_SCORE = 0.25
     CACHE_TTL = 300  # 5분
 
@@ -108,7 +108,7 @@ class IBLUsageRAG:
 
     def inject_references(self, user_message: str,
                           allowed_nodes: set = None) -> str:
-        """사용자 메시지에 IBL 참조 + discover 결과를 주입한 새 메시지 반환
+        """사용자 메시지에 IBL 참조를 주입한 새 메시지 반환
 
         참조가 있으면 메시지 앞에 XML 블록 추가.
         없으면 원본 메시지 그대로 반환.
@@ -116,69 +116,14 @@ class IBLUsageRAG:
         if not user_message or not self._is_ibl_relevant(user_message):
             return user_message
 
-        parts = []
-
-        # 1) RAG 참조 (기존)
         refs = self.get_references(user_message, allowed_nodes=allowed_nodes)
         if refs:
             ref_count = refs.count('<ref ')
-            parts.append(refs)
             print(f"[IBL RAG] 참조 {ref_count}개 주입: \"{user_message[:40]}...\"")
-
-        # 2) discover 자동 주입 (키워드 기반 도구 추천, API 비용 없음)
-        discover_xml = self._auto_discover(user_message, allowed_nodes)
-        if discover_xml:
-            parts.append(discover_xml)
-
-        if parts:
-            return "\n\n".join(parts) + f"\n\n{user_message}"
+            return f"{refs}\n\n{user_message}"
 
         print(f"[IBL RAG] 참조 없음: \"{user_message[:40]}\"")
         return user_message
-
-    def _auto_discover(self, user_message: str,
-                       allowed_nodes: set = None) -> str:
-        """discover를 자동 호출하여 도구 추천 XML 생성 (API 비용 0)"""
-        try:
-            from node_registry import discover
-
-            results = discover(user_message, limit=5)
-            if not results:
-                return ""
-
-            # allowed_nodes 필터
-            if allowed_nodes:
-                results = [r for r in results if r["node"] in allowed_nodes]
-
-            if not results:
-                return ""
-
-            # 최소 점수 필터 (너무 낮은 매칭 제외)
-            results = [r for r in results if r["score"] >= 5]
-            if not results:
-                return ""
-
-            # 상위 3개 노드, 각 노드당 상위 2개 액션만
-            lines = ['<ibl_discover note="키워드 기반 추천 도구입니다. 전문 데이터 액션이 있으면 우선 사용하세요. 반드시 execute_ibl 도구를 호출하여 실행하세요. IBL 코드를 텍스트로 출력하면 아무 일도 일어나지 않습니다.">']
-            for r in results[:3]:
-                details = r.get("action_details", [])[:2]
-                for d in details:
-                    action = d["action"]
-                    desc = d["description"]
-                    example = d["example"]
-                    lines.append(f'  <tool action="{action}" description="{desc}" example=\'{example}\'/>')
-            lines.append('</ibl_discover>')
-
-            if len(lines) <= 2:  # 헤더/푸터만 있으면 빈 결과
-                return ""
-
-            tool_count = len(lines) - 2
-            print(f"[IBL Discover] 추천 {tool_count}개 주입: \"{user_message[:40]}...\"")
-            return '\n'.join(lines)
-
-        except Exception as e:
-            logger.error(f"[IBL Discover] 실패 (무시): {e}")
-            return ""
 
     def _is_ibl_relevant(self, query: str) -> bool:
         """메시지가 IBL 도구 사용이 필요한지 휴리스틱 판단
@@ -238,7 +183,7 @@ class IBLUsageRAG:
 def build_execution_memory(user_message: str, allowed_nodes: set = None) -> str:
     """사용자 명령에 대한 실행기억을 생성한다.
 
-    실행기억 = RAG 코드 사례 + discover 추천 도구 + 언급된 액션의 implementation.
+    실행기억 = 해마(과거 IBL 코드 사례) + 코드 사례에 등장하는 액션의 implementation.
     파이프라인의 모든 에이전트(무의식/의식/실행/평가)가 동일한 실행기억을 공유한다.
 
     Returns:
@@ -251,107 +196,45 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> str:
 
     sections = []
 
-    # 1) RAG — 과거 IBL 코드 사례
+    # 1) 해마 — 과거 IBL 코드 사례 (fine-tuned 임베딩 + BM25 하이브리드)
     refs_xml = rag.get_references(user_message, allowed_nodes=allowed_nodes)
     if refs_xml:
         sections.append(refs_xml)
 
-    # 2) Discover — 키워드 기반 추천 도구 (implementation 포함)
-    discover_xml = _discover_with_implementation(user_message, allowed_nodes)
-    if discover_xml:
-        sections.append(discover_xml)
-
-    # 3) RAG 코드 사례에서 [node:action] 패턴 추출 → 추가 implementation 조회
-    extra_impl = _extract_implementations_from_refs(refs_xml, discover_xml)
-    if extra_impl:
-        sections.append(extra_impl)
+    # 2) 해마 결과에서 [node:action] 패턴 추출 → implementation 조회
+    impl_xml = _extract_implementations_from_refs(refs_xml)
+    if impl_xml:
+        sections.append(impl_xml)
 
     if not sections:
         return ""
 
     inner = "\n".join(sections)
     result = (
-        '<execution_memory note="실행기억: 과거 코드 사례 + 추천 도구 + 구현 상세. '
+        '<execution_memory note="실행기억: 과거 코드 사례 + 구현 상세. '
         '반드시 execute_ibl 도구로 실행하세요.">\n'
         f'{inner}\n'
         '</execution_memory>'
     )
+    # 로그: 실행기억 내용 출력 (해마 참조 + implementation)
     print(f"[실행기억] 생성 완료: \"{user_message[:40]}...\"")
+    print(f"[실행기억] 내용:\n{result}")
     return result
 
 
-def _discover_with_implementation(user_message: str,
-                                   allowed_nodes: set = None) -> str:
-    """discover 호출 + implementation 포함 XML 생성"""
-    try:
-        from node_registry import discover
-
-        results = discover(user_message, limit=5)
-        if not results:
-            return ""
-
-        if allowed_nodes:
-            results = [r for r in results if r["node"] in allowed_nodes]
-
-        results = [r for r in results if r["score"] >= 5]
-        if not results:
-            return ""
-
-        lines = ['<tools note="키워드 기반 추천 도구">']
-        for r in results[:3]:
-            details = r.get("action_details", [])[:2]
-            for d in details:
-                action = d["action"]
-                desc = d.get("description", "")
-                example = d.get("example", "")
-                impl = d.get("implementation", "")
-                # implementation이 없으면 yaml에서 직접 조회
-                if not impl:
-                    impl = _lookup_implementation(r["node"], action)
-                attrs = f'action="{action}" description="{desc}"'
-                if impl:
-                    impl_escaped = impl.replace('"', '&quot;')
-                    attrs += f' implementation="{impl_escaped}"'
-                attrs += f" example='{example}'"
-                lines.append(f'  <tool {attrs}/>')
-        lines.append('</tools>')
-
-        if len(lines) <= 2:
-            return ""
-
-        return '\n'.join(lines)
-
-    except Exception as e:
-        logger.error(f"[실행기억] discover 실패 (무시): {e}")
-        return ""
-
-
-def _extract_implementations_from_refs(refs_xml: str, discover_xml: str) -> str:
-    """RAG 코드 사례에서 [node:action] 패턴을 추출하여,
-    discover에 없는 액션의 implementation을 보충한다."""
+def _extract_implementations_from_refs(refs_xml: str) -> str:
+    """해마 코드 사례에서 [node:action] 패턴을 추출하여 implementation을 조회한다."""
     if not refs_xml:
         return ""
 
-    # RAG 코드에서 [node:action] 패턴 추출
     pattern = re.compile(r'\[([a-z_-]+):([a-z_-]+)\]')
     ref_actions = set(pattern.findall(refs_xml))
 
     if not ref_actions:
         return ""
 
-    # discover XML에 이미 있는 액션 제외
-    already_in_discover = set()
-    if discover_xml:
-        # discover의 example 속성에서 [node:action] 추출
-        already_in_discover = set(pattern.findall(discover_xml))
-
-    missing = ref_actions - already_in_discover
-    if not missing:
-        return ""
-
-    # 누락된 액션의 implementation 조회
     lines = ['<implementations note="코드 사례에 등장하는 도구의 구현 상세">']
-    for node, action in sorted(missing):
+    for node, action in sorted(ref_actions):
         impl = _lookup_implementation(node, action)
         if impl:
             impl_escaped = impl.replace('"', '&quot;')
@@ -376,3 +259,154 @@ def _lookup_implementation(node: str, action: str) -> str:
         return action_config.get("implementation", "")
     except Exception:
         return ""
+
+
+# =========================================================================
+# 경험 증류 (Experience Distillation)
+# =========================================================================
+
+# 증류 임계값: 해마 최고 점수가 이 값 미만이면 새로운 패턴으로 판단
+DISTILL_THRESHOLD = 0.7
+
+
+def get_top_score(user_message: str, allowed_nodes: set = None) -> float:
+    """사용자 메시지에 대한 해마 최고 점수를 반환한다."""
+    try:
+        from ibl_usage_db import IBLUsageDB
+        db = IBLUsageDB()
+        results = db.search_hybrid(query=user_message, top_k=1, allowed_nodes=allowed_nodes)
+        if results:
+            return results[0].score
+        return 0.0
+    except Exception:
+        return 0.0
+
+
+def distill_experience(user_message: str, tool_calls: list, top_score: float) -> bool:
+    """실행 경험을 증류하여 해마에 저장한다.
+
+    조건: 해마 점수가 DISTILL_THRESHOLD 미만이고, 도구 호출이 있었을 때만 실행.
+    무의식 에이전트와 같은 경량 AI로 경험을 반성하여 일반화된 용례로 변환한다.
+
+    Args:
+        user_message: 사용자 원본 메시지
+        tool_calls: 도구 실행 이력 [{tool_name, input, success}, ...]
+        top_score: 해마 최고 점수 (build_execution_memory 시점)
+
+    Returns:
+        증류 성공 여부
+    """
+    if top_score >= DISTILL_THRESHOLD:
+        return False
+
+    if not tool_calls:
+        return False
+
+    # 성공한 IBL 호출만 필터
+    ibl_calls = []
+    for tc in tool_calls:
+        if not isinstance(tc, dict):
+            continue
+        tool_name = tc.get("tool_name", "")
+        if tool_name != "execute_ibl":
+            continue
+        if not tc.get("success", True):
+            continue
+        code = tc.get("input", {}).get("code", "")
+        if code:
+            ibl_calls.append(code)
+
+    if not ibl_calls:
+        return False
+
+    # 증류: 실행 에이전트와 같은 모델로 반성
+    try:
+        tool_log = "\n".join(f"  {i+1}. {code}" for i, code in enumerate(ibl_calls))
+
+        prompt = f"""다음은 사용자 명령과 그에 대해 실행된 IBL 코드 목록이다.
+이 경험에서 핵심 패턴을 추출하여 용례로 만들어라.
+
+사용자 명령: {user_message}
+
+실행된 IBL 코드:
+{tool_log}
+
+규칙:
+1. 사용자 명령을 일반화하라 (고유명사는 유지하되, 패턴으로서 재사용 가능하게)
+2. 실행된 코드에서 중복/탐색성 호출을 제거하고 핵심만 남겨라
+3. 단일 액션이면 그대로, 여러 액션이면 & 또는 >>로 조합하라
+4. 결과는 반드시 JSON으로만 응답:
+
+{{"intent": "일반화된 사용자 의도", "code": "[node:action]{{params}} 형태의 IBL 코드"}}"""
+
+        # 반성 에이전트 프롬프트 로드
+        from pathlib import Path
+        _prompt_path = Path(__file__).parent.parent / "data" / "common_prompts" / "reflection_prompt.md"
+        system_prompt = _prompt_path.read_text(encoding="utf-8").strip() if _prompt_path.exists() else ""
+
+        # 반성 에이전트: 무의식 에이전트와 같은 경량 AI 사용 (도구 없음, 단순 텍스트)
+        from consciousness_agent import lightweight_ai_call
+        result = lightweight_ai_call(prompt=prompt, system_prompt=system_prompt)
+
+        if not result:
+            return False
+
+        # JSON 파싱
+        import json
+        # ```json ... ``` 래핑 제거
+        cleaned = result.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[-1]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+
+        distilled = json.loads(cleaned)
+        intent = distilled.get("intent", "").strip()
+        code = distilled.get("code", "").strip()
+
+        if not intent or not code:
+            return False
+
+        # 노드 추출
+        node_pattern = re.compile(r'\[([a-z_-]+):')
+        nodes = ",".join(sorted(set(node_pattern.findall(code))))
+
+        # 파이프라인 여부
+        category = "pipeline" if (">>" in code or "&" in code) else "single"
+
+        # 해마에 저장 (임베딩도 즉시 생성)
+        from ibl_usage_db import IBLUsageDB
+        db = IBLUsageDB()
+        example_id = db.add_example(
+            intent=intent,
+            ibl_code=code,
+            nodes=nodes,
+            category=category,
+            difficulty=1,
+            source="distilled",
+            tags="auto",
+        )
+
+        # 학습용 JSON 파일에 누적 (재학습 시 기존 데이터와 합쳐서 사용)
+        from pathlib import Path
+        import json as _json
+        distilled_path = Path(__file__).parent.parent / "data" / "training" / "ibl_distilled.json"
+        try:
+            existing = _json.loads(distilled_path.read_text(encoding="utf-8")) if distilled_path.exists() else []
+            existing.append({"intent": intent, "ibl_code": code})
+            distilled_path.write_text(_json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+        # RAG 캐시 무효화
+        rag = IBLUsageRAG()
+        rag.clear_cache()
+
+        print(f"[경험��류] 저장 완료 (id={example_id}, score={top_score:.2f}��학습): "
+              f"\"{intent[:40]}\" → {code[:60]}")
+        return True
+
+    except Exception as e:
+        print(f"[경험증류] 실패: {e}")
+        return False

@@ -123,6 +123,44 @@ async def lifespan(app: FastAPI):
 
     print("🚀 IndieBiz OS 서버 시작")
 
+    # 이전 세션의 완료된 task 기록 정리 (현재 세션만 보존)
+    try:
+        from pathlib import Path as _Path
+        import sqlite3 as _sqlite3
+        _projects_file = BASE_PATH / "projects" / "projects.json"
+        if _projects_file.exists():
+            with open(_projects_file, "r", encoding="utf-8") as _f:
+                _projects = json.load(_f)
+            _cleaned = 0
+            for _proj in _projects:
+                if _proj.get("type") != "project":
+                    continue
+                _db = _Path(_proj.get("path", "")) / "conversations.db"
+                if _db.exists():
+                    try:
+                        _conn = _sqlite3.connect(str(_db), timeout=3)
+                        _cnt = _conn.execute("DELETE FROM tasks WHERE status = 'completed'").fetchone()
+                        _conn.commit()
+                        _cleaned += _conn.total_changes
+                        _conn.close()
+                    except Exception:
+                        pass
+            # 시스템 AI 메모리 DB도 정리
+            _sys_db = DATA_PATH / "system_ai_memory.db"
+            if _sys_db.exists():
+                try:
+                    _conn = _sqlite3.connect(str(_sys_db), timeout=3)
+                    _conn.execute("DELETE FROM tasks WHERE status = 'completed'")
+                    _conn.commit()
+                    _cleaned += _conn.total_changes
+                    _conn.close()
+                except Exception:
+                    pass
+            if _cleaned > 0:
+                print(f"[Cleanup] 이전 세션 완료 task {_cleaned}건 정리")
+    except Exception as e:
+        print(f"[Cleanup] task 정리 중 오류 (무시): {e}")
+
     # World Pulse: 펄스 수집 & 자가점검 스케줄 등록 (스케줄러 시작 전에 등록해야 함)
     try:
         from world_pulse import register_pulse_tasks
@@ -274,6 +312,7 @@ from api_nas import router as nas_router
 from api_launcher_web import router as launcher_web_router
 from api_tunnel import router as tunnel_router, auto_start_if_enabled as tunnel_auto_start
 from api_ibl import router as ibl_router
+from api_xray import router as xray_router
 
 # 매니저 주입
 init_projects_managers(project_manager, switch_manager)
@@ -313,6 +352,7 @@ app.include_router(nas_router, tags=["nas"])
 app.include_router(launcher_web_router, tags=["launcher-web"])
 app.include_router(tunnel_router, tags=["tunnel"])
 app.include_router(ibl_router, tags=["ibl"])
+app.include_router(xray_router, tags=["xray"])
 
 # ============ NAS Finder 정적 파일 마운트 ============
 # 주의: 마운트는 반드시 라우터 등록 **후**에 해야 함

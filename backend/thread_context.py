@@ -105,6 +105,33 @@ def get_user_input() -> str:
     return getattr(_thread_local, 'user_input', '')
 
 
+# ============ 도구 호출 이력 (경험 증류용) ============
+
+def append_tool_call(tool_name: str, tool_input: dict, success: bool = True,
+                     node: str = "", action: str = "", duration_ms: int = 0):
+    """현재 스레드의 도구 호출 이력에 추가"""
+    if not hasattr(_thread_local, 'tool_calls'):
+        _thread_local.tool_calls = []
+    _thread_local.tool_calls.append({
+        "tool_name": tool_name,
+        "input": tool_input,
+        "success": success,
+        "node": node,
+        "action": action,
+        "ms": duration_ms,
+    })
+
+
+def get_tool_calls() -> list:
+    """현재 스레드의 도구 호출 이력 반환"""
+    return getattr(_thread_local, 'tool_calls', [])
+
+
+def clear_tool_calls():
+    """현재 스레드의 도구 호출 이력 초기화"""
+    _thread_local.tool_calls = []
+
+
 # ============ Allowed Nodes (IBL Node Access Control) ============
 
 def set_allowed_nodes(allowed):
@@ -128,6 +155,7 @@ def clear_all_context():
     _thread_local.called_agent = False
     _thread_local.allowed_nodes = None
     _thread_local.user_input = ''
+    _thread_local.tool_calls = []
 
 
 def get_context_summary() -> dict:

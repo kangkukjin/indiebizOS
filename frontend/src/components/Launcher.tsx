@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText, HelpCircle, Info, ChevronDown, BookOpen } from 'lucide-react';
+import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText, HelpCircle, Info, ChevronDown, BookOpen, ScanLine } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -962,6 +962,16 @@ export function Launcher() {
                 >
                   <ScrollText size={16} />
                   <span className="text-sm">로그 보기</span>
+                </button>
+                <button
+                  onClick={() => {
+                    window.electron?.openExternal('http://127.0.0.1:8765/xray/app');
+                    setShowMainMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                >
+                  <ScanLine size={16} />
+                  <span className="text-sm">System X-Ray</span>
                 </button>
                 <div className="border-t border-gray-200 my-1" />
                 <button

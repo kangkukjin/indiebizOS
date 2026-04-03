@@ -5,35 +5,35 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:12527
+- dataset_size:14446
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 검색 인덱스 재구축해줘
+- source_sentence: 사진 정리하는 기능 있어?
   sentences:
-  - 이 폼에 글자 좀 써줘
-  - 블로그 검색 인덱스 다시 만들어줘
-  - '[sense:performance_regions]'
-- source_sentence: 메일 하나 보내야 돼
+  - 날씨 어떻게 확인해
+  - 공연 장르 코드 목록 조회
+  - 쓸데없는 파일 삭제
+- source_sentence: Pew Research 여론조사 데이터
   sentences:
-  - 스크린 캡처해
-  - 메시지 발송 (Gmail/Nostr/Telegram)
-  - '[self:discover]'
-- source_sentence: 메모 전체 내용 펼쳐봐
+  - 볼륨 뭐가 있어 보여줘
+  - 파이썬 스크립트 어디있어
+  - Pew Research 최신 여론조사/리서치 보고서 목록. 미국 사회·정치·기술 트렌드 조사. 파라미터 없이 호출하면 최신 리서치 목록 반환.
+- source_sentence: 연락처 전체 목록 보여줘
   sentences:
-  - 영상 오디오 다운로드해줘
-  - 저장된 메모 전체 내용 봐야 해
-  - 주식 볼 수 있는 기능 있나
-- source_sentence: 인구 통계 찾아줘
+  - '[self:health_query]'
+  - 수집 데이터 남겨줘해줘
+  - 연락처 전체 뭐가 있어
+- source_sentence: 집 설계 리스트 보여줄래
   sentences:
-  - '[sense:search]'
-  - 집 설계 목록 보여줘 보여줘
-  - '[limbs:permissions]'
-- source_sentence: 한국 라디오 채널 리스트
-  sentences:
-  - 한국 라디오 채널 뭐가 있어
-  - 이거 저장해
   - '[self:search_memory]'
+  - '[engines:arch_list]'
+  - PubMed 논문 내려받아
+- source_sentence: 사진 타임라인 보여줘
+  sentences:
+  - 사진 타임라인 보여
+  - 즐겨찾기 라디오 보여
+  - 주식 볼 수 있는 기능 있나
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -87,9 +87,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '한국 라디오 채널 리스트',
-    '한국 라디오 채널 뭐가 있어',
-    '[self:search_memory]',
+    '사진 타임라인 보여줘',
+    '사진 타임라인 보여',
+    '즐겨찾기 라디오 보여',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -98,9 +98,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.9687, -0.0067],
-#         [ 0.9687,  1.0000, -0.0076],
-#         [-0.0067, -0.0076,  1.0000]])
+# tensor([[1.0000, 0.9940, 0.1780],
+#         [0.9940, 1.0000, 0.1682],
+#         [0.1780, 0.1682, 1.0000]])
 ```
 
 <!--
@@ -145,19 +145,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 12,527 training samples
+* Size: 14,446 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
   |         | sentence_0                                                                       | sentence_1                                                                        |
   |:--------|:---------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type    | string                                                                           | string                                                                            |
-  | details | <ul><li>min: 3 tokens</li><li>mean: 7.85 tokens</li><li>max: 58 tokens</li></ul> | <ul><li>min: 4 tokens</li><li>mean: 10.39 tokens</li><li>max: 60 tokens</li></ul> |
+  | details | <ul><li>min: 3 tokens</li><li>mean: 7.92 tokens</li><li>max: 47 tokens</li></ul> | <ul><li>min: 4 tokens</li><li>mean: 10.32 tokens</li><li>max: 60 tokens</li></ul> |
 * Samples:
-  | sentence_0                  | sentence_1                                                   |
-  |:----------------------------|:-------------------------------------------------------------|
-  | <code>삼성전자 주가 알려줄래</code>   | <code>오늘 외국인 순매수 얼마야?</code>                                 |
-  | <code>스캔한 폴더 목록 봐봐</code>   | <code>[self:list_scans]</code>                               |
-  | <code>수도권이랑 부산 날씨 비교</code> | <code>[sense:navigate_route] & [sense:navigate_route]</code> |
+  | sentence_0                       | sentence_1                    |
+  |:---------------------------------|:------------------------------|
+  | <code>유튜브 동영상 내용 정리해서 보여줘</code> | <code>이 영상 핵심 정리해줘</code>     |
+  | <code>재생 멈춰</code>               | <code>재생 중지 및 큐 초기화</code>    |
+  | <code>블로그 인웹사이트 v2로 분석해줘</code>  | <code>블로그 인사이트 v2로 분석해</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -279,21 +279,21 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.3193 | 500  | 0.4882        |
-| 0.6386 | 1000 | 0.2158        |
-| 0.9579 | 1500 | 0.1523        |
-| 0.3193 | 500  | 0.1487        |
-| 0.6386 | 1000 | 0.1192        |
-| 0.9579 | 1500 | 0.1076        |
-| 0.3193 | 500  | 0.0599        |
-| 0.6386 | 1000 | 0.0574        |
-| 0.9579 | 1500 | 0.0640        |
-| 0.3193 | 500  | 0.0365        |
-| 0.6386 | 1000 | 0.0321        |
-| 0.9579 | 1500 | 0.0473        |
-| 0.3193 | 500  | 0.0157        |
-| 0.6386 | 1000 | 0.0210        |
-| 0.9579 | 1500 | 0.0371        |
+| 0.2769 | 500  | 0.4662        |
+| 0.5537 | 1000 | 0.2116        |
+| 0.8306 | 1500 | 0.1512        |
+| 0.2769 | 500  | 0.1445        |
+| 0.5537 | 1000 | 0.1215        |
+| 0.8306 | 1500 | 0.0910        |
+| 0.2769 | 500  | 0.0581        |
+| 0.5537 | 1000 | 0.0483        |
+| 0.8306 | 1500 | 0.0402        |
+| 0.2769 | 500  | 0.0281        |
+| 0.5537 | 1000 | 0.0273        |
+| 0.8306 | 1500 | 0.0213        |
+| 0.2769 | 500  | 0.0147        |
+| 0.5537 | 1000 | 0.0129        |
+| 0.8306 | 1500 | 0.0139        |
 
 
 ### Framework Versions

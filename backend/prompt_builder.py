@@ -205,7 +205,7 @@ class PromptBuilder:
             # 달성 기준 (실행 에이전트가 목표를 알고 행동하도록)
             achievement_criteria = consciousness_output.get("achievement_criteria", "")
             if achievement_criteria:
-                consciousness_parts.append(f"# 달성 기준\n{achievement_criteria}")
+                consciousness_parts.append(f"# 달성해야 할 목표의 기준\n{achievement_criteria}\n\n이 기준을 모두 충족하도록 응답을 구성하라. 응답 완성 전에 각 항목을 스스로 점검하라.")
 
             # NOTE: history_summary는 messages 파라미터에서 원본 히스토리를 대체하므로 여기엔 넣지 않음
 
@@ -417,7 +417,7 @@ def build_system_ai_prompt(
         # 달성 기준 (실행 에이전트가 목표를 알고 행동하도록)
         achievement_criteria = consciousness_output.get("achievement_criteria", "")
         if achievement_criteria:
-            consciousness_parts.append(f"# 달성 기준\n{achievement_criteria}")
+            consciousness_parts.append(f"# 달성해야 할 목표의 기준\n{achievement_criteria}\n\n이 기준을 모두 충족하도록 응답을 구성하라. 응답 완성 전에 각 항목을 스스로 점검하라.")
 
         ibl_focus = consciousness_output.get("ibl_focus", {})
         if ibl_focus:

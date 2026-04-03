@@ -394,13 +394,6 @@ async def handle_chat_message(client_id: str, data: dict):
             "agent": agent_name
         })
 
-        # IBL 자동 승격 비활성화 — 수작업 용례만 사용
-        # try:
-        #     from ibl_usage_db import IBLUsageDB
-        #     IBLUsageDB().try_promote_session(message)
-        # except Exception as promote_err:
-        #     print(f"[IBL Auto] 승격 실패 (무시): {promote_err}")
-
         # 컨텍스트 정리
         from thread_context import clear_all_context
         clear_all_context()
@@ -504,9 +497,16 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 실행기억 생성 (RAG + discover + implementation, 1회)
         execution_memory = runner._build_execution_memory(message)
 
-        # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경)
-        request_type = runner._classify_request(message, execution_memory)
-        print(f"[무의식] 분류: {request_type}")
+        # 해마 최고 점수 저장 (경험 증류 판단용)
+        from ibl_usage_rag import get_top_score as _get_top_score
+        _hippocampus_score = _get_top_score(message)
+
+        # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경 + Reflex IBL)
+        request_type, reflex_hint = runner._classify_request(message, execution_memory)
+        if reflex_hint:
+            print(f"[무의식] Reflex EXECUTE: {reflex_hint[:60]}")
+        else:
+            print(f"[무의식] 분류: {request_type}")
 
         # 판단형만 의식 에이전트 실행
         consciousness_output = None
@@ -524,11 +524,18 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             if runner.ai._provider:
                 runner.ai._provider.system_prompt = new_prompt
             history = runner._apply_consciousness_to_history(history, consciousness_output)
-        elif execution_memory:
-            # EXECUTE 경로: 실행기억만 시스템 프롬프트에 반영
+        elif execution_memory or reflex_hint:
+            # EXECUTE 경로: 실행기억(+reflex 힌트)만 시스템 프롬프트에 반영
+            _exec_mem = execution_memory or ""
+            if reflex_hint:
+                _exec_mem += (
+                    f"\n\n<reflex_hint note=\"고확신 매칭된 IBL 패턴입니다. "
+                    f"이 코드를 우선적으로 사용하세요.\">"
+                    f"\n{reflex_hint}\n</reflex_hint>"
+                )
             role_file = runner.project_path / f"agent_{agent_name}_role.txt"
             role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-            new_prompt = runner._build_system_prompt(role, None, execution_memory)
+            new_prompt = runner._build_system_prompt(role, None, _exec_mem)
             runner.ai.system_prompt = new_prompt
             if runner.ai._provider:
                 runner.ai._provider.system_prompt = new_prompt
@@ -556,6 +563,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         loop = asyncio.get_running_loop()
 
         tool_results_log = []  # 도구 실행 이력 수집
+        tool_calls_log = []   # 경험 증류용 도구 호출 구조화 이력
 
         def run_stream():
             """스레드에서 스트리밍 실행"""
@@ -583,6 +591,13 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     if event_type == "final":
                         final_content = event.get("content", "")
                         print(f"[WS run_stream] final_content 설정됨 (len={len(final_content)})")
+                    elif event_type == "tool_start":
+                        # 경험 증류용: 도구 호출 시작 기록
+                        tool_calls_log.append({
+                            "tool_name": event.get("name", ""),
+                            "input": event.get("input", {}),
+                            "success": True,  # tool_result에서 업데이트
+                        })
                     elif event_type == "tool_result":
                         # 도구 실행 결과 수집 (평가 루프에서 사용)
                         tool_results_log.append(event.get("content", ""))
@@ -638,12 +653,24 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         print(f"[WS run_stream] 타임아웃 후 미전달 메시지 저장 완료: message_id={msg_id}")
                     except Exception as save_err:
                         print(f"[WS run_stream] 타임아웃 후 메시지 저장 실패: {save_err}")
-                # IBL 자동 승격 비활성화 — 수작업 용례만 사용
-                # try:
-                #     from ibl_usage_db import IBLUsageDB
-                #     IBLUsageDB().try_promote_session(message)
-                # except Exception as promote_err:
-                #     print(f"[IBL Auto] 승격 실패 (무시): {promote_err}")
+                # thread_context에서 node/action/ms 포함 도구 이력 수집 (X-Ray용)
+                try:
+                    from thread_context import get_tool_calls as _get_tc, clear_tool_calls as _clear_tc
+                    _tc = _get_tc()
+                    if _tc:
+                        # GoalEval 재실행 포함 모든 라운드의 액션을 누적
+                        tool_calls_log.extend(_tc)
+                    _clear_tc()
+                except Exception:
+                    pass
+
+                # 경험 증류: 해마 점수가 낮은 성공 세션에서 새로운 패턴 학습
+                if final_content and tool_calls_log:
+                    try:
+                        from ibl_usage_rag import distill_experience
+                        distill_experience(message, tool_calls_log, _hippocampus_score)
+                    except Exception as distill_err:
+                        print(f"[경험증류] 오류 (무시): {distill_err}")
 
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put(None),  # 종료 신호
@@ -771,6 +798,38 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 "agent": agent_name,
                 "message_id": message_id
             })
+
+        # 태스크 완료 처리 (X-Ray 타임라인용)
+        # tool_calls_log는 run_stream 스레드에서 수집됨 — thread_context가 아닌 이 변수를 직접 사용
+        if task_id:
+            try:
+                import json as _json
+                tool_history_json = _json.dumps(tool_calls_log, ensure_ascii=False) if tool_calls_log else None
+                with db.get_connection() as conn:
+                    cursor = conn.cursor()
+                    try:
+                        cursor.execute("ALTER TABLE tasks ADD COLUMN tool_history TEXT")
+                    except Exception:
+                        pass
+                    cursor.execute("""
+                        UPDATE tasks SET status = 'completed', result = ?,
+                                         completed_at = CURRENT_TIMESTAMP, tool_history = ?
+                        WHERE task_id = ?
+                    """, ((final_content or "")[:500], tool_history_json, task_id))
+                    conn.commit()
+                # X-Ray 실시간 이벤트
+                try:
+                    from api_xray import push_xray_event
+                    push_xray_event("task_complete", {
+                        "task_id": task_id,
+                        "request": (message or "")[:100],
+                        "agent": agent_name,
+                        "tool_count": len(tool_calls_log),
+                    })
+                except Exception:
+                    pass
+            except Exception as ct_err:
+                print(f"[WS] complete_task 실패 (무시): {ct_err}")
 
         # 완료 알림
         await manager.send_message(client_id, {

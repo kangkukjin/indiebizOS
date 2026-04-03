@@ -285,6 +285,7 @@ export function SettingsDialog({
                     <option value="google">Google (Gemini)</option>
                     <option value="anthropic">Anthropic (Claude)</option>
                     <option value="openai">OpenAI (GPT)</option>
+                    <option value="openrouter">OpenRouter (650+ 모델)</option>
                   </select>
                 </div>
 
@@ -454,6 +455,7 @@ export function SettingsDialog({
                     <option value="google">Google (Gemini)</option>
                     <option value="anthropic">Anthropic (Claude)</option>
                     <option value="openai">OpenAI (GPT)</option>
+                    <option value="openrouter">OpenRouter (650+ 모델)</option>
                   </select>
                 </div>
 

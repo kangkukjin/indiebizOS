@@ -113,22 +113,73 @@ class SwitchRunner:
             agent_name = self.config.get("agent_name", "스위치 에이전트")
             agent_role = self.config.get("agent_role", "")
 
-            # Phase 17: execute_ibl 단일 도구 로드
-            from tool_loader import load_tool_schema
-            ibl_schema = load_tool_schema("execute_ibl")
-            tools = [ibl_schema] if ibl_schema else []
-
-            self._status(f"IBL 도구 로드됨 (execute_ibl)")
-
-            # Phase 17: IBL 환경 프롬프트 구성
-            from prompt_builder import build_agent_prompt
+            # 프로젝트 에이전트와 동일한 도구 구성
+            import json as _json
+            from tool_loader import build_execute_ibl_tool
             from ibl_access import build_environment
 
-            # allowed_nodes 결정
             allowed_nodes = self._resolve_allowed_nodes()
             project_path = self._get_project_path()
 
-            # 기본 프롬프트
+            # 도구 목록: execute_ibl + 범용 도구 (프로젝트 에이전트와 동일)
+            tools = []
+            pkg_base = Path(__file__).parent.parent / "data" / "packages" / "installed" / "tools"
+
+            # 1) IBL 도구
+            ibl_tool = build_execute_ibl_tool(allowed_nodes=allowed_nodes)
+            if ibl_tool:
+                tools.append(ibl_tool)
+
+            # 2) 범용 언어 도구
+            for pkg_id, tool_name in [
+                ("python-exec", "execute_python"),
+                ("nodejs", "execute_node"),
+                ("system_essentials", "run_command"),
+            ]:
+                tool_json = pkg_base / pkg_id / "tool.json"
+                if tool_json.exists():
+                    try:
+                        with open(tool_json, 'r', encoding='utf-8') as f:
+                            pkg_data = _json.load(f)
+                        for tool_def in pkg_data.get("tools", []):
+                            if tool_def.get("name") == tool_name:
+                                tools.append(tool_def)
+                                break
+                    except Exception:
+                        pass
+
+            # 3) 가이드 검색 도구
+            tools.append({
+                "name": "read_guide",
+                "description": "가이드 파일을 읽는 도구. 검색, 투자 분석, 동영상 제작, 웹사이트 빌드 등 복잡한 작업의 단계별 가이드가 저장되어 있다. 작업 전에 이 도구로 가이드를 읽어라.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "검색 키워드"},
+                        "read": {"type": "boolean", "description": "true: 내용 반환, false: 목록만"}
+                    },
+                    "required": ["query"]
+                }
+            })
+
+            self._status(f"도구 {len(tools)}개 로드됨")
+
+            # 실행기억(해마) — 과거 성공 사례를 참조
+            command = self.switch.get("command", "")
+            execution_memory = ""
+            try:
+                from ibl_usage_rag import build_execution_memory
+                from ibl_access import resolve_allowed_nodes
+                allowed_set = resolve_allowed_nodes(allowed_nodes) if allowed_nodes else None
+                execution_memory = build_execution_memory(command, allowed_set)
+                if execution_memory:
+                    self._status("실행기억 로드됨")
+            except Exception as e:
+                self._status(f"실행기억 생성 실패 (무시): {e}")
+
+            # 프롬프트 구성
+            from prompt_builder import build_agent_prompt
+
             system_prompt = build_agent_prompt(
                 agent_name=agent_name,
                 role=agent_role or "",
@@ -137,13 +188,15 @@ class SwitchRunner:
                 git_enabled=False
             )
 
-            # IBL 환경 주입
+            # IBL 환경 + 실행기억 주입
             ibl_env = build_environment(
                 allowed_nodes=allowed_nodes,
                 project_path=project_path
             )
             if ibl_env:
                 system_prompt = system_prompt + "\n\n" + ibl_env
+            if execution_memory:
+                system_prompt = system_prompt + "\n\n" + execution_memory
 
             # AI 에이전트 생성
             agent = AIAgent(
@@ -154,7 +207,6 @@ class SwitchRunner:
             )
 
             # 명령 실행
-            command = self.switch.get("command", "")
             self._status(f"명령 실행: {command}")
 
             response = agent.process_message_with_history(

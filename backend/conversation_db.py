@@ -465,13 +465,56 @@ class ConversationDB:
             return dict(row) if row else None
 
     def complete_task(self, task_id: str, result: str) -> bool:
-        """작업 완료 처리 - 태스크 삭제"""
+        """작업 완료 처리 — status 업데이트 + 도구 이력 저장 (세션 내 조회용)"""
+        # 현재 스레드의 도구 호출 이력 수집
+        tool_history_json = None
+        try:
+            from thread_context import get_tool_calls
+            calls = get_tool_calls()
+            if calls:
+                import json
+                tool_history_json = json.dumps(calls, ensure_ascii=False)
+        except Exception:
+            pass
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
-            # 태스크 삭제 (위임 추적은 임시 상태이므로 완료 후 삭제)
-            cursor.execute("DELETE FROM tasks WHERE task_id = ?", (task_id,))
+            # tool_history 컬럼 없으면 추가 (마이그레이션)
+            try:
+                cursor.execute("ALTER TABLE tasks ADD COLUMN tool_history TEXT")
+            except Exception:
+                pass  # 이미 존재
+            # 원래 요청 내용 조회 (이벤트용)
+            row = cursor.execute("SELECT original_request, delegated_to FROM tasks WHERE task_id = ?",
+                                 (task_id,)).fetchone()
+            original_req = dict(row).get("original_request", "")[:100] if row else ""
+            delegated_to = dict(row).get("delegated_to", "") if row else ""
+
+            cursor.execute("""
+                UPDATE tasks
+                SET status = 'completed', result = ?,
+                    completed_at = CURRENT_TIMESTAMP,
+                    tool_history = ?
+                WHERE task_id = ?
+            """, (result[:500] if result else None, tool_history_json, task_id))
             conn.commit()
-            return cursor.rowcount > 0
+            updated = cursor.rowcount > 0
+
+            # X-Ray 실시간 이벤트
+            if updated:
+                try:
+                    from api_xray import push_xray_event
+                    tools = json.loads(tool_history_json) if tool_history_json else []
+                    push_xray_event("task_complete", {
+                        "task_id": task_id,
+                        "request": original_req,
+                        "agent": delegated_to,
+                        "tool_count": len(tools),
+                    })
+                except Exception:
+                    pass
+
+            return updated
 
     def update_task_delegation(self, task_id: str, delegation_context: str,
                                increment_pending: bool = True) -> bool:

@@ -671,15 +671,21 @@ def summarize_youtube(
         f.write(html_content)
 
     print(f"💾 HTML 저장: {html_filename}")
+
+    # 4. 브라우저로 열기
+    import webbrowser
+    abs_path = os.path.abspath(html_filepath)
+    webbrowser.open(f"file://{abs_path}")
+    print(f"🌐 브라우저에서 열기: {abs_path}")
     print(f"✅ YouTube 요약 완료!\n")
 
     return {
         'success': True,
-        'file_path': html_filepath,
+        'file_path': abs_path,
         'title': title,
         'duration': duration,
         'summary_length': len(summary_content),
-        'message': f'YouTube 영상 요약이 완료되었습니다. 파일: {html_filepath}'
+        'message': f'YouTube 영상 요약이 완료되었습니다. 브라우저에서 열었습니다. 파일: {abs_path}'
     }
 
 

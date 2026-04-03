@@ -10,6 +10,11 @@ from pathlib import Path
 
 current_dir = Path(__file__).parent
 
+# 자기 디렉토리 경로 (동적 모듈 로드 시 필요)
+_self_dir = os.path.abspath(os.path.dirname(__file__))
+if _self_dir not in sys.path:
+    sys.path.insert(0, _self_dir)
+
 # common 유틸리티 경로
 _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
 if _backend_dir not in sys.path:
@@ -136,7 +141,9 @@ def execute(tool_name: str, params: dict, project_path: str = None):
 
         # 종목 뉴스: Finnhub 우선, 실패 시 Yahoo Finance 폴백
         elif tool_name == "company_news":
-            symbol = params.get("symbol")
+            symbol = params.get("symbol") or params.get("query")
+            if not symbol:
+                return {"success": False, "error": "symbol(티커) 파라미터가 필요합니다. 예: 005930.KS (삼성전자), AAPL (애플)"}
             # 1차: Finnhub (날짜 범위 지정 가능, 전문 금융 뉴스)
             try:
                 tool = load_module("tool_finnhub")

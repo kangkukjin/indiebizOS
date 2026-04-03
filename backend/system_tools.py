@@ -17,6 +17,11 @@ from typing import Dict, List, Any
 from tool_loader import load_tool_handler, get_all_tool_names
 from api_engine import is_registry_tool, execute_tool as registry_execute_tool
 
+# === 액션 실패 카운터 (같은 액션 반복 실패 방지) ===
+# 키: "agent_id:node:action", 값: 연속 실패 횟수
+_action_fail_counter: Dict[str, int] = {}
+_ACTION_FAIL_LIMIT = 3  # 연속 N번 실패 시 차단
+
 
 # ============ Async 핸들러 지원: 영구 이벤트 루프 ============
 # Playwright 등 async 도구 패키지가 동일한 이벤트 루프에서 실행되어야
@@ -168,7 +173,12 @@ def _extract_hint(tool_input: dict) -> str:
 
 def _log_ibl(tool_name: str, tool_input: dict, duration_ms: float,
              agent_id: str = None, success: bool = True):
-    """도구 실행을 IBL 형식으로 콘솔 로그 + DB 저장"""
+    """도구 실행을 IBL 형식으로 콘솔 로그
+
+    개별 IBL 액션 기록(thread_context, X-Ray 푸시)은
+    ibl_engine.py의 execute_ibl() 내부에서 직접 수행.
+    여기서는 콘솔 출력만 담당.
+    """
     node, action = _tool_to_ibl_notation(tool_name, tool_input)
     hint = _extract_hint(tool_input)
 
@@ -179,24 +189,23 @@ def _log_ibl(tool_name: str, tool_input: dict, duration_ms: float,
     hint_str = f" ({hint})" if hint else ""
     print(f"[{timestamp}] {agent_tag}[{node}:{action}]{hint_str} -> {status} ({duration_ms:.0f}ms)")
 
-    # 실행 로그 비활성화 — 자동 승격 중단에 따라 로그 수집도 불필요
-    # try:
-    #     from ibl_usage_db import IBLUsageDB
-    #     from thread_context import get_user_input, get_current_project_id
-    #     db = IBLUsageDB()
-    #     ibl_str = f"[{node}:{action}]" + (f'("{target}")' if target else "")
-    #     db.log_execution(
-    #         user_input=get_user_input() or "",
-    #         generated_ibl=ibl_str,
-    #         node=node, action=action, target=target,
-    #         params=tool_input.get("params", {}),
-    #         success=success,
-    #         duration_ms=int(duration_ms),
-    #         agent_id=agent_id or "",
-    #         project_id=get_current_project_id() or "",
-    #     )
-    # except Exception:
-    #     pass
+    # execute_ibl이 아닌 도구(request_user_approval 등)는 여기서 기록
+    if tool_name != "execute_ibl":
+        try:
+            from thread_context import append_tool_call
+            append_tool_call(tool_name, tool_input, success,
+                             node=node, action=action, duration_ms=round(duration_ms))
+        except Exception:
+            pass
+        try:
+            from api_xray import push_xray_event
+            push_xray_event("tool", {
+                "node": node, "action": action, "hint": hint or "",
+                "success": success, "ms": round(duration_ms),
+                "agent": agent_id or "",
+            })
+        except Exception:
+            pass
 
 
 # ============ 시스템 도구 정의 ============
@@ -917,6 +926,29 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     # 디버그
     print(f"[IBL_DEBUG] code={code[:100]}")
 
+    # --- 실패 카운터 체크: 같은 액션이 연속 N번 실패하면 차단 ---
+    # 단일 액션만 체크 (파이프라인/병렬은 개별 액션이 아니라 통과)
+    _blocked_actions = set()
+    try:
+        from ibl_parser import parse as _pre_parse
+        _pre_parsed = _pre_parse(code)
+        if _pre_parsed and len(_pre_parsed) == 1 and not _pre_parsed[0].get("_parallel"):
+            _node = _pre_parsed[0].get("_node", "")
+            _action = _pre_parsed[0].get("action", "")
+            _fail_key = f"{agent_id or 'default'}:{_node}:{_action}"
+            _fail_count = _action_fail_counter.get(_fail_key, 0)
+            if _fail_count >= _ACTION_FAIL_LIMIT:
+                _blocked_actions.add(f"{_node}:{_action}")
+                print(f"[IBL] 액션 차단: {_node}:{_action} (연속 {_fail_count}회 실패)")
+                return json.dumps({
+                    "error": f"[{_node}:{_action}] 액션이 연속 {_fail_count}회 실패하여 일시 차단되었습니다. 이 도구는 현재 사용할 수 없습니다. 다른 방법을 찾으세요.",
+                    "blocked": True,
+                    "action": f"{_node}:{_action}",
+                    "consecutive_failures": _fail_count,
+                }, ensure_ascii=False)
+    except Exception:
+        pass
+
     # --- IBL 코드 파싱 + 실행 ---
     try:
         from ibl_parser import parse as parse_ibl
@@ -990,6 +1022,28 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                             break
                     except (json.JSONDecodeError, TypeError):
                         pass
+
+        # --- 실패 카운터 업데이트 ---
+        try:
+            _pre_parsed2 = parse_ibl(code)
+            if _pre_parsed2 and len(_pre_parsed2) == 1 and not _pre_parsed2[0].get("_parallel"):
+                _n = _pre_parsed2[0].get("_node", "")
+                _a = _pre_parsed2[0].get("action", "")
+                _fk = f"{agent_id or 'default'}:{_n}:{_a}"
+                _is_err = False
+                if isinstance(result, dict):
+                    _is_err = not result.get("success", True) or "error" in result
+                elif isinstance(result, str):
+                    _is_err = '"error"' in result or '"success": false' in result or '"success":false' in result
+                if _is_err:
+                    _action_fail_counter[_fk] = _action_fail_counter.get(_fk, 0) + 1
+                    _cnt = _action_fail_counter[_fk]
+                    if _cnt >= _ACTION_FAIL_LIMIT:
+                        print(f"[IBL] 액션 실패 누적: {_n}:{_a} ({_cnt}회 — 다음 호출 시 차단)")
+                else:
+                    _action_fail_counter.pop(_fk, None)  # 성공하면 카운터 초기화
+        except Exception:
+            pass
 
         if isinstance(result, dict):
             return json.dumps(result, ensure_ascii=False, indent=2)

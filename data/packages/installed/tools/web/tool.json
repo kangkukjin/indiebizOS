@@ -109,57 +109,6 @@
       }
     },
     {
-      "name": "unified_search",
-      "description": "종합 검색 - DuckDuckGo 웹 검색, Google 뉴스, YouTube, OpenAlex 논문을 한 번에 병렬 검색합니다.\n\n## 사용 시점\n- 특정 주제에 대해 웹/뉴스/영상/논문을 종합적으로 조사할 때\n- 하나의 키워드로 다양한 소스의 정보를 한꺼번에 수집할 때\n- 일반적인 검색 요청 시 (가장 포괄적인 결과 제공)\n\n## 반환값\n- web: DuckDuckGo 검색 결과 (title, url, snippet)\n- news: Google News 결과 (title, url, published, source_name, summary)\n- youtube: YouTube 검색 결과 (title, channel, duration, url)\n- papers: OpenAlex 논문 결과 (title, authors, year, citations, journal, doi, pdf_url, abstract)\n\n## 다른 도구와의 관계\n- 웹만 검색: ddgs_search\n- 뉴스만 검색: google_news_search\n- 유튜브만 검색: YouTube 패키지의 search_youtube\n- 논문 상세 검색: study 패키지의 search_openalex\n- 페이지 내용 확인: crawl_website",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "description": "검색 키워드"
-          },
-          "sources": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": ["web", "news", "youtube", "papers"]
-            },
-            "description": "검색할 소스 (기본: 전부). 예: [\"web\", \"news\", \"papers\"]"
-          },
-          "web_count": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10,
-            "description": "웹 검색 결과 수 (기본 5)"
-          },
-          "news_count": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 20,
-            "description": "뉴스 결과 수 (기본 5)"
-          },
-          "youtube_count": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10,
-            "description": "유튜브 결과 수 (기본 3)"
-          },
-          "papers_count": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 10,
-            "description": "논문 결과 수 (기본 3)"
-          },
-          "language": {
-            "type": "string",
-            "enum": ["ko", "en"],
-            "description": "뉴스 검색 언어 (기본 ko)"
-          }
-        },
-        "required": ["query"]
-      }
-    },
-    {
       "name": "generate_newspaper",
       "description": "키워드 목록으로 Google News 검색 후 신문(HTML) 자동 생성. 키워드별 7개 기사를 수집하여 반응형 HTML 신문으로 조합.",
       "input_schema": {
@@ -167,7 +116,9 @@
         "properties": {
           "keywords": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "검색할 키워드 목록 (예: [\"AI\", \"경제\", \"문화\"])"
           },
           "title": {
@@ -176,11 +127,15 @@
           },
           "exclude_sources": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "제외할 뉴스 출처 목록"
           }
         },
-        "required": ["keywords"]
+        "required": [
+          "keywords"
+        ]
       }
     }
   ]

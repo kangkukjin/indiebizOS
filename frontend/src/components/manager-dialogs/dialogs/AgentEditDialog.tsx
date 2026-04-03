@@ -146,6 +146,7 @@ export function AgentEditDialog({
                   <option value="google">Google (Gemini)</option>
                   <option value="anthropic">Anthropic (Claude)</option>
                   <option value="openai">OpenAI (GPT)</option>
+                  <option value="openrouter">OpenRouter (650+ 모델)</option>
                   <option value="ollama">Ollama (로컬)</option>
                 </select>
               </div>

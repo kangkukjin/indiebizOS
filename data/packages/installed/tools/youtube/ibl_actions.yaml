@@ -10,8 +10,8 @@ nodes:
         implementation: yt-dlp로 유튜브 메타데이터 추출 (공식 API 불필요)
         target_key: url
       video_transcript:
-        description: 유튜브 동영상 자막/스크립트 추출 — 영상 요약의 첫 단계 (url 또는 video_id 사용 가능)
-        keywords: [youtube, 유튜브, 자막, 요약, 스크립트, transcript, 영상요약, 영상내용, subtitle, 대본]
+        description: 유튜브 ��영상 자막/스크립트 추출 (url 또는 video_id 사용 가능). 영상 요약이 목적이면 summarize_video를 쓰면 자막 추출+AI 요약+HTML+브라우저 열기를 한 번에 수행한다.
+        keywords: [youtube, 유튜브, 자막, 스크립트, transcript, subtitle, 대본]
         target_description: 유튜브 URL 또는 video_id
         router: handler
         tool: get_youtube_transcript
@@ -24,6 +24,14 @@ nodes:
         router: handler
         tool: list_available_transcripts
         implementation: youtube-transcript-api로 사용 가능한 자막 언어 조회
+        target_key: url
+      summarize_video:
+        description: 유튜브 동영상을 AI로 요약하여 HTML 보고서를 생성하고 브라우저에 표시 (자막 추출 → AI 요약 → HTML 생성 → 브라우저 열기를 한 번에 수행)
+        keywords: [youtube, 유튜브, 요약, 영상요약, 동영상요약, summarize, 리포트, 보고서, 정리]
+        target_description: 유튜브 URL
+        router: handler
+        tool: summarize_youtube
+        implementation: 자막 추출 + 시스템 AI 모델로 요약 + HTML 보고서 생성 + 브라우저 자동 열기
         target_key: url
       search_youtube:
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)

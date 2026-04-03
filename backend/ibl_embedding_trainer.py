@@ -467,13 +467,17 @@ def main():
     examples = extract_examples_from_db()
     variations = generate_variations(examples)
 
-    # 합성 데이터 로드 (Opus 생성만 — 규칙 기반 제외)
-    synth_path = DATA_DIR / "ibl_synthetic_opus.json"
-    if synth_path.exists():
-        with open(synth_path, 'r', encoding='utf-8') as f:
-            synth_data = json.load(f)
-        print(f"[데이터] Opus 합성: {len(synth_data)}건 로드 (규칙 기반 제외)")
-        variations.extend(synth_data)
+    # 학습 데이터 로드 (data/training/ 폴더)
+    training_dir = DATA_DIR / "training"
+    for synth_file in sorted(training_dir.glob("*.json")) if training_dir.exists() else []:
+        try:
+            with open(synth_file, 'r', encoding='utf-8') as f:
+                synth_data = json.load(f)
+            if isinstance(synth_data, list) and synth_data:
+                print(f"[데이터] {synth_file.name}: {len(synth_data)}건 로드")
+                variations.extend(synth_data)
+        except Exception as e:
+            print(f"[데이터] {synth_file.name} 로드 실패: {e}")
 
     train_pairs, test_pairs, code_to_intents = prepare_training_data(
         examples, variations, normalize=True

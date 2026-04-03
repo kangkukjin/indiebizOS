@@ -43,12 +43,15 @@ def _parse_html(html: str, url: str) -> tuple[str, str]:
     # 광고/관련기사/댓글 등 노이즈 제거 (class/id 기반)
     noise_patterns = ['comment', 'advert', 'sidebar', 'related', 'recommend',
                       'share', 'social', 'newsletter', 'popup', 'banner', 'cookie']
-    for el in soup.find_all(True):
-        classes = ' '.join(el.get('class', []))
-        el_id = el.get('id', '')
-        combined = (classes + ' ' + el_id).lower()
-        if any(p in combined for p in noise_patterns):
-            el.decompose()
+    for el in list(soup.find_all(True)):
+        try:
+            classes = ' '.join(el.get('class', []))
+            el_id = el.get('id', '')
+            combined = (classes + ' ' + el_id).lower()
+            if any(p in combined for p in noise_patterns):
+                el.decompose()
+        except Exception:
+            continue
 
     # 본문 추출: <article> → <main> → <body>
     container = soup.find('article') or soup.find('main') or soup.find('body') or soup

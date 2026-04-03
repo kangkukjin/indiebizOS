@@ -437,6 +437,19 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
             return "\n".join(result_lines)
 
         elif tool_name == "ask_user_question":
+            # GoalEval 재실행 중에는 사용자에게 질문할 수 없음
+            try:
+                from thread_context import get_current_task_id
+                current_task = get_current_task_id() or ""
+                if current_task.startswith("goal_retry_"):
+                    return (
+                        "현재 평가 재실행 중이므로 사용자에게 질문할 수 없습니다. "
+                        "보유한 정보만으로 최선의 답변을 작성하세요. "
+                        "확실하지 않은 부분은 가정을 명시하고 진행하세요."
+                    )
+            except Exception:
+                pass
+
             questions = tool_input.get("questions", [])
             paths = get_state_paths(project_path, agent_id)
 

@@ -136,13 +136,23 @@ class ConsciousnessAgent:
 
             print(f"[ConsciousnessAgent] AI 호출 시작 (입력 {len(input_text)}자)")
 
-            # AI 호출 (도구 없이, 히스토리 없이 — 원샷)
-            response = self._provider.process_message(
-                message=input_text,
-                history=[],
-                images=None,
-                execute_tool=None
-            )
+            # AI 호출 (도구 없이, 히스토리 없이 — 원샷, 503 재시도)
+            import time as _time
+            response = ""
+            max_retries = 2
+            for attempt in range(max_retries + 1):
+                response = self._provider.process_message(
+                    message=input_text,
+                    history=[],
+                    images=None,
+                    execute_tool=None
+                )
+                if response and response.strip():
+                    break
+                if attempt < max_retries:
+                    wait_sec = 2 * (attempt + 1)
+                    print(f"[ConsciousnessAgent] 빈 응답 (503 등), {wait_sec}초 후 재시도 ({attempt + 1}/{max_retries})")
+                    _time.sleep(wait_sec)
 
             print(f"[ConsciousnessAgent] AI 응답 수신 ({len(response)}자)")
             print(f"[ConsciousnessAgent] 원본 응답:\n{response}")
@@ -251,68 +261,6 @@ class ConsciousnessAgent:
 
 
 # ============ 유틸리티 함수 ============
-
-def get_ibl_node_summary(allowed_nodes: list = None, user_message: str = "") -> str:
-    """IBL 노드/액션 요약 생성 — 의식 에이전트 입력용
-
-    모든 액션의 이름은 나열하되, 사용자 메시지와 관련된 액션만
-    implementation(구현 방식)을 포함합니다.
-    의식 에이전트는 이를 통해 관련 도구의 능력과 한계를 판단합니다.
-
-    관련 액션 탐색에 discover()를 사용하여 정교한 토큰 매칭,
-    조사 제거, verb 라우팅 등을 활용합니다.
-    """
-    from ibl_access import _load_nodes_data, resolve_allowed_nodes
-
-    nodes_data = _load_nodes_data()
-    if not nodes_data:
-        return ""
-
-    allowed = resolve_allowed_nodes(allowed_nodes)
-    nodes = nodes_data.get("nodes", {})
-
-    # 전체 노드/액션 목록 (항상 포함)
-    lines = []
-    for node_name, node_config in sorted(nodes.items()):
-        if allowed is not None and node_name not in allowed:
-            continue
-        actions = node_config.get("actions", {})
-        if not actions:
-            continue
-        desc = node_config.get("description", "")
-        action_names = list(actions.keys())
-        lines.append(f"{node_name} ({desc}): {', '.join(action_names)} [{len(action_names)}개]")
-
-    # 관련 액션의 implementation 상세 — discover() 활용
-    if user_message:
-        try:
-            from node_registry import discover
-
-            results = discover(user_message, limit=10, allowed_nodes=list(allowed) if allowed else None)
-            relevant = []
-            for result in results:
-                node_name = result["node"]
-                for detail in result.get("action_details", []):
-                    action_name = detail["action"]
-                    desc = detail.get("description", "")
-                    impl = detail.get("implementation", "")
-                    if impl:
-                        relevant.append(f"- [{node_name}:{action_name}]: {desc} | 구현: {impl}")
-                    else:
-                        # implementation이 없는 경우 ibl_nodes.yaml에서 직접 조회
-                        node_config = nodes.get(node_name, {})
-                        action_config = node_config.get("actions", {}).get(action_name, {})
-                        impl = action_config.get("implementation", "")
-                        if impl:
-                            relevant.append(f"- [{node_name}:{action_name}]: {desc} | 구현: {impl}")
-
-            if relevant:
-                lines.append(f"\n[관련 도구 구현 상세 ({len(relevant)}개)]")
-                lines.extend(relevant)
-        except Exception as e:
-            logger.warning(f"[get_ibl_node_summary] discover 호출 실패, 폴백 없음: {e}")
-
-    return "\n".join(lines)
 
 
 def get_guide_list(user_message: str = "") -> List[str]:

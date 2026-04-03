@@ -3,9 +3,9 @@
   "location": "Cheongju",
   "profile": {
     "name": "강국진",
-    "occupation": "물리학자, 작가, ",
+    "occupation": "물리학자, 작가",
     "interests": "AI OS 개발, 정치, 물리학, 철학",
-    "memo": "시스템에는 사용자가 작성해온 블로그 데이터를 볼 수 있는 기능이 있다. "
+    "memo": "시스템에는 사용자가 작성해온 블로그 데이터를 볼 수 있는 기능이 있다. \n사용자는 한국인 남성으로 1969년생이다. "
   },
   "economy": {
     "enabled": true,
@@ -51,63 +51,181 @@
     ],
     "excluded_actions": [
       "world_refresh",
-      "write", "delete", "local_save", "memory_save", "memory_delete",
-      "health_save", "todo_write", "send_notification",
-      "create", "delete_trigger", "run_pipeline", "delete_workflow",
-      "os_open", "play", "launch", "download",
-      "push_file", "send_text", "sms_send",
-      "delete_call_log", "delete_contact", "delete_messages", "delete_mms", "delete_sms",
-      "channel_send", "delegate_project", "ask_sync",
-      "newspaper", "slide", "html_video", "music", "remotion_video", "tts",
-      "render_video", "render_remotion", "slide_shadcn", "image_gemini", "render_html",
-      "web_site_register", "web_site_remove", "web_create_site", "web_create_page", "web_fetch_component",
+      "write",
+      "delete",
+      "local_save",
+      "memory_save",
+      "memory_delete",
+      "health_save",
+      "todo_write",
+      "send_notification",
+      "create",
+      "delete_trigger",
+      "run_pipeline",
+      "delete_workflow",
+      "os_open",
+      "play",
+      "launch",
+      "download",
+      "push_file",
+      "send_text",
+      "sms_send",
+      "delete_call_log",
+      "delete_contact",
+      "delete_messages",
+      "delete_mms",
+      "delete_sms",
+      "channel_send",
+      "delegate_project",
+      "ask_sync",
+      "newspaper",
+      "slide",
+      "html_video",
+      "music",
+      "remotion_video",
+      "tts",
+      "render_video",
+      "render_remotion",
+      "slide_shadcn",
+      "image_gemini",
+      "render_html",
+      "web_site_register",
+      "web_site_remove",
+      "web_create_site",
+      "web_create_page",
+      "web_fetch_component",
       "arch_create",
-      "browser_navigate", "browser_click", "browser_type", "browser_scroll",
-      "browser_chrome_connect", "browser_chrome_disconnect",
-      "android_install_app", "android_uninstall_app", "android_tap", "android_swipe", "android_input_text",
-      "rebuild_index", "blog_rebuild_index"
+      "browser_navigate",
+      "browser_click",
+      "browser_type",
+      "browser_scroll",
+      "browser_chrome_connect",
+      "browser_chrome_disconnect",
+      "android_install_app",
+      "android_uninstall_app",
+      "android_tap",
+      "android_swipe",
+      "android_input_text",
+      "rebuild_index",
+      "blog_rebuild_index",
+      "file",
+      "run",
+      "save_workflow",
+      "candlestick",
+      "open_project",
+      "open_system_ai",
+      "open_indienet",
+      "open_business",
+      "open_multichat",
+      "open_folder",
+      "schedule",
+      "goal_kill",
+      "log_attempt"
     ],
     "failure_alert_threshold": 3,
     "retention_days": 30,
     "test_params": {
-      "price": {"symbol": "005930"},
-      "stock_info": {"symbol": "삼성전자"},
-      "kr_company": {"corp_name": "삼성전자"},
-      "kr_financial": {"corp_name": "삼성전자"},
-      "kr_disclosure": {"corp_name": "삼성전자"},
-      "kr_investor": {"symbol": "STK"},
-      "us_quote": {"symbol": "AAPL"},
-      "us_metrics": {"symbol": "AAPL"},
-      "us_income": {"symbol": "AAPL"},
-      "us_balance": {"symbol": "AAPL"},
-      "us_cashflow": {"symbol": "AAPL"},
-      "apt_trade": {"region_code": "11110"},
-      "apt_rent": {"region_code": "11110"},
-      "nearby": {"lat": 36.6424, "lng": 127.4890},
-      "commercial": {"lat": 36.6424, "lng": 127.4890},
-      "video_info": {"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"},
-      "cctv_capture": {"url": "http://example.com"},
-      "search_ddg": {"query": "test"},
-      "search_news": {"query": "뉴스"},
-      "search_youtube": {"query": "test"},
-      "search_openalex": {"query": "AI"},
-      "search_shopping": {"query": "노트북"},
-      "search_kosis": {"query": "인구"},
-      "info": {"query": "인구"},
-      "pubmed": {"query": "cancer"},
-      "crawl": {"url": "https://example.com"},
-      "blog_search": {"query": "AI"},
-      "blog_content": {"post_id": "1"},
-      "memory_search": {"query": "test"},
-      "photo_search": {"query": "여행"},
-      "popular_books": {"count": 3},
-      "trending_books": {"count": 3},
-      "book_search": {"query": "인공지능"},
-      "book_by_isbn": {"isbn": "9791192107103"},
-      "performance_detail": {"performance_id": "PF12345"},
-      "integrated": {"query": "삼성전자"},
-      "price_target": {"symbol": "005930"},
-      "search_stock": {"query": "삼성전자"}
+      "price": {
+        "symbol": "005930"
+      },
+      "stock_info": {
+        "symbol": "005930"
+      },
+      "kr_company": {
+        "corp_name": "삼성전자"
+      },
+      "kr_financial": {
+        "corp_name": "삼성전자"
+      },
+      "kr_disclosure": {
+        "corp_name": "삼성전자"
+      },
+      "kr_investor": {
+        "symbol": "STK"
+      },
+      "us_financial": {
+        "symbol": "AAPL",
+        "statement_type": "income"
+      },
+      "apt_trade": {
+        "region_code": "11110",
+        "start_month": "202601"
+      },
+      "apt_rent": {
+        "region_code": "11110",
+        "start_month": "202601"
+      },
+      "nearby": {
+        "lat": 36.6424,
+        "lng": 127.489
+      },
+      "commercial": {
+        "lat": 36.6424,
+        "lng": 127.489
+      },
+      "video_info": {
+        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+      },
+      "cctv_capture": {
+        "name": "청주"
+      },
+      "search_ddg": {
+        "query": "test"
+      },
+      "search_news": {
+        "query": "뉴스"
+      },
+      "search_youtube": {
+        "query": "test"
+      },
+      "search_openalex": {
+        "query": "AI"
+      },
+      "search_shopping": {
+        "query": "노트북"
+      },
+      "search_kosis": {
+        "query": "인구"
+      },
+      "info": {
+        "query": "인구"
+      },
+      "search_pubmed": {
+        "query": "cancer"
+      },
+      "crawl": {
+        "url": "https://example.com"
+      },
+      "blog_search": {
+        "query": "AI"
+      },
+      "blog_content": {
+        "post_id": "1"
+      },
+      "memory_search": {
+        "query": "test"
+      },
+      "photo_search": {
+        "query": "여행"
+      },
+      "popular_books": {
+        "count": 3
+      },
+      "book_search": {
+        "query": "인공지능"
+      },
+      "book_by_isbn": {
+        "isbn": "9791192107103"
+      },
+      "performance": {
+        "query": "뮤지컬"
+      },
+      "integrated": {
+        "query": "삼성전자"
+      },
+      "search_stock": {
+        "query": "삼성전자"
+      }
     }
   },
   "goal_eval": {

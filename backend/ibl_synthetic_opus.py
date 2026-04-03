@@ -17,7 +17,7 @@ from typing import List, Dict, Tuple
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DB_PATH = PROJECT_ROOT / "data" / "ibl_usage.db"
-OUTPUT_PATH = PROJECT_ROOT / "data" / "ibl_synthetic_data.json"
+OUTPUT_PATH = PROJECT_ROOT / "data" / "training" / "ibl_synthetic_data.json"
 
 random.seed(42)
 

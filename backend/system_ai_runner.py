@@ -129,7 +129,8 @@ class SystemAIRunner:
 
         system_prompt = build_system_ai_prompt(
             user_profile=user_profile,
-            git_enabled=git_enabled
+            git_enabled=git_enabled,
+            model_name=ai_config.get("model", ""),
         )
 
         self.ai = AIAgent(

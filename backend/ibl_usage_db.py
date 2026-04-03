@@ -60,13 +60,13 @@ class IBLUsageDB:
     BlogHybridSearch와 동일한 패턴:
     - jhgan/ko-sroberta-multitask (768차원) 임베딩
     - sqlite-vec 벡터 검색 + FTS5 BM25 키워드 검색
-    - DEFAULT_ALPHA = 0.7 (70% Semantic + 30% BM25)
+    - DEFAULT_ALPHA = 1.0 (100% Semantic, BM25 폴백)
     """
 
     EMBEDDING_DIM = 768
     # 해마 (hippocampus): IBL 도메인 fine-tuned 모델 (Top-5 80.9%, 범용 대비 +28.3%p)
     EMBEDDING_MODEL = str(Path(__file__).parent.parent / 'data' / 'models' / 'ibl_embedding')
-    DEFAULT_ALPHA = 0.7
+    DEFAULT_ALPHA = 1.0
     BATCH_SIZE = 32
     INTENT_REPEAT = 3  # intent 가중치 (제목 반복과 동일)
 
@@ -465,389 +465,11 @@ class IBLUsageDB:
             ).fetchall()
             return [dict(row) for row in rows]
 
-    def promote_log_to_example(self, log_id: int, intent: str = None) -> Optional[int]:
-        """실행 로그를 용례로 승격"""
-        with self._get_connection() as conn:
-            row = conn.execute(
-                "SELECT * FROM ibl_execution_logs WHERE id = ?", (log_id,)
-            ).fetchone()
-            if not row:
-                return None
-
-        use_intent = intent or row['user_input'] or row['generated_ibl']
-        if not use_intent:
-            return None
-
-        # 노드 추출
-        nodes = row['node'] or ''
-
-        return self.add_example(
-            intent=use_intent,
-            ibl_code=row['generated_ibl'],
-            nodes=nodes,
-            category='single',
-            difficulty=1,
-            source='log',
-        )
-
-    def try_promote_session(self, user_input: str) -> bool:
-        """단일 세션의 성공 로그를 용례로 승격 시도
-
-        에이전트 대화 완료 후 호출하여 해당 세션의 로그만 승격.
-        auto_promote_logs()보다 가볍고 빠름.
-
-        Args:
-            user_input: 사용자 원본 메시지
-
-        Returns:
-            승격 성공 여부
-        """
-        if not user_input or len(user_input.strip()) < 6:
-            return False
-
-        user_input = user_input.strip()
-
-        # 이미 같은 intent 용례가 있으면 스킵
-        with self._get_connection() as conn:
-            existing = conn.execute(
-                "SELECT 1 FROM ibl_examples WHERE LOWER(intent) = LOWER(?) LIMIT 1",
-                (user_input,)
-            ).fetchone()
-            if existing:
-                return False
-
-            # 성공 로그 존재 확인
-            has_success = conn.execute(
-                "SELECT 1 FROM ibl_execution_logs WHERE user_input = ? AND success = 1 LIMIT 1",
-                (user_input,)
-            ).fetchone()
-            if not has_success:
-                return False
-
-        # IBL 코드 추출
-        ibl_code = self._extract_session_ibl(user_input)
-        if not ibl_code:
-            return False
-
-        # 과도하게 긴 세션은 용례 가치 없음 (오매칭 유발)
-        MAX_CODE_LEN = 500    # IBL 코드 최대 길이
-        MAX_PIPE_STEPS = 5    # 파이프라인 최대 스텝 수
-        pipe_count = ibl_code.count('>>')
-        if len(ibl_code) > MAX_CODE_LEN or pipe_count > MAX_PIPE_STEPS:
-            print(f"[IBL Auto] 승격 거부 (과대): len={len(ibl_code)}, pipes={pipe_count}, \"{user_input[:40]}\"")
-            return False
-
-        # 노드/카테고리 결정
-        with self._get_connection() as conn:
-            session_info = conn.execute("""
-                SELECT COUNT(*) as total,
-                       GROUP_CONCAT(DISTINCT node || ':' || action) as actions
-                FROM ibl_execution_logs
-                WHERE user_input = ? AND success = 1
-            """, (user_input,)).fetchone()
-
-        actions = session_info['actions'] or ''
-        nodes = ','.join(sorted(set(
-            a.split(':')[0] for a in actions.split(',')
-            if a and ':' in a and a.split(':')[0] not in ('tool',)
-        )))
-
-        call_count = session_info['total']
-        if call_count >= 3 or '>>' in ibl_code or '&' in ibl_code:
-            category = 'pipeline'
-        else:
-            category = 'single'
-
-        example_id = self.add_example(
-            intent=user_input,
-            ibl_code=ibl_code,
-            nodes=nodes,
-            category=category,
-            difficulty=min(call_count, 5),
-            source='auto_log',
-            tags='auto_promoted',
-        )
-
-        if example_id:
-            self._search_cache.clear()
-            print(f"[IBL Auto] 세션 승격: \"{user_input[:40]}\" → {ibl_code[:60]}")
-            return True
-
-        return False
-
-    def auto_promote_logs(self) -> Dict[str, Any]:
-        """성공한 실행 로그를 자동으로 용례로 승격 (전체 배치)
-
-        동일 user_input에 대한 성공 로그들을 세션으로 묶어
-        대표 IBL 코드를 추출하고 용례 DB에 추가.
-        이미 승격된 세션은 스킵 (중복 방지).
-
-        Returns:
-            {'promoted': 승격 수, 'skipped': 스킵 수, 'details': [...]}
-        """
-        promoted = 0
-        skipped = 0
-        details = []
-
-        with self._get_connection() as conn:
-            # 1. user_input별 성공 세션 집계
-            #    - user_input이 비어있지 않고
-            #    - 성공 로그가 있는 세션
-            sessions = conn.execute("""
-                SELECT user_input,
-                       COUNT(*) as total_calls,
-                       SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as success_calls,
-                       SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as fail_calls,
-                       GROUP_CONCAT(DISTINCT node || ':' || action) as actions,
-                       MIN(created_at) as first_at
-                FROM ibl_execution_logs
-                WHERE user_input != '' AND LENGTH(user_input) >= 6
-                GROUP BY user_input
-                HAVING success_calls >= 1
-                ORDER BY first_at DESC
-            """).fetchall()
-
-            if not sessions:
-                return {'promoted': 0, 'skipped': 0, 'details': []}
-
-            # 2. 기존 용례의 intent 집합 (중복 체크용)
-            existing_intents = set()
-            rows = conn.execute("SELECT intent FROM ibl_examples").fetchall()
-            for row in rows:
-                existing_intents.add(row['intent'].strip().lower())
-
-        for session in sessions:
-            user_input = session['user_input'].strip()
-            intent_key = user_input.lower()
-
-            # 이미 동일 intent로 용례가 존재하면 스킵
-            if intent_key in existing_intents:
-                skipped += 1
-                continue
-
-            # 3. 세션의 성공 로그에서 대표 IBL 코드 추출
-            ibl_code = self._extract_session_ibl(user_input)
-            if not ibl_code:
-                skipped += 1
-                continue
-
-            # 과도하게 긴 세션은 용례 가치 없음 (오매칭 유발)
-            pipe_count = ibl_code.count('>>')
-            if len(ibl_code) > 500 or pipe_count > 5:
-                skipped += 1
-                details.append({'input': user_input[:40], 'status': 'too_large',
-                                'code_len': len(ibl_code), 'pipes': pipe_count})
-                continue
-
-            # 4. 노드 목록 추출
-            actions = session['actions'] or ''
-            nodes = ','.join(sorted(set(
-                a.split(':')[0] for a in actions.split(',')
-                if a and ':' in a and a.split(':')[0] not in ('tool',)
-            )))
-
-            # 5. 카테고리 결정
-            call_count = session['success_calls']
-            if call_count >= 3:
-                category = 'pipeline'
-            elif '>>' in ibl_code or '&' in ibl_code:
-                category = 'pipeline'
-            else:
-                category = 'single'
-
-            # 6. 용례 추가
-            example_id = self.add_example(
-                intent=user_input,
-                ibl_code=ibl_code,
-                nodes=nodes,
-                category=category,
-                difficulty=min(call_count, 5),
-                source='auto_log',
-                tags='auto_promoted',
-            )
-
-            if example_id:
-                promoted += 1
-                existing_intents.add(intent_key)
-                details.append({
-                    'intent': user_input[:60],
-                    'ibl_code': ibl_code[:80],
-                    'category': category,
-                    'example_id': example_id,
-                })
-                print(f"[IBL Auto] 승격: \"{user_input[:40]}\" → {ibl_code[:60]}")
-
-        if promoted > 0:
-            # 캐시 무효화
-            self._search_cache.clear()
-
-        return {'promoted': promoted, 'skipped': skipped, 'details': details}
-
-    # action → 정석 node 역매핑 캐시
-    _action_to_node_cache: dict = None
-
-    @classmethod
-    def _get_action_to_node_map(cls) -> dict:
-        """ibl_nodes.yaml에서 action → node 역매핑 구축 (캐시)"""
-        if cls._action_to_node_cache is not None:
-            return cls._action_to_node_cache
-
-        import yaml
-        nodes_path = Path(__file__).parent.parent / "data" / "ibl_nodes.yaml"
-        result = {}
-        try:
-            data = yaml.safe_load(nodes_path.read_text(encoding="utf-8"))
-            for node_name, node_config in data.get("nodes", {}).items():
-                for action_name in node_config.get("actions", {}):
-                    result[action_name] = node_name
-        except Exception:
-            pass
-        cls._action_to_node_cache = result
-        return result
-
-    @classmethod
-    def _normalize_ibl_nodes(cls, ibl_code: str) -> str:
-        """IBL 코드에서 [ibl:action] → [정석node:action] 치환"""
-        import re
-        action_map = cls._get_action_to_node_map()
-
-        def _replace(m):
-            action = m.group(1)
-            proper_node = action_map.get(action, "self")
-            return f'[{proper_node}:{action}]'
-
-        return re.sub(r'\[ibl:(\w+)\]', _replace, ibl_code)
-
-    # 탐색/보조 액션 — 용례로서 가치 없음 (과정일 뿐, 결과가 아님)
-    _EXPLORATORY_ACTIONS = frozenset({
-        # 파일/디렉토리 탐색
-        'read', 'read_file', 'list', 'find', 'grep', 'list_projects',
-        # 시스템 메타 조회
-        'todo', 'snapshot', 'registry', 'read_guide', 'launch',
-        'agent_info', 'remotion_status', 'live_check', 'list_workflows',
-        # 범용 get (type 파라미터에 따라 다양한 조회)
-        'get',
-    })
-    # 탐색성 노드 (tool 노드 전체)
-    _EXPLORATORY_NODES = frozenset({'tool'})
-
-    def _extract_session_ibl(self, user_input: str) -> Optional[str]:
-        """세션(같은 user_input)의 성공 로그에서 대표 IBL 코드 추출
-
-        전략:
-        1. code 모드([ibl:?])로 파이프라인을 실행한 경우 → 길이 제한 후 사용
-        2. 개별 호출이면 → 탐색성 액션 제거 후 핵심 액션만 조합
-        """
-        with self._get_connection() as conn:
-            rows = conn.execute("""
-                SELECT generated_ibl, node, action, target, params_json
-                FROM ibl_execution_logs
-                WHERE user_input = ? AND success = 1
-                ORDER BY created_at
-            """, (user_input,)).fetchall()
-
-        if not rows:
-            return None
-
-        # code 모드 로그 찾기 (파이프라인 >> 또는 병렬 & 포함)
-        code_entries = []
-        individual_entries = []
-
-        for row in rows:
-            ibl = row['generated_ibl'] or ''
-            action = row['action'] or ''
-            node = row['node'] or ''
-            target = row['target'] or ''
-
-            if action == '?' and re.search(r'\[\w+:', ibl):
-                # execute_ibl code 모드 — 원본 IBL 코드 추출
-                inner = self._extract_inner_code(ibl)
-                if inner and len(inner) <= 500:
-                    code_entries.append(inner)
-            elif (node not in self._EXPLORATORY_NODES
-                  and node != ''
-                  and action not in ('?', '')
-                  and action not in self._EXPLORATORY_ACTIONS):
-                # 핵심 액션만 수집 (탐색성 제외)
-                params = {}
-                try:
-                    params = json.loads(row['params_json'] or '{}')
-                except Exception:
-                    pass
-                # [ibl:action] → [정석node:action] 치환
-                actual_node = node
-                if node == 'ibl':
-                    action_map = self._get_action_to_node_map()
-                    actual_node = action_map.get(action, 'self')
-                entry = f'[{actual_node}:{action}]'
-                # target: 절대경로는 축약, 긴 것은 잘라냄
-                if target:
-                    t = target
-                    if len(t) > 60:
-                        t = t[:57] + '...'
-                    entry += f'("{t}")'
-                if params:
-                    parts = []
-                    for k, v in params.items():
-                        if not v:
-                            continue
-                        if isinstance(v, list):
-                            parts.append(f'{k}: [...]')        # 배열 → 플레이스홀더
-                        elif isinstance(v, dict):
-                            parts.append(f'{k}: {{...}}')      # 딕셔너리 → 플레이스홀더
-                        elif len(str(v)) > 100:
-                            parts.append(f'{k}: "<{k}>"')      # 긴 문자열 → 타입 힌트
-                        else:
-                            parts.append(f'{k}: "{str(v)[:40]}"')
-                    param_str = ', '.join(parts)
-                    if param_str:
-                        entry += f' {{{param_str}}}'
-                individual_entries.append(entry)
-
-        # 우선순위: 파이프라인 코드 > 개별 호출 조합
-        if code_entries:
-            best = max(code_entries, key=len)
-            return best
-
-        if individual_entries:
-            # 중복 제거: 같은 [node:action] 시그니처는 마지막 호출만 유지
-            # (에이전트가 같은 액션을 파라미터 바꿔 재시도한 경우 최종 결과만)
-            import re
-            sig_pattern = re.compile(r'^\[[\w]+:[\w]+\]')
-            last_by_sig = {}  # signature → (index, entry)
-            for i, e in enumerate(individual_entries):
-                m = sig_pattern.match(e)
-                sig = m.group(0) if m else e
-                last_by_sig[sig] = (i, e)
-            # 원래 순서 유지하되 마지막 호출만
-            unique = [entry for _, entry in sorted(last_by_sig.values())]
-            if not unique:
-                return None
-            if len(unique) > 5:
-                # 핵심만 남겨도 5개 초과면 포기
-                return None
-            if len(unique) == 1:
-                return unique[0]
-            return ' >> '.join(unique)
-
-        return None
-
-    def _extract_inner_code(self, ibl_str: str) -> Optional[str]:
-        """[ibl:?]("...코드...") 에서 내부 IBL 코드 추출"""
-        import re
-        # [ibl:?](" 이후의 내용 추출 (또는 [sense:?] 등)
-        m = re.match(r'\[\w+:\?\]\("', ibl_str)
-        if m:
-            inner = ibl_str[m.end():]
-            # 끝의 ")가 있으면 제거
-            if inner.endswith('")'):
-                inner = inner[:-2]
-            # 노드 참조가 있는 유효한 IBL 코드인지 확인
-            if re.search(r'\[\w+:', inner):
-                # [ibl:action] → [정석node:action] 치환
-                inner = self._normalize_ibl_nodes(inner)
-                return inner
-        return None
+    # =========================================================================
+    # 구 승격 시스템 제거됨 — 경험 증류(ibl_usage_rag.distill_experience)로 대체
+    # promote_log_to_example, try_promote_session, auto_promote_logs,
+    # _extract_session_ibl, _extract_inner_code 등은 삭제됨
+    # =========================================================================
 
     # =========================================================================
     # 인덱싱
@@ -1082,24 +704,23 @@ class IBLUsageDB:
         use_semantic = self.is_semantic_available() and alpha > 0
 
         semantic_results = self.search_semantic(query, over_fetch) if use_semantic else []
-        fts5_results = self.search_fts5(query, over_fetch)
 
-        if not semantic_results and not fts5_results:
-            return []
-
-        if not semantic_results:
-            effective_alpha = 0.0
-        elif not fts5_results:
-            effective_alpha = 1.0
-        else:
-            effective_alpha = alpha
-
-        if effective_alpha == 0.0:
-            scored = list(fts5_results)
-        elif effective_alpha == 1.0:
+        if semantic_results and alpha >= 1.0:
+            # 시맨틱 100%: BM25 호출 생략
             scored = list(semantic_results)
         else:
-            scored = self._combine_scores(semantic_results, fts5_results, effective_alpha)
+            # 시맨틱 실패 시 BM25 폴백, 또는 하이브리드 모드
+            fts5_results = self.search_fts5(query, over_fetch)
+
+            if not semantic_results and not fts5_results:
+                return []
+
+            if not semantic_results:
+                scored = list(fts5_results)
+            elif not fts5_results:
+                scored = list(semantic_results)
+            else:
+                scored = self._combine_scores(semantic_results, fts5_results, alpha)
 
         # 메타데이터 조회
         all_ids = [idx for idx, _ in scored]

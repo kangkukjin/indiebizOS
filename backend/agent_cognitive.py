@@ -158,7 +158,7 @@ class AgentCognitiveMixin:
         )
 
     def _build_execution_memory(self, user_message: str) -> str:
-        """실행기억 생성 — RAG + discover + implementation
+        """연상기억 생성 — 실행기억(해마) + 관련기억(심층 메모리)
 
         파이프라인의 모든 에이전트(무의식/의식/실행/평가)가 공유하는 통합 기억.
         사용자 명령 당 1회만 생성.
@@ -171,13 +171,88 @@ class AgentCognitiveMixin:
                 from ibl_access import resolve_allowed_nodes
                 allowed_set = resolve_allowed_nodes(allowed_nodes)
             result = build_execution_memory(user_message, allowed_set)
-            if not result:
-                print(f"[실행기억] 빈 결과: \"{user_message[:40]}\"")
+
+            # 심층 메모리에서 관련기억 검색 → 연상기억 합성
+            related = self._search_related_memory(user_message)
+            if related:
+                result = (result + "\n" + related) if result else related
+
+            if result:
+                has_exec = "execution_memory" in result
+                has_rel = "related_memory" in result
+                parts = []
+                if has_exec:
+                    parts.append("실행기억")
+                if has_rel:
+                    parts.append("관련기억")
+                print(f"[연상] {'+'.join(parts)}: \"{user_message[:40]}\"")
+            else:
+                print(f"[연상] 빈 결과: \"{user_message[:40]}\"")
+
             return result
         except Exception as e:
             import traceback
-            print(f"[실행기억] 생성 실패: {e}")
+            print(f"[연상] 생성 실패: {e}")
             traceback.print_exc()
+            return ""
+
+    def _search_related_memory(self, user_message: str) -> str:
+        """심층 메모리에서 관련기억 검색 (top-3)
+
+        사용자 메시지를 키워드로 심층 메모리를 검색하여
+        <related_memory> XML 블록으로 반환한다.
+        """
+        try:
+            import sys
+            import os
+            # memory_db 패키지 경로 추가
+            mem_pkg = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "..",
+                "data", "packages", "installed", "tools", "memory"
+            )
+            if mem_pkg not in sys.path:
+                sys.path.insert(0, mem_pkg)
+            import memory_db
+
+            from thread_context import get_current_agent_id
+            agent_id = get_current_agent_id()
+            project_path = str(self.project_path)
+
+            results = memory_db.search(
+                project_path=project_path,
+                agent_id=agent_id,
+                query=user_message,
+                limit=3,
+            )
+            if not results:
+                return ""
+
+            # 전문 조회 (preview는 100자 잘림이므로)
+            items = []
+            for r in results:
+                full = memory_db.read(project_path, agent_id, r["id"])
+                if full:
+                    cat = full.get("category", "")
+                    kw = full.get("keywords", "")
+                    content = full.get("content", "")
+                    meta = f' category="{cat}"' if cat else ""
+                    meta += f' keywords="{kw}"' if kw else ""
+                    items.append(f"  <memory{meta}>{content}</memory>")
+
+            if not items:
+                return ""
+
+            xml = (
+                '<related_memory note="심층 메모리에서 연상된 관련 기억입니다. 참고용.">\n'
+                + "\n".join(items)
+                + "\n</related_memory>"
+            )
+            print(f"[연상:관련기억] {len(items)}건 검색됨: \"{user_message[:40]}\"")
+            print(f"[연상:관련기억] 내용:\n{xml}")
+            return xml
+
+        except Exception as e:
+            print(f"[연상:관련기억] 검색 실패 (무시): {e}")
             return ""
 
     def _run_consciousness(self, user_message: str, history: list,
@@ -231,6 +306,134 @@ class AgentCognitiveMixin:
         except Exception as e:
             self._log(f"[의식] 실행 실패 (폴백): {e}")
             return None
+
+    def _distill_deep_memory(self, user_message: str, ai_response: str):
+        """대화 후 심층 메모리 자동 저장.
+
+        경량 AI로 대화에서 기억할 정보 조각을 추출하고,
+        기존 심층 메모리와 비교하여 추가/업데이트한다.
+        """
+        try:
+            if not user_message or not ai_response:
+                return
+
+            import sys, os, json
+            mem_pkg = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "..",
+                "data", "packages", "installed", "tools", "memory"
+            )
+            if mem_pkg not in sys.path:
+                sys.path.insert(0, mem_pkg)
+            import memory_db
+
+            from thread_context import get_current_agent_id
+            from consciousness_agent import lightweight_ai_call
+
+            agent_id = get_current_agent_id()
+            project_path = str(self.project_path)
+
+            # 1단계: 대화에서 기억할 정보 조각 추출
+            extract_prompt = f"""다음 대화에서 나중에 기억해둘 만한 사실 정보를 추출하라.
+(이름, 날짜, 수치, 선호, 결정사항, 환경 정보 등)
+추론이나 감상은 제외. JSON 배열로만 응답.
+[{{"content": "...", "keywords": "k1,k2", "category": "사용자선호|환경정보|작업기록|의사결정"}}]
+정보가 없으면 빈 배열 [] 반환.
+
+사용자: {user_message[:500]}
+AI: {ai_response[:500]}"""
+
+            result = lightweight_ai_call(
+                prompt=extract_prompt,
+                system_prompt="사실 정보만 추출하라. JSON 배열로만 응답."
+            )
+            if not result:
+                return
+
+            # JSON 파싱
+            cleaned = result.strip()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.split("\n", 1)[-1]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3]
+                cleaned = cleaned.strip()
+
+            facts = json.loads(cleaned)
+            if not isinstance(facts, list) or not facts:
+                return
+
+            saved_count = 0
+            updated_count = 0
+
+            for fact in facts[:5]:  # 최대 5개 조각
+                content = fact.get("content", "").strip()
+                keywords = fact.get("keywords", "").strip()
+                category = fact.get("category", "").strip()
+                if not content:
+                    continue
+
+                # 2단계: 기존 심층 메모리에서 유사 항목 검색
+                existing = memory_db.search(
+                    project_path=project_path,
+                    agent_id=agent_id,
+                    query=keywords or content,
+                    limit=3,
+                )
+
+                if existing:
+                    # 유사 항목 있음 → 경량 AI로 중복 판단
+                    # 가장 유사한 항목의 전문 조회
+                    top = memory_db.read(project_path, agent_id, existing[0]["id"])
+                    if top:
+                        dedup_prompt = (
+                            f"기존 기억: {top['content'][:200]}\n"
+                            f"새 정보: {content[:200]}\n"
+                            "SAME(동일) / UPDATE(보충수정) / NEW(다른정보) 중 하나만 답하라."
+                        )
+                        judgment = lightweight_ai_call(
+                            prompt=dedup_prompt,
+                            system_prompt="SAME, UPDATE, NEW 중 하나만 답하라."
+                        )
+                        if judgment:
+                            j = judgment.strip().upper()
+                            if "SAME" in j:
+                                # 동일 → used_at만 갱신
+                                memory_db.update(project_path, agent_id, top["id"])
+                                print(f"[연상:증류] SAME 스킵: \"{content[:50]}\"")
+                                continue
+                            elif "UPDATE" in j:
+                                # 보충 → 기존 항목 업데이트
+                                merged = f"{top['content']}\n[보충] {content}"
+                                merged_kw = top.get("keywords", "")
+                                if keywords:
+                                    merged_kw = f"{merged_kw},{keywords}" if merged_kw else keywords
+                                memory_db.update(
+                                    project_path, agent_id, top["id"],
+                                    content=merged, keywords=merged_kw,
+                                )
+                                updated_count += 1
+                                print(f"[연상:증류] UPDATE: \"{content[:50]}\" → 기존 ID {top['id']}")
+                                continue
+                            # NEW → 아래에서 새로 저장
+
+                # 유사 항목 없음 또는 NEW → 새로 저장
+                memory_db.save(
+                    project_path=project_path,
+                    agent_id=agent_id,
+                    content=content,
+                    keywords=keywords,
+                    category=category,
+                )
+                saved_count += 1
+                print(f"[연상:증류] NEW [{category}]: \"{content[:50]}\" (kw: {keywords})")
+
+            if saved_count or updated_count:
+                print(f"[연상:증류] 저장 {saved_count}건, 업데이트 {updated_count}건: "
+                      f"\"{user_message[:40]}\"")
+
+        except json.JSONDecodeError:
+            print(f"[연상:증류] JSON 파싱 실패 (무시)")
+        except Exception as e:
+            print(f"[연상:증류] 실패 (무시): {e}")
 
     def _apply_consciousness_to_history(self, history: list, consciousness_output: dict) -> list:
         """의식 에이전트의 판단에 따라 히스토리를 편집합니다.
@@ -526,13 +729,19 @@ class AgentCognitiveMixin:
 
     @classmethod
     def _load_evaluator_prompt(cls) -> str:
-        """평가 에이전트 프롬프트 파일을 로드한다 (캐시)."""
+        """평가 에이전트 프롬프트 파일을 로드한다 (캐시). 시스템 구조 문서 포함."""
         if not cls._evaluator_prompt_cache:
-            prompt_path = Path(__file__).parent.parent / "data" / "common_prompts" / "evaluator_prompt.md"
+            base = Path(__file__).parent.parent / "data"
+            prompt_path = base / "common_prompts" / "evaluator_prompt.md"
             try:
                 cls._evaluator_prompt_cache = prompt_path.read_text(encoding='utf-8')
             except FileNotFoundError:
                 cls._evaluator_prompt_cache = "달성 기준의 모든 항목을 엄격히 평가하라."
+            # 시스템 구조 문서 항상 주입
+            structure_path = base / "system_docs" / "system_structure.md"
+            if structure_path.exists():
+                structure = structure_path.read_text(encoding='utf-8')
+                cls._evaluator_prompt_cache += f"\n\n<system_structure>\n{structure}\n</system_structure>"
         return cls._evaluator_prompt_cache
 
     def _evaluate_achievement(self, user_message: str, criteria: str,

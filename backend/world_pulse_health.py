@@ -198,6 +198,7 @@ safe: false로 분류 (테스트하면 안 되는 것):
 - GUI 창을 여는 액션 (open_project, open_system_ai, open_indienet, open_business, open_multichat, open_folder, os_open, launch 등)
 - 재생/정지 액션 (play, stop, play_radio, stop_radio 등)
 - android/adb 그룹 액션 (하드웨어 의존)
+- photo 그룹 액션 (외장하드 의존 — photo_gallery, photo_timeline, photo_duplicates, photo_stats, gallery, timeline 등)
 - 브라우저 조작 (click, type, navigate, scroll, screenshot 등)
 - 파일 변경 (write, file, save, move, copy, delete, rebuild_index 등)
 - 스케줄/워크플로우 변경 (schedule, save_workflow, create, delete_trigger 등)
@@ -409,6 +410,8 @@ def _get_safe_actions() -> List[Dict]:
         "send_text", "sms_send", "channel_send", "delegate_project", "ask_sync",
         "download", "push_file", "upload",
         "scan_photos", "scan_storage", "cctv_refresh",
+        "photo_gallery", "photo_timeline", "photo_duplicates", "photo_stats",
+        "photo_list_scans", "photo_manager", "gallery", "timeline", "list_scans",
         "browser_navigate", "browser_click", "browser_type", "browser_scroll",
         "browser_screenshot", "browser_resize", "browser_tab_new",
         "browser_cookies_save", "browser_cookies_load",
@@ -1028,6 +1031,7 @@ def trigger_ai_health_check():
         "slide", "video", "image", "tts", "newspaper", "render", "export",
         "schedule", "kill", "log_attempt", "rebuild", "scan", "refresh",
         "register", "unregister", "add_component", "snapshot",
+        "photo", "gallery", "duplicates",
     }
 
     def _is_safe_for_test(action_name: str) -> bool:

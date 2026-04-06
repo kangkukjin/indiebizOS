@@ -55,6 +55,19 @@ class PromptBuilder:
             return content
         return ""
 
+    def _load_system_doc(self, filename: str) -> str:
+        """data/system_docs/ 폴더에서 시스템 문서 로드 (캐시 사용)"""
+        cache_key = f"__sysdoc__{filename}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
+        doc_path = get_base_path() / "data" / "system_docs" / filename
+        if doc_path.exists():
+            content = doc_path.read_text(encoding='utf-8')
+            self._cache[cache_key] = content
+            return content
+        return ""
+
     def _load_guide_file(self, guide_filename: str) -> str:
         """data/guides/ 폴더에서 가이드 파일 로드 (캐시 사용)"""
         cache_key = f"__guide__{guide_filename}"
@@ -169,6 +182,11 @@ class PromptBuilder:
         base = self._load_file("base_prompt_v5.md")
         if base:
             parts.append(base)
+
+        # 1.5. 시스템 구조 문서 (항상 포함 — 파일 위치, 아키텍처, 패키지 목록 등)
+        sys_structure = self._load_system_doc("system_structure.md")
+        if sys_structure:
+            parts.append(f"<system_structure>\n{sys_structure}\n</system_structure>")
 
         # 2. Git 프롬프트 (조건부)
         if git_enabled:

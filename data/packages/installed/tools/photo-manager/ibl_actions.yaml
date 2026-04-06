@@ -52,18 +52,6 @@ nodes:
         - 사진
         - 동영상
         - 앨범
-      duplicates:
-        description: 중복 사진/동영상 탐지 (MD5 기반)
-        group: photo
-        category: search
-        router: handler
-        tool: find_duplicates
-        implementation: MD5 해시 기반 중복 파일 탐지 (파일시스템 스캔)
-        target_key: path
-        keywords:
-        - 중복
-        - 사진
-        - 정리
       photo_manager:
         description: Photo Manager GUI 실행
         group: photo

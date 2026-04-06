@@ -66,12 +66,19 @@ class ConsciousnessAgent:
         """의식 에이전트 전용 프롬프트 로드 (베이스 프롬프트 불필요 — 도구를 쓰지 않고 JSON만 출력)"""
         from runtime_utils import get_base_path
 
-        role_path = get_base_path() / "data" / "common_prompts" / "consciousness_prompt.md"
+        base_path = get_base_path()
+        role_path = base_path / "data" / "common_prompts" / "consciousness_prompt.md"
         if role_path.exists():
             self._prompt = role_path.read_text(encoding='utf-8')
         else:
             logger.warning(f"[ConsciousnessAgent] 프롬프트 파일 없음: {role_path}")
             self._prompt = self._default_prompt()
+
+        # 시스템 구조 문서 항상 주입
+        structure_path = base_path / "data" / "system_docs" / "system_structure.md"
+        if structure_path.exists():
+            structure = structure_path.read_text(encoding='utf-8')
+            self._prompt += f"\n\n<system_structure>\n{structure}\n</system_structure>"
 
     def _default_prompt(self) -> str:
         """기본 프롬프트 (파일이 없을 때 폴백)"""

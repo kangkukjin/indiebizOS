@@ -21,7 +21,8 @@
 ## 시스템 문서 (System AI 참조)
 - **경로**: `/Users/kangkukjin/Desktop/AI/indiebizOS/data/system_docs/`
 - 시스템 AI가 장기 기억으로 참조하는 문서들
-- **파일 목록** (10개):
+- **파일 목록** (11개):
+  - `system_structure.md` - 시스템 구조 가이드 (**항상 프롬프트에 포함** — 의식/실행/평가 에이전트)
   - `architecture.md` - 시스템 개요, 아키텍처, 설계 의도 (overview.md 통합)
   - `technical.md` - 기술 문서 (API, 설정, 경로)
   - `ibl.md` - IBL 명세 (phase26, ibl_development_plan 통합)
@@ -161,8 +162,8 @@ indiebizOS/
 │   ├── ibl_nodes.yaml   # IBL 전체 노드/액션 레지스트리
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
-│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 10개 파일)
-│   ├── guides/          # 가이드 파일 (33개)
+│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 11개 파일 — system_structure.md는 항상 프롬프트에 포함)
+│   ├── guides/          # 가이드 파일 (35개, read_guide로 온디맨드 로드)
 │   ├── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
 │   └── my_profile.txt   # 사용자 프로필
 │
@@ -445,4 +446,4 @@ npm run electron:build:win  # Windows
 
 ---
 
-*마지막 업데이트: 2026-04-04*
+*마지막 업데이트: 2026-04-06*

@@ -187,7 +187,7 @@
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["search", "get", "timeline", "stats", "list_scans", "scan", "gallery", "duplicates", "manager"],
+            "enum": ["search", "get", "timeline", "stats", "list_scans", "scan", "gallery", "manager"],
             "description": "실행할 액션"
           },
           "target": {

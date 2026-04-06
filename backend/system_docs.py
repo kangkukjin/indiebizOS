@@ -3,11 +3,16 @@ system_docs.py - 시스템 문서 관리
 IndieBiz OS Core
 
 시스템 문서 계층 구조:
-1. overview.md - 시스템 개요 및 사용자 안내 (항상 간략히 참조)
-2. architecture.md - 시스템 구조 및 설계 의도
-3. inventory.md - 설치된 것들 (프로젝트, 에이전트, 도구)
-4. technical.md - 기술 상세 (API, 설정, 경로 등)
-5. packages.md - 패키지 설치/제거 및 개발 가이드
+1. architecture.md - 시스템 개요, 구조, 설계 의도 (overview.md 통합)
+2. technical.md - 기술 상세 (API, 설정, 경로 등)
+3. ibl.md - IBL 명세 (phase26, ibl_development_plan 통합)
+4. execution_memory.md - 실행기억 & 해마
+5. packages.md - 패키지 시스템 (guide_file.md 통합)
+6. inventory.md - 프로젝트/패키지 현황 (자동 생성)
+7. communication.md - 통신/연동 (auto_response.md 통합)
+8. delegation.md - 위임 체인 시스템
+9. scheduler_guide.md - 스케줄러 가이드
+10. remote_access.md - 원격 접속 가이드
 
 시스템 AI는 필요할 때 해당 문서를 읽어서 참조합니다.
 패키지 설치/제거 시에는 반드시 packages.md를 먼저 읽어야 합니다.

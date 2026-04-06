@@ -4,6 +4,11 @@
 
 ## 현재 지원하는 API
 
+### Project Gutenberg (Gutendex)
+- 저작권이 만료된 고전문학 및 도서 검색
+- 원문 텍스트 및 HTML 다운로드 링크 제공
+
+
 ### KOPIS (공연예술통합전산망)
 - 연극, 뮤지컬, 클래식, 국악, 콘서트 등 공연 정보
 - 예매 순위(박스오피스)
@@ -21,6 +26,18 @@
    ```
 
 ## 도구 목록
+
+### gutenberg_search
+Project Gutenberg에서 고전 문학 및 도서의 메타데이터와 원문 텍스트 링크를 검색합니다.
+
+```python
+# 오만과 편견 검색
+gutenberg_search(query="pride and prejudice")
+
+# 특정 저자의 책 검색
+gutenberg_search(query="shakespeare", languages="en")
+```
+
 
 ### kopis_quick_search
 공연을 키워드로 빠르게 검색합니다.

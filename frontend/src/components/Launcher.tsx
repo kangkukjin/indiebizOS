@@ -862,6 +862,16 @@ export function Launcher() {
         <div className="flex items-center gap-1 no-drag">
           <button
             onClick={() => {
+              window.electron?.openExternal('http://127.0.0.1:8765/xray/app');
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
+            title="System X-Ray"
+          >
+            <ScanLine size={16} />
+            <span className="text-sm">X-Ray</span>
+          </button>
+          <button
+            onClick={() => {
               if (window.electron?.openIndieNetWindow) {
                 window.electron.openIndieNetWindow();
               } else {
@@ -962,16 +972,6 @@ export function Launcher() {
                 >
                   <ScrollText size={16} />
                   <span className="text-sm">로그 보기</span>
-                </button>
-                <button
-                  onClick={() => {
-                    window.electron?.openExternal('http://127.0.0.1:8765/xray/app');
-                    setShowMainMenu(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
-                >
-                  <ScanLine size={16} />
-                  <span className="text-sm">System X-Ray</span>
                 </button>
                 <div className="border-t border-gray-200 my-1" />
                 <button

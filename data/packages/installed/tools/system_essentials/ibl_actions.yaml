@@ -9,7 +9,8 @@ actions:
     description: 파일 읽기 (offset/limit으로 부분 읽기 가능)
     router: handler
     tool: read_file
-    implementation: Python 파일 I/O로 로컬 파일 읽기. offset(시작 줄, 0부터)과 limit(줄 수)로 대용량 파일을 부분적으로 읽을 수 있다.
+    implementation: Python 파일 I/O로 로컬 파일 읽기. offset(시작 줄, 0부터)과 limit(줄 수)로 대용량 파일을
+      부분적으로 읽을 수 있다.
     target_key: path
   write:
     description: 파일 쓰기
@@ -25,14 +26,24 @@ actions:
     target_key: path
   find:
     description: 파일 검색 (glob 패턴)
-    keywords: [파일, 찾기, 검색, find, search, 파일찾기]
+    keywords:
+    - 파일
+    - 찾기
+    - 검색
+    - find
+    - search
+    - 파일찾기
     router: handler
     tool: glob_files
     implementation: pathlib.glob으로 패턴 기반 파일 검색
     target_key: pattern
   grep:
     description: 파일 내용 검색
-    keywords: [검색, 내용검색, grep, 코드검색]
+    keywords:
+    - 검색
+    - 내용검색
+    - grep
+    - 코드검색
     router: handler
     tool: grep_files
     implementation: subprocess로 grep/ripgrep 실행하여 파일 내용 검색

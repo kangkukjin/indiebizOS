@@ -92,6 +92,30 @@
       }
     },
     {
+      "name": "summarize_video",
+      "description": "유튜브 동영상 자막 추출 + AI 요약 + HTML 보고서 생성 + 브라우저 자동 열기를 한 번에 수행합니다. 영상의 핵심 내용을 빠르고 시각적으로 파악하고 싶을 때 사용.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "YouTube URL"
+          },
+          "summary_length": {
+            "type": "integer",
+            "description": "요약 길이 (자). 기본 3000자"
+          },
+          "language": {
+            "type": "string",
+            "description": "선호 자막 언어 (예: 'ko', 'en')"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      }
+    },
+    {
       "name": "search_youtube",
       "description": "유튜브 검색 (재생하지 않고 결과 목록만 반환). 검색어로 영상을 찾고 video_id, title, channel, duration, url 정보를 포함한 결과 목록을 반환합니다. 재생/다운로드/자막추출 전에 원하는 영상을 먼저 찾을 때 사용.",
       "input_schema": {

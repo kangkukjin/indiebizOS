@@ -91,7 +91,13 @@ def _get_path(tool_input: dict) -> str:
 def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
     try:
         if tool_name == "read_file":
-            path = os.path.join(project_path, _get_path(tool_input))
+            raw_path = _get_path(tool_input)
+            # system_docs/ 경로는 어떤 프로젝트에서든 data/system_docs/로 매핑
+            if raw_path.startswith("system_docs/") and not os.path.isabs(raw_path):
+                from runtime_utils import get_base_path
+                path = str(get_base_path() / "data" / raw_path)
+            else:
+                path = os.path.join(project_path, raw_path)
             offset = tool_input.get("offset", 0) or 0
             limit = tool_input.get("limit")
             file_size = os.path.getsize(path)

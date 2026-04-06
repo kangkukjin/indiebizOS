@@ -1,0 +1,20 @@
+node: sense
+actions:
+  search_library_docs:
+    description: 라이브러리/프레임워크 최신 공식 문서 검색 (코드 작성 시 정확한 API 참조용)
+    target_description: 알고 싶은 내용
+    router: handler
+    tool: search_library_docs
+    implementation: Context7 REST API로 최신 공식 문서 검색 및 반환
+    target_key: query
+    postprocess:
+      type: compress
+  resolve_library:
+    description: 라이브러리 이름으로 Context7 ID 조회
+    target_description: 라이브러리 이름
+    router: handler
+    tool: resolve_library
+    implementation: Context7 REST API로 라이브러리 ID 검색
+    target_key: library_name
+guides:
+- context7/context7_guide.md

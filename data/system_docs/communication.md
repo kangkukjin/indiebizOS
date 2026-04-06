@@ -117,8 +117,6 @@ OWNER_NOSTR_PUBKEYS=npub1xxx...,npub1yyy...
 
 ## 자동응답 시스템 V3 (Tool Use 통합)
 
-→ 상세 문서: [auto_response.md](auto_response.md)
-
 ### 지원 프로바이더
 자동응답은 시스템 AI의 API 설정을 공유하며, 다음 프로바이더를 지원합니다:
 - **Anthropic** (Claude)
@@ -159,6 +157,22 @@ V3에서는 판단과 응답을 한 번의 AI 호출로 처리합니다 (Tool Us
 | `no_response_needed` | 응답 불필요 시 (스팸, 광고, 개인적 대화) |
 | `send_response` | 응답 메시지를 발신자에게 즉시 전송 |
 
+### 메시지 유형별 처리
+
+| 메시지 유형 | AI 동작 |
+|------------|--------|
+| 비즈니스 문의 | `search_business_items` → `send_response` |
+| 공식적 인사/감사 | `send_response` (검색 없이) |
+| 개인적 대화/잡담 | `no_response_needed` |
+| 스팸/광고 | `no_response_needed` |
+
+### send_response 실행 흐름
+
+1. 메시지 컨텍스트에서 발신자 정보 조회
+2. Channel Poller의 `_send_response()` 호출하여 즉시 발송
+3. DB에 발송 기록 저장 (`status='sent'`)
+4. 원본 메시지 `replied=1`로 업데이트
+
 ### V2 → V3 변경사항
 
 | 항목 | V2 (이전) | V3 (현재) |
@@ -166,6 +180,7 @@ V3에서는 판단과 응답을 한 번의 AI 호출로 처리합니다 (Tool Us
 | AI 호출 횟수 | 2회 (판단 + 응답) | 1회 (Tool Use) |
 | 판단 로직 | 별도 ai_judgment.py | auto_response.py에 통합 |
 | 응답 발송 | pending → polling → 발송 | send_response 도구로 즉시 발송 |
+| 관련 파일 | ai_judgment.py, response_generator.py | auto_response.py 통합 |
 
 ---
 
@@ -362,4 +377,4 @@ agents:
 4. **Nostr 키 관리**: nsec는 채널 설정 또는 IndieNet에서 관리
 
 ---
-*마지막 업데이트: 2026-03-27*
+*마지막 업데이트: 2026-04-05 (auto_response.md 통합)*

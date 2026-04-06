@@ -35,7 +35,7 @@ def _route_api_engine(action: str, params: dict, project_path: str,
         return api_execute(mapped_tool, dict(params), project_path)
 
     # 2) 범용 api_engine 액션
-    if action == "list":
+    if action in ("list", "list_api"):
         tools = list_registry_tools()
         return {"node": "api", "action": "list", "tools": tools, "count": len(tools)}
 
@@ -213,6 +213,11 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         from world_pulse import execute_world_pulse
         action_name = func_name  # world_pulse, world_trend, world_refresh
         return execute_world_pulse(action_name, dict(params))
+
+    # 자가점검: 전수 IBL 액션 면역 순찰
+    elif func_name == "self_check":
+        from world_pulse_health import run_self_check
+        return run_self_check()
 
     # Phase 26: Goal 프로세스 관리
     elif func_name == "list_goals":
@@ -488,7 +493,10 @@ execute_ibl(node="system", action="run_pipeline", params={{"steps": {steps_json}
 def _agent_ask(agent_id: str, params: dict, project_path: str) -> Any:
     """에이전트에게 질문/위임 [others:delegate]{agent_id: "투자/투자컨설팅"} (Phase 11)"""
     if not agent_id:
-        return {"error": "agent_id가 필요합니다."}
+        return {"error": "agent_id(문자열)가 필요합니다. 예: \"대장장이\" 또는 \"컨텐츠/대장장이\" 형식"}
+
+    if isinstance(agent_id, (int, float)):
+        agent_id = str(int(agent_id))
 
     # "프로젝트/에이전트이름" 파싱
     parts = agent_id.split("/", 1)
@@ -500,7 +508,7 @@ def _agent_ask(agent_id: str, params: dict, project_path: str) -> Any:
 
     message = params.get("message", params.get("query", ""))
     if not message:
-        return {"error": "params.message가 필요합니다."}
+        return {"error": "message 파라미터가 필요합니다. 예: {agent_id: \"대장장이\", message: \"이것 좀 해줘\"}"}
 
     from system_tools import execute_call_agent
     env_path = os.environ.get("INDIEBIZ_BASE_PATH")
@@ -519,7 +527,11 @@ def _agent_ask_sync(agent_id: str, params: dict, project_path: str) -> Any:
     파이프라인: [self:blog_search]{query: "AI"} >> [others:ask_sync]{agent_id: "컨텐츠/컨텐츠", message: "요약해줘"}
     """
     if not agent_id:
-        return {"error": "agent_id가 필요합니다."}
+        return {"error": "agent_id(문자열)가 필요합니다. 예: \"대장장이\" 또는 \"컨텐츠/대장장이\" 형식"}
+
+    # agent_id가 숫자로 들어온 경우 문자열로 변환
+    if isinstance(agent_id, (int, float)):
+        agent_id = str(int(agent_id))
 
     # "프로젝트/에이전트이름" 파싱
     parts_split = agent_id.split("/", 1)
@@ -531,7 +543,7 @@ def _agent_ask_sync(agent_id: str, params: dict, project_path: str) -> Any:
 
     message = params.get("message", params.get("query", ""))
     if not message:
-        return {"error": "params.message가 필요합니다."}
+        return {"error": "message 파라미터가 필요합니다. 예: {agent_id: \"대장장이\", message: \"이것 좀 분석해줘\"}"}
 
     # _prev_result가 있으면 message에 첨부
     prev = params.get("_prev_result", "")

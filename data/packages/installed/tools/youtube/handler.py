@@ -72,7 +72,7 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
             else:
                 return {"error": "url 또는 video_id 파라미터가 필요합니다."}
         return tool_youtube.list_available_transcripts(url=url)
-    elif tool_name == 'summarize_youtube':
+    elif tool_name == 'summarize_video':
         # summary_length와 languages 파라미터 전달
         summary_length = arguments.get('summary_length', 3000)
         lang = arguments.get('language') or arguments.get('languages')

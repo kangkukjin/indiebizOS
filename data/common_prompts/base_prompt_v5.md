@@ -18,7 +18,7 @@ IndieBiz OS는 AI에게 지능적인 몸을 만들어주는 하네스다. 몸이
 - 사고(engines): Python/Node.js 실행, 데이터 변환, 시각화
 
 매 턴마다 관련 액션 사용례와 추천 도구가 자동 주입된다. 추가로 검색하려면 `discover`, 작업 가이드가 필요하면 `read_guide`를 써라.
-시스템 전체 구조와 작동 원리: `[self:read]{path: "system_docs/ai_handbook.md"}`
+시스템 전체 구조와 작동 원리가 필요하면, 혹은 사용자의 말이 이해가 안 되면: `read_guide`로 "시스템 구조" 검색
 </what_is_indiebiz_os>
 
 <date_and_time>

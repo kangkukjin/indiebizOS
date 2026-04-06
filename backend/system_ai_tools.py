@@ -1,12 +1,9 @@
 """
-system_ai_tools.py - 시스템 AI 도구 정의 및 실행 모듈
+system_ai_tools.py - 시스템 AI 도구 및 실행 모듈
 IndieBiz OS Core
 
-시스템 AI가 사용하는 도구(tool)의 스키마 정의와 실행 함수를 포함합니다:
-- 프로젝트/에이전트 목록 조회 및 위임
-- 캘린더/스케줄 이벤트 관리
-- 스위치 목록 조회
-- IBL/언어 도구/가이드 도구 통합 로딩
+- 최상위 도구 목록 구성 (get_all_system_ai_tools)
+- IBL 라우팅용 실행 함수: 프로젝트/에이전트 위임, 캘린더/스케줄, 스위치
 """
 
 import json
@@ -18,176 +15,8 @@ from tool_loader import load_tool_schema
 from runtime_utils import get_base_path as _get_base_path
 
 
-def _get_list_project_agents_tool() -> Dict:
-    """list_project_agents 도구 정의"""
-    return {
-        "name": "list_project_agents",
-        "description": """시스템 내 모든 프로젝트와 에이전트 목록을 조회합니다.
-
-## 반환 정보
-- project_id: 프로젝트 ID (폴더명)
-- project_name: 프로젝트 이름
-- agents: 에이전트 목록
-  - id: 에이전트 ID
-  - name: 에이전트 이름
-  - role_description: 역할 설명 (전문 분야)
-
-## 사용 시점
-- call_project_agent 전 적합한 대상 확인
-- 어떤 프로젝트/에이전트가 있는지 파악
-- role_description을 보고 작업에 적합한 에이전트 선택
-
-## 참고
-- 에이전트가 실행 중이 아니어도 call_project_agent 시 자동 시작됨""",
-        "input_schema": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
-    }
-
-
-def _get_call_project_agent_tool() -> Dict:
-    """call_project_agent 도구 정의"""
-    return {
-        "name": "call_project_agent",
-        "description": """프로젝트의 에이전트에게 작업을 위임합니다.
-
-## 사용 전 확인
-1. list_project_agents로 사용 가능한 에이전트 확인
-2. role_description을 보고 적합한 에이전트 선택
-
-## 사용 시나리오
-- 특정 프로젝트의 전문 에이전트에게 작업을 맡기고 싶을 때
-- 프로젝트별 도구나 컨텍스트가 필요한 작업일 때
-
-## 주의사항
-- 위임 후 결과를 기다려야 합니다
-- 에이전트가 작업을 완료하면 자동으로 결과를 보고받습니다
-- 에이전트가 실행 중이 아니면 자동으로 시작됩니다""",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "project_id": {
-                    "type": "string",
-                    "description": "프로젝트 ID"
-                },
-                "agent_id": {
-                    "type": "string",
-                    "description": "에이전트 ID (agents.yaml의 id 필드)"
-                },
-                "message": {
-                    "type": "string",
-                    "description": "에이전트에게 전달할 작업 내용"
-                }
-            },
-            "required": ["project_id", "agent_id", "message"]
-        }
-    }
-
-
-def _get_manage_events_tool() -> Dict:
-    """manage_events 통합 도구 정의 (캘린더 + 스케줄러)"""
-    return {
-        "name": "manage_events",
-        "description": "캘린더 이벤트와 스케줄 작업을 통합 관리합니다 (기념일, 약속, 생일, 알림, 스케줄 등의 추가/수정/삭제/조회/토글).",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "description": "수행할 작업: list, add, update, delete, toggle, run_now"
-                },
-                "event_id": {
-                    "type": "string",
-                    "description": "이벤트 ID (update, delete, toggle, run_now 시 필수)"
-                },
-                "title": {
-                    "type": "string",
-                    "description": "이벤트 제목/이름 (add 시 필수)"
-                },
-                "date": {
-                    "type": "string",
-                    "description": "날짜 (YYYY-MM-DD 형식)"
-                },
-                "time": {
-                    "type": "string",
-                    "description": "시간 (HH:MM 형식)"
-                },
-                "type": {
-                    "type": "string",
-                    "description": "이벤트 타입: anniversary, birthday, appointment, reminder, schedule, other"
-                },
-                "repeat": {
-                    "type": "string",
-                    "description": "반복 유형: none, daily, weekly, monthly, yearly, interval"
-                },
-                "description": {
-                    "type": "string",
-                    "description": "이벤트 설명"
-                },
-                "event_action": {
-                    "type": "string",
-                    "description": "실행할 액션 (스케줄 작업일 때): run_pipeline, run_switch, send_notification, test. run_pipeline은 IBL 코드를 예약 실행할 때 사용. null이면 순수 캘린더 이벤트"
-                },
-                "action_params": {
-                    "type": "object",
-                    "description": "액션 파라미터. run_pipeline일 때: {pipeline: \"[limbs:play]{query: '검색어'}\"}, run_switch일 때: {switch_id: '...'}, send_notification일 때: {message: '...', title: '...'}"
-                },
-                "weekdays": {
-                    "type": "array",
-                    "items": {"type": "integer"},
-                    "description": "요일 목록 (weekly일 때, 0=월 ~ 6=일)"
-                },
-                "month": {
-                    "type": "integer",
-                    "description": "월 (yearly일 때 1-12, list 시 조회 월)"
-                },
-                "day": {
-                    "type": "integer",
-                    "description": "일 (yearly일 때 1-31)"
-                },
-                "interval_hours": {
-                    "type": "integer",
-                    "description": "반복 간격 시간 (interval일 때)"
-                },
-                "year": {
-                    "type": "integer",
-                    "description": "조회 연도 (list 시 선택)"
-                },
-                "enabled": {
-                    "type": "boolean",
-                    "description": "활성화 여부 (update 시)"
-                }
-            },
-            "required": ["action"]
-        }
-    }
-
-
-def _get_list_switches_tool() -> Dict:
-    """list_switches 도구 정의"""
-    return {
-        "name": "list_switches",
-        "description": """등록된 스위치 목록을 조회합니다. 스케줄에 스위치를 연결할 때 switch_id를 확인하는 용도입니다.
-
-## 반환 정보
-- id: 스위치 ID (스케줄 등록 시 사용)
-- name: 스위치 이름
-- command: 실행 명령어
-- project: 연결된 프로젝트
-- run_count: 총 실행 횟수
-- last_run: 마지막 실행 시간""",
-        "input_schema": {
-            "type": "object",
-            "properties": {},
-            "required": []
-        }
-    }
-
-
 def get_all_system_ai_tools() -> List[Dict]:
-    """시스템 AI 도구: execute_ibl + 범용 언어 도구 + read_guide
+    """시스템 AI 도구: execute_ibl + 범용 언어 + 인지 도구 + read_guide
 
     프로젝트 에이전트와 동일한 도구 구조.
     차이는 IBL에서 접근 가능한 노드 범위뿐 (시스템 AI: 전체 노드).
@@ -205,6 +34,11 @@ def get_all_system_ai_tools() -> List[Dict]:
         ("python-exec", "execute_python"),
         ("nodejs", "execute_node"),
         ("system_essentials", "run_command"),
+        # 에이전트 인지 도구 — IBL 경유 불가 (파라미터 구조 불일치)
+        ("system_essentials", "todo_write"),
+        ("system_essentials", "ask_user_question"),
+        ("system_essentials", "enter_plan_mode"),
+        ("system_essentials", "exit_plan_mode"),
     ]
     for pkg_id, tool_name in lang_tools:
         tool_json = pkg_base / pkg_id / "tool.json"

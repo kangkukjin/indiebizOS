@@ -121,6 +121,13 @@ async def lifespan(app: FastAPI):
     from runtime_utils import setup_bundled_runtime_paths
     setup_bundled_runtime_paths()
 
+    # 에피소드 로거 설치 (stdout 가로채기)
+    try:
+        from episode_logger import EpisodeLogger
+        EpisodeLogger.install()
+    except Exception as e:
+        print(f"[EpisodeLogger] 설치 실패: {e}")
+
     print("🚀 IndieBiz OS 서버 시작")
 
     # 이전 세션의 완료된 task 기록 정리 (현재 세션만 보존)

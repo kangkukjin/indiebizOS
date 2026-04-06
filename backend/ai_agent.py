@@ -89,6 +89,9 @@ class AIAgent:
         self.model = ai_config.get("model", "claude-sonnet-4-20250514")
         self.api_key = ai_config.get("api_key", "")
 
+        # 도구 실행 중 수집된 이미지 (턴 단위)
+        self._last_tool_images = []
+
         # 프로바이더 초기화
         self._provider = None
         self._init_provider()
@@ -115,6 +118,12 @@ class AIAgent:
     def _client(self):
         """하위 호환성을 위한 client 속성"""
         return self._provider._client if self._provider else None
+
+    def get_last_tool_images(self):
+        """현재 턴에서 도구가 반환한 이미지 목록 반환 후 초기화"""
+        images = self._last_tool_images
+        self._last_tool_images = []
+        return images if images else None
 
     def process_message_with_history(
         self,
@@ -149,12 +158,18 @@ class AIAgent:
         tool_executor = self._custom_execute_tool if self._custom_execute_tool else execute_tool
 
         try:
+            self._last_tool_images = []  # 턴 시작 시 초기화
             response = self._provider.process_message(
                 message=message_content,
                 history=history,
                 images=images,
                 execute_tool=tool_executor
             )
+
+            # 프로바이더에서 수집된 도구 이미지 가져오기
+            if hasattr(self._provider, '_last_tool_images') and self._provider._last_tool_images:
+                self._last_tool_images.extend(self._provider._last_tool_images)
+                self._provider._last_tool_images = []
 
             # 미완료 약속 감지 → 실행 유도 (1회)
             if _is_unfulfilled_promise(response):
@@ -217,6 +232,7 @@ class AIAgent:
                 # 이벤트 수집 — final 이벤트는 미완료 약속 체크 후 전달
                 had_tool_calls = False
                 final_content = ""
+                self._last_tool_images = []  # 턴 시작 시 초기화
 
                 for event in self._provider.process_message_stream(
                     message=message_content,
@@ -229,6 +245,10 @@ class AIAgent:
 
                     if event_type in ("tool_start", "tool_result"):
                         had_tool_calls = True
+
+                    # tool_result에서 이미지 수집
+                    if event_type == "tool_result" and event.get("images"):
+                        self._last_tool_images.extend(event["images"])
 
                     if event_type == "final":
                         final_content = event.get("content", "")

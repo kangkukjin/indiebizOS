@@ -9,7 +9,6 @@ IndieBiz OS Core
 import json
 import re
 import threading
-import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List
@@ -21,7 +20,6 @@ from system_ai_memory import (
     create_task,
     get_task,
     complete_task,
-    update_task_delegation,
     decrement_pending_and_update_context
 )
 from prompt_builder import build_system_ai_prompt
@@ -106,8 +104,8 @@ class SystemAIRunner:
     def _init_ai(self):
         """AI 에이전트 초기화
 
-        Phase 17: execute_ibl 단일 도구로 전환
-        시스템 AI도 프로젝트 에이전트와 같은 IBL 구조 사용
+        WebSocket 경로 전용: execute_ibl 단일 도구로 초기화.
+        HTTP API 경로(system_ai_core.py)는 get_all_system_ai_tools()로 전체 도구 로딩.
         """
         from api_system_ai import load_system_ai_config
         from tool_loader import load_tool_schema
@@ -121,7 +119,7 @@ class SystemAIRunner:
             "api_key": config.get("apiKey", "")
         }
 
-        # Phase 17: execute_ibl 단일 도구
+        # WebSocket 경로: execute_ibl만 로딩
         ibl_schema = load_tool_schema("execute_ibl")
         tools = [ibl_schema] if ibl_schema else []
 
@@ -143,39 +141,6 @@ class SystemAIRunner:
             execute_tool_func=self._execute_tool
         )
 
-    def _get_call_project_agent_tool(self) -> dict:
-        """call_project_agent 도구 정의"""
-        return {
-            "name": "call_project_agent",
-            "description": """프로젝트의 에이전트에게 작업을 위임합니다.
-
-사용 시나리오:
-- 특정 프로젝트의 전문 에이전트에게 작업을 맡기고 싶을 때
-- 프로젝트별 도구나 컨텍스트가 필요한 작업일 때
-
-주의사항:
-- 위임 후 결과를 기다려야 합니다
-- 에이전트가 작업을 완료하면 자동으로 결과를 보고받습니다""",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "project_id": {
-                        "type": "string",
-                        "description": "프로젝트 ID"
-                    },
-                    "agent_id": {
-                        "type": "string",
-                        "description": "에이전트 ID (agents.yaml의 id 필드)"
-                    },
-                    "message": {
-                        "type": "string",
-                        "description": "에이전트에게 전달할 작업 내용"
-                    }
-                },
-                "required": ["project_id", "agent_id", "message"]
-            }
-        }
-
     def _execute_tool(self, tool_name: str, tool_input: dict, work_dir: str = None, agent_id: str = None) -> str:
         """도구 실행 (Phase 17: execute_ibl 단일 경로)"""
         from system_tools import execute_tool
@@ -184,110 +149,6 @@ class SystemAIRunner:
             project_path=work_dir or str(self.data_path),
             agent_id=agent_id or "system_ai"
         )
-
-    def _execute_call_project_agent(self, tool_input: dict) -> str:
-        """프로젝트 에이전트 호출 실행"""
-        from agent_runner import AgentRunner
-        from thread_context import get_current_task_id, set_called_agent
-
-        project_id = tool_input.get("project_id", "")
-        agent_id = tool_input.get("agent_id", "")
-        message = tool_input.get("message", "")
-
-        if not project_id or not agent_id or not message:
-            return "오류: project_id, agent_id, message가 모두 필요합니다."
-
-        # 대상 에이전트 찾기
-        registry_key = f"{project_id}:{agent_id}"
-        target = AgentRunner.agent_registry.get(registry_key)
-
-        if not target:
-            return f"오류: 에이전트를 찾을 수 없습니다. (project_id: {project_id}, agent_id: {agent_id})"
-
-        # 현재 태스크 ID (시스템 AI의 태스크)
-        parent_task_id = get_current_task_id()
-        if not parent_task_id:
-            return "오류: 현재 태스크 ID가 없습니다. (내부 오류)"
-
-        # 자식 태스크 생성
-        child_task_id = f"task_{uuid.uuid4().hex[:8]}"
-
-        # 위임 컨텍스트 업데이트
-        parent_task = get_task(parent_task_id)
-        if parent_task:
-            delegation_context_str = parent_task.get('delegation_context')
-            if delegation_context_str:
-                delegation_context = json.loads(delegation_context_str)
-            else:
-                delegation_context = {
-                    'original_request': parent_task.get('original_request', ''),
-                    'requester': parent_task.get('requester', 'user@gui'),
-                    'delegations': [],
-                    'responses': []
-                }
-
-            delegation_context['delegations'].append({
-                'child_task_id': child_task_id,
-                'delegated_to': target.config.get('name', agent_id),
-                'delegation_message': message,
-                'delegation_time': datetime.now().isoformat()
-            })
-
-            update_task_delegation(
-                parent_task_id,
-                json.dumps(delegation_context, ensure_ascii=False),
-                increment_pending=True
-            )
-
-        # 프로젝트 에이전트의 DB에 자식 태스크 생성
-        target.db.create_task(
-            task_id=child_task_id,
-            requester="system_ai",
-            requester_channel="system_ai",
-            original_request=message,
-            delegated_to=target.config.get('name', agent_id),
-            parent_task_id=parent_task_id
-        )
-
-        # 프로젝트 에이전트에게 메시지 전송
-        msg_dict = {
-            'content': f"[task:{child_task_id}] {message}",
-            'from_agent': '시스템 AI',
-            'task_id': child_task_id,
-            'timestamp': datetime.now().isoformat()
-        }
-
-        with AgentRunner._lock:
-            if registry_key not in AgentRunner.internal_messages:
-                AgentRunner.internal_messages[registry_key] = []
-            AgentRunner.internal_messages[registry_key].append(msg_dict)
-
-        # call_agent 호출 플래그 설정
-        set_called_agent(True)
-
-        agent_name = target.config.get('name', agent_id)
-        project_id = target.project_id
-        print(f"[SystemAIRunner] 위임: 시스템 AI → {agent_name} (task: {child_task_id})")
-
-        # 시스템 AI → 프로젝트 에이전트 위임 메시지 DB 기록 (system_ai_memory.db)
-        try:
-            save_conversation(
-                role="delegation",
-                content=f"[위임] 시스템 AI → {agent_name}@{project_id}: {message}",
-                source=f"system_ai→{agent_name}@{project_id}"
-            )
-        except Exception as e:
-            print(f"[SystemAIRunner] 위임 메시지 system_ai_memory DB 기록 실패: {e}")
-
-        # 프로젝트 conversations.db에도 기록 (중복 기록)
-        try:
-            system_ai_id = target.db.get_or_create_agent("시스템 AI", "system")
-            agent_db_id = target.db.get_or_create_agent(agent_name, "ai_agent")
-            target.db.save_message(system_ai_id, agent_db_id, message, contact_type='system_ai_delegation')
-        except Exception as e:
-            print(f"[SystemAIRunner] 위임 메시지 프로젝트 DB 기록 실패: {e}")
-
-        return f"'{agent_name}'에게 작업을 위임했습니다. 결과를 기다리세요."
 
     def _run_loop(self):
         """백그라운드 루프 (메시지 큐 폴링)"""

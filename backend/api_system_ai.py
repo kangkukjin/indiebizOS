@@ -43,10 +43,7 @@ from system_ai_core import (
     load_system_ai_config,
     save_system_ai_config,
     create_system_ai_agent,
-    _build_execution_memory_for_system_ai,
-    _classify_system_ai_request,
-    _run_consciousness_for_system_ai,
-    _apply_consciousness,
+    get_system_ai_runner,
     process_system_ai_message,
     process_system_ai_message_stream,
     execute_system_tool,
@@ -59,10 +56,6 @@ from system_ai_core import (
 )
 
 from system_ai_tools import (
-    _get_list_project_agents_tool,
-    _get_call_project_agent_tool,
-    _get_manage_events_tool,
-    _get_list_switches_tool,
     _execute_list_project_agents,
     _execute_call_project_agent,
     _execute_manage_events,
@@ -175,17 +168,17 @@ async def chat_with_system_ai(chat: ChatMessage):
     # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
     history = get_history_for_ai(limit=7)
 
-    # 사용자 메시지 저장
-    save_conversation("user", chat.message)
-
     # 이미지 데이터 변환
     images_data = None
     if chat.images:
         images_data = [{"base64": img.base64, "media_type": img.media_type} for img in chat.images]
 
+    # 사용자 메시지 저장 (이미지 포함)
+    save_conversation("user", chat.message, images=images_data)
+
     # AIAgent를 사용한 통합 처리 (모든 프로바이더 자동 지원)
     try:
-        response_text = process_system_ai_message(
+        response_text, tool_images = process_system_ai_message(
             message=chat.message,
             history=history,
             images=images_data
@@ -215,8 +208,8 @@ async def chat_with_system_ai(chat: ChatMessage):
         from system_ai_memory import complete_task as complete_system_ai_task
         complete_system_ai_task(task_id, response_text[:500])
 
-        # AI 응답 저장
-        save_conversation("assistant", response_text)
+        # AI 응답 저장 (도구 이미지 포함)
+        save_conversation("assistant", response_text, images=tool_images)
 
         return ChatResponse(
             response=response_text,

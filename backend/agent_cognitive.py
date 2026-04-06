@@ -24,43 +24,75 @@ class AgentCognitiveMixin:
     def _init_ai(self):
         """AI 에이전트 초기화
 
-        Phase 19: IBL-only 모드 — execute_ibl + 시스템 도구만 제공
-        개별 도구 패키지(336개)를 로딩하지 않고, execute_ibl 하나로 모든 노드에 접근
+        IBL + 범용 언어 + 인지 도구 모드:
+        개별 도구 패키지(308개 액션)를 로딩하지 않고, execute_ibl로 모든 노드에 접근.
+        범용 언어(Python/Node.js/Shell)와 인지 도구(todo/plan/질문)는 별도 최상위 도구로 제공.
+        시스템 AI는 전용 도구/프롬프트/실행기 사용.
         """
         ai_config = self.config.get("ai", {})
         agent_name = self.config.get("name", "에이전트")
         agent_id = self.config.get("id")
+        is_system_ai = self.config.get("_is_system_ai", False)
 
-        # 역할 로드
-        role_file = self.project_path / f"agent_{agent_name}_role.txt"
-        role = ""
-        if role_file.exists():
-            role = role_file.read_text(encoding='utf-8')
+        if is_system_ai:
+            # 시스템 AI: 전용 역할/도구/프롬프트/실행기
+            from system_ai_tools import get_all_system_ai_tools
+            from system_ai_core import execute_system_tool
 
-        # 시스템 프롬프트 생성
-        system_prompt = self._build_system_prompt(role)
+            role = self._load_role()
+            system_prompt = self._build_system_prompt(role)
+            tools = get_all_system_ai_tools()
 
-        # IBL-only 도구 목록 구성
-        tools = self._build_ibl_tools()
+            self.ai = AIAgent(
+                ai_config=ai_config,
+                system_prompt=system_prompt,
+                agent_name=agent_name,
+                agent_id=agent_id,
+                project_path=str(self.project_path),
+                tools=tools,
+                execute_tool_func=execute_system_tool
+            )
+        else:
+            # 프로젝트 에이전트: 기존 경로
+            role = self._load_role()
+            system_prompt = self._build_system_prompt(role)
+            tools = self._build_ibl_tools()
 
-        # AIAgent 생성 (tools 명시 → 336개 로딩 방지)
-        self.ai = AIAgent(
-            ai_config=ai_config,
-            system_prompt=system_prompt,
-            agent_name=agent_name,
-            agent_id=agent_id,
-            project_path=str(self.project_path),
-            tools=tools
-        )
+            self.ai = AIAgent(
+                ai_config=ai_config,
+                system_prompt=system_prompt,
+                agent_name=agent_name,
+                agent_id=agent_id,
+                project_path=str(self.project_path),
+                tools=tools
+            )
+
+    def _load_role(self) -> str:
+        """에이전트 역할 텍스트 로드"""
+        if self.config.get("_is_system_ai"):
+            from runtime_utils import get_base_path
+            role_path = get_base_path() / "data" / "system_ai_role.txt"
+            if role_path.exists():
+                return role_path.read_text(encoding='utf-8').strip()
+            return "IndieBiz OS의 관리자이자 안내자"
+        else:
+            agent_name = self.config.get("name", "에이전트")
+            role_file = self.project_path / f"agent_{agent_name}_role.txt"
+            if role_file.exists():
+                return role_file.read_text(encoding='utf-8')
+            return ""
 
     def _build_system_prompt(self, role: str, consciousness_output: dict = None,
                              execution_memory: str = "") -> str:
         """시스템 프롬프트 구성 (동적 조합)
 
-        구조: base_prompt_v4.md + (조건부 위임 프롬프트) + IBL 환경
-              + 실행기억 + 의식 에이전트 출력 + 개별역할 + 영구메모
-        Phase 16: 모든 에이전트가 ibl_only 모드로 통일
+        시스템 AI와 프로젝트 에이전트 모두 이 메서드를 사용.
+        시스템 AI: build_system_ai_prompt() 호출
+        프로젝트 에이전트: build_agent_prompt() 호출
         """
+        if self.config.get("_is_system_ai"):
+            return self._build_system_ai_prompt(role, consciousness_output, execution_memory)
+
         from prompt_builder import build_agent_prompt
 
         agent_name = self.config.get("name", "에이전트")
@@ -105,6 +137,23 @@ class AgentCognitiveMixin:
             agent_id=self.config.get("id"),
             consciousness_output=consciousness_output,
             model_name=self.config.get("model", ""),
+            execution_memory=execution_memory,
+        )
+
+    def _build_system_ai_prompt(self, role: str, consciousness_output: dict = None,
+                                execution_memory: str = "") -> str:
+        """시스템 AI 전용 프롬프트 빌드"""
+        from prompt_builder import build_system_ai_prompt
+        from system_ai_memory import load_user_profile
+
+        git_enabled = (self.project_path / ".git").exists()
+        user_profile = load_user_profile()
+
+        return build_system_ai_prompt(
+            user_profile=user_profile,
+            git_enabled=git_enabled,
+            consciousness_output=consciousness_output,
+            model_name=self.config.get("ai", {}).get("model", ""),
             execution_memory=execution_memory,
         )
 
@@ -155,13 +204,14 @@ class AgentCognitiveMixin:
             agent_name = self.config.get("name", "")
 
             # 역할 전문 로드 (잘리지 않고 전체 전달 — self_awareness 판단용)
-            role_file = self.project_path / f"agent_{agent_name}_role.txt"
-            agent_role = ""
-            if role_file.exists():
-                agent_role = role_file.read_text(encoding='utf-8').strip()
+            agent_role = self._load_role()
 
-            # 영구메모 로드
-            agent_notes = self.config.get("notes", "")
+            # 영구메모 로드 — 시스템 AI는 사용자 프로필 사용
+            if self.config.get("_is_system_ai"):
+                from system_ai_memory import load_user_profile
+                agent_notes = load_user_profile()
+            else:
+                agent_notes = self.config.get("notes", "")
 
             result = agent.process(
                 user_message=user_message,

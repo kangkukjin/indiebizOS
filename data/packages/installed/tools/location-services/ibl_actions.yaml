@@ -2,18 +2,50 @@ nodes:
   sense:
     actions:
       weather:
-        description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
+        description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat:
+          37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
         target_description: 도시명 또는 좌표
         router: handler
         tool: get_weather
         implementation: Open-Meteo 무료 API로 날씨 조회 (API키 불필요)
       restaurant:
-        description: 맛집/음식점 공식 검색 (카카오+네이버 API). 가게 이름·주소·전화·평점 등 공식 DB 기반. 주민 후기/커뮤니티 의견은 sense:search_local 사용.
+        description: 맛집/음식점 공식 검색 (카카오+네이버 API). 가게 이름·주소·전화·평점 등 공식 DB 기반. 주민 후기/커뮤니티
+          의견은 sense:search_local 사용.
         target_description: 검색어 (강남 파스타 등)
         router: handler
         tool: search_restaurants
-        implementation: Kakao Local API + Naver Local API 듀얼 검색으로 맛집 공식 정보 집계 (상호명, 주소, 평점)
+        implementation: Kakao Local API + Naver Local API 듀얼 검색으로 맛집 공식 정보 집계 (상호명,
+          주소, 평점)
         target_key: query
+      navigate_route:
+        description: 자동차 길찾기 (카카오 내비)
+        group: location
+        router: handler
+        tool: kakao_navigation
+        implementation: Kakao Map API로 자동차 경로 탐색 (거리/시간/톨비)
+        target_key: destination
+        keywords:
+        - 길찾기
+        - 내비
+        - 경로
+        - 네비게이션
+      map:
+        description: 지도에 위치 표시
+        group: location
+        category: get
+        router: handler
+        tool: show_location_map
+        implementation: Kakao Map API로 좌표 기반 지도 HTML 생성
+        target_key: query
+        keywords:
+        - 지도
+        - 위치
+        - 좌표
+      reverse_geocode:
+        description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
+        router: handler
+        tool: reverse_geocode
+        implementation: Kakao Map API로 GPS 좌표→주소 변환
       travel:
         description: 여행 검색 - 항공, 호텔, 관광지 (Amadeus)
         target_description: 검색 엔드포인트 (flight-offers, hotel-list 등)
@@ -23,11 +55,19 @@ nodes:
         target_key: endpoint
         postprocess:
           type: compress
-      reverse_geocode:
-        description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
+      api_ninjas:
+        description: API Ninjas 범용 데이터 조회 (날씨, 환율, 영양, 명언 등 다양한 endpoint)
+        group: data
+        category: get
         router: handler
-        tool: reverse_geocode
-        implementation: Kakao Map API로 GPS 좌표→주소 변환
+        tool: get_api_ninjas_data
+        implementation: API Ninjas REST API (40+ endpoint, API 키 기반)
+        keywords:
+        - ninjas
+        - 날씨
+        - 환율
+        - 영양
+        - 명언
     guides:
     - location-services/location_services_guide.md
   limbs:

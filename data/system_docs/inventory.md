@@ -1,6 +1,6 @@
 # IndieBiz OS 인벤토리
 
-## 프로젝트 (활성) - 20개
+## 프로젝트 (활성) - 20개 (에이전트 29개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -28,7 +28,7 @@
 
 ---
 
-## 도구 패키지 (Tools) - 35개
+## 도구 패키지 (Tools) - 36개
 에이전트가 사용할 수 있는 유틸리티. handler 라우팅(복잡 후처리) 또는 api_engine 라우팅(API+transform 자동 발견)으로 실행됩니다.
 
 | ID | 이름 | 설명 |
@@ -40,7 +40,8 @@
 | cctv | CCTV | CCTV/웹캠 관련 도구 |
 | cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel) |
 | computer-use | Computer Use | 컴퓨터 사용 자동화 |
-| culture | Culture | 공연(KOPIS), 도서(도서관 정보나루) 등 문화예술 정보 조회 |
+| context7 | Context7 | Context7 라이브러리 문서 검색 |
+| culture | Culture | 공연(KOPIS), 도서(도서관 정보나루), Project Gutenberg 고전 원문, 한국고전종합DB 등 문화예술 정보 조회 |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
 | house-designer | House Designer | 건축 설계 (평면도, 3D뷰) |
 | ibl-core | IBL Core | IBL 핵심 도구 |
@@ -71,105 +72,24 @@
 
 ---
 
-## 확장 패키지 (Extensions) - 9개
-백엔드 기능을 확장하는 패키지. 도구 패키지와 달리 에이전트가 직접 호출하지 않고 시스템 레벨에서 동작합니다.
+## 백엔드 코어 모듈 (extensions/) - 9개
+에이전트가 호출하는 도구가 아니라 백엔드 시스템 내부에서 사용되는 코어 모듈입니다.
 
-| ID | 이름 | 설명 |
-|----|------|------|
-| ai-agent | AI Agent | AI 에이전트 확장 |
-| conversation | Conversation | 대화 관리 |
-| gmail | Gmail | Gmail 연동 |
-| indienet | IndieNet | 외부 메신저 연동 (Nostr 기반) |
-| notification-system | Notification System | 알림 시스템 |
-| prompt-generator | Prompt Generator | 프롬프트 생성기 |
-| scheduler | Scheduler | 스케줄러 확장 |
-| switch-runner | Switch Runner | 스위치 실행기 |
-| websocket-chat | WebSocket Chat | WebSocket 채팅 |
-
----
-
-## 시스템 AI 위임 기능 (Phase 17→25: IBL 통합 + others 노드)
-
-시스템 AI는 `execute_ibl` 단일 도구를 통해 프로젝트의 전문 에이전트에게 작업을 위임할 수 있습니다.
-
-### 위임 IBL 액션 (others 노드)
-| IBL 액션 | 설명 |
-|----------|------|
-| `[others:list_projects]` | 모든 프로젝트와 에이전트 목록 조회 |
-| `[others:delegate_project]` | 프로젝트 에이전트에게 작업 위임 |
-| `[self:manage_events]` | 이벤트/스케줄 통합 관리 |
-| `[self:list_switches]` | 등록된 스위치 목록 조회 |
-
-### 위임 조건
-- **사용자가 명시적으로 요청한 경우에만** 위임
-- "의료팀에게 물어봐" → 위임 O
-- "두통이 있어" → 직접 답변 (위임 X)
-
-### 위임 흐름
-```
-사용자 요청 → 시스템 AI → [others:delegate_project]{project_path: "프로젝트/에이전트", message: "..."}
-    → 프로젝트 에이전트들 자동 활성화 → 작업 수행
-    → 결과 자동 보고 → 시스템 AI가 사용자에게 전달
-```
-
-### 병렬 위임
-여러 프로젝트에 동시 위임 가능:
-```
-[others:delegate_project]{project_path: "의료/내과", message: "두통 증상 분석"}
-[others:delegate_project]{project_path: "study/학습", message: "두통 관련 최신 연구 검색"}
-```
+| ID | 설명 |
+|----|------|
+| ai-agent | AI 에이전트 실행 |
+| conversation | 대화 DB 관리 |
+| gmail | Gmail 연동 |
+| indienet | 외부 메신저 연동 (Nostr 기반) |
+| notification-system | 알림 시스템 |
+| prompt-generator | 프롬프트 생성기 |
+| scheduler | 스케줄러 |
+| switch-runner | 스위치 실행기 |
+| websocket-chat | WebSocket 채팅 |
 
 ---
 
-## 다중채팅방 시스템
-여러 에이전트와 사용자가 함께 대화하는 그룹 채팅
-
-### 주요 기능
-- 채팅방 생성/삭제/아이콘 정렬
-- 프로젝트 에이전트 소환 (원본 AI 설정 유지)
-- @지목 또는 랜덤 응답
-- 전체 시작/중단 버튼
-- 도구 할당 기능
-- 별도 창에서 운영 (창 닫으면 에이전트 비활성화)
+> 위임 시스템은 `delegation.md`, 통신/자동응답은 `communication.md`, 패키지 상세는 `packages.md` 참조.
 
 ---
-
-## 비즈니스 관리 시스템
-
-### 통신 채널
-| 채널 | 방식 | 설명 |
-|------|------|------|
-| Gmail | 폴링 | 주기적으로 이메일 수신 |
-| Nostr | WebSocket | 실시간 DM 수신 |
-
-### 자동응답 V3 (Tool Use 통합)
-AI 호출 1회로 판단, 검색, 발송을 한 번에 처리:
-- `search_business_items`: 비즈니스 DB 검색
-- `no_response_needed`: 응답 불필요 처리 (스팸/광고)
-- `send_response`: 응답 즉시 발송
-
----
-
-## 휴지통
-런처에서 삭제한 프로젝트, 폴더, 스위치는 휴지통으로 이동합니다.
-
----
-
-## 템플릿
-- **기본** - 빈 프로젝트 템플릿
-- **프로젝트1** - 에이전트 팀 템플릿 (집사, 직원1, 대장장이, 출판, 영상담당)
-
----
-
-## 도구 상자 & 패키지 공유 (Nostr)
-자신이 만든 도구 패키지를 Nostr 네트워크를 통해 공유하고, 다른 사용자의 패키지를 검색/설치할 수 있습니다.
-
-### 주요 기능
-- **패키지 공개**: AI가 패키지 전체를 분석하여 설치 방법 자동 생성
-- **패키지 검색**: Nostr 네트워크에서 공개된 패키지 검색
-- **설치 전 검토**: 시스템 AI가 보안/품질/호환성 검토
-
-자세한 내용은 `packages.md` 참조.
-
----
-*마지막 업데이트: 2026-03-27*
+*마지막 업데이트: 2026-04-05 (중복 섹션 제거, 자동생성 목록만 유지)*

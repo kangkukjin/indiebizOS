@@ -1,12 +1,53 @@
 # IndieBiz OS 아키텍처
 
+## 정의
+
+IndieBiz OS는 AI에게 지능적인 몸을 만들어주는 하네스(harness)다. AI의 본질적 가치는 **연결** — 사람과 세계를, 사람과 사람을, 알고 있는 것과 아직 모르는 것을 잇는 것.
+
+하네스는 에이전틱 루프와 다르다. 에이전틱 루프는 AI의 처리량(throughput)을 올린다 — 도구를 더 많이 호출. 하네스는 AI의 판단력(intelligence)을 올린다 — 같은 모델이라도 하네스에 따라 결과의 질이 달라진다.
+
+## 신체 구조 (생명체 메타포)
+
+| 신체 시스템 | IndieBiz OS 구현 | 역할 |
+|------------|------------------|------|
+| 신경계 | IBL (5노드, 308액션) | 감각/행동의 상시 연결 |
+| 감각기관 전처리 | 감각 전처리 (postprocess) | 원시 정보를 압축하여 뇌에 전달 |
+| 선택적 주의력 | 의식 에이전트 | 매 턴 메타 판단 — 문제 정의, 초점, 달성 기준 |
+| 반사 신경 | 무의식 에이전트 | EXECUTE/THINK 분류, 단순 요청은 의식 건너뜀 |
+| 자기 교정 | 평가 에이전트 | 달성 기준 대비 평가, NOT_ACHIEVED 시 재시도 |
+| 자의식/각성 | World Pulse | 매시간 세계/사용자/자기 상태 수집 |
+| 면역계 | AI 건강 체크 + action_health | 매 6시간 시스템 AI가 미확인 액션 테스트, 모든 액션 실행을 자동 기록 |
+| 자율신경계 | 스케줄러, 이벤트 엔진 | 의식 없이 돌아가는 리듬 |
+| 해마 | 실행기억 (해마 + discover) | 1회 생성, 전 에이전트 공유. fine-tuned 임베딩으로 관련 기억 자동 인출 |
+| 에피소딕 메모리 | episode_log + episode_summary | 에피소드(명령→응답)별 실행 로그 기록, 인지 품질 지표 영구 추적 |
+
+## 4단 인지 파이프라인
+
+```
+사용자 메시지
+    ↓
+실행기억 생성 (해마 + discover + implementation, 1회)
+    ↓
+무의식 에이전트 ← 실행기억 (EXECUTE/THINK 분류)
+    ↓ THINK만
+의식 에이전트 ← 실행기억 (문제 정의 + 달성 기준 + 자기 인식)
+    ↓
+실행 에이전트 ← 실행기억 + 달성 기준 (IBL로 도구 사용)
+    ↓
+평가 에이전트 ← 실행기억 (달성 기준 대비 평가, 최대 3라운드)
+```
+
+- **실행기억**: 파이프라인 최상단에서 1회 생성, 전 에이전트 공유. 과거 코드 사례(해마) + 추천 도구(discover) + 액션 implementation
+- **해마**: IBL 도메인 fine-tuned 임베딩 모델 (Top-5 95.6%, 범용 대비 +49.8%p)
+- 상세: `system_docs/execution_memory.md`
+
 ## 시스템 구조
 
 ```
 indiebizOS/
 ├── backend/              # Python FastAPI 백엔드
 │   ├── api.py           # 메인 서버 (포트 8765)
-│   ├── api_*.py         # 각 모듈 라우터 (21개)
+│   ├── api_*.py         # 각 모듈 라우터 (25개)
 │   ├── api_nas.py       # 원격 Finder API (파일 접근/스트리밍)
 │   ├── *_manager.py     # 비즈니스 로직 매니저
 │   ├── ai_agent.py      # AI 에이전트 코어
@@ -34,8 +75,8 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/   # 설치된 패키지
-│   │   │   ├── tools/      # 도구 패키지 (35개)
-│   │   │   └── extensions/ # 확장 패키지 (9개)
+│   │   │   ├── tools/      # 도구 패키지 (36개)
+│   │   │   └── extensions/ # 백엔드 코어 모듈 (9개)
 │   │   └── not_installed/  # 미설치 패키지
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억)
 │   ├── business.db      # 비즈니스 DB
@@ -50,7 +91,7 @@ indiebizOS/
 
 ## 핵심 컴포넌트
 
-### 통합 AI 아키텍처 (Phase 25: 5-Node 구조)
+### 통합 AI 아키텍처 (5-Node + 다언어 도구)
 시스템 AI와 프로젝트 에이전트가 동일한 코드베이스와 **동일한 도구 구조**를 공유합니다:
 
 ```
@@ -58,18 +99,25 @@ indiebizOS/
 │                    AIAgent 클래스                    │
 │         (ai_agent.py - 단일 코어)                    │
 ├─────────────────────────────────────────────────────┤
-│  • process_message_stream() - 스트리밍 처리          │
-│  • process_message_with_history() - 동기 처리        │
-│  • execute_ibl 단일 도구로 모든 기능 접근            │
+│  최상위 도구 (9개):                                  │
+│  • execute_ibl        — IBL 실행기 (308 액션)        │
+│  • execute_python     — Python 코드 실행             │
+│  • execute_node       — Node.js 코드 실행            │
+│  • run_command        — 셸 명령 실행                  │
+│  • todo_write         — 작업 목록 관리                │
+│  • ask_user_question  — 사용자 질문                   │
+│  • enter_plan_mode    — 계획 모드 진입                │
+│  • exit_plan_mode     — 계획 승인 요청                │
+│  • read_guide         — 가이드 검색                   │
 └─────────────────────────────────────────────────────┘
           │                           │
           ▼                           ▼
 ┌──────────────────┐       ┌──────────────────┐
 │    시스템 AI      │       │  프로젝트 에이전트  │
-│ (api_system_ai)  │       │  (agent_runner)  │
+│  (agent_runner)  │       │  (agent_runner)  │
+│  _is_system_ai   │       │                  │
 ├──────────────────┤       ├──────────────────┤
-│ execute_ibl      │       │ execute_ibl      │
-│ (전체 노드)       │       │ (허용 노드)       │
+│ 전체 노드 접근    │       │ 허용 노드만 접근   │
 └──────────────────┘       └──────────────────┘
           │                           │
           └───────────┬───────────────┘
@@ -80,12 +128,12 @@ indiebizOS/
 └─────────────────────────────────────────────────────┘
 ```
 
-**통합 효과:**
-- 시스템 AI와 프로젝트 에이전트 모두 `execute_ibl` 단일 도구 사용
-- 차이점은 접근 가능한 노드 범위뿐 (시스템 AI: 전체, 프로젝트 에이전트: 허용된 노드)
-- 사용자 소통(질문, 할일, 승인, 알림)도 `[self:*]` 액션으로 통합
+**도구 계층 설계:**
+- IBL 실행기(`execute_ibl`)와 범용 언어(Python/Node.js/Shell)가 같은 레벨의 최상위 도구
+- 인지 도구(`todo_write`, `ask_user_question`, `enter_plan_mode`, `exit_plan_mode`)는 IBL 경유 불가(파라미터 구조 불일치)하므로 별도 최상위 도구로 제공
+- IBL 코드가 실행되기 전에 언어 도구가 디코딩되어야 하므로, 같은 레벨에 배치
+- 차이점은 IBL에서 접근 가능한 노드 범위뿐 (시스템 AI: 전체, 프로젝트 에이전트: 허용된 노드)
 - 프로바이더 코드 1회 작성으로 시스템 AI + 모든 에이전트 지원
-- 새 프로바이더 추가 시 자동으로 전체 적용
 
 ### 프롬프트 빌더 (prompt_builder.py)
 시스템 AI와 프로젝트 에이전트 모두 동일한 프롬프트 구조 사용:
@@ -149,7 +197,7 @@ AI의 정확한 파싱을 위해 모든 프롬프트에 XML 태그 구조 적용
 
 ### IBL (IndieBiz Logic) 시스템
 - 노드 기반 추상화: `[node:action]{params}` 문법
-- execute_ibl 단일 도구로 모든 노드 접근
+- execute_ibl + 범용 언어 + 인지 도구 (총 9개 최상위 도구)
 - **5개 노드, 308 액션** (Phase 25: 노드 재구조화)
   - sense(78), self(75), limbs(96), others(13), engines(46)
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
@@ -236,7 +284,7 @@ search_ddg:
                                        ^
 실행 로그 (성공) ──→ [자동 승격] ──────┘
 ```
-→ 상세 문서: [ibl_rag.md](ibl_rag.md)
+→ 상세 문서: [execution_memory.md](execution_memory.md)
 
 ### 도구 패키지 시스템 (노드 구현체)
 - 폴더 기반 탐지 및 동적 로딩 (35개 설치됨)
@@ -244,13 +292,13 @@ search_ddg:
 - **두 가지 실행 경로**: handler.py(복잡한 후처리) 또는 api_engine(API+transform)
 - `tool.json` + `handler.py` 구조 (또는 api_registry.yaml 등록)
 - 도구 설명 구조: 한줄 요약 + 데이터 형식 + 예시
-- 가이드 파일 시스템: 복잡한 도구에 on-demand 가이드 주입 → [상세 문서](guide_file.md)
+- 가이드 파일 시스템: 복잡한 도구에 on-demand 가이드 주입 → [상세 문서](packages.md)
 
 ### 자동응답 서비스 V3
 - Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `search_business_items`, `no_response_needed`, `send_response` 도구
 - 응답 즉시 발송 (polling 대기 없음)
-→ 상세 문서: [auto_response.md](auto_response.md)
+→ 상세 문서: [communication.md](communication.md)
 
 ### 다중채팅방 시스템
 - 독립 창에서 여러 프로젝트의 에이전트를 소환하여 그룹 대화 수행
@@ -274,7 +322,8 @@ search_ddg:
 경량 게이트키퍼. gemini-2.5-flash-lite를 사용하여 요청을 빠르게 분류.
 - **EXECUTE**: 단순 명령, 인사, 도구 1개로 해결 가능한 작업 → 의식 에이전트 건너뜀
 - **THINK**: 분석/비교/전략이 필요한 복잡 작업 → 의식 에이전트 경유
-- 파일: `data/common_prompts/unconscious_prompt.md`, `agent_runner._classify_request()`
+- 파일: `data/common_prompts/unconscious_prompt.md`, `agent_cognitive.AgentCognitiveMixin._classify_request()`
+- 시스템 AI와 프로젝트 에이전트 모두 동일한 AgentRunner 인지 파이프라인 사용
 
 #### 의식 에이전트 (Consciousness Agent)
 사용자 메시지가 AI 에이전트에 도달하기 전에 메타적 판단을 수행합니다. 단순한 프롬프트 최적화가 아니라 **자기 한계 인식을 통한 문제 정의**가 핵심입니다.
@@ -295,14 +344,15 @@ search_ddg:
 **적용 범위**: 시스템 AI + 모든 프로젝트 에이전트 (내부 위임 메시지는 제외)
 **구현**: 시스템 AI의 API 설정(프로바이더/모델/키)을 재사용, 원샷 JSON 응답
 - 파일: `backend/consciousness_agent.py`, `data/common_prompts/consciousness_prompt.md`
-- 통합: `agent_runner.py`, `api_websocket.py`, `api_system_ai.py`, `prompt_builder.py`
+- 통합: `agent_cognitive.py._run_consciousness()` (시스템 AI + 프로젝트 에이전트 공통)
 
 #### 평가 에이전트 (Evaluator Agent)
 AI 에이전트 실행 후 결과를 평가하는 사후 루프:
 - 의식 에이전트가 출력한 `achievement_criteria`를 기준으로 평가
 - **ACHIEVED**: 결과 그대로 반환
 - **NOT_ACHIEVED**: 구체적 피드백과 함께 AI 에이전트 재실행 (최대 3라운드)
-- 파일: `data/common_prompts/evaluator_prompt.md`, `agent_runner._run_goal_evaluation_loop()`
+- 파일: `data/common_prompts/evaluator_prompt.md`, `agent_cognitive.AgentCognitiveMixin._run_goal_evaluation_loop()`
+- 시스템 AI와 프로젝트 에이전트 모두 동일한 평가 루프 사용
 
 ### 의식 시스템 (Consciousness Pulse & Self-Check)
 시스템에 자기인식을 부여하는 주기적 상태 수집 및 자가 점검 시스템:
@@ -322,10 +372,16 @@ AI 에이전트 실행 후 결과를 평가하는 사후 루프:
               world_pulse.md 가이드 파일 갱신
 ```
 
-**Self-Check (매 6시간)**: IBL 액션 랜덤 자가 점검 (면역 순찰)
-- **전체 5개 노드**(sense, self, limbs, others, engines) 대상으로 확대 — 액션별 테스트 파라미터 정의
-- LLM 호출 없이 응답 코드/데이터 유무/응답 시간으로 평가
-- 연속 3회 실패 시 알림 발송
+**AI 건강 체크 (매 6시간)**: 시스템 AI가 미확인/실패 액션을 능동적으로 테스트
+- 읽기 전용 액션만 선택, 적절한 파라미터를 AI가 직접 생성
+- 결과는 `action_health` 테이블에 자동 기록 (실사용 액션도 동일 테이블)
+- 3단계 상태: verified(7일 이내 성공), assumed(기록 없음), failed(최근 실패)
+
+**에피소딕 메모리**: 에피소드(사용자 명령→최종 응답)별 실행 로그 기록
+- `episode_log` 테이블: 전체 로그 (최근 100개 보존)
+- `episode_summary` 테이블: 인지 품질 지표 영구 보존 (해마 점수, 무의식 판정, 의식 소요시간, 실행 라운드, 평가 결과)
+- 파일: `backend/episode_logger.py`, DB: `data/world_pulse.db`
+- API: `/xray/episodes`, `/xray/episodes/{id}`, `/xray/episode-summaries`
 
 **서버 시작 시**: 최근 1시간 내 펄스가 없으면 즉시 수집, 있으면 건너뜀
 
@@ -352,5 +408,32 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
   - Chrome 미실행 시 Playwright로 자동 폴백
   - 같은 IBL 액션(`limbs:browser_*`)을 사용, 내부 드라이버만 다름
 
+## 프로젝트 & 에이전트
+
+- 프로젝트 단위로 독립된 작업 공간. 각 프로젝트에 역할별 에이전트 배치
+- 에이전트 간 위임: 단일/순차/병렬 (`[others:delegate_project]`)
+- 시스템 AI: 전체 노드 접근, 프로젝트 에이전트에 위임 가능
+- 프로젝트 에이전트: 허용된 노드만 접근 (allowed_nodes)
+
+## 외부 연동
+
+- **통신**: Gmail, Nostr, Telegram
+- **NAS**: 음악 스트리밍, 자막 관리, 웹앱 호스팅
+- **안드로이드**: ADB 기반 기기 제어
+- **원격**: Cloudflare Tunnel (Finder + 런처)
+- **브라우저**: Playwright 기반 자동화
+
+## 시스템 통계
+
+- 활성 프로젝트: 20개, 활성 에이전트: 29개
+- 도구 패키지: 36개, IBL: 5노드 308액션
+
+## 참조
+
+- IBL 명세: `system_docs/ibl.md`
+- 실행기억 & 해마: `system_docs/execution_memory.md`
+- 패키지 가이드: `system_docs/packages.md`
+- 설계 철학 (백서): `WHITEPAPER.md`
+
 ---
-*마지막 업데이트: 2026-03-29 (감각 전처리 시스템 추가, 패키지 YAML 자동 동기화)*
+*마지막 업데이트: 2026-04-05 (overview.md 통합)*

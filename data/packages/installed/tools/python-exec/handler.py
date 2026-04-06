@@ -13,7 +13,7 @@ OUTPUT_DIR = Path(__file__).parent.parent.parent.parent / "outputs" / "python_ex
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # 출력 길이 임계값 (이 이상이면 파일로 저장)
-OUTPUT_THRESHOLD = 3000
+OUTPUT_THRESHOLD = 16000
 
 
 def get_python_cmd():

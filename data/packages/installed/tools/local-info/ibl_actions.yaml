@@ -1,21 +1,38 @@
-node: sense
-actions:
-  search_local:
-    description: 지역 커뮤니티(네이버 카페) 검색. 동네 주민들의 후기·추천·정보 수집용. 가게/음식점 공식 검색은 sense:restaurant(카카오+네이버 API) 사용.
-    target_description: 검색어
-    router: handler
-    tool: local_search
-    implementation: Naver Cafe API로 지역 커뮤니티 글 검색 (주민 후기, 추천, 지역 정보). 공식 가게 DB 검색이 아닌 커뮤니티 의견 수집.
-    target_key: query
-  local_query:
-    description: 축적된 지역 정보 DB 조회
-    target_description: 검색어
-    router: handler
-    tool: local_db_query
-    implementation: SQLite FTS(전문검색)로 축적된 지역 정보 DB 조회
-    target_key: query
-  save:
-    description: 가게 정보/커뮤니티 언급 DB 저장
-    router: handler
-    tool: local_db_save
-    implementation: SQLite DB에 가게/지역 정보 구조화 저장
+nodes:
+  sense:
+    actions:
+      search_local:
+        description: 지역 커뮤니티(네이버 카페) 검색. 동네 주민들의 후기·추천·정보 수집용. 가게/음식점 공식 검색은 sense:restaurant(카카오+네이버
+          API) 사용.
+        target_description: 검색어
+        router: handler
+        tool: local_search
+        implementation: Naver Cafe API로 지역 커뮤니티 글 검색 (주민 후기, 추천, 지역 정보). 공식 가게 DB
+          검색이 아닌 커뮤니티 의견 수집.
+        target_key: query
+      local_query:
+        description: 축적된 지역 정보 DB 조회
+        target_description: 검색어
+        router: handler
+        tool: local_db_query
+        implementation: SQLite FTS(전문검색)로 축적된 지역 정보 DB 조회
+        target_key: query
+      save:
+        description: 가게 정보/커뮤니티 언급 DB 저장
+        router: handler
+        tool: local_db_save
+        implementation: SQLite DB에 가게/지역 정보 구조화 저장
+  self:
+    actions:
+      local_save:
+        description: 가게 정보/커뮤니티 언급 DB 저장
+        group: system
+        category: write
+        router: handler
+        tool: local_db_save
+        implementation: SQLite DB에 가게/지역 정보 구조화 저장
+        keywords:
+        - 가게
+        - 지역
+        - 커뮤니티
+        - 저장

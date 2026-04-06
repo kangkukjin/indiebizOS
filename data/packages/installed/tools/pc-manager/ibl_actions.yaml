@@ -14,16 +14,61 @@ nodes:
         tool: query_storage
         implementation: SQLite DB에서 파일명/확장자/크기 기반 검색
         target_key: search_term
-      storage_summary:
+      summary:
         description: 저장소 사용량 요약
+        group: file
+        category: storage
         router: handler
         tool: get_storage_summary
         implementation: SQLite DB에서 저장소 사용량 집계
+        keywords:
+        - 저장소
+        - 용량
+        - 사용량
       volumes:
         description: 마운트된 볼륨 목록
         router: handler
         tool: list_volumes
         implementation: psutil/diskutil로 마운트된 볼륨 목록 조회
+      annotate:
+        description: 폴더에 메모/주석 추가
+        group: file
+        category: storage
+        router: handler
+        tool: annotate_folder
+        implementation: SQLite DB에 폴더 메모/주석 저장
+        target_key: folder_path
+        keywords:
+        - 주석
+        - 메모
+        - 폴더
+      annotations:
+        description: 폴더 주석 조회
+        group: file
+        category: storage
+        router: handler
+        tool: get_folder_annotations
+        implementation: SQLite DB에서 폴더 주석 조회
+        keywords:
+        - 주석조회
+        - 메모
+      explorer:
+        description: 파일 탐색기에서 열기 (Finder)
+        group: file
+        category: storage
+        router: handler
+        tool: open_file_explorer
+        implementation: subprocess로 macOS Finder/Windows Explorer 실행
+        target_key: path
+        keywords:
+        - Finder
+        - 탐색기
+        - 열기
+      storage_summary:
+        description: 저장소 사용량 요약
+        router: handler
+        tool: get_storage_summary
+        implementation: SQLite DB에서 저장소 사용량 집계
       folder_annotate:
         description: 폴더에 메모/주석 추가
         target_description: 폴더 경로

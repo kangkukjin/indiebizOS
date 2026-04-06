@@ -72,6 +72,39 @@ def _init_pulse_db():
             error_message TEXT,
             data_quality TEXT
         );
+        CREATE TABLE IF NOT EXISTS action_health (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            node TEXT NOT NULL,
+            action TEXT NOT NULL,
+            success INTEGER NOT NULL,
+            response_ms INTEGER,
+            source TEXT NOT NULL DEFAULT 'usage',
+            timestamp TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_action_health_na ON action_health(node, action);
+        CREATE INDEX IF NOT EXISTS idx_action_health_ts ON action_health(timestamp);
+        CREATE TABLE IF NOT EXISTS episode_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            started_at TEXT NOT NULL,
+            ended_at TEXT,
+            agent TEXT,
+            user_message TEXT,
+            log TEXT,
+            total_ms INTEGER
+        );
+        CREATE TABLE IF NOT EXISTS episode_summary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            episode_id INTEGER,
+            started_at TEXT NOT NULL,
+            agent TEXT,
+            user_message TEXT,
+            hippocampus_score REAL,
+            unconscious_decision TEXT,
+            consciousness_ms INTEGER,
+            execution_rounds INTEGER,
+            total_ms INTEGER,
+            evaluation_result TEXT
+        );
     """)
     conn.close()
 
@@ -168,9 +201,11 @@ from world_pulse_collectors import (
 )
 from world_pulse_health import (
     generate_guide,
-    _get_safe_actions, _evaluate_result,
+    generate_test_plan, _get_safe_actions, _evaluate_result,
     run_self_check, save_self_check, _check_failure_alerts,
+    analyze_failure_patterns,
     get_action_health_summary, get_recent_self_checks, get_system_health,
+    trigger_ai_health_check,
 )
 
 
@@ -384,7 +419,8 @@ def register_pulse_tasks():
 
         # 커스텀 액션 등록
         cm.actions["world_pulse"] = lambda task: collect_world_pulse()
-        cm.actions["self_check"] = lambda task: run_self_check()
+        cm.actions["self_check"] = lambda task: run_self_check()  # 하위 호환
+        cm.actions["ai_health_check"] = lambda task: trigger_ai_health_check()
 
         # 기존에 등록된 의식 이벤트가 있는지 확인
         existing = {evt.get("title"): evt for evt in cm.list_events()}
@@ -405,21 +441,30 @@ def register_pulse_tasks():
             )
             logger.info(f"[WorldPulse] World Pulse 등록 (매 {interval}시간)")
 
-        # 2) 자가점검 (매 6시간)
-        if sc_config.get("enabled", True) and "[WorldPulse] 자가점검" not in existing:
+        # 2) AI 건강 체크 (매 6시간) — 기존 self_check 대체
+        if sc_config.get("enabled", True) and "[WorldPulse] AI 건강체크" not in existing:
             interval = sc_config.get("interval_hours", 6)
+            next_time = (datetime.now() + timedelta(hours=interval)).strftime("%H:%M")
             cm.add_event(
-                title="[WorldPulse] 자가점검",
+                title="[WorldPulse] AI 건강체크",
                 event_type="schedule",
                 repeat="interval",
                 interval_hours=interval,
-                event_time=datetime.now().strftime("%H:%M"),
-                action="self_check",
+                event_time=next_time,
+                action="ai_health_check",
                 enabled=True,
                 owner_project_id="__system_ai__",
                 owner_agent_id="system_ai",
             )
-            logger.info(f"[WorldPulse] 자가점검 등록 (매 {interval}시간)")
+            logger.info(f"[WorldPulse] AI 건강체크 등록 (매 {interval}시간, 다음 실행: {next_time})")
+
+        # 기존 self_check 이벤트가 있으면 비활성화 (하위 호환)
+        if "[WorldPulse] 자가점검" in existing:
+            for evt in cm.config.get("events", []):
+                if evt.get("title") == "[WorldPulse] 자가점검":
+                    evt["enabled"] = False
+                    break
+            cm._save_config()
 
         # DB 초기화
         _init_pulse_db()
@@ -436,6 +481,7 @@ def register_pulse_tasks():
             except Exception as e:
                 logger.error(f"[WorldPulse] 시작 시 펄스 체크 실패: {e}")
         threading.Thread(target=_initial_pulse_if_needed, daemon=True, name="initial-world-pulse").start()
+
 
     except Exception as e:
         logger.error(f"[WorldPulse] 스케줄 등록 실패: {e}")

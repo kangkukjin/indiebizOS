@@ -1021,3 +1021,19 @@ async def get_health():
         return get_system_health()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/world-pulse/run-self-check")
+async def trigger_self_check():
+    """자가점검 수동 트리거 — 전수 점검 실행"""
+    import threading
+    from world_pulse import run_self_check
+
+    def _run():
+        try:
+            run_self_check()
+        except Exception as e:
+            logger.error(f"[WorldPulse] 수동 자가점검 실패: {e}")
+
+    threading.Thread(target=_run, daemon=True, name="manual-self-check").start()
+    return {"status": "started", "message": "전수 점검이 백그라운드에서 시작되었습니다."}

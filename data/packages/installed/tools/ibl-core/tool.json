@@ -319,13 +319,13 @@
     },
     {
       "name": "ibl_finance",
-      "description": "금융/투자 통합 노드. 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐를 하나의 인터페이스로 통합합니다.\n\n## 액션\n- price: 주가 조회 - Yahoo Finance (target=심볼, params: period, interval)\n- info: 종목 상세 정보 (target=심볼)\n- search: 종목 심볼 검색 (target=회사명)\n- kr_company: 한국 기업 정보 - DART (target=기업명)\n- us_company: 미국 기업 프로필 - FMP (target=티커)\n- kr_financial: 한국 재무제표 - DART (target=기업명, params: year, report_type)\n- us_financial: 미국 재무제표 - FMP (target=티커, params: statement_type, period)\n- kr_disclosure: 한국 공시 검색 - DART (target=기업명, params: start_date, end_date)\n- us_filing: 미국 SEC 공시 (target=티커, params: filing_type)\n- news: 종목 뉴스 - Finnhub (target=티커)\n- stock_news: 종목 뉴스 - Yahoo (target=티커)\n- earnings: 실적 발표 일정 (target=티커, 비우면 전체)\n- crypto: 암호화폐 시세 - CoinGecko (target=코인심볼 BTC/ETH 등)\n- kr_price: 한국 주가 - KRX (target=종목코드, params: start_date, end_date)\n- us_price: 미국 주가 - FMP (target=티커, params: start_date, end_date)\n\n## 사용 예시\n삼성전자 주가: action='price', target='005930.KS'\n애플 재무제표: action='us_financial', target='AAPL', params={'statement_type': 'income'}\n비트코인 시세: action='crypto', target='BTC'",
+      "description": "금융/투자 통합 노드. 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐를 하나의 인터페이스로 통합합니다.\n\n## 액션\n- price: 주가 조회 - Yahoo Finance (target=심볼, params: period, interval)\n- info: 종목 상세 정보 (target=심볼)\n- search: 종목 심볼 검색 (target=회사명)\n- kr_company: 한국 기업 정보 - DART (target=기업명)\n- us_company: 미국 기업 프로필 - FMP (target=티커)\n- kr_financial: 한국 재무제표 - DART (target=기업명, params: year, report_type)\n- us_financial: 미국 재무제표 - FMP (target=티커, params: statement_type, period)\n- kr_disclosure: 한국 공시 검색 - DART (target=기업명, params: start_date, end_date)\n- us_filing: 미국 SEC 공시 (target=티커, params: filing_type)\n- news: 종목 뉴스 - Finnhub (target=티커)\n- earnings: 실적 발표 일정 (target=티커, 비우면 전체)\n- crypto: 암호화폐 시세 - CoinGecko (target=코인심볼 BTC/ETH 등)\n- kr_price: 한국 주가 - KRX (target=종목코드, params: start_date, end_date)\n- us_price: 미국 주가 - FMP (target=티커, params: start_date, end_date)\n\n## 사용 예시\n삼성전자 주가: action='price', target='005930.KS'\n애플 재무제표: action='us_financial', target='AAPL', params={'statement_type': 'income'}\n비트코인 시세: action='crypto', target='BTC'",
       "input_schema": {
         "type": "object",
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["price", "info", "search", "kr_company", "us_company", "kr_financial", "us_financial", "kr_disclosure", "us_filing", "news", "stock_news", "earnings", "crypto", "kr_price", "us_price"],
+            "enum": ["price", "info", "search", "kr_company", "us_company", "kr_financial", "us_financial", "kr_disclosure", "us_filing", "news", "earnings", "crypto", "kr_price", "us_price"],
             "description": "실행할 액션"
           },
           "target": {

@@ -1,16 +1,9 @@
 nodes:
-  limbs:
-    actions:
-      launch:
-        description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
-        router: handler
-        tool: launch_sites
-        implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈)
-        target_key: action
   sense:
     actions:
       search_ddg:
-        description: 웹 검색 (DuckDuckGo). 뉴스는 search_news, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
+        description: 웹 검색 (DuckDuckGo). 뉴스는 search_news, 유튜브는 search_youtube, 논문은
+          search_openalex를 각각 사용.
         router: handler
         tool: ddgs_search
         implementation: DuckDuckGo ddgs 라이브러리로 웹 검색. 쿼리 언어 자동 감지(영어→글로벌, 한국어→한국).
@@ -21,7 +14,8 @@ nodes:
         description: 웹페이지 원문 읽기 (URL 필요). 검색 스니펫으로 부족할 때 상세 내용 확인용.
         router: handler
         tool: crawl_website
-        implementation: 1차 requests+BeautifulSoup 정적 크롤링, 콘텐츠 부족 시 Chrome MCP(실제 브라우저)로 자동 폴백. JS 렌더링 사이트도 처리 가능.
+        implementation: 1차 requests+BeautifulSoup 정적 크롤링, 콘텐츠 부족 시 Chrome MCP(실제 브라우저)로
+          자동 폴백. JS 렌더링 사이트도 처리 가능.
         target_key: url
         postprocess:
           type: compress
@@ -33,6 +27,52 @@ nodes:
         target_key: query
         postprocess:
           type: compress
-          prompt: "같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라."
+          prompt: 같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라.
     guides:
     - web/web_guide.md
+  self:
+    actions:
+      launch:
+        description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. '런처 띄워줘' → 대시보드 UI 표시. 전부 열기는
+          명시 요청 시에만
+        group: output
+        category: io
+        router: handler
+        tool: launch_sites
+        implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈)
+        target_key: action
+        keywords:
+        - launcher
+        - 런처
+        - 즐겨찾기
+        - favorite
+        - 좋아하는 사이트
+        - bookmark
+        - 좋아하는 사이트
+        - 자주가는
+  limbs:
+    actions:
+      launch:
+        description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
+        router: handler
+        tool: launch_sites
+        implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈)
+        target_key: action
+  engines:
+    actions:
+      newspaper:
+        description: '"신문 만들어줘"라고 요청할 때만 사용. 키워드별 뉴스 기사를 자동 수집하여 HTML 신문 레이아웃으로 생성.
+          보고서/분석/요약 요청에는 사용하지 말 것.'
+        group: media_produce
+        category: create
+        router: handler
+        tool: generate_newspaper
+        implementation: Google News RSS + Guardian API 수집 → Jinja2 HTML 신문 레이아웃 생성
+        target_key: keywords
+        keywords:
+        - 신문
+        - 신문만들기
+        - 신문생성
+        - 가디언
+        - guardian
+        - world news

@@ -1,5 +1,10 @@
 node: sense
 actions:
+  commercial:
+    description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
+    router: handler
+    tool: search_commercial_district
+    implementation: 소상공인진흥공단 상권정보 공개 API로 업종별 점포 밀집도/분포 분석
   apt_trade:
     description: 아파트 매매 실거래가 (국토부)
     target_description: '지역코드 (5자리, 예: 11680=강남)'
@@ -35,10 +40,5 @@ actions:
     tool: get_region_codes
     implementation: 법정동 코드 매핑 테이블로 지역코드 조회 (로컬 데이터)
     target_key: city
-  commercial:
-    description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
-    router: handler
-    tool: search_commercial_district
-    implementation: 소상공인진흥공단 상권정보 공개 API로 업종별 점포 밀집도/분포 분석
 guides:
 - real-estate/real_estate_guide.md

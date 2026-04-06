@@ -386,22 +386,6 @@
       }
     },
     {
-      "name": "yf_stock_news",
-      "description": "Yahoo Finance에서 종목 관련 뉴스를 조회합니다.\n\n## 반환 정보\n- 뉴스 제목, 요약, 링크\n- 발행 시간, 출처",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "symbol": {
-            "type": "string",
-            "description": "종목 심볼 (예: AAPL, TSLA)"
-          }
-        },
-        "required": [
-          "symbol"
-        ]
-      }
-    },
-    {
       "name": "crypto_price",
       "description": "CoinGecko API로 암호화폐 가격을 조회합니다 (무료, API 키 불필요).\n\n## 장점\n- API 키 불필요, 완전 무료\n- USD/KRW 동시 조회\n\n## 지원 코인\n- bitcoin (BTC), ethereum (ETH), ripple (XRP)\n- dogecoin (DOGE), solana (SOL), cardano (ADA)\n- 심볼(BTC, ETH)도 자동 변환\n\n## 반환 정보\n- USD/KRW 현재가, 24시간 변동률\n- 시가총액, 거래량, 역대 최고가",
       "input_schema": {

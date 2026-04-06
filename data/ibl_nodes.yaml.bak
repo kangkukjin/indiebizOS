@@ -281,8 +281,6 @@ nodes:
         implementation: OpenAlex 무료 API로 학술 논문 메타데이터 검색 (제목/초록/인용수/OA 필터). 통합검색보다
           결과가 많고 필터 옵션 풍부.
         target_key: query
-        postprocess:
-          type: compress
       search_arxiv:
         description: AI/CS/물리/수학 프리프린트 검색 (arXiv). 최신 미출판 연구, PDF 다운로드 가능. 정식 출판 논문은
           search_openalex 사용.
@@ -526,6 +524,30 @@ nodes:
         implementation: 국토부 ITS API(한국 CCTV) + Windy API(해외 웹캠) 통합 검색. 해외 전용은 webcam
           액션 사용.
         target_key: query
+      cctv_by_name:
+        description: CCTV 이름으로 검색 (ITS 국가교통정보센터)
+        group: cctv
+        category: search
+        router: handler
+        tool: get_cctv_by_name
+        implementation: ITS API에서 CCTV 이름/키워드로 직접 검색
+        target_key: keyword
+        keywords:
+        - cctv
+        - 이름검색
+      api_ninjas:
+        description: API Ninjas 범용 데이터 조회 (날씨, 환율, 영양, 명언 등 다양한 endpoint)
+        group: data
+        category: get
+        router: handler
+        tool: get_api_ninjas_data
+        implementation: API Ninjas REST API (40+ endpoint, API 키 기반)
+        keywords:
+        - ninjas
+        - 날씨
+        - 환율
+        - 영양
+        - 명언
       commercial:
         description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
         router: handler
@@ -638,16 +660,14 @@ nodes:
         implementation: yt-dlp로 유튜브 메타데이터 추출 (공식 API 불필요)
         target_key: url
       video_transcript:
-        description: 유튜브 동영상 자막/스크립트 추출 — 영상 요약의 첫 단계 (url 또는 video_id 사용 가능)
+        description: 유튜브 ��영상 자막/스크립트 추출 (url 또는 video_id 사용 가능). 영상 요약이 목적이면 summarize_video를
+          쓰면 자막 추출+AI 요약+HTML+브라우저 열기를 한 번에 수행한다.
         keywords:
         - youtube
         - 유튜브
         - 자막
-        - 요약
         - 스크립트
         - transcript
-        - 영상요약
-        - 영상내용
         - subtitle
         - 대본
         target_description: 유튜브 URL 또는 video_id
@@ -743,6 +763,20 @@ nodes:
         - 세계
         - 재수집
         - 갱신
+      self_check:
+        description: 전수 자가점검 실행 — 부작용 없는 모든 IBL 액션을 테스트하여 시스템 건강 상태 확인
+        group: world
+        category: run
+        router: system
+        func: self_check
+        implementation: 전체 IBL 액션 중 안전한 액션을 전수 실행, 결과를 world_pulse.db에 기록, 패턴 분석
+        keywords:
+        - 자가점검
+        - 전수점검
+        - 면역
+        - 건강체크
+        - 셀프체크
+        - self-check
       cctv_nearby:
         description: 좌표 근처 CCTV 찾기 (lat/lng 필수, 모르면 cctv_search 사용)
         keywords:
@@ -776,6 +810,71 @@ nodes:
         router: handler
         tool: local_db_save
         implementation: SQLite DB에 가게/지역 정보 구조화 저장
+      search_library_docs:
+        description: 라이브러리/프레임워크 최신 공식 문서 검색 (코드 작성 시 정확한 API 참조용)
+        target_description: 알고 싶은 내용
+        router: handler
+        tool: search_library_docs
+        implementation: Context7 REST API로 최신 공식 문서 검색 및 반환
+        target_key: query
+        postprocess:
+          type: compress
+      resolve_library:
+        description: 라이브러리 이름으로 Context7 ID 조회
+        target_description: 라이브러리 이름
+        router: handler
+        tool: resolve_library
+        implementation: Context7 REST API로 라이브러리 ID 검색
+        target_key: library_name
+      summarize_video:
+        description: 유튜브 동영상 자막 추출 + AI 요약 + HTML 보고서 생성 + 브라우저 자동 열기를 한 번에 수행
+        keywords:
+        - youtube
+        - 유튜브
+        - 요약
+        - 영상요약
+        - 동영상요약
+        - summarize
+        target_description: 유튜브 URL
+        router: handler
+        tool: summarize_youtube
+        implementation: 자막 추출 + 시스템 AI 모델로 요약 + HTML 보고서 생성 + 브라우저 자동 열기. summary_length
+          파라미터로 요약 길이 지정 가능.
+        target_key: url
+      gutenberg_books:
+        description: Project Gutenberg 고전 도서 및 원문 텍스트 검색 (Gutendex API). 저작권 만료된 7만
+          6천여 권의 고전 문학, 철학, 과학 텍스트를 검색하고 원문 다운로드 링크를 제공
+        target_description: 검색어 (제목, 저자, 주제)
+        router: handler
+        tool: gutenberg_search
+        implementation: Gutendex REST API로 Project Gutenberg 도서 메타데이터 검색. 원문 텍스트/HTML
+          다운로드 URL 포함
+        target_key: query
+        keywords:
+        - 고전
+        - 원문
+        - gutenberg
+        - 문학
+        - 철학
+        - 고전문학
+        - 원전
+      korean_classics:
+        description: 한국고전종합DB 검색 (db.itkc.or.kr). 이황, 이이 등 고전 문헌, 번역서 검색 및 원문 링크 제공.
+        target_description: '검색어 (예: 이황, 퇴계집)'
+        router: handler
+        tool: korean_classics_search
+        implementation: 한국고전종합DB OpenAPI를 통해 고전 문헌 및 번역서 검색, 원문 링크 반환
+        target_key: query
+        keywords:
+        - 한국고전
+        - 고전번역
+        - 이황
+        - 이이
+        - 퇴계
+        - 율곡
+        - 조선
+        - 문집
+        - itkc
     description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 세계 상태 등 외부 API 및 데이터
       소스 접근'
     tags:
@@ -802,6 +901,7 @@ nodes:
     - real-estate/real_estate_guide.md
     - study/study_guide.md
     - web/web_guide.md
+    - context7/context7_guide.md
   self:
     actions:
       search_photos:
@@ -931,6 +1031,26 @@ nodes:
         router: handler
         tool: blog_stats
         implementation: 블로그 SQLite DB에서 통계 집계 쿼리
+      blog_get_post:
+        description: 블로그 글 ID로 전체 내용 조회 (단순 ID 조회)
+        group: blog
+        category: get
+        router: handler
+        tool: blog_get_post
+        implementation: 블로그 SQLite DB에서 ID로 글 전문 조회
+        target_key: post_id
+      blog_semantic:
+        description: 블로그 의미 검색 (키워드 무관, 의미적 유사성만으로 검색)
+        group: blog
+        category: search
+        router: handler
+        tool: search_blog_semantic
+        implementation: 벡터 임베딩 기반 시맨틱 검색 (코사인 유사도)
+        target_key: query
+        keywords:
+        - 블로그
+        - 의미검색
+        - 시맨틱
       check_new:
         description: 새 블로그 글 확인
         group: blog
@@ -1089,6 +1209,19 @@ nodes:
         - 일정
         - 스케줄관리
         - 예약관리
+      show_calendar:
+        description: 캘린더를 HTML로 생성하여 브라우저에서 표시
+        group: schedule
+        category: display
+        router: system
+        func: show_calendar
+        implementation: calendar_manager.open_in_browser() — HTML 캘린더 생성 후 브라우저 자동
+          열기
+        keywords:
+        - 캘린더
+        - 달력
+        - 일정보기
+        - calendar
       list_switches:
         description: 등록된 스위치 목록 조회
         group: schedule
@@ -1099,40 +1232,88 @@ nodes:
         keywords:
         - 스위치
         - 목록
-      ask_user:
-        description: 사용자에게 질문
-        group: system
-        category: notify
+      run_switch:
+        description: 스위치 실행 (switch_id 필수)
+        group: schedule
+        category: execute
         router: system
-        func: ask_user_question
-        implementation: WebSocket으로 프론트엔드에 질문 UI 표시 후 응답 대기
+        func: run_switch
+        implementation: SwitchManager + SwitchRunner로 스위치 실행
+        target_key: switch_id
         keywords:
-        - 질문
-        - 사용자
-        - 확인
-      approve:
-        description: 위험한 작업 전 사용자 승인 요청
-        group: system
-        category: notify
+        - 스위치실행
+        - 스위치
+      schedule:
+        description: 스케줄 실행 (지연 실행, 특정 시간, 반복 등)
+        group: schedule
+        category: execute
         router: system
-        func: request_user_approval
-        implementation: WebSocket으로 프론트엔드에 승인 요청 UI 표시
+        func: schedule
+        implementation: _execute_schedule — 지연(delay)/특정시간(at)/반복(repeat) 기반 작업 예약
+          실행
         keywords:
-        - 승인
-        - 확인
-        - 허가
-      todo:
-        description: 할일 목록 생성/관리
-        group: system
-        category: notify
+        - 스케줄
+        - 예약
+        - 타이머
+        - 지연실행
+        - 반복
+      list_goals:
+        description: 활성 목표 목록 조회
+        group: goal
+        category: list
         router: system
-        func: todo_write
-        implementation: WebSocket으로 프론트엔드에 TODO 리스트 UI 전송
+        func: list_goals
+        implementation: conversation_db에서 활성/대기 중인 목표 프로세스 목록 조회
         keywords:
-        - 할일
-        - 투두
-        - TODO
-        - 작업관리
+        - 목표
+        - 목표목록
+        - goal
+        - 진행중
+      goal_status:
+        description: 특정 목표의 상세 상태 조회
+        group: goal
+        category: get
+        router: system
+        func: get_goal_status
+        implementation: conversation_db에서 목표 상태, 라운드 이력, 누적 결과 조회
+        keywords:
+        - 목표상태
+        - 진행상황
+        - goal
+      goal_kill:
+        description: 목표 프로세스 강제 종료
+        group: goal
+        category: execute
+        router: system
+        func: kill_goal
+        implementation: 활성 목표를 terminated 상태로 전환하고 스케줄 제거
+        keywords:
+        - 목표종료
+        - 목표취소
+        - 중단
+        - kill
+      log_attempt:
+        description: 목표 실행 시도 기록 (전략 전환 및 라운드 메모리)
+        group: goal
+        category: execute
+        router: system
+        func: log_attempt
+        implementation: conversation_db에 시도 결과/카테고리/전략 기록, 연속 실패 추적
+        keywords:
+        - 시도기록
+        - 전략
+        - 라운드
+      get_attempts:
+        description: 목표의 과거 시도 이력 조회
+        group: goal
+        category: get
+        router: system
+        func: get_attempts
+        implementation: conversation_db에서 시도 이력 조회, 실패 카테고리별 요약 포함
+        keywords:
+        - 시도이력
+        - 시도목록
+        - 전략이력
       notify_user:
         description: 사용자에게 알림 전송
         group: system
@@ -1766,6 +1947,64 @@ nodes:
         router: handler
         tool: browser_tab_close
         implementation: Playwright page.close()로 현재 탭 닫기
+      dblclick:
+        description: 요소 더블클릭
+        group: browser
+        router: handler
+        tool: browser_dblclick
+        implementation: Playwright locator.dblclick()로 요소 더블클릭
+        target_key: ref
+      rightclick:
+        description: 요소 우클릭 (컨텍스트 메뉴)
+        group: browser
+        router: handler
+        tool: browser_rightclick
+        implementation: Playwright locator.click(button='right')로 우클릭
+        target_key: ref
+      check:
+        description: 체크박스/라디오 버튼 체크 또는 해제
+        group: browser
+        router: handler
+        tool: browser_check
+        implementation: Playwright locator.check()/uncheck()로 체크박스 토글
+        target_key: ref
+      upload_file:
+        description: 파일 input에 파일 업로드
+        group: browser
+        router: handler
+        tool: browser_upload_file
+        implementation: Playwright set_input_files()로 파일 업로드
+        target_key: ref
+      get_html:
+        description: 현재 페이지 HTML 소스 추출
+        group: browser
+        router: handler
+        tool: browser_get_html
+        implementation: Playwright page.content()로 HTML 소스 반환
+      network_logs:
+        description: 네트워크 요청 로그 조회/캡처
+        group: browser
+        router: handler
+        tool: browser_network_logs
+        implementation: Playwright route/CDP로 네트워크 요청 캡처 및 조회
+      dialog_info:
+        description: Alert/Confirm/Prompt 팝업 정보 조회
+        group: browser
+        router: handler
+        tool: browser_dialog_info
+        implementation: Playwright dialog 이벤트 리스너로 마지막 팝업 정보 반환
+      resize:
+        description: 브라우저 뷰포트 크기 변경
+        group: browser
+        router: handler
+        tool: browser_resize
+        implementation: Playwright page.set_viewport_size()로 뷰포트 조정
+      vision:
+        description: 페이지 스크린샷을 base64 이미지로 반환 (멀티모달 AI 분석용)
+        group: browser
+        router: handler
+        tool: browser_vision
+        implementation: Playwright screenshot을 base64 인코딩하여 반환 (AI 시각 인식용)
       devices:
         description: 연결된 기기 목록 조회
         group: android
@@ -2762,6 +3001,78 @@ nodes:
         tool: launch_sites
         implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈)
         target_key: action
+      open_project:
+        description: 프로젝트 창 열기
+        group: launcher
+        category: execute
+        router: system
+        func: launcher_command
+        default_input:
+          command: open_project
+        implementation: WebSocket으로 Electron Launcher에 open_project_window 명령 전송
+        keywords:
+        - 프로젝트열기
+        - 프로젝트창
+      open_system_ai:
+        description: 시스템 AI 창 열기
+        group: launcher
+        category: execute
+        router: system
+        func: launcher_command
+        default_input:
+          command: open_system_ai
+        implementation: WebSocket으로 Electron Launcher에 open_system_ai_window 명령 전송
+        keywords:
+        - 시스템AI
+        - 시스템창
+      open_indienet:
+        description: IndieNet 창 열기
+        group: launcher
+        category: execute
+        router: system
+        func: launcher_command
+        default_input:
+          command: open_indienet
+        implementation: WebSocket으로 Electron Launcher에 open_indienet_window 명령 전송
+        keywords:
+        - 인디넷
+        - 메신저
+      open_business:
+        description: 비즈니스 매니저 창 열기
+        group: launcher
+        category: execute
+        router: system
+        func: launcher_command
+        default_input:
+          command: open_business
+        implementation: WebSocket으로 Electron Launcher에 open_business_window 명령 전송
+        keywords:
+        - 비즈니스
+        - 이웃
+      open_multichat:
+        description: 멀티채팅 창 열기
+        group: launcher
+        category: execute
+        router: system
+        func: launcher_command
+        default_input:
+          command: open_multichat
+        implementation: WebSocket으로 Electron Launcher에 open_multichat_window 명령 전송
+        keywords:
+        - 멀티채팅
+        - 멀티챗
+      open_folder:
+        description: 폴더 뷰 창 열기
+        group: launcher
+        category: execute
+        router: system
+        func: launcher_command
+        default_input:
+          command: open_folder
+        implementation: WebSocket으로 Electron Launcher에 open_folder_window 명령 전송
+        keywords:
+        - 폴더
+        - 파일탐색
     description: '수족: 작업 도구 및 기기 제어 — 브라우저 자동화, 안드로이드, 데스크톱, 미디어 재생, URL/파일 열기'
     tags:
     - 브라우저
@@ -3347,6 +3658,52 @@ nodes:
         keywords:
         - 컴포넌트
         - 가져오기
+      web_add_component:
+        description: shadcn/ui 컴포넌트를 프로젝트에 추가
+        group: web_builder
+        category: create
+        router: handler
+        tool: add_component
+        implementation: shadcn/ui CLI로 버튼, 카드, 모달 등 UI 컴포넌트 설치
+        target_key: component
+        keywords:
+        - 컴포넌트추가
+        - shadcn
+        - UI
+      web_edit_styles:
+        description: 프로젝트 스타일 수정 (색상, 폰트, 테마)
+        group: web_builder
+        category: edit
+        router: handler
+        tool: edit_styles
+        implementation: globals.css 및 Tailwind 설정 수정으로 사이트 테마 변경
+        keywords:
+        - 스타일
+        - 테마
+        - 색상
+        - 폰트
+      web_build:
+        description: 프로덕션 빌드 생성
+        group: web_builder
+        category: execute
+        router: handler
+        tool: build_site
+        implementation: Next.js 빌드 실행 (.next/ 디렉토리 생성)
+        keywords:
+        - 빌드
+        - build
+        - 배포준비
+      web_deploy:
+        description: Vercel에 사이트 배포
+        group: web_builder
+        category: execute
+        router: handler
+        tool: deploy_vercel
+        implementation: Vercel CLI로 사이트 배포 (도메인 설정 포함)
+        keywords:
+        - 배포
+        - deploy
+        - vercel
       arch_create:
         description: 새 집 설계 초기화 (부지 크기, 층수 설정)
         group: architecture

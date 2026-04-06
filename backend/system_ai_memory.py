@@ -10,6 +10,7 @@ IndieBiz OS Core
 
 import sqlite3
 import json
+import base64
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
@@ -75,6 +76,9 @@ def init_memory_db():
     if 'source' not in columns:
         cursor.execute("ALTER TABLE conversations ADD COLUMN source TEXT")
         print("[system_ai_memory] conversations.source 컬럼 추가됨")
+    if 'images' not in columns:
+        cursor.execute("ALTER TABLE conversations ADD COLUMN images TEXT")
+        print("[system_ai_memory] conversations.images 컬럼 추가됨")
 
     # 중요 기억 테이블 (시스템 AI가 기억해야 할 것들)
     cursor.execute("""
@@ -112,14 +116,51 @@ def init_memory_db():
     conn.close()
 
 
-def save_conversation(role: str, content: str, importance: int = 0, source: str = None) -> int:
-    """대화 저장
+def _save_images_to_files(conversation_id: int, images: list) -> str:
+    """이미지를 파일로 저장하고 상대 경로 JSON 반환"""
+    images_dir = DATA_PATH / "system_ai_images"
+    images_dir.mkdir(exist_ok=True)
+
+    paths = []
+    for idx, img in enumerate(images):
+        b64_data = img.get("base64", "")
+        if not b64_data:
+            continue
+        media_type = img.get("media_type", "image/png")
+        ext = "jpg" if "jpeg" in media_type else "png"
+        filename = f"conv_{conversation_id}_{idx}.{ext}"
+        filepath = images_dir / filename
+        filepath.write_bytes(base64.b64decode(b64_data))
+        paths.append(f"system_ai_images/{filename}")
+
+    return json.dumps(paths, ensure_ascii=False) if paths else None
+
+
+def _load_images_from_files(images_json: str) -> list:
+    """파일에서 이미지를 base64로 로드"""
+    if not images_json:
+        return None
+    paths = json.loads(images_json)
+    images = []
+    for rel_path in paths:
+        filepath = DATA_PATH / rel_path
+        if filepath.exists():
+            b64_data = base64.b64encode(filepath.read_bytes()).decode()
+            ext = filepath.suffix.lower()
+            media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else "image/png"
+            images.append({"base64": b64_data, "media_type": media_type})
+    return images if images else None
+
+
+def save_conversation(role: str, content: str, importance: int = 0, source: str = None, images: list = None) -> int:
+    """대화 저장 (이미지 포함 가능)
 
     Args:
         role: 역할 ('user', 'assistant', 'agent')
         content: 대화 내용
         importance: 중요도 (0-10)
         source: 발신자 정보 (예: 'user@gui', '스토리텔러@홍보', 'system_ai')
+        images: 이미지 데이터 [{"base64": "...", "media_type": "image/png"}]
 
     Returns:
         저장된 대화 ID
@@ -135,6 +176,16 @@ def save_conversation(role: str, content: str, importance: int = 0, source: str 
     """, (datetime.now().isoformat(), role, content, importance, source))
 
     conversation_id = cursor.lastrowid
+
+    # 이미지가 있으면 파일로 저장 후 경로 업데이트
+    if images:
+        images_json = _save_images_to_files(conversation_id, images)
+        if images_json:
+            cursor.execute(
+                "UPDATE conversations SET images = ? WHERE id = ?",
+                (images_json, conversation_id)
+            )
+
     conn.commit()
     conn.close()
 
@@ -182,11 +233,12 @@ def get_history_for_ai(limit: int = 7) -> List[Dict[str, str]]:
     1. user/assistant 대화만 조회 (delegation, agent_report 제외)
     2. role을 Claude API 호환 형식으로 매핑
     3. Observation Masking: 오래된 긴 대화는 축약
+    4. 최근 턴의 이미지는 파일에서 로드하여 포함
 
     프론트엔드 히스토리 표시에는 get_recent_conversations()를 사용하세요.
 
     Returns:
-        [{"role": "user"|"assistant", "content": "..."}] 형식의 리스트
+        [{"role": "user"|"assistant", "content": "...", "images": [...]}] 형식의 리스트
     """
     RECENT_TURNS_RAW = 2    # 최근 2턴은 원본 유지
     MASK_THRESHOLD = 500    # 500자 이상이면 마스킹
@@ -197,7 +249,7 @@ def get_history_for_ai(limit: int = 7) -> List[Dict[str, str]]:
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, timestamp, role, content, summary, importance
+        SELECT id, timestamp, role, content, summary, importance, images
         FROM conversations
         WHERE role IN ('user', 'assistant')
         ORDER BY id DESC
@@ -211,13 +263,22 @@ def get_history_for_ai(limit: int = 7) -> List[Dict[str, str]]:
     for idx, row in enumerate(reversed(rows)):  # 시간순으로 정렬
         role = row[2]       # 이미 'user' 또는 'assistant'만 조회됨
         content = row[3]
+        images_json = row[6]
 
         # Observation Masking: 최근 2턴은 원본, 오래된 것은 500자 이상이면 축약
         if idx < len(rows) - RECENT_TURNS_RAW and len(content) > MASK_THRESHOLD:
             first_line = content.split('\n')[0][:100]
             content = f"[이전 대화: {first_line}... ({len(content)}자)]"
 
-        history.append({"role": role, "content": content})
+        msg = {"role": role, "content": content}
+
+        # 최근 턴만 이미지 로드 (토큰 절약)
+        if idx >= len(rows) - RECENT_TURNS_RAW and images_json:
+            loaded_images = _load_images_from_files(images_json)
+            if loaded_images:
+                msg["images"] = loaded_images
+
+        history.append(msg)
 
     return history
 

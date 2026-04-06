@@ -324,8 +324,8 @@ async def handle_chat_message(client_id: str, data: dict):
         # 히스토리 로드
         history = db.get_history_for_ai(target_agent_id, user_id)
 
-        # 사용자 메시지 저장
-        db.save_message(user_id, target_agent_id, message)
+        # 사용자 메시지 저장 (이미지 포함)
+        db.save_message(user_id, target_agent_id, message, images=images if images else None)
 
         # 태스크 생성
         task_id = f"task_{uuid.uuid4().hex[:8]}"
@@ -377,8 +377,9 @@ async def handle_chat_message(client_id: str, data: dict):
             images=images
         )
 
-        # AI 응답 저장
-        message_id = db.save_message(target_agent_id, user_id, response)
+        # AI 응답 저장 (도구 결과 이미지 포함)
+        tool_images = runner.ai.get_last_tool_images()
+        message_id = db.save_message(target_agent_id, user_id, response, images=tool_images)
 
         # 응답 전송
         await manager.send_message(client_id, {
@@ -416,6 +417,13 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     agent_name = data.get("agent_name", "")
     project_id = data.get("project_id", "")
     images = data.get("images", [])
+
+    # 에피소드 로그 시작
+    try:
+        from episode_logger import EpisodeLogger
+        EpisodeLogger.start_episode(agent_name, message)
+    except Exception:
+        pass
 
     try:
         # 시작 알림
@@ -491,8 +499,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 히스토리 로드
         history = db.get_history_for_ai(target_agent_id, user_id)
 
-        # 사용자 메시지 저장
-        db.save_message(user_id, target_agent_id, message)
+        # 사용자 메시지 저장 (이미지 포함)
+        db.save_message(user_id, target_agent_id, message, images=images if images else None)
 
         # 실행기억 생성 (RAG + discover + implementation, 1회)
         execution_memory = runner._build_execution_memory(message)
@@ -789,7 +797,9 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         if final_content:
             # 내부 시스템 마커 필터링
             final_content = filter_internal_markers(final_content)
-            message_id = db.save_message(target_agent_id, user_id, final_content)
+            # 도구 결과 이미지 수집하여 저장
+            tool_images = runner.ai.get_last_tool_images()
+            message_id = db.save_message(target_agent_id, user_id, final_content, images=tool_images)
 
             # 최종 응답 전송
             await manager.send_message(client_id, {
@@ -837,6 +847,13 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             "agent": agent_name
         })
 
+        # 에피소드 로그 종료
+        try:
+            from episode_logger import EpisodeLogger
+            EpisodeLogger.end_episode()
+        except Exception:
+            pass
+
         # 컨텍스트 정리
         from thread_context import clear_all_context
         clear_all_context()
@@ -844,6 +861,12 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     except Exception as e:
         import traceback
         traceback.print_exc()
+        # 에피소드 로그 종료 (에러 시에도)
+        try:
+            from episode_logger import EpisodeLogger
+            EpisodeLogger.end_episode()
+        except Exception:
+            pass
         from thread_context import clear_all_context
         clear_all_context()
         await manager.send_message(client_id, {
@@ -863,6 +886,13 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
     """
     message = data.get("message", "")
     images = data.get("images", [])
+
+    # 에피소드 로그 시작
+    try:
+        from episode_logger import EpisodeLogger
+        EpisodeLogger.start_episode("system_ai", message)
+    except Exception:
+        pass
 
     try:
         # 시작 알림
@@ -917,13 +947,14 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
         history = get_history_for_ai(limit=7)
 
-        # 사용자 메시지 저장
-        save_conversation("user", message)
+        # 사용자 메시지 저장 (이미지 포함)
+        save_conversation("user", message, images=images if images else None)
 
         # 스트리밍 처리 (AIAgent 사용)
         event_queue = asyncio.Queue()
         final_content = ""
         tool_results_list = []  # 도구 실행 결과 기록용
+        collected_tool_images = []  # 도구 결과 이미지 수집
         timed_out = False  # 타임아웃 발생 여부 (워커 스레드에서 확인)
         loop = asyncio.get_running_loop()
 
@@ -931,12 +962,16 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         set_cancel(client_id, False)
 
         def run_stream():
-            """스레드에서 시스템 AI 스트리밍 실행 (AIAgent 사용)"""
+            """스레드에서 시스템 AI 스트리밍 실행 (AgentRunner 인지 파이프라인)"""
             nonlocal final_content
             # 스레드별로 컨텍스트를 다시 설정해야 함 (thread-local storage)
             set_current_task_id(task_id)
-            # 실행기억은 process_system_ai_message_stream 내부에서 생성/주입됨
             try:
+                # 인지 메타데이터 수집 (평가 루프용)
+                consciousness_output = None
+                execution_memory = ""
+                tool_results_log = []
+
                 # 통합된 스트리밍 함수 사용 - 모든 프로바이더 지원
                 for event in process_system_ai_message_stream(
                     message=message,
@@ -951,9 +986,60 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                             loop
                         )
                         break
+
+                    event_type = event.get("type")
+
+                    # 인지 메타데이터 수집 (클라이언트에 전달하지 않음)
+                    if event_type == "_consciousness_output":
+                        consciousness_output = event.get("data")
+                        execution_memory = event.get("execution_memory", "")
+                        continue
+
+                    # 도구 실행 결과 수집 (평가 루프에서 사용)
+                    if event_type == "tool_result":
+                        tool_results_log.append(event.get("content", ""))
+                        if event.get("images"):
+                            collected_tool_images.extend(event["images"])
+
                     asyncio.run_coroutine_threadsafe(event_queue.put(event), loop)
-                    if event.get("type") == "final":
+                    if event_type == "final":
                         final_content = event.get("content", "")
+
+                # 평가 루프 — 달성 기준이 있으면 프로젝트 에이전트와 동일하게 실행
+                if consciousness_output and final_content:
+                    from system_ai_core import get_system_ai_runner
+                    runner = get_system_ai_runner()
+                    criteria = runner._extract_achievement_criteria(consciousness_output)
+                    if criteria:
+                        from world_pulse import _load_config as _load_wp_config
+                        _goal_cfg = _load_wp_config().get("goal_eval", {})
+                        if _goal_cfg.get("enabled", True):
+                            print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
+                            evaluated = runner._run_goal_evaluation_loop(
+                                user_message=message,
+                                criteria=criteria,
+                                initial_response=final_content,
+                                history=history,
+                                consciousness_output=consciousness_output,
+                                max_rounds=_goal_cfg.get("max_rounds", 3),
+                                tool_results=tool_results_log,
+                                execution_memory=execution_memory,
+                            )
+                            if evaluated and evaluated.strip() and evaluated != final_content:
+                                final_content = evaluated
+                                asyncio.run_coroutine_threadsafe(
+                                    event_queue.put({"type": "text", "content": "\n\n---\n[평가 피드백 반영 재실행]\n\n"}),
+                                    loop
+                                )
+                                asyncio.run_coroutine_threadsafe(
+                                    event_queue.put({"type": "text", "content": evaluated}),
+                                    loop
+                                )
+                                asyncio.run_coroutine_threadsafe(
+                                    event_queue.put({"type": "final", "content": evaluated}),
+                                    loop
+                                )
+                                print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
             except Exception as e:
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put({"type": "error", "content": str(e)}),
@@ -1110,7 +1196,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         # 내부 시스템 마커 필터링
         final_content = filter_internal_markers(final_content)
 
-        save_conversation("assistant", final_content)
+        save_conversation("assistant", final_content, images=collected_tool_images if collected_tool_images else None)
 
         await manager.send_message(client_id, {
             "type": "response",
@@ -1164,11 +1250,24 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             except Exception as e:
                 print(f"[WS] 시스템 AI 태스크 삭제 실패: {e}")
 
+        # 에피소드 로그 종료
+        try:
+            from episode_logger import EpisodeLogger
+            EpisodeLogger.end_episode()
+        except Exception:
+            pass
+
         clear_all_context()
 
     except Exception as e:
         import traceback
         traceback.print_exc()
+        # 에피소드 로그 종료 (에러 시에도)
+        try:
+            from episode_logger import EpisodeLogger
+            EpisodeLogger.end_episode()
+        except Exception:
+            pass
         try:
             from thread_context import clear_all_context
             clear_all_context()

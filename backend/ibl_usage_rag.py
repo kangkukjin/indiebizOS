@@ -403,7 +403,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
         rag = IBLUsageRAG()
         rag.clear_cache()
 
-        print(f"[경험��류] 저장 완료 (id={example_id}, score={top_score:.2f}��학습): "
+        print(f"[경험증류] 저장 완료 (id={example_id}, score={top_score:.2f}/학습): "
               f"\"{intent[:40]}\" → {code[:60]}")
         return True
 

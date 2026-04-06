@@ -64,11 +64,15 @@ cleanup() {
         kill -TERM $FRONTEND_PID 2>/dev/null
     fi
 
-    # 3. 남은 고아 프로세스 정리
+    # 3. 포트 8765 점유 프로세스 강제 정리
+    lsof -ti :8765 | xargs kill -9 2>/dev/null
+
+    # 4. 남은 고아 프로세스 정리
     pkill -9 -f "python3 api.py" 2>/dev/null
+    pkill -9 -f "Python api.py" 2>/dev/null
     pkill -f "cloudflared tunnel run" 2>/dev/null
 
-    # 4. uvicorn multiprocessing 고아 정리 (Python 3.14 + multiprocessing.spawn)
+    # 5. uvicorn multiprocessing 고아 정리 (Python 3.14 + multiprocessing.spawn)
     pgrep -f "multiprocessing.spawn" | while read pid; do
         # 터미널에 붙어있는 것만 (MCP 서버 등은 건드리지 않음)
         if ps -p $pid -o tty= 2>/dev/null | grep -q "s0"; then

@@ -1,0 +1,40 @@
+{
+  "id": "context7",
+  "name": "Context7 Docs",
+  "description": "라이브러리/프레임워크 최신 공식 문서 검색. 코드 생성 시 최신 API와 사용법을 실시간으로 조회하여 정확한 코드를 작성할 수 있도록 지원합니다.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "search_library_docs",
+      "description": "라이브러리/프레임워크의 최신 공식 문서를 검색합니다.\n\n## 사용 시점\n- 코드 작성 시 최신 API 사용법이 필요할 때\n- 라이브러리 버전별 차이를 확인할 때\n- 설정/설치 방법을 정확히 알고 싶을 때\n\n## 사용법\n- query: 알고 싶은 내용 (예: 'how to use hooks')\n- library_name: 라이브러리 이름 (예: 'react', 'fastapi', 'tailwindcss')\n\n## 반환값\n- 최신 공식 문서에서 추출된 관련 내용 (코드 예제 포함)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "알고 싶은 내용 (예: 'middleware setup', 'useState hook')"
+          },
+          "library_name": {
+            "type": "string",
+            "description": "라이브러리 이름 (예: 'react', 'nextjs', 'fastapi', 'tailwindcss')"
+          }
+        },
+        "required": ["query", "library_name"]
+      }
+    },
+    {
+      "name": "resolve_library",
+      "description": "라이브러리 이름으로 Context7 ID를 조회합니다. search_library_docs가 라이브러리를 못 찾을 때 사용.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "library_name": {
+            "type": "string",
+            "description": "검색할 라이브러리 이름"
+          }
+        },
+        "required": ["library_name"]
+      }
+    }
+  ]
+}

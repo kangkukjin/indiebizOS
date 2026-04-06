@@ -15,7 +15,8 @@ actions:
     implementation: Playwright 크롤링 결과를 SQLite DB에 구조화 저장 (사이트별 분류)
     target_key: site_id
   collect_query:
-    description: 축적된 수집 데이터 검색. 정기 수집으로 쌓인 웹 데이터에서 키워드 검색. 실시간 웹 검색은 sense:search_ddg 사용.
+    description: 축적된 수집 데이터 검색. 정기 수집으로 쌓인 웹 데이터에서 키워드 검색. 실시간 웹 검색은 sense:search_ddg
+      사용.
     target_description: 검색어
     router: handler
     tool: wc_query

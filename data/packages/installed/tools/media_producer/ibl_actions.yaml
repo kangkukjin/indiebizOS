@@ -1,54 +1,99 @@
-node: forge
+node: engines
 actions:
   slide:
     description: 프레젠테이션 슬라이드 생성
+    group: media_produce
+    category: create
     router: handler
     tool: create_slides
     implementation: Jinja2 HTML 템플릿 렌더링 + Playwright로 슬라이드 PNG 캡처
     target_key: topic
+    keywords:
+    - 슬라이드
+    - 프레젠테이션
+    - PPT
   html_video:
-    description: 'HTML+CSS 기반 MP4 영상 생성. 각 씬을 완전한 HTML 문서로 작성. {scenes: [{html: "<!DOCTYPE
-      html>...", duration: 5}], narration_texts: ["나레이션"], transition: "fade", transition_duration:
-      0.5}. 전환효과: fade/wipeleft/wiperight/slidedown/slideup/circleopen/dissolve/none.
-      guide_file 참조 필수.'
+    description: HTML+CSS 기반 MP4 영상 생성 (guide 참조)
+    group: media_produce
+    category: create
     router: handler
     tool: create_html_video
     implementation: Jinja2 HTML 씬 생성 → Playwright 프레임 캡처 → FFmpeg MP4 인코딩
     target_key: topic
-
+    keywords:
+    - 영상
+    - 동영상
+    - MP4
   tts:
     description: 텍스트를 음성 파일(MP3)로 변환 (Edge TTS). 동영상 나레이션 등에 활용.
+    group: media_produce
+    category: create
     router: handler
     tool: create_tts
     implementation: edge-tts(Microsoft Azure TTS)로 텍스트→MP3 변환
     target_key: text
+    keywords:
+    - speech
+    - voice
+    - 음성
+    - 읽어줘
+    - narration
+    - text to speech
+    - 목소리
+    - 텍스트음성
+    - TTS
+    - 나레이션
   render_video:
-    description: 파일로 저장된 HTML 씬들을 MP4로 렌더링. scene_files(경로+duration 배열) 또는 scene_dir
-      지정. narration_files, bgm_path 옵션.
+    description: 저장된 HTML 씬들을 MP4로 렌더링
+    group: media_produce
+    category: create
     router: handler
     tool: render_html_video
     implementation: 저장된 HTML 씬 디렉토리 → Playwright + FFmpeg MP4 렌더링
     target_key: scene_dir
+    keywords:
+    - 렌더링
+    - MP4
+    - HTML영상
   slide_shadcn:
-    description: 'Shadcn UI 스타일 고품질 슬라이드(PNG) 생성. {slides: [{layout: "hero", title:
-      "제목"}, {layout: "features", title: "기능", features: [{icon: "🤖", title: "AI",
-      description: "설명"}]}], theme: "blue"}. layout: hero/features/stats/cta/steps/pricing/testimonial/content_image/custom.'
+    description: Shadcn UI 스타일 고품질 슬라이드(PNG) 생성 (guide 참조)
+    group: media_produce
+    category: create
     router: handler
     tool: create_shadcn_slides
     implementation: Shadcn UI React 컴포넌트 기반 슬라이드 생성 + Playwright PNG 캡처
     target_key: topic
+    keywords:
+    - 슬라이드
+    - Shadcn
+    - PNG
   image_gemini:
     description: Gemini AI 이미지 생성
+    group: media_produce
+    category: create
     router: handler
     tool: generate_gemini_image
     implementation: Google Gemini API로 프롬프트 기반 AI 이미지 생성
     target_key: prompt
+    keywords:
+    - image generation
+    - 이미지 만들기
+    - AI 이미지
+    - 그림
+    - picture
+    - 사진생성
+    - text to image
+    - 이미지생성
+    - AI이미지
   render_html:
     description: HTML을 이미지로 렌더링
+    group: media_produce
+    category: create
     router: handler
     tool: render_html_to_image
     implementation: Playwright로 HTML 페이지 렌더링 후 PNG 캡처
     target_key: html
-guides:
-- media_producer/video_workflow_guide.md
-- media_producer/slides_guide.md
+    keywords:
+    - HTML
+    - 이미지
+    - 렌더링

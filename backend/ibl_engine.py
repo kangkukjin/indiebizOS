@@ -329,8 +329,11 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
             return {"error": f"알 수 없는 라우터: {router}"}
 
         # 결과에서 성공/실패 판단
-        if isinstance(result, dict) and result.get("success") is False:
-            _action_success = False
+        if isinstance(result, dict):
+            if result.get("success") is False:
+                _action_success = False
+            elif result.get("error"):  # error 키가 있고 값이 비어있지 않은 경우
+                _action_success = False
     except Exception:
         _action_success = False
         raise
@@ -351,10 +354,18 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
             })
         except Exception:
             pass
+        # action_health 기록 (실사용 및 self_check 모두)
+        try:
+            from world_pulse_health import record_action_health
+            _src = "self_check" if agent_id == "__self_check__" else "usage"
+            record_action_health(node, action, _action_success, _action_ms, source=_src)
+        except Exception:
+            pass
 
     # 후처리 (postprocess): 액션 YAML에 정의된 전처리 수행
+    # 자가점검 시에는 건너뜀 (AI 호출 비용 절감)
     postprocess = action_config.get("postprocess")
-    if postprocess and result is not None:
+    if postprocess and result is not None and agent_id != "__self_check__":
         result = _postprocess(result, action, postprocess)
 
     return result

@@ -51,6 +51,7 @@ class OpenAIProvider(BaseProvider):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._compaction_summary = None  # Rolling Compaction 요약 저장
+        self._last_tool_images = []  # 도구 실행 중 수집된 이미지
 
     def init_client(self) -> bool:
         """OpenAI 클라이언트 초기화"""
@@ -115,6 +116,7 @@ class OpenAIProvider(BaseProvider):
             return
 
         history = history or []
+        self._last_tool_images = []  # 턴 시작 시 초기화
         messages = self._build_messages(message, history, images)
         openai_tools = self._convert_tools()
 
@@ -149,10 +151,21 @@ class OpenAIProvider(BaseProvider):
                 tagged_content = f"<user_message>\n{content}\n</user_message>"
             else:
                 tagged_content = f"<assistant_message>\n{content}\n</assistant_message>"
-            messages.append({
-                "role": role,
-                "content": tagged_content
-            })
+
+            # 히스토리에 이미지가 있으면 멀티 콘텐츠로 구성
+            if h.get("images"):
+                multi_content = []
+                for img in h["images"]:
+                    multi_content.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{img.get('media_type', 'image/png')};base64,{img['base64']}"
+                        }
+                    })
+                multi_content.append({"type": "text", "text": tagged_content})
+                messages.append({"role": role, "content": multi_content})
+            else:
+                messages.append({"role": role, "content": tagged_content})
 
         # 현재 메시지 (이미지 포함 가능) - 태그로 명확히 구분
         tagged_message = f"<current_user_request>\n{message}\n</current_user_request>"
@@ -570,14 +583,21 @@ class OpenAIProvider(BaseProvider):
                 ui_result = json.dumps(ui_result, ensure_ascii=False)
             ui_result_preview = str(ui_result)[:3000] + "..." if len(str(ui_result)) > 3000 else ui_result
 
+            # 도구 이미지 수집 (다음 턴 히스토리용)
+            if tool_images:
+                self._last_tool_images.extend(tool_images)
+
             # 클라이언트에 도구 결과 전달
-            yield {
+            tool_result_event = {
                 "type": "tool_result",
                 "name": tool_name,
                 "input": tool_input,
                 "result": ui_result_preview,
                 "is_error": is_error
             }
+            if tool_images:
+                tool_result_event["images"] = tool_images
+            yield tool_result_event
 
             # 3. role="tool" 메시지 추가 (OpenAI 공식 형식) — AI에게는 content만
             messages.append({

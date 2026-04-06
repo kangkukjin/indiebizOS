@@ -11,6 +11,7 @@ IndieBiz OS Core
 
 import sqlite3
 import json
+import base64
 import threading
 from pathlib import Path
 from datetime import datetime
@@ -66,6 +67,12 @@ class ConversationDB:
                     FOREIGN KEY (to_agent_id) REFERENCES agents(id)
                 )
             """)
+
+            # messages 테이블에 images 컬럼 추가 (마이그레이션)
+            try:
+                cursor.execute("ALTER TABLE messages ADD COLUMN images TEXT")
+            except sqlite3.OperationalError:
+                pass  # 이미 존재
 
             # 태스크 테이블 (위임 체인 지원)
             cursor.execute("""
@@ -302,9 +309,45 @@ class ConversationDB:
 
     # ============ Message 관리 ============
 
+    def _save_images_to_files(self, message_id: int, images: list) -> str:
+        """이미지를 파일로 저장하고 상대 경로 JSON 반환"""
+        db_dir = Path(self.db_path).parent
+        images_dir = db_dir / "images"
+        images_dir.mkdir(exist_ok=True)
+
+        paths = []
+        for idx, img in enumerate(images):
+            b64_data = img.get("base64", "")
+            if not b64_data:
+                continue
+            media_type = img.get("media_type", "image/png")
+            ext = "jpg" if "jpeg" in media_type else "png"
+            filename = f"msg_{message_id}_{idx}.{ext}"
+            filepath = images_dir / filename
+            filepath.write_bytes(base64.b64decode(b64_data))
+            paths.append(f"images/{filename}")
+
+        return json.dumps(paths, ensure_ascii=False) if paths else None
+
+    def _load_images_from_files(self, images_json: str) -> list:
+        """파일에서 이미지를 base64로 로드"""
+        if not images_json:
+            return None
+        db_dir = Path(self.db_path).parent
+        paths = json.loads(images_json)
+        images = []
+        for rel_path in paths:
+            filepath = db_dir / rel_path
+            if filepath.exists():
+                b64_data = base64.b64encode(filepath.read_bytes()).decode()
+                ext = filepath.suffix.lower()
+                media_type = "image/jpeg" if ext in (".jpg", ".jpeg") else "image/png"
+                images.append({"base64": b64_data, "media_type": media_type})
+        return images if images else None
+
     def save_message(self, from_agent_id: int, to_agent_id: int, content: str,
-                     tool_calls: str = None, contact_type: str = 'gui') -> int:
-        """메시지 저장"""
+                     images: list = None, tool_calls: str = None, contact_type: str = 'gui') -> int:
+        """메시지 저장 (이미지 포함 가능)"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -312,7 +355,19 @@ class ConversationDB:
                 VALUES (?, ?, ?, ?, ?)
             """, (from_agent_id, to_agent_id, content, tool_calls, contact_type))
             conn.commit()
-            return cursor.lastrowid
+            message_id = cursor.lastrowid
+
+            # 이미지가 있으면 파일로 저장 후 경로 업데이트
+            if images:
+                images_json = self._save_images_to_files(message_id, images)
+                if images_json:
+                    cursor.execute(
+                        "UPDATE messages SET images = ? WHERE id = ?",
+                        (images_json, message_id)
+                    )
+                    conn.commit()
+
+            return message_id
 
     def save_message_undelivered(self, from_agent_id: int, to_agent_id: int, content: str,
                                  tool_calls: str = None, contact_type: str = 'gui') -> int:
@@ -383,6 +438,7 @@ class ConversationDB:
         """AI용 대화 히스토리 (최신 순, Observation Masking 적용)
 
         JetBrains Research 기반: 최근 N턴은 원본 유지, 오래된 턴은 긴 내용 마스킹
+        최근 턴의 이미지는 파일에서 로드하여 포함
         """
         if limit is None:
             limit = HISTORY_LIMIT_USER
@@ -390,7 +446,7 @@ class ConversationDB:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT from_agent_id, content, message_time
+                SELECT from_agent_id, content, message_time, images
                 FROM messages
                 WHERE (from_agent_id = ? AND to_agent_id = ?)
                    OR (from_agent_id = ? AND to_agent_id = ?)
@@ -404,15 +460,24 @@ class ConversationDB:
             for idx, row in enumerate(rows):
                 role = "assistant" if row[0] == agent_id else "user"
                 content = row[1]
+                images_json = row[3]
 
                 # 최근 N턴은 원본 유지, 오래된 것은 마스킹
                 if idx >= RECENT_TURNS_RAW and len(content) > MASK_THRESHOLD:
                     content = self._mask_long_content(content)
 
-                messages.append({
+                msg = {
                     "role": role,
                     "content": content
-                })
+                }
+
+                # 최근 턴만 이미지 로드 (토큰 절약)
+                if idx < RECENT_TURNS_RAW and images_json:
+                    loaded_images = self._load_images_from_files(images_json)
+                    if loaded_images:
+                        msg["images"] = loaded_images
+
+                messages.append(msg)
 
             return list(reversed(messages))
 

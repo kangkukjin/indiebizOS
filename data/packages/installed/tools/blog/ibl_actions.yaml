@@ -12,28 +12,81 @@ actions:
     tool: get_post_content_rag
     implementation: 블로그 SQLite DB에서 포스트 전문·날짜·카테고리·링크 반환
     target_key: post_id
-  blog_posts:
-    description: 블로그 글 목록 (카테고리별 조회)
+  posts:
+    description: 블로그 글 목록 (handler)
+    group: blog
+    category: list
     router: handler
     tool: blog_get_posts
     implementation: 블로그 SQLite DB에서 카테고리별 글 목록 조회
     target_key: category
+    keywords:
+    - 블로그
+    - 글목록
+    - 포스트
   blog_stats:
     description: 블로그 통계 (글 수, 카테고리별 분포)
     router: handler
     tool: blog_stats
     implementation: 블로그 SQLite DB에서 통계 집계 쿼리
-  blog_check_new:
+  blog_get_post:
+    description: 블로그 글 ID로 전체 내용 조회 (단순 ID 조회)
+    group: blog
+    category: get
+    router: handler
+    tool: blog_get_post
+    implementation: 블로그 SQLite DB에서 ID로 글 전문 조회
+    target_key: post_id
+  blog_semantic:
+    description: 블로그 의미 검색 (키워드 무관, 의미적 유사성만으로 검색)
+    group: blog
+    category: search
+    router: handler
+    tool: search_blog_semantic
+    implementation: 벡터 임베딩 기반 시맨틱 검색 (코사인 유사도)
+    target_key: query
+    keywords:
+    - 블로그
+    - 의미검색
+    - 시맨틱
+  check_new:
     description: 새 블로그 글 확인
+    group: blog
+    category: list
     router: handler
     tool: blog_check_new_posts
     implementation: 블로그 DB와 소스 디렉토리 비교로 새 글 감지
+    keywords:
+    - 블로그
+    - 새글
+    - 업데이트
   kinsight:
     description: 블로그 인사이트 분석 (기본 15개, count로 개수 지정 가능)
     router: handler
     tool: kinsight
     implementation: 블로그 최신 포스트 수집 + AI 모델 호출로 인사이트 HTML 생성
     target_key: query
+  rebuild_index:
+    description: 블로그 검색 인덱스 재구축
+    group: blog
+    router: handler
+    tool: rebuild_search_index
+    implementation: 블로그 전체 포스트 재인덱싱 (벡터 임베딩 재생성)
+    keywords:
+    - 블로그
+    - 인덱스
+    - 재구축
+  blog_posts:
+    description: 블로그 글 목록 (카테고리별 조회)
+    router: handler
+    tool: blog_get_posts
+    implementation: 블로그 SQLite DB에서 카테고리별 글 목록 조회
+    target_key: category
+  blog_check_new:
+    description: 새 블로그 글 확인
+    router: handler
+    tool: blog_check_new_posts
+    implementation: 블로그 DB와 소스 디렉토리 비교로 새 글 감지
   blog_rebuild_index:
     description: 블로그 검색 인덱스 재구축
     router: handler

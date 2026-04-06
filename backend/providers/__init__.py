@@ -6,6 +6,7 @@ IndieBiz OS Core
 - Anthropic (Claude)
 - OpenAI (GPT)
 - Google (Gemini)
+- OpenRouter (650+ 모델, 무료 포함)
 - Ollama (로컬 LLM)
 """
 
@@ -13,6 +14,7 @@ from .base import BaseProvider
 from .anthropic import AnthropicProvider
 from .openai import OpenAIProvider
 from .gemini import GeminiProvider
+from .openrouter import OpenRouterProvider
 from .ollama import OllamaProvider
 
 __all__ = [
@@ -20,6 +22,7 @@ __all__ = [
     'AnthropicProvider',
     'OpenAIProvider',
     'GeminiProvider',
+    'OpenRouterProvider',
     'OllamaProvider',
 ]
 
@@ -31,6 +34,7 @@ def get_provider(provider_name: str, **kwargs):
         'openai': OpenAIProvider,
         'google': GeminiProvider,
         'gemini': GeminiProvider,
+        'openrouter': OpenRouterProvider,
         'ollama': OllamaProvider,
     }
 

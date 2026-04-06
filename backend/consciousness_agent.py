@@ -204,10 +204,12 @@ class ConsciousnessAgent:
             for i, turn in enumerate(history):
                 role = turn.get("role", "unknown")
                 content = turn.get("content", "")
+                has_images = bool(turn.get("images"))
                 # 긴 내용은 앞부분만 전달 (의식 에이전트는 판단만 하므로)
                 if len(content) > 500:
                     content = content[:500] + f"... ({len(content)}자)"
-                parts.append(f"<turn index=\"{i}\" role=\"{role}\">{content}</turn>")
+                img_attr = ' has_images="true"' if has_images else ''
+                parts.append(f"<turn index=\"{i}\" role=\"{role}\"{img_attr}>{content}</turn>")
             parts.append("</history>")
 
         # IBL 노드/액션 요약

@@ -102,17 +102,6 @@ nodes:
         tool: yf_search_stock
         implementation: Yahoo Finance yfinance 심볼 검색
         target_key: query
-      stock_news:
-        description: 종목 관련 뉴스 조회 (Yahoo Finance)
-        group: finance
-        category: search
-        router: handler
-        tool: yf_stock_news
-        implementation: Yahoo Finance RSS/API로 종목 관련 뉴스 헤드라인 조회
-        target_key: symbol
-        keywords:
-        - 주식뉴스
-        - 종목뉴스
       kr_company:
         description: '한국 기업 정보 (DART: 대표자, 업종, 주소, IR)'
         target_description: 기업명 또는 DART 코드
@@ -774,6 +763,20 @@ nodes:
         - 세계
         - 재수집
         - 갱신
+      self_check:
+        description: 전수 자가점검 실행 — 부작용 없는 모든 IBL 액션을 테스트하여 시스템 건강 상태 확인
+        group: world
+        category: run
+        router: system
+        func: self_check
+        implementation: 전체 IBL 액션 중 안전한 액션을 전수 실행, 결과를 world_pulse.db에 기록, 패턴 분석
+        keywords:
+        - 자가점검
+        - 전수점검
+        - 면역
+        - 건강체크
+        - 셀프체크
+        - self-check
       cctv_nearby:
         description: 좌표 근처 CCTV 찾기 (lat/lng 필수, 모르면 cctv_search 사용)
         keywords:
@@ -824,8 +827,7 @@ nodes:
         implementation: Context7 REST API로 라이브러리 ID 검색
         target_key: library_name
       summarize_video:
-        description: 유튜브 동영상을 AI로 요약하여 HTML 보고서를 생성하고 브라우저에 표시 (자막 추출 → AI 요약 → HTML
-          생성 → 브라우저 열기를 한 번에 수행)
+        description: 유튜브 동영상 자막 추출 + AI 요약 + HTML 보고서 생성 + 브라우저 자동 열기를 한 번에 수행
         keywords:
         - youtube
         - 유튜브
@@ -833,14 +835,46 @@ nodes:
         - 영상요약
         - 동영상요약
         - summarize
-        - 리포트
-        - 보고서
-        - 정리
         target_description: 유튜브 URL
         router: handler
-        tool: summarize_youtube
-        implementation: 자막 추출 + 시스템 AI 모델로 요약 + HTML 보고서 생성 + 브라우저 자동 열기
+        tool: summarize_video
+        implementation: 자막 추출 + 시스템 AI 모델로 요약 + HTML 보고서 생성 + 브라우저 자동 열기. summary_length
+          파라미터로 요약 길이 지정 가능.
         target_key: url
+      gutenberg_books:
+        description: Project Gutenberg 고전 도서 및 원문 텍스트 검색 (Gutendex API). 저작권 만료된 7만
+          6천여 권의 고전 문학, 철학, 과학 텍스트를 검색하고 원문 다운로드 링크를 제공
+        target_description: 검색어 (제목, 저자, 주제)
+        router: handler
+        tool: gutenberg_search
+        implementation: Gutendex REST API로 Project Gutenberg 도서 메타데이터 검색. 원문 텍스트/HTML
+          다운로드 URL 포함
+        target_key: query
+        keywords:
+        - 고전
+        - 원문
+        - gutenberg
+        - 문학
+        - 철학
+        - 고전문학
+        - 원전
+      korean_classics:
+        description: 한국고전종합DB 검색 (db.itkc.or.kr). 이황, 이이 등 고전 문헌, 번역서 검색 및 원문 링크 제공.
+        target_description: '검색어 (예: 이황, 퇴계집)'
+        router: handler
+        tool: korean_classics_search
+        implementation: 한국고전종합DB OpenAPI를 통해 고전 문헌 및 번역서 검색, 원문 링크 반환
+        target_key: query
+        keywords:
+        - 한국고전
+        - 고전번역
+        - 이황
+        - 이이
+        - 퇴계
+        - 율곡
+        - 조선
+        - 문집
+        - itkc
     description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 세계 상태 등 외부 API 및 데이터
       소스 접근'
     tags:
@@ -1181,7 +1215,8 @@ nodes:
         category: display
         router: system
         func: show_calendar
-        implementation: calendar_manager.open_in_browser() — HTML 캘린더 생성 후 브라우저 자동 열기
+        implementation: calendar_manager.open_in_browser() — HTML 캘린더 생성 후 브라우저 자동
+          열기
         keywords:
         - 캘린더
         - 달력
@@ -1214,7 +1249,8 @@ nodes:
         category: execute
         router: system
         func: schedule
-        implementation: _execute_schedule — 지연(delay)/특정시간(at)/반복(repeat) 기반 작업 예약 실행
+        implementation: _execute_schedule — 지연(delay)/특정시간(at)/반복(repeat) 기반 작업 예약
+          실행
         keywords:
         - 스케줄
         - 예약

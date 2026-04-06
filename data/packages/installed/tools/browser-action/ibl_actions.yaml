@@ -1,179 +1,266 @@
-nodes:
-  limbs:
-    actions:
-      browser_navigate:
-        description: URL 열기 (Playwright 브라우저)
-        target_description: URL
-        router: handler
-        tool: browser_navigate
-        implementation: Playwright 헤드리스 Chromium으로 URL 로딩
-        target_key: url
-      browser_snapshot:
-        description: 접근성 스냅샷 (요소 ref 생성)
-        router: handler
-        tool: browser_snapshot
-        implementation: Playwright 접근성 트리 스냅샷으로 DOM 요소 ref 매핑
-      click:
-        description: 요소 클릭 (ref 기반)
-        target_description: ref ID (e1, e2 등)
-        router: handler
-        tool: browser_click
-        implementation: Playwright locator로 요소 클릭 (ref ID 기반)
-        target_key: ref
-      type:
-        description: 입력 필드에 텍스트 입력
-        target_description: ref ID
-        router: handler
-        tool: browser_type
-        implementation: Playwright locator로 입력 필드에 텍스트 입력
-        target_key: ref
-      browser_content:
-        description: 페이지 텍스트 콘텐츠 추출
-        router: handler
-        tool: browser_get_content
-        implementation: Playwright page.content()로 페이지 텍스트 추출
-      screenshot:
-        description: 페이지 스크린샷 (PNG 저장)
-        router: handler
-        tool: browser_screenshot
-        implementation: Playwright page.screenshot()으로 PNG 캡처
-      scroll:
-        description: 페이지 스크롤 (up/down)
-        router: handler
-        tool: browser_scroll
-        implementation: Playwright mouse.wheel()로 페이지 스크롤
-      evaluate:
-        description: JavaScript 실행
-        target_description: JS 표현식
-        router: handler
-        tool: browser_evaluate
-        implementation: Playwright page.evaluate()로 JavaScript 실행
-        target_key: expression
-      wait:
-        description: 조건 대기 (selector/text/url)
-        router: handler
-        tool: browser_wait_for
-        implementation: Playwright wait_for_selector/wait_for_url로 조건 대기
-      press_key:
-        description: 키보드 키 입력 (Enter, Tab 등)
-        target_description: 키 이름
-        router: handler
-        tool: browser_press_key
-        implementation: Playwright keyboard.press()로 키 입력
-        target_key: key
-      tab_list:
-        description: 열린 탭 목록 조회
-        router: handler
-        tool: browser_tab_list
-        implementation: Playwright 브라우저 컨텍스트에서 열린 페이지 목록 조회
-      tab_new:
-        description: 새 탭 열기
-        router: handler
-        tool: browser_tab_new
-        implementation: Playwright context.new_page()로 새 탭 생성
-      tab_switch:
-        description: 탭 전환
-        target_description: tab_id
-        router: handler
-        tool: browser_tab_switch
-        implementation: Playwright 페이지 배열에서 인덱스로 탭 전환
-        target_key: tab_id
-      browser_close:
-        description: 브라우저 세션 종료
-        router: handler
-        tool: browser_close
-        implementation: Playwright 브라우저 컨텍스트 종료
-      pdf:
-        description: 페이지를 PDF로 저장
-        router: handler
-        tool: browser_save_pdf
-        implementation: Playwright page.pdf()로 PDF 저장 (Chromium only)
-      back:
-        description: 이전 페이지로 이동
-        router: handler
-        tool: browser_navigate_back
-        implementation: Playwright page.go_back()으로 이전 페이지 이동
-      forward:
-        description: 다음 페이지로 이동
-        router: handler
-        tool: browser_navigate_forward
-        implementation: Playwright page.go_forward()로 다음 페이지 이동
-      hover:
-        description: 요소에 마우스 호버
-        target_description: ref ID
-        router: handler
-        tool: browser_hover
-        implementation: Playwright locator.hover()로 마우스 호버
-        target_key: ref
-      drag:
-        description: 요소 드래그 앤 드롭
-        router: handler
-        tool: browser_drag
-        implementation: Playwright locator.drag_to()로 드래그 앤 드롭
-      select:
-        description: 셀렉트 옵션 선택
-        target_description: ref ID
-        router: handler
-        tool: browser_select_option
-        implementation: Playwright select_option()으로 셀렉트 옵션 선택
-        target_key: ref
-      console:
-        description: 브라우저 콘솔 로그 확인
-        router: handler
-        tool: browser_console_logs
-        implementation: Playwright page.on('console')로 콘솔 로그 수집
-      cookies_save:
-        description: 쿠키 저장
-        router: handler
-        tool: browser_cookies_save
-        implementation: Playwright context.cookies()로 쿠키 JSON 저장
-      cookies_load:
-        description: 쿠키 로드
-        router: handler
-        tool: browser_cookies_load
-        implementation: Playwright context.add_cookies()로 쿠키 복원
-      iframe_list:
-        description: iframe 목록 조회
-        router: handler
-        tool: browser_iframe_list
-        implementation: Playwright page.frames()로 iframe 목록 조회
-      iframe_switch:
-        description: iframe 전환
-        router: handler
-        tool: browser_iframe_switch
-        implementation: Playwright frame 인덱스로 iframe 전환
-        target_key: index
-      iframe_reset:
-        description: iframe에서 메인 프레임으로 복귀
-        router: handler
-        tool: browser_iframe_reset
-        implementation: Playwright page.main_frame()으로 메인 프레임 복귀
-      tab_close:
-        description: 현재 탭 닫기
-        router: handler
-        tool: browser_tab_close
-        implementation: Playwright page.close()로 현재 탭 닫기
-      chrome_connect:
-        description: Chrome MCP 서버 연결 (실제 Chrome 브라우저 제어)
-        router: handler
-        tool: browser_chrome_connect
-        implementation: Chrome MCP 서버에 WebSocket 연결하여 실제 Chrome 브라우저 원격 제어
-      chrome_disconnect:
-        description: Chrome MCP 연결 해제
-        router: handler
-        tool: browser_chrome_disconnect
-        implementation: Chrome MCP WebSocket 연결 해제
-      chrome_status:
-        description: Chrome MCP 연결 상태 확인
-        router: handler
-        tool: browser_chrome_status
-        implementation: Chrome MCP 연결 여부·URL·탭ID·ref 수 반환
-      find:
-        description: 자연어로 페이지 요소 검색 (Chrome 전용)
-        target_description: 검색어
-        router: handler
-        tool: browser_find
-        implementation: Chrome MCP find 도구로 자연어 기반 DOM 요소 검색
-        target_key: query
-    guides:
-    - browser-action/browser_guide.md
+node: limbs
+actions:
+  navigate:
+    description: URL 열기 (Playwright 브라우저)
+    group: browser
+    router: handler
+    tool: browser_navigate
+    implementation: Playwright 헤드리스 Chromium으로 URL 로딩
+    target_key: url
+    keywords:
+    - 브라우저
+    - 웹페이지
+    - URL
+  browser_snapshot:
+    description: 접근성 스냅샷 (요소 ref 생성)
+    router: handler
+    tool: browser_snapshot
+    implementation: Playwright 접근성 트리 스냅샷으로 DOM 요소 ref 매핑
+  click:
+    description: 요소 클릭 (ref 기반)
+    target_description: ref ID (e1, e2 등)
+    router: handler
+    tool: browser_click
+    implementation: Playwright locator로 요소 클릭 (ref ID 기반)
+    target_key: ref
+  type:
+    description: 입력 필드에 텍스트 입력
+    target_description: ref ID
+    router: handler
+    tool: browser_type
+    implementation: Playwright locator로 입력 필드에 텍스트 입력
+    target_key: ref
+  content:
+    description: 페이지 텍스트 콘텐츠 추출
+    group: browser
+    category: get
+    router: handler
+    tool: browser_get_content
+    implementation: Playwright page.content()로 페이지 텍스트 추출
+    keywords:
+    - 텍스트추출
+    - 페이지내용
+  screenshot:
+    description: 페이지 스크린샷 (PNG 저장)
+    router: handler
+    tool: browser_screenshot
+    implementation: Playwright page.screenshot()으로 PNG 캡처
+  scroll:
+    description: 페이지 스크롤 (up/down)
+    router: handler
+    tool: browser_scroll
+    implementation: Playwright mouse.wheel()로 페이지 스크롤
+  evaluate:
+    description: JavaScript 실행
+    target_description: JS 표현식
+    router: handler
+    tool: browser_evaluate
+    implementation: Playwright page.evaluate()로 JavaScript 실행
+    target_key: expression
+  wait:
+    description: 조건 대기 (selector/text/url)
+    router: handler
+    tool: browser_wait_for
+    implementation: Playwright wait_for_selector/wait_for_url로 조건 대기
+  press_key:
+    description: 키보드 키 입력 (Enter, Tab 등)
+    target_description: 키 이름
+    router: handler
+    tool: browser_press_key
+    implementation: Playwright keyboard.press()로 키 입력
+    target_key: key
+  tab_list:
+    description: 열린 탭 목록 조회
+    router: handler
+    tool: browser_tab_list
+    implementation: Playwright 브라우저 컨텍스트에서 열린 페이지 목록 조회
+  tab_new:
+    description: 새 탭 열기
+    router: handler
+    tool: browser_tab_new
+    implementation: Playwright context.new_page()로 새 탭 생성
+  tab_switch:
+    description: 탭 전환
+    target_description: tab_id
+    router: handler
+    tool: browser_tab_switch
+    implementation: Playwright 페이지 배열에서 인덱스로 탭 전환
+    target_key: tab_id
+  close:
+    description: 브라우저 세션 종료
+    group: browser
+    router: handler
+    tool: browser_close
+    implementation: Playwright 브라우저 컨텍스트 종료
+    keywords:
+    - 브라우저닫기
+    - 종료
+  pdf:
+    description: 페이지를 PDF로 저장
+    router: handler
+    tool: browser_save_pdf
+    implementation: Playwright page.pdf()로 PDF 저장 (Chromium only)
+  back:
+    description: 이전 페이지로 이동
+    router: handler
+    tool: browser_navigate_back
+    implementation: Playwright page.go_back()으로 이전 페이지 이동
+  forward:
+    description: 다음 페이지로 이동
+    router: handler
+    tool: browser_navigate_forward
+    implementation: Playwright page.go_forward()로 다음 페이지 이동
+  hover:
+    description: 요소에 마우스 호버
+    target_description: ref ID
+    router: handler
+    tool: browser_hover
+    implementation: Playwright locator.hover()로 마우스 호버
+    target_key: ref
+  drag:
+    description: 요소 드래그 앤 드롭
+    router: handler
+    tool: browser_drag
+    implementation: Playwright locator.drag_to()로 드래그 앤 드롭
+  select:
+    description: 셀렉트 옵션 선택
+    target_description: ref ID
+    router: handler
+    tool: browser_select_option
+    implementation: Playwright select_option()으로 셀렉트 옵션 선택
+    target_key: ref
+  console:
+    description: 브라우저 콘솔 로그 확인
+    router: handler
+    tool: browser_console_logs
+    implementation: Playwright page.on('console')로 콘솔 로그 수집
+  cookies_save:
+    description: 쿠키 저장
+    router: handler
+    tool: browser_cookies_save
+    implementation: Playwright context.cookies()로 쿠키 JSON 저장
+  cookies_load:
+    description: 쿠키 로드
+    router: handler
+    tool: browser_cookies_load
+    implementation: Playwright context.add_cookies()로 쿠키 복원
+  iframe_list:
+    description: iframe 목록 조회
+    router: handler
+    tool: browser_iframe_list
+    implementation: Playwright page.frames()로 iframe 목록 조회
+  iframe_switch:
+    description: iframe 전환
+    router: handler
+    tool: browser_iframe_switch
+    implementation: Playwright frame 인덱스로 iframe 전환
+    target_key: index
+  iframe_reset:
+    description: iframe에서 메인 프레임으로 복귀
+    router: handler
+    tool: browser_iframe_reset
+    implementation: Playwright page.main_frame()으로 메인 프레임 복귀
+  tab_close:
+    description: 현재 탭 닫기
+    router: handler
+    tool: browser_tab_close
+    implementation: Playwright page.close()로 현재 탭 닫기
+  dblclick:
+    description: 요소 더블클릭
+    group: browser
+    router: handler
+    tool: browser_dblclick
+    implementation: Playwright locator.dblclick()로 요소 더블클릭
+    target_key: ref
+  rightclick:
+    description: 요소 우클릭 (컨텍스트 메뉴)
+    group: browser
+    router: handler
+    tool: browser_rightclick
+    implementation: Playwright locator.click(button='right')로 우클릭
+    target_key: ref
+  check:
+    description: 체크박스/라디오 버튼 체크 또는 해제
+    group: browser
+    router: handler
+    tool: browser_check
+    implementation: Playwright locator.check()/uncheck()로 체크박스 토글
+    target_key: ref
+  upload_file:
+    description: 파일 input에 파일 업로드
+    group: browser
+    router: handler
+    tool: browser_upload_file
+    implementation: Playwright set_input_files()로 파일 업로드
+    target_key: ref
+  get_html:
+    description: 현재 페이지 HTML 소스 추출
+    group: browser
+    router: handler
+    tool: browser_get_html
+    implementation: Playwright page.content()로 HTML 소스 반환
+  network_logs:
+    description: 네트워크 요청 로그 조회/캡처
+    group: browser
+    router: handler
+    tool: browser_network_logs
+    implementation: Playwright route/CDP로 네트워크 요청 캡처 및 조회
+  dialog_info:
+    description: Alert/Confirm/Prompt 팝업 정보 조회
+    group: browser
+    router: handler
+    tool: browser_dialog_info
+    implementation: Playwright dialog 이벤트 리스너로 마지막 팝업 정보 반환
+  resize:
+    description: 브라우저 뷰포트 크기 변경
+    group: browser
+    router: handler
+    tool: browser_resize
+    implementation: Playwright page.set_viewport_size()로 뷰포트 조정
+  vision:
+    description: 페이지 스크린샷을 base64 이미지로 반환 (멀티모달 AI 분석용)
+    group: browser
+    router: handler
+    tool: browser_vision
+    implementation: Playwright screenshot을 base64 인코딩하여 반환 (AI 시각 인식용)
+  browser_navigate:
+    description: URL 열기 (Playwright 브라우저)
+    target_description: URL
+    router: handler
+    tool: browser_navigate
+    implementation: Playwright 헤드리스 Chromium으로 URL 로딩
+    target_key: url
+  browser_content:
+    description: 페이지 텍스트 콘텐츠 추출
+    router: handler
+    tool: browser_get_content
+    implementation: Playwright page.content()로 페이지 텍스트 추출
+  browser_close:
+    description: 브라우저 세션 종료
+    router: handler
+    tool: browser_close
+    implementation: Playwright 브라우저 컨텍스트 종료
+  chrome_connect:
+    description: Chrome MCP 서버 연결 (실제 Chrome 브라우저 제어)
+    router: handler
+    tool: browser_chrome_connect
+    implementation: Chrome MCP 서버에 WebSocket 연결하여 실제 Chrome 브라우저 원격 제어
+  chrome_disconnect:
+    description: Chrome MCP 연결 해제
+    router: handler
+    tool: browser_chrome_disconnect
+    implementation: Chrome MCP WebSocket 연결 해제
+  chrome_status:
+    description: Chrome MCP 연결 상태 확인
+    router: handler
+    tool: browser_chrome_status
+    implementation: Chrome MCP 연결 여부·URL·탭ID·ref 수 반환
+  find:
+    description: 자연어로 페이지 요소 검색 (Chrome 전용)
+    target_description: 검색어
+    router: handler
+    tool: browser_find
+    implementation: Chrome MCP find 도구로 자연어 기반 DOM 요소 검색
+    target_key: query
+guides:
+- browser-action/browser_guide.md

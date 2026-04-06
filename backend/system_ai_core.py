@@ -60,207 +60,122 @@ def save_system_ai_config(config: dict):
 from system_ai_tools import get_all_system_ai_tools
 
 
-# ============ 에이전트 생성 ============
+# ============ AgentRunner 기반 통합 ============
 
-def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAgent:
-    """시스템 AI용 AIAgent 인스턴스 생성
+_system_ai_runner = None  # 싱글턴
 
-    **Phase 17 통합 아키텍처**: 프로젝트 에이전트와 동일한 구조.
-    - execute_ibl 단일 도구
-    - IBL 환경 프롬프트로 노드/액션 인식
-    - 차이점: 모든 노드 접근 가능 + 프로젝트 간 위임
 
-    Args:
-        config: 시스템 AI 설정 (None이면 자동 로드)
-        user_profile: 사용자 프로필
+def get_system_ai_runner():
+    """시스템 AI용 AgentRunner 싱글턴 반환.
 
-    Returns:
-        AIAgent 인스턴스
+    프로젝트 에이전트와 동일한 인지 파이프라인(무의식→의식→실행→평가)을 사용.
+    차이점은 config의 _is_system_ai 플래그로 분기: 도구/프롬프트/권한만 다름.
     """
-    if config is None:
-        config = load_system_ai_config()
+    global _system_ai_runner
 
-    # AI 설정
-    ai_config = {
-        "provider": config.get("provider", "anthropic"),
-        "model": config.get("model", "claude-sonnet-4-20250514"),
-        "api_key": config.get("apiKey", "")
+    if _system_ai_runner is not None and _system_ai_runner.ai is not None:
+        # 설정 변경 시 재생성 (provider/model 변경 감지)
+        config = load_system_ai_config()
+        current_ai = _system_ai_runner.config.get("ai", {})
+        if (current_ai.get("provider") != config.get("provider") or
+            current_ai.get("model") != config.get("model")):
+            _system_ai_runner = None
+        else:
+            return _system_ai_runner
+
+    from agent_runner import AgentRunner
+
+    config = load_system_ai_config()
+    agent_config = {
+        "id": "system_ai",
+        "name": "시스템 AI",
+        "_project_path": str(DATA_PATH),
+        "_project_id": "system",
+        "_is_system_ai": True,
+        "type": "internal",
+        "allowed_nodes": None,  # 전체 접근
+        "ai": {
+            "provider": config.get("provider", "anthropic"),
+            "model": config.get("model", "claude-sonnet-4-20250514"),
+            "api_key": config.get("apiKey", "")
+        }
     }
 
-    # Phase 17: execute_ibl 단일 도구
-    tools = get_all_system_ai_tools()
-
-    # Git 활성화: .git 폴더 존재 여부로 판단
-    git_enabled = (DATA_PATH / ".git").exists()
-
-    # 시스템 프롬프트 생성 (IBL 환경 포함)
-    system_prompt = build_system_ai_prompt(
-        user_profile=user_profile,
-        git_enabled=git_enabled,
-        model_name=ai_config.get("model", ""),
-    )
-
-    # AIAgent 인스턴스 생성 (execute_ibl → IBL 경로)
-    agent = AIAgent(
-        ai_config=ai_config,
-        system_prompt=system_prompt,
-        agent_name="시스템 AI",
-        agent_id="system_ai",
-        project_path=str(DATA_PATH),
-        tools=tools,
-        execute_tool_func=execute_system_tool
-    )
-
-    return agent
+    runner = AgentRunner(agent_config)
+    runner._init_ai()
+    runner.running = True
+    _system_ai_runner = runner
+    print(f"[시스템AI] AgentRunner 초기화 완료 (provider={config.get('provider')}, model={config.get('model')})")
+    return runner
 
 
-# ============ 인지 아키텍처 ============
-
-def _build_execution_memory_for_system_ai(message: str) -> str:
-    """시스템 AI용 실행기억 생성"""
-    try:
-        from ibl_usage_rag import build_execution_memory
-        result = build_execution_memory(message, allowed_nodes=None)  # 시스템 AI는 전체 노드
-        if not result:
-            print(f"[시스템AI 실행기억] 빈 결과: \"{message[:40]}\"")
-        return result
-    except Exception as e:
-        print(f"[시스템AI 실행기억] 생성 실패: {e}")
-        return ""
+def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAgent:
+    """시스템 AI용 AIAgent 인스턴스 반환 (하위 호환)"""
+    runner = get_system_ai_runner()
+    return runner.ai
 
 
-def _classify_system_ai_request(message: str, execution_memory: str = "") -> str:
-    """시스템 AI용 무의식 에이전트 — 실행형/판단형 분류"""
-    try:
-        from consciousness_agent import lightweight_ai_call, get_unconscious_prompt
+# ============ 메시지 처리 (AgentRunner 인지 파이프라인 사용) ============
 
-        system_prompt = get_unconscious_prompt()
-        input_message = message
-        if execution_memory:
-            input_message = f"{execution_memory}\n\n{message}"
-        response = lightweight_ai_call(input_message, system_prompt=system_prompt)
-
-        if response is None:
-            return "THINK"
-
-        result = response.strip().upper()
-        if "EXECUTE" in result:
-            return "EXECUTE"
-        return "THINK"
-
-    except Exception as e:
-        print(f"[시스템AI 무의식] 분류 실패: {e}")
-        return "THINK"
-
-
-def _run_consciousness_for_system_ai(message: str, history: List[Dict] = None,
-                                     execution_memory: str = "") -> dict:
-    """시스템 AI용 의식 에이전트 실행"""
-    try:
-        from consciousness_agent import (
-            get_consciousness_agent,
-            get_guide_list,
-            get_world_pulse_text,
-        )
-        agent = get_consciousness_agent()
-        if not agent.is_ready:
-            return None
-
-        # 시스템 AI 역할 전문 로드
-        role_path = DATA_PATH / "system_ai_role.txt"
-        agent_role = role_path.read_text(encoding='utf-8').strip() if role_path.exists() else "IndieBiz OS의 관리자이자 안내자"
-
-        # 사용자 프로필 (시스템 AI의 영구메모에 해당)
-        agent_notes = load_user_profile()
-
-        return agent.process(
-            user_message=message,
-            history=history or [],
-            ibl_node_summary=execution_memory,  # 실행기억으로 대체
-            guide_list=get_guide_list(message),
-            world_pulse=get_world_pulse_text(),
-            agent_name="시스템 AI",
-            agent_role=agent_role,
-            agent_notes=agent_notes,
-        )
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"[SystemAI 의식] 실행 실패: {e}")
-        return None
-
-
-def _apply_consciousness(agent, message: str, history: List[Dict],
-                         consciousness_output: dict, execution_memory: str = ""):
-    """의식 에이전트 결과를 시스템 AI에 적용 — 프롬프트 갱신 + 히스토리 편집"""
-    if not consciousness_output and not execution_memory:
-        return history
-
-    # 시스템 프롬프트 재구성
-    user_profile = load_user_profile()
-    git_enabled = (DATA_PATH / ".git").exists()
-
-    from prompt_builder import build_system_ai_prompt
-    config = load_system_ai_config()
-    new_prompt = build_system_ai_prompt(
-        user_profile=user_profile,
-        git_enabled=git_enabled,
-        consciousness_output=consciousness_output,
-        model_name=config.get("model", ""),
-        execution_memory=execution_memory,
-    )
-    agent.system_prompt = new_prompt
-    if agent._provider:
-        agent._provider.system_prompt = new_prompt
-
-    # 히스토리 편집
-    if consciousness_output:
-        history_summary = consciousness_output.get("history_summary", "")
-        if history_summary:
-            return [{"role": "user", "content": f"[이전 대화 요약: {history_summary}]"}]
-    return history
-
-
-# ============ 메시지 처리 ============
-
-def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None) -> str:
-    """시스템 AI 메시지 처리 (AIAgent 사용, 동기 모드)
-
-    Args:
-        message: 사용자 메시지
-        history: 대화 히스토리
-        images: 이미지 데이터
+def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None):
+    """시스템 AI 메시지 처리 (동기 모드, AgentRunner 인지 파이프라인)
 
     Returns:
-        AI 응답
+        (response_text, tool_images)
     """
-    user_profile = load_user_profile()
+    runner = get_system_ai_runner()
 
-    agent = create_system_ai_agent(
-        user_profile=user_profile
-    )
+    # 인지 파이프라인: 실행기억 → 무의식 → 의식 → 프롬프트 갱신
+    execution_memory = runner._build_execution_memory(message)
 
-    # 실행기억 생성 (1회)
-    execution_memory = _build_execution_memory_for_system_ai(message)
-
-    # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경)
-    request_type = _classify_system_ai_request(message, execution_memory)
+    request_type, reflex_hint = runner._classify_request(message, execution_memory)
     print(f"[시스템AI 무의식] 분류: {request_type}")
 
     consciousness_output = None
     if request_type == "THINK":
-        consciousness_output = _run_consciousness_for_system_ai(
-            message, history, execution_memory
-        )
-    # 실행기억 + 의식출력을 시스템 프롬프트에 반영
-    history = _apply_consciousness(
-        agent, message, history or [], consciousness_output, execution_memory
-    )
+        consciousness_output = runner._run_consciousness(message, history or [], execution_memory)
 
-    return agent.process_message_with_history(
+    # 프롬프트 갱신
+    role = runner._load_role()
+    if consciousness_output or execution_memory or reflex_hint:
+        _exec_mem = execution_memory
+        if reflex_hint:
+            _exec_mem = f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}" if execution_memory else f"[Reflex 매칭] {reflex_hint}"
+        new_prompt = runner._build_system_prompt(role, consciousness_output, _exec_mem)
+        runner.ai.system_prompt = new_prompt
+        runner.ai._provider.system_prompt = new_prompt
+
+    # 히스토리 편집
+    history = runner._apply_consciousness_to_history(history or [], consciousness_output)
+
+    response = runner.ai.process_message_with_history(
         message_content=message,
         history=history,
         images=images
     )
+
+    # 평가 루프 — 달성 기준이 있으면 실행
+    if consciousness_output and response:
+        criteria = runner._extract_achievement_criteria(consciousness_output)
+        if criteria:
+            from world_pulse import _load_config as _load_wp_config
+            _goal_cfg = _load_wp_config().get("goal_eval", {})
+            if _goal_cfg.get("enabled", True):
+                print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
+                evaluated = runner._run_goal_evaluation_loop(
+                    user_message=message,
+                    criteria=criteria,
+                    initial_response=response,
+                    history=history,
+                    consciousness_output=consciousness_output,
+                    max_rounds=_goal_cfg.get("max_rounds", 3),
+                    execution_memory=execution_memory,
+                )
+                if evaluated and evaluated.strip():
+                    response = evaluated
+
+    tool_images = runner.ai.get_last_tool_images()
+    return response, tool_images
 
 
 def process_system_ai_message_stream(
@@ -269,41 +184,47 @@ def process_system_ai_message_stream(
     images: List[Dict] = None,
     cancel_check: Callable = None
 ) -> Generator:
-    """시스템 AI 메시지 처리 (AIAgent 사용, 스트리밍 모드)
-
-    Args:
-        message: 사용자 메시지
-        history: 대화 히스토리
-        images: 이미지 데이터
-        cancel_check: 중단 여부를 확인하는 콜백 함수
+    """시스템 AI 메시지 처리 (스트리밍 모드, AgentRunner 인지 파이프라인)
 
     Yields:
         스트리밍 이벤트 딕셔너리
+
+    Note:
+        평가 루프는 api_websocket.py의 시스템 AI 핸들러에서 처리
+        (프로젝트 에이전트와 동일한 패턴)
     """
-    user_profile = load_user_profile()
+    runner = get_system_ai_runner()
 
-    agent = create_system_ai_agent(
-        user_profile=user_profile
-    )
+    # 인지 파이프라인: 실행기억 → 무의식 → 의식 → 프롬프트 갱신
+    execution_memory = runner._build_execution_memory(message)
 
-    # 실행기억 생성 (1회)
-    execution_memory = _build_execution_memory_for_system_ai(message)
-
-    # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경)
-    request_type = _classify_system_ai_request(message, execution_memory)
+    request_type, reflex_hint = runner._classify_request(message, execution_memory)
     print(f"[시스템AI 무의식] 분류: {request_type}")
 
     consciousness_output = None
     if request_type == "THINK":
-        consciousness_output = _run_consciousness_for_system_ai(
-            message, history, execution_memory
-        )
-    # 실행기억 + 의식출력을 시스템 프롬프트에 반영
-    history = _apply_consciousness(
-        agent, message, history or [], consciousness_output, execution_memory
-    )
+        consciousness_output = runner._run_consciousness(message, history or [], execution_memory)
 
-    yield from agent.process_message_stream(
+    # 프롬프트 갱신
+    role = runner._load_role()
+    if consciousness_output or execution_memory or reflex_hint:
+        _exec_mem = execution_memory
+        if reflex_hint:
+            _exec_mem = f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}" if execution_memory else f"[Reflex 매칭] {reflex_hint}"
+        new_prompt = runner._build_system_prompt(role, consciousness_output, _exec_mem)
+        runner.ai.system_prompt = new_prompt
+        runner.ai._provider.system_prompt = new_prompt
+
+    # 히스토리 편집
+    history = runner._apply_consciousness_to_history(history or [], consciousness_output)
+
+    # 스트리밍 실행 — 이벤트를 중간 수집하면서 yield
+    # consciousness_output을 메타데이터로 첫 이벤트에 첨부 (평가 루프용)
+    if consciousness_output:
+        yield {"type": "_consciousness_output", "data": consciousness_output,
+               "execution_memory": execution_memory}
+
+    yield from runner.ai.process_message_stream(
         message_content=message,
         history=history,
         images=images,

@@ -15,7 +15,8 @@ actions:
     implementation: KOPIS API로 공연장/시설 검색
     target_key: keyword
   book:
-    description: 한국 도서 검색 (도서관정보나루). 국내 도서관 소장/대출 정보 포함. 글로벌 도서는 sense:search_books(Google Books) 사용.
+    description: 한국 도서 검색 (도서관정보나루). 국내 도서관 소장/대출 정보 포함. 글로벌 도서는 sense:search_books(Google
+      Books) 사용.
     target_description: 검색어 (제목/저자/출판사)
     router: handler
     tool: library_quick_search
@@ -69,3 +70,37 @@ actions:
     router: handler
     tool: library_get_regions
     implementation: 도서관정보나루 API로 지역코드 목록 조회
+  gutenberg_books:
+    description: Project Gutenberg 고전 도서 및 원문 텍스트 검색 (Gutendex API). 저작권 만료된 7만 6천여
+      권의 고전 문학, 철학, 과학 텍스트를 검색하고 원문 다운로드 링크를 제공
+    target_description: 검색어 (제목, 저자, 주제)
+    router: handler
+    tool: gutenberg_search
+    implementation: Gutendex REST API로 Project Gutenberg 도서 메타데이터 검색. 원문 텍스트/HTML
+      다운로드 URL 포함
+    target_key: query
+    keywords:
+    - 고전
+    - 원문
+    - gutenberg
+    - 문학
+    - 철학
+    - 고전문학
+    - 원전
+  korean_classics:
+    description: 한국고전종합DB 검색 (db.itkc.or.kr). 이황, 이이 등 고전 문헌, 번역서 검색 및 원문 링크 제공.
+    target_description: '검색어 (예: 이황, 퇴계집)'
+    router: handler
+    tool: korean_classics_search
+    implementation: 한국고전종합DB OpenAPI를 통해 고전 문헌 및 번역서 검색, 원문 링크 반환
+    target_key: query
+    keywords:
+    - 한국고전
+    - 고전번역
+    - 이황
+    - 이이
+    - 퇴계
+    - 율곡
+    - 조선
+    - 문집
+    - itkc

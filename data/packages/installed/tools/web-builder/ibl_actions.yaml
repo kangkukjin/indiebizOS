@@ -1,106 +1,176 @@
-node: forge
+node: engines
 actions:
   web_site_list:
     description: 등록된 사이트 목록 조회
+    group: web_builder
+    category: list
     router: handler
     tool: site_list
     implementation: 사이트 레지스트리 JSON에서 등록된 사이트 목록 조회
+    keywords:
+    - 사이트
+    - 웹사이트목록
   web_site_register:
     description: 새 사이트 등록 (이름, 경로 필수)
-    target_description: 사이트 이름
+    group: web_builder
+    category: create
     router: handler
     tool: site_register
     implementation: 사이트 레지스트리 JSON에 새 사이트 등록
     target_key: name
+    keywords:
+    - 사이트등록
+    - 웹사이트
   web_site_remove:
     description: 등록된 사이트 삭제
-    target_description: 사이트 ID
+    group: web_builder
+    category: delete
     router: handler
     tool: site_remove
     implementation: 사이트 레지스트리 JSON에서 사이트 삭제
     target_key: site_id
+    keywords:
+    - 사이트삭제
   web_site_update:
     description: 등록된 사이트 정보 수정
-    target_description: 사이트 ID
+    group: web_builder
+    category: control
     router: handler
     tool: site_update
     implementation: 사이트 레지스트리 JSON에서 사이트 정보 수정
     target_key: site_id
+    keywords:
+    - 사이트수정
   web_snapshot:
     description: 사이트 스냅샷 (현재 상태 캡처)
-    target_description: 사이트 ID
+    group: web_builder
+    category: get
     router: handler
     tool: site_snapshot
     implementation: Playwright로 사이트 스크린샷 캡처 후 저장
     target_key: site_id
+    keywords:
+    - 사이트스냅샷
+    - 캡처
   web_live_check:
     description: 사이트 상태 확인 (Lighthouse 품질 검사)
-    target_description: 사이트 ID 또는 URL
+    group: web_builder
+    category: get
     router: handler
     tool: site_live_check
     implementation: Playwright + Lighthouse CLI로 사이트 품질 검사
     target_key: site_id
+    keywords:
+    - 사이트상태
+    - Lighthouse
   web_create_site:
     description: '새 프로젝트 생성 (템플릿: blank/landing/portfolio/blog/business)'
-    target_description: 프로젝트명
+    group: web_builder
+    category: create
     router: handler
     tool: create_project
     implementation: HTML/CSS/JS 템플릿 기반 웹 프로젝트 디렉토리 생성
     target_key: name
-  web_add_component:
-    description: shadcn/ui 컴포넌트 추가
-    target_description: 프로젝트 경로
-    router: handler
-    tool: add_component
-    target_key: project_path
+    keywords:
+    - 웹사이트
+    - 프로젝트생성
+    - 템플릿
   web_list_components:
     description: 사용 가능한 컴포넌트 목록
+    group: web_builder
+    category: list
     router: handler
     tool: list_components
     implementation: 사용 가능한 UI 컴포넌트 카탈로그 조회 (로컬 JSON)
+    keywords:
+    - 컴포넌트
+    - 목록
   web_list_sections:
     description: 사용 가능한 섹션 템플릿 목록
+    group: web_builder
+    category: list
     router: handler
     tool: list_sections
     implementation: 섹션 템플릿 카탈로그 조회 (로컬 JSON)
+    keywords:
+    - 섹션
+    - 템플릿
   web_create_page:
     description: 페이지 생성 (섹션 조합)
-    target_description: 프로젝트 경로
+    group: web_builder
+    category: create
     router: handler
     tool: create_page
     implementation: 섹션 템플릿 조합으로 HTML 페이지 생성
     target_key: project_path
-  web_edit_styles:
-    description: 테마/스타일 변경 (색상, 라운딩 등)
-    target_description: 프로젝트 경로
-    router: handler
-    tool: edit_styles
-    target_key: project_path
+    keywords:
+    - 페이지생성
+    - 섹션조합
   web_preview:
     description: 로컬 미리보기 서버 (start/stop/status)
-    target_description: 프로젝트 경로
+    group: web_builder
+    category: run
     router: handler
     tool: preview_site
     implementation: Python http.server로 로컬 미리보기 서버 실행
     target_key: project_path
-  web_build:
-    description: 프로덕션 빌드
-    target_description: 프로젝트 경로
-    router: handler
-    tool: build_site
-    target_key: project_path
-  web_deploy:
-    description: Vercel 배포
-    target_description: 프로젝트 경로
-    router: handler
-    tool: deploy_vercel
-    target_key: project_path
+    keywords:
+    - 미리보기
+    - 로컬서버
   web_fetch_component:
     description: 외부 컴포넌트 가져오기
-    target_description: 컴포넌트명
+    group: web_builder
+    category: create
     router: handler
     tool: fetch_component
     implementation: 외부 컴포넌트 CDN/레지스트리에서 다운로드
     target_key: component
-guides:
-- web-builder/web_builder_guide.md
+    keywords:
+    - 컴포넌트
+    - 가져오기
+  web_add_component:
+    description: shadcn/ui 컴포넌트를 프로젝트에 추가
+    group: web_builder
+    category: create
+    router: handler
+    tool: add_component
+    implementation: shadcn/ui CLI로 버튼, 카드, 모달 등 UI 컴포넌트 설치
+    target_key: component
+    keywords:
+    - 컴포넌트추가
+    - shadcn
+    - UI
+  web_edit_styles:
+    description: 프로젝트 스타일 수정 (색상, 폰트, 테마)
+    group: web_builder
+    category: edit
+    router: handler
+    tool: edit_styles
+    implementation: globals.css 및 Tailwind 설정 수정으로 사이트 테마 변경
+    keywords:
+    - 스타일
+    - 테마
+    - 색상
+    - 폰트
+  web_build:
+    description: 프로덕션 빌드 생성
+    group: web_builder
+    category: execute
+    router: handler
+    tool: build_site
+    implementation: Next.js 빌드 실행 (.next/ 디렉토리 생성)
+    keywords:
+    - 빌드
+    - build
+    - 배포준비
+  web_deploy:
+    description: Vercel에 사이트 배포
+    group: web_builder
+    category: execute
+    router: handler
+    tool: deploy_vercel
+    implementation: Vercel CLI로 사이트 배포 (도메인 설정 포함)
+    keywords:
+    - 배포
+    - deploy
+    - vercel

@@ -620,3 +620,13 @@
   - architecture.md: 무의식/의식/평가 에이전트 3단 구조, Self-Check 5노드 확대
   - overview.md: 3단 인지 아키텍처, Self-Check 5노드 반영
   - CLAUDE.md: 의식/무의식/평가 에이전트, 검색 분리, WHITEPAPER.md 반영
+[2026-04-05 09:00:00] CODE_CLEANUP: 시스템 AI 도구 계층 정비 및 레거시 코드 제거
+  - system_ai_tools.py: 시스템 AI에 인지 도구 4개 추가 (todo_write, ask_user_question, enter_plan_mode, exit_plan_mode) — 프로젝트 에이전트와 동일한 9개 도구 구조로 통일
+  - system_ai_tools.py: 죽은 스키마 함수 4개 제거 (_get_list_project_agents_tool 등, ~165줄) — IBL 라우팅으로 대체되어 호출되지 않던 코드
+  - system_ai_runner.py: 죽은 메서드 2개 제거 (_get_call_project_agent_tool, _execute_call_project_agent, ~135줄) — system_ai_tools.py에 동일 실행 함수 존재
+  - system_ai.py: 파일 삭제 (~295줄) — 전체 미참조. 메시징 기능은 channel_engine.py + [others:channel_send]로 이미 IBL 통합됨, execute_system_tool은 system_ai_core.py에 대체됨
+  - api_system_ai.py: 삭제된 스키마 함수 import 제거
+  - 주석/독스트링 수정: "Phase 17: execute_ibl 단일 도구" → 현재 9개 도구 구조 반영 (system_ai_core.py, system_ai_runner.py, system_ai_tools.py, agent_cognitive.py)
+  - agent_cognitive.py: 잘못된 액션 수 "336개" → "308개"로 정정
+[2026-04-05 09:00:00] DOCS_UPDATED: 시스템 문서 업데이트 (도구 계층 정비 반영)
+  - architecture.md: 통합 AI 아키텍처 다이어그램을 9개 최상위 도구 구조로 전면 갱신, "execute_ibl 단일 도구" 표현 제거

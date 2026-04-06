@@ -166,6 +166,27 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
             from tool_library import get_kdc_list
             result = get_kdc_list()
 
+        # Project Gutenberg 도서 검색
+        elif tool_name == "gutenberg_search":
+            from tool_gutenberg import search_gutenberg
+            result = search_gutenberg(
+                query=tool_input.get("query"),
+                author_year_start=tool_input.get("author_year_start"),
+                author_year_end=tool_input.get("author_year_end"),
+                topic=tool_input.get("topic"),
+                languages=tool_input.get("languages", "en")
+            )
+
+
+
+        # 한국고전종합DB 검색
+        elif tool_name == "korean_classics_search":
+            from tool_korean_classics import search_korean_classics
+            result = search_korean_classics(
+                query=tool_input.get("query"),
+                rows=tool_input.get("rows", 10)
+            )
+
         # KCISA 문화정보 도구들
         elif tool_name == "kcisa_search_culture":
             from tool_kcisa import search_culture_events

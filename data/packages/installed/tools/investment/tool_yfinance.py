@@ -366,13 +366,27 @@ def get_stock_news(symbol: str) -> dict:
 
         news_list = []
         for item in news[:10]:
-            news_list.append({
-                "title": item.get("title", ""),
-                "publisher": item.get("publisher", ""),
-                "link": item.get("link", ""),
-                "published": datetime.fromtimestamp(item.get("providerPublishTime", 0)).strftime("%Y-%m-%d %H:%M") if item.get("providerPublishTime") else "",
-                "type": item.get("type", "")
-            })
+            # 예전 구조 호환성 (yfinance 하위 버전)
+            if "title" in item:
+                news_list.append({
+                    "title": item.get("title", ""),
+                    "publisher": item.get("publisher", ""),
+                    "link": item.get("link", ""),
+                    "published": datetime.fromtimestamp(item.get("providerPublishTime", 0)).strftime("%Y-%m-%d %H:%M") if item.get("providerPublishTime") else "",
+                    "type": item.get("type", "")
+                })
+            # 새로운 구조 (최신 yfinance 버전)
+            elif "content" in item:
+                content_dict = item.get("content") or {}
+                provider = content_dict.get("provider") or {}
+                click_through = content_dict.get("clickThroughUrl") or {}
+                news_list.append({
+                    "title": content_dict.get("title", ""),
+                    "publisher": provider.get("displayName", ""),
+                    "link": click_through.get("url", ""),
+                    "published": content_dict.get("pubDate", ""),
+                    "type": content_dict.get("contentType", "")
+                })
 
         return {
             "success": True,

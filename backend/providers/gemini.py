@@ -68,6 +68,7 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
         self._cache_thread = None  # 백그라운드 캐시 생성 스레드
         self._cache_ready = threading.Event()  # 캐시 준비 완료 시그널
         self._cache_lock = threading.Lock()  # 캐시 생성/삭제 동시성 보호
+        self._last_tool_images = []  # 도구 실행 중 수집된 이미지
 
     @staticmethod
     def _patch_ipv4_preference():
@@ -282,6 +283,7 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
         history = history or []
         types = self._genai_types
         self._pending_map_tags = []
+        self._last_tool_images = []  # 턴 시작 시 초기화
 
         # 대화 히스토리 구성
         contents = self._build_contents(message, history, images)
@@ -426,20 +428,27 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
                     self._pending_map_tags.append(map_match.group(0).strip())
                     tool_output = tool_output[:map_match.start()].strip()
 
+                # 도구 이미지 수집 (다음 턴 히스토리용)
+                if tool_images:
+                    self._last_tool_images.extend(tool_images)
+
                 # 이벤트 발생 — UI에는 details가 있으면 details 사용
                 tool_input = dict(fc.args) if fc.args else {}
                 ui_result = ui_details if ui_details is not None else tool_output
-                yield {
+                event = {
                     "type": "tool_result",
                     "name": fc.name,
                     "input": tool_input,
                     "result": ui_result[:3000] + "..." if len(str(ui_result)) > 3000 else ui_result
                 }
+                if tool_images:
+                    event["images"] = tool_images
+                yield event
 
                 # 도구 응답 추가 (AI에게는 content만)
                 # 파이프라인 결과인 경우 _action_count(병렬 포함 실제 액션 수) × 16KB 허용
                 import re as _re
-                _max_len = 8000
+                _max_len = 16000
                 _action_match = _re.search(r'"_action_count"\s*:\s*(\d+)', tool_output)
                 if _action_match:
                     _actions = int(_action_match.group(1))
@@ -786,7 +795,22 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
                 tagged_content = f"<user_message>\n{content}\n</user_message>"
             else:
                 tagged_content = f"<assistant_message>\n{content}\n</assistant_message>"
-            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=tagged_content)]))
+
+            parts = []
+            # 히스토리에 이미지가 있으면 Parts에 추가
+            if h.get("images"):
+                import base64 as b64_hist
+                for img in h["images"]:
+                    try:
+                        img_bytes = b64_hist.b64decode(img["base64"])
+                        parts.append(types.Part.from_bytes(
+                            data=img_bytes,
+                            mime_type=img.get("media_type", "image/png")
+                        ))
+                    except Exception:
+                        pass
+            parts.append(types.Part.from_text(text=tagged_content))
+            contents.append(types.Content(role=role, parts=parts))
 
         # 현재 메시지
         current_parts = []

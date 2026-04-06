@@ -35,7 +35,7 @@ def search_commercial_district(lat: float = None, lng: float = None, radius: int
     try:
         if lat and lng:
             # 반경 기반 검색
-            endpoint = f"{BASE_URL}/getStoreListInRadius"
+            endpoint = f"{BASE_URL}/storeListInRadius"
             params = {
                 'serviceKey': SERVICE_KEY,
                 'radius': str(radius),
@@ -45,7 +45,7 @@ def search_commercial_district(lat: float = None, lng: float = None, radius: int
             }
         elif region_code:
             # 지역(행정동) 기반 검색
-            endpoint = f"{BASE_URL}/getStoreListInDong"
+            endpoint = f"{BASE_URL}/storeListInDong"
             params = {
                 'serviceKey': SERVICE_KEY,
                 'divId': 'adongCd',

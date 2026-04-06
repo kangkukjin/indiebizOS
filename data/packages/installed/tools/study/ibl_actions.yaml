@@ -1,14 +1,17 @@
 node: sense
 actions:
   search_openalex:
-    description: 범용 학술 논문 검색 (OpenAlex). 분야 무관 논문 검색의 기본 선택. 웹 검색(sense:search_ddg)과 별도로, 논문만 집중적으로 많이 가져올 때 사용.
+    description: 범용 학술 논문 검색 (OpenAlex). 분야 무관 논문 검색의 기본 선택. 웹 검색(sense:search_ddg)과
+      별도로, 논문만 집중적으로 많이 가져올 때 사용.
     target_description: 검색 쿼리
     router: handler
     tool: search_openalex
-    implementation: OpenAlex 무료 API로 학술 논문 메타데이터 검색 (제목/초록/인용수/OA 필터). 통합검색보다 결과가 많고 필터 옵션 풍부.
+    implementation: OpenAlex 무료 API로 학술 논문 메타데이터 검색 (제목/초록/인용수/OA 필터). 통합검색보다 결과가
+      많고 필터 옵션 풍부.
     target_key: query
   search_arxiv:
-    description: AI/CS/물리/수학 프리프린트 검색 (arXiv). 최신 미출판 연구, PDF 다운로드 가능. 정식 출판 논문은 search_openalex 사용.
+    description: AI/CS/물리/수학 프리프린트 검색 (arXiv). 최신 미출판 연구, PDF 다운로드 가능. 정식 출판 논문은 search_openalex
+      사용.
     target_description: 검색 쿼리
     router: handler
     tool: search_arxiv
@@ -22,21 +25,25 @@ actions:
     implementation: arXiv 서버에서 논문 PDF 직접 다운로드
     target_key: arxiv_id
   search_semantic:
-    description: AI/ML 논문 심층 검색 (Semantic Scholar). 인용 그래프·관련 논문 추적 가능. arXiv보다 정식 출판 논문 포함, AI 분야 논문 간 관계 탐색에 적합.
+    description: AI/ML 논문 심층 검색 (Semantic Scholar). 인용 그래프·관련 논문 추적 가능. arXiv보다 정식
+      출판 논문 포함, AI 분야 논문 간 관계 탐색에 적합.
     target_description: 검색 쿼리
     router: handler
     tool: search_semantic_scholar
     implementation: Semantic Scholar API로 AI/CS 논문 검색 (인용 그래프, 관련 논문 추적 포함)
     target_key: query
   search_scholar:
-    description: Google Scholar 학술 검색. 커버리지 가장 넓음 (모든 분야, 비영어 논문 포함). 단, 비공식 크롤링이라 불안정할 수 있음. 다른 소스에서 못 찾을 때 보조적으로 사용.
+    description: Google Scholar 학술 검색. 커버리지 가장 넓음 (모든 분야, 비영어 논문 포함). 단, 비공식 크롤링이라
+      불안정할 수 있음. 다른 소스에서 못 찾을 때 보조적으로 사용.
     target_description: 검색 쿼리
     router: handler
     tool: search_google_scholar
-    implementation: scholarly 라이브러리로 Google Scholar 비공식 크롤링. 불안정할 수 있어 다른 학술검색의 보조 수단으로 사용.
+    implementation: scholarly 라이브러리로 Google Scholar 비공식 크롤링. 불안정할 수 있어 다른 학술검색의 보조
+      수단으로 사용.
     target_key: query
   search_pubmed:
-    description: 생의학/의학 논문 전용 (PubMed). 의학·약학·생명과학 주제에만 사용. 다른 분야는 search_openalex 사용.
+    description: 생의학/의학 논문 전용 (PubMed). 의학·약학·생명과학 주제에만 사용. 다른 분야는 search_openalex
+      사용.
     target_description: 검색 쿼리
     router: handler
     tool: search_pubmed
@@ -50,7 +57,8 @@ actions:
     implementation: PubMed Central에서 오픈액세스 논문 PDF 다운로드
     target_key: pmcid
   pew_research:
-    description: Pew Research 최신 여론조사/리서치 보고서 목록. 미국 사회·정치·기술 트렌드 조사. 파라미터 없이 호출하면 최신 리서치 목록 반환.
+    description: Pew Research 최신 여론조사/리서치 보고서 목록. 미국 사회·정치·기술 트렌드 조사. 파라미터 없이 호출하면
+      최신 리서치 목록 반환.
     router: handler
     tool: fetch_pew_research
     implementation: Pew Research RSS 피드 파싱 (feedparser). 입력 파라미터 없이 최신 리서치 목록 반환.
@@ -63,7 +71,7 @@ actions:
     target_key: query
     postprocess:
       type: compress
-      prompt: "같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라."
+      prompt: 같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라.
   world_bank:
     description: 세계은행 경제/사회 지표 데이터
     target_description: '지표 코드 (예: NY.GDP.MKTP.CD)'
@@ -72,7 +80,8 @@ actions:
     implementation: 세계은행 공개 API로 국가별 경제/사회 지표 시계열 조회
     target_key: indicator
   search_books:
-    description: 글로벌 도서 검색 (Google Books). 해외 도서·원서 포함. 한국 도서관 소장/대출 정보는 sense:book(도서관정보나루) 사용.
+    description: 글로벌 도서 검색 (Google Books). 해외 도서·원서 포함. 한국 도서관 소장/대출 정보는 sense:book(도서관정보나루)
+      사용.
     target_description: 검색 쿼리
     router: handler
     tool: search_books

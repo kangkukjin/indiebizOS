@@ -10,11 +10,28 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": { "type": "string", "description": "공연명 검색어" },
-          "genre": { "type": "string", "description": "장르 (연극, 뮤지컬, 클래식, 국악, 대중음악, 무용, 서커스/마술, 복합)" },
-          "region": { "type": "string", "description": "지역 (서울, 부산, 대구, 인천, 광주, 대전, 울산, 세종, 경기, 강원, 충북, 충남, 전북, 전남, 경북, 경남, 제주)" },
-          "status": { "type": "string", "description": "공연 상태 (공연중, 공연예정, 공연완료)", "default": "공연중" },
-          "days": { "type": "integer", "description": "오늘부터 검색할 기간(일)", "default": 90 }
+          "keyword": {
+            "type": "string",
+            "description": "공연명 검색어"
+          },
+          "genre": {
+            "type": "string",
+            "description": "장르 (연극, 뮤지컬, 클래식, 국악, 대중음악, 무용, 서커스/마술, 복합)"
+          },
+          "region": {
+            "type": "string",
+            "description": "지역 (서울, 부산, 대구, 인천, 광주, 대전, 울산, 세종, 경기, 강원, 충북, 충남, 전북, 전남, 경북, 경남, 제주)"
+          },
+          "status": {
+            "type": "string",
+            "description": "공연 상태 (공연중, 공연예정, 공연완료)",
+            "default": "공연중"
+          },
+          "days": {
+            "type": "integer",
+            "description": "오늘부터 검색할 기간(일)",
+            "default": 90
+          }
         }
       }
     },
@@ -24,16 +41,46 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "stdate": { "type": "string", "description": "조회 시작일 (YYYYMMDD 또는 YYYY-MM-DD)" },
-          "eddate": { "type": "string", "description": "조회 종료일" },
-          "genre": { "type": "string", "description": "장르 (연극, 뮤지컬, 클래식 등)" },
-          "region": { "type": "string", "description": "지역 (서울, 부산 등)" },
-          "status": { "type": "string", "description": "공연 상태 (공연중, 공연예정, 공연완료)", "default": "공연중" },
-          "keyword": { "type": "string", "description": "공연명 검색어" },
-          "rows": { "type": "integer", "description": "페이지당 결과 수 (최대 100)", "default": 20 },
-          "page": { "type": "integer", "description": "페이지 번호", "default": 1 }
+          "stdate": {
+            "type": "string",
+            "description": "조회 시작일 (YYYYMMDD 또는 YYYY-MM-DD)"
+          },
+          "eddate": {
+            "type": "string",
+            "description": "조회 종료일"
+          },
+          "genre": {
+            "type": "string",
+            "description": "장르 (연극, 뮤지컬, 클래식 등)"
+          },
+          "region": {
+            "type": "string",
+            "description": "지역 (서울, 부산 등)"
+          },
+          "status": {
+            "type": "string",
+            "description": "공연 상태 (공연중, 공연예정, 공연완료)",
+            "default": "공연중"
+          },
+          "keyword": {
+            "type": "string",
+            "description": "공연명 검색어"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "페이지당 결과 수 (최대 100)",
+            "default": 20
+          },
+          "page": {
+            "type": "integer",
+            "description": "페이지 번호",
+            "default": 1
+          }
         },
-        "required": ["stdate", "eddate"]
+        "required": [
+          "stdate",
+          "eddate"
+        ]
       }
     },
     {
@@ -42,9 +89,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "performance_id": { "type": "string", "description": "공연 ID (mt20id, 예: PF123456)" }
+          "performance_id": {
+            "type": "string",
+            "description": "공연 ID (mt20id, 예: PF123456)"
+          }
         },
-        "required": ["performance_id"]
+        "required": [
+          "performance_id"
+        ]
       }
     },
     {
@@ -53,10 +105,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "period": { "type": "string", "description": "조회 주기 (day: 일간, week: 주간, month: 월간)", "default": "day" },
-          "date": { "type": "string", "description": "기준일 (YYYYMMDD), 생략시 어제" },
-          "genre": { "type": "string", "description": "장르 필터" },
-          "region": { "type": "string", "description": "지역 필터" }
+          "period": {
+            "type": "string",
+            "description": "조회 주기 (day: 일간, week: 주간, month: 월간)",
+            "default": "day"
+          },
+          "date": {
+            "type": "string",
+            "description": "기준일 (YYYYMMDD), 생략시 어제"
+          },
+          "genre": {
+            "type": "string",
+            "description": "장르 필터"
+          },
+          "region": {
+            "type": "string",
+            "description": "지역 필터"
+          }
         }
       }
     },
@@ -66,11 +131,28 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": { "type": "string", "description": "공연장명 검색어" },
-          "facility_id": { "type": "string", "description": "시설 ID (상세 조회용)" },
-          "region": { "type": "string", "description": "지역" },
-          "rows": { "type": "integer", "description": "결과 수", "default": 20 },
-          "page": { "type": "integer", "description": "페이지 번호", "default": 1 }
+          "keyword": {
+            "type": "string",
+            "description": "공연장명 검색어"
+          },
+          "facility_id": {
+            "type": "string",
+            "description": "시설 ID (상세 조회용)"
+          },
+          "region": {
+            "type": "string",
+            "description": "지역"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수",
+            "default": 20
+          },
+          "page": {
+            "type": "integer",
+            "description": "페이지 번호",
+            "default": 1
+          }
         }
       }
     },
@@ -80,12 +162,32 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "stdate": { "type": "string", "description": "시작일 (기본: 오늘)" },
-          "eddate": { "type": "string", "description": "종료일 (기본: 6개월 후)" },
-          "genre": { "type": "string", "description": "장르" },
-          "region": { "type": "string", "description": "지역" },
-          "rows": { "type": "integer", "description": "결과 수", "default": 20 },
-          "page": { "type": "integer", "description": "페이지 번호", "default": 1 }
+          "stdate": {
+            "type": "string",
+            "description": "시작일 (기본: 오늘)"
+          },
+          "eddate": {
+            "type": "string",
+            "description": "종료일 (기본: 6개월 후)"
+          },
+          "genre": {
+            "type": "string",
+            "description": "장르"
+          },
+          "region": {
+            "type": "string",
+            "description": "지역"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수",
+            "default": 20
+          },
+          "page": {
+            "type": "integer",
+            "description": "페이지 번호",
+            "default": 1
+          }
         }
       }
     },
@@ -111,11 +213,24 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": { "type": "string", "description": "검색 키워드 (제목, 저자, 출판사 등)" },
-          "page": { "type": "integer", "description": "페이지 번호", "default": 1 },
-          "rows": { "type": "integer", "description": "결과 수 (최대 100)", "default": 10 }
+          "keyword": {
+            "type": "string",
+            "description": "검색 키워드 (제목, 저자, 출판사 등)"
+          },
+          "page": {
+            "type": "integer",
+            "description": "페이지 번호",
+            "default": 1
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수 (최대 100)",
+            "default": 10
+          }
         },
-        "required": ["keyword"]
+        "required": [
+          "keyword"
+        ]
       }
     },
     {
@@ -124,10 +239,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "isbn13": { "type": "string", "description": "ISBN 13자리 (하이픈 포함 가능)" },
-          "loan_info": { "type": "boolean", "description": "대출 통계 포함 여부", "default": true }
+          "isbn13": {
+            "type": "string",
+            "description": "ISBN 13자리 (하이픈 포함 가능)"
+          },
+          "loan_info": {
+            "type": "boolean",
+            "description": "대출 통계 포함 여부",
+            "default": true
+          }
         },
-        "required": ["isbn13"]
+        "required": [
+          "isbn13"
+        ]
       }
     },
     {
@@ -136,15 +260,44 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "start_date": { "type": "string", "description": "시작일 (YYYY-MM-DD, 기본: 7일 전)" },
-          "end_date": { "type": "string", "description": "종료일 (YYYY-MM-DD, 기본: 어제)" },
-          "gender": { "type": "integer", "description": "성별 (0: 남성, 1: 여성)" },
-          "from_age": { "type": "integer", "description": "시작 연령 (예: 20)" },
-          "to_age": { "type": "integer", "description": "종료 연령 (예: 29)" },
-          "region": { "type": "string", "description": "지역코드 (예: 11=서울)" },
-          "kdc": { "type": "string", "description": "KDC 분류코드 (예: 8=문학)" },
-          "page": { "type": "integer", "description": "페이지 번호", "default": 1 },
-          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+          "start_date": {
+            "type": "string",
+            "description": "시작일 (YYYY-MM-DD, 기본: 7일 전)"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "종료일 (YYYY-MM-DD, 기본: 어제)"
+          },
+          "gender": {
+            "type": "integer",
+            "description": "성별 (0: 남성, 1: 여성)"
+          },
+          "from_age": {
+            "type": "integer",
+            "description": "시작 연령 (예: 20)"
+          },
+          "to_age": {
+            "type": "integer",
+            "description": "종료 연령 (예: 29)"
+          },
+          "region": {
+            "type": "string",
+            "description": "지역코드 (예: 11=서울)"
+          },
+          "kdc": {
+            "type": "string",
+            "description": "KDC 분류코드 (예: 8=문학)"
+          },
+          "page": {
+            "type": "integer",
+            "description": "페이지 번호",
+            "default": 1
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수",
+            "default": 10
+          }
         }
       }
     },
@@ -154,7 +307,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "base_date": { "type": "string", "description": "기준일 (YYYY-MM-DD, 기본: 어제)" }
+          "base_date": {
+            "type": "string",
+            "description": "기준일 (YYYY-MM-DD, 기본: 어제)"
+          }
         }
       }
     },
@@ -164,10 +320,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "isbn13": { "type": "string", "description": "기준 도서의 ISBN13" },
-          "rec_type": { "type": "string", "description": "추천 유형 (mania: 마니아 추천, reader: 다독자 추천)", "default": "mania" }
+          "isbn13": {
+            "type": "string",
+            "description": "기준 도서의 ISBN13"
+          },
+          "rec_type": {
+            "type": "string",
+            "description": "추천 유형 (mania: 마니아 추천, reader: 다독자 추천)",
+            "default": "mania"
+          }
         },
-        "required": ["isbn13"]
+        "required": [
+          "isbn13"
+        ]
       }
     },
     {
@@ -176,10 +341,24 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "name": { "type": "string", "description": "도서관명 (부분 일치)" },
-          "region": { "type": "string", "description": "지역코드 (예: 11=서울)" },
-          "page": { "type": "integer", "description": "페이지 번호", "default": 1 },
-          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+          "name": {
+            "type": "string",
+            "description": "도서관명 (부분 일치)"
+          },
+          "region": {
+            "type": "string",
+            "description": "지역코드 (예: 11=서울)"
+          },
+          "page": {
+            "type": "integer",
+            "description": "페이지 번호",
+            "default": 1
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수",
+            "default": 10
+          }
         }
       }
     },
@@ -189,12 +368,28 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "isbn13": { "type": "string", "description": "도서의 ISBN13" },
-          "region": { "type": "string", "description": "지역코드 (선택)" },
-          "page": { "type": "integer", "description": "페이지 번호", "default": 1 },
-          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+          "isbn13": {
+            "type": "string",
+            "description": "도서의 ISBN13"
+          },
+          "region": {
+            "type": "string",
+            "description": "지역코드 (선택)"
+          },
+          "page": {
+            "type": "integer",
+            "description": "페이지 번호",
+            "default": 1
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수",
+            "default": 10
+          }
         },
-        "required": ["isbn13"]
+        "required": [
+          "isbn13"
+        ]
       }
     },
     {
@@ -203,10 +398,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": { "type": "string", "description": "검색 키워드" },
-          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+          "keyword": {
+            "type": "string",
+            "description": "검색 키워드"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수",
+            "default": 10
+          }
         },
-        "required": ["keyword"]
+        "required": [
+          "keyword"
+        ]
       }
     },
     {
@@ -215,9 +419,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "isbn": { "type": "string", "description": "ISBN (10자리 또는 13자리, 하이픈 포함 가능)" }
+          "isbn": {
+            "type": "string",
+            "description": "ISBN (10자리 또는 13자리, 하이픈 포함 가능)"
+          }
         },
-        "required": ["isbn"]
+        "required": [
+          "isbn"
+        ]
       }
     },
     {
@@ -242,12 +451,32 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": { "type": "string", "description": "행사명 또는 키워드" },
-          "start_date": { "type": "string", "description": "조회 시작일 (YYYYMMDD)" },
-          "end_date": { "type": "string", "description": "조회 종료일 (YYYYMMDD)" },
-          "area": { "type": "string", "description": "지역 (서울, 부산 등)" },
-          "rows": { "type": "integer", "description": "결과 수", "default": 10 },
-          "page": { "type": "integer", "description": "페이지 번호", "default": 1 }
+          "keyword": {
+            "type": "string",
+            "description": "행사명 또는 키워드"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "조회 시작일 (YYYYMMDD)"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "조회 종료일 (YYYYMMDD)"
+          },
+          "area": {
+            "type": "string",
+            "description": "지역 (서울, 부산 등)"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수",
+            "default": 10
+          },
+          "page": {
+            "type": "integer",
+            "description": "페이지 번호",
+            "default": 1
+          }
         }
       }
     },
@@ -257,9 +486,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "seq": { "type": "string", "description": "행사 일련번호 (UCI 또는 ID)" }
+          "seq": {
+            "type": "string",
+            "description": "행사 일련번호 (UCI 또는 ID)"
+          }
         },
-        "required": ["seq"]
+        "required": [
+          "seq"
+        ]
       }
     },
     {
@@ -268,10 +502,69 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": { "type": "string", "description": "검색어" },
-          "rows": { "type": "integer", "description": "결과 수", "default": 10 }
+          "keyword": {
+            "type": "string",
+            "description": "검색어"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수",
+            "default": 10
+          }
         },
-        "required": ["keyword"]
+        "required": [
+          "keyword"
+        ]
+      }
+    },
+    {
+      "name": "gutenberg_search",
+      "description": "Project Gutenberg에서 고전 문학 및 도서의 메타데이터와 원문 텍스트 링크를 검색합니다 (Gutendex API). 무료로 다운로드 가능한 저작권 만료 도서들입니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "도서 제목, 저자 등 검색어"
+          },
+          "author_year_start": {
+            "type": "integer",
+            "description": "저자 출생/사망 연도 시작"
+          },
+          "author_year_end": {
+            "type": "integer",
+            "description": "저자 출생/사망 연도 끝"
+          },
+          "topic": {
+            "type": "string",
+            "description": "주제어 (예: philosophy, children)"
+          },
+          "languages": {
+            "type": "string",
+            "description": "언어 코드 (기본: en, 쉼표로 구분 가능 예: en,fr)",
+            "default": "en"
+          }
+        }
+      }
+    },
+    {
+      "name": "korean_classics_search",
+      "description": "한국고전종합DB 검색 (db.itkc.or.kr). 이황, 이이 등 고전 문헌, 번역서 검색 및 원문 링크 제공.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색어 (예: 이황, 퇴계집)"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "반환할 결과 수 (기본 10)"
+          }
+        },
+        "required": [
+          "query"
+        ]
       }
     }
   ]

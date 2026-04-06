@@ -62,9 +62,13 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin)
         self.project_path = Path(agent_config.get("_project_path", "."))
         self.project_id = agent_config.get("_project_id", "")
 
-        # 대화 DB
-        db_path = self.project_path / "conversations.db"
-        self.db = ConversationDB(str(db_path))
+        # 대화 DB — 시스템 AI는 전용 메모리 DB 사용
+        if agent_config.get("_is_system_ai"):
+            from system_ai_memory import MEMORY_DB_PATH
+            self.db = ConversationDB(str(MEMORY_DB_PATH))
+        else:
+            db_path = self.project_path / "conversations.db"
+            self.db = ConversationDB(str(db_path))
 
         # 레지스트리에 등록 (스레드 안전)
         # 키 형식: {project_id}:{agent_id} - 프로젝트 간 충돌 방지

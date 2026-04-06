@@ -201,11 +201,13 @@ IBL Engine: parse -> dispatch to handler/api_engine -> return result
 - Per-step status tracking (`pending` → `in_progress` → `completed`/`failed`)
 - Automatic retry on failure with alternative paths
 
-### IBL Usage RAG (Learning from Experience)
-Agents improve over time through a RAG system that learns from successful IBL executions:
-- **Usage Dictionary**: ~970 examples (synthetic data + auto-promoted execution logs)
-- **Hybrid Search**: Semantic (ko-sroberta) + BM25 (FTS5)
-- **Prompt Injection**: Top 3 similar examples injected as XML references
+### Hippocampus: IBL Usage RAG (Learning from Experience)
+Agents improve over time through a hippocampus-like memory system that recalls past IBL executions:
+- **Fine-tuned Embedding Model**: Custom 768-dim model trained on IBL usage patterns (Top-5 accuracy 95.6%)
+- **Usage Dictionary**: ~2,480 examples (synthetic data + experience distillation from successful executions)
+- **Hybrid Search**: Semantic (fine-tuned embedding) + BM25 (FTS5)
+- **Experience Distillation**: Low-confidence executions (hippocampus score < 0.7) that succeed are automatically distilled into training data
+- **Prompt Injection**: Top 5 similar examples injected as execution memory (XML references + implementation details)
 
 ### Advanced Automation
 - **Scheduler**: Automate repetitive tasks with cron-like scheduling

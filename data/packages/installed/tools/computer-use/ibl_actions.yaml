@@ -1,53 +1,95 @@
-node: tools
+node: limbs
 actions:
   desktop_screenshot:
     description: macOS 화면 캡처 (전체 또는 영역 지정)
+    group: desktop
+    category: screenshot
     router: handler
     tool: computer_screenshot
     implementation: pyautogui.screenshot()으로 macOS 화면 캡처 (Retina 자동 변환)
+    keywords:
+    - 스크린샷
+    - macOS
+    - 화면캡처
   desktop_click:
     description: macOS 좌표 클릭 (left/right/middle, 더블클릭 가능)
+    group: desktop
+    category: click
     router: handler
     tool: computer_click
     implementation: pyautogui.click()으로 좌표 기반 클릭 (Retina 좌표 변환)
+    keywords:
+    - 클릭
+    - macOS
+    - 좌표
   desktop_type:
     description: macOS 텍스트 입력
-    target_description: 입력할 텍스트
+    group: desktop
+    category: type
     router: handler
     tool: computer_type
     implementation: pyautogui.write()로 텍스트 입력
     target_key: text
+    keywords:
+    - 텍스트입력
+    - macOS
   desktop_key:
     description: 'macOS 키보드 키 입력 (단축키 포함, 예: cmd+c, enter)'
-    target_description: 키 이름
+    group: desktop
     router: handler
     tool: computer_key
     implementation: pyautogui.hotkey()로 키보드 입력/단축키
     target_key: key
+    keywords:
+    - 키보드
+    - macOS
+    - 단축키
+    - cmd
   mouse_move:
     description: 마우스 커서 이동
+    group: desktop
     router: handler
     tool: computer_mouse_move
     implementation: pyautogui.moveTo()로 커서 이동
+    keywords:
+    - 마우스
+    - 커서이동
   desktop_drag:
     description: macOS 드래그 (시작점→끝점)
+    group: desktop
     router: handler
     tool: computer_drag
     implementation: pyautogui.moveTo() + drag로 드래그
+    keywords:
+    - 드래그
+    - macOS
   desktop_scroll:
     description: macOS 스크롤 (up/down/left/right)
+    group: desktop
+    category: control
     router: handler
     tool: computer_scroll
     implementation: pyautogui.scroll()로 스크롤
+    keywords:
+    - 스크롤
+    - macOS
   cursor_position:
     description: 현재 커서 위치 확인
+    group: desktop
     router: handler
     tool: computer_cursor_position
     implementation: pyautogui.position()으로 현재 커서 좌표 반환
+    keywords:
+    - 커서위치
+    - 마우스
   desktop_screen_info:
     description: macOS 화면 해상도 및 스케일 정보
+    group: desktop
+    category: get
     router: handler
     tool: computer_screen_info
     implementation: pyautogui.size()로 화면 해상도/스케일 조회
-guides:
-- computer-use/guide.md
+    keywords:
+    - 해상도
+    - macOS
+    - 화면

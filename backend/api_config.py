@@ -24,6 +24,9 @@ ENV_PATH = _get_base_path() / ".env"
 
 SYSTEM_MEMO_PATH = DATA_PATH / "system_ai_memo.txt"
 SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
+LIGHTWEIGHT_AI_CONFIG_PATH = DATA_PATH / "lightweight_ai_config.json"
+MIDTIER_AI_CONFIG_PATH = DATA_PATH / "midtier_ai_config.json"
+# 하위호환: 기존 unconscious_ai_config.json 경로
 UNCONSCIOUS_AI_CONFIG_PATH = DATA_PATH / "unconscious_ai_config.json"
 
 # 매니저 인스턴스
@@ -255,43 +258,106 @@ async def update_system_ai_config(config: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ============ 무의식 AI 설정 API ============
+# ============ 경량 AI 설정 API ============
 
-def get_default_unconscious_ai_config() -> dict:
-    """기본 무의식 AI 설정"""
+def get_default_lightweight_ai_config() -> dict:
+    """기본 경량 AI 설정"""
     return {
         "enabled": True,
         "provider": "google",
-        "model": "gemini-2.0-flash-lite",
+        "model": "gemini-2.5-flash-lite",
         "apiKey": ""
     }
 
 
-@router.get("/unconscious-ai")
-async def get_unconscious_ai_config():
-    """무의식 AI 설정 조회"""
+def _load_lightweight_config() -> dict:
+    """경량 AI 설정 로드 (하위호환: unconscious_ai_config.json 폴백)"""
+    if LIGHTWEIGHT_AI_CONFIG_PATH.exists():
+        with open(LIGHTWEIGHT_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    elif UNCONSCIOUS_AI_CONFIG_PATH.exists():
+        with open(UNCONSCIOUS_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return get_default_lightweight_ai_config()
+
+
+@router.get("/lightweight-ai")
+async def get_lightweight_ai_config():
+    """경량 AI 설정 조회"""
     try:
-        if UNCONSCIOUS_AI_CONFIG_PATH.exists():
-            with open(UNCONSCIOUS_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-        else:
-            config = get_default_unconscious_ai_config()
+        config = _load_lightweight_config()
         return {"config": config}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.put("/unconscious-ai")
-async def update_unconscious_ai_config(config: Dict[str, Any]):
-    """무의식 AI 설정 저장"""
+@router.put("/lightweight-ai")
+async def update_lightweight_ai_config(config: Dict[str, Any]):
+    """경량 AI 설정 저장"""
     try:
         config_dict = {
             "enabled": config.get("enabled", True),
             "provider": config.get("provider", "google"),
-            "model": config.get("model", "gemini-2.0-flash-lite"),
+            "model": config.get("model", "gemini-2.5-flash-lite"),
             "apiKey": config.get("apiKey", ""),
         }
-        with open(UNCONSCIOUS_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
+        with open(LIGHTWEIGHT_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
+            json.dump(config_dict, f, ensure_ascii=False, indent=2)
+        return {"status": "saved", "config": config_dict}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# 하위호환: /unconscious-ai 엔드포인트 유지
+@router.get("/unconscious-ai")
+async def get_unconscious_ai_config_compat():
+    """무의식 AI 설정 조회 (하위호환 → 경량 AI로 리다이렉트)"""
+    return await get_lightweight_ai_config()
+
+
+@router.put("/unconscious-ai")
+async def update_unconscious_ai_config_compat(config: Dict[str, Any]):
+    """무의식 AI 설정 저장 (하위호환 → 경량 AI로 리다이렉트)"""
+    return await update_lightweight_ai_config(config)
+
+
+# ============ 중급 AI 설정 API ============
+
+def get_default_midtier_ai_config() -> dict:
+    """기본 중급 AI 설정"""
+    return {
+        "enabled": True,
+        "provider": "google",
+        "model": "gemini-2.5-flash",
+        "apiKey": ""
+    }
+
+
+@router.get("/midtier-ai")
+async def get_midtier_ai_config():
+    """중급 AI 설정 조회"""
+    try:
+        if MIDTIER_AI_CONFIG_PATH.exists():
+            with open(MIDTIER_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        else:
+            config = get_default_midtier_ai_config()
+        return {"config": config}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/midtier-ai")
+async def update_midtier_ai_config(config: Dict[str, Any]):
+    """중급 AI 설정 저장"""
+    try:
+        config_dict = {
+            "enabled": config.get("enabled", True),
+            "provider": config.get("provider", "google"),
+            "model": config.get("model", "gemini-2.5-flash"),
+            "apiKey": config.get("apiKey", ""),
+        }
+        with open(MIDTIER_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, ensure_ascii=False, indent=2)
         return {"status": "saved", "config": config_dict}
     except Exception as e:
@@ -1019,6 +1085,26 @@ async def get_health():
     try:
         from world_pulse import get_system_health
         return get_system_health()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/world-pulse/diagnostic-report")
+async def get_diagnostic_report(format: str = "json"):
+    """통합 진단 리포트 — AI 비용 0, 순수 SQL 집계
+
+    Query params:
+        format: "json" (default) 또는 "md" (마크다운 텍스트)
+    """
+    try:
+        from world_pulse_health import generate_diagnostic_report, format_diagnostic_report_md
+        if format == "md":
+            from fastapi.responses import PlainTextResponse
+            report = generate_diagnostic_report()
+            md = format_diagnostic_report_md(report)
+            return PlainTextResponse(md, media_type="text/plain; charset=utf-8")
+        else:
+            return generate_diagnostic_report()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -78,3 +78,15 @@ actions:
     tool: read_pdf
     implementation: PyPDF2/pdfplumber로 PDF 텍스트 추출
     target_key: path
+  read_docx:
+    description: DOCX 파일 읽기 (텍스트 + 이미지 추출)
+    router: handler
+    tool: read_docx
+    implementation: python-docx로 텍스트/표 추출, ZIP 구조에서 이미지 파일 추출 및 저장. 텍스트 내 이미지 위치 마커 포함
+    target_key: path
+    keywords:
+      - docx
+      - 워드
+      - word
+      - 문서읽기
+      - 참고문서

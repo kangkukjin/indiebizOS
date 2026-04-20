@@ -1,8 +1,8 @@
 /**
  * 채팅 입력 영역 (파일 첨부, 카메라, 드래그앤드롭)
  */
-import { Send, StopCircle, Paperclip, Camera, FileText, X, Square } from 'lucide-react';
-import type { ImageAttachment, TextAttachment } from './types';
+import { Send, StopCircle, Paperclip, Camera, FileText, File as FileIcon, X, Square } from 'lucide-react';
+import type { ImageAttachment, TextAttachment, DocumentAttachment } from './types';
 
 interface ChatInputAreaProps {
   input: string;
@@ -15,6 +15,7 @@ interface ChatInputAreaProps {
   // 파일 첨부 관련
   attachedImages: ImageAttachment[];
   attachedTextFiles: TextAttachment[];
+  attachedDocuments: DocumentAttachment[];
   isDragging: boolean;
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: (e: React.DragEvent) => void;
@@ -23,6 +24,7 @@ interface ChatInputAreaProps {
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveImage: (index: number) => void;
   onRemoveTextFile: (index: number) => void;
+  onRemoveDocument: (index: number) => void;
   onCameraClick: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -41,6 +43,7 @@ export function ChatInputArea({
   hasContent,
   attachedImages,
   attachedTextFiles,
+  attachedDocuments,
   isDragging,
   onDragOver,
   onDragLeave,
@@ -49,6 +52,7 @@ export function ChatInputArea({
   onFileSelect,
   onRemoveImage,
   onRemoveTextFile,
+  onRemoveDocument,
   onCameraClick,
   fileInputRef,
   inputRef,
@@ -173,10 +177,31 @@ export function ChatInputArea({
         </div>
       )}
 
+      {/* 첨부된 문서 파일 미리보기 */}
+      {attachedDocuments.length > 0 && (
+        <div className="flex gap-2 mb-3 flex-wrap">
+          {attachedDocuments.map((doc, index) => (
+            <div key={index} className={`relative group ${styles.fileBg} border ${styles.fileBorder} rounded-lg p-2 max-w-[200px]`}>
+              <div className="flex items-center gap-2">
+                <FileIcon size={variant === 'warm' ? 16 : 14} className={`${styles.fileIcon} flex-shrink-0`} />
+                <span className={`text-xs font-medium ${styles.fileNameColor} truncate`}>{doc.fileName}</span>
+                <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded uppercase flex-shrink-0">{doc.fileType}</span>
+              </div>
+              <button
+                onClick={() => onRemoveDocument(index)}
+                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 드래그 오버레이 */}
       {isDragging && (
         <div className={`mb-3 p-${variant === 'warm' ? '4' : '3'} border-2 border-dashed ${styles.dragBorder} rounded-xl ${styles.dragBg} text-center ${styles.dragText} ${variant === 'neutral' ? 'text-sm' : ''}`}>
-          파일을 여기에 놓으세요 (이미지, 텍스트 파일)
+          파일을 여기에 놓으세요 (이미지, 텍스트, 문서 파일)
         </div>
       )}
 
@@ -185,7 +210,7 @@ export function ChatInputArea({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,.txt,.md,.json,.yaml,.yml,.xml,.csv,.log,.py,.js,.ts,.tsx,.jsx,.html,.css,.sql,.sh,.env,.ini,.conf,.toml"
+          accept="image/*,.txt,.md,.json,.yaml,.yml,.xml,.csv,.log,.py,.js,.ts,.tsx,.jsx,.html,.css,.sql,.sh,.env,.ini,.conf,.toml,.pages,.docx,.pdf"
           multiple
           onChange={onFileSelect}
           className="hidden"

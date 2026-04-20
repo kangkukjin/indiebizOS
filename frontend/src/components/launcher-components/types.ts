@@ -80,13 +80,24 @@ export interface SystemAISettings {
   role?: string;
 }
 
-// 무의식 AI 설정 타입
-export interface UnconsciousAISettings {
+// 경량 AI 설정 타입 (구 무의식 AI)
+export interface LightweightAISettings {
   enabled: boolean;
   provider: string;
   model: string;
   apiKey: string;
 }
+
+// 중급 AI 설정 타입
+export interface MidtierAISettings {
+  enabled: boolean;
+  provider: string;
+  model: string;
+  apiKey: string;
+}
+
+// 하위호환 별칭
+export type UnconsciousAISettings = LightweightAISettings;
 
 // DraggableIcon props 타입
 export interface DraggableIconProps {

@@ -81,6 +81,9 @@ def search(project_path: str, agent_id: str,
         words = query.strip().split()
         if not words:
             return []
+        # SQLite expression tree depth 제한 방지 (긴 메시지 대응)
+        if len(words) > 20:
+            words = words[:20]
 
         conditions = []
         params = []
@@ -135,6 +138,42 @@ def read(project_path: str, agent_id: str, memory_id: int) -> Optional[Dict]:
         result = dict(row)
         result['used_at'] = now
         return result
+    finally:
+        conn.close()
+
+
+def update(project_path: str, agent_id: str, memory_id: int,
+           content: str = None, keywords: str = None, category: str = None) -> bool:
+    """기존 메모리 항목 업데이트 (변경된 필드만 갱신, used_at 자동 갱신)"""
+    conn = get_db(project_path, agent_id)
+    try:
+        sets = []
+        params = []
+        if content is not None:
+            sets.append("content = ?")
+            params.append(content)
+        if keywords is not None:
+            sets.append("keywords = ?")
+            params.append(keywords)
+        if category is not None:
+            sets.append("category = ?")
+            params.append(category)
+        if not sets:
+            # 필드 변경 없어도 used_at만 갱신
+            now = datetime.now().isoformat()
+            conn.execute("UPDATE memories SET used_at = ? WHERE id = ?", (now, memory_id))
+            conn.commit()
+            return True
+
+        now = datetime.now().isoformat()
+        sets.append("used_at = ?")
+        params.append(now)
+        params.append(memory_id)
+
+        sql = f"UPDATE memories SET {', '.join(sets)} WHERE id = ?"
+        cur = conn.execute(sql, params)
+        conn.commit()
+        return cur.rowcount > 0
     finally:
         conn.close()
 

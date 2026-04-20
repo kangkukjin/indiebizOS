@@ -8,7 +8,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw, Zap } from 'lucide-react';
-import type { SystemAISettings, UnconsciousAISettings } from '../types';
+import type { SystemAISettings, LightweightAISettings, MidtierAISettings } from '../types';
 import { api } from '../../../lib/api';
 import { SettingsChannelsTab } from './SettingsChannelsTab';
 import { SettingsRemoteTab } from './SettingsRemoteTab';
@@ -27,10 +27,14 @@ interface SettingsDialogProps {
   showApiKey: boolean;
   onSettingsChange: (settings: SystemAISettings) => void;
   onToggleApiKey: () => void;
-  unconsciousSettings: UnconsciousAISettings;
-  showUnconsciousApiKey: boolean;
-  onUnconsciousSettingsChange: (settings: UnconsciousAISettings) => void;
-  onToggleUnconsciousApiKey: () => void;
+  lightweightSettings: LightweightAISettings;
+  showLightweightApiKey: boolean;
+  onLightweightSettingsChange: (settings: LightweightAISettings) => void;
+  onToggleLightweightApiKey: () => void;
+  midtierSettings: MidtierAISettings;
+  showMidtierApiKey: boolean;
+  onMidtierSettingsChange: (settings: MidtierAISettings) => void;
+  onToggleMidtierApiKey: () => void;
   onSave: () => void;
   onClose: () => void;
 }
@@ -41,14 +45,18 @@ export function SettingsDialog({
   showApiKey,
   onSettingsChange,
   onToggleApiKey,
-  unconsciousSettings,
-  showUnconsciousApiKey,
-  onUnconsciousSettingsChange,
-  onToggleUnconsciousApiKey,
+  lightweightSettings,
+  showLightweightApiKey,
+  onLightweightSettingsChange,
+  onToggleLightweightApiKey,
+  midtierSettings,
+  showMidtierApiKey,
+  onMidtierSettingsChange,
+  onToggleMidtierApiKey,
   onSave,
   onClose,
 }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'ai' | 'unconscious' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel' | 'world'>('ai');
+  const [activeTab, setActiveTab] = useState<'ai' | 'lightweight' | 'midtier' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel' | 'world'>('ai');
 
   // 데이터 내보내기/가져오기 상태
   const [isExporting, setIsExporting] = useState(false);
@@ -238,7 +246,8 @@ export function SettingsDialog({
         <div className="flex border-b border-gray-200 bg-gray-50 shrink-0">
           {([
             { key: 'ai', icon: Brain, label: '시스템 AI' },
-            { key: 'unconscious', icon: Zap, label: '무의식 AI' },
+            { key: 'lightweight', icon: Zap, label: '경량 AI' },
+            { key: 'midtier', icon: Settings, label: '중급 AI' },
             { key: 'channels', icon: Radio, label: '통신채널' },
             { key: 'data', icon: Package, label: '데이터' },
             { key: 'nas', icon: HardDrive, label: '원격 Finder' },
@@ -433,12 +442,12 @@ export function SettingsDialog({
             </div>
           )}
 
-          {/* 무의식 AI 탭 */}
-          {activeTab === 'unconscious' && (
+          {/* 경량 AI 탭 */}
+          {activeTab === 'lightweight' && (
             <div className="space-y-6">
               <div>
                 <p className="text-sm text-gray-700 mb-4">
-                  실행형 요청(음악 재생, 검색 등)과 판단형 요청(분석, 보고서 등)을 빠르게 분류하는 AI입니다.
+                  요청 분류, 달성 기준 평가 등 경량 판단에 사용하는 AI입니다.
                   싸고 빠른 모델을 사용하세요.
                 </p>
               </div>
@@ -448,8 +457,8 @@ export function SettingsDialog({
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-1">AI 제공자</label>
                   <select
-                    value={unconsciousSettings.provider}
-                    onChange={(e) => onUnconsciousSettingsChange({ ...unconsciousSettings, provider: e.target.value })}
+                    value={lightweightSettings.provider}
+                    onChange={(e) => onLightweightSettingsChange({ ...lightweightSettings, provider: e.target.value })}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
                   >
                     <option value="google">Google (Gemini)</option>
@@ -464,9 +473,9 @@ export function SettingsDialog({
                   <label className="block text-sm font-semibold text-gray-900 mb-1">모델</label>
                   <input
                     type="text"
-                    value={unconsciousSettings.model}
-                    onChange={(e) => onUnconsciousSettingsChange({ ...unconsciousSettings, model: e.target.value })}
-                    placeholder="gemini-2.0-flash-lite"
+                    value={lightweightSettings.model}
+                    onChange={(e) => onLightweightSettingsChange({ ...lightweightSettings, model: e.target.value })}
+                    placeholder="gemini-2.5-flash-lite"
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                   />
                 </div>
@@ -476,17 +485,17 @@ export function SettingsDialog({
                   <label className="block text-sm font-semibold text-gray-900 mb-1">API 키</label>
                   <div className="flex gap-2">
                     <input
-                      type={showUnconsciousApiKey ? 'text' : 'password'}
-                      value={unconsciousSettings.apiKey}
-                      onChange={(e) => onUnconsciousSettingsChange({ ...unconsciousSettings, apiKey: e.target.value })}
+                      type={showLightweightApiKey ? 'text' : 'password'}
+                      value={lightweightSettings.apiKey}
+                      onChange={(e) => onLightweightSettingsChange({ ...lightweightSettings, apiKey: e.target.value })}
                       placeholder="API 키를 입력하세요 (비워두면 시스템 AI 키 사용)"
                       className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                     />
                     <button
-                      onClick={onToggleUnconsciousApiKey}
+                      onClick={onToggleLightweightApiKey}
                       className="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700"
                     >
-                      {showUnconsciousApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showLightweightApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
@@ -497,8 +506,79 @@ export function SettingsDialog({
 
               <div className="bg-blue-50 rounded-lg p-4">
                 <p className="text-sm text-blue-800">
-                  <strong>무의식 AI의 역할:</strong> 사용자 요청이 들어오면 1초 이내에 "실행형(바로 수행)"인지 "판단형(분석 필요)"인지 분류합니다.
-                  판단형만 의식 에이전트와 평가 루프를 거칩니다.
+                  <strong>경량 AI의 역할:</strong> 사용자 요청이 들어오면 1초 이내에 "실행형(바로 수행)"인지 "판단형(분석 필요)"인지 분류합니다.
+                  또한 실행 결과의 달성 기준 평가에도 사용됩니다.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 중급 AI 탭 */}
+          {activeTab === 'midtier' && (
+            <div className="space-y-6">
+              <div>
+                <p className="text-sm text-gray-700 mb-4">
+                  의식 에이전트를 거치지 않는 단순 실행(EXECUTE/Reflex)에 사용하는 AI입니다.
+                  시스템 AI보다 빠르고 저렴한 모델을 설정하세요.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-5 space-y-4">
+                {/* 제공자 */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-1">AI 제공자</label>
+                  <select
+                    value={midtierSettings.provider}
+                    onChange={(e) => onMidtierSettingsChange({ ...midtierSettings, provider: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
+                  >
+                    <option value="google">Google (Gemini)</option>
+                    <option value="anthropic">Anthropic (Claude)</option>
+                    <option value="openai">OpenAI (GPT)</option>
+                    <option value="openrouter">OpenRouter (650+ 모델)</option>
+                  </select>
+                </div>
+
+                {/* 모델 */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-1">모델</label>
+                  <input
+                    type="text"
+                    value={midtierSettings.model}
+                    onChange={(e) => onMidtierSettingsChange({ ...midtierSettings, model: e.target.value })}
+                    placeholder="gemini-2.5-flash"
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
+                  />
+                </div>
+
+                {/* API 키 */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-1">API 키</label>
+                  <div className="flex gap-2">
+                    <input
+                      type={showMidtierApiKey ? 'text' : 'password'}
+                      value={midtierSettings.apiKey}
+                      onChange={(e) => onMidtierSettingsChange({ ...midtierSettings, apiKey: e.target.value })}
+                      placeholder="API 키를 입력하세요 (비워두면 시스템 AI 키 사용)"
+                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
+                    />
+                    <button
+                      onClick={onToggleMidtierApiKey}
+                      className="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700"
+                    >
+                      {showMidtierApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    비워두면 시스템 AI의 키를 사용합니다. 설정하지 않으면 시스템 AI 모델이 그대로 사용됩니다.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 rounded-lg p-4">
+                <p className="text-sm text-amber-800">
+                  <strong>중급 AI의 역할:</strong> 단순 실행형 요청(음악 재생, 날씨 확인 등)에서 의식 에이전트를 거치지 않고 바로 실행할 때 사용합니다.
+                  복잡한 분석이나 보고서 작성 등 판단형 요청에는 시스템 AI(본격 모델)가 사용됩니다.
                 </p>
               </div>
             </div>
@@ -868,7 +948,7 @@ export function SettingsDialog({
           >
             취소
           </button>
-          {(activeTab === 'ai' || activeTab === 'unconscious') && (
+          {(activeTab === 'ai' || activeTab === 'lightweight' || activeTab === 'midtier') && (
             <button
               onClick={onSave}
               className="flex items-center gap-2 px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#B45309]"

@@ -57,7 +57,7 @@ description에 모든 내용을 넣지 않고, 필요할 때만 가이드를 주
 **두 가지 유형:**
 
 **(A) 공용 가이드 (data/guides/)** — 의식 에이전트 기반 선택
-- `data/guides/` 폴더에 마크다운 파일 저장 (현재 35개)
+- `data/guides/` 폴더에 마크다운 파일 저장 (현재 28개)
 - 의식 에이전트가 사용자 메시지를 분석하여 관련 가이드 2-3개 선택
 - `prompt_builder._load_guide_file()`로 로드 후 프롬프트에 주입
 
@@ -227,11 +227,10 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 
 ---
 
-## 현재 설치된 도구 패키지 (36개)
+## 현재 설치된 도구 패키지 (34개)
 
 | ID | 이름 | 설명 |
 |----|------|------|
-| android | Android | ADB를 통한 안드로이드 기기 관리 (SMS, 통화기록, 연락처, 앱) |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
 | browser-action | Browser Action | Playwright 기반 브라우저 자동화 v5.0 (36개 도구: ref/CSS selector, stealth, 쿠키 동의 자동처리, 네트워크 캡처, vision 모드, 다중 탭/iframe, 동적 콘텐츠 대기, 다단계 폴백 추출, CDP 타임아웃) |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
@@ -241,7 +240,6 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 | context7 | Context7 | Context7 라이브러리 문서 검색 |
 | culture | Culture | 공연(KOPIS), 도서(도서관 정보나루), Project Gutenberg 고전 원문, 한국고전종합DB 등 문화예술 정보 조회 |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
-| house-designer | House Designer | 건축 설계 (평면도, 3D뷰) |
 | ibl-core | IBL Core | IBL 핵심 도구 |
 | investment | Investment | 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석 |
 | kosis | KOSIS | 통계청 KOSIS API 국가통계 조회 |
@@ -249,7 +247,7 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 | local-info | Local Info | 지역 정보 도구 |
 | location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
 | media_producer | Media Producer | 홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지 생성 |
-| memory | Memory | 대화 이력, 심층 메모리 관리 |
+| memory | Memory | 심층 메모리 (자동 시스템: 연상기억 검색 + 경험 증류. IBL 액션 없음) |
 | music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | nodejs | Nodejs | Node.js/JavaScript 코드 실행 |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |

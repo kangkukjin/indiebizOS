@@ -30,7 +30,7 @@ IBL 표현 계층:     [node:action]{params}
 
 ## 액션 카테고리
 
-총 308개 액션(sense 78, self 75, limbs 96, others 13, engines 46)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
+총 311개 액션(sense 88, self 92, limbs 79, others 12, engines 40)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
 
 | 카테고리 | 의미 | 올바른 사용 예시 |
 |---------|------|----------------|
@@ -127,9 +127,9 @@ IBL 표현 계층:     [node:action]{params}
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `sense` | 78 | 외부 정보(웹 검색, API) + 내부 DB(사진, 블로그, 기억, 건강): 금융, 문화, 학술, 법률, 통계, 부동산, 위치, CCTV, 뉴스 | web_search, search_news, price, crawl, search_photos, rag_search, search_memory, save_health |
+| `sense` | 78 | 외부 정보(웹 검색, API) + 내부 DB(사진, 블로그, 건강): 금융, 문화, 학술, 법률, 통계, 부동산, 위치, CCTV, 뉴스 | web_search, search_news, price, crawl, search_photos, rag_search, save_health |
 
-구성: 정보 수집(웹 API, 크롤링) + 로컬 DB 조회(사진, 블로그, 메모리, 건강)
+구성: 정보 수집(웹 API, 크롤링) + 로컬 DB 조회(사진, 블로그, 건강)
 
 | 주요 액션 | 설명 | 예시 |
 |----------|------|------|
@@ -140,7 +140,6 @@ IBL 표현 계층:     [node:action]{params}
 | `stock_info` | 주식 상세 정보 | `[sense:stock_info]{symbol: "삼성전자"}` |
 | `search_photos` | 사진 검색 | `[sense:search_photos]{query: "가족"}` |
 | `rag_search` | 블로그 RAG 검색 | `[sense:rag_search]{query: "AI"}` |
-| `search_memory` | 대화 기억 검색 | `[sense:search_memory]{query: "지난 약속"}` |
 | `save_health` | 건강 기록 저장 | `[sense:save_health]{type: "blood_pressure", ...}` |
 | `cctv_search` | CCTV 통합 검색 (UTIC→ITS→Windy) | `[sense:cctv_search]{query: "광화문"}` |
 | `cctv_refresh` | UTIC API 최신 데이터 갱신 | `[sense:cctv_refresh]` |

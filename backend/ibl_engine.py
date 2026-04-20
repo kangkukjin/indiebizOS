@@ -357,7 +357,8 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
         # action_health 기록 (실사용 및 self_check 모두)
         try:
             from world_pulse_health import record_action_health
-            _src = "self_check" if agent_id == "__self_check__" else "usage"
+            from thread_context import is_health_check_mode
+            _src = "self_check" if agent_id == "__self_check__" or is_health_check_mode() else "usage"
             record_action_health(node, action, _action_success, _action_ms, source=_src)
         except Exception:
             pass

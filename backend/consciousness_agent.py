@@ -80,6 +80,12 @@ class ConsciousnessAgent:
             structure = structure_path.read_text(encoding='utf-8')
             self._prompt += f"\n\n<system_structure>\n{structure}\n</system_structure>"
 
+        # IBL 환경 프롬프트 주입 — 의식 에이전트도 IBL 체계를 알아야 올바른 hint를 줄 수 있다
+        ibl_only_path = base_path / "data" / "common_prompts" / "fragments" / "12_ibl_only.md"
+        if ibl_only_path.exists():
+            ibl_only = ibl_only_path.read_text(encoding='utf-8')
+            self._prompt += f"\n\n{ibl_only}"
+
     def _default_prompt(self) -> str:
         """기본 프롬프트 (파일이 없을 때 폴백)"""
         return """당신은 의식 에이전트입니다. AI 에이전트가 사용자의 문제를 잘 풀 수 있도록 프롬프트를 메타적으로 편집합니다.
@@ -336,8 +342,10 @@ def get_world_pulse_text() -> str:
 # ============ 싱글톤 ============
 
 _consciousness_instance: Optional[ConsciousnessAgent] = None
-_unconscious_provider = None  # 무의식 AI 전용 프로바이더 (싱글톤)
-_unconscious_provider_initialized = False
+_lightweight_provider = None  # 경량 AI 전용 프로바이더 (싱글톤)
+_lightweight_provider_initialized = False
+_midtier_provider = None  # 중급 AI 전용 프로바이더 (싱글톤)
+_midtier_provider_initialized = False
 _unconscious_prompt_cache: str = ""
 
 
@@ -354,21 +362,23 @@ def get_unconscious_prompt() -> str:
     return _unconscious_prompt_cache
 
 
-def _get_unconscious_provider():
-    """무의식 AI 전용 프로바이더 반환. 설정이 없으면 None (의식 에이전트로 폴백)."""
-    global _unconscious_provider, _unconscious_provider_initialized
-    if _unconscious_provider_initialized:
-        return _unconscious_provider
+def _get_lightweight_provider():
+    """경량 AI 전용 프로바이더 반환. 설정이 없으면 None (의식 에이전트로 폴백)."""
+    global _lightweight_provider, _lightweight_provider_initialized
+    if _lightweight_provider_initialized:
+        return _lightweight_provider
 
-    _unconscious_provider_initialized = True
+    _lightweight_provider_initialized = True
     try:
-        from api_config import UNCONSCIOUS_AI_CONFIG_PATH
+        from api_config import LIGHTWEIGHT_AI_CONFIG_PATH, UNCONSCIOUS_AI_CONFIG_PATH
         import json as _json
 
-        if not UNCONSCIOUS_AI_CONFIG_PATH.exists():
+        # 하위호환: lightweight 없으면 unconscious 폴백
+        config_path = LIGHTWEIGHT_AI_CONFIG_PATH if LIGHTWEIGHT_AI_CONFIG_PATH.exists() else UNCONSCIOUS_AI_CONFIG_PATH
+        if not config_path.exists():
             return None
 
-        with open(UNCONSCIOUS_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
+        with open(config_path, 'r', encoding='utf-8') as f:
             config = _json.load(f)
 
         api_key = config.get("apiKey", "").strip()
@@ -376,22 +386,90 @@ def _get_unconscious_provider():
             return None
 
         provider_name = config.get("provider", "google").strip()
-        model_name = config.get("model", "gemini-2.0-flash-lite").strip()
+        model_name = config.get("model", "gemini-2.5-flash-lite").strip()
 
         from providers import get_provider
-        _unconscious_provider = get_provider(
+        _lightweight_provider = get_provider(
             provider_name,
             api_key=api_key,
             model=model_name,
             system_prompt="",
             tools=[],
         )
-        _unconscious_provider.init_client()
-        print(f"[UnconsciousAI] 초기화 완료 ({config.get('provider')}/{config.get('model')})")
-        return _unconscious_provider
+        _lightweight_provider.init_client()
+        print(f"[LightweightAI] 초기화 완료 ({provider_name}/{model_name})")
+        return _lightweight_provider
     except Exception as e:
-        print(f"[UnconsciousAI] 초기화 실패 (의식 에이전트로 폴백): {e}")
+        print(f"[LightweightAI] 초기화 실패 (의식 에이전트로 폴백): {e}")
         return None
+
+
+# 하위호환 별칭
+_get_unconscious_provider = _get_lightweight_provider
+
+
+def _get_midtier_provider():
+    """중급 AI 전용 프로바이더 반환. 설정이 없으면 None (본격 모델 그대로 사용)."""
+    global _midtier_provider, _midtier_provider_initialized
+    if _midtier_provider_initialized:
+        return _midtier_provider
+
+    _midtier_provider_initialized = True
+    try:
+        from api_config import MIDTIER_AI_CONFIG_PATH
+        import json as _json
+
+        if not MIDTIER_AI_CONFIG_PATH.exists():
+            return None
+
+        with open(MIDTIER_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            config = _json.load(f)
+
+        if not config.get("enabled", True):
+            return None
+
+        # API 키가 없으면 시스템 AI 키 사용
+        api_key = config.get("apiKey", "").strip()
+        if not api_key:
+            from api_config import SYSTEM_AI_CONFIG_PATH
+            if SYSTEM_AI_CONFIG_PATH.exists():
+                with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                    sys_config = _json.load(f)
+                api_key = sys_config.get("apiKey", "").strip()
+            if not api_key:
+                return None
+
+        provider_name = config.get("provider", "google").strip()
+        model_name = config.get("model", "gemini-2.5-flash").strip()
+
+        from providers import get_provider
+        _midtier_provider = get_provider(
+            provider_name,
+            api_key=api_key,
+            model=model_name,
+            system_prompt="",
+            tools=[],
+        )
+        _midtier_provider.init_client()
+        print(f"[MidtierAI] 초기화 완료 ({provider_name}/{model_name})")
+        return _midtier_provider
+    except Exception as e:
+        print(f"[MidtierAI] 초기화 실패 (본격 모델 유지): {e}")
+        return None
+
+
+def reset_midtier_provider():
+    """중급 AI 프로바이더 캐시 초기화 (설정 변경 시 호출)"""
+    global _midtier_provider, _midtier_provider_initialized
+    _midtier_provider = None
+    _midtier_provider_initialized = False
+
+
+def reset_lightweight_provider():
+    """경량 AI 프로바이더 캐시 초기화 (설정 변경 시 호출)"""
+    global _lightweight_provider, _lightweight_provider_initialized
+    _lightweight_provider = None
+    _lightweight_provider_initialized = False
 
 
 def get_consciousness_agent() -> ConsciousnessAgent:
@@ -405,7 +483,7 @@ def get_consciousness_agent() -> ConsciousnessAgent:
 def lightweight_ai_call(prompt: str, system_prompt: str = None) -> Optional[str]:
     """경량 원샷 AI 호출.
 
-    무의식 AI 전용 프로바이더가 있으면 우선 사용하고,
+    경량 AI 전용 프로바이더가 있으면 우선 사용하고,
     없으면 의식 에이전트의 프로바이더로 폴백한다.
 
     Args:
@@ -414,8 +492,8 @@ def lightweight_ai_call(prompt: str, system_prompt: str = None) -> Optional[str]
 
     용도: 무의식 에이전트 분류, 달성 기준 평가 등 가벼운 AI 호출.
     """
-    # 1차: 무의식 AI 전용 프로바이더
-    provider = _get_unconscious_provider()
+    # 1차: 경량 AI 전용 프로바이더
+    provider = _get_lightweight_provider()
 
     # 2차: 의식 에이전트 프로바이더로 폴백
     if provider is None:

@@ -1,0 +1,45 @@
+{
+  "id": "publishing",
+  "name": "Publishing Project Manager",
+  "description": "출판 프로젝트(책) 관리 도구. 원고 관리, 구조 기획, 조각글 수집 등.\n\n사용 가이드: data/guides/book_publishing.md 참조",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "publish_list",
+      "description": "등록된 출판 프로젝트(책) 목록을 조회합니다. 각 책의 ID, 제목, 상태, 챕터 진행률, 조각글 수를 반환합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "publish_create",
+      "description": "새 출판 프로젝트를 생성합니다. 폴더 구조, book_plan.md, progress.md를 자동 초기화합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "description": "책 제목" },
+          "subtitle": { "type": "string", "description": "부제목" },
+          "author": { "type": "string", "description": "저자명" },
+          "genre": { "type": "string", "description": "장르 (비소설, 소설, 에세이 등)" },
+          "description": { "type": "string", "description": "책 소개 한 줄" },
+          "target_length": { "type": "string", "description": "목표 분량 (예: 200페이지)" },
+          "style_reference": { "type": "string", "description": "문체 참고 원고 경로 또는 URL" }
+        },
+        "required": ["title"]
+      }
+    },
+    {
+      "name": "publish_status",
+      "description": "특정 출판 프로젝트의 상세 상태를 반환합니다. 챕터별 진행 상황, 조각글 목록, 진척 기록 요약을 포함합니다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "book_id": { "type": "string", "description": "출판 프로젝트 ID" }
+        },
+        "required": ["book_id"]
+      }
+    }
+  ]
+}

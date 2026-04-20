@@ -100,14 +100,6 @@ export interface Message {
   to_agent_id: number;
   content: string;
   timestamp: string;
-  tool_calls?: ToolCall[];
-}
-
-// 도구 호출
-export interface ToolCall {
-  id: string;
-  name: string;
-  input: Record<string, unknown>;
 }
 
 // 도구

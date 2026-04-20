@@ -1,0 +1,45 @@
+node: engines
+actions:
+  publish_list:
+    description: 출판 프로젝트(책) 목록 조회
+    group: publishing
+    category: list
+    router: handler
+    tool: publish_list
+    implementation: 출판 프로젝트 폴더 스캔 후 book_registry.yaml 기반 목록 반환
+    keywords:
+      - 출판
+      - 출판프로젝트
+      - 책목록
+      - 원고목록
+      - 출판사
+      - publishing
+      - book_list
+  publish_create:
+    description: 새 출판 프로젝트 생성 (제목 필수)
+    group: publishing
+    category: create
+    router: handler
+    tool: publish_create
+    implementation: 출판 프로젝트 폴더 구조 생성 + book_plan.md + progress.md 초기화
+    target_key: title
+    keywords:
+      - 출판프로젝트생성
+      - 책만들기
+      - 새책
+      - 원고시작
+      - publishing_create
+  publish_status:
+    description: 출판 프로젝트 상세 상태 조회 (챕터 진행, 조각글, 진척 기록)
+    group: publishing
+    category: get
+    router: handler
+    tool: publish_status
+    implementation: book_registry.yaml + 챕터/조각글 폴더 스캔 + progress.md 요약
+    target_key: book_id
+    keywords:
+      - 출판상태
+      - 책진행
+      - 원고상태
+      - 출판프로젝트상태
+      - publishing_status

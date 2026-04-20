@@ -244,7 +244,7 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 - `backend/`: 서버 소스 코드
 - `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (36개)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (34개)
 - `data/api_registry.yaml`: API 도구 정의 (node 필드로 IBL 자동 병합, 현재 2개 액션)
 - `data/packages/installed/extensions/`: 백엔드 코어 모듈 (9개)
 - `projects/`: 사용자 프로젝트 데이터 (20개)

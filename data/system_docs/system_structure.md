@@ -87,8 +87,8 @@ indiebizOS/
 │   ├── trigger_engine.py # 트리거 엔진
 │   ├── channel_engine.py # 채널 추상화 계층
 │   │
-│   │   # === 인지/자율 시스템 (3단 인지 아키텍처) ===
-│   ├── agent_runner.py  # 에이전트 실행 엔진 (무의식→의식→실행→평가 파이프라인)
+│   │   # === 인지/자율 시스템 (3단 인지 아키텍처 + 3단계 모델 티어) ===
+│   ├── agent_runner.py  # 에이전트 실행 엔진 (분류→의식→실행→평가 파이프라인)
 │   ├── agent_cognitive.py # 인지 시스템 통합
 │   ├── consciousness_agent.py # 의식 에이전트 — 메타 판단 + achievement_criteria
 │   ├── world_pulse.py   # Consciousness Pulse + Self-Check (자의식/면역, 5노드 전체)
@@ -150,12 +150,12 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/
-│   │   │   ├── tools/       # 도구 패키지 (36개)
+│   │   │   ├── tools/       # 도구 패키지 (34개)
 │   │   │   └── extensions/  # 백엔드 코어 모듈 (9개)
 │   │   ├── not_installed/   # 미설치 패키지
 │   │   └── dev/             # 개발 중
 │   ├── training/        # 해마 학습 데이터
-│   │   ├── ibl_synthetic_opus_final_2479.json  # 학습 데이터 (2484개)
+│   │   ├── ibl_synthetic_opus_final_2479.json  # 학습 데이터 (2354개, memory 액션 제거 후)
 │   │   └── ibl_distilled.json                  # 경험 증류 누적 데이터
 │   ├── models/          # fine-tuned 임베딩 모델 (768차원)
 │   │   └── ibl_embedding/   # 해마 시맨틱 검색용
@@ -163,7 +163,7 @@ indiebizOS/
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억, 11개 파일 — system_structure.md는 항상 프롬프트에 포함)
-│   ├── guides/          # 가이드 파일 (35개, read_guide로 온디맨드 로드)
+│   ├── guides/          # 가이드 파일 (28개, 의식 에이전트가 선택하여 프롬프트에 주입)
 │   ├── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
 │   └── my_profile.txt   # 사용자 프로필
 │
@@ -186,7 +186,7 @@ indiebizOS/
 ### IBL (IndieBiz Logic) 시스템
 - AI의 신경계 — 모든 정보 소스를 통합하는 정보 흐름 추상화 언어
 - **패턴**: `[node:action]{params}` — (target) 문법은 폐지됨, 모든 값은 params에
-- **5개 노드**: sense(78), self(75), limbs(96), others(13), engines(46) — 총 **308 액션**
+- **5개 노드**: sense(88), self(92), limbs(79), others(12), engines(40) — 총 **311 액션**
 - Phase 24에서 verb 시스템 제거, category 태그로 대체 (순수 표시용)
 - 드라이버 기반 프로토콜 추상화 (HTTP, WebSocket, ADB, CDP, SQLite, File I/O)
 - 병렬 실행 (`&` 연산자), 폴백 패턴 (`??` 연산자), 순차 실행 (`>>` 연산자) 지원
@@ -198,12 +198,26 @@ indiebizOS/
 - 프로젝트 에이전트와 동일한 AgentRunner 인지 파이프라인 사용 (`_is_system_ai` 플래그로 분기)
 - 파일: `backend/system_ai_core.py` (싱글턴/설정), `backend/agent_cognitive.py` (인지 파이프라인), `backend/api_system_ai.py`
 
-### 3단 인지 아키텍처 (Phase 28: 무의식/의식/평가)
-인간의 인지 과정을 모델링: **무의식(반사) -> 의식(계획) -> 평가(성찰)**
+### 3단 인지 아키텍처 + 3단계 모델 티어 (Phase 28 → Phase 30)
+인간의 인지 과정을 모델링: **분류(반사) -> 의식(계획) -> 실행 -> 평가(성찰)**
+비용/속도 최적화를 위한 3단계 모델 티어: **경량 / 중급 / 본격**
 
-- **무의식 에이전트 (Unconscious Agent)**: gemini-2.5-flash-lite 기반 경량 게이트키퍼
+**3단계 모델 티어:**
+| 레벨 | 용도 | 설정 파일 |
+|------|------|----------|
+| 경량 (lightweight) | 분류, 평가, 원샷 판단 | `data/lightweight_ai_config.json` |
+| 중급 (midtier) | EXECUTE/Reflex 경로 실행 | `data/midtier_ai_config.json` |
+| 본격 (system_ai) | THINK 경로 의식+실행 | `data/system_ai_config.json` |
+
+- **경량 AI (분류/평가)**: 경량 게이트키퍼
   - 요청을 EXECUTE(단순) / THINK(복잡)로 분류. EXECUTE는 의식 에이전트 건너뜀
-  - 파일: `data/common_prompts/unconscious_prompt.md`, `agent_runner._classify_request()`
+  - 달성 기준 평가에도 사용 (`lightweight_ai_call()`)
+  - 파일: `data/common_prompts/unconscious_prompt.md`, `agent_cognitive._classify_request()`
+  - 프로바이더: `consciousness_agent._get_lightweight_provider()` (싱글턴)
+- **중급 모델 전환**: EXECUTE/Reflex 경로에서 실행 에이전트의 provider를 중급 모델로 임시 교체
+  - 전환: `system_ai_core._switch_to_midtier()` → 실행 → `_restore_provider()`
+  - 중급 설정이 없으면 본격 모델 그대로 사용 (하위호환)
+  - 프로바이더: `consciousness_agent._get_midtier_provider()` (싱글턴)
 - **의식 에이전트 (Consciousness Agent)**: 복잡 요청에 대한 메타적 판단
   - **히스토리 요약**: 현재 문제 관련 맥락만 추려 요약
   - **태스크 프레이밍**: 도구 한계를 인식한 상태에서 문제 정의
@@ -214,9 +228,9 @@ indiebizOS/
   - 파일: `backend/consciousness_agent.py`, `data/common_prompts/consciousness_prompt.md`
 - **평가 에이전트 (Evaluator Agent)**: 실행 후 achievement_criteria 대비 결과 평가
   - NOT_ACHIEVED 시 피드백과 함께 재실행 (최대 3라운드)
-  - 파일: `data/common_prompts/evaluator_prompt.md`, `agent_runner._run_goal_evaluation_loop()`
+  - 파일: `data/common_prompts/evaluator_prompt.md`, `agent_cognitive._run_goal_evaluation_loop()`
 - 시스템 AI와 프로젝트 에이전트 모두에 적용 (내부 위임 제외)
-- 시스템 AI의 API 설정(프로바이더/모델)을 공유하여 가벼운 원샷 호출로 동작
+- 경량/중급 AI의 API 키가 비어있으면 시스템 AI 키를 자동 사용
 
 ### Consciousness Pulse (자의식 시스템)
 - 매 1시간 세계/사용자/자신 상태 업데이트 (세계 인식)
@@ -294,10 +308,9 @@ indiebizOS/
 
 ---
 
-## 설치된 도구 패키지 (36개)
+## 설치된 도구 패키지 (34개)
 | 패키지 | 설명 |
 |--------|------|
-| android | 안드로이드 기기 관리 (adb) |
 | blog | 블로그 RAG 검색 및 인사이트 분석 |
 | browser-action | Playwright 기반 브라우저 자동화 (클릭/입력/스크롤/콘텐츠 추출) |
 | business | 비즈니스 관계 및 연락처(이웃) 관리 |
@@ -307,7 +320,6 @@ indiebizOS/
 | context7 | Context7 라이브러리 문서 검색 |
 | culture | 문화/예술 정보 (공연, 도서, 전시, Project Gutenberg 고전 원문, 한국고전종합DB) |
 | health-record | 건강 기록 관리 |
-| house-designer | 건축/인테리어 디자인 도구 |
 | ibl-core | IBL 핵심 인프라 |
 | investment | 투자 정보 및 분석 |
 | kosis | 통계청 KOSIS API |
@@ -315,7 +327,7 @@ indiebizOS/
 | local-info | 지역 정보 서비스 |
 | location-services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
 | media_producer | 홍보용 슬라이드/영상/AI 이미지 생성 |
-| memory | 메모리/노트 관리 |
+| memory | 심층 메모리 (자동 시스템: 연상기억 검색 + 경험 증류. IBL 액션 없음) |
 | music-composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | nodejs | JavaScript/Node.js 코드 실행 |
 | pc-manager | 파일 및 저장소 관리 |
@@ -393,11 +405,12 @@ indiebizOS/
                                                       ↓
                                               프로젝트/에이전트 관리
                                                       ↓
-                                              무의식 에이전트 (EXECUTE/THINK 분류)
-                                                      ↓ THINK
-                                              의식 에이전트 (문제 정의 + 달성 기준)
+                                              경량 AI (EXECUTE/THINK 분류)
+                                                ↓ THINK              ↓ EXECUTE
+                                              의식 에이전트        실행 에이전트 [중급 모델]
+                                              (문제 정의 + 달성 기준)
                                                       ↓
-                                              AI 프로바이더 (Claude/GPT/Gemini/Ollama)
+                                              실행 에이전트 [본격 모델]
                                                       ↓
                                               최상위 도구 9개 (IBL + Python/Node/Shell + 인지 도구 + 가이드)
                                                       ↓

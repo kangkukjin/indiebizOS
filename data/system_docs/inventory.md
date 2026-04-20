@@ -28,12 +28,11 @@
 
 ---
 
-## 도구 패키지 (Tools) - 36개
+## 도구 패키지 (Tools) - 34개
 에이전트가 사용할 수 있는 유틸리티. handler 라우팅(복잡 후처리) 또는 api_engine 라우팅(API+transform 자동 발견)으로 실행됩니다.
 
 | ID | 이름 | 설명 |
 |----|------|------|
-| android | Android | ADB를 통한 안드로이드 기기 관리 (SMS, 통화기록, 연락처, 앱) |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
 | browser-action | Browser Action | Playwright 기반 브라우저 자동화 v5.0 (클릭/입력/스크롤/콘텐츠 추출, 동적 콘텐츠 대기, 다단계 폴백, CDP 타임아웃) |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
@@ -43,7 +42,6 @@
 | context7 | Context7 | Context7 라이브러리 문서 검색 |
 | culture | Culture | 공연(KOPIS), 도서(도서관 정보나루), Project Gutenberg 고전 원문, 한국고전종합DB 등 문화예술 정보 조회 |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
-| house-designer | House Designer | 건축 설계 (평면도, 3D뷰) |
 | ibl-core | IBL Core | IBL 핵심 도구 |
 | investment | Investment | 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석 |
 | kosis | KOSIS | 통계청 KOSIS API 국가통계 조회 |
@@ -51,7 +49,7 @@
 | local-info | Local Info | 지역 정보 도구 |
 | location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
 | media_producer | Media Producer | 홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지 생성 |
-| memory | Memory | 대화 이력, 심층 메모리 관리 |
+| memory | Memory | 심층 메모리 (자동 시스템: 연상기억 검색 + 경험 증류. IBL 액션 없음) |
 | music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | nodejs | Nodejs | Node.js/JavaScript 코드 실행 |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |
@@ -92,4 +90,4 @@
 > 위임 시스템은 `delegation.md`, 통신/자동응답은 `communication.md`, 패키지 상세는 `packages.md` 참조.
 
 ---
-*마지막 업데이트: 2026-04-05 (중복 섹션 제거, 자동생성 목록만 유지)*
+*마지막 업데이트: 2026-04-07 12:45*

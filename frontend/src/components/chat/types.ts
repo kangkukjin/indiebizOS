@@ -14,6 +14,13 @@ export interface TextAttachment {
   preview: string;
 }
 
+export interface DocumentAttachment {
+  file: File;
+  filePath: string;
+  fileName: string;
+  fileType: string;
+}
+
 export interface ToolActivity {
   name: string;
   status: 'running' | 'done' | 'completed';
@@ -53,5 +60,6 @@ export interface ChatMessage {
   isStreaming?: boolean;
   images?: string[];
   textFiles?: { name: string; content: string }[];
+  documentFiles?: { fileName: string; filePath: string; fileType: string }[];
   toolActivities?: ToolActivity[];
 }

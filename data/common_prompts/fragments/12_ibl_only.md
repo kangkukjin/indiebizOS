@@ -1,5 +1,7 @@
 <ibl_executor>
-# IBL Executor - Your Primary Tool
+# IBL (IndieBiz Logic) — Programming Language
+
+IBL은 외부 세계와 상호작용하기 위한 프로그래밍 언어다. Python처럼 실행기(`execute_ibl`)를 통해서만 실행된다. 텍스트에 IBL 코드를 쓰는 것은 실행이 아니다.
 
 너의 도구는 5개다:
 1. `execute_ibl` — IBL 코드 실행 (검색, 데이터 조회, 파일 읽기/쓰기, 기기 제어, 통신 등 모든 외부 행위)
@@ -32,6 +34,19 @@
 execute_ibl(code='[node:action]{params}')
 execute_ibl(code='[node:action]{param: "value"}')
 ```
+
+## Common Mistakes — NEVER do these
+
+```
+WRONG: [self:workflow]                    # workflow는 액션이 아님
+WRONG: [self:get]{type: "time"}           # get은 액션이 아님. [self:time]을 써야 함
+WRONG: [sense:price]("AAPL")              # (target) 문법은 폐지됨! {params}를 사용할 것
+RIGHT: [self:time]                        # 직접 액션명 사용
+RIGHT: [sense:price]{symbol: "AAPL"}      # 모든 값은 named parameter
+RIGHT: [sense:price]{symbol: "005930"}    # 파라미터가 하나여도 named
+```
+- action-categories의 이름(get, run 등)은 쓰지 말 것. 항상 구체적 액션명을 사용하라.
+- (target) 문법은 폐지되어 에러 발생함. 모든 값은 `{key: val}` 안에 작성.
 
 ## Pipeline Operators
 
@@ -66,11 +81,11 @@ execute_ibl(code='[self:discover]{query: "stock prices"}')
 ```
 
 ## Key Principles
-1. `execute_ibl`은 인디비즈의 기능을 간결하게 호출하는 도구다. 하지만 Python, Node.js, Shell로도 같은 일을 할 수 있다. 상황에 맞는 도구를 선택해라.
-2. IBL 코드는 `execute_ibl`의 `code` 파라미터에 넣어 실행
-3. 어떤 액션이 있는지 모르겠으면 `[self:discover]` 사용
-4. `>>` 순차, `&` 병렬, `??` 폴백
-5. 모든 파라미터는 `{key: "value"}` 형태
+1. **IBL 우선**: 파일 읽기/쓰기/검색/편집은 우선적으로 IBL 액션(`[self:read]`, `[self:write]`, `[self:find]`, `[self:edit]`, `[self:grep]`)으로 한다. IBL 액션이 실패하면 파라미터를 바꿔 재시도하라. Python/Node.js/Shell은 IBL에 해당 액션이 없거나, 복합 처리(읽기+파싱+변환을 한 번에)가 필요할 때 사용한다.
+3. IBL 코드는 `execute_ibl`의 `code` 파라미터에 넣어 실행
+4. 어떤 액션이 있는지 모르겠으면 `[self:discover]` 사용
+5. `>>` 순차, `&` 병렬, `??` 폴백
+6. 모든 파라미터는 `{key: "value"}` 형태
 
 ## Goal / Time / Condition — 목적 기반 실행
 
@@ -217,6 +232,8 @@ execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:news]{query: "
 - **다음 스텝 전에 분석/요약/판단/비교가 필요한가?** → 파이프라인 쓰지 말고 하나씩 호출
 - 사용자가 "분석", "요약", "비교", "보고서", "인사이트", "평가" 같은 단어를 쓰면 → 반드시 하나씩 호출
 
-## ⚠️ Critical Output Rule
-**NEVER include IBL code (`[node:action]{...}`) in your text responses to the user.** IBL code is ONLY for the `execute_ibl` tool's `code` parameter. The user should see natural language — analysis, explanations, results — not IBL syntax. If you need to plan which actions to use, do so internally and execute them via `execute_ibl`, never by writing IBL code as text.
+## IBL Code in Responses
+- **실행할 때**: 반드시 `execute_ibl` 도구의 `code` 파라미터로 호출. 텍스트에 IBL을 쓰는 것은 실행이 아니다.
+- **보여줄 때**: 코드블록(```)으로 감싸서 표시. 사용자가 IBL 코드를 요청하거나 설명이 필요할 때.
+- **일반 응답**: 분석, 설명, 결과는 자연어로. IBL 구문을 자연어에 섞지 않는다.
 </ibl_executor>

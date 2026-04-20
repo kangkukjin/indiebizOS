@@ -40,13 +40,6 @@ class GeminiProvider(BaseProvider):
     COMPACTION_CHAR_THRESHOLD = 3200000
 
     # IBL 텍스트 출력 감지 패턴
-    _IBL_TEXT_PATTERN = None  # 지연 컴파일
-
-    # IBL 텍스트 출력 감지 시 교정 프롬프트
-    FORCE_EXECUTE_IBL_PROMPT = """당신이 방금 텍스트 응답에 IBL 코드([node:action]{...} 형태)를 포함했습니다. 이것은 실행되지 않습니다.
-IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 합니다.
-방금 텍스트에 쓴 IBL 코드를 execute_ibl 도구로 다시 실행하세요. 텍스트 응답에는 자연어만 사용하세요."""
-
     # 강제 프롬프트 (설정 가능)
     FORCE_RESPONSE_PROMPT = "도구 실행 결과를 바탕으로 사용자에게 답변을 작성해주세요."
     FORCE_STATUS_PROMPT = """도구만 연속 호출하고 있습니다. 반드시 멈추고 다음을 텍스트로 작성하세요:
@@ -215,19 +208,33 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
         """GenerateContentConfig 생성 (캐시 있으면 캐시만, 없으면 전부 직접 전달)"""
         types = self._genai_types
 
+        # Extended Thinking 설정
+        thinking = None
+        if self.thinking_budget > 0:
+            try:
+                thinking = types.ThinkingConfig(thinking_budget=self.thinking_budget)
+            except Exception as e:
+                print(f"[Gemini] ThinkingConfig 생성 실패 (무시): {e}")
+
         if self._cache_name:
             # 캐시에 system_instruction + tools 포함됨
             # API 규칙: cachedContent 사용 시 tools/system_instruction 전달 불가
-            return types.GenerateContentConfig(
-                cachedContent=self._cache_name,
-                temperature=0.8
-            )
+            config_kwargs = {
+                "cachedContent": self._cache_name,
+                "temperature": 0.8,
+            }
+            if thinking:
+                config_kwargs["thinking_config"] = thinking
+            return types.GenerateContentConfig(**config_kwargs)
         else:
-            return types.GenerateContentConfig(
-                system_instruction=self.system_prompt,
-                tools=gemini_tools,
-                temperature=0.8
-            )
+            config_kwargs = {
+                "system_instruction": self.system_prompt,
+                "tools": gemini_tools,
+                "temperature": 0.8,
+            }
+            if thinking:
+                config_kwargs["thinking_config"] = thinking
+            return types.GenerateContentConfig(**config_kwargs)
 
     def cleanup(self):
         """프로바이더 정리 (에이전트 종료 시 호출)"""
@@ -349,22 +356,6 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
                         role="user",
                         parts=[types.Part.from_text(text=self.FORCE_RESPONSE_PROMPT)]
                     ))
-                    iteration += 1
-                    continue
-
-                # IBL 텍스트 출력 감지: 텍스트에 IBL 코드가 포함되어 있으면 execute_ibl 호출 유도 (최대 1회)
-                if collected_text.strip() and self._detect_ibl_in_text(collected_text) and empty_response_retries < 1:
-                    empty_response_retries += 1
-                    print(f"[Gemini] ⚠️ 텍스트에 IBL 코드 감지 (iteration={iteration}), execute_ibl 호출 유도")
-                    # 텍스트 응답을 모델 응답으로 추가하고 교정 프롬프트 주입
-                    if response_content:
-                        contents.append(response_content)
-                    contents.append(types.Content(
-                        role="user",
-                        parts=[types.Part.from_text(text=self.FORCE_EXECUTE_IBL_PROMPT)]
-                    ))
-                    # 누적 텍스트에서 잘못된 IBL 코드 제거 (교정 후 다시 생성)
-                    accumulated_text = accumulated_text[:-len(collected_text)] if accumulated_text.endswith(collected_text) else accumulated_text
                     iteration += 1
                     continue
 
@@ -499,10 +490,6 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
         # 최종 응답 생성
         final_result = accumulated_text
 
-        # IBL 잔여물 정리: 텍스트에 남은 [action]{params} 패턴 제거
-        # (에이전트가 도구 실행 결과를 텍스트에 포함시키는 경우)
-        final_result = self._clean_ibl_from_text(final_result)
-
         # MAP 태그 추가
         if self._pending_map_tags:
             final_result += "\n\n" + "\n".join(self._pending_map_tags)
@@ -564,6 +551,13 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
 
             for part in candidate.content.parts:
                 all_response_parts.append(part)
+
+                # Thinking part 감지 (Extended Thinking)
+                if hasattr(part, 'thought') and part.thought:
+                    thinking_text = part.text or ""
+                    if thinking_text:
+                        yield {"type": "thinking", "content": thinking_text}
+                    continue
 
                 # 텍스트 청크
                 if hasattr(part, 'text') and part.text:
@@ -723,59 +717,6 @@ IBL 코드는 반드시 execute_ibl 도구의 code 파라미터로 호출해야 
             self.metrics.record_error()
             print(f"[Gemini][round={iteration}] 도구 실행 예외: {fc.name} - {tool_err}")
             return f"도구 실행 실패: {fc.name} - {str(tool_err)}. 다른 방법을 시도하거나 사용자에게 알려주세요.", None, None
-
-    def _clean_ibl_from_text(self, text: str) -> str:
-        """텍스트 응답에서 실행되지 않은 IBL 코드 잔여물 제거
-
-        에이전트가 execute_ibl로 실행한 후에도 텍스트에 IBL 코드를
-        남기는 경우가 있음. 사용자에게 보이지 않도록 정리.
-        코드블록(```) 안의 IBL은 유지 (설명 목적).
-        """
-        if not text:
-            return text
-
-        # 코드블록 영역 보존하면서 바깥의 IBL 패턴 제거
-        # 코드블록 위치를 기록
-        code_blocks = [(m.start(), m.end()) for m in re.finditer(r'```[\s\S]*?```', text)]
-
-        def in_code_block(pos):
-            return any(s <= pos < e for s, e in code_blocks)
-
-        # [node:action]{...} 패턴 찾기
-        ibl_pattern = re.compile(
-            r'\[(?:self|sense|limbs|engines|others):[a-z_]+\]\s*\{[^}]*\}'
-        )
-
-        result = text
-        for m in reversed(list(ibl_pattern.finditer(text))):
-            if not in_code_block(m.start()):
-                result = result[:m.start()] + result[m.end():]
-
-        # 빈 줄 정리
-        result = re.sub(r'\n{3,}', '\n\n', result)
-        return result.strip() if result.strip() else text
-
-    def _detect_ibl_in_text(self, text: str) -> bool:
-        """텍스트 응답에 실행되지 않은 IBL 코드가 포함되어 있는지 감지
-
-        [node:action]{params} 패턴이 텍스트에 있으면 True.
-        코드블록(```) 안이나 인용("로 감싼) 설명은 제외.
-        """
-        if not text:
-            return False
-
-        # 지연 컴파일
-        if self.__class__._IBL_TEXT_PATTERN is None:
-            self.__class__._IBL_TEXT_PATTERN = re.compile(
-                r'\[(?:self|sense|limbs|engines|others):[a-z_]+\]'
-            )
-
-        # 코드블록 제거 (설명/인용 목적의 IBL은 무시)
-        cleaned = re.sub(r'```[\s\S]*?```', '', text)
-        # 인라인 코드 제거
-        cleaned = re.sub(r'`[^`]+`', '', cleaned)
-
-        return bool(self.__class__._IBL_TEXT_PATTERN.search(cleaned))
 
     def _build_contents(
         self,

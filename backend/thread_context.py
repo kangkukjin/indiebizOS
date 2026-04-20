@@ -93,6 +93,22 @@ def clear_called_agent():
     _thread_local.called_agent = False
 
 
+# ============ Health Check 컨텍스트 ============
+
+def set_health_check_mode(enabled: bool = True):
+    """현재 스레드가 건강 체크 모드임을 표시
+
+    trigger_ai_health_check()가 시스템 AI를 통해 실행될 때,
+    IBL 액션 결과를 source=self_check으로 기록하기 위한 플래그.
+    """
+    _thread_local.health_check_mode = enabled
+
+
+def is_health_check_mode() -> bool:
+    """현재 스레드가 건강 체크 모드인지 확인"""
+    return getattr(_thread_local, 'health_check_mode', False)
+
+
 # ============ User Input 추적 (IBL 용례 학습용) ============
 
 def set_user_input(text: str):
@@ -156,6 +172,7 @@ def clear_all_context():
     _thread_local.allowed_nodes = None
     _thread_local.user_input = ''
     _thread_local.tool_calls = []
+    _thread_local.health_check_mode = False
 
 
 def get_context_summary() -> dict:

@@ -94,7 +94,7 @@ class IBLUsageRAG:
 
     def _format_references(self, examples: list) -> str:
         """검색 결과를 프롬프트 주입용 XML로 포맷팅"""
-        lines = ['<ibl_references note="아래는 유사한 과거 용례입니다. code의 IBL 코드를 참고하되, 반드시 execute_ibl 도구의 code 파라미터로 실행하세요. 절대 텍스트 응답에 IBL 코드를 포함하지 마세요. 분석/판단/정리가 필요한 작업은 파이프라인(>>)으로 엮지 말고 액션을 하나씩 호출하면서 중간에 생각하세요.">']
+        lines = ['<ibl_references note="참고 용례. execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라.">']
         for ex in examples:
             # XML 속성용 이스케이프
             intent = ex.intent.replace('"', '&quot;').replace("'", "&apos;")
@@ -211,14 +211,13 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> str:
 
     inner = "\n".join(sections)
     result = (
-        '<execution_memory note="실행기억: 과거 코드 사례 + 구현 상세. '
-        '반드시 execute_ibl 도구로 실행하세요.">\n'
+        '<execution_memory note="과거 코드 사례 + 구현 상세">\n'
         f'{inner}\n'
         '</execution_memory>'
     )
-    # 로그: 실행기억 내용 출력 (해마 참조 + implementation)
-    print(f"[실행기억] 생성 완료: \"{user_message[:40]}...\"")
-    print(f"[실행기억] 내용:\n{result}")
+    # 로그: 해마 실행기억 내용 출력
+    print(f"[연상:실행기억] 생성 완료: \"{user_message[:40]}...\"")
+    print(f"[연상:실행기억] 내용:\n{result}")
     return result
 
 
@@ -353,13 +352,23 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
 
         # JSON 파싱
         import json
-        # ```json ... ``` 래핑 제거
+        # ```json ... ``` 래핑 제거 + JSON 객체 추출
         cleaned = result.strip()
         if cleaned.startswith("```"):
             cleaned = cleaned.split("\n", 1)[-1]
             if cleaned.endswith("```"):
                 cleaned = cleaned[:-3]
             cleaned = cleaned.strip()
+
+        # JSON 객체가 텍스트 안에 섞여 있을 때 추출
+        if not cleaned.startswith("{"):
+            json_start = cleaned.find("{")
+            json_end = cleaned.rfind("}")
+            if json_start >= 0 and json_end > json_start:
+                cleaned = cleaned[json_start:json_end + 1]
+            else:
+                print(f"[경험증류] JSON 추출 실패: {cleaned[:100]}")
+                return False
 
         distilled = json.loads(cleaned)
         intent = distilled.get("intent", "").strip()

@@ -178,6 +178,12 @@ def generate_guide():
     PULSE_GUIDE_PATH.write_text("\n".join(lines), encoding="utf-8")
     logger.info("[WorldPulse] 가이드 파일 갱신 완료")
 
+    # 진단 리포트도 함께 갱신 (Pulse 주기 편승, AI 비용 0)
+    try:
+        save_diagnostic_report()
+    except Exception as e:
+        logger.debug(f"[WorldPulse] 진단 리포트 갱신 실패 (무시): {e}")
+
 
 # ============================================================
 # Self-Check — 주기적 IBL 액션 자가 점검 (면역 순찰)
@@ -695,11 +701,13 @@ def analyze_failure_patterns() -> Dict:
         cutoff_7d = (datetime.now() - timedelta(days=7)).isoformat()
         cutoff_3d = (datetime.now() - timedelta(days=3)).isoformat()
 
-        # 최근 7일 전체 데이터 — action_health 우선, 없으면 self_checks 폴백
+        # 최근 7일 실사용 데이터만 — 건강 체크(self_check) 실패는 제외
+        # 건강 체크 실패는 테스트 환경 문제(파라미터/컨텍스트 부족)일 수 있으므로
+        # 실사용 실패만으로 패턴을 판단해야 정확하다.
         rows = conn.execute("""
             SELECT node, action, success, response_ms, timestamp, 'usage' as data_quality
             FROM action_health
-            WHERE timestamp >= ?
+            WHERE timestamp >= ? AND source = 'usage'
             ORDER BY node, action, timestamp
         """, (cutoff_7d,)).fetchall()
         if not rows:
@@ -804,24 +812,31 @@ def analyze_failure_patterns() -> Dict:
 
 
 def get_action_health_summary() -> Dict:
-    """액션별 건강 상태 요약 — action_health 테이블 기반 (self_check + 실사용 통합)"""
+    """액션별 건강 상태 요약 — action_health 테이블 기반
+
+    상태 판정 기준:
+    - verified: 실사용(usage)에서 최근 성공 기록 있음
+    - failed: 실사용(usage)에서 최근 실패 기록 있고 그 이후 성공 없음
+    - assumed: 실사용 기록 없음 (건강 체크 전용 실패는 failed로 올리지 않음)
+    """
     from world_pulse import _get_pulse_db
 
     try:
         conn = _get_pulse_db()
+        cutoff = (datetime.now() - timedelta(days=7)).isoformat()
 
-        # action_health 테이블에서 7일간 집계
+        # 실사용(usage) 기록으로 상태 판정
         rows = conn.execute("""
             SELECT node, action,
                    COUNT(*) as total,
                    SUM(success) as successes,
                    AVG(response_ms) as avg_ms,
                    MAX(CASE WHEN success = 1 THEN timestamp END) as last_success,
-                   MAX(CASE WHEN success = 0 THEN timestamp END) as last_failure
+                   MAX(CASE WHEN success = 0 AND source = 'usage' THEN timestamp END) as last_usage_failure
             FROM action_health
             WHERE timestamp >= ?
             GROUP BY node, action
-        """, ((datetime.now() - timedelta(days=7)).isoformat(),)).fetchall()
+        """, (cutoff,)).fetchall()
 
         # action_health가 비어있으면 기존 self_checks에서 폴백
         if not rows:
@@ -831,11 +846,11 @@ def get_action_health_summary() -> Dict:
                        SUM(success) as successes,
                        AVG(response_ms) as avg_ms,
                        MAX(CASE WHEN success = 1 THEN timestamp END) as last_success,
-                       MAX(CASE WHEN success = 0 THEN timestamp END) as last_failure
+                       MAX(CASE WHEN success = 0 THEN timestamp END) as last_usage_failure
                 FROM self_checks
                 WHERE timestamp >= ?
                 GROUP BY node, action
-            """, ((datetime.now() - timedelta(days=7)).isoformat(),)).fetchall()
+            """, (cutoff,)).fetchall()
 
         conn.close()
 
@@ -845,12 +860,13 @@ def get_action_health_summary() -> Dict:
             total = row["total"]
             successes = row["successes"] or 0
             last_success = row["last_success"]
-            last_failure = row["last_failure"]
+            last_usage_failure = row["last_usage_failure"]
 
             # 3단계 상태 결정: verified / assumed / failed
-            if last_success and (not last_failure or last_success > last_failure):
+            # 실사용 성공 있으면 verified, 실사용 실패만 있으면 failed
+            if last_success and (not last_usage_failure or last_success > last_usage_failure):
                 status = "verified"
-            elif last_failure and (not last_success or last_failure >= last_success):
+            elif last_usage_failure and (not last_success or last_usage_failure >= last_success):
                 status = "failed"
             else:
                 status = "assumed"
@@ -1100,3 +1116,312 @@ def trigger_ai_health_check():
         logger.info(f"[HealthCheck] 시스템 AI에게 건강 체크 요청 전송 (assumed {len(assumed)}개 중 {min(len(assumed), 50)}개 전달)")
     except Exception as e:
         logger.error(f"[HealthCheck] 시스템 AI 메시지 전송 실패: {e}")
+
+
+# ============================================================
+# 통합 진단 리포트 (AI 비용 0 — 순수 SQL + Python)
+# ============================================================
+
+DIAGNOSTIC_REPORT_PATH = Path(__file__).parent.parent / "data" / "diagnostic_report.md"
+
+
+def _count_all_actions() -> int:
+    """ibl_nodes.yaml에서 전체 액션 수 카운트"""
+    import yaml as _yaml
+    nodes_path = Path(__file__).parent.parent / "data" / "ibl_nodes.yaml"
+    if not nodes_path.exists():
+        return 0
+    try:
+        with open(nodes_path, "r", encoding="utf-8") as f:
+            data = _yaml.safe_load(f) or {}
+        count = 0
+        for section_key in ("nodes", "actions"):
+            section = data.get(section_key, {})
+            if isinstance(section, dict):
+                for node_val in section.values():
+                    if isinstance(node_val, dict):
+                        acts = node_val.get("actions", node_val)
+                        if isinstance(acts, dict):
+                            count += len(acts)
+        return count
+    except Exception:
+        return 0
+
+
+def _calculate_action_coverage() -> Dict:
+    """전체 액션 중 verified/assumed/failed 비율 계산"""
+    total = _count_all_actions()
+    summary = get_action_health_summary()
+
+    verified = sum(1 for v in summary.values() if v["status"] == "verified")
+    failed = sum(1 for v in summary.values() if v["status"] == "failed")
+    # assumed = 전체 - DB에 기록이 있는 것
+    recorded = len(summary)
+    assumed = total - recorded if total > recorded else 0
+
+    return {
+        "total": total,
+        "verified": verified,
+        "assumed": assumed,
+        "failed": failed,
+        "recorded_other": recorded - verified - failed,  # DB에 있지만 verified/failed 아닌 것
+    }
+
+
+def _get_recent_errors(days: int = 7, limit: int = 10) -> List[Dict]:
+    """최근 N일간 실패 빈도 높은 액션 top N"""
+    from world_pulse import _get_pulse_db
+
+    try:
+        conn = _get_pulse_db()
+        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        rows = conn.execute("""
+            SELECT node, action, COUNT(*) as fail_count,
+                   MAX(timestamp) as last_failure
+            FROM action_health
+            WHERE success = 0 AND source = 'usage' AND timestamp >= ?
+            GROUP BY node, action
+            ORDER BY fail_count DESC
+            LIMIT ?
+        """, (cutoff, limit)).fetchall()
+        conn.close()
+        return [{"action": f"[{r['node']}:{r['action']}]",
+                 "fail_count": r["fail_count"],
+                 "last_failure": r["last_failure"]} for r in rows]
+    except Exception:
+        return []
+
+
+def _build_recommendations(patterns: Dict, cognitive: Dict, coverage: Dict) -> List[Dict]:
+    """규칙 기반 추천 생성 (AI 없이)"""
+    recs = []
+
+    # 만성 실패 액션
+    chronic = patterns.get("chronic_failures", [])
+    if chronic:
+        recs.append({
+            "severity": "high",
+            "area": "action_health",
+            "message": f"만성 실패 액션 {len(chronic)}개: {', '.join(chronic[:5])}",
+            "action": "해당 패키지 handler.py 점검 필요",
+        })
+
+    # 성능 저하 액션
+    degrading = patterns.get("degrading", [])
+    if degrading:
+        names = [d["action"] if isinstance(d, dict) else str(d) for d in degrading[:3]]
+        recs.append({
+            "severity": "medium",
+            "area": "action_health",
+            "message": f"성능 저하 감지 {len(degrading)}개: {', '.join(names)}",
+            "action": "API 소스 또는 네트워크 상태 확인",
+        })
+
+    # 속도 저하 액션
+    slowdowns = patterns.get("slowdowns", [])
+    if slowdowns:
+        names = [s["action"] if isinstance(s, dict) else str(s) for s in slowdowns[:3]]
+        recs.append({
+            "severity": "low",
+            "area": "action_health",
+            "message": f"응답 속도 저하 {len(slowdowns)}개: {', '.join(names)}",
+            "action": "외부 API 지연 또는 내부 병목 확인",
+        })
+
+    # 인지 품질 추세
+    trends = cognitive.get("trends", {})
+    if trends.get("hippocampus") == "declining":
+        recs.append({
+            "severity": "medium",
+            "area": "cognitive",
+            "message": "해마 점수 하락 추세 — 용례 사전 보강 또는 재학습 검토",
+            "action": "ibl_usage_db 용례 확인, 필요시 ibl_embedding_trainer.py 실행",
+        })
+    if trends.get("efficiency") == "declining":
+        recs.append({
+            "severity": "medium",
+            "area": "cognitive",
+            "message": "실행 라운드 증가 추세 — 에이전트 효율 저하",
+            "action": "프롬프트 또는 도구 설명 점검",
+        })
+
+    # 커버리지
+    total = coverage.get("total", 0)
+    assumed = coverage.get("assumed", 0)
+    if total > 0 and assumed / total > 0.5:
+        recs.append({
+            "severity": "low",
+            "area": "coverage",
+            "message": f"미확인 액션 {assumed}개 ({assumed * 100 // total}%) — 절반 이상 미검증",
+            "action": "건강 체크 확대 또는 수동 테스트 실행",
+        })
+
+    return recs
+
+
+def generate_diagnostic_report() -> Dict:
+    """통합 진단 리포트 생성 (AI 비용 0, 순수 SQL + Python)
+
+    Returns: 시스템 상태, 액션 건강, 인지 품질, 추천 조치를 포함하는 dict
+    """
+    from episode_logger import get_cognitive_trends
+
+    health = get_system_health()
+    cognitive = get_cognitive_trends(days=7)
+    coverage = _calculate_action_coverage()
+    recent_errors = _get_recent_errors(days=7, limit=10)
+    patterns = health.get("self_check_patterns", {})
+    recommendations = _build_recommendations(patterns, cognitive, coverage)
+
+    return {
+        "generated_at": datetime.now().isoformat(),
+        "system": {
+            "overall": health.get("overall", "unknown"),
+            "services": health.get("services", {}),
+            "disk_free_gb": health.get("disk_free_gb"),
+            "pulse_count_6h": health.get("pulse_count_6h"),
+            "last_pulse": health.get("last_pulse"),
+        },
+        "action_health": {
+            "coverage": coverage,
+            "avg_success_rate": health.get("self_check_avg_success_rate"),
+            "patterns": patterns,
+            "recent_errors": recent_errors,
+        },
+        "cognitive_quality": cognitive,
+        "recommendations": recommendations,
+    }
+
+
+def format_diagnostic_report_md(report: Dict = None) -> str:
+    """진단 리포트를 마크다운 문자열로 변환"""
+    if report is None:
+        report = generate_diagnostic_report()
+
+    lines = []
+    gen_at = report.get("generated_at", "?")[:16]
+    lines.append(f"# IndieBiz OS 진단 리포트\n생성: {gen_at}\n")
+
+    # 시스템 상태
+    sys = report.get("system", {})
+    overall = sys.get("overall", "unknown")
+    lines.append(f"## 시스템 상태: {overall}")
+    services = sys.get("services", {})
+    if services:
+        svc_parts = [f"{k} {'✅' if v else '❌'}" for k, v in services.items()]
+        lines.append(f"- 서비스: {' | '.join(svc_parts)}")
+    disk = sys.get("disk_free_gb")
+    if disk is not None:
+        lines.append(f"- 디스크: {disk}GB 여유")
+    pulse_6h = sys.get("pulse_count_6h")
+    last_pulse = sys.get("last_pulse")
+    if pulse_6h is not None:
+        lines.append(f"- 최근 6시간 펄스: {pulse_6h}회 (마지막: {(last_pulse or '?')[:16]})")
+    lines.append("")
+
+    # 액션 건강
+    ah = report.get("action_health", {})
+    cov = ah.get("coverage", {})
+    lines.append("## 액션 건강")
+    lines.append(f"- 전체 {cov.get('total', '?')}개: "
+                 f"verified {cov.get('verified', '?')} | "
+                 f"assumed {cov.get('assumed', '?')} | "
+                 f"failed {cov.get('failed', '?')}")
+    avg_rate = ah.get("avg_success_rate")
+    if avg_rate is not None:
+        lines.append(f"- 평균 성공률: {avg_rate}%")
+
+    patterns = ah.get("patterns", {})
+    chronic = patterns.get("chronic_failures", [])
+    if chronic:
+        lines.append(f"- 만성 실패: {', '.join(chronic[:5])}")
+    degrading = patterns.get("degrading", [])
+    if degrading:
+        names = [d["action"] if isinstance(d, dict) else str(d) for d in degrading[:3]]
+        lines.append(f"- 성능 저하: {', '.join(names)}")
+    slowdowns = patterns.get("slowdowns", [])
+    if slowdowns:
+        names = [s["action"] if isinstance(s, dict) else str(s) for s in slowdowns[:3]]
+        lines.append(f"- 속도 저하: {', '.join(names)}")
+    recovered = patterns.get("recovered", [])
+    if recovered:
+        lines.append(f"- 회복됨: {', '.join(recovered[:5])}")
+
+    errors = ah.get("recent_errors", [])
+    if errors:
+        lines.append(f"\n### 최근 7일 실패 빈도 Top")
+        for e in errors[:5]:
+            lines.append(f"- {e['action']}: {e['fail_count']}회 (마지막: {(e.get('last_failure') or '?')[:16]})")
+    lines.append("")
+
+    # 인지 품질
+    cq = report.get("cognitive_quality", {})
+    recent = cq.get("recent", {})
+    previous = cq.get("previous", {})
+    trends = cq.get("trends", {})
+    lines.append("## 인지 품질 (최근 7일 vs 이전 7일)")
+    r_cnt = recent.get("episode_count", 0)
+    p_cnt = previous.get("episode_count", 0)
+    lines.append(f"- 에피소드: {p_cnt}회 → {r_cnt}회")
+
+    def _trend_mark(t):
+        if t == "improving": return "✅ improving"
+        if t == "declining": return "⚠ declining"
+        if t == "stable": return "stable"
+        return "데이터 부족"
+
+    r_hippo = recent.get("avg_hippocampus_score")
+    p_hippo = previous.get("avg_hippocampus_score")
+    if r_hippo is not None or p_hippo is not None:
+        lines.append(f"- 해마 점수: {p_hippo or '?'} → {r_hippo or '?'} {_trend_mark(trends.get('hippocampus', ''))}")
+
+    r_exec = recent.get("execute_ratio")
+    p_exec = previous.get("execute_ratio")
+    if r_exec is not None or p_exec is not None:
+        fmt = lambda v: f"{v*100:.0f}%" if v is not None else "?"
+        lines.append(f"- EXECUTE 비율: {fmt(p_exec)} → {fmt(r_exec)}")
+
+    r_rounds = recent.get("avg_execution_rounds")
+    p_rounds = previous.get("avg_execution_rounds")
+    if r_rounds is not None or p_rounds is not None:
+        lines.append(f"- 평균 실행 라운드: {p_rounds or '?'} → {r_rounds or '?'} {_trend_mark(trends.get('efficiency', ''))}")
+
+    r_ms = recent.get("avg_total_ms")
+    p_ms = previous.get("avg_total_ms")
+    if r_ms is not None or p_ms is not None:
+        fmt_ms = lambda v: f"{v/1000:.1f}s" if v is not None else "?"
+        lines.append(f"- 평균 소요시간: {fmt_ms(p_ms)} → {fmt_ms(r_ms)} {_trend_mark(trends.get('speed', ''))}")
+
+    r_eval = recent.get("evaluation_achieved_ratio")
+    p_eval = previous.get("evaluation_achieved_ratio")
+    if r_eval is not None or p_eval is not None:
+        fmt = lambda v: f"{v*100:.0f}%" if v is not None else "?"
+        lines.append(f"- 평가 달성률: {fmt(p_eval)} → {fmt(r_eval)}")
+    lines.append("")
+
+    # 추천 조치
+    recs = report.get("recommendations", [])
+    if recs:
+        lines.append("## 추천 조치")
+        for i, r in enumerate(recs, 1):
+            sev = r.get("severity", "").upper()
+            lines.append(f"{i}. [{sev}] {r['message']}")
+            if r.get("action"):
+                lines.append(f"   → {r['action']}")
+    else:
+        lines.append("## 추천 조치\n특이사항 없음 ✅")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def save_diagnostic_report():
+    """진단 리포트를 data/diagnostic_report.md로 저장 (Pulse 주기에 편승)"""
+    try:
+        report = generate_diagnostic_report()
+        md = format_diagnostic_report_md(report)
+        DIAGNOSTIC_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        DIAGNOSTIC_REPORT_PATH.write_text(md, encoding="utf-8")
+        logger.info("[DiagnosticReport] 진단 리포트 갱신 완료")
+    except Exception as e:
+        logger.warning(f"[DiagnosticReport] 리포트 저장 실패: {e}")

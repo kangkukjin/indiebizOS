@@ -279,7 +279,7 @@
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["search", "recent", "agents", "save", "memory_search", "memory_read", "memory_delete"],
+            "enum": ["search", "recent", "agents"],
             "description": "실행할 액션"
           },
           "target": {

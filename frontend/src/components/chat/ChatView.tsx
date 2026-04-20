@@ -557,6 +557,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
     if (!hasContent || !ws || ws.readyState !== WebSocket.OPEN || isLoading) return;
 
     const imageData = fileAttachments.prepareImageData();
+    const documentData = fileAttachments.prepareDocumentData();
     const messageContent = fileAttachments.prepareMessageContent(input);
 
     setMessages(prev => [...prev, {
@@ -566,6 +567,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       timestamp: new Date(),
       images: fileAttachments.getMessageImages(),
       textFiles: fileAttachments.getMessageTextFiles(),
+      documentFiles: fileAttachments.getMessageDocuments(),
     }]);
 
     // 에이전트와 시스템 AI는 다른 메시지 타입 사용
@@ -576,12 +578,14 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         agent_name: agentName,
         project_id: projectId,
         images: imageData.length > 0 ? imageData : undefined,
+        documents: documentData.length > 0 ? documentData : undefined,
       }));
     } else {
       ws.send(JSON.stringify({
         type: 'system_ai_stream',
         message: messageContent,
         images: imageData.length > 0 ? imageData : undefined,
+        documents: documentData.length > 0 ? documentData : undefined,
       }));
     }
 
@@ -838,6 +842,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         hasContent={!!input.trim() || fileAttachments.hasAttachments}
         attachedImages={fileAttachments.attachedImages}
         attachedTextFiles={fileAttachments.attachedTextFiles}
+        attachedDocuments={fileAttachments.attachedDocuments}
         isDragging={fileAttachments.isDragging}
         onDragOver={fileAttachments.handleDragOver}
         onDragLeave={fileAttachments.handleDragLeave}
@@ -846,6 +851,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         onFileSelect={fileAttachments.handleFileSelect}
         onRemoveImage={fileAttachments.removeImage}
         onRemoveTextFile={fileAttachments.removeTextFile}
+        onRemoveDocument={fileAttachments.removeDocument}
         onCameraClick={() => fileAttachments.setIsCameraOpen(true)}
         fileInputRef={fileAttachments.fileInputRef}
         inputRef={inputRef}

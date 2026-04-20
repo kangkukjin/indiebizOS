@@ -416,6 +416,130 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
             except Exception as e:
                 return json.dumps({"success": False, "error": f"PDF를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
 
+        elif tool_name == "read_docx":
+            from docx import Document as DocxDocument
+            from docx.opc.constants import RELATIONSHIP_TYPE as RT
+            import zipfile
+
+            file_path = tool_input.get("file_path") or tool_input.get("path")
+            extract_images = tool_input.get("extract_images", True)
+
+            if not file_path:
+                return json.dumps({"success": False, "error": "file_path가 제공되지 않았습니다."}, ensure_ascii=False)
+
+            path = Path(file_path)
+            if not path.is_absolute():
+                path = Path(project_path) / path
+
+            if not path.exists():
+                return json.dumps({"success": False, "error": f"파일을 찾을 수 없습니다: {path}"}, ensure_ascii=False)
+
+            try:
+                doc = DocxDocument(str(path))
+
+                # --- 이미지 추출 ---
+                images_info = []
+                images_dir = None
+                if extract_images:
+                    # ZIP에서 word/media/ 추출
+                    with zipfile.ZipFile(str(path), 'r') as zf:
+                        media_files = [n for n in zf.namelist() if n.startswith("word/media/")]
+                        if media_files:
+                            images_dir = path.parent / f"{path.stem}_images"
+                            images_dir.mkdir(exist_ok=True)
+                            for mf in media_files:
+                                img_name = os.path.basename(mf)
+                                img_data = zf.read(mf)
+                                img_path = images_dir / img_name
+                                with open(img_path, 'wb') as f:
+                                    f.write(img_data)
+                                images_info.append({
+                                    "name": img_name,
+                                    "saved_path": str(img_path),
+                                    "size": len(img_data),
+                                })
+
+                # --- 이미지-문단 관계 매핑 ---
+                # relationship ID → 이미지 파일명 매핑
+                rid_to_image = {}
+                try:
+                    for rel in doc.part.rels.values():
+                        if "image" in rel.reltype:
+                            rid_to_image[rel.rId] = os.path.basename(rel.target_ref)
+                except Exception:
+                    pass
+
+                # --- 텍스트 추출 (이미지 위치 마커 포함) ---
+                from docx.oxml.ns import qn
+                extracted_parts = []
+                para_index = 0
+
+                for element in doc.element.body:
+                    tag = element.tag.split('}')[-1] if '}' in element.tag else element.tag
+
+                    if tag == 'p':  # 문단
+                        para_text = element.text or ""
+                        # 하위 요소에서 텍스트 수집
+                        runs_text = []
+                        for run in element.iter(qn('w:r')):
+                            for t in run.iter(qn('w:t')):
+                                if t.text:
+                                    runs_text.append(t.text)
+                        full_text = ''.join(runs_text) if runs_text else para_text
+
+                        # 인라인 이미지 탐지
+                        for drawing in element.iter(qn('w:drawing')):
+                            for blip in drawing.iter(qn('a:blip')):
+                                embed_id = blip.get(qn('r:embed'))
+                                if embed_id and embed_id in rid_to_image:
+                                    img_name = rid_to_image[embed_id]
+                                    full_text += f"\n[이미지: {img_name}]"
+
+                        if full_text.strip():
+                            extracted_parts.append(full_text.strip())
+                        para_index += 1
+
+                    elif tag == 'tbl':  # 표
+                        table_lines = ["[표 시작]"]
+                        for row in element.iter(qn('w:tr')):
+                            cells = []
+                            for cell in row.iter(qn('w:tc')):
+                                cell_texts = []
+                                for p in cell.iter(qn('w:p')):
+                                    t_parts = []
+                                    for t in p.iter(qn('w:t')):
+                                        if t.text:
+                                            t_parts.append(t.text)
+                                    cell_texts.append(''.join(t_parts))
+                                cells.append(' '.join(cell_texts))
+                            table_lines.append(" | ".join(cells))
+                        table_lines.append("[표 끝]")
+                        extracted_parts.append('\n'.join(table_lines))
+
+                text = '\n\n'.join(extracted_parts)
+
+                metadata = {
+                    "filename": path.name,
+                    "total_paragraphs": len(doc.paragraphs),
+                    "total_tables": len(doc.tables),
+                    "total_images": len(images_info),
+                }
+                if images_dir:
+                    metadata["images_dir"] = str(images_dir)
+
+                res = {
+                    "success": True,
+                    "metadata": metadata,
+                    "text": text,
+                }
+                if images_info:
+                    res["images"] = images_info
+
+                return json.dumps(res, ensure_ascii=False)
+
+            except Exception as e:
+                return json.dumps({"success": False, "error": f"DOCX를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
+
         elif tool_name == "todo_write":
             todos = tool_input.get("todos", [])
             paths = get_state_paths(project_path, agent_id)

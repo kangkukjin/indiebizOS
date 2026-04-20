@@ -97,6 +97,7 @@ def _collect_ibl_stats() -> Dict:
             proprioception = self_state.get("proprioception", {})
 
         # 2) action_health에서 7일간 액션별 집계
+        # 상태 판정은 실사용(usage) 실패만 기준 — 건강 체크 실패는 테스트 환경 문제일 수 있음
         cutoff = (datetime.now() - timedelta(days=7)).isoformat()
         rows = conn.execute("""
             SELECT node, action,
@@ -104,7 +105,7 @@ def _collect_ibl_stats() -> Dict:
                    SUM(success) as successes,
                    AVG(response_ms) as avg_ms,
                    MAX(CASE WHEN success = 1 THEN timestamp END) as last_success,
-                   MAX(CASE WHEN success = 0 THEN timestamp END) as last_failure
+                   MAX(CASE WHEN success = 0 AND source = 'usage' THEN timestamp END) as last_failure
             FROM action_health
             WHERE timestamp >= ?
             GROUP BY node, action
@@ -807,21 +808,48 @@ def _collect_docs() -> Dict:
 
 
 def _collect_mental_health() -> Dict:
-    """에피소드 요약 기반 정신 건강 판정
+    """에피소드 기반 인지 건강 — 추세 비교 + 자동 판정
 
-    현재는 고정값. 향후 에피소드 데이터 기반 자동 판정으로 전환 예정.
     - optimal: 해마 적중률 높고, 라운드 수 적고, 평가 달성률 높음
     - good: 전반적으로 양호
     - poor: 라운드 과다, 실패 빈번
     """
     try:
-        from episode_logger import get_episode_summaries
+        from episode_logger import get_episode_summaries, get_cognitive_trends
         summaries = get_episode_summaries(limit=20)
-        # TODO: 에피소드 데이터 기반 자동 판정
-        # 현재는 고정값
-        return {"status": "good", "episode_count": len(summaries)}
+        trends = get_cognitive_trends(days=7)
+
+        # 추세 기반 자동 판정
+        recent = trends.get("recent", {})
+        trend_vals = trends.get("trends", {})
+        declining_count = sum(1 for v in trend_vals.values() if v == "declining")
+        improving_count = sum(1 for v in trend_vals.values() if v == "improving")
+
+        if declining_count >= 2:
+            status = "poor"
+        elif improving_count >= 2 and declining_count == 0:
+            status = "optimal"
+        else:
+            status = "good"
+
+        return {
+            "status": status,
+            "episode_count": len(summaries),
+            "cognitive_trends": trends,
+        }
     except Exception:
-        return {"status": "good", "episode_count": 0}
+        return {"status": "good", "episode_count": 0, "cognitive_trends": {}}
+
+
+def _collect_recommendations() -> List[Dict]:
+    """규칙 기반 추천 조치 수집 (AI 비용 0)"""
+    try:
+        from world_pulse_health import generate_diagnostic_report
+        report = generate_diagnostic_report()
+        return report.get("recommendations", [])
+    except Exception as e:
+        logger.debug(f"[X-Ray] recommendations 수집 실패: {e}")
+        return []
 
 
 @router.get("/data")
@@ -836,6 +864,7 @@ async def xray_data():
         "packages": _collect_package_stats(),
         "cognitive": _collect_cognitive_stats(),
         "self_checks": _collect_self_checks(),
+        "recommendations": _collect_recommendations(),
     })
 
 

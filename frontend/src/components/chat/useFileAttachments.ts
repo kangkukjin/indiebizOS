@@ -2,12 +2,13 @@
  * 파일 첨부 관련 공통 훅
  */
 import { useState, useRef, useEffect } from 'react';
-import type { ImageAttachment, TextAttachment } from './types';
-import { fileToBase64, isTextFile, readTextFile } from './chatUtils';
+import type { ImageAttachment, TextAttachment, DocumentAttachment } from './types';
+import { fileToBase64, isTextFile, readTextFile, isDocumentFile } from './chatUtils';
 
 export function useFileAttachments() {
   const [attachedImages, setAttachedImages] = useState<ImageAttachment[]>([]);
   const [attachedTextFiles, setAttachedTextFiles] = useState<TextAttachment[]>([]);
+  const [attachedDocuments, setAttachedDocuments] = useState<DocumentAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,10 +36,20 @@ export function useFileAttachments() {
     setAttachedTextFiles(prev => [...prev, { file, content, preview }]);
   };
 
+  // 문서 파일 처리 (.pages, .docx, .pdf)
+  const handleDocumentFile = (file: File) => {
+    const filePath = (file as any).path || '';
+    const fileName = file.name;
+    const ext = fileName.toLowerCase().split('.').pop() || '';
+    setAttachedDocuments(prev => [...prev, { file, filePath, fileName, fileType: ext }]);
+  };
+
   // 파일 타입에 따라 처리
   const handleFile = async (file: File) => {
     if (file.type.startsWith('image/')) {
       await handleImageFile(file);
+    } else if (isDocumentFile(file)) {
+      handleDocumentFile(file);
     } else if (isTextFile(file)) {
       await handleTextFile(file);
     }
@@ -60,6 +71,15 @@ export function useFileAttachments() {
       const newFiles = [...prev];
       newFiles.splice(index, 1);
       return newFiles;
+    });
+  };
+
+  // 문서 파일 제거
+  const removeDocument = (index: number) => {
+    setAttachedDocuments(prev => {
+      const newDocs = [...prev];
+      newDocs.splice(index, 1);
+      return newDocs;
     });
   };
 
@@ -119,6 +139,7 @@ export function useFileAttachments() {
     attachedImages.forEach(img => URL.revokeObjectURL(img.preview));
     setAttachedImages([]);
     setAttachedTextFiles([]);
+    setAttachedDocuments([]);
   };
 
   // 메시지 콘텐츠 준비 (텍스트 파일 내용 추가)
@@ -151,11 +172,30 @@ export function useFileAttachments() {
     return attachedTextFiles.map(tf => ({ name: tf.file.name, content: tf.content }));
   };
 
-  const hasAttachments = attachedImages.length > 0 || attachedTextFiles.length > 0;
+  // 문서 데이터 준비 (WebSocket 전송용)
+  const prepareDocumentData = () => {
+    return attachedDocuments.map(doc => ({
+      filePath: doc.filePath,
+      fileName: doc.fileName,
+      fileType: doc.fileType,
+    }));
+  };
+
+  // 메시지에 저장할 문서 파일 목록
+  const getMessageDocuments = () => {
+    return attachedDocuments.map(doc => ({
+      fileName: doc.fileName,
+      filePath: doc.filePath,
+      fileType: doc.fileType,
+    }));
+  };
+
+  const hasAttachments = attachedImages.length > 0 || attachedTextFiles.length > 0 || attachedDocuments.length > 0;
 
   return {
     attachedImages,
     attachedTextFiles,
+    attachedDocuments,
     isDragging,
     isCameraOpen,
     setIsCameraOpen,
@@ -170,11 +210,14 @@ export function useFileAttachments() {
     handleCameraCapture,
     removeImage,
     removeTextFile,
+    removeDocument,
     clearAttachments,
     // 메시지 준비
     prepareMessageContent,
     prepareImageData,
+    prepareDocumentData,
     getMessageImages,
     getMessageTextFiles,
+    getMessageDocuments,
   };
 }

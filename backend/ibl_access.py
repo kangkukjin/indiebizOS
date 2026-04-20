@@ -18,8 +18,11 @@ ibl_access.py - IBL Node Access Control & Environment Builder
 
 import os
 import yaml
+import logging
 from pathlib import Path
 from typing import List, Optional, Set, Dict
+
+logger = logging.getLogger(__name__)
 
 
 # 항상 허용되는 인프라 노드
@@ -122,7 +125,18 @@ def build_environment(
         return ""
 
     parts = []
-    parts.append("<ibl_executor>")
+
+    # 12_ibl_only.md를 기본 IBL 교재로 첫머리에 삽입
+    # (문법, Goal 시스템, 파이프라인 vs 에이전틱 사고 등 핵심 개념 포함)
+    from runtime_utils import get_base_path
+    ibl_only_path = get_base_path() / "data" / "common_prompts" / "fragments" / "12_ibl_only.md"
+    if ibl_only_path.exists():
+        parts.append(ibl_only_path.read_text(encoding='utf-8').strip())
+    else:
+        logger.warning("12_ibl_only.md not found, IBL 기본 교재 누락")
+
+    # 액션 카탈로그 시작 — 12_ibl_only.md가 개념을, 여기서는 "뭐가 있는지"를 담당
+    parts.append("<ibl_actions>")
 
     # 환경 선언
     node_names = sorted(visible.keys())
@@ -131,19 +145,7 @@ def build_environment(
     if constraint:
         parts.append(f"<constraint>{constraint}</constraint>")
 
-    # 사용법: YAML meta.usage에서 동적 로드
-    usage = nodes_data.get("meta", {}).get("usage", [])
-    if usage:
-        parts.append("<usage>")
-        for mode in usage:
-            section = mode['section']
-            parts.append(f"<mode name=\"{section}\">")
-            for ex in mode.get("examples", []):
-                parts.append(f"  {ex}")
-            if mode.get("note"):
-                parts.append(f"  NOTE: {mode['note']}")
-            parts.append("</mode>")
-        parts.append("</usage>")
+    # usage, pipeline, principles는 12_ibl_only.md에서 이미 커버하므로 생략
 
     # 노드 상세
     for node_name, node_config in visible.items():
@@ -202,50 +204,10 @@ def build_environment(
             parts.append(f'  <agent name="{name}" role="{role}" call=\'[others:delegate]{{agent_id: "{name}", message: "..."}}\'/>')
         parts.append("</peers>")
 
-    # 파이프라인: YAML meta.pipeline에서 동적 로드
-    pipeline = nodes_data.get("meta", {}).get("pipeline", [])
-    if pipeline:
-        parts.append("<pipeline>")
-        for p in pipeline:
-            example = p.get("example", "")
-            # examples(복수)가 있으면 첫 번째를 대표 예제로 사용
-            if not example and "examples" in p:
-                examples = p["examples"]
-                if examples and isinstance(examples, list) and len(examples) > 0:
-                    ex = examples[0]
-                    example = ex.get("code", "") if isinstance(ex, dict) else str(ex)
-            desc = p.get("description", "")
-            if desc:
-                parts.append(f'  <op symbol="{p["op"]}" name="{p["name"]}" description="{desc}" example="{example}"/>')
-            else:
-                parts.append(f'  <op symbol="{p["op"]}" name="{p["name"]}" example="{example}"/>')
-        parts.append("</pipeline>")
-
-    # 핵심 원칙: YAML meta.principles에서 동적 로드
-    principles = nodes_data.get("meta", {}).get("principles", [])
-    if principles:
-        parts.append("<principles>")
-        for p in principles:
-            parts.append(f"  <rule>{p}</rule>")
-        if peers:
-            parts.append(f"  <rule>Use [others:delegate] to delegate tasks to peer agents ({len(peers)} available)</rule>")
-        parts.append("</principles>")
-
-    # Phase 26b: 전략 전환 규칙 (Strategy Escalation)
-    parts.append("<strategy_rules>")
-    parts.append("  <rule priority=\"1\">매 시도 후 반드시 [self:log_attempt]로 기록하라. "
-                 "task_id, approach_category(접근 범주), description(무엇을 시도했는지), "
-                 "result(success/failure), lesson(배운 점)을 포함하라.</rule>")
-    parts.append("  <rule priority=\"2\">동일 approach_category가 3회 연속 실패하면, "
-                 "그 범주를 포기하고 근본적으로 다른 접근으로 전환하라. "
-                 "예: 'cv2_import'가 3회 실패 → 'pillow_alternative'나 'ffmpeg_cli' 등 전혀 다른 방법 시도.</rule>")
-    parts.append("  <rule priority=\"3\">시도 가능한 모든 접근 범주가 소진되면, "
-                 "사용자에게 상황을 보고하고 판단을 요청하라. 무한히 반복하지 마라.</rule>")
-    parts.append("  <rule priority=\"4\">새 시도 전에 [self:get_attempts]로 이전 이력을 확인하라. "
-                 "같은 실수를 반복하지 마라.</rule>")
-    parts.append("  <rule priority=\"5\">파일을 수정하기 전에 현재 상태를 백업하거나 기록하라. "
-                 "수정이 실패하면 원래 상태로 복원할 수 있어야 한다.</rule>")
-    parts.append("</strategy_rules>")
+    # pipeline, principles, strategy_rules는 12_ibl_only.md에서 커버
+    # 동료 에이전트 위임 힌트만 추가
+    if peers:
+        parts.append(f"  <hint>Use [others:delegate] to delegate tasks to peer agents ({len(peers)} available)</hint>")
 
     # Phase 26: 활성 Goal 컨텍스트 주입 (DB에서 동적 로드)
     try:
@@ -312,7 +274,7 @@ def build_environment(
     except Exception:
         pass  # 시도 이력 접근 실패 시 조용히 무시
 
-    parts.append("</ibl_executor>")
+    parts.append("</ibl_actions>")
 
     return "\n".join(parts)
 

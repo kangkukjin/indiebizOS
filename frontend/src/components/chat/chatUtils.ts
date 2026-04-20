@@ -11,6 +11,15 @@ export const TEXT_EXTENSIONS = [
   '.sh', '.env', '.ini', '.conf', '.toml'
 ];
 
+// 문서 파일 확장자 목록 (.pages, .docx, .pdf)
+export const DOCUMENT_EXTENSIONS = ['.pages', '.docx', '.pdf'];
+
+// 문서 파일인지 확인
+export function isDocumentFile(file: File): boolean {
+  const fileName = file.name.toLowerCase();
+  return DOCUMENT_EXTENSIONS.some(ext => fileName.endsWith(ext));
+}
+
 // 파일을 base64로 변환
 export function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

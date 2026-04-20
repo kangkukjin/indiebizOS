@@ -255,11 +255,16 @@ class SystemAIRunner:
 - 추가 작업이 필요하면 다른 에이전트에게 위임하세요.
 - 모든 작업이 완료되었으면 사용자에게 최종 결과를 전달하세요."""
 
-                    from thread_context import set_current_task_id, clear_current_task_id, set_called_agent, did_call_agent, clear_called_agent
+                    from thread_context import set_current_task_id, clear_current_task_id, set_called_agent, did_call_agent, clear_called_agent, set_health_check_mode
 
                     if extracted_task_id:
                         set_current_task_id(extracted_task_id)
                     clear_called_agent()
+
+                    # 건강 체크 메시지일 때 컨텍스트 설정 → IBL 실행 시 source=self_check으로 기록
+                    _is_health_check = from_agent == "__health_check__"
+                    if _is_health_check:
+                        set_health_check_mode(True)
 
                     response = self.ai.process_message_with_history(
                         message_content=ai_message,
@@ -287,6 +292,8 @@ class SystemAIRunner:
 
                     clear_current_task_id()
                     clear_called_agent()
+                    if _is_health_check:
+                        set_health_check_mode(False)
 
             except Exception as e:
                 import traceback

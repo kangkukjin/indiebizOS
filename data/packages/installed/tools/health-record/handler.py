@@ -32,9 +32,23 @@ def save_health_info(input_data: dict, project_path: str = ".") -> str:
     """건강 정보 저장"""
     info_type = input_data.get('info_type')
     data = input_data.get('data', {})
+    if not isinstance(data, dict):
+        data = {}
     measured_at = input_data.get('measured_at')
     note = input_data.get('note')
     person = input_data.get('person')  # 대상자
+
+    # AI가 data 없이 최상위에 category/value/name 등을 평탄화하여 넘기는 경우 보정
+    # (예: {info_type: measurement, category: blood_sugar, value: 128})
+    _TOPLEVEL_DATA_KEYS = (
+        'category', 'value', 'name', 'description', 'severity',
+        'started_at', 'ended_at', 'dosage', 'frequency',
+        'image_path', 'extracted_data',
+        'systolic', 'diastolic', 'unit', 'type',
+    )
+    for _k in _TOPLEVEL_DATA_KEYS:
+        if _k in input_data and _k not in data:
+            data[_k] = input_data[_k]
 
     # AI가 info_type에 한국어나 카테고리명을 넣는 경우 자동 보정
     _VALID_INFO_TYPES = {'measurement', 'symptom', 'medication', 'document'}
@@ -71,11 +85,54 @@ def save_health_info(input_data: dict, project_path: str = ".") -> str:
                 data['category'] = _KO_CATEGORY_MAP[info_type]
             info_type = 'measurement'
 
+    # info_type 누락 시 data.category로부터 추론
+    # (학습 코퍼스가 {category: "혈압", value: ...} 형태로 가르치기 때문)
+    if not info_type:
+        _raw_cat = data.get('category')
+        if _raw_cat in _KO_CATEGORY_MAP:
+            data['category'] = _KO_CATEGORY_MAP[_raw_cat]
+            info_type = 'measurement'
+        elif _raw_cat in _KNOWN_CATEGORIES:
+            info_type = 'measurement'
+        elif _raw_cat in _KO_INFO_TYPE_MAP:
+            info_type = _KO_INFO_TYPE_MAP[_raw_cat]
+            # category 자리에 '투약' 같은 info_type이 들어온 경우 제거
+            data.pop('category', None)
+        elif data.get('name') or data.get('dosage'):
+            info_type = 'medication'
+        elif data.get('description') or data.get('severity'):
+            info_type = 'symptom'
+
     try:
         if info_type == 'measurement':
             # 측정값 저장 (혈압, 혈당, 체중 등)
             category = data.get('category', 'unknown')
             value = data.get('value', {})
+
+            # 스칼라 value 정규화: 128 → {"value": 128}
+            if not isinstance(value, dict):
+                value = {'value': value}
+
+            # 혈압: data 평면에 systolic/diastolic 왔을 때 value로 합치기
+            if category == 'blood_pressure':
+                if 'systolic' in data and 'systolic' not in value:
+                    value['systolic'] = data['systolic']
+                if 'diastolic' in data and 'diastolic' not in value:
+                    value['diastolic'] = data['diastolic']
+
+            # 보조 필드(unit/type) 값에 병합
+            for _aux in ('unit', 'type'):
+                if _aux in data and _aux not in value:
+                    value[_aux] = data[_aux]
+
+            # 빈 value 방어 — 조용한 손실 방지
+            _meaningful = {k: v for k, v in value.items() if v not in (None, '')}
+            if not _meaningful:
+                return (
+                    "저장 실패: 측정값이 비어 있습니다. "
+                    "data.value에 수치를 넣어주세요 "
+                    "(예: {info_type: measurement, data: {category: blood_sugar, value: {value: 128, unit: 'mg/dL', type: fasting}}})"
+                )
 
             record_id = storage.save_measurement(
                 category=category,
@@ -174,6 +231,8 @@ def save_health_info(input_data: dict, project_path: str = ".") -> str:
 
 def get_health_context(input_data: dict) -> str:
     """건강 컨텍스트 조회"""
+    # query_type 명시 여부 구분 — default 처리 전에 확인
+    query_type_given = input_data.get('query_type') is not None
     query_type = input_data.get('query_type', 'summary')
     category = input_data.get('category')
     days = input_data.get('days', 365)
@@ -226,6 +285,18 @@ def get_health_context(input_data: dict) -> str:
             if not keyword:
                 keyword = query_type
             query_type = 'search'
+
+    # query_type 미지정 + category에 카테고리/조회유형이 들어온 경우 재해석
+    # (학습 코퍼스가 [self:health_query]{category: "혈당"} 형태로 가르치기 때문)
+    if not query_type_given and category and query_type == 'summary':
+        if category in _KO_QUERY_TYPE_MAP:
+            query_type = _KO_QUERY_TYPE_MAP[category]
+            category = None
+        elif category in _KO_CATEGORY_MAP:
+            category = _KO_CATEGORY_MAP[category]
+            query_type = 'measurements'
+        elif category in _KNOWN_CATEGORIES:
+            query_type = 'measurements'
 
     try:
         if query_type == 'list_persons':

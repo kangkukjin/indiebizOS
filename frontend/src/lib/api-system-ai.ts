@@ -34,25 +34,62 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
       });
     },
 
-    // ============ 무의식 AI 설정 ============
+    // ============ 경량 AI 설정 ============
 
-    async getUnconsciousAI() {
+    async getLightweightAI() {
       const data = await client.request<{ config: {
         enabled: boolean;
         provider: string;
         model: string;
         apiKey: string;
-      }}>('/unconscious-ai');
+      }}>('/lightweight-ai');
       return data.config;
     },
 
+    async updateLightweightAI(config: {
+      enabled: boolean;
+      provider: string;
+      model: string;
+      apiKey: string;
+    }) {
+      return client.request<{ status: string; config: typeof config }>('/lightweight-ai', {
+        method: 'PUT',
+        body: JSON.stringify(config),
+      });
+    },
+
+    // 하위호환 별칭
+    async getUnconsciousAI() {
+      return this.getLightweightAI();
+    },
     async updateUnconsciousAI(config: {
       enabled: boolean;
       provider: string;
       model: string;
       apiKey: string;
     }) {
-      return client.request<{ status: string; config: typeof config }>('/unconscious-ai', {
+      return this.updateLightweightAI(config);
+    },
+
+    // ============ 중급 AI 설정 ============
+
+    async getMidtierAI() {
+      const data = await client.request<{ config: {
+        enabled: boolean;
+        provider: string;
+        model: string;
+        apiKey: string;
+      }}>('/midtier-ai');
+      return data.config;
+    },
+
+    async updateMidtierAI(config: {
+      enabled: boolean;
+      provider: string;
+      model: string;
+      apiKey: string;
+    }) {
+      return client.request<{ status: string; config: typeof config }>('/midtier-ai', {
         method: 'PUT',
         body: JSON.stringify(config),
       });

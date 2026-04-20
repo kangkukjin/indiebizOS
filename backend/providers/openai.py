@@ -286,6 +286,15 @@ class OpenAIProvider(BaseProvider):
             if openai_tools:
                 create_params["tools"] = openai_tools
 
+            # Reasoning (o1/o3 모델)
+            if self.thinking_budget > 0:
+                model_lower = self.model.lower()
+                if "o1" in model_lower or "o3" in model_lower:
+                    create_params["reasoning_effort"] = "medium"
+                    # o1/o3는 max_tokens 대신 max_completion_tokens 사용
+                    create_params.pop("max_tokens", None)
+                    create_params["max_completion_tokens"] = max_tokens
+
             collected_text = ""
             tool_calls = {}  # id -> {id, name, arguments}
             current_tool_id = None

@@ -334,9 +334,9 @@ class AgentCognitiveMixin:
 
             # 1단계: 대화에서 기억할 정보 조각 추출
             extract_prompt = f"""다음 대화에서 나중에 기억해둘 만한 사실 정보를 추출하라.
-(이름, 날짜, 수치, 선호, 결정사항, 환경 정보 등)
-추론이나 감상은 제외. JSON 배열로만 응답.
-[{{"content": "...", "keywords": "k1,k2", "category": "사용자선호|환경정보|작업기록|의사결정"}}]
+(이름, 중요한 날짜, 사용자 선호, 결정사항, 작업 결과 등)
+일시적 데이터(주가, 날씨, 환율, 시세 등)와 추론/감상은 제외. JSON 배열로만 응답.
+[{{"content": "...", "keywords": "k1,k2", "category": "사용자선호|작업기록|의사결정|중요날짜"}}]
 정보가 없으면 빈 배열 [] 반환.
 
 사용자: {user_message[:500]}
@@ -398,7 +398,7 @@ AI: {ai_response[:500]}"""
                             if "SAME" in j:
                                 # 동일 → used_at만 갱신
                                 memory_db.update(project_path, agent_id, top["id"])
-                                print(f"[연상:증류] SAME 스킵: \"{content[:50]}\"")
+                                print(f"[심층메모리] SAME 스킵: \"{content[:50]}\"")
                                 continue
                             elif "UPDATE" in j:
                                 # 보충 → 기존 항목 업데이트
@@ -411,7 +411,7 @@ AI: {ai_response[:500]}"""
                                     content=merged, keywords=merged_kw,
                                 )
                                 updated_count += 1
-                                print(f"[연상:증류] UPDATE: \"{content[:50]}\" → 기존 ID {top['id']}")
+                                print(f"[심층메모리] UPDATE: \"{content[:50]}\" → 기존 ID {top['id']}")
                                 continue
                             # NEW → 아래에서 새로 저장
 
@@ -424,16 +424,16 @@ AI: {ai_response[:500]}"""
                     category=category,
                 )
                 saved_count += 1
-                print(f"[연상:증류] NEW [{category}]: \"{content[:50]}\" (kw: {keywords})")
+                print(f"[심층메모리] NEW [{category}]: \"{content[:50]}\" (kw: {keywords})")
 
             if saved_count or updated_count:
-                print(f"[연상:증류] 저장 {saved_count}건, 업데이트 {updated_count}건: "
+                print(f"[심층메모리] 저장 {saved_count}건, 업데이트 {updated_count}건: "
                       f"\"{user_message[:40]}\"")
 
         except json.JSONDecodeError:
-            print(f"[연상:증류] JSON 파싱 실패 (무시)")
+            print(f"[심층메모리] JSON 파싱 실패 (무시)")
         except Exception as e:
-            print(f"[연상:증류] 실패 (무시): {e}")
+            print(f"[심층메모리] 실패 (무시): {e}")
 
     def _apply_consciousness_to_history(self, history: list, consciousness_output: dict) -> list:
         """의식 에이전트의 판단에 따라 히스토리를 편집합니다.
@@ -742,6 +742,11 @@ AI: {ai_response[:500]}"""
             if structure_path.exists():
                 structure = structure_path.read_text(encoding='utf-8')
                 cls._evaluator_prompt_cache += f"\n\n<system_structure>\n{structure}\n</system_structure>"
+            # IBL 환경 프롬프트 주입 — 평가 에이전트도 IBL 체계를 알아야 올바른 평가를 할 수 있다
+            ibl_only_path = base / "common_prompts" / "fragments" / "12_ibl_only.md"
+            if ibl_only_path.exists():
+                ibl_only = ibl_only_path.read_text(encoding='utf-8')
+                cls._evaluator_prompt_cache += f"\n\n{ibl_only}"
         return cls._evaluator_prompt_cache
 
     def _evaluate_achievement(self, user_message: str, criteria: str,

@@ -51,7 +51,7 @@ def _get_cik(symbol: str):
 
     try:
         # SEC 회사 티커 목록에서 조회
-        url = f"{SEC_BASE_URL}/files/company_tickers.json"
+        url = "https://www.sec.gov/files/company_tickers.json"
         req = urllib.request.Request(url)
         req.add_header("User-Agent", USER_AGENT)
 
@@ -113,7 +113,7 @@ def get_filings(symbol: str, filing_type: str = None, count: int = 10):
         }
 
     # 회사 제출 내역 조회
-    url = f"{SEC_BASE_URL}/cgi-bin/browse-edgar?action=getcompany&CIK={cik}&type={filing_type or ''}&dateb=&owner=include&count={count}&output=atom"
+    url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}&type={filing_type or ''}&dateb=&owner=include&count={count}&output=atom"
 
     try:
         req = urllib.request.Request(url)

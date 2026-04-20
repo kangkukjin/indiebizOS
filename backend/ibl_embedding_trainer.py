@@ -139,6 +139,43 @@ def generate_variations(examples: List[Dict]) -> List[Dict]:
     return variations
 
 
+def balance_by_action(data: List[Dict], max_per_action: int = 20) -> List[Dict]:
+    """액션별 데이터 밸런싱 — 초과분은 오래된(앞쪽) 데이터부터 제거.
+
+    증류 데이터는 시간순으로 쌓이므로, 리스트 뒤쪽이 최신이다.
+    같은 액션 패턴이 max_per_action건을 초과하면 오래된 것부터 버린다.
+    """
+    import re
+    from collections import defaultdict
+
+    action_pattern = re.compile(r'\[(\w+:\w+)\]')
+
+    # 액션 패턴별로 인덱스 수집 (뒤쪽 = 최신)
+    action_indices: Dict[str, List[int]] = defaultdict(list)
+    for i, item in enumerate(data):
+        code = item.get('ibl_code', '')
+        actions = tuple(sorted(set(action_pattern.findall(code))))
+        key = "+".join(actions) if actions else "_unknown"
+        action_indices[key].append(i)
+
+    # 초과분 제거 대상 인덱스 수집
+    drop = set()
+    trimmed_actions = []
+    for key, indices in action_indices.items():
+        if len(indices) > max_per_action:
+            old_indices = indices[:-max_per_action]  # 앞쪽(오래된) 것 제거
+            drop.update(old_indices)
+            trimmed_actions.append(f"{key}({len(indices)}→{max_per_action})")
+
+    if trimmed_actions:
+        print(f"[밸런싱] 액션별 상한 {max_per_action}건 적용, "
+              f"{len(drop)}건 제거: {', '.join(trimmed_actions)}")
+    else:
+        print(f"[밸런싱] 모든 액션이 상한({max_per_action}건) 이내 — 제거 없음")
+
+    return [item for i, item in enumerate(data) if i not in drop]
+
+
 def prepare_training_data(examples: List[Dict], variations: List[Dict],
                           test_ratio: float = 0.2,
                           normalize: bool = False) -> Tuple[List, List, Dict]:
@@ -237,7 +274,7 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
 
     BASE_MODEL = 'jhgan/ko-sroberta-multitask'
     print(f"\n[학습] 베이스 모델 로딩: {BASE_MODEL}")
-    model = SentenceTransformer(BASE_MODEL)
+    model = SentenceTransformer(BASE_MODEL, device="mps")
 
     # 액션 description 로드
     action_descs = load_action_descriptions()
@@ -478,6 +515,9 @@ def main():
                 variations.extend(synth_data)
         except Exception as e:
             print(f"[데이터] {synth_file.name} 로드 실패: {e}")
+
+    # 액션별 데이터 밸런싱 — 과다 축적된 액션의 오래된 데이터 제거
+    variations = balance_by_action(variations)
 
     train_pairs, test_pairs, code_to_intents = prepare_training_data(
         examples, variations, normalize=True

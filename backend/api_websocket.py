@@ -45,6 +45,36 @@ def filter_internal_markers(text: str) -> str:
     return text.strip()
 
 
+def _process_documents(documents: list, message: str) -> str:
+    """첨부된 문서 파일을 텍스트로 변환하여 메시지에 추가"""
+    if not documents:
+        return message
+    try:
+        from document_converter import convert_document
+    except ImportError:
+        return message
+
+    doc_texts = []
+    for doc in documents:
+        file_path = doc.get("filePath", "")
+        file_name = doc.get("fileName", "")
+        if not file_path:
+            continue
+        result = convert_document(file_path)
+        if result.get("text"):
+            doc_texts.append(
+                f"\n\n--- 첨부 문서: {file_name} (원본 경로: {file_path}) ---\n"
+                f"{result['text']}"
+            )
+        elif result.get("error"):
+            doc_texts.append(
+                f"\n\n--- 첨부 문서: {file_name} (변환 실패: {result['error']}) ---"
+            )
+    if doc_texts:
+        message = message + "".join(doc_texts)
+    return message
+
+
 def is_cancelled(client_id: str) -> bool:
     """클라이언트의 중단 요청 여부 확인"""
     return cancel_flags.get(client_id, False)
@@ -250,6 +280,7 @@ async def handle_chat_message(client_id: str, data: dict):
     agent_name = data.get("agent_name", "")
     project_id = data.get("project_id", "")
     images = data.get("images", [])
+    message = _process_documents(data.get("documents", []), message)
 
     try:
         # 시작 알림
@@ -417,6 +448,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     agent_name = data.get("agent_name", "")
     project_id = data.get("project_id", "")
     images = data.get("images", [])
+    message = _process_documents(data.get("documents", []), message)
 
     # 에피소드 로그 시작
     try:
@@ -516,12 +548,34 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         else:
             print(f"[무의식] 분류: {request_type}")
 
-        # 판단형만 의식 에이전트 실행
+        # 판단형만 의식 에이전트 실행 / 실행형은 중급 모델 전환
         consciousness_output = None
+        _original_provider = None
         if request_type == "THINK":
             consciousness_output = runner._run_consciousness(
                 message, history, execution_memory
             )
+        else:
+            # EXECUTE/reflex: 중급 모델로 전환
+            try:
+                from consciousness_agent import _get_midtier_provider
+                _midtier = _get_midtier_provider()
+                if _midtier is not None and runner.ai and runner.ai._provider:
+                    _original_provider = runner.ai._provider
+                    _midtier.system_prompt = runner.ai._provider.system_prompt
+                    _midtier.tools = runner.ai._provider.tools
+                    # Gemini provider의 경우 도구 캐시 재구축
+                    if hasattr(_midtier, '_cached_gemini_tools') and _midtier.tools:
+                        try:
+                            from google.genai import types as _gtypes
+                            _midtier._cached_gemini_tools = [_gtypes.Tool(function_declarations=_midtier._convert_tools())]
+                        except Exception:
+                            pass
+                    runner.ai._provider = _midtier
+                    print(f"[프로젝트AI] 중급 모델로 전환: {_midtier.model}")
+            except Exception as _me:
+                print(f"[프로젝트AI] 중급 모델 전환 실패 (본격 모델 유지): {_me}")
+
         if consciousness_output:
             role_file = runner.project_path / f"agent_{agent_name}_role.txt"
             role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
@@ -652,6 +706,9 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     loop
                 )
             finally:
+                # 중급 모델 사용 후 원래 provider 복원
+                if _original_provider is not None and runner.ai:
+                    runner.ai._provider = _original_provider
                 print(f"[WS run_stream] 스트림 종료, final_content len={len(final_content)}, timed_out={timed_out}")
                 if timed_out and final_content:
                     # 타임아웃 이후 워커가 결과를 완성한 경우: DB에 미전달로 저장
@@ -679,6 +736,13 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         distill_experience(message, tool_calls_log, _hippocampus_score)
                     except Exception as distill_err:
                         print(f"[경험증류] 오류 (무시): {distill_err}")
+
+                # 연상기억 증류: 대화에서 기억할 정보 자동 저장
+                if final_content:
+                    try:
+                        runner._distill_deep_memory(message, final_content)
+                    except Exception as mem_err:
+                        print(f"[심층메모리] 오류 (무시): {mem_err}")
 
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put(None),  # 종료 신호
@@ -886,6 +950,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
     """
     message = data.get("message", "")
     images = data.get("images", [])
+    message = _process_documents(data.get("documents", []), message)
 
     # 에피소드 로그 시작
     try:
@@ -967,6 +1032,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             # 스레드별로 컨텍스트를 다시 설정해야 함 (thread-local storage)
             set_current_task_id(task_id)
             try:
+                # 도구 호출 이력 초기화 (경험 증류용)
+                from thread_context import clear_tool_calls as _clear_tc_sys
+                _clear_tc_sys()
+
                 # 인지 메타데이터 수집 (평가 루프용)
                 consciousness_output = None
                 execution_memory = ""
@@ -1054,6 +1123,30 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                         print(f"[WS run_stream] 시스템AI 타임아웃 후 대화 저장 완료")
                     except Exception as save_err:
                         print(f"[WS run_stream] 시스템AI 타임아웃 후 저장 실패: {save_err}")
+
+                # 시스템 AI runner 확보 (경험 증류 + 연상기억 증류용)
+                from system_ai_core import get_system_ai_runner
+                _runner = get_system_ai_runner()
+
+                # 경험 증류: 해마 점수가 낮은 성공 세션에서 새로운 패턴 학습
+                if final_content:
+                    try:
+                        from ibl_usage_rag import get_top_score as _get_top_score, distill_experience
+                        from thread_context import get_tool_calls as _get_tc
+                        _hippocampus_score = _get_top_score(message)
+                        _tool_calls = _get_tc()
+                        if _tool_calls:
+                            distill_experience(message, _tool_calls, _hippocampus_score)
+                    except Exception as distill_err:
+                        print(f"[경험증류] 시스템AI 오류 (무시): {distill_err}")
+
+                # 연상기억 증류: 대화에서 기억할 정보 자동 저장
+                if final_content and _runner:
+                    try:
+                        _runner._distill_deep_memory(message, final_content)
+                    except Exception as mem_err:
+                        print(f"[심층메모리] 오류 (무시): {mem_err}")
+
                 asyncio.run_coroutine_threadsafe(event_queue.put(None), loop)
 
         # 스레드에서 스트리밍 시작

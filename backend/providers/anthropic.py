@@ -283,6 +283,13 @@ class AnthropicProvider(BaseProvider):
             if self.tools:
                 create_params["tools"] = self.tools
 
+            # Extended Thinking
+            if self.thinking_budget > 0:
+                create_params["thinking"] = {
+                    "type": "enabled",
+                    "budget_tokens": self.thinking_budget
+                }
+
             collected_text = ""
             tool_uses = []
             current_tool = None
@@ -315,6 +322,9 @@ class AnthropicProvider(BaseProvider):
                                 "name": block.name,
                                 "input": {}
                             }
+                        elif block.type == "thinking":
+                            # Extended Thinking 블록 시작
+                            pass
 
                     elif event_type == "content_block_delta":
                         delta = event.delta
@@ -325,6 +335,9 @@ class AnthropicProvider(BaseProvider):
                         elif delta.type == "input_json_delta":
                             # 도구 입력 JSON 누적
                             current_tool_input += delta.partial_json
+                        elif delta.type == "thinking_delta":
+                            # Extended Thinking 텍스트
+                            yield {"type": "thinking", "content": delta.thinking}
 
                     elif event_type == "content_block_stop":
                         if current_tool:

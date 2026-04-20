@@ -115,6 +115,43 @@ def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAge
     return runner.ai
 
 
+# ============ 중급 모델 전환 헬퍼 ============
+
+def _switch_to_midtier(runner):
+    """EXECUTE/reflex 경로에서 중급 모델로 provider 전환. 전환 성공 시 원래 provider 반환."""
+    try:
+        from consciousness_agent import _get_midtier_provider
+        midtier = _get_midtier_provider()
+        if midtier is None:
+            return None  # 중급 설정 없으면 본격 모델 유지
+
+        original_provider = runner.ai._provider
+        # 중급 provider에 현재 시스템 프롬프트와 도구 설정 복사
+        midtier.system_prompt = runner.ai._provider.system_prompt
+        midtier.tools = runner.ai._provider.tools
+
+        # Gemini provider의 경우 도구 캐시 재구축
+        if hasattr(midtier, '_cached_gemini_tools') and midtier.tools:
+            try:
+                from google.genai import types
+                midtier._cached_gemini_tools = [types.Tool(function_declarations=midtier._convert_tools())]
+            except Exception:
+                pass
+
+        runner.ai._provider = midtier
+        print(f"[시스템AI] 중급 모델로 전환: {midtier.model}")
+        return original_provider
+    except Exception as e:
+        print(f"[시스템AI] 중급 모델 전환 실패 (본격 모델 유지): {e}")
+        return None
+
+
+def _restore_provider(runner, original_provider):
+    """원래 provider로 복원"""
+    if original_provider is not None:
+        runner.ai._provider = original_provider
+
+
 # ============ 메시지 처리 (AgentRunner 인지 파이프라인 사용) ============
 
 def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None):
@@ -132,8 +169,12 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     print(f"[시스템AI 무의식] 분류: {request_type}")
 
     consciousness_output = None
+    original_provider = None
     if request_type == "THINK":
         consciousness_output = runner._run_consciousness(message, history or [], execution_memory)
+    else:
+        # EXECUTE/reflex: 중급 모델로 전환
+        original_provider = _switch_to_midtier(runner)
 
     # 프롬프트 갱신
     role = runner._load_role()
@@ -148,11 +189,15 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     # 히스토리 편집
     history = runner._apply_consciousness_to_history(history or [], consciousness_output)
 
-    response = runner.ai.process_message_with_history(
-        message_content=message,
-        history=history,
-        images=images
-    )
+    try:
+        response = runner.ai.process_message_with_history(
+            message_content=message,
+            history=history,
+            images=images
+        )
+    finally:
+        # 중급 모델 사용 후 원래 provider 복원
+        _restore_provider(runner, original_provider)
 
     # 평가 루프 — 달성 기준이 있으면 실행
     if consciousness_output and response:
@@ -202,8 +247,12 @@ def process_system_ai_message_stream(
     print(f"[시스템AI 무의식] 분류: {request_type}")
 
     consciousness_output = None
+    original_provider = None
     if request_type == "THINK":
         consciousness_output = runner._run_consciousness(message, history or [], execution_memory)
+    else:
+        # EXECUTE/reflex: 중급 모델로 전환
+        original_provider = _switch_to_midtier(runner)
 
     # 프롬프트 갱신
     role = runner._load_role()
@@ -224,12 +273,16 @@ def process_system_ai_message_stream(
         yield {"type": "_consciousness_output", "data": consciousness_output,
                "execution_memory": execution_memory}
 
-    yield from runner.ai.process_message_stream(
-        message_content=message,
-        history=history,
-        images=images,
-        cancel_check=cancel_check
-    )
+    try:
+        yield from runner.ai.process_message_stream(
+            message_content=message,
+            history=history,
+            images=images,
+            cancel_check=cancel_check
+        )
+    finally:
+        # 중급 모델 사용 후 원래 provider 복원
+        _restore_provider(runner, original_provider)
 
 
 # ============ 도구 실행 ============

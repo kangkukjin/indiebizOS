@@ -99,6 +99,7 @@ class AIAgent:
     def _init_provider(self):
         """프로바이더 초기화"""
         try:
+            thinking_budget = self.config.get("thinkingBudget", 0)
             self._provider = get_provider(
                 self.provider_name,
                 api_key=self.api_key,
@@ -107,9 +108,12 @@ class AIAgent:
                 tools=self.tools,
                 project_path=self.project_path,
                 agent_name=self.agent_name,
-                agent_id=self.agent_id
+                agent_id=self.agent_id,
+                thinking_budget=thinking_budget
             )
             self._provider.init_client()
+            if thinking_budget > 0:
+                print(f"[AIAgent] Extended Thinking 활성화 (budget={thinking_budget})")
         except Exception as e:
             print(f"[AIAgent] 프로바이더 초기화 실패: {e}")
             self._provider = None

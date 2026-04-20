@@ -140,6 +140,8 @@ data/**/*.json
 data/_ibl_provenance.yaml
 CCTV*
 backend/conversations.db
+backend/conversations.db.*
+backend/출판사*
 # SQLite DB files in backend (project conversations)
 backend/*-shm
 backend/*-wal

@@ -217,19 +217,6 @@
       "file": "web_collector.md"
     },
     {
-      "id": "blog",
-      "name": "블로그 도구 가이드",
-      "description": "개인 블로그 'K의 생각' RAG 검색 및 인사이트 분석.",
-      "keywords": [
-        "블로그",
-        "blog",
-        "글쓰기",
-        "포스트",
-        "RAG"
-      ],
-      "file": "blog.md"
-    },
-    {
       "id": "cctv",
       "name": "CCTV 영상 가이드",
       "description": "한국 교통 CCTV 등 실시간 영상 조회.",
@@ -243,20 +230,6 @@
       "file": "cctv.md"
     },
     {
-      "id": "location_services",
-      "name": "위치 기반 서비스 가이드",
-      "description": "날씨, 맛집, 길찾기, 여행 정보 조회.",
-      "keywords": [
-        "날씨",
-        "맛집",
-        "길찾기",
-        "여행",
-        "위치",
-        "지도"
-      ],
-      "file": "location_services.md"
-    },
-    {
       "id": "local_info",
       "name": "지역 정보 가이드",
       "description": "동네 가게/상점 정보 검색 및 DB 관리.",
@@ -268,33 +241,6 @@
         "로컬"
       ],
       "file": "local_info.md"
-    },
-    {
-      "id": "memory",
-      "name": "메모리 시스템 가이드",
-      "description": "에이전트 메모리 구조와 스킬 관리.",
-      "keywords": [
-        "메모리",
-        "기억",
-        "스킬",
-        "memory",
-        "skill"
-      ],
-      "file": "memory.md"
-    },
-    {
-      "id": "system_essentials",
-      "name": "시스템 기본 도구 가이드",
-      "description": "파일 읽기/쓰기/수정, glob, grep 등 시스템 기본 작업.",
-      "keywords": [
-        "파일",
-        "시스템",
-        "읽기",
-        "쓰기",
-        "수정",
-        "file"
-      ],
-      "file": "system_essentials.md"
     },
     {
       "id": "agent_publishing",
@@ -484,29 +430,6 @@
       "file": "search.md"
     },
     {
-      "id": "context7",
-      "name": "라이브러리 문서 검색 가이드",
-      "description": "라이브러리/프레임워크 최신 공식 문서 검색. 코드 작성 시 최신 API와 사용법을 정확하게 참조.",
-      "keywords": [
-        "라이브러리",
-        "library",
-        "문서",
-        "docs",
-        "documentation",
-        "API",
-        "프레임워크",
-        "framework",
-        "react",
-        "fastapi",
-        "nextjs",
-        "tailwind",
-        "코드",
-        "코딩",
-        "최신"
-      ],
-      "file": "context7_guide.md"
-    },
-    {
       "id": "new_action_checklist",
       "name": "새 IBL 액션 추가 체크리스트",
       "description": "새로운 IBL 액션(도구 패키지)을 만들 때 반드시 따라야 할 5단계 체크리스트. 패키지 생성부터 노드 등록, 해마 데이터, 임베딩, 확인까지.",
@@ -545,6 +468,29 @@
         "임베딩"
       ],
       "file": "action_removal.md"
+    },
+    {
+      "id": "book_publishing",
+      "name": "출판 프로젝트 관리 가이드",
+      "description": "책 쓰기, 원고 관리, 출판 프로젝트 운영 가이드. 폴더 구조, book_plan.md 작성법, 조각글 수집, 문체 참고, 진척 기록, 합본 출력.",
+      "keywords": [
+        "출판",
+        "책",
+        "원고",
+        "글쓰기",
+        "집필",
+        "publishing",
+        "book",
+        "manuscript",
+        "출판사",
+        "챕터",
+        "조각글",
+        "문체",
+        "원고관리",
+        "book_plan",
+        "draft"
+      ],
+      "file": "book_publishing.md"
     }
   ]
 }

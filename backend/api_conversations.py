@@ -3,7 +3,6 @@ api_conversations.py - 대화 관련 API
 IndieBiz OS Core
 """
 
-import json
 
 from fastapi import APIRouter, HTTPException
 
@@ -60,7 +59,7 @@ async def get_messages(project_id: str, agent_id: int, limit: int = 50, offset: 
         with db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, from_agent_id, to_agent_id, content, message_time, tool_calls
+                SELECT id, from_agent_id, to_agent_id, content, message_time
                 FROM messages
                 WHERE from_agent_id = ? OR to_agent_id = ?
                 ORDER BY message_time DESC
@@ -74,8 +73,7 @@ async def get_messages(project_id: str, agent_id: int, limit: int = 50, offset: 
                     "from_agent_id": row[1],
                     "to_agent_id": row[2],
                     "content": row[3],
-                    "timestamp": row[4],
-                    "tool_calls": json.loads(row[5]) if row[5] else None
+                    "timestamp": row[4]
                 })
 
         return {"messages": messages}
@@ -183,7 +181,7 @@ async def get_messages_between(project_id: str, agent1_id: int, agent2_id: int, 
         with db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, from_agent_id, to_agent_id, content, message_time, tool_calls
+                SELECT id, from_agent_id, to_agent_id, content, message_time
                 FROM messages
                 WHERE (from_agent_id = ? AND to_agent_id = ?)
                    OR (from_agent_id = ? AND to_agent_id = ?)
@@ -198,8 +196,7 @@ async def get_messages_between(project_id: str, agent1_id: int, agent2_id: int, 
                     "from_agent_id": row[1],
                     "to_agent_id": row[2],
                     "content": row[3],
-                    "timestamp": row[4],
-                    "tool_calls": json.loads(row[5]) if row[5] else None
+                    "timestamp": row[4]
                 })
 
         return {"messages": messages}

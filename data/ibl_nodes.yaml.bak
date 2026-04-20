@@ -837,7 +837,7 @@ nodes:
         - summarize
         target_description: 유튜브 URL
         router: handler
-        tool: summarize_youtube
+        tool: summarize_video
         implementation: 자막 추출 + 시스템 AI 모델로 요약 + HTML 보고서 생성 + 브라우저 자동 열기. summary_length
           파라미터로 요약 길이 지정 가능.
         target_key: url
@@ -980,18 +980,6 @@ nodes:
         - 사진
         - 동영상
         - 앨범
-      duplicates:
-        description: 중복 사진/동영상 탐지 (MD5 기반)
-        group: photo
-        category: search
-        router: handler
-        tool: find_duplicates
-        implementation: MD5 해시 기반 중복 파일 탐지 (파일시스템 스캔)
-        target_key: path
-        keywords:
-        - 중복
-        - 사진
-        - 정리
       photo_manager:
         description: Photo Manager GUI 실행
         group: photo
@@ -1078,20 +1066,6 @@ nodes:
         - 블로그
         - 인덱스
         - 재구축
-      search_memory:
-        description: 메모리 통합 검색 (대화 이력 + 심층 메모리)
-        group: memory
-        category: search
-        router: handler
-        tool: memory_search
-        implementation: SQLite FTS + conversations.db 통합 텍스트 검색
-        target_key: query
-        keywords:
-        - 기억
-        - 대화내용
-        - 이전대화
-        - 메모리
-        - 검색
       recent:
         description: 최근 대화 조회
         group: memory
@@ -1116,27 +1090,6 @@ nodes:
         - 에이전트
         - 목록
         - 팀
-      memory_save:
-        description: 심층 메모리에 항목 저장
-        target_description: 저장할 내용
-        router: handler
-        tool: memory_save
-        implementation: SQLite DB에 메모리 항목 저장 (키워드 태깅)
-        target_key: content
-      memory_read:
-        description: 메모리 항목 전체 내용 조회
-        target_description: 메모리 ID
-        router: handler
-        tool: memory_read
-        implementation: SQLite DB에서 메모리 항목 조회
-        target_key: memory_id
-      memory_delete:
-        description: 메모리 항목 삭제
-        target_description: 메모리 ID
-        router: handler
-        tool: memory_delete
-        implementation: SQLite DB에서 메모리 항목 삭제
-        target_key: memory_id
       health_save:
         description: 건강 정보 저장 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 투약, 의료문서를 DB에 기록
         target_description: '저장 유형: 혈압, 혈당, 체중, 증상, 투약, 문서'
@@ -1712,13 +1665,6 @@ nodes:
         router: handler
         tool: cctv_stats
         implementation: 로컬 캐시 기반 CCTV 통계 집계 (전체 수, 센터별 분포)
-      memory_search:
-        description: 심층 메모리에서 키워드 검색
-        target_description: 검색 키워드
-        router: handler
-        tool: memory_search
-        implementation: SQLite FTS + conversations.db 통합 텍스트 검색
-        target_key: query
       storage_summary:
         description: 저장소 사용량 요약
         router: handler
@@ -1779,7 +1725,6 @@ nodes:
     - 수집
     guides:
     - blog/blog_guide.md
-    - memory/memory_guide.md
   limbs:
     actions:
       navigate:
@@ -3813,6 +3758,49 @@ nodes:
         keywords:
         - 설계목록
         - 집설계
+      publish_list:
+        description: 출판 프로젝트(책) 목록 조회
+        group: publishing
+        category: list
+        router: handler
+        tool: publish_list
+        implementation: 출판 프로젝트 폴더 스캔 후 book_registry.yaml 기반 목록 반환
+        keywords:
+        - 출판
+        - 출판프로젝트
+        - 책목록
+        - 원고목록
+        - 출판사
+        - publishing
+        - book_list
+      publish_create:
+        description: 새 출판 프로젝트 생성 (제목 필수)
+        group: publishing
+        category: create
+        router: handler
+        tool: publish_create
+        implementation: 출판 프로젝트 폴더 구조 생성 + book_plan.md + progress.md 초기화
+        target_key: title
+        keywords:
+        - 출판프로젝트생성
+        - 책만들기
+        - 새책
+        - 원고시작
+        - publishing_create
+      publish_status:
+        description: 출판 프로젝트 상세 상태 조회 (챕터 진행, 조각글, 진척 기록)
+        group: publishing
+        category: get
+        router: handler
+        tool: publish_status
+        implementation: book_registry.yaml + 챕터/조각글 폴더 스캔 + progress.md 요약
+        target_key: book_id
+        keywords:
+        - 출판상태
+        - 책진행
+        - 원고상태
+        - 출판프로젝트상태
+        - publishing_status
     description: '작업장: 콘텐츠 생성 및 변환 — 신문, 슬라이드, 영상, 차트, 음악, 웹사이트, 디자인'
     tags:
     - 생성

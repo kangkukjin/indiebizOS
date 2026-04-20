@@ -61,7 +61,6 @@ class ConversationDB:
                     to_agent_id INTEGER,
                     content TEXT,
                     message_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    tool_calls TEXT,
                     contact_type TEXT DEFAULT 'gui',
                     FOREIGN KEY (from_agent_id) REFERENCES agents(id),
                     FOREIGN KEY (to_agent_id) REFERENCES agents(id)
@@ -73,6 +72,12 @@ class ConversationDB:
                 cursor.execute("ALTER TABLE messages ADD COLUMN images TEXT")
             except sqlite3.OperationalError:
                 pass  # 이미 존재
+
+            # 미사용 tool_calls 컬럼 정리 (dead column — 어떤 호출부도 값을 전달하지 않았음)
+            try:
+                cursor.execute("ALTER TABLE messages DROP COLUMN tool_calls")
+            except sqlite3.OperationalError:
+                pass  # 이미 없음
 
             # 태스크 테이블 (위임 체인 지원)
             cursor.execute("""
@@ -346,14 +351,14 @@ class ConversationDB:
         return images if images else None
 
     def save_message(self, from_agent_id: int, to_agent_id: int, content: str,
-                     images: list = None, tool_calls: str = None, contact_type: str = 'gui') -> int:
+                     images: list = None, contact_type: str = 'gui') -> int:
         """메시지 저장 (이미지 포함 가능)"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO messages (from_agent_id, to_agent_id, content, tool_calls, contact_type)
-                VALUES (?, ?, ?, ?, ?)
-            """, (from_agent_id, to_agent_id, content, tool_calls, contact_type))
+                INSERT INTO messages (from_agent_id, to_agent_id, content, contact_type)
+                VALUES (?, ?, ?, ?)
+            """, (from_agent_id, to_agent_id, content, contact_type))
             conn.commit()
             message_id = cursor.lastrowid
 
@@ -370,14 +375,14 @@ class ConversationDB:
             return message_id
 
     def save_message_undelivered(self, from_agent_id: int, to_agent_id: int, content: str,
-                                 tool_calls: str = None, contact_type: str = 'gui') -> int:
+                                 contact_type: str = 'gui') -> int:
         """미전달 메시지 저장 (WS 타임아웃 시 워커 스레드에서 호출)"""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO messages (from_agent_id, to_agent_id, content, tool_calls, contact_type, delivered)
-                VALUES (?, ?, ?, ?, ?, 0)
-            """, (from_agent_id, to_agent_id, content, tool_calls, contact_type))
+                INSERT INTO messages (from_agent_id, to_agent_id, content, contact_type, delivered)
+                VALUES (?, ?, ?, ?, 0)
+            """, (from_agent_id, to_agent_id, content, contact_type))
             conn.commit()
             return cursor.lastrowid
 
@@ -418,7 +423,7 @@ class ConversationDB:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, from_agent_id, to_agent_id, content, message_time, tool_calls
+                SELECT id, from_agent_id, to_agent_id, content, message_time
                 FROM messages
                 WHERE from_agent_id = ? OR to_agent_id = ?
                 ORDER BY message_time DESC
@@ -430,8 +435,7 @@ class ConversationDB:
                 "from_agent_id": row[1],
                 "to_agent_id": row[2],
                 "content": row[3],
-                "timestamp": row[4],
-                "tool_calls": row[5]
+                "timestamp": row[4]
             } for row in cursor.fetchall()]
 
     def get_history_for_ai(self, agent_id: int, user_id: int = 1, limit: int = None) -> list:

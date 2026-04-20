@@ -186,6 +186,20 @@ data/training/
 
 학습 스크립트(`ibl_embedding_trainer.py`)는 `data/training/*.json`을 전부 읽으므로, 증류 데이터가 쌓이면 재학습 시 자동 포함된다.
 
+### 재학습 (Re-training)
+
+재학습은 증류 데이터가 충분히 쌓였을 때 수동으로 실행한다.
+
+```bash
+cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend
+python ibl_embedding_trainer.py
+```
+
+**핵심 원칙:**
+- **항상 원본 모델에서 시작**: 매번 범용 모델(`ko-sroberta-multitask`)에서 처음부터 fine-tuning. 기존 학습 모델에 이어서 학습하지 않음 (catastrophic forgetting 방지)
+- **MPS 가속**: Apple Silicon GPU(`device="mps"`)로 학습 (CPU 대비 2~4배 속도)
+- **액션별 데이터 밸런싱**: 자주 쓰는 액션의 증류 데이터가 편중 축적되는 문제를 방지. 학습 시 액션별 상한(기본 20건)을 두고, 초과분은 오래된 데이터부터 제거하여 최신 데이터 우선 유지
+
 ### 학습의 핵심 결정
 
 **코드 정규화**: IBL 코드에서 파라미터를 제거하고 액션 패턴만으로 학습한다.
@@ -265,4 +279,4 @@ ibl_examples_fts (intent, ibl_code)
 
 ---
 
-*마지막 업데이트: 2026-04-03*
+*마지막 업데이트: 2026-04-06*

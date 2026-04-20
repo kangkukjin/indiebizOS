@@ -14,7 +14,7 @@ import re
 import sys
 import sqlite3
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from runtime_utils import get_base_path
@@ -311,3 +311,120 @@ def get_episode_summaries(limit: int = 50):
         return [dict(r) for r in rows]
     except Exception:
         return []
+
+
+def get_cognitive_trends(days: int = 7) -> dict:
+    """최근 N일 vs 이전 N일 인지 품질 추세 비교 (순수 SQL, AI 비용 0)
+
+    Returns:
+        {
+            "period": {"recent_days": 7, "compare_days": 7},
+            "recent": { episode_count, avg_hippocampus_score, execute_ratio, ... },
+            "previous": { ... },
+            "trends": { hippocampus, speed, efficiency }
+        }
+    """
+    now = datetime.now()
+    recent_start = (now - timedelta(days=days)).isoformat()
+    previous_start = (now - timedelta(days=days * 2)).isoformat()
+    recent_end = now.isoformat()
+    previous_end = recent_start
+
+    def _aggregate(conn, start, end):
+        row = conn.execute("""
+            SELECT
+                COUNT(*) as cnt,
+                AVG(hippocampus_score) as avg_hippo,
+                AVG(execution_rounds) as avg_rounds,
+                AVG(total_ms) as avg_ms
+            FROM episode_summary
+            WHERE started_at >= ? AND started_at < ?
+        """, (start, end)).fetchone()
+
+        # EXECUTE 비율
+        unc_row = conn.execute("""
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN unconscious_decision = 'EXECUTE' THEN 1 ELSE 0 END) as exec_count
+            FROM episode_summary
+            WHERE started_at >= ? AND started_at < ?
+              AND unconscious_decision IS NOT NULL
+        """, (start, end)).fetchone()
+
+        # 평가 달성률
+        eval_row = conn.execute("""
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN evaluation_result = 'ACHIEVED' THEN 1 ELSE 0 END) as achieved
+            FROM episode_summary
+            WHERE started_at >= ? AND started_at < ?
+              AND evaluation_result IS NOT NULL
+        """, (start, end)).fetchone()
+
+        cnt = row["cnt"] or 0
+        unc_total = unc_row["total"] or 0
+        eval_total = eval_row["total"] or 0
+
+        return {
+            "episode_count": cnt,
+            "avg_hippocampus_score": round(row["avg_hippo"], 3) if row["avg_hippo"] else None,
+            "execute_ratio": round(unc_row["exec_count"] / unc_total, 3) if unc_total > 0 else None,
+            "avg_execution_rounds": round(row["avg_rounds"], 2) if row["avg_rounds"] else None,
+            "avg_total_ms": round(row["avg_ms"]) if row["avg_ms"] else None,
+            "evaluation_achieved_ratio": round(eval_row["achieved"] / eval_total, 3) if eval_total > 0 else None,
+        }
+
+    MIN_DATA = 3  # 추세 판정에 필요한 최소 에피소드 수
+
+    def _judge_trend(recent_val, previous_val, higher_is_better=True, threshold=0.10):
+        """두 값 비교 → improving/stable/declining/insufficient_data"""
+        if recent_val is None or previous_val is None:
+            return "insufficient_data"
+        if previous_val == 0:
+            return "stable" if recent_val == 0 else "improving"
+        ratio = (recent_val - previous_val) / abs(previous_val)
+        if higher_is_better:
+            if ratio > threshold:
+                return "improving"
+            elif ratio < -threshold:
+                return "declining"
+        else:
+            if ratio < -threshold:
+                return "improving"
+            elif ratio > threshold:
+                return "declining"
+        return "stable"
+
+    try:
+        conn = _get_db()
+        recent = _aggregate(conn, recent_start, recent_end)
+        previous = _aggregate(conn, previous_start, previous_end)
+        conn.close()
+    except Exception:
+        return {
+            "period": {"recent_days": days, "compare_days": days},
+            "recent": {"episode_count": 0},
+            "previous": {"episode_count": 0},
+            "trends": {},
+        }
+
+    # 데이터 부족 시 추세 판정 스킵
+    if recent["episode_count"] < MIN_DATA or previous["episode_count"] < MIN_DATA:
+        trends = {
+            "hippocampus": "insufficient_data",
+            "speed": "insufficient_data",
+            "efficiency": "insufficient_data",
+        }
+    else:
+        trends = {
+            "hippocampus": _judge_trend(recent["avg_hippocampus_score"], previous["avg_hippocampus_score"], higher_is_better=True),
+            "speed": _judge_trend(recent["avg_total_ms"], previous["avg_total_ms"], higher_is_better=False),
+            "efficiency": _judge_trend(recent["avg_execution_rounds"], previous["avg_execution_rounds"], higher_is_better=False),
+        }
+
+    return {
+        "period": {"recent_days": days, "compare_days": days},
+        "recent": recent,
+        "previous": previous,
+        "trends": trends,
+    }

@@ -415,6 +415,13 @@ class AgentCommunicationMixin:
                     except Exception as distill_err:
                         self._log(f"[경험증류] 오류 (무시): {distill_err}")
 
+                # 심층 메모리 증류: 대화에서 기억할 정보 자동 저장
+                if response:
+                    try:
+                        self._distill_deep_memory(content, response)
+                    except Exception as mem_err:
+                        self._log(f"[심층메모리] 오류 (무시): {mem_err}")
+
             # 컨텍스트 정리
             clear_current_task_id()
             clear_called_agent()

@@ -108,7 +108,8 @@ class BaseProvider(ABC):
         tools: List[Dict] = None,
         project_path: str = ".",
         agent_name: str = "에이전트",
-        agent_id: str = None
+        agent_id: str = None,
+        thinking_budget: int = 0
     ):
         self.api_key = api_key
         self.model = model
@@ -118,6 +119,9 @@ class BaseProvider(ABC):
         self.agent_name = agent_name
         self.agent_id = agent_id
         self._client = None
+
+        # Extended Thinking: 0이면 비활성, 양수면 해당 토큰 수만큼 thinking 예산
+        self.thinking_budget = thinking_budget
 
         # 성능 메트릭
         self.metrics = ProviderMetrics()

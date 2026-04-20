@@ -1,46 +1,5 @@
+# memory 패키지의 IBL 액션은 모두 제거됨 (2026-04-06)
+# 심층메모리는 자동 시스템(연상기억 검색 + 경험 증류)으로 동작하며,
+# memory_db.py는 agent_cognitive.py에서 직접 import하여 사용.
 node: self
-actions:
-  search_memory:
-    description: 메모리 통합 검색 (대화 이력 + 심층 메모리)
-    group: memory
-    category: search
-    router: handler
-    tool: memory_search
-    implementation: SQLite FTS + conversations.db 통합 텍스트 검색
-    target_key: query
-    keywords:
-    - 기억
-    - 대화내용
-    - 이전대화
-    - 메모리
-    - 검색
-  memory_save:
-    description: 심층 메모리에 항목 저장
-    target_description: 저장할 내용
-    router: handler
-    tool: memory_save
-    implementation: SQLite DB에 메모리 항목 저장 (키워드 태깅)
-    target_key: content
-  memory_read:
-    description: 메모리 항목 전체 내용 조회
-    target_description: 메모리 ID
-    router: handler
-    tool: memory_read
-    implementation: SQLite DB에서 메모리 항목 조회
-    target_key: memory_id
-  memory_delete:
-    description: 메모리 항목 삭제
-    target_description: 메모리 ID
-    router: handler
-    tool: memory_delete
-    implementation: SQLite DB에서 메모리 항목 삭제
-    target_key: memory_id
-  memory_search:
-    description: 심층 메모리에서 키워드 검색
-    target_description: 검색 키워드
-    router: handler
-    tool: memory_search
-    implementation: SQLite FTS + conversations.db 통합 텍스트 검색
-    target_key: query
-guides:
-- memory/memory_guide.md
+actions: {}

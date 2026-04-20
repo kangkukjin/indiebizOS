@@ -159,8 +159,8 @@ export function DraggableIcon({
   return (
     <div
       ref={setRef}
-      className={`absolute flex flex-col items-center gap-1 p-2 rounded-xl cursor-pointer transition-all no-select ${
-        finalIsSelected ? 'bg-[#E5DFD5]' : 'hover:bg-[#EAE4DA]'
+      className={`group absolute flex flex-col items-center gap-1.5 p-2 rounded-xl cursor-pointer transition-all no-select ${
+        finalIsSelected ? 'bg-[#E5DFD5]/60' : 'hover:bg-[#EAE4DA]/70'
       } ${isDragging ? 'z-50' : ''} ${isDragging && trashHover ? 'opacity-50 scale-90' : ''} ${
         isFolderHovered ? 'bg-[#BBF7D0] scale-110' : ''
       }`}
@@ -174,16 +174,18 @@ export function DraggableIcon({
       onContextMenu={handleRightClick}
     >
       <div
-        className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl shadow-sm transition-all ${
+        className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.06)] ${
           isSwitch
-            ? 'bg-[#D97706] text-white'
+            ? 'bg-gradient-to-br from-[#F59E0B] to-[#D97706] text-white'
             : isFolder
-              ? 'bg-[#F59E0B] text-white'
+              ? 'bg-gradient-to-br from-[#FBBF24] to-[#F59E0B] text-white'
               : isMultiChat
-                ? 'bg-[#8B5CF6] text-white'
-                : 'bg-[#3B82F6] text-white'
-        } ${finalIsSelected ? 'ring-2 ring-[#D97706] ring-offset-2 ring-offset-[#F5F1EB]' : ''} ${
-          isFolderHovered ? 'ring-4 ring-[#22C55E] ring-offset-2 ring-offset-[#F5F1EB]' : ''
+                ? 'bg-gradient-to-br from-[#A78BFA] to-[#8B5CF6] text-white'
+                : 'bg-gradient-to-br from-[#60A5FA] to-[#3B82F6] text-white'
+        } ${isDragging ? '' : 'group-hover:scale-[1.04] group-hover:shadow-[0_2px_5px_rgba(0,0,0,0.1),0_8px_20px_rgba(0,0,0,0.1)]'} ${
+          finalIsSelected ? 'ring-2 ring-[#D97706] ring-offset-2 ring-offset-[#F5F1EB]' : ''
+        } ${
+          isFolderHovered ? 'ring-4 ring-[#22C55E] ring-offset-2 ring-offset-[#F5F1EB] scale-110' : ''
         }`}
       >
         {typeof icon === 'string' ? icon : icon}
@@ -198,10 +200,12 @@ export function DraggableIcon({
           onBlur={handleRenameBlur}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
-          className="text-xs text-center w-20 px-1 py-0.5 bg-white border border-blue-500 rounded outline-none text-[#4A4035] font-medium"
+          className="text-xs text-center w-24 px-1.5 py-0.5 bg-white border border-[#D97706] rounded-md outline-none text-[#4A4035] font-medium shadow-sm"
         />
       ) : (
-        <span className="text-xs text-center max-w-16 truncate text-[#4A4035] font-medium">{label}</span>
+        <span className={`text-[11px] leading-tight text-center max-w-[5.5rem] px-1 py-0.5 rounded text-[#4A4035] font-medium ${
+          finalIsSelected ? 'bg-[#D97706] text-white' : ''
+        }`} style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{label}</span>
       )}
     </div>
   );

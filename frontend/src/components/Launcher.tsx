@@ -31,7 +31,8 @@ import type {
   RenamingItem,
   TrashItems,
   SystemAISettings,
-  UnconsciousAISettings,
+  LightweightAISettings,
+  MidtierAISettings,
 } from './launcher-components';
 
 export function Launcher() {
@@ -114,13 +115,20 @@ export function Launcher() {
     model: 'gemini-2.0-flash-exp',
     apiKey: '',
   });
-  const [unconsciousAiSettings, setUnconsciousAiSettings] = useState<UnconsciousAISettings>({
+  const [lightweightAiSettings, setLightweightAiSettings] = useState<LightweightAISettings>({
     enabled: true,
     provider: 'google',
-    model: 'gemini-2.0-flash-lite',
+    model: 'gemini-2.5-flash-lite',
     apiKey: '',
   });
-  const [showUnconsciousApiKey, setShowUnconsciousApiKey] = useState(false);
+  const [showLightweightApiKey, setShowLightweightApiKey] = useState(false);
+  const [midtierAiSettings, setMidtierAiSettings] = useState<MidtierAISettings>({
+    enabled: true,
+    provider: 'google',
+    model: 'gemini-2.5-flash',
+    apiKey: '',
+  });
+  const [showMidtierApiKey, setShowMidtierApiKey] = useState(false);
 
   const trashRef = useRef<HTMLDivElement>(null);
   const desktopRef = useRef<HTMLDivElement>(null);
@@ -395,16 +403,26 @@ export function Launcher() {
         model: config.model ?? 'gemini-2.0-flash-exp',
         apiKey: config.apiKey ?? '',
       });
-      // 무의식 AI 설정도 로드
+      // 경량 AI 설정 로드
       try {
-        const uConfig = await api.getUnconsciousAI();
-        setUnconsciousAiSettings({
-          enabled: uConfig.enabled ?? true,
-          provider: uConfig.provider ?? 'google',
-          model: uConfig.model ?? 'gemini-2.0-flash-lite',
-          apiKey: uConfig.apiKey ?? '',
+        const lConfig = await api.getLightweightAI();
+        setLightweightAiSettings({
+          enabled: lConfig.enabled ?? true,
+          provider: lConfig.provider ?? 'google',
+          model: lConfig.model ?? 'gemini-2.5-flash-lite',
+          apiKey: lConfig.apiKey ?? '',
         });
-      } catch { /* 무의식 AI 설정 없으면 기본값 유지 */ }
+      } catch { /* 경량 AI 설정 없으면 기본값 유지 */ }
+      // 중급 AI 설정 로드
+      try {
+        const mConfig = await api.getMidtierAI();
+        setMidtierAiSettings({
+          enabled: mConfig.enabled ?? true,
+          provider: mConfig.provider ?? 'google',
+          model: mConfig.model ?? 'gemini-2.5-flash',
+          apiKey: mConfig.apiKey ?? '',
+        });
+      } catch { /* 중급 AI 설정 없으면 기본값 유지 */ }
       setShowSettingsDialog(true);
     } catch (error) {
       console.error('Failed to load system AI settings:', error);
@@ -415,7 +433,8 @@ export function Launcher() {
   const handleSaveSystemAi = async () => {
     try {
       await api.updateSystemAI(systemAiSettings);
-      await api.updateUnconsciousAI(unconsciousAiSettings);
+      await api.updateLightweightAI(lightweightAiSettings);
+      await api.updateMidtierAI(midtierAiSettings);
       setShowSettingsDialog(false);
     } catch (error) {
       console.error('Failed to save settings:', error);
@@ -858,99 +877,121 @@ export function Launcher() {
   return (
     <div className="h-full flex flex-col bg-[#F5F1EB]">
       {/* 상단 툴바 */}
-      <div className="h-10 flex items-center justify-end px-4 drag bg-[#F5F1EB] border-b border-[#E5DFD5]">
-        <div className="flex items-center gap-1 no-drag">
-          <button
-            onClick={() => {
-              window.electron?.openExternal('http://127.0.0.1:8765/xray/app');
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="System X-Ray"
-          >
-            <ScanLine size={16} />
-            <span className="text-sm">X-Ray</span>
-          </button>
-          <button
-            onClick={() => {
-              if (window.electron?.openIndieNetWindow) {
-                window.electron.openIndieNetWindow();
-              } else {
-                console.log('IndieNet: Electron API 없음');
-              }
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="IndieNet 커뮤니티"
-          >
-            <Globe size={16} />
-            <span className="text-sm">IndieNet</span>
-          </button>
-          <button
-            onClick={() => {
-              if (window.electron?.openBusinessWindow) {
-                window.electron.openBusinessWindow();
-              } else {
-                console.log('Business: Electron API 없음');
-              }
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="비즈니스 관리"
-          >
-            <Building2 size={16} />
-            <span className="text-sm">비즈니스</span>
-          </button>
-          <button
-            onClick={() => setShowContactsDialog(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="빠른 연락처"
-          >
-            <Contact size={16} />
-            <span className="text-sm">빠른 연락처</span>
-          </button>
-          <button
-            onClick={() => { window.electron?.openSystemAIWindow?.(); }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F] bg-gradient-to-r from-amber-50 to-orange-50"
-            title="시스템 AI와 대화"
-          >
-            <Bot size={16} className="text-amber-600" />
-            <span className="text-sm font-medium text-amber-700">시스템 AI</span>
-          </button>
-          <button
-            onClick={handleOpenScheduler}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="예약작업"
-          >
-            <Clock size={16} />
-            <span className="text-sm">예약작업</span>
-          </button>
-          <button
-            onClick={handleOpenMyProfile}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
-            title="시스템 메모"
-          >
-            <User size={16} />
-            <span className="text-sm">시스템 메모</span>
-          </button>
+      <div className="h-11 flex items-center justify-end px-4 drag bg-gradient-to-b from-[#F7F3ED] to-[#F5F1EB] border-b border-[#E5DFD5]">
+        <div className="flex items-center gap-1.5 no-drag">
+          {/* 그룹 A: 세계 / 감각 */}
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => {
+                window.electron?.openExternal('http://127.0.0.1:8765/xray/app');
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
+              title="System X-Ray - 시스템 상태를 전체적으로 보는 대시보드"
+            >
+              <ScanLine size={15} />
+              <span className="text-[13px]">X-Ray</span>
+            </button>
+            <button
+              onClick={() => {
+                if (window.electron?.openIndieNetWindow) {
+                  window.electron.openIndieNetWindow();
+                } else {
+                  console.log('IndieNet: Electron API 없음');
+                }
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
+              title="IndieNet 커뮤니티"
+            >
+              <Globe size={15} />
+              <span className="text-[13px]">IndieNet</span>
+            </button>
+            <button
+              onClick={() => {
+                if (window.electron?.openBusinessWindow) {
+                  window.electron.openBusinessWindow();
+                } else {
+                  console.log('Business: Electron API 없음');
+                }
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
+              title="비즈니스 관리"
+            >
+              <Building2 size={15} />
+              <span className="text-[13px]">비즈니스</span>
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-[#D8D1C3] mx-1" aria-hidden="true" />
+
+          {/* 그룹 B: 소통 */}
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => setShowContactsDialog(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
+              title="빠른 연락처"
+            >
+              <Contact size={15} />
+              <span className="text-[13px]">연락처</span>
+            </button>
+            <button
+              onClick={() => { window.electron?.openSystemAIWindow?.(); }}
+              className="ml-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm hover:shadow-md hover:from-amber-600 hover:to-amber-700 active:translate-y-[0.5px] transition-all"
+              title="시스템 AI와 대화"
+            >
+              <Bot size={15} />
+              <span className="text-[13px] font-semibold">시스템 AI</span>
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-[#D8D1C3] mx-1" aria-hidden="true" />
+
+          {/* 그룹 C: 관리 */}
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={handleOpenScheduler}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
+              title="예약작업"
+            >
+              <Clock size={15} />
+              <span className="text-[13px]">예약작업</span>
+            </button>
+            <button
+              onClick={handleOpenMyProfile}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
+              title="시스템 메모"
+            >
+              <User size={15} />
+              <span className="text-[13px]">메모</span>
+            </button>
+          </div>
+
+          <div className="w-px h-5 bg-[#D8D1C3] mx-1" aria-hidden="true" />
+
           {/* 메인 메뉴 (드롭다운) */}
           <div className="relative" ref={mainMenuRef}>
             <button
               onClick={() => setShowMainMenu(!showMainMenu)}
-              className="flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-[#EAE4DA] transition-colors text-[#6B5B4F]"
+              className={`flex items-center gap-1 px-1.5 py-1 rounded-lg transition-all text-[#6B5B4F] ${
+                showMainMenu ? 'bg-[#EAE4DA]' : 'hover:bg-[#EAE4DA]'
+              }`}
               title="메뉴"
+              aria-expanded={showMainMenu}
+              aria-haspopup="true"
             >
-              <img src={logoImage} alt="IndieBiz" className="w-12 h-12 object-contain" style={{ mixBlendMode: 'multiply' }} />
+              <img src={logoImage} alt="IndieBiz" className="w-9 h-9 object-contain" style={{ mixBlendMode: 'multiply' }} />
               <ChevronDown size={12} className={`transition-transform ${showMainMenu ? 'rotate-180' : ''}`} />
             </button>
 
             {showMainMenu && (
-              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[180px] z-50">
+              <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-stone-200 py-1.5 min-w-[200px] z-50 overflow-hidden">
                 <button
                   onClick={() => {
                     setShowToolboxDialog(true);
                     setShowMainMenu(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
                 >
-                  <Package size={16} />
+                  <Package size={16} className="text-amber-600" />
                   <span className="text-sm">도구 상점</span>
                 </button>
                 <button
@@ -958,9 +999,9 @@ export function Launcher() {
                     handleOpenSettings();
                     setShowMainMenu(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
                 >
-                  <Settings size={16} />
+                  <Settings size={16} className="text-stone-500" />
                   <span className="text-sm">설정</span>
                 </button>
                 <button
@@ -968,20 +1009,20 @@ export function Launcher() {
                     window.electron?.openLogWindow?.();
                     setShowMainMenu(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
                 >
-                  <ScrollText size={16} />
+                  <ScrollText size={16} className="text-stone-500" />
                   <span className="text-sm">로그 보기</span>
                 </button>
-                <div className="border-t border-gray-200 my-1" />
+                <div className="border-t border-stone-100 my-1" />
                 <button
                   onClick={() => {
                     setShowGuideDialog(true);
                     setShowMainMenu(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
                 >
-                  <HelpCircle size={16} />
+                  <HelpCircle size={16} className="text-stone-500" />
                   <span className="text-sm">시작 가이드</span>
                 </button>
                 <button
@@ -989,9 +1030,9 @@ export function Launcher() {
                     setShowUserManualDialog(true);
                     setShowMainMenu(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
                 >
-                  <BookOpen size={16} />
+                  <BookOpen size={16} className="text-stone-500" />
                   <span className="text-sm">사용자 메뉴얼</span>
                 </button>
                 <button
@@ -999,9 +1040,9 @@ export function Launcher() {
                     alert(`IndieBiz OS\n버전: 1.0.0\n\n개인과 소규모 비즈니스를 위한 AI 운영체제`);
                     setShowMainMenu(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2 hover:bg-[#FEF3C7] text-left text-[#6B5B4F]"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
                 >
-                  <Info size={16} />
+                  <Info size={16} className="text-stone-500" />
                   <span className="text-sm">버전 정보</span>
                 </button>
               </div>
@@ -1261,10 +1302,14 @@ export function Launcher() {
         showApiKey={showApiKey}
         onSettingsChange={setSystemAiSettings}
         onToggleApiKey={() => setShowApiKey(!showApiKey)}
-        unconsciousSettings={unconsciousAiSettings}
-        showUnconsciousApiKey={showUnconsciousApiKey}
-        onUnconsciousSettingsChange={setUnconsciousAiSettings}
-        onToggleUnconsciousApiKey={() => setShowUnconsciousApiKey(!showUnconsciousApiKey)}
+        lightweightSettings={lightweightAiSettings}
+        showLightweightApiKey={showLightweightApiKey}
+        onLightweightSettingsChange={setLightweightAiSettings}
+        onToggleLightweightApiKey={() => setShowLightweightApiKey(!showLightweightApiKey)}
+        midtierSettings={midtierAiSettings}
+        showMidtierApiKey={showMidtierApiKey}
+        onMidtierSettingsChange={setMidtierAiSettings}
+        onToggleMidtierApiKey={() => setShowMidtierApiKey(!showMidtierApiKey)}
         onSave={handleSaveSystemAi}
         onClose={() => setShowSettingsDialog(false)}
       />

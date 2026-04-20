@@ -98,10 +98,10 @@ export function DraggableTrash({
   return (
     <div
       ref={setRef}
-      className={`absolute flex flex-col items-center gap-2 p-3 rounded-xl transition-all no-select ${
+      className={`group absolute flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all no-select ${
         trashHover
           ? 'bg-[#FECACA] scale-110'
-          : 'hover:bg-[#EAE4DA]'
+          : 'hover:bg-[#EAE4DA]/70'
       } ${isDragging ? 'z-50' : ''}`}
       style={{
         ...style,
@@ -112,20 +112,20 @@ export function DraggableTrash({
       onContextMenu={onContextMenu}
     >
       <div
-        className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all shadow-sm relative ${
+        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all relative shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.06)] ${
           trashHover
-            ? 'bg-[#EF4444] text-white'
-            : 'bg-[#E5DFD5] text-[#6B5B4F]'
+            ? 'bg-gradient-to-br from-[#EF4444] to-[#DC2626] text-white'
+            : 'bg-gradient-to-br from-[#E5DFD5] to-[#D8D1C3] text-[#6B5B4F] group-hover:from-[#D8D1C3] group-hover:to-[#C8C0B0]'
         }`}
       >
-        <Trash2 size={32} className={trashHover ? 'animate-pulse' : ''} />
+        <Trash2 size={28} className={trashHover ? 'animate-pulse' : ''} />
         {trashCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
+          <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center font-bold shadow-sm ring-2 ring-[#F5F1EB]">
             {trashCount > 9 ? '9+' : trashCount}
           </span>
         )}
       </div>
-      <span className="text-xs text-center text-[#6B5B4F]">휴지통</span>
+      <span className="text-[11px] text-center text-[#6B5B4F] font-medium">휴지통</span>
     </div>
   );
 }

@@ -222,8 +222,8 @@ def _parse_goal_block(code: str) -> Optional[Dict]:
 
     goal_name = m.group(1)
 
-    # 중괄호 내용 추출 (첫 번째 { 부터)
-    brace_start = code.index('{', m.start())
+    # 정규식이 매칭한 '{' 위치 사용 (goal_name 안의 '{'에 속지 않도록)
+    brace_start = m.end() - 1
     body, end_pos = _extract_bracket_raw(code, brace_start, '{', '}')
     if body is None:
         raise IBLSyntaxError(f"Goal block 중괄호가 닫히지 않았습니다: {goal_name}")
@@ -275,7 +275,8 @@ def _parse_if_else(code: str) -> Optional[Dict]:
 
     # 첫 번째 if
     condition_text = m.group(1).strip()
-    brace_start = code.index('{', m.start())
+    # 정규식이 매칭한 '{' 위치 사용 (condition 안의 '{'에 속지 않도록)
+    brace_start = m.end() - 1
     body, end_pos = _extract_bracket_raw(code, brace_start, '{', '}')
     if body is None:
         raise IBLSyntaxError(f"if 블록 중괄호가 닫히지 않았습니다.")
@@ -337,8 +338,8 @@ def _parse_case(code: str) -> Optional[Dict]:
 
     source = m.group(1).strip()
 
-    # 전체 body 추출
-    brace_start = code.index('{', m.start())
+    # 전체 body 추출 — 정규식이 매칭한 '{' 위치 사용 (source 안의 '{'에 속지 않도록)
+    brace_start = m.end() - 1
     body, end_pos = _extract_bracket_raw(code, brace_start, '{', '}')
     if body is None:
         raise IBLSyntaxError("case 블록 중괄호가 닫히지 않았습니다.")
@@ -907,17 +908,29 @@ def _parse_step(text: str) -> Optional[Dict]:
 
 def _parse_params(text: str) -> dict:
     """
-    파라미터 블록 파싱
+    파라미터 블록 파싱.
 
-    { "key": "value", "num": 42 } → dict
+    JSON5(unquoted keys, single/double quotes, trailing commas, comments 등 허용)를
+    우선 시도하고, 실패하면 표준 JSON → relaxed_params 순으로 폴백.
 
-    JSON 호환 형식을 우선 시도,
-    실패하면 간단한 key: value 형식으로 파싱
+    JSON5는 사람이 손으로 쓰는 JSON-like 형식의 표준이고, 우리가 그동안 만들던
+    헬퍼들(_quote_unquoted_keys, replace 변환)이 사실상 JSON5의 부분집합을
+    재발명하는 것이었다. 표준에 위임하면 따옴표 변환·키 quote 같은 미봉책이
+    모두 불필요해진다.
     """
     if not text:
         return {}
 
-    # 1. JSON 직접 파싱 시도
+    # 1. JSON5 시도 — unquoted keys, 양쪽 따옴표, trailing comma 등 모두 처리
+    try:
+        import pyjson5
+        result = pyjson5.loads(text)
+        if isinstance(result, dict):
+            return result
+    except Exception:
+        pass
+
+    # 2. 표준 JSON (JSON5 라이브러리 부재 또는 파싱 실패 시 보험)
     try:
         result = json.loads(text)
         if isinstance(result, dict):
@@ -925,16 +938,7 @@ def _parse_params(text: str) -> dict:
     except json.JSONDecodeError:
         pass
 
-    # 2. 작은따옴표 → 큰따옴표 변환 후 재시도
-    try:
-        converted = text.replace("'", '"')
-        result = json.loads(converted)
-        if isinstance(result, dict):
-            return result
-    except json.JSONDecodeError:
-        pass
-
-    # 3. 간단한 key: value 파싱 (따옴표 없는 키 지원)
+    # 3. 최후 폴백: 간단한 key: value 파싱
     return _parse_relaxed_params(text)
 
 
@@ -1072,15 +1076,15 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
             depth -= 1
             if depth == 0:
                 raw = text[pos:i + 1]
-                # 1. JSON 직접 파싱
+                # 1. JSON5 시도 — 모든 JSON-like 입력의 표준 해석기
+                try:
+                    import pyjson5
+                    return pyjson5.loads(raw), i + 1
+                except Exception:
+                    pass
+                # 2. 표준 JSON (JSON5 부재 시 보험)
                 try:
                     return json.loads(raw), i + 1
-                except (json.JSONDecodeError, ValueError):
-                    pass
-                # 2. 작은따옴표 → 큰따옴표 변환 후 재시도
-                try:
-                    converted = raw.replace("'", '"')
-                    return json.loads(converted), i + 1
                 except (json.JSONDecodeError, ValueError):
                     pass
                 # 3. 중첩 객체면 재귀적 relaxed 파싱

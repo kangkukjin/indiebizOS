@@ -157,11 +157,18 @@ class AgentCognitiveMixin:
             execution_memory=execution_memory,
         )
 
-    def _build_execution_memory(self, user_message: str) -> str:
+    def _build_execution_memory(self, user_message: str) -> tuple:
         """연상기억 생성 — 실행기억(해마) + 관련기억(심층 메모리)
 
         파이프라인의 모든 에이전트(무의식/의식/실행/평가)가 공유하는 통합 기억.
-        사용자 명령 당 1회만 생성.
+        사용자 명령 당 해마 검색은 단 1회. 호출 측은 반환된 top_score를 그대로 사용하여
+        Reflex 분기, 경험 증류 판정 등에서 추가 검색을 피한다.
+
+        Returns:
+            (xml: str, top_score: float, top_code: str)
+            - xml: <execution_memory> + <related_memory> 결합된 문자열 (없으면 "")
+            - top_score: 해마 최고 점수 (없으면 0.0)
+            - top_code: 해마 최고 점수 항목의 ibl_code (없으면 "")
         """
         try:
             from ibl_usage_rag import build_execution_memory
@@ -170,31 +177,30 @@ class AgentCognitiveMixin:
             if allowed_nodes:
                 from ibl_access import resolve_allowed_nodes
                 allowed_set = resolve_allowed_nodes(allowed_nodes)
-            result = build_execution_memory(user_message, allowed_set)
+            exec_xml, top_score, top_code = build_execution_memory(user_message, allowed_set)
 
             # 심층 메모리에서 관련기억 검색 → 연상기억 합성
             related = self._search_related_memory(user_message)
+            result = exec_xml
             if related:
                 result = (result + "\n" + related) if result else related
 
             if result:
-                has_exec = "execution_memory" in result
-                has_rel = "related_memory" in result
                 parts = []
-                if has_exec:
+                if "execution_memory" in result:
                     parts.append("실행기억")
-                if has_rel:
+                if "related_memory" in result:
                     parts.append("관련기억")
                 print(f"[연상] {'+'.join(parts)}: \"{user_message[:40]}\"")
             else:
                 print(f"[연상] 빈 결과: \"{user_message[:40]}\"")
 
-            return result
+            return (result, top_score, top_code)
         except Exception as e:
             import traceback
             print(f"[연상] 생성 실패: {e}")
             traceback.print_exc()
-            return ""
+            return ("", 0.0, "")
 
     def _search_related_memory(self, user_message: str) -> str:
         """심층 메모리에서 관련기억 검색 (top-3)
@@ -291,7 +297,7 @@ class AgentCognitiveMixin:
             result = agent.process(
                 user_message=user_message,
                 history=history,
-                ibl_node_summary=execution_memory,  # 실행기억으로 대체
+                associative_memory=execution_memory,  # 연상기억(해마+심층메모리) 묶음
                 guide_list=get_guide_list(user_message),
                 world_pulse=get_world_pulse_text(),
                 agent_name=agent_name,
@@ -475,14 +481,13 @@ AI: {ai_response[:500]}"""
         return build_execute_ibl_tool(allowed_nodes=allowed_nodes)
 
     def _build_ibl_tools(self) -> list:
-        """에이전트 도구 구성: IBL + 범용 언어(Python, Node.js, Shell)
+        """에이전트 도구 구성: IBL + 쉘 + 인지 도구
 
-        에이전트는 두 종류의 도구를 가진다:
+        에이전트는 두 종류의 실행 도구를 가진다:
         1. execute_ibl - 인디비즈 고유 기능 (전문 용어/지름길)
-        2. execute_python, execute_node, run_command - 범용 프로그래밍 언어
-
-        IBL은 인디비즈 도메인 특화 언어이고,
-        Python/Node.js/Shell은 복잡한 로직, 데이터 처리, 워크플로우 구성에 사용.
+        2. run_command - 쉘. Python/Node.js 코드는 [self:write]로 파일에 쓴 뒤
+           `run_command`로 실행하는 write→run 패턴을 사용한다.
+           이스케이프 충돌·traceback 손실 문제가 사라진다.
         """
         import json as _json
 
@@ -494,10 +499,8 @@ AI: {ai_response[:500]}"""
         if ibl_tool:
             tools.append(ibl_tool)
 
-        # 2) 범용 언어 도구 (일상 언어)
+        # 2) 쉘 + 인지 도구
         lang_tools = [
-            ("python-exec", "execute_python"),
-            ("nodejs", "execute_node"),
             ("system_essentials", "run_command"),
             # 에이전트 인지 도구 — IBL 경유 불가 (파라미터 구조 불일치)
             ("system_essentials", "todo_write"),
@@ -538,15 +541,16 @@ AI: {ai_response[:500]}"""
             }
         })
 
-        print(f"[AgentRunner] {self.config.get('name')}: IBL + 범용언어 모드 (도구 {len(tools)}개)")
+        print(f"[AgentRunner] {self.config.get('name')}: IBL + 쉘 모드 (도구 {len(tools)}개)")
         return tools
 
     def _get_available_tools(self) -> list:
         """에이전트가 사용할 수 있는 도구 이름 목록 반환
 
-        IBL(도메인 특화) + 범용 프로그래밍 언어 + 가이드 검색
+        IBL(도메인 특화) + 쉘 + 가이드 검색 + 인지 도구.
+        Python/Node.js 코드 실행은 write→run 패턴(`[self:write]` → `run_command`)으로 한다.
         """
-        return ["execute_ibl", "execute_python", "execute_node", "run_command", "read_guide",
+        return ["execute_ibl", "run_command", "read_guide",
                 "todo_write", "ask_user_question", "enter_plan_mode", "exit_plan_mode"]
 
     def augment_with_ibl_references(self, user_message: str) -> str:
@@ -569,110 +573,40 @@ AI: {ai_response[:500]}"""
             return user_message
 
     # ============================================================
-    # Reflex IBL 캐시 — 모델 호출 없이 즉시 EXECUTE 판정
+    # Reflex 임계값 — 단계 0 결과의 top_score가 이 값 이상이면
+    # 무의식(경량 AI) 호출을 건너뛰고 즉시 EXECUTE.
+    # 분기는 호출 측(_process_channel_message)이 책임진다.
     # ============================================================
-
-    # 클래스 레벨 reflex 캐시 (인메모리, 프로세스 수명)
-    _reflex_cache: dict = {}       # {message_hash: (ibl_code, timestamp)}
-    _reflex_cache_ttl: int = 600   # 10분
-    _reflex_max_size: int = 200
-
     REFLEX_SCORE_THRESHOLD = 0.88
 
-    def _try_reflex(self, user_message: str,
-                    allowed_nodes: set = None) -> Optional[str]:
-        """해마에서 고확신 매칭을 찾아 reflex IBL 코드를 반환한다.
-
-        score ≥ 0.88인 용례가 있으면
-        모델 호출 없이 즉시 EXECUTE할 수 있는 IBL 코드를 반환.
-        없으면 None.
-        """
-        import hashlib
-        import time as _time
-
-        msg_hash = hashlib.md5(user_message.encode()).hexdigest()
-
-        # 캐시 히트 확인
-        if msg_hash in self._reflex_cache:
-            code, ts = self._reflex_cache[msg_hash]
-            if _time.time() - ts < self._reflex_cache_ttl:
-                self._log(f"[Reflex] 캐시 히트: {code[:60]}...")
-                return code
-            else:
-                del self._reflex_cache[msg_hash]
-
-        try:
-            from ibl_usage_db import IBLUsageDB
-            db = IBLUsageDB()
-            results = db.search_hybrid(
-                query=user_message, top_k=1, allowed_nodes=allowed_nodes
-            )
-            if not results:
-                return None
-
-            top = results[0]
-            if top.score >= self.REFLEX_SCORE_THRESHOLD:
-                # 캐시에 저장 (LRU: 오래된 것 제거)
-                if len(self._reflex_cache) >= self._reflex_max_size:
-                    oldest_key = min(
-                        self._reflex_cache,
-                        key=lambda k: self._reflex_cache[k][1]
-                    )
-                    del self._reflex_cache[oldest_key]
-                self._reflex_cache[msg_hash] = (top.ibl_code, _time.time())
-                self._log(
-                    f"[Reflex] 히트! score={top.score:.3f} "
-                    f"code={top.ibl_code[:60]}"
-                )
-                return top.ibl_code
-            return None
-
-        except Exception as e:
-            self._log(f"[Reflex] 검색 실패: {e}")
-            return None
-
     def _classify_request(self, user_message: str,
-                          execution_memory: str = "",
-                          allowed_nodes: set = None) -> tuple:
+                          execution_memory: str = "") -> str:
         """사용자 요청을 실행형(EXECUTE) 또는 판단형(THINK)으로 분류한다.
 
-        무의식 에이전트 — 의식 에이전트를 호출하기 전의 반사 신경.
-        실행형은 의식/평가 루프를 타지 않고 바로 실행된다.
-        실행기억이 있으면 관련 액션 정보를 보고 판정할 수 있다.
+        무의식 에이전트 — 경량 AI 호출만 담당. Reflex 판정은
+        호출 측에서 단계 0(_build_execution_memory)의 top_score로 미리 분기한다.
 
         Returns:
-            (request_type: str, reflex_hint: str|None)
-            request_type: "EXECUTE" 또는 "THINK"
-            reflex_hint: reflex 매칭된 IBL 코드 (없으면 None)
+            "EXECUTE" 또는 "THINK"
         """
-        # Phase 1: Reflex 체크 — 고확신 패턴은 모델 호출 없이 즉시 EXECUTE
-        reflex_code = self._try_reflex(user_message, allowed_nodes)
-        if reflex_code:
-            self._log(f"[무의식] Reflex EXECUTE (모델 스킵)")
-            return "EXECUTE", reflex_code
-
-        # Phase 2: 모델 기반 분류 (기존 무의식 에이전트)
         try:
             from consciousness_agent import lightweight_ai_call, get_unconscious_prompt
 
             system_prompt = get_unconscious_prompt()
-            # 실행기억이 있으면 사용자 메시지 앞에 붙여서 무의식이 판정에 활용
             input_message = user_message
             if execution_memory:
                 input_message = f"{execution_memory}\n\n{user_message}"
             response = lightweight_ai_call(input_message, system_prompt=system_prompt)
 
             if response is None:
-                return "THINK", None  # AI 미준비 시 안전하게 판단형으로
+                return "THINK"  # AI 미준비 시 안전하게 판단형으로
 
             result = response.strip().upper()
-            if "EXECUTE" in result:
-                return "EXECUTE", None
-            return "THINK", None
+            return "EXECUTE" if "EXECUTE" in result else "THINK"
 
         except Exception as e:
             self._log(f"[무의식] 분류 실패: {e}")
-            return "THINK", None  # 실패 시 안전하게 판단형으로
+            return "THINK"  # 실패 시 안전하게 판단형으로
 
     # ============================================================
     # Goal 평가 루프 — 의식 에이전트의 달성 기준 기반 자동 평가
@@ -803,7 +737,8 @@ AI: {ai_response[:500]}"""
                 prompt += f"## 세계 상태\n{world_state}\n\n"
 
         if execution_memory:
-            prompt += f"## 실행기억 (사용 가능한 도구 및 사례)\n{execution_memory}\n\n"
+            # <execution_memory>(해마) + <related_memory>(심층메모리) 묶음 — 자식 태그가 self-describing
+            prompt += f"## 연상기억\n{execution_memory}\n\n"
 
         if tool_results_str:
             prompt += f"## 도구 실행 결과\n{tool_results_str}\n\n"

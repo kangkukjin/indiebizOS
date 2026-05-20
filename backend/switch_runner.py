@@ -130,10 +130,8 @@ class SwitchRunner:
             if ibl_tool:
                 tools.append(ibl_tool)
 
-            # 2) 범용 언어 도구
+            # 2) 쉘 도구 (Python/Node.js는 [self:write]+run_command의 write→run 패턴 사용)
             for pkg_id, tool_name in [
-                ("python-exec", "execute_python"),
-                ("nodejs", "execute_node"),
                 ("system_essentials", "run_command"),
             ]:
                 tool_json = pkg_base / pkg_id / "tool.json"
@@ -171,7 +169,7 @@ class SwitchRunner:
                 from ibl_usage_rag import build_execution_memory
                 from ibl_access import resolve_allowed_nodes
                 allowed_set = resolve_allowed_nodes(allowed_nodes) if allowed_nodes else None
-                execution_memory = build_execution_memory(command, allowed_set)
+                execution_memory, _ts, _tc = build_execution_memory(command, allowed_set)
                 if execution_memory:
                     self._status("실행기억 로드됨")
             except Exception as e:

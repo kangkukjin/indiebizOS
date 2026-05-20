@@ -219,20 +219,56 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
 
         elif tool_name == "glob_files":
             pattern = tool_input["pattern"]
-            root = os.path.join(project_path, tool_input.get("root_path", "."))
 
-            # recursive glob 지원
-            matches = glob.glob(os.path.join(root, pattern), recursive=True)
+            # 검색 루트 결정 (우선순위: path > root_path > project_path)
+            # - 절대경로(/...): 그대로 사용 → 컴퓨터 어디든 검색 가능
+            # - ~ 시작: 홈 디렉토리로 확장
+            # - 상대경로: project_path 기준
+            # - 미지정: project_path
+            raw_root = tool_input.get("path") or tool_input.get("root_path") or "."
+            expanded = os.path.expanduser(raw_root)
+            if os.path.isabs(expanded):
+                root = expanded
+            else:
+                root = os.path.join(project_path, expanded)
 
-            # 절대 경로로 변환하고 정렬 (에이전트 간 경로 혼동 방지)
-            absolute_paths = sorted([
-                os.path.abspath(m) for m in matches
-            ])
+            # 자동 recursive: pattern에 ** 없고 root만 지정된 경우, 하위까지 검색
+            search_pattern = pattern
+            if "**" not in pattern and "/" not in pattern:
+                search_pattern = f"**/{pattern}"
+
+            try:
+                max_results = int(tool_input.get("max_results", 200))
+            except (TypeError, ValueError):
+                max_results = 200
+
+            try:
+                # recursive=True로 ** 패턴 동작
+                matches = glob.glob(os.path.join(root, search_pattern), recursive=True)
+            except Exception as e:
+                return f"검색 오류: {e}"
+
+            absolute_paths = sorted(os.path.abspath(m) for m in matches)
+            total = len(absolute_paths)
+            truncated = total > max_results > 0
+            if truncated:
+                absolute_paths = absolute_paths[:max_results]
 
             if absolute_paths:
-                return "\n".join(absolute_paths)
-            else:
-                return f"No files matching pattern: {pattern}"
+                header_parts = [f"{total}개 매칭"]
+                if truncated:
+                    header_parts.append(f"(상위 {max_results}개만 반환 — 더 많으면 max_results 또는 더 좁은 path 사용)")
+                header_parts.append(f"root: {root}")
+                header = " | ".join(header_parts)
+                return header + "\n" + "\n".join(absolute_paths)
+
+            # 결과 없을 때 — 안내 메시지에 path 옵션 힌트 포함
+            hint = (
+                f"매칭 없음: pattern={pattern!r} root={root}\n"
+                "힌트: 프로젝트 밖을 검색하려면 path 파라미터를 사용하세요. "
+                '예: {pattern: "*.docx", path: "~/Desktop"} 또는 {pattern: "*.docx", path: "/Users"}'
+            )
+            return hint
 
         elif tool_name == "edit_file":
             file_path = os.path.join(project_path, _get_path(tool_input))
@@ -424,6 +460,22 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
             file_path = tool_input.get("file_path") or tool_input.get("path")
             extract_images = tool_input.get("extract_images", True)
 
+            # 부분 읽기 파라미터 — 큰 docx의 컨텍스트 잠식 방지
+            # 블록 = 문단(p) 또는 표(tbl) 하나
+            try:
+                offset = max(0, int(tool_input.get("offset", 0) or 0))
+            except (TypeError, ValueError):
+                offset = 0
+            limit_raw = tool_input.get("limit")
+            try:
+                limit = int(limit_raw) if limit_raw is not None else None
+            except (TypeError, ValueError):
+                limit = None
+            try:
+                max_blocks = int(tool_input.get("max_blocks", 300))
+            except (TypeError, ValueError):
+                max_blocks = 300
+
             if not file_path:
                 return json.dumps({"success": False, "error": "file_path가 제공되지 않았습니다."}, ensure_ascii=False)
 
@@ -516,14 +568,43 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
                         table_lines.append("[표 끝]")
                         extracted_parts.append('\n'.join(table_lines))
 
-                text = '\n\n'.join(extracted_parts)
+                # --- 부분 읽기 슬라이싱 ---
+                total_blocks = len(extracted_parts)
+
+                # 적용 한계 결정: 명시적 limit > max_blocks(기본 안전망)
+                # max_blocks=0이면 무제한
+                if limit is not None and limit >= 0:
+                    effective_limit = limit
+                elif max_blocks > 0:
+                    effective_limit = max_blocks
+                else:
+                    effective_limit = None  # 무제한
+
+                start = min(offset, total_blocks)
+                if effective_limit is None:
+                    end = total_blocks
+                else:
+                    end = min(start + effective_limit, total_blocks)
+
+                sliced = extracted_parts[start:end]
+                returned_blocks = len(sliced)
+                truncated = end < total_blocks
+
+                text = '\n\n'.join(sliced)
 
                 metadata = {
                     "filename": path.name,
                     "total_paragraphs": len(doc.paragraphs),
                     "total_tables": len(doc.tables),
                     "total_images": len(images_info),
+                    "total_blocks": total_blocks,
+                    "offset": start,
+                    "returned_blocks": returned_blocks,
+                    "truncated": truncated,
                 }
+                if truncated:
+                    metadata["next_offset"] = end
+                    metadata["hint"] = f"전체 {total_blocks}블록 중 {start}~{end-1}만 반환됨. 다음 호출에 offset={end}로 이어 읽기."
                 if images_dir:
                     metadata["images_dir"] = str(images_dir)
 

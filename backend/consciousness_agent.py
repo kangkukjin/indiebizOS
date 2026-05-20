@@ -99,7 +99,7 @@ class ConsciousnessAgent:
         self,
         user_message: str,
         history: List[Dict],
-        ibl_node_summary: str,
+        associative_memory: str,
         guide_list: List[str],
         world_pulse: str = "",
         agent_name: str = "",
@@ -111,7 +111,8 @@ class ConsciousnessAgent:
         Args:
             user_message: 사용자의 현재 메시지
             history: 대화 히스토리 원본 (정제 전)
-            ibl_node_summary: IBL 노드/액션 요약 (노드명: [액션들])
+            associative_memory: 연상기억 — <execution_memory>(해마) +
+                <related_memory>(심층메모리) self-describing 묶음
             guide_list: 사용 가능한 가이드 파일 목록
             world_pulse: 현재 세계 상태 요약
             agent_name: 에이전트 이름
@@ -139,7 +140,7 @@ class ConsciousnessAgent:
 
         # 입력 구성
         input_text = self._build_input(
-            user_message, history, ibl_node_summary,
+            user_message, history, associative_memory,
             guide_list, world_pulse, agent_name, agent_role, agent_notes
         )
 
@@ -187,7 +188,7 @@ class ConsciousnessAgent:
         self,
         user_message: str,
         history: List[Dict],
-        ibl_node_summary: str,
+        associative_memory: str,
         guide_list: List[str],
         world_pulse: str,
         agent_name: str,
@@ -225,9 +226,10 @@ class ConsciousnessAgent:
                 parts.append(f"<turn index=\"{i}\" role=\"{role}\"{img_attr}>{content}</turn>")
             parts.append("</history>")
 
-        # IBL 노드/액션 요약
-        if ibl_node_summary:
-            parts.append(f"<ibl_nodes>\n{ibl_node_summary}\n</ibl_nodes>")
+        # 연상기억 — <execution_memory>(해마) + <related_memory>(심층메모리)
+        # 내부 태그가 이미 self-describing이므로 외부 래퍼를 두지 않는다.
+        if associative_memory:
+            parts.append(associative_memory)
 
         # 가이드 파일 목록
         if guide_list:

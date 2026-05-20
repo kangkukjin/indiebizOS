@@ -25,7 +25,7 @@ actions:
     implementation: os.listdir/pathlib로 디렉토리 내용 조회
     target_key: path
   find:
-    description: 파일 검색 (glob 패턴)
+    description: '파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트 지정 (절대경로, ~/, 상대경로 모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀'
     keywords:
     - 파일
     - 찾기
@@ -35,7 +35,7 @@ actions:
     - 파일찾기
     router: handler
     tool: glob_files
-    implementation: pathlib.glob으로 패턴 기반 파일 검색
+    implementation: 'pathlib.glob 패턴 검색. path 파라미터로 검색 루트 지정 (절대경로/~/상대경로). max_results로 결과 상한 (기본 200). 매칭 없으면 path 옵션 안내'
     target_key: pattern
   grep:
     description: 파일 내용 검색
@@ -79,10 +79,10 @@ actions:
     implementation: PyPDF2/pdfplumber로 PDF 텍스트 추출
     target_key: path
   read_docx:
-    description: DOCX 파일 읽기 (텍스트 + 이미지 추출)
+    description: DOCX 파일 읽기 (텍스트 + 표 + 이미지 추출). 기본 300블록까지만 반환 — 더 읽으려면 offset/limit 사용
     router: handler
     tool: read_docx
-    implementation: python-docx로 텍스트/표 추출, ZIP 구조에서 이미지 파일 추출 및 저장. 텍스트 내 이미지 위치 마커 포함
+    implementation: python-docx로 텍스트/표 추출, ZIP 구조에서 이미지 파일 추출 및 저장. 텍스트 내 이미지 위치 마커 포함. offset/limit/max_blocks로 부분 읽기 지원 (블록=문단 또는 표 하나). 응답 metadata에 truncated/next_offset 포함
     target_key: path
     keywords:
       - docx

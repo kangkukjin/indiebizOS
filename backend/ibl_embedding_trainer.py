@@ -313,7 +313,7 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
     print(f"[학습] {len(train_examples)}개 학습 쌍 구성")
 
     # DataLoader — 배치 작게 (MPS 메모리 제한)
-    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=8)
+    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=4)
 
     # Loss: MultipleNegativesRankingLoss
     # 같은 배치 내의 다른 쌍이 자동으로 negative가 됨

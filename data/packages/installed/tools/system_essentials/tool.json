@@ -106,7 +106,7 @@
     },
     {
       "name": "run_command",
-      "description": "쉘 명령어를 실행합니다.\n\n주의사항 - 반드시 읽으세요:\n1. 파일/디렉토리 작업은 전용 도구 사용:\n   - 디렉토리 목록: list_directory (ls 대신)\n   - 파일 검색: glob_files (find 대신)\n   - 내용 검색: grep_files (grep/rg 대신)\n   - 파일 읽기: read_file (cat/head/tail 대신)\n   - 파일 쓰기: write_file (echo > 대신)\n   - 파일 수정: edit_file (sed/awk 대신)\n\n2. 금지된 명령어 (대용량 출력 위험):\n   - ls -R, ls -la -R (재귀 목록)\n   - find / (루트 검색)\n   - cat 대용량파일\n   - 출력 제한 없는 검색 명령\n\n3. 위험 명령은 approved=true 필요:\n   - rm, rmdir (삭제)\n   - sudo (권한 상승)\n   - chmod, chown (권한 변경)\n\n적합한 사용 예:\n- git 명령어 (git status, git log --oneline -10)\n- 패키지 관리 (npm install, pip install)\n- 빌드/테스트 (npm run build, pytest)\n- 프로세스 관리 (ps, kill)",
+      "description": "쉘 명령어를 실행합니다. execute_ibl과 함께 에이전트의 두 가지 실행 경로 중 하나.\n\n주의사항 - 반드시 읽으세요:\n1. 파일/디렉토리 작업은 IBL 액션을 우선 사용:\n   - 디렉토리 목록: execute_ibl [self:list] (ls 대신)\n   - 파일 검색: execute_ibl [self:find] (find 대신)\n   - 내용 검색: execute_ibl [self:grep] (grep/rg 대신)\n   - 파일 읽기: execute_ibl [self:read] (cat/head/tail 대신)\n   - 파일 쓰기: execute_ibl [self:write] (echo > 대신)\n   - 파일 수정: execute_ibl [self:edit] (sed/awk 대신)\n\n2. Python/Node.js 코드 실행 — write→run 패턴:\n   - 멀티라인: [self:write]로 /tmp/*.py 파일 생성 후 run_command 'python3 /tmp/x.py'\n   - 한 줄: run_command 'python3 -c \"...\"' 또는 'node -e \"...\"'\n   - 별도의 execute_python/execute_node 도구는 없음 (이스케이프·traceback 손실 회피)\n\n3. 금지된 명령어 (대용량 출력 위험):\n   - ls -R, ls -la -R (재귀 목록)\n   - find / (루트 검색)\n   - cat 대용량파일\n   - 출력 제한 없는 검색 명령\n\n4. 위험 명령은 approved=true 필요:\n   - rm, rmdir (삭제)\n   - sudo (권한 상승)\n   - chmod, chown (권한 변경)\n\nrun_command가 어울리는 경우:\n- git 명령어 (git status, git log --oneline -10)\n- 패키지 관리 (npm install, pip install)\n- 빌드/테스트 (npm run build, pytest)\n- 프로세스 관리 (ps, kill)\n- write→run 패턴의 실행 단계 (python3/node 스크립트 실행)\n- IBL 액션에 해당하지 않는 시스템 명령",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -130,17 +130,25 @@
     },
     {
       "name": "glob_files",
-      "description": "glob 패턴으로 파일을 검색합니다.\n\n사용법:\n- 패턴 매칭으로 파일 경로 목록 반환\n- 재귀 검색 지원 ('**' 패턴)\n\n패턴 예시:\n- '*.py': 현재 디렉토리의 Python 파일\n- '**/*.py': 모든 하위 디렉토리의 Python 파일\n- 'src/**/*.{js,ts}': src 하위의 JS/TS 파일\n- '**/test_*.py': 모든 테스트 파일\n\n주의사항:\n- run_command로 find 사용 대신 이 도구 사용\n- 결과가 많을 수 있으니 패턴을 구체적으로 지정",
+      "description": "glob 패턴으로 파일을 검색합니다. 프로젝트 안뿐 아니라 컴퓨터 어느 디렉토리든 검색 가능.\n\n## 검색 범위 (path 파라미터)\n- 미지정: 프로젝트 디렉토리 (기본)\n- 절대경로: 그대로 사용 (예: '/Users/me/Desktop', '/etc')\n- ~ 시작: 홈 디렉토리 확장 (예: '~/Documents', '~')\n- 상대경로: 프로젝트 디렉토리 기준\n\n## 패턴 동작\n- 패턴에 '**'나 '/'가 없으면 자동으로 모든 하위 디렉토리까지 검색 ('*.docx' → '**/*.docx' 효과)\n- 명시적 재귀: '**/*.py' (모든 하위)\n- 디렉토리 한정: 'src/**/*.{js,ts}'\n\n## 사용 예시\n- 프로젝트 안 Python 파일: pattern='**/*.py'\n- 바탕화면의 docx: pattern='*.docx', path='~/Desktop'\n- 컴퓨터 전체에서 특정 파일: pattern='**/하네스*.docx', path='/Users'\n- 다운로드 폴더의 PDF: pattern='*.pdf', path='~/Downloads'\n\n## 결과\n- '{총_매칭수}개 매칭 | root: {검색루트}' 헤더 + 절대경로 목록\n- 기본 200개까지 반환 (max_results로 조정, 0이면 무제한 — 컨텍스트 폭주 주의)\n- 매칭 없으면 path 옵션 사용 힌트 안내\n\n## 주의\n- run_command로 'find' 사용하지 말 것 — 이 도구가 컴퓨터 전체 검색 지원\n- 너무 넓은 범위(예: path='/')는 시간이 오래 걸리고 결과가 폭주",
       "input_schema": {
         "type": "object",
         "properties": {
           "pattern": {
             "type": "string",
-            "description": "glob 패턴 (예: '**/*.py')"
+            "description": "glob 패턴 (예: '*.docx', '**/*.py'). '**'나 '/'가 없으면 자동 재귀"
+          },
+          "path": {
+            "type": "string",
+            "description": "검색 루트. 절대경로(/Users/...), ~ 확장(~/Desktop), 상대경로(./src) 모두 가능. 미지정 시 프로젝트 디렉토리"
           },
           "root_path": {
             "type": "string",
-            "description": "검색 시작 경로"
+            "description": "(deprecated) path와 동일. path 사용 권장"
+          },
+          "max_results": {
+            "type": "integer",
+            "description": "반환할 최대 파일 수 (기본 200). 0이면 무제한 (큰 검색 시 컨텍스트 폭주 위험)"
           }
         },
         "required": [
@@ -199,7 +207,7 @@
     },
     {
       "name": "read_docx",
-      "description": "DOCX(Word) 파일의 텍스트, 표, 이미지를 추출합니다. 텍스트 내 이미지 위치가 마커로 표시되며, 이미지 파일은 별도 폴더에 저장됩니다.",
+      "description": "DOCX(Word) 파일의 텍스트, 표, 이미지를 추출합니다. 텍스트 내 이미지 위치가 마커로 표시되며, 이미지 파일은 별도 폴더에 저장됩니다.\n\n## 부분 읽기 (큰 문서 대응)\n블록(문단 또는 표 하나)을 단위로 슬라이싱할 수 있습니다.\n- 기본값으로 최대 300블록까지만 반환 (대용량 docx가 컨텍스트를 잠식하지 않도록)\n- 응답 metadata에 `total_blocks`, `returned_blocks`, `truncated`, `next_offset`이 포함됨\n- truncated가 true면 다음 호출에 `offset=next_offset`을 넘겨 이어 읽기\n- 전체를 한 번에 읽으려면 `max_blocks=0` (무제한, 단 컨텍스트 부담)\n- 작은 청크씩 보려면 `offset`+`limit` 조합 사용",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -210,6 +218,18 @@
           "extract_images": {
             "type": "boolean",
             "description": "이미지 추출 여부 (기본값: true). false면 텍스트만 추출"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "시작 블록 인덱스 (0부터). 기본값 0. 이어 읽기 시 이전 응답의 metadata.next_offset 사용"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "반환할 최대 블록 수. 지정하면 max_blocks보다 우선. 미지정 시 max_blocks 적용"
+          },
+          "max_blocks": {
+            "type": "integer",
+            "description": "안전 상한 (기본 300). limit 미지정 시 적용. 0이면 무제한 (큰 문서는 컨텍스트 폭주 위험)"
           }
         },
         "required": [

@@ -11,7 +11,7 @@ execute_ibl 등은 함수 내부에서 지연 임포트합니다.
 import os
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 
 _nodes_cache: Optional[Dict] = None
@@ -761,37 +761,38 @@ def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
 
 def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) -> bool:
     """
-    조건 표현식에서 sense 노드 실행 후 비교
+    조건식 평가 — case/if의 source 표현 + 비교 연산.
 
-    Args:
-        condition: "sense:kospi < 2400" 형태
+    지원하는 형태:
+        node:action <op> value
+        node:action{params} <op> value
+        node:action{params}.field <op> value
+        node:action.field <op> value
+        node:action                    (불리언 평가, 연산자 없음)
 
-    Returns:
-        조건 충족 여부
+    sense뿐 아니라 self/limbs/others/engines 모두 허용한다.
+    비교 연산자는 {}/[]/문자열 밖의 첫 번째 것을 사용한다.
     """
-    import re
+    op_info = _find_top_level_comparison_op(condition)
+    if op_info:
+        op_start, op_end, op = op_info
+        source_expr = condition[:op_start].strip()
+        compare_raw = condition[op_end:].strip().strip("'\"")
+    else:
+        source_expr = condition.strip()
+        op = None
+        compare_raw = None
 
-    # sense 참조 추출
-    match = re.match(r'(sense:\w+)', condition)
-    if not match:
+    value = _get_sense_value(source_expr, project_path, agent_id)
+
+    if value is None:
         return False
 
-    sense_ref = match.group(1)
-    sense_value = _get_sense_value(sense_ref, project_path, agent_id)
-
-    if sense_value is None:
-        return False
-
-    # 비교 연산자 추출
-    op_match = re.search(r'(==|!=|>=|<=|>|<)\s*(.+)$', condition)
-    if not op_match:
-        return bool(sense_value)
-
-    op = op_match.group(1)
-    compare_raw = op_match.group(2).strip().strip("'\"")
+    if op is None:
+        return bool(value)
 
     try:
-        sv = float(sense_value)
+        sv = float(value)
         cv = float(compare_raw)
         if op == "==": return sv == cv
         if op == "!=": return sv != cv
@@ -800,7 +801,7 @@ def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) 
         if op == "<":  return sv < cv
         if op == "<=": return sv <= cv
     except (ValueError, TypeError):
-        ss = str(sense_value)
+        ss = str(value)
         if op == "==": return ss == compare_raw
         if op == "!=": return ss != compare_raw
 
@@ -809,21 +810,129 @@ def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) 
 
 def _get_sense_value(source: str, project_path: str, agent_id: str) -> Any:
     """
-    sense 참조 (예: "sense:kospi")에서 실제 값 가져오기
-    """
-    parts = source.split(":")
-    if len(parts) != 2:
-        return None
+    case/if의 source 표현을 평가하여 실제 값 반환.
 
-    node, action = parts[0], parts[1]
+    지원하는 형태:
+        node:action                      예: self:time
+        node:action{params}              예: sense:price{symbol: "^KS11"}
+        node:action{params}.field        예: sense:price{symbol: "^KS11"}.close
+        node:action.field                예: self:time.hour
+
+    sense뿐 아니라 self/limbs/others/engines 모두 허용한다.
+    field가 지정된 경우 결과 dict에서 점 표기법으로 추출하고,
+    없으면 기존 동작(`value` → `result` → str)을 유지한다.
+    """
+    parsed = _parse_source_ref(source)
+    if parsed is None:
+        return None
+    node, action, params, field = parsed
 
     try:
         from ibl_engine import execute_ibl
-        step = {"_node": node, "action": action, "params": {}}
+        step = {"_node": node, "action": action, "params": params}
         result = execute_ibl(step, project_path, agent_id)
-
-        if isinstance(result, dict):
-            return result.get("value", result.get("result", str(result)))
-        return result
     except Exception:
         return None
+
+    if field is not None:
+        return _extract_dotted_field(result, field)
+
+    if isinstance(result, dict):
+        return result.get("value", result.get("result", str(result)))
+    return result
+
+
+def _parse_source_ref(source: str) -> Optional[Tuple[str, str, Dict, Optional[str]]]:
+    """
+    case/if의 source 참조식을 (node, action, params, field)로 분해.
+
+    유효하지 않으면 None.
+    """
+    import re
+
+    src = source.strip()
+    m = re.match(r'^(\w+):(\w+)', src)
+    if not m:
+        return None
+    node, action = m.group(1), m.group(2)
+    rest = src[m.end():]
+
+    params: Dict[str, Any] = {}
+    if rest.startswith('{'):
+        from ibl_parser import _extract_bracket_raw, _parse_params
+        body, end_pos = _extract_bracket_raw(rest, 0, '{', '}')
+        if body is None:
+            return None
+        try:
+            params = _parse_params('{' + body + '}') or {}
+        except Exception:
+            params = {}
+        rest = rest[end_pos + 1:]
+
+    field: Optional[str] = None
+    rest = rest.strip()
+    if rest.startswith('.'):
+        fm = re.match(r'^\.(\w+(?:\.\w+)*)\s*$', rest)
+        if fm:
+            field = fm.group(1)
+
+    return (node, action, params, field)
+
+
+def _extract_dotted_field(result: Any, field_path: str) -> Any:
+    """중첩 dict에서 점 표기법으로 필드 추출 ('close', 'data.price')."""
+    if result is None:
+        return None
+    current = result
+    for key in field_path.split('.'):
+        if isinstance(current, dict):
+            current = current.get(key)
+        else:
+            return None
+        if current is None:
+            return None
+    return current
+
+
+def _find_top_level_comparison_op(text: str) -> Optional[Tuple[int, int, str]]:
+    """
+    조건식에서 {}/[]/문자열 밖의 첫 비교 연산자 위치 찾기.
+
+    좌→우 스캔. 2자 연산자(==, !=, >=, <=)를 먼저 시도.
+    """
+    depth = 0
+    in_string = False
+    string_char: Optional[str] = None
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if in_string:
+            if c == '\\' and i + 1 < n:
+                i += 2
+                continue
+            if c == string_char:
+                in_string = False
+            i += 1
+            continue
+        if c == '"' or c == "'":
+            in_string = True
+            string_char = c
+            i += 1
+            continue
+        if c in '{[':
+            depth += 1
+            i += 1
+            continue
+        if c in '}]':
+            depth -= 1
+            i += 1
+            continue
+        if depth == 0:
+            two = text[i:i+2]
+            if two in ('==', '!=', '>=', '<='):
+                return (i, i + 2, two)
+            if c == '>' or c == '<':
+                return (i, i + 1, c)
+        i += 1
+    return None

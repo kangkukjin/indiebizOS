@@ -32,7 +32,7 @@ def get_prompt_builder() -> 'PromptBuilder':
 class PromptBuilder:
     """시스템 프롬프트 빌더
 
-    base_prompt.md (항상 포함) + 조건부 프롬프트를 조합합니다.
+    base_prompt_v5.md (항상 포함) + 조건부 프롬프트를 조합합니다.
 
     사용 예시:
         builder = PromptBuilder()
@@ -331,7 +331,7 @@ def build_agent_prompt(
 ) -> str:
     """프로젝트 에이전트용 시스템 프롬프트 생성
 
-    구조: base_prompt_v4.md + (조건부 위임) + IBL 환경 + 실행기억 + 의식 에이전트 출력 + 개별역할 + 영구메모
+    구조: base_prompt_v5.md + (조건부 위임) + IBL 환경 + 실행기억 + 의식 에이전트 출력 + 개별역할 + 영구메모
 
     Args:
         agent_name: 에이전트 이름
@@ -388,7 +388,7 @@ def build_system_ai_prompt(
 ) -> str:
     """시스템 AI용 시스템 프롬프트 생성
 
-    구조: base_prompt_v2.md + (조건부 git) + IBL 환경 + 실행기억 + 의식 에이전트 출력
+    구조: base_prompt_v5.md + (조건부 git) + IBL 환경 + 실행기억 + 의식 에이전트 출력
           + 위임 프롬프트 + 개별역할 + 시스템메모
 
     Args:

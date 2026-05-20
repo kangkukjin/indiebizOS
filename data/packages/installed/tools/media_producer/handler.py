@@ -717,6 +717,22 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
 
 def create_slides(tool_input, output_base):
     slides_data = tool_input.get("slides", [])
+
+    # 가드: slides가 비어있으면 옛 호출 패턴일 가능성 — 0개 슬라이드 "성공"으로 가짜 완료되는 것 방지
+    if not slides_data:
+        legacy_keys = [k for k in ("topic", "file", "custom_html") if k in tool_input]
+        if legacy_keys:
+            return (
+                "오류: [engines:slide]는 'slides' 배열 인라인 호출만 받습니다. "
+                f"'{', '.join(legacy_keys)}'는 지원하지 않습니다. "
+                "올바른 호출: [engines:slide]{slides: [{title: \"제목\", body: \"본문\", theme: \"modern\"}, ...]}. "
+                "테마 목록과 슬라이드별 추가 키는 read_guide(query=\"슬라이드\")로 가이드 확인."
+            )
+        return (
+            "오류: [engines:slide] 호출에 slides 배열이 비어있습니다. "
+            "[engines:slide]{slides: [{title, body, theme}, ...]} 형태로 인라인 배열을 전달하세요."
+        )
+
     custom_output_dir = tool_input.get("output_dir")
     width = tool_input.get("width", 1280)
     height = tool_input.get("height", 720)

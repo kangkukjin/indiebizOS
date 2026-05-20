@@ -1,3 +1,11 @@
+---
+title: 기술 참조
+scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
+owner_code: api_*.py, providers/, ibl_engine.py
+last_updated: 2026-05-17
+see_also: [architecture.md, ibl.md]
+---
+
 # IndieBiz OS 기술 문서
 
 ## API 엔드포인트
@@ -135,87 +143,38 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 | `final` | 최종 응답 |
 | `error` | 에러 발생 |
 
-## IBL 도구 아키텍처 (Phase 25: 5-Node 구조)
+## IBL 도구 — execute_ibl
 
-모든 에이전트(시스템 AI 포함)는 `execute_ibl` 단일 도구를 사용합니다. 시스템 AI와 프로젝트 에이전트는 추가로 `execute_python`, `execute_node`, `run_command`, `search_guide` 도구도 보유합니다.
-
-### execute_ibl
-IBL 코드를 받아 파싱하고 실행하는 통합 실행기입니다.
-
-```
-execute_ibl(code='[node:action]{params}')
+모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 5노드(sense/self/limbs/others/engines) 311 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
 
 예시:
+```
 execute_ibl(code='[sense:price]{symbol: "AAPL"}')
 execute_ibl(code='[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}')
 execute_ibl(code='[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}')
 ```
 
-### 액션 라우팅
-IBL 액션은 여러 경로로 실행됩니다:
+**자동 발견**: `ibl_engine._merge_api_registry_actions()`가 로드 시 `api_registry.yaml`의 node 바인딩 도구를 노드 액션에 자동 병합.
 
-| 라우터 | 개수 | 특성 | 등록 방식 |
-|--------|------|------|----------|
-| api_engine | 2 | API 호출 + transform 후처리 | api_registry.yaml에 node 필드 (자동 병합) |
-| handler | 260 | 복잡한 후처리 (캐싱, 코드 매핑 등) | ibl_nodes.yaml에 수동 등록 |
-| system | 22 | 시스템 내장 액션 | 시스템 레벨 직접 등록 |
-| trigger_engine | 9 | 이벤트/트리거 기반 실행 | trigger_engine 등록 |
-| workflow_engine | - | 워크플로우 오케스트레이션 | workflow 정의 |
-| driver | - | 프로토콜 추상화 (HTTP, WebSocket, ADB, CDP 등) | 드라이버 등록 |
-| channel_engine | - | 채널 추상화 계층 | 채널 설정 |
-
-**자동 발견**: `ibl_engine.py`의 `_merge_api_registry_actions()`가 로드 시 api_registry의 node 바인딩 도구를 노드 액션에 자동 병합합니다.
-
-### 주요 IBL 노드 액션 (기존 시스템 도구 대응)
-
-Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장치 제어 → limbs, 제작 → engines, 협업 → others
-
-| IBL 액션 | 기존 도구명 | 설명 |
-|----------|-----------|------|
-| `[others:delegate]` | `call_agent` | 다른 에이전트에게 작업 위임 |
-| `[others:ask_sync]` | - | 동기 에이전트 호출 (파이프라인용) |
-| `[others:delegate_project]` | `call_project_agent` | 프로젝트 간 위임 (시스템AI 전용) |
-| `[others:channel_send]` | - | 메시지 발송 (gmail, nostr 등) |
-| `[others:search_contact]` | - | 연락처 검색 |
-| `[self:ask_user]` | `ask_user_question` | 사용자에게 질문 |
-| `[self:todo]` | `todo_write` | 할일 목록 관리 |
-| `[self:approve]` | `request_user_approval` | 사용자 승인 요청 |
-| `[self:notify_user]` | `send_notification` | 사용자 알림 전송 |
-| `[self:file]` | - | 파일 저장/관리 |
-| `[self:read]` | `read_file` | 파일 읽기 |
-| `[self:write]` | `write_file` | 파일 쓰기 |
-| `[self:run_command]` | `run_command` | 코드/명령 실행 |
-| `[sense:search_ddg]` | `web_search` | 웹 검색 |
-| `[sense:price]` | `get_stock_price` | 주가 조회 |
-| `[limbs:browser_navigate]` | `browser_navigate` | 브라우저 탐색 |
-| `[limbs:play]` | `play_media` | 미디어 재생 |
-| `[engines:slide]` | `create_slide` | 슬라이드 생성 |
-
-### 인프라 노드 (항상 허용)
-`self`, `others` — 모든 에이전트에 자동 제공 (`_ALWAYS_ALLOWED`)
-
-### 5-Node 구조 (Phase 25: 노드 재구조화)
-| 노드 | 액션 수 | 카테고리 | 설명 |
-|------|---------|---------|------|
-| `sense` | 78 | search, get, list, create, delete, write | 데이터 검색/조회 (외부 정보 + 내부 저장소) |
-| `limbs` | 96 | click, type, get, screenshot, control, play, stream, list | UI 조작 + 미디어 (브라우저, 안드로이드, 데스크탑, 유튜브, 라디오) |
-| `self` | 75 | get, io, list, event, notify, run, control, fs, storage | 개인 도메인 (시스템 관리, 사용자 소통, 워크플로우, 파일) |
-| `engines` | 46 | create, get, list, run | 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 웹사이트) |
-| `others` | 13 | search, get, send, read, delegate | 협업 통신 (에이전트 위임, 메시지 전송, 연락처) |
-
-**카테고리**: 프롬프트 가독성용 분류 (런타임 영향 없음). `<action-categories>`로 표시되며 에이전트는 카테고리명이 아닌 구체적 액션명을 직접 사용해야 함.
+**인프라 노드 (항상 허용)**: `self`, `others` — 모든 에이전트에 자동 제공 (`_ALWAYS_ALLOWED`)
 
 ## 설정 파일 위치
-- **시스템 AI 설정**: `data/system_ai_config.json`
+- **본격 AI 설정 (시스템 AI / THINK 경로 실행)**: `data/system_ai_config.json`
+- **중급 AI 설정 (EXECUTE/Reflex 경로 실행)**: `data/midtier_ai_config.json`
+- **경량 AI 설정 (분류·평가·증류)**: `data/lightweight_ai_config.json`
 - **스위치 목록**: `data/switches.json`
 - **프로젝트 목록**: `projects/projects.json`
 - **프로젝트 에이전트**: `projects/{id}/agents.yaml`
-- **시스템 AI 메모리**: `data/system_ai_memory.db` (SQLite)
-- **World Pulse DB**: `data/world_pulse.db` (SQLite — pulse_log, self_checks 테이블)
+- **시스템 AI 대화 이력**: `data/system_ai_memory.db` (SQLite)
+- **시스템 AI 심층메모리**: `data/system_ai_state/memory_system_ai.db` (SQLite, 시맨틱 검색)
+- **프로젝트 에이전트 심층메모리**: `projects/{id}/memory_{agent}.db` (SQLite, 시맨틱 검색)
+- **World Pulse DB**: `data/world_pulse.db` (SQLite — pulse_log, self_checks, action_health, episode_log, episode_summary)
 - **대화 이력**: `projects/{id}/conversations.db` (SQLite)
 - **도구 패키지**: `data/packages/installed/tools/`
 - **비즈니스 DB**: `data/business.db` (SQLite)
-- **IBL 사용량 DB**: `data/ibl_usage.db` (SQLite)
+- **해마 (IBL 사용량) DB**: `data/ibl_usage.db` (SQLite — ibl_examples + FTS5 + vec0)
+- **해마 임베딩 모델**: `data/models/ibl_embedding/` (fine-tuned `jhgan/ko-sroberta-multitask`, 422MB. 해마 + 심층메모리 공유)
+- **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` (2,019건)
 - **IBL 노드 정의**: `data/ibl_nodes.yaml`
 - **IBL 출처 추적**: `data/_ibl_provenance.yaml`
 
@@ -251,12 +210,28 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 
 ## 프롬프트 구조
 
-### XML 태그 구조 (2026-01-20 통일)
+### XML 태그 구조 (2026-01-20 통일, 2026-05-17 정리)
 모든 프롬프트에서 AI의 정확한 파싱을 위해 XML 태그 사용:
+
+**연상기억 (모든 인지 에이전트에 동등하게 주입)** — self-describing
+- `<execution_memory>` - 해마 결과 (과거 IBL 코드 사례 + 도구 구현)
+  - `<ibl_references>` - 참고 용례 (intent + code + score)
+  - `<implementations>` - 액션별 구현 상세
+- `<related_memory>` - 심층메모리 결과 (사용자 사실·선호·결정 등 시맨틱 매칭)
+  - `<memory category="..." keywords="...">` - 개별 기억 항목
+
+(이전 `<ibl_nodes>` 외부 래퍼는 2026-05-17 제거 — 자식 태그가 self-describing이라 불필요)
+
+**의식 에이전트 입력 블록 (`consciousness_agent._build_input`)**
+- `<agent name="...">` - 이름 + `<role>` + `<notes>`
+- `<world_pulse>` - 매시간 갱신되는 세계/사용자/시스템 상태
+- `<history>` - 대화 히스토리 (`<turn index="..." role="...">`)
+- `<available_guides>` - 가이드 파일 목록
+- `<user_message>` - 현재 사용자 메시지
 
 **프래그먼트 (fragments/)**
 - `<git_operations>` - Git 작업 가이드
-- `<agent_delegation>` - 에이전트 위임 가이드
+- `12_ibl_only.md` - IBL 환경 설명 (의식·평가 에이전트에 주입)
 
 **히스토리 메시지 (providers/*.py)**
 - `<user_message>` - 사용자 메시지
@@ -265,7 +240,6 @@ Phase 19→22→23→25: 개인 도메인 → self, 정보 수집 → sense, 장
 
 **자동응답 V3 (auto_response.py - Tool Use 통합)**
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
-- Tool Use 기반으로 판단/검색/발송을 단일 AI 호출로 처리
 
 ---
-*마지막 업데이트: 2026-04-04 (감각 전처리 시스템, 패키지 YAML 자동 동기화)*
+*마지막 업데이트: 2026-05-17 — 3단계 모델 티어 설정 파일 명시, 심층메모리 DB 경로 추가, 의식 에이전트 입력 XML 구조 정리*

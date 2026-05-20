@@ -58,8 +58,8 @@ cctv_nearby는 lat/lng가 필수. 모르면 cctv_search를 쓰는 게 더 간편
 
 ```
 [sense:cctv_sources]          # 소스 목록 + API 연결 상태
-[sense:cctv_stats]            # 센터별 통계 (CCTV 수, 데이터 소스)
-[sense:cctv_refresh]          # UTIC API에서 최신 목록 강제 갱신
+[self:cctv_stats]             # 센터별 통계 (CCTV 수, 데이터 소스)
+[self:cctv_refresh]           # UTIC API에서 최신 목록 강제 갱신
 ```
 
 ---
@@ -75,8 +75,8 @@ cctv_nearby는 lat/lng가 필수. 모르면 cctv_search를 쓰는 게 더 간편
 | CCTV URL 열기 | `cctv_open` | `[sense:cctv_open]{name: "CCTV이름"}` |
 | 프레임 캡처 | `cctv_capture` | `[sense:cctv_capture]{url: "http://..."}` |
 | 소스 상태 | `cctv_sources` | `[sense:cctv_sources]` |
-| CCTV 데이터 통계 | `cctv_stats` | `[sense:cctv_stats]` |
-| UTIC 데이터 갱신 | `cctv_refresh` | `[sense:cctv_refresh]` |
+| CCTV 데이터 통계 | `cctv_stats` | `[self:cctv_stats]` |
+| UTIC 데이터 갱신 | `cctv_refresh` | `[self:cctv_refresh]` |
 
 **중요: 대부분의 경우 `cctv_search`가 가장 간단하고 확실한 선택이다.**
 cctv_nearby는 좌표를 알아야 하므로, 모르면 cctv_search를 쓸 것.

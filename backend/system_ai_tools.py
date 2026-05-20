@@ -28,11 +28,10 @@ def get_all_system_ai_tools() -> List[Dict]:
     if ibl_schema:
         tools.append(ibl_schema)
 
-    # 범용 언어 도구 (프로젝트 에이전트와 동일)
+    # 범용 도구 (프로젝트 에이전트와 동일)
+    # Python/Node.js 실행기는 제거됨 — 코드는 [self:write]로 파일에 쓴 후 run_command로 실행 (write→run 패턴)
     pkg_base = Path(__file__).parent.parent / "data" / "packages" / "installed" / "tools"
     lang_tools = [
-        ("python-exec", "execute_python"),
-        ("nodejs", "execute_node"),
         ("system_essentials", "run_command"),
         # 에이전트 인지 도구 — IBL 경유 불가 (파라미터 구조 불일치)
         ("system_essentials", "todo_write"),

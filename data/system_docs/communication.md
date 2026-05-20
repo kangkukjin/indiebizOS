@@ -1,3 +1,11 @@
+---
+title: 통신·연동
+scope: 채널 추상화, Gmail/Nostr, 자동응답 V3
+owner_code: channel_engine.py, channel_poller.py, auto_response.py, indienet.py, gmail.py
+last_updated: 2026-05-17
+see_also: [architecture.md, delegation.md]
+---
+
 # 통신 채널 시스템 (Communication Channels)
 
 외부 정보채널을 통한 메시지 수신/발송 및 자동응답 시스템.

@@ -9,7 +9,7 @@
 [others:delegate]{agent_id: "에이전트이름", message: "작업 내용"}
 
 # 에이전트 정보 조회
-[others:info]{agent_id: "에이전트이름"}
+[others:agent_info]{agent_id: "에이전트이름"}
 ```
 
 ## 핵심 원칙

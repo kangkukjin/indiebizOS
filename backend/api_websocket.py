@@ -377,7 +377,7 @@ async def handle_chat_message(client_id: str, data: dict):
         set_current_task_id(task_id)
 
         # 실행기억 생성 (RAG + discover + implementation, 1회)
-        execution_memory = runner._build_execution_memory(message)
+        execution_memory, _ts, _tc = runner._build_execution_memory(message)
 
         # 의식 에이전트 실행 — 메타 판단
         consciousness_output = runner._run_consciousness(
@@ -534,18 +534,17 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 사용자 메시지 저장 (이미지 포함)
         db.save_message(user_id, target_agent_id, message, images=images if images else None)
 
-        # 실행기억 생성 (RAG + discover + implementation, 1회)
-        execution_memory = runner._build_execution_memory(message)
+        # 연상 단계 — 해마+심층메모리, 검색 1회로 점수/코드까지 확보
+        execution_memory, _hippocampus_score, _top_code = runner._build_execution_memory(message)
 
-        # 해마 최고 점수 저장 (경험 증류 판단용)
-        from ibl_usage_rag import get_top_score as _get_top_score
-        _hippocampus_score = _get_top_score(message)
-
-        # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경 + Reflex IBL)
-        request_type, reflex_hint = runner._classify_request(message, execution_memory)
-        if reflex_hint:
-            print(f"[무의식] Reflex EXECUTE: {reflex_hint[:60]}")
+        # Reflex 분기 — 해마 점수가 임계값 이상이면 무의식 호출 스킵
+        if _hippocampus_score >= runner.REFLEX_SCORE_THRESHOLD and _top_code:
+            request_type = "EXECUTE"
+            reflex_hint = _top_code
+            print(f"[연상→실행] Reflex EXECUTE (score={_hippocampus_score:.3f}): {reflex_hint[:60]}")
         else:
+            request_type = runner._classify_request(message, execution_memory)
+            reflex_hint = None
             print(f"[무의식] 분류: {request_type}")
 
         # 판단형만 의식 에이전트 실행 / 실행형은 중급 모델 전환

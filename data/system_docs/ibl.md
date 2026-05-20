@@ -1,3 +1,11 @@
+---
+title: IBL (IndieBiz Logic)
+scope: IBL 명세, 5-Node 구조, 311 액션, 파서/엔진/라우팅
+owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_action_manager.py, ibl_routing.py
+last_updated: 2026-05-17
+see_also: [execution_memory.md, packages.md, technical.md]
+---
+
 # IBL (IndieBiz Logic)
 
 > indiebizOS의 정보 흐름 추상화 언어

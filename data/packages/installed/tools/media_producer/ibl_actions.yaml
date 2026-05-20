@@ -1,13 +1,12 @@
 node: engines
 actions:
   slide:
-    description: 프레젠테이션 슬라이드 생성
+    description: 'PNG 슬라이드 생성. 호출: [engines:slide]{slides: [{title, body, theme}, ...]} (인라인 배열만, topic/file 미지원). 가이드 read_guide(query="슬라이드")'
     group: media_produce
     category: create
     router: handler
     tool: create_slides
-    implementation: Jinja2 HTML 템플릿 렌더링 + Playwright로 슬라이드 PNG 캡처
-    target_key: topic
+    implementation: 'Jinja2 HTML 템플릿 + Playwright PNG 캡처. tool_input.slides 배열만 사용. 슬라이드 dict 키: title, body, theme(modern/tech/business/title_bold/dark_tech/glassmorphism/gradient_modern/split_asymmetric/minimal_white/image_fullscreen/data_card/tailwind), image_path, bg_color, text_color, accent_color 등'
     keywords:
     - 슬라이드
     - 프레젠테이션
@@ -56,13 +55,12 @@ actions:
     - MP4
     - HTML영상
   slide_shadcn:
-    description: Shadcn UI 스타일 고품질 슬라이드(PNG) 생성 (guide 참조)
+    description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅+강의용 레이아웃 모두 지원, design_system으로 책 단위 비주얼 정체성 부여. 호출: [engines:slide_shadcn]{slides: [{layout, title, ...}, ...], design_system: "vintage_book"} (인라인 배열만, topic 미지원). 강의·발표·책 강의에는 lecture_body / metaphor_story / comparison_table / factbox / quote 사용. 가이드 read_guide(query="슬라이드")'
     group: media_produce
     category: create
     router: handler
     tool: create_shadcn_slides
-    implementation: Shadcn UI React 컴포넌트 기반 슬라이드 생성 + Playwright PNG 캡처
-    target_key: topic
+    implementation: 'Shadcn UI React 기반 + Playwright PNG 캡처. tool_input.slides 배열만 사용. 마케팅 레이아웃: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom. 강의 레이아웃: lecture_body(본문단락+불릿+인용+푸터), metaphor_story(스토리+결론), comparison_table(헤더/행), factbox(보조정보), quote(풀스크린 인용). theme(색만): default/blue/green/purple/orange/dark. design_system(색+폰트+텍스처+장식 일관 묶음): default(없음), vintage_book(베이지 종이+청적갈 잉크+한글 디스플레이+컴퍼스 마크, 책 강의·인문), academic_paper(미색 종이+진남색+진홍 강조+Crimson 세리프, 학술 논문·연구), tech_minimal(다크 남+시안 네온+Inter+JetBrains Mono+그리드, 테크 컨퍼런스·개발자), magazine_modern(흰+검+적색+Bebas/Playfair, 잡지·편집)'
     keywords:
     - 슬라이드
     - Shadcn

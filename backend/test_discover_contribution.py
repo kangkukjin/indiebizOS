@@ -75,7 +75,7 @@ def run_test():
         rag._cache_times = {}
 
         t0 = time.time()
-        memory = build_execution_memory(cmd)
+        memory, _, _ = build_execution_memory(cmd)
         elapsed = (time.time() - t0) * 1000
 
         mem_len = len(memory)

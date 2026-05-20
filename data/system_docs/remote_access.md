@@ -1,3 +1,11 @@
+---
+title: 원격 접속
+scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, NAS 연동
+owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, nas_*.py
+last_updated: 2026-05-17
+see_also: [architecture.md, technical.md]
+---
+
 # 원격 접근 시스템 (Remote Access)
 
 IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외부에서 안전하게 홈 서버를 제어하고 파일에 접근할 수 있습니다.

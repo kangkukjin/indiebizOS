@@ -716,8 +716,11 @@ class IBLUsageDB:
                 return []
 
             if not semantic_results:
-                scored = list(fts5_results)
+                # FTS5 단독 폴백 — raw BM25 점수를 0~1로 정규화하여 일관성 확보
+                max_fts = max((s for _, s in fts5_results), default=1.0) or 1.0
+                scored = [(idx, s / max_fts) for idx, s in fts5_results]
             elif not fts5_results:
+                # 시맨틱 단독 — search_semantic이 이미 0~1로 반환
                 scored = list(semantic_results)
             else:
                 scored = self._combine_scores(semantic_results, fts5_results, alpha)

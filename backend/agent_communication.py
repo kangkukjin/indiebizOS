@@ -299,27 +299,54 @@ class AgentCommunicationMixin:
             if self.ai:
                 start_time = time_module.time()
 
-                # 실행기억 생성 (RAG + discover + implementation, 1회)
-                execution_memory = self._build_execution_memory(content)
-
-                # 해마 최고 점수 저장 (경험 증류 판단용)
-                from ibl_usage_rag import get_top_score as _get_top_score
-                _hippocampus_score = _get_top_score(content)
+                # 연상 단계 (해마+심층메모리 — 검색 1회로 점수/코드까지 확보)
+                execution_memory, _hippocampus_score, _top_code = self._build_execution_memory(content)
 
                 # 도구 호출 이력 초기화 (경험 증류용)
                 from thread_context import clear_tool_calls, get_tool_calls
                 clear_tool_calls()
 
-                # 무의식 에이전트 — 실행형/판단형 분류 (반사 신경 + Reflex IBL)
-                request_type, reflex_hint = self._classify_request(content, execution_memory)
-                self._log(f"[무의식] 분류: {request_type}" + (f" (Reflex)" if reflex_hint else ""))
+                # Reflex 분기 — 해마 점수가 임계값 이상이면 무의식 호출 스킵
+                if _hippocampus_score >= self.REFLEX_SCORE_THRESHOLD and _top_code:
+                    request_type = "EXECUTE"
+                    reflex_hint = _top_code
+                    self._log(f"[연상→실행] Reflex EXECUTE (score={_hippocampus_score:.3f})")
+                else:
+                    # 무의식 에이전트 — 경량 AI로 EXECUTE/THINK 분류
+                    request_type = self._classify_request(content, execution_memory)
+                    reflex_hint = None
+                    self._log(f"[무의식] 분류: {request_type}")
 
-                # 판단형만 의식 에이전트 실행
+                # 판단형만 의식 에이전트 실행 / 실행형은 중급 모델로 전환 (비용·속도 절감)
                 consciousness_output = None
+                _original_provider = None
                 if request_type == "THINK":
                     consciousness_output = self._run_consciousness(
                         content, history, execution_memory
                     )
+                else:
+                    # EXECUTE/reflex: 중급 모델로 전환 (api_websocket·system_ai_core와 동일 패턴)
+                    try:
+                        from consciousness_agent import _get_midtier_provider
+                        _midtier = _get_midtier_provider()
+                        if _midtier is not None and self.ai and self.ai._provider:
+                            _original_provider = self.ai._provider
+                            _midtier.system_prompt = self.ai._provider.system_prompt
+                            _midtier.tools = self.ai._provider.tools
+                            # Gemini provider의 경우 도구 캐시 재구축
+                            if hasattr(_midtier, '_cached_gemini_tools') and _midtier.tools:
+                                try:
+                                    from google.genai import types as _gtypes
+                                    _midtier._cached_gemini_tools = [
+                                        _gtypes.Tool(function_declarations=_midtier._convert_tools())
+                                    ]
+                                except Exception:
+                                    pass
+                            self.ai._provider = _midtier
+                            self._log(f"[프로젝트AI] 중급 모델로 전환: {_midtier.model}")
+                    except Exception as _me:
+                        self._log(f"[프로젝트AI] 중급 모델 전환 실패 (본격 모델 유지): {_me}")
+
                 if consciousness_output:
                     # 시스템 프롬프트 재구성 (의식 에이전트 출력 + 실행기억 반영)
                     role_file = self.project_path / f"agent_{agent_name}_role.txt"
@@ -351,33 +378,38 @@ class AgentCommunicationMixin:
                     if self.ai._provider:
                         self.ai._provider.system_prompt = new_prompt
 
-                response = self.ai.process_message_with_history(
-                    message_content=content,
-                    from_email=from_addr,
-                    history=history,
-                    reply_to=reply_to,
-                    task_id=task_id
-                )
-                process_time = time_module.time() - start_time
-                self._log(f"AI 응답 생성 ({process_time:.1f}초): {len(response)}자")
+                try:
+                    response = self.ai.process_message_with_history(
+                        message_content=content,
+                        from_email=from_addr,
+                        history=history,
+                        reply_to=reply_to,
+                        task_id=task_id
+                    )
+                    process_time = time_module.time() - start_time
+                    self._log(f"AI 응답 생성 ({process_time:.1f}초): {len(response)}자")
 
-                # Goal 평가 루프 — 달성 기준이 있으면 평가 후 재시도
-                if consciousness_output:
-                    criteria = self._extract_achievement_criteria(consciousness_output)
-                    if criteria:
-                        from world_pulse import _load_config as _load_wp_config
-                        _goal_cfg = _load_wp_config().get("goal_eval", {})
-                        if _goal_cfg.get("enabled", True):
-                            self._log(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
-                            response = self._run_goal_evaluation_loop(
-                                user_message=content,
-                                criteria=criteria,
-                                initial_response=response,
-                                history=history,
-                                consciousness_output=consciousness_output,
-                                max_rounds=_goal_cfg.get("max_rounds", 3),
-                                execution_memory=execution_memory,
-                            )
+                    # Goal 평가 루프 — 달성 기준이 있으면 평가 후 재시도
+                    if consciousness_output:
+                        criteria = self._extract_achievement_criteria(consciousness_output)
+                        if criteria:
+                            from world_pulse import _load_config as _load_wp_config
+                            _goal_cfg = _load_wp_config().get("goal_eval", {})
+                            if _goal_cfg.get("enabled", True):
+                                self._log(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
+                                response = self._run_goal_evaluation_loop(
+                                    user_message=content,
+                                    criteria=criteria,
+                                    initial_response=response,
+                                    history=history,
+                                    consciousness_output=consciousness_output,
+                                    max_rounds=_goal_cfg.get("max_rounds", 3),
+                                    execution_memory=execution_memory,
+                                )
+                finally:
+                    # 중급 모델 사용했으면 본격 모델로 복원
+                    if _original_provider is not None and self.ai:
+                        self.ai._provider = _original_provider
 
                 # call_agent 호출 여부 확인
                 called_another = did_call_agent()
@@ -514,7 +546,7 @@ class AgentCommunicationMixin:
                 # AI 처리
                 if self.ai:
                     # 실행기억 생성 + 메시지 앞에 주입 (에이전트 간 경로)
-                    exec_mem = self._build_execution_memory(content)
+                    exec_mem, _ts, _tc = self._build_execution_memory(content)
                     ai_message = f"{exec_mem}\n\n{content}" if exec_mem else content
                     history = []
 

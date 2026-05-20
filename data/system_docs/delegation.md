@@ -1,3 +1,11 @@
+---
+title: 위임 체인 시스템
+scope: 동기/비동기 위임, 순차/병렬, 시스템 AI → 프로젝트 에이전트, 스케줄 기반 위임
+owner_code: agent_communication.py, agent_runner.py, calendar_manager.py
+last_updated: 2026-05-17
+see_also: [architecture.md, communication.md, scheduler_guide.md]
+---
+
 # 위임 체인 시스템 (Delegation Chain System)
 
 에이전트 간 비동기 협업을 위한 핵심 메커니즘.

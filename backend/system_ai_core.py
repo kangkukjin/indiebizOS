@@ -162,11 +162,18 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     """
     runner = get_system_ai_runner()
 
-    # 인지 파이프라인: 실행기억 → 무의식 → 의식 → 프롬프트 갱신
-    execution_memory = runner._build_execution_memory(message)
+    # 인지 파이프라인: 연상 → (Reflex 또는 무의식) → 의식 → 프롬프트 갱신
+    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message)
 
-    request_type, reflex_hint = runner._classify_request(message, execution_memory)
-    print(f"[시스템AI 무의식] 분류: {request_type}")
+    # Reflex 분기 — 해마 점수 임계값 이상이면 무의식 호출 스킵
+    if _hippo_score >= runner.REFLEX_SCORE_THRESHOLD and _top_code:
+        request_type = "EXECUTE"
+        reflex_hint = _top_code
+        print(f"[시스템AI 연상→실행] Reflex EXECUTE (score={_hippo_score:.3f})")
+    else:
+        request_type = runner._classify_request(message, execution_memory)
+        reflex_hint = None
+        print(f"[시스템AI 무의식] 분류: {request_type}")
 
     consciousness_output = None
     original_provider = None
@@ -240,11 +247,18 @@ def process_system_ai_message_stream(
     """
     runner = get_system_ai_runner()
 
-    # 인지 파이프라인: 실행기억 → 무의식 → 의식 → 프롬프트 갱신
-    execution_memory = runner._build_execution_memory(message)
+    # 인지 파이프라인: 연상 → (Reflex 또는 무의식) → 의식 → 프롬프트 갱신
+    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message)
 
-    request_type, reflex_hint = runner._classify_request(message, execution_memory)
-    print(f"[시스템AI 무의식] 분류: {request_type}")
+    # Reflex 분기
+    if _hippo_score >= runner.REFLEX_SCORE_THRESHOLD and _top_code:
+        request_type = "EXECUTE"
+        reflex_hint = _top_code
+        print(f"[시스템AI 연상→실행] Reflex EXECUTE (score={_hippo_score:.3f})")
+    else:
+        request_type = runner._classify_request(message, execution_memory)
+        reflex_hint = None
+        print(f"[시스템AI 무의식] 분류: {request_type}")
 
     consciousness_output = None
     original_provider = None
@@ -311,7 +325,7 @@ def get_system_prompt(user_profile: str = "", git_enabled: bool = False) -> str:
     """시스템 AI의 시스템 프롬프트 (prompt_builder.py 사용)
 
     **통합**: 이제 공통 프롬프트 빌더를 사용합니다.
-    - base_prompt_v2.md + (조건부 git) + 위임 프롬프트 + 개별역할 + 시스템메모
+    - base_prompt_v5.md + (조건부 git) + 위임 프롬프트 + 개별역할 + 시스템메모
     """
     return build_system_ai_prompt(user_profile=user_profile, git_enabled=git_enabled)
 

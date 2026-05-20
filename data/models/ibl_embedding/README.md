@@ -5,35 +5,35 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:14446
+- dataset_size:10419
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 사진 정리하는 기능 있어?
+- source_sentence: CCTV 소스 리스트
   sentences:
-  - 날씨 어떻게 확인해
-  - 공연 장르 코드 목록 조회
-  - 쓸데없는 파일 삭제
-- source_sentence: Pew Research 여론조사 데이터
-  sentences:
-  - 볼륨 뭐가 있어 보여줘
-  - 파이썬 스크립트 어디있어
-  - Pew Research 최신 여론조사/리서치 보고서 목록. 미국 사회·정치·기술 트렌드 조사. 파라미터 없이 호출하면 최신 리서치 목록 반환.
-- source_sentence: 연락처 전체 목록 보여줘
-  sentences:
-  - '[self:health_query]'
-  - 수집 데이터 남겨줘해줘
-  - 연락처 전체 뭐가 있어
-- source_sentence: 집 설계 리스트 보여줄래
-  sentences:
+  - '[sense:collect_sites]'
+  - CCTV 소스 뭐가 있어
   - '[self:search_memory]'
-  - '[engines:arch_list]'
-  - PubMed 논문 내려받아
-- source_sentence: 사진 타임라인 보여줘
+- source_sentence: 김철수가 누구야
   sentences:
-  - 사진 타임라인 보여
-  - 즐겨찾기 라디오 보여
-  - 주식 볼 수 있는 기능 있나
+  - 이거 클릭해
+  - 교향곡 하나 틀어줘
+  - 특정 이웃의 상세 정보 조회
+- source_sentence: 이전 결과를 거부하고 특정 문제(문자 깨짐)를 해결하여 다시 돌려줘
+  sentences:
+  - '[sense:search_arxiv] >> [self:file]'
+  - '[self:discover] >> [engines:image_gemini]'
+  - 구글 웹사이트 켜줘
+- source_sentence: 최근에 뭐 물어봤었지
+  sentences:
+  - 이전 대화 좀 보자
+  - 펄스 데이터 보여
+  - 페이지 생성 (섹션 조합)
+- source_sentence: 세종문화회관 상세 정보
+  sentences:
+  - 이 HTML 코드 미리보기 보여줘
+  - 이 공연장 어디에 있어
+  - 여행 카테고리 글 뭐가 있어
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -87,9 +87,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '사진 타임라인 보여줘',
-    '사진 타임라인 보여',
-    '즐겨찾기 라디오 보여',
+    '세종문화회관 상세 정보',
+    '이 공연장 어디에 있어',
+    '여행 카테고리 글 뭐가 있어',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -98,9 +98,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[1.0000, 0.9940, 0.1780],
-#         [0.9940, 1.0000, 0.1682],
-#         [0.1780, 0.1682, 1.0000]])
+# tensor([[ 1.0000,  0.7927, -0.0714],
+#         [ 0.7927,  1.0000, -0.0960],
+#         [-0.0714, -0.0960,  1.0000]])
 ```
 
 <!--
@@ -145,19 +145,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 14,446 training samples
+* Size: 10,419 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
   |         | sentence_0                                                                       | sentence_1                                                                        |
   |:--------|:---------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type    | string                                                                           | string                                                                            |
-  | details | <ul><li>min: 3 tokens</li><li>mean: 7.92 tokens</li><li>max: 47 tokens</li></ul> | <ul><li>min: 4 tokens</li><li>mean: 10.32 tokens</li><li>max: 60 tokens</li></ul> |
+  | details | <ul><li>min: 4 tokens</li><li>mean: 8.74 tokens</li><li>max: 47 tokens</li></ul> | <ul><li>min: 4 tokens</li><li>mean: 11.02 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                       | sentence_1                    |
-  |:---------------------------------|:------------------------------|
-  | <code>유튜브 동영상 내용 정리해서 보여줘</code> | <code>이 영상 핵심 정리해줘</code>     |
-  | <code>재생 멈춰</code>               | <code>재생 중지 및 큐 초기화</code>    |
-  | <code>블로그 인웹사이트 v2로 분석해줘</code>  | <code>블로그 인사이트 v2로 분석해</code> |
+  | sentence_0                  | sentence_1                      |
+  |:----------------------------|:--------------------------------|
+  | <code>문서 폴더에 뭐 있어</code>    | <code>Documents 안에 뭐 있지</code>  |
+  | <code>만들어둔 자동화 리스트</code>   | <code>만들어둔 자동화 목록</code>        |
+  | <code>삼성전자 기업 개요 알려줘</code> | <code>[sense:kr_company]</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -170,6 +170,8 @@ You can finetune this model on your own dataset.
 ### Training Hyperparameters
 #### Non-Default Hyperparameters
 
+- `per_device_train_batch_size`: 4
+- `per_device_eval_batch_size`: 4
 - `num_train_epochs`: 1
 - `multi_dataset_batch_sampler`: round_robin
 
@@ -179,8 +181,8 @@ You can finetune this model on your own dataset.
 - `do_predict`: False
 - `eval_strategy`: no
 - `prediction_loss_only`: True
-- `per_device_train_batch_size`: 8
-- `per_device_eval_batch_size`: 8
+- `per_device_train_batch_size`: 4
+- `per_device_eval_batch_size`: 4
 - `gradient_accumulation_steps`: 1
 - `eval_accumulation_steps`: None
 - `torch_empty_cache_steps`: None
@@ -279,21 +281,51 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.2769 | 500  | 0.4662        |
-| 0.5537 | 1000 | 0.2116        |
-| 0.8306 | 1500 | 0.1512        |
-| 0.2769 | 500  | 0.1445        |
-| 0.5537 | 1000 | 0.1215        |
-| 0.8306 | 1500 | 0.0910        |
-| 0.2769 | 500  | 0.0581        |
-| 0.5537 | 1000 | 0.0483        |
-| 0.8306 | 1500 | 0.0402        |
-| 0.2769 | 500  | 0.0281        |
-| 0.5537 | 1000 | 0.0273        |
-| 0.8306 | 1500 | 0.0213        |
-| 0.2769 | 500  | 0.0147        |
-| 0.5537 | 1000 | 0.0129        |
-| 0.8306 | 1500 | 0.0139        |
+| 0.1919 | 500  | 0.2845        |
+| 0.3839 | 1000 | 0.1596        |
+| 0.5758 | 1500 | 0.0991        |
+| 0.7678 | 2000 | 0.0776        |
+| 0.9597 | 2500 | 0.0606        |
+| 0.1919 | 500  | 0.0532        |
+| 0.3839 | 1000 | 0.0631        |
+| 0.5758 | 1500 | 0.0371        |
+| 0.7678 | 2000 | 0.0487        |
+| 0.9597 | 2500 | 0.0463        |
+| 0.1919 | 500  | 0.0174        |
+| 0.3839 | 1000 | 0.0196        |
+| 0.5758 | 1500 | 0.0126        |
+| 0.7678 | 2000 | 0.0171        |
+| 0.9597 | 2500 | 0.0197        |
+| 0.1919 | 500  | 0.0082        |
+| 0.3839 | 1000 | 0.0167        |
+| 0.5758 | 1500 | 0.0127        |
+| 0.7678 | 2000 | 0.0146        |
+| 0.9597 | 2500 | 0.0175        |
+| 0.1919 | 500  | 0.0087        |
+| 0.3839 | 1000 | 0.0081        |
+| 0.5758 | 1500 | 0.0035        |
+| 0.7678 | 2000 | 0.0202        |
+| 0.9597 | 2500 | 0.0124        |
+| 0.1919 | 500  | 0.0040        |
+| 0.3839 | 1000 | 0.0042        |
+| 0.5758 | 1500 | 0.0015        |
+| 0.7678 | 2000 | 0.0046        |
+| 0.9597 | 2500 | 0.0091        |
+| 0.1919 | 500  | 0.0011        |
+| 0.3839 | 1000 | 0.0017        |
+| 0.5758 | 1500 | 0.0014        |
+| 0.7678 | 2000 | 0.0028        |
+| 0.9597 | 2500 | 0.0059        |
+| 0.1919 | 500  | 0.0012        |
+| 0.3839 | 1000 | 0.0028        |
+| 0.5758 | 1500 | 0.0005        |
+| 0.7678 | 2000 | 0.0037        |
+| 0.9597 | 2500 | 0.0071        |
+| 0.1919 | 500  | 0.0008        |
+| 0.3839 | 1000 | 0.0070        |
+| 0.5758 | 1500 | 0.0024        |
+| 0.7678 | 2000 | 0.0011        |
+| 0.9597 | 2500 | 0.0059        |
 
 
 ### Framework Versions

@@ -3,14 +3,27 @@
 
 IBL은 외부 세계와 상호작용하기 위한 프로그래밍 언어다. Python처럼 실행기(`execute_ibl`)를 통해서만 실행된다. 텍스트에 IBL 코드를 쓰는 것은 실행이 아니다.
 
-너의 도구는 5개다:
+너의 도구는 3개다:
 1. `execute_ibl` — IBL 코드 실행 (검색, 데이터 조회, 파일 읽기/쓰기, 기기 제어, 통신 등 모든 외부 행위)
-2. `execute_python` — Python 코드 실행
-3. `execute_node` — Node.js 코드 실행
-4. `run_command` — 쉘 명령어 실행
-5. `read_guide` — 가이드 파일 읽기 (복잡한 작업 전에 매뉴얼 확인)
+2. `run_command` — 쉘 명령어 실행 (git, npm, pytest, 파이썬/노드 스크립트 실행 등)
+3. `read_guide` — 가이드 파일 읽기 (복잡한 작업 전에 매뉴얼 확인)
 
 `execute_ibl`이 주 도구다. 파일 읽기/쓰기, todo, 알림 등도 모두 IBL 액션이다 (별도 도구가 아님).
+
+## Python / Node.js 코드 실행 — write→run 패턴
+
+코드 실행 전용 도구는 없다. 대신:
+1. **멀티라인 코드**는 `[self:write]{path, content}`로 파일에 쓴 후 `run_command`로 실행한다. 이스케이프 충돌이 사라지고, stderr/traceback이 그대로 나와 디버깅에 유리하다.
+   ```
+   execute_ibl(code='[self:write]{path: "/tmp/calc.py", content: "import math\nprint(math.sqrt(2))"}')
+   run_command(cmd: "python3 /tmp/calc.py")
+   ```
+2. **한 줄짜리**는 곧장 `run_command`로 `-c` 호출한다.
+   ```
+   run_command(cmd: "python3 -c 'print(2+2)'")
+   run_command(cmd: "node -e 'console.log(Date.now())'")
+   ```
+3. 임시 스크립트는 `/tmp/` 아래에 두어 작업 디렉토리를 오염시키지 않는다.
 
 ## 5 Nodes — 노드 선택 기준
 
@@ -56,7 +69,7 @@ Chain multiple steps with operators:
 |----------|------|---------|
 | `>>` | Sequential | `[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}` |
 | `&` | Parallel | `[sense:stock_info]{symbol: "AAPL"} & [sense:stock_info]{symbol: "MSFT"}` |
-| `??` | Fallback | `[sense:api]{endpoint: "data"} ?? [sense:search_ddg]{query: "data"}` |
+| `??` | Fallback | `[sense:price]{symbol: "AAPL"} ?? [sense:search_ddg]{query: "AAPL price"}` |
 
 ## Common Patterns
 
@@ -134,23 +147,24 @@ IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 
 상황에 따라 다른 Goal을 활성화한다:
 
 ```
-[if: sense:kospi < 2400]{
+[if: sense:price{symbol: "^KS11"}.current_price < 2400]{
   [goal: "방어적 포트폴리오 재편"]{deadline: "즉시", max_rounds: 10}
 } [else]{
   [goal: "성장주 모니터링 유지"]{every: "매일 09:00", max_rounds: 30}
 }
 ```
 
+조건식의 좌변은 `node:action{params}.field` 형태로 쓸 수 있다. `.field`는 액션 결과 dict에서 점 표기법으로 값을 꺼낸다. 생략하면 결과의 `value` → `result` → 전체 dict 순으로 폴백한다.
+
 ### 케이스문 (case)
 
 여러 경우를 분기할 때:
 
 ```
-[case: sense:market_status]{
-  "상승장": [goal: "공격적 매수"]{max_rounds: 20},
-  "하락장": [goal: "손절 점검"]{max_rounds: 10},
-  "> 20%": [goal: "즉시 구매"]{max_rounds: 5},
-  "10~20%": [goal: "추가 비교"]{max_rounds: 15},
+[case: sense:price{symbol: "^KS11"}.current_price]{
+  "> 3000": [goal: "공격적 매수"]{max_rounds: 20},
+  "2400~3000": [goal: "추가 비교"]{max_rounds: 15},
+  "< 2400": [goal: "손절 점검"]{max_rounds: 10},
   default: [goal: "관망"]{max_rounds: 5}
 }
 ```
@@ -162,7 +176,7 @@ IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 
 ```
 [self:list_goals]{status: "active"}       # 진행 중인 목표 조회
 [self:goal_status]{goal_id: "goal_001"}   # 특정 목표 상태 조회
-[self:kill_goal]{goal_id: "goal_001"}     # 목표 중단
+[self:goal_kill]{goal_id: "goal_001"}     # 목표 중단
 ```
 
 **Goal 상태**: `pending` → `active` → `achieved` / `expired` / `limit_reached` / `cancelled`
@@ -183,9 +197,9 @@ IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 
   until: "매수 결정",
   max_rounds: 200,
   max_cost: 50000,
-  strategy: [case: sense:interest_rate]{
-    "하락": [sense:apt_trade]{region: "청주", depth: "deep"},
-    "상승": [goal: "관망"]{max_rounds: 1},
+  strategy: [case: sense:price{symbol: "^IRX"}.current_price]{
+    "< 4": [sense:apt_trade]{region: "청주", depth: "deep"},
+    "> 5": [goal: "관망"]{max_rounds: 1},
     default: [sense:apt_trade]{region: "청주", depth: "shallow"}
   }
 }

@@ -1,3 +1,11 @@
+---
+title: 도구 패키지 시스템
+scope: 패키지 구조(handler/tool.json/ibl_actions.yaml), 설치 절차, 34개 패키지 목록
+owner_code: package_manager.py, tool_loader.py, ibl_action_manager.py
+last_updated: 2026-05-17
+see_also: [architecture.md, ibl.md]
+---
+
 # 도구 패키지 시스템 가이드
 
 이 문서는 IndieBiz OS의 도구 패키지 설치/제거 방법을 정의합니다.

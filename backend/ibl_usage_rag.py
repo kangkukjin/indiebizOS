@@ -180,24 +180,47 @@ class IBLUsageRAG:
 # 실행기억 (Execution Memory) — 파이프라인 전체가 공유하는 통합 기억
 # =========================================================================
 
-def build_execution_memory(user_message: str, allowed_nodes: set = None) -> str:
+def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tuple:
     """사용자 명령에 대한 실행기억을 생성한다.
 
     실행기억 = 해마(과거 IBL 코드 사례) + 코드 사례에 등장하는 액션의 implementation.
     파이프라인의 모든 에이전트(무의식/의식/실행/평가)가 동일한 실행기억을 공유한다.
 
+    해마 검색은 여기서 단 한 번만 일어난다. 호출 측은 반환된 top_score를
+    그대로 사용해 Reflex 분기, 경험 증류 등에서 추가 검색을 피한다.
+
     Returns:
-        <execution_memory> XML 블록 문자열. 내용이 없으면 빈 문자열.
+        (xml: str, top_score: float, top_code: str)
+        - xml: <execution_memory> 블록 문자열 (내용 없으면 빈 문자열)
+        - top_score: 해마 최고 점수 (없으면 0.0)
+        - top_code: 해마 최고 점수 항목의 ibl_code (없으면 빈 문자열)
     """
     rag = IBLUsageRAG()
 
     if not user_message or not rag._is_ibl_relevant(user_message):
-        return ""
+        return ("", 0.0, "")
+
+    # 1) 해마 — 단일 검색으로 결과/최고 점수/최고 코드 모두 확보
+    try:
+        from ibl_usage_db import IBLUsageDB
+        db = IBLUsageDB()
+        results = db.search_hybrid(
+            query=user_message,
+            top_k=rag.DEFAULT_K,
+            allowed_nodes=allowed_nodes,
+        )
+    except Exception as e:
+        logger.error(f"[IBL RAG] 검색 실패: {e}")
+        return ("", 0.0, "")
+
+    top_score = results[0].score if results else 0.0
+    top_code = results[0].ibl_code if results else ""
+
+    # 최소 점수 필터
+    filtered = [r for r in results if r.score >= rag.MIN_SCORE]
 
     sections = []
-
-    # 1) 해마 — 과거 IBL 코드 사례 (fine-tuned 임베딩 + BM25 하이브리드)
-    refs_xml = rag.get_references(user_message, allowed_nodes=allowed_nodes)
+    refs_xml = rag._format_references(filtered) if filtered else ""
     if refs_xml:
         sections.append(refs_xml)
 
@@ -207,7 +230,7 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> str:
         sections.append(impl_xml)
 
     if not sections:
-        return ""
+        return ("", top_score, top_code)
 
     inner = "\n".join(sections)
     result = (
@@ -215,10 +238,10 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> str:
         f'{inner}\n'
         '</execution_memory>'
     )
-    # 로그: 해마 실행기억 내용 출력
-    print(f"[연상:실행기억] 생성 완료: \"{user_message[:40]}...\"")
+    # 로그
+    print(f"[연상:실행기억] 생성 완료 (top_score={top_score:.3f}): \"{user_message[:40]}...\"")
     print(f"[연상:실행기억] 내용:\n{result}")
-    return result
+    return (result, top_score, top_code)
 
 
 def _extract_implementations_from_refs(refs_xml: str) -> str:

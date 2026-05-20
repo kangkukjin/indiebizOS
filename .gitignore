@@ -233,3 +233,9 @@ backend/CCTV*
 backend/conversations.db
 image-*.png
 data/models/
+
+# 임시 작업 파일 및 백업 (수동 작업 부산물)
+backend/WORK
+*복사본*.md
+*.before_slim*
+*.before_slim2*

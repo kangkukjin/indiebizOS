@@ -65,12 +65,14 @@ def get_node_cmd():
     return node_cmd
 
 
-def execute(tool_name, args, project_path=None):
+def execute(tool_input, context):
+    """ToolContext 기반 신규 시그니처."""
+    tool_name = context.tool_name
     if tool_name != "execute_node":
         return {"error": f"Unknown tool: {tool_name}"}
 
-    code = args.get("code", "")
-    work_dir = project_path or os.getcwd()
+    code = tool_input.get("code", "")
+    work_dir = context.project_path
     temp_path = None
     try:
         # 임시 JavaScript 파일 생성 (project_path 내에 생성)

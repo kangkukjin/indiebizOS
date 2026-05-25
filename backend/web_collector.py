@@ -320,15 +320,19 @@ def _collect_browser(profile: dict) -> dict:
 
     try:
         from tool_loader import load_tool_handler
+        from tool_context import ToolContext
+        from runtime_utils import get_base_path
         handler = load_tool_handler("browser_navigate")
         if not handler:
             return {"success": False, "error": "browser-action 패키지가 설치되지 않았습니다."}
 
         import asyncio
-        import inspect
+
+        base_path = str(get_base_path())
 
         def _run(tool_name, params):
-            result = handler.execute(tool_name, params, ".")
+            context = ToolContext(project_path=base_path, tool_name=tool_name)
+            result = handler.execute(params, context)
             if asyncio.iscoroutine(result):
                 try:
                     loop = asyncio.get_event_loop()

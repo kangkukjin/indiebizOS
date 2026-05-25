@@ -312,10 +312,26 @@ class AgentCommunicationMixin:
                     reflex_hint = _top_code
                     self._log(f"[연상→실행] Reflex EXECUTE (score={_hippocampus_score:.3f})")
                 else:
-                    # 무의식 에이전트 — 경량 AI로 EXECUTE/THINK 분류
+                    # 무의식 에이전트 — 경량 AI로 SESSION_RESET/EXECUTE/THINK 분류
                     request_type = self._classify_request(content, execution_memory)
                     reflex_hint = None
                     self._log(f"[무의식] 분류: {request_type}")
+
+                # SESSION_RESET 분기 — Claude Code 세션만 클리어, AI 호출 없이 표준 응답
+                if request_type == "SESSION_RESET":
+                    from agent_cognitive import handle_session_reset
+                    response = handle_session_reset()
+                    self._log(f"[SESSION_RESET] 표준 응답 반환, AI 호출 스킵")
+                    # 응답을 DB에 저장 (UI는 polling으로 수신)
+                    try:
+                        self.db.save_message(agent_id, user_id, response, contact_type=contact_type)
+                        self.db.complete_task(task_id, response[:500])
+                    except Exception as send_err:
+                        self._log(f"SESSION_RESET 응답 저장 실패: {send_err}")
+                    # 후속 처리 스킵 (의식·실행·증류)
+                    clear_current_task_id()
+                    clear_called_agent()
+                    return
 
                 # 판단형만 의식 에이전트 실행 / 실행형은 중급 모델로 전환 (비용·속도 절감)
                 consciousness_output = None
@@ -333,6 +349,10 @@ class AgentCommunicationMixin:
                             _original_provider = self.ai._provider
                             _midtier.system_prompt = self.ai._provider.system_prompt
                             _midtier.tools = self.ai._provider.tools
+                            # 도구 호출 시 ToolContext 안전망(project_path 안전망 발동 WARN) 회피
+                            _midtier.project_path = self.ai._provider.project_path
+                            _midtier.agent_id = self.ai._provider.agent_id
+                            _midtier.agent_name = self.ai._provider.agent_name
                             # Gemini provider의 경우 도구 캐시 재구축
                             if hasattr(_midtier, '_cached_gemini_tools') and _midtier.tools:
                                 try:

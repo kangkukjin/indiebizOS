@@ -220,20 +220,63 @@ def unregister_actions(package_id: str) -> dict:
     return {"removed": removed, "package": package_id}
 
 
+def get_action_meta(node: str, action: str) -> dict:
+    """ibl_nodes.yaml에서 특정 액션의 메타데이터(description/implementation/achievement_criteria 등)를 조회.
+
+    Args:
+        node: 노드 이름 (예: "engines")
+        action: 액션 이름 (예: "lecture_plan")
+
+    Returns:
+        액션 메타 dict (존재하지 않으면 빈 dict)
+    """
+    nodes_data = _load_yaml(_get_nodes_path())
+    nodes = nodes_data.get("nodes", {})
+    actions = nodes.get(node, {}).get("actions", {})
+    return actions.get(action, {}) or {}
+
+
+def get_action_achievement_criteria(node: str, action: str) -> Optional[str]:
+    """액션의 achievement_criteria 메타를 조회. 없으면 None."""
+    meta = get_action_meta(node, action)
+    criteria = meta.get("achievement_criteria")
+    if isinstance(criteria, list):
+        criteria = ", ".join(str(c) for c in criteria if c)
+    if isinstance(criteria, str) and criteria.strip():
+        return criteria.strip()
+    return None
+
+
 def _parse_package_def(pkg_def: dict) -> Dict[str, tuple]:
     """패키지 정의에서 {node_name: (actions_dict, guides_list)} 추출.
 
     지원 형식:
     1. 단일 노드: node: "source", actions: {...}
     2. 복수 노드: nodes: {source: {actions: {...}}, forge: {actions: {...}}}
+
+    Phase 30: scope 전파
+        - 파일 레벨 scope (단일 노드 형식 최상위)는 모든 액션의 기본값
+        - 노드 레벨 scope (복수 노드 형식의 nodes.X.scope)는 그 노드 액션들의 기본값
+        - 액션 자체에 scope가 명시되어 있으면 우선
     """
     result = {}
 
+    def _apply_default_scope(actions: dict, default: str | None):
+        if not default:
+            return
+        for action_def in actions.values():
+            if isinstance(action_def, dict) and "scope" not in action_def:
+                action_def["scope"] = default
+
     if "nodes" in pkg_def:
         # 복수 노드
+        file_scope = pkg_def.get("scope")  # 파일 전체에 걸친 기본값 (선택)
         for node_name, node_def in pkg_def["nodes"].items():
             actions = node_def.get("actions", {})
             guides = node_def.get("guides", [])
+            # 노드 레벨 scope가 있으면 그것, 없으면 파일 레벨
+            node_scope = node_def.get("scope") or file_scope
+            _apply_default_scope(actions, node_scope)
             if actions:
                 result[node_name] = (actions, guides)
     elif "node" in pkg_def:
@@ -241,6 +284,8 @@ def _parse_package_def(pkg_def: dict) -> Dict[str, tuple]:
         node_name = pkg_def["node"]
         actions = pkg_def.get("actions", {})
         guides = pkg_def.get("guides", [])
+        file_scope = pkg_def.get("scope")
+        _apply_default_scope(actions, file_scope)
         if actions:
             result[node_name] = (actions, guides)
 

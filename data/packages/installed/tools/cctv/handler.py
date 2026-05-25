@@ -484,19 +484,20 @@ _TOOL_MAP = {
 }
 
 
-def execute(tool_name: str, args: dict, project_path: str = ".") -> str:
-    """CCTV 도구 실행 통합 핸들러"""
+def execute(tool_input: dict, context) -> str:
+    """CCTV 도구 실행 통합 핸들러 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
     func = _TOOL_MAP.get(tool_name)
     if func is None:
         return json.dumps({"error": f"미구현 도구: {tool_name}"}, ensure_ascii=False)
 
     try:
-        return func(**args)
-    except TypeError as e:
+        return func(**tool_input)
+    except TypeError:
         # 불필요한 파라미터 제거 후 재시도
         import inspect
         sig = inspect.signature(func)
-        valid_args = {k: v for k, v in args.items() if k in sig.parameters}
+        valid_args = {k: v for k, v in tool_input.items() if k in sig.parameters}
         return func(**valid_args)
     except Exception as e:
         return json.dumps({"error": f"{tool_name} 실행 실패: {str(e)}"}, ensure_ascii=False)

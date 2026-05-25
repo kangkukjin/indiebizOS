@@ -1552,7 +1552,8 @@ nodes:
         implementation: os.listdir/pathlib로 디렉토리 내용 조회
         target_key: path
       find:
-        description: '파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트 지정 (절대경로, ~/, 상대경로 모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀'
+        description: 파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트
+          지정 (절대경로, ~/, 상대경로 모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀
         keywords:
         - 파일
         - 찾기
@@ -1562,7 +1563,8 @@ nodes:
         - 파일찾기
         router: handler
         tool: glob_files
-        implementation: 'pathlib.glob 패턴 검색. path 파라미터로 검색 루트 지정 (절대경로/~/상대경로). max_results로 결과 상한 (기본 200). 매칭 없으면 path 옵션 안내'
+        implementation: pathlib.glob 패턴 검색. path 파라미터로 검색 루트 지정 (절대경로/~/상대경로). max_results로
+          결과 상한 (기본 200). 매칭 없으면 path 옵션 안내
         target_key: pattern
       grep:
         description: 파일 내용 검색
@@ -1606,10 +1608,13 @@ nodes:
         implementation: PyPDF2/pdfplumber로 PDF 텍스트 추출
         target_key: path
       read_docx:
-        description: DOCX 파일 읽기 (텍스트 + 표 + 이미지 추출). 기본 300블록까지만 반환 — 더 읽으려면 offset/limit 사용
+        description: DOCX 파일 읽기 (텍스트 + 표 + 이미지 추출). 기본 300블록까지만 반환 — 더 읽으려면 offset/limit
+          사용
         router: handler
         tool: read_docx
-        implementation: python-docx로 텍스트/표 추출, ZIP 구조에서 이미지 파일 추출 및 저장. 텍스트 내 이미지 위치 마커 포함. offset/limit/max_blocks로 부분 읽기 지원 (블록=문단 또는 표 하나). 응답 metadata에 truncated/next_offset 포함
+        implementation: python-docx로 텍스트/표 추출, ZIP 구조에서 이미지 파일 추출 및 저장. 텍스트 내 이미지
+          위치 마커 포함. offset/limit/max_blocks로 부분 읽기 지원 (블록=문단 또는 표 하나). 응답 metadata에
+          truncated/next_offset 포함
         target_key: path
         keywords:
         - docx
@@ -1762,6 +1767,161 @@ nodes:
         tool: find_duplicates
         implementation: MD5 해시 기반 중복 파일 탐지 (파일시스템 스캔)
         target_key: path
+      lecture_list:
+        description: 저장된 강의 목록 조회. indiebizOS/outputs/lectures/ 하위 스캔.
+        keywords:
+        - 강의목록
+        - 강의 목록
+        - 강의 리스트
+        router: handler
+        tool: lecture_list
+        implementation: outputs/lectures/ 디렉토리 스캔, 각 deck.json 메타 요약 반환
+        scope: workspace
+      lecture_create:
+        description: 새 강의 생성. 한글 제목 슬러그화 → lecture_id, 폴더 + 빈 deck.json 생성.
+        keywords:
+        - 강의 만들기
+        - 강의 생성
+        - 새 강의
+        - 강의 시작
+        router: handler
+        tool: lecture_create
+        implementation: 한글 제목 unidecode 슬러그화(중복시 -2/-3 자동), outputs/lectures/{lecture_id}/{deck.json,
+          materials/, slides/} 생성
+        scope: workspace
+      lecture_load:
+        description: 강의 데이터 로드. deck.json + 슬라이드/재료 파일 목록 반환.
+        router: handler
+        tool: lecture_load
+        implementation: deck.json 읽고, slides_dir/materials_dir 절대경로 함께 반환
+        target_key: lecture_id
+        scope: workspace
+      lecture_delete:
+        description: 강의 폴더 전체 삭제 (confirm=true 필수).
+        keywords:
+        - 강의 삭제
+        - 강의 지우기
+        router: handler
+        tool: lecture_delete
+        implementation: confirm=true 검증 후 shutil.rmtree로 강의 폴더 전체 삭제
+        target_key: lecture_id
+        scope: workspace
+      lecture_open:
+        description: 강의 만들기 창(별도 Electron BrowserWindow) 열기. lecture_id 옵션이면 그 강의
+          로드 상태로 열고, 미지정이면 강의 목록 화면.
+        keywords:
+        - 강의 만들기 창
+        - 강의만들기창
+        - 강의 창
+        - 강의 워크스페이스
+        - 강의 작업
+        router: handler
+        tool: lecture_open
+        implementation: WebSocket으로 프론트엔드에 open-lecture-workspace 이벤트 전송 (Step 2에서
+          IPC 핸들러 추가). 현재는 데이터만 반환.
+        scope: workspace
+      deck_reorder:
+        description: 슬라이드 순서만 변경 (slide_order 배열 갱신, 파일은 안 건드림).
+        router: handler
+        tool: deck_reorder
+        implementation: deck.json의 slide_order 배열을 받은 순서로 교체. 검증 후 저장.
+        target_key: lecture_id
+        scope: workspace
+      slide_delete:
+        description: 특정 슬라이드 삭제. 파일(json+png) 지우고 deck에서 제거.
+        router: handler
+        tool: slide_delete
+        implementation: slides/{slide_id}.{json,png} 삭제 + deck.json의 slide_order/slides
+          갱신
+        target_key: lecture_id
+        scope: workspace
+      material_add:
+        description: 재료 추가. 파일 경로(file_path) 또는 텍스트(text+filename)로 호출.
+        keywords:
+        - 재료 추가
+        - 자료 추가
+        - 원고 추가
+        router: handler
+        tool: material_add
+        implementation: file_path 모드는 shutil.copy로 materials/에 복사. text 모드는 materials/{filename}에
+          직접 쓰기. deck.materials 갱신.
+        target_key: lecture_id
+        scope: workspace
+      material_remove:
+        description: 재료 삭제. materials/{filename} 지우고 deck에서 제거.
+        router: handler
+        tool: material_remove
+        implementation: materials/{filename} unlink + deck.materials 갱신
+        target_key: lecture_id
+        scope: workspace
+      slide_create:
+        description: 강의자의 자연어 요청을 받아 슬라이드 한 장을 생성. 시스템 AI 키·모델 빌린 가벼운 AI가 spec(JSON)
+          생성 → slide_shadcn 렌더 → deck 등록.
+        keywords:
+        - 슬라이드 만들기
+        - 슬라이드 생성
+        - 다음 슬라이드
+        - 첫 슬라이드
+        - 표지 슬라이드
+        router: handler
+        tool: slide_create
+        implementation: 시스템 AI 설정 빌린 가벼운 provider 호출(채팅 히스토리 없이 self-contained 프롬프트).
+          컨텍스트=강의 메타+재료 색인+데크 개요+누적 메모. 응답 JSON 파싱→[engines:slide_shadcn] 렌더→slides/{sid}.{json,png}
+          저장→deck.slides[sid]+slide_order 갱신→memo_signals를 cumulative_memo에 자동 패치.
+        target_key: lecture_id
+        scope: workspace
+      slide_edit:
+        description: 특정 슬라이드 재생성(편집). focus 슬라이드의 현재 spec을 AI에 컨텍스트로 줘서 강의자 코멘트만 반영.
+          다른 부분 보존.
+        keywords:
+        - 슬라이드 편집
+        - 톤 바꿔
+        - 이 장 다시
+        router: handler
+        tool: slide_edit
+        implementation: focus_slide_spec 로드 → build_prompt에 포함 → AI 호출 → 동일 slide_id로
+          PNG 재렌더 (덮어쓰기). slide_order는 변동 없음.
+        target_key: lecture_id
+        scope: workspace
+      slide_patch_spec:
+        description: 슬라이드 spec의 일부 필드만 직접 patch + PNG 재렌더 (AI 호출 없음, PowerPoint식 편집).
+        keywords:
+        - 슬라이드 필드 편집
+        - 단어만 바꾸기
+        - 일부 수정
+        - spec patch
+        router: handler
+        tool: slide_patch_spec
+        implementation: 현재 spec 로드 → patch 키-값 shallow update → slide_shadcn 재렌더.
+          layout 키는 거부 (필요 필드 달라져 spec 깨질 위험). None은 필드 삭제.
+        target_key: lecture_id
+        scope: workspace
+      slide_rerender:
+        description: 슬라이드 spec 변경 없이 PNG만 재렌더. design_system 바꾼 뒤 같은 내용을 새 톤으로 다시
+          그릴 때. AI 호출 없음.
+        keywords:
+        - 슬라이드 재렌더
+        - 같은 내용 다시 그려
+        - 디자인만 적용
+        - 톤만 바꿔
+        router: handler
+        tool: slide_rerender
+        implementation: spec_file 로드 → 현재 design_system으로 slide_shadcn 호출 → deck.slides[sid].updated_at
+          갱신. AI 호출 없음.
+        target_key: lecture_id
+        scope: workspace
+      deck_export:
+        description: 강의 데크를 PDF 또는 PPTX 파일로 내보내기. slide_order 순서대로 PNG를 합본.
+        keywords:
+        - 강의 내보내기
+        - PDF 내보내기
+        - PPTX 내보내기
+        - 슬라이드 합본
+        router: handler
+        tool: deck_export
+        implementation: PIL 다중 페이지 PDF (의존성 없음) 또는 python-pptx 16:9 슬라이드. 저장 위치 outputs/lectures/{lecture_id}/exports/.
+        target_key: lecture_id
+        scope: workspace
     description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
     tags:
     - 파일
@@ -2597,12 +2757,15 @@ nodes:
         - guardian
         - world news
       slide:
-        description: 'PNG 슬라이드 생성. 호출: [engines:slide]{slides: [{title, body, theme}, ...]} (인라인 배열만, topic/file 미지원). 가이드 read_guide(query="슬라이드")'
+        description: 'PNG 슬라이드 생성. 호출: [engines:slide]{slides: [{title, body, theme},
+          ...]} (인라인 배열만, topic/file 미지원). 가이드 read_guide(query="슬라이드")'
         group: media_produce
         category: create
         router: handler
         tool: create_slides
-        implementation: 'Jinja2 HTML 템플릿 + Playwright PNG 캡처. tool_input.slides 배열만 사용. 슬라이드 dict 키: title, body, theme(modern/tech/business/title_bold/dark_tech/glassmorphism/gradient_modern/split_asymmetric/minimal_white/image_fullscreen/data_card/tailwind), image_path, bg_color, text_color, accent_color 등'
+        implementation: 'Jinja2 HTML 템플릿 + Playwright PNG 캡처. tool_input.slides 배열만
+          사용. 슬라이드 dict 키: title, body, theme(modern/tech/business/title_bold/dark_tech/glassmorphism/gradient_modern/split_asymmetric/minimal_white/image_fullscreen/data_card/tailwind),
+          image_path, bg_color, text_color, accent_color 등'
         keywords:
         - 슬라이드
         - 프레젠테이션
@@ -2711,23 +2874,55 @@ nodes:
         - Remotion
         - 상태
       slide_shadcn:
-        description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅+강의용 레이아웃 모두 지원, design_system으로 책 단위 비주얼 정체성 부여. 호출: [engines:slide_shadcn]{slides: [{layout, title, ...}, ...], design_system: "vintage_book"} (인라인 배열만, topic 미지원). 강의·발표·책 강의에는 lecture_body / metaphor_story / comparison_table / factbox / quote 사용. 가이드 read_guide(query="슬라이드")'
+        description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅+강의용 레이아웃 모두 지원, design_system으로
+          책 단위 비주얼 정체성 부여. 일러스트가 슬라이드 배경과 융합되는 통합형 레이아웃(hero_illustration/illustration_anchor/split_concept/illustration_background)
+          + 시각적 비교 표(comparison_iconic) 우선 권장. 호출: [engines:slide_shadcn]{slides:
+          [{layout, title, ...}, ...], design_system: "vintage_book", output_dir:
+          "(선택)"} (인라인 배열만, topic 미지원). 강의·발표·책 강의에는 lecture_body / metaphor_story
+          / comparison_table / factbox / quote 사용. 가이드 read_guide(query="슬라이드")'
         group: media_produce
         category: create
         router: handler
         tool: create_shadcn_slides
-        implementation: 'Shadcn UI React 기반 + Playwright PNG 캡처. tool_input.slides 배열만 사용. 마케팅 레이아웃: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom. 강의 레이아웃: lecture_body(본문단락+불릿+인용+푸터), metaphor_story(스토리+결론), comparison_table(헤더/행), factbox(보조정보), quote(풀스크린 인용). theme(색만): default/blue/green/purple/orange/dark. design_system(색+폰트+텍스처+장식 일관 묶음): default(없음), vintage_book(베이지 종이+청적갈 잉크+한글 디스플레이+컴퍼스 마크, 책 강의·인문), academic_paper(미색 종이+진남색+진홍 강조+Crimson 세리프, 학술 논문·연구), tech_minimal(다크 남+시안 네온+Inter+JetBrains Mono+그리드, 테크 컨퍼런스·개발자), magazine_modern(흰+검+적색+Bebas/Playfair, 잡지·편집)'
+        implementation: 'Shadcn UI React 기반 + Playwright PNG 캡처. tool_input: slides(배열,
+          필수) + theme(선택) + design_system(선택) + output_dir(선택, 미지정 시 자동 생성된 shadcn_slides_<hex>/)
+          + width/height(선택, 기본 1280x720). 마케팅 레이아웃: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom.
+          강의 레이아웃: lecture_body(본문단락+불릿+인용+푸터), metaphor_story(스토리+결론), comparison_table(헤더/행
+          순수 텍스트 표), factbox(보조정보), quote(풀스크린 인용). 통합형 일러스트 레이아웃(NotebookLM 스타일 —
+          이미지와 텍스트가 한 화면으로 융합): hero_illustration(중앙 영웅 일러스트+상하 텍스트, 표지·장 도입), illustration_anchor(상단
+          큰 일러스트+하단 텍스트(title/body/takeaway), 개념 설명), split_concept(좌우 대비, 양쪽 일러스트+캡션
+          + conclusion 박스, left_image_path/right_image_path 절대경로 자동 base64 변환 또는 left_image_data/right_image_data
+          + left_title/right_title + left_body/right_body + conclusion), illustration_background(전면
+          배경 일러스트+오버레이 텍스트, 부 도입·임팩트, text_align="left"/"center" 옵션 — center는 라디얼
+          스크림으로 가독성 보장), comparison_iconic(이모지/일러스트 헤더가 있는 시각적 비교 표 — label_header
+          + columns:[{title,subtitle,icon,highlighted}] + rows:[{label, cells:[...]}];
+          주의: row 필드명은 cells (values 아님 — Jinja dict 메서드 충돌)). image_path 절대경로는 자동
+          base64 변환되어 image_data로 주입됨 (image_path/left_image_path/right_image_path/avatar_path
+          모두 지원). theme(색만): default/blue/green/purple/orange/dark. design_system(색+폰트+텍스처+장식+일러스트
+          통합 묶음): default(없음), vintage_book(베이지 종이+청적갈 잉크+한글 디스플레이+컴퍼스 마크, 책 강의·인문,
+          일러스트 multiply 블렌드로 종이에 흡수), academic_paper(미색 종이+진남색+진홍 강조+Crimson 세리프,
+          학술 논문·연구), tech_minimal(다크 남+시안 네온+Inter+JetBrains Mono+그리드, 테크 컨퍼런스·개발자),
+          magazine_modern(흰+검+적색+Bebas/Playfair, 잡지·편집)'
         keywords:
         - 슬라이드
         - Shadcn
         - PNG
       image_gemini:
-        description: Gemini AI 이미지 생성
+        description: 'Gemini AI 이미지 생성 (Nano Banana 2 / Gemini 3.1 Flash 기본). style_preset으로
+          슬라이드 design_system과 일관된 일러스트 자동 생성 권장 (한글 텍스트 금지 + 스타일 토큰 자동 주입). 호출: [engines:image_gemini]{prompt:
+          "...", style_preset: "vintage_book", aspect_ratio: "16:9", image_size: "2K"}.
+          더 정밀한 일러스트는 quality:"pro" (Nano Banana Pro), 빠른 기본은 quality:"fast"'
         group: media_produce
         category: create
         router: handler
         tool: generate_gemini_image
-        implementation: Google Gemini API로 프롬프트 기반 AI 이미지 생성
+        implementation: 'Google Gemini API로 프롬프트 기반 AI 이미지 생성. 기본 모델: gemini-3.1-flash-image-preview
+          (Nano Banana 2, 2026-02 출시, 한국어 텍스트 렌더링 개선, 4K까지). 파라미터: prompt(필수), style_preset(vintage_book/academic_paper/tech_minimal/magazine_modern
+          — 슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합), aspect_ratio(1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1),
+          image_size(512/1K/2K/4K, 기본 1K — 가격 1K $0.045 / 2K 중간 / 4K $0.151), quality(fast=3.1
+          Flash 기본 / pro=gemini-3-pro-image-preview Pro / legacy=gemini-2.5-flash-image
+          폴백), model(직접 모델명 지정 시 quality 무시), output_path(선택), api_key(선택, 환경변수 GEMINI_API_KEY
+          기본)'
         target_key: prompt
         keywords:
         - image generation
@@ -3049,6 +3244,102 @@ nodes:
         - 배포
         - deploy
         - vercel
+      lecture_plan:
+        description: '강의 슬라이드 파이프라인 1단계 — 메시지 큐레이션. 명제 outline을 검증·저장. 호출: [engines:lecture_plan]{outline:
+          [{idx, role, title, device, visual, concrete}, ...], source: "책 메타", style:
+          "notebooklm"} 또는 처음이면 [engines:lecture_plan]{init_skeleton: true}로 스켈레톤
+          안내 받기. 가이드 read_guide(query="강의 슬라이드 원칙")'
+        group: media_produce
+        category: create
+        router: handler
+        tool: create_lecture_plan
+        implementation: '단계 산출물 outline.json + outline.md 저장. 스키마 검증: role(cover/intro/thesis/closure_table/closure_diagram/quote/outro/reference),
+          device(contrast/chain/equation/scale/hierarchy/none), notebooklm 스타일은 closure_table+closure_diagram
+          슬라이드 존재 강제. 산출물 위치 lecture_<id>/outline.{json,md}. 이 단계가 통과해야 lecture_write
+          가능.'
+        achievement_criteria: 모든 슬라이드 제목이 단정문(라벨 X), 5종 수사 장치(contrast/chain/equation/scale/hierarchy)에
+          매핑됨, 이중 회수(closure_table+closure_diagram) 존재, 핵심 명제 누락 없음, 각 슬라이드의 concrete
+          필드에 수치·고유명사 ≥1.
+        keywords:
+        - 강의
+        - 슬라이드 기획
+        - outline
+        - 명제
+      lecture_write:
+        description: '강의 슬라이드 파이프라인 2단계 — 각 슬라이드 콘텐츠 집필. outline.json을 입력으로 슬라이드별
+          layout/title/labels/image_prompt 채움. 호출: [engines:lecture_write]{lecture_dir:
+          "...", contents: [{idx, layout, title, labels, image_prompt, ...}], design_system:
+          "sf_blueprint"}. only_indices로 부분 갱신 가능.'
+        group: media_produce
+        category: create
+        router: handler
+        tool: create_lecture_write
+        implementation: 'contents.json 저장. 스키마 검증: idx가 outline에 존재, illustration_*
+          레이아웃은 image_prompt 필수, split_concept은 left_image_prompt+right_image_prompt
+          필수. 부분 갱신은 only_indices=[idx,...]로.'
+        achievement_criteria: image_prompt가 다이어그램형(씬 묘사 X)으로 작성됨, 영문 라벨 명시(EYE/MASS
+          등), 한글 라벨 들어갈 빈 공간 명세 포함, 본문 단락을 라벨로 그대로 옮기지 않음, 각 명제를 시각화하는 라벨 배치가 outline의
+          device와 정합.
+        keywords:
+        - 강의
+        - 슬라이드 집필
+        - contents
+      lecture_illustrate:
+        description: '강의 슬라이드 파이프라인 3단계 — 일러스트 생성. contents.json의 image_prompt들을 image_gemini로
+          병렬 호출. 호출: [engines:lecture_illustrate]{lecture_dir: "...", style_preset:
+          "sf_blueprint" (선택, 미지정시 design_system 사용), quality: "fast"/"pro", image_size:
+          "1K"/"2K"/"4K"}. only_indices로 약한 일러스트만 재생성.'
+        group: media_produce
+        category: create
+        router: handler
+        tool: create_lecture_illustrate
+        implementation: image_gemini를 슬라이드별로 호출, illustrations/manifest.json으로 매니페스트
+          관리. split_concept은 좌·우 1:1 두 장 생성. 부분 재생성 only_indices 지원. 실패한 슬라이드는 manifest에
+          기록 안 됨 — 다시 호출.
+        achievement_criteria: 생성된 일러스트가 다이어그램형이고 한글 미포함, 디자인 시스템 톤 일관, 빈 공간이 정말 비어있음(라벨
+          들어갈 자리), 각 일러스트가 contents.json의 image_prompt 의도와 정합. (VLM 평가는 image_critic
+          액션 참조)
+        keywords:
+        - 강의
+        - 일러스트 생성
+        - illustrate
+      lecture_compose:
+        description: '강의 슬라이드 파이프라인 4단계 — 데크 합성. contents.json + illustrations/manifest.json
+          → slide_shadcn 호출 → 최종 데크. 호출: [engines:lecture_compose]{lecture_dir: "..."}.
+          only_indices로 부분 재합성.'
+        group: media_produce
+        category: create
+        router: handler
+        tool: create_lecture_compose
+        implementation: contents.json과 illustrations/manifest.json을 병합하여 slide_shadcn에
+          전달. 최종 데크는 lecture_dir/deck/에 HTML+PNG로 저장. only_indices로 약한 슬라이드만 재합성 가능.
+        achievement_criteria: 라벨이 일러스트의 핵심 객체를 가리지 않음, 1280×720 뷰포트 안에 모든 요소가 들어옴,
+          한국어 폰트가 깨지지 않음, 라벨 좌표가 일러스트 빈 공간과 정합.
+        keywords:
+        - 강의
+        - 슬라이드 데크
+        - compose
+      image_critic:
+        description: 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 호출: [engines:image_critic]{image_path:
+          "/abs/...", intent: "이 일러스트가 표현해야 할 것 자연어 설명", style_preset: "sf_blueprint",
+          checks: ["...추가 체크"]}. 반환: passed/score/issues/notes JSON. ILLUSTRATE 단계의
+          자동 평가에 사용.'
+        group: media_produce
+        category: evaluate
+        router: handler
+        tool: critique_gemini_image
+        implementation: 'Gemini 3 Pro Vision으로 이미지를 평가. 기본 체크: (1) 다이어그램형인가, (2) 한글이
+          들어갔는가, (3) 빈 공간이 의도된 위치에 있는가, (4) 주요 객체가 명확히 배치됐는가, (5) 디자인 시스템 톤 일관성. checks
+          파라미터로 추가 체크 가능. 한글이 일러스트 안에 있으면 무조건 passed=false. 반환: 사람용 요약 + verdict_json
+          (passed/score/issues/notes).'
+        achievement_criteria: 평가 자체의 신뢰성 — JSON 파싱 성공, issues가 구체적 이유를 담음, 한글 검출 시
+          무조건 passed=false.
+        keywords:
+        - 일러스트 평가
+        - VLM
+        - vision
+        - critic
+        - image evaluation
     description: '작업장: 콘텐츠 생성 및 변환 — 신문, 슬라이드, 영상, 차트, 음악, 웹사이트, 디자인'
     tags:
     - 생성

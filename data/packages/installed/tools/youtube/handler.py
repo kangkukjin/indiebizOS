@@ -30,31 +30,35 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 SETTINGS_PATH = os.path.join(BASE_DIR, "tool_settings.json")
 
-def execute(tool_name: str, arguments: dict, project_path: str = None):
+def execute(tool_input: dict, context):
+    """ToolContext 기반 신규 시그니처."""
+    tool_name = context.tool_name
     tool_youtube = load_tool_youtube()
 
     if tool_name == 'download_youtube_music':
         # AI가 다양한 이름으로 파일명을 전달할 수 있으므로 유연하게 처리
-        fname = (arguments.get('output_path')
-                 or arguments.get('filename')
-                 or arguments.get('path')
-                 or arguments.get('file')
-                 or arguments.get('name')
+        # ('output'은 가장 자연스러운 키 — 의식 에이전트가 자주 사용)
+        fname = (tool_input.get('output_path')
+                 or tool_input.get('output')
+                 or tool_input.get('filename')
+                 or tool_input.get('path')
+                 or tool_input.get('file')
+                 or tool_input.get('name')
                  or 'output.mp3')
-        return tool_youtube.download_youtube_music(url=arguments['url'], filename=fname)
+        return tool_youtube.download_youtube_music(url=tool_input['url'], filename=fname)
     elif tool_name == 'get_youtube_info':
-        return tool_youtube.get_youtube_info(url=arguments['url'])
+        return tool_youtube.get_youtube_info(url=tool_input['url'])
     elif tool_name == 'get_youtube_transcript':
         # url 또는 video_id 파라미터 지원
-        url = arguments.get('url')
+        url = tool_input.get('url')
         if not url:
-            video_id = arguments.get('video_id')
+            video_id = tool_input.get('video_id')
             if video_id:
                 url = f"https://www.youtube.com/watch?v={video_id}"
             else:
                 return {"error": "url 또는 video_id 파라미터가 필요합니다."}
         # language를 languages 리스트로 변환
-        lang = arguments.get('language') or arguments.get('languages')
+        lang = tool_input.get('language') or tool_input.get('languages')
         if isinstance(lang, str):
             languages = [lang]
         elif isinstance(lang, list):
@@ -64,9 +68,9 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
         return tool_youtube.get_youtube_transcript(url=url, languages=languages)
     elif tool_name == 'list_available_transcripts':
         # url 또는 video_id 파라미터 지원
-        url = arguments.get('url')
+        url = tool_input.get('url')
         if not url:
-            video_id = arguments.get('video_id')
+            video_id = tool_input.get('video_id')
             if video_id:
                 url = f"https://www.youtube.com/watch?v={video_id}"
             else:
@@ -74,8 +78,8 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
         return tool_youtube.list_available_transcripts(url=url)
     elif tool_name == 'summarize_video':
         # summary_length와 languages 파라미터 전달
-        summary_length = arguments.get('summary_length', 3000)
-        lang = arguments.get('language') or arguments.get('languages')
+        summary_length = tool_input.get('summary_length', 3000)
+        lang = tool_input.get('language') or tool_input.get('languages')
         if isinstance(lang, str):
             languages = [lang]
         elif isinstance(lang, list):
@@ -83,25 +87,25 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
         else:
             languages = None  # 자동 선택
         return tool_youtube.summarize_youtube(
-            url=arguments['url'],
+            url=tool_input['url'],
             summary_length=summary_length,
             languages=languages
         )
     elif tool_name == 'search_youtube':
         return tool_youtube.search_youtube(
-            query=arguments.get('query', ''),
-            count=arguments.get('count', 5),
+            query=tool_input.get('query', ''),
+            count=tool_input.get('count', 5),
         )
     elif tool_name == 'play_youtube':
         return tool_youtube.play_youtube(
-            query=arguments.get('query', ''),
-            mode=arguments.get('mode', 'audio'),
-            count=arguments.get('count', 5),
+            query=tool_input.get('query', ''),
+            mode=tool_input.get('mode', 'audio'),
+            count=tool_input.get('count', 5),
         )
     elif tool_name == 'add_to_queue':
         return tool_youtube.add_to_queue(
-            query=arguments.get('query', ''),
-            count=arguments.get('count', 3),
+            query=tool_input.get('query', ''),
+            count=tool_input.get('count', 3),
         )
     elif tool_name == 'skip_youtube':
         return tool_youtube.skip_youtube()

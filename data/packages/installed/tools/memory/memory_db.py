@@ -110,7 +110,11 @@ def _ensure_vec_table(conn):
 
 def _index_one(db_path: str, mem_id: int, content: str,
                keywords: str = "", category: str = ""):
-    """단일 메모리 항목 임베딩 인덱싱"""
+    """단일 메모리 항목 임베딩 인덱싱.
+
+    sqlite-vec의 vec0 가상 테이블은 INSERT OR REPLACE를 제대로 지원하지 않아
+    같은 rowid로 다시 INSERT 시 UNIQUE constraint failed가 발생한다.
+    명시적 DELETE 후 INSERT 패턴을 사용해 업데이트 의미를 보장한다."""
     conn = _get_vec_conn(db_path)
     if conn is None:
         return
@@ -119,8 +123,9 @@ def _index_one(db_path: str, mem_id: int, content: str,
         text = _prepare_text(content, keywords, category)
         emb = _embed(text)
         if emb:
+            conn.execute("DELETE FROM memories_vec WHERE rowid = ?", (mem_id,))
             conn.execute(
-                "INSERT OR REPLACE INTO memories_vec(rowid, embedding) VALUES (?, ?)",
+                "INSERT INTO memories_vec(rowid, embedding) VALUES (?, ?)",
                 (mem_id, emb)
             )
             conn.commit()

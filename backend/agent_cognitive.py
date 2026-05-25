@@ -14,6 +14,34 @@ from typing import Optional, List
 from ai_agent import AIAgent
 
 
+# ============================================================
+# SESSION_RESET 핸들러 (모듈 레벨 — call site에서 직접 호출)
+# ============================================================
+
+SESSION_RESET_RESPONSE = "새 세션을 시작했습니다. 무엇을 도와드릴까요?"
+
+
+def handle_session_reset() -> str:
+    """SESSION_RESET 분류 후 호출.
+
+    현재 thread_context의 agent에 해당하는 Claude Code 세션 매핑을 제거하여
+    다음 호출이 fresh Claude Code 세션으로 시작되도록 한다.
+    Claude Code provider가 아닌 경우 no-op (안전).
+
+    Returns:
+        사용자에게 보여줄 표준 응답 텍스트
+    """
+    try:
+        from providers.claude_code import clear_session_for_agent
+        from thread_context import get_current_registry_key
+        key = get_current_registry_key() or "default"
+        clear_session_for_agent(key)
+        print(f"[SESSION_RESET] 세션 매핑 클리어: {key}")
+    except Exception as e:
+        print(f"[SESSION_RESET] 매핑 클리어 실패 (무시): {e}")
+    return SESSION_RESET_RESPONSE
+
+
 class AgentCognitiveMixin:
     """AgentRunner의 인지/AI 초기화 관련 메서드 모음.
 
@@ -581,13 +609,13 @@ AI: {ai_response[:500]}"""
 
     def _classify_request(self, user_message: str,
                           execution_memory: str = "") -> str:
-        """사용자 요청을 실행형(EXECUTE) 또는 판단형(THINK)으로 분류한다.
+        """사용자 요청을 SESSION_RESET / EXECUTE / THINK로 분류한다.
 
         무의식 에이전트 — 경량 AI 호출만 담당. Reflex 판정은
         호출 측에서 단계 0(_build_execution_memory)의 top_score로 미리 분기한다.
 
         Returns:
-            "EXECUTE" 또는 "THINK"
+            "SESSION_RESET" / "EXECUTE" / "THINK"
         """
         try:
             from consciousness_agent import lightweight_ai_call, get_unconscious_prompt
@@ -602,6 +630,9 @@ AI: {ai_response[:500]}"""
                 return "THINK"  # AI 미준비 시 안전하게 판단형으로
 
             result = response.strip().upper()
+            # SESSION_RESET 우선 검사 (EXECUTE 키워드가 들어있는 경우와 충돌 방지)
+            if "SESSION_RESET" in result or "RESET" == result:
+                return "SESSION_RESET"
             return "EXECUTE" if "EXECUTE" in result else "THINK"
 
         except Exception as e:
@@ -612,28 +643,41 @@ AI: {ai_response[:500]}"""
     # Goal 평가 루프 — 의식 에이전트의 달성 기준 기반 자동 평가
     # ============================================================
 
-    def _extract_achievement_criteria(self, consciousness_output: dict) -> Optional[str]:
+    def _extract_achievement_criteria(self, consciousness_output: dict,
+                                       tool_results_str: str = "") -> Optional[str]:
         """의식 에이전트 출력에서 달성 기준을 추출한다.
 
         1차: achievement_criteria 필드 (별도 필드)
         2차: task_framing에서 "달성 기준:" 이후 텍스트 (하위 호환)
+        3차: 도구 실행 결과에 박힌 [ACHIEVEMENT_CRITERIA:node:action] ... [/ACHIEVEMENT_CRITERIA]
+             마커 — 액션 메타데이터 자동 보강 (ibl_actions.yaml의 achievement_criteria 필드)
         """
-        if not consciousness_output:
-            return None
+        # 1차: consciousness_output의 별도 필드
+        if consciousness_output:
+            criteria = consciousness_output.get("achievement_criteria", "")
+            if isinstance(criteria, list):
+                criteria = ", ".join(str(c) for c in criteria if c)
+            if criteria and isinstance(criteria, str) and criteria.strip():
+                return criteria.strip()
 
-        # 1차: 별도 필드 (문자열 또는 리스트)
-        criteria = consciousness_output.get("achievement_criteria", "")
-        if isinstance(criteria, list):
-            criteria = ", ".join(str(c) for c in criteria if c)
-        if criteria and isinstance(criteria, str) and criteria.strip():
-            return criteria.strip()
+            # 2차: task_framing에서 추출 (하위 호환)
+            task_framing = consciousness_output.get("task_framing", "")
+            if "달성 기준:" in task_framing:
+                return task_framing.split("달성 기준:")[-1].strip().rstrip(".")
+            if "달성기준:" in task_framing:
+                return task_framing.split("달성기준:")[-1].strip().rstrip(".")
 
-        # 2차: task_framing에서 추출 (하위 호환)
-        task_framing = consciousness_output.get("task_framing", "")
-        if "달성 기준:" in task_framing:
-            return task_framing.split("달성 기준:")[-1].strip().rstrip(".")
-        if "달성기준:" in task_framing:
-            return task_framing.split("달성기준:")[-1].strip().rstrip(".")
+        # 3차: 도구 실행 결과에 박힌 액션 메타 마커 (lecture_pipeline 등)
+        if tool_results_str:
+            marker_pat = re.compile(
+                r"\[ACHIEVEMENT_CRITERIA:([^\]]+)\]\s*(.+?)\s*\[/ACHIEVEMENT_CRITERIA\]",
+                re.DOTALL,
+            )
+            matches = marker_pat.findall(tool_results_str)
+            if matches:
+                # 여러 액션이 연달아 실행되면 모든 criteria를 묶음
+                parts = [f"[{action}] {body.strip()}" for action, body in matches]
+                return "\n".join(parts)
 
         return None
 

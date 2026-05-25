@@ -15,6 +15,7 @@ import { applyIndieNetMethods } from './api-indienet';
 import { applyPackagesMethods } from './api-packages';
 import { applyBusinessMethods } from './api-business';
 import { applyMultiChatMethods } from './api-multi-chat';
+import { applyLectureWorkspaceMethods } from './api-lecture-workspace';
 
 const API_BASE = 'http://127.0.0.1:8765';
 
@@ -612,7 +613,8 @@ function createAPIClient() {
   const withPackages = applyPackagesMethods(withIndieNet);
   const withBusiness = applyBusinessMethods(withPackages);
   const withMultiChat = applyMultiChatMethods(withBusiness);
-  return withMultiChat;
+  const withLectureWorkspace = applyLectureWorkspaceMethods(withMultiChat);
+  return withLectureWorkspace;
 }
 
 export const api = createAPIClient();

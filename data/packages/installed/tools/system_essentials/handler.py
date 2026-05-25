@@ -88,7 +88,11 @@ def _get_path(tool_input: dict) -> str:
     """file_path, path, target 중 사용 가능한 경로 반환"""
     return tool_input.get("file_path") or tool_input.get("path") or tool_input.get("target") or ""
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
+def execute(tool_input: dict, context) -> str:
+    """ToolContext 기반 신규 시그니처."""
+    tool_name = context.tool_name
+    project_path = context.project_path
+    agent_id = context.agent_id
     try:
         if tool_name == "read_file":
             raw_path = _get_path(tool_input)

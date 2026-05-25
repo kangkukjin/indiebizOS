@@ -56,6 +56,18 @@ contextBridge.exposeInMainWorld('electron', {
   openAndroidManagerWindow: (deviceId, projectId) =>
     ipcRenderer.invoke('open-android-manager-window', deviceId, projectId),
 
+  // 강의 만들기 워크스페이스 창 열기
+  openLectureWorkspaceWindow: (lectureId) =>
+    ipcRenderer.invoke('open-lecture-workspace-window', lectureId),
+
+  // 강의 워크스페이스: 다른 강의 선택 신호 수신
+  onLectureWorkspaceSelect: (callback) => {
+    ipcRenderer.on('lecture-workspace-select', (_, lectureId) => callback(lectureId));
+  },
+  removeLectureWorkspaceSelectListener: () => {
+    ipcRenderer.removeAllListeners('lecture-workspace-select');
+  },
+
   // 런처 새로고침 요청
   refreshLauncher: () => ipcRenderer.invoke('refresh-launcher'),
   onLauncherRefresh: (callback) => {

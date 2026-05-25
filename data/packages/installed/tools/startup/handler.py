@@ -10,20 +10,20 @@ def load_module(module_name):
     spec.loader.exec_module(module)
     return module
 
-def execute(tool_name: str, params: dict, project_path: str = None):
-    """
-    IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러
-    """
+def execute(tool_input: dict, context):
+    """IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
+
     if tool_name == "search_kstartup":
         tool = load_module("tool_kstartup")
-        keyword = params.get("keyword", "")
-        count = params.get("count", 10)
+        keyword = tool_input.get("keyword", "")
+        count = tool_input.get("count", 10)
         return tool.search_kstartup(keyword, count)
 
     elif tool_name == "search_mss_biz":
         tool = load_module("tool_mss_biz")
-        keyword = params.get("keyword", "")
-        count = params.get("count", 10)
+        keyword = tool_input.get("keyword", "")
+        count = tool_input.get("count", 10)
         return tool.search_mss_biz(keyword, count)
 
     else:

@@ -75,18 +75,9 @@ def get_python_cmd():
     return python_cmd
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    """
-    Python 코드 실행 도구
-
-    Args:
-        tool_name: 도구 이름 (이 패키지에서는 "execute_python")
-        tool_input: 도구 입력 파라미터
-        project_path: 프로젝트 경로
-
-    Returns:
-        실행 결과 문자열
-    """
+def execute(tool_input: dict, context) -> str:
+    """Python 코드 실행 도구 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
     if tool_name == "execute_python":
         code = tool_input.get("code", "")
         try:
@@ -96,7 +87,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
                 capture_output=True,
                 text=True,
                 timeout=30,
-                cwd=project_path
+                cwd=context.project_path
             )
             output = result.stdout
             if result.stderr:

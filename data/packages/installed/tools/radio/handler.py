@@ -24,29 +24,31 @@ def load_tool_radio():
     return module
 
 
-def execute(tool_name: str, arguments: dict, project_path: str = None):
+def execute(tool_input: dict, context):
+    """ToolContext 기반 신규 시그니처."""
+    tool_name = context.tool_name
     radio = load_tool_radio()
 
     if tool_name == "search_radio":
         return radio.search_radio(
-            name=arguments.get("name"),
-            tag=arguments.get("tag"),
-            country=arguments.get("country"),
-            state=arguments.get("state"),
-            language=arguments.get("language"),
-            order=arguments.get("order"),
-            bitrateMin=arguments.get("bitrateMin"),
-            limit=arguments.get("limit", 10),
+            name=tool_input.get("name"),
+            tag=tool_input.get("tag"),
+            country=tool_input.get("country"),
+            state=tool_input.get("state"),
+            language=tool_input.get("language"),
+            order=tool_input.get("order"),
+            bitrateMin=tool_input.get("bitrateMin"),
+            limit=tool_input.get("limit", 10),
         )
     elif tool_name == "get_korean_radio":
         return radio.get_korean_radio(
-            broadcaster=arguments.get("broadcaster"),
+            broadcaster=tool_input.get("broadcaster"),
         )
     elif tool_name == "play_radio":
         return radio.play_radio(
-            station_id=arguments.get("station_id"),
-            stream_url=arguments.get("stream_url"),
-            volume=arguments.get("volume", 70),
+            station_id=tool_input.get("station_id"),
+            stream_url=tool_input.get("stream_url"),
+            volume=tool_input.get("volume", 70),
         )
     elif tool_name == "stop_radio":
         return radio.stop_radio()
@@ -54,19 +56,19 @@ def execute(tool_name: str, arguments: dict, project_path: str = None):
         return radio.radio_status()
     elif tool_name == "set_radio_volume":
         return radio.set_radio_volume(
-            volume=arguments.get("volume", 70),
+            volume=tool_input.get("volume", 70),
         )
     elif tool_name == "get_radio_favorites":
         return radio.get_radio_favorites()
     elif tool_name == "save_radio_favorite":
         return radio.save_radio_favorite(
-            station_id=arguments.get("station_id"),
-            name=arguments.get("name"),
-            stream_url=arguments.get("stream_url"),
+            station_id=tool_input.get("station_id"),
+            name=tool_input.get("name"),
+            stream_url=tool_input.get("stream_url"),
         )
     elif tool_name == "remove_radio_favorite":
         return radio.remove_radio_favorite(
-            name=arguments.get("name"),
+            name=tool_input.get("name"),
         )
     else:
         raise ValueError(f"Unknown tool: {tool_name}")

@@ -42,106 +42,97 @@ def get_definitions():
         return json.load(f)
 
 
-def execute(tool_name: str, params: dict, project_path: str = None):
-    """
-    도구 실행 진입점
-
-    Args:
-        tool_name: 실행할 도구 이름
-        params: 도구 파라미터
-        project_path: 프로젝트 경로 (선택사항)
-
-    Returns:
-        dict: {"success": bool, "data": ..., "error": ...}
-    """
+def execute(tool_input: dict, context):
+    """도구 실행 진입점 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
     try:
         # 한국 기업 관련 도구
         if tool_name == "kr_company_info":
             tool = load_module("tool_dart")
             return tool.get_company_info(
-                corp_code=params.get("corp_code"),
-                corp_name=params.get("corp_name")
+                corp_code=tool_input.get("corp_code"),
+                corp_name=tool_input.get("corp_name")
             )
 
         elif tool_name == "kr_financial_statements":
             tool = load_module("tool_dart")
             return tool.get_financial_statements(
-                corp_code=params.get("corp_code"),
-                corp_name=params.get("corp_name"),
-                year=params.get("year"),
-                report_type=params.get("report_type", "11011")
+                corp_code=tool_input.get("corp_code"),
+                corp_name=tool_input.get("corp_name"),
+                year=tool_input.get("year"),
+                report_type=tool_input.get("report_type", "11011")
             )
 
         elif tool_name == "kr_disclosures":
             tool = load_module("tool_dart")
             return tool.get_disclosures(
-                corp_code=params.get("corp_code"),
-                corp_name=params.get("corp_name"),
-                start_date=params.get("start_date"),
-                end_date=params.get("end_date"),
-                pblntf_ty=params.get("pblntf_ty"),
-                count=params.get("count", 20)
+                corp_code=tool_input.get("corp_code"),
+                corp_name=tool_input.get("corp_name"),
+                start_date=tool_input.get("start_date"),
+                end_date=tool_input.get("end_date"),
+                pblntf_ty=tool_input.get("pblntf_ty"),
+                count=tool_input.get("count", 20)
             )
 
         elif tool_name == "kr_stock_price":
             tool = load_module("tool_krx")
             return tool.get_stock_price(
-                symbol=params.get("symbol"),
-                start_date=params.get("start_date"),
-                end_date=params.get("end_date")
+                symbol=tool_input.get("symbol"),
+                start_date=tool_input.get("start_date"),
+                end_date=tool_input.get("end_date")
             )
 
         elif tool_name == "kr_market_investor_trading":
             tool = load_module("tool_krx_investor")
             return tool.get_market_investor_trading(
-                market=params.get("market", "STK"),
-                start_date=params.get("start_date"),
-                end_date=params.get("end_date"),
+                market=tool_input.get("market", "STK"),
+                start_date=tool_input.get("start_date"),
+                end_date=tool_input.get("end_date"),
             )
 
         elif tool_name == "kr_stock_investor_trading":
             tool = load_module("tool_krx_investor")
             return tool.get_stock_investor_trading(
-                symbol=params.get("symbol"),
-                start_date=params.get("start_date"),
-                end_date=params.get("end_date"),
+                symbol=tool_input.get("symbol"),
+                start_date=tool_input.get("start_date"),
+                end_date=tool_input.get("end_date"),
             )
 
         # 미국 기업 관련 도구
         elif tool_name == "us_company_profile":
             tool = load_module("tool_fmp")
             return tool.get_company_profile(
-                symbol=params.get("symbol")
+                symbol=tool_input.get("symbol")
             )
 
         elif tool_name == "us_financial_statements":
             tool = load_module("tool_fmp")
             return tool.get_financial_statements(
-                symbol=params.get("symbol"),
-                statement_type=params.get("statement_type", "income"),
-                period=params.get("period", "annual"),
-                limit=params.get("limit", 5)
+                symbol=tool_input.get("symbol"),
+                statement_type=tool_input.get("statement_type", "income"),
+                period=tool_input.get("period", "annual"),
+                limit=tool_input.get("limit", 5)
             )
 
         elif tool_name == "us_sec_filings":
             tool = load_module("tool_sec_edgar")
             return tool.get_filings(
-                symbol=params.get("symbol"),
-                filing_type=params.get("filing_type"),
-                count=params.get("count", 10)
+                symbol=tool_input.get("symbol"),
+                filing_type=tool_input.get("filing_type"),
+                count=tool_input.get("count", 10)
             )
 
         elif tool_name == "us_stock_price":
             tool = load_module("tool_fmp")
             return tool.get_stock_price(
-                symbol=params.get("symbol"),
-                start_date=params.get("start_date"),
-                end_date=params.get("end_date")
+                symbol=tool_input.get("symbol"),
+                start_date=tool_input.get("start_date"),
+                end_date=tool_input.get("end_date")
             )
 
         # 종목 뉴스: Finnhub 우선, 실패 시 Yahoo Finance 폴백
         elif tool_name == "company_news":
-            symbol = params.get("symbol") or params.get("query")
+            symbol = tool_input.get("symbol") or tool_input.get("query")
             if not symbol:
                 return {"success": False, "error": "symbol(티커) 파라미터가 필요합니다. 예: 005930.KS (삼성전자), AAPL (애플)"}
             # 1차: Finnhub (날짜 범위 지정 가능, 전문 금융 뉴스)
@@ -149,8 +140,8 @@ def execute(tool_name: str, params: dict, project_path: str = None):
                 tool = load_module("tool_finnhub")
                 result = tool.get_company_news(
                     symbol=symbol,
-                    start_date=params.get("start_date"),
-                    end_date=params.get("end_date")
+                    start_date=tool_input.get("start_date"),
+                    end_date=tool_input.get("end_date")
                 )
                 # 결과가 있으면 반환
                 if isinstance(result, dict) and result.get("success") and result.get("data", {}).get("count", 0) > 0:
@@ -169,37 +160,37 @@ def execute(tool_name: str, params: dict, project_path: str = None):
         elif tool_name == "earnings_calendar":
             tool = load_module("tool_finnhub")
             return tool.get_earnings_calendar(
-                symbol=params.get("symbol"),
-                start_date=params.get("start_date"),
-                end_date=params.get("end_date")
+                symbol=tool_input.get("symbol"),
+                start_date=tool_input.get("start_date"),
+                end_date=tool_input.get("end_date")
             )
 
         # Yahoo Finance / CoinGecko 도구
         elif tool_name == "yf_stock_price":
             tool = load_module("tool_yfinance")
             return tool.get_stock_price(
-                symbol=params.get("symbol"),
-                period=params.get("period", "5d"),
-                interval=params.get("interval", "1d")
+                symbol=tool_input.get("symbol"),
+                period=tool_input.get("period", "5d"),
+                interval=tool_input.get("interval", "1d")
             )
 
         elif tool_name == "yf_stock_info":
             tool = load_module("tool_yfinance")
             return tool.get_stock_info(
-                symbol=params.get("symbol")
+                symbol=tool_input.get("symbol")
             )
 
         elif tool_name == "yf_search_stock":
             tool = load_module("tool_yfinance")
             return tool.search_stock(
-                query=params.get("query"),
-                search_type=params.get("search_type", "quotes")
+                query=tool_input.get("query"),
+                search_type=tool_input.get("search_type", "quotes")
             )
 
         elif tool_name == "crypto_price":
             tool = load_module("tool_yfinance")
             return tool.get_crypto_price(
-                coin_id=params.get("coin_id", "bitcoin")
+                coin_id=tool_input.get("coin_id", "bitcoin")
             )
 
         else:

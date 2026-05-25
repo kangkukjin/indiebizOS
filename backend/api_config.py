@@ -349,7 +349,7 @@ async def get_midtier_ai_config():
 
 @router.put("/midtier-ai")
 async def update_midtier_ai_config(config: Dict[str, Any]):
-    """중급 AI 설정 저장"""
+    """중급 AI 설정 저장. 저장 후 provider 캐시 무효화하여 즉시 반영."""
     try:
         config_dict = {
             "enabled": config.get("enabled", True),
@@ -359,6 +359,14 @@ async def update_midtier_ai_config(config: Dict[str, Any]):
         }
         with open(MIDTIER_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, ensure_ascii=False, indent=2)
+
+        # 캐시 무효화 — 다음 호출 시 새 config로 provider 재생성
+        try:
+            from consciousness_agent import reset_midtier_provider
+            reset_midtier_provider()
+        except Exception as cache_err:
+            print(f"[midtier-ai] 캐시 무효화 경고: {cache_err}")
+
         return {"status": "saved", "config": config_dict}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

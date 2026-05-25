@@ -148,6 +148,7 @@ export function AgentEditDialog({
                   <option value="openai">OpenAI (GPT)</option>
                   <option value="openrouter">OpenRouter (650+ 모델)</option>
                   <option value="ollama">Ollama (로컬)</option>
+                  <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
                 </select>
               </div>
 

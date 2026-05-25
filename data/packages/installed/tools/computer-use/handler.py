@@ -400,13 +400,14 @@ _TOOLS = {
 }
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str | dict:
-    """도구 실행 엔트리포인트
+def execute(tool_input: dict, context) -> str | dict:
+    """도구 실행 엔트리포인트 (ToolContext 기반 신규 시그니처).
 
     Returns:
         str (JSON): 텍스트 전용 결과
         dict: 이미지를 포함한 결과 {"content", "images", "details"}
     """
+    tool_name = context.tool_name
     handler = _TOOLS.get(tool_name)
     if not handler:
         return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)

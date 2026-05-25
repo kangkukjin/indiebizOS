@@ -29,8 +29,9 @@ _TARGET_MAP = {
 }
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    """법률 패키지 도구 실행 핸들러"""
+def execute(tool_input: dict, context) -> str:
+    """법률 패키지 도구 실행 핸들러 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
     api_key = get_api_key("LAW_API_KEY", package_dir=_PACKAGE_DIR)
     if not api_key:
         return "에러: Law API 키가 설정되지 않았습니다. 패키지 폴더의 config.json에 'api_key'를 입력하거나 LAW_API_KEY 환경 변수를 설정해주세요."

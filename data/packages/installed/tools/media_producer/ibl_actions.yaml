@@ -55,23 +55,23 @@ actions:
     - MP4
     - HTML영상
   slide_shadcn:
-    description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅+강의용 레이아웃 모두 지원, design_system으로 책 단위 비주얼 정체성 부여. 호출: [engines:slide_shadcn]{slides: [{layout, title, ...}, ...], design_system: "vintage_book"} (인라인 배열만, topic 미지원). 강의·발표·책 강의에는 lecture_body / metaphor_story / comparison_table / factbox / quote 사용. 가이드 read_guide(query="슬라이드")'
+    description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅+강의용 레이아웃 모두 지원, design_system으로 책 단위 비주얼 정체성 부여. 일러스트가 슬라이드 배경과 융합되는 통합형 레이아웃(hero_illustration/illustration_anchor/split_concept/illustration_background) + 시각적 비교 표(comparison_iconic) 우선 권장. 호출: [engines:slide_shadcn]{slides: [{layout, title, ...}, ...], design_system: "vintage_book", output_dir: "(선택)"} (인라인 배열만, topic 미지원). 강의·발표·책 강의에는 lecture_body / metaphor_story / comparison_table / factbox / quote 사용. 가이드 read_guide(query="슬라이드")'
     group: media_produce
     category: create
     router: handler
     tool: create_shadcn_slides
-    implementation: 'Shadcn UI React 기반 + Playwright PNG 캡처. tool_input.slides 배열만 사용. 마케팅 레이아웃: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom. 강의 레이아웃: lecture_body(본문단락+불릿+인용+푸터), metaphor_story(스토리+결론), comparison_table(헤더/행), factbox(보조정보), quote(풀스크린 인용). theme(색만): default/blue/green/purple/orange/dark. design_system(색+폰트+텍스처+장식 일관 묶음): default(없음), vintage_book(베이지 종이+청적갈 잉크+한글 디스플레이+컴퍼스 마크, 책 강의·인문), academic_paper(미색 종이+진남색+진홍 강조+Crimson 세리프, 학술 논문·연구), tech_minimal(다크 남+시안 네온+Inter+JetBrains Mono+그리드, 테크 컨퍼런스·개발자), magazine_modern(흰+검+적색+Bebas/Playfair, 잡지·편집)'
+    implementation: 'Shadcn UI React 기반 + Playwright PNG 캡처. tool_input: slides(배열, 필수) + theme(선택) + design_system(선택) + output_dir(선택, 미지정 시 자동 생성된 shadcn_slides_<hex>/) + width/height(선택, 기본 1280x720). 마케팅 레이아웃: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom. 강의 레이아웃: lecture_body(본문단락+불릿+인용+푸터), metaphor_story(스토리+결론), comparison_table(헤더/행 순수 텍스트 표), factbox(보조정보), quote(풀스크린 인용). 통합형 일러스트 레이아웃(NotebookLM 스타일 — 이미지와 텍스트가 한 화면으로 융합): hero_illustration(중앙 영웅 일러스트+상하 텍스트, 표지·장 도입), illustration_anchor(상단 큰 일러스트+하단 텍스트(title/body/takeaway), 개념 설명), split_concept(좌우 대비, 양쪽 일러스트+캡션 + conclusion 박스, left_image_path/right_image_path 절대경로 자동 base64 변환 또는 left_image_data/right_image_data + left_title/right_title + left_body/right_body + conclusion), illustration_background(전면 배경 일러스트+오버레이 텍스트, 부 도입·임팩트, text_align="left"/"center" 옵션 — center는 라디얼 스크림으로 가독성 보장), comparison_iconic(이모지/일러스트 헤더가 있는 시각적 비교 표 — label_header + columns:[{title,subtitle,icon,highlighted}] + rows:[{label, cells:[...]}]; 주의: row 필드명은 cells (values 아님 — Jinja dict 메서드 충돌)). image_path 절대경로는 자동 base64 변환되어 image_data로 주입됨 (image_path/left_image_path/right_image_path/avatar_path 모두 지원). theme(색만): default/blue/green/purple/orange/dark. design_system(색+폰트+텍스처+장식+일러스트 통합 묶음): default(없음), vintage_book(베이지 종이+청적갈 잉크+한글 디스플레이+컴퍼스 마크, 책 강의·인문, 일러스트 multiply 블렌드로 종이에 흡수), academic_paper(미색 종이+진남색+진홍 강조+Crimson 세리프, 학술 논문·연구), tech_minimal(다크 남+시안 네온+Inter+JetBrains Mono+그리드, 테크 컨퍼런스·개발자), magazine_modern(흰+검+적색+Bebas/Playfair, 잡지·편집)'
     keywords:
     - 슬라이드
     - Shadcn
     - PNG
   image_gemini:
-    description: Gemini AI 이미지 생성
+    description: 'Gemini AI 이미지 생성 (Nano Banana 2 / Gemini 3.1 Flash 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트 자동 생성 권장 (한글 텍스트 금지 + 스타일 토큰 자동 주입). 호출: [engines:image_gemini]{prompt: "...", style_preset: "vintage_book", aspect_ratio: "16:9", image_size: "2K"}. 더 정밀한 일러스트는 quality:"pro" (Nano Banana Pro), 빠른 기본은 quality:"fast"'
     group: media_produce
     category: create
     router: handler
     tool: generate_gemini_image
-    implementation: Google Gemini API로 프롬프트 기반 AI 이미지 생성
+    implementation: 'Google Gemini API로 프롬프트 기반 AI 이미지 생성. 기본 모델: gemini-3.1-flash-image-preview (Nano Banana 2, 2026-02 출시, 한국어 텍스트 렌더링 개선, 4K까지). 파라미터: prompt(필수), style_preset(vintage_book/academic_paper/tech_minimal/magazine_modern — 슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합), aspect_ratio(1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1), image_size(512/1K/2K/4K, 기본 1K — 가격 1K $0.045 / 2K 중간 / 4K $0.151), quality(fast=3.1 Flash 기본 / pro=gemini-3-pro-image-preview Pro / legacy=gemini-2.5-flash-image 폴백), model(직접 모델명 지정 시 quality 무시), output_path(선택), api_key(선택, 환경변수 GEMINI_API_KEY 기본)'
     target_key: prompt
     keywords:
     - image generation
@@ -95,3 +95,66 @@ actions:
     - HTML
     - 이미지
     - 렌더링
+  lecture_plan:
+    description: '강의 슬라이드 파이프라인 1단계 — 메시지 큐레이션. 명제 outline을 검증·저장. 호출: [engines:lecture_plan]{outline: [{idx, role, title, device, visual, concrete}, ...], source: "책 메타", style: "notebooklm"} 또는 처음이면 [engines:lecture_plan]{init_skeleton: true}로 스켈레톤 안내 받기. 가이드 read_guide(query="강의 슬라이드 원칙")'
+    group: media_produce
+    category: create
+    router: handler
+    tool: create_lecture_plan
+    implementation: '단계 산출물 outline.json + outline.md 저장. 스키마 검증: role(cover/intro/thesis/closure_table/closure_diagram/quote/outro/reference), device(contrast/chain/equation/scale/hierarchy/none), notebooklm 스타일은 closure_table+closure_diagram 슬라이드 존재 강제. 산출물 위치 lecture_<id>/outline.{json,md}. 이 단계가 통과해야 lecture_write 가능.'
+    achievement_criteria: '모든 슬라이드 제목이 단정문(라벨 X), 5종 수사 장치(contrast/chain/equation/scale/hierarchy)에 매핑됨, 이중 회수(closure_table+closure_diagram) 존재, 핵심 명제 누락 없음, 각 슬라이드의 concrete 필드에 수치·고유명사 ≥1.'
+    keywords:
+    - 강의
+    - 슬라이드 기획
+    - outline
+    - 명제
+  lecture_write:
+    description: '강의 슬라이드 파이프라인 2단계 — 각 슬라이드 콘텐츠 집필. outline.json을 입력으로 슬라이드별 layout/title/labels/image_prompt 채움. 호출: [engines:lecture_write]{lecture_dir: "...", contents: [{idx, layout, title, labels, image_prompt, ...}], design_system: "sf_blueprint"}. only_indices로 부분 갱신 가능.'
+    group: media_produce
+    category: create
+    router: handler
+    tool: create_lecture_write
+    implementation: 'contents.json 저장. 스키마 검증: idx가 outline에 존재, illustration_* 레이아웃은 image_prompt 필수, split_concept은 left_image_prompt+right_image_prompt 필수. 부분 갱신은 only_indices=[idx,...]로.'
+    achievement_criteria: 'image_prompt가 다이어그램형(씬 묘사 X)으로 작성됨, 영문 라벨 명시(EYE/MASS 등), 한글 라벨 들어갈 빈 공간 명세 포함, 본문 단락을 라벨로 그대로 옮기지 않음, 각 명제를 시각화하는 라벨 배치가 outline의 device와 정합.'
+    keywords:
+    - 강의
+    - 슬라이드 집필
+    - contents
+  lecture_illustrate:
+    description: '강의 슬라이드 파이프라인 3단계 — 일러스트 생성. contents.json의 image_prompt들을 image_gemini로 병렬 호출. 호출: [engines:lecture_illustrate]{lecture_dir: "...", style_preset: "sf_blueprint" (선택, 미지정시 design_system 사용), quality: "fast"/"pro", image_size: "1K"/"2K"/"4K"}. only_indices로 약한 일러스트만 재생성.'
+    group: media_produce
+    category: create
+    router: handler
+    tool: create_lecture_illustrate
+    implementation: 'image_gemini를 슬라이드별로 호출, illustrations/manifest.json으로 매니페스트 관리. split_concept은 좌·우 1:1 두 장 생성. 부분 재생성 only_indices 지원. 실패한 슬라이드는 manifest에 기록 안 됨 — 다시 호출.'
+    achievement_criteria: '생성된 일러스트가 다이어그램형이고 한글 미포함, 디자인 시스템 톤 일관, 빈 공간이 정말 비어있음(라벨 들어갈 자리), 각 일러스트가 contents.json의 image_prompt 의도와 정합. (VLM 평가는 image_critic 액션 참조)'
+    keywords:
+    - 강의
+    - 일러스트 생성
+    - illustrate
+  image_critic:
+    description: 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 호출: [engines:image_critic]{image_path: "/abs/...", intent: "이 일러스트가 표현해야 할 것 자연어 설명", style_preset: "sf_blueprint", checks: ["...추가 체크"]}. 반환: passed/score/issues/notes JSON. ILLUSTRATE 단계의 자동 평가에 사용.'
+    group: media_produce
+    category: evaluate
+    router: handler
+    tool: critique_gemini_image
+    implementation: 'Gemini 3 Pro Vision으로 이미지를 평가. 기본 체크: (1) 다이어그램형인가, (2) 한글이 들어갔는가, (3) 빈 공간이 의도된 위치에 있는가, (4) 주요 객체가 명확히 배치됐는가, (5) 디자인 시스템 톤 일관성. checks 파라미터로 추가 체크 가능. 한글이 일러스트 안에 있으면 무조건 passed=false. 반환: 사람용 요약 + verdict_json (passed/score/issues/notes).'
+    achievement_criteria: '평가 자체의 신뢰성 — JSON 파싱 성공, issues가 구체적 이유를 담음, 한글 검출 시 무조건 passed=false.'
+    keywords:
+    - 일러스트 평가
+    - VLM
+    - vision
+    - critic
+    - image evaluation
+  lecture_compose:
+    description: '강의 슬라이드 파이프라인 4단계 — 데크 합성. contents.json + illustrations/manifest.json → slide_shadcn 호출 → 최종 데크. 호출: [engines:lecture_compose]{lecture_dir: "..."}. only_indices로 부분 재합성.'
+    group: media_produce
+    category: create
+    router: handler
+    tool: create_lecture_compose
+    implementation: 'contents.json과 illustrations/manifest.json을 병합하여 slide_shadcn에 전달. 최종 데크는 lecture_dir/deck/에 HTML+PNG로 저장. only_indices로 약한 슬라이드만 재합성 가능.'
+    achievement_criteria: '라벨이 일러스트의 핵심 객체를 가리지 않음, 1280×720 뷰포트 안에 모든 요소가 들어옴, 한국어 폰트가 깨지지 않음, 라벨 좌표가 일러스트 빈 공간과 정합.'
+    keywords:
+    - 강의
+    - 슬라이드 데크
+    - compose

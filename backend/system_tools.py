@@ -1122,7 +1122,7 @@ class ToolCancelled(Exception):
     pass
 
 
-def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None,
+def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: str = None,
                  cancel_check=None):
     """
     도구 실행 (IBL 형식 로깅 래퍼)
@@ -1131,7 +1131,7 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".", agen
     Args:
         tool_name: 도구 이름
         tool_input: 도구 입력
-        project_path: 프로젝트 경로
+        project_path: 프로젝트 경로 (필수, 호출자가 명시 전달)
         agent_id: 에이전트 ID (에이전트별 상태 저장용)
         cancel_check: 중단 여부 확인 함수 (None이면 기존 동기 실행)
 
@@ -1217,10 +1217,8 @@ def _execute_tool_with_cancel(tool_name, tool_input, project_path, agent_id, can
     return result_holder[0]
 
 
-def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None, cancel_check=None) -> str:
-    """
-    도구 실행 내부 구현 (시스템 도구 + 동적 로딩)
-    """
+def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, agent_id: str = None, cancel_check=None) -> str:
+    """도구 실행 내부 구현 (시스템 도구 + 동적 로딩). project_path는 필수."""
     try:
         # 승인 요청 도구 (가장 먼저 처리)
         if tool_name == "request_user_approval":
@@ -1260,19 +1258,37 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str = ".
         # 동적 로딩된 도구 패키지에서 실행 (레지스트리 미등록 도구용)
         handler = load_tool_handler(tool_name)
         if handler and hasattr(handler, 'execute'):
-            # handler.execute의 시그니처에 따라 agent_id 전달
+            # 신규 시그니처 execute(tool_input, context: ToolContext)만 지원
             import inspect
             sig = inspect.signature(handler.execute)
-            if 'agent_id' in sig.parameters:
-                if 'cancel_check' in sig.parameters:
-                    result = handler.execute(tool_name, tool_input, project_path, agent_id, cancel_check=cancel_check)
-                else:
-                    result = handler.execute(tool_name, tool_input, project_path, agent_id)
-            else:
-                if 'cancel_check' in sig.parameters:
-                    result = handler.execute(tool_name, tool_input, project_path, cancel_check=cancel_check)
-                else:
-                    result = handler.execute(tool_name, tool_input, project_path)
+            if 'context' not in sig.parameters:
+                return json.dumps({
+                    "success": False,
+                    "error": (
+                        f"도구 핸들러가 구 시그니처를 사용합니다: {tool_name}. "
+                        "신규 시그니처 execute(tool_input, context: ToolContext)로 마이그레이션이 필요합니다."
+                    )
+                }, ensure_ascii=False)
+
+            from ibl_routing import _resolve_project_path
+            from tool_context import ToolContext, ToolContextError
+            resolved_path = _resolve_project_path(project_path, tool_input)
+            if not resolved_path:
+                return json.dumps({
+                    "success": False,
+                    "error": (
+                        f"활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: {tool_name}. "
+                        "대상 프로젝트를 params.project_id로 명시하거나 "
+                        "프로젝트 컨텍스트(thread_context.project_id) 안에서 호출하세요. "
+                        "예: execute_ibl(code='[node:action]{..., project_id: \"컨텐츠\"}')"
+                    )
+                }, ensure_ascii=False)
+            try:
+                context = ToolContext.from_thread_context(resolved_path, tool_name)
+            except ToolContextError as e:
+                return json.dumps({"success": False, "error": f"ToolContext 생성 실패: {e}"}, ensure_ascii=False)
+
+            result = handler.execute(tool_input, context)
 
             # async 핸들러 지원: coroutine이면 영구 이벤트 루프에서 실행
             if asyncio.iscoroutine(result):

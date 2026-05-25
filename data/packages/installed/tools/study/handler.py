@@ -7,7 +7,9 @@ import html
 import re
 from typing import Optional
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
+def execute(tool_input: dict, context) -> str:
+    """ToolContext 기반 신규 시그니처."""
+    tool_name = context.tool_name
 
     if tool_name == "search_openalex":
         return _search_openalex(tool_input)
@@ -16,13 +18,13 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         client = arxiv.Client()
         query = tool_input.get("query")
         max_results = tool_input.get("max_results", 5)
-        
+
         search = arxiv.Search(
             query=query,
             max_results=max_results,
             sort_by=arxiv.SortCriterion.Relevance
         )
-        
+
         results = []
         for result in client.results(search):
             paper_info = (
@@ -34,10 +36,10 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
                 "--------------------------------------"
             )
             results.append(paper_info)
-        
+
         if not results:
             return "No papers found for the given query."
-        
+
         return "\n".join(results)
 
     elif tool_name == "download_arxiv_pdf":
@@ -45,10 +47,8 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         arxiv_id = tool_input.get("arxiv_id")
         filename = tool_input.get("filename")
 
-        # Ensure download directory exists within project_path
-        download_dir = os.path.join(project_path, "papers")
-        if not os.path.exists(download_dir):
-            os.makedirs(download_dir)
+        download_dir = context.resolve_path("papers")
+        os.makedirs(download_dir, exist_ok=True)
 
         search = arxiv.Search(id_list=[arxiv_id])
         paper = next(client.results(search), None)
@@ -70,10 +70,10 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         return _search_google_scholar(tool_input)
 
     elif tool_name == "search_pubmed":
-        return _search_pubmed(tool_input, project_path)
+        return _search_pubmed(tool_input)
 
     elif tool_name == "download_pubmed_pdf":
-        return _download_pubmed_pdf(tool_input, project_path)
+        return _download_pubmed_pdf(tool_input, context)
 
     elif tool_name == "fetch_pew_research":
         return _fetch_rss("https://www.pewresearch.org/feed/", "Pew Research Center", tool_input.get("limit", 10))
@@ -230,7 +230,7 @@ def _search_google_scholar(tool_input: dict) -> str:
         return f"Error searching Google Scholar: {str(e)}"
 
 
-def _search_pubmed(tool_input: dict, project_path: str = ".") -> str:
+def _search_pubmed(tool_input: dict) -> str:
     """PubMed API를 사용한 의학/생명과학 논문 검색 (PMC ID 포함)"""
     query = tool_input.get("query")
     max_results = tool_input.get("max_results", 5)
@@ -350,7 +350,7 @@ def _get_pmc_ids(pmid_list: list) -> dict:
         return {}
 
 
-def _download_pubmed_pdf(tool_input: dict, project_path: str = ".") -> str:
+def _download_pubmed_pdf(tool_input: dict, context) -> str:
     """PMC에서 무료 전문 PDF 다운로드 (OA API 사용)"""
     import xml.etree.ElementTree as ET
     import tarfile
@@ -369,10 +369,8 @@ def _download_pubmed_pdf(tool_input: dict, project_path: str = ".") -> str:
         pmcid = f"PMC{pmcid}"
     pmcid = pmcid.upper()
 
-    # 다운로드 디렉토리 생성
-    download_dir = os.path.join(project_path, "papers")
-    if not os.path.exists(download_dir):
-        os.makedirs(download_dir)
+    download_dir = context.resolve_path("papers")
+    os.makedirs(download_dir, exist_ok=True)
 
     try:
         # 1. OA API로 다운로드 링크 가져오기

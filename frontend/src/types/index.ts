@@ -183,6 +183,9 @@ export interface ElectronAPI {
   openPCManagerWindow: (initialPath?: string | null) => Promise<void>;
   openPhotoManagerWindow: (initialPath?: string | null) => Promise<void>;
   openAndroidManagerWindow: (deviceId?: string | null, projectId?: string | null) => Promise<void>;
+  openLectureWorkspaceWindow: (lectureId?: string | null) => Promise<void>;
+  onLectureWorkspaceSelect?: (callback: (lectureId: string) => void) => void;
+  removeLectureWorkspaceSelectListener?: () => void;
   openPath: (path: string) => Promise<void>;
 
   // 런처 새로고침

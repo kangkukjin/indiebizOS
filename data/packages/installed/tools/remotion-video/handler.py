@@ -115,9 +115,10 @@ def get_npm_cmd():
 # Entry Point
 # ============================================================
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    output_base = os.path.join(project_path, "outputs")
-    os.makedirs(output_base, exist_ok=True)
+def execute(tool_input: dict, context) -> str:
+    """ToolContext 기반 신규 시그니처."""
+    tool_name = context.tool_name
+    output_base = context.output_dir()
 
     if tool_name == "create_remotion_video":
         return create_remotion_video(tool_input, output_base)

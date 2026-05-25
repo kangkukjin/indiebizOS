@@ -161,6 +161,23 @@ THEMES = {
         "border": "0 0% 85%",
         "ring": "356 85% 50%",
         "radius": "0rem"                  # 매거진 스타일 — 모서리 직각
+    },
+
+    # sf_blueprint — NotebookLM 양식 SF/블루프린트 (다크 네이비 + 시안 글로우 + HUD)
+    # 책 강의·인포그래픽·메타포 시각화에 최적, 매 슬라이드가 다이어그램이 되는 패러다임
+    "sf_blueprint": {
+        "background": "215 60% 5%",       # #050d1a (심해 네이비)
+        "foreground": "190 95% 92%",      # #d6f6ff (글로우 시안 화이트)
+        "primary": "190 95% 70%",         # #6ee0ff (밝은 시안)
+        "primary-foreground": "215 60% 5%",
+        "secondary": "215 50% 12%",       # #0d1a2e (어두운 네이비 카드)
+        "secondary-foreground": "190 95% 92%",
+        "muted": "215 35% 18%",
+        "muted-foreground": "200 30% 70%",
+        "accent": "188 100% 55%",         # #1ad3ff (네온 시안 강조)
+        "border": "190 70% 35%",          # 시안 라인
+        "ring": "188 100% 55%",
+        "radius": "0.125rem"              # SF HUD 양식 — 모서리 거의 직각
     }
 }
 
@@ -245,6 +262,37 @@ body {
 .slide-container [class*="rounded-xl"] {
     background: rgba(247, 240, 218, 0.6) !important;
     border-color: rgba(165, 90, 62, 0.3) !important;
+}
+
+/* === 일러스트 통합 — 이미지가 양피지 배경에 녹아들도록 === */
+/* 일러스트가 있는 슬라이드 — 종이 노이즈를 더 강하게 깔아 이미지가 떠 보이지 않게 */
+.slide-container .slide-illustration-bleed {
+    position: relative;
+}
+.slide-container .slide-illustration-bleed::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(ellipse at center, rgba(243, 236, 214, 0) 30%, rgba(165, 90, 62, 0.04) 100%),
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n2'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' /%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.25 0 0 0 0 0.18 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n2)' /%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+}
+/* z-index만 부여 — position은 자식 element의 클래스가 결정 (absolute/relative 유지) */
+.slide-container .slide-illustration-bleed > * { z-index: 1; }
+
+/* 일러스트 자체 — 박스 그림자 없이, multiply 블렌드로 종이에 흡수 */
+.slide-container .slide-illustration {
+    mix-blend-mode: multiply;
+    filter: contrast(0.96) saturate(0.92);
+}
+
+/* 전면 배경 일러스트 — 페이드 처리 */
+.slide-container .slide-illustration-bg {
+    mix-blend-mode: multiply;
+    opacity: 0.85;
+    filter: sepia(0.15) contrast(0.95);
 }
 
 /* slide-container에 코너 마크 + 시그니처 */
@@ -539,6 +587,159 @@ body {
 """,
         "extra_html": "",
     },
+
+    # sf_blueprint — NotebookLM 양식: 다크 네이비 + 시안 글로우 + HUD 격자 + 코너 마크
+    # 매 슬라이드가 인포그래픽이 되는 패러다임 (모든 일러스트가 풀-블리드 다이어그램)
+    "sf_blueprint": {
+        "theme_override": "sf_blueprint",
+        "extra_head": '<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">',
+        "extra_css": """
+/* === sf_blueprint — NotebookLM SF HUD 양식 === */
+body {
+    font-family: 'Rajdhani', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif !important;
+    /* 심해 네이비 + HUD 격자 + 라디얼 글로우 */
+    background-image:
+        radial-gradient(ellipse at 30% 20%, rgba(26, 211, 255, 0.10), transparent 55%),
+        radial-gradient(ellipse at 70% 80%, rgba(110, 224, 255, 0.07), transparent 55%),
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(110, 224, 255, 0.05) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(110, 224, 255, 0.05) 40px) !important;
+}
+
+/* 제목 — 와이드한 SF 헤드라인 */
+.slide-container h1,
+.slide-container h2,
+.slide-container h3 {
+    font-family: 'Noto Sans KR', 'Rajdhani', sans-serif !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.01em !important;
+    text-shadow: 0 0 24px rgba(26, 211, 255, 0.35), 0 0 4px rgba(110, 224, 255, 0.6);
+}
+.slide-container h1 strong,
+.slide-container h2 strong,
+.slide-container h3 strong,
+.slide-container .accent-glow {
+    color: hsl(var(--accent)) !important;
+    text-shadow: 0 0 24px rgba(26, 211, 255, 0.7) !important;
+}
+
+/* 본문 */
+.slide-container p, .slide-container li, .slide-container td {
+    font-family: 'Noto Sans KR', 'Rajdhani', sans-serif !important;
+    line-height: 1.7 !important;
+    font-weight: 500;
+}
+
+/* 라벨 — JetBrains Mono + 시안 글로우 */
+.slide-container [class*="text-xs"][class*="uppercase"],
+.slide-container [class*="text-sm"][class*="uppercase"] {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.18em !important;
+    color: hsl(var(--accent)) !important;
+}
+
+/* 표 — HUD 양식 */
+.slide-container table thead {
+    background: rgba(26, 211, 255, 0.08) !important;
+    border-bottom: 1px solid hsl(var(--accent)) !important;
+}
+.slide-container table thead th {
+    color: hsl(var(--accent)) !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.85em !important;
+    text-shadow: 0 0 12px rgba(26, 211, 255, 0.5);
+}
+.slide-container table tbody tr {
+    border-bottom: 1px solid rgba(110, 224, 255, 0.15) !important;
+}
+
+/* 인용 — 글로우 좌측 막대 */
+.slide-container blockquote {
+    border-color: hsl(var(--accent)) !important;
+    background: rgba(26, 211, 255, 0.05) !important;
+    box-shadow: -2px 0 16px rgba(26, 211, 255, 0.25);
+}
+
+/* 팩트박스 + HUD 패널 (사각형 코너 + 글로우 경계) */
+.slide-container [class*="rounded-xl"],
+.slide-container .hud-panel {
+    background: rgba(13, 26, 46, 0.7) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: 0.125rem !important;
+    box-shadow: 0 0 24px rgba(26, 211, 255, 0.15), inset 0 0 0 1px rgba(110, 224, 255, 0.1);
+    position: relative;
+}
+/* HUD 코너 브래킷 — .hud-panel 명시 클래스에만 적용 */
+.slide-container .hud-panel::before,
+.slide-container .hud-panel::after {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    border: 2px solid hsl(var(--accent));
+    pointer-events: none;
+}
+.slide-container .hud-panel::before {
+    top: -1px; left: -1px;
+    border-right: none; border-bottom: none;
+}
+.slide-container .hud-panel::after {
+    bottom: -1px; right: -1px;
+    border-left: none; border-top: none;
+}
+
+/* 일러스트 통합 — 다크 배경에 자연스럽게 녹아들도록 (screen 블렌드) */
+.slide-container .slide-illustration-bleed { position: relative; }
+.slide-container .slide-illustration-bleed::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(5, 13, 26, 0.25) 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+.slide-container .slide-illustration-bleed > * { z-index: 1; }
+.slide-container .slide-illustration {
+    mix-blend-mode: screen;
+    filter: contrast(1.05) saturate(1.1);
+}
+.slide-container .slide-illustration-bg {
+    mix-blend-mode: screen;
+    opacity: 0.95;
+    filter: contrast(1.05);
+}
+
+/* 코너 마크 + SF 시그니처 */
+.slide-container { position: relative; }
+.slide-container::before {
+    content: '';
+    position: absolute;
+    top: 24px; left: 28px;
+    width: 24px; height: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%231ad3ff' stroke-width='1.5'%3E%3Crect x='2' y='2' width='28' height='28'/%3E%3Cline x1='2' y1='16' x2='10' y2='16'/%3E%3Cline x1='22' y1='16' x2='30' y2='16'/%3E%3Cline x1='16' y1='2' x2='16' y2='10'/%3E%3Cline x1='16' y1='22' x2='16' y2='30'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%231ad3ff' stroke='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: contain;
+    filter: drop-shadow(0 0 6px rgba(26, 211, 255, 0.6));
+    opacity: 0.85;
+    z-index: 10;
+}
+.slide-container::after {
+    content: 'indiebiz.os // lectures';
+    position: absolute;
+    bottom: 22px; right: 30px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 10px;
+    color: hsl(var(--accent));
+    letter-spacing: 0.15em;
+    opacity: 0.7;
+    text-shadow: 0 0 8px rgba(26, 211, 255, 0.5);
+    z-index: 10;
+}
+""",
+        "extra_html": "",
+    },
 }
 
 # ============================================
@@ -558,6 +759,10 @@ SLIDE_BASE_TEMPLATE = """
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/@lottiefiles/lottie-player@2/dist/lottie-player.js"></script>
     {{design_system_head|safe}}
+    <style>
+        /* style_overrides — spec.style_overrides 적용 (있을 때만 비어있지 않음) */
+        {{style_overrides_css|safe}}
+    </style>
     <style>
 
         :root {
@@ -739,16 +944,17 @@ SLIDE_LAYOUTS = {
 </div>
 """,
 
-    # 히어로 + 이미지 (좌우 분할)
+    # 히어로 + 이미지 (좌우 분할 — 일러스트가 배경에 녹아드는 통합형)
     "hero_image": """
-<div class="w-full h-full flex">
+<div class="w-full h-full flex slide-illustration-bleed">
     <div class="w-1/2 h-full flex flex-col justify-center p-16">
+        {% if eyebrow %}<p class="text-sm font-semibold uppercase tracking-wider mb-3" style="color: hsl(var(--accent))">{{eyebrow}}</p>{% endif %}
         {% if badge %}<span class="badge badge-secondary mb-4">{{badge}}</span>{% endif %}
-        <h1 class="text-5xl font-bold tracking-tight mb-6" style="color: hsl(var(--foreground))">
+        <h1 class="text-5xl font-bold tracking-tight mb-6 leading-tight" style="color: hsl(var(--foreground))">
             {{title}}
         </h1>
         {% if subtitle %}
-        <p class="text-xl mb-8" style="color: hsl(var(--muted-foreground))">
+        <p class="text-xl mb-8 leading-relaxed" style="color: hsl(var(--muted-foreground))">
             {{subtitle}}
         </p>
         {% endif %}
@@ -758,11 +964,11 @@ SLIDE_LAYOUTS = {
         </div>
         {% endif %}
     </div>
-    <div class="w-1/2 h-full flex items-center justify-center p-8" style="background: hsl(var(--muted))">
+    <div class="w-1/2 h-full flex items-center justify-center p-10">
         {% if image_data %}
-        <img src="{{image_data}}" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl">
+        <img src="{{image_data}}" class="max-w-full max-h-full object-contain slide-illustration">
         {% else %}
-        <div class="w-80 h-80 rounded-lg flex items-center justify-center" style="background: hsl(var(--secondary))">
+        <div class="w-80 h-80 flex items-center justify-center opacity-30">
             <i data-lucide="image" class="w-20 h-20" style="color: hsl(var(--muted-foreground))"></i>
         </div>
         {% endif %}
@@ -891,23 +1097,24 @@ SLIDE_LAYOUTS = {
 </div>
 """,
 
-    # 콘텐츠 + 이미지
+    # 콘텐츠 + 이미지 (좌우 분할 — 일러스트가 배경에 녹아드는 통합형)
     "content_image": """
-<div class="w-full h-full flex {% if image_position == 'left' %}flex-row-reverse{% endif %}">
+<div class="w-full h-full flex slide-illustration-bleed {% if image_position == 'left' %}flex-row-reverse{% endif %}">
     <div class="w-1/2 h-full flex flex-col justify-center p-16">
-        <h2 class="text-4xl font-bold mb-6" style="color: hsl(var(--foreground))">{{title}}</h2>
-        <p class="text-lg leading-relaxed" style="color: hsl(var(--muted-foreground))">{{content}}</p>
+        {% if eyebrow %}<p class="text-sm font-semibold uppercase tracking-wider mb-3" style="color: hsl(var(--accent))">{{eyebrow}}</p>{% endif %}
+        <h2 class="text-4xl font-bold mb-6 leading-tight" style="color: hsl(var(--foreground))">{{title}}</h2>
+        <p class="text-lg leading-relaxed" style="color: hsl(var(--foreground)); opacity: 0.85">{{content}}</p>
         {% if cta_text %}
         <div class="mt-8">
             <span class="btn btn-default">{{cta_text}}</span>
         </div>
         {% endif %}
     </div>
-    <div class="w-1/2 h-full">
+    <div class="w-1/2 h-full flex items-center justify-center p-10">
         {% if image_data %}
-        <img src="{{image_data}}" class="w-full h-full object-cover">
+        <img src="{{image_data}}" class="max-w-full max-h-full object-contain slide-illustration">
         {% else %}
-        <div class="w-full h-full flex items-center justify-center" style="background: hsl(var(--muted))">
+        <div class="w-full h-full flex items-center justify-center opacity-20">
             <i data-lucide="image" class="w-24 h-24" style="color: hsl(var(--muted-foreground))"></i>
         </div>
         {% endif %}
@@ -1066,6 +1273,298 @@ SLIDE_LAYOUTS = {
 </div>
 """,
 
+    # === NotebookLM 스타일 통합형 레이아웃 ===
+    # 이미지와 텍스트가 한 화면 안에서 융합 — 일러스트는 슬라이드 배경과 자연스럽게 흐른다.
+    # 키 포인트: 이미지 영역에 별도 배경/박스 없음, slide-illustration 클래스로 design_system이 후킹.
+
+    # hero_illustration — 중앙 영웅 일러스트 + 상하 텍스트 (NotebookLM 표지/장 표지 스타일)
+    # 사용처: 책 표지, 장 도입, 핵심 개념 단일 시각화
+    "hero_illustration": """
+<div class="w-full h-full flex flex-col items-center justify-center px-16 py-10 slide-illustration-bleed">
+    {% if eyebrow %}<p class="text-xs font-semibold uppercase tracking-[0.3em] mb-3 opacity-80" style="color: hsl(var(--accent))">{{eyebrow}}</p>{% endif %}
+    <div class="flex-1 flex items-center justify-center w-full max-w-5xl my-3 min-h-0">
+        {% if image_data %}
+        <img src="{{image_data}}" class="max-w-full max-h-full object-contain slide-illustration">
+        {% else %}
+        <div class="w-96 h-96 flex items-center justify-center opacity-20">
+            <i data-lucide="image" class="w-24 h-24" style="color: hsl(var(--muted-foreground))"></i>
+        </div>
+        {% endif %}
+    </div>
+    <h1 class="text-6xl font-black text-center tracking-tight mb-3 leading-[1.15]" style="color: hsl(var(--foreground))">
+        {{title}}
+    </h1>
+    {% if subtitle %}
+    <p class="text-xl text-center max-w-4xl leading-relaxed" style="color: hsl(var(--muted-foreground))">
+        {{subtitle}}
+    </p>
+    {% endif %}
+    {% if footer %}<p class="text-sm mt-6" style="color: hsl(var(--muted-foreground))">{{footer}}</p>{% endif %}
+</div>
+""",
+
+    # illustration_anchor — 상단 큰 일러스트 + 하단 텍스트 (가장 활용도 높은 강의 슬라이드)
+    # 사용처: 개념 설명, 다이어그램 + 캡션, 일러스트로 보여주고 글로 마무리
+    "illustration_anchor": """
+<div class="w-full h-full flex flex-col p-14 slide-illustration-bleed">
+    <div class="flex-1 flex items-center justify-center min-h-0 mb-8">
+        {% if image_data %}
+        <img src="{{image_data}}" class="max-w-full max-h-full object-contain slide-illustration">
+        {% else %}
+        <div class="w-full h-full flex items-center justify-center opacity-20">
+            <i data-lucide="image" class="w-24 h-24" style="color: hsl(var(--muted-foreground))"></i>
+        </div>
+        {% endif %}
+    </div>
+    <div class="flex-shrink-0">
+        {% if eyebrow %}<p class="text-sm font-semibold uppercase tracking-wider mb-2" style="color: hsl(var(--accent))">{{eyebrow}}</p>{% endif %}
+        <h2 class="text-4xl font-bold tracking-tight mb-3 leading-tight" style="color: hsl(var(--foreground))">{{title}}</h2>
+        {% if body %}
+        <p class="text-lg leading-relaxed" style="color: hsl(var(--foreground)); opacity: 0.85">{{body}}</p>
+        {% endif %}
+        {% if takeaway %}
+        <p class="text-lg font-semibold mt-4 pl-4 border-l-4" style="color: hsl(var(--accent)); border-color: hsl(var(--accent))">{{takeaway}}</p>
+        {% endif %}
+    </div>
+</div>
+""",
+
+    # split_concept — 좌우 개념 대비 (양쪽 모두 일러스트+캡션, 가운데 결론 박스)
+    # 사용처: A vs B, 문제 vs 해결, 전/후, 뇌 vs 몸 같은 대조
+    "split_concept": """
+<div class="w-full h-full flex flex-col slide-illustration-bleed">
+    {% if title %}
+    <div class="px-14 pt-10 pb-4 flex-shrink-0">
+        <h2 class="text-4xl font-bold text-center tracking-tight leading-tight" style="color: hsl(var(--foreground))">{{title}}</h2>
+        {% if subtitle %}<p class="text-lg text-center mt-2" style="color: hsl(var(--muted-foreground))">{{subtitle}}</p>{% endif %}
+    </div>
+    {% endif %}
+    <div class="flex-1 flex min-h-0 relative">
+        <div class="w-1/2 h-full flex flex-col items-center px-8 py-6" style="background: linear-gradient(180deg, transparent, hsl(var(--secondary) / 0.3))">
+            <div class="flex items-center justify-center w-full" style="flex: 1 1 60%; min-height: 0;">
+                {% if left_image_data %}
+                <img src="{{left_image_data}}" class="max-w-full max-h-full object-contain slide-illustration">
+                {% endif %}
+            </div>
+            <div class="flex-shrink-0 w-full text-center mt-2" style="flex: 0 0 auto;">
+                <h3 class="text-2xl font-bold mb-2" style="color: hsl(var(--foreground))">{{left_title}}</h3>
+                {% if left_body %}
+                <p class="text-base leading-relaxed" style="color: hsl(var(--foreground)); opacity: 0.8">{{left_body}}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="w-1/2 h-full flex flex-col items-center px-8 py-6" style="background: linear-gradient(180deg, transparent, hsl(var(--accent) / 0.12))">
+            <div class="flex items-center justify-center w-full" style="flex: 1 1 60%; min-height: 0;">
+                {% if right_image_data %}
+                <img src="{{right_image_data}}" class="max-w-full max-h-full object-contain slide-illustration">
+                {% endif %}
+            </div>
+            <div class="flex-shrink-0 w-full text-center mt-2" style="flex: 0 0 auto;">
+                <h3 class="text-2xl font-bold mb-2" style="color: hsl(var(--accent))">{{right_title}}</h3>
+                {% if right_body %}
+                <p class="text-base leading-relaxed" style="color: hsl(var(--foreground)); opacity: 0.8">{{right_body}}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% if conclusion %}
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-md px-7 py-4 rounded-lg shadow-xl text-center" style="background: hsl(var(--background)); border: 1.5px solid hsl(var(--accent)); z-index: 5;">
+            <p class="text-base font-medium leading-relaxed" style="color: hsl(var(--foreground))">{{conclusion}}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+""",
+
+    # comparison_iconic — 시각적 헤더가 있는 비교 표 (NotebookLM 5페이지 스타일)
+    # 사용처: A vs B (말하는 챗봇 vs 일하는 에이전트, 도구 없는 AI vs 도구 가진 AI)
+    # comparison_table과 다른 점: 헤더 행에 이모지/일러스트 + 큰 컬럼 제목 + 부드러운 배경
+    #
+    # 데이터 구조:
+    #   title, subtitle (선택), eyebrow (선택)
+    #   label_header: 좌측 라벨 컬럼 헤더 (예: "구분")
+    #   columns: [{title: "도구가 없는 AI", subtitle: "(Chatbot)", icon: "💬"}, {title: "도구를 가진 AI", subtitle: "(Agent + Harness)", icon: "⚙️", highlighted: true}]
+    #   rows: [{label: "역할", cells: ["통역사 및 조언자", "실제 문제를 해결하는 작업자"]}, ...]
+    #         (주의: values가 아닌 cells — Jinja에서 .values는 dict 메서드와 충돌)
+    #   footer (선택)
+    "comparison_iconic": """
+<div class="w-full h-full flex flex-col p-12 slide-illustration-bleed">
+    <div class="mb-6 text-center flex-shrink-0">
+        {% if eyebrow %}<p class="text-xs font-semibold uppercase tracking-[0.25em] mb-2 opacity-80" style="color: hsl(var(--accent))">{{eyebrow}}</p>{% endif %}
+        <h2 class="text-4xl font-bold tracking-tight leading-tight" style="color: hsl(var(--foreground))">{{title}}</h2>
+        {% if subtitle %}<p class="text-base mt-2" style="color: hsl(var(--muted-foreground))">{{subtitle}}</p>{% endif %}
+    </div>
+    <div class="flex-1 flex items-center justify-center min-h-0">
+        <table class="w-full max-w-6xl border-separate" style="border-spacing: 0; color: hsl(var(--foreground))">
+            <thead>
+                <tr>
+                    <th class="w-[14%] py-5 px-4 text-base font-bold text-center" style="background: hsl(var(--secondary)); border: 1px solid hsl(var(--border)); border-right: none;">
+                        {{label_header|default('구분')}}
+                    </th>
+                    {% for col in columns %}
+                    <th class="py-5 px-6 text-center" style="
+                        background: {% if col.highlighted %}hsl(var(--accent) / 0.15){% else %}hsl(var(--secondary)){% endif %};
+                        border: 1px solid hsl(var(--border));
+                        {% if not loop.last %}border-right: none;{% endif %}
+                    ">
+                        {% if col.icon %}<div class="text-3xl mb-2 leading-none">{{col.icon}}</div>{% endif %}
+                        <div class="text-xl font-bold leading-tight" style="color: hsl(var(--foreground))">{{col.title}}</div>
+                        {% if col.subtitle %}<div class="text-sm mt-1" style="color: hsl(var(--muted-foreground))">{{col.subtitle}}</div>{% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td class="py-5 px-4 text-center font-bold text-base" style="
+                        background: hsl(var(--secondary) / 0.5);
+                        border: 1px solid hsl(var(--border));
+                        border-top: none;
+                        border-right: none;
+                        color: hsl(var(--foreground));
+                    ">
+                        {{row.label}}
+                    </td>
+                    {% for val in row.cells %}
+                    <td class="py-5 px-6 text-center text-base leading-relaxed" style="
+                        background: {% if columns[loop.index0].highlighted %}hsl(var(--accent) / 0.05){% else %}transparent{% endif %};
+                        border: 1px solid hsl(var(--border));
+                        border-top: none;
+                        {% if not loop.last %}border-right: none;{% endif %}
+                        color: hsl(var(--foreground));
+                    ">
+                        {{val|safe}}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if footer %}<p class="text-sm mt-4 text-center flex-shrink-0" style="color: hsl(var(--muted-foreground))">{{footer}}</p>{% endif %}
+</div>
+""",
+
+    # illustration_background — 전면 일러스트 배경 + 오버레이 텍스트
+    # 사용처: 강한 인상의 부 도입, 영화 같은 한 장면, 분위기 슬라이드
+    # 옵션: text_align="center" (NotebookLM 부 표지 양식) / "left" (영화 자막 양식, 기본)
+    "illustration_background": """
+<div class="w-full h-full relative slide-illustration-bleed">
+    {% if image_data %}
+    <img src="{{image_data}}" class="absolute inset-0 w-full h-full object-cover slide-illustration-bg">
+    {% endif %}
+    {% set _align = text_align|default('left') %}
+    {% if _align == 'center' %}
+    <!-- center 모드: 일러스트 위에 텍스트가 직접 겹치므로 강한 라디얼 스크림 -->
+    <div class="absolute inset-0" style="background: radial-gradient(ellipse 70% 50% at center, hsl(var(--background) / 0.78) 0%, hsl(var(--background) / 0.45) 65%, hsl(var(--background) / 0.65) 100%)"></div>
+    <div class="relative w-full h-full flex flex-col items-center justify-center p-16 text-center">
+        {% if eyebrow %}<p class="text-base font-semibold tracking-[0.3em] mb-6 opacity-80" style="color: hsl(var(--muted-foreground))">{{eyebrow}}</p>{% endif %}
+        <h1 class="text-7xl font-black tracking-tight mb-5 leading-[1.1]" style="color: hsl(var(--foreground))">{{title}}</h1>
+        {% if subtitle %}
+        <p class="text-xl max-w-4xl leading-relaxed" style="color: hsl(var(--foreground)); opacity: 0.9">{{subtitle}}</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="absolute inset-0" style="background: linear-gradient(180deg, hsl(var(--background) / 0.1) 0%, hsl(var(--background) / 0.4) 50%, hsl(var(--background) / 0.85) 100%)"></div>
+    <div class="relative w-full h-full flex flex-col justify-end p-16">
+        {% if eyebrow %}<p class="text-sm font-semibold uppercase tracking-[0.3em] mb-4" style="color: hsl(var(--accent))">{{eyebrow}}</p>{% endif %}
+        <h1 class="text-6xl font-black tracking-tight mb-4 leading-tight" style="color: hsl(var(--foreground))">{{title}}</h1>
+        {% if subtitle %}
+        <p class="text-xl max-w-3xl leading-relaxed" style="color: hsl(var(--foreground)); opacity: 0.85">{{subtitle}}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+""",
+
+    # illustration_overlay — NotebookLM 양식: 풀-블리드 일러스트 + 자유 좌표 라벨 박스 N개
+    # 사용처: 다이어그램형 슬라이드, 한 일러스트 안의 여러 구성요소를 한국어로 라벨링
+    # 필수 키:
+    #   - image_path / image_data : 풀-블리드 배경 이미지 (가급적 영문 라벨만 박힌 다이어그램)
+    #   - labels : [{text, position}] 리스트
+    #              position: "top-left" | "top-center" | "top-right" | "middle-left" |
+    #                       "middle-center" | "middle-right" | "bottom-left" | "bottom-center" |
+    #                       "bottom-right" 또는 {top: "20%", left: "10%", width: "30%"} 같은 절대 좌표
+    #              variant(선택): "label"(작은 캡션, 기본) | "title"(큰 제목) | "panel"(다중행 본문)
+    #              subtext(선택): variant=panel일 때 본문 줄들
+    # 선택 키:
+    #   - title : 상단 헤더 (선택). 없으면 라벨만 그려짐 — NotebookLM 다이어그램 슬라이드처럼.
+    #   - eyebrow : 헤더 위 작은 라벨
+    #   - footer_quote : 하단 결론 박스 (NotebookLM 5/8/10페이지 양식)
+    "illustration_overlay": """
+<div class="w-full h-full relative slide-illustration-bleed" style="background: hsl(var(--background));">
+    {% if image_data %}
+    <img src="{{image_data}}" class="absolute inset-0 w-full h-full object-cover slide-illustration-bg">
+    {% endif %}
+
+    {% if title or eyebrow %}
+    <div class="absolute top-0 left-0 right-0 px-16 pt-12 pb-4 z-10" style="background: linear-gradient(180deg, hsl(var(--background) / 0.85) 0%, hsl(var(--background) / 0.5) 70%, transparent 100%);">
+        {% if eyebrow %}<p class="text-xs font-semibold uppercase tracking-[0.25em] mb-2" style="color: hsl(var(--accent))">{{eyebrow}}</p>{% endif %}
+        {% if title %}<h1 class="text-4xl font-black tracking-tight text-center" style="color: hsl(var(--foreground))">{{title}}</h1>{% endif %}
+    </div>
+    {% endif %}
+
+    {% set _pos_map = {
+        'top-left':       {'top': '14%', 'left': '4%',    'width': '26%', 'text-align': 'left'},
+        'top-center':     {'top': '14%', 'left': '32%',   'width': '36%', 'text-align': 'center'},
+        'top-right':      {'top': '14%', 'right': '4%',   'width': '26%', 'text-align': 'right'},
+        'middle-left':    {'top': '42%', 'left': '4%',    'width': '26%', 'text-align': 'left'},
+        'middle-center':  {'top': '42%', 'left': '32%',   'width': '36%', 'text-align': 'center'},
+        'middle-right':   {'top': '42%', 'right': '4%',   'width': '26%', 'text-align': 'right'},
+        'bottom-left':    {'bottom': '14%', 'left': '4%', 'width': '34%', 'text-align': 'left'},
+        'bottom-center':  {'bottom': '14%', 'left': '20%','width': '60%', 'text-align': 'center'},
+        'bottom-right':   {'bottom': '14%', 'right': '4%','width': '34%', 'text-align': 'right'}
+    } %}
+
+    {% for lbl in labels or [] %}
+        {% set _v = lbl.variant or 'label' %}
+        {% set _p = lbl.position %}
+        {% if _p is string %}
+            {% set _coord = _pos_map[_p] %}
+        {% else %}
+            {% set _coord = _p %}
+        {% endif %}
+        <div class="absolute z-20 hud-panel"
+             style="
+                {% if _coord.top %}top: {{_coord.top}};{% endif %}
+                {% if _coord.bottom %}bottom: {{_coord.bottom}};{% endif %}
+                {% if _coord.left %}left: {{_coord.left}};{% endif %}
+                {% if _coord.right %}right: {{_coord.right}};{% endif %}
+                {% if _coord.width %}width: {{_coord.width}};{% endif %}
+                text-align: {{_coord['text-align'] or 'left'}};
+                padding: {% if _v == 'title' %}14px 20px{% elif _v == 'panel' %}16px 22px{% else %}10px 16px{% endif %};
+                background: hsl(var(--secondary) / 0.86);
+                backdrop-filter: blur(6px);
+             ">
+            {% if _v == 'title' %}
+                <p class="font-black tracking-tight" style="font-size: 1.6rem; color: hsl(var(--foreground)); line-height: 1.2">{{lbl.text}}</p>
+                {% if lbl.subtext %}<p class="text-sm mt-1 opacity-80" style="color: hsl(var(--muted-foreground))">{{lbl.subtext}}</p>{% endif %}
+            {% elif _v == 'panel' %}
+                <p class="font-bold mb-2" style="font-size: 1.05rem; color: hsl(var(--accent))">{{lbl.text}}</p>
+                {% if lbl.subtext %}
+                    {% if lbl.subtext is string %}
+                        <p class="text-sm leading-relaxed" style="color: hsl(var(--foreground))">{{lbl.subtext}}</p>
+                    {% else %}
+                        {% for line in lbl.subtext %}
+                        <p class="text-sm leading-relaxed mb-1" style="color: hsl(var(--foreground))">{{line}}</p>
+                        {% endfor %}
+                    {% endif %}
+                {% endif %}
+            {% else %}
+                <p class="font-semibold" style="font-size: 0.95rem; color: hsl(var(--foreground)); line-height: 1.4">{{lbl.text}}</p>
+                {% if lbl.subtext %}<p class="text-xs mt-1 opacity-75" style="color: hsl(var(--muted-foreground))">{{lbl.subtext}}</p>{% endif %}
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    {% if footer_quote %}
+    <div class="absolute left-12 right-12 z-20 hud-panel" style="bottom: 36px; padding: 16px 24px; background: hsl(var(--secondary) / 0.92); backdrop-filter: blur(8px); text-align: center;">
+        <p class="font-bold" style="font-size: 1.1rem; color: hsl(var(--foreground)); line-height: 1.5">{{footer_quote}}</p>
+    </div>
+    {% endif %}
+</div>
+""",
+
     # 커스텀 (Tailwind 자유 작성)
     "custom": """
 {{custom_html|safe}}
@@ -1137,10 +1636,17 @@ def render_slide(slide_data: dict, theme_name: str = "default", width: int = 128
         slide_data["image_data"] = get_image_base64(slide_data["image_path"])
     if slide_data.get("avatar_path"):
         slide_data["avatar_data"] = get_image_base64(slide_data["avatar_path"])
+    if slide_data.get("left_image_path"):
+        slide_data["left_image_data"] = get_image_base64(slide_data["left_image_path"])
+    if slide_data.get("right_image_path"):
+        slide_data["right_image_data"] = get_image_base64(slide_data["right_image_path"])
 
     # 레이아웃 렌더링 (SilentUndefined 사용)
     layout_tpl = env.from_string(layout_template)
     content_html = layout_tpl.render(**slide_data)
+
+    # style_overrides — spec에 사용자가 지정한 미세 조정값 (없으면 빈 CSS)
+    style_overrides_css = _build_style_overrides_css(slide_data.get("style_overrides"))
 
     # 베이스 템플릿에 삽입 (디자인 시스템 주입 포함)
     base_tpl = env.from_string(SLIDE_BASE_TEMPLATE)
@@ -1152,9 +1658,52 @@ def render_slide(slide_data: dict, theme_name: str = "default", width: int = 128
         design_system_head=ds.get("extra_head", ""),
         design_system_css=ds.get("extra_css", ""),
         design_system_html=ds.get("extra_html", ""),
+        style_overrides_css=style_overrides_css,
     )
 
     return full_html
+
+
+def _build_style_overrides_css(overrides) -> str:
+    """spec.style_overrides → 슬라이드별 추가 CSS.
+
+    지원 키:
+      - font_scale: float (0.7 ~ 1.4). html root font-size 조정 → 모든 rem 단위 비례.
+      - text_align: 'left' | 'center' | 'right'. 본문 텍스트 강제 정렬.
+      - accent_color: hex 문자열 (예: '#a55a3e'). primary 색 override.
+
+    1280×720 viewport에서 font_scale은 텍스트만 비례 확대/축소 (이미지·여백은 그대로).
+    너무 큰 값은 슬라이드가 잘릴 수 있음 — 0.85~1.25 권장.
+    """
+    if not overrides or not isinstance(overrides, dict):
+        return ""
+
+    parts = []
+
+    # font_scale — html root font-size 조정 (tailwind rem 단위 비례)
+    fs = overrides.get("font_scale")
+    if isinstance(fs, (int, float)) and 0.5 <= float(fs) <= 2.0 and float(fs) != 1.0:
+        parts.append(f"html {{ font-size: {16 * float(fs):.2f}px !important; }}")
+
+    # text_align — 본문 텍스트 강제 정렬
+    ta = overrides.get("text_align")
+    if ta in ("left", "center", "right"):
+        parts.append(
+            f".slide-container h1, .slide-container h2, .slide-container h3, "
+            f".slide-container p, .slide-container li, .slide-container blockquote "
+            f"{{ text-align: {ta} !important; }}"
+        )
+
+    # accent_color — primary 색 override (text/bg/border-primary 클래스)
+    ac = overrides.get("accent_color")
+    if isinstance(ac, str) and ac.startswith("#") and len(ac) in (4, 7):
+        parts.append(
+            f".slide-container [class*='text-primary'] {{ color: {ac} !important; }}\n"
+            f".slide-container [class*='bg-primary'] {{ background-color: {ac} !important; }}\n"
+            f".slide-container [class*='border-primary'] {{ border-color: {ac} !important; }}"
+        )
+
+    return "\n".join(parts)
 
 
 def create_shadcn_slides(tool_input: dict, output_base: str) -> str:
@@ -1165,18 +1714,32 @@ def create_shadcn_slides(tool_input: dict, output_base: str) -> str:
         tool_input: {
             "slides": [
                 {
-                    "layout": "hero",  # hero, hero_image, features, stats, testimonial, pricing, cta, content_image, steps, custom
+                    # layout 옵션:
+                    #   마케팅: hero / hero_image / features / stats / testimonial / pricing / cta / content_image / steps / custom
+                    #   강의:   lecture_body / metaphor_story / comparison_table / factbox / quote
+                    #   통합형 일러스트(NotebookLM 스타일):
+                    #           hero_illustration / illustration_anchor / split_concept /
+                    #           illustration_background / comparison_iconic
+                    "layout": "hero",
                     "title": "제목",
                     "subtitle": "부제목",
-                    ... (레이아웃별 속성)
+                    # 일러스트가 필요한 layout에 image_path 절대경로(자동 base64 변환):
+                    #   - image_path  → image_data  (hero_illustration / illustration_anchor / illustration_background / hero_image / content_image)
+                    #   - left_image_path  → left_image_data  (split_concept)
+                    #   - right_image_path → right_image_data (split_concept)
+                    #   - avatar_path → avatar_data           (testimonial)
+                    ...
                 }
             ],
-            "theme": "blue",  # default, blue, green, purple, orange, dark
-            "output_dir": "경로" (선택)
+            "theme": "blue",          # default / blue / green / purple / orange / dark
+            "design_system": "vintage_book",  # default / vintage_book / academic_paper / tech_minimal / magazine_modern
+            "output_dir": "경로",     # 선택. 미지정 시 output_base/shadcn_slides_<8자hex>/
+            "width": 1280,            # 선택. 슬라이드 가로 픽셀 (기본 1280)
+            "height": 720             # 선택. 슬라이드 세로 픽셀 (기본 720)
         }
 
     Returns:
-        생성 결과 JSON
+        JSON: {success, message, output_dir, images[], html_files[], theme}
     """
     slides_data = tool_input.get("slides", [])
 
@@ -1207,6 +1770,7 @@ def create_shadcn_slides(tool_input: dict, output_base: str) -> str:
     height = tool_input.get("height", 720)
 
     output_dir = custom_output_dir if custom_output_dir else os.path.join(output_base, f"shadcn_slides_{uuid.uuid4().hex[:8]}")
+    output_dir = os.path.abspath(output_dir)  # 외부와 소통하는 모든 경로는 절대경로 (AI 안내가 cwd에 의존하지 않도록)
     os.makedirs(output_dir, exist_ok=True)
 
     generated_paths = []
@@ -1260,17 +1824,6 @@ def create_shadcn_slides(tool_input: dict, output_base: str) -> str:
             "success": False,
             "error": str(e)
         }, ensure_ascii=False)
-
-
-# 도구 실행 함수 (handler.py와 통합용)
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    """도구 실행"""
-    if tool_name == "create_shadcn_slides":
-        output_base = os.path.join(project_path, "outputs")
-        os.makedirs(output_base, exist_ok=True)
-        return create_shadcn_slides(tool_input, output_base)
-
-    return json.dumps({"error": f"알 수 없는 도구: {tool_name}"})
 
 
 if __name__ == "__main__":

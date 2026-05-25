@@ -7,8 +7,8 @@ api_registry.yaml을 읽고, 도구 이름으로 API를 자동 호출합니다.
 사용법:
     from api_engine import execute_tool, is_registry_tool, list_registry_tools
 
-    # 도구 실행
-    result = execute_tool("search_laws", {"query": "임대차"})
+    # 도구 실행 (project_path는 필수)
+    result = execute_tool("search_laws", {"query": "임대차"}, project_path="/abs/project/path")
 
     # 레지스트리에 등록된 도구인지 확인
     if is_registry_tool("search_laws"):
@@ -96,14 +96,14 @@ def get_service_config(service_name: str) -> Optional[Dict]:
     return reg.get("services", {}).get(service_name)
 
 
-def execute_tool(tool_name: str, tool_input: dict, project_path: str = ".") -> Any:
+def execute_tool(tool_name: str, tool_input: dict, project_path: str) -> Any:
     """
     레지스트리 기반으로 도구 실행
 
     Args:
         tool_name: 도구 이름 (api_registry.yaml의 tools 섹션 키)
         tool_input: 도구 파라미터 (AI가 전달하는 파라미터)
-        project_path: 프로젝트 경로
+        project_path: 프로젝트 경로 (필수, 호출자가 명시 전달)
 
     Returns:
         API 응답 (dict, list, str 등)

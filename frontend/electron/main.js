@@ -29,6 +29,7 @@ let photoManagerWindow = null; // Photo Manager 창
 let androidManagerWindow = null; // Android Manager 창
 let logWindow = null; // 로그 뷰어 창
 let systemAIWindow = null; // 시스템 AI 창
+let lectureWorkspaceWindow = null; // 강의 만들기 워크스페이스 창
 
 // 로그 버퍼 (최근 500줄 유지)
 const MAX_LOG_LINES = 500;
@@ -993,6 +994,68 @@ function createAndroidManagerWindow(deviceId = null, projectId = null) {
 }
 
 /**
+ * 강의 만들기 워크스페이스 창 생성
+ * lectureId가 주어지면 해당 강의를 선택한 상태로, 미지정 시 강의 목록 화면.
+ */
+function createLectureWorkspaceWindow(lectureId = null) {
+  // 이미 열려있으면 포커스 + (다른 강의 요청이면) 라우트 갱신
+  if (lectureWorkspaceWindow && !lectureWorkspaceWindow.isDestroyed()) {
+    lectureWorkspaceWindow.focus();
+    if (lectureId) {
+      lectureWorkspaceWindow.webContents.send('lecture-workspace-select', lectureId);
+    }
+    return lectureWorkspaceWindow;
+  }
+
+  lectureWorkspaceWindow = new BrowserWindow({
+    width: 1600,
+    height: 1000,
+    minWidth: 1200,
+    minHeight: 700,
+    title: '강의 만들기',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    trafficLightPosition: process.platform === 'darwin' ? { x: 15, y: 15 } : undefined,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  const hashPath = lectureId
+    ? `/lecture-workspace?lecture_id=${encodeURIComponent(lectureId)}`
+    : '/lecture-workspace';
+
+  if (isDev) {
+    lectureWorkspaceWindow.loadURL(`http://localhost:5173/#${hashPath}`);
+  } else {
+    lectureWorkspaceWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
+      hash: hashPath
+    });
+  }
+
+  // 외부 링크는 기본 브라우저에서
+  lectureWorkspaceWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  lectureWorkspaceWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  lectureWorkspaceWindow.on('closed', () => {
+    lectureWorkspaceWindow = null;
+  });
+
+  setupContextMenu(lectureWorkspaceWindow);
+  return lectureWorkspaceWindow;
+}
+
+/**
  * 다중채팅방 창 생성
  */
 function createMultiChatWindow(roomId, roomName) {
@@ -1100,6 +1163,11 @@ function setupIPC() {
   // 다중채팅방 창 열기
   ipcMain.handle('open-multichat-window', (_, roomId, roomName) => {
     createMultiChatWindow(roomId, roomName);
+  });
+
+  // 강의 만들기 워크스페이스 창 열기
+  ipcMain.handle('open-lecture-workspace-window', (_, lectureId) => {
+    createLectureWorkspaceWindow(lectureId);
   });
 
   // PC Manager 창 열기
@@ -1272,6 +1340,9 @@ function startLauncherWS() {
               params?.folder_id || '',
               params?.folder_name || ''
             );
+            break;
+          case 'open_lecture_workspace':
+            createLectureWorkspaceWindow(params?.lecture_id || null);
             break;
           default:
             console.warn('[Launcher WS] 알 수 없는 명령:', command);

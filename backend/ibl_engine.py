@@ -210,7 +210,7 @@ def list_actions(node: str) -> List[Dict]:
     return result
 
 
-def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None) -> Any:
+def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
     """
     IBL 노드 도구 실행
 
@@ -220,7 +220,7 @@ def execute_ibl(tool_input: dict, project_path: str = ".", agent_id: str = None)
             "params": {...},         # 파라미터
             ...기타 노드별 파라미터
         }
-        project_path: 프로젝트 경로
+        project_path: 프로젝트 경로 (필수, 호출자가 명시 전달)
         agent_id: 에이전트 ID
 
     Returns:

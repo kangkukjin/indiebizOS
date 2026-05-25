@@ -57,6 +57,10 @@ class ConsciousnessAgent:
                 tools=[],
             )
             self._provider.init_client()
+            # 메타 역할 provider는 메인 에이전트와 session_key가 충돌하므로
+            # claude_code provider의 세션 연속성 비활성화 (no-op on other providers)
+            if hasattr(self._provider, "disable_session_persistence"):
+                self._provider.disable_session_persistence = True
             print(f"[ConsciousnessAgent] 초기화 완료 ({provider_name}/{model})")
         except Exception as e:
             print(f"[ConsciousnessAgent] 초기화 실패: {e}")
@@ -399,6 +403,9 @@ def _get_lightweight_provider():
             tools=[],
         )
         _lightweight_provider.init_client()
+        # 분류·평가·증류용 — 메인 에이전트와 session_key 충돌 방지를 위해 세션 비활성
+        if hasattr(_lightweight_provider, "disable_session_persistence"):
+            _lightweight_provider.disable_session_persistence = True
         print(f"[LightweightAI] 초기화 완료 ({provider_name}/{model_name})")
         return _lightweight_provider
     except Exception as e:
@@ -430,9 +437,14 @@ def _get_midtier_provider():
         if not config.get("enabled", True):
             return None
 
-        # API 키가 없으면 시스템 AI 키 사용
+        provider_name = config.get("provider", "google").strip()
+        model_name = config.get("model", "gemini-2.5-flash").strip()
+
+        # API 키 없으면 시스템 AI 키 사용. 단 claude_code/ollama는 자체 인증 경로(OAuth/로컬)가
+        # 있으므로 api_key 요구를 건너뛴다.
         api_key = config.get("apiKey", "").strip()
-        if not api_key:
+        providers_without_api_key = {"claude_code", "claude-code", "claudecode", "ollama"}
+        if not api_key and provider_name.lower() not in providers_without_api_key:
             from api_config import SYSTEM_AI_CONFIG_PATH
             if SYSTEM_AI_CONFIG_PATH.exists():
                 with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
@@ -440,9 +452,6 @@ def _get_midtier_provider():
                 api_key = sys_config.get("apiKey", "").strip()
             if not api_key:
                 return None
-
-        provider_name = config.get("provider", "google").strip()
-        model_name = config.get("model", "gemini-2.5-flash").strip()
 
         from providers import get_provider
         _midtier_provider = get_provider(

@@ -31,18 +31,9 @@ def get_credentials() -> dict:
     }
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = None) -> str:
-    """
-    도구 실행 진입점
-
-    Args:
-        tool_name: 실행할 도구 이름 (cf_api만 지원)
-        tool_input: 도구 입력 파라미터
-        project_path: 프로젝트 경로 (컨텍스트)
-
-    Returns:
-        JSON 형식의 결과 문자열
-    """
+def execute(tool_input: dict, context) -> str:
+    """도구 실행 진입점 (ToolContext 기반 신규 시그니처). cf_api만 지원."""
+    tool_name = context.tool_name
     try:
         if tool_name != "cf_api":
             return json.dumps({

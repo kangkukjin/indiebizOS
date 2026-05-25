@@ -16,6 +16,53 @@ from typing import Any, Dict, Optional
 TOOL_EXECUTION_TIMEOUT = 60
 
 
+# === 파라미터 alias 정규화 ===
+# AI(특히 실행기억/해마 RAG)가 자연스러운 이름으로 호출했을 때 핸들러의 정규 키로 자동 매핑.
+# 형식: {"node:action": {"<정규 키>": ["<alias1>", "<alias2>", ...]}}
+# 정규화 규칙: 정규 키가 비어있고 alias 키 중 하나에 값이 있으면 그 값을 정규 키로 옮긴다.
+ACTION_PARAM_ALIASES: Dict[str, Dict[str, list]] = {
+    # === 부동산 (real-estate) — 법정동 코드는 region_code가 정식 ===
+    "sense:apt_trade":   {"region_code": ["district_code", "region", "dong_code", "code"]},
+    "sense:apt_rent":    {"region_code": ["district_code", "region", "dong_code", "code"]},
+    "sense:house_trade": {"region_code": ["district_code", "region", "dong_code", "code"]},
+    "sense:house_rent":  {"region_code": ["district_code", "region", "dong_code", "code"]},
+    "sense:commercial": {
+        "region_code": ["district_code", "dong_code", "code"],
+        "lat": ["latitude", "y"],
+        "lng": ["longitude", "lon", "x"],
+    },
+
+    # === 라이브러리 문서 (context7) — library_name이 정식 ===
+    "sense:resolve_library":  {"library_name": ["name", "library", "lib", "query"]},
+    "sense:get_library_docs": {"library_id": ["id", "library", "lib_id"]},
+
+    # === 도서 (culture) — isbn13이 정식 ===
+    "sense:recommended_books": {"isbn13": ["isbn", "book_isbn", "base_isbn", "book_id"]},
+}
+
+
+def _normalize_param_aliases(node: str, action: str, params: dict) -> dict:
+    """액션별 alias 매핑을 적용해 핸들러가 받는 정규 키로 변환.
+
+    핸들러는 변경 없이 정규 키만 받고, AI 호출자는 자연스러운 이름을 써도 통과한다.
+    이미 정규 키에 값이 있으면 alias는 무시 (정규 키 우선).
+    """
+    if not isinstance(params, dict):
+        return params
+    key = f"{node}:{action}"
+    aliases = ACTION_PARAM_ALIASES.get(key)
+    if not aliases:
+        return params
+    for canonical, alts in aliases.items():
+        if params.get(canonical) is not None:
+            continue
+        for alt in alts:
+            if params.get(alt) is not None:
+                params[canonical] = params[alt]
+                break
+    return params
+
+
 # === 라우터 구현 ===
 
 def _route_api_engine(action: str, params: dict, project_path: str,
@@ -58,9 +105,131 @@ def _route_api_engine(action: str, params: dict, project_path: str,
     return {"error": f"api 노드에 '{action}' 액션이 없습니다."}
 
 
+# ─────────────────────────────────────────────────────────────────────
+# 액션 스코프 (Phase 30) — 액션의 데이터 경계 선언
+# ─────────────────────────────────────────────────────────────────────
+#
+# IBL 액션은 데이터 경계가 서로 다르다. 스코프는 ibl_actions.yaml에 명시:
+#
+#   - "project" (기본): 특정 프로젝트의 데이터에서 작동. project_path 필요.
+#                       예: self:read, self:write — 프로젝트 폴더에서 작동.
+#
+#   - "workspace":      indiebizOS 인스턴스 전체에 걸친 데이터. 프로젝트 무관.
+#                       예: lecture_workspace (outputs/lectures/),
+#                       앞으로 추가될 비즈니스 관계, NAS, 통합 메모 등.
+#                       resolved path = get_base_path() (indiebizOS 루트 / userData)
+#
+#   - "system":         indiebizOS 자체에 대한 작업 (설정, 패키지 관리 등).
+#                       workspace와 동일한 경로를 쓰되, 향후 권한 모델에서 분리.
+#
+# scope는 ibl_actions.yaml의 파일 레벨(전체 적용) 또는 액션 레벨(개별 오버라이드)
+# 어디든 선언 가능. 라우팅은 이 선언을 보고 project_path 강요 여부를 결정.
+
+WORKSPACE_SCOPES = {"workspace", "system"}
+
+
+def _resolve_path_by_scope(scope: str, project_path: str,
+                            params: Optional[dict] = None) -> Optional[str]:
+    """scope에 따라 ToolContext에 줄 base path 결정.
+
+    - workspace/system: get_base_path() (indiebizOS 루트 / userData).
+                       project_path/project_id 무시 — 의도적 격리.
+    - project (기본):   기존 4단 폴백 우선순위 적용 (_resolve_project_path).
+    """
+    if scope in WORKSPACE_SCOPES:
+        try:
+            from runtime_utils import get_base_path
+            return str(get_base_path())
+        except Exception as e:
+            print(f"[ibl_routing] workspace 경로 해석 실패: {e}")
+            return None
+    return _resolve_project_path(project_path, params)
+
+
+def _resolve_project_path(project_path: str,
+                          params: Optional[dict] = None) -> Optional[str]:
+    """project_path를 4단 우선순위로 해석 (scope='project' 전용).
+
+    우선순위:
+      1) 호출자가 직접 인자로 넘긴 project_path (디폴트 '.' 가 아닐 때)
+         — 프로젝트 에이전트 등 컨텍스트가 살아있는 정상 경로
+      2) params["project_id"] — ID만 알면 ProjectManager로 절대경로 변환 (메타 키)
+      3) params["project_path"] — 명시 절대/상대 경로 (web-builder처럼 동일
+         키를 도구 인자로 쓰는 핸들러와의 충돌을 피하려고 positional이 빈
+         경우에만 본다 — 프로젝트 에이전트 흐름에서는 1번에서 결정되므로
+         params를 건드리지 않음)
+      4) 안전망 — thread_context.project_id
+
+    시스템 AI처럼 자신의 project_path가 없는 호출자는 2·3번으로 대상 프로젝트를
+    명시한다. 1번이 살아있으면 params는 도구 인자로 그대로 보존된다.
+    """
+    # 1) 호출자가 직접 인자로 넘긴 값 — 가장 신뢰
+    if project_path and project_path.strip() and project_path != ".":
+        return os.path.abspath(project_path)
+
+    # positional이 비어있을 때만 params에서 명시 키 탐색
+    if isinstance(params, dict):
+        # 2) params.project_id — 의미상 메타 키 (도구 인자로 쓰는 핸들러 없음)
+        explicit_id = params.get("project_id")
+        if isinstance(explicit_id, str) and explicit_id.strip():
+            resolved = _resolve_project_id(explicit_id)
+            if resolved:
+                return resolved
+
+        # 3) params.project_path — 명시 경로
+        explicit_path = params.get("project_path")
+        if isinstance(explicit_path, str) and explicit_path.strip() and explicit_path != ".":
+            candidate = os.path.abspath(explicit_path)
+            if os.path.isdir(candidate):
+                return candidate
+            # 디렉토리가 아니면 project_id처럼 생긴 값이라 보고 ID 해석 시도
+            resolved = _resolve_project_id(explicit_path)
+            if resolved:
+                return resolved
+
+    # 4) 안전망 — thread_context
+    print(
+        f"[ibl_routing] WARN: project_path 안전망 발동 (입력={project_path!r}). "
+        "호출자가 명시 전달하지 못함 — thread_context.project_id로 복구 시도."
+    )
+    try:
+        from thread_context import get_current_project_id
+        project_id = get_current_project_id()
+        if project_id:
+            resolved = _resolve_project_id(project_id)
+            if resolved:
+                return resolved
+    except Exception as e:
+        print(f"[ibl_routing] project_path 복구 실패: {e}")
+
+    return None
+
+
+def _resolve_project_id(project_id: str) -> Optional[str]:
+    """project_id 문자열 → 절대경로 (ProjectManager 경유)."""
+    try:
+        from project_manager import ProjectManager
+        pm = ProjectManager()
+        path = pm.get_project_path(project_id)
+        if path and path.exists():
+            return str(path.resolve())
+    except Exception as e:
+        print(f"[ibl_routing] project_id '{project_id}' 해석 실패: {e}")
+    return None
+
+
 def _route_handler(mapped_tool: str, params: dict,
-                   project_path: str, agent_id: str = None) -> Any:
-    """handler.py로 위임 (타임아웃 적용)"""
+                   project_path: str, agent_id: str = None,
+                   scope: str = "project") -> Any:
+    """handler.py로 위임 (타임아웃 적용).
+
+    표준 시그니처: execute(tool_input, context: ToolContext).
+    구 시그니처(tool_name, tool_input, project_path, [agent_id])는 더 이상 지원하지 않는다.
+
+    scope (Phase 30):
+        - "project" (기본): project_path 필요. 없으면 에러.
+        - "workspace"/"system": project_path 무시, get_base_path()를 ToolContext에 주입.
+    """
     from tool_loader import load_tool_handler
 
     if not mapped_tool:
@@ -72,13 +241,34 @@ def _route_handler(mapped_tool: str, params: dict,
 
     merged_params = dict(params)
 
-    # handler.execute 호출
+    # handler.execute는 신규 시그니처 (tool_input, context)만 지원
     import inspect
     sig = inspect.signature(handler.execute)
-    if "agent_id" in sig.parameters:
-        result = handler.execute(mapped_tool, merged_params, project_path, agent_id)
-    else:
-        result = handler.execute(mapped_tool, merged_params, project_path)
+    if "context" not in sig.parameters:
+        return {"error": (
+            f"도구 핸들러가 구 시그니처를 사용합니다: {mapped_tool}. "
+            "신규 시그니처 execute(tool_input, context: ToolContext)로 마이그레이션이 필요합니다."
+        )}
+
+    resolved_path = _resolve_path_by_scope(scope, project_path, merged_params)
+    if not resolved_path:
+        if scope in WORKSPACE_SCOPES:
+            return {"error": (
+                f"workspace 경로를 확보할 수 없습니다: {mapped_tool}. "
+                "INDIEBIZ_BASE_PATH 환경변수 또는 backend 폴더 구조를 확인하세요."
+            )}
+        return {"error": (
+            f"활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: {mapped_tool}. "
+            "대상 프로젝트를 params.project_id로 명시하거나 "
+            "프로젝트 컨텍스트(thread_context.project_id) 안에서 호출하세요. "
+            "예: execute_ibl(code='[node:action]{..., project_id: \"컨텐츠\"}')"
+        )}
+    from tool_context import ToolContext, ToolContextError
+    try:
+        context = ToolContext.from_thread_context(resolved_path, mapped_tool)
+    except ToolContextError as e:
+        return {"error": f"ToolContext 생성 실패: {e}"}
+    result = handler.execute(merged_params, context)
 
     # async 핸들러 지원 (persistent 이벤트 루프 + 타임아웃)
     if asyncio.iscoroutine(result):
@@ -711,10 +901,16 @@ def _route_driver(driver_type: str, node: str, action: str,
 def _route_by_config(action_config, params, node, action,
                      project_path, agent_id):
     """YAML 액션 설정 기반 통합 라우팅"""
+    # 자연스러운 파라미터 이름(district_code, name 등)을 핸들러 정규 키로 자동 매핑
+    params = _normalize_param_aliases(node, action, params)
+
     router = action_config.get("router")
+    # Phase 30: scope 선언 (workspace/system/project). 미지정 시 project.
+    scope = action_config.get("scope", "project")
+
     if router == "handler":
         mapped_tool = action_config.get("tool")
-        return _route_handler(mapped_tool, params, project_path, agent_id)
+        return _route_handler(mapped_tool, params, project_path, agent_id, scope=scope)
     elif router == "driver":
         driver_type = action_config.get("driver", "sqlite")
         dn = action_config.get("driver_node")  # Phase 22: 하위 핸들러 지정

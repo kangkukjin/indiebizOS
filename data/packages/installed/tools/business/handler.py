@@ -7,8 +7,9 @@ import sys
 from pathlib import Path
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
-    """비즈니스 도구 실행"""
+def execute(tool_input: dict, context) -> str:
+    """비즈니스 도구 실행 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
     try:
         # backend 경로 추가 (business_manager 임포트용)
         backend_path = str(Path(__file__).parent.parent.parent.parent.parent / "backend")

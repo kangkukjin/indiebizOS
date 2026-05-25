@@ -18,10 +18,10 @@ if _backend_dir not in sys.path:
 from common.response_formatter import format_json
 
 
-def execute(tool_name: str, args: dict, project_path: str = ".") -> str:
-    """
-    블로그 도구 실행 통합 핸들러
-    """
+def execute(tool_input: dict, context) -> str:
+    """블로그 도구 실행 통합 핸들러 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
+    project_path = context.project_path
     try:
         # 인사이트 도구들
         if tool_name == "blog_check_new_posts":
@@ -32,43 +32,43 @@ def execute(tool_name: str, args: dict, project_path: str = ".") -> str:
         elif tool_name == "blog_get_posts":
             from tool_blog_insight import blog_get_posts
             result = blog_get_posts(
-                count=args.get("count", 20),
-                offset=args.get("offset", 0),
-                category=args.get("category"),
-                with_summary=args.get("with_summary", False),
-                only_without_summary=args.get("only_without_summary", False)
+                count=tool_input.get("count", 20),
+                offset=tool_input.get("offset", 0),
+                category=tool_input.get("category"),
+                with_summary=tool_input.get("with_summary", False),
+                only_without_summary=tool_input.get("only_without_summary", False)
             )
             return format_json(result)
 
         elif tool_name == "blog_get_post":
             from tool_blog_insight import blog_get_post
-            result = blog_get_post(post_id=args.get("post_id"))
+            result = blog_get_post(post_id=tool_input.get("post_id"))
             return format_json(result)
 
         elif tool_name == "blog_get_summaries":
             from tool_blog_insight import blog_get_summaries
             result = blog_get_summaries(
-                count=args.get("count", 20),
-                offset=args.get("offset", 0),
-                category=args.get("category")
+                count=tool_input.get("count", 20),
+                offset=tool_input.get("offset", 0),
+                category=tool_input.get("category")
             )
             return format_json(result)
 
         elif tool_name == "blog_save_summary":
             from tool_blog_insight import blog_save_summary
             result = blog_save_summary(
-                post_id=args.get("post_id"),
-                summary=args.get("summary"),
-                keywords=args.get("keywords", "")
+                post_id=tool_input.get("post_id"),
+                summary=tool_input.get("summary"),
+                keywords=tool_input.get("keywords", "")
             )
             return format_json(result)
 
         elif tool_name == "blog_search":
             from tool_blog_insight import blog_search
             result = blog_search(
-                query=args.get("query"),
-                count=args.get("count", 20),
-                search_in=args.get("search_in", "all")
+                query=tool_input.get("query"),
+                count=tool_input.get("count", 20),
+                search_in=tool_input.get("search_in", "all")
             )
             return format_json(result)
 
@@ -81,8 +81,8 @@ def execute(tool_name: str, args: dict, project_path: str = ".") -> str:
             from tool_blog_insight import blog_insight_report
             # project_path 전달 필수
             result = blog_insight_report(
-                count=args.get("count", 50),
-                category=args.get("category"),
+                count=tool_input.get("count", 50),
+                category=tool_input.get("category"),
                 project_path=project_path
             )
             return format_json(result)
@@ -91,8 +91,8 @@ def execute(tool_name: str, args: dict, project_path: str = ".") -> str:
             from tool_kinsight import kinsight
             result = kinsight(
                 project_path=project_path,
-                count=args.get("count", 15),
-                before_date=args.get("before_date")
+                count=tool_input.get("count", 15),
+                before_date=tool_input.get("before_date")
             )
             return format_json(result)
 
@@ -103,23 +103,23 @@ def execute(tool_name: str, args: dict, project_path: str = ".") -> str:
         elif tool_name == "search_blog_rag":
             from tool_blog_rag import search_blog
             result = search_blog(
-                query=args.get("query"),
-                limit=args.get("limit", 5)
+                query=tool_input.get("query"),
+                limit=tool_input.get("limit", 5)
             )
             return format_json(result)
 
         elif tool_name == "get_post_content_rag":
             from tool_blog_rag import get_post_content
             result = get_post_content(
-                post_id=args.get("post_id")
+                post_id=tool_input.get("post_id")
             )
             return format_json(result)
 
         elif tool_name == "search_blog_semantic":
             from tool_blog_rag import search_blog_semantic
             result = search_blog_semantic(
-                query=args.get("query"),
-                limit=args.get("limit", 5)
+                query=tool_input.get("query"),
+                limit=tool_input.get("limit", 5)
             )
             return format_json(result)
 

@@ -24,7 +24,9 @@ def _load_module(module_file: str):
     return module
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
+def execute(tool_input: dict, context) -> str:
+    """ToolContext 기반 신규 시그니처."""
+    tool_name = context.tool_name
     module_file = _TOOL_MODULE_MAP.get(tool_name)
     if not module_file:
         return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}. 사용 가능: {TOOLS}"}, ensure_ascii=False)

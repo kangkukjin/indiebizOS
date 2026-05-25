@@ -683,10 +683,14 @@ TEMPLATES = {
 """,
 }
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    """도구 실행 함수"""
-    output_base = os.path.join(project_path, "outputs")
-    os.makedirs(output_base, exist_ok=True)
+def execute(tool_input: dict, context) -> str:
+    """도구 실행 함수 (ToolContext 기반 신규 시그니처).
+
+    context는 tool_context.ToolContext. tool_name 분기와 출력 경로 결정에 사용.
+    output_dir()은 항상 절대경로 + mkdir 자동.
+    """
+    tool_name = context.tool_name
+    output_base = context.output_dir()
 
     if tool_name == "create_slides":
         return create_slides(tool_input, output_base)
@@ -698,6 +702,8 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         return generate_ai_image(tool_input, output_base)
     elif tool_name == "generate_gemini_image":
         return generate_gemini_image(tool_input, output_base)
+    elif tool_name == "critique_gemini_image":
+        return critique_gemini_image(tool_input, output_base)
     elif tool_name == "create_tts":
         return create_tts(tool_input, output_base)
     elif tool_name == "render_html_video":
@@ -712,6 +718,18 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         sys.modules["shadcn_slides"] = shadcn_slides
         spec.loader.exec_module(shadcn_slides)
         return shadcn_slides.create_shadcn_slides(tool_input, output_base)
+    elif tool_name in ("create_lecture_plan", "create_lecture_write",
+                       "create_lecture_illustrate", "create_lecture_compose"):
+        # 강의 슬라이드 4단계 파이프라인 (별도 모듈)
+        import importlib.util
+        import sys
+        module_path = os.path.join(os.path.dirname(__file__), "lecture_pipeline.py")
+        spec = importlib.util.spec_from_file_location("lecture_pipeline", module_path)
+        lecture_pipeline = importlib.util.module_from_spec(spec)
+        sys.modules["lecture_pipeline"] = lecture_pipeline
+        spec.loader.exec_module(lecture_pipeline)
+        func = getattr(lecture_pipeline, tool_name)
+        return func(tool_input, output_base)
 
     return f"알 수 없는 도구: {tool_name}"
 
@@ -738,6 +756,7 @@ def create_slides(tool_input, output_base):
     height = tool_input.get("height", 720)
     
     output_dir = custom_output_dir if custom_output_dir else os.path.join(output_base, f"slides_{uuid.uuid4().hex[:8]}")
+    output_dir = os.path.abspath(output_dir)  # 외부와 소통하는 모든 경로는 절대경로 (AI 안내가 cwd에 의존하지 않도록)
     os.makedirs(output_dir, exist_ok=True)
     
     # HTML/Playwright를 사용한 렌더링 시도
@@ -1492,6 +1511,191 @@ def generate_ai_image(tool_input, output_base):
         return f"이미지 생성 중 오류 발생: {str(e)}"
 
 
+STYLE_PRESETS = {
+    "vintage_book": (
+        "Hand-drawn pen and ink illustration on aged beige parchment paper, "
+        "two-tone palette of deep navy blue (#2c3e6f) and rust brown (#a55a3e), "
+        "fine cross-hatching, geometric grid background lines, subtle paper texture and grain, "
+        "vintage scientific manuscript aesthetic, balanced empty space around the central subject, "
+        "centered composition with breathing room. "
+        "Do NOT include any Korean or Hangul characters. Do NOT add decorative Latin text, ciphers, or unreadable script. "
+        "Only the subject illustration — minimal or no text inside the image."
+    ),
+    "academic_paper": (
+        "Clean academic diagram on bright white paper, monochrome with deep navy (#161c2a) line art and crimson (#8b1a1a) accent, "
+        "thin precise pen lines, minimal shading, scholarly figure illustration style, generous white space. "
+        "Do NOT include Korean or Hangul characters. Only English labels if any text is needed."
+    ),
+    "tech_minimal": (
+        "Minimal vector-style illustration on dark navy background (#0d0f17), "
+        "neon cyan (#1ce0ff) accent lines, thin geometric strokes, subtle glow, "
+        "Linear/Vercel design aesthetic, isometric or flat composition, generous negative space. "
+        "Do NOT include Korean or Hangul characters."
+    ),
+    "magazine_modern": (
+        "Bold editorial illustration in New Yorker / Wired magazine style, "
+        "high contrast black ink on pure white background with selective vivid red (#e6182b) accent, "
+        "confident brush strokes, modernist composition, ample white space. "
+        "Do NOT include Korean or Hangul characters."
+    ),
+    "sf_blueprint": (
+        "Sci-fi HUD blueprint infographic on a deep navy (#050d1a) background, "
+        "glowing cyan (#1ad3ff) and pale ice-blue (#6ee0ff) line art, thin precise pen strokes with subtle outer glow, "
+        "wireframe / x-ray rendering of the subject, surrounded by faint technical schematic grid lines and HUD frame brackets in the corners, "
+        "small English technical labels and arrow annotations allowed (e.g. 'EYE', 'MASS', 'F=ma', 'FAILURE STATE'), "
+        "NotebookLM diagram aesthetic, holographic / hologram feel, "
+        "composition deliberately leaves clear empty regions on the sides or bottom so Korean caption boxes can be overlaid later without occluding the subject. "
+        "Strictly NO Korean / Hangul characters anywhere in the image. "
+        "Avoid decorative gibberish Latin text — only meaningful English labels if any."
+    ),
+}
+
+
+def _build_image_prompt(user_prompt: str, style_preset: str = None) -> str:
+    """스타일 프리셋을 사용자 프롬프트와 결합. 디자인 시스템과 어울리는 일러스트 생성용."""
+    if not style_preset or style_preset == "default":
+        return user_prompt
+    style = STYLE_PRESETS.get(style_preset)
+    if not style:
+        return user_prompt
+    return f"{user_prompt}\n\n--- STYLE GUIDELINES ---\n{style}"
+
+
+def critique_gemini_image(tool_input, output_base):
+    """Gemini Vision으로 이미지를 평가한다 — 일러스트가 의도와 정합하는지 검증.
+
+    파라미터:
+      - image_path (필수): 평가할 이미지 절대 경로 (또는 base64 data URI)
+      - intent (필수): "이 일러스트가 무엇을 표현해야 하는가" — 자연어 설명
+      - checks (선택): 추가 체크 리스트 (예: ["다이어그램형인가", "한글이 들어갔는가", "오른쪽 1/3이 비어있는가"])
+      - style_preset (선택): 디자인 시스템 톤 일관성 평가 기준 (sf_blueprint 등)
+      - api_key (선택)
+
+    반환:
+      JSON 문자열 — {"passed": bool, "score": 0-10, "issues": [...], "notes": "..."}
+      그리고 사람이 읽을 수 있는 요약 텍스트가 앞에 옴.
+    """
+    import httpx
+    import base64
+    import json as _json
+
+    image_path = tool_input.get("image_path")
+    intent = tool_input.get("intent", "")
+    if not image_path:
+        return "오류: image_path가 필요합니다."
+    if not intent:
+        return "오류: intent(이 일러스트가 무엇을 표현해야 하는지)가 필요합니다."
+
+    api_key = tool_input.get("api_key") or os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return "오류: GEMINI_API_KEY가 설정되지 않았습니다."
+
+    # 이미지 로드 (절대 경로 또는 data URI)
+    if image_path.startswith("data:"):
+        # data URI → base64 페이로드만 추출
+        try:
+            _, b64data = image_path.split(",", 1)
+            mime = image_path.split(";", 1)[0].split(":", 1)[1]
+        except Exception:
+            return "오류: 잘못된 data URI."
+    else:
+        if not os.path.exists(image_path):
+            return f"오류: 파일이 없습니다: {image_path}"
+        with open(image_path, "rb") as f:
+            b64data = base64.b64encode(f.read()).decode("utf-8")
+        ext = os.path.splitext(image_path)[1].lower()
+        mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(ext, "image/png")
+
+    checks = tool_input.get("checks") or []
+    style_preset = tool_input.get("style_preset", "")
+
+    default_checks = [
+        "이 일러스트는 회화적 '씬(scene)'이 아니라 정보를 전달하는 '다이어그램/인포그래픽'인가? (NotebookLM 양식)",
+        "한글(Hangul) 문자가 일러스트 안에 들어가 있는가? (있으면 실패 — 한글은 텍스트 레이어에서 처리)",
+        "라벨 박스가 들어갈 빈 공간(여백)이 의도된 위치에 정말 비어 있는가? (intent에 명시된 빈 공간 위치 확인)",
+        "주요 객체가 일러스트의 핵심 영역(중앙/지정 위치)에 명확하게 배치되어 있는가?",
+    ]
+    if style_preset:
+        default_checks.append(f"디자인 시스템 톤이 '{style_preset}'와 일관되는가? (색·선·분위기)")
+
+    all_checks = default_checks + checks
+
+    instruction = (
+        "당신은 강의 슬라이드 일러스트 평가자입니다. 다음 일러스트가 의도를 잘 표현하는지 엄격하게 평가하세요.\n\n"
+        f"**의도 (이 일러스트가 표현해야 할 것)**:\n{intent}\n\n"
+        f"**체크 항목** ({len(all_checks)}개):\n"
+        + "\n".join(f"{i+1}. {c}" for i, c in enumerate(all_checks))
+        + "\n\n반드시 다음 JSON 형식 한 개만 출력하세요. 다른 텍스트 금지.\n"
+        "```json\n"
+        "{\n"
+        '  "passed": true|false,\n'
+        '  "score": 0-10,\n'
+        '  "issues": ["체크 N번 실패 — 구체적 이유", ...],\n'
+        '  "notes": "전반적 평가 (1~2문장)"\n'
+        "}\n"
+        "```\n"
+        "passed는 issues가 없거나 score>=7일 때 true. 한글이 일러스트에 들어가 있으면 무조건 passed=false."
+    )
+
+    payload = {
+        "contents": [{
+            "parts": [
+                {"inlineData": {"mimeType": mime, "data": b64data}},
+                {"text": instruction},
+            ]
+        }],
+        "generationConfig": {"temperature": 0.2, "responseModalities": ["TEXT"]},
+    }
+
+    # VLM 모델 — pro 우선, fallback flash
+    model = tool_input.get("model") or "gemini-3-pro-preview"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+    try:
+        with httpx.Client(timeout=120.0) as client:
+            r = client.post(url, params={"key": api_key}, json=payload,
+                            headers={"Content-Type": "application/json"})
+            if r.status_code == 404:
+                # 폴백 모델
+                model = "gemini-2.5-pro"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+                r = client.post(url, params={"key": api_key}, json=payload,
+                                headers={"Content-Type": "application/json"})
+            r.raise_for_status()
+            data = r.json()
+    except Exception as e:
+        return f"오류: VLM 호출 실패: {e}"
+
+    parts = (data.get("candidates", [{}])[0].get("content", {}) or {}).get("parts", [])
+    text = "".join(p.get("text", "") for p in parts).strip()
+    # ```json ... ``` 코드 펜스 제거
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.lower().startswith("json"):
+            text = text[4:].strip()
+        text = text.split("```")[0].strip()
+
+    try:
+        verdict = _json.loads(text)
+    except Exception:
+        return f"VLM 응답 파싱 실패 — 원문:\n{text[:500]}"
+
+    summary_lines = [
+        f"이미지 평가: {image_path}",
+        f"의도: {intent[:80]}{'...' if len(intent) > 80 else ''}",
+        f"평가 결과: {'✓ 통과' if verdict.get('passed') else '✗ 실패'} (score={verdict.get('score', '?')}/10)",
+    ]
+    issues = verdict.get("issues") or []
+    if issues:
+        summary_lines.append("문제점:")
+        summary_lines.extend(f"  - {i}" for i in issues)
+    if verdict.get("notes"):
+        summary_lines.append(f"메모: {verdict['notes']}")
+    summary_lines.append("")
+    summary_lines.append(f"verdict_json: {_json.dumps(verdict, ensure_ascii=False)}")
+    return "\n".join(summary_lines)
+
+
 def generate_gemini_image(tool_input, output_base):
     """Gemini API를 사용하여 이미지를 생성합니다."""
     import httpx
@@ -1507,6 +1711,19 @@ def generate_gemini_image(tool_input, output_base):
 
     output_path = tool_input.get("output_path")
     aspect_ratio = tool_input.get("aspect_ratio", "1:1")
+    image_size = tool_input.get("image_size", "1K")  # 512/1K/2K/4K (3.x), 2.5는 무시
+    style_preset = tool_input.get("style_preset")
+    final_prompt = _build_image_prompt(prompt, style_preset)
+
+    # 모델 선택 — 기본은 Nano Banana 2 (Gemini 3.1 Flash, 2026-02 출시)
+    # quality 별칭으로 간편 선택, 또는 model로 직접 지정 가능
+    quality = tool_input.get("quality")  # "fast" | "pro" | "legacy"
+    quality_map = {
+        "fast": "gemini-3.1-flash-image-preview",  # Nano Banana 2 (기본)
+        "pro": "gemini-3-pro-image-preview",       # Nano Banana Pro — 4K, 더 정밀
+        "legacy": "gemini-2.5-flash-image",        # 구버전 폴백
+    }
+    model = tool_input.get("model") or quality_map.get(quality, "gemini-3.1-flash-image-preview")
 
     # output_path가 지정되면 파일명만 추출하여 output_base에 저장
     if output_path:
@@ -1516,21 +1733,25 @@ def generate_gemini_image(tool_input, output_base):
         output_path = os.path.join(output_base, f"gemini_image_{uuid.uuid4().hex[:8]}.png")
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
-    model = "gemini-2.5-flash-image"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
+    # 페이로드 구조: 양쪽 모델 모두 generationConfig.imageConfig 사용.
+    #   - 2.5: aspectRatio만 지원
+    #   - 3.x: aspectRatio + imageSize (1K/2K/4K/512) 지원
+    is_legacy = model.startswith("gemini-2.5")
+    image_config = {"aspectRatio": aspect_ratio}
+    if not is_legacy:
+        image_config["imageSize"] = image_size
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
+        "contents": [{"parts": [{"text": final_prompt}]}],
         "generationConfig": {
             "responseModalities": ["IMAGE", "TEXT"],
-            "imageConfig": {
-                "aspectRatio": aspect_ratio
-            }
-        }
+            "imageConfig": image_config,
+        },
     }
 
     try:
-        with httpx.Client(timeout=120.0) as client:
+        with httpx.Client(timeout=180.0) as client:
             response = client.post(
                 url,
                 params={"key": api_key},
@@ -1561,7 +1782,12 @@ def generate_gemini_image(tool_input, output_base):
         if not image_saved:
             return f"오류: 응답에 이미지 데이터가 없습니다. 텍스트 응답: {description or data}"
 
-        result = f"Gemini 이미지 생성 완료: {os.path.abspath(output_path)}\n프롬프트: {prompt}"
+        size_note = "" if is_legacy else f" / {image_size}"
+        result = (
+            f"Gemini 이미지 생성 완료: {os.path.abspath(output_path)}\n"
+            f"모델: {model}{size_note} (aspect {aspect_ratio})\n"
+            f"프롬프트: {prompt}"
+        )
         if description:
             result += f"\n설명: {description}"
         return result

@@ -15,6 +15,7 @@ import { PhotoManager } from './components/PhotoManager';
 import { AndroidManager } from './components/AndroidManager';
 import { LogViewer } from './components/LogViewer';
 import { SystemAIView } from './components/SystemAIView';
+import { LectureWorkspace } from './components/LectureWorkspace';
 import { api } from './lib/api';
 
 function App() {
@@ -34,6 +35,8 @@ function App() {
   const [androidProjectId, setAndroidProjectId] = useState<string | null>(null);
   const [isLogViewer, setIsLogViewer] = useState(false);
   const [isSystemAI, setIsSystemAI] = useState(false);
+  const [isLectureWorkspace, setIsLectureWorkspace] = useState(false);
+  const [lectureId, setLectureId] = useState<string | null>(null);
 
   // URL 해시에서 프로젝트/폴더/IndieNet 확인
   useEffect(() => {
@@ -49,9 +52,29 @@ function App() {
         setIsPCManager(false);
         setIsPhotoManager(false);
         setIsAndroidManager(false);
+        setIsLectureWorkspace(false);
         setProjectId(null);
         setFolderId(null);
         setMultiChatRoomId(null);
+        return;
+      }
+
+      // 강의 만들기 워크스페이스 체크
+      if (hash.startsWith('#/lecture-workspace')) {
+        setIsLectureWorkspace(true);
+        setIsSystemAI(false);
+        setIsLogViewer(false);
+        setIsIndieNet(false);
+        setIsBusiness(false);
+        setIsPCManager(false);
+        setIsPhotoManager(false);
+        setIsAndroidManager(false);
+        setProjectId(null);
+        setFolderId(null);
+        setMultiChatRoomId(null);
+        // lecture_id 쿼리 파라미터 추출
+        const lectureIdMatch = hash.match(/lecture_id=([^&]+)/);
+        setLectureId(lectureIdMatch ? decodeURIComponent(lectureIdMatch[1]) : null);
         return;
       }
 
@@ -204,6 +227,8 @@ function App() {
       setIsAndroidManager(false);
       setIsLogViewer(false);
       setIsSystemAI(false);
+      setIsLectureWorkspace(false);
+      setLectureId(null);
       setMultiChatRoomId(null);
     };
 
@@ -272,6 +297,15 @@ function App() {
         <div className="flex-1 min-h-0 flex flex-col rounded-xl overflow-hidden shadow-lg">
           <SystemAIView />
         </div>
+      </div>
+    );
+  }
+
+  // 강의 만들기 워크스페이스 창인 경우
+  if (isLectureWorkspace) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB]">
+        <LectureWorkspace initialLectureId={lectureId} />
       </div>
     );
   }

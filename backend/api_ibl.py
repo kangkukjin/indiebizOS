@@ -14,6 +14,14 @@ async def execute_ibl_code(req: IBLRequest):
     try:
         from system_tools import _execute_ibl_unified
         result = _execute_ibl_unified({"code": req.code}, req.project_path)
-        return json.loads(result) if isinstance(result, str) else result
+
+        # 결과가 str이면 JSON 파싱 시도. 실패 시 plain text로 wrap.
+        # (일부 IBL 액션은 JSON이 아닌 평문/markdown/빈문자열을 반환)
+        if isinstance(result, str):
+            try:
+                return json.loads(result)
+            except json.JSONDecodeError:
+                return {"result": result}
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -3,6 +3,8 @@
 .env.local
 .env.*.local
 data/system_ai_config.json
+data/claude_code_config.json
+data/claude_code_sessions.json
 data/system_ai_memory.db
 data/switches.json
 tokens/

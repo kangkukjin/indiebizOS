@@ -12,28 +12,25 @@ if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
 
-def _get_agent_id():
-    """현재 에이전트 ID 가져오기"""
-    from thread_context import get_current_agent_id
-    return get_current_agent_id()
+def execute(tool_input: dict, context) -> str:
+    """메모리 & 스킬 도구 실행 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
+    project_path = context.project_path
+    agent_id = context.agent_id
 
-
-def execute(tool_name: str, args: dict, project_path: str = ".") -> str:
-    """메모리 & 스킬 도구 실행"""
     try:
         # 에이전트 메모리 도구
         if tool_name in ("memory_save", "memory_search", "memory_read", "memory_delete"):
             import memory_db
-            agent_id = _get_agent_id()
 
             if tool_name == "memory_save":
-                return _memory_save(memory_db, args, project_path, agent_id)
+                return _memory_save(memory_db, tool_input, project_path, agent_id)
             elif tool_name == "memory_search":
-                return _memory_search(memory_db, args, project_path, agent_id)
+                return _memory_search(memory_db, tool_input, project_path, agent_id)
             elif tool_name == "memory_read":
-                return _memory_read(memory_db, args, project_path, agent_id)
+                return _memory_read(memory_db, tool_input, project_path, agent_id)
             elif tool_name == "memory_delete":
-                return _memory_delete(memory_db, args, project_path, agent_id)
+                return _memory_delete(memory_db, tool_input, project_path, agent_id)
 
         return json.dumps({"error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
     except Exception as e:
@@ -42,8 +39,8 @@ def execute(tool_name: str, args: dict, project_path: str = ".") -> str:
 
 # ============ 에이전트 메모리 도구 ============
 
-def _memory_save(db, args, project_path, agent_id):
-    content = args.get("content", "")
+def _memory_save(db, tool_input, project_path, agent_id):
+    content = tool_input.get("content", "")
     if not content.strip():
         return json.dumps({"error": "content가 필요합니다."}, ensure_ascii=False)
 
@@ -51,8 +48,8 @@ def _memory_save(db, args, project_path, agent_id):
         project_path=project_path,
         agent_id=agent_id,
         content=content,
-        keywords=args.get("keywords", ""),
-        category=args.get("category", "")
+        keywords=tool_input.get("keywords", ""),
+        category=tool_input.get("category", "")
     )
 
     return json.dumps({
@@ -61,13 +58,13 @@ def _memory_save(db, args, project_path, agent_id):
     }, ensure_ascii=False, indent=2)
 
 
-def _memory_search(db, args, project_path, agent_id):
+def _memory_search(db, tool_input, project_path, agent_id):
     """통합 검색: 심층 메모리 + 대화 이력"""
-    query = args.get("query", "")
+    query = tool_input.get("query", "")
     if not query.strip():
         return json.dumps({"error": "query가 필요합니다."}, ensure_ascii=False)
 
-    limit = args.get("limit", 10)
+    limit = tool_input.get("limit", 10)
     results = []
 
     # 1) 심층 메모리 검색
@@ -75,7 +72,7 @@ def _memory_search(db, args, project_path, agent_id):
         project_path=project_path,
         agent_id=agent_id,
         query=query,
-        category=args.get("category"),
+        category=tool_input.get("category"),
         limit=limit
     )
     for r in deep_results:
@@ -131,8 +128,8 @@ def _search_conversations(project_path, query, limit=5):
         return []
 
 
-def _memory_read(db, args, project_path, agent_id):
-    memory_id = args.get("memory_id")
+def _memory_read(db, tool_input, project_path, agent_id):
+    memory_id = tool_input.get("memory_id")
     if not memory_id:
         return json.dumps({"error": "memory_id가 필요합니다."}, ensure_ascii=False)
 
@@ -156,8 +153,8 @@ def _memory_read(db, args, project_path, agent_id):
     return "\n".join(parts)
 
 
-def _memory_delete(db, args, project_path, agent_id):
-    memory_id = args.get("memory_id")
+def _memory_delete(db, tool_input, project_path, agent_id):
+    memory_id = tool_input.get("memory_id")
     if not memory_id:
         return json.dumps({"error": "memory_id가 필요합니다."}, ensure_ascii=False)
 

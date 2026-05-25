@@ -8,6 +8,7 @@ IndieBiz OS Core
 - Google (Gemini)
 - OpenRouter (650+ 모델, 무료 포함)
 - Ollama (로컬 LLM)
+- Claude Code (CLI subprocess, Max 플랜 사용)
 """
 
 from .base import BaseProvider
@@ -16,6 +17,7 @@ from .openai import OpenAIProvider
 from .gemini import GeminiProvider
 from .openrouter import OpenRouterProvider
 from .ollama import OllamaProvider
+from .claude_code import ClaudeCodeProvider
 
 __all__ = [
     'BaseProvider',
@@ -24,6 +26,7 @@ __all__ = [
     'GeminiProvider',
     'OpenRouterProvider',
     'OllamaProvider',
+    'ClaudeCodeProvider',
 ]
 
 
@@ -36,6 +39,9 @@ def get_provider(provider_name: str, **kwargs):
         'gemini': GeminiProvider,
         'openrouter': OpenRouterProvider,
         'ollama': OllamaProvider,
+        'claude_code': ClaudeCodeProvider,
+        'claude-code': ClaudeCodeProvider,
+        'claudecode': ClaudeCodeProvider,
     }
 
     provider_class = providers.get(provider_name.lower())

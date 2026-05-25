@@ -10,16 +10,18 @@ def load_module(module_name):
     spec.loader.exec_module(module)
     return module
 
-def execute(tool_name: str, params: dict, project_path: str = None):
-    """
-    IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러
+def execute(tool_input: dict, context):
+    """IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러 (ToolContext 기반 신규 시그니처).
+
     모든 도구가 기간 범위 조회를 지원 (start_month/end_month)
     """
+    tool_name = context.tool_name
+
     if tool_name in ("apt_trade_price", "apt_rent_price", "house_trade_price", "house_rent_price"):
-        region_code = params.get("region_code")
-        start_month = params.get("start_month")
-        end_month = params.get("end_month")
-        count_per_month = params.get("count_per_month", 30)
+        region_code = tool_input.get("region_code")
+        start_month = tool_input.get("start_month")
+        end_month = tool_input.get("end_month")
+        count_per_month = tool_input.get("count_per_month", 30)
 
         # 필수 파라미터 검증
         if not region_code:
@@ -46,16 +48,16 @@ def execute(tool_name: str, params: dict, project_path: str = None):
 
     elif tool_name == "get_region_codes":
         tool = load_module("tool_region_codes")
-        city = params.get("city", "")
+        city = tool_input.get("city", "")
         return tool.get_region_codes(city)
 
     elif tool_name == "search_commercial_district":
         tool = load_module("tool_commercial_district")
-        lat = params.get("lat")
-        lng = params.get("lng")
-        radius = params.get("radius", 500)
-        region_code = params.get("region_code")
-        indsLclsCd = params.get("indsLclsCd")
+        lat = tool_input.get("lat")
+        lng = tool_input.get("lng")
+        radius = tool_input.get("radius", 500)
+        region_code = tool_input.get("region_code")
+        indsLclsCd = tool_input.get("indsLclsCd")
         return tool.search_commercial_district(lat=lat, lng=lng, radius=radius, region_code=region_code, indsLclsCd=indsLclsCd)
 
     else:

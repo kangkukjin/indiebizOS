@@ -256,6 +256,40 @@ steps:
 
 ---
 
+## 액션 스코프 (Phase 30)
+
+액션마다 데이터 경계가 다르다. 모든 액션이 특정 프로젝트의 폴더에서 작동하는 건 아니고, 인스턴스 전체에 걸친 워크스페이스에서 작동하거나 indiebizOS 자체를 다루는 액션도 있다. `ibl_actions.yaml`에 `scope`를 명시.
+
+| scope | 의미 | base path | 용도 예시 |
+|-------|------|-----------|----------|
+| `project` (기본) | 특정 프로젝트의 데이터 | 활성 프로젝트 폴더 | `self:read`, `self:write` — 프로젝트 폴더 안 파일 |
+| `workspace` | 인스턴스 전체에 걸친 데이터 | `get_base_path()` (indiebizOS 루트 / userData) | `self:lecture_list`, `self:lecture_open` — `outputs/lectures/` |
+| `system` | indiebizOS 자체 작업 | `get_base_path()` | 설정·패키지 관리 등 (향후 권한 모델 분리 예정) |
+
+**선언 위치** — ibl_actions.yaml에 두 곳에 쓸 수 있음:
+- **파일 레벨** (전체 액션 기본값): `node:` 옆에 `scope: workspace` 한 번
+- **액션 레벨** (개별 오버라이드): 해당 액션 dict 안에 `scope:`
+
+```yaml
+node: self
+scope: workspace      # 이 파일의 모든 액션 기본값
+actions:
+  lecture_list: { router: handler, tool: lecture_list, ... }
+  lecture_create: { router: handler, tool: lecture_create, ... }
+  special_action:
+    router: handler
+    tool: special
+    scope: project    # 이 액션만 오버라이드
+```
+
+**라우팅 동작** — `_route_handler`(`backend/ibl_routing.py`)가 scope를 보고:
+- `project`: `_resolve_project_path` 4단 폴백 (인자 → thread_context → params.project_path → params.project_id). 모두 실패하면 에러.
+- `workspace`/`system`: `get_base_path()`를 ToolContext에 주입. project_path/project_id 무시 — 의도적 격리.
+
+**왜 필요한가** — 강의 만들기 워크스페이스 같은 패키지는 `outputs/lectures/` 같은 공유 폴더에 데이터를 두는데, 라우팅이 이를 모르고 모든 액션에 프로젝트 컨텍스트를 강요하면 AI가 "프로젝트 하나 골라서 컨텍스트 끌어오기" 같은 부자연스러운 우회를 한다. scope 선언으로 이 마찰을 제거.
+
+---
+
 ## 노드 타입
 
 노드들은 노드 타입으로 그룹화되어 상위 레벨에서 접근할 수 있다.

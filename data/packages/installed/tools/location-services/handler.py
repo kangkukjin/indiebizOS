@@ -321,7 +321,7 @@ def _geocode_place(place_str: str) -> tuple:
 def kakao_navigation(origin: str, destination: str, waypoints: str = None,
                       priority: str = "RECOMMEND", avoid: str = None,
                       alternatives: bool = False, summary: bool = False,
-                      generate_map: bool = True, project_path: str = ".") -> dict:
+                      generate_map: bool = True) -> dict:
     """
     카카오모빌리티 길찾기 API
 
@@ -334,7 +334,6 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
         alternatives: 대안 경로 제공 여부
         summary: 요약 정보만 반환 여부
         generate_map: HTML 지도 생성 여부 (기본: True)
-        project_path: 출력 경로
 
     Returns:
         경로 정보 (거리, 시간, 요금, 지도 데이터)
@@ -776,7 +775,9 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
         return {"error": f"날씨 조회 실패: {str(e)}"}
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
+def execute(tool_input: dict, context) -> str:
+    """ToolContext 기반 신규 시그니처."""
+    tool_name = context.tool_name
     if tool_name == "get_weather":
         result = get_weather_openmeteo(
             city=tool_input.get("city"),
@@ -793,7 +794,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
         # params 키가 있으면 사용, 없으면 endpoint 제외한 나머지 파라미터를 params로 사용
         params = tool_input.get("params")
         if params is None:
-            params = {k: v for k, v in tool_input.items() if k not in ("endpoint", "project_path")}
+            params = {k: v for k, v in tool_input.items() if k != "endpoint"}
         result = get_api_ninjas_data(endpoint, params)
         return json.dumps(result, ensure_ascii=False, indent=2)
 
@@ -858,8 +859,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
             avoid=tool_input.get("avoid"),
             alternatives=tool_input.get("alternatives", False),
             summary=tool_input.get("summary", False),
-            generate_map=tool_input.get("generate_map", True),
-            project_path=project_path
+            generate_map=tool_input.get("generate_map", True)
         )
 
         # 응답 압축: map_data를 최상위로, 불필요한 route raw 데이터 제거

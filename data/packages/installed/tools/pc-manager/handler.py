@@ -22,8 +22,9 @@ if _current_dir not in sys.path:
     sys.path.insert(0, _current_dir)
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    """도구 실행"""
+def execute(tool_input: dict, context) -> str:
+    """도구 실행 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
     try:
         # PC Manager 창 열기
         if tool_name == "open_file_explorer":

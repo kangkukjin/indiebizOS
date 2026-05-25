@@ -53,33 +53,24 @@ def _resolve_scan_path(params: Dict[str, Any]) -> str:
     return None
 
 
-def execute(command: str, params: Dict[str, Any], project_path: str = ".") -> Dict[str, Any]:
-    """
-    도구 명령 실행
-
-    Args:
-        command: 실행할 명령어
-        params: 명령어 파라미터
-        project_path: 프로젝트 경로 (사용하지 않지만 호환성을 위해 받음)
-
-    Returns:
-        실행 결과
-    """
+def execute(tool_input: Dict[str, Any], context) -> Dict[str, Any]:
+    """도구 명령 실행 (ToolContext 기반 신규 시그니처)."""
+    command = context.tool_name
     try:
         if command == "scan_photos":
-            return scan_photos(params)
+            return scan_photos(tool_input)
         elif command == "list_scans":
-            return list_scans(params)
+            return list_scans(tool_input)
         elif command == "get_gallery":
-            return get_gallery(params)
+            return get_gallery(tool_input)
         elif command == "find_duplicates":
-            return find_duplicates(params)
+            return find_duplicates(tool_input)
         elif command == "get_stats":
-            return get_stats(params)
+            return get_stats(tool_input)
         elif command == "get_timeline":
-            return get_timeline(params)
+            return get_timeline(tool_input)
         elif command == "open_photo_manager":
-            return open_photo_manager(params)
+            return open_photo_manager(tool_input)
         else:
             return {"success": False, "error": f"알 수 없는 명령어: {command}"}
     except Exception as e:

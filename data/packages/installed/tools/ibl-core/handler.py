@@ -46,8 +46,9 @@ _TOOL_NODE_MAP = {
 }
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id: str = None) -> str:
-    """IBL 노드 도구 실행"""
+def execute(tool_input: dict, context) -> str:
+    """IBL 노드 도구 실행 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
     # 노드 기반 라우팅 (현재 노드명으로 직접 매핑)
     node = _TOOL_NODE_MAP.get(tool_name)
     if not node:
@@ -56,7 +57,7 @@ def execute(tool_name: str, tool_input: dict, project_path: str = ".", agent_id:
     # 노드 정보를 tool_input에 주입
     tool_input["_node"] = node
 
-    result = execute_ibl(tool_input, project_path, agent_id)
+    result = execute_ibl(tool_input, context.project_path, context.agent_id)
 
     # dict 결과는 그대로 반환 (system_tools.py가 JSON 변환 처리)
     return result

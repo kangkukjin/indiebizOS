@@ -125,6 +125,8 @@ api_engine 라우팅 액션들이 이 방식을 사용합니다.
 
 ```yaml
 node: engines             # 어떤 노드에 등록할지 (sense, self, limbs, others, engines 등 기존 노드)
+# scope: workspace        # (선택) 이 패키지의 데이터 경계. 자세한 건 ibl.md "액션 스코프" 참고.
+                          # project(기본) / workspace / system. 파일 레벨 또는 액션 레벨 어느 쪽이든 가능.
 actions:
   create_site:             # 액션 이름 (노드 내에서 유일해야 함)
     description: 웹사이트 프로젝트 생성

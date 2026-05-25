@@ -38,3 +38,4 @@ google-auth-httplib2
 
 # 기타
 markdown
+python-pptx

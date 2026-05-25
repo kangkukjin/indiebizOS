@@ -488,10 +488,10 @@ def blog_insight_report(count: int = 50, category: Optional[str] = None, project
         os.makedirs(out_dir, exist_ok=True)
         filename = f"blog_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
         filepath = os.path.join(out_dir, filename)
-        
+
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(html_content)
 
-        return {'success': True, 'report_path': os.path.abspath(filepath), 'message': f'보고서 생성 완료: {filepath}'}
+        return {'success': True, 'report_path': filepath, 'message': f'보고서 생성 완료: {filepath}'}
     except Exception as e:
         return {'success': False, 'error': str(e)}

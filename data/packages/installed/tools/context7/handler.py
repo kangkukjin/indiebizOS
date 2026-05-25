@@ -65,12 +65,13 @@ def _get_docs(library_id: str, query: str) -> str:
         return f"문서 조회 실패: {e}"
 
 
-def execute(tool_name: str, params: dict, project_path: str = ".") -> str:
-    """도구 실행 엔트리포인트"""
+def execute(tool_input: dict, context) -> str:
+    """도구 실행 엔트리포인트 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
 
     if tool_name == "search_library_docs":
-        query = params.get("query", "")
-        library_name = params.get("library_name", "")
+        query = tool_input.get("query", "")
+        library_name = tool_input.get("library_name", "")
 
         if not query or not library_name:
             return json.dumps({"error": "query와 library_name이 필요합니다."}, ensure_ascii=False)
@@ -104,7 +105,7 @@ def execute(tool_name: str, params: dict, project_path: str = ".") -> str:
         return docs
 
     elif tool_name == "resolve_library":
-        library_name = params.get("library_name", "")
+        library_name = tool_input.get("library_name", "")
 
         if not library_name:
             return json.dumps({"error": "library_name이 필요합니다."}, ensure_ascii=False)

@@ -465,8 +465,8 @@ def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
 
     return {
         'success': True,
-        'message': f'신문 생성 완료: {os.path.abspath(filepath)}',
-        'file': os.path.abspath(filepath),
+        'message': f'신문 생성 완료: {filepath}',
+        'file': filepath,
         'title': title,
         'sections': len(sections),
         'total_news': total_news
@@ -593,21 +593,23 @@ def launch_sites(action: str = "open_ui", name: str = None, url: str = None, pro
 
 # ============== 메인 핸들러 ==============
 
-def execute(tool_name: str, params: dict, project_path: str = None):
-    """IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러"""
+def execute(tool_input: dict, context):
+    """IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
+    project_path = context.project_path
 
     # DuckDuckGo 웹 검색
     if tool_name == "ddgs_search":
         tool_ddgs = load_module("tool_ddgs_search")
-        query = params.get("query")
-        count = params.get("count", 5)
-        country = params.get("country", "kr-kr")
+        query = tool_input.get("query")
+        count = tool_input.get("count", 5)
+        country = tool_input.get("country", "kr-kr")
         return tool_ddgs.search_web(query, count, country)
 
     # 웹페이지 크롤링
     elif tool_name == "crawl_website":
-        url = params.get("url")
-        max_length = params.get("max_length", 10000)
+        url = tool_input.get("url")
+        max_length = tool_input.get("max_length", 10000)
 
         if not url:
             return format_json({"success": False, "error": "URL이 제공되지 않았습니다."})
@@ -621,19 +623,19 @@ def execute(tool_name: str, params: dict, project_path: str = None):
 
     # Google News 검색
     elif tool_name == "google_news_search":
-        query = params.get("query", "")
+        query = tool_input.get("query", "")
         if not query:
             return format_json({"success": False, "error": "검색어(query)가 필요합니다."})
 
         # 언어 자동 감지: 명시적 지정이 없으면 쿼리에서 판단
-        language = params.get("language", "auto")
+        language = tool_input.get("language", "auto")
         if language == "auto":
             korean_chars = sum(1 for c in query if '\uac00' <= c <= '\ud7a3' or '\u3131' <= c <= '\u318e')
             language = "ko" if korean_chars > len(query) * 0.2 else "en"
 
         result = search_google_news(
             query=query,
-            count=params.get("count", 10),
+            count=tool_input.get("count", 10),
             language=language
         )
         return format_json(result)
@@ -641,24 +643,24 @@ def execute(tool_name: str, params: dict, project_path: str = None):
     # 종합 검색
     elif tool_name == "unified_search":
         tool_unified = load_module("tool_unified_search")
-        return tool_unified.use_tool(params)
+        return tool_unified.use_tool(tool_input)
 
     # 신문 생성
     elif tool_name == "generate_newspaper":
-        keywords = params.get("keywords", [])
+        keywords = tool_input.get("keywords", [])
         # 문자열이면 쉼표 구분 리스트로 변환 (IBL target → keywords 매핑 시 문자열로 전달됨)
         if isinstance(keywords, str):
             keywords = [k.strip() for k in keywords.split(",") if k.strip()]
         if not keywords:
             return format_json({"success": False, "error": "키워드(keywords)가 필요합니다."})
 
-        language = params.get("language", None)
-        source = params.get("source", "google")
+        language = tool_input.get("language", None)
+        source = tool_input.get("source", "google")
         result = generate_newspaper(
             keywords=keywords,
-            title=params.get("title", "IndieBiz Daily"),
-            exclude_sources=params.get("exclude_sources", []),
-            project_path=project_path or ".",
+            title=tool_input.get("title", "IndieBiz Daily"),
+            exclude_sources=tool_input.get("exclude_sources", []),
+            project_path=project_path,
             language=language,
             source=source
         )
@@ -666,10 +668,10 @@ def execute(tool_name: str, params: dict, project_path: str = None):
 
     # 사이트 런처
     elif tool_name == "launch_sites":
-        action = params.get("action", "open_ui")
-        name = params.get("name")
-        url = params.get("url")
-        return launch_sites(action, name, url, project_path or ".")
+        action = tool_input.get("action", "open_ui")
+        name = tool_input.get("name")
+        url = tool_input.get("url")
+        return launch_sites(action, name, url, project_path)
 
     else:
         return format_json({

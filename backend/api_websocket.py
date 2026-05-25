@@ -547,10 +547,20 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             reflex_hint = None
             print(f"[무의식] 분류: {request_type}")
 
+        # SESSION_RESET 분기 — Claude Code 세션 매핑만 제거하고 표준 응답 반환 (AI 호출 없음)
+        is_session_reset = (request_type == "SESSION_RESET")
+        reset_text_predefined = None
+        if is_session_reset:
+            from agent_cognitive import handle_session_reset
+            reset_text_predefined = handle_session_reset()
+            print(f"[SESSION_RESET] {agent_name}: 표준 응답 반환, AI 호출 스킵")
+
         # 판단형만 의식 에이전트 실행 / 실행형은 중급 모델 전환
         consciousness_output = None
         _original_provider = None
-        if request_type == "THINK":
+        if is_session_reset:
+            pass  # 의식/중급 모두 스킵
+        elif request_type == "THINK":
             consciousness_output = runner._run_consciousness(
                 message, history, execution_memory
             )
@@ -563,6 +573,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     _original_provider = runner.ai._provider
                     _midtier.system_prompt = runner.ai._provider.system_prompt
                     _midtier.tools = runner.ai._provider.tools
+                    # 도구 호출 시 ToolContext 안전망(project_path 안전망 발동 WARN) 회피
+                    _midtier.project_path = runner.ai._provider.project_path
+                    _midtier.agent_id = runner.ai._provider.agent_id
+                    _midtier.agent_name = runner.ai._provider.agent_name
                     # Gemini provider의 경우 도구 캐시 재구축
                     if hasattr(_midtier, '_cached_gemini_tools') and _midtier.tools:
                         try:
@@ -636,6 +650,20 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             set_current_project_id(project_id)
             set_current_task_id(task_id)
             _set_user_input(message)
+
+            # SESSION_RESET: AI 호출 없이 표준 응답만 emit
+            if is_session_reset and reset_text_predefined:
+                final_content = reset_text_predefined
+                asyncio.run_coroutine_threadsafe(
+                    event_queue.put({"type": "text", "content": reset_text_predefined}),
+                    loop
+                )
+                asyncio.run_coroutine_threadsafe(
+                    event_queue.put({"type": "final", "content": reset_text_predefined}),
+                    loop
+                )
+                return
+
             # 실행기억은 이미 시스템 프롬프트에 반영됨
             try:
                 for event in runner.ai.process_message_stream(
@@ -644,7 +672,33 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     images=images
                 ):
                     event_type = event.get("type", "unknown")
-                    print(f"[WS run_stream] 이벤트 수신: {event_type}")
+                    # 진단·episode_log 풍부화: 이벤트 내용을 함께 표시
+                    # (episode_logger가 stdout을 캡처하므로 print = 회고 자료)
+                    if event_type == "tool_start":
+                        _name = event.get("name", "")
+                        _inp = str(event.get("input", {}))
+                        if len(_inp) > 1500:
+                            _inp = _inp[:1500] + f"... [trunc, total={len(_inp)}]"
+                        print(f"[WS run_stream] tool_start: {_name} input={_inp}")
+                    elif event_type == "tool_result":
+                        _content = str(event.get("content", "") or event.get("result", ""))
+                        if len(_content) > 1500:
+                            _content = _content[:1500] + f"... [trunc, total={len(_content)}]"
+                        _err = " [ERROR]" if event.get("is_error") else ""
+                        print(f"[WS run_stream] tool_result{_err}: {_content}")
+                    elif event_type == "thinking":
+                        _content = str(event.get("content", ""))
+                        if len(_content) > 1500:
+                            _content = _content[:1500] + f"... [trunc, total={len(_content)}]"
+                        print(f"[WS run_stream] thinking: {_content}")
+                    elif event_type == "error":
+                        print(f"[WS run_stream] error: {event.get('content', '')[:300]}")
+                    elif event_type == "text":
+                        # text는 스트리밍이라 매 chunk마다 찍으면 노이즈. 길이만.
+                        _len = len(str(event.get("content", "")))
+                        print(f"[WS run_stream] text: ({_len}자)")
+                    else:
+                        print(f"[WS run_stream] 이벤트 수신: {event_type}")
                     asyncio.run_coroutine_threadsafe(
                         event_queue.put(event),
                         loop
@@ -654,8 +708,17 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         print(f"[WS run_stream] final_content 설정됨 (len={len(final_content)})")
                     elif event_type == "tool_start":
                         # 경험 증류용: 도구 호출 시작 기록
+                        _raw_name = event.get("name", "")
+                        # MCP 도구 이름 정규화 — Claude Code provider는 execute_ibl을
+                        # 'mcp__indiebizos__execute_ibl' 로 부르므로 prefix 제거.
+                        # 이렇게 해야 distill_experience(tool_name == 'execute_ibl' 매칭)가
+                        # Claude Code 경유 호출도 학습 대상으로 인식한다.
+                        if _raw_name.startswith("mcp__indiebizos__"):
+                            _normalized_name = _raw_name[len("mcp__indiebizos__"):]
+                        else:
+                            _normalized_name = _raw_name
                         tool_calls_log.append({
-                            "tool_name": event.get("name", ""),
+                            "tool_name": _normalized_name,
                             "input": event.get("input", {}),
                             "success": True,  # tool_result에서 업데이트
                         })

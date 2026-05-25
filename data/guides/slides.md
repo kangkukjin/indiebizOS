@@ -3,6 +3,15 @@
 HTML/Playwright 기반으로 1280x720px 슬라이드 이미지(PNG)를 생성하는 도구입니다.
 기본 제공 테마를 사용하거나, `tailwind` 테마 + `custom_html`로 자유롭게 디자인할 수 있습니다.
 
+## 강의·교육용 슬라이드를 만든다면 — 먼저 읽을 가이드
+
+본 가이드는 **도구 사용법**이다. 강의·교육·발표 슬라이드라면 도구를 호출하기 전에 다음을 먼저 읽는다:
+
+- **[lecture_slide_principles.md](lecture_slide_principles.md) §2 — 메시지 큐레이션 5단계** ★ 명제 추출 → 슬라이드=명제 → 수사장치 매핑 → 구체화 → 이중 회수. **이 단계가 슬라이드 품질을 결정한다.** 톤·디자인이 NotebookLM과 똑같아도 이 단계가 빠지면 결과물의 격이 다르다.
+- 일러스트가 들어가는 강의 슬라이드는 [lecture_slides_with_illustrations.md](lecture_slides_with_illustrations.md) 추가 참조.
+
+도구만 호출하면 "텍스트 나열" 슬라이드가 나오기 쉽다. 책 본문을 슬라이드에 옮기는 게 아니라, 명제를 추출해서 슬라이드 = 명제로 만들어야 한다.
+
 ## 뷰포트 고정 규칙 (필수)
 
 **모든 슬라이드는 1280x720px 고정입니다.** 콘텐츠가 이 영역을 초과하면 잘립니다.
@@ -265,7 +274,8 @@ tailwind 테마를 사용하면 다음이 자동으로 로드됩니다:
 | 두 개 이상 항목 비교 (v0 vs v5, A vs B) | `comparison_table` | 마크다운 표보다 가독성 ↑ |
 | 보조 정보 (역사·정의·수치) | `factbox` | 책의 팩트박스 그대로 옮길 때 |
 | 강력한 한 줄 명제 | `quote` | 풀스크린 임팩트 |
-| 표지·부 도입·총정리 | `hero` 또는 `cta` | 마케팅 레이아웃 재사용 |
+| 표지·부 도입·총정리 (텍스트만) | `hero` 또는 `cta` | 마케팅 레이아웃 재사용 |
+| 표지·부 도입 (일러스트 포함) | `hero_illustration` / `illustration_background` | `lecture_slides_with_illustrations.md` 가이드 참조 |
 
 ## lecture_body — 가장 많이 쓰는 강의 슬라이드
 
@@ -396,8 +406,8 @@ design_system을 지정하면 **모든 layout**(hero/lecture_body/metaphor_story
 
 한 챕터(예: 1부 1장)를 강의한다면 보통 3~5장의 슬라이드로 구성:
 
-1. **부/장 도입** — `hero` (제목 + 부제)
-2. **메타포** — `metaphor_story` (있다면)
+1. **부/장 도입** — `hero` (텍스트만) 또는 `hero_illustration`/`illustration_background` (일러스트 있는 경우, `lecture_slides_with_illustrations.md` 참조)
+2. **메타포** — `metaphor_story` (텍스트만) 또는 `illustration_anchor` (일러스트 메타포)
 3. **본문 설명** — `lecture_body` 1~3장
 4. **비교/팩트** — `comparison_table` 또는 `factbox` (있다면)
 5. **핵심 명제 정리** — `quote` 또는 `lecture_body`로 마무리

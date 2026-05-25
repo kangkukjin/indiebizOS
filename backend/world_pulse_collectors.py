@@ -34,6 +34,22 @@ _collecting = False
 _collecting_lock = threading.Lock()
 
 
+def _exec_tool(tool_name: str, params: dict):
+    """시스템 백그라운드용 도구 실행 헬퍼.
+
+    World Pulse는 활성 프로젝트 컨텍스트 없이 실행되므로 BASE_PATH를
+    project_path로 사용하는 ToolContext를 직접 만들어 호출한다.
+    pure API 호출(가격/뉴스/날씨)은 project_path를 사용하지 않는다.
+    """
+    from tool_loader import load_tool_handler
+    from tool_context import ToolContext
+    handler = load_tool_handler(tool_name)
+    if not handler or not hasattr(handler, "execute"):
+        return None
+    context = ToolContext(project_path=str(BASE_PATH), tool_name=tool_name)
+    return handler.execute(params, context)
+
+
 # ============================================================
 # DB 관리
 # ============================================================
@@ -94,36 +110,32 @@ def _collect_economy() -> Dict:
         "usd_krw": "KRW=X", "gold": "GC=F", "wti": "CL=F",
     })
 
-    try:
-        from tool_loader import load_tool_handler
-        handler = load_tool_handler("yf_stock_price")
-        if handler and hasattr(handler, "execute"):
-            for label, symbol in symbols.items():
-                try:
-                    raw = handler.execute("yf_stock_price", {"symbol": symbol}, ".")
-                    parsed = _parse_handler_result(raw)
+    for label, symbol in symbols.items():
+        try:
+            raw = _exec_tool("yf_stock_price", {"symbol": symbol})
+            if raw is None:
+                continue
+            parsed = _parse_handler_result(raw)
 
-                    # 핸들러는 {"success": True, "data": {...}} 형태로 반환
-                    data = parsed.get("data", parsed)
+            # 핸들러는 {"success": True, "data": {...}} 형태로 반환
+            data = parsed.get("data", parsed)
 
-                    price = data.get("current_price")
-                    change_pct = data.get("change_percent")
+            price = data.get("current_price")
+            change_pct = data.get("change_percent")
 
-                    if price is not None:
-                        # 실제 데이터 날짜 추출 (prices 배열의 마지막 거래일)
-                        prices = data.get("prices", [])
-                        data_date = prices[-1].get("date", "") if prices else ""
-                        results[label] = {
-                            "price": price,
-                            "change_pct": change_pct,
-                            "data_date": data_date,
-                        }
-                    else:
-                        logger.debug(f"[WorldPulse] {label}: price가 없음, 키 목록={list(data.keys())[:10]}")
-                except Exception as e:
-                    logger.debug(f"[WorldPulse] {label} 조회 실패: {e}")
-    except ImportError:
-        logger.warning("[WorldPulse] tool_loader import 실패")
+            if price is not None:
+                # 실제 데이터 날짜 추출 (prices 배열의 마지막 거래일)
+                prices = data.get("prices", [])
+                data_date = prices[-1].get("date", "") if prices else ""
+                results[label] = {
+                    "price": price,
+                    "change_pct": change_pct,
+                    "data_date": data_date,
+                }
+            else:
+                logger.debug(f"[WorldPulse] {label}: price가 없음, 키 목록={list(data.keys())[:10]}")
+        except Exception as e:
+            logger.debug(f"[WorldPulse] {label} 조회 실패: {e}")
 
     return results
 
@@ -145,12 +157,9 @@ def _collect_news() -> List[str]:
     headlines = []
 
     try:
-        from tool_loader import load_tool_handler
-        handler = load_tool_handler("google_news_search")
-        if handler and hasattr(handler, "execute"):
-            raw = handler.execute("google_news_search", {"query": query, "count": count}, ".")
+        raw = _exec_tool("google_news_search", {"query": query, "count": count})
+        if raw is not None:
             parsed = _parse_handler_result(raw)
-
             results = parsed.get("results", [])
             for item in results[:8]:
                 if isinstance(item, dict):
@@ -182,12 +191,9 @@ def _collect_tech_news() -> List[str]:
     headlines = []
 
     try:
-        from tool_loader import load_tool_handler
-        handler = load_tool_handler("ddgs_search")
-        if handler and hasattr(handler, "execute"):
-            raw = handler.execute("ddgs_search", {"query": query, "count": count}, ".")
+        raw = _exec_tool("ddgs_search", {"query": query, "count": count})
+        if raw is not None:
             parsed = _parse_handler_result(raw)
-
             results = parsed.get("results", [])
             for item in results[:5]:
                 if isinstance(item, dict):
@@ -216,13 +222,11 @@ def _collect_weather() -> str:
     location = config.get("location", "Cheongju")
 
     try:
-        from tool_loader import load_tool_handler
-        handler = load_tool_handler("get_api_ninjas_data")
-        if handler and hasattr(handler, "execute"):
-            raw = handler.execute("get_api_ninjas_data", {
-                "endpoint": "weather",
-                "city": location
-            }, ".")
+        raw = _exec_tool("get_api_ninjas_data", {
+            "endpoint": "weather",
+            "city": location,
+        })
+        if raw is not None:
             parsed = _parse_handler_result(raw)
 
             # wrapper 형태일 수 있음

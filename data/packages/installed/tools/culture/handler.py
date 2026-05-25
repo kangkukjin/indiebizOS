@@ -11,10 +11,11 @@ if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
+def execute(tool_input: dict, context) -> str:
     """
-    Culture 패키지 도구 실행 핸들러
+    Culture 패키지 도구 실행 핸들러 (ToolContext 기반 신규 시그니처).
     """
+    tool_name = context.tool_name
     try:
         # KOPIS 공연 정보 도구들
         if tool_name == "kopis_search_performances":

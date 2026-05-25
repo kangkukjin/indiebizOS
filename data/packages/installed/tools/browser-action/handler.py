@@ -110,9 +110,10 @@ _TOOL_ROUTING = {
 }
 
 
-async def execute(tool_name: str, params: dict, project_path: str = None):
-    """메인 핸들러 (async) — driver 파라미터로 Playwright/Chrome 분기"""
-    proj_path = project_path or "."
+async def execute(tool_input: dict, context):
+    """메인 핸들러 (ToolContext 기반 신규 시그니처, async) — driver 파라미터로 Playwright/Chrome 분기"""
+    tool_name = context.tool_name
+    proj_path = context.project_path
 
     # Chrome 전용 도구는 항상 Chrome 모듈로 라우팅
     if tool_name in _CHROME_ONLY_TOOLS:
@@ -120,13 +121,13 @@ async def execute(tool_name: str, params: dict, project_path: str = None):
         try:
             mod = _load(module_name)
             func = getattr(mod, func_name)
-            result = await func(params, proj_path) if needs_project else await func(params)
+            result = await func(tool_input, proj_path) if needs_project else await func(tool_input)
             return json.dumps(result, ensure_ascii=False, indent=2)
         except Exception as e:
             return json.dumps({"success": False, "error": f"Chrome 도구 실패 ({tool_name}): {str(e)}"}, ensure_ascii=False)
 
     # 일반 도구: driver 파라미터로 분기
-    driver = params.pop("driver", "auto")
+    driver = tool_input.pop("driver", "auto")
 
     if driver == "auto":
         driver = "chrome" if _is_chrome_connected() else "playwright"
@@ -149,7 +150,7 @@ async def execute(tool_name: str, params: dict, project_path: str = None):
                 driver = "playwright"
             else:
                 needs_project = tool_name in _CHROME_PROJECT_TOOLS
-                result = await func(params, proj_path) if needs_project else await func(params)
+                result = await func(tool_input, proj_path) if needs_project else await func(tool_input)
                 return json.dumps(result, ensure_ascii=False, indent=2)
 
         # Playwright 드라이버 (기본 또는 폴백)
@@ -161,9 +162,9 @@ async def execute(tool_name: str, params: dict, project_path: str = None):
         func = getattr(mod, func_name)
 
         if needs_project:
-            result = await func(params, proj_path)
+            result = await func(tool_input, proj_path)
         else:
-            result = await func(params)
+            result = await func(tool_input)
 
         return json.dumps(result, ensure_ascii=False, indent=2)
     except Exception as e:

@@ -186,8 +186,9 @@ async def search_all_async(query: str, display: int = 5):
     return {"total": len(combined_items), "items": combined_items}
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    """도구 실행 메인 핸들러"""
+def execute(tool_input: dict, context) -> str:
+    """도구 실행 메인 핸들러 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
     if tool_name == "search_shopping":
         query = tool_input.get("query")
         site = tool_input.get("site", "all")

@@ -17,18 +17,19 @@ if _package_dir not in sys.path:
 import storage
 
 
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
-    """도구 실행 엔트리포인트"""
+def execute(tool_input: dict, context) -> str:
+    """도구 실행 엔트리포인트 (ToolContext 기반 신규 시그니처)."""
+    tool_name = context.tool_name
 
     if tool_name == "save_health_info":
-        return save_health_info(tool_input, project_path)
+        return save_health_info(tool_input)
     elif tool_name == "get_health_context":
         return get_health_context(tool_input)
     else:
         return f"알 수 없는 도구: {tool_name}"
 
 
-def save_health_info(input_data: dict, project_path: str = ".") -> str:
+def save_health_info(input_data: dict) -> str:
     """건강 정보 저장"""
     info_type = input_data.get('info_type')
     data = input_data.get('data', {})

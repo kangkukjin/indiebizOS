@@ -156,20 +156,15 @@ def build_environment(
 
         parts.append(f'<node name="{node_name}" description="{desc}">')
 
-        # group 또는 category별 그룹화 (프롬프트 가독성용)
-        # group 필드가 있으면 group 기준, 없으면 category 기준
-        has_groups = any(
-            isinstance(ac, dict) and ac.get("group")
-            for ac in actions.values()
-        )
-
-        grouped = {}  # group/category -> [(action_name, action_config), ...]
+        # group별 그룹화 (프롬프트 가독성용). group이 없는 액션은 ungrouped.
+        # 2026-05-26 cleanup: category 폴백 제거 — 모든 액션에 group 부여 완료.
+        grouped = {}  # group -> [(action_name, action_config), ...]
         ungrouped = []  # [(action_name, action_config), ...]
         for action_name, action_config in actions.items():
             if not isinstance(action_config, dict):
                 ungrouped.append((action_name, action_config))
                 continue
-            key = action_config.get("group") if has_groups else action_config.get("category")
+            key = action_config.get("group")
             if key:
                 grouped.setdefault(key, []).append((action_name, action_config))
             else:

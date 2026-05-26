@@ -45,7 +45,7 @@ cctv_nearby는 lat/lng가 필수. 모르면 cctv_search를 쓰는 게 더 간편
 ### CCTV 영상을 브라우저에서 열기
 
 ```
-[sense:cctv_search]{query: "한라산"} >> [sense:cctv_open]
+[sense:cctv_search]{query: "한라산"} >> [limbs:cctv_open]
 ```
 
 ### 프레임 캡처 (AI 분석용)
@@ -72,7 +72,7 @@ cctv_nearby는 lat/lng가 필수. 모르면 cctv_search를 쓰는 게 더 간편
 | 전세계 웹캠 검색 | `webcam` | `[sense:webcam]{query: "Paris", category: "city"}` |
 | 좌표 근처 CCTV | `cctv_nearby` | `[sense:cctv_nearby]{lat: 37.49, lng: 127.03}` |
 | 좌표 근처 웹캠 | `webcam_nearby` | `[sense:webcam_nearby]{lat: 21.31, lng: -157.86, radius_km: 50}` |
-| CCTV URL 열기 | `cctv_open` | `[sense:cctv_open]{name: "CCTV이름"}` |
+| CCTV URL 열기 | `cctv_open` | `[limbs:cctv_open]{name: "CCTV이름"}` |
 | 프레임 캡처 | `cctv_capture` | `[sense:cctv_capture]{url: "http://..."}` |
 | 소스 상태 | `cctv_sources` | `[sense:cctv_sources]` |
 | CCTV 데이터 통계 | `cctv_stats` | `[self:cctv_stats]` |

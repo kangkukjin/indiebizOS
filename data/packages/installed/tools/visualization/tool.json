@@ -5,6 +5,74 @@
   "version": "1.0.0",
   "tools": [
     {
+      "name": "chart",
+      "description": "차트 종류 자동 분기 — chart_type으로 line/bar/pie/scatter/heatmap/candlestick/multi 선택. 종류별 데이터 형식은 해당 개별 차트 도구의 설명을 참조.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "chart_type": {
+            "type": "string",
+            "enum": [
+              "line",
+              "bar",
+              "pie",
+              "scatter",
+              "heatmap",
+              "candlestick",
+              "multi"
+            ],
+            "description": "차트 종류. 기본값 line."
+          },
+          "data": {
+            "type": "array",
+            "description": "차트 데이터. 형식은 chart_type에 따라 다름 ([{x,y}] / [{label,value}] / [{x,y,size}] / 등)",
+            "items": {
+              "type": "object"
+            }
+          },
+          "data_file": {
+            "type": "string",
+            "description": "데이터 파일 경로 (JSON/CSV). data 대신 사용."
+          },
+          "title": {
+            "type": "string",
+            "description": "차트 제목"
+          },
+          "x_label": {
+            "type": "string"
+          },
+          "y_label": {
+            "type": "string"
+          },
+          "series_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "png",
+              "html"
+            ],
+            "description": "기본값 png"
+          },
+          "output_path": {
+            "type": "string",
+            "description": "출력 파일 경로 (선택)"
+          },
+          "charts": {
+            "type": "array",
+            "description": "multi 차트 전용 — 여러 서브차트 배열",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "line_chart",
       "description": "라인 차트 생성. x-y 데이터를 선으로 연결하여 시각화. 수학 함수, 시계열, 가격 추이 등 모든 연속 데이터에 사용.\n\n입력 방식: data_file (권장) 또는 data 중 하나 사용. 데이터가 많으면 반드시 파일로 전달.\n\n자동 샘플링: 300개 초과 시 자동으로 샘플링됨.",
       "input_schema": {
@@ -17,7 +85,9 @@
           "data": {
             "type": "array",
             "description": "데이터 배열 (소량일 때만 사용). [{x: 값, y: 값}, ...] 또는 여러 시리즈: [{x: 값, gold: 100, silver: 50}, ...]",
-            "items": {"type": "object"}
+            "items": {
+              "type": "object"
+            }
           },
           "title": {
             "type": "string",
@@ -34,7 +104,9 @@
           "series_names": {
             "type": "array",
             "description": "여러 시리즈가 있을 때 각 시리즈 이름",
-            "items": {"type": "string"}
+            "items": {
+              "type": "string"
+            }
           },
           "output_format": {
             "type": "string",
@@ -42,7 +114,9 @@
             "default": "png"
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       }
     },
     {
@@ -58,7 +132,9 @@
           "data": {
             "type": "array",
             "description": "데이터 배열 (소량일 때만 사용). [{label: '항목1', value: 100}, ...]",
-            "items": {"type": "object"}
+            "items": {
+              "type": "object"
+            }
           },
           "title": {
             "type": "string",
@@ -75,7 +151,9 @@
           "series_names": {
             "type": "array",
             "description": "여러 시리즈가 있을 때 각 시리즈 이름",
-            "items": {"type": "string"}
+            "items": {
+              "type": "string"
+            }
           },
           "horizontal": {
             "type": "boolean",
@@ -97,7 +175,9 @@
             "description": "저장할 파일 경로"
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       }
     },
     {
@@ -113,7 +193,9 @@
           "data": {
             "type": "array",
             "description": "OHLC 데이터 배열 (소량일 때만 사용). [{date, open, high, low, close, volume}, ...]",
-            "items": {"type": "object"}
+            "items": {
+              "type": "object"
+            }
           },
           "title": {
             "type": "string",
@@ -127,7 +209,9 @@
           "ma_periods": {
             "type": "array",
             "description": "이동평균선 기간 (예: [5, 20, 60])",
-            "items": {"type": "integer"}
+            "items": {
+              "type": "integer"
+            }
           },
           "output_format": {
             "type": "string",
@@ -139,7 +223,9 @@
             "description": "저장할 파일 경로"
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       }
     },
     {
@@ -151,7 +237,9 @@
           "data": {
             "type": "array",
             "description": "데이터 배열. [{label: '항목1', value: 30}, {label: '항목2', value: 70}, ...]",
-            "items": {"type": "object"}
+            "items": {
+              "type": "object"
+            }
           },
           "title": {
             "type": "string",
@@ -177,7 +265,9 @@
             "description": "저장할 파일 경로"
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       }
     },
     {
@@ -193,7 +283,9 @@
           "data": {
             "type": "array",
             "description": "데이터 배열 (소량일 때만 사용). [{x: 10, y: 20}, ...]",
-            "items": {"type": "object"}
+            "items": {
+              "type": "object"
+            }
           },
           "title": {
             "type": "string",
@@ -222,7 +314,9 @@
             "description": "저장할 파일 경로"
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       }
     },
     {
@@ -243,12 +337,16 @@
           "x_labels": {
             "type": "array",
             "description": "X축 레이블들",
-            "items": {"type": "string"}
+            "items": {
+              "type": "string"
+            }
           },
           "y_labels": {
             "type": "array",
             "description": "Y축 레이블들",
-            "items": {"type": "string"}
+            "items": {
+              "type": "string"
+            }
           },
           "color_scale": {
             "type": "string",
@@ -270,7 +368,9 @@
             "description": "저장할 파일 경로"
           }
         },
-        "required": ["data"]
+        "required": [
+          "data"
+        ]
       }
     },
     {
@@ -282,7 +382,9 @@
           "charts": {
             "type": "array",
             "description": "차트 정의 배열. [{type: 'line', data: [...], title: '...'}, {type: 'bar', data: [...], title: '...'}, ...]",
-            "items": {"type": "object"}
+            "items": {
+              "type": "object"
+            }
           },
           "title": {
             "type": "string",
@@ -303,7 +405,9 @@
             "description": "저장할 파일 경로"
           }
         },
-        "required": ["charts"]
+        "required": [
+          "charts"
+        ]
       }
     }
   ]

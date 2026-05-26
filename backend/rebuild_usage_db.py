@@ -43,7 +43,7 @@ EXAMPLES = [
 
     # open / open_url
     ("이 파일 열어줘", '[limbs:os_open]{path: "/path/to/file.html"}', "limbs", "single", 1, "limbs,os_open"),
-    ("파일 탐색기 열어줘", '[self:explorer]{path: "~/Desktop"}', "self", "single", 1, "self,explorer"),
+    ("파일 탐색기 열어줘", '[limbs:explorer]{path: "~/Desktop"}', "self", "single", 1, "self,explorer"),
     ("이 URL 열어줘", '[limbs:open_url]{path: "https://example.com"}', "limbs", "single", 1, "limbs,open_url"),
     ("구글 열어줘", '[limbs:open_url]{path: "https://google.com"}', "limbs", "single", 1, "limbs,open_url"),
     ("이 사이트 브라우저로 열어", '[limbs:open_url]{path: "https://example.com"}', "limbs", "single", 1, "limbs,open_url"),
@@ -55,7 +55,7 @@ EXAMPLES = [
     ("한라산 실시간 영상", '[sense:cctv_search]{query: "한라산"}', "sense", "single", 1, "sense,cctv_search"),
     ("타임스퀘어 웹캠 검색", '[sense:webcam]{query: "Times Square", category: "city"}', "sense", "single", 1, "sense,webcam"),
     ("서울역 근처 CCTV", '[sense:cctv_search]{query: "서울역"}', "sense", "single", 1, "sense,cctv_search"),
-    ("CCTV 영상 열어줘", '[sense:cctv_open]{name: "CCTV이름"}', "sense", "single", 1, "sense,cctv_open"),
+    ("CCTV 영상 열어줘", '[limbs:cctv_open]{name: "CCTV이름"}', "sense", "single", 1, "sense,cctv_open"),
     ("CCTV 소스 상태 확인", '[sense:cctv_sources]', "sense", "single", 1, "sense,cctv_sources"),
 
     # file / output

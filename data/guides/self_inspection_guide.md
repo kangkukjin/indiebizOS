@@ -101,7 +101,7 @@ ORDER BY id DESC LIMIT 30;
 ### E. 심층 메모리 (사용자에 대한 사실)
 중복·모순 검사용.
 
-`[self:search_memory]{query: "키워드"}` 또는:
+`[self:memory_search]{query: "키워드"}` 또는:
 ```bash
 sqlite3 data/system_ai_memory.db "
 SELECT id, keywords, substr(content, 1, 100) AS content

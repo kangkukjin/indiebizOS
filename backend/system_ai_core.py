@@ -154,8 +154,13 @@ def _restore_provider(runner, original_provider):
 
 # ============ 메시지 처리 (AgentRunner 인지 파이프라인 사용) ============
 
-def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None):
+def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None,
+                              action_hint: str = None):
     """시스템 AI 메시지 처리 (동기 모드, AgentRunner 인지 파이프라인)
+
+    Args:
+        action_hint: 마법책에서 사용자가 명시적으로 선택한 액션 ID ("sense:price" 등).
+            지정되면 해마 검색 대신 그 액션을 Top-1로 <execution_memory>에 주입.
 
     Returns:
         (response_text, tool_images)
@@ -163,7 +168,7 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     runner = get_system_ai_runner()
 
     # 인지 파이프라인: 연상 → (Reflex 또는 무의식) → 의식 → 프롬프트 갱신
-    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message)
+    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
 
     # Reflex 분기 — 해마 점수 임계값 이상이면 무의식 호출 스킵
     if _hippo_score >= runner.REFLEX_SCORE_THRESHOLD and _top_code:
@@ -242,9 +247,14 @@ def process_system_ai_message_stream(
     message: str,
     history: List[Dict] = None,
     images: List[Dict] = None,
-    cancel_check: Callable = None
+    cancel_check: Callable = None,
+    action_hint: str = None
 ) -> Generator:
     """시스템 AI 메시지 처리 (스트리밍 모드, AgentRunner 인지 파이프라인)
+
+    Args:
+        action_hint: 마법책에서 사용자가 명시적으로 선택한 액션 ID ("sense:price" 등).
+            지정되면 해마 검색 대신 그 액션을 Top-1로 <execution_memory>에 주입.
 
     Yields:
         스트리밍 이벤트 딕셔너리
@@ -256,7 +266,7 @@ def process_system_ai_message_stream(
     runner = get_system_ai_runner()
 
     # 인지 파이프라인: 연상 → (Reflex 또는 무의식) → 의식 → 프롬프트 갱신
-    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message)
+    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
 
     # Reflex 분기
     if _hippo_score >= runner.REFLEX_SCORE_THRESHOLD and _top_code:

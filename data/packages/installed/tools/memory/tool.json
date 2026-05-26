@@ -1,7 +1,7 @@
 {
   "id": "memory",
   "name": "Memory",
-  "description": "에이전트 심층 메모리. 연상기억에서 자동으로 검색·저장되며, IBL [self:search_memory]/[self:save_memory] 액션으로 직접 호출도 가능합니다.",
+  "description": "에이전트 심층 메모리. 연상기억에서 자동으로 검색·저장되며, IBL [self:memory_search]/[self:save_memory] 액션으로 직접 호출도 가능합니다.",
   "version": "2.1.0",
   "tools": [
     {

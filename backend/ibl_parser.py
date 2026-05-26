@@ -855,6 +855,41 @@ def _split_by_operator(text: str, operator: str) -> List[str]:
     return segments
 
 
+# Deprecated action-name aliases → canonical (node, action).
+# 2026-05-26 cleanup: 24개 별칭을 yaml에서 제거하면서 학습 데이터/RAG/외부 호출의
+# 옛 이름이 그대로 동작하도록 파서에서 캐노니컬로 정규화한다.
+# 새 코드는 캐노니컬 이름만 쓰고, 이 맵은 점차 비워질 것.
+_ACTION_NAME_ALIASES: Dict[Tuple[str, str], Tuple[str, str]] = {
+    ("sense", "info"): ("sense", "stock_info"),
+    ("sense", "company_news"): ("sense", "news"),
+    ("sense", "nearby"): ("sense", "cctv_nearby"),
+    ("self", "cctv_sources"): ("sense", "cctv_sources"),
+    ("sense", "save"): ("self", "local_save"),
+    ("self", "timeline"): ("self", "photo_timeline"),
+    ("self", "list_scans"): ("self", "photo_list_scans"),
+    ("self", "gallery"): ("self", "photo_gallery"),
+    ("self", "photo_manager"): ("limbs", "photo_manager"),
+    ("self", "posts"): ("self", "blog_posts"),
+    ("self", "check_new"): ("self", "blog_check_new"),
+    ("self", "rebuild_index"): ("self", "blog_rebuild_index"),
+    ("self", "search_memory"): ("self", "memory_search"),
+    ("self", "launch"): ("limbs", "launch"),
+    ("self", "summary"): ("self", "storage_summary"),
+    ("self", "annotate"): ("self", "folder_annotate"),
+    ("self", "annotations"): ("self", "folder_annotations"),
+    ("self", "explorer"): ("limbs", "explorer"),
+    ("limbs", "navigate"): ("limbs", "browser_navigate"),
+    ("limbs", "content"): ("limbs", "browser_content"),
+    ("limbs", "close"): ("limbs", "browser_close"),
+    ("limbs", "route_navigate"): ("sense", "navigate_route"),
+    ("sense", "map"): ("limbs", "show_map"),
+    ("sense", "cctv_open"): ("limbs", "cctv_open"),
+    # 2026-05-26 cross-node 동명 정리: self의 find(파일 glob)와 limbs의 find(DOM 요소)가 충돌.
+    # self:find → self:file_find로 캐노니컬 변경.
+    ("self", "find"): ("self", "file_find"),
+}
+
+
 def _parse_step(text: str) -> Optional[Dict]:
     """
     단일 IBL 명령 파싱
@@ -874,6 +909,10 @@ def _parse_step(text: str) -> Optional[Dict]:
     node = m.group(1)
     action = m.group(2)
     target_raw = m.group(3)
+
+    canonical = _ACTION_NAME_ALIASES.get((node, action))
+    if canonical is not None:
+        node, action = canonical
 
     # (target) 구문 감지 → 에러 (폐지됨)
     if target_raw is not None:

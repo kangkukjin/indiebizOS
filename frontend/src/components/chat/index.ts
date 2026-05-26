@@ -8,6 +8,7 @@ export { ToolHistoryPanel } from './ToolHistoryPanel';
 export { TodoPanel } from './TodoPanel';
 export { MessageContent } from './MessageContent';
 export { ChatInputArea } from './ChatInputArea';
+export { ActionGrimoire } from './ActionGrimoire';
 export { QuestionPanel } from './QuestionPanel';
 export { PlanModePanel } from './PlanModePanel';
 export { ChatView } from './ChatView';

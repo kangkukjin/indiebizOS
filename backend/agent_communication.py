@@ -367,21 +367,24 @@ class AgentCommunicationMixin:
                     except Exception as _me:
                         self._log(f"[프로젝트AI] 중급 모델 전환 실패 (본격 모델 유지): {_me}")
 
+                # 안정/가변 분리 (캐시 prefix 보존)
+                augmented_content = content
                 if consciousness_output:
-                    # 시스템 프롬프트 재구성 (의식 에이전트 출력 + 실행기억 반영)
                     role_file = self.project_path / f"agent_{agent_name}_role.txt"
                     role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-                    new_prompt = self._build_system_prompt(
+                    stable_prompt, dynamic_context = self._build_system_prompt_split(
                         role, consciousness_output, execution_memory
                     )
-                    self.ai.system_prompt = new_prompt
+                    self.ai.system_prompt = stable_prompt
                     if self.ai._provider:
-                        self.ai._provider.system_prompt = new_prompt
+                        self.ai._provider.system_prompt = stable_prompt
+                    if dynamic_context:
+                        augmented_content = f"{dynamic_context}\n\n{content}"
 
                     # 히스토리 편집 (의식 에이전트 판단에 따라)
                     history = self._apply_consciousness_to_history(history, consciousness_output)
                 elif execution_memory or reflex_hint:
-                    # EXECUTE 경로: 실행기억(+reflex 힌트)만 시스템 프롬프트에 반영
+                    # EXECUTE 경로: 실행기억(+reflex 힌트)만 가변 컨텍스트로 반영
                     _exec_mem = execution_memory or ""
                     if reflex_hint:
                         _exec_mem += (
@@ -391,16 +394,18 @@ class AgentCommunicationMixin:
                         )
                     role_file = self.project_path / f"agent_{agent_name}_role.txt"
                     role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-                    new_prompt = self._build_system_prompt(
+                    stable_prompt, dynamic_context = self._build_system_prompt_split(
                         role, None, _exec_mem
                     )
-                    self.ai.system_prompt = new_prompt
+                    self.ai.system_prompt = stable_prompt
                     if self.ai._provider:
-                        self.ai._provider.system_prompt = new_prompt
+                        self.ai._provider.system_prompt = stable_prompt
+                    if dynamic_context:
+                        augmented_content = f"{dynamic_context}\n\n{content}"
 
                 try:
                     response = self.ai.process_message_with_history(
-                        message_content=content,
+                        message_content=augmented_content,
                         from_email=from_addr,
                         history=history,
                         reply_to=reply_to,
@@ -417,6 +422,8 @@ class AgentCommunicationMixin:
                             _goal_cfg = _load_wp_config().get("goal_eval", {})
                             if _goal_cfg.get("enabled", True):
                                 self._log(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
+                                # provider가 누적한 도구 실행 결과를 평가자에 전달
+                                tool_results_for_eval = self.ai.get_last_tool_results()
                                 response = self._run_goal_evaluation_loop(
                                     user_message=content,
                                     criteria=criteria,
@@ -424,6 +431,7 @@ class AgentCommunicationMixin:
                                     history=history,
                                     consciousness_output=consciousness_output,
                                     max_rounds=_goal_cfg.get("max_rounds", 3),
+                                    tool_results=tool_results_for_eval,
                                     execution_memory=execution_memory,
                                 )
                 finally:

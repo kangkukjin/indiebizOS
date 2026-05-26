@@ -583,6 +583,37 @@
         "참고문헌"
       ],
       "file": "lecture_slide_principles.md"
+    },
+    {
+      "id": "self_inspection",
+      "name": "자기 점검 가이드",
+      "description": "시스템 AI가 자기 자신의 상태(IBL/메모리/프롬프트/히스토리/가이드/인지)를 진단하고 보고하는 절차. episode_log/world_pulse 등을 활용한 자기 진단.",
+      "keywords": [
+        "자기 점검",
+        "자기점검",
+        "점검",
+        "진단",
+        "자가진단",
+        "self-inspection",
+        "self check",
+        "self-check",
+        "성찰",
+        "회고",
+        "메타인지",
+        "메타 인지",
+        "x-ray",
+        "엑스레이",
+        "시스템 점검",
+        "시스템 진단",
+        "어디 아픈지",
+        "최적화",
+        "최근 어땠어",
+        "뭐 했어",
+        "에피소드",
+        "에피소드 메모리",
+        "episode"
+      ],
+      "file": "self_inspection_guide.md"
     }
   ]
 }

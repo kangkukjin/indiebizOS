@@ -110,13 +110,68 @@ class AgentCognitiveMixin:
                 return role_file.read_text(encoding='utf-8')
             return ""
 
+    def _build_system_prompt_split(self, role: str, consciousness_output: dict = None,
+                                    execution_memory: str = "") -> tuple:
+        """시스템 프롬프트를 (안정, 가변)로 분리해 반환.
+
+        시스템 AI와 프로젝트 에이전트 둘 다 캐시 prefix 보존을 위해 사용.
+        가변 부분은 호출 측에서 user message 앞에 prepend한다.
+
+        Returns:
+            (stable_prompt, dynamic_context)
+        """
+        if self.config.get("_is_system_ai"):
+            return self._build_system_ai_prompt_split(role, consciousness_output, execution_memory)
+        return self._build_agent_prompt_split(role, consciousness_output, execution_memory)
+
+    def _build_agent_prompt_split(self, role: str, consciousness_output: dict = None,
+                                   execution_memory: str = "") -> tuple:
+        """프로젝트 에이전트 프롬프트를 (안정, 가변)로 분리."""
+        from prompt_builder import build_agent_prompt_split
+
+        agent_name = self.config.get("name", "에이전트")
+        agent_count = self._get_agent_count()
+        git_enabled = (self.project_path / ".git").exists()
+
+        agent_notes = ""
+        note_file = self.project_path / f"agent_{agent_name}_note.txt"
+        if note_file.exists():
+            agent_notes = note_file.read_text(encoding='utf-8').strip()
+
+        is_delegated_from_system_ai = self.delegated_from_system_ai
+        if not is_delegated_from_system_ai:
+            try:
+                pending = self.db.get_pending_tasks(delegated_to=agent_name)
+                is_delegated_from_system_ai = any(
+                    t.get('requester_channel') == 'system_ai' for t in pending
+                )
+            except Exception:
+                pass
+
+        allowed_nodes_config = self.config.get("allowed_nodes")
+
+        return build_agent_prompt_split(
+            agent_name=agent_name,
+            role=role,
+            agent_count=agent_count,
+            agent_notes=agent_notes,
+            git_enabled=git_enabled,
+            delegated_from_system_ai=is_delegated_from_system_ai,
+            ibl_only=True,
+            allowed_nodes=allowed_nodes_config,
+            project_path=str(self.project_path),
+            agent_id=self.config.get("id"),
+            consciousness_output=consciousness_output,
+            model_name=self.config.get("model", ""),
+            execution_memory=execution_memory,
+        )
+
     def _build_system_prompt(self, role: str, consciousness_output: dict = None,
                              execution_memory: str = "") -> str:
-        """시스템 프롬프트 구성 (동적 조합)
+        """시스템 프롬프트 구성 (동적 조합) — 안정+가변 합친 단일 문자열 (호환용).
 
         시스템 AI와 프로젝트 에이전트 모두 이 메서드를 사용.
-        시스템 AI: build_system_ai_prompt() 호출
-        프로젝트 에이전트: build_agent_prompt() 호출
+        새 호출자는 _build_system_prompt_split를 직접 사용해 캐시 효율을 얻는다.
         """
         if self.config.get("_is_system_ai"):
             return self._build_system_ai_prompt(role, consciousness_output, execution_memory)
@@ -170,7 +225,7 @@ class AgentCognitiveMixin:
 
     def _build_system_ai_prompt(self, role: str, consciousness_output: dict = None,
                                 execution_memory: str = "") -> str:
-        """시스템 AI 전용 프롬프트 빌드"""
+        """시스템 AI 전용 프롬프트 빌드 (안정+가변 합친 단일 문자열, 호환용)"""
         from prompt_builder import build_system_ai_prompt
         from system_ai_memory import load_user_profile
 
@@ -178,6 +233,31 @@ class AgentCognitiveMixin:
         user_profile = load_user_profile()
 
         return build_system_ai_prompt(
+            user_profile=user_profile,
+            git_enabled=git_enabled,
+            consciousness_output=consciousness_output,
+            model_name=self.config.get("ai", {}).get("model", ""),
+            execution_memory=execution_memory,
+        )
+
+    def _build_system_ai_prompt_split(self, role: str, consciousness_output: dict = None,
+                                      execution_memory: str = "") -> tuple:
+        """시스템 AI 프롬프트를 (안정, 가변)로 분리.
+
+        안정 부분만 system_prompt로 넘기면 프롬프트 캐시 prefix가 매 호출마다
+        동일해져 Anthropic 캐시가 hit한다. 가변 부분은 호출 측에서 user message
+        앞에 prepend한다.
+
+        Returns:
+            (stable_prompt, dynamic_context)
+        """
+        from prompt_builder import build_system_ai_prompt_split
+        from system_ai_memory import load_user_profile
+
+        git_enabled = (self.project_path / ".git").exists()
+        user_profile = load_user_profile()
+
+        return build_system_ai_prompt_split(
             user_profile=user_profile,
             git_enabled=git_enabled,
             consciousness_output=consciousness_output,
@@ -604,8 +684,9 @@ AI: {ai_response[:500]}"""
     # Reflex 임계값 — 단계 0 결과의 top_score가 이 값 이상이면
     # 무의식(경량 AI) 호출을 건너뛰고 즉시 EXECUTE.
     # 분기는 호출 측(_process_channel_message)이 책임진다.
+    # 0.88 → 0.85: 한계 사례(0.85~0.88)도 학습된 패턴이면 EXECUTE로 흘림.
     # ============================================================
-    REFLEX_SCORE_THRESHOLD = 0.88
+    REFLEX_SCORE_THRESHOLD = 0.85
 
     def _classify_request(self, user_message: str,
                           execution_memory: str = "") -> str:
@@ -614,6 +695,11 @@ AI: {ai_response[:500]}"""
         무의식 에이전트 — 경량 AI 호출만 담당. Reflex 판정은
         호출 측에서 단계 0(_build_execution_memory)의 top_score로 미리 분기한다.
 
+        execution_memory는 받지만 분류 입력에 합치지 않는다.
+        unconscious_prompt.md 규칙: "현재 메시지만으로 판단한다."
+        연상기억을 합치면 짧은 명령도 입력이 부풀어 모델이 단순 EXECUTE 판단을 못함.
+        (인터페이스 호환을 위해 파라미터는 유지)
+
         Returns:
             "SESSION_RESET" / "EXECUTE" / "THINK"
         """
@@ -621,10 +707,7 @@ AI: {ai_response[:500]}"""
             from consciousness_agent import lightweight_ai_call, get_unconscious_prompt
 
             system_prompt = get_unconscious_prompt()
-            input_message = user_message
-            if execution_memory:
-                input_message = f"{execution_memory}\n\n{user_message}"
-            response = lightweight_ai_call(input_message, system_prompt=system_prompt)
+            response = lightweight_ai_call(user_message, system_prompt=system_prompt)
 
             if response is None:
                 return "THINK"  # AI 미준비 시 안전하게 판단형으로
@@ -793,6 +876,16 @@ AI: {ai_response[:500]}"""
             prompt += f"## 생성된 파일 내용\n{created_files}\n\n"
 
         prompt += "위 정보를 바탕으로 평가하세요. 도구 실행 결과가 있으면 실제로 작업이 수행되었는지 확인하세요."
+
+        # 평가 입력 가시화 — 평가자에게 충분한 컨텍스트가 전달되는지 진단.
+        # 어제 208번 같은 오판(도구 결과가 평가자에 부족하게 전달되어 "상상 보고" 판정) 검출용.
+        _tool_results_info = f"{len(tool_results_str)}자" if tool_results_str else "없음"
+        _created_files_info = f"{len(created_files)}자" if created_files else "없음"
+        self._log(
+            f"[GoalEval] 평가 입력: prompt={len(prompt)}자, "
+            f"criteria={len(criteria)}자, response={len(response)}자, "
+            f"tool_results={_tool_results_info}, created_files={_created_files_info}"
+        )
 
         try:
             from consciousness_agent import lightweight_ai_call

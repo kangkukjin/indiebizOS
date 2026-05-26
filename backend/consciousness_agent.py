@@ -324,7 +324,9 @@ def get_guide_list(user_message: str = "") -> List[str]:
         top = scored[:10]
 
         if not top:
-            return []
+            # 매칭 0건 — 키워드가 사용자 표현과 안 맞을 수 있으므로 전체 목록을 fallback으로 제공.
+            # 의식 에이전트가 가이드 description을 보고 직접 고르도록.
+            return [f"{g['file']} - {g['description']}" for g in guides if g.get("file")]
 
         return [f"{g['file']} - {g['description']}" for _, g in top]
 

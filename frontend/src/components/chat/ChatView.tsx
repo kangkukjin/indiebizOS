@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, User, Loader2, X, RefreshCw, History, ArrowLeft } from 'lucide-react';
+import { Bot, User, Loader2, X, RefreshCw, History, ArrowLeft, RotateCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cancelAllAgents, api } from '../../lib/api';
@@ -152,6 +152,45 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   const agentLabel = agentName || '시스템 AI';
   const agentModel = isAgent ? chatTarget.agent.ai?.model : null;
+
+  // provider 추적 — Claude Code일 때만 세션 재시작 버튼 노출.
+  // 시스템 AI는 status API에서, 프로젝트 에이전트는 agent 객체에서 직접.
+  const [systemAiProvider, setSystemAiProvider] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isAgent) {
+      api.getSystemAIStatus().then(s => setSystemAiProvider(s.provider)).catch(() => {});
+    }
+  }, [isAgent]);
+  const currentProvider = isAgent
+    ? chatTarget.agent.ai?.provider
+    : systemAiProvider;
+  const showResetSessionButton = currentProvider === 'claude_code';
+
+  const handleResetSession = async () => {
+    try {
+      const result = isAgent
+        ? await api.resetAgentSession(projectId!, agentId!)
+        : await api.resetSystemAISession();
+      const ok = (result as { ok?: boolean }).ok !== false;
+      console.log('[ChatView] 세션 재시작:', result);
+      setMessages(prev => [...prev, {
+        id: `reset-${Date.now()}`,
+        role: 'assistant',
+        content: ok
+          ? '↻ Claude Code 새 세션을 시작했습니다. 누적 컨텍스트가 끊어졌습니다.'
+          : `↻ 세션 재시작 실패: ${(result as { error?: string }).error || '알 수 없는 오류'}`,
+        timestamp: new Date(),
+      }]);
+    } catch (e) {
+      console.error('[ChatView] 세션 재시작 실패:', e);
+      setMessages(prev => [...prev, {
+        id: `reset-error-${Date.now()}`,
+        role: 'assistant',
+        content: `↻ 세션 재시작 실패: ${(e as Error).message}`,
+        timestamp: new Date(),
+      }]);
+    }
+  };
 
   // ── WebSocket 연결 ──
 
@@ -710,6 +749,12 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           </div>
         </div>
         <div className={`flex items-center gap-2${isDialog ? '' : ' no-drag'}`}>
+          {/* Claude Code 세션 재시작 (Claude Code provider일 때만) */}
+          {showResetSessionButton && (
+            <button onClick={handleResetSession} className={`p-1.5 rounded-lg transition-colors ${isDialog ? 'hover:bg-gray-200' : 'hover:bg-[#DDD5C8]'}`} title="Claude Code 새 세션 시작 (누적 컨텍스트 끊기)">
+              <RotateCw size={16} className={isDialog ? 'text-gray-500' : 'text-[#6B5B4F]'} />
+            </button>
+          )}
           {/* 히스토리/초기화 (시스템 AI일 때) */}
           {!isAgent && (
             <>

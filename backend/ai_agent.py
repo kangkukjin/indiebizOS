@@ -91,6 +91,8 @@ class AIAgent:
 
         # 도구 실행 중 수집된 이미지 (턴 단위)
         self._last_tool_images = []
+        # 도구 실행 결과 (턴 단위) — non-streaming 경로에서 evaluator 입력용
+        self._last_tool_results: List[str] = []
 
         # 프로바이더 초기화
         self._provider = None
@@ -129,6 +131,16 @@ class AIAgent:
         self._last_tool_images = []
         return images if images else None
 
+    def get_last_tool_results(self) -> List[str]:
+        """현재 턴에서 도구가 반환한 결과 텍스트 목록 반환 후 초기화.
+
+        non-streaming 경로에서 evaluator(_run_goal_evaluation_loop의 tool_results 인자)에
+        전달하기 위해 사용. provider가 _last_tool_results 속성으로 누적한 것을 가져온다.
+        """
+        results = self._last_tool_results
+        self._last_tool_results = []
+        return results
+
     def process_message_with_history(
         self,
         message_content: str,
@@ -163,6 +175,7 @@ class AIAgent:
 
         try:
             self._last_tool_images = []  # 턴 시작 시 초기화
+            self._last_tool_results = []  # 턴 시작 시 초기화
             response = self._provider.process_message(
                 message=message_content,
                 history=history,
@@ -174,6 +187,11 @@ class AIAgent:
             if hasattr(self._provider, '_last_tool_images') and self._provider._last_tool_images:
                 self._last_tool_images.extend(self._provider._last_tool_images)
                 self._provider._last_tool_images = []
+
+            # 프로바이더에서 수집된 도구 실행 결과 가져오기 (evaluator 입력용)
+            if hasattr(self._provider, '_last_tool_results') and self._provider._last_tool_results:
+                self._last_tool_results.extend(self._provider._last_tool_results)
+                self._provider._last_tool_results = []
 
             # 미완료 약속 감지 → 실행 유도 (1회)
             if _is_unfulfilled_promise(response):

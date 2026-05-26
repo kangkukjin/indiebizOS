@@ -383,24 +383,26 @@ async def handle_chat_message(client_id: str, data: dict):
         consciousness_output = runner._run_consciousness(
             message, history, execution_memory
         )
+        # 안정/가변 분리 (캐시 prefix 보존)
+        augmented_message = message
         if consciousness_output:
-            # 시스템 프롬프트 재구성 (의식 에이전트 출력 + 실행기억 반영)
             role_file = runner.project_path / f"agent_{agent_name}_role.txt"
             role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-            new_prompt = runner._build_system_prompt(
+            stable_prompt, dynamic_context = runner._build_system_prompt_split(
                 role, consciousness_output, execution_memory
             )
-            runner.ai.system_prompt = new_prompt
+            runner.ai.system_prompt = stable_prompt
             if runner.ai._provider:
-                runner.ai._provider.system_prompt = new_prompt
+                runner.ai._provider.system_prompt = stable_prompt
+            if dynamic_context:
+                augmented_message = f"{dynamic_context}\n\n{message}"
 
             # 히스토리 편집 (의식 에이전트 판단에 따라)
             history = runner._apply_consciousness_to_history(history, consciousness_output)
 
-        # 실행기억은 이미 시스템 프롬프트에 반영됨
         # AI 응답 생성
         response = runner.ai.process_message_with_history(
-            message_content=message,
+            message_content=augmented_message,
             from_email="user@gui",
             history=history,
             reply_to="user@gui",
@@ -589,18 +591,22 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             except Exception as _me:
                 print(f"[프로젝트AI] 중급 모델 전환 실패 (본격 모델 유지): {_me}")
 
+        # 안정/가변 분리 (캐시 prefix 보존) — augmented_message는 run_stream에서 closure로 사용
+        augmented_message = message
         if consciousness_output:
             role_file = runner.project_path / f"agent_{agent_name}_role.txt"
             role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-            new_prompt = runner._build_system_prompt(
+            stable_prompt, dynamic_context = runner._build_system_prompt_split(
                 role, consciousness_output, execution_memory
             )
-            runner.ai.system_prompt = new_prompt
+            runner.ai.system_prompt = stable_prompt
             if runner.ai._provider:
-                runner.ai._provider.system_prompt = new_prompt
+                runner.ai._provider.system_prompt = stable_prompt
+            if dynamic_context:
+                augmented_message = f"{dynamic_context}\n\n{message}"
             history = runner._apply_consciousness_to_history(history, consciousness_output)
         elif execution_memory or reflex_hint:
-            # EXECUTE 경로: 실행기억(+reflex 힌트)만 시스템 프롬프트에 반영
+            # EXECUTE 경로: 실행기억(+reflex 힌트)만 가변 컨텍스트로 반영
             _exec_mem = execution_memory or ""
             if reflex_hint:
                 _exec_mem += (
@@ -610,10 +616,12 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 )
             role_file = runner.project_path / f"agent_{agent_name}_role.txt"
             role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-            new_prompt = runner._build_system_prompt(role, None, _exec_mem)
-            runner.ai.system_prompt = new_prompt
+            stable_prompt, dynamic_context = runner._build_system_prompt_split(role, None, _exec_mem)
+            runner.ai.system_prompt = stable_prompt
             if runner.ai._provider:
-                runner.ai._provider.system_prompt = new_prompt
+                runner.ai._provider.system_prompt = stable_prompt
+            if dynamic_context:
+                augmented_message = f"{dynamic_context}\n\n{message}"
 
         # 태스크 생성
         task_id = f"task_{uuid.uuid4().hex[:8]}"
@@ -664,40 +672,23 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 )
                 return
 
-            # 실행기억은 이미 시스템 프롬프트에 반영됨
+            # 가변 컨텍스트는 augmented_message에 prepend된 상태 (캐시 prefix 보존)
             try:
                 for event in runner.ai.process_message_stream(
-                    message_content=message,
+                    message_content=augmented_message,
                     history=history,
                     images=images
                 ):
                     event_type = event.get("type", "unknown")
-                    # 진단·episode_log 풍부화: 이벤트 내용을 함께 표시
-                    # (episode_logger가 stdout을 캡처하므로 print = 회고 자료)
-                    if event_type == "tool_start":
-                        _name = event.get("name", "")
-                        _inp = str(event.get("input", {}))
-                        if len(_inp) > 1500:
-                            _inp = _inp[:1500] + f"... [trunc, total={len(_inp)}]"
-                        print(f"[WS run_stream] tool_start: {_name} input={_inp}")
-                    elif event_type == "tool_result":
-                        _content = str(event.get("content", "") or event.get("result", ""))
-                        if len(_content) > 1500:
-                            _content = _content[:1500] + f"... [trunc, total={len(_content)}]"
-                        _err = " [ERROR]" if event.get("is_error") else ""
-                        print(f"[WS run_stream] tool_result{_err}: {_content}")
-                    elif event_type == "thinking":
-                        _content = str(event.get("content", ""))
-                        if len(_content) > 1500:
-                            _content = _content[:1500] + f"... [trunc, total={len(_content)}]"
-                        print(f"[WS run_stream] thinking: {_content}")
-                    elif event_type == "error":
+                    # tool_start/tool_result/thinking은 ClaudeCode provider에서 이미 print되므로 중복 제거.
+                    # text는 스트리밍이라 길이만, error/other는 가시화.
+                    if event_type == "error":
                         print(f"[WS run_stream] error: {event.get('content', '')[:300]}")
                     elif event_type == "text":
-                        # text는 스트리밍이라 매 chunk마다 찍으면 노이즈. 길이만.
                         _len = len(str(event.get("content", "")))
                         print(f"[WS run_stream] text: ({_len}자)")
-                    else:
+                    elif event_type not in ("tool_start", "tool_result", "thinking", "final"):
+                        # tool_*/thinking은 provider가 찍음, final은 아래에서 처리
                         print(f"[WS run_stream] 이벤트 수신: {event_type}")
                     asyncio.run_coroutine_threadsafe(
                         event_queue.put(event),
@@ -724,7 +715,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         })
                     elif event_type == "tool_result":
                         # 도구 실행 결과 수집 (평가 루프에서 사용)
-                        tool_results_log.append(event.get("content", ""))
+                        tool_results_log.append(event.get("result", ""))
 
                 # Goal 평가 루프 — 달성 기준이 있으면 평가 후 재시도
                 if consciousness_output and final_content:
@@ -1128,7 +1119,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
 
                     # 도구 실행 결과 수집 (평가 루프에서 사용)
                     if event_type == "tool_result":
-                        tool_results_log.append(event.get("content", ""))
+                        tool_results_log.append(event.get("result", ""))
                         if event.get("images"):
                             collected_tool_images.extend(event["images"])
 

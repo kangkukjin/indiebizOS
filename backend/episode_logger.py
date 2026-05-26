@@ -56,6 +56,9 @@ class EpisodeLogger:
             cls._started_at = datetime.now()
             cls._agent = agent
             cls._user_message = (user_message or "")[:500]
+        # 시작 마커 — 캡처되어 episode_log에 첫 줄로 들어감 (회고 가독성)
+        _msg_preview = (user_message or "")[:80].replace("\n", " ")
+        print(f"[Episode START] agent={agent} message={_msg_preview!r}")
 
     @classmethod
     def end_episode(cls):
@@ -63,6 +66,10 @@ class EpisodeLogger:
         with cls._lock:
             if not cls._active:
                 return
+            # 종료 마커 — active=True 상태에서 print → 캡처되어 log_text에 포함
+            _agent_snap = cls._agent
+            _total_ms_snap = int((datetime.now() - cls._started_at).total_seconds() * 1000) if cls._started_at else 0
+            print(f"[Episode END] agent={_agent_snap} total_ms={_total_ms_snap}")
             log_text = "".join(cls._buffer)
             started = cls._started_at
             agent = cls._agent
@@ -195,10 +202,15 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
     if score_matches:
         hippocampus_score = max(float(s) for s in score_matches)
 
-    # 무의식 판정 추출 (프로젝트 에이전트: [무의식], 시스템 AI: [시스템AI 무의식])
-    # Reflex EXECUTE (모델 스킵) 패턴과 분류: EXECUTE/THINK 패턴 모두 캡처
+    # 무의식 판정 추출
+    # - 분류 마커: [무의식] / [시스템AI 무의식] (분류: EXECUTE|THINK|SESSION_RESET)
+    # - Reflex 마커: [연상→실행] / [시스템AI 연상→실행] (Reflex EXECUTE)
+    #   Reflex는 무의식 모델을 거치지 않아 로그 마커가 다름.
     unconscious_decision = None
-    unc_match = re.search(r'\[(?:시스템AI\s*)?무의식\] (?:Reflex\s+(EXECUTE)|분류:\s*(\w+))', log_text)
+    unc_match = re.search(
+        r'\[(?:시스템AI\s*)?(?:무의식|연상→실행)\] (?:Reflex\s+(EXECUTE)|분류:\s*(\w+))',
+        log_text,
+    )
     if unc_match:
         unconscious_decision = unc_match.group(1) or unc_match.group(2)
 
@@ -218,11 +230,12 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
     if round_matches:
         execution_rounds = max(int(r) for r in round_matches)
 
-    # 평가 결과 추출
+    # 평가 결과 추출 — 평가 루프가 여러 라운드면 마지막 라운드 결과가 최종 결과
+    # (재실행 후 ACHIEVED로 통과한 경우 첫 NOT_ACHIEVED만 저장되는 버그 수정)
     evaluation_result = None
-    eval_match = re.search(r'\[GoalEval\].*?평가 응답: (\w+)', log_text)
-    if eval_match:
-        evaluation_result = eval_match.group(1)
+    eval_matches = re.findall(r'\[GoalEval\].*?평가 응답: (\w+)', log_text)
+    if eval_matches:
+        evaluation_result = eval_matches[-1]
 
     try:
         conn = _get_db()

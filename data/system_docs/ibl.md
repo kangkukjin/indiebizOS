@@ -141,8 +141,9 @@ IBL 표현 계층:     [node:action]{params}
 
 | 주요 액션 | 설명 | 예시 |
 |----------|------|------|
-| `search_ddg` | 웹 검색 (DuckDuckGo) | `[sense:search_ddg]{query: "AI 뉴스"}` |
-| `search_news` | 뉴스 검색 | `[sense:search_news]{keyword: "부동산"}` |
+| `search_ddg` | 웹 검색 (DuckDuckGo, 영어/글로벌에 적합) | `[sense:search_ddg]{query: "AI 뉴스"}` |
+| `search_naver` | 네이버 검색 (한국어 콘텐츠 압도적, 9개 도메인: webkr/news/blog/cafe/kin/book/encyc/doc/shop) | `[sense:search_naver]{query: "청주 맛집", type: "blog"}` |
+| `search_news` | 뉴스 검색 (Google News RSS) | `[sense:search_news]{keyword: "부동산"}` |
 | `price` | 주가 조회 | `[sense:price]{symbol: "삼성전자"}` |
 | `crawl` | 웹 크롤링 | `[sense:crawl]{url: "https://..."}` |
 | `stock_info` | 주식 상세 정보 | `[sense:stock_info]{symbol: "삼성전자"}` |

@@ -40,7 +40,7 @@
   },
   "self_check": {
     "enabled": true,
-    "interval_hours": 6,
+    "interval_hours": 12,
     "action_timeout_sec": 10,
     "failure_alert_threshold": 3,
     "retention_days": 30

@@ -115,11 +115,11 @@ actions:
     implementation: FMP API로 미국 주가 시계열 이력 조회. 기간 지정 가능.
     target_key: symbol
   kr_investor:
-    description: 한국 시장 투자자별 매매동향 (외국인/기관/개인 순매수, 코스피/코스닥)
-    target_description: 시장 구분 (STK=코스피, KSQ=코스닥, ALL=전체)
+    description: 한국 시장 투자자별 매매동향 (외국인/기관/개인 순매수). market 파라미터에 'KOSPI', 'KOSDAQ', 'ALL' 사용 (STK/KSQ도 허용).
+    target_description: 시장 구분 (KOSPI=코스피, KOSDAQ=코스닥, ALL=전체)
     router: handler
     tool: kr_market_investor_trading
-    implementation: KRX API로 투자자별 매매동향 XML 파싱
+    implementation: 네이버 금융에서 일별 투자자별 매매동향 파싱 (단위 억원). market 별칭 정규화 지원.
     target_key: market
   kr_stock_investor:
     description: 개별종목 투자자별 매매동향 (외국인/기관/개인 순매수)

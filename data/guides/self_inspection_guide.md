@@ -152,7 +152,46 @@ wc -l data/ibl_nodes.yaml
 # episode_log에서 IBL_DEBUG 라인 추출 → 액션별 빈도·실패율 집계
 sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE started_at > datetime('now', '-7 days');" | \
   grep -E "IBL_DEBUG|execute_ibl" | head -200
+
+# self_checks 테이블에서 최근 실패 액션 목록 (자동 자가점검 결과)
+sqlite3 data/world_pulse.db "
+SELECT node, action, COUNT(*) AS fail_cnt, MAX(timestamp) AS last_at,
+       substr(error_message, 1, 120) AS err
+FROM self_checks
+WHERE success = 0 AND timestamp > datetime('now', '-7 days')
+GROUP BY node, action, substr(error_message, 1, 120)
+ORDER BY fail_cnt DESC;
+"
 ```
+
+**검증 절차 (실패 액션 재시도)**
+
+위 신호로 잡힌 실패 액션은 보고 전 다음 절차로 검증한다. 단순히 "N회 실패" 보고에서 끝내지 말고, **진짜 고장인지 / 쉽게 고칠 수 있는지**까지 분류해야 보고가 행동 가능한 정보가 된다.
+
+1. **idempotent 판단**
+   - 안전 (재시도 OK): `sense:*`, `self:search_*` 등 모든 read-only 조회 액션
+   - 금지 (원본 로그만 보고): `others:send_*`, `limbs:write_*`, `limbs:exec_*` 등 외부에 메시지를 보내거나 파일·DB를 쓰는 부수효과 액션
+   - 애매하면 재시도하지 않고 원본 로그만 인용 + `[난이도: 미상]` 표시
+
+2. **재실행 분류** (idempotent 액션만)
+   - 동일 파라미터로 1회 재호출: `[node:action]{...원본 파라미터...}`
+   - 결과별 분류:
+     - 재시도 성공 → **transient** (네트워크 일시 장애, rate limit 등). 보고서에 메모만 / 우선순위 ↓
+     - 같은 에러 재현 → **reproducible**. 우선순위 ↑
+     - 다른 에러 → **state-dependent** (외부 상태에 따라 다른 결과). 두 에러 모두 인용
+   - 부수효과 액션이라 재시도하지 않은 경우 → `미검증`으로 표시
+
+3. **수정 난이도 평가**
+   - **쉬움**: 파라미터 명명 불일치(예: `district_code` ↔ `region_code` 류), 시그니처 stale, 가이드의 옛 호출 형식 — 사용자 승인 후 단순 치환
+   - **중간**: 액션 코드 자체 버그(예외 처리 누락, 잘못된 파싱) — 코드 수정 필요, 사용자 승인 후 작업
+   - **어려움 / 사용자 결정**: 외부 API 변경·종료, 인증·자격 증명 만료, 네트워크 의존성 — 시스템이 단독으로 못 고침
+   - **미상**: idempotent 판단 보류 또는 재시도 결과 해석 불가
+
+4. **보고 반영**
+   - IBL 관리 영역 발견 항목에는 다음 두 필드를 **관찰** 아래에 추가:
+     - `[확인]`: transient / reproducible / state-dependent / 미검증
+     - `[난이도]`: 쉬움 / 중간 / 어려움 / 미상
+   - transient만 발견된 액션은 발견 목록에서 제외해도 무방(짧은 메모로만 남김)
 
 ---
 
@@ -377,11 +416,13 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 
 ```
 
+> **IBL 액션 실패 발견의 경우**: 위 템플릿에 더해 `[확인]`(transient / reproducible / state-dependent / 미검증)과 `[난이도]`(쉬움 / 중간 / 어려움 / 미상) 필드를 **관찰** 아래에 추가하라. 분류 기준은 섹션 4 "검증 절차" 참고.
+
 ---
 
 ## 12. 절대 금지 (안전선)
 
-- **사용자 명시 승인 없이 코드·설정·DB 변경 금지** — 점검 단계에선 read-only
+- **사용자 명시 승인 없이 코드·설정·DB 변경 금지** — 점검 단계에선 read-only. 단, idempotent IBL 액션(`sense:*`, `self:search_*` 등)의 1회 재시도는 관찰 행위로 허용 (섹션 4 검증 절차 참고)
 - 백업·git checkpoint 없이 변경 금지 (수정 단계에서)
 - 데이터 마이그레이션 같은 비가역 작업은 **제안만**, 직접 실행 절대 금지
 - 아키텍처 큰 결정(새 모듈, DB 스키마 변경, 새 provider 통합)은 보고만 — 사용자가 외부 Claude Code와 협의할 작업이라 명시
@@ -401,6 +442,13 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 **현재 누적**:
 
 - [2026-05-25] [정체성] indiebizOS의 핵심 가치는 **IBL 액션(언어) + 해마(패턴) + 가이드(절차)** 의 누적 어휘이다. 모델 파워(opus 등)는 commodity가 되어가지만 이 어휘는 사용자별로 시간이 쌓아올린 이전 불가능한 자산이다. 따라서 자기 점검의 우선순위는 **어휘의 정확성·일관성·풍부함을 보존·확장하는** 방향으로 정렬한다. 단순 버그픽스보다 어휘 건강에 영향을 주는 발견(IBL 액션 정의 명료화, 해마 학습 루프 신뢰성, 가이드의 현실 정합성 등)을 더 높은 우선순위로 보고한다.
+
+- [2026-05-25] [Read 휴리스틱] **자기가 직전 턴에 수정한 파일을 점검에서 다시 읽을 때**, 옛 범위 감각이 어긋난다 — 자기 patch로 함수가 길어졌다는 사실을 잊고 좁은 limit으로 읽어 본문이 잘림. 다음 순서로 읽어라:
+  1. `Grep` 으로 함수/클래스 시그니처 라인 찾기 (`pattern: "^def 함수명\|^class 클래스명"`, `-n: true`)
+  2. 종료 라인은 다음 같은 인덴트의 `def`/`class` 또는 파일 끝
+  3. `Read` 의 `offset`/`limit` 을 정확한 범위로 전달
+  - 대안 (빠른 휴리스틱): 자기 patch한 파일은 평소 추정 limit의 **1.5배**로 읽기. 잘리면 한 번 더 호출하는 게 토큰 손실보다 디버깅 손실이 큼.
+  - 출처: episode 206 (2026-05-25 19:21) — `agent_cognitive.py`의 `_classify_request` 검증 시 `offset=603 limit=45` 로 읽어 본문 끝부분(약 668줄)이 잘려 `offset=647 limit=25` 보충 호출 발생.
 
 - [2026-05-25] [방법론] 어휘 진화 후보 (섹션 10)는 4유형으로 구성된다:
   - **A**: IBL 액션 신규 등록 (조합 패턴 → 매크로 어휘)

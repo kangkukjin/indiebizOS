@@ -161,22 +161,22 @@ Cost/speed optimization through tiered model allocation:
 The system maintains awareness of itself and the world:
 
 - **World Pulse** — Hourly updates: economy, weather, news, user activity, system health
-- **Self-Check** — Every 6 hours: random IBL action self-test across all 5 nodes (immune patrol)
+- **Self-Check** — Every 12 hours: full sweep of side-effect-free IBL actions across all 5 nodes (immune patrol). When the user runs `/self-inspect`, the system AI retries failed actions to classify them as transient vs reproducible and assesses fix difficulty (easy / medium / hard)
 - **Health Monitoring** — Service alive checks, disk usage, anomaly detection
 
 ### IBL (IndieBiz Logic) — The Nervous System
 
 A domain-specific language that unifies all capabilities into one syntax.
 
-**5 Nodes, 311 Atomic Actions:**
+**5 Nodes, 332 Atomic Actions:**
 
 | Node | Actions | Description |
 |------|---------|-------------|
-| **sense** | 88 | Data retrieval (web, finance, photos, blog, health, real estate, legal, statistics) |
-| **self** | 92 | System management, workflows, files, notifications, code execution, health records |
+| **sense** | 89 | Data retrieval (web, Naver Korean search, finance, photos, blog, health, real estate, legal, statistics) |
+| **self** | 107 | System management, workflows, files, notifications, code execution, health records |
 | **limbs** | 79 | UI automation (browser, Android, macOS), media playback (YouTube, radio) |
 | **others** | 12 | Collaboration, delegation, email, contacts, messaging |
-| **engines** | 40 | Content creation (slides, video, charts, images, music, websites, architecture) |
+| **engines** | 45 | Content creation (slides, video, charts, images, music, websites, architecture) |
 
 ```
 User: "Search AI news and save to file"

@@ -554,8 +554,8 @@ nodes:
         tool: search_commercial_district
         implementation: 소상공인진흥공단 상권정보 공개 API로 업종별 점포 밀집도/분포 분석
       search_ddg:
-        description: 웹 검색 (DuckDuckGo). 뉴스는 search_news, 유튜브는 search_youtube, 논문은
-          search_openalex를 각각 사용.
+        description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는
+          search_news, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
         router: handler
         tool: ddgs_search
         implementation: DuckDuckGo ddgs 라이브러리로 웹 검색. 쿼리 언어 자동 감지(영어→글로벌, 한국어→한국).
@@ -875,6 +875,17 @@ nodes:
         - 조선
         - 문집
         - itkc
+      search_naver:
+        description: 네이버 검색 API. 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)에서 DuckDuckGo/Google보다
+          압도적으로 강함. type 파라미터로 도메인 선택 (기본 webkr). 뉴스 단독 검색은 type='news' 또는 search_news(Google
+          News) 중 한국 출처 우선이면 이쪽.
+        router: handler
+        tool: naver_search
+        implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 9개 도메인(webkr/news/blog/cafe/kin/book/encyc/doc/shop)
+          모두 호출. 무료 일 25k 쿼리.
+        target_key: query
+        postprocess:
+          type: compress
     description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 세계 상태 등 외부 API 및 데이터
       소스 접근'
     tags:

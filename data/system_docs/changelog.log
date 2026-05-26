@@ -710,3 +710,37 @@
   - 10개 메인 문서에 frontmatter 추가 (title/scope/owner_code/last_updated/see_also)
     → AI가 업데이트 시 "어디 적을지" 즉시 판단 가능
   - 효과: 토큰 비용 감소 (의식·실행·평가 매 호출), 단일 책임 명확화, 동일 정보의 다중 저장 해소
+[2026-05-26 09:30:00] SELF_CHECK_INTERVAL: 자가점검 주기 6시간 → 12시간
+  - data/world_pulse_config.json: self_check.interval_hours 6 → 12
+  - data/calendar_events.json: 비활성 calendar 이벤트 동기화 12로
+  - CLAUDE.md, system_docs/architecture.md, README.md, README.ko.md 표기 일괄 갱신
+  - 부수: 기존 표기 "랜덤 IBL 액션"이 코드 실제와 달랐음(전수 점검) — 함께 정정
+[2026-05-26 09:30:00] GUIDE_UPDATED: self_inspection_guide.md 검증 절차 추가
+  - 섹션 4 (IBL 관리): "검증 절차 (실패 액션 재시도)" 하위 섹션 신규
+    · idempotent 판단 (read-only 액션만 재시도)
+    · 재실행 분류: transient / reproducible / state-dependent / 미검증
+    · 수정 난이도 평가: 쉬움(파라미터 명명 불일치 류) / 중간(코드 버그) / 어려움(외부 API 의존) / 미상
+    · self_checks 테이블 쿼리 예시 추가
+  - 섹션 11 (보고 형식): IBL 발견에 `[확인]`/`[난이도]` 필드 추가 메모
+  - 섹션 12 (절대 금지): "단, idempotent IBL 액션의 1회 재시도는 관찰 행위로 허용" 단서
+  - 효과: 자기 점검 보고가 "N회 실패" 수준에서 "transient vs reproducible, 쉽게 고칠 수 있는가" 수준으로 행동 가능한 정보화
+[2026-05-26 09:30:00] BUG_FIX: tool_krx_investor.py 시장 파라미터 alias
+  - [sense:kr_investor]가 self_check에서 `market: "KOSPI"` 호출 시 입력단 컷오프로 즉시 실패하던 버그
+  - 원인: tool은 STK/KSQ/ALL만 받는데 self_check_plan.json은 KOSPI를 넘김 (외부 API 호출 전 1~4ms에 빈 응답)
+  - 수정: _MARKET_ALIASES 사전 + _normalize_market() 추가 — KOSPI/코스피→STK, KOSDAQ/코스닥→KSQ
+  - ibl_actions.yaml description도 친화적 이름(KOSPI/KOSDAQ) 우선 + implementation 설명을 실제(네이버 금융) 기준으로 정정
+[2026-05-26 10:00:00] NEW_ACTION: [sense:search_naver] — 네이버 검색 API 통합
+  - 단일 IBL 액션으로 네이버 9개 검색 도메인 통합 호출
+    (webkr/news/blog/cafe/kin/book/encyc/doc/shop, type 파라미터로 선택)
+  - 자연어 별칭 지원: type에 "웹"/"뉴스"/"블로그"/"카페"/"지식인"/"책"/"백과" 등 한글로 전달 가능
+  - 한국어 콘텐츠 검색 품질 대폭 강화 (네이버 > 구글 > DDG)
+  - 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 9개 도메인 모두 호출 (shopping-assistant 패키지와 키 공유)
+  - 무료 일 25,000 쿼리 한도
+  - 파일:
+    · data/packages/installed/tools/web/tool_naver_search.py (신규)
+    · data/packages/installed/tools/web/handler.py (라우팅 추가)
+    · data/packages/installed/tools/web/tool.json (도구 스키마 등록)
+    · data/packages/installed/tools/web/ibl_actions.yaml (search_naver 액션 + search_ddg description에 "한국어는 search_naver 우선" 명시)
+  - 해마: 26개 합성 용례 추가 (ibl_distilled.json 97→123, IBLUsageDB add_examples_batch)
+  - 임베딩 재구축 완료 (2132개 인덱싱, 31.9초)
+  - 검증: 자연어 6개 쿼리 중 5개에서 search_naver score 1.000으로 #1 retrieve

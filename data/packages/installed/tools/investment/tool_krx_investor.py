@@ -111,6 +111,19 @@ def _fetch_market_naver_web(market: str, max_pages: int = 5) -> list[dict]:
     return all_data
 
 
+_MARKET_ALIASES = {
+    "STK": "STK", "KOSPI": "STK", "코스피": "STK",
+    "KSQ": "KSQ", "KOSDAQ": "KSQ", "코스닥": "KSQ",
+    "ALL": "ALL", "전체": "ALL",
+}
+
+
+def _normalize_market(market: str) -> str:
+    if not market:
+        return "STK"
+    return _MARKET_ALIASES.get(str(market).strip().upper(), market)
+
+
 def get_market_investor_trading(
     market: str = "STK",
     start_date: str = None,
@@ -120,7 +133,7 @@ def get_market_investor_trading(
     전체시장 투자자별 매매동향 (일별 순매수 금액)
 
     Args:
-        market: 시장 구분 - STK(코스피), KSQ(코스닥), ALL(전체)
+        market: 시장 구분 - KOSPI(=STK, 코스피), KOSDAQ(=KSQ, 코스닥), ALL(전체)
         start_date: 조회 시작일 (YYYY-MM-DD). 기본: 1개월 전
         end_date: 조회 종료일 (YYYY-MM-DD). 기본: 오늘
 
@@ -132,6 +145,7 @@ def get_market_investor_trading(
     if not start_date:
         start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
+    market = _normalize_market(market)
     market_name = {"STK": "코스피", "KSQ": "코스닥", "ALL": "전체"}.get(market, market)
 
     if market == "ALL":

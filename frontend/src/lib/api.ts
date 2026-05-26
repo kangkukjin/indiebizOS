@@ -330,6 +330,13 @@ class APIClientBase {
     });
   }
 
+  async resetAgentSession(projectId: string, agentId: string) {
+    return this.request<{ ok: boolean; message: string; key?: string }>(
+      `/projects/${projectId}/agents/${agentId}/reset-session`,
+      { method: 'POST' }
+    );
+  }
+
   async cancelAllAgents(projectId: string) {
     return this.request<{ status: string; cancelled_agents: Array<{ agent_id: string; name: string }> }>(
       `/projects/${projectId}/cancel_all`,

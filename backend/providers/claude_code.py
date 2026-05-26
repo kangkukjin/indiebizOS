@@ -148,6 +148,9 @@ class ClaudeCodeProvider(BaseProvider):
         # 메인 에이전트와 session_key가 충돌하므로 비활성화 가능.
         # 호출 측이 init_client 후 True로 설정.
         self.disable_session_persistence: bool = False
+        # 도구 실행 결과 (non-streaming 경로에서 evaluator가 사용).
+        # process_message 시작 시 비워지고 stream 이벤트 소비 중 누적된다.
+        self._last_tool_results: List[str] = []
 
     def init_client(self) -> bool:
         """claude CLI 바이너리 탐지 + OAuth 토큰 로드 + 검증."""
@@ -193,12 +196,22 @@ class ClaudeCodeProvider(BaseProvider):
         images: List[Dict] = None,
         execute_tool: Callable = None,
     ) -> str:
-        """동기 호출. 내부적으로 process_message_stream을 collect하여 최종 텍스트 반환."""
+        """동기 호출. 내부적으로 process_message_stream을 collect하여 최종 텍스트 반환.
+
+        부수효과: tool_result 이벤트를 self._last_tool_results에 누적해
+        non-streaming 호출 측(이메일 응답·시스템 AI 등)이 evaluator에 전달할 수 있게 한다.
+        """
         final_text = ""
+        self._last_tool_results = []  # 턴 시작 시 초기화
         for event in self.process_message_stream(message, history, images, execute_tool):
             etype = event.get("type")
             if etype == "text":
                 final_text += event.get("content", "")
+            elif etype == "tool_result":
+                # evaluator 노출용 — 결과 텍스트만 보존 (name·is_error는 옵션)
+                _result = event.get("result", "")
+                if _result:
+                    self._last_tool_results.append(_result)
             elif etype == "final":
                 final_text = event.get("content", final_text)
             elif etype == "error":
@@ -272,6 +285,16 @@ class ClaudeCodeProvider(BaseProvider):
             mcp_config_path=mcp_config_path,
             stream=True,
             resume_session_id=resume_session_id,
+        )
+
+        # 진단 — system_prompt(안정 부분, 캐시 prefix)와 message(가변+사용자) 크기.
+        # 안정 부분이 호출마다 동일하면 캐시 hit 가능. dynamic은 message에 prepend됨.
+        _sp_len = len(self.system_prompt or "")
+        _msg_len = len(full_prompt or "")
+        _resumed = "resume" if resume_session_id else "new"
+        print(
+            f"[ClaudeCode/{self.agent_name}] call: session={_resumed} "
+            f"system_prompt={_sp_len}자 message={_msg_len}자"
         )
 
         # 5) 토큰·컨텍스트 env 주입
@@ -390,11 +413,21 @@ class ClaudeCodeProvider(BaseProvider):
                         out.append(({"type": "text", "content": text}, accumulated_text + text))
                         accumulated_text = accumulated_text + text
                 elif btype == "tool_use":
+                    tool_name = block.get("name", "")
+                    tool_input = block.get("input", {})
+                    # episode_logger가 stdout을 캡처 → 회고 자료로 보존
+                    try:
+                        input_repr = json.dumps(tool_input, ensure_ascii=False)
+                    except (TypeError, ValueError):
+                        input_repr = str(tool_input)
+                    if len(input_repr) > 300:
+                        input_repr = input_repr[:300] + "..."
+                    print(f"[ClaudeCode/{self.agent_name}] tool_use {tool_name} {input_repr}")
                     out.append((
                         {
                             "type": "tool_start",
-                            "name": block.get("name", ""),
-                            "input": block.get("input", {}),
+                            "name": tool_name,
+                            "input": tool_input,
                         },
                         None,
                     ))
@@ -441,12 +474,19 @@ class ClaudeCodeProvider(BaseProvider):
                     )
                 else:
                     result_text = str(result_content)
+                is_error = bool(block.get("is_error"))
+                # episode_logger 캡처용 — 결과는 앞부분만
+                result_preview = result_text.replace("\n", " ")
+                if len(result_preview) > 300:
+                    result_preview = result_preview[:300] + "..."
+                err_tag = " (error)" if is_error else ""
+                print(f"[ClaudeCode/{self.agent_name}] tool_result{err_tag} {result_preview}")
                 out.append((
                     {
                         "type": "tool_result",
                         "name": "",  # stream-json의 tool_result에는 name 없음
                         "result": result_text,
-                        "is_error": bool(block.get("is_error")),
+                        "is_error": is_error,
                     },
                     None,
                 ))
@@ -457,7 +497,18 @@ class ClaudeCodeProvider(BaseProvider):
             usage = event.get("usage") or {}
             input_tokens = int(usage.get("input_tokens") or 0)
             output_tokens = int(usage.get("output_tokens") or 0)
+            # 캐시 통계 — 어제 한 prefix 분리 작업의 실효성 측정.
+            # cache_read = 캐시 hit으로 즉시 처리된 input (저렴, 빠름)
+            # cache_create = 새로 캐시에 쓰인 input (write 비용)
+            cache_read = int(usage.get("cache_read_input_tokens") or 0)
+            cache_create = int(usage.get("cache_creation_input_tokens") or 0)
             self.metrics.record_request(latency_ms, input_tokens, output_tokens)
+            err_flag = " (error)" if event.get("is_error") else ""
+            cache_info = f" cache_read={cache_read} cache_create={cache_create}" if (cache_read or cache_create) else ""
+            print(
+                f"[ClaudeCode/{self.agent_name}] result{err_flag} "
+                f"{latency_ms:.0f}ms in={input_tokens} out={output_tokens}{cache_info}"
+            )
 
             if event.get("is_error"):
                 if isinstance(final_text, str) and ("Not logged in" in final_text or "/login" in final_text):
@@ -503,9 +554,17 @@ class ClaudeCodeProvider(BaseProvider):
         # 웹
         "WebSearch", "WebFetch",
         # 인지·작업 관리
-        "TodoWrite", "AskUserQuestion",
+        # AskUserQuestion 제외 — Claude Code 자체 도구는 indiebizOS UI와 연결되지 않아 응답을 받을 수 없음.
+        # 사용자 질문은 indiebizOS의 ask_user_question (IBL [user:ask])을 사용.
+        "TodoWrite",
         # MCP — IBL 브리지
         "mcp__indiebizos__execute_ibl",
+    ]
+
+    # 명시적으로 차단할 도구 — ToolSearch 등을 통해 우회 로드되더라도 호출 거부됨.
+    # AskUserQuestion: indiebizOS UI 미연결, 응답 채널 없음 → 사용자가 답을 못 줘서 모델이 자기 판단으로 진행하는 문제 발생.
+    DISALLOWED_TOOLS = [
+        "AskUserQuestion",
     ]
 
     def _build_command(
@@ -530,6 +589,8 @@ class ClaudeCodeProvider(BaseProvider):
             "--permission-mode", "bypassPermissions",
             # ToolSearch 우회: 자주 쓰는 도구를 eager-load
             "--allowed-tools", ",".join(self.EAGER_TOOLS),
+            # 명시 차단: indiebizOS UI와 연결되지 않은 도구 (AskUserQuestion 등)
+            "--disallowed-tools", ",".join(self.DISALLOWED_TOOLS),
         ]
 
         # stream-json 출력은 verbose 필수

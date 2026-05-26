@@ -183,22 +183,27 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
         # EXECUTE/reflex: 중급 모델로 전환
         original_provider = _switch_to_midtier(runner)
 
-    # 프롬프트 갱신
+    # 프롬프트 갱신 — 안정/가변 분리 (캐시 prefix 보존)
     role = runner._load_role()
+    augmented_message = message
     if consciousness_output or execution_memory or reflex_hint:
         _exec_mem = execution_memory
         if reflex_hint:
             _exec_mem = f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}" if execution_memory else f"[Reflex 매칭] {reflex_hint}"
-        new_prompt = runner._build_system_prompt(role, consciousness_output, _exec_mem)
-        runner.ai.system_prompt = new_prompt
-        runner.ai._provider.system_prompt = new_prompt
+        stable_prompt, dynamic_context = runner._build_system_ai_prompt_split(
+            role, consciousness_output, _exec_mem
+        )
+        runner.ai.system_prompt = stable_prompt
+        runner.ai._provider.system_prompt = stable_prompt
+        if dynamic_context:
+            augmented_message = f"{dynamic_context}\n\n{message}"
 
     # 히스토리 편집
     history = runner._apply_consciousness_to_history(history or [], consciousness_output)
 
     try:
         response = runner.ai.process_message_with_history(
-            message_content=message,
+            message_content=augmented_message,
             history=history,
             images=images
         )
@@ -214,6 +219,8 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
             _goal_cfg = _load_wp_config().get("goal_eval", {})
             if _goal_cfg.get("enabled", True):
                 print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
+                # provider가 누적한 도구 실행 결과를 평가자에 전달
+                tool_results_for_eval = runner.ai.get_last_tool_results()
                 evaluated = runner._run_goal_evaluation_loop(
                     user_message=message,
                     criteria=criteria,
@@ -221,6 +228,7 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
                     history=history,
                     consciousness_output=consciousness_output,
                     max_rounds=_goal_cfg.get("max_rounds", 3),
+                    tool_results=tool_results_for_eval,
                     execution_memory=execution_memory,
                 )
                 if evaluated and evaluated.strip():
@@ -268,15 +276,20 @@ def process_system_ai_message_stream(
         # EXECUTE/reflex: 중급 모델로 전환
         original_provider = _switch_to_midtier(runner)
 
-    # 프롬프트 갱신
+    # 프롬프트 갱신 — 안정/가변 분리 (캐시 prefix 보존)
     role = runner._load_role()
+    augmented_message = message
     if consciousness_output or execution_memory or reflex_hint:
         _exec_mem = execution_memory
         if reflex_hint:
             _exec_mem = f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}" if execution_memory else f"[Reflex 매칭] {reflex_hint}"
-        new_prompt = runner._build_system_prompt(role, consciousness_output, _exec_mem)
-        runner.ai.system_prompt = new_prompt
-        runner.ai._provider.system_prompt = new_prompt
+        stable_prompt, dynamic_context = runner._build_system_ai_prompt_split(
+            role, consciousness_output, _exec_mem
+        )
+        runner.ai.system_prompt = stable_prompt
+        runner.ai._provider.system_prompt = stable_prompt
+        if dynamic_context:
+            augmented_message = f"{dynamic_context}\n\n{message}"
 
     # 히스토리 편집
     history = runner._apply_consciousness_to_history(history or [], consciousness_output)
@@ -289,7 +302,7 @@ def process_system_ai_message_stream(
 
     try:
         yield from runner.ai.process_message_stream(
-            message_content=message,
+            message_content=augmented_message,
             history=history,
             images=images,
             cancel_check=cancel_check

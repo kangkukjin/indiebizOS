@@ -923,8 +923,9 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     # --- files 파라미터: $file:N 참조 정보 보관 (파싱 후 치환) ---
     files = tool_input.get("files")
 
-    # 디버그
-    print(f"[IBL_DEBUG] code={code[:100]}")
+    # 디버그 — 잘림 한도를 500자로 늘림. 8개 병렬 호출 같은 긴 IBL 코드도 회고 가능.
+    _c = code if len(code) <= 500 else code[:500] + f"... [trunc, total={len(code)}]"
+    print(f"[IBL_DEBUG] code={_c}")
 
     # --- 실패 카운터 체크: 같은 액션이 연속 N번 실패하면 차단 ---
     # 단일 액션만 체크 (파이프라인/병렬은 개별 액션이 아니라 통과)

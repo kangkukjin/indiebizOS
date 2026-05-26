@@ -280,6 +280,7 @@ async def handle_chat_message(client_id: str, data: dict):
     agent_name = data.get("agent_name", "")
     project_id = data.get("project_id", "")
     images = data.get("images", [])
+    action_hint = data.get("action_hint")  # 마법책 선택 액션 (예: "sense:price")
     message = _process_documents(data.get("documents", []), message)
 
     try:
@@ -377,7 +378,7 @@ async def handle_chat_message(client_id: str, data: dict):
         set_current_task_id(task_id)
 
         # 실행기억 생성 (RAG + discover + implementation, 1회)
-        execution_memory, _ts, _tc = runner._build_execution_memory(message)
+        execution_memory, _ts, _tc = runner._build_execution_memory(message, action_hint=action_hint)
 
         # 의식 에이전트 실행 — 메타 판단
         consciousness_output = runner._run_consciousness(
@@ -450,6 +451,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     agent_name = data.get("agent_name", "")
     project_id = data.get("project_id", "")
     images = data.get("images", [])
+    action_hint = data.get("action_hint")  # 마법책 선택 액션 (예: "sense:price")
     message = _process_documents(data.get("documents", []), message)
 
     # 에피소드 로그 시작
@@ -537,7 +539,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         db.save_message(user_id, target_agent_id, message, images=images if images else None)
 
         # 연상 단계 — 해마+심층메모리, 검색 1회로 점수/코드까지 확보
-        execution_memory, _hippocampus_score, _top_code = runner._build_execution_memory(message)
+        execution_memory, _hippocampus_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
 
         # Reflex 분기 — 해마 점수가 임계값 이상이면 무의식 호출 스킵
         if _hippocampus_score >= runner.REFLEX_SCORE_THRESHOLD and _top_code:
@@ -1003,6 +1005,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
     """
     message = data.get("message", "")
     images = data.get("images", [])
+    action_hint = data.get("action_hint")  # 마법책 선택 액션 (예: "sense:price")
     message = _process_documents(data.get("documents", []), message)
 
     # 에피소드 로그 시작
@@ -1099,7 +1102,8 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     message=message,
                     history=history,
                     images=images if images else None,
-                    cancel_check=lambda: is_cancelled(client_id)  # 중단 체크 함수 전달
+                    cancel_check=lambda: is_cancelled(client_id),  # 중단 체크 함수 전달
+                    action_hint=action_hint
                 ):
                     # 중단 요청 시 루프 탈출
                     if is_cancelled(client_id):

@@ -24,7 +24,7 @@
 
 ### 우선 활용 지침
 - **`<related_memory>`**: 이 에이전트의 심층 메모리에서 의미적으로 연상된 항목들. "내 ~", "지난번 ~", "방금 ~" 같이 **사용자만 아는 정보**를 요구할 때 먼저 참조하고, 답이 있으면 묻지 않고 활용한다. 시점·맥락이 의심스러우면 그때만 확인.
-- **`<execution_memory>`**: 과거 IBL 코드 사례(`<ibl_references>`)와 그 액션의 구현(`<implementations>`). self_awareness에 도구의 능력·한계를 적을 때 근거 자료.
+- **`<execution_memory>`**: 과거 IBL 코드 사례(`<ibl_references>`)와 그 액션의 구현(`<implementations>`). self_awareness에 도구의 능력·한계를 적을 때 근거 자료. **`<user_selected_action>` 블록이 들어있으면 사용자가 마법책에서 그 액션을 명시적으로 선택한 것이다. 이때는 capability_focus.highlight_actions에 그 액션을 1순위로 두고, task_framing을 그 액션 중심으로 정의한다. 사용자 메시지가 액션 사용을 직접 요구하지 않더라도(예: "이거 어때?", 또는 빈 메시지에 가까운 경우) 사용자가 *그 액션으로 무엇을 알거나 하려는지*를 추측해 프레이밍한다.**
 - **`<world_pulse>`**: 사용자·시스템·경제·날씨 등 환경 정보. task_framing/world_state가 영향을 받을 때만 인용.
 - **`<history>`**: "그거", "아까" 같은 지시가 있을 때 맥락 복원에 사용.
 

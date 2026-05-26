@@ -265,27 +265,41 @@ class AgentCognitiveMixin:
             execution_memory=execution_memory,
         )
 
-    def _build_execution_memory(self, user_message: str) -> tuple:
+    def _build_execution_memory(self, user_message: str, action_hint: Optional[str] = None) -> tuple:
         """연상기억 생성 — 실행기억(해마) + 관련기억(심층 메모리)
 
         파이프라인의 모든 에이전트(무의식/의식/실행/평가)가 공유하는 통합 기억.
         사용자 명령 당 해마 검색은 단 1회. 호출 측은 반환된 top_score를 그대로 사용하여
         Reflex 분기, 경험 증류 판정 등에서 추가 검색을 피한다.
 
+        Args:
+            user_message: 사용자 명령
+            action_hint: 마법책에서 사용자가 명시적으로 선택한 액션 ID ("sense:price" 등).
+                지정되면 해마 시맨틱 검색을 건너뛰고 그 액션을 Top-1로 <execution_memory> 합성.
+                잘못된 액션 ID면 자동으로 해마 검색으로 폴백.
+
         Returns:
             (xml: str, top_score: float, top_code: str)
             - xml: <execution_memory> + <related_memory> 결합된 문자열 (없으면 "")
-            - top_score: 해마 최고 점수 (없으면 0.0)
-            - top_code: 해마 최고 점수 항목의 ibl_code (없으면 "")
+            - top_score: 해마 최고 점수 (action_hint 적용 시 1.0)
+            - top_code: 해마 최고 점수 항목의 ibl_code (action_hint 적용 시 "[node:action]")
         """
         try:
-            from ibl_usage_rag import build_execution_memory
-            allowed_nodes = self.config.get("allowed_nodes")
-            allowed_set = None
-            if allowed_nodes:
-                from ibl_access import resolve_allowed_nodes
-                allowed_set = resolve_allowed_nodes(allowed_nodes)
-            exec_xml, top_score, top_code = build_execution_memory(user_message, allowed_set)
+            exec_xml, top_score, top_code = ("", 0.0, "")
+            if action_hint:
+                from ibl_usage_rag import build_execution_memory_from_hint
+                exec_xml, top_score, top_code = build_execution_memory_from_hint(action_hint)
+                if not exec_xml:
+                    print(f"[연상] action_hint='{action_hint}' 유효하지 않음 — 해마 검색으로 폴백")
+
+            if not exec_xml:
+                from ibl_usage_rag import build_execution_memory
+                allowed_nodes = self.config.get("allowed_nodes")
+                allowed_set = None
+                if allowed_nodes:
+                    from ibl_access import resolve_allowed_nodes
+                    allowed_set = resolve_allowed_nodes(allowed_nodes)
+                exec_xml, top_score, top_code = build_execution_memory(user_message, allowed_set)
 
             # 심층 메모리에서 관련기억 검색 → 연상기억 합성
             related = self._search_related_memory(user_message)

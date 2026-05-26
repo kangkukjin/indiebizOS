@@ -1,7 +1,7 @@
 /**
  * 채팅 입력 영역 (파일 첨부, 카메라, 드래그앤드롭)
  */
-import { Send, StopCircle, Paperclip, Camera, FileText, File as FileIcon, X, Square } from 'lucide-react';
+import { Send, StopCircle, Paperclip, Camera, FileText, File as FileIcon, X, Square, BookOpen } from 'lucide-react';
 import type { ImageAttachment, TextAttachment, DocumentAttachment } from './types';
 
 interface ChatInputAreaProps {
@@ -26,6 +26,8 @@ interface ChatInputAreaProps {
   onRemoveTextFile: (index: number) => void;
   onRemoveDocument: (index: number) => void;
   onCameraClick: () => void;
+  selectedAction?: string | null;  // 마법책에서 선택한 액션 ID ("sense:price" 등)
+  onClearAction?: () => void;  // 선택 칩의 × 버튼
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
   placeholder?: string;
@@ -54,6 +56,8 @@ export function ChatInputArea({
   onRemoveTextFile,
   onRemoveDocument,
   onCameraClick,
+  selectedAction = null,
+  onClearAction,
   fileInputRef,
   inputRef,
   placeholder = '메시지를 입력하세요... (파일 드래그/붙여넣기 가능)',
@@ -133,6 +137,26 @@ export function ChatInputArea({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
+      {/* 마법책에서 선택한 액션 — 다음 메시지에 action_hint로 전달됨 */}
+      {selectedAction && (
+        <div className="flex items-center gap-2 mb-3">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-[#FEF3C7] border border-[#D97706] rounded-lg">
+            <BookOpen size={14} className="text-[#92400E]" />
+            <span className="text-xs font-mono text-[#92400E]">[{selectedAction}]</span>
+            <span className="text-[10px] text-[#A09080] ml-1">선택됨</span>
+            {onClearAction && (
+              <button
+                onClick={onClearAction}
+                className="ml-1 text-[#A09080] hover:text-[#92400E] transition-colors"
+                title="선택 해제"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 첨부된 이미지 미리보기 */}
       {attachedImages.length > 0 && (
         <div className="flex gap-2 mb-3 flex-wrap">

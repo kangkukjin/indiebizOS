@@ -13,7 +13,7 @@ widget:
   sentences:
   - '[sense:collect_sites]'
   - CCTV 소스 뭐가 있어
-  - '[self:search_memory]'
+  - '[self:memory_search]'
 - source_sentence: 김철수가 누구야
   sentences:
   - 이거 클릭해

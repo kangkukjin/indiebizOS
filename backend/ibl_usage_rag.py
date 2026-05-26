@@ -244,6 +244,74 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
     return (result, top_score, top_code)
 
 
+def build_execution_memory_from_hint(action_hint: str) -> tuple:
+    """사용자가 마법책에서 명시적으로 선택한 액션을 Top-1로 <execution_memory> 합성.
+
+    해마 시맨틱 검색을 건너뛰고, ibl_nodes.yaml에서 해당 액션의 메타와 implementation을
+    직접 조회하여 의식 에이전트가 그 액션 중심으로 task_framing/capability_focus를 짤 수 있게 한다.
+
+    Args:
+        action_hint: "sense:price" 같은 [node:action] 형태의 액션 ID
+
+    Returns:
+        (xml, top_score, top_code)
+        - 유효한 액션: 합성된 <execution_memory> XML, top_score=1.0, top_code="[node:action]"
+        - 유효하지 않으면: ("", 0.0, "") — 호출 측에서 해마 검색으로 폴백 가능
+    """
+    if not action_hint or ":" not in action_hint:
+        return ("", 0.0, "")
+
+    node, action = action_hint.split(":", 1)
+    node = node.strip()
+    action = action.strip()
+    if not node or not action:
+        return ("", 0.0, "")
+
+    try:
+        from ibl_access import _load_nodes_data
+        data = _load_nodes_data()
+        action_config = (
+            (data.get("nodes") or {}).get(node, {}).get("actions", {}).get(action, {})
+        )
+    except Exception:
+        return ("", 0.0, "")
+
+    if not action_config:
+        return ("", 0.0, "")
+
+    def _esc(s: str) -> str:
+        return (s or "").replace('"', '&quot;')
+
+    action_id = f"[{node}:{action}]"
+    description = _esc(action_config.get("description", ""))
+    target_description = _esc(action_config.get("target_description", ""))
+    target_key = action_config.get("target_key", "")
+    implementation = _esc(action_config.get("implementation", ""))
+
+    sections = [
+        f'  <user_selected_action action="{action_id}" '
+        f'description="{description}" '
+        f'target_description="{target_description}" '
+        f'target_key="{target_key}"/>'
+    ]
+    if implementation:
+        sections.append(
+            '  <implementations note="구현 상세">\n'
+            f'    <impl action="{action_id}" implementation="{implementation}"/>\n'
+            '  </implementations>'
+        )
+
+    inner = "\n".join(sections)
+    xml = (
+        '<execution_memory note="사용자가 마법책에서 명시적으로 선택한 액션. 해마 검색 결과 대신 이 액션이 Top-1.">\n'
+        f'{inner}\n'
+        '</execution_memory>'
+    )
+
+    print(f"[연상:실행기억] 사용자 선택 액션 주입: {action_id}")
+    return (xml, 1.0, action_id)
+
+
 def _extract_implementations_from_refs(refs_xml: str) -> str:
     """해마 코드 사례에서 [node:action] 패턴을 추출하여 implementation을 조회한다."""
     if not refs_xml:

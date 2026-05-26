@@ -1,5 +1,16 @@
 node: engines
 actions:
+  chart:
+    description: 차트 종류 자동 분기 — chart_type으로 line/bar/pie/scatter/heatmap/candlestick/multi 선택.
+    group: chart
+    router: handler
+    tool: chart
+    implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. 개별 차트 액션(line, bar, pie 등)으로도 직접 호출 가능
+    target_key: title
+    keywords:
+    - 차트
+    - 그래프
+    - 시각화
   line:
     description: 라인 차트
     group: chart

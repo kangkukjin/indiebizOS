@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, User, Loader2, X, RefreshCw, History, ArrowLeft, RotateCw } from 'lucide-react';
+import { Bot, User, Loader2, X, RefreshCw, History, ArrowLeft, RotateCw, BookOpen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cancelAllAgents, api } from '../../lib/api';
@@ -24,6 +24,7 @@ import {
   TodoPanel,
   MessageContent,
   ChatInputArea,
+  ActionGrimoire,
   QuestionPanel,
   PlanModePanel,
 } from './index';
@@ -91,6 +92,11 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [questionStatus, setQuestionStatus] = useState<'none' | 'pending' | 'answered'>('none');
   const [planMode, setPlanMode] = useState<PlanModeState>({ active: false, phase: null });
+
+  // 마법책 (IBL 액션 사전) 모달
+  const [grimoireOpen, setGrimoireOpen] = useState(false);
+  // 마법책에서 선택한 액션 — 다음 메시지 전송 시 action_hint로 전달, 전송 후 자동 초기화
+  const [selectedAction, setSelectedAction] = useState<string | null>(null);
 
   // 다이얼로그 히스토리
   const [showHistory, setShowHistory] = useState(false);
@@ -618,6 +624,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         project_id: projectId,
         images: imageData.length > 0 ? imageData : undefined,
         documents: documentData.length > 0 ? documentData : undefined,
+        action_hint: selectedAction || undefined,
       }));
     } else {
       ws.send(JSON.stringify({
@@ -625,11 +632,13 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         message: messageContent,
         images: imageData.length > 0 ? imageData : undefined,
         documents: documentData.length > 0 ? documentData : undefined,
+        action_hint: selectedAction || undefined,
       }));
     }
 
     setInput('');
     fileAttachments.clearAttachments();
+    setSelectedAction(null);  // 전송 후 마법책 선택 자동 초기화
     inputRef.current?.focus();
   };
 
@@ -749,6 +758,14 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           </div>
         </div>
         <div className={`flex items-center gap-2${isDialog ? '' : ' no-drag'}`}>
+          {/* 마법책 — IBL 액션 사전 */}
+          <button
+            onClick={() => setGrimoireOpen(true)}
+            className={`p-1.5 rounded-lg transition-colors ${isDialog ? 'hover:bg-amber-50 text-amber-600' : 'hover:bg-[#FFE9B8] text-[#92400E]'}`}
+            title="마법책 — IBL 액션 사전"
+          >
+            <BookOpen size={16} />
+          </button>
           {/* Claude Code 세션 재시작 (Claude Code provider일 때만) */}
           {showResetSessionButton && (
             <button onClick={handleResetSession} className={`p-1.5 rounded-lg transition-colors ${isDialog ? 'hover:bg-gray-200' : 'hover:bg-[#DDD5C8]'}`} title="Claude Code 새 세션 시작 (누적 컨텍스트 끊기)">
@@ -898,6 +915,8 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         onRemoveTextFile={fileAttachments.removeTextFile}
         onRemoveDocument={fileAttachments.removeDocument}
         onCameraClick={() => fileAttachments.setIsCameraOpen(true)}
+        selectedAction={selectedAction}
+        onClearAction={() => setSelectedAction(null)}
         fileInputRef={fileAttachments.fileInputRef}
         inputRef={inputRef}
         placeholder={isAgent ? `${agentLabel}에게 메시지 보내기... (파일 드래그/붙여넣기 가능)` : '메시지를 입력하세요... (파일 드래그/붙여넣기 가능)'}
@@ -906,6 +925,16 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       />
 
       </div>{/* 메시지+입력 래퍼 닫기 */}
+
+      {/* 마법책 (IBL 액션 사전) 모달 */}
+      <ActionGrimoire
+        open={grimoireOpen}
+        onClose={() => setGrimoireOpen(false)}
+        onSelect={(actionId) => {
+          // 같은 액션을 다시 누르면 해제, 아니면 선택
+          setSelectedAction((prev) => (prev === actionId ? null : actionId));
+        }}
+      />
 
       {/* 카메라 */}
       <CameraPreview

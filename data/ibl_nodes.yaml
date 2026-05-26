@@ -26,7 +26,7 @@ meta:
     - 'WRONG: [sense:price]("AAPL")  # (target) 문법은 폐지됨! {params}를 사용할 것'
     - 'RIGHT: [self:time]  # 직접 액션명 사용'
     - 'RIGHT: [sense:price]{symbol: "AAPL"}  # 모든 값은 named parameter'
-    note: action-categories는 참고용 분류. 항상 구체적 액션명을 사용하라. (target) 문법은 에러 발생함.
+    note: 항상 구체적 액션명을 사용하라. (target) 문법은 에러 발생함.
   - section: 'params — 모든 값은 {key: val} 형태의 named parameter'
     examples:
     - 'RIGHT: [sense:kr_investor]{symbol: "STK", start_date: "2026-02-01"}'
@@ -62,8 +62,7 @@ meta:
   principles:
   - 'IBL 코드를 execute_ibl의 code 파라미터로 전달. 예: execute_ibl(code=''[sense:price]{symbol:
     "AAPL"}'')'
-  - 구체적 액션명을 직접 지정 (time, price, play 등). action-categories의 이름(get, run 등)은 쓰지 말
-    것.
+  - 구체적 액션명을 직접 지정 (time, price, play 등). 일반 동사(get, run 등)는 액션명이 아니므로 쓰지 말 것.
   - '[self:discover]{query: "키워드"} — 어떤 액션을 쓸지 모를 때 사용.'
   - '모든 값은 {key: val} 형태의 named parameter. (target) 문법은 폐지됨 — 사용 시 에러 발생.'
   - '전문 데이터 액션이 있으면 파일 직접 탐색([self:list]+[self:read])보다 반드시 우선 사용. 예: 건강기록→[self:health_query],
@@ -77,6 +76,7 @@ nodes:
       price:
         description: '현재 시세 빠른 조회 (한국: 005930, 미국: AAPL, ETF: SPY, 원자재: GC=F). 간단
           시세 확인용. 기간별 이력은 kr_price(한국) 또는 us_price(미국) 사용.'
+        group: finance
         target_description: 종목 코드/티커 (자동으로 시장 판별)
         router: handler
         tool: yf_stock_price
@@ -84,9 +84,9 @@ nodes:
           사용.
         target_key: symbol
       stock_info:
-        description: 종목 상세 정보 (시가총액, 52주 최고/최저 등)
-        group: investment
-        category: get
+        description: 종목 메타 정보 — 시가총액, 52주 최고/최저, PER, 배당 등. 시세는 price, 재무는 kr_financial.
+        target_description: 종목 코드/티커 (한국 6자리, 미국 알파벳).
+        group: finance
         router: handler
         tool: yf_stock_info
         implementation: Yahoo Finance yfinance로 종목 메타데이터 조회
@@ -96,14 +96,16 @@ nodes:
         - 주식정보
         - 시가총액
       search_stock:
-        description: 종목 심볼 검색 (이름으로 코드 찾기)
-        target_description: 회사명 또는 키워드
+        description: 회사명·키워드로 종목 심볼 검색. 종목 코드를 모를 때 첫 단계.
+        group: finance
+        target_description: 회사명 또는 키워드 (예 '삼성전자', 'apple').
         router: handler
         tool: yf_search_stock
         implementation: Yahoo Finance yfinance 심볼 검색
         target_key: query
       kr_company:
         description: '한국 기업 정보 (DART: 대표자, 업종, 주소, IR)'
+        group: finance
         target_description: 기업명 또는 DART 코드
         router: handler
         tool: kr_company_info
@@ -111,6 +113,7 @@ nodes:
         target_key: corp_name
       us_company:
         description: '미국 기업 프로필 (FMP: CEO, 시총, 섹터, 설명)'
+        group: finance
         target_description: 티커 (AAPL, MSFT 등)
         router: handler
         tool: us_company_profile
@@ -118,6 +121,7 @@ nodes:
         target_key: symbol
       kr_financial:
         description: '한국 재무제표 (DART: 재무상태표, 손익계산서, 현금흐름표)'
+        group: finance
         target_description: 기업명 또는 DART 코드
         router: handler
         tool: kr_financial_statements
@@ -125,6 +129,7 @@ nodes:
         target_key: corp_name
       us_financial:
         description: '미국 재무제표 (FMP: income, balance, cashflow)'
+        group: finance
         target_description: 티커 (AAPL 등)
         router: handler
         tool: us_financial_statements
@@ -132,6 +137,7 @@ nodes:
         target_key: symbol
       kr_disclosure:
         description: '한국 공시 검색 (DART: 정기공시, 대량보유, 거래소공시)'
+        group: finance
         target_description: 기업명 또는 DART 코드
         router: handler
         tool: kr_disclosures
@@ -139,15 +145,16 @@ nodes:
         target_key: corp_name
       us_filing:
         description: 미국 SEC 공시 검색 (10-K, 10-Q, 8-K, DEF 14A)
+        group: finance
         target_description: 티커
         router: handler
         tool: us_sec_filings
         implementation: SEC Edgar 공개 API로 미국 공시 문서 검색
         target_key: symbol
       news:
-        description: 종목 관련 뉴스 (Finnhub)
-        group: investment
-        category: get
+        description: 특정 종목 관련 뉴스 (Finnhub). 일반 뉴스는 search_news, 종목명 키워드는 company_news.
+        target_description: 종목 티커 (AAPL, MSFT 등). 한국 종목은 6자리 코드.
+        group: finance
         router: handler
         tool: company_news
         implementation: Finnhub 무료 API로 영문 종목 뉴스 조회
@@ -159,6 +166,7 @@ nodes:
         - Finnhub
       earnings:
         description: '실적 발표 일정 (Finnhub: EPS/매출 예상 vs 실적)'
+        group: finance
         target_description: 티커 (선택, 비우면 전체 시장)
         router: handler
         tool: earnings_calendar
@@ -166,6 +174,7 @@ nodes:
         target_key: symbol
       crypto:
         description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
+        group: finance
         target_description: 코인 심볼 (BTC, ETH, SOL 등)
         router: handler
         tool: crypto_price
@@ -174,6 +183,7 @@ nodes:
       kr_price:
         description: 한국 주가 기간별 이력 (KRX). start_date/end_date로 기간 지정 가능. 현재 시세만 필요하면
           price 사용.
+        group: finance
         target_description: 종목 코드 또는 기업명
         router: handler
         tool: kr_stock_price
@@ -183,6 +193,7 @@ nodes:
       us_price:
         description: 미국 주가 기간별 이력 (FMP). start_date/end_date로 기간 지정 가능. 현재 시세만 필요하면
           price 사용.
+        group: finance
         target_description: 티커
         router: handler
         tool: us_stock_price
@@ -190,6 +201,7 @@ nodes:
         target_key: symbol
       kr_investor:
         description: 한국 시장 투자자별 매매동향 (외국인/기관/개인 순매수, 코스피/코스닥)
+        group: finance
         target_description: 시장 구분 (STK=코스피, KSQ=코스닥, ALL=전체)
         router: handler
         tool: kr_market_investor_trading
@@ -197,6 +209,7 @@ nodes:
         target_key: market
       kr_stock_investor:
         description: 개별종목 투자자별 매매동향 (외국인/기관/개인 순매수)
+        group: finance
         target_description: 종목 코드 또는 기업명
         router: handler
         tool: kr_stock_investor_trading
@@ -204,14 +217,16 @@ nodes:
         target_key: symbol
       performance:
         description: 공연 검색 (KOPIS - 연극, 뮤지컬, 음악회 등)
+        group: culture
         target_description: 검색 키워드
         router: handler
         tool: kopis_quick_search
         implementation: KOPIS(한국공연예술센터) 공개 API로 공연 검색 (XML 파싱)
         target_key: keyword
       venue:
-        description: 공연장/시설 검색
-        target_description: 공연장명
+        description: 한국 문화시설(공연장·전시장) 검색. 공연 일정은 performance, 전시는 exhibit.
+        group: culture
+        target_description: 공연장 이름 또는 키워드 (예 '예술의전당'). KOPIS DB의 한국 시설.
         router: handler
         tool: kopis_search_facilities
         implementation: KOPIS API로 공연장/시설 검색
@@ -219,62 +234,76 @@ nodes:
       book:
         description: 한국 도서 검색 (도서관정보나루). 국내 도서관 소장/대출 정보 포함. 글로벌 도서는 sense:search_books(Google
           Books) 사용.
+        group: culture
         target_description: 검색어 (제목/저자/출판사)
         router: handler
         tool: library_quick_search
         implementation: 도서관정보나루 공개 API로 한국 도서 검색 (소장 도서관, 대출 통계 포함)
         target_key: keyword
       book_detail:
-        description: 도서 상세 정보 (대출 통계 포함)
-        target_description: ISBN13
+        description: 한국 도서 상세 정보 (대출 통계 포함). 검색은 book, ISBN 직접 조회는 book_by_isbn.
+        group: culture
+        target_description: 도서 ISBN13 (book 검색 결과의 isbn13 필드).
         router: handler
         tool: library_get_book_detail
         implementation: 도서관정보나루 API로 도서 상세 + 대출 통계 조회
         target_key: isbn13
       exhibit:
-        description: 전시/문화행사 검색 (KCISA - 박물관, 미술관)
-        target_description: 검색어
+        description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.
+        group: culture
+        target_description: 검색어 또는 키워드 (예 '국립중앙박물관', '미디어아트').
         router: handler
         tool: kcisa_quick_search
         implementation: 한국문화정보원(KCISA) API로 전시/문화행사 검색
         target_key: keyword
       genres:
-        description: 공연 장르 코드 목록 조회
+        description: KOPIS 공연 장르 코드 목록. performance 검색 시 장르 필터링용.
+        group: culture
+        target_description: '(파라미터 없음 — 전체 장르 코드 반환)'
         router: handler
         tool: kopis_get_genres
         implementation: KOPIS API로 장르 코드 목록 조회
       performance_regions:
-        description: 공연 지역 코드 목록 조회
+        description: KOPIS 공연 지역 코드 목록. performance 검색 시 지역 필터링용.
+        group: culture
+        target_description: '(파라미터 없음 — 전체 지역 코드 반환)'
         router: handler
         tool: kopis_get_regions
         implementation: KOPIS API로 지역 코드 목록 조회
       book_by_isbn:
-        description: ISBN으로 도서 조회 (10자리/13자리)
-        target_description: ISBN
+        description: ISBN으로 도서 조회 (10자리/13자리). 한국 도서관정보나루 기준, 상세는 book_detail.
+        group: culture
+        target_description: 도서 ISBN (10자리 또는 13자리, 하이픈 무관).
         router: handler
         tool: library_get_book_by_isbn
         implementation: 도서관정보나루 API로 ISBN 기반 도서 조회
         target_key: isbn
       kdc:
-        description: KDC(한국십진분류) 주제분류코드 목록
+        description: KDC(한국십진분류) 주제분류 코드 목록. 도서관 도서 분류 기준.
+        group: culture
+        target_description: '(파라미터 없음 — 전체 KDC 코드 반환)'
         router: handler
         tool: library_get_kdc
         implementation: 도서관정보나루 API로 KDC 분류코드 조회
       recommended_books:
-        description: 특정 도서 기반 추천도서 (마니아/다독자 추천)
-        target_description: 기준 도서 ISBN13
+        description: 특정 도서 기반 추천도서 — 마니아·다독자 패턴 추천. 도서관정보나루 데이터.
+        group: culture
+        target_description: 기준 도서의 ISBN13.
         router: handler
         tool: library_get_recommended_books
         implementation: 도서관정보나루 API로 추천도서 조회
         target_key: isbn13
       library_regions:
-        description: 도서관 정보나루 지역코드 목록
+        description: 한국 도서관정보나루 지역 코드 목록. 도서관 위치별 데이터 필터링용.
+        group: culture
+        target_description: '(파라미터 없음 — 전체 지역 코드 반환)'
         router: handler
         tool: library_get_regions
         implementation: 도서관정보나루 API로 지역코드 목록 조회
       search_openalex:
         description: 범용 학술 논문 검색 (OpenAlex). 분야 무관 논문 검색의 기본 선택. 웹 검색(sense:search_ddg)과
           별도로, 논문만 집중적으로 많이 가져올 때 사용.
+        group: research
         target_description: 검색 쿼리
         router: handler
         tool: search_openalex
@@ -284,14 +313,16 @@ nodes:
       search_arxiv:
         description: AI/CS/물리/수학 프리프린트 검색 (arXiv). 최신 미출판 연구, PDF 다운로드 가능. 정식 출판 논문은
           search_openalex 사용.
+        group: research
         target_description: 검색 쿼리
         router: handler
         tool: search_arxiv
         implementation: arxiv-py 라이브러리로 프리프린트 논문 검색. download_arxiv로 PDF 다운로드 가능.
         target_key: query
       download_arxiv:
-        description: arXiv 논문 PDF 다운로드
-        target_description: 'arXiv ID (예: 2301.07041)'
+        description: arXiv 논문 PDF 다운로드. 검색은 search_arxiv.
+        group: research
+        target_description: 'arXiv 논문 ID (예 2301.07041).'
         router: handler
         tool: download_arxiv_pdf
         implementation: arXiv 서버에서 논문 PDF 직접 다운로드
@@ -299,6 +330,7 @@ nodes:
       search_semantic:
         description: AI/ML 논문 심층 검색 (Semantic Scholar). 인용 그래프·관련 논문 추적 가능. arXiv보다
           정식 출판 논문 포함, AI 분야 논문 간 관계 탐색에 적합.
+        group: research
         target_description: 검색 쿼리
         router: handler
         tool: search_semantic_scholar
@@ -307,6 +339,7 @@ nodes:
       search_scholar:
         description: Google Scholar 학술 검색. 커버리지 가장 넓음 (모든 분야, 비영어 논문 포함). 단, 비공식 크롤링이라
           불안정할 수 있음. 다른 소스에서 못 찾을 때 보조적으로 사용.
+        group: research
         target_description: 검색 쿼리
         router: handler
         tool: search_google_scholar
@@ -316,14 +349,16 @@ nodes:
       search_pubmed:
         description: 생의학/의학 논문 전용 (PubMed). 의학·약학·생명과학 주제에만 사용. 다른 분야는 search_openalex
           사용.
+        group: research
         target_description: 검색 쿼리
         router: handler
         tool: search_pubmed
         implementation: PubMed 공개 API로 생의학 논문 검색 (feedparser). 의학/생명과학 분야 전용.
         target_key: query
       download_pubmed:
-        description: PubMed Central 논문 PDF 다운로드
-        target_description: PMC ID
+        description: PubMed Central 논문 PDF 다운로드. 검색은 search_pubmed.
+        group: research
+        target_description: 'PMC ID (예 PMC1234567).'
         router: handler
         tool: download_pubmed_pdf
         implementation: PubMed Central에서 오픈액세스 논문 PDF 다운로드
@@ -331,13 +366,16 @@ nodes:
       pew_research:
         description: Pew Research 최신 여론조사/리서치 보고서 목록. 미국 사회·정치·기술 트렌드 조사. 파라미터 없이
           호출하면 최신 리서치 목록 반환.
+        group: research
+        target_description: '(파라미터 없음 — 최신 리서치 목록 반환). topic 옵션으로 주제 필터링 가능.'
         router: handler
         tool: fetch_pew_research
         implementation: Pew Research RSS 피드 파싱 (feedparser). 입력 파라미터 없이 최신 리서치 목록
           반환.
       search_guardian:
-        description: Guardian 뉴스 아카이브 검색
-        target_description: 검색 쿼리
+        description: Guardian 신문 아카이브 검색. 영국·국제 기사 위주, 영어 검색.
+        group: research
+        target_description: 검색어 또는 키워드 (영어).
         router: handler
         tool: search_guardian
         implementation: Guardian Open Platform API로 뉴스 아카이브 검색 (API키 필요)
@@ -346,8 +384,9 @@ nodes:
           type: compress
           prompt: 같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라.
       world_bank:
-        description: 세계은행 경제/사회 지표 데이터
-        target_description: '지표 코드 (예: NY.GDP.MKTP.CD)'
+        description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용.
+        group: world
+        target_description: '지표 코드 (예 NY.GDP.MKTP.CD=GDP, SP.POP.TOTL=인구). country로 국가 지정.'
         router: handler
         tool: fetch_world_bank_data
         implementation: 세계은행 공개 API로 국가별 경제/사회 지표 시계열 조회
@@ -355,6 +394,7 @@ nodes:
       search_books:
         description: 글로벌 도서 검색 (Google Books). 해외 도서·원서 포함. 한국 도서관 소장/대출 정보는 sense:book(도서관정보나루)
           사용.
+        group: culture
         target_description: 검색 쿼리
         router: handler
         tool: search_books
@@ -362,6 +402,7 @@ nodes:
         target_key: query
       search_shopping:
         description: 상품 검색 및 가격 비교 (네이버+다나와+중고나라+번개장터)
+        group: research
         target_description: 상품명
         router: handler
         tool: search_shopping
@@ -372,6 +413,7 @@ nodes:
       weather:
         description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat:
           37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
+        group: places
         target_description: 도시명 또는 좌표
         router: handler
         tool: get_weather
@@ -379,6 +421,7 @@ nodes:
       restaurant:
         description: 맛집/음식점 공식 검색 (카카오+네이버 API). 가게 이름·주소·전화·평점 등 공식 DB 기반. 주민 후기/커뮤니티
           의견은 sense:search_local 사용.
+        group: places
         target_description: 검색어 (강남 파스타 등)
         router: handler
         tool: search_restaurants
@@ -386,8 +429,9 @@ nodes:
           주소, 평점)
         target_key: query
       navigate_route:
-        description: 자동차 길찾기 (카카오 내비)
-        group: location
+        description: 카카오 내비 자동차 길찾기. 거리·시간·톨비 반환. 지도 표시는 map.
+        target_description: 목적지 (장소명 또는 '경도,위도'). origin 옵션으로 출발지 지정.
+        group: places
         router: handler
         tool: kakao_navigation
         implementation: Kakao Map API로 자동차 경로 탐색 (거리/시간/톨비)
@@ -397,26 +441,17 @@ nodes:
         - 내비
         - 경로
         - 네비게이션
-      map:
-        description: 지도에 위치 표시
-        group: location
-        category: get
-        router: handler
-        tool: show_location_map
-        implementation: Kakao Map API로 좌표 기반 지도 HTML 생성
-        target_key: query
-        keywords:
-        - 지도
-        - 위치
-        - 좌표
       reverse_geocode:
         description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
+        group: places
+        target_description: 위도(lat)와 경도(lng) 두 파라미터. 결과는 시/도/구/동까지 분해.
         router: handler
         tool: reverse_geocode
         implementation: Kakao Map API로 GPS 좌표→주소 변환
       travel:
-        description: 여행 검색 - 항공, 호텔, 관광지 (Amadeus)
-        target_description: 검색 엔드포인트 (flight-offers, hotel-list 등)
+        description: 여행 정보 검색 (Amadeus) — 항공·호텔·관광지. 글로벌 데이터.
+        group: culture
+        target_description: endpoint로 종류 선택 (flight-offers/hotel-list/points-of-interest 등). 추가 파라미터는 endpoint별로 다름.
         router: handler
         tool: amadeus_travel_search
         implementation: Amadeus API(OAuth2)로 항공/호텔/관광지 검색
@@ -426,36 +461,18 @@ nodes:
       search_local:
         description: 지역 커뮤니티(네이버 카페) 검색. 동네 주민들의 후기·추천·정보 수집용. 가게/음식점 공식 검색은 sense:restaurant(카카오+네이버
           API) 사용.
+        group: research
         target_description: 검색어
         router: handler
         tool: local_search
         implementation: Naver Cafe API로 지역 커뮤니티 글 검색 (주민 후기, 추천, 지역 정보). 공식 가게 DB
           검색이 아닌 커뮤니티 의견 수집.
         target_key: query
-      nearby:
-        description: 좌표 근처 CCTV 찾기 (lat/lng 필수, 모르면 cctv_search 사용)
-        group: cctv
-        router: handler
-        tool: get_nearby_cctv
-        implementation: 국토부 ITS CCTV 공개 API로 좌표 근처 CCTV 검색
-        keywords:
-        - CCTV
-        - 근처
-        - 주변
-      cctv_open:
-        description: CCTV 실시간 영상을 브라우저에서 열기
-        group: cctv
-        router: handler
-        tool: open_cctv
-        implementation: CCTV HLS/RTSP 스트림 URL을 브라우저에서 재생
-        target_key: name
-        keywords:
-        - CCTV
-        - 실시간
-        - 영상보기
       webcam:
         description: 해외 웹캠 전용 검색 (Windy). 해외 도시/관광지 실시간 모습. 한국 CCTV 포함 통합 검색은 cctv_search
           사용.
+        group: media
+        target_description: 검색어 (도시·지역·관광지명, 영어 권장).
         keywords:
         - webcam
         - 웹캠
@@ -466,7 +483,9 @@ nodes:
         implementation: Windy Webcams API로 전세계 웹캠 검색. 한국 교통 CCTV는 포함 안 됨 → cctv_search
           사용.
       webcam_nearby:
-        description: 가까운 웹캠 찾기
+        description: 좌표 근처 해외 웹캠 찾기 (Windy). 한국 CCTV 포함은 nearby.
+        group: media
+        target_description: 위도(lat)와 경도(lng) 두 파라미터 필수.
         keywords:
         - webcam
         - 웹캠
@@ -476,6 +495,7 @@ nodes:
         implementation: Windy Webcams API로 좌표 근처 웹캠 검색
       cctv_capture:
         description: CCTV/웹캠 현재 화면 캡처 (이미지 저장, AI 분석용)
+        group: media
         keywords:
         - cctv
         - 캡처
@@ -488,9 +508,9 @@ nodes:
         implementation: ffmpeg로 CCTV/웹캠 스트림에서 단일 프레임 캡처 후 PNG 저장
         target_key: url
       cctv_sources:
-        description: 사용 가능한 CCTV/웹캠 소스 및 상태 확인
-        group: cctv
-        category: list
+        description: 등록된 CCTV·웹캠 소스 목록과 연결 상태 확인. ITS·Windy 점검용.
+        target_description: '(파라미터 없음 — 소스 목록과 상태 반환)'
+        group: media
         router: handler
         tool: list_cctv_sources
         implementation: 등록된 CCTV/웹캠 소스 목록 조회 (로컬 설정 파일)
@@ -499,8 +519,9 @@ nodes:
         - 소스
         - 상태
       local_query:
-        description: 축적된 지역 정보 DB 조회
-        target_description: 검색어
+        description: 축적된 지역 정보 DB 조회 (정기 수집된 가게·커뮤니티 데이터). 실시간 검색은 search_local.
+        group: places
+        target_description: 검색어 (FTS5 전문검색, 한국어 토큰화 지원).
         router: handler
         tool: local_db_query
         implementation: SQLite FTS(전문검색)로 축적된 지역 정보 DB 조회
@@ -508,6 +529,7 @@ nodes:
       cctv_search:
         description: 국내 CCTV + 해외 웹캠 통합 검색 (ITS+Windy). 한국 교통/도시 CCTV와 해외 웹캠을 동시 검색.
           결과의 stream_tags를 응답에 포함하면 채팅창에서 스트리밍 재생. 해외만 보려면 webcam 사용.
+        group: media
         keywords:
         - cctv
         - 교통
@@ -525,9 +547,9 @@ nodes:
           액션 사용.
         target_key: query
       cctv_by_name:
-        description: CCTV 이름으로 검색 (ITS 국가교통정보센터)
-        group: cctv
-        category: search
+        description: 한국 교통 CCTV를 이름으로 검색 (ITS 국가교통정보센터). 좌표 기반은 nearby.
+        target_description: CCTV 이름 또는 키워드 (예 '강남대로', '한남대교').
+        group: media
         router: handler
         tool: get_cctv_by_name
         implementation: ITS API에서 CCTV 이름/키워드로 직접 검색
@@ -537,8 +559,8 @@ nodes:
         - 이름검색
       api_ninjas:
         description: API Ninjas 범용 데이터 조회 (날씨, 환율, 영양, 명언 등 다양한 endpoint)
-        group: data
-        category: get
+        target_description: 'endpoint로 종류 선택 (weather/exchange/nutrition/quotes 등 40+가지). 추가 파라미터는 endpoint별로 다름.'
+        group: research
         router: handler
         tool: get_api_ninjas_data
         implementation: API Ninjas REST API (40+ endpoint, API 키 기반)
@@ -550,12 +572,16 @@ nodes:
         - 명언
       commercial:
         description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
+        group: real_estate
+        target_description: 업종 코드 또는 키워드. 좌표(lat/lng) 또는 행정동 코드(district)로 영역 지정.
         router: handler
         tool: search_commercial_district
         implementation: 소상공인진흥공단 상권정보 공개 API로 업종별 점포 밀집도/분포 분석
       search_ddg:
         description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는
           search_news, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
+        group: research
+        target_description: 검색어 (영어 권장). region/safesearch 옵션 가능.
         router: handler
         tool: ddgs_search
         implementation: DuckDuckGo ddgs 라이브러리로 웹 검색. 쿼리 언어 자동 감지(영어→글로벌, 한국어→한국).
@@ -564,6 +590,8 @@ nodes:
           type: compress
       crawl:
         description: 웹페이지 원문 읽기 (URL 필요). 검색 스니펫으로 부족할 때 상세 내용 확인용.
+        group: research
+        target_description: 읽을 페이지 URL (http/https). 검색 결과의 link 필드 그대로 전달 가능.
         router: handler
         tool: crawl_website
         implementation: 1차 requests+BeautifulSoup 정적 크롤링, 콘텐츠 부족 시 Chrome MCP(실제 브라우저)로
@@ -573,6 +601,8 @@ nodes:
           type: compress
       search_news:
         description: 뉴스만 검색 (Google News). 신문 생성, 뉴스 모니터링 등 뉴스 전용 작업에 사용.
+        group: research
+        target_description: 뉴스 검색어. 언어 자동 감지 — 한국어는 한국 뉴스, 영어는 글로벌 뉴스.
         router: handler
         tool: google_news_search
         implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
@@ -581,8 +611,9 @@ nodes:
           type: compress
           prompt: 같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라.
       collect:
-        description: 사이트 프로필 기반 구조화된 데이터 수집
-        group: collect
+        description: 사이트 프로필 기반 구조화 데이터 수집 (Playwright 크롤링). 사이트 관리는 collect_sites.
+        target_description: 수집할 사이트 ID 또는 URL. collect_sites로 등록된 프로필 사용.
+        group: places
         router: web_collector
         implementation: Playwright 크롤링 + 사이트 프로필 기반 구조화 데이터 수집
         keywords:
@@ -591,6 +622,7 @@ nodes:
         - 구조화
       collect_sites:
         description: 정기 수집 사이트 프로필 관리 (등록/조회/삭제). 사이트별 크롤링 가이드를 등록하여 반복 수집 설정.
+        group: places
         target_description: 사이트 ID
         router: handler
         tool: wc_sites
@@ -598,6 +630,7 @@ nodes:
         target_key: site_id
       collect_save:
         description: 크롤링 결과를 DB에 저장. 수집 사이트에서 가져온 데이터를 구조화하여 축적.
+        group: places
         target_description: 사이트 ID
         router: handler
         tool: wc_save
@@ -606,48 +639,55 @@ nodes:
       collect_query:
         description: 축적된 수집 데이터 검색. 정기 수집으로 쌓인 웹 데이터에서 키워드 검색. 실시간 웹 검색은 sense:search_ddg
           사용.
+        group: places
         target_description: 검색어
         router: handler
         tool: wc_query
         implementation: SQLite FTS(전문검색)로 축적된 웹 수집 데이터 검색. 실시간 웹 검색이 아닌 로컬 DB 검색.
         target_key: query
       apt_trade:
-        description: 아파트 매매 실거래가 (국토부)
-        target_description: '지역코드 (5자리, 예: 11680=강남)'
+        description: 아파트 매매 실거래가 조회. 국토부 실거래가 공개 시스템 기준.
+        group: real_estate
+        target_description: '지역 코드 5자리 (예 11680=강남). district_codes로 조회. start_date/end_date로 기간 지정.'
         router: handler
         tool: apt_trade_price
         implementation: 국토부 아파트 실거래가 공개 API로 매매 데이터 XML 파싱
         target_key: region_code
       apt_rent:
-        description: 아파트 전월세 실거래가
-        target_description: 지역코드
+        description: 아파트 전월세 실거래가 조회. 국토부 실거래가 공개 시스템 기준.
+        group: real_estate
+        target_description: 지역 코드 5자리 (district_codes로 조회). 거래 기간 지정 가능.
         router: handler
         tool: apt_rent_price
         implementation: 국토부 아파트 전월세 공개 API로 임대 데이터 XML 파싱
         target_key: region_code
       house_trade:
-        description: 단독/다세대 주택 매매 실거래가
-        target_description: 지역코드
+        description: 단독/다세대 주택 매매 실거래가. 국토부 실거래가 공개 시스템 기준.
+        group: real_estate
+        target_description: 지역 코드 5자리 (district_codes로 조회).
         router: handler
         tool: house_trade_price
         implementation: 국토부 주택 실거래가 공개 API로 매매 데이터 XML 파싱
         target_key: region_code
       house_rent:
-        description: 단독/다세대 주택 전월세 실거래가
-        target_description: 지역코드
+        description: 단독/다세대 주택 전월세 실거래가. 국토부 실거래가 공개 시스템 기준.
+        group: real_estate
+        target_description: 지역 코드 5자리 (district_codes로 조회).
         router: handler
         tool: house_rent_price
         implementation: 국토부 주택 전월세 공개 API로 임대 데이터 XML 파싱
         target_key: region_code
       district_codes:
-        description: 법정동 지역코드 조회
-        target_description: 시/도명 (서울, 경기 등)
+        description: 부동산 실거래가 조회용 법정동 지역코드 조회.
+        group: real_estate
+        target_description: '시/도명 (서울, 경기 등). 결과 코드를 apt_*/house_* 액션에 사용.'
         router: handler
         tool: get_region_codes
         implementation: 법정동 코드 매핑 테이블로 지역코드 조회 (로컬 데이터)
         target_key: city
       video_info:
         description: 유튜브 동영상 메타데이터 조회 (제목, 조회수, 채널 등)
+        group: media
         keywords:
         - youtube
         - 유튜브
@@ -662,6 +702,7 @@ nodes:
       video_transcript:
         description: 유튜브 ��영상 자막/스크립트 추출 (url 또는 video_id 사용 가능). 영상 요약이 목적이면 summarize_video를
           쓰면 자막 추출+AI 요약+HTML+브라우저 열기를 한 번에 수행한다.
+        group: media
         keywords:
         - youtube
         - 유튜브
@@ -677,6 +718,7 @@ nodes:
         target_key: url
       video_languages:
         description: 유튜브 동영상 사용 가능한 자막 언어 목록 조회 (url 또는 video_id 사용 가능)
+        group: media
         keywords:
         - youtube
         - 유튜브
@@ -690,6 +732,7 @@ nodes:
         target_key: url
       search_youtube:
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
+        group: media
         keywords:
         - youtube
         - 유튜브
@@ -702,9 +745,9 @@ nodes:
         implementation: yt-dlp ytsearch로 유튜브 검색 결과 목록 추출
         target_key: query
       search_radio:
-        description: 전세계 인터넷 라디오 검색 (Radio Browser API)
-        group: radio
-        category: search
+        description: 전세계 인터넷 라디오 검색 (Radio Browser API). 한국 방송사는 korean_radio 우선.
+        target_description: 검색어 (방송국 이름·국가·장르 등).
+        group: media
         router: handler
         tool: search_radio
         implementation: Radio Browser 무료 API로 전세계 인터넷 라디오 검색
@@ -714,8 +757,8 @@ nodes:
         - 인터넷라디오
       korean_radio:
         description: 한국 주요 방송사 라디오 채널 목록 (KBS/MBC/SBS/TBS/CBS/EBS)
-        group: radio
-        category: search
+        target_description: '(파라미터 없음 — 전체 채널 목록). 재생은 limbs:radio_play.'
+        group: media
         router: handler
         tool: get_korean_radio
         implementation: 한국 방송사별 HLS 스트림 URL 하드코딩 목록 반환
@@ -727,8 +770,8 @@ nodes:
         - SBS
       world_pulse:
         description: 세계 상태 스냅샷 조회 — 오늘의 경제 지표, 주요 뉴스, 기술 동향, 날씨 (하루 1회 자동 수집)
+        target_description: '(파라미터 없음 — 오늘의 세계 상태 스냅샷 반환)'
         group: world
-        category: get
         router: system
         func: world_pulse
         implementation: Consciousness Pulse DB(SQLite)에서 최신 세계 상태 스냅샷 조회
@@ -741,8 +784,8 @@ nodes:
         - 뉴스
       world_trend:
         description: 최근 N일간 세계 상태 추이 조회 — 경제 지표 변화, 뉴스 흐름 비교
+        target_description: 조회 기간 (일 수, 예 7 또는 30). 기본 7일.
         group: world
-        category: get
         router: system
         func: world_trend
         implementation: Consciousness Pulse DB에서 N일간 스냅샷 시계열 조회
@@ -754,8 +797,8 @@ nodes:
         - 뉴스흐름
       world_refresh:
         description: 세계 상태 강제 재수집 (오늘 이미 수집된 데이터를 덮어씁니다)
+        target_description: '(파라미터 없음 — 재수집 트리거). 빈번 호출 금지 (외부 API 부하).'
         group: world
-        category: get
         router: system
         func: world_refresh
         implementation: 뉴스/경제/날씨 API 재호출 후 Consciousness Pulse DB 갱신
@@ -765,8 +808,8 @@ nodes:
         - 갱신
       self_check:
         description: 전수 자가점검 실행 — 부작용 없는 모든 IBL 액션을 테스트하여 시스템 건강 상태 확인
+        target_description: '(파라미터 없음 — 전수 자가점검 실행). 결과는 world_pulse.db에 기록.'
         group: world
-        category: run
         router: system
         func: self_check
         implementation: 전체 IBL 액션 중 안전한 액션을 전수 실행, 결과를 world_pulse.db에 기록, 패턴 분석
@@ -779,6 +822,8 @@ nodes:
         - self-check
       cctv_nearby:
         description: 좌표 근처 CCTV 찾기 (lat/lng 필수, 모르면 cctv_search 사용)
+        group: media
+        target_description: 위도(lat)·경도(lng) 두 파라미터 필수. radius 옵션으로 반경 지정.
         keywords:
         - cctv
         - 근처
@@ -789,29 +834,9 @@ nodes:
         router: handler
         tool: get_nearby_cctv
         implementation: 국토부 ITS CCTV 공개 API로 좌표 근처 CCTV 검색
-      info:
-        description: 종목 기본 정보 (시가총액, 52주 최고/최저, PER, 배당 등). 한국/미국 모두 가능. 재무제표가 필요하면
-          kr_financial 또는 us_financial 사용.
-        target_description: 종목 코드/티커
-        router: handler
-        tool: yf_stock_info
-        implementation: Yahoo Finance yfinance로 종목 메타데이터 조회 (시총, 밸류에이션, 배당 등 요약)
-        target_key: symbol
-      company_news:
-        description: 특정 종목/기업 관련 뉴스 (티커 필수, 일반 뉴스는 sense:search_news)
-        target_description: '티커 (US: AAPL, KR: 005930.KS)'
-        router: handler
-        tool: company_news
-        implementation: Finnhub → Yahoo Finance 순서로 종목 뉴스 조회. 날짜 범위 지정 가능(start_date,
-          end_date).
-        target_key: symbol
-      save:
-        description: 가게 정보/커뮤니티 언급 DB 저장
-        router: handler
-        tool: local_db_save
-        implementation: SQLite DB에 가게/지역 정보 구조화 저장
       search_library_docs:
         description: 라이브러리/프레임워크 최신 공식 문서 검색 (코드 작성 시 정확한 API 참조용)
+        group: research
         target_description: 알고 싶은 내용
         router: handler
         tool: search_library_docs
@@ -820,14 +845,16 @@ nodes:
         postprocess:
           type: compress
       resolve_library:
-        description: 라이브러리 이름으로 Context7 ID 조회
-        target_description: 라이브러리 이름
+        description: 라이브러리 이름으로 Context7 ID 조회. search_library_docs 사용 전 첫 단계.
+        group: research
+        target_description: 라이브러리 이름 (예 'react', 'fastapi').
         router: handler
         tool: resolve_library
         implementation: Context7 REST API로 라이브러리 ID 검색
         target_key: library_name
       summarize_video:
         description: 유튜브 동영상 자막 추출 + AI 요약 + HTML 보고서 생성 + 브라우저 자동 열기를 한 번에 수행
+        group: media
         keywords:
         - youtube
         - 유튜브
@@ -844,6 +871,7 @@ nodes:
       gutenberg_books:
         description: Project Gutenberg 고전 도서 및 원문 텍스트 검색 (Gutendex API). 저작권 만료된 7만
           6천여 권의 고전 문학, 철학, 과학 텍스트를 검색하고 원문 다운로드 링크를 제공
+        group: culture
         target_description: 검색어 (제목, 저자, 주제)
         router: handler
         tool: gutenberg_search
@@ -860,6 +888,7 @@ nodes:
         - 원전
       korean_classics:
         description: 한국고전종합DB 검색 (db.itkc.or.kr). 이황, 이이 등 고전 문헌, 번역서 검색 및 원문 링크 제공.
+        group: culture
         target_description: '검색어 (예: 이황, 퇴계집)'
         router: handler
         tool: korean_classics_search
@@ -879,6 +908,8 @@ nodes:
         description: 네이버 검색 API. 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)에서 DuckDuckGo/Google보다
           압도적으로 강함. type 파라미터로 도메인 선택 (기본 webkr). 뉴스 단독 검색은 type='news' 또는 search_news(Google
           News) 중 한국 출처 우선이면 이쪽.
+        group: research
+        target_description: 검색어. type 옵션으로 도메인 선택 (webkr/news/blog/cafe/kin/book/encyc/doc/shop, 기본 webkr).
         router: handler
         tool: naver_search
         implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 9개 도메인(webkr/news/blog/cafe/kin/book/encyc/doc/shop)
@@ -916,9 +947,9 @@ nodes:
   self:
     actions:
       search_photos:
-        description: 사진/동영상 검색 (파일명, 카메라 모델 등)
+        description: 사진/동영상 검색 (파일명, 카메라 모델 등). 인덱스는 photo_scan 후 생성.
+        target_description: 검색어 (파일명·카메라·키워드). filter 옵션 (date/camera/location).
         group: photo
-        category: search
         router: driver
         driver: sqlite
         driver_node: photo
@@ -929,9 +960,9 @@ nodes:
         - 사진검색
         - 미디어
       photo_detail:
-        description: 미디어 파일 상세 정보 조회
+        description: 사진·동영상 파일의 상세 메타 조회 (촬영일·카메라·GPS·해상도 등).
+        target_description: 미디어 파일 ID 또는 절대 경로.
         group: photo
-        category: get
         router: driver
         driver: sqlite
         driver_node: photo
@@ -940,108 +971,57 @@ nodes:
         - 사진
         - 상세
         - 메타데이터
-      timeline:
-        description: 월별 사진/동영상 촬영 통계
-        group: photo
-        category: get
-        router: handler
-        tool: get_timeline
-        implementation: SQLite DB에서 월별 미디어 파일 집계 쿼리
-        target_key: path
-        keywords:
-        - 사진
-        - 타임라인
-        - 월별
-        - 통계
       photo_stats:
         description: 스캔된 폴더의 통계 (사진/동영상 수, 용량, 카메라별)
+        group: photo
         target_description: 폴더 경로
         router: handler
         tool: get_stats
         implementation: SQLite DB에서 전체 미디어 통계 집계
         target_key: path
-      list_scans:
-        description: 스캔된 폴더 목록 조회
-        group: photo
-        category: list
-        router: handler
-        tool: list_scans
-        implementation: 스캔 이력 SQLite DB 조회
-        keywords:
-        - 사진
-        - 스캔
-        - 폴더
       photo_scan:
         description: 폴더의 사진/동영상 메타데이터 수집 (인덱싱)
+        group: photo
         target_description: 스캔할 폴더 경로
         router: handler
         tool: scan_photos
         implementation: PIL(Pillow)로 이미지 EXIF 메타데이터 추출 후 SQLite 인덱싱
         target_key: path
-      gallery:
-        description: 스캔된 사진/동영상 갤러리 조회 (페이지네이션, 필터)
-        group: photo
-        category: get
-        router: handler
-        tool: get_gallery
-        implementation: SQLite DB에서 페이지네이션/필터 기반 미디어 목록 조회
-        target_key: path
-        keywords:
-        - 갤러리
-        - 사진
-        - 동영상
-        - 앨범
-      photo_manager:
-        description: Photo Manager GUI 실행
-        group: photo
-        router: handler
-        tool: open_photo_manager
-        implementation: Electron 기반 Photo Manager GUI 실행
-        target_key: path
-        keywords:
-        - 사진관리
-        - GUI
       blog_search:
         description: 블로그 검색 (하이브리드 — 시맨틱 벡터 70% + 키워드 BM25 30%)
+        group: blog
+        target_description: 검색 키워드 또는 자연어. limit 옵션으로 건수 제한 (기본 10).
         router: handler
         tool: search_blog_rag
         implementation: SQLite + 벡터 임베딩 하이브리드 검색. 제목·미리보기·점수 목록 반환 (로컬 블로그 DB)
         target_key: query
       blog_content:
         description: 블로그 글 전문 조회 (post_id 또는 제목으로)
+        group: blog
+        target_description: post_id 또는 글 제목 (제목은 부분 일치). 전체 본문·날짜·카테고리 반환.
         router: handler
         tool: get_post_content_rag
         implementation: 블로그 SQLite DB에서 포스트 전문·날짜·카테고리·링크 반환
         target_key: post_id
-      posts:
-        description: 블로그 글 목록 (handler)
-        group: blog
-        category: list
-        router: handler
-        tool: blog_get_posts
-        implementation: 블로그 SQLite DB에서 카테고리별 글 목록 조회
-        target_key: category
-        keywords:
-        - 블로그
-        - 글목록
-        - 포스트
       blog_stats:
-        description: 블로그 통계 (글 수, 카테고리별 분포)
+        description: 블로그 통계 — 전체 글 수, 카테고리별·기간별 분포, 활동 트렌드.
+        group: blog
+        target_description: '(파라미터 없음 — 전체 통계 반환)'
         router: handler
         tool: blog_stats
         implementation: 블로그 SQLite DB에서 통계 집계 쿼리
       blog_get_post:
-        description: 블로그 글 ID로 전체 내용 조회 (단순 ID 조회)
+        description: 블로그 글 ID로 전체 내용 조회 (정확한 ID 조회). 제목 검색은 blog_content.
+        target_description: post_id (정확한 식별자, blog_search 결과의 id).
         group: blog
-        category: get
         router: handler
         tool: blog_get_post
         implementation: 블로그 SQLite DB에서 ID로 글 전문 조회
         target_key: post_id
       blog_semantic:
-        description: 블로그 의미 검색 (키워드 무관, 의미적 유사성만으로 검색)
+        description: 블로그 의미 검색 (키워드 무관, 의미적 유사성만으로). 하이브리드는 blog_search.
+        target_description: 검색 쿼리 (자연어). limit 옵션으로 건수 제한.
         group: blog
-        category: search
         router: handler
         tool: search_blog_semantic
         implementation: 벡터 임베딩 기반 시맨틱 검색 (코사인 유사도)
@@ -1050,51 +1030,18 @@ nodes:
         - 블로그
         - 의미검색
         - 시맨틱
-      check_new:
-        description: 새 블로그 글 확인
-        group: blog
-        category: list
-        router: handler
-        tool: blog_check_new_posts
-        implementation: 블로그 DB와 소스 디렉토리 비교로 새 글 감지
-        keywords:
-        - 블로그
-        - 새글
-        - 업데이트
       kinsight:
         description: 블로그 인사이트 분석 (기본 15개, count로 개수 지정 가능)
+        group: blog
+        target_description: '(파라미터 없음 — 기본 15개 인사이트). count 옵션으로 개수 지정.'
         router: handler
         tool: kinsight
         implementation: 블로그 최신 포스트 수집 + AI 모델 호출로 인사이트 HTML 생성
         target_key: query
-      rebuild_index:
-        description: 블로그 검색 인덱스 재구축
-        group: blog
-        router: handler
-        tool: rebuild_search_index
-        implementation: 블로그 전체 포스트 재인덱싱 (벡터 임베딩 재생성)
-        keywords:
-        - 블로그
-        - 인덱스
-        - 재구축
-      search_memory:
-        description: 메모리 통합 검색 (대화 이력 + 심층 메모리)
-        group: memory
-        category: search
-        router: handler
-        tool: memory_search
-        implementation: SQLite FTS + conversations.db 통합 텍스트 검색
-        target_key: query
-        keywords:
-        - 기억
-        - 대화내용
-        - 이전대화
-        - 메모리
-        - 검색
       recent:
-        description: 최근 대화 조회
+        description: 최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순).
+        target_description: '(파라미터 없음). limit 옵션으로 건수 제한 (기본 10).'
         group: memory
-        category: get
         router: driver
         driver: sqlite
         driver_node: memory
@@ -1104,9 +1051,9 @@ nodes:
         - 대화이력
         - 이전
       agents:
-        description: 등록된 에이전트 목록
+        description: 메모리 DB에 등록된 에이전트 목록 조회 (사용자·AI 구분).
+        target_description: '(파라미터 없음 — 전체 에이전트 목록)'
         group: memory
-        category: list
         router: driver
         driver: sqlite
         driver_node: memory
@@ -1116,44 +1063,49 @@ nodes:
         - 목록
         - 팀
       memory_save:
-        description: 심층 메모리에 항목 저장
-        target_description: 저장할 내용
+        description: 에이전트의 심층 메모리에 항목 저장 (장기 기억). 자동 키워드 추출·카테고리 분류.
+        group: memory
+        target_description: 저장 내용 (content). category/keywords 옵션.
         router: handler
         tool: memory_save
         implementation: SQLite DB에 메모리 항목 저장 (키워드 태깅)
         target_key: content
       memory_read:
-        description: 메모리 항목 전체 내용 조회
-        target_description: 메모리 ID
+        description: 메모리 항목의 전체 내용 조회 (search 결과의 preview는 잘림). ID로 조회.
+        group: memory
+        target_description: 메모리 항목 ID (memory_search 결과의 id).
         router: handler
         tool: memory_read
         implementation: SQLite DB에서 메모리 항목 조회
         target_key: memory_id
       memory_delete:
-        description: 메모리 항목 삭제
-        target_description: 메모리 ID
+        description: 심층 메모리 항목 영구 삭제. ID로 지정. 복구 불가능.
+        group: memory
+        target_description: 삭제할 메모리 항목 ID (memory_search 결과의 id).
         router: handler
         tool: memory_delete
         implementation: SQLite DB에서 메모리 항목 삭제
         target_key: memory_id
       health_save:
         description: 건강 정보 저장 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 투약, 의료문서를 DB에 기록
-        target_description: '저장 유형: 혈압, 혈당, 체중, 증상, 투약, 문서'
+        group: data
+        target_description: 저장 타입 (혈압/혈당/체중/증상/투약/문서). data 파라미터로 측정값/내용 전달.
         router: handler
         tool: save_health_info
         implementation: SQLite DB에 건강 데이터 구조화 저장 (혈압/혈당/체중/투약 등)
         target_key: info_type
       health_query:
         description: 건강 기록 조회 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 약물 이력, 건강 요약, 키워드 검색
-        target_description: '조회 유형: 요약, 검색, 측정기록, 증상, 투약, 문서 또는 혈압/혈당/체중 등 카테고리명'
+        group: data
+        target_description: 조회 타입 (summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중 카테고리). keyword 옵션.
         router: handler
         tool: get_health_context
         implementation: SQLite DB에서 건강 이력 조회 + AI 요약 생성
         target_key: query_type
       local_save:
-        description: 가게 정보/커뮤니티 언급 DB 저장
+        description: 가게 정보·커뮤니티 언급을 지역 DB에 저장 (sense:save와 같은 동작).
+        target_description: 저장할 데이터 (JSON). type 옵션으로 store/mention 분류.
         group: system
-        category: write
         router: handler
         tool: local_db_save
         implementation: SQLite DB에 가게/지역 정보 구조화 저장
@@ -1163,7 +1115,8 @@ nodes:
         - 커뮤니티
         - 저장
       discover:
-        description: 키워드로 적합한 노드/액션 자동 탐색
+        description: 키워드로 적합한 IBL 노드·액션 자동 탐색. 어떤 액션 쓸지 모를 때 첫 단계.
+        target_description: 검색 키워드 (자연어). 결과 — 후보 액션 + 사용 예시.
         group: system
         target_key: query
         router: system
@@ -1175,21 +1128,24 @@ nodes:
         - 도구검색
         - 액션
       time:
-        description: 현재 시간 조회
+        description: 현재 시간 조회 (로컬 시스템 시계, KST). 날짜·요일·시:분:초 반환.
+        group: system
+        target_description: '(파라미터 없음). format 옵션으로 포맷 지정 가능.'
         router: handler
         tool: get_current_time
         implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
       list_api:
-        description: 등록된 API 도구 목록 조회
+        description: API 레지스트리에 등록된 외부 도구 목록 조회. call로 실행.
+        target_description: '(파라미터 없음 — 전체 도구 목록)'
         group: system
-        category: list
         router: api_engine
         implementation: API 레지스트리에 등록된 외부 API 도구 동적 호출
         keywords:
         - API
         - 도구목록
       call:
-        description: API 레지스트리에 등록된 도구 실행
+        description: API 레지스트리에 등록된 외부 도구 호출. list_api로 후보 확인.
+        target_description: 도구 이름. params 옵션으로 인자 전달.
         group: system
         router: api_engine
         implementation: API 레지스트리에 등록된 외부 API 도구 동적 호출
@@ -1198,9 +1154,9 @@ nodes:
         - 실행
         - 호출
       manage_events:
-        description: 이벤트/스케줄 통합 관리 (생성/조회/삭제)
+        description: 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
+        target_description: action (create/list/delete). 추가 파라미터는 action별로 다름.
         group: schedule
-        category: event
         router: system
         func: manage_events
         implementation: event_engine으로 이벤트/스케줄 CRUD (SQLite 기반)
@@ -1210,8 +1166,8 @@ nodes:
         - 예약관리
       show_calendar:
         description: 캘린더를 HTML로 생성하여 브라우저에서 표시
+        target_description: '(파라미터 없음 — 현재 월 캘린더). month/year 옵션으로 특정 월 지정.'
         group: schedule
-        category: display
         router: system
         func: show_calendar
         implementation: calendar_manager.open_in_browser() — HTML 캘린더 생성 후 브라우저 자동
@@ -1222,9 +1178,9 @@ nodes:
         - 일정보기
         - calendar
       list_switches:
-        description: 등록된 스위치 목록 조회
+        description: 등록된 모든 스위치 목록 조회 (활성/비활성·타입·이름).
+        target_description: '(파라미터 없음 — 전체 스위치 목록)'
         group: schedule
-        category: list
         router: system
         func: list_switches
         implementation: switch_manager에서 등록된 스위치 목록 조회 (JSON 설정)
@@ -1232,9 +1188,9 @@ nodes:
         - 스위치
         - 목록
       run_switch:
-        description: 스위치 실행 (switch_id 필수)
+        description: 특정 스위치 즉시 실행 (예약 무시). 정상 실행은 트리거로.
+        target_description: 실행할 스위치 ID (list_switches로 조회한 id).
         group: schedule
-        category: execute
         router: system
         func: run_switch
         implementation: SwitchManager + SwitchRunner로 스위치 실행
@@ -1244,8 +1200,8 @@ nodes:
         - 스위치
       schedule:
         description: 스케줄 실행 (지연 실행, 특정 시간, 반복 등)
+        target_description: 실행 시점 (delay/at/cron) + action. 한 번 실행 또는 반복 가능.
         group: schedule
-        category: execute
         router: system
         func: schedule
         implementation: _execute_schedule — 지연(delay)/특정시간(at)/반복(repeat) 기반 작업 예약
@@ -1257,9 +1213,9 @@ nodes:
         - 지연실행
         - 반복
       list_goals:
-        description: 활성 목표 목록 조회
+        description: 현재 활성·대기 중인 목표 프로세스 목록 조회.
+        target_description: '(파라미터 없음 — 전체 활성 목표 목록)'
         group: goal
-        category: list
         router: system
         func: list_goals
         implementation: conversation_db에서 활성/대기 중인 목표 프로세스 목록 조회
@@ -1269,9 +1225,9 @@ nodes:
         - goal
         - 진행중
       goal_status:
-        description: 특정 목표의 상세 상태 조회
+        description: 특정 목표의 상세 상태 조회 (진행률·라운드 이력·누적 결과).
+        target_description: 조회할 목표 ID (list_goals로 확인).
         group: goal
-        category: get
         router: system
         func: get_goal_status
         implementation: conversation_db에서 목표 상태, 라운드 이력, 누적 결과 조회
@@ -1280,9 +1236,9 @@ nodes:
         - 진행상황
         - goal
       goal_kill:
-        description: 목표 프로세스 강제 종료
+        description: 진행 중인 목표 프로세스 강제 종료. 일시정지 아닌 완전 중단.
+        target_description: 종료할 목표 ID.
         group: goal
-        category: execute
         router: system
         func: kill_goal
         implementation: 활성 목표를 terminated 상태로 전환하고 스케줄 제거
@@ -1293,8 +1249,8 @@ nodes:
         - kill
       log_attempt:
         description: 목표 실행 시도 기록 (전략 전환 및 라운드 메모리)
+        target_description: 목표 ID와 시도 정보. strategy/result 파라미터.
         group: goal
-        category: execute
         router: system
         func: log_attempt
         implementation: conversation_db에 시도 결과/카테고리/전략 기록, 연속 실패 추적
@@ -1303,9 +1259,9 @@ nodes:
         - 전략
         - 라운드
       get_attempts:
-        description: 목표의 과거 시도 이력 조회
+        description: 특정 목표의 과거 실행 시도 이력 조회 (라운드별 전략·결과).
+        target_description: 목표 ID. limit 옵션으로 건수 제한.
         group: goal
-        category: get
         router: system
         func: get_attempts
         implementation: conversation_db에서 시도 이력 조회, 실패 카테고리별 요약 포함
@@ -1314,9 +1270,9 @@ nodes:
         - 시도목록
         - 전략이력
       notify_user:
-        description: 사용자에게 알림 전송
+        description: 사용자에게 알림 전송 (프론트엔드 + 텔레그램). 중요 이벤트 통지용.
+        target_description: 알림 메시지. priority 옵션 (info/warn/error).
         group: system
-        category: notify
         target_key: message
         router: system
         func: send_notification
@@ -1326,9 +1282,9 @@ nodes:
         - 통지
         - 메시지
       run:
-        description: 저장된 워크플로우 실행
+        description: 저장된 워크플로우 실행 (steps 순서대로). 즉시 실행은 run_pipeline.
+        target_description: 실행할 워크플로우 ID. params 옵션으로 변수 전달.
         group: workflow
-        category: run
         target_key: workflow_id
         router: workflow_engine
         implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
@@ -1336,18 +1292,18 @@ nodes:
         - 워크플로우
         - 실행
       list_workflows:
-        description: 저장된 워크플로우 목록 조회
+        description: 저장된 모든 워크플로우 목록 조회. ID·이름·생성 시점.
+        target_description: '(파라미터 없음 — 전체 목록)'
         group: workflow
-        category: list
         router: workflow_engine
         implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
         keywords:
         - 워크플로우
         - 목록
       get_workflow:
-        description: 워크플로우 상세 조회
+        description: 저장된 워크플로우의 상세 정보 조회 (steps·메타·실행 이력).
+        target_description: 조회할 워크플로우 ID.
         group: workflow
-        category: get
         target_key: workflow_id
         router: workflow_engine
         implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
@@ -1355,9 +1311,9 @@ nodes:
         - 워크플로우
         - 상세
       save_workflow:
-        description: 워크플로우 저장
+        description: 워크플로우 저장 (재사용 가능한 IBL 파이프라인). 실행은 run.
+        target_description: 워크플로우 이름과 steps 배열 (각 step은 IBL 코드).
         group: workflow
-        category: get
         target_key: workflow_id
         router: workflow_engine
         implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
@@ -1365,9 +1321,9 @@ nodes:
         - 워크플로우
         - 저장
       delete_workflow:
-        description: 워크플로우 삭제
+        description: 저장된 워크플로우 영구 삭제. ID로 지정. 복구 불가능.
+        target_description: 삭제할 워크플로우 ID (list_workflows로 확인).
         group: workflow
-        category: get
         target_key: workflow_id
         router: workflow_engine
         implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
@@ -1375,9 +1331,9 @@ nodes:
         - 워크플로우
         - 삭제
       run_pipeline:
-        description: 파이프라인 직접 실행 (steps를 params로 전달)
+        description: IBL 파이프라인 즉시 실행 (steps를 params로 직접 전달, 저장 안 됨).
+        target_description: steps 배열 (각 step은 IBL 코드). 저장하려면 save_workflow.
         group: workflow
-        category: run
         router: workflow_engine
         implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
         keywords:
@@ -1385,18 +1341,18 @@ nodes:
         - 실행
         - 단계
       list_triggers:
-        description: 등록된 트리거 목록 조회
+        description: 등록된 모든 트리거 목록 조회 (타입·조건·상태). create로 등록.
+        target_description: '(파라미터 없음 — 전체 트리거 목록). type 옵션으로 타입별 필터링.'
         group: schedule
-        category: list
         router: trigger_engine
         implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
         keywords:
         - 트리거
         - 목록
       get_trigger:
-        description: 트리거 상세 정보
+        description: 특정 트리거의 상세 정보 조회 (타입·조건·동작·실행 이력 등).
+        target_description: 조회할 트리거 ID (list_triggers로 확인).
         group: schedule
-        category: get
         target_key: trigger_id
         router: trigger_engine
         implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
@@ -1404,9 +1360,9 @@ nodes:
         - 트리거
         - 상세
       create:
-        description: 새 트리거 등록 (schedule/channel/webhook/file)
+        description: 새 트리거 등록 (schedule/channel/webhook/file). 조건 충족 시 자동 실행.
+        target_description: 트리거 타입 (schedule/channel/webhook/file). condition·action 파라미터로 구성.
         group: schedule
-        category: create
         target_key: trigger_id
         router: trigger_engine
         implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
@@ -1415,9 +1371,9 @@ nodes:
         - 등록
         - 생성
       update:
-        description: 트리거 수정
+        description: 기존 트리거의 조건·동작 수정. 종류(cron/channel/webhook/file) 무관.
+        target_description: 수정할 트리거 ID. 변경할 필드는 별도 파라미터로 전달.
         group: schedule
-        category: control
         target_key: trigger_id
         router: trigger_engine
         implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
@@ -1425,9 +1381,9 @@ nodes:
         - 트리거
         - 수정
       delete_trigger:
-        description: 트리거 삭제
+        description: 등록된 트리거 영구 삭제. list_triggers로 ID 확인 후 사용.
+        target_description: 삭제할 트리거 ID.
         group: schedule
-        category: delete
         target_key: trigger_id
         router: trigger_engine
         implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
@@ -1435,9 +1391,9 @@ nodes:
         - 트리거
         - 삭제
       enable:
-        description: 트리거 활성화
+        description: 비활성화된 트리거 재활성화. 조건 충족 시 다시 실행 시작.
+        target_description: 활성화할 트리거 ID.
         group: schedule
-        category: control
         target_key: trigger_id
         router: trigger_engine
         implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
@@ -1446,9 +1402,9 @@ nodes:
         - 활성화
         - 켜기
       disable:
-        description: 트리거 비활성화
+        description: 트리거 비활성화 (조건 충족해도 실행 안 됨). 재활성화는 enable.
+        target_description: 비활성화할 트리거 ID.
         group: schedule
-        category: control
         target_key: trigger_id
         router: trigger_engine
         implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
@@ -1458,8 +1414,8 @@ nodes:
         - 끄기
       trigger_status:
         description: 트리거 시스템 전체 상태 (폴러, 스케줄러, 자동응답)
+        target_description: '(파라미터 없음 — 시스템 전체 상태 반환)'
         group: schedule
-        category: get
         router: trigger_engine
         implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
         keywords:
@@ -1467,9 +1423,9 @@ nodes:
         - 상태
         - 폴러
       trigger_history:
-        description: 트리거 실행 이력 조회
+        description: 트리거 실행 이력 조회 (성공·실패·결과). 디버깅·모니터링용.
+        target_description: 트리거 ID (생략 시 전체). limit으로 건수 제한.
         group: schedule
-        category: get
         target_key: trigger_id
         router: trigger_engine
         implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
@@ -1478,9 +1434,9 @@ nodes:
         - 실행이력
         - 기록
       gui:
-        description: UI에 결과를 HTML/카드/테이블 형태로 표시
-        group: output
-        category: io
+        description: UI에 결과를 HTML/카드/테이블 형태로 표시 (WebSocket 통해 프론트).
+        target_description: 표시할 내용 (HTML 또는 데이터). format 옵션으로 카드/테이블/HTML 선택.
+        group: data
         target_key: content
         router: system
         func: output_gui
@@ -1491,9 +1447,9 @@ nodes:
         - HTML
         - 카드
       file:
-        description: 결과를 파일로 저장 (텍스트, JSON, CSV, HTML 등)
+        description: 결과를 파일로 저장 (텍스트, JSON, CSV, HTML 등). 확장자로 형식 자동 인식.
+        target_description: 저장 파일 경로. content 옵션으로 내용 전달.
         group: file
-        category: io
         target_key: path
         router: system
         func: output_file
@@ -1504,9 +1460,9 @@ nodes:
         - CSV
         - JSON
       clipboard:
-        description: 결과를 클립보드에 복사
-        group: output
-        category: io
+        description: 텍스트·결과를 OS 클립보드에 복사. 사용자가 다른 앱에 붙여넣기 가능.
+        target_description: 복사할 내용 (텍스트).
+        group: data
         target_key: content
         router: system
         func: output_clipboard
@@ -1515,9 +1471,9 @@ nodes:
         - 클립보드
         - 복사
       download:
-        description: URL에서 파일을 다운로드하여 로컬에 저장
+        description: URL에서 파일 다운로드해 로컬 저장. HTML 페이지 텍스트 추출은 sense:crawl.
+        target_description: 다운로드 URL. output 옵션으로 저장 경로 지정.
         group: file
-        category: io
         target_key: url
         router: system
         func: output_download
@@ -1525,46 +1481,36 @@ nodes:
         keywords:
         - 다운로드
         - 파일받기
-      launch:
-        description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. '런처 띄워줘' → 대시보드 UI 표시. 전부 열기는
-          명시 요청 시에만
-        group: output
-        category: io
-        router: handler
-        tool: launch_sites
-        implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈)
-        target_key: action
-        keywords:
-        - launcher
-        - 런처
-        - 즐겨찾기
-        - favorite
-        - 좋아하는 사이트
-        - bookmark
-        - 좋아하는 사이트
-        - 자주가는
       read:
-        description: 파일 읽기 (offset/limit으로 부분 읽기 가능)
+        description: 텍스트 파일 읽기 (offset/limit으로 부분 읽기 가능). PDF/DOCX는 별도 액션.
+        group: file
+        target_description: 읽을 파일 경로. offset(시작 라인 0-base)·limit(라인 수) 옵션 가능.
         router: handler
         tool: read_file
         implementation: Python 파일 I/O로 로컬 파일 읽기. offset(시작 줄, 0부터)과 limit(줄 수)로 대용량
           파일을 부분적으로 읽을 수 있다.
         target_key: path
       write:
-        description: 파일 쓰기
+        description: 텍스트 파일 새로 쓰기·덮어쓰기. write→run 패턴의 한 축, append 아님.
+        group: file
+        target_description: 쓸 파일 경로 (절대 또는 상대). 기존 파일은 묻지 않고 덮어쓴다.
         router: handler
         tool: write_file
         implementation: Python 파일 I/O로 로컬 파일 쓰기
         target_key: path
       list:
-        description: 디렉토리 내용 조회
+        description: 디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).
+        group: file
+        target_description: 조회할 디렉토리 경로. recursive 옵션으로 하위 포함 가능.
         router: handler
         tool: list_directory
         implementation: os.listdir/pathlib로 디렉토리 내용 조회
         target_key: path
-      find:
+      file_find:
         description: 파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트
           지정 (절대경로, ~/, 상대경로 모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀
+        group: file
+        target_description: 검색 패턴 (glob, 예 '*.md', '**/*.tsx'). path 옵션으로 검색 루트 지정.
         keywords:
         - 파일
         - 찾기
@@ -1578,7 +1524,9 @@ nodes:
           결과 상한 (기본 200). 매칭 없으면 path 옵션 안내
         target_key: pattern
       grep:
-        description: 파일 내용 검색
+        description: 파일 내용에서 패턴 검색 (grep/ripgrep). 정규식 지원. 파일명 검색은 find.
+        group: file
+        target_description: 검색 패턴 (정규식). path 옵션으로 검색 루트, include로 확장자 필터.
         keywords:
         - 검색
         - 내용검색
@@ -1589,31 +1537,41 @@ nodes:
         implementation: subprocess로 grep/ripgrep 실행하여 파일 내용 검색
         target_key: pattern
       edit:
-        description: 파일 부분 편집 (old_string → new_string 교체)
+        description: 파일 부분 편집 (old_string → new_string 교체). 전체 덮어쓰기는 write.
+        group: file
+        target_description: 편집할 파일 경로. old_string/new_string 파라미터로 교체할 텍스트 지정.
         router: handler
         tool: edit_file
         implementation: Python 문자열 치환으로 파일 부분 편집
         target_key: path
       copy:
-        description: 파일/폴더 복사
+        description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사.
+        group: file
+        target_description: source(원본 경로)와 dest(복사 위치) 두 파라미터.
         router: handler
         tool: copy_path
         implementation: shutil.copy/copytree로 파일/폴더 복사
         target_key: source
       move:
-        description: 파일/폴더 이동 또는 이름 변경
+        description: 파일 또는 폴더 이동·이름 변경. 같은 폴더면 이름 변경, 다른 폴더면 이동.
+        group: file
+        target_description: source(원본)와 dest(이동/새 이름) 두 파라미터.
         router: handler
         tool: move_path
         implementation: shutil.move로 파일/폴더 이동/이름변경
         target_key: source
       delete:
-        description: 파일/폴더 삭제
+        description: 파일 또는 폴더 영구 삭제. 휴지통 거치지 않음 — 신중히 사용.
+        group: file
+        target_description: 삭제할 파일 또는 폴더 경로. 폴더는 재귀 삭제 (rmtree).
         router: handler
         tool: delete_path
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
       read_pdf:
-        description: PDF 파일 읽기 (텍스트 추출)
+        description: PDF 파일에서 텍스트 추출. 표·이미지 무시. 스캔 PDF는 별도 OCR 필요.
+        group: file
+        target_description: PDF 파일 경로. pages 옵션으로 특정 페이지 (예 '1-5', '3').
         router: handler
         tool: read_pdf
         implementation: PyPDF2/pdfplumber로 PDF 텍스트 추출
@@ -1621,6 +1579,8 @@ nodes:
       read_docx:
         description: DOCX 파일 읽기 (텍스트 + 표 + 이미지 추출). 기본 300블록까지만 반환 — 더 읽으려면 offset/limit
           사용
+        group: file
+        target_description: DOCX 파일 경로. offset/limit/max_blocks로 블록 단위 부분 읽기.
         router: handler
         tool: read_docx
         implementation: python-docx로 텍스트/표 추출, ZIP 구조에서 이미지 파일 추출 및 저장. 텍스트 내 이미지
@@ -1634,152 +1594,130 @@ nodes:
         - 문서읽기
         - 참고문서
       storage_scan:
-        description: 디스크/볼륨 스캔 (인덱싱)
-        target_description: 스캔 경로
+        description: 디스크·볼륨 전체 스캔 후 SQLite 인덱스 구축. fs_query의 전제 단계.
+        group: file
+        target_description: 스캔할 디렉토리 경로 (생략 시 홈 폴더).
         router: handler
         tool: scan_storage
         implementation: os.walk으로 디렉토리 재귀 탐색 후 SQLite 인덱싱
         target_key: path
       fs_query:
-        description: 파일 검색 (이름, 확장자, 크기)
+        description: 파일 메타 검색 (이름·확장자·크기, SQLite 인덱스). 내용 검색은 grep, 패턴은 find.
+        group: file
+        target_description: 검색 조건 (name/ext/size). path로 검색 루트 지정.
         router: handler
         tool: query_storage
         implementation: SQLite DB에서 파일명/확장자/크기 기반 검색
         target_key: search_term
-      summary:
-        description: 저장소 사용량 요약
-        group: file
-        category: storage
-        router: handler
-        tool: get_storage_summary
-        implementation: SQLite DB에서 저장소 사용량 집계
-        keywords:
-        - 저장소
-        - 용량
-        - 사용량
       volumes:
-        description: 마운트된 볼륨 목록
+        description: 현재 마운트된 디스크 볼륨 목록 (이름·경로·용량). storage_scan 전 확인용.
+        group: file
+        target_description: '(파라미터 없음)'
         router: handler
         tool: list_volumes
         implementation: psutil/diskutil로 마운트된 볼륨 목록 조회
-      annotate:
-        description: 폴더에 메모/주석 추가
-        group: file
-        category: storage
-        router: handler
-        tool: annotate_folder
-        implementation: SQLite DB에 폴더 메모/주석 저장
-        target_key: folder_path
-        keywords:
-        - 주석
-        - 메모
-        - 폴더
-      annotations:
-        description: 폴더 주석 조회
-        group: file
-        category: storage
-        router: handler
-        tool: get_folder_annotations
-        implementation: SQLite DB에서 폴더 주석 조회
-        keywords:
-        - 주석조회
-        - 메모
-      explorer:
-        description: 파일 탐색기에서 열기 (Finder)
-        group: file
-        category: storage
-        router: handler
-        tool: open_file_explorer
-        implementation: subprocess로 macOS Finder/Windows Explorer 실행
-        target_key: path
-        keywords:
-        - Finder
-        - 탐색기
-        - 열기
       blog_posts:
-        description: 블로그 글 목록 (카테고리별 조회)
+        description: 블로그 글 목록 조회. category·기간으로 필터링.
+        group: blog
+        target_description: '(파라미터 없음 — 전체 목록). category/limit 옵션 가능.'
         router: handler
         tool: blog_get_posts
         implementation: 블로그 SQLite DB에서 카테고리별 글 목록 조회
         target_key: category
       blog_check_new:
-        description: 새 블로그 글 확인
+        description: 마지막 조회 이후 새로 추가된 블로그 글 확인. 정기 모니터링용.
+        group: blog
+        target_description: '(파라미터 없음 — 신규 글 목록 반환). since 옵션으로 기준 시점 지정.'
         router: handler
         tool: blog_check_new_posts
         implementation: 블로그 DB와 소스 디렉토리 비교로 새 글 감지
       blog_rebuild_index:
-        description: 블로그 검색 인덱스 재구축
+        description: 블로그 검색 인덱스 재구축 (벡터 임베딩 재생성). 글 다량 추가 후 실행.
+        group: blog
+        target_description: '(파라미터 없음 — 전체 재인덱싱). force 옵션으로 강제 재생성.'
         router: handler
         tool: rebuild_search_index
         implementation: 블로그 전체 포스트 재인덱싱 (벡터 임베딩 재생성)
       cctv_refresh:
         description: CCTV 목록 캐시 갱신. UTIC API에서 전국 16,000+대 최신 CCTV 데이터를 가져와 로컬 캐시
           업데이트.
+        group: data
+        target_description: '(파라미터 없음 — 전국 CCTV 데이터 일괄 갱신). force 옵션으로 강제 재수집.'
         router: handler
         tool: cctv_refresh
         implementation: UTIC 실시간 API 호출 → 로컬 캐시 파일 갱신 (유지보수용)
-      cctv_sources:
-        description: CCTV/웹캠 데이터 소스 목록 및 API 키 설정 상태 확인.
-        router: handler
-        tool: list_cctv_sources
-        implementation: 등록된 CCTV/웹캠 소스 목록 + API 키 설정 여부 조회 (로컬 설정 파일)
       cctv_stats:
         description: CCTV 데이터 현황 통계 (전체 수, 센터별 분포, 데이터 소스 상태).
+        group: data
+        target_description: '(파라미터 없음)'
         router: handler
         tool: cctv_stats
         implementation: 로컬 캐시 기반 CCTV 통계 집계 (전체 수, 센터별 분포)
       memory_search:
-        description: 심층 메모리에서 키워드 검색
-        target_description: 검색 키워드
+        description: 에이전트의 심층 메모리에서 키워드·시맨틱 통합 검색.
+        group: memory
+        target_description: 검색 키워드 또는 자연어 질문. category 옵션으로 필터링.
         router: handler
         tool: memory_search
         implementation: SQLite FTS + conversations.db 통합 텍스트 검색
         target_key: query
       storage_summary:
-        description: 저장소 사용량 요약
+        description: 디스크·볼륨 저장소 사용량 요약. 전체 + 디렉토리별 통계.
+        group: file
+        target_description: '(파라미터 없음 — 전체 요약). path 옵션으로 특정 폴더만.'
         router: handler
         tool: get_storage_summary
         implementation: SQLite DB에서 저장소 사용량 집계
       folder_annotate:
-        description: 폴더에 메모/주석 추가
-        target_description: 폴더 경로
+        description: 특정 폴더에 메모·주석 추가. 폴더 의미를 기록해두는 용도.
+        group: file
+        target_description: 대상 폴더 경로. text 옵션으로 주석 내용.
         router: handler
         tool: annotate_folder
         implementation: SQLite DB에 폴더 메모/주석 저장
         target_key: folder_path
       folder_annotations:
-        description: 폴더 주석 조회
+        description: 폴더에 저장된 주석 조회. annotate로 추가한 메모 확인.
+        group: file
+        target_description: 대상 폴더 경로 (생략 시 전체 주석 목록).
         router: handler
         tool: get_folder_annotations
         implementation: SQLite DB에서 폴더 주석 조회
       photo_list_scans:
-        description: 스캔된 폴더 목록 및 DB 경로 조회
+        description: 스캔된 사진 폴더 목록과 DB 경로 조회. photo_scan 이후 확인용.
+        group: photo
+        target_description: '(파라미터 없음 — 전체 스캔된 폴더 목록)'
         router: handler
         tool: list_scans
         implementation: 스캔 이력 SQLite DB 조회
       photo_gallery:
         description: 스캔된 사진/동영상 갤러리 조회 (페이지네이션, 필터)
+        group: photo
         target_description: 폴더 경로
         router: handler
         tool: get_gallery
         implementation: SQLite DB에서 페이지네이션/필터 기반 미디어 목록 조회
         target_key: path
       photo_timeline:
-        description: 월별 촬영 현황 타임라인
-        target_description: 폴더 경로
+        description: 월별 사진·동영상 촬영 통계 (타임라인). 활동 패턴 시각화.
+        group: photo
+        target_description: 폴더 경로 (생략 시 전체 라이브러리). year 옵션으로 특정 연도.
         router: handler
         tool: get_timeline
         implementation: SQLite DB에서 월별 미디어 파일 집계 쿼리
         target_key: path
       photo_duplicates:
-        description: 중복 사진/동영상 탐지 (MD5 기반)
-        target_description: 폴더 경로
+        description: 중복 사진·동영상 탐지 (MD5 해시 기반). 정리·용량 절감용.
+        group: photo
+        target_description: 폴더 경로 (생략 시 전체 라이브러리 스캔).
         router: handler
         tool: find_duplicates
         implementation: MD5 해시 기반 중복 파일 탐지 (파일시스템 스캔)
         target_key: path
       lecture_list:
         description: 저장된 강의 목록 조회. indiebizOS/outputs/lectures/ 하위 스캔.
+        group: lecture
+        target_description: '(파라미터 없음 — 전체 강의 목록)'
         keywords:
         - 강의목록
         - 강의 목록
@@ -1790,6 +1728,8 @@ nodes:
         scope: workspace
       lecture_create:
         description: 새 강의 생성. 한글 제목 슬러그화 → lecture_id, 폴더 + 빈 deck.json 생성.
+        group: lecture
+        target_description: 강의 제목 (한글 가능). style 옵션으로 design_system 지정 가능.
         keywords:
         - 강의 만들기
         - 강의 생성
@@ -1802,6 +1742,8 @@ nodes:
         scope: workspace
       lecture_load:
         description: 강의 데이터 로드. deck.json + 슬라이드/재료 파일 목록 반환.
+        group: lecture
+        target_description: 로드할 강의 ID (lecture_list로 확인).
         router: handler
         tool: lecture_load
         implementation: deck.json 읽고, slides_dir/materials_dir 절대경로 함께 반환
@@ -1809,6 +1751,8 @@ nodes:
         scope: workspace
       lecture_delete:
         description: 강의 폴더 전체 삭제 (confirm=true 필수).
+        group: lecture
+        target_description: 강의 ID와 confirm=true (안전 장치).
         keywords:
         - 강의 삭제
         - 강의 지우기
@@ -1820,6 +1764,8 @@ nodes:
       lecture_open:
         description: 강의 만들기 창(별도 Electron BrowserWindow) 열기. lecture_id 옵션이면 그 강의
           로드 상태로 열고, 미지정이면 강의 목록 화면.
+        group: lecture
+        target_description: '(파라미터 없음 — 빈 창). lecture_id 옵션으로 특정 강의 로드 상태로 오픈.'
         keywords:
         - 강의 만들기 창
         - 강의만들기창
@@ -1833,6 +1779,8 @@ nodes:
         scope: workspace
       deck_reorder:
         description: 슬라이드 순서만 변경 (slide_order 배열 갱신, 파일은 안 건드림).
+        group: lecture
+        target_description: 강의 ID와 slide_order 배열 (새 순서).
         router: handler
         tool: deck_reorder
         implementation: deck.json의 slide_order 배열을 받은 순서로 교체. 검증 후 저장.
@@ -1840,6 +1788,8 @@ nodes:
         scope: workspace
       slide_delete:
         description: 특정 슬라이드 삭제. 파일(json+png) 지우고 deck에서 제거.
+        group: lecture
+        target_description: 강의 ID와 슬라이드 idx (slide_order 위치).
         router: handler
         tool: slide_delete
         implementation: slides/{slide_id}.{json,png} 삭제 + deck.json의 slide_order/slides
@@ -1848,6 +1798,8 @@ nodes:
         scope: workspace
       material_add:
         description: 재료 추가. 파일 경로(file_path) 또는 텍스트(text+filename)로 호출.
+        group: lecture
+        target_description: 강의 ID + file_path(파일 경로) 또는 text+filename(텍스트 직접).
         keywords:
         - 재료 추가
         - 자료 추가
@@ -1860,6 +1812,8 @@ nodes:
         scope: workspace
       material_remove:
         description: 재료 삭제. materials/{filename} 지우고 deck에서 제거.
+        group: lecture
+        target_description: 강의 ID와 삭제할 재료 filename.
         router: handler
         tool: material_remove
         implementation: materials/{filename} unlink + deck.materials 갱신
@@ -1868,6 +1822,8 @@ nodes:
       slide_create:
         description: 강의자의 자연어 요청을 받아 슬라이드 한 장을 생성. 시스템 AI 키·모델 빌린 가벼운 AI가 spec(JSON)
           생성 → slide_shadcn 렌더 → deck 등록.
+        group: lecture
+        target_description: 강의 ID와 자연어 요청 (request). focus_idx 옵션으로 위치 지정.
         keywords:
         - 슬라이드 만들기
         - 슬라이드 생성
@@ -1884,6 +1840,8 @@ nodes:
       slide_edit:
         description: 특정 슬라이드 재생성(편집). focus 슬라이드의 현재 spec을 AI에 컨텍스트로 줘서 강의자 코멘트만 반영.
           다른 부분 보존.
+        group: lecture
+        target_description: 강의 ID, idx, 강의자 코멘트 (request).
         keywords:
         - 슬라이드 편집
         - 톤 바꿔
@@ -1896,6 +1854,8 @@ nodes:
         scope: workspace
       slide_patch_spec:
         description: 슬라이드 spec의 일부 필드만 직접 patch + PNG 재렌더 (AI 호출 없음, PowerPoint식 편집).
+        group: lecture
+        target_description: 강의 ID, idx, patch 객체 (변경할 필드만). layout 키는 거부.
         keywords:
         - 슬라이드 필드 편집
         - 단어만 바꾸기
@@ -1910,6 +1870,8 @@ nodes:
       slide_rerender:
         description: 슬라이드 spec 변경 없이 PNG만 재렌더. design_system 바꾼 뒤 같은 내용을 새 톤으로 다시
           그릴 때. AI 호출 없음.
+        group: lecture
+        target_description: 강의 ID와 idx (생략 시 전체 슬라이드 재렌더).
         keywords:
         - 슬라이드 재렌더
         - 같은 내용 다시 그려
@@ -1923,6 +1885,8 @@ nodes:
         scope: workspace
       deck_export:
         description: 강의 데크를 PDF 또는 PPTX 파일로 내보내기. slide_order 순서대로 PNG를 합본.
+        group: lecture
+        target_description: 강의 ID. format 옵션 (pdf/pptx, 기본 pdf).
         keywords:
         - 강의 내보내기
         - PDF 내보내기
@@ -1953,233 +1917,253 @@ nodes:
     - memory/memory_guide.md
   limbs:
     actions:
-      navigate:
-        description: URL 열기 (Playwright 브라우저)
-        group: browser
-        router: handler
-        tool: browser_navigate
-        implementation: Playwright 헤드리스 Chromium으로 URL 로딩
-        target_key: url
-        keywords:
-        - 브라우저
-        - 웹페이지
-        - URL
       browser_snapshot:
-        description: 접근성 스냅샷 (요소 ref 생성)
+        description: Playwright 접근성 트리 스냅샷. 요소마다 ref ID 부여 — 이후 click/type 등이 ref로 대상 지정.
+        group: browser
+        target_description: '(파라미터 없음 — 현재 페이지의 ref 트리 반환)'
         router: handler
         tool: browser_snapshot
         implementation: Playwright 접근성 트리 스냅샷으로 DOM 요소 ref 매핑
       click:
-        description: 요소 클릭 (ref 기반)
-        target_description: ref ID (e1, e2 등)
+        description: Playwright 요소 클릭. browser_snapshot으로 얻은 ref ID로 대상 지정.
+        group: browser
+        target_description: 'ref ID (snapshot 결과의 e1, e2 등 식별자).'
         router: handler
         tool: browser_click
         implementation: Playwright locator로 요소 클릭 (ref ID 기반)
         target_key: ref
       type:
-        description: 입력 필드에 텍스트 입력
-        target_description: ref ID
+        description: 입력 필드(input/textarea)에 텍스트 입력. ref로 대상 지정.
+        group: browser
+        target_description: ref ID. text 파라미터로 입력 내용 전달.
         router: handler
         tool: browser_type
         implementation: Playwright locator로 입력 필드에 텍스트 입력
         target_key: ref
-      content:
-        description: 페이지 텍스트 콘텐츠 추출
-        group: browser
-        category: get
-        router: handler
-        tool: browser_get_content
-        implementation: Playwright page.content()로 페이지 텍스트 추출
-        keywords:
-        - 텍스트추출
-        - 페이지내용
       screenshot:
-        description: 페이지 스크린샷 (PNG 저장)
+        description: Playwright 페이지 스크린샷 PNG 저장. 시각 검증·기록용.
+        group: browser
+        target_description: '(파라미터 없음). path 옵션으로 저장 경로, full_page로 전체 영역 캡처.'
         router: handler
         tool: browser_screenshot
         implementation: Playwright page.screenshot()으로 PNG 캡처
       scroll:
-        description: 페이지 스크롤 (up/down)
+        description: Playwright 페이지 스크롤 (up/down). 무한 스크롤 페이지 로딩이나 화면 이동에 사용.
+        group: browser
+        target_description: '(파라미터 없음). direction (up/down), pixels로 양 지정.'
         router: handler
         tool: browser_scroll
         implementation: Playwright mouse.wheel()로 페이지 스크롤
       evaluate:
-        description: JavaScript 실행
-        target_description: JS 표현식
+        description: 페이지에서 JavaScript 표현식 실행. DOM 직접 조작·계산용.
+        group: browser
+        target_description: JavaScript 표현식 (page.evaluate 인자).
         router: handler
         tool: browser_evaluate
         implementation: Playwright page.evaluate()로 JavaScript 실행
         target_key: expression
       wait:
-        description: 조건 대기 (selector/text/url)
+        description: Playwright 조건 충족까지 대기 (selector 등장·URL 변경·텍스트 표시). AJAX 페이지에 필수.
+        group: browser
+        target_description: selector/url/text 중 하나로 대기 조건 지정. timeout 옵션 가능.
         router: handler
         tool: browser_wait_for
         implementation: Playwright wait_for_selector/wait_for_url로 조건 대기
       press_key:
-        description: 키보드 키 입력 (Enter, Tab 등)
-        target_description: 키 이름
+        description: Playwright 키보드 키 입력 (Enter/Tab/Escape 등). 단축키는 'Control+A' 형식.
+        group: browser
+        target_description: 키 이름 (Enter/Tab/Escape/ArrowDown 등 Playwright 표기).
         router: handler
         tool: browser_press_key
         implementation: Playwright keyboard.press()로 키 입력
         target_key: key
       tab_list:
-        description: 열린 탭 목록 조회
+        description: Playwright 세션의 열린 탭 목록 조회. tab_switch와 짝.
+        group: browser_session
+        target_description: '(파라미터 없음)'
         router: handler
         tool: browser_tab_list
         implementation: Playwright 브라우저 컨텍스트에서 열린 페이지 목록 조회
       tab_new:
-        description: 새 탭 열기
+        description: Playwright 새 탭 열기. 현재 세션에서 새 페이지 생성.
+        group: browser_session
+        target_description: '(파라미터 없음). url 옵션 시 새 탭에서 바로 페이지 로딩.'
         router: handler
         tool: browser_tab_new
         implementation: Playwright context.new_page()로 새 탭 생성
       tab_switch:
-        description: 탭 전환
-        target_description: tab_id
+        description: Playwright 브라우저의 활성 탭 전환. 0-base 인덱스로 식별.
+        group: browser_session
+        target_description: 전환할 탭의 0부터 시작하는 인덱스. tab_list로 확인.
         router: handler
         tool: browser_tab_switch
         implementation: Playwright 페이지 배열에서 인덱스로 탭 전환
         target_key: tab_id
-      close:
-        description: 브라우저 세션 종료
-        group: browser
-        router: handler
-        tool: browser_close
-        implementation: Playwright 브라우저 컨텍스트 종료
-        keywords:
-        - 브라우저닫기
-        - 종료
       pdf:
-        description: 페이지를 PDF로 저장
+        description: 현재 페이지를 PDF로 저장 (Chromium 전용). 인쇄용 자료 보관.
+        group: browser
+        target_description: '(파라미터 없음). path 옵션으로 저장 경로 지정.'
         router: handler
         tool: browser_save_pdf
         implementation: Playwright page.pdf()로 PDF 저장 (Chromium only)
       back:
-        description: 이전 페이지로 이동
+        description: Playwright 브라우저에서 이전 페이지로 이동. URL 입력 없이 히스토리 뒤로.
+        group: browser
+        target_description: '(파라미터 없음)'
         router: handler
         tool: browser_navigate_back
         implementation: Playwright page.go_back()으로 이전 페이지 이동
       forward:
-        description: 다음 페이지로 이동
+        description: Playwright 브라우저에서 다음 페이지로 이동. back과 짝.
+        group: browser
+        target_description: '(파라미터 없음)'
         router: handler
         tool: browser_navigate_forward
         implementation: Playwright page.go_forward()로 다음 페이지 이동
       hover:
-        description: 요소에 마우스 호버
-        target_description: ref ID
+        description: 요소에 마우스 호버. 툴팁·드롭다운 활성화에 사용. snapshot의 ref로 대상 지정.
+        group: browser
+        target_description: ref ID (snapshot 결과의 식별자).
         router: handler
         tool: browser_hover
         implementation: Playwright locator.hover()로 마우스 호버
         target_key: ref
       drag:
-        description: 요소 드래그 앤 드롭
+        description: 한 요소를 다른 요소로 드래그 앤 드롭. 시작·끝 ref 두 개 필요.
+        group: browser
+        target_description: 시작 ref. target_ref 파라미터로 목적지 ref 지정.
         router: handler
         tool: browser_drag
         implementation: Playwright locator.drag_to()로 드래그 앤 드롭
       select:
-        description: 셀렉트 옵션 선택
-        target_description: ref ID
+        description: select 박스에서 옵션 선택. value 또는 label로 선택.
+        group: browser
+        target_description: ref ID. value 또는 label 파라미터로 선택할 옵션 지정.
         router: handler
         tool: browser_select_option
         implementation: Playwright select_option()으로 셀렉트 옵션 선택
         target_key: ref
       console:
-        description: 브라우저 콘솔 로그 확인
+        description: Playwright 브라우저 콘솔 로그 조회. 페이지 JS 오류·console.log 출력 확인.
+        group: browser
+        target_description: '(파라미터 없음 — 누적 로그 반환). level 옵션으로 필터링 가능.'
         router: handler
         tool: browser_console_logs
         implementation: Playwright page.on('console')로 콘솔 로그 수집
       cookies_save:
-        description: 쿠키 저장
+        description: Playwright 쿠키를 JSON으로 저장. 로그인 세션 유지용, cookies_load와 짝.
+        group: browser_session
+        target_description: 저장할 JSON 파일 경로 (생략 시 기본 경로).
         router: handler
         tool: browser_cookies_save
         implementation: Playwright context.cookies()로 쿠키 JSON 저장
       cookies_load:
-        description: 쿠키 로드
+        description: 저장된 쿠키 JSON을 Playwright에 복원. 재로그인 없이 세션 이어가기.
+        group: browser_session
+        target_description: 복원할 JSON 파일 경로 (생략 시 기본 경로).
         router: handler
         tool: browser_cookies_load
         implementation: Playwright context.add_cookies()로 쿠키 복원
       iframe_list:
-        description: iframe 목록 조회
+        description: 현재 페이지의 iframe 목록 조회. iframe_switch에 사용할 인덱스 확인.
+        group: browser_session
+        target_description: '(파라미터 없음)'
         router: handler
         tool: browser_iframe_list
         implementation: Playwright page.frames()로 iframe 목록 조회
       iframe_switch:
-        description: iframe 전환
+        description: 특정 iframe으로 컨텍스트 전환. 이후 click/content 등은 그 frame 안에서 동작.
+        group: browser_session
+        target_description: iframe 인덱스 (iframe_list 결과의 위치).
         router: handler
         tool: browser_iframe_switch
         implementation: Playwright frame 인덱스로 iframe 전환
         target_key: index
       iframe_reset:
-        description: iframe에서 메인 프레임으로 복귀
+        description: iframe에서 메인 페이지로 복귀. 다음 액션은 다시 최상위 frame 대상.
+        group: browser_session
+        target_description: '(파라미터 없음)'
         router: handler
         tool: browser_iframe_reset
         implementation: Playwright page.main_frame()으로 메인 프레임 복귀
       tab_close:
-        description: 현재 탭 닫기
+        description: 현재 활성 탭 닫기. 마지막 탭이면 세션 유지.
+        group: browser_session
+        target_description: '(파라미터 없음 — 현재 탭 닫기)'
         router: handler
         tool: browser_tab_close
         implementation: Playwright page.close()로 현재 탭 닫기
       dblclick:
-        description: 요소 더블클릭
+        description: Playwright 요소 더블클릭. 표 셀 편집·파일 열기 등에 사용.
+        target_description: ref ID (snapshot 결과의 식별자).
         group: browser
         router: handler
         tool: browser_dblclick
         implementation: Playwright locator.dblclick()로 요소 더블클릭
         target_key: ref
       rightclick:
-        description: 요소 우클릭 (컨텍스트 메뉴)
+        description: Playwright 요소 우클릭 — 컨텍스트 메뉴 띄우기.
+        target_description: ref ID (snapshot 결과의 식별자).
         group: browser
         router: handler
         tool: browser_rightclick
         implementation: Playwright locator.click(button='right')로 우클릭
         target_key: ref
       check:
-        description: 체크박스/라디오 버튼 체크 또는 해제
+        description: 체크박스·라디오 버튼 체크 또는 해제. 토글 동작.
+        target_description: ref ID. checked 옵션으로 강제 상태 지정 가능.
         group: browser
         router: handler
         tool: browser_check
         implementation: Playwright locator.check()/uncheck()로 체크박스 토글
         target_key: ref
       upload_file:
-        description: 파일 input에 파일 업로드
+        description: 파일 input에 로컬 파일 업로드. 파일 선택 다이얼로그 자동 처리.
+        target_description: ref ID. file_path 파라미터로 업로드할 파일 경로.
         group: browser
         router: handler
         tool: browser_upload_file
         implementation: Playwright set_input_files()로 파일 업로드
         target_key: ref
       get_html:
-        description: 현재 페이지 HTML 소스 추출
+        description: 현재 페이지의 전체 HTML 소스 추출. 구조 분석·파싱용. 텍스트만은 content.
+        target_description: '(파라미터 없음 — 현재 페이지 HTML)'
         group: browser
         router: handler
         tool: browser_get_html
         implementation: Playwright page.content()로 HTML 소스 반환
       network_logs:
-        description: 네트워크 요청 로그 조회/캡처
+        description: Playwright 네트워크 요청 캡처 로그 조회. API 호출·리소스 로딩 분석.
+        target_description: '(파라미터 없음). filter 옵션으로 URL/상태/타입 필터링 가능.'
         group: browser
         router: handler
         tool: browser_network_logs
         implementation: Playwright route/CDP로 네트워크 요청 캡처 및 조회
       dialog_info:
-        description: Alert/Confirm/Prompt 팝업 정보 조회
+        description: Alert/Confirm/Prompt 팝업 정보 조회. 최근 팝업의 메시지·타입 반환.
+        target_description: '(파라미터 없음)'
         group: browser
         router: handler
         tool: browser_dialog_info
         implementation: Playwright dialog 이벤트 리스너로 마지막 팝업 정보 반환
       resize:
-        description: 브라우저 뷰포트 크기 변경
+        description: Playwright 브라우저 뷰포트 크기 변경. 반응형 테스트·캡처 크기 조정용.
+        target_description: '(파라미터 없음). width/height로 크기 지정 (기본 1280x720).'
         group: browser
         router: handler
         tool: browser_resize
         implementation: Playwright page.set_viewport_size()로 뷰포트 조정
       vision:
-        description: 페이지 스크린샷을 base64 이미지로 반환 (멀티모달 AI 분석용)
+        description: Playwright 스크린샷을 base64 이미지로 반환. 멀티모달 AI(Claude/Gemini Vision) 분석용.
+        target_description: '(파라미터 없음 — 현재 페이지 base64 PNG 반환)'
         group: browser
         router: handler
         tool: browser_vision
         implementation: Playwright screenshot을 base64 인코딩하여 반환 (AI 시각 인식용)
       desktop_screenshot:
-        description: macOS 화면 캡처 (전체 또는 영역 지정)
+        description: macOS 화면 캡처 PNG (전체 또는 영역). Retina 자동 변환. 브라우저 캡처는 screenshot.
+        target_description: '(파라미터 없음 — 전체 화면). x/y/width/height로 영역 지정 가능.'
         group: desktop
-        category: screenshot
         router: handler
         tool: computer_screenshot
         implementation: pyautogui.screenshot()으로 macOS 화면 캡처 (Retina 자동 변환)
@@ -2188,9 +2172,9 @@ nodes:
         - macOS
         - 화면캡처
       desktop_click:
-        description: macOS 좌표 클릭 (left/right/middle, 더블클릭 가능)
+        description: macOS 절대 좌표에 마우스 클릭. left/right/middle 버튼, 더블클릭 지원.
+        target_description: x,y 좌표. button (left/right/middle), double 옵션 가능.
         group: desktop
-        category: click
         router: handler
         tool: computer_click
         implementation: pyautogui.click()으로 좌표 기반 클릭 (Retina 좌표 변환)
@@ -2199,9 +2183,9 @@ nodes:
         - macOS
         - 좌표
       desktop_type:
-        description: macOS 텍스트 입력
+        description: macOS 키보드로 텍스트 입력. 현재 포커스된 입력 필드에 타이핑.
+        target_description: 입력할 텍스트. 한국어/유니코드 가능.
         group: desktop
-        category: type
         router: handler
         tool: computer_type
         implementation: pyautogui.write()로 텍스트 입력
@@ -2210,7 +2194,8 @@ nodes:
         - 텍스트입력
         - macOS
       desktop_key:
-        description: 'macOS 키보드 키 입력 (단축키 포함, 예: cmd+c, enter)'
+        description: macOS 키보드 키 또는 단축키 입력. 시스템 단축키 가능.
+        target_description: 키 이름 또는 단축키 (예 'cmd+c', 'shift+tab', 'enter').
         group: desktop
         router: handler
         tool: computer_key
@@ -2222,7 +2207,8 @@ nodes:
         - 단축키
         - cmd
       mouse_move:
-        description: 마우스 커서 이동
+        description: macOS 마우스 커서를 절대 좌표로 이동. 클릭 없이 이동만.
+        target_description: x,y 좌표. duration 옵션으로 이동 시간 지정 가능.
         group: desktop
         router: handler
         tool: computer_mouse_move
@@ -2231,7 +2217,8 @@ nodes:
         - 마우스
         - 커서이동
       desktop_drag:
-        description: macOS 드래그 (시작점→끝점)
+        description: macOS 마우스 드래그 (시작점→끝점 좌표). 파일·창 이동에 사용.
+        target_description: 시작 좌표 (start_x, start_y)와 끝 좌표 (end_x, end_y).
         group: desktop
         router: handler
         tool: computer_drag
@@ -2240,9 +2227,9 @@ nodes:
         - 드래그
         - macOS
       desktop_scroll:
-        description: macOS 스크롤 (up/down/left/right)
+        description: macOS 마우스 스크롤 (up/down/left/right). 브라우저 외 일반 앱에도 적용.
+        target_description: direction (up/down/left/right). amount로 스크롤 양 지정.
         group: desktop
-        category: control
         router: handler
         tool: computer_scroll
         implementation: pyautogui.scroll()로 스크롤
@@ -2250,7 +2237,8 @@ nodes:
         - 스크롤
         - macOS
       cursor_position:
-        description: 현재 커서 위치 확인
+        description: macOS 마우스 커서의 현재 좌표 반환. desktop_click 좌표 확인용.
+        target_description: '(파라미터 없음 — x,y 좌표 반환)'
         group: desktop
         router: handler
         tool: computer_cursor_position
@@ -2259,9 +2247,9 @@ nodes:
         - 커서위치
         - 마우스
       desktop_screen_info:
-        description: macOS 화면 해상도 및 스케일 정보
+        description: macOS 화면 해상도·스케일 정보 반환. Retina 좌표 변환 기준.
+        target_description: '(파라미터 없음 — 해상도/스케일 반환)'
         group: desktop
-        category: get
         router: handler
         tool: computer_screen_info
         implementation: pyautogui.size()로 화면 해상도/스케일 조회
@@ -2271,8 +2259,8 @@ nodes:
         - 화면
       os_open:
         description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
-        group: general
-        category: io
+        target_description: 열 대상의 경로 또는 URL. http/https는 브라우저, 파일은 Finder/탐색기.
+        group: open
         target_key: path
         router: system
         func: output_open
@@ -2283,6 +2271,8 @@ nodes:
         - 브라우저
       play:
         description: 유튜브 음악/영상 재생 (검색+재생 복합. 검색만 원하면 search_youtube 사용)
+        group: media
+        target_description: 검색어 또는 유튜브 URL. 검색 후 큐에 추가하고 자동 재생 시작.
         keywords:
         - youtube
         - 유튜브
@@ -2293,25 +2283,27 @@ nodes:
         - play
         - music
         - 듣기
-        target_description: 검색어 또는 유튜브 URL
         router: handler
         tool: play_youtube
         implementation: yt-dlp로 유튜브 URL 추출 + mpv/ffplay로 스트리밍 재생
         target_key: query
       queue_add:
-        description: 재생 큐에 곡 추가
+        description: 재생 큐에 곡 추가 (검색어로 유튜브 검색 후 큐 마지막에 추가).
+        group: media
+        target_description: 검색어 (곡 제목·가수 등) 또는 유튜브 URL.
         keywords:
         - 큐
         - 대기열
         - queue
         - 추가
-        target_description: 검색어
         router: handler
         tool: add_to_queue
         implementation: 재생 큐 리스트에 유튜브 URL 추가 (인메모리)
         target_key: query
       skip:
-        description: 현재 곡 건너뛰고 다음 곡 재생
+        description: 현재 재생 중인 곡을 건너뛰고 큐의 다음 곡으로 이동.
+        group: media
+        target_description: '(파라미터 없음)'
         keywords:
         - 스킵
         - 다음곡
@@ -2321,12 +2313,16 @@ nodes:
         tool: skip_youtube
         implementation: mpv/ffplay 프로세스 종료 후 큐 다음 곡 재생
       queue:
-        description: 현재 재생 큐 상태 조회
+        description: 현재 재생 큐의 상태와 곡 목록 조회. 큐 추가는 queue_add.
+        group: media
+        target_description: '(파라미터 없음)'
         router: handler
         tool: get_queue
         implementation: 인메모리 재생 큐 상태 반환
       stop:
-        description: 재생 중지 및 큐 초기화
+        description: 재생 중지 + 큐 초기화. 일시정지 불가, 항상 완전 정지.
+        group: media
+        target_description: '(파라미터 없음)'
         keywords:
         - 정지
         - 멈춰
@@ -2336,7 +2332,9 @@ nodes:
         tool: stop_youtube
         implementation: mpv/ffplay 프로세스 종료 + 큐 초기화
       youtube_download:
-        description: 유튜브 동영상 오디오를 MP3로 다운로드
+        description: 유튜브 동영상의 오디오를 MP3로 다운로드. 영상 다운로드는 미지원.
+        group: media
+        target_description: 유튜브 동영상 URL. output 옵션으로 저장 경로 지정 가능.
         keywords:
         - youtube
         - 유튜브
@@ -2345,15 +2343,14 @@ nodes:
         - mp3
         - 음악저장
         - 노래저장
-        target_description: 유튜브 URL
         router: handler
         tool: download_youtube_music
         implementation: yt-dlp로 유튜브 오디오 스트림 추출 후 MP3 변환
         target_key: url
       radio_play:
-        description: 라디오 재생 (mpv)
+        description: 인터넷 라디오 재생 (mpv 기반). search_radio·korean_radio로 찾은 채널.
+        target_description: 방송 ID 또는 stream URL (search_radio/korean_radio 결과).
         group: media
-        category: play
         router: handler
         tool: play_radio
         implementation: mpv/ffplay로 HLS/ICY 라디오 스트림 재생
@@ -2362,18 +2359,18 @@ nodes:
         - 라디오재생
         - 라디오듣기
       radio_stop:
-        description: 라디오 재생 중지
+        description: 라디오 재생 중지. 음악 재생은 stop으로 별도.
+        target_description: '(파라미터 없음)'
         group: media
-        category: stop
         router: handler
         tool: stop_radio
         implementation: mpv/ffplay 프로세스 종료
         keywords:
         - 라디오중지
       player_status:
-        description: 현재 재생 상태 확인
+        description: 현재 음악·라디오 재생 상태 확인 (재생 중/정지/곡명 등).
+        target_description: '(파라미터 없음)'
         group: media
-        category: get
         router: handler
         tool: radio_status
         implementation: mpv/ffplay 프로세스 상태 확인
@@ -2381,9 +2378,9 @@ nodes:
         - 재생상태
         - 플레이어
       volume:
-        description: 볼륨 조절
+        description: 음악·라디오 재생 볼륨 조절 (mpv IPC). 0-100 범위.
+        target_description: 볼륨 값 (0=무음, 100=최대).
         group: media
-        category: control
         router: handler
         tool: set_radio_volume
         implementation: mpv IPC 소켓으로 볼륨 조절
@@ -2393,9 +2390,9 @@ nodes:
         - 소리
         - 음량
       favorites:
-        description: 즐겨찾기 목록 조회
+        description: 라디오 즐겨찾기 채널 목록 조회. save_favorite으로 추가.
+        target_description: '(파라미터 없음)'
         group: media
-        category: get
         router: handler
         tool: get_radio_favorites
         implementation: 즐겨찾기 JSON 파일에서 목록 조회
@@ -2403,7 +2400,8 @@ nodes:
         - 즐겨찾기
         - 좋아요
       save_favorite:
-        description: 즐겨찾기에 추가
+        description: 현재 재생 중인 라디오 채널을 즐겨찾기에 추가.
+        target_description: '(현재 재생 중인 채널 자동 등록). name 옵션으로 별칭 지정.'
         group: media
         router: handler
         tool: save_radio_favorite
@@ -2411,7 +2409,8 @@ nodes:
         keywords:
         - 즐겨찾기추가
       remove_favorite:
-        description: 즐겨찾기에서 제거
+        description: 라디오 즐겨찾기에서 특정 채널 제거. 추가는 save_favorite.
+        target_description: 채널 이름 (favorites로 조회한 결과의 name).
         group: media
         router: handler
         tool: remove_radio_favorite
@@ -2421,9 +2420,9 @@ nodes:
         - 즐겨찾기삭제
         - 기본앱
       cloudflare_api:
-        description: Cloudflare API 호출 (모든 서비스 통합)
+        description: Cloudflare API 호출 (Pages/Workers/R2/D1/Tunnel 모든 서비스 통합).
+        target_description: API endpoint 경로 (예 'zones/abc/dns_records'). method/data 옵션으로 요청 구성.
         group: cloudflare
-        category: control
         router: handler
         tool: cf_api
         implementation: Cloudflare REST API (Pages/Workers/R2/D1/Tunnel) 통합 HTTP 클라이언트
@@ -2435,46 +2434,59 @@ nodes:
         - R2
         - Pages
       browser_navigate:
-        description: URL 열기 (Playwright 브라우저)
-        target_description: URL
+        description: Playwright 헤드리스 브라우저로 URL 로딩. 결과는 snapshot/content로 추출.
+        group: browser
+        target_description: 이동할 URL (http/https 절대 주소).
         router: handler
         tool: browser_navigate
         implementation: Playwright 헤드리스 Chromium으로 URL 로딩
         target_key: url
       browser_content:
-        description: 페이지 텍스트 콘텐츠 추출
+        description: Playwright 페이지의 텍스트 콘텐츠 추출. 본문 텍스트 위주, HTML 태그 제외.
+        group: browser
+        target_description: '(파라미터 없음 — 현재 페이지 텍스트)'
         router: handler
         tool: browser_get_content
         implementation: Playwright page.content()로 페이지 텍스트 추출
       browser_close:
-        description: 브라우저 세션 종료
+        description: Playwright 브라우저 세션 종료. 열린 탭·쿠키 모두 해제.
+        group: browser
+        target_description: '(파라미터 없음)'
         router: handler
         tool: browser_close
         implementation: Playwright 브라우저 컨텍스트 종료
       chrome_connect:
-        description: Chrome MCP 서버 연결 (실제 Chrome 브라우저 제어)
+        description: Chrome MCP 서버 연결 — 실제 Chrome 브라우저 원격 제어 (헤드리스 아님). Playwright 대안.
+        group: browser_session
+        target_description: '(파라미터 없음). url 옵션으로 MCP 서버 주소 지정.'
         router: handler
         tool: browser_chrome_connect
         implementation: Chrome MCP 서버에 WebSocket 연결하여 실제 Chrome 브라우저 원격 제어
       chrome_disconnect:
-        description: Chrome MCP 연결 해제
+        description: Chrome MCP 서버 연결 해제. 원격 제어 세션 종료.
+        group: browser_session
+        target_description: '(파라미터 없음)'
         router: handler
         tool: browser_chrome_disconnect
         implementation: Chrome MCP WebSocket 연결 해제
       chrome_status:
-        description: Chrome MCP 연결 상태 확인
+        description: Chrome MCP 연결 상태 확인. 연결 여부·현재 URL·탭 ID·ref 수 반환.
+        group: browser_session
+        target_description: '(파라미터 없음)'
         router: handler
         tool: browser_chrome_status
         implementation: Chrome MCP 연결 여부·URL·탭ID·ref 수 반환
       find:
-        description: 자연어로 페이지 요소 검색 (Chrome 전용)
-        target_description: 검색어
+        description: 자연어로 페이지 요소 검색 (Chrome MCP 전용). browser_snapshot의 ref 대안.
+        group: browser
+        target_description: 검색어 (자연어, 예 '로그인 버튼', '검색창').
         router: handler
         tool: browser_find
         implementation: Chrome MCP find 도구로 자연어 기반 DOM 요소 검색
         target_key: query
       cctv_open:
         description: CCTV 실시간 영상을 브라우저에서 열기. 검색(cctv_search)으로 찾은 CCTV를 실제로 재생.
+        group: open
         keywords:
         - cctv
         - 열기
@@ -2485,44 +2497,42 @@ nodes:
         tool: open_cctv
         implementation: CCTV HLS/RTSP 스트림 URL을 브라우저에서 재생
         target_key: name
-      route_navigate:
-        description: 자동차 길찾기 (카카오 내비). 출발지→목적지 경로/거리/시간/톨비 반환. 장소명 또는 좌표 사용 가능.
-        target_description: 목적지 (장소명 또는 경도,위도)
-        router: handler
-        tool: kakao_navigation
-        implementation: Kakao Map API로 자동차 경로 탐색 (거리/시간/톨비 포함)
-        target_key: destination
       show_map:
         description: 지도에 위치 마커 표시 (HTML 지도 생성). 장소명 입력 시 자동 좌표 변환.
+        group: open
         target_description: 장소명 또는 좌표
         router: handler
         tool: show_location_map
         implementation: Kakao Map API로 좌표 기반 지도 HTML 생성 (프론트엔드 렌더링용)
         target_key: query
       explorer:
-        description: 파일 탐색기에서 열기 (Finder)
-        target_description: 경로
+        description: 파일 탐색기로 폴더 열기 (macOS Finder, Windows 탐색기). 파일 자체 열기는 os_open.
+        group: open
+        target_description: 폴더 경로 (절대 또는 상대). 파일이면 파일 위치 폴더가 열림.
         router: handler
         tool: open_file_explorer
         implementation: subprocess로 macOS Finder/Windows Explorer 실행
         target_key: path
       photo_manager:
-        description: Photo Manager GUI 실행
-        target_description: 폴더 경로 (선택)
+        description: indiebizOS 내장 Photo Manager GUI 실행 (Electron). 사진 분류·검색·인덱싱.
+        group: open
+        target_description: 폴더 경로 (선택, 미지정 시 기본 라이브러리 폴더).
         router: handler
         tool: open_photo_manager
         implementation: Electron 기반 Photo Manager GUI 실행
         target_key: path
       launch:
         description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
+        group: open
+        target_description: '(미지정 시 대시보드 표시). action으로 register/add/list/remove 등 사이트 관리.'
         router: handler
         tool: launch_sites
         implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈)
         target_key: action
       open_project:
-        description: 프로젝트 창 열기
-        group: launcher
-        category: execute
+        description: Electron 런처에 프로젝트 창 열기 명령 전송.
+        target_description: '(파라미터 없음). project_id 옵션으로 특정 프로젝트 지정 가능.'
+        group: open
         router: system
         func: launcher_command
         default_input:
@@ -2532,9 +2542,9 @@ nodes:
         - 프로젝트열기
         - 프로젝트창
       open_system_ai:
-        description: 시스템 AI 창 열기
-        group: launcher
-        category: execute
+        description: Electron 런처에 시스템 AI 채팅 창 열기 명령 전송.
+        target_description: '(파라미터 없음)'
+        group: open
         router: system
         func: launcher_command
         default_input:
@@ -2544,9 +2554,9 @@ nodes:
         - 시스템AI
         - 시스템창
       open_indienet:
-        description: IndieNet 창 열기
-        group: launcher
-        category: execute
+        description: Electron 런처에 IndieNet(통신·이웃 채널) 창 열기 명령 전송.
+        target_description: '(파라미터 없음)'
+        group: open
         router: system
         func: launcher_command
         default_input:
@@ -2556,9 +2566,9 @@ nodes:
         - 인디넷
         - 메신저
       open_business:
-        description: 비즈니스 매니저 창 열기
-        group: launcher
-        category: execute
+        description: Electron 런처에 비즈니스 매니저(이웃·관계) 창 열기 명령 전송.
+        target_description: '(파라미터 없음)'
+        group: open
         router: system
         func: launcher_command
         default_input:
@@ -2568,9 +2578,9 @@ nodes:
         - 비즈니스
         - 이웃
       open_multichat:
-        description: 멀티채팅 창 열기
-        group: launcher
-        category: execute
+        description: Electron 런처에 멀티 채팅(여러 에이전트 동시 대화) 창 열기 명령 전송.
+        target_description: '(파라미터 없음)'
+        group: open
         router: system
         func: launcher_command
         default_input:
@@ -2580,9 +2590,9 @@ nodes:
         - 멀티채팅
         - 멀티챗
       open_folder:
-        description: 폴더 뷰 창 열기
-        group: launcher
-        category: execute
+        description: Electron 런처에 폴더 뷰 창 열기 명령 전송.
+        target_description: '(파라미터 없음). path 옵션으로 시작 폴더 지정 가능.'
+        group: open
         router: system
         func: launcher_command
         default_input:
@@ -2613,6 +2623,7 @@ nodes:
     actions:
       delegate:
         description: 같은 프로젝트의 동료 에이전트에게 작업 위임 (비동기, 결과 자동 보고)
+        target_description: 동료 에이전트 이름. message로 위임할 작업 전달.
         group: delegation
         target_key: agent_id
         router: system
@@ -2625,6 +2636,7 @@ nodes:
         - 작업
       ask_sync:
         description: 에이전트에게 동기 질문 (응답을 기다려서 반환 — 파이프라인/워크플로우용)
+        target_description: 에이전트 ID ('프로젝트/에이전트' 형식). message로 질문 내용 전달.
         group: delegation
         target_key: agent_id
         router: system
@@ -2636,7 +2648,8 @@ nodes:
         - 동기
         - 에이전트
       delegate_workflow:
-        description: 다른 에이전트에게 IBL 파이프라인 위임
+        description: 다른 에이전트에게 IBL 파이프라인 위임 (대상 에이전트의 project_path 컨텍스트에서 실행).
+        target_description: 대상 에이전트 ID와 실행할 IBL 파이프라인 코드.
         group: delegation
         router: system
         func: delegate_workflow
@@ -2647,6 +2660,7 @@ nodes:
         - IBL
       delegate_project:
         description: 시스템 AI 전용 — 다른 프로젝트의 에이전트에게 작업 위임 (프로젝트 자동 활성화)
+        target_description: "'프로젝트/에이전트' 형식 ID. message로 위임 작업 전달."
         group: delegation
         target_key: agent_id
         router: system
@@ -2657,7 +2671,8 @@ nodes:
         - 프로젝트위임
         - 다른프로젝트
       agent_info:
-        description: 에이전트의 역할·도구·설정 상세 조회
+        description: 다른 에이전트의 역할·도구·설정 상세 조회. 위임 전 능력 확인용.
+        target_description: agent_id ('프로젝트/에이전트' 형식, list_projects로 확인).
         group: delegation
         target_key: agent_id
         router: system
@@ -2668,7 +2683,8 @@ nodes:
         - 에이전트정보
         - 상세
       list_projects:
-        description: 모든 프로젝트와 소속 에이전트 목록 조회
+        description: 모든 프로젝트와 소속 에이전트 목록 조회. 위임 대상 확인용 (delegate/delegate_project).
+        target_description: '(파라미터 없음 — 전체 목록 반환)'
         group: delegation
         router: system
         func: list_project_agents
@@ -2678,8 +2694,8 @@ nodes:
         - 에이전트목록
       channel_search:
         description: 채널 메시지 검색 (Gmail/Nostr/Telegram)
+        target_description: 채널 타입 (gmail/nostr/telegram). query 옵션으로 검색어 (Gmail은 Gmail 검색 문법).
         group: channel
-        category: search
         target_key: channel_type
         router: channel_engine
         implementation: channel_engine 추상화 계층을 통해 채널별 메시지 검색. Gmail은 query 기반, Nostr/Telegram은
@@ -2688,9 +2704,9 @@ nodes:
         - 메시지검색
         - 채널
       messages:
-        description: 특정 연락처의 메시지 이력
+        description: 한 이웃과 주고받은 메시지 채널 통합 이력 (Gmail/Nostr/Telegram 등).
+        target_description: 이웃 ID (neighbors로 조회한 결과의 id 필드).
         group: channel
-        category: get
         target_key: neighbor_id
         router: driver
         driver: sqlite
@@ -2701,23 +2717,25 @@ nodes:
         - 대화
         - 이력
       neighbors:
-        description: 비즈니스 이웃 목록 조회 (검색, 상세도 조절)
-        target_description: 검색어 (선택)
+        description: 비즈니스 이웃 목록 조회 (검색, 상세도 조절). 사용자 프로필 + 관계 DB 기반.
+        group: neighbor
+        target_description: 검색어 (선택, 미지정 시 전체). detail 옵션으로 상세도 (summary/full).
         router: handler
         tool: get_neighbors
         implementation: 사용자 프로필(my_profile.txt) + 관계 DB 기반 이웃 목록 조회
         target_key: search
       neighbor_detail:
-        description: 특정 이웃의 상세 정보 조회
-        target_description: 이웃 이름 또는 ID
+        description: 한 이웃(연락처)의 상세 정보 조회 (관계·채널·메모 등 DB 전체 필드).
+        group: neighbor
+        target_description: 이웃 이름 또는 ID. 동명이인이 있을 수 있어 ID 권장.
         router: handler
         tool: get_neighbor_detail
         implementation: 비즈니스 관계 DB에서 이웃 상세 정보 조회
         target_key: name
       channel_send:
-        description: 메시지 발송 (Gmail/Nostr/Telegram)
+        description: 메시지 발송 (Gmail/Nostr/Telegram). 에이전트 identity 기반 발신자 자동 설정.
+        target_description: 채널 타입 (gmail/nostr/telegram). to/subject/body 파라미터로 메시지 구성.
         group: channel
-        category: send
         target_key: channel_type
         router: channel_engine
         implementation: channel_engine 추상화 계층을 통해 메시지 발송. Gmail은 SMTP, Nostr은 릴레이
@@ -2728,9 +2746,9 @@ nodes:
         - 텔레그램
         - 이메일
       channel_read:
-        description: 채널 수신 메시지 읽기 (Gmail/Nostr/Telegram)
+        description: 채널 수신 메시지 읽기 (Gmail/Nostr/Telegram). 최근 수신함 조회.
+        target_description: 채널 타입 (gmail/nostr/telegram). max_results로 건수 제한 (기본 10).
         group: channel
-        category: read
         target_key: channel_type
         router: channel_engine
         implementation: channel_engine 추상화 계층을 통해 수신 메시지 조회. Gmail�� IMAP, Nostr은
@@ -2754,8 +2772,8 @@ nodes:
       newspaper:
         description: '"신문 만들어줘"라고 요청할 때만 사용. 키워드별 뉴스 기사를 자동 수집하여 HTML 신문 레이아웃으로 생성.
           보고서/분석/요약 요청에는 사용하지 말 것.'
+        target_description: keywords 배열 (수집할 뉴스 주제). 결과는 HTML 신문 파일.
         group: media_produce
-        category: create
         router: handler
         tool: generate_newspaper
         implementation: Google News RSS + Guardian API 수집 → Jinja2 HTML 신문 레이아웃 생성
@@ -2768,10 +2786,9 @@ nodes:
         - guardian
         - world news
       slide:
-        description: 'PNG 슬라이드 생성. 호출: [engines:slide]{slides: [{title, body, theme},
-          ...]} (인라인 배열만, topic/file 미지원). 가이드 read_guide(query="슬라이드")'
+        description: 'PNG 슬라이드 생성 (기본 템플릿, 간단 케이스). 더 풍부한 레이아웃은 slide_shadcn. (가이드 slides.md)'
+        target_description: slides 배열 (각 슬라이드는 title/body/theme 등). 인라인 배열만, topic/file 미지원.
         group: media_produce
-        category: create
         router: handler
         tool: create_slides
         implementation: 'Jinja2 HTML 템플릿 + Playwright PNG 캡처. tool_input.slides 배열만
@@ -2782,9 +2799,9 @@ nodes:
         - 프레젠테이션
         - PPT
       html_video:
-        description: HTML+CSS 기반 MP4 영상 생성 (guide 참조)
+        description: HTML/CSS 씬을 MP4 영상으로 합성. 슬라이드형 자동 영상 생성용. (가이드 html_video.md)
+        target_description: 영상 주제 또는 제목. scenes 파라미터로 씬 배열 직접 전달도 가능.
         group: media_produce
-        category: create
         router: handler
         tool: create_html_video
         implementation: Jinja2 HTML 씬 생성 → Playwright 프레임 캡처 → FFmpeg MP4 인코딩
@@ -2794,9 +2811,9 @@ nodes:
         - 동영상
         - MP4
       chart:
-        description: 범용 차트 생성 (chart_type으로 종류 선택 — line/bar/pie/scatter/heatmap/candlestick/multi)
+        description: 차트 종류 자동 분기 — chart_type으로 line/bar/pie/scatter/heatmap/candlestick/multi 선택.
+        target_description: 차트 제목. chart_type으로 종류 지정 (기본 line). 종류별 데이터 형식은 해당 액션 참고.
         group: chart
-        category: create
         router: handler
         tool: chart
         implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. 개별 차트
@@ -2807,9 +2824,9 @@ nodes:
         - 그래프
         - 시각화
       music:
-        description: ABC 악보 작곡 및 오디오 변환
+        description: ABC 표기법 작곡 + MIDI 변환 + 오디오 렌더링 통합. 한 번에 음악 파일 생성.
+        target_description: 곡 제목. 멜로디는 abc 파라미터로 ABC notation 직접 전달, 또는 description으로 AI 작곡 요청.
         group: music
-        category: create
         router: handler
         tool: compose_and_export
         implementation: ABC notation 생성 → abc2midi MIDI 변환 → fluidsynth 오디오 렌더링
@@ -2820,9 +2837,9 @@ nodes:
         - ABC
         - MIDI
       remotion_video:
-        description: React/Remotion 기반 프로그래밍 방식 영상 생성
+        description: React TSX 컴포지션으로 MP4 영상 생성. 동적 데이터 시각화·애니메이션 영상에 적합.
+        target_description: Remotion 컴포지션 TSX 코드. 파일로 저장된 컴포지션은 render_remotion.
         group: media_produce
-        category: create
         router: handler
         tool: create_remotion_video
         implementation: React TSX 컴포지션 생성 + Remotion CLI로 MP4 렌더링
@@ -2832,9 +2849,9 @@ nodes:
         - React
         - Remotion
       tts:
-        description: 텍스트를 음성 파일(MP3)로 변환 (Edge TTS). 동영상 나레이션 등에 활용.
+        description: 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
+        target_description: 음성으로 만들 텍스트. voice 옵션으로 화자 선택 (기본 한국어 여성).
         group: media_produce
-        category: create
         router: handler
         tool: create_tts
         implementation: edge-tts(Microsoft Azure TTS)로 텍스트→MP3 변환
@@ -2851,9 +2868,9 @@ nodes:
         - TTS
         - 나레이션
       render_video:
-        description: 저장된 HTML 씬들을 MP4로 렌더링
+        description: 저장된 HTML 씬 디렉토리를 MP4 영상으로 합성. html_video의 마지막 단계.
+        target_description: 씬 HTML 파일들이 저장된 디렉토리 경로.
         group: media_produce
-        category: create
         router: handler
         tool: render_html_video
         implementation: 저장된 HTML 씬 디렉토리 → Playwright + FFmpeg MP4 렌더링
@@ -2865,8 +2882,8 @@ nodes:
       render_remotion:
         description: 파일로 저장된 TSX 컴포지션을 Remotion으로 MP4 렌더링. composition_file(절대경로)
           필수.
+        target_description: composition_file (TSX 파일 절대 경로). 인라인 코드는 remotion_video.
         group: media_produce
-        category: create
         router: handler
         tool: render_remotion_video
         implementation: Remotion CLI(npx remotion render)로 TSX→MP4 렌더링
@@ -2876,7 +2893,8 @@ nodes:
         - Remotion
         - TSX
       remotion_status:
-        description: Remotion 설치 상태 및 렌더링 상태 확인
+        description: Remotion/Node.js 설치 상태 확인. remotion_video 실행 전 검증용.
+        target_description: '(파라미터 없음 — 상태만 반환)'
         group: media_produce
         router: handler
         tool: check_remotion_status
@@ -2885,14 +2903,9 @@ nodes:
         - Remotion
         - 상태
       slide_shadcn:
-        description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅+강의용 레이아웃 모두 지원, design_system으로
-          책 단위 비주얼 정체성 부여. 일러스트가 슬라이드 배경과 융합되는 통합형 레이아웃(hero_illustration/illustration_anchor/split_concept/illustration_background)
-          + 시각적 비교 표(comparison_iconic) 우선 권장. 호출: [engines:slide_shadcn]{slides:
-          [{layout, title, ...}, ...], design_system: "vintage_book", output_dir:
-          "(선택)"} (인라인 배열만, topic 미지원). 강의·발표·책 강의에는 lecture_body / metaphor_story
-          / comparison_table / factbox / quote 사용. 가이드 read_guide(query="슬라이드")'
+        description: 'Shadcn UI 고품질 PNG 슬라이드 — 통합 레이아웃 + design_system으로 책·강의·발표용 일관된 비주얼. (가이드 lecture_slides_with_illustrations.md)'
+        target_description: slides 배열 (각 슬라이드는 layout/title 등). design_system/theme/output_dir 옵션.
         group: media_produce
-        category: create
         router: handler
         tool: create_shadcn_slides
         implementation: 'Shadcn UI React 기반 + Playwright PNG 캡처. tool_input: slides(배열,
@@ -2923,8 +2936,8 @@ nodes:
           슬라이드 design_system과 일관된 일러스트 자동 생성 권장 (한글 텍스트 금지 + 스타일 토큰 자동 주입). 호출: [engines:image_gemini]{prompt:
           "...", style_preset: "vintage_book", aspect_ratio: "16:9", image_size: "2K"}.
           더 정밀한 일러스트는 quality:"pro" (Nano Banana Pro), 빠른 기본은 quality:"fast"'
+        target_description: prompt (필수). style_preset/aspect_ratio/image_size/quality/output_path 옵션.
         group: media_produce
-        category: create
         router: handler
         tool: generate_gemini_image
         implementation: 'Google Gemini API로 프롬프트 기반 AI 이미지 생성. 기본 모델: gemini-3.1-flash-image-preview
@@ -2946,9 +2959,9 @@ nodes:
         - 이미지생성
         - AI이미지
       render_html:
-        description: HTML을 이미지로 렌더링
+        description: HTML 페이지를 PNG 이미지로 렌더링. 슬라이드·차트 결과를 이미지화.
+        target_description: 렌더링할 HTML 문자열 또는 경로. 결과 PNG 경로 반환.
         group: media_produce
-        category: create
         router: handler
         tool: render_html_to_image
         implementation: Playwright로 HTML 페이지 렌더링 후 PNG 캡처
@@ -2958,7 +2971,8 @@ nodes:
         - 이미지
         - 렌더링
       abc_to_midi:
-        description: ABC 악보를 MIDI 파일로 변환
+        description: ABC 표기법 텍스트를 MIDI 파일로 변환. 오디오 변환은 midi_to_audio.
+        target_description: 'ABC notation 텍스트 (X:/T:/M:/K: 헤더 포함 표준 형식).'
         group: music
         router: handler
         tool: abc_to_midi
@@ -2969,7 +2983,8 @@ nodes:
         - MIDI
         - ABC변환
       midi_to_audio:
-        description: MIDI를 오디오(WAV/MP3)로 변환
+        description: MIDI 파일을 WAV/MP3 오디오로 변환. 사운드폰트 GeneralUser GS 사용.
+        target_description: 변환할 MIDI 파일 경로. format 옵션으로 wav/mp3 선택 (기본 mp3).
         group: music
         router: handler
         tool: midi_to_audio
@@ -2981,7 +2996,8 @@ nodes:
         - WAV
         - MP3
       abc_search:
-        description: ABC 악보 검색
+        description: abcnotation.com에서 ABC 표기법 악보 검색. 곡명·작곡가·키워드로.
+        target_description: 검색어 (곡명, 작곡가, 장르 등). 결과는 tune_id로 abc_get에 사용.
         group: music
         router: handler
         tool: search_abc_tunes
@@ -2991,7 +3007,8 @@ nodes:
         - 악보검색
         - ABC
       abc_get:
-        description: ABC 악보 상세 조회
+        description: abcnotation.com 악보의 상세 내용 조회. 검색은 abc_search.
+        target_description: 악보 ID (abc_search 결과의 tune_id).
         group: music
         router: handler
         tool: get_abc_tune
@@ -3001,9 +3018,9 @@ nodes:
         - 악보조회
         - ABC
       line:
-        description: 라인 차트
+        description: 시계열·연속값 라인 차트. 다중 시리즈 가능. matplotlib 폴백 내장.
+        target_description: 차트 제목. 데이터는 x/y 리스트, 다중 시리즈는 series 배열. 시간축 데이터에 적합.
         group: chart
-        category: create
         router: handler
         tool: line_chart
         implementation: Plotly로 인터랙티브 라인 차트 HTML 생성 (matplotlib 폴백)
@@ -3013,9 +3030,9 @@ nodes:
         - 선그래프
         - 추이
       bar:
-        description: 바 차트 (수평/수직, 스택)
+        description: 범주별 값 비교 바 차트. 수평/수직/스택 모두 지원. 시간축은 line 사용.
+        target_description: 차트 제목. 데이터는 x(범주 라벨)·y(값) 리스트. 스택은 series 배열로 다중 시리즈 전달.
         group: chart
-        category: create
         router: handler
         tool: bar_chart
         implementation: Plotly로 바 차트 HTML 생성 (수평/수직/스택 지원)
@@ -3024,9 +3041,9 @@ nodes:
         - 바차트
         - 막대그래프
       candlestick:
-        description: 캔들스틱 차트 (OHLCV, 이동평균)
+        description: 주가 OHLCV 캔들스틱 차트. 이동평균선 옵션 포함. 일반 시계열은 line 사용.
+        target_description: 차트 제목. 데이터는 open/high/low/close/volume 시계열. ma 옵션으로 이동평균선 추가.
         group: chart
-        category: create
         router: handler
         tool: candlestick_chart
         implementation: Plotly로 OHLCV 캔들스틱 차트 HTML 생성
@@ -3036,9 +3053,9 @@ nodes:
         - 주식차트
         - OHLCV
       pie:
-        description: 파이/도넛 차트
+        description: 비율 분포 파이/도넛 차트. 카테고리별 비중 시각화.
+        target_description: 차트 제목. 데이터는 labels(카테고리)와 values(값) 리스트. hole 옵션으로 도넛 모양.
         group: chart
-        category: create
         router: handler
         tool: pie_chart
         implementation: Plotly로 파이/도넛 차트 HTML 생성
@@ -3048,9 +3065,9 @@ nodes:
         - 원그래프
         - 비율
       scatter:
-        description: 산점도 (추세선 옵션)
+        description: 두 변수의 상관관계 산점도. 추세선 옵션 포함. 군집·이상치 탐색에 적합.
+        target_description: 차트 제목. 데이터는 x/y 좌표 리스트. trendline 옵션으로 추세선 추가 가능.
         group: chart
-        category: create
         router: handler
         tool: scatter_plot
         implementation: Plotly로 산점도 HTML 생성 (추세선 옵션)
@@ -3060,9 +3077,9 @@ nodes:
         - 분포
         - 추세선
       heatmap:
-        description: 히트맵
+        description: 2차원 분포를 색상 강도로 표현하는 히트맵. 매트릭스 데이터 시각화.
+        target_description: 차트 제목. 데이터는 z(매트릭스)·x(열 라벨)·y(행 라벨). 시간×요일·지역×카테고리 등.
         group: chart
-        category: create
         router: handler
         tool: heatmap
         implementation: Plotly로 히트맵 HTML 생성
@@ -3071,9 +3088,9 @@ nodes:
         - 히트맵
         - 열지도
       multi:
-        description: 복합 차트 대시보드 (여러 차트 조합)
+        description: 여러 차트를 한 페이지에 배치하는 복합 대시보드. 비교·관계 시각화용.
+        target_description: 차트 제목. charts 배열에 개별 차트 정의 (각각 chart_type + 데이터). subplots 자동 배치.
         group: chart
-        category: create
         router: handler
         tool: multi_chart
         implementation: Plotly subplots로 복합 차트 대시보드 HTML 생성
@@ -3082,9 +3099,9 @@ nodes:
         - 대시보드
         - 복합차트
       web_site_list:
-        description: 등록된 사이트 목록 조회
+        description: 등록된 사이트 목록 조회. 레지스트리에 있는 모든 사이트.
+        target_description: '(파라미터 없음 — 전체 목록 반환)'
         group: web_builder
-        category: list
         router: handler
         tool: site_list
         implementation: 사이트 레지스트리 JSON에서 등록된 사이트 목록 조회
@@ -3092,9 +3109,9 @@ nodes:
         - 사이트
         - 웹사이트목록
       web_site_register:
-        description: 새 사이트 등록 (이름, 경로 필수)
+        description: 새 사이트를 레지스트리에 등록. 이후 ID로 빠른 참조 가능.
+        target_description: 사이트 이름. path 파라미터로 프로젝트 경로 지정.
         group: web_builder
-        category: create
         router: handler
         tool: site_register
         implementation: 사이트 레지스트리 JSON에 새 사이트 등록
@@ -3103,9 +3120,9 @@ nodes:
         - 사이트등록
         - 웹사이트
       web_site_remove:
-        description: 등록된 사이트 삭제
+        description: 등록된 사이트를 레지스트리에서 삭제. 실제 파일은 그대로.
+        target_description: 삭제할 사이트의 ID (site_list로 조회한 id).
         group: web_builder
-        category: delete
         router: handler
         tool: site_remove
         implementation: 사이트 레지스트리 JSON에서 사이트 삭제
@@ -3113,9 +3130,9 @@ nodes:
         keywords:
         - 사이트삭제
       web_site_update:
-        description: 등록된 사이트 정보 수정
+        description: 등록된 사이트의 메타 정보 수정 (이름·경로·태그 등).
+        target_description: 사이트 ID. 변경할 필드는 별도 파라미터로 전달.
         group: web_builder
-        category: control
         router: handler
         tool: site_update
         implementation: 사이트 레지스트리 JSON에서 사이트 정보 수정
@@ -3123,9 +3140,9 @@ nodes:
         keywords:
         - 사이트수정
       web_snapshot:
-        description: 사이트 스냅샷 (현재 상태 캡처)
+        description: 사이트 현재 화면 스크린샷 캡처. 배포 결과 시각 확인·기록용.
+        target_description: 사이트 ID (site_register로 등록된 사이트).
         group: web_builder
-        category: get
         router: handler
         tool: site_snapshot
         implementation: Playwright로 사이트 스크린샷 캡처 후 저장
@@ -3134,9 +3151,9 @@ nodes:
         - 사이트스냅샷
         - 캡처
       web_live_check:
-        description: 사이트 상태 확인 (Lighthouse 품질 검사)
+        description: Lighthouse로 사이트 품질 검사 (성능·접근성·SEO). 배포 후 점검용.
+        target_description: 사이트 ID (site_register로 등록된 사이트).
         group: web_builder
-        category: get
         router: handler
         tool: site_live_check
         implementation: Playwright + Lighthouse CLI로 사이트 품질 검사
@@ -3145,9 +3162,9 @@ nodes:
         - 사이트상태
         - Lighthouse
       web_create_site:
-        description: '새 프로젝트 생성 (템플릿: blank/landing/portfolio/blog/business)'
+        description: 새 웹 프로젝트 디렉토리 생성. blank/landing/portfolio/blog/business 템플릿 중 선택.
+        target_description: 프로젝트 이름. template 옵션으로 시작 템플릿 선택.
         group: web_builder
-        category: create
         router: handler
         tool: create_project
         implementation: HTML/CSS/JS 템플릿 기반 웹 프로젝트 디렉토리 생성
@@ -3157,9 +3174,9 @@ nodes:
         - 프로젝트생성
         - 템플릿
       web_list_components:
-        description: 사용 가능한 컴포넌트 목록
+        description: 사용 가능한 UI 컴포넌트 카탈로그 조회. add_component로 추가할 후보 확인용.
+        target_description: '(파라미터 없음 — 전체 카탈로그 반환)'
         group: web_builder
-        category: list
         router: handler
         tool: list_components
         implementation: 사용 가능한 UI 컴포넌트 카탈로그 조회 (로컬 JSON)
@@ -3167,9 +3184,9 @@ nodes:
         - 컴포넌트
         - 목록
       web_list_sections:
-        description: 사용 가능한 섹션 템플릿 목록
+        description: 사용 가능한 섹션 템플릿 카탈로그 조회. create_page로 조합할 후보 확인용.
+        target_description: '(파라미터 없음 — 전체 카탈로그 반환)'
         group: web_builder
-        category: list
         router: handler
         tool: list_sections
         implementation: 섹션 템플릿 카탈로그 조회 (로컬 JSON)
@@ -3177,9 +3194,9 @@ nodes:
         - 섹션
         - 템플릿
       web_create_page:
-        description: 페이지 생성 (섹션 조합)
+        description: 기존 웹 프로젝트에 페이지 1개 생성. 섹션 템플릿을 조합해 자동 작성.
+        target_description: 프로젝트 경로. sections 배열로 사용할 섹션 지정.
         group: web_builder
-        category: create
         router: handler
         tool: create_page
         implementation: 섹션 템플릿 조합으로 HTML 페이지 생성
@@ -3188,9 +3205,9 @@ nodes:
         - 페이지생성
         - 섹션조합
       web_preview:
-        description: 로컬 미리보기 서버 (start/stop/status)
+        description: 로컬 미리보기 서버 제어 (start/stop/status). 빌드 없이 즉시 확인용.
+        target_description: 프로젝트 경로. action 옵션으로 start/stop/status 선택.
         group: web_builder
-        category: run
         router: handler
         tool: preview_site
         implementation: Python http.server로 로컬 미리보기 서버 실행
@@ -3199,9 +3216,9 @@ nodes:
         - 미리보기
         - 로컬서버
       web_fetch_component:
-        description: 외부 컴포넌트 가져오기
+        description: 외부 컴포넌트 CDN/레지스트리에서 다운로드. add_component는 shadcn/ui 한정.
+        target_description: 컴포넌트 이름 또는 URL. source 옵션으로 레지스트리 지정.
         group: web_builder
-        category: create
         router: handler
         tool: fetch_component
         implementation: 외부 컴포넌트 CDN/레지스트리에서 다운로드
@@ -3210,9 +3227,9 @@ nodes:
         - 컴포넌트
         - 가져오기
       web_add_component:
-        description: shadcn/ui 컴포넌트를 프로젝트에 추가
+        description: shadcn/ui 컴포넌트를 웹 프로젝트에 추가. 버튼·카드·모달 등 React UI.
+        target_description: 컴포넌트 이름 (예 button, card, dialog). shadcn/ui 카탈로그 기준.
         group: web_builder
-        category: create
         router: handler
         tool: add_component
         implementation: shadcn/ui CLI로 버튼, 카드, 모달 등 UI 컴포넌트 설치
@@ -3222,9 +3239,9 @@ nodes:
         - shadcn
         - UI
       web_edit_styles:
-        description: 프로젝트 스타일 수정 (색상, 폰트, 테마)
+        description: 사이트 스타일 변경 — 색상·폰트·테마. globals.css/Tailwind 설정 수정.
+        target_description: '(현재 프로젝트 기준). theme/colors/fonts 파라미터로 변경 항목 지정.'
         group: web_builder
-        category: edit
         router: handler
         tool: edit_styles
         implementation: globals.css 및 Tailwind 설정 수정으로 사이트 테마 변경
@@ -3234,9 +3251,9 @@ nodes:
         - 색상
         - 폰트
       web_build:
-        description: 프로덕션 빌드 생성
+        description: 웹 프로젝트의 프로덕션 빌드 생성. Next.js 기반 .next/ 디렉토리 산출.
+        target_description: '(파라미터 없음 — 현재 프로젝트 빌드)'
         group: web_builder
-        category: execute
         router: handler
         tool: build_site
         implementation: Next.js 빌드 실행 (.next/ 디렉토리 생성)
@@ -3245,9 +3262,9 @@ nodes:
         - build
         - 배포준비
       web_deploy:
-        description: Vercel에 사이트 배포
+        description: Vercel에 사이트 배포. 빌드부터 도메인 연결까지 자동 수행.
+        target_description: '(현재 프로젝트 기준). domain 옵션으로 커스텀 도메인 지정 가능.'
         group: web_builder
-        category: execute
         router: handler
         tool: deploy_vercel
         implementation: Vercel CLI로 사이트 배포 (도메인 설정 포함)
@@ -3256,12 +3273,9 @@ nodes:
         - deploy
         - vercel
       lecture_plan:
-        description: '강의 슬라이드 파이프라인 1단계 — 메시지 큐레이션. 명제 outline을 검증·저장. 호출: [engines:lecture_plan]{outline:
-          [{idx, role, title, device, visual, concrete}, ...], source: "책 메타", style:
-          "notebooklm"} 또는 처음이면 [engines:lecture_plan]{init_skeleton: true}로 스켈레톤
-          안내 받기. 가이드 read_guide(query="강의 슬라이드 원칙")'
+        description: '강의 슬라이드 파이프라인 1/4 — 메시지 outline 큐레이션·검증. (가이드 lecture_slide_principles.md)'
+        target_description: outline 배열 (각 슬라이드 명제) 또는 init_skeleton=true. source/style 옵션.
         group: media_produce
-        category: create
         router: handler
         tool: create_lecture_plan
         implementation: '단계 산출물 outline.json + outline.md 저장. 스키마 검증: role(cover/intro/thesis/closure_table/closure_diagram/quote/outro/reference),
@@ -3277,12 +3291,9 @@ nodes:
         - outline
         - 명제
       lecture_write:
-        description: '강의 슬라이드 파이프라인 2단계 — 각 슬라이드 콘텐츠 집필. outline.json을 입력으로 슬라이드별
-          layout/title/labels/image_prompt 채움. 호출: [engines:lecture_write]{lecture_dir:
-          "...", contents: [{idx, layout, title, labels, image_prompt, ...}], design_system:
-          "sf_blueprint"}. only_indices로 부분 갱신 가능.'
+        description: '강의 슬라이드 파이프라인 2/4 — outline → 슬라이드별 layout/labels/image_prompt 집필. (가이드 lecture_slides_with_illustrations.md)'
+        target_description: lecture_dir + contents 배열. design_system/only_indices 옵션.
         group: media_produce
-        category: create
         router: handler
         tool: create_lecture_write
         implementation: 'contents.json 저장. 스키마 검증: idx가 outline에 존재, illustration_*
@@ -3296,12 +3307,9 @@ nodes:
         - 슬라이드 집필
         - contents
       lecture_illustrate:
-        description: '강의 슬라이드 파이프라인 3단계 — 일러스트 생성. contents.json의 image_prompt들을 image_gemini로
-          병렬 호출. 호출: [engines:lecture_illustrate]{lecture_dir: "...", style_preset:
-          "sf_blueprint" (선택, 미지정시 design_system 사용), quality: "fast"/"pro", image_size:
-          "1K"/"2K"/"4K"}. only_indices로 약한 일러스트만 재생성.'
+        description: '강의 슬라이드 파이프라인 3/4 — image_prompt들을 image_gemini로 일러스트 병렬 생성. (가이드 lecture_slides_with_illustrations.md)'
+        target_description: lecture_dir 필수. style_preset/quality/image_size/only_indices 옵션.
         group: media_produce
-        category: create
         router: handler
         tool: create_lecture_illustrate
         implementation: image_gemini를 슬라이드별로 호출, illustrations/manifest.json으로 매니페스트
@@ -3315,11 +3323,9 @@ nodes:
         - 일러스트 생성
         - illustrate
       lecture_compose:
-        description: '강의 슬라이드 파이프라인 4단계 — 데크 합성. contents.json + illustrations/manifest.json
-          → slide_shadcn 호출 → 최종 데크. 호출: [engines:lecture_compose]{lecture_dir: "..."}.
-          only_indices로 부분 재합성.'
+        description: '강의 슬라이드 파이프라인 4/4 — contents + 일러스트 → slide_shadcn 최종 데크 합성. (가이드 lecture_slides_with_illustrations.md)'
+        target_description: lecture_dir 필수. only_indices로 부분 재합성 가능.
         group: media_produce
-        category: create
         router: handler
         tool: create_lecture_compose
         implementation: contents.json과 illustrations/manifest.json을 병합하여 slide_shadcn에
@@ -3335,8 +3341,8 @@ nodes:
           "/abs/...", intent: "이 일러스트가 표현해야 할 것 자연어 설명", style_preset: "sf_blueprint",
           checks: ["...추가 체크"]}. 반환: passed/score/issues/notes JSON. ILLUSTRATE 단계의
           자동 평가에 사용.'
+        target_description: image_path (절대 경로) + intent (자연어 설명). style_preset/checks 옵션.
         group: media_produce
-        category: evaluate
         router: handler
         tool: critique_gemini_image
         implementation: 'Gemini 3 Pro Vision으로 이미지를 평가. 기본 체크: (1) 다이어그램형인가, (2) 한글이

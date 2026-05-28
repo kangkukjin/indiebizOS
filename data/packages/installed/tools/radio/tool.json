@@ -151,6 +151,37 @@
         },
         "required": ["name"]
       }
+    },
+    {
+      "name": "radio_favorite_op",
+      "description": "라디오 즐겨찾기 관리 단일 디스패처. op으로 list/add/remove 분기.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": ["list", "add", "remove"],
+            "description": "즐겨찾기 동작"
+          },
+          "name": { "type": "string", "description": "별칭 (add/remove)" },
+          "station_id": { "type": "string", "description": "방송국 ID (add)" },
+          "stream_url": { "type": "string", "description": "스트림 URL (add)" }
+        },
+        "required": ["op"]
+      }
+    },
+    {
+      "name": "radio_op",
+      "description": "라디오 재생/중지 단일 디스패처. op으로 play/stop 분기 (기본 play).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["play", "stop"], "default": "play", "description": "재생 동작" },
+          "station_id": { "type": "string", "description": "방송국 ID (op=play 시)" },
+          "stream_url": { "type": "string", "description": "스트림 URL (op=play 시)" },
+          "volume": { "type": "integer", "description": "볼륨 0-100 (op=play 시, 기본 70)" }
+        }
+      }
     }
   ]
 }

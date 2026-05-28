@@ -141,6 +141,20 @@
           }
         }
       }
+    },
+    {
+      "name": "remotion",
+      "description": "Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).\n\n파라미터: op로 분기 (기본 render_inline).\n- render_inline: composition_code(인라인 TSX 문자열) 필수.\n- render_file: composition_file(TSX 파일 절대경로) 필수.\n- status: 파라미터 없음, Remotion/Node.js 설치 상태만 반환.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
+      }
     }
   ]
 }

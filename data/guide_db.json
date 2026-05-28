@@ -35,14 +35,36 @@
     {
       "id": "slides",
       "name": "슬라이드 제작 가이드",
-      "description": "HTML/Playwright 기반 1280x720px PNG 슬라이드 제작. 프레젠테이션, 카드뉴스.",
+      "description": "HTML/Playwright 기반 1280x720px PNG 슬라이드. shadcn UI 마케팅/강의 layout(hero, features, pricing, cta, lecture_body 등) + 디자인 시스템.",
       "keywords": [
         "슬라이드",
         "프레젠테이션",
         "카드뉴스",
         "slides",
         "발표",
-        "PNG"
+        "PNG",
+        "마케팅",
+        "랜딩",
+        "피치덱",
+        "랜딩페이지",
+        "marketing",
+        "landing",
+        "deck",
+        "shadcn",
+        "slide_shadcn",
+        "hero",
+        "features",
+        "stats",
+        "pricing",
+        "cta",
+        "testimonial",
+        "steps",
+        "content_image",
+        "design_system",
+        "vintage_book",
+        "tech_minimal",
+        "magazine_modern",
+        "academic_paper"
       ],
       "file": "slides.md"
     },
@@ -127,15 +149,22 @@
     {
       "id": "browser_action",
       "name": "브라우저 자동화 가이드",
-      "description": "Playwright 기반 브라우저 자동화. Snapshot → Ref → Action 패턴.",
+      "description": "Playwright(헤드리스)와 Chrome MCP(실제 브라우저) 자동화. Snapshot→Ref→Action 패턴, 탭/iframe/쿠키 세션 관리, 폼·드롭다운 조작.",
       "keywords": [
         "브라우저",
         "browser",
         "자동화",
         "playwright",
+        "chrome",
+        "크롬",
         "클릭",
         "스크린샷",
-        "크롤링"
+        "크롤링",
+        "탭",
+        "iframe",
+        "쿠키",
+        "로그인",
+        "원격제어"
       ],
       "file": "browser_action.md"
     },
@@ -152,6 +181,26 @@
         "스마트폰"
       ],
       "file": "android.md"
+    },
+    {
+      "id": "desktop",
+      "name": "데스크톱 자동화 가이드",
+      "description": "macOS 데스크톱 앱(브라우저 밖) 제어 — 좌표 기반 클릭·키보드·스크린샷. screenshot → 판단 → action 흐름과 9개 op 사양.",
+      "keywords": [
+        "데스크톱",
+        "desktop",
+        "macOS",
+        "맥",
+        "자동화",
+        "마우스",
+        "키보드",
+        "스크린샷",
+        "단축키",
+        "Finder",
+        "pyautogui",
+        "좌표"
+      ],
+      "file": "desktop.md"
     },
     {
       "id": "investment",
@@ -614,6 +663,194 @@
         "episode"
       ],
       "file": "self_inspection_guide.md"
+    },
+    {
+      "id": "lecture_workspace",
+      "name": "강의 만들기 워크스페이스",
+      "description": "lecture/slide/material/deck 4개 단일 액션으로 강의 슬라이드를 한 장씩 협업으로 만드는 워크플로우. AI 호출 op vs 직접 op 구분.",
+      "keywords": [
+        "강의",
+        "슬라이드",
+        "강의 만들기",
+        "lecture",
+        "slide",
+        "deck",
+        "워크스페이스",
+        "발표 자료",
+        "강의 워크플로우"
+      ],
+      "file": "lecture_workspace.md"
+    },
+    {
+      "id": "trigger",
+      "name": "트리거·스위치",
+      "description": "자동 실행 작업 등록·관리. 트리거(push, 조건 충족 시 자동) vs 스위치(pull, 명시적 호출). 4타입(schedule/channel/webhook/file) 설정 패턴.",
+      "keywords": [
+        "트리거",
+        "자동 실행",
+        "예약",
+        "스케줄링",
+        "trigger",
+        "스위치",
+        "switch",
+        "자동화",
+        "cron",
+        "정기 실행",
+        "알람",
+        "매일",
+        "매주"
+      ],
+      "file": "trigger.md"
+    },
+    {
+      "id": "realty",
+      "name": "부동산 실거래가",
+      "description": "국토부 공개 실거래가 4종(아파트/주택 × 매매/전월세) 통합 조회. type × deal 매트릭스와 region_code 사용법.",
+      "keywords": [
+        "부동산",
+        "실거래가",
+        "아파트",
+        "매매",
+        "전세",
+        "월세",
+        "주택",
+        "realty",
+        "강남",
+        "지역코드"
+      ],
+      "file": "realty.md"
+    },
+    {
+      "id": "book",
+      "name": "한국 도서 검색",
+      "description": "도서관정보나루 통합 — keyword 검색, isbn 기본 조회, isbn+detail로 대출 통계까지. 3가지 입력 모드.",
+      "keywords": [
+        "도서",
+        "책",
+        "ISBN",
+        "도서관",
+        "대출통계",
+        "한국책",
+        "library",
+        "book"
+      ],
+      "file": "book.md"
+    },
+    {
+      "id": "legal",
+      "name": "법률 정보 (국가법령정보센터)",
+      "description": "법령·판례·행정규칙·자치법규·법령해석·헌재결정·조약·법률용어·서식 10종 영역. query/id × target 매트릭스.",
+      "keywords": [
+        "법률",
+        "법령",
+        "판례",
+        "법",
+        "조항",
+        "헌재",
+        "행정규칙",
+        "조례",
+        "law",
+        "legal",
+        "선의의 제3자",
+        "임대차"
+      ],
+      "file": "legal.md"
+    },
+    {
+      "id": "kosis",
+      "name": "통계청 KOSIS 국가통계",
+      "description": "한국 공식 통계 검색·조회. query(검색)/indicator(주요지표)/(org_id+tbl_id)(특정 통계표) 3가지 모드.",
+      "keywords": [
+        "통계",
+        "kosis",
+        "통계청",
+        "인구",
+        "GDP",
+        "물가",
+        "실업률",
+        "지표",
+        "시계열",
+        "통계표"
+      ],
+      "file": "kosis.md"
+    },
+    {
+      "id": "startup",
+      "name": "정부 창업·중소기업 지원사업",
+      "description": "K-Startup(창업진흥원) + 중기부 MSS 사업공고 통합. source(all/kstartup/mss) 분기, 단계·분야별 매핑.",
+      "keywords": [
+        "창업",
+        "사업공고",
+        "지원사업",
+        "예비창업",
+        "정책자금",
+        "R&D",
+        "수출바우처",
+        "K-Startup",
+        "중기부",
+        "MSS",
+        "TIPS"
+      ],
+      "file": "startup.md"
+    },
+    {
+      "id": "open_window",
+      "name": "런처 창 열기",
+      "description": "IndieBiz OS Electron 런처의 6개 메인 작업창(project/system_ai/indienet/business/multichat/folder) 진입 가이드. app별 파라미터·시나리오·자연어 매핑.",
+      "keywords": [
+        "창",
+        "윈도우",
+        "런처",
+        "앱열기",
+        "프로젝트창",
+        "시스템AI",
+        "인디넷",
+        "비즈니스",
+        "멀티채팅",
+        "폴더",
+        "open_window",
+        "메신저"
+      ],
+      "file": "open_window.md"
+    },
+    {
+      "id": "photo",
+      "name": "사진·동영상 라이브러리",
+      "description": "[self:photo]{op} 8 op 통합 — scan(인덱싱) + list_scans/gallery/search/detail/stats/timeline/duplicates. 워크플로우, 자연어 매핑, 깊은 쿼리 진입점.",
+      "keywords": [
+        "사진",
+        "동영상",
+        "미디어",
+        "갤러리",
+        "스캔",
+        "EXIF",
+        "GPS",
+        "중복사진",
+        "사진검색",
+        "타임라인",
+        "photo",
+        "video"
+      ],
+      "file": "photo.md"
+    },
+    {
+      "id": "gutenberg",
+      "name": "Project Gutenberg 가이드",
+      "description": "저작권 만료된 7만+권 고전 원문 검색·다운로드. Gutendex API. 파라미터(query/topic/author_year/languages), 응답 필드(text_url/html_url), 활용 예시.",
+      "keywords": [
+        "고전",
+        "원문",
+        "gutenberg",
+        "문학",
+        "철학",
+        "고전문학",
+        "원전",
+        "classic",
+        "저작권만료",
+        "무료도서",
+        "서양고전"
+      ],
+      "file": "gutenberg.md"
     }
   ]
 }

@@ -84,14 +84,14 @@ HTML을 이미지로 렌더링하여 레이아웃을 확인합니다.
 - [ ] 나레이션 파일이 모두 생성되었는가? (필요한 경우)
 - 하나라도 누락되었으면 해당 단계로 돌아가 해결한 후 렌더링합니다.
 
-모든 파일이 준비되면 render_video로 MP4를 생성합니다.
+모든 파일이 준비되면 html_video에 scene_dir을 전달해 MP4를 생성합니다 (scene_dir이 있으면 자동으로 렌더링 단계만 실행).
 ```
-[engines:render_video]{scene_dir: "outputs/video_project/", scene_files: [{"path": "outputs/video_project/scene_01.html", "duration": 5}, {"path": "outputs/video_project/scene_02.html", "duration": 7}], narration_files: ["outputs/video_project/narration_01.mp3", "outputs/video_project/narration_02.mp3"], bgm_path: "경로/bgm.mp3", output_filename: "final_video.mp4"}
+[engines:html_video]{scene_dir: "outputs/video_project/", scene_files: [{"path": "outputs/video_project/scene_01.html", "duration": 5}, {"path": "outputs/video_project/scene_02.html", "duration": 7}], narration_files: ["outputs/video_project/narration_01.mp3", "outputs/video_project/narration_02.mp3"], bgm_path: "경로/bgm.mp3", output_filename: "final_video.mp4"}
 ```
 
 또는 scene_dir로 폴더 전체를 지정할 수도 있습니다:
 ```
-[engines:render_video]{scene_dir: "outputs/video_project/", default_duration: 5, output_filename: "final_video.mp4"}
+[engines:html_video]{scene_dir: "outputs/video_project/", default_duration: 5, output_filename: "final_video.mp4"}
 ```
 
 ---
@@ -125,7 +125,7 @@ React/TSX 코드를 파일로 작성합니다.
 
 TSX 파일 경로를 지정하여 렌더링합니다.
 ```
-[engines:render_remotion]{composition_file: "outputs/video_project/composition.tsx", duration_in_frames: 300, fps: 30, width: 1280, height: 720, asset_paths: ["이미지경로1.png", "이미지경로2.png"], output_filename: "remotion_video.mp4"}
+[engines:remotion]{op: "render_file", composition_file: "outputs/video_project/composition.tsx", duration_in_frames: 300, fps: 30, width: 1280, height: 720, asset_paths: ["이미지경로1.png", "이미지경로2.png"], output_filename: "remotion_video.mp4"}
 ```
 
 ### Step 5: 오류 수정 (필요 시)
@@ -133,7 +133,7 @@ TSX 파일 경로를 지정하여 렌더링합니다.
 ```
 [self:edit]{path: "outputs/video_project/composition.tsx", old_string: "...", new_string: "..."}
 ```
-수정 후 다시 render_remotion을 실행합니다.
+수정 후 다시 [engines:remotion]{op: "render_file", ...}을 실행합니다.
 
 ---
 
@@ -144,8 +144,8 @@ TSX 파일 경로를 지정하여 렌더링합니다.
 # HTML 영상 - 코드를 직접 전달
 [engines:html_video]{topic: "주제", scenes: [...], narration_texts: [...]}
 
-# Remotion 영상 - 코드를 직접 전달
-[engines:remotion_video]{composition_code: "<TSX 코드>"}
+# Remotion 영상 - 코드를 직접 전달 (op 생략 시 composition_code 유무로 자동 render_inline)
+[engines:remotion]{composition_code: "<TSX 코드>"}
 ```
 단, 이 방식은 코드 오류 수정이 어렵습니다. 품질이 중요한 영상은 위의 단계별 워크플로우를 사용하세요.
 
@@ -158,8 +158,8 @@ TSX 파일 경로를 지정하여 렌더링합니다.
 | `engines:image_gemini` | Gemini AI 이미지 생성 | prompt |
 | `engines:tts` | 텍스트 → MP3 | text, voice, output_filename |
 | `engines:render_html` | HTML → 이미지 (미리보기) | html |
-| `engines:render_video` | HTML 파일들 → MP4 | scene_files/scene_dir, narration_files |
-| `engines:render_remotion` | TSX 파일 → MP4 | composition_file |
+| `engines:html_video` | HTML 파일들 → MP4 (scene_dir이 있으면 자동으로 렌더 단계만, 없으면 풀 파이프라인) | topic 또는 scene_files/scene_dir, narration_files |
+| `engines:remotion` | TSX → MP4 (op=render_inline: composition_code / op=render_file: composition_file / op=status) | composition_code 또는 composition_file |
 | `self:write` | 코드를 파일로 저장 | path, content |
 | `self:edit` | 파일 부분 수정 | path, old_string, new_string |
 | `self:read` | 파일 내용 확인 | path |

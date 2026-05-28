@@ -340,6 +340,30 @@ class AgentCommunicationMixin:
                     consciousness_output = self._run_consciousness(
                         content, history, execution_memory
                     )
+
+                    # Clarification fast-path — 정보 부족 시 실행 에이전트 스킵하고
+                    # 의식이 만든 질문을 그대로 채널 응답으로 전송.
+                    _clarify_text = self._consciousness_clarification(consciousness_output)
+                    if _clarify_text:
+                        self._log("[의식] clarification fast-path: 실행 에이전트 스킵")
+                        try:
+                            channel.send_message(
+                                to=reply_to,
+                                subject=f"Re: {subject}",
+                                body=_clarify_text,
+                            )
+                            if is_from_owner:
+                                _an = self.config.get('name', '')
+                                _aid = self.db.get_or_create_agent(_an, "ai_agent")
+                                _uid = self.db.get_or_create_agent("user", "user")
+                                self.db.save_message(_aid, _uid, _clarify_text,
+                                                     contact_type=contact_type)
+                            self.db.complete_task(task_id, _clarify_text[:500])
+                        except Exception as send_err:
+                            self._log(f"clarification 응답 전송 실패: {send_err}")
+                        clear_current_task_id()
+                        clear_called_agent()
+                        return
                 else:
                     # EXECUTE/reflex: 중급 모델로 전환 (api_websocket·system_ai_core와 동일 패턴)
                     try:

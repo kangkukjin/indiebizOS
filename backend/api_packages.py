@@ -126,6 +126,17 @@ async def list_tool_packages():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/packages/reload")
+async def reload_package_cache():
+    """tool.json 등 패키지 메타를 수정한 뒤 런타임 캐시를 비운다.
+    backend 재시작 없이 신규 도구 매핑을 반영한다."""
+    try:
+        package_manager.invalidate_cache()
+        return {"status": "ok", "message": "패키지/도구 캐시를 초기화했습니다."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============ 패키지 정보 API ============
 
 @router.get("/packages/{package_id}")

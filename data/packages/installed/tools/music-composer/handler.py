@@ -16,6 +16,15 @@ def execute(tool_input: dict, context) -> str:
     tool_name = context.tool_name
     project_path = context.project_path
 
+    # 2026-05-27 통합: music {stage} 단일 진입점
+    if tool_name == "music":
+        stage = (tool_input.get("stage") or "full").lower()
+        if stage == "midi_only":
+            return abc_to_midi(tool_input, project_path)
+        elif stage == "audio_only":
+            return midi_to_audio(tool_input, project_path)
+        return compose_and_export(tool_input, project_path)
+
     if tool_name == "abc_to_midi":
         return abc_to_midi(tool_input, project_path)
     elif tool_name == "midi_to_audio":

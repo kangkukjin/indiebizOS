@@ -14,7 +14,7 @@ meta:
     - '[sense:kr_investor]{symbol: "STK", start_date: "2026-02-01"}  # 투자자 매매동향'
     - '[limbs:play]{query: "슬픈 피아노곡"}  # 음악 재생'
     - '[sense:search_radio]{query: "KBS"}  # 라디오 검색'
-    - '[engines:line]{title: "Stock Price"}  # 차트 생성'
+    - '[engines:chart]{title: "Stock Price", chart_type: "line"}  # 차트 생성 (chart_type: line/bar/pie/scatter/heatmap/candlestick/multi)'
     - '[engines:slide]{title: "발표자료", pages: 5}  # 슬라이드 생성'
     note: execute_ibl의 code 파라미터에 IBL 코드를 전달. 모든 값은 {params} 안에 named parameter로.
       (target) 문법은 폐지됨.

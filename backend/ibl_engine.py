@@ -299,7 +299,9 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
                                      mapped_tool=mapped_tool)
         elif router == "handler":
             mapped_tool = action_config.get("tool")
-            result = _route_handler(mapped_tool, params, project_path, agent_id)
+            # Phase 30: scope 선언 (workspace/system/project). 미지정 시 project.
+            scope = action_config.get("scope", "project")
+            result = _route_handler(mapped_tool, params, project_path, agent_id, scope=scope)
         elif router == "system":
             func_name = action_config.get("func")
             result = _route_system(func_name, params, project_path, agent_id=agent_id)

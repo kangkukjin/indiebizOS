@@ -484,6 +484,99 @@
         },
         "required": ["name"]
       }
+    },
+    {
+      "name": "browser_tab_op",
+      "description": "브라우저 탭 관리 단일 디스패처. op으로 list/new/switch/close 분기.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["list", "new", "switch", "close"], "description": "탭 동작" }
+        },
+        "required": ["op"]
+      }
+    },
+    {
+      "name": "browser_iframe_op",
+      "description": "브라우저 iframe 관리 단일 디스패처. op으로 list/switch/reset 분기.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["list", "switch", "reset"], "description": "iframe 동작" }
+        },
+        "required": ["op"]
+      }
+    },
+    {
+      "name": "browser_cookies_op",
+      "description": "브라우저 쿠키 저장/복원 단일 디스패처. op으로 save/load 분기.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["save", "load"], "description": "쿠키 동작" }
+        },
+        "required": ["op"]
+      }
+    },
+    {
+      "name": "browser_chrome_op",
+      "description": "Chrome MCP 원격 세션 관리 단일 디스패처. op으로 connect/disconnect/status 분기.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["connect", "disconnect", "status"], "description": "Chrome MCP 동작" }
+        },
+        "required": ["op"]
+      }
+    },
+    {
+      "name": "browser_click_op",
+      "description": "브라우저 요소 클릭 단일 디스패처. op으로 single/double/right 분기 (기본 single).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["single", "double", "right"], "default": "single", "description": "클릭 종류" },
+          "ref": { "type": "string", "description": "browser_snapshot에서 얻은 ref" },
+          "selector": { "type": "string", "description": "CSS selector (ref 대안)" },
+          "element": { "type": "string", "description": "클릭할 요소 설명" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto" }
+        }
+      }
+    },
+    {
+      "name": "browser_navigate_op",
+      "description": "브라우저 페이지 이동 단일 디스패처. op으로 goto/back/forward 분기 (기본 goto).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["goto", "back", "forward"], "default": "goto", "description": "이동 동작" },
+          "url": { "type": "string", "description": "이동할 URL (op=goto일 때 필수)" },
+          "wait_for": { "type": "string", "enum": ["domcontentloaded", "load", "networkidle"], "default": "domcontentloaded" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto" }
+        }
+      }
+    },
+    {
+      "name": "browser_content_op",
+      "description": "현재 페이지 콘텐츠 추출 단일 디스패처. op으로 text/html 분기 (기본 text).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["text", "html"], "default": "text", "description": "추출 형식" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto" }
+        }
+      }
+    },
+    {
+      "name": "browser_logs_op",
+      "description": "브라우저 로그 조회 단일 디스패처. op으로 console/network 분기 (기본 console).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["console", "network"], "default": "console", "description": "로그 종류" },
+          "driver": { "type": "string", "enum": ["auto", "chrome", "playwright"], "default": "auto" }
+        }
+      }
     }
   ]
 }

@@ -5,11 +5,42 @@
 ## 기본 도구
 
 ```
-# 동료 에이전트에게 위임
+# 동료 에이전트에게 위임 (기본: 같은 프로젝트, 비동기, 결과 자동 보고)
 [others:delegate]{agent_id: "에이전트이름", message: "작업 내용"}
 
-# 에이전트 정보 조회
-[others:agent_info]{agent_id: "에이전트이름"}
+# 프로젝트·에이전트 조회 (agent_id 생략 시 전체 목록, 지정 시 단건 상세)
+[others:agents]
+[others:agents]{agent_id: "에이전트이름"}
+```
+
+## 위임 모드 (mode)
+
+`[others:delegate]`는 mode 파라미터로 동작이 갈립니다. 기본은 `async`.
+
+| mode | 동작 | 언제 |
+|---|---|---|
+| `async` (기본) | 비동기 위임, 결과는 자동 보고 체인으로 나중에 도착 | 일반적인 위임 |
+| `sync` | 응답이 올 때까지 대기, 결과 텍스트 반환 | 파이프라인 `>>` 안에서 결과를 다음 단계로 넘길 때 |
+| `workflow` | `steps`로 전달된 IBL 파이프라인을 대상 에이전트 컨텍스트에서 실행 | 다른 에이전트의 도구/권한으로 파이프라인을 실행할 때 |
+
+```
+# 동기 (파이프라인용)
+[sense:search_news]{query: "AI"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "투자 관점 분석"}
+
+# 파이프라인 위임
+[others:delegate]{mode: "workflow", agent_id: "기획", steps: [...]}
+```
+
+## 위임 범위 (scope)
+
+| scope | 동작 | 권한 |
+|---|---|---|
+| `same` (기본) | 같은 프로젝트 동료 에이전트에게 위임 | 모든 에이전트 |
+| `cross` | **타 프로젝트** 에이전트에게 위임 (필요 시 프로젝트 자동 활성화) | **시스템 AI 전용** |
+
+```
+# 타 프로젝트로 위임 (시스템 AI만)
+[others:delegate]{scope: "cross", agent_id: "의료/내과", message: "두통 분석"}
 ```
 
 ## 핵심 원칙
@@ -89,19 +120,19 @@
 # ✅ "파일 /Users/.../result.txt의 3번째 항목을 'ABC'로 수정해줘"
 ```
 
-## 시간 지정 위임 (크로스 위임)
+## 시간 지정 위임 (스케줄러 경유)
 
 특정 시간에 다른 에이전트에게 작업을 시키는 경우, `[self:schedule]`에 `target_agent_id`를 지정하세요.
 
-- 즉시 위임 → `[others:delegate]` 사용
-- 시간 지정 → `[self:schedule]` + `target_agent_id` 사용
+- 즉시 위임 → `[others:delegate]`
+- 시간 지정 위임 → `[self:schedule]` + `target_agent_id`
 
 ```
 # ❌ 스케줄 안에 delegate (결과 전달 불가)
 [self:schedule]{at: "15:00", pipeline: "[others:delegate]{agent_id: '심장전문', message: '분석해줘'}"}
 
-# ✅ 크로스 위임
+# ✅ 스케줄러로 시간 지정 위임
 [self:schedule]{at: "15:00", target_agent_id: "심장전문", pipeline: "최신 심장 연구 동향을 조사하고 요약해줘"}
 ```
 
-크로스 위임 시 pipeline에는 자연어로 의도를 전달하세요.
+스케줄러 경유 위임 시 pipeline에는 자연어로 의도를 전달하세요.

@@ -484,6 +484,20 @@ _TOOL_MAP = {
 }
 
 
+def _cctv_op(op: str = None, **kwargs) -> str:
+    """[limbs:cctv]{op} 단일 디스패처 (2026-05-27 limbs 라운드 2)."""
+    op = (op or "open").strip()
+    if op == "open":
+        return cctv_open(**kwargs)
+    elif op == "capture":
+        return cctv_capture(**kwargs)
+    else:
+        return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: open/capture"}, ensure_ascii=False)
+
+
+_TOOL_MAP["cctv_op"] = _cctv_op
+
+
 def execute(tool_input: dict, context) -> str:
     """CCTV 도구 실행 통합 핸들러 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name

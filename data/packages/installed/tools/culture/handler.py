@@ -153,6 +153,23 @@ def execute(tool_input: dict, context) -> str:
                 rows=tool_input.get("rows", 10)
             )
 
+        elif tool_name == "library_book":
+            isbn = tool_input.get("isbn") or tool_input.get("isbn13")
+            keyword = tool_input.get("keyword") or tool_input.get("query")
+            detail = tool_input.get("detail", False)
+            if isbn:
+                if detail:
+                    from tool_library import get_book_detail
+                    result = get_book_detail(isbn13=isbn, loan_info=tool_input.get("loan_info", True))
+                else:
+                    from tool_library import get_book_by_isbn
+                    result = get_book_by_isbn(isbn=isbn)
+            elif keyword:
+                from tool_library import quick_search
+                result = quick_search(keyword=keyword, rows=tool_input.get("rows", 10))
+            else:
+                result = {"success": False, "error": "keyword 또는 isbn 중 하나가 필요합니다."}
+
         elif tool_name == "library_get_book_by_isbn":
             from tool_library import get_book_by_isbn
             result = get_book_by_isbn(

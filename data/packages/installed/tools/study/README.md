@@ -32,9 +32,6 @@ arXiv 논문 PDF 다운로드
 ### search_semantic_scholar
 AI 기반 학술 검색 (인용수, 영향력 분석 포함)
 
-### search_google_scholar
-가장 넓은 범위의 학술 검색
-
 ### search_pubmed
 의학/생명과학 논문 검색
 
@@ -76,7 +73,7 @@ AI에게 "최신 여론 조사 결과 알려줘" 또는 "특정 주제에 대한
 ## 필요 라이브러리
 
 ```bash
-pip install arxiv scholarly requests feedparser
+pip install arxiv requests feedparser
 ```
 
 ## 적합한 에이전트

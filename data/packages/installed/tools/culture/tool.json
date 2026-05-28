@@ -566,6 +566,20 @@
           "query"
         ]
       }
+    },
+    {
+      "name": "library_book",
+      "description": "한국 도서 검색·조회 (도서관정보나루). keyword 검색, isbn 기본 조회, isbn+detail로 상세(대출 통계). 글로벌 도서는 sense:search_books.\n\n파라미터: 검색어(제목/저자/출판사) 또는 ISBN. 파라미터 — keyword 단독은 검색, isbn 단독은 기본 조회, isbn+detail=true는 상세+대출통계.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
+      }
     }
   ]
 }

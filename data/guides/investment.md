@@ -190,11 +190,11 @@ with open(file_path) as f:
    → 결과에서 file_path 또는 prices 획득
 
 2-A. file_path가 있는 경우:
-   line_chart(data_file=file_path, ...)
+   [engines:chart]{title: "AAPL", chart_type: "line", data_file: <file_path>}
 
 2-B. prices 배열이 있는 경우:
    data = [{"x": p["date"], "y": p["close"]} for p in prices]
-   line_chart(data=data, ...)
+   [engines:chart]{title: "AAPL", chart_type: "line", data: <data>}
 ```
 
 ---

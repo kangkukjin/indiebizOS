@@ -1,10 +1,73 @@
 {
   "id": "lecture_workspace",
   "name": "강의 만들기 워크스페이스",
-  "description": "강의 슬라이드를 한 장씩 협업으로 만드는 도구. indiebizOS/outputs/lectures/ 밑에 강의별 폴더(deck.json + materials/ + slides/)를 두고, 별도 Electron 창에서 재료/슬라이드 데크/AI 명령을 한 화면에 보며 작업한다. 한 번에 데크 전체를 생성하던 채팅 방식의 한계(매 턴 컨텍스트 재구축, 데크 수동 조작 불가)를 영구 상태 + UI 패널로 해결한다.\n\n## 액션 분류\n- 강의 CRUD: lecture_create, lecture_list, lecture_load, lecture_delete\n- 데크 조작: deck_reorder, slide_delete\n- 재료 관리: material_add, material_remove\n- 워크스페이스: lecture_open (Electron 창 트리거)\n- (Step 2/3에서 추가 예정) slide_create, slide_edit — AI 슬라이드 생성/편집",
-  "version": "0.1.0",
+  "description": "강의 슬라이드를 한 장씩 협업으로 만드는 도구. indiebizOS/outputs/lectures/ 밑에 강의별 폴더(deck.json + materials/ + slides/)를 두고, 별도 Electron 창에서 재료/슬라이드 데크/AI 명령을 한 화면에 보며 작업한다.\n\n## IBL 통합 도구 (4개, op 분기)\n- lecture_op {op: list|create|load|delete|open}\n- slide_op {op: create|edit|delete|patch|rerender}\n- material_op {op: add|remove}\n- deck_op {op: reorder|export}\n\n옛 14개 단일 도구(lecture_create, slide_create 등)도 직접 호출 호환용으로 유지.",
+  "version": "0.2.0",
   "author": "IndieBiz OS",
   "tools": [
+    {
+      "name": "lecture_op",
+      "description": "강의 워크스페이스 관리 통합 도구. op 파라미터로 분기:\n- list: 강의 목록 조회 (파라미터 없음)\n- create: 새 강의 생성 (title 필수, +audience/thesis/duration_minutes/design_system)\n- load: 강의 데이터 로드 (lecture_id)\n- delete: 강의 폴더 전체 삭제 (lecture_id, confirm=true)\n- open: 강의 만들기 창 열기 (lecture_id 옵션)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {"type": "string", "enum": ["list", "create", "load", "delete", "open"], "description": "수행할 작업"},
+          "lecture_id": {"type": "string", "description": "강의 ID (load/delete/open에 필요, open은 옵션)"},
+          "title": {"type": "string", "description": "create — 강의 제목 (한글 가능)"},
+          "audience": {"type": "string", "description": "create 옵션 — 청중"},
+          "thesis": {"type": "string", "description": "create 옵션 — 한 줄 요지"},
+          "duration_minutes": {"type": "integer", "description": "create 옵션 — 분량"},
+          "design_system": {"type": "string", "description": "create 옵션 — vintage_book/academic_paper/tech_minimal/magazine_modern"},
+          "confirm": {"type": "boolean", "description": "delete 필수 — true가 아니면 거부"}
+        },
+        "required": ["op"]
+      }
+    },
+    {
+      "name": "slide_op",
+      "description": "슬라이드 한 장 관리 통합 도구. op 파라미터로 분기:\n- create: AI로 슬라이드 한 장 생성 (lecture_id, instruction, +insert_at)\n- edit: 슬라이드 AI 재생성 — 현재 spec을 컨텍스트로 (lecture_id, slide_id, instruction)\n- delete: 슬라이드 파일+deck 항목 제거 (lecture_id, slide_id)\n- patch: spec 일부 필드만 직접 patch (AI 호출 없음) (lecture_id, slide_id, patch)\n- rerender: spec 변경 없이 PNG만 재렌더 (AI 호출 없음) (lecture_id, slide_id)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {"type": "string", "enum": ["create", "edit", "delete", "patch", "rerender"], "description": "수행할 작업"},
+          "lecture_id": {"type": "string", "description": "강의 ID (모든 op 필수)"},
+          "slide_id": {"type": "string", "description": "edit/delete/patch/rerender에 필요"},
+          "instruction": {"type": "string", "description": "create/edit 필수 — 강의자 자연어 요청"},
+          "insert_at": {"type": "integer", "description": "create 옵션 — 삽입 위치 (0-based)"},
+          "patch": {"type": "object", "description": "patch 필수 — 변경할 필드 객체. None 값은 필드 삭제. layout 키는 거부."}
+        },
+        "required": ["op", "lecture_id"]
+      }
+    },
+    {
+      "name": "material_op",
+      "description": "강의 재료 관리 통합 도구. op 파라미터로 분기:\n- add: 재료 추가 (lecture_id + file_path 또는 text+filename)\n- remove: 재료 삭제 (lecture_id, filename)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {"type": "string", "enum": ["add", "remove"], "description": "수행할 작업"},
+          "lecture_id": {"type": "string", "description": "강의 ID (필수)"},
+          "file_path": {"type": "string", "description": "add 모드 1 — 복사할 원본 파일 절대경로"},
+          "text": {"type": "string", "description": "add 모드 2 — 저장할 텍스트 내용 (filename과 함께)"},
+          "filename": {"type": "string", "description": "add 모드 2 또는 remove — 파일명"}
+        },
+        "required": ["op", "lecture_id"]
+      }
+    },
+    {
+      "name": "deck_op",
+      "description": "강의 데크 조작 통합 도구. op 파라미터로 분기:\n- reorder: 슬라이드 순서 변경 (lecture_id, order=slide_id 배열). 파일은 안 건드림.\n- export: PDF/PPTX 파일로 내보내기 (lecture_id, format). outputs/lectures/{id}/exports/ 저장.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {"type": "string", "enum": ["reorder", "export"], "description": "수행할 작업"},
+          "lecture_id": {"type": "string", "description": "강의 ID (필수)"},
+          "order": {"type": "array", "items": {"type": "string"}, "description": "reorder 필수 — 새 순서의 slide_id 배열 (기존 슬라이드 전체 포함)"},
+          "format": {"type": "string", "enum": ["pdf", "pptx"], "description": "export 필수 — 출력 형식"}
+        },
+        "required": ["op", "lecture_id"]
+      }
+    },
     {
       "name": "lecture_list",
       "description": "저장된 모든 강의 목록을 반환합니다. indiebizOS/outputs/lectures/ 하위 폴더를 스캔해서 각 deck.json의 메타 요약을 반환.\n\n## 반환\n[{lecture_id, title, audience, slide_count, updated_at}, ...]",

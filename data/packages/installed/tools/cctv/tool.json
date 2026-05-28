@@ -242,6 +242,19 @@
         "type": "object",
         "properties": {}
       }
+    },
+    {
+      "name": "cctv_op",
+      "description": "CCTV 열기/캡처 단일 디스패처. op으로 open/capture 분기 (기본 open).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["open", "capture"], "default": "open", "description": "CCTV 동작" },
+          "url": { "type": "string", "description": "CCTV 스트림 URL" },
+          "name": { "type": "string", "description": "CCTV 이름 (url 대안, 자동 검색)" },
+          "save_path": { "type": "string", "description": "캡처 저장 경로 (op=capture 시)" }
+        }
+      }
     }
   ]
 }

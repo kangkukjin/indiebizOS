@@ -110,27 +110,6 @@
       }
     },
     {
-      "name": "search_google_scholar",
-      "description": "Google Scholar에서 학술 논문을 검색합니다.\n\n## Google Scholar란?\n- 가장 넓은 학술 자료 커버리지\n- 논문, 책, 학위논문, 학회발표 포함\n\n## 사용 시점\n- 광범위한 검색이 필요할 때\n- 한국어 논문 검색\n- 특정 분야 전문 DB가 없을 때\n\n## 반환 정보\n- 제목, 저자, 출처, 인용수, 링크\n\n## 주의사항\n- PDF 직접 다운로드 미지원\n- 링크 클릭하여 원문 확인 필요",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "description": "검색어 (예: 'machine learning healthcare')"
-          },
-          "max_results": {
-            "type": "integer",
-            "description": "최대 결과 수 (기본 5)",
-            "default": 5
-          }
-        },
-        "required": [
-          "query"
-        ]
-      }
-    },
-    {
       "name": "search_pubmed",
       "description": "PubMed에서 의학/생명과학 논문을 검색합니다.\n\n## PubMed란?\n- 미국 국립의학도서관(NLM) 운영\n- 의학, 생명과학 최고 권위\n- 임상 연구, 약물 연구 필수\n\n## 사용 시점\n- 의학/건강 관련 연구 검색\n- 임상시험 결과 확인\n- 약물 효능/부작용 연구\n\n## 반환 정보\n- 제목, 저자, 저널명, 발행일\n- PMC ID (무료 전문 있는 경우)\n\n## 무료 전문 다운로드\n- PMC ID 있으면 download_pubmed_pdf 사용 가능",
       "input_schema": {

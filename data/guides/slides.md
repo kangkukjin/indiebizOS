@@ -413,3 +413,249 @@ design_system을 지정하면 **모든 layout**(hero/lecture_body/metaphor_story
 5. **핵심 명제 정리** — `quote` 또는 `lecture_body`로 마무리
 
 책 한 권의 한 부(part)는 보통 30~50장 분량의 강의 슬라이드가 적합하다 — 짧으면 깊이가 사라지고, 너무 길면 한 슬라이드에 정보가 넘친다.
+
+---
+
+# 마케팅 / 발표용 layout 카탈로그 (slide_shadcn)
+
+랜딩 페이지, 제품 소개, 피치덱, 마케팅 자료에 쓰는 shadcn UI 기반 layout 10종. 각 layout은 `[engines:slide_shadcn]{slides: [{layout: "<이름>", ...}]}` 형태로 호출하며 `design_system`·`theme` 옵션으로 색·폰트 통합 가능.
+
+## 빠른 참고
+
+| layout | 용도 | 핵심 키 |
+|---|---|---|
+| `hero` | 표지·도입 (텍스트만) | title, subtitle, badge, cta_text |
+| `hero_image` | 표지+일러스트 (좌우 분할) | title, subtitle, image_path, eyebrow, badge, cta_text |
+| `features` | 기능 3열 그리드 | title, features: `[{title, description, icon}]` |
+| `stats` | 통계 4열 강조 (primary 배경) | title, stats: `[{value, label}]` |
+| `testimonial` | 인용·후기 (풀스크린 quote) | quote, author, role, avatar_path |
+| `pricing` | 가격표 3열 카드 | title, plans: `[{name, description, price, period, features, cta_text, highlighted}]` |
+| `cta` | Call-to-Action 배너 (primary 배경) | title, subtitle, cta_text |
+| `content_image` | 콘텐츠+이미지 좌우 분할 | title, content, image_path, eyebrow, image_position |
+| `steps` | 단계·타임라인 (가로 화살표) | title, steps: `[{title, description}]` (번호 자동) |
+| `custom` | 자유 Tailwind HTML | custom_html |
+
+> 강의·발표용 슬라이드(`lecture_body` 등)는 위 강의 섹션 참조. 일러스트 통합 layout(`hero_illustration` 등)은 `lecture_slides_with_illustrations.md` 참조.
+
+## design_system / theme 매칭
+
+| 옵션 | 영향 |
+|---|---|
+| `theme` (색만) | default / blue / green / purple / orange / dark — primary/secondary/accent CSS 변수만 |
+| `design_system` (색+폰트+텍스처+장식 통합) | default / vintage_book / academic_paper / tech_minimal / magazine_modern |
+
+**마케팅 자료라면 `tech_minimal`(SaaS/개발자) 또는 `magazine_modern`(에디토리얼/소비재)이 어울린다.** 데크 한 벌의 모든 슬라이드에 같은 design_system을 쓰면 시각적 정체성이 유지된다.
+
+## hero — 표지·도입
+
+```
+[engines:slide_shadcn]{slides: [{
+  layout: "hero",
+  badge: "v2.0 출시",
+  title: "더 빠른 작업, 더 적은 도구",
+  subtitle: "IndieBiz OS는 흩어진 개인 데이터를 하나의 신경계로 묶어줍니다",
+  cta_text: "지금 시작하기"
+}], design_system: "tech_minimal"}
+```
+
+- `badge`(선택): 좌상단에 작은 라벨 칩
+- `cta_text`(선택): 하단 액션 버튼 (실제 링크는 없음 — 데모용 시각만)
+- 사용 시점: 데크 첫 슬라이드, 부/장 도입
+
+## hero_image — 표지 + 이미지 (좌우 분할)
+
+```
+[engines:slide_shadcn]{slides: [{
+  layout: "hero_image",
+  eyebrow: "INTRODUCING",
+  title: "당신의 데이터, 당신의 AI",
+  subtitle: "Gmail·NAS·CCTV·홈페이지를 하나의 어시스턴트로",
+  cta_text: "데모 보기",
+  image_path: "/abs/path/hero.png"
+}], design_system: "tech_minimal"}
+```
+
+- `eyebrow`(선택): 제목 위 작은 대문자 라벨 (예 "INTRODUCING")
+- `image_path` 절대경로는 자동 base64 변환되어 우측 절반에 표시
+- 일러스트가 슬라이드 배경에 녹아드는 통합형(`slide-illustration-bleed`) — design_system의 일러스트 블렌드 처리 적용
+
+## features — 기능 3열 그리드
+
+```
+[engines:slide_shadcn]{slides: [{
+  layout: "features",
+  title: "왜 IndieBiz OS인가",
+  subtitle: "흩어진 도구를 하나로",
+  features: [
+    {title: "통합 신경계", description: "IBL로 모든 정보 소스 표준화", icon: "🧠"},
+    {title: "자율 실행", description: "스케줄러 + 에이전트가 알아서", icon: "⚙️"},
+    {title: "개인 데이터", description: "외부 클라우드 없이 NAS·로컬", icon: "🔒"}
+  ]
+}]}
+```
+
+- `features` 정확히 3개 권장 (그리드 `grid-cols-3` 고정)
+- `icon`: 이모지 또는 비워두면 Lucide `star` 기본 아이콘
+- 사용 시점: 제품 핵심 가치 3가지
+
+## stats — 통계 4열 강조
+
+```
+[engines:slide_shadcn]{slides: [{
+  layout: "stats",
+  title: "숫자로 보는 성과",
+  stats: [
+    {value: "332→208", label: "IBL 액션 통합"},
+    {value: "-37%", label: "시스템 프롬프트 비용"},
+    {value: "95.6%", label: "해마 Top-5 정확도"},
+    {value: "1h", label: "Pulse 주기"}
+  ]
+}], theme: "blue"}
+```
+
+- `stats` 정확히 4개 권장 (`grid-cols-4`)
+- 슬라이드 전체가 primary 색 배경 — `theme`/`design_system`의 primary가 강조됨
+- `value` 큰 폰트 + `label` 작은 폰트 (역피라미드)
+
+## testimonial — 인용·후기
+
+```
+[engines:slide_shadcn]{slides: [{
+  layout: "testimonial",
+  quote: "원래는 도구마다 따로 열어서 썼는데, 이제는 그냥 '어시스턴트야'라고 부르면 끝납니다",
+  author: "강국진",
+  role: "IndieBiz OS 사용자",
+  avatar_path: "/abs/path/avatar.png"
+}]}
+```
+
+- `avatar_path`(선택): 절대경로 → 자동 base64. 없으면 author 첫 2글자 이니셜 원형
+- `quote` 자동으로 따옴표 감쌈 — 본문에 따옴표 넣지 말 것
+- 사용 시점: 사용자 후기, 한 줄 임팩트, 핵심 인용
+
+## pricing — 가격표 3열
+
+```
+[engines:slide_shadcn]{slides: [{
+  layout: "pricing",
+  title: "요금",
+  plans: [
+    {
+      name: "Free",
+      description: "개인 사용",
+      price: "0원",
+      period: "/월",
+      features: ["IBL 기본 액션", "1개 프로젝트", "커뮤니티 지원"],
+      cta_text: "시작하기"
+    },
+    {
+      name: "Pro",
+      description: "프리랜서·1인 사업자",
+      price: "29,000원",
+      period: "/월",
+      features: ["IBL 전체", "프로젝트 무제한", "스케줄러 자동화", "이메일 지원"],
+      cta_text: "구독",
+      highlighted: true
+    },
+    {
+      name: "Team",
+      description: "소규모 팀",
+      price: "문의",
+      features: ["Pro 전체", "멀티 에이전트", "전담 지원"],
+      cta_text: "상담 신청"
+    }
+  ]
+}]}
+```
+
+- `plans` 정확히 3개 (`grid-cols-3`)
+- `highlighted: true` → "추천" 라벨 + primary 테두리 강조
+- `period`(선택): 기본 `/월`. 없애려면 빈 문자열 `""`
+- `description`(선택): 플랜 이름 아래 한 줄 설명
+- 사용 시점: 가격·플랜 비교
+
+## cta — Call-to-Action 배너
+
+```
+[engines:slide_shadcn]{slides: [{
+  layout: "cta",
+  title: "지금 시작하세요",
+  subtitle: "30초 만에 첫 IBL 액션을 실행할 수 있습니다",
+  cta_text: "무료로 시작"
+}], theme: "purple"}
+```
+
+- 슬라이드 전체가 primary 색 배경 (stats와 비슷, 통계가 아닌 행동 유도)
+- 데크 마지막 슬라이드로 자주 사용
+- 사용 시점: 데모 마무리, 등록 유도, "다음 단계는?"
+
+## content_image — 콘텐츠 + 이미지 (좌우 분할)
+
+```
+[engines:slide_shadcn]{slides: [{
+  layout: "content_image",
+  eyebrow: "How it works",
+  title: "신경계가 먼저, 도구는 그 위에",
+  content: "IBL은 모든 외부 데이터(주가·날씨·CCTV·이메일)를 통일된 문법으로 추상화합니다. AI는 도구가 아닌 *언어*를 학습합니다.",
+  image_path: "/abs/path/diagram.png",
+  image_position: "right",
+  cta_text: "기술 문서 보기"
+}]}
+```
+
+- `image_position`: `right`(기본) 또는 `left`. left면 이미지가 왼쪽, 텍스트가 오른쪽
+- `eyebrow`(선택): 제목 위 작은 대문자 라벨
+- hero_image와 차이: hero_image는 표지용 큰 제목, content_image는 본문용 일반 제목
+- 사용 시점: 기능 상세 설명, 다이어그램 + 해설
+
+## steps — 단계·타임라인
+
+```
+[engines:slide_shadcn]{slides: [{
+  layout: "steps",
+  title: "3단계로 시작",
+  steps: [
+    {title: "설치", description: "macOS/Windows 한 줄 명령어"},
+    {title: "연결", description: "Gmail·NAS·홈페이지 등록"},
+    {title: "지시", description: "자연어로 어시스턴트 호출"}
+  ]
+}]}
+```
+
+- `steps` 3~4개 권장 (개수에 따라 자동 분할, 사이에 화살표 자동)
+- 번호는 `loop.index`로 자동 (`1`, `2`, `3` 원형 배지)
+- 사용 시점: 온보딩, 워크플로우, 절차 안내
+
+## custom — 자유 Tailwind HTML
+
+기본 layout으로 안 되는 디자인은 `custom`으로 직접 HTML 작성.
+
+```
+[engines:slide_shadcn]{slides: [{
+  layout: "custom",
+  custom_html: '<div class="w-full h-full bg-black text-white flex items-center justify-center"><h1 class="text-9xl font-black">2026</h1></div>'
+}]}
+```
+
+- `custom_html`은 그대로 슬라이드 영역(`1280x720`)에 삽입됨
+- Tailwind CSS, shadcn 컴포넌트 클래스(`card`, `badge`, `btn` 등), Lucide 아이콘 모두 사용 가능
+- `slides.md`의 "방법 2: tailwind 테마 + custom_html (권장)" 섹션의 디자인 가이드(글래스모피즘, 그라데이션, Google Fonts, Lucide, Lottie 등) 동일 적용
+- 사용 시점: 카운트다운 화면, 임팩트 통계 한 글자, 브랜드 풀스크린 등 카탈로그에 없는 디자인
+
+## 데크 구성 권장 (마케팅 자료)
+
+10~15장 분량의 제품 소개 데크 예시 구성:
+
+| # | layout | 역할 |
+|---|---|---|
+| 1 | `hero` 또는 `hero_image` | 표지 — 한 줄 가치 제안 |
+| 2 | `content_image` | 문제 정의 (왜 필요한가) |
+| 3 | `features` | 솔루션 — 핵심 3가지 |
+| 4-6 | `content_image` ×3 | 각 기능 상세 |
+| 7 | `stats` | 성과·실적 (숫자로) |
+| 8 | `steps` | 도입 절차 |
+| 9 | `testimonial` | 사용자 후기 |
+| 10 | `pricing` | 가격 |
+| 11 | `cta` | 다음 단계 |
+
+`design_system`은 데크 전체에 한 번만 지정하면 모든 슬라이드에 적용된다.

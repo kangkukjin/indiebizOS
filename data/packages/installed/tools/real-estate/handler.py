@@ -17,7 +17,7 @@ def execute(tool_input: dict, context):
     """
     tool_name = context.tool_name
 
-    if tool_name in ("apt_trade_price", "apt_rent_price", "house_trade_price", "house_rent_price"):
+    if tool_name in ("realty_price", "apt_trade_price", "apt_rent_price", "house_trade_price", "house_rent_price"):
         region_code = tool_input.get("region_code")
         start_month = tool_input.get("start_month")
         end_month = tool_input.get("end_month")
@@ -29,6 +29,25 @@ def execute(tool_input: dict, context):
         if not start_month:
             from datetime import datetime
             start_month = datetime.now().strftime("%Y%m")
+
+    if tool_name == "realty_price":
+        rtype = tool_input.get("type", "apt")
+        deal = tool_input.get("deal", "trade")
+        key = (rtype, deal)
+        if key == ("apt", "trade"):
+            tool = load_module("tool_apt_trade_range")
+            return tool.get_apt_trade_range(region_code, start_month, end_month, count_per_month)
+        elif key == ("apt", "rent"):
+            tool = load_module("tool_apt_rent")
+            return tool.get_apt_rent(region_code, start_month, end_month, count_per_month)
+        elif key == ("house", "trade"):
+            tool = load_module("tool_house_trade_range")
+            return tool.get_house_trade_range(region_code, start_month, end_month, count_per_month)
+        elif key == ("house", "rent"):
+            tool = load_module("tool_house_rent")
+            return tool.get_house_rent(region_code, start_month, end_month, count_per_month)
+        else:
+            return {"success": False, "error": f"잘못된 조합: type={rtype}, deal={deal}. type은 apt|house, deal은 trade|rent."}
 
     if tool_name == "apt_trade_price":
         tool = load_module("tool_apt_trade_range")

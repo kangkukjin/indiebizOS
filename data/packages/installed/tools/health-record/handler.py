@@ -21,6 +21,15 @@ def execute(tool_input: dict, context) -> str:
     """도구 실행 엔트리포인트 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
 
+    # 통합 도구 — IBL 어휘에 노출
+    if tool_name == "health_op":
+        op = (tool_input.get("op") or "").strip()
+        if op == "save":
+            return save_health_info(tool_input)
+        if op == "query":
+            return get_health_context(tool_input)
+        return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|query)"}, ensure_ascii=False)
+    # 옛 도구 이름 (직접 호출 호환)
     if tool_name == "save_health_info":
         return save_health_info(tool_input)
     elif tool_name == "get_health_context":

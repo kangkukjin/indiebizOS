@@ -1,62 +1,39 @@
   self:
     actions:
-      search_photos:
-        description: 사진/동영상 검색 (파일명, 카메라 모델 등). 인덱스는 photo_scan 후 생성.
-        target_description: 검색어 (파일명·카메라·키워드). filter 옵션 (date/camera/location).
+      photo:
+        description: 사진·동영상 라이브러리 관리 (op 분기). 스캔(인덱싱)/조회/검색/통계/타임라인/중복/상세 통합. scan이 모든 조회의 전제.
+        target_description: 'op: scan | list_scans | gallery | search | detail | stats | timeline | duplicates. scan/gallery/stats/timeline/duplicates는 path(폴더 경로) 필요(생략 시 가장 큰 스캔 자동). search는 query + 옵션(media_type, start_date, end_date, limit). detail은 media_id. list_scans는 파라미터 없음. timeline에 year 옵션.'
         group: photo
-        router: driver
-        driver: sqlite
-        driver_node: photo
-        implementation: SQLite DB에서 사진/동영상 메타데이터 쿼리
+        target_key: op
+        router: handler
+        tool: photo_op
+        implementation: handler.py가 op로 분기 — scan/list_scans/gallery/stats/timeline/duplicates는 photo_db 함수, search/detail은 photo_db.search_media/get_media_detail.
         keywords:
         - 사진
         - 동영상
-        - 사진검색
         - 미디어
-      photo_detail:
-        description: 사진·동영상 파일의 상세 메타 조회 (촬영일·카메라·GPS·해상도 등).
-        target_description: 미디어 파일 ID 또는 절대 경로.
-        group: photo
-        router: driver
-        driver: sqlite
-        driver_node: photo
-        implementation: SQLite DB에서 사진/동영상 메타데이터 쿼리
-        keywords:
-        - 사진
-        - 상세
-        - 메타데이터
-      photo_stats:
-        description: 스캔된 폴더의 통계 (사진/동영상 수, 용량, 카메라별)
-        group: photo
-        target_description: 폴더 경로
-        router: handler
-        tool: get_stats
-        implementation: SQLite DB에서 전체 미디어 통계 집계
-        target_key: path
-      photo_scan:
-        description: 폴더의 사진/동영상 메타데이터 수집 (인덱싱)
-        group: photo
-        target_description: 스캔할 폴더 경로
-        router: handler
-        tool: scan_photos
-        implementation: PIL(Pillow)로 이미지 EXIF 메타데이터 추출 후 SQLite 인덱싱
-        target_key: path
+        - 사진 검색
+        - 사진 스캔
+        - 갤러리
+        - 사진 통계
+        - 타임라인
+        - 중복 사진
+        - 사진 상세
       blog_search:
-        description: 블로그 검색 (하이브리드 — 시맨틱 벡터 70% + 키워드 BM25 30%)
+        description: 블로그 검색·조회 통합 (mode 분기). 하이브리드(기본)/시맨틱/전문조회.
         group: blog
-        target_description: 검색 키워드 또는 자연어. limit 옵션으로 건수 제한 (기본 10).
+        target_description: 'mode: hybrid (기본, 시맨틱 70% + BM25 30%) | semantic (의미만, 키워드 무관) | content (전문 조회). hybrid/semantic — query 필수 + limit 옵션(기본 10). content — post_id 또는 title(부분 일치) 중 하나 필수. 워크플로 — query로 찾고 결과 id로 mode=content 호출.'
         router: handler
-        tool: search_blog_rag
-        implementation: SQLite + 벡터 임베딩 하이브리드 검색. 제목·미리보기·점수 목록 반환 (로컬 블로그 DB)
+        tool: blog_search_op
+        implementation: handler.py가 mode로 분기 — hybrid는 search_blog_rag, semantic은 search_blog_semantic, content는 get_post_content_rag.
         target_key: query
-      blog_content:
-        description: 블로그 글 전문 조회 (post_id 또는 제목으로)
-        group: blog
-        target_description: post_id 또는 글 제목 (제목은 부분 일치). 전체 본문·날짜·카테고리 반환.
-        router: handler
-        tool: get_post_content_rag
-        implementation: 블로그 SQLite DB에서 포스트 전문·날짜·카테고리·링크 반환
-        target_key: post_id
+        keywords:
+        - 블로그 검색
+        - 블로그
+        - 시맨틱
+        - 의미검색
+        - 글 전문
+        - 글 조회
       blog_stats:
         description: 블로그 통계 — 전체 글 수, 카테고리별·기간별 분포, 활동 트렌드.
         group: blog
@@ -64,26 +41,6 @@
         router: handler
         tool: blog_stats
         implementation: 블로그 SQLite DB에서 통계 집계 쿼리
-      blog_get_post:
-        description: 블로그 글 ID로 전체 내용 조회 (정확한 ID 조회). 제목 검색은 blog_content.
-        target_description: post_id (정확한 식별자, blog_search 결과의 id).
-        group: blog
-        router: handler
-        tool: blog_get_post
-        implementation: 블로그 SQLite DB에서 ID로 글 전문 조회
-        target_key: post_id
-      blog_semantic:
-        description: 블로그 의미 검색 (키워드 무관, 의미적 유사성만으로). 하이브리드는 blog_search.
-        target_description: 검색 쿼리 (자연어). limit 옵션으로 건수 제한.
-        group: blog
-        router: handler
-        tool: search_blog_semantic
-        implementation: 벡터 임베딩 기반 시맨틱 검색 (코사인 유사도)
-        target_key: query
-        keywords:
-        - 블로그
-        - 의미검색
-        - 시맨틱
       kinsight:
         description: 블로그 인사이트 분석 (기본 15개, count로 개수 지정 가능)
         group: blog
@@ -93,9 +50,9 @@
         implementation: 블로그 최신 포스트 수집 + AI 모델 호출로 인사이트 HTML 생성
         target_key: query
       recent:
-        description: 최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순).
+        description: 최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.
         target_description: '(파라미터 없음). limit 옵션으로 건수 제한 (기본 10).'
-        group: memory
+        group: conversation
         router: driver
         driver: sqlite
         driver_node: memory
@@ -105,9 +62,9 @@
         - 대화이력
         - 이전
       agents:
-        description: 메모리 DB에 등록된 에이전트 목록 조회 (사용자·AI 구분).
+        description: 등록된 에이전트 목록 조회 (사용자·AI 구분). conversations.db 기반.
         target_description: '(파라미터 없음 — 전체 에이전트 목록)'
-        group: memory
+        group: conversation
         router: driver
         driver: sqlite
         driver_node: memory
@@ -116,46 +73,38 @@
         - 에이전트
         - 목록
         - 팀
-      memory_save:
-        description: 에이전트의 심층 메모리에 항목 저장 (장기 기억). 자동 키워드 추출·카테고리 분류.
+      memory:
+        description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도.
         group: memory
-        target_description: 저장 내용 (content). category/keywords 옵션.
+        target_description: 'op: save | search | read | delete. save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합)+ category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save로 누적 → search 키워드/자연어 → preview 잘렸으면 read로 전문, 잘못 저장은 delete.'
+        target_key: op
         router: handler
-        tool: memory_save
-        implementation: SQLite DB에 메모리 항목 저장 (키워드 태깅)
-        target_key: content
-      memory_read:
-        description: 메모리 항목의 전체 내용 조회 (search 결과의 preview는 잘림). ID로 조회.
-        group: memory
-        target_description: 메모리 항목 ID (memory_search 결과의 id).
+        tool: memory_op
+        implementation: handler.py가 op로 분기 — save/search/read/delete 옛 함수에 위임.
+        keywords:
+        - 메모리
+        - 기억
+        - 장기기억
+        - 메모리 저장
+        - 메모리 검색
+        - 메모리 삭제
+        - 메모리 읽기
+      health:
+        description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
+        group: health
+        target_description: 'op: save | query. save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션.'
+        target_key: op
         router: handler
-        tool: memory_read
-        implementation: SQLite DB에서 메모리 항목 조회
-        target_key: memory_id
-      memory_delete:
-        description: 심층 메모리 항목 영구 삭제. ID로 지정. 복구 불가능.
-        group: memory
-        target_description: 삭제할 메모리 항목 ID (memory_search 결과의 id).
-        router: handler
-        tool: memory_delete
-        implementation: SQLite DB에서 메모리 항목 삭제
-        target_key: memory_id
-      health_save:
-        description: 건강 정보 저장 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 투약, 의료문서를 DB에 기록
-        group: data
-        target_description: 저장 타입 (혈압/혈당/체중/증상/투약/문서). data 파라미터로 측정값/내용 전달.
-        router: handler
-        tool: save_health_info
-        implementation: SQLite DB에 건강 데이터 구조화 저장 (혈압/혈당/체중/투약 등)
-        target_key: info_type
-      health_query:
-        description: 건강 기록 조회 — 혈액검사 결과, 혈압, 혈당, 체중, 증상, 약물 이력, 건강 요약, 키워드 검색
-        group: data
-        target_description: 조회 타입 (summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중 카테고리). keyword 옵션.
-        router: handler
-        tool: get_health_context
-        implementation: SQLite DB에서 건강 이력 조회 + AI 요약 생성
-        target_key: query_type
+        tool: health_op
+        implementation: handler.py가 op로 분기 — save는 save_health_info, query는 get_health_context.
+        keywords:
+        - 건강
+        - 건강 저장
+        - 건강 조회
+        - 혈압
+        - 혈당
+        - 체중
+        - 투약
       local_save:
         description: 가게 정보·커뮤니티 언급을 지역 DB에 저장 (sense:save와 같은 동작).
         target_description: 저장할 데이터 (JSON). type 옵션으로 store/mention 분류.
@@ -231,27 +180,18 @@
         - 달력
         - 일정보기
         - calendar
-      list_switches:
-        description: 등록된 모든 스위치 목록 조회 (활성/비활성·타입·이름).
-        target_description: '(파라미터 없음 — 전체 스위치 목록)'
+      switch:
+        description: 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
+        target_description: 'op: list | run. list는 파라미터 없음. run은 switch_id 필요.'
         group: schedule
+        target_key: op
         router: system
-        func: list_switches
-        implementation: switch_manager에서 등록된 스위치 목록 조회 (JSON 설정)
+        func: switch_op
+        implementation: _route_system이 op로 분기 — list는 _execute_list_switches, run은 SwitchRunner.run_switch.
         keywords:
         - 스위치
-        - 목록
-      run_switch:
-        description: 특정 스위치 즉시 실행 (예약 무시). 정상 실행은 트리거로.
-        target_description: 실행할 스위치 ID (list_switches로 조회한 id).
-        group: schedule
-        router: system
-        func: run_switch
-        implementation: SwitchManager + SwitchRunner로 스위치 실행
-        target_key: switch_id
-        keywords:
-        - 스위치실행
-        - 스위치
+        - 스위치 목록
+        - 스위치 실행
       schedule:
         description: 스케줄 실행 (지연 실행, 특정 시간, 반복 등)
         target_description: 실행 시점 (delay/at/cron) + action. 한 번 실행 또는 반복 가능.
@@ -266,63 +206,22 @@
         - 타이머
         - 지연실행
         - 반복
-      list_goals:
-        description: 현재 활성·대기 중인 목표 프로세스 목록 조회.
-        target_description: '(파라미터 없음 — 전체 활성 목표 목록)'
+      goal:
+        description: 목표 프로세스 관리 (op 분기). list/status/kill/log/attempts. 의식 에이전트가 평가 루프 라운드를 누적·종료하는 메타 인지 도구.
+        target_description: 'op: list | status | kill | log | attempts. list — 파라미터 없음, 활성/대기 중 전체. status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. log — goal_id + strategy + result 필수, 시도 1건 기록(연속 실패 추적). attempts — goal_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.'
         group: goal
+        target_key: op
         router: system
-        func: list_goals
-        implementation: conversation_db에서 활성/대기 중인 목표 프로세스 목록 조회
+        func: goal_op
+        implementation: _route_system이 op로 분기 — list_goals/get_goal_status/kill_goal/log_attempt/get_attempts에 위임.
         keywords:
         - 목표
-        - 목표목록
-        - goal
-        - 진행중
-      goal_status:
-        description: 특정 목표의 상세 상태 조회 (진행률·라운드 이력·누적 결과).
-        target_description: 조회할 목표 ID (list_goals로 확인).
-        group: goal
-        router: system
-        func: get_goal_status
-        implementation: conversation_db에서 목표 상태, 라운드 이력, 누적 결과 조회
-        keywords:
-        - 목표상태
+        - 목표 목록
+        - 목표 상태
+        - 목표 종료
+        - 시도 기록
+        - 시도 이력
         - 진행상황
-        - goal
-      goal_kill:
-        description: 진행 중인 목표 프로세스 강제 종료. 일시정지 아닌 완전 중단.
-        target_description: 종료할 목표 ID.
-        group: goal
-        router: system
-        func: kill_goal
-        implementation: 활성 목표를 terminated 상태로 전환하고 스케줄 제거
-        keywords:
-        - 목표종료
-        - 목표취소
-        - 중단
-        - kill
-      log_attempt:
-        description: 목표 실행 시도 기록 (전략 전환 및 라운드 메모리)
-        target_description: 목표 ID와 시도 정보. strategy/result 파라미터.
-        group: goal
-        router: system
-        func: log_attempt
-        implementation: conversation_db에 시도 결과/카테고리/전략 기록, 연속 실패 추적
-        keywords:
-        - 시도기록
-        - 전략
-        - 라운드
-      get_attempts:
-        description: 특정 목표의 과거 실행 시도 이력 조회 (라운드별 전략·결과).
-        target_description: 목표 ID. limit 옵션으로 건수 제한.
-        group: goal
-        router: system
-        func: get_attempts
-        implementation: conversation_db에서 시도 이력 조회, 실패 카테고리별 요약 포함
-        keywords:
-        - 시도이력
-        - 시도목록
-        - 전략이력
       notify_user:
         description: 사용자에게 알림 전송 (프론트엔드 + 텔레그램). 중요 이벤트 통지용.
         target_description: 알림 메시지. priority 옵션 (info/warn/error).
@@ -335,55 +234,20 @@
         - 알림
         - 통지
         - 메시지
-      run:
-        description: 저장된 워크플로우 실행 (steps 순서대로). 즉시 실행은 run_pipeline.
-        target_description: 실행할 워크플로우 ID. params 옵션으로 변수 전달.
+      workflow:
+        description: 저장된 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. 즉시 실행은 run_pipeline 별도.
+        target_description: 'op: list | get | save | delete | run. list — 파라미터 없음. get/delete/run — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — params 옵션으로 워크플로 변수 전달.'
         group: workflow
-        target_key: workflow_id
+        target_key: op
         router: workflow_engine
-        implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
+        implementation: workflow_engine.execute_workflow_action 입구에서 op→action 재매핑 후 기존 분기 활용.
         keywords:
         - 워크플로우
-        - 실행
-      list_workflows:
-        description: 저장된 모든 워크플로우 목록 조회. ID·이름·생성 시점.
-        target_description: '(파라미터 없음 — 전체 목록)'
-        group: workflow
-        router: workflow_engine
-        implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
-        keywords:
-        - 워크플로우
-        - 목록
-      get_workflow:
-        description: 저장된 워크플로우의 상세 정보 조회 (steps·메타·실행 이력).
-        target_description: 조회할 워크플로우 ID.
-        group: workflow
-        target_key: workflow_id
-        router: workflow_engine
-        implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
-        keywords:
-        - 워크플로우
-        - 상세
-      save_workflow:
-        description: 워크플로우 저장 (재사용 가능한 IBL 파이프라인). 실행은 run.
-        target_description: 워크플로우 이름과 steps 배열 (각 step은 IBL 코드).
-        group: workflow
-        target_key: workflow_id
-        router: workflow_engine
-        implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
-        keywords:
-        - 워크플로우
-        - 저장
-      delete_workflow:
-        description: 저장된 워크플로우 영구 삭제. ID로 지정. 복구 불가능.
-        target_description: 삭제할 워크플로우 ID (list_workflows로 확인).
-        group: workflow
-        target_key: workflow_id
-        router: workflow_engine
-        implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
-        keywords:
-        - 워크플로우
-        - 삭제
+        - 워크플로우 저장
+        - 워크플로우 목록
+        - 워크플로우 실행
+        - 워크플로우 삭제
+        - 파이프라인 저장
       run_pipeline:
         description: IBL 파이프라인 즉시 실행 (steps를 params로 직접 전달, 저장 안 됨).
         target_description: steps 배열 (각 step은 IBL 코드). 저장하려면 save_workflow.
@@ -394,103 +258,25 @@
         - 파이프라인
         - 실행
         - 단계
-      list_triggers:
-        description: 등록된 모든 트리거 목록 조회 (타입·조건·상태). create로 등록.
-        target_description: '(파라미터 없음 — 전체 트리거 목록). type 옵션으로 타입별 필터링.'
+      trigger:
+        description: 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
+        target_description: 'op: list | get | create | update | delete | enable | disable | status | history. create/update는 trigger 정의(name, type, condition, action 등) 필요. get/update/delete/enable/disable/history는 trigger_id 필요. list/status는 파라미터 없음.'
         group: schedule
+        target_key: op
         router: trigger_engine
-        implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
+        implementation: trigger_engine.execute_trigger 입구에서 op→action 재매핑 후 기존 분기(list/get/create/update/delete/enable/disable/status/history) 그대로 사용.
         keywords:
         - 트리거
-        - 목록
-      get_trigger:
-        description: 특정 트리거의 상세 정보 조회 (타입·조건·동작·실행 이력 등).
-        target_description: 조회할 트리거 ID (list_triggers로 확인).
-        group: schedule
-        target_key: trigger_id
-        router: trigger_engine
-        implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
-        keywords:
-        - 트리거
-        - 상세
-      create:
-        description: 새 트리거 등록 (schedule/channel/webhook/file). 조건 충족 시 자동 실행.
-        target_description: 트리거 타입 (schedule/channel/webhook/file). condition·action 파라미터로 구성.
-        group: schedule
-        target_key: trigger_id
-        router: trigger_engine
-        implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
-        keywords:
-        - 트리거
-        - 등록
-        - 생성
-      update:
-        description: 기존 트리거의 조건·동작 수정. 종류(cron/channel/webhook/file) 무관.
-        target_description: 수정할 트리거 ID. 변경할 필드는 별도 파라미터로 전달.
-        group: schedule
-        target_key: trigger_id
-        router: trigger_engine
-        implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
-        keywords:
-        - 트리거
-        - 수정
-      delete_trigger:
-        description: 등록된 트리거 영구 삭제. list_triggers로 ID 확인 후 사용.
-        target_description: 삭제할 트리거 ID.
-        group: schedule
-        target_key: trigger_id
-        router: trigger_engine
-        implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
-        keywords:
-        - 트리거
-        - 삭제
-      enable:
-        description: 비활성화된 트리거 재활성화. 조건 충족 시 다시 실행 시작.
-        target_description: 활성화할 트리거 ID.
-        group: schedule
-        target_key: trigger_id
-        router: trigger_engine
-        implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
-        keywords:
-        - 트리거
-        - 활성화
-        - 켜기
-      disable:
-        description: 트리거 비활성화 (조건 충족해도 실행 안 됨). 재활성화는 enable.
-        target_description: 비활성화할 트리거 ID.
-        group: schedule
-        target_key: trigger_id
-        router: trigger_engine
-        implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
-        keywords:
-        - 트리거
-        - 비활성화
-        - 끄기
-      trigger_status:
-        description: 트리거 시스템 전체 상태 (폴러, 스케줄러, 자동응답)
-        target_description: '(파라미터 없음 — 시스템 전체 상태 반환)'
-        group: schedule
-        router: trigger_engine
-        implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
-        keywords:
-        - 트리거
-        - 상태
-        - 폴러
-      trigger_history:
-        description: 트리거 실행 이력 조회 (성공·실패·결과). 디버깅·모니터링용.
-        target_description: 트리거 ID (생략 시 전체). limit으로 건수 제한.
-        group: schedule
-        target_key: trigger_id
-        router: trigger_engine
-        implementation: trigger_engine으로 cron/channel/webhook/file 이벤트 기반 트리거 관리
-        keywords:
-        - 트리거
-        - 실행이력
-        - 기록
+        - 트리거 등록
+        - 트리거 목록
+        - 트리거 삭제
+        - 트리거 이력
+        - 트리거 상태
+        - 자동 실행
       gui:
         description: UI에 결과를 HTML/카드/테이블 형태로 표시 (WebSocket 통해 프론트).
         target_description: 표시할 내용 (HTML 또는 데이터). format 옵션으로 카드/테이블/HTML 선택.
-        group: data
+        group: output
         target_key: content
         router: system
         func: output_gui
@@ -503,7 +289,7 @@
       file:
         description: 결과를 파일로 저장 (텍스트, JSON, CSV, HTML 등). 확장자로 형식 자동 인식.
         target_description: 저장 파일 경로. content 옵션으로 내용 전달.
-        group: file
+        group: output
         target_key: path
         router: system
         func: output_file
@@ -516,7 +302,7 @@
       clipboard:
         description: 텍스트·결과를 OS 클립보드에 복사. 사용자가 다른 앱에 붙여넣기 가능.
         target_description: 복사할 내용 (텍스트).
-        group: data
+        group: output
         target_key: content
         router: system
         func: output_clipboard
@@ -527,7 +313,7 @@
       download:
         description: URL에서 파일 다운로드해 로컬 저장. HTML 페이지 텍스트 추출은 sense:crawl.
         target_description: 다운로드 URL. output 옵션으로 저장 경로 지정.
-        group: file
+        group: output
         target_key: url
         router: system
         func: output_download
@@ -536,13 +322,12 @@
         - 다운로드
         - 파일받기
       read:
-        description: 텍스트 파일 읽기 (offset/limit으로 부분 읽기 가능). PDF/DOCX는 별도 액션.
+        description: 파일 읽기 — 텍스트/PDF/DOCX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: 읽을 파일 경로. offset(시작 라인 0-base)·limit(라인 수) 옵션 가능.
+        target_description: 읽을 파일 경로. format 옵션 (text/pdf/docx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). 스캔 PDF는 별도 OCR 필요.
         router: handler
-        tool: read_file
-        implementation: Python 파일 I/O로 로컬 파일 읽기. offset(시작 줄, 0부터)과 limit(줄 수)로 대용량
-          파일을 부분적으로 읽을 수 있다.
+        tool: read_op
+        implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
         target_key: path
       write:
         description: 텍스트 파일 새로 쓰기·덮어쓰기. write→run 패턴의 한 축, append 아님.
@@ -622,31 +407,6 @@
         tool: delete_path
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
-      read_pdf:
-        description: PDF 파일에서 텍스트 추출. 표·이미지 무시. 스캔 PDF는 별도 OCR 필요.
-        group: file
-        target_description: PDF 파일 경로. pages 옵션으로 특정 페이지 (예 '1-5', '3').
-        router: handler
-        tool: read_pdf
-        implementation: PyPDF2/pdfplumber로 PDF 텍스트 추출
-        target_key: path
-      read_docx:
-        description: DOCX 파일 읽기 (텍스트 + 표 + 이미지 추출). 기본 300블록까지만 반환 — 더 읽으려면 offset/limit
-          사용
-        group: file
-        target_description: DOCX 파일 경로. offset/limit/max_blocks로 블록 단위 부분 읽기.
-        router: handler
-        tool: read_docx
-        implementation: python-docx로 텍스트/표 추출, ZIP 구조에서 이미지 파일 추출 및 저장. 텍스트 내 이미지
-          위치 마커 포함. offset/limit/max_blocks로 부분 읽기 지원 (블록=문단 또는 표 하나). 응답 metadata에
-          truncated/next_offset 포함
-        target_key: path
-        keywords:
-        - docx
-        - 워드
-        - word
-        - 문서읽기
-        - 참고문서
       storage_scan:
         description: 디스크·볼륨 전체 스캔 후 SQLite 인덱스 구축. fs_query의 전제 단계.
         group: file
@@ -695,26 +455,18 @@
       cctv_refresh:
         description: CCTV 목록 캐시 갱신. UTIC API에서 전국 16,000+대 최신 CCTV 데이터를 가져와 로컬 캐시
           업데이트.
-        group: data
+        group: cctv
         target_description: '(파라미터 없음 — 전국 CCTV 데이터 일괄 갱신). force 옵션으로 강제 재수집.'
         router: handler
         tool: cctv_refresh
         implementation: UTIC 실시간 API 호출 → 로컬 캐시 파일 갱신 (유지보수용)
       cctv_stats:
         description: CCTV 데이터 현황 통계 (전체 수, 센터별 분포, 데이터 소스 상태).
-        group: data
+        group: cctv
         target_description: '(파라미터 없음)'
         router: handler
         tool: cctv_stats
         implementation: 로컬 캐시 기반 CCTV 통계 집계 (전체 수, 센터별 분포)
-      memory_search:
-        description: 에이전트의 심층 메모리에서 키워드·시맨틱 통합 검색.
-        group: memory
-        target_description: 검색 키워드 또는 자연어 질문. category 옵션으로 필터링.
-        router: handler
-        tool: memory_search
-        implementation: SQLite FTS + conversations.db 통합 텍스트 검색
-        target_key: query
       storage_summary:
         description: 디스크·볼륨 저장소 사용량 요약. 전체 + 디렉토리별 통계.
         group: file
@@ -737,219 +489,65 @@
         router: handler
         tool: get_folder_annotations
         implementation: SQLite DB에서 폴더 주석 조회
-      photo_list_scans:
-        description: 스캔된 사진 폴더 목록과 DB 경로 조회. photo_scan 이후 확인용.
-        group: photo
-        target_description: '(파라미터 없음 — 전체 스캔된 폴더 목록)'
-        router: handler
-        tool: list_scans
-        implementation: 스캔 이력 SQLite DB 조회
-      photo_gallery:
-        description: 스캔된 사진/동영상 갤러리 조회 (페이지네이션, 필터)
-        group: photo
-        target_description: 폴더 경로
-        router: handler
-        tool: get_gallery
-        implementation: SQLite DB에서 페이지네이션/필터 기반 미디어 목록 조회
-        target_key: path
-      photo_timeline:
-        description: 월별 사진·동영상 촬영 통계 (타임라인). 활동 패턴 시각화.
-        group: photo
-        target_description: 폴더 경로 (생략 시 전체 라이브러리). year 옵션으로 특정 연도.
-        router: handler
-        tool: get_timeline
-        implementation: SQLite DB에서 월별 미디어 파일 집계 쿼리
-        target_key: path
-      photo_duplicates:
-        description: 중복 사진·동영상 탐지 (MD5 해시 기반). 정리·용량 절감용.
-        group: photo
-        target_description: 폴더 경로 (생략 시 전체 라이브러리 스캔).
-        router: handler
-        tool: find_duplicates
-        implementation: MD5 해시 기반 중복 파일 탐지 (파일시스템 스캔)
-        target_key: path
-      lecture_list:
-        description: 저장된 강의 목록 조회. indiebizOS/outputs/lectures/ 하위 스캔.
+      lecture:
+        description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
         group: lecture
-        target_description: '(파라미터 없음 — 전체 강의 목록)'
-        keywords:
-        - 강의목록
-        - 강의 목록
-        - 강의 리스트
+        target_description: 'op: list | create | load | delete | open. create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면). delete는 confirm=true 추가. list는 파라미터 없음.'
+        target_key: op
         router: handler
-        tool: lecture_list
-        implementation: outputs/lectures/ 디렉토리 스캔, 각 deck.json 메타 요약 반환
-        scope: workspace
-      lecture_create:
-        description: 새 강의 생성. 한글 제목 슬러그화 → lecture_id, 폴더 + 빈 deck.json 생성.
-        group: lecture
-        target_description: 강의 제목 (한글 가능). style 옵션으로 design_system 지정 가능.
+        tool: lecture_op
+        implementation: handler.py가 op로 분기 — list/create/load/delete/open 내부 함수 호출.
         keywords:
         - 강의 만들기
         - 강의 생성
-        - 새 강의
-        - 강의 시작
-        router: handler
-        tool: lecture_create
-        implementation: 한글 제목 unidecode 슬러그화(중복시 -2/-3 자동), outputs/lectures/{lecture_id}/{deck.json,
-          materials/, slides/} 생성
-        scope: workspace
-      lecture_load:
-        description: 강의 데이터 로드. deck.json + 슬라이드/재료 파일 목록 반환.
-        group: lecture
-        target_description: 로드할 강의 ID (lecture_list로 확인).
-        router: handler
-        tool: lecture_load
-        implementation: deck.json 읽고, slides_dir/materials_dir 절대경로 함께 반환
-        target_key: lecture_id
-        scope: workspace
-      lecture_delete:
-        description: 강의 폴더 전체 삭제 (confirm=true 필수).
-        group: lecture
-        target_description: 강의 ID와 confirm=true (안전 장치).
-        keywords:
+        - 강의 목록
         - 강의 삭제
-        - 강의 지우기
-        router: handler
-        tool: lecture_delete
-        implementation: confirm=true 검증 후 shutil.rmtree로 강의 폴더 전체 삭제
-        target_key: lecture_id
-        scope: workspace
-      lecture_open:
-        description: 강의 만들기 창(별도 Electron BrowserWindow) 열기. lecture_id 옵션이면 그 강의
-          로드 상태로 열고, 미지정이면 강의 목록 화면.
-        group: lecture
-        target_description: '(파라미터 없음 — 빈 창). lecture_id 옵션으로 특정 강의 로드 상태로 오픈.'
-        keywords:
-        - 강의 만들기 창
-        - 강의만들기창
-        - 강의 창
+        - 강의 열기
         - 강의 워크스페이스
-        - 강의 작업
-        router: handler
-        tool: lecture_open
-        implementation: WebSocket으로 프론트엔드에 open-lecture-workspace 이벤트 전송 (Step 2에서
-          IPC 핸들러 추가). 현재는 데이터만 반환.
         scope: workspace
-      deck_reorder:
-        description: 슬라이드 순서만 변경 (slide_order 배열 갱신, 파일은 안 건드림).
+      slide:
+        description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더.
         group: lecture
-        target_description: 강의 ID와 slide_order 배열 (새 순서).
+        target_description: 'op: create | edit | delete | patch | rerender. 공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete는 slide_id, patch는 slide_id+patch(객체), rerender는 slide_id. create/edit만 AI 호출.'
+        target_key: op
         router: handler
-        tool: deck_reorder
-        implementation: deck.json의 slide_order 배열을 받은 순서로 교체. 검증 후 저장.
-        target_key: lecture_id
-        scope: workspace
-      slide_delete:
-        description: 특정 슬라이드 삭제. 파일(json+png) 지우고 deck에서 제거.
-        group: lecture
-        target_description: 강의 ID와 슬라이드 idx (slide_order 위치).
-        router: handler
-        tool: slide_delete
-        implementation: slides/{slide_id}.{json,png} 삭제 + deck.json의 slide_order/slides
-          갱신
-        target_key: lecture_id
-        scope: workspace
-      material_add:
-        description: 재료 추가. 파일 경로(file_path) 또는 텍스트(text+filename)로 호출.
-        group: lecture
-        target_description: 강의 ID + file_path(파일 경로) 또는 text+filename(텍스트 직접).
-        keywords:
-        - 재료 추가
-        - 자료 추가
-        - 원고 추가
-        router: handler
-        tool: material_add
-        implementation: file_path 모드는 shutil.copy로 materials/에 복사. text 모드는 materials/{filename}에
-          직접 쓰기. deck.materials 갱신.
-        target_key: lecture_id
-        scope: workspace
-      material_remove:
-        description: 재료 삭제. materials/{filename} 지우고 deck에서 제거.
-        group: lecture
-        target_description: 강의 ID와 삭제할 재료 filename.
-        router: handler
-        tool: material_remove
-        implementation: materials/{filename} unlink + deck.materials 갱신
-        target_key: lecture_id
-        scope: workspace
-      slide_create:
-        description: 강의자의 자연어 요청을 받아 슬라이드 한 장을 생성. 시스템 AI 키·모델 빌린 가벼운 AI가 spec(JSON)
-          생성 → slide_shadcn 렌더 → deck 등록.
-        group: lecture
-        target_description: 강의 ID와 자연어 요청 (request). focus_idx 옵션으로 위치 지정.
+        tool: slide_op
+        implementation: handler.py가 op로 분기. create/edit는 AI 호출, delete/patch/rerender는 AI 우회 (PowerPoint식 직접 편집).
         keywords:
         - 슬라이드 만들기
-        - 슬라이드 생성
-        - 다음 슬라이드
-        - 첫 슬라이드
-        - 표지 슬라이드
-        router: handler
-        tool: slide_create
-        implementation: 시스템 AI 설정 빌린 가벼운 provider 호출(채팅 히스토리 없이 self-contained 프롬프트).
-          컨텍스트=강의 메타+재료 색인+데크 개요+누적 메모. 응답 JSON 파싱→[engines:slide_shadcn] 렌더→slides/{sid}.{json,png}
-          저장→deck.slides[sid]+slide_order 갱신→memo_signals를 cumulative_memo에 자동 패치.
-        target_key: lecture_id
-        scope: workspace
-      slide_edit:
-        description: 특정 슬라이드 재생성(편집). focus 슬라이드의 현재 spec을 AI에 컨텍스트로 줘서 강의자 코멘트만 반영.
-          다른 부분 보존.
-        group: lecture
-        target_description: 강의 ID, idx, 강의자 코멘트 (request).
-        keywords:
         - 슬라이드 편집
-        - 톤 바꿔
-        - 이 장 다시
-        router: handler
-        tool: slide_edit
-        implementation: focus_slide_spec 로드 → build_prompt에 포함 → AI 호출 → 동일 slide_id로
-          PNG 재렌더 (덮어쓰기). slide_order는 변동 없음.
-        target_key: lecture_id
-        scope: workspace
-      slide_patch_spec:
-        description: 슬라이드 spec의 일부 필드만 직접 patch + PNG 재렌더 (AI 호출 없음, PowerPoint식 편집).
-        group: lecture
-        target_description: 강의 ID, idx, patch 객체 (변경할 필드만). layout 키는 거부.
-        keywords:
-        - 슬라이드 필드 편집
-        - 단어만 바꾸기
-        - 일부 수정
-        - spec patch
-        router: handler
-        tool: slide_patch_spec
-        implementation: 현재 spec 로드 → patch 키-값 shallow update → slide_shadcn 재렌더.
-          layout 키는 거부 (필요 필드 달라져 spec 깨질 위험). None은 필드 삭제.
-        target_key: lecture_id
-        scope: workspace
-      slide_rerender:
-        description: 슬라이드 spec 변경 없이 PNG만 재렌더. design_system 바꾼 뒤 같은 내용을 새 톤으로 다시
-          그릴 때. AI 호출 없음.
-        group: lecture
-        target_description: 강의 ID와 idx (생략 시 전체 슬라이드 재렌더).
-        keywords:
         - 슬라이드 재렌더
-        - 같은 내용 다시 그려
-        - 디자인만 적용
-        - 톤만 바꿔
-        router: handler
-        tool: slide_rerender
-        implementation: spec_file 로드 → 현재 design_system으로 slide_shadcn 호출 → deck.slides[sid].updated_at
-          갱신. AI 호출 없음.
-        target_key: lecture_id
+        - 슬라이드 삭제
+        - 슬라이드 일부 수정
+        - 다음 슬라이드
         scope: workspace
-      deck_export:
-        description: 강의 데크를 PDF 또는 PPTX 파일로 내보내기. slide_order 순서대로 PNG를 합본.
+      material:
+        description: 강의 재료 관리 (op 분기). 추가/삭제.
         group: lecture
-        target_description: 강의 ID. format 옵션 (pdf/pptx, 기본 pdf).
+        target_description: 'op: add | remove. 공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.'
+        target_key: op
+        router: handler
+        tool: material_op
+        implementation: handler.py가 op로 분기. add는 file_path 모드/text 모드 자동 감지.
         keywords:
+        - 재료 추가
+        - 재료 삭제
+        - 원고 추가
+        - 자료 추가
+        scope: workspace
+      deck:
+        description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기.
+        group: lecture
+        target_description: 'op: reorder | export. 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx).'
+        target_key: op
+        router: handler
+        tool: deck_op
+        implementation: handler.py가 op로 분기. reorder는 deck.json만 갱신, export는 PIL/python-pptx로 합본.
+        keywords:
+        - 슬라이드 순서 변경
         - 강의 내보내기
         - PDF 내보내기
         - PPTX 내보내기
-        - 슬라이드 합본
-        router: handler
-        tool: deck_export
-        implementation: PIL 다중 페이지 PDF (의존성 없음) 또는 python-pptx 16:9 슬라이드. 저장 위치 outputs/lectures/{lecture_id}/exports/.
-        target_key: lecture_id
         scope: workspace
     description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
     tags:
@@ -969,3 +567,6 @@
     guides:
     - blog/blog_guide.md
     - memory/memory_guide.md
+    - lecture_workspace.md
+    - trigger.md
+    - photo.md

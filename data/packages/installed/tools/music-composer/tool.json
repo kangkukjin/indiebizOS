@@ -195,6 +195,20 @@
           "tune_id"
         ]
       }
+    },
+    {
+      "name": "music",
+      "description": "ABC 작곡 + MIDI + 오디오 통합. stage: full(기본, 작곡→MIDI→오디오) / midi_only(ABC→MIDI) / audio_only(MIDI→오디오).\n\n파라미터: stage로 분기 (기본 full).\n- full: title(필수) + abc(직접 ABC 전달) 또는 description(AI 작곡 요청). 작곡→MIDI→오디오 전 단계.\n- midi_only: abc_notation(필수, X:/T:/M:/K: 헤더 포함). ABC→MIDI만.\n- audio_only: midi_path(필수, MIDI 파일 경로). MIDI→WAV/MP3만. format 옵션(wav/mp3, 기본 mp3).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
+      }
     }
   ]
 }

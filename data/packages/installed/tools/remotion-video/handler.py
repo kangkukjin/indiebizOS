@@ -120,6 +120,25 @@ def execute(tool_input: dict, context) -> str:
     tool_name = context.tool_name
     output_base = context.output_dir()
 
+    # 통합 액션: tool_name=="remotion" + op로 분기
+    if tool_name == "remotion":
+        op = tool_input.get("op")
+        if not op:
+            if tool_input.get("composition_file"):
+                op = "render_file"
+            elif tool_input.get("composition_code"):
+                op = "render_inline"
+            else:
+                op = "render_inline"
+        if op == "render_inline":
+            return create_remotion_video(tool_input, output_base)
+        elif op == "render_file":
+            return render_remotion_video(tool_input, output_base)
+        elif op == "status":
+            return check_remotion_status(tool_input)
+        return f"알 수 없는 op: {op} (render_inline/render_file/status)"
+
+    # 옛 tool_name 호환 (학습 데이터/외부 호출 그대로 동작)
     if tool_name == "create_remotion_video":
         return create_remotion_video(tool_input, output_base)
     elif tool_name == "render_remotion_video":

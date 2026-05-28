@@ -16,70 +16,99 @@
         - 가디언
         - guardian
         - world news
-      slide:
-        description: 'PNG 슬라이드 생성. 호출: [engines:slide]{slides: [{title, body, theme},
-          ...]} (인라인 배열만, topic/file 미지원). 가이드 read_guide(query="슬라이드")'
-        target_description: slides 배열 (각 슬라이드는 title/body/theme 등). 인라인 배열만, topic/file 미지원.
-        group: media_produce
-        router: handler
-        tool: create_slides
-        implementation: 'Jinja2 HTML 템플릿 + Playwright PNG 캡처. tool_input.slides 배열만
-          사용. 슬라이드 dict 키: title, body, theme(modern/tech/business/title_bold/dark_tech/glassmorphism/gradient_modern/split_asymmetric/minimal_white/image_fullscreen/data_card/tailwind),
-          image_path, bg_color, text_color, accent_color 등'
-        keywords:
-        - 슬라이드
-        - 프레젠테이션
-        - PPT
       html_video:
-        description: HTML/CSS 씬을 MP4 영상으로 합성. 슬라이드형 자동 영상 생성용. (가이드 html_video.md)
-        target_description: 영상 주제 또는 제목. scenes 파라미터로 씬 배열 직접 전달도 가능.
+        description: 'HTML/CSS 씬을 MP4 영상으로 합성. topic 있으면 풀 파이프라인, scene_dir 있으면 마지막 렌더링만. (가이드 html_video.md)'
+        target_description: 'topic(주제) 또는 scene_dir(이미 만든 씬 디렉토리) 중 하나. scene_dir이 있으면 자동으로 렌더링 단계만 실행. scenes 파라미터로 씬 배열 직접 전달도 가능.'
         group: media_produce
         router: handler
-        tool: create_html_video
-        implementation: Jinja2 HTML 씬 생성 → Playwright 프레임 캡처 → FFmpeg MP4 인코딩
+        tool: html_video
+        implementation: scene_dir이 있으면 render 단계(저장된 HTML 씬 → Playwright + FFmpeg MP4)로, 아니면 풀 파이프라인(Jinja2 HTML 씬 생성 → Playwright 프레임 캡처 → FFmpeg MP4 인코딩)으로 분기.
         target_key: topic
         keywords:
         - 영상
         - 동영상
         - MP4
+        - 렌더링
+        - HTML영상
       chart:
-        description: 차트 종류 자동 분기 — chart_type으로 line/bar/pie/scatter/heatmap/candlestick/multi 선택.
-        target_description: 차트 제목. chart_type으로 종류 지정 (기본 line). 종류별 데이터 형식은 해당 액션 참고.
+        description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
+        target_description: |
+          title (필수). chart_type으로 종류 분기 (기본 line).
+          - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
+          - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
+          - pie: labels·values 리스트. hole 옵션으로 도넛.
+          - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
+          - heatmap: z(매트릭스)·x_labels·y_labels.
+          - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
+          - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
         group: chart
         router: handler
         tool: chart
-        implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. 개별 차트
-          액션(line, bar, pie 등)으로도 직접 호출 가능
+        implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. matplotlib 폴백 내장.
         target_key: title
         keywords:
         - 차트
         - 그래프
         - 시각화
+        - 라인차트
+        - 선그래프
+        - 추이
+        - 바차트
+        - 막대그래프
+        - 캔들
+        - 주식차트
+        - OHLCV
+        - 파이차트
+        - 원그래프
+        - 비율
+        - 산점도
+        - 분포
+        - 추세선
+        - 히트맵
+        - 열지도
+        - 대시보드
+        - 복합차트
       music:
-        description: ABC 표기법 작곡 + MIDI 변환 + 오디오 렌더링 통합. 한 번에 음악 파일 생성.
-        target_description: 곡 제목. 멜로디는 abc 파라미터로 ABC notation 직접 전달, 또는 description으로 AI 작곡 요청.
+        description: 'ABC 작곡 + MIDI + 오디오 통합. stage: full(기본, 작곡→MIDI→오디오) / midi_only(ABC→MIDI) / audio_only(MIDI→오디오).'
+        target_description: |
+          stage로 분기 (기본 full).
+          - full: title(필수) + abc(직접 ABC 전달) 또는 description(AI 작곡 요청). 작곡→MIDI→오디오 전 단계.
+          - midi_only: abc_notation(필수, X:/T:/M:/K: 헤더 포함). ABC→MIDI만.
+          - audio_only: midi_path(필수, MIDI 파일 경로). MIDI→WAV/MP3만. format 옵션(wav/mp3, 기본 mp3).
         group: music
         router: handler
-        tool: compose_and_export
-        implementation: ABC notation 생성 → abc2midi MIDI 변환 → fluidsynth 오디오 렌더링
+        tool: music
+        implementation: stage=full은 compose_and_export(ABC notation 생성→abc2midi→fluidsynth). stage=midi_only는 abc2midi CLI. stage=audio_only는 fluidsynth + GeneralUser GS.sf2.
         target_key: title
         keywords:
         - 작곡
         - 악보
         - ABC
         - MIDI
-      remotion_video:
-        description: React TSX 컴포지션으로 MP4 영상 생성. 동적 데이터 시각화·애니메이션 영상에 적합.
-        target_description: Remotion 컴포지션 TSX 코드. 파일로 저장된 컴포지션은 render_remotion.
+        - 오디오
+        - WAV
+        - MP3
+        - ABC변환
+      remotion:
+        description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
+        target_description: |
+          op로 분기 (기본 render_inline).
+          - render_inline: composition_code(인라인 TSX 문자열) 필수.
+          - render_file: composition_file(TSX 파일 절대경로) 필수.
+          - status: 파라미터 없음, Remotion/Node.js 설치 상태만 반환.
         group: media_produce
         router: handler
-        tool: create_remotion_video
-        implementation: React TSX 컴포지션 생성 + Remotion CLI로 MP4 렌더링
+        tool: remotion
+        implementation: op로 분기. render_inline은 React TSX 컴포지션을 생성하고 Remotion CLI(npx remotion render)로 MP4 렌더링. render_file은 저장된 TSX 파일로 렌더링. status는 which/npm list로 설치 상태 확인.
         target_key: composition_code
         keywords:
         - 영상
         - React
         - Remotion
+        - TSX
+        - MP4
+        - 렌더링
+        - 상태
       tts:
         description: 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
         target_description: 음성으로 만들 텍스트. voice 옵션으로 화자 선택 (기본 한국어 여성).
@@ -99,49 +128,15 @@
         - 텍스트음성
         - TTS
         - 나레이션
-      render_video:
-        description: 저장된 HTML 씬 디렉토리를 MP4 영상으로 합성. html_video의 마지막 단계.
-        target_description: 씬 HTML 파일들이 저장된 디렉토리 경로.
-        group: media_produce
-        router: handler
-        tool: render_html_video
-        implementation: 저장된 HTML 씬 디렉토리 → Playwright + FFmpeg MP4 렌더링
-        target_key: scene_dir
-        keywords:
-        - 렌더링
-        - MP4
-        - HTML영상
-      render_remotion:
-        description: 파일로 저장된 TSX 컴포지션을 Remotion으로 MP4 렌더링. composition_file(절대경로)
-          필수.
-        target_description: composition_file (TSX 파일 절대 경로). 인라인 코드는 remotion_video.
-        group: media_produce
-        router: handler
-        tool: render_remotion_video
-        implementation: Remotion CLI(npx remotion render)로 TSX→MP4 렌더링
-        target_key: composition_file
-        keywords:
-        - 렌더링
-        - Remotion
-        - TSX
-      remotion_status:
-        description: Remotion/Node.js 설치 상태 확인. remotion_video 실행 전 검증용.
-        target_description: '(파라미터 없음 — 상태만 반환)'
-        group: media_produce
-        router: handler
-        tool: check_remotion_status
-        implementation: Remotion/Node.js 설치 상태 확인 (which/npm list)
-        keywords:
-        - Remotion
-        - 상태
       slide_shadcn:
-        description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅+강의용 레이아웃 모두 지원, design_system으로
-          책 단위 비주얼 정체성 부여. 일러스트가 슬라이드 배경과 융합되는 통합형 레이아웃(hero_illustration/illustration_anchor/split_concept/illustration_background)
-          + 시각적 비교 표(comparison_iconic) 우선 권장. 호출: [engines:slide_shadcn]{slides:
-          [{layout, title, ...}, ...], design_system: "vintage_book", output_dir:
-          "(선택)"} (인라인 배열만, topic 미지원). 강의·발표·책 강의에는 lecture_body / metaphor_story
-          / comparison_table / factbox / quote 사용. 가이드 read_guide(query="슬라이드")'
-        target_description: slides 배열 (각 슬라이드는 layout/title 등). design_system/theme/output_dir 옵션.
+        description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅·강의·일러스트 통합 레이아웃 + design_system. 자세한 layout/스타일은 read_guide(query="슬라이드").'
+        target_description: |
+          slides 배열 (각 슬라이드 {layout, title, ...}) + design_system/theme/output_dir/width/height 옵션. 인라인 배열만 (topic 미지원).
+          마케팅 layout: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom
+          강의 layout: lecture_body/metaphor_story/comparison_table/factbox/quote
+          일러스트 통합 layout(NotebookLM 스타일): hero_illustration/illustration_anchor/split_concept/illustration_background/comparison_iconic
+          design_system: default/vintage_book/academic_paper/tech_minimal/magazine_modern
+          theme(색만): default/blue/green/purple/orange/dark
         group: media_produce
         router: handler
         tool: create_shadcn_slides
@@ -169,11 +164,14 @@
         - Shadcn
         - PNG
       image_gemini:
-        description: 'Gemini AI 이미지 생성 (Nano Banana 2 / Gemini 3.1 Flash 기본). style_preset으로
-          슬라이드 design_system과 일관된 일러스트 자동 생성 권장 (한글 텍스트 금지 + 스타일 토큰 자동 주입). 호출: [engines:image_gemini]{prompt:
-          "...", style_preset: "vintage_book", aspect_ratio: "16:9", image_size: "2K"}.
-          더 정밀한 일러스트는 quality:"pro" (Nano Banana Pro), 빠른 기본은 quality:"fast"'
-        target_description: prompt (필수). style_preset/aspect_ratio/image_size/quality/output_path 옵션.
+        description: 'Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").'
+        target_description: |
+          prompt (필수). 옵션:
+          - style_preset: vintage_book/academic_paper/tech_minimal/magazine_modern (슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합)
+          - aspect_ratio: 1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1
+          - image_size: 512/1K/2K/4K (기본 1K)
+          - quality: fast(3.1 Flash 기본)/pro(Nano Banana Pro)/legacy
+          - output_path, api_key(환경변수 GEMINI_API_KEY 기본)
         group: media_produce
         router: handler
         tool: generate_gemini_image
@@ -207,174 +205,23 @@
         - HTML
         - 이미지
         - 렌더링
-      abc_to_midi:
-        description: ABC 표기법 텍스트를 MIDI 파일로 변환. 오디오 변환은 midi_to_audio.
-        target_description: 'ABC notation 텍스트 (X:/T:/M:/K: 헤더 포함 표준 형식).'
-        group: music
-        router: handler
-        tool: abc_to_midi
-        implementation: abc2midi CLI로 ABC 악보→MIDI 파일 변환
-        target_key: abc_notation
-        keywords:
-        - 악보
-        - MIDI
-        - ABC변환
-      midi_to_audio:
-        description: MIDI 파일을 WAV/MP3 오디오로 변환. 사운드폰트 GeneralUser GS 사용.
-        target_description: 변환할 MIDI 파일 경로. format 옵션으로 wav/mp3 선택 (기본 mp3).
-        group: music
-        router: handler
-        tool: midi_to_audio
-        implementation: fluidsynth + GeneralUser GS.sf2 사운드폰트로 MIDI→WAV→MP3 변환
-        target_key: midi_path
-        keywords:
-        - MIDI
-        - 오디오
-        - WAV
-        - MP3
-      abc_search:
-        description: abcnotation.com에서 ABC 표기법 악보 검색. 곡명·작곡가·키워드로.
-        target_description: 검색어 (곡명, 작곡가, 장르 등). 결과는 tune_id로 abc_get에 사용.
-        group: music
-        router: handler
-        tool: search_abc_tunes
-        implementation: abcnotation.com에서 ABC 악보 검색 (HTTP 크롤링)
-        target_key: query
-        keywords:
-        - 악보검색
-        - ABC
-      abc_get:
-        description: abcnotation.com 악보의 상세 내용 조회. 검색은 abc_search.
-        target_description: 악보 ID (abc_search 결과의 tune_id).
-        group: music
-        router: handler
-        tool: get_abc_tune
-        implementation: abcnotation.com에서 악보 상세 조회 (HTTP 크롤링)
-        target_key: tune_id
-        keywords:
-        - 악보조회
-        - ABC
-      line:
-        description: 시계열·연속값 라인 차트. 다중 시리즈 가능. matplotlib 폴백 내장.
-        target_description: 차트 제목. 데이터는 x/y 리스트, 다중 시리즈는 series 배열. 시간축 데이터에 적합.
-        group: chart
-        router: handler
-        tool: line_chart
-        implementation: Plotly로 인터랙티브 라인 차트 HTML 생성 (matplotlib 폴백)
-        target_key: title
-        keywords:
-        - 라인차트
-        - 선그래프
-        - 추이
-      bar:
-        description: 범주별 값 비교 바 차트. 수평/수직/스택 모두 지원. 시간축은 line 사용.
-        target_description: 차트 제목. 데이터는 x(범주 라벨)·y(값) 리스트. 스택은 series 배열로 다중 시리즈 전달.
-        group: chart
-        router: handler
-        tool: bar_chart
-        implementation: Plotly로 바 차트 HTML 생성 (수평/수직/스택 지원)
-        target_key: title
-        keywords:
-        - 바차트
-        - 막대그래프
-      candlestick:
-        description: 주가 OHLCV 캔들스틱 차트. 이동평균선 옵션 포함. 일반 시계열은 line 사용.
-        target_description: 차트 제목. 데이터는 open/high/low/close/volume 시계열. ma 옵션으로 이동평균선 추가.
-        group: chart
-        router: handler
-        tool: candlestick_chart
-        implementation: Plotly로 OHLCV 캔들스틱 차트 HTML 생성
-        target_key: title
-        keywords:
-        - 캔들
-        - 주식차트
-        - OHLCV
-      pie:
-        description: 비율 분포 파이/도넛 차트. 카테고리별 비중 시각화.
-        target_description: 차트 제목. 데이터는 labels(카테고리)와 values(값) 리스트. hole 옵션으로 도넛 모양.
-        group: chart
-        router: handler
-        tool: pie_chart
-        implementation: Plotly로 파이/도넛 차트 HTML 생성
-        target_key: title
-        keywords:
-        - 파이차트
-        - 원그래프
-        - 비율
-      scatter:
-        description: 두 변수의 상관관계 산점도. 추세선 옵션 포함. 군집·이상치 탐색에 적합.
-        target_description: 차트 제목. 데이터는 x/y 좌표 리스트. trendline 옵션으로 추세선 추가 가능.
-        group: chart
-        router: handler
-        tool: scatter_plot
-        implementation: Plotly로 산점도 HTML 생성 (추세선 옵션)
-        target_key: title
-        keywords:
-        - 산점도
-        - 분포
-        - 추세선
-      heatmap:
-        description: 2차원 분포를 색상 강도로 표현하는 히트맵. 매트릭스 데이터 시각화.
-        target_description: 차트 제목. 데이터는 z(매트릭스)·x(열 라벨)·y(행 라벨). 시간×요일·지역×카테고리 등.
-        group: chart
-        router: handler
-        tool: heatmap
-        implementation: Plotly로 히트맵 HTML 생성
-        target_key: title
-        keywords:
-        - 히트맵
-        - 열지도
-      multi:
-        description: 여러 차트를 한 페이지에 배치하는 복합 대시보드. 비교·관계 시각화용.
-        target_description: 차트 제목. charts 배열에 개별 차트 정의 (각각 chart_type + 데이터). subplots 자동 배치.
-        group: chart
-        router: handler
-        tool: multi_chart
-        implementation: Plotly subplots로 복합 차트 대시보드 HTML 생성
-        target_key: title
-        keywords:
-        - 대시보드
-        - 복합차트
-      web_site_list:
-        description: 등록된 사이트 목록 조회. 레지스트리에 있는 모든 사이트.
-        target_description: '(파라미터 없음 — 전체 목록 반환)'
+      web_site:
+        description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
+        target_description: |
+          op로 분기 (기본 list).
+          - list: 파라미터 없음. 등록된 사이트 전체 반환.
+          - register: name(필수) + local_path(필수) + repo_url/deploy_url/description(선택).
+          - remove: site_id(필수).
+          - update: site_id(필수) + 변경할 필드(name/local_path/repo_url/deploy_url/description).
         group: web_builder
         router: handler
-        tool: site_list
-        implementation: 사이트 레지스트리 JSON에서 등록된 사이트 목록 조회
+        tool: web_site
+        implementation: web-builder 패키지의 sites.json 레지스트리 CRUD. 빈번하지 않은 어드민이라 가이드 web_builder.md 참조 권장.
         keywords:
         - 사이트
         - 웹사이트목록
-      web_site_register:
-        description: 새 사이트를 레지스트리에 등록. 이후 ID로 빠른 참조 가능.
-        target_description: 사이트 이름. path 파라미터로 프로젝트 경로 지정.
-        group: web_builder
-        router: handler
-        tool: site_register
-        implementation: 사이트 레지스트리 JSON에 새 사이트 등록
-        target_key: name
-        keywords:
         - 사이트등록
-        - 웹사이트
-      web_site_remove:
-        description: 등록된 사이트를 레지스트리에서 삭제. 실제 파일은 그대로.
-        target_description: 삭제할 사이트의 ID (site_list로 조회한 id).
-        group: web_builder
-        router: handler
-        tool: site_remove
-        implementation: 사이트 레지스트리 JSON에서 사이트 삭제
-        target_key: site_id
-        keywords:
         - 사이트삭제
-      web_site_update:
-        description: 등록된 사이트의 메타 정보 수정 (이름·경로·태그 등).
-        target_description: 사이트 ID. 변경할 필드는 별도 파라미터로 전달.
-        group: web_builder
-        router: handler
-        tool: site_update
-        implementation: 사이트 레지스트리 JSON에서 사이트 정보 수정
-        target_key: site_id
-        keywords:
         - 사이트수정
       web_snapshot:
         description: 사이트 현재 화면 스크린샷 캡처. 배포 결과 시각 확인·기록용.
@@ -398,48 +245,36 @@
         keywords:
         - 사이트상태
         - Lighthouse
-      web_create_site:
-        description: 새 웹 프로젝트 디렉토리 생성. blank/landing/portfolio/blog/business 템플릿 중 선택.
-        target_description: 프로젝트 이름. template 옵션으로 시작 템플릿 선택.
+      web_catalog:
+        description: '웹빌더 카탈로그 조회. kind: components(UI 컴포넌트) / sections(섹션 템플릿).'
+        target_description: |
+          kind로 분기.
+          - components: UI 컴포넌트(button/card/dialog 등) 카탈로그. category 옵션.
+          - sections: 섹션 템플릿(hero/features/cta 등) 카탈로그. category 옵션.
         group: web_builder
         router: handler
-        tool: create_project
-        implementation: HTML/CSS/JS 템플릿 기반 웹 프로젝트 디렉토리 생성
-        target_key: name
+        tool: web_catalog
+        implementation: 로컬 JSON 카탈로그 조회. add_component(컴포넌트 추가)나 web_create(페이지 생성) 전 후보 확인용.
+        keywords:
+        - 카탈로그
+        - 컴포넌트
+        - 섹션
+        - 목록
+      web_create:
+        description: '웹 프로젝트/페이지 생성. target: site(새 프로젝트 디렉토리) / page(기존 프로젝트에 페이지 추가). 가이드 web_builder.md.'
+        target_description: |
+          target으로 분기.
+          - site: name(필수) + template(blank/landing/portfolio/blog/business 중 선택) + features.
+          - page: project_path(필수) + page_name + sections 배열 + metadata.
+        group: web_builder
+        router: handler
+        tool: web_create
+        implementation: target=site는 HTML/CSS/JS 템플릿 기반 디렉토리 생성. target=page는 섹션 템플릿 조합으로 HTML 페이지 생성. 자세한 절차는 가이드 web_builder.md.
         keywords:
         - 웹사이트
         - 프로젝트생성
-        - 템플릿
-      web_list_components:
-        description: 사용 가능한 UI 컴포넌트 카탈로그 조회. add_component로 추가할 후보 확인용.
-        target_description: '(파라미터 없음 — 전체 카탈로그 반환)'
-        group: web_builder
-        router: handler
-        tool: list_components
-        implementation: 사용 가능한 UI 컴포넌트 카탈로그 조회 (로컬 JSON)
-        keywords:
-        - 컴포넌트
-        - 목록
-      web_list_sections:
-        description: 사용 가능한 섹션 템플릿 카탈로그 조회. create_page로 조합할 후보 확인용.
-        target_description: '(파라미터 없음 — 전체 카탈로그 반환)'
-        group: web_builder
-        router: handler
-        tool: list_sections
-        implementation: 섹션 템플릿 카탈로그 조회 (로컬 JSON)
-        keywords:
-        - 섹션
-        - 템플릿
-      web_create_page:
-        description: 기존 웹 프로젝트에 페이지 1개 생성. 섹션 템플릿을 조합해 자동 작성.
-        target_description: 프로젝트 경로. sections 배열로 사용할 섹션 지정.
-        group: web_builder
-        router: handler
-        tool: create_page
-        implementation: 섹션 템플릿 조합으로 HTML 페이지 생성
-        target_key: project_path
-        keywords:
         - 페이지생성
+        - 템플릿
         - 섹션조합
       web_preview:
         description: 로컬 미리보기 서버 제어 (start/stop/status). 빌드 없이 즉시 확인용.
@@ -452,41 +287,23 @@
         keywords:
         - 미리보기
         - 로컬서버
-      web_fetch_component:
-        description: 외부 컴포넌트 CDN/레지스트리에서 다운로드. add_component는 shadcn/ui 한정.
-        target_description: 컴포넌트 이름 또는 URL. source 옵션으로 레지스트리 지정.
+      web_component:
+        description: '웹 컴포넌트 가져오기/추가. op: fetch(외부 CDN/레지스트리 다운로드) / add(shadcn/ui CLI로 프로젝트에 설치).'
+        target_description: |
+          op로 분기.
+          - fetch: component(이름 또는 URL, 필수) + style + project_path + output_format(code/file).
+          - add: component(필수, 예 button/card/dialog) + project_path. shadcn/ui CLI로 설치.
         group: web_builder
         router: handler
-        tool: fetch_component
-        implementation: 외부 컴포넌트 CDN/레지스트리에서 다운로드
+        tool: web_component
+        implementation: op=fetch는 외부 CDN/레지스트리에서 컴포넌트 코드 다운로드. op=add는 shadcn/ui CLI로 프로젝트에 컴포넌트 설치.
         target_key: component
         keywords:
         - 컴포넌트
         - 가져오기
-      web_add_component:
-        description: shadcn/ui 컴포넌트를 웹 프로젝트에 추가. 버튼·카드·모달 등 React UI.
-        target_description: 컴포넌트 이름 (예 button, card, dialog). shadcn/ui 카탈로그 기준.
-        group: web_builder
-        router: handler
-        tool: add_component
-        implementation: shadcn/ui CLI로 버튼, 카드, 모달 등 UI 컴포넌트 설치
-        target_key: component
-        keywords:
         - 컴포넌트추가
         - shadcn
         - UI
-      web_edit_styles:
-        description: 사이트 스타일 변경 — 색상·폰트·테마. globals.css/Tailwind 설정 수정.
-        target_description: '(현재 프로젝트 기준). theme/colors/fonts 파라미터로 변경 항목 지정.'
-        group: web_builder
-        router: handler
-        tool: edit_styles
-        implementation: globals.css 및 Tailwind 설정 수정으로 사이트 테마 변경
-        keywords:
-        - 스타일
-        - 테마
-        - 색상
-        - 폰트
       web_build:
         description: 웹 프로젝트의 프로덕션 빌드 생성. Next.js 기반 .next/ 디렉토리 산출.
         target_description: '(파라미터 없음 — 현재 프로젝트 빌드)'
@@ -510,11 +327,14 @@
         - deploy
         - vercel
       lecture_plan:
-        description: '강의 슬라이드 파이프라인 1단계 — 메시지 큐레이션. 명제 outline을 검증·저장. 호출: [engines:lecture_plan]{outline:
-          [{idx, role, title, device, visual, concrete}, ...], source: "책 메타", style:
-          "notebooklm"} 또는 처음이면 [engines:lecture_plan]{init_skeleton: true}로 스켈레톤
-          안내 받기. 가이드 read_guide(query="강의 슬라이드 원칙")'
-        target_description: outline 배열 (각 슬라이드 명제) 또는 init_skeleton=true. source/style 옵션.
+        description: '강의 슬라이드 파이프라인 1단계: 메시지 큐레이션(명제 outline). init_skeleton:true로 스켈레톤. 가이드 read_guide(query="강의 슬라이드").'
+        target_description: |
+          outline 배열 또는 init_skeleton=true.
+          - outline 각 항목: {idx, role, title, device, visual, concrete}
+          - role: cover/intro/thesis/closure_table/closure_diagram/quote/outro/reference
+          - device: contrast/chain/equation/scale/hierarchy/none
+          - source, style(notebooklm 등) 옵션
+          notebooklm 스타일은 closure_table+closure_diagram 슬라이드 강제.
         group: media_produce
         router: handler
         tool: create_lecture_plan
@@ -531,11 +351,12 @@
         - outline
         - 명제
       lecture_write:
-        description: '강의 슬라이드 파이프라인 2단계 — 각 슬라이드 콘텐츠 집필. outline.json을 입력으로 슬라이드별
-          layout/title/labels/image_prompt 채움. 호출: [engines:lecture_write]{lecture_dir:
-          "...", contents: [{idx, layout, title, labels, image_prompt, ...}], design_system:
-          "sf_blueprint"}. only_indices로 부분 갱신 가능.'
-        target_description: lecture_dir + contents 배열. design_system/only_indices 옵션.
+        description: '강의 슬라이드 파이프라인 2단계: 슬라이드별 layout/title/labels/image_prompt 집필. only_indices로 부분 갱신.'
+        target_description: |
+          lecture_dir + contents 배열 (각 항목 {idx, layout, title, labels, image_prompt, ...}).
+          - design_system(sf_blueprint 등) 옵션
+          - only_indices: 부분 갱신할 idx 배열
+          - illustration_* 레이아웃은 image_prompt 필수, split_concept은 left/right_image_prompt 필수
         group: media_produce
         router: handler
         tool: create_lecture_write
@@ -550,11 +371,14 @@
         - 슬라이드 집필
         - contents
       lecture_illustrate:
-        description: '강의 슬라이드 파이프라인 3단계 — 일러스트 생성. contents.json의 image_prompt들을 image_gemini로
-          병렬 호출. 호출: [engines:lecture_illustrate]{lecture_dir: "...", style_preset:
-          "sf_blueprint" (선택, 미지정시 design_system 사용), quality: "fast"/"pro", image_size:
-          "1K"/"2K"/"4K"}. only_indices로 약한 일러스트만 재생성.'
-        target_description: lecture_dir 필수. style_preset/quality/image_size/only_indices 옵션.
+        description: '강의 슬라이드 파이프라인 3단계: image_prompt들을 image_gemini로 병렬 호출. only_indices로 약한 일러스트만 재생성.'
+        target_description: |
+          lecture_dir 필수. 옵션:
+          - style_preset(미지정시 design_system 사용)
+          - quality: fast/pro
+          - image_size: 1K/2K/4K
+          - only_indices: 재생성할 idx 배열
+          split_concept은 좌·우 1:1 두 장 생성. 실패한 슬라이드는 manifest 미기록 → 다시 호출.
         group: media_produce
         router: handler
         tool: create_lecture_illustrate
@@ -569,10 +393,8 @@
         - 일러스트 생성
         - illustrate
       lecture_compose:
-        description: '강의 슬라이드 파이프라인 4단계 — 데크 합성. contents.json + illustrations/manifest.json
-          → slide_shadcn 호출 → 최종 데크. 호출: [engines:lecture_compose]{lecture_dir: "..."}.
-          only_indices로 부분 재합성.'
-        target_description: lecture_dir 필수. only_indices로 부분 재합성 가능.
+        description: '강의 슬라이드 파이프라인 4단계: contents+illustrations → slide_shadcn → 최종 데크. only_indices로 부분 재합성.'
+        target_description: lecture_dir 필수. only_indices(부분 재합성할 idx 배열) 옵션. 최종 데크는 lecture_dir/deck/에 HTML+PNG로 저장.
         group: media_produce
         router: handler
         tool: create_lecture_compose
@@ -585,11 +407,8 @@
         - 슬라이드 데크
         - compose
       image_critic:
-        description: 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 호출: [engines:image_critic]{image_path:
-          "/abs/...", intent: "이 일러스트가 표현해야 할 것 자연어 설명", style_preset: "sf_blueprint",
-          checks: ["...추가 체크"]}. 반환: passed/score/issues/notes JSON. ILLUSTRATE 단계의
-          자동 평가에 사용.'
-        target_description: image_path (절대 경로) + intent (자연어 설명). style_preset/checks 옵션.
+        description: 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 반환: passed/score/issues/notes. ILLUSTRATE 단계 자동 평가용.'
+        target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. style_preset/checks(추가 체크 배열) 옵션. 기본 체크 — 다이어그램형/한글 미포함/빈 공간/객체 명확성/디자인 톤 일관성. 한글 검출 시 무조건 passed=false.'
         group: media_produce
         router: handler
         tool: critique_gemini_image

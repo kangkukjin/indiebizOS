@@ -36,6 +36,26 @@ def execute(tool_input: dict, context) -> str:
     if not api_key:
         return "에러: Law API 키가 설정되지 않았습니다. 패키지 폴더의 config.json에 'api_key'를 입력하거나 LAW_API_KEY 환경 변수를 설정해주세요."
 
+    if tool_name == "legal_lookup":
+        query = tool_input.get("query")
+        item_id = tool_input.get("id") or tool_input.get("law_id") or tool_input.get("precedent_id")
+        target = tool_input.get("target", "law")
+        if item_id:
+            result = api_call(
+                "law", "/lawService.do",
+                params={"OC": api_key, "target": target, "type": "JSON", "ID": item_id},
+                raw_response=True,
+            )
+        elif query:
+            result = api_call(
+                "law", "/lawSearch.do",
+                params={"OC": api_key, "target": target, "type": "JSON", "query": query},
+                raw_response=True,
+            )
+        else:
+            return "에러: query 또는 id 중 하나가 필요합니다."
+        return result if isinstance(result, str) else str(result)
+
     if tool_name in ("search_legal_info", "search_laws", "search_precedents"):
         target = _TARGET_MAP.get(tool_name) or tool_input.get("target", "law")
         result = api_call(

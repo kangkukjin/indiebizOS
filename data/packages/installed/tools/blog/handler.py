@@ -99,6 +99,30 @@ def execute(tool_input: dict, context) -> str:
         elif tool_name == "kinsight2":
             return format_json({"success": False, "error": "kinsight2는 kinsight로 통합되었습니다. [self:kinsight]{count: N}을 사용하세요."})
 
+        # 통합 도구 — IBL 어휘에 노출. mode로 분기.
+        elif tool_name == "blog_search_op":
+            mode = (tool_input.get("mode") or "hybrid").strip()
+            if mode == "hybrid":
+                from tool_blog_rag import search_blog
+                result = search_blog(
+                    query=tool_input.get("query"),
+                    limit=tool_input.get("limit", 5)
+                )
+            elif mode == "semantic":
+                from tool_blog_rag import search_blog_semantic
+                result = search_blog_semantic(
+                    query=tool_input.get("query"),
+                    limit=tool_input.get("limit", 5)
+                )
+            elif mode == "content":
+                from tool_blog_rag import get_post_content
+                result = get_post_content(
+                    post_id=tool_input.get("post_id")
+                )
+            else:
+                result = {"success": False, "error": f"알 수 없는 mode '{mode}'. (hybrid|semantic|content)"}
+            return format_json(result)
+
         # RAG 검색 도구들
         elif tool_name == "search_blog_rag":
             from tool_blog_rag import search_blog

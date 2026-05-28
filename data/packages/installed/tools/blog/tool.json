@@ -145,6 +145,20 @@
         "type": "object",
         "properties": {}
       }
+    },
+    {
+      "name": "blog_search_op",
+      "description": "블로그 검색·조회 통합 (mode 분기). 하이브리드(기본)/시맨틱/전문조회.\n\n파라미터: mode: hybrid (기본, 시맨틱 70% + BM25 30%) | semantic (의미만, 키워드 무관) | content (전문 조회). hybrid/semantic — query 필수 + limit 옵션(기본 10). content — post_id 또는 title(부분 일치) 중 하나 필수. 워크플로 — query로 찾고 결과 id로 mode=content 호출.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
+      }
     }
   ]
 }

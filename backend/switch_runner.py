@@ -98,6 +98,23 @@ class SwitchRunner:
         self.running = True
         self._status(f"스위치 '{self.switch.get('name', 'unknown')}' 실행 시작")
 
+        # thread_context에 스위치의 project_id를 미리 등록.
+        # ibl_routing의 4번 안전망(thread_context.project_id 폴백)이 첫 라운드부터
+        # 동작해서, LLM이 project_id 파라미터를 빼먹어 첫 호출이 ERR 나고 두 번째에
+        # 다시 호출되는 재시도 1회가 사라진다.
+        # 동기 run() 호출자(calendar/scheduler) 보호를 위해 이전 값 백업 후 finally에서 복원.
+        _ctx_modified = False
+        _prev_project_id = None
+        try:
+            from thread_context import get_current_project_id, set_current_project_id
+            _prev_project_id = get_current_project_id()
+            project_id = self.config.get("projectId")
+            if project_id:
+                set_current_project_id(project_id)
+                _ctx_modified = True
+        except Exception as _ctx_err:
+            self._status(f"thread_context 설정 실패 (무시): {_ctx_err}")
+
         try:
             # AI 설정
             ai_config = self.config.get("ai", {})
@@ -234,6 +251,13 @@ class SwitchRunner:
 
         finally:
             self.running = False
+            # thread_context 복원 (동기 run() 호출자 보호)
+            if _ctx_modified:
+                try:
+                    from thread_context import set_current_project_id
+                    set_current_project_id(_prev_project_id)
+                except Exception:
+                    pass
 
         return self.result
 

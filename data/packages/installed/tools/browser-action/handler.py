@@ -110,10 +110,81 @@ _TOOL_ROUTING = {
 }
 
 
+# 2026-05-27 단일 액션 통합: [limbs:tab|iframe|cookies|chrome|click|navigate|content|logs]{op}
+# 디스패처 도구는 _TOOL_ROUTING의 실제 도구로 op 분기
+_OP_DISPATCHERS = {
+    "browser_tab_op": {
+        "list": "browser_tab_list",
+        "new": "browser_tab_new",
+        "switch": "browser_tab_switch",
+        "close": "browser_tab_close",
+    },
+    "browser_iframe_op": {
+        "list": "browser_iframe_list",
+        "switch": "browser_iframe_switch",
+        "reset": "browser_iframe_reset",
+    },
+    "browser_cookies_op": {
+        "save": "browser_cookies_save",
+        "load": "browser_cookies_load",
+    },
+    "browser_chrome_op": {
+        "connect": "browser_chrome_connect",
+        "disconnect": "browser_chrome_disconnect",
+        "status": "browser_chrome_status",
+    },
+    # limbs 라운드 2 (2026-05-27)
+    "browser_click_op": {
+        "single": "browser_click",
+        "double": "browser_dblclick",
+        "right": "browser_rightclick",
+    },
+    "browser_navigate_op": {
+        "goto": "browser_navigate",
+        "back": "browser_navigate_back",
+        "forward": "browser_navigate_forward",
+    },
+    "browser_content_op": {
+        "text": "browser_get_content",
+        "html": "browser_get_html",
+    },
+    "browser_logs_op": {
+        "console": "browser_console_logs",
+        "network": "browser_network_logs",
+    },
+}
+
+# 디스패처별 op 기본값 (op 미지정 시 사용 — 가장 흔한 동작)
+_OP_DEFAULTS = {
+    "browser_click_op": "single",
+    "browser_navigate_op": "goto",
+    "browser_content_op": "text",
+    "browser_logs_op": "console",
+}
+
+
 async def execute(tool_input: dict, context):
     """메인 핸들러 (ToolContext 기반 신규 시그니처, async) — driver 파라미터로 Playwright/Chrome 분기"""
     tool_name = context.tool_name
     proj_path = context.project_path
+
+    # 2026-05-27 단일 액션 통합: *_op 디스패처는 op 파라미터로 실제 tool_name 결정
+    if tool_name in _OP_DISPATCHERS:
+        op = (tool_input.pop("op", "") or "").strip()
+        mapping = _OP_DISPATCHERS[tool_name]
+        if not op:
+            op = _OP_DEFAULTS.get(tool_name, "")
+        if not op:
+            return json.dumps({
+                "success": False,
+                "error": f"op 파라미터 필요 ({tool_name}). 사용 가능: {sorted(mapping.keys())}"
+            }, ensure_ascii=False)
+        if op not in mapping:
+            return json.dumps({
+                "success": False,
+                "error": f"알 수 없는 op '{op}' ({tool_name}). 사용 가능: {sorted(mapping.keys())}"
+            }, ensure_ascii=False)
+        tool_name = mapping[op]
 
     # Chrome 전용 도구는 항상 Chrome 모듈로 라우팅
     if tool_name in _CHROME_ONLY_TOOLS:

@@ -1,29 +1,28 @@
 # Real Estate 도구 가이드
 
-## 도구 선택 가이드
+## IBL 액션
 
-| 목적 | 도구 | 설명 |
-|------|------|------|
-| 아파트 매매 | `apt_trade_price` | 아파트 매매 실거래가 조회 |
-| 아파트 전월세 | `apt_rent_price` | 아파트 전세/월세 실거래가 조회 |
-| 단독/다가구 매매 | `house_trade_price` | 단독/다가구 매매 실거래가 조회 |
-| 단독/다가구 전월세 | `house_rent_price` | 단독/다가구 전세/월세 실거래가 조회 |
-| 지역코드 | `get_region_codes` | 법정동 지역코드 확인 |
-| 상권 분석 | `search_commercial_district` | 상권/업종 정보 조회 |
+| 액션 | 설명 |
+|------|------|
+| `sense:realty` | 실거래가 조회 (type=apt|house, deal=trade|rent) |
+| `sense:district_codes` | 법정동 지역코드 조회 |
+| `sense:commercial` | 상권/업종 분석 |
 
 ---
 
 ## 기본 워크플로우
 
 ```
-1. get_region_codes로 지역코드 확인
-   - 예: "강남구" → 11680
+1. 지역코드 확인
+   [sense:district_codes]{city: "서울"}   # → 강남구=11680 등
 
-2. 원하는 데이터 조회
-   - apt_trade_price(지역코드, 기간) → 아파트 매매 실거래가
-   - apt_rent_price(지역코드, 기간) → 아파트 전월세 실거래가
-   - house_trade_price(지역코드, 기간) → 단독/다가구 매매
-   - house_rent_price(지역코드, 기간) → 단독/다가구 전월세
+2. 실거래가 조회 (type × deal 조합)
+   [sense:realty]{type: "apt",   deal: "trade", region_code: "11680"}  # 아파트 매매
+   [sense:realty]{type: "apt",   deal: "rent",  region_code: "11680"}  # 아파트 전월세
+   [sense:realty]{type: "house", deal: "trade", region_code: "11680"}  # 주택 매매
+   [sense:realty]{type: "house", deal: "rent",  region_code: "11680"}  # 주택 전월세
+
+   선택 파라미터: start_month, end_month, count_per_month (월별 건수, 기본 30)
 ```
 
 ---
@@ -73,8 +72,8 @@
 전세가율을 구하려면 매매가와 전세가를 함께 조회해야 한다.
 
 ```
-1. apt_trade_price로 매매 실거래가 조회
-2. apt_rent_price로 전세 실거래가 조회
+1. [sense:realty]{type: "apt", deal: "trade", region_code: "11680"}  # 매매
+2. [sense:realty]{type: "apt", deal: "rent",  region_code: "11680"}  # 전세
 3. 전세가율 = (전세가 / 매매가) x 100
 ```
 

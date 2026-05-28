@@ -188,6 +188,13 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
         # EXECUTE/reflex: 중급 모델로 전환
         original_provider = _switch_to_midtier(runner)
 
+    # Clarification fast-path — 정보 부족 시 의식이 만든 질문을 그대로 응답으로 반환.
+    _clarify_text = runner._consciousness_clarification(consciousness_output) if consciousness_output else None
+    if _clarify_text:
+        print(f"[시스템AI 의식] clarification fast-path: 실행 에이전트 스킵")
+        _restore_provider(runner, original_provider)
+        return _clarify_text, []
+
     # 프롬프트 갱신 — 안정/가변 분리 (캐시 prefix 보존)
     role = runner._load_role()
     augmented_message = message
@@ -285,6 +292,16 @@ def process_system_ai_message_stream(
     else:
         # EXECUTE/reflex: 중급 모델로 전환
         original_provider = _switch_to_midtier(runner)
+
+    # Clarification fast-path — 정보 부족 시 텍스트/종료 이벤트만 흘리고 종료.
+    # 평가 루프는 _consciousness_output 메타가 없으면 자동으로 안 탄다.
+    _clarify_text = runner._consciousness_clarification(consciousness_output) if consciousness_output else None
+    if _clarify_text:
+        print(f"[시스템AI 의식] clarification fast-path: 실행 에이전트 스킵")
+        _restore_provider(runner, original_provider)
+        yield {"type": "text", "content": _clarify_text}
+        yield {"type": "final", "content": _clarify_text}
+        return
 
     # 프롬프트 갱신 — 안정/가변 분리 (캐시 prefix 보존)
     role = runner._load_role()

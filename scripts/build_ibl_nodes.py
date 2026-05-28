@@ -37,7 +37,14 @@ def build(check: bool = False) -> int:
         print(f"[build_ibl_nodes] 소스 디렉토리 없음: {src_dir}", file=sys.stderr)
         return 2
 
-    parts: list[str] = []
+    header = (
+        "# GENERATED — DO NOT EDIT\n"
+        "# Source : data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml\n"
+        "# Rebuild: python3 scripts/build_ibl_nodes.py\n"
+        "# Check  : python3 scripts/build_ibl_nodes.py --check\n"
+        "\n"
+    )
+    parts: list[str] = [header]
 
     meta_path = src_dir / "meta.yaml"
     if not meta_path.is_file():

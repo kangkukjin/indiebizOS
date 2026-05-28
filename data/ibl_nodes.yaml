@@ -1,3 +1,8 @@
+# GENERATED — DO NOT EDIT
+# Source : data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml
+# Rebuild: python3 scripts/build_ibl_nodes.py
+# Check  : python3 scripts/build_ibl_nodes.py --check
+
 meta:
   constraint: ONLY the nodes listed below exist. No other node names are valid.
   usage:

@@ -117,6 +117,19 @@
         router: handler
         tool: browser_logs_op
         implementation: Playwright console·network 이벤트 캡처 로그 op 분기
+      dialog_info:
+        description: 브라우저 Alert/Confirm/Prompt 팝업 정보 조회.
+        target_description: 파라미터 없음. 마지막으로 캡처된 dialog의 type/message/default_value 반환. click 직후 알림창 처리에 사용.
+        group: browser
+        router: handler
+        tool: browser_dialog_info
+        implementation: Playwright dialog 이벤트 리스너로 마지막 팝업 정보 반환
+        keywords:
+        - 팝업
+        - alert
+        - confirm
+        - prompt
+        - dialog
       cookies:
         description: 브라우저 쿠키 저장/복원 (로그인 세션 유지용). op=save 또는 load.
         group: browser_session

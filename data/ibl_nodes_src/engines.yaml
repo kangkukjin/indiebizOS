@@ -424,6 +424,43 @@
         - vision
         - critic
         - image evaluation
+      publish_list:
+        description: 출판 프로젝트(책) 목록 조회.
+        target_description: 파라미터 없음. book_registry.yaml 기반 전체 책 반환.
+        group: publishing
+        router: handler
+        tool: publish_list
+        implementation: 출판 프로젝트 폴더 스캔 후 book_registry.yaml 기반 목록 반환
+        keywords:
+        - 출판
+        - 출판프로젝트
+        - 책목록
+        - 원고목록
+      publish_create:
+        description: 새 출판 프로젝트 생성 (제목 필수).
+        target_description: title(필수) — 책 제목. 폴더 구조 + book_plan.md + progress.md 초기화.
+        group: publishing
+        router: handler
+        tool: publish_create
+        implementation: 출판 프로젝트 폴더 구조 생성 + book_plan.md + progress.md 초기화
+        target_key: title
+        keywords:
+        - 출판프로젝트생성
+        - 책만들기
+        - 새책
+        - 원고시작
+      publish_status:
+        description: 출판 프로젝트 상세 상태 — 챕터 진행/조각글/진척 기록.
+        target_description: book_id(필수) — publish_list에서 반환되는 ID.
+        group: publishing
+        router: handler
+        tool: publish_status
+        implementation: book_registry.yaml + 챕터/조각글 폴더 스캔 + progress.md 요약
+        target_key: book_id
+        keywords:
+        - 출판상태
+        - 책진행
+        - 원고상태
     description: '작업장: 콘텐츠 생성 및 변환 — 신문, 슬라이드, 영상, 차트, 음악, 웹사이트, 디자인'
     tags:
     - 생성

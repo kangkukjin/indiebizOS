@@ -206,6 +206,21 @@
         "type": "object",
         "properties": {}
       }
+    },
+    {
+      "name": "music_op",
+      "description": "유튜브 음악 재생/대기열 단일 디스패처. op으로 play/add/skip/queue/stop/download 분기 (기본 play).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["play", "add", "skip", "queue", "stop", "download"], "default": "play", "description": "음악 동작" },
+          "query": { "type": "string", "description": "검색어 또는 URL (op=play/add 시)" },
+          "url": { "type": "string", "description": "유튜브 URL (op=download 시)" },
+          "mode": { "type": "string", "enum": ["audio", "video"], "description": "재생 모드 (op=play 시, 기본 audio)" },
+          "count": { "type": "integer", "description": "곡 수 (op=play/add 시)" },
+          "output_path": { "type": "string", "description": "MP3 저장 경로 (op=download 시)" }
+        }
+      }
     }
   ]
 }

@@ -18,16 +18,16 @@
 
 ```
 # 프로젝트/에이전트 목록 조회
-[others:list_projects]
+[others:agents]
 
 # 프로젝트 에이전트에게 위임
-[others:delegate_project]{project_path: "프로젝트/에이전트", message: "작업 내용"}
+[others:delegate]{scope: "cross", agent_id: "프로젝트/에이전트", message: "작업 내용"}
 ```
 
 ## 위임 절차
 
 1. **사용자 요청 확인**: 사용자가 위임을 원하는지 먼저 확인
-2. **적합한 에이전트 확인**: `[others:list_projects]`로 프로젝트/에이전트 목록과 `role_description` 확인
+2. **적합한 에이전트 확인**: `[others:agents]`로 프로젝트/에이전트 목록과 `role_description` 확인
 3. **전문성 기반 선택**: 작업 내용에 맞는 전문 에이전트 선택
 4. **명확한 요청**: 무엇을 해야 하는지 구체적으로 전달
 5. **비동기 처리**: 위임 후 결과는 자동으로 보고됨
@@ -40,8 +40,8 @@
 
 서로 의존성이 없는 작업은 동시에 위임 가능:
 ```
-[others:delegate_project]{project_path: "의료/내과", message: "두통 증상 분석"}
-[others:delegate_project]{project_path: "study/학습", message: "두통 관련 최신 연구 검색"}
+[others:delegate]{scope: "cross", agent_id: "의료/내과", message: "두통 증상 분석"}
+[others:delegate]{scope: "cross", agent_id: "study/학습", message: "두통 관련 최신 연구 검색"}
 ```
 
 ## 순차 위임
@@ -53,7 +53,7 @@
 3. **실제 결과가 도착할 때까지 대기** (다음 위임 보류)
 4. 결과 도착 후 TODO 업데이트하고 두 번째 위임 실행
 
-**중요**: `[others:delegate_project]`가 반환하는 "위임했습니다"는 **접수 확인**일 뿐입니다.
+**중요**: `[others:delegate]`가 반환하는 "위임했습니다"는 **접수 확인**일 뿐입니다.
 
 **절대 금지:**
 - 결과를 받지 않은 상태에서 "검토했습니다", "확인했습니다", "개선점을 드립니다" 등의 표현 사용
@@ -62,11 +62,11 @@
 
 ```
 # ❌ 잘못된 예
-[others:delegate_project]{project_path: "홍보/storyteller", message: "슬라이드 만들어줘"}
-[others:delegate_project]{project_path: "홍보/storyteller", message: "검토했습니다. 개선점..."}  # 결과 없음!
+[others:delegate]{scope: "cross", agent_id: "홍보/storyteller", message: "슬라이드 만들어줘"}
+[others:delegate]{scope: "cross", agent_id: "홍보/storyteller", message: "검토했습니다. 개선점..."}  # 결과 없음!
 
 # ✅ 올바른 예
-[others:delegate_project]{project_path: "홍보/storyteller", message: "슬라이드 만들어줘"}
+[others:delegate]{scope: "cross", agent_id: "홍보/storyteller", message: "슬라이드 만들어줘"}
 # → 여기서 멈추고 실제 결과 대기 → 결과 도착 후 다음 위임
 ```
 
@@ -98,22 +98,22 @@
 #     - 수정사항: 3번 슬라이드의 제목을 '새로운 시작'으로 변경"
 ```
 
-## 시간 지정 위임 (크로스 위임)
+## 시간 지정 위임 (스케줄러 경유)
 
 사용자가 **특정 시간에 다른 에이전트에게 작업을 시키는 경우**, `[self:schedule]`에 `target_project_id`/`target_agent_id`를 지정하세요.
 
-- 즉시 위임 → `[others:delegate_project]` 사용
+- 즉시 위임 → `[others:delegate]{scope: "cross", ...}` 사용
 - 시간 지정 → `[self:schedule]` + `target_project_id`/`target_agent_id` 사용
 
 ```
-# ❌ 스케줄 안에 delegate_project (결과 전달 불가)
-[self:schedule]{at: "15:00", pipeline: "[others:delegate_project]{project_path: '투자/analyst', message: '주식 현황 보고'}"}
+# ❌ 스케줄 안에 delegate (결과 전달 불가)
+[self:schedule]{at: "15:00", pipeline: "[others:delegate]{scope: 'cross', agent_id: '투자/analyst', message: '주식 현황 보고'}"}
 
-# ✅ 크로스 위임 (대상 에이전트가 직접 실행)
+# ✅ 스케줄러로 시간 지정 위임 (대상 에이전트가 직접 실행)
 [self:schedule]{at: "15:00", target_project_id: "투자", target_agent_id: "analyst", pipeline: "내 주식 현재 가격을 확인하고 보고해줘"}
 ```
 
-크로스 위임 시 pipeline에는 자연어로 의도를 전달하세요. 대상 에이전트가 자신의 맥락과 도구로 실행 방법을 스스로 판단합니다.
+스케줄러 경유 위임 시 pipeline에는 자연어로 의도를 전달하세요. 대상 에이전트가 자신의 맥락과 도구로 실행 방법을 스스로 판단합니다.
 
 ## 주의사항
 

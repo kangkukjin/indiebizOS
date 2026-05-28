@@ -66,9 +66,6 @@ def execute(tool_input: dict, context) -> str:
     elif tool_name == "search_semantic_scholar":
         return _search_semantic_scholar(tool_input)
 
-    elif tool_name == "search_google_scholar":
-        return _search_google_scholar(tool_input)
-
     elif tool_name == "search_pubmed":
         return _search_pubmed(tool_input)
 
@@ -176,58 +173,6 @@ def _search_semantic_scholar(tool_input: dict) -> str:
             return f"Semantic Scholar 검색 오류: {str(e)}"
 
     return "Semantic Scholar 검색 실패. 다른 검색 도구를 사용해주세요."
-
-
-def _search_google_scholar(tool_input: dict) -> str:
-    """Google Scholar 검색 (scholarly 라이브러리 사용)"""
-    query = tool_input.get("query")
-    max_results = tool_input.get("max_results", 5)
-
-    try:
-        from scholarly import scholarly
-
-        search_query = scholarly.search_pubs(query)
-
-        results = []
-        for i, paper in enumerate(search_query):
-            if i >= max_results:
-                break
-
-            bib = paper.get("bib", {})
-            title = bib.get("title", "Unknown")
-            authors = bib.get("author", "Unknown")
-            if isinstance(authors, list):
-                authors = ", ".join(authors[:3])
-                if len(bib.get("author", [])) > 3:
-                    authors += " et al."
-            year = bib.get("pub_year", "Unknown")
-            abstract = bib.get("abstract", "No abstract available")
-            if abstract and len(abstract) > 200:
-                abstract = abstract[:200] + "..."
-
-            citations = paper.get("num_citations", 0)
-            url = paper.get("pub_url", paper.get("eprint_url", ""))
-
-            paper_info = (
-                f"Title: {title}\n"
-                f"Authors: {authors}\n"
-                f"Year: {year}\n"
-                f"Citations: {citations}\n"
-                f"URL: {url}\n"
-                f"Abstract: {abstract}\n"
-                "--------------------------------------"
-            )
-            results.append(paper_info)
-
-        if not results:
-            return "No papers found for the given query."
-
-        return "\n".join(results)
-
-    except ImportError:
-        return "Error: 'scholarly' library not installed. Run: pip install scholarly"
-    except Exception as e:
-        return f"Error searching Google Scholar: {str(e)}"
 
 
 def _search_pubmed(tool_input: dict) -> str:

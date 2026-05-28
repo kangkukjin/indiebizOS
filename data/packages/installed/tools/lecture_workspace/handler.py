@@ -38,7 +38,17 @@ def execute(tool_input: dict, context) -> str:
     tool_name = context.tool_name
 
     try:
-        if tool_name == "lecture_list":
+        # 통합 도구 (op 분기) — IBL 어휘에 노출되는 4개
+        if tool_name == "lecture_op":
+            return _dispatch_lecture_op(tool_input)
+        elif tool_name == "slide_op":
+            return _dispatch_slide_op(tool_input)
+        elif tool_name == "material_op":
+            return _dispatch_material_op(tool_input)
+        elif tool_name == "deck_op":
+            return _dispatch_deck_op(tool_input)
+        # 옛 도구 이름 (직접 호출 호환 유지)
+        elif tool_name == "lecture_list":
             return _lecture_list(tool_input)
         elif tool_name == "lecture_create":
             return _lecture_create(tool_input)
@@ -74,6 +84,66 @@ def execute(tool_input: dict, context) -> str:
         return _err(str(e), error_type="validation")
     except Exception as e:
         return _err(f"실행 중 예외: {e}", error_type=type(e).__name__)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 통합 도구 op 디스패처 (lecture_op / slide_op / material_op / deck_op)
+# ─────────────────────────────────────────────────────────────────────
+
+def _dispatch_lecture_op(tool_input: dict) -> str:
+    op = (tool_input.get("op") or "").strip()
+    if not op:
+        return _err("op는 필수입니다. (list|create|load|delete|open)")
+    if op == "list":
+        return _lecture_list(tool_input)
+    if op == "create":
+        return _lecture_create(tool_input)
+    if op == "load":
+        return _lecture_load(tool_input)
+    if op == "delete":
+        return _lecture_delete(tool_input)
+    if op == "open":
+        return _lecture_open(tool_input)
+    return _err(f"알 수 없는 op: {op}. (list|create|load|delete|open 중 하나)")
+
+
+def _dispatch_slide_op(tool_input: dict) -> str:
+    op = (tool_input.get("op") or "").strip()
+    if not op:
+        return _err("op는 필수입니다. (create|edit|delete|patch|rerender)")
+    if op == "create":
+        return _slide_create(tool_input)
+    if op == "edit":
+        return _slide_edit(tool_input)
+    if op == "delete":
+        return _slide_delete(tool_input)
+    if op == "patch":
+        return _slide_patch_spec(tool_input)
+    if op == "rerender":
+        return _slide_rerender(tool_input)
+    return _err(f"알 수 없는 op: {op}. (create|edit|delete|patch|rerender 중 하나)")
+
+
+def _dispatch_material_op(tool_input: dict) -> str:
+    op = (tool_input.get("op") or "").strip()
+    if not op:
+        return _err("op는 필수입니다. (add|remove)")
+    if op == "add":
+        return _material_add(tool_input)
+    if op == "remove":
+        return _material_remove(tool_input)
+    return _err(f"알 수 없는 op: {op}. (add|remove 중 하나)")
+
+
+def _dispatch_deck_op(tool_input: dict) -> str:
+    op = (tool_input.get("op") or "").strip()
+    if not op:
+        return _err("op는 필수입니다. (reorder|export)")
+    if op == "reorder":
+        return _deck_reorder(tool_input)
+    if op == "export":
+        return _deck_export(tool_input)
+    return _err(f"알 수 없는 op: {op}. (reorder|export 중 하나)")
 
 
 # ─────────────────────────────────────────────────────────────────────

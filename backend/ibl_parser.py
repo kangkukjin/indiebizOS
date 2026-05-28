@@ -855,11 +855,13 @@ def _split_by_operator(text: str, operator: str) -> List[str]:
     return segments
 
 
-# Deprecated action-name aliases → canonical (node, action).
+# Deprecated action-name aliases → canonical (node, action) [+ optional injected params].
 # 2026-05-26 cleanup: 24개 별칭을 yaml에서 제거하면서 학습 데이터/RAG/외부 호출의
 # 옛 이름이 그대로 동작하도록 파서에서 캐노니컬로 정규화한다.
+# 2026-05-27 확장: 단일 액션 패턴 통합 시 옛 액션의 의미를 새 액션 + 기본 파라미터로 보존.
+# 값 형식: (node, action) 또는 (node, action, {param: default, ...})
 # 새 코드는 캐노니컬 이름만 쓰고, 이 맵은 점차 비워질 것.
-_ACTION_NAME_ALIASES: Dict[Tuple[str, str], Tuple[str, str]] = {
+_ACTION_NAME_ALIASES: Dict[Tuple[str, str], Tuple] = {
     ("sense", "info"): ("sense", "stock_info"),
     ("sense", "company_news"): ("sense", "news"),
     ("sense", "nearby"): ("sense", "cctv_nearby"),
@@ -878,15 +880,192 @@ _ACTION_NAME_ALIASES: Dict[Tuple[str, str], Tuple[str, str]] = {
     ("self", "annotate"): ("self", "folder_annotate"),
     ("self", "annotations"): ("self", "folder_annotations"),
     ("self", "explorer"): ("limbs", "explorer"),
-    ("limbs", "navigate"): ("limbs", "browser_navigate"),
-    ("limbs", "content"): ("limbs", "browser_content"),
-    ("limbs", "close"): ("limbs", "browser_close"),
+    # 2026-05-27 browser 그룹 명명 일관성: browser_* prefix를 캐노니컬에서 제거.
+    # 4개 액션을 24개 형제 (click/type/scroll 등) prefix 없는 형태와 일관.
+    ("limbs", "browser_navigate"): ("limbs", "navigate"),
+    ("limbs", "browser_content"): ("limbs", "content"),
+    ("limbs", "browser_close"): ("limbs", "close"),
+    ("limbs", "browser_snapshot"): ("limbs", "snapshot"),
+    # 2026-05-27 라디오 즐겨찾기 3개를 radio_favorite{op} 단일 액션으로 통합.
+    ("limbs", "favorites"): ("limbs", "radio_favorite", {"op": "list"}),
+    ("limbs", "save_favorite"): ("limbs", "radio_favorite", {"op": "add"}),
+    ("limbs", "remove_favorite"): ("limbs", "radio_favorite", {"op": "remove"}),
     ("limbs", "route_navigate"): ("sense", "navigate_route"),
     ("sense", "map"): ("limbs", "show_map"),
     ("sense", "cctv_open"): ("limbs", "cctv_open"),
     # 2026-05-26 cross-node 동명 정리: self의 find(파일 glob)와 limbs의 find(DOM 요소)가 충돌.
     # self:find → self:file_find로 캐노니컬 변경.
     ("self", "find"): ("self", "file_find"),
+    # 2026-05-27 런처 창 열기 6개를 open_window{app} 단일 액션으로 통합.
+    ("limbs", "open_project"): ("limbs", "open_window", {"app": "project"}),
+    ("limbs", "open_system_ai"): ("limbs", "open_window", {"app": "system_ai"}),
+    ("limbs", "open_indienet"): ("limbs", "open_window", {"app": "indienet"}),
+    ("limbs", "open_business"): ("limbs", "open_window", {"app": "business"}),
+    ("limbs", "open_multichat"): ("limbs", "open_window", {"app": "multichat"}),
+    ("limbs", "open_folder"): ("limbs", "open_window", {"app": "folder"}),
+    # 2026-05-27 데스크톱 자동화 9개를 desktop{op} 단일 액션으로 통합.
+    ("limbs", "desktop_screenshot"): ("limbs", "desktop", {"op": "screenshot"}),
+    ("limbs", "desktop_click"): ("limbs", "desktop", {"op": "click"}),
+    ("limbs", "desktop_type"): ("limbs", "desktop", {"op": "type"}),
+    ("limbs", "desktop_key"): ("limbs", "desktop", {"op": "key"}),
+    ("limbs", "mouse_move"): ("limbs", "desktop", {"op": "mouse_move"}),
+    ("limbs", "desktop_drag"): ("limbs", "desktop", {"op": "drag"}),
+    ("limbs", "desktop_scroll"): ("limbs", "desktop", {"op": "scroll"}),
+    ("limbs", "cursor_position"): ("limbs", "desktop", {"op": "cursor_position"}),
+    ("limbs", "desktop_screen_info"): ("limbs", "desktop", {"op": "screen_info"}),
+    # 2026-05-27 browser_session 12개 → 4개 단일 액션 (tab/iframe/cookies/chrome).
+    ("limbs", "tab_list"): ("limbs", "tab", {"op": "list"}),
+    ("limbs", "tab_new"): ("limbs", "tab", {"op": "new"}),
+    ("limbs", "tab_switch"): ("limbs", "tab", {"op": "switch"}),
+    ("limbs", "tab_close"): ("limbs", "tab", {"op": "close"}),
+    ("limbs", "iframe_list"): ("limbs", "iframe", {"op": "list"}),
+    ("limbs", "iframe_switch"): ("limbs", "iframe", {"op": "switch"}),
+    ("limbs", "iframe_reset"): ("limbs", "iframe", {"op": "reset"}),
+    ("limbs", "cookies_save"): ("limbs", "cookies", {"op": "save"}),
+    ("limbs", "cookies_load"): ("limbs", "cookies", {"op": "load"}),
+    ("limbs", "chrome_connect"): ("limbs", "chrome", {"op": "connect"}),
+    ("limbs", "chrome_disconnect"): ("limbs", "chrome", {"op": "disconnect"}),
+    ("limbs", "chrome_status"): ("limbs", "chrome", {"op": "status"}),
+    # 2026-05-27 self.read/read_pdf/read_docx → read {format} 단일 액션 (확장자 자동 인식).
+    ("self", "read_pdf"): ("self", "read", {"format": "pdf"}),
+    ("self", "read_docx"): ("self", "read", {"format": "docx"}),
+    # 2026-05-27 self.health_save/query 통합 → health {op} 단일 액션.
+    ("self", "health_save"): ("self", "health", {"op": "save"}),
+    ("self", "health_query"): ("self", "health", {"op": "query"}),
+    # 2026-05-27 self.blog 검색 4개 → blog_search {mode} 단일 액션. blog_get_post는 mode=content로 흡수.
+    ("self", "blog_semantic"): ("self", "blog_search", {"mode": "semantic"}),
+    ("self", "blog_content"): ("self", "blog_search", {"mode": "content"}),
+    ("self", "blog_get_post"): ("self", "blog_search", {"mode": "content"}),
+    # 2026-05-27 self.workflow 그룹 5개 → workflow {op} 단일 액션. run_pipeline 별도 유지.
+    ("self", "list_workflows"): ("self", "workflow", {"op": "list"}),
+    ("self", "get_workflow"): ("self", "workflow", {"op": "get"}),
+    ("self", "save_workflow"): ("self", "workflow", {"op": "save"}),
+    ("self", "delete_workflow"): ("self", "workflow", {"op": "delete"}),
+    ("self", "run"): ("self", "workflow", {"op": "run"}),
+    # 2026-05-27 self.goal 그룹 5개 → goal {op} 단일 액션.
+    ("self", "list_goals"): ("self", "goal", {"op": "list"}),
+    ("self", "goal_status"): ("self", "goal", {"op": "status"}),
+    ("self", "goal_kill"): ("self", "goal", {"op": "kill"}),
+    ("self", "log_attempt"): ("self", "goal", {"op": "log"}),
+    ("self", "get_attempts"): ("self", "goal", {"op": "attempts"}),
+    # 2026-05-27 self.memory 그룹 4개 → memory {op} 단일 액션. agents/recent는 group=conversation으로 이동.
+    ("self", "memory_save"): ("self", "memory", {"op": "save"}),
+    ("self", "memory_search"): ("self", "memory", {"op": "search"}),
+    ("self", "memory_read"): ("self", "memory", {"op": "read"}),
+    ("self", "memory_delete"): ("self", "memory", {"op": "delete"}),
+    # 2026-05-27 self.photo 그룹 8개 → photo {op} 단일 액션.
+    ("self", "photo_scan"): ("self", "photo", {"op": "scan"}),
+    ("self", "photo_list_scans"): ("self", "photo", {"op": "list_scans"}),
+    ("self", "photo_gallery"): ("self", "photo", {"op": "gallery"}),
+    ("self", "photo_stats"): ("self", "photo", {"op": "stats"}),
+    ("self", "photo_timeline"): ("self", "photo", {"op": "timeline"}),
+    ("self", "photo_duplicates"): ("self", "photo", {"op": "duplicates"}),
+    ("self", "search_photos"): ("self", "photo", {"op": "search"}),
+    ("self", "photo_detail"): ("self", "photo", {"op": "detail"}),
+    # 2026-05-27 self.schedule 트리거 9개 → trigger {op} 단일 액션.
+    ("self", "list_triggers"): ("self", "trigger", {"op": "list"}),
+    ("self", "get_trigger"): ("self", "trigger", {"op": "get"}),
+    ("self", "create"): ("self", "trigger", {"op": "create"}),
+    ("self", "update"): ("self", "trigger", {"op": "update"}),
+    ("self", "delete_trigger"): ("self", "trigger", {"op": "delete"}),
+    ("self", "enable"): ("self", "trigger", {"op": "enable"}),
+    ("self", "disable"): ("self", "trigger", {"op": "disable"}),
+    ("self", "trigger_status"): ("self", "trigger", {"op": "status"}),
+    ("self", "trigger_history"): ("self", "trigger", {"op": "history"}),
+    # 2026-05-27 self.schedule 스위치 2개 → switch {op} 단일 액션.
+    ("self", "list_switches"): ("self", "switch", {"op": "list"}),
+    ("self", "run_switch"): ("self", "switch", {"op": "run"}),
+    # 2026-05-27 self.lecture 그룹 14개 → 4개 단일 액션 (lecture/slide/material/deck).
+    # 2026-05-27 others.delegation 4종 통합 → delegate {mode/scope} 단일 액션.
+    # mode=async(기본,비동기)/sync(파이프라인 동기)/workflow(IBL steps 위임)
+    # scope=same(기본,같은 프로젝트)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)
+    ("others", "ask_sync"): ("others", "delegate", {"mode": "sync"}),
+    ("others", "delegate_workflow"): ("others", "delegate", {"mode": "workflow"}),
+    ("others", "delegate_project"): ("others", "delegate", {"scope": "cross"}),
+    # 2026-05-27 others 조회 계열 2종 통합 → agents (agent_id 유무로 분기).
+    ("others", "list_projects"): ("others", "agents"),
+    ("others", "agent_info"): ("others", "agents"),
+    # 2026-05-27 others.neighbor 2종 통합 → neighbors (neighbor_id/name 유무로 분기).
+    ("others", "neighbor_detail"): ("others", "neighbors"),
+    # 2026-05-27 others.channel_search → channel_read (query 유무로 자동 분기).
+    ("others", "channel_search"): ("others", "channel_read"),
+    ("self", "lecture_list"): ("self", "lecture", {"op": "list"}),
+    ("self", "lecture_create"): ("self", "lecture", {"op": "create"}),
+    ("self", "lecture_load"): ("self", "lecture", {"op": "load"}),
+    ("self", "lecture_delete"): ("self", "lecture", {"op": "delete"}),
+    ("self", "lecture_open"): ("self", "lecture", {"op": "open"}),
+    ("self", "slide_create"): ("self", "slide", {"op": "create"}),
+    ("self", "slide_edit"): ("self", "slide", {"op": "edit"}),
+    ("self", "slide_delete"): ("self", "slide", {"op": "delete"}),
+    ("self", "slide_patch_spec"): ("self", "slide", {"op": "patch"}),
+    ("self", "slide_rerender"): ("self", "slide", {"op": "rerender"}),
+    ("self", "material_add"): ("self", "material", {"op": "add"}),
+    ("self", "material_remove"): ("self", "material", {"op": "remove"}),
+    ("self", "deck_reorder"): ("self", "deck", {"op": "reorder"}),
+    ("self", "deck_export"): ("self", "deck", {"op": "export"}),
+    # 2026-05-27 engines 라운드 2 — chart 7종 → chart {chart_type} 단일 액션.
+    ("engines", "line"): ("engines", "chart", {"chart_type": "line"}),
+    ("engines", "bar"): ("engines", "chart", {"chart_type": "bar"}),
+    ("engines", "pie"): ("engines", "chart", {"chart_type": "pie"}),
+    ("engines", "scatter"): ("engines", "chart", {"chart_type": "scatter"}),
+    ("engines", "heatmap"): ("engines", "chart", {"chart_type": "heatmap"}),
+    ("engines", "candlestick"): ("engines", "chart", {"chart_type": "candlestick"}),
+    ("engines", "multi"): ("engines", "chart", {"chart_type": "multi"}),
+    # 2026-05-27 engines 라운드 2 — remotion 3종 → remotion {op} 단일 액션.
+    ("engines", "remotion_video"): ("engines", "remotion", {"op": "render_inline"}),
+    ("engines", "render_remotion"): ("engines", "remotion", {"op": "render_file"}),
+    ("engines", "remotion_status"): ("engines", "remotion", {"op": "status"}),
+    # 2026-05-27 engines 라운드 2 — render_video → html_video (scene_dir 유무로 자동 분기).
+    ("engines", "render_video"): ("engines", "html_video"),
+    # 2026-05-27 engines 라운드 2 — slide → slide_shadcn (입력 스키마는 핸들러 어댑터가 호환 변환).
+    ("engines", "slide"): ("engines", "slide_shadcn"),
+    # 2026-05-27 engines 라운드 2 — web_builder 16종 → 9종 (IBL 4기준 재분류).
+    # M3 어드민 통합: web_site (CRUD 4), web_catalog (조회 2).
+    ("engines", "web_site_list"): ("engines", "web_site", {"op": "list"}),
+    ("engines", "web_site_register"): ("engines", "web_site", {"op": "register"}),
+    ("engines", "web_site_remove"): ("engines", "web_site", {"op": "remove"}),
+    ("engines", "web_site_update"): ("engines", "web_site", {"op": "update"}),
+    ("engines", "web_list_components"): ("engines", "web_catalog", {"kind": "components"}),
+    ("engines", "web_list_sections"): ("engines", "web_catalog", {"kind": "sections"}),
+    # M2 생성 통합: web_create (site/page).
+    ("engines", "web_create_site"): ("engines", "web_create", {"target": "site"}),
+    ("engines", "web_create_page"): ("engines", "web_create", {"target": "page"}),
+    # M1 컴포넌트 통합: web_component (fetch/add).
+    ("engines", "web_fetch_component"): ("engines", "web_component", {"op": "fetch"}),
+    ("engines", "web_add_component"): ("engines", "web_component", {"op": "add"}),
+    # web_edit_styles는 alias 없이 폐기 — M3로 분류, [self:edit]로 globals.css/tailwind.config.* 직접 편집 권장.
+    # 2026-05-27 engines 라운드 2 — abc 정리.
+    # abc_search/abc_get은 검색·조회라 sense 의미. engines → sense 노드 이동.
+    ("engines", "abc_search"): ("sense", "abc_search"),
+    ("engines", "abc_get"): ("sense", "abc_get"),
+    # abc_to_midi/midi_to_audio는 music 액션에 stage 옵션으로 흡수.
+    ("engines", "abc_to_midi"): ("engines", "music", {"stage": "midi_only"}),
+    ("engines", "midi_to_audio"): ("engines", "music", {"stage": "audio_only"}),
+    # 2026-05-27 limbs 라운드 2 — 7개 도메인 op 디스패처 통합.
+    # 클릭 계열 (3종 → click {op}).
+    ("limbs", "dblclick"): ("limbs", "click", {"op": "double"}),
+    ("limbs", "rightclick"): ("limbs", "click", {"op": "right"}),
+    # 페이지 이동 (3종 → navigate {op}). navigate 자체는 op=goto 기본.
+    ("limbs", "back"): ("limbs", "navigate", {"op": "back"}),
+    ("limbs", "forward"): ("limbs", "navigate", {"op": "forward"}),
+    # 콘텐츠 추출 (2종 → content {op}). content 자체는 op=text 기본.
+    ("limbs", "get_html"): ("limbs", "content", {"op": "html"}),
+    # 브라우저 로그 (2종 → logs {op}). console alias는 logs로.
+    ("limbs", "console"): ("limbs", "logs", {"op": "console"}),
+    ("limbs", "network_logs"): ("limbs", "logs", {"op": "network"}),
+    # 음악/유튜브 (6종 → music {op}). music 자체는 op=play 기본.
+    ("limbs", "play"): ("limbs", "music", {"op": "play"}),
+    ("limbs", "queue_add"): ("limbs", "music", {"op": "add"}),
+    ("limbs", "skip"): ("limbs", "music", {"op": "skip"}),
+    ("limbs", "queue"): ("limbs", "music", {"op": "queue"}),
+    ("limbs", "stop"): ("limbs", "music", {"op": "stop"}),
+    ("limbs", "youtube_download"): ("limbs", "music", {"op": "download"}),
+    # 라디오 (2종 → radio {op}). radio 자체는 op=play 기본.
+    ("limbs", "radio_play"): ("limbs", "radio", {"op": "play"}),
+    ("limbs", "radio_stop"): ("limbs", "radio", {"op": "stop"}),
+    # CCTV (2종 → cctv {op}). cctv 자체는 op=open 기본.
+    ("limbs", "cctv_open"): ("limbs", "cctv", {"op": "open"}),
+    ("limbs", "cctv_capture"): ("limbs", "cctv", {"op": "capture"}),
 }
 
 
@@ -911,8 +1090,12 @@ def _parse_step(text: str) -> Optional[Dict]:
     target_raw = m.group(3)
 
     canonical = _ACTION_NAME_ALIASES.get((node, action))
+    injected_params: dict = {}
     if canonical is not None:
-        node, action = canonical
+        if len(canonical) >= 3:
+            node, action, injected_params = canonical[0], canonical[1], dict(canonical[2] or {})
+        else:
+            node, action = canonical[0], canonical[1]
 
     # (target) 구문 감지 → 에러 (폐지됨)
     if target_raw is not None:
@@ -935,6 +1118,12 @@ def _parse_step(text: str) -> Optional[Dict]:
             params = extracted
         elif isinstance(extracted, str):
             params = _parse_params(extracted)
+
+    # 별칭 정규화로 주입된 파라미터를 병합 (사용자 명시값 우선)
+    if injected_params:
+        for k, v in injected_params.items():
+            if k not in params:
+                params[k] = v
 
     return {
         "_node": node,

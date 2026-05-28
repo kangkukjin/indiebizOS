@@ -45,7 +45,7 @@ IBL 표현 계층:     [node:action]{params}
 | `search` | 찾기 | `[sense:search_ddg]{query: "AI 뉴스"}` |
 | `get` | 가져오기 | `[sense:price]{symbol: "AAPL"}` |
 | `list` | 나열하기 | `[sense:posts]{}` |
-| `create` | 만들기 | `[engines:slide]{title: "발표자료"}` |
+| `create` | 만들기 | `[engines:slide_shadcn]{slides: [{layout: "hero", title: "발표자료"}]}` |
 | `control` | 조작하기 | `[limbs:open_app]{name: "설정"}` |
 | `fs` | 파일 조작 | `[self:read]{path: "report.pdf"}` |
 | `io` | 결과 출력 | `[self:file]{path: "result.md"}` |

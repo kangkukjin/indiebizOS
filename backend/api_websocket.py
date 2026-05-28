@@ -384,6 +384,27 @@ async def handle_chat_message(client_id: str, data: dict):
         consciousness_output = runner._run_consciousness(
             message, history, execution_memory
         )
+
+        # Clarification fast-path — 의식이 정보 부족으로 사용자 확인을 요청하면
+        # 실행 에이전트 호출을 건너뛰고 질문을 응답으로 반환.
+        _clarify_text = runner._consciousness_clarification(consciousness_output) if consciousness_output else None
+        if _clarify_text:
+            print(f"[의식] clarification fast-path (non-stream): 실행 에이전트 스킵")
+            message_id = db.save_message(target_agent_id, user_id, _clarify_text)
+            await manager.send_message(client_id, {
+                "type": "response",
+                "content": _clarify_text,
+                "agent": agent_name,
+                "message_id": message_id,
+            })
+            await manager.send_message(client_id, {
+                "type": "end",
+                "agent": agent_name,
+            })
+            from thread_context import clear_all_context
+            clear_all_context()
+            return
+
         # 안정/가변 분리 (캐시 prefix 보존)
         augmented_message = message
         if consciousness_output:
@@ -592,6 +613,34 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     print(f"[프로젝트AI] 중급 모델로 전환: {_midtier.model}")
             except Exception as _me:
                 print(f"[프로젝트AI] 중급 모델 전환 실패 (본격 모델 유지): {_me}")
+
+        # Clarification fast-path — 의식이 정보 부족으로 사용자 확인을 요청하면
+        # 실행 에이전트 호출을 건너뛰고 질문을 그대로 응답으로 노출. 평가 루프도 스킵.
+        _clarify_text = None
+        if consciousness_output:
+            _clarify_text = runner._consciousness_clarification(consciousness_output)
+        if _clarify_text:
+            print(f"[의식] clarification fast-path: 실행 에이전트 스킵")
+            # 기존 stream 형식(text 청크 + final)으로 클라이언트에 전송
+            await manager.send_message(client_id, {
+                "type": "text",
+                "content": _clarify_text,
+            })
+            await manager.send_message(client_id, {
+                "type": "final",
+                "content": _clarify_text,
+            })
+            # AI 메시지로 저장하여 다음 대화의 history에 들어가게
+            try:
+                db.save_message(target_agent_id, user_id, _clarify_text)
+            except Exception as _se:
+                print(f"[의식] clarification 메시지 저장 실패 (무시): {_se}")
+            # 중급 모델로 전환했었다면 원상복구 (THINK 분기에서는 안 바뀜)
+            if _original_provider is not None and runner.ai:
+                runner.ai._provider = _original_provider
+            from thread_context import clear_all_context
+            clear_all_context()
+            return
 
         # 안정/가변 분리 (캐시 prefix 보존) — augmented_message는 run_stream에서 closure로 사용
         augmented_message = message

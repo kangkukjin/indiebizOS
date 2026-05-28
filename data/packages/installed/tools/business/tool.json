@@ -6,6 +6,19 @@
   "author": "System AI",
   "tools": [
     {
+      "name": "neighbors_op",
+      "description": "이웃(연락처) 통합 조회. neighbor_id 또는 name이 있으면 단건 상세, 없으면 목록.\n\n## 사용 예시\n- 전체 목록: neighbors_op()\n- 검색: neighbors_op(search='홍길동')\n- 레벨별 필터: neighbors_op(info_level=2)\n- 단건 상세 (ID): neighbors_op(neighbor_id=1)\n- 단건 상세 (이름 정확 일치): neighbors_op(name='홍길동')\n\n## 분기 규칙\n- neighbor_id 또는 name 제공 → get_neighbor_detail 동작 (상세 정보 + 연락처 + 최근 메시지)\n- 둘 다 없음 → get_neighbors 동작 (목록, search/info_level 필터 적용)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "search": { "type": "string", "description": "이름 부분 일치 검색 (목록 모드)" },
+          "info_level": { "type": "integer", "description": "정보 공개 레벨 필터 0-4 (목록 모드)" },
+          "neighbor_id": { "type": "integer", "description": "이웃 ID (단건 상세 모드)" },
+          "name": { "type": "string", "description": "이웃 이름 정확 일치 (단건 상세 모드)" }
+        }
+      }
+    },
+    {
       "name": "get_neighbors",
       "description": "이웃(연락처) 목록을 조회합니다.\n\n## 이웃이란?\nIndieBiz OS에서 관리하는 비즈니스 연락처입니다. 고객, 파트너, 협력사 등 다양한 관계를 이웃으로 등록하고 관리할 수 있습니다.\n\n## 반환 정보\n- id: 이웃 ID (상세 조회 시 사용)\n- name: 이름\n- info_level: 정보 공개 레벨 (0-4, 높을수록 상세 정보 보유)\n- rating: 평가 (0-5점)\n- favorite: 즐겨찾기 여부\n\n## 사용 예시\n- 모든 이웃 목록: get_neighbors()\n- 이름 검색: get_neighbors(search='홍길동')\n- 레벨별 필터: get_neighbors(info_level=2)",
       "input_schema": {

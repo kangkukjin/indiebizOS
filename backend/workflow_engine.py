@@ -559,6 +559,13 @@ def execute_workflow_action(action: str, params: dict,
                 delete/delete_workflow, run_pipeline
         params: 파라미터 (workflow_id 등 포함)
     """
+    # 단일 액션 패턴: workflow {op} 통합 액션. op로 다시 분기.
+    if action == "workflow":
+        op = (params.get("op") or "").strip()
+        if not op:
+            return {"error": "op 파라미터가 필요합니다. (list|get|save|delete|run)"}
+        action = op
+
     workflow_id = params.get("workflow_id", "")
 
     if action in ("list", "list_workflows"):

@@ -416,6 +416,19 @@ class AgentCognitiveMixin:
             else:
                 agent_notes = self.config.get("notes", "")
 
+            # 가용 도구 목록 — 의식이 capability_focus.tools에 추천할 수 있는 범위.
+            # 시스템 AI는 system_ai_tools, 프로젝트 에이전트는 _get_available_tools().
+            try:
+                if self.config.get("_is_system_ai"):
+                    from system_ai_tools import get_all_system_ai_tools
+                    available_tools = [t.get("name", "") for t in get_all_system_ai_tools()
+                                       if isinstance(t, dict) and t.get("name")]
+                else:
+                    available_tools = self._get_available_tools()
+            except Exception as e:
+                self._log(f"[의식] 가용 도구 목록 조회 실패 (검증 스킵): {e}")
+                available_tools = None
+
             result = agent.process(
                 user_message=user_message,
                 history=history,
@@ -425,6 +438,7 @@ class AgentCognitiveMixin:
                 agent_name=agent_name,
                 agent_role=agent_role,
                 agent_notes=agent_notes,
+                available_tools=available_tools,
             )
 
             if result:
@@ -562,6 +576,28 @@ AI: {ai_response[:500]}"""
             print(f"[심층메모리] JSON 파싱 실패 (무시)")
         except Exception as e:
             print(f"[심층메모리] 실패 (무시): {e}")
+
+    def _consciousness_clarification(self, consciousness_output: dict) -> Optional[str]:
+        """의식이 needs_clarification=true로 판단했다면 사용자에게 보낼 질문을 반환.
+
+        반환값이 None이 아니면 호출자는 실행 에이전트 호출을 건너뛰고 이 문자열을
+        그대로 응답으로 노출해야 한다 (평가 루프도 안 탄다).
+
+        Returns:
+            clarification_question 문자열 또는 None
+        """
+        if not consciousness_output:
+            return None
+        if not consciousness_output.get("needs_clarification"):
+            return None
+        question = consciousness_output.get("clarification_question", "")
+        if isinstance(question, str) and question.strip():
+            return question.strip()
+        # needs_clarification=true인데 질문이 비어있으면 task_framing 폴백
+        task_framing = consciousness_output.get("task_framing", "")
+        if isinstance(task_framing, str) and task_framing.strip():
+            return task_framing.strip()
+        return None
 
     def _apply_consciousness_to_history(self, history: list, consciousness_output: dict) -> list:
         """의식 에이전트의 판단에 따라 히스토리를 편집합니다.

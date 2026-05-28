@@ -159,22 +159,18 @@
         implementation: KOPIS API로 공연장/시설 검색
         target_key: keyword
       book:
-        description: 한국 도서 검색 (도서관정보나루). 국내 도서관 소장/대출 정보 포함. 글로벌 도서는 sense:search_books(Google
-          Books) 사용.
+        description: 한국 도서 검색·조회 (도서관정보나루). keyword 검색, isbn 기본 조회, isbn+detail로 상세(대출 통계). 글로벌 도서는 sense:search_books.
         group: culture
-        target_description: 검색어 (제목/저자/출판사)
+        target_description: 검색어(제목/저자/출판사) 또는 ISBN. 파라미터 — keyword 단독은 검색, isbn 단독은 기본 조회, isbn+detail=true는 상세+대출통계.
         router: handler
-        tool: library_quick_search
-        implementation: 도서관정보나루 공개 API로 한국 도서 검색 (소장 도서관, 대출 통계 포함)
+        tool: library_book
+        implementation: 도서관정보나루 공개 API 통합 — keyword면 quick_search, isbn면 get_book_by_isbn, isbn+detail=true면 get_book_detail(loan_info 포함).
         target_key: keyword
-      book_detail:
-        description: 한국 도서 상세 정보 (대출 통계 포함). 검색은 book, ISBN 직접 조회는 book_by_isbn.
-        group: culture
-        target_description: 도서 ISBN13 (book 검색 결과의 isbn13 필드).
-        router: handler
-        tool: library_get_book_detail
-        implementation: 도서관정보나루 API로 도서 상세 + 대출 통계 조회
-        target_key: isbn13
+        keywords:
+        - 도서
+        - 책
+        - ISBN
+        - 도서관
       exhibit:
         description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.
         group: culture
@@ -197,14 +193,6 @@
         router: handler
         tool: kopis_get_regions
         implementation: KOPIS API로 지역 코드 목록 조회
-      book_by_isbn:
-        description: ISBN으로 도서 조회 (10자리/13자리). 한국 도서관정보나루 기준, 상세는 book_detail.
-        group: culture
-        target_description: 도서 ISBN (10자리 또는 13자리, 하이픈 무관).
-        router: handler
-        tool: library_get_book_by_isbn
-        implementation: 도서관정보나루 API로 ISBN 기반 도서 조회
-        target_key: isbn
       kdc:
         description: KDC(한국십진분류) 주제분류 코드 목록. 도서관 도서 분류 기준.
         group: culture
@@ -262,16 +250,6 @@
         router: handler
         tool: search_semantic_scholar
         implementation: Semantic Scholar API로 AI/CS 논문 검색 (인용 그래프, 관련 논문 추적 포함)
-        target_key: query
-      search_scholar:
-        description: Google Scholar 학술 검색. 커버리지 가장 넓음 (모든 분야, 비영어 논문 포함). 단, 비공식 크롤링이라
-          불안정할 수 있음. 다른 소스에서 못 찾을 때 보조적으로 사용.
-        group: research
-        target_description: 검색 쿼리
-        router: handler
-        tool: search_google_scholar
-        implementation: scholarly 라이브러리로 Google Scholar 비공식 크롤링. 불안정할 수 있어 다른 학술검색의
-          보조 수단으로 사용.
         target_key: query
       search_pubmed:
         description: 생의학/의학 논문 전용 (PubMed). 의학·약학·생명과학 주제에만 사용. 다른 분야는 search_openalex
@@ -395,20 +373,6 @@
         implementation: Naver Cafe API로 지역 커뮤니티 글 검색 (주민 후기, 추천, 지역 정보). 공식 가게 DB
           검색이 아닌 커뮤니티 의견 수집.
         target_key: query
-      webcam:
-        description: 해외 웹캠 전용 검색 (Windy). 해외 도시/관광지 실시간 모습. 한국 CCTV 포함 통합 검색은 cctv_search
-          사용.
-        group: media
-        target_description: 검색어 (도시·지역·관광지명, 영어 권장).
-        keywords:
-        - webcam
-        - 웹캠
-        - 해외
-        - windy
-        router: handler
-        tool: search_webcam
-        implementation: Windy Webcams API로 전세계 웹캠 검색. 한국 교통 CCTV는 포함 안 됨 → cctv_search
-          사용.
       webcam_nearby:
         description: 좌표 근처 해외 웹캠 찾기 (Windy). 한국 CCTV 포함은 nearby.
         group: media
@@ -420,31 +384,6 @@
         router: handler
         tool: get_nearby_webcam
         implementation: Windy Webcams API로 좌표 근처 웹캠 검색
-      cctv_capture:
-        description: CCTV/웹캠 현재 화면 캡처 (이미지 저장, AI 분석용)
-        group: media
-        keywords:
-        - cctv
-        - 캡처
-        - 스크린샷
-        - capture
-        - 찍어
-        target_description: 영상/이미지 URL
-        router: handler
-        tool: capture_cctv
-        implementation: ffmpeg로 CCTV/웹캠 스트림에서 단일 프레임 캡처 후 PNG 저장
-        target_key: url
-      cctv_sources:
-        description: 등록된 CCTV·웹캠 소스 목록과 연결 상태 확인. ITS·Windy 점검용.
-        target_description: '(파라미터 없음 — 소스 목록과 상태 반환)'
-        group: media
-        router: handler
-        tool: list_cctv_sources
-        implementation: 등록된 CCTV/웹캠 소스 목록 조회 (로컬 설정 파일)
-        keywords:
-        - CCTV
-        - 소스
-        - 상태
       local_query:
         description: 축적된 지역 정보 DB 조회 (정기 수집된 가게·커뮤니티 데이터). 실시간 검색은 search_local.
         group: places
@@ -454,8 +393,7 @@
         implementation: SQLite FTS(전문검색)로 축적된 지역 정보 DB 조회
         target_key: query
       cctv_search:
-        description: 국내 CCTV + 해외 웹캠 통합 검색 (ITS+Windy). 한국 교통/도시 CCTV와 해외 웹캠을 동시 검색.
-          결과의 stream_tags를 응답에 포함하면 채팅창에서 스트리밍 재생. 해외만 보려면 webcam 사용.
+        description: 국내 CCTV + 해외 웹캠 통합 검색 (ITS+Windy). stream_tags 포함 시 채팅창 재생. 자세히 read_guide(query="cctv").
         group: media
         keywords:
         - cctv
@@ -473,17 +411,6 @@
         implementation: 국토부 ITS API(한국 CCTV) + Windy API(해외 웹캠) 통합 검색. 해외 전용은 webcam
           액션 사용.
         target_key: query
-      cctv_by_name:
-        description: 한국 교통 CCTV를 이름으로 검색 (ITS 국가교통정보센터). 좌표 기반은 nearby.
-        target_description: CCTV 이름 또는 키워드 (예 '강남대로', '한남대교').
-        group: media
-        router: handler
-        tool: get_cctv_by_name
-        implementation: ITS API에서 CCTV 이름/키워드로 직접 검색
-        target_key: keyword
-        keywords:
-        - cctv
-        - 이름검색
       api_ninjas:
         description: API Ninjas 범용 데이터 조회 (날씨, 환율, 영양, 명언 등 다양한 endpoint)
         target_description: 'endpoint로 종류 선택 (weather/exchange/nutrition/quotes 등 40+가지). 추가 파라미터는 endpoint별로 다름.'
@@ -555,14 +482,6 @@
         tool: wc_sites
         implementation: 사이트 수집 프로필 JSON 관리 (등록/조회/삭제). 크롤링 가이드 코드 포함.
         target_key: site_id
-      collect_save:
-        description: 크롤링 결과를 DB에 저장. 수집 사이트에서 가져온 데이터를 구조화하여 축적.
-        group: places
-        target_description: 사이트 ID
-        router: handler
-        tool: wc_save
-        implementation: Playwright 크롤링 결과를 SQLite DB에 구조화 저장 (사이트별 분류)
-        target_key: site_id
       collect_query:
         description: 축적된 수집 데이터 검색. 정기 수집으로 쌓인 웹 데이터에서 키워드 검색. 실시간 웹 검색은 sense:search_ddg
           사용.
@@ -572,42 +491,26 @@
         tool: wc_query
         implementation: SQLite FTS(전문검색)로 축적된 웹 수집 데이터 검색. 실시간 웹 검색이 아닌 로컬 DB 검색.
         target_key: query
-      apt_trade:
-        description: 아파트 매매 실거래가 조회. 국토부 실거래가 공개 시스템 기준.
+      realty:
+        description: 부동산 실거래가 조회 (국토부 공개 시스템). type(apt|house) × deal(trade|rent) 조합. 지역코드는 district_codes로 조회.
         group: real_estate
-        target_description: '지역 코드 5자리 (예 11680=강남). district_codes로 조회. start_date/end_date로 기간 지정.'
+        target_description: 지역 코드 5자리 (예 11680=강남). district_codes로 조회. start_month/end_month로 기간 지정.
         router: handler
-        tool: apt_trade_price
-        implementation: 국토부 아파트 실거래가 공개 API로 매매 데이터 XML 파싱
+        tool: realty_price
+        implementation: type(apt|house)와 deal(trade|rent) 조합으로 국토부 4종 실거래가 API 분기. start_month/end_month로 기간, count_per_month로 월별 건수.
         target_key: region_code
-      apt_rent:
-        description: 아파트 전월세 실거래가 조회. 국토부 실거래가 공개 시스템 기준.
-        group: real_estate
-        target_description: 지역 코드 5자리 (district_codes로 조회). 거래 기간 지정 가능.
-        router: handler
-        tool: apt_rent_price
-        implementation: 국토부 아파트 전월세 공개 API로 임대 데이터 XML 파싱
-        target_key: region_code
-      house_trade:
-        description: 단독/다세대 주택 매매 실거래가. 국토부 실거래가 공개 시스템 기준.
-        group: real_estate
-        target_description: 지역 코드 5자리 (district_codes로 조회).
-        router: handler
-        tool: house_trade_price
-        implementation: 국토부 주택 실거래가 공개 API로 매매 데이터 XML 파싱
-        target_key: region_code
-      house_rent:
-        description: 단독/다세대 주택 전월세 실거래가. 국토부 실거래가 공개 시스템 기준.
-        group: real_estate
-        target_description: 지역 코드 5자리 (district_codes로 조회).
-        router: handler
-        tool: house_rent_price
-        implementation: 국토부 주택 전월세 공개 API로 임대 데이터 XML 파싱
-        target_key: region_code
+        keywords:
+        - 부동산
+        - 실거래가
+        - 매매
+        - 전세
+        - 월세
+        - 아파트
+        - 주택
       district_codes:
         description: 부동산 실거래가 조회용 법정동 지역코드 조회.
         group: real_estate
-        target_description: '시/도명 (서울, 경기 등). 결과 코드를 apt_*/house_* 액션에 사용.'
+        target_description: '시/도명 (서울, 경기 등). 결과 코드를 realty 액션에 사용.'
         router: handler
         tool: get_region_codes
         implementation: 법정동 코드 매핑 테이블로 지역코드 조회 (로컬 데이터)
@@ -627,8 +530,7 @@
         implementation: yt-dlp로 유튜브 메타데이터 추출 (공식 API 불필요)
         target_key: url
       video_transcript:
-        description: 유튜브 ��영상 자막/스크립트 추출 (url 또는 video_id 사용 가능). 영상 요약이 목적이면 summarize_video를
-          쓰면 자막 추출+AI 요약+HTML+브라우저 열기를 한 번에 수행한다.
+        description: 유튜브 동영상 자막/스크립트 추출. 요약 목적이면 summarize_video 권장. 자세히 read_guide(query="자막").
         group: media
         keywords:
         - youtube
@@ -796,8 +698,7 @@
           파라미터로 요약 길이 지정 가능.
         target_key: url
       gutenberg_books:
-        description: Project Gutenberg 고전 도서 및 원문 텍스트 검색 (Gutendex API). 저작권 만료된 7만
-          6천여 권의 고전 문학, 철학, 과학 텍스트를 검색하고 원문 다운로드 링크를 제공
+        description: Project Gutenberg 서양 고전 원문 검색 (Gutendex). 저작권 만료 7만+권. 자세히 read_guide(query="gutenberg").
         group: culture
         target_description: 검색어 (제목, 저자, 주제)
         router: handler
@@ -844,7 +745,76 @@
         target_key: query
         postprocess:
           type: compress
-    description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 세계 상태 등 외부 API 및 데이터
+      startup:
+        description: 정부 창업/중소기업 지원사업 공고 검색. 기본은 K-Startup(창업진흥원) + 중기부(MSS) 통합. source로 한쪽만 가능.
+        group: research
+        target_description: 'query(검색 키워드, 예: 예비창업패키지·R&D·정책자금). source 옵션 — all(기본, 둘 다 통합), kstartup(K-Startup만, 창업 특화), mss(중기부만, R&D/수출 포함). count(기본 10, 최대 50).'
+        router: handler
+        tool: startup_search
+        implementation: K-Startup + 중기부 사업공고 API 통합. source=all이면 둘 다 호출, kstartup/mss면 한쪽만.
+        target_key: query
+        keywords:
+        - 창업
+        - 사업공고
+        - 지원사업
+        - 예비창업
+        - 정책자금
+        - R&D
+      kosis:
+        description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. 자세히 read_guide(query="통계").
+        group: research
+        target_description: 'query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회.'
+        router: handler
+        tool: kosis_lookup
+        implementation: KOSIS API 통합 — org_id+tbl_id면 get_data(또는 info=true시 get_statistics_info), indicator면 get_indicators, query면 integrated_search.
+        target_key: query
+        keywords:
+        - 통계
+        - kosis
+        - 통계청
+        - 인구
+        - GDP
+        - 물가
+        - 실업률
+      legal:
+        description: 대한민국 법률 통합 검색 (law.go.kr). query/id 분기, target 10종(법령/판례/규칙 등). 자세히 read_guide(query="법률").
+        group: legal
+        target_description: 'query(검색어) 또는 id(상세). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(법률서식).'
+        router: handler
+        tool: legal_lookup
+        implementation: 국가법령정보센터 API 통합 — query면 /lawSearch.do, id면 /lawService.do. target 파라미터로 10종 영역 분기.
+        target_key: query
+        keywords:
+        - 법률
+        - 법령
+        - 판례
+        - 법
+        - 조항
+        - 헌재
+        - 행정규칙
+      abc_search:
+        description: abcnotation.com에서 ABC 표기법 악보 검색. 곡명·작곡가·키워드로. 상세 조회는 abc_get.
+        target_description: 검색어 (곡명, 작곡가, 장르 등). 결과는 tune_id로 abc_get에 사용.
+        group: music
+        router: handler
+        tool: search_abc_tunes
+        implementation: abcnotation.com에서 ABC 악보 검색 (HTTP 크롤링)
+        target_key: query
+        keywords:
+        - 악보검색
+        - ABC
+      abc_get:
+        description: abcnotation.com 악보의 상세 내용 조회. 검색은 abc_search.
+        target_description: 악보 ID (abc_search 결과의 tune_id).
+        group: music
+        router: handler
+        tool: get_abc_tune
+        implementation: abcnotation.com에서 악보 상세 조회 (HTTP 크롤링)
+        target_key: tune_id
+        keywords:
+        - 악보조회
+        - ABC
+    description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 법률, 세계 상태 등 외부 API 및 데이터
       소스 접근'
     tags:
     - 검색
@@ -864,6 +834,11 @@
     - 여행
     - 라디오
     - 세계
+    - 법률
+    - 판례
+    - 통계
+    - 창업
+    - 지원사업
     guides:
     - investment/investment_guide.md
     - location-services/location_services_guide.md
@@ -871,3 +846,8 @@
     - study/study_guide.md
     - web/web_guide.md
     - context7/context7_guide.md
+    - realty.md
+    - book.md
+    - legal.md
+    - kosis.md
+    - startup.md

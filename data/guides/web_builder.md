@@ -7,176 +7,210 @@
 - **강점**: 완전한 코드 제어, 컴포넌트 단위 설계, React 생태계 활용
 - **적합**: 홈페이지, 블로그, 포트폴리오, 랜딩 페이지, 웹앱 등 모든 웹사이트
 
----
+## 운영 모드 매트릭스 (2026-05-27 IBL 4기준 재분류)
 
-## Web-builder (engines 노드) 상세 가이드
+| 영역 | 모드 | 처리 방식 |
+|---|---|---|
+| 외부 행동 (Playwright/Lighthouse/HTTP 서버/Next.js/Vercel CLI/shadcn CLI) | **M1 풀 IBL** | 전용 액션 (web_snapshot/live_check/preview/build/deploy/web_component) |
+| 어드민 CRUD (sites.json, 카탈로그 조회) | **M3 직접 편집 + 통합 진입점** | `web_site`/`web_catalog` 한 액션에 op로 분기. 빈번하지 않은 어드민 |
+| 생성 (프로젝트 디렉토리/페이지) | **M2 얇은 IBL + 가이드** | `web_create` 진입점 + 이 가이드. 복잡한 경우 [self:write]로 직접 작성 |
+| 스타일 편집 (globals.css/tailwind.config.*) | **M3 직접 편집** | IBL 액션 없음. [self:edit]로 globals.css 등 직접 수정 |
 
-### 두 가지 시나리오 명확 구분
+## 액션 빠른 참고
+
+| 액션 | 용도 | 핵심 파라미터 |
+|---|---|---|
+| `web_site` | 사이트 레지스트리 CRUD | op: list/register/remove/update |
+| `web_catalog` | 컴포넌트/섹션 카탈로그 조회 | kind: components/sections |
+| `web_create` | 새 프로젝트/페이지 생성 | target: site/page |
+| `web_component` | 컴포넌트 가져오기/추가 | op: fetch/add |
+| `web_snapshot` | 사이트 스크린샷 | site_id |
+| `web_live_check` | Lighthouse 품질 검사 | site_id + checks (status/lighthouse/screenshot) |
+| `web_preview` | 로컬 미리보기 서버 제어 | project_path + action: start/stop/status |
+| `web_build` | 프로덕션 빌드 | project_path |
+| `web_deploy` | Vercel 배포 | project_path + production |
+
+## 두 가지 시나리오 명확 구분
 
 ### A. 새 홈페이지 만들기
 
 ```
-create_project → 컴포넌트 추가(CLI) → create_page → 스타일 직접 수정 → preview_site → 빌드(CLI) → 배포(CLI)
+web_create(site) → web_component(add) → web_create(page) → 스타일 직접 편집 → web_preview → web_build → web_deploy → web_site(register)
 ```
 
-1. **create_project**: 새 Next.js + shadcn/ui 프로젝트 생성 → 실패 시: npm 설치 오류 확인, 디스크 공간/네트워크 확인 후 재시도
-2. **컴포넌트 추가**: `run_command('cd {project_path} && npx shadcn@latest add {component_names} --yes')` → 실패 시: `list_components`로 사용 가능 목록 확인. 여러 개 한꺼번에: `npx shadcn@latest add button card dialog --yes`
-3. **create_page**: 섹션 조합으로 페이지 생성 → 실패 시: 섹션 타입/props 확인 후 재시도
-4. **스타일 수정**: `read_file`로 `{project_path}/src/app/globals.css` 읽기 → CSS 변수(--primary, --secondary 등) 직접 수정 → `edit_file`로 저장. 테마 프리셋은 아래 참조.
-5. **preview_site**: 로컬에서 미리보기 → 실패 시: 에러 로그 확인, 코드 수정 후 재시도
-6. **빌드**: `run_command('cd {project_path} && npm run build')` → 실패 시: 에러 로그 분석, 타입 에러/import 오류 수정 후 재빌드. **빌드 실패 상태에서 배포하지 마세요.**
-7. **배포**: `run_command('cd {project_path} && vercel --prod --yes')` → 출력에서 배포 URL 확인. 실패 시: `vercel --version`으로 CLI 설치 확인, `vercel whoami`로 로그인 확인.
+1. **web_create(target=site)**: 새 Next.js + shadcn/ui 프로젝트 생성
+2. **web_component(op=add)**: shadcn/ui 컴포넌트 추가 (또는 `run_command('npx shadcn@latest add button card --yes')`로 여러 개 한꺼번에)
+3. **web_create(target=page)**: 섹션 조합으로 페이지 생성
+4. **스타일 편집**: `[self:read]`로 `{project_path}/src/app/globals.css` 읽기 → CSS 변수 직접 수정 → `[self:edit]`로 저장
+5. **web_preview(action=start)**: 로컬에서 미리보기 → 문제 시 코드 수정 → 재확인
+6. **web_build**: 프로덕션 빌드 → 빌드 실패 상태에서 배포하지 마세요
+7. **web_deploy(production=true)**: Vercel 프로덕션 배포 → 출력에서 URL 확인
+8. **web_site(op=register)**: 새 사이트를 레지스트리에 등록
 
 ### B. 기존 홈페이지 수정
 
-⚠️ **중요: 홈페이지 수정 요청을 받으면 반드시 첫 번째로 site_registry(action='list')를 호출하세요.**
+⚠️ **중요: 홈페이지 수정 요청을 받으면 반드시 첫 번째로 `[engines:web_site]{op: "list"}`를 호출하세요.**
 파일 시스템을 탐색하거나 ls/cat 명령으로 파일을 찾지 마세요. registry에 모든 사이트 정보(경로, 배포 URL, 기술 스택)가 있습니다.
 
 ```
-[반드시 이 순서대로]
-site_registry(list) → 현재 페이지 확인 → site_snapshot → 파일 직접 읽기/수정 → git push → site_live_check
+[반드시 이 순서]
+web_site(list) → 현재 페이지 확인 → web_snapshot → 파일 직접 읽기/수정 → git push → web_live_check
 ```
 
-1. **site_registry(action='list')**: 등록된 사이트 목록 확인 — ⚠️ 반드시 첫 번째! 이 결과에 local_path, repo_url, deploy_url, tech_stack 모두 포함됨
-2. **현재 배포된 페이지 내용 확인**: `[sense:crawl]{url: "배포URL"}`로 현재 페이지 내용을 크롤링. ⚠️ **브라우저 자동화(`[limbs:browser_navigate]`, `[limbs:browser_content]`)를 사용하지 마세요.** 크롤링이 훨씬 빠르고 가볍습니다.
-3. **site_snapshot**: 현재 구조 파악 (파일, 커밋, 페이지, 의존성)
-4. **파일 직접 읽기/수정**: read_file → edit_file로 기존 코드 수정
+1. **web_site(op=list)**: 등록된 사이트 목록 확인 — ⚠️ 반드시 첫 번째!
+2. **현재 배포된 페이지 내용 확인**: `[sense:crawl]{url: "배포URL"}`로 현재 페이지 내용 크롤링. ⚠️ 브라우저 자동화(`[limbs:navigate]`, `[limbs:content]`)를 사용하지 마세요 — 크롤링이 훨씬 빠르고 가볍습니다.
+3. **web_snapshot**: 현재 구조 파악 (스크린샷)
+4. **파일 직접 읽기/수정**: `[self:read]` → `[self:edit]`로 기존 코드 수정
 5. **git push**: 변경사항 푸시 (자동 배포 설정 시 자동 반영)
-6. **site_live_check**: 배포된 사이트 상태 점검
+6. **web_live_check**: 배포된 사이트 상태 점검
 
 ### 핵심 주의사항
-- **기존 사이트를 수정할 때 절대 `create_project`를 호출하지 마세요.**
+- **기존 사이트 수정 시 절대 `web_create(target=site)`를 호출하지 마세요.**
 - **절대 run_command로 ls, cat, find 등을 사용해 사이트 파일을 찾지 마세요.** registry에 경로가 있습니다.
-- 기존 사이트 개선은 반드시: `site_registry(list)` → `site_snapshot` → 파일 읽기 → 직접 수정 → git push
+- 기존 사이트 개선은 반드시: `web_site(list)` → `web_snapshot` → 파일 읽기 → 직접 수정 → git push
 
----
+## web_site 상세
 
-## site_registry 상세
+### op 종류
 
-### action 종류
-
-| action | 설명 | 필수 파라미터 |
-|--------|------|-------------|
-| `register` | 새 사이트 등록 | name, local_path |
+| op | 설명 | 필수 파라미터 |
+|---|---|---|
 | `list` | 등록된 사이트 목록 조회 | (없음) |
+| `register` | 새 사이트 등록 | name, local_path |
 | `remove` | 사이트 등록 해제 | site_id |
 | `update` | 사이트 정보 수정 | site_id + 수정할 필드 |
 
 ### 사용 예시
-```python
+```
 # 새 사이트 등록
-site_registry(
-    action='register',
-    name='내 블로그',
-    local_path='/path/to/site',
-    repo_url='https://github.com/user/my-blog',
-    deploy_url='https://my-blog.vercel.app'
-)
+[engines:web_site]{op: "register", name: "내 블로그", local_path: "/path/to/site", repo_url: "https://github.com/user/my-blog", deploy_url: "https://my-blog.vercel.app"}
 
 # 목록 조회
-site_registry(action='list')
+[engines:web_site]{op: "list"}
 
 # 삭제
-site_registry(action='remove', site_id='my-blog')
+[engines:web_site]{op: "remove", site_id: "my-blog"}
 
 # 수정
-site_registry(action='update', site_id='my-blog', deploy_url='https://new-url.vercel.app')
+[engines:web_site]{op: "update", site_id: "my-blog", deploy_url: "https://new-url.vercel.app"}
 ```
 
----
+빈번한 호출이면 sites.json 직접 읽기도 가능:
+```
+[self:read]{path: "/Users/.../indiebizOS/data/packages/installed/tools/web-builder/sites.json"}
+```
 
-## site_live_check 점검 항목
+## web_live_check 점검 항목
 
 ### checks 옵션
 
 | 항목 | 설명 |
-|------|------|
+|---|---|
 | `status` | HTTP 응답 상태 확인 |
 | `lighthouse` | 성능, 접근성, SEO 점수, Core Web Vitals, 개선 기회 |
 | `screenshot` | 스크린샷 캡처 |
 
 ### 사용 예시
-```python
+```
 # 전체 점검 (기본)
-site_live_check(site_id='indiebiz-homepage')
+[engines:web_live_check]{site_id: "indiebiz-homepage"}
 
 # 상태만 확인
-site_live_check(site_id='indiebiz-homepage', checks=['status'])
+[engines:web_live_check]{site_id: "indiebiz-homepage", checks: ["status"]}
 
 # Lighthouse만
-site_live_check(site_id='indiebiz-homepage', checks=['lighthouse'])
+[engines:web_live_check]{site_id: "indiebiz-homepage", checks: ["lighthouse"]}
 
 # URL 직접 지정 (등록되지 않은 사이트도 가능)
-site_live_check(url='https://example.com')
+[engines:web_live_check]{url: "https://example.com"}
 ```
 
----
+## web_create 상세
 
-## create_project 상세
+### target=site (신규 프로젝트)
 
-### 템플릿 종류
+#### 템플릿 종류
 
 | 템플릿 | 설명 | 포함 섹션 |
-|--------|------|----------|
+|---|---|---|
 | `blank` | 빈 프로젝트 | (없음) |
 | `landing` | 랜딩페이지 | 히어로, 기능소개, CTA |
 | `portfolio` | 포트폴리오 | 프로필, 작업물, 연락처 |
 | `blog` | 블로그 | 포스트 목록, 상세 |
 | `business` | 비즈니스 | 서비스, 가격, 문의폼 |
 
-### 추가 기능 (features)
+#### 추가 기능 (features)
 - `dark_mode`: 다크 모드 토글
 - `i18n`: 다국어 지원
 - `analytics`: 분석 도구 연동
 - `seo`: SEO 메타태그 최적화
 - `pwa`: Progressive Web App
 
-### 예시
-```python
-create_project(
-    name="my-homepage",        # 영문, 소문자, 하이픈 허용
-    template="landing",
-    features=["dark_mode", "seo"],
-    output_dir="/path/to/output"
-)
+#### 예시
+```
+[engines:web_create]{target: "site", name: "my-homepage", template: "landing", features: ["dark_mode", "seo"], output_dir: "/path/to/output"}
 ```
 
----
+### target=page (기존 프로젝트에 페이지 추가)
+
+먼저 사용 가능한 섹션 카탈로그 확인:
+```
+[engines:web_catalog]{kind: "sections"}
+```
+원하는 섹션을 골라 페이지 생성:
+```
+[engines:web_create]{target: "page", project_path: "/path/to/project", page_name: "about", sections: ["hero-centered", "features-grid", "cta-banner"], metadata: {title: "About"}}
+```
+
+### 자유 코드 (M2 보조)
+복잡한 구조는 [self:write]로 직접 디렉토리 골격을 만들고, package.json·Next.js 설정을 직접 작성한 뒤 `[engines:web_site]{op: "register"}`로 레지스트리에 등록하는 흐름이 더 유연합니다.
+
+## web_component 상세
+
+### op 종류
+
+| op | 설명 | 도구 |
+|---|---|---|
+| `add` | shadcn/ui 컴포넌트를 프로젝트에 설치 | shadcn CLI |
+| `fetch` | 외부 CDN/레지스트리에서 코드 가져오기 | HTTP |
+
+### 사용 예시
+```
+# shadcn 설치 (단일)
+[engines:web_component]{op: "add", project_path: "/path", component: "button"}
+
+# 외부 가져오기 (코드 확인)
+[engines:web_component]{op: "fetch", component: "Navigation", style: "new-york", output_format: "code"}
+```
+
+여러 개 한꺼번에 설치는 CLI가 더 효율적:
+```
+run_command('cd /path && npx shadcn@latest add button card dialog tabs --yes')
+```
 
 ## shadcn/ui 컴포넌트 카테고리
 
 ### 사용 가능한 주요 컴포넌트
 
 | 카테고리 | 컴포넌트 |
-|---------|---------|
+|---|---|
 | **기본** | button, input, label, badge, separator |
 | **레이아웃** | card, dialog, sheet, tabs, accordion |
 | **폼** | form, select, checkbox, radio-group, switch |
 | **네비게이션** | navigation-menu, dropdown-menu, breadcrumb |
 
-### list_components 카테고리 옵션
-`all`, `layout`, `form`, `data`, `feedback`, `navigation`, `overlay`
-
-### 사용 예시
-```bash
-# 여러 컴포넌트 한 번에 추가 (run_command 사용)
-cd /path/to/project && npx shadcn@latest add button card dialog tabs --yes
-
-# 카테고리별 목록 조회 (액션 사용)
-list_components(category='form')
-
-# 프로젝트에 설치된 컴포넌트 확인 (액션 사용)
-list_components(project_path="/path/to/project")
+### 카테고리별 카탈로그 조회
 ```
-
----
+[engines:web_catalog]{kind: "components", category: "form"}
+```
+category 옵션: `all`, `layout`, `form`, `data`, `feedback`, `navigation`, `overlay`
 
 ## 섹션 카테고리
 
-### list_sections / create_page에서 사용 가능한 섹션
+### 사용 가능한 섹션 (`web_catalog{kind:"sections"}` 결과 일부)
 
 | 카테고리 | 섹션 타입 | 설명 |
-|---------|----------|------|
+|---|---|---|
 | **hero** | hero-simple | 심플 히어로 |
 | | hero-centered | 중앙정렬 히어로 |
 | | hero-image | 이미지 히어로 |
@@ -198,7 +232,7 @@ list_components(project_path="/path/to/project")
 | | footer | 푸터 |
 
 ### 섹션 props 예시
-```python
+```
 # hero-simple
 {"title": "메인 제목", "subtitle": "부제목", "cta_text": "시작하기"}
 
@@ -209,166 +243,123 @@ list_components(project_path="/path/to/project")
 {"title": "가격", "plans": [{"name": "Free", "price": "0원", "features": ["기능1"]}]}
 ```
 
----
+## 스타일 편집 (M3 직접 편집)
 
-## 테마 프리셋 (CSS 변수 직접 수정)
+IBL 액션 없음. `globals.css` / `tailwind.config.*` / `theme.json`을 `[self:edit]`로 직접 편집합니다. 이는 의도된 것 — 스타일 변경은 작업 중 한두 번이라 IBL 액션화 가치(4기준 점수)가 낮습니다.
 
-| 프리셋 | 설명 |
-|--------|------|
-| `default` | 기본 (무채색/회색) |
-| `blue` | 파랑 계열 |
-| `green` | 녹색 계열 |
-| `purple` | 보라 계열 |
-| `orange` | 주황 계열 |
-| `red` | 빨강 계열 |
-| `custom` | 커스텀 색상 (`custom_colors` 파라미터로 지정) |
-
-### 테두리 반경 (border_radius)
-`none`, `sm`, `md`, `lg`, `full`
-
-### 스타일 수정 방법
-`read_file`로 `{project_path}/src/app/globals.css`를 읽고, CSS 변수를 직접 수정한 뒤 `edit_file`로 저장합니다.
-
+### globals.css에서 수정할 주요 CSS 변수
 ```css
-/* globals.css에서 수정할 주요 CSS 변수 */
 :root {
   --primary: 221.2 83.2% 53.3%;      /* HSL 값 */
   --secondary: 210 40% 96.1%;
   --accent: 210 40% 96.1%;
-  --radius: 0.5rem;                   /* border-radius: none=0, sm=0.25rem, md=0.375rem, lg=0.5rem, full=9999px */
+  --radius: 0.5rem;                   /* none=0, sm=0.25rem, md=0.375rem, lg=0.5rem, full=9999px */
 }
 ```
 
-프리셋별 대표 primary 색상:
+### 프리셋별 대표 primary 색상
 - `blue`: 221.2 83.2% 53.3%
 - `green`: 142.1 76.2% 36.3%
 - `purple`: 262.1 83.3% 57.8%
 - `orange`: 24.6 95% 53.1%
 - `red`: 0 84.2% 60.2%
 
----
+### 편집 예시
+```
+[self:read]{path: "/path/to/project/src/app/globals.css"}
+[self:edit]{path: "/path/to/project/src/app/globals.css", old_string: "--primary: 221.2 83.2% 53.3%", new_string: "--primary: 262.1 83.3% 57.8%"}
+```
 
-## preview_site 사용법
+## web_preview 사용법
 
-### 액션 종류
+### action 종류
 
 | action | 설명 |
-|--------|------|
+|---|---|
 | `start` | 개발 서버 시작 (기본) |
 | `stop` | 실행 중인 서버 중지 |
 | `status` | 서버 상태 확인 |
 
 ### 사용 예시
-```python
+```
 # 서버 시작 (기본 포트 3000)
-preview_site(project_path="/path", action="start")
+[engines:web_preview]{project_path: "/path", action: "start"}
 
 # 다른 포트로 시작
-preview_site(project_path="/path", port=3001)
+[engines:web_preview]{project_path: "/path", port: 3001}
 
 # 서버 상태 확인
-preview_site(project_path="/path", action="status")
+[engines:web_preview]{project_path: "/path", action: "status"}
 
 # 서버 중지
-preview_site(project_path="/path", action="stop")
+[engines:web_preview]{project_path: "/path", action: "stop"}
 ```
 
-실행 후 브라우저에서 `http://localhost:3000` 접속
-
----
-
-## fetch_component 사용법
-
-### 출력 형식 (output_format)
-
-| 형식 | 설명 | 용도 |
-|------|------|------|
-| `code` | 코드와 사용 예시 반환 | 코드 확인/참고 |
-| `json` | 전체 메타데이터 반환 | 의존성 확인 |
-| `save` | 프로젝트에 직접 저장 | 컴포넌트 설치 |
-
-### 사용 예시
-```python
-# 코드 확인
-fetch_component(component="button", output_format="code")
-
-# 프로젝트에 저장
-fetch_component(
-    component="card",
-    output_format="save",
-    project_path="/path/to/project"
-)
-
-# 스타일 선택
-fetch_component(component="dialog", style="new-york")  # 또는 "default"
-```
-
----
+실행 후 브라우저에서 `http://localhost:3000` 접속.
 
 ## 빌드 및 배포
 
-### 빌드 (run_command)
-```bash
-# 프로덕션 빌드
-cd /path/to/project && npm run build
-# → .next/ 디렉토리에 빌드 파일 생성
-# → 에러 발생 시 출력 로그를 분석하여 타입 에러/import 오류 수정 후 재빌드
-
-# 빌드 결과 확인
-ls -la /path/to/project/.next/
+### 빌드
 ```
+[engines:web_build]{project_path: "/path/to/project"}
+```
+실패 시: 에러 로그 분석 → 타입 에러/import 오류 수정 후 재빌드. 빌드 성공 전까지 배포 금지.
 
-### 배포 (run_command)
-```bash
+### 배포
+```
 # 프로덕션 배포
-cd /path/to/project && vercel --prod --yes
-# → 출력에서 "Production: https://..." URL 확인
-
-# 미리보기 배포
-cd /path/to/project && vercel --yes
+[engines:web_deploy]{project_path: "/path/to/project", production: true}
 
 # 프로젝트 이름 지정
-cd /path/to/project && vercel --prod --yes --name my-site
+[engines:web_deploy]{project_path: "/path/to/project", production: true, project_name: "my-site"}
 ```
 
 **전제조건 (실패 시 확인):**
-```bash
-# Vercel CLI 설치 확인/설치
-vercel --version || npm install -g vercel
-
-# Vercel 로그인 확인
-vercel whoami || vercel login
+```
+run_command('vercel --version')   # 미설치면: npm install -g vercel
+run_command('vercel whoami')      # 미로그인이면: vercel login
 ```
 
----
+### 파이프라인
+```
+[engines:web_build]{project_path: "/path"} >> [engines:web_deploy]{project_path: "/path", production: true} >> [engines:web_live_check]{site_id: "내-사이트"}
+```
 
 ## 전체 워크플로우 예시
 
 ### 새 랜딩 페이지 만들기
 ```
-1. create_project(name="my-landing", template="landing")
-   → 실패 시: 에러 확인 후 재시도. 프로젝트 생성 없이는 다음 단계 불가.
+1. [engines:web_create]{target: "site", name: "my-landing", template: "landing"}
 2. run_command('cd {path} && npx shadcn@latest add button card --yes')
-   → 실패 시: 컴포넌트 이름 확인, list_components로 목록 재확인
-3. create_page(project_path="...", page_name="index", sections=[...])
-4. read_file → globals.css의 CSS 변수 직접 수정 → edit_file
-5. preview_site(project_path="...", action="start")
-   → 문제 발견 시: 코드 수정 → 재확인 반복
-6. run_command('cd {path} && npm run build')
-   → 빌드 실패 시: 에러 로그 분석 후 수정, 재빌드. 빌드 성공 전까지 배포 금지.
-7. run_command('cd {path} && vercel --prod --yes')
-8. site_registry(action="register", name="My Landing", local_path="...")
+3. [engines:web_create]{target: "page", project_path: "...", page_name: "index", sections: [...]}
+4. [self:read]/{self:edit}으로 globals.css의 CSS 변수 수정
+5. [engines:web_preview]{project_path: "...", action: "start"}  # 문제 발견 시 코드 수정 반복
+6. [engines:web_build]{project_path: "..."}  # 빌드 성공 전까지 배포 금지
+7. [engines:web_deploy]{project_path: "...", production: true}
+8. [engines:web_site]{op: "register", name: "My Landing", local_path: "..."}
 ```
 
 ### 기존 사이트 수정하기
 ⚠️ **절대 파일 시스템을 탐색하지 마세요. registry가 모든 정보를 알려줍니다.**
 ```
-1. site_registry(action='list')              → ⚠️ 반드시 첫 번째! 사이트 목록 + 경로 + URL 확인
-2. site_snapshot(site_id='my-site')          → 현재 구조 파악 (어떤 파일이 있는지 여기서 확인)
-3. read_file('/path/to/page.tsx')            → 파일 읽기 (경로는 1,2단계에서 이미 알고 있음)
-4. edit_file('/path/to/page.tsx', ...)       → 코드 수정
+1. [engines:web_site]{op: "list"}            # ⚠️ 반드시 첫 번째!
+2. [engines:web_snapshot]{site_id: "my-site"}  # 현재 구조 파악
+3. [self:read]{path: "/path/to/page.tsx"}   # 경로는 1,2단계에서 알고 있음
+4. [self:edit]{path: "/path/to/page.tsx", ...}
 5. run_command('cd /path && git add -A && git commit -m "update" && git push')
-6. site_live_check(site_id='my-site')        → 배포 결과 확인
+6. [engines:web_live_check]{site_id: "my-site"}
 ```
-❌ 나쁜 예: run_command('ls ~/Desktop/AI/HomePages/') → 이렇게 하지 마세요!
-✅ 좋은 예: site_registry(action='list') → registry가 local_path를 알려줌
+- ❌ 나쁜 예: `run_command('ls ~/Desktop/AI/HomePages/')`
+- ✅ 좋은 예: `[engines:web_site]{op: "list"}` → registry가 local_path를 알려줌
+
+## 마이그레이션 노트 (2026-05-27)
+
+기존 16종 액션 → 9종으로 정리. 옛 액션명은 모두 alias로 자동 정규화되므로 학습 데이터/외부 호출은 그대로 동작.
+
+| 옛 액션 | 새 표기 |
+|---|---|
+| web_site_list/register/remove/update | `web_site {op}` |
+| web_list_components / web_list_sections | `web_catalog {kind}` |
+| web_create_site / web_create_page | `web_create {target}` |
+| web_fetch_component / web_add_component | `web_component {op}` |
+| web_edit_styles | (폐기 — `[self:edit]`로 globals.css 직접 편집) |

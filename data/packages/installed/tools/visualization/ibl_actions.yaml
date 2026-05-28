@@ -1,94 +1,40 @@
 node: engines
 actions:
   chart:
-    description: 차트 종류 자동 분기 — chart_type으로 line/bar/pie/scatter/heatmap/candlestick/multi 선택.
+    description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
+    target_description: |
+      title (필수). chart_type으로 종류 분기 (기본 line).
+      - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
+      - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
+      - pie: labels·values 리스트. hole 옵션으로 도넛.
+      - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
+      - heatmap: z(매트릭스)·x_labels·y_labels.
+      - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
+      - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
     group: chart
     router: handler
     tool: chart
-    implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. 개별 차트 액션(line, bar, pie 등)으로도 직접 호출 가능
+    implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. matplotlib 폴백 내장.
     target_key: title
     keywords:
     - 차트
     - 그래프
     - 시각화
-  line:
-    description: 라인 차트
-    group: chart
-    category: create
-    router: handler
-    tool: line_chart
-    implementation: Plotly로 인터랙티브 라인 차트 HTML 생성 (matplotlib 폴백)
-    target_key: title
-    keywords:
     - 라인차트
     - 선그래프
     - 추이
-  bar:
-    description: 바 차트 (수평/수직, 스택)
-    group: chart
-    category: create
-    router: handler
-    tool: bar_chart
-    implementation: Plotly로 바 차트 HTML 생성 (수평/수직/스택 지원)
-    target_key: title
-    keywords:
     - 바차트
     - 막대그래프
-  candlestick:
-    description: 캔들스틱 차트 (OHLCV, 이동평균)
-    group: chart
-    category: create
-    router: handler
-    tool: candlestick_chart
-    implementation: Plotly로 OHLCV 캔들스틱 차트 HTML 생성
-    target_key: title
-    keywords:
     - 캔들
     - 주식차트
     - OHLCV
-  pie:
-    description: 파이/도넛 차트
-    group: chart
-    category: create
-    router: handler
-    tool: pie_chart
-    implementation: Plotly로 파이/도넛 차트 HTML 생성
-    target_key: title
-    keywords:
     - 파이차트
     - 원그래프
     - 비율
-  scatter:
-    description: 산점도 (추세선 옵션)
-    group: chart
-    category: create
-    router: handler
-    tool: scatter_plot
-    implementation: Plotly로 산점도 HTML 생성 (추세선 옵션)
-    target_key: title
-    keywords:
     - 산점도
     - 분포
     - 추세선
-  heatmap:
-    description: 히트맵
-    group: chart
-    category: create
-    router: handler
-    tool: heatmap
-    implementation: Plotly로 히트맵 HTML 생성
-    target_key: title
-    keywords:
     - 히트맵
     - 열지도
-  multi:
-    description: 복합 차트 대시보드 (여러 차트 조합)
-    group: chart
-    category: create
-    router: handler
-    tool: multi_chart
-    implementation: Plotly subplots로 복합 차트 대시보드 HTML 생성
-    target_key: title
-    keywords:
     - 대시보드
     - 복합차트

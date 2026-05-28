@@ -85,7 +85,7 @@ execute_ibl(code='[sense:stock_info]{symbol: "AAPL"} & [sense:stock_info]{symbol
 
 **기계적 전달 (파이프라인):**
 ```
-execute_ibl(code='[engines:slide]{title: "보고서"} >> [limbs:os_open]')  # 생성 → 열기
+execute_ibl(code='[engines:slide_shadcn]{slides: [{layout: "hero", title: "보고서"}]} >> [limbs:os_open]')  # 생성 → 열기
 ```
 
 **액션 찾기:**
@@ -173,19 +173,21 @@ IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 
 
 ### Goal 프로세스 관리
 
+`[self:goal]` 단일 액션의 `op` 파라미터로 분기한다.
+
 ```
-[self:list_goals]{status: "active"}       # 진행 중인 목표 조회
-[self:goal_status]{goal_id: "goal_001"}   # 특정 목표 상태 조회
-[self:goal_kill]{goal_id: "goal_001"}     # 목표 중단
+[self:goal]{op: "list", status: "active"}        # 진행 중인 목표 조회
+[self:goal]{op: "status", goal_id: "goal_001"}   # 특정 목표 상태 조회
+[self:goal]{op: "kill", goal_id: "goal_001"}     # 목표 중단
 ```
 
 **Goal 상태**: `pending` → `active` → `achieved` / `expired` / `limit_reached` / `cancelled`
 
 ### 전략 전환 규칙
 
-- 매 시도 후 `[self:log_attempt]`로 접근 범주, 결과, 배운 점을 기록
+- 매 시도 후 `[self:goal]{op: "log", goal_id, strategy, result}`로 접근 범주·결과·배운 점을 기록
 - 동일 접근이 3회 연속 실패하면 근본적으로 다른 접근으로 전환
-- 새 시도 전에 `[self:get_attempts]`로 이전 이력 확인하여 같은 실수 반복 방지
+- 새 시도 전에 `[self:goal]{op: "attempts", goal_id}`로 이전 이력 확인하여 같은 실수 반복 방지
 - 모든 접근 범주가 소진되면 사용자에게 상황 보고
 
 ### 통합 예시
@@ -198,9 +200,9 @@ IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 
   max_rounds: 200,
   max_cost: 50000,
   strategy: [case: sense:price{symbol: "^IRX"}.current_price]{
-    "< 4": [sense:apt_trade]{region: "청주", depth: "deep"},
+    "< 4": [sense:realty]{type: "apt", deal: "trade", region: "청주"},
     "> 5": [goal: "관망"]{max_rounds: 1},
-    default: [sense:apt_trade]{region: "청주", depth: "shallow"}
+    default: [sense:realty]{type: "apt", deal: "trade", region: "청주"}
   }
 }
 ```
@@ -218,7 +220,7 @@ IBL은 몸의 언어다. `[sense:search_ddg]`는 "검색하라"는 행위이고,
 
 ### 파이프라인을 쓰는 경우 (기계적 전달만 필요할 때)
 ```
-execute_ibl(code='[engines:slide]{title: "보고서"} >> [limbs:os_open]')  # 생성 → 열기
+execute_ibl(code='[engines:slide_shadcn]{slides: [{layout: "hero", title: "보고서"}]} >> [limbs:os_open]')  # 생성 → 열기
 execute_ibl(code='[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}')  # 병렬 수집
 ```
 

@@ -41,6 +41,24 @@ def load_tool_module(tool_name: str):
 def execute(tool_input: dict, context) -> str:
     """도구 실행 진입점 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
+
+    # 2026-05-27 IBL 4기준 통합 — 단일 진입점들을 옛 tool_name으로 디스패치
+    if tool_name == "web_site":
+        op = (tool_input.get("op") or "list").lower()
+        tool_name = {
+            "list": "site_list", "register": "site_register",
+            "remove": "site_remove", "update": "site_update",
+        }.get(op, "site_list")
+    elif tool_name == "web_catalog":
+        kind = (tool_input.get("kind") or "components").lower()
+        tool_name = "list_sections" if kind == "sections" else "list_components"
+    elif tool_name == "web_create":
+        target = (tool_input.get("target") or "site").lower()
+        tool_name = "create_page" if target == "page" else "create_project"
+    elif tool_name == "web_component":
+        op = (tool_input.get("op") or "fetch").lower()
+        tool_name = "add_component" if op == "add" else "fetch_component"
+
     try:
         # 도구 모듈 로드
         module = load_tool_module(tool_name)

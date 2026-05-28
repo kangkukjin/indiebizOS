@@ -148,10 +148,14 @@ def _collect_ibl_stats() -> Dict:
                 pass
 
         # 4) 액션별 상태 결정
+        # YAML에서 사라진 액션(라운드 통합/은퇴)은 표시에서 제외 — all_registered 로드 실패 시엔 폴백.
+        filter_registered = bool(all_registered)
         health_map = {}  # (node, action) → {status, success_rate, avg_ms, total}
         all_actions = []
         for row in rows:
             node, action = row["node"], row["action"]
+            if filter_registered and (node, action) not in all_registered:
+                continue
             total = row["total"]
             successes = row["successes"] or 0
             avg_ms = row["avg_ms"]

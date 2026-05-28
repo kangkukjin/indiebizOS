@@ -24,7 +24,11 @@ class IBLUsageRAG:
 
     MAX_REFERENCES = 5
     DEFAULT_K = 5
-    MIN_SCORE = 0.25
+    # 표시 임계값. 0.65 미만은 사례 매칭이 약해서 의식 에이전트에 노이즈로
+    # 작용한다 (예: "라벨지 필요해" 쿼리에 clipboard/copy/write 사례가 0.68로
+    # 매칭되어 잘못된 액션을 추천하는 사고). 증류 임계값(0.7)보다는 살짝
+    # 낮춰서, 0.65~0.7 구간(증류 후보)은 ref로 보여 의식이 활용 가능하게.
+    MIN_SCORE = 0.65
     CACHE_TTL = 300  # 5분
 
     _instance = None

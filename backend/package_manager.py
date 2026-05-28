@@ -180,6 +180,12 @@ class PackageManager:
         """캐시 무효화 (패키지 설치/제거 시 호출)"""
         PackageManager._packages_cache = []
         PackageManager._cache_time = 0
+        # tool_loader의 도구↔패키지 매핑도 함께 비워야 신규/변경된 tool.json이 반영된다
+        try:
+            from tool_loader import clear_cache as _clear_tool_loader_cache
+            _clear_tool_loader_cache()
+        except Exception as e:
+            print(f"[PackageManager] tool_loader 캐시 무효화 실패 (무시): {e}")
 
     # ============ 핵심: 폴더 스캔 ============
 

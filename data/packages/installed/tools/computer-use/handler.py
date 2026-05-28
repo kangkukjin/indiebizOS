@@ -399,6 +399,39 @@ _TOOLS = {
     "computer_screen_info": _do_screen_info,
 }
 
+# 2026-05-27 단일 액션 통합: [limbs:desktop]{op} → 내부 op 분기
+_OP_TO_TOOL = {
+    "screenshot": "computer_screenshot",
+    "click": "computer_click",
+    "type": "computer_type",
+    "key": "computer_key",
+    "mouse_move": "computer_mouse_move",
+    "drag": "computer_drag",
+    "scroll": "computer_scroll",
+    "cursor_position": "computer_cursor_position",
+    "screen_info": "computer_screen_info",
+}
+
+
+def _do_op(tool_input: dict):
+    """단일 액션 통합 디스패처. op 파라미터로 9개 함수에 위임."""
+    op = (tool_input.get("op") or "").strip()
+    if not op:
+        return json.dumps({
+            "success": False,
+            "error": f"op 파라미터 필요. 사용 가능: {sorted(_OP_TO_TOOL.keys())}"
+        }, ensure_ascii=False)
+    tool = _OP_TO_TOOL.get(op)
+    if not tool:
+        return json.dumps({
+            "success": False,
+            "error": f"알 수 없는 op: '{op}'. 사용 가능: {sorted(_OP_TO_TOOL.keys())}"
+        }, ensure_ascii=False)
+    return _TOOLS[tool](tool_input)
+
+
+_TOOLS["computer_op"] = _do_op
+
 
 def execute(tool_input: dict, context) -> str | dict:
     """도구 실행 엔트리포인트 (ToolContext 기반 신규 시그니처).

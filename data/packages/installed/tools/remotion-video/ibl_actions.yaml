@@ -1,35 +1,23 @@
 node: engines
 actions:
-  remotion_video:
-    description: React/Remotion 기반 프로그래밍 방식 영상 생성
+  remotion:
+    description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
+    target_description: |
+      op로 분기 (기본 render_inline).
+      - render_inline: composition_code(인라인 TSX 문자열) 필수.
+      - render_file: composition_file(TSX 파일 절대경로) 필수.
+      - status: 파라미터 없음, Remotion/Node.js 설치 상태만 반환.
     group: media_produce
     category: create
     router: handler
-    tool: create_remotion_video
-    implementation: React TSX 컴포지션 생성 + Remotion CLI로 MP4 렌더링
+    tool: remotion
+    implementation: op로 분기. render_inline은 React TSX 컴포지션을 생성하고 Remotion CLI(npx remotion render)로 MP4 렌더링. render_file은 저장된 TSX 파일로 렌더링. status는 which/npm list로 설치 상태 확인.
     target_key: composition_code
     keywords:
     - 영상
     - React
     - Remotion
-  render_remotion:
-    description: 파일로 저장된 TSX 컴포지션을 Remotion으로 MP4 렌더링. composition_file(절대경로) 필수.
-    group: media_produce
-    category: create
-    router: handler
-    tool: render_remotion_video
-    implementation: Remotion CLI(npx remotion render)로 TSX→MP4 렌더링
-    target_key: composition_file
-    keywords:
-    - 렌더링
-    - Remotion
     - TSX
-  remotion_status:
-    description: Remotion 설치 상태 및 렌더링 상태 확인
-    group: media_produce
-    router: handler
-    tool: check_remotion_status
-    implementation: Remotion/Node.js 설치 상태 확인 (which/npm list)
-    keywords:
-    - Remotion
+    - MP4
+    - 렌더링
     - 상태

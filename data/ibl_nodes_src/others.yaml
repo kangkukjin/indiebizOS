@@ -1,87 +1,39 @@
   others:
     actions:
       delegate:
-        description: 같은 프로젝트의 동료 에이전트에게 작업 위임 (비동기, 결과 자동 보고)
-        target_description: 동료 에이전트 이름. message로 위임할 작업 전달.
+        description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기.
+        target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본,비동기 보고)/sync(응답 대기, 파이프라인용)/workflow(steps IBL 위임). scope: same(기본)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용). mode=workflow 시 steps 필수.'
         group: delegation
         target_key: agent_id
         router: system
-        func: call_agent
-        implementation: agent_runner를 통해 같은 프로젝트 에이전트에게 메시지 전달. 자식 태스크 생성, 완료 시 자동
-          보고 체인으로 결과 수신. 병렬/순차 위임 가능
+        func: delegate
+        implementation: |
+          mode/scope로 기존 4 함수를 통합 디스패치 — scope=cross → _execute_call_project_agent
+          (시스템 AI만), scope=same일 때 mode=async → execute_call_agent, mode=sync →
+          _agent_ask_sync (응답 텍스트 반환), mode=workflow → _delegate_workflow (steps 위임).
         keywords:
         - 위임
         - 에이전트
-        - 작업
-      ask_sync:
-        description: 에이전트에게 동기 질문 (응답을 기다려서 반환 — 파이프라인/워크플로우용)
-        target_description: 에이전트 ID ('프로젝트/에이전트' 형식). message로 질문 내용 전달.
-        group: delegation
-        target_key: agent_id
-        router: system
-        func: agent_ask_sync
-        implementation: 임시 AI 에이전트를 생성하여 메시지 처리 후 결과 텍스트를 직접 반환. 파이프라인에서 >> 연산자로 연결
-          가능
-        keywords:
-        - 질문
         - 동기
-        - 에이전트
-      delegate_workflow:
-        description: 다른 에이전트에게 IBL 파이프라인 위임 (대상 에이전트의 project_path 컨텍스트에서 실행).
-        target_description: 대상 에이전트 ID와 실행할 IBL 파이프라인 코드.
-        group: delegation
-        router: system
-        func: delegate_workflow
-        implementation: IBL 파이프라인을 대상 에이전트의 project_path 컨텍스트에서 실행
-        keywords:
-        - 위임
         - 파이프라인
-        - IBL
-      delegate_project:
-        description: 시스템 AI 전용 — 다른 프로젝트의 에이전트에게 작업 위임 (프로젝트 자동 활성화)
-        target_description: "'프로젝트/에이전트' 형식 ID. message로 위임 작업 전달."
-        group: delegation
-        target_key: agent_id
-        router: system
-        func: call_project_agent
-        implementation: 대상 프로젝트의 모든 활성 에이전트를 자동 시작한 뒤 메시지 전달. 시스템 AI만 사용 가능. 자식 태스크
-          생성, 완료 시 시스템 AI에게 자동 보고
-        keywords:
         - 프로젝트위임
         - 다른프로젝트
-      agent_info:
-        description: 다른 에이전트의 역할·도구·설정 상세 조회. 위임 전 능력 확인용.
-        target_description: agent_id ('프로젝트/에이전트' 형식, list_projects로 확인).
+      agents:
+        description: 프로젝트·에이전트 조회. agent_id 없으면 전체 트리, 있으면 단건 상세.
+        target_description: agent_id ('프로젝트/에이전트' 형식). 생략 시 전체 프로젝트별 에이전트 트리 반환 (위임 대상 확인용).
         group: delegation
         target_key: agent_id
         router: system
-        func: agent_info
-        implementation: agents.yaml에서 에이전트 설정(역할, 모델, 도구 목록 등) 조회. agent_id는 "프로젝트/에이전트"
-          형식
+        func: agents
+        implementation: |
+          agent_id 없음 → _execute_list_project_agents (프로젝트별 트리), agent_id 있음 →
+          _agent_info (node_registry에서 단건 상세).
         keywords:
-        - 에이전트정보
-        - 상세
-      list_projects:
-        description: 모든 프로젝트와 소속 에이전트 목록 조회. 위임 대상 확인용 (delegate/delegate_project).
-        target_description: '(파라미터 없음 — 전체 목록 반환)'
-        group: delegation
-        router: system
-        func: list_project_agents
-        implementation: projects.json + 각 프로젝트 agents.yaml에서 전체 프로젝트·에이전트 목록 조회
-        keywords:
+        - 에이전트
         - 프로젝트목록
         - 에이전트목록
-      channel_search:
-        description: 채널 메시지 검색 (Gmail/Nostr/Telegram)
-        target_description: 채널 타입 (gmail/nostr/telegram). query 옵션으로 검색어 (Gmail은 Gmail 검색 문법).
-        group: channel
-        target_key: channel_type
-        router: channel_engine
-        implementation: channel_engine 추상화 계층을 통해 채널별 메시지 검색. Gmail은 query 기반, Nostr/Telegram은
-          키워드 매칭
-        keywords:
-        - 메시지검색
-        - 채널
+        - 에이전트정보
+        - 상세
       messages:
         description: 한 이웃과 주고받은 메시지 채널 통합 이력 (Gmail/Nostr/Telegram 등).
         target_description: 이웃 ID (neighbors로 조회한 결과의 id 필드).
@@ -96,21 +48,18 @@
         - 대화
         - 이력
       neighbors:
-        description: 비즈니스 이웃 목록 조회 (검색, 상세도 조절). 사용자 프로필 + 관계 DB 기반.
+        description: 비즈니스 이웃 조회. neighbor_id/name 있으면 단건 상세, 없으면 목록.
         group: neighbor
-        target_description: 검색어 (선택, 미지정 시 전체). detail 옵션으로 상세도 (summary/full).
+        target_description: 'neighbor_id (단건 상세) 또는 name (정확 일치 단건 상세). 또는 search (부분 일치 검색), info_level (0-4 필터). 모두 생략 시 전체 목록.'
         router: handler
-        tool: get_neighbors
-        implementation: 사용자 프로필(my_profile.txt) + 관계 DB 기반 이웃 목록 조회
+        tool: neighbors_op
+        implementation: handler.py가 neighbor_id/name 유무로 분기 — 있으면 get_neighbor_detail (상세+연락처+최근 메시지), 없으면 get_neighbors (목록+검색·필터).
         target_key: search
-      neighbor_detail:
-        description: 한 이웃(연락처)의 상세 정보 조회 (관계·채널·메모 등 DB 전체 필드).
-        group: neighbor
-        target_description: 이웃 이름 또는 ID. 동명이인이 있을 수 있어 ID 권장.
-        router: handler
-        tool: get_neighbor_detail
-        implementation: 비즈니스 관계 DB에서 이웃 상세 정보 조회
-        target_key: name
+        keywords:
+        - 이웃
+        - 연락처
+        - 비즈니스
+        - 상세
       channel_send:
         description: 메시지 발송 (Gmail/Nostr/Telegram). 에이전트 identity 기반 발신자 자동 설정.
         target_description: 채널 타입 (gmail/nostr/telegram). to/subject/body 파라미터로 메시지 구성.
@@ -125,16 +74,16 @@
         - 텔레그램
         - 이메일
       channel_read:
-        description: 채널 수신 메시지 읽기 (Gmail/Nostr/Telegram). 최근 수신함 조회.
-        target_description: 채널 타입 (gmail/nostr/telegram). max_results로 건수 제한 (기본 10).
+        description: 채널 수신함 조회/검색 (Gmail/Nostr/Telegram). query 있으면 검색, 없으면 최근 수신.
+        target_description: 채널 타입 (gmail/nostr/telegram). query 옵션으로 검색어 (Gmail은 Gmail 검색 문법). 검색 미사용 시 max_results로 건수 제한(기본 10).
         group: channel
         target_key: channel_type
         router: channel_engine
-        implementation: channel_engine 추상화 계층을 통해 수신 메시지 조회. Gmail�� IMAP, Nostr은
-          릴레이 구독. max_results로 건수 제한
+        implementation: channel_engine 입구가 query 유무로 자동 분기 — query 있으면 _channel_search, 없으면 _channel_read (Gmail IMAP, Nostr 릴레이 구독 등).
         keywords:
         - 메시지읽기
         - 수신
+        - 메시지검색
     description: '타자: 외부 에이전트 및 사용자와의 소통 — 위임, 메시징, SMS, 이메일, 연락처, 협업'
     tags:
     - 위임

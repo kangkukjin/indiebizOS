@@ -167,6 +167,20 @@
           }
         }
       }
+    },
+    {
+      "name": "realty_price",
+      "description": "부동산 실거래가 조회 (국토부 공개 시스템). type(apt|house) × deal(trade|rent) 조합. 지역코드는 district_codes로 조회.\n\n파라미터: 지역 코드 5자리 (예 11680=강남). district_codes로 조회. start_month/end_month로 기간 지정.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
+      }
     }
   ]
 }

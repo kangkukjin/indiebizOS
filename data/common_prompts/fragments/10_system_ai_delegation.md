@@ -13,7 +13,7 @@
 </delegation_condition>
 
 <delegation_tools>
-- **[others:list_projects]**: 모든 프로젝트와 에이전트 목록 조회
+- **[others:agents]**: 프로젝트·에이전트 조회 (agent_id 생략 시 전체 목록, 지정 시 단건 상세)
 - **[others:delegate_project]{project_path: "프로젝트/에이전트", message: "..."}**: 프로젝트 에이전트에게 작업 위임 (비동기, 결과 자동 보고)
 </delegation_tools>
 

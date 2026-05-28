@@ -265,18 +265,18 @@ SYNTHETIC_DATA = {
         ("폰 메시지 전부 보여줘", "[limbs:android_all_messages]"),
     ],
     "limbs:browser_close": [
-        ("브라우저 탭 닫아줘", "[limbs:browser_close]"),
-        ("브라우저 닫아", "[limbs:browser_close]"),
+        ("브라우저 탭 닫아줘", "[limbs:close]"),
+        ("브라우저 닫아", "[limbs:close]"),
     ],
     "limbs:browser_content": [
-        ("웹페이지 내용 가져와", "[limbs:browser_content]"),
-        ("이 페이지 텍스트 추출해", "[limbs:browser_content]"),
-        ("사이트 내용 읽어줘", "[limbs:browser_content]"),
+        ("웹페이지 내용 가져와", "[limbs:content]"),
+        ("이 페이지 텍스트 추출해", "[limbs:content]"),
+        ("사이트 내용 읽어줘", "[limbs:content]"),
     ],
     "limbs:browser_navigate": [
-        ("이 URL로 이동해줘", "[limbs:browser_navigate]"),
-        ("웹사이트 열어줘", "[limbs:browser_navigate]"),
-        ("브라우저로 접속해", "[limbs:browser_navigate]"),
+        ("이 URL로 이동해줘", "[limbs:navigate]"),
+        ("웹사이트 열어줘", "[limbs:navigate]"),
+        ("브라우저로 접속해", "[limbs:navigate]"),
     ],
     "limbs:cctv_open": [
         ("CCTV 영상 열어줘", "[limbs:cctv_open]"),

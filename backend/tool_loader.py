@@ -18,12 +18,17 @@ _tool_handlers_cache: Dict[str, Any] = {}
 _package_handlers_cache: Dict[str, Any] = {}
 # 도구 이름 -> 패키지 ID 매핑
 _tool_to_package_map: Dict[str, str] = {}
+# tool.json mtime 스냅샷 (자동 캐시 무효화용 — 2026-05-28 추가)
+# 패키지 ID -> tool.json의 mtime. _tool_to_package_map과 _all_tools_cache가
+# tool.json 변경에 즉시 반응하도록 한다.
+_tool_json_mtimes: Dict[str, float] = {}
 # 전체 도구 정의 캐시
 _all_tools_cache: List[Dict] = []
 _all_tools_cache_time: float = 0
+_all_tools_cache_mtimes: Dict[str, float] = {}
 # agents.yaml 캐시 (project_path -> (캐시시간, 데이터))
 _agents_yaml_cache: Dict[str, tuple] = {}
-_CACHE_TTL: float = 60.0  # 60초 캐시
+_CACHE_TTL: float = 60.0  # 60초 캐시 (mtime 변화 없을 때 상한)
 
 
 def get_base_path() -> Path:
@@ -40,9 +45,32 @@ def get_tools_path() -> Path:
     return get_base_path() / "data" / "packages" / "installed" / "tools"
 
 
+def _scan_tool_json_mtimes() -> Dict[str, float]:
+    """현재 모든 tool.json의 mtime 스냅샷.
+
+    캐시 무효화 트리거 용도. 패키지 추가/삭제/수정 모두 감지.
+    """
+    tools_path = get_tools_path()
+    out: Dict[str, float] = {}
+    if not tools_path.exists():
+        return out
+    for pkg_dir in tools_path.iterdir():
+        if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
+            continue
+        tj = pkg_dir / "tool.json"
+        if tj.exists():
+            try:
+                out[pkg_dir.name] = tj.stat().st_mtime
+            except OSError:
+                pass
+    return out
+
+
 def build_tool_package_map(force: bool = False) -> Dict[str, str]:
     """
     설치된 도구 패키지에서 도구 이름 -> 패키지 ID 매핑 구축
+
+    tool.json 변경 시 자동 무효화 (mtime 스냅샷 비교).
 
     Args:
         force: True면 캐시 무시하고 재구축
@@ -50,10 +78,14 @@ def build_tool_package_map(force: bool = False) -> Dict[str, str]:
     Returns:
         도구 이름 -> 패키지 ID 매핑
     """
-    global _tool_to_package_map
+    global _tool_to_package_map, _tool_json_mtimes
 
     if _tool_to_package_map and not force:
-        return _tool_to_package_map
+        # 캐시가 있어도 tool.json 변경이 있으면 자동 무효화.
+        cur_mtimes = _scan_tool_json_mtimes()
+        if cur_mtimes == _tool_json_mtimes:
+            return _tool_to_package_map
+        print(f"[도구 매핑] tool.json 변경 감지 — 캐시 재구축")
 
     tools_path = get_tools_path()
     if not tools_path.exists():
@@ -75,6 +107,8 @@ def build_tool_package_map(force: bool = False) -> Dict[str, str]:
         except Exception as e:
             print(f"[도구 매핑 실패] {pkg_dir.name}: {e}")
 
+    # mtime 스냅샷 갱신 (다음 호출에서 변화 감지용)
+    _tool_json_mtimes = _scan_tool_json_mtimes()
     return _tool_to_package_map
 
 
@@ -286,10 +320,15 @@ def load_agent_tools(project_path: str, agent_id: str = None) -> List[Dict]:
     Returns:
         도구 정의 리스트
     """
-    global _all_tools_cache, _all_tools_cache_time
+    global _all_tools_cache, _all_tools_cache_time, _all_tools_cache_mtimes
 
-    # 캐시가 유효하면 캐시 사용
-    if _all_tools_cache and time.time() - _all_tools_cache_time < _CACHE_TTL:
+    # 캐시 유효성 검사: TTL 내 + tool.json mtime 변화 없음 (2026-05-28 추가)
+    cache_fresh = (
+        _all_tools_cache
+        and time.time() - _all_tools_cache_time < _CACHE_TTL
+        and _scan_tool_json_mtimes() == _all_tools_cache_mtimes
+    )
+    if cache_fresh:
         all_tools = _all_tools_cache.copy()
     else:
         tools_path = get_tools_path()
@@ -310,9 +349,10 @@ def load_agent_tools(project_path: str, agent_id: str = None) -> List[Dict]:
                     except Exception as e:
                         print(f"[도구 스캔 실패] {pkg_dir.name}: {e}")
 
-        # 캐시 업데이트
+        # 캐시 업데이트 (mtime 스냅샷 동반 — tool.json 변경 시 자동 무효화)
         _all_tools_cache = all_tools.copy()
         _all_tools_cache_time = time.time()
+        _all_tools_cache_mtimes = _scan_tool_json_mtimes()
 
     # agents.yaml에서 에이전트별 allowed_tools 확인
     if agent_id and project_path:
@@ -529,12 +569,14 @@ def get_all_tool_names() -> List[str]:
 
 def clear_cache():
     """캐시 초기화 (테스트/리로드용)"""
-    global _tool_handlers_cache, _package_handlers_cache, _tool_to_package_map, _all_tools_cache, _all_tools_cache_time, _agents_yaml_cache, _guide_content_cache, _tool_guide_map, _tool_guide_map_built
+    global _tool_handlers_cache, _package_handlers_cache, _tool_to_package_map, _tool_json_mtimes, _all_tools_cache, _all_tools_cache_time, _all_tools_cache_mtimes, _agents_yaml_cache, _guide_content_cache, _tool_guide_map, _tool_guide_map_built
     _tool_handlers_cache.clear()
     _package_handlers_cache.clear()
     _tool_to_package_map.clear()
+    _tool_json_mtimes.clear()
     _all_tools_cache = []
     _all_tools_cache_time = 0
+    _all_tools_cache_mtimes.clear()
     _agents_yaml_cache.clear()
     _guide_content_cache.clear()
     _tool_guide_map.clear()

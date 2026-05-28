@@ -10,9 +10,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": { "type": "string", "description": "검색 키워드 (예: '인구', 'GDP')" },
-          "vw_cd": { "type": "string", "description": "서비스뷰 (기본: MT_ZTITLE)" },
-          "parent_list_id": { "type": "string", "description": "상위 목록 ID" }
+          "keyword": {
+            "type": "string",
+            "description": "검색 키워드 (예: '인구', 'GDP')"
+          },
+          "vw_cd": {
+            "type": "string",
+            "description": "서비스뷰 (기본: MT_ZTITLE)"
+          },
+          "parent_list_id": {
+            "type": "string",
+            "description": "상위 목록 ID"
+          }
         }
       }
     },
@@ -22,17 +31,47 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "org_id": { "type": "string", "description": "기관 ID (예: '101'=통계청)" },
-          "tbl_id": { "type": "string", "description": "통계표 ID" },
-          "itm_id": { "type": "string", "description": "항목 ID (기본 'ALL')" },
-          "obj_l1": { "type": "string", "description": "분류1 (기본 'ALL')" },
-          "obj_l2": { "type": "string", "description": "분류2 (기본 'ALL')" },
-          "obj_l3": { "type": "string", "description": "분류3 (기본 'ALL')" },
-          "prd_se": { "type": "string", "description": "주기 (Y/H/Q/M)" },
-          "start_prd_de": { "type": "string", "description": "시작 시점 (예: '2020')" },
-          "end_prd_de": { "type": "string", "description": "종료 시점" }
+          "org_id": {
+            "type": "string",
+            "description": "기관 ID (예: '101'=통계청)"
+          },
+          "tbl_id": {
+            "type": "string",
+            "description": "통계표 ID"
+          },
+          "itm_id": {
+            "type": "string",
+            "description": "항목 ID (기본 'ALL')"
+          },
+          "obj_l1": {
+            "type": "string",
+            "description": "분류1 (기본 'ALL')"
+          },
+          "obj_l2": {
+            "type": "string",
+            "description": "분류2 (기본 'ALL')"
+          },
+          "obj_l3": {
+            "type": "string",
+            "description": "분류3 (기본 'ALL')"
+          },
+          "prd_se": {
+            "type": "string",
+            "description": "주기 (Y/H/Q/M)"
+          },
+          "start_prd_de": {
+            "type": "string",
+            "description": "시작 시점 (예: '2020')"
+          },
+          "end_prd_de": {
+            "type": "string",
+            "description": "종료 시점"
+          }
         },
-        "required": ["org_id", "tbl_id"]
+        "required": [
+          "org_id",
+          "tbl_id"
+        ]
       }
     },
     {
@@ -41,10 +80,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "org_id": { "type": "string", "description": "기관 ID" },
-          "tbl_id": { "type": "string", "description": "통계표 ID" }
+          "org_id": {
+            "type": "string",
+            "description": "기관 ID"
+          },
+          "tbl_id": {
+            "type": "string",
+            "description": "통계표 ID"
+          }
         },
-        "required": ["org_id", "tbl_id"]
+        "required": [
+          "org_id",
+          "tbl_id"
+        ]
       }
     },
     {
@@ -53,10 +101,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": { "type": "string", "description": "검색 키워드" },
-          "count": { "type": "integer", "description": "결과 수 (기본 10, 최대 100)" }
+          "keyword": {
+            "type": "string",
+            "description": "검색 키워드"
+          },
+          "count": {
+            "type": "integer",
+            "description": "결과 수 (기본 10, 최대 100)"
+          }
         },
-        "required": ["keyword"]
+        "required": [
+          "keyword"
+        ]
       }
     },
     {
@@ -65,10 +121,33 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "indicator_id": { "type": "string", "description": "지표 ID (없으면 전체 목록)" },
-          "start_prd_de": { "type": "string", "description": "시작 시점" },
-          "end_prd_de": { "type": "string", "description": "종료 시점" }
+          "indicator_id": {
+            "type": "string",
+            "description": "지표 ID (없으면 전체 목록)"
+          },
+          "start_prd_de": {
+            "type": "string",
+            "description": "시작 시점"
+          },
+          "end_prd_de": {
+            "type": "string",
+            "description": "종료 시점"
+          }
         }
+      }
+    },
+    {
+      "name": "kosis_lookup",
+      "description": "통계청 KOSIS 국가통계 검색·조회. query는 통합 검색, indicator는 주요지표(GDP·물가·인구·고용 등), org_id+tbl_id는 특정 통계표 데이터(info=true면 메타).\n\n파라미터: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
       }
     }
   ]

@@ -5,6 +5,28 @@
   "version": "1.0.0",
   "tools": [
     {
+      "name": "legal_lookup",
+      "description": "대한민국 법률 정보 통합 조회 (국가법령정보센터 law.go.kr). query를 주면 검색, id를 주면 상세. target으로 종류 지정(law/prec/admrul/ordin/exp/detc/trty/eng_law/law_term/law_form).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색어 (id 없을 때 사용)"
+          },
+          "id": {
+            "type": "string",
+            "description": "상세 조회용 항목 ID (query 없을 때 사용)"
+          },
+          "target": {
+            "type": "string",
+            "description": "대상 (law/prec/admrul/ordin/exp/detc/trty/eng_law/law_term/law_form)",
+            "default": "law"
+          }
+        }
+      }
+    },
+    {
       "name": "search_legal_info",
       "description": "대한민국 통합 법률 정보 검색. 법령, 판례뿐만 아니라 행정규칙, 자치법규, 법령해석, 헌재결정례 등을 모두 검색할 수 있습니다.\n\n데이터 형식: {query: \"검색어\", target: \"대상\"}\n\n대상(target) 옵션:\n- law: 법령 (기본값)\n- prec: 판례\n- admrul: 행정규칙\n- ordin: 자치법규\n- exp: 법령해석\n- detc: 헌재결정\n- trty: 조약\n- eng_law: 영문법령\n- law_term: 법률용어\n- law_form: 법률서식",
       "input_schema": {

@@ -412,6 +412,20 @@
           "path"
         ]
       }
+    },
+    {
+      "name": "read_op",
+      "description": "파일 읽기 — 텍스트/PDF/DOCX 통합. 확장자로 자동 인식(format 명시도 가능).\n\n파라미터: 읽을 파일 경로. format 옵션 (text/pdf/docx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). 스캔 PDF는 별도 OCR 필요.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
+      }
     }
   ]
 }

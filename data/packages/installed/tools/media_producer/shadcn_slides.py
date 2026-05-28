@@ -871,6 +871,13 @@ SLIDE_BASE_TEMPLATE = """
 
         /* === Design System CSS (적용된 디자인 시스템의 비주얼 정체성) === */
         {{design_system_css|safe}}
+
+        /* PNG 캡처는 정적이므로 animate.css 지연/지속시간을 0으로 만들어 최종 상태로 즉시 도달 */
+        .animate__animated {
+            animation-delay: 0s !important;
+            animation-duration: 0s !important;
+            animation-fill-mode: both !important;
+        }
     </style>
     <script>
         tailwind.config = {
@@ -1706,9 +1713,58 @@ def _build_style_overrides_css(overrides) -> str:
     return "\n".join(parts)
 
 
+_LEGACY_SLIDE_THEMES = {
+    "modern", "tech", "business", "title_bold", "dark_tech",
+    "glassmorphism", "gradient_modern", "split_asymmetric",
+    "minimal_white", "image_fullscreen", "data_card", "tailwind",
+}
+
+
+def _adapt_legacy_slide_input(tool_input: dict) -> dict:
+    """옛 [engines:slide] 입력을 [engines:slide_shadcn] 입력으로 호환 변환.
+
+    옛 slide dict: {title, body, theme(modern/tech/...), image_path, bg_color, ...}
+    새 slide dict: {layout, title, body, ...}
+
+    layout이 없는 슬라이드에 한해 image_path/body 유무 기반으로 기본 layout 주입.
+    옛 theme(slide_shadcn의 theme와 의미 다름)과 색상 키들은 제거.
+    """
+    adapted = dict(tool_input)
+    slides = adapted.get("slides")
+    if not isinstance(slides, list):
+        return adapted
+    new_slides = []
+    for s in slides:
+        if not isinstance(s, dict):
+            new_slides.append(s)
+            continue
+        s = dict(s)
+        if "layout" not in s:
+            if s.get("image_path") or s.get("image_data"):
+                s["layout"] = "content_image"
+            elif s.get("body"):
+                s["layout"] = "lecture_body"
+            else:
+                s["layout"] = "hero"
+        for legacy_key in ("theme", "bg_color", "text_color", "accent_color"):
+            s.pop(legacy_key, None)
+        new_slides.append(s)
+    adapted["slides"] = new_slides
+    if adapted.get("theme") in _LEGACY_SLIDE_THEMES:
+        adapted.pop("theme")
+    return adapted
+
+
 def create_shadcn_slides(tool_input: dict, output_base: str) -> str:
     """
-    shadcn 스타일 슬라이드 생성
+    shadcn 스타일 슬라이드 생성"""
+    tool_input = _adapt_legacy_slide_input(tool_input)
+    return _create_shadcn_slides_impl(tool_input, output_base)
+
+
+def _create_shadcn_slides_impl(tool_input: dict, output_base: str) -> str:
+    """
+    shadcn 스타일 슬라이드 생성 (실제 구현)
 
     Args:
         tool_input: {

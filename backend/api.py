@@ -461,10 +461,15 @@ if __name__ == "__main__":
     # 프로덕션(패키징)에서는 reload 비활성화 (파일 감시자 오류 방지)
     is_production = os.environ.get("INDIEBIZ_PRODUCTION", "").lower() in ("1", "true")
 
+    # reload_delay: 시스템 AI가 backend/*.py를 여러 번 빠르게 편집할 때 (예:
+    # 패치 → 검증 → 추가 패치) 매 편집마다 reload되어 WebSocket이 끊기고 자기
+    # 컨텍스트를 잃는 자해 패턴을 방지. 2초 디바운스로 일반적인 연쇄 편집은
+    # 한 번의 reload로 묶이게 한다. (uvicorn 기본 0.25초 → 2.0초)
     uvicorn.run(
         "api:app",
         host="127.0.0.1",
         port=port,
         reload=not is_production,
+        reload_delay=2.0,
         log_level="warning"
     )

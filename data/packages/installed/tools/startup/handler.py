@@ -14,6 +14,21 @@ def execute(tool_input: dict, context):
     """IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
 
+    if tool_name == "startup_search":
+        query = tool_input.get("query") or tool_input.get("keyword", "")
+        source = tool_input.get("source", "all")
+        count = tool_input.get("count", 10)
+        if source == "kstartup":
+            tool = load_module("tool_kstartup")
+            return tool.search_kstartup(query, count)
+        elif source == "mss":
+            tool = load_module("tool_mss_biz")
+            return tool.search_mss_biz(query, count)
+        else:
+            ks = load_module("tool_kstartup").search_kstartup(query, count)
+            mss = load_module("tool_mss_biz").search_mss_biz(query, count)
+            return {"kstartup": ks, "mss": mss}
+
     if tool_name == "search_kstartup":
         tool = load_module("tool_kstartup")
         keyword = tool_input.get("keyword", "")

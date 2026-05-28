@@ -10,8 +10,17 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": { "type": "string", "description": "검색 키워드 (예: 예비창업, 기술창업)" },
-          "count": { "type": "integer", "default": 10, "minimum": 1, "maximum": 50, "description": "조회 건수 (기본 10)" }
+          "keyword": {
+            "type": "string",
+            "description": "검색 키워드 (예: 예비창업, 기술창업)"
+          },
+          "count": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 50,
+            "description": "조회 건수 (기본 10)"
+          }
         }
       }
     },
@@ -21,9 +30,32 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": { "type": "string", "description": "검색 키워드 (예: 창업, R&D, 수출)" },
-          "count": { "type": "integer", "default": 10, "minimum": 1, "maximum": 50, "description": "조회 건수 (기본 10)" }
+          "keyword": {
+            "type": "string",
+            "description": "검색 키워드 (예: 창업, R&D, 수출)"
+          },
+          "count": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 50,
+            "description": "조회 건수 (기본 10)"
+          }
         }
+      }
+    },
+    {
+      "name": "startup_search",
+      "description": "정부 창업/중소기업 지원사업 공고 검색. 기본은 K-Startup(창업진흥원) + 중기부(MSS) 통합. source로 한쪽만 가능.\n\n파라미터: query(검색 키워드, 예: 예비창업패키지·R&D·정책자금). source 옵션 — all(기본, 둘 다 통합), kstartup(K-Startup만, 창업 특화), mss(중기부만, R&D/수출 포함). count(기본 10, 최대 50).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
       }
     }
   ]

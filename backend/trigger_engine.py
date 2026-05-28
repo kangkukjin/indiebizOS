@@ -415,6 +415,13 @@ def execute_trigger(action: str, params: dict,
     Returns:
         결과 dict
     """
+    # 단일 액션 패턴: trigger {op} 통합 액션. op로 다시 분기.
+    if action == "trigger":
+        op = (params.get("op") or "").strip()
+        if not op:
+            return {"error": "op 파라미터가 필요합니다. (list|get|create|update|delete|enable|disable|status|history)"}
+        action = op
+
     trigger_id = params.get("trigger_id", "")
 
     if action in ("list", "list_triggers", "list_events"):

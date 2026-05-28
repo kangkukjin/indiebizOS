@@ -93,6 +93,27 @@ def execute(tool_input: dict, context) -> str:
     tool_name = context.tool_name
     project_path = context.project_path
     agent_id = context.agent_id
+
+    # 단일 액션 패턴: read {format} 통합 액션. format 명시 또는 확장자 자동 인식.
+    if tool_name == "read_op":
+        fmt = (tool_input.get("format") or "").strip().lower()
+        if not fmt:
+            raw = tool_input.get("path") or ""
+            ext = os.path.splitext(raw)[1].lower().lstrip(".")
+            if ext == "pdf":
+                fmt = "pdf"
+            elif ext in ("docx", "doc"):
+                fmt = "docx"
+            else:
+                fmt = "text"
+        # 분기 후 tool_name 재할당해 기존 코드로 위임
+        if fmt == "pdf":
+            tool_name = "read_pdf"
+        elif fmt == "docx":
+            tool_name = "read_docx"
+        else:
+            tool_name = "read_file"
+
     try:
         if tool_name == "read_file":
             raw_path = _get_path(tool_input)

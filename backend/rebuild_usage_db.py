@@ -319,10 +319,10 @@ EXAMPLES = [
     # =========================================================================
 
     # 브라우저
-    ("이 사이트 Playwright로 열어", '[limbs:browser_navigate]{url: "https://google.com"}', "limbs", "single", 1, "limbs,browser_navigate"),
-    ("페이지 스냅샷 찍어", '[limbs:browser_snapshot]', "limbs", "single", 1, "limbs,snapshot"),
+    ("이 사이트 Playwright로 열어", '[limbs:navigate]{url: "https://google.com"}', "limbs", "single", 1, "limbs,browser_navigate"),
+    ("페이지 스냅샷 찍어", '[limbs:snapshot]', "limbs", "single", 1, "limbs,snapshot"),
     ("스크린샷 찍어줘", '[limbs:screenshot]', "limbs", "single", 1, "limbs,screenshot"),
-    ("페이지 내용 추출해", '[limbs:browser_content]', "limbs", "single", 1, "limbs,browser_content"),
+    ("페이지 내용 추출해", '[limbs:content]', "limbs", "single", 1, "limbs,browser_content"),
     ("JavaScript 실행해줘", '[limbs:evaluate]{expression: "document.title"}', "limbs", "single", 1, "limbs,evaluate"),
 
     # 안드로이드

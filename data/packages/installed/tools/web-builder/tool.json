@@ -40,7 +40,10 @@
             "description": "사이트 설명"
           }
         },
-        "required": ["name", "local_path"]
+        "required": [
+          "name",
+          "local_path"
+        ]
       }
     },
     {
@@ -54,7 +57,9 @@
             "description": "삭제할 사이트 ID"
           }
         },
-        "required": ["site_id"]
+        "required": [
+          "site_id"
+        ]
       }
     },
     {
@@ -88,7 +93,9 @@
             "description": "새 설명"
           }
         },
-        "required": ["site_id"]
+        "required": [
+          "site_id"
+        ]
       }
     },
     {
@@ -467,6 +474,62 @@
         "required": [
           "component"
         ]
+      }
+    },
+    {
+      "name": "web_site",
+      "description": "사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.\n\n파라미터: op로 분기 (기본 list).\n- list: 파라미터 없음. 등록된 사이트 전체 반환.\n- register: name(필수) + local_path(필수) + repo_url/deploy_url/description(선택).\n- remove: site_id(필수).\n- update: site_id(필수) + 변경할 필드(name/local_path/repo_url/deploy_url/description).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "web_catalog",
+      "description": "웹빌더 카탈로그 조회. kind: components(UI 컴포넌트) / sections(섹션 템플릿).\n\n파라미터: kind로 분기.\n- components: UI 컴포넌트(button/card/dialog 등) 카탈로그. category 옵션.\n- sections: 섹션 템플릿(hero/features/cta 등) 카탈로그. category 옵션.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "web_create",
+      "description": "웹 프로젝트/페이지 생성. target: site(새 프로젝트 디렉토리) / page(기존 프로젝트에 페이지 추가). 가이드 web_builder.md.\n\n파라미터: target으로 분기.\n- site: name(필수) + template(blank/landing/portfolio/blog/business 중 선택) + features.\n- page: project_path(필수) + page_name + sections 배열 + metadata.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "web_component",
+      "description": "웹 컴포넌트 가져오기/추가. op: fetch(외부 CDN/레지스트리 다운로드) / add(shadcn/ui CLI로 프로젝트에 설치).\n\n파라미터: op로 분기.\n- fetch: component(이름 또는 URL, 필수) + style + project_path + output_format(code/file).\n- add: component(필수, 예 button/card/dialog) + project_path. shadcn/ui CLI로 설치.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조"
+          }
+        },
+        "additionalProperties": true
       }
     }
   ]

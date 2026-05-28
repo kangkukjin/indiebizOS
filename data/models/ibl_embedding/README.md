@@ -5,35 +5,35 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:10419
+- dataset_size:10282
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: CCTV 소스 리스트
+- source_sentence: 강의 슬라이드 두 번째 단계
   sentences:
-  - '[sense:collect_sites]'
-  - CCTV 소스 뭐가 있어
-  - '[self:memory_search]'
-- source_sentence: 김철수가 누구야
+  - 웹캠 데이터 출처 확인
+  - 슬라이드별 labels와 image_prompt 등록
+  - 페이지 상태 캡처해
+- source_sentence: 일일리포트 실행해줘해
   sentences:
-  - 이거 클릭해
-  - 교향곡 하나 틀어줘
-  - 특정 이웃의 상세 정보 조회
-- source_sentence: 이전 결과를 거부하고 특정 문제(문자 깨짐)를 해결하여 다시 돌려줘
+  - '[limbs:os_open]'
+  - 삼성전자 정보
+  - 일일리포트 실행해
+- source_sentence: 신촌 카페 검색해줘해봐
   sentences:
-  - '[sense:search_arxiv] >> [self:file]'
-  - '[self:discover] >> [engines:image_gemini]'
-  - 구글 웹사이트 켜줘
-- source_sentence: 최근에 뭐 물어봤었지
+  - 워크플로우 설정 보여줘
+  - CCTV 화면 저장해줘
+  - '[sense:search_local]'
+- source_sentence: 구글 찾아봐 좀 할래
   sentences:
-  - 이전 대화 좀 보자
-  - 펄스 데이터 보여
-  - 페이지 생성 (섹션 조합)
-- source_sentence: 세종문화회관 상세 정보
+  - 작업흐름 실행을 다른 팀에 맡겨
+  - '[limbs:snapshot] >> [limbs:click]'
+  - 브라우저에서 이거 띄워줘
+- source_sentence: 네트워크 요청 로그
   sentences:
-  - 이 HTML 코드 미리보기 보여줘
-  - 이 공연장 어디에 있어
-  - 여행 카테고리 글 뭐가 있어
+  - 브라우저에서 이거 띄워줘
+  - '[engines:web_deploy] >> [engines:web_live_check]'
+  - 콘솔 로그 봐봐
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -46,7 +46,7 @@ This is a [sentence-transformers](https://www.SBERT.net) model finetuned from [j
 
 ### Model Description
 - **Model Type:** Sentence Transformer
-- **Base model:** [jhgan/ko-sroberta-multitask](https://huggingface.co/jhgan/ko-sroberta-multitask) <!-- at revision ab957ae6a91e99c4cad36d52063a2a9cf1bf4419 -->
+- **Base model:** [jhgan/ko-sroberta-multitask](https://huggingface.co/jhgan/ko-sroberta-multitask) <!-- at revision 1050bd4e2ca90c0b9b62f0c1fbd83edc85ba8483 -->
 - **Maximum Sequence Length:** 128 tokens
 - **Output Dimensionality:** 768 dimensions
 - **Similarity Function:** Cosine Similarity
@@ -87,9 +87,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '세종문화회관 상세 정보',
-    '이 공연장 어디에 있어',
-    '여행 카테고리 글 뭐가 있어',
+    '네트워크 요청 로그',
+    '콘솔 로그 봐봐',
+    '[engines:web_deploy] >> [engines:web_live_check]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -98,9 +98,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.7927, -0.0714],
-#         [ 0.7927,  1.0000, -0.0960],
-#         [-0.0714, -0.0960,  1.0000]])
+# tensor([[1.0000, 0.9431, 0.1784],
+#         [0.9431, 1.0000, 0.1944],
+#         [0.1784, 0.1944, 1.0000]])
 ```
 
 <!--
@@ -145,19 +145,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 10,419 training samples
+* Size: 10,282 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
   |         | sentence_0                                                                       | sentence_1                                                                        |
   |:--------|:---------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type    | string                                                                           | string                                                                            |
-  | details | <ul><li>min: 4 tokens</li><li>mean: 8.74 tokens</li><li>max: 47 tokens</li></ul> | <ul><li>min: 4 tokens</li><li>mean: 11.02 tokens</li><li>max: 64 tokens</li></ul> |
+  | details | <ul><li>min: 3 tokens</li><li>mean: 9.19 tokens</li><li>max: 63 tokens</li></ul> | <ul><li>min: 4 tokens</li><li>mean: 12.84 tokens</li><li>max: 69 tokens</li></ul> |
 * Samples:
-  | sentence_0                  | sentence_1                      |
-  |:----------------------------|:--------------------------------|
-  | <code>문서 폴더에 뭐 있어</code>    | <code>Documents 안에 뭐 있지</code>  |
-  | <code>만들어둔 자동화 리스트</code>   | <code>만들어둔 자동화 목록</code>        |
-  | <code>삼성전자 기업 개요 알려줘</code> | <code>[sense:kr_company]</code> |
+  | sentence_0                          | sentence_1                       |
+  |:------------------------------------|:---------------------------------|
+  | <code>Pandas Context7 ID 알려줘</code> | <code>라이브러리 이름으로 ID — vue</code> |
+  | <code>이 창 닫아</code>                 | <code>다른 탭으로 가</code>            |
+  | <code>끄자</code>                     | <code>아이유 뭐 좋은 거 재생해줘</code>     |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -281,55 +281,30 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.1919 | 500  | 0.2845        |
-| 0.3839 | 1000 | 0.1596        |
-| 0.5758 | 1500 | 0.0991        |
-| 0.7678 | 2000 | 0.0776        |
-| 0.9597 | 2500 | 0.0606        |
-| 0.1919 | 500  | 0.0532        |
-| 0.3839 | 1000 | 0.0631        |
-| 0.5758 | 1500 | 0.0371        |
-| 0.7678 | 2000 | 0.0487        |
-| 0.9597 | 2500 | 0.0463        |
-| 0.1919 | 500  | 0.0174        |
-| 0.3839 | 1000 | 0.0196        |
-| 0.5758 | 1500 | 0.0126        |
-| 0.7678 | 2000 | 0.0171        |
-| 0.9597 | 2500 | 0.0197        |
-| 0.1919 | 500  | 0.0082        |
-| 0.3839 | 1000 | 0.0167        |
-| 0.5758 | 1500 | 0.0127        |
-| 0.7678 | 2000 | 0.0146        |
-| 0.9597 | 2500 | 0.0175        |
-| 0.1919 | 500  | 0.0087        |
-| 0.3839 | 1000 | 0.0081        |
-| 0.5758 | 1500 | 0.0035        |
-| 0.7678 | 2000 | 0.0202        |
-| 0.9597 | 2500 | 0.0124        |
-| 0.1919 | 500  | 0.0040        |
-| 0.3839 | 1000 | 0.0042        |
-| 0.5758 | 1500 | 0.0015        |
-| 0.7678 | 2000 | 0.0046        |
-| 0.9597 | 2500 | 0.0091        |
-| 0.1919 | 500  | 0.0011        |
-| 0.3839 | 1000 | 0.0017        |
-| 0.5758 | 1500 | 0.0014        |
-| 0.7678 | 2000 | 0.0028        |
-| 0.9597 | 2500 | 0.0059        |
-| 0.1919 | 500  | 0.0012        |
-| 0.3839 | 1000 | 0.0028        |
-| 0.5758 | 1500 | 0.0005        |
-| 0.7678 | 2000 | 0.0037        |
-| 0.9597 | 2500 | 0.0071        |
-| 0.1919 | 500  | 0.0008        |
-| 0.3839 | 1000 | 0.0070        |
-| 0.5758 | 1500 | 0.0024        |
-| 0.7678 | 2000 | 0.0011        |
-| 0.9597 | 2500 | 0.0059        |
+| 0.1945 | 500  | 0.3633        |
+| 0.3890 | 1000 | 0.2159        |
+| 0.5834 | 1500 | 0.1082        |
+| 0.7779 | 2000 | 0.0907        |
+| 0.9724 | 2500 | 0.0754        |
+| 0.1945 | 500  | 0.0841        |
+| 0.3890 | 1000 | 0.0856        |
+| 0.5834 | 1500 | 0.0531        |
+| 0.7779 | 2000 | 0.0598        |
+| 0.9724 | 2500 | 0.0524        |
+| 0.1945 | 500  | 0.0286        |
+| 0.3890 | 1000 | 0.0247        |
+| 0.5834 | 1500 | 0.0183        |
+| 0.7779 | 2000 | 0.0276        |
+| 0.9724 | 2500 | 0.0256        |
+| 0.1945 | 500  | 0.0168        |
+| 0.3890 | 1000 | 0.0135        |
+| 0.5834 | 1500 | 0.0168        |
+| 0.7779 | 2000 | 0.0173        |
+| 0.9724 | 2500 | 0.0203        |
 
 
 ### Framework Versions
-- Python: 3.14.3
+- Python: 3.14.5
 - Sentence Transformers: 5.2.2
 - Transformers: 5.1.0
 - PyTorch: 2.10.0

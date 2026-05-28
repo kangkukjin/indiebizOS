@@ -127,9 +127,16 @@ def execute_channel_action(action: str, params: dict,
     if "error" in identity:
         return {"success": False, "channel": channel_type, "error": identity["error"]}
 
+    # IBL 액션명(channel_send/read/search)을 내부 키(send/read/search)로 정규화.
+    if action.startswith("channel_"):
+        action = action[len("channel_"):]
+
     if action == "send":
         return _channel_send(channel_type, params, identity)
     elif action == "read":
+        # query 있으면 검색으로 자동 위임 (read/search 통합).
+        if params.get("query"):
+            return _channel_search(channel_type, params, identity)
         return _channel_read(channel_type, params, identity)
     elif action == "search":
         return _channel_search(channel_type, params, identity)

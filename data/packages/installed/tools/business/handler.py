@@ -19,6 +19,13 @@ def execute(tool_input: dict, context) -> str:
         from business_manager import BusinessManager
         bm = BusinessManager()
 
+        # 통합 입구: neighbor_id/name 있으면 단건 상세, 없으면 목록.
+        if tool_name == "neighbors_op":
+            if tool_input.get("neighbor_id") or tool_input.get("name"):
+                tool_name = "get_neighbor_detail"
+            else:
+                tool_name = "get_neighbors"
+
         if tool_name == "get_neighbors":
             # 이웃 목록 조회
             search = tool_input.get("search")

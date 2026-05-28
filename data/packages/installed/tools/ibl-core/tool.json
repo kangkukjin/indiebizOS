@@ -480,13 +480,13 @@
     },
     {
       "name": "ibl_realestate",
-      "description": "부동산 노드. 아파트/주택 매매·전월세 실거래가 조회 및 상권 분석을 통합합니다 (국토교통부, 소상공인진흥공단).\n\n## 액션\n- apt_trade: 아파트 매매 실거래가 (target=지역코드, params: start_month, end_month)\n- apt_rent: 아파트 전월세 실거래가 (target=지역코드, params: start_month, end_month)\n- house_trade: 주택 매매 실거래가 (target=지역코드)\n- house_rent: 주택 전월세 실거래가 (target=지역코드)\n- regions: 지역코드 조회 (target=시도명)\n- commercial: 상권 분석 (params: lat, lng, radius, indsLclsCd)\n\n## 지역코드: 5자리 (11680=강남, 11305=강북 등)\n\n## 사용 예시\n강남 아파트 매매: action='apt_trade', target='11680', params={'start_month': '202501'}\n지역코드 조회: action='regions', target='서울'\n상권 분석: action='commercial', params={'lat': 37.498, 'lng': 127.027, 'radius': 500}",
+      "description": "부동산 노드. 부동산 실거래가 통합 조회 및 상권 분석 (국토교통부, 소상공인진흥공단).\n\n## 액션\n- realty: 실거래가 조회 (target=지역코드, params: type=apt|house, deal=trade|rent, start_month, end_month)\n- regions: 지역코드 조회 (target=시도명)\n- commercial: 상권 분석 (params: lat, lng, radius, indsLclsCd)\n\n## 지역코드: 5자리 (11680=강남, 11305=강북 등)\n\n## 사용 예시\n강남 아파트 매매: action='realty', target='11680', params={'type': 'apt', 'deal': 'trade', 'start_month': '202501'}\n주택 전월세: action='realty', target='11680', params={'type': 'house', 'deal': 'rent'}\n지역코드 조회: action='regions', target='서울'\n상권 분석: action='commercial', params={'lat': 37.498, 'lng': 127.027, 'radius': 500}",
       "input_schema": {
         "type": "object",
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["apt_trade", "apt_rent", "house_trade", "house_rent", "regions", "commercial"],
+            "enum": ["realty", "regions", "commercial"],
             "description": "실행할 액션"
           },
           "target": {
@@ -526,13 +526,13 @@
     },
     {
       "name": "ibl_culture",
-      "description": "문화/예술 노드. 공연(KOPIS), 도서(도서관정보나루), 전시(KCISA) 정보를 통합 조회합니다.\n\n## 액션\n- performance: 공연 검색 (target=키워드, params: genre, region)\n- performance_detail: 공연 상세 (target=공연ID)\n- box_office: 인기 공연 순위 (params: period=day/week/month)\n- venue: 공연장 검색 (target=공연장명)\n- festival: 축제/행사 검색 (params: stdate, eddate)\n- book: 도서 검색 (target=제목/저자/출판사)\n- book_detail: 도서 상세 (target=ISBN13)\n- popular_books: 인기 대출 도서 (params: gender, age, region)\n- trending_books: 대출 급증 도서\n- library: 도서관 검색 (target=도서관명)\n- exhibit: 전시/문화행사 검색 (target=키워드)\n- exhibit_detail: 전시 상세 (target=행사seq)\n\n## 사용 예시\n뮤지컬 검색: action='performance', target='뮤지컬'\n도서 검색: action='book', target='인공지능'\n인기 도서: action='popular_books'\n전시 검색: action='exhibit', target='현대미술'",
+      "description": "문화/예술 노드. 공연(KOPIS), 도서(도서관정보나루), 전시(KCISA) 정보를 통합 조회합니다.\n\n## 액션\n- performance: 공연 검색 (target=키워드, params: genre, region)\n- performance_detail: 공연 상세 (target=공연ID)\n- box_office: 인기 공연 순위 (params: period=day/week/month)\n- venue: 공연장 검색 (target=공연장명)\n- festival: 축제/행사 검색 (params: stdate, eddate)\n- book: 도서 검색·조회 (target=제목/저자/출판사 또는 ISBN. params: isbn, detail=true로 상세+대출통계)\n- popular_books: 인기 대출 도서 (params: gender, age, region)\n- trending_books: 대출 급증 도서\n- library: 도서관 검색 (target=도서관명)\n- exhibit: 전시/문화행사 검색 (target=키워드)\n- exhibit_detail: 전시 상세 (target=행사seq)\n\n## 사용 예시\n뮤지컬 검색: action='performance', target='뮤지컬'\n도서 검색: action='book', target='인공지능'\n인기 도서: action='popular_books'\n전시 검색: action='exhibit', target='현대미술'",
       "input_schema": {
         "type": "object",
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["performance", "performance_detail", "box_office", "venue", "festival", "book", "book_detail", "popular_books", "trending_books", "library", "exhibit", "exhibit_detail", "performance_search", "genres", "regions"],
+            "enum": ["performance", "performance_detail", "box_office", "venue", "festival", "book", "popular_books", "trending_books", "library", "exhibit", "exhibit_detail", "performance_search", "genres", "regions"],
             "description": "실행할 액션"
           },
           "target": {
@@ -595,13 +595,13 @@
     },
     {
       "name": "ibl_study",
-      "description": "학술/리서치 노드. 다양한 학술 DB와 데이터 소스에서 논문, 도서, 통계를 검색합니다.\n\n## 액션\n- search_openalex: OpenAlex 논문 검색 (인용수/OA 필터)\n- search_arxiv: arXiv 프리프린트 검색\n- download_arxiv: arXiv PDF 다운로드 (target=ID)\n- search_semantic: Semantic Scholar 검색\n- search_scholar: Google Scholar 검색\n- search_pubmed: PubMed 생의학 논문 검색\n- download_pubmed: PMC 논문 PDF 다운로드 (target=PMC ID)\n- pew_research: Pew Research 여론조사 데이터\n- search_guardian: Guardian 뉴스 아카이브\n- world_bank: 세계은행 경제지표 (target=지표코드)\n- search_books: Google Books 도서 검색\n\n## 사용 예시\nAI 논문: action='search_arxiv', target='transformer attention mechanism'\n경제지표: action='world_bank', target='NY.GDP.MKTP.CD', params={'country': 'KR'}",
+      "description": "학술/리서치 노드. 다양한 학술 DB와 데이터 소스에서 논문, 도서, 통계를 검색합니다.\n\n## 액션\n- search_openalex: OpenAlex 논문 검색 (인용수/OA 필터)\n- search_arxiv: arXiv 프리프린트 검색\n- download_arxiv: arXiv PDF 다운로드 (target=ID)\n- search_semantic: Semantic Scholar 검색\n- search_pubmed: PubMed 생의학 논문 검색\n- download_pubmed: PMC 논문 PDF 다운로드 (target=PMC ID)\n- pew_research: Pew Research 여론조사 데이터\n- search_guardian: Guardian 뉴스 아카이브\n- world_bank: 세계은행 경제지표 (target=지표코드)\n- search_books: Google Books 도서 검색\n\n## 사용 예시\nAI 논문: action='search_arxiv', target='transformer attention mechanism'\n경제지표: action='world_bank', target='NY.GDP.MKTP.CD', params={'country': 'KR'}",
       "input_schema": {
         "type": "object",
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["search_openalex", "search_arxiv", "download_arxiv", "search_semantic", "search_scholar", "search_pubmed", "download_pubmed", "pew_research", "search_guardian", "world_bank", "search_books"],
+            "enum": ["search_openalex", "search_arxiv", "download_arxiv", "search_semantic", "search_pubmed", "download_pubmed", "pew_research", "search_guardian", "world_bank", "search_books"],
             "description": "실행할 액션"
           },
           "target": {

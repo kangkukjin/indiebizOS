@@ -310,6 +310,16 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         from system_tools import execute_send_notification
         return execute_send_notification(dict(params), project_path)
 
+    elif func_name == "delegate":
+        return _delegate_unified(params, project_path)
+
+    elif func_name == "agents":
+        agent_id = params.get("agent_id", "")
+        if agent_id:
+            return _agent_info(agent_id)
+        from system_ai_tools import _execute_list_project_agents
+        return _execute_list_project_agents(dict(params))
+
     elif func_name == "call_agent":
         from system_tools import execute_call_agent
         return execute_call_agent(dict(params), project_path)
@@ -376,8 +386,13 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         return {"ok": True, "file": file_path}
 
     elif func_name == "launcher_command":
-        # params.command에 실제 런처 명령이 들어옴 (open_project, open_system_ai 등)
+        # 신규: params.app ("project" 등) → "open_<app>" 합성
+        # 호환: params.command ("open_project" 등) 직접 지정도 허용
         launcher_action = params.get("command", "")
+        if not launcher_action:
+            app = params.get("app", "")
+            if app:
+                launcher_action = f"open_{app}"
         return _execute_launcher_command(launcher_action, params)
 
     elif func_name == "list_switches":
@@ -397,6 +412,30 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         runner = SwitchRunner(sm)
         result = runner.run_switch(switch_id)
         return {"success": True, "switch_id": switch_id, "result": result}
+
+    elif func_name == "switch_op":
+        # 단일 액션 패턴: switch {op: list|run}
+        op = (params.get("op") or "").strip()
+        if op == "list":
+            return _route_system("list_switches", params, project_path, agent_id=agent_id)
+        if op == "run":
+            return _route_system("run_switch", params, project_path, agent_id=agent_id)
+        return {"success": False, "error": "op 파라미터가 필요합니다. (list|run)"}
+
+    elif func_name == "goal_op":
+        # 단일 액션 패턴: goal {op: list|status|kill|log|attempts}
+        op = (params.get("op") or "").strip()
+        op_map = {
+            "list": "list_goals",
+            "status": "get_goal_status",
+            "kill": "kill_goal",
+            "log": "log_attempt",
+            "attempts": "get_attempts",
+        }
+        target_func = op_map.get(op)
+        if not target_func:
+            return {"success": False, "error": "op 파라미터가 필요합니다. (list|status|kill|log|attempts)"}
+        return _route_system(target_func, params, project_path, agent_id=agent_id)
 
     # World Pulse: 세계 상태 감각
     elif func_name in ("world_pulse", "world_trend", "world_refresh"):
@@ -640,6 +679,36 @@ def _search_guide(query: str, params: dict) -> Any:
                     pass
 
     return response
+
+
+def _delegate_unified(params: dict, project_path: str) -> Any:
+    """위임 통합 디스패처 — mode(async/sync/workflow) × scope(same/cross)."""
+    mode = (params.get("mode") or "async").lower()
+    scope = (params.get("scope") or "same").lower()
+
+    if scope == "cross":
+        from system_ai_tools import _execute_call_project_agent
+        agent_id_raw = params.get("agent_id", "")
+        if not agent_id_raw:
+            return {"error": "agent_id가 필요합니다. 예: '의료/내과'"}
+        # '프로젝트/에이전트' 자동 분리 (call_project_agent는 둘을 분리해서 받음)
+        if "project_id" not in params and "/" in str(agent_id_raw):
+            project_id, agent_id = str(agent_id_raw).split("/", 1)
+            call_input = {**params, "project_id": project_id, "agent_id": agent_id}
+        else:
+            call_input = dict(params)
+        return _execute_call_project_agent(call_input)
+
+    if mode == "sync":
+        return _agent_ask_sync(params.get("agent_id", ""), params, project_path)
+
+    if mode == "workflow":
+        return _delegate_workflow(params.get("agent_id", "") or params.get("workflow", ""),
+                                   params, project_path)
+
+    # 기본: async (같은 프로젝트 비동기 위임)
+    from system_tools import execute_call_agent
+    return execute_call_agent(dict(params), project_path)
 
 
 def _delegate_workflow(agent_id: str, params: dict, project_path: str) -> Any:

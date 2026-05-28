@@ -307,6 +307,66 @@ def list_scans() -> Dict:
     return {"success": True, "scans": result}
 
 
+def search_media(root_path: str, query: str = "",
+                 media_type: str = "all",
+                 start_date: Optional[str] = None,
+                 end_date: Optional[str] = None,
+                 limit: int = 20,
+                 sort_by: str = "taken_date DESC") -> Dict:
+    """파일명/카메라 모델 키워드 검색 (날짜·미디어 타입 필터).
+
+    2026-05-27 [self:photo]{op:"search"} 통합 액션용. 기존 driver(sqlite)의 _photo_search 로직을 photo_db에 내재화.
+    """
+    root_path = _normalize_path(root_path)
+
+    scans = _load_scans_json()
+    scan = None
+    for s in scans:
+        if _normalize_path(s.get("root_path", "")) == root_path:
+            scan = s
+            break
+    if not scan:
+        return {"success": False, "error": "스캔 데이터가 없습니다. 먼저 op=scan을 실행하세요."}
+
+    db_path = _get_db_path(scan["id"])
+    if not os.path.exists(db_path):
+        return {"success": False, "error": "스캔 DB가 없습니다."}
+
+    conn = _get_connection(scan["id"])
+    try:
+        sql = ("SELECT id, path, filename, media_type, taken_date, "
+               "gps_lat, gps_lon, camera_model, width, height, size "
+               "FROM media_files WHERE 1=1")
+        args: list = []
+
+        if query:
+            sql += " AND (filename LIKE ? OR camera_model LIKE ?)"
+            args.extend([f"%{query}%", f"%{query}%"])
+        if media_type in ("photo", "video"):
+            sql += " AND media_type = ?"
+            args.append(media_type)
+        if start_date:
+            sql += " AND COALESCE(taken_date, mtime) >= ?"
+            args.append(start_date)
+        if end_date:
+            sql += " AND COALESCE(taken_date, mtime) <= ?"
+            args.append(end_date)
+
+        sql += f" ORDER BY {sort_by} LIMIT ?"
+        args.append(limit)
+
+        rows = conn.execute(sql, args).fetchall()
+        items = [dict(r) for r in rows]
+        return {
+            "success": True,
+            "query": query,
+            "count": len(items),
+            "items": items,
+        }
+    finally:
+        conn.close()
+
+
 def get_gallery(root_path: str, page: int = 1, limit: int = 50,
                 media_type: Optional[str] = None, sort_by: str = "taken_date",
                 start_date: Optional[str] = None, end_date: Optional[str] = None) -> Dict:

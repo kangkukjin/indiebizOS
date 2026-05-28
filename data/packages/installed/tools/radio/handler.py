@@ -70,5 +70,35 @@ def execute(tool_input: dict, context):
         return radio.remove_radio_favorite(
             name=tool_input.get("name"),
         )
+    elif tool_name == "radio_op":
+        # 2026-05-27 limbs 라운드 2: [limbs:radio]{op} 단일 액션 디스패치
+        op = (tool_input.get("op") or "").strip() or "play"
+        if op == "play":
+            return radio.play_radio(
+                station_id=tool_input.get("station_id"),
+                stream_url=tool_input.get("stream_url"),
+                volume=tool_input.get("volume", 70),
+            )
+        elif op == "stop":
+            return radio.stop_radio()
+        else:
+            return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: play/stop"}
+    elif tool_name == "radio_favorite_op":
+        # 2026-05-27 단일 액션 통합: [limbs:radio_favorite]{op} → 내부 op 분기
+        op = (tool_input.get("op") or "").strip()
+        if op == "list":
+            return radio.get_radio_favorites()
+        elif op == "add":
+            return radio.save_radio_favorite(
+                station_id=tool_input.get("station_id"),
+                name=tool_input.get("name"),
+                stream_url=tool_input.get("stream_url"),
+            )
+        elif op == "remove":
+            return radio.remove_radio_favorite(
+                name=tool_input.get("name"),
+            )
+        else:
+            return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: list/add/remove"}
     else:
         raise ValueError(f"Unknown tool: {tool_name}")

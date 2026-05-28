@@ -22,18 +22,6 @@ nodes:
         - CCTV
         - 실시간
         - 영상보기
-      webcam:
-        description: 해외 웹캠 전용 검색 (Windy). 해외 도시/관광지 실시간 모습. 한국 CCTV 포함 통합 검색은 cctv_search
-          사용.
-        keywords:
-        - webcam
-        - 웹캠
-        - 해외
-        - windy
-        router: handler
-        tool: search_webcam
-        implementation: Windy Webcams API로 전세계 웹캠 검색. 한국 교통 CCTV는 포함 안 됨 → cctv_search
-          사용.
       webcam_nearby:
         description: 가까운 웹캠 찾기
         keywords:
@@ -43,33 +31,8 @@ nodes:
         router: handler
         tool: get_nearby_webcam
         implementation: Windy Webcams API로 좌표 근처 웹캠 검색
-      cctv_capture:
-        description: CCTV/웹캠 현재 화면 캡처 (이미지 저장, AI 분석용)
-        keywords:
-        - cctv
-        - 캡처
-        - 스크린샷
-        - capture
-        - 찍어
-        target_description: 영상/이미지 URL
-        router: handler
-        tool: capture_cctv
-        implementation: ffmpeg로 CCTV/웹캠 스트림에서 단일 프레임 캡처 후 PNG 저장
-        target_key: url
-      cctv_sources:
-        description: 사용 가능한 CCTV/웹캠 소스 및 상태 확인
-        group: cctv
-        category: list
-        router: handler
-        tool: list_cctv_sources
-        implementation: 등록된 CCTV/웹캠 소스 목록 조회 (로컬 설정 파일)
-        keywords:
-        - CCTV
-        - 소스
-        - 상태
       cctv_search:
-        description: 국내 CCTV + 해외 웹캠 통합 검색 (ITS+Windy). 한국 교통/도시 CCTV와 해외 웹캠을 동시 검색.
-          결과의 stream_tags를 응답에 포함하면 채팅창에서 스트리밍 재생. 해외만 보려면 webcam 사용.
+        description: 국내 CCTV + 해외 웹캠 통합 검색 (ITS+Windy). stream_tags 포함 시 채팅창 재생. 자세히 read_guide(query="cctv").
         keywords:
         - cctv
         - 교통
@@ -86,17 +49,6 @@ nodes:
         implementation: 국토부 ITS API(한국 CCTV) + Windy API(해외 웹캠) 통합 검색. 해외 전용은 webcam
           액션 사용.
         target_key: query
-      cctv_by_name:
-        description: CCTV 이름으로 검색 (ITS 국가교통정보센터)
-        group: cctv
-        category: search
-        router: handler
-        tool: get_cctv_by_name
-        implementation: ITS API에서 CCTV 이름/키워드로 직접 검색
-        target_key: keyword
-        keywords:
-        - cctv
-        - 이름검색
       cctv_nearby:
         description: 좌표 근처 CCTV 찾기 (lat/lng 필수, 모르면 cctv_search 사용)
         keywords:
@@ -141,3 +93,16 @@ nodes:
         tool: open_cctv
         implementation: CCTV HLS/RTSP 스트림 URL을 브라우저에서 재생
         target_key: name
+      cctv_capture:
+        description: CCTV/웹캠 현재 화면 캡처 (이미지 저장, AI 분석용).
+        keywords:
+        - cctv
+        - 캡처
+        - 스크린샷
+        - capture
+        - 찍어
+        target_description: 영상/이미지 URL
+        router: handler
+        tool: capture_cctv
+        implementation: ffmpeg로 CCTV/웹캠 스트림에서 단일 프레임 캡처 후 PNG 저장
+        target_key: url

@@ -459,7 +459,7 @@ def _execute_create_plan(params: dict, agent_id: str = None, project_path: str =
         if not agent_proj or not agent:
             errors.append(f"단계 {i}: agent_project_id와 agent_id는 필수입니다. "
                           f"(현재: project='{agent_proj}', agent='{agent}'). "
-                          f"[others:list_projects]로 프로젝트/에이전트 목록을 확인하세요.")
+                          f"[others:agents]로 프로젝트/에이전트 목록을 확인하세요.")
     if errors:
         return json.dumps({
             "success": False,
@@ -467,7 +467,7 @@ def _execute_create_plan(params: dict, agent_id: str = None, project_path: str =
             "details": errors,
             "hint": "각 step에 agent_project_id(프로젝트 ID)와 agent_id(에이전트 ID)를 반드시 지정하세요. "
                      "read_guide('작업계획서')로 가이드를 읽고, "
-                     "[others:list_projects]로 프로젝트/에이전트 목록을 확인하세요."
+                     "[others:agents]로 프로젝트/에이전트 목록을 확인하세요."
         }, ensure_ascii=False)
 
     # ── description 품질 검증 ──

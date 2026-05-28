@@ -15,8 +15,7 @@ nodes:
         implementation: yt-dlp로 유튜브 메타데이터 추출 (공식 API 불필요)
         target_key: url
       video_transcript:
-        description: 유튜브 ��영상 자막/스크립트 추출 (url 또는 video_id 사용 가능). 영상 요약이 목적이면 summarize_video를
-          쓰면 자막 추출+AI 요약+HTML+브라우저 열기를 한 번에 수행한다.
+        description: 유튜브 동영상 자막/스크립트 추출. 요약 목적이면 summarize_video 권장. 자세히 read_guide(query="자막").
         keywords:
         - youtube
         - 유튜브

@@ -19,7 +19,21 @@ def execute(tool_input: dict, context) -> str:
     agent_id = context.agent_id
 
     try:
-        # 에이전트 메모리 도구
+        # 통합 도구 (op 분기) — IBL 어휘에 노출
+        if tool_name == "memory_op":
+            import memory_db
+            op = (tool_input.get("op") or "").strip()
+            if op == "save":
+                return _memory_save(memory_db, tool_input, project_path, agent_id)
+            if op == "search":
+                return _memory_search(memory_db, tool_input, project_path, agent_id)
+            if op == "read":
+                return _memory_read(memory_db, tool_input, project_path, agent_id)
+            if op == "delete":
+                return _memory_delete(memory_db, tool_input, project_path, agent_id)
+            return json.dumps({"error": f"알 수 없는 op '{op}'. (save|search|read|delete)"}, ensure_ascii=False)
+
+        # 옛 도구 이름 (직접 호출 호환)
         if tool_name in ("memory_save", "memory_search", "memory_read", "memory_delete"):
             import memory_db
 

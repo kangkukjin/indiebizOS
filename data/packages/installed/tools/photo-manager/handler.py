@@ -57,7 +57,11 @@ def execute(tool_input: Dict[str, Any], context) -> Dict[str, Any]:
     """도구 명령 실행 (ToolContext 기반 신규 시그니처)."""
     command = context.tool_name
     try:
-        if command == "scan_photos":
+        # 통합 도구 (op 분기) — IBL 어휘에 노출
+        if command == "photo_op":
+            return _dispatch_photo_op(tool_input)
+        # 옛 도구 이름 (직접 호출 호환)
+        elif command == "scan_photos":
             return scan_photos(tool_input)
         elif command == "list_scans":
             return list_scans(tool_input)
@@ -75,6 +79,62 @@ def execute(tool_input: Dict[str, Any], context) -> Dict[str, Any]:
             return {"success": False, "error": f"알 수 없는 명령어: {command}"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+def _dispatch_photo_op(params: Dict[str, Any]) -> Dict[str, Any]:
+    """[self:photo]{op} 통합 액션 디스패처."""
+    op = (params.get("op") or "").strip()
+    if not op:
+        return {"success": False, "error": "op는 필수입니다. (scan|list_scans|gallery|search|detail|stats|timeline|duplicates)"}
+
+    if op == "scan":
+        return scan_photos(params)
+    if op == "list_scans":
+        return list_scans(params)
+    if op == "gallery":
+        return get_gallery(params)
+    if op == "stats":
+        return get_stats(params)
+    if op == "timeline":
+        return get_timeline(params)
+    if op == "duplicates":
+        return find_duplicates(params)
+    if op == "search":
+        return _photo_search(params)
+    if op == "detail":
+        return _photo_detail(params)
+    return {"success": False, "error": f"알 수 없는 op '{op}'. (scan|list_scans|gallery|search|detail|stats|timeline|duplicates)"}
+
+
+def _photo_search(params: Dict[str, Any]) -> Dict[str, Any]:
+    """파일명/카메라 모델 키워드 검색."""
+    root_path = _resolve_scan_path(params)
+    if not root_path:
+        return {"success": False, "error": "스캔 데이터가 없습니다. 먼저 op=scan으로 폴더를 스캔하세요."}
+    return photo_db.search_media(
+        root_path=root_path,
+        query=params.get("query", ""),
+        media_type=params.get("media_type", "all"),
+        start_date=params.get("start_date"),
+        end_date=params.get("end_date"),
+        limit=params.get("limit", 20),
+        sort_by=params.get("sort_by", "taken_date DESC"),
+    )
+
+
+def _photo_detail(params: Dict[str, Any]) -> Dict[str, Any]:
+    """미디어 ID로 상세 정보 조회."""
+    media_id = params.get("media_id") or params.get("id")
+    if media_id is None:
+        return {"success": False, "error": "media_id가 필요합니다."}
+    try:
+        media_id = int(media_id)
+    except (TypeError, ValueError):
+        return {"success": False, "error": f"media_id는 정수여야 합니다: {media_id}"}
+    root_path = params.get("path")
+    if root_path:
+        root_path = os.path.abspath(os.path.expanduser(root_path))
+    return photo_db.get_media_detail(media_id, root_path=root_path)
 
 
 def scan_photos(params: Dict[str, Any]) -> Dict[str, Any]:

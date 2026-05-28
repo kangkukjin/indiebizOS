@@ -1,9 +1,0 @@
-node: sense
-actions:
-  kosis:
-    description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. 자세히 read_guide(query="통계").
-    target_description: 'query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회.'
-    router: handler
-    tool: kosis_lookup
-    implementation: KOSIS API 통합 — org_id+tbl_id면 get_data(또는 info=true시 get_statistics_info), indicator면 get_indicators, query면 integrated_search.
-    target_key: query

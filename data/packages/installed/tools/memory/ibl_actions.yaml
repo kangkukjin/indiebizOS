@@ -1,5 +1,0 @@
-# memory 패키지의 IBL 액션은 모두 제거됨 (2026-04-06)
-# 심층메모리는 자동 시스템(연상기억 검색 + 경험 증류)으로 동작하며,
-# memory_db.py는 agent_cognitive.py에서 직접 import하여 사용.
-node: self
-actions: {}

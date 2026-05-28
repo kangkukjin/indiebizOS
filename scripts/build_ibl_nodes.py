@@ -6,9 +6,8 @@
 2) `python scripts/build_ibl_nodes.py` 실행
 3) `data/ibl_nodes.yaml`이 갱신됨 (런타임이 읽는 단일 파일)
 
-런타임 코드는 손대지 않는다 — 5곳의 yaml 직접 로드 코드
-(ibl_access / tool_loader / tool_selector / system_tools / bootstrap_ibl_actions)
-는 그대로 단일 ibl_nodes.yaml만 읽는다.
+런타임 코드는 단일 ibl_nodes.yaml만 읽는다 (ibl_access / tool_loader /
+tool_selector / system_tools).
 
 병합 방식: 바이트-단위 연결. 소스 파일들의 내용은 원본 yaml의 해당 span에서
 잘라낸 바이트 그대로이므로, 정상 워크플로에서는 byte-identical 라운드트립이

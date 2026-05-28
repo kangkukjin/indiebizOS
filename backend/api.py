@@ -62,55 +62,6 @@ from switch_manager import SwitchManager
 
 # ============ 앱 초기화 ============
 
-def _auto_register_packages():
-    """서버 시작 시 변경된 패키지의 IBL 액션을 ibl_nodes.yaml에 동기화.
-
-    각 패키지의 ibl_actions.yaml 수정 시간을 ibl_nodes.yaml과 비교하여
-    변경된 패키지만 register_actions()로 재등록한다.
-    미등록 패키지는 항상 등록한다.
-    """
-    from ibl_action_manager import register_actions, _load_provenance, _get_nodes_path
-
-    tools_dir = DATA_PATH / "packages" / "installed" / "tools"
-    if not tools_dir.exists():
-        return
-
-    # ibl_nodes.yaml 수정 시간 (없으면 0 → 모두 등록)
-    nodes_path = _get_nodes_path()
-    nodes_mtime = nodes_path.stat().st_mtime if nodes_path.exists() else 0
-
-    # provenance에서 이미 등록된 패키지 집합
-    prov = _load_provenance()
-    registered_pkgs = set()
-    for node_actions in prov.values():
-        if isinstance(node_actions, dict):
-            for owner in node_actions.values():
-                registered_pkgs.add(owner)
-
-    count = 0
-    for pkg_dir in sorted(tools_dir.iterdir()):
-        if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
-            continue
-        actions_file = pkg_dir / "ibl_actions.yaml"
-        if not actions_file.exists():
-            continue
-
-        # 미등록이거나, 패키지 YAML이 nodes보다 새로우면 등록
-        is_new = pkg_dir.name not in registered_pkgs
-        is_modified = actions_file.stat().st_mtime > nodes_mtime
-        if not is_new and not is_modified:
-            continue
-
-        result = register_actions(pkg_dir.name)
-        registered = result.get("registered", 0)
-        if registered > 0:
-            count += 1
-            label = "신규" if is_new else "변경"
-            print(f"  → {pkg_dir.name}: {registered}개 액션 ({label})")
-
-    if count > 0:
-        print(f"[AutoRegister] {count}개 패키지 동기화 완료")
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -189,12 +140,6 @@ async def lifespan(app: FastAPI):
     # 시스템 AI Runner 자동 시작 (위임 체인 지원)
     from system_ai_runner import start_system_ai_runner, stop_system_ai_runner
     system_ai_runner = start_system_ai_runner()
-
-    # 패키지 IBL 액션 자동 등록 (수동 설치된 패키지 감지)
-    try:
-        _auto_register_packages()
-    except Exception as e:
-        print(f"[AutoRegister] 오류: {e}")
 
     # Cloudflare 터널 자동 시작 (설정에 따라)
     try:

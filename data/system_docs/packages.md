@@ -1,8 +1,8 @@
 ---
 title: 도구 패키지 시스템
-scope: 패키지 구조(handler/tool.json/ibl_actions.yaml), 설치 절차, 34개 패키지 목록
-owner_code: package_manager.py, tool_loader.py, ibl_action_manager.py
-last_updated: 2026-05-17
+scope: 패키지 구조(handler/tool.json), 설치 절차, 34개 패키지 목록. IBL 어휘 등록은 ibl_nodes_src/ 직접 편집(ibl.md 참조).
+owner_code: package_manager.py, tool_loader.py
+last_updated: 2026-05-28
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -118,37 +118,40 @@ kosis_search_statistics:
 
 api_engine 라우팅 액션들이 이 방식을 사용합니다.
 
-### 3. ibl_actions.yaml - IBL 노드 액션 등록 (선택)
+### 3. IBL 노드 액션 등록 — 단일 진실 소스 (2026-05-28~)
 
-패키지의 도구를 IBL 노드 액션으로 노출하려면 `ibl_actions.yaml`을 작성해야 한다.
-이 파일은 에이전트가 `execute_ibl`로 호출하는 노드 액션(예: `engines.create_site`, `sense.search`)을 정의한다.
+패키지의 도구를 IBL 노드 액션으로 노출하려면 **`data/ibl_nodes_src/<node>.yaml`에 직접 액션을 추가**한다. 패키지 폴더에 `ibl_actions.yaml`을 두지 않는다 (옛 방식은 폐기됨; [[architecture_ibl_unification]] 참조).
 
 ```yaml
-node: engines             # 어떤 노드에 등록할지 (sense, self, limbs, others, engines 등 기존 노드)
-# scope: workspace        # (선택) 이 패키지의 데이터 경계. 자세한 건 ibl.md "액션 스코프" 참고.
-                          # project(기본) / workspace / system. 파일 레벨 또는 액션 레벨 어느 쪽이든 가능.
-actions:
-  create_site:             # 액션 이름 (노드 내에서 유일해야 함)
-    description: 웹사이트 프로젝트 생성
-    router: handler        # handler.py로 라우팅
-    tool: site_manager     # handler.py에서 매핑할 도구명
-    target_key: site_name  # 자연어에서 추출한 대상이 매핑될 파라미터
-    default_input:         # 기본 입력값 (선택)
-      action: create
-  add_component:
-    description: 웹사이트에 컴포넌트 추가
-    target_description: 컴포넌트 이름
-    router: handler
-    tool: component_manager
-    target_key: component_name
-    default_input:
-      action: add
-guides:                    # 이 노드에서 사용할 가이드 파일 (선택)
-- web-builder/web_builder_guide.md
+# data/ibl_nodes_src/engines.yaml
+engines:
+  # scope: workspace          # (선택) 노드 레벨 기본값. 자세한 건 ibl.md "액션 스코프" 참고.
+  actions:
+    create_site:               # 액션 이름 (노드 내에서 유일해야 함)
+      description: 웹사이트 프로젝트 생성
+      router: handler          # handler.py로 라우팅
+      tool: site_manager       # handler.py에서 매핑할 도구명
+      target_key: site_name    # 자연어에서 추출한 대상이 매핑될 파라미터
+      default_input:           # 기본 입력값 (선택)
+        action: create
+    add_component:
+      description: 웹사이트에 컴포넌트 추가
+      target_description: 컴포넌트 이름
+      router: handler
+      tool: component_manager
+      target_key: component_name
 ```
 
+추가 후 빌드 + 검증:
+```bash
+python3 scripts/build_ibl_nodes.py          # data/ibl_nodes.yaml 재생성
+python3 scripts/build_ibl_nodes.py --check  # 일치 확인
+```
+
+빌드 산출물(`data/ibl_nodes.yaml`)은 첫 줄에 `# GENERATED — DO NOT EDIT` 헤더가 있으며 런타임이 읽는 단일 파일이다. 직접 편집하지 말 것.
+
 #### postprocess 필드 (감각 전처리)
-정보성 액션의 출력이 길 때 경량 AI로 압축하여 에이전틱 루프의 컨텍스트 폭발을 방지한다. 감각기관이 원시 데이터를 전처리해서 뇌에 보내는 것과 같은 원리.
+정보성 액션의 출력이 길 때 경량 AI로 압축하여 에이전틱 루프의 컨텍스트 폭발을 방지한다. 감각기관이 원시 데이터를 전처리해서 뇌에 보내는 것과 같은 원리. `ibl_nodes_src/<node>.yaml`의 액션 정의 안에 `postprocess` 블록으로 선언.
 
 ```yaml
 search_ddg:
@@ -164,9 +167,6 @@ search_ddg:
 - **threshold**: 결과가 이 글자 수 미만이면 후처리를 건너뜀 (기본: 1500).
 - **prompt**: 액션 특성에 맞는 압축 지시. 생략 시 범용 프롬프트 사용.
 - engines 등 결과를 보존해야 하는 액션에는 적용하지 않는다.
-
-**중요**: `ibl_actions.yaml`을 작성하는 것만으로는 등록이 완료되지 않는다.
-반드시 `register_actions()`를 호출하여 `ibl_nodes.yaml`에 병합해야 한다.
 
 ### 4. 가이드 파일 - 에이전트용 사용 설명서 (선택)
 
@@ -193,8 +193,10 @@ search_ddg:
 `POST /packages/{id}/install` API 또는 UI 도구 상자에서 설치하면 `package_manager.py`가 자동으로:
 1. 패키지 폴더를 `not_installed/` → `installed/`로 이동
 2. tool.json, handler.py 검증
-3. **`register_actions(package_id)` 호출** → ibl_actions.yaml의 액션을 ibl_nodes.yaml에 병합
-4. inventory.md 자동 업데이트
+3. inventory.md 자동 업데이트
+4. (선택) `ibl_usage_generator`로 새 도구의 기본 용례를 RAG에 추가
+
+**패키지 설치는 IBL 어휘를 자동 추가하지 않는다.** 패키지가 새 IBL 액션으로 노출되어야 하면 `data/ibl_nodes_src/<node>.yaml`에 액션을 직접 추가하고 `python3 scripts/build_ibl_nodes.py`를 실행한다. ([[architecture_ibl_unification]])
 
 ### 수동 설치 (패키지 폴더를 직접 생성한 경우)
 패키지 폴더를 `installed/tools/`에 직접 만들면 된다.
@@ -205,17 +207,15 @@ installed/tools/{package_id}/
 ├── tool.json          # 필수 — 도구 정의
 ├── handler.py         # 필수 — execute(tool_name, tool_input, project_path) 함수
 ├── manifest.json      # 권장 — 패키지 메타데이터
-├── ibl_actions.yaml   # IBL 액션 사용 시 필수
 └── tools/             # 실제 도구 모듈들
 ```
 
-**IBL 액션 자동 동기화:**
-서버 시작 시 `_auto_register_packages()`가 각 패키지의 `ibl_actions.yaml` 수정 시간을 `ibl_nodes.yaml`과 비교하여, 변경된 패키지만 `register_actions()`로 재등록한다. 미등록 패키지는 항상 등록된다. **패키지 YAML을 수정하고 서버를 재시작하면 `postprocess` 등 새 필드가 자동 반영된다.**
-
-서버 재시작 없이 즉시 등록하려면:
+IBL 어휘 추가가 필요하면 별개 작업:
 ```bash
-cd /path/to/indiebizOS/backend
-python3 -c "from ibl_action_manager import register_actions; print(register_actions('패키지ID'))"
+# data/ibl_nodes_src/<node>.yaml 편집 후
+python3 scripts/build_ibl_nodes.py          # 빌드
+python3 scripts/build_ibl_nodes.py --check  # 검증
+# 백엔드의 인메모리 캐시는 invalidate_cache() 또는 재시작으로 갱신
 ```
 
 **가이드 파일 등록** (있는 경우):
@@ -223,17 +223,12 @@ python3 -c "from ibl_action_manager import register_actions; print(register_acti
 - 시스템 레벨: `data/guide_db.json`에 항목 추가 + `data/guides/`에 파일 작성
 
 ### 패키지 제거
-```bash
-# IBL 액션 해제
-python3 -c "from ibl_action_manager import unregister_actions; print(unregister_actions('패키지ID'))"
-```
-- `_ibl_provenance.yaml`에서 해당 패키지 소유 액션을 찾아 `ibl_nodes.yaml`에서 제거
-- guides도 함께 제거됨
+`POST /packages/{id}/uninstall`이 패키지 폴더를 `not_installed/`로 이동한다. **IBL 어휘는 자동 제거되지 않음** — 이 패키지가 노출하던 IBL 액션이 src에 있다면 직접 정리해야 한다 (`ibl_nodes_src/<node>.yaml`에서 제거 → 재빌드).
 
 ### 주의사항
-- **ibl_actions.yaml의 node 값은 기존 노드여야 한다** (sense, self, limbs, others, engines 등). 존재하지 않는 노드를 지정하면 경고 후 건너뜀.
-- **액션 이름 충돌**: 같은 노드에 이미 같은 이름의 액션이 다른 패키지 소유로 등록되어 있으면 건너뜀. 접두사를 붙여 구분할 것 (예: `radio_play`, `radio_search`).
-- **register_actions() 없이 ibl_actions.yaml만 편집하면 즉시 반영되지 않음**. 서버 재시작 시 자동 동기화되거나, 수동으로 `register_actions()`를 호출해야 함.
+- **노드 추가 금지**: 기존 5개 노드(sense, self, limbs, others, engines)만 사용. 새 노드는 `data/ibl_nodes_src/meta.yaml` 변경 + 라우팅 코드 합의 후 별건 작업.
+- **액션 이름 충돌**: 같은 노드에 같은 이름의 액션이 이미 있으면 src 빌드가 후행 정의로 덮어쓰니, 접두사를 붙여 구분할 것 (예: `radio_play`, `radio_search`).
+- **빌드 산출물 직접 편집 금지**: `data/ibl_nodes.yaml` 첫 줄의 `# GENERATED` 헤더 확인. 수정 시 다음 빌드에서 원복된다.
 
 ---
 
@@ -337,4 +332,4 @@ python3 -c "from ibl_action_manager import unregister_actions; print(unregister_
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-04-05 (guide_file.md 통합)*
+*마지막 업데이트: 2026-05-28 (IBL 단일 진실 소스화 반영 — 패키지 ibl_actions.yaml 폐기)*

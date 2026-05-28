@@ -1,8 +1,10 @@
 ---
 title: IBL (IndieBiz Logic)
-scope: IBL 명세, 5-Node 구조, 311 액션, 파서/엔진/라우팅
-owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_action_manager.py, ibl_routing.py
-last_updated: 2026-05-17
+scope: IBL 명세, 5-Node 구조, 199 액션, 파서/엔진/라우팅
+owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
+source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml
+build_tool: scripts/build_ibl_nodes.py
+last_updated: 2026-05-28
 see_also: [execution_memory.md, packages.md, technical.md]
 ---
 

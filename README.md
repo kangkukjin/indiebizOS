@@ -212,7 +212,8 @@ data/packages/
 Each package is self-contained:
 - `handler.py` — Implementation
 - `tool.json` — Tool definitions for AI
-- `ibl_actions.yaml` — IBL action registry
+
+IBL vocabulary lives in a single source of truth at `data/ibl_nodes_src/` (built into `data/ibl_nodes.yaml` via `scripts/build_ibl_nodes.py`), independent of package install state.
 
 An AI agent can create new packages for you, install existing ones, or modify them to fit your specific needs.
 

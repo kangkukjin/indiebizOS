@@ -170,7 +170,7 @@ IBL 파서 밖에서 코드나 긴 텍스트를 전달하기 위한 메커니즘
 - AI가 다음 단계로 자연스럽게 이어갈 수 있도록 힌트 제공
 
 ### 감각 전처리 (Sensory Preprocessing)
-정보성 액션의 출력을 경량 AI로 압축하여 컨텍스트 폭발을 방지. `ibl_actions.yaml`의 `postprocess` 블록으로 액션별 선언. 적용 액션: `search_ddg`, `crawl`, `search_news`, `travel`. 실측 65-70% 압축.
+정보성 액션의 출력을 경량 AI로 압축하여 컨텍스트 폭발을 방지. `data/ibl_nodes_src/<node>.yaml`의 `postprocess` 블록으로 액션별 선언. 적용 액션: `search_ddg`, `crawl`, `search_news`, `travel`. 실측 65-70% 압축.
 설정 형식과 디테일은 **technical.md** 참조. 구현: `ibl_engine.py`의 `_postprocess()`.
 
 ### 연상기억 (해마 + 심층메모리)

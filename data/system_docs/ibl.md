@@ -259,7 +259,7 @@ steps:
 
 ## 액션 스코프 (Phase 30)
 
-액션마다 데이터 경계가 다르다. 모든 액션이 특정 프로젝트의 폴더에서 작동하는 건 아니고, 인스턴스 전체에 걸친 워크스페이스에서 작동하거나 indiebizOS 자체를 다루는 액션도 있다. `ibl_actions.yaml`에 `scope`를 명시.
+액션마다 데이터 경계가 다르다. 모든 액션이 특정 프로젝트의 폴더에서 작동하는 건 아니고, 인스턴스 전체에 걸친 워크스페이스에서 작동하거나 indiebizOS 자체를 다루는 액션도 있다. `data/ibl_nodes_src/<node>.yaml`에 `scope`를 명시.
 
 | scope | 의미 | base path | 용도 예시 |
 |-------|------|-----------|----------|
@@ -267,20 +267,20 @@ steps:
 | `workspace` | 인스턴스 전체에 걸친 데이터 | `get_base_path()` (indiebizOS 루트 / userData) | `self:lecture_list`, `self:lecture_open` — `outputs/lectures/` |
 | `system` | indiebizOS 자체 작업 | `get_base_path()` | 설정·패키지 관리 등 (향후 권한 모델 분리 예정) |
 
-**선언 위치** — ibl_actions.yaml에 두 곳에 쓸 수 있음:
-- **파일 레벨** (전체 액션 기본값): `node:` 옆에 `scope: workspace` 한 번
+**선언 위치** — `ibl_nodes_src/<node>.yaml`에 두 곳에 쓸 수 있음:
+- **노드 레벨** (전체 액션 기본값): 해당 노드 dict 안에 `scope: workspace`
 - **액션 레벨** (개별 오버라이드): 해당 액션 dict 안에 `scope:`
 
 ```yaml
-node: self
-scope: workspace      # 이 파일의 모든 액션 기본값
-actions:
-  lecture_list: { router: handler, tool: lecture_list, ... }
-  lecture_create: { router: handler, tool: lecture_create, ... }
-  special_action:
-    router: handler
-    tool: special
-    scope: project    # 이 액션만 오버라이드
+self:
+  scope: workspace        # 이 노드의 모든 액션 기본값
+  actions:
+    lecture_list: { router: handler, tool: lecture_list, ... }
+    lecture_create: { router: handler, tool: lecture_create, ... }
+    special_action:
+      router: handler
+      tool: special
+      scope: project      # 이 액션만 오버라이드
 ```
 
 **라우팅 동작** — `_route_handler`(`backend/ibl_routing.py`)가 scope를 보고:

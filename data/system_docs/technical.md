@@ -175,8 +175,8 @@ execute_ibl(code='[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}'
 - **해마 (IBL 사용량) DB**: `data/ibl_usage.db` (SQLite — ibl_examples + FTS5 + vec0)
 - **해마 임베딩 모델**: `data/models/ibl_embedding/` (fine-tuned `jhgan/ko-sroberta-multitask`, 422MB. 해마 + 심층메모리 공유)
 - **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` (2,019건)
-- **IBL 노드 정의**: `data/ibl_nodes.yaml`
-- **IBL 출처 추적**: `data/_ibl_provenance.yaml`
+- **IBL 노드 정의 (소스)**: `data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml` — 단일 진실 소스, 직접 편집
+- **IBL 노드 정의 (빌드 산출물)**: `data/ibl_nodes.yaml` — `scripts/build_ibl_nodes.py`로 생성, 런타임 로드, 직접 편집 금지
 
 ## 지원 AI 프로바이더 (모두 스트리밍 지원)
 - **Anthropic Claude**: claude-sonnet-4-20250514, claude-3-5-haiku-20241022, claude-3-5-sonnet-latest
@@ -190,14 +190,15 @@ execute_ibl(code='[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}'
 
 ### 감각 전처리 (Sensory Preprocessing)
 - 정보성 액션의 출력을 경량 AI(flash-lite)로 압축하여 컨텍스트 폭발 방지
-- `ibl_actions.yaml`의 `postprocess` 블록으로 액션별 선언적 설정
+- `data/ibl_nodes_src/<node>.yaml`의 `postprocess` 블록으로 액션별 선언적 설정
 - 적용 액션: `search_ddg`, `crawl`, `search_news`, `travel`
 - 구현: `ibl_engine.py`의 `_postprocess()` → `_pp_compress()`
 
-### 패키지 YAML 자동 동기화
-- 서버 시작 시 `_auto_register_packages()`가 각 패키지 `ibl_actions.yaml`의 mtime을 `ibl_nodes.yaml`과 비교
-- 변경된 패키지만 `register_actions()`로 재등록, 미등록은 항상 등록
-- 패키지 YAML이 source of truth, `ibl_nodes.yaml`은 파생 파일
+### IBL 액션 단일 진실 소스 (2026-05-28~)
+- `data/ibl_nodes_src/` 6개 yaml이 사람이 편집하는 단일 소스
+- `python3 scripts/build_ibl_nodes.py`로 `data/ibl_nodes.yaml` 빌드 (명시적, 자동 등록 없음)
+- 패키지 설치/제거가 IBL 어휘를 자동 변경하지 않음 — 어휘 추가/삭제는 src 수동 편집
+- `--check`로 src와 빌드 산출물 일치 검증 (CI/pre-commit)
 
 ## 물리적 구조 (주요 경로)
 - `backend/`: 서버 소스 코드

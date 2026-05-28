@@ -129,7 +129,7 @@
       kr_investor:
         description: 한국 시장 투자자별 매매동향 (외국인/기관/개인 순매수, 코스피/코스닥)
         group: finance
-        target_description: 시장 구분 (STK=코스피, KSQ=코스닥, ALL=전체)
+        target_description: 시장 구분 — market 파라미터에 KOSPI/KOSDAQ/ALL (별칭 STK/KSQ도 허용).
         router: handler
         tool: kr_market_investor_trading
         implementation: KRX API로 투자자별 매매동향 XML 파싱

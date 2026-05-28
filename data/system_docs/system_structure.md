@@ -82,12 +82,11 @@ indiebizOS/
 │   ├── ibl_engine.py    # IBL 실행 엔진 코어
 │   ├── ibl_parser.py    # IBL 구문 파서
 │   ├── ibl_access.py    # IBL 접근 계층
-│   ├── ibl_action_manager.py # IBL 액션 관리
 │   ├── ibl_routing.py   # 9종 라우터 구현 (handler, system, driver 등)
 │   ├── ibl_usage_db.py  # IBL 해마 DB (벡터 검색 + FTS5)
 │   ├── ibl_usage_generator.py # IBL 합성 용례 생성기
 │   ├── ibl_usage_rag.py # IBL 실행기억 생성 + 경험 증류
-│   ├── bootstrap_ibl_actions.py # IBL 초기화
+│   │   # 빌드: scripts/build_ibl_nodes.py (소스: data/ibl_nodes_src/, 산출물: data/ibl_nodes.yaml)
 │   │
 │   │   # === 실행 엔진 ===
 │   ├── workflow_engine.py # 워크플로우 오케스트레이션

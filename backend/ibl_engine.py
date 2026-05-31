@@ -210,6 +210,50 @@ def list_actions(node: str) -> List[Dict]:
     return result
 
 
+# === async-safe 핸들러 오프로드 ===
+# MCP/ClaudeCode 경로에서는 execute_ibl이 '실행 중인 이벤트 루프' 위에서 호출된다.
+# 그 컨텍스트에서 패키지 핸들러가 asyncio.run()·Playwright sync API를 쓰면
+# "asyncio.run() cannot be called from a running event loop"로 죽는다(media_producer,
+# lecture_workspace 등). 해결: handler/driver 라우터 실행을 '루프 없는 워커 스레드'로 넘긴다.
+#  - 루프가 없으면(동기 프로바이더 등) 오프로드 안 함 → 기존과 100% 동일.
+#  - thread_context(threading.local)는 스냅샷→워커 복원해 allowed_nodes 등 보존.
+#  - delegate(system 라우터)/channel/workflow 등은 손대지 않음 → AI·위임 경로 무영향.
+_offload_pool = None
+
+
+def _get_offload_pool():
+    """핸들러 오프로드용 스레드풀 (지연 생성)."""
+    global _offload_pool
+    if _offload_pool is None:
+        import concurrent.futures
+        _offload_pool = concurrent.futures.ThreadPoolExecutor(
+            max_workers=8, thread_name_prefix="ibl_offload"
+        )
+    return _offload_pool
+
+
+def _run_router_safely(fn, *args, **kwargs):
+    """실행 중인 이벤트 루프 위라면 루프 없는 워커 스레드에서 fn을 실행한다.
+
+    핸들러/드라이버 내부의 asyncio.run()/sync_playwright()가 충돌 없이 동작하도록.
+    루프가 없으면 그대로 인라인 실행(기존 동작 유지).
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return fn(*args, **kwargs)  # 루프 없음 → 인라인 (변화 없음)
+
+    # 실행 중인 루프 위 → 워커 스레드로 오프로드 (+ thread_context 전파)
+    import thread_context as _tc
+    snap = _tc.snapshot()
+
+    def _worker():
+        _tc.restore(snap)
+        return fn(*args, **kwargs)
+
+    return _get_offload_pool().submit(_worker).result()
+
+
 def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
     """
     IBL 노드 도구 실행
@@ -301,7 +345,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
             mapped_tool = action_config.get("tool")
             # Phase 30: scope 선언 (workspace/system/project). 미지정 시 project.
             scope = action_config.get("scope", "project")
-            result = _route_handler(mapped_tool, params, project_path, agent_id, scope=scope)
+            result = _run_router_safely(_route_handler, mapped_tool, params, project_path, agent_id, scope=scope)
         elif router == "system":
             func_name = action_config.get("func")
             result = _route_system(func_name, params, project_path, agent_id=agent_id)
@@ -320,7 +364,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         elif router == "driver":
             driver_type = action_config.get("driver", "sqlite")
             dn = action_config.get("driver_node")
-            result = _route_driver(driver_type, node, action, params, project_path, driver_node=dn)
+            result = _run_router_safely(_route_driver, driver_type, node, action, params, project_path, driver_node=dn)
         elif router == "stub":
             phase = action_config.get("phase", "?")
             return {

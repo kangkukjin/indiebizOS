@@ -160,6 +160,22 @@ def get_allowed_nodes():
     return getattr(_thread_local, 'allowed_nodes', None)
 
 
+def snapshot() -> dict:
+    """현재 스레드의 thread-local 컨텍스트 스냅샷.
+
+    IBL 핸들러를 워커 스레드로 오프로드할 때(async 안전), agent_id/allowed_nodes/
+    task_id 등 컨텍스트를 워커 스레드로 전파하기 위해 사용한다.
+    threading.local은 스레드 간 자동 전파가 안 되므로 명시적으로 떠서 옮긴다.
+    """
+    return dict(_thread_local.__dict__)
+
+
+def restore(snap: dict):
+    """snapshot()으로 떠둔 컨텍스트를 현재 스레드의 thread-local에 복원."""
+    for k, v in (snap or {}).items():
+        setattr(_thread_local, k, v)
+
+
 # ============ 컨텍스트 일괄 관리 ============
 
 def clear_all_context():

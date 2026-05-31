@@ -64,7 +64,7 @@ class IBLUsageDB:
     """
 
     EMBEDDING_DIM = 768
-    # 해마 (hippocampus): IBL 도메인 fine-tuned 모델 (Top-5 80.9%, 범용 대비 +28.3%p)
+    # 해마 (hippocampus): IBL 도메인 fine-tuned 모델 (Top-5 95.3%, 범용 대비 +53.3%p / 2026-05-31 Modal GPU batch=16)
     EMBEDDING_MODEL = str(Path(__file__).parent.parent / 'data' / 'models' / 'ibl_embedding')
     DEFAULT_ALPHA = 1.0
     BATCH_SIZE = 32

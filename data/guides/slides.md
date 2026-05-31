@@ -507,7 +507,7 @@ design_system을 지정하면 **모든 layout**(hero/lecture_body/metaphor_story
   stats: [
     {value: "332→208", label: "IBL 액션 통합"},
     {value: "-37%", label: "시스템 프롬프트 비용"},
-    {value: "95.6%", label: "해마 Top-5 정확도"},
+    {value: "95.3%", label: "해마 Top-5 정확도"},
     {value: "1h", label: "Pulse 주기"}
   ]
 }], theme: "blue"}

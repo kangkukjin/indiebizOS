@@ -54,7 +54,7 @@ EXECUTE/Reflex                          [2] framing 재고 확인 → 있고 맞
 
 - **연상기억**: 파이프라인 최상단에서 1회 생성. 해마(과거 IBL 사례)와 심층메모리(사용자 사실)를 합친 self-describing XML 묶음 (`<execution_memory>` + `<related_memory>`)
 - **단일 검색**: 검색 1회로 top_score까지 확보 (이전 3회 중복 호출 제거, 2026-05-17)
-- **해마**: 베이스 `ko-sroberta-multitask`에서 fine-tuning. 현재 Top-5 94.8%, description 96.0% (2026-05-16 재학습, 2,019건 학습 데이터)
+- **해마**: 베이스 `ko-sroberta-multitask`에서 fine-tuning. 현재 Top-5 95.3%, description 81.7% (2026-05-31 Modal GPU 재학습, 199 액션 / op 어휘 기준, batch=16)
 - **심층메모리**: 같은 fine-tuned 모델로 시맨틱 검색 (2026-05-16 도입)
 - **점수 정규화**: 모든 검색 경로(시맨틱·하이브리드·FTS5 폴백)에서 0~1 보장
 - 상세: `system_docs/execution_memory.md`
@@ -175,7 +175,7 @@ IBL 파서 밖에서 코드나 긴 텍스트를 전달하기 위한 메커니즘
 
 ### 연상기억 (해마 + 심층메모리)
 fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(심층메모리)을 단계 0에서 1회 검색해 모든 에이전트에 self-describing XML로 주입.
-- 해마: 2,019건 학습 (라운드 2 정리 전 311 액션 기준, 199 액션으로 재학습 대기), Top-5 95.6% — 자동 경험 증류 (점수 < 0.7 시)
+- 해마: 199 액션 / op 어휘 기준 재학습 완료 (2026-05-31 Modal GPU, batch=16), Top-5 95.3% — 자동 경험 증류 (점수 < 0.7 시)
 - 심층메모리: 같은 모델 공유로 시맨틱 검색 (2026-05-16 도입)
 - 상세 (단계별 흐름·증류 조건·DB 스키마·학습 절차): **execution_memory.md**
 

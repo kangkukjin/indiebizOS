@@ -195,7 +195,7 @@ User: "Search AI news and save to file"
 
 Two memories learn from you automatically — and keep themselves clean:
 
-- **Hippocampus (procedural memory)** — A fine-tuned 768-dim embedding model maps your natural language to past IBL code (Top-5 accuracy: 91.4%). Successful executions are automatically distilled into reusable examples, so the system gets faster at *your* recurring tasks.
+- **Hippocampus (procedural memory)** — A fine-tuned 768-dim embedding model maps your natural language to past IBL code (Top-5 accuracy: 95.3%). Successful executions are automatically distilled into reusable examples, so the system gets faster at *your* recurring tasks.
 - **Deep Memory (relational memory)** — After each conversation, a lightweight pass extracts durable facts about you — preferences, decisions, key dates — and recalls them, with their last-seen date, when relevant.
 - **Closed feedback loop** — When a recalled example drives an execution, its success or failure is recorded, so proven patterns rise and bad ones sink. Distilled code is validated against the action registry before it can enter the corpus.
 - **Self-cleaning** — A periodic consolidation pass (part of the immune patrol) merges near-duplicates, prunes stale or proven-bad entries, and resolves contradictions — so memory stays sharp instead of bloating.

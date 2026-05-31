@@ -8,6 +8,14 @@ see_also: [architecture.md, delegation.md]
 
 # manage_schedule 도구 사용 가이드
 
+> **⚠️ 2026-05-27 라운드 2 통합 — 본문의 옛 액션 이름 매핑**:
+> 본문 예시에 라운드 2 이전 호출 형식이 남아 있다. 새 호출 형식:
+> - `list_switches` / `run_switch` → `[self:switch]{op: "list"}` / `[self:switch]{op: "run", switch_id: ...}`
+> - `list_triggers` / `create_trigger` / `enable_trigger` / `disable_trigger` 등 9종 → `[self:trigger]{op: "list|get|create|update|delete|enable|disable|status|history"}`
+> - `list_workflows` / `save_workflow` / `get_workflow` 등 → `[self:workflow]{op: "list|get|save|delete|run"}`
+> - `[others:delegate_project]` → `[others:delegate]{mode: "async|sync|workflow", scope: "cross"}`
+> 정확한 op 어휘는 [ibl.md](ibl.md) "op 어휘 단일화" 섹션 + `data/ibl_nodes_src/self.yaml`/`others.yaml` 의 `ops:` 블록 참조.
+
 ## 개요
 사용자의 일정, 기념일, 반복 작업을 스케줄러에 등록하고 관리하는 도구입니다.
 스케줄러는 백그라운드에서 동작하며, 에이전트 없이 지정된 시간에 자동으로 작업을 실행합니다.

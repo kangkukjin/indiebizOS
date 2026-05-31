@@ -10,10 +10,16 @@
       click:
         description: 브라우저 요소 클릭 (op 분기). single/double/right.
         group: browser
-        target_description: 'op: single | double | right (기본 single). ref ID 또는 selector로 대상 지정. double은 표 셀 편집·파일 열기, right는 컨텍스트 메뉴.'
+        target_description: 'ref ID 또는 selector로 대상 지정. double은 표 셀 편집·파일 열기, right는 컨텍스트 메뉴.'
         target_key: op
         router: handler
         tool: browser_click_op
+        ops:
+          default: single
+          values:
+            single: 좌클릭 (기본)
+            double: 더블클릭 — 표 셀 편집·파일 열기
+            right: 우클릭 — 컨텍스트 메뉴
         implementation: Playwright locator.click/dblclick/contextual_click op 분기 (ref 기반)
         keywords:
         - 클릭
@@ -68,10 +74,16 @@
       tab:
         description: 브라우저 탭 관리 (op 분기). list/new/switch/close.
         group: browser_session
-        target_description: 'op: list | new | switch | close. new — url 옵션 / switch — tab_id (0-base 인덱스, tab_list로 확인) / close — 현재 활성 탭 닫음.'
+        target_description: 'new — url 옵션 / switch — tab_id (0-base 인덱스, tab_list로 확인) / close — 현재 활성 탭 닫음.'
         target_key: op
         router: handler
         tool: browser_tab_op
+        ops:
+          values:
+            list: 열린 탭 목록 조회
+            new: 새 탭 열기 (url 옵션)
+            switch: 활성 탭 전환 (tab_id 0-base)
+            close: 현재 활성 탭 닫기
         implementation: Playwright 브라우저 컨텍스트에서 탭 op 분기
         keywords:
         - 탭
@@ -112,10 +124,15 @@
       logs:
         description: 브라우저 로그 조회 (op 분기). console(JS 오류·console.log) / network(API 호출·리소스).
         group: browser
-        target_description: 'op: console | network (기본 console). console — JS 오류·log 누적. network — filter 옵션으로 URL/상태/타입 필터링.'
+        target_description: 'console — JS 오류·log 누적. network — filter 옵션으로 URL/상태/타입 필터링.'
         target_key: op
         router: handler
         tool: browser_logs_op
+        ops:
+          default: console
+          values:
+            console: JS 오류·console.log 조회 (기본)
+            network: API 호출·리소스 요청 조회
         implementation: Playwright console·network 이벤트 캡처 로그 op 분기
       dialog_info:
         description: 브라우저 Alert/Confirm/Prompt 팝업 정보 조회.
@@ -133,10 +150,14 @@
       cookies:
         description: 브라우저 쿠키 저장/복원 (로그인 세션 유지용). op=save 또는 load.
         group: browser_session
-        target_description: 'op: save | load. path 옵션으로 JSON 파일 경로 지정 (생략 시 기본 경로).'
+        target_description: 'path 옵션으로 JSON 파일 경로 지정 (생략 시 기본 경로).'
         target_key: op
         router: handler
         tool: browser_cookies_op
+        ops:
+          values:
+            save: 현재 쿠키를 JSON 파일로 저장
+            load: JSON 파일에서 쿠키 복원
         implementation: Playwright context.cookies()/add_cookies()로 쿠키 JSON 저장·복원
         keywords:
         - 쿠키
@@ -146,10 +167,15 @@
       iframe:
         description: 브라우저 iframe 관리 (op 분기). list/switch/reset.
         group: browser_session
-        target_description: 'op: list | switch | reset. switch — index 파라미터(iframe_list 결과의 위치) / reset — 메인 페이지로 복귀.'
+        target_description: 'switch — index 파라미터(iframe_list 결과의 위치) / reset — 메인 페이지로 복귀.'
         target_key: op
         router: handler
         tool: browser_iframe_op
+        ops:
+          values:
+            list: 페이지 내 iframe 목록 조회
+            switch: iframe 컨텍스트 전환 (index 파라미터)
+            reset: 메인 페이지 컨텍스트로 복귀
         implementation: Playwright page.frames()/main_frame()로 iframe op 분기
         keywords:
         - iframe
@@ -187,11 +213,22 @@
         implementation: Playwright screenshot을 base64 인코딩하여 반환 (AI 시각 인식용)
       desktop:
         description: macOS 데스크톱 자동화 (op 분기). 마우스/키보드/스크린샷/화면정보.
-        target_description: 'op 종류: screenshot | click | type | key | mouse_move | drag | scroll | cursor_position | screen_info. op별 파라미터 — click/mouse_move: x,y / type: text / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 모든 좌표는 1280x800 가상 해상도 기준.'
+        target_description: 'op별 파라미터 — click/mouse_move: x,y / type: text / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 모든 좌표는 1280x800 가상 해상도 기준.'
         group: desktop
         target_key: op
         router: handler
         tool: computer_op
+        ops:
+          values:
+            screenshot: 화면 캡처 (x,y,width,height 옵션)
+            click: 마우스 클릭 (x,y)
+            type: 텍스트 입력 (text)
+            key: 키 입력 (key)
+            mouse_move: 마우스 이동 (x,y)
+            drag: 드래그 (start_x,start_y,end_x,end_y)
+            scroll: 스크롤 (direction,amount)
+            cursor_position: 현재 커서 좌표 반환
+            screen_info: 화면 해상도 정보 반환
         implementation: pyautogui로 op 분기 (1280x800 가상 좌표 → 실제 해상도 자동 변환, Retina 대응)
         keywords:
         - 데스크톱
@@ -218,10 +255,19 @@
       music:
         description: 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
         group: media
-        target_description: 'op: play | add | skip | queue | stop | download (기본 play). play/add — query 파라미터로 검색어 또는 URL. download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.'
+        target_description: 'play/add — query 파라미터로 검색어 또는 URL. download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.'
         target_key: op
         router: handler
         tool: music_op
+        ops:
+          default: play
+          values:
+            play: 즉시 재생 (query 검색어/URL, 기본)
+            add: 큐에 추가 (query 검색어/URL)
+            skip: 현재 곡 스킵
+            queue: 큐 목록 조회
+            stop: 재생 중지
+            download: MP3 다운로드 (url + output_path 옵션)
         implementation: yt-dlp + mpv/ffplay 음악 재생·큐·다운로드 op 분기
         keywords:
         - youtube
@@ -240,11 +286,16 @@
         - mp3
       radio:
         description: 인터넷 라디오 재생·중지 (op 분기). play/stop.
-        target_description: 'op: play | stop (기본 play). play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. stop — 파라미터 없음.'
+        target_description: 'play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. stop — 파라미터 없음.'
         group: media
         target_key: op
         router: handler
         tool: radio_op
+        ops:
+          default: play
+          values:
+            play: 라디오 재생 (station_id 또는 stream_url, 기본)
+            stop: 라디오 중지
         implementation: mpv/ffplay HLS/ICY 라디오 스트림 재생·중지 op 분기
         keywords:
         - 라디오
@@ -275,11 +326,16 @@
         - 음량
       radio_favorite:
         description: 라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.
-        target_description: 'op: list | add | remove. list — 파라미터 없음, 전체 즐겨찾기 목록. add — station_id(get_korean_radio 등에서 받은 ID, 권장) 또는 stream_url(search_radio 결과) 중 하나 + name 옵션(별칭). 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — radio_play로 재생 중 마음에 들면 바로 add 호출.'
+        target_description: 'list — 파라미터 없음, 전체 즐겨찾기 목록. add — station_id(권장) 또는 stream_url 중 하나 + name 옵션. 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — radio_play로 재생 중 마음에 들면 바로 add 호출.'
         group: media
         target_key: op
         router: handler
         tool: radio_favorite_op
+        ops:
+          values:
+            list: 전체 즐겨찾기 목록 조회
+            add: 즐겨찾기 등록 (station_id/stream_url 또는 현재 재생 채널 자동)
+            remove: 즐겨찾기 삭제 (name 파라미터)
         implementation: 즐겨찾기 JSON 파일 조회/저장/삭제 op 분기. add는 station_id/stream_url 둘 다 없으면 현재 재생 채널 메타로부터 추출.
         keywords:
         - 즐겨찾기
@@ -304,10 +360,16 @@
       navigate:
         description: 브라우저 페이지 이동 (op 분기). goto(URL) / back / forward.
         group: browser
-        target_description: 'op: goto | back | forward (기본 goto). goto — url 파라미터 필수(http/https). back/forward — 파라미터 없음, 히스토리 이동.'
+        target_description: 'goto — url 파라미터 필수(http/https). back/forward — 파라미터 없음, 히스토리 이동.'
         target_key: op
         router: handler
         tool: browser_navigate_op
+        ops:
+          default: goto
+          values:
+            goto: 지정 URL로 이동 (url 필수, 기본)
+            back: 히스토리 뒤로
+            forward: 히스토리 앞으로
         implementation: Playwright page.goto/go_back/go_forward op 분기
         keywords:
         - 이동
@@ -317,10 +379,15 @@
       content:
         description: 현재 페이지 콘텐츠 추출 (op 분기). text(본문 텍스트) / html(전체 HTML 소스).
         group: browser
-        target_description: 'op: text | html (기본 text). text — 본문 텍스트만, HTML 태그 제외. html — 구조 분석·파싱용 전체 소스.'
+        target_description: 'text — 본문 텍스트만, HTML 태그 제외. html — 구조 분석·파싱용 전체 소스.'
         target_key: op
         router: handler
         tool: browser_content_op
+        ops:
+          default: text
+          values:
+            text: 본문 텍스트 (HTML 태그 제외, 기본)
+            html: 전체 HTML 소스 (구조 분석·파싱용)
         implementation: Playwright page.content/text op 분기
       close:
         description: Playwright 브라우저 세션 종료. 열린 탭·쿠키 모두 해제.
@@ -332,10 +399,15 @@
       chrome:
         description: Chrome MCP 원격 제어 세션 관리 (Playwright 대안, 실제 Chrome). op=connect/disconnect/status.
         group: browser_session
-        target_description: 'op: connect | disconnect | status. connect — url 옵션으로 MCP 서버 주소. status — 연결 여부·현재 URL·탭ID·ref 수 반환.'
+        target_description: 'connect — url 옵션으로 MCP 서버 주소. status — 연결 여부·현재 URL·탭ID·ref 수 반환.'
         target_key: op
         router: handler
         tool: browser_chrome_op
+        ops:
+          values:
+            connect: Chrome MCP WebSocket 연결 (url 옵션)
+            disconnect: 연결 해제
+            status: 연결 여부·현재 URL·탭ID·ref 수 반환
         implementation: Chrome MCP WebSocket 연결/해제/상태 op 분기
         keywords:
         - Chrome
@@ -353,10 +425,15 @@
       cctv:
         description: CCTV 실시간 영상 열기·캡처 (op 분기). open(브라우저 재생) / capture(이미지 저장).
         group: open
-        target_description: 'op: open | capture (기본 open). name 또는 url 중 하나. open — 브라우저에서 HLS/RTSP 재생. capture — ffmpeg로 단일 프레임 PNG 캡처 (save_path 옵션, AI 분석용).'
+        target_description: 'name 또는 url 중 하나. open — 브라우저에서 HLS/RTSP 재생. capture — ffmpeg로 단일 프레임 PNG 캡처 (save_path 옵션, AI 분석용).'
         target_key: op
         router: handler
         tool: cctv_op
+        ops:
+          default: open
+          values:
+            open: 브라우저에서 HLS/RTSP 영상 재생 (기본)
+            capture: ffmpeg 단일 프레임 PNG 캡처 (AI 분석용)
         implementation: cctv_open/cctv_capture op 분기 (HLS 브라우저 재생 + ffmpeg 프레임 캡처)
         keywords:
         - cctv

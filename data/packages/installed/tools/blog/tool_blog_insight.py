@@ -285,7 +285,17 @@ def blog_check_new_posts() -> Dict[str, Any]:
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (post['post_id'], post['title'], post['category'], pub_date_db, post['content'], len(post['content'])))
                 new_posts.append({'post_id': post['post_id'], 'title': post['title'], 'pub_date': pub_date_db})
-        
+                # canonical store(vault)에 .md 기록 — A안: vault가 진실 소스
+                try:
+                    from tool_blog_vault import write_post_md
+                    write_post_md({
+                        'post_id': post['post_id'], 'title': post['title'],
+                        'category': post['category'], 'pub_date': pub_date_db,
+                        'content': post['content'],
+                    })
+                except Exception as e:
+                    print(f"[Blog] vault .md 기록 실패({post['post_id']}): {e}")
+
         conn.commit()
         total = conn.execute("SELECT COUNT(*) FROM posts").fetchone()[0]
         conn.close()
@@ -374,6 +384,12 @@ def blog_save_summary(post_id: str, summary: str, keywords: str = "") -> Dict[st
         conn.execute("INSERT OR REPLACE INTO summaries (post_id, summary, keywords) VALUES (?, ?, ?)", (post_id, summary, keywords))
         conn.commit()
         conn.close()
+        # canonical store(vault)의 .md 요약/키워드도 갱신 — A안
+        try:
+            from tool_blog_vault import update_post_summary_md
+            update_post_summary_md(post_id, summary, keywords)
+        except Exception as e:
+            print(f"[Blog] vault 요약 갱신 실패({post_id}): {e}")
         return {'success': True}
     except Exception as e:
         return {'success': False, 'error': str(e)}

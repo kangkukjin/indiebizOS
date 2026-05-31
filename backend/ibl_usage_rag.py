@@ -98,13 +98,15 @@ class IBLUsageRAG:
 
     def _format_references(self, examples: list) -> str:
         """검색 결과를 프롬프트 주입용 XML로 포맷팅"""
-        lines = ['<ibl_references note="참고 용례. execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라.">']
+        lines = ['<ibl_references note="참고 용례. execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라. success_rate는 과거 실행 성공률(0~1)이니 낮으면 신중히 참고하라(없으면 미검증).">']
         for ex in examples:
             # XML 속성용 이스케이프
             intent = ex.intent.replace('"', '&quot;').replace("'", "&apos;")
             code = ex.ibl_code.replace('"', '&quot;')
             attrs = f'intent="{intent}" code=\'{ex.ibl_code}\' score="{ex.score}"'
-            if ex.success_rate > 0:
+            # success_rate >= 0 이면 시도 이력 있음(0.0=전부 실패 포함) → 표시.
+            # -1.0(미검증)은 표시하지 않아 노이즈를 줄인다.
+            if ex.success_rate >= 0:
                 attrs += f' success_rate="{ex.success_rate}"'
             lines.append(f'  <ref {attrs}/>')
         lines.append('</ibl_references>')
@@ -363,6 +365,30 @@ def _lookup_implementation(node: str, action: str) -> str:
 DISTILL_THRESHOLD = 0.7
 
 
+def _validate_ibl_actions(code: str) -> bool:
+    """증류된 IBL 코드의 모든 [node:action]이 ibl_nodes.yaml에 실재하는지 검증.
+
+    경량 AI 반성이 환각한 액션(없는 node:action)이 해마 코퍼스에 진입하면
+    이후 연상으로 추천되어 실패를 유발한다. add_example 전에 정적으로 거른다.
+    하나라도 미존재 액션이 있으면 False (증류 폐기)."""
+    pairs = re.findall(r'\[([a-z_-]+):([a-z_-]+)\]', code or "")
+    if not pairs:
+        return False  # 액션 패턴이 없으면 용례로서 무의미
+    try:
+        from ibl_access import _load_nodes_data
+        nodes_data = _load_nodes_data() or {}
+        nodes = nodes_data.get("nodes", {})
+    except Exception:
+        # 노드 데이터 로드 실패 시 검증 불가 → 보수적으로 통과(기존 동작 유지)
+        return True
+    for node, action in pairs:
+        actions = (nodes.get(node, {}) or {}).get("actions", {}) or {}
+        if action not in actions:
+            print(f"[경험증류] 검증 실패 — 미존재 액션 [{node}:{action}], 증류 폐기")
+            return False
+    return True
+
+
 def get_top_score(user_message: str, allowed_nodes: set = None) -> float:
     """사용자 메시지에 대한 해마 최고 점수를 반환한다."""
     try:
@@ -374,6 +400,74 @@ def get_top_score(user_message: str, allowed_nodes: set = None) -> float:
         return 0.0
     except Exception:
         return 0.0
+
+
+def get_top(user_message: str, allowed_nodes: set = None) -> tuple:
+    """해마 최고 점수와 그 항목의 ibl_code를 함께 반환한다 (score, code).
+
+    피드백 귀속(record_recall_outcome)에 top_code가 필요한 경로용."""
+    try:
+        from ibl_usage_db import IBLUsageDB
+        db = IBLUsageDB()
+        results = db.search_hybrid(query=user_message, top_k=1, allowed_nodes=allowed_nodes)
+        if results:
+            return (results[0].score, results[0].ibl_code)
+        return (0.0, "")
+    except Exception:
+        return (0.0, "")
+
+
+# 피드백 귀속 임계값: 이 점수 이상(Reflex 경로)에서만 top-1 example에 실행 결과 귀속.
+# 연상은 example을 '참고'로 주입하고 AI가 새 코드를 생성하므로 귀속이 흐릿하지만,
+# 고점수 경로는 top-1이 사실상 코드를 주도하므로 깔끔히 귀속된다.
+RECALL_RECORD_THRESHOLD = 0.85
+
+
+def record_recall_outcome(top_code: str, top_score: float, tool_calls: list) -> bool:
+    """Reflex 경로에서 연상 top-1 example의 실행 성공/실패를 해마에 피드백한다.
+
+    이것이 해마의 강화-감쇠 루프다. 기록된 성공/실패는 success_rate로 환산되어
+    이후 연상 시 참조 XML에 표시되고(검증된 사례 부상), 정리 패스의 가지치기
+    신호로도 쓸 수 있다.
+
+    Args:
+        top_code: 연상 최고점 항목의 ibl_code (build_execution_memory 반환)
+        top_score: 해마 최고 점수
+        tool_calls: 도구 실행 이력 [{tool_name, input, success}, ...]
+    Returns:
+        기록 여부 (귀속 불가/저점수 시 False)
+    """
+    if not top_code or top_score < RECALL_RECORD_THRESHOLD:
+        return False
+    if not tool_calls:
+        return False
+
+    # execute_ibl 호출들의 성공 여부 집계 (하나라도 실패하면 실패로 귀속)
+    ibl_success = None
+    for tc in tool_calls:
+        if not isinstance(tc, dict):
+            continue
+        if tc.get("tool_name") != "execute_ibl":
+            continue
+        s = bool(tc.get("success", True))
+        ibl_success = s if ibl_success is None else (ibl_success and s)
+
+    if ibl_success is None:
+        return False  # IBL 실행이 없었으면 귀속 불가
+
+    try:
+        from ibl_usage_db import IBLUsageDB
+        db = IBLUsageDB()
+        ok = db.update_success_by_code(top_code, ibl_success)
+        if ok:
+            print(f"[해마피드백] top-1 {'성공' if ibl_success else '실패'} 기록 "
+                  f"(score={top_score:.2f}): {top_code[:50]}")
+            # 성공률이 바뀌었으니 연상 캐시 무효화
+            IBLUsageRAG().clear_cache()
+        return ok
+    except Exception as e:
+        print(f"[해마피드백] 실패 (무시): {e}")
+        return False
 
 
 def distill_experience(user_message: str, tool_calls: list, top_score: float) -> bool:
@@ -472,6 +566,10 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
         if not intent or not code:
             return False
 
+        # 검증 게이트: 환각된(미존재) 액션이 코퍼스에 진입하지 못하도록 정적 검증
+        if not _validate_ibl_actions(code):
+            return False
+
         # 노드 추출
         node_pattern = re.compile(r'\[([a-z_-]+):')
         nodes = ",".join(sorted(set(node_pattern.findall(code))))
@@ -514,3 +612,110 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
     except Exception as e:
         print(f"[경험증류] 실패: {e}")
         return False
+
+
+# =========================================================================
+# 해마 정리 패스 (Hippocampus Consolidation) — 증류물 위생
+# 심층메모리 정리 패스의 대칭. 증류(입력)는 쓰기 시점에, 정리(위생)는 배치로.
+# 증류물(source='distilled')에만 적용하고 학습 코퍼스는 보호한다.
+# =========================================================================
+
+HIPPO_CADENCE_HOURS = 24
+HIPPO_DISTILLED_CAP = 200
+HIPPO_JSON_CAP = 800
+
+
+def _hippo_marker_path():
+    from pathlib import Path
+    return Path(__file__).parent.parent / "data" / "training" / ".hippocampus_consolidated"
+
+
+def _hippo_is_due(force: bool = False) -> bool:
+    """마지막 정리 후 HIPPO_CADENCE_HOURS 경과했는지 (마커 파일 기반)."""
+    if force:
+        return True
+    try:
+        marker = _hippo_marker_path()
+        if not marker.exists():
+            return True
+        from datetime import datetime, timedelta
+        last = datetime.fromisoformat(marker.read_text(encoding="utf-8").strip())
+        return datetime.now() - last >= timedelta(hours=HIPPO_CADENCE_HOURS)
+    except Exception:
+        return True
+
+
+def _hippo_touch_marker():
+    try:
+        from datetime import datetime
+        _hippo_marker_path().write_text(datetime.now().isoformat(), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _consolidate_distilled_json(cap: int = HIPPO_JSON_CAP) -> dict:
+    """ibl_distilled.json 정리: 완전중복(intent+code) 제거 + 최신 cap건만 유지.
+
+    재학습 입력 파일이라 중복이 쌓이면 학습 편향이 된다. 최근 항목을 보존."""
+    from pathlib import Path
+    import json as _json
+    path = Path(__file__).parent.parent / "data" / "training" / "ibl_distilled.json"
+    if not path.exists():
+        return {"json": 0}
+    try:
+        data = _json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"json": 0, "error": "parse"}
+    if not isinstance(data, list):
+        return {"json": 0}
+
+    # 최신 우선 dedup (뒤에서부터 보존), 그 후 최근 cap건
+    seen, kept_rev = set(), []
+    for e in reversed(data):
+        k = (e.get("intent", ""), e.get("ibl_code", ""))
+        if k in seen:
+            continue
+        seen.add(k)
+        kept_rev.append(e)
+    kept = list(reversed(kept_rev))[-cap:]
+
+    removed = len(data) - len(kept)
+    if removed > 0:
+        try:
+            path.write_text(_json.dumps(kept, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+    return {"json": len(kept), "json_removed": removed}
+
+
+def run_hippocampus_consolidation(force: bool = False) -> dict:
+    """해마 정리 패스 — 증류물 가지치기/중복제거/상한 + json 정리.
+
+    self-check(면역 순찰)에 합류하되 24h 카덴스 게이트로 자기 페이싱.
+    dirty하지 않으면 즉시 스킵(싸다)."""
+    if not _hippo_is_due(force):
+        return {"skipped": "cadence"}
+
+    result = {}
+    try:
+        from ibl_usage_db import IBLUsageDB
+        db = IBLUsageDB()
+        result.update(db.consolidate_distilled(cap=HIPPO_DISTILLED_CAP))
+    except Exception as e:
+        print(f"[해마정리] DB 정리 실패 (무시): {e}")
+        result["db_error"] = str(e)
+
+    result.update(_consolidate_distilled_json())
+
+    # 변경이 있었으면 연상 캐시 무효화
+    if result.get("deleted_total") or result.get("json_removed"):
+        try:
+            IBLUsageRAG().clear_cache()
+        except Exception:
+            pass
+        print(f"[해마정리] 증류물 가지치기 {result.get('pruned_bad',0)} / "
+              f"중복제거 {result.get('deduped',0)} / 상한 {result.get('pruned_cap',0)} / "
+              f"json정리 {result.get('json_removed',0)}")
+
+    _hippo_touch_marker()
+    return result

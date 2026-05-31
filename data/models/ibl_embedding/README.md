@@ -5,35 +5,38 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:10282
+- dataset_size:3930
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 강의 슬라이드 두 번째 단계
+- source_sentence: arXiv에서 트랜스포머 논문
   sentences:
-  - 웹캠 데이터 출처 확인
-  - 슬라이드별 labels와 image_prompt 등록
-  - 페이지 상태 캡처해
-- source_sentence: 일일리포트 실행해줘해
-  sentences:
-  - '[limbs:os_open]'
-  - 삼성전자 정보
-  - 일일리포트 실행해
-- source_sentence: 신촌 카페 검색해줘해봐
-  sentences:
-  - 워크플로우 설정 보여줘
-  - CCTV 화면 저장해줘
-  - '[sense:search_local]'
-- source_sentence: 구글 찾아봐 좀 할래
-  sentences:
-  - 작업흐름 실행을 다른 팀에 맡겨
-  - '[limbs:snapshot] >> [limbs:click]'
-  - 브라우저에서 이거 띄워줘
-- source_sentence: 네트워크 요청 로그
-  sentences:
-  - 브라우저에서 이거 띄워줘
+  - 마지막 조회 이후 새로 추가된 블로그 글 확인. 정기 모니터링용.
   - '[engines:web_deploy] >> [engines:web_live_check]'
-  - 콘솔 로그 봐봐
+  - AI/CS/물리/수학 프리프린트 검색 (arXiv). 최신 미출판 연구, PDF 다운로드 가능. 정식 출판 논문은 search_openalex
+    사용.
+- source_sentence: 키워드로 적합한 IBL 노드·액션 자동 탐색. 어떤 액션 쓸지 모를 때 첫 단계.
+  sentences:
+  - 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
+  - '[limbs:iframe]'
+  - '[self:discover]'
+- source_sentence: 웹사이트에 버튼 컴포넌트 추가해줘
+  sentences:
+  - '[self:blog_check_new]'
+  - '[sense:gutenberg_books]'
+  - '[engines:web_add_component]'
+- source_sentence: 퍼센트 차트로 봐야겠다
+  sentences:
+  - '[sense:search_arxiv] & [sense:search_ddg] & [sense:crawl] & [sense:search_openalex]
+    & [sense:search_ddg]'
+  - '[self:disable]'
+  - '[engines:pie]'
+- source_sentence: 내 일정 HTML로 열어
+  sentences:
+  - 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 반환: passed/score/issues/notes. ILLUSTRATE
+    단계 자동 평가용.'
+  - 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
+  - '[self:show_calendar]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -47,7 +50,7 @@ This is a [sentence-transformers](https://www.SBERT.net) model finetuned from [j
 ### Model Description
 - **Model Type:** Sentence Transformer
 - **Base model:** [jhgan/ko-sroberta-multitask](https://huggingface.co/jhgan/ko-sroberta-multitask) <!-- at revision 1050bd4e2ca90c0b9b62f0c1fbd83edc85ba8483 -->
-- **Maximum Sequence Length:** 128 tokens
+- **Maximum Sequence Length:** 64 tokens
 - **Output Dimensionality:** 768 dimensions
 - **Similarity Function:** Cosine Similarity
 <!-- - **Training Dataset:** Unknown -->
@@ -64,7 +67,7 @@ This is a [sentence-transformers](https://www.SBERT.net) model finetuned from [j
 
 ```
 SentenceTransformer(
-  (0): Transformer({'max_seq_length': 128, 'do_lower_case': False, 'architecture': 'RobertaModel'})
+  (0): Transformer({'max_seq_length': 64, 'do_lower_case': False, 'architecture': 'RobertaModel'})
   (1): Pooling({'word_embedding_dimension': 768, 'pooling_mode_cls_token': False, 'pooling_mode_mean_tokens': True, 'pooling_mode_max_tokens': False, 'pooling_mode_mean_sqrt_len_tokens': False, 'pooling_mode_weightedmean_tokens': False, 'pooling_mode_lasttoken': False, 'include_prompt': True})
 )
 ```
@@ -87,9 +90,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '네트워크 요청 로그',
-    '콘솔 로그 봐봐',
-    '[engines:web_deploy] >> [engines:web_live_check]',
+    '내 일정 HTML로 열어',
+    '[self:show_calendar]',
+    'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 반환: passed/score/issues/notes. ILLUSTRATE 단계 자동 평가용.',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -98,9 +101,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[1.0000, 0.9431, 0.1784],
-#         [0.9431, 1.0000, 0.1944],
-#         [0.1784, 0.1944, 1.0000]])
+# tensor([[ 1.0000,  0.7397, -0.1673],
+#         [ 0.7397,  1.0000, -0.0224],
+#         [-0.1673, -0.0224,  1.0000]])
 ```
 
 <!--
@@ -145,19 +148,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 10,282 training samples
+* Size: 3,930 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
-  |         | sentence_0                                                                       | sentence_1                                                                        |
-  |:--------|:---------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
-  | type    | string                                                                           | string                                                                            |
-  | details | <ul><li>min: 3 tokens</li><li>mean: 9.19 tokens</li><li>max: 63 tokens</li></ul> | <ul><li>min: 4 tokens</li><li>mean: 12.84 tokens</li><li>max: 69 tokens</li></ul> |
+  |         | sentence_0                                                                        | sentence_1                                                                       |
+  |:--------|:----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|
+  | type    | string                                                                            | string                                                                           |
+  | details | <ul><li>min: 3 tokens</li><li>mean: 10.23 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 19.0 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                          | sentence_1                       |
-  |:------------------------------------|:---------------------------------|
-  | <code>Pandas Context7 ID 알려줘</code> | <code>라이브러리 이름으로 ID — vue</code> |
-  | <code>이 창 닫아</code>                 | <code>다른 탭으로 가</code>            |
-  | <code>끄자</code>                     | <code>아이유 뭐 좋은 거 재생해줘</code>     |
+  | sentence_0                      | sentence_1                             |
+  |:--------------------------------|:---------------------------------------|
+  | <code>새 글 올라왔어?</code>          | <code>[self:blog_check_new]</code>     |
+  | <code>사진 저장 공간 얼마나 쓰고 있어</code> | <code>[self:photo]</code>              |
+  | <code>블로그 색인 갱신</code>          | <code>[self:blog_rebuild_index]</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -281,26 +284,7 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.1945 | 500  | 0.3633        |
-| 0.3890 | 1000 | 0.2159        |
-| 0.5834 | 1500 | 0.1082        |
-| 0.7779 | 2000 | 0.0907        |
-| 0.9724 | 2500 | 0.0754        |
-| 0.1945 | 500  | 0.0841        |
-| 0.3890 | 1000 | 0.0856        |
-| 0.5834 | 1500 | 0.0531        |
-| 0.7779 | 2000 | 0.0598        |
-| 0.9724 | 2500 | 0.0524        |
-| 0.1945 | 500  | 0.0286        |
-| 0.3890 | 1000 | 0.0247        |
-| 0.5834 | 1500 | 0.0183        |
-| 0.7779 | 2000 | 0.0276        |
-| 0.9724 | 2500 | 0.0256        |
-| 0.1945 | 500  | 0.0168        |
-| 0.3890 | 1000 | 0.0135        |
-| 0.5834 | 1500 | 0.0168        |
-| 0.7779 | 2000 | 0.0173        |
-| 0.9724 | 2500 | 0.0203        |
+| 0.5086 | 500  | 0.0089        |
 
 
 ### Framework Versions

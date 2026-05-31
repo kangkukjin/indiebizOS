@@ -526,6 +526,8 @@ let tooltip = null;
 let GOALS = null;
 let TOOLS = null;
 let DOCS = null;
+let COGNITION = null;
+let MEMORY = null;
 let currentTab = 'bodymap';
 let goalFilter = 'all';
 
@@ -562,6 +564,30 @@ function switchTab(tab) {
     else renderSystemDashboard();
   }
   if (tab === 'docs' && !DOCS) fetchDocs();
+  if (tab === 'cognition') { if (!COGNITION) fetchCognition(); else renderCognition(); }
+  if (tab === 'memory') { if (!MEMORY) fetchMemory(); else renderMemory(); }
+}
+
+async function fetchCognition() {
+  try {
+    const res = await fetch(API_BASE + '/xray/cognition');
+    COGNITION = await res.json();
+    renderCognition();
+  } catch(e) {
+    document.getElementById('cognition-panel').innerHTML =
+      '<div style="padding:40px;color:#ef4444;">사고 과정 데이터 로드 실패: ' + e.message + '</div>';
+  }
+}
+
+async function fetchMemory() {
+  try {
+    const res = await fetch(API_BASE + '/xray/memory');
+    MEMORY = await res.json();
+    renderMemory();
+  } catch(e) {
+    document.getElementById('memory-panel').innerHTML =
+      '<div style="padding:40px;color:#ef4444;">메모리 데이터 로드 실패: ' + e.message + '</div>';
+  }
 }
 
 async function fetchDocs() {
@@ -653,6 +679,8 @@ function render() {
       <button class="tab-btn active" data-tab="bodymap" onclick="switchTab('bodymap')">Body Map</button>
       <button class="tab-btn" data-tab="goals" onclick="switchTab('goals')">Task Timeline</button>
       <button class="tab-btn" data-tab="tools" onclick="switchTab('tools')">도구 현황</button>
+      <button class="tab-btn" data-tab="cognition" onclick="switchTab('cognition')">사고 과정</button>
+      <button class="tab-btn" data-tab="memory" onclick="switchTab('memory')">메모리 관리</button>
       <button class="tab-btn" data-tab="dashboard" onclick="switchTab('dashboard')">시스템 개요</button>
       <button class="tab-btn" data-tab="docs" onclick="switchTab('docs')">시스템 문서</button>
     </div>
@@ -815,12 +843,209 @@ function render() {
       </div>
     </div>
 
+    <div id="tab-cognition" class="tab-content">
+      <div id="cognition-panel" style="padding:24px;">
+        <div class="loading"><div class="loading-spinner"></div>사고 과정 데이터 로딩 중...</div>
+      </div>
+    </div>
+
+    <div id="tab-memory" class="tab-content">
+      <div id="memory-panel" style="padding:24px;">
+        <div class="loading"><div class="loading-spinner"></div>메모리 데이터 로딩 중...</div>
+      </div>
+    </div>
+
     <div id="tab-docs" class="tab-content">
       <div id="docs-panel" class="docs-layout">
         <div class="loading" style="grid-column:1/-1;"><div class="loading-spinner"></div>문서 로딩 중...</div>
       </div>
     </div>
   `;
+}
+
+function renderCognition() {
+  if (!COGNITION) return;
+  const c = COGNITION;
+  const dist = c.distribution || {};
+  const tr = c.trends || {};
+  const rec = tr.recent || {}, prev = tr.previous || {}, trends = tr.trends || {};
+  const dec = dist.decision || {}, ev = dist.evaluation || {};
+  const decTotal = Object.values(dec).reduce((a,b)=>a+b,0) || 1;
+  const evTotal = Object.values(ev).reduce((a,b)=>a+b,0) || 1;
+  const decColors = { EXECUTE:'#22c55e', THINK:'#22d3ee', SESSION_RESET:'#64748b' };
+  function bar(label, n, total, color) {
+    const p = Math.round(n/total*100);
+    return `<div style="margin:6px 0;"><div style="display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;margin-bottom:3px;"><span>${label}</span><span>${n} (${p}%)</span></div><div style="height:8px;background:#1e293b;border-radius:4px;overflow:hidden;"><div style="height:100%;width:${p}%;background:${color};"></div></div></div>`;
+  }
+  function trendMark(t) {
+    if (t==='improving') return '<span style="color:#22c55e;">▲ 개선</span>';
+    if (t==='declining') return '<span style="color:#ef4444;">▼ 하락</span>';
+    if (t==='stable') return '<span style="color:#64748b;">― 안정</span>';
+    return '<span style="color:#475569;">· 데이터 부족</span>';
+  }
+  function stat(label, val, unit) {
+    return `<div style="flex:1;min-width:120px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:14px;"><div style="font-size:11px;color:#64748b;">${label}</div><div style="font-size:22px;color:#e2e8f0;font-weight:600;margin-top:4px;">${val ?? '—'}<span style="font-size:12px;color:#64748b;"> ${unit||''}</span></div></div>`;
+  }
+  const pct = v => v!=null ? Math.round(v*100)+'%' : '—';
+  const html = `
+  <div class="section">
+    <div class="section-title">사고 과정 — 3단 인지 + 3단계 모델 티어</div>
+    <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:16px;">
+      사용자 명령은 인간의 인지 과정을 본뜬 <b style="color:#e2e8f0;">분류(반사) → 의식(계획) → 실행 → 평가(성찰)</b> 파이프라인을 거칩니다.
+      비용·속도를 위해 단계마다 모델을 갈아끼웁니다 —
+      <span style="color:#22c55e;">경량</span>(분류·평가),
+      <span style="color:#f59e0b;">중급</span>(EXECUTE 실행),
+      <span style="color:#a78bfa;">본격</span>(THINK 의식·실행).
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 0</div>
+        <div style="flex:1;border-left:2px solid #1e293b;padding-left:14px;">
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">연상기억 생성 <span style="font-size:10px;color:#64748b;font-weight:400;">· 명령당 1회</span></div>
+          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">해마(과거 IBL 코드 사례)와 심층메모리(사용자 사실·선호)를 합성합니다. 이후 모든 하위 에이전트가 이 기억을 공유하여 중복 검색을 피합니다.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 1</div>
+        <div style="flex:1;border-left:2px solid #22c55e;padding-left:14px;">
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">분류 · 반사 <span style="color:#22c55e;font-size:10px;">경량</span></div>
+          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">경량 AI가 요청을 <b style="color:#f59e0b;">EXECUTE</b>(의식 생략, 즉시 실행)와 <b style="color:#a78bfa;">THINK</b>(의식 경유)로 분류합니다. 단, 해마 점수가 <b>Reflex 임계(0.85)</b> 이상이면 분류조차 건너뛰고 과거 top-1 코드를 그대로 실행합니다(척수반사).</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 2</div>
+        <div style="flex:1;border-left:2px solid #a78bfa;padding-left:14px;">
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">의식 · 계획 <span style="color:#a78bfa;font-size:10px;">본격</span> <span style="font-size:10px;color:#64748b;font-weight:400;">· THINK 경로만</span></div>
+          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">의식 에이전트가 히스토리를 요약하고, 도구 한계를 인식한 채 문제를 정의(<b style="color:#e2e8f0;">task framing</b>)하고, 달성 기준을 세우고, 관련 IBL 노드·가이드 파일을 짚어줍니다. 이것이 실행 에이전트의 초점이 됩니다.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;"></div>
+        <div style="flex:1;background:#0f172a;border:1px solid #312e54;border-radius:8px;padding:12px 14px;">
+          <div style="color:#c4b5fd;font-size:12px;font-weight:600;margin-bottom:4px;">↻ framing 재사용 — 의식 호출 절약</div>
+          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">
+            같은 대화의 연속 질문이라면 매번 본격 모델(의식)을 다시 부르지 않습니다.
+            직전에 만든 framing이 있으면 경량 <b style="color:#22c55e;">적합성 게이트</b>가 "이 framing이 새 질문에도 맞는가"를 1회 판정합니다 —
+            <b style="color:#e2e8f0;">맞으면</b> 의식(본격) 호출을 건너뛰고 framing을 재사용하되, 매 턴 달라지는 <b>달성 기준</b>만 게이트가 새로 뽑습니다.
+            주제가 바뀌었다면(<b style="color:#e2e8f0;">안 맞으면</b>) 의식이 새 framing을 만듭니다. framing은 30분간 유지됩니다.
+            → 같은 맥락의 후속 대화에서 비용 큰 의식 단계를 반복하지 않는 것이 핵심입니다.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 3</div>
+        <div style="flex:1;border-left:2px solid #f59e0b;padding-left:14px;">
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">실행 <span style="color:#f59e0b;font-size:10px;">중급</span> <span style="color:#a78bfa;font-size:10px;">/ 본격</span></div>
+          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">실행 에이전트가 IBL 엔진으로 도구를 실행합니다. EXECUTE 경로는 중급 모델, THINK 경로는 본격 모델을 씁니다.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 4</div>
+        <div style="flex:1;border-left:2px solid #22c55e;padding-left:14px;">
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">평가 · 성찰 <span style="color:#22c55e;font-size:10px;">경량</span></div>
+          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">평가 에이전트가 단계 2의 달성 기준 대비 결과를 검증합니다. 미달(NOT_ACHIEVED)이면 피드백과 함께 최대 3라운드까지 재실행합니다. 성공 경험은 해마로 증류됩니다.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">분류 분포 <span style="color:#475569;font-weight:400;">(최근 ${dist.sample||0} 에피소드)</span></div>
+    ${Object.entries(dec).sort((a,b)=>b[1]-a[1]).map(([k,n])=>bar(k,n,decTotal,decColors[k]||'#8b5cf6')).join('') || '<div style="color:#64748b;font-size:12px;">기록 없음</div>'}
+  </div>
+  <div class="section">
+    <div class="section-title">평가 달성</div>
+    ${Object.entries(ev).map(([k,n])=>bar(k,n,evTotal,k==='ACHIEVED'?'#22c55e':'#ef4444')).join('') || '<div style="color:#64748b;font-size:12px;">평가 기록 없음</div>'}
+  </div>
+  <div class="section">
+    <div class="section-title">인지 지표 <span style="color:#475569;font-weight:400;">(최근 100)</span></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      ${stat('평균 의식 지연', dist.avg_consciousness_ms, 'ms')}
+      ${stat('평균 실행 라운드', dist.avg_execution_rounds, '회')}
+      ${stat('평균 해마 점수', dist.avg_hippocampus_score, '')}
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">7일 추세 <span style="color:#475569;font-weight:400;">(최근 7일 vs 이전 7일)</span></div>
+    <table class="xray-table">
+      <thead><tr><th>지표</th><th>최근</th><th>이전</th><th>추세</th></tr></thead>
+      <tbody>
+        <tr><td>에피소드 수</td><td>${rec.episode_count ?? '—'}</td><td>${prev.episode_count ?? '—'}</td><td></td></tr>
+        <tr><td>해마 점수</td><td>${rec.avg_hippocampus_score ?? '—'}</td><td>${prev.avg_hippocampus_score ?? '—'}</td><td>${trendMark(trends.hippocampus)}</td></tr>
+        <tr><td>EXECUTE 비율</td><td>${pct(rec.execute_ratio)}</td><td>${pct(prev.execute_ratio)}</td><td>${trendMark(trends.efficiency)}</td></tr>
+        <tr><td>평가 달성률</td><td>${pct(rec.evaluation_achieved_ratio)}</td><td>${pct(prev.evaluation_achieved_ratio)}</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>`;
+  document.getElementById('cognition-panel').innerHTML = html;
+}
+
+function renderMemory() {
+  if (!MEMORY) return;
+  const m = MEMORY;
+  function card(title, subtitle, rows, accent) {
+    const body = rows.map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;margin:4px 0;"><span style="color:#64748b;">${k}</span><span style="color:#e2e8f0;font-weight:500;">${v}</span></div>`).join('');
+    return `<div style="background:#0f172a;border:1px solid #1e293b;border-left:3px solid ${accent};border-radius:8px;padding:14px;"><div style="font-size:13px;color:#e2e8f0;font-weight:600;">${title}</div><div style="font-size:11px;color:#475569;margin-bottom:8px;">${subtitle}</div>${body}</div>`;
+  }
+  const proc=m.procedural||{}, rel=m.relational||{}, epi=m.episodic||{}, ss=m.self_state||{}, sem=m.semantic||{}, wk=m.working||{}, con=m.consolidation||{};
+  const catRows = Object.entries(rel.by_category||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const html = `
+  <div class="section">
+    <div class="section-title">메모리 관리 — 6종 기억</div>
+    <div style="color:#94a3b8;font-size:13px;line-height:1.7;">
+      indiebizOS의 기억은 인간 기억 분류에 대응하는 <b style="color:#e2e8f0;">6종</b>으로 구성됩니다.
+      이 중 <b style="color:#22d3ee;">절차기억(해마)</b>과 <b style="color:#a78bfa;">관계기억(심층메모리)</b>은
+      대화에서 자동으로 증류되고, 주기적 <b>정리 패스</b>로 중복·노화·모순을 청소합니다.
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">기억 현황</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+      ${card('절차기억 · 해마', '자연어→IBL 코드 용례', [
+        ['총 용례', proc.total_examples ?? '—'],
+        ['자동증류분', proc.distilled ?? '—'],
+        ['증류 학습셋(json)', proc.distilled_json ?? '—'],
+      ], '#22d3ee')}
+      ${card('관계기억 · 심층메모리', `사용자 사실·선호 (${rel.agents||0} 에이전트)`, [
+        ['총 기억', rel.total ?? '—'],
+        ['정리된 DB', (rel.consolidated_dbs ?? '—')+' / '+(rel.agents ?? '—')],
+        ...catRows,
+      ], '#a78bfa')}
+      ${card('일화기억', '에피소드 로그 + 인지 요약', [
+        ['에피소드', epi.episode_log ?? '—'],
+        ['요약(영구)', epi.episode_summary ?? '—'],
+      ], '#f59e0b')}
+      ${card('자기상태', 'World Pulse + Self-Check', [
+        ['펄스 로그', ss.pulse_log ?? '—'],
+        ['자가점검', ss.self_checks ?? '—'],
+        ['액션 건강', ss.action_health ?? '—'],
+      ], '#22c55e')}
+      ${card('의미기억', '시스템 문서(장기지식)', [
+        ['시스템 문서', sem.system_docs ?? '—'],
+      ], '#64748b')}
+      ${card('작업기억', '대화 이력(단기)', [
+        ['시스템 AI 대화', wk.system_ai_conversations ?? '—'],
+      ], '#94a3b8')}
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">정리 패스 현황</div>
+    <table class="xray-table">
+      <thead><tr><th>정리 패스</th><th>마지막 실행</th></tr></thead>
+      <tbody>
+        <tr><td>해마 정리 (증류물 위생)</td><td>${con.hippocampus ? con.hippocampus.replace('T',' ') : '미실행'}</td></tr>
+        <tr><td>데이터 정리 (retention)</td><td>${con.cleanup ? con.cleanup.replace('T',' ') : '미실행'}</td></tr>
+        <tr><td>심층메모리 정리</td><td>${rel.consolidated_dbs ?? 0} / ${rel.agents ?? 0} DB</td></tr>
+      </tbody>
+    </table>
+  </div>`;
+  document.getElementById('memory-panel').innerHTML = html;
 }
 
 function renderTools() {

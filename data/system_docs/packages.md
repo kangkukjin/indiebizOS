@@ -1,6 +1,6 @@
 ---
 title: 도구 패키지 시스템
-scope: 패키지 구조(handler/tool.json), 설치 절차, 34개 패키지 목록. IBL 어휘 등록은 ibl_nodes_src/ 직접 편집(ibl.md 참조).
+scope: 패키지 구조(handler/tool.json), 설치 절차, 36개 패키지 목록. IBL 어휘 등록은 ibl_nodes_src/ 직접 편집(ibl.md 참조). op-bearing 9 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
 last_updated: 2026-05-28
 see_also: [architecture.md, ibl.md]
@@ -232,7 +232,9 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 
 ---
 
-## 현재 설치된 도구 패키지 (34개)
+## 현재 설치된 도구 패키지 (36개)
+
+**op-bearing 9 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): browser-action / youtube / computer-use / radio / cctv / photo-manager / memory / health-record / lecture_workspace.
 
 | ID | 이름 | 설명 |
 |----|------|------|
@@ -248,6 +250,7 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | ibl-core | IBL Core | IBL 핵심 도구 |
 | investment | Investment | 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석 |
 | kosis | KOSIS | 통계청 KOSIS API 국가통계 조회 |
+| lecture_workspace | Lecture Workspace | 강의 워크스페이스 (강의/슬라이드/재료/데크 op 분기) |
 | legal | Legal | 대한민국 법률 정보 검색 (법령, 판례, 행정규칙, 자치법규 등) |
 | local-info | Local Info | 지역 정보 도구 |
 | location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
@@ -257,6 +260,7 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | nodejs | Nodejs | Node.js/JavaScript 코드 실행 |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |
 | photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 |
+| publishing | Publishing | 한국어 단행본 출판 (typst 조판, 표지·내지·검증) |
 | python-exec | Python Exec | Python 코드 실행 |
 | radio | Radio | 인터넷 라디오 검색 및 재생 |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API |

@@ -88,6 +88,36 @@ def get_denied_message(node: str, allowed: Set[str]) -> dict:
 
 # ============ 환경 프롬프트 생성 ============
 
+def _emit_action_xml(action_name: str, action_config, indent: str = "") -> str:
+    """단일 액션을 XML 문자열로 직렬화.
+
+    ops 블록이 있으면 자식 <op> 요소로 펼친다 — 실행 에이전트가 op 선택 시
+    description의 자연어가 아닌 구조화된 정보를 보도록.
+
+    2026-05-28: ops 블록 도입과 함께 추가. 비용은 24 op 사용 액션에 한정.
+    """
+    if not isinstance(action_config, dict):
+        return f'{indent}<action name="{action_name}"/>'
+
+    desc = action_config.get("description", "")
+    ops = action_config.get("ops")
+
+    if not isinstance(ops, dict) or not ops.get("values"):
+        return f'{indent}<action name="{action_name}" description="{desc}"/>'
+
+    # ops 펼치기
+    values = ops.get("values") or {}
+    default = ops.get("default")
+    lines = [f'{indent}<action name="{action_name}" description="{desc}">']
+    for op_name, op_desc in values.items():
+        attrs = f'name="{op_name}"'
+        if op_name == default:
+            attrs += ' default="true"'
+        lines.append(f'{indent}  <op {attrs}>{op_desc}</op>')
+    lines.append(f'{indent}</action>')
+    return "\n".join(lines)
+
+
 def build_environment(
     allowed_nodes: Optional[List[str]] = None,
     project_path: Optional[str] = None,
@@ -174,15 +204,13 @@ def build_environment(
             for grp_name, grp_actions in grouped.items():
                 parts.append(f'<group name="{grp_name}">')
                 for action_name, action_config in grp_actions:
-                    action_desc = action_config.get("description", "")
-                    parts.append(f'  <action name="{action_name}" description="{action_desc}"/>')
+                    parts.append(_emit_action_xml(action_name, action_config, indent="  "))
                 parts.append("</group>")
 
         if ungrouped:
             parts.append("<actions>")
             for action_name, action_config in ungrouped:
-                action_desc = action_config.get("description", "") if isinstance(action_config, dict) else ""
-                parts.append(f'  <action name="{action_name}" description="{action_desc}"/>')
+                parts.append(_emit_action_xml(action_name, action_config, indent="  "))
             parts.append("</actions>")
 
         parts.append("</node>")

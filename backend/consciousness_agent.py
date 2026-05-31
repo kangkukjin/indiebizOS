@@ -15,6 +15,7 @@ consciousness_agent.py - 의식 에이전트
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -285,7 +286,13 @@ class ConsciousnessAgent:
         cap["tools"] = kept
 
     def _parse_response(self, response: str) -> Optional[Dict]:
-        """AI 응답에서 JSON 추출 및 파싱"""
+        """AI 응답에서 JSON 추출 및 파싱.
+
+        엄격 파싱 실패 시 trailing comma 같은 흔한 LLM 오류를 정리해 재시도한다.
+        의식 에이전트의 JSON 한 글자 오류가 평가 루프 전체를 무력화하는 fragility
+        방지가 목적 (2026-05-28 사례: opus가 capability_focus 마지막 키 뒤에
+        trailing comma를 붙여 consciousness_output=None 되어 평가 루프가 침묵).
+        """
         if not response:
             return None
 
@@ -302,23 +309,46 @@ class ConsciousnessAgent:
             end = text.index("```", start)
             text = text[start:end].strip()
 
-        # { 로 시작하는 부분만 추출
+        # { 로 시작하는 부분만 추출 — `}` 누락 같은 깨진 응답은 None으로 graceful fail
         if "{" in text:
             brace_start = text.index("{")
-            # 마지막 } 찾기
+            if "}" not in text[brace_start:]:
+                logger.warning(
+                    f"[ConsciousnessAgent] JSON 파싱 실패 (닫는 중괄호 없음)\n응답: {response[:200]}"
+                )
+                return None
             brace_end = text.rindex("}") + 1
             text = text[brace_start:brace_end]
 
+        # 1차: 엄격 파싱
         try:
             result = json.loads(text)
-            # 필수 필드 검증
-            if "task_framing" not in result:
-                logger.warning("[ConsciousnessAgent] task_framing 누락")
+        except json.JSONDecodeError as e1:
+            # 2차: 흔한 LLM 출력 오류 청소 후 재시도.
+            # - trailing comma: `,\s*[}\]]` → 닫기 괄호만 남김.
+            # 다른 오류(single quote 등)는 의식 에이전트에서 거의 안 보여 대응 안 함.
+            cleaned = re.sub(r",(\s*[}\]])", r"\1", text)
+            if cleaned != text:
+                try:
+                    result = json.loads(cleaned)
+                    # 어디서 청소가 일어났는지 가시화 — opus 출력 안정성 모니터링용.
+                    print(f"[ConsciousnessAgent] JSON 청소 후 파싱 성공 (trailing comma 등 제거). 원본 오류: {e1}")
+                except json.JSONDecodeError as e2:
+                    logger.warning(
+                        f"[ConsciousnessAgent] JSON 파싱 실패 (청소 후에도): {e2}\n응답: {response[:200]}"
+                    )
+                    return None
+            else:
+                logger.warning(
+                    f"[ConsciousnessAgent] JSON 파싱 실패 (청소 대상 없음): {e1}\n응답: {response[:200]}"
+                )
                 return None
-            return result
-        except json.JSONDecodeError as e:
-            logger.warning(f"[ConsciousnessAgent] JSON 파싱 실패: {e}\n응답: {response[:200]}")
+
+        # 필수 필드 검증
+        if "task_framing" not in result:
+            logger.warning("[ConsciousnessAgent] task_framing 누락")
             return None
+        return result
 
 
 # ============ 유틸리티 함수 ============

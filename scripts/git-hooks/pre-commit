@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# IBL 어휘 정합성 pre-commit 훅
+#
+# 다음 파일이 스테이징될 때만 `build_ibl_nodes.py --check` 를 실행:
+#   - data/ibl_nodes_src/*.yaml          (src 편집)
+#   - data/packages/installed/**/tool.json   (op enum/default)
+#   - data/packages/installed/**/handler.py  (op 분기 substring)
+#   - scripts/build_ibl_nodes.py             (빌더 자체)
+#
+# 검사 실패 시 커밋 차단. `--no-verify` 로 우회 가능하지만 권장 X.
+#
+# 설치:
+#   ln -sf "$(pwd)/scripts/git-hooks/pre-commit" .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit  (이미 +x 면 생략 가능)
+set -euo pipefail
+
+# 스테이징된 파일 목록.
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+# 검사 트리거 — 위 4종 중 하나라도 스테이지되어 있으면 실행.
+if echo "$staged" | grep -qE '^(data/ibl_nodes_src/.*\.yaml|data/packages/installed/.*/tool\.json|data/packages/installed/.*/handler\.py|scripts/build_ibl_nodes\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] IBL 정합성 검사 실행..."
+  if ! python3 "$repo_root/scripts/build_ibl_nodes.py" --check; then
+    echo "" >&2
+    echo "[pre-commit] IBL 검증 실패 — 커밋 차단." >&2
+    echo "[pre-commit]   • src 편집 후 \`python3 scripts/build_ibl_nodes.py\` 재실행하여 ibl_nodes.yaml 갱신" >&2
+    echo "[pre-commit]   • 검증 실패 항목은 위 로그 참조" >&2
+    echo "[pre-commit]   • 정말로 우회하려면 \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] IBL 정합성 OK ✓"
+fi
+
+exit 0

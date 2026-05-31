@@ -484,15 +484,25 @@ _TOOL_MAP = {
 }
 
 
+# 2026-05-28 dispatcher 표준화 — 단일 액션 op 키 메타데이터 (browser-action 패턴).
+# 값은 None — 분기 로직은 _cctv_op 함수 안에 그대로 유지.
+# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
+_OP_DISPATCHERS = {
+    "cctv_op": {"open": None, "capture": None},
+}
+_OP_DEFAULTS = {"cctv_op": "open"}
+
+
 def _cctv_op(op: str = None, **kwargs) -> str:
     """[limbs:cctv]{op} 단일 디스패처 (2026-05-27 limbs 라운드 2)."""
-    op = (op or "open").strip()
+    op = (op or _OP_DEFAULTS.get("cctv_op", "")).strip()
+    mapping = _OP_DISPATCHERS["cctv_op"]
     if op == "open":
         return cctv_open(**kwargs)
     elif op == "capture":
         return cctv_capture(**kwargs)
     else:
-        return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: open/capture"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(mapping.keys())}"}, ensure_ascii=False)
 
 
 _TOOL_MAP["cctv_op"] = _cctv_op

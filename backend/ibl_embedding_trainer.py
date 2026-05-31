@@ -275,6 +275,10 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
     BASE_MODEL = 'jhgan/ko-sroberta-multitask'
     print(f"\n[학습] 베이스 모델 로딩: {BASE_MODEL}")
     model = SentenceTransformer(BASE_MODEL, device="mps")
+    # 2026-05-29 v12: max_seq_length 128→64. 의도/설명/코드가 모두 짧아(대개 30~50토큰)
+    # 손실 거의 없이 activation 메모리를 절반으로. batch=4가 9GB 천장(v11 epoch3 OOM)
+    # 아래로 들어가도록. v11이 epoch2에서 0.898(상승 중)이었으니 peak 포착이 목표.
+    model.max_seq_length = 64
 
     # 액션 description 로드
     action_descs = load_action_descriptions()
@@ -290,29 +294,37 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
         train_code_to_intents[code].append(intent)
 
     for code, intents in train_code_to_intents.items():
-        # 1. intent ↔ intent 쌍 (같은 코드 내)
-        if len(intents) >= 2:
-            for i in range(len(intents)):
-                for j in range(i + 1, min(i + 4, len(intents))):
-                    train_examples.append(InputExample(texts=[intents[i], intents[j]]))
+        # 1. intent ↔ intent 쌍 — 2026-05-28 완전 제거.
+        # 라운드 2 통합 + 윈도우 2 축소(0.825) vs 이전 윈도우 4(0.948) 비교에서
+        # intent-intent supervision이 plateau를 만든다는 판단. intent→code 매칭이
+        # 본질이고, 같은 code에 묶인 intent들은 자연스럽게 비슷한 embedding으로 수렴
+        # (모두 code와 가까이 가야 하므로). 메모리/시간 부담도 추가 감소.
 
         # 2. intent → ibl_code 쌍
         for intent in intents:
             train_examples.append(InputExample(texts=[intent, code]))
 
-        # 3. intent → action description 쌍 (핵심 추가)
+        # 3. intent → action description 쌍 — 2026-05-29 v6 복원.
+        # v5 (제거) 시 best 0.796 vs v4 (유지) 0.829 — description 페어가 핵심 신호.
+        # batch_size=1 로 메모리 부담 대신 시간으로 비용 전환.
         action = extract_action_from_code(code)
         if action in action_descs:
             desc = action_descs[action]
             for intent in intents[:5]:  # 상위 5개 intent
                 train_examples.append(InputExample(texts=[intent, desc]))
-                # description → code 쌍도 추가 (description과 code의 연결)
             train_examples.append(InputExample(texts=[desc, code]))
 
     random.shuffle(train_examples)
     print(f"[학습] {len(train_examples)}개 학습 쌍 구성")
 
-    # DataLoader — 배치 작게 (MPS 메모리 제한)
+    # DataLoader — batch_size
+    # 2026-05-28: batch_size=4 OOM → 2.
+    # 2026-05-29 v6: batch=1로 실험했으나 MultipleNegativesRankingLoss가 in-batch
+    # negatives를 못 만들어 loss=0/grad=0 (학습 자체 안 됨). 2로 복원.
+    # 2026-05-29 v10: batch=4 복원 실험. 0.948 모델이 batch=4("윈도우 4")였음.
+    # batch 4→2는 OOM 응급처치였으나 진짜 원인은 시스템 메모리 굶주림 +
+    # HIGH_WATERMARK_RATIO=0.0(자체 브레이크 해제 → OS jetsam kill 유도)로 추정.
+    # 메모리 위생(epoch 사이 empty_cache + watermark 기본값)으로 batch=4 재시도.
     train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=4)
 
     # Loss: MultipleNegativesRankingLoss
@@ -328,10 +340,13 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
 
     best_score = -1
     best_epoch = 0
-    patience = 999  # 조기 종료 비활성화
+    patience = 3  # 2026-05-29 v10: 무의미한 꼬리 epoch에서 kill 노출 줄이기 (999→3)
     no_improve = 0
 
     for epoch in range(1, max_epochs + 1):
+        # 2026-05-29 v10: 직전 epoch의 CPU 평가가 모델을 cpu로 옮겨두므로(ST 5.x
+        # encode(device='cpu') 부작용 확인됨) fit 전에 mps로 강제 복귀.
+        model.to('mps')
         model.fit(
             train_objectives=[(train_dataloader, train_loss)],
             epochs=1,
@@ -340,7 +355,7 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
             show_progress_bar=True,
         )
 
-        # 검증: 실제 test set으로 평가 (학습에 사용되지 않은 데이터)
+        # 검증: 실제 test set으로 평가 (CPU에서 — MPS 예산을 학습에 양보)
         if test_pairs:
             val_score = _eval_on_test(model, test_pairs, list(code_to_intents.keys()))
         else:
@@ -355,6 +370,18 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
             model.save(str(MODEL_OUTPUT_DIR))
         else:
             no_improve += 1
+
+        # 2026-05-29 v10: epoch 사이 MPS 캐시 해제. PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
+        # 으로 무한정 자라던 누적 누수가 epoch 7 system kill의 유력 원인. 매 epoch
+        # 캐시를 OS에 반납해 wired 메모리가 평평하게 유지되도록.
+        try:
+            import torch
+            if torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+                import gc as _gc
+                _gc.collect()
+        except Exception as _e:
+            print(f"  [경고] MPS 캐시 해제 실패(무시): {_e}")
 
         if no_improve >= patience:
             print(f"  [조기 종료] {patience} epoch 연속 개선 없음 → epoch {best_epoch}이 최적")
@@ -376,8 +403,8 @@ def _eval_on_test(model, test_pairs: List[Tuple[str, str]], all_codes: List[str]
     test_intents = [p[0] for p in test_pairs]
     test_codes = [p[1] for p in test_pairs]
 
-    intent_embs = model.encode(test_intents, convert_to_tensor=True, show_progress_bar=False)
-    code_embs = model.encode(unique_codes, convert_to_tensor=True, show_progress_bar=False)
+    intent_embs = model.encode(test_intents, convert_to_tensor=True, show_progress_bar=False, device='cpu')
+    code_embs = model.encode(unique_codes, convert_to_tensor=True, show_progress_bar=False, device='cpu')
     sims = cos_sim(intent_embs, code_embs)
 
     correct = 0
@@ -409,8 +436,8 @@ def _quick_eval(model, code_to_intents: Dict) -> float:
     if not test_intents:
         return 0.0
 
-    intent_embs = model.encode(test_intents, convert_to_tensor=True, show_progress_bar=False)
-    code_embs = model.encode(test_codes, convert_to_tensor=True, show_progress_bar=False)
+    intent_embs = model.encode(test_intents, convert_to_tensor=True, show_progress_bar=False, device='cpu')
+    code_embs = model.encode(test_codes, convert_to_tensor=True, show_progress_bar=False, device='cpu')
     sims = cos_sim(intent_embs, code_embs)
 
     # Top-5 정확도
@@ -433,13 +460,13 @@ def evaluate_model(model, test_pairs: List[Tuple[str, str]],
     # 모든 고유 ibl_code의 임베딩 계산
     unique_codes = list(set(all_codes))
     code_embeddings = model.encode(unique_codes, convert_to_tensor=True,
-                                   show_progress_bar=False)
+                                   show_progress_bar=False, device='cpu')
 
     # 평가 셋의 intent → 가장 가까운 코드 찾기
     test_intents = [pair[0] for pair in test_pairs]
     test_codes = [pair[1] for pair in test_pairs]
     intent_embeddings = model.encode(test_intents, convert_to_tensor=True,
-                                      show_progress_bar=False)
+                                      show_progress_bar=False, device='cpu')
 
     # 코사인 유사도 계산
     from sentence_transformers.util import cos_sim
@@ -468,7 +495,7 @@ def evaluate_model(model, test_pairs: List[Tuple[str, str]],
         action_list = list(action_descs.keys())
         desc_list = [action_descs[a] for a in action_list]
         desc_embeddings = model.encode(desc_list, convert_to_tensor=True,
-                                        show_progress_bar=False)
+                                        show_progress_bar=False, device='cpu')
 
         desc_sim = cos_sim(intent_embeddings, desc_embeddings)
 

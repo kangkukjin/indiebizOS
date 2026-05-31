@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-05-17
+last_updated: 2026-05-28
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -174,9 +174,10 @@ execute_ibl(code='[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}'
 - **비즈니스 DB**: `data/business.db` (SQLite)
 - **해마 (IBL 사용량) DB**: `data/ibl_usage.db` (SQLite — ibl_examples + FTS5 + vec0)
 - **해마 임베딩 모델**: `data/models/ibl_embedding/` (fine-tuned `jhgan/ko-sroberta-multitask`, 422MB. 해마 + 심층메모리 공유)
-- **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` (2,019건)
-- **IBL 노드 정의 (소스)**: `data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml` — 단일 진실 소스, 직접 편집
+- **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` (2,019건, 라운드 2 정리 전 311 액션 기준 — 199 액션으로 재학습 대기)
+- **IBL 노드 정의 (소스)**: `data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml` — 단일 진실 소스, 직접 편집. op-bearing 액션은 `ops: {default, values}` 블록 의무.
 - **IBL 노드 정의 (빌드 산출물)**: `data/ibl_nodes.yaml` — `scripts/build_ibl_nodes.py`로 생성, 런타임 로드, 직접 편집 금지
+- **IBL 검증 게이트**: `scripts/git-hooks/pre-commit` (commit 시점) + `backend/world_pulse_health.run_static_ibl_check` (12시간 self-check)
 
 ## 지원 AI 프로바이더 (모두 스트리밍 지원)
 - **Anthropic Claude**: claude-sonnet-4-20250514, claude-3-5-haiku-20241022, claude-3-5-sonnet-latest
@@ -198,16 +199,23 @@ execute_ibl(code='[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}'
 - `data/ibl_nodes_src/` 6개 yaml이 사람이 편집하는 단일 소스
 - `python3 scripts/build_ibl_nodes.py`로 `data/ibl_nodes.yaml` 빌드 (명시적, 자동 등록 없음)
 - 패키지 설치/제거가 IBL 어휘를 자동 변경하지 않음 — 어휘 추가/삭제는 src 수동 편집
-- `--check`로 src와 빌드 산출물 일치 검증 (CI/pre-commit)
+- **삼각 검증** (`--check`): src ↔ tool.json ↔ handler.py `_OP_DISPATCHERS` 3중 일치 AST 정확 비교
+  - 등록: src.tool ↔ tool.json.name
+  - op enum: src.ops.values 키 ↔ tool.json input_schema.properties.op.enum
+  - default: src.ops.default ↔ tool.json input_schema.properties.op.default
+  - dispatcher: src.ops.values 키 ↔ handler.py `_OP_DISPATCHERS[tool_name]` dict 키
+- **이중 게이트**: pre-commit 훅(commit 시점) + self-check 사이클(12시간, `__static__:ibl_consistency` 식별자)
+- **dispatcher 표준** (op-bearing 9 패키지): `_OP_DISPATCHERS = {tool_name: {op: handler_or_None}}` 모듈 레벨 dict 노출 의무
 
 ## 물리적 구조 (주요 경로)
 - `backend/`: 서버 소스 코드
 - `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (34개)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (36개 — op-bearing 9개 `_OP_DISPATCHERS` 표준)
 - `data/api_registry.yaml`: API 도구 정의 (node 필드로 IBL 자동 병합, 현재 2개 액션)
 - `data/packages/installed/extensions/`: 백엔드 코어 모듈 (9개)
 - `projects/`: 사용자 프로젝트 데이터 (20개)
+- `scripts/`: 빌드/배포 스크립트 (`build_ibl_nodes.py` + `git-hooks/pre-commit`)
 
 ## 프롬프트 구조
 
@@ -243,4 +251,4 @@ execute_ibl(code='[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}'
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
 
 ---
-*마지막 업데이트: 2026-05-17 — 3단계 모델 티어 설정 파일 명시, 심층메모리 DB 경로 추가, 의식 에이전트 입력 XML 구조 정리*
+*마지막 업데이트: 2026-05-28 — op 어휘 단일화(ops 블록) + 삼각 검증 인프라(`--check`, pre-commit, self-check 합류) + dispatcher 표준(9 패키지 `_OP_DISPATCHERS`) + 36 패키지. 이전 갱신(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*

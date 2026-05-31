@@ -81,6 +81,18 @@ def execute(tool_input: Dict[str, Any], context) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
+# 2026-05-28 dispatcher 표준화 — 단일 액션 op 키 메타데이터 (browser-action 패턴).
+# 값은 None — 분기 로직은 _dispatch_photo_op 안에 그대로 유지.
+# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
+_OP_DISPATCHERS = {
+    "photo_op": {
+        "scan": None, "list_scans": None, "gallery": None, "search": None,
+        "detail": None, "stats": None, "timeline": None, "duplicates": None,
+    },
+}
+# photo_op는 op 필수 — _OP_DEFAULTS 항목 없음.
+
+
 def _dispatch_photo_op(params: Dict[str, Any]) -> Dict[str, Any]:
     """[self:photo]{op} 통합 액션 디스패처."""
     op = (params.get("op") or "").strip()

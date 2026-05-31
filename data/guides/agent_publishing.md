@@ -19,7 +19,7 @@ IndieBiz OS 에이전트 → Cloudflare Worker (백엔드 API + 프론트엔드 
 ```env
 CLOUDFLARE_API_TOKEN=xxx    # Cloudflare API 토큰 (필수)
 CLOUDFLARE_ACCOUNT_ID=xxx   # Cloudflare Account ID (필수)
-GOOGLE_API_KEY=xxx          # Gemini API 키 (기본 프로바이더)
+GEMINI_API_KEY=xxx          # Gemini API 키 (기본 프로바이더)
 ANTHROPIC_API_KEY=xxx       # Claude API 키 (선택)
 OPENAI_API_KEY=xxx          # OpenAI API 키 (선택)
 ```
@@ -319,7 +319,7 @@ async function callGoogle(messages, systemPrompt, env) {
   }));
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GOOGLE_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -481,7 +481,7 @@ wrangler deploy
 echo "{password}" | wrangler secret put APP_PASSWORD --name {subdomain}
 
 # AI API 키 설정 (프로바이더에 따라)
-echo "{api_key}" | wrangler secret put GOOGLE_API_KEY --name {subdomain}
+echo "{api_key}" | wrangler secret put GEMINI_API_KEY --name {subdomain}
 # 또는
 echo "{api_key}" | wrangler secret put ANTHROPIC_API_KEY --name {subdomain}
 # 또는
@@ -542,7 +542,7 @@ wrangler deploy
 
 # 5. 시크릿 설정
 echo "mypassword" | wrangler secret put APP_PASSWORD --name myagent
-echo "sk-xxx" | wrangler secret put GOOGLE_API_KEY --name myagent
+echo "sk-xxx" | wrangler secret put GEMINI_API_KEY --name myagent
 
 # 6. 브라우저에서 확인
 # https://myagent.xxx.workers.dev

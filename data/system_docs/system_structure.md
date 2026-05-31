@@ -2,7 +2,7 @@
 title: 시스템 구조 가이드
 scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행·평가에 자동 주입)
 owner_code: prompt_builder.py, consciousness_agent.py, agent_cognitive.py (모두 자동 로드)
-last_updated: 2026-05-17
+last_updated: 2026-05-28
 see_also: [architecture.md, execution_memory.md]
 ---
 
@@ -29,15 +29,15 @@ see_also: [architecture.md, execution_memory.md]
 ## 시스템 문서 (System AI 참조)
 - **경로**: `/Users/kangkukjin/Desktop/AI/indiebizOS/data/system_docs/`
 - 시스템 AI가 장기 기억으로 참조하는 문서들
-- **파일 목록** (11개):
+- **파일 목록** (12개):
   - `system_structure.md` - 시스템 구조 가이드 (**항상 프롬프트에 포함** — 의식/실행/평가 에이전트)
-  - `architecture.md` - 시스템 개요, 아키텍처, 설계 의도 (overview.md 통합)
+  - `architecture.md` - 시스템 개요, 아키텍처, 설계 의도
   - `technical.md` - 기술 문서 (API, 설정, 경로)
-  - `ibl.md` - IBL 명세 (phase26, ibl_development_plan 통합)
+  - `ibl.md` - IBL 명세 — 5-Node·199 액션·op 어휘화·삼각 검증
   - `execution_memory.md` - 실행기억 & 해마 & RAG
-  - `packages.md` - 패키지 시스템 (guide_file.md 통합)
+  - `packages.md` - 패키지 시스템 (36개 도구 + 9개 extensions)
   - `inventory.md` - 프로젝트/패키지 현황 (자동 생성)
-  - `communication.md` - 통신/연동 (auto_response.md 통합)
+  - `communication.md` - 통신/연동
   - `delegation.md` - 위임 체인 시스템
   - `scheduler_guide.md` - 스케줄러 가이드
   - `remote_access.md` - 원격 접속 문서
@@ -49,7 +49,7 @@ see_also: [architecture.md, execution_memory.md]
 
 ```
 indiebizOS/
-├── backend/              # Python FastAPI 백엔드 (포트 8765) — 102개 파일
+├── backend/              # Python FastAPI 백엔드 (포트 8765) — 106개 파일
 │   ├── api.py           # 메인 서버 엔트리포인트
 │   ├── api_*.py         # 각 모듈 라우터 (25개)
 │   │   ├── api_agents.py        # 에이전트 관리
@@ -87,6 +87,8 @@ indiebizOS/
 │   ├── ibl_usage_generator.py # IBL 합성 용례 생성기
 │   ├── ibl_usage_rag.py # IBL 실행기억 생성 + 경험 증류
 │   │   # 빌드: scripts/build_ibl_nodes.py (소스: data/ibl_nodes_src/, 산출물: data/ibl_nodes.yaml)
+│   │   # 검증: --check 가 src↔tool.json↔handler.py(_OP_DISPATCHERS) 삼각 일치 AST 정확 비교
+│   │   # 게이트: scripts/git-hooks/pre-commit (commit 시점) + world_pulse_health (12시간 self-check)
 │   │
 │   │   # === 실행 엔진 ===
 │   ├── workflow_engine.py # 워크플로우 오케스트레이션
@@ -97,8 +99,9 @@ indiebizOS/
 │   │   # === 인지/자율 시스템 (3단 인지 아키텍처 + 3단계 모델 티어) ===
 │   ├── agent_runner.py  # 에이전트 실행 엔진 (분류→의식→실행→평가 파이프라인)
 │   ├── agent_cognitive.py # 인지 시스템 통합
-│   ├── consciousness_agent.py # 의식 에이전트 — 메타 판단 + achievement_criteria
+│   ├── consciousness_agent.py # 의식 에이전트 — 메타 판단 + achievement_criteria + 메타 인지 가드(자해/의심 갱신/재시도)
 │   ├── world_pulse.py   # Consciousness Pulse + Self-Check (자의식/면역, 5노드 전체)
+│   ├── world_pulse_health.py # Self-Check 엔진 + 정적 정합성 합류 (run_static_ibl_check, build_ibl_nodes --check 통합)
 │   ├── goal_evaluator.py # 목표 평가 시스템
 │   │
 │   │   # === 코어 모듈 ===
@@ -157,20 +160,22 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/
-│   │   │   ├── tools/       # 도구 패키지 (34개)
+│   │   │   ├── tools/       # 도구 패키지 (36개 — op-bearing 9개는 _OP_DISPATCHERS 표준)
 │   │   │   └── extensions/  # 백엔드 코어 모듈 (9개)
 │   │   ├── not_installed/   # 미설치 패키지
 │   │   └── dev/             # 개발 중
+│   ├── ibl_nodes_src/   # IBL 액션 단일 진실 소스 (편집 위치, 노드별 yaml)
 │   ├── training/        # 해마 학습 데이터
-│   │   ├── ibl_training_balanced_20260516.json  # 정리된 학습 데이터 (2,019건, 311 액션 100% 커버)
-│   │   └── _archive/                            # 옛 학습 데이터 (synthetic/distilled 원본 + 중간 산출물)
+│   │   ├── ibl_training_balanced_20260516.json  # 학습 데이터 (라운드 2 정리 전 311 액션 기준, 재학습 대기)
+│   │   └── _archive/                            # 옛 학습 데이터
 │   ├── models/          # fine-tuned 임베딩 모델 (768차원)
 │   │   └── ibl_embedding/   # 해마 시맨틱 검색용
-│   ├── ibl_nodes.yaml   # IBL 전체 노드/액션 레지스트리
+│   ├── ibl_nodes.yaml   # IBL 전체 노드/액션 레지스트리 (빌드 산출물, 직접 편집 금지)
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
-│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 11개 파일 — system_structure.md는 항상 프롬프트에 포함)
-│   ├── guides/          # 가이드 파일 (28개, 의식 에이전트가 선택하여 프롬프트에 주입)
+│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 12개 파일 — system_structure.md는 항상 프롬프트에 포함)
+│   ├── guides/          # 가이드 파일 (47개, 의식 에이전트가 선택하여 프롬프트에 주입)
+│   ├── common_prompts/  # 공용 프롬프트 (consciousness/evaluator/unconscious + fragments)
 │   ├── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
 │   └── my_profile.txt   # 사용자 프로필
 │
@@ -180,7 +185,7 @@ indiebizOS/
 │       ├── agents.yaml  # 에이전트 설정
 │       └── conversations.db # 대화 이력
 │
-├── scripts/             # 빌드/배포 스크립트
+├── scripts/             # 빌드/배포 스크립트 (build_ibl_nodes.py + git-hooks/pre-commit)
 ├── mcp_server.py        # MCP 서버 엔트리포인트
 ├── templates/           # 프로젝트 템플릿
 └── outputs/             # 출력 파일
@@ -196,14 +201,15 @@ indiebizOS/
 [0] 연상 단계        — 해마(IBL 사례) + 심층메모리(연상기억) 검색 1회로 자료 묶음
                        (top_score, top_code 함께 추출 — 중복 검색 제거)
      ↓
-[1] Reflex 분기      — top_score ≥ 0.88 이면 무의식 호출 스킵, 곧장 EXECUTE
+[1] Reflex 분기      — top_score ≥ 0.85 이면 무의식 호출 스킵, 곧장 EXECUTE
      ↓ 미만
 [1B] 무의식 분류     — 경량 AI로 EXECUTE / THINK 판정
      ↓
-EXECUTE                                THINK
+EXECUTE                                THINK ( = "framing이 필요하다"는 수요)
    │                                     ↓
-   │                              [2] 의식 에이전트 (본격 AI)
-   │                                  task_framing / achievement_criteria / …
+   │                              [2] framing 재고 확인 (_run_consciousness_or_reuse)
+   │                                  ├─ 재고 있고 fit? → 재사용(criteria만 갱신, 의식 Opus 스킵)
+   │                                  └─ 없음/안맞음 → 의식 에이전트(본격 AI): task_framing / achievement_criteria / …
    ↓                                     ↓
 [3] 실행 에이전트
      · EXECUTE/Reflex → 중급 모델로 전환
@@ -227,7 +233,7 @@ EXECUTE                                THINK
   - 반환: `(xml, top_score, top_code)` — 검색 한 번으로 점수/코드까지 확보 (이전 3회 중복 호출 제거)
   - 모든 에이전트(무의식/의식/실행/평가)가 같은 묶음을 공유
 - **Reflex 분기** — 호출 측(`agent_communication`, `api_websocket`, `system_ai_core`)이 직접 분기
-  - `top_score >= REFLEX_SCORE_THRESHOLD (0.88)` 이면 무의식 모델 호출 스킵
+  - `top_score >= REFLEX_SCORE_THRESHOLD (0.85)` 이면 무의식 모델 호출 스킵
   - reflex_hint로 매칭된 IBL 코드를 실행 에이전트에 힌트로 전달
 - **무의식 (경량 AI)** — `_classify_request()`
   - 단순 분류만 담당 (Reflex 로직 분리됨)
@@ -239,6 +245,8 @@ EXECUTE                                THINK
   - 출력 필드: task_framing, achievement_criteria, history_summary, capability_focus, guide_files, self_awareness, world_state
   - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<related_memory>`, `<world_pulse>`, `<available_guides>`, `<user_message>`)
   - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `fragments/12_ibl_only.md`
+- **framing 재사용 (의식 진입 게이트, 2026-05-31)** — `_run_consciousness_or_reuse()` + `_consciousness_fit_gate()`
+  - THINK 시 같은 대화의 직전 framing이 재고(30분 TTL)에 있고 경량 fit 게이트가 적합 판정하면 의식(Opus) 호출을 스킵·재사용(criteria만 갱신). 없음/안 맞음/실패 또는 SESSION_RESET·재시작 시엔 풀 의식. 상세: architecture.md
 - **평가 에이전트 (경량 AI)** — `_run_goal_evaluation_loop()`
   - achievement_criteria가 있을 때만 실행. NOT_ACHIEVED 시 피드백과 함께 재실행 (최대 3라운드)
   - 입력에 `## 연상기억` 섹션으로 연상 묶음 그대로 전달
@@ -249,4 +257,4 @@ EXECUTE                                THINK
 
 ---
 
-*마지막 업데이트: 2026-05-17 — 인지 파이프라인 재설계, 해마 재학습(Top-5 94.8%), 연상기억 시맨틱 검색 도입. 자기 인식과 무관한 핵심 컴포넌트 섹션 추가 정리(인지 파이프라인만 보존).*
+*마지막 업데이트: 2026-05-31 — THINK 경로 framing 재사용 게이트 추가(연속 turn에서 의식 Opus 호출 스킵). 이전(2026-05-28): 라운드 2 정리(195 액션) + op 어휘 단일화(24 액션 ops 블록) + 삼각 검증 인프라(`build_ibl_nodes.py --check`, pre-commit, self-check 합류) + dispatcher 표준화(9 패키지 `_OP_DISPATCHERS`) + consciousness 메타 인지 3 가드. 현재 5-Node 199 액션 / 36 패키지.*

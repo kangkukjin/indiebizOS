@@ -91,8 +91,11 @@ class AIAgent:
 
         # 도구 실행 중 수집된 이미지 (턴 단위)
         self._last_tool_images = []
-        # 도구 실행 결과 (턴 단위) — non-streaming 경로에서 evaluator 입력용
+        # 도구 실행 결과 (턴 단위) — non-streaming 경로에서 evaluator 입력용 (legacy: 결과 문자열만)
         self._last_tool_results: List[str] = []
+        # 도구 호출 구조화 이력 (턴 단위) — evaluator가 시퀀스 자체를 근거로 쓸 수 있도록
+        # {name, input, result, is_error} 형태로 누적. _last_tool_results보다 정보가 풍부.
+        self._last_tool_calls: List[Dict] = []
 
         # 프로바이더 초기화
         self._provider = None
@@ -141,6 +144,17 @@ class AIAgent:
         self._last_tool_results = []
         return results
 
+    def get_last_tool_calls(self) -> List[Dict]:
+        """현재 턴에서 호출된 도구의 구조화 이력 반환 후 초기화.
+
+        각 항목: {name, input, result, is_error}.
+        non-streaming 경로에서 evaluator의 tool_calls 인자로 전달하기 위해 사용.
+        평가자가 호출 시퀀스(어떤 도구를 어떤 순서로) 자체를 근거로 쓸 수 있다.
+        """
+        calls = self._last_tool_calls
+        self._last_tool_calls = []
+        return calls
+
     def process_message_with_history(
         self,
         message_content: str,
@@ -176,6 +190,7 @@ class AIAgent:
         try:
             self._last_tool_images = []  # 턴 시작 시 초기화
             self._last_tool_results = []  # 턴 시작 시 초기화
+            self._last_tool_calls = []  # 턴 시작 시 초기화
             response = self._provider.process_message(
                 message=message_content,
                 history=history,
@@ -188,10 +203,15 @@ class AIAgent:
                 self._last_tool_images.extend(self._provider._last_tool_images)
                 self._provider._last_tool_images = []
 
-            # 프로바이더에서 수집된 도구 실행 결과 가져오기 (evaluator 입력용)
+            # 프로바이더에서 수집된 도구 실행 결과 가져오기 (evaluator 입력용 — legacy)
             if hasattr(self._provider, '_last_tool_results') and self._provider._last_tool_results:
                 self._last_tool_results.extend(self._provider._last_tool_results)
                 self._provider._last_tool_results = []
+
+            # 프로바이더에서 수집된 도구 호출 구조화 이력 가져오기 (evaluator 입력용 — 신규)
+            if hasattr(self._provider, '_last_tool_calls') and self._provider._last_tool_calls:
+                self._last_tool_calls.extend(self._provider._last_tool_calls)
+                self._provider._last_tool_calls = []
 
             # 미완료 약속 감지 → 실행 유도 (1회)
             if _is_unfulfilled_promise(response):

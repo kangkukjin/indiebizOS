@@ -183,7 +183,7 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     consciousness_output = None
     original_provider = None
     if request_type == "THINK":
-        consciousness_output = runner._run_consciousness(message, history or [], execution_memory)
+        consciousness_output = runner._run_consciousness_or_reuse(message, history or [], execution_memory)
     else:
         # EXECUTE/reflex: 중급 모델로 전환
         original_provider = _switch_to_midtier(runner)
@@ -233,6 +233,10 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
                 print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
                 # provider가 누적한 도구 실행 결과를 평가자에 전달
                 tool_results_for_eval = runner.ai.get_last_tool_results()
+                tool_calls_for_eval = (
+                    runner.ai.get_last_tool_calls()
+                    if hasattr(runner.ai, "get_last_tool_calls") else None
+                )
                 evaluated = runner._run_goal_evaluation_loop(
                     user_message=message,
                     criteria=criteria,
@@ -241,6 +245,7 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
                     consciousness_output=consciousness_output,
                     max_rounds=_goal_cfg.get("max_rounds", 3),
                     tool_results=tool_results_for_eval,
+                    tool_calls=tool_calls_for_eval,
                     execution_memory=execution_memory,
                 )
                 if evaluated and evaluated.strip():
@@ -288,7 +293,7 @@ def process_system_ai_message_stream(
     consciousness_output = None
     original_provider = None
     if request_type == "THINK":
-        consciousness_output = runner._run_consciousness(message, history or [], execution_memory)
+        consciousness_output = runner._run_consciousness_or_reuse(message, history or [], execution_memory)
     else:
         # EXECUTE/reflex: 중급 모델로 전환
         original_provider = _switch_to_midtier(runner)

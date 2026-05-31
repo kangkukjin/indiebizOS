@@ -241,3 +241,11 @@ backend/WORK
 *복사본*.md
 *.before_slim*
 *.before_slim2*
+
+# --- 런타임/개인정보 보호 (2026-05-31 추가) ---
+logs/
+data/training/
+data/.world_pulse_cleanup
+data/training/.hippocampus_consolidated
+*.bak
+*.bak.*

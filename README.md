@@ -168,15 +168,17 @@ The system maintains awareness of itself and the world:
 
 A domain-specific language that unifies all capabilities into one syntax.
 
-**5 Nodes, 332 Atomic Actions:**
+**5 Nodes, 199 Atomic Actions:**
 
 | Node | Actions | Description |
 |------|---------|-------------|
-| **sense** | 89 | Data retrieval (web, Naver Korean search, finance, photos, blog, health, real estate, legal, statistics) |
-| **self** | 107 | System management, workflows, files, notifications, code execution, health records |
-| **limbs** | 79 | UI automation (browser, Android, macOS), media playback (YouTube, radio) |
-| **others** | 12 | Collaboration, delegation, email, contacts, messaging |
-| **engines** | 45 | Content creation (slides, video, charts, images, music, websites, architecture) |
+| **sense** | 77 | Data retrieval (web, Naver Korean search, finance, photos, blog, health, real estate, legal, statistics) |
+| **self** | 50 | System management, workflows, files, notifications, code execution, health records |
+| **limbs** | 40 | UI automation (browser, Android, macOS), media playback (YouTube, radio) |
+| **others** | 6 | Collaboration, delegation, email, contacts, messaging |
+| **engines** | 26 | Content creation (slides, video, charts, images, music, websites, architecture) |
+
+> Action counts shrank from 332 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn.
 
 ```
 User: "Search AI news and save to file"
@@ -185,20 +187,21 @@ User: "Search AI news and save to file"
 ```
 
 **Key design:**
-- **One tool, one language** — AI agents learn one syntax, not 311 tool schemas
+- **One tool, one language** — AI agents learn one syntax, not 199 tool schemas
 - **Per-agent filtering** — Each agent's `allowed_nodes` restricts access
 - **Dynamic loading** — Tool packages are folders; drop one in, it's recognized
 
-### Hippocampus: Learning from Experience
+### Memory: Learning from Experience
 
-The system improves over time through a hippocampus-like memory system:
+Two memories learn from you automatically — and keep themselves clean:
 
-- **Fine-tuned Embedding Model** — Custom 768-dim model trained on IBL usage patterns (Top-5 accuracy: 95.6%)
-- **Experience Distillation** — Successful executions are automatically distilled into training data
-- **Action Balancing** — Training data is balanced per-action to prevent overfitting to frequently used patterns
-- **Periodic Retraining** — Always from the base model (no catastrophic forgetting), with MPS acceleration on Apple Silicon
+- **Hippocampus (procedural memory)** — A fine-tuned 768-dim embedding model maps your natural language to past IBL code (Top-5 accuracy: 91.4%). Successful executions are automatically distilled into reusable examples, so the system gets faster at *your* recurring tasks.
+- **Deep Memory (relational memory)** — After each conversation, a lightweight pass extracts durable facts about you — preferences, decisions, key dates — and recalls them, with their last-seen date, when relevant.
+- **Closed feedback loop** — When a recalled example drives an execution, its success or failure is recorded, so proven patterns rise and bad ones sink. Distilled code is validated against the action registry before it can enter the corpus.
+- **Self-cleaning** — A periodic consolidation pass (part of the immune patrol) merges near-duplicates, prunes stale or proven-bad entries, and resolves contradictions — so memory stays sharp instead of bloating.
+- **Periodic Retraining** — The embedding model is always retrained from the base model (no catastrophic forgetting), with MPS acceleration on Apple Silicon.
 
-### Tool Package System — Your System, Your Tools (34 packages, growing)
+### Tool Package System — Your System, Your Tools (36 packages, growing)
 
 Packages are not pre-installed. They grow with your needs.
 
@@ -244,4 +247,4 @@ cd frontend && npm run electron:dev  # Frontend (Electron)
 
 *IndieBiz OS — An AI system that grows with you, not one that's given to you.*
 
-*Last updated: 2026-04-14*
+*Last updated: 2026-05-31*

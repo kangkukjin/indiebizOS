@@ -10,6 +10,13 @@ see_also: [architecture.md, communication.md, scheduler_guide.md]
 
 에이전트 간 비동기 협업을 위한 핵심 메커니즘.
 
+> **⚠️ 2026-05-27 라운드 2 통합 — 본문의 옛 액션 이름 매핑**:
+> 본문 일부에 라운드 2 이전 액션 이름이 남아 있다. 새 호출 형식:
+> - `[others:delegate_project]` → `[others:delegate]{mode: "async|sync|workflow", scope: "cross"}` (mode×scope 분기)
+> - `[others:ask_sync]` → `[others:delegate]{mode: "sync"}`
+> - `[others:delegate_workflow]` → `[others:delegate]{mode: "workflow"}`
+> 정확한 op 어휘는 [ibl.md](ibl.md) "op 어휘 단일화" 섹션 + `data/ibl_nodes_src/others.yaml` 의 `ops:` 블록 참조.
+
 ## 개요
 
 ```

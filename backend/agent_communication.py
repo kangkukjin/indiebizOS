@@ -337,7 +337,7 @@ class AgentCommunicationMixin:
                 consciousness_output = None
                 _original_provider = None
                 if request_type == "THINK":
-                    consciousness_output = self._run_consciousness(
+                    consciousness_output = self._run_consciousness_or_reuse(
                         content, history, execution_memory
                     )
 
@@ -448,6 +448,10 @@ class AgentCommunicationMixin:
                                 self._log(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
                                 # provider가 누적한 도구 실행 결과를 평가자에 전달
                                 tool_results_for_eval = self.ai.get_last_tool_results()
+                                tool_calls_for_eval = (
+                                    self.ai.get_last_tool_calls()
+                                    if hasattr(self.ai, "get_last_tool_calls") else None
+                                )
                                 response = self._run_goal_evaluation_loop(
                                     user_message=content,
                                     criteria=criteria,
@@ -456,6 +460,7 @@ class AgentCommunicationMixin:
                                     consciousness_output=consciousness_output,
                                     max_rounds=_goal_cfg.get("max_rounds", 3),
                                     tool_results=tool_results_for_eval,
+                                    tool_calls=tool_calls_for_eval,
                                     execution_memory=execution_memory,
                                 )
                 finally:
@@ -494,8 +499,10 @@ class AgentCommunicationMixin:
                 _tool_calls = get_tool_calls()
                 if response and _tool_calls:
                     try:
-                        from ibl_usage_rag import distill_experience
+                        from ibl_usage_rag import distill_experience, record_recall_outcome
                         distill_experience(content, _tool_calls, _hippocampus_score)
+                        # 해마 피드백: Reflex 경로 top-1 실행 결과를 성공률에 반영
+                        record_recall_outcome(_top_code, _hippocampus_score, _tool_calls)
                     except Exception as distill_err:
                         self._log(f"[경험증류] 오류 (무시): {distill_err}")
 

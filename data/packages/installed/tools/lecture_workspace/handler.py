@@ -33,6 +33,18 @@ def _err(message: str, **extra) -> str:
     return json.dumps({"success": False, "error": message, **extra}, ensure_ascii=False, indent=2)
 
 
+# 2026-05-28 dispatcher 표준화 — 단일 액션 op 키 메타데이터 (browser-action 패턴).
+# 값은 None — 분기 로직은 _dispatch_*_op 함수 안에 그대로 유지.
+# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
+_OP_DISPATCHERS = {
+    "lecture_op": {"list": None, "create": None, "load": None, "delete": None, "open": None},
+    "slide_op": {"create": None, "edit": None, "delete": None, "patch": None, "rerender": None},
+    "material_op": {"add": None, "remove": None},
+    "deck_op": {"reorder": None, "export": None},
+}
+# 모두 op 필수 — _OP_DEFAULTS 항목 없음.
+
+
 def execute(tool_input: dict, context) -> str:
     """도구 실행 entry point (ToolContext 기반)."""
     tool_name = context.tool_name

@@ -61,8 +61,8 @@
         - 비즈니스
         - 상세
       channel_send:
-        description: 메시지 발송 (Gmail/Nostr/Telegram). 에이전트 identity 기반 발신자 자동 설정.
-        target_description: 채널 타입 (gmail/nostr/telegram). to/subject/body 파라미터로 메시지 구성.
+        description: 메시지 발송 (Gmail/Nostr). 발신자는 자기 계정 자동 설정(없으면 차단).
+        target_description: '채널 타입 (gmail/nostr). to=수신자 — 이웃 이름(주소록에서 자동 해소) 또는 이메일/npub 주소 직접 지정. subject/body로 내용 구성. 발신자는 호출 주체의 자기 계정(미설정 시 발신 차단).'
         group: channel
         target_key: channel_type
         router: channel_engine

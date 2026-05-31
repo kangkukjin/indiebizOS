@@ -249,3 +249,10 @@ data/.world_pulse_cleanup
 data/training/.hippocampus_consolidated
 *.bak
 *.bak.*
+
+# --- 해마 클라우드 학습 산출물 (대용량, 추적 제외) ---
+cloud_training/
+
+# --- DB 백업 덤프 (개인정보 포함) ---
+data/*.sql
+*.sql.bak

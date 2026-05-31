@@ -21,33 +21,67 @@ from typing import Any, Dict, List, Optional
 # === 지원 채널 ===
 SUPPORTED_CHANNELS = ["gmail", "nostr"]
 
+# 시스템 AI(=indiebizOS 운영 주체) 식별자. 런처 indienet과 nostr 신원을 공유한다.
+SYSTEM_AI_ID = "system_ai"
 
-# === 에이전트 identity 조회 ===
+
+# === 시스템 계정 조회 ===
+
+def _get_system_gmail_address() -> Optional[str]:
+    """시스템 AI gmail 주소 — gmail extension config.yaml의 email.
+
+    indiebizOS가 운영하는 계정이다. (owner 개인 계정과는 별개 — owner는 .env의
+    OWNER_EMAILS로 등록되어 '명령 출처'로만 인식된다.)
+    """
+    env_path = os.environ.get("INDIEBIZ_BASE_PATH")
+    base = Path(env_path) if env_path else Path(__file__).parent.parent
+    config_path = base / "data" / "packages" / "installed" / "extensions" / "gmail" / "config.yaml"
+    if not config_path.exists():
+        return None
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = yaml.safe_load(f) or {}
+        return (config.get("gmail") or {}).get("email") or None
+    except Exception:
+        return None
+
+
+# === 에이전트 identity 조회 (발신 신원 + 발신 게이트) ===
 
 def _resolve_agent_identity(channel_type: str, params: dict,
                             project_path: str, agent_id: str = None) -> dict:
     """
-    채널 사용 시 에이전트의 identity를 결정한다.
+    채널 발신/수신 시 '누구로서' 동작할지(발신 신원)를 결정한다.
 
-    우선순위:
-    1. params에 account가 명시되면 그 주소를 사용
-    2. agent_id가 있으면 agents.yaml에서 해당 에이전트의 주소를 조회
-    3. 둘 다 없으면 에러
+    신원 모델:
+    - 시스템 AI(SYSTEM_AI_ID): 시스템 자체 계정 사용 (gmail=config.yaml, nostr=indienet 신원).
+      신뢰된 주체이므로 account 명시 override 허용. 항상 발신 가능.
+    - 프로젝트 에이전트: 자기 agents.yaml에 설정된 계정(email/npub)만 사용.
+      계정이 비어 있으면 '연락처 없음'으로 보고 외부 발신을 차단한다.
+      (외부로 연락하는 기능은 함부로 열지 않는다 — 명시적 옵트인.)
+      사칭 방지를 위해 account override는 허용하지 않는다.
+    - 내부(internal) 에이전트: 외부 채널 사용 불가.
 
     Returns:
-        {"email": "..."} 또는 {"npub": "..."} 또는 {"error": "..."}
+        {"email": "..."} 또는 {"npub": "..."} 또는 {"use_system": True} 또는 {"error": "..."}
     """
-    # 1) 명시적 account 지정
-    account = params.get("account")
-    if account:
+    # 0) 시스템 AI — 신뢰된 운영 주체. 시스템 자체 계정 사용.
+    if agent_id == SYSTEM_AI_ID:
+        account = params.get("account")
         if channel_type == "gmail":
-            return {"email": account}
+            email = account or _get_system_gmail_address()
+            if not email:
+                return {"error": "시스템 gmail 계정이 설정되지 않았습니다. (gmail extension config.yaml의 email)"}
+            return {"email": email}
         elif channel_type == "nostr":
-            return {"npub": account}
+            # 시스템 nostr는 항상 indienet 신원으로 서명 (런처 indienet과 공유).
+            # account는 임의 pubkey를 가리킬 뿐 서명 주체가 아니므로 무시한다.
+            return {"use_system": True}
+        return {"error": f"identity 미지원 채널: {channel_type}"}
 
-    # 2) 에이전트 설정에서 조회
+    # 1) 프로젝트 에이전트 — 자기 계정만. (account override 불가: 사칭 방지)
     if not agent_id:
-        return {"error": "에이전트 정보가 없습니다. 채널 사용에는 에이전트 identity가 필요합니다."}
+        return {"error": "에이전트 identity가 없어 외부 채널을 사용할 수 없습니다."}
 
     agents_file = Path(project_path) / "agents.yaml"
     if not agents_file.exists():
@@ -73,21 +107,80 @@ def _resolve_agent_identity(channel_type: str, params: dict,
     if agent_config.get("type") == "internal":
         return {"error": f"내부 에이전트 '{agent_id}'는 외부 채널을 사용할 수 없습니다."}
 
-    # 채널별 주소 조회
+    # 발신 게이트: 계정(연락처)이 비어 있으면 외부 발신 차단
     if channel_type == "gmail":
         email = agent_config.get("email")
         if not email:
-            return {"error": f"에이전트 '{agent_id}'에 email이 설정되어 있지 않습니다."}
+            return {"error": f"에이전트 '{agent_id}'에 gmail 계정(연락처)이 설정되지 않아 외부 발신이 차단됩니다."}
         return {"email": email}
 
     elif channel_type == "nostr":
         npub = agent_config.get("npub") or agent_config.get("nostr")
         if not npub:
-            # nostr는 시스템 공용 identity를 fallback으로 사용
-            return {"npub": None, "use_system": True}
+            return {"error": f"에이전트 '{agent_id}'에 nostr 계정(연락처)이 설정되지 않아 외부 발신이 차단됩니다."}
         return {"npub": npub}
 
-    return {"error": f"identity 조회 미지원 채널: {channel_type}"}
+    return {"error": f"identity 미지원 채널: {channel_type}"}
+
+
+# === 수신자 해소 (이름 → 주소록 주소) ===
+
+def _looks_like_address(channel_type: str, to: str) -> bool:
+    """to가 이미 채널 주소 형식인지 판별."""
+    to = (to or "").strip()
+    if channel_type == "gmail":
+        return "@" in to
+    elif channel_type == "nostr":
+        if to.startswith("npub"):
+            return True
+        if len(to) == 64:  # hex 공개키
+            try:
+                int(to, 16)
+                return True
+            except ValueError:
+                return False
+    return False
+
+
+def _resolve_recipient(channel_type: str, to: str) -> dict:
+    """수신자(to)를 채널 주소로 해소한다.
+
+    - 이미 주소 형식이면 그대로 통과.
+    - 이름이면 business.db 주소록(neighbors/contacts)에서 해당 채널 주소를 찾는다.
+      0건: 에러. 다건: 후보 목록과 함께 에러(AI가 다시 선택).
+
+    Returns: {"value": addr} 또는 {"error": ..., "candidates": [...]}
+    """
+    to = (to or "").strip()
+    if not to:
+        return {"error": "수신자(to)가 비어 있습니다."}
+
+    if _looks_like_address(channel_type, to):
+        return {"value": to}
+
+    try:
+        from business_manager import BusinessManager
+        bm = BusinessManager()
+        neighbors = bm.get_neighbors()
+    except Exception as e:
+        return {"error": f"주소록 조회 실패: {e}"}
+
+    name_l = to.lower()
+    matched = []  # contact_value 목록
+    for n in neighbors:
+        if (n.get("name") or "").strip().lower() != name_l:
+            continue
+        for c in n.get("contacts", []):
+            if c.get("contact_type") == channel_type and c.get("contact_value"):
+                matched.append(c["contact_value"])
+
+    if not matched:
+        return {"error": f"주소록에서 '{to}'의 {channel_type} 주소를 찾지 못했습니다. "
+                         f"이름을 확인하거나 주소를 직접 지정하세요."}
+    if len(set(matched)) > 1:
+        return {"error": f"'{to}'에 해당하는 {channel_type} 주소가 여러 개입니다. 어느 것인지 지정하세요.",
+                "candidates": list(dict.fromkeys(matched))}
+    return {"value": matched[0]}
 
 
 # === IBL 노드 액션 핸들러 (ibl_engine에서 호출) ===
@@ -206,7 +299,16 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
         attachment_path = params.get("attachment_path")
 
         if not to:
-            return {"error": "수신자(to) 이메일이 필요합니다."}
+            return {"error": "수신자(to)가 필요합니다. (이웃 이름 또는 이메일 주소)"}
+
+        # 수신자 해소: 이름이면 주소록에서 이메일로 변환
+        resolved = _resolve_recipient("gmail", to)
+        if resolved.get("error"):
+            out = {"success": False, "channel": "gmail", "error": resolved["error"]}
+            if resolved.get("candidates"):
+                out["candidates"] = resolved["candidates"]
+            return out
+        to = resolved["value"]
 
         try:
             client = _get_gmail_client(email=identity.get("email"))
@@ -231,9 +333,25 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
         content = params.get("content") or params.get("body", "")
 
         if not to:
-            return {"error": "수신자 공개키(to)가 필요합니다. (npub 또는 hex 형식)"}
+            return {"error": "수신자(to)가 필요합니다. (이웃 이름, npub 또는 hex)"}
         if not content:
             return {"error": "메시지 내용(content)이 필요합니다."}
+
+        # nostr 발신은 현재 indienet 단일 신원으로만 서명 가능.
+        # 프로젝트 에이전트의 자체 npub 키 서명은 아직 미지원 → 시스템 신원만 허용.
+        if not identity.get("use_system"):
+            return {"success": False, "channel": "nostr",
+                    "error": "에이전트 자체 nostr 키 서명은 아직 지원되지 않습니다. "
+                             "현재 nostr 발신은 시스템(indienet) 신원만 가능합니다."}
+
+        # 수신자 해소: 이름이면 주소록에서 npub으로 변환
+        resolved = _resolve_recipient("nostr", to)
+        if resolved.get("error"):
+            out = {"success": False, "channel": "nostr", "error": resolved["error"]}
+            if resolved.get("candidates"):
+                out["candidates"] = resolved["candidates"]
+            return out
+        to = resolved["value"]
 
         try:
             indienet = _get_indienet()

@@ -5,38 +5,37 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:3930
+- dataset_size:3947
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: arXiv에서 트랜스포머 논문
+- source_sentence: 이 영상 스크립트 뽑아
   sentences:
-  - 마지막 조회 이후 새로 추가된 블로그 글 확인. 정기 모니터링용.
-  - '[engines:web_deploy] >> [engines:web_live_check]'
-  - AI/CS/물리/수학 프리프린트 검색 (arXiv). 최신 미출판 연구, PDF 다운로드 가능. 정식 출판 논문은 search_openalex
-    사용.
-- source_sentence: 키워드로 적합한 IBL 노드·액션 자동 탐색. 어떤 액션 쓸지 모를 때 첫 단계.
-  sentences:
+  - '[sense:cctv_search]'
   - 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
-  - '[limbs:iframe]'
-  - '[self:discover]'
-- source_sentence: 웹사이트에 버튼 컴포넌트 추가해줘
+  - '[limbs:music]'
+- source_sentence: 드래그 앤 드롭해줄래
   sentences:
-  - '[self:blog_check_new]'
-  - '[sense:gutenberg_books]'
-  - '[engines:web_add_component]'
-- source_sentence: 퍼센트 차트로 봐야겠다
+  - '[self:read_docx]'
+  - '[limbs:drag]'
+  - '[sense:navigate_route] & [sense:navigate_route]'
+- source_sentence: 사용 가능한 UI 컴포넌트 목록 보여
   sentences:
-  - '[sense:search_arxiv] & [sense:search_ddg] & [sense:crawl] & [sense:search_openalex]
-    & [sense:search_ddg]'
-  - '[self:disable]'
-  - '[engines:pie]'
-- source_sentence: 내 일정 HTML로 열어
+  - 한국 도서관정보나루 지역 코드 목록. 도서관 위치별 데이터 필터링용.
+  - '[self:memory]'
+  - '[engines:web_list_components]'
+- source_sentence: 오늘 날씨랑 뉴스 한번에 알려줘
   sentences:
-  - 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 반환: passed/score/issues/notes. ILLUSTRATE
-    단계 자동 평가용.'
-  - 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
-  - '[self:show_calendar]'
+  - '[engines:web_live_check]'
+  - '[sense:video_info]'
+  - '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}.
+    도시명(한/영) 직접 사용 가능'
+- source_sentence: 강의 슬라이드 image_prompt 작성
+  sentences:
+  - '[sense:search_ddg] >> [sense:search_ddg] >> [sense:search_ddg] >> [sense:search_ddg]
+    >> [sense:search_ddg]'
+  - 로컬 미리보기 서버 제어 (start/stop/status). 빌드 없이 즉시 확인용.
+  - '[engines:lecture_write]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -50,7 +49,7 @@ This is a [sentence-transformers](https://www.SBERT.net) model finetuned from [j
 ### Model Description
 - **Model Type:** Sentence Transformer
 - **Base model:** [jhgan/ko-sroberta-multitask](https://huggingface.co/jhgan/ko-sroberta-multitask) <!-- at revision 1050bd4e2ca90c0b9b62f0c1fbd83edc85ba8483 -->
-- **Maximum Sequence Length:** 64 tokens
+- **Maximum Sequence Length:** 128 tokens
 - **Output Dimensionality:** 768 dimensions
 - **Similarity Function:** Cosine Similarity
 <!-- - **Training Dataset:** Unknown -->
@@ -67,7 +66,7 @@ This is a [sentence-transformers](https://www.SBERT.net) model finetuned from [j
 
 ```
 SentenceTransformer(
-  (0): Transformer({'max_seq_length': 64, 'do_lower_case': False, 'architecture': 'RobertaModel'})
+  (0): Transformer({'max_seq_length': 128, 'do_lower_case': False, 'architecture': 'RobertaModel'})
   (1): Pooling({'word_embedding_dimension': 768, 'pooling_mode_cls_token': False, 'pooling_mode_mean_tokens': True, 'pooling_mode_max_tokens': False, 'pooling_mode_mean_sqrt_len_tokens': False, 'pooling_mode_weightedmean_tokens': False, 'pooling_mode_lasttoken': False, 'include_prompt': True})
 )
 ```
@@ -90,9 +89,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '내 일정 HTML로 열어',
-    '[self:show_calendar]',
-    'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 반환: passed/score/issues/notes. ILLUSTRATE 단계 자동 평가용.',
+    '강의 슬라이드 image_prompt 작성',
+    '[engines:lecture_write]',
+    '로컬 미리보기 서버 제어 (start/stop/status). 빌드 없이 즉시 확인용.',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -101,9 +100,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.7397, -0.1673],
-#         [ 0.7397,  1.0000, -0.0224],
-#         [-0.1673, -0.0224,  1.0000]])
+# tensor([[1.0000, 0.7736, 0.0951],
+#         [0.7736, 1.0000, 0.0345],
+#         [0.0951, 0.0345, 1.0000]])
 ```
 
 <!--
@@ -148,19 +147,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 3,930 training samples
+* Size: 3,947 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
-  |         | sentence_0                                                                        | sentence_1                                                                       |
-  |:--------|:----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|
-  | type    | string                                                                            | string                                                                           |
-  | details | <ul><li>min: 3 tokens</li><li>mean: 10.23 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 19.0 tokens</li><li>max: 64 tokens</li></ul> |
+  |         | sentence_0                                                                        | sentence_1                                                                        |
+  |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
+  | type    | string                                                                            | string                                                                            |
+  | details | <ul><li>min: 4 tokens</li><li>mean: 10.41 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 19.15 tokens</li><li>max: 94 tokens</li></ul> |
 * Samples:
-  | sentence_0                      | sentence_1                             |
-  |:--------------------------------|:---------------------------------------|
-  | <code>새 글 올라왔어?</code>          | <code>[self:blog_check_new]</code>     |
-  | <code>사진 저장 공간 얼마나 쓰고 있어</code> | <code>[self:photo]</code>              |
-  | <code>블로그 색인 갱신</code>          | <code>[self:blog_rebuild_index]</code> |
+  | sentence_0                    | sentence_1                       |
+  |:------------------------------|:---------------------------------|
+  | <code>config 수정해</code>       | <code>[self:edit]</code>         |
+  | <code>프로젝트에서 .py 문서 목록</code> | <code>[self:storage_scan]</code> |
+  | <code>탭 하나 닫아줘</code>         | <code>[limbs:tab]</code>         |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -173,8 +172,8 @@ You can finetune this model on your own dataset.
 ### Training Hyperparameters
 #### Non-Default Hyperparameters
 
-- `per_device_train_batch_size`: 4
-- `per_device_eval_batch_size`: 4
+- `per_device_train_batch_size`: 16
+- `per_device_eval_batch_size`: 16
 - `num_train_epochs`: 1
 - `multi_dataset_batch_sampler`: round_robin
 
@@ -184,8 +183,8 @@ You can finetune this model on your own dataset.
 - `do_predict`: False
 - `eval_strategy`: no
 - `prediction_loss_only`: True
-- `per_device_train_batch_size`: 4
-- `per_device_eval_batch_size`: 4
+- `per_device_train_batch_size`: 16
+- `per_device_eval_batch_size`: 16
 - `gradient_accumulation_steps`: 1
 - `eval_accumulation_steps`: None
 - `torch_empty_cache_steps`: None
@@ -281,19 +280,13 @@ You can finetune this model on your own dataset.
 
 </details>
 
-### Training Logs
-| Epoch  | Step | Training Loss |
-|:------:|:----:|:-------------:|
-| 0.5086 | 500  | 0.0089        |
-
-
 ### Framework Versions
-- Python: 3.14.5
+- Python: 3.11.12
 - Sentence Transformers: 5.2.2
 - Transformers: 5.1.0
-- PyTorch: 2.10.0
+- PyTorch: 2.12.0+cu130
 - Accelerate: 1.13.0
-- Datasets: 4.8.4
+- Datasets: 4.8.5
 - Tokenizers: 0.22.2
 
 ## Citation

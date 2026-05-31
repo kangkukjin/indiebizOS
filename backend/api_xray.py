@@ -856,6 +856,164 @@ def _collect_recommendations() -> List[Dict]:
         return []
 
 
+def _collect_cognition() -> Dict:
+    """사고 과정(인지 파이프라인)의 라이브 상태.
+
+    3단 인지(분류·반사 → 의식 → 실행 → 평가)가 episode_summary에 남긴
+    지표를 집계한다 — 분류 분포, 의식 지연, 실행 라운드, 평가 달성, 해마 점수.
+    """
+    out: Dict[str, Any] = {"trends": {}, "distribution": {}}
+    try:
+        from episode_logger import get_cognitive_trends
+        out["trends"] = get_cognitive_trends(days=7)
+    except Exception as e:
+        out["trends_error"] = str(e)
+
+    try:
+        conn = sqlite3.connect(str(DATA_PATH / "world_pulse.db"), timeout=5)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("""
+            SELECT unconscious_decision, evaluation_result, consciousness_ms,
+                   execution_rounds, hippocampus_score
+            FROM episode_summary ORDER BY id DESC LIMIT 100
+        """).fetchall()
+        conn.close()
+        dec: Dict[str, int] = {}
+        ev: Dict[str, int] = {}
+        cms, rounds, hippo = [], [], []
+        for r in rows:
+            if r["unconscious_decision"]:
+                dec[r["unconscious_decision"]] = dec.get(r["unconscious_decision"], 0) + 1
+            if r["evaluation_result"]:
+                ev[r["evaluation_result"]] = ev.get(r["evaluation_result"], 0) + 1
+            if r["consciousness_ms"] is not None:
+                cms.append(r["consciousness_ms"])
+            if r["execution_rounds"] is not None:
+                rounds.append(r["execution_rounds"])
+            if r["hippocampus_score"] is not None:
+                hippo.append(r["hippocampus_score"])
+        out["distribution"] = {
+            "sample": len(rows),
+            "decision": dec,
+            "evaluation": ev,
+            "avg_consciousness_ms": round(sum(cms) / len(cms)) if cms else None,
+            "avg_execution_rounds": round(sum(rounds) / len(rounds), 2) if rounds else None,
+            "avg_hippocampus_score": round(sum(hippo) / len(hippo), 3) if hippo else None,
+        }
+    except Exception as e:
+        out["distribution_error"] = str(e)
+    return out
+
+
+def _collect_memory() -> Dict:
+    """메모리 관리의 라이브 상태 — 6종 기억 + 정리 패스 현황.
+
+    의미·작업·일화·절차·관계·자기상태 각 기억의 규모와, 두 자기학습 기억
+    (해마/심층메모리)의 정리 패스 마커를 집계한다.
+    """
+    out: Dict[str, Any] = {}
+    wp = DATA_PATH / "world_pulse.db"
+
+    # 절차기억 — 해마 (IBL 용례)
+    try:
+        from ibl_usage_db import IBLUsageDB
+        st = IBLUsageDB().get_stats()
+        djson = DATA_PATH / "training" / "ibl_distilled.json"
+        dcount = len(json.loads(djson.read_text(encoding="utf-8"))) if djson.exists() else 0
+        out["procedural"] = {
+            "total_examples": st.get("total_examples"),
+            "by_source": st.get("by_source", {}),
+            "distilled": st.get("by_source", {}).get("distilled", 0),
+            "distilled_json": dcount,
+        }
+    except Exception as e:
+        out["procedural_error"] = str(e)
+
+    # 관계기억 — 심층메모리 (에이전트별 DB 집계)
+    try:
+        from memory_consolidation import _discover_memory_dbs, _memory_db
+        mdb = _memory_db()
+        dbs = _discover_memory_dbs()
+        total, cats, consolidated = 0, {}, 0
+        for db in dbs:
+            total += mdb.count_at(db)
+            for r in mdb.list_all(db):
+                c = (r.get("category") or "(미분류)")
+                cats[c] = cats.get(c, 0) + 1
+            if mdb.get_meta(db, "last_consolidated"):
+                consolidated += 1
+        out["relational"] = {
+            "agents": len(dbs), "total": total,
+            "by_category": cats, "consolidated_dbs": consolidated,
+        }
+    except Exception as e:
+        out["relational_error"] = str(e)
+
+    # 일화기억 + 자기상태 — world_pulse.db
+    try:
+        conn = sqlite3.connect(str(wp), timeout=5)
+
+        def _cnt(t):
+            try:
+                return conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+            except Exception:
+                return None
+        out["episodic"] = {"episode_log": _cnt("episode_log"),
+                           "episode_summary": _cnt("episode_summary")}
+        out["self_state"] = {"pulse_log": _cnt("pulse_log"),
+                             "self_checks": _cnt("self_checks"),
+                             "action_health": _cnt("action_health")}
+        conn.close()
+    except Exception as e:
+        out["episodic_error"] = str(e)
+
+    # 의미기억 — 시스템 문서
+    try:
+        docs = list((DATA_PATH / "system_docs").glob("*.md"))
+        out["semantic"] = {"system_docs": len(docs)}
+    except Exception:
+        pass
+
+    # 작업기억 — 시스템 AI 대화
+    try:
+        sysmem = DATA_PATH / "system_ai_memory.db"
+        if sysmem.exists():
+            conn = sqlite3.connect(str(sysmem), timeout=5)
+            try:
+                cc = conn.execute("SELECT COUNT(*) FROM conversations").fetchone()[0]
+            except Exception:
+                cc = None
+            conn.close()
+            out["working"] = {"system_ai_conversations": cc}
+    except Exception:
+        pass
+
+    # 정리 패스 현황 (마커)
+    try:
+        def _marker(p):
+            return p.read_text(encoding="utf-8").strip()[:19] if p.exists() else None
+        out["consolidation"] = {
+            "hippocampus": _marker(DATA_PATH / "training" / ".hippocampus_consolidated"),
+            "cleanup": _marker(DATA_PATH / ".world_pulse_cleanup"),
+        }
+    except Exception:
+        pass
+
+    return out
+
+
+@router.get("/cognition")
+async def xray_cognition():
+    """사고 과정 라이브 상태"""
+    return JSONResponse(_collect_cognition())
+
+
+@router.get("/memory")
+async def xray_memory():
+    """메모리 관리 라이브 상태 (6종 기억)"""
+    return JSONResponse(_collect_memory())
+
+
 @router.get("/data")
 async def xray_data():
     """시스템 전체 진단 데이터"""

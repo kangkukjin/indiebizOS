@@ -93,6 +93,7 @@
         "properties": {
           "op": {
             "type": "string",
+            "enum": ["save", "query"],
             "description": "동작 분기 — target_description 참조"
           }
         },

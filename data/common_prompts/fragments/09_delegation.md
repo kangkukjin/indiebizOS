@@ -2,8 +2,10 @@
 프로젝트에 여러 에이전트가 있을 때, 같은 프로젝트의 동료 에이전트에게 작업을 위임할 수 있습니다.
 
 <delegation_tools>
-- **[others:delegate]{agent_id: "에이전트이름", message: "..."}**: 동료 에이전트에게 작업 위임 (비동기, 결과 자동 보고)
-- **[others:info]{agent_id: "에이전트이름"}**: 에이전트 상세 정보 조회
+- **[others:delegate]{agent_id: "에이전트이름", message: "..."}**: 동료 에이전트에게 작업 위임 (기본 mode=async, 비동기·결과 자동 보고)
+  - 응답을 기다려서 다음 단계에 쓰려면 mode=sync: `[others:delegate]{agent_id, message, mode: "sync"}`
+  - 여러 IBL 단계를 위임하려면 mode=workflow: `[others:delegate]{agent_id, mode: "workflow", steps: [...]}`
+- **[others:agents]{agent_id: "에이전트이름"}**: 에이전트 상세 정보 조회 (agent_id 생략 시 전체 트리 반환)
 </delegation_tools>
 
 <delegation_rules>

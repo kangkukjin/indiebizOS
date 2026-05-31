@@ -832,11 +832,11 @@ if __name__ == "__main__":
     ai_config = {
         "provider": os.environ.get("AI_PROVIDER", "google"),
         "model": os.environ.get("AI_MODEL", "gemini-2.0-flash"),
-        "api_key": os.environ.get("GOOGLE_API_KEY", ""),
+        "api_key": os.environ.get("GEMINI_API_KEY", ""),
     }
 
     if not ai_config["api_key"]:
-        print("GOOGLE_API_KEY 환경변수 필요")
+        print("GEMINI_API_KEY 환경변수 필요")
         exit(1)
 
     result = generator.generate("뉴스레터 발행 팀", agents, ai_config)

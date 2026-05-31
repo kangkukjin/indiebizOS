@@ -51,7 +51,6 @@ execute_ibl(code='[node:action]{param: "value"}')
 ## Common Mistakes — NEVER do these
 
 ```
-WRONG: [self:workflow]                    # workflow는 액션이 아님
 WRONG: [self:get]{type: "time"}           # get은 액션이 아님. [self:time]을 써야 함
 WRONG: [sense:price]("AAPL")              # (target) 문법은 폐지됨! {params}를 사용할 것
 RIGHT: [self:time]                        # 직접 액션명 사용
@@ -60,6 +59,42 @@ RIGHT: [sense:price]{symbol: "005930"}    # 파라미터가 하나여도 named
 ```
 - action-categories의 이름(get, run 등)은 쓰지 말 것. 항상 구체적 액션명을 사용하라.
 - (target) 문법은 폐지되어 에러 발생함. 모든 값은 `{key: val}` 안에 작성.
+
+## 단일 액션 + op 분기 패턴 (라운드 2 통합 후 표준)
+
+같은 도메인의 여러 도구는 **하나의 IBL 액션 + op 파라미터**로 통합되어 있다. 카탈로그에서 액션 옆에 `<op>` 자식 요소가 보이면 이 패턴이다.
+
+```
+<action name="click" description="브라우저 요소 클릭...">
+  <op name="single" default="true">좌클릭 (기본)</op>
+  <op name="double">더블클릭 — 표 셀 편집·파일 열기</op>
+  <op name="right">우클릭 — 컨텍스트 메뉴</op>
+</action>
+```
+
+호출:
+```
+[limbs:click]{ref: "abc"}                 # op 생략 → default "single" 적용
+[limbs:click]{op: "double", ref: "abc"}   # 명시
+[limbs:click]{op: "right", ref: "abc"}    # 명시
+```
+
+**규약**:
+- `<op default="true">`가 있으면 op 생략 가능 (기본값 자동 적용)
+- default 가 없으면 op 필수 — 생략하면 "op 파라미터 필요" 에러
+- op 값은 카탈로그의 `<op name="...">` 목록 안에서만 골라야 함 (오타·창작 금지)
+
+대표 op-bearing 액션:
+- `[limbs:click]{op}` single/double/right
+- `[limbs:navigate]{op}` goto/back/forward
+- `[limbs:music]{op}` play/add/skip/queue/stop/download
+- `[limbs:desktop]{op}` screenshot/click/type/key/mouse_move/drag/scroll/cursor_position/screen_info
+- `[self:photo]{op}` scan/list_scans/gallery/search/detail/stats/timeline/duplicates
+- `[self:memory]{op}` save/search/read/delete
+- `[self:goal]{op}` list/status/kill/log/attempts
+- `[self:trigger]{op}` list/get/create/update/delete/enable/disable/status/history
+- `[self:workflow]{op}` list/get/save/delete/run
+- `[others:delegate]{mode, scope}` async/sync/workflow × same/cross
 
 ## Pipeline Operators
 

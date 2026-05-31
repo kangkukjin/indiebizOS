@@ -427,6 +427,25 @@ class IBLUsageDB:
             )
             conn.commit()
 
+    def update_success_by_code(self, ibl_code: str, success: bool) -> bool:
+        """ibl_code 정확 일치로 example을 찾아 성공/실패 카운트 갱신.
+
+        연상 Reflex 경로의 top-1 귀속용 — top_code(연상 최고점 항목의 코드)로
+        해당 용례를 찾아 실행 결과를 피드백한다. 여러 개면 가장 최근 갱신본 하나.
+        반환: 갱신 성공 여부(매칭 없으면 False)."""
+        if not ibl_code:
+            return False
+        with self._get_connection() as conn:
+            row = conn.execute(
+                "SELECT id FROM ibl_examples WHERE ibl_code = ? ORDER BY updated_at DESC LIMIT 1",
+                (ibl_code,)
+            ).fetchone()
+            if not row:
+                return False
+            example_id = row['id']
+        self.update_success(example_id, success)
+        return True
+
     # =========================================================================
     # CRUD - 실행 로그
     # =========================================================================
@@ -520,6 +539,114 @@ class IBLUsageDB:
             logger.error(f"[IBL Usage DB] 배치 인덱싱 실패: {e}")
         finally:
             conn.close()
+
+    def _delete_examples(self, ids: List[int]):
+        """용례 삭제 (행 + 벡터). FTS5는 DELETE 트리거로 자동 동기화되지만
+        ibl_examples_vec는 트리거가 없어 수동 삭제한다."""
+        if not ids:
+            return
+        ph = ",".join("?" * len(ids))
+        with self._get_connection() as conn:
+            conn.execute(f"DELETE FROM ibl_examples WHERE id IN ({ph})", ids)
+            conn.commit()
+        vconn = self._get_vec_connection()
+        if vconn is not None:
+            try:
+                vconn.execute(f"DELETE FROM ibl_examples_vec WHERE rowid IN ({ph})", ids)
+                vconn.commit()
+            except Exception as e:
+                logger.error(f"[IBL Usage DB] vec 삭제 실패: {e}")
+            finally:
+                vconn.close()
+        self._search_cache.clear()
+
+    def consolidate_distilled(self, cap: int = 200,
+                              dup_threshold: float = 0.92,
+                              min_fails_to_prune: int = 2) -> Dict[str, Any]:
+        """자동증류분(source='distilled')만 정리하는 해마 위생 패스.
+
+        학습 코퍼스(synthetic/balanced/manual_seed 등)는 절대 건드리지 않는다.
+        세 가지 기계적 정리(LLM 불필요 — 증류물은 사실이 아니라 참고 코드):
+          ⑤ 검증실패 가지치기: fail_count>=N 이고 success_count==0 인 '입증된 나쁜 사례' 삭제
+          ③ 근접중복 제거: 임베딩 코사인>=threshold 클러스터에서 최선 1개만 유지
+          상한: 남은 distilled가 cap 초과 시 미검증(trial 0)부터 오래된 순 삭제
+        """
+        with self._get_connection() as conn:
+            rows = [dict(r) for r in conn.execute(
+                "SELECT id, intent, ibl_code, success_count, fail_count, created_at "
+                "FROM ibl_examples WHERE source='distilled'"
+            ).fetchall()]
+
+        stats = {"distilled": len(rows), "pruned_bad": 0, "deduped": 0,
+                 "pruned_cap": 0, "deleted_total": 0}
+        if not rows:
+            return stats
+
+        to_delete = set()
+
+        # ⑤ 검증 실패 가지치기 (피드백 루프가 살아있어 가능)
+        for r in rows:
+            if r["fail_count"] >= min_fails_to_prune and r["success_count"] == 0:
+                to_delete.add(r["id"])
+        stats["pruned_bad"] = len(to_delete)
+
+        by_id = {r["id"]: r for r in rows if r["id"] not in to_delete}
+        alive_ids = set(by_id)
+
+        # ③ 근접중복 제거 — union-find
+        parent = {i: i for i in alive_ids}
+
+        def find(x):
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        def union(a, b):
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[rb] = ra
+
+        if self.is_semantic_available():
+            for r in by_id.values():
+                text = self._prepare_search_text(r["intent"], r["ibl_code"])
+                for mid, sim in self.search_semantic(text, top_k=15):
+                    if mid != r["id"] and mid in alive_ids and sim >= dup_threshold:
+                        union(r["id"], mid)
+
+            def quality(r):
+                total = r["success_count"] + r["fail_count"]
+                sr = (r["success_count"] / total) if total else -1.0
+                return (sr, total, r["id"])  # 성공률 → 시도수 → 최신
+
+            groups: Dict[int, List[int]] = {}
+            for i in alive_ids:
+                groups.setdefault(find(i), []).append(i)
+            for g in groups.values():
+                if len(g) < 2:
+                    continue
+                keep = max(g, key=lambda i: quality(by_id[i]))
+                for i in g:
+                    if i != keep:
+                        to_delete.add(i)
+                        stats["deduped"] += 1
+
+        # 상한 — 미검증부터 오래된 순
+        remaining = [r for r in rows if r["id"] not in to_delete]
+        if len(remaining) > cap:
+            prunable = sorted(
+                [r for r in remaining if (r["success_count"] + r["fail_count"]) == 0],
+                key=lambda r: r["created_at"]
+            )
+            need = len(remaining) - cap
+            for r in prunable[:need]:
+                to_delete.add(r["id"])
+                stats["pruned_cap"] += 1
+
+        if to_delete:
+            self._delete_examples(list(to_delete))
+        stats["deleted_total"] = len(to_delete)
+        return stats
 
     def rebuild_index(self) -> Dict[str, Any]:
         """벡터 인덱스 전체 재구축 (모델을 동기적으로 로드)"""
@@ -757,7 +884,9 @@ class IBLUsageDB:
                 continue
 
             total = meta['success_count'] + meta['fail_count']
-            success_rate = meta['success_count'] / max(total, 1)
+            # 시도 이력이 없으면 -1.0 sentinel (미검증). 있으면 0~1 성공률.
+            # 0.0(전부 실패)과 미검증을 구분해야 연상이 '실패한 사례'를 표시할 수 있다.
+            success_rate = (meta['success_count'] / total) if total else -1.0
 
             results.append(UsageExample(
                 id=meta['id'],
@@ -768,7 +897,7 @@ class IBLUsageDB:
                 difficulty=meta['difficulty'],
                 score=round(float(score), 4),
                 source=meta['source'],
-                success_rate=round(success_rate, 2)
+                success_rate=round(success_rate, 2) if total else -1.0
             ))
 
             if len(results) >= top_k:

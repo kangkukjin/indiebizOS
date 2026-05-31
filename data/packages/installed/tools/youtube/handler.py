@@ -30,14 +30,18 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 SETTINGS_PATH = os.path.join(BASE_DIR, "tool_settings.json")
 
-_MUSIC_OP_MAP = {
-    "play": "play_youtube",
-    "add": "add_to_queue",
-    "skip": "skip_youtube",
-    "queue": "get_queue",
-    "stop": "stop_youtube",
-    "download": "download_youtube_music",
+# 2026-05-28 dispatcher 표준화: browser-action 패턴 통일 (_OP_DISPATCHERS 두 단계 dict).
+_OP_DISPATCHERS = {
+    "music_op": {
+        "play": "play_youtube",
+        "add": "add_to_queue",
+        "skip": "skip_youtube",
+        "queue": "get_queue",
+        "stop": "stop_youtube",
+        "download": "download_youtube_music",
+    },
 }
+_OP_DEFAULTS = {"music_op": "play"}
 
 
 def execute(tool_input: dict, context):
@@ -46,11 +50,12 @@ def execute(tool_input: dict, context):
     tool_youtube = load_tool_youtube()
 
     # 2026-05-27 limbs 라운드 2: [limbs:music]{op} 단일 액션 디스패치
-    if tool_name == 'music_op':
-        op = (tool_input.pop('op', '') or '').strip() or 'play'
-        if op not in _MUSIC_OP_MAP:
-            return {"error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(_MUSIC_OP_MAP.keys())}"}
-        tool_name = _MUSIC_OP_MAP[op]
+    if tool_name in _OP_DISPATCHERS:
+        op = (tool_input.pop('op', '') or '').strip() or _OP_DEFAULTS.get(tool_name, '')
+        mapping = _OP_DISPATCHERS[tool_name]
+        if op not in mapping:
+            return {"error": f"알 수 없는 op '{op}' ({tool_name}). 사용 가능: {sorted(mapping.keys())}"}
+        tool_name = mapping[op]
 
     if tool_name == 'download_youtube_music':
         # AI가 다양한 이름으로 파일명을 전달할 수 있으므로 유연하게 처리

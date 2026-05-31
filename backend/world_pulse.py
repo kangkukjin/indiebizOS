@@ -23,7 +23,6 @@ IndieBiz OS Core
 
 import json
 import logging
-import random
 import sqlite3
 import threading
 from datetime import datetime, date, timedelta
@@ -134,6 +133,30 @@ def _cleanup_old_data():
         conn.close()
     except Exception as e:
         logger.debug(f"[WorldPulse] 정리 실패: {e}")
+
+
+# 오래된 데이터 정리는 하루 한 번이면 충분하다. 확률(random<0.04) 대신
+# 마커 파일 기반 결정적 24h 게이트 — 누락도 중복도 없고, 마지막 정리 시각도 남는다.
+_CLEANUP_MARKER = DATA_PATH / ".world_pulse_cleanup"
+_CLEANUP_INTERVAL_HOURS = 24
+
+
+def _cleanup_is_due() -> bool:
+    """마지막 정리 후 _CLEANUP_INTERVAL_HOURS 경과했는지 (결정적)."""
+    try:
+        if not _CLEANUP_MARKER.exists():
+            return True
+        last = datetime.fromisoformat(_CLEANUP_MARKER.read_text(encoding="utf-8").strip())
+        return datetime.now() - last >= timedelta(hours=_CLEANUP_INTERVAL_HOURS)
+    except Exception:
+        return True
+
+
+def _touch_cleanup_marker():
+    try:
+        _CLEANUP_MARKER.write_text(datetime.now().isoformat(), encoding="utf-8")
+    except Exception:
+        pass
 
 
 # ============================================================
@@ -343,9 +366,10 @@ def collect_world_pulse() -> Dict:
 
     generate_guide()
 
-    # 오래된 데이터 정리 (낮은 빈도로)
-    if random.random() < 0.04:
+    # 오래된 데이터 정리 (하루 한 번, 결정적 게이트)
+    if _cleanup_is_due():
         _cleanup_old_data()
+        _touch_cleanup_marker()
 
     logger.info(f"[WorldPulse] World Pulse 완료: {pulse['status']}")
     return pulse

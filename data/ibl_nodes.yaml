@@ -933,11 +933,21 @@ nodes:
     actions:
       photo:
         description: 사진·동영상 라이브러리 관리 (op 분기). 스캔(인덱싱)/조회/검색/통계/타임라인/중복/상세 통합. scan이 모든 조회의 전제.
-        target_description: 'op: scan | list_scans | gallery | search | detail | stats | timeline | duplicates. scan/gallery/stats/timeline/duplicates는 path(폴더 경로) 필요(생략 시 가장 큰 스캔 자동). search는 query + 옵션(media_type, start_date, end_date, limit). detail은 media_id. list_scans는 파라미터 없음. timeline에 year 옵션.'
+        target_description: 'scan/gallery/stats/timeline/duplicates는 path(폴더 경로) 필요(생략 시 가장 큰 스캔 자동). search는 query + 옵션(media_type, start_date, end_date, limit). detail은 media_id. list_scans는 파라미터 없음. timeline에 year 옵션.'
         group: photo
         target_key: op
         router: handler
         tool: photo_op
+        ops:
+          values:
+            scan: 폴더 인덱싱 (path 필수, 모든 조회의 전제)
+            list_scans: 인덱싱된 스캔 목록 조회
+            gallery: 갤러리 보기 (path)
+            search: 키워드/필터 검색 (query + media_type/날짜/limit)
+            detail: 단일 미디어 상세 (media_id)
+            stats: 통계 (path)
+            timeline: 시간순 보기 (path + year 옵션)
+            duplicates: 중복 미디어 검출 (path)
         implementation: handler.py가 op로 분기 — scan/list_scans/gallery/stats/timeline/duplicates는 photo_db 함수, search/detail은 photo_db.search_media/get_media_detail.
         keywords:
         - 사진
@@ -1007,10 +1017,16 @@ nodes:
       memory:
         description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도.
         group: memory
-        target_description: 'op: save | search | read | delete. save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합)+ category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save로 누적 → search 키워드/자연어 → preview 잘렸으면 read로 전문, 잘못 저장은 delete.'
+        target_description: 'save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.'
         target_key: op
         router: handler
         tool: memory_op
+        ops:
+          values:
+            save: 메모리 저장 (content 필수, category/keywords 자동 추출)
+            search: 키워드·자연어 검색 (FTS+시맨틱 통합)
+            read: 전문 조회 (memory_id)
+            delete: 삭제 (memory_id)
         implementation: handler.py가 op로 분기 — save/search/read/delete 옛 함수에 위임.
         keywords:
         - 메모리
@@ -1023,10 +1039,14 @@ nodes:
       health:
         description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
         group: health
-        target_description: 'op: save | query. save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션.'
+        target_description: 'save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션.'
         target_key: op
         router: handler
         tool: health_op
+        ops:
+          values:
+            save: 건강 정보 저장 (info_type + data)
+            query: 조회 (query_type + keyword 옵션)
         implementation: handler.py가 op로 분기 — save는 save_health_info, query는 get_health_context.
         keywords:
         - 건강
@@ -1113,11 +1133,15 @@ nodes:
         - calendar
       switch:
         description: 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
-        target_description: 'op: list | run. list는 파라미터 없음. run은 switch_id 필요.'
+        target_description: 'list는 파라미터 없음. run은 switch_id 필요.'
         group: schedule
         target_key: op
         router: system
         func: switch_op
+        ops:
+          values:
+            list: 등록된 스위치 목록
+            run: 스위치 즉시 실행 (switch_id 필수)
         implementation: _route_system이 op로 분기 — list는 _execute_list_switches, run은 SwitchRunner.run_switch.
         keywords:
         - 스위치
@@ -1139,11 +1163,18 @@ nodes:
         - 반복
       goal:
         description: 목표 프로세스 관리 (op 분기). list/status/kill/log/attempts. 의식 에이전트가 평가 루프 라운드를 누적·종료하는 메타 인지 도구.
-        target_description: 'op: list | status | kill | log | attempts. list — 파라미터 없음, 활성/대기 중 전체. status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. log — goal_id + strategy + result 필수, 시도 1건 기록(연속 실패 추적). attempts — goal_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.'
+        target_description: 'list — 활성/대기 중 전체. status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. log — goal_id + strategy + result 필수, 시도 1건 기록. attempts — goal_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.'
         group: goal
         target_key: op
         router: system
         func: goal_op
+        ops:
+          values:
+            list: 활성/대기 중 목표 전체
+            status: 진행률·라운드 이력·누적 결과 (goal_id 필수)
+            kill: 목표 종료 + 스케줄 제거 (goal_id 필수)
+            log: 시도 1건 기록 (goal_id + strategy + result, 연속 실패 추적)
+            attempts: 과거 시도 이력 + 실패 카테고리 요약 (goal_id + limit)
         implementation: _route_system이 op로 분기 — list_goals/get_goal_status/kill_goal/log_attempt/get_attempts에 위임.
         keywords:
         - 목표
@@ -1167,10 +1198,17 @@ nodes:
         - 메시지
       workflow:
         description: 저장된 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. 즉시 실행은 run_pipeline 별도.
-        target_description: 'op: list | get | save | delete | run. list — 파라미터 없음. get/delete/run — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — params 옵션으로 워크플로 변수 전달.'
+        target_description: 'get/delete/run — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — params 옵션으로 워크플로 변수 전달.'
         group: workflow
         target_key: op
         router: workflow_engine
+        ops:
+          values:
+            list: 저장된 워크플로우 목록
+            get: 워크플로우 조회 (workflow_id)
+            save: 워크플로우 저장 (name + steps IBL 코드 배열)
+            delete: 워크플로우 삭제 (workflow_id)
+            run: 저장된 워크플로우 실행 (workflow_id + params 옵션)
         implementation: workflow_engine.execute_workflow_action 입구에서 op→action 재매핑 후 기존 분기 활용.
         keywords:
         - 워크플로우
@@ -1191,10 +1229,21 @@ nodes:
         - 단계
       trigger:
         description: 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
-        target_description: 'op: list | get | create | update | delete | enable | disable | status | history. create/update는 trigger 정의(name, type, condition, action 등) 필요. get/update/delete/enable/disable/history는 trigger_id 필요. list/status는 파라미터 없음.'
+        target_description: 'create/update는 trigger 정의(name, type, condition, action 등) 필요. get/update/delete/enable/disable/history는 trigger_id 필요. list/status는 파라미터 없음.'
         group: schedule
         target_key: op
         router: trigger_engine
+        ops:
+          values:
+            list: 등록된 트리거 목록
+            get: 단일 트리거 조회 (trigger_id)
+            create: 트리거 등록 (name/type/condition/action 정의)
+            update: 트리거 수정 (trigger_id + 정의)
+            delete: 트리거 삭제 (trigger_id)
+            enable: 트리거 활성화 (trigger_id)
+            disable: 트리거 비활성화 (trigger_id)
+            status: 전체 트리거 상태 요약
+            history: 트리거 실행 이력 (trigger_id)
         implementation: trigger_engine.execute_trigger 입구에서 op→action 재매핑 후 기존 분기(list/get/create/update/delete/enable/disable/status/history) 그대로 사용.
         keywords:
         - 트리거
@@ -1423,10 +1472,17 @@ nodes:
       lecture:
         description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
         group: lecture
-        target_description: 'op: list | create | load | delete | open. create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면). delete는 confirm=true 추가. list는 파라미터 없음.'
+        target_description: 'create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면). delete는 confirm=true 추가.'
         target_key: op
         router: handler
         tool: lecture_op
+        ops:
+          values:
+            list: 강의 목록 조회
+            create: 새 강의 생성 (title 필수)
+            load: 기존 강의 로드 (lecture_id)
+            delete: 강의 삭제 (lecture_id + confirm=true)
+            open: 강의 창 열기 (lecture_id, 미지정시 목록)
         implementation: handler.py가 op로 분기 — list/create/load/delete/open 내부 함수 호출.
         keywords:
         - 강의 만들기
@@ -1439,10 +1495,17 @@ nodes:
       slide:
         description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더.
         group: lecture
-        target_description: 'op: create | edit | delete | patch | rerender. 공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete는 slide_id, patch는 slide_id+patch(객체), rerender는 slide_id. create/edit만 AI 호출.'
+        target_description: '공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체). create/edit만 AI 호출.'
         target_key: op
         router: handler
         tool: slide_op
+        ops:
+          values:
+            create: 슬라이드 생성 (instruction, AI 호출)
+            edit: 슬라이드 편집 (slide_id+instruction, AI 호출)
+            delete: 슬라이드 삭제 (slide_id)
+            patch: 필드 직접 수정 (slide_id+patch, AI 우회)
+            rerender: 재렌더링 (slide_id, AI 우회)
         implementation: handler.py가 op로 분기. create/edit는 AI 호출, delete/patch/rerender는 AI 우회 (PowerPoint식 직접 편집).
         keywords:
         - 슬라이드 만들기
@@ -1455,10 +1518,14 @@ nodes:
       material:
         description: 강의 재료 관리 (op 분기). 추가/삭제.
         group: lecture
-        target_description: 'op: add | remove. 공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.'
+        target_description: '공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.'
         target_key: op
         router: handler
         tool: material_op
+        ops:
+          values:
+            add: 재료 추가 (file_path 또는 text+filename)
+            remove: 재료 삭제 (filename)
         implementation: handler.py가 op로 분기. add는 file_path 모드/text 모드 자동 감지.
         keywords:
         - 재료 추가
@@ -1469,10 +1536,14 @@ nodes:
       deck:
         description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기.
         group: lecture
-        target_description: 'op: reorder | export. 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx).'
+        target_description: '공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx).'
         target_key: op
         router: handler
         tool: deck_op
+        ops:
+          values:
+            reorder: 슬라이드 순서 변경 (order=slide_id 배열, deck.json만 갱신)
+            export: 파일 내보내기 (format=pdf|pptx, PIL/python-pptx 합본)
         implementation: handler.py가 op로 분기. reorder는 deck.json만 갱신, export는 PIL/python-pptx로 합본.
         keywords:
         - 슬라이드 순서 변경
@@ -1513,10 +1584,16 @@ nodes:
       click:
         description: 브라우저 요소 클릭 (op 분기). single/double/right.
         group: browser
-        target_description: 'op: single | double | right (기본 single). ref ID 또는 selector로 대상 지정. double은 표 셀 편집·파일 열기, right는 컨텍스트 메뉴.'
+        target_description: 'ref ID 또는 selector로 대상 지정. double은 표 셀 편집·파일 열기, right는 컨텍스트 메뉴.'
         target_key: op
         router: handler
         tool: browser_click_op
+        ops:
+          default: single
+          values:
+            single: 좌클릭 (기본)
+            double: 더블클릭 — 표 셀 편집·파일 열기
+            right: 우클릭 — 컨텍스트 메뉴
         implementation: Playwright locator.click/dblclick/contextual_click op 분기 (ref 기반)
         keywords:
         - 클릭
@@ -1571,10 +1648,16 @@ nodes:
       tab:
         description: 브라우저 탭 관리 (op 분기). list/new/switch/close.
         group: browser_session
-        target_description: 'op: list | new | switch | close. new — url 옵션 / switch — tab_id (0-base 인덱스, tab_list로 확인) / close — 현재 활성 탭 닫음.'
+        target_description: 'new — url 옵션 / switch — tab_id (0-base 인덱스, tab_list로 확인) / close — 현재 활성 탭 닫음.'
         target_key: op
         router: handler
         tool: browser_tab_op
+        ops:
+          values:
+            list: 열린 탭 목록 조회
+            new: 새 탭 열기 (url 옵션)
+            switch: 활성 탭 전환 (tab_id 0-base)
+            close: 현재 활성 탭 닫기
         implementation: Playwright 브라우저 컨텍스트에서 탭 op 분기
         keywords:
         - 탭
@@ -1615,10 +1698,15 @@ nodes:
       logs:
         description: 브라우저 로그 조회 (op 분기). console(JS 오류·console.log) / network(API 호출·리소스).
         group: browser
-        target_description: 'op: console | network (기본 console). console — JS 오류·log 누적. network — filter 옵션으로 URL/상태/타입 필터링.'
+        target_description: 'console — JS 오류·log 누적. network — filter 옵션으로 URL/상태/타입 필터링.'
         target_key: op
         router: handler
         tool: browser_logs_op
+        ops:
+          default: console
+          values:
+            console: JS 오류·console.log 조회 (기본)
+            network: API 호출·리소스 요청 조회
         implementation: Playwright console·network 이벤트 캡처 로그 op 분기
       dialog_info:
         description: 브라우저 Alert/Confirm/Prompt 팝업 정보 조회.
@@ -1636,10 +1724,14 @@ nodes:
       cookies:
         description: 브라우저 쿠키 저장/복원 (로그인 세션 유지용). op=save 또는 load.
         group: browser_session
-        target_description: 'op: save | load. path 옵션으로 JSON 파일 경로 지정 (생략 시 기본 경로).'
+        target_description: 'path 옵션으로 JSON 파일 경로 지정 (생략 시 기본 경로).'
         target_key: op
         router: handler
         tool: browser_cookies_op
+        ops:
+          values:
+            save: 현재 쿠키를 JSON 파일로 저장
+            load: JSON 파일에서 쿠키 복원
         implementation: Playwright context.cookies()/add_cookies()로 쿠키 JSON 저장·복원
         keywords:
         - 쿠키
@@ -1649,10 +1741,15 @@ nodes:
       iframe:
         description: 브라우저 iframe 관리 (op 분기). list/switch/reset.
         group: browser_session
-        target_description: 'op: list | switch | reset. switch — index 파라미터(iframe_list 결과의 위치) / reset — 메인 페이지로 복귀.'
+        target_description: 'switch — index 파라미터(iframe_list 결과의 위치) / reset — 메인 페이지로 복귀.'
         target_key: op
         router: handler
         tool: browser_iframe_op
+        ops:
+          values:
+            list: 페이지 내 iframe 목록 조회
+            switch: iframe 컨텍스트 전환 (index 파라미터)
+            reset: 메인 페이지 컨텍스트로 복귀
         implementation: Playwright page.frames()/main_frame()로 iframe op 분기
         keywords:
         - iframe
@@ -1690,11 +1787,22 @@ nodes:
         implementation: Playwright screenshot을 base64 인코딩하여 반환 (AI 시각 인식용)
       desktop:
         description: macOS 데스크톱 자동화 (op 분기). 마우스/키보드/스크린샷/화면정보.
-        target_description: 'op 종류: screenshot | click | type | key | mouse_move | drag | scroll | cursor_position | screen_info. op별 파라미터 — click/mouse_move: x,y / type: text / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 모든 좌표는 1280x800 가상 해상도 기준.'
+        target_description: 'op별 파라미터 — click/mouse_move: x,y / type: text / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 모든 좌표는 1280x800 가상 해상도 기준.'
         group: desktop
         target_key: op
         router: handler
         tool: computer_op
+        ops:
+          values:
+            screenshot: 화면 캡처 (x,y,width,height 옵션)
+            click: 마우스 클릭 (x,y)
+            type: 텍스트 입력 (text)
+            key: 키 입력 (key)
+            mouse_move: 마우스 이동 (x,y)
+            drag: 드래그 (start_x,start_y,end_x,end_y)
+            scroll: 스크롤 (direction,amount)
+            cursor_position: 현재 커서 좌표 반환
+            screen_info: 화면 해상도 정보 반환
         implementation: pyautogui로 op 분기 (1280x800 가상 좌표 → 실제 해상도 자동 변환, Retina 대응)
         keywords:
         - 데스크톱
@@ -1721,10 +1829,19 @@ nodes:
       music:
         description: 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
         group: media
-        target_description: 'op: play | add | skip | queue | stop | download (기본 play). play/add — query 파라미터로 검색어 또는 URL. download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.'
+        target_description: 'play/add — query 파라미터로 검색어 또는 URL. download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.'
         target_key: op
         router: handler
         tool: music_op
+        ops:
+          default: play
+          values:
+            play: 즉시 재생 (query 검색어/URL, 기본)
+            add: 큐에 추가 (query 검색어/URL)
+            skip: 현재 곡 스킵
+            queue: 큐 목록 조회
+            stop: 재생 중지
+            download: MP3 다운로드 (url + output_path 옵션)
         implementation: yt-dlp + mpv/ffplay 음악 재생·큐·다운로드 op 분기
         keywords:
         - youtube
@@ -1743,11 +1860,16 @@ nodes:
         - mp3
       radio:
         description: 인터넷 라디오 재생·중지 (op 분기). play/stop.
-        target_description: 'op: play | stop (기본 play). play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. stop — 파라미터 없음.'
+        target_description: 'play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. stop — 파라미터 없음.'
         group: media
         target_key: op
         router: handler
         tool: radio_op
+        ops:
+          default: play
+          values:
+            play: 라디오 재생 (station_id 또는 stream_url, 기본)
+            stop: 라디오 중지
         implementation: mpv/ffplay HLS/ICY 라디오 스트림 재생·중지 op 분기
         keywords:
         - 라디오
@@ -1778,11 +1900,16 @@ nodes:
         - 음량
       radio_favorite:
         description: 라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.
-        target_description: 'op: list | add | remove. list — 파라미터 없음, 전체 즐겨찾기 목록. add — station_id(get_korean_radio 등에서 받은 ID, 권장) 또는 stream_url(search_radio 결과) 중 하나 + name 옵션(별칭). 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — radio_play로 재생 중 마음에 들면 바로 add 호출.'
+        target_description: 'list — 파라미터 없음, 전체 즐겨찾기 목록. add — station_id(권장) 또는 stream_url 중 하나 + name 옵션. 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — radio_play로 재생 중 마음에 들면 바로 add 호출.'
         group: media
         target_key: op
         router: handler
         tool: radio_favorite_op
+        ops:
+          values:
+            list: 전체 즐겨찾기 목록 조회
+            add: 즐겨찾기 등록 (station_id/stream_url 또는 현재 재생 채널 자동)
+            remove: 즐겨찾기 삭제 (name 파라미터)
         implementation: 즐겨찾기 JSON 파일 조회/저장/삭제 op 분기. add는 station_id/stream_url 둘 다 없으면 현재 재생 채널 메타로부터 추출.
         keywords:
         - 즐겨찾기
@@ -1807,10 +1934,16 @@ nodes:
       navigate:
         description: 브라우저 페이지 이동 (op 분기). goto(URL) / back / forward.
         group: browser
-        target_description: 'op: goto | back | forward (기본 goto). goto — url 파라미터 필수(http/https). back/forward — 파라미터 없음, 히스토리 이동.'
+        target_description: 'goto — url 파라미터 필수(http/https). back/forward — 파라미터 없음, 히스토리 이동.'
         target_key: op
         router: handler
         tool: browser_navigate_op
+        ops:
+          default: goto
+          values:
+            goto: 지정 URL로 이동 (url 필수, 기본)
+            back: 히스토리 뒤로
+            forward: 히스토리 앞으로
         implementation: Playwright page.goto/go_back/go_forward op 분기
         keywords:
         - 이동
@@ -1820,10 +1953,15 @@ nodes:
       content:
         description: 현재 페이지 콘텐츠 추출 (op 분기). text(본문 텍스트) / html(전체 HTML 소스).
         group: browser
-        target_description: 'op: text | html (기본 text). text — 본문 텍스트만, HTML 태그 제외. html — 구조 분석·파싱용 전체 소스.'
+        target_description: 'text — 본문 텍스트만, HTML 태그 제외. html — 구조 분석·파싱용 전체 소스.'
         target_key: op
         router: handler
         tool: browser_content_op
+        ops:
+          default: text
+          values:
+            text: 본문 텍스트 (HTML 태그 제외, 기본)
+            html: 전체 HTML 소스 (구조 분석·파싱용)
         implementation: Playwright page.content/text op 분기
       close:
         description: Playwright 브라우저 세션 종료. 열린 탭·쿠키 모두 해제.
@@ -1835,10 +1973,15 @@ nodes:
       chrome:
         description: Chrome MCP 원격 제어 세션 관리 (Playwright 대안, 실제 Chrome). op=connect/disconnect/status.
         group: browser_session
-        target_description: 'op: connect | disconnect | status. connect — url 옵션으로 MCP 서버 주소. status — 연결 여부·현재 URL·탭ID·ref 수 반환.'
+        target_description: 'connect — url 옵션으로 MCP 서버 주소. status — 연결 여부·현재 URL·탭ID·ref 수 반환.'
         target_key: op
         router: handler
         tool: browser_chrome_op
+        ops:
+          values:
+            connect: Chrome MCP WebSocket 연결 (url 옵션)
+            disconnect: 연결 해제
+            status: 연결 여부·현재 URL·탭ID·ref 수 반환
         implementation: Chrome MCP WebSocket 연결/해제/상태 op 분기
         keywords:
         - Chrome
@@ -1856,10 +1999,15 @@ nodes:
       cctv:
         description: CCTV 실시간 영상 열기·캡처 (op 분기). open(브라우저 재생) / capture(이미지 저장).
         group: open
-        target_description: 'op: open | capture (기본 open). name 또는 url 중 하나. open — 브라우저에서 HLS/RTSP 재생. capture — ffmpeg로 단일 프레임 PNG 캡처 (save_path 옵션, AI 분석용).'
+        target_description: 'name 또는 url 중 하나. open — 브라우저에서 HLS/RTSP 재생. capture — ffmpeg로 단일 프레임 PNG 캡처 (save_path 옵션, AI 분석용).'
         target_key: op
         router: handler
         tool: cctv_op
+        ops:
+          default: open
+          values:
+            open: 브라우저에서 HLS/RTSP 영상 재생 (기본)
+            capture: ffmpeg 단일 프레임 PNG 캡처 (AI 분석용)
         implementation: cctv_open/cctv_capture op 분기 (HLS 브라우저 재생 + ffmpeg 프레임 캡처)
         keywords:
         - cctv

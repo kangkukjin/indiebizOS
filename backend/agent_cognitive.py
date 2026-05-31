@@ -7,11 +7,172 @@ AgentRunner의 인지 관련 메서드를 분리한 Mixin 클래스.
 AI 인지 아키텍처에 해당하는 로직을 포함한다.
 """
 
+import json
 import re
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Union
 
 from ai_agent import AIAgent
+
+
+# ============================================================
+# 도구 호출 trace 직렬화 (평가자 입력용)
+# ============================================================
+
+# 파일 경로 인풋 키 — Write/Edit/MultiEdit 류와 IBL self:write 등에서 파일 경로를 담는 흔한 키들.
+# tool_calls에서 input을 스캔할 때 이 키 중 하나가 있으면 생성/수정된 파일 후보로 본다.
+_FILE_PATH_INPUT_KEYS = ("file_path", "path", "filepath", "target", "output", "output_path", "filename")
+# 파일 변경(생성/수정) 의미를 갖는 도구 이름 — 정규화된 이름 기준.
+_FILE_WRITE_TOOL_NAMES = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
+
+
+def _brief_input(tool_input: Any, max_len: int = 160) -> str:
+    """tool input dict를 한 줄로 요약. 키=값 일부만 보여서 시퀀스 트레이스를 짧게 유지."""
+    if not isinstance(tool_input, dict) or not tool_input:
+        if tool_input in (None, "", {}):
+            return ""
+        s = str(tool_input)
+        return s if len(s) <= max_len else s[:max_len] + "…"
+    parts = []
+    # 우선 순위: 식별성 높은 키 먼저 (execute_ibl/IBL/Write/Edit/Bash 등의 핵심 인자)
+    priority_keys = (
+        "node", "action", "op", "command", "query", "name",
+        "file_path", "path", "filepath", "output_path",
+        "subagent_type", "url", "id",
+    )
+    seen = set()
+    for k in priority_keys:
+        if k in tool_input and k not in seen:
+            v = tool_input[k]
+            sv = str(v) if not isinstance(v, (dict, list)) else json.dumps(v, ensure_ascii=False)
+            if len(sv) > 60:
+                sv = sv[:60] + "…"
+            parts.append(f"{k}={sv}")
+            seen.add(k)
+    # 남은 키는 이름만 (값 너무 클 수 있음)
+    remaining = [k for k in tool_input.keys() if k not in seen]
+    if remaining:
+        parts.append("+" + ",".join(remaining[:5]))
+    joined = " ".join(parts)
+    return joined if len(joined) <= max_len else joined[:max_len] + "…"
+
+
+def _normalize_tool_entry(entry: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """문자열(legacy) 또는 dict(신규 구조)를 표준 dict로 변환."""
+    if isinstance(entry, dict):
+        return {
+            "name": entry.get("name") or entry.get("tool_name") or "",
+            "input": entry.get("input") or {},
+            "result": entry.get("result", ""),
+            "is_error": bool(entry.get("is_error", False)),
+        }
+    # 문자열 — name·input 불명, 결과만 보존 (backward-compat)
+    return {"name": "", "input": {}, "result": str(entry), "is_error": False}
+
+
+def _merge_keywords(existing: str, new: str) -> str:
+    """두 키워드 문자열을 합집합으로 병합 (순서 보존, 중복 제거).
+
+    심층메모리 UPDATE/REPLACE 시 키워드가 무한 누적되지 않도록."""
+    seen, out = set(), []
+    for kw in (existing or "").split(",") + (new or "").split(","):
+        k = kw.strip()
+        if k and k.lower() not in seen:
+            seen.add(k.lower())
+            out.append(k)
+    return ",".join(out)
+
+
+def serialize_tool_trace(
+    items: List[Union[str, Dict[str, Any]]],
+    total_budget: int = 8000,
+    head_keep: int = 8,
+    tail_keep: int = 8,
+    per_result_chars: int = 220,
+) -> str:
+    """도구 호출 시퀀스를 평가자가 읽을 수 있는 한 문자열로 직렬화.
+
+    핵심 원칙: **호출 이름·순서는 어떤 경우에도 보존**한다. 결과 본문만 잘라낸다.
+    호출 수가 많아 total_budget을 넘으면, 앞 head_keep + 뒤 tail_keep 개 호출만 상세히 보여주고
+    가운데는 "[헤더만 — 결과 생략]" 모드로 압축하여 시퀀스 자체는 끝까지 노출한다.
+
+    Args:
+        items: dict(`{name,input,result,is_error}`) 또는 str(legacy) 리스트
+        total_budget: 직렬화 결과 전체 길이 한계 (대략치)
+        head_keep: 앞쪽에서 결과까지 상세히 보여줄 호출 수
+        tail_keep: 뒤쪽에서 결과까지 상세히 보여줄 호출 수
+        per_result_chars: 호출당 결과 본문 최대 길이
+
+    Returns:
+        직렬화된 트레이스 문자열 (items 비어있으면 "").
+    """
+    if not items:
+        return ""
+
+    normalized = [_normalize_tool_entry(it) for it in items if it is not None]
+    if not normalized:
+        return ""
+
+    total = len(normalized)
+    # 모든 호출의 헤더(이름+input brief)는 무조건 살린다.
+    # detail 마스크: True면 결과까지 노출, False면 헤더만.
+    if total <= head_keep + tail_keep:
+        detail_mask = [True] * total
+    else:
+        detail_mask = (
+            [True] * head_keep
+            + [False] * (total - head_keep - tail_keep)
+            + [True] * tail_keep
+        )
+
+    lines: List[str] = [f"# 도구 호출 시퀀스 (총 {total}회)"]
+    omitted_run = 0
+    for idx, (entry, detailed) in enumerate(zip(normalized, detail_mask), start=1):
+        name = entry["name"] or "(이름미상)"
+        brief = _brief_input(entry["input"])
+        err_tag = " [ERROR]" if entry["is_error"] else ""
+        header = f"[{idx}] {name}({brief}){err_tag}" if brief else f"[{idx}] {name}{err_tag}"
+
+        if detailed:
+            if omitted_run > 0:
+                lines.append(f"  … (호출 {omitted_run}개 — 헤더는 위에서 이어짐, 결과 생략) …")
+                omitted_run = 0
+            result = entry["result"] or ""
+            if isinstance(result, str) and result:
+                excerpt = result.strip().replace("\n", " ")
+                if len(excerpt) > per_result_chars:
+                    excerpt = excerpt[:per_result_chars] + "…"
+                lines.append(f"{header}\n    → {excerpt}")
+            else:
+                lines.append(header)
+        else:
+            # 헤더만 — 시퀀스 손실 방지가 목적
+            lines.append(header)
+            omitted_run += 1
+
+    if omitted_run > 0:
+        lines.append(f"  … (위 {omitted_run}개 호출은 결과 본문 생략됨) …")
+
+    serialized = "\n".join(lines)
+
+    # 안전망: 그래도 budget을 넘으면 결과 라인부터 추가 truncate.
+    # 호출 헤더(`[N] name(...)` 줄)는 살리고, 결과 줄(`    → ...`)을 우선적으로 자른다.
+    if len(serialized) > total_budget:
+        kept: List[str] = []
+        budget = total_budget
+        for line in lines:
+            if budget <= 0:
+                # 결과 줄이면 스킵, 헤더 줄이면 짧게라도 포함
+                if line.startswith("    → ") or line.startswith("  … "):
+                    continue
+                kept.append(line)
+                continue
+            kept.append(line)
+            budget -= len(line) + 1
+        kept.append(f"  (총 길이 budget {total_budget}자 초과 — 일부 결과 본문 생략됨)")
+        serialized = "\n".join(kept)
+
+    return serialized
 
 
 # ============================================================
@@ -19,6 +180,47 @@ from ai_agent import AIAgent
 # ============================================================
 
 SESSION_RESET_RESPONSE = "새 세션을 시작했습니다. 무엇을 도와드릴까요?"
+
+
+# ============================================================
+# 의식 framing 캐시 (연속 turn 재사용)
+# ------------------------------------------------------------
+# THINK 판정 = "framing이 필요하다"는 수요 선언이다. 같은 대화 맥락에서 이미
+# 의식 에이전트가 만든 framing이 지금 질문에 맞으면, 그걸 재사용해 비싼 의식
+# (Opus) 호출을 건너뛴다. 없거나 안 맞으면 의식 에이전트가 새로 만든다.
+#   키: registry_key (project_id:agent_id)
+#   값: {"output": dict, "ts": epoch_seconds}
+# ============================================================
+
+_FRAMING_CACHE: Dict[str, Dict[str, Any]] = {}
+_FRAMING_TTL_SEC = 1800  # 30분 — 오래된 동선이 새 대화로 새지 않도록 만료
+
+
+def framing_cache_get(key: str) -> Optional[dict]:
+    """저장된 framing 조회 (TTL 경과 시 폐기하고 None)."""
+    import time as _t
+    entry = _FRAMING_CACHE.get(key)
+    if not entry:
+        return None
+    if _t.time() - entry.get("ts", 0) > _FRAMING_TTL_SEC:
+        _FRAMING_CACHE.pop(key, None)
+        return None
+    return entry.get("output")
+
+
+def framing_cache_set(key: str, output: dict):
+    """framing 저장 (빈 값·미완성 framing은 호출 측에서 걸러 보낼 것)."""
+    import time as _t
+    if key and output:
+        _FRAMING_CACHE[key] = {"output": output, "ts": _t.time()}
+
+
+def clear_framing_cache(key: str = None):
+    """framing 캐시 무효화. key 없으면 전체."""
+    if key:
+        _FRAMING_CACHE.pop(key, None)
+    else:
+        _FRAMING_CACHE.clear()
 
 
 def handle_session_reset() -> str:
@@ -36,6 +238,7 @@ def handle_session_reset() -> str:
         from thread_context import get_current_registry_key
         key = get_current_registry_key() or "default"
         clear_session_for_agent(key)
+        clear_framing_cache(key)  # 저장된 의식 framing도 함께 폐기
         print(f"[SESSION_RESET] 세션 매핑 클리어: {key}")
     except Exception as e:
         print(f"[SESSION_RESET] 매핑 클리어 실패 (무시): {e}")
@@ -358,6 +561,9 @@ class AgentCognitiveMixin:
             # 전문 조회 (preview는 100자 잘림이므로)
             items = []
             for r in results:
+                # last_seen은 read()가 used_at을 now로 갱신하기 전 값(search 결과)에서 취한다.
+                # 마지막으로 확인된(사용되거나 만들어진) 날짜 — 에이전트가 낡음을 스스로 판단하도록.
+                last_seen = (r.get("used_at") or r.get("created_at") or "")[:10]
                 full = memory_db.read(project_path, agent_id, r["id"])
                 if full:
                     cat = full.get("category", "")
@@ -365,13 +571,15 @@ class AgentCognitiveMixin:
                     content = full.get("content", "")
                     meta = f' category="{cat}"' if cat else ""
                     meta += f' keywords="{kw}"' if kw else ""
+                    meta += f' last_seen="{last_seen}"' if last_seen else ""
                     items.append(f"  <memory{meta}>{content}</memory>")
 
             if not items:
                 return ""
 
             xml = (
-                '<related_memory note="심층 메모리에서 연상된 관련 기억입니다. 참고용.">\n'
+                '<related_memory note="심층 메모리에서 연상된 관련 기억입니다. 참고용. '
+                'last_seen은 그 기억이 마지막으로 확인된 날짜이니, 오래된 기억은 현재와 다를 수 있음을 감안하세요.">\n'
                 + "\n".join(items)
                 + "\n</related_memory>"
             )
@@ -382,6 +590,92 @@ class AgentCognitiveMixin:
         except Exception as e:
             print(f"[연상:관련기억] 검색 실패 (무시): {e}")
             return ""
+
+    def _run_consciousness_or_reuse(self, user_message: str, history: list,
+                                    execution_memory: str = "") -> Optional[dict]:
+        """THINK 경로의 의식 진입점 — framing 재고가 있으면 재사용, 없으면 생성.
+
+        THINK 판정은 "framing이 필요하다"는 수요다. 같은 대화에서 이미 만든
+        framing이 지금 질문에 맞으면(fit 게이트, 경량 1회) 재사용하고 의식(Opus)
+        호출을 건너뛴다. 없거나 안 맞으면 의식 에이전트가 새로 만들어 저장한다.
+        per-turn으로 바뀌는 achievement_criteria만 게이트가 새로 뽑는다.
+        """
+        from thread_context import get_current_registry_key
+        key = get_current_registry_key() or "default"
+
+        # 후속 turn(히스토리 존재) + 저장된 framing 있을 때만 재사용 시도
+        prev = framing_cache_get(key) if history else None
+        if prev:
+            gate = self._consciousness_fit_gate(user_message, prev)
+            if gate and gate.get("fits"):
+                reused = dict(prev)
+                reused["achievement_criteria"] = (
+                    gate.get("criteria") or prev.get("achievement_criteria", "")
+                )
+                reused["history_summary"] = ""  # 실제 최근 history가 그대로 흐르도록
+                self._log(
+                    f"[의식] framing 재사용 (Opus 스킵): {reused.get('task_framing', '')[:50]}"
+                )
+                return reused
+
+        # 없거나 안 맞음 → 의식 에이전트가 새로 만든다
+        out = self._run_consciousness(user_message, history, execution_memory)
+        # 미완성 framing(clarification 요청)은 재고로 쌓지 않는다
+        if out and not out.get("needs_clarification"):
+            framing_cache_set(key, out)
+        return out
+
+    def _consciousness_fit_gate(self, user_message: str, prev_framing: dict) -> Optional[dict]:
+        """저장된 framing이 현재 질문에 맞는지 경량 모델로 판정 + 이번 turn 달성 기준 생성.
+
+        Returns:
+            {"fits": bool, "criteria": str} 또는 None(실패 → 호출 측은 풀 의식 폴백)
+        """
+        try:
+            from consciousness_agent import lightweight_ai_call
+
+            task_framing = (prev_framing or {}).get("task_framing", "")
+            if not task_framing:
+                return None
+
+            prompt = f"""아래는 직전까지 진행 중인 태스크의 정의(framing)다.
+
+[진행 중 태스크]
+{task_framing}
+
+[사용자의 새 메시지]
+{user_message}
+
+판정하라:
+1. 이 framing이 새 메시지를 푸는 데 그대로 맞는가? 같은 태스크의 연장·변주(조건/방향/대상만 바뀐 경우)면 맞고(fits=true), 주제가 바뀌었으면 안 맞다(fits=false).
+2. 맞다면 이번 메시지의 구체적 달성 기준을 한 줄로 작성하라.
+
+JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
+
+            resp = lightweight_ai_call(
+                prompt,
+                system_prompt="진행 중 태스크 framing의 적합성 판정기. JSON으로만 응답.",
+            )
+            if not resp:
+                return None
+
+            cleaned = resp.strip()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.split("\n", 1)[-1]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3]
+                cleaned = cleaned.strip()
+
+            data = json.loads(cleaned)
+            if not isinstance(data, dict) or "fits" not in data:
+                return None
+            return {
+                "fits": bool(data.get("fits")),
+                "criteria": str(data.get("criteria", "") or ""),
+            }
+        except Exception as e:
+            self._log(f"[의식] fit 게이트 실패 (풀 의식 폴백): {e}")
+            return None
 
     def _run_consciousness(self, user_message: str, history: list,
                            execution_memory: str = "") -> dict:
@@ -478,7 +772,7 @@ class AgentCognitiveMixin:
             extract_prompt = f"""다음 대화에서 나중에 기억해둘 만한 사실 정보를 추출하라.
 (이름, 중요한 날짜, 사용자 선호, 결정사항, 작업 결과 등)
 일시적 데이터(주가, 날씨, 환율, 시세 등)와 추론/감상은 제외. JSON 배열로만 응답.
-[{{"content": "...", "keywords": "k1,k2", "category": "사용자선호|작업기록|의사결정|중요날짜"}}]
+[{{"content": "...", "keywords": "k1,k2", "category": "사용자선호|사용자정보|작업기록|의사결정|중요날짜"}}]
 정보가 없으면 빈 배열 [] 반환.
 
 사용자: {user_message[:500]}
@@ -506,67 +800,96 @@ AI: {ai_response[:500]}"""
             saved_count = 0
             updated_count = 0
 
+            # 2단계: 각 조각의 기존 유사 항목을 기계적으로 탐색(임베딩, 무LLM).
+            #   - 유사 항목 없음 → 곧장 NEW (LLM 판정 불필요)
+            #   - 유사 항목 있음 → (신규, 기존 후보) 쌍으로 모아 다음 단계에서 '한 번에' 판정
+            pending = []   # [(fact, top)] — 배치 dedup 대상
             for fact in facts[:5]:  # 최대 5개 조각
                 content = fact.get("content", "").strip()
-                keywords = fact.get("keywords", "").strip()
-                category = fact.get("category", "").strip()
                 if not content:
                     continue
+                fact["content"] = content
+                fact["keywords"] = fact.get("keywords", "").strip()
+                fact["category"] = fact.get("category", "").strip()
 
-                # 2단계: 기존 심층 메모리에서 유사 항목 검색
                 existing = memory_db.search(
-                    project_path=project_path,
-                    agent_id=agent_id,
-                    query=keywords or content,
-                    limit=3,
+                    project_path=project_path, agent_id=agent_id,
+                    query=fact["keywords"] or content, limit=3,
                 )
+                top = (memory_db.read(project_path, agent_id, existing[0]["id"])
+                       if existing else None)
+                if top:
+                    pending.append((fact, top))
+                else:
+                    memory_db.save(
+                        project_path=project_path, agent_id=agent_id,
+                        content=content, keywords=fact["keywords"],
+                        category=fact["category"],
+                    )
+                    saved_count += 1
+                    print(f"[심층메모리] NEW [{fact['category']}]: \"{content[:50]}\"")
 
-                if existing:
-                    # 유사 항목 있음 → 경량 AI로 중복 판단
-                    # 가장 유사한 항목의 전문 조회
-                    top = memory_db.read(project_path, agent_id, existing[0]["id"])
-                    if top:
-                        dedup_prompt = (
-                            f"기존 기억: {top['content'][:200]}\n"
-                            f"새 정보: {content[:200]}\n"
-                            "SAME(동일) / UPDATE(보충수정) / NEW(다른정보) 중 하나만 답하라."
-                        )
-                        judgment = lightweight_ai_call(
-                            prompt=dedup_prompt,
-                            system_prompt="SAME, UPDATE, NEW 중 하나만 답하라."
-                        )
-                        if judgment:
-                            j = judgment.strip().upper()
-                            if "SAME" in j:
-                                # 동일 → used_at만 갱신
-                                memory_db.update(project_path, agent_id, top["id"])
-                                print(f"[심층메모리] SAME 스킵: \"{content[:50]}\"")
-                                continue
-                            elif "UPDATE" in j:
-                                # 보충 → 기존 항목 업데이트
-                                merged = f"{top['content']}\n[보충] {content}"
-                                merged_kw = top.get("keywords", "")
-                                if keywords:
-                                    merged_kw = f"{merged_kw},{keywords}" if merged_kw else keywords
-                                memory_db.update(
-                                    project_path, agent_id, top["id"],
-                                    content=merged, keywords=merged_kw,
-                                )
-                                updated_count += 1
-                                print(f"[심층메모리] UPDATE: \"{content[:50]}\" → 기존 ID {top['id']}")
-                                continue
-                            # NEW → 아래에서 새로 저장
-
-                # 유사 항목 없음 또는 NEW → 새로 저장
-                memory_db.save(
-                    project_path=project_path,
-                    agent_id=agent_id,
-                    content=content,
-                    keywords=keywords,
-                    category=category,
+            # 3단계: 유사쌍이 있으면 '단 한 번'의 배치 호출로 전부 판정 (조각마다 호출 X)
+            verdicts = []
+            if pending:
+                pairs_text = "\n".join(
+                    f'{i+1}. 기존: {top["content"][:200]}\n   신규: {fact["content"][:200]}'
+                    for i, (fact, top) in enumerate(pending)
                 )
-                saved_count += 1
-                print(f"[심층메모리] NEW [{category}]: \"{content[:50]}\" (kw: {keywords})")
+                batch_prompt = (
+                    "각 쌍의 '기존 기억'과 '신규 정보'의 관계를 판정하라.\n"
+                    "SAME(완전 동일) / UPDATE(기존도 유효한데 정보 보충) / "
+                    "REPLACE(기존이 틀렸거나 옛 정보라 새 정보로 정정·대체) / "
+                    "NEW(서로 다른 정보) 중 하나씩.\n\n"
+                    f"{pairs_text}\n\n"
+                    '쌍 순서대로 JSON으로만 응답: {"verdicts": ["SAME"|"UPDATE"|"REPLACE"|"NEW", ...]}'
+                )
+                resp = lightweight_ai_call(
+                    prompt=batch_prompt,
+                    system_prompt="기억 관계 판정기. 쌍 순서대로 verdict 배열만 JSON으로 응답."
+                )
+                if resp:
+                    rc = resp.strip()
+                    if rc.startswith("```"):
+                        rc = rc.split("\n", 1)[-1]
+                        if rc.endswith("```"):
+                            rc = rc[:-3]
+                        rc = rc.strip()
+                    try:
+                        verdicts = (json.loads(rc) or {}).get("verdicts", [])
+                    except json.JSONDecodeError:
+                        verdicts = []
+
+            # 4단계: 판정 적용 (verdict 누락/불명은 NEW로 안전 처리)
+            for i, (fact, top) in enumerate(pending):
+                j = (verdicts[i] if i < len(verdicts) else "NEW")
+                j = str(j).strip().upper()
+                content = fact["content"]
+                keywords = fact["keywords"]
+                category = fact["category"]
+                if "SAME" in j:
+                    memory_db.update(project_path, agent_id, top["id"])
+                    print(f"[심층메모리] SAME 스킵: \"{content[:50]}\"")
+                elif "REPLACE" in j:
+                    # 정정 → 기존을 새 정보로 덮어쓰기 (옛/틀린 정보 폐기)
+                    merged_kw = _merge_keywords(top.get("keywords", ""), keywords)
+                    memory_db.update(project_path, agent_id, top["id"],
+                                     content=content, keywords=merged_kw)
+                    updated_count += 1
+                    print(f"[심층메모리] REPLACE: \"{content[:50]}\" → 기존 ID {top['id']} 덮어씀")
+                elif "UPDATE" in j:
+                    # 보충 → 기존 내용에 덧붙임 (둘 다 유효)
+                    merged = f"{top['content']}\n[보충] {content}"
+                    merged_kw = _merge_keywords(top.get("keywords", ""), keywords)
+                    memory_db.update(project_path, agent_id, top["id"],
+                                     content=merged, keywords=merged_kw)
+                    updated_count += 1
+                    print(f"[심층메모리] UPDATE: \"{content[:50]}\" → 기존 ID {top['id']}")
+                else:  # NEW (또는 불명)
+                    memory_db.save(project_path=project_path, agent_id=agent_id,
+                                   content=content, keywords=keywords, category=category)
+                    saved_count += 1
+                    print(f"[심층메모리] NEW [{category}]: \"{content[:50]}\"")
 
             if saved_count or updated_count:
                 print(f"[심층메모리] 저장 {saved_count}건, 업데이트 {updated_count}건: "
@@ -814,23 +1137,69 @@ AI: {ai_response[:500]}"""
 
         return None
 
-    def _collect_created_files(self, response: str) -> str:
-        """에이전트 응답에서 생성된 파일 경로를 찾아 내용을 읽는다."""
+    def _collect_created_files(self, response: str,
+                                tool_calls: Optional[List[Dict[str, Any]]] = None) -> str:
+        """생성/수정된 파일 경로를 찾아 내용을 읽는다.
+
+        1차: tool_calls(있으면)에서 Write/Edit/MultiEdit/NotebookEdit 같은 파일 변경 도구의
+             input.file_path 등을 직접 수집. IBL execute_ibl `[self:write]` 같은 케이스도
+             input.params.path 등에서 추출. 응답 텍스트에 안 보여도 누락 안 됨.
+        2차: 응답 텍스트에서 절대 경로 정규식 fallback — 1차에서 못 찾은 경로 보강용.
+
+        Args:
+            response: 에이전트 최종 응답 텍스트
+            tool_calls: `{name, input, result, ...}` 리스트 (선택)
+        """
         import os
 
-        # 절대 경로 패턴 매칭
+        paths_seen: List[str] = []
+        seen_set: set = set()
+
+        def _add(path: str):
+            if path and path not in seen_set and path.startswith("/"):
+                seen_set.add(path)
+                paths_seen.append(path)
+
+        # 1차: tool_calls에서 직접 수집
+        if tool_calls:
+            for entry in tool_calls:
+                if not isinstance(entry, dict):
+                    continue
+                name = entry.get("name") or entry.get("tool_name") or ""
+                inp = entry.get("input") or {}
+                if not isinstance(inp, dict):
+                    continue
+
+                # 표준 Write/Edit 류
+                if name in _FILE_WRITE_TOOL_NAMES or name.endswith("/Write") or name.endswith("/Edit"):
+                    for key in _FILE_PATH_INPUT_KEYS:
+                        v = inp.get(key)
+                        if isinstance(v, str):
+                            _add(v)
+
+                # IBL self:write 같은 케이스: execute_ibl({node:"self", action:"write", params:{path:...}})
+                if name in ("execute_ibl", "mcp__indiebizos__execute_ibl"):
+                    params = inp.get("params") or {}
+                    if isinstance(params, dict):
+                        for key in _FILE_PATH_INPUT_KEYS:
+                            v = params.get(key)
+                            if isinstance(v, str):
+                                _add(v)
+
+        # 2차: 응답 텍스트에서 절대 경로 fallback (1차에서 못 잡은 경우 보강)
         path_pattern = re.compile(r'(/[^\s"\'<>]+\.\w{1,10})')
-        paths = path_pattern.findall(response)
+        for p in path_pattern.findall(response or ""):
+            _add(p)
 
         files_content = []
-        for path in paths:
+        for path in paths_seen:
             if os.path.isfile(path):
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
                         content = f.read()
                     if len(content) > 10000:
                         content = content[:10000] + "\n\n... (10000자 초과, 생략됨)"
-                    files_content.append(f"### {os.path.basename(path)}\n```\n{content}\n```")
+                    files_content.append(f"### {os.path.basename(path)} ({path})\n```\n{content}\n```")
                 except Exception:
                     pass
 
@@ -975,6 +1344,7 @@ AI: {ai_response[:500]}"""
                                    consciousness_output: dict = None,
                                    max_rounds: int = 2,
                                    tool_results: list = None,
+                                   tool_calls: list = None,
                                    execution_memory: str = "") -> str:
         """달성 기준 기반 평가 루프.
 
@@ -985,7 +1355,10 @@ AI: {ai_response[:500]}"""
             history: 대화 히스토리
             consciousness_output: 의식 에이전트 출력 (self_awareness, capability_focus 등)
             max_rounds: 최대 평가 횟수 (기본 2)
-            tool_results: 도구 실행 이력 리스트
+            tool_results: 도구 실행 결과 문자열 리스트 (legacy — 이름·인풋 없음)
+            tool_calls: 도구 호출 구조화 이력 `{name,input,result,is_error}` 리스트.
+                tool_results보다 우선 사용된다. 둘 다 있으면 tool_calls 사용.
+                평가자가 시퀀스 자체(어떤 도구를 어떤 순서로)를 판단 근거로 쓸 수 있다.
             execution_memory: 실행기억 (도구/사례/implementation)
 
         Returns:
@@ -994,24 +1367,19 @@ AI: {ai_response[:500]}"""
         import time as _time
         response = initial_response
 
-        # 도구 실행 이력을 문자열로 변환
-        tool_results_str = ""
-        if tool_results:
-            tool_entries = []
-            for tr in tool_results:
-                if isinstance(tr, str) and tr.strip():
-                    # 너무 긴 결과는 truncate
-                    entry = tr[:2000] if len(tr) > 2000 else tr
-                    tool_entries.append(entry)
-            if tool_entries:
-                tool_results_str = "\n---\n".join(tool_entries[-5:])  # 최근 5개
+        # 도구 호출 trace를 직렬화 — 시퀀스 자체는 어떤 경우에도 보존됨.
+        # tool_calls가 우선; 없으면 tool_results(legacy) 사용.
+        trace_source: list = tool_calls if tool_calls else (tool_results or [])
+        tool_results_str = serialize_tool_trace(trace_source)
+        # _collect_created_files용: tool_calls가 있으면 그쪽도 활용.
+        _trace_dicts = tool_calls if tool_calls else None
 
         for round_num in range(1, max_rounds + 1):
             self._log(f"[GoalEval] 라운드 {round_num}/{max_rounds} 평가 시작")
             eval_start = _time.time()
 
-            # 생성된 파일 수집
-            created_files = self._collect_created_files(response)
+            # 생성된 파일 수집 (tool_calls의 file_path를 우선 활용)
+            created_files = self._collect_created_files(response, tool_calls=_trace_dicts)
 
             # 달성 여부 평가 (의식 에이전트의 자기 인식 + 도구 실행 이력 + 실행기억)
             achieved, feedback, severity = self._evaluate_achievement(

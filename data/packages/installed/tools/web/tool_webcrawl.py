@@ -124,6 +124,75 @@ def _get_chrome_driver():
     return None
 
 
+# ─── 2.5단계: Playwright 폴백 (자체 Chromium, 외부 서버 불필요) ───
+
+_browser_session = None  # crawl 전용 BrowserSession 싱글턴 캐시
+
+
+def _get_browser_session():
+    """browser-action 패키지의 Playwright BrowserSession을 가져온다.
+
+    Chrome MCP와 달리 외부 서버(12306)가 필요 없고 자체 헤드리스 Chromium을 띄운다.
+    crawl 전용으로 1회 로드해 캐싱 — 이후 모든 crawl이 같은 인스턴스를 재사용하고
+    `_run_async`(system_tools 루프)에서 일관되게 구동되어 루프 충돌이 없다.
+    """
+    global _browser_session
+    if _browser_session is not None:
+        return _browser_session
+    try:
+        bs_path = os.path.join(
+            os.path.dirname(__file__), "..", "browser-action", "browser_session.py"
+        )
+        spec = importlib.util.spec_from_file_location("webcrawl_browser_session", bs_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _browser_session = mod.BrowserSession.get_instance()
+        return _browser_session
+    except Exception:
+        return None
+
+
+async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
+    """Playwright(헤드리스 Chromium)로 JS 렌더링 후 본문 텍스트 추출.
+
+    daangn 등 클라이언트 렌더링 SPA에서 정적 fetch가 못 얻는
+    (a) 동적 필터 적용 결과 (b) JS로 그려지는 본문/사진 정보를 확보한다.
+    """
+    try:
+        await session.ensure_browser(headless=True)
+        page = session.raw_page
+        if page is None:
+            return {"success": False, "error": "Playwright 페이지 생성 실패", "url": url}
+
+        await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+        # 동적 콘텐츠 대기 (SPA 렌더링) — networkidle 우선, 실패해도 진행
+        try:
+            await page.wait_for_load_state("networkidle", timeout=8000)
+        except Exception:
+            await asyncio.sleep(2)
+
+        text = await page.inner_text("body")
+        title = await page.title()
+
+        if not text or len(text) < _MIN_CONTENT_LENGTH:
+            return {"success": False, "error": "Playwright에서도 콘텐츠 부족", "url": url}
+
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines))
+        text, original_length, truncated = _truncate(text, max_length)
+        return {
+            "success": True,
+            "url": url,
+            "title": title,
+            "text": text,
+            "length": original_length,
+            "truncated": truncated,
+            "method": "playwright",
+        }
+    except Exception as e:
+        return {"success": False, "error": f"Playwright 크롤링 실패: {e}", "url": url}
+
+
 async def _crawl_chrome_async(driver, url: str, max_length: int) -> dict:
     """Chrome MCP를 사용하여 실제 브라우저로 페이지 텍스트를 가져온다."""
     try:
@@ -202,20 +271,27 @@ def crawl_website(url: str, max_length: int = 10000) -> dict:
     if result.get("success") and len(result.get("text", "")) >= _MIN_CONTENT_LENGTH:
         return result
 
-    # 2단계: Chrome MCP 폴백
+    # 2단계: JS 렌더링 폴백
+    # (a) Chrome MCP가 "이미 연결돼 있으면" 우선 사용 (실제 Chrome 로그인 세션·쿠키 활용).
+    #     연결돼 있지 않으면 외부 서버(12306)가 필요하므로 건너뛴다 — 자동 연결하지 않음.
     driver = _get_chrome_driver()
-    if driver is None:
-        # Chrome MCP 사용 불가 — 원래 결과(또는 에러) 그대로 반환
-        return result
+    if driver is not None:
+        chrome_result = _run_async(_crawl_chrome_async(driver, url, max_length))
+        if chrome_result.get("success"):
+            return chrome_result
 
-    chrome_result = _run_async(_crawl_chrome_async(driver, url, max_length))
-    if chrome_result.get("success"):
-        return chrome_result
+    # (b) Playwright 폴백 — 자체 Chromium, 외부 서버 불필요. 기본 JS 렌더링 경로.
+    session = _get_browser_session()
+    if session is not None:
+        try:
+            pw_result = _run_async(_crawl_playwright_async(session, url, max_length))
+            if pw_result.get("success"):
+                return pw_result
+        except Exception:
+            pass  # Playwright 실패 → 정적 결과로 폴백
 
-    # Chrome MCP도 실패하면, 원래 결과 중 나은 것을 반환
-    if result.get("success"):
-        return result
-    return chrome_result
+    # 모든 폴백 실패 → 정적 결과(또는 에러) 그대로 반환
+    return result
 
 
 def use_tool(tool_input: dict) -> dict:

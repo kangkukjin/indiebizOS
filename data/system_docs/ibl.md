@@ -318,16 +318,64 @@ self:
 
 | 파일 | 역할 |
 |------|------|
-| `data/ibl_nodes.yaml` | 노드 정의 (수동 액션: handler 라우팅) |
+| `data/ibl_nodes_src/` | **IBL 액션 단일 진실 소스** — 노드별 yaml (sense/self/limbs/others/engines + meta) |
+| `data/ibl_nodes.yaml` | **빌드 산출물** — 직접 편집 금지. `scripts/build_ibl_nodes.py`로 생성 |
+| `scripts/build_ibl_nodes.py` | 빌드 + 삼각 검증 (`--check`로 src↔tool.json↔handler.py `_OP_DISPATCHERS` AST 정확 비교) |
+| `scripts/git-hooks/pre-commit` | 정합성 게이트 (commit 시점에 `--check` 자동 호출) |
 | `data/api_registry.yaml` | API 도구 정의 (node 필드로 자동 병합) |
 | `backend/ibl_engine.py` | IBL 실행 엔진, 동사 해석, 라우팅, 자동 발견 |
 | `backend/api_engine.py` | API 레지스트리 실행 엔진, transform 후처리 |
 | `backend/ibl_parser.py` | IBL 문법 파서 (`>>`, `&`, `??`) |
-| `backend/ibl_access.py` | 에이전트별 노드 접근 제어, 환경 프롬프트 |
+| `backend/ibl_access.py` | 에이전트별 노드 접근 제어, 환경 프롬프트(`_emit_action_xml` — op 자식 노출) |
 | `backend/workflow_engine.py` | 파이프라인 실행, 워크플로우 관리 |
 | `backend/trigger_engine.py` | 이벤트/트리거 기반 실행 엔진 |
 | `data/workflows/` | 저장된 워크플로우 YAML |
 | `backend/goal_evaluator.py` | Goal 조건 평가, 비용 산출 (Phase 26) |
+
+---
+
+## op 어휘 단일화 (2026-05-28)
+
+단일 액션 + op 분기 패턴(예: `[limbs:click]{op: "double", ref: "..."}`)에서 op 값들을 src yaml에 어휘로 선언:
+
+```yaml
+click:
+  description: 브라우저 요소 클릭 (op 분기). single/double/right.
+  target_key: op
+  router: handler
+  tool: browser_click_op
+  ops:                          # 신규 (2026-05-28)
+    default: single
+    values:
+      single: 좌클릭 (기본)
+      double: 더블클릭 — 표 셀 편집·파일 열기
+      right: 우클릭 — 컨텍스트 메뉴
+```
+
+**규약**:
+- `target_key: op` 인 모든 액션에 `ops` 블록 의무 (라우터 무관 — handler/system/workflow_engine/trigger_engine 모두).
+- `ops.values` 키들은 시스템 프롬프트에 `<op>` 자식 요소로 노출되어 실행 에이전트가 정확한 op를 선택.
+- 24개 op 액션(limbs 13 + self 11) 마이그레이션 완료.
+
+**삼각 검증** (`build_ibl_nodes.py --check`):
+1. **등록**: src.tool ↔ tool.json.name (어제 dispatcher audit의 16건 누락 패턴 재발 방지)
+2. **op enum**: src.ops.values 키 ↔ tool.json input_schema.properties.op.enum (exact set)
+3. **default**: src.ops.default ↔ tool.json input_schema.properties.op.default
+4. **handler**: src.ops.values 키 ↔ handler.py 모듈 레벨 `_OP_DISPATCHERS[tool_name]` dict 키 (AST 파싱, exact set)
+
+**dispatcher 표준** (handler.py 측 규약):
+```python
+_OP_DISPATCHERS = {
+    tool_name: {op: handler_or_None, ...},
+    ...
+}
+_OP_DEFAULTS = {tool_name: default_op, ...}  # 기본값 있을 때만
+```
+op-bearing 9 패키지(browser-action / youtube / computer-use / radio / cctv / photo-manager / memory / health-record / lecture_workspace) 모두 이 패턴 채택.
+
+**이중 게이트**:
+- `pre-commit` 훅: commit 시점, 정적 검증
+- `world_pulse_health.run_static_ibl_check()`: 12시간 self-check 사이클 합류, `self_checks` 테이블에 `__static__:ibl_consistency` 식별자로 기록
 
 ---
 

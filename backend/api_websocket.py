@@ -380,8 +380,8 @@ async def handle_chat_message(client_id: str, data: dict):
         # 실행기억 생성 (RAG + discover + implementation, 1회)
         execution_memory, _ts, _tc = runner._build_execution_memory(message, action_hint=action_hint)
 
-        # 의식 에이전트 실행 — 메타 판단
-        consciousness_output = runner._run_consciousness(
+        # 의식 에이전트 실행 — 메타 판단 (framing 재고 있으면 재사용)
+        consciousness_output = runner._run_consciousness_or_reuse(
             message, history, execution_memory
         )
 
@@ -586,7 +586,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         if is_session_reset:
             pass  # 의식/중급 모두 스킵
         elif request_type == "THINK":
-            consciousness_output = runner._run_consciousness(
+            consciousness_output = runner._run_consciousness_or_reuse(
                 message, history, execution_memory
             )
         else:
@@ -696,8 +696,9 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         timed_out = False  # 타임아웃 발생 여부 (워커 스레드에서 확인)
         loop = asyncio.get_running_loop()
 
-        tool_results_log = []  # 도구 실행 이력 수집
+        tool_results_log = []  # 도구 실행 이력 수집 (legacy — 결과 문자열만)
         tool_calls_log = []   # 경험 증류용 도구 호출 구조화 이력
+        eval_tool_calls = []  # 평가자용 도구 호출 trace ({name,input,result,is_error}, 시퀀스 보존)
 
         def run_stream():
             """스레드에서 스트리밍 실행"""
@@ -764,9 +765,22 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                             "input": event.get("input", {}),
                             "success": True,  # tool_result에서 업데이트
                         })
+                        # 평가자용 trace에도 동일한 헤더를 적재 (결과는 다음 tool_result에서 채움).
+                        # tool_calls_log와 키 형태가 다름에 유의 (tool_name vs name).
+                        eval_tool_calls.append({
+                            "name": _normalized_name,
+                            "input": event.get("input", {}),
+                            "result": "",
+                            "is_error": False,
+                        })
                     elif event_type == "tool_result":
-                        # 도구 실행 결과 수집 (평가 루프에서 사용)
-                        tool_results_log.append(event.get("result", ""))
+                        # 도구 실행 결과 수집 (평가 루프에서 사용 — legacy)
+                        _result_text = event.get("result", "")
+                        tool_results_log.append(_result_text)
+                        # 가장 최근 trace 항목에 결과 페어링 (Claude Code는 도구 순차 실행).
+                        if eval_tool_calls and not eval_tool_calls[-1]["result"]:
+                            eval_tool_calls[-1]["result"] = _result_text
+                            eval_tool_calls[-1]["is_error"] = bool(event.get("is_error", False))
 
                 # Goal 평가 루프 — 달성 기준이 있으면 평가 후 재시도
                 if consciousness_output and final_content:
@@ -784,6 +798,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                                 consciousness_output=consciousness_output,
                                 max_rounds=_goal_cfg.get("max_rounds", 3),
                                 tool_results=tool_results_log,
+                                tool_calls=eval_tool_calls,
                                 execution_memory=execution_memory,
                             )
                             if evaluated and evaluated.strip() and evaluated != final_content:
@@ -836,8 +851,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 # 경험 증류: 해마 점수가 낮은 성공 세션에서 새로운 패턴 학습
                 if final_content and tool_calls_log:
                     try:
-                        from ibl_usage_rag import distill_experience
+                        from ibl_usage_rag import distill_experience, record_recall_outcome
                         distill_experience(message, tool_calls_log, _hippocampus_score)
+                        # 해마 피드백: Reflex 경로 top-1 실행 결과를 성공률에 반영
+                        record_recall_outcome(_top_code, _hippocampus_score, tool_calls_log)
                     except Exception as distill_err:
                         print(f"[경험증류] 오류 (무시): {distill_err}")
 
@@ -1144,7 +1161,8 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 # 인지 메타데이터 수집 (평가 루프용)
                 consciousness_output = None
                 execution_memory = ""
-                tool_results_log = []
+                tool_results_log = []  # legacy — 결과 문자열만
+                eval_tool_calls = []  # 평가자용 trace ({name,input,result,is_error}, 시퀀스 보존)
 
                 # 통합된 스트리밍 함수 사용 - 모든 프로바이더 지원
                 for event in process_system_ai_message_stream(
@@ -1170,9 +1188,27 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                         execution_memory = event.get("execution_memory", "")
                         continue
 
+                    # 도구 호출 헤더 수집 (시퀀스 보존)
+                    if event_type == "tool_start":
+                        _raw_name = event.get("name", "")
+                        if _raw_name.startswith("mcp__indiebizos__"):
+                            _norm_name = _raw_name[len("mcp__indiebizos__"):]
+                        else:
+                            _norm_name = _raw_name
+                        eval_tool_calls.append({
+                            "name": _norm_name,
+                            "input": event.get("input", {}),
+                            "result": "",
+                            "is_error": False,
+                        })
+
                     # 도구 실행 결과 수집 (평가 루프에서 사용)
                     if event_type == "tool_result":
-                        tool_results_log.append(event.get("result", ""))
+                        _result_text = event.get("result", "")
+                        tool_results_log.append(_result_text)
+                        if eval_tool_calls and not eval_tool_calls[-1]["result"]:
+                            eval_tool_calls[-1]["result"] = _result_text
+                            eval_tool_calls[-1]["is_error"] = bool(event.get("is_error", False))
                         if event.get("images"):
                             collected_tool_images.extend(event["images"])
 
@@ -1198,6 +1234,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                                 consciousness_output=consciousness_output,
                                 max_rounds=_goal_cfg.get("max_rounds", 3),
                                 tool_results=tool_results_log,
+                                tool_calls=eval_tool_calls,
                                 execution_memory=execution_memory,
                             )
                             if evaluated and evaluated.strip() and evaluated != final_content:
@@ -1237,12 +1274,14 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 # 경험 증류: 해마 점수가 낮은 성공 세션에서 새로운 패턴 학습
                 if final_content:
                     try:
-                        from ibl_usage_rag import get_top_score as _get_top_score, distill_experience
+                        from ibl_usage_rag import get_top as _get_top, distill_experience, record_recall_outcome
                         from thread_context import get_tool_calls as _get_tc
-                        _hippocampus_score = _get_top_score(message)
+                        _hippocampus_score, _sys_top_code = _get_top(message)
                         _tool_calls = _get_tc()
                         if _tool_calls:
                             distill_experience(message, _tool_calls, _hippocampus_score)
+                            # 해마 피드백: Reflex 경로 top-1 실행 결과를 성공률에 반영
+                            record_recall_outcome(_sys_top_code, _hippocampus_score, _tool_calls)
                     except Exception as distill_err:
                         print(f"[경험증류] 시스템AI 오류 (무시): {distill_err}")
 

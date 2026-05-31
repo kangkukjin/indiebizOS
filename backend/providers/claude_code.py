@@ -151,6 +151,9 @@ class ClaudeCodeProvider(BaseProvider):
         # 도구 실행 결과 (non-streaming 경로에서 evaluator가 사용).
         # process_message 시작 시 비워지고 stream 이벤트 소비 중 누적된다.
         self._last_tool_results: List[str] = []
+        # 도구 호출 구조화 이력 ({name, input, result, is_error}) — evaluator 시퀀스 근거용.
+        # tool_start와 tool_result를 인덱스로 페어링하여 누적한다.
+        self._last_tool_calls: List[Dict[str, Any]] = []
 
     def init_client(self) -> bool:
         """claude CLI 바이너리 탐지 + OAuth 토큰 로드 + 검증."""
@@ -198,20 +201,36 @@ class ClaudeCodeProvider(BaseProvider):
     ) -> str:
         """동기 호출. 내부적으로 process_message_stream을 collect하여 최종 텍스트 반환.
 
-        부수효과: tool_result 이벤트를 self._last_tool_results에 누적해
-        non-streaming 호출 측(이메일 응답·시스템 AI 등)이 evaluator에 전달할 수 있게 한다.
+        부수효과: tool_start/tool_result 이벤트를 self._last_tool_results와
+        self._last_tool_calls에 누적해 non-streaming 호출 측(이메일 응답·시스템 AI 등)이
+        evaluator에 호출 시퀀스를 통째로 전달할 수 있게 한다.
         """
         final_text = ""
         self._last_tool_results = []  # 턴 시작 시 초기화
+        self._last_tool_calls = []  # 턴 시작 시 초기화
         for event in self.process_message_stream(message, history, images, execute_tool):
             etype = event.get("type")
             if etype == "text":
                 final_text += event.get("content", "")
+            elif etype == "tool_start":
+                # 호출 헤더(이름·인풋) 우선 적재 — 결과는 다음 tool_result 이벤트에서 채운다.
+                self._last_tool_calls.append({
+                    "name": event.get("name", ""),
+                    "input": event.get("input", {}),
+                    "result": "",
+                    "is_error": False,
+                })
             elif etype == "tool_result":
-                # evaluator 노출용 — 결과 텍스트만 보존 (name·is_error는 옵션)
+                # evaluator 노출용 — 결과 텍스트는 legacy 리스트에도 보존.
                 _result = event.get("result", "")
                 if _result:
                     self._last_tool_results.append(_result)
+                # 가장 최근 tool_start 항목에 결과를 페어링.
+                # stream-json은 tool_result에 name이 없으므로(_translate_stream_event 참조)
+                # 인덱스 기반 페어링이 정확하다 (Claude Code는 도구를 순차 실행).
+                if self._last_tool_calls and not self._last_tool_calls[-1]["result"]:
+                    self._last_tool_calls[-1]["result"] = _result
+                    self._last_tool_calls[-1]["is_error"] = bool(event.get("is_error", False))
             elif etype == "final":
                 final_text = event.get("content", final_text)
             elif etype == "error":

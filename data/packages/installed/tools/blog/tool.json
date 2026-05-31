@@ -159,6 +159,52 @@
         },
         "additionalProperties": true
       }
+    },
+    {
+      "name": "blog_vault_stats",
+      "description": "Obsidian vault(블로그 글의 진실 소스) 현황을 조회합니다. vault 경로, 존재 여부, 총 글 수, 요약 보유 수를 반환합니다.\n\n## 배경\n- 블로그 글의 canonical store는 ~/Documents/iRepublic-Vault 의 markdown 파일입니다\n- DB는 vault에서 재생성되는 검색 인덱스 캐시입니다",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "blog_vault_export",
+      "description": "DB의 모든 글(+요약)을 vault .md 파일로 내보냅니다. 카테고리는 폴더 계층으로, 메타데이터는 frontmatter로 저장됩니다.\n\n## 사용 시점\n- 최초 1회 마이그레이션\n- DB가 vault보다 앞서 있을 때 동기화\n\n## 주의사항\n- 기존 .md를 덮어씁니다 (DB가 우선)\n- 평소엔 새 글/요약 시 자동으로 .md가 갱신되므로 불필요",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "blog_vault_rebuild",
+      "description": "vault .md 파일만으로 DB(posts/summaries)와 검색 인덱스를 전면 재구축합니다. vault가 진실 소스임을 보증하는 복구 경로입니다.\n\n## 사용 시점\n- DB 손상/유실 시 복구\n- vault를 직접 편집한 뒤 DB 반영\n\n## 주의사항\n- DB의 posts/summaries를 전부 삭제 후 vault 기준으로 다시 채웁니다\n- reindex=true(기본)면 벡터 임베딩까지 재생성 — 약 3000개 기준 수 분 소요",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "reindex": {
+            "type": "boolean",
+            "description": "벡터 인덱스까지 재생성 여부 (기본 true)"
+          }
+        }
+      }
+    },
+    {
+      "name": "blog_vault_link",
+      "description": "해마(임베딩)로 글들의 의미적 이웃을 계산해, 각 글 하단에 '## 관련 글' [[위키링크]]를 써넣습니다. Obsidian 그래프가 의미 기반으로 연결됩니다.\n\n## 사용 시점\n- 새 글이 다수 추가된 뒤 의미 연결 갱신\n- k/유사도 임계값을 바꿔 연결 밀도 조정\n\n## 동작\n- 본문이 있는(임베딩된) 글만 대상\n- 매 실행마다 관련 글 섹션을 새로 계산해 교체 (멱등)\n- 본문/요약은 보존, 관련 글 링크만 갱신",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "k": {
+            "type": "integer",
+            "description": "글당 연결할 이웃 수 (기본 6)"
+          },
+          "min_sim": {
+            "type": "number",
+            "description": "연결 최소 코사인 유사도 (기본 0.55). 높이면 더 엄격하게 연결"
+          }
+        }
+      }
     }
   ]
 }

@@ -237,9 +237,9 @@ class ProgramScheduler:
         from tool_blog_insight import get_db
         
         # API 키 (환경변수에서 읽기)
-        api_key = os.environ.get("GOOGLE_API_KEY", "")
+        api_key = os.environ.get("GEMINI_API_KEY", "")
         if not api_key:
-            self._log("GOOGLE_API_KEY 환경변수가 설정되지 않았습니다")
+            self._log("GEMINI_API_KEY 환경변수가 설정되지 않았습니다")
             return
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-2.0-flash-exp")

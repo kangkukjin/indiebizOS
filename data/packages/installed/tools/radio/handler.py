@@ -24,6 +24,16 @@ def load_tool_radio():
     return module
 
 
+# 2026-05-28 dispatcher 표준화 — 단일 액션 op 키 메타데이터 (browser-action 패턴).
+# 값은 None — 분기 로직은 아래 elif 안에 그대로 유지(refactor 없음).
+# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
+_OP_DISPATCHERS = {
+    "radio_op": {"play": None, "stop": None},
+    "radio_favorite_op": {"list": None, "add": None, "remove": None},
+}
+_OP_DEFAULTS = {"radio_op": "play"}
+
+
 def execute(tool_input: dict, context):
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name

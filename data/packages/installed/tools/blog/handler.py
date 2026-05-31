@@ -152,6 +152,30 @@ def execute(tool_input: dict, context) -> str:
             result = rebuild_search_index()
             return format_json(result)
 
+        # === Vault (canonical store) 운영 ===
+        elif tool_name == "blog_vault_stats":
+            from tool_blog_vault import vault_stats
+            return format_json({"success": True, **vault_stats()})
+
+        elif tool_name == "blog_vault_export":
+            from tool_blog_vault import export_all
+            return format_json(export_all())
+
+        elif tool_name == "blog_vault_rebuild":
+            from tool_blog_vault import rebuild_db_from_vault
+            result = rebuild_db_from_vault(
+                reindex=tool_input.get("reindex", True)
+            )
+            return format_json(result)
+
+        elif tool_name == "blog_vault_link":
+            from tool_blog_vault import build_semantic_links
+            result = build_semantic_links(
+                k=tool_input.get("k", 6),
+                min_sim=tool_input.get("min_sim", 0.55),
+            )
+            return format_json(result)
+
         else:
             return format_json({"success": False, "error": f"Unknown tool: {tool_name}"})
 

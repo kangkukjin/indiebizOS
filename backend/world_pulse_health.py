@@ -17,12 +17,99 @@ world_pulse.py에서 분리된 모듈로, 시스템 건강 점검(Self-Check)과
 import hashlib
 import json
 import logging
+import sys
 import time as _time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================
+# 정적 정합성 검증 (build_ibl_nodes --check 통합, 2026-05-28)
+# ============================================================
+
+def run_static_ibl_check() -> Dict:
+    """build_ibl_nodes.py 의 정합성 검증을 self-check 사이클에 호출.
+
+    런타임 동작 점검(전수 액션 실행)과 별개로, 정적 정합성(src↔tool.json↔handler)
+    까지 같은 면역 순찰 사이클에서 잡는다. commit pre-commit 훅으로도 잡지만
+    backend 측 정기 검증이 합류하면 src/tool.json/handler 외부 편집(직접 파일
+    수정, AI 자가 픽스 등)도 12시간 사이클로 검출.
+
+    Returns: save_self_check() 와 호환되는 dict (node="__static__", action="ibl_consistency").
+    """
+    BASE = Path(__file__).parent.parent
+    scripts_dir = BASE / "scripts"
+
+    sys.path.insert(0, str(scripts_dir))
+    try:
+        try:
+            import yaml as _yaml
+            from build_ibl_nodes import validate
+        except ImportError as e:
+            return {
+                "node": "__static__",
+                "action": "ibl_consistency",
+                "success": 0,
+                "response_ms": 0,
+                "error_message": f"검증 모듈 import 실패: {e}",
+                "data_quality": "skipped",
+            }
+    finally:
+        if str(scripts_dir) in sys.path:
+            sys.path.remove(str(scripts_dir))
+
+    nodes_yaml = BASE / "data" / "ibl_nodes.yaml"
+    if not nodes_yaml.is_file():
+        return {
+            "node": "__static__",
+            "action": "ibl_consistency",
+            "success": 0,
+            "response_ms": 0,
+            "error_message": f"ibl_nodes.yaml 없음: {nodes_yaml}",
+            "data_quality": "skipped",
+        }
+
+    start = _time.time()
+    try:
+        with open(nodes_yaml, "r", encoding="utf-8") as f:
+            data = _yaml.safe_load(f)
+        issues = validate(data, BASE)
+    except Exception as e:
+        return {
+            "node": "__static__",
+            "action": "ibl_consistency",
+            "success": 0,
+            "response_ms": int((_time.time() - start) * 1000),
+            "error_message": f"검증 중 예외: {e}",
+            "data_quality": "exception",
+        }
+
+    elapsed_ms = int((_time.time() - start) * 1000)
+    if not issues:
+        return {
+            "node": "__static__",
+            "action": "ibl_consistency",
+            "success": 1,
+            "response_ms": elapsed_ms,
+            "error_message": None,
+            "data_quality": "ok",
+        }
+
+    # 실패 — 상위 5개만 요약 (error_message 칼럼 TEXT 한정)
+    summary = f"{len(issues)}건: " + " / ".join(issues[:5])
+    if len(issues) > 5:
+        summary += f" (외 {len(issues) - 5}건)"
+    return {
+        "node": "__static__",
+        "action": "ibl_consistency",
+        "success": 0,
+        "response_ms": elapsed_ms,
+        "error_message": summary[:1000],
+        "data_quality": "consistency_failure",
+    }
 
 
 # ============================================================
@@ -511,6 +598,51 @@ def _evaluate_result(result, elapsed_ms: int) -> Dict:
         }
 
 
+def run_maintenance_bundle() -> Dict:
+    """면역 순찰의 기계적 유지보수 번들 — 활성 경로(ai_health_check)와 수동
+    self_check 양쪽에서 호출한다. 각 항목은 자체 카덴스 게이트/저비용이라
+    6h마다 호출돼도 안전하다(대부분 즉시 스킵).
+
+    스케줄러 마이그레이션(self_check 이벤트 비활성화 → ai_health_check)으로
+    run_self_check가 정기 호출되지 않게 되면서 고아가 됐던 유지보수 작업들을
+    활성 경로로 합류시키는 것이 목적이다.
+    """
+    result: Dict[str, Any] = {}
+
+    # 1) 만성 실패 능동 알림
+    try:
+        from world_pulse import _load_config
+        threshold = _load_config().get("self_check", {}).get("failure_alert_threshold", 3)
+        _check_failure_alerts(threshold)
+    except Exception as e:
+        logger.warning(f"[Maintenance] 실패 알림 실패 (무시): {e}")
+
+    # 2) 심층메모리 정리 패스 (DB별 24h 카덴스)
+    try:
+        from memory_consolidation import run_memory_consolidation
+        mc = run_memory_consolidation()
+        result["memory"] = mc
+        if mc.get("consolidated"):
+            logger.info(f"[Maintenance] 기억 정리: {mc['consolidated']}/{mc['databases']} DB 처리")
+    except Exception as e:
+        logger.warning(f"[Maintenance] 기억 정리 실패 (무시): {e}")
+
+    # 3) 해마 정리 패스 (24h 카덴스)
+    try:
+        from ibl_usage_rag import run_hippocampus_consolidation
+        hp = run_hippocampus_consolidation()
+        result["hippocampus"] = hp
+        if hp.get("deleted_total") or hp.get("json_removed"):
+            logger.info(
+                f"[Maintenance] 해마 정리: 증류물 삭제 {hp.get('deleted_total', 0)} / "
+                f"json {hp.get('json_removed', 0)}"
+            )
+    except Exception as e:
+        logger.warning(f"[Maintenance] 해마 정리 실패 (무시): {e}")
+
+    return result
+
+
 def run_self_check() -> Dict:
     """전수 IBL 액션 자가 점검 (면역 순찰)
 
@@ -535,6 +667,20 @@ def run_self_check() -> Dict:
     results = []
     stats = {"ok": 0, "fail": 0, "slow": 0, "empty": 0}
     total_start = _time.time()
+
+    # 0) 정적 정합성 검증 (build_ibl_nodes --check 통합, 2026-05-28)
+    #    런타임 액션 실행 전에 먼저 src↔tool.json↔handler 정합성 확인.
+    #    실패하면 다른 액션도 영향받을 수 있다는 신호.
+    static_result = run_static_ibl_check()
+    save_self_check(static_result)
+    results.append(static_result)
+    if static_result.get("success"):
+        stats["ok"] += 1
+    else:
+        stats["fail"] += 1
+        logger.warning(
+            f"[SelfCheck] 정적 정합성 검증 실패: {static_result.get('error_message', '')[:200]}"
+        )
 
     for action_info in safe_actions:
         node = action_info["node"]
@@ -589,11 +735,12 @@ def run_self_check() -> Dict:
 
     total_elapsed = int((_time.time() - total_start) * 1000)
 
-    # 연속 실패 알림 체크
-    _check_failure_alerts(failure_threshold)
-
     # 패턴 분석 실행
     pattern = analyze_failure_patterns()
+
+    # 기계적 유지보수 번들 (실패 알림 + 메모리/해마 정리) — 활성 경로(ai_health_check)와 공유.
+    # 각 항목은 자체 카덴스 게이트가 있어 두 경로에서 호출돼도 중복 작업 없이 안전.
+    maintenance = run_maintenance_bundle()
 
     logger.info(
         f"[SelfCheck] 전수 점검 완료: {len(results)}개 액션, "
@@ -619,6 +766,7 @@ def run_self_check() -> Dict:
         "failures": failures,
         "slow_actions": slow_list,
         "pattern_analysis": pattern,
+        "maintenance": maintenance,
     }
 
 
@@ -1121,6 +1269,13 @@ def trigger_ai_health_check():
         logger.info(f"[HealthCheck] 시스템 AI에게 건강 체크 요청 전송 (assumed {len(assumed)}개 중 {min(len(assumed), 50)}개 전달)")
     except Exception as e:
         logger.error(f"[HealthCheck] 시스템 AI 메시지 전송 실패: {e}")
+
+    # 기계적 유지보수 번들 — 활성 6h 경로(ai_health_check)에 합류해 정기 실행을 보장.
+    # (run_self_check 이벤트 비활성화로 고아가 됐던 메모리/해마 정리·실패 알림 복구)
+    try:
+        run_maintenance_bundle()
+    except Exception as e:
+        logger.warning(f"[HealthCheck] 유지보수 번들 실패 (무시): {e}")
 
 
 # ============================================================

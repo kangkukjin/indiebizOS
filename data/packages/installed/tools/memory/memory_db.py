@@ -19,6 +19,20 @@ SEMANTIC_THRESHOLD = 0.4   # 시맨틱 유사도 컷오프 (이하 무시)
 # - 시맨틱 결과가 임계값을 통과하면 그것만 사용 (정규화된 점수 0~1)
 # - 시맨틱이 비었거나 모델 미준비 시 LIKE 폴백 (raw 매칭 순서)
 
+# 기억 위생(정리 패스) 정책
+# - 유효 카테고리: 이외 값은 저장 시 "기타"로 정규화 (드리프트 방지)
+# - 보호 카테고리: 지속적 사실은 LRU 가지치기에서 제외. 오직 작업기록/기타만 가지치기 대상
+VALID_CATEGORIES = {"사용자선호", "사용자정보", "작업기록", "의사결정", "중요날짜", "기타"}
+PROTECTED_CATEGORIES = {"사용자선호", "사용자정보", "의사결정", "중요날짜"}
+DEFAULT_MEMORY_CAP = 300   # 에이전트당 기억 상한 (초과 시 used_at LRU로 가지치기)
+DUP_SIM_THRESHOLD = 0.85   # 근접중복 클러스터 코사인 임계
+
+
+def normalize_category(category: str) -> str:
+    """카테고리를 유효 집합으로 정규화. 빈 값/미지 값 → '기타'."""
+    cat = (category or "").strip()
+    return cat if cat in VALID_CATEGORIES else "기타"
+
 
 # =============================================================================
 # 모델/벡터 공유 (backend의 IBLUsageDB 재사용)
@@ -233,6 +247,7 @@ def get_db(project_path: str, agent_id: str):
 def save(project_path: str, agent_id: str,
          content: str, keywords: str = "", category: str = "") -> int:
     """메모리 저장 (임베딩 자동 인덱싱)"""
+    category = normalize_category(category)
     db_path = _get_db_path(project_path, agent_id)
     conn = get_db(project_path, agent_id)
     try:
@@ -384,7 +399,7 @@ def update(project_path: str, agent_id: str, memory_id: int,
         if keywords is not None:
             sets.append("keywords = ?"); params.append(keywords)
         if category is not None:
-            sets.append("category = ?"); params.append(category)
+            sets.append("category = ?"); params.append(normalize_category(category))
 
         if not sets:
             now = datetime.now().isoformat()
@@ -493,3 +508,241 @@ def rebuild_index(project_path: str, agent_id: str) -> Dict:
         vec_conn.close()
 
     return {"success": True, "indexed": len(rows), "db_path": db_path}
+
+
+# =============================================================================
+# 정리(consolidation) 프리미티브 — db_path 직접 조작 (오케스트레이터용)
+# 정리 패스는 쓰기 시점 중복제거의 배치/오프라인 짝이다. 여기 함수들은
+# 기계적(무LLM) 부분만 담당하고, 의미 병합 판단은 backend 오케스트레이터가 한다.
+# =============================================================================
+
+def _ensure_meta(conn):
+    """_meta(key,value) 테이블 보장 — 마지막 정리 시각 등 추적용."""
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value TEXT)"
+    )
+
+
+def get_meta(db_path: str, key: str) -> Optional[str]:
+    conn = sqlite3.connect(db_path)
+    try:
+        _ensure_meta(conn)
+        row = conn.execute("SELECT value FROM _meta WHERE key = ?", (key,)).fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def set_meta(db_path: str, key: str, value: str):
+    conn = sqlite3.connect(db_path)
+    try:
+        _ensure_meta(conn)
+        conn.execute(
+            "INSERT INTO _meta(key,value) VALUES(?,?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, value)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def list_all(db_path: str) -> List[Dict]:
+    """전체 메모리 전문 조회 (정리 패스용)."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        rows = conn.execute(
+            "SELECT id, category, keywords, content, created_at, used_at "
+            "FROM memories ORDER BY id"
+        ).fetchall()
+        return [dict(r) for r in rows]
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        conn.close()
+
+
+def count_at(db_path: str) -> int:
+    conn = sqlite3.connect(db_path)
+    try:
+        return conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+    except sqlite3.OperationalError:
+        return 0
+    finally:
+        conn.close()
+
+
+def prune_lru(db_path: str, cap: int = DEFAULT_MEMORY_CAP,
+              protected: set = PROTECTED_CATEGORIES) -> int:
+    """상한 초과 시 used_at LRU로 가지치기 (보호 카테고리 제외).
+
+    used_at이 NULL이면 created_at을 사용. 보호 카테고리(지속적 사실)는
+    절대 삭제하지 않으므로, 보호 항목만으로 cap을 넘으면 그대로 둔다.
+    반환: 삭제된 개수."""
+    total = count_at(db_path)
+    if total <= cap:
+        return 0
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        # 가지치기 후보: 비보호 카테고리, 오래 안 쓰인 순(used_at/created_at 오름차순)
+        ph = ",".join("?" * len(protected)) if protected else "''"
+        rows = conn.execute(
+            f"SELECT id FROM memories "
+            f"WHERE category NOT IN ({ph}) "
+            f"ORDER BY COALESCE(used_at, created_at) ASC",
+            tuple(protected) if protected else ()
+        ).fetchall()
+    finally:
+        conn.close()
+
+    need = total - cap
+    victims = [r["id"] for r in rows[:need]]
+    if not victims:
+        return 0
+
+    conn = sqlite3.connect(db_path)
+    try:
+        ph = ",".join("?" * len(victims))
+        conn.execute(f"DELETE FROM memories WHERE id IN ({ph})", victims)
+        conn.commit()
+    finally:
+        conn.close()
+    for vid in victims:
+        _delete_vec(db_path, vid)
+    return len(victims)
+
+
+def _load_vectors(db_path: str) -> List[Tuple[int, list]]:
+    """memories_vec에서 (id, 정규화 벡터 리스트) 전수 로드."""
+    conn = _get_vec_conn(db_path)
+    if conn is None:
+        return []
+    try:
+        rows = conn.execute("SELECT rowid, embedding FROM memories_vec").fetchall()
+        out = []
+        for r in rows:
+            blob = r["embedding"]
+            vec = list(struct.unpack(f"{EMBEDDING_DIM}f", blob))
+            out.append((int(r["rowid"]), vec))
+        return out
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+def find_duplicate_clusters(db_path: str,
+                            threshold: float = DUP_SIM_THRESHOLD) -> List[List[int]]:
+    """근접중복 클러스터 탐지 — 코사인 유사도 >= threshold 쌍을 union-find로 묶음.
+
+    임베딩은 normalize_embeddings=True로 저장되므로 내적 = 코사인.
+    반환: 크기 2 이상 클러스터의 id 리스트들 (각 클러스터 내부는 id 오름차순)."""
+    vectors = _load_vectors(db_path)
+    n = len(vectors)
+    if n < 2:
+        return []
+
+    try:
+        import numpy as np
+        ids = [vid for vid, _ in vectors]
+        mat = np.array([v for _, v in vectors], dtype=np.float32)
+        sims = mat @ mat.T  # 정규화 벡터라 내적=코사인
+    except Exception:
+        # numpy 없으면 순수 파이썬 폴백
+        ids = [vid for vid, _ in vectors]
+        vecs = [v for _, v in vectors]
+        sims = [[sum(a * b for a, b in zip(vecs[i], vecs[j])) for j in range(n)]
+                for i in range(n)]
+
+    # union-find
+    parent = list(range(n))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            s = sims[i][j] if isinstance(sims, list) else float(sims[i][j])
+            if s >= threshold:
+                union(i, j)
+
+    groups: Dict[int, List[int]] = {}
+    for i in range(n):
+        groups.setdefault(find(i), []).append(ids[i])
+    return [sorted(g) for g in groups.values() if len(g) > 1]
+
+
+def get_by_id(db_path: str, memory_id: int) -> Optional[Dict]:
+    """id로 메모리 전문 조회 (used_at 갱신 없음 — 정리 패스용)."""
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            "SELECT id, category, keywords, content, created_at, used_at "
+            "FROM memories WHERE id = ?", (memory_id,)
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def apply_merge(db_path: str, keep_id: int, content: str,
+                keywords: str, category: str, drop_ids: List[int]) -> bool:
+    """클러스터 병합 적용 — keep_id를 정규 병합본으로 덮어쓰고 나머지 삭제.
+
+    content/keywords/category를 keep_id에 갱신하고 재인덱싱, drop_ids는
+    행+vec 동시 삭제. 카테고리는 정규화된다."""
+    category = normalize_category(category)
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute(
+            "UPDATE memories SET content=?, keywords=?, category=? WHERE id=?",
+            (content, keywords, category, keep_id)
+        )
+        if drop_ids:
+            ph = ",".join("?" * len(drop_ids))
+            conn.execute(f"DELETE FROM memories WHERE id IN ({ph})", drop_ids)
+        conn.commit()
+    finally:
+        conn.close()
+
+    _index_one(db_path, keep_id, content, keywords, category)
+    for did in drop_ids:
+        _delete_vec(db_path, did)
+    return True
+
+
+def normalize_all_categories(db_path: str) -> int:
+    """비어있지 않은 무효 카테고리만 '기타'로 정규화. 반환: 변경된 행 수.
+
+    빈 카테고리는 건드리지 않는다 — 빈칸이 실제로는 사용자 사실인 경우가 많아
+    무조건 '기타'로 강등하면 보호를 잃기 때문. 빈칸 분류는 LLM 병합 단계에 맡긴다."""
+    rows = list_all(db_path)
+    changed = 0
+    conn = sqlite3.connect(db_path)
+    try:
+        for r in rows:
+            cur = (r.get("category") or "").strip()
+            if not cur:
+                continue  # 빈칸은 보존
+            norm = normalize_category(cur)
+            if norm != cur:
+                conn.execute("UPDATE memories SET category=? WHERE id=?",
+                             (norm, r["id"]))
+                changed += 1
+        if changed:
+            conn.commit()
+    finally:
+        conn.close()
+    return changed

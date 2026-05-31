@@ -744,3 +744,15 @@
   - 해마: 26개 합성 용례 추가 (ibl_distilled.json 97→123, IBLUsageDB add_examples_batch)
   - 임베딩 재구축 완료 (2132개 인덱싱, 31.9초)
   - 검증: 자연어 6개 쿼리 중 5개에서 search_naver score 1.000으로 #1 retrieve
+
+[2026-05-31 10:30:00] CONSCIOUSNESS_FRAMING_REUSE: THINK 경로 의식 framing 재사용 게이트 추가
+  - 동기: 의식 에이전트(Opus)가 연속 대화에서 매 turn 풀 호출(40~54초)되어 속도·비용 병목. 분류기가 THINK를 남발하는 게 아니라, 후속 turn이 이미 만든 framing의 변주인데도 새로 생성하던 것이 원인
+  - 설계 원리: THINK = "framing이 필요하다"는 *수요* 선언. 분류기(무의식)는 history-blind(현재 메시지만 봄)라 "직전 태스크의 변주"를 인식 불가 → 의식 호출 직전에 "그 수요를 *재고*로 충당 가능한가"를 별개 신호로 분리해서 물음 (분류기 자체는 손대지 않음)
+  - 동작: 같은 대화(registry_key)에서 만든 framing이 30분 내 재고에 있고, 경량 fit 게이트가 "지금 질문에 맞다"고 판정하면 의식(Opus) 호출을 건너뛰고 재사용. turn마다 바뀌는 achievement_criteria만 게이트가 새로 생성 (framing=비싼 재사용 자산 / criteria=싼 per-turn 값)
+  - 폴백: 재고 없음 / fits=false(주제 전환) / 게이트 실패 / history 없음(새 대화) → 전부 풀 의식. 품질 손실 0
+  - 무효화: 모듈 레벨 `_FRAMING_CACHE` 30분 TTL + SESSION_RESET 시 clear + 백엔드 재시작 시 소멸
+  - 주제 전환 처리 2채널 정리: 명시적(사용자가 "그만/새로 시작") = SESSION_RESET / 암묵적(말없이 다른 질문) = fit 게이트 fits=false
+  - 파일:
+    · backend/agent_cognitive.py — `_FRAMING_CACHE` + framing_cache_get/set + clear_framing_cache + `_run_consciousness_or_reuse()` + `_consciousness_fit_gate()`, handle_session_reset에 캐시 clear 합류
+    · backend/agent_communication.py, api_websocket.py(2), system_ai_core.py(2) — THINK 분기의 `_run_consciousness` 호출을 `_run_consciousness_or_reuse`로 드롭인 교체 (총 5곳)
+  - 문서: system_structure.md(프롬프트 주입), architecture.md 인지 파이프라인·의식 에이전트 섹션 갱신

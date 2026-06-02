@@ -12,7 +12,7 @@ _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "
 if _backend_dir not in sys.path:
     sys.path.insert(0, os.path.abspath(_backend_dir))
 
-from common.response_formatter import save_large_data
+from common.response_formatter import save_large_data, downsample_prices, compact_price_series
 
 
 def _format_number(num):
@@ -30,9 +30,12 @@ def _format_number(num):
     return str(num)
 
 
-def get_crypto_price(coin_id: str = "bitcoin") -> dict:
+def get_crypto_price(coin_id: str = "bitcoin", days: int = 0, max_points: int = 400) -> dict:
     """
     CoinGecko API를 통해 암호화폐 가격 조회 (무료, API 키 불필요)
+
+    days > 0 이면 market_chart로 일별 시세 이력을 받아 data.prices([{date, close}])에 추가.
+    max_points 초과 시 다운샘플.
     """
     symbol_map = {
         "BTC": "bitcoin", "BITCOIN": "bitcoin",
@@ -82,7 +85,7 @@ def get_crypto_price(coin_id: str = "bitcoin") -> dict:
 
         direction = "▲" if change_24h and change_24h >= 0 else "▼"
 
-        return {
+        result = {
             "success": True,
             "data": {
                 "symbol": data.get("symbol", "").upper(),
@@ -102,6 +105,30 @@ def get_crypto_price(coin_id: str = "bitcoin") -> dict:
             "message": f"{data.get('name', '')} ({data.get('symbol', '').upper()}): ${current_price_usd:,.2f} ({current_price_krw:,.0f}원) {direction} {abs(change_24h):.2f}% (24h)"
         }
 
+        # 이력 차트용 일별 시세 (선택)
+        if days and days > 0:
+            try:
+                chart_resp = requests.get(
+                    f"https://api.coingecko.com/api/v3/coins/{coin_id_resolved}/market_chart",
+                    params={"vs_currency": "usd", "days": days, "interval": "daily"},
+                    timeout=15,
+                )
+                if chart_resp.status_code == 200:
+                    raw = chart_resp.json().get("prices", [])
+                    pts = [
+                        {"date": datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d"),
+                         "close": round(price, 6)}
+                        for ts, price in raw
+                    ]
+                    if max_points and len(pts) > max_points:
+                        step = max(1, len(pts) // max_points)
+                        pts = pts[::step]
+                    result["data"]["prices"] = pts
+            except Exception:
+                pass  # 이력 실패해도 현재가는 정상 반환
+
+        return result
+
     except requests.exceptions.Timeout:
         return {"success": False, "error": "CoinGecko API 요청 시간 초과"}
     except Exception as e:
@@ -118,6 +145,19 @@ def _normalize_symbol(symbol: str) -> str:
     if not symbol:
         raise ValueError("symbol 파라미터가 필요합니다.")
     s = symbol.strip()
+
+    # 0) 원자재(선물) 한글/영문 별칭 → Yahoo 선물 심볼 (호출자가 GC=F 등을 몰라도 됨)
+    _COMMODITY_MAP = {
+        "금": "GC=F", "금값": "GC=F", "골드": "GC=F", "gold": "GC=F",
+        "은": "SI=F", "은값": "SI=F", "실버": "SI=F", "silver": "SI=F",
+        "유가": "CL=F", "원유": "CL=F", "wti": "CL=F", "crude": "CL=F", "oil": "CL=F",
+        "브렌트": "BZ=F", "브렌트유": "BZ=F", "brent": "BZ=F",
+        "천연가스": "NG=F", "가스": "NG=F", "natgas": "NG=F",
+        "구리": "HG=F", "동": "HG=F", "copper": "HG=F",
+    }
+    commodity = _COMMODITY_MAP.get(s) or _COMMODITY_MAP.get(s.lower())
+    if commodity:
+        return commodity
 
     # 1) 시장 지수 별명 → yfinance 심볼
     _INDEX_MAP = {
@@ -139,9 +179,9 @@ def _normalize_symbol(symbol: str) -> str:
     return s
 
 
-def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d") -> dict:
+def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_points: int = 10) -> dict:
     """
-    Yahoo Finance를 통해 주식/ETF 가격 조회
+    Yahoo Finance를 통해 주식/ETF/원자재(선물) 가격 조회
     """
     if not symbol:
         return {"success": False, "error": "symbol 파라미터가 필요합니다."}
@@ -216,35 +256,18 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d") -> di
 
         msg = f"{symbol.upper()}: {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%)"
 
-        # 50개 초과 시 파일로 저장 + 샘플 제공
-        if total_days > 50:
+        # prices는 항상 포함(shape 일관). 50일 이하면 전체, 초과면 다운샘플 + 전체는 file_path.
+        compact, truncated = compact_price_series(all_history, max_points)
+        base_data["prices"] = compact
+        base_data["truncated"] = truncated
+        if truncated:
             file_path = save_large_data(all_history, "investment", f"yf_prices_{symbol.upper().replace('=', '_')}")
-
-            # 시각화용 샘플 (10개 포인트)
-            step = max(1, total_days // 10)
-            sample = all_history[::step]
-            if sample[-1] != all_history[-1]:
-                sample.append(all_history[-1])
-            sample_compact = [{"date": p["date"], "close": p["close"]} for p in sample]
-
-            base_data["file_path"] = file_path
-            base_data["sample"] = sample_compact
-
-            return {
-                "success": True,
-                "data": base_data,
-                "summary": f"{msg}, 기간: {all_history[0]['date']} ~ {all_history[-1]['date']}, 총 {total_days}거래일. 전체 데이터: {file_path}. 차트 생성 시 line_chart 도구에 data_file 파라미터로 이 경로를 전달하세요."
-            }
+            base_data["file_path"] = file_path     # 전체 데이터 파일 경로 (시각화 data_file용)
+            base_data["sample"] = compact          # 하위호환 별칭
+            summary = f"{msg}, 기간: {all_history[0]['date']} ~ {all_history[-1]['date']}, 총 {total_days}거래일. 전체 데이터: {file_path}. 차트 생성 시 line_chart 도구에 data_file 파라미터로 이 경로를 전달하세요."
         else:
-            # 50개 이하: 직접 prices 배열 반환
-            compact_prices = [{"date": p["date"], "close": p["close"]} for p in all_history]
-            base_data["prices"] = compact_prices
-
-            return {
-                "success": True,
-                "data": base_data,
-                "summary": f"{msg}, 총 {total_days}거래일. 차트 생성 시 line_chart 도구의 data 파라미터에 prices 배열을 전달하세요."
-            }
+            summary = f"{msg}, 총 {total_days}거래일. 차트 생성 시 line_chart 도구의 data 파라미터에 prices 배열을 전달하세요."
+        return {"success": True, "data": base_data, "summary": summary}
 
     except Exception as e:
         return {"success": False, "error": f"주식 정보 조회 실패: {str(e)}"}
@@ -296,10 +319,31 @@ def get_stock_info(symbol: str) -> dict:
         return {"success": False, "error": f"종목 정보 조회 실패: {str(e)}"}
 
 
+def _search_kr_stocks(query: str) -> list:
+    """한글 회사명 → KRX 종목코드 내부 해소 (yfinance는 영어 검색만 되므로).
+    KRX 종목코드 맵(이름→코드)에서 정확 일치 우선, 부분 일치 보조."""
+    try:
+        from tool_krx import _load_stock_codes
+        codes = _load_stock_codes()  # {회사명: 6자리코드}
+    except Exception:
+        return []
+    q = query.strip()
+    exact = [(n, c) for n, c in codes.items() if n == q]
+    partial = [(n, c) for n, c in codes.items() if q in n and n != q]
+    hits = (exact + partial)[:10]
+    return [{"symbol": c, "name": n, "exchange": "KRX", "type": "EQUITY"} for n, c in hits]
+
+
 def search_stock(query: str, search_type: str = "quotes") -> dict:
     """
     Yahoo Finance에서 종목 검색
     """
+    # 한글 회사명은 yfinance 검색이 안 되므로 KRX 종목코드 맵으로 먼저 해소
+    if search_type == "quotes" and query and any('가' <= ch <= '힣' for ch in query):
+        kr = _search_kr_stocks(query)
+        if kr:
+            return {"success": True, "data": {"query": query, "count": len(kr), "quotes": kr}}
+
     try:
         import yfinance as yf
     except ImportError:

@@ -16,6 +16,7 @@ import { AndroidManager } from './components/AndroidManager';
 import { LogViewer } from './components/LogViewer';
 import { SystemAIView } from './components/SystemAIView';
 import { LectureWorkspace } from './components/LectureWorkspace';
+import { RealtyInstrument } from './components/RealtyInstrument';
 import { api } from './lib/api';
 
 function App() {
@@ -37,11 +38,19 @@ function App() {
   const [isSystemAI, setIsSystemAI] = useState(false);
   const [isLectureWorkspace, setIsLectureWorkspace] = useState(false);
   const [lectureId, setLectureId] = useState<string | null>(null);
+  const [isRealty, setIsRealty] = useState(false);
 
   // URL 해시에서 프로젝트/폴더/IndieNet 확인
   useEffect(() => {
     const checkHash = () => {
       const hash = window.location.hash;
+      setIsRealty(false); // 매 해시 변경마다 초기화 (계기 라우트)
+
+      // 부동산 실거래가 계기 (직접 조작 인스트루먼트)
+      if (hash === '#/realty') {
+        setIsRealty(true);
+        return;
+      }
 
       // 시스템 AI 체크
       if (hash === '#/system-ai') {
@@ -288,6 +297,15 @@ function App() {
   // 로그 뷰어 창인 경우
   if (isLogViewer) {
     return <LogViewer />;
+  }
+
+  // 부동산 실거래가 계기 창인 경우
+  if (isRealty) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB]">
+        <RealtyInstrument />
+      </div>
+    );
   }
 
   // 시스템 AI 창인 경우

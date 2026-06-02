@@ -21,7 +21,7 @@ def search_gutenberg(query: str = None, author_year_start: int = None, author_ye
         params['languages'] = languages
         
     try:
-        response = requests.get(url, params=params, timeout=10)
+        response = requests.get(url, params=params, timeout=25)
         response.raise_for_status()
         data = response.json()
         
@@ -32,7 +32,8 @@ def search_gutenberg(query: str = None, author_year_start: int = None, author_ye
             # 텍스트 또는 HTML 다운로드 링크 추출
             text_url = formats.get('text/plain; charset=us-ascii') or formats.get('text/plain; charset=utf-8') or formats.get('text/plain')
             html_url = formats.get('text/html')
-            
+            cover_url = formats.get('image/jpeg')
+
             results.append({
                 'id': book.get('id'),
                 'title': book.get('title'),
@@ -41,6 +42,7 @@ def search_gutenberg(query: str = None, author_year_start: int = None, author_ye
                 'languages': book.get('languages', []),
                 'text_url': text_url,
                 'html_url': html_url,
+                'cover_url': cover_url,
                 'download_count': book.get('download_count', 0)
             })
             

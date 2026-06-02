@@ -124,6 +124,18 @@ function setupContextMenu(window) {
     ]);
     contextMenu.popup(window);
   });
+
+  // macOS에서 Ctrl+C(윈도우 습관)도 복사가 되게 메운다.
+  // 애플리케이션 메뉴 accelerator(CmdOrCtrl+C)는 macOS에서 Cmd+C만 매핑하므로,
+  // <pre> 등 비입력 영역에서 Ctrl+C는 무시된다 → 선택해도 복사 안 됨. 그 틈만 직접 처리한다.
+  // 복사만: Ctrl+A(줄 처음)·Ctrl+V 등은 macOS 텍스트 필드의 기본 이동 바인딩이라 건드리지 않는다.
+  // (Windows/Linux는 메뉴가 이미 Ctrl+C를 처리하므로 추가하지 않는다 — 중복 방지.)
+  if (process.platform === 'darwin') {
+    window.webContents.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown' || !input.control || input.meta || input.alt) return;
+      if ((input.key || '').toLowerCase() === 'c') window.webContents.copy();
+    });
+  }
 }
 
 /**

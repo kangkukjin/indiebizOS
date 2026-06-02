@@ -1,5 +1,6 @@
 import arxiv
 import os
+import time
 import requests
 import feedparser
 import xml.etree.ElementTree as ET
@@ -717,49 +718,53 @@ def _search_books(tool_input: dict) -> str:
         "orderBy": order_by,
         "printType": "books"
     }
+    # API 키가 있으면 사용 — 익명 호출은 IP당 할당량이 작아 429가 잦다 (.env: GOOGLE_BOOKS_API_KEY)
+    _gbooks_key = os.environ.get("GOOGLE_BOOKS_API_KEY", "").strip()
+    if _gbooks_key:
+        params["key"] = _gbooks_key
 
     try:
-        response = requests.get(url, params=params, timeout=15)
+        # 429(Too Many Requests) 시 짧게 백오프 후 재시도 (최대 3회)
+        response = None
+        for _attempt in range(3):
+            response = requests.get(url, params=params, timeout=15)
+            if response.status_code == 429 and _attempt < 2:
+                time.sleep(1.5 * (_attempt + 1))
+                continue
+            break
         response.raise_for_status()
         data = response.json()
 
         items = data.get("items", [])
-        if not items:
-            return f"'{query}'에 대한 도서 검색 결과가 없습니다."
 
-        results = [f"### Google Books 검색 결과: '{query}'\n"]
-
-        for i, item in enumerate(items, 1):
+        # 구조화 반환 — 앱(도서검색)이 그대로 렌더할 수 있게 도서관정보나루(book)와 같은 필드명을 쓴다.
+        books = []
+        for item in items:
             info = item.get("volumeInfo", {})
-            title = info.get("title", "Unknown Title")
-            authors = ", ".join(info.get("authors", ["Unknown Author"]))
-            publisher = info.get("publisher", "Unknown Publisher")
-            published_date = info.get("publishedDate", "Unknown Date")
-            description = info.get("description", "No description available.")
-            if len(description) > 300:
-                description = description[:300] + "..."
-            
-            categories = ", ".join(info.get("categories", ["N/A"]))
-            page_count = info.get("pageCount", "N/A")
-            
-            # ISBN 추출
-            isbns = []
-            for identifier in info.get("industryIdentifiers", []):
-                isbns.append(f"{identifier.get('type')}: {identifier.get('identifier')}")
-            isbn_str = ", ".join(isbns) if isbns else "N/A"
+            isbn13 = ""
+            for idf in info.get("industryIdentifiers", []):
+                if idf.get("type") == "ISBN_13":
+                    isbn13 = idf.get("identifier", "")
+                    break
+            img = info.get("imageLinks") or {}
+            books.append({
+                "bookname": info.get("title", ""),
+                "authors": ", ".join(info.get("authors", [])),
+                "publisher": info.get("publisher", ""),
+                "publication_year": (info.get("publishedDate", "") or "")[:4],
+                "isbn13": isbn13,
+                "bookImageURL": img.get("thumbnail") or img.get("smallThumbnail") or "",
+                "description": info.get("description", ""),
+                "categories": ", ".join(info.get("categories", [])),
+                "page_count": info.get("pageCount"),
+                "infoLink": info.get("infoLink", ""),
+            })
 
-            book_info = (
-                f"[{i}] {title}\n"
-                f"- 저자: {authors}\n"
-                f"- 출판: {publisher} ({published_date})\n"
-                f"- ISBN: {isbn_str}\n"
-                f"- 카테고리: {categories} | 페이지: {page_count}\n"
-                f"- 요약: {description}\n"
-                "--------------------------------------"
-            )
-            results.append(book_info)
-
-        return "\n".join(results)
+        return {
+            "count": data.get("totalItems", len(books)),
+            "data": books,
+            "message": f"'{query}' Google Books 검색 {len(books)}건",
+        }
 
     except Exception as e:
         return f"Google Books API 요청 오류: {str(e)}"

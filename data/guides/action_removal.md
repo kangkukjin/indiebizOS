@@ -5,16 +5,19 @@
 
 ## 체크리스트
 
-### 1. 액션 정의 제거
-- [ ] `data/packages/installed/tools/{패키지}/ibl_actions.yaml` — 해당 액션 항목 삭제
-- [ ] `register_actions('{패키지}')` 실행하여 ibl_nodes.yaml에 반영
+### 1. 액션 정의 제거 (단일 소스 src → 빌드 → 검증)
+
+> 2026-05-28 IBL 단일화 이후: 액션 정의는 `data/ibl_nodes_src/`가 단일 소스다. 패키지별 `ibl_actions.yaml` + `register_actions()`는 폐기됐다.
+
+- [ ] `data/ibl_nodes_src/{node}.yaml` — 해당 node(sense/self/limbs/others/engines)의 `actions:`에서 액션 항목 삭제
+- [ ] 빌드 + 검증:
   ```bash
-  cd backend && python3 -c "from ibl_action_manager import register_actions; print(register_actions('{패키지}'))"
+  python scripts/build_ibl_nodes.py          # data/ibl_nodes.yaml 재생성
+  python scripts/build_ibl_nodes.py --check  # 삼각 일치 확인 (비0이면 잔여 참조)
   ```
 
 ### 2. ibl_nodes.yaml 확인
-- [ ] `data/ibl_nodes.yaml` — 액션이 제거되었는지 확인 (register_actions가 처리하지만 수동 확인 권장)
-- [ ] `data/_ibl_provenance.yaml` — 해당 액션의 출처 항목 제거
+- [ ] `data/ibl_nodes.yaml` — 산출물에서 액션이 빠졌는지 확인 (직접 편집 금지, 빌드 결과물)
 
 ### 3. 도구 정의 정리
 - [ ] `{패키지}/tool.json` — 해당 도구의 JSON 정의 제거 (tool.json에 단독 도구로 정의된 경우)

@@ -409,10 +409,13 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         except Exception:
             pass
 
-    # 후처리 (postprocess): 액션 YAML에 정의된 전처리 수행
-    # 자가점검 시에는 건너뜀 (AI 호출 비용 절감)
+    # 후처리 (postprocess): 액션 YAML에 정의된 전처리(예: compress=AI 노이즈 제거) 수행
+    # 건너뛰는 경우:
+    #  - 자가점검(__self_check__): AI 호출 비용 절감
+    #  - params._raw=true: 앱·GUI 등 구조화 원본이 필요한 호출 (요약은 에이전트 소비용)
     postprocess = action_config.get("postprocess")
-    if postprocess and result is not None and agent_id != "__self_check__":
+    _raw = bool((tool_input.get("params") or {}).get("_raw"))
+    if postprocess and result is not None and agent_id != "__self_check__" and not _raw:
         result = _postprocess(result, action, postprocess)
 
     return result

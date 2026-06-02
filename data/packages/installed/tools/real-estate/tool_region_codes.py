@@ -2,6 +2,14 @@
 부동산 API 지역 코드 조회 모듈
 법정동 코드 앞 5자리 (시군구 코드)
 """
+import os
+import sys
+
+# common 유틸리티 (카카오 키) 사용
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
 
 def get_tool_definition():
     return {
@@ -303,6 +311,92 @@ REGION_CODES = {
         "서귀포시": "50130",
     },
 }
+
+def resolve_region_code(name: str):
+    """지역 이름 → 법정동 5자리 시군구 코드 (내부 자동 해소용).
+
+    "강남구"/"서울 강남구"/"청주흥덕구"/"흥덕구" 같은 시군구 이름을 코드로 바꾼다.
+    실거래가 API가 시군구 단위라, 읍·면·동(예: 오송)은 직접 못 찾으므로 후보/안내를 돌려준다.
+
+    Returns:
+        {"code": "11680", "matched": "서울 강남구"}                 — 유일 매칭
+        {"candidates": [{"name","code"}...], "error": "..."}       — 모호 (여러 매칭)
+        {"error": "..."}                                            — 못 찾음
+    """
+    if not name or not str(name).strip():
+        return {"error": "지역명이 비었습니다."}
+    raw = str(name).strip()
+    norm = (raw.replace("특별시", "").replace("광역시", "")
+               .replace("특별자치시", "").replace("특별자치도", "")
+               .replace(" ", ""))
+
+    flat = [(sido, gu, code) for sido, regions in REGION_CODES.items()
+            for gu, code in regions.items()]
+
+    matched = {}  # code -> "시도 시군구"
+    for sido, gu, code in flat:
+        full = sido + gu  # 예: "서울강남구", "충북청주시흥덕구"
+        # norm in full: "강남"·"분당"·"흥덕구" 같은 부분/접미 매칭 허용.
+        # (gu in norm은 금지 — "남구"가 "강남구"의 부분문자열이라 강남구가 모든 남구에 오매칭됨)
+        if norm == gu or norm == full or norm in full:
+            matched[code] = f"{sido} {gu}"
+
+    if len(matched) == 1:
+        code = next(iter(matched))
+        return {"code": code, "matched": matched[code]}
+    if len(matched) > 1:
+        return {
+            "candidates": [{"name": n, "code": c} for c, n in matched.items()][:12],
+            "error": f"'{raw}'가 여러 시군구와 일치합니다. region_code로 지정하거나 시/도를 함께 적으세요 (예: '서울 중구').",
+        }
+
+    # 로컬 시군구 테이블에 없음 → 카카오 지오코딩으로 읍·면·동을 상위 시군구로 자동 해소
+    via = _resolve_via_kakao(raw)
+    if via:
+        return via
+
+    return {
+        "error": (f"'{raw}'에 해당하는 시군구를 찾지 못했습니다. 실거래가는 시군구 단위입니다 "
+                  f"(예: 강남구, 청주시흥덕구). 시군구 이름으로 다시 시도하세요. "
+                  f"district_codes로 목록을 확인할 수 있습니다.")
+    }
+
+
+def _resolve_via_kakao(name: str):
+    """카카오 주소검색으로 임의 지명 → 시군구 코드. 법정동코드(b_code) 앞 5자리가 시군구 코드.
+
+    읍·면·동(예 '오송')처럼 로컬 시군구 테이블에 없는 하위 지명을 상위 시군구로 자동 변환한다.
+    카카오 키 없거나 결과 없으면 None.
+    """
+    try:
+        from common.auth_manager import get_api_key
+        key = get_api_key('KAKAO_REST_API_KEY')
+        if not key:
+            return None
+        import urllib.request
+        import urllib.parse
+        import json as _json
+        url = "https://dapi.kakao.com/v2/local/search/address.json?" + urllib.parse.urlencode(
+            {"query": name, "size": 5})
+        req = urllib.request.Request(url, headers={"Authorization": f"KakaoAK {key}"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = _json.loads(r.read().decode("utf-8"))
+        for doc in data.get("documents", []):
+            addr = doc.get("address") or {}
+            b = (addr.get("b_code") or "")
+            if len(b) >= 5 and b[:5].isdigit():
+                sido = (addr.get("region_1depth_name") or "").strip()
+                sgg = (addr.get("region_2depth_name") or "").strip()
+                emd = (addr.get("region_3depth_name") or "").strip()
+                return {
+                    "code": b[:5],
+                    "matched": f"{sido} {sgg}".strip(),
+                    "via": emd or name,  # 어떤 읍·면·동을 상위 시군구로 올렸는지
+                }
+    except Exception:
+        return None
+    return None
+
 
 def get_region_codes(city: str = ""):
     """

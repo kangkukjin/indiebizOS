@@ -48,6 +48,8 @@ execute_ibl(code='[node:action]{params}')
 execute_ibl(code='[node:action]{param: "value"}')
 ```
 
+공통 파라미터 `_raw: true` — 일부 검색 액션은 결과를 AI로 자동 요약(postprocess:compress)해서 돌려준다. 원본 구조화 데이터(JSON)가 필요하면 `{_raw: true}`를 더해 요약을 건너뛴다. 예: `[sense:search_naver]{query: "한강", type: "book", _raw: true}`. (앱·파이프라인용. 평소 읽기엔 요약본이 더 편하다.)
+
 ## Common Mistakes — NEVER do these
 
 ```

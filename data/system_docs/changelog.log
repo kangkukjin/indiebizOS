@@ -756,3 +756,13 @@
     · backend/agent_cognitive.py — `_FRAMING_CACHE` + framing_cache_get/set + clear_framing_cache + `_run_consciousness_or_reuse()` + `_consciousness_fit_gate()`, handle_session_reset에 캐시 clear 합류
     · backend/agent_communication.py, api_websocket.py(2), system_ai_core.py(2) — THINK 분기의 `_run_consciousness` 호출을 `_run_consciousness_or_reuse`로 드롭인 교체 (총 5곳)
   - 문서: system_structure.md(프롬프트 주입), architecture.md 인지 파이프라인·의식 에이전트 섹션 갱신
+[2026-06-02 12:21:43] PROJECT_CREATED: 수동모드 (ID: 수동모드)
+[2026-06-02 12:21:43] PROJECT_CREATED: 앱모드 (ID: 앱모드)
+[2026-06-02] 런처 3표면(트릴레마: 자율주행/수동/앱) 정립 + 수동 모드 신설 + 앱 확장 + 액션 개선
+  - 런처: 2탭(프로젝트/액션) → 3토글(자율주행/수동/앱). launcherTab 타입 'autopilot'|'manual'|'app'. 자율주행=구 프로젝트, 앱=구 액션(ActionDesktop). {속도·표현력·주권} 중 둘.
+  - 수동 모드(신규, 컴파일러 프론트엔드): backend/api_ibl.py에 /ibl/translate(해마+경량모델 자연어→IBL)·/ibl/validate(dry-run: 파싱·노드/액션 유효성·효과설명·안전성 read/write·has_side_effect)·/ibl/distill(성공 실행 증류) 추가. frontend ManualMode.tsx — 번역→효과 검수→부작용 게이팅 실행→사용자 승인 시 학습. 둘러보기 팔레트(아이콘→씨앗). 자동완성은 시도 후 제거(사용자 피드백). 번역 system 프롬프트는 12_ibl_only.md 재사용(문법 일원화).
+  - 앱 모드 계기: BookInstrument(도서검색 — 국내 도서관정보나루/네이버/글로벌 Google/고전 Gutenberg 4소스, 상세=대출통계·추천·원문). 기존 RealtyInstrument 개선.
+  - sense:realty 개선: region 이름 자동해소(로컬 시군구 테이블 + 카카오 읍면동→시군구), villa(연립다세대) 추가(6종), dong 법정동 필터, 최근 3개월 기본, 공통 키 명칭/면적 보강, apt/house 도구 403/오류 표면화.
+  - sense:book 개선: title/author/publisher 필드 검색. data4library 파싱 버그 2건 수정(get_book_detail XML 중첩, recommended_books 항목태그 doc→book). Google search_books·naver_search 구조화 경로(_raw로 postprocess:compress 우회).
+  - 미문서 파라미터 노출: recommended_books.rec_type(마니아/다독자), realty.dong, 공통 _raw(12_ibl_only.md).
+  - 문서: README.md/README.ko.md 런처 3표면 섹션, architecture.md '사용자 표면' 섹션, system_structure.md 주요기능+푸터.

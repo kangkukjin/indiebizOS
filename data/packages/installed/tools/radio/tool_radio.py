@@ -369,8 +369,8 @@ def _find_mpv():
     return None
 
 
-def play_radio(station_id=None, stream_url=None, volume=70):
-    """라디오 재생"""
+def play_radio(station_id=None, stream_url=None, volume=70, name=None):
+    """라디오 재생. name: stream_url 재생 시 채널명(검색 결과 등) — 미지정 시 '외부 방송'."""
     global _player_process, _current_station, _play_start_time
 
     mpv_path = _find_mpv()
@@ -389,7 +389,7 @@ def play_radio(station_id=None, stream_url=None, volume=70):
         stream_url = url
         station_name = KOREAN_STATIONS[station_id]["name"]
     elif stream_url:
-        station_name = "외부 방송"
+        station_name = (name or "").strip() or "외부 방송"
     else:
         return json.dumps({
             "success": False,

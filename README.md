@@ -122,6 +122,22 @@ Connect with others through decentralized networks and access your system from a
 
 ---
 
+## The Launcher — Three Surfaces
+
+Every task can be run three ways, all on the same IBL nervous system. Each surface picks two of **{speed, expressiveness, sovereignty}** and gives up the third.
+
+| Mode | What it is | Trade-off |
+|------|-----------|-----------|
+| **Autopilot** | Tell a flagship AI your intent; it handles the multi-step work. Best for new, one-off, exploratory tasks. (formerly "Projects") | speed + expressiveness − sovereignty |
+| **Manual** | A lightweight model translates your natural-language command into IBL (leaning on hippocampus memory); you review the **effect** (dry-run) and run it. A compiler front-end — the model only translates, intelligence accrues in the language (IBL). Near-zero cost. | expressiveness + sovereignty − speed |
+| **App** | Tap an icon to drive a GUI (e.g. real-estate transaction lookup, book search). Fastest, most discoverable. (formerly "Actions") | speed + sovereignty − expressiveness |
+
+Frequency flows a task between modes: Autopilot explores it once → the IBL trace seeds Manual → a proven, high-frequency workflow crystallizes into an App. **Crystallize only what's proven.**
+
+Manual mode is governed by two rules: side-effecting steps are gated behind explicit confirmation (read-only steps run friction-free), and the hippocampus learns *only the results you approve*.
+
+---
+
 ## Architecture
 
 ### Three-Agent Cognitive Pipeline

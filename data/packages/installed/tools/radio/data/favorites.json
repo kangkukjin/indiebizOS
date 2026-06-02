@@ -3,5 +3,11 @@
     "name": "Listen.moe Kpop",
     "added_at": "2026-02-09 20:47:50",
     "stream_url": "https://listen.moe/kpop/stream"
+  },
+  {
+    "name": "MBC Standard FM",
+    "added_at": "2026-06-02 23:03:16",
+    "station_id": "mbc_sfm",
+    "stream_url": "https://minisw.imbc.com/dsfm/_definst_/sfm.stream/playlist.m3u8?_lsu_sa_=6F31D912F3AC30B4484E85C03571CA43A5EB3FC51D0742CD34B0AFaB661E3156F1a3332838B2FF48502C3AA175b55116B0A9A40464EA639096D2E2F88E83D81FF195B00E031337D89D4FA090A0E225670513D742755849AD0C48F236A462A6026072D485F2CB9574300062E6FD427960"
   }
 ]

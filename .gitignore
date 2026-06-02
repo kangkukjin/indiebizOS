@@ -256,3 +256,14 @@ cloud_training/
 # --- DB 백업 덤프 (개인정보 포함) ---
 data/*.sql
 *.sql.bak
+
+# --- 민감 설정/DB 추적 해제 (2026-06-02) ---
+data/launcher_web_config.json
+data/nas_config.json
+data/tunnel_config.json
+data/SKILLs/skills.db
+data/indiebiz.db
+backend/수동모드
+backend/수동모드*
+backend/앱모드
+backend/앱모드*

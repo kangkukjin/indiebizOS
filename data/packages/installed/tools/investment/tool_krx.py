@@ -17,7 +17,7 @@ _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "
 if _backend_dir not in sys.path:
     sys.path.insert(0, os.path.abspath(_backend_dir))
 
-from common.response_formatter import save_large_data
+from common.response_formatter import save_large_data, downsample_prices, compact_price_series
 
 # 종목 코드 캐시
 STOCK_CODE_CACHE_PATH = Path(__file__).parent / "stock_code_cache.json"
@@ -259,7 +259,7 @@ def _fetch_stock_price_krx(code: str, start_date: str, end_date: str):
         return None
 
 
-def get_stock_price(symbol: str, start_date: str = None, end_date: str = None):
+def get_stock_price(symbol: str, start_date: str = None, end_date: str = None, max_points: int = 10):
     """
     한국 주식 시세 조회
 
@@ -311,49 +311,25 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None):
 
     total_days = len(prices)
 
-    # 대량 데이터는 파일로 저장 (50개 초과시)
-    if total_days > 50:
-        # 전체 데이터를 파일로 저장
+    # prices는 항상 포함(shape 일관). 50일 이하면 전체, 초과면 다운샘플 + 전체는 file_path.
+    compact, truncated = compact_price_series(prices, max_points)
+    data = {
+        "symbol": code,
+        "name": stock_name,
+        "start_date": start_date,
+        "end_date": end_date,
+        "total_days": total_days,
+        "latest": latest,
+        "prices": compact,
+        "truncated": truncated,
+    }
+    summary = f"{stock_name}({code}) 현재가: {latest.get('close', 'N/A'):,}원, 기간: {start_date} ~ {end_date}, 총 {total_days}거래일"
+    if truncated:
         file_path = save_large_data(prices, "investment", f"kr_prices_{code}")
-
-        # 요약용 샘플 (10개 포인트만)
-        step = max(1, total_days // 10)
-        sample_prices = prices[::step]
-        if sample_prices[-1] != prices[-1]:
-            sample_prices.append(prices[-1])
-        sample_compact = [{"date": p["date"], "close": p["close"]} for p in sample_prices]
-
-        return {
-            "success": True,
-            "data": {
-                "symbol": code,
-                "name": stock_name,
-                "start_date": start_date,
-                "end_date": end_date,
-                "total_days": total_days,
-                "latest": latest,
-                "file_path": file_path,  # 전체 데이터 파일 경로
-                "sample": sample_compact  # 요약용 샘플 (10개)
-            },
-            "summary": f"{stock_name}({code}) 현재가: {latest.get('close', 'N/A'):,}원, 기간: {start_date} ~ {end_date}, 총 {total_days}거래일. 전체 데이터: {file_path}"
-        }
-    else:
-        # 적은 데이터는 직접 반환
-        compact_prices = [{"date": p["date"], "close": p["close"]} for p in prices]
-
-        return {
-            "success": True,
-            "data": {
-                "symbol": code,
-                "name": stock_name,
-                "start_date": start_date,
-                "end_date": end_date,
-                "total_days": total_days,
-                "latest": latest,
-                "prices": compact_prices
-            },
-            "summary": f"{stock_name}({code}) 현재가: {latest.get('close', 'N/A'):,}원, 기간: {start_date} ~ {end_date}, 총 {total_days}거래일"
-        }
+        data["file_path"] = file_path     # 전체 데이터 파일 경로 (시각화 data_file용)
+        data["sample"] = compact          # 하위호환 별칭
+        summary += f". 전체 데이터: {file_path}"
+    return {"success": True, "data": data, "summary": summary}
 
 
 def get_stock_info(symbol: str):

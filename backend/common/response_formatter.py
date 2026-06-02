@@ -110,6 +110,33 @@ def save_large_data(data: Any, category: str, identifier: str, base_dir: str = N
     return str(filepath)
 
 
+def downsample_prices(prices: list, max_points: int = 10) -> list:
+    """시계열 [{date, close, ...}] 을 max_points 이하로 다운샘플한 compact [{date, close}] 로 반환.
+
+    여러 시세 도구(tool_krx/tool_fmp/tool_yfinance)에서 중복되던 다운샘플 로직 통합.
+    마지막 점(최신가)은 항상 포함. max_points 가 크면 사실상 전체 반환.
+    """
+    if not prices:
+        return []
+    total = len(prices)
+    step = max(1, total // max(1, max_points))
+    sampled = list(prices[::step])
+    if sampled[-1] != prices[-1]:
+        sampled.append(prices[-1])
+    return [{"date": p["date"], "close": p["close"]} for p in sampled]
+
+
+def compact_price_series(prices: list, max_points: int = 10, threshold: int = 50):
+    """시세 시계열을 일관된 compact [{date, close}] 로. threshold 이하면 전체, 초과면 다운샘플.
+
+    시세 도구들이 항상 동일한 `prices` 키를 내도록 shape 통일용. 반환: (compact, truncated).
+    """
+    total = len(prices or [])
+    if total <= threshold:
+        return [{"date": p["date"], "close": p["close"]} for p in (prices or [])], False
+    return downsample_prices(prices, max_points), True
+
+
 def is_error(response: Any) -> bool:
     """
     응답이 에러인지 확인

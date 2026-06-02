@@ -686,13 +686,8 @@ _WMO_CODES = {
 }
 
 
-def _resolve_city_coords(city: str) -> tuple:
-    """도시명 → (lat, lon) 변환. 캐시 → Open-Meteo geocoding 순서"""
-    key = city.lower().strip()
-    if key in _CITY_COORDS:
-        return _CITY_COORDS[key]
-
-    # Open-Meteo geocoding API (무료)
+def _geocode_openmeteo(city: str) -> tuple:
+    """Open-Meteo geocoding (무키). 영어/로마자 도시명에 강함 — 한글은 빈 결과를 준다."""
     try:
         resp = requests.get(
             "https://geocoding-api.open-meteo.com/v1/search",
@@ -703,11 +698,71 @@ def _resolve_city_coords(city: str) -> tuple:
             results = resp.json().get("results", [])
             if results:
                 r = results[0]
-                coords = (r["latitude"], r["longitude"])
-                _CITY_COORDS[key] = coords  # 캐시
-                return coords
+                return (r["latitude"], r["longitude"])
     except Exception:
         pass
+    return None
+
+
+def _geocode_kakao(city: str) -> tuple:
+    """카카오 주소(행정구역) 검색 → (lat, lon). 한국 도시/구/동에 정확. 업소 오매칭 없음(주소 전용)."""
+    key_ok, _ = check_api_key("kakao")
+    if not key_ok:
+        return None
+    data = api_call("kakao", "/v2/local/search/address.json",
+                    params={"query": city, "size": 1}, timeout=10)
+    if isinstance(data, dict) and data.get("documents"):
+        d = data["documents"][0]
+        try:
+            return (float(d["y"]), float(d["x"]))  # 카카오: x=경도, y=위도
+        except (KeyError, ValueError, TypeError):
+            pass
+    return None
+
+
+def _geocode_nominatim(city: str) -> tuple:
+    """OpenStreetMap Nominatim (무키). 전세계 폴백 — 한글 외국 도시까지 처리."""
+    try:
+        resp = requests.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={"q": city, "format": "json", "limit": 1, "accept-language": "ko"},
+            headers={"User-Agent": "indiebizOS/1.0 (weather)"},
+            timeout=8
+        )
+        if resp.ok:
+            arr = resp.json()
+            if arr:
+                return (float(arr[0]["lat"]), float(arr[0]["lon"]))
+    except Exception:
+        pass
+    return None
+
+
+def _has_hangul(s: str) -> bool:
+    return any('가' <= c <= '힣' for c in s)
+
+
+def _resolve_city_coords(city: str) -> tuple:
+    """도시명 → (lat, lon). 정적표에 없으면 외부 지오코더로 내부 해소(호출자가 좌표를 떠넘길 필요 없음).
+
+    한글 도시는 Open-Meteo가 동음 외국 지명으로 오매칭하므로(예 '전주'→압록강변 40.4N,
+    '청주'→빈 결과) 한글이면 Nominatim(accept-language=ko)을 우선한다. 영문/로마자는
+    날씨 전용인 Open-Meteo가 정확·빠르므로 먼저 쓴다.
+    """
+    key = city.lower().strip()
+    if key in _CITY_COORDS:
+        return _CITY_COORDS[key]
+
+    if _has_hangul(city):
+        resolvers = (_geocode_nominatim, _geocode_kakao, _geocode_openmeteo)
+    else:
+        resolvers = (_geocode_openmeteo, _geocode_nominatim)
+
+    for resolver in resolvers:
+        coords = resolver(city)
+        if coords:
+            _CITY_COORDS[key] = coords  # 런타임 캐시
+            return coords
     return None
 
 

@@ -79,7 +79,8 @@ def execute(tool_input: dict, context):
             return tool.get_stock_price(
                 symbol=tool_input.get("symbol"),
                 start_date=tool_input.get("start_date"),
-                end_date=tool_input.get("end_date")
+                end_date=tool_input.get("end_date"),
+                max_points=tool_input.get("max_points", 10)
             )
 
         elif tool_name == "kr_market_investor_trading":
@@ -127,7 +128,8 @@ def execute(tool_input: dict, context):
             return tool.get_stock_price(
                 symbol=tool_input.get("symbol"),
                 start_date=tool_input.get("start_date"),
-                end_date=tool_input.get("end_date")
+                end_date=tool_input.get("end_date"),
+                max_points=tool_input.get("max_points", 10)
             )
 
         # 종목 뉴스: Finnhub 우선, 실패 시 Yahoo Finance 폴백
@@ -171,7 +173,8 @@ def execute(tool_input: dict, context):
             return tool.get_stock_price(
                 symbol=tool_input.get("symbol"),
                 period=tool_input.get("period", "5d"),
-                interval=tool_input.get("interval", "1d")
+                interval=tool_input.get("interval", "1d"),
+                max_points=tool_input.get("max_points", 10)
             )
 
         elif tool_name == "yf_stock_info":
@@ -190,7 +193,9 @@ def execute(tool_input: dict, context):
         elif tool_name == "crypto_price":
             tool = load_module("tool_yfinance")
             return tool.get_crypto_price(
-                coin_id=tool_input.get("coin_id", "bitcoin")
+                coin_id=tool_input.get("coin_id", "bitcoin"),
+                days=tool_input.get("days", 0),
+                max_points=tool_input.get("max_points", 400)
             )
 
         else:

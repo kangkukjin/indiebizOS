@@ -59,6 +59,7 @@ def execute(tool_input: dict, context):
             station_id=tool_input.get("station_id"),
             stream_url=tool_input.get("stream_url"),
             volume=tool_input.get("volume", 70),
+            name=tool_input.get("name"),
         )
     elif tool_name == "stop_radio":
         return radio.stop_radio()
@@ -88,6 +89,7 @@ def execute(tool_input: dict, context):
                 station_id=tool_input.get("station_id"),
                 stream_url=tool_input.get("stream_url"),
                 volume=tool_input.get("volume", 70),
+                name=tool_input.get("name"),
             )
         elif op == "stop":
             return radio.stop_radio()

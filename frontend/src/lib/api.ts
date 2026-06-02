@@ -16,6 +16,7 @@ import { applyPackagesMethods } from './api-packages';
 import { applyBusinessMethods } from './api-business';
 import { applyMultiChatMethods } from './api-multi-chat';
 import { applyLectureWorkspaceMethods } from './api-lecture-workspace';
+import { applyIblMethods } from './api-ibl';
 
 const API_BASE = 'http://127.0.0.1:8765';
 
@@ -621,7 +622,8 @@ function createAPIClient() {
   const withBusiness = applyBusinessMethods(withPackages);
   const withMultiChat = applyMultiChatMethods(withBusiness);
   const withLectureWorkspace = applyLectureWorkspaceMethods(withMultiChat);
-  return withLectureWorkspace;
+  const withIbl = applyIblMethods(withLectureWorkspace);
+  return withIbl;
 }
 
 export const api = createAPIClient();

@@ -138,28 +138,38 @@ def extract_libs_from_xml(root):
 
 # ==================== 도서 검색 API ====================
 
-def search_books(keyword, page=1, page_size=10):
+def search_books(keyword=None, title=None, author=None, publisher=None, page=1, page_size=10):
     """
-    도서 검색 (키워드 기반)
+    도서 검색 (필드 선택 가능)
 
     도서관 정보나루의 이용분석 대상 도서를 검색합니다.
+    keyword는 제목·저자·출판사 전체를 훑는 광역 검색이고,
+    title/author/publisher는 그 필드로만 좁혀 검색합니다 (정확도↑).
 
     Args:
-        keyword: 검색 키워드 (제목, 저자, 출판사 등)
+        keyword: 광역 검색어 (제목·저자·출판사 등 전체)
+        title: 제목으로만 검색
+        author: 저자로만 검색
+        publisher: 출판사로만 검색
         page: 페이지 번호 (기본값: 1)
         page_size: 한 페이지당 결과 수 (기본값: 10, 최대: 100)
 
     Returns:
         검색 결과 목록
     """
-    if not keyword:
-        return {"error": "검색 키워드를 입력해주세요."}
+    params = {"pageNo": page, "pageSize": min(page_size, 100)}
+    if keyword:
+        params["keyword"] = keyword
+    if title:
+        params["title"] = title
+    if author:
+        params["author"] = author
+    if publisher:
+        params["publisher"] = publisher
 
-    params = {
-        "keyword": keyword,
-        "pageNo": page,
-        "pageSize": min(page_size, 100)
-    }
+    label = title or author or publisher or keyword
+    if not label:
+        return {"error": "검색어를 입력해주세요 (keyword / title / author / publisher 중 하나)."}
 
     result = call_library_api("srchBooks", params)
 
@@ -178,7 +188,7 @@ def search_books(keyword, page=1, page_size=10):
         "page": page,
         "pageSize": page_size,
         "data": books,
-        "message": f"'{keyword}' 검색 결과: 총 {total}건"
+        "message": f"'{label}' 검색 결과: 총 {total}건"
     }
 
 
@@ -218,45 +228,40 @@ def get_book_detail(isbn13, loan_info=True):
     if isinstance(result, dict) and "error" in result:
         return result
 
-    # 도서 정보 추출
-    detail = result.find('.//detail')
-    if detail is None:
+    # 도서 정보 추출 (<detail><book>…필드…</book></detail>)
+    book_el = result.find('.//detail/book')
+    if book_el is None:
         return {
             "error": f"ISBN '{isbn13}'에 해당하는 도서를 찾을 수 없습니다.",
             "suggestion": "ISBN을 확인하거나 키워드로 검색해보세요."
         }
 
     book_info = {}
-    for child in detail:
+    for child in book_el:
         if child.text:
             book_info[child.tag] = child.text.strip()
 
     # 대출 정보 추출
+    # 구조: <loanInfo><Total><loanCnt/></Total>
+    #        <regionResult><region><name/><loanCnt/></region>…</regionResult>
+    #        <ageResult><age><name/><loanCnt/></age>…</ageResult>
+    #        <genderResult><gender><name/><loanCnt/></gender>…</genderResult></loanInfo>
     if loan_info:
-        loan_data = {
-            "by_region": [],
-            "by_age": []
+        def _entries(path):
+            out = []
+            for el in result.findall(path):
+                entry = {c.tag: c.text.strip() for c in el if c.text}
+                if entry:
+                    out.append(entry)
+            return out
+
+        total_el = result.find('.//loanInfo/Total/loanCnt')
+        book_info["loan_stats"] = {
+            "total": total_el.text.strip() if total_el is not None and total_el.text else "",
+            "by_region": _entries('.//regionResult/region'),
+            "by_age": _entries('.//ageResult/age'),
+            "by_gender": _entries('.//genderResult/gender'),
         }
-
-        # 지역별 대출
-        for loan in result.findall('.//loanInfo'):
-            loan_entry = {}
-            for child in loan:
-                if child.text:
-                    loan_entry[child.tag] = child.text.strip()
-            if loan_entry:
-                loan_data["by_region"].append(loan_entry)
-
-        # 연령별 대출
-        for age_loan in result.findall('.//loanInfoByAge'):
-            age_entry = {}
-            for child in age_loan:
-                if child.text:
-                    age_entry[child.tag] = child.text.strip()
-            if age_entry:
-                loan_data["by_age"].append(age_entry)
-
-        book_info["loan_stats"] = loan_data
 
     return {
         "book": book_info,
@@ -412,8 +417,8 @@ def get_recommended_books(isbn13, rec_type="mania"):
     if isinstance(result, dict) and "error" in result:
         return result
 
-    # 도서 목록 추출
-    books = extract_books_from_xml(result, "doc")
+    # 도서 목록 추출 (recommandList는 <docs><book>…</book></docs> — 항목 태그가 book)
+    books = extract_books_from_xml(result, "book")
 
     rec_type_name = "마니아" if rec_type == "mania" else "다독자"
 

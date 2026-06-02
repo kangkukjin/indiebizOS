@@ -24,6 +24,8 @@ import {
 import { ContactsDialog } from './ContactsDialog';
 import { GuideDialog } from './GuideDialog';
 import { UserManualDialog } from './UserManualDialog';
+import { ActionDesktop } from './ActionDesktop';
+import ManualMode from './ManualMode';
 import type {
   ContextMenuState,
   ClipboardItem,
@@ -47,6 +49,11 @@ export function Launcher() {
     error,
   } = useAppStore();
 
+  // 런처는 같은 IBL 위에 얹힌 세 개의 표면이다 (트릴레마: 속도/표현력/주권 중 둘):
+  //   autopilot(자율주행) = 속도+표현력−주권 (구 'projects')
+  //   manual(수동)        = 표현력+주권−속도 (미구현 — IBL 번역·dry-run 검수·커맨드 팔레트)
+  //   app(앱)             = 속도+주권−표현력 (구 'actions', ActionDesktop)
+  const [launcherTab, setLauncherTab] = useState<'autopilot' | 'manual' | 'app'>('autopilot');
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [showNewMultiChatDialog, setShowNewMultiChatDialog] = useState(false);
@@ -284,8 +291,14 @@ export function Launcher() {
     };
   }, [loadSwitches]);
 
-  // 루트 레벨 아이템만 표시 (휴지통 제외)
-  const displayProjects = projects.filter((p) => !p.parent_folder && !p.in_trash);
+  // 수동/앱 모드 표면이 IBL 컨텍스트로 쓰는 시스템 프로젝트 — 데스크탑에선 숨긴다.
+  // (프로젝트 자체는 존재해 경로 해소는 계속 동작. 토글과 이름이 겹쳐 혼동·삭제 위험 방지)
+  const SYSTEM_PROJECT_IDS = new Set(['수동모드', '앱모드']);
+
+  // 루트 레벨 아이템만 표시 (휴지통 + 시스템 프로젝트 제외)
+  const displayProjects = projects.filter(
+    (p) => !p.parent_folder && !p.in_trash && !SYSTEM_PROJECT_IDS.has(p.id)
+  );
   const displaySwitches = switches.filter((s) => !s.parent_folder && !s.in_trash);
 
   // 폴더 아이템만 필터 (드롭 타겟용)
@@ -801,6 +814,9 @@ export function Launcher() {
 
   // 컨텍스트 메뉴 (오른쪽 클릭) - 빈 영역
   const handleContextMenu = (e: React.MouseEvent) => {
+    // 프로젝트 데스크탑(자율주행)에서만 런처 메뉴(새 프로젝트/붙여넣기 등)를 띄운다.
+    // 수동·앱 모드에서는 막지 않고 그대로 둬서 네이티브 복사 메뉴만 뜨게 한다.
+    if (launcherTab !== 'autopilot') return;
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY });
   };
@@ -1051,13 +1067,32 @@ export function Launcher() {
         </div>
       </div>
 
+      {/* 탭 토글: 자율주행 ↔ 수동 ↔ 앱 — 캔버스 위 전용 바. 워크스페이스 위에 떠서 아이콘과 겹치지 않도록 자기 영역을 가진다 */}
+      <div className="shrink-0 flex justify-center py-2 bg-[#F5F1EB]">
+        <div className="inline-flex rounded-full bg-white/85 shadow-sm border border-stone-200 p-0.5">
+          {([['autopilot', '자율주행'], ['manual', '수동'], ['app', '앱']] as const).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setLauncherTab(k)}
+              className={`px-4 py-1 rounded-full text-sm transition ${launcherTab === k ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-700'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* 데스크탑 영역 */}
       <div
         ref={desktopRef}
         className="flex-1 relative overflow-hidden"
         onContextMenu={handleContextMenu}
       >
-        {isLoading ? (
+        {launcherTab === 'app' ? (
+          <ActionDesktop />
+        ) : launcherTab === 'manual' ? (
+          <ManualMode />
+        ) : isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D97706]" />
           </div>

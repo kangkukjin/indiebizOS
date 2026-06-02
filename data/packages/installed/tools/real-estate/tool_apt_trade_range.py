@@ -4,6 +4,7 @@
 """
 import urllib.request
 import urllib.parse
+import urllib.error
 import xml.etree.ElementTree as ET
 import os
 import sys
@@ -107,6 +108,10 @@ def _fetch_month_data(region_code: str, year_month: str, count: int) -> list:
             trades.append(trade)
 
         return trades
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            raise  # 인증/미승인 — 상위에서 친절히 안내
+        return []
     except:
         return []
 
@@ -174,6 +179,10 @@ def get_apt_trade_range(region_code: str, start_month: str, end_month: str = Non
             "data": all_trades
         }
 
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            return {"success": False, "error": "아파트 매매 실거래가 API 권한이 없습니다(403). data.go.kr에서 동일 키로 활용신청하세요."}
+        return {"success": False, "error": f"HTTP {e.code}: {e.reason}"}
     except Exception as e:
         return {
             "success": False,

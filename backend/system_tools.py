@@ -7,20 +7,61 @@ IndieBiz OS Core
 
 import json
 import re
+import time
 import uuid
 import asyncio
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 from tool_loader import load_tool_handler, get_all_tool_names
 from api_engine import is_registry_tool, execute_tool as registry_execute_tool
 
-# === 액션 실패 카운터 (같은 액션 반복 실패 방지) ===
-# 키: "agent_id:node:action", 값: 연속 실패 횟수
-_action_fail_counter: Dict[str, int] = {}
-_ACTION_FAIL_LIMIT = 3  # 연속 N번 실패 시 차단
+# === 액션 서킷 브레이커 (같은 액션 반복 실패 방지) ===
+# 표준 서킷 브레이커 패턴: closed → (연속 N회 실패) → open → (쿨다운 경과) → half-open
+#   - closed: 정상 실행. 실패 시 fails 증가, 한도 도달하면 open.
+#   - open: open_until 이전에는 즉시 차단. 쿨다운이 지나면 half-open으로 자동 전이.
+#   - half-open: 1회 시험 실행 허용. 성공하면 reset(closed), 실패하면 다시 open.
+# 키: "agent_id:node:action", 값: {"fails": int, "open_until": Optional[float]}
+#   open_until 은 time.monotonic() 기준 epoch (벽시계 변경에 영향받지 않음).
+#
+# 주의: 인메모리 모듈 전역이라 워커 프로세스마다 독립적이다. 멀티 워커(uvicorn
+# reload/다중 워커) 환경에서는 워커별로 카운터가 따로 쌓이지만, 쿨다운 기반
+# 자동 복구(half-open)가 있으므로 어느 워커도 영구 차단되지 않는다.
+_action_fail_counter: Dict[str, dict] = {}
+_ACTION_FAIL_LIMIT = 3       # 연속 N번 실패 시 차단(open)
+_ACTION_OPEN_SECONDS = 90    # open 상태 유지 시간(초). 경과 후 half-open 시험 허용.
+
+
+def reset_action_breaker(key: Optional[str] = None) -> int:
+    """액션 서킷 브레이커를 수동으로 리셋한다.
+
+    key=None 이면 전체 초기화, 특정 키("agent_id:node:action")면 해당 항목만 제거.
+    프로세스 재시작 없이 차단을 해제하는 복구 경로 (수동/self-check 용).
+    Returns: 제거된 항목 수.
+    """
+    global _action_fail_counter
+    if key is None:
+        n = len(_action_fail_counter)
+        _action_fail_counter = {}
+        return n
+    return 1 if _action_fail_counter.pop(key, None) is not None else 0
+
+
+def get_action_breaker_state() -> Dict[str, dict]:
+    """현재 차단(open/half-open 대기) 중인 액션 상태를 조회한다 (관측/디버그용)."""
+    now = time.monotonic()
+    out = {}
+    for k, v in _action_fail_counter.items():
+        open_until = v.get("open_until")
+        if open_until is not None:
+            out[k] = {
+                "fails": v.get("fails", 0),
+                "remaining_seconds": max(0, round(open_until - now, 1)),
+                "state": "open" if now < open_until else "half-open",
+            }
+    return out
 
 
 # ============ Async 핸들러 지원: 영구 이벤트 루프 ============
@@ -927,9 +968,8 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     _c = code if len(code) <= 500 else code[:500] + f"... [trunc, total={len(code)}]"
     print(f"[IBL_DEBUG] code={_c}")
 
-    # --- 실패 카운터 체크: 같은 액션이 연속 N번 실패하면 차단 ---
+    # --- 서킷 브레이커 체크: open 상태면 쿨다운 동안만 차단, 경과하면 half-open 시험 허용 ---
     # 단일 액션만 체크 (파이프라인/병렬은 개별 액션이 아니라 통과)
-    _blocked_actions = set()
     try:
         from ibl_parser import parse as _pre_parse
         _pre_parsed = _pre_parse(code)
@@ -937,16 +977,25 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             _node = _pre_parsed[0].get("_node", "")
             _action = _pre_parsed[0].get("action", "")
             _fail_key = f"{agent_id or 'default'}:{_node}:{_action}"
-            _fail_count = _action_fail_counter.get(_fail_key, 0)
-            if _fail_count >= _ACTION_FAIL_LIMIT:
-                _blocked_actions.add(f"{_node}:{_action}")
-                print(f"[IBL] 액션 차단: {_node}:{_action} (연속 {_fail_count}회 실패)")
-                return json.dumps({
-                    "error": f"[{_node}:{_action}] 액션이 연속 {_fail_count}회 실패하여 일시 차단되었습니다. 이 도구는 현재 사용할 수 없습니다. 다른 방법을 찾으세요.",
-                    "blocked": True,
-                    "action": f"{_node}:{_action}",
-                    "consecutive_failures": _fail_count,
-                }, ensure_ascii=False)
+            _entry = _action_fail_counter.get(_fail_key)
+            _open_until = _entry.get("open_until") if _entry else None
+            if _open_until is not None:
+                _now = time.monotonic()
+                if _now < _open_until:
+                    # open: 쿨다운 미경과 → 즉시 차단
+                    _remaining = int(_open_until - _now) + 1
+                    _fail_count = _entry.get("fails", _ACTION_FAIL_LIMIT)
+                    print(f"[IBL] 액션 차단(open): {_node}:{_action} (연속 {_fail_count}회 실패, {_remaining}초 후 재시도 가능)")
+                    return json.dumps({
+                        "error": f"[{_node}:{_action}] 액션이 연속 {_fail_count}회 실패하여 일시 차단되었습니다. 약 {_remaining}초 후 자동으로 재시도가 허용됩니다. 그동안 파라미터를 점검하거나 다른 방법을 찾으세요.",
+                        "blocked": True,
+                        "action": f"{_node}:{_action}",
+                        "consecutive_failures": _fail_count,
+                        "retry_after_seconds": _remaining,
+                    }, ensure_ascii=False)
+                else:
+                    # half-open: 쿨다운 경과 → 이번 1회 시험 실행 허용 (성공 시 reset, 실패 시 재-open)
+                    print(f"[IBL] 액션 half-open 시험: {_node}:{_action} (쿨다운 경과, 1회 시험 실행)")
     except Exception:
         pass
 
@@ -1024,7 +1073,9 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                     except (json.JSONDecodeError, TypeError):
                         pass
 
-        # --- 실패 카운터 업데이트 ---
+        # --- 서킷 브레이커 상태 업데이트 ---
+        # 실패: fails 증가, 한도 도달 시 open_until 설정(open/재-open). 성공: 항목 제거(reset → closed).
+        # half-open 시험 실행이 실패하면 fails 는 이미 한도 이상이므로 곧장 open_until 갱신 → 재-open.
         try:
             _pre_parsed2 = parse_ibl(code)
             if _pre_parsed2 and len(_pre_parsed2) == 1 and not _pre_parsed2[0].get("_parallel"):
@@ -1037,12 +1088,14 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 elif isinstance(result, str):
                     _is_err = '"error"' in result or '"success": false' in result or '"success":false' in result
                 if _is_err:
-                    _action_fail_counter[_fk] = _action_fail_counter.get(_fk, 0) + 1
-                    _cnt = _action_fail_counter[_fk]
+                    _entry = _action_fail_counter.setdefault(_fk, {"fails": 0, "open_until": None})
+                    _entry["fails"] += 1
+                    _cnt = _entry["fails"]
                     if _cnt >= _ACTION_FAIL_LIMIT:
-                        print(f"[IBL] 액션 실패 누적: {_n}:{_a} ({_cnt}회 — 다음 호출 시 차단)")
+                        _entry["open_until"] = time.monotonic() + _ACTION_OPEN_SECONDS
+                        print(f"[IBL] 액션 차단(open) 진입: {_n}:{_a} ({_cnt}회 실패 — {_ACTION_OPEN_SECONDS}초 차단)")
                 else:
-                    _action_fail_counter.pop(_fk, None)  # 성공하면 카운터 초기화
+                    _action_fail_counter.pop(_fk, None)  # 성공하면 reset → closed
         except Exception:
             pass
 

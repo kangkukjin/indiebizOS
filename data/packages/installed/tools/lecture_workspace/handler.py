@@ -359,6 +359,72 @@ def _material_remove(tool_input: dict) -> str:
 # 슬라이드 생성/편집 (AI)
 # ─────────────────────────────────────────────────────────────────────
 
+# 프리미엄 이미지 디자인 (media_producer/slide_image 경로). "auto"는 AI가 스타일 선택.
+_IMAGE_DESIGNS = {"ink_blueprint", "cinematic_3d", "isometric", "lineart_duotone", "auto"}
+
+
+def _load_slide_image():
+    """sibling 패키지 media_producer/slide_image.py 동적 로드."""
+    import importlib.util
+    import sys as _sys
+    path = Path(__file__).resolve().parent.parent / "media_producer" / "slide_image.py"
+    spec = importlib.util.spec_from_file_location("slide_image", str(path))
+    mod = importlib.util.module_from_spec(spec)
+    _sys.modules["slide_image"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _generate_image_slide(
+    lecture_id, deck, slides_dir_path, instruction, focus_slide_id, insert_at, design
+) -> dict:
+    """프리미엄 일러스트 슬라이드 — slide_image 위임 후 deck에 등록."""
+    slide_id = focus_slide_id or lecture_store.next_slide_id(deck)
+    si = _load_slide_image()
+
+    # 강의 맥락을 가볍게 곁들여 그라운딩 (주제·핵심·청중)
+    ctx = []
+    if deck.get("title"):
+        ctx.append(f"강의: {deck['title']}")
+    if deck.get("thesis"):
+        ctx.append(f"핵심 논지: {deck['thesis']}")
+    if deck.get("audience"):
+        ctx.append(f"청중: {deck['audience']}")
+    tool_input = {"instruction": instruction}
+    if ctx:
+        tool_input["content"] = " / ".join(ctx)
+
+    result = json.loads(
+        si.create_image_slide(tool_input, str(slides_dir_path), design, slide_id=slide_id)
+    )
+    if not result.get("success"):
+        raise RuntimeError(result.get("message") or "이미지 슬라이드 생성 실패")
+
+    # spec json 저장 (pptx editable은 image layout 미지원 → 자동 PNG fallback)
+    spec = result.get("spec") or {}
+    spec_meta = {
+        "layout": "image", "style": result.get("style"), "composition": result.get("composition"),
+        "title": result.get("title"), "kicker": result.get("kicker"), **spec,
+    }
+    with open(slides_dir_path / f"{slide_id}.json", "w", encoding="utf-8") as f:
+        json.dump(spec_meta, f, ensure_ascii=False, indent=2)
+
+    png_rel = f"slides/{slide_id}.png"
+    spec_rel = f"slides/{slide_id}.json"
+    lecture_store.register_slide(
+        lecture_id=lecture_id, slide_id=slide_id,
+        title=result.get("title") or "(제목 없음)",
+        layout=f"image:{result.get('style')}",
+        spec_file=spec_rel, png_file=png_rel, insert_at=insert_at,
+    )
+    return {
+        "slide_id": slide_id, "slide": spec_meta, "png_file": png_rel, "spec_file": spec_rel,
+        "reasoning": result.get("reasoning"), "style": result.get("style"),
+        "composition": result.get("composition"),
+        "mode": "edit" if focus_slide_id else "create",
+    }
+
+
 def _generate_and_register_slide(
     lecture_id: str,
     instruction: str,
@@ -373,6 +439,13 @@ def _generate_and_register_slide(
     deck = lecture_store.read_deck(lecture_id)
     lecture_dir_path = lecture_store.lecture_dir(lecture_id)
     slides_dir_path = lecture_store.slides_dir(lecture_id)
+
+    # 프리미엄 이미지 디자인(또는 auto)이면 별도 경로 — media_producer/slide_image 위임
+    design = (deck.get("design_system") or "vintage_book").strip()
+    if design in _IMAGE_DESIGNS:
+        return _generate_image_slide(
+            lecture_id, deck, slides_dir_path, instruction, focus_slide_id, insert_at, design
+        )
 
     # focus slide의 현재 spec 로드 (편집 모드)
     focus_spec = None
@@ -468,6 +541,7 @@ _VALID_LAYOUTS = {
     "hero", "lecture_body", "metaphor_story", "comparison_table", "factbox", "quote",
     "hero_illustration", "illustration_anchor", "split_concept",
     "illustration_background", "illustration_overlay", "comparison_iconic",
+    "custom",  # 자유형 — AI가 슬라이드 HTML을 직접 작성 (고정 틀 없음)
 }
 
 

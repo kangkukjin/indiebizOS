@@ -209,6 +209,15 @@ def export_pptx_editable(lecture_id: str, output_path: Optional[Path] = None) ->
             import json
             with open(spec_file, "r", encoding="utf-8") as f:
                 spec = json.load(f)
+            # 프리미엄 이미지 슬라이드(slide_image 경로)는 통째 렌더 PNG — 편집모드에서도 비주얼 보존
+            if spec.get("layout") == "image":
+                png = lecture_dir / meta.get("png_file", "")
+                if png.exists():
+                    slide.shapes.add_picture(
+                        str(png), 0, 0, width=prs.slide_width, height=prs.slide_height
+                    )
+                    fallback_image += 1
+                continue
             _populate_editable_slide(slide, spec, lecture_dir, Emu, Pt)
             placed += 1
         except Exception as e:

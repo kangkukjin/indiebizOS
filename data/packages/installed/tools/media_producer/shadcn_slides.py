@@ -402,86 +402,76 @@ body {
         "extra_html": "",
     },
 
-    # tech_minimal — 다크 + 시안 강조, Linear/Vercel 양식
+    # tech_minimal — 프리미엄 다크 (Linear/Vercel/Stripe 양식): Pretendard + 레이어드 깊이 + 글래스
     "tech_minimal": {
         "theme_override": "tech_minimal",
-        "extra_head": '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">',
+        "extra_head": '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" /><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">',
         "extra_css": """
-/* === tech_minimal === */
+/* === tech_minimal (premium dark) === */
 body {
-    font-family: 'Inter', 'Apple SD Gothic Neo', sans-serif !important;
-    /* 미세한 그리드 + 다크 그라데이션 */
+    font-family: 'Pretendard Variable','Pretendard','Inter','Apple SD Gothic Neo',sans-serif !important;
+    background-color: #070A12 !important;
+    /* 레이어드 깊이: 시안 글로우(상우) + 바이올렛 글로우(하좌) + 수직 그라데이션 */
     background-image:
-        radial-gradient(ellipse at top left, rgba(28, 224, 255, 0.08), transparent 50%),
-        linear-gradient(180deg, transparent, rgba(28, 224, 255, 0.02)),
-        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.02) 40px),
-        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 40px) !important;
+        radial-gradient(1100px 720px at 82% -14%, rgba(56,189,248,0.22), transparent 56%),
+        radial-gradient(940px 660px at 4% 118%, rgba(124,99,255,0.20), transparent 60%),
+        linear-gradient(180deg, #0B1020 0%, #070A12 62%, #05070D 100%) !important;
 }
+/* 미세 그레인 + 비네트로 깊이 */
+body::after {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+        radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%),
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='tn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23tn)'/%3E%3C/svg%3E");
+}
+.slide-container { position:relative; z-index:1; }
 
-.slide-container h1, .slide-container h2, .slide-container h3 {
-    font-family: 'Inter', sans-serif !important;
-    font-weight: 800 !important;
-    letter-spacing: -0.03em;
+/* 제목 — 크고 단단하게 */
+.slide-container h1 {
+    font-family:'Pretendard Variable','Inter',sans-serif !important;
+    font-weight:800 !important; letter-spacing:-0.035em !important; line-height:1.08 !important;
 }
-.slide-container p, .slide-container li, .slide-container td {
-    line-height: 1.7 !important;
-    font-weight: 400;
-}
+.slide-container h2, .slide-container h3 { font-weight:700 !important; letter-spacing:-0.02em !important; }
+.slide-container p, .slide-container li, .slide-container td { line-height:1.7 !important; font-weight:400; }
 
-/* 라벨 — 모노스페이스 + 시안 */
+/* eyebrow — 모노 시안 */
+.slide-container [class*="uppercase"][class*="tracking"],
 .slide-container [class*="text-xs"][class*="uppercase"],
 .slide-container [class*="text-sm"][class*="uppercase"] {
-    font-family: 'JetBrains Mono', monospace !important;
-    font-weight: 500 !important;
-    color: hsl(var(--accent)) !important;
-    letter-spacing: 0.08em !important;
+    font-family:'JetBrains Mono',monospace !important; color:hsl(var(--accent)) !important; font-weight:500 !important;
 }
 
-/* 표 — 미니멀 모노 헤더 */
-.slide-container table thead {
-    background: rgba(28, 224, 255, 0.08) !important;
-}
-.slide-container table thead th {
-    color: hsl(var(--accent)) !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.85em !important;
-    text-transform: uppercase;
-}
-
-/* 인용 — 시안 좌측 굵은 선 */
-.slide-container blockquote {
-    border-color: hsl(var(--accent)) !important;
-    background: rgba(28, 224, 255, 0.05) !important;
-    color: hsl(var(--foreground)) !important;
-}
-
-/* 팩트박스 — 미니멀 카드 */
+/* 카드/박스 — 글래스모피즘 (납작한 면 금지) */
+.slide-container [class*="rounded-2xl"],
 .slide-container [class*="rounded-xl"] {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border-color: hsl(var(--border)) !important;
+    background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.015)) !important;
+    border:1px solid rgba(255,255,255,0.08) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 48px -28px rgba(0,0,0,0.85) !important;
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+/* 강조 테두리 카드 — 시안 글로우 */
+.slide-container [class*="border-2"] {
+    border-color: hsl(var(--accent)) !important;
+    box-shadow: 0 0 0 1px hsl(var(--accent) / 0.35), 0 0 48px -10px hsl(var(--accent) / 0.4) !important;
 }
 
-/* 좌상단 시안 점 + 우하단 모노 시그니처 */
-.slide-container { position: relative; }
-.slide-container::before {
-    content: '';
-    position: absolute;
-    top: 28px; left: 32px;
-    width: 10px; height: 10px;
-    background: hsl(var(--accent));
-    border-radius: 50%;
-    box-shadow: 0 0 12px hsl(var(--accent) / 0.6);
-    z-index: 10;
+/* 인용 */
+.slide-container blockquote {
+    border-color:hsl(var(--accent)) !important; background:rgba(56,189,248,0.06) !important;
+    color:hsl(var(--foreground)) !important;
 }
+/* 표 — 미니멀 모노 헤더 */
+.slide-container table thead { background:rgba(56,189,248,0.08) !important; }
+.slide-container table thead th {
+    font-family:'JetBrains Mono',monospace !important; color:hsl(var(--accent)) !important;
+    text-transform:uppercase; font-size:0.8em !important;
+}
+
+/* 우하단 시그니처 */
 .slide-container::after {
-    content: 'indiebiz.os // lectures';
-    position: absolute;
-    bottom: 24px; right: 32px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: hsl(var(--muted-foreground));
-    letter-spacing: 0.05em;
-    z-index: 10;
+    content:'indiebiz \\00B7 os'; position:absolute; bottom:26px; right:34px;
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.12em;
+    color:hsl(var(--muted-foreground)); opacity:0.7; z-index:10;
 }
 """,
         "extra_html": "",

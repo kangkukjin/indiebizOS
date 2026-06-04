@@ -622,11 +622,21 @@ function CreateLectureForm(props: {
             onChange={(e) => setDesignSystem(e.target.value)}
             className="w-full px-3 py-2 border border-stone-300 rounded focus:outline-none focus:border-stone-500 text-stone-900 bg-white"
           >
-            {DESIGN_SYSTEM_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label} — {o.description}
-              </option>
-            ))}
+            <optgroup label="CSS 디자인 (빠름·무료)">
+              {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'css').map((o) => (
+                <option key={o.value} value={o.value}>{o.label} — {o.description}</option>
+              ))}
+            </optgroup>
+            <optgroup label="프리미엄 일러스트 (이미지 생성 — 느림·비용)">
+              {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'image').map((o) => (
+                <option key={o.value} value={o.value}>{o.label} — {o.description}</option>
+              ))}
+            </optgroup>
+            <optgroup label="자동">
+              {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'auto').map((o) => (
+                <option key={o.value} value={o.value}>{o.label} — {o.description}</option>
+              ))}
+            </optgroup>
           </select>
         </Field>
         {error && <div className="text-sm text-red-600">{error}</div>}
@@ -736,11 +746,21 @@ function DesignSystemPicker(props: {
         title={`현재: ${currentLabel}. 변경 시 새 슬라이드부터 적용 (기존 슬라이드는 옛 톤 유지).`}
         className="px-2 py-1 text-xs border border-stone-300 rounded bg-white text-stone-700 hover:border-stone-500 focus:outline-none focus:border-stone-500 disabled:opacity-50"
       >
-        {DESIGN_SYSTEM_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value} title={o.description}>
-            {o.label}
-          </option>
-        ))}
+        <optgroup label="CSS (빠름)">
+          {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'css').map((o) => (
+            <option key={o.value} value={o.value} title={o.description}>{o.label}</option>
+          ))}
+        </optgroup>
+        <optgroup label="프리미엄 일러스트 (이미지·느림)">
+          {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'image').map((o) => (
+            <option key={o.value} value={o.value} title={o.description}>{o.label}</option>
+          ))}
+        </optgroup>
+        <optgroup label="자동">
+          {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'auto').map((o) => (
+            <option key={o.value} value={o.value} title={o.description}>{o.label}</option>
+          ))}
+        </optgroup>
       </select>
       {error && (
         <span className="text-[11px] text-red-600">{error}</span>
@@ -1880,7 +1900,7 @@ function AIChatPanel(props: {
 // Layout 선택 드롭다운 — 슬라이드 생성/편집 시 강제 layout
 // ─────────────────────────────────────────────────────────
 
-const LAYOUT_OPTIONS: Array<{ value: string; label: string; group: '텍스트' | '일러스트' }> = [
+const LAYOUT_OPTIONS: Array<{ value: string; label: string; group: '텍스트' | '일러스트' | '자유형' }> = [
   // 텍스트형 — 이미지 생성 없음, 빠름
   { value: 'hero',              label: '표지 (hero)',                  group: '텍스트' },
   { value: 'lecture_body',      label: '본문 (lecture_body)',          group: '텍스트' },
@@ -1895,6 +1915,8 @@ const LAYOUT_OPTIONS: Array<{ value: string; label: string; group: '텍스트' |
   { value: 'illustration_background', label: '배경 일러스트+텍스트 (illustration_background)', group: '일러스트' },
   { value: 'illustration_overlay',  label: '전면 다이어그램 (illustration_overlay)',    group: '일러스트' },
   { value: 'comparison_iconic',     label: '아이콘 비교표 (comparison_iconic)',         group: '일러스트' },
+  // 자유형 — AI가 슬라이드 HTML을 직접 작성 (고정 틀 없음, 이미지 생성 안 함)
+  { value: 'custom',                label: '자유형 (틀 없이 AI가 직접 디자인)',         group: '자유형' },
 ];
 
 function LayoutSelect(props: {
@@ -1927,6 +1949,11 @@ function LayoutSelect(props: {
         </optgroup>
         <optgroup label="일러스트형 (이미지 생성 — 느림)">
           {LAYOUT_OPTIONS.filter((o) => o.group === '일러스트').map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </optgroup>
+        <optgroup label="자유형 (틀 없음 — AI 직접 디자인)">
+          {LAYOUT_OPTIONS.filter((o) => o.group === '자유형').map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </optgroup>

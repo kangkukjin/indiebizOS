@@ -366,8 +366,12 @@ def execute(tool_input: dict, context) -> str:
                 return f"Error: 명령어 실행 실패: {e}"
 
         elif tool_name == "copy_path":
-            src = os.path.join(project_path, tool_input["source"])
-            dst = os.path.join(project_path, tool_input["destination"])
+            _src = tool_input.get("src") or tool_input.get("source")  # src 우선(코퍼스/자연어), source 별칭
+            _dst = tool_input.get("dest") or tool_input.get("destination")
+            if not _src or not _dst:
+                return "Error: src(원본)와 dest(대상) 경로가 필요합니다."
+            src = os.path.join(project_path, _src)
+            dst = os.path.join(project_path, _dst)
             scope_err = _validate_path_in_scope(dst, project_path)
             if scope_err:
                 return scope_err
@@ -391,8 +395,12 @@ def execute(tool_input: dict, context) -> str:
                 return f"파일을 복사했습니다: {os.path.abspath(dst)}"
 
         elif tool_name == "move_path":
-            src = os.path.join(project_path, tool_input["source"])
-            dst = os.path.join(project_path, tool_input["destination"])
+            _src = tool_input.get("src") or tool_input.get("source")  # src 우선(코퍼스/자연어), source 별칭
+            _dst = tool_input.get("dest") or tool_input.get("destination")
+            if not _src or not _dst:
+                return "Error: src(원본)와 dest(대상) 경로가 필요합니다."
+            src = os.path.join(project_path, _src)
+            dst = os.path.join(project_path, _dst)
             scope_err = _validate_path_in_scope(dst, project_path)
             if scope_err:
                 return scope_err

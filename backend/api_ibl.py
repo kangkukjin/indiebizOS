@@ -86,6 +86,7 @@ async def get_actions_catalog():
                 "implementation": action_config.get("implementation", ""),
                 "keywords": action_config.get("keywords") or [],
                 "group": action_config.get("group", ""),
+                "ops": action_config.get("ops") or None,  # {default, values:{op명:설명}} — 수동모드 op 분기 안내용
             }
         nodes_out[node_name] = {"actions": actions, "count": len(actions)}
         total += len(actions)

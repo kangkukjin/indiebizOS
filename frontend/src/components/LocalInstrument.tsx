@@ -16,7 +16,7 @@ const CACHE_KEY = 'local.instrument.last';
 
 interface Place {
   name: string; category?: string; address?: string; phone?: string;
-  url?: string; x?: string; y?: string; source?: string;
+  url?: string; lat?: number; lng?: number; source?: string;
 }
 interface RestaurantResult { combined?: Place[]; message?: string; error?: string }
 
@@ -72,8 +72,8 @@ export function LocalInstrument() {
   // 지도 데이터 구성 (x=경도, y=위도)
   const mapData: LocationMapData | null = useMemo(() => {
     const markers = (places || [])
-      .map((p) => ({ name: p.name, lat: parseFloat(p.y || ''), lng: parseFloat(p.x || '') }))
-      .filter((m) => !isNaN(m.lat) && !isNaN(m.lng));
+      .filter((p) => p.lat != null && p.lng != null)
+      .map((p) => ({ name: p.name, lat: p.lat as number, lng: p.lng as number }));
     if (!markers.length) return null;
     return { type: 'location_map', center: { ...markers[0] }, zoom: 14, markers };
   }, [places]);

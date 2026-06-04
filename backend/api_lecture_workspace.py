@@ -3,7 +3,7 @@
 UI가 호출하는 얇은 REST 엔드포인트. 모든 로직은 lecture_workspace 패키지의
 lecture_store 모듈에 위임한다.
 
-AI는 동일한 lecture_store를 IBL 액션([self:lecture_list] 등)으로 호출 —
+AI는 동일한 lecture_store를 IBL 액션([self:lecture]{op: "list"} 등)으로 호출 —
 두 진입점이 같은 데이터 레이어를 공유.
 """
 

@@ -8,70 +8,76 @@ import html
 import re
 from typing import Optional
 
+# 2026-06-03 학술 논문 어휘 통합 — search_openalex/arxiv/pubmed/semantic + download_arxiv/pubmed
+# → [sense:paper]{op: search|download, source}. op 키만 _OP_DISPATCHERS(소스는 파라미터).
+_OP_DISPATCHERS = {"paper_op": {"search": None, "download": None}}
+_OP_DEFAULTS = {"paper_op": "search"}
+
+
+def _search_arxiv(tool_input: dict) -> str:
+    """arXiv 프리프린트 검색."""
+    client = arxiv.Client()
+    search = arxiv.Search(
+        query=tool_input.get("query"),
+        max_results=tool_input.get("max_results", 5),
+        sort_by=arxiv.SortCriterion.Relevance,
+    )
+    results = []
+    for result in client.results(search):
+        results.append(
+            f"Title: {result.title}\n"
+            f"ArXiv ID: {result.entry_id.split('/')[-1]}\n"
+            f"Authors: {', '.join(author.name for author in result.authors)}\n"
+            f"Published: {result.published.strftime('%Y-%m-%d')}\n"
+            f"Summary: {result.summary[:200]}...\n"
+            "--------------------------------------"
+        )
+    return "\n".join(results) if results else "No papers found for the given query."
+
+
+def _download_arxiv_pdf(tool_input: dict, context) -> str:
+    """arXiv 논문 PDF 다운로드."""
+    client = arxiv.Client()
+    arxiv_id = tool_input.get("arxiv_id") or tool_input.get("id")
+    filename = tool_input.get("filename")
+    download_dir = context.resolve_path("papers")
+    os.makedirs(download_dir, exist_ok=True)
+    paper = next(client.results(arxiv.Search(id_list=[arxiv_id])), None)
+    if not paper:
+        return f"Could not find paper with ID: {arxiv_id}"
+    if not filename:
+        filename = "".join([c if c.isalnum() else "_" for c in paper.title]) + ".pdf"
+    path = paper.download_pdf(dirpath=download_dir, filename=filename)
+    return f"Paper '{paper.title}' downloaded successfully to: {path}"
+
+
+def _paper_op(tool_input: dict, context) -> str:
+    """[sense:paper]{op, source} — 학술 논문 검색·다운로드."""
+    op = (tool_input.get("op") or _OP_DEFAULTS["paper_op"]).strip()
+    source = (tool_input.get("source") or "openalex").strip().lower()
+    if op == "search":
+        if source == "arxiv":
+            return _search_arxiv(tool_input)
+        if source in ("pubmed", "pmc"):
+            return _search_pubmed(tool_input)
+        if source in ("semantic", "semantic_scholar", "s2"):
+            return _search_semantic_scholar(tool_input)
+        return _search_openalex(tool_input)  # openalex = 기본(범용)
+    if op == "download":
+        if source in ("pubmed", "pmc"):
+            return _download_pubmed_pdf(tool_input, context)
+        if source == "arxiv":
+            return _download_arxiv_pdf(tool_input, context)
+        return "download op은 source=arxiv 또는 pubmed가 필요합니다."
+    return f"알 수 없는 op '{op}'. 사용: search|download"
+
+
 def execute(tool_input: dict, context) -> str:
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name
 
-    if tool_name == "search_openalex":
-        return _search_openalex(tool_input)
-
-    elif tool_name == "search_arxiv":
-        client = arxiv.Client()
-        query = tool_input.get("query")
-        max_results = tool_input.get("max_results", 5)
-
-        search = arxiv.Search(
-            query=query,
-            max_results=max_results,
-            sort_by=arxiv.SortCriterion.Relevance
-        )
-
-        results = []
-        for result in client.results(search):
-            paper_info = (
-                f"Title: {result.title}\n"
-                f"ArXiv ID: {result.entry_id.split('/')[-1]}\n"
-                f"Authors: {', '.join(author.name for author in result.authors)}\n"
-                f"Published: {result.published.strftime('%Y-%m-%d')}\n"
-                f"Summary: {result.summary[:200]}...\n"
-                "--------------------------------------"
-            )
-            results.append(paper_info)
-
-        if not results:
-            return "No papers found for the given query."
-
-        return "\n".join(results)
-
-    elif tool_name == "download_arxiv_pdf":
-        client = arxiv.Client()
-        arxiv_id = tool_input.get("arxiv_id")
-        filename = tool_input.get("filename")
-
-        download_dir = context.resolve_path("papers")
-        os.makedirs(download_dir, exist_ok=True)
-
-        search = arxiv.Search(id_list=[arxiv_id])
-        paper = next(client.results(search), None)
-
-        if paper:
-            # If filename not provided, use a sanitized version of the title
-            if not filename:
-                filename = "".join([c if c.isalnum() else "_" for c in paper.title]) + ".pdf"
-
-            path = paper.download_pdf(dirpath=download_dir, filename=filename)
-            return f"Paper '{paper.title}' downloaded successfully to: {path}"
-        else:
-            return f"Could not find paper with ID: {arxiv_id}"
-
-    elif tool_name == "search_semantic_scholar":
-        return _search_semantic_scholar(tool_input)
-
-    elif tool_name == "search_pubmed":
-        return _search_pubmed(tool_input)
-
-    elif tool_name == "download_pubmed_pdf":
-        return _download_pubmed_pdf(tool_input, context)
+    if tool_name == "paper_op":
+        return _paper_op(tool_input, context)
 
     elif tool_name == "fetch_pew_research":
         return _fetch_rss("https://www.pewresearch.org/feed/", "Pew Research Center", tool_input.get("limit", 10))
@@ -304,7 +310,7 @@ def _download_pubmed_pdf(tool_input: dict, context) -> str:
     import urllib.request
     import urllib.error
 
-    pmcid = tool_input.get("pmcid", "").strip()
+    pmcid = (tool_input.get("pmcid") or tool_input.get("id") or "").strip()
     filename = tool_input.get("filename")
 
     if not pmcid:
@@ -652,10 +658,83 @@ def _search_guardian(tool_input: dict) -> str:
         return f"The Guardian API 검색 오류: {str(e)}"
 
 
+# ── 내부 해소 테이블 (자연어 지표·국가명 → World Bank 코드) ────────────
+# 흔한 케이스만 큐레이션. 미등록 입력은 원시 코드로 간주하고 그대로 통과.
+_WB_INDICATORS = {
+    "gdp": "NY.GDP.MKTP.CD", "국내총생산": "NY.GDP.MKTP.CD",
+    "1인당gdp": "NY.GDP.PCAP.CD", "인당gdp": "NY.GDP.PCAP.CD",
+    "gdppercapita": "NY.GDP.PCAP.CD",
+    "gdp성장률": "NY.GDP.MKTP.KD.ZG", "경제성장률": "NY.GDP.MKTP.KD.ZG",
+    "gdpgrowth": "NY.GDP.MKTP.KD.ZG", "성장률": "NY.GDP.MKTP.KD.ZG",
+    "인구": "SP.POP.TOTL", "population": "SP.POP.TOTL", "총인구": "SP.POP.TOTL",
+    "인구증가율": "SP.POP.GROW", "populationgrowth": "SP.POP.GROW",
+    "인플레이션": "FP.CPI.TOTL.ZG", "물가": "FP.CPI.TOTL.ZG",
+    "물가상승률": "FP.CPI.TOTL.ZG", "inflation": "FP.CPI.TOTL.ZG",
+    "실업률": "SL.UEM.TOTL.ZS", "unemployment": "SL.UEM.TOTL.ZS",
+    "기대수명": "SP.DYN.LE00.IN", "lifeexpectancy": "SP.DYN.LE00.IN",
+    "수출": "NE.EXP.GNFS.CD", "exports": "NE.EXP.GNFS.CD",
+    "수입": "NE.IMP.GNFS.CD", "imports": "NE.IMP.GNFS.CD",
+    "1인당소득": "NY.GNP.PCAP.CD", "gnipercapita": "NY.GNP.PCAP.CD",
+    "출산율": "SP.DYN.TFRT.IN", "fertility": "SP.DYN.TFRT.IN",
+    "도시인구비율": "SP.URB.TOTL.IN.ZS", "urban": "SP.URB.TOTL.IN.ZS",
+    "정부부채": "GC.DOD.TOTL.GD.ZS", "governmentdebt": "GC.DOD.TOTL.GD.ZS",
+    "co2": "EN.ATM.CO2E.PC", "이산화탄소": "EN.ATM.CO2E.PC", "탄소배출": "EN.ATM.CO2E.PC",
+}
+_WB_COUNTRIES = {
+    "한국": "KOR", "대한민국": "KOR", "korea": "KOR", "southkorea": "KOR", "rok": "KOR",
+    "북한": "PRK", "northkorea": "PRK",
+    "미국": "USA", "usa": "USA", "us": "USA", "unitedstates": "USA", "america": "USA",
+    "일본": "JPN", "japan": "JPN",
+    "중국": "CHN", "china": "CHN",
+    "독일": "DEU", "germany": "DEU",
+    "영국": "GBR", "uk": "GBR", "unitedkingdom": "GBR", "britain": "GBR",
+    "프랑스": "FRA", "france": "FRA",
+    "인도": "IND", "india": "IND",
+    "러시아": "RUS", "russia": "RUS",
+    "캐나다": "CAN", "canada": "CAN",
+    "호주": "AUS", "australia": "AUS",
+    "브라질": "BRA", "brazil": "BRA",
+    "이탈리아": "ITA", "italy": "ITA",
+    "스페인": "ESP", "spain": "ESP",
+    "멕시코": "MEX", "mexico": "MEX",
+    "인도네시아": "IDN", "indonesia": "IDN",
+    "베트남": "VNM", "vietnam": "VNM",
+    "대만": "TWN", "taiwan": "TWN",
+    "싱가포르": "SGP", "singapore": "SGP",
+    "태국": "THA", "thailand": "THA",
+}
+
+
+def _norm_wb_key(s: str) -> str:
+    return "".join(str(s).lower().split())
+
+
+def _resolve_wb_indicator(indicator: str) -> str:
+    """지표명(자연어)→World Bank 코드. 이미 코드(점 포함)면 그대로."""
+    if not indicator:
+        return indicator
+    if "." in indicator:  # NY.GDP.MKTP.CD 같은 원시 코드
+        return indicator
+    return _WB_INDICATORS.get(_norm_wb_key(indicator), indicator)
+
+
+def _resolve_wb_country(country: str) -> str:
+    """국가명(자연어)→ISO3. 'all'/2~3자 코드/숫자는 그대로."""
+    if not country or country == "all":
+        return country or "all"
+    key = _norm_wb_key(country)
+    if key in _WB_COUNTRIES:
+        return _WB_COUNTRIES[key]
+    # ISO2/ISO3/숫자 코드로 보이면 대문자로 통과
+    if country.isalpha() and len(country) in (2, 3):
+        return country.upper()
+    return country
+
+
 def _fetch_world_bank_data(tool_input: dict) -> str:
     """World Bank API를 사용하여 국가별 지표 데이터를 가져옵니다."""
-    indicator = tool_input.get("indicator")
-    country = tool_input.get("country", "all")
+    indicator = _resolve_wb_indicator(tool_input.get("indicator"))
+    country = _resolve_wb_country(tool_input.get("country", "all"))
     date = tool_input.get("date")
     per_page = tool_input.get("per_page", 50)
     

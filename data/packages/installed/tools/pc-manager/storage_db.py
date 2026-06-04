@@ -461,6 +461,76 @@ def query_files(
     }
 
 
+def get_summary_all() -> Dict:
+    """모든 스캔 볼륨의 통합 요약 (root_path 미지정 시 기본 동작)."""
+    scans = _load_scans_json()
+    if not scans:
+        return {"success": False,
+                "error": "스캔된 볼륨이 없습니다. [self:storage]{op:scan, path:...}로 먼저 스캔하세요."}
+
+    volumes = []
+    total_files = 0
+    total_size = 0
+    for s in scans:
+        fc = s.get('file_count', 0)
+        ts = s.get('total_size', 0)
+        total_files += fc
+        total_size += ts
+        volumes.append({
+            "name": s['name'],
+            "root_path": s['root_path'],
+            "file_count": fc,
+            "total_size_mb": round(ts / (1024 * 1024), 2),
+            "last_scan": s.get('last_scan'),
+        })
+
+    return {
+        "success": True,
+        "volume_count": len(scans),
+        "total_file_count": total_files,
+        "total_size_mb": round(total_size / (1024 * 1024), 2),
+        "volumes": volumes,
+    }
+
+
+def query_files_all(
+    search_term: Optional[str] = None,
+    extension: Optional[str] = None,
+    min_size_mb: Optional[float] = None,
+    limit: int = 100,
+) -> Dict:
+    """모든 스캔 볼륨을 가로질러 파일 검색 (root_path 미지정 시 기본 동작)."""
+    scans = _load_scans_json()
+    if not scans:
+        return {"success": False,
+                "error": "스캔된 볼륨이 없습니다. [self:storage]{op:scan, path:...}로 먼저 스캔하세요."}
+
+    all_files = []
+    total = 0
+    for s in scans:
+        res = query_files(
+            root_path=s['root_path'],
+            search_term=search_term,
+            extension=extension,
+            min_size_mb=min_size_mb,
+            limit=limit,
+        )
+        if res.get('success'):
+            total += res.get('total', 0)
+            for f in res.get('files', []):
+                f['volume'] = s['name']
+                all_files.append(f)
+
+    # 크기 내림차순 후 limit (전 볼륨 통합 top-N)
+    all_files.sort(key=lambda f: f.get('size_mb', 0), reverse=True)
+    return {
+        "success": True,
+        "total": total,
+        "limit": limit,
+        "files": all_files[:limit],
+    }
+
+
 def get_summary(root_path: str) -> Dict:
     """스캔 요약 정보"""
     root_path = _normalize_path(os.path.abspath(os.path.expanduser(root_path)))
@@ -540,6 +610,36 @@ def add_annotation(root_path: str, folder_path: str, note: str) -> Dict:
     conn.close()
 
     return {"success": True, "folder_path": folder_path, "note": note}
+
+
+def get_annotations_all() -> Dict:
+    """모든 스캔 볼륨의 폴더 주석 통합 조회 (root_path 미지정 시 기본 동작)."""
+    scans = _load_scans_json()
+    if not scans:
+        return {"success": True, "annotations": []}
+
+    annotations = []
+    for s in scans:
+        try:
+            conn = _get_connection(s['id'])
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT folder_path, note, created_at
+                FROM annotations ORDER BY created_at DESC
+            """)
+            for row in cursor.fetchall():
+                annotations.append({
+                    "volume": s['name'],
+                    "root_path": s['root_path'],
+                    "folder_path": row['folder_path'],
+                    "note": row['note'],
+                    "created_at": row['created_at'],
+                })
+            conn.close()
+        except Exception:
+            continue
+
+    return {"success": True, "annotations": annotations}
 
 
 def get_annotations(root_path: str) -> Dict:

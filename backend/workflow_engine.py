@@ -467,6 +467,25 @@ def list_workflows() -> List[Dict]:
     return workflows
 
 
+def _resolve_workflow_id(name: str) -> str:
+    """name(또는 id)을 저장된 워크플로우 id로 해소. 코퍼스/사용자가 이름으로 호출해도
+    run/get/delete가 동작하도록 — id 정확일치 → 이름 일치 → slugify 순. 못 찾으면 입력 그대로."""
+    name = str(name).strip()
+    if not name:
+        return ""
+    wfs = list_workflows()
+    ids = {w["id"] for w in wfs}
+    if name in ids:
+        return name
+    for w in wfs:
+        if w.get("name") == name:
+            return w["id"]
+    slug = _slugify(name)
+    if slug in ids:
+        return slug
+    return name
+
+
 def get_workflow(workflow_id: str) -> Optional[Dict]:
     """워크플로우 조회"""
     wf_path = _get_workflows_path() / f"{workflow_id}.yaml"
@@ -567,6 +586,12 @@ def execute_workflow_action(action: str, params: dict,
         action = op
 
     workflow_id = params.get("workflow_id", "")
+    # 코퍼스/사용자는 name으로도 호출 → 저장된 id로 해소 (run/get/delete round-trip).
+    # save는 제외 (save_workflow가 name→slug로 새 id를 생성).
+    if (not workflow_id
+            and action in ("get", "get_workflow", "run", "delete", "delete_workflow")
+            and (params.get("name") or params.get("id"))):
+        workflow_id = _resolve_workflow_id(params.get("name") or params.get("id"))
 
     if action in ("list", "list_workflows"):
         return {"workflows": list_workflows(), "count": len(list_workflows())}

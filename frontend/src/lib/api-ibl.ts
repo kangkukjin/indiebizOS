@@ -44,6 +44,7 @@ export interface IblCatalogAction {
   implementation: string;
   keywords: string[];
   group: string;
+  ops?: { default?: string; values?: Record<string, string> } | null;
 }
 
 export interface IblCatalog {

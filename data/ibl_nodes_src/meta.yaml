@@ -7,15 +7,15 @@ meta:
     - '[self:discover]{query: "주가"}  # 모르면 discover'
     - '[limbs:os_open]{path: "/path/to/file.html"}  # 파일 열기'
     - '[limbs:os_open]{path: "https://example.com"}  # URL 열기'
-    - '[sense:price]{symbol: "005930"}  # 삼성전자 주가'
-    - '[sense:price]{symbol: "AAPL"}  # 미국 주가'
+    - '[sense:stock]{op: "quote", ticker: "005930"}  # 삼성전자 주가'
+    - '[sense:stock]{op: "quote", ticker: "AAPL"}  # 미국 주가'
     - '[sense:search_ddg]{query: "AI news"}  # 웹 검색 (DuckDuckGo)'
-    - '[sense:news]{query: "삼성전자"}  # 종목 뉴스'
-    - '[sense:kr_investor]{symbol: "STK", start_date: "2026-02-01"}  # 투자자 매매동향'
-    - '[limbs:play]{query: "슬픈 피아노곡"}  # 음악 재생'
-    - '[sense:search_radio]{query: "KBS"}  # 라디오 검색'
+    - '[sense:stock]{op: "news", ticker: "AAPL"}  # 종목 뉴스'
+    - '[sense:stock]{op: "investors", market: "STK", start_date: "2026-02-01"}  # 투자자 매매동향(코스피)'
+    - '[limbs:music]{op: "play", query: "슬픈 피아노곡"}  # 음악 재생'
+    - '[sense:radio]{op: "search", name: "KBS"}  # 라디오 검색'
     - '[engines:chart]{title: "Stock Price", chart_type: "line"}  # 차트 생성 (chart_type: line/bar/pie/scatter/heatmap/candlestick/multi)'
-    - '[engines:slide]{title: "발표자료", pages: 5}  # 슬라이드 생성'
+    - '[engines:slide_shadcn]{slides: [{layout: "hero", title: "발표자료"}]}  # 슬라이드 생성'
     note: execute_ibl의 code 파라미터에 IBL 코드를 전달. 모든 값은 {params} 안에 named parameter로.
       (target) 문법은 폐지됨.
   - section: Common mistakes — NEVER do these
@@ -23,30 +23,30 @@ meta:
     - 'WRONG: [self:workflow]  # workflow는 액션이 아님'
     - 'WRONG: [self:get]{type: "time"}  # get은 액션이 아님. [self:time]을 써야 함'
     - 'RIGHT: [sense:search_ddg]{query: "AAPL"}  # 웹 검색 (DuckDuckGo)'
-    - 'WRONG: [sense:price]("AAPL")  # (target) 문법은 폐지됨! {params}를 사용할 것'
+    - 'WRONG: [sense:stock]("AAPL")  # (target) 문법은 폐지됨! {params}를 사용할 것'
     - 'RIGHT: [self:time]  # 직접 액션명 사용'
-    - 'RIGHT: [sense:price]{symbol: "AAPL"}  # 모든 값은 named parameter'
+    - 'RIGHT: [sense:stock]{op: "quote", ticker: "AAPL"}  # 모든 값은 named parameter'
     note: 항상 구체적 액션명을 사용하라. (target) 문법은 에러 발생함.
   - section: 'params — 모든 값은 {key: val} 형태의 named parameter'
     examples:
-    - 'RIGHT: [sense:kr_investor]{symbol: "STK", start_date: "2026-02-01"}'
-    - 'RIGHT: [sense:kr_investor]{symbol: "STK", start_date: "2026-02-01", end_date:
+    - 'RIGHT: [sense:stock]{op: "investors", market: "STK", start_date: "2026-02-01"}'
+    - 'RIGHT: [sense:stock]{op: "investors", market: "STK", start_date: "2026-02-01", end_date:
       "2026-02-28"}'
-    - 'WRONG: [sense:kr_investor]("STK") {"start_date": "2026-02-01"}  # (target)
+    - 'WRONG: [sense:stock]("STK") {"start_date": "2026-02-01"}  # (target)
       문법 폐지됨!'
-    - 'RIGHT: [sense:price]{symbol: "005930"}  # 파라미터가 하나여도 named'
+    - 'RIGHT: [sense:stock]{op: "quote", ticker: "005930"}  # 파라미터가 하나여도 named'
     note: '모든 값은 {key: val} 안에 작성. (target) 문법은 폐지되어 에러 발생함.'
   - section: Pipeline — 다중 스텝은 >>, & 연산자 사용
     examples:
     - '[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}  # 순차: step1
       결과가 step2에 자동 전달'
-    - '[engines:slide]{title: "보고서"} >> [limbs:os_open]  # 슬라이드 생성 후 열기'
-    - '[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}  # 병렬 실행'
-    - '[self:time] & [sense:price]{symbol: "005930"} & [sense:news]{query: "한국 증시"}  #
+    - '[engines:slide_shadcn]{slides: [{layout: "hero", title: "보고서"}]} >> [limbs:os_open]  # 슬라이드 생성 후 열기'
+    - '[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}  # 병렬 실행'
+    - '[self:time] & [sense:stock]{op: "quote", ticker: "005930"} & [sense:stock]{op: "news", ticker: "AAPL"}  #
       병렬 3개'
-    - '[sense:price]{symbol: "AAPL"} ?? [sense:kr_price]{symbol: "AAPL"}  # 폴백: 실패시
+    - '[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:stock]{op: "price", ticker: "AAPL"}  # 폴백: 실패시
       대안'
-    - 'WRONG: [engines:slide]{title: "AI"} >> [limbs:os_open]{path: $prev.file}  #
+    - 'WRONG: [engines:slide_shadcn]{slides: [{layout: "hero", title: "AI"}]} >> [limbs:os_open]{path: $prev.file}  #
       $prev 문법 없음!'
     note: '>> 사용 시 이전 step의 결과가 다음 step에 자동 전달됨. $prev, $result 같은 변수 참조 문법은 없다.'
   pipeline:
@@ -55,17 +55,17 @@ meta:
     example: '[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}'
   - op: '&'
     name: Parallel
-    example: '[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}'
+    example: '[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}'
   - op: ??
     name: Fallback
-    example: '[sense:price]{symbol: "AAPL"} ?? [sense:kr_price]{symbol: "AAPL"}'
+    example: '[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:stock]{op: "price", ticker: "AAPL"}'
   principles:
-  - 'IBL 코드를 execute_ibl의 code 파라미터로 전달. 예: execute_ibl(code=''[sense:price]{symbol:
+  - 'IBL 코드를 execute_ibl의 code 파라미터로 전달. 예: execute_ibl(code=''[sense:stock]{op: "quote", ticker:
     "AAPL"}'')'
-  - 구체적 액션명을 직접 지정 (time, price, play 등). 일반 동사(get, run 등)는 액션명이 아니므로 쓰지 말 것.
+  - 구체적 액션명을 직접 지정 (time, stock, play 등). 일반 동사(get, run 등)는 액션명이 아니므로 쓰지 말 것.
   - '[self:discover]{query: "키워드"} — 어떤 액션을 쓸지 모를 때 사용.'
   - '모든 값은 {key: val} 형태의 named parameter. (target) 문법은 폐지됨 — 사용 시 에러 발생.'
-  - '전문 데이터 액션이 있으면 파일 직접 탐색([self:list]+[self:read])보다 반드시 우선 사용. 예: 건강기록→[self:health_query],
+  - '전문 데이터 액션이 있으면 파일 직접 탐색([self:list]+[self:read])보다 반드시 우선 사용. 예: 건강기록→[self:health]{op: "query"},
     메모리→[self:recall]'
   - 'CRITICAL: 절대로 IBL 코드([node:action]{...})를 텍스트 응답에 포함하지 말 것. IBL은 반드시 execute_ibl
     도구의 code 파라미터로만 실행. 사용자에게는 자연어로 응답.'

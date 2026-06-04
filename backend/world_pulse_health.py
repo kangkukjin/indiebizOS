@@ -47,7 +47,7 @@ def run_static_ibl_check() -> Dict:
     try:
         try:
             import yaml as _yaml
-            from build_ibl_nodes import validate
+            from build_ibl_nodes import validate, validate_corpus_params
         except ImportError as e:
             return {
                 "node": "__static__",
@@ -77,6 +77,10 @@ def run_static_ibl_check() -> Dict:
         with open(nodes_yaml, "r", encoding="utf-8") as f:
             data = _yaml.safe_load(f)
         issues = validate(data, BASE)
+        # 코퍼스 param 정합도 같은 사이클에서 (조용히 무시되는 키 회귀 방지).
+        cissues = validate_corpus_params(data, BASE)
+        if cissues:
+            issues = issues + cissues
     except Exception as e:
         return {
             "node": "__static__",
@@ -139,7 +143,7 @@ def generate_guide():
         "> 이 정보는 대화 시작 시 시스템 프롬프트에 자동 포함됩니다.",
         "> 사용자가 '요즘 세상은 어때', '오늘 경제 상황' 등을 물으면",
         "> 아래 데이터를 바로 활용하여 답하세요.",
-        "> [sense:world_refresh]나 read_guide 호출은 불필요합니다.",
+        "> [sense:world]{op: \"refresh\"}나 read_guide 호출은 불필요합니다.",
         "",
     ]
 

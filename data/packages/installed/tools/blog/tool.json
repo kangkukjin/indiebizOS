@@ -102,23 +102,6 @@
       }
     },
     {
-      "name": "kinsight",
-      "description": "블로그 글 기반 인사이트를 생성합니다.\n\n## 처리 과정\n1. 최신 글 분석 (기본 15개, count로 조절)\n2. 커뮤니티/콘텐츠 추천 생성\n3. HTML 파일로 저장\n\n## 사용 시점\n- 블로그 트렌드 분석\n- 관련 콘텐츠 아이디어 얻기",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "count": {
-            "type": "integer",
-            "description": "분석할 글 개수 (기본 15)"
-          },
-          "before_date": {
-            "type": "string",
-            "description": "이 날짜 이전 글 분석 (YYYY-MM-DD)"
-          }
-        }
-      }
-    },
-    {
       "name": "search_blog_semantic",
       "description": "의미 기반 검색만 사용합니다. 키워드가 정확히 일치하지 않아도 의미적으로 유사한 글을 찾습니다.\n\n## 사용 시점\n- 추상적인 개념으로 글 찾기\n- 키워드가 정확하지 않을 때\n\n## 주의사항\n- sentence-transformers + sqlite-vec 필요\n- 미설치 시 FTS5 키워드 검색으로 대체",
       "input_schema": {
@@ -204,6 +187,61 @@
             "description": "연결 최소 코사인 유사도 (기본 0.55). 높이면 더 엄격하게 연결"
           }
         }
+      }
+    },
+    {
+      "name": "blog_op",
+      "description": "내 블로그 조회·검색·관리 (op 분기) — [self:blog].\n- op=posts(기본): 글 목록. category/count.\n- op=search: RAG 검색. query + mode(hybrid 기본/semantic/content) + limit. content는 post_id 또는 title.\n- op=check_new: 마지막 조회 이후 새 글.\n- op=rebuild_index: 검색 인덱스(벡터) 재구축.\n- op=stats: 글 수·분포·트렌드.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "posts",
+              "search",
+              "check_new",
+              "rebuild_index",
+              "stats"
+            ],
+            "default": "posts",
+            "description": "posts(기본)/search/check_new/rebuild_index/stats"
+          },
+          "query": {
+            "type": "string",
+            "description": "[search] 검색어"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "hybrid",
+              "semantic",
+              "content"
+            ],
+            "description": "[search] hybrid(기본)/semantic/content"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "[search] 결과 수(기본 5)"
+          },
+          "post_id": {
+            "type": "string",
+            "description": "[search content] 글 ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "[search content] 제목(부분일치)"
+          },
+          "category": {
+            "type": "string",
+            "description": "[posts] 카테고리 필터"
+          },
+          "count": {
+            "type": "integer",
+            "description": "[posts] 개수(기본 20)"
+          }
+        },
+        "required": []
       }
     }
   ]

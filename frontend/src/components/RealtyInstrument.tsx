@@ -49,7 +49,7 @@ async function loadDistricts(province: string): Promise<{ name: string; code: st
   if (_districtCache[province]) return _districtCache[province];
   const res = await fetch(IBL_ENDPOINT, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: `[sense:district_codes]{city: "${province}", project_id: "${PROJECT_ID}"}`, project_path: '.' }),
+    body: JSON.stringify({ code: `[sense:realty]{op: "codes", city: "${province}", project_id: "${PROJECT_ID}"}`, project_path: '.' }),
   });
   const d = await res.json();
   const list = Object.entries((d && d.regions) || {}).map(([name, code]) => ({ name, code: String(code) }));

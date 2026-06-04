@@ -183,7 +183,7 @@ def prepare_training_data(examples: List[Dict], variations: List[Dict],
 
     Args:
         normalize: True이면 코드를 액션 패턴으로 정규화.
-                   [sense:stock_info]{symbol: "삼성전자"} → [sense:stock_info]
+                   [sense:stock]{op: "info", ticker: "삼성전자"} → [sense:stock]
                    파라미터만 다른 코드들이 같은 그룹으로 합쳐짐.
     """
     # 모든 데이터를 ibl_code 기준으로 그룹핑
@@ -253,8 +253,8 @@ def normalize_code_to_pattern(ibl_code: str) -> str:
     """IBL 코드를 액션 패턴으로 정규화.
 
     파라미터를 제거하고 액션 패턴만 남긴다.
-    [sense:stock_info]{symbol: "삼성전자"} → [sense:stock_info]
-    [sense:price]{symbol: "A"} >> [engines:chart]{type: "line"} → [sense:price] >> [engines:chart]
+    [sense:stock]{op: "info", ticker: "삼성전자"} → [sense:stock]
+    [sense:stock]{op: "quote", ticker: "A"} >> [engines:chart]{type: "line"} → [sense:stock] >> [engines:chart]
     [a:b]{...} & [c:d]{...} → [a:b] & [c:d]
     """
     import re
@@ -325,7 +325,13 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
     # batch 4→2는 OOM 응급처치였으나 진짜 원인은 시스템 메모리 굶주림 +
     # HIGH_WATERMARK_RATIO=0.0(자체 브레이크 해제 → OS jetsam kill 유도)로 추정.
     # 메모리 위생(epoch 사이 empty_cache + watermark 기본값)으로 batch=4 재시도.
-    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=4)
+    # 2026-06-03: M4 Pro 24GB로 batch=16 — 옛 OOM은 메모리 빈약한 맥에어 한정.
+    #   in-batch negative가 많아 대조학습 신호↑ (클라우드 b16 = Top-5 95.3% 재현 목표).
+    #   WATERMARK_RATIO는 절대 0.0으로 두지 말 것(기본값 유지 = 깔끔한 RuntimeError).
+    # 2026-06-03 batch 스윕(4/8/16/32) 결론: batch는 레버 아님 — 넷 다 클라우드 백업(desc Top-5 94.5%)
+    #   못 넘음. 로컬 최고는 b8(desc 92.8). 진짜 레버는 데이터량·epoch·재현성(generate_variations 시딩).
+    #   상세: [[project_hippocampus_retrain_memory]]. 기본은 8(로컬 최선)로 둠.
+    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=8)
 
     # Loss: MultipleNegativesRankingLoss
     # 같은 배치 내의 다른 쌍이 자동으로 negative가 됨

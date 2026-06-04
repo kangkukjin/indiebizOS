@@ -15,6 +15,9 @@ import { InvestInstrument } from './InvestInstrument';
 import { WeatherInstrument } from './WeatherInstrument';
 import { CultureInstrument } from './CultureInstrument';
 import { LocalInstrument } from './LocalInstrument';
+import { DirectionsInstrument } from './DirectionsInstrument';
+import { CalendarInstrument } from './CalendarInstrument';
+import { NewspaperInstrument } from './NewspaperInstrument';
 import { RadioInstrument } from './RadioInstrument';
 import { YtMusicInstrument } from './YtMusicInstrument';
 
@@ -47,6 +50,22 @@ const DOMAINS: Domain[] = [
       { id: 'booksearch', icon: '📖', label: '도서검색', el: <BookInstrument /> },
     ],
   },
+  // 블로그 노트(Obsidian vault) — IBL 액션이 아니라 obsidian:// 프로토콜로 데스크톱 Obsidian을 띄운다.
+  // 진실 소스 vault: ~/Documents/iRepublic-Vault (markdown). shell.openExternal 경유.
+  { id: 'obsidian', icon: '💎', label: '블로그(Obsidian)',
+    onOpen: () => window.electron?.openExternal?.('obsidian://open?vault=iRepublic-Vault'), instruments: [] },
+  {
+    id: 'calendar', icon: '📅', label: '일정',
+    instruments: [
+      { id: 'calendar', icon: '📅', label: '일정 캘린더', el: <CalendarInstrument /> },
+    ],
+  },
+  {
+    id: 'newspaper', icon: '📰', label: '신문',
+    instruments: [
+      { id: 'newspaper', icon: '📰', label: '신문 생성', el: <NewspaperInstrument /> },
+    ],
+  },
   {
     id: 'device', icon: '🖥️', label: '내 기기',
     instruments: [
@@ -68,6 +87,12 @@ const DOMAINS: Domain[] = [
     id: 'local', icon: '🗺️', label: '지역정보',
     instruments: [
       { id: 'places', icon: '🗺️', label: '장소·맛집', el: <LocalInstrument /> },
+    ],
+  },
+  {
+    id: 'directions', icon: '🛣️', label: '길찾기·CCTV',
+    instruments: [
+      { id: 'directions', icon: '🛣️', label: '길찾기·CCTV', el: <DirectionsInstrument /> },
     ],
   },
   {

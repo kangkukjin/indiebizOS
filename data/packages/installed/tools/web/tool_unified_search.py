@@ -287,7 +287,7 @@ def unified_search(query: str, sources: list = None, web_count: int = None,
         "news": search_results.get("news"),
         "youtube": search_results.get("youtube"),
         "papers": search_results.get("papers"),
-        "_note": "검색 결과는 제목과 요약(snippet)만 포함합니다. 상세 내용이 필요하면: 웹/뉴스 → [sense:crawl]{url: \"...\"}, 유튜브 → [sense:video_transcript]{url: \"...\"}, 논문 → DOI/PDF URL로 [sense:crawl] 사용."
+        "_note": "검색 결과는 제목과 요약(snippet)만 포함합니다. 상세 내용이 필요하면: 웹/뉴스 → [sense:crawl]{url: \"...\"}, 유튜브 → [sense:video]{op: \"transcript\", url: \"...\"}, 논문 → DOI/PDF URL로 [sense:crawl] 사용."
     })
 
 

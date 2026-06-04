@@ -2,9 +2,9 @@
  * InvestInstrument — 투자 "계기(instrument)" (앱 모드)
  *
  * 같은 IBL 위에서 사람이 직접 도는 다이얼 (세 탭):
- *   주식  [sense:search_stock] 검색 → [sense:price]+[sense:stock_info] → [sense:kr_price]/[sense:us_price] 차트
+ *   주식  [sense:stock]{op:search} 검색 → {op:price}+{op:info} → {op:history} 차트 (시장 자동판별)
  *   코인  [sense:crypto] 시세 + 일별 이력 차트 (days/max_points)
- *   자원  [sense:price] 금(GC=F)·은(SI=F)·유가(CL=F) 등 선물 시세 + 차트 (period/max_points)
+ *   자원  [sense:stock]{op:price} 금(GC=F)·은(SI=F)·유가(CL=F) 등 선물 시세 + 차트 (period/max_points)
  * 검색·조회는 LLM 없이 IBL 직접 실행(0 토큰). 마지막 선택은 localStorage에 굳혀 다음 방문에 '이미 떠 있게'.
  *
  * 스키마 출처: data/ibl_nodes_src/sense.yaml (finance 그룹), investment/handler.py
@@ -144,8 +144,8 @@ export function InvestInstrument() {
     setLoading(true); setError(null);
     setQuote(null); setInfo(null);
     const [p, i] = await Promise.all([
-      runIBL<PriceData>(`[sense:price]{symbol: "${esc(symbol)}"}`),
-      runIBL<InfoData>(`[sense:stock_info]{symbol: "${esc(symbol)}"}`),
+      runIBL<PriceData>(`[sense:stock]{op: "price", ticker: "${esc(symbol)}"}`),
+      runIBL<InfoData>(`[sense:stock]{op: "info", ticker: "${esc(symbol)}"}`),
     ]);
     if (p.success && p.data) setQuote(p.data);
     else setError(p.error || '시세를 불러오지 못했습니다.');
@@ -158,9 +158,9 @@ export function InvestInstrument() {
     const start = new Date(); start.setDate(start.getDate() - days);
     const kr = isKR(symbol);
     const sym = kr ? krBase(symbol) : symbol;
-    const action = kr ? 'kr_price' : 'us_price';
+    // op:price 는 ticker(6자리=한국/그외=미국)로 시장 자동판별 → KRX·FMP 분기
     const r = await runIBL<PriceData>(
-      `[sense:${action}]{symbol: "${esc(sym)}", start_date: "${ymd(start)}", end_date: "${ymd(end)}", max_points: 400}`,
+      `[sense:stock]{op: "history", ticker: "${esc(sym)}", start_date: "${ymd(start)}", end_date: "${ymd(end)}", max_points: 400}`,
     );
     const pts = r.success ? (r.data?.prices || r.data?.sample) : null;
     setChart(pts && pts.length ? pts : null);
@@ -175,7 +175,7 @@ export function InvestInstrument() {
     if (!q) return;
     if (looksLikeSymbol(q)) { loadStock(q.toUpperCase(), q.toUpperCase()); return; }
     setLoading(true); setError(null); setQuotes(null);
-    const r = await runIBL<{ quotes?: Quote[] }>(`[sense:search_stock]{query: "${esc(q)}"}`);
+    const r = await runIBL<{ quotes?: Quote[] }>(`[sense:stock]{op: "search", query: "${esc(q)}"}`);
     setLoading(false);
     if (r.success && r.data?.quotes?.length) setQuotes(r.data.quotes);
     else setError('검색 결과가 없습니다. 회사명·종목코드(예: 005930)·티커로 다시 시도해 보세요.');
@@ -206,7 +206,7 @@ export function InvestInstrument() {
   const loadCommodity = useCallback(async (sym: string) => {
     setCommodity(sym);
     setLoading(true); setError(null); setCommodityData(null); setCommodityChart(null);
-    const r = await runIBL<PriceData>(`[sense:price]{symbol: "${esc(sym)}"}`);
+    const r = await runIBL<PriceData>(`[sense:stock]{op: "price", ticker: "${esc(sym)}"}`);
     setLoading(false);
     if (r.success && r.data) setCommodityData(r.data);
     else setError(r.error || '시세를 불러오지 못했습니다.');
@@ -216,7 +216,7 @@ export function InvestInstrument() {
   useEffect(() => {
     if (tab !== 'commodity' || !commodity) return;
     let alive = true;
-    runIBL<PriceData>(`[sense:price]{symbol: "${esc(commodity)}", period: "${period}", max_points: 400}`)
+    runIBL<PriceData>(`[sense:stock]{op: "price", ticker: "${esc(commodity)}", period: "${period}", max_points: 400}`)
       .then((r) => {
         const pts = r.success ? (r.data?.prices || r.data?.sample) : null;
         if (alive) setCommodityChart(pts && pts.length ? pts : null);

@@ -5,60 +5,6 @@
   "version": "1.0.0",
   "tools": [
     {
-      "name": "search_radio",
-      "description": "전세계 인터넷 라디오 방송을 검색합니다 (Radio Browser API 사용).\n\n## 검색 방법 (파라미터 조합 가능)\n- name: 방송국 이름으로 검색 (예: 'KBS', 'BBC')\n- tag: 장르/태그로 검색 (예: 'jazz', 'classical', 'rock', 'kpop', 'news')\n- country: 국가 코드로 필터 (예: 'KR', 'US', 'JP', 'GB')\n- state: 지역/주/도시로 검색 (예: 'Okinawa', 'California', 'Tokyo')\n- language: 언어로 필터 (예: 'korean', 'english', 'japanese')\n\n## 검색 팁\n- 특정 도시/지역의 라디오: state 파라미터 사용 (예: state='Okinawa', country='JP')\n- 결과가 없으면 country만으로 넓게 검색 후 필터\n- 한국 방송은 get_korean_radio가 더 정확함",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "description": "방송국 이름 검색어 (예: 'KBS', 'Jazz FM')"
-          },
-          "tag": {
-            "type": "string",
-            "description": "장르/태그 (예: 'jazz', 'classical', 'rock', 'kpop', 'news')"
-          },
-          "country": {
-            "type": "string",
-            "description": "국가 코드 (예: 'KR', 'US', 'JP', 'GB')"
-          },
-          "state": {
-            "type": "string",
-            "description": "지역/주/도시 (예: 'Okinawa', 'California', 'Tokyo', 'Seoul')"
-          },
-          "language": {
-            "type": "string",
-            "description": "언어 (예: 'korean', 'english', 'japanese')"
-          },
-          "order": {
-            "type": "string",
-            "description": "정렬 기준. votes=인기순(기본), clickcount=최근청취순, random=랜덤발견, name=이름순, bitrate=음질순"
-          },
-          "bitrateMin": {
-            "type": "integer",
-            "description": "최소 비트레이트(kbps). 고음질 필터 (예: 192, 256, 320)"
-          },
-          "limit": {
-            "type": "integer",
-            "description": "결과 수 (기본 10, 최대 50)"
-          }
-        }
-      }
-    },
-    {
-      "name": "get_korean_radio",
-      "description": "한국 주요 방송사의 라디오 채널 목록과 스트림 URL을 반환합니다.\n\n## 지원 방송사\n- KBS: 1Radio, Cool FM, Classic FM, Happy FM, 3Radio\n- MBC: Standard FM, FM4U, mini\n- SBS: Power FM, Love FM\n- TBS: FM, eFM\n- CBS: Standard FM, Music FM\n- EBS: FM\n\n## 사용 시점\n- 한국 라디오를 바로 들을 때 (search_radio보다 정확)\n- broadcaster로 특정 방송사만 필터 가능\n\n## 다른 도구와의 관계\n- 목록 확인 후 play_radio로 재생",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "broadcaster": {
-            "type": "string",
-            "description": "방송사 필터 (예: 'KBS', 'MBC', 'SBS', 'TBS', 'CBS', 'EBS'). 생략하면 전체 목록"
-          }
-        }
-      }
-    },
-    {
       "name": "play_radio",
       "description": "라디오 방송을 PC 스피커로 재생합니다 (mpv 사용). URL/링크 보여주지 말 것.\n\n## 사용법\n- station_id: get_korean_radio에서 받은 ID (예: 'kbs_coolfm')\n- stream_url: search_radio에서 받은 스트림 URL\n- 둘 중 하나만 지정하면 됨 (station_id 우선)\n\n## 주의사항\n- mpv가 설치되어 있어야 함 (brew install mpv)\n- 이미 재생 중이면 기존 방송 중지 후 새 방송 재생\n- stop_radio로 중지\n\n## 다른 도구와의 관계\n- 한국 방송: get_korean_radio → play_radio\n- 해외 방송: search_radio → play_radio (stream_url 사용)",
       "input_schema": {
@@ -106,7 +52,9 @@
             "description": "볼륨 (0-100)"
           }
         },
-        "required": ["volume"]
+        "required": [
+          "volume"
+        ]
       }
     },
     {
@@ -149,7 +97,9 @@
             "description": "제거할 방송국 이름"
           }
         },
-        "required": ["name"]
+        "required": [
+          "name"
+        ]
       }
     },
     {
@@ -160,14 +110,29 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["list", "add", "remove"],
+            "enum": [
+              "list",
+              "add",
+              "remove"
+            ],
             "description": "즐겨찾기 동작"
           },
-          "name": { "type": "string", "description": "별칭 (add/remove)" },
-          "station_id": { "type": "string", "description": "방송국 ID (add)" },
-          "stream_url": { "type": "string", "description": "스트림 URL (add)" }
+          "name": {
+            "type": "string",
+            "description": "별칭 (add/remove)"
+          },
+          "station_id": {
+            "type": "string",
+            "description": "방송국 ID (add)"
+          },
+          "stream_url": {
+            "type": "string",
+            "description": "스트림 URL (add)"
+          }
         },
-        "required": ["op"]
+        "required": [
+          "op"
+        ]
       }
     },
     {
@@ -176,11 +141,71 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "op": { "type": "string", "enum": ["play", "stop"], "default": "play", "description": "재생 동작" },
-          "station_id": { "type": "string", "description": "방송국 ID (op=play 시)" },
-          "stream_url": { "type": "string", "description": "스트림 URL (op=play 시)" },
-          "volume": { "type": "integer", "description": "볼륨 0-100 (op=play 시, 기본 70)" }
+          "op": {
+            "type": "string",
+            "enum": [
+              "play",
+              "stop"
+            ],
+            "default": "play",
+            "description": "재생 동작"
+          },
+          "station_id": {
+            "type": "string",
+            "description": "방송국 ID (op=play 시)"
+          },
+          "stream_url": {
+            "type": "string",
+            "description": "스트림 URL (op=play 시)"
+          },
+          "volume": {
+            "type": "integer",
+            "description": "볼륨 0-100 (op=play 시, 기본 70)"
+          }
         }
+      }
+    },
+    {
+      "name": "radio_search_op",
+      "description": "라디오 방송국 검색·탐색 (op 분기) — [sense:radio]. 재생은 [limbs:radio].\n- op=search(기본): 전세계 인터넷 라디오 (Radio Browser). name/tag/country/language/limit.\n- op=korean: 한국 방송사 채널 (KBS/MBC/SBS/TBS/CBS/EBS). broadcaster(비우면 전체).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "search",
+              "korean"
+            ],
+            "default": "search",
+            "description": "search(기본)/korean"
+          },
+          "name": {
+            "type": "string",
+            "description": "[search] 방송국 이름"
+          },
+          "tag": {
+            "type": "string",
+            "description": "[search] 장르 태그"
+          },
+          "country": {
+            "type": "string",
+            "description": "[search] 국가"
+          },
+          "language": {
+            "type": "string",
+            "description": "[search] 언어"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "[search] 결과 수(기본 10)"
+          },
+          "broadcaster": {
+            "type": "string",
+            "description": "[korean] KBS/MBC/SBS 등(비우면 전체)"
+          }
+        },
+        "required": []
       }
     }
   ]

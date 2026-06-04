@@ -95,8 +95,8 @@ def gen(code, intents):
                 f"{city} 우산 챙겨야 해?", f"지금 {city} 밖에 어때"
             ]
 
-    # ---- sense:cctv_search ----
-    elif a == "sense:cctv_search":
+    # ---- sense:cctv (op=search) ----
+    elif a == "sense:cctv":
         q = p(code, "query")
         if q:
             results += [

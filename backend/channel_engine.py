@@ -3,7 +3,7 @@ channel_engine.py - IBL 채널 노드 실행 엔진
 
 [others:channel_send]{channel_type: "gmail", to: "user@mail.com", subject: "제목", body: "내용"}
 [others:channel_read]{channel_type: "gmail", max_results: 10}
-[others:channel_search]{channel_type: "gmail", query: "from:someone"}
+[others:channel_read]{channel_type: "gmail", query: "from:someone"}  # query 주면 검색
 
 에이전트 identity 기반 발송:
 - 외부 에이전트: 에이전트에 설정된 주소(email/nostr)를 사용
@@ -198,13 +198,18 @@ def execute_channel_action(action: str, params: dict,
     """
     channel_type_raw = params.get("channel_type", "")
     if not channel_type_raw:
+        # 수신자가 이메일 형식이면 gmail로 추론 (코퍼스 다수가 channel_type 생략).
+        _to = str(params.get("to", "")).strip()
+        if "@" in _to and "." in _to.split("@")[-1]:
+            channel_type_raw = "gmail"
+    if not channel_type_raw:
         return {
             "error": "channel_type이 필요합니다.",
             "supported_channels": SUPPORTED_CHANNELS,
             "usage": {
                 "send": '[others:channel_send]{channel_type: "gmail", to: "user@mail.com", subject: "제목", body: "내용"}',
                 "read": '[others:channel_read]{channel_type: "gmail", max_results: 10}',
-                "search": '[others:channel_search]{channel_type: "gmail", query: "from:someone"}',
+                "search": '[others:channel_read]{channel_type: "gmail", query: "from:someone"}',
             }
         }
 

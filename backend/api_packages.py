@@ -132,7 +132,19 @@ async def reload_package_cache():
     backend 재시작 없이 신규 도구 매핑을 반영한다."""
     try:
         package_manager.invalidate_cache()
-        return {"status": "ok", "message": "패키지/도구 캐시를 초기화했습니다."}
+        # IBL 노드 캐시 전부 비운다 — 액션 추가·제거·op 변경(ibl_nodes.yaml 재빌드) 반영.
+        #  ① ibl_access(카탈로그/시스템프롬프트)  ② ibl_engine(실행기) + ibl_executors(파생, reload_nodes가 함께)
+        try:
+            from ibl_access import invalidate_nodes_cache
+            invalidate_nodes_cache()
+        except Exception:
+            pass
+        try:
+            from ibl_engine import reload_nodes
+            reload_nodes()
+        except Exception:
+            pass
+        return {"status": "ok", "message": "패키지/도구/IBL노드 캐시(카탈로그+실행기)를 초기화했습니다."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

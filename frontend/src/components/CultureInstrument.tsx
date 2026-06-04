@@ -2,7 +2,7 @@
  * CultureInstrument — 문화·공연 "계기(instrument)" (앱 모드)
  *
  * 같은 IBL 위 두 탭:
- *   공연  [sense:performance]{genre, keyword} (KOPIS) + [sense:genres] 장르 다이얼
+ *   공연  [sense:performance]{genre, keyword} (KOPIS) + {op:genres} 장르 다이얼
  *   전시  [sense:exhibit]{keyword} (KCISA)
  * 검색은 LLM 없이 IBL 직접 실행(0 토큰). 포스터/썸네일로 시각적 브라우즈. 마지막 탭은 localStorage에 굳힘.
  *
@@ -68,7 +68,7 @@ export function CultureInstrument() {
 
   // 장르 목록 (다이얼)
   useEffect(() => {
-    runIBL<Genre>('[sense:genres]{}').then((r) => { if (r.genres) setGenres(r.genres); });
+    runIBL<Genre>('[sense:performance]{op: "genres"}').then((r) => { if (r.genres) setGenres(r.genres); });
   }, []);
 
   const loadPerf = useCallback(async (g: string, q: string) => {

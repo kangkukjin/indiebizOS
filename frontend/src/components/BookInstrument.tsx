@@ -4,7 +4,7 @@
  * 세 소스를 한 표면에서 (같은 IBL 위):
  *   국내(domestic)  [sense:book]            도서관정보나루 — 대출통계·추천
  *   글로벌(global)  [sense:search_books]    Google Books — 원서·요약
- *   고전(classic)   [sense:gutenberg_books] Project Gutenberg — 저작권 만료 원문 읽기
+ *   고전(classic)   [sense:classic]{op:western} Project Gutenberg — 저작권 만료 원문 읽기
  * 검색은 LLM 없이 IBL 직접 실행(0 토큰). 클릭 상세는 '리스트에 없는 정보'가 있을 때만.
  */
 import { useMemo, useState, useRef } from 'react';
@@ -57,7 +57,7 @@ const esc = (s: string) => s.replace(/"/g, '');
 function buildCode(q: string, field: Field, source: Source): string {
   if (source === 'naver') return `[sense:search_naver]{query: "${esc(q)}", type: "book", display: 20, _raw: true}`;
   if (source === 'global') return `[sense:search_books]{query: "${esc(q)}"}`;
-  if (source === 'classic') return `[sense:gutenberg_books]{query: "${esc(q)}"}`;
+  if (source === 'classic') return `[sense:classic]{op: "western", query: "${esc(q)}"}`;
   return `[sense:book]{${field}: "${esc(q)}"}`;
 }
 // 네이버 isbn 필드는 "10자리 13자리" 형태일 수 있어 13자리만 추출
@@ -139,7 +139,7 @@ export function BookInstrument() {
     try {
       const [dr, rr] = await Promise.all([
         runIBL<{ book?: Book & { loan_stats?: LoanStats } }>(`[sense:book]{isbn: "${b.isbn13}", detail: true}`),
-        runIBL<{ data?: Book[] }>(`[sense:recommended_books]{isbn13: "${b.isbn13}"}`),
+        runIBL<{ data?: Book[] }>(`[sense:book]{op: "recommended", isbn13: "${b.isbn13}"}`),
       ]);
       const full = { ...b, ...(dr.book || {}) };
       setDetail((d) => (d && d.book === b) ? { book: full, source: src, stats: dr.book?.loan_stats || null, recs: rr.data || [] } : d);

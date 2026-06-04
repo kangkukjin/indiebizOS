@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 
 # common 유틸리티 사용
@@ -34,6 +34,35 @@ def get_amadeus_token():
     except:
         pass
     return None
+
+
+# ── 좌표/표시 봉투 공통 헬퍼 ──────────────────────────────
+# 위치 액션 표준: 출력 좌표는 항상 {lat,lng} float, 지도형 결과는 map_data 봉투.
+# sys.modules["common"] 충돌(cctv 패키지가 'common' 이름을 flat 모듈로 덮음) 때문에
+# backend/common 공유 대신 패키지 로컬에 둔다. 봉투 스키마 규약은 cctv/프론트와 동일.
+def _normalize_coords(lat, lng):
+    """좌표를 표준 {lat,lng} float로 정규화. 파싱 실패·(0,0)·범위밖이면 None."""
+    try:
+        lat = float(lat)
+        lng = float(lng)
+    except (TypeError, ValueError):
+        return None
+    if lat == 0 and lng == 0:
+        return None
+    if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+        return None
+    return {"lat": lat, "lng": lng}
+
+
+def build_location_map(center: dict, markers: list, zoom: int = 14) -> dict:
+    """location_map 봉투. center={lat,lng,name}, markers=[{name,lat,lng}]."""
+    return {"type": "location_map", "center": center, "zoom": zoom, "markers": markers}
+
+
+def build_route_map(origin: dict, destination: dict, path: list, summary: dict) -> dict:
+    """route_map 봉투. origin/destination={lat,lng,name}, path=[[lat,lng]]."""
+    return {"type": "route_map", "origin": origin, "destination": destination,
+            "path": path, "summary": summary}
 
 
 def search_kakao_restaurants(query: str, x: str = None, y: str = None,
@@ -73,6 +102,8 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
 
     restaurants = []
     for doc in documents:
+        # 카카오: x=경도, y=위도 (문자열) → 표준 {lat,lng} float
+        coords = _normalize_coords(doc.get("y"), doc.get("x")) or {"lat": None, "lng": None}
         restaurants.append({
             "name": doc.get("place_name", ""),
             "category": doc.get("category_name", ""),
@@ -80,8 +111,8 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
             "phone": doc.get("phone", ""),
             "url": doc.get("place_url", ""),
             "distance": doc.get("distance", ""),
-            "x": doc.get("x", ""),
-            "y": doc.get("y", "")
+            "lat": coords["lat"],
+            "lng": coords["lng"],
         })
 
     return {
@@ -122,6 +153,13 @@ def search_naver_local(query: str, display: int = 5, sort: str = "random"):
 
     restaurants = []
     for item in items:
+        # 네이버 local: mapx/mapy = WGS84 * 1e7 (예: "1270276000") → 표준 {lat,lng} float
+        coords = None
+        try:
+            coords = _normalize_coords(int(item.get("mapy")) / 1e7, int(item.get("mapx")) / 1e7)
+        except (TypeError, ValueError):
+            coords = None
+        coords = coords or {"lat": None, "lng": None}
         restaurants.append({
             "name": clean_html(item.get("title", "")),
             "category": item.get("category", ""),
@@ -129,8 +167,8 @@ def search_naver_local(query: str, display: int = 5, sort: str = "random"):
             "phone": item.get("telephone", ""),
             "url": item.get("link", ""),
             "description": clean_html(item.get("description", "")),
-            "mapx": item.get("mapx", ""),
-            "mapy": item.get("mapy", "")
+            "lat": coords["lat"],
+            "lng": coords["lng"],
         })
 
     return {
@@ -187,6 +225,17 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
     kakao_count = len(results["kakao"]["restaurants"])
     naver_count = len(results["naver"]["restaurants"])
     results["message"] = f"'{query}' 검색 결과: 카카오 {kakao_count}개 + 네이버 {naver_count}개 = 총 {kakao_count + naver_count}개"
+
+    # 좌표 계약(#1): 위치 액션 출력 항목은 lat/lng 보장 — 좌표 없는 항목은 드롭.
+    results["combined"] = [r for r in results["combined"]
+                           if r.get("lat") is not None and r.get("lng") is not None]
+    # 표시 봉투(#4): 결과를 지도에 바로 그릴 수 있게 map_data 동봉.
+    markers = [{"name": r.get("name", ""), "lat": r["lat"], "lng": r["lng"]}
+               for r in results["combined"]]
+    if markers:
+        results["map_data"] = build_location_map(
+            center={"lat": markers[0]["lat"], "lng": markers[0]["lng"], "name": query},
+            markers=markers)
 
     return results
 
@@ -264,25 +313,15 @@ def generate_route_map_data(origin_coord: tuple, dest_coord: tuple,
         path_latlng = path_latlng[::step]
     path_latlng = [[round(c[0], 5), round(c[1], 5)] for c in path_latlng]
 
-    return {
-        "type": "route_map",
-        "origin": {
-            "lat": origin_coord[1],
-            "lng": origin_coord[0],
-            "name": origin_name
-        },
-        "destination": {
-            "lat": dest_coord[1],
-            "lng": dest_coord[0],
-            "name": dest_name
-        },
-        "path": path_latlng,
-        "summary": {
+    return build_route_map(
+        origin={**(_normalize_coords(origin_coord[1], origin_coord[0]) or {"lat": origin_coord[1], "lng": origin_coord[0]}), "name": origin_name},
+        destination={**(_normalize_coords(dest_coord[1], dest_coord[0]) or {"lat": dest_coord[1], "lng": dest_coord[0]}), "name": dest_name},
+        path=path_latlng,
+        summary={
             "distance_km": summary_info.get("distance_km", 0) if summary_info else 0,
             "duration_min": summary_info.get("duration_min", 0) if summary_info else 0,
-            "toll": summary_info.get("fare", {}).get("toll", 0) if summary_info else 0
-        }
-    }
+            "toll": summary_info.get("fare", {}).get("toll", 0) if summary_info else 0,
+        })
 
 
 def _geocode_place(place_str: str) -> tuple:
@@ -526,17 +565,10 @@ def show_location_map(query: str = None, lat: float = None, lng: float = None,
     if markers:
         all_markers.extend(markers)
 
-    # 지도 데이터 생성
-    map_data = {
-        "type": "location_map",
-        "center": {
-            "lat": center_lat,
-            "lng": center_lng,
-            "name": center_name
-        },
-        "zoom": zoom,
-        "markers": all_markers
-    }
+    # 지도 데이터 생성 (표시 봉투 단일 빌더, #4)
+    map_data = build_location_map(
+        center={"lat": center_lat, "lng": center_lng, "name": center_name},
+        markers=all_markers, zoom=zoom)
 
     return {
         "message": f"'{center_name}' 위치 지도",
@@ -545,62 +577,200 @@ def show_location_map(query: str = None, lat: float = None, lng: float = None,
     }
 
 
-def get_api_ninjas_data(endpoint: str, params: dict = None) -> dict:
+# ── travel 내부 해소 (도시명→IATA, 상대날짜→절대날짜) ───────────────
+# 주요 도시 IATA 도시코드(메트로). 미등록은 Amadeus city-search로 동적 해소.
+_IATA_CITY = {
+    "서울": "SEL", "seoul": "SEL", "부산": "PUS", "busan": "PUS",
+    "제주": "CJU", "jeju": "CJU",
+    "도쿄": "TYO", "동경": "TYO", "tokyo": "TYO",
+    "오사카": "OSA", "osaka": "OSA", "후쿠오카": "FUK", "fukuoka": "FUK",
+    "삿포로": "SPK", "sapporo": "SPK", "나고야": "NGO", "nagoya": "NGO",
+    "베이징": "BJS", "북경": "BJS", "beijing": "BJS",
+    "상하이": "SHA", "상해": "SHA", "shanghai": "SHA",
+    "홍콩": "HKG", "hongkong": "HKG",
+    "타이베이": "TPE", "대만": "TPE", "타이페이": "TPE", "taipei": "TPE",
+    "방콕": "BKK", "bangkok": "BKK", "싱가포르": "SIN", "singapore": "SIN",
+    "하노이": "HAN", "hanoi": "HAN", "호치민": "SGN", "hochiminh": "SGN",
+    "마닐라": "MNL", "manila": "MNL", "발리": "DPS", "덴파사르": "DPS", "bali": "DPS",
+    "다낭": "DAD", "danang": "DAD", "괌": "GUM", "guam": "GUM", "사이판": "SPN", "saipan": "SPN",
+    "파리": "PAR", "paris": "PAR", "런던": "LON", "london": "LON",
+    "로마": "ROM", "rome": "ROM", "프랑크푸르트": "FRA", "frankfurt": "FRA",
+    "뮌헨": "MUC", "munich": "MUC", "바르셀로나": "BCN", "barcelona": "BCN",
+    "마드리드": "MAD", "madrid": "MAD", "암스테르담": "AMS", "amsterdam": "AMS",
+    "이스탄불": "IST", "istanbul": "IST", "두바이": "DXB", "dubai": "DXB",
+    "취리히": "ZRH", "zurich": "ZRH", "빈": "VIE", "vienna": "VIE", "프라하": "PRG", "prague": "PRG",
+    "뉴욕": "NYC", "newyork": "NYC", "로스앤젤레스": "LAX", "la": "LAX", "losangeles": "LAX",
+    "샌프란시스코": "SFO", "sanfrancisco": "SFO", "시카고": "CHI", "chicago": "CHI",
+    "워싱턴": "WAS", "washington": "WAS", "시애틀": "SEA", "seattle": "SEA",
+    "라스베이거스": "LAS", "lasvegas": "LAS", "보스턴": "BOS", "boston": "BOS",
+    "호놀룰루": "HNL", "하와이": "HNL", "honolulu": "HNL", "hawaii": "HNL",
+    "토론토": "YTO", "toronto": "YTO", "밴쿠버": "YVR", "vancouver": "YVR",
+    "시드니": "SYD", "sydney": "SYD", "멜버른": "MEL", "melbourne": "MEL",
+}
+
+_WEEKDAYS = {
+    "월요일": 0, "화요일": 1, "수요일": 2, "목요일": 3, "금요일": 4, "토요일": 5, "일요일": 6,
+    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6,
+}
+
+
+def _amadeus_city_lookup(keyword: str):
+    """미등록 도시명 → Amadeus city-search로 IATA 코드 동적 해소 (best-effort)."""
+    try:
+        token = get_amadeus_token()
+        if not token:
+            return None
+        url = f"{AMADEUS_BASE_URL}/v1/reference-data/locations"
+        data = api_call_raw(url, headers={"Authorization": f"Bearer {token}"},
+                            params={"keyword": keyword, "subType": "CITY"}, timeout=15)
+        if isinstance(data, str):
+            data = json.loads(data)
+        if isinstance(data, dict):
+            for item in data.get("data", []):
+                code = item.get("iataCode")
+                if code:
+                    return code
+    except Exception:
+        pass
+    return None
+
+
+def _resolve_iata(name: str):
+    """도시명 → IATA 코드. 이미 3자 코드면 통과, 미등록은 API로 해소."""
+    if not name:
+        return None
+    key = "".join(str(name).lower().split())
+    if key in _IATA_CITY:
+        return _IATA_CITY[key]
+    s = str(name).strip()
+    if s.isalpha() and len(s) == 3 and s.isascii():  # 이미 IATA 코드
+        return s.upper()
+    return _amadeus_city_lookup(name)
+
+
+def _resolve_travel_date(s):
+    """상대/자연어 날짜 → YYYY-MM-DD. 못 풀면 원본 통과(Amadeus가 검증)."""
+    if not s:
+        return s
+    s = str(s).strip()
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", s):  # 이미 ISO
+        return s
+    today = datetime.now()
+    low = s.lower()
+    for k, v in {"오늘": 0, "today": 0, "내일": 1, "tomorrow": 1, "모레": 2, "글피": 3}.items():
+        if k in low:
+            return (today + timedelta(days=v)).strftime("%Y-%m-%d")
+    m = re.search(r"(\d+)\s*일\s*(후|뒤)", s)
+    if m:
+        return (today + timedelta(days=int(m.group(1)))).strftime("%Y-%m-%d")
+    base_week = 14 if "다다음주" in s else (7 if ("다음주" in s or "담주" in s) else 0)
+    wd = next((v for k, v in _WEEKDAYS.items() if k in low), None)
+    if wd is not None:
+        ref = today + timedelta(days=base_week)
+        delta = (wd - ref.weekday()) % 7
+        return (ref + timedelta(days=delta)).strftime("%Y-%m-%d")
+    if base_week:
+        return (today + timedelta(days=base_week)).strftime("%Y-%m-%d")
+    m = re.search(r"(\d{1,2})\s*월\s*(\d{1,2})\s*일", s)
+    if m:
+        month, day = int(m.group(1)), int(m.group(2))
+        for year in (today.year, today.year + 1):
+            try:
+                cand = datetime(year, month, day)
+                if cand.date() >= today.date():
+                    return cand.strftime("%Y-%m-%d")
+            except ValueError:
+                break
+    return s
+
+
+# ── op 디스패처 (2026-06-04 travel 자연어 인터페이스화) ──────────────
+_OP_DISPATCHERS = {
+    "amadeus_travel_search": {"flight": None, "hotel": None, "poi": None},
+}
+_OP_DEFAULTS = {"amadeus_travel_search": "flight"}
+
+
+def amadeus_travel_search(tool_input: dict) -> dict:
+    """[sense:travel]{op} — 자연어 평면 인터페이스. 도시명→IATA·상대날짜 내부 해소.
+
+    op=flight: from(기본 서울)→to(필수), date(기본 +7일).
+    op=hotel:  city(필수).
+    op=poi:    city 또는 lat/lng.
+    endpoint+params 직접 지정 시 Amadeus 원본 호출(파워유저 탈출구).
     """
-    API Ninjas를 통해 다양한 지식 정보 조회
+    # 파워유저 탈출구: endpoint+params 직접 지정 (후방호환)
+    endpoint = tool_input.get("endpoint")
+    if endpoint:
+        return _amadeus_call(endpoint, tool_input.get("params", {}))
 
-    Args:
-        endpoint: API 엔드포인트 (quotes, facts, weather, dictionary, trivia 등)
-        params: 필터링 매개변수
+    op = (tool_input.get("op") or _OP_DEFAULTS["amadeus_travel_search"]).strip()
+    notes = []
 
-    지원 엔드포인트 예시:
-        - quotes: 명언 (category: happiness, love, etc.)
-        - facts: 흥미로운 사실
-        - weather: 날씨 (city 필수)
-        - dictionary: 사전 정의 (word 필수)
-        - trivia: 퀴즈 (category: artliterature, science, etc.)
-        - jokes: 농담
-        - riddles: 수수께끼
-        - historicalevents: 역사적 사건 (day, month, year)
-    """
-    key_ok, key_error = check_api_key("ninjas")
-    if not key_ok:
-        return {"error": f"{key_error} https://api-ninjas.com 에서 발급받으세요."}
-
-    data = api_call("ninjas", f"/{endpoint}", params=params or {}, timeout=15)
-    if isinstance(data, dict) and "error" in data:
-        return data
-
-    # 결과가 리스트인 경우 (대부분의 엔드포인트)
-    if isinstance(data, list):
-        return {
-            "endpoint": endpoint,
-            "count": len(data),
-            "results": data
+    if op == "flight":
+        to_city = tool_input.get("to") or tool_input.get("destination")
+        if not to_city:
+            return {"error": '항공권은 도착 도시(to)가 필요합니다. 예: [sense:travel]{op: "flight", to: "도쿄"}'}
+        has_from = bool(tool_input.get("from") or tool_input.get("origin"))
+        from_city = tool_input.get("from") or tool_input.get("origin") or "서울"
+        origin_code = _resolve_iata(from_city)
+        dest_code = _resolve_iata(to_city)
+        if not origin_code or not dest_code:
+            bad = from_city if not origin_code else to_city
+            return {"error": f"도시 '{bad}'의 공항 코드를 찾지 못했습니다. IATA 코드(예 ICN)로 지정하거나 endpoint+params로 직접 호출하세요."}
+        if not has_from:
+            notes.append(f"출발지 미지정 — 서울({origin_code}) 기준")
+        date_in = tool_input.get("date")
+        if date_in:
+            dep_date = _resolve_travel_date(date_in)
+        else:
+            dep_date = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+            notes.append(f"날짜 미지정 — {dep_date}(약 1주 후) 기준")
+        params = {
+            "originLocationCode": origin_code,
+            "destinationLocationCode": dest_code,
+            "departureDate": dep_date,
+            "adults": int(tool_input.get("adults", 1)),
         }
+        ret = tool_input.get("return_date") or tool_input.get("return")
+        if ret:
+            params["returnDate"] = _resolve_travel_date(ret)
+        result = _amadeus_call("flight-offers", params)
+
+    elif op == "hotel":
+        city = tool_input.get("city") or tool_input.get("to") or tool_input.get("query")
+        if not city:
+            return {"error": '호텔은 도시(city)가 필요합니다. 예: [sense:travel]{op: "hotel", city: "파리"}'}
+        code = _resolve_iata(city)
+        if not code:
+            return {"error": f"도시 '{city}'의 코드를 찾지 못했습니다."}
+        result = _amadeus_call("hotel-list", {"cityCode": code})
+
+    elif op == "poi":
+        lat = tool_input.get("lat") if tool_input.get("lat") is not None else tool_input.get("latitude")
+        lng = tool_input.get("lng")
+        if lng is None:
+            lng = tool_input.get("lon") if tool_input.get("lon") is not None else tool_input.get("longitude")
+        if lat is None or lng is None:
+            city = tool_input.get("city") or tool_input.get("query")
+            if not city:
+                return {"error": "관광지는 city 또는 lat/lng가 필요합니다."}
+            coords = _resolve_city_coords(city)
+            if not coords:
+                return {"error": f"도시 '{city}'의 좌표를 찾지 못했습니다."}
+            lat, lng = coords
+        result = _amadeus_call("points-of-interest", {"latitude": float(lat), "longitude": float(lng)})
+
     else:
-        return {
-            "endpoint": endpoint,
-            "result": data
-        }
+        return {"error": f"알 수 없는 op '{op}'. 사용 가능: flight/hotel/poi (또는 endpoint+params 직접 지정)"}
+
+    if isinstance(result, dict) and notes and "error" not in result:
+        result["notes"] = notes
+    return result
 
 
-def amadeus_travel_search(endpoint: str, params: dict) -> dict:
-    """
-    Amadeus API를 통한 여행 정보 검색
-
-    Args:
-        endpoint: API 엔드포인트
-            - flight-offers: 항공권 검색 (originLocationCode, destinationLocationCode, departureDate, adults 필수)
-            - hotel-list: 호텔 목록 (cityCode 필수)
-            - points-of-interest: 관광지 (latitude, longitude 필수)
-        params: 검색 매개변수
-
-    예시:
-        항공권: endpoint="flight-offers", params={"originLocationCode": "ICN", "destinationLocationCode": "NRT", "departureDate": "2024-03-01", "adults": 1}
-        호텔: endpoint="hotel-list", params={"cityCode": "PAR"}
-        관광지: endpoint="points-of-interest", params={"latitude": 48.8566, "longitude": 2.3522}
-    """
+def _amadeus_call(endpoint: str, params: dict) -> dict:
+    """Amadeus API 저수준 호출 (endpoint+params → 결과). 내부용."""
     key_ok, key_error = check_api_key("amadeus")
     if not key_ok:
         return {"error": f"{key_error} https://developers.amadeus.com 에서 발급받으세요."}
@@ -842,23 +1012,8 @@ def execute(tool_input: dict, context) -> str:
         )
         return json.dumps(result, ensure_ascii=False, indent=2)
 
-    elif tool_name == "get_api_ninjas_data":
-        endpoint = tool_input.get("endpoint", "")
-        if not endpoint:
-            return json.dumps({"error": "endpoint 매개변수가 필요합니다."}, ensure_ascii=False)
-        # params 키가 있으면 사용, 없으면 endpoint 제외한 나머지 파라미터를 params로 사용
-        params = tool_input.get("params")
-        if params is None:
-            params = {k: v for k, v in tool_input.items() if k != "endpoint"}
-        result = get_api_ninjas_data(endpoint, params)
-        return json.dumps(result, ensure_ascii=False, indent=2)
-
     elif tool_name == "amadeus_travel_search":
-        endpoint = tool_input.get("endpoint", "")
-        params = tool_input.get("params", {})
-        if not endpoint:
-            return json.dumps({"error": "endpoint 매개변수가 필요합니다."}, ensure_ascii=False)
-        result = amadeus_travel_search(endpoint, params)
+        result = amadeus_travel_search(tool_input)
         return json.dumps(result, ensure_ascii=False, indent=2)
 
     elif tool_name == "search_restaurants":
@@ -893,8 +1048,8 @@ def execute(tool_input: dict, context) -> str:
         return json.dumps(result, ensure_ascii=False, indent=2)
 
     elif tool_name == "kakao_navigation":
-        origin = tool_input.get("origin", "")
-        destination = tool_input.get("destination", "")
+        origin = tool_input.get("from") or tool_input.get("origin", "")  # from/to 우선(자연어), origin/destination 별칭
+        destination = tool_input.get("to") or tool_input.get("destination", "")
 
         # 자연어 파싱: "A에서 B까지" 형식을 origin/destination으로 분리
         if destination and not origin:

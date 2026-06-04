@@ -31,16 +31,14 @@ class ProjectManager:
             self._save_projects_list([])
 
     def _load_projects_list(self) -> list:
-        """프로젝트 목록 로드"""
-        if self.projects_json.exists():
-            with open(self.projects_json, encoding='utf-8') as f:
-                return json.load(f)
-        return []
+        """프로젝트 목록 로드 (손상 시 빈 목록으로 덮어쓰기 방지 — safe_store)"""
+        from safe_store import safe_load_json
+        return safe_load_json(self.projects_json, [])
 
     def _save_projects_list(self, projects: list):
-        """프로젝트 목록 저장"""
-        with open(self.projects_json, 'w', encoding='utf-8') as f:
-            json.dump(projects, f, ensure_ascii=False, indent=2)
+        """프로젝트 목록 저장 (원자적 쓰기 + .bak — safe_store)"""
+        from safe_store import safe_save_json
+        safe_save_json(self.projects_json, projects)
 
     def list_projects(self) -> list:
         """모든 프로젝트 목록 반환"""

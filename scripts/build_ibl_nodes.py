@@ -21,6 +21,11 @@ tool_selector / system_tools).
                        또는 _OP_DISPATCHERS 없으면 op 문자열 substring (폴백)
   src.ops.default ↔ handler.py 의 _OP_DEFAULTS[tool_name] (AST, _OP_DISPATCHERS 있을 때만)
 실패하면 `--check`는 비0 종료, 일반 빌드는 경고만 출력.
+
+코퍼스 param 정합 (2026-06-04 추가, --check/--validate 전용):
+  학습 코퍼스의 액션별 param 키 ↔ (핸들러 읽기키 ∪ ACTION_PARAM_ALIASES ∪ 보편키 ∪ target_key).
+  코퍼스가 자연어로 쓰는 키를 핸들러가 조용히 무시하는 신규 불일치를 검출 (silent-ignore 회귀 방지).
+  의도된 노이즈는 CORPUS_PARAM_ALLOW 에 등록. 파서/코퍼스 미가용 시 건너뜀.
 """
 from __future__ import annotations
 import argparse
@@ -38,6 +43,23 @@ NODE_ORDER = ["sense", "self", "limbs", "others", "engines"]
 PACKAGE_DIRS = [
     "data/packages/installed/tools",
     "data/packages/installed/extensions",
+]
+
+# === 코퍼스 param 정합 검사 (2026-06-04) ===
+# 모든 액션이 자연히 받는 보편 키 (op 디스패치/레거시 target).
+UNIVERSAL_PARAM_KEYS = {"op", "target"}
+
+# 코퍼스가 쓰지만 핸들러/별칭에 의도적으로 없는 키 (문서화된 예외).
+# 목적: 신규 불일치만 잡고 알려진 노이즈는 통과. 코퍼스 정제/별칭으로 해소되면 여기서 제거할 것.
+CORPUS_PARAM_ALLOW: dict[str, set[str]] = {}
+# 정리됨(2026-06-04): pew_research:topic / blog:sort / web_site:reference / web:font
+#   (migrate_allowlist_cleanup.py — 군더더기 제거) + self:trigger:cron
+#   (trigger_engine._cron_to_config 로 내부 해소 — 핸들러가 cron 직접 읽음).
+
+# 학습 코퍼스 (param 키 추출 대상).
+CORPUS_FILES = [
+    "data/training/ibl_training_balanced_20260516.json",
+    "data/training/ibl_distilled.json",
 ]
 
 
@@ -280,6 +302,181 @@ def _check_action(
     return issues
 
 
+def _file_read_keys(text: str) -> set[str]:
+    """파이썬 소스에서 '핸들러가 읽는 키' 후보를 AST로 추출.
+    함수 파라미터명 + .get/_arg/pop 문자열 인자 + call 키워드 인자 + 문자열 subscript."""
+    keys: set[str] = set()
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return keys
+    for n in ast.walk(tree):
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            a = n.args
+            for arg in list(a.posonlyargs) + list(a.args) + list(a.kwonlyargs):
+                keys.add(arg.arg)
+        elif isinstance(n, ast.Call):
+            for kw in n.keywords:
+                if kw.arg:
+                    keys.add(kw.arg)
+            func = n.func
+            fname = func.attr if isinstance(func, ast.Attribute) else (func.id if isinstance(func, ast.Name) else "")
+            if fname in ("_arg", "get", "pop"):
+                for arg in n.args:
+                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                        keys.add(arg.value)
+        elif isinstance(n, ast.Subscript):
+            sl = n.slice
+            if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
+                keys.add(sl.value)
+    keys.discard(None)
+    return keys
+
+
+def _dir_read_keys(paths) -> set[str]:
+    """여러 .py 파일에서 읽기키 합집합."""
+    keys: set[str] = set()
+    for py in paths:
+        try:
+            keys |= _file_read_keys(py.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+    return keys
+
+
+def _extract_action_param_aliases(root: Path) -> dict[str, set[str]]:
+    """backend/ibl_routing.py 의 ACTION_PARAM_ALIASES → {qualified: {정규키 ∪ 별칭들}} (AST)."""
+    path = root / "backend" / "ibl_routing.py"
+    out: dict[str, set[str]] = {}
+    if not path.is_file():
+        return out
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+    except SyntaxError:
+        return out
+    for node in tree.body:
+        # 일반 대입과 주석 대입(`X: T = {...}`) 둘 다.
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, ast.AnnAssign):
+            targets = [node.target]
+        else:
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "ACTION_PARAM_ALIASES" for t in targets):
+            continue
+        if not isinstance(node.value, ast.Dict):
+            continue
+        for k_node, v_node in zip(node.value.keys, node.value.values):
+            if not (isinstance(k_node, ast.Constant) and isinstance(k_node.value, str)):
+                continue
+            ks: set[str] = set()
+            if isinstance(v_node, ast.Dict):
+                for ck, cv in zip(v_node.keys, v_node.values):
+                    if isinstance(ck, ast.Constant) and isinstance(ck.value, str):
+                        ks.add(ck.value)
+                    if isinstance(cv, ast.List):
+                        for el in cv.elts:
+                            if isinstance(el, ast.Constant) and isinstance(el.value, str):
+                                ks.add(el.value)
+            out[k_node.value] = ks
+    return out
+
+
+def _load_corpus_param_keys(root: Path) -> dict[str, set[str]] | None:
+    """학습 코퍼스를 실제 IBL 파서로 파싱 → {qualified: set(top-level param 키)}.
+    파서/코퍼스 미가용 시 None (검사 건너뜀)."""
+    backend = root / "backend"
+    try:
+        if str(backend) not in sys.path:
+            sys.path.insert(0, str(backend))
+        import ibl_parser  # type: ignore
+    except Exception:
+        return None
+
+    def walk(obj):
+        res = []
+        if isinstance(obj, dict):
+            if "_node" in obj and "action" in obj:
+                res.append(obj)
+            for v in obj.values():
+                res += walk(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                res += walk(v)
+        return res
+
+    out: dict[str, set[str]] = {}
+    found_any = False
+    for rel in CORPUS_FILES:
+        f = root / rel
+        if not f.is_file():
+            continue
+        try:
+            entries = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        found_any = True
+        for e in entries:
+            try:
+                parsed = ibl_parser.parse(e.get("ibl_code", ""))
+            except Exception:
+                continue
+            for st in walk(parsed):
+                q = f"{st.get('_node')}:{st.get('action')}"
+                out.setdefault(q, set()).update((st.get("params") or {}).keys())
+    return out if found_any else None
+
+
+def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
+    """코퍼스 param 키 ↔ (핸들러 읽기키 ∪ ACTION_PARAM_ALIASES ∪ 보편키 ∪ target_key) 대조.
+
+    코퍼스가 자연어로 쓰는 키를 핸들러가 조용히 무시하는 신규 불일치를 검출한다.
+    router:handler 액션은 패키지 .py 전체를, 그 외(system/engine/driver/trigger)는
+    backend/*.py 전역 어휘를 핸들러 키 출처로 본다 (후자는 보수적 = 오탐 회피 우선).
+    파서/코퍼스 미가용 시 None (검사 건너뜀)."""
+    corpus = _load_corpus_param_keys(root)
+    if corpus is None:
+        return None
+    aliases = _extract_action_param_aliases(root)
+    tool_index = build_tool_index(root)
+    backend_keys = _dir_read_keys((root / "backend").glob("*.py"))
+    pkg_cache: dict[Path, set[str]] = {}
+
+    issues: list[str] = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions", {}) or {}).items():
+            if not isinstance(action, dict):
+                continue
+            qualified = f"{node_name}:{action_name}"
+            used = corpus.get(qualified)
+            if not used:
+                continue
+            known = set(UNIVERSAL_PARAM_KEYS)
+            if action.get("target_key"):
+                known.add(action["target_key"])
+            known |= aliases.get(qualified, set())
+            known |= CORPUS_PARAM_ALLOW.get(qualified, set())
+            tool_name = action.get("tool")
+            if action.get("router") == "handler" and tool_name and tool_name in tool_index:
+                pkg_dir = tool_index[tool_name][0]
+                if pkg_dir not in pkg_cache:
+                    pkg_cache[pkg_dir] = _dir_read_keys(pkg_dir.rglob("*.py"))
+                known |= pkg_cache[pkg_dir]
+            else:
+                known |= backend_keys
+            unknown = sorted(used - known)
+            if unknown:
+                issues.append(
+                    f"{qualified}: 코퍼스 param 키가 핸들러/별칭에 없음 — {unknown} "
+                    f"(ibl_routing.ACTION_PARAM_ALIASES 별칭 추가 · 핸들러 폴백 · 코퍼스 정정 중 택1; "
+                    f"의도된 노이즈면 build_ibl_nodes.CORPUS_PARAM_ALLOW 에 등록)"
+                )
+    return issues
+
+
 def validate(data: dict, root: Path) -> list[str]:
     """전체 yaml 데이터에 대해 삼각 검증 수행."""
     issues: list[str] = []
@@ -370,8 +567,29 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 검증 통과 ✓ (등록·op enum·default·handler 분기)")
 
+    # --- 코퍼스 param 정합 검사 (--check/--validate 전용) ---
+    # 코퍼스 드리프트가 평소 yaml 빌드를 막지 않도록, 게이트(check/validate)에서만 평가.
+    corpus_failed = False
+    if data is not None and (check or validate_only):
+        cissues = validate_corpus_params(data, root)
+        if cissues is None:
+            print(
+                "[build_ibl_nodes] 코퍼스/파서 미가용 — param 정합 검사 건너뜀",
+                file=sys.stderr,
+            )
+        elif cissues:
+            corpus_failed = True
+            print(
+                f"[build_ibl_nodes] 코퍼스 param 정합 실패: {len(cissues)}건",
+                file=sys.stderr,
+            )
+            for issue in cissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 코퍼스 param 정합 통과 ✓")
+
     if validate_only:
-        return 1 if validation_failed else 0
+        return 1 if (validation_failed or corpus_failed) else 0
 
     if check:
         if not target.is_file():
@@ -389,7 +607,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             )
         else:
             print("[build_ibl_nodes] check: 바이트 일치 ✓")
-        return 0 if (bytes_ok and not validation_failed) else 1
+        return 0 if (bytes_ok and not validation_failed and not corpus_failed) else 1
 
     if validation_failed:
         print(

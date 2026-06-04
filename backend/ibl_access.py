@@ -258,7 +258,7 @@ def build_environment(
                     if g.get("until_condition"):
                         attrs += f' until="{g["until_condition"]}"'
                     parts.append(f"  <goal {attrs}/>")
-                parts.append("  <instruction>목표의 success_condition이 충족되었다고 판단되면 [self:goal_status]로 보고하라. "
+                parts.append("  <instruction>목표의 success_condition이 충족되었다고 판단되면 [self:goal]{op: \"status\"}로 보고하라. "
                               "비용 한도(max_cost)에 근접하면 효율적인 전략을 선택하라.</instruction>")
                 parts.append("</goal_context>")
     except Exception:
@@ -306,6 +306,17 @@ def build_environment(
 
 _node_groups_cache = None
 _nodes_data_cache = None
+
+
+def invalidate_nodes_cache():
+    """ibl_nodes.yaml 재빌드 후 노드/그룹 캐시를 비운다.
+
+    액션 추가·제거·op 변경(build_ibl_nodes.py 결과)을 backend 재시작 없이 반영하기 위해
+    /packages/reload 경로에서 호출된다.
+    """
+    global _nodes_data_cache, _node_groups_cache
+    _nodes_data_cache = None
+    _node_groups_cache = None
 
 
 def _load_peer_agents(project_path: Optional[str], agent_id: Optional[str]) -> List[Dict]:

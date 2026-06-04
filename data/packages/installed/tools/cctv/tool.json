@@ -5,226 +5,50 @@
   "version": "3.0.0",
   "tools": [
     {
-      "name": "search_cctv",
-      "description": "CCTV/웹캠 통합 검색+자동캡처 - ITS 교통 CCTV 검색 후 결과 없으면 Windy 웹캠 자동 폴백. 첫 번째 결과의 이미지를 자동 캡처하여 file_path 반환.\n브라우저 접속 불필요 - auto_capture.file_path의 이미지를 직접 분석하면 됩니다.\n한국+해외 주요 지명(한라산, 맨하탄, 도쿄, 파리 등) 자동 좌표 매핑.\n\n## 사용 예시\n- search_cctv(query='경부')  # ITS 교통 CCTV + 자동 캡처\n- search_cctv(query='한라산')  # Windy mountain 웹캠 + 자동 캡처\n- search_cctv(query='Manhattan')  # 뉴욕 맨하탄 웹캠 + 자동 캡처",
+      "name": "cctv_query",
+      "description": "CCTV/웹캠 조회 (op 분기) — [sense:cctv].\n- op=search (기본): 키워드로 전국 CCTV+해외 웹캠 통합 검색. 한국+해외 지명 자동 좌표 매핑.\n- op=nearby: 좌표(lat·lng 필수) 근처 CCTV. radius_km(km, 기본 5) 옵션.\n- op=webcam: 좌표(lat·lng 필수) 근처 해외 경치 웹캠 (Windy 직행, 교통 CCTV 건너뜀).\n출력 cctvs[]/webcams[]는 항상 lat/lng(float)·playable 포함. stream_tags 동봉 시 채팅창 재생.\n\n## 예시\n- cctv_query(query='광화문')          # 기본 search\n- cctv_query(op='nearby', lat=37.5665, lng=126.9780, radius_km=3)\n- cctv_query(op='webcam', lat=48.8566, lng=2.3522)  # 파리 근처 경치 웹캠",
       "input_schema": {
         "type": "object",
         "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "search",
+              "nearby",
+              "webcam"
+            ],
+            "default": "search",
+            "description": "search=키워드 검색(기본), nearby=좌표 근처 CCTV, webcam=좌표 근처 해외 경치 웹캠"
+          },
           "query": {
             "type": "string",
-            "description": "검색 키워드 (한라산, 경부, 해운대 등)"
+            "description": "[search] 검색 키워드 (광화문, 경부, 해운대 등)"
           },
           "lat": {
             "type": "number",
-            "description": "위도 (Windy 검색 시 좌표 직접 지정)"
-          },
-          "lon": {
-            "type": "number",
-            "description": "경도 (Windy 검색 시 좌표 직접 지정)"
-          },
-          "category": {
-            "type": "string",
-            "description": "Windy 카테고리 (mountain, beach, city, airport 등)"
-          },
-          "limit": {
-            "type": "integer",
-            "description": "최대 결과 수 (기본 10)"
-          }
-        },
-        "required": [
-          "query"
-        ]
-      }
-    },
-    {
-      "name": "get_nearby_cctv",
-      "description": "ITS 국가교통정보센터 - 특정 좌표에서 가장 가까운 교통 CCTV를 찾습니다.\n\n## 사용 예시\n- get_nearby_cctv(lat=37.5665, lng=126.9780)  # 서울시청 근처\n- get_nearby_cctv(lat=35.1796, lng=129.0756, count=5)  # 부산역 근처 5개",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "lat": {
-            "type": "number",
-            "description": "위도"
+            "description": "[nearby] 위도 (필수)"
           },
           "lng": {
             "type": "number",
-            "description": "경도"
-          },
-          "radius": {
-            "type": "number",
-            "description": "검색 반경 (도 단위, 기본값 0.1 = 약 10km)"
-          },
-          "count": {
-            "type": "integer",
-            "description": "반환할 CCTV 수 (기본값 1)"
-          },
-          "road_type": {
-            "type": "string",
-            "enum": [
-              "ex",
-              "its",
-              "all"
-            ],
-            "description": "도로 유형"
-          }
-        },
-        "required": [
-          "lat",
-          "lng"
-        ]
-      }
-    },
-    {
-      "name": "get_cctv_by_name",
-      "description": "ITS 국가교통정보센터 - CCTV 이름으로 검색합니다.\n\n## 사용 예시\n- get_cctv_by_name(keyword='경부')  # 경부고속도로 CCTV\n- get_cctv_by_name(keyword='강남')  # 강남 포함된 CCTV",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "keyword": {
-            "type": "string",
-            "description": "검색 키워드"
-          },
-          "road_type": {
-            "type": "string",
-            "enum": [
-              "ex",
-              "its",
-              "all"
-            ],
-            "description": "도로 유형"
-          },
-          "limit": {
-            "type": "integer",
-            "description": "최대 결과 수 (기본값 10)"
-          }
-        },
-        "required": [
-          "keyword"
-        ]
-      }
-    },
-    {
-      "name": "open_cctv",
-      "description": "교통 CCTV 영상을 브라우저에서 엽니다.\n\n## 사용 방법 (택1)\n- url: CCTV URL 직접 지정\n- name: 이름으로 검색하여 열기\n- lat/lng: 좌표 근처 CCTV 열기",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "CCTV 영상 URL (직접 지정)"
-          },
-          "name": {
-            "type": "string",
-            "description": "CCTV 이름 키워드"
-          },
-          "lat": {
-            "type": "number",
-            "description": "위도"
-          },
-          "lng": {
-            "type": "number",
-            "description": "경도"
-          }
-        }
-      }
-    },
-    {
-      "name": "search_webcam",
-      "description": "Windy Webcams API - 전세계 실시간 웹캠을 검색합니다.\n\n## 카테고리 (18종)\nairport, beach, building, city, coast, forest, indoor, lake, landscape, meteo, mountain, observatory, port, river, sportArea, square, traffic, village\n\n## 사용 예시\n- search_webcam(lat=37.5665, lon=126.9780, radius_km=50)  # 서울 주변\n- search_webcam(category='beach', country='KR')  # 한국 해변 웹캠\n- search_webcam(category='mountain', country='JP')  # 일본 산 웹캠\n\n## 필요 환경변수: WINDY_API_KEY",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "lat": {
-            "type": "number",
-            "description": "위도 (근처 검색 시)"
-          },
-          "lon": {
-            "type": "number",
-            "description": "경도 (근처 검색 시)"
+            "description": "[nearby] 경도 (필수)"
           },
           "radius_km": {
             "type": "number",
-            "description": "검색 반경 km (기본 50, 최대 250)"
+            "description": "[nearby] 검색 반경 km (기본 5)"
+          },
+          "count": {
+            "type": "integer",
+            "description": "[nearby] 반환할 CCTV 수 (기본 5)"
           },
           "category": {
             "type": "string",
-            "description": "카테고리 (beach, mountain, city 등)"
-          },
-          "country": {
-            "type": "string",
-            "description": "국가 코드 (KR, JP, US 등)"
+            "description": "[search] Windy 카테고리 (mountain, beach, city 등)"
           },
           "limit": {
             "type": "integer",
-            "description": "최대 결과 수 (기본 10, 최대 50)"
+            "description": "[search] 최대 결과 수 (기본 10)"
           }
         }
-      }
-    },
-    {
-      "name": "get_nearby_webcam",
-      "description": "Windy Webcams API - 특정 좌표에서 가장 가까운 웹캠을 찾습니다 (전세계).\n\n## 사용 예시\n- get_nearby_webcam(lat=37.5665, lon=126.9780)  # 서울시청 근처\n- get_nearby_webcam(lat=48.8566, lon=2.3522, count=5)  # 파리 근처 5개\n\n## 필요 환경변수: WINDY_API_KEY",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "lat": {
-            "type": "number",
-            "description": "위도"
-          },
-          "lon": {
-            "type": "number",
-            "description": "경도"
-          },
-          "radius_km": {
-            "type": "number",
-            "description": "검색 반경 km (기본 50)"
-          },
-          "count": {
-            "type": "integer",
-            "description": "반환할 웹캠 수 (기본 3)"
-          }
-        },
-        "required": [
-          "lat",
-          "lon"
-        ]
-      }
-    },
-    {
-      "name": "capture_cctv",
-      "description": "CCTV/웹캠 영상에서 현재 프레임을 캡처하여 이미지로 저장합니다.\nAI가 CCTV 화면의 실시간 상황을 분석할 때 사용합니다.\n\n## 지원 형식\n- HLS 스트림 (m3u8): ffmpeg으로 프레임 캡처\n- 이미지 URL (jpg/png): 직접 다운로드\n- auto: URL 패턴으로 자동 판별\n\n## 사용 예시\n- capture_cctv(url='https://...playlist.m3u8')  # HLS 스트림\n- capture_cctv(url='https://images-webcams.windy.com/...')  # 웹캠 이미지\n- capture_cctv(url='...', source_type='hls')  # 타입 명시\n\n## 반환값\n- file_path: 저장된 이미지 파일 경로 (AI가 이 파일을 읽어 분석)\n- capture_method: 사용된 캡처 방법\n\n## 의존성\n- ffmpeg 필요 (HLS 캡처용, brew install ffmpeg)",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "CCTV 영상/이미지 URL"
-          },
-          "source_type": {
-            "type": "string",
-            "enum": [
-              "auto",
-              "hls",
-              "image"
-            ],
-            "description": "소스 타입 (기본 auto: URL로 자동 판별)"
-          },
-          "filename": {
-            "type": "string",
-            "description": "저장 파일명 (기본: cctv_capture_타임스탬프.jpg)"
-          }
-        },
-        "required": [
-          "url"
-        ]
-      }
-    },
-    {
-      "name": "list_cctv_sources",
-      "description": "사용 가능한 모든 CCTV/웹캠 소스와 현재 상태를 확인합니다.\n각 소스의 API 키 설정 여부, 도구 목록, 커버리지 정보를 반환합니다.\nUTIC 실시간 API 연결 상태 포함.",
-      "input_schema": {
-        "type": "object",
-        "properties": {}
       }
     },
     {
@@ -249,10 +73,27 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "op": { "type": "string", "enum": ["open", "capture"], "default": "open", "description": "CCTV 동작" },
-          "url": { "type": "string", "description": "CCTV 스트림 URL" },
-          "name": { "type": "string", "description": "CCTV 이름 (url 대안, 자동 검색)" },
-          "save_path": { "type": "string", "description": "캡처 저장 경로 (op=capture 시)" }
+          "op": {
+            "type": "string",
+            "enum": [
+              "open",
+              "capture"
+            ],
+            "default": "open",
+            "description": "CCTV 동작"
+          },
+          "url": {
+            "type": "string",
+            "description": "CCTV 스트림 URL"
+          },
+          "name": {
+            "type": "string",
+            "description": "CCTV 이름 (url 대안, 자동 검색)"
+          },
+          "save_path": {
+            "type": "string",
+            "description": "캡처 저장 경로 (op=capture 시)"
+          }
         }
       }
     }

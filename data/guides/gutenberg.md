@@ -5,10 +5,10 @@
 ## 액션
 
 ```
-[sense:gutenberg_books]{query: "검색어", ...옵션}
+[sense:classic]{op: "western", query: "검색어", ...옵션}
 ```
 
-핸들러: `culture` 패키지의 `gutenberg_search`.
+서양 고전 통합 액션 `[sense:classic]` 의 `op:"western"` 분기다 (op 생략 시 western이 기본). 한국 고전은 `[sense:classic]{op:"korean"}`(한국고전종합DB). 핸들러: `culture` 패키지의 `classic_op` → `gutenberg_search`. (옛 `[sense:gutenberg_books]` 는 2026-06-03 폐지 — `[sense:classic]{op:"western"}` 사용.)
 
 ## 파라미터
 
@@ -46,22 +46,22 @@
 
 ### 1) 제목으로 검색
 ```
-[sense:gutenberg_books]{query: "pride and prejudice"}
+[sense:classic]{op: "western", query: "pride and prejudice"}
 ```
 
 ### 2) 저자 + 언어 한정
 ```
-[sense:gutenberg_books]{query: "shakespeare", languages: "en"}
+[sense:classic]{op: "western", query: "shakespeare", languages: "en"}
 ```
 
 ### 3) 주제 + 연도 필터
 ```
-[sense:gutenberg_books]{topic: "philosophy", author_year_start: 1700, author_year_end: 1800}
+[sense:classic]{op: "western", topic: "philosophy", author_year_start: 1700, author_year_end: 1800}
 ```
 
 ### 4) 원문 다운로드 후 분석 (파이프라인)
 ```
-[sense:gutenberg_books]{query: "moby dick"}
+[sense:classic]{op: "western", query: "moby dick"}
 # 결과의 text_url을 받아서:
 [sense:web_get]{url: "<text_url>"} >> [self:write]{path: "/tmp/moby.txt", content: "<원문>"}
 ```
@@ -77,6 +77,6 @@
 
 ## 관련 액션
 
-- `sense:korean_classics_search` — 한국고전종합DB (한문 원전)
+- `sense:classic`{op:"korean"} — 한국고전종합DB (한문 원전)
 - `sense:search_books` — 글로벌 도서 일반 검색
 - `sense:book` — 한국 도서 (도서관정보나루)

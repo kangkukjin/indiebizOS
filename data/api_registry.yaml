@@ -1751,7 +1751,7 @@ tools:
         count: _count
         data: _results
     node: sense
-    action_name: cctv_search
+    action_name: cctv
     description: "ITS 교통 CCTV 검색 (좌표 영역)"
     target_key: min_x
     target_description: "최소 경도 (minX)"

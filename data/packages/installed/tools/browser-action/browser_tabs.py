@@ -163,8 +163,16 @@ async def browser_iframe_list(params: dict) -> dict:
         for i, frame in enumerate(frames):
             if frame == page.main_frame:
                 continue
+            # iframe element 의 HTML id 속성도 노출(switch 가 id 로 전환 가능)
+            fid = ""
+            try:
+                el = await frame.frame_element()
+                fid = await el.get_attribute("id") or ""
+            except Exception:
+                pass
             iframe_list.append({
                 "index": i,
+                "id": fid,
                 "name": frame.name or "",
                 "url": frame.url or "",
             })
@@ -186,6 +194,7 @@ async def browser_iframe_switch(params: dict) -> dict:
         return err
 
     name = params.get("name", "")
+    frame_id = params.get("id", "")
     index = params.get("index")
     url_pattern = params.get("url", "")
 
@@ -196,15 +205,36 @@ async def browser_iframe_switch(params: dict) -> dict:
         frames = page.frames
         target_frame = None
 
-        if name:
+        # 우선순위: name(정확) → id(HTML id 속성) → index(위치) → url(부분일치).
+        # elif 가 아니라 순차 시도 — 앞 방법이 못 찾으면 다음으로 폴백.
+        if name and target_frame is None:
             for frame in frames:
                 if frame.name == name:
                     target_frame = frame
                     break
-        elif index is not None:
+
+        if frame_id and target_frame is None:
+            # HTML id 속성으로 iframe element → content_frame() 로 Frame 획득
+            try:
+                handle = await page.query_selector(f'iframe[id="{frame_id}"]')
+                if handle:
+                    cf = await handle.content_frame()
+                    if cf:
+                        target_frame = cf
+            except Exception:
+                pass
+            # 폴백: 코퍼스가 name 속성을 'id'로 부른 경우 (name==id)
+            if target_frame is None:
+                for frame in frames:
+                    if frame.name == frame_id:
+                        target_frame = frame
+                        break
+
+        if index is not None and target_frame is None:
             if 0 <= index < len(frames):
                 target_frame = frames[index]
-        elif url_pattern:
+
+        if url_pattern and target_frame is None:
             for frame in frames:
                 if url_pattern in (frame.url or ""):
                     target_frame = frame
@@ -214,14 +244,23 @@ async def browser_iframe_switch(params: dict) -> dict:
             return {
                 "success": False,
                 "error": "지정한 iframe을 찾을 수 없습니다.",
-                "hint": "browser_iframe_list로 사용 가능한 iframe을 확인하세요."
+                "hint": "browser_iframe_list로 사용 가능한 iframe(id/name/index/url)을 확인하세요."
             }
 
         session.set_active_frame(target_frame)
 
+        # 전환된 프레임의 HTML id 도 표기(가능하면)
+        switched_id = ""
+        try:
+            el = await target_frame.frame_element()
+            switched_id = await el.get_attribute("id") or ""
+        except Exception:
+            pass
+
         return {
             "success": True,
             "switched_to": {
+                "id": switched_id,
                 "name": target_frame.name or "",
                 "url": target_frame.url or "",
             },

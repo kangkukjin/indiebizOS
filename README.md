@@ -184,17 +184,17 @@ The system maintains awareness of itself and the world:
 
 A domain-specific language that unifies all capabilities into one syntax.
 
-**5 Nodes, 199 Atomic Actions:**
+**5 Nodes, 144 Atomic Actions:**
 
 | Node | Actions | Description |
 |------|---------|-------------|
-| **sense** | 77 | Data retrieval (web, Naver Korean search, finance, photos, blog, health, real estate, legal, statistics) |
-| **self** | 50 | System management, workflows, files, notifications, code execution, health records |
+| **sense** | 39 | Data retrieval (web, Naver Korean search, finance, travel, photos, blog, health, real estate, legal, statistics) |
+| **self** | 42 | System management, workflows, triggers, files, notifications, code execution, health records |
 | **limbs** | 40 | UI automation (browser, Android, macOS), media playback (YouTube, radio) |
 | **others** | 6 | Collaboration, delegation, email, contacts, messaging |
-| **engines** | 26 | Content creation (slides, video, charts, images, music, websites, architecture) |
+| **engines** | 17 | Content creation (slides, video, charts, images, music, websites, architecture) |
 
-> Action counts shrank from 332 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn.
+> Action counts shrank from 332 → 144 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn. Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work.
 
 ```
 User: "Search AI news and save to file"
@@ -203,7 +203,7 @@ User: "Search AI news and save to file"
 ```
 
 **Key design:**
-- **One tool, one language** — AI agents learn one syntax, not 199 tool schemas
+- **One tool, one language** — AI agents learn one syntax, not 144 tool schemas
 - **Per-agent filtering** — Each agent's `allowed_nodes` restricts access
 - **Dynamic loading** — Tool packages are folders; drop one in, it's recognized
 
@@ -211,7 +211,7 @@ User: "Search AI news and save to file"
 
 Two memories learn from you automatically — and keep themselves clean:
 
-- **Hippocampus (procedural memory)** — A fine-tuned 768-dim embedding model maps your natural language to past IBL code (Top-5 accuracy: 95.3%). Successful executions are automatically distilled into reusable examples, so the system gets faster at *your* recurring tasks.
+- **Hippocampus (procedural memory)** — A fine-tuned 768-dim embedding model maps your natural language to past IBL code (action retrieval ~99% Top-5 in practice; retrained 2026-06-04 on the current 144-action vocabulary). Successful executions are automatically distilled into reusable examples, so the system gets faster at *your* recurring tasks.
 - **Deep Memory (relational memory)** — After each conversation, a lightweight pass extracts durable facts about you — preferences, decisions, key dates — and recalls them, with their last-seen date, when relevant.
 - **Closed feedback loop** — When a recalled example drives an execution, its success or failure is recorded, so proven patterns rise and bad ones sink. Distilled code is validated against the action registry before it can enter the corpus.
 - **Self-cleaning** — A periodic consolidation pass (part of the immune patrol) merges near-duplicates, prunes stale or proven-bad entries, and resolves contradictions — so memory stays sharp instead of bloating.
@@ -263,4 +263,4 @@ cd frontend && npm run electron:dev  # Frontend (Electron)
 
 *IndieBiz OS — An AI system that grows with you, not one that's given to you.*
 
-*Last updated: 2026-05-31*
+*Last updated: 2026-06-04*

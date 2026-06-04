@@ -766,3 +766,186 @@
   - sense:book 개선: title/author/publisher 필드 검색. data4library 파싱 버그 2건 수정(get_book_detail XML 중첩, recommended_books 항목태그 doc→book). Google search_books·naver_search 구조화 경로(_raw로 postprocess:compress 우회).
   - 미문서 파라미터 노출: recommended_books.rec_type(마니아/다독자), realty.dong, 공통 _raw(12_ibl_only.md).
   - 문서: README.md/README.ko.md 런처 3표면 섹션, architecture.md '사용자 표면' 섹션, system_structure.md 주요기능+푸터.
+
+## 2026-06-03 (2) — IBL 어휘 정리 라운드 1: finance (파일럿)
+- 동기: 수동 모드(인간 작성) 가독성. 보편어 land-grab/과잉한정 16개 액션을 도메인 명료 3개로.
+- sense/finance 16→3: [sense:stock]{op: quote|price|info|search|investors|news|earnings} + [sense:company]{op: profile|financials|disclosures} + [sense:crypto](유지). 전체 액션 199→185.
+- 시장 자동판별: ticker로 kr/us 판별(6자리/.KS/한글=kr, 그외=us), market 파라미터로 강제 지정. price=KRX|FMP, company=DART|FMP·SEC 분기.
+- handler: stock_op/company_op 디스패처(_OP_DISPATCHERS 표준, ticker/symbol/query/corp_name 호환). tool.json 16→3. build --check 삼각검증 통과.
+- 후방호환: ibl_parser _ACTION_NAME_ALIASES에 옛 15개 액션→stock/company{op,market} 별칭(무손실, kr_/us_ 접두는 market 주입으로 보존).
+- 해마: migrate_finance_action.py로 학습 130건+usage_db 130건 IBL코드 치환, rebuild_index(2286 용례), world_pulse 옛 액션행 삭제. 연상 검증(삼성 주가→stock, 애플 재무→company).
+- 호출측 정리: InvestInstrument.tsx(앱 모드), tool_loader/system_tools 예시, ibl_usage_generator/ibl_embedding_trainer. 가이드 investment.md 전면 재작성.
+- 잔여(별도): generate_missing_intents.py·rebuild_usage_db.py 레거시 시드(런타임 비관여, 라벨 버그 동반).
+- 다음 롤아웃: culture(책 5개·공연계열) → media → research.
+
+## 2026-06-03 (3) — IBL 어휘 정리 라운드 2: culture
+- sense/culture 13→6: [sense:performance]{op: search|venue|genres|regions}(KOPIS 4→1) + [sense:book]{op: search|recommended|codes}(도서관정보나루 4→1) + [sense:classic]{op: western|korean}(고전 원문 2→1, Gutenberg/한국고전DB) + exhibit·search_books 유지. travel은 culture→travel 그룹 재배치. 전체 액션 185→178.
+- 설계 결정(사용자): book(신간/일반)과 classic(고전 원문)을 분리 — 고전은 원문 열람 목적이라 검색 맥락이 다름. 글로벌 search_books는 패키지(study) 달라 별도.
+- handler: culture 패키지에 performance_op/book_op/classic_op 디스패처(_OP_DISPATCHERS 표준), 접힌 10개 분기 정리, 비-IBL 내부 도구는 유지. tool.json 옛 IBL 도구 10개 제거 + 3 op 도구 추가. --check 통과.
+- 후방호환: ibl_parser 별칭 8건(venue/genres/performance_regions→performance, recommended_books/kdc/library_regions→book, gutenberg_books/korean_classics→classic). book/performance/exhibit는 이름 유지(기본 op).
+- 해마: migrate_culture_action.py로 학습 60건+usage_db 60건 치환, rebuild_index(2286), world_pulse 정리.
+- 호출측: BookInstrument(classic/recommended)·CultureInstrument(genres) 앱 갱신. 가이드 book.md/gutenberg.md 갱신.
+- 다음: media → research.
+
+## 2026-06-03 (4) — 별칭 완전 은퇴: 단일 어휘로 수렴
+- 문제 인식: 코퍼스만 마이그레이션하고 "방출/교재 표면"(meta.yaml IBL 예제·프롬프트 fragment·execute_ibl tool.json·system_docs·운영데이터)은 옛 어휘를 유지 → 프롬프트가 옛 이름을 가르치고 별칭이 조용히 번역 → 어휘가 영원히 수렴 안 하는 자기모순 고리.
+- 조치: 모든 방출/교재 표면을 신규 어휘로 마이그레이션:
+  - ibl_nodes_src/meta.yaml(에이전트 IBL 예제 원천), 12_ibl_only.md·base_prompt_v4.md(프롬프트), ibl-core/tool.json(execute_ibl 스키마), system_docs/ibl.md·technical.md, guides/workflow.md, calendar_events.json(운영 25건). [sense:news] 섹터검색 오용은 search_news로 의미 보정.
+  - 시드 스크립트(rebuild_usage_db.py·generate_missing_intents.py)는 백그라운드 작업이 이미 정리(라벨 버그 포함).
+- finance 17 + culture 8 별칭 완전 삭제(_ACTION_NAME_ALIASES). 옛 이름은 이제 "노드에 X 액션 없음" + 사용가능목록 에러로 명시적 실패. 조용한 번역 → 명시적 실패.
+- 검증: 방출/교재 표면 grep 0(폐기 안내 문구 제외), [sense:price]/[sense:gutenberg_books] 에러 확인, 신규 동작 확인.
+- 원칙: 임시방편(영구 별칭)은 모순을 쌓는다. 별칭은 *전환 도구*일 때만 옳고, 정본 표면을 옮긴 뒤 은퇴시켜야 단일 어휘가 된다.
+
+## 2026-06-03 (5) — IBL 명명 헌법 성문화 + 전수 감사 + web 라운드
+- 명명 헌법(사용자 철학) 성문화: new_action_checklist.md "0단계: 명명 헌법", ibl_design_philosophy.md "§4.5 이름 짓는 법". 원칙: ①보편성-길이 반비례(보편=짧게, 특수=자기설명적 긴 이름) ②변형은 op로(굴절) ③한 단어=한 개념(과통합 경계) ④특수→보편 흡수 ⑤land-grab 금지.
+- 전수 어휘 감사: 178액션 4렌즈 채점 → worklist(Tier1 op통합 / Tier2 명명·흡수 / Tier3 유지). project_ibl_vocab_reform 메모에 지도.
+- web 라운드(Tier1 #1): engines/web_builder 9→3. [engines:web]{op: create|build|deploy|preview|snapshot|check} + [engines:web_component]{op: catalog|fetch|add} + [engines:web_site]{op}(유지). 한 단어=한 개념 원칙으로 9→1 잡동사니 대신 3개 개념 분리. 전체 178→172.
+- 완전 은퇴 방식(별칭 없이 직접): 코퍼스 35건 + 시드스크립트 + 가이드 web_builder.md 전수 마이그(이전 per-tool 스킴 잔재 web_create_site/web_edit_styles류 포함) → rebuild_index. 옛 이름은 즉시 에러.
+- 검증: --check 통과, 옛 web_deploy→에러, 신규 동작, 방출표면 grep 0(docs/ 과거계획 기록 제외).
+- 잔여: web_edit_styles(핸들러엔 있으나 IBL 액션 아님) — styles op 추가 여부 별도 결정. 다음 Tier1: 학술검색 8→paper.
+
+## 2026-06-03 (6) — Tier1 #2: 학술논문 + devdocs
+- sense 학술검색 감사 결과 8개가 두 개념: 논문 6개(study 패키지) + 소프트웨어 문서 2개(context7). 헌법(한 단어=한 개념)대로 분리.
+- [sense:paper]{op: search|download, source: openalex/arxiv/pubmed/semantic} — 논문 6→1 (study). op=verb, source=DB(파라미터).
+- [sense:devdocs]{op: resolve|search} — Context7 라이브러리 문서 2→1 (context7). search는 library_id 직접/library_name 자동해소.
+- 완전 은퇴(별칭 0): 코퍼스 62건 + 시드스크립트 + self_inspection_guide 마이그 → rebuild_index. 전체 172→167.
+- 검증: --check, 옛 search_openalex→에러, paper openalex(44만건)·devdocs resolve 동작. arxiv는 외부 429(라우팅 정상).
+
+## 2026-06-03 (7) — Tier1 #3: blog 통합 + kinsight 폐기
+- self/blog 6 → [self:blog]{op: posts|search|check_new|rebuild_index|stats} (blog 패키지). search는 mode(hybrid/semantic/content) 파라미터.
+- kinsight·kinsight2 완전 폐기(사용자 지시): src 액션·핸들러 2분기·tool.json·tool_kinsight.py 삭제, 코퍼스 6건 삭제, 시드 블록 제거. 흡수 아님.
+- 완전 은퇴(별칭 0): 코퍼스 50건 변환 + kinsight 6 삭제 + 시드 마이그 → rebuild_index(2280). 전체 액션 161.
+- 검증: --check, 옛 blog_posts·폐기 kinsight→에러, blog stats(3977글)·기본 posts 동작.
+
+## 2026-06-03 (8) — Tier1 #4: video 통합
+- sense/media video 4 → [sense:video]{op: info|transcript|languages|summarize} (youtube 패키지). search_youtube(검색)·limbs:music(재생)은 별개 유지.
+- youtube 핸들러 _OP_DISPATCHERS에 video_op 추가(op→내부 tool 매핑, 기존 메커니즘 재사용). tool.json 옛 4개 제거 + video_op.
+- 완전 은퇴(별칭 0): 코퍼스 25건 + 시드/생성기 + web 패키지 _note 힌트 마이그 → rebuild_index(2280). 전체 액션 158.
+- 검증: --check, 옛 video_info→에러, 신규 video info 동작.
+
+## 2026-06-03 (9) — Tier1 #5: collect 통합
+- sense/places collect 3(collect/collect_sites/collect_query) → [sense:collect]{op: run|sites|query} (web-collector 패키지). 라우터 경계 통일: 옛 collect는 router=web_collector(엔진), sites/query는 handler였음 → 단일 handler/collect_op로, op=run은 backend web_collector 크롤 엔진에 위임(패키지→backend 정상 방향).
+- 완전 은퇴(별칭 0): 코퍼스 10건 + collect는 이름 유지(기본 op run). 전체 액션 156.
+- 검증: --check, collect sites/query/run 동작, 옛 collect_sites→에러.
+- **인프라 발견**: /packages/reload는 카탈로그 노드 캐시만 비우고 실행기(_execute_ibl_unified/ibl_engine) 노드 캐시는 안 비움. src/nodes 변경 반영엔 uvicorn 워커 재시작(backend .py touch) 필요. 이전 라운드는 migrate_*.py 생성으로 우연히 재시작됨.
+
+## 2026-06-03 (10) — 인프라 수정: /packages/reload 실행기 노드캐시 누락
+- 문제: 노드 캐시 3곳(ibl_access 카탈로그 / ibl_engine._nodes 실행기 / ibl_executors._nodes_cache 파생) 중 reload가 ibl_access만 비움. src/nodes 변경이 실행 경로에 반영 안 됨(backend 재시작 전까지).
+- 수정: ibl_engine.reload_nodes()가 ibl_executors._nodes_cache까지 무효화. api_packages reload 엔드포인트가 invalidate_nodes_cache()(ibl_access) + reload_nodes()(ibl_engine+executors) 둘 다 호출.
+- 검증(격리): src에서 collect→collect_xtest 개명 후 build+reload(백엔드 재시작 없이) → 옛 collect 에러, 새 collect_xtest 동작. 복구 확인.
+- 효과: 어휘 정리 9단계에서 backend touch 워크어라운드 불필요 — /packages/reload만으로 충분.
+
+## 2026-06-03 (11) — Tier1 #6: publishing 통합
+- engines/publishing 3(publish_list/create/status) → [engines:publish]{op: list|create|status} (publishing 패키지 registry.py op 분기). 전체 액션 154.
+- 완전 은퇴(별칭 0): 코퍼스엔 용례 없었음(신규 패키지), world_pulse 정리 + 시드 변환. **reload 수정 후 첫 라운드 — /packages/reload만으로 라이브 반영 확인**(백엔드 재시작 불필요).
+- 검증: --check, 옛 publish_list→에러, 신규 publish(기본 list) 동작.
+
+## 2026-06-03 (12) — Tier1 #7: lecture 검토 → 통합 보류(유지 결정)
+- engines/lecture 4(lecture_plan/write/illustrate/compose)는 이름상 op 후보였으나, 각자 고유 achievement_criteria(단계별 평가기준)를 가진 진짜 4단계 파이프라인. achievement_criteria는 액션 단위라 op 통합 시 단계별 평가 소실.
+- 헌법 3원칙(op=굴절, 잡동사니 아님) 적용: 변형이 아닌 별개 단계 → 유지. 이름도 lecture_ prefix로 자기설명적(land-grab 아님). 무변경.
+- (모든 클러스터가 통합 대상은 아님을 보여주는 사례 — 명명 헌법이 과통합을 막음.)
+
+## 2026-06-03 (13) — Tier1 #8: radio 통합 (Tier1 완료)
+- sense/media radio 2(search_radio/korean_radio) → [sense:radio]{op: search|korean} (radio 패키지 radio_search_op). 재생 limbs:radio와 노드 구분. 전체 액션 153.
+- 완전 은퇴(별칭 0): 코퍼스 10건 + RadioInstrument.tsx(앱) + meta.yaml(교재) + mcp_server.py(라디오 예시 2개, radio_play도 동반 수정) 마이그 → rebuild_index. reload만으로 검증.
+- 검증: --check, 옛 search_radio→에러, radio korean(KBS)·search(jazz) 동작.
+- **Tier1 전체 완료**: web/paper+devdocs/blog(+kinsight폐기)/video/collect/publish/radio 통합 + lecture는 검토 후 유지. 액션 178→153.
+
+## 2026-06-03 (14) — Tier2 일부: 특수→보편 흡수 검증 + api_ninjas 폐기 + district_codes 흡수
+- 특수→보편 흡수 검증(사용자 관심): world_bank/search_guardian/pew_research는 접근(structured API/전용 아카이브/단일 RSS)이 보편 액션과 달라 **유지**. 흡수 불가 = 접근 캡슐화 원칙 확인.
+- api_ninjas **폐기**(사용자 결정): 벤더 이름이라 자기설명 실패 + 40+endpoint(한 개념 아님) + weather는 [sense:weather] 중복. src/handler/tool.json/함수/코퍼스6/world_pulse 전부 제거.
+- district_codes → [sense:realty]{op: query|codes} 흡수(realty가 region 자동해소하므로 codes는 보조). RealtyInstrument.tsx·가이드 2개 갱신. 전체 액션 151.
+- 검증: --check, 옛 둘 다 에러, realty codes/query 동작. (reload만으로 검증)
+
+## 2026-06-03 (15) — Tier2: webcam 흡수 + limbs open 유지 + storage/folder 통합 + web_edit_styles 부활
+- #27 sense/webcam_nearby → [sense:cctv]{op: webcam} 흡수(사용자 결정). webcam op=Windy 직행(get_nearby_webcam, 교통 CCTV 건너뜀). cctv:search/nearby가 이미 Windy 폴백 보유라 같은 모듈·패키지 → 굴절(헌법 2). 코퍼스 5 + 가이드 마이그, 별칭 0. 전체 151→150.
+- #28 limbs open 그룹 6(os_open/show_map/explorer/photo_manager/launch/open_window) 검토 → **유지**(사용자 결정). router(system 2/handler 4)·패키지·개념이 다 달라 op 통합 불가 — lecture(#5)처럼 헌법 3원칙(과통합 경계) 사례. group:open은 UI 분류일 뿐.
+- #29 self storage/folder 통합(사용자 결정=권장안). storage_scan/summary/volumes → [self:storage]{op}(default volumes), folder_annotate/annotations → [self:folder_note]{op}(default get). fs_query는 빈번 검색이라 별도 유지(헌법 1). pc-manager(구식 디스패치)에 _OP_DISPATCHERS 신규 도입. 코퍼스 53 마이그. 별칭 3개(summary/annotate/annotations) dangling→신규 op 갱신. **기존 버그 2개 수정**: _annotate_folder의 root_path 인자 누락(set 원래 깨짐), _scan_storage의 없는 키 참조(scan KeyError). end-to-end 검증. 전체 150→147.
+- #25 web_edit_styles **부활**(사용자 결정) → [engines:web]{op: styles}. shadcn 테마 프리셋/HSL/border-radius 구조화 편집은 생 텍스트 [self:edit]가 대체 못 함(헌법 4 접근 상이). 기존 폐기 결정 번복. 코퍼스 3 마이그, 가이드/parser 노트 정정. end-to-end(globals.css 테마 적용) 실증. 액션 수 불변(op 추가).
+- 모두 --check 삼각검증 + 해마 재색인(2274) + 옛이름 에러 + /packages/reload만으로 라이브 검증.
+[2026-06-03 18:00:00] IBL_VOCAB_REFORM #24: 레거시 별칭 완전 은퇴 (마지막 캡스톤)
+  - ibl_parser._ACTION_NAME_ALIASES 159개 별칭 전체 제거 → 빈 dict. 시스템이 단 하나의 어휘만 말함.
+  - 옛 이름(price/gallery/ask_sync/slide/line/blog_semantic 등)은 이제 "노드에 X 액션 없음" 에러로 명시적 실패(조용한 번역 종료).
+  - 마이그 표면: 코퍼스 2파일(balanced 188+distilled 25건)+usage_db 208건+rebuild_index(2274용례, 12.7s), world_pulse action_health 291건 정리(충돌 6개 제외), meta.yaml(catalog 재빌드)+guides 4(browser_action/workflow/calendar/self_inspection)+lecture README+ibl_access instruction+channel_engine 제안문, 운영 IBL kinsight.yaml, 시드 3(generate_missing_intents 깨진 30줄 포함 복구/ibl_usage_generator/rebuild_usage_db), docstring(ibl_routing/api_lecture_workspace/health-record).
+  - slide는 스키마 변경(topic/theme→slides 배열) 특수 변환. create_slides 고아 도구는 별도 정리 위임.
+  - 검증: build_ibl_nodes --check 바이트 일치, /validate 라이브(옛 5개 에러/신규 5개 valid), 방출표면 grep 0(모델 README 히스토리 제외).
+[2026-06-03 19:00:00] IBL_VOCAB_REFORM 재감사 라운드 A: sense:world op 통합
+  - world_pulse/world_trend/world_refresh 3개 → [sense:world]{op: snapshot|trend|refresh} (기본 snapshot). self_check은 별 개념이라 분리 유지.
+  - system 라우터 변형: src func: world_op + ibl_routing _route_system의 world_op 분기(op→execute_world_pulse action_name 매핑). 핸들러 _OP_DISPATCHERS 아님(--check 무관).
+  - 마이그: 코퍼스 25건+usage_db 25건→rebuild_index(2274), world_pulse.db action_health 8건 정리, 가이드 world_pulse.md+world_pulse.py docstring+world_pulse_health.py 메시지.
+  - 검증: --check 바이트 일치, /validate(옛 3개 에러/신규 3개+self_check valid), /execute [sense:world] 스냅샷 정상 반환. 전체 147→145.
+[2026-06-03 20:00:00] IBL: engines:publish 완전 은퇴 (껍데기 액션 제거)
+  - 사유: publish_op(list/create/status)가 폴더+book_plan.md+progress.md 스캐폴딩/조회만 할 뿐, 실제 조판(typst/표지/내지/검증)은 전혀 안 함. 진짜 출판은 대화형 스킬(project_publishing_skill). 이름이 내용보다 큼.
+  - src engines.yaml publish 블록 삭제 → 전체 145→144 (engines 18→17). publishing 패키지는 installed→not_installed 이동(registry.py는 패키지 밖 미사용 확인). handler의 죽은 참조(export.py/collect.py)도 함께 격리.
+  - 코퍼스: gap-fill로 넣었던 publish 예시 7건 삭제(training 2092→2085, usage_db), rebuild_index 2324, world_pulse action_health 2건 정리.
+  - 검증: --check 바이트 일치, [engines:publish]→"액션 없음" 에러.
+  - 해마 빈틈 메우기(2026-06-03): 예시 0개였던 8액션 채움 후 publish 제거 → 현재 143액션 커버(0빈틈), kosis/legal/lecture/slide 등 신규 예시 50건 유효.
+[2026-06-03 21:00:00] BUG_FIX: 파라미터 이름 불일치 6건 (코퍼스 자연어명 vs 핸들러 관례명)
+  - sense:performance(query↔keyword), sense:crypto(coin↔coin_id, 무시돼 항상 bitcoin), self:copy/move(src/dest↔source/destination, KeyError로 액션 통째 실패), sense:navigate_route(from/to↔origin/destination), sense:company(query 누락, stock과 비일관).
+  - 전부 핸들러가 자연어/코퍼스 파라미터명을 별칭으로 수용하도록 수정(기존 명도 호환). 원인=합성 코퍼스가 자연어명 사용하나 핸들러는 제 관례명만 읽음(stock/book/performance-now만 _arg/or 폴백 보유). 라이브 검증 완료.
+[2026-06-03 22:00:00] 전수조사: IBL 파라미터 이름 불일치 ~35건 (병렬 에이전트 5노드)
+  - 실제 파서로 코퍼스 param 추출 후 핸들러 대조. 중앙 ACTION_PARAM_ALIASES(ibl_routing.py, 모든 라우터 진입 직전 적용) 확장으로 일괄 수정.
+  - 중앙 테이블(plain-rename ~20): realty/devdocs 재키잉(옛 통합액션명 stale했음)+exhibit/local_query/abc_get/fs_query/folder_note/photo/grep/call/trigger/gui/drag/radio_favorite/show_map/music(abc→abc_notation)/chart(type)/messages/delegate.
+  - 핸들러 배열래핑(별칭 불가): select(value→values), upload_file(path→files).
+  - 보류(transform/기능 필요): tab/iframe/trigger.cron/navigate_route.query/realty.year_month/chart.labels/download.path. 코퍼스노이즈(정제 대상): stock.coin_id/web_*.site_id 등.
+  - 검증: exhibit query→keyword 776건 라이브. 상세 [[project_ibl_param_name_mismatch]].
+[2026-06-03 22:30:00] 수동모드 둘러보기 UX: op 분기 가시화
+  - 문제: op 액션 선택 시 빈 [node:action]{op: }만 써지고 op 값/파라미터를 알 수 없었음(카탈로그 API가 ops 미노출).
+  - api_ibl.py /ibl/actions/catalog에 ops(default+values 설명) 추가. ManualMode 둘러보기가 op를 클릭 칩(각 {op:"값"} seed 생성, 기본=★, hover=설명)으로 펼치고 target_description를 파라미터 힌트로 표시. api-ibl.ts 타입에 ops 추가. dev HMR 반영.
+[2026-06-03 23:00:00] BUG_FIX(데이터 유실): 앱모드 캘린더에서 개인 일정(생일/제사 등) 사라짐 복구
+  - 증상: 정기일정(WorldPulse interval 2건)만 표시, 사용자 일정 15건 소실.
+  - 근본원인: calendar_manager._load_config가 파싱 실패 시 조용히 {"events":[]} 반환 → _save_config가 빈 설정을 통째로 덮어씀 → 파일 1회 손상 시 WorldPulse가 2건만 재등록하며 사용자 15건 영구 유실.
+  - 복구: git e289354(개인정보 추적제외 직전 커밋)에서 15건 추출, (title,date) 기준 병합(다년치 음력 일정 보존) → 17건 복원. 백엔드 재시작으로 싱글턴 리로드, GET /scheduler/calendar/events 17건 확인.
+  - 재발방지: _load_config 파싱실패 시 손상본 .corrupt.<ts> 백업(빈 설정 덮어쓰기 전 보존), _save_config 원자적 쓰기(tmp+os.replace)+직전 파일 .json.bak 보존.
+  - 잔여(latent): list_events의 무-date yearly/monthly 드롭 엣지(현재 데이터는 전부 date 보유라 영향 없음).
+[2026-06-03 23:30:00] 데이터 유실 안티패턴 일괄 보강 (safe_store 공유 유틸)
+  - 캘린더 사고와 동일 패턴("로드 실패→빈 기본값→save로 클로버링")을 가진 핵심 사용자 데이터 스토어 보강.
+  - backend/safe_store.py 신설: safe_load_json(손상 시 .corrupt.<ts> 백업+default, 덮어쓰기 방지) + safe_save_json(tmp+os.replace 원자적 + .json.bak 보존).
+  - 마이그: switch_manager(스위치)·trigger_engine(트리거)=silent-empty-clobber 위험 / project_manager(projects.json)=원자성 보강. business_manager는 SQLite라 안전(제외).
+  - 검증: safe_store 단위테스트(없음/저장/손상) 통과, 프로젝트 24·캘린더 17 정상 로드.
+  - 잔여(낮은 우선): web-builder sites.json(패키지 로컬), 그 외 36개 의심파일 대부분은 캐시/재생성/DB라 무위험.
+[2026-06-04 00:00:00] sense:stock 이름→코드 내부 해소 (내부 해소 원칙 확장)
+  - 전: quote/price가 종목코드만 받아 사용자/LLM이 search→코드→quote 다단계 필요. "TIGER 200"·"삼성전자" 직접 호출 시 실패.
+  - 후: _resolve_ticker가 이름(공백 ETF명/한글 회사명)을 내부 search로 코드 해소. 코드/US티커는 그대로. 매칭=정확→질의시작 최단명→top, 공백 제거 비교(yfinance가 102110을 "TIGER200"으로 반환 → "TIGER 200"과 매칭). price(krx)는 .KS 접미사 strip, market 재판별.
+  - 검증: quote/price query="TIGER 200"→102110/141495, KODEX 200→252650, 삼성전자→005930, AAPL 그대로.
+  - 효과: [sense:stock]{op:"quote", query:"TIGER 200"} 한 줄로 가격. 호출자에 코드 안 떠넘김(내부 해소 원칙). company도 같은 개선 후보(corp_name→코드).
+[2026-06-04 00:30:00] sense:stock 상대기간 period 내부 해소 ("상대 시간 > 절대 시간" 원칙)
+  - period(1mo/3mo/6mo/1y/ytd/Nd/Nw) → start_date=오늘−기간, end_date=오늘 자동계산(_resolve_period, _months_ago 월말안전). start_date 명시 시 우선.
+  - price/news/earnings/investors 적용. quote는 yfinance period native라 제외 → quote·price가 같은 period 어휘 공유.
+  - 검증: {op:price, ticker:"삼성전자", period:"3mo"}→62거래일, {query:"TIGER 200", period:"1y"}→243일/102110(이름+기간 동시), 명시 start_date 우선. target_description 문서화 + --check 통과.
+  - 근거: 절대 날짜는 같은 의도→다른 IBL(해마 노이즈) + 저장 IBL 노후화. 상대기간은 결정적·불변이라 LLM/코퍼스/워크플로우에 유리. 다른 시간 액션(news/world trend/캘린더 등) 확산 후보.
+[2026-06-04 01:00:00] sense:stock op 개명: price=현재가 / history=기간이력 (직관 정렬)
+  - 동기: 번역기가 "현재가"를 op:price(=옛 기간이력)로 오역 — 이름이 직관 거스름(사람·LLM·코퍼스 공통). 옛 quote→price(현재가, 기본), 옛 price→history(이력/차트).
+  - src ops(default price)+handler 분기+_OP_DISPATCHERS+tool.json enum/default/태그+InvestInstrument(현재가=price, 차트=history) 개명. --check 바이트 일치.
+  - 코퍼스: 동시스왑(quote→price/price→history) 후 **의도 기준 재분류 33건**(차트/추이→history, 정보/52주→info, 현재가/얼마/시세→price). 분포 price30/info23/history17 — "지금 얼마"→price 정상화. reindex 2324.
+  - period 관용 수용 확장: 3mo/3m/3개월/6mo/1y/2주/5일/ytd 모두 → 날짜 자동계산.
+  - 잔여: 경량 번역기가 일부 표현(현재가→info, "chart"/"3m" 추측)에서 불완전 — 어휘 구조는 정확, 번역 품질은 증류/재학습으로 점진 개선되는 층.
+[2026-06-04 01:20:00] sense:stock 이름해소 휴리스틱 확장 (마무리)
+  - 증상: 번역기 출력 symbol:"tiger200"(소문자·공백없음) 실행 실패 — _resolve_ticker가 "공백 또는 한글"만 이름으로 봐서 영숫자혼합 누락.
+  - 수정: _looks_like_code(005930·AAPL·102110.KS)가 아니면 전부 이름으로 보고 search 해소. "tiger200"→102110/141495 검증, AAPL·005930·삼성전자 회귀 정상.
+  - stock end-to-end 완결: 어휘(price=현재가)+번역(현재가→price)+실행(이름→코드)+기간(3개월/3mo/ytd).
+[2026-06-04 04:30:00] IBL 사용성 감사 설계결정 ① — self:storage/folder_note/fs_query 무인자 안전화
+  - root 미지정 시 에러 → 스캔된 전체 볼륨 통합으로 폴백. storage_db에 get_summary_all/get_annotations_all/query_files_all 신설. 기본 op volumes는 이미 안전, scan만 명시 path 요구(안내 에러 개선).
+  - 라이브 검증: summary 무인자→4볼륨 18.9GB 통합, fs_query 무인자→전볼륨 검색(volume 라벨).
+[2026-06-04 04:50:00] sense:world_bank 자연어 내부 해소
+  - 지표명(GDP/인구/실업률 한·영)→WB 코드, 국가명(한국/미국)→ISO3 큐레이션 맵. 원시 코드·ISO는 패스스루. 라이브 검증("인구"+"한국"→SP.POP.TOTL/KOR).
+[2026-06-04 05:10:00] 코퍼스 param 노이즈 정리 — CORPUS_PARAM_ALLOW 비움
+  - pew_research:topic/blog:sort/web:font/web_site:reference (핸들러가 안 읽는 군더더기)를 코퍼스에서 제거(migrate_allowlist_cleanup.py, 24건). reindex 후 allowlist 빈 dict.
+[2026-06-04 06:00:00] sense:travel 자연어 평면 op 인터페이스화 (삼중 불일치 해소)
+  - 전: 카탈로그(endpoint)·코퍼스(query)·핸들러(endpoint 요구) 삼중 불일치 + IATA/날짜 호출자 떠넘김 + params 중첩.
+  - 후: [sense:travel]{op: flight|hotel|poi, from/to/date/city}. 도시명→IATA(_IATA_CITY 40여+Amadeus city-search 폴백)·상대날짜(_resolve_travel_date) 내부해소. 기본값(from=서울, date=+7일). endpoint+params 중첩은 파워유저 탈출구 보존. location-services에 _OP_DISPATCHERS 첫 도입.
+  - 라이브 검증: {op:flight,to:도쿄}→실제 Amadeus 항공권(ICN→NRT), 옛 endpoint 호텔 후방호환. 코퍼스 재라벨5+신op 시드6, reindex 2324.
+[2026-06-04 06:40:00] limbs:iframe switch HTML id 속성 선택 지원 (옵션B)
+  - 전: switch가 name/index/url만, 코퍼스 id는 임시 별칭(name:[id])으로 폴백 — 진짜 HTML id면 못 찾음.
+  - 후: page.query_selector('iframe[id="X"]').content_frame()로 HTML id 직접 타게팅(+name 폴백). list가 id 반환, default:list. 임시 별칭 은퇴(정본 승격).
+  - 라이브 검증(테스트 iframe 페이지): id/name/index/url 4방식 switch + reset + 없는id 에러.
+[2026-06-04 07:20:00] self:trigger cron 내부 해소 + ACTION_PARAM_ALIASES 잠복결함 수정
+  - trigger create: 표준 cron 문자열→calendar config 내부해소(_cron_to_config: daily/weekly/interval/monthly/yearly + 미지원 명확 에러). create는 name+pipeline 필수, action→pipeline 정리. calendar_manager monthly day 영속화 버그 부수 수정.
+  - ★ 부수발견: ACTION_PARAM_ALIASES(중앙 별칭)가 비-handler 라우터(trigger/system/workflow_engine/channel_engine)엔 죽어있었음 — _normalize_param_aliases가 _route_by_config(handler/driver 전용)에서만 호출. ibl_engine 메인 디스패치 입구에 중앙 적용 추가 → id→trigger_id 등 모든 비-handler 별칭이 살아남.
+  - 라이브 검증: create cron→daily config, update cron→weekly, get/delete by id. CORPUS_PARAM_ALLOW 완전히 빔. → 사용성 감사 설계결정 전건 종결.
+[2026-06-04 08:00:00] 해마 임베딩 144액션 어휘 재학습 + 새 모델 채택
+  - 트레이너 개선(조기종료 code+desc 블렌드 모니터·torch.manual_seed·밸런싱 상한30·patience4) + Modal GPU T4 batch16 epochs10. 엄격 게이트(cloud_training/compare_models.py + 런타임-충실 프로브): code Top-5 91.9→94.5, desc Top-5 95.7→93.5(횡보), **런타임-충실 aggregate A 99.3 ≈ B 99.1(둘 다 천장)**.
+  - 결론: 모델은 런타임 천장이라 재학습 거의 무차별 — 해마는 IBL 어휘가 아니라 query↔저장 intent 의미를 매칭해 vocab 변경에 강건. 관찰된 "도쿄→cctv" 오랭킹은 FTS5 키워드 artifact였지 임베딩 실패 아님(검색 품질 레버=하이브리드 alpha/FTS5).
+  - 코드 중시+현재 어휘 기반이라 새 모델 B 채택. apply_model.sh→rebuild_index 2324→백엔드 재시작, 라이브 검증(translate 신어휘 travel/trigger/stock/world_bank 전부 정확). 함정: 모델 교체 후 touch-reload가 백엔드 OOM-kill → 다음엔 명시적 재시작.
+[2026-06-04 08:15:00] system_docs + README 갱신 (액션수·해마수치)
+  - 199→144 액션(sense39/self42/limbs40/others6/engines17) 전 문서 정정. 해마 95.3%→code Top5 94.5%/런타임 ~99%. travel/world_bank ibl.md 추가, trigger cron scheduler_guide 문서화. architecture/execution_memory/technical/ibl/ibl_design_philosophy/system_structure/README footer 갱신.

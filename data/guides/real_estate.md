@@ -14,7 +14,7 @@
 
 ```
 1. 지역코드 확인
-   [sense:district_codes]{city: "서울"}   # → 강남구=11680 등
+   [sense:realty]{op: "codes", city: "서울"}   # → 강남구=11680 등
 
 2. 실거래가 조회 (type × deal 조합)
    [sense:realty]{type: "apt",   deal: "trade", region_code: "11680"}  # 아파트 매매

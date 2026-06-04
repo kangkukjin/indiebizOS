@@ -957,7 +957,7 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 "단일": '[sense:web_search]{query: "AI 뉴스"}',
                 "파이프라인": '[sense:web_search]{query: "AI 뉴스"} >> [self:file]{path: "result.md"}',
                 "병렬": '[sense:web_search]{query: "AI"} & [sense:search_news]{query: "tech"}',
-                "폴백": '[sense:price]{symbol: "AAPL"} ?? [sense:web_search]{query: "AAPL stock"}'
+                "폴백": '[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:web_search]{query: "AAPL stock"}'
             }
         }, ensure_ascii=False)
 

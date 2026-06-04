@@ -306,7 +306,7 @@ def get_health_context(input_data: dict) -> str:
             query_type = 'search'
 
     # query_type 미지정 + category에 카테고리/조회유형이 들어온 경우 재해석
-    # (학습 코퍼스가 [self:health_query]{category: "혈당"} 형태로 가르치기 때문)
+    # (학습 코퍼스가 [self:health]{op: "query", category: "혈당"} 형태로 가르치기 때문)
     if not query_type_given and category and query_type == 'summary':
         if category in _KO_QUERY_TYPE_MAP:
             query_type = _KO_QUERY_TYPE_MAP[category]

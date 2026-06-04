@@ -54,10 +54,10 @@ execute_ibl(code='[node:action]{param: "value"}')
 
 ```
 WRONG: [self:get]{type: "time"}           # get은 액션이 아님. [self:time]을 써야 함
-WRONG: [sense:price]("AAPL")              # (target) 문법은 폐지됨! {params}를 사용할 것
+WRONG: [sense:stock]("AAPL")             # (target) 문법은 폐지됨! {params}를 사용할 것
 RIGHT: [self:time]                        # 직접 액션명 사용
-RIGHT: [sense:price]{symbol: "AAPL"}      # 모든 값은 named parameter
-RIGHT: [sense:price]{symbol: "005930"}    # 파라미터가 하나여도 named
+RIGHT: [sense:stock]{op: "quote", ticker: "AAPL"}    # 모든 값은 named parameter
+RIGHT: [sense:stock]{op: "quote", ticker: "005930"}  # 파라미터가 하나여도 named
 ```
 - action-categories의 이름(get, run 등)은 쓰지 말 것. 항상 구체적 액션명을 사용하라.
 - (target) 문법은 폐지되어 에러 발생함. 모든 값은 `{key: val}` 안에 작성.
@@ -105,8 +105,8 @@ Chain multiple steps with operators:
 | Operator | Name | Example |
 |----------|------|---------|
 | `>>` | Sequential | `[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}` |
-| `&` | Parallel | `[sense:stock_info]{symbol: "AAPL"} & [sense:stock_info]{symbol: "MSFT"}` |
-| `??` | Fallback | `[sense:price]{symbol: "AAPL"} ?? [sense:search_ddg]{query: "AAPL price"}` |
+| `&` | Parallel | `[sense:stock]{op: "info", ticker: "AAPL"} & [sense:stock]{op: "info", ticker: "MSFT"}` |
+| `??` | Fallback | `[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search_ddg]{query: "AAPL price"}` |
 
 ## Common Patterns
 
@@ -117,7 +117,7 @@ execute_ibl(code='[sense:search_ddg]{query: "AI trends"}')
 
 **병렬 데이터 수집:**
 ```
-execute_ibl(code='[sense:stock_info]{symbol: "AAPL"} & [sense:stock_info]{symbol: "GOOGL"}')
+execute_ibl(code='[sense:stock]{op: "info", ticker: "AAPL"} & [sense:stock]{op: "info", ticker: "GOOGL"}')
 ```
 
 **기계적 전달 (파이프라인):**
@@ -258,7 +258,7 @@ IBL은 몸의 언어다. `[sense:search_ddg]`는 "검색하라"는 행위이고,
 ### 파이프라인을 쓰는 경우 (기계적 전달만 필요할 때)
 ```
 execute_ibl(code='[engines:slide_shadcn]{slides: [{layout: "hero", title: "보고서"}]} >> [limbs:os_open]')  # 생성 → 열기
-execute_ibl(code='[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}')  # 병렬 수집
+execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}')  # 병렬 수집
 ```
 
 ### 파이프라인을 쓰지 않는 경우 (분석/판단이 필요할 때)
@@ -266,7 +266,7 @@ execute_ibl(code='[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}'
 
 **WRONG — 파이프라인으로 한번에 보내기:**
 ```
-execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:news]{query: "반도체"} >> [self:file]{path: "분석.md"}')
+execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:search_news]{query: "반도체"} >> [self:file]{path: "분석.md"}')
 ```
 → 검색 결과 JSON이 분석 없이 그대로 파일에 저장됨. 쓸모없다.
 
@@ -274,7 +274,7 @@ execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:news]{query: "
 ```
 1. execute_ibl(code='[sense:search_ddg]{query: "반도체 시장 동향"}')
 2. (결과를 보고 네가 분석 — 핵심 트렌드, 주요 기업 동향 파악)
-3. execute_ibl(code='[sense:news]{query: "반도체 투자"}')
+3. execute_ibl(code='[sense:search_news]{query: "반도체 투자"}')
 4. (추가 결과와 함께 종합 분석)
 5. execute_ibl(code='[self:file]{path: "반도체_분석.md", content: "네가 정리한 분석 내용"}')
 ```

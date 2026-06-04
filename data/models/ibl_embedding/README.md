@@ -5,37 +5,36 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:3947
+- dataset_size:3739
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 이 영상 스크립트 뽑아
+- source_sentence: 근처 전세 매물 가격대
   sentences:
-  - '[sense:cctv_search]'
-  - 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
-  - '[limbs:music]'
-- source_sentence: 드래그 앤 드롭해줄래
+  - 부동산 실거래가 조회 (op 분기, 국토부). query(실거래가)/codes(법정동 코드). region 이름만 넣으면 코드 자동 변환 —
+    codes는 보통 불필요.
+  - '[self:health]'
+  - '[sense:weather] & [sense:search_news]'
+- source_sentence: 부산 비 오려나
   sentences:
-  - '[self:read_docx]'
-  - '[limbs:drag]'
-  - '[sense:navigate_route] & [sense:navigate_route]'
-- source_sentence: 사용 가능한 UI 컴포넌트 목록 보여
+  - 라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.
+  - '[sense:weather]'
+  - '[sense:search_ddg] & [sense:search_ddg] & [sense:search_ddg]'
+- source_sentence: 이 메뉴 위에 마우스 올려봐
   sentences:
-  - 한국 도서관정보나루 지역 코드 목록. 도서관 위치별 데이터 필터링용.
-  - '[self:memory]'
-  - '[engines:web_list_components]'
-- source_sentence: 오늘 날씨랑 뉴스 한번에 알려줘
+  - '[limbs:hover]'
+  - '[sense:legal]'
+  - '[limbs:content]'
+- source_sentence: 주가 보여줘하는 거 있어?
   sentences:
-  - '[engines:web_live_check]'
-  - '[sense:video_info]'
-  - '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}.
-    도시명(한/영) 직접 사용 가능'
-- source_sentence: 강의 슬라이드 image_prompt 작성
+  - '[self:discover]'
+  - '[engines:slide_shadcn], ]}], theme: "purple"}'
+  - '[limbs:cookies]'
+- source_sentence: 이 docx 파일에서 텍스트 추출해줘
   sentences:
-  - '[sense:search_ddg] >> [sense:search_ddg] >> [sense:search_ddg] >> [sense:search_ddg]
-    >> [sense:search_ddg]'
-  - 로컬 미리보기 서버 제어 (start/stop/status). 빌드 없이 즉시 확인용.
-  - '[engines:lecture_write]'
+  - '[sense:weather]'
+  - '[self:list]'
+  - '[self:read]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -89,9 +88,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '강의 슬라이드 image_prompt 작성',
-    '[engines:lecture_write]',
-    '로컬 미리보기 서버 제어 (start/stop/status). 빌드 없이 즉시 확인용.',
+    '이 docx 파일에서 텍스트 추출해줘',
+    '[self:read]',
+    '[self:list]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -100,9 +99,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[1.0000, 0.7736, 0.0951],
-#         [0.7736, 1.0000, 0.0345],
-#         [0.0951, 0.0345, 1.0000]])
+# tensor([[1.0000, 0.5825, 0.1073],
+#         [0.5825, 1.0000, 0.4415],
+#         [0.1073, 0.4415, 1.0000]])
 ```
 
 <!--
@@ -147,19 +146,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 3,947 training samples
+* Size: 3,739 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
   |         | sentence_0                                                                        | sentence_1                                                                        |
   |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type    | string                                                                            | string                                                                            |
-  | details | <ul><li>min: 4 tokens</li><li>mean: 10.41 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 19.15 tokens</li><li>max: 94 tokens</li></ul> |
+  | details | <ul><li>min: 4 tokens</li><li>mean: 10.97 tokens</li><li>max: 94 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 18.32 tokens</li><li>max: 94 tokens</li></ul> |
 * Samples:
-  | sentence_0                    | sentence_1                       |
-  |:------------------------------|:---------------------------------|
-  | <code>config 수정해</code>       | <code>[self:edit]</code>         |
-  | <code>프로젝트에서 .py 문서 목록</code> | <code>[self:storage_scan]</code> |
-  | <code>탭 하나 닫아줘</code>         | <code>[limbs:tab]</code>         |
+  | sentence_0                        | sentence_1                                                                    |
+  |:----------------------------------|:------------------------------------------------------------------------------|
+  | <code>이 도서 상세 정보 좀</code>         | <code>한국 도서 조회 (op 분기, 도서관정보나루). 고전 원문은 classic, 글로벌 도서는 search_books.</code> |
+  | <code>워크플로우 하나 생성해줘해</code>       | <code>[self:workflow]</code>                                                  |
+  | <code>특정 장르에 대한 정보 및 대안 탐색</code> | <code>[sense:search_ddg] & [sense:search_ddg]</code>                          |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {

@@ -29,36 +29,34 @@
         - 타임라인
         - 중복 사진
         - 사진 상세
-      blog_search:
-        description: 블로그 검색·조회 통합 (mode 분기). 하이브리드(기본)/시맨틱/전문조회.
+      blog:
+        description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스.
+        target_description: |
+          op로 분기 (기본 posts).
+          - posts: 글 목록. category/count 옵션.
+          - search: RAG 검색. query(필수) + mode(hybrid 기본/semantic/content) + limit. content는 post_id 또는 title.
+          - check_new: 마지막 조회 이후 새로 추가된 글 확인.
+          - rebuild_index: 검색 인덱스(벡터 임베딩) 재구축. 글 다량 추가 후.
+          - stats: 전체 글 수·카테고리/기간 분포·활동 트렌드.
+        target_key: op
         group: blog
-        target_description: 'mode: hybrid (기본, 시맨틱 70% + BM25 30%) | semantic (의미만, 키워드 무관) | content (전문 조회). hybrid/semantic — query 필수 + limit 옵션(기본 10). content — post_id 또는 title(부분 일치) 중 하나 필수. 워크플로 — query로 찾고 결과 id로 mode=content 호출.'
         router: handler
-        tool: blog_search_op
-        implementation: handler.py가 mode로 분기 — hybrid는 search_blog_rag, semantic은 search_blog_semantic, content는 get_post_content_rag.
-        target_key: query
+        tool: blog_op
+        ops:
+          default: posts
+          values:
+            posts: 글 목록 조회 (category/기간 필터)
+            search: RAG 검색 (mode hybrid/semantic/content)
+            check_new: 마지막 조회 이후 새 글 확인
+            rebuild_index: 검색 인덱스(벡터) 재구축
+            stats: 블로그 통계 (글 수·분포·트렌드)
+        implementation: blog 패키지 op 분기. posts=blog_get_posts, search=blog_search_op(mode), check_new=blog_check_new_posts, rebuild_index=rebuild_search_index, stats=blog_stats.
         keywords:
-        - 블로그 검색
         - 블로그
+        - 블로그 검색
         - 시맨틱
-        - 의미검색
-        - 글 전문
-        - 글 조회
-      blog_stats:
-        description: 블로그 통계 — 전체 글 수, 카테고리별·기간별 분포, 활동 트렌드.
-        group: blog
-        target_description: '(파라미터 없음 — 전체 통계 반환)'
-        router: handler
-        tool: blog_stats
-        implementation: 블로그 SQLite DB에서 통계 집계 쿼리
-      kinsight:
-        description: 블로그 인사이트 분석 (기본 15개, count로 개수 지정 가능)
-        group: blog
-        target_description: '(파라미터 없음 — 기본 15개 인사이트). count 옵션으로 개수 지정.'
-        router: handler
-        tool: kinsight
-        implementation: 블로그 최신 포스트 수집 + AI 모델 호출로 인사이트 HTML 생성
-        target_key: query
+        - 블로그 통계
+        - 인덱스
       recent:
         description: 최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.
         target_description: '(파라미터 없음). limit 옵션으로 건수 제한 (기본 10).'
@@ -232,7 +230,7 @@
         - 반복
       goal:
         description: 목표 프로세스 관리 (op 분기). list/status/kill/log/attempts. 의식 에이전트가 평가 루프 라운드를 누적·종료하는 메타 인지 도구.
-        target_description: 'list — 활성/대기 중 전체. status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. log — goal_id + strategy + result 필수, 시도 1건 기록. attempts — goal_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.'
+        target_description: 'list — 활성/대기 중 전체. status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. log — task_id + approach_category + description 필수(result/lesson 옵션), 시도 1건 기록. attempts — task_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.'
         group: goal
         target_key: op
         router: system
@@ -242,8 +240,8 @@
             list: 활성/대기 중 목표 전체
             status: 진행률·라운드 이력·누적 결과 (goal_id 필수)
             kill: 목표 종료 + 스케줄 제거 (goal_id 필수)
-            log: 시도 1건 기록 (goal_id + strategy + result, 연속 실패 추적)
-            attempts: 과거 시도 이력 + 실패 카테고리 요약 (goal_id + limit)
+            log: 시도 1건 기록 (task_id + approach_category + description, 연속 실패 추적)
+            attempts: 과거 시도 이력 + 실패 카테고리 요약 (task_id + limit)
         implementation: _route_system이 op로 분기 — list_goals/get_goal_status/kill_goal/log_attempt/get_attempts에 위임.
         keywords:
         - 목표
@@ -298,16 +296,16 @@
         - 단계
       trigger:
         description: 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
-        target_description: 'create/update는 trigger 정의(name, type, condition, action 등) 필요. get/update/delete/enable/disable/history는 trigger_id 필요. list/status는 파라미터 없음.'
+        target_description: 'create는 name + pipeline(실행할 IBL) 필수, schedule이면 cron("0 9 * * *" 등 표준 cron, 내부에서 일정으로 해소) 또는 config. get/update/delete/enable/disable/history는 id 필요. list/status는 파라미터 없음.'
         group: schedule
         target_key: op
         router: trigger_engine
         ops:
           values:
             list: 등록된 트리거 목록
-            get: 단일 트리거 조회 (trigger_id)
-            create: 트리거 등록 (name/type/condition/action 정의)
-            update: 트리거 수정 (trigger_id + 정의)
+            get: 단일 트리거 조회 (id)
+            create: 트리거 등록 (name + pipeline + schedule이면 cron|config)
+            update: 트리거 수정 (id + 변경 필드, cron 가능)
             delete: 트리거 삭제 (trigger_id)
             enable: 트리거 활성화 (trigger_id)
             disable: 트리거 비활성화 (trigger_id)
@@ -435,7 +433,7 @@
       copy:
         description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사.
         group: file
-        target_description: source(원본 경로)와 dest(복사 위치) 두 파라미터.
+        target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용)
         router: handler
         tool: copy_path
         implementation: shutil.copy/copytree로 파일/폴더 복사
@@ -443,7 +441,7 @@
       move:
         description: 파일 또는 폴더 이동·이름 변경. 같은 폴더면 이름 변경, 다른 폴더면 이동.
         group: file
-        target_description: source(원본)와 dest(이동/새 이름) 두 파라미터.
+        target_description: src(원본)와 dest(이동/새 이름) 두 파라미터. (source/destination 별칭도 허용)
         router: handler
         tool: move_path
         implementation: shutil.move로 파일/폴더 이동/이름변경
@@ -456,51 +454,30 @@
         tool: delete_path
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
-      storage_scan:
-        description: 디스크·볼륨 전체 스캔 후 SQLite 인덱스 구축. fs_query의 전제 단계.
+      storage:
+        description: 저장소 인덱스 조작 (op 분기). scan(디스크 스캔→SQLite 인덱스)/summary(사용량 요약)/volumes(스캔된
+          볼륨 목록). 파일 검색은 fs_query.
         group: file
-        target_description: 스캔할 디렉토리 경로 (생략 시 홈 폴더).
+        target_description: 'scan — path 필수(+volume_name 옵션). summary — volume_name/root_path
+          생략 시 전체 볼륨 통합 요약. volumes — 파라미터 없음.'
+        target_key: op
         router: handler
-        tool: scan_storage
-        implementation: os.walk으로 디렉토리 재귀 탐색 후 SQLite 인덱싱
-        target_key: path
+        tool: storage_op
+        ops:
+          default: volumes
+          values:
+            scan: 디스크·볼륨 스캔 후 SQLite 인덱스 구축 (path 필수, fs_query 전제)
+            summary: 저장소 사용량 요약 (볼륨 생략 시 전체 통합)
+            volumes: 스캔된 볼륨 목록 (이름·경로·용량, 파라미터 없음, 기본)
+        implementation: scan_storage/get_storage_summary/list_volumes op 분기 (pc-manager)
       fs_query:
         description: 파일 메타 검색 (이름·확장자·크기, SQLite 인덱스). 내용 검색은 grep, 패턴은 find.
         group: file
-        target_description: 검색 조건 (name/ext/size). path로 검색 루트 지정.
+        target_description: 검색 조건 (name/ext/size). path로 검색 루트 지정, 생략 시 전체 볼륨 검색.
         router: handler
         tool: query_storage
         implementation: SQLite DB에서 파일명/확장자/크기 기반 검색
         target_key: search_term
-      volumes:
-        description: 현재 마운트된 디스크 볼륨 목록 (이름·경로·용량). storage_scan 전 확인용.
-        group: file
-        target_description: '(파라미터 없음)'
-        router: handler
-        tool: list_volumes
-        implementation: psutil/diskutil로 마운트된 볼륨 목록 조회
-      blog_posts:
-        description: 블로그 글 목록 조회. category·기간으로 필터링.
-        group: blog
-        target_description: '(파라미터 없음 — 전체 목록). category/limit 옵션 가능.'
-        router: handler
-        tool: blog_get_posts
-        implementation: 블로그 SQLite DB에서 카테고리별 글 목록 조회
-        target_key: category
-      blog_check_new:
-        description: 마지막 조회 이후 새로 추가된 블로그 글 확인. 정기 모니터링용.
-        group: blog
-        target_description: '(파라미터 없음 — 신규 글 목록 반환). since 옵션으로 기준 시점 지정.'
-        router: handler
-        tool: blog_check_new_posts
-        implementation: 블로그 DB와 소스 디렉토리 비교로 새 글 감지
-      blog_rebuild_index:
-        description: 블로그 검색 인덱스 재구축 (벡터 임베딩 재생성). 글 다량 추가 후 실행.
-        group: blog
-        target_description: '(파라미터 없음 — 전체 재인덱싱). force 옵션으로 강제 재생성.'
-        router: handler
-        tool: rebuild_search_index
-        implementation: 블로그 전체 포스트 재인덱싱 (벡터 임베딩 재생성)
       cctv_refresh:
         description: CCTV 목록 캐시 갱신. UTIC API에서 전국 16,000+대 최신 CCTV 데이터를 가져와 로컬 캐시
           업데이트.
@@ -516,28 +493,20 @@
         router: handler
         tool: cctv_stats
         implementation: 로컬 캐시 기반 CCTV 통계 집계 (전체 수, 센터별 분포)
-      storage_summary:
-        description: 디스크·볼륨 저장소 사용량 요약. 전체 + 디렉토리별 통계.
+      folder_note:
+        description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file
-        target_description: '(파라미터 없음 — 전체 요약). path 옵션으로 특정 폴더만.'
+        target_description: 'set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. get —
+          root_path/volume_name 생략 시 전체 볼륨 주석 통합 조회.'
+        target_key: op
         router: handler
-        tool: get_storage_summary
-        implementation: SQLite DB에서 저장소 사용량 집계
-      folder_annotate:
-        description: 특정 폴더에 메모·주석 추가. 폴더 의미를 기록해두는 용도.
-        group: file
-        target_description: 대상 폴더 경로. text 옵션으로 주석 내용.
-        router: handler
-        tool: annotate_folder
-        implementation: SQLite DB에 폴더 메모/주석 저장
-        target_key: folder_path
-      folder_annotations:
-        description: 폴더에 저장된 주석 조회. annotate로 추가한 메모 확인.
-        group: file
-        target_description: 대상 폴더 경로 (생략 시 전체 주석 목록).
-        router: handler
-        tool: get_folder_annotations
-        implementation: SQLite DB에서 폴더 주석 조회
+        tool: folder_note_op
+        ops:
+          default: get
+          values:
+            set: 폴더에 메모·주석 추가 (root_path + folder_path + note)
+            get: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
+        implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       lecture:
         description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
         group: lecture

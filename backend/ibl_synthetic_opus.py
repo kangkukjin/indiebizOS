@@ -123,7 +123,7 @@ ACTION_TEMPLATES = {
         "프로젝트 뭐뭐 있어?", "팀 현황 알려줘", "에이전트 누구누구 있지?",
         "프로젝트 리스트 좀", "뭐뭐 할 수 있어?",
     ],
-    "sense:cctv_search": [
+    "sense:cctv": [
         "{query} CCTV 좀 봐봐", "{query} 실시간 영상 있어?", "{query} 지금 어때?",
         "{query} 카메라 보여줘", "{query} 상황 좀 봐",
     ],

@@ -276,9 +276,10 @@ def ensure_today_pulse() -> Dict:
 def execute_world_pulse(action: str, params: dict) -> Any:
     """IBL 액션 엔트리포인트
 
-    [sense:world_pulse] — 오늘의 세계 상태 반환
-    [sense:world_trend]{days: 7} — 최근 N일 추이 반환
-    [sense:world_refresh] — 강제 재수집
+    [sense:world] — 오늘의 세계 상태 반환 (op=snapshot 기본)
+    [sense:world]{op: "trend", days: 7} — 최근 N일 추이 반환
+    [sense:world]{op: "refresh"} — 강제 재수집
+    (op→내부 action_name 매핑은 ibl_routing._route_system의 world_op 분기에서.)
     """
     if action == "world_pulse":
         pulse = get_today_pulse()

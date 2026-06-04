@@ -24,6 +24,16 @@ _TOOL_MODULE_MAP = {
 }
 
 
+# 2026-06-03 dispatcher 표준화 — 단일 액션 op 키 메타데이터.
+# 값 None — 분기는 execute() 상단에서 내부 tool_name으로 변환. --check 가 키로 src.ops.values 와 정확 비교.
+_OP_DISPATCHERS = {
+    "web_site": {"list": None, "register": None, "remove": None, "update": None},
+    "web_op": {"create": None, "build": None, "deploy": None, "preview": None, "snapshot": None, "check": None, "styles": None},
+    "web_component_op": {"catalog": None, "fetch": None, "add": None},
+}
+_OP_DEFAULTS = {"web_site": "list", "web_op": "preview", "web_component_op": "fetch"}
+
+
 def load_tool_module(tool_name: str):
     """도구 모듈 동적 로드"""
     # 모듈명 매핑 (site_registry → registry.py 등)
@@ -42,22 +52,46 @@ def execute(tool_input: dict, context) -> str:
     """도구 실행 진입점 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
 
-    # 2026-05-27 IBL 4기준 통합 — 단일 진입점들을 옛 tool_name으로 디스패치
+    # 단일 액션 op 분기 — IBL 진입점을 내부 tool_name으로 디스패치.
+    # (2026-06-03 어휘 정리: web 9개 → web/web_component/web_site 3개)
     if tool_name == "web_site":
-        op = (tool_input.get("op") or "list").lower()
+        op = (tool_input.get("op") or _OP_DEFAULTS["web_site"]).lower()
         tool_name = {
             "list": "site_list", "register": "site_register",
             "remove": "site_remove", "update": "site_update",
         }.get(op, "site_list")
-    elif tool_name == "web_catalog":
-        kind = (tool_input.get("kind") or "components").lower()
-        tool_name = "list_sections" if kind == "sections" else "list_components"
-    elif tool_name == "web_create":
-        target = (tool_input.get("target") or "site").lower()
-        tool_name = "create_page" if target == "page" else "create_project"
-    elif tool_name == "web_component":
-        op = (tool_input.get("op") or "fetch").lower()
-        tool_name = "add_component" if op == "add" else "fetch_component"
+    elif tool_name == "web_op":
+        op = (tool_input.get("op") or _OP_DEFAULTS["web_op"]).lower()
+        if op == "create":
+            target = (tool_input.get("target") or "site").lower()
+            tool_name = "create_page" if target == "page" else "create_project"
+        else:
+            tool_name = {
+                "build": "build_site", "deploy": "deploy_vercel",
+                "preview": "preview_site", "snapshot": "site_snapshot",
+                "check": "site_live_check", "styles": "edit_styles",
+            }.get(op, "preview_site")
+    elif tool_name == "web_component_op":
+        op = (tool_input.get("op") or _OP_DEFAULTS["web_component_op"]).lower()
+        if op == "catalog":
+            kind = (tool_input.get("kind") or "components").lower()
+            tool_name = "list_sections" if kind == "sections" else "list_components"
+        elif op == "add":
+            tool_name = "add_component"
+        else:  # fetch
+            tool_name = "fetch_component"
+
+    # site_id → project_path 내부 해소
+    # 코퍼스/사용자는 site_id로 호출(preview/build/deploy/styles 등)하나
+    # 빌더 도구들은 project_path를 읽음 → 등록된 사이트면 로컬 경로로 변환.
+    if not tool_input.get("project_path") and tool_input.get("site_id"):
+        try:
+            _snap = load_tool_module("snapshot")
+            _site = _snap.find_site(tool_input["site_id"], PACKAGE_DIR) if _snap else None
+            if _site and _site.get("local_path"):
+                tool_input["project_path"] = _site["local_path"]
+        except Exception:
+            pass
 
     try:
         # 도구 모듈 로드
@@ -95,9 +129,14 @@ def execute(tool_input: dict, context) -> str:
             )
 
         elif tool_name == "add_component":
+            # 코퍼스/사용자는 component(단수 문자열)도 씀 → 리스트로 래핑.
+            _comps = tool_input.get("components")
+            if not _comps and tool_input.get("component"):
+                _c = tool_input["component"]
+                _comps = _c if isinstance(_c, list) else [_c]
             result = module.run(
                 project_path=tool_input.get("project_path"),
-                components=tool_input.get("components", [])
+                components=_comps or []
             )
 
         elif tool_name == "list_components":

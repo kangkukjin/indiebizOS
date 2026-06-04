@@ -3,12 +3,51 @@ from pathlib import Path
 
 current_dir = Path(__file__).parent
 
+# 2026-06-03 어휘 정리: [sense:realty]{op} — district_codes 흡수.
+_OP_DISPATCHERS = {"realty_op": {"query": None, "codes": None}}
+_OP_DEFAULTS = {"realty_op": "query"}
+
+
 def load_module(module_name):
     module_path = current_dir / f"{module_name}.py"
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+# 상권 검색용 키리스 지오코딩(Nominatim). 자연어 지명(+업종)을 좌표로 내부 해소한다 —
+# 코드/좌표를 호출자에 떠넘기지 않는다(내부 해소 원칙). 업종 접미어는 떼어 지명만으로도 시도해 적중률↑.
+_PLACE_NOISE_WORDS = ["카페", "커피", "음식점", "식당", "맛집", "술집", "호프", "편의점",
+                      "상가", "상권", "주변", "근처", "일대", "거리"]
+
+
+def _geocode_query_to_latlng(query):
+    import urllib.request, urllib.parse, json as _json
+    q = str(query).strip()
+    if not q:
+        return None
+    candidates = []
+    stripped = q
+    for w in _PLACE_NOISE_WORDS:
+        stripped = stripped.replace(w, "")
+    stripped = stripped.strip()
+    if stripped and stripped != q:
+        candidates.append(stripped)  # 지명만 (예 "강남 카페"→"강남") 우선
+    candidates.append(q)
+    for cand in candidates:
+        try:
+            url = "https://nominatim.openstreetmap.org/search?" + urllib.parse.urlencode(
+                {"q": cand, "format": "json", "limit": 1, "countrycodes": "kr"})
+            req = urllib.request.Request(url, headers={"User-Agent": "indiebizOS/1.0"})
+            with urllib.request.urlopen(req, timeout=10) as r:
+                data = _json.loads(r.read().decode("utf-8"))
+            if data:
+                return {"lat": float(data[0]["lat"]), "lng": float(data[0]["lon"]),
+                        "matched": data[0].get("display_name", cand)}
+        except Exception:
+            continue
+    return None
 
 def execute(tool_input: dict, context):
     """IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러 (ToolContext 기반 신규 시그니처).
@@ -17,10 +56,22 @@ def execute(tool_input: dict, context):
     """
     tool_name = context.tool_name
 
+    # [sense:realty]{op: query|codes} — op=codes는 지역코드 조회(옛 district_codes), op=query는 실거래가(기본).
+    if tool_name == "realty_op":
+        _op = (tool_input.get("op") or _OP_DEFAULTS["realty_op"]).strip()
+        if _op == "codes":
+            tool = load_module("tool_region_codes")
+            return tool.get_region_codes(tool_input.get("city") or tool_input.get("region") or "")
+        tool_name = "realty_price"  # op=query (기본)
+
     if tool_name in ("realty_price", "apt_trade_price", "apt_rent_price", "house_trade_price", "house_rent_price"):
         region_code = tool_input.get("region_code")
         start_month = tool_input.get("start_month")
         end_month = tool_input.get("end_month")
+        # 코퍼스/사용자가 단일 month(year_month/month)로 특정 달을 지정하면 그 달만 조회.
+        _ym = tool_input.get("year_month") or tool_input.get("month")
+        if _ym and not start_month and not end_month:
+            start_month = end_month = str(_ym)
         count_per_month = tool_input.get("count_per_month", 30)
 
         # region_code가 없으면 region(지역 이름)을 받아 내부에서 자동 해소한다.
@@ -116,7 +167,19 @@ def execute(tool_input: dict, context):
         radius = tool_input.get("radius", 500)
         region_code = tool_input.get("region_code")
         indsLclsCd = tool_input.get("indsLclsCd")
-        return tool.search_commercial_district(lat=lat, lng=lng, radius=radius, region_code=region_code, indsLclsCd=indsLclsCd)
+        # query(자연어 지명)로 호출 시 내부에서 좌표로 해소 — 코드/좌표를 호출자에 떠넘기지 않는다.
+        _resolved_place = None
+        if (lat is None or lng is None) and not region_code:
+            q = tool_input.get("query") or tool_input.get("region") or tool_input.get("area")
+            if q:
+                geo = _geocode_query_to_latlng(q)
+                if geo:
+                    lat, lng = geo["lat"], geo["lng"]
+                    _resolved_place = geo["matched"]
+        result = tool.search_commercial_district(lat=lat, lng=lng, radius=radius, region_code=region_code, indsLclsCd=indsLclsCd)
+        if isinstance(result, dict) and _resolved_place:
+            result["조회지역"] = _resolved_place
+        return result
 
     else:
         return {

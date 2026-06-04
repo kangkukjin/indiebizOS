@@ -2,8 +2,8 @@
  * RadioInstrument — 라디오 "계기(instrument)" (앱 모드)
  *
  * 브라우즈는 sense, 재생은 limbs(mpv가 이 PC에서 재생 — HLS 포함). 앱은 리모컨이다.
- *   한국    [sense:korean_radio]{broadcaster?}  → [limbs:radio]{op:play, station_id}
- *   검색    [sense:search_radio]{query}         → [limbs:radio]{op:play, stream_url}
+ *   한국    [sense:radio]{op:korean, broadcaster?}  → [limbs:radio]{op:play, station_id}
+ *   검색    [sense:radio]{op:search, query}         → [limbs:radio]{op:play, stream_url}
  *   즐겨찾기 [limbs:radio_favorite]{op:list|add|remove}
  *   상태/정지/볼륨  [limbs:player_status] / [limbs:radio]{op:stop} / [limbs:volume]{volume}
  *
@@ -65,7 +65,7 @@ export function RadioInstrument() {
   // ----- 로더 -----
   const loadKorean = useCallback(async (bc: string) => {
     setLoading(true); setError(null); setKorean(null);
-    const r = await runIBL<{ stations?: KStation[] }>(`[sense:korean_radio]{${bc ? `broadcaster: "${bc}"` : ''}}`);
+    const r = await runIBL<{ stations?: KStation[] }>(`[sense:radio]{op: "korean"${bc ? `, broadcaster: "${bc}"` : ''}}`);
     setLoading(false);
     if (r.error) setError(r.error); else setKorean(r.stations || []);
   }, []);
@@ -73,7 +73,7 @@ export function RadioInstrument() {
   const loadSearch = useCallback(async (q: string) => {
     if (!q.trim()) return;
     setLoading(true); setError(null); setResults(null);
-    const r = await runIBL<{ stations?: GStation[] }>(`[sense:search_radio]{query: "${esc(q.trim())}", limit: 30}`);
+    const r = await runIBL<{ stations?: GStation[] }>(`[sense:radio]{op: "search", query: "${esc(q.trim())}", limit: 30}`);
     setLoading(false);
     if (r.error) setError(r.error); else setResults(r.stations || []);
   }, []);

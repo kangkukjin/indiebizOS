@@ -16,6 +16,8 @@ see_also: [architecture.md, delegation.md]
 > - `[others:delegate_project]` → `[others:delegate]{mode: "async|sync|workflow", scope: "cross"}`
 > 정확한 op 어휘는 [ibl.md](ibl.md) "op 어휘 단일화" 섹션 + `data/ibl_nodes_src/self.yaml`/`others.yaml` 의 `ops:` 블록 참조.
 
+> **⚠️ 2026-06-04 trigger 생성 인터페이스 정리**: `[self:trigger]{op: "create"}`는 이제 `name`(트리거 이름) + `pipeline`(실행할 IBL 코드) 필수, schedule 타입이면 **표준 cron 문자열을 그대로** 받는다(`trigger_engine._cron_to_config`가 내부에서 calendar config로 해소). 예: `[self:trigger]{op: "create", name: "아침뉴스", type: "schedule", cron: "0 9 * * *", pipeline: "[engines:newspaper]"}`. cron 지원: 매일(`m h * * *`)·매주(`m h * * 요일`)·매월(`m h 일 * *`)·N시간 간격(`0 */N * * *`); 미지원 패턴은 명확한 에러 후 `config:{repeat,time,weekdays,...}` 직접 지정. get/update/delete 등은 `id`로 지정.
+
 ## 개요
 사용자의 일정, 기념일, 반복 작업을 스케줄러에 등록하고 관리하는 도구입니다.
 스케줄러는 백그라운드에서 동작하며, 에이전트 없이 지정된 시간에 자동으로 작업을 실행합니다.

@@ -2096,6 +2096,25 @@ nodes:
         - 슬라이드
         - Shadcn
         - PNG
+      slide:
+        description: '명령 한 줄 → 슬라이드 1장(PNG). 메시지 큐레이션+자유형 디자인까지 AI가 저작. (완성 spec 직접 렌더는 slide_shadcn)'
+        target_description: |
+          instruction(필수) — 무엇을 말하는 한 장인지 자연어로. content(선택) — 근거 사실·원문(환각 방지).
+          style(선택) — 두 등급:
+            · 텍스트형(빠름·무료, 기본): 미지정 또는 "text". AI가 자유형 custom HTML로 저작·렌더(이미지 API 안 씀). design_system(default/vintage_book/academic_paper/tech_minimal/magazine_modern/sf_blueprint) 톤 적용.
+            · 프리미엄 이미지형(느림·비용): ink_blueprint / cinematic_3d / isometric / lineart_duotone. 개념을 시각화하는 일러스트(Nano Banana Pro) + 또렷한 타이포 레이어로 합성 — 자동 NotebookLM을 넘는 '정성 한 장' 등급. 한 덱은 한 style로 고정하면 일관된 책이 됨.
+          width/height(선택, 기본 1280x720). 제목=명제·한 장 한 아이디어 원칙. AI가 조합해 리포트→슬라이드 등 더 큰 산출물을 만드는 기층 액션.
+        group: media_produce
+        router: handler
+        tool: create_slide
+        implementation: 'slide_author.py — 저작 시스템 프롬프트로 system_ai provider 호출 → spec(JSON, custom_html 우선) → 같은 패키지 shadcn_slides.create_shadcn_slides로 단일 슬라이드 렌더. design_system CSS 래퍼를 상속해 톤 일관. tool_input: instruction(필수) + content/design_system/width/height(선택).'
+        target_key: instruction
+        keywords:
+        - 슬라이드
+        - 한장
+        - 저작
+        - 발표자료
+        - 카드
       image_gemini:
         description: 'Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").'
         target_description: |

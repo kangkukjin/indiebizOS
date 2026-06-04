@@ -58,14 +58,25 @@ from typing import Optional
 
 DECK_SCHEMA_VERSION = 1
 
-# 유효한 design_system 값 — media_producer/shadcn_slides.py의 DESIGN_SYSTEMS와 일치해야 함
+# 유효한 design_system 값.
+#  - CSS 디자인: media_producer/shadcn_slides.py의 DESIGN_SYSTEMS와 일치 (default는 UI에서 숨김 — 호환 위해 허용 유지)
+#  - 프리미엄 이미지: media_producer/slide_styles.py의 STYLES (slide_image 경로)
+#  - "auto": 슬라이드마다 AI가 이미지 스타일 선택
 VALID_DESIGN_SYSTEMS = {
+    # CSS
     "default",
     "vintage_book",
     "academic_paper",
     "tech_minimal",
     "magazine_modern",
     "sf_blueprint",
+    # 프리미엄 이미지 (slide_image)
+    "ink_blueprint",
+    "cinematic_3d",
+    "isometric",
+    "lineart_duotone",
+    # AI 자율
+    "auto",
 }
 
 # indiebizOS 루트 경로 — 이 파일은 data/packages/installed/tools/lecture_workspace/lecture_store.py 에 있음

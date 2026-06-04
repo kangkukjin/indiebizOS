@@ -79,18 +79,28 @@ export interface DeckMetaUpdate {
   design_system?: string;
 }
 
-/** 디자인 시스템 6종 — media_producer/shadcn_slides.py와 일치 */
+/** 디자인 옵션 — 3그룹:
+ *  css = slide_shadcn(CSS, 빠름·무료) / image = slide_image(개념 일러스트, 느림·비용) / auto = AI 자율
+ *  값은 백엔드 shadcn_slides.DESIGN_SYSTEMS · slide_styles.STYLES · _IMAGE_DESIGNS와 일치 */
 export const DESIGN_SYSTEM_OPTIONS: Array<{
   value: string;
   label: string;
   description: string;
+  group: 'css' | 'image' | 'auto';
 }> = [
-  { value: 'vintage_book',    label: '빈티지북',         description: '베이지 종이 + 청·적갈 잉크 · 책 강의·인문' },
-  { value: 'academic_paper',  label: '학술 논문',        description: '미색 + 진남 + 진홍 강조 · 연구·논문' },
-  { value: 'sf_blueprint',    label: 'SF 블루프린트',    description: '다크 네이비 + 시안 HUD · NotebookLM 양식' },
-  { value: 'tech_minimal',    label: '테크 미니멀',      description: '다크 + 시안 네온 · 개발자·테크' },
-  { value: 'magazine_modern', label: '잡지 모던',        description: '흰·검·적색 · 편집·홍보' },
-  { value: 'default',         label: '기본 (없음)',      description: '디자인 시스템 없음 — 색 테마만' },
+  // CSS 디자인 (빠름·무료 — 텍스트/도형 렌더)
+  { value: 'vintage_book',    label: '빈티지북',         description: '베이지 종이 + 청·적갈 잉크 · 책 강의·인문', group: 'css' },
+  { value: 'academic_paper',  label: '학술 논문',        description: '미색 + 진남 + 진홍 강조 · 연구·논문', group: 'css' },
+  { value: 'sf_blueprint',    label: 'SF 블루프린트',    description: '다크 네이비 + 시안 HUD · NotebookLM 양식', group: 'css' },
+  { value: 'tech_minimal',    label: '테크 미니멀',      description: '프리미엄 다크 + 글래스 · 개발자·테크', group: 'css' },
+  { value: 'magazine_modern', label: '잡지 모던',        description: '흰·검·적색 · 편집·홍보', group: 'css' },
+  // 프리미엄 일러스트 (느림·비용 — AI 개념 일러스트 + 타이포 합성)
+  { value: 'ink_blueprint',   label: '잉크+청사진 ✦',    description: '손그림 잉크 + 청사진 · 인문·개념', group: 'image' },
+  { value: 'cinematic_3d',    label: '시네마틱 3D ✦',    description: '빛·유리·볼륨 · 표지·임팩트', group: 'image' },
+  { value: 'isometric',       label: '아이소메트릭 ✦',   description: '30도 도면 · 시스템·구조', group: 'image' },
+  { value: 'lineart_duotone', label: '라인아트 듀오톤 ✦', description: '미니멀 선화 + 두 색 · 모던·고급', group: 'image' },
+  // AI 자율
+  { value: 'auto',            label: 'AI 자율 ✨',        description: '슬라이드마다 AI가 스타일·구성을 직접 선택', group: 'auto' },
 ];
 
 export interface SlideCreateResponse {

@@ -138,6 +138,42 @@ _SYSTEM_PROMPT = """당신은 강의 슬라이드 생성 전문 AI다.
 - 평범한 정의·본문·표 → 텍스트 layout (속도 빠름)
 - **이미지 API 비용**이 들기 때문에 매 슬라이드 일러스트 쓰지 말 것. 핵심 명제·표지·메타포·구조 정리 슬라이드 위주.
 
+# 자유형 레이아웃 (custom) — 틀에서 벗어나야 할 때
+위의 고정 레이아웃 중 어느 것도 명제를 제대로 담지 못할 때, `layout: "custom"`을 선택하고 슬라이드 HTML을 **직접 작성**한다. 12개 틀에 갇히지 말고 내용에 맞는 배치를 새로 디자인하라.
+
+**언제 쓰나**
+- 타임라인·플로우차트·계층 트리·매트릭스·동심원 등 고정 틀에 없는 구조
+- 여러 요소를 자유 좌표로 배치해야 하는 다이어그램
+- 강의자가 "자유롭게/창의적으로/이 틀 말고" 라고 명시할 때
+- 평범한 본문·표·표지는 **고정 레이아웃이 더 빠르고 안정적** — 굳이 custom 쓰지 말 것
+
+**디자인 시스템 자동 상속 (반드시 지킬 것)**
+custom HTML은 선택된 디자인 시스템(vintage_book 등)의 CSS 래퍼 안에 삽입된다. 색·폰트가 자동으로 흐르게 하려면 **하드코딩 색상 금지**, 반드시 CSS 변수를 써라:
+- 글자색: `hsl(var(--foreground))` / 보조: `hsl(var(--muted-foreground))`
+- 강조색: `hsl(var(--accent))` / 배경: `hsl(var(--background))` / 면: `hsl(var(--muted))`
+- 테두리: `hsl(var(--border))`
+- 사용 가능 자산: **Tailwind 유틸리티 클래스**(cdn), **animate.css** 클래스, **lucide 아이콘**(`<i data-lucide="아이콘명"></i>`), 이모지, **인라인 SVG**.
+- 시각 요소는 SVG/이모지/아이콘/CSS로 직접 그려라 — **custom은 이미지 API를 호출하지 않는다**(빠르고 무료). `illustrations` 필드 쓰지 말 것.
+
+**작성 규칙**
+- 최상위 요소는 슬라이드 전체(1280×720)를 채운다: `<div class="w-full h-full ...">` 로 시작.
+- 한글 텍스트는 HTML이므로 그대로 써도 된다(이미지가 아님).
+- 메시지 큐레이션 원칙은 그대로 — 제목=명제, 한 슬라이드 한 아이디어, 키워드 단위.
+
+## 자유형 layout 예시 (custom)
+```json
+{
+  "slide": {
+    "layout": "custom",
+    "title": "에이전트 인지 루프의 4단계",
+    "custom_html": "<div class=\\"w-full h-full flex flex-col p-16\\" style=\\"color: hsl(var(--foreground))\\"><p class=\\"text-sm font-semibold uppercase tracking-wider mb-2\\" style=\\"color: hsl(var(--accent))\\">2부 · 구조</p><h1 class=\\"text-4xl font-black mb-10\\">생각은 한 바퀴 돈다</h1><div class=\\"flex items-center justify-between flex-1\\"><div class=\\"flex-1 text-center\\"><div class=\\"text-5xl mb-3\\">🧭</div><div class=\\"font-bold text-xl\\">분류</div><div class=\\"text-sm\\" style=\\"color: hsl(var(--muted-foreground))\\">반사</div></div><i data-lucide=\\"arrow-right\\" style=\\"color: hsl(var(--accent))\\"></i><div class=\\"flex-1 text-center\\"><div class=\\"text-5xl mb-3\\">💭</div><div class=\\"font-bold text-xl\\">의식</div><div class=\\"text-sm\\" style=\\"color: hsl(var(--muted-foreground))\\">계획</div></div><i data-lucide=\\"arrow-right\\" style=\\"color: hsl(var(--accent))\\"></i><div class=\\"flex-1 text-center\\"><div class=\\"text-5xl mb-3\\">⚙️</div><div class=\\"font-bold text-xl\\">실행</div></div><i data-lucide=\\"arrow-right\\" style=\\"color: hsl(var(--accent))\\"></i><div class=\\"flex-1 text-center\\"><div class=\\"text-5xl mb-3\\">🔍</div><div class=\\"font-bold text-xl\\">평가</div><div class=\\"text-sm\\" style=\\"color: hsl(var(--muted-foreground))\\">성찰</div></div></div></div>"
+  },
+  "reasoning": "4단계 순환은 고정 틀에 없어 자유형으로 가로 플로우를 직접 배치",
+  "speaker_note": "..."
+}
+```
+custom은 `title`(데크 목록 표시용)과 `custom_html` 두 필드만 있으면 된다. 다른 레이아웃 필드는 생략.
+
 # 출력 형식
 **반드시 다음 JSON 한 객체만 반환**. 코드 펜스 ```json ... ``` 안에 넣어도 되고, 그냥 객체만 줘도 된다. 다른 설명 텍스트 금지.
 
@@ -217,6 +253,9 @@ _SYSTEM_PROMPT = """당신은 강의 슬라이드 생성 전문 AI다.
 - **split_concept**: eyebrow, left_title, left_body, right_title, right_body, conclusion + illustrations.left_image_prompt + illustrations.right_image_prompt
 - **illustration_overlay**: eyebrow, title + illustrations.image_prompt (자유 좌표 라벨 박스는 별도 — 본 MVP에서는 단순 오버레이만)
 - **comparison_iconic**: eyebrow, title, label_header, columns[{title,subtitle,icon,highlighted}], rows[{label, cells:[...]}] (icon은 이모지 권장, illustrations 필요 없음)
+
+## 자유형 layout (틀에서 벗어날 때)
+- **custom**: title(데크 표시용) + custom_html(슬라이드 전체 HTML). 디자인 시스템 CSS 변수 필수, illustrations 없음. 위 "자유형 레이아웃" 섹션 참조.
 
 필요 없는 필드는 생략. 항상 eyebrow에 "부·장·라벨" 형식으로 위치 표시 (예: "1부 · 정의").
 
@@ -438,7 +477,16 @@ def _build_instruction_block(
             "누적 메모는 톤·메타포 일관성용 참고일 뿐 주제를 결정하지 않는다."
         ),
     ]
-    if forced_layout:
+    if forced_layout == "custom":
+        parts.append(
+            "\n## ⚠ Layout 강제 지정 — 자유형(custom)\n"
+            "강의자가 UI에서 **자유형(custom)**을 명시적으로 지정했다. "
+            "고정 레이아웃을 쓰지 말고 `layout: \"custom\"` + `custom_html`로 슬라이드 HTML을 직접 작성하라. "
+            "디자인 시스템 CSS 변수(`hsl(var(--foreground))`, `hsl(var(--accent))` 등)와 Tailwind/이모지/SVG/lucide만 사용. "
+            "`illustrations` 필드는 쓰지 말 것(이미지 API 호출 안 함). "
+            "자세한 규칙은 시스템 프롬프트의 '자유형 레이아웃' 섹션을 따른다."
+        )
+    elif forced_layout:
         parts.append(
             f"\n## ⚠ Layout 강제 지정\n"
             f"강의자가 UI에서 **layout = `{forced_layout}`**을 명시적으로 지정했다. "

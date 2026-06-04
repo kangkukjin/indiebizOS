@@ -31,6 +31,8 @@ calendar_events.json이 유일한 정보 원천(Single Source of Truth)입니다
 """
 
 import json
+import os
+import shutil
 import time
 import uuid
 import threading
@@ -114,14 +116,31 @@ class CalendarManager(CalendarActionsMixin, CalendarHtmlMixin):
                 with open(CALENDAR_CONFIG_PATH, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"[CalendarManager] 설정 로드 실패: {e}")
+                # ★ 손상된 파일을 빈 설정으로 덮어쓰면 사용자 일정이 영구 유실된다(2026-06 생일 유실 사고).
+                #   파싱 실패 시 손상본을 백업해 복구 가능하게 남긴다.
+                try:
+                    bak = CALENDAR_CONFIG_PATH.with_name(
+                        CALENDAR_CONFIG_PATH.stem + f".corrupt.{datetime.now():%Y%m%d_%H%M%S}.json")
+                    shutil.copy(CALENDAR_CONFIG_PATH, bak)
+                    print(f"[CalendarManager] 설정 로드 실패: {e} — 손상본 백업: {bak}")
+                except Exception:
+                    print(f"[CalendarManager] 설정 로드 실패: {e}")
         return {"events": []}
 
     def _save_config(self):
-        """설정 파일 저장"""
+        """설정 파일 저장 — 원자적 쓰기 + 이전 파일 .bak 보존(로직 오류로 인한 유실 대비)."""
         DATA_PATH.mkdir(parents=True, exist_ok=True)
-        with open(CALENDAR_CONFIG_PATH, 'w', encoding='utf-8') as f:
+        # 직전 파일을 .bak으로 보존 (1단계 롤백 안전망)
+        if CALENDAR_CONFIG_PATH.exists():
+            try:
+                shutil.copy(CALENDAR_CONFIG_PATH, CALENDAR_CONFIG_PATH.with_suffix(".json.bak"))
+            except Exception:
+                pass
+        # 임시 파일에 쓰고 원자적 교체 (부분 쓰기 손상 방지)
+        tmp = CALENDAR_CONFIG_PATH.with_suffix(".json.tmp")
+        with open(tmp, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, CALENDAR_CONFIG_PATH)
 
     # =========================================================================
     # 이벤트 CRUD (캘린더 + 스케줄 통합)
@@ -214,7 +233,7 @@ class CalendarManager(CalendarActionsMixin, CalendarHtmlMixin):
             event["action_params"] = action_params
         if repeat == "weekly" and weekdays:
             event["weekdays"] = weekdays
-        if repeat == "yearly":
+        if repeat in ("yearly", "monthly"):
             if month is not None:
                 event["month"] = month
             if day is not None:

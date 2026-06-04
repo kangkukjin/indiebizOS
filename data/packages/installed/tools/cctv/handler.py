@@ -44,28 +44,8 @@ load_module("common")
 
 # 주요 지명 → 좌표 매핑 (Windy 웹캠 폴백용)
 def _is_hls_playable(url: str) -> bool:
-    """URL이 hls.js로 재생 가능한 HLS 스트림인지 판단"""
-    if not url:
-        return False
-    u = url.lower()
-    # HLS 직접 스트림
-    if '.m3u8' in u:
-        return True
-    # 카카오맵 경유 HLS (ktict.co.kr)
-    if 'ktict.co.kr' in u:
-        return True
-    # TOPIS 서울 HLS
-    if 'eseoul.go.kr' in u:
-        return True
-    # RTMP/HLS 스트리밍 서버
-    if ':1935/' in u:
-        return True
-    if 'streamlock.net' in u:
-        return True
-    # UTIC JSP 페이지 → 재생 불가
-    if 'utic.go.kr' in u and '.jsp' in u:
-        return False
-    return False
+    """재생가능 판정은 common.is_hls_playable 단일 소스에 위임."""
+    return load_module("common").is_hls_playable(url)
 
 
 def _is_korea(lat: float, lng: float) -> bool:
@@ -254,12 +234,15 @@ def cctv_search(query: str, lat: float = None, lon: float = None,
 
     results = all_results[:limit]
 
-    # 스트림 태그 생성 — HLS 재생 가능한 URL만 포함
+    # 스트림 태그 생성 — HLS 재생 가능한 URL만 포함.
+    # 각 cctv 항목에도 playable 필드를 실어, 프론트가 URL 재-스니핑 없이 신뢰하게 한다(#5).
     stream_tags = []
     for cctv in results:
         url = cctv.get("url", "")
-        if url and _is_hls_playable(url):
-            tag_data = {"url": url, "name": cctv.get("name", "")}
+        playable = bool(url) and _is_hls_playable(url)
+        cctv["playable"] = playable
+        if playable:
+            tag_data = {"url": url, "name": cctv.get("name", ""), "playable": True}
             if cctv.get("source"):
                 tag_data["source"] = cctv["source"]
             if cctv.get("lat") and cctv.get("lng"):
@@ -275,59 +258,64 @@ def cctv_search(query: str, lat: float = None, lon: float = None,
     )
 
 
-def nearby(lat: float, lng: float, radius: float = 0.1, count: int = 5) -> str:
-    """주변 CCTV 검색 — 한국이면 카카오 최우선, 해외는 UTIC/ITS/Windy"""
+def nearby(lat: float, lng: float, radius_km: float = 5.0, count: int = 5,
+           radius: float = None) -> str:
+    """주변 CCTV 검색 — 한국이면 카카오 최우선, 해외는 UTIC/ITS/Windy.
+
+    radius_km: 검색 반경(km, 표준 단위). 레거시 radius(도) 호출도 수용해 km로 환산.
+    """
     common = load_module("common")
+    if radius is not None:  # 레거시 도(degree) 입력 → km 환산
+        radius_km = max(0.5, float(radius) * 111.0)
     all_results = []
 
     if _is_korea(lat, lng):
-        # ── 한국: 카카오맵 최우선 ──
-        region = _coords_to_region(lat, lng)
-        print(f"[CCTV nearby] 한국 좌표 → 지역: {region}")
+        # ── 한국: 카카오맵 최우선(좌표 보강 완료) → 부족분만 TOPIS/UTIC/ITS 보완 ──
+        # 지도 표시가 목적이므로 좌표(lat/lng) 있는 항목만 모은다.
+        existing = set()
 
-        # 1. 카카오맵 — 지역명으로 검색
+        def _add(cctvs, require_hls=False):
+            for c in cctvs or []:
+                name = c.get("name", "")
+                if name in existing:
+                    continue
+                if not (c.get("lat") and c.get("lng")):  # 좌표 없으면 지도 표시 불가
+                    continue
+                if require_hls and not _is_hls_playable(c.get("url", "")):
+                    continue
+                all_results.append(c)
+                existing.add(name)
+
+        # 1. 카카오맵 — 좌표 기준 거리 검색 (전국 시내도로+고속도로, 대부분 HLS)
         try:
             kakao = load_module("kakao_traffic")
-            kakao_res = json.loads(kakao.get_cctv_by_region(region, limit=count * 3))
-            if kakao_res.get("success") and kakao_res.get("cctvs"):
-                all_results.extend(kakao_res["cctvs"])
-                print(f"[CCTV nearby] 카카오 {region}: {len(kakao_res['cctvs'])}대")
+            kakao_res = json.loads(kakao.get_nearby_cctv(lat, lng, radius=radius_km, count=count * 2))
+            if kakao_res.get("success"):
+                _add(kakao_res.get("cctvs", []))
+                print(f"[CCTV nearby] 카카오: {kakao_res.get('count', 0)}대")
         except Exception as e:
             print(f"[CCTV nearby] 카카오 실패: {e}")
 
-        # 2. TOPIS (서울 보완)
-        if len(all_results) < count:
+        # 2. 부족하면 TOPIS(서울)/UTIC/ITS 보완 — 좌표 + HLS 재생 가능한 것만
+        for mod_name in ["topis_traffic", "utic_traffic", "its_traffic"]:
+            if len(all_results) >= count:
+                break
             try:
-                topis = load_module("topis_traffic")
-                topis_res = json.loads(topis.get_nearby_cctv(lat, lng, radius=radius, count=count))
-                if topis_res.get("success") and topis_res.get("cctvs"):
-                    existing = {r.get("name", "") for r in all_results}
-                    for c in topis_res["cctvs"]:
-                        if c.get("name", "") not in existing and _is_hls_playable(c.get("url", "")):
-                            all_results.append(c)
+                mod = load_module(mod_name)
+                r_arg = (radius_km / 111.0) if mod_name == "its_traffic" else radius_km  # ITS만 도(degree) bbox
+                res = json.loads(mod.get_nearby_cctv(lat, lng, radius=r_arg, count=count))
+                if res.get("success"):
+                    _add(res.get("cctvs", []), require_hls=True)
             except Exception as e:
-                print(f"[CCTV nearby] TOPIS 실패: {e}")
-
-        # 3. UTIC/ITS — HLS 가능한 것만 보완
-        if len(all_results) < count:
-            for mod_name in ["utic_traffic", "its_traffic"]:
-                try:
-                    mod = load_module(mod_name)
-                    res = json.loads(mod.get_nearby_cctv(lat, lng, radius=radius, count=count))
-                    if res.get("success"):
-                        existing = {r.get("name", "") for r in all_results}
-                        for c in res["cctvs"]:
-                            if c.get("name", "") not in existing and _is_hls_playable(c.get("url", "")):
-                                all_results.append(c)
-                except Exception as e:
-                    print(f"[CCTV nearby] {mod_name} 실패: {e}")
+                print(f"[CCTV nearby] {mod_name} 실패: {e}")
 
     else:
         # ── 해외: UTIC/ITS/Windy ──
         for mod_name in ["utic_traffic", "its_traffic"]:
             try:
                 mod = load_module(mod_name)
-                res = json.loads(mod.get_nearby_cctv(lat, lng, radius=radius, count=count))
+                r_arg = (radius_km / 111.0) if mod_name == "its_traffic" else radius_km
+                res = json.loads(mod.get_nearby_cctv(lat, lng, radius=r_arg, count=count))
                 if res.get("success"):
                     all_results.extend(res["cctvs"])
             except Exception:
@@ -345,12 +333,15 @@ def nearby(lat: float, lng: float, radius: float = 0.1, count: int = 5) -> str:
     all_results.sort(key=lambda x: x.get("distance_km", 999))
     results = all_results[:count]
 
-    # 스트림 태그 생성 — HLS 재생 가능한 URL만 포함
+    # 스트림 태그 생성 — HLS 재생 가능한 URL만 포함.
+    # 각 cctv 항목에도 playable 필드를 실어, 프론트가 URL 재-스니핑 없이 신뢰하게 한다(#5).
     stream_tags = []
     for cctv in results:
         url = cctv.get("url", "")
-        if url and _is_hls_playable(url):
-            tag_data = {"url": url, "name": cctv.get("name", "")}
+        playable = bool(url) and _is_hls_playable(url)
+        cctv["playable"] = playable
+        if playable:
+            tag_data = {"url": url, "name": cctv.get("name", ""), "playable": True}
             if cctv.get("source"):
                 tag_data["source"] = cctv["source"]
             if cctv.get("lat") and cctv.get("lng"):
@@ -415,6 +406,9 @@ def cctv_capture(url: str, save_path: str = None, name: str = None, **kwargs) ->
             print(f"[CCTV 캡처] JSP m3u8 추출 실패: {e}")
 
     capture = load_module("capture")
+    # save_path가 지정되면 capture_cctv의 filename으로 전달 (이전엔 무시됨).
+    if save_path:
+        return capture.capture_cctv(url, filename=save_path)
     return capture.capture_cctv(url)
 
 
@@ -470,27 +464,38 @@ def cctv_stats() -> str:
 # ── 도구 디스패처 ──────────────────────────────────────
 
 # tool_name → 실제 함수 매핑
+# (cctv_search/get_nearby_cctv 는 단일 op 액션 [sense:cctv](tool=cctv_query)로 통합되어 직접 등록하지 않음.
+#  함수 본체 cctv_search/nearby 는 _cctv_query 디스패처가 호출한다.)
 _TOOL_MAP = {
-    "search_cctv": cctv_search,
-    "cctv_search": cctv_search,
-    "get_nearby_cctv": nearby,
-    "open_cctv": cctv_open,
-    "capture_cctv": cctv_capture,
-    "list_cctv_sources": cctv_sources,
     "cctv_refresh": cctv_refresh,
     "cctv_stats": cctv_stats,
-    "search_webcam": lambda **kw: load_module("windy_webcam").search_webcam(**kw),
-    "get_nearby_webcam": lambda **kw: load_module("windy_webcam").get_nearby_webcam(**kw),
 }
+
+
+def webcam(lat: float, lng: float = None, lon: float = None,
+           radius_km: float = 50, count: int = 5) -> str:
+    """[sense:cctv]{op:webcam} — 좌표 근처 해외 경치 웹캠 (Windy 직행).
+
+    교통 CCTV를 건너뛰고 Windy Webcams API를 직접 호출한다.
+    lng(표준)/lon 둘 다 수용한다.
+    """
+    windy = load_module("windy_webcam")
+    resolved_lon = lon if lon is not None else lng
+    return windy.get_nearby_webcam(lat=lat, lon=resolved_lon,
+                                   radius_km=radius_km, count=count)
+# cctv_open/cctv_capture 함수는 _cctv_op(limbs:cctv) 디스패처가 호출하므로 유지(직접 등록 안 함).
+# get_cctv_by_name/open_cctv/capture_cctv/list_cctv_sources/search_webcam 표준 도구는
+# 어떤 IBL 액션도 가리키지 않아 2026-06-03 제거(잔존 도구 정리).
 
 
 # 2026-05-28 dispatcher 표준화 — 단일 액션 op 키 메타데이터 (browser-action 패턴).
-# 값은 None — 분기 로직은 _cctv_op 함수 안에 그대로 유지.
+# 값은 None — 분기 로직은 _cctv_op/_cctv_query 함수 안에 유지.
 # --check 가 이 dict 키로 src.ops.values 와 정확 비교.
 _OP_DISPATCHERS = {
     "cctv_op": {"open": None, "capture": None},
+    "cctv_query": {"search": None, "nearby": None, "webcam": None},
 }
-_OP_DEFAULTS = {"cctv_op": "open"}
+_OP_DEFAULTS = {"cctv_op": "open", "cctv_query": "search"}
 
 
 def _cctv_op(op: str = None, **kwargs) -> str:
@@ -505,7 +510,25 @@ def _cctv_op(op: str = None, **kwargs) -> str:
         return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(mapping.keys())}"}, ensure_ascii=False)
 
 
+def _cctv_query(op: str = None, **kwargs) -> str:
+    """[sense:cctv]{op} 단일 디스패처 — search(키워드 통합검색)/nearby(좌표 근처).
+
+    op 액션은 두 함수의 파라미터 합집합을 받으므로, 대상 함수 시그니처에 없는 키는 걸러
+    TypeError를 방지한다(예: search인데 radius_km 가 섞여 들어오는 경우).
+    """
+    import inspect
+    op = (op or _OP_DEFAULTS.get("cctv_query", "")).strip()
+    func = {"search": cctv_search, "nearby": nearby, "webcam": webcam}.get(op)
+    if func is None:
+        return json.dumps({"success": False,
+                           "error": f"알 수 없는 op '{op}'. 사용 가능: ['search', 'nearby', 'webcam']"},
+                          ensure_ascii=False)
+    valid = {k: v for k, v in kwargs.items() if k in inspect.signature(func).parameters}
+    return func(**valid)
+
+
 _TOOL_MAP["cctv_op"] = _cctv_op
+_TOOL_MAP["cctv_query"] = _cctv_query
 
 
 def execute(tool_input: dict, context) -> str:

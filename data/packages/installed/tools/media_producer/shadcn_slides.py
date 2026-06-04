@@ -1721,7 +1721,7 @@ _LEGACY_SLIDE_THEMES = {
 
 
 def _adapt_legacy_slide_input(tool_input: dict) -> dict:
-    """옛 [engines:slide] 입력을 [engines:slide_shadcn] 입력으로 호환 변환.
+    """옛 slide 스키마 입력을 [engines:slide_shadcn] 입력으로 호환 변환.
 
     옛 slide dict: {title, body, theme(modern/tech/...), image_path, bg_color, ...}
     새 slide dict: {layout, title, body, ...}

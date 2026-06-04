@@ -10,6 +10,7 @@ import 'leaflet/dist/leaflet.css';
 // Leaflet 기본 마커 아이콘 문제 해결
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import type { LocationMapData } from './maps/mapTypes';
 
 const DefaultIcon = L.icon({
   iconUrl: icon,
@@ -19,20 +20,7 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-export interface LocationMapData {
-  type: 'location_map';
-  center: {
-    lat: number;
-    lng: number;
-    name: string;
-  };
-  zoom: number;
-  markers: {
-    name: string;
-    lat: number;
-    lng: number;
-  }[];
-}
+export type { LocationMapData };
 
 interface LocationMapProps {
   data: LocationMapData;

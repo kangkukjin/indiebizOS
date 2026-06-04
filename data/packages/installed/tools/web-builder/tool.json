@@ -491,45 +491,160 @@
       }
     },
     {
-      "name": "web_catalog",
-      "description": "웹빌더 카탈로그 조회. kind: components(UI 컴포넌트) / sections(섹션 템플릿).\n\n파라미터: kind로 분기.\n- components: UI 컴포넌트(button/card/dialog 등) 카탈로그. category 옵션.\n- sections: 섹션 템플릿(hero/features/cta 등) 카탈로그. category 옵션.",
+      "name": "web_op",
+      "description": "웹 프로젝트 생애주기 작업 (op 분기) — [engines:web]. UI 컴포넌트는 web_component_op, 사이트 목록은 web_site.\n- op=preview(기본): 로컬 미리보기 서버. project_path + action(start/stop/status).\n- op=create: 프로젝트/페이지 생성. target=site(name+template+features) | page(project_path+page_name+sections+metadata).\n- op=build: 프로덕션 빌드(Next.js).\n- op=deploy: Vercel 배포(project_name/production).\n- op=snapshot: site_id 스크린샷.\n- op=check: site_id Lighthouse 품질검사.\n- op=styles: shadcn 테마 편집. project_path + theme(프리셋) 또는 custom_colors(HSL) + border_radius.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "동작 분기 — target_description 참조"
+            "enum": [
+              "create",
+              "build",
+              "deploy",
+              "preview",
+              "snapshot",
+              "check",
+              "styles"
+            ],
+            "default": "preview",
+            "description": "preview(기본)/create/build/deploy/snapshot/check/styles"
+          },
+          "target": {
+            "type": "string",
+            "enum": [
+              "site",
+              "page"
+            ],
+            "description": "[create] site=새 프로젝트, page=페이지 추가"
+          },
+          "name": {
+            "type": "string",
+            "description": "[create site] 프로젝트 이름"
+          },
+          "template": {
+            "type": "string",
+            "description": "[create site] blank/landing/portfolio/blog/business"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "[create site] 기능 목록"
+          },
+          "project_path": {
+            "type": "string",
+            "description": "프로젝트 경로 (create page/preview/build/deploy)"
+          },
+          "page_name": {
+            "type": "string",
+            "description": "[create page] 페이지 이름"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "[create page] 섹션 배열"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "[create page] 메타데이터"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "start",
+              "stop",
+              "status"
+            ],
+            "description": "[preview] 서버 제어"
+          },
+          "port": {
+            "type": "integer",
+            "description": "[preview] 포트(기본 3000)"
+          },
+          "production": {
+            "type": "boolean",
+            "description": "[deploy] 프로덕션 배포"
+          },
+          "project_name": {
+            "type": "string",
+            "description": "[deploy] Vercel 프로젝트명"
+          },
+          "site_id": {
+            "type": "string",
+            "description": "[snapshot/check] 등록된 사이트 ID"
+          },
+          "theme": {
+            "type": "string",
+            "enum": ["default", "blue", "green", "purple", "orange", "red", "custom"],
+            "description": "[styles] 테마 프리셋 (custom이면 custom_colors 사용)"
+          },
+          "custom_colors": {
+            "type": "object",
+            "description": "[styles] theme=custom일 때 HSL 색상 (primary/background/foreground)"
+          },
+          "border_radius": {
+            "type": "string",
+            "enum": ["none", "sm", "md", "lg", "full"],
+            "description": "[styles] 테두리 반경 (기본 md)"
           }
         },
-        "additionalProperties": true
+        "required": []
       }
     },
     {
-      "name": "web_create",
-      "description": "웹 프로젝트/페이지 생성. target: site(새 프로젝트 디렉토리) / page(기존 프로젝트에 페이지 추가). 가이드 web_builder.md.\n\n파라미터: target으로 분기.\n- site: name(필수) + template(blank/landing/portfolio/blog/business 중 선택) + features.\n- page: project_path(필수) + page_name + sections 배열 + metadata.",
+      "name": "web_component_op",
+      "description": "웹 UI 컴포넌트 (op 분기) — [engines:web_component].\n- op=fetch(기본): 외부 CDN/레지스트리에서 컴포넌트 코드 다운로드. component(이름/URL)+style+project_path+output_format(code/file).\n- op=catalog: 카탈로그 조회. kind=components(button/card 등)|sections(hero/features 등), category 옵션.\n- op=add: shadcn/ui CLI로 프로젝트에 설치. component+project_path.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "동작 분기 — target_description 참조"
-          }
-        },
-        "additionalProperties": true
-      }
-    },
-    {
-      "name": "web_component",
-      "description": "웹 컴포넌트 가져오기/추가. op: fetch(외부 CDN/레지스트리 다운로드) / add(shadcn/ui CLI로 프로젝트에 설치).\n\n파라미터: op로 분기.\n- fetch: component(이름 또는 URL, 필수) + style + project_path + output_format(code/file).\n- add: component(필수, 예 button/card/dialog) + project_path. shadcn/ui CLI로 설치.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "op": {
+            "enum": [
+              "catalog",
+              "fetch",
+              "add"
+            ],
+            "default": "fetch",
+            "description": "fetch(기본)/catalog/add"
+          },
+          "component": {
             "type": "string",
-            "description": "동작 분기 — target_description 참조"
+            "description": "[fetch/add] 컴포넌트 이름 또는 URL"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "components",
+              "sections"
+            ],
+            "description": "[catalog] components 또는 sections"
+          },
+          "category": {
+            "type": "string",
+            "description": "[catalog] 카테고리 필터"
+          },
+          "style": {
+            "type": "string",
+            "description": "[fetch] 스타일(기본 new-york)"
+          },
+          "project_path": {
+            "type": "string",
+            "description": "[fetch/add] 프로젝트 경로"
+          },
+          "output_format": {
+            "type": "string",
+            "enum": [
+              "code",
+              "file"
+            ],
+            "description": "[fetch] 출력 형식"
           }
         },
-        "additionalProperties": true
+        "required": []
       }
     }
   ]

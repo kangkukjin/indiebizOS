@@ -1,63 +1,15 @@
 """
 IBL Core 도구 핸들러
 
-ibl_* 도구 호출을 ibl_engine.py로 위임합니다.
+이 패키지는 `execute_ibl` 도구 **스키마의 집**이다(에이전트에게 IBL 문법을 안내).
+execute_ibl 의 실제 실행은 backend/system_tools._execute_ibl_unified 가 담당하므로
+이 핸들러를 거치지 않는다.
+
+2026-06-03 정리: 옛 노드 기반 ibl_* 개별 도구(40개)는 현재 시스템(에이전트는 execute_ibl
+단일 도구만 사용, 5노드 액션은 ibl_access 가 별도 XML로 노출)에서 호출되지 않아 제거했다.
 """
-import sys
-import os
-
-# backend 모듈 경로 추가
-_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
-if _backend_dir not in sys.path:
-    sys.path.insert(0, os.path.abspath(_backend_dir))
-
-from ibl_engine import execute_ibl
-
-# 도구 이름 → 현재 노드 매핑 (6개 노드: system, interface, messenger, source, stream, forge)
-# ibl_* 개별 도구는 레거시이며 현재 execute_ibl 단일 도구만 사용됨.
-# 이 매핑은 혹시 ibl_* 도구가 호출될 경우를 위한 폴백.
-_TOOL_NODE_MAP = {
-    # 현재 노드 직접 매핑
-    "ibl_system": "system", "ibl_interface": "interface",
-    "ibl_messenger": "messenger", "ibl_source": "source",
-    "ibl_stream": "stream", "ibl_forge": "engines",
-    # 구 도구명 → 현재 노드 (직접 매핑, 이중 변환 없음)
-    "ibl_android": "interface", "ibl_browser": "interface", "ibl_desktop": "interface",
-    "ibl_youtube": "stream", "ibl_radio": "stream",
-    "ibl_informant": "source", "ibl_librarian": "source",
-    "ibl_finance": "source", "ibl_culture": "source", "ibl_study": "source",
-    "ibl_legal": "source", "ibl_statistics": "source",
-    "ibl_commerce": "source", "ibl_location": "source",
-    "ibl_web": "source", "ibl_info": "source",
-    "ibl_photo": "source", "ibl_blog": "source",
-    "ibl_memory": "source", "ibl_health": "source",
-    "ibl_cctv": "source", "ibl_realestate": "source",
-    "ibl_creator": "engines", "ibl_webdev": "engines", "ibl_design": "engines",
-    "ibl_orchestrator": "system", "ibl_workflow": "system",
-    "ibl_automation": "system", "ibl_output": "system",
-    "ibl_user": "system", "ibl_filesystem": "system", "ibl_fs": "system",
-    # 기타 레거시
-    "ibl_channel": "messenger", "ibl_contact": "messenger",
-    "ibl_media": "engines", "ibl_viz": "engines",
-    "ibl_api": "source", "ibl_shopping": "source",
-    "ibl_startup": "source", "ibl_hosting": "engines",
-    "ibl_webbuilder": "engines", "ibl_storage": "system",
-    "ibl_event": "system", "ibl_agent": "system",
-}
 
 
 def execute(tool_input: dict, context) -> str:
-    """IBL 노드 도구 실행 (ToolContext 기반 신규 시그니처)."""
-    tool_name = context.tool_name
-    # 노드 기반 라우팅 (현재 노드명으로 직접 매핑)
-    node = _TOOL_NODE_MAP.get(tool_name)
-    if not node:
-        return f"알 수 없는 IBL 도구: {tool_name}"
-
-    # 노드 정보를 tool_input에 주입
-    tool_input["_node"] = node
-
-    result = execute_ibl(tool_input, context.project_path, context.agent_id)
-
-    # dict 결과는 그대로 반환 (system_tools.py가 JSON 변환 처리)
-    return result
+    """레거시 ibl_* 도구는 제거됨. execute_ibl 은 system_tools 가 직접 실행한다."""
+    return f"미지원 도구: {context.tool_name} (ibl_* 레거시 도구는 제거됨; execute_ibl 사용)"

@@ -48,7 +48,8 @@ export function StreamPlayer({ data, variant = 'warm' }: StreamPlayerProps) {
   const textColor = variant === 'warm' ? 'text-[#4A4035]' : 'text-gray-700';
   const subTextColor = variant === 'warm' ? 'text-[#8A8478]' : 'text-gray-500';
 
-  const isHls = data.url?.includes('.m3u8') || data.url?.includes('ktict.co.kr') || data.url?.includes('eseoul.go.kr') || data.url?.includes(':1935/');
+  // 재생가능 판정은 백엔드 playable 필드를 신뢰(#5). 없을 때만 URL 스니핑 폴백(레거시 호환).
+  const isHls = data.playable ?? (data.url?.includes('.m3u8') || data.url?.includes('ktict.co.kr') || data.url?.includes('eseoul.go.kr') || data.url?.includes(':1935/'));
 
   /* 재생 시작 */
   const startPlay = async () => {

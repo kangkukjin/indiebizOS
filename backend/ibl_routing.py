@@ -21,23 +21,45 @@ TOOL_EXECUTION_TIMEOUT = 60
 # 형식: {"node:action": {"<정규 키>": ["<alias1>", "<alias2>", ...]}}
 # 정규화 규칙: 정규 키가 비어있고 alias 키 중 하나에 값이 있으면 그 값을 정규 키로 옮긴다.
 ACTION_PARAM_ALIASES: Dict[str, Dict[str, list]] = {
-    # === 부동산 (real-estate) — 법정동 코드는 region_code가 정식 ===
-    "sense:apt_trade":   {"region_code": ["district_code", "region", "dong_code", "code"]},
-    "sense:apt_rent":    {"region_code": ["district_code", "region", "dong_code", "code"]},
-    "sense:house_trade": {"region_code": ["district_code", "region", "dong_code", "code"]},
-    "sense:house_rent":  {"region_code": ["district_code", "region", "dong_code", "code"]},
+    # 2026-06-03 전수조사(param 이름 불일치): 코퍼스/자연어가 쓰는 키 → 핸들러 정규 키.
+    #   옛 항목(apt_trade/resolve_library/recommended_books)은 어휘 통합으로 사라져 현재 액션명으로 재키잉.
+    # === 부동산 (real-estate) — 옛 apt_*/house_* → realty{op}, region_code가 정식 ===
+    "sense:realty": {"region_code": ["district_code", "dong_code", "code"]},
     "sense:commercial": {
         "region_code": ["district_code", "dong_code", "code"],
         "lat": ["latitude", "y"],
         "lng": ["longitude", "lon", "x"],
     },
-
-    # === 라이브러리 문서 (context7) — library_name이 정식 ===
-    "sense:resolve_library":  {"library_name": ["name", "library", "lib", "query"]},
-    "sense:get_library_docs": {"library_id": ["id", "library", "lib_id"]},
-
-    # === 도서 (culture) — isbn13이 정식 ===
-    "sense:recommended_books": {"isbn13": ["isbn", "book_isbn", "base_isbn", "book_id"]},
+    # === 라이브러리 문서 (context7) — 옛 resolve_library/get_library_docs → devdocs{op} ===
+    "sense:devdocs": {"library_name": ["library", "lib", "name"], "library_id": ["id", "lib_id"]},
+    # === 문화 (KCISA 전시 — keyword가 정식) ===
+    "sense:exhibit": {"keyword": ["query"]},
+    # === 지역 정보 DB (area가 정식) ===
+    "sense:local_query": {"area": ["region"]},
+    # === 웹 수집 (query op: site_id/query가 정식) ===
+    "sense:collect": {"site_id": ["site"], "query": ["keyword"]},
+    # === 악보 조회 (tune_id가 정식) ===
+    "sense:abc_get": {"tune_id": ["id"]},
+    # === self ===
+    "self:fs_query": {"min_size_mb": ["min_size"]},
+    "self:folder_note": {"folder_path": ["path"], "root_path": ["path"]},
+    "self:photo": {"media_type": ["filter"]},
+    "self:grep": {"root_path": ["path"], "pattern": ["query"]},
+    "self:call": {"tool": ["api_name"]},
+    "self:trigger": {"trigger_id": ["id"]},
+    "self:gui": {"content": ["data"], "format": ["type"]},
+    # === limbs ===
+    "limbs:drag": {"source_ref": ["from_ref"], "target_ref": ["to_ref"]},
+    "limbs:radio_favorite": {"stream_url": ["url"], "name": ["title"]},
+    "limbs:show_map": {"query": ["location"]},
+    # (은퇴 2026-06-04) limbs:iframe name:[id] 별칭 — switch가 id를 HTML id 속성으로 직접 처리(name 폴백 포함).
+    # === engines ===
+    "engines:music": {"abc_notation": ["abc"], "midi_path": ["path"]},
+    "engines:chart": {"chart_type": ["type"]},
+    "engines:image_gemini": {"output_path": ["filename"]},
+    # === others ===
+    "others:messages": {"neighbor_id": ["contact", "name", "id"]},
+    "others:delegate": {"steps": ["pipeline"]},
 }
 
 
@@ -437,10 +459,18 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
             return {"success": False, "error": "op 파라미터가 필요합니다. (list|status|kill|log|attempts)"}
         return _route_system(target_func, params, project_path, agent_id=agent_id)
 
-    # World Pulse: 세계 상태 감각
-    elif func_name in ("world_pulse", "world_trend", "world_refresh"):
+    # World Pulse: 세계 상태 감각 — 단일 액션 패턴: world {op: snapshot|trend|refresh}
+    elif func_name == "world_op":
         from world_pulse import execute_world_pulse
-        action_name = func_name  # world_pulse, world_trend, world_refresh
+        op = (params.get("op") or "snapshot").strip()  # 기본 snapshot
+        op_map = {
+            "snapshot": "world_pulse",
+            "trend": "world_trend",
+            "refresh": "world_refresh",
+        }
+        action_name = op_map.get(op)
+        if not action_name:
+            return {"success": False, "error": "op 파라미터가 필요합니다. (snapshot|trend|refresh)"}
         return execute_world_pulse(action_name, dict(params))
 
     # 자가점검: 전수 IBL 액션 면역 순찰
@@ -782,8 +812,8 @@ def _agent_ask_sync(agent_id: str, params: dict, project_path: str) -> Any:
     비동기 agent_ask와 달리, 임시 AI 에이전트를 생성하여
     메시지를 처리하고 결과 텍스트를 직접 반환합니다.
 
-    사용: [others:ask_sync]{agent_id: "프로젝트/에이전트", message: "분석해줘"}
-    파이프라인: [self:blog_search]{query: "AI"} >> [others:ask_sync]{agent_id: "컨텐츠/컨텐츠", message: "요약해줘"}
+    사용: [others:delegate]{mode: "sync", agent_id: "프로젝트/에이전트", message: "분석해줘"}
+    파이프라인: [self:blog]{op: "search", query: "AI"} >> [others:delegate]{mode: "sync", agent_id: "컨텐츠/컨텐츠", message: "요약해줘"}
     """
     if not agent_id:
         return {"error": "agent_id(문자열)가 필요합니다. 예: \"대장장이\" 또는 \"컨텐츠/대장장이\" 형식"}

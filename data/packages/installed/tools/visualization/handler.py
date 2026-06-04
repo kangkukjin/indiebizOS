@@ -62,6 +62,15 @@ def execute(tool_input: dict, context):
         # 범용 chart 액션: chart_type으로 분기
         if tool_name == "chart":
             chart_type = tool_input.get("chart_type", "line")
+            # flat data + labels 정규화: 코퍼스/사용자는 data:[10,20,30] + labels:[...]로 쓰나
+            # 차트 도구는 dict 리스트를 기대 → 종류별 키로 변환 (pie/bar={label,value}, line/scatter={x,y}).
+            _d = tool_input.get("data")
+            if isinstance(_d, list) and _d and not isinstance(_d[0], dict):
+                _labels = tool_input.get("labels") or [str(i + 1) for i in range(len(_d))]
+                if chart_type in ("pie", "bar"):
+                    tool_input["data"] = [{"label": l, "value": v} for l, v in zip(_labels, _d)]
+                elif chart_type in ("line", "scatter"):
+                    tool_input["data"] = [{"x": l, "y": v} for l, v in zip(_labels, _d)]
             type_map = {
                 "line": "line_chart", "bar": "bar_chart", "pie": "pie_chart",
                 "scatter": "scatter_plot", "heatmap": "heatmap", "multi": "multi_chart",

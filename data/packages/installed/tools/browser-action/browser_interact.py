@@ -212,9 +212,13 @@ async def browser_select_option(params: dict) -> dict:
     if err:
         return err
 
-    values = params.get("values", [])
+    values = params.get("values")
+    if values is None and params.get("value") is not None:  # 단수 value → 배열 래핑(자연어 호환)
+        values = params["value"]
+    if isinstance(values, str):
+        values = [values]
     if not values:
-        return {"success": False, "error": "values가 필요합니다."}
+        return {"success": False, "error": "values(또는 value)가 필요합니다."}
 
     session = BrowserSession.get_instance()
     page = session.page
@@ -277,9 +281,13 @@ async def browser_upload_file(params: dict) -> dict:
     if err:
         return err
 
-    files = params.get("files", [])
+    files = params.get("files")
+    if files is None and params.get("path") is not None:  # 단수 path → 배열 래핑(자연어 호환)
+        files = params["path"]
+    if isinstance(files, str):
+        files = [files]
     if not files:
-        return {"success": False, "error": "files(파일 경로 배열)가 필요합니다."}
+        return {"success": False, "error": "files(또는 path) 파일 경로가 필요합니다."}
 
     session = BrowserSession.get_instance()
     page = session.page

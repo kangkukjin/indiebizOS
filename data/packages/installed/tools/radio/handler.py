@@ -30,8 +30,10 @@ def load_tool_radio():
 _OP_DISPATCHERS = {
     "radio_op": {"play": None, "stop": None},
     "radio_favorite_op": {"list": None, "add": None, "remove": None},
+    # 2026-06-03 [sense:radio]{op} — 방송국 검색/탐색 (재생은 limbs:radio).
+    "radio_search_op": {"search": None, "korean": None},
 }
-_OP_DEFAULTS = {"radio_op": "play"}
+_OP_DEFAULTS = {"radio_op": "play", "radio_search_op": "search"}
 
 
 def execute(tool_input: dict, context):
@@ -53,6 +55,21 @@ def execute(tool_input: dict, context):
     elif tool_name == "get_korean_radio":
         return radio.get_korean_radio(
             broadcaster=tool_input.get("broadcaster"),
+        )
+    elif tool_name == "radio_search_op":
+        # [sense:radio]{op} — search(전세계)/korean(한국 방송사)
+        op = (tool_input.get("op") or _OP_DEFAULTS["radio_search_op"]).strip()
+        if op == "korean":
+            return radio.get_korean_radio(broadcaster=tool_input.get("broadcaster") or tool_input.get("query"))
+        return radio.search_radio(
+            name=tool_input.get("name") or tool_input.get("query"),
+            tag=tool_input.get("tag"),
+            country=tool_input.get("country"),
+            state=tool_input.get("state"),
+            language=tool_input.get("language"),
+            order=tool_input.get("order"),
+            bitrateMin=tool_input.get("bitrateMin"),
+            limit=tool_input.get("limit", 10),
         )
     elif tool_name == "play_radio":
         return radio.play_radio(
@@ -109,6 +126,7 @@ def execute(tool_input: dict, context):
         elif op == "remove":
             return radio.remove_radio_favorite(
                 name=tool_input.get("name"),
+                stream_url=tool_input.get("stream_url"),
             )
         else:
             return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: list/add/remove"}

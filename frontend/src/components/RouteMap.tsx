@@ -9,6 +9,7 @@ import 'leaflet/dist/leaflet.css';
 // Leaflet 기본 마커 아이콘 문제 해결
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import type { RouteMapData } from './maps/mapTypes';
 
 const DefaultIcon = L.icon({
   iconUrl: icon,
@@ -18,25 +19,7 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-export interface RouteMapData {
-  type: 'route_map';
-  origin: {
-    lat: number;
-    lng: number;
-    name: string;
-  };
-  destination: {
-    lat: number;
-    lng: number;
-    name: string;
-  };
-  path: [number, number][];  // [lat, lng][]
-  summary: {
-    distance_km: number;
-    duration_min: number;
-    toll: number;
-  };
-}
+export type { RouteMapData };
 
 interface RouteMapProps {
   data: RouteMapData;

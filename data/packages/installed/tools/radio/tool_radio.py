@@ -396,7 +396,11 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None):
             "error": "station_id 또는 stream_url 중 하나를 지정해주세요.",
         }, ensure_ascii=False)
 
-    volume = max(0, min(100, volume or 70))
+    try:
+        volume = int(volume)
+    except (TypeError, ValueError):
+        volume = 70
+    volume = max(0, min(100, volume))
 
     # 기존 재생 중지
     with _player_lock:
@@ -542,6 +546,10 @@ def set_radio_volume(volume):
     """볼륨 조절 - mpv 재시작 방식"""
     global _player_process, _current_station, _play_start_time
 
+    try:
+        volume = int(volume)
+    except (TypeError, ValueError):
+        volume = 70
     volume = max(0, min(100, volume))
 
     with _player_lock:
@@ -642,19 +650,29 @@ def save_radio_favorite(station_id=None, name=None, stream_url=None):
     }, ensure_ascii=False)
 
 
-def remove_radio_favorite(name):
-    """즐겨찾기 제거"""
+def remove_radio_favorite(name=None, stream_url=None):
+    """즐겨찾기 제거 (이름 또는 스트림 URL로)."""
     favs = _load_favorites()
-    new_favs = [f for f in favs if f.get("name") != name]
-
-    if len(new_favs) == len(favs):
+    if not name and not stream_url:
         return json.dumps({
             "success": False,
-            "error": f"'{name}'을(를) 즐겨찾기에서 찾을 수 없습니다.",
+            "error": "name 또는 stream_url 중 하나가 필요합니다.",
+        }, ensure_ascii=False)
+
+    def _match(f):
+        return (name and f.get("name") == name) or (stream_url and f.get("stream_url") == stream_url)
+
+    new_favs = [f for f in favs if not _match(f)]
+
+    if len(new_favs) == len(favs):
+        _key = name or stream_url
+        return json.dumps({
+            "success": False,
+            "error": f"'{_key}'을(를) 즐겨찾기에서 찾을 수 없습니다.",
         }, ensure_ascii=False)
 
     _save_favorites(new_favs)
     return json.dumps({
         "success": True,
-        "message": f"'{name}'을(를) 즐겨찾기에서 제거했습니다.",
+        "message": f"'{name or stream_url}'을(를) 즐겨찾기에서 제거했습니다.",
     }, ensure_ascii=False)

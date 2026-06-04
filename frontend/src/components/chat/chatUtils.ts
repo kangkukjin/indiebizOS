@@ -104,6 +104,7 @@ export interface StreamData {
   source?: string;
   lat?: number;
   lng?: number;
+  playable?: boolean;  // 백엔드가 HLS 재생가능 판정한 결과 (있으면 프론트가 재-스니핑 없이 신뢰)
 }
 
 // 스트림 데이터 패턴 감지 및 파싱

@@ -17,11 +17,27 @@ if _backend_dir not in sys.path:
 
 from common.response_formatter import format_json
 
+# 2026-06-03 dispatcher 표준화 — [self:blog]{op} 키 메타데이터. 분기는 execute() 상단.
+_OP_DISPATCHERS = {
+    "blog_op": {"posts": None, "search": None, "check_new": None, "rebuild_index": None, "stats": None},
+}
+_OP_DEFAULTS = {"blog_op": "posts"}
+
 
 def execute(tool_input: dict, context) -> str:
     """블로그 도구 실행 통합 핸들러 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
     project_path = context.project_path
+    # 2026-06-03 어휘 정리: [self:blog]{op} 단일 액션 → 내부 tool_name으로 디스패치.
+    if tool_name == "blog_op":
+        op = (tool_input.get("op") or _OP_DEFAULTS["blog_op"]).strip()
+        tool_name = {
+            "posts": "blog_get_posts",
+            "search": "blog_search_op",
+            "check_new": "blog_check_new_posts",
+            "rebuild_index": "rebuild_search_index",
+            "stats": "blog_stats",
+        }.get(op, "blog_get_posts")
     try:
         # 인사이트 도구들
         if tool_name == "blog_check_new_posts":
@@ -87,17 +103,7 @@ def execute(tool_input: dict, context) -> str:
             )
             return format_json(result)
 
-        elif tool_name == "kinsight":
-            from tool_kinsight import kinsight
-            result = kinsight(
-                project_path=project_path,
-                count=tool_input.get("count", 15),
-                before_date=tool_input.get("before_date")
-            )
-            return format_json(result)
-
-        elif tool_name == "kinsight2":
-            return format_json({"success": False, "error": "kinsight2는 kinsight로 통합되었습니다. [self:kinsight]{count: N}을 사용하세요."})
+        # (2026-06-03 kinsight/kinsight2 폐기 — 블로그 인사이트 액션 제거)
 
         # 통합 도구 — IBL 어휘에 노출. mode로 분기.
         elif tool_name == "blog_search_op":

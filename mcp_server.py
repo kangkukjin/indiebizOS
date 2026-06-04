@@ -21,8 +21,8 @@ def execute_ibl(code: str, project_path: str = "") -> str:
     예시:
         [sense:web_search]{query: "AI 뉴스"}
         [limbs:play_youtube]{query: "Queen Bohemian Rhapsody"}
-        [sense:search_radio]{name: "KBS"}
-        [limbs:radio_play]{station_id: "kbs_coolfm"}
+        [sense:radio]{op: "search", name: "KBS"}
+        [limbs:radio]{op: "play", station_id: "kbs_coolfm"}
 
     project_path를 비워두면 현재 호출 컨텍스트의 프로젝트가 사용됩니다.
     """

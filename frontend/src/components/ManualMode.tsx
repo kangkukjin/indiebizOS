@@ -137,18 +137,27 @@ export default function ManualMode() {
     }
   }, [pendingCaret, iblCode]);
 
-  // 발견 레이어: 클릭한 액션을 명령줄에 씨앗으로 떨군다 (target_key가 있으면 파라미터 골격까지)
-  const seedFromAction = useCallback((node: string, action: string, targetKey: string) => {
-    const seed = targetKey ? `[${node}:${action}]{${targetKey}: }` : `[${node}:${action}]{}`;
+  // 발견 레이어: 클릭한 액션을 명령줄에 씨앗으로 떨군다.
+  //  - op 분기 액션은 op를 미리 채워(기본 op 또는 클릭한 op) 바로 실행 가능한 골격을 준다.
+  //  - 그 외엔 target_key 골격.
+  const seedFromAction = useCallback((node: string, action: string, targetKey: string, op?: string) => {
+    let seed: string;
+    if (op) {
+      seed = `[${node}:${action}]{op: "${op}"}`;
+    } else if (targetKey) {
+      seed = `[${node}:${action}]{${targetKey}: }`;
+    } else {
+      seed = `[${node}:${action}]{}`;
+    }
     setIblCode(seed);
     setBrowsing(false);
-    // 파라미터를 바로 채우도록 '{' 안쪽에 커서를 둔다
     setPendingCaret(seed.lastIndexOf('}'));
   }, []);
 
-  // 둘러보기 필터: 액션 이름/설명/키워드/노드로 검색
+  // 둘러보기 필터: 액션 이름/설명/키워드/노드로 검색 (op 분기·파라미터 힌트 포함)
   const browseGroups = useMemo(() => {
-    if (!catalog) return [] as Array<{ node: string; actions: Array<{ name: string; description: string; targetKey: string }> }>;
+    type BrowseAction = { name: string; description: string; targetKey: string; targetDesc: string; opDefault: string; ops: Array<{ op: string; desc: string }> };
+    if (!catalog) return [] as Array<{ node: string; actions: BrowseAction[] }>;
     const q = browseQuery.trim().toLowerCase();
     return Object.entries(catalog.nodes).map(([node, nd]) => ({
       node,
@@ -159,7 +168,14 @@ export default function ManualMode() {
           node.toLowerCase().includes(q) ||
           (meta.description || '').toLowerCase().includes(q) ||
           (meta.keywords || []).some((k) => k.toLowerCase().includes(q)))
-        .map(([name, meta]) => ({ name, description: meta.description || '', targetKey: meta.target_key || '' })),
+        .map(([name, meta]) => ({
+          name,
+          description: meta.description || '',
+          targetKey: meta.target_key || '',
+          targetDesc: meta.target_description || '',
+          opDefault: meta.ops?.default || '',
+          ops: Object.entries(meta.ops?.values || {}).map(([op, desc]) => ({ op, desc: String(desc) })),
+        })),
     })).filter((g) => g.actions.length > 0);
   }, [catalog, browseQuery]);
 
@@ -304,16 +320,33 @@ export default function ManualMode() {
               {browseGroups.map((g) => (
                 <div key={g.node}>
                   <div className="text-[11px] text-stone-400 px-1 mb-1">{NODE_GLOSS[g.node] || g.node}</div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="space-y-1.5">
                     {g.actions.map((a) => (
-                      <button
-                        key={a.name}
-                        onClick={() => seedFromAction(g.node, a.name, a.targetKey)}
-                        title={a.description}
-                        className="px-2 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-[12px] text-stone-700 font-mono transition"
-                      >
-                        {a.name}
-                      </button>
+                      <div key={a.name} className="px-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button
+                            onClick={() => seedFromAction(g.node, a.name, a.targetKey, a.opDefault || undefined)}
+                            title={a.description}
+                            className="px-2 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-[12px] text-stone-700 font-mono transition"
+                          >
+                            {a.name}
+                          </button>
+                          {a.ops.length > 0 && <span className="text-[10px] text-stone-400">op:</span>}
+                          {a.ops.map((o) => (
+                            <button
+                              key={o.op}
+                              onClick={() => seedFromAction(g.node, a.name, a.targetKey, o.op)}
+                              title={o.desc}
+                              className="px-1.5 py-0.5 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-200 text-[11px] text-amber-800 font-mono transition"
+                            >
+                              {o.op}{o.op === a.opDefault ? '★' : ''}
+                            </button>
+                          ))}
+                        </div>
+                        {a.targetDesc && (
+                          <div className="text-[10px] text-stone-400 mt-0.5 leading-snug">{a.targetDesc}</div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>

@@ -40,8 +40,15 @@ _OP_DISPATCHERS = {
         "stop": "stop_youtube",
         "download": "download_youtube_music",
     },
+    # 2026-06-03 어휘 정리: [sense:video]{op} — 유튜브 동영상 조회.
+    "video_op": {
+        "info": "get_youtube_info",
+        "transcript": "get_youtube_transcript",
+        "languages": "list_available_transcripts",
+        "summarize": "summarize_video",
+    },
 }
-_OP_DEFAULTS = {"music_op": "play"}
+_OP_DEFAULTS = {"music_op": "play", "video_op": "info"}
 
 
 def execute(tool_input: dict, context):
@@ -69,7 +76,15 @@ def execute(tool_input: dict, context):
                  or 'output.mp3')
         return tool_youtube.download_youtube_music(url=tool_input['url'], filename=fname)
     elif tool_name == 'get_youtube_info':
-        return tool_youtube.get_youtube_info(url=tool_input['url'])
+        # url 또는 video_id 파라미터 지원 (transcript와 동일 해소)
+        url = tool_input.get('url')
+        if not url:
+            video_id = tool_input.get('video_id')
+            if video_id:
+                url = f"https://www.youtube.com/watch?v={video_id}"
+            else:
+                return {"error": "url 또는 video_id 파라미터가 필요합니다."}
+        return tool_youtube.get_youtube_info(url=url)
     elif tool_name == 'get_youtube_transcript':
         # url 또는 video_id 파라미터 지원
         url = tool_input.get('url')

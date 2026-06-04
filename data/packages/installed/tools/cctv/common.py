@@ -34,6 +34,35 @@ def calculate_distance(lat1: float, lng1: float, lat2: float, lng2: float) -> fl
     return R * c
 
 
+def normalize_coords(lat, lng):
+    """좌표를 표준 {lat,lng} float로 정규화. 파싱 실패·(0,0)·범위 밖이면 None.
+
+    위치 액션의 좌표 계약(항상 {lat:float, lng:float})을 강제하는 단일 지점.
+    """
+    try:
+        lat = float(lat)
+        lng = float(lng)
+    except (TypeError, ValueError):
+        return None
+    if lat == 0 and lng == 0:
+        return None
+    if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+        return None
+    return {"lat": lat, "lng": lng}
+
+
+def is_hls_playable(url: str) -> bool:
+    """URL이 hls.js로 재생 가능한 HLS 스트림인지 판단 (재생가능 판정 단일 소스)."""
+    if not url:
+        return False
+    u = url.lower()
+    # UTIC JSP 페이지 → m3u8 추출 전엔 재생 불가
+    if 'utic.go.kr' in u and '.jsp' in u:
+        return False
+    return ('.m3u8' in u or 'ktict.co.kr' in u or 'eseoul.go.kr' in u
+            or ':1935/' in u or 'streamlock.net' in u)
+
+
 def success_response(**kwargs) -> str:
     """성공 응답 JSON"""
     result = {"success": True}

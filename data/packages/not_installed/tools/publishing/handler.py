@@ -5,14 +5,16 @@ import importlib.util
 import os
 
 _TOOL_MODULE_MAP = {
-    "publish_list": "registry.py",
-    "publish_create": "registry.py",
-    "publish_status": "registry.py",
+    "publish_op": "registry.py",  # 2026-06-03 [engines:publish]{op} 통합
     "publish_export": "export.py",
     "publish_collect": "collect.py",
 }
 
 TOOLS = list(_TOOL_MODULE_MAP.keys())
+
+# 단일 액션 op 키 메타데이터 (--check 가 src.ops.values 와 비교).
+_OP_DISPATCHERS = {"publish_op": {"list": None, "create": None, "status": None}}
+_OP_DEFAULTS = {"publish_op": "list"}
 
 
 def _load_module(module_file: str):
@@ -34,14 +36,13 @@ def execute(tool_input: dict, context) -> str:
     try:
         module = _load_module(module_file)
 
-        if tool_name == "publish_list":
-            result = module.run({"action": "list"})
-        elif tool_name == "publish_create":
-            tool_input["action"] = "create"
-            result = module.run(tool_input)
-        elif tool_name == "publish_status":
-            tool_input["action"] = "status"
-            result = module.run(tool_input)
+        if tool_name == "publish_op":
+            op = (tool_input.get("op") or _OP_DEFAULTS["publish_op"]).strip()
+            if op not in _OP_DISPATCHERS["publish_op"]:
+                return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. 사용: list|create|status"}, ensure_ascii=False)
+            ti = dict(tool_input)
+            ti["action"] = op
+            result = module.run(ti)
         elif tool_name == "publish_export":
             result = module.run(tool_input)
         elif tool_name == "publish_collect":

@@ -101,7 +101,7 @@ ORDER BY id DESC LIMIT 30;
 ### E. 심층 메모리 (사용자에 대한 사실)
 중복·모순 검사용.
 
-`[self:memory_search]{query: "키워드"}` 또는:
+`[self:memory]{op: "search", query: "키워드"}` 또는:
 ```bash
 sqlite3 data/system_ai_memory.db "
 SELECT id, keywords, substr(content, 1, 100) AS content
@@ -288,7 +288,7 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 
 **제안 형식 예시**:
 ```
-[발견] `[sense:search_pubmed]{q:X} & [sense:search_ddg]{q:X}` 조합이
+[발견] `[sense:paper]{op:"search", source:"pubmed", q:X} & [sense:search_ddg]{q:X}` 조합이
        의료 에이전트 최근 7일 12회 반복
 [해석] 의학 정보 다각도 검색을 매번 모델이 재구성. 토큰·시간 비용 누적.
 [제안] `[engines:medical_research]{query: ...}` 등록.

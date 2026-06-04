@@ -1,0 +1,36 @@
+{
+  "id": "publishing",
+  "name": "Publishing Project Manager",
+  "description": "출판 프로젝트(책) 관리 도구. 원고 관리, 구조 기획, 조각글 수집 등.\n\n사용 가이드: data/guides/book_publishing.md 참조",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "publish_op",
+      "description": "출판 프로젝트(책) 관리 (op 분기) — [engines:publish].\n- op=list(기본): 전체 책 목록.\n- op=create: title(필수)로 새 프로젝트 생성.\n- op=status: book_id(필수)로 상세 상태(챕터/진척).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "list",
+              "create",
+              "status"
+            ],
+            "default": "list",
+            "description": "list(기본)/create/status"
+          },
+          "title": {
+            "type": "string",
+            "description": "[create] 책 제목"
+          },
+          "book_id": {
+            "type": "string",
+            "description": "[status] 프로젝트 ID(list 반환)"
+          }
+        },
+        "required": []
+      }
+    }
+  ]
+}

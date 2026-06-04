@@ -5,37 +5,6 @@
   "version": "2.0.0",
   "tools": [
     {
-      "name": "kopis_quick_search",
-      "description": "공연을 키워드로 빠르게 검색합니다. 가장 간단한 공연 검색 도구입니다.\n\n## 사용 예시\n- '위키드' 뮤지컬 검색: keyword='위키드', genre='뮤지컬'\n- 서울 지역 연극: keyword='', genre='연극', region='서울'\n- 공연예정 콘서트: status='공연예정', genre='대중음악'",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "keyword": {
-            "type": "string",
-            "description": "공연명 검색어"
-          },
-          "genre": {
-            "type": "string",
-            "description": "장르 (연극, 뮤지컬, 클래식, 국악, 대중음악, 무용, 서커스/마술, 복합)"
-          },
-          "region": {
-            "type": "string",
-            "description": "지역 (서울, 부산, 대구, 인천, 광주, 대전, 울산, 세종, 경기, 강원, 충북, 충남, 전북, 전남, 경북, 경남, 제주)"
-          },
-          "status": {
-            "type": "string",
-            "description": "공연 상태 (공연중, 공연예정, 공연완료)",
-            "default": "공연중"
-          },
-          "days": {
-            "type": "integer",
-            "description": "오늘부터 검색할 기간(일)",
-            "default": 90
-          }
-        }
-      }
-    },
-    {
       "name": "kopis_search_performances",
       "description": "기간을 지정하여 공연 목록을 상세 검색합니다.\n\n## 검색 파라미터\n- 날짜: YYYYMMDD 또는 YYYY-MM-DD 형식\n- 장르: 한글(연극, 뮤지컬) 또는 영문(theater, musical)\n- 지역: 한글(서울, 부산) 또는 영문(seoul, busan)\n- 상태: 공연중, 공연예정, 공연완료",
       "input_schema": {
@@ -126,37 +95,6 @@
       }
     },
     {
-      "name": "kopis_search_facilities",
-      "description": "공연장(공연시설) 정보를 검색합니다.\n\n## 반환 정보\n- 공연장 이름, 주소\n- 좌석 수, 공연장 수\n- 시설 특성, 개관 연도",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "keyword": {
-            "type": "string",
-            "description": "공연장명 검색어"
-          },
-          "facility_id": {
-            "type": "string",
-            "description": "시설 ID (상세 조회용)"
-          },
-          "region": {
-            "type": "string",
-            "description": "지역"
-          },
-          "rows": {
-            "type": "integer",
-            "description": "결과 수",
-            "default": 20
-          },
-          "page": {
-            "type": "integer",
-            "description": "페이지 번호",
-            "default": 1
-          }
-        }
-      }
-    },
-    {
       "name": "kopis_search_festivals",
       "description": "축제/페스티벌 목록을 검색합니다.\n\n## 사용 예시\n- 다가오는 음악 축제: genre='대중음악'\n- 서울 지역 축제: region='서울'",
       "input_schema": {
@@ -189,22 +127,6 @@
             "default": 1
           }
         }
-      }
-    },
-    {
-      "name": "kopis_get_genres",
-      "description": "KOPIS API에서 지원하는 장르 목록을 조회합니다. 각 장르의 코드와 한글/영문 별칭을 확인할 수 있습니다.",
-      "input_schema": {
-        "type": "object",
-        "properties": {}
-      }
-    },
-    {
-      "name": "kopis_get_regions",
-      "description": "KOPIS API에서 지원하는 지역 목록을 조회합니다. 각 지역의 코드와 한글/영문 별칭을 확인할 수 있습니다.",
-      "input_schema": {
-        "type": "object",
-        "properties": {}
       }
     },
     {
@@ -315,27 +237,6 @@
       }
     },
     {
-      "name": "library_get_recommended_books",
-      "description": "특정 도서와 관련된 추천도서를 조회합니다. 마니아 추천 또는 다독자 추천 중 선택할 수 있습니다.\n\n## 추천 유형\n- mania: 해당 도서를 좋아한 마니아들이 함께 읽은 책\n- reader: 해당 도서를 읽은 다독자들이 함께 읽은 책",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "isbn13": {
-            "type": "string",
-            "description": "기준 도서의 ISBN13"
-          },
-          "rec_type": {
-            "type": "string",
-            "description": "추천 유형 (mania: 마니아 추천, reader: 다독자 추천)",
-            "default": "mania"
-          }
-        },
-        "required": [
-          "isbn13"
-        ]
-      }
-    },
-    {
       "name": "library_search_libraries",
       "description": "전국 공공도서관 정보를 검색합니다.\n\n## 사용 예시\n- 도서관명으로 검색: name='국립중앙'\n- 서울 지역 도서관: region='11'\n\n## 반환 정보\n- 도서관명, 주소\n- 전화번호, 홈페이지\n- 운영시간, 휴관일",
       "input_schema": {
@@ -430,22 +331,6 @@
       }
     },
     {
-      "name": "library_get_regions",
-      "description": "도서관 정보나루 API에서 사용하는 지역코드 목록을 조회합니다.",
-      "input_schema": {
-        "type": "object",
-        "properties": {}
-      }
-    },
-    {
-      "name": "library_get_kdc",
-      "description": "KDC(한국십진분류) 주제분류코드 목록을 조회합니다. 인기대출도서 필터링에 사용합니다.",
-      "input_schema": {
-        "type": "object",
-        "properties": {}
-      }
-    },
-    {
       "name": "kcisa_search_culture",
       "description": "한국문화정보원(KCISA)에서 전국 박물관, 미술관 전시 및 문화 행사 정보를 검색합니다.\n\n## 사용 예시\n- '피카소' 전시회 검색: keyword='피카소'\n- 이번 달 서울 지역 행사: area='서울'\n- 특정 기간 전시 검색: start_date='20240101', end_date='20240131'",
       "input_schema": {
@@ -518,67 +403,167 @@
       }
     },
     {
-      "name": "gutenberg_search",
-      "description": "Project Gutenberg에서 고전 문학 및 도서의 메타데이터와 원문 텍스트 링크를 검색합니다 (Gutendex API). 무료로 다운로드 가능한 저작권 만료 도서들입니다.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "description": "도서 제목, 저자 등 검색어"
-          },
-          "author_year_start": {
-            "type": "integer",
-            "description": "저자 출생/사망 연도 시작"
-          },
-          "author_year_end": {
-            "type": "integer",
-            "description": "저자 출생/사망 연도 끝"
-          },
-          "topic": {
-            "type": "string",
-            "description": "주제어 (예: philosophy, children)"
-          },
-          "languages": {
-            "type": "string",
-            "description": "언어 코드 (기본: en, 쉼표로 구분 가능 예: en,fr)",
-            "default": "en"
-          }
-        }
-      }
-    },
-    {
-      "name": "korean_classics_search",
-      "description": "한국고전종합DB 검색 (db.itkc.or.kr). 이황, 이이 등 고전 문헌, 번역서 검색 및 원문 링크 제공.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "description": "검색어 (예: 이황, 퇴계집)"
-          },
-          "rows": {
-            "type": "integer",
-            "description": "반환할 결과 수 (기본 10)"
-          }
-        },
-        "required": [
-          "query"
-        ]
-      }
-    },
-    {
-      "name": "library_book",
-      "description": "한국 도서 검색·조회 (도서관정보나루). keyword 검색, isbn 기본 조회, isbn+detail로 상세(대출 통계). 글로벌 도서는 sense:search_books.\n\n파라미터: 검색어(제목/저자/출판사) 또는 ISBN. 파라미터 — keyword 단독은 검색, isbn 단독은 기본 조회, isbn+detail=true는 상세+대출통계.",
+      "name": "performance_op",
+      "description": "공연·공연장 조회 (op 분기) — [sense:performance], KOPIS.\n- op=search (기본): 공연 검색 (연극·뮤지컬·음악회). keyword·genre·region·status·days 옵션.\n- op=venue: 공연장·문화시설 검색. keyword(시설명)·region.\n- op=genres: 장르 코드 목록 (검색 필터용, 파라미터 없음).\n- op=regions: 지역 코드 목록 (검색 필터용, 파라미터 없음).",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "동작 분기 — target_description 참조"
+            "enum": [
+              "search",
+              "venue",
+              "genres",
+              "regions"
+            ],
+            "default": "search",
+            "description": "search=공연검색(기본), venue=공연장, genres=장르코드, regions=지역코드"
+          },
+          "keyword": {
+            "type": "string",
+            "description": "[search] 공연명 / [venue] 공연장명"
+          },
+          "genre": {
+            "type": "string",
+            "description": "[search] 장르 코드 (genres로 조회)"
+          },
+          "region": {
+            "type": "string",
+            "description": "[search/venue] 지역 코드 (regions로 조회)"
+          },
+          "status": {
+            "type": "string",
+            "description": "[search] 공연상태 (기본 공연중)"
+          },
+          "days": {
+            "type": "integer",
+            "description": "[search] 검색 기간(일, 기본 90)"
+          },
+          "facility_id": {
+            "type": "string",
+            "description": "[venue] 시설 ID"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수"
+          },
+          "page": {
+            "type": "integer",
+            "description": "페이지"
           }
         },
-        "additionalProperties": true
+        "required": []
+      }
+    },
+    {
+      "name": "book_op",
+      "description": "한국 도서 조회 (op 분기) — [sense:book], 도서관정보나루. 고전 원문은 classic_op, 글로벌 도서는 study:search_books.\n- op=search (기본): 도서 검색·조회. title/author/publisher(필드 전용)·keyword(광역)·isbn(+detail=true면 대출통계).\n- op=recommended: 추천도서 (마니아·다독자 패턴). isbn13·rec_type.\n- op=codes: 분류 코드 목록. code_type=kdc(주제분류) 또는 region(도서관 지역).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "search",
+              "recommended",
+              "codes"
+            ],
+            "default": "search",
+            "description": "search=도서검색(기본), recommended=추천도서, codes=분류코드목록"
+          },
+          "title": {
+            "type": "string",
+            "description": "[search] 제목 전용 검색"
+          },
+          "author": {
+            "type": "string",
+            "description": "[search] 저자 전용 검색"
+          },
+          "publisher": {
+            "type": "string",
+            "description": "[search] 출판사 전용 검색"
+          },
+          "keyword": {
+            "type": "string",
+            "description": "[search] 광역 검색 (제목+저자+출판사)"
+          },
+          "isbn": {
+            "type": "string",
+            "description": "[search] ISBN 조회"
+          },
+          "detail": {
+            "type": "boolean",
+            "description": "[search] isbn과 함께 true면 상세·대출통계"
+          },
+          "isbn13": {
+            "type": "string",
+            "description": "[recommended] 기준 도서 ISBN13"
+          },
+          "rec_type": {
+            "type": "string",
+            "enum": [
+              "mania",
+              "reader"
+            ],
+            "description": "[recommended] mania(기본)/reader"
+          },
+          "code_type": {
+            "type": "string",
+            "enum": [
+              "kdc",
+              "region"
+            ],
+            "description": "[codes] kdc 또는 region"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "classic_op",
+      "description": "고전 원문 검색 (op 분기) — [sense:classic].\n- op=western (기본): 서양 고전 원문 (Project Gutenberg, 저작권 만료 7만+권). query·languages·topic·author_year_start/end.\n- op=korean: 한국 고전 (한국고전종합DB, 이황·이이 등 원문·번역). query·rows.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "western",
+              "korean"
+            ],
+            "default": "western",
+            "description": "western=Gutenberg 서양고전(기본), korean=한국고전종합DB"
+          },
+          "query": {
+            "type": "string",
+            "description": "검색어 (제목·저자·주제)"
+          },
+          "languages": {
+            "type": "string",
+            "description": "[western] 언어 (기본 en)"
+          },
+          "topic": {
+            "type": "string",
+            "description": "[western] 주제"
+          },
+          "author_year_start": {
+            "type": "integer",
+            "description": "[western] 저자 생존연도 시작"
+          },
+          "author_year_end": {
+            "type": "integer",
+            "description": "[western] 저자 생존연도 끝"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "[korean] 결과 수 (기본 10)"
+          }
+        },
+        "required": []
       }
     }
   ]

@@ -138,10 +138,21 @@ def _load_nodes_config() -> Dict:
 
 
 def reload_nodes():
-    """노드 정의 강제 리로드"""
+    """노드 정의 강제 리로드 (실행기 측 캐시 전부).
+
+    ibl_engine._nodes + ibl_executors._nodes_cache(파생 캐시)를 함께 무효화한다.
+    /packages/reload 가 ibl_access(카탈로그) 캐시만 비우던 누락을 메운다 — src/nodes 변경이
+    backend 재시작 없이 실행 경로에도 반영되도록.
+    """
     global _nodes
     _nodes = None
     _load_nodes_config()
+    # ibl_executors 가 _load_nodes_config 결과의 nodes 섹션을 별도 캐싱하므로 함께 비운다.
+    try:
+        import ibl_executors
+        ibl_executors._nodes_cache = None
+    except Exception:
+        pass
 
 
 def get_node_actions(node_name: str) -> set:
@@ -322,6 +333,12 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
 
     router = action_config.get("router")
     params = tool_input.get("params", {})
+
+    # 중앙 파라미터 별칭 정규화 — 비-handler 라우터(system/workflow_engine/channel_engine/
+    # trigger_engine 등)도 ACTION_PARAM_ALIASES 적용받게. handler/driver는 _route_by_config 에서
+    # 한 번 더 적용되나 정규 키 우선이라 멱등. (예: self:trigger 의 id→trigger_id)
+    from ibl_routing import _normalize_param_aliases
+    params = _normalize_param_aliases(node, action, params)
 
     # default_input 병합: 액션에 정의된 기본값을 params에 적용 (사용자 값 우선)
     default_input = action_config.get("default_input")

@@ -341,7 +341,7 @@ def _execute_manage_events(tool_input: dict) -> str:
                 return json.dumps({"success": True, "events": [], "message": "등록된 이벤트가 없습니다."}, ensure_ascii=False)
             return json.dumps({"success": True, "events": events, "count": len(events)}, ensure_ascii=False)
 
-        elif action == "add":
+        elif action in ("add", "create"):
             title = tool_input.get("title")
             if not title:
                 return json.dumps({"success": False, "error": "title은 필수입니다."}, ensure_ascii=False)

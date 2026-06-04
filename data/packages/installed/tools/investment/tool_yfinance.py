@@ -265,8 +265,12 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             base_data["file_path"] = file_path     # 전체 데이터 파일 경로 (시각화 data_file용)
             base_data["sample"] = compact          # 하위호환 별칭
             summary = f"{msg}, 기간: {all_history[0]['date']} ~ {all_history[-1]['date']}, 총 {total_days}거래일. 전체 데이터: {file_path}. 차트 생성 시 line_chart 도구에 data_file 파라미터로 이 경로를 전달하세요."
-        else:
+        elif total_days > 20:
+            # 충분한 시계열 → 차트 안내
             summary = f"{msg}, 총 {total_days}거래일. 차트 생성 시 line_chart 도구의 data 파라미터에 prices 배열을 전달하세요."
+        else:
+            # 짧은 현재가 조회(기본 5일) → 현재가 중심 요약 (차트 안내 생략, prices는 최근 맥락일 뿐)
+            summary = f"현재가 {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%), 전일 {round(prev_close, 2)}. 최근 {total_days}거래일 시세 포함."
         return {"success": True, "data": base_data, "summary": summary}
 
     except Exception as e:

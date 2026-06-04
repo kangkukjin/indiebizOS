@@ -1,24 +1,40 @@
 # 한국 도서 검색 가이드
 
-`[sense:book]` 단일 액션으로 도서관정보나루(국립중앙도서관 공식 통계 API) 도서 정보를 검색·조회한다. **keyword / isbn / isbn+detail** 3가지 입력 모드.
+`[sense:book]{op}` 으로 도서관정보나루(국립중앙도서관 공식 통계 API) 도서를 조회한다 (2026-06-03 op 분기로 통합).
 
-다른 도서 도구와 구분:
-- **이 액션**: 한국 출판 도서 (메타 + 대출 통계)
-- `sense:search_books` 또는 글로벌 — 영어권 도서, 일반 검색
-- `culture` 패키지의 `gutenberg_search` — 영문 고전 (Project Gutenberg)
-- `culture` 패키지의 한국고전종합DB — 한문 고전 원문
+| op | 설명 | 주요 파라미터 |
+|----|------|--------------|
+| `search` (기본) | 도서 검색·조회 (필드분기·ISBN·대출통계) | title/author/publisher/keyword/isbn/detail |
+| `recommended` | 추천도서 (마니아·다독자 패턴) | isbn13, rec_type(mania 기본/reader) |
+| `codes` | 분류 코드 목록 | code_type(kdc 또는 region) |
+
+다른 도서 액션과 구분:
+- **이 액션(book)**: 한국 출판 도서 (메타 + 대출 통계 + 추천)
+- `sense:search_books` — 글로벌 도서 (Google Books, 영어권·원서)
+- `sense:classic`{op:"western"} — 서양 고전 원문 (Project Gutenberg)
+- `sense:classic`{op:"korean"} — 한국 고전 원문 (한국고전종합DB)
 
 ---
 
-## 핵심 분기: 입력 모드
+## op=search 입력 모드 (기본, op 생략 가능)
+
+필드/ISBN으로 분기:
 
 | 모드 | 호출 | 결과 |
 |---|---|---|
-| **키워드 검색** | `keyword:"하네스"` | 매칭 도서 목록 (제목·저자·ISBN·출판사) |
+| **필드 검색** | `title:"하네스"` / `author:"…"` / `publisher:"…"` | 해당 필드 매칭 도서 목록 |
+| **광역 검색** | `keyword:"하네스"` | 제목+저자+출판사 통합 검색 |
 | **ISBN 기본 조회** | `isbn:"9788936434267"` | 단일 도서 메타데이터 |
 | **ISBN 상세 + 대출통계** | `isbn:"9788936434267", detail:true` | 메타 + 대출 추이·연령대·성별 통계 |
 
-기본값: `detail:false`. ISBN을 알고 있고 대출 통계까지 필요하면 `detail:true`.
+제목만 안다면 `title`로 좁혀라(정확도↑). 기본값: `detail:false`.
+
+## op=recommended / op=codes
+```
+[sense:book]{op:"recommended", isbn13:"9788936434267"}       # 마니아 추천 (rec_type:"reader"면 다독자)
+[sense:book]{op:"codes", code_type:"kdc"}                     # KDC 주제분류 코드
+[sense:book]{op:"codes", code_type:"region"}                  # 도서관 지역 코드
+```
 
 ---
 
@@ -91,6 +107,6 @@
 
 ## 관련
 
-- `culture/gutenberg_search` — Project Gutenberg 영문 고전 원문
+- `sense:classic`{op:"western"} — Project Gutenberg 영문 고전 원문
 - `culture` 패키지 한국고전종합DB — 한문 고전
 - `sense:search_books` (있다면) — 글로벌 도서 일반 검색

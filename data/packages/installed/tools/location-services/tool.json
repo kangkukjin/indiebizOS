@@ -30,44 +30,62 @@
       }
     },
     {
-      "name": "get_api_ninjas_data",
-      "description": "API Ninjas에서 다양한 정보를 조회합니다.\n\n## 지원 endpoint\n- weather: 날씨 (params: {city: '도시명'})\n- airquality: 대기질/미세먼지 (params: {city: '도시명'})\n- geocoding: 도시명→좌표 (params: {city: '도시명'})\n- reversegeocoding: 좌표→도시명 (params: {lat: 위도, lon: 경도})\n- recipe: 레시피 검색 (params: {query: '음식명'})\n- cocktail: 칵테일 레시피 (params: {name: '칵테일명'} 또는 {ingredients: '재료'})\n\n## 사용 예시\n- 날씨: endpoint='weather', params={city: 'Seoul'}\n- 레시피: endpoint='recipe', params={query: 'pasta'}",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "endpoint": {
-            "type": "string",
-            "description": "데이터 종류 (weather, airquality, geocoding, reversegeocoding, recipe, cocktail)"
-          },
-          "params": {
-            "type": "object",
-            "description": "검색 매개변수"
-          }
-        },
-        "required": [
-          "endpoint"
-        ]
-      }
-    },
-    {
       "name": "amadeus_travel_search",
-      "description": "Amadeus API로 여행 정보를 조회합니다.\n\n## 지원 endpoint\n- flight-offers: 항공권 검색\n- hotel-offers: 호텔 검색\n- points-of-interest: 관광지 검색\n\n## 주의사항\n- API 키 설정 필요\n- 실시간 조회로 응답 시간이 길 수 있음",
+      "description": "[sense:travel]{op} — 여행 정보 검색(Amadeus). op=flight(from→to, date)/hotel(city)/poi(city 또는 lat/lng). 도시명·상대날짜 자동 해소. endpoint+params 직접 지정도 가능.",
       "input_schema": {
         "type": "object",
         "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "flight",
+              "hotel",
+              "poi"
+            ],
+            "default": "flight",
+            "description": "검색 종류"
+          },
+          "to": {
+            "type": "string",
+            "description": "도착 도시명 (flight). 예: 도쿄"
+          },
+          "from": {
+            "type": "string",
+            "description": "출발 도시명 (flight, 기본 서울)"
+          },
+          "date": {
+            "type": "string",
+            "description": "출발일 (flight). \"내일\"/\"다음주 금요일\"/YYYY-MM-DD. 기본 +7일"
+          },
+          "return_date": {
+            "type": "string",
+            "description": "귀국일 (flight, 옵션)"
+          },
+          "adults": {
+            "type": "integer",
+            "description": "성인 수 (flight, 기본 1)"
+          },
+          "city": {
+            "type": "string",
+            "description": "도시명 (hotel/poi)"
+          },
+          "lat": {
+            "type": "number",
+            "description": "위도 (poi, city 대신)"
+          },
+          "lng": {
+            "type": "number",
+            "description": "경도 (poi, city 대신)"
+          },
           "endpoint": {
             "type": "string",
-            "description": "조회 유형"
+            "description": "(파워유저) Amadeus 원본 endpoint 직접 지정"
           },
           "params": {
             "type": "object",
-            "description": "검색 매개변수"
+            "description": "(파워유저) endpoint별 원본 파라미터"
           }
-        },
-        "required": [
-          "endpoint",
-          "params"
-        ]
+        }
       }
     },
     {
@@ -192,7 +210,10 @@
             "description": "경도 (longitude)"
           }
         },
-        "required": ["lat", "lon"]
+        "required": [
+          "lat",
+          "lon"
+        ]
       }
     }
   ]

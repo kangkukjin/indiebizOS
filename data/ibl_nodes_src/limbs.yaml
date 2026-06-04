@@ -167,14 +167,15 @@
       iframe:
         description: 브라우저 iframe 관리 (op 분기). list/switch/reset.
         group: browser_session
-        target_description: 'switch — index 파라미터(iframe_list 결과의 위치) / reset — 메인 페이지로 복귀.'
+        target_description: 'switch — id(HTML id)·name·index·url 중 하나로 지정(list 결과의 어느 필드든). reset — 메인 페이지로 복귀.'
         target_key: op
         router: handler
         tool: browser_iframe_op
         ops:
+          default: list
           values:
-            list: 페이지 내 iframe 목록 조회
-            switch: iframe 컨텍스트 전환 (index 파라미터)
+            list: 페이지 내 iframe 목록 조회 (각 id·name·index·url 반환)
+            switch: iframe 컨텍스트 전환 (id/name/index/url)
             reset: 메인 페이지 컨텍스트로 복귀
         implementation: Playwright page.frames()/main_frame()로 iframe op 분기
         keywords:

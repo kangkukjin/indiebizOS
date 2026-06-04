@@ -27,6 +27,7 @@ IndieBiz OS Core - Phase 8
 """
 
 import json
+import re
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -41,22 +42,86 @@ TRIGGERS_PATH = DATA_PATH / "event_triggers.json"
 
 # === 트리거 저장소 ===
 
+# cron 요일(0=일,1=월..6=토,7=일) → calendar weekdays(0=월..6=일) 변환
+_CRON_DOW = {0: 6, 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6}
+
+
+def _cron_to_config(cron: str) -> dict:
+    """표준 cron(5필드: 분 시 일 월 요일) → calendar config 또는 {"error":...}.
+
+    지원: 매일(m h * * *), 매주(m h * * dow[,dow]), 매월(m h dom * *),
+          매년(m h dom mon *), N시간 간격(0 */N * * *), 매시간(m * * * *).
+    미지원 패턴(분 단위 */N, 복합 일+요일 등)은 명확한 에러 → config로 직접 지정 유도.
+    """
+    if not cron or not isinstance(cron, str):
+        return {"error": "cron 문자열이 필요합니다."}
+    fields = cron.split()
+    if len(fields) != 5:
+        return {"error": f"cron은 5필드(분 시 일 월 요일)여야 합니다: '{cron}'"}
+    minute, hour, dom, mon, dow = fields
+
+    # N시간 간격: 시 = */N (일·월·요일 모두 *)
+    m_interval = re.match(r"^\*/(\d+)$", hour)
+    if m_interval and dom == "*" and mon == "*" and dow == "*":
+        return {"repeat": "interval", "interval_hours": int(m_interval.group(1))}
+    # 매시간
+    if hour == "*" and dom == "*" and mon == "*" and dow == "*":
+        return {"repeat": "interval", "interval_hours": 1}
+
+    if not (minute.isdigit() and hour.isdigit()):
+        return {"error": f"분·시는 숫자여야 합니다(또는 시 '*/N' 간격): '{cron}'"}
+    time_str = f"{int(hour):02d}:{int(minute):02d}"
+
+    # 매주 (요일 지정)
+    if dow != "*":
+        if dom != "*" or mon != "*":
+            return {"error": "요일과 일/월을 동시 지정한 cron은 미지원입니다. config로 직접 지정하세요."}
+        days = []
+        for part in dow.split(","):
+            if not part.isdigit() or int(part) not in _CRON_DOW:
+                return {"error": f"요일 필드는 0-7 숫자(콤마 구분)여야 합니다: '{dow}'"}
+            days.append(_CRON_DOW[int(part)])
+        return {"repeat": "weekly", "weekdays": sorted(set(days)), "time": time_str}
+
+    # 매년 (일+월) / 매월 (일만)
+    if dom != "*" and mon != "*":
+        if not (dom.isdigit() and mon.isdigit()):
+            return {"error": f"일·월은 숫자여야 합니다: '{cron}'"}
+        return {"repeat": "yearly", "month": int(mon), "day": int(dom), "time": time_str}
+    if dom != "*":
+        if not dom.isdigit():
+            return {"error": f"일은 숫자여야 합니다: '{cron}'"}
+        return {"repeat": "monthly", "day": int(dom), "time": time_str}
+
+    # 매일
+    return {"repeat": "daily", "time": time_str}
+
+
+def _resolve_schedule_config(params: dict) -> dict:
+    """params 에서 schedule config 산출. cron 우선 파싱, 없으면 config 직접 사용.
+    반환: config dict, 또는 cron 파싱 실패 시 {"error":...} 포함 dict."""
+    if params.get("config"):
+        return {"config": params["config"]}
+    cron = params.get("cron")
+    if cron:
+        parsed = _cron_to_config(cron)
+        if "error" in parsed:
+            return {"error": parsed["error"]}
+        return {"config": parsed}
+    return {"config": {}}
+
+
 def _load_triggers() -> dict:
-    """트리거 파일 로드"""
-    if TRIGGERS_PATH.exists():
-        try:
-            with open(TRIGGERS_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {"triggers": [], "history": []}
+    """트리거 파일 로드 (손상 시 빈 설정으로 덮어쓰기 방지 — safe_store)"""
+    from safe_store import safe_load_json
+    return safe_load_json(TRIGGERS_PATH, {"triggers": [], "history": []})
 
 
 def _save_triggers(data: dict):
-    """트리거 파일 저장"""
+    """트리거 파일 저장 (원자적 쓰기 + .bak — safe_store)"""
     DATA_PATH.mkdir(parents=True, exist_ok=True)
-    with open(TRIGGERS_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    from safe_store import safe_save_json
+    safe_save_json(TRIGGERS_PATH, data)
 
 
 # === 스케줄 연동 (calendar_manager) ===
@@ -206,14 +271,19 @@ def _create_trigger(target: str, params: dict) -> dict:
         enabled: 활성화 여부 (기본 True)
     """
     if not target:
-        return {"error": "트리거 이름이 필요합니다."}
+        return {"error": "트리거 이름(name)이 필요합니다."}
 
     trigger_type = params.get("type", "schedule")
-    config = params.get("config", {})
     pipeline = params.get("pipeline", "")
 
     if not pipeline:
-        return {"error": "pipeline이 필요합니다. IBL 코드를 지정하세요."}
+        return {"error": "pipeline이 필요합니다. 실행할 IBL 코드를 지정하세요."}
+
+    # config 산출 — cron 문자열을 calendar config 로 내부 해소(없으면 config 직접 사용)
+    cfg = _resolve_schedule_config(params)
+    if "error" in cfg:
+        return {"error": cfg["error"]}
+    config = cfg["config"]
 
     trigger_id = f"trg_{uuid.uuid4().hex[:12]}"
     trigger = {
@@ -251,9 +321,16 @@ def _update_trigger(target: str, params: dict) -> dict:
     for t in data.get("triggers", []):
         if t["id"] == target or t.get("name") == target:
             # 수정 가능 필드
-            for key in ("name", "config", "pipeline", "enabled"):
+            for key in ("name", "config", "pipeline", "enabled", "type"):
                 if key in params:
                     t[key] = params[key]
+
+            # cron 문자열로 스케줄 수정 시 calendar config 로 내부 해소
+            if params.get("cron") and not params.get("config"):
+                parsed = _cron_to_config(params["cron"])
+                if "error" in parsed:
+                    return {"error": parsed["error"]}
+                t["config"] = parsed
 
             _save_triggers(data)
 
@@ -431,7 +508,8 @@ def execute_trigger(action: str, params: dict,
             return {"error": "trigger_id가 필요합니다."}
         return _get_trigger(trigger_id)
     elif action in ("watch", "create"):
-        return _create_trigger(trigger_id, params)
+        # 생성은 이름(name) 기준. 후방호환으로 trigger_id 도 수용.
+        return _create_trigger(params.get("name") or trigger_id, params)
     elif action == "update":
         if not trigger_id:
             return {"error": "trigger_id가 필요합니다."}

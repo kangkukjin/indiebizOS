@@ -160,6 +160,7 @@ _OP_DEFAULTS = {
     "browser_navigate_op": "goto",
     "browser_content_op": "text",
     "browser_logs_op": "console",
+    "browser_iframe_op": "list",
 }
 
 

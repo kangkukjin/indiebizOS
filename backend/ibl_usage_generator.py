@@ -271,12 +271,12 @@ _PIPELINE_TEMPLATES = [
     # 병렬 검색
     (
         "삼성전자랑 SK하이닉스 주가 동시에 확인해줘",
-        '[sense:price]{symbol: "삼성전자"} & [sense:price]{symbol: "SK하이닉스"}',
+        '[sense:stock]{op: "quote", ticker: "삼성전자"} & [sense:stock]{op: "quote", ticker: "SK하이닉스"}',
         "sense", "pipeline"
     ),
     (
         "애플이랑 마이크로소프트 주가 비교해줘",
-        '[sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "MSFT"}',
+        '[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}',
         "sense", "pipeline"
     ),
     (
@@ -292,7 +292,7 @@ _PIPELINE_TEMPLATES = [
     # 검색 → 에이전트 분석
     (
         "AI 뉴스 검색해서 투자 에이전트한테 분석 요청해줘",
-        '[sense:search]{query: "AI 뉴스"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "이 뉴스를 투자 관점에서 분석해주세요"}',
+        '[sense:search]{query: "AI 뉴스"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "이 뉴스를 투자 관점에서 분석해주세요"}',
         "sense,others", "pipeline"
     ),
     # 검색 → 메신저 전송
@@ -304,7 +304,7 @@ _PIPELINE_TEMPLATES = [
     # Fallback 패턴
     (
         "삼성전자 주가 조회하되, 실패하면 종목 검색으로 찾아봐",
-        '[sense:price]{symbol: "삼성전자"} ?? [sense:search_stock]{query: "삼성전자"}',
+        '[sense:stock]{op: "quote", ticker: "삼성전자"} ?? [sense:stock]{op: "search", query: "삼성전자"}',
         "sense", "pipeline"
     ),
     # 크롤링 → 저장
@@ -316,13 +316,13 @@ _PIPELINE_TEMPLATES = [
     # 검색 → 시각화
     (
         "삼성전자 주가 조회해서 차트로 그려줘",
-        '[sense:price]{symbol: "삼성전자"} >> [engines:create]{name: "삼성전자 주가 차트", type: "chart"}',
+        '[sense:stock]{op: "quote", ticker: "삼성전자"} >> [engines:create]{name: "삼성전자 주가 차트", type: "chart"}',
         "sense,engines", "pipeline"
     ),
     # 유튜브 → 저장
     (
         "유튜브 영상 자막 추출해서 파일로 저장해줘",
-        '[sense:video_transcript]{url: "https://youtube.com/watch?v=example"} >> [self:local_save]{path: "transcript.md"}',
+        '[sense:video]{op: "transcript", url: "https://youtube.com/watch?v=example"} >> [self:local_save]{path: "transcript.md"}',
         "sense,self", "pipeline"
     ),
     # 복합 병렬 → 저장
@@ -334,7 +334,7 @@ _PIPELINE_TEMPLATES = [
     # 3단 파이프라인
     (
         "삼성전자 뉴스 검색 후 분석 에이전트에게 보내고 결과 저장해줘",
-        '[sense:search_news]{query: "삼성전자"} >> [others:ask_sync]{agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}',
+        '[sense:search_news]{query: "삼성전자"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}',
         "sense,others,self", "complex"
     ),
     # 블로그 검색 → 저장
@@ -352,7 +352,7 @@ _PIPELINE_TEMPLATES = [
     # 사진 검색
     (
         "여행 사진 검색해줘",
-        '[self:search_photos]{keyword: "여행"}',
+        '[self:photo]{op: "search", keyword: "여행"}',
         "self", "single"
     ),
     # 포지 콘텐츠 생성
@@ -380,12 +380,12 @@ _PIPELINE_TEMPLATES = [
     # 스트림
     (
         "재즈 음악 틀어줘",
-        '[limbs:play]{query: "jazz music"}',
+        '[limbs:music]{op: "play", query: "jazz music"}',
         "limbs", "single"
     ),
     (
         "라디오 KBS 클래식 FM 틀어줘",
-        '[limbs:radio_play]{station: "KBS 클래식FM"}',
+        '[limbs:radio]{op: "play", station: "KBS 클래식FM"}',
         "limbs", "single"
     ),
     # 메신저
@@ -397,7 +397,7 @@ _PIPELINE_TEMPLATES = [
     # 투자 병렬
     (
         "한국과 미국 시장 주요 종목 동시 확인",
-        '[sense:price]{symbol: "005930"} & [sense:price]{symbol: "AAPL"} & [sense:price]{symbol: "SPY"}',
+        '[sense:stock]{op: "quote", ticker: "005930"} & [sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "SPY"}',
         "sense", "pipeline"
     ),
     # 웹사이트 생성
@@ -432,12 +432,12 @@ _PIPELINE_TEMPLATES = [
     # 워크플로우 관련
     (
         "저장된 워크플로우 목록 보여줘",
-        '[self:list_workflows]{}',
+        '[self:workflow]{op: "list"}',
         "self", "single"
     ),
     (
         "뉴스 브리핑 워크플로우 실행해줘",
-        '[self:run]{name: "news_briefing"}',
+        '[self:workflow]{op: "run", name: "news_briefing"}',
         "self", "single"
     ),
     # 통계 (KOSIS)

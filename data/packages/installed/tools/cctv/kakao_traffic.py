@@ -19,6 +19,8 @@ import time
 import urllib.request
 from typing import Dict, List, Optional, Tuple
 
+from common import calculate_distance
+
 # ── 상수 ──────────────────────────────────────────────
 KAKAO_CCTV_INFO_URL = "https://map.kakao.com/api/cctvs/"
 KAKAO_CCTV_URL_API = "https://map.kakao.com/api/cctvs/url/"
@@ -82,8 +84,9 @@ def _format_cctv(cctv: Dict, distance_km: float = None) -> Dict:
     result = {
         "name": cctv.get("name", ""),
         "url": hls_url or "",
-        "lat": 0,  # Congnamul 좌표 → WGS84 변환은 별도 처리 필요
-        "lon": 0,
+        # 좌표: enrich_kakao_coords.py 가 WCONGNAMUL→WGS84 보강해 캐시에 lat/lng 저장.
+        "lat": float(cctv.get("lat", 0) or 0),
+        "lng": float(cctv.get("lng", 0) or 0),
         "source": "kakao",
         "source_detail": cctv.get("source", ""),
         "source_name": cctv.get("sourceName", "카카오맵"),
@@ -144,6 +147,38 @@ def get_cctv_by_name(query: str, limit: int = 5) -> str:
     return json.dumps({
         "success": True,
         "count": len(formatted),
+        "cctvs": formatted,
+    }, ensure_ascii=False)
+
+
+def get_nearby_cctv(lat: float, lng: float, radius: float = 5.0, count: int = 10) -> str:
+    """좌표 기준 가까운 CCTV (radius: km). 보강된 WGS84 좌표로 거리 필터.
+
+    전국 6,892대(시내도로 utic + 고속도로 mltm 등)를 거리순으로 추려 상위 count대만
+    HLS URL을 해소(_format_cctv)한다. 좌표 없는 항목(보강 실패분)은 제외.
+    """
+    cctvs = _load_cctv_list()
+    if not cctvs:
+        return json.dumps({"success": False, "error": "캐시 데이터 없음"}, ensure_ascii=False)
+
+    results = []
+    for c in cctvs:
+        c_lat = float(c.get("lat", 0) or 0)
+        c_lng = float(c.get("lng", 0) or 0)
+        if not c_lat or not c_lng:
+            continue
+        dist = calculate_distance(lat, lng, c_lat, c_lng)
+        if dist <= radius:
+            results.append((dist, c))
+
+    results.sort(key=lambda x: x[0])
+    formatted = [_format_cctv(c, dist) for dist, c in results[:count]]
+
+    return json.dumps({
+        "success": True,
+        "count": len(formatted),
+        "search_location": {"lat": lat, "lng": lng},
+        "radius_km": radius,
         "cctvs": formatted,
     }, ensure_ascii=False)
 

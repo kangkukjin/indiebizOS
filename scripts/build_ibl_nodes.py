@@ -51,7 +51,11 @@ UNIVERSAL_PARAM_KEYS = {"op", "target"}
 
 # 코퍼스가 쓰지만 핸들러/별칭에 의도적으로 없는 키 (문서화된 예외).
 # 목적: 신규 불일치만 잡고 알려진 노이즈는 통과. 코퍼스 정제/별칭으로 해소되면 여기서 제거할 것.
-CORPUS_PARAM_ALLOW: dict[str, set[str]] = {}
+CORPUS_PARAM_ALLOW: dict[str, set[str]] = {
+    # browser_op은 2차 selector 'mode'를 _OP_SELECTOR로 동적 pop(handler.py) —
+    # 정적 리터럴이 아니라 검출 불가. 핸들러가 실제로 읽으므로 의도된 예외.
+    "limbs:browser": {"mode"},
+}
 # 정리됨(2026-06-04): pew_research:topic / blog:sort / web_site:reference / web:font
 #   (migrate_allowlist_cleanup.py — 군더더기 제거) + self:trigger:cron
 #   (trigger_engine._cron_to_config 로 내부 해소 — 핸들러가 cron 직접 읽음).

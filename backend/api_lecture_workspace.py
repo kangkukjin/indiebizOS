@@ -615,6 +615,66 @@ async def remove_material(lecture_id: str, filename: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.post("/{lecture_id}/slides/upload-images")
+async def upload_slide_images(
+    lecture_id: str,
+    files: list[UploadFile] = File(...),
+    insert_at: Optional[int] = Form(None),
+):
+    """이미지 파일 여러 장을 슬라이드로 한 번에 추가.
+
+    AI 생성/렌더 없이 **업로드 이미지 자체가 슬라이드 PNG**가 된다(layout="image").
+    이미 만들어둔 슬라이드 이미지를 한꺼번에 올릴 때 사용. 파일 순서대로 데크에 삽입.
+    """
+    ls = _load_lecture_store()
+    if not ls.lecture_exists(lecture_id):
+        raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
+    if not files:
+        raise HTTPException(status_code=400, detail="이미지 파일이 없습니다.")
+
+    # UploadFile.read()는 async → 먼저 다 읽고, PIL 변환/저장은 스레드풀에서.
+    items = [(f.filename or "image", await f.read()) for f in files]
+
+    def _process():
+        from PIL import Image
+        import io as _io
+        import json as _json
+        sdir = ls.slides_dir(lecture_id)
+        sdir.mkdir(parents=True, exist_ok=True)
+        created, skipped = [], []
+        for idx, (fname, content) in enumerate(items):
+            try:
+                img = Image.open(_io.BytesIO(content)).convert("RGB")
+            except Exception:
+                skipped.append(fname)
+                continue
+            deck = ls.read_deck(lecture_id)           # 매번 최신 deck → next_slide_id 정확
+            sid = ls.next_slide_id(deck)
+            img.save(str(sdir / f"{sid}.png"), format="PNG")
+            title = (Path(fname).stem or sid)[:60]
+            spec = {
+                "layout": "image",
+                "title": title,
+                "image_slide": True,          # AI 재렌더/패치 대상 아님 (UI가 분기)
+                "source_image": Path(fname).name,
+            }
+            (sdir / f"{sid}.json").write_text(
+                _json.dumps(spec, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            at = None if insert_at is None else insert_at + len(created)
+            meta = ls.register_slide(
+                lecture_id, sid, title, "image",
+                f"slides/{sid}.json", f"slides/{sid}.png", insert_at=at,
+            )
+            created.append(meta)
+        return created, skipped
+
+    created, skipped = await run_in_threadpool(_process)
+    if not created:
+        raise HTTPException(status_code=400, detail="유효한 이미지가 없습니다.")
+    return {"success": True, "created": created, "count": len(created), "skipped": skipped}
+
+
 # ─────────────────────────────────────────────────────────────────────
 # 누적 메모 (Step 3에서 AI가 사용, UI는 보기/편집)
 # ─────────────────────────────────────────────────────────────────────

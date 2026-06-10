@@ -934,8 +934,30 @@ function DeckPanel(props: {
   const { lectureId, deck, focusSlideId, insertBeforeIndex, onFocus, onInsertBefore, onPreview, onSpecEdit, onChange } = props;
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const imgInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImg, setUploadingImg] = useState(false);
 
   const slideIds = deck.slide_order;
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingImg(true);
+    try {
+      // 삽입 모드면 그 위치부터, 아니면 데크 끝에
+      const at = insertBeforeIndex !== null ? insertBeforeIndex : undefined;
+      const r = await api.uploadSlideImages(lectureId, Array.from(files), at);
+      if (r.skipped && r.skipped.length) {
+        alert(`이미지가 아닌 파일 ${r.skipped.length}개 건너뜀: ${r.skipped.join(', ')}`);
+      }
+      onChange();
+    } catch (err) {
+      alert('이미지 업로드 실패: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setUploadingImg(false);
+      if (imgInputRef.current) imgInputRef.current.value = '';
+    }
+  };
 
   const onDragStart = (idx: number) => {
     setDragIdx(idx);
@@ -979,9 +1001,27 @@ function DeckPanel(props: {
   return (
     <main className="flex-1 min-w-0 flex flex-col bg-stone-100">
       <div className="px-6 py-3 bg-white border-b border-stone-200 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-stone-700">
-          🎴 슬라이드 데크 ({slideIds.length}장)
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-sm font-semibold text-stone-700">
+            🎴 슬라이드 데크 ({slideIds.length}장)
+          </h2>
+          <button
+            onClick={() => imgInputRef.current?.click()}
+            disabled={uploadingImg}
+            title="이미 만든 이미지를 슬라이드로 한 번에 추가 (여러 장 선택 가능). 삽입 모드면 그 위치부터."
+            className="px-2.5 py-1 text-xs bg-stone-100 hover:bg-stone-200 rounded text-stone-700 disabled:opacity-50"
+          >
+            {uploadingImg ? '업로드 중...' : '🖼 이미지 업로드'}
+          </button>
+          <input
+            ref={imgInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+        </div>
         <div className="text-xs text-stone-400">
           {focusSlideId
             ? `편집 모드: ${focusSlideId} (다시 클릭하면 해제)`
@@ -995,7 +1035,10 @@ function DeckPanel(props: {
           <div className="text-center text-stone-400 mt-12">
             <div className="text-lg">아직 슬라이드가 없습니다</div>
             <div className="text-sm mt-2">
-              우측 AI 채팅에서 "첫 슬라이드 만들어줘"라고 시작해보세요
+              우측 AI 채팅에서 "첫 슬라이드 만들어줘"라고 시작하거나,
+            </div>
+            <div className="text-sm mt-1">
+              위 <span className="font-medium text-stone-500">🖼 이미지 업로드</span>로 이미 만든 이미지를 한 번에 올리세요
             </div>
           </div>
         ) : (
@@ -1621,16 +1664,18 @@ function SlideCard(props: {
           #{index + 1}
         </div>
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSpecEdit();
-            }}
-            className="px-2 py-0.5 bg-black/40 hover:bg-black/70 text-white text-xs rounded"
-            title="필드 직접 편집 (AI 없이 단어·줄 수정)"
-          >
-            ✏️
-          </button>
+          {slide.layout !== 'image' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSpecEdit();
+              }}
+              className="px-2 py-0.5 bg-black/40 hover:bg-black/70 text-white text-xs rounded"
+              title="필드 직접 편집 (AI 없이 단어·줄 수정)"
+            >
+              ✏️
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();

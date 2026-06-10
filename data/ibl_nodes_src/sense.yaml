@@ -1,5 +1,28 @@
   sense:
     actions:
+      phone:
+        description: 폰 컴패니언이 보낸 알림·위치·걸음 조회 (op 분기). "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요.
+        group: device
+        target_description: 'op=notifications(기본): 최근 폰 알림 — latest_ago/ago("방금"·"N분 전")로 지금 오는 연락인지 판별,
+          pkg로 앱 필터(예 com.kakao.talk). location: 폰 최근 위치(lat/lng). steps: 일별 걸음수. limit=개수.'
+        target_key: op
+        router: handler
+        tool: phone_op
+        scope: system
+        ops:
+          default: notifications
+          values:
+            notifications: 최근 폰 알림 (카톡·문자·앱 푸시 — "지금 연락 오나")
+            location: 폰 최근 위치 (lat/lng)
+            steps: 일별 걸음수
+        implementation: phone_notifications.py(폰 에이전트가 NIP-17 DM 으로 전송 → 60초 폴링 저장)의
+          recent/recent_locations/recent_steps 조회. android 패키지 phone_op 핸들러(scope:system). raw ADB 우회 대체.
+        keywords:
+        - 폰알림
+        - 연락
+        - 카톡
+        - 폰위치
+        - 걸음수
       stock:
         description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
         group: finance
@@ -573,28 +596,6 @@
         - 조항
         - 헌재
         - 행정규칙
-      abc_search:
-        description: abcnotation.com에서 ABC 표기법 악보 검색. 곡명·작곡가·키워드로. 상세 조회는 abc_get.
-        target_description: 검색어 (곡명, 작곡가, 장르 등). 결과는 tune_id로 abc_get에 사용.
-        group: music
-        router: handler
-        tool: search_abc_tunes
-        implementation: abcnotation.com에서 ABC 악보 검색 (HTTP 크롤링)
-        target_key: query
-        keywords:
-        - 악보검색
-        - ABC
-      abc_get:
-        description: abcnotation.com 악보의 상세 내용 조회. 검색은 abc_search.
-        target_description: 악보 ID (abc_search 결과의 tune_id).
-        group: music
-        router: handler
-        tool: get_abc_tune
-        implementation: abcnotation.com에서 악보 상세 조회 (HTTP 크롤링)
-        target_key: tune_id
-        keywords:
-        - 악보조회
-        - ABC
     description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 법률, 세계 상태 등 외부 API 및 데이터
       소스 접근'
     tags:

@@ -360,11 +360,14 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
 
         try:
             indienet = _get_indienet()
-            event_id = indienet.send_dm(to_pubkey=to, content=content)
+            # NIP-17(gift-wrap)로 발송 — 최신 클라이언트(Damus/Amethyst/0xchat)가 읽는 표준.
+            # 수신자의 kind:10050 DM relay로 배달. (구 NIP-04 send_dm은 최신 앱이 복호 못 함)
+            event_id = indienet.send_dm_nip17(to_pubkey=to, content=content)
             if event_id:
                 return {
                     "success": True,
                     "channel": "nostr",
+                    "protocol": "nip17",
                     "event_id": event_id,
                     "to": to[:20] + "..."
                 }

@@ -12,6 +12,9 @@ mcp = FastMCP("indiebiz")
 BASE = os.environ.get("INDIEBIZOS_BACKEND_URL", "http://localhost:8765")
 # 내부 spawn 시 부모(indiebizOS)가 현재 작업 컨텍스트의 project_path를 env로 주입
 DEFAULT_PROJECT_PATH = os.environ.get("INDIEBIZOS_PROJECT_PATH", ".")
+# 내부 spawn 시 부모가 이 에이전트의 신원(agent_id)을 env로 주입.
+# channel_send/read의 발신 신원 게이트에 사용된다. 외부(Claude Desktop) 사용 시엔 없음 → 신원 없음.
+DEFAULT_AGENT_ID = os.environ.get("INDIEBIZOS_AGENT_ID", "")
 
 
 @mcp.tool()
@@ -27,7 +30,10 @@ def execute_ibl(code: str, project_path: str = "") -> str:
     project_path를 비워두면 현재 호출 컨텍스트의 프로젝트가 사용됩니다.
     """
     effective_path = project_path or DEFAULT_PROJECT_PATH
-    data = json.dumps({"code": code, "project_path": effective_path}).encode()
+    payload = {"code": code, "project_path": effective_path}
+    if DEFAULT_AGENT_ID:
+        payload["agent_id"] = DEFAULT_AGENT_ID  # env에 신원이 주입됐을 때만 전달 (없으면 현 동작 그대로)
+    data = json.dumps(payload).encode()
     req = urllib.request.Request(f"{BASE}/ibl/execute", data=data, headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=120) as resp:

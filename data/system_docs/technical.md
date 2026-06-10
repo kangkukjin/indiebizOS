@@ -145,12 +145,12 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 
 ## IBL 도구 — execute_ibl
 
-모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 5노드(sense/self/limbs/others/engines) 144 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
+모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 5노드(sense/self/limbs/others/engines) 109 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
 
 예시:
 ```
 execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"}')
-execute_ibl(code='[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}')
+execute_ibl(code='[sense:search_ddg]{query: "AI"} >> [self:output]{op: "file", path: "result.md"}')
 execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}')
 ```
 
@@ -160,7 +160,7 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 
 ## 설정 파일 위치
 - **본격 AI 설정 (시스템 AI / THINK 경로 실행)**: `data/system_ai_config.json`
-- **중급 AI 설정 (EXECUTE/Reflex 경로 실행)**: `data/midtier_ai_config.json`
+- **중급 AI 설정 (Reflex 경로 전용 — 2026-06-10부터 무의식 EXECUTE는 본격 모델)**: `data/midtier_ai_config.json`
 - **경량 AI 설정 (분류·평가·증류)**: `data/lightweight_ai_config.json`
 - **스위치 목록**: `data/switches.json`
 - **프로젝트 목록**: `projects/projects.json`
@@ -174,7 +174,9 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 - **비즈니스 DB**: `data/business.db` (SQLite)
 - **해마 (IBL 사용량) DB**: `data/ibl_usage.db` (SQLite — ibl_examples + FTS5 + vec0)
 - **해마 임베딩 모델**: `data/models/ibl_embedding/` (fine-tuned `jhgan/ko-sroberta-multitask`, 422MB. 해마 + 심층메모리 공유)
-- **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` + `ibl_distilled.json`. usage_db 2,324건. **2026-06-04 144 액션 어휘로 재학습 완료**(Modal GPU, code Top-5 94.5%/런타임 ~99%).
+- **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` + `ibl_distilled.json`. usage_db ~2,316건. **2026-06-05 android 어휘 흡수 재학습 완료**(Modal GPU, code Top-5 92.8%/desc 94.5%/런타임 ~99%).
+- **폰 컴패니언 피드 DB**: `data/phone_notifications.db` (SQLite — 알림·위치·걸음. `backend/phone_notifications.py`가 NIP-17 수신분 저장, 인가 폰 신원은 `data/phone_agent.json`). 조회 API `/phone/notifications|locations|steps` (`backend/api_phone.py`) + `[sense:phone]{op}`
+- **NIP-17/NIP-44 모듈**: `backend/nip17.py` (gift-wrap DM) + `backend/nip44.py` (암호화, 공식 테스트 벡터 150/150). channel_engine 송신은 NIP-17, 수신은 NIP-04+NIP-17 병행 fan-out
 - **IBL 노드 정의 (소스)**: `data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml` — 단일 진실 소스, 직접 편집. op-bearing 액션은 `ops: {default, values}` 블록 의무.
 - **IBL 노드 정의 (빌드 산출물)**: `data/ibl_nodes.yaml` — `scripts/build_ibl_nodes.py`로 생성, 런타임 로드, 직접 편집 금지
 - **IBL 검증 게이트**: `scripts/git-hooks/pre-commit` (commit 시점) + `backend/world_pulse_health.run_static_ibl_check` (12시간 self-check)
@@ -205,13 +207,13 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
   - default: src.ops.default ↔ tool.json input_schema.properties.op.default
   - dispatcher: src.ops.values 키 ↔ handler.py `_OP_DISPATCHERS[tool_name]` dict 키
 - **이중 게이트**: pre-commit 훅(commit 시점) + self-check 사이클(12시간, `__static__:ibl_consistency` 식별자)
-- **dispatcher 표준** (op-bearing 9 패키지): `_OP_DISPATCHERS = {tool_name: {op: handler_or_None}}` 모듈 레벨 dict 노출 의무
+- **dispatcher 표준** (op-bearing 10 패키지): `_OP_DISPATCHERS = {tool_name: {op: handler_or_None}}` 모듈 레벨 dict 노출 의무
 
 ## 물리적 구조 (주요 경로)
 - `backend/`: 서버 소스 코드
 - `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (36개 — op-bearing 9개 `_OP_DISPATCHERS` 표준)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (35개 — op-bearing 10개 `_OP_DISPATCHERS` 표준)
 - `data/api_registry.yaml`: API 도구 정의 (node 필드로 IBL 자동 병합, 현재 2개 액션)
 - `data/packages/installed/extensions/`: 백엔드 코어 모듈 (9개)
 - `projects/`: 사용자 프로젝트 데이터 (20개)
@@ -251,4 +253,4 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
 
 ---
-*마지막 업데이트: 2026-05-28 — op 어휘 단일화(ops 블록) + 삼각 검증 인프라(`--check`, pre-commit, self-check 합류) + dispatcher 표준(9 패키지 `_OP_DISPATCHERS`) + 36 패키지. 이전 갱신(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*
+*마지막 업데이트: 2026-06-10 — 중급 모델 Reflex 전용화(EXECUTE는 본격 모델), 폰 컴패니언 피드(/phone API + phone_notifications.db), NIP-17/44 모듈, 해마 2026-06-05 재학습 수치, 35 패키지. 이전(2026-05-28): op 어휘 단일화 + 삼각 검증 인프라 + dispatcher 표준. 이전(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*

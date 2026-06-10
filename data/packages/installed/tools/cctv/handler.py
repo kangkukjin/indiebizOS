@@ -425,9 +425,11 @@ def cctv_sources() -> str:
 
     utic = load_module("utic_traffic")
     utic_stats = json.loads(utic.get_data_stats())
+    utic_total = utic_stats.get("total_cctv", 0)
 
     return json.dumps({
         "success": True,
+        "total_cctv": kakao_total + utic_total,
         "sources": [
             {
                 "id": "kakao",
@@ -440,7 +442,7 @@ def cctv_sources() -> str:
                 "id": "utic",
                 "name": "도시교통정보센터",
                 "description": "전국 시내 도로 CCTV (보완용)",
-                "total_cctv": utic_stats.get("total_cctv", 0),
+                "total_cctv": utic_total,
                 "api_key_configured": utic_stats.get("api_key_configured", False),
             },
             {"id": "its", "name": "국가교통정보센터", "description": "전국 고속도로/국도 CCTV"},
@@ -455,21 +457,12 @@ def cctv_refresh() -> str:
     return utic.refresh_cache()
 
 
-def cctv_stats() -> str:
-    """CCTV 데이터 소스 상태 및 통계"""
-    utic = load_module("utic_traffic")
-    return utic.get_data_stats()
-
-
 # ── 도구 디스패처 ──────────────────────────────────────
 
-# tool_name → 실제 함수 매핑
-# (cctv_search/get_nearby_cctv 는 단일 op 액션 [sense:cctv](tool=cctv_query)로 통합되어 직접 등록하지 않음.
-#  함수 본체 cctv_search/nearby 는 _cctv_query 디스패처가 호출한다.)
-_TOOL_MAP = {
-    "cctv_refresh": cctv_refresh,
-    "cctv_stats": cctv_stats,
-}
+# tool_name → 실제 함수 매핑. CCTV 액션은 모두 op 디스패처로 통합:
+#   [sense:cctv]=cctv_query(search/nearby/webcam), [limbs:cctv]=cctv_op(open/capture),
+#   [self:cctv]=cctv_admin(stats/refresh). 직접 등록은 하단에서.
+_TOOL_MAP = {}
 
 
 def webcam(lat: float, lng: float = None, lon: float = None,
@@ -494,8 +487,9 @@ def webcam(lat: float, lng: float = None, lon: float = None,
 _OP_DISPATCHERS = {
     "cctv_op": {"open": None, "capture": None},
     "cctv_query": {"search": None, "nearby": None, "webcam": None},
+    "cctv_admin": {"stats": None, "refresh": None},
 }
-_OP_DEFAULTS = {"cctv_op": "open", "cctv_query": "search"}
+_OP_DEFAULTS = {"cctv_op": "open", "cctv_query": "search", "cctv_admin": "stats"}
 
 
 def _cctv_op(op: str = None, **kwargs) -> str:
@@ -527,8 +521,24 @@ def _cctv_query(op: str = None, **kwargs) -> str:
     return func(**valid)
 
 
+def _cctv_admin(op: str = None, **kwargs) -> str:
+    """[self:cctv]{op} 단일 디스패처 — stats(전체 소스 현황)/refresh(UTIC 캐시 갱신).
+
+    기본 op=stats(읽기 전용). refresh는 유지보수용 부작용 op.
+    """
+    op = (op or _OP_DEFAULTS.get("cctv_admin", "stats")).strip()
+    if op == "stats":
+        return cctv_sources()
+    elif op == "refresh":
+        return cctv_refresh()
+    return json.dumps({"success": False,
+                       "error": f"알 수 없는 op '{op}'. 사용 가능: ['stats', 'refresh']"},
+                      ensure_ascii=False)
+
+
 _TOOL_MAP["cctv_op"] = _cctv_op
 _TOOL_MAP["cctv_query"] = _cctv_query
+_TOOL_MAP["cctv_admin"] = _cctv_admin
 
 
 def execute(tool_input: dict, context) -> str:

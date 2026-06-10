@@ -26,68 +26,56 @@
 | 행정_서비스 | 행정_서비스 | 정부24 및 민원 서비스 지원 |
 | 홍보 | 홍보 | 홍보/마케팅 콘텐츠 제작 |
 
----
 
-## 도구 패키지 (Tools) - 34개
-에이전트가 사용할 수 있는 유틸리티. handler 라우팅(복잡 후처리) 또는 api_engine 라우팅(API+transform 자동 발견)으로 실행됩니다.
+## 도구 패키지 (Tools) - 37개
+에이전트가 사용할 수 있는 유틸리티
 
-| ID | 이름 | 설명 |
-|----|------|------|
-| blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
-| browser-action | Browser Action | Playwright 기반 브라우저 자동화 v5.0 (클릭/입력/스크롤/콘텐츠 추출, 동적 콘텐츠 대기, 다단계 폴백, CDP 타임아웃) |
-| business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
-| cctv | CCTV | CCTV/웹캠 관련 도구 |
-| cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel) |
-| computer-use | Computer Use | 컴퓨터 사용 자동화 |
-| context7 | Context7 | Context7 라이브러리 문서 검색 |
-| culture | Culture | 공연(KOPIS), 도서(도서관 정보나루), Project Gutenberg 고전 원문, 한국고전종합DB 등 문화예술 정보 조회 |
-| health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
-| ibl-core | IBL Core | IBL 핵심 도구 |
-| investment | Investment | 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석 |
-| kosis | KOSIS | 통계청 KOSIS API 국가통계 조회 |
-| legal | Legal | 대한민국 법률 정보 검색 (법령, 판례, 행정규칙, 자치법규 등) |
-| local-info | Local Info | 지역 정보 도구 |
-| location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
-| media_producer | Media Producer | 홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지 생성 |
-| memory | Memory | 심층 메모리 (자동 시스템: 연상기억 검색 + 경험 증류. IBL 액션 없음) |
-| music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
-| nodejs | Nodejs | Node.js/JavaScript 코드 실행 |
-| pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |
-| photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 |
-| python-exec | Python Exec | Python 코드 실행 |
-| radio | Radio | 인터넷 라디오 검색 및 재생 (Radio Browser API + 한국 방송사 직접 스트리밍) |
-| real-estate | Real Estate | 국토교통부 부동산 실거래가 API |
-| remotion-video | Remotion Video | React/Remotion 기반 프로그래밍 방식 동영상 생성 (TSX → MP4) |
-| shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 가격 비교 |
-| startup | Startup | 창업지원 사업공고 검색 (K-Startup, 중소벤처기업부) |
-| study | Study Helper | 학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) |
-| system_essentials | System Essentials | 파일 읽기/쓰기/검색, PDF 읽기, todo, 계획 모드, 이웃 조회 |
-| visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
-| web | Web Tools | 웹 검색, 크롤링, 뉴스, 신문 생성, 즐겨찾기 |
-| web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
-| web-collector | Web Collector | 웹 데이터 수집/스크래핑 |
-| youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
+| ID | 이름 | 설명 | 상태 |
+|----|------|------|------|
+| android | Android Phone Control | ADB(uiautomator)로 안드로이드 폰 화면을 독해·터치·입력하는 | 설치됨 |
+| blog | Blog Tools | 개인 블로그(K의 생각) RAG 검색 및 분석 도구. 티스토리 블로그 글 | 설치됨 |
+| browser-action | Browser Action | Playwright + Chrome MCP 듀얼 드라이버 브라우저 자동화 | 설치됨 |
+| business | Business & Contacts | 비즈니스 관계 및 연락처(이웃) 관리 도구. 이웃 목록 조회, 상세 정보 | 설치됨 |
+| cctv | CCTV 실시간 영상 | CCTV 및 실시간 웹캠 통합 도구
 
----
+## 소스
+- UTIC 도시교통정보 | 설치됨 |
+| cloudflare | Cloudflare | Cloudflare API 통합 도구. Pages, Workers, R2 | 설치됨 |
+| computer-use | Computer Use | macOS 데스크톱 자동화. AI가 화면을 직접 보고 마우스/키보드를 조 | 설치됨 |
+| context7 | Context7 Docs | 라이브러리/프레임워크 최신 공식 문서 검색. 코드 생성 시 최신 API와 | 설치됨 |
+| culture | Culture & Arts | 공연, 도서, 전시 등 문화 예술 정보 조회 도구. KOPIS API로  | 설치됨 |
+| health-record | Health Record | 건강 정보 기록 및 조회 도구. 혈압, 혈당, 체중 측정값과 증상, 투약 | 설치됨 |
+| house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중  | 미설치 |
+| ibl-core | IBL Core | IBL(IndieBiz Logic) 노드-액션 통합 도구. 여러 도구를  | 설치됨 |
+| investment | Investment Tools | 한국/미국 기업의 주가·시세·재무·공시·뉴스 및 암호화폐 정보를 조회하는 | 설치됨 |
+| kosis | KOSIS Statistics | 통계청 KOSIS API를 통한 국가통계 조회 도구. 인구, GDP, 물 | 설치됨 |
+| lecture_workspace | 강의 만들기 워크스페이스 | 강의 슬라이드를 한 장씩 협업으로 만드는 도구. indiebizOS/ou | 설치됨 |
+| legal | Legal | 대한민국 법률 정보 검색 도구. 국가법령정보센터(law.go.kr) AP | 설치됨 |
+| local-info | Local Info | 동네 가게/상점 정보 검색 및 관리 도구. 네이버 카페(아이러브오송 등) | 설치됨 |
+| location-services | Location Services | 위치 기반 서비스 도구. 날씨/대기질 조회, 맛집 검색, 자동차 길찾기, | 설치됨 |
+| media_producer | Media Producer | 홍보용 슬라이드 이미지, HTML 기반 MP4 동영상, AI 이미지 생성 | 설치됨 |
+| memory | Memory | 에이전트 심층 메모리. 연상기억에서 자동으로 검색·저장되며, IBL [s | 설치됨 |
+| nodejs | Node.js Executor | Node.js/JavaScript 코드 실행 환경. JSON 처리, 비동 | 설치됨 |
+| pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 도구. 파일 탐색기 GUI | 설치됨 |
+| photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 도구.
 
-## 백엔드 코어 모듈 (extensions/) - 9개
-에이전트가 호출하는 도구가 아니라 백엔드 시스템 내부에서 사용되는 코어 모듈입니다.
+## 스캔 D | 설치됨 |
+| publishing | Publishing Project Manager | 출판 프로젝트(책) 관리 도구. 원고 관리, 구조 기획, 조각글 수집 등 | 미설치 |
+| python-exec | Python Executor | Python 코드 실행 환경. 수학 계산, 데이터 처리, 파일 파싱(JS | 설치됨 |
+| radio | Radio Tools | 인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전 | 설치됨 |
+| real-estate | Real Estate | 국토교통부 부동산 실거래가 API 도구. 아파트/주택의 매매·전월세 실거 | 설치됨 |
+| remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프 | 설치됨 |
+| shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색  | 설치됨 |
+| startup | Startup Support | 정부 창업지원 사업공고 검색 도구. K-Startup(창업진흥원)과 중소 | 설치됨 |
+| study | Academic Research | 학술 논문 검색, 여론 조사, 뉴스 아카이브 및 글로벌 경제 지표 접근  | 설치됨 |
+| system_essentials | System Essentials Kit | 에이전트 기본 도구 모음. 파일 읽기/쓰기/검색, 작업 목록(todo)  | 설치됨 |
+| visualization | Visualization Tools | 데이터 시각화 도구. 라인차트, 막대차트, 파이차트, 산점도, 히트맵,  | 설치됨 |
+| web | Web Tools | 웹 검색 및 크롤링 도구. 종합 검색(웹+뉴스+유튜브 병렬), DuckD | 설치됨 |
+| web-builder | Web Builder & Homepage Manager | 홈페이지 제작과 관리를 위한 통합 도구 패키지.
 
-| ID | 설명 |
-|----|------|
-| ai-agent | AI 에이전트 실행 |
-| conversation | 대화 DB 관리 |
-| gmail | Gmail 연동 |
-| indienet | 외부 메신저 연동 (Nostr 기반) |
-| notification-system | 알림 시스템 |
-| prompt-generator | 프롬프트 생성기 |
-| scheduler | 스케줄러 |
-| switch-runner | 스위치 실행기 |
-| websocket-chat | WebSocket 채팅 |
+## 두 가지 시나리오 | 설치됨 |
+| web-collector | Web Collector | 웹 정보 수집 가이드 + DB 프레임워크. 사이트별 가이드(어디서 뭘 어 | 설치됨 |
+| youtube | YouTube Tools | YouTube 영상 도구. 영상 정보 조회, 자막 추출 및 요약, MP3 | 설치됨 |
 
 ---
-
-> 위임 시스템은 `delegation.md`, 통신/자동응답은 `communication.md`, 패키지 상세는 `packages.md` 참조.
-
----
-*마지막 업데이트: 2026-06-02 12:21*
+*마지막 업데이트: 2026-06-10 19:54*

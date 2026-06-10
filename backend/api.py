@@ -137,6 +137,15 @@ async def lifespan(app: FastAPI):
     poller = get_channel_poller()
     poller.start()
 
+    # 폰 컴패니언 알림 폴러 — 2026-06-06 사용자 요청으로 일단 중단.
+    # 알림/걸음/위치 신호를 indiebizOS 에 저장할 필요가 없다고 판단해 비활성화.
+    # 재개하려면 아래 3줄의 주석을 해제하면 됨 (NIP-17 DM → SQLite 저장 재개).
+    # try:
+    #     import phone_notifications
+    #     phone_notifications.start_poller(interval=60)
+    # except Exception as e:
+    #     print(f"[phone_notifications] 폴러 기동 실패: {e}")
+
     # 시스템 AI Runner 자동 시작 (위임 체인 지원)
     from system_ai_runner import start_system_ai_runner, stop_system_ai_runner
     system_ai_runner = start_system_ai_runner()
@@ -307,6 +316,9 @@ app.include_router(tunnel_router, tags=["tunnel"])
 app.include_router(ibl_router, tags=["ibl"])
 app.include_router(xray_router, tags=["xray"])
 app.include_router(lecture_workspace_router, tags=["lecture-workspace"])
+
+from api_phone import router as phone_router
+app.include_router(phone_router, tags=["phone"])
 
 # ============ NAS Finder 정적 파일 마운트 ============
 # 주의: 마운트는 반드시 라우터 등록 **후**에 해야 함

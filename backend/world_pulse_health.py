@@ -498,7 +498,7 @@ def _get_safe_actions() -> List[Dict]:
     # AI가 safe로 분류한 것 중에서, 확실히 위험한 키워드가 포함된 것은 코드에서 한 번 더 거름
     _UNSAFE_KEYWORDS = {
         "open_window", "os_open", "launch", "launch_sites",
-        "desktop",
+        "screen",  # 구 desktop — 화면 좌표 조작(클릭/타이핑), 부작용
         "play", "stop", "play_radio", "stop_radio", "set_radio_volume",
         "write", "delete", "save", "move", "copy", "create", "edit",
         "rebuild_index", "blog_rebuild_index", "rebuild_search_index",
@@ -506,16 +506,13 @@ def _get_safe_actions() -> List[Dict]:
         "run", "run_pipeline", "execute", "notify_user", "send_notification",
         "send_text", "sms_send", "channel_send", "delegate_project", "ask_sync",
         "download", "push_file", "upload",
-        "scan_photos", "scan_storage", "cctv_refresh",
+        "scan_photos", "scan_storage",
+        # [self:cctv]는 기본 op=stats(읽기 전용)라 자가점검 허용. refresh(부작용)는
+        # 명시적 op일 때만 — 기본 호출은 안전.
         "photo_gallery", "photo_timeline", "photo_duplicates", "photo_stats",
         "photo_list_scans", "photo_manager", "gallery", "timeline", "list_scans",
-        # browser 그룹 — 새 캐노니컬 (prefix 없음, 2026-05-27)
-        "navigate", "snapshot", "content", "close",
-        "tab", "iframe", "cookies", "chrome",
-        # 옛 캐노니컬 (호환 — 별칭으로 정규화되지만 안전망 차원에서 유지)
-        "browser_navigate", "browser_click", "browser_type", "browser_scroll",
-        "browser_screenshot", "browser_resize", "browser_tab_new",
-        "browser_cookies_save", "browser_cookies_load",
+        # browser — 2026-06-04 통합 [limbs:browser]{op}. 라이브 브라우저 필요 + 부작용(클릭/입력/이동) → 통째 제외.
+        "browser",
         "goal_kill", "log_attempt",
     }
 

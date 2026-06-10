@@ -74,7 +74,7 @@ see_also: [execution_memory.md, architecture.md, ibl.md]
 세 겹으로 구성된다.
 
 **(a) 액션 정의** — 가장 안정된 절차 지식
-`ibl_nodes_src/*.yaml`(단일 진실) → `build_ibl_nodes.py`(삼각 검증) → `ibl_nodes.yaml`(런타임 캐시). 144개 액션이 곧 어휘화된 방법 지식.
+`ibl_nodes_src/*.yaml`(단일 진실) → `build_ibl_nodes.py`(삼각 검증) → `ibl_nodes.yaml`(런타임 캐시). 111개 액션이 곧 어휘화된 방법 지식.
 
 **(b) 해마(실행기억)** — 가장 살아있는 자기 학습 루프 ⭐
 - `ibl_usage.db:ibl_examples`에 `(자연어 의도 → IBL 코드)` 쌍 + 768차원 임베딩 저장

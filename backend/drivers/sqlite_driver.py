@@ -524,7 +524,7 @@ class SqliteDriver(Driver):
             return self._err(f"대화 DB를 찾을 수 없습니다: {db_path}")
 
         try:
-            if action == "recent":
+            if action == "recent_chats":
                 return self._memory_recent(conn, params)
             elif action == "agents":
                 return self._memory_agents(conn)

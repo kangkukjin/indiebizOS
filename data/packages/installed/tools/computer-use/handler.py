@@ -14,6 +14,7 @@ macOS 데스크톱 자동화: 스크린샷 캡처 + 마우스/키보드 제어
 import json
 import base64
 import io
+import re
 import time
 import platform
 import subprocess
@@ -167,8 +168,52 @@ def _do_screenshot(tool_input):
     })
 
 
+def _click_by_ref(ref, tool_input):
+    """ref 기반 클릭 — AXPress(좌표 0) → stale 재탐색 → center 좌표 폴백."""
+    info = _AX_SESSION.get(ref)
+    if not info:
+        return json.dumps({
+            "success": False,
+            "error": f"알 수 없는 ref: {ref}. [limbs:screen]{{op:\"snapshot\"}}을 먼저 호출하세요.",
+        }, ensure_ascii=False)
+
+    method = None
+    if _ax_press(info["el"]):
+        method = "AXPress"
+    else:
+        el2 = _ax_refind(info.get("pid"), info.get("role"), info.get("title"))
+        if el2 is not None and _ax_press(el2):
+            method = "AXPress(재탐색)"
+
+    if method:
+        if tool_input.get("screenshot_after", False):
+            try:
+                time.sleep(SCREENSHOT_WAIT)
+                return _make_image_result(
+                    f"ref {ref}({info.get('title')}) {method} 완료. 클릭 후 화면:",
+                    _capture_screenshot(), {"action": "click", "ref": ref, "method": method})
+            except Exception:
+                pass
+        return json.dumps({"success": True, "action": "click", "ref": ref,
+                           "title": info.get("title"), "method": method}, ensure_ascii=False)
+
+    # 폴백: 저장된 center 좌표로 일반 클릭
+    if info.get("center"):
+        ti = dict(tool_input)
+        ti["x"], ti["y"] = info["center"]
+        ti.pop("ref", None)
+        return _do_click(ti)
+    return json.dumps({
+        "success": False,
+        "error": f"ref {ref} 클릭 실패 (AXPress 미지원 + 좌표 없음). center 있는 다른 요소나 OCR 좌표 사용.",
+    }, ensure_ascii=False)
+
+
 def _do_click(tool_input):
-    """computer_click: 마우스 클릭"""
+    """computer_click: 요소 ref(좌표 0) 우선, 없으면 가상좌표(x,y)."""
+    ref = (tool_input.get("ref") or "").strip()
+    if ref:
+        return _click_by_ref(ref, tool_input)
     pag = _get_pyautogui()
     vx, vy = tool_input["x"], tool_input["y"]
     button = tool_input.get("button", "left")
@@ -194,7 +239,20 @@ def _do_click(tool_input):
 
 
 def _do_type(tool_input):
-    """computer_type: 텍스트 입력 (한글 지원)"""
+    """computer_type: 입력칸 ref면 AXValue 직접 설정(좌표 0), 아니면 현재 포커스에 키 입력."""
+    ref = (tool_input.get("ref") or "").strip()
+    if ref:
+        info = _AX_SESSION.get(ref)
+        if info:
+            if _ax_set_value(info["el"], tool_input.get("text", "")):
+                return json.dumps({"success": True, "action": "type", "ref": ref,
+                                   "method": "AXValue", "length": len(tool_input.get("text", ""))},
+                                  ensure_ascii=False)
+            # 폴백: 요소를 눌러 포커스 후 키 입력
+            if info.get("center"):
+                _do_click({"x": info["center"][0], "y": info["center"][1], "screenshot_after": False})
+        tool_input = dict(tool_input)
+        tool_input.pop("ref", None)
     pag = _get_pyautogui()
     text = tool_input["text"]
     interval = tool_input.get("interval", 0.02)
@@ -385,9 +443,212 @@ def _do_screen_info(tool_input):
     return json.dumps(info, ensure_ascii=False, indent=2)
 
 
+# ── 화면 독해 (snapshot): AX 접근성 트리(구조) + Vision OCR(글자) ──
+# 브라우저 snapshot의 데스크톱 판. 좌표는 click과 같은 1280x800 가상공간으로 통일.
+
+_AX_ROLES = {
+    "AXButton", "AXTextField", "AXTextArea", "AXCheckBox", "AXRadioButton",
+    "AXMenuItem", "AXMenuButton", "AXPopUpButton", "AXLink", "AXStaticText",
+    "AXTab", "AXSlider", "AXComboBox",
+}
+
+# snapshot이 부여한 ref → AX 요소 핸들 (브라우저 세션과 동형, 호출 간 유지).
+# 좌표 없이 요소를 직접 누르기/입력하기 위한 저장소. snapshot마다 초기화.
+_AX_SESSION = {}
+
+
+def _ax_press(el):
+    """좌표 없이 요소를 누름 (AXPress). 브라우저 locator.click()의 데스크톱 판."""
+    from ApplicationServices import AXUIElementPerformAction
+    try:
+        return AXUIElementPerformAction(el, "AXPress") == 0
+    except Exception:
+        return False
+
+
+def _ax_set_value(el, text):
+    """좌표 없이 입력칸에 값 직접 설정 (AXValue)."""
+    from ApplicationServices import AXUIElementSetAttributeValue
+    try:
+        return AXUIElementSetAttributeValue(el, "AXValue", text) == 0
+    except Exception:
+        return False
+
+
+def _ax_refind(pid, role, title):
+    """role+title 로 AX 요소 재탐색 (핸들 stale 대응 — 브라우저 stale-ref 처리와 동일 취지)."""
+    if not (pid and title):
+        return None
+    from ApplicationServices import AXUIElementCreateApplication, AXUIElementCopyAttributeValue
+    app = AXUIElementCreateApplication(pid)
+    found = [None]
+
+    def attr(el, name):
+        try:
+            err, val = AXUIElementCopyAttributeValue(el, name, None)
+            return val if err == 0 else None
+        except Exception:
+            return None
+
+    def walk(el, depth):
+        if found[0] is not None or depth > 18:
+            return
+        if attr(el, "AXRole") == role and (attr(el, "AXTitle") or attr(el, "AXDescription")) == title:
+            found[0] = el
+            return
+        for k in (attr(el, "AXChildren") or []):
+            walk(k, depth + 1)
+
+    walk(app, 0)
+    return found[0]
+
+
+def _frontmost_app():
+    from AppKit import NSWorkspace
+    a = NSWorkspace.sharedWorkspace().frontmostApplication()
+    return {"name": a.localizedName(), "pid": int(a.processIdentifier())}
+
+
+def _ax_elements(pid, max_elems=80, max_depth=18):
+    """활성 앱의 AX 접근성 트리 → [{role,title,value,center(가상좌표)}]."""
+    from ApplicationServices import (
+        AXUIElementCreateApplication, AXUIElementCopyAttributeValue, AXValueGetValue,
+    )
+    out = []
+    app = AXUIElementCreateApplication(pid)
+
+    def attr(el, name):
+        try:
+            err, val = AXUIElementCopyAttributeValue(el, name, None)
+            return val if err == 0 else None
+        except Exception:
+            return None
+
+    def pt(axval, is_size=False):
+        """AXValue(CGPoint/CGSize) → (a,b). AXValueGetValue 우선, 실패 시 repr 파싱 폴백."""
+        if axval is None:
+            return None
+        try:
+            ok, s = AXValueGetValue(axval, 2 if is_size else 1, None)
+            if ok:
+                return (float(s.width), float(s.height)) if is_size else (float(s.x), float(s.y))
+        except Exception:
+            pass
+        # 폴백: "<AXValue ... {value = x:100.0 y:200.0 ...}>" / "w:.. h:.." 파싱
+        m = re.search(r'w:(-?[\d.]+)\s+h:(-?[\d.]+)' if is_size
+                      else r'x:(-?[\d.]+)\s+y:(-?[\d.]+)', str(axval))
+        return (float(m.group(1)), float(m.group(2))) if m else None
+
+    def walk(el, depth):
+        if len(out) >= max_elems or depth > max_depth:
+            return
+        role = attr(el, "AXRole")
+        title = attr(el, "AXTitle") or attr(el, "AXDescription")
+        value = attr(el, "AXValue")
+        if isinstance(value, str) and len(value) > 80:
+            value = value[:80] + "…"
+        if role in _AX_ROLES and (title or (isinstance(value, str) and value)):
+            pos = pt(attr(el, "AXPosition"), False)
+            sz = pt(attr(el, "AXSize"), True)
+            center = None
+            if pos and sz:
+                center = list(_actual_to_virtual(pos[0] + sz[0] / 2, pos[1] + sz[1] / 2))
+            t = title if isinstance(title, str) else None
+            ref = f"e{len(_AX_SESSION)}"
+            _AX_SESSION[ref] = {"el": el, "pid": pid, "role": role, "title": t, "center": center}
+            out.append({
+                "ref": ref,
+                "role": role,
+                "title": t,
+                "value": value if isinstance(value, str) else None,
+                "center": center,
+            })
+        for k in (attr(el, "AXChildren") or []):
+            walk(k, depth + 1)
+
+    walk(app, 0)
+    return out
+
+
+def _ocr_lines(png_path, langs=("ko-KR", "en-US"), limit=120):
+    """Vision OCR → [{text,center(가상좌표),conf}]. 정규화 bbox를 1280x800으로 직접 매핑."""
+    import Quartz
+    import Vision
+    from Cocoa import NSURL
+    src = Quartz.CGImageSourceCreateWithURL(NSURL.fileURLWithPath_(png_path), None)
+    cg = Quartz.CGImageSourceCreateImageAtIndex(src, 0, None)
+    req = Vision.VNRecognizeTextRequest.alloc().init()
+    req.setRecognitionLanguages_(list(langs))
+    req.setRecognitionLevel_(0)          # 0=accurate
+    req.setUsesLanguageCorrection_(True)
+    h = Vision.VNImageRequestHandler.alloc().initWithCGImage_options_(cg, {})
+    h.performRequests_error_([req], None)
+    out = []
+    for obs in (req.results() or [])[:limit]:
+        cand = obs.topCandidates_(1)
+        if not cand:
+            continue
+        bb = obs.boundingBox()           # 정규화, 좌하단 원점
+        vx = (bb.origin.x + bb.size.width / 2) * VIRTUAL_WIDTH
+        vy = (1 - bb.origin.y - bb.size.height / 2) * VIRTUAL_HEIGHT
+        out.append({
+            "text": cand[0].string(),
+            "center": [round(vx), round(vy)],
+            "conf": round(float(cand[0].confidence()), 2),
+        })
+    return out
+
+
+def _capture_png():
+    p = os.path.join(tempfile.gettempdir(), "indiebiz_cu_snapshot.png")
+    subprocess.run(["screencapture", "-x", p], capture_output=True, timeout=8)
+    if not os.path.exists(p) or os.path.getsize(p) < 100:
+        raise PermissionError("화면 기록 권한 필요 (시스템 설정 > 개인정보 보호 > 화면 기록)")
+    return p
+
+
+def _do_snapshot(tool_input):
+    """computer_snapshot: 화면 독해 — AX 구조 + OCR 글자. 요소엔 ref(좌표 없이 누르기용)."""
+    _AX_SESSION.clear()  # 이전 snapshot의 ref 무효화
+    result = {
+        "app": None, "elements": [], "elements_note": None,
+        "ocr_lines": [], "ocr_note": None,
+        "resolution": f"{VIRTUAL_WIDTH}x{VIRTUAL_HEIGHT}",
+        "hint": "요소는 ref로 [limbs:screen]{op:click, ref:\"e3\"} — 좌표 없이 누름(강건). "
+                "OCR 글자는 ref가 없으니 center로 [limbs:screen]{op:click, x, y}.",
+    }
+    try:
+        app = _frontmost_app()
+        result["app"] = app["name"]
+        try:
+            els = _ax_elements(app["pid"])
+            result["elements"] = els
+            if not els:
+                result["elements_note"] = "AX 0개 — 손쉬운 사용 권한 미부여 또는 앱 a11y 미노출. OCR 폴백."
+        except Exception as e:
+            result["elements_note"] = f"AX 실패: {e}"
+    except Exception as e:
+        result["elements_note"] = f"활성 앱 조회 실패: {e}"
+
+    png = None
+    try:
+        png = _capture_png()
+        result["ocr_lines"] = _ocr_lines(png)
+    except Exception as e:
+        result["ocr_note"] = str(e)
+    finally:
+        if png and os.path.exists(png):
+            try:
+                os.unlink(png)
+            except Exception:
+                pass
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
 # ── 라우팅 테이블 ──
 
 _TOOLS = {
+    "computer_snapshot": _do_snapshot,
     "computer_screenshot": _do_screenshot,
     "computer_click": _do_click,
     "computer_type": _do_type,
@@ -399,10 +660,11 @@ _TOOLS = {
     "computer_screen_info": _do_screen_info,
 }
 
-# 2026-05-27 단일 액션 통합: [limbs:desktop]{op} → 내부 op 분기
+# 2026-05-27 단일 액션 통합: [limbs:screen]{op} → 내부 op 분기
 # 2026-05-28 dispatcher 표준화: browser-action 패턴(_OP_DISPATCHERS 두 단계 dict).
 _OP_DISPATCHERS = {
     "computer_op": {
+        "snapshot": "computer_snapshot",
         "screenshot": "computer_screenshot",
         "click": "computer_click",
         "type": "computer_type",

@@ -90,19 +90,15 @@ SYNTHETIC_DATA = {
         ("기억 속에서 찾아봐", '[self:memory]{op: "search"}'),
         ("저장한 거 검색해", '[self:memory]{op: "search"}'),
     ],
-    "self:cctv_refresh": [
-        ("CCTV 새로고침", '[self:cctv_refresh]'),
-        ("CCTV 목록 갱신해줘", '[self:cctv_refresh]'),
-    ],
-    "self:cctv_sources": [
-        ("CCTV 소스 목록", '[sense:cctv_sources]'),
-        ("CCTV 상태 확인해줘", '[sense:cctv_sources]'),
-        ("등록된 CCTV 보여줘", '[sense:cctv_sources]'),
-        ("CCTV 돌아가고 있어?", '[sense:cctv_sources]'),
-    ],
-    "self:cctv_stats": [
-        ("CCTV 통계 보여줘", '[self:cctv_stats]'),
-        ("CCTV 운영 현황", '[self:cctv_stats]'),
+    "self:cctv": [
+        ("CCTV 새로고침", '[self:cctv]{op: "refresh"}'),
+        ("CCTV 목록 갱신해줘", '[self:cctv]{op: "refresh"}'),
+        ("CCTV 통계 보여줘", '[self:cctv]{op: "stats"}'),
+        ("CCTV 운영 현황", '[self:cctv]{op: "stats"}'),
+        ("CCTV 소스 목록", '[self:cctv]{op: "stats"}'),
+        ("CCTV 상태 확인해줘", '[self:cctv]{op: "stats"}'),
+        ("등록된 CCTV 보여줘", '[self:cctv]{op: "stats"}'),
+        ("CCTV 돌아가고 있어?", '[self:cctv]{op: "stats"}'),
     ],
     "self:folder_annotate": [
         ("폴더에 메모 남겨줘", '[self:folder_annotate]'),
@@ -260,18 +256,18 @@ SYNTHETIC_DATA = {
         ("폰 메시지 전부 보여줘", '[limbs:android_all_messages]'),
     ],
     "limbs:browser_close": [
-        ("브라우저 탭 닫아줘", '[limbs:close]'),
-        ("브라우저 닫아", '[limbs:close]'),
+        ("브라우저 탭 닫아줘", '[limbs:browser]{op: "close"}'),
+        ("브라우저 닫아", '[limbs:browser]{op: "close"}'),
     ],
     "limbs:browser_content": [
-        ("웹페이지 내용 가져와", '[limbs:content]'),
-        ("이 페이지 텍스트 추출해", '[limbs:content]'),
-        ("사이트 내용 읽어줘", '[limbs:content]'),
+        ("웹페이지 내용 가져와", '[limbs:browser]{op: "content"}'),
+        ("이 페이지 텍스트 추출해", '[limbs:browser]{op: "content"}'),
+        ("사이트 내용 읽어줘", '[limbs:browser]{op: "content"}'),
     ],
     "limbs:browser_navigate": [
-        ("이 URL로 이동해줘", '[limbs:navigate]'),
-        ("웹사이트 열어줘", '[limbs:navigate]'),
-        ("브라우저로 접속해", '[limbs:navigate]'),
+        ("이 URL로 이동해줘", '[limbs:browser]{op: "navigate"}'),
+        ("웹사이트 열어줘", '[limbs:browser]{op: "navigate"}'),
+        ("브라우저로 접속해", '[limbs:browser]{op: "navigate"}'),
     ],
     "limbs:cctv_open": [
         ("CCTV 영상 열어줘", '[limbs:cctv]{op: "open"}'),
@@ -279,21 +275,21 @@ SYNTHETIC_DATA = {
         ("CCTV 스트리밍 시작", '[limbs:cctv]{op: "open"}'),
     ],
     "limbs:chrome_connect": [
-        ("크롬 브라우저 연결", '[limbs:chrome]{op: "connect"}'),
+        ("크롬 브라우저 연결", '[limbs:browser]{op: "chrome", mode: "connect"}'),
     ],
     "limbs:chrome_disconnect": [
-        ("크롬 연결 해제", '[limbs:chrome]{op: "disconnect"}'),
+        ("크롬 연결 해제", '[limbs:browser]{op: "chrome", mode: "disconnect"}'),
     ],
     "limbs:chrome_status": [
-        ("크롬 연결 상태 확인", '[limbs:chrome]{op: "status"}'),
+        ("크롬 연결 상태 확인", '[limbs:browser]{op: "chrome", mode: "status"}'),
     ],
     "limbs:explorer": [
         ("파일 탐색기 열어줘", '[limbs:explorer]'),
         ("폴더 열어줘", '[limbs:explorer]'),
     ],
     "limbs:find": [
-        ("파일 찾아줘", '[limbs:find]'),
-        ("파일 검색해줘", '[limbs:find]'),
+        ("파일 찾아줘", '[limbs:browser]{op: "find"}'),
+        ("파일 검색해줘", '[limbs:browser]{op: "find"}'),
     ],
     "limbs:launch": [
         ("프로그램 실행해줘", '[limbs:launch]'),
@@ -394,6 +390,27 @@ SYNTHETIC_DATA = {
     "engines:web_snapshot": [
         ("웹 스냅샷 찍어줘", '[engines:web]{op: "snapshot"}'),
         ("웹사이트 캡처해", '[engines:web]{op: "snapshot"}'),
+    ],
+    # ── 파일 포맷 (2026-06-05) ──
+    "engines:spreadsheet": [
+        ("엑셀로 표 만들어줘", '[engines:spreadsheet]{path: "표.xlsx", headers: ["항목", "값"], rows: [["사과", 3]]}'),
+        ("xlsx 파일로 저장해줘", '[engines:spreadsheet]{path: "data.xlsx", rows: [["a", 1]]}'),
+        ("이 데이터 스프레드시트로 내보내", '[engines:spreadsheet]{path: "출력.xlsx", rows: [["x", "y"]]}'),
+        ("장부 엑셀로 정리해줘", '[engines:spreadsheet]{path: "장부.xlsx", headers: ["날짜", "금액"], rows: [["2026-06-05", 1000]]}'),
+        ("표를 엑셀 파일로 뽑아줘", '[engines:spreadsheet]{path: "표.xlsx", rows: [["컬럼1", "컬럼2"]]}'),
+        ("매출 데이터 엑셀로 만들어줘", '[engines:spreadsheet]{path: "매출.xlsx", headers: ["월", "매출"], rows: [["1월", 500], ["2월", 700]]}'),
+        ("시트 여러 개로 엑셀 만들어", '[engines:spreadsheet]{path: "보고서.xlsx", sheets: {"매출": [["1월", 500]], "비용": [["임대", 200]]}}'),
+        ("재고 목록 xlsx로 저장", '[engines:spreadsheet]{path: "재고.xlsx", headers: ["품목", "수량"], rows: [["펜", 100]]}'),
+        ("export this table to excel", '[engines:spreadsheet]{path: "export.xlsx", rows: [["a", 1], ["b", 2]]}'),
+        ("엑셀 읽어서 새 시트로 다시 정리", '[self:read]{path: "원본.xlsx", format: "xlsx"} >> [engines:spreadsheet]{path: "정리.xlsx", rows: [["정리", "완료"]]}'),
+    ],
+    "self:read_xlsx": [
+        ("엑셀 파일 읽어줘", '[self:read]{path: "파일.xlsx", format: "xlsx"}'),
+        ("xlsx 내용 보여줘", '[self:read]{path: "data.xlsx", format: "xlsx"}'),
+        ("스프레드시트 열어서 봐", '[self:read]{path: "표.xlsx", format: "xlsx"}'),
+        ("엑셀에서 특정 시트만 읽어줘", '[self:read]{path: "장부.xlsx", format: "xlsx", sheet: "매출"}'),
+        ("엑셀 파일 내용 분석해줘", '[self:read]{path: "data.xlsx", format: "xlsx"}'),
+        ("read the excel file", '[self:read]{path: "file.xlsx", format: "xlsx"}'),
     ],
 }
 

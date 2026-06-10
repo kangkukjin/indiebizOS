@@ -152,15 +152,59 @@ _OP_DISPATCHERS = {
         "console": "browser_console_logs",
         "network": "browser_network_logs",
     },
+    # 2026-06-04 모달리티 통합: [limbs:browser]{op: <동작>} 단일 액션.
+    # op = 26개 동작. 단순 동작 → 내부 도구, 복합 동작 → 위 *_op 디스패처(2차 mode 분기).
+    "browser_op": {
+        "snapshot": "browser_snapshot",
+        "navigate": "browser_navigate_op",
+        "click": "browser_click_op",
+        "type": "browser_type",
+        "press_key": "browser_press_key",
+        "hover": "browser_hover",
+        "drag": "browser_drag",
+        "select": "browser_select_option",
+        "check": "browser_check",
+        "upload_file": "browser_upload_file",
+        "scroll": "browser_scroll",
+        "wait": "browser_wait_for",
+        "content": "browser_content_op",
+        "screenshot": "browser_screenshot",
+        "vision": "browser_vision",
+        "evaluate": "browser_evaluate",
+        "pdf": "browser_save_pdf",
+        "find": "browser_find",
+        "logs": "browser_logs_op",
+        "dialog_info": "browser_dialog_info",
+        "resize": "browser_resize",
+        "close": "browser_close",
+        "tab": "browser_tab_op",
+        "iframe": "browser_iframe_op",
+        "cookies": "browser_cookies_op",
+        "chrome": "browser_chrome_op",
+    },
 }
 
-# 디스패처별 op 기본값 (op 미지정 시 사용 — 가장 흔한 동작)
+# 디스패처별 기본값 (selector 미지정 시 — 가장 흔한 동작)
 _OP_DEFAULTS = {
+    "browser_op": "snapshot",
     "browser_click_op": "single",
     "browser_navigate_op": "goto",
     "browser_content_op": "text",
     "browser_logs_op": "console",
     "browser_iframe_op": "list",
+}
+
+# 디스패처가 읽는 selector 파라미터 키 (기본 "op").
+# browser_op는 op(=동작)로 분기, 복합 *_op는 2차 mode로 분기 — 두 단계 키 충돌 방지.
+_OP_SELECTOR = {
+    "browser_navigate_op": "mode",
+    "browser_click_op": "mode",
+    "browser_content_op": "mode",
+    "browser_logs_op": "mode",
+    "browser_tab_op": "mode",
+    "browser_iframe_op": "mode",
+    "browser_cookies_op": "mode",
+    "browser_chrome_op": "mode",
 }
 
 
@@ -169,23 +213,25 @@ async def execute(tool_input: dict, context):
     tool_name = context.tool_name
     proj_path = context.project_path
 
-    # 2026-05-27 단일 액션 통합: *_op 디스패처는 op 파라미터로 실제 tool_name 결정
-    if tool_name in _OP_DISPATCHERS:
-        op = (tool_input.pop("op", "") or "").strip()
+    # 단일 액션 통합 디스패치 (2026-05-27, 2026-06-04 browser_op 2단계 확장).
+    # browser_op는 op(=동작)로 분기 → 복합 동작은 *_op로 가서 다시 mode로 분기 (2단계 루프).
+    while tool_name in _OP_DISPATCHERS:
+        sel_key = _OP_SELECTOR.get(tool_name, "op")
         mapping = _OP_DISPATCHERS[tool_name]
-        if not op:
-            op = _OP_DEFAULTS.get(tool_name, "")
-        if not op:
+        sel = (tool_input.pop(sel_key, "") or "").strip()
+        if not sel:
+            sel = _OP_DEFAULTS.get(tool_name, "")
+        if not sel:
             return json.dumps({
                 "success": False,
-                "error": f"op 파라미터 필요 ({tool_name}). 사용 가능: {sorted(mapping.keys())}"
+                "error": f"{sel_key} 파라미터 필요 ({tool_name}). 사용 가능: {sorted(mapping.keys())}"
             }, ensure_ascii=False)
-        if op not in mapping:
+        if sel not in mapping:
             return json.dumps({
                 "success": False,
-                "error": f"알 수 없는 op '{op}' ({tool_name}). 사용 가능: {sorted(mapping.keys())}"
+                "error": f"알 수 없는 {sel_key} '{sel}' ({tool_name}). 사용 가능: {sorted(mapping.keys())}"
             }, ensure_ascii=False)
-        tool_name = mapping[op]
+        tool_name = mapping[sel]
 
     # Chrome 전용 도구는 항상 Chrome 모듈로 라우팅
     if tool_name in _CHROME_ONLY_TOOLS:

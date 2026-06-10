@@ -5,36 +5,36 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:3739
+- dataset_size:3474
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 근처 전세 매물 가격대
-  sentences:
-  - 부동산 실거래가 조회 (op 분기, 국토부). query(실거래가)/codes(법정동 코드). region 이름만 넣으면 코드 자동 변환 —
-    codes는 보통 불필요.
-  - '[self:health]'
-  - '[sense:weather] & [sense:search_news]'
-- source_sentence: 부산 비 오려나
-  sentences:
-  - 라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.
-  - '[sense:weather]'
-  - '[sense:search_ddg] & [sense:search_ddg] & [sense:search_ddg]'
-- source_sentence: 이 메뉴 위에 마우스 올려봐
-  sentences:
-  - '[limbs:hover]'
-  - '[sense:legal]'
-  - '[limbs:content]'
-- source_sentence: 주가 보여줘하는 거 있어?
-  sentences:
-  - '[self:discover]'
-  - '[engines:slide_shadcn], ]}], theme: "purple"}'
-  - '[limbs:cookies]'
-- source_sentence: 이 docx 파일에서 텍스트 추출해줘
+- source_sentence: '사용자의 현재 위치 또는 관심 지역 근처에서 특정 기간(예: 이번 주말, 이번 달)에 열리는 축제나 행사를 찾고,
+    동시에 해당 지역 근처의 특정 장소(예: 스타벅스)를 검색하는 것'
   sentences:
   - '[sense:weather]'
+  - '[sense:search_ddg] & [sense:search_ddg]'
+  - '[sense:startup]'
+- source_sentence: 달력 확인해봐
+  sentences:
+  - '[self:manage_events]'
+  - '[sense:book]'
   - '[self:list]'
-  - '[self:read]'
+- source_sentence: 브라우저 쿠키 저장해
+  sentences:
+  - '[sense:search_local]'
+  - '[engines:newspaper]'
+  - '[limbs:browser]'
+- source_sentence: Finder로 /Users/me 오픈해줘
+  sentences:
+  - '[limbs:explorer]'
+  - 인터넷 라디오 재생·중지 (op 분기). play/stop.
+  - '[self:run_pipeline]'
+- source_sentence: 연락처 목록 보여줘 좀 봐
+  sentences:
+  - 스케줄 실행 (지연 실행, 특정 시간, 반복 등)
+  - '[limbs:os_open]'
+  - '[others:channel_read]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -88,9 +88,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '이 docx 파일에서 텍스트 추출해줘',
-    '[self:read]',
-    '[self:list]',
+    '연락처 목록 보여줘 좀 봐',
+    '[others:channel_read]',
+    '[limbs:os_open]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -99,9 +99,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[1.0000, 0.5825, 0.1073],
-#         [0.5825, 1.0000, 0.4415],
-#         [0.1073, 0.4415, 1.0000]])
+# tensor([[1.0000, 0.6291, 0.1520],
+#         [0.6291, 1.0000, 0.2461],
+#         [0.1520, 0.2461, 1.0000]])
 ```
 
 <!--
@@ -146,19 +146,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 3,739 training samples
+* Size: 3,474 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
-  |         | sentence_0                                                                        | sentence_1                                                                        |
-  |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
-  | type    | string                                                                            | string                                                                            |
-  | details | <ul><li>min: 4 tokens</li><li>mean: 10.97 tokens</li><li>max: 94 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 18.32 tokens</li><li>max: 94 tokens</li></ul> |
+  |         | sentence_0                                                                       | sentence_1                                                                        |
+  |:--------|:---------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
+  | type    | string                                                                           | string                                                                            |
+  | details | <ul><li>min: 3 tokens</li><li>mean: 10.9 tokens</li><li>max: 94 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 18.79 tokens</li><li>max: 94 tokens</li></ul> |
 * Samples:
-  | sentence_0                        | sentence_1                                                                    |
-  |:----------------------------------|:------------------------------------------------------------------------------|
-  | <code>이 도서 상세 정보 좀</code>         | <code>한국 도서 조회 (op 분기, 도서관정보나루). 고전 원문은 classic, 글로벌 도서는 search_books.</code> |
-  | <code>워크플로우 하나 생성해줘해</code>       | <code>[self:workflow]</code>                                                  |
-  | <code>특정 장르에 대한 정보 및 대안 탐색</code> | <code>[sense:search_ddg] & [sense:search_ddg]</code>                          |
+  | sentence_0                 | sentence_1                                                     |
+  |:---------------------------|:---------------------------------------------------------------|
+  | <code>웹 코드 미리보기</code>     | <code>[engines:render_html]</code>                             |
+  | <code>고속도로 밀리는지 좀 봐</code> | <code>[sense:cctv]</code>                                      |
+  | <code>홍길동이랑 주고받은 거</code>  | <code>한 이웃과 주고받은 메시지 채널 통합 이력 (Gmail/Nostr/Telegram 등).</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {

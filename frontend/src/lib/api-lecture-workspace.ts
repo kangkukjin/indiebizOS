@@ -183,6 +183,27 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
     },
 
     /**
+     * 이미 만들어둔 이미지 여러 장을 슬라이드로 한 번에 추가 (AI 생성 없이).
+     * 파일 순서대로 데크에 삽입. insertAt 지정 시 그 위치부터.
+     */
+    async uploadSlideImages(
+      lectureId: string,
+      files: File[],
+      insertAt?: number,
+    ): Promise<{ success: boolean; count: number; created: SlideMeta[]; skipped: string[] }> {
+      const url = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/slides/upload-images`;
+      const formData = new FormData();
+      for (const f of files) formData.append('files', f);
+      if (insertAt !== undefined) formData.append('insert_at', String(insertAt));
+      const response = await fetch(url, { method: 'POST', body: formData });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: response.statusText }));
+        throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+      }
+      return response.json();
+    },
+
+    /**
      * 슬라이드의 현재 spec을 가져옴 (직접 편집 모달용).
      */
     async getSlideSpec(lectureId: string, slideId: string) {

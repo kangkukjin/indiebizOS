@@ -1,8 +1,8 @@
 ---
 title: 도구 패키지 시스템
-scope: 패키지 구조(handler/tool.json), 설치 절차, 36개 패키지 목록. IBL 어휘 등록은 ibl_nodes_src/ 직접 편집(ibl.md 참조). op-bearing 9 패키지는 `_OP_DISPATCHERS` 표준 채택.
+scope: 패키지 구조(handler/tool.json), 설치 절차, 35개 패키지 목록. IBL 어휘 등록은 ibl_nodes_src/ 직접 편집(ibl.md 참조). op-bearing 10 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
-last_updated: 2026-05-28
+last_updated: 2026-06-10
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -232,12 +232,13 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 
 ---
 
-## 현재 설치된 도구 패키지 (36개)
+## 현재 설치된 도구 패키지 (35개)
 
-**op-bearing 9 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): browser-action / youtube / computer-use / radio / cctv / photo-manager / memory / health-record / lecture_workspace.
+**op-bearing 10 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): browser-action / youtube / computer-use / radio / cctv / photo-manager / memory / health-record / lecture_workspace / android.
 
 | ID | 이름 | 설명 |
 |----|------|------|
+| android | Android | 안드로이드 폰 화면 조작 — `[limbs:android]{op}` 단일 센터피스 (snapshot/tap/type/swipe/key/long_press/open_app). ADB+uiautomator, 한글 입력=cliphelper IME. 2026-06-05 얇은 부활(옛 45 액션은 `data/packages/_archive/` 백업) |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
 | browser-action | Browser Action | Playwright 기반 브라우저 자동화 v5.0 (36개 도구: ref/CSS selector, stealth, 쿠키 동의 자동처리, 네트워크 캡처, vision 모드, 다중 탭/iframe, 동적 콘텐츠 대기, 다단계 폴백 추출, CDP 타임아웃) |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
@@ -256,11 +257,9 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
 | media_producer | Media Producer | 홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지 생성 |
 | memory | Memory | 심층 메모리 (자동 시스템: 연상기억 검색 + 경험 증류. IBL 액션 없음) |
-| music-composer | Music Composer | ABC 악보 기반 작곡, MIDI 생성, 오디오 변환 |
 | nodejs | Nodejs | Node.js/JavaScript 코드 실행 |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |
 | photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 |
-| publishing | Publishing | 한국어 단행본 출판 (typst 조판, 표지·내지·검증) |
 | python-exec | Python Exec | Python 코드 실행 |
 | radio | Radio | 인터넷 라디오 검색 및 재생 |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API |
@@ -336,4 +335,4 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-05-28 (IBL 단일 진실 소스화 반영 — 패키지 ibl_actions.yaml 폐기)*
+*마지막 업데이트: 2026-06-10 — 35개 정합화: android 얇은 부활 추가(op-bearing 10번째), publishing은 not_installed로 이동. 이전(2026-05-28): IBL 단일 진실 소스화 반영 — 패키지 ibl_actions.yaml 폐기*

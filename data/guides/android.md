@@ -1,427 +1,136 @@
-# Android Device Manager 사용 가이드
+# 안드로이드 폰 조작 가이드 ([limbs:android]{op})
 
-## 기기 연결 기본 흐름
+USB 디버깅으로 연결된 안드로이드 폰을, **화면을 읽고 → 터치/입력**하는 방식으로 조작합니다.
+데스크톱 `limbs:screen`, 웹 `limbs:browser`의 **폰 버전** — 같은 "지각→행위" 루프입니다.
+
+## 핵심 원칙: 눈대중 금지, 항상 snapshot 먼저
+
+좌표를 추측해서 누르면 **빗나갑니다.** 반드시 `snapshot`으로 화면을 읽어
+요소의 **실제 라벨과 OS가 알려준 정확한 좌표**를 받은 뒤, 그걸로 누릅니다.
+(uiautomator는 이 기기들에서 잘 작동합니다 — 과거 "불안정하니 좌표로 찍어라"는 조언이
+오히려 빗나감의 원인이었습니다. 요소의 bounds 중심 탭은 정밀합니다.)
 
 ```
-android_list_devices → android_grant_permissions → 기능 사용
-   (연결 확인)           (권한 부여)               (SMS, 앱, 파일 등)
+[limbs:android]{op: "snapshot"}                  # ① 화면 독해 (요소+라벨+좌표)
+[limbs:android]{op: "tap", query: "전송"}         # ② 라벨로 탭 (가장 견고)
 ```
 
-### 1단계: 기기 연결 확인
-```python
-android_list_devices()
-# 반환: 기기 ID, 연결 상태, 모델명
-```
+- `tap`은 **query(라벨/content-desc/resource-id 일부)** 로 누르는 것이 1순위. 좌표가 바뀌어도 안전.
+- query로 안 잡히면 snapshot이 준 `x,y`를 직접 사용 (이것도 눈대중이 아니라 OS 좌표).
 
-**전제 조건:**
-- USB 디버깅 활성화 필요
-- 기기가 표시되지 않으면 USB 케이블/설정 확인
-
-### 2단계: 권한 부여
-```python
-android_grant_permissions()
-# device_id 생략 시 첫 번째 기기 자동 선택
-```
-
-### device_id 생략 규칙
-- 모든 android 도구에서 `device_id` 생략 시 **첫 번째 기기 자동 선택**
-- 여러 기기 연결 시에만 device_id 명시 필요
-
----
-
-## 권한 관리
-
-### android_grant_permissions 필요 시점
-- SMS, 통화기록, 연락처 조회가 **빈 결과를 반환할 때**
-- SMS, 통화기록, 연락처 **삭제가 필요할 때**
-- Android 10 이상 기기에서 **처음 연결했을 때**
-- **폰을 재시작한 후** (권한이 초기화될 수 있음)
-
-### 권한 진단
-```python
-# 현재 권한 상태 확인
-android_check_permissions()
-# → READ/WRITE_SMS, READ/WRITE_CALL_LOG, READ/WRITE_CONTACTS 각각의 상태 반환
-```
-
----
-
-## SMS/MMS/RCS 도구 선택 가이드
-
-### 상황별 도구 선택
-
-| 목적 | 사용할 도구 | 속도 |
-|------|------------|------|
-| 메시지 개수 확인 | `android_delete_mms_by_content` (dry_run=true) | 빠름 (2-3초) |
-| 메시지 삭제 | `android_delete_mms_by_content` (dry_run=false) | 빠름 (2-3초) |
-| 메시지 내용 확인 | `android_search_sms` | 느림 (4-5초) |
-| SMS만 조회 | `android_get_sms` | - |
-| MMS/채팅+ 조회 | `android_get_mms` | - |
-| SMS+MMS 통합 조회 | `android_get_all_messages` | - |
-| SMS 단일/조건부 삭제 | `android_delete_sms` | - |
-| SMS+MMS ID 기반 삭제 | `android_delete_messages` | - |
-
-### 핵심 판단 기준
-- **"~~ 몇 개야?"** → `android_delete_mms_by_content(body_contains="검색어", dry_run=true)`
-- **"~~ 삭제해줘"** → `android_delete_mms_by_content(body_contains="검색어", dry_run=false)`
-- **"~~ 내용 보여줘"** → `android_search_sms(query="검색어")`
-
----
-
-## 삭제 안전 규칙
-
-### 반드시 dry_run=true 먼저 실행
-
-```python
-# 1단계: 삭제 대상 미리보기
-android_delete_mms_by_content(body_contains="광고", dry_run=True)
-# → target_count, sms_count, mms_count, rcs_count 확인
-
-# 2단계: 사용자 확인 후 실제 삭제
-android_delete_mms_by_content(body_contains="광고", dry_run=False)
-```
-
-```python
-# SMS 조건부 삭제도 동일
-android_delete_sms(body_contains="광고", dry_run=True)   # 미리보기
-android_delete_sms(body_contains="광고", dry_run=False)   # 실제 삭제
-```
-
-**중요:** 모든 삭제는 **복구 불가**
-
----
-
-## android_delete_sms 상세 사용법
-
-### 삭제 방법 (여러 조건 조합 가능 - AND 조건)
-
-| 파라미터 | 설명 | 예시 |
-|---------|------|------|
-| `sms_id` | 특정 메시지 1개 삭제 | `sms_id="12345"` |
-| `address` | 특정 발신자의 모든 메시지 | `address="01012345678"` |
-| `body_contains` | 본문에 특정 문자열 포함 | `body_contains="광고"` |
-| `before_date` | 특정 날짜 이전 메시지 | `before_date="2024-01-01"` |
-
-### 와일드카드 사용
-- `address` 필드에서 `%` 사용 가능
-- 예: `address="1588%"` → 1588로 시작하는 모든 번호
-
-### 삭제 예시
-```python
-# 긴급재난문자 삭제
-android_delete_sms(address="#CMAS#Severe", dry_run=True)
-
-# 광고 문자 삭제
-android_delete_sms(body_contains="광고", dry_run=True)
-
-# 특정 번호의 배송 관련 문자만 삭제
-android_delete_sms(address="1588%", body_contains="배송", dry_run=True)
-
-# 2023년 이전 문자 전체 삭제
-android_delete_sms(before_date="2023-01-01", dry_run=True)
-```
-
-### SMS vs MMS 삭제 구분
-- `android_delete_sms`: **SMS만** 삭제 가능
-- `android_delete_messages`: SMS와 MMS를 **ID 목록으로** 일괄 삭제
-- `android_delete_mms_by_content`: SMS/MMS/RCS **모두** 조건부 삭제
-
----
-
-## 앱 관리 워크플로우
-
-### 불필요한 앱 정리
-```
-android_list_apps → android_app_sizes → android_uninstall_app
-   (앱 목록 확인)     (용량 큰 앱 확인)    (앱 삭제)
-```
-
-### 상세 앱 분석
-```python
-# 용량 순위 조회
-android_app_sizes(limit=20)
-
-# 사용량 통계 (최근 24시간)
-android_app_usage()
-# → 마지막 사용 시간, 총 사용 시간, 세션 횟수
-
-# 전체 정보 한 번에 조회
-android_apps_with_details(limit=50)
-# → 패키지명, 용량, 마지막 사용, 총 사용 시간
-
-# 특정 앱 상세
-android_app_info(package_name='com.example.app')
-```
-
-### 앱 삭제
-```python
-android_uninstall_app(package_name='com.example.app')
-```
-**주의:** 사용자 설치 앱만 삭제 가능, 시스템 앱 불가, 복구 불가
-
----
-
-## 파일 전송
-
-### PC에서 기기로 (push)
-```python
-android_push_file(
-    local_path='/Users/user/Documents/report.pdf',
-    remote_path='/sdcard/Download/'   # 기본 저장 위치
-)
-```
-
-### 기기에서 PC로 (pull)
-```python
-android_pull_file(
-    remote_path='/sdcard/DCIM/Camera/photo.jpg',
-    local_path='/Users/user/Desktop/'   # 생략 시 자동
-)
-```
-
-**주의사항:**
-- 대용량 파일은 전송 시간이 걸릴 수 있음
-- 기기 저장 공간 확인 필요 (`android_system_status`)
-- 일부 시스템 경로는 접근 제한될 수 있음
-
----
-
-## 연락처/통화 관련 도구
-
-### 연락처
-```python
-# 목록 조회
-android_get_contacts(limit=100)
-
-# 검색 (이름 또는 번호)
-android_search_contacts(query='홍길동')
-android_search_contacts(query='010-1234')
-
-# 삭제 (contact_id 또는 phone_number)
-android_delete_contact(contact_id='123')
-android_delete_contact(phone_number='01012345678')
-```
-**삭제 시 WRITE_CONTACTS 권한 필요** → `android_grant_permissions` 먼저 실행
-
-### 통화
-```python
-# 통화 기록 조회
-android_get_call_log(call_type='all', limit=50)
-# call_type: all, incoming(수신), outgoing(발신), missed(부재중)
-
-# 전화 걸기
-android_make_call(phone_number='01012345678')
-
-# 통화 종료
-android_end_call()
-
-# 통화 기록 삭제
-android_delete_call_log(call_id='456')
-```
-
----
-
-## 기타 유용한 도구
-
-### 기기 상태 확인
-```python
-# 상세 정보 (모델, OS 버전, 빌드 등)
-android_device_info()
-
-# 종합 상태 (배터리, 온도, 저장 공간)
-android_system_status()
-```
-
-### 화면 캡처
-```python
-android_capture_screen()
-# → 스크린샷 파일 경로 반환
-```
-
-### 알림 확인
-```python
-android_notifications()
-# → 알림 제목, 내용, 앱 이름, 시간
-```
-
-### 텍스트 전송
-```python
-android_send_text(text='전송할 텍스트')
-# 주의: 기기에서 텍스트 입력 필드가 활성화되어 있어야 함
-# 한글은 클립보드 방식으로 전송됨
-```
-
-### Android Manager UI
-```python
-open_android_manager()
-# 전화, 문자, 연락처를 관리할 수 있는 UI 열기
-```
-
----
-
-## UI 자동화 (Computer-Use 패턴)
-
-ADB를 통해 안드로이드 화면을 직접 제어하는 기능이다.
-AI가 스크린샷을 보고 → 분석하고 → 조작하는 루프를 반복한다.
-
-### 기본 루프
+## 표준 흐름 (예: 카카오톡 메시지 보내기)
 
 ```
-android_ui_screenshot → 화면 분석 → android_ui_tap / type_text / swipe → 확인
+[limbs:android]{op: "open_app", package_name: "com.kakao.talk"}   # 앱 실행
+# (대화방을 연 상태에서)
+[limbs:android]{op: "snapshot"}                                   # 입력창 위치 확인
+[limbs:android]{op: "tap", query: "message_edit_text"}           # 입력창 포커스
+[limbs:android]{op: "type", text: "안녕하세요"}                    # 텍스트 입력
+[limbs:android]{op: "snapshot"}                                   # ★ 다시 읽기 — 전송 버튼이 이제 생김
+[limbs:android]{op: "tap", query: "전송"}                         # 전송
 ```
 
-### 핵심 원칙 (반드시 준수)
+### ★ 가장 중요한 함정: 동적으로 생기는 버튼
 
-1. **앱 실행은 반드시 `open_app`** 사용 (패키지명 기반, 가장 안정적)
-2. **`find_tap`/`find_element`/`hierarchy`는 사용하지 마라** — uiautomator가 불안정하여 대부분 실패한다. 반드시 `android_screenshot` + `tap`(좌표)으로 조작한다.
-3. **좌표 추정이 어려우면 `android_screenshot_grid` 사용** (그리드 오버레이)
-4. **매 동작 후 반드시 `android_screenshot`으로 결과 확인** — 스크린샷 없이 다음 동작 금지
-5. **한글 입력은 `type_text`** — IndieBiz IME가 자동으로 처리
-6. **실패한 방법은 다시 시도하지 마라** — `find_element`가 한 번 실패하면 다시 시도해도 실패한다. 즉시 스크린샷 기반으로 전환한다.
-7. **완료하지 못한 작업을 완료했다고 보고하지 마라** — 작업이 끝나지 않았으면 현재 상황과 막힌 부분을 솔직하게 보고한다.
+**카카오톡 전송 버튼은 입력창이 비어 있으면 화면에 존재하지 않습니다.**
+글자를 입력하는 순간 비로소 나타납니다(`content-desc="전송"`, `resource-id ...:id/send_button_layout`).
+그래서 **`type` 다음에는 반드시 `snapshot`을 다시** 떠야 전송 버튼을 찾을 수 있습니다.
+입력 전에 전송 버튼을 찾으면 당연히 못 찾습니다 — 과거 실패의 주원인.
 
-### 실패 시 행동 규칙
+이 패턴은 카톡만이 아닙니다. 많은 앱이 입력/선택 후 버튼을 동적 표시합니다.
+**행동으로 화면이 바뀌면, 다음 행동 전에 다시 snapshot.**
 
-```
-hierarchy 실패 → screenshot_grid로 전환 (find_element/find_tap 재시도 금지)
-screenshot 실패 → FLAG_SECURE 앱일 수 있음 → 사용자에게 보고
-tap 후 화면 변화 없음 → 좌표가 잘못됨 → screenshot_grid로 재확인
-작업 완료 불가 → 현재까지 진행 상황 + 막힌 이유를 솔직하게 보고
-```
+## op별 요약
 
-### 앱 실행
+| op | 용도 | 주요 파라미터 |
+|----|------|--------------|
+| `snapshot` | 화면 독해 (기본) | 없음 |
+| `tap` | 요소 탭 | `query`(권장) 또는 `x,y`, `index` |
+| `type` | 입력창에 텍스트 | `text` |
+| `swipe` | 스와이프/스크롤 | `direction`(up/down/left/right) 또는 `x1,y1,x2,y2` |
+| `key` | 시스템 키 | `key`: back/home/enter/recent/delete |
+| `long_press` | 길게 누르기 | `x,y`, `duration_ms` |
+| `open_app` | 앱 실행 | `package_name` (예 com.kakao.talk) |
 
-```python
-# 패키지명으로 실행 (가장 확실)
-open_app(package_name='com.tempdiary')
+- **앱 실행은 항상 `open_app`(패키지명)** — 홈 화면 아이콘 탭은 페이지마다 위치가 달라 비추천.
+- **키보드 닫기**: `key` + `back`.
 
-# 패키지명 모르면 검색
-# adb shell pm list packages | grep 키워드
-```
+## 한글 입력
 
-**주의: 홈 화면 아이콘 탭은 비추천** — 좌표가 부정확하고 페이지에 따라 다름
+`type`의 영문/숫자는 ADB로 바로 입력되지만, **한글은 전용 IME(`com.indiebiz.cliphelper`)가
+설치·활성화되어 있어야** 합니다 (commitText 주입 방식). 미설치 시 한글 입력은 실패하고
+영문만 됩니다. 설치 소스는 패키지 내 `apk/` 참조.
 
-### 화면 캡처 및 좌표 파악
+## 한계 (정직하게)
 
-```python
-# 일반 스크린샷 (AI 비전 분석용)
-android_ui_screenshot()
+- **접근성 트리에 잡히는 요소만** 정밀 제어됩니다. 게임·커스텀 캔버스·지도/사진 내부 임의 지점은
+  요소로 안 잡혀 좌표/추정에 의존 → 정밀도 하락.
+- **FLAG_SECURE 앱**(일부 은행/정부 앱)은 screencap·uiautomator를 차단할 수 있음 → 막히면 사용자에게 보고.
+- 패널이 뜨는 **애니메이션 순간**엔 snapshot이 빈 결과를 줄 수 있음 → 잠시 후 재시도.
+- 같은 방법이 실패하면 **재시도 대신 대안**으로(query↔좌표). 완료 못 하면 막힌 지점을 솔직히 보고.
 
-# 그리드 오버레이 스크린샷 (좌표 캘리브레이션)
-android_ui_screenshot_grid(rows=10, cols=5)
-# → 셀 ID(A0~E9)와 실제 좌표가 오버레이된 이미지 반환
-# → grid_map에 각 셀의 center/bounds 좌표 포함
-```
+## 전제 조건
 
-### 화면 조작
+- PC에 ADB 설치 + 폰 USB 디버깅 ON + "이 컴퓨터 허용" 승인.
+- 여러 기기 연결 시에만 `device_id` 명시 — 보통은 생략(첫 기기 자동).
 
-```python
-# 좌표 탭 (스크린샷에서 추정한 좌표)
-android_ui_tap(x=540, y=1800)
+## 구조화 데이터: 문자·통화·연락처 (액션 없이 raw adb로)
 
-# 그리드 셀 탭 (screenshot_grid로 확인한 셀 ID)
-android_ui_tap_grid(cell='C7')
+화면 조작과 **완전히 다른 길**입니다. 문자/통화/연락처는 안드로이드 **content provider**에
+구조화되어 저장돼 있어, 화면을 긁지 말고 **DB를 직접 쿼리**하면 100건이든 1000건이든
+한 번에 정리·검색·집계할 수 있습니다. (메시지 "정리"가 화면긁기로 안 됐던 이유 = 도구를 잘못 골라서.)
 
-# 스와이프 (스크롤, 페이지 넘기기)
-android_ui_swipe(x1=900, y1=1200, x2=200, y2=1200, duration_ms=300)  # 왼쪽으로
-android_ui_swipe(x1=200, y1=1200, x2=900, y2=1200, duration_ms=300)  # 오른쪽으로
-android_ui_swipe(x1=540, y1=2000, x2=540, y2=800, duration_ms=300)   # 위로 스크롤
+아직 전용 IBL 액션은 없습니다. **`run_command` 도구로 adb 명령을 직접 실행**합니다.
+(`run_command`는 `execute_ibl`과 같은 레벨의 최상위 쉘 도구 — IBL 경유가 아니라 곧장 호출.)
+자주 쓰게 되면 `[limbs:android_message]{op}` 액션으로 승격 — 백업 `_archive/android_full_*/`에 옛 구현 보존.
 
-# 길게 누르기
-android_ui_long_press(x=540, y=1200, duration_ms=1000)
+### 문자 정리 — 검증된 레시피 (2026-06-06 실측)
 
-# 시스템 키
-android_ui_press_key(keycode='HOME')    # 홈
-android_ui_press_key(keycode='BACK')    # 뒤로 (키보드 닫기에도 유용)
-android_ui_press_key(keycode='RECENT')  # 최근 앱
-android_ui_press_key(keycode='ENTER')   # 엔터
-```
+```bash
+# ① 받은문자 조회 (정렬은 따옴표 이스케이프 필수 — 공백이 원격 셸에서 쪼개짐)
+adb shell "content query --uri content://sms/inbox --projection address:date:body --sort \"date DESC\""
 
-### 텍스트 입력
+# ② 발신처별 집계 예: 재난문자가 몇 건인지
+adb shell "content query --uri content://sms/inbox --projection _id --where \"address LIKE '%CMAS%'\""
 
-```python
-# 입력 필드를 먼저 탭한 후
-android_ui_tap(x=270, y=1810)
-
-# 텍스트 입력 (한글/영문 자동 처리)
-android_ui_type_text(text='코스트코 방문, 머리깍음')
-# → 영문/숫자: ADB input text 직접 입력
-# → 한글: IndieBiz IME commitText() 주입
-
-# 키보드 닫기
-android_ui_press_key(keycode='BACK')
+# ③ 삭제 — 아래 함정 3개를 반드시 지킬 것
+adb shell "appops set com.android.shell WRITE_SMS allow"                                   # 권한 선행
+adb shell "content delete --uri content://sms --where \"address LIKE '%CMAS%'\""           # 베이스 URI
+adb shell "content query --uri content://sms --projection _id --where \"address LIKE '%CMAS%'\"" | grep -c Row:  # 검증(0이어야)
 ```
 
-### UI 요소 검색 (hierarchy/find_element/find_tap)
+### ★ 삭제 함정 3개 (약한 모델이 정확히 미끄러지는 곳 — 반드시 지킬 것)
 
-`uiautomator dump`는 `waitForIdle()`에 의존하며, 아래 조건에서 실패한다:
+1. **조용한 실패**: 권한 없이 `content delete` → **exit=0(성공)인데 0건 삭제.** 절대 exit 코드를 믿지 말 것.
+   → **삭제 직후 같은 조건으로 재조회해 0건임을 확인**하기 전엔 "지웠다"고 말하지 말 것.
+2. **권한 선행**: `appops set com.android.shell WRITE_SMS allow` 먼저. (Android 10+ 제약, 폰 재시작 시 초기화 → 매번 부여.)
+3. **삭제는 베이스 URI**: 조회는 `content://sms/inbox` OK지만 **삭제는 `content://sms`**.
+   `/inbox`에 delete 하면 `Unknown URL` 에러.
 
-| 상황 | dump 결과 | 원인 |
-|------|-----------|------|
-| **삼성 홈 런처** | ❌ 항상 실패 | 위젯(Tesla, 시계 등)이 주기적 UI 업데이트 → idle 불가 |
-| **앱 전환 직후** | ❌ 실패 확률 높음 | 전환 애니메이션이 끝나지 않음 |
-| **일반 앱 (3초+ 대기 후)** | ✅ 대부분 성공 | 정적 화면은 idle 도달 |
-| **FLAG_SECURE 앱** | ❌ 항상 실패 | 보안 정책으로 차단 |
+### ★★ 재난문자는 저장소가 다르다 (가장 중요)
 
-**사용 규칙:**
-- 홈 화면에서는 **절대 사용하지 마라** (항상 실패)
-- 앱 내에서는 **open_app 후 3초 이상 대기한 뒤** 시도 가능
-- **한 번 실패하면 재시도하지 말고** screenshot + tap(좌표)로 전환
-- 가장 안정적인 패턴은 항상 `screenshot` + `tap`(좌표)
+실종경보·폭염경보 등 **재난문자(CMAS)의 진짜 원본은 `content://cellbroadcasts`** 라는 별도 저장소입니다.
+`content://sms`엔 **사본(미러)** 만 있어서, **sms만 지우면 메시지 앱 화면엔 그대로 남습니다.**
+앱에서 없애려면 cellbroadcasts까지 지워야 합니다.
 
-```python
-# ⚠️ 홈 화면에서 사용 금지, 앱 내에서만 사용
-android_ui_find_element(query='저장하기')
-android_ui_find_and_tap(query='확인', index=0)
-android_ui_hierarchy()
+```bash
+adb shell "content query --uri content://cellbroadcasts --projection _id:body"             # 재난문자 원본 조회
+adb shell "content delete --uri content://cellbroadcasts --where \"_id>0\""                 # 전체 삭제(베이스 URI)
+adb shell "am force-stop com.samsung.android.messaging"                                     # 앱 캐시 재읽기 유도
 ```
 
-### 실전 예시: TempDiary 앱에서 일기 작성
+- 삼성 메시지 앱은 자기 캐시 DB가 있어 저장소를 비워도 즉시 갱신 안 될 수 있음 → `force-stop` 후 재확인.
+- 그래도 남으면 앱 내부 캐시(루트 없이 불가) → 앱 설정에서 직접 삭제하거나 화면긁기로 앱 안에서 삭제.
 
-**올바른 패턴** (스크린샷 → 분석 → 탭 반복):
-```
-1. [limbs:open_app]{package_name: "com.tempdiary"}  # 앱 실행
-2. (2~3초 대기)
-3. [limbs:android_screenshot]                        # ✅ 화면 확인 (일기 목록 보임)
-4. [limbs:tap]{x: 980, y: 2150}                      # 우하단 + 버튼 탭
-5. [limbs:android_screenshot]                        # ✅ 화면 확인 (일기 작성 폼)
-6. [limbs:tap]{x: 270, y: 1810}                      # "제목을 입력하세요" 필드 탭
-7. [limbs:type_text]{text: "오늘의 일기"}             # 제목 입력
-8. [limbs:android_key]{keycode: "BACK"}              # 키보드 닫기
-9. [limbs:android_screenshot]                        # ✅ 화면 확인 (제목 입력 확인)
-10. [limbs:tap]{x: 270, y: 2020}                     # "오늘 하루는..." 본문 필드 탭
-11. [limbs:type_text]{text: "내용 작성"}              # 본문 입력
-12. [limbs:android_key]{keycode: "BACK"}             # 키보드 닫기
-13. [limbs:swipe]{x1:540, y1:2000, x2:540, y2:800}  # 아래로 스크롤 (저장 버튼 찾기)
-14. [limbs:android_screenshot]                       # ✅ 화면 확인 (저장하기 보임)
-15. [limbs:tap]{x: 360, y: 2060}                     # 저장하기 탭
-16. [limbs:android_screenshot]                       # ✅ 결과 확인 ("저장되었습니다" 다이얼로그)
-```
+### 한계 (정직하게)
 
-**잘못된 패턴** (❌ 절대 하지 마라):
-```
-❌ hierarchy 실패 → find_element 시도 → 또 find_tap 시도  (같은 방법 반복)
-❌ 스크린샷 확인 없이 연속 탭  (어디를 탭하는지 모름)
-❌ 실패했는데 "완료했습니다"라고 보고  (거짓 보고)
-❌ 좌표를 확인 안 하고 추측으로 탭  (screenshot_grid 사용하라)
-```
+- **카카오톡 등 서드파티 메신저는 이 길이 없습니다.** 암호화 로컬 DB라 content provider도 API도 없음 →
+  화면긁기(위 thin 액션)만 가능하고, 대량 집계·정리는 본질적으로 약합니다. **SMS만 구조화 가능.**
+- 통화기록(`content://call_log/calls`)·연락처(`content://contacts`)도 같은 패턴(읽기는 READ_*, 삭제는 WRITE_* appop).
 
-### 알려진 제약사항
+## 보존된 구조화 기능 (백업)
 
-| 제약 | 설명 | 대응 |
-|------|------|------|
-| **FLAG_SECURE 앱** | 정부24, 은행 앱 등은 screencap/uiautomator 차단 | 사용자에게 수동 조작 안내 |
-| **uiautomator 불안정** | hierarchy/find_tap/find_element가 대부분 실패 | **사용 금지** — screenshot + tap(좌표) 사용 |
-| **좌표 추정 오차** | AI 스크린샷 분석 시 축소로 인한 오차 | screenshot_grid(그리드 캘리브레이션) 사용 |
-| **홈 화면 페이지** | 홈 화면 아이콘은 페이지마다 다른 위치 | open_app(패키지명)으로 실행 |
-| **앱 로딩 시간** | 앱이 열리기까지 대기 필요 | 2~4초 대기 후 스크린샷 확인 |
-| **실패 반복** | 같은 방법으로 재시도해도 동일 실패 | 즉시 대안으로 전환, 재시도 금지 |
-| **거짓 완료 보고** | 완료하지 못한 작업을 완료라고 보고 | 현재 상황 + 막힌 이유를 솔직하게 보고 |
-
-### 화면 크기 참고
-
-```python
-android_ui_screen_info()
-# → 일반적으로 1080x2400 (FHD+), 밀도 480dpi
-# → 그리드 기본(5x10): 셀 크기 216x240px
-```
+옛 SMS/통화/연락처/앱관리 등 45개 액션은 `data/packages/_archive/android_full_*/`에 백업되어 있습니다
+(`sms_manager.py`=문자 get/search/delete, `device_info.py`=appops 권한부여). 위 레시피를 자주 쓰게 되면
+이 백업을 바탕으로 `[limbs:android_message]{op}` 액션으로 부활시키되, **함정 3개 + cellbroadcasts**를 반영할 것.
+지금 등록된 건 "화면 조작" 센터피스 하나뿐입니다.

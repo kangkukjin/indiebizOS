@@ -267,3 +267,8 @@ backend/수동모드
 backend/수동모드*
 backend/앱모드
 backend/앱모드*
+
+# phone-companion (안드로이드 로컬 빌드 환경)
+phone-companion/local.properties
+phone-companion/.gradle/
+phone-companion/app/release/

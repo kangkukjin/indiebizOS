@@ -25,9 +25,6 @@ moviepy
 edge-tts
 jinja2
 
-# 음악
-midiutil
-
 # 학술
 arxiv
 

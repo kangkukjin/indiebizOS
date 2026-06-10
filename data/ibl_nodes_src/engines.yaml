@@ -68,27 +68,21 @@
         - 열지도
         - 대시보드
         - 복합차트
-      music:
-        description: 'ABC 작곡 + MIDI + 오디오 통합. stage: full(기본, 작곡→MIDI→오디오) / midi_only(ABC→MIDI) / audio_only(MIDI→오디오).'
-        target_description: |
-          stage로 분기 (기본 full).
-          - full: title(필수) + abc(직접 ABC 전달) 또는 description(AI 작곡 요청). 작곡→MIDI→오디오 전 단계.
-          - midi_only: abc_notation(필수, X:/T:/M:/K: 헤더 포함). ABC→MIDI만.
-          - audio_only: midi_path(필수, MIDI 파일 경로). MIDI→WAV/MP3만. format 옵션(wav/mp3, 기본 mp3).
-        group: music
+      spreadsheet:
+        description: 행 데이터(rows/sheets) → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
+        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
+        group: chart
         router: handler
-        tool: music
-        implementation: stage=full은 compose_and_export(ABC notation 생성→abc2midi→fluidsynth). stage=midi_only는 abc2midi CLI. stage=audio_only는 fluidsynth + GeneralUser GS.sf2.
-        target_key: title
+        tool: spreadsheet
+        implementation: system_essentials handler.py가 openpyxl로 Workbook 생성 — sheets(다중) 또는 rows+headers(단일), 셀은 str/int/float로 강제.
+        target_key: path
         keywords:
-        - 작곡
-        - 악보
-        - ABC
-        - MIDI
-        - 오디오
-        - WAV
-        - MP3
-        - ABC변환
+        - 스프레드시트
+        - 엑셀
+        - xlsx
+        - 표
+        - 시트
+        - 장부
       remotion:
         description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
         target_description: |
@@ -297,86 +291,6 @@
         - 카탈로그
         - shadcn
         - UI
-      lecture_plan:
-        description: '강의 슬라이드 파이프라인 1단계: 메시지 큐레이션(명제 outline). init_skeleton:true로 스켈레톤. 가이드 read_guide(query="강의 슬라이드").'
-        target_description: |
-          outline 배열 또는 init_skeleton=true.
-          - outline 각 항목: {idx, role, title, device, visual, concrete}
-          - role: cover/intro/thesis/closure_table/closure_diagram/quote/outro/reference
-          - device: contrast/chain/equation/scale/hierarchy/none
-          - source, style(notebooklm 등) 옵션
-          notebooklm 스타일은 closure_table+closure_diagram 슬라이드 강제.
-        group: media_produce
-        router: handler
-        tool: create_lecture_plan
-        implementation: '단계 산출물 outline.json + outline.md 저장. 스키마 검증: role(cover/intro/thesis/closure_table/closure_diagram/quote/outro/reference),
-          device(contrast/chain/equation/scale/hierarchy/none), notebooklm 스타일은 closure_table+closure_diagram
-          슬라이드 존재 강제. 산출물 위치 lecture_<id>/outline.{json,md}. 이 단계가 통과해야 lecture_write
-          가능.'
-        achievement_criteria: 모든 슬라이드 제목이 단정문(라벨 X), 5종 수사 장치(contrast/chain/equation/scale/hierarchy)에
-          매핑됨, 이중 회수(closure_table+closure_diagram) 존재, 핵심 명제 누락 없음, 각 슬라이드의 concrete
-          필드에 수치·고유명사 ≥1.
-        keywords:
-        - 강의
-        - 슬라이드 기획
-        - outline
-        - 명제
-      lecture_write:
-        description: '강의 슬라이드 파이프라인 2단계: 슬라이드별 layout/title/labels/image_prompt 집필. only_indices로 부분 갱신.'
-        target_description: |
-          lecture_dir + contents 배열 (각 항목 {idx, layout, title, labels, image_prompt, ...}).
-          - design_system(sf_blueprint 등) 옵션
-          - only_indices: 부분 갱신할 idx 배열
-          - illustration_* 레이아웃은 image_prompt 필수, split_concept은 left/right_image_prompt 필수
-        group: media_produce
-        router: handler
-        tool: create_lecture_write
-        implementation: 'contents.json 저장. 스키마 검증: idx가 outline에 존재, illustration_*
-          레이아웃은 image_prompt 필수, split_concept은 left_image_prompt+right_image_prompt
-          필수. 부분 갱신은 only_indices=[idx,...]로.'
-        achievement_criteria: image_prompt가 다이어그램형(씬 묘사 X)으로 작성됨, 영문 라벨 명시(EYE/MASS
-          등), 한글 라벨 들어갈 빈 공간 명세 포함, 본문 단락을 라벨로 그대로 옮기지 않음, 각 명제를 시각화하는 라벨 배치가 outline의
-          device와 정합.
-        keywords:
-        - 강의
-        - 슬라이드 집필
-        - contents
-      lecture_illustrate:
-        description: '강의 슬라이드 파이프라인 3단계: image_prompt들을 image_gemini로 병렬 호출. only_indices로 약한 일러스트만 재생성.'
-        target_description: |
-          lecture_dir 필수. 옵션:
-          - style_preset(미지정시 design_system 사용)
-          - quality: fast/pro
-          - image_size: 1K/2K/4K
-          - only_indices: 재생성할 idx 배열
-          split_concept은 좌·우 1:1 두 장 생성. 실패한 슬라이드는 manifest 미기록 → 다시 호출.
-        group: media_produce
-        router: handler
-        tool: create_lecture_illustrate
-        implementation: image_gemini를 슬라이드별로 호출, illustrations/manifest.json으로 매니페스트
-          관리. split_concept은 좌·우 1:1 두 장 생성. 부분 재생성 only_indices 지원. 실패한 슬라이드는 manifest에
-          기록 안 됨 — 다시 호출.
-        achievement_criteria: 생성된 일러스트가 다이어그램형이고 한글 미포함, 디자인 시스템 톤 일관, 빈 공간이 정말 비어있음(라벨
-          들어갈 자리), 각 일러스트가 contents.json의 image_prompt 의도와 정합. (VLM 평가는 image_critic
-          액션 참조)
-        keywords:
-        - 강의
-        - 일러스트 생성
-        - illustrate
-      lecture_compose:
-        description: '강의 슬라이드 파이프라인 4단계: contents+illustrations → slide_shadcn → 최종 데크. only_indices로 부분 재합성.'
-        target_description: lecture_dir 필수. only_indices(부분 재합성할 idx 배열) 옵션. 최종 데크는 lecture_dir/deck/에 HTML+PNG로 저장.
-        group: media_produce
-        router: handler
-        tool: create_lecture_compose
-        implementation: contents.json과 illustrations/manifest.json을 병합하여 slide_shadcn에
-          전달. 최종 데크는 lecture_dir/deck/에 HTML+PNG로 저장. only_indices로 약한 슬라이드만 재합성 가능.
-        achievement_criteria: 라벨이 일러스트의 핵심 객체를 가리지 않음, 1280×720 뷰포트 안에 모든 요소가 들어옴,
-          한국어 폰트가 깨지지 않음, 라벨 좌표가 일러스트 빈 공간과 정합.
-        keywords:
-        - 강의
-        - 슬라이드 데크
-        - compose
       image_critic:
         description: 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 반환: passed/score/issues/notes. ILLUSTRATE 단계 자동 평가용.'
         target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. style_preset/checks(추가 체크 배열) 옵션. 기본 체크 — 다이어그램형/한글 미포함/빈 공간/객체 명확성/디자인 톤 일관성. 한글 검출 시 무조건 passed=false.'

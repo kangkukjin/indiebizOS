@@ -1,21 +1,27 @@
-# Desktop 자동화 가이드 (macOS)
+# Screen (데스크톱) 자동화 가이드 (macOS)
 
-`[limbs:desktop]{op: ...}` 단일 액션으로 macOS 데스크톱(브라우저 밖 일반 앱)을 제어한다.
-브라우저는 `[limbs:click]`·`[limbs:type]` 등 browser_action을 사용하라. 데스크톱과 브라우저는 **다른 도구다.**
+`[limbs:screen]{op: ...}` 단일 액션으로 macOS 화면(좌표 기반, 브라우저 밖 일반 앱)을 제어한다. (구 `[limbs:desktop]` — 2026-06-04 개명)
+브라우저는 `[limbs:browser]{op: "click"}`·`[limbs:browser]{op: "type"}` 등 browser_action을 사용하라. 데스크톱과 브라우저는 **다른 도구다.**
 
-## 핵심 원리: Screenshot → 판단 → Action → Screenshot
+## 핵심 원리: Snapshot → 판단 → Action → Snapshot
 
-**브라우저와 가장 큰 차이**: ref ID가 없다. 좌표(x, y)만으로 대상 지정한다.
-좌표를 **추측하지 말 것**. 반드시 screenshot으로 화면을 보고 좌표를 결정한다.
+**좌표를 추측하지 말 것.** 클릭 전에 `snapshot`으로 화면을 **읽어서** 좌표를 얻는다.
+
+- `snapshot` (권장 1순위) — 화면을 **구조로 독해**: UI 요소(역할/이름)와 글자(OCR)를 **클릭 좌표와 함께** 반환. 브라우저 snapshot의 데스크톱 판.
+  - 층1 **AX 접근성 트리**: 버튼/입력칸의 role·title·value + center 좌표 (예: `{role:"AXButton", title:"뒤로", center:[168,120]}`).
+  - 층2 **Vision OCR**: AX가 못 주는 글자(캔버스/이미지)를 center 좌표와 함께.
+  - 좌표는 click과 같은 1280×800 가상공간 → 그대로 `{op:"click", x, y}`.
+- `screenshot` — 픽셀 이미지만 필요할 때(시각 모델로 직접 보기). 좌표 추측이 필요해 snapshot보다 비권장.
 
 ```
-[limbs:desktop]{op: "screenshot"}        # 화면 파악
-→ 이미지 분석 후 클릭할 좌표 결정
-[limbs:desktop]{op: "click", x: 640, y: 400}
-[limbs:desktop]{op: "screenshot"}        # 결과 확인
+[limbs:screen]{op: "snapshot"}                      # 화면 독해 (요소+글자+좌표)
+→ elements/ocr_lines에서 대상의 center 좌표 선택
+[limbs:screen]{op: "click", x: 168, y: 120}         # 정밀 클릭
+[limbs:screen]{op: "snapshot"}                      # 결과 재확인
 ```
 
-원칙: **불확실하면 screenshot.** 매 동작 후에도 결과 검증용 screenshot이 기본이다.
+원칙: **불확실하면 snapshot.** 매 동작 후 결과 검증도 snapshot이 기본이다.
+AX가 0개면(권한 미부여/앱 a11y 미노출) `ocr_lines`로 폴백한다 — 손쉬운 사용 권한을 켜면 AX 구조독해가 살아난다(클릭과 같은 권한).
 
 ---
 
@@ -62,27 +68,27 @@
 
 ### 1) 처음 보는 앱 화면 탐색
 ```
-[limbs:desktop]{op: "screen_info"}              # 권한·해상도 확인
-[limbs:desktop]{op: "screenshot"}               # 전체 화면
+[limbs:screen]{op: "screen_info"}              # 권한·해상도 확인
+[limbs:screen]{op: "screenshot"}               # 전체 화면
 → 이미지 분석으로 클릭 대상 좌표 결정
-[limbs:desktop]{op: "click", x: ..., y: ...}    # 동작 (자동 screenshot 포함)
+[limbs:screen]{op: "click", x: ..., y: ...}    # 동작 (자동 screenshot 포함)
 ```
 
 ### 2) 입력 필드에 텍스트 입력
 필드를 클릭해서 포커스를 먼저 줘야 한다. 직접 type만 호출하면 다른 곳에 입력될 수 있다.
 ```
-[limbs:desktop]{op: "click", x: 600, y: 300}    # 필드 클릭
-[limbs:desktop]{op: "type", text: "안녕하세요"} # 입력
+[limbs:screen]{op: "click", x: 600, y: 300}    # 필드 클릭
+[limbs:screen]{op: "type", text: "안녕하세요"} # 입력
 ```
 
 ### 3) 단축키
 조합키는 `+`로 구분. 키 이름은 pyautogui 표기를 따른다.
 ```
-[limbs:desktop]{op: "key", key: "cmd+c"}        # 복사
-[limbs:desktop]{op: "key", key: "cmd+shift+s"}  # 다른 이름으로 저장
-[limbs:desktop]{op: "key", key: "enter"}        # 엔터
-[limbs:desktop]{op: "key", key: "escape"}       # ESC
-[limbs:desktop]{op: "key", key: "cmd+space"}    # Spotlight (앱 실행)
+[limbs:screen]{op: "key", key: "cmd+c"}        # 복사
+[limbs:screen]{op: "key", key: "cmd+shift+s"}  # 다른 이름으로 저장
+[limbs:screen]{op: "key", key: "enter"}        # 엔터
+[limbs:screen]{op: "key", key: "escape"}       # ESC
+[limbs:screen]{op: "key", key: "cmd+space"}    # Spotlight (앱 실행)
 ```
 
 자주 쓰는 키: `enter`, `tab`, `escape`, `space`, `backspace`, `delete`,
@@ -90,13 +96,13 @@
 
 ### 4) 드래그 (파일 이동·창 크기 조정)
 ```
-[limbs:desktop]{op: "drag", start_x: 200, start_y: 400, end_x: 800, end_y: 400}
+[limbs:screen]{op: "drag", start_x: 200, start_y: 400, end_x: 800, end_y: 400}
 ```
 
 ### 5) 긴 페이지 스크롤
 스크롤은 좌표 생략 시 현재 커서 위치 기준.
 ```
-[limbs:desktop]{op: "scroll", direction: "down", amount: 5}
+[limbs:screen]{op: "scroll", direction: "down", amount: 5}
 ```
 
 ---
@@ -105,10 +111,10 @@
 
 | 상황 | 사용할 도구 |
 |---|---|
-| Safari/Chrome 안의 웹페이지 | `[limbs:navigate]` + `[limbs:click]{ref}` (browser_action) |
-| Finder, Notion, Slack 데스크톱 앱, 시스템 환경설정 | `[limbs:desktop]{op}` |
-| macOS 전역 단축키 (Cmd+Space, Mission Control 등) | `[limbs:desktop]{op: "key"}` |
-| 웹페이지 안 요소 클릭 | `[limbs:click]{ref}` (정확) > `[limbs:desktop]{op: "click", x, y}` (좌표 추측 = 약함) |
+| Safari/Chrome 안의 웹페이지 | `[limbs:browser]{op: "navigate"}` + `[limbs:browser]{op: "click", ref}` (browser_action) |
+| Finder, Notion, Slack 데스크톱 앱, 시스템 환경설정 | `[limbs:screen]{op}` |
+| macOS 전역 단축키 (Cmd+Space, Mission Control 등) | `[limbs:screen]{op: "key"}` |
+| 웹페이지 안 요소 클릭 | `[limbs:browser]{op: "click", ref}` (정확) > `[limbs:screen]{op: "click", x, y}` (좌표 추측 = 약함) |
 
 **원칙**: 가능하면 browser_*. 좌표보다 ref가 정확하다. desktop은 브라우저로 접근 불가한 영역에만.
 
@@ -142,24 +148,24 @@
 
 ### Spotlight로 앱 실행
 ```
-[limbs:desktop]{op: "key", key: "cmd+space"}
-[limbs:desktop]{op: "type", text: "Calculator"}
-[limbs:desktop]{op: "key", key: "enter"}
+[limbs:screen]{op: "key", key: "cmd+space"}
+[limbs:screen]{op: "type", text: "Calculator"}
+[limbs:screen]{op: "key", key: "enter"}
 ```
 
 ### Finder에서 파일 복사 → 다른 폴더에 붙여넣기
 ```
-[limbs:desktop]{op: "screenshot"}
+[limbs:screen]{op: "screenshot"}
 → 파일 위치 확인
-[limbs:desktop]{op: "click", x: ..., y: ...}    # 파일 선택
-[limbs:desktop]{op: "key", key: "cmd+c"}
+[limbs:screen]{op: "click", x: ..., y: ...}    # 파일 선택
+[limbs:screen]{op: "key", key: "cmd+c"}
 → 대상 폴더로 이동
-[limbs:desktop]{op: "key", key: "cmd+v"}
+[limbs:screen]{op: "key", key: "cmd+v"}
 ```
 
 ### 화면 일부만 캡처해서 분석
 ```
-[limbs:desktop]{op: "screenshot", x: 0, y: 0, width: 640, height: 400}
+[limbs:screen]{op: "screenshot", x: 0, y: 0, width: 640, height: 400}
 ```
 
 ---

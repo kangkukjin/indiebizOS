@@ -104,6 +104,8 @@ def execute(tool_input: dict, context) -> str:
                 fmt = "pdf"
             elif ext in ("docx", "doc"):
                 fmt = "docx"
+            elif ext in ("xlsx", "xlsm"):
+                fmt = "xlsx"
             else:
                 fmt = "text"
         # 분기 후 tool_name 재할당해 기존 코드로 위임
@@ -111,6 +113,8 @@ def execute(tool_input: dict, context) -> str:
             tool_name = "read_pdf"
         elif fmt == "docx":
             tool_name = "read_docx"
+        elif fmt == "xlsx":
+            tool_name = "read_xlsx"
         else:
             tool_name = "read_file"
 
@@ -653,6 +657,131 @@ def execute(tool_input: dict, context) -> str:
 
             except Exception as e:
                 return json.dumps({"success": False, "error": f"DOCX를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
+
+        elif tool_name == "read_xlsx":
+            import openpyxl
+
+            file_path = tool_input.get("file_path") or tool_input.get("path")
+            sheet_name = tool_input.get("sheet")  # 특정 시트만 (생략 시 전체)
+            try:
+                max_rows = int(tool_input.get("max_rows", 200) or 200)
+            except (TypeError, ValueError):
+                max_rows = 200
+
+            if not file_path:
+                return json.dumps({"success": False, "error": "file_path가 제공되지 않았습니다."}, ensure_ascii=False)
+
+            path = Path(file_path)
+            if not path.is_absolute():
+                path = Path(project_path) / path
+            if not path.exists():
+                return json.dumps({"success": False, "error": f"파일을 찾을 수 없습니다: {path}"}, ensure_ascii=False)
+
+            try:
+                # read_only=True(대용량 안전), data_only=True(수식 대신 계산값)
+                wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+                all_sheets = list(wb.sheetnames)
+                targets = [sheet_name] if sheet_name else all_sheets
+
+                parts = []
+                for sn in targets:
+                    if sn not in all_sheets:
+                        parts.append(f"### 시트: {sn} — 없음")
+                        continue
+                    ws = wb[sn]
+                    rows_text = []
+                    truncated = False
+                    for i, row in enumerate(ws.iter_rows(values_only=True)):
+                        if i >= max_rows:
+                            truncated = True
+                            break
+                        cells = ["" if c is None else str(c) for c in row]
+                        rows_text.append("\t".join(cells))
+                    header = f"### 시트: {sn} ({ws.max_row}행 × {ws.max_column}열)"
+                    if truncated:
+                        header += f" — 처음 {max_rows}행만 (max_rows로 조정)"
+                    parts.append(header + "\n" + "\n".join(rows_text))
+                wb.close()
+
+                return json.dumps({
+                    "success": True,
+                    "sheet_count": len(all_sheets),
+                    "sheets": all_sheets,
+                    "text": "\n\n".join(parts),
+                }, ensure_ascii=False)
+
+            except Exception as e:
+                return json.dumps({"success": False, "error": f"XLSX를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
+
+        elif tool_name == "spreadsheet":
+            # [engines:spreadsheet] — 행 데이터 → xlsx 산출 (값만, 수식/서식은 범위 밖)
+            import openpyxl
+
+            raw_path = _get_path(tool_input)
+            if not raw_path:
+                return json.dumps({"success": False, "error": "출력 파일 경로(path)가 지정되지 않았습니다."}, ensure_ascii=False)
+            if not raw_path.lower().endswith((".xlsx", ".xlsm")):
+                raw_path += ".xlsx"
+            path = os.path.join(project_path, raw_path)
+
+            # write_file과 동일: bare 파일명 → outputs/ 리다이렉트
+            redirected = False
+            if (not os.path.isabs(raw_path)
+                    and os.sep not in raw_path and '/' not in raw_path
+                    and not os.path.exists(path)):
+                raw_path = os.path.join("outputs", raw_path)
+                path = os.path.join(project_path, raw_path)
+                redirected = True
+
+            scope_err = _validate_path_in_scope(path, project_path)
+            if scope_err:
+                return scope_err
+
+            def _coerce(cell):
+                # openpyxl이 받는 타입(str/int/float/bool/None)으로 강제
+                if cell is None or isinstance(cell, (str, int, float, bool)):
+                    return cell
+                return str(cell)
+
+            def _fill(ws, rows):
+                for r in (rows or []):
+                    if isinstance(r, (list, tuple)):
+                        ws.append([_coerce(c) for c in r])
+                    else:
+                        ws.append([_coerce(r)])
+
+            try:
+                sheets = tool_input.get("sheets")
+                wb = openpyxl.Workbook()
+                if sheets and isinstance(sheets, dict):
+                    # 다중 시트: {시트명: rows}
+                    first = True
+                    for sn, srows in sheets.items():
+                        ws = wb.active if first else wb.create_sheet()
+                        ws.title = str(sn)[:31]  # xlsx 시트명 최대 31자
+                        _fill(ws, srows)
+                        first = False
+                    sheet_summary = list(sheets.keys())
+                else:
+                    # 단일 시트: rows (+ 선택 headers)
+                    ws = wb.active
+                    ws.title = str(tool_input.get("sheet_name", "Sheet1"))[:31]
+                    headers = tool_input.get("headers")
+                    if headers:
+                        ws.append([_coerce(c) for c in headers])
+                    _fill(ws, tool_input.get("rows"))
+                    sheet_summary = [ws.title]
+
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                wb.save(path)
+                abs_path = os.path.abspath(path)
+                result = {"success": True, "path": abs_path, "sheets": sheet_summary}
+                if redirected:
+                    result["redirected_to"] = "outputs/"
+                return json.dumps(result, ensure_ascii=False)
+
+            except Exception as e:
+                return json.dumps({"success": False, "error": f"XLSX를 쓰는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
 
         elif tool_name == "todo_write":
             todos = tool_input.get("todos", [])

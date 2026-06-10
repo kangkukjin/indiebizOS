@@ -12,7 +12,7 @@
         "properties": {
           "code": {
             "type": "string",
-            "description": "IBL 코드. 예: [sense:search_ddg]{query: \"AI 뉴스\"}, [sense:stock]{op: \"info\", ticker: \"AAPL\"} >> [self:file]{path: \"result.md\"}"
+            "description": "IBL 코드. 예: [sense:search_ddg]{query: \"AI 뉴스\"}, [sense:stock]{op: \"info\", ticker: \"AAPL\"} >> [self:output]{op: \"file\", path: \"result.md\"}"
           }
         },
         "required": [

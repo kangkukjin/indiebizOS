@@ -49,9 +49,16 @@ IndieBiz OS는 GUI 외에도 Gmail, Nostr 등 외부 채널을 통해 사용자 
 
 ### Nostr (실시간 WebSocket)
 - **인증**: nsec 개인키 (NIP-01)
-- **수신**: 실시간 WebSocket (릴레이 구독)
-- **발송**: NIP-04 암호화 DM
+- **수신**: 실시간 WebSocket (릴레이 구독). DM 조회는 전체 릴레이 fan-out + dedup (`_query_relays` — 단일 릴레이만 읽던 버그 수정됨)
+- **발송**: **NIP-17 gift-wrap DM** (2026-06-05 전환 — 최신 클라이언트 0xchat 등에서 수신 확인). 구 `send_dm`(NIP-04)은 보존, 수신은 NIP-04(kind:4) + NIP-17(kind:1059) 병행
+- **모듈**: `backend/nip44.py` (NIP-44 암호화, 공식 테스트 벡터 150/150 통과) + `backend/nip17.py` (gift-wrap). DM inbox relay 선언(kind:10050) 자동 발행
 - **기본 릴레이**: wss://relay.damus.io, wss://relay.nostr.band, wss://nos.lol, wss://relay.primal.net, wss://nostr.wine
+
+### 폰 컴패니언 피드 (한방향 센서, 대화 채널과 분리)
+폰의 네이티브 컴패니언 앱(`phone-companion/`, NotificationListenerService)이 알림·위치·걸음수를 NIP-17 DM으로 전송:
+- **수신/저장**: `backend/phone_notifications.py` → `data/phone_notifications.db` (대화용 channel_poller와 분리된 한방향 피드)
+- **인가**: `data/phone_agent.json`의 pubkey만 수용, 그 외 발신자 무시
+- **조회**: `[sense:phone]{op: notifications|location|steps}` 또는 `/phone/*` API — "지금 폰에 연락 오나"의 정답 소스
 
 ### IndieNet 연동
 Nostr 키는 IndieNet identity와 연동 가능:
@@ -385,4 +392,4 @@ agents:
 4. **Nostr 키 관리**: nsec는 채널 설정 또는 IndieNet에서 관리
 
 ---
-*마지막 업데이트: 2026-04-05 (auto_response.md 통합)*
+*마지막 업데이트: 2026-06-10 — Nostr DM NIP-17 전환(nip44/nip17 모듈, 전 릴레이 fan-out 수신) + 폰 컴패니언 피드(한방향 센서) 추가. 이전: 2026-04-05 (auto_response.md 통합)*

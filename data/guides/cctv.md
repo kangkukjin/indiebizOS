@@ -44,8 +44,8 @@ CCTV 조회는 **`[sense:cctv]` 하나**로 통합되어 있다. `op`로 검색 
 | CCTV 검색(좌표) | `[sense:cctv]{op:"nearby"}` | `[sense:cctv]{op: "nearby", lat: 37.49, lng: 127.03}` |
 | 해외 경치 웹캠(좌표) | `[sense:cctv]{op:"webcam"}` | `[sense:cctv]{op: "webcam", lat: 21.31, lng: -157.86, radius_km: 50}` |
 | 영상 열기/캡처 | `[limbs:cctv]{op}` | `[limbs:cctv]{op: "open", name: "시청"}` / `{op: "capture", url: "..."}` |
-| 데이터 통계 | `[self:cctv_stats]` | `[self:cctv_stats]` |
-| UTIC 캐시 갱신 | `[self:cctv_refresh]` | `[self:cctv_refresh]` |
+| 데이터 통계(전체 소스) | `[self:cctv]{op:"stats"}` | `[self:cctv]` (기본 op=stats) |
+| UTIC 캐시 갱신 | `[self:cctv]{op:"refresh"}` | `[self:cctv]{op: "refresh"}` |
 
 ### CCTV 영상 열기 / 캡처 (조작 = limbs)
 
@@ -73,7 +73,7 @@ CCTV 조회는 **`[sense:cctv]` 하나**로 통합되어 있다. `op`로 검색 
 UTIC(도시교통정보센터)는 전국 시내 도로 CCTV 16,000+대를 실시간 API로 제공한다.
 - 엔드포인트: `http://www.utic.go.kr/map/mapcctv.do` · 인증: UTIC_API_KEY + Referer 헤더
 - 반환: cctvname, lat, lng, kind(1=시내, 7=고속도로), cctvurl(HLS), stream_id
-- `[self:cctv_refresh]`로 수동 갱신 (보통 자동 캐시로 충분)
+- `[self:cctv]{op: "refresh"}`로 수동 갱신 (보통 자동 캐시로 충분)
 
 ---
 

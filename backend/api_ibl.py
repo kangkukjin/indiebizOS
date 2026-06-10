@@ -12,6 +12,8 @@ class IBLRequest(BaseModel):
     code: str
     project_id: Optional[str] = None   # 수동/앱 모드 등 표면이 자기 프로젝트를 지정
     project_path: str = "."
+    agent_id: Optional[str] = None     # 발신 신원(channel_send/read 게이트). out-of-process 프로바이더(Claude Code)가
+                                       # MCP→HTTP로 자기 agent_id를 실어 보내는 통로. None이면 신원 없음(외부 채널 차단).
 
 
 class TranslateRequest(BaseModel):
@@ -47,7 +49,7 @@ async def execute_ibl_code(req: IBLRequest):
                 project_path = str(p.resolve())
 
         from system_tools import _execute_ibl_unified
-        result = _execute_ibl_unified({"code": req.code}, project_path)
+        result = _execute_ibl_unified({"code": req.code}, project_path, agent_id=req.agent_id)
 
         # 결과가 str이면 JSON 파싱 시도. 실패 시 plain text로 wrap.
         # (일부 IBL 액션은 JSON이 아닌 평문/markdown/빈문자열을 반환)

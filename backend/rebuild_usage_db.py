@@ -56,7 +56,7 @@ EXAMPLES = [
     ("타임스퀘어 웹캠 검색", '[sense:webcam]{query: "Times Square", category: "city"}', "sense", "single", 1, "sense,webcam"),
     ("서울역 근처 CCTV", '[sense:cctv]{op: "search", query: "서울역"}', "sense", "single", 1, "sense,cctv"),
     ("CCTV 영상 열어줘", '[limbs:cctv]{op: "open", name: "CCTV이름"}', "sense", "single", 1, "sense,cctv_open"),
-    ("CCTV 소스 상태 확인", '[sense:cctv_sources]', "sense", "single", 1, "sense,cctv_sources"),
+    ("CCTV 소스 상태 확인", '[self:cctv]{op: "stats"}', "self", "single", 1, "self,cctv"),
 
     # file / output
     ("결과를 파일로 저장해", '[self:local_save]{path: "result.md"}', "self", "single", 1, "self,file"),
@@ -299,9 +299,6 @@ EXAMPLES = [
     ("영상 만들어줘", '[engines:html_video]{topic: "회사 소개"}', "engines", "single", 1, "engines,html_video"),
     ("TTS로 음성 변환해줘", '[engines:tts]{text: "안녕하세요, 오늘 뉴스입니다"}', "engines", "single", 1, "engines,tts"),
 
-    # 음악/작곡
-    ("피아노곡 작곡해줘", '[engines:music]{title: "편안한 피아노 소품"}', "engines", "single", 1, "engines,music"),
-
     # AI 이미지
     ("AI 이미지 만들어줘", '[engines:image_gemini]{prompt: "아름다운 한국 산 풍경"}', "engines", "single", 1, "engines,image_gemini"),
 
@@ -319,11 +316,11 @@ EXAMPLES = [
     # =========================================================================
 
     # 브라우저
-    ("이 사이트 Playwright로 열어", '[limbs:navigate]{url: "https://google.com"}', "limbs", "single", 1, "limbs,browser_navigate"),
-    ("페이지 스냅샷 찍어", '[limbs:snapshot]', "limbs", "single", 1, "limbs,snapshot"),
-    ("스크린샷 찍어줘", '[limbs:screenshot]', "limbs", "single", 1, "limbs,screenshot"),
-    ("페이지 내용 추출해", '[limbs:content]', "limbs", "single", 1, "limbs,browser_content"),
-    ("JavaScript 실행해줘", '[limbs:evaluate]{expression: "document.title"}', "limbs", "single", 1, "limbs,evaluate"),
+    ("이 사이트 Playwright로 열어", '[limbs:browser]{op: "navigate", url: "https://google.com"}', "limbs", "single", 1, "limbs,browser_navigate"),
+    ("페이지 스냅샷 찍어", '[limbs:browser]{op: "snapshot"}', "limbs", "single", 1, "limbs,snapshot"),
+    ("스크린샷 찍어줘", '[limbs:browser]{op: "screenshot"}', "limbs", "single", 1, "limbs,screenshot"),
+    ("페이지 내용 추출해", '[limbs:browser]{op: "content"}', "limbs", "single", 1, "limbs,browser_content"),
+    ("JavaScript 실행해줘", '[limbs:browser]{op: "evaluate", expression: "document.title"}', "limbs", "single", 1, "limbs,evaluate"),
 
     # 안드로이드
     ("연결된 기기 목록 보여줘", '[limbs:android_devices]', "limbs", "single", 1, "limbs,android_devices"),
@@ -334,7 +331,7 @@ EXAMPLES = [
     ("안드로이드 관리창 열어줘", '[limbs:manager]', "limbs", "single", 1, "limbs,manager"),
 
     # 데스크탑
-    ("Mac 화면 캡처해줘", '[limbs:desktop]{op: "screenshot"}', "limbs", "single", 1, "limbs,desktop_screenshot"),
+    ("Mac 화면 캡처해줘", '[limbs:screen]{op: "screenshot"}', "limbs", "single", 1, "limbs,desktop_screenshot"),
 
     # =========================================================================
     # others 노드 — 통신

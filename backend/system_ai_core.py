@@ -118,7 +118,7 @@ def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAge
 # ============ 중급 모델 전환 헬퍼 ============
 
 def _switch_to_midtier(runner):
-    """EXECUTE/reflex 경로에서 중급 모델로 provider 전환. 전환 성공 시 원래 provider 반환."""
+    """reflex(해마 고확신) 경로에서 중급 모델로 provider 전환. 전환 성공 시 원래 provider 반환."""
     try:
         from consciousness_agent import _get_midtier_provider
         midtier = _get_midtier_provider()
@@ -129,6 +129,12 @@ def _switch_to_midtier(runner):
         # 중급 provider에 현재 시스템 프롬프트와 도구 설정 복사
         midtier.system_prompt = runner.ai._provider.system_prompt
         midtier.tools = runner.ai._provider.tools
+        # 발신 신원·컨텍스트도 복사 — 중급 provider가 spawn하는 subprocess(claude)가
+        # 시스템 AI 신원(agent_id="system_ai")을 갖고 가야 channel_send/read 게이트를 통과한다.
+        # (agent_communication.py의 프로젝트AI 전환과 동일. 빠지면 EXECUTE 경로에서 identity 유실 → "identity 없음".)
+        midtier.agent_id = runner.ai._provider.agent_id
+        midtier.project_path = runner.ai._provider.project_path
+        midtier.agent_name = runner.ai._provider.agent_name
 
         # Gemini provider의 경우 도구 캐시 재구축
         if hasattr(midtier, '_cached_gemini_tools') and midtier.tools:
@@ -184,8 +190,8 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     original_provider = None
     if request_type == "THINK":
         consciousness_output = runner._run_consciousness_or_reuse(message, history or [], execution_memory)
-    else:
-        # EXECUTE/reflex: 중급 모델로 전환
+    elif reflex_hint:
+        # reflex(해마 고확신)만 중급 모델 — 무의식 EXECUTE는 본격 모델 유지 (오분류 품질 방어)
         original_provider = _switch_to_midtier(runner)
 
     # Clarification fast-path — 정보 부족 시 의식이 만든 질문을 그대로 응답으로 반환.
@@ -294,8 +300,8 @@ def process_system_ai_message_stream(
     original_provider = None
     if request_type == "THINK":
         consciousness_output = runner._run_consciousness_or_reuse(message, history or [], execution_memory)
-    else:
-        # EXECUTE/reflex: 중급 모델로 전환
+    elif reflex_hint:
+        # reflex(해마 고확신)만 중급 모델 — 무의식 EXECUTE는 본격 모델 유지 (오분류 품질 방어)
         original_provider = _switch_to_midtier(runner)
 
     # Clarification fast-path — 정보 부족 시 텍스트/종료 이벤트만 흘리고 종료.

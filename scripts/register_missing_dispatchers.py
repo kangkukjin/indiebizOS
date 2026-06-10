@@ -33,7 +33,6 @@ ADDITIONS = [
     ("health_op",      "health-record",    "self",    "health"),
     ("read_op",        "system_essentials","self",    "read"),
     ("html_video",     "media_producer",   "engines", "html_video"),
-    ("music",          "music-composer",   "engines", "music"),
     ("remotion",       "remotion-video",   "engines", "remotion"),
     ("web_site",       "web-builder",      "engines", "web_site"),
     ("web_catalog",    "web-builder",      "engines", "web_catalog"),

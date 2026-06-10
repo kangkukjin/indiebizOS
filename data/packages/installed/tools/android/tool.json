@@ -1,0 +1,88 @@
+{
+  "id": "android",
+  "name": "Android Phone Control",
+  "description": "ADB(uiautomator)로 안드로이드 폰 화면을 독해·터치·입력하는 얇은 센터피스. snapshot으로 요소를 읽고 ref/좌표로 조작.",
+  "version": "2.0.0",
+  "tools": [
+    {
+      "name": "android_op",
+      "description": "안드로이드 폰 화면 조작 단일 디스패처. op으로 snapshot/tap/type/swipe/key/long_press/open_app 분기 (기본 snapshot). 흐름: snapshot → tap/type → (입력 후 동적 버튼은) snapshot 재실행.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": ["snapshot", "tap", "type", "swipe", "key", "long_press", "open_app"],
+            "default": "snapshot",
+            "description": "수행할 동작"
+          },
+          "query": {
+            "type": "string",
+            "description": "tap 대상 요소의 라벨/content-desc/resource-id 일부 (op=tap, 가장 견고)"
+          },
+          "index": {
+            "type": "integer",
+            "description": "query 결과가 여럿일 때 몇 번째 (op=tap, 기본 0)"
+          },
+          "x": {
+            "type": "integer",
+            "description": "탭/롱프레스 X 좌표 (snapshot이 준 좌표; op=tap/long_press)"
+          },
+          "y": {
+            "type": "integer",
+            "description": "탭/롱프레스 Y 좌표 (op=tap/long_press)"
+          },
+          "text": {
+            "type": "string",
+            "description": "입력할 텍스트 (op=type; 한글은 IndieBiz IME 필요)"
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["up", "down", "left", "right"],
+            "description": "스와이프/스크롤 방향 (op=swipe)"
+          },
+          "x1": {"type": "integer", "description": "스와이프 시작 X (op=swipe, 좌표 방식)"},
+          "y1": {"type": "integer", "description": "스와이프 시작 Y (op=swipe, 좌표 방식)"},
+          "x2": {"type": "integer", "description": "스와이프 끝 X (op=swipe, 좌표 방식)"},
+          "y2": {"type": "integer", "description": "스와이프 끝 Y (op=swipe, 좌표 방식)"},
+          "duration_ms": {"type": "integer", "description": "스와이프/롱프레스 지속 시간 ms"},
+          "key": {
+            "type": "string",
+            "description": "시스템 키 (op=key): back/home/enter/recent/delete/menu 등"
+          },
+          "package_name": {
+            "type": "string",
+            "description": "실행할 앱 패키지명 (op=open_app), 예: com.kakao.talk"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "기기 ID (생략 시 첫 번째 연결 기기)"
+          }
+        }
+      }
+    },
+    {
+      "name": "phone_op",
+      "description": "폰 컴패니언 sense 피드 조회. 폰 에이전트가 보낸 알림/위치/걸음을 읽음(USB-ADB 불필요). op=notifications(기본): 최근 폰 알림 — '지금 폰에 연락/알림 오나'의 정답 소스. location: 최근 위치. steps: 일별 걸음수.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": ["notifications", "location", "steps"],
+            "default": "notifications",
+            "description": "조회 종류"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "가져올 개수 (기본 20)"
+          },
+          "pkg": {
+            "type": "string",
+            "description": "특정 앱 패키지만 필터 (op=notifications), 예: com.kakao.talk"
+          }
+        }
+      }
+    }
+  ]
+}

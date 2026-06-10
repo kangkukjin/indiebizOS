@@ -70,18 +70,9 @@ def execute(tool_input: dict, context) -> str:
         sys.modules["slide_author"] = slide_author
         spec.loader.exec_module(slide_author)
         return slide_author.create_slide(tool_input, output_base)
-    elif tool_name in ("create_lecture_plan", "create_lecture_write",
-                       "create_lecture_illustrate", "create_lecture_compose"):
-        # 강의 슬라이드 4단계 파이프라인 (별도 모듈)
-        import importlib.util
-        import sys
-        module_path = os.path.join(os.path.dirname(__file__), "lecture_pipeline.py")
-        spec = importlib.util.spec_from_file_location("lecture_pipeline", module_path)
-        lecture_pipeline = importlib.util.module_from_spec(spec)
-        sys.modules["lecture_pipeline"] = lecture_pipeline
-        spec.loader.exec_module(lecture_pipeline)
-        func = getattr(lecture_pipeline, tool_name)
-        return func(tool_input, output_base)
+    # (2026-06-04 은퇴) create_lecture_plan/write/illustrate/compose 4단계 파이프라인 제거.
+    # 강의 = AI가 lecture_slide_principles.md 가이드로 계획 → [engines:slide] × N(같은 style, & 병렬).
+    # 계획은 인지(가이드+추론)지 액션 아님 (ibl_design_philosophy Mode C).
 
     return f"알 수 없는 도구: {tool_name}"
 

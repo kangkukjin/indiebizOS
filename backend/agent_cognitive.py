@@ -1123,7 +1123,7 @@ AI: {ai_response[:500]}"""
             if "달성기준:" in task_framing:
                 return task_framing.split("달성기준:")[-1].strip().rstrip(".")
 
-        # 3차: 도구 실행 결과에 박힌 액션 메타 마커 (lecture_pipeline 등)
+        # 3차: 도구 실행 결과에 박힌 액션 메타 마커 (achievement_criteria 마커 등)
         if tool_results_str:
             marker_pat = re.compile(
                 r"\[ACHIEVEMENT_CRITERIA:([^\]]+)\]\s*(.+?)\s*\[/ACHIEVEMENT_CRITERIA\]",

@@ -1,5 +1,5 @@
 # World Pulse — 오늘의 세계와 나 (자동 주입)
-수집 시각: 2026-06-04T03:29
+수집 시각: 2026-06-10T09:29
 
 > 이 정보는 대화 시작 시 시스템 프롬프트에 자동 포함됩니다.
 > 사용자가 '요즘 세상은 어때', '오늘 경제 상황' 등을 물으면
@@ -16,30 +16,26 @@
 
 ## 시스템 상태
 - 프로젝트 24개, 에이전트 33개 활성
-- 최근 대화: 멈췄다. (시스템 AI) / 지금도 라디오 소리가 나오고 있어. (시스템 AI)
 - 오늘 예정: 없음
-- 저장소 여유: 321.4GB
+- 저장소 여유: 316.3GB
 
 ## 시스템 건강
 - scheduler: 정상
 - channel_poller: 정상
 - system_ai_runner: 정상
-- ⚠ 비정상 액션 (6개): engines:tts, self:run_pipeline, sense:collect_sites, sense:crypto, sense:kosis, sense:paper
+- ⚠ 비정상 액션 (1개): sense:kosis
 
 ## 자가점검 패턴 분석
-- 만성 실패: self:run_pipeline, sense:collect_sites, sense:crypto, sense:kosis
-- 성공률 하락: engines:tts (100% → 0%)
-- 성공률 하락: sense:paper (100% → 50%)
-- 응답 느려짐: engines:newspaper (872ms → 6194ms)
-- 응답 느려짐: self:manage_events (1ms → 2ms)
-- 응답 느려짐: self:storage (3ms → 6ms)
-- 응답 느려짐: sense:commercial (123ms → 1917ms)
-- 응답 느려짐: sense:search_books (392ms → 980ms)
-- 응답 느려짐: sense:search_naver (124ms → 333ms)
-- 복구됨: engines:slide_shadcn, limbs:music, self:trigger, sense:book, sense:cctv, sense:commercial, sense:realty, sense:stock
+- 만성 실패: sense:kosis
+- 성공률 하락: sense:realty (100% → 50%)
+- 응답 느려짐: engines:slide (16152ms → 42914ms)
+- 응답 느려짐: others:channel_read (2ms → 391ms)
+- 응답 느려짐: others:channel_send (1ms → 1263ms)
+- 응답 느려짐: self:trigger (0ms → 2ms)
+- 복구됨: engines:slide, limbs:radio, self:trigger, sense:crypto
 
 ## Digital Proprioception
-- 메모리: 461.5MB
-- CPU: 90.0%
-- 스레드: 21개
+- 메모리: 446.7MB
+- CPU: 0.1%
+- 스레드: 13개
 - 태스크: 실행 0개 / 대기 0개

@@ -82,17 +82,6 @@ pip install finance-datareader yfinance
 pip install pillow moviepy edge-tts jinja2
 ```
 
-**music-composer** (음악 작곡)
-```bash
-# Python 패키지
-pip install midiutil
-
-# 시스템 도구 (선택사항 - MIDI를 오디오로 변환)
-# macOS: brew install fluidsynth timidity
-# Windows: FluidSynth 또는 TiMidity++ 설치
-# Linux: sudo apt install fluidsynth timidity
-```
-
 **remotion-video** (Remotion 영상)
 ```bash
 # Node.js 패키지 (자동 설치됨)

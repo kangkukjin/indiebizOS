@@ -190,7 +190,6 @@ agents:
 | **미디어** | media_producer | 슬라이드, 동영상, AI 이미지 생성 |
 | | remotion-video | React/Remotion 기반 동영상 생성 |
 | | photo-manager | 사진 메타데이터 수집, 갤러리 |
-| | music-composer | ABC 악보 기반 작곡, MIDI 생성 |
 | | youtube | YouTube 영상 정보, 자막, 다운로드 |
 | **금융/투자** | investment | 주가, 재무제표, 공시, 암호화폐 분석 |
 | | real-estate | 부동산 실거래가 API |

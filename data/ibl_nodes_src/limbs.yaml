@@ -1,227 +1,58 @@
   limbs:
     actions:
-      snapshot:
-        description: Playwright 접근성 트리 스냅샷. 요소마다 ref ID 부여 — 이후 click/type 등이 ref로 대상 지정.
+      browser:
+        description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
+        target_description: 'op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).'
         group: browser
-        target_description: '(파라미터 없음 — 현재 페이지의 ref 트리 반환)'
-        router: handler
-        tool: browser_snapshot
-        implementation: Playwright 접근성 트리 스냅샷으로 DOM 요소 ref 매핑
-      click:
-        description: 브라우저 요소 클릭 (op 분기). single/double/right.
-        group: browser
-        target_description: 'ref ID 또는 selector로 대상 지정. double은 표 셀 편집·파일 열기, right는 컨텍스트 메뉴.'
         target_key: op
         router: handler
-        tool: browser_click_op
+        tool: browser_op
         ops:
-          default: single
+          default: snapshot
           values:
-            single: 좌클릭 (기본)
-            double: 더블클릭 — 표 셀 편집·파일 열기
-            right: 우클릭 — 컨텍스트 메뉴
-        implementation: Playwright locator.click/dblclick/contextual_click op 분기 (ref 기반)
+            snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)
+            navigate: 페이지 이동 (mode goto|back|forward; goto는 url)
+            click: 요소 클릭 (ref; mode single|double|right)
+            type: 입력 필드에 텍스트 입력 (ref, text)
+            press_key: 키보드 키 입력 (Enter/Tab/Escape 등)
+            hover: 요소에 마우스 호버 (ref)
+            drag: 드래그 앤 드롭 (source_ref→target_ref)
+            select: select 박스 옵션 선택 (ref, value/label)
+            check: 체크박스·라디오 토글 (ref)
+            upload_file: 파일 input에 업로드 (ref, path)
+            scroll: 페이지 스크롤 (up/down)
+            wait: 조건 대기 (selector/url/text/networkidle)
+            content: 페이지 콘텐츠 추출 (mode text|html)
+            screenshot: 페이지 스크린샷 PNG 저장 (path, full_page)
+            vision: 스크린샷 base64 반환 (AI 시각 인식용)
+            evaluate: JavaScript 표현식 실행 (expression)
+            pdf: 페이지를 PDF로 저장 (path)
+            find: 자연어로 요소 검색 (query; Chrome MCP 전용)
+            logs: 브라우저 로그 (mode console|network)
+            dialog_info: Alert/Confirm/Prompt 팝업 정보
+            resize: 뷰포트 크기 변경 (width/height)
+            close: 브라우저 세션 종료
+            tab: 탭 관리 (mode list|new|switch|close)
+            iframe: iframe 관리 (mode list|switch|reset)
+            cookies: 쿠키 저장·복원 (mode save|load)
+            chrome: Chrome MCP 원격 제어 (mode connect|disconnect|status)
         keywords:
+        - 브라우저
+        - 웹 자동화
         - 클릭
-        - 더블클릭
-        - 우클릭
-        - 컨텍스트메뉴
-      type:
-        description: 입력 필드(input/textarea)에 텍스트 입력. ref로 대상 지정.
-        group: browser
-        target_description: ref ID. text 파라미터로 입력 내용 전달.
-        router: handler
-        tool: browser_type
-        implementation: Playwright locator로 입력 필드에 텍스트 입력
-        target_key: ref
-      screenshot:
-        description: Playwright 페이지 스크린샷 PNG 저장. 시각 검증·기록용.
-        group: browser
-        target_description: '(파라미터 없음). path 옵션으로 저장 경로, full_page로 전체 영역 캡처.'
-        router: handler
-        tool: browser_screenshot
-        implementation: Playwright page.screenshot()으로 PNG 캡처
-      scroll:
-        description: Playwright 페이지 스크롤 (up/down). 무한 스크롤 페이지 로딩이나 화면 이동에 사용.
-        group: browser
-        target_description: '(파라미터 없음). direction (up/down), pixels로 양 지정.'
-        router: handler
-        tool: browser_scroll
-        implementation: Playwright mouse.wheel()로 페이지 스크롤
-      evaluate:
-        description: 페이지에서 JavaScript 표현식 실행. DOM 직접 조작·계산용.
-        group: browser
-        target_description: JavaScript 표현식 (page.evaluate 인자).
-        router: handler
-        tool: browser_evaluate
-        implementation: Playwright page.evaluate()로 JavaScript 실행
-        target_key: expression
-      wait:
-        description: Playwright 조건 충족까지 대기 (selector 등장·URL 변경·텍스트 표시). AJAX 페이지에 필수.
-        group: browser
-        target_description: selector/url/text 중 하나로 대기 조건 지정. timeout 옵션 가능.
-        router: handler
-        tool: browser_wait_for
-        implementation: Playwright wait_for_selector/wait_for_url로 조건 대기
-      press_key:
-        description: Playwright 키보드 키 입력 (Enter/Tab/Escape 등). 단축키는 'Control+A' 형식.
-        group: browser
-        target_description: 키 이름 (Enter/Tab/Escape/ArrowDown 등 Playwright 표기).
-        router: handler
-        tool: browser_press_key
-        implementation: Playwright keyboard.press()로 키 입력
-        target_key: key
-      tab:
-        description: 브라우저 탭 관리 (op 분기). list/new/switch/close.
-        group: browser_session
-        target_description: 'new — url 옵션 / switch — tab_id (0-base 인덱스, tab_list로 확인) / close — 현재 활성 탭 닫음.'
-        target_key: op
-        router: handler
-        tool: browser_tab_op
-        ops:
-          values:
-            list: 열린 탭 목록 조회
-            new: 새 탭 열기 (url 옵션)
-            switch: 활성 탭 전환 (tab_id 0-base)
-            close: 현재 활성 탭 닫기
-        implementation: Playwright 브라우저 컨텍스트에서 탭 op 분기
-        keywords:
-        - 탭
-        - tab
-        - 새탭
-        - 탭전환
-        - 탭닫기
-      pdf:
-        description: 현재 페이지를 PDF로 저장 (Chromium 전용). 인쇄용 자료 보관.
-        group: browser
-        target_description: '(파라미터 없음). path 옵션으로 저장 경로 지정.'
-        router: handler
-        tool: browser_save_pdf
-        implementation: Playwright page.pdf()로 PDF 저장 (Chromium only)
-      hover:
-        description: 요소에 마우스 호버. 툴팁·드롭다운 활성화에 사용. snapshot의 ref로 대상 지정.
-        group: browser
-        target_description: ref ID (snapshot 결과의 식별자).
-        router: handler
-        tool: browser_hover
-        implementation: Playwright locator.hover()로 마우스 호버
-        target_key: ref
-      drag:
-        description: 한 요소를 다른 요소로 드래그 앤 드롭. 시작·끝 ref 두 개 필요.
-        group: browser
-        target_description: 시작 ref. target_ref 파라미터로 목적지 ref 지정.
-        router: handler
-        tool: browser_drag
-        implementation: Playwright locator.drag_to()로 드래그 앤 드롭
-      select:
-        description: select 박스에서 옵션 선택. value 또는 label로 선택.
-        group: browser
-        target_description: ref ID. value 또는 label 파라미터로 선택할 옵션 지정.
-        router: handler
-        tool: browser_select_option
-        implementation: Playwright select_option()으로 셀렉트 옵션 선택
-        target_key: ref
-      logs:
-        description: 브라우저 로그 조회 (op 분기). console(JS 오류·console.log) / network(API 호출·리소스).
-        group: browser
-        target_description: 'console — JS 오류·log 누적. network — filter 옵션으로 URL/상태/타입 필터링.'
-        target_key: op
-        router: handler
-        tool: browser_logs_op
-        ops:
-          default: console
-          values:
-            console: JS 오류·console.log 조회 (기본)
-            network: API 호출·리소스 요청 조회
-        implementation: Playwright console·network 이벤트 캡처 로그 op 분기
-      dialog_info:
-        description: 브라우저 Alert/Confirm/Prompt 팝업 정보 조회.
-        target_description: 파라미터 없음. 마지막으로 캡처된 dialog의 type/message/default_value 반환. click 직후 알림창 처리에 사용.
-        group: browser
-        router: handler
-        tool: browser_dialog_info
-        implementation: Playwright dialog 이벤트 리스너로 마지막 팝업 정보 반환
-        keywords:
-        - 팝업
-        - alert
-        - confirm
-        - prompt
-        - dialog
-      cookies:
-        description: 브라우저 쿠키 저장/복원 (로그인 세션 유지용). op=save 또는 load.
-        group: browser_session
-        target_description: 'path 옵션으로 JSON 파일 경로 지정 (생략 시 기본 경로).'
-        target_key: op
-        router: handler
-        tool: browser_cookies_op
-        ops:
-          values:
-            save: 현재 쿠키를 JSON 파일로 저장
-            load: JSON 파일에서 쿠키 복원
-        implementation: Playwright context.cookies()/add_cookies()로 쿠키 JSON 저장·복원
-        keywords:
-        - 쿠키
-        - cookies
-        - 로그인유지
-        - 세션
-      iframe:
-        description: 브라우저 iframe 관리 (op 분기). list/switch/reset.
-        group: browser_session
-        target_description: 'switch — id(HTML id)·name·index·url 중 하나로 지정(list 결과의 어느 필드든). reset — 메인 페이지로 복귀.'
-        target_key: op
-        router: handler
-        tool: browser_iframe_op
-        ops:
-          default: list
-          values:
-            list: 페이지 내 iframe 목록 조회 (각 id·name·index·url 반환)
-            switch: iframe 컨텍스트 전환 (id/name/index/url)
-            reset: 메인 페이지 컨텍스트로 복귀
-        implementation: Playwright page.frames()/main_frame()로 iframe op 분기
-        keywords:
-        - iframe
-        - 프레임
-        - 프레임전환
-      check:
-        description: 체크박스·라디오 버튼 체크 또는 해제. 토글 동작.
-        target_description: ref ID. checked 옵션으로 강제 상태 지정 가능.
-        group: browser
-        router: handler
-        tool: browser_check
-        implementation: Playwright locator.check()/uncheck()로 체크박스 토글
-        target_key: ref
-      upload_file:
-        description: 파일 input에 로컬 파일 업로드. 파일 선택 다이얼로그 자동 처리.
-        target_description: ref ID. file_path 파라미터로 업로드할 파일 경로.
-        group: browser
-        router: handler
-        tool: browser_upload_file
-        implementation: Playwright set_input_files()로 파일 업로드
-        target_key: ref
-      resize:
-        description: Playwright 브라우저 뷰포트 크기 변경. 반응형 테스트·캡처 크기 조정용.
-        target_description: '(파라미터 없음). width/height로 크기 지정 (기본 1280x720).'
-        group: browser
-        router: handler
-        tool: browser_resize
-        implementation: Playwright page.set_viewport_size()로 뷰포트 조정
-      vision:
-        description: Playwright 스크린샷을 base64 이미지로 반환. 멀티모달 AI(Claude/Gemini Vision) 분석용.
-        target_description: '(파라미터 없음 — 현재 페이지 base64 PNG 반환)'
-        group: browser
-        router: handler
-        tool: browser_vision
-        implementation: Playwright screenshot을 base64 인코딩하여 반환 (AI 시각 인식용)
-      desktop:
-        description: macOS 데스크톱 자동화 (op 분기). 마우스/키보드/스크린샷/화면정보.
-        target_description: 'op별 파라미터 — click/mouse_move: x,y / type: text / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 모든 좌표는 1280x800 가상 해상도 기준.'
+        - 입력
+        - 페이지
+      screen:
+        description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
+        target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
         group: desktop
         target_key: op
         router: handler
         tool: computer_op
         ops:
           values:
-            screenshot: 화면 캡처 (x,y,width,height 옵션)
+            snapshot: 화면 독해 — UI 요소(역할/이름)+글자(OCR)+클릭좌표. 클릭 전 화면 파악 (브라우저 snapshot의 데스크톱 판)
+            screenshot: 화면 캡처 이미지 (x,y,width,height 옵션)
             click: 마우스 클릭 (x,y)
             type: 텍스트 입력 (text)
             key: 키 입력 (key)
@@ -241,6 +72,40 @@
         - 드래그
         - 스크롤
         - 자동화
+        - 화면독해
+        - 화면읽기
+        - 접근성
+        - OCR
+        - 화면분석
+        - 버튼찾기
+      android:
+        description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. USB 디버깅 연결 폰. 데스크톱은 limbs:screen, 웹은 limbs:browser.
+        target_description: '흐름 — snapshot(요소+라벨+좌표 읽기, 기본) → tap(query 라벨/id 일부 권장, 또는 x,y) → type(text). 입력 후 전송 등 동적 버튼은 반드시 snapshot 다시. 주요 파라미터 — query(탭할 요소 라벨), x/y(snapshot이 준 좌표), text(입력), key(back/home/enter/recent), package_name(앱 실행, 예 com.kakao.talk), direction(swipe up/down/left/right). device_id 생략 시 첫 기기. 가이드 android.md 참조.'
+        group: device
+        target_key: op
+        router: handler
+        tool: android_op
+        ops:
+          default: snapshot
+          values:
+            snapshot: 화면 독해 — 누를 수 있는 요소를 라벨+좌표로 반환 (탭 전 필수)
+            tap: 요소 탭 (query 라벨/id 일부 권장, 또는 x,y)
+            type: 포커스된 입력창에 텍스트 입력 (한글은 IME 필요)
+            swipe: 스와이프·스크롤 (direction up/down/left/right 또는 x1,y1,x2,y2)
+            key: 시스템 키 (back/home/enter/recent 등)
+            long_press: 길게 누르기 (x,y)
+            open_app: 앱 실행 (package_name)
+        implementation: ADB(uiautomator dump + input)로 폰 화면 독해·터치·입력 op 분기
+        keywords:
+        - 안드로이드
+        - 폰
+        - 스마트폰
+        - 카카오톡
+        - 카톡
+        - 앱조작
+        - 화면조작
+        - 터치
+        - 탭
       os_open:
         description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
         target_description: 열 대상의 경로 또는 URL. http/https는 브라우저, 파일은 Finder/탐색기.
@@ -358,71 +223,6 @@
         - Workers
         - R2
         - Pages
-      navigate:
-        description: 브라우저 페이지 이동 (op 분기). goto(URL) / back / forward.
-        group: browser
-        target_description: 'goto — url 파라미터 필수(http/https). back/forward — 파라미터 없음, 히스토리 이동.'
-        target_key: op
-        router: handler
-        tool: browser_navigate_op
-        ops:
-          default: goto
-          values:
-            goto: 지정 URL로 이동 (url 필수, 기본)
-            back: 히스토리 뒤로
-            forward: 히스토리 앞으로
-        implementation: Playwright page.goto/go_back/go_forward op 분기
-        keywords:
-        - 이동
-        - 뒤로
-        - 앞으로
-        - URL
-      content:
-        description: 현재 페이지 콘텐츠 추출 (op 분기). text(본문 텍스트) / html(전체 HTML 소스).
-        group: browser
-        target_description: 'text — 본문 텍스트만, HTML 태그 제외. html — 구조 분석·파싱용 전체 소스.'
-        target_key: op
-        router: handler
-        tool: browser_content_op
-        ops:
-          default: text
-          values:
-            text: 본문 텍스트 (HTML 태그 제외, 기본)
-            html: 전체 HTML 소스 (구조 분석·파싱용)
-        implementation: Playwright page.content/text op 분기
-      close:
-        description: Playwright 브라우저 세션 종료. 열린 탭·쿠키 모두 해제.
-        group: browser
-        target_description: '(파라미터 없음)'
-        router: handler
-        tool: browser_close
-        implementation: Playwright 브라우저 컨텍스트 종료
-      chrome:
-        description: Chrome MCP 원격 제어 세션 관리 (Playwright 대안, 실제 Chrome). op=connect/disconnect/status.
-        group: browser_session
-        target_description: 'connect — url 옵션으로 MCP 서버 주소. status — 연결 여부·현재 URL·탭ID·ref 수 반환.'
-        target_key: op
-        router: handler
-        tool: browser_chrome_op
-        ops:
-          values:
-            connect: Chrome MCP WebSocket 연결 (url 옵션)
-            disconnect: 연결 해제
-            status: 연결 여부·현재 URL·탭ID·ref 수 반환
-        implementation: Chrome MCP WebSocket 연결/해제/상태 op 분기
-        keywords:
-        - Chrome
-        - 크롬
-        - 원격제어
-        - MCP
-      find:
-        description: 자연어로 페이지 요소 검색 (Chrome MCP 전용). snapshot의 ref 대안.
-        group: browser
-        target_description: 검색어 (자연어, 예 '로그인 버튼', '검색창').
-        router: handler
-        tool: browser_find
-        implementation: Chrome MCP find 도구로 자연어 기반 DOM 요소 검색
-        target_key: query
       cctv:
         description: CCTV 실시간 영상 열기·캡처 (op 분기). open(브라우저 재생) / capture(이미지 저장).
         group: open
@@ -510,3 +310,4 @@
     - browser_action.md
     - desktop.md
     - open_window.md
+    - android.md

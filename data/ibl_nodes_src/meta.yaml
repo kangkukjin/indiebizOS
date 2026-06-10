@@ -38,7 +38,7 @@ meta:
     note: '모든 값은 {key: val} 안에 작성. (target) 문법은 폐지되어 에러 발생함.'
   - section: Pipeline — 다중 스텝은 >>, & 연산자 사용
     examples:
-    - '[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}  # 순차: step1
+    - '[sense:search_ddg]{query: "AI"} >> [self:output]{op: "file", path: "result.md"}  # 순차: step1
       결과가 step2에 자동 전달'
     - '[engines:slide_shadcn]{slides: [{layout: "hero", title: "보고서"}]} >> [limbs:os_open]  # 슬라이드 생성 후 열기'
     - '[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}  # 병렬 실행'
@@ -52,7 +52,7 @@ meta:
   pipeline:
   - op: '>>'
     name: Sequential
-    example: '[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}'
+    example: '[sense:search_ddg]{query: "AI"} >> [self:output]{op: "file", path: "result.md"}'
   - op: '&'
     name: Parallel
     example: '[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}'
@@ -66,7 +66,7 @@ meta:
   - '[self:discover]{query: "키워드"} — 어떤 액션을 쓸지 모를 때 사용.'
   - '모든 값은 {key: val} 형태의 named parameter. (target) 문법은 폐지됨 — 사용 시 에러 발생.'
   - '전문 데이터 액션이 있으면 파일 직접 탐색([self:list]+[self:read])보다 반드시 우선 사용. 예: 건강기록→[self:health]{op: "query"},
-    메모리→[self:recall]'
+    메모리→[self:memory]{op: "search"}'
   - 'CRITICAL: 절대로 IBL 코드([node:action]{...})를 텍스트 응답에 포함하지 말 것. IBL은 반드시 execute_ibl
     도구의 code 파라미터로만 실행. 사용자에게는 자연어로 응답.'
   - 작업을 계획만 하고 끝내지 말 것. 계획했으면 반드시 execute_ibl로 실행까지 완료할 것.

@@ -268,6 +268,7 @@
           "op": {
             "type": "string",
             "enum": [
+              "snapshot",
               "screenshot",
               "click",
               "type",
@@ -278,10 +279,16 @@
               "cursor_position",
               "screen_info"
             ],
-            "description": "수행할 동작"
+            "description": "수행할 동작 (snapshot=화면 독해: AX 요소+OCR 글자+클릭좌표)"
+          },
+          "ref": {
+            "type": "string",
+            "description": "snapshot이 부여한 요소 ref(예 e3). click/type에서 좌표 없이 요소 직접 조작(AXPress/AXValue). 권장 1순위, OCR 글자는 ref 없어 x,y 사용."
           }
         },
-        "required": ["op"]
+        "required": [
+          "op"
+        ]
       }
     }
   ]

@@ -38,23 +38,20 @@ ACTION_PARAM_ALIASES: Dict[str, Dict[str, list]] = {
     "sense:local_query": {"area": ["region"]},
     # === 웹 수집 (query op: site_id/query가 정식) ===
     "sense:collect": {"site_id": ["site"], "query": ["keyword"]},
-    # === 악보 조회 (tune_id가 정식) ===
-    "sense:abc_get": {"tune_id": ["id"]},
     # === self ===
     "self:fs_query": {"min_size_mb": ["min_size"]},
     "self:folder_note": {"folder_path": ["path"], "root_path": ["path"]},
     "self:photo": {"media_type": ["filter"]},
     "self:grep": {"root_path": ["path"], "pattern": ["query"]},
-    "self:call": {"tool": ["api_name"]},
     "self:trigger": {"trigger_id": ["id"]},
-    "self:gui": {"content": ["data"], "format": ["type"]},
+    "self:output": {"content": ["data"], "format": ["type"]},
     # === limbs ===
-    "limbs:drag": {"source_ref": ["from_ref"], "target_ref": ["to_ref"]},
+    # browser 통합(2026-06-04): 옛 limbs:drag 별칭을 limbs:browser{op:drag}로 재키.
+    "limbs:browser": {"source_ref": ["from_ref"], "target_ref": ["to_ref"]},
     "limbs:radio_favorite": {"stream_url": ["url"], "name": ["title"]},
     "limbs:show_map": {"query": ["location"]},
     # (은퇴 2026-06-04) limbs:iframe name:[id] 별칭 — switch가 id를 HTML id 속성으로 직접 처리(name 폴백 포함).
     # === engines ===
-    "engines:music": {"abc_notation": ["abc"], "midi_path": ["path"]},
     "engines:chart": {"chart_type": ["type"]},
     "engines:image_gemini": {"output_path": ["filename"]},
     # === others ===
@@ -95,36 +92,17 @@ def _route_api_engine(action: str, params: dict, project_path: str,
     이를 통해 노드 액션(informant:search 등)이 handler.py 없이
     api_registry.yaml + api_engine.py transform으로 직접 동작합니다.
     """
-    from api_engine import execute_tool as api_execute, list_registry_tools, is_registry_tool
+    from api_engine import execute_tool as api_execute, is_registry_tool
 
-    # 1) 노드 액션에서 직접 매핑된 api_registry 도구 실행
+    # 노드 액션에서 직접 매핑된 api_registry 도구 실행.
+    # (범용 self:call / self:list_api 액션은 2026-06-04 은퇴 — 모든 등록 도구가
+    #  정식 명명 액션으로 노출되어 mapped_tool 경로로만 디스패치됨.)
     if mapped_tool:
         if not is_registry_tool(mapped_tool):
             return {"error": f"api_registry에 등록되지 않은 도구: {mapped_tool}"}
         return api_execute(mapped_tool, dict(params), project_path)
 
-    # 2) 범용 api_engine 액션
-    if action in ("list", "list_api"):
-        tools = list_registry_tools()
-        return {"node": "api", "action": "list", "tools": tools, "count": len(tools)}
-
-    if action == "call":
-        tool_name = params.get("tool", "")
-        if not tool_name:
-            tools = list_registry_tools()
-            return {
-                "error": "params.tool(도구 이름)이 필요합니다.",
-                "available_tools": tools,
-            }
-        if not is_registry_tool(tool_name):
-            tools = list_registry_tools()
-            return {
-                "error": f"레지스트리에 등록되지 않은 도구: {tool_name}",
-                "available_tools": tools,
-            }
-        return api_execute(tool_name, params, project_path)
-
-    return {"error": f"api 노드에 '{action}' 액션이 없습니다."}
+    return {"error": f"api 노드에 '{action}' 액션이 없습니다 (mapped_tool 미지정)."}
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -361,6 +339,20 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         return _agent_list(params)
     elif func_name == "agent_info":
         return _agent_info(params.get("agent_id", ""))
+
+    # 출력 싱크 — 단일 액션 패턴: output {op: gui|file|clipboard} (2026-06-04 통합)
+    # download는 획득 동작이라 별도 액션 유지.
+    elif func_name == "output_op":
+        op = (params.get("op") or "gui").strip()  # 기본 gui (부작용 없는 표시)
+        op_map = {
+            "gui": "output_gui",
+            "file": "output_file",
+            "clipboard": "output_clipboard",
+        }
+        target_func = op_map.get(op)
+        if not target_func:
+            return {"success": False, "error": "op 파라미터가 필요합니다. (gui|file|clipboard)"}
+        return _route_system(target_func, params, project_path, agent_id=agent_id)
 
     # Phase 13: 출력 노드 (순환 import 방지를 위해 lazy import)
     elif func_name == "output_gui":

@@ -369,12 +369,12 @@ _PIPELINE_TEMPLATES = [
     # 인터페이스
     (
         "구글 홈페이지 열어줘",
-        '[limbs:navigate]{url: "https://google.com"}',
+        '[limbs:browser]{op: "navigate", url: "https://google.com"}',
         "limbs", "single"
     ),
     (
         "화면 스크린샷 찍어줘",
-        '[limbs:snapshot]{}',
+        '[limbs:browser]{op: "snapshot"}',
         "limbs", "single"
     ),
     # 스트림

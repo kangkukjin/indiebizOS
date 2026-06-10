@@ -57,7 +57,7 @@
         - 시맨틱
         - 블로그 통계
         - 인덱스
-      recent:
+      recent_chats:
         description: 최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.
         target_description: '(파라미터 없음). limit 옵션으로 건수 제한 (기본 10).'
         group: conversation
@@ -155,25 +155,6 @@
         router: handler
         tool: get_current_time
         implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
-      list_api:
-        description: API 레지스트리에 등록된 외부 도구 목록 조회. call로 실행.
-        target_description: '(파라미터 없음 — 전체 도구 목록)'
-        group: system
-        router: api_engine
-        implementation: API 레지스트리에 등록된 외부 API 도구 동적 호출
-        keywords:
-        - API
-        - 도구목록
-      call:
-        description: API 레지스트리에 등록된 외부 도구 호출. list_api로 후보 확인.
-        target_description: 도구 이름. params 옵션으로 인자 전달.
-        group: system
-        router: api_engine
-        implementation: API 레지스트리에 등록된 외부 API 도구 동적 호출
-        keywords:
-        - API
-        - 실행
-        - 호출
       manage_events:
         description: 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
         target_description: action (create/list/delete). 추가 파라미터는 action별로 다름.
@@ -320,43 +301,27 @@
         - 트리거 이력
         - 트리거 상태
         - 자동 실행
-      gui:
-        description: UI에 결과를 HTML/카드/테이블 형태로 표시 (WebSocket 통해 프론트).
-        target_description: 표시할 내용 (HTML 또는 데이터). format 옵션으로 카드/테이블/HTML 선택.
+      output:
+        description: 결과를 지정한 목적지로 내보냄 (op 분기). gui=UI 표시, file=파일 저장, clipboard=클립보드 복사. 파일 *조작*은 write/read 별도.
+        target_description: 'gui — content(HTML/데이터) + format(카드/테이블/HTML). file — path(확장자로 형식 자동) + content. clipboard — content(텍스트).'
         group: output
-        target_key: content
+        target_key: op
         router: system
-        func: output_gui
-        implementation: WebSocket으로 프론트엔드에 HTML/카드/테이블 렌더링 데이터 전송
+        func: output_op
+        ops:
+          default: gui
+          values:
+            gui: UI에 HTML/카드/테이블로 표시 (WebSocket)
+            file: 파일로 저장 (확장자로 형식 자동 인식)
+            clipboard: OS 클립보드에 복사
+        implementation: ibl_routing._route_system이 op로 분기 — output_gui/output_file/output_clipboard에 위임.
         keywords:
-        - UI
         - 출력
-        - HTML
-        - 카드
-      file:
-        description: 결과를 파일로 저장 (텍스트, JSON, CSV, HTML 등). 확장자로 형식 자동 인식.
-        target_description: 저장 파일 경로. content 옵션으로 내용 전달.
-        group: output
-        target_key: path
-        router: system
-        func: output_file
-        implementation: Python 파일 I/O로 결과를 파일로 저장
-        keywords:
+        - 표시
         - 파일저장
-        - 출력
-        - CSV
-        - JSON
-      clipboard:
-        description: 텍스트·결과를 OS 클립보드에 복사. 사용자가 다른 앱에 붙여넣기 가능.
-        target_description: 복사할 내용 (텍스트).
-        group: output
-        target_key: content
-        router: system
-        func: output_clipboard
-        implementation: pyperclip으로 클립보드에 텍스트 복사
-        keywords:
         - 클립보드
         - 복사
+        - UI
       download:
         description: URL에서 파일 다운로드해 로컬 저장. HTML 페이지 텍스트 추출은 sense:crawl.
         target_description: 다운로드 URL. output 옵션으로 저장 경로 지정.
@@ -369,9 +334,9 @@
         - 다운로드
         - 파일받기
       read:
-        description: 파일 읽기 — 텍스트/PDF/DOCX 통합. 확장자로 자동 인식(format 명시도 가능).
+        description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: 읽을 파일 경로. format 옵션 (text/pdf/docx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). 스캔 PDF는 별도 OCR 필요.
+        target_description: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션, 시트를 TSV 텍스트로. 스캔 PDF는 별도 OCR 필요.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
@@ -478,21 +443,24 @@
         tool: query_storage
         implementation: SQLite DB에서 파일명/확장자/크기 기반 검색
         target_key: search_term
-      cctv_refresh:
-        description: CCTV 목록 캐시 갱신. UTIC API에서 전국 16,000+대 최신 CCTV 데이터를 가져와 로컬 캐시
-          업데이트.
+      cctv:
+        description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신.'
         group: cctv
-        target_description: '(파라미터 없음 — 전국 CCTV 데이터 일괄 갱신). force 옵션으로 강제 재수집.'
+        target_description: '파라미터 없음. op 분기 — stats(기본): 카카오·UTIC·ITS·Windy 전체 소스 CCTV 현황·총수 / refresh: UTIC 실시간 API로 전국 캐시 일괄 갱신(유지보수).'
+        target_key: op
         router: handler
-        tool: cctv_refresh
-        implementation: UTIC 실시간 API 호출 → 로컬 캐시 파일 갱신 (유지보수용)
-      cctv_stats:
-        description: CCTV 데이터 현황 통계 (전체 수, 센터별 분포, 데이터 소스 상태).
-        group: cctv
-        target_description: '(파라미터 없음)'
-        router: handler
-        tool: cctv_stats
-        implementation: 로컬 캐시 기반 CCTV 통계 집계 (전체 수, 센터별 분포)
+        tool: cctv_admin
+        ops:
+          default: stats
+          values:
+            stats: 전체 소스 CCTV 현황 통계
+            refresh: UTIC 캐시 갱신 (유지보수)
+        implementation: handler.py _cctv_admin이 op 분기 — stats=cctv_sources(전체 소스 집계), refresh=utic.refresh_cache.
+        keywords:
+        - CCTV
+        - CCTV 현황
+        - CCTV 통계
+        - CCTV 갱신
       folder_note:
         description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file

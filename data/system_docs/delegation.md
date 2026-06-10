@@ -10,12 +10,7 @@ see_also: [architecture.md, communication.md, scheduler_guide.md]
 
 에이전트 간 비동기 협업을 위한 핵심 메커니즘.
 
-> **⚠️ 2026-05-27 라운드 2 통합 — 본문의 옛 액션 이름 매핑**:
-> 본문 일부에 라운드 2 이전 액션 이름이 남아 있다. 새 호출 형식:
-> - `[others:delegate_project]` → `[others:delegate]{mode: "async|sync|workflow", scope: "cross"}` (mode×scope 분기)
-> - `[others:ask_sync]` → `[others:delegate]{mode: "sync"}`
-> - `[others:delegate_workflow]` → `[others:delegate]{mode: "workflow"}`
-> 정확한 op 어휘는 [ibl.md](ibl.md) "op 어휘 단일화" 섹션 + `data/ibl_nodes_src/others.yaml` 의 `ops:` 블록 참조.
+> **2026-05-27 라운드 2 통합 (이력)**: 옛 `delegate_project`/`ask_sync`/`delegate_workflow` 3종이 `[others:delegate]` 단일 액션으로 통합됐다 — `mode: "async|sync|workflow"` × `scope: "cross"` 분기(기본=같은 프로젝트 async). 본문은 새 형식으로 갱신 완료. 파라미터 어휘는 `data/ibl_nodes_src/others.yaml` 참조.
 
 ## 개요
 
@@ -651,7 +646,7 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 
 | 레이어 | 메커니즘 | 특징 |
 |--------|---------|------|
-| **동기 위임** | `[others:delegate]`, `[others:delegate_project]` | 즉시, 작업 도중 분담, 결과 자동 보고 |
+| **동기 위임** | `[others:delegate]`, `[others:delegate]{scope: "cross"}` | 즉시, 작업 도중 분담, 결과 자동 보고 |
 | **스케줄 위임** | `[self:schedule]` + 크로스 위임 | 시간 기반, 에이전트 소유 |
 
 두 레이어는 조합 가능:
@@ -660,7 +655,7 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 
 ---
 *마지막 업데이트: 2026-03-27*
-*Phase 25: others 노드로 통합. `[others:delegate]`, `[others:delegate_project]`.*
+*Phase 25: others 노드로 통합. `[others:delegate]`, `[others:delegate]{scope: "cross"}`.*
 *Phase 28: `create_plan`/`_execute_plan()` 폐지. 작업계획서는 자연어로 작성하고 기존 위임 도구로 실행.*
 *event_engine.py → trigger_engine.py로 이전 (event_engine.py는 하위 호환 래퍼로 유지).*
 

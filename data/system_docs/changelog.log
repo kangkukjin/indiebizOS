@@ -949,3 +949,22 @@
   - 코드 중시+현재 어휘 기반이라 새 모델 B 채택. apply_model.sh→rebuild_index 2324→백엔드 재시작, 라이브 검증(translate 신어휘 travel/trigger/stock/world_bank 전부 정확). 함정: 모델 교체 후 touch-reload가 백엔드 OOM-kill → 다음엔 명시적 재시작.
 [2026-06-04 08:15:00] system_docs + README 갱신 (액션수·해마수치)
   - 199→144 액션(sense39/self42/limbs40/others6/engines17) 전 문서 정정. 해마 95.3%→code Top5 94.5%/런타임 ~99%. travel/world_bank ibl.md 추가, trigger cron scheduler_guide 문서화. architecture/execution_memory/technical/ibl/ibl_design_philosophy/system_structure/README footer 갱신.
+[2026-06-05 12:00:00] 안드로이드 얇은 부활 — [limbs:android]{op} 단일 센터피스
+  - 옛 45 bespoke 액션 폐기(백업: data/packages/_archive/) → snapshot/tap/type/swipe/key/long_press/open_app 7 op. ADB+uiautomator, snapshot→요소 ref 탭 강제 루프(limbs:screen 패턴). 한글 입력=cliphelper IME 재설치.
+  - 실측 spike(A36/Android16): 카톡 정밀 제어 검증 — 전송버튼은 입력 후 동적 등장, uiautomator로 잡힘, bounds 중심 탭 정밀. 구조화 기능(SMS/통화/연락처)은 백업서 선별 부활 대기.
+  - 같은 날: ABC 음악 작곡(engines:music+sense:abc) 완전 은퇴(두 천장: LLM 작곡+GM 음색) + 해마 재학습(Modal GPU, android 어휘 흡수, code Top-5 92.8%/desc 94.5%, 코퍼스 ~2,316).
+[2026-06-05 13:10:00] Nostr DM NIP-17 전환
+  - 증상: 최신 앱(0xchat 등)이 NIP-04 DM을 못 읽음(세대차). backend/nip44.py(공식 테스트 벡터 150/150) + nip17.py(gift-wrap) 신설, indienet에 send_dm_nip17/fetch_dms_nip17/publish_dm_relays(kind:10050) 통합, channel_engine 송신 NIP-17 전환. 구 send_dm(NIP-04) 보존, 수신은 kind:4+1059 병행.
+  - 부수 수정: fetch가 relays[0]만 읽던 버그 → _query_relays 전 릴레이 fan-out+dedup (posts 0→1, DMs 1→9 복구).
+[2026-06-06 10:00:00] 폰 컴패니언 1차 — 폰을 sense 노드로
+  - phone-companion/ 네이티브 안드로이드 앱(NotificationListenerService): 알림·위치·걸음수를 NIP-17 DM 한방향 피드로 전송(대화용 channel_poller와 분리).
+  - backend/phone_notifications.py(수신·SQLite 저장, data/phone_agent.json pubkey 인가) + api_phone.py(/phone/notifications|locations|steps) + [sense:phone]{op:notifications/location/steps} 신설 — "지금 폰에 연락 오나"가 raw ADB로 새던 근본원인 제거. 타임스탬프 초/ms 단위혼합 정규화(_to_ms).
+  - SMS 정리 실측: 재난문자(CMAS) 진짜 저장소=content://cellbroadcasts(별도 provider) — sms만 지우면 앱에 남음. 받은문자 135→54.
+[2026-06-10 14:00:00] 인지 경로 개편 — THINK 과잉 축소 + 모델 배정 재설계
+  - 데이터 진단: episode_summary 분포 THINK 192(74%) vs EXECUTE 69 — 상태확인·단발검색·능력질문·명시된 전송까지 THINK로 과잉 유입.
+  - 무의식 분류기 재조정(unconscious_prompt.md): EXECUTE 예시 4유형 추가(상태확인/단발검색·추천/수신자·내용 명시 전송/시스템 대화 질문) + THINK를 "검색 한 번으로 안 끝나는 일"로 좁힘 + 타이브레이커 역전("도구 호출 한 번으로 결과가 나오면 EXECUTE").
+  - 모델 배정: 중급 모델을 Reflex(해마 ≥0.85) 전용으로 좁히고 무의식 EXECUTE는 본격 모델 유지 — 4개 분기점(system_ai_core×2/api_websocket/agent_communication) elif reflex_hint 패턴. 오분류 비용 비대칭 해소(잘못 EXECUTE해도 잃는 건 의식 프레이밍뿐, 모델 지능 아님).
+  - 의식 프롬프트 2섹션 신설: "좋은 문제 규정이란"(메타-메타: 수단이 닿는가/진짜 목적에 복무하는가/크기가 맞는가/판별 가능한가) + "IBL과 코딩의 우선순위"(코딩=의식적 고비용, IBL=숙달된 동작+접근 캡슐화+해마 증류 축적).
+[2026-06-10 20:00:00] system_docs + README 일괄 갱신 (111 액션 정합화)
+  - 144→111 액션(sense38/self37/limbs16/others6/engines14), 36→35 패키지(publishing→not_installed, android 부활 추가, op-bearing 10) 전 문서 정정.
+  - ibl.md(android/phone 액션 추가), packages.md(android 행), communication.md(NIP-17+폰 피드), technical.md(중급=Reflex 전용, phone API/DB, nip 모듈), architecture.md(인지 파이프라인/외부연동/통계), execution_memory.md(2026-06-05 재학습 수치), README(노드 표·티어 표·Phone Companion), overview 통계(24 프로젝트/33 에이전트/35 패키지), inventory 재생성.

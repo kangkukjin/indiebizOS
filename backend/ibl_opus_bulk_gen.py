@@ -293,14 +293,6 @@ def gen(code, intents):
     elif a == "engines:tts":
         results += ["음성으로 바꿔줘", "읽어주는 거 만들어", "TTS로 변환해"]
 
-    # ---- engines:music / abc_* ----
-    elif a == "engines:music":
-        results += ["작곡해줘", "곡 하나 만들어봐", "음악 만들어"]
-    elif a == "engines:abc_search":
-        results += ["악보 찾아줘", "악보 검색해"]
-    elif a == "engines:abc_to_midi":
-        results += ["악보를 미디로 바꿔", "MIDI 변환해줘"]
-
     # ---- engines:image_gemini ----
     elif a == "engines:image_gemini":
         results += ["그림 그려줘", "이미지 만들어", "AI로 그림 좀"]
@@ -322,8 +314,8 @@ def gen(code, intents):
     elif a == "self:list_triggers":
         results += ["트리거 뭐 걸려있어", "자동실행 목록", "트리거 보여줘"]
 
-    # ---- self:recent ----
-    elif a == "self:recent":
+    # ---- self:recent_chats ----
+    elif a == "self:recent_chats":
         results += ["최근 대화 뭐였지", "아까 뭐 얘기했지", "대화 이력 좀"]
 
     # ---- self:posts / blog_stats / rag_search / insight ----

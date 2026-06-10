@@ -52,19 +52,21 @@
       }
     },
     {
-      "name": "cctv_refresh",
-      "description": "UTIC 실시간 API에서 최신 CCTV 목록을 가져와 로컬 캐시를 갱신합니다.\n16,000+대 전국 CCTV 데이터를 최신화합니다.",
+      "name": "cctv_admin",
+      "description": "CCTV 데이터 캐시 행정. op으로 stats/refresh 분기 (기본 stats).\nstats=전체 소스(카카오·UTIC·ITS·Windy) 현황 통계, refresh=UTIC 실시간 API로 전국 캐시 갱신(유지보수).",
       "input_schema": {
         "type": "object",
-        "properties": {}
-      }
-    },
-    {
-      "name": "cctv_stats",
-      "description": "CCTV 데이터 소스 상태 및 센터별 통계를 조회합니다.\n현재 데이터 소스(API/캐시), 전체 CCTV 수, 주요 센터별 분포를 반환합니다.",
-      "input_schema": {
-        "type": "object",
-        "properties": {}
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "stats",
+              "refresh"
+            ],
+            "default": "stats",
+            "description": "stats=전체 소스 현황 통계 / refresh=UTIC 캐시 갱신(유지보수)"
+          }
+        }
       }
     },
     {

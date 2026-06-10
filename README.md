@@ -116,7 +116,8 @@ Stop repeating the same AI conversations. **Save them as Switches or Workflows**
 
 Connect with others through decentralized networks and access your system from anywhere.
 
-- **Nostr Protocol** — No central server, no data collection
+- **Nostr Protocol** — No central server, no data collection (DMs use modern NIP-17 gift-wrap encryption)
+- **Phone Companion** — A native Android app turns your phone into a live sense organ: notifications, location, and step counts stream home over NIP-17 as a one-way feed, queryable via `[sense:phone]`
 - **Remote Access** — Cloudflare Tunnel based Remote Finder and Launcher
 - **Business Network** — Manage partners, auto-respond to inquiries
 
@@ -169,8 +170,8 @@ Cost/speed optimization through tiered model allocation:
 | Tier | Purpose | Used For |
 |------|---------|----------|
 | **Lightweight** | Classification, evaluation, one-shot judgment | Unconscious & Evaluator agents |
-| **Midtier** | EXECUTE path execution | Simple, reflexive tasks |
-| **Full** | THINK path: consciousness + execution | Complex tasks requiring planning |
+| **Midtier** | Reflex path execution | Tasks the hippocampus already knows with high confidence (score ≥ 0.85 — skips even the unconscious classifier) |
+| **Full** | EXECUTE + THINK path execution | EXECUTE skips consciousness but keeps the full model (misclassification costs framing, never intelligence); THINK adds consciousness framing |
 
 ### Consciousness Pulse (Self-Awareness)
 
@@ -184,17 +185,17 @@ The system maintains awareness of itself and the world:
 
 A domain-specific language that unifies all capabilities into one syntax.
 
-**5 Nodes, 144 Atomic Actions:**
+**5 Nodes, 111 Atomic Actions:**
 
 | Node | Actions | Description |
 |------|---------|-------------|
-| **sense** | 39 | Data retrieval (web, Naver Korean search, finance, travel, photos, blog, health, real estate, legal, statistics) |
-| **self** | 42 | System management, workflows, triggers, files, notifications, code execution, health records |
-| **limbs** | 40 | UI automation (browser, Android, macOS), media playback (YouTube, radio) |
+| **sense** | 38 | Data retrieval (web, Naver Korean search, finance, travel, photos, blog, health, real estate, legal, statistics, phone notifications/location/steps) |
+| **self** | 37 | System management, workflows, triggers, files, notifications, code execution, health records |
+| **limbs** | 16 | UI automation (browser, Android phone, macOS screen), media playback (YouTube, radio) |
 | **others** | 6 | Collaboration, delegation, email, contacts, messaging |
-| **engines** | 17 | Content creation (slides, video, charts, images, music, websites, architecture) |
+| **engines** | 14 | Content creation (slides, video, charts, images, websites, architecture) |
 
-> Action counts shrank from 332 → 144 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn. Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work.
+> Action counts shrank from 332 → 111 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn (e.g. 45 bespoke Android actions became one `[limbs:android]{op}` centerpiece). Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work.
 
 ```
 User: "Search AI news and save to file"
@@ -203,7 +204,7 @@ User: "Search AI news and save to file"
 ```
 
 **Key design:**
-- **One tool, one language** — AI agents learn one syntax, not 144 tool schemas
+- **One tool, one language** — AI agents learn one syntax, not 111 tool schemas
 - **Per-agent filtering** — Each agent's `allowed_nodes` restricts access
 - **Dynamic loading** — Tool packages are folders; drop one in, it's recognized
 
@@ -211,13 +212,13 @@ User: "Search AI news and save to file"
 
 Two memories learn from you automatically — and keep themselves clean:
 
-- **Hippocampus (procedural memory)** — A fine-tuned 768-dim embedding model maps your natural language to past IBL code (action retrieval ~99% Top-5 in practice; retrained 2026-06-04 on the current 144-action vocabulary). Successful executions are automatically distilled into reusable examples, so the system gets faster at *your* recurring tasks.
+- **Hippocampus (procedural memory)** — A fine-tuned 768-dim embedding model maps your natural language to past IBL code (action retrieval ~99% Top-5 in practice; retrained 2026-06-05 on the current vocabulary, ~2,300-example corpus). Successful executions are automatically distilled into reusable examples, so the system gets faster at *your* recurring tasks.
 - **Deep Memory (relational memory)** — After each conversation, a lightweight pass extracts durable facts about you — preferences, decisions, key dates — and recalls them, with their last-seen date, when relevant.
 - **Closed feedback loop** — When a recalled example drives an execution, its success or failure is recorded, so proven patterns rise and bad ones sink. Distilled code is validated against the action registry before it can enter the corpus.
 - **Self-cleaning** — A periodic consolidation pass (part of the immune patrol) merges near-duplicates, prunes stale or proven-bad entries, and resolves contradictions — so memory stays sharp instead of bloating.
 - **Periodic Retraining** — The embedding model is always retrained from the base model (no catastrophic forgetting), with MPS acceleration on Apple Silicon.
 
-### Tool Package System — Your System, Your Tools (36 packages, growing)
+### Tool Package System — Your System, Your Tools (35 packages, growing)
 
 Packages are not pre-installed. They grow with your needs.
 
@@ -263,4 +264,4 @@ cd frontend && npm run electron:dev  # Frontend (Electron)
 
 *IndieBiz OS — An AI system that grows with you, not one that's given to you.*
 
-*Last updated: 2026-06-04*
+*Last updated: 2026-06-10*

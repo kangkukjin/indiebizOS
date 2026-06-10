@@ -580,7 +580,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             reset_text_predefined = handle_session_reset()
             print(f"[SESSION_RESET] {agent_name}: 표준 응답 반환, AI 호출 스킵")
 
-        # 판단형만 의식 에이전트 실행 / 실행형은 중급 모델 전환
+        # 판단형은 의식 에이전트 / reflex(해마 고확신)만 중급 모델 / 무의식 EXECUTE는 본격 모델 유지
         consciousness_output = None
         _original_provider = None
         if is_session_reset:
@@ -589,8 +589,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             consciousness_output = runner._run_consciousness_or_reuse(
                 message, history, execution_memory
             )
-        else:
-            # EXECUTE/reflex: 중급 모델로 전환
+        elif reflex_hint:
+            # reflex만 중급 모델 — 무의식 EXECUTE 오분류여도 본격 모델이 받아 품질 방어
             try:
                 from consciousness_agent import _get_midtier_provider
                 _midtier = _get_midtier_provider()

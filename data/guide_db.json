@@ -88,22 +88,6 @@
       "file": "remotion.md"
     },
     {
-      "id": "music_composer",
-      "name": "작곡 가이드",
-      "description": "ABC Notation 기반 작곡, MIDI 생성, WAV/MP3 오디오 변환 워크플로우.",
-      "keywords": [
-        "음악",
-        "작곡",
-        "악보",
-        "ABC",
-        "MIDI",
-        "WAV",
-        "MP3",
-        "멜로디"
-      ],
-      "file": "music_composer.md"
-    },
-    {
       "id": "web_builder",
       "name": "웹사이트 빌더 가이드",
       "description": "홈페이지, 블로그, 웹사이트 만들기 및 관리. 사이트 제작/수정 요청 시 반드시 이 가이드를 먼저 읽을 것. Vercel/Cloudflare 배포.",

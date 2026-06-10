@@ -43,7 +43,7 @@ meta:
     note: '모든 값은 {key: val} 안에 작성. (target) 문법은 폐지되어 에러 발생함.'
   - section: Pipeline — 다중 스텝은 >>, & 연산자 사용
     examples:
-    - '[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}  # 순차: step1
+    - '[sense:search_ddg]{query: "AI"} >> [self:output]{op: "file", path: "result.md"}  # 순차: step1
       결과가 step2에 자동 전달'
     - '[engines:slide_shadcn]{slides: [{layout: "hero", title: "보고서"}]} >> [limbs:os_open]  # 슬라이드 생성 후 열기'
     - '[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}  # 병렬 실행'
@@ -57,7 +57,7 @@ meta:
   pipeline:
   - op: '>>'
     name: Sequential
-    example: '[sense:search_ddg]{query: "AI"} >> [self:file]{path: "result.md"}'
+    example: '[sense:search_ddg]{query: "AI"} >> [self:output]{op: "file", path: "result.md"}'
   - op: '&'
     name: Parallel
     example: '[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}'
@@ -71,13 +71,36 @@ meta:
   - '[self:discover]{query: "키워드"} — 어떤 액션을 쓸지 모를 때 사용.'
   - '모든 값은 {key: val} 형태의 named parameter. (target) 문법은 폐지됨 — 사용 시 에러 발생.'
   - '전문 데이터 액션이 있으면 파일 직접 탐색([self:list]+[self:read])보다 반드시 우선 사용. 예: 건강기록→[self:health]{op: "query"},
-    메모리→[self:recall]'
+    메모리→[self:memory]{op: "search"}'
   - 'CRITICAL: 절대로 IBL 코드([node:action]{...})를 텍스트 응답에 포함하지 말 것. IBL은 반드시 execute_ibl
     도구의 code 파라미터로만 실행. 사용자에게는 자연어로 응답.'
   - 작업을 계획만 하고 끝내지 말 것. 계획했으면 반드시 execute_ibl로 실행까지 완료할 것.
 nodes:
   sense:
     actions:
+      phone:
+        description: 폰 컴패니언이 보낸 알림·위치·걸음 조회 (op 분기). "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요.
+        group: device
+        target_description: 'op=notifications(기본): 최근 폰 알림 — latest_ago/ago("방금"·"N분 전")로 지금 오는 연락인지 판별,
+          pkg로 앱 필터(예 com.kakao.talk). location: 폰 최근 위치(lat/lng). steps: 일별 걸음수. limit=개수.'
+        target_key: op
+        router: handler
+        tool: phone_op
+        scope: system
+        ops:
+          default: notifications
+          values:
+            notifications: 최근 폰 알림 (카톡·문자·앱 푸시 — "지금 연락 오나")
+            location: 폰 최근 위치 (lat/lng)
+            steps: 일별 걸음수
+        implementation: phone_notifications.py(폰 에이전트가 NIP-17 DM 으로 전송 → 60초 폴링 저장)의
+          recent/recent_locations/recent_steps 조회. android 패키지 phone_op 핸들러(scope:system). raw ADB 우회 대체.
+        keywords:
+        - 폰알림
+        - 연락
+        - 카톡
+        - 폰위치
+        - 걸음수
       stock:
         description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
         group: finance
@@ -651,28 +674,6 @@ nodes:
         - 조항
         - 헌재
         - 행정규칙
-      abc_search:
-        description: abcnotation.com에서 ABC 표기법 악보 검색. 곡명·작곡가·키워드로. 상세 조회는 abc_get.
-        target_description: 검색어 (곡명, 작곡가, 장르 등). 결과는 tune_id로 abc_get에 사용.
-        group: music
-        router: handler
-        tool: search_abc_tunes
-        implementation: abcnotation.com에서 ABC 악보 검색 (HTTP 크롤링)
-        target_key: query
-        keywords:
-        - 악보검색
-        - ABC
-      abc_get:
-        description: abcnotation.com 악보의 상세 내용 조회. 검색은 abc_search.
-        target_description: 악보 ID (abc_search 결과의 tune_id).
-        group: music
-        router: handler
-        tool: get_abc_tune
-        implementation: abcnotation.com에서 악보 상세 조회 (HTTP 크롤링)
-        target_key: tune_id
-        keywords:
-        - 악보조회
-        - ABC
     description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 법률, 세계 상태 등 외부 API 및 데이터
       소스 접근'
     tags:
@@ -769,7 +770,7 @@ nodes:
         - 시맨틱
         - 블로그 통계
         - 인덱스
-      recent:
+      recent_chats:
         description: 최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.
         target_description: '(파라미터 없음). limit 옵션으로 건수 제한 (기본 10).'
         group: conversation
@@ -867,25 +868,6 @@ nodes:
         router: handler
         tool: get_current_time
         implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
-      list_api:
-        description: API 레지스트리에 등록된 외부 도구 목록 조회. call로 실행.
-        target_description: '(파라미터 없음 — 전체 도구 목록)'
-        group: system
-        router: api_engine
-        implementation: API 레지스트리에 등록된 외부 API 도구 동적 호출
-        keywords:
-        - API
-        - 도구목록
-      call:
-        description: API 레지스트리에 등록된 외부 도구 호출. list_api로 후보 확인.
-        target_description: 도구 이름. params 옵션으로 인자 전달.
-        group: system
-        router: api_engine
-        implementation: API 레지스트리에 등록된 외부 API 도구 동적 호출
-        keywords:
-        - API
-        - 실행
-        - 호출
       manage_events:
         description: 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
         target_description: action (create/list/delete). 추가 파라미터는 action별로 다름.
@@ -1032,43 +1014,27 @@ nodes:
         - 트리거 이력
         - 트리거 상태
         - 자동 실행
-      gui:
-        description: UI에 결과를 HTML/카드/테이블 형태로 표시 (WebSocket 통해 프론트).
-        target_description: 표시할 내용 (HTML 또는 데이터). format 옵션으로 카드/테이블/HTML 선택.
+      output:
+        description: 결과를 지정한 목적지로 내보냄 (op 분기). gui=UI 표시, file=파일 저장, clipboard=클립보드 복사. 파일 *조작*은 write/read 별도.
+        target_description: 'gui — content(HTML/데이터) + format(카드/테이블/HTML). file — path(확장자로 형식 자동) + content. clipboard — content(텍스트).'
         group: output
-        target_key: content
+        target_key: op
         router: system
-        func: output_gui
-        implementation: WebSocket으로 프론트엔드에 HTML/카드/테이블 렌더링 데이터 전송
+        func: output_op
+        ops:
+          default: gui
+          values:
+            gui: UI에 HTML/카드/테이블로 표시 (WebSocket)
+            file: 파일로 저장 (확장자로 형식 자동 인식)
+            clipboard: OS 클립보드에 복사
+        implementation: ibl_routing._route_system이 op로 분기 — output_gui/output_file/output_clipboard에 위임.
         keywords:
-        - UI
         - 출력
-        - HTML
-        - 카드
-      file:
-        description: 결과를 파일로 저장 (텍스트, JSON, CSV, HTML 등). 확장자로 형식 자동 인식.
-        target_description: 저장 파일 경로. content 옵션으로 내용 전달.
-        group: output
-        target_key: path
-        router: system
-        func: output_file
-        implementation: Python 파일 I/O로 결과를 파일로 저장
-        keywords:
+        - 표시
         - 파일저장
-        - 출력
-        - CSV
-        - JSON
-      clipboard:
-        description: 텍스트·결과를 OS 클립보드에 복사. 사용자가 다른 앱에 붙여넣기 가능.
-        target_description: 복사할 내용 (텍스트).
-        group: output
-        target_key: content
-        router: system
-        func: output_clipboard
-        implementation: pyperclip으로 클립보드에 텍스트 복사
-        keywords:
         - 클립보드
         - 복사
+        - UI
       download:
         description: URL에서 파일 다운로드해 로컬 저장. HTML 페이지 텍스트 추출은 sense:crawl.
         target_description: 다운로드 URL. output 옵션으로 저장 경로 지정.
@@ -1081,9 +1047,9 @@ nodes:
         - 다운로드
         - 파일받기
       read:
-        description: 파일 읽기 — 텍스트/PDF/DOCX 통합. 확장자로 자동 인식(format 명시도 가능).
+        description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: 읽을 파일 경로. format 옵션 (text/pdf/docx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). 스캔 PDF는 별도 OCR 필요.
+        target_description: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션, 시트를 TSV 텍스트로. 스캔 PDF는 별도 OCR 필요.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
@@ -1190,21 +1156,24 @@ nodes:
         tool: query_storage
         implementation: SQLite DB에서 파일명/확장자/크기 기반 검색
         target_key: search_term
-      cctv_refresh:
-        description: CCTV 목록 캐시 갱신. UTIC API에서 전국 16,000+대 최신 CCTV 데이터를 가져와 로컬 캐시
-          업데이트.
+      cctv:
+        description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신.'
         group: cctv
-        target_description: '(파라미터 없음 — 전국 CCTV 데이터 일괄 갱신). force 옵션으로 강제 재수집.'
+        target_description: '파라미터 없음. op 분기 — stats(기본): 카카오·UTIC·ITS·Windy 전체 소스 CCTV 현황·총수 / refresh: UTIC 실시간 API로 전국 캐시 일괄 갱신(유지보수).'
+        target_key: op
         router: handler
-        tool: cctv_refresh
-        implementation: UTIC 실시간 API 호출 → 로컬 캐시 파일 갱신 (유지보수용)
-      cctv_stats:
-        description: CCTV 데이터 현황 통계 (전체 수, 센터별 분포, 데이터 소스 상태).
-        group: cctv
-        target_description: '(파라미터 없음)'
-        router: handler
-        tool: cctv_stats
-        implementation: 로컬 캐시 기반 CCTV 통계 집계 (전체 수, 센터별 분포)
+        tool: cctv_admin
+        ops:
+          default: stats
+          values:
+            stats: 전체 소스 CCTV 현황 통계
+            refresh: UTIC 캐시 갱신 (유지보수)
+        implementation: handler.py _cctv_admin이 op 분기 — stats=cctv_sources(전체 소스 집계), refresh=utic.refresh_cache.
+        keywords:
+        - CCTV
+        - CCTV 현황
+        - CCTV 통계
+        - CCTV 갱신
       folder_note:
         description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file
@@ -1324,228 +1293,59 @@ nodes:
     - photo.md
   limbs:
     actions:
-      snapshot:
-        description: Playwright 접근성 트리 스냅샷. 요소마다 ref ID 부여 — 이후 click/type 등이 ref로 대상 지정.
+      browser:
+        description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
+        target_description: 'op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).'
         group: browser
-        target_description: '(파라미터 없음 — 현재 페이지의 ref 트리 반환)'
-        router: handler
-        tool: browser_snapshot
-        implementation: Playwright 접근성 트리 스냅샷으로 DOM 요소 ref 매핑
-      click:
-        description: 브라우저 요소 클릭 (op 분기). single/double/right.
-        group: browser
-        target_description: 'ref ID 또는 selector로 대상 지정. double은 표 셀 편집·파일 열기, right는 컨텍스트 메뉴.'
         target_key: op
         router: handler
-        tool: browser_click_op
+        tool: browser_op
         ops:
-          default: single
+          default: snapshot
           values:
-            single: 좌클릭 (기본)
-            double: 더블클릭 — 표 셀 편집·파일 열기
-            right: 우클릭 — 컨텍스트 메뉴
-        implementation: Playwright locator.click/dblclick/contextual_click op 분기 (ref 기반)
+            snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)
+            navigate: 페이지 이동 (mode goto|back|forward; goto는 url)
+            click: 요소 클릭 (ref; mode single|double|right)
+            type: 입력 필드에 텍스트 입력 (ref, text)
+            press_key: 키보드 키 입력 (Enter/Tab/Escape 등)
+            hover: 요소에 마우스 호버 (ref)
+            drag: 드래그 앤 드롭 (source_ref→target_ref)
+            select: select 박스 옵션 선택 (ref, value/label)
+            check: 체크박스·라디오 토글 (ref)
+            upload_file: 파일 input에 업로드 (ref, path)
+            scroll: 페이지 스크롤 (up/down)
+            wait: 조건 대기 (selector/url/text/networkidle)
+            content: 페이지 콘텐츠 추출 (mode text|html)
+            screenshot: 페이지 스크린샷 PNG 저장 (path, full_page)
+            vision: 스크린샷 base64 반환 (AI 시각 인식용)
+            evaluate: JavaScript 표현식 실행 (expression)
+            pdf: 페이지를 PDF로 저장 (path)
+            find: 자연어로 요소 검색 (query; Chrome MCP 전용)
+            logs: 브라우저 로그 (mode console|network)
+            dialog_info: Alert/Confirm/Prompt 팝업 정보
+            resize: 뷰포트 크기 변경 (width/height)
+            close: 브라우저 세션 종료
+            tab: 탭 관리 (mode list|new|switch|close)
+            iframe: iframe 관리 (mode list|switch|reset)
+            cookies: 쿠키 저장·복원 (mode save|load)
+            chrome: Chrome MCP 원격 제어 (mode connect|disconnect|status)
         keywords:
+        - 브라우저
+        - 웹 자동화
         - 클릭
-        - 더블클릭
-        - 우클릭
-        - 컨텍스트메뉴
-      type:
-        description: 입력 필드(input/textarea)에 텍스트 입력. ref로 대상 지정.
-        group: browser
-        target_description: ref ID. text 파라미터로 입력 내용 전달.
-        router: handler
-        tool: browser_type
-        implementation: Playwright locator로 입력 필드에 텍스트 입력
-        target_key: ref
-      screenshot:
-        description: Playwright 페이지 스크린샷 PNG 저장. 시각 검증·기록용.
-        group: browser
-        target_description: '(파라미터 없음). path 옵션으로 저장 경로, full_page로 전체 영역 캡처.'
-        router: handler
-        tool: browser_screenshot
-        implementation: Playwright page.screenshot()으로 PNG 캡처
-      scroll:
-        description: Playwright 페이지 스크롤 (up/down). 무한 스크롤 페이지 로딩이나 화면 이동에 사용.
-        group: browser
-        target_description: '(파라미터 없음). direction (up/down), pixels로 양 지정.'
-        router: handler
-        tool: browser_scroll
-        implementation: Playwright mouse.wheel()로 페이지 스크롤
-      evaluate:
-        description: 페이지에서 JavaScript 표현식 실행. DOM 직접 조작·계산용.
-        group: browser
-        target_description: JavaScript 표현식 (page.evaluate 인자).
-        router: handler
-        tool: browser_evaluate
-        implementation: Playwright page.evaluate()로 JavaScript 실행
-        target_key: expression
-      wait:
-        description: Playwright 조건 충족까지 대기 (selector 등장·URL 변경·텍스트 표시). AJAX 페이지에 필수.
-        group: browser
-        target_description: selector/url/text 중 하나로 대기 조건 지정. timeout 옵션 가능.
-        router: handler
-        tool: browser_wait_for
-        implementation: Playwright wait_for_selector/wait_for_url로 조건 대기
-      press_key:
-        description: Playwright 키보드 키 입력 (Enter/Tab/Escape 등). 단축키는 'Control+A' 형식.
-        group: browser
-        target_description: 키 이름 (Enter/Tab/Escape/ArrowDown 등 Playwright 표기).
-        router: handler
-        tool: browser_press_key
-        implementation: Playwright keyboard.press()로 키 입력
-        target_key: key
-      tab:
-        description: 브라우저 탭 관리 (op 분기). list/new/switch/close.
-        group: browser_session
-        target_description: 'new — url 옵션 / switch — tab_id (0-base 인덱스, tab_list로 확인) / close — 현재 활성 탭 닫음.'
-        target_key: op
-        router: handler
-        tool: browser_tab_op
-        ops:
-          values:
-            list: 열린 탭 목록 조회
-            new: 새 탭 열기 (url 옵션)
-            switch: 활성 탭 전환 (tab_id 0-base)
-            close: 현재 활성 탭 닫기
-        implementation: Playwright 브라우저 컨텍스트에서 탭 op 분기
-        keywords:
-        - 탭
-        - tab
-        - 새탭
-        - 탭전환
-        - 탭닫기
-      pdf:
-        description: 현재 페이지를 PDF로 저장 (Chromium 전용). 인쇄용 자료 보관.
-        group: browser
-        target_description: '(파라미터 없음). path 옵션으로 저장 경로 지정.'
-        router: handler
-        tool: browser_save_pdf
-        implementation: Playwright page.pdf()로 PDF 저장 (Chromium only)
-      hover:
-        description: 요소에 마우스 호버. 툴팁·드롭다운 활성화에 사용. snapshot의 ref로 대상 지정.
-        group: browser
-        target_description: ref ID (snapshot 결과의 식별자).
-        router: handler
-        tool: browser_hover
-        implementation: Playwright locator.hover()로 마우스 호버
-        target_key: ref
-      drag:
-        description: 한 요소를 다른 요소로 드래그 앤 드롭. 시작·끝 ref 두 개 필요.
-        group: browser
-        target_description: 시작 ref. target_ref 파라미터로 목적지 ref 지정.
-        router: handler
-        tool: browser_drag
-        implementation: Playwright locator.drag_to()로 드래그 앤 드롭
-      select:
-        description: select 박스에서 옵션 선택. value 또는 label로 선택.
-        group: browser
-        target_description: ref ID. value 또는 label 파라미터로 선택할 옵션 지정.
-        router: handler
-        tool: browser_select_option
-        implementation: Playwright select_option()으로 셀렉트 옵션 선택
-        target_key: ref
-      logs:
-        description: 브라우저 로그 조회 (op 분기). console(JS 오류·console.log) / network(API 호출·리소스).
-        group: browser
-        target_description: 'console — JS 오류·log 누적. network — filter 옵션으로 URL/상태/타입 필터링.'
-        target_key: op
-        router: handler
-        tool: browser_logs_op
-        ops:
-          default: console
-          values:
-            console: JS 오류·console.log 조회 (기본)
-            network: API 호출·리소스 요청 조회
-        implementation: Playwright console·network 이벤트 캡처 로그 op 분기
-      dialog_info:
-        description: 브라우저 Alert/Confirm/Prompt 팝업 정보 조회.
-        target_description: 파라미터 없음. 마지막으로 캡처된 dialog의 type/message/default_value 반환. click 직후 알림창 처리에 사용.
-        group: browser
-        router: handler
-        tool: browser_dialog_info
-        implementation: Playwright dialog 이벤트 리스너로 마지막 팝업 정보 반환
-        keywords:
-        - 팝업
-        - alert
-        - confirm
-        - prompt
-        - dialog
-      cookies:
-        description: 브라우저 쿠키 저장/복원 (로그인 세션 유지용). op=save 또는 load.
-        group: browser_session
-        target_description: 'path 옵션으로 JSON 파일 경로 지정 (생략 시 기본 경로).'
-        target_key: op
-        router: handler
-        tool: browser_cookies_op
-        ops:
-          values:
-            save: 현재 쿠키를 JSON 파일로 저장
-            load: JSON 파일에서 쿠키 복원
-        implementation: Playwright context.cookies()/add_cookies()로 쿠키 JSON 저장·복원
-        keywords:
-        - 쿠키
-        - cookies
-        - 로그인유지
-        - 세션
-      iframe:
-        description: 브라우저 iframe 관리 (op 분기). list/switch/reset.
-        group: browser_session
-        target_description: 'switch — id(HTML id)·name·index·url 중 하나로 지정(list 결과의 어느 필드든). reset — 메인 페이지로 복귀.'
-        target_key: op
-        router: handler
-        tool: browser_iframe_op
-        ops:
-          default: list
-          values:
-            list: 페이지 내 iframe 목록 조회 (각 id·name·index·url 반환)
-            switch: iframe 컨텍스트 전환 (id/name/index/url)
-            reset: 메인 페이지 컨텍스트로 복귀
-        implementation: Playwright page.frames()/main_frame()로 iframe op 분기
-        keywords:
-        - iframe
-        - 프레임
-        - 프레임전환
-      check:
-        description: 체크박스·라디오 버튼 체크 또는 해제. 토글 동작.
-        target_description: ref ID. checked 옵션으로 강제 상태 지정 가능.
-        group: browser
-        router: handler
-        tool: browser_check
-        implementation: Playwright locator.check()/uncheck()로 체크박스 토글
-        target_key: ref
-      upload_file:
-        description: 파일 input에 로컬 파일 업로드. 파일 선택 다이얼로그 자동 처리.
-        target_description: ref ID. file_path 파라미터로 업로드할 파일 경로.
-        group: browser
-        router: handler
-        tool: browser_upload_file
-        implementation: Playwright set_input_files()로 파일 업로드
-        target_key: ref
-      resize:
-        description: Playwright 브라우저 뷰포트 크기 변경. 반응형 테스트·캡처 크기 조정용.
-        target_description: '(파라미터 없음). width/height로 크기 지정 (기본 1280x720).'
-        group: browser
-        router: handler
-        tool: browser_resize
-        implementation: Playwright page.set_viewport_size()로 뷰포트 조정
-      vision:
-        description: Playwright 스크린샷을 base64 이미지로 반환. 멀티모달 AI(Claude/Gemini Vision) 분석용.
-        target_description: '(파라미터 없음 — 현재 페이지 base64 PNG 반환)'
-        group: browser
-        router: handler
-        tool: browser_vision
-        implementation: Playwright screenshot을 base64 인코딩하여 반환 (AI 시각 인식용)
-      desktop:
-        description: macOS 데스크톱 자동화 (op 분기). 마우스/키보드/스크린샷/화면정보.
-        target_description: 'op별 파라미터 — click/mouse_move: x,y / type: text / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 모든 좌표는 1280x800 가상 해상도 기준.'
+        - 입력
+        - 페이지
+      screen:
+        description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
+        target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
         group: desktop
         target_key: op
         router: handler
         tool: computer_op
         ops:
           values:
-            screenshot: 화면 캡처 (x,y,width,height 옵션)
+            snapshot: 화면 독해 — UI 요소(역할/이름)+글자(OCR)+클릭좌표. 클릭 전 화면 파악 (브라우저 snapshot의 데스크톱 판)
+            screenshot: 화면 캡처 이미지 (x,y,width,height 옵션)
             click: 마우스 클릭 (x,y)
             type: 텍스트 입력 (text)
             key: 키 입력 (key)
@@ -1565,6 +1365,40 @@ nodes:
         - 드래그
         - 스크롤
         - 자동화
+        - 화면독해
+        - 화면읽기
+        - 접근성
+        - OCR
+        - 화면분석
+        - 버튼찾기
+      android:
+        description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. USB 디버깅 연결 폰. 데스크톱은 limbs:screen, 웹은 limbs:browser.
+        target_description: '흐름 — snapshot(요소+라벨+좌표 읽기, 기본) → tap(query 라벨/id 일부 권장, 또는 x,y) → type(text). 입력 후 전송 등 동적 버튼은 반드시 snapshot 다시. 주요 파라미터 — query(탭할 요소 라벨), x/y(snapshot이 준 좌표), text(입력), key(back/home/enter/recent), package_name(앱 실행, 예 com.kakao.talk), direction(swipe up/down/left/right). device_id 생략 시 첫 기기. 가이드 android.md 참조.'
+        group: device
+        target_key: op
+        router: handler
+        tool: android_op
+        ops:
+          default: snapshot
+          values:
+            snapshot: 화면 독해 — 누를 수 있는 요소를 라벨+좌표로 반환 (탭 전 필수)
+            tap: 요소 탭 (query 라벨/id 일부 권장, 또는 x,y)
+            type: 포커스된 입력창에 텍스트 입력 (한글은 IME 필요)
+            swipe: 스와이프·스크롤 (direction up/down/left/right 또는 x1,y1,x2,y2)
+            key: 시스템 키 (back/home/enter/recent 등)
+            long_press: 길게 누르기 (x,y)
+            open_app: 앱 실행 (package_name)
+        implementation: ADB(uiautomator dump + input)로 폰 화면 독해·터치·입력 op 분기
+        keywords:
+        - 안드로이드
+        - 폰
+        - 스마트폰
+        - 카카오톡
+        - 카톡
+        - 앱조작
+        - 화면조작
+        - 터치
+        - 탭
       os_open:
         description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
         target_description: 열 대상의 경로 또는 URL. http/https는 브라우저, 파일은 Finder/탐색기.
@@ -1682,71 +1516,6 @@ nodes:
         - Workers
         - R2
         - Pages
-      navigate:
-        description: 브라우저 페이지 이동 (op 분기). goto(URL) / back / forward.
-        group: browser
-        target_description: 'goto — url 파라미터 필수(http/https). back/forward — 파라미터 없음, 히스토리 이동.'
-        target_key: op
-        router: handler
-        tool: browser_navigate_op
-        ops:
-          default: goto
-          values:
-            goto: 지정 URL로 이동 (url 필수, 기본)
-            back: 히스토리 뒤로
-            forward: 히스토리 앞으로
-        implementation: Playwright page.goto/go_back/go_forward op 분기
-        keywords:
-        - 이동
-        - 뒤로
-        - 앞으로
-        - URL
-      content:
-        description: 현재 페이지 콘텐츠 추출 (op 분기). text(본문 텍스트) / html(전체 HTML 소스).
-        group: browser
-        target_description: 'text — 본문 텍스트만, HTML 태그 제외. html — 구조 분석·파싱용 전체 소스.'
-        target_key: op
-        router: handler
-        tool: browser_content_op
-        ops:
-          default: text
-          values:
-            text: 본문 텍스트 (HTML 태그 제외, 기본)
-            html: 전체 HTML 소스 (구조 분석·파싱용)
-        implementation: Playwright page.content/text op 분기
-      close:
-        description: Playwright 브라우저 세션 종료. 열린 탭·쿠키 모두 해제.
-        group: browser
-        target_description: '(파라미터 없음)'
-        router: handler
-        tool: browser_close
-        implementation: Playwright 브라우저 컨텍스트 종료
-      chrome:
-        description: Chrome MCP 원격 제어 세션 관리 (Playwright 대안, 실제 Chrome). op=connect/disconnect/status.
-        group: browser_session
-        target_description: 'connect — url 옵션으로 MCP 서버 주소. status — 연결 여부·현재 URL·탭ID·ref 수 반환.'
-        target_key: op
-        router: handler
-        tool: browser_chrome_op
-        ops:
-          values:
-            connect: Chrome MCP WebSocket 연결 (url 옵션)
-            disconnect: 연결 해제
-            status: 연결 여부·현재 URL·탭ID·ref 수 반환
-        implementation: Chrome MCP WebSocket 연결/해제/상태 op 분기
-        keywords:
-        - Chrome
-        - 크롬
-        - 원격제어
-        - MCP
-      find:
-        description: 자연어로 페이지 요소 검색 (Chrome MCP 전용). snapshot의 ref 대안.
-        group: browser
-        target_description: 검색어 (자연어, 예 '로그인 버튼', '검색창').
-        router: handler
-        tool: browser_find
-        implementation: Chrome MCP find 도구로 자연어 기반 DOM 요소 검색
-        target_key: query
       cctv:
         description: CCTV 실시간 영상 열기·캡처 (op 분기). open(브라우저 재생) / capture(이미지 저장).
         group: open
@@ -1834,6 +1603,7 @@ nodes:
     - browser_action.md
     - desktop.md
     - open_window.md
+    - android.md
   others:
     actions:
       delegate:
@@ -2001,27 +1771,21 @@ nodes:
         - 열지도
         - 대시보드
         - 복합차트
-      music:
-        description: 'ABC 작곡 + MIDI + 오디오 통합. stage: full(기본, 작곡→MIDI→오디오) / midi_only(ABC→MIDI) / audio_only(MIDI→오디오).'
-        target_description: |
-          stage로 분기 (기본 full).
-          - full: title(필수) + abc(직접 ABC 전달) 또는 description(AI 작곡 요청). 작곡→MIDI→오디오 전 단계.
-          - midi_only: abc_notation(필수, X:/T:/M:/K: 헤더 포함). ABC→MIDI만.
-          - audio_only: midi_path(필수, MIDI 파일 경로). MIDI→WAV/MP3만. format 옵션(wav/mp3, 기본 mp3).
-        group: music
+      spreadsheet:
+        description: 행 데이터(rows/sheets) → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
+        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
+        group: chart
         router: handler
-        tool: music
-        implementation: stage=full은 compose_and_export(ABC notation 생성→abc2midi→fluidsynth). stage=midi_only는 abc2midi CLI. stage=audio_only는 fluidsynth + GeneralUser GS.sf2.
-        target_key: title
+        tool: spreadsheet
+        implementation: system_essentials handler.py가 openpyxl로 Workbook 생성 — sheets(다중) 또는 rows+headers(단일), 셀은 str/int/float로 강제.
+        target_key: path
         keywords:
-        - 작곡
-        - 악보
-        - ABC
-        - MIDI
-        - 오디오
-        - WAV
-        - MP3
-        - ABC변환
+        - 스프레드시트
+        - 엑셀
+        - xlsx
+        - 표
+        - 시트
+        - 장부
       remotion:
         description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
         target_description: |
@@ -2230,86 +1994,6 @@ nodes:
         - 카탈로그
         - shadcn
         - UI
-      lecture_plan:
-        description: '강의 슬라이드 파이프라인 1단계: 메시지 큐레이션(명제 outline). init_skeleton:true로 스켈레톤. 가이드 read_guide(query="강의 슬라이드").'
-        target_description: |
-          outline 배열 또는 init_skeleton=true.
-          - outline 각 항목: {idx, role, title, device, visual, concrete}
-          - role: cover/intro/thesis/closure_table/closure_diagram/quote/outro/reference
-          - device: contrast/chain/equation/scale/hierarchy/none
-          - source, style(notebooklm 등) 옵션
-          notebooklm 스타일은 closure_table+closure_diagram 슬라이드 강제.
-        group: media_produce
-        router: handler
-        tool: create_lecture_plan
-        implementation: '단계 산출물 outline.json + outline.md 저장. 스키마 검증: role(cover/intro/thesis/closure_table/closure_diagram/quote/outro/reference),
-          device(contrast/chain/equation/scale/hierarchy/none), notebooklm 스타일은 closure_table+closure_diagram
-          슬라이드 존재 강제. 산출물 위치 lecture_<id>/outline.{json,md}. 이 단계가 통과해야 lecture_write
-          가능.'
-        achievement_criteria: 모든 슬라이드 제목이 단정문(라벨 X), 5종 수사 장치(contrast/chain/equation/scale/hierarchy)에
-          매핑됨, 이중 회수(closure_table+closure_diagram) 존재, 핵심 명제 누락 없음, 각 슬라이드의 concrete
-          필드에 수치·고유명사 ≥1.
-        keywords:
-        - 강의
-        - 슬라이드 기획
-        - outline
-        - 명제
-      lecture_write:
-        description: '강의 슬라이드 파이프라인 2단계: 슬라이드별 layout/title/labels/image_prompt 집필. only_indices로 부분 갱신.'
-        target_description: |
-          lecture_dir + contents 배열 (각 항목 {idx, layout, title, labels, image_prompt, ...}).
-          - design_system(sf_blueprint 등) 옵션
-          - only_indices: 부분 갱신할 idx 배열
-          - illustration_* 레이아웃은 image_prompt 필수, split_concept은 left/right_image_prompt 필수
-        group: media_produce
-        router: handler
-        tool: create_lecture_write
-        implementation: 'contents.json 저장. 스키마 검증: idx가 outline에 존재, illustration_*
-          레이아웃은 image_prompt 필수, split_concept은 left_image_prompt+right_image_prompt
-          필수. 부분 갱신은 only_indices=[idx,...]로.'
-        achievement_criteria: image_prompt가 다이어그램형(씬 묘사 X)으로 작성됨, 영문 라벨 명시(EYE/MASS
-          등), 한글 라벨 들어갈 빈 공간 명세 포함, 본문 단락을 라벨로 그대로 옮기지 않음, 각 명제를 시각화하는 라벨 배치가 outline의
-          device와 정합.
-        keywords:
-        - 강의
-        - 슬라이드 집필
-        - contents
-      lecture_illustrate:
-        description: '강의 슬라이드 파이프라인 3단계: image_prompt들을 image_gemini로 병렬 호출. only_indices로 약한 일러스트만 재생성.'
-        target_description: |
-          lecture_dir 필수. 옵션:
-          - style_preset(미지정시 design_system 사용)
-          - quality: fast/pro
-          - image_size: 1K/2K/4K
-          - only_indices: 재생성할 idx 배열
-          split_concept은 좌·우 1:1 두 장 생성. 실패한 슬라이드는 manifest 미기록 → 다시 호출.
-        group: media_produce
-        router: handler
-        tool: create_lecture_illustrate
-        implementation: image_gemini를 슬라이드별로 호출, illustrations/manifest.json으로 매니페스트
-          관리. split_concept은 좌·우 1:1 두 장 생성. 부분 재생성 only_indices 지원. 실패한 슬라이드는 manifest에
-          기록 안 됨 — 다시 호출.
-        achievement_criteria: 생성된 일러스트가 다이어그램형이고 한글 미포함, 디자인 시스템 톤 일관, 빈 공간이 정말 비어있음(라벨
-          들어갈 자리), 각 일러스트가 contents.json의 image_prompt 의도와 정합. (VLM 평가는 image_critic
-          액션 참조)
-        keywords:
-        - 강의
-        - 일러스트 생성
-        - illustrate
-      lecture_compose:
-        description: '강의 슬라이드 파이프라인 4단계: contents+illustrations → slide_shadcn → 최종 데크. only_indices로 부분 재합성.'
-        target_description: lecture_dir 필수. only_indices(부분 재합성할 idx 배열) 옵션. 최종 데크는 lecture_dir/deck/에 HTML+PNG로 저장.
-        group: media_produce
-        router: handler
-        tool: create_lecture_compose
-        implementation: contents.json과 illustrations/manifest.json을 병합하여 slide_shadcn에
-          전달. 최종 데크는 lecture_dir/deck/에 HTML+PNG로 저장. only_indices로 약한 슬라이드만 재합성 가능.
-        achievement_criteria: 라벨이 일러스트의 핵심 객체를 가리지 않음, 1280×720 뷰포트 안에 모든 요소가 들어옴,
-          한국어 폰트가 깨지지 않음, 라벨 좌표가 일러스트 빈 공간과 정합.
-        keywords:
-        - 강의
-        - 슬라이드 데크
-        - compose
       image_critic:
         description: 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 반환: passed/score/issues/notes. ILLUSTRATE 단계 자동 평가용.'
         target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. style_preset/checks(추가 체크 배열) 옵션. 기본 체크 — 다이어그램형/한글 미포함/빈 공간/객체 명확성/디자인 톤 일관성. 한글 검출 시 무조건 passed=false.'

@@ -283,133 +283,162 @@ class ClaudeCodeProvider(BaseProvider):
                 clear_session_for_agent(session_key_val)
                 stored_session_id = None
 
-        # 4) 프롬프트 빌드
-        # 주의: --resume 사용 시 Claude Code가 자체 세션에서 history를 알므로
-        # 텍스트 직렬화된 history 주입은 중복이 됨 → 현재 메시지만 보냄
-        if resume_session_id:
-            full_prompt = message
-        else:
-            full_prompt = self._build_prompt_with_history(message, history or [])
+        # 4~6) resume 시도 → 만료/무효 시 fresh 로 자동 재시도 (최대 2회)
+        # CLI 가 `--resume <소멸한 세션>` 을 만나면 stdout JSON 이 아니라 stderr +
+        # 종료코드 1("No conversation found with session ID")로 즉사한다. 첫 시도가
+        # 그렇게 실패하면 그 에러를 사용자에게 노출하지 않고 삼킨 뒤(deferred) 매핑을
+        # 폐기하고 fresh 로 한 번 더 돌린다. 그래야 stale 매핑이 고착되지 않는다.
+        for attempt in range(2):
+            is_resume_attempt = bool(resume_session_id)
 
-        if image_paths:
-            img_lines = "\n".join(f"첨부 이미지 경로: {p}" for p in image_paths)
-            full_prompt = (
-                f"{img_lines}\n"
-                f"(위 이미지 파일을 Read 도구로 읽어 시각 내용을 확인할 수 있다)\n\n"
-                f"{full_prompt}"
+            # 프롬프트 빌드 — resume 면 CLI 가 자체 세션에서 history 를 알므로 현재 메시지만,
+            # fresh 면 직렬화된 history 를 함께 보낸다.
+            if resume_session_id:
+                full_prompt = message
+            else:
+                full_prompt = self._build_prompt_with_history(message, history or [])
+
+            if image_paths:
+                img_lines = "\n".join(f"첨부 이미지 경로: {p}" for p in image_paths)
+                full_prompt = (
+                    f"{img_lines}\n"
+                    f"(위 이미지 파일을 Read 도구로 읽어 시각 내용을 확인할 수 있다)\n\n"
+                    f"{full_prompt}"
+                )
+
+            cmd = self._build_command(
+                mcp_config_path=mcp_config_path,
+                stream=True,
+                resume_session_id=resume_session_id,
             )
 
-        # 5) CLI 명령어 구성 (stream-json 출력)
-        cmd = self._build_command(
-            mcp_config_path=mcp_config_path,
-            stream=True,
-            resume_session_id=resume_session_id,
-        )
-
-        # 진단 — system_prompt(안정 부분, 캐시 prefix)와 message(가변+사용자) 크기.
-        # 안정 부분이 호출마다 동일하면 캐시 hit 가능. dynamic은 message에 prepend됨.
-        _sp_len = len(self.system_prompt or "")
-        _msg_len = len(full_prompt or "")
-        _resumed = "resume" if resume_session_id else "new"
-        print(
-            f"[ClaudeCode/{self.agent_name}] call: session={_resumed} "
-            f"system_prompt={_sp_len}자 message={_msg_len}자"
-        )
-
-        # 5) 토큰·컨텍스트 env 주입
-        env = self._build_env()
-
-        # 6) subprocess 시작 + 라인별 스트림 파싱
-        start = time.time()
-        cwd = self.project_path if self.project_path and self.project_path != "." else None
-        try:
-            proc = subprocess.Popen(
-                cmd + ["--", full_prompt],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                cwd=cwd,
-                env=env,
+            _sp_len = len(self.system_prompt or "")
+            _msg_len = len(full_prompt or "")
+            _resumed = "resume" if resume_session_id else "new"
+            print(
+                f"[ClaudeCode/{self.agent_name}] call: session={_resumed} "
+                f"system_prompt={_sp_len}자 message={_msg_len}자"
             )
-        except FileNotFoundError as e:
-            self.metrics.record_error()
-            yield {"type": "error", "content": f"Claude Code 바이너리 실행 실패: {e}"}
-            return
 
-        accumulated_text = ""
-        captured_session_id: Optional[str] = None
-        resume_failed = False
-        try:
-            for raw_line in proc.stdout:
-                if cancel_check and cancel_check():
-                    proc.kill()
-                    yield {"type": "error", "content": "사용자 취소"}
-                    return
+            env = self._build_env()
+            start = time.time()
+            cwd = self.project_path if self.project_path and self.project_path != "." else None
+            try:
+                proc = subprocess.Popen(
+                    cmd + ["--", full_prompt],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    cwd=cwd,
+                    env=env,
+                )
+            except FileNotFoundError as e:
+                self.metrics.record_error()
+                yield {"type": "error", "content": f"Claude Code 바이너리 실행 실패: {e}"}
+                return
 
-                line = raw_line.strip()
-                if not line:
-                    continue
-                try:
-                    event = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
+            accumulated_text = ""
+            captured_session_id: Optional[str] = None
+            committed = False          # 실제 본문(text/tool/thinking)을 하나라도 받았나
+            resume_err_text = ""       # stdout result 에러 텍스트 (보통 비어있음)
+            deferred: List[Dict] = []  # resume 시도 중 보류한 터미널 이벤트(error/final)
+            try:
+                for raw_line in proc.stdout:
+                    if cancel_check and cancel_check():
+                        proc.kill()
+                        yield {"type": "error", "content": "사용자 취소"}
+                        return
 
-                # session_id 캡처 (system init 이벤트 또는 result 이벤트에서)
-                sid = event.get("session_id")
-                if sid:
-                    captured_session_id = sid
+                    line = raw_line.strip()
+                    if not line:
+                        continue
+                    try:
+                        event = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
 
-                # --resume 실패 패턴 감지
-                if event.get("type") == "result" and event.get("is_error"):
-                    err_text = str(event.get("result") or "")
-                    if "session" in err_text.lower() and (
-                        "not found" in err_text.lower() or "invalid" in err_text.lower()
-                    ):
-                        resume_failed = True
+                    sid = event.get("session_id")
+                    if sid:
+                        captured_session_id = sid
 
-                yielded = self._translate_stream_event(event, accumulated_text, start)
-                for out_event, new_acc in yielded:
-                    if new_acc is not None:
-                        accumulated_text = new_acc
-                    yield out_event
+                    if event.get("type") == "result" and event.get("is_error"):
+                        resume_err_text = str(event.get("result") or "")
 
-            proc.wait(timeout=self.DEFAULT_TIMEOUT_SEC)
+                    yielded = self._translate_stream_event(event, accumulated_text, start)
+                    for out_event, new_acc in yielded:
+                        if new_acc is not None:
+                            accumulated_text = new_acc
+                        t2 = out_event.get("type")
+                        if t2 in ("text", "tool_start", "tool_result", "thinking"):
+                            committed = True
+                        # resume 시도이고 아직 본문이 안 왔으면 터미널 에러/final 은 보류
+                        if is_resume_attempt and not committed and t2 in ("error", "final"):
+                            deferred.append(out_event)
+                        else:
+                            yield out_event
 
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            self.metrics.record_error()
-            yield {"type": "error", "content": f"Claude Code 호출 타임아웃 ({self.DEFAULT_TIMEOUT_SEC}초)"}
-            return
-        except Exception as e:
-            self.metrics.record_error()
-            yield {"type": "error", "content": f"Claude Code 스트림 오류: {e}"}
-            return
-        finally:
-            if proc.poll() is None:
+                proc.wait(timeout=self.DEFAULT_TIMEOUT_SEC)
+
+            except subprocess.TimeoutExpired:
                 proc.kill()
+                self.metrics.record_error()
+                yield {"type": "error", "content": f"Claude Code 호출 타임아웃 ({self.DEFAULT_TIMEOUT_SEC}초)"}
+                return
+            except Exception as e:
+                self.metrics.record_error()
+                yield {"type": "error", "content": f"Claude Code 스트림 오류: {e}"}
+                return
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
 
-        # 비정상 종료 시 stderr 보고
-        if proc.returncode is not None and proc.returncode != 0 and not accumulated_text:
-            stderr_msg = (proc.stderr.read() if proc.stderr else "").strip()[:500]
-            yield {"type": "error", "content": f"Claude Code 종료 코드 {proc.returncode}: {stderr_msg}"}
+            # 비정상 종료 시 stderr 확보 (resume 실패 메시지가 여기에 담긴다)
+            stderr_text = ""
+            if proc.returncode is not None and proc.returncode != 0 and not accumulated_text:
+                stderr_text = (proc.stderr.read() if proc.stderr else "").strip()
 
-        # 세션 매핑 갱신 (disable_session_persistence면 스킵)
-        if not self.disable_session_persistence and session_key_val:
-            if resume_failed and stored_session_id:
-                # --resume 실패 → 매핑 폐기 (다음 호출은 fresh)
-                clear_session_for_agent(session_key_val)
+            # --- resume 실패 판정 (stdout result 텍스트 + stderr 종합) ---
+            combined = (resume_err_text + " " + stderr_text).lower()
+            session_issue = ("no conversation found" in combined) or (
+                "session" in combined
+                and ("not found" in combined or "invalid" in combined)
+            )
+            # session 만료/무효일 때만 재시도 — rate limit·인증 등 일시적 에러로는
+            # 멀쩡한 매핑을 폐기하지 않는다 (그 에러는 그대로 사용자에게 보고).
+            resume_failed = is_resume_attempt and not committed and session_issue
+
+            if attempt == 0 and resume_failed:
+                # 매핑 폐기 + fresh 재시도 (보류했던 에러는 버린다 → 사용자에 미노출)
+                if session_key_val:
+                    clear_session_for_agent(session_key_val)
                 print(
-                    f"[ClaudeCodeProvider] {self.agent_name}: 저장된 세션({stored_session_id[:8]}...) 만료/유효하지 않음 → 매핑 제거"
+                    f"[ClaudeCodeProvider] {self.agent_name}: 저장된 세션"
+                    f"({(stored_session_id or '')[:8]}...) 만료/무효 → fresh 재시도"
                 )
-            elif captured_session_id and captured_session_id != stored_session_id:
-                # 새 세션 또는 변경된 세션 ID 저장
-                session_map[session_key_val] = captured_session_id
-                save_session_map(session_map)
-                print(
-                    f"[ClaudeCodeProvider] {self.agent_name}: 세션 저장 "
-                    f"({session_key_val} → {captured_session_id[:8]}...)"
-                )
+                resume_session_id = None
+                stored_session_id = None
+                continue
+
+            # --- 최종 attempt: 결과 확정 ---
+            for ev in deferred:          # 보류했던 터미널 이벤트 방출
+                yield ev
+            if proc.returncode not in (0, None) and not accumulated_text and not deferred:
+                yield {
+                    "type": "error",
+                    "content": f"Claude Code 종료 코드 {proc.returncode}: {stderr_text[:500]}",
+                }
+
+            # 세션 매핑 갱신 (disable_session_persistence면 스킵)
+            if not self.disable_session_persistence and session_key_val:
+                if captured_session_id and captured_session_id != stored_session_id:
+                    session_map[session_key_val] = captured_session_id
+                    save_session_map(session_map)
+                    print(
+                        f"[ClaudeCodeProvider] {self.agent_name}: 세션 저장 "
+                        f"({session_key_val} → {captured_session_id[:8]}...)"
+                    )
+            break
 
     def _translate_stream_event(
         self, event: Dict, accumulated_text: str, start_time: float
@@ -648,6 +677,11 @@ class ClaudeCodeProvider(BaseProvider):
                 env["ANTHROPIC_API_KEY"] = self._effective_token
         if self.project_path and self.project_path != ".":
             env["INDIEBIZOS_PROJECT_PATH"] = str(self.project_path)
+        # 발신 신원: subprocess(claude)가 MCP→/ibl/execute로 IBL을 돌릴 때 자기 agent_id를 갖고 가게 한다.
+        # in-process 프로바이더는 execute_tool(..., self.agent_id)로 직접 넘기지만, out-of-process인 이 프로바이더는
+        # env가 유일한 통로. channel_send/read의 신원 게이트(시스템 AI=system_ai, 프로젝트 에이전트=자기 계정)에 필요.
+        if self.agent_id:
+            env["INDIEBIZOS_AGENT_ID"] = str(self.agent_id)
         return env
 
     def _save_images_to_temp(self, images: List[Dict]) -> List[str]:

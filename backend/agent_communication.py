@@ -333,7 +333,7 @@ class AgentCommunicationMixin:
                     clear_called_agent()
                     return
 
-                # 판단형만 의식 에이전트 실행 / 실행형은 중급 모델로 전환 (비용·속도 절감)
+                # 판단형은 의식 에이전트 / reflex(해마 고확신)만 중급 모델 / 무의식 EXECUTE는 본격 모델 유지
                 consciousness_output = None
                 _original_provider = None
                 if request_type == "THINK":
@@ -364,8 +364,8 @@ class AgentCommunicationMixin:
                         clear_current_task_id()
                         clear_called_agent()
                         return
-                else:
-                    # EXECUTE/reflex: 중급 모델로 전환 (api_websocket·system_ai_core와 동일 패턴)
+                elif reflex_hint:
+                    # reflex만 중급 모델 — 무의식 EXECUTE 오분류여도 본격 모델이 받아 품질 방어
                     try:
                         from consciousness_agent import _get_midtier_provider
                         _midtier = _get_midtier_provider()

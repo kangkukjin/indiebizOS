@@ -72,18 +72,7 @@ def _load_owner_identities() -> Dict[str, set]:
             if email:
                 identities['emails'].add(email)
 
-    # 시스템 AI Gmail도 소유자 이메일에 추가 (config.yaml에서 읽기)
-    try:
-        import yaml
-        gmail_config_path = _get_base_path() / "data" / "packages" / "installed" / "extensions" / "gmail" / "config.yaml"
-        if gmail_config_path.exists():
-            with open(gmail_config_path) as f:
-                gmail_config = yaml.safe_load(f)
-            system_ai_gmail = gmail_config.get('gmail', {}).get('email', '')
-            if system_ai_gmail:
-                identities['emails'].add(system_ai_gmail.strip().lower())
-    except:
-        pass
+    # 시스템 AI 발신 주소는 owner로 등록하지 않음 — 자기 응답이 다시 명령으로 처리되는 루프 방지
 
     # Nostr 공개키 로드 (쉼표 구분, hex와 npub 양쪽 모두 저장)
     owner_nostr = os.getenv('OWNER_NOSTR_PUBKEYS', '')
@@ -131,6 +120,9 @@ class ChannelPoller:
 
         # 사용자 식별 정보
         self._owner_identities = _load_owner_identities()
+
+        # 처리된 소유자 메시지 external_id 캐시 (business DB 미저장으로 인한 재처리 방지)
+        self._processed_owner_ids: set = set()
 
     def _is_from_owner(self, contact_type: str, contact_value: str) -> bool:
         """메시지가 소유자(사용자)로부터 왔는지 확인"""
@@ -572,8 +564,8 @@ class ChannelPoller:
             if self._gmail_client is None:
                 return
 
-            # 읽지 않은 모든 메시지 가져오기
-            query = 'is:unread'
+            # 읽지 않은 메시지 중 자신이 보낸 것 제외 (응답 루프 방지)
+            query = 'is:unread -from:me'
             messages = self._gmail_client.get_messages(query=query, max_results=10)
 
             if not messages:
@@ -585,7 +577,14 @@ class ChannelPoller:
                 if msg is None:
                     continue
 
-                # DB에 저장
+                # 처리 전 즉시 읽음 처리 — 처리가 수십 초 걸려도 다음 폴링 주기에서 재선택 방지
+                if msg.get('id'):
+                    try:
+                        self._gmail_client.mark_as_read(msg['id'])
+                    except Exception as e:
+                        self._log(f"Gmail 읽음 처리 실패: {e}")
+
+                # DB 저장 / 시스템 AI 처리
                 self._save_message_to_db(
                     contact_type='gmail',
                     contact_value=self._extract_email(msg.get('from', '')),
@@ -594,13 +593,6 @@ class ChannelPoller:
                     external_id=msg.get('id', ''),
                     message_time=msg.get('date')
                 )
-
-                # 읽음 처리
-                if msg.get('id'):
-                    try:
-                        self._gmail_client.mark_as_read(msg['id'])
-                    except Exception as e:
-                        self._log(f"Gmail 읽음 처리 실패: {e}")
 
         except Exception as e:
             self._log(f"Gmail 폴링 실패: {e}")
@@ -666,6 +658,12 @@ class ChannelPoller:
             is_owner = self._is_from_owner(contact_type, contact_value)
 
             if is_owner:
+                # 소유자 메시지 중복 처리 방지 (business DB 미저장이므로 메모리 캐시 사용)
+                if external_id:
+                    if external_id in self._processed_owner_ids:
+                        return
+                    self._processed_owner_ids.add(external_id)
+
                 # 사용자 명령 → 시스템 AI로 처리
                 self._log(f"사용자 명령 감지: {subject[:30]}...")
                 self._process_owner_command(contact_type, contact_value, subject, content)
@@ -742,8 +740,11 @@ class ChannelPoller:
                 # AI 응답도 system_ai_memory.db에 저장 (GUI와 동일)
                 save_conversation("assistant", response, source=f"system_ai@{contact_type}")
 
-                # 외부 채널로 응답 전송
-                self._send_response(contact_type, contact_value, f"Re: {subject}", response)
+                # 오류 응답은 외부 채널로 전송하지 않음 (수신 루프 방지)
+                if response.startswith("명령 처리 중 오류"):
+                    self._log(f"오류 응답 - 외부 전송 생략 (루프 방지): {response[:60]}")
+                else:
+                    self._send_response(contact_type, contact_value, f"Re: {subject}", response)
 
             self._log(f"사용자 명령 처리 완료: {subject[:30]}...")
 
@@ -796,18 +797,18 @@ class ChannelPoller:
                     })
 
             # 실제 시스템 AI 호출 (모든 도구 포함)
-            response = process_system_ai_message(
+            response_text, _tool_images = process_system_ai_message(
                 message=command,
                 history=formatted_history,
                 images=None
             )
 
             # 태스크 완료 처리
-            complete_system_ai_task(task_id, response[:500] if response else "")
+            complete_system_ai_task(task_id, response_text[:500] if response_text else "")
             clear_current_task_id()
             clear_called_agent()
 
-            return response
+            return response_text
 
         except Exception as e:
             self._log(f"시스템 AI 실행 오류: {e}")

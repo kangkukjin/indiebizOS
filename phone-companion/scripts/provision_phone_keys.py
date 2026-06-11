@@ -38,6 +38,15 @@ PHONE_KEYS = [
     "MOLIT_API_KEY",
 ]
 
+# 분산 IBL 위임 설정 — 폰 자율주행 표면이 맥 백엔드로 프록시할 대상.
+# .env 에 있으면 함께 주입(없으면 건너뜀 → 폰은 오프라인 폴백, 앱모드만).
+#   INDIEBIZ_MAC_URL      = http://<맥 LAN IP>:8765  또는  http://127.0.0.1:8766 (adb reverse 시)
+#   INDIEBIZ_MAC_PASSWORD = 맥 원격 런처 비번 (터널 경유 시 필수; LAN 직결은 생략 가능)
+MAC_DELEGATION_KEYS = [
+    "INDIEBIZ_MAC_URL",
+    "INDIEBIZ_MAC_PASSWORD",
+]
+
 
 def load_env(env_path: Path) -> dict:
     out = {}
@@ -60,6 +69,9 @@ def main() -> int:
     env = load_env(env_path)
     keys = {k: env[k] for k in PHONE_KEYS if env.get(k)}
     missing = [k for k in PHONE_KEYS if not env.get(k)]
+    # 분산 IBL 위임 설정도 .env 에 있으면 합류(비밀 아닌 URL + 비번).
+    mac_cfg = {k: env[k] for k in MAC_DELEGATION_KEYS if env.get(k)}
+    keys.update(mac_cfg)
     if not keys:
         print("[provision] .env 에 폰 키가 하나도 없습니다.", file=sys.stderr)
         return 1
@@ -91,7 +103,14 @@ def main() -> int:
     finally:
         os.unlink(tmp)
 
-    print(f"[provision] ✅ 폰에 키 {len(keys)}개 주입: {', '.join(sorted(keys))}")
+    data_keys = sorted(k for k in keys if k not in MAC_DELEGATION_KEYS)
+    print(f"[provision] ✅ 폰에 데이터 키 {len(data_keys)}개 주입: {', '.join(data_keys)}")
+    if mac_cfg:
+        url_shown = mac_cfg.get("INDIEBIZ_MAC_URL", "(미설정)")
+        pw = "비번 동봉" if "INDIEBIZ_MAC_PASSWORD" in mac_cfg else "비번 없음(LAN 직결 전제)"
+        print(f"[provision] ✅ 맥 위임: {url_shown} ({pw}) — 자율주행이 맥으로 프록시됩니다.")
+    else:
+        print("[provision] ℹ️  맥 위임 미설정(.env 에 INDIEBIZ_MAC_URL 없음) → 폰 자율주행은 오프라인 폴백, 앱모드만 동작.")
     if missing:
         print(f"[provision] (.env 에 없어 건너뜀: {', '.join(missing)})")
     print("[provision] 폰 백엔드 재기동(앱 force-stop 후 '폰 백엔드 시작')하면 반영됩니다.")

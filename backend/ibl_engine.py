@@ -139,6 +139,42 @@ def _phone_runnable(node: str, action: str) -> bool:
     return True if rs is None else (f"{node}:{action}" in rs)
 
 
+def _forward_to_phone(phone_url: str, node: str, action: str, params: dict) -> Dict:
+    """분산 IBL(#2) — phone_only 액션을 폰 /ibl/execute 로 HTTP 포워드(몸=폰).
+
+    맥(두뇌)에서 도는 에이전트가 [limbs:phone] 같은 폰 전용 동작을 만나면, 맥에서
+    `from java` 로 실패(graceful 거부)하는 대신 폰이 실제 네이티브 effector(진동·알림·
+    TTS 등)를 구동하게 보낸다. 호출부는 INDIEBIZ_PHONE_URL 설정 시에만 이 함수를 부르므로,
+    여기선 항상 dict 를 돌려준다(폰 미도달도 명확한 에러 dict — 맥서 USB-ADB 하라는 오인 회피).
+    """
+    code = f"[{node}:{action}]"
+    if params:
+        code += json.dumps(params, ensure_ascii=False)
+    try:
+        import requests
+        headers = {"Content-Type": "application/json"}
+        token = os.environ.get("INDIEBIZ_PHONE_TOKEN")
+        if token:
+            headers["X-Phone-Token"] = token  # #3 인에이블러(폰 인증) 대비 — 미설정이면 미동봉
+        r = requests.post(f"{phone_url.rstrip('/')}/ibl/execute",
+                          json={"code": code}, headers=headers, timeout=30)
+    except Exception as e:
+        return {"error": f"[{node}:{action}]은 폰에서 실행되는 동작인데 폰({phone_url})에 "
+                         f"연결할 수 없습니다. 폰 백엔드가 켜져 있는지 확인하세요. "
+                         f"({e.__class__.__name__})",
+                "phone_unreachable": True}
+    if r.status_code != 200:
+        return {"error": f"폰 실행 실패 (HTTP {r.status_code})",
+                "detail": r.text[:300], "phone_forward": True}
+    try:
+        result = r.json()
+    except Exception:
+        return {"result": r.text, "_forwarded_to": "phone"}
+    if isinstance(result, dict):
+        result.setdefault("_forwarded_to", "phone")
+    return result
+
+
 def _load_nodes_config() -> Dict:
     """노드 정의 로드 (캐싱)"""
     global _nodes
@@ -375,6 +411,15 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         for k, v in default_input.items():
             if k not in params:
                 params[k] = v
+
+    # 분산 IBL(#2): 맥(두뇌)에서 도는 에이전트가 phone_only 액션을 만나면 폰(몸)으로 포워드.
+    # INDIEBIZ_PHONE_URL 설정 시에만 — 미설정이면 아래 핸들러가 graceful phone_only 거부로 안내.
+    # (폰 프로파일에선 INDIEBIZ_PROFILE=phone 이라 스킵 → 폰이 로컬 핸들러로 실제 실행.)
+    if action_config.get("runs_on") == "phone_only" \
+            and os.environ.get("INDIEBIZ_PROFILE") != "phone":
+        _phone_url = os.environ.get("INDIEBIZ_PHONE_URL")
+        if _phone_url:
+            return _forward_to_phone(_phone_url, node, action, params)
 
     # 라우터별 실행 + 개별 액션 기록 (X-Ray용)
     import time as _time

@@ -14,14 +14,29 @@ import copy
 import yaml
 
 
-def _redact_agents_secrets(agents):
-    """원격 응답에서 민감 정보(API 키 등) 제거"""
-    safe = copy.deepcopy(agents)
-    for agent in safe:
-        ai = agent.get("ai")
-        if isinstance(ai, dict) and ai.get("api_key"):
-            ai["api_key"] = ""
+# ai 설정 안에서 절대 클라이언트로 내보내면 안 되는 비밀 키들
+_AI_SECRET_FIELDS = ("api_key", "apiKey", "token", "access_token", "secret", "api_secret")
+
+
+def _redact_agent_secrets(agent):
+    """단일 에이전트 dict에서 API 키 등 비밀을 비파괴적으로 제거.
+
+    응답 직렬화 직전에만 호출 — 원본(agents.yaml 로드본)을 건드리지 않도록 deepcopy.
+    키 존재 여부는 `has_api_key` 불리언으로만 노출(UI가 '키 설정됨' 표시에 사용).
+    """
+    safe = copy.deepcopy(agent)
+    ai = safe.get("ai")
+    if isinstance(ai, dict):
+        safe["has_api_key"] = bool(ai.get("api_key"))
+        for field in _AI_SECRET_FIELDS:
+            if field in ai:
+                ai[field] = ""
     return safe
+
+
+def _redact_agents_secrets(agents):
+    """에이전트 목록 응답에서 민감 정보(API 키 등) 일괄 제거"""
+    return [_redact_agent_secrets(a) for a in agents]
 
 router = APIRouter()
 
@@ -86,13 +101,11 @@ async def get_project_agents(project_id: str, request: Request):
 
         agents = data.get("agents", [])
 
-        # 원격(터널) 요청에는 API 키 등 민감 정보를 노출하지 않는다
-        try:
-            from api_launcher_web import is_external_request
-            if is_external_request(request):
-                agents = _redact_agents_secrets(agents)
-        except Exception:
-            pass
+        # API 키 등 비밀은 어떤 클라이언트(데스크탑/원격 터널/폰 컴패니언 프록시)에도
+        # 평문으로 내보내지 않는다. 자율주행 JS는 id/name/role만 쓰고, 데스크탑 편집
+        # 폼은 비대칭 PUT(빈 키=기존 유지)이라 실제 키 없이도 동작한다.
+        # is_external_request는 Host 헤더 기반이라 LAN 프록시를 놓칠 수 있어 항상 마스킹.
+        agents = _redact_agents_secrets(agents)
 
         return {"agents": agents}
     except Exception as e:
@@ -474,7 +487,9 @@ async def create_agent(project_id: str, agent_data: AgentUpdate):
             role_file = project_path / f"agent_{agent_data.name}_role.txt"
             role_file.write_text(agent_data.role, encoding='utf-8')
 
-        return {"status": "created", "agent": new_agent}
+        # 응답에는 키를 되돌려 보내지 않는다 (요청자는 이미 키를 가졌지만,
+        # 프록시/로깅 표면에 평문 키가 새지 않도록 일관되게 마스킹)
+        return {"status": "created", "agent": _redact_agent_secrets(new_agent)}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

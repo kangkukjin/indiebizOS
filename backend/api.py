@@ -450,7 +450,10 @@ if __name__ == "__main__":
     # 한 번의 reload로 묶이게 한다. (uvicorn 기본 0.25초 → 2.0초)
     uvicorn.run(
         "api:app",
-        host="127.0.0.1",
+        # 기본 localhost 전용. 분산 IBL LAN 테스트 등 LAN 도달이 필요하면 .env 에
+        # INDIEBIZ_BIND_HOST=0.0.0.0 으로 opt-in(=LAN 노출, 외부요청 인증 게이트는
+        # 터널 호스트네임 기준이라 LAN 직결은 우회됨 — 신뢰 LAN에서만).
+        host=os.environ.get("INDIEBIZ_BIND_HOST", "127.0.0.1"),
         port=port,
         reload=not is_production,
         reload_delay=2.0,

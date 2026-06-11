@@ -113,7 +113,15 @@ _docs_initialized = False
 # ============ 채팅 API ============
 
 @router.post("/system-ai/chat", response_model=ChatResponse)
-async def chat_with_system_ai(chat: ChatMessage):
+def chat_with_system_ai(chat: ChatMessage):
+    # ★ 동기(def) 엔드포인트로 둔다 (async 아님). process_system_ai_message 는 LLM
+    # 파이프라인 전체를 동기로 블로킹한다. async 로 두면 이벤트 루프를 통째로 막아,
+    # claude_code(아웃오브프로세스) 프로바이더가 MCP→HTTP 로 같은 백엔드 /ibl/execute
+    # 로 재진입할 때 루프가 막혀 처리되지 못한다(자기 데드락) → mcp urllib 120초
+    # 타임아웃 후에야 풀려 에이전트가 "타임아웃 실패"로 오판한다(예: [limbs:phone]
+    # 포워드가 폰에 닿질 못함). def 로 두면 FastAPI 가 스레드풀에서 실행해 루프가
+    # 자유로워지고 재진입 /ibl/execute 가 동시 처리된다. set_current_task_id 등은
+    # threading.local 이라 엔드포인트 전체가 한 워커 스레드에서 돌아야 일관된다.
     """
     시스템 AI와 대화
 

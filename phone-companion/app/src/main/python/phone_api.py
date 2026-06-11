@@ -16,6 +16,7 @@ import sys
 import json
 import asyncio
 
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 import uvicorn
@@ -24,6 +25,16 @@ import uvicorn
 _lw = None
 _scratch = None
 _base = None
+
+# === 분산 IBL: 자율주행 표면 → 맥 백엔드 위임 ===
+# 두뇌=맥(claude_code, 단일 설정·프로젝트·스위치), 몸=폰. 폰의 자율주행 표면
+# (프로젝트/스위치/시스템AI 채팅)은 맥 백엔드(:8765)로 프록시한다 — 번들 아님.
+# 도달=LAN IP 또는 터널 URL(INDIEBIZ_MAC_URL). 인증=맥 원격 런처 세션
+# (비번 INDIEBIZ_MAC_PASSWORD → 로그인 → X-Launcher-Session). 둘 다 keys.json/env 로.
+# 미설정(오프라인) 시 자율주행은 빈 목록 graceful — 앱모드(폰 로컬 IBL)는 무관히 동작.
+_mac_url = None
+_mac_password = None
+_mac_session = None
 
 
 def _init_base(base_path):
@@ -50,6 +61,14 @@ def _init_base(base_path):
             print(f"[phone_api] API 키 주입: {len([k for k in _keys if _keys[k]])}개")
     except Exception as e:
         print(f"[phone_api] 키 주입 스킵: {e}")
+
+    # 분산 IBL: 맥 백엔드 위임 설정(LAN/터널 URL + 원격 런처 비번). keys.json/env 로 주입.
+    global _mac_url, _mac_password, _mac_session
+    _mac_url = (os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/") or None
+    _mac_password = os.environ.get("INDIEBIZ_MAC_PASSWORD") or None
+    _mac_session = None
+    if _mac_url:
+        print(f"[phone_api] 맥 위임 대상: {_mac_url} (비번 {'설정됨' if _mac_password else '없음'})")
 
     # scratch 프로젝트 경로 — scope=project 액션이 경로를 요구하므로 확보(weather/crypto 는 미사용).
     # BaseBundle 이 지우는 indiebiz_base 의 sibling(filesDir/scratch)에 둬 생성물(신문 등)이 영속.
@@ -79,10 +98,138 @@ def launcher_config():
     return {"remote_enabled": True, "has_password": False, "host": "phone-local"}
 
 
+# === 맥 위임 프록시 (분산 IBL) ===
+
+async def _mac_login() -> bool:
+    """맥 원격 런처에 로그인 → 세션 토큰 확보. LAN 직결 시 맥이 비-외부로 보고
+    인증을 건너뛸 수 있으나(api_launcher_web.is_external_request), 터널 경유엔 필수.
+    비번 미설정이면 로그인 생략(LAN 경로 의존)."""
+    global _mac_session
+    if not _mac_url or not _mac_password:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=15) as c:
+            r = await c.post(f"{_mac_url}/launcher/auth/login",
+                             json={"password": _mac_password})
+        if r.status_code == 200:
+            _mac_session = (r.json() or {}).get("session_id") or \
+                r.cookies.get("launcher_session")
+            return bool(_mac_session)
+    except Exception as e:
+        print(f"[phone_api] 맥 로그인 실패: {e}")
+    return False
+
+
+async def _mac_proxy(request: Request, path: str, *, timeout: float = 60.0):
+    """들어온 요청을 맥 백엔드로 그대로 포워드. 401/403 이면 1회 재로그인 후 재시도.
+    맥 미설정/미도달이면 None 반환(호출부가 graceful 폴백)."""
+    if not _mac_url:
+        return None
+    method = request.method
+    try:
+        body = await request.body()
+    except Exception:
+        body = b""
+    params = dict(request.query_params)
+
+    async def _send():
+        headers = {}
+        if _mac_session:
+            headers["X-Launcher-Session"] = _mac_session
+        ct = request.headers.get("content-type")
+        if ct:
+            headers["content-type"] = ct
+        async with httpx.AsyncClient(timeout=timeout) as c:
+            return await c.request(method, f"{_mac_url}{path}",
+                                   content=body or None, params=params or None,
+                                   headers=headers)
+
+    try:
+        r = await _send()
+        if r.status_code in (401, 403) and _mac_password:
+            if await _mac_login():
+                r = await _send()
+        return r
+    except Exception as e:
+        print(f"[phone_api] 맥 프록시 오류 {path}: {e}")
+        return "error"
+
+
+def _relay(r):
+    """httpx.Response → JSONResponse(가능하면 JSON, 아니면 텍스트)."""
+    try:
+        return JSONResponse(r.json(), status_code=r.status_code)
+    except Exception:
+        return JSONResponse({"response": r.text}, status_code=r.status_code)
+
+
+def _list_or_empty(r, default):
+    """자율주행 표면이 checkSession() 으로 읽는 GET 리스트 라우트용.
+    ★폰은 내 기기 — 맥 인증 실패/미도달을 폰 사용자에게 '맥 로그인창'으로 전가하지 않는다.
+    맥이 200 데이터를 주면 그대로, 그밖(미연결 None/예외 'error'/**비-200 401·403·5xx**)이면
+    default 를 200 으로. 401 을 폰 런처로 전파하면 checkSession 이 비번 게이트를 띄우는 회귀(버그2)."""
+    if r is None or r == "error" or getattr(r, "status_code", 0) != 200:
+        return JSONResponse(default)
+    return _relay(r)
+
+
 @app.get("/projects")
-def projects():
-    # 200 이면 런처가 로그인 스킵하고 showApp() (checkSession)
-    return JSONResponse([])
+async def projects(request: Request):
+    # 맥 연결 시 맥의 프로젝트 목록을 그대로 — 폰이 PC와 같은 프로젝트를 본다.
+    # 미연결/인증실패면 200 빈 목록 → 런처가 로그인 스킵하고 앱모드 진입(checkSession).
+    return _list_or_empty(await _mac_proxy(request, "/projects"), [])
+
+
+@app.get("/switches")
+async def switches(request: Request):
+    return _list_or_empty(await _mac_proxy(request, "/switches"), {"switches": []})
+
+
+@app.get("/projects/{project_id}/agents")
+async def project_agents(project_id: str, request: Request):
+    return _list_or_empty(await _mac_proxy(request, f"/projects/{project_id}/agents"),
+                          {"agents": []})
+
+
+@app.post("/switches/{switch_id}/execute")
+async def switch_execute(switch_id: str, request: Request):
+    # 스위치 실행=맥의 IBL/에이전트 — 길어질 수 있어 넉넉한 타임아웃.
+    r = await _mac_proxy(request, f"/switches/{switch_id}/execute", timeout=300.0)
+    if r is None:
+        return JSONResponse({"success": False, "error": "맥 백엔드 미연결(INDIEBIZ_MAC_URL 미설정)"}, status_code=503)
+    if r == "error":
+        return JSONResponse({"success": False, "error": "맥 백엔드 연결 실패"}, status_code=502)
+    return _relay(r)
+
+
+@app.post("/system-ai/chat")
+async def system_ai_chat(request: Request):
+    # 시스템 AI 채팅=맥 claude_code 의식+실행 — LLM 왕복이라 긴 타임아웃.
+    r = await _mac_proxy(request, "/system-ai/chat", timeout=300.0)
+    if r is None:
+        return JSONResponse({"response": "맥 백엔드에 연결되어 있지 않습니다. (INDIEBIZ_MAC_URL 미설정 — 집 PC가 켜져 있어야 자율주행이 동작합니다.)"})
+    if r == "error":
+        return JSONResponse({"response": "맥 백엔드 연결에 실패했습니다. 집 PC와 네트워크를 확인하세요."})
+    return _relay(r)
+
+
+@app.post("/projects/{project_id}/agents/{agent_id}/start")
+async def agent_start(project_id: str, agent_id: str, request: Request):
+    r = await _mac_proxy(request, f"/projects/{project_id}/agents/{agent_id}/start", timeout=120.0)
+    if r is None or r == "error":
+        return JSONResponse({"success": False, "error": "맥 백엔드 미연결"}, status_code=503)
+    return _relay(r)
+
+
+@app.post("/projects/{project_id}/agents/{agent_id}/command")
+async def agent_command(project_id: str, agent_id: str, request: Request):
+    # 에이전트 명령=맥 claude_code 실행 — 긴 타임아웃.
+    r = await _mac_proxy(request, f"/projects/{project_id}/agents/{agent_id}/command", timeout=300.0)
+    if r is None:
+        return JSONResponse({"response": "맥 백엔드에 연결되어 있지 않습니다."})
+    if r == "error":
+        return JSONResponse({"response": "맥 백엔드 연결에 실패했습니다."})
+    return _relay(r)
 
 
 @app.get("/output/{name}")
@@ -144,8 +291,12 @@ def serve(port=8765, base_path=None):
         return
     _init_base(base_path)
 
+    # 기본 localhost 전용(WebView 자기접속). 분산 IBL 에서 맥(두뇌)이 폰(몸)으로 직접
+    # phone_only 액션을 포워드하려면 폰이 LAN 도달 가능해야 하므로, keys.json 에
+    # INDIEBIZ_BIND_HOST=0.0.0.0 주입 시 LAN 바인딩(=WiFi 노출 → #3 폰 인증 필요).
     config = uvicorn.Config(
-        app, host="127.0.0.1", port=int(port), log_level="info", loop="asyncio")
+        app, host=os.environ.get("INDIEBIZ_BIND_HOST", "127.0.0.1"),
+        port=int(port), log_level="info", loop="asyncio")
     _server = uvicorn.Server(config)
     _server.install_signal_handlers = lambda: None
     _serving = True

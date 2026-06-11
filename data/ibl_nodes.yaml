@@ -1857,7 +1857,7 @@ nodes:
         - 터치
         - 탭
       phone:
-        description: 폰 네이티브 동작 (op 분기) — 폰의 뇌가 폰 하드웨어를 직접 만짐. 알림/진동/토스트/복사/음성/앱실행. sense:phone(입력)의 출력 짝.
+        description: 폰 네이티브 동작 (op 분기) — 알림/진동/토스트/복사/음성/앱실행. 동작 요청은 sense:phone 진단 없이 바로 실행 — 도달성은 sense:phone(푸시 피드) 신선도와 무관, 미도달이면 phone_unreachable 명시됨.
         group: device
         target_description: 'op=notify(기본): 알림 표시 — title/body. vibrate: 진동 — duration_ms(기본 400).
           toast: 화면 토스트 — text. clipboard: 클립보드 복사 — text. speak: TTS 음성 — text. open_app: 앱 실행 — package_name(예 com.kakao.talk).

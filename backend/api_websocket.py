@@ -377,19 +377,72 @@ async def handle_chat_message(client_id: str, data: dict):
         from thread_context import set_current_task_id
         set_current_task_id(task_id)
 
-        # 실행기억 생성 (RAG + discover + implementation, 1회)
-        execution_memory, _ts, _tc = runner._build_execution_memory(message, action_hint=action_hint)
+        # ★ LLM 파이프라인(의식+실행)을 워커 스레드로 오프로드한다 — 이벤트 루프를
+        # 막지 않기 위해. 동기 블로킹(process_message_with_history)을 async 핸들러에서
+        # 직접 부르면 루프가 막혀, claude_code(아웃오브프로세스)가 MCP→HTTP 로 같은
+        # 백엔드 /ibl/execute 로 재진입할 때 처리되지 못하는 자기 데드락이 난다(시스템 AI
+        # 채팅 bug1과 동일 부류). 스트리밍 핸들러(handle_chat_message_stream/system_ai)는
+        # 이미 executor.submit(run_stream) 으로 이 패턴을 쓴다 — 비스트리밍 경로도 합류.
+        # thread_context 는 threading.local 이라 워커 스레드 안에서 재설정한다(run_stream 미러).
+        loop = asyncio.get_running_loop()
 
-        # 의식 에이전트 실행 — 메타 판단 (framing 재고 있으면 재사용)
-        consciousness_output = runner._run_consciousness_or_reuse(
-            message, history, execution_memory
-        )
+        def _work():
+            from thread_context import (set_current_agent_id as _sa, set_current_agent_name as _sn,
+                                        set_current_project_id as _sp, set_current_task_id as _st,
+                                        set_user_input as _su, clear_all_context as _clear)
+            _sa(agent_id); _sn(agent_name); _sp(project_id); _st(task_id); _su(message)
+            try:
+                # 실행기억 생성 (RAG + discover + implementation, 1회)
+                execution_memory, _ts, _tc = runner._build_execution_memory(message, action_hint=action_hint)
 
-        # Clarification fast-path — 의식이 정보 부족으로 사용자 확인을 요청하면
-        # 실행 에이전트 호출을 건너뛰고 질문을 응답으로 반환.
-        _clarify_text = runner._consciousness_clarification(consciousness_output) if consciousness_output else None
-        if _clarify_text:
-            print(f"[의식] clarification fast-path (non-stream): 실행 에이전트 스킵")
+                # 의식 에이전트 실행 — 메타 판단 (framing 재고 있으면 재사용)
+                consciousness_output = runner._run_consciousness_or_reuse(
+                    message, history, execution_memory
+                )
+
+                # Clarification fast-path — 의식이 정보 부족으로 사용자 확인을 요청하면
+                # 실행 에이전트 호출을 건너뛰고 질문을 응답으로 반환.
+                _clarify_text = runner._consciousness_clarification(consciousness_output) if consciousness_output else None
+                if _clarify_text:
+                    print(f"[의식] clarification fast-path (non-stream): 실행 에이전트 스킵")
+                    return {"clarify": _clarify_text}
+
+                # 안정/가변 분리 (캐시 prefix 보존)
+                augmented_message = message
+                conv_history = history
+                if consciousness_output:
+                    role_file = runner.project_path / f"agent_{agent_name}_role.txt"
+                    role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
+                    stable_prompt, dynamic_context = runner._build_system_prompt_split(
+                        role, consciousness_output, execution_memory
+                    )
+                    runner.ai.system_prompt = stable_prompt
+                    if runner.ai._provider:
+                        runner.ai._provider.system_prompt = stable_prompt
+                    if dynamic_context:
+                        augmented_message = f"{dynamic_context}\n\n{message}"
+
+                    # 히스토리 편집 (의식 에이전트 판단에 따라)
+                    conv_history = runner._apply_consciousness_to_history(history, consciousness_output)
+
+                # AI 응답 생성
+                response = runner.ai.process_message_with_history(
+                    message_content=augmented_message,
+                    from_email="user@gui",
+                    history=conv_history,
+                    reply_to="user@gui",
+                    task_id=task_id,
+                    images=images
+                )
+                tool_images = runner.ai.get_last_tool_images()
+                return {"response": response, "tool_images": tool_images}
+            finally:
+                _clear()
+
+        result = await loop.run_in_executor(executor, _work)
+
+        if result.get("clarify"):
+            _clarify_text = result["clarify"]
             message_id = db.save_message(target_agent_id, user_id, _clarify_text)
             await manager.send_message(client_id, {
                 "type": "response",
@@ -401,39 +454,11 @@ async def handle_chat_message(client_id: str, data: dict):
                 "type": "end",
                 "agent": agent_name,
             })
-            from thread_context import clear_all_context
-            clear_all_context()
             return
 
-        # 안정/가변 분리 (캐시 prefix 보존)
-        augmented_message = message
-        if consciousness_output:
-            role_file = runner.project_path / f"agent_{agent_name}_role.txt"
-            role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-            stable_prompt, dynamic_context = runner._build_system_prompt_split(
-                role, consciousness_output, execution_memory
-            )
-            runner.ai.system_prompt = stable_prompt
-            if runner.ai._provider:
-                runner.ai._provider.system_prompt = stable_prompt
-            if dynamic_context:
-                augmented_message = f"{dynamic_context}\n\n{message}"
-
-            # 히스토리 편집 (의식 에이전트 판단에 따라)
-            history = runner._apply_consciousness_to_history(history, consciousness_output)
-
-        # AI 응답 생성
-        response = runner.ai.process_message_with_history(
-            message_content=augmented_message,
-            from_email="user@gui",
-            history=history,
-            reply_to="user@gui",
-            task_id=task_id,
-            images=images
-        )
-
         # AI 응답 저장 (도구 결과 이미지 포함)
-        tool_images = runner.ai.get_last_tool_images()
+        response = result["response"]
+        tool_images = result.get("tool_images")
         message_id = db.save_message(target_agent_id, user_id, response, images=tool_images)
 
         # 응답 전송
@@ -449,10 +474,6 @@ async def handle_chat_message(client_id: str, data: dict):
             "type": "end",
             "agent": agent_name
         })
-
-        # 컨텍스트 정리
-        from thread_context import clear_all_context
-        clear_all_context()
 
     except Exception as e:
         import traceback

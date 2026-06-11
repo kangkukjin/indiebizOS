@@ -18,6 +18,7 @@ from .gemini import GeminiProvider
 from .openrouter import OpenRouterProvider
 from .ollama import OllamaProvider
 from .claude_code import ClaudeCodeProvider
+from .gemini_http import GeminiHTTPProvider  # SDK 없는 Gemini REST (폰 네이티브)
 
 __all__ = [
     'BaseProvider',
@@ -27,6 +28,7 @@ __all__ = [
     'OpenRouterProvider',
     'OllamaProvider',
     'ClaudeCodeProvider',
+    'GeminiHTTPProvider',
 ]
 
 
@@ -42,6 +44,9 @@ def get_provider(provider_name: str, **kwargs):
         'claude_code': ClaudeCodeProvider,
         'claude-code': ClaudeCodeProvider,
         'claudecode': ClaudeCodeProvider,
+        'gemini_http': GeminiHTTPProvider,
+        'gemini-http': GeminiHTTPProvider,
+        'google_http': GeminiHTTPProvider,
     }
 
     provider_class = providers.get(provider_name.lower())

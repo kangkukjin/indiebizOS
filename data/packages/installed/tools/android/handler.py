@@ -38,8 +38,22 @@ _OP_DISPATCHERS = {
         "location": None,
         "steps": None,
     },
+    # 2026-06-11 송신측(폰→동작) — [limbs:phone]. sense:phone(입력)의 출력 짝.
+    # Chaquopy Java 브리지로 Kotlin PhoneActions 호출(폰 네이티브 전용, runs_on phone_only).
+    "phone_act": {
+        "notify": None,
+        "vibrate": None,
+        "toast": None,
+        "clipboard": None,
+        "speak": None,
+        "open_app": None,
+        # 외부·비가역 동작은 스테이징(작성창/다이얼러를 채워 열고, 전송·통화는 사용자가 탭).
+        # SEND_SMS/CALL_PHONE 위험권한 불필요 — augmentation-over-autonomy.
+        "sms": None,
+        "call": None,
+    },
 }
-_OP_DEFAULTS = {"android_op": "snapshot", "phone_op": "notifications"}
+_OP_DEFAULTS = {"android_op": "snapshot", "phone_op": "notifications", "phone_act": "notify"}
 
 
 def _snapshot(tool_input: dict) -> dict:
@@ -195,11 +209,104 @@ def _phone(tool_input: dict) -> dict:
     }
 
 
+def _phone_act(tool_input: dict) -> dict:
+    """송신측 — 폰 네이티브 effector ([limbs:phone]). 폰의 파이썬 뇌가 폰 하드웨어를 직접 만진다.
+
+    Chaquopy Java 브리지로 Kotlin PhoneActions(@JvmStatic)를 호출. runs_on=phone_only 라
+    폰 프로파일에서만 노출되지만, 혹시 PC에서 호출돼도 `from java import` 가 없어 graceful 거부.
+    op: notify(알림)/vibrate(진동)/toast/clipboard(복사)/speak(TTS)/open_app(앱실행)/
+        sms(문자 작성창 스테이징)/call(다이얼러 스테이징). sms/call 은 채워서 열기만 — 전송·통화는 사용자 탭.
+    """
+    op = (tool_input.get("op") or _OP_DEFAULTS["phone_act"]).strip()
+    try:
+        from java import jclass  # Chaquopy 브리지 — 폰 네이티브 런타임에만 존재
+    except Exception:
+        return {"success": False,
+                "error": "[limbs:phone] 는 폰 네이티브 앱에서만 동작합니다(Chaquopy 브리지 부재). "
+                         "집 PC에선 limbs:android(USB-ADB)를 쓰세요.",
+                "phone_only": True}
+
+    try:
+        PA = jclass("com.indiebiz.phoneagent.PhoneActions")
+    except Exception as e:
+        return {"success": False, "error": f"PhoneActions 브리지 로드 실패: {e}"}
+
+    if op == "notify":
+        title = (tool_input.get("title") or "IndieBiz").strip()
+        body = (tool_input.get("body") or tool_input.get("text") or "").strip()
+        ok = bool(PA.notify(title, body))
+        return {"success": ok, "message": f"알림 표시: {title}" if ok
+                else "알림 실패(POST_NOTIFICATIONS 권한 확인)."}
+
+    if op == "vibrate":
+        try:
+            ms = int(tool_input.get("duration_ms", 400))
+        except (TypeError, ValueError):
+            ms = 400
+        ok = bool(PA.vibrate(ms))
+        return {"success": ok, "message": f"진동 {ms}ms" if ok else "진동 실패."}
+
+    if op == "toast":
+        text = (tool_input.get("text") or tool_input.get("body") or "").strip()
+        if not text:
+            return {"success": False, "error": "toast 엔 text 가 필요합니다."}
+        ok = bool(PA.toast(text))
+        return {"success": ok, "message": "토스트 표시"}
+
+    if op == "clipboard":
+        text = tool_input.get("text")
+        if text is None:
+            return {"success": False, "error": "clipboard 엔 text 가 필요합니다."}
+        ok = bool(PA.setClipboard(str(text)))
+        return {"success": ok, "message": "클립보드 복사" if ok else "복사 실패."}
+
+    if op == "speak":
+        text = (tool_input.get("text") or tool_input.get("body") or "").strip()
+        if not text:
+            return {"success": False, "error": "speak 엔 text 가 필요합니다."}
+        ok = bool(PA.speak(text))
+        return {"success": ok, "message": f"음성 출력: {text[:30]}" if ok
+                else "음성 출력 실패(TTS 엔진/한국어 음성 미준비일 수 있음)."}
+
+    if op == "open_app":
+        pkg = tool_input.get("package_name") or tool_input.get("pkg")
+        if not pkg:
+            return {"success": False, "error": "open_app 엔 package_name 이 필요합니다 (예 com.kakao.talk)."}
+        ok = bool(PA.openApp(str(pkg)))
+        return {"success": ok, "message": f"앱 실행: {pkg}" if ok
+                else f"앱을 찾을 수 없습니다: {pkg}"}
+
+    if op == "sms":
+        # 스테이징: 작성창을 수신자·본문 채워 연다. 전송은 사용자 탭(자율 발송 아님).
+        to = str(tool_input.get("to") or tool_input.get("number") or "").strip()
+        text = (tool_input.get("text") or tool_input.get("body") or "").strip()
+        ok = bool(PA.composeSms(to, text))
+        return {"success": ok, "staged": True,
+                "message": (f"문자 작성창 열림 (받는사람 {to or '미지정'}) — 전송은 직접 탭하세요" if ok
+                            else "문자 작성창 열기 실패.")}
+
+    if op == "call":
+        # 스테이징: 다이얼러를 번호 채워 연다. 통화 시작은 사용자 탭(즉시 발신 아님).
+        number = str(tool_input.get("to") or tool_input.get("number") or "").strip()
+        if not number:
+            return {"success": False, "error": "call 엔 number(또는 to) 가 필요합니다."}
+        ok = bool(PA.dial(number))
+        return {"success": ok, "staged": True,
+                "message": (f"다이얼러 열림 ({number}) — 통화는 직접 탭하세요" if ok
+                            else "다이얼러 열기 실패.")}
+
+    return {"success": False,
+            "error": f"알 수 없는 op '{op}'. 사용 가능: notify/vibrate/toast/clipboard/speak/open_app/sms/call"}
+
+
 def execute(tool_input: dict, context) -> dict:
-    """ToolContext 기반 표준 시그니처. limbs:android(제어) + sense:phone(컴패니언 피드) 디스패처."""
+    """ToolContext 기반 표준 시그니처. limbs:android(PC-ADB 제어) + sense:phone(컴패니언 입력 피드)
+    + limbs:phone(폰 네이티브 출력 effector) 디스패처."""
     tool_name = context.tool_name
     if tool_name == "phone_op":
         return _phone(tool_input)
+    if tool_name == "phone_act":
+        return _phone_act(tool_input)
     if tool_name != "android_op":
         raise ValueError(f"Unknown tool: {tool_name}")
 

@@ -41,6 +41,12 @@ else
   echo "⚠ 알림 리스너 미확인 — 폰 설정에서 수동 허용 필요할 수 있음"
 fi
 
+# 2b) 알림 표시 권한 (송신측 [limbs:phone]{op:notify} — Android 13+ 런타임 권한)
+#     VIBRATE 는 일반 권한이라 설치시 자동 부여. notify 만 명시 grant.
+adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS 2>/dev/null \
+  && echo "✓ 알림 표시 권한(POST_NOTIFICATIONS) 부여" \
+  || echo "⚠ POST_NOTIFICATIONS 부여 실패 — 폰 설정에서 수동 허용"
+
 # 3) API 키 주입 (.env 부분집합 → app-private)
 say "API 키 주입"
 python3 "$HERE/provision_phone_keys.py" || echo "⚠ 키 주입 건너뜀(.env 확인)"

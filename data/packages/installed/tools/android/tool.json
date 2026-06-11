@@ -83,6 +83,45 @@
           }
         }
       }
+    },
+    {
+      "name": "phone_act",
+      "description": "폰 네이티브 동작(송신측) — 폰의 뇌가 폰 하드웨어를 직접 만진다. sense:phone(입력)의 출력 짝. op=notify(알림 표시·기본)/vibrate(진동)/toast(화면 토스트)/clipboard(클립보드 복사)/speak(TTS 음성)/open_app(앱 실행)/sms(문자 작성창을 받는사람·본문 채워 열기 — 전송은 사용자 탭)/call(다이얼러를 번호 채워 열기 — 통화는 사용자 탭). 폰 네이티브 앱 전용(USB-ADB 불필요).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": ["notify", "vibrate", "toast", "clipboard", "speak", "open_app", "sms", "call"],
+            "default": "notify",
+            "description": "수행할 동작"
+          },
+          "to": {
+            "type": "string",
+            "description": "받는사람 전화번호 (op=sms/call). 예: 01012345678"
+          },
+          "title": {
+            "type": "string",
+            "description": "알림 제목 (op=notify, 기본 'IndieBiz')"
+          },
+          "body": {
+            "type": "string",
+            "description": "알림 본문 (op=notify)"
+          },
+          "text": {
+            "type": "string",
+            "description": "표시·복사·발화할 텍스트 (op=toast/clipboard/speak)"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "description": "진동 지속 시간 ms (op=vibrate, 기본 400)"
+          },
+          "package_name": {
+            "type": "string",
+            "description": "실행할 앱 패키지명 (op=open_app), 예: com.kakao.talk"
+          }
+        }
+      }
     }
   ]
 }

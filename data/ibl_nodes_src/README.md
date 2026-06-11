@@ -39,7 +39,7 @@ python scripts/build_ibl_nodes.py
 액션에 `runs_on: anywhere|home_only|phone_only`를 달아 실행 환경을 선언한다 (미지정=`anywhere`).
 - `anywhere` (기본): 이식 가능 로직/HTTP. handler/driver 라우터면 **검증된 폰 패키지**(`build_ibl_nodes.PHONE_VERIFIED_PACKAGES`)일 때만 폰서 실행.
 - `home_only`: 집 PC 하드웨어·무거운 의존·미검증 패키지. 폰서 제외(예: `limbs:os_open`/`open_window`=데스크탑 GUI).
-- `phone_only`: 폰 하드웨어(알림·센서, 미래 M3). 폰 전용.
+- `phone_only`: 폰 하드웨어 전용. 입력=`sense:phone`(알림·위치·걸음), 출력=`limbs:phone`(알림·진동·토스트·복사·TTS·앱실행 + 문자·전화 스테이징, Chaquopy→Kotlin PhoneActions). PC선 graceful 거부.
 
 빌드가 `runs_on` + 검증 패키지에서 `data/phone_manifest.json`(packages + runnable_actions)을 파생한다 —
 폰 번들(Gradle `bundleIndiebizBase`)·앱 계기 필터(`_derive_instruments`)·엔진 가드(`ibl_engine._phone_runnable`)의 **단일 진실 소스**.

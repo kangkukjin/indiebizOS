@@ -1,6 +1,6 @@
 ---
 title: IBL (IndieBiz Logic)
-scope: IBL 명세, 5-Node 구조, 109 액션, 파서/엔진/라우팅
+scope: IBL 명세, 5-Node 구조, 112 액션, 파서/엔진/라우팅
 owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
 source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml
 build_tool: scripts/build_ibl_nodes.py
@@ -72,7 +72,7 @@ IBL 표현 계층:     [node:action]{params}
 각 액션은 선택 필드 `runs_on`으로 실행 환경을 선언한다 (미지정=`anywhere`).
 - `anywhere`(기본): 이식 가능 로직/HTTP. 단 handler/driver 라우터는 **검증된 폰 패키지**일 때만 폰서 실행.
 - `home_only`: 집 PC 하드웨어·무거운 의존·미검증 패키지(예: `limbs:os_open`/`open_window`=데스크탑 GUI). 폰서 제외.
-- `phone_only`: 폰 하드웨어(알림·센서, 미래 M3).
+- `phone_only`: 폰 하드웨어 전용. 입력=`sense:phone`(알림·위치·걸음), 출력=`limbs:phone`(알림·진동·토스트·복사·TTS·앱실행 + 문자·전화는 스테이징=작성창/다이얼러를 채워 열고 전송·통화는 사용자 탭). PC에선 graceful 거부.
 
 빌드가 `runs_on` + 검증 패키지(`build_ibl_nodes.PHONE_VERIFIED_PACKAGES`)에서 `data/phone_manifest.json`을 파생한다 —
 폰 임베드 빌드의 번들 패키지·앱 계기 필터·엔진 실행 가드의 단일 진실 소스. PC에선 무영향(전 액션 실행).
@@ -83,12 +83,12 @@ IBL 표현 계층:     [node:action]{params}
 
 ### 핵심 노드 분류
 
-총 **111 액션** (op 어휘 단일화 + 사용성 재감사 + 어휘 정리 + 안드로이드 얇은 부활 + 폰 컴패니언 후).
+총 **112 액션** (op 어휘 단일화 + 사용성 재감사 + 어휘 정리 + 안드로이드 얇은 부활 + 폰 컴패니언 + 폰 송신측 limbs:phone 후).
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
 | `self` | 37 | 개인 도메인: 시스템 관리, 파일, 트리거/스케줄, 목표/메모리, 사용자 소통, 워크플로우 | read, write, file_find, storage, folder_note, fs_query, trigger, workflow, goal, memory |
-| `limbs` | 16 | 장치 제어: UI 조작(브라우저, 데스크톱 화면, 안드로이드 폰) + 미디어 재생 | browser, screen, android, music, radio, cctv, launch, os_open |
+| `limbs` | 17 | 장치 제어: UI 조작(브라우저, 데스크톱 화면, 안드로이드 폰) + 폰 네이티브 동작(phone) + 미디어 재생 | browser, screen, android, phone, music, radio, cctv, launch, os_open |
 | `sense` | 38 | 감각 확장: 외부 정보 수집 + 내부 데이터 관리 + 폰 컴패니언 피드 | search_naver, search_news, stock, company, travel, world_bank, crawl, realty, weather, phone |
 | `others` | 6 | 협업 통신: 에이전트 위임 + 메시지 송수신 | delegate, channel_send, channel_read, neighbors, messages, agents |
 | `engines` | 14 | 창작: 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 웹사이트, 설계) | slide, slide_shadcn, html_video, chart, image_gemini, web, newspaper, tts |

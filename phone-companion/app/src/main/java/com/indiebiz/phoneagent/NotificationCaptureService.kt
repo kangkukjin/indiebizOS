@@ -22,7 +22,12 @@ class NotificationCaptureService : NotificationListenerService() {
 
         val extras = sbn.notification.extras
         val title = extras.getString("android.title") ?: ""
-        val text = extras.getCharSequence("android.text")?.toString() ?: ""
+        // bigText(펼친 전체 본문) 우선 — android.text 만 읽으면 긴 알림이 절단된다
+        // ("지금 어디야?"→"지금"). 인박스 스타일은 textLines 합본으로 폴백.
+        val text = (extras.getCharSequence("android.bigText")
+            ?: extras.getCharSequence("android.text")
+            ?: (extras.getCharSequenceArray("android.textLines")
+                ?.joinToString("\n") { it.toString() }))?.toString()?.trim() ?: ""
         if (title.isEmpty() && text.isEmpty()) return
 
         Log.i(TAG, "NOTIF pkg=$pkg | title=$title | text=$text")

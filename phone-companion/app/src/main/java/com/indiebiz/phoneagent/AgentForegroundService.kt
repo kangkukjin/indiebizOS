@@ -21,7 +21,9 @@ class AgentForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIF_ID, buildNotification())
         Log.i(TAG, "포그라운드 서비스 시작 — 상주")
-        SignalCollector.start(applicationContext)   // 위치·걸음 신호 수집 시작
+        // 위치·걸음 신호 수집은 보류(2026-06-11 사용자 결정) — 수집/푸시/저장 안 함.
+        // 재개하려면 아래 한 줄 주석 해제 (SignalCollector.kt 코드는 보존됨).
+        // SignalCollector.start(applicationContext)
         return START_STICKY
     }
 

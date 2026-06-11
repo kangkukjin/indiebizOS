@@ -1019,3 +1019,20 @@
 - 단일소스 완결: orphaned InvestInstrument/BookInstrument/RadioInstrument.tsx 삭제(데스크탑 generic 렌더 검증 후). 앱 표면=app 블록 선언 하나가 데스크탑·폰·원격 동시 렌더.
 - 폰 APK 재빌드+설치: 새 ibl_nodes.yaml(투자 3탭·도서 4모드·라디오 수정)·tool_radio·api_launcher_web 번들. 폰 매니페스트 검증(투자 주식/코인/자원, 도서 정보나루/네이버/고전[글로벌은 폰 미검증 자동숨김], 라디오 한국/검색/즐겨찾기 note無).
 - 문서: README.md/README.ko.md(폰 네이티브·앱 선언 단일소스), architecture.md/remote_access.md(폰 네이티브 vs 원격 리모컨 구분), changelog.
+
+## 2026-06-11 — 폰 송신측(폰→동작) [limbs:phone] 신설 (M3 확장)
+- sense:phone(폰 하드웨어 입력)의 출력 짝. 폰의 파이썬 뇌가 폰 하드웨어를 직접 만짐 — Chaquopy Java 브리지로 Kotlin PhoneActions(@JvmStatic) 호출. runs_on=phone_only(PC선 `from java import` 부재로 graceful 거부, limbs:android USB-ADB 안내).
+- op 6종: notify(알림)/vibrate(진동)/toast/clipboard(복사)/speak(TTS)/open_app(앱실행). 새 위험 권한 없음 — VIBRATE는 일반 권한(설치시 자동), POST_NOTIFICATIONS만 런타임 grant(setup_phone.sh 합류). SMS·통화는 민감(메시지 발송)이라 제외.
+- 구현: PhoneActions.kt(App.onCreate서 init — 알림채널+TTS 선초기화), AndroidManifest VIBRATE, android 패키지 handler.py _phone_act + tool.json phone_act + _OP_DISPATCHERS(--check 삼각검증), src limbs.yaml phone 액션. 액션 111→112, limbs 16→17.
+- 해마: 합성 용례 24개 등록(DB+distilled 253→277)+rebuild_index(2356). 6 op 전부 rank 1 연상(클립보드는 self:output PC복사와 경쟁 → 폰 강조 용례 3개 추가로 해소).
+- 검증(A36 실기기 종단): /ibl/execute로 6 op 전부 success — notify/vibrate/toast/clipboard/speak 동작, open_app은 설정앱 실제 포그라운드 진입(객관 증거). unknown op graceful. 빌드순서 준수(src→build_ibl_nodes→assembleDebug→install). 미커밋.
+
+## 2026-06-11 — 위치/걸음 수집 보류 + 알림 bigText 절단 보강 (M3 후속)
+- 위치/걸음 수집·푸시·저장 **중단(사용자 결정)**: AgentForegroundService에서 SignalCollector.start() 호출 주석처리(SignalCollector.kt 코드는 보존, 재개 시 한 줄 주석해제). 재빌드+재설치+실기기로 "신호 수집기 시작" 로그 부재 확인. ※force-stop만으론 부족(NotificationListener 시스템 재바인딩 + FGS START_STICKY로 부활) → 코드 비활성화가 유일한 영구 중단.
+- 알림 bigText 보강: NotificationCaptureService가 android.bigText(전체본문) 우선 → android.text → android.textLines 폴백(인박스 합본). 긴 알림 본문 절단("지금 어디야?"→"지금") 해소. 실기기 검증=39자 전체 캡처. 둘 다 미커밋.
+
+## 2026-06-11 — limbs:phone 송신측 2차: 문자·전화 스테이징 (M3 잔여)
+- sms/call op 추가(스테이징 모델, 사용자 결정): 에이전트가 작성창/다이얼러를 채워 열기만 — 전송·통화는 사용자 탭. **SEND_SMS/CALL_PHONE 위험권한 불필요**(ACTION_SENDTO smsto:/ACTION_DIAL tel:, ACTION_CALL=즉시발신과 구분). augmentation-over-autonomy 정합.
+- 구현: PhoneActions.composeSms(to,text)/dial(number) @JvmStatic + handler _phone_act sms/call 분기({staged:true}) + tool.json enum/to param + src limbs.yaml ops.values. 액션 수 불변(phone op만 8→10... 실제 op 6→8).
+- 해마: sms/call 용례 11개(distilled 277→288)+rebuild_index 2367. 4 쿼리 rank1.
+- 검증(A36 실기기): sms→삼성 메시지 작성창(ConversationComposer) 수신자·본문 채워 포그라운드 진입, call→삼성 다이얼러(DialtactsActivity) 번호 채워 포그라운드 진입. 둘 다 {staged:true}, 자율 전송/발신 없음. 미커밋. 카메라는 후속(미선택).

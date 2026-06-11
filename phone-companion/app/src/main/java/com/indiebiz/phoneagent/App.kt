@@ -22,6 +22,7 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(this))
         }
+        PhoneActions.init(this)   // 송신측(폰→동작) effector 다리 초기화 — [limbs:phone] 가 호출
         registerActivityLifecycleCallbacks(this)
     }
 

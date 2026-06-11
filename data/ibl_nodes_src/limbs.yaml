@@ -85,6 +85,7 @@
         target_key: op
         router: handler
         tool: android_op
+        runs_on: home_only   # PC-ADB로 폰 제어 — 폰 자신에선 무의미(sense:phone은 폰가능)
         ops:
           default: snapshot
           values:
@@ -113,6 +114,7 @@
         target_key: path
         router: system
         func: output_open
+        runs_on: home_only   # 집 PC Finder/탐색기 GUI — 폰 무의미
         implementation: subprocess로 OS 기본 앱(Finder/브라우저) 실행
         keywords:
         - 열기
@@ -150,6 +152,28 @@
         - 멈춰
         - 다운로드
         - mp3
+        app:
+          instrument: ytmusic
+          mode: 큐
+          mode_order: 1
+          auto_run: true
+          buttons:
+          - label: ⏭ 다음 곡
+            action: '[limbs:music]{op: "skip"}'
+          - label: ■ 정지
+            action: '[limbs:music]{op: "stop"}'
+          action: '[limbs:music]{op: "queue"}'
+          view:
+          - type: kv
+            rows:
+            - k: 상태
+              v: '{message}'
+          - type: kv_list
+            from: queue
+            title: 대기열
+            empty: 대기열이 비어 있습니다
+            k: '{position}'
+            v: '{title|trunc:40} · {channel}'
       radio:
         description: 인터넷 라디오 재생·중지 (op 분기). play/stop.
         target_description: 'play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. stop — 파라미터 없음.'
@@ -275,6 +299,21 @@
         scope: workspace
         implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈) — workspace 도구(프로젝트 무관)
         target_key: action
+        app:
+          icon: 🔖
+          name: 즐겨찾기
+          order: 10
+          auto_run: true
+          action: '[limbs:launch]{action: "list"}'
+          view:
+          - type: card_list
+            from: sites
+            empty_from: message
+            card:
+              title: '{name}'
+              lines:
+              - '{url|trunc:54}'
+              link: { href: '{url}', label: 열기 → }
       open_window:
         description: Electron 런처의 6개 메인 작업창 열기 (project/system_ai/indienet/business/multichat/folder). 자세한 진입 시나리오는 가이드(open_window.md) 참조.
         target_description: 'app 종류: project | system_ai | indienet | business | multichat | folder. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). system_ai/indienet/business는 파라미터 없음.'
@@ -282,6 +321,7 @@
         target_key: app
         router: system
         func: launcher_command
+        runs_on: home_only   # Electron 데스크탑 런처 창 — 폰 무의미
         implementation: WebSocket으로 Electron Launcher에 open_<app>_window 명령 전송
         keywords:
         - 창

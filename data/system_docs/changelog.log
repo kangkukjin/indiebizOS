@@ -968,3 +968,54 @@
 [2026-06-10 20:00:00] system_docs + README 일괄 갱신 (111 액션 정합화)
   - 144→111 액션(sense38/self37/limbs16/others6/engines14), 36→35 패키지(publishing→not_installed, android 부활 추가, op-bearing 10) 전 문서 정정.
   - ibl.md(android/phone 액션 추가), packages.md(android 행), communication.md(NIP-17+폰 피드), technical.md(중급=Reflex 전용, phone API/DB, nip 모듈), architecture.md(인지 파이프라인/외부연동/통계), execution_memory.md(2026-06-05 재학습 수치), README(노드 표·티어 표·Phone Companion), overview 통계(24 프로젝트/33 에이전트/35 패키지), inventory 재생성.
+[2026-06-11 18:00:00] 앱 표면 제네릭화 — 계기를 코드에서 선언으로 (단일 진실 소스)
+  - src 액션에 선택적 app:{icon,name,inputs,action,view,…} 블록 신설 — 액션이 자기 앱 계기(GUI)를 자기 정의 안에서 선언. 7계기 전환(weather/book/restaurant/stock/crypto/radio + performance·exhibit→instrument:culture 탭 병합).
+  - GET /launcher/instruments 신설(api_launcher_web._derive_instruments, mtime 캐시) — app: 블록을 모아 계기 매니페스트 자동 파생. 외부 요청은 launcher 세션 필요(remote_access_guard, 화이트리스트 제외).
+  - 원격 런처 웹앱 앱 표면을 하드코딩→제네릭 렌더러로 교체(렌더 어휘: metric/kv/kv_list/card_list+드릴/image_grid/sparkline/list_action + {path|filter} 템플릿 + $key 액션 템플릿).
+  - 데스크탑 흡수: GenericInstrument.tsx(같은 어휘의 React 해석기) + ActionDesktop 매니페스트 구동 전환. Weather/Culture/LocalInstrument.tsx 은퇴(제네릭이 대체), book/invest/radio는 풍부한 데스크탑판 유지(OVERRIDES escape), 지도·네이티브 창은 STATIC_DOMAINS 영구 escape.
+  - 효과: 새 IBL 액션에 app: 블록 1개 = 데스크탑+원격 동시 등장, 표면별 코드 0줄 (코인 [sense:crypto] 계기로 실증). build_ibl_nodes --check에 validate_app_blocks 합류(참조 실존·$key↔inputs·view 어휘·계기 그룹 정적 차단, 파손 10종 검출 검증). app:은 에이전트 프롬프트에 직렬화 안 됨(비용 0)·해마 무관.
+  - 문서: docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md(전체 명세+완료 기록), ibl.md·ibl_nodes_src/README·new_action_checklist(선택 단계)·remote_access.md 갱신.
+[2026-06-11 21:00:00] 원격 런처 리모컨 의미론 확정 + 앱 계기 승격 1차 (신문·유튜브뮤직)
+  - 설계 결정(사용자): 원격 런처=집 PC 리모컨 — 폰에서 결과를 자연히 못 보여주면 집 PC에서 실행돼도 됨(라디오 스피커·신문 띄우기). 폰-로컬 실행은 폰 네이티브 배포의 일, 두 모델 안 섞음.
+  - 신문 승격: engines:newspaper에 app: 블록 — 생성 후 결과 행 "🖥 띄우기"가 [limbs:os_open]{path}로 집 PC에 엶. 렌더 어휘 1개 확장: 리스트 프리미티브 from:"."=응답 자체를 1행으로(단일 객체에 행 버튼).
+  - 유튜브뮤직 승격: sense:search_youtube+limbs:music이 instrument:ytmusic으로 병합(검색 탭=행 ▶ 집 스피커 재생 / 큐 탭=auto_run+스킵·정지) — 노드 다른 두 액션의 계기 병합 첫 사례.
+  - 데스크탑은 둘 다 OVERRIDES 풍부판 유지, STATIC_DOMAINS에서 제거(타일은 매니페스트가 생성). 원격 앱 계기 7→9.
+  - 남은 승격 후보: 실거래가(의존 select 어휘), 즐겨찾기(실행형 타일 어휘), 캘린더(custom renderer).
+[2026-06-11 23:30:00] 앱 계기 승격 2차 (실거래가·즐겨찾기) + select 어휘 2종 확장
+  - 어휘 확장: select 입력이 ①정적 options:[{value,label}](IBL 호출 없음) ②동적 options_action(+options_from)을 받음. 응답이 딕셔너리({이름:코드})면 자동 entries 정규화. **종속(cascade)**: options_action의 $형제키가 그 형제 select 변경 시 자동 재조회. 양 렌더러(webapp resolveOptionsAction/selChanged, GenericInstrument SelectInput) 동시 구현. validate_app_blocks에 select 규칙 갱신(options OR options_action, 정적 형식, 파손 4종 검출 검증).
+  - 실거래가 승격: 시/도(정적)→구/군(종속, [sense:realty]{op:codes,city:$province} 딕셔너리)→유형/거래(정적). 월 파라미터 생략(최근 3개월 기본). 원격에 cascade로 등장. 데스크탑은 풍부판 RealtyInstrument 유지(부동산 도메인 안에 중첩 — STATIC_INSTRUMENT_IDS로 매니페스트 중복 타일 억제).
+  - 즐겨찾기 승격: launch_sites list가 구조화 반환({sites:[{name,url}]})으로 변경(텍스트→JSON). card_list+링크로 렌더 — 링크는 폰/PC 각자 브라우저에서 열림(북마크 의미). 데스크탑 옛 launchpad onOpen 은퇴.
+  - 원격 앱 계기 9→11. 데스크탑 홈은 부동산 안에 실거래가 중첩(별도 타일 없음)·즐겨찾기 카드리스트.
+  - 남은 후보: 일정 캘린더(월그리드=custom renderer), 상권(지도). 핸들러 변경이라 /packages/reload 필요했음.
+
+## 2026-06-11 — 폰 네이티브 #3: runs_on 능력 태그 + 폰 프로파일
+- IBL 액션에 선택 필드 `runs_on: anywhere(기본)|home_only|phone_only` 신설 (어디서 도는가). src 그대로 concat이라 전파 자동.
+- `build_ibl_nodes.py`: `PHONE_VERIFIED_PACKAGES`(실기기 검증된 폰안전 6패키지=SSOT) + `derive_phone_manifest` → `data/phone_manifest.json`(packages + runnable_actions) 빌드 시 파생. `validate_runs_on`(enum) + 매니페스트 정합이 `--check` 합류.
+- 폰 프로파일(INDIEBIZ_PROFILE=phone): `_derive_instruments`가 못 도는 계기 숨김(유튜브뮤직 등), `ibl_engine._phone_runnable` 가드가 home_only/미검증 액션을 "집 PC 전용" 명확 거부. PC(프로파일 미설정)는 무영향.
+- phone-companion: Gradle `bundleIndiebizBase`가 옛 하드코딩 `_PHONE_PACKAGES` 대신 phone_manifest.json의 packages를 읽음(JsonSlurper). manifest도 zip에 번들. 태그: limbs:os_open/open_window=home_only(데스크탑 GUI).
+
+## 2026-06-11 — 폰 네이티브 M3: 하드웨어 다리 (수신 알림 → [sense:phone])
+- 폰 네이티브 셸이 캡처한 알림을 폰의 파이썬 뇌가 직접 소비. NotificationCaptureService가 Nostr 푸시(데스크탑)에 더해 app-private `filesDir/signals/notifications.jsonl`(LocalSignals.kt)에도 기록.
+- phone_notifications.recent()에 폰 프로파일 분기: INDIEBIZ_PROFILE=phone이면 그 JSONL을 읽어 [sense:phone]에 공급(PC는 기존 SQLite/Nostr 경로 유지).
+- 번들: android 패키지 PHONE_VERIFIED 추가(handler import-safe — adb_core=순수 subprocess), phone_notifications/runtime_utils 엔진모듈 추가. limbs:android=home_only 태그(폰 가드 거부), sense:phone=anywhere(폰 로컬·PC 원격 양쪽).
+- 검증(A36): 실제 수신 카톡 알림이 [sense:phone]{op:notifications}로 폰서 반환(데스크탑/ADB/Nostr 왕복 없이). limbs:android는 가드 거부.
+
+## 2026-06-11 — 앱 풍부판→선언 단일소스화 (투자·도서·라디오 OVERRIDE 제거)
+- GenericInstrument.tsx에 `periods` 프리미티브 추가(webapp 충실 포팅): mode.periods:{key,items}를 values[key]에 통합, 토글→그 키로 재조회. 데스크탑 차트 기간토글 획득.
+- ActionDesktop OVERRIDES에서 invest/book/radio 제거 → 데스크탑도 GenericInstrument(폰과 동일 선언) 렌더. 남은 OVERRIDE=newspaper(인앱오버레이)·ytmusic(home_only).
+- 도서 4모드 선언(sense:book app): 정보나루(item_click 드릴→대출통계 metric+kv_list 보존)/네이버(search_naver _raw:true)/글로벌(search_books, 폰 자동필터)/고전(classic western). 라디오 3모드(한국/검색/즐겨찾기, 집PC 스피커 note).
+- 검증(vite build→preview:3000 종단): 투자 3탭+기간토글(차트 5→62점 재조회), 도서 4탭+검색+대출통계 드릴, 라디오 3탭+방송국 list_action. build --check + phone_manifest 정합 통과.
+- 잔여: orphaned InvestInstrument/BookInstrument/RadioInstrument.tsx 디스크 보존(사용자 확인 후 삭제 권장).
+
+## 2026-06-11 — 라디오 한국 방송국 스트림 URL 부패 수정 + generic 버튼/입력 가독성
+- 한국 방송국 일부 재생 실패 진단: CBS 표준FM 호스트 aac.cbs.co.kr→m-aac.cbs.co.kr 이전, EBS FM 경로 fmradiofamily/bandibudistream→fmradiofamilypc/familypc1m 변경(둘 다 공식 URL 갱신, mpv 재생 검증). SBS Power/Love FM·CBS Music FM은 공식 스트림 토큰보호(mpv도 403)/호스트 소멸로 재생 불가 → KOREAN_STATIONS에서 제거(죽은 버튼 방지). 한국 15→12개 전부 재생 가능.
+- tool_radio 죽은 SBS 리졸버(_get_sbs_stream_url + api=='sbs' 분기) 정리.
+- ★함정: tool_radio.py는 handler가 sys.modules["tool_radio_singleton"]로 캐시 → /packages/reload가 이 싱글턴을 안 지움. tool_radio.py 변경은 백엔드 reload 필요(touch backend/api.py로 uvicorn reload 트리거).
+- GenericInstrument 가독성: 입력 text-stone-900, 예시 칩·list_action ▶·모드 ■정지 버튼 text-stone-800(이전 색 미지정으로 밝게 보임). 루트 absolute inset-0→h-full w-full(ActionDesktop BackBar 가림 해소).
+- 데스크탑 GenericInstrument는 mode.note 비렌더(라디오 "집 PC 스피커/원격 제어" note는 원격-제어 disclaimer라 집 PC 자신인 데스크탑에선 무의미). 원격/폰 webapp(api_launcher_web renderView)은 note 유지 — 그 맥락에서만 경고 노출.
+
+## 2026-06-11 — 라디오 폰 스피커 재생 + 풍부판 .tsx 삭제(단일소스 완결) + 문서 갱신
+- 라디오 폰 재생: play_radio가 INDIEBIZ_PROFILE=phone이면 mpv 대신 {play_in_client, stream_url} 반환 → webapp(api_launcher_web)이 hls.js로 폰 스피커 재생(HLS=hls.js, 그외 네이티브 audio). stop도 stop_in_client. PC는 그대로 mpv. 실기기(A36) 소리 확인.
+- 단일소스 완결: orphaned InvestInstrument/BookInstrument/RadioInstrument.tsx 삭제(데스크탑 generic 렌더 검증 후). 앱 표면=app 블록 선언 하나가 데스크탑·폰·원격 동시 렌더.
+- 폰 APK 재빌드+설치: 새 ibl_nodes.yaml(투자 3탭·도서 4모드·라디오 수정)·tool_radio·api_launcher_web 번들. 폰 매니페스트 검증(투자 주식/코인/자원, 도서 정보나루/네이버/고전[글로벌은 폰 미검증 자동숨김], 라디오 한국/검색/즐겨찾기 note無).
+- 문서: README.md/README.ko.md(폰 네이티브·앱 선언 단일소스), architecture.md/remote_access.md(폰 네이티브 vs 원격 리모컨 구분), changelog.

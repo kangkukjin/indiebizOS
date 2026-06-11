@@ -35,6 +35,9 @@ class NotificationCaptureService : NotificationListenerService() {
             .put("posted_at", sbn.postTime / 1000)
             .toString()
 
+        // M3: 폰 로컬 뇌가 [sense:phone] 으로 읽도록 app-private JSONL 에도 기록.
+        LocalSignals.appendNotification(applicationContext, payload)
+        // 데스크탑 푸시(기존 경로) — 병행 유지.
         Sender.sendAsync(applicationContext, payload)
     }
 

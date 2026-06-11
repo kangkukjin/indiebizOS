@@ -74,7 +74,7 @@ EXECUTE/Reflex                          [2] framing 재고 확인 → 있고 맞
 **생애주기**: 새 일은 자율주행이 탐색 → IBL 흔적이 수동 초안으로 → 검증된 고빈도 워크플로가 앱으로 결정화. *굳히는 건 증명된 것만.*
 
 - 수동: `backend/api_ibl.py` (`/ibl/translate`·`/ibl/validate`(dry-run)·`/ibl/execute`·`/ibl/distill`) + `frontend/.../ManualMode.tsx`. 부작용 step은 명시적 확인 게이팅, 해마 증류는 사용자 승인 시에만.
-- 앱: `frontend/.../ActionDesktop.tsx` + 계기(`RealtyInstrument`/`CommercialInstrument`/`BookInstrument` 등). 0토큰 IBL 직접 실행. 상세는 '리스트에 없는 정보'가 있을 때만 노출.
+- 앱: **선언 기반 단일소스**. 각 계기는 IBL 액션의 `app:` 블록(`data/ibl_nodes_src/`)이고 `/launcher/instruments`로 자동 파생 → **데스크탑(`GenericInstrument.tsx`)·원격 런처·폰이 같은 선언을 같은 어휘로 렌더**(app 블록 1개 = 전 표면 동시 등장). 어휘: modes 탭, view 프리미티브(metric/kv/kv_list/card_list+드릴/image_grid/sparkline/list_action), periods 기간토글, 표시 템플릿 `{path|filter}`. 0토큰 IBL 직접 실행. escape hatch 2층: OVERRIDES(지도·네이티브 창 등 손제작 풍부판) + STATIC_DOMAINS(부동산 실거래가·길찾기 등 렌더 어휘 밖). `build_ibl_nodes --check`에 app 블록 정합성 합류.
 - `_raw: true` 파라미터로 `postprocess:compress`(검색계 액션의 AI 요약)를 우회 — 앱·파이프라인이 구조화 원본을 받는다.
 
 ## 시스템 구조
@@ -297,8 +297,9 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 
 - **통신**: Gmail, Nostr (DM은 NIP-17 gift-wrap, 구 NIP-04 호환 수신), Telegram
 - **NAS**: 음악 스트리밍, 자막 관리, 웹앱 호스팅
-- **안드로이드 (양방향)**: 제어=ADB 기반 `[limbs:android]{op}` (snapshot→요소 탭) / 감각=폰 컴패니언 앱(NotificationListener)이 알림·위치·걸음을 NIP-17 한방향 피드로 전송 → `[sense:phone]{op}` + `/phone/*` API. 장기 방향: 폰 자체를 상주 sense+limbs 노드로 (phone-companion/ gradle 프로젝트)
-- **원격**: Cloudflare Tunnel (Finder + 런처)
+- **안드로이드 (양방향)**: 제어=ADB 기반 `[limbs:android]{op}` (snapshot→요소 탭) / 감각=폰 컴패니언 앱(NotificationListener)이 알림·위치·걸음을 NIP-17 한방향 피드로 전송 → `[sense:phone]{op}` + `/phone/*` API.
+- **폰 네이티브 (indiebizOS 폰 자체 구동)**: phone-companion/ (Kotlin+Chaquopy) 네이티브 앱이 **폰에서 온디바이스 Python 백엔드**를 띄워 앱모드 슈퍼앱을 서빙하고 **실제 IBL 엔진**이 폰 안전 패키지(`build_ibl_nodes.PHONE_VERIFIED_PACKAGES`)를 로컬 실행한다. 빌드가 정본 트리(엔진+패키지+`ibl_nodes.yaml`)를 `indiebiz_base.zip` 에셋으로 번들→filesDir 추출. `runs_on` 능력 태그(`anywhere`/`home_only`/`phone_only`)와 `data/phone_manifest.json`이 폰 못 도는 계기/액션을 숨기거나 거부. 캡처 알림은 폰 로컬 JSONL→`[sense:phone]`, 라디오는 mpv 대신 stream URL을 WebView(hls.js)로 돌려 **폰 스피커** 재생. API 키는 app-private `filesDir/secrets/keys.json`로 주입(APK 밖). 폰=리모컨 아닌 진짜 sense+limbs 노드.
+- **원격**: Cloudflare Tunnel (Finder + 런처). 원격 런처=집 PC 리모컨 의미론(라디오 재생은 집 PC 스피커).
 - **브라우저**: Playwright 기반 자동화
 
 ## 시스템 통계
@@ -315,4 +316,4 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 - 설계 철학 (백서): `WHITEPAPER.md`
 
 ---
-*마지막 업데이트: 2026-06-10 — 인지 경로 개편: 중급 모델을 Reflex 전용으로 좁히고 무의식 EXECUTE는 본격 모델 유지(오분류 품질 방어) + 무의식 분류기 재조정(THINK 과잉 축소) + 의식 프롬프트에 "좋은 문제 규정"(메타-메타)·"IBL과 코딩의 우선순위" 섹션. 이전(2026-06-05~06): 안드로이드 얇은 부활([limbs:android]{op}) + 폰 컴패니언 앱(NIP-17 한방향 피드 + [sense:phone]) + Nostr DM NIP-17 전환 + 음악 작곡 은퇴 → 111 액션. 이전(2026-06-04): IBL 사용성 재감사 종결 + ACTION_PARAM_ALIASES 중앙 적용. 이전(2026-05-31): THINK 경로 framing 재사용 게이트. 이전(2026-05-28): 라운드 2 정리 + op 어휘 단일화 + 삼각 검증 인프라.*
+*마지막 업데이트: 2026-06-11 — 폰 네이티브 정착(M1-M3: Chaquopy 온디바이스 백엔드 + 실제 IBL 엔진 + runs_on 능력 태그 + phone_manifest + API키 프로비저닝 + 수신알림→[sense:phone] + 라디오 폰 스피커 재생 hls.js) + 앱 표면 선언 단일소스화(투자/도서/라디오 OVERRIDE 제거, GenericInstrument에 periods 추가 → 데스크탑·폰·원격 같은 선언) + 라디오 한국 방송국 스트림 URL 부패 수정(CBS/EBS 갱신, SBS 토큰보호 제거). 이전(2026-06-10): 인지 경로 개편: 중급 모델을 Reflex 전용으로 좁히고 무의식 EXECUTE는 본격 모델 유지(오분류 품질 방어) + 무의식 분류기 재조정(THINK 과잉 축소) + 의식 프롬프트에 "좋은 문제 규정"(메타-메타)·"IBL과 코딩의 우선순위" 섹션. 이전(2026-06-05~06): 안드로이드 얇은 부활([limbs:android]{op}) + 폰 컴패니언 앱(NIP-17 한방향 피드 + [sense:phone]) + Nostr DM NIP-17 전환 + 음악 작곡 은퇴 → 111 액션. 이전(2026-06-04): IBL 사용성 재감사 종결 + ACTION_PARAM_ALIASES 중앙 적용. 이전(2026-05-31): THINK 경로 framing 재사용 게이트. 이전(2026-05-28): 라운드 2 정리 + op 어휘 단일화 + 삼각 검증 인프라.*

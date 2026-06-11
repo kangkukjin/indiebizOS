@@ -1,0 +1,16 @@
+# Gradle / Android 빌드 산출물
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.aab
+*.iml
+captures/
+
+# 정본 엔진 트리 자동 번들 (Gradle bundleIndiebizBase 가 backend/data 정본에서 생성 — 커밋 금지)
+app/src/main/assets/indiebiz_base.zip
+
+# IDE
+.idea/
+.DS_Store

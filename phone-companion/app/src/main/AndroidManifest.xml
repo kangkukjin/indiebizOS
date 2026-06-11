@@ -16,7 +16,9 @@
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
     <application
+        android:name=".App"
         android:label="IndieBiz Phone Agent"
+        android:usesCleartextTraffic="true"
         android:allowBackup="true">
 
         <!-- 진입 화면 -->
@@ -28,6 +30,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- 런처(앱/수동/자율주행) WebView 표면 -->
+        <activity
+            android:name=".LauncherActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <!-- 알림 캡처 서비스 (NotificationListenerService) -->
         <service

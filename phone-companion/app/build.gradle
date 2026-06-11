@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'com.chaquo.python'
 }
 
 android {
@@ -13,6 +14,30 @@ android {
         targetSdk 34
         versionCode 1
         versionName "0.1"
+
+        // Chaquopy: 실기기(arm64)만 — APK 경량화
+        ndk { abiFilters "arm64-v8a" }
+        python {
+            version "3.12"
+            buildPython "/opt/homebrew/bin/python3.12"
+            pip {
+                // M2 서버 증명: FastAPI 0.99 + pydantic v1 (둘 다 순수파이썬, Rust 0)
+                install "fastapi==0.99.1"
+                install "pydantic==1.10.18"
+                install "uvicorn"
+                // IBL 엔진/핸들러 런타임 의존 (전부 순수파이썬)
+                install "PyYAML"
+                install "requests"
+                install "httpx"
+                install "beautifulsoup4"
+                install "feedparser"
+                // 투자(주식·원자재) 시세는 tool_yfinance 가 Yahoo chart/search API 를 requests 로
+                // 직접 호출(_yahoo_chart/_yahoo_search) — yfinance 라이브러리·pandas 불필요.
+                // 베이스라인 측정 유지
+                install "numpy"
+                install "Pillow"
+            }
+        }
     }
 
     compileOptions {
@@ -30,6 +55,86 @@ android {
         release {
             minifyEnabled false
         }
+    }
+
+    // 드리프트 제거: 정본 엔진 트리를 빌드 시 zip 에셋으로 번들(아래 bundleIndiebizBase).
+    // 손복사 스냅샷 없음 — backend·data 정본이 단일 진실 소스.
+    sourceSets {
+        main {
+            assets {
+                srcDir layout.buildDirectory.dir("generated/indiebizAssets")
+            }
+        }
+    }
+}
+
+// === 정본 엔진 트리 자동 번들 (드리프트 제거 · 실제 IBL 엔진 폰 임베드) ===
+// 폰이 실제 IBL 엔진(파서+라우팅+실행)과 실제 패키지 핸들러를 무변경으로 돌리려면
+// backend 엔진 모듈 + backend/common + data/ibl_nodes.yaml + 폰안전 패키지 트리가
+// 폰 파일시스템에 실재해야 한다(tool_loader 가 iterdir/exists/파일경로 로드 사용).
+// → 정본에서 indiebiz_base.zip 에셋으로 묶고, 앱이 filesDir 로 풀어 INDIEBIZ_BASE_PATH 로 가리킨다.
+// 핸들러 추출(phone_weather 식 손복사)은 금지 — 그건 우리가 제거한 바로 그 드리프트.
+def _ROOT = "${rootDir}/.."
+// 엔진 클로저(맥 격리 시뮬레이션으로 검증된 최소 집합)
+def _ENGINE_MODULES = [
+    'ibl_engine', 'ibl_parser', 'ibl_access', 'ibl_routing', 'ibl_executors',
+    'tool_loader', 'tool_context', 'system_tools', 'api_engine', 'thread_context',
+    'api_launcher_web',
+    'phone_notifications',   // M3: [sense:phone] 로컬 알림 reader
+    'runtime_utils',         // scope=system/workspace 액션의 get_base_path (sense:phone 등)
+]
+// 폰 번들 패키지 = data/phone_manifest.json 의 packages (runs_on 단일 진실 소스에서 파생).
+// 옛 하드코딩 리스트를 폐기 — build_ibl_nodes.py 의 PHONE_VERIFIED_PACKAGES 가 SSOT.
+def _phoneManifest = file("${_ROOT}/data/phone_manifest.json")
+if (!_phoneManifest.exists()) {
+    throw new GradleException("phone_manifest.json 없음 — `python3 scripts/build_ibl_nodes.py` 먼저 실행하세요.")
+}
+def _PHONE_PACKAGES = new groovy.json.JsonSlurper().parse(_phoneManifest).packages
+
+tasks.register('bundleIndiebizBase', Zip) {
+    description = '정본 IBL 엔진 트리(backend 엔진+common+data)를 폰 임베드용 zip 에셋으로 번들'
+    group = 'build'
+    archiveFileName = 'indiebiz_base.zip'
+    destinationDirectory = layout.buildDirectory.dir('generated/indiebizAssets')
+
+    doFirst {
+        def missing = []
+        _ENGINE_MODULES.each { m -> if (!file("${_ROOT}/backend/${m}.py").exists()) missing << "backend/${m}.py" }
+        if (!file("${_ROOT}/backend/common").exists()) missing << "backend/common"
+        if (!file("${_ROOT}/data/ibl_nodes.yaml").exists()) missing << "data/ibl_nodes.yaml"
+        _PHONE_PACKAGES.each { p -> if (!file("${_ROOT}/data/packages/installed/tools/${p}").exists()) missing << "tools/${p}" }
+        if (missing) throw new GradleException("정본 누락: ${missing.join(', ')} — 폰 엔진 번들을 만들 수 없습니다(드리프트 방지).")
+    }
+
+    // backend 엔진 모듈 → zip 안 backend/
+    _ENGINE_MODULES.each { m ->
+        from("${_ROOT}/backend/${m}.py") { into 'backend' }
+    }
+    // backend/common → zip 안 backend/common/
+    from("${_ROOT}/backend/common") {
+        into 'backend/common'
+        include '**/*.py'
+    }
+    // 레지스트리 + 폰 프로파일 매니페스트 (단일 진실 소스)
+    from("${_ROOT}/data/ibl_nodes.yaml") { into 'data' }
+    from("${_ROOT}/data/phone_manifest.json") { into 'data' }
+    // 폰안전 패키지(handler.py + tool.json + 가이드 등) → 원 구조 보존
+    _PHONE_PACKAGES.each { p ->
+        from("${_ROOT}/data/packages/installed/tools/${p}") {
+            into "data/packages/installed/tools/${p}"
+            exclude '**/__pycache__/**'
+            exclude '**/*.pyc'
+        }
+    }
+}
+
+// AGP 에셋 병합(merge*Assets)이 생성 에셋을 읽기 전에 zip 생성 보장.
+tasks.named('preBuild') { dependsOn 'bundleIndiebizBase' }
+afterEvaluate {
+    tasks.matching { t ->
+        t.name != 'bundleIndiebizBase' && t.name.toLowerCase().contains('assets')
+    }.configureEach {
+        dependsOn 'bundleIndiebizBase'
     }
 }
 

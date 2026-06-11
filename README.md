@@ -117,7 +117,7 @@ Stop repeating the same AI conversations. **Save them as Switches or Workflows**
 Connect with others through decentralized networks and access your system from anywhere.
 
 - **Nostr Protocol** — No central server, no data collection (DMs use modern NIP-17 gift-wrap encryption)
-- **Phone Companion** — A native Android app turns your phone into a live sense organ: notifications, location, and step counts stream home over NIP-17 as a one-way feed, queryable via `[sense:phone]`
+- **Phone Native** — A native Android app runs IndieBiz OS *on the phone itself*: an on-device Python backend (Chaquopy) serves the App-mode superapp, and the real IBL engine executes phone-safe packages locally (weather, books, finance, internet radio playing on the phone's own speaker…). `runs_on` capability tags hide or refuse what only the home PC can do; captured notifications/location/steps feed `[sense:phone]` — read locally on the phone, or streamed home over NIP-17 as a one-way feed. The phone becomes a real sense+limbs node, not just a remote control.
 - **Remote Access** — Cloudflare Tunnel based Remote Finder and Launcher
 - **Business Network** — Manage partners, auto-respond to inquiries
 
@@ -136,6 +136,8 @@ Every task can be run three ways, all on the same IBL nervous system. Each surfa
 Frequency flows a task between modes: Autopilot explores it once → the IBL trace seeds Manual → a proven, high-frequency workflow crystallizes into an App. **Crystallize only what's proven.**
 
 Manual mode is governed by two rules: side-effecting steps are gated behind explicit confirmation (read-only steps run friction-free), and the hippocampus learns *only the results you approve*.
+
+App-mode instruments are **declaration-driven**: each is an `app:` block on an IBL action (in `data/ibl_nodes_src/`), and a single declaration renders identically on the desktop, the remote launcher, and the phone — so a new App is one declaration, not three UIs. A small set of richer hand-built instruments (maps, native windows) stay as escape hatches.
 
 ---
 
@@ -264,4 +266,4 @@ cd frontend && npm run electron:dev  # Frontend (Electron)
 
 *IndieBiz OS — An AI system that grows with you, not one that's given to you.*
 
-*Last updated: 2026-06-10*
+*Last updated: 2026-06-11*

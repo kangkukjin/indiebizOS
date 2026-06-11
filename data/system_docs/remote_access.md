@@ -2,8 +2,8 @@
 title: 원격 접속
 scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, NAS 연동
 owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, nas_*.py
-last_updated: 2026-05-17
-see_also: [architecture.md, technical.md]
+last_updated: 2026-06-11
+see_also: [architecture.md, technical.md, ibl.md]
 ---
 
 # 원격 접근 시스템 (Remote Access)
@@ -17,7 +17,7 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 | 기능 | 경로 | 목적 |
 |-----|------|------|
 | **원격 Finder** | `/nas/app` | 파일 탐색, 동영상 스트리밍, 다운로드 |
-| **원격 런처** | `/launcher/app` | 시스템 AI/에이전트 채팅, 스위치 실행 |
+| **원격 런처** | `/launcher/app` | 데스크탑과 동형인 3표면(자율주행 채팅·스위치 / 수동 IBL 컴파일러 / 앱 계기) |
 
 각 기능은 **별도의 비밀번호**로 독립적으로 활성화할 수 있습니다.
 
@@ -39,6 +39,12 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 - 투자 에이전트에게 시장 분석 요청, 법률 에이전트에게 법령 검색 등
 - 스위치 한 번 터치로 뉴스 수집, 리포트 생성 등 자동화 작업 실행
 - 집 PC의 AI 에이전트 전체를 원격으로 구동하는 개인 AI 서버
+
+### 원격 런처 ≠ 폰 네이티브 (구분)
+
+여기 원격 런처는 **집 PC를 외부에서 조종하는 리모컨**이다 — 백엔드는 집 PC에서 돌고 터널로 노출된다. 결과를 폰서 못 보여주면 집에서 실행해도 됨(라디오는 집 PC 스피커, 신문은 집 화면). 같은 `/launcher/app` HTML이라 `/launcher/config`의 `host`로 맥락을 구분: `host!=phone-local`이면 REMOTE 배지·"집 PC 재생" 류 안내를 보인다.
+
+이와 별개로 **폰 네이티브**(`phone-companion/`)는 indiebizOS를 **폰에서 직접** 구동한다 — 온디바이스 Python 백엔드(Chaquopy)가 같은 launcher HTML을 폰 로컬(`127.0.0.1:8765`)로 서빙하고, 실제 IBL 엔진이 폰 안전 패키지를 로컬 실행한다(`host=phone-local`, 배지 숨김). 라디오는 mpv 대신 stream URL을 WebView(hls.js)로 돌려 **폰 스피커**로 재생. 능력 경계는 `runs_on` 태그 + `data/phone_manifest.json`로 강제(`ibl.md` 참조). 즉 "폰에서 모든 것"=폰 네이티브의 일, "집을 조종"=원격 런처의 일 — 두 모델을 섞지 않는다.
 
 ---
 
@@ -141,7 +147,8 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 | `/launcher/config` | GET/POST | - | 설정 조회/저장 |
 | `/launcher/auth/login` | POST | - | 로그인 → 세션 발급 |
 | `/launcher/auth/logout` | POST | ✓ | 로그아웃 |
-| `/launcher/app` | GET | - | 웹 앱 HTML |
+| `/launcher/app` | GET | - | 웹 앱 HTML (3표면) |
+| `/launcher/instruments` | GET | ✓(외부만) | 앱 계기 매니페스트 — ibl_nodes.yaml의 `app:` 블록에서 자동 파생. 데스크탑(localhost)은 무인증, 터널 경유는 launcher 세션 필요 |
 
 ### 설정 파일
 경로: `data/launcher_web_config.json`

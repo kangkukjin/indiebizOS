@@ -45,6 +45,26 @@ PACKAGE_DIRS = [
     "data/packages/installed/extensions",
 ]
 
+# === runs_on 능력 태그 (2026-06-11, #3 폰 네이티브) ===
+# 액션이 어디서 도는가: anywhere(기본·이식가능 로직/HTTP) / home_only(집 PC 하드웨어·
+# 무거운 의존·미검증 패키지) / phone_only(폰 하드웨어=알림·센서, 미래 M3).
+VALID_RUNS_ON = {"anywhere", "home_only", "phone_only"}
+DEFAULT_RUNS_ON = "anywhere"
+
+# 실기기(Galaxy A36)에서 import+종단 실행이 검증된 폰안전 패키지 — 폰 프로파일의 단일 진실 소스.
+# (옛 build.gradle 의 하드코딩 _PHONE_PACKAGES 를 여기로 승격. phone_manifest.json 으로 파생.)
+# handler 라우터 액션의 폰 실행가능성은 이 집합으로 결정(미검증 패키지=폰서 제외).
+# 새 패키지를 폰서 검증하면 여기 추가.
+PHONE_VERIFIED_PACKAGES = {
+    "location-services",
+    "investment",
+    "culture",
+    "radio",
+    "web",
+    "real-estate",
+    "android",   # M3: [sense:phone] 폰 로컬 알림. limbs:android(android_op)은 home_only 태그로 제외.
+}
+
 # === 코퍼스 param 정합 검사 (2026-06-04) ===
 # 모든 액션이 자연히 받는 보편 키 (op 디스패치/레거시 target).
 UNIVERSAL_PARAM_KEYS = {"op", "target"}
@@ -481,6 +501,285 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
     return issues
 
 
+# === app: 블록 검증 (2026-06-11, 원격 앱 표면 제네릭화 2단계) ===
+# 액션이 자기 앱 표면(inputs/action 템플릿/view)을 선언하면 원격 런처가 자동 파생.
+# 어휘 명세: docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md. 소비자: api_launcher_web._derive_instruments.
+APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action"}
+APP_INPUT_TYPES = {"text", "select"}
+APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes",
+            "note", "auto_run", "inputs", "buttons", "action", "view", "renderer"}
+APP_TPL_FILTERS = {"round", "num", "abs", "arrow"}  # + 'opt:' / 'trunc:' 접두 허용
+
+
+def _app_action_templates(app: dict) -> list[str]:
+    """app 블록에서 IBL 액션 템플릿 문자열 전부 수집 (참조 존재 검증용)."""
+    import re as _re  # noqa: F401 (지역 사용 명시)
+    out: list[str] = []
+    if isinstance(app.get("action"), str):
+        out.append(app["action"])
+    for b in app.get("buttons") or []:
+        if isinstance(b, dict) and isinstance(b.get("action"), str):
+            out.append(b["action"])
+    for inp in app.get("inputs") or []:
+        if isinstance(inp, dict) and isinstance(inp.get("options_action"), str):
+            out.append(inp["options_action"])
+
+    def walk_view(view):
+        for p in view or []:
+            if not isinstance(p, dict):
+                continue
+            btn = p.get("button")
+            if isinstance(btn, dict) and isinstance(btn.get("action"), str):
+                out.append(btn["action"])
+            drill = p.get("item_click")
+            if isinstance(drill, dict):
+                if isinstance(drill.get("action"), str):
+                    out.append(drill["action"])
+                walk_view(drill.get("view"))
+
+    walk_view(app.get("view"))
+    return out
+
+
+def _app_check_view(qualified: str, view, depth: int = 0) -> list[str]:
+    """view 프리미티브 배열 구조 검증 (드릴 뷰 재귀 포함)."""
+    issues: list[str] = []
+    if not isinstance(view, list) or not view:
+        issues.append(f"{qualified}: app.view 는 비어있지 않은 리스트여야 함")
+        return issues
+    for i, p in enumerate(view):
+        where = f"{qualified}: app.view[{i}]" + (" (드릴)" if depth else "")
+        if not isinstance(p, dict):
+            issues.append(f"{where} 가 매핑이 아님")
+            continue
+        ptype = p.get("type")
+        if ptype not in APP_VIEW_TYPES:
+            issues.append(f"{where}: 미지의 프리미티브 type={ptype!r} (어휘: {sorted(APP_VIEW_TYPES)})")
+            continue
+        if ptype in ("kv_list", "card_list", "image_grid", "sparkline", "list_action") and not p.get("from"):
+            issues.append(f"{where}: {ptype} 는 from(데이터 경로) 필수")
+        if ptype == "card_list" and not isinstance(p.get("card"), dict):
+            issues.append(f"{where}: card_list 는 card 매핑 필수")
+        drill = p.get("item_click")
+        if drill is not None:
+            if ptype != "card_list":
+                issues.append(f"{where}: item_click 은 card_list 전용")
+            elif not isinstance(drill, dict) or not isinstance(drill.get("action"), str):
+                issues.append(f"{where}: item_click 은 action 템플릿 필수")
+            else:
+                issues.extend(_app_check_view(qualified, drill.get("view"), depth + 1))
+        btn = p.get("button")
+        if btn is not None and (not isinstance(btn, dict) or not isinstance(btn.get("action"), str)):
+            issues.append(f"{where}: button 은 action 템플릿 필수")
+    return issues
+
+
+def _app_check_filters(qualified: str, app: dict) -> list[str]:
+    """표시 템플릿 '{path|filter}' 의 필터 오타 검출."""
+    import re
+    issues: list[str] = []
+    strings: list[str] = []
+
+    def walk(o):
+        if isinstance(o, str):
+            strings.append(o)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+        elif isinstance(o, dict):
+            for v in o.values():
+                walk(v)
+
+    walk(app.get("view"))
+    for m in app.get("modes") or []:          # 명시적 modes 각 탭의 view 도 검사
+        if isinstance(m, dict):
+            walk(m.get("view"))
+    for s in strings:
+        for expr in re.findall(r"\{([^{}]+)\}", s):
+            for f in [x.strip() for x in expr.split("|")[1:]]:
+                if f in APP_TPL_FILTERS or f.startswith("opt:") or f.startswith("trunc:"):
+                    continue
+                issues.append(f"{qualified}: 미지의 템플릿 필터 {f!r} (in {s!r})")
+    return issues
+
+
+def validate_app_blocks(data: dict) -> list[str]:
+    """app: 블록 정합성 — 액션 템플릿의 [node:action] 실존, $key↔inputs, view 어휘, 계기 그룹."""
+    import re
+    issues: list[str] = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    qualified_set = {
+        f"{n}:{a}"
+        for n, nd in nodes.items() if isinstance(nd, dict)
+        for a in (nd.get("actions") or {})
+    }
+    groups: dict[str, list[tuple[str, dict]]] = {}
+
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            if not isinstance(action, dict) or "app" not in action:
+                continue
+            qualified = f"{node_name}:{action_name}"
+            app = action["app"]
+            if not isinstance(app, dict):
+                issues.append(f"{qualified}: app 은 매핑이어야 함")
+                continue
+
+            unknown = set(app.keys()) - APP_KEYS
+            if unknown:
+                issues.append(f"{qualified}: app 미지의 키 {sorted(unknown)} (허용: {sorted(APP_KEYS)})")
+
+            # io(action/view/inputs/템플릿)는 블록 단위로 검증.
+            # 명시적 modes(탭)면 각 탭이 독립 블록, 아니면 app 자신이 단일 블록.
+            mode_list = app.get("modes")
+            if isinstance(mode_list, list) and mode_list:
+                blocks: list[tuple[str, dict]] = []
+                for mi, m in enumerate(mode_list):
+                    if not isinstance(m, dict):
+                        issues.append(f"{qualified}: app.modes[{mi}] 가 매핑이 아님")
+                        continue
+                    if not m.get("name"):
+                        issues.append(f"{qualified}: app.modes[{mi}] name(탭 이름) 필수")
+                    blocks.append((f"{qualified} modes[{mi}]", m))
+            elif "modes" in app:
+                issues.append(f"{qualified}: app.modes 는 비어있지 않은 리스트여야 함")
+                blocks = []
+            else:
+                blocks = [(qualified, app)]
+
+            for blabel, blk in blocks:
+                if not isinstance(blk.get("action"), str):
+                    issues.append(f"{blabel}: app.action(IBL 템플릿) 필수")
+                issues.extend(_app_check_view(blabel, blk.get("view")))
+                input_keys: set[str] = set()
+                # 기간 토글(periods)도 액션 $key 의 출처 — input_keys 에 합류
+                _pd = blk.get("periods")
+                if isinstance(_pd, dict):
+                    input_keys.add(_pd.get("key") or "period")
+                for j, inp in enumerate(blk.get("inputs") or []):
+                    if not isinstance(inp, dict) or not inp.get("key"):
+                        issues.append(f"{blabel}: app.inputs[{j}] 에 key 없음")
+                        continue
+                    input_keys.add(inp["key"])
+                    itype = inp.get("type")
+                    if itype not in APP_INPUT_TYPES:
+                        issues.append(f"{blabel}: app.inputs[{j}] type={itype!r} (허용: {sorted(APP_INPUT_TYPES)})")
+                    if itype == "select":
+                        if inp.get("options"):
+                            opts = inp["options"]
+                            if not isinstance(opts, list) or not all(
+                                isinstance(o, dict) and "value" in o and "label" in o for o in opts
+                            ):
+                                issues.append(f"{blabel}: app.inputs[{j}] 정적 options 는 [{{value,label}}] 배열")
+                        elif inp.get("options_action"):
+                            if not inp.get("options_from"):
+                                issues.append(f"{blabel}: app.inputs[{j}] select options_action 에 options_from 필수")
+                        else:
+                            issues.append(f"{blabel}: app.inputs[{j}] select 는 정적 options 또는 options_action 필수")
+                for t in _app_action_templates(blk):
+                    for ref_node, ref_action in re.findall(r"\[(\w+):(\w+)\]", t):
+                        if f"{ref_node}:{ref_action}" not in qualified_set:
+                            issues.append(f"{blabel}: app 템플릿이 미존재 액션 [{ref_node}:{ref_action}] 참조 ({t!r})")
+                    for key in re.findall(r"\$(\w+)", t):
+                        if key not in input_keys:
+                            issues.append(f"{blabel}: app 템플릿 $%s 에 대응하는 input 없음 ({t!r})" % key)
+
+            issues.extend(_app_check_filters(qualified, app))
+
+            gid = app.get("instrument") or action_name
+            groups.setdefault(gid, []).append((qualified, app))
+
+    # 계기 그룹 정합
+    for gid, members in groups.items():
+        partial = [q for q, a in members if bool(a.get("icon")) != bool(a.get("name"))]
+        if partial:
+            issues.append(f"계기 {gid!r}: icon/name 은 함께 선언해야 함 — 반쪽 선언 {partial}")
+        primaries = [q for q, a in members if a.get("icon") and a.get("name")]
+        if len(members) == 1:
+            q, a = members[0]
+            if not (a.get("icon") and a.get("name")):
+                issues.append(f"{q}: 단독 계기 {gid!r} 는 icon+name 필수")
+        else:
+            if len(primaries) != 1:
+                issues.append(
+                    f"계기 {gid!r}: icon+name 선언 멤버(primary)가 정확히 1개여야 함 (현재 {len(primaries)}: {primaries})"
+                )
+            no_mode = [q for q, a in members if not a.get("mode")]
+            if no_mode:
+                issues.append(f"계기 {gid!r}: 복수 멤버는 전원 mode(탭 이름) 필수 — 누락 {no_mode}")
+            mode_names = [a.get("mode") for _, a in members if a.get("mode")]
+            if len(mode_names) != len(set(mode_names)):
+                issues.append(f"계기 {gid!r}: mode 이름 중복 {mode_names}")
+    return issues
+
+
+# === runs_on 검증 + 폰 매니페스트 파생 (2026-06-11, #3) ===
+
+def validate_runs_on(data: dict) -> list[str]:
+    """모든 액션의 runs_on 값이 유효 enum 인지 검사 (미지정=anywhere 허용)."""
+    issues: list[str] = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            if not isinstance(action, dict):
+                continue
+            ro = action.get("runs_on")
+            if ro is not None and ro not in VALID_RUNS_ON:
+                issues.append(
+                    f"{node_name}:{action_name} — 잘못된 runs_on '{ro}' "
+                    f"(허용: {', '.join(sorted(VALID_RUNS_ON))})"
+                )
+    return issues
+
+
+def derive_phone_manifest(data: dict, root: Path) -> dict:
+    """runs_on + 검증된 폰 패키지 → 폰 프로파일 매니페스트.
+
+    runnable_actions(폰서 실행 가능):
+      - runs_on == phone_only  → 폰 전용 하드웨어 액션(항상 포함)
+      - runs_on == home_only   → 제외
+      - runs_on == anywhere(기본):
+          · handler/driver 라우터(패키지 보유) → 패키지가 PHONE_VERIFIED 일 때만
+          · 비-패키지(system/engine 등) → 기본 포함(home_only 로 명시 태그 안 한 한)
+    packages: 폰에 번들할 패키지 = PHONE_VERIFIED (Gradle 이 읽음).
+    """
+    tool_index = build_tool_index(root)
+    runnable: list[str] = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            if not isinstance(action, dict):
+                continue
+            qualified = f"{node_name}:{action_name}"
+            ro = action.get("runs_on", DEFAULT_RUNS_ON)
+            if ro == "home_only":
+                continue
+            if ro == "phone_only":
+                runnable.append(qualified)
+                continue
+            # anywhere
+            tool = action.get("tool")
+            pkg = None
+            if tool and tool in tool_index:
+                pkg = tool_index[tool][0].name
+            if pkg is None:
+                runnable.append(qualified)          # 비-패키지 액션: 기본 폰가능
+            elif pkg in PHONE_VERIFIED_PACKAGES:
+                runnable.append(qualified)          # 검증된 폰 패키지
+            # else: 미검증 패키지 → 폰서 제외
+    return {
+        "_comment": "GENERATED by build_ibl_nodes.py — 폰 프로파일(어디서 도는가) 단일 진실 소스. 직접 수정 금지.",
+        "packages": sorted(PHONE_VERIFIED_PACKAGES),
+        "runnable_actions": sorted(runnable),
+    }
+
+
 def validate(data: dict, root: Path) -> list[str]:
     """전체 yaml 데이터에 대해 삼각 검증 수행."""
     issues: list[str] = []
@@ -495,6 +794,8 @@ def validate(data: dict, root: Path) -> list[str]:
                 continue
             qualified = f"{node_name}:{action_name}"
             issues.extend(_check_action(qualified, action, tool_index))
+    issues.extend(validate_app_blocks(data))
+    issues.extend(validate_runs_on(data))
     return issues
 
 
@@ -595,6 +896,13 @@ def build(check: bool = False, validate_only: bool = False) -> int:
     if validate_only:
         return 1 if (validation_failed or corpus_failed) else 0
 
+    # 폰 매니페스트 파생 (runs_on + 검증된 폰 패키지). data 파싱 성공 시에만.
+    manifest_path = root / "data" / "phone_manifest.json"
+    manifest_text = None
+    if data is not None:
+        manifest = derive_phone_manifest(data, root)
+        manifest_text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
+
     if check:
         if not target.is_file():
             print(f"[build_ibl_nodes] check: 타깃 부재 — {target}", file=sys.stderr)
@@ -611,7 +919,20 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             )
         else:
             print("[build_ibl_nodes] check: 바이트 일치 ✓")
-        return 0 if (bytes_ok and not validation_failed and not corpus_failed) else 1
+        # 폰 매니페스트 정합 (드리프트 방지)
+        manifest_ok = True
+        if manifest_text is not None:
+            on_disk = manifest_path.read_text(encoding="utf-8") if manifest_path.is_file() else None
+            manifest_ok = on_disk == manifest_text
+            if not manifest_ok:
+                print(
+                    f"[build_ibl_nodes] check: phone_manifest.json 불일치 — "
+                    f"`python3 scripts/build_ibl_nodes.py` 로 재생성 필요",
+                    file=sys.stderr,
+                )
+            else:
+                print("[build_ibl_nodes] check: phone_manifest.json 일치 ✓")
+        return 0 if (bytes_ok and manifest_ok and not validation_failed and not corpus_failed) else 1
 
     if validation_failed:
         print(
@@ -623,6 +944,10 @@ def build(check: bool = False, validate_only: bool = False) -> int:
 
     target.write_text(merged, encoding="utf-8")
     print(f"[build_ibl_nodes] 작성: {target}")
+    if manifest_text is not None:
+        manifest_path.write_text(manifest_text, encoding="utf-8")
+        print(f"[build_ibl_nodes] 작성: {manifest_path} "
+              f"(폰 패키지 {len(PHONE_VERIFIED_PACKAGES)}, runnable {manifest_text.count(':')})")
     return 0
 
 

@@ -179,6 +179,39 @@ def _normalize_symbol(symbol: str) -> str:
     return s
 
 
+def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d") -> list:
+    """Yahoo Finance chart API 직접 호출(requests) → 일별 바 리스트.
+
+    yfinance 라이브러리는 Yahoo 봇차단에 막히고(최신판은 curl_cffi 네이티브 의존),
+    이 v8/finance/chart 엔드포인트는 브라우저 UA 헤더면 열려 있다 — 폰(Chaquopy)·데스크탑 공통.
+    반환: [{date, open, high, low, close, volume}] (close 결측 바 제외)."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    r = requests.get(url, params={"range": period, "interval": interval},
+                     headers=headers, timeout=15)
+    res = ((r.json().get("chart") or {}).get("result")) or []
+    if not res:
+        return []
+    res0 = res[0]
+    ts = res0.get("timestamp") or []
+    q = ((res0.get("indicators") or {}).get("quote") or [{}])[0]
+    o, h, l, c, v = (q.get(k) or [] for k in ("open", "high", "low", "close", "volume"))
+    bars = []
+    for i, t in enumerate(ts):
+        cl = c[i] if i < len(c) else None
+        if cl is None:
+            continue
+        bars.append({
+            "date": datetime.utcfromtimestamp(t).strftime("%Y-%m-%d"),
+            "open": round(o[i], 2) if i < len(o) and o[i] is not None else round(cl, 2),
+            "high": round(h[i], 2) if i < len(h) and h[i] is not None else round(cl, 2),
+            "low": round(l[i], 2) if i < len(l) and l[i] is not None else round(cl, 2),
+            "close": round(cl, 2),
+            "volume": int(v[i]) if i < len(v) and v[i] is not None else 0,
+        })
+    return bars
+
+
 def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_points: int = 10) -> dict:
     """
     Yahoo Finance를 통해 주식/ETF/원자재(선물) 가격 조회
@@ -200,20 +233,14 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
         print(f"[yfinance] 심볼 보정: {original_symbol} → {symbol}")
 
     try:
-        import yfinance as yf
-    except ImportError:
-        return {"success": False, "error": "yfinance 라이브러리가 설치되지 않았습니다. pip install yfinance 실행 필요"}
-
-    try:
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(period=period, interval=interval)
-
-        if hist.empty:
+        # yfinance 라이브러리(봇차단) 대신 Yahoo chart API 직접(requests) — 폰·데스크탑 공통.
+        all_history = _yahoo_chart(symbol, period, interval)
+        if not all_history:
             return {"success": False, "error": f"'{symbol}' 종목을 찾을 수 없거나 데이터가 없습니다."}
 
-        latest = hist.iloc[-1]
-        current_price = latest["Close"]
-        prev_close = hist.iloc[-2]["Close"] if len(hist) >= 2 else current_price
+        latest = all_history[-1]
+        current_price = latest["close"]
+        prev_close = all_history[-2]["close"] if len(all_history) >= 2 else current_price
 
         if prev_close and prev_close > 0:
             change = current_price - prev_close
@@ -221,18 +248,6 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
         else:
             change = 0
             change_percent = 0
-
-        # 전체 히스토리 데이터 구성
-        all_history = []
-        for idx, row in hist.iterrows():
-            all_history.append({
-                "date": idx.strftime("%Y-%m-%d"),
-                "open": round(row["Open"], 2),
-                "high": round(row["High"], 2),
-                "low": round(row["Low"], 2),
-                "close": round(row["Close"], 2),
-                "volume": int(row["Volume"])
-            })
 
         direction = "▲" if change >= 0 else "▼"
         currency = "KRW" if symbol.endswith((".KS", ".KQ")) else "USD"
@@ -245,10 +260,10 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             "change": round(change, 2),
             "change_percent": round(change_percent, 2),
             "previous_close": round(prev_close, 2),
-            "open": round(latest.get("Open", 0), 2),
-            "high": round(latest.get("High", 0), 2),
-            "low": round(latest.get("Low", 0), 2),
-            "volume": int(latest.get("Volume", 0)),
+            "open": latest["open"],
+            "high": latest["high"],
+            "low": latest["low"],
+            "volume": latest["volume"],
             "period": period,
             "total_days": total_days,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -349,48 +364,30 @@ def search_stock(query: str, search_type: str = "quotes") -> dict:
             return {"success": True, "data": {"query": query, "count": len(kr), "quotes": kr}}
 
     try:
-        import yfinance as yf
-    except ImportError:
-        return {"success": False, "error": "yfinance 라이브러리가 설치되지 않았습니다."}
-
-    try:
-        search = yf.Search(query)
+        # yf.Search(봇차단) 대신 Yahoo search API 직접(requests) — 폰·데스크탑 공통.
+        url = "https://query1.finance.yahoo.com/v1/finance/search"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        j = requests.get(url, params={"q": query, "quotesCount": 10, "newsCount": 5},
+                         headers=headers, timeout=12).json()
+        raw_quotes = j.get("quotes") or []
+        raw_news = j.get("news") or []
 
         if search_type == "all":
-            return {
-                "success": True,
-                "data": {
-                    "query": query,
-                    "quotes": search.quotes[:10] if search.quotes else [],
-                    "news": search.news[:5] if search.news else []
-                }
-            }
+            return {"success": True, "data": {"query": query, "quotes": raw_quotes[:10], "news": raw_news[:5]}}
         elif search_type == "news":
-            return {
-                "success": True,
-                "data": {
-                    "query": query,
-                    "count": len(search.news) if search.news else 0,
-                    "news": search.news[:10] if search.news else []
-                }
-            }
+            return {"success": True, "data": {"query": query, "count": len(raw_news), "news": raw_news[:10]}}
         else:
             quotes = []
-            for q in (search.quotes or [])[:10]:
+            for q in raw_quotes[:10]:
+                if not q.get("symbol"):
+                    continue
                 quotes.append({
                     "symbol": q.get("symbol", ""),
                     "name": q.get("shortname") or q.get("longname", ""),
                     "exchange": q.get("exchange", ""),
                     "type": q.get("quoteType", "")
                 })
-            return {
-                "success": True,
-                "data": {
-                    "query": query,
-                    "count": len(quotes),
-                    "quotes": quotes
-                }
-            }
+            return {"success": True, "data": {"query": query, "count": len(quotes), "quotes": quotes}}
 
     except Exception as e:
         return {"success": False, "error": f"종목 검색 실패: {str(e)}"}

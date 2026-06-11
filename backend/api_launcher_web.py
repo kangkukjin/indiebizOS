@@ -11,12 +11,131 @@ from typing import Optional
 import os
 import json
 import uuid
+import hashlib
 from datetime import datetime
 
 router = APIRouter(prefix="/launcher")
 
 # 설정 파일 경로
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "launcher_web_config.json")
+
+# 앱 표면 계기 — ibl_nodes.yaml 의 app: 블록에서 자동 파생 (2단계, 단일 진실 소스).
+# app: 블록을 단 액션은 빌드(--check) 시 정합성 검증을 통과해야 하며, 여기서 계기로 합성된다.
+IBL_NODES_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ibl_nodes.yaml")
+_instruments_cache = {"mtime": None, "payload": None}
+
+# app 블록에서 모드(탭) 레벨로 그대로 전달되는 필드
+_APP_MODE_FIELDS = ("note", "auto_run", "inputs", "buttons", "action", "view", "renderer")
+
+# 폰 프로파일(#3 runs_on): INDIEBIZ_PROFILE=phone 이면 phone_manifest.json 의 runnable_actions 에
+# 없는 계기(=폰서 못 도는 액션)를 홈 그리드에서 숨긴다. PC(프로파일 미설정)면 필터 없음.
+_phone_runnable_cache = {"loaded": False, "set": None}
+
+
+def _phone_runnable_actions():
+    """폰 프로파일이면 runnable 액션 집합 반환, 아니면 None(필터 안 함)."""
+    if os.environ.get("INDIEBIZ_PROFILE") != "phone":
+        return None
+    if not _phone_runnable_cache["loaded"]:
+        s = None
+        try:
+            mp = os.path.join(os.path.dirname(IBL_NODES_PATH), "phone_manifest.json")
+            with open(mp, "r", encoding="utf-8") as f:
+                s = set(json.load(f).get("runnable_actions") or [])
+        except Exception:
+            s = None  # 매니페스트 없으면 필터 비활성(안전)
+        _phone_runnable_cache["set"] = s
+        _phone_runnable_cache["loaded"] = True
+    return _phone_runnable_cache["set"]
+
+
+def _derive_instruments() -> dict:
+    """ibl_nodes.yaml 의 app: 블록 → 원격 앱 표면 계기 매니페스트 합성.
+
+    - app.instrument 가 같은 액션들은 한 계기의 modes(탭)로 병합 (mode_order 정렬)
+    - icon+name 을 선언한 멤버가 계기의 primary (빌드 검증이 정확히 1개 강제)
+    - 홈 그리드 정렬은 app.order (미지정 999)
+    """
+    import yaml
+    with open(IBL_NODES_PATH, 'r', encoding='utf-8') as f:
+        nodes = (yaml.safe_load(f) or {}).get("nodes", {})
+
+    runnable = _phone_runnable_actions()  # 폰이면 집합, PC면 None
+
+    groups: dict[str, list] = {}
+    group_seq: list[str] = []
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            if not isinstance(action, dict):
+                continue
+            app = action.get("app")
+            if not isinstance(app, dict):
+                continue
+            # 폰 프로파일: 폰서 못 도는 액션은 계기에서 제외
+            if runnable is not None and f"{node_name}:{action_name}" not in runnable:
+                continue
+            gid = app.get("instrument") or action_name
+            if gid not in groups:
+                groups[gid] = []
+                group_seq.append(gid)
+            groups[gid].append((action_name, app))
+
+    import re as _re
+
+    def _mode_action_qualified(action_str):
+        """모드 action 문자열에서 [node:action] 추출 (폰 runnable 필터용)."""
+        if not action_str:
+            return None
+        m = _re.search(r"\[(\w+):(\w+)\]", str(action_str))
+        return f"{m.group(1)}:{m.group(2)}" if m else None
+
+    instruments = []
+    for gid in group_seq:
+        members = sorted(groups[gid], key=lambda m: m[1].get("mode_order", 0))
+        primary = next((a for _, a in members if a.get("icon") and a.get("name")), members[0][1])
+        inst = {
+            "id": gid,
+            "icon": primary.get("icon", "🔧"),
+            "name": primary.get("name", gid),
+            "_order": primary.get("order", 999),
+        }
+        explicit = primary.get("modes")
+        if isinstance(explicit, list) and explicit:
+            # 명시적 modes — 한 액션이 여러 탭을 선언(주식/코인/자원). 탭별로 다른 액션 호출 가능.
+            modes = []
+            for m in explicit:
+                if not isinstance(m, dict):
+                    continue
+                # 폰 프로파일: 그 탭의 액션이 폰서 못 돌면 탭 숨김
+                if runnable is not None:
+                    qa = _mode_action_qualified(m.get("action"))
+                    if qa and qa not in runnable:
+                        continue
+                modes.append(m)
+            if not modes:
+                continue  # 모든 탭이 폰서 제외 → 계기 숨김
+            inst["modes"] = modes
+        elif len(members) == 1 and not members[0][1].get("mode"):
+            app = members[0][1]
+            for f in _APP_MODE_FIELDS:
+                if f in app:
+                    inst[f] = app[f]
+        else:
+            inst["modes"] = []
+            for action_name, app in members:
+                mode = {"id": action_name, "name": app.get("mode", action_name)}
+                for f in _APP_MODE_FIELDS:
+                    if f in app:
+                        mode[f] = app[f]
+                inst["modes"].append(mode)
+        instruments.append(inst)
+
+    instruments.sort(key=lambda i: i["_order"])
+    for inst in instruments:
+        inst.pop("_order", None)
+    return {"version": 2, "source": "ibl_nodes", "instruments": instruments}
 
 # 세션 저장소 (메모리)
 sessions = {}
@@ -28,7 +147,7 @@ def load_config():
             return json.load(f)
     return {
         "enabled": False,
-        "password": "",
+        "password_hash": None,
     }
 
 def save_config(config):
@@ -37,6 +156,10 @@ def save_config(config):
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
+def hash_password(password: str) -> str:
+    """비밀번호 SHA256 해시 (Finder와 동일 방식)"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
 def verify_session(request: Request) -> bool:
     """세션 검증"""
     session_id = request.cookies.get("launcher_session")
@@ -44,11 +167,68 @@ def verify_session(request: Request) -> bool:
         session_id = request.headers.get("X-Launcher-Session")
     return session_id in sessions
 
+
+# === 원격(터널) 요청 판별 ===
+# launcher/finder 데이터 엔드포인트는 데스크탑과 공유되므로, 터널을 통해
+# 들어온 외부 요청만 골라내 인증 게이트를 적용한다. (localhost 데스크탑은 통과)
+
+def _load_external_hostnames():
+    """tunnel_config.json에서 외부 노출 호스트네임 집합 로드"""
+    hosts = set()
+    try:
+        cfg_path = os.path.join(os.path.dirname(__file__), "..", "data", "tunnel_config.json")
+        if os.path.exists(cfg_path):
+            with open(cfg_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+            for key in ("launcher_hostname", "finder_hostname", "hostname"):
+                h = (cfg.get(key) or "").strip().lower()
+                if h:
+                    hosts.add(h)
+    except Exception:
+        pass
+    return hosts
+
+
+_EXTERNAL_HOSTNAMES = _load_external_hostnames()
+
+
+def reload_external_hostnames():
+    """터널 설정 변경 후 호스트네임 캐시 갱신"""
+    global _EXTERNAL_HOSTNAMES
+    _EXTERNAL_HOSTNAMES = _load_external_hostnames()
+    return _EXTERNAL_HOSTNAMES
+
+
+def is_external_request(request: Request) -> bool:
+    """터널 호스트네임으로 들어온 원격 요청인지 판별"""
+    host = (request.headers.get("host") or "").split(":")[0].strip().lower()
+    if host and host in _EXTERNAL_HOSTNAMES:
+        return True
+    # 호스트네임 설정이 비어있을 때를 위한 폴백: Cloudflare 경유 신호
+    if request.headers.get("cf-connecting-ip"):
+        return True
+    return False
+
+
+def is_public_remote_path(method: str, path: str) -> bool:
+    """원격에서 인증 없이 허용되는 경로 (로그인 셸 + 자체 인증 보유 경로)"""
+    # 런처 앱 셸 + 로그인 흐름
+    if path == "/launcher/app":
+        return True
+    if path in ("/launcher/auth/login", "/launcher/auth/logout"):
+        return True
+    if method == "GET" and path == "/launcher/config":
+        return True
+    # 원격 파인더(/nas/*)는 자체 session_token 인증을 사용하므로 위임
+    if path == "/nas" or path.startswith("/nas/"):
+        return True
+    return False
+
 # === API 엔드포인트 ===
 
 class ConfigModel(BaseModel):
     enabled: bool
-    password: str
+    password: Optional[str] = None  # 새 비밀번호 설정 시에만 전달 (생략 시 기존 유지)
 
 class LoginModel(BaseModel):
     password: str
@@ -59,14 +239,43 @@ async def get_config():
     config = load_config()
     return {
         "enabled": config.get("enabled", False),
-        "has_password": bool(config.get("password", ""))
+        "has_password": bool(config.get("password_hash"))
     }
 
 @router.post("/config")
-async def set_config(config: ConfigModel):
-    """설정 저장"""
-    save_config(config.dict())
+async def set_config(update: ConfigModel):
+    """설정 저장 (비밀번호는 해시로만 저장)"""
+    config = load_config()
+    config["enabled"] = update.enabled
+
+    if update.password is not None and update.password != "":
+        if len(update.password) < 4:
+            raise HTTPException(status_code=400, detail="비밀번호는 4자 이상이어야 합니다")
+        config["password_hash"] = hash_password(update.password)
+
+    # 레거시 평문 비밀번호 필드가 남아있으면 제거
+    config.pop("password", None)
+
+    save_config(config)
     return {"success": True}
+
+@router.get("/instruments")
+async def get_instruments():
+    """앱 표면 계기 매니페스트 — ibl_nodes.yaml app: 블록에서 파생 (mtime 캐시).
+
+    표면은 이걸 해석만 한다 (선언형). 새 IBL 액션에 app: 블록만 달면 자동 등장.
+    원격 인증: api.py:remote_access_guard가 외부 요청에 launcher 세션을 요구
+    (화이트리스트 아님 — 데이터 엔드포인트라 로그인 후 접근이 맞음).
+    """
+    try:
+        mtime = os.path.getmtime(IBL_NODES_PATH)
+        if _instruments_cache["mtime"] != mtime:
+            _instruments_cache["payload"] = _derive_instruments()
+            _instruments_cache["mtime"] = mtime
+        return _instruments_cache["payload"]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"계기 파생 실패: {e}")
+
 
 @router.post("/auth/login")
 async def login(data: LoginModel, response: Response):
@@ -76,7 +285,17 @@ async def login(data: LoginModel, response: Response):
     if not config.get("enabled"):
         raise HTTPException(status_code=403, detail="원격 런처가 비활성화되어 있습니다")
 
-    if data.password != config.get("password"):
+    # 레거시 평문 비밀번호 자동 마이그레이션 (있으면 해시로 전환 후 평문 제거)
+    if config.get("password") and not config.get("password_hash"):
+        config["password_hash"] = hash_password(config["password"])
+        config.pop("password", None)
+        save_config(config)
+
+    password_hash = config.get("password_hash")
+    if not password_hash:
+        raise HTTPException(status_code=400, detail="비밀번호가 설정되지 않았습니다")
+
+    if hash_password(data.password) != password_hash:
         raise HTTPException(status_code=401, detail="비밀번호가 틀렸습니다")
 
     session_id = str(uuid.uuid4())
@@ -88,7 +307,9 @@ async def login(data: LoginModel, response: Response):
         key="launcher_session",
         value=session_id,
         httponly=True,
-        samesite="strict"
+        secure=True,        # 터널은 HTTPS 전용
+        samesite="strict",
+        max_age=60 * 60 * 24 * 7,  # 7일
     )
 
     return {"success": True, "session_id": session_id}
@@ -109,903 +330,855 @@ async def get_webapp():
 
 
 def get_launcher_webapp_html():
-    """원격 런처 웹앱 HTML"""
+    """원격 런처 웹앱 HTML — 3표면(자율주행/수동/앱) 구조"""
     return """<!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IndieBiz OS - Remote Launcher</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        :root {
-            --bg-primary: #1a1a2e;
-            --bg-secondary: #16213e;
-            --bg-tertiary: #0f3460;
-            --accent: #e94560;
-            --accent-light: #ff6b6b;
-            --text-primary: #eee;
-            --text-secondary: #aaa;
-            --border: #333;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-        }
-
-        /* 로그인 화면 */
-        .login-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .login-box {
-            background: var(--bg-secondary);
-            padding: 40px;
-            border-radius: 16px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        }
-
-        .login-title {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .login-title h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-
-        .login-title p {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-
-        .login-input {
-            width: 100%;
-            padding: 14px 16px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 16px;
-            margin-bottom: 16px;
-        }
-
-        .login-input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 14px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .login-btn:hover {
-            background: var(--accent-light);
-        }
-
-        .login-error {
-            color: var(--accent);
-            text-align: center;
-            margin-top: 16px;
-            font-size: 14px;
-        }
-
-        /* 메인 앱 */
-        .app-container {
-            display: none;
-            height: 100vh;
-        }
-
-        .app-container.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* 헤더 */
-        .header {
-            background: var(--bg-secondary);
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .header-title {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .header-title h1 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .header-badge {
-            background: var(--accent);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .header-btn {
-            padding: 8px 16px;
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: none;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .header-btn:hover {
-            background: var(--accent);
-        }
-
-        /* 메인 영역 */
-        .main {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-        }
-
-        /* 사이드바 */
-        .sidebar {
-            width: 280px;
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .sidebar-section {
-            padding: 16px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .sidebar-section h3 {
-            font-size: 12px;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-            margin-bottom: 12px;
-            letter-spacing: 0.5px;
-        }
-
-        .sidebar-item {
-            padding: 10px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 4px;
-            transition: background 0.2s;
-        }
-
-        .sidebar-item:hover {
-            background: var(--bg-tertiary);
-        }
-
-        .sidebar-item.active {
-            background: var(--accent);
-        }
-
-        .sidebar-item-icon {
-            font-size: 18px;
-        }
-
-        .sidebar-item-text {
-            flex: 1;
-            font-size: 14px;
-        }
-
-        .sidebar-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-        }
-
-        /* 채팅 영역 */
-        .chat-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: var(--bg-primary);
-        }
-
-        .chat-header {
-            padding: 16px 20px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .chat-header h2 {
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .chat-header p {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-top: 4px;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-        }
-
-        .message {
-            margin-bottom: 16px;
-            display: flex;
-            gap: 12px;
-        }
-
-        .message-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--bg-tertiary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            flex-shrink: 0;
-        }
-
-        .message-content {
-            flex: 1;
-            background: var(--bg-secondary);
-            padding: 12px 16px;
-            border-radius: 12px;
-            border-top-left-radius: 4px;
-        }
-
-        .message.user .message-content {
-            background: var(--accent);
-            border-radius: 12px;
-            border-top-right-radius: 4px;
-        }
-
-        .message.user {
-            flex-direction: row-reverse;
-        }
-
-        .message-text {
-            font-size: 14px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-        }
-
-        .chat-input-area {
-            padding: 16px 20px;
-            background: var(--bg-secondary);
-            border-top: 1px solid var(--border);
-        }
-
-        .chat-input-wrapper {
-            display: flex;
-            gap: 12px;
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 14px;
-            resize: none;
-        }
-
-        .chat-input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        .chat-send-btn {
-            padding: 12px 24px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .chat-send-btn:hover {
-            background: var(--accent-light);
-        }
-
-        .chat-send-btn:disabled {
-            background: var(--border);
-            cursor: not-allowed;
-        }
-
-        /* 스위치 영역 */
-        .switches-area {
-            display: none;
-            flex: 1;
-            flex-direction: column;
-            background: var(--bg-primary);
-        }
-
-        .switches-area.active {
-            display: flex;
-        }
-
-        .switches-header {
-            padding: 16px 20px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .switches-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-        }
-
-        .switch-item {
-            background: var(--bg-secondary);
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .switch-icon {
-            font-size: 24px;
-        }
-
-        .switch-info {
-            flex: 1;
-        }
-
-        .switch-name {
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .switch-prompt {
-            font-size: 12px;
-            color: var(--text-secondary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 300px;
-        }
-
-        .switch-run-btn {
-            padding: 10px 20px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .switch-run-btn:hover {
-            background: var(--accent-light);
-        }
-
-        /* 로딩 */
-        .loading {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px;
-            color: var(--text-secondary);
-        }
-
-        .loading.active {
-            display: flex;
-        }
-
-        .loading-spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* 반응형 */
-        @media (max-width: 768px) {
-            .sidebar {
-                position: fixed;
-                left: -280px;
-                top: 0;
-                bottom: 0;
-                z-index: 100;
-                transition: left 0.3s;
-            }
-
-            .sidebar.open {
-                left: 0;
-            }
-
-            .sidebar-overlay {
-                display: none;
-                position: fixed;
-                inset: 0;
-                background: rgba(0,0,0,0.5);
-                z-index: 99;
-            }
-
-            .sidebar-overlay.active {
-                display: block;
-            }
-
-            .header-menu-btn {
-                display: block;
-            }
-        }
-
-        @media (min-width: 769px) {
-            .header-menu-btn {
-                display: none;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>IndieBiz OS — Remote Launcher</title>
+<!-- 폰 라디오 재생용: 한국 방송은 HLS(.m3u8)라 Android WebView 직접재생에 hls.js 필요 -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root{
+  --bg:#15151f; --bg2:#1c1c2b; --bg3:#262640; --line:#33334d;
+  --txt:#ececf2; --dim:#9a9ab0; --acc:#e94560; --acc2:#ff6b81;
+  --ok:#3ecf8e; --warn:#f5a623; --unknown:#7a7a92; --info:#4a9fe0;
+  --up:#e94560; --down:#3f7fe0;
+}
+body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--txt); min-height:100vh; -webkit-font-smoothing:antialiased; }
+button{ font-family:inherit; cursor:pointer; }
+input,textarea,select{ font-family:inherit; }
+::-webkit-scrollbar{ width:8px; height:8px; }
+::-webkit-scrollbar-thumb{ background:var(--bg3); border-radius:4px; }
+
+/* 로그인 */
+.login{ display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+.login-box{ background:var(--bg2); padding:36px 28px; border-radius:18px; width:100%; max-width:380px; box-shadow:0 12px 48px rgba(0,0,0,.4); }
+.login-box h1{ font-size:24px; text-align:center; }
+.login-box p.sub{ color:var(--dim); text-align:center; font-size:13px; margin:6px 0 26px; }
+.inp{ width:100%; padding:14px 16px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--txt); font-size:16px; }
+.inp:focus{ outline:none; border-color:var(--acc); }
+.btn{ width:100%; padding:14px; background:var(--acc); color:#fff; border:none; border-radius:10px; font-size:16px; font-weight:600; margin-top:14px; transition:background .15s; }
+.btn:hover{ background:var(--acc2); }
+.btn:disabled{ background:var(--line); cursor:not-allowed; }
+.err{ color:var(--acc); text-align:center; margin-top:14px; font-size:13px; min-height:18px; }
+
+/* 앱 셸 */
+.app{ display:none; flex-direction:column; height:100vh; }
+.app.on{ display:flex; }
+.top{ display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--bg2); border-bottom:1px solid var(--line); flex-shrink:0; }
+.top .brand{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px; }
+.top .badge{ background:var(--acc); color:#fff; font-size:10px; font-weight:700; padding:3px 7px; border-radius:8px; letter-spacing:.5px; }
+.iconbtn{ background:var(--bg3); border:none; color:var(--txt); width:34px; height:34px; border-radius:8px; font-size:15px; }
+.iconbtn:hover{ background:var(--acc); }
+
+/* 표면 토글 */
+.surfaces{ display:flex; gap:6px; padding:8px 14px; background:var(--bg2); border-bottom:1px solid var(--line); flex-shrink:0; }
+.surf-tab{ flex:1; padding:10px 6px; background:var(--bg); border:1px solid var(--line); border-radius:10px; color:var(--dim); font-size:13px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:3px; transition:all .15s; }
+.surf-tab .em{ font-size:18px; }
+.surf-tab.on{ background:var(--acc); border-color:var(--acc); color:#fff; }
+.surf-tab .hint{ font-size:9px; font-weight:400; opacity:.7; }
+
+.panel{ flex:1; overflow-y:auto; display:none; }
+.panel.on{ display:flex; flex-direction:column; }
+.wrap{ max-width:720px; width:100%; margin:0 auto; padding:16px; }
+
+/* 공통 */
+.row{ display:flex; gap:8px; }
+.field{ flex:1; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--bg2); color:var(--txt); font-size:15px; }
+.field:focus{ outline:none; border-color:var(--acc); }
+.go{ padding:12px 18px; background:var(--acc); color:#fff; border:none; border-radius:10px; font-weight:600; white-space:nowrap; }
+.go:hover{ background:var(--acc2); }
+.go:disabled{ background:var(--line); }
+.muted{ color:var(--dim); font-size:13px; }
+.card{ background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px; }
+.spin{ width:22px; height:22px; border:2px solid var(--line); border-top-color:var(--acc); border-radius:50%; animation:sp 1s linear infinite; }
+@keyframes sp{ to{ transform:rotate(360deg); } }
+.center{ display:flex; align-items:center; justify-content:center; gap:10px; padding:30px; color:var(--dim); }
+.pill{ display:inline-block; padding:2px 8px; border-radius:8px; font-size:11px; font-weight:600; }
+
+/* === 자율주행 === */
+.ap{ flex:1; display:flex; min-height:0; }
+.ap-side{ width:200px; background:var(--bg2); border-right:1px solid var(--line); overflow-y:auto; flex-shrink:0; }
+.ap-side h3{ font-size:10px; text-transform:uppercase; color:var(--dim); padding:14px 14px 6px; letter-spacing:.5px; }
+.ap-item{ padding:10px 14px; display:flex; align-items:center; gap:9px; font-size:14px; }
+.ap-item:hover{ background:var(--bg3); }
+.ap-item.on{ background:var(--acc); }
+.ap-main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+.ap-head{ padding:12px 16px; background:var(--bg2); border-bottom:1px solid var(--line); }
+.ap-head h2{ font-size:15px; }
+.ap-head p{ font-size:11px; color:var(--dim); margin-top:2px; }
+.msgs{ flex:1; overflow-y:auto; padding:16px; }
+.msg{ margin-bottom:14px; display:flex; gap:10px; }
+.msg.user{ flex-direction:row-reverse; }
+.av{ width:30px; height:30px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:15px; }
+.bub{ max-width:78%; background:var(--bg2); border:1px solid var(--line); padding:10px 13px; border-radius:13px; font-size:14px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+.msg.user .bub{ background:var(--acc); border-color:var(--acc); }
+.composer{ padding:12px 16px; background:var(--bg2); border-top:1px solid var(--line); display:flex; gap:8px; }
+.composer textarea{ flex:1; padding:11px 14px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--txt); font-size:14px; resize:none; max-height:120px; }
+.composer textarea:focus{ outline:none; border-color:var(--acc); }
+.sw-item{ display:flex; align-items:center; gap:12px; }
+.sw-item .nm{ flex:1; font-weight:600; font-size:14px; }
+.sw-item .pr{ font-size:11px; color:var(--dim); }
+
+/* === 수동 === */
+.step{ margin-bottom:16px; }
+.step-label{ font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; margin-bottom:7px; font-weight:600; }
+.codebox{ width:100%; min-height:64px; padding:13px; border:1px solid var(--line); border-radius:10px; background:#11111a; color:#a5d6ff; font-family:'SF Mono',Menlo,monospace; font-size:13px; line-height:1.5; resize:vertical; }
+.eff{ background:var(--bg2); border:1px solid var(--line); border-left-width:3px; border-radius:8px; padding:11px 13px; margin-bottom:8px; }
+.eff.read{ border-left-color:var(--ok); }
+.eff.write{ border-left-color:var(--warn); }
+.eff.unknown{ border-left-color:var(--unknown); }
+.eff .h{ display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; }
+.eff .e{ font-size:13px; color:var(--dim); margin-top:5px; line-height:1.45; }
+.s-read{ background:rgba(62,207,142,.16); color:var(--ok); }
+.s-write{ background:rgba(245,166,35,.16); color:var(--warn); }
+.s-unknown{ background:rgba(122,122,146,.2); color:var(--dim); }
+.warnbox{ background:rgba(245,166,35,.1); border:1px solid var(--warn); border-radius:10px; padding:12px; margin-bottom:12px; font-size:13px; display:flex; align-items:flex-start; gap:9px; }
+.warnbox input{ margin-top:2px; width:17px; height:17px; accent-color:var(--warn); }
+.result{ background:#11111a; border:1px solid var(--line); border-radius:10px; padding:13px; font-family:'SF Mono',Menlo,monospace; font-size:12px; line-height:1.5; white-space:pre-wrap; word-break:break-word; max-height:340px; overflow:auto; color:#cfe9ff; }
+.refbox{ font-size:12px; color:var(--dim); background:var(--bg); border:1px dashed var(--line); border-radius:8px; padding:10px; margin-top:8px; white-space:pre-wrap; max-height:160px; overflow:auto; display:none; }
+.linkbtn{ background:none; border:none; color:var(--info); font-size:12px; padding:4px 0; text-decoration:underline; }
+.btnrow{ display:flex; gap:8px; flex-wrap:wrap; }
+.btn2{ padding:11px 16px; border:1px solid var(--line); background:var(--bg3); color:var(--txt); border-radius:10px; font-weight:600; font-size:14px; }
+.btn2:hover{ border-color:var(--acc); }
+.btn2.prim{ background:var(--acc); border-color:var(--acc); color:#fff; }
+.btn2.prim:hover{ background:var(--acc2); }
+.btn2:disabled{ opacity:.5; }
+/* 둘러보기 팔레트 */
+.palette{ margin-top:18px; border-top:1px solid var(--line); padding-top:14px; }
+.cat-node{ margin-bottom:10px; }
+.cat-node h4{ font-size:12px; color:var(--acc2); margin-bottom:5px; }
+.act-chip{ display:inline-block; margin:3px 4px 0 0; padding:5px 10px; background:var(--bg3); border:1px solid var(--line); border-radius:8px; font-size:12px; }
+.act-chip:hover{ border-color:var(--acc); }
+
+/* === 앱 === */
+.grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.tile{ background:var(--bg2); color:var(--txt); border:1px solid var(--line); border-radius:16px; padding:20px 10px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.tile:hover{ border-color:var(--acc); transform:translateY(-2px); }
+.tile .em{ font-size:30px; }
+.tile .nm{ font-size:13px; font-weight:600; }
+.fileov{ position:fixed; inset:0; z-index:1000; background:var(--bg); display:flex; flex-direction:column; }
+.fileov-bar{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:var(--bg2); border-bottom:1px solid var(--line); color:var(--txt); font-size:13px; flex-shrink:0; }
+.fileov iframe{ flex:1; border:none; width:100%; background:#fff; }
+.inst-head{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.back{ background:var(--bg3); border:none; color:var(--txt); width:34px; height:34px; border-radius:9px; font-size:16px; }
+.back:hover{ background:var(--acc); }
+.inst-head h2{ font-size:17px; }
+.tabs{ display:flex; gap:6px; margin-bottom:12px; }
+.tab{ padding:8px 14px; background:var(--bg2); border:1px solid var(--line); border-radius:9px; font-size:13px; color:var(--dim); }
+.tab.on{ background:var(--acc); border-color:var(--acc); color:#fff; }
+.chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.chip{ padding:6px 12px; background:var(--bg2); border:1px solid var(--line); border-radius:20px; font-size:12px; }
+.periods{ display:flex; gap:6px; flex-wrap:wrap; }
+.pchip{ padding:5px 12px; background:var(--bg2); border:1px solid var(--line); border-radius:8px; font-size:12px; color:var(--dim); }
+.pchip.on{ background:var(--acc); border-color:var(--acc); color:#fff; }
+.chip:hover{ border-color:var(--acc); }
+.bookcard{ display:flex; gap:12px; }
+.bookcard img{ width:56px; height:80px; object-fit:cover; border-radius:6px; background:var(--bg3); flex-shrink:0; }
+.card .t{ font-weight:600; font-size:14px; margin-bottom:3px; }
+.card .m{ font-size:12px; color:var(--dim); line-height:1.5; }
+.posters{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+.poster img{ width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:8px; background:var(--bg3); }
+.poster .t{ font-size:13px; font-weight:600; margin-top:6px; }
+.poster .m{ font-size:11px; color:var(--dim); margin-top:2px; }
+.kv{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; }
+.kv .k{ color:var(--dim); }
+.big{ font-size:30px; font-weight:700; }
+.note{ font-size:11px; color:var(--warn); background:rgba(245,166,35,.1); border-radius:8px; padding:8px 10px; margin-bottom:12px; }
+a{ color:var(--info); }
+@media(max-width:560px){
+  .ap-side{ width:150px; }
+  .grid{ grid-template-columns:repeat(3,1fr); }
+  .surf-tab .hint{ display:none; }
+}
+</style>
 </head>
 <body>
-    <!-- 로그인 화면 -->
-    <div class="login-container" id="loginScreen">
-        <div class="login-box">
-            <div class="login-title">
-                <h1>🚀 IndieBiz OS</h1>
-                <p>Remote Launcher</p>
-            </div>
-            <input type="password" class="login-input" id="passwordInput" placeholder="비밀번호 입력" autofocus>
-            <button class="login-btn" onclick="login()">로그인</button>
-            <p class="login-error" id="loginError"></p>
+
+<!-- 로그인 -->
+<div class="login" id="login">
+  <div class="login-box">
+    <h1>IndieBiz OS</h1>
+    <p class="sub">Remote Launcher</p>
+    <input type="password" class="inp" id="pw" placeholder="비밀번호" autocomplete="current-password">
+    <button class="btn" id="loginBtn" onclick="doLogin()">로그인</button>
+    <p class="err" id="loginErr"></p>
+  </div>
+</div>
+
+<!-- 앱 -->
+<div class="app" id="app">
+  <div class="top">
+    <div class="brand"><span>IndieBiz OS</span><span class="badge" id="surfBadge">REMOTE</span></div>
+    <div style="display:flex; gap:8px;">
+      <button class="iconbtn" onclick="refreshSurface()" title="새로고침">↻</button>
+      <button class="iconbtn" onclick="doLogout()" title="로그아웃">⏻</button>
+    </div>
+  </div>
+  <div class="surfaces">
+    <button class="surf-tab on" id="t-autopilot" onclick="setSurface('autopilot')">
+      <span class="em">🛰️</span><span>자율주행</span><span class="hint">속도·표현력</span></button>
+    <button class="surf-tab" id="t-manual" onclick="setSurface('manual')">
+      <span class="em">⚙️</span><span>수동</span><span class="hint">표현력·주권</span></button>
+    <button class="surf-tab" id="t-app" onclick="setSurface('app')">
+      <span class="em">📱</span><span>앱</span><span class="hint">속도·주권</span></button>
+  </div>
+
+  <!-- 자율주행 -->
+  <div class="panel on" id="p-autopilot">
+    <div class="ap">
+      <div class="ap-side">
+        <h3>시스템</h3>
+        <div class="ap-item on" id="nav-system" onclick="apSelectSystem()"><span>🤖</span><span>시스템 AI</span></div>
+        <div class="ap-item" id="nav-switch" onclick="apShowSwitches()"><span>⚡</span><span>스위치</span></div>
+        <h3>프로젝트</h3>
+        <div id="ap-projects"></div>
+      </div>
+      <div class="ap-main">
+        <div class="ap-head"><h2 id="apTitle">시스템 AI</h2><p id="apSub">IndieBiz OS 전체를 관리합니다</p></div>
+        <div class="msgs" id="apMsgs"></div>
+        <div class="composer" id="apComposer">
+          <textarea id="apInput" rows="1" placeholder="메시지..." onkeydown="apKey(event)"></textarea>
+          <button class="go" id="apSend" onclick="apSend()">전송</button>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- 메인 앱 -->
-    <div class="app-container" id="appContainer">
-        <header class="header">
-            <div class="header-title">
-                <button class="header-btn header-menu-btn" onclick="toggleSidebar()">☰</button>
-                <h1>🚀 IndieBiz OS</h1>
-                <span class="header-badge">REMOTE</span>
-            </div>
-            <div class="header-actions">
-                <button class="header-btn" onclick="refreshData()">🔄 새로고침</button>
-                <button class="header-btn" onclick="logout()">로그아웃</button>
-            </div>
-        </header>
-
-        <main class="main">
-            <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-            <aside class="sidebar" id="sidebar">
-                <div class="sidebar-section">
-                    <h3>시스템</h3>
-                    <div class="sidebar-item active" onclick="selectChat('system')">
-                        <span class="sidebar-item-icon">🤖</span>
-                        <span class="sidebar-item-text">시스템 AI</span>
-                    </div>
-                    <div class="sidebar-item" onclick="showSwitches()">
-                        <span class="sidebar-item-icon">⚡</span>
-                        <span class="sidebar-item-text">스위치</span>
-                    </div>
-                </div>
-
-                <div class="sidebar-section">
-                    <h3>프로젝트</h3>
-                </div>
-                <div class="sidebar-list" id="projectList">
-                    <!-- 프로젝트 목록 동적 로드 -->
-                </div>
-            </aside>
-
-            <section class="chat-area" id="chatArea">
-                <div class="chat-header">
-                    <h2 id="chatTitle">시스템 AI</h2>
-                    <p id="chatSubtitle">IndieBiz OS 전체를 관리하는 시스템 AI입니다</p>
-                </div>
-                <div class="chat-messages" id="chatMessages">
-                    <!-- 메시지 동적 로드 -->
-                </div>
-                <div class="loading" id="chatLoading">
-                    <div class="loading-spinner"></div>
-                    <span>AI가 응답 중...</span>
-                </div>
-                <div class="chat-input-area">
-                    <div class="chat-input-wrapper">
-                        <textarea class="chat-input" id="chatInput" rows="1" placeholder="메시지를 입력하세요..." onkeydown="handleInputKeydown(event)"></textarea>
-                        <button class="chat-send-btn" id="sendBtn" onclick="sendMessage()">보내기</button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="switches-area" id="switchesArea">
-                <div class="switches-header">
-                    <h2>⚡ 스위치</h2>
-                    <p>원클릭으로 자동화된 작업을 실행합니다</p>
-                </div>
-                <div class="switches-list" id="switchesList">
-                    <!-- 스위치 목록 동적 로드 -->
-                </div>
-            </section>
-        </main>
+  <!-- 수동 -->
+  <div class="panel" id="p-manual">
+    <div class="wrap">
+      <div class="step">
+        <div class="step-label">① 의도 (자연어)</div>
+        <div class="row">
+          <input class="field" id="mIntent" placeholder='예: 서울 날씨 알려줘 / 강남구 아파트 실거래가' onkeydown="if(event.key==='Enter')mTranslate()">
+          <button class="go" id="mTransBtn" onclick="mTranslate()">번역</button>
+        </div>
+        <button class="linkbtn" onclick="togglePalette()">＋ 둘러보기 (액션 팔레트)</button>
+        <div id="palette" class="palette" style="display:none"></div>
+      </div>
+      <div id="mAfterTranslate" style="display:none">
+        <div class="step">
+          <div class="step-label">② IBL 코드 (수정 가능)</div>
+          <textarea class="codebox" id="mCode"></textarea>
+          <button class="linkbtn" onclick="toggleRefs()">참고 용례 보기/숨기기</button>
+          <div class="refbox" id="mRefs"></div>
+        </div>
+        <div class="btnrow">
+          <button class="btn2 prim" id="mValBtn" onclick="mValidate()">검수 (dry-run)</button>
+        </div>
+      </div>
+      <div id="mAfterValidate" style="display:none">
+        <div class="step" style="margin-top:16px">
+          <div class="step-label">③ 효과 검수 — 코드가 아니라 무슨 일이 일어나는지</div>
+          <div id="mSteps"></div>
+        </div>
+        <div id="mSideWarn"></div>
+        <div class="btnrow">
+          <button class="btn2 prim" id="mExecBtn" onclick="mExecute()">실행</button>
+        </div>
+      </div>
+      <div id="mAfterExecute" style="display:none">
+        <div class="step" style="margin-top:16px">
+          <div class="step-label">④ 결과</div>
+          <div class="result" id="mResult"></div>
+          <div class="btnrow" style="margin-top:10px">
+            <button class="btn2" id="mDistillBtn" onclick="mDistill()">✓ 이 결과 학습 (해마 증류)</button>
+          </div>
+          <p class="muted" id="mDistillMsg" style="margin-top:8px"></p>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <script>
-        // 상태
-        let currentChat = { type: 'system', projectId: null, agentName: null };
-        let messages = [];
-        let projects = [];
-        let switches = [];
+  <!-- 앱 -->
+  <div class="panel" id="p-app">
+    <div class="wrap" id="appHome"></div>
+    <div class="wrap" id="appInst" style="display:none"></div>
+  </div>
+</div>
 
-        // API 베이스 URL
-        const API_BASE = '';
+<script>
+const API='';
+let surface='autopilot';
+let apChat={ type:'system', projectId:null, agentId:null, agentName:null };
+let apProjects=[];
+let apSwitches=[];
 
-        // 초기화
-        document.addEventListener('DOMContentLoaded', () => {
-            checkSession();
+/* ===== 공통 ===== */
+function esc(s){ const d=document.createElement('div'); d.textContent=(s==null?'':String(s)); return d.innerHTML; }
+function jfetch(url,opt){ return fetch(API+url, Object.assign({headers:{'Content-Type':'application/json'}}, opt||{})); }
+async function ibl(code){
+  const r=await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'앱모드',project_path:'.'})});
+  if(!r.ok) throw new Error('[HTTP '+r.status+']');
+  return r.json();
+}
 
-            // Enter 키 처리
-            document.getElementById('passwordInput').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') login();
-            });
-        });
+/* ===== 로그인 ===== */
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('pw').addEventListener('keydown',e=>{ if(e.key==='Enter')doLogin(); });
+  checkSession();
+});
+async function checkSession(){
+  try{ const r=await jfetch('/projects'); if(r.ok){ showApp(); } }catch(e){}
+}
+async function doLogin(){
+  const pw=document.getElementById('pw').value;
+  const el=document.getElementById('loginErr'); el.textContent='';
+  try{
+    const r=await jfetch('/launcher/auth/login',{method:'POST',body:JSON.stringify({password:pw})});
+    if(r.ok){ showApp(); } else { const d=await r.json().catch(()=>({})); el.textContent=d.detail||'로그인 실패'; }
+  }catch(e){ el.textContent='서버 연결 실패'; }
+}
+async function doLogout(){ try{ await jfetch('/launcher/auth/logout',{method:'POST'}); }catch(e){} location.reload(); }
+let IS_PHONE=false;
+async function showApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').classList.add('on');
+  // 자급 컴패니언(폰-로컬)인지 판별 — REMOTE 배지는 원격 시나리오 전용이라 폰에선 숨긴다.
+  try{ const r=await jfetch('/launcher/config'); if(r.ok){ const c=await r.json();
+    IS_PHONE=(c.host==='phone-local');
+    if(IS_PHONE){ const b=document.getElementById('surfBadge'); if(b) b.style.display='none'; }
+  } }catch(e){}
+  apLoad();
+}
 
-        // 세션 체크
-        async function checkSession() {
-            try {
-                const res = await fetch(API_BASE + '/projects');
-                if (res.ok) {
-                    showApp();
-                    loadData();
-                }
-            } catch (e) {
-                // 세션 없음 - 로그인 화면 유지
-            }
-        }
+/* ===== 표면 토글 ===== */
+function setSurface(s){
+  surface=s;
+  ['autopilot','manual','app'].forEach(k=>{
+    document.getElementById('t-'+k).classList.toggle('on',k===s);
+    document.getElementById('p-'+k).classList.toggle('on',k===s);
+  });
+  if(s==='app' && !appHomeRendered) renderAppHome();
+}
+function refreshSurface(){
+  if(surface==='autopilot') apLoad();
+  else if(surface==='app'){ appBackHome(); }
+}
 
-        // 로그인
-        async function login() {
-            const password = document.getElementById('passwordInput').value;
-            const errorEl = document.getElementById('loginError');
+/* ================= 자율주행 ================= */
+async function apLoad(){ await apLoadProjects(); await apLoadSwitches(); }
+async function apLoadProjects(){
+  try{ const r=await jfetch('/projects'); if(r.ok){ const d=await r.json(); apProjects=d.projects||[]; apRenderProjects(); } }catch(e){}
+}
+function apRenderProjects(){
+  document.getElementById('ap-projects').innerHTML=apProjects.map(p=>
+    '<div class="ap-item" onclick="apSelectProject(\\''+esc(p.id)+'\\')"><span>'+(p.icon||'📁')+'</span><span>'+esc(p.name)+'</span></div>'
+  ).join('');
+}
+async function apLoadSwitches(){
+  try{ const r=await jfetch('/switches'); if(r.ok){ const d=await r.json(); apSwitches=d.switches||[]; } }catch(e){}
+}
+function apClearActive(){ document.querySelectorAll('.ap-item').forEach(e=>e.classList.remove('on')); }
+function apSelectSystem(){
+  apChat={ type:'system', projectId:null, agentId:null, agentName:null };
+  apClearActive(); document.getElementById('nav-system').classList.add('on');
+  document.getElementById('apComposer').style.display='flex';
+  document.getElementById('apTitle').textContent='시스템 AI';
+  document.getElementById('apSub').textContent='IndieBiz OS 전체를 관리합니다';
+  document.getElementById('apMsgs').innerHTML='';
+}
+async function apSelectProject(pid){
+  const p=apProjects.find(x=>x.id===pid); if(!p) return;
+  try{
+    const r=await jfetch('/projects/'+encodeURIComponent(pid)+'/agents');
+    if(r.ok){
+      const d=await r.json(); const ags=d.agents||[];
+      if(!ags.length){ alert('이 프로젝트에 에이전트가 없습니다.'); return; }
+      const a=ags[0];
+      apChat={ type:'agent', projectId:pid, agentId:a.id, agentName:a.name };
+      apClearActive(); if(event&&event.target) event.target.closest('.ap-item').classList.add('on');
+      document.getElementById('apComposer').style.display='flex';
+      document.getElementById('apTitle').textContent=p.name+' — '+a.name;
+      document.getElementById('apSub').textContent=(a.role||'').substring(0,80);
+      document.getElementById('apMsgs').innerHTML='';
+    }
+  }catch(e){ alert('에이전트 로드 실패'); }
+}
+function apShowSwitches(){
+  apClearActive(); document.getElementById('nav-switch').classList.add('on');
+  document.getElementById('apComposer').style.display='none';
+  document.getElementById('apTitle').textContent='스위치';
+  document.getElementById('apSub').textContent='원클릭 자동화 실행';
+  const box=document.getElementById('apMsgs');
+  if(!apSwitches.length){ box.innerHTML='<p class="muted" style="padding:20px">스위치가 없습니다</p>'; return; }
+  box.innerHTML=apSwitches.map(s=>
+    '<div class="card sw-item"><span>⚡</span><div style="flex:1"><div class="nm">'+esc(s.name)+'</div><div class="pr">'+esc((s.prompt||'').substring(0,60))+'</div></div>'+
+    '<button class="btn2" onclick="apRunSwitch(\\''+esc(s.id)+'\\',this)">실행</button></div>'
+  ).join('');
+}
+async function apRunSwitch(id,btn){
+  btn.disabled=true; btn.textContent='실행 중...';
+  try{ const r=await jfetch('/switches/'+encodeURIComponent(id)+'/execute',{method:'POST'}); alert(r.ok?'스위치를 실행했습니다':'실행 실패'); }
+  catch(e){ alert('오류: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='실행'; }
+}
+function apAddMsg(role,text){
+  const c=document.getElementById('apMsgs');
+  const el=document.createElement('div'); el.className='msg '+role;
+  el.innerHTML='<div class="av">'+(role==='user'?'🧑':'🤖')+'</div><div class="bub">'+esc(text)+'</div>';
+  c.appendChild(el); c.scrollTop=c.scrollHeight;
+}
+function apKey(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); apSend(); } }
+async function apSend(){
+  const inp=document.getElementById('apInput'); const msg=inp.value.trim(); if(!msg) return;
+  apAddMsg('user',msg); inp.value='';
+  const btn=document.getElementById('apSend'); btn.disabled=true;
+  apAddMsg('assistant','…'); const last=document.getElementById('apMsgs').lastChild.querySelector('.bub');
+  try{
+    let r;
+    if(apChat.type==='system'){
+      r=await jfetch('/system-ai/chat',{method:'POST',body:JSON.stringify({message:msg})});
+    }else{
+      await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/start',{method:'POST'});
+      r=await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/command',{method:'POST',body:JSON.stringify({command:msg})});
+    }
+    if(r.ok){ const d=await r.json(); last.textContent=d.response||d.message||'(응답 없음)'; }
+    else{ const d=await r.json().catch(()=>({})); last.textContent='['+r.status+'] '+(d.detail||'오류'); }
+  }catch(e){ last.textContent='연결 오류: '+e.message; }
+  finally{ btn.disabled=false; }
+}
 
-            try {
-                const res = await fetch(API_BASE + '/launcher/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
+/* ================= 수동 ================= */
+let mLastIntent='', mLastScore=0;
+function resetManualFrom(stage){
+  if(stage<=3) document.getElementById('mAfterValidate').style.display='none';
+  if(stage<=4) document.getElementById('mAfterExecute').style.display='none';
+}
+async function mTranslate(){
+  const intent=document.getElementById('mIntent').value.trim(); if(!intent) return;
+  mLastIntent=intent;
+  const btn=document.getElementById('mTransBtn'); btn.disabled=true; btn.textContent='…';
+  resetManualFrom(2); document.getElementById('mAfterTranslate').style.display='none';
+  try{
+    const r=await jfetch('/ibl/translate',{method:'POST',body:JSON.stringify({intent})});
+    const d=await r.json();
+    document.getElementById('mCode').value=d.ibl_code||d.raw||'';
+    document.getElementById('mRefs').textContent=d.references||'(참고 용례 없음)';
+    document.getElementById('mAfterTranslate').style.display='block';
+  }catch(e){ alert('번역 실패: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='번역'; }
+}
+function toggleRefs(){ const b=document.getElementById('mRefs'); b.style.display=b.style.display==='block'?'none':'block'; }
+async function mValidate(){
+  const code=document.getElementById('mCode').value.trim(); if(!code) return;
+  const btn=document.getElementById('mValBtn'); btn.disabled=true; btn.textContent='검수 중…';
+  resetManualFrom(4);
+  try{
+    const r=await jfetch('/ibl/validate',{method:'POST',body:JSON.stringify({code})});
+    const d=await r.json();
+    const box=document.getElementById('mSteps');
+    if(!d.valid){
+      box.innerHTML='<div class="eff write"><div class="h">⚠ 구문 오류</div><div class="e">'+esc(d.syntax_error||'알 수 없는 오류')+'</div></div>';
+      document.getElementById('mSideWarn').innerHTML='';
+      document.getElementById('mExecBtn').disabled=true;
+      document.getElementById('mAfterValidate').style.display='block';
+      return;
+    }
+    const steps=d.steps||[];
+    box.innerHTML=steps.map(s=>{
+      const sf=s.safety||'unknown';
+      return '<div class="eff '+sf+'"><div class="h"><span class="pill s-'+sf+'">'+sf+'</span>['+esc(s.node)+':'+esc(s.action)+']</div>'+
+        '<div class="e">'+esc(s.effect||'(설명 없음)')+'</div></div>';
+    }).join('');
+    if(d.has_side_effect){
+      document.getElementById('mSideWarn').innerHTML=
+        '<label class="warnbox"><input type="checkbox" id="mConfirm" onchange="document.getElementById(\\'mExecBtn\\').disabled=!this.checked"><span><b>부작용(쓰기/외부 전송)이 있는 액션</b>입니다. 실행하면 되돌릴 수 없을 수 있습니다. 확인 후 체크하세요.</span></label>';
+      document.getElementById('mExecBtn').disabled=true;
+    }else{
+      document.getElementById('mSideWarn').innerHTML='';
+      document.getElementById('mExecBtn').disabled=false;
+    }
+    document.getElementById('mAfterValidate').style.display='block';
+  }catch(e){ alert('검수 실패: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='검수 (dry-run)'; }
+}
+async function mExecute(){
+  const code=document.getElementById('mCode').value.trim(); if(!code) return;
+  const btn=document.getElementById('mExecBtn'); btn.disabled=true; btn.textContent='실행 중…';
+  try{
+    const r=await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'수동모드',project_path:'.'})});
+    const d=await r.json();
+    document.getElementById('mResult').textContent=JSON.stringify(d,null,2);
+    document.getElementById('mDistillMsg').textContent='';
+    document.getElementById('mDistillBtn').disabled=false;
+    document.getElementById('mAfterExecute').style.display='block';
+    document.getElementById('mAfterExecute').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }catch(e){ alert('실행 실패: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent='실행'; }
+}
+async function mDistill(){
+  const code=document.getElementById('mCode').value.trim();
+  const btn=document.getElementById('mDistillBtn'); btn.disabled=true;
+  try{
+    const r=await jfetch('/ibl/distill',{method:'POST',body:JSON.stringify({intent:mLastIntent,code,top_score:mLastScore})});
+    const d=await r.json();
+    document.getElementById('mDistillMsg').textContent=d.distilled?'✓ 해마에 학습되었습니다':('학습 안 함'+(d.reason?' — '+d.reason:''));
+  }catch(e){ document.getElementById('mDistillMsg').textContent='학습 실패: '+e.message; btn.disabled=false; }
+}
+/* 둘러보기 팔레트 */
+let paletteLoaded=false;
+async function togglePalette(){
+  const p=document.getElementById('palette');
+  if(p.style.display==='none'){ p.style.display='block'; if(!paletteLoaded) await loadPalette(); }
+  else p.style.display='none';
+}
+async function loadPalette(){
+  const p=document.getElementById('palette'); p.innerHTML='<div class="center"><div class="spin"></div></div>';
+  try{
+    const r=await jfetch('/ibl/actions/catalog'); const d=await r.json();
+    const nodes=d.nodes||{}; let html='<input class="field" placeholder="액션 검색..." oninput="filterPalette(this.value)" style="margin-bottom:10px">';
+    html+='<div id="palette-list">';
+    for(const node in nodes){
+      const acts=nodes[node].actions||{};
+      html+='<div class="cat-node" data-node="'+esc(node)+'"><h4>'+esc(node)+'</h4>';
+      for(const a in acts){
+        const seed='['+node+':'+a+']{}';
+        html+='<span class="act-chip" data-key="'+esc((node+' '+a).toLowerCase())+'" onclick="seedAction(\\''+esc(seed)+'\\')">'+esc(a)+'</span>';
+      }
+      html+='</div>';
+    }
+    html+='</div>'; p.innerHTML=html; paletteLoaded=true;
+  }catch(e){ p.innerHTML='<p class="muted">카탈로그 로드 실패</p>'; }
+}
+function filterPalette(q){
+  q=(q||'').toLowerCase().trim();
+  document.querySelectorAll('#palette-list .act-chip').forEach(c=>{
+    c.style.display=(!q||c.dataset.key.indexOf(q)>=0)?'inline-block':'none';
+  });
+}
+function seedAction(seed){
+  document.getElementById('mCode').value=seed;
+  document.getElementById('mAfterTranslate').style.display='block';
+  document.getElementById('mCode').focus();
+  document.getElementById('palette').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
 
-                if (res.ok) {
-                    showApp();
-                    loadData();
-                } else {
-                    const data = await res.json();
-                    errorEl.textContent = data.detail || '로그인 실패';
-                }
-            } catch (e) {
-                errorEl.textContent = '서버 연결 실패';
-            }
-        }
+/* ================= 앱 (제네릭 렌더러 — /launcher/instruments 매니페스트 해석) ================= */
+let appHomeRendered=false;
+let INSTRUMENTS=[];
+let CUR={inst:null, mode:null, optCache:{}};
+let VIEW_CTX=null; /* 마지막 렌더의 {view,data} — 행 버튼/드릴 디스패치용 */
+const CUSTOM_RENDERERS={}; /* escape hatch: manifest renderer:"custom:이름" → 전용 렌더 함수 (지도·플레이어 등) */
 
-        // 로그아웃
-        async function logout() {
-            await fetch(API_BASE + '/launcher/auth/logout', { method: 'POST' });
-            location.reload();
-        }
+async function loadInstruments(){
+  if(INSTRUMENTS.length) return;
+  try{ const r=await jfetch('/launcher/instruments'); if(r.ok){ const d=await r.json(); INSTRUMENTS=d.instruments||[]; } }catch(e){}
+}
+async function renderAppHome(){
+  const home=document.getElementById('appHome');
+  home.innerHTML='<div class="center"><div class="spin"></div></div>';
+  await loadInstruments();
+  if(!INSTRUMENTS.length){ home.innerHTML='<p class="muted">계기 매니페스트를 불러오지 못했습니다</p>'; return; }
+  home.innerHTML=
+    '<p class="muted" style="margin-bottom:12px">직접 조작 — 아이콘을 눌러 바로 실행 (0 토큰)</p>'+
+    '<div class="grid">'+INSTRUMENTS.map((inst,ix)=>
+      '<button class="tile" onclick="openInstrument('+ix+')"><span class="em">'+esc(inst.icon||'🔧')+'</span><span class="nm">'+esc(inst.name)+'</span></button>'
+    ).join('')+'</div>';
+  appHomeRendered=true;
+}
+function appBackHome(){
+  document.getElementById('appInst').style.display='none';
+  document.getElementById('appHome').style.display='block';
+}
+function openInstrument(ix){
+  const inst=INSTRUMENTS[ix]; if(!inst) return;
+  CUR={inst:inst, mode:null, optCache:{}}; VIEW_CTX=null;
+  document.getElementById('appHome').style.display='none';
+  const box=document.getElementById('appInst'); box.style.display='block';
+  let h='<div class="inst-head"><button class="back" onclick="appBackHome()">←</button><h2>'+esc(inst.icon||'')+' '+esc(inst.name)+'</h2></div>';
+  if(inst.renderer&&inst.renderer.indexOf('custom:')===0){
+    box.innerHTML=h+'<div id="modeBody"></div>';
+    const fn=CUSTOM_RENDERERS[inst.renderer.slice(7)];
+    if(fn) fn(inst,document.getElementById('modeBody'));
+    else document.getElementById('modeBody').innerHTML='<p class="muted">렌더러 없음: '+esc(inst.renderer)+'</p>';
+    return;
+  }
+  if(inst.modes){
+    h+='<div class="tabs">'+inst.modes.map((m,i)=>'<button class="tab" id="modeTab'+i+'" onclick="setMode('+i+')">'+esc(m.name)+'</button>').join('')+'</div>';
+  }
+  h+='<div id="modeBody"></div>';
+  box.innerHTML=h;
+  setMode(0);
+}
+function setMode(i){
+  const inst=CUR.inst; const modes=inst.modes||[inst]; const mode=modes[i];
+  CUR.mode=mode; VIEW_CTX=null;
+  if(inst.modes) modes.forEach((m,j)=>{ const t=document.getElementById('modeTab'+j); if(t)t.classList.toggle('on',j===i); });
+  CUR.optCache={};
+  CUR.period=(mode.periods&&mode.periods.items)?((mode.periods.items.find(x=>x.default)||mode.periods.items[0]||{}).value):null;
+  let h='';
+  if(mode.note) h+='<div class="note">'+esc(mode.note)+'</div>';
+  const inputs=mode.inputs||[];
+  if(inputs.length){
+    h+='<div class="row" style="flex-wrap:wrap">'+inputs.map(inp=>{
+      if(inp.type==='select')
+        return '<select class="field" id="in_'+esc(inp.key)+'" style="flex:0 1 130px" onchange="selChanged(\\''+esc(inp.key)+'\\')"><option value="">'+esc(inp.label||'전체')+'</option></select>';
+      return '<input class="field" id="in_'+esc(inp.key)+'" value="'+esc(inp.default||'')+'" placeholder="'+esc(inp.placeholder||'')+'" onkeydown="if(event.key===\\'Enter\\')runMode()">';
+    }).join('')+'<button class="go" onclick="runMode()">조회</button></div>';
+  }
+  inputs.forEach(inp=>{
+    if(inp.chips&&inp.chips.length)
+      h+='<div class="chips" style="margin-top:10px">'+inp.chips.map(c=>
+        '<span class="chip" onclick="chipRun(\\''+esc(inp.key)+'\\',\\''+esc(c)+'\\')">'+esc(c)+'</span>').join('')+'</div>';
+  });
+  // 기간 토글(차트 범위) — 클릭 즉시 그 기간으로 재조회
+  if(mode.periods&&mode.periods.items){
+    h+='<div class="periods" style="margin-top:10px">'+mode.periods.items.map(x=>
+      '<button class="pchip'+(String(x.value)===String(CUR.period)?' on':'')+'" data-v="'+esc(String(x.value))+'" onclick="setPeriod(\\''+esc(String(x.value))+'\\')">'+esc(x.label)+'</button>').join('')+'</div>';
+  }
+  const btns=mode.buttons||[];
+  if(btns.length)
+    h+='<div class="btnrow" style="margin-top:10px">'+btns.map((b,bi)=>
+      '<button class="btn2" onclick="fireButton('+bi+',this)">'+esc(b.label)+'</button>').join('')+'</div>';
+  h+='<div id="instOut"></div>';
+  document.getElementById('modeBody').innerHTML=h;
+  // select 채우기는 선언 순서대로 — 정적 옵션(동기)이 먼저 값을 잡아야 종속 옵션이 그 값을 읽는다
+  (async()=>{ for(const inp of inputs){ if(inp.type==='select') await fillOptions(inp); } if(mode.auto_run) runMode(); })();
+}
+/* options_action 의 $key 를 형제 입력값으로 치환 — 비어 있으면 missing 표시(종속 대기) */
+function resolveOptionsAction(template){
+  let missing=false;
+  const code=String(template).replace(/\\$(\\w+)/g,(m,k)=>{ const el=document.getElementById('in_'+k); const v=el?String(el.value):''; if(!v) missing=true; return v.replace(/"/g,''); });
+  return {code, missing};
+}
+/* 배열은 option_value/option_label로, 딕셔너리({이름:코드})는 entries로 정규화 → [{value,label}] */
+function normalizeOptions(raw,inp){
+  if(Array.isArray(raw)) return raw.map(o=>({value:o[inp.option_value||'value'], label:o[inp.option_label||'label']}));
+  if(raw&&typeof raw==='object') return Object.entries(raw).map(([k,v])=>({value:v, label:k}));
+  return [];
+}
+function setOptions(sel,opts,def){
+  while(sel.options.length>1) sel.remove(1);  /* placeholder 1개 유지 */
+  opts.forEach(o=>{ const el=document.createElement('option'); el.value=o.value; el.textContent=o.label; sel.appendChild(el); });
+  if(def!=null && opts.some(o=>String(o.value)===String(def))) sel.value=def;
+}
+async function fillOptions(inp){
+  const sel=document.getElementById('in_'+inp.key); if(!sel) return;
+  if(Array.isArray(inp.options)){ setOptions(sel, inp.options.map(o=>({value:o.value,label:o.label})), inp.default); return; }
+  if(!inp.options_action) return;
+  const {code,missing}=resolveOptionsAction(inp.options_action);
+  if(missing){ setOptions(sel, [], null); return; }   /* 종속 부모 미선택 — 비워두고 대기 */
+  let opts=CUR.optCache[code];
+  if(!opts){ try{ const d=await ibl(code); opts=normalizeOptions(jget(d,inp.options_from),inp); CUR.optCache[code]=opts; }catch(e){ opts=[]; } }
+  if(document.getElementById('in_'+inp.key)!==sel) return;
+  setOptions(sel, opts, inp.default);
+}
+/* select 변경 시, 그 키에 의존하는 종속 select 들을 비우고 다시 채운다 (cascade) */
+function selChanged(key){
+  const mode=CUR.mode; if(!mode) return;
+  (mode.inputs||[]).forEach(inp=>{
+    if(inp.type==='select' && inp.options_action && new RegExp('\\\\$'+key+'\\\\b').test(inp.options_action)) fillOptions(inp);
+  });
+}
+function chipRun(key,val){ const el=document.getElementById('in_'+key); if(el) el.value=val; runMode(); }
+/* 폰 라디오: 백엔드가 play_in_client+stream_url 반환 → WebView 가 직접 재생(소리=폰 스피커).
+   한국 방송=HLS(.m3u8)라 hls.js, ICY/mp3 등은 네이티브 <audio>. */
+let _radioHls=null;
+function _radioAudioEl(){ let a=document.getElementById('radioAudio'); if(!a){ a=document.createElement('audio'); a.id='radioAudio'; a.autoplay=true; document.body.appendChild(a); } return a; }
+function playRadioStream(url,vol){
+  const a=_radioAudioEl();
+  if(_radioHls){ try{_radioHls.destroy();}catch(e){} _radioHls=null; }
+  if(typeof vol==='number') a.volume=Math.max(0,Math.min(1,vol/100));
+  if(/\\.m3u8/i.test(url) && window.Hls && Hls.isSupported()){
+    _radioHls=new Hls(); _radioHls.loadSource(url); _radioHls.attachMedia(a);
+    _radioHls.on(Hls.Events.MANIFEST_PARSED,()=>a.play().catch(()=>{}));
+  } else { a.src=url; a.play().catch(()=>{}); }
+}
+function stopRadioStream(){
+  if(_radioHls){ try{_radioHls.destroy();}catch(e){} _radioHls=null; }
+  const a=document.getElementById('radioAudio'); if(a){ a.pause(); a.removeAttribute('src'); a.load(); }
+}
+async function fireButton(bi,btn){
+  const b=(CUR.mode.buttons||[])[bi]; if(!b) return;
+  btn.disabled=true;
+  try{ const d=await ibl(b.action);
+    if(d&&d.stop_in_client){ stopRadioStream(); }
+    else if(d&&d.error) alert(d.error); }
+  catch(e){ alert('실행 실패: '+e.message); }
+  finally{ btn.disabled=false; }
+}
 
-        // 앱 화면 표시
-        function showApp() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('appContainer').classList.add('active');
-        }
+/* ----- 액션 템플릿: $key=사용자 입력, {path}=데이터 행 필드 ----- */
+function jget(o,path){ if(!path) return o; return String(path).split('.').reduce((a,k)=>(a==null?undefined:a[k]),o); }
+function buildAction(template,values){
+  let code=template.replace(/\\$(\\w+)/g,(m,k)=>{
+    const v=values[k]; return v==null?'':String(v).replace(/\\\\/g,'').replace(/"/g,'');
+  });
+  code=code.replace(/\\w+:\\s*"",?\\s*/g,'');  /* 빈 입력 파라미터 제거 */
+  code=code.replace(/,\\s*\\}/g,'}').replace(/\\{\\s*,/g,'{');
+  return code;
+}
+function viewList(data,from){ if(from==='.') return [data]; const a=jget(data,from); return Array.isArray(a)?a:[]; }
+function rowAction(template,item){
+  return template.replace(/\\{([\\w.]+)\\}/g,(m,path)=>{ const v=jget(item,path); return v==null?'':String(v).replace(/"/g,''); });
+}
 
-        // 데이터 로드
-        async function loadData() {
-            await loadProjects();
-            await loadSwitches();
-        }
+/* ----- 표시 템플릿: "{path|filter|...}" → 문자열 (HTML 이스케이프 포함) ----- */
+function applyFilter(v,f){
+  if(f==='round') return v==null?v:Math.round(Number(v));
+  if(f==='num') return v==null?null:Number(v).toLocaleString();
+  if(f==='abs') return v==null?v:Math.abs(Number(v));
+  if(f==='arrow') return (Number(v)||0)>=0?'▲':'▼';
+  if(f.indexOf('opt:')===0){ const a=f.slice(4).split(','); return (v==null||v===''||Number(v)===0)?'':(a[0]||'')+v+(a[1]||''); }
+  if(f.indexOf('trunc:')===0){ const n=parseInt(f.slice(6))||40; const s=String(v==null?'':v); return s.length>n?s.slice(0,n)+'…':s; }
+  return v;
+}
+function tpl(t,data){
+  if(t==null) return '';
+  return String(t).replace(/\\{([^{}]+)\\}/g,(m,expr)=>{
+    const parts=expr.split('|'); let v=jget(data,parts[0].trim());
+    for(let i=1;i<parts.length;i++) v=applyFilter(v,parts[i].trim());
+    return v==null?'':esc(v);
+  });
+}
 
-        // 새로고침
-        function refreshData() {
-            loadData();
-        }
+/* ----- 뷰 렌더 (순수 함수: view+data → HTML 문자열) ----- */
+function renderView(view,data){
+  if(data&&data.error) return '<p class="muted">'+esc(data.error)+'</p>';
+  if(data&&data.success===false) return '<p class="muted">'+esc(data.message||'실패')+'</p>';
+  return (view||[]).map((p,vi)=>renderPrim(p,vi,data)).join('');
+}
+function trendColor(p,data){ if(!p.trend) return null; return (Number(jget(data,p.trend))||0)>=0?'var(--up)':'var(--down)'; }
+function emptyMsg(p,data){
+  const m=(p.empty_from?jget(data,p.empty_from):null)||p.empty||'결과가 없습니다';
+  return '<p class="muted" style="margin-top:10px">'+esc(m)+'</p>';
+}
+function renderPrim(p,vi,data){
+  if(p.type==='metric'){
+    const col=trendColor(p,data);
+    return '<div class="card">'+(p.label?'<div class="muted">'+tpl(p.label,data)+'</div>':'')+
+      '<div class="big"'+(col?' style="color:'+col+'"':'')+'>'+tpl(p.big,data)+(p.unit?' <span style="font-size:14px">'+tpl(p.unit,data)+'</span>':'')+'</div>'+
+      (p.sub?'<div'+(col?' style="color:'+col+'; font-weight:600"':' class="muted"')+'>'+tpl(p.sub,data)+'</div>':'')+'</div>';
+  }
+  if(p.type==='kv')
+    return '<div class="card">'+(p.title?'<div class="step-label">'+esc(p.title)+'</div>':'')+
+      (p.rows||[]).map(r=>'<div class="kv"><span class="k">'+tpl(r.k,data)+'</span><span>'+tpl(r.v,data)+'</span></div>').join('')+'</div>';
+  if(p.type==='kv_list'){
+    const arr=viewList(data,p.from);
+    if(!arr.length) return emptyMsg(p,data);
+    return '<div class="card">'+(p.title?'<div class="step-label">'+esc(p.title)+'</div>':'')+
+      arr.map(it=>'<div class="kv"><span class="k">'+tpl(p.k,it)+'</span><span>'+tpl(p.v,it)+'</span></div>').join('')+'</div>';
+  }
+  if(p.type==='card_list'){
+    const arr=viewList(data,p.from);
+    if(!arr.length) return emptyMsg(p,data);
+    const c=p.card||{};
+    return arr.map((it,ri)=>{
+      const click=p.item_click?' onclick="rowDrill('+vi+','+ri+')" style="cursor:pointer"':'';
+      let body='<div class="t">'+tpl(c.title,it)+'</div><div class="m">'+(c.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div>';
+      if(c.link&&c.link.href){
+        const href=tpl(c.link.href,it);
+        if(href) body+='<a href="'+href+'" target="_blank" style="font-size:12px" onclick="event.stopPropagation()">'+esc(c.link.label||'상세 →')+'</a>';
+      }
+      if(c.image){ const img=tpl(c.image,it); return '<div class="card bookcard"'+click+'>'+(img?'<img src="'+img+'" loading="lazy">':'<img>')+'<div>'+body+'</div></div>'; }
+      return '<div class="card"'+click+'>'+body+'</div>';
+    }).join('');
+  }
+  if(p.type==='image_grid'){
+    const arr=viewList(data,p.from);
+    if(!arr.length) return emptyMsg(p,data);
+    return '<div class="posters">'+arr.map(it=>{
+      const img=p.image?tpl(p.image,it):'';
+      return '<div class="poster">'+(img?'<img src="'+img+'" loading="lazy">':'<div style="aspect-ratio:3/4;background:var(--bg3);border-radius:8px"></div>')+
+        '<div class="t">'+tpl(p.title,it)+'</div><div class="m">'+(p.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div></div>';
+    }).join('')+'</div>';
+  }
+  if(p.type==='sparkline'){
+    const arr=viewList(data,p.from);
+    const vals=arr.map(x=>Number(p.y?x[p.y]:x)).filter(v=>!isNaN(v));
+    if(vals.length<2) return '';
+    const col=trendColor(p,data)||'var(--acc)';
+    const w=280,hh=50,mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals),rg=(mx-mn)||1;
+    const pts=vals.map((v,i)=>((i/(vals.length-1))*w).toFixed(1)+','+(hh-((v-mn)/rg*hh)).toFixed(1)).join(' ');
+    return '<div class="card"><svg viewBox="0 0 '+w+' '+hh+'" style="width:100%; height:50px" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="2"/></svg></div>';
+  }
+  if(p.type==='list_action'){
+    const arr=viewList(data,p.from);
+    if(!arr.length) return emptyMsg(p,data);
+    return arr.map((it,ri)=>
+      '<div class="card sw-item">'+(p.icon?'<span>'+esc(p.icon)+'</span>':'')+
+      '<div style="flex:1"><div class="nm">'+tpl(p.title,it)+'</div><div class="pr">'+tpl(p.sub,it)+'</div></div>'+
+      (p.button?'<button class="btn2" onclick="rowBtn('+vi+','+ri+',this)">'+esc(p.button.label||'▶')+'</button>':'')+'</div>'
+    ).join('');
+  }
+  return '';
+}
 
-        // 프로젝트 로드
-        async function loadProjects() {
-            try {
-                const res = await fetch(API_BASE + '/projects');
-                if (res.ok) {
-                    const data = await res.json();
-                    projects = data.projects || [];
-                    renderProjects();
-                }
-            } catch (e) {
-                console.error('프로젝트 로드 실패:', e);
-            }
-        }
-
-        // 프로젝트 렌더링
-        function renderProjects() {
-            const list = document.getElementById('projectList');
-            list.innerHTML = projects.map(p => `
-                <div class="sidebar-item" onclick="selectProject('${p.id}')">
-                    <span class="sidebar-item-icon">${p.icon || '📁'}</span>
-                    <span class="sidebar-item-text">${p.name}</span>
-                </div>
-            `).join('');
-        }
-
-        // 스위치 로드
-        async function loadSwitches() {
-            try {
-                const res = await fetch(API_BASE + '/switches');
-                if (res.ok) {
-                    const data = await res.json();
-                    switches = data.switches || [];
-                }
-                renderSwitches();
-            } catch (e) {
-                console.error('스위치 로드 실패:', e);
-            }
-        }
-
-        // 스위치 렌더링
-        function renderSwitches() {
-            const list = document.getElementById('switchesList');
-            if (switches.length === 0) {
-                list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 40px;">스위치가 없습니다</p>';
-                return;
-            }
-            list.innerHTML = switches.map(s => `
-                <div class="switch-item">
-                    <span class="switch-icon">⚡</span>
-                    <div class="switch-info">
-                        <div class="switch-name">${s.name}</div>
-                        <div class="switch-prompt">${s.prompt || ''}</div>
-                    </div>
-                    <button class="switch-run-btn" onclick="runSwitch('${s.id}')">실행</button>
-                </div>
-            `).join('');
-        }
-
-        // 채팅 선택 (시스템 AI)
-        function selectChat(type) {
-            currentChat = { type, projectId: null, agentName: null };
-            messages = [];
-
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-            event.target.closest('.sidebar-item').classList.add('active');
-
-            document.getElementById('chatArea').style.display = 'flex';
-            document.getElementById('switchesArea').classList.remove('active');
-
-            document.getElementById('chatTitle').textContent = '시스템 AI';
-            document.getElementById('chatSubtitle').textContent = 'IndieBiz OS 전체를 관리하는 시스템 AI입니다';
-            document.getElementById('chatMessages').innerHTML = '';
-
-            closeSidebar();
-        }
-
-        // 프로젝트 선택
-        async function selectProject(projectId) {
-            const project = projects.find(p => p.id === projectId);
-            if (!project) return;
-
-            // 에이전트 목록 로드
-            try {
-                const res = await fetch(API_BASE + `/projects/${projectId}/agents`);
-                if (res.ok) {
-                    const agents = await res.json();
-                    if (agents.length > 0) {
-                        currentChat = {
-                            type: 'agent',
-                            projectId,
-                            agentName: agents[0].name
-                        };
-
-                        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-                        event.target.closest('.sidebar-item').classList.add('active');
-
-                        document.getElementById('chatArea').style.display = 'flex';
-                        document.getElementById('switchesArea').classList.remove('active');
-
-                        document.getElementById('chatTitle').textContent = `${project.name} - ${agents[0].name}`;
-                        document.getElementById('chatSubtitle').textContent = agents[0].role?.substring(0, 100) || '';
-                        document.getElementById('chatMessages').innerHTML = '';
-                        messages = [];
-                    }
-                }
-            } catch (e) {
-                console.error('에이전트 로드 실패:', e);
-            }
-
-            closeSidebar();
-        }
-
-        // 스위치 화면 표시
-        function showSwitches() {
-            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-            event.target.closest('.sidebar-item').classList.add('active');
-
-            document.getElementById('chatArea').style.display = 'none';
-            document.getElementById('switchesArea').classList.add('active');
-
-            closeSidebar();
-        }
-
-        // 스위치 실행
-        async function runSwitch(switchId) {
-            const btn = event.target;
-            btn.disabled = true;
-            btn.textContent = '실행 중...';
-
-            try {
-                const res = await fetch(API_BASE + `/switches/${switchId}/execute`, {
-                    method: 'POST'
-                });
-
-                if (res.ok) {
-                    alert('스위치가 실행되었습니다!');
-                } else {
-                    alert('스위치 실행 실패');
-                }
-            } catch (e) {
-                alert('오류: ' + e.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '실행';
-            }
-        }
-
-        // 메시지 전송
-        async function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
-            if (!message) return;
-
-            // UI에 사용자 메시지 추가
-            addMessageToUI('user', message);
-            input.value = '';
-
-            // 로딩 표시
-            document.getElementById('chatLoading').classList.add('active');
-            document.getElementById('sendBtn').disabled = true;
-
-            try {
-                let res;
-
-                if (currentChat.type === 'system') {
-                    // 시스템 AI 채팅
-                    res = await fetch(API_BASE + '/system-ai/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message })
-                    });
-                } else {
-                    // 프로젝트 에이전트 채팅
-                    res = await fetch(API_BASE + `/projects/${currentChat.projectId}/chat`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            message,
-                            agent_name: currentChat.agentName
-                        })
-                    });
-                }
-
-                if (res.ok) {
-                    const data = await res.json();
-                    addMessageToUI('assistant', data.response || data.message || '응답을 받았습니다.');
-                } else {
-                    let errorMsg = '오류가 발생했습니다.';
-                    try {
-                        const errData = await res.json();
-                        errorMsg = errData.detail || errData.error || errorMsg;
-                    } catch(e) {}
-                    addMessageToUI('assistant', `[${res.status}] ${errorMsg}`);
-                }
-            } catch (e) {
-                addMessageToUI('assistant', '서버 연결 오류: ' + e.message);
-            } finally {
-                document.getElementById('chatLoading').classList.remove('active');
-                document.getElementById('sendBtn').disabled = false;
-            }
-        }
-
-        // UI에 메시지 추가
-        function addMessageToUI(role, text) {
-            const container = document.getElementById('chatMessages');
-            const avatar = role === 'user' ? '👤' : '🤖';
-
-            const messageEl = document.createElement('div');
-            messageEl.className = `message ${role}`;
-            messageEl.innerHTML = `
-                <div class="message-avatar">${avatar}</div>
-                <div class="message-content">
-                    <div class="message-text">${escapeHtml(text)}</div>
-                </div>
-            `;
-
-            container.appendChild(messageEl);
-            container.scrollTop = container.scrollHeight;
-
-            messages.push({ role, content: text });
-        }
-
-        // HTML 이스케이프
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // 입력 키 핸들러
-        function handleInputKeydown(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        }
-
-        // 사이드바 토글 (모바일)
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.querySelector('.sidebar-overlay').classList.toggle('active');
-        }
-
-        function closeSidebar() {
-            document.getElementById('sidebar').classList.remove('open');
-            document.querySelector('.sidebar-overlay').classList.remove('active');
-        }
-    </script>
+/* ----- 실행/디스패치 ----- */
+function gatherInputs(){
+  const vals={};
+  (CUR.mode.inputs||[]).forEach(inp=>{ const el=document.getElementById('in_'+inp.key); vals[inp.key]=el?el.value.trim():''; });
+  if(CUR.mode.periods&&CUR.period!=null) vals[CUR.mode.periods.key||'period']=CUR.period;
+  return vals;
+}
+function setPeriod(v){
+  CUR.period=v;
+  document.querySelectorAll('#modeBody .pchip').forEach(b=>b.classList.toggle('on', b.getAttribute('data-v')===String(v)));
+  runMode();
+}
+async function runMode(){
+  const mode=CUR.mode; if(!mode||!mode.action) return;
+  const out=document.getElementById('instOut'); if(!out) return;
+  const vals=gatherInputs();
+  for(const inp of (mode.inputs||[])) if(inp.required&&!vals[inp.key]) return;
+  out.innerHTML='<div class="center"><div class="spin"></div></div>';
+  try{
+    const d=await ibl(buildAction(mode.action,vals));
+    VIEW_CTX={view:mode.view,data:d};
+    out.innerHTML=renderView(mode.view,d);
+    // 폰: 생성된 HTML(신문 등)을 조회 직후 자동으로 띄운다(별도 '띄우기' 탭 불필요).
+    if(IS_PHONE && d && typeof d==='object' && typeof d.file==='string' && /\\.html?$/i.test(d.file)) openFileOverlay(d.file);
+  }catch(e){ out.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }
+}
+function rowItem(vi,ri){
+  if(!VIEW_CTX) return null;
+  const p=(VIEW_CTX.view||[])[vi]; if(!p) return null;
+  const arr=viewList(VIEW_CTX.data,p.from);
+  return arr[ri]==null?null:{prim:p,item:arr[ri]};
+}
+async function rowBtn(vi,ri,btn){
+  const r=rowItem(vi,ri); if(!r||!r.prim.button) return;
+  const action=rowAction(r.prim.button.action,r.item);
+  btn.disabled=true; const old=btn.textContent; btn.textContent='…';
+  try{
+    const d=await ibl(action);
+    if(d&&d.play_in_client&&d.stream_url){ playRadioStream(d.stream_url,d.volume); }  // 폰 라디오: WebView 직접 재생
+    else if(d&&d.error){
+      // 폰: os_open(집 PC GUI)이 home_only 로 막히면, 로컬 생성한 HTML 을 인앱 뷰어로 띄운다.
+      const m=action.match(/path:\\s*"([^"]+\\.html?)"/i);
+      if(d.home_only && m){ openFileOverlay(m[1]); }
+      else alert(d.error);
+    }
+  }
+  catch(e){ alert('실행 실패: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent=old; }
+}
+function openFileOverlay(path){
+  const name=path.split('/').pop().split('\\\\').pop();
+  const ov=document.createElement('div'); ov.className='fileov';
+  ov.innerHTML='<div class="fileov-bar"><span>'+esc(name)+'</span>'
+    +'<button class="iconbtn" onclick="this.closest(\\'.fileov\\').remove()">✕</button></div>'
+    +'<iframe src="'+API+'/output/'+encodeURIComponent(name)+'"></iframe>';
+  document.body.appendChild(ov);
+}
+async function rowDrill(vi,ri){
+  const r=rowItem(vi,ri); if(!r||!r.prim.item_click) return;
+  const dc=r.prim.item_click;
+  const out=document.getElementById('instOut');
+  out.innerHTML='<div class="center"><div class="spin"></div></div>';
+  try{
+    const d=await ibl(rowAction(dc.action,r.item));
+    if(d&&typeof d==='object') d._item=r.item; /* 드릴 뷰에서 클릭한 행 참조용 */
+    VIEW_CTX={view:dc.view,data:d};
+    out.innerHTML=renderView(dc.view,d);
+  }catch(e){ out.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }
+}
+</script>
 </body>
 </html>
 """

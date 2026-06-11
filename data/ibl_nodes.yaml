@@ -129,6 +129,120 @@ nodes:
         - 시세
         - 종목
         - 매매동향
+        app:
+          instrument: invest
+          icon: 📈
+          name: 투자
+          order: 4
+          modes:
+          - name: 주식
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              default: 삼성전자
+              placeholder: '회사명(한글)·티커 (예: 삼성전자, AAPL)'
+              chips: [삼성전자, SK하이닉스, AAPL, NVDA, TSLA]
+            periods:
+              key: period
+              items:
+              - {label: 5일, value: 5d, default: true}
+              - {label: 1달, value: 1mo}
+              - {label: 3달, value: 3mo}
+              - {label: 1년, value: 1y}
+            action: '[sense:stock]{op: "price", ticker: "$q", period: "$period", max_points: 60}'
+            view:
+            - type: metric
+              label: '{data.symbol}'
+              big: '{data.current_price|num}'
+              unit: '{data.currency}'
+              sub: '{data.change|arrow} {data.change|abs|num} ({data.change_percent}%)'
+              trend: data.change
+            - type: sparkline
+              from: data.prices
+              y: close
+              trend: data.change
+            - type: kv
+              rows:
+              - k: 전일
+                v: '{data.previous_close|num}'
+              - k: 시가/고가/저가
+                v: '{data.open|num} / {data.high|num} / {data.low|num}'
+              - k: 거래량
+                v: '{data.volume|num}'
+          - name: 코인
+            auto_run: true
+            inputs:
+            - key: coin
+              type: text
+              default: BTC
+              placeholder: 코인 심볼 (BTC, ETH, SOL …)
+              chips: [BTC, ETH, SOL, XRP, DOGE]
+            periods:
+              key: days
+              items:
+              - {label: 7일, value: 7, default: true}
+              - {label: 1달, value: 30}
+              - {label: 3달, value: 90}
+            action: '[sense:crypto]{coin_id: "$coin", days: $days}'
+            view:
+            - type: metric
+              label: '{data.name} ({data.symbol})'
+              big: '{data.current_price_krw|num}'
+              unit: 원
+              sub: '{data.change_24h_percent|arrow} {data.change_24h_percent|abs}% (24h)'
+              trend: data.change_24h_percent
+            - type: sparkline
+              from: data.prices
+              y: close
+              trend: data.change_24h_percent
+            - type: kv
+              rows:
+              - k: USD
+                v: '${data.current_price_usd|num}'
+              - k: 24h 고가/저가
+                v: '${data.high_24h_usd|num} / ${data.low_24h_usd|num}'
+              - k: 시가총액
+                v: '{data.market_cap_formatted} · 랭크 #{data.rank}'
+          - name: 자원
+            auto_run: true
+            inputs:
+            - key: sym
+              type: select
+              label: 자원
+              default: 'GC=F'
+              options:
+              - {value: 'GC=F', label: 금}
+              - {value: 'SI=F', label: 은}
+              - {value: 'CL=F', label: WTI 유가}
+              - {value: 'BZ=F', label: 브렌트유}
+              - {value: 'NG=F', label: 천연가스}
+              - {value: 'HG=F', label: 구리}
+            periods:
+              key: period
+              items:
+              - {label: 5일, value: 5d, default: true}
+              - {label: 1달, value: 1mo}
+              - {label: 3달, value: 3mo}
+              - {label: 1년, value: 1y}
+            action: '[sense:stock]{op: "price", ticker: "$sym", period: "$period", max_points: 60}'
+            view:
+            - type: metric
+              label: '{data.symbol}'
+              big: '{data.current_price|num}'
+              unit: '{data.currency}'
+              sub: '{data.change|arrow} {data.change|abs|num} ({data.change_percent}%)'
+              trend: data.change
+            - type: sparkline
+              from: data.prices
+              y: close
+              trend: data.change
+            - type: kv
+              rows:
+              - k: 고가/저가
+                v: '{data.high|num} / {data.low|num}'
+              - k: 거래량
+                v: '{data.volume|num}'
       company:
         description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. 주가·시세는 stock.
         group: finance
@@ -180,6 +294,35 @@ nodes:
         - 연극
         - 뮤지컬
         - 공연장
+        app:
+          instrument: culture
+          icon: 🎭
+          name: 문화공연
+          order: 3
+          mode: 공연
+          mode_order: 0
+          inputs:
+          - key: genre
+            type: select
+            label: 전체 장르
+            options_action: '[sense:performance]{op: "genres"}'
+            options_from: genres
+            option_value: code
+            option_label: name
+          - key: kw
+            type: text
+            placeholder: 공연명 키워드(선택)
+          action: '[sense:performance]{genre: "$genre", keyword: "$kw"}'
+          view:
+          - type: image_grid
+            from: data
+            empty_from: message
+            image: '{poster}'
+            title: '{prfnm}'
+            lines:
+            - '{fcltynm}'
+            - '{prfpdfrom}~{prfpdto}'
+            - '{area} · {prfstate}'
       book:
         description: 한국 도서 조회 (op 분기, 도서관정보나루). 고전 원문은 classic, 글로벌 도서는 search_books.
         group: culture
@@ -199,6 +342,106 @@ nodes:
         - 책
         - ISBN
         - 도서관
+        app:
+          icon: 📚
+          name: 도서
+          order: 1
+          modes:
+          - name: 정보나루
+            inputs:
+            - key: q
+              type: text
+              placeholder: 제목·저자·키워드
+              required: true
+            action: '[sense:book]{keyword: "$q"}'
+            view:
+            - type: card_list
+              from: data
+              empty_from: message
+              item_click:
+                action: '[sense:book]{isbn: "{isbn13}", detail: true}'
+                view:
+                - type: metric
+                  label: 전국 누적 대출
+                  big: '{book.loan_stats.total|num}'
+                  unit: 회
+                - type: kv_list
+                  title: 연령별 대출
+                  from: book.loan_stats.by_age
+                  k: '{name}'
+                  v: '{loanCnt|num}'
+                - type: kv_list
+                  title: 성별 대출
+                  from: book.loan_stats.by_gender
+                  k: '{name}'
+                  v: '{loanCnt|num}'
+              card:
+                image: '{bookImageURL}'
+                title: '{bookname}'
+                lines:
+                - '{authors}'
+                - '{publisher} · {publication_year}{loan_count|opt: · 대출 ,회}'
+                link:
+                  href: '{bookDtlUrl}'
+                  label: 상세 →
+          - name: 네이버
+            inputs:
+            - key: q
+              type: text
+              placeholder: 책 제목·저자  예) 한강
+              required: true
+            action: '[sense:search_naver]{query: "$q", type: "book", display: 20, _raw: true}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                image: '{image}'
+                title: '{title}'
+                lines:
+                - '{author}'
+                - '{publisher}'
+                link:
+                  href: '{link}'
+                  label: 네이버 책 →
+          - name: 글로벌
+            inputs:
+            - key: q
+              type: text
+              placeholder: 원서·해외도서  예) sapiens
+              required: true
+            action: '[sense:search_books]{query: "$q"}'
+            view:
+            - type: card_list
+              from: data
+              empty_from: message
+              card:
+                image: '{bookImageURL}'
+                title: '{bookname}'
+                lines:
+                - '{authors}'
+                - '{categories|opt:,}{page_count|opt: · ,쪽}'
+                link:
+                  href: '{infoLink}'
+                  label: Google Books →
+          - name: 고전
+            inputs:
+            - key: q
+              type: text
+              placeholder: 서양 고전  예) sherlock, austen
+              required: true
+            action: '[sense:classic]{op: "western", query: "$q"}'
+            view:
+            - type: card_list
+              from: results
+              card:
+                image: '{cover_url}'
+                title: '{title}'
+                lines:
+                - '{authors}'
+                - '내려받기 {download_count|num}회'
+                link:
+                  href: '{html_url}'
+                  label: 원문 읽기 →
       classic:
         description: 고전 원문 검색 (op 분기). western=서양 고전(Gutenberg), korean=한국 고전(한국고전종합DB).
         group: culture
@@ -225,6 +468,26 @@ nodes:
         tool: kcisa_quick_search
         implementation: 한국문화정보원(KCISA) API로 전시/문화행사 검색
         target_key: keyword
+        app:
+          instrument: culture
+          mode: 전시
+          mode_order: 1
+          inputs:
+          - key: kw
+            type: text
+            default: 전시
+            placeholder: '전시 키워드 (예: 사진, 현대미술)'
+            required: true
+          action: '[sense:exhibit]{keyword: "$kw"}'
+          view:
+          - type: image_grid
+            from: data
+            image: '{thumbnail}'
+            title: '{title}'
+            lines:
+            - '{place}'
+            - '{startDate}~{endDate}'
+            - '{area} · {realmName}'
       paper:
         description: 학술 논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
         target_description: |
@@ -303,6 +566,35 @@ nodes:
         router: handler
         tool: get_weather
         implementation: Open-Meteo 무료 API로 날씨 조회 (API키 불필요)
+        app:
+          icon: 🌤️
+          name: 날씨
+          order: 0
+          auto_run: true
+          inputs:
+          - key: city
+            type: text
+            default: 서울
+            placeholder: 도시명 (한/영)
+            chips: [서울, 부산, 제주, 수원, 인천, 대구]
+          action: '[sense:weather]{city: "$city", days: 7}'
+          view:
+          - type: metric
+            label: '{city}'
+            big: '{current.temp|round}'
+            unit: °
+            sub: '{current.condition} · 체감 {current.feels_like|round}°'
+          - type: kv
+            rows:
+            - k: 💧 습도
+              v: '{current.humidity}%'
+            - k: 🌬 바람
+              v: '{current.wind_speed}m/s'
+          - type: kv_list
+            title: 7일 예보
+            from: forecast
+            k: '{date}'
+            v: '{condition} {min_temp|round}° / {max_temp|round}°{precipitation_mm|opt: ☔,mm}'
       restaurant:
         description: 맛집/음식점 검색 (카카오+네이버 Local API). 상호명·주소·전화·카테고리·place 링크 반환. 별점·리뷰
           숫자는 공개 API 미제공 — 카카오 place_url(카카오맵 페이지)에서 확인. 커뮤니티 후기는 sense:search_local.
@@ -313,6 +605,27 @@ nodes:
         implementation: Kakao + Naver Local API 듀얼 검색. 반환 combined[]에 상호명·주소·전화·카테고리·url(카카오는
           place.map.kakao.com=평점/리뷰 페이지). 별점 숫자 자체는 API에 없음.
         target_key: query
+        app:
+          icon: 🍴
+          name: 맛집
+          order: 2
+          inputs:
+          - key: q
+            type: text
+            placeholder: '예: 강남역 맛집 / 성수동 카페'
+            required: true
+          action: '[sense:restaurant]{query: "$q"}'
+          view:
+          - type: card_list
+            from: combined
+            card:
+              title: '{name}'
+              lines:
+              - '{category}'
+              - '📍 {address}{phone|opt:  ·  ☎ ,}'
+              link:
+                href: '{url}'
+                label: 지도/상세 →
       navigate_route:
         description: 카카오 내비 자동차 길찾기. 거리·시간·톨비 반환. 지도 표시는 map.
         target_description: 목적지 (장소명 또는 '경도,위도'). origin 옵션으로 출발지 지정.
@@ -483,6 +796,72 @@ nodes:
         - 월세
         - 아파트
         - 주택
+        app:
+          icon: 🏢
+          name: 실거래가
+          order: 9
+          inputs:
+          - key: province
+            type: select
+            label: 시/도
+            default: 서울
+            options:
+            - { value: 서울, label: 서울 }
+            - { value: 경기, label: 경기 }
+            - { value: 인천, label: 인천 }
+            - { value: 부산, label: 부산 }
+            - { value: 대구, label: 대구 }
+            - { value: 대전, label: 대전 }
+            - { value: 광주, label: 광주 }
+            - { value: 울산, label: 울산 }
+            - { value: 세종, label: 세종 }
+            - { value: 강원, label: 강원 }
+            - { value: 충북, label: 충북 }
+            - { value: 충남, label: 충남 }
+            - { value: 전북, label: 전북 }
+            - { value: 전남, label: 전남 }
+            - { value: 경북, label: 경북 }
+            - { value: 경남, label: 경남 }
+            - { value: 제주, label: 제주 }
+          - key: region
+            type: select
+            label: 구/군
+            required: true
+            options_action: '[sense:realty]{op: "codes", city: "$province"}'
+            options_from: regions
+          - key: type
+            type: select
+            label: 유형
+            default: apt
+            options:
+            - { value: apt, label: 아파트 }
+            - { value: house, label: 단독·다가구 }
+            - { value: villa, label: 연립·다세대 }
+          - key: deal
+            type: select
+            label: 거래
+            default: trade
+            options:
+            - { value: trade, label: 매매 }
+            - { value: rent, label: 전월세 }
+          action: '[sense:realty]{region_code: "$region", type: "$type", deal: "$deal"}'
+          view:
+          - type: metric
+            label: 평균 거래가 (최근 3개월)
+            big: '{summary.평균가}'
+            sub: '{summary.총거래건수}건 · {summary.조회기간}'
+          - type: kv
+            rows:
+            - { k: 최고가, v: '{summary.최고가}' }
+            - { k: 최저가, v: '{summary.최저가}' }
+          - type: card_list
+            from: data
+            empty: 해당 기간 거래가 없습니다
+            card:
+              title: '{명칭}'
+              lines:
+              - '{법정동} · {면적}㎡ · {층}층 · {건축년도}년'
+              - '{거래금액}만원'
       video:
         description: 유튜브 동영상 조회 (op 분기). 메타·자막·요약. 검색은 search_youtube, 재생은 limbs:music.
         target_description: |
@@ -523,6 +902,28 @@ nodes:
         tool: search_youtube
         implementation: yt-dlp ytsearch로 유튜브 검색 결과 목록 추출
         target_key: query
+        app:
+          instrument: ytmusic
+          icon: 🎵
+          name: 유튜브 뮤직
+          order: 8
+          mode: 검색
+          mode_order: 0
+          inputs:
+          - key: q
+            type: text
+            placeholder: 곡·아티스트 검색
+            required: true
+          action: '[sense:search_youtube]{query: "$q", count: 15}'
+          view:
+          - type: list_action
+            from: results
+            icon: 🎵
+            title: '{title|trunc:60}'
+            sub: '{channel} · {duration}'
+            button:
+              label: ▶
+              action: '[limbs:music]{op: "play", query: "https://www.youtube.com/watch?v={video_id}"}'
       radio:
         description: 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
         target_description: |
@@ -546,6 +947,61 @@ nodes:
         - KBS
         - MBC
         - SBS
+        app:
+          icon: 📻
+          name: 라디오
+          order: 5
+          modes:
+          - name: 한국
+            auto_run: true
+            buttons:
+            - label: ■ 정지
+              action: '[limbs:radio]{op: "stop"}'
+            action: '[sense:radio]{op: "korean"}'
+            view:
+            - type: list_action
+              from: stations
+              icon: 📻
+              title: '{name}'
+              sub: '{broadcaster} · {description}'
+              button:
+                label: ▶
+                action: '[limbs:radio]{op: "play", station_id: "{station_id}"}'
+          - name: 검색
+            buttons:
+            - label: ■ 정지
+              action: '[limbs:radio]{op: "stop"}'
+            inputs:
+            - key: q
+              type: text
+              placeholder: 방송국 이름·태그  예) jazz, BBC
+              required: true
+            action: '[sense:radio]{op: "search", query: "$q", limit: 30}'
+            view:
+            - type: list_action
+              from: stations
+              icon: 📻
+              title: '{name}'
+              sub: '{country} · {tags|trunc:40}'
+              button:
+                label: ▶
+                action: '[limbs:radio]{op: "play", stream_url: "{stream_url}"}'
+          - name: 즐겨찾기
+            auto_run: true
+            buttons:
+            - label: ■ 정지
+              action: '[limbs:radio]{op: "stop"}'
+            action: '[limbs:radio_favorite]{op: "list"}'
+            view:
+            - type: list_action
+              from: favorites
+              empty: 즐겨찾기가 없습니다 — 재생 중 자율주행/수동 모드에서 추가하세요
+              icon: ♡
+              title: '{name}'
+              sub: '{added_at}'
+              button:
+                label: ▶
+                action: '[limbs:radio]{op: "play", stream_url: "{stream_url}"}'
       world:
         description: 세계 상태 감각 (op 분기). 경제·뉴스·기술·날씨 스냅샷 조회/추이/재수집.
         target_description: |
@@ -1378,6 +1834,7 @@ nodes:
         target_key: op
         router: handler
         tool: android_op
+        runs_on: home_only   # PC-ADB로 폰 제어 — 폰 자신에선 무의미(sense:phone은 폰가능)
         ops:
           default: snapshot
           values:
@@ -1406,6 +1863,7 @@ nodes:
         target_key: path
         router: system
         func: output_open
+        runs_on: home_only   # 집 PC Finder/탐색기 GUI — 폰 무의미
         implementation: subprocess로 OS 기본 앱(Finder/브라우저) 실행
         keywords:
         - 열기
@@ -1443,6 +1901,28 @@ nodes:
         - 멈춰
         - 다운로드
         - mp3
+        app:
+          instrument: ytmusic
+          mode: 큐
+          mode_order: 1
+          auto_run: true
+          buttons:
+          - label: ⏭ 다음 곡
+            action: '[limbs:music]{op: "skip"}'
+          - label: ■ 정지
+            action: '[limbs:music]{op: "stop"}'
+          action: '[limbs:music]{op: "queue"}'
+          view:
+          - type: kv
+            rows:
+            - k: 상태
+              v: '{message}'
+          - type: kv_list
+            from: queue
+            title: 대기열
+            empty: 대기열이 비어 있습니다
+            k: '{position}'
+            v: '{title|trunc:40} · {channel}'
       radio:
         description: 인터넷 라디오 재생·중지 (op 분기). play/stop.
         target_description: 'play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. stop — 파라미터 없음.'
@@ -1568,6 +2048,21 @@ nodes:
         scope: workspace
         implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈) — workspace 도구(프로젝트 무관)
         target_key: action
+        app:
+          icon: 🔖
+          name: 즐겨찾기
+          order: 10
+          auto_run: true
+          action: '[limbs:launch]{action: "list"}'
+          view:
+          - type: card_list
+            from: sites
+            empty_from: message
+            card:
+              title: '{name}'
+              lines:
+              - '{url|trunc:54}'
+              link: { href: '{url}', label: 열기 → }
       open_window:
         description: Electron 런처의 6개 메인 작업창 열기 (project/system_ai/indienet/business/multichat/folder). 자세한 진입 시나리오는 가이드(open_window.md) 참조.
         target_description: 'app 종류: project | system_ai | indienet | business | multichat | folder. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). system_ai/indienet/business는 파라미터 없음.'
@@ -1575,6 +2070,7 @@ nodes:
         target_key: app
         router: system
         func: launcher_command
+        runs_on: home_only   # Electron 데스크탑 런처 창 — 폰 무의미
         implementation: WebSocket으로 Electron Launcher에 open_<app>_window 명령 전송
         keywords:
         - 창
@@ -1719,6 +2215,27 @@ nodes:
         - 가디언
         - guardian
         - world news
+        app:
+          icon: 📰
+          name: 신문
+          order: 7
+          note: 키워드별 최신 뉴스를 모아 HTML 신문을 만들어 "띄우기"로 봅니다.
+          inputs:
+          - key: kw
+            type: text
+            default: 'AI, 경제, 부동산'
+            placeholder: 뉴스 키워드 (쉼표 구분)
+            required: true
+          action: '[engines:newspaper]{keywords: "$kw"}'
+          view:
+          - type: list_action
+            from: '.'
+            icon: 📰
+            title: '{title}'
+            sub: '{message}'
+            button:
+              label: 🖥 띄우기
+              action: '[limbs:os_open]{path: "{file}"}'
       html_video:
         description: '완성된 HTML/CSS 씬을 MP4 영상으로 합성. scenes(HTML 배열) 또는 scene_dir(저장된 씬)로 호출. 주제→슬라이드 자동생성은 slide/lecture 사용. (가이드 html_video.md)'
         target_description: 'scenes(완전한 HTML 문서 배열, 각 {html, duration})을 직접 전달하거나 scene_dir(저장된 씬 디렉토리)을 지정. scene_dir이 있으면 렌더링 단계만 실행. narration_texts로 씬별 나레이션 추가.'

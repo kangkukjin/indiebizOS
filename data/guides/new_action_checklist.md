@@ -87,6 +87,9 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         implementation: 내부 동작 요약 (UI 전용)
         target_key: query         # tool_input 의 주 파라미터 키
         keywords: [한글키워드, english_keyword]
+        # runs_on: home_only      # (선택) 폰 네이티브: 집 PC 전용이면. 기본 anywhere.
+        #   집 하드웨어/무거운 의존/미검증 패키지=home_only · 폰 센서=phone_only.
+        #   build 가 data/phone_manifest.json 파생(폰 번들/계기필터/엔진가드 SSOT).
         # op 분기 액션이면:
         ops:
           default: list
@@ -155,6 +158,29 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 
 ---
 
+## 선택 단계: 앱 표면 노출 (`app:` 블록)
+
+액션을 **앱 모드 계기(GUI)**로도 쓰게 하려면 src 액션 정의에 `app:` 블록을 단다 — 그러면 데스크탑(`GenericInstrument.tsx`)과 원격 런처에 **계기로 자동 등장**한다(표면별 코드 0줄, `GET /launcher/instruments` 파생).
+
+```yaml
+        app:
+          icon: 🪙
+          name: 코인                  # 단독 계기는 icon+name 필수
+          order: 6                    # 홈 그리드 정렬
+          inputs:
+          - { key: coin, type: text, default: BTC, required: true }
+          action: '[sense:crypto]{coin_id: "$coin"}'    # $key=입력 치환
+          view:
+          - { type: metric, big: '{data.current_price_krw|num}' }
+```
+
+- view 프리미티브 7종(metric/kv/kv_list/card_list+드릴/image_grid/sparkline/list_action), 표시 템플릿 `{path|filter}`. **응답 shape은 추측하지 말고 live `/ibl/execute`로 확인 후 작성.**
+- 정합성은 2단계의 `--check`가 함께 검증한다(`validate_app_blocks` — 참조 액션 실존, $key↔inputs, view 어휘, 계기 그룹).
+- 해마(3·4단계)와 무관 — app:은 에이전트가 호출하는 어휘가 아니라 표면이 읽는 선언.
+- 어휘 전체 명세: `docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md`, 요약: `system_docs/ibl.md` "앱 표면 노출" 절.
+
+---
+
 ## 5단계: 확인
 
 1. **등록**: `[node:my_action]{...}` 를 execute_ibl(또는 `POST /ibl/execute`)로 실행 — 단, sense 외 부작용 액션은 주의.
@@ -172,5 +198,6 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 | 3. 해마 데이터 | 합성 용례 + 학습 JSON | 에이전트가 연상 못 함 |
 | 4. 임베딩 | `rebuild_index()` | 시맨틱 검색 불가 |
 | 5. 확인 | 등록 + 연상 + 실행 | 배포 후 장애 |
+| (선택) 앱 표면 | src에 `app:` 블록 | 앱 모드 계기로 안 보임 (에이전트 사용엔 무관) |
 
 **1~4를 모두 완료해야 에이전트가 액션을 인식하고 사용할 수 있다.**

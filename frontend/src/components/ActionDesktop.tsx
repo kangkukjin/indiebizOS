@@ -7,47 +7,40 @@
  * 프로젝트 탭이 '에이전트에게 맡기는' 오토파일럿이라면,
  * 이 탭은 '내가 직접 다이얼을 도는' 수동 운전이다. 같은 도메인의 두 얼굴.
  */
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { RealtyInstrument } from './RealtyInstrument';
 import { CommercialInstrument } from './CommercialInstrument';
-import { BookInstrument } from './BookInstrument';
-import { InvestInstrument } from './InvestInstrument';
-import { WeatherInstrument } from './WeatherInstrument';
-import { CultureInstrument } from './CultureInstrument';
-import { LocalInstrument } from './LocalInstrument';
 import { DirectionsInstrument } from './DirectionsInstrument';
 import { CalendarInstrument } from './CalendarInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
-import { RadioInstrument } from './RadioInstrument';
 import { YtMusicInstrument } from './YtMusicInstrument';
+import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 
 // 계기는 두 종류 — 인라인으로 펼쳐지는 것(el)과, 누르면 별도 네이티브 창을 띄우는 것(onOpen).
 interface Instrument { id: string; icon: string; label: string; el?: ReactNode; onOpen?: () => void; soon?: boolean }
 // 도메인도 onOpen을 가질 수 있다 — 계기 화면을 거치지 않고 홈에서 바로 액션을 실행하는 단일 아이콘.
 interface Domain { id: string; icon: string; label: string; soon?: boolean; onOpen?: () => void; instruments: Instrument[] }
 
-// 앱 모드 IBL 직접 실행(0 토큰) — BookInstrument와 동일한 경로/프로젝트 컨텍스트.
-function runIBL(code: string) {
-  fetch('http://127.0.0.1:8765/ibl/execute', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, project_id: '앱모드' }),
-  }).catch(() => { /* 액션이 브라우저를 띄우므로 응답은 신경쓰지 않음 */ });
-}
+// ===== 매니페스트 구동 계기 =====
+// 진실 소스 = ibl_nodes_src 액션의 app: 블록 → GET /launcher/instruments 자동 파생.
+// 여기 명단에 없는 새 계기(app: 블록만 단 액션)는 홈 그리드 끝에 자동 등장한다 —
+// 원격 런처와 같은 선언을 같은 어휘로 그린다 (docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md).
 
-// 도메인 → 계기 구성. 부동산/실거래가만 실제 동작, 나머지는 구조를 보여주는 자리.
-const DOMAINS: Domain[] = [
+// escape hatch: 매니페스트보다 풍부한 데스크탑 전용 컴포넌트가 있으면 그걸 쓴다.
+// (도서=대출통계·추천 드릴 / 투자=recharts 차트·3탭 / 라디오=즐겨찾기·볼륨)
+const OVERRIDES: Record<string, ReactNode> = {
+  newspaper: <NewspaperInstrument />,   // electron 창으로 바로 열기 등(인앱 오버레이)
+  ytmusic: <YtMusicInstrument />,       // 다운로드·큐 통합 UI(youtube=home_only)
+};
+
+// 데스크탑 전용 도메인 — 지도·네이티브 창·파일 경로 등 렌더 어휘 밖(영구 escape).
+const STATIC_DOMAINS: Domain[] = [
   {
     id: 'realestate', icon: '🏢', label: '부동산',
     instruments: [
       { id: 'realty', icon: '🏢', label: '실거래가', el: <RealtyInstrument /> },
       { id: 'commercial', icon: '🏪', label: '상권', el: <CommercialInstrument /> },
       { id: 'listing', icon: '🔑', label: '매물', soon: true },
-    ],
-  },
-  {
-    id: 'book', icon: '📚', label: '도서',
-    instruments: [
-      { id: 'booksearch', icon: '📖', label: '도서검색', el: <BookInstrument /> },
     ],
   },
   // 블로그 노트(Obsidian vault) — IBL 액션이 아니라 obsidian:// 프로토콜로 데스크톱 Obsidian을 띄운다.
@@ -61,69 +54,63 @@ const DOMAINS: Domain[] = [
     ],
   },
   {
-    id: 'newspaper', icon: '📰', label: '신문',
-    instruments: [
-      { id: 'newspaper', icon: '📰', label: '신문 생성', el: <NewspaperInstrument /> },
-    ],
-  },
-  {
     id: 'device', icon: '🖥️', label: '내 기기',
     instruments: [
       { id: 'photo', icon: '📷', label: '사진', onOpen: () => window.electron?.openPhotoManagerWindow?.(null) },
       { id: 'pcmanager', icon: '🗂️', label: 'PC 관리', onOpen: () => window.electron?.openPCManagerWindow?.(null) },
     ],
   },
-  // 즐겨찾기 사이트 런처 — 홈 아이콘 한 번으로 [limbs:launch] 실행(Launchpad 띄우기).
-  { id: 'launchpad', icon: '🚀', label: '즐겨찾기', onOpen: () => runIBL('[limbs:launch]'), instruments: [] },
   // 강의 만들기 — 홈 아이콘 한 번으로 강의 워크스페이스 네이티브 창 열기.
   { id: 'lecture', icon: '🎓', label: '강의 만들기', onOpen: () => window.electron?.openLectureWorkspaceWindow?.(null), instruments: [] },
-  {
-    id: 'invest', icon: '📈', label: '투자',
-    instruments: [
-      { id: 'market', icon: '📈', label: '주식·코인', el: <InvestInstrument /> },
-    ],
-  },
-  {
-    id: 'local', icon: '🗺️', label: '지역정보',
-    instruments: [
-      { id: 'places', icon: '🗺️', label: '장소·맛집', el: <LocalInstrument /> },
-    ],
-  },
   {
     id: 'directions', icon: '🛣️', label: '길찾기·CCTV',
     instruments: [
       { id: 'directions', icon: '🛣️', label: '길찾기·CCTV', el: <DirectionsInstrument /> },
     ],
   },
-  {
-    id: 'weather', icon: '🌤️', label: '날씨',
-    instruments: [
-      { id: 'forecast', icon: '🌤️', label: '날씨·예보', el: <WeatherInstrument /> },
-    ],
-  },
-  {
-    id: 'culture', icon: '🎭', label: '문화공연',
-    instruments: [
-      { id: 'showexhibit', icon: '🎭', label: '공연·전시', el: <CultureInstrument /> },
-    ],
-  },
-  {
-    id: 'radio', icon: '📻', label: '라디오',
-    instruments: [
-      { id: 'radioplayer', icon: '📻', label: '라디오', el: <RadioInstrument /> },
-    ],
-  },
-  {
-    id: 'ytmusic', icon: '🎵', label: '유튜브 뮤직',
-    instruments: [
-      { id: 'ytmusicplayer', icon: '🎵', label: '재생·저장', el: <YtMusicInstrument /> },
-    ],
-  },
 ];
+
+// 홈 그리드 배치 순서 (static id + 매니페스트 계기 id 혼합).
+// 명단에 없는 매니페스트 계기는 끝에 자동 추가 — "새 앱 = app: 블록 1개"의 데스크탑 절반.
+const HOME_ORDER = [
+  'realestate', 'book', 'obsidian', 'calendar', 'newspaper', 'device', 'launch',
+  'lecture', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic',
+];
+
+// STATIC_DOMAINS 안에 이미 들어있는 계기 id — 매니페스트가 같은 id를 줘도 데스크탑 홈에 별도 타일로
+// 띄우지 않는다(부동산 도메인 안의 '실거래가'처럼 더 풍부한 전용 컴포넌트로 렌더 중). 원격엔 그대로 노출.
+const STATIC_INSTRUMENT_IDS = new Set(STATIC_DOMAINS.flatMap((d) => d.instruments.map((i) => i.id)));
+
+function manifestToDomain(inst: AppInstrument): Domain {
+  const el = OVERRIDES[inst.id] ?? <GenericInstrument instrument={inst} />;
+  return {
+    id: inst.id, icon: inst.icon, label: inst.name,
+    instruments: [{ id: inst.id, icon: inst.icon, label: inst.name, el }],
+  };
+}
 
 export function ActionDesktop() {
   const [domainId, setDomainId] = useState<string | null>(null);
   const [instrumentId, setInstrumentId] = useState<string | null>(null);
+  const [manifest, setManifest] = useState<AppInstrument[]>([]);
+
+  useEffect(() => {
+    fetch('http://127.0.0.1:8765/launcher/instruments')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d) => setManifest(d.instruments || []))
+      .catch(() => { /* 백엔드 미기동 시 static 도메인만 표시 */ });
+  }, []);
+
+  const DOMAINS = useMemo<Domain[]>(() => {
+    const byId = new Map<string, Domain>();
+    STATIC_DOMAINS.forEach((d) => byId.set(d.id, d));
+    // STATIC_DOMAINS가 이미 품은 계기(예: 부동산 안의 realty)는 매니페스트로 덮어쓰지 않는다
+    const shown = manifest.filter((i) => !STATIC_INSTRUMENT_IDS.has(i.id));
+    shown.forEach((inst) => byId.set(inst.id, manifestToDomain(inst)));
+    const ordered = HOME_ORDER.map((id) => byId.get(id)).filter((d): d is Domain => !!d);
+    const extras = shown.filter((i) => !HOME_ORDER.includes(i.id)).map(manifestToDomain);
+    return [...ordered, ...extras];
+  }, [manifest]);
 
   const domain = DOMAINS.find((d) => d.id === domainId) || null;
   const instrument = domain?.instruments.find((i) => i.id === instrumentId) || null;

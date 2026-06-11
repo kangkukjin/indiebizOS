@@ -489,10 +489,12 @@ def launch_sites(action: str = "open_ui", name: str = None, url: str = None, pro
         return f"사이트 목록을 읽는 중 오류 발생: {str(e)}"
 
     if action == "list":
+        # 구조화 반환 — 앱 계기(즐겨찾기)가 sites[] 를 직접 렌더. message 는 에이전트/사람용.
         if not sites:
-            return "등록된 사이트가 없습니다."
+            return {"success": True, "sites": [], "count": 0, "message": "등록된 사이트가 없습니다."}
         list_str = "\n".join([f"- {s['name']}: {s['url']}" for s in sites])
-        return f"현재 등록된 사이트 목록입니다:\n{list_str}"
+        return {"success": True, "sites": sites, "count": len(sites),
+                "message": f"현재 등록된 사이트 목록입니다:\n{list_str}"}
 
     elif action == "add":
         if not name or not url:

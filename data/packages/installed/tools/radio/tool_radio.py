@@ -87,21 +87,7 @@ KOREAN_STATIONS = {
         "channel_code": "chm",
         "description": "음악/예능"
     },
-    # SBS
-    "sbs_powerfm": {
-        "name": "SBS Power FM",
-        "broadcaster": "SBS",
-        "api": "sbs",
-        "channel_code": "powerfm",
-        "description": "대중음악/토크"
-    },
-    "sbs_lovefm": {
-        "name": "SBS Love FM",
-        "broadcaster": "SBS",
-        "api": "sbs",
-        "channel_code": "lovefm",
-        "description": "뉴스/시사/교양"
-    },
+    # SBS 제외: 공식 스트림이 토큰 보호라 외부 클라이언트(mpv 포함) 403 — 재생 불가 (2026-06-11)
     # TBS
     "tbs_fm": {
         "name": "TBS FM",
@@ -125,13 +111,7 @@ KOREAN_STATIONS = {
         "channel_code": "sfm",
         "description": "뉴스/시사"
     },
-    "cbs_musicfm": {
-        "name": "CBS Music FM",
-        "broadcaster": "CBS",
-        "api": "cbs",
-        "channel_code": "mfm",
-        "description": "음악 전문"
-    },
+    # CBS Music FM 제외: 공식 호스트(aac/m-aac) 음악FM 경로 소멸 — 재생 불가 (2026-06-11)
     # EBS
     "ebs_fm": {
         "name": "EBS FM",
@@ -148,15 +128,14 @@ TBS_URLS = {
     "efm": "https://cdnefm.tbs.seoul.kr/tbs/_definst_/tbs_efm_web_360.smil/playlist.m3u8",
 }
 
-# CBS 고정 URL
+# CBS 고정 URL (2026-06-11: 호스트 aac → m-aac 로 이전, 표준FM 복구 검증. 음악FM은 경로 소멸로 제외)
 CBS_URLS = {
-    "sfm": "https://aac.cbs.co.kr/cbs939/cbs939.stream/playlist.m3u8",
-    "mfm": "https://aac.cbs.co.kr/mfm961/mfm961.stream/playlist.m3u8",
+    "sfm": "https://m-aac.cbs.co.kr/cbs939/cbs939.stream/playlist.m3u8",
 }
 
-# EBS 고정 URL
+# EBS 고정 URL (2026-06-11: 경로 fmradiofamily/bandibudistream → fmradiofamilypc/familypc1m)
 EBS_URLS = {
-    "fm": "https://ebsonair.ebs.co.kr/fmradiofamily/bandibudistream/playlist.m3u8",
+    "fm": "https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8",
 }
 
 # ─── 재생 상태 관리 ───
@@ -283,22 +262,6 @@ def _get_mbc_stream_url(channel_code):
     return _http_get(url).strip()
 
 
-def _get_sbs_stream_url(channel_code):
-    """SBS API에서 실시간 스트림 URL 가져오기 (텍스트 URL 반환)"""
-    url = f"https://apis.sbs.co.kr/play-api/1.0/livestream/media/{channel_code}?protocol=hls&ssl=Y"
-    text = _http_get(url).strip()
-    # SBS는 URL을 텍스트로 직접 반환
-    if text.startswith("http"):
-        return text
-    # JSON 형태인 경우 대비
-    try:
-        data = json.loads(text)
-        return data.get("onair", {}).get("source", {}).get("mediasource", {}).get("mediaurl", "")
-    except (json.JSONDecodeError, KeyError, AttributeError):
-        pass
-    return ""
-
-
 def _get_korean_stream_url(station_id):
     """한국 방송 station_id로 스트림 URL 획득"""
     station = KOREAN_STATIONS.get(station_id)
@@ -313,8 +276,6 @@ def _get_korean_stream_url(station_id):
             url = _get_kbs_stream_url(code)
         elif api == "mbc":
             url = _get_mbc_stream_url(code)
-        elif api == "sbs":
-            url = _get_sbs_stream_url(code)
         elif api == "tbs":
             url = TBS_URLS.get(code, "")
         elif api == "cbs":
@@ -373,14 +334,7 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None):
     """라디오 재생. name: stream_url 재생 시 채널명(검색 결과 등) — 미지정 시 '외부 방송'."""
     global _player_process, _current_station, _play_start_time
 
-    mpv_path = _find_mpv()
-    if not mpv_path:
-        return json.dumps({
-            "success": False,
-            "error": "mpv가 설치되어 있지 않습니다. 'brew install mpv'로 설치해주세요.",
-        }, ensure_ascii=False)
-
-    # 스트림 URL 결정
+    # 스트림 URL 결정 (mpv 유무와 무관 — 폰은 클라이언트가 재생)
     station_name = None
     if station_id:
         url, err = _get_korean_stream_url(station_id)
@@ -401,6 +355,25 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None):
     except (TypeError, ValueError):
         volume = 70
     volume = max(0, min(100, volume))
+
+    # 폰: mpv 없음 → WebView 가 stream_url 을 직접 재생(HTML5/hls.js). 소리는 폰 스피커.
+    if os.environ.get("INDIEBIZ_PROFILE") == "phone":
+        return json.dumps({
+            "success": True,
+            "play_in_client": True,
+            "stream_url": stream_url,
+            "station": station_name,
+            "volume": volume,
+            "message": f"{station_name} 재생",
+        }, ensure_ascii=False)
+
+    # PC: mpv 로 재생
+    mpv_path = _find_mpv()
+    if not mpv_path:
+        return json.dumps({
+            "success": False,
+            "error": "mpv가 설치되어 있지 않습니다. 'brew install mpv'로 설치해주세요.",
+        }, ensure_ascii=False)
 
     # 기존 재생 중지
     with _player_lock:
@@ -471,6 +444,10 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None):
 def stop_radio():
     """재생 중지"""
     global _player_process, _current_station, _play_start_time
+
+    # 폰: 클라이언트(WebView)가 재생 중 → 클라이언트에 중지 지시
+    if os.environ.get("INDIEBIZ_PROFILE") == "phone":
+        return json.dumps({"success": True, "stop_in_client": True, "message": "재생 중지"}, ensure_ascii=False)
 
     with _player_lock:
         if not _player_process or _player_process.poll() is not None:

@@ -8,9 +8,20 @@ from datetime import datetime
 from typing import Dict, Any
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
 from pydantic import BaseModel
+import copy
 import yaml
+
+
+def _redact_agents_secrets(agents):
+    """원격 응답에서 민감 정보(API 키 등) 제거"""
+    safe = copy.deepcopy(agents)
+    for agent in safe:
+        ai = agent.get("ai")
+        if isinstance(ai, dict) and ai.get("api_key"):
+            ai["api_key"] = ""
+    return safe
 
 router = APIRouter()
 
@@ -61,7 +72,7 @@ def get_agent_runners():
 # ============ 에이전트 조회 ============
 
 @router.get("/projects/{project_id}/agents")
-async def get_project_agents(project_id: str):
+async def get_project_agents(project_id: str, request: Request):
     """프로젝트의 에이전트 목록"""
     try:
         project_path = project_manager.get_project_path(project_id)
@@ -73,7 +84,17 @@ async def get_project_agents(project_id: str):
         with open(agents_file, 'r', encoding='utf-8') as f:
             data = yaml.safe_load(f)
 
-        return {"agents": data.get("agents", [])}
+        agents = data.get("agents", [])
+
+        # 원격(터널) 요청에는 API 키 등 민감 정보를 노출하지 않는다
+        try:
+            from api_launcher_web import is_external_request
+            if is_external_request(request):
+                agents = _redact_agents_secrets(agents)
+        except Exception:
+            pass
+
+        return {"agents": agents}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

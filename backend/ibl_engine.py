@@ -117,6 +117,28 @@ def _merge_api_registry_actions(nodes_config: Dict):
         actions[action_name] = action
 
 
+# 폰 프로파일(#3 runs_on) — runnable 액션 집합 캐시.
+_phone_runnable_cache = {"loaded": False, "set": None}
+
+
+def _phone_runnable(node: str, action: str) -> bool:
+    """폰 프로파일이면 phone_manifest.runnable_actions 막을 적용. PC면 항상 True."""
+    if os.environ.get("INDIEBIZ_PROFILE") != "phone":
+        return True
+    if not _phone_runnable_cache["loaded"]:
+        s = None
+        try:
+            base = os.environ.get("INDIEBIZ_BASE_PATH") or os.path.join(os.path.dirname(__file__), "..")
+            with open(os.path.join(base, "data", "phone_manifest.json"), "r", encoding="utf-8") as f:
+                s = set(json.load(f).get("runnable_actions") or [])
+        except Exception:
+            s = None  # 매니페스트 없으면 가드 비활성(안전)
+        _phone_runnable_cache["set"] = s
+        _phone_runnable_cache["loaded"] = True
+    rs = _phone_runnable_cache["set"]
+    return True if rs is None else (f"{node}:{action}" in rs)
+
+
 def _load_nodes_config() -> Dict:
     """노드 정의 로드 (캐싱)"""
     global _nodes
@@ -330,6 +352,13 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         available = list(node_config.get("actions", {}).keys())
         return {"error": f"노드 '{node}'에 '{action}' 액션이 없습니다.",
                 "available_actions": available}
+
+    # 폰 프로파일 가드 (#3 runs_on): 폰서 못 도는 액션은 시도 전에 명확히 거부
+    # (ImportError/핸들러없음 대신 "집 PC 전용" 안내).
+    if not _phone_runnable(node, action):
+        return {"error": f"[{node}:{action}] 액션은 집 PC에서만 동작합니다(폰 프로파일 제외). "
+                         "집 데스크탑/원격 런처에서 실행하세요.",
+                "home_only": True}
 
     router = action_config.get("router")
     params = tool_input.get("params", {})

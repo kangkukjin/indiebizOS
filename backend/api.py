@@ -41,9 +41,9 @@ load_dotenv(_base_for_env / ".env")
 # 개발 모드에서는 기존 위치의 .env도 로드 시도
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 # 경로 설정
@@ -244,6 +244,32 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
 )
+
+
+# === 원격 접근 인증 게이트 ===
+# 데이터 엔드포인트(/projects, /switches, /system-ai/chat 등)는 데스크탑과 공유되어
+# 로컬에선 무인증으로 열려 있다. 터널을 통해 들어온 외부 요청에 대해서만 런처 세션을
+# 강제해, 비밀번호 없이 데이터·API 키가 새는 것을 막는다. (localhost 데스크탑은 통과)
+@app.middleware("http")
+async def remote_access_guard(request: Request, call_next):
+    if request.method != "OPTIONS":
+        try:
+            from api_launcher_web import (
+                is_external_request,
+                is_public_remote_path,
+                verify_session,
+            )
+            if is_external_request(request):
+                path = request.url.path
+                if not is_public_remote_path(request.method, path) and not verify_session(request):
+                    return JSONResponse(
+                        {"detail": "인증이 필요합니다. 원격 런처에 로그인하세요."},
+                        status_code=401,
+                    )
+        except Exception:
+            # 게이트 자체의 오류로 서비스가 막히지 않도록 보수적으로 통과
+            pass
+    return await call_next(request)
 
 # 매니저 인스턴스
 project_manager = ProjectManager(BASE_PATH)

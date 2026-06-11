@@ -27,6 +27,24 @@ python scripts/build_ibl_nodes.py
 소스 파일들은 모두 단독 yaml로 파싱 가능하다 (PyYAML/IDE/lint 모두 OK).
 노드 파일 4개는 root key가 column 2에 위치하지만 YAML 스펙상 유효하다.
 
+## 선택 필드: `app:` 블록 (앱 표면 노출)
+
+액션 정의에 `app:{icon,name,order,inputs,action,view,…}` 블록을 달면 그 액션이
+데스크탑·원격 런처의 **앱 모드 계기(GUI)**로 자동 등장한다 (`GET /launcher/instruments`가 파생).
+정합성은 `--check`의 `validate_app_blocks`가 검증한다 (참조 액션 실존·$key↔inputs·view 어휘 7종·계기 그룹).
+어휘 명세: `docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md`, 요약: `data/system_docs/ibl.md`의 "앱 표면 노출" 절.
+
+## 선택 필드: `runs_on` (어디서 도는가 — 폰 네이티브 #3)
+
+액션에 `runs_on: anywhere|home_only|phone_only`를 달아 실행 환경을 선언한다 (미지정=`anywhere`).
+- `anywhere` (기본): 이식 가능 로직/HTTP. handler/driver 라우터면 **검증된 폰 패키지**(`build_ibl_nodes.PHONE_VERIFIED_PACKAGES`)일 때만 폰서 실행.
+- `home_only`: 집 PC 하드웨어·무거운 의존·미검증 패키지. 폰서 제외(예: `limbs:os_open`/`open_window`=데스크탑 GUI).
+- `phone_only`: 폰 하드웨어(알림·센서, 미래 M3). 폰 전용.
+
+빌드가 `runs_on` + 검증 패키지에서 `data/phone_manifest.json`(packages + runnable_actions)을 파생한다 —
+폰 번들(Gradle `bundleIndiebizBase`)·앱 계기 필터(`_derive_instruments`)·엔진 가드(`ibl_engine._phone_runnable`)의 **단일 진실 소스**.
+`--check`가 enum + 매니페스트 정합을 검증. **패키지를 폰서 검증하면 `PHONE_VERIFIED_PACKAGES`에 추가**.
+
 ## 주의
 
 - **단일 yaml을 직접 편집하지 말 것.** 다음 빌드에서 덮어쓴다.

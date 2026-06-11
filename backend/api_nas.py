@@ -159,6 +159,23 @@ def verify_session(session_token: str) -> bool:
     return True
 
 
+def _remote_unauthenticated(request: Request) -> bool:
+    """터널을 통해 들어온 원격 요청인데 NAS 세션이 없으면 True(차단 대상).
+
+    /config·/status 는 데스크탑(localhost)이 NAS 로그인 없이 호출하므로
+    무조건 막을 수 없다. 외부(터널) 요청에 대해서만 세션을 강제한다.
+    """
+    try:
+        from api_launcher_web import is_external_request
+        if is_external_request(request):
+            token = request.cookies.get('nas_session') or request.headers.get('X-NAS-Session')
+            if not token or not verify_session(token):
+                return True
+    except Exception:
+        pass
+    return False
+
+
 def get_safe_path(base_paths: List[str], requested_path: str) -> Optional[Path]:
     """
     경로 조작 공격 방지
@@ -368,8 +385,10 @@ class NASConfigUpdate(BaseModel):
 
 
 @router.get("/config")
-async def get_nas_config():
+async def get_nas_config(request: Request):
     """NAS 설정 조회 (비밀번호 제외)"""
+    if _remote_unauthenticated(request):
+        raise HTTPException(status_code=401, detail="인증이 필요합니다")
     config = load_config()
     return {
         "enabled": config.get("enabled", False),
@@ -380,8 +399,12 @@ async def get_nas_config():
 
 
 @router.put("/config")
-async def update_nas_config(update: NASConfigUpdate):
+async def update_nas_config(update: NASConfigUpdate, request: Request):
     """NAS 설정 업데이트"""
+    # 원격(터널)에서 무인증으로 비밀번호·허용경로를 덮어쓰지 못하게 차단.
+    # (데스크탑 localhost는 통과 — 최초 설정은 로컬에서 이뤄진다)
+    if _remote_unauthenticated(request):
+        raise HTTPException(status_code=401, detail="인증이 필요합니다")
     config = load_config()
 
     if update.enabled is not None:
@@ -837,8 +860,10 @@ async def get_embedded_subtitle(
 # ============ 상태 API ============
 
 @router.get("/status")
-async def get_nas_status():
+async def get_nas_status(request: Request):
     """NAS 서비스 상태"""
+    if _remote_unauthenticated(request):
+        raise HTTPException(status_code=401, detail="인증이 필요합니다")
     config = load_config()
 
     return {

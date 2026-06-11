@@ -472,7 +472,7 @@
     {
       "id": "new_action_checklist",
       "name": "새 IBL 액션 추가 체크리스트",
-      "description": "새로운 IBL 액션(도구 패키지)을 만들 때 반드시 따라야 할 5단계 체크리스트. 패키지 생성부터 노드 등록, 해마 데이터, 임베딩, 확인까지.",
+      "description": "새로운 IBL 액션(도구 패키지)을 만들 때 반드시 따라야 할 체크리스트. 명명 헌법, 패키지 생성, src 노드 등록+검증, 해마 데이터, 임베딩, 확인 + 선택: 앱 표면 노출(app: 블록 — 데스크탑·원격 계기 자동 등장).",
       "keywords": [
         "액션",
         "추가",
@@ -489,7 +489,13 @@
         "embedding",
         "도구",
         "tool",
-        "ibl_actions"
+        "ibl_actions",
+        "앱",
+        "계기",
+        "app",
+        "GUI",
+        "instrument",
+        "표면"
       ],
       "file": "new_action_checklist.md"
     },

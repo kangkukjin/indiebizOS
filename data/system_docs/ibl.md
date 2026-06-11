@@ -67,6 +67,16 @@ IBL 표현 계층:     [node:action]{params}
 | engines | media_produce, music, chart, web_builder, architecture | 생산물 유형별 구분 |
 | others | delegation, channel, business | 소통 유형별 구분 |
 
+## 액션 runs_on (어디서 도는가 — 폰 네이티브)
+
+각 액션은 선택 필드 `runs_on`으로 실행 환경을 선언한다 (미지정=`anywhere`).
+- `anywhere`(기본): 이식 가능 로직/HTTP. 단 handler/driver 라우터는 **검증된 폰 패키지**일 때만 폰서 실행.
+- `home_only`: 집 PC 하드웨어·무거운 의존·미검증 패키지(예: `limbs:os_open`/`open_window`=데스크탑 GUI). 폰서 제외.
+- `phone_only`: 폰 하드웨어(알림·센서, 미래 M3).
+
+빌드가 `runs_on` + 검증 패키지(`build_ibl_nodes.PHONE_VERIFIED_PACKAGES`)에서 `data/phone_manifest.json`을 파생한다 —
+폰 임베드 빌드의 번들 패키지·앱 계기 필터·엔진 실행 가드의 단일 진실 소스. PC에선 무영향(전 액션 실행).
+
 ---
 
 ## 노드 (Phase 25: 5-Node 재구조화)
@@ -290,6 +300,37 @@ self:
 - `workspace`/`system`: `get_base_path()`를 ToolContext에 주입. project_path/project_id 무시 — 의도적 격리.
 
 **왜 필요한가** — 강의 만들기 워크스페이스 같은 패키지는 `outputs/lectures/` 같은 공유 폴더에 데이터를 두는데, 라우팅이 이를 모르고 모든 액션에 프로젝트 컨텍스트를 강요하면 AI가 "프로젝트 하나 골라서 컨텍스트 끌어오기" 같은 부자연스러운 우회를 한다. scope 선언으로 이 마찰을 제거.
+
+---
+
+## 앱 표면 노출 — `app:` 블록 (2026-06-11)
+
+액션을 **앱 모드 계기(GUI)**로 노출하려면 src 액션 정의에 선택적 `app:` 블록을 단다. 액션이 자기 입력 폼·IBL 호출 템플릿·결과 표현을 스스로 선언하고, 표면(데스크탑 `GenericInstrument.tsx` / 원격 런처 웹앱)은 이를 해석만 한다 — **app: 블록 1개 = 모든 표면에 동시 등장, 표면별 코드 0줄.**
+
+```yaml
+      crypto:
+        ...                       # 일반 액션 필드
+        app:
+          icon: 🪙
+          name: 코인              # 계기 표시명 (단독 계기는 icon+name 필수)
+          order: 6                # 홈 그리드 정렬
+          auto_run: true          # 열자마자 기본값으로 실행
+          inputs:                 # text/select(+options_action)/chips/required/default
+          - { key: coin, type: text, default: BTC, chips: [BTC, ETH] }
+          action: '[sense:crypto]{coin_id: "$coin"}'   # $key=입력 치환, 빈 입력 파라미터 자동 제거
+          view:                   # 프리미티브 7종: metric/kv/kv_list/card_list(+item_click 드릴)/image_grid/sparkline/list_action
+          - { type: metric, big: '{data.current_price_krw|num}', trend: data.change_24h_percent }
+```
+
+- 표시 템플릿 `{path|filter}` — 필터: round/num/abs/arrow/`opt:앞,뒤`/`trunc:N`. 드릴 응답엔 클릭 행이 `_item`으로 주입.
+- 리스트 프리미티브의 `from: "."` = 응답 자체를 1행으로 (단일 객체 응답에 행 버튼 달기 — 예: 신문 생성 결과에 "띄우기").
+- **select 입력 2종:** ①정적 `options: [{value,label}]` (IBL 호출 없음 — 시/도·유형 등 고정 목록) ②동적 `options_action`+`options_from` (IBL로 옵션 조회; 응답이 배열이면 option_value/option_label로, 딕셔너리 `{이름:코드}`면 자동 entries 정규화). **종속(cascade):** options_action 안에 `$형제키`를 쓰면 그 형제 select가 바뀔 때 자동 재조회 — 예: 구/군 `options_action: '[sense:realty]{op:"codes", city:"$province"}'` 가 시/도 선택에 따라 갱신. 실거래가 계기가 시연.
+- 탭 계기는 여러 액션이 같은 `instrument:` id + `mode:` 이름 공유 (예: performance+exhibit → 문화공연, search_youtube+music → 유튜브 뮤직). 노드가 달라도 병합된다.
+- **리모컨 의미론(2026-06-11 사용자 결정):** 부작용이 집 PC에서 일어나는 계기(라디오·유튜브뮤직 재생, 신문 띄우기)도 원격 노출 OK — `note:`로 "집 PC에서 실행됩니다" 경고만 명확히. 폰-로컬 실행은 폰 네이티브 배포의 일이므로 섞지 말 것.
+- `GET /launcher/instruments`가 app: 블록을 모아 계기 매니페스트로 자동 파생 (api_launcher_web._derive_instruments).
+- 정합성은 `build_ibl_nodes.py --check`의 `validate_app_blocks`가 정적 차단 (참조 액션 실존·$key↔inputs·view 어휘·계기 그룹).
+- app: 블록은 에이전트 프롬프트에 직렬화되지 않는다 (프롬프트 비용 0). 해마 용례·임베딩과도 무관 — 에이전트가 호출하는 어휘가 아니라 표면이 읽는 선언이다.
+- 전체 어휘 명세: `docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md`.
 
 ---
 

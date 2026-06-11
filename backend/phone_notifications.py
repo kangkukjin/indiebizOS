@@ -6,6 +6,7 @@
 인가된 폰 신원: data/phone_agent.json 의 pubkey(들). 그 외 발신자 DM 은 무시.
 """
 import json
+import os
 import sqlite3
 import threading
 import time
@@ -156,8 +157,58 @@ def recent_steps(limit: int = 30) -> List[Dict]:
     return [dict(zip(cols, r)) for r in rows]
 
 
+# === M3 하드웨어 다리: 폰 로컬 캡처 (Nostr 왕복 없이) ===
+# 폰 프로파일에선 NotificationCaptureService(LocalSignals)가 적은 app-private JSONL 을
+# 직접 읽는다. filesDir/signals/notifications.jsonl = dirname(INDIEBIZ_BASE_PATH)/signals/.
+def _local_signals_path() -> Optional[str]:
+    base = os.environ.get("INDIEBIZ_BASE_PATH")
+    if not base:
+        return None
+    return os.path.join(os.path.dirname(base), "signals", "notifications.jsonl")
+
+
+def _recent_local(limit: int, pkg: Optional[str]) -> List[Dict]:
+    path = _local_signals_path()
+    items: List[Dict] = []
+    if not path or not os.path.exists(path):
+        return items
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    d = json.loads(line)
+                except Exception:
+                    continue
+                if d.get("type") and d.get("type") != "notification":
+                    continue
+                if pkg and d.get("pkg") != pkg:
+                    continue
+                ts = d.get("posted_at") or d.get("received_at") or 0
+                items.append({
+                    "event_id": f"{d.get('pkg','')}:{ts}:{(d.get('title') or '')[:24]}",
+                    "sender": "phone-local",
+                    "pkg": d.get("pkg"),
+                    "title": d.get("title"),
+                    "body": d.get("text") or d.get("body"),
+                    "posted_at": ts,
+                    "received_at": ts,
+                })
+    except Exception as e:
+        print(f"[phone_notifications] 로컬 읽기 실패: {e}")
+        return []
+    items.sort(key=lambda r: _to_ms(r.get("posted_at")), reverse=True)
+    return items[:limit]
+
+
 def recent(limit: int = 30, pkg: Optional[str] = None) -> List[Dict]:
-    """최근 폰 알림(시간 내림차순). 시스템 AI 대화 참조용."""
+    """최근 폰 알림(시간 내림차순). 시스템 AI 대화 참조용.
+
+    폰 프로파일(INDIEBIZ_PROFILE=phone)=로컬 JSONL 직접 읽기(M3). PC=SQLite(Nostr 수신분)."""
+    if os.environ.get("INDIEBIZ_PROFILE") == "phone":
+        return _recent_local(limit, pkg)
     conn = _conn()
     q = "SELECT event_id, sender, pkg, title, body, posted_at, received_at FROM notifications"
     args: list = []

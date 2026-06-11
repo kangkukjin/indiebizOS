@@ -16,6 +16,27 @@
         - 가디언
         - guardian
         - world news
+        app:
+          icon: 📰
+          name: 신문
+          order: 7
+          note: 키워드별 최신 뉴스를 모아 HTML 신문을 만들어 "띄우기"로 봅니다.
+          inputs:
+          - key: kw
+            type: text
+            default: 'AI, 경제, 부동산'
+            placeholder: 뉴스 키워드 (쉼표 구분)
+            required: true
+          action: '[engines:newspaper]{keywords: "$kw"}'
+          view:
+          - type: list_action
+            from: '.'
+            icon: 📰
+            title: '{title}'
+            sub: '{message}'
+            button:
+              label: 🖥 띄우기
+              action: '[limbs:os_open]{path: "{file}"}'
       html_video:
         description: '완성된 HTML/CSS 씬을 MP4 영상으로 합성. scenes(HTML 배열) 또는 scene_dir(저장된 씬)로 호출. 주제→슬라이드 자동생성은 slide/lecture 사용. (가이드 html_video.md)'
         target_description: 'scenes(완전한 HTML 문서 배열, 각 {html, duration})을 직접 전달하거나 scene_dir(저장된 씬 디렉토리)을 지정. scene_dir이 있으면 렌더링 단계만 실행. narration_texts로 씬별 나레이션 추가.'

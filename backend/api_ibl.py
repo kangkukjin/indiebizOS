@@ -48,8 +48,15 @@ async def execute_ibl_code(req: IBLRequest):
             if p and p.exists():
                 project_path = str(p.resolve())
 
+        # 직접조작 표면(앱/수동 모드)은 소유자가 직접 모는 것 = 시스템 운영자.
+        # agent_id가 비어 있으면 system_ai 신원으로 채널 발신(메신저 작성·커뮤니티 게시)을 허용한다.
+        # (이 표면은 데스크탑=localhost 또는 원격=런처 인증 게이트 뒤에 있음.)
+        agent_id = req.agent_id
+        if not agent_id and req.project_id in ("앱모드", "수동모드"):
+            agent_id = "system_ai"
+
         from system_tools import _execute_ibl_unified
-        result = _execute_ibl_unified({"code": req.code}, project_path, agent_id=req.agent_id)
+        result = _execute_ibl_unified({"code": req.code}, project_path, agent_id=agent_id)
 
         # 결과가 str이면 JSON 파싱 시도. 실패 시 plain text로 wrap.
         # (일부 IBL 액션은 JSON이 아닌 평문/markdown/빈문자열을 반환)

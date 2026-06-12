@@ -72,6 +72,26 @@ Nostr 키는 IndieNet identity와 연동 가능:
 - 해시태그별 게시글 분리 조회
 - 기본 해시태그: `IndieNet`
 
+### 메신저·커뮤니티 앱 (IBL 앱모드 계기, 2026-06-12)
+이웃 메시징과 IndieNet 커뮤니티는 런처 버튼이 아니라 **IBL 액션 위의 앱모드 계기**로 제공된다
+(데스크탑·원격·폰 전 표면 자동 등장). 메시지/글 **내용 동기화는 릴레이가 진실원**이라 폰·PC가
+같은 키로 같은 릴레이를 구독하면 자동으로 일치(주소록 메타데이터 reconcile은 후속 과제).
+- **메신저**(instrument `messenger`, 💬): `[others:messages]{op:"inbox"}`(대화 목록) →
+  `{op:"thread", neighbor_id|pubkey}`(스레드, 채팅 버블) → 작성바가 `[others:channel_send]`로 답장.
+  **DM 통합**: business.db(다채널 이웃·양방향) + dms.db(IndieNet Nostr DM)를 Nostr 이벤트 id로
+  dedupe해 합침 — 비이웃 npub도 대화로 표시(pubkey 라우팅). 폰 컴패니언 텔레메트리(알림/위치/걸음)는 제외.
+- **커뮤니티**(instrument `community`, 🌐): `[others:feed]{op:"read"/"post"}`(피드·게시) +
+  `[others:board]{op:"list"/"create"/"switch"}`(게시판) + `[others:nostr]{op:"profile"/"rename"/"relays"/
+  "import_key"/"reset_identity"}`(내 계정 탭 — 신원·릴레이). IndieNet(Nostr) 기반.
+- **옛 IndieNet 전용 창 교체(2026-06-12, 버튼은 유지)**: 위 계기들이 피드·게시판·DM·신원·릴레이를
+  전부 덮으므로 옛 bespoke IndieNet.tsx 창은 제거. 런처 '커뮤니티'(Globe) 버튼은 유지하되, 표면 무관하게
+  전용 창(`#/community`, CommunityInstrumentView)으로 IBL 커뮤니티 계기를 그대로 띄운다 — 진입 통로는
+  보존하고 내용만 단일 진실 소스(/launcher/instruments)로 교체. (비즈니스 창은 IBL 미커버라 유지.)
+- 렌더 어휘 확장: `thread`(좌/우 버블) view 프리미티브 + `compose`(하단 작성바) — 데스크탑
+  `GenericInstrument.tsx`와 원격 `api_launcher_web.py` HTML이 같은 선언을 해석.
+- 발신 신원: 앱/수동 표면(`앱모드`/`수동모드` 프로젝트)의 IBL 실행은 `agent_id=system_ai`로
+  기본 설정(소유자=시스템 운영자) → 작성바 전송·게시가 자기 계정으로 동작.
+
 ---
 
 ## 핵심 컴포넌트
@@ -353,25 +373,13 @@ agents:
 - `POST /business/messages/{id}/processed` - 처리 완료
 - `POST /business/messages/{id}/replied` - 응답 완료
 
-### IndieNet
-- `GET /indienet/status` - 상태 조회
-- `GET /indienet/identity` - ID 조회
-- `PUT /indienet/identity/display-name` - 표시 이름 변경
-- `POST /indienet/identity/import` - 외부 nsec 키 가져오기
-- `POST /indienet/identity/reset` - ID 초기화
-- `GET /indienet/settings` - 설정 조회
-- `PUT /indienet/settings` - 설정 변경 (릴레이, 자동 새로고침 등)
-- `GET /indienet/posts` - 게시글 조회
-- `POST /indienet/posts` - 글 게시
-- `GET /indienet/user/{pubkey}` - 사용자 정보 조회
-- `GET /indienet/dms` - DM 목록 조회
-- `POST /indienet/dms` - DM 전송
-- `GET /indienet/boards` - 보드 목록 조회
-- `POST /indienet/boards` - 새 보드 생성
-- `DELETE /indienet/boards/{hashtag}` - 보드 삭제
-- `PUT /indienet/boards/active` - 활성 보드 설정
-- `GET /indienet/boards/{hashtag}/posts` - 보드 게시글 조회
-- `POST /indienet/boards/post` - 보드에 글 게시
+### IndieNet (커뮤니티/메신저)
+**전용 REST(`/indienet/*`)는 제거됨** (api_indienet.py 삭제). 커뮤니티·DM·신원은 모두 IBL 계기로 접근:
+- 피드: `[others:feed]{op: list/read/post}`
+- 보드: `[others:board]{op: list/create/switch}`
+- DM/메신저: `[others:messages]{op: inbox/thread}` + `[others:channel_send]`
+- 신원·릴레이: `[others:nostr]{op: profile/rename/relays/import_key/reset_identity}`
+- 코어 모듈 `indienet.py`(채널 엔진·폴러가 사용)는 유지. Nostr DM은 NIP-17(gift-wrap) — channel_poller가 전 릴레이 멀티 구독으로 실시간 수신.
 
 ---
 
@@ -392,4 +400,4 @@ agents:
 4. **Nostr 키 관리**: nsec는 채널 설정 또는 IndieNet에서 관리
 
 ---
-*마지막 업데이트: 2026-06-10 — Nostr DM NIP-17 전환(nip44/nip17 모듈, 전 릴레이 fan-out 수신) + 폰 컴패니언 피드(한방향 센서) 추가. 이전: 2026-04-05 (auto_response.md 통합)*
+*마지막 업데이트: 2026-06-12 — IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신(channel_poller 전 릴레이 구독) + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05 (auto_response.md 통합)*

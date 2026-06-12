@@ -285,7 +285,6 @@ from api_system_ai import router as system_ai_router
 from api_agents import router as agents_router, init_manager as init_agents_manager
 from api_conversations import router as conversations_router, init_manager as init_conversations_manager
 from api_websocket import router as websocket_router, init_manager as init_websocket_manager
-from api_indienet import router as indienet_router
 from api_packages import router as packages_router
 from api_scheduler import router as scheduler_router
 from api_notifications import router as notifications_router
@@ -326,7 +325,6 @@ app.include_router(system_ai_router, tags=["system-ai"])
 app.include_router(agents_router, tags=["agents"])
 app.include_router(conversations_router, tags=["conversations"])
 app.include_router(websocket_router, tags=["websocket"])
-app.include_router(indienet_router, tags=["indienet"])
 app.include_router(packages_router, tags=["packages"])
 app.include_router(scheduler_router, tags=["scheduler"])
 app.include_router(notifications_router, tags=["notifications"])

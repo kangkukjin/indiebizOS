@@ -31,7 +31,7 @@ python scripts/build_ibl_nodes.py
 
 액션 정의에 `app:{icon,name,order,inputs,action,view,…}` 블록을 달면 그 액션이
 데스크탑·원격 런처의 **앱 모드 계기(GUI)**로 자동 등장한다 (`GET /launcher/instruments`가 파생).
-정합성은 `--check`의 `validate_app_blocks`가 검증한다 (참조 액션 실존·$key↔inputs·view 어휘 7종·계기 그룹).
+정합성은 `--check`의 `validate_app_blocks`가 검증한다 (참조 액션 실존·$key↔inputs·view 어휘 10종(metric/kv/kv_list/card_list/image_grid/sparkline/list_action/thread/form/editable_list)+보조어휘(form.actions·compose.channels·master_detail)·계기 그룹).
 어휘 명세: `docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md`, 요약: `data/system_docs/ibl.md`의 "앱 표면 노출" 절.
 
 ## 선택 필드: `runs_on` (어디서 도는가 — 폰 네이티브 #3)

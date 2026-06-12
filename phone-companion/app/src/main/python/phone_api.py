@@ -17,7 +17,7 @@ import json
 import asyncio
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Body
 from fastapi.responses import HTMLResponse, JSONResponse
 import uvicorn
 
@@ -171,6 +171,166 @@ def _list_or_empty(r, default):
     if r is None or r == "error" or getattr(r, "status_code", 0) != 200:
         return JSONResponse(default)
     return _relay(r)
+
+
+# === 분산 IBL: business.db(주소록 메타데이터) 폰↔맥 합집합 동기화 ===
+# 폰이 자기 business.db 를 갖고 작동(자급) + 맥 연결 시 합집합 머지(LWW+tombstone).
+# 자동응답=PC전용·메시지내용=릴레이수렴이라, 폰 DB 머지 대상은 주소록 메타데이터뿐.
+def _phone_bm():
+    """폰 로컬 business.db (영속 userdata 경로 — BaseBundle 재추출에 안 지워짐).
+    최초 호출 시 생성+마이그레이션(uuid/deleted 등 동기화 스키마)."""
+    from pathlib import Path
+    from business_manager import BusinessManager
+    userdata = os.path.join(os.path.dirname(_base), "userdata")
+    os.makedirs(userdata, exist_ok=True)
+    return BusinessManager(db_path=Path(os.path.join(userdata, "business.db")))
+
+
+async def _mac_post_json(path, payload, *, timeout: float = 60.0):
+    """맥 백엔드에 JSON POST(폰이 originator). 401/403 이면 재로그인 후 재시도. 실패 None."""
+    if not _mac_url:
+        return None
+
+    async def _send():
+        headers = {"content-type": "application/json"}
+        if _mac_session:
+            headers["X-Launcher-Session"] = _mac_session
+        async with httpx.AsyncClient(timeout=timeout) as c:
+            return await c.post(f"{_mac_url}{path}", json=payload, headers=headers)
+
+    try:
+        r = await _send()
+        if r.status_code in (401, 403) and _mac_password:
+            if await _mac_login():
+                r = await _send()
+        return r
+    except Exception as e:
+        print(f"[phone_api] 맥 POST 오류 {path}: {e}")
+        return None
+
+
+@app.post("/business/sync/run")
+async def business_sync_run():
+    """폰↔맥 business.db 양방향 합집합 동기화(1왕복): 폰 export → 맥 /business/sync/merge
+    (맥이 폰 데이터 머지 후 자기 스냅샷 반환) → 폰이 그 스냅샷을 머지. 맥 미설정/미도달이면 graceful."""
+    try:
+        from business_sync import export_business_db, merge_business_db
+        bm = _phone_bm()
+        phone_export = export_business_db(bm)
+        r = await _mac_post_json("/business/sync/merge", {"data": phone_export}, timeout=60.0)
+        if r is None or getattr(r, "status_code", 0) != 200:
+            return JSONResponse({"success": False, "error": "맥 미도달/인증실패",
+                                 "status": getattr(r, "status_code", None)})
+        mac_payload = r.json() or {}
+        stats = merge_business_db(bm, mac_payload.get("data") or {})
+        return JSONResponse({"success": True, "merged_from_mac": stats,
+                             "mac_received_from_phone": mac_payload.get("stats")})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"success": False, "error": str(e)})
+
+
+@app.get("/business/sync/peek")
+async def business_sync_peek():
+    """폰 로컬 business.db 점검(테스트용) — 이웃·비즈니스 이름·연락처 수."""
+    try:
+        bm = _phone_bm()
+        neighbors = bm.get_neighbors()
+        return {"neighbors": [n["name"] for n in neighbors],
+                "businesses": [b["name"] for b in bm.get_businesses()],
+                "contacts": sum(len(bm.get_contacts(n["id"])) for n in neighbors)}
+    except Exception as e:
+        return JSONResponse({"error": str(e)})
+
+
+@app.get("/business/sync/export")
+async def business_sync_export():
+    """폰 business.db 동기화 스냅샷(tombstone 포함) — 맥 [self:phone_sync]가 adb 로 가져감."""
+    try:
+        from business_sync import export_business_db
+        return {"success": True, "data": export_business_db(_phone_bm())}
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
+
+
+@app.post("/business/sync/merge")
+async def business_sync_merge(payload: dict = Body(...)):
+    """맥 export 를 폰 business.db 에 합집합 머지(LWW+tombstone). 맥 [self:phone_sync]가 호출."""
+    try:
+        from business_sync import export_business_db, merge_business_db
+        bm = _phone_bm()
+        remote = payload.get("data") if isinstance(payload, dict) and "data" in payload else payload
+        if not isinstance(remote, dict):
+            return JSONResponse({"success": False, "error": "payload dict 필요"})
+        stats = merge_business_db(bm, remote)
+        return {"success": True, "stats": stats, "data": export_business_db(bm)}
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
+
+
+# === 폰 입력 기능: 이웃(주소록) 추가 — 폰 자급 + phone→맥 동기화의 입력측 ===
+@app.post("/business/neighbor/add")
+async def business_neighbor_add(payload: dict = Body(...)):
+    """폰 로컬 business.db 에 이웃 추가(+선택 연락처). 다음 [self:phone_sync] 때 맥으로 합쳐짐."""
+    try:
+        bm = _phone_bm()
+        name = (payload.get("name") or "").strip()
+        if not name:
+            return JSONResponse({"success": False, "error": "이름을 입력하세요."})
+        nb = bm.create_neighbor(name=name, info_level=int(payload.get("info_level") or 0))
+        ct, cv = (payload.get("contact_type") or "").strip(), (payload.get("contact_value") or "").strip()
+        if ct and cv:
+            bm.add_contact(nb["id"], ct, cv)
+        return {"success": True, "neighbor": nb,
+                "message": f"'{name}' 추가됨. 맥에서 '폰 동기화'하면 PC로 반영됩니다."}
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
+
+
+@app.get("/business/neighbor/form")
+def business_neighbor_form():
+    """폰에서 이웃을 추가하는 미니 입력 폼(자급형). 추가 후 [self:phone_sync]로 맥에 합쳐짐."""
+    html = """<!doctype html><html lang=ko><head><meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<title>이웃 추가</title><style>
+body{font-family:-apple-system,sans-serif;background:#1a1a1a;color:#eee;margin:0;padding:20px}
+h1{font-size:20px;margin:0 0 4px} .sub{color:#999;font-size:13px;margin-bottom:20px}
+label{display:block;margin:14px 0 4px;font-size:13px;color:#bbb}
+input,select{width:100%;box-sizing:border-box;padding:11px;background:#2a2a2a;border:1px solid #444;border-radius:8px;color:#eee;font-size:15px}
+.row{display:flex;gap:8px} .row>*{flex:1}
+button{width:100%;margin-top:22px;padding:13px;background:#D97706;border:0;border-radius:8px;color:#fff;font-size:16px;font-weight:600}
+#msg{margin-top:16px;padding:12px;border-radius:8px;font-size:14px;display:none}
+.ok{background:#14532d;color:#bbf7d0} .err{background:#5a1717;color:#fecaca}
+</style></head><body>
+<h1>이웃 추가</h1><div class=sub>폰 주소록에 저장 → 맥에서 "폰 동기화"하면 PC로 합쳐집니다.</div>
+<label>이름 *</label><input id=name placeholder="홍길동" autofocus>
+<label>정보 레벨</label>
+<select id=level><option value=0>L0 공개</option><option value=1>L1</option><option value=2>L2</option><option value=3>L3</option><option value=4>L4 신뢰</option></select>
+<div class=row>
+  <div><label>연락처 종류</label><select id=ctype><option value="">(없음)</option><option value=gmail>이메일</option><option value=nostr>Nostr</option><option value=phone>전화</option><option value=kakao>카카오</option></select></div>
+  <div><label>연락처 값</label><input id=cvalue placeholder="선택"></div>
+</div>
+<button onclick=add()>추가</button>
+<div id=msg></div>
+<script>
+async function add(){
+  const name=document.getElementById('name').value.trim();
+  const m=document.getElementById('msg');
+  if(!name){ m.className='err'; m.style.display='block'; m.textContent='이름을 입력하세요.'; return; }
+  const body={name, info_level:+document.getElementById('level').value,
+    contact_type:document.getElementById('ctype').value, contact_value:document.getElementById('cvalue').value.trim()};
+  try{
+    const r=await fetch('/business/neighbor/add',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    m.style.display='block';
+    if(d.success){ m.className='ok'; m.textContent=d.message||'추가됨';
+      document.getElementById('name').value=''; document.getElementById('cvalue').value=''; }
+    else { m.className='err'; m.textContent=d.error||'실패'; }
+  }catch(e){ m.className='err'; m.style.display='block'; m.textContent='오류: '+e; }
+}
+</script></body></html>"""
+    return HTMLResponse(html)
 
 
 @app.get("/projects")

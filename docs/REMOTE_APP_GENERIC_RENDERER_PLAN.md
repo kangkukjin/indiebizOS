@@ -2,6 +2,66 @@
 
 > 작성: 2026-06-11 · 상태: **전 단계 완료(2026-06-11)** — 1·2단계 + 데스크탑 흡수 + 승격 1·2차(11계기). "모든 표면이 한 정의" 달성.
 
+## ✅ 비즈니스 창 은퇴 → IBL 비즈니스 멀티모드 계기 (2026-06-12)
+
+- 옛 `BusinessManager.tsx`(930줄) **삭제**, `#/business` 전용창이 `BusinessInstrumentView`(id:business 계기)를 렌더. 비즈니스 버튼·IPC·창 유지(메신저/커뮤니티 선례). `self:business` 액션 `app:{instrument:business, modes:[...]}` 4탭:
+  - 비즈니스: card_list(filter 레벨필터+검색+＋추가, master_detail) → 드릴 탭(정보 form[+삭제 danger] / 아이템 editable_list)
+  - 공개문서·근무지침: card_list → 드릴 form(레벨별 편집) + (문서)↻재생성 버튼
+  - 자동응답: kv 상태 + 켜기/끄기 버튼(others:auto_response)
+- 렌더러 어휘 +**`button.refresh`**: mode 버튼에 `refresh: true` 면 실행 후 모드 재조회(토글/재생성 즉시 반영). 두 렌더러(GenericInstrument.fireButton·api_launcher_web.fireButton). 핸들러는 표시용 필드(state_label/summary) 반환해 kv가 그대로 출력(불리언 직접표시·opt 필터 한계 회피).
+- 검증: build --check(4탭 app 정합)+tsc+브라우저 실렌더(드릴·editable_list·토글 refresh 끄기↔켜기). 액션 122 유지(렌더러/app 어휘라 해마 불변).
+- (갭 해소 ↓)
+
+## ✅ images 필드 프리미티브 + 아이템 풀편집 모드 (2026-06-12)
+
+- 위 갭(이미지 업로드·아이템 인라인 수정) 해소. **`images` form 필드타입**(두 렌더러): 썸네일(`/image?path=` 전 표면) + 제거(어디서나) + 추가(데스크탑 window.electron.selectImages 만 — 본질적 표면별). **form save 와 분리**: 업로드/제거 즉시 `add_action`/`remove_action`($path 런타임 주입) 으로 영속(JSON 배열 $치환 불가 회피).
+- 백엔드 `business_item_op` +add_image(소스→business_images 복사+attachment_path JSON 추가)/remove_image(제거+파일삭제). 아이템 모드(셀렉터→card_list→드릴 form[제목/설명/images]+삭제)로 BusinessManager 아이템 모달 완전 대체.
+- 검증: build --check(images 필드타입·add/remove_image 액션존재·$path 로컬키)+tsc+원격 node --check+`/ibl/execute` add/remove_image 종단(복사·경로·파일 검증)+브라우저(드릴 form). 데스크탑 실 파일선택은 Electron 전용이라 백엔드만 검증.
+
+## ✅ 이웃관리창·빠른연락처 은퇴 → 메신저 전용 창 (2026-06-12)
+
+- 메신저 계기가 이웃관리 CRM을 전부 덮으므로 `NeighborManagerDialog.tsx`(1053줄)·`ContactsDialog.tsx` **삭제**. 커뮤니티 선례와 동일 패턴: 진입점 보존 + 내용을 IBL 계기로 교체.
+- `MessengerInstrumentView.tsx`(CommunityInstrumentView 복제 — `id:messenger` 계기를 GenericInstrument 단독 렌더) + App.tsx `#/messenger` + electron `createMessengerWindow`/`open-messenger-window`/preload/types(900×760, 브라우저 hash 폴백).
+- 재배선: 런처 '연락처' 버튼·비즈니스 창 '이웃관리' 버튼 → `openMessengerWindow()`. 비즈니스 창은 IBL 미커버라 유지(은퇴 전제=business CRUD/문서 IBL화).
+- 검증: tsc(잔여참조 0)·electron node --check·브라우저 `#/messenger` 실렌더. IPC는 electron 재시작 시(브라우저 폴백 즉시).
+
+## ✅ 이웃관리창 완전 대체 마무리 — form 보조 액션 + compose 채널 선택 (2026-06-12)
+
+- **`form.actions`**(보조 액션, 저장 외 부가 동작): `actions:[{label(템플릿), action, style?:danger, confirm?, back?}]`. 저장 버튼 옆에 렌더, **드릴 데이터 컨텍스트로 실행**(form 값 아님). `back:true`면 성공 후 새로고침 대신 목록 복귀(상세가 사라지는 삭제용). 메신저 '이웃 정보' 탭에 ⭐즐겨찾기 토글(`[others:neighbor]{op:favorite}`) + 이웃 삭제(danger·confirm·back, `op:delete`) 노출. 즐겨찾기/삭제 액션은 이미 있었으나 UI 미노출이던 것을 선언으로 연결.
+- **`compose.channels`**(발신 채널 선택): `channels:{from(연락처 배열 필드), type(→channel_type), value(→to), sendable?:[gmail,nostr]}`. 드릴 데이터 연락처에서 발신 가능한 채널만 골라 ≥2개면 작성바에 드롭다운, 1개(또는 0=primary 폴백)면 숨김. 선택값을 action의 `$channel_type`/`$to`로 주입. 메신저 compose가 `{channel}`/`{to}`(primary 고정) → `$channel_type`/`$to`(다채널 선택)로 전환. 단일 채널 이웃은 폴백이 primary와 동일 → 회귀 없음.
+- **dispatch `opts.back`**(두 렌더러): 성공 후 `refreshCurrent` 대신 목록 복귀(데스크탑=`setDrill(null)`, 원격=`runMode()`로 리스트 재조회).
+- **검증 합류**: `_check_compose_channels`(from/type/value 필수·sendable 리스트) + `_block_local_keys`가 channels 있으면 `channel_type`/`to`를 $key 검증에 합류 + form.actions(label·action 필수·style=danger만) `_app_check_view`. 발신 가능 채널은 gmail/nostr뿐(`_primary_channel`·inbox 동일) → sendable로 정직하게 제한.
+- 검증: build --check + tsc + 원격 JS node --check + 데스크탑 실브라우저(즐겨찾기 토글 0→1→0 종단 동작·3버튼 렌더·danger 스타일).
+
+## ✅ 반응형 master-detail (카카오톡식 메신저) (2026-06-12)
+
+- card_list `master_detail: true` → **반응형**: 넓은 화면(≥760px)=2분할(리스트 좌 고정 + 상세 우, **선택해도 리스트 유지**), 좁은 화면=드릴(리스트→선택→상세 전체화면→'목록' 뒤로). 단일 선언이 PC/폰 공통.
+- 구현: GenericInstrument.tsx — `isSplit` 시 `flex-col md:flex-row`, 리스트 패널 `drill? 'hidden md:block':'block'`, 상세 패널 `drill?'block':'hidden md:block'`, 상세 안에 탭+view+compose. api_launcher_web.py — `.mdsplit/.mdlist/.mddetail` CSS(@media 760px) + `SPLIT`/`LIST` 컨텍스트(리스트는 LIST, 상세는 VIEW_CTX) + rowDrill이 `#mdDetail`에 렌더 + `has-detail` 토글(좁은 화면 list↔detail) + `mdBack()`.
+- 배지: `badge` 필드(핸들러가 'L{레벨}'/'쪽지' 계산 — opt 필터가 L0을 빈값 처리하던 문제 회피). 대화 상단 `metric` 헤더(이름+배지).
+- 함정: 2분할 레이아웃은 폰에 안 맞음 → 반응형으로 좁으면 드릴. 옛 이웃관리창(NeighborManagerDialog)이 PC에서 선택 시 리스트를 없애던 게 버그였음.
+- 검증: 두 렌더러 실브라우저(1120px 2분할 / 375px 드릴) 동치.
+
+## ✅ 편집 어휘(form/editable_list/tabs) — 메신저 CRM 풍부화 (2026-06-12)
+
+- **결정**: 이웃관리 CRM 수준 메신저를 데스크탑 전용 OVERRIDES로 빼지 않고 **선언형 어휘를 키워 전 표면**으로(사용자 지시: "표현 못 하면 표현 가능하게"). 함의: form 류는 메신저뿐 아니라 설정·프로필 등 광범위 재사용 → 죽은 스캐폴드 아닌 "몸" 투자.
+- **view 프리미티브 10종(8 → +form, +editable_list):**
+  - **`form`**: 편집 필드 `fields:[{key,label,type:text|select|toggle|textarea,value(템플릿),options}]` + `action`(저장) + `button`. value는 데이터에서 프리필, 저장 시 `$field`+`{드릴데이터}` 치환→실행→새로고침.
+  - **`editable_list`**: `from`(행)+`display`(행 템플릿)+`delete_action`(행 {field})+`add:{fields,action,button}`. 연락처 CRUD.
+- **`item_click.tabs`**: 드릴 상세 탭 `[{name,view,compose?}]` — 한 드릴 액션 데이터를 탭별 view로(대화↔이웃정보). `view`(단일)와 배타.
+- **thread `status`**: 메시지 상태 글리프(sent ✓/pending ⏳/failed ⚠).
+- **범용 `dispatch`**(두 렌더러): `$field`+`{path}`(rowContext 기본 드릴 데이터) 치환→실행→`refreshCurrent`(드릴 액션 재실행 재렌더 / 모드 재실행). compose·form·editable·favorite 모두 이걸로.
+- **검증 함정**: `form.button`은 라벨 문자열(list_action button={action}과 충돌 — `_app_check_view` button 검사에서 form/editable 제외). `_block_local_keys`가 form/editable/add 필드 키를 $key 검증에 합류.
+- 검증: build --check + tsc + **두 렌더러 실브라우저**(데스크탑 React :3000 / 원격 HTML :8765/launcher/app, localhost 무인증) — 탭·폼·연락처·편집 사이클 전부 동치 확인. 액션 117.
+
+## ✅ 메신저·커뮤니티 계기 + 채팅 어휘 확장 (2026-06-12)
+
+- **view 프리미티브 8종(7종 → +thread):** `thread`(좌/우 채팅 버블 — `from`/`text` 필수, `mine`(truthy=내 메시지·우측)/`time`/`meta` 옵션). 메신저 스레드·대화 렌더용. `--check`의 `_app_check_view`가 from/text 검증.
+- **`compose`(하단 작성바, 진짜 어휘 확장):** `app.compose` 또는 `item_click.compose` = `{placeholder, action, button}`. `$text`=작성 내용, 드릴이면 `{field}`=클릭 행 필드. **전송 후 현재 뷰 자동 새로고침**(드릴=드릴 액션 재실행, 모드=mode.action 재실행). 암묵 입력 키 `text` 도입(`_block_has_compose`). webapp(renderComposeBar/composeSend) + GenericInstrument(composeSend) 동시 구현.
+- **메신저 승격**(instrument `messenger`): `[others:messages]` driver→handler+ops(inbox/thread). inbox=card_list → thread 드릴(버블)+compose(=channel_send 답장).
+- **커뮤니티 승격**(instrument `community`): `[others:feed]{op:read/post}`+`[others:board]{op:list/create/switch}` 신규(channel_engine, indienet.py 재사용). 피드(card_list+compose)·게시판(list_action+전환·생성) 2탭.
+- **발신 신원**: 앱/수동 표면(`앱모드`/`수동모드`) IBL 실행은 `agent_id=system_ai` 기본(api_ibl) → 작성바 전송/게시가 소유자 계정으로 동작.
+- 검증: `--check`(app 정합성+thread/compose) + tsc + 데스크탑 실브라우저(vite:3000) — 메신저 inbox→스레드 버블→작성바, 커뮤니티 피드+작성, 게시판 list_action+전환 실렌더. 원격 HTML JS `node --check`. 해마 12용례+rebuild_index 2375.
+
 ## ✅ 승격 2차 + select 어휘 확장 (2026-06-11)
 
 - **select 어휘 2종 추가(진짜 어휘 확장, 도메인 중립):**

@@ -65,7 +65,7 @@
               default: 삼성전자
               placeholder: '회사명(한글)·티커 (예: 삼성전자, AAPL)'
               chips: [삼성전자, SK하이닉스, AAPL, NVDA, TSLA]
-            periods:
+            filter:
               key: period
               items:
               - {label: 5일, value: 5d, default: true}
@@ -100,7 +100,7 @@
               default: BTC
               placeholder: 코인 심볼 (BTC, ETH, SOL …)
               chips: [BTC, ETH, SOL, XRP, DOGE]
-            periods:
+            filter:
               key: days
               items:
               - {label: 7일, value: 7, default: true}
@@ -140,7 +140,7 @@
               - {value: 'BZ=F', label: 브렌트유}
               - {value: 'NG=F', label: 천연가스}
               - {value: 'HG=F', label: 구리}
-            periods:
+            filter:
               key: period
               items:
               - {label: 5일, value: 5d, default: true}

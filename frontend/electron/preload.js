@@ -28,9 +28,13 @@ contextBridge.exposeInMainWorld('electron', {
   openFolderWindow: (folderId, folderName) =>
     ipcRenderer.invoke('open-folder-window', folderId, folderName),
 
-  // IndieNet 창 열기
-  openIndieNetWindow: () =>
-    ipcRenderer.invoke('open-indienet-window'),
+  // 커뮤니티 창 열기 (옛 IndieNet — IBL 커뮤니티 계기를 전용 창으로)
+  openCommunityWindow: () =>
+    ipcRenderer.invoke('open-community-window'),
+
+  // 메신저 창 열기 (옛 이웃관리·빠른 연락처 — IBL 메신저 계기를 전용 창으로)
+  openMessengerWindow: () =>
+    ipcRenderer.invoke('open-messenger-window'),
 
   // 시스템 AI 창 열기
   openSystemAIWindow: () =>

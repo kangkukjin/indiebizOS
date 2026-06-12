@@ -1036,3 +1036,147 @@
 - 구현: PhoneActions.composeSms(to,text)/dial(number) @JvmStatic + handler _phone_act sms/call 분기({staged:true}) + tool.json enum/to param + src limbs.yaml ops.values. 액션 수 불변(phone op만 8→10... 실제 op 6→8).
 - 해마: sms/call 용례 11개(distilled 277→288)+rebuild_index 2367. 4 쿼리 rank1.
 - 검증(A36 실기기): sms→삼성 메시지 작성창(ConversationComposer) 수신자·본문 채워 포그라운드 진입, call→삼성 다이얼러(DialtactsActivity) 번호 채워 포그라운드 진입. 둘 다 {staged:true}, 자율 전송/발신 없음. 미커밋. 카메라는 후속(미선택).
+
+## 2026-06-12 — 메신저·커뮤니티 앱을 IBL 앱모드 계기로 재구축
+- 배경: 이웃관리창(메신저)·IndieNet(커뮤니티)이 IBL 우회 별도 프로그램(직접 REST)이라 폰·원격 표면에 미등장 + 앱마다 bespoke 동기화 필요. → app: 블록 위의 앱모드 계기로 재구축(전 표면 자동 등장, 내용 동기화는 릴레이가 진실원).
+- 렌더러 확장(전 표면 공통 어휘): view 프리미티브 `thread`(채팅 버블) 신설 + `compose`(하단 작성바, 전송 후 현재 뷰 새로고침). 데스크탑 GenericInstrument.tsx·원격 api_launcher_web.py HTML·build_ibl_nodes.py(APP_VIEW_TYPES/APP_KEYS/검증) 세 곳 동기.
+- 메신저: `[others:messages]` 를 driver:sqlite → router:handler+ops(thread 기본/inbox)로 전환(명명 헌법: 변형=op). business 패키지 messages_op 핸들러(inbox=neighbors⋈messages 조인) + tool.json. messenger 계기(목록→스레드→작성바=channel_send).
+- 커뮤니티: `[others:feed]{op:read/post}`·`[others:board]{op:list/create/switch}` 신규(router:channel_engine, indienet.py 재사용). community 계기(피드+작성·게시판 탭).
+- 신원: 앱/수동 표면 IBL 실행은 agent_id=system_ai 기본(소유자=시스템 운영자) → 작성바 전송/게시 동작. (api_ibl.execute_ibl_code)
+- 액션 112→114. 해마 용례 12개 추가(messenger/community)+rebuild_index 2375. build --check 통과. 데스크탑 실브라우저(vite:3000) 검증: inbox 카드→스레드 버블→작성바, 커뮤니티 피드+작성, 게시판 list_action+전환. 원격 HTML JS 문법 검증.
+- 후속: 주소록 메타데이터 reconcile(폰 business.db 실재화 시) + 폰 네이티브 노출(PHONE_VERIFIED_PACKAGES에 business/indienet 등록). IndieNet Electron 창은 계기 검증 후 은퇴 검토.
+
+## 2026-06-12 (후속) — IndieNet 창 완전 대체 + 메신저 DM 통합 + 릴레이 정리
+- 릴레이 진단/정리: 사용자 "글 안 보임" 신고 → 릴레이별 직접 probe. 데이터 안전(캐시 글20·DM11, nos.lol에 글 생존). 죽은 릴레이 정리(nostr.wine 403 유료거부·nostr.band 타임아웃 제거, snort/nostr.mom/purplepag 추가). settings.relays + DEFAULT_RELAYS 갱신.
+- 단계1 메신저 DM 통합: [others:messages]가 business.db(다채널 이웃·양방향) + dms.db(IndieNet Nostr DM)를 Nostr 이벤트 id로 dedupe하며 통합. 비이웃 npub도 대화로(pubkey 라우팅). 폰 컴패니언 텔레메트리(알림/위치/걸음 JSON)는 _is_phone_feed로 제외. 실측: 안 보이던 인간 DM 8건 메신저에 복원.
+- 단계2 신원·설정 액션화: [others:nostr]{op:profile/rename/relays/import_key/reset_identity} 신규(channel_engine, indienet.identity 래핑). 커뮤니티 계기에 '내 계정' 탭(npub·표시이름·릴레이 + rename·릴레이초기화). import_key/reset_identity는 수동 모드.
+- 단계3 옛 IndieNet 전용 창 교체(버튼은 유지): 옛 IndieNet.tsx 컴포넌트 + #/indienet 라우트 + createIndieNetWindow 제거. 런처 버튼은 '커뮤니티'(Globe)로 유지 — 표면 무관하게 전용 창(#/community)으로 진입, 내용은 앱모드와 동일한 IBL 커뮤니티 계기(CommunityInstrumentView가 GenericInstrument 단독 렌더, 단일 진실 소스 /launcher/instruments). 옛 bespoke 창만 IBL 계기로 교체, 진입 버튼은 사용자 요청으로 보존. createCommunityWindow/open-community-window IPC/preload/types 신설. tsc/vite build 통과, 실브라우저 검증(버튼→전용 창→피드·게시판·내 계정·작성바·자기 글 정상). 비즈니스 창은 IBL 미커버라 유지.
+- 액션 114→115(others:nostr). api_indienet REST·api-indienet.ts는 잔존(무해, indienet.py 코어는 channel_engine이 사용).
+- IndieNet 브랜딩: 커뮤니티 계기 표시명을 '커뮤니티'→'IndieNet'(상표)로. 런처 버튼 라벨·앱모드 타일/헤더(매니페스트 name)·전용 창 상단 헤더(CommunityInstrumentView) 모두 IndieNet. 계기 id는 'community' 유지(내부 식별·라우팅 불변).
+
+## 2026-06-12 (후속2) — 메신저 풍부화: 이웃관리 CRM 수준을 선언형 전 표면으로
+- 동기: 사용자 지적 — "이웃관리 창(NeighborManagerDialog)이 진짜 메신저인데 지금 계기는 너무 단순하고 이웃 DB 구조(레벨/평점/연락처/CRUD)를 무시." + "표현 못 하면 표현 가능하게 어휘를 키우자(데스크탑 전용 escape hatch 거부)."
+- 선언형 렌더 어휘 확장(3곳 동기: GenericInstrument.tsx·api_launcher_web.py·build_ibl_nodes.py): view 프리미티브 `form`(편집 필드 text/select/toggle/textarea + 저장)·`editable_list`(행 표시+삭제+추가 폼) 신설(8→10종). drill `item_click.tabs`(한 액션 데이터를 탭별 view로 — 대화↔이웃정보). thread `status` 글리프. 범용 `dispatch`(=$field+{드릴데이터} 치환→실행→새로고침). _block_local_keys로 form/editable 필드 $key 검증 합류.
+- 백엔드: `[others:messages]` inbox/thread 메타 enrich(info_level/rating/favorite/info_share/메시지 status·processed·replied/연락처). inbox는 메시지 없는 이웃도 포함(즐겨찾기 먼저). `[others:neighbor]`(save/delete/favorite)·`[others:contact]`(add/update/delete) CRUD 신규(business 패키지 neighbor_op/contact_op, _OP_DISPATCHERS 표준).
+- 메신저 app 블록: 대화목록(즐겨찾기⭐·레벨·평점 배지)→드릴 탭[대화: thread(상태)+compose / 이웃정보: form(이름·레벨·평점·정보공유·메모·비즈니스문서) + 연락처 editable_list] + 이웃 추가(mode 입력+버튼).
+- 검증: build --check(form/editable/tabs 정합) + tsc + **두 렌더러 실브라우저** — 데스크탑 React(localhost:3000)·원격 HTML(localhost:8765/launcher/app, 로그인 불필요) 모두 탭·폼·연락처·편집 사이클(레벨 변경→저장→새로고침 반영) 확인. 콘솔 0. escape hatch 없이 단일 선언이 전 표면 풍부판. 액션 115→117. 테스트 편집 원복.
+
+## 2026-06-12 (후속3) — 메신저 카카오톡식 반응형 master-detail
+- 사용자 지시: "핵심은 이웃리스트→선택→대화(카톡식). PC는 2분할(리스트 좌+대화 우, 리스트가 사라지면 안 됨=이웃관리창 버그), 폰은 리스트→선택→대화→뒤로. 앱은 PC/폰 공통이면 반응형으로."
+- card_list `master_detail: true` 플래그 → 반응형 2분할/드릴(두 렌더러 CSS 브레이크포인트 760px): 넓으면 리스트 좌+상세 우 동시(선택해도 리스트 유지), 좁으면 리스트→선택→상세 전체화면→'목록' 뒤로. GenericInstrument.tsx(md: 반응형 클래스 + 상세 패널 분리) + api_launcher_web.py(.mdsplit/.mdlist/.mddetail CSS + SPLIT/LIST 컨텍스트 + rowDrill→#mdDetail + mdBack).
+- 메신저 보강: 레벨 항상 표시 배지(`badge`: 'L{레벨}' 이웃 / '쪽지' DM — opt 필터가 L0을 숨기던 문제 해결), 대화 상단 헤더(metric: 이름 + 배지·채널). inbox는 메시지 없는 이웃도 포함(즐겨찾기 먼저).
+- 검증: 두 렌더러 실브라우저 — 데스크탑 React(1120px 2분할: 선택 시 리스트 유지+우측 대화 / 375px 드릴: 전체화면+뒤로) + 원격 HTML(동일 동치). 콘솔 0, tsc/--check 통과. 단일 선언 app 블록이 PC/폰 공통 반응형.
+
+## 2026-06-12 (후속4) — 이웃관리창 완전 대체 마무리: form 보조 액션 + compose 채널 선택
+- `form.actions`(저장 외 보조 동작): `[{label,action,style?:danger,confirm?,back?}]`. 드릴 데이터 컨텍스트로 실행, back=true면 성공 후 목록 복귀(삭제용). 메신저 '이웃 정보' 탭에 ⭐즐겨찾기 토글(`[others:neighbor]{op:favorite}`)·이웃 삭제(danger·confirm·back, `op:delete`) 노출 — 액션은 있었으나 UI 미노출이던 것을 선언으로 연결.
+- `compose.channels`(발신 채널 선택): `{from,type,value,sendable?:[gmail,nostr]}`. 다채널 이웃이면 작성바에 채널 드롭다운(≥2), 단일/0이면 숨김+primary 폴백. 선택값→action `$channel_type`/`$to`. 메신저 compose가 primary 고정 → 다채널 선택으로. 발신 가능 채널은 gmail/nostr뿐이라 sendable로 정직하게 제한.
+- 두 렌더러(GenericInstrument.tsx·api_launcher_web.py) + 검증(build_ibl_nodes.py: `_check_compose_channels`·`_block_local_keys` channel_type/to·form.actions 검사) 세 곳 동기. dispatch `opts.back` 신설.
+- 검증: build --check(액션 117 유지·바이트 일치) + tsc + 원격 JS node --check + 데스크탑 실브라우저(즐겨찾기 토글 0→1→0 종단·3버튼 렌더·danger). 발송계는 실제 안 쏨(side effect).
+
+## 2026-06-12 (후속5) — 이웃관리창(NeighborManagerDialog)·빠른 연락처(ContactsDialog) 은퇴
+- 메신저 계기가 이웃관리 CRM 기능(대화·이웃정보 form·연락처 CRUD·즐겨찾기·삭제·다채널 발신)을 전부 덮으므로 옛 bespoke 다이얼로그 2종 은퇴. 커뮤니티 선례(IndieNet.tsx→CommunityInstrumentView) 그대로: **진입점(버튼) 보존 + 내용을 IBL 계기로 교체**.
+- 신설: `MessengerInstrumentView.tsx`(=/launcher/instruments 의 id:messenger 계기를 GenericInstrument 단독 렌더) + App.tsx `#/messenger` 라우트 + electron `createMessengerWindow`/`open-messenger-window` IPC/preload/types(전용 창 900×760, 브라우저는 hash 폴백).
+- 진입점 재배선: 런처 '연락처' 버튼(옛 ContactsDialog 팝업)·비즈니스 창 '이웃관리' 버튼(옛 NeighborManagerDialog) → 둘 다 `openMessengerWindow()`. 버튼·아이콘·위치는 그대로(은퇴=버튼 제거 아님, 내용 교체).
+- 삭제: `NeighborManagerDialog.tsx`(1053줄)·`ContactsDialog.tsx`. 비즈니스 창(BusinessManager)은 IBL 미커버라 유지(은퇴는 business CRUD/문서 IBL화=B 선행).
+- 검증: tsc 통과(잔여 참조 0) + electron main/preload node --check + 브라우저 `#/messenger` 실렌더(헤더·레벨필터·이웃추가·대화목록 gmail/nostr/쪽지). main 프로세스 변경이라 IPC는 electron 재시작 시 반영(브라우저 폴백은 즉시).
+
+## 2026-06-12 (후속6) — 비즈니스 도메인 IBL화 (4 엔티티 CRUD를 REST→IBL 어휘로)
+- 옛 비즈니스 창이 businesses/business_items/business_documents/work_guidelines 를 REST로만 다뤄 폰·앱·수동·에이전트가 못 건드림. 4 엔티티를 IBL op 액션으로 흡수:
+  - `self:business` — list(기본, level/search)/detail(+소속 아이템)/save(생성·수정)/delete(cascade)
+  - `self:business_item` — list(business_id)/detail/save/delete
+  - `self:business_document` — list/detail/update/**regenerate**(비즈니스·아이템 기반 레벨별 공개문서 자동생성)
+  - `self:work_guideline` — list/detail/update
+- 명명 헌법: 이웃=타자(`others`)와 달리 내 사업은 자기 데이터라 `self` 노드, group `business`. 단일 액션+CRUD op(소수의 명료한 액션+타이트한 op).
+- business 패키지 handler.py 에 op 디스패처 4종(15함수, `_OP_DISPATCHERS`/`_OP_DEFAULTS` 등록, business_manager 메서드 래핑) + tool.json 4 tool(op.enum/default) + self.yaml 4 액션. build --check 삼각 검증 통과(src↔tool.json↔handler AST). 액션 117→**121**(self 37→41).
+- 검증: `/packages/reload`(handler.py 편집 반영) 후 `/ibl/execute` 종단 — 임시 비즈니스로 save→detail→item save/list→regenerate→cascade delete→verify gone(비파괴, regenerate 잔여도 재실행으로 정리). 해마 합성 용례 34건(add_examples_batch + ibl_distilled 288→322) + rebuild_index 2375→2409 + 연상 검증(사업목록/문서재생성/상품추가/지침 1.000). fine-tune 재학습은 관례대로 후속(용례 대기열 적재).
+- REST 엔드포인트·BusinessManager.tsx 유지(회귀 없음, 비파괴 증분). **비즈니스 창 은퇴는 app: 계기화(메신저 선례) 후속** — IBL化가 그 전제였고 이제 충족.
+
+## 2026-06-12 (후속7) — 버그: NIP-17 수신 DM이 자동응답을 트리거 못 하던 것 복구
+- 발견 경위: 비즈니스 창 자동응답 검토 중, **외부 메시지 자동응답**이 Nostr에서 안 도는 걸 발견. 근본 원인=수신 경로 2갈래 분기:
+  - channel_poller 실시간 WebSocket이 `kind:4`(NIP-04 레거시)만 구독→복호→**business.db**(자동응답이 읽는 곳).
+  - 최근 DM을 **NIP-17(gift-wrap kind:1059)로 전환**했으나 channel_poller는 1059를 구독조차 안 함 → NIP-17 DM은 indienet fetch가 **dms.db**(메신저 inbox)에만 적재 → business.db 미도달 → **자동응답 미트리거**. 0xchat 등 최신앱이 NIP-17로 보내므로 사실상 Nostr 자동응답 불능.
+- 수정: channel_poller 실시간 리스너가 `kind:1059`도 구독(on_open REQ 추가, gift-wrap created_at 무작위화로 since 불가→limit) + `_handle_nostr_giftwrap`(nip17.unwrap_dm 재사용→kind:4와 동일하게 `_save_message_to_db`로 business.db 저장, 이웃 매칭·소유자 분기·미응답 상태 그대로). external_id=rumor id(dms.db dedupe 정합).
+- **안전 가드(중요)**: gift-wrap 구독은 since를 못 써서 릴레이가 과거 1059를 한꺼번에 내려줌 → 옛 DM에 **대량 자동응답** 위험. `_nostr_listen_started`(리스닝 시작 시각, 재연결에도 불변) 기준으로 unwrap 후 rumor created_at < 시작-120초면 스킵. 옛 DM은 이미 dms.db(메신저)에 있으니 손실 없음.
+- 검증: 부작용 0 왕복 테스트(임시 키쌍 wrap→unwrap→`_handle_nostr_giftwrap`, `_save_message_to_db` 모킹) — FRESH=저장 호출 / OLD(백필)=스킵 / DEDUP=재수신 스킵 전부 통과. uvicorn reload로 적재, 서버 health 200·자동응답 가동 확인. (실 NIP-17 DM 종단은 실제 자동발송 side effect라 미실행.)
+- 잔여 한계(후속): 실시간 리스너가 relays[0] 단일 릴레이만 연결(kind:4도 동일) — 우리 kind:10050 DM inbox가 여러 릴레이면 다른 릴레이로만 온 gift-wrap은 실시간 누락(indienet 주기 fetch는 dms.db로 잡음). 멀티릴레이 실시간 구독은 별도 과제.
+
+## 2026-06-12 (후속8) — 자동응답 IBL화(`others:auto_response`) + on/off 영속화
+- 비즈니스 창 은퇴 선행: 옛 비즈니스 창에만 있던 자동응답 on/off 토글을 IBL 어휘로. `others:auto_response{op: status(기본)/start/stop}`(group channel, channel_send/channel_read 옆). business 패키지 handler `auto_response_op`(_ar_status/start/stop) + tool.json + others.yaml. 액션 121→**122**(others 11→12).
+- **상태 영속화(신규)**: 기존 토글은 `_running` 메모리 플래그뿐이라 서버 재시작 시 항상 ON 복귀(사용자가 꺼도 부활). `auto_response.py`에 `is_enabled/_set_enabled/enable/disable` + `data/auto_response_state.json` 영속. `channel_poller.start()` 부팅 게이트=`if auto_response.is_enabled()`(꺼뒀으면 자동 시작 생략). 파일 없으면 기본 켜짐(기존 동작 보존, 무회귀). REST `/auto-response/{start,stop}`도 enable/disable로 바꿔 **기존 BusinessManager 토글도 이제 영속**(보너스).
+- 검증: build --check 삼각 통과. `/packages/reload` 후 `/ibl/execute` 종단 — status(running:true)→stop(running:false·state{enabled:false})→start(running:true·state{enabled:true})→status 원복. 해마 용례 10건(ibl_distilled 322→332)+rebuild_index 2419+연상(자동응답 꺼줘→stop 0.79). 자동응답 자체는 발송 side effect라 토글만 검증.
+- (앞서 후속7에서 NIP-17 수신 버그 복구 — 이 토글이 켜도 NIP-17 DM에 응답하도록.)
+
+## 2026-06-12 (후속9) — 비즈니스 창 은퇴 → IBL 비즈니스 멀티모드 계기로 대체
+- 메신저·커뮤니티 선례 그대로: 비즈니스 버튼·IPC·전용창(#/business) 유지, 내용을 옛 `BusinessManager.tsx`(930줄)에서 IBL 계기로 교체. `self:business` 액션 `app:` 블록에 `instrument: business` + `modes` 4탭:
+  - **비즈니스**: card_list(레벨 필터 periods+검색+＋추가, master_detail) → 드릴 탭(정보 form: name/level/description 저장+삭제 danger / 아이템 editable_list: 제목·설명 추가/삭제 — self:business_item)
+  - **공개문서**: card_list → 드릴 form(레벨별 제목/내용 저장) + ↻재생성 버튼
+  - **근무지침**: card_list → 드릴 form(레벨별 저장)
+  - **자동응답**: kv 상태(●켜짐/꺼짐·안내·점검주기) + 켜기/끄기 버튼(others:auto_response, 영속)
+- 렌더러 어휘 +`button.refresh`(실행 후 모드 재조회 — 토글/재생성 결과 즉시 반영, 두 렌더러 GenericInstrument.fireButton/api_launcher_web.fireButton). `_ar_status`에 표시용 state_label/summary/interval_label 추가.
+- 신설 `BusinessInstrumentView.tsx`(id:business 계기 GenericInstrument 렌더, 메신저/커뮤니티 패턴) + App.tsx `isBusiness`→BusinessInstrumentView. 옛 `BusinessManager.tsx` **삭제**(tsc 잔여참조0).
+- 검증: build --check(app 4탭 정합)+tsc+`/launcher/instruments` 4탭 파생+브라우저 실렌더(목록·레벨필터·드릴 정보form/아이템 editable_list·문서/지침/자동응답 탭·**토글 끄기→꺼짐 즉시반영→켜기 원복** refresh 동작). 액션 122 유지(app 블록·refresh는 렌더러 어휘라 해마 불변).
+- (후속10에서 이미지 업로드 갭 해소 — 아래.)
+
+## 2026-06-12 (후속10) — 이미지 업로드 프리미티브 + 아이템 풀편집 모드 (비즈니스 갭 해소)
+- 후속9의 미이관 갭(business_item 이미지 업로드·아이템 인라인 수정) 해소.
+- **`images` form 필드 타입 신설**(두 렌더러): 썸네일(전 표면 `/image?path=` 서빙) + 제거(어디서나) + 추가(데스크탑 window.electron.selectImages 있을 때만 — 본질적 표면별). **form save 와 분리** — 업로드/제거 즉시 `add_image`/`remove_image` op 로 영속(JSON 배열을 $치환으로 못 보내는 문제 회피). add_action/remove_action 템플릿이 $path 런타임 주입.
+- **`business_item_op` +add_image/remove_image**: add_image=소스 로컬파일을 business_images 로 복사 후 attachment_path(JSON 배열) 추가, remove_image=배열서 제거+파일 삭제. handler+tool.json+src ops. _item_list 는 business_id 없으면 빈 목록(셀렉터 미선택 graceful).
+- **아이템 모드 신설**(business 계기 2번째 탭): 비즈니스 셀렉터(select options_action=`[self:business]{op:list}`)→아이템 card_list(master_detail)→드릴 form(제목/설명/**사진 images**)+삭제. 옛 BusinessManager 아이템 모달(이미지 포함)을 선언형으로 완전 대체.
+- 검증: build --check(images 필드타입·add/remove_image 액션존재·$path 로컬키 합류)+tsc+원격 node --check + `/ibl/execute` 종단(임시 비즈니스/아이템에 add_image→복사·경로갱신·파일존재 / remove_image→제거·파일삭제 / cascade 정리) + 브라우저(아이템 셀렉터 8옵션·드릴 form 제목/설명/사진·이미지없음 표시). 액션 122 유지(렌더러/app 어휘). 데스크탑 파일선택 실picker 는 Electron 전용이라 브라우저 프리뷰선 미검(add_image 백엔드는 검증).
+- 이로써 비즈니스 창 기능 **전부** IBL 계기로 이관(텍스트·이미지·문서·지침·자동응답). 잔여=아이템 인라인 수정은 이제 아이템 모드 드릴 form 으로 가능(editable_list 갈음 불필요).
+[2026-06-12 16:24:18] CLEANUP: 매니페스트 캐시 갱신 + api_indienet 정리 + periods→filter 어휘 통일
+  - 매니페스트 캐시: 앱 표면이 계기/어휘 변경을 재시작 없이 반영하도록 — ActionDesktop.tsx 창 포커스 복귀 시 재fetch(다른 창서 IBL 편집 후 복귀 케이스), 원격 HTML loadInstruments(force)+refreshSurface 앱 브랜치 강제 재fetch. 백엔드 /launcher/instruments 는 기존 mtime 캐시 유지.
+  - api_indienet 정리: IndieNet.tsx 은퇴(커뮤니티 IBL 계기화) 후 미사용이던 REST 라우터(api_indienet.py)·프론트 클라이언트(api-indienet.ts) 삭제. api.py 라우터 등록 2줄·api.ts mixin 체인 재배선. 코어 indienet.py(channel_engine/poller 사용)는 유지. technical.md IndieNet REST 섹션→IBL 계기(others:feed/board/messages/nostr) 안내로 갱신.
+  - periods→filter: 렌더러 어휘 통일(naming law — 단일선택 칩 그룹이 한 개념, periods는 시간으로 과좁힘). 시간기간(invest period/days)·계층레벨(business/messenger level) 양용을 generic filter로. 3표면(GenericInstrument.tsx·api_launcher_web.py·build_ibl_nodes.py)+5 src 액션(sense 3/self 1/others 1)+CSS(.filters/.fchip)+문서. 액션 122 유지(렌더러 어휘라 해마 불변).
+  - 검증: build --check 삼각 통과·tsc 0·py_compile·원격 HTML JS node --check·라이브 매니페스트 filter 필드 5계기 전달 확인. 원격 비즈니스·메신저 라이브 렌더는 Chrome 연결 후 별도 확인 예정.
+
+[2026-06-12 16:41:37] BUG_FIX: 연락처 email→gmail 통일 + NIP-17 실시간 멀티릴레이 수신
+  - 연락처 add-form contact_type 옵션 value 'email'→'gmail'(others.yaml 메신저 연락처 추가). 발신/inbox 채널 매핑(_primary_channel·compose.sendable)이 'gmail'만 인식해 form 추가한 email 연락처가 발신 피커에 안 뜨던 버그. live business.db는 'email' 0건이라 마이그레이션 불필요, agent_runner는 conversation_db라 무관 — 호환층 없이 정본 'gmail' 단일화. build --check 통과·액션 122 유지.
+  - channel_poller Nostr 실시간 수신을 relays[0] 단일→설정된 전 릴레이 동시 구독. 과거엔 kind:1059(NIP-17) gift-wrap이 다른 릴레이로만 오면 실시간 누락→자동응답 미트리거(주기 fetch_dms_nip17은 dms.db만 채움). _nostr_realtime_loop가 릴레이별 독립 리스너 스레드(_nostr_relay_listener) 띄움. ws·last_active를 연결별 로컬화(_nostr_ws 단수→_nostr_wss 리스트, stop/토글오프 시 전체 close). 중복 수신 안전=_nostr_seen_lock으로 dedup 체크-추가 원자화 + 기존 external_id DB dedup + freshness 가드. py_compile + 격리 테스트(3릴레이 팬아웃·같은 event_id 50동시→1통과) 통과.
+
+[2026-06-12 17:10:19] FEATURE: business.db 폰↔PC 합집합 머지 토대 (LWW + tombstone CRDT)
+  - 설계결정(사용자 합의): 자동응답=PC 전용(상시 켜진 단일 응답자, 폰은 읽기/작성만→이중응답 없음). 메시지/글 내용=Nostr릴레이·Gmail이 진실원→같은 키로 같은 릴레이 구독하면 공짜 수렴(머지 대상 아님). DB 머지=외부 진실원 없는 주소록 메타데이터(이웃·연락처·사업·아이템·문서·지침)만.
+  - 스키마(business_manager._migrate_sync_columns, 멱등): neighbors/businesses +uuid+deleted, contacts/business_items +uuid+parent_uuid+(updated_at)+deleted. 기존 행 uuid backfill + 자식 parent_uuid 연결. 기본 7 카테고리는 이름기반 결정적 uuid5(양 기기 수렴, 무작위 backfill분도 reconcile—자식 business_uuid 동기).
+  - write-path: create=uuid 부여, 자식=parent_uuid 채움, update=updated_at 갱신(LWW 기준), delete=소프트삭제(deleted=1 tombstone), 전 read에 deleted 필터. 우회 없음(conversation_db는 별도 conversations.db).
+  - business_sync.py: export_business_db(tombstone 포함) + merge_business_db(LWW+tombstone+union+자식 FK uuid→로컬id remap, 결합·교환법칙 성립=어느 순서든 동일결과). 메시지/채널설정 제외.
+  - 검증: 격리 7테스트(시드수렴·union·LWW·tombstone전파·부활방지·자식remap·멱등) 전부 통과 + live DB 마이그레이션(기본카테고리 결정적uuid·아이템 동기 0불일치) + 종단 IBL([self:business]list 7개·백엔드 200). 폰↔맥 전송(API+연결트리거)은 폰 빌드·인증 필요로 다음 단계.
+
+[2026-06-12 17:17:38] FEATURE: business.db 동기화 전송 계층 (맥측 인증 엔드포인트)
+  - api_business.py에 GET /business/sync/export(tombstone 포함 스냅샷) + POST /business/sync/merge(remote export 합집합 머지 후 머지된 최신 스냅샷 반환 → 1왕복 양방향) 신설. business_sync.export/merge 래핑.
+  - 인증: api.py remote_access_guard 미들웨어가 외부(터널) 요청에 launcher 세션(X-Launcher-Session) 강제, localhost(데스크탑)는 통과. 주소록 전체 노출이라 public 화이트리스트에 안 넣음 → 외부는 로그인 필수. 무인증 데이터 노출 표면 0.
+  - 검증: GET export=6테이블 정상 / POST 멱등 self-merge=added0·updated0(비파괴) / 외부 Host(세션없음)→GET·POST 둘 다 401 / localhost→200 / live DB 행수 불변. py_compile·백엔드 200.
+  - 남은=폰 측(phone_api가 연결 시 export→POST merge→반환분 머지) — 폰 business.db 실재화 + 폰 빌드 환경 필요.
+
+[2026-06-12 17:31:09] FEATURE: business.db 폰↔PC 동기화 — 폰 측 완성 + A36 실기기 종단 검증
+  - 폰 자급: build.gradle _ENGINE_MODULES에 business_manager·business_sync 추가(폰 번들 zip 포함 확인). phone_api.py에 _phone_bm(영속 filesDir/userdata/business.db, 최초 생성+마이그레이션) + _mac_post_json(폰 originator JSON POST, 세션 주입) + POST /business/sync/run(폰 export→맥 merge→반환 스냅샷 폰 merge, 1왕복 양방향) + GET /business/sync/peek(점검).
+  - 빌드: 정본 build_ibl_nodes→assembleDebug(BUILD SUCCESSFUL, 번들에 business 2모듈)→adb install -r. de-risk(맥격리 import+폰 business.db 생성 시뮬) 선통과.
+  - 실기기 검증(A36, 터널+인증 경유): 폰 초기 business.db=0이웃·7기본비즈니스(맥과 결정적 uuid 일치)·0연락처 / sync 실행→맥 이웃5+연락처5 added·비즈니스 skipped7(중복0=결정적uuid 실기기간 수렴) / 양방향(맥도 폰 export 머지) / 재sync added0(멱등 수렴 5·7·5 유지). 고아 items(부모 없는 잔재)는 parent 미해소로 올바르게 skip.
+  - 인증: 폰 INDIEBIZ_MAC_URL=터널이라 맥이 외부요청으로 보고 세션 강제 → 폰 _mac_login(비번→X-Launcher-Session) 자동. remote_access_guard 종단 통과 실증.
+  - 의미: "두뇌=맥·몸=폰" 분산 IBL에서 폰이 주소록을 자급+합집합 동기화. 자동응답=PC전용·내용=릴레이수렴이라 DB머지는 메타데이터만. 남은=폰 UI서 이웃 추가(phone→mac 신규 레코드 실증)·동기화 자동 트리거 시점.
+
+[2026-06-12 17:46:00] FEATURE: [self:phone_sync] IBL 액션 — 시스템 AI 명령으로 폰↔PC 주소록 동기화
+  - 시스템 AI는 IBL 액션으로만 동작 → "폰 동기화해줘" 명령을 위한 액션 신설(가이드만으론 실행 불가). 네이밍 헌법(드묾=자기설명적 긴 이름)에 따라 sync 아닌 phone_sync.
+  - [self:phone_sync](group business, runs_on home_only, tool phone_sync): 맥 주도 USB(adb) 양방향 합집합 동기화. 핸들러(business 패키지)=adb forward로 폰 백엔드(:8765) 도달(미기동 시 am start 자동 기동+폴링)→폰 export 받아 맥 머지→맥 export를 폰 merge. business_sync(LWW+tombstone) 재사용. 폰엔 export/merge 엔드포인트 추가(phone_api.py)+APK 재빌드/설치.
+  - 검증(A36 실기기 종단): 맥 이웃 생성→[self:phone_sync]→폰 도착 / 맥 삭제→재실행→폰 tombstone 전파(사라짐) / 멱등(재실행 0). 한국어 요약 반환. 해마 용례 5건+자동인덱싱 → "폰 동기화/주소록 맞춰/데이터 합쳐" rank1 연상.
+  - build --check 삼각 통과. 액션 122→123(self business 그룹). 자동응답=PC전용·내용=릴레이수렴이라 머지는 주소록 메타데이터만.
+
+[2026-06-12 18:00:19] REFACTOR: others:neighbor 통합 (해마 학습 전 파편화 정리)
+  - 파편화: 같은 엔티티(이웃)인데 neighbor{save/delete/favorite}(쓰기)와 neighbors{}(읽기·목록/상세, op없음)가 따로였음. business{list/detail/save/delete} 대칭 깨짐 — 메신저 세션 잔재.
+  - 통합: neighbor에 list/detail op 추가(default save→list), neighbors 액션 은퇴. handler _nb_list/_nb_detail 신설(구 neighbors_op get_neighbors/get_neighbor_detail 포팅, 구조화 반환), neighbor_op 디스패처+tool.json op enum(list/detail/save/delete/favorite), 레거시 neighbors_op 분기 제거. 액션 123→122(others 12→11).
+  - 코퍼스 relabel: [others:neighbors]→[others:neighbor]{op:list} (무param) / {op:detail,...} (name·id). 라이브 해마 DB 10건+재인덱싱 + 학습 JSON 10건 + 생성소스(rebuild_usage_db EXAMPLES·ibl_opus_bulk_gen) 정리. 잔존 0(.bak 제외). ★해마 학습 전에 통합=relabel 1번+재학습 1번.
+  - 검증: build --check 삼각 통과 / 라이브 [others:neighbor]{op:list}=5명·{op:detail,name}=연락처포함 / 연상 "이웃 누구있어"→list·"김철수 누구야"→detail rank1.
+
+[2026-06-12 18:21:41] FIX+FEATURE: images $path Windows 경로 수정 + 폰 이웃추가 입력 기능
+  - images $path Windows 수정: buildAction이 IBL 값의 백슬래시·따옴표를 *스트립*해 Windows 경로(C:\Users\…)가 깨지던 버그. IBL 파서가 JSON5 문자열 의미론이라 스트립이 아니라 *이스케이프*(\→\\, "→\")가 정답 → 파서가 단일 백슬래시로 복원. 3곳 수정(GenericInstrument.tsx buildAction·resolveOptionsAction + api_launcher_web.py 원격 HTML buildAction). 검증=node 왕복(C:\Users\me\photo.jpg 복원·Mac 회귀 없음)+tsc+원격 node --check+데스크탑 비즈니스 계기 dispatch 무회귀.
+  - 폰 이웃추가 입력 기능: 폰이 주소록을 자급 입력하도록 phone_api.py에 POST /business/neighbor/add(_phone_bm.create_neighbor+선택 연락처) + GET /business/neighbor/form(미니 HTML 폼 — 이름/레벨/연락처). APK 재빌드/설치.
+  - 실기기 종단(A36): 폰 폼으로 '폰이웃테스트'+gmail 연락처 추가 → [self:phone_sync] → 맥에 도착(연락처 remap까지) = **phone→mac 방향 실증 완료**. 삭제→sync→양쪽 tombstone(폰발 레코드 삭제 전파도 검증). 양방향(mac→phone·phone→mac) 모두 라이브 검증.
+
+[2026-06-12 18:31:44] FIX+UI: 폰 앱 로그인 화면 제거 + 앱 아이콘 신설
+  - 로그인 제거: 런처 checkSession()이 /projects(맥 터널 프록시) 200 여부로 로그인 게이트를 결정 → 맥 느림/다운/기동레이스 시 폰에 비번 로그인 화면이 뜨던 회귀. 수정=먼저 /launcher/config(로컬·즉시) 확인해 has_password===false면 바로 showApp()(맥 의존 제거). 폰=phone-local·비번없음이라 항상 즉시 런처 진입. 맥 원격(비번 설정)은 기존 /projects 게이트 유지(보안 보존). 실기기 검증=force-stop→재기동→로그인 없이 런처 직행.
+  - 앱 아이콘: 폰앱이 res/android:icon 부재로 기본 안드로이드 아이콘이었음. minSdk28 적응형 벡터 아이콘 신설 — ic_launcher_background(앰버 그라데이션 #FBBF24→#D97706)+ic_launcher_foreground(흰색 IBL 신경망 허브: 중앙 노드+위성3+연결선, 중앙 앰버점)+mipmap-anydpi-v26 adaptive-icon(+round). manifest android:icon/roundIcon 연결, 라벨 'IndieBiz Phone Agent'→'IndieBiz'. APK 빌드 성공·아이콘 리소스 포함 확인.
+
+[2026-06-12 18:46:51] RETRAIN: 해마 임베딩 재학습 (로컬 M4 Pro — 클라우드 불필요)
+  - 경로 결정: 클라우드(Modal/Colab)는 옛 맥에어 OOM 때문이었음. 현 Mac mini M4 Pro 24GB는 OOM 없고, 데이터셋 작아(2424 용례) 클라우드 오버헤드(멀티GB 토치 이미지 콜드스타트+400MB 모델 다운로드)보다 로컬 MPS가 빠름. lib 버전도 정확히 일치(torch2.10/MPS·st5.2.2·transformers5.1.0). → backend/ibl_embedding_trainer.py 로컬 실행(batch8=로컬최선, 10epoch).
+  - 코퍼스: ibl_usage.db 2424(phone_sync 신규+neighbor relabel 반영)+training json. 정규화 223 패턴, 학습2429/평가652쌍.
+  - 결과: 코드 Top-5 92.6%(baseline 43.9%→+48.8%p)·desc Top-5 92.8%(67.6%→+25.2%p). 메모리 로컬최선(~92.8%) 재현. rebuild_index(2424 재색인 7.2초)+백엔드 touch로 반영.
+  - 보강: neighbor save/favorite 코퍼스 용례 0건 공백 발견(통합 시 list/detail만 relabel됨) → 13 용례 추가(이웃추가/즐겨찾기/맛집), 새 모델로 자동 인덱싱. 연상 검증: phone_sync·neighbor list/detail/save/favorite·business·phone vibrate·맛집 전부 Top-1 정상. 백업: data/models/ibl_embedding.bak.20260612_183704.

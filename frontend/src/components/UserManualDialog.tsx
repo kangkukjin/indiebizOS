@@ -472,7 +472,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
           </div>
 
           <div className="bg-amber-50 p-2 rounded-lg text-amber-700 text-sm">
-            📍 접속: 상단 툴바 → <strong>IndieNet</strong> 버튼
+            📍 접속: 앱 모드 → <strong>커뮤니티</strong> 계기(피드·게시판·내 계정). DM은 <strong>메신저</strong> 계기.
           </div>
         </div>
       )

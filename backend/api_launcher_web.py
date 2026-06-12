@@ -25,7 +25,7 @@ IBL_NODES_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ibl_node
 _instruments_cache = {"mtime": None, "payload": None}
 
 # app 블록에서 모드(탭) 레벨로 그대로 전달되는 필드
-_APP_MODE_FIELDS = ("note", "auto_run", "inputs", "buttons", "action", "view", "renderer")
+_APP_MODE_FIELDS = ("note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter")
 
 # 폰 프로파일(#3 runs_on): INDIEBIZ_PROFILE=phone 이면 phone_manifest.json 의 runnable_actions 에
 # 없는 계기(=폰서 못 도는 액션)를 홈 그리드에서 숨긴다. PC(프로파일 미설정)면 필터 없음.
@@ -472,9 +472,9 @@ input,textarea,select{ font-family:inherit; }
 .tab.on{ background:var(--acc); border-color:var(--acc); color:#fff; }
 .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
 .chip{ padding:6px 12px; background:var(--bg2); border:1px solid var(--line); border-radius:20px; font-size:12px; }
-.periods{ display:flex; gap:6px; flex-wrap:wrap; }
-.pchip{ padding:5px 12px; background:var(--bg2); border:1px solid var(--line); border-radius:8px; font-size:12px; color:var(--dim); }
-.pchip.on{ background:var(--acc); border-color:var(--acc); color:#fff; }
+.filters{ display:flex; gap:6px; flex-wrap:wrap; }
+.fchip{ padding:5px 12px; background:var(--bg2); border:1px solid var(--line); border-radius:8px; font-size:12px; color:var(--dim); }
+.fchip.on{ background:var(--acc); border-color:var(--acc); color:#fff; }
 .chip:hover{ border-color:var(--acc); }
 .bookcard{ display:flex; gap:12px; }
 .bookcard img{ width:56px; height:80px; object-fit:cover; border-radius:6px; background:var(--bg3); flex-shrink:0; }
@@ -488,6 +488,30 @@ input,textarea,select{ font-family:inherit; }
 .kv .k{ color:var(--dim); }
 .big{ font-size:30px; font-weight:700; }
 .note{ font-size:11px; color:var(--warn); background:rgba(245,166,35,.1); border-radius:8px; padding:8px 10px; margin-bottom:12px; }
+/* 메신저/커뮤니티: 대화 버블(thread) + 작성바(compose) */
+.thread{ display:flex; flex-direction:column; gap:6px; padding:4px 0 2px; }
+.tmsg{ display:flex; flex-direction:column; align-items:flex-start; }
+.tmsg.me{ align-items:flex-end; }
+.tbub{ max-width:78%; padding:9px 13px; border-radius:14px; border-bottom-left-radius:4px; font-size:14px; line-height:1.5; white-space:pre-wrap; word-break:break-word; background:var(--bg2); border:1px solid var(--line); }
+.tmsg.me .tbub{ background:var(--acc); border-color:var(--acc); color:#fff; border-bottom-left-radius:14px; border-bottom-right-radius:4px; }
+.tfoot{ font-size:10px; color:var(--dim); margin-top:2px; padding:0 5px; }
+.composebar{ position:sticky; bottom:0; display:flex; gap:8px; padding:10px 0 6px; margin-top:8px; background:linear-gradient(transparent,var(--bg) 35%); }
+.composebar .field{ border-radius:22px; }
+.composebar .go{ border-radius:22px; }
+/* master-detail 반응형(메신저): 넓으면 2분할(리스트+상세), 좁으면 드릴(리스트↔상세 토글) */
+.mdsplit{ display:flex; flex-direction:column; gap:10px; }
+.mddetail{ display:flex; flex-direction:column; min-width:0; }
+.mdph{ flex:1; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:13px; padding:40px 0; }
+@media(min-width:760px){
+  .mdsplit{ flex-direction:row; height:calc(100vh - 250px); }
+  .mdlist{ width:258px; flex-shrink:0; overflow-y:auto; padding-right:6px; }
+  .mddetail{ flex:1; border-left:1px solid var(--line); padding-left:14px; overflow-y:auto; }
+  .mdback{ display:none; }
+}
+@media(max-width:759px){
+  .mdsplit.has-detail .mdlist{ display:none; }
+  .mdsplit:not(.has-detail) .mddetail{ display:none; }
+}
 a{ color:var(--info); }
 @media(max-width:560px){
   .ap-side{ width:150px; }
@@ -623,6 +647,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   checkSession();
 });
 async function checkSession(){
+  // 비번 없는 표면(폰 자급·로컬)은 게이트 자체가 무의미 → config로 즉시 진입(맥 프록시 의존 제거).
+  // 폰은 has_password=false 라 /projects(맥 터널 왕복) 결과와 무관히 바로 런처가 뜬다 = 로그인 화면 없음.
+  try{ const c=await(await jfetch('/launcher/config')).json(); if(c && c.has_password===false){ showApp(); return; } }catch(e){}
   try{ const r=await jfetch('/projects'); if(r.ok){ showApp(); } }catch(e){}
 }
 async function doLogin(){
@@ -657,7 +684,7 @@ function setSurface(s){
 }
 function refreshSurface(){
   if(surface==='autopilot') apLoad();
-  else if(surface==='app'){ appBackHome(); }
+  else if(surface==='app'){ appBackHome(); appHomeRendered=false; renderAppHome(true); }  /* 매니페스트 강제 재fetch */
 }
 
 /* ================= 자율주행 ================= */
@@ -863,16 +890,17 @@ let appHomeRendered=false;
 let INSTRUMENTS=[];
 let CUR={inst:null, mode:null, optCache:{}};
 let VIEW_CTX=null; /* 마지막 렌더의 {view,data} — 행 버튼/드릴 디스패치용 */
+let SPLIT=false, LIST=null; /* master-detail: SPLIT=2분할 모드, LIST={view,data}=리스트 컨텍스트 */
 const CUSTOM_RENDERERS={}; /* escape hatch: manifest renderer:"custom:이름" → 전용 렌더 함수 (지도·플레이어 등) */
 
-async function loadInstruments(){
-  if(INSTRUMENTS.length) return;
+async function loadInstruments(force){
+  if(INSTRUMENTS.length && !force) return;  /* force=true 면 매니페스트 재fetch (계기/어휘 변경 반영) */
   try{ const r=await jfetch('/launcher/instruments'); if(r.ok){ const d=await r.json(); INSTRUMENTS=d.instruments||[]; } }catch(e){}
 }
-async function renderAppHome(){
+async function renderAppHome(force){
   const home=document.getElementById('appHome');
   home.innerHTML='<div class="center"><div class="spin"></div></div>';
-  await loadInstruments();
+  await loadInstruments(force);
   if(!INSTRUMENTS.length){ home.innerHTML='<p class="muted">계기 매니페스트를 불러오지 못했습니다</p>'; return; }
   home.innerHTML=
     '<p class="muted" style="margin-bottom:12px">직접 조작 — 아이콘을 눌러 바로 실행 (0 토큰)</p>'+
@@ -907,10 +935,10 @@ function openInstrument(ix){
 }
 function setMode(i){
   const inst=CUR.inst; const modes=inst.modes||[inst]; const mode=modes[i];
-  CUR.mode=mode; VIEW_CTX=null;
+  CUR.mode=mode; VIEW_CTX=null; SPLIT=false; LIST=null;
   if(inst.modes) modes.forEach((m,j)=>{ const t=document.getElementById('modeTab'+j); if(t)t.classList.toggle('on',j===i); });
   CUR.optCache={};
-  CUR.period=(mode.periods&&mode.periods.items)?((mode.periods.items.find(x=>x.default)||mode.periods.items[0]||{}).value):null;
+  CUR.filterVal=(mode.filter&&mode.filter.items)?((mode.filter.items.find(x=>x.default)||mode.filter.items[0]||{}).value):null;
   let h='';
   if(mode.note) h+='<div class="note">'+esc(mode.note)+'</div>';
   const inputs=mode.inputs||[];
@@ -927,9 +955,9 @@ function setMode(i){
         '<span class="chip" onclick="chipRun(\\''+esc(inp.key)+'\\',\\''+esc(c)+'\\')">'+esc(c)+'</span>').join('')+'</div>';
   });
   // 기간 토글(차트 범위) — 클릭 즉시 그 기간으로 재조회
-  if(mode.periods&&mode.periods.items){
-    h+='<div class="periods" style="margin-top:10px">'+mode.periods.items.map(x=>
-      '<button class="pchip'+(String(x.value)===String(CUR.period)?' on':'')+'" data-v="'+esc(String(x.value))+'" onclick="setPeriod(\\''+esc(String(x.value))+'\\')">'+esc(x.label)+'</button>').join('')+'</div>';
+  if(mode.filter&&mode.filter.items){
+    h+='<div class="filters" style="margin-top:10px">'+mode.filter.items.map(x=>
+      '<button class="fchip'+(String(x.value)===String(CUR.filterVal)?' on':'')+'" data-v="'+esc(String(x.value))+'" onclick="setFilter(\\''+esc(String(x.value))+'\\')">'+esc(x.label)+'</button>').join('')+'</div>';
   }
   const btns=mode.buttons||[];
   if(btns.length)
@@ -998,7 +1026,9 @@ async function fireButton(bi,btn){
   btn.disabled=true;
   try{ const d=await ibl(b.action);
     if(d&&d.stop_in_client){ stopRadioStream(); }
-    else if(d&&d.error) alert(d.error); }
+    else if(d&&d.error){ alert(d.error); }
+    else if(b.refresh){ runMode(); }  // 실행 후 현재 모드 재조회(토글/재생성 즉시 반영)
+  }
   catch(e){ alert('실행 실패: '+e.message); }
   finally{ btn.disabled=false; }
 }
@@ -1007,7 +1037,7 @@ async function fireButton(bi,btn){
 function jget(o,path){ if(!path) return o; return String(path).split('.').reduce((a,k)=>(a==null?undefined:a[k]),o); }
 function buildAction(template,values){
   let code=template.replace(/\\$(\\w+)/g,(m,k)=>{
-    const v=values[k]; return v==null?'':String(v).replace(/\\\\/g,'').replace(/"/g,'');
+    const v=values[k]; return v==null?'':String(v).replace(/\\\\/g,'\\\\\\\\').replace(/"/g,'\\\\"');
   });
   code=code.replace(/\\w+:\\s*"",?\\s*/g,'');  /* 빈 입력 파라미터 제거 */
   code=code.replace(/,\\s*\\}/g,'}').replace(/\\{\\s*,/g,'{');
@@ -1036,6 +1066,8 @@ function tpl(t,data){
     return v==null?'':esc(v);
   });
 }
+
+function statusGlyph(s){ return s==='sent'?'✓':s==='pending'?'⏳':s==='failed'?'⚠':''; }
 
 /* ----- 뷰 렌더 (순수 함수: view+data → HTML 문자열) ----- */
 function renderView(view,data){
@@ -1088,6 +1120,61 @@ function renderPrim(p,vi,data){
         '<div class="t">'+tpl(p.title,it)+'</div><div class="m">'+(p.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div></div>';
     }).join('')+'</div>';
   }
+  if(p.type==='thread'){
+    const arr=viewList(data,p.from);
+    if(!arr.length) return emptyMsg(p,data);
+    return '<div class="thread">'+arr.map(it=>{
+      const mine=p.mine?!!jget(it,p.mine):false;
+      const st=p.status?statusGlyph(jget(it,p.status)||''):'';
+      const foot=[p.meta?tpl(p.meta,it):'', p.time?tpl(p.time,it):'', st].filter(Boolean).join(' · ');
+      return '<div class="tmsg'+(mine?' me':'')+'"><div class="tbub">'+tpl(p.text,it)+'</div>'+(foot?'<div class="tfoot">'+foot+'</div>':'')+'</div>';
+    }).join('')+'</div>';
+  }
+  if(p.type==='form'){
+    let h='<div class="card">'+(p.title?'<div class="step-label">'+esc(p.title)+'</div>':'');
+    (p.fields||[]).forEach((f,fi)=>{
+      const val=tpl(f.value||'',data); const id='ff_'+vi+'_'+f.key;
+      h+='<div style="margin-bottom:8px"><label class="muted" style="display:block;font-size:11px;margin-bottom:3px">'+esc(f.label||'')+'</label>';
+      if(f.type==='select') h+='<select class="field" id="'+id+'">'+(f.options||[]).map(o=>'<option value="'+esc(String(o.value))+'"'+(String(o.value)===String(val)?' selected':'')+'>'+esc(o.label)+'</option>').join('')+'</select>';
+      else if(f.type==='textarea') h+='<textarea class="field" id="'+id+'" rows="3">'+esc(val)+'</textarea>';
+      else if(f.type==='toggle') h+='<select class="field" id="'+id+'"><option value="0"'+(String(val)!=='1'?' selected':'')+'>꺼짐</option><option value="1"'+(String(val)==='1'?' selected':'')+'>켜짐</option></select>';
+      else if(f.type==='images'){
+        // 썸네일(전 표면 /image?path=) + 제거. 추가(파일선택)는 데스크탑 전용이라 원격엔 없음.
+        let arr=[]; try{ const j=JSON.parse(val); arr=Array.isArray(j)?j:(val?[val]:[]); }catch(e){ arr=val?[val]:[]; }
+        h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+        arr.forEach(pth=>{ h+='<div style="position:relative">'
+          +'<img src="'+API+'/image?path='+encodeURIComponent(pth)+'" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">'
+          +(f.remove_action?'<button onclick="imgRemove('+vi+','+fi+',\\''+encodeURIComponent(pth)+'\\')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#333;color:#fff;border:none;font-size:12px;line-height:1;cursor:pointer">×</button>':'')
+          +'</div>'; });
+        if(!arr.length) h+='<span class="muted" style="font-size:12px">이미지 없음 (사진 추가는 데스크탑에서)</span>';
+        h+='</div>';
+      }
+      else h+='<input class="field" id="'+id+'" value="'+esc(val)+'" placeholder="'+esc(f.placeholder||'')+'">';
+      h+='</div>';
+    });
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px">'
+      +'<button class="go" onclick="formSave('+vi+',this)">'+esc(p.button||'저장')+'</button>';
+    // 보조 액션(즐겨찾기 토글·삭제 등) — 드릴 데이터 컨텍스트로 실행
+    (p.actions||[]).forEach((a,ai)=>{
+      const dz=a.style==='danger'?';color:#c0392b;border-color:#e8b9b3':'';
+      h+='<button class="linkbtn" style="padding:9px 13px;border:1px solid var(--line);border-radius:10px'+dz+'" onclick="formAct('+vi+','+ai+',this)">'+esc(tpl(a.label,data))+'</button>';
+    });
+    h+='</div></div>';
+    return h;
+  }
+  if(p.type==='editable_list'){
+    const arr=viewList(data,p.from);
+    let h='<div class="card">'+(p.title?'<div class="step-label">'+esc(p.title)+'</div>':'');
+    if(!arr.length) h+='<p class="muted">'+esc(p.empty||'없음')+'</p>';
+    arr.forEach((it,ri)=>{ h+='<div class="kv"><span class="k">'+tpl(p.display,it)+'</span>'+(p.delete_action?'<button class="linkbtn" onclick="elDelete('+vi+','+ri+')">삭제</button>':'')+'</div>'; });
+    if(p.add){
+      h+='<div class="row" style="margin-top:8px">'+(p.add.fields||[]).map(f=> f.type==='select'
+        ? '<select class="field" id="ea_'+vi+'_'+f.key+'" style="flex:0 1 110px"><option value="">'+esc(f.placeholder||'')+'</option>'+(f.options||[]).map(o=>'<option value="'+esc(String(o.value))+'">'+esc(o.label)+'</option>').join('')+'</select>'
+        : '<input class="field" id="ea_'+vi+'_'+f.key+'" placeholder="'+esc(f.placeholder||'')+'">').join('')
+        +'<button class="go" onclick="elAdd('+vi+',this)">'+esc((p.add.button)||'추가')+'</button></div>';
+    }
+    h+='</div>'; return h;
+  }
   if(p.type==='sparkline'){
     const arr=viewList(data,p.from);
     const vals=arr.map(x=>Number(p.y?x[p.y]:x)).filter(v=>!isNaN(v));
@@ -1113,12 +1200,12 @@ function renderPrim(p,vi,data){
 function gatherInputs(){
   const vals={};
   (CUR.mode.inputs||[]).forEach(inp=>{ const el=document.getElementById('in_'+inp.key); vals[inp.key]=el?el.value.trim():''; });
-  if(CUR.mode.periods&&CUR.period!=null) vals[CUR.mode.periods.key||'period']=CUR.period;
+  if(CUR.mode.filter&&CUR.filterVal!=null) vals[CUR.mode.filter.key||'filter']=CUR.filterVal;
   return vals;
 }
-function setPeriod(v){
-  CUR.period=v;
-  document.querySelectorAll('#modeBody .pchip').forEach(b=>b.classList.toggle('on', b.getAttribute('data-v')===String(v)));
+function setFilter(v){
+  CUR.filterVal=v;
+  document.querySelectorAll('#modeBody .fchip').forEach(b=>b.classList.toggle('on', b.getAttribute('data-v')===String(v)));
   runMode();
 }
 async function runMode(){
@@ -1129,15 +1216,127 @@ async function runMode(){
   out.innerHTML='<div class="center"><div class="spin"></div></div>';
   try{
     const d=await ibl(buildAction(mode.action,vals));
-    VIEW_CTX={view:mode.view,data:d};
-    out.innerHTML=renderView(mode.view,d);
+    SPLIT=(mode.view||[]).some(p=>p&&p.type==='card_list'&&p.master_detail);
+    if(SPLIT){
+      LIST={view:mode.view,data:d}; VIEW_CTX=null;
+      out.innerHTML='<div class="mdsplit" id="mdSplit"><div class="mdlist" id="mdList">'+renderView(mode.view,d)+'</div>'
+        +'<div class="mddetail" id="mdDetail"><div class="mdph">← 목록에서 대화를 선택하세요</div></div></div>';
+    } else {
+      LIST=null; VIEW_CTX={view:mode.view,data:d,compose:mode.compose,refresh:'mode'};
+      out.innerHTML=renderView(mode.view,d)+renderComposeBar(mode.compose);
+    }
     // 폰: 생성된 HTML(신문 등)을 조회 직후 자동으로 띄운다(별도 '띄우기' 탭 불필요).
     if(IS_PHONE && d && typeof d==='object' && typeof d.file==='string' && /\\.html?$/i.test(d.file)) openFileOverlay(d.file);
   }catch(e){ out.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }
 }
+/* 작성바(compose) — $text=작성 내용, 드릴이면 {field}=대화 상대 행 필드. 전송 후 현재 뷰 새로고침. */
+/* compose 발신 채널 후보 — 드릴 데이터 연락처에서 발신 가능한 채널만, 없으면 기본(primary) 폴백 */
+function composeChannelOptions(cmp){
+  const ch=cmp&&cmp.channels; const data=VIEW_CTX&&VIEW_CTX.data;
+  if(!ch||!data||typeof data!=='object') return [];
+  const mk=(ct,to,label)=>({key:ct+'|'+to,channel_type:ct,to:to,label:label});
+  let opts=viewList(data,ch.from).map(c=>({ct:String(jget(c,ch.type)||''),to:String(jget(c,ch.value)||'')}))
+    .filter(o=>o.to&&(!ch.sendable||ch.sendable.indexOf(o.ct)>=0)).map(o=>mk(o.ct,o.to,o.ct+' · '+o.to));
+  if(!opts.length){ const ct=String(jget(data,'channel')||''),to=String(jget(data,'to')||''); if(to) opts=[mk(ct,to,ct||'기본')]; }
+  const seen={}; return opts.filter(o=>seen[o.key]?false:(seen[o.key]=1,true));
+}
+function renderComposeBar(cmp){
+  if(!cmp) return '';
+  const opts=composeChannelOptions(cmp);
+  let sel='';
+  if(opts.length>=2) sel='<select id="composeChannel" class="field" style="flex:0 0 auto;max-width:42%;border-radius:22px">'
+    +opts.map(o=>'<option value="'+esc(o.key)+'">'+esc(o.label)+'</option>').join('')+'</select>';
+  return '<div class="composebar">'+sel+'<input id="composeInput" class="field" placeholder="'+esc(cmp.placeholder||'메시지 입력…')+'" '
+    +'onkeydown="if(event.key===\\'Enter\\')composeSend(document.getElementById(\\'composeSendBtn\\'))">'
+    +'<button id="composeSendBtn" class="go" onclick="composeSend(this)">'+esc(cmp.button||'전송')+'</button></div>';
+}
+/* 현재 렌더 중인 view(탭이면 활성 탭 view, 아니면 모드/드릴 view) */
+function activeView(){ return (VIEW_CTX&&(VIEW_CTX._activeView||VIEW_CTX.view))||[]; }
+
+/* 드릴 새로고침 — 드릴이면 드릴 액션 재실행 후 재렌더, 아니면 모드 재실행 */
+async function refreshCurrent(){
+  if(VIEW_CTX&&VIEW_CTX.refresh==='drill'){
+    const nd=await ibl(VIEW_CTX.action); if(nd&&typeof nd==='object') nd._item=VIEW_CTX.item;
+    VIEW_CTX.data=nd; renderDrill();
+  } else { runMode(); }
+}
+
+/* 액션 실행기: $field 치환 + {path}(rowContext, 기본 현재 데이터) 치환 → 실행 → 새로고침.
+   opts.back=true 면 성공 후 새로고침 대신 목록으로 복귀(삭제 등 — 현재 상세가 사라지는 경우). */
+async function dispatchAction(template,fieldValues,rowContext,opts){
+  let code=buildAction(template,fieldValues||{});
+  const ctx=rowContext||(VIEW_CTX&&VIEW_CTX.data);
+  if(ctx) code=rowAction(code,ctx);
+  const d=await ibl(code);
+  if(d&&(d.error||d.success===false)){ alert(d.error||d.message||'실패'); return false; }
+  if(opts&&opts.back) runMode(); else await refreshCurrent();
+  return true;
+}
+
+/* 드릴 렌더 — 탭(대화/정보) + 활성 view + 활성 compose */
+function renderDrill(){
+  const out = SPLIT ? document.getElementById('mdDetail') : document.getElementById('instOut');
+  if(!out||!VIEW_CTX) return;
+  let h = SPLIT ? '<button class="linkbtn mdback" onclick="mdBack()">‹ 목록</button>'
+                : '<button class="linkbtn" onclick="runMode()">‹ 목록으로</button>';
+  let av, ac;
+  if(VIEW_CTX.tabs&&VIEW_CTX.tabs.length){
+    const ai=Math.min(VIEW_CTX.activeTab||0,VIEW_CTX.tabs.length-1);
+    h+='<div class="tabs">'+VIEW_CTX.tabs.map((t,i)=>'<button class="tab'+(i===ai?' on':'')+'" onclick="drillTab('+i+')">'+esc(t.name)+'</button>').join('')+'</div>';
+    av=VIEW_CTX.tabs[ai].view; ac=VIEW_CTX.tabs[ai].compose;
+  } else { av=VIEW_CTX.view; ac=VIEW_CTX.compose; }
+  VIEW_CTX._activeView=av; VIEW_CTX._activeCompose=ac;
+  out.innerHTML=h+renderView(av,VIEW_CTX.data)+renderComposeBar(ac);
+}
+function drillTab(i){ if(VIEW_CTX){ VIEW_CTX.activeTab=i; renderDrill(); } }
+function mdBack(){ const s=document.getElementById('mdSplit'); if(s) s.classList.remove('has-detail'); }
+
+async function composeSend(btn){
+  const cmp=VIEW_CTX&&(VIEW_CTX._activeCompose||VIEW_CTX.compose); if(!cmp) return;
+  const inp=document.getElementById('composeInput'); const text=inp?inp.value.trim():''; if(!text) return;
+  const fields={text};
+  const opts=composeChannelOptions(cmp);
+  if(opts.length){ const selEl=document.getElementById('composeChannel'); const key=selEl?selEl.value:opts[0].key; const sel=opts.filter(o=>o.key===key)[0]||opts[0]; fields.channel_type=sel.channel_type; fields.to=sel.to; }
+  btn.disabled=true;
+  try{ await dispatchAction(cmp.action,fields); }
+  catch(e){ alert('전송 실패: '+e.message); }
+  finally{ btn.disabled=false; }
+}
+async function formSave(vi,btn){
+  const p=activeView()[vi]; if(!p) return;
+  const vals={}; (p.fields||[]).forEach(f=>{ const el=document.getElementById('ff_'+vi+'_'+f.key); if(el) vals[f.key]=el.value; });
+  btn.disabled=true; try{ await dispatchAction(p.action,vals); }catch(e){ alert('저장 실패: '+e.message); } finally{ btn.disabled=false; }
+}
+/* images 필드 — 첨부 이미지 제거(드릴 데이터 컨텍스트로 remove_image). 추가는 데스크탑 전용. */
+async function imgRemove(vi,fi,encPath){
+  const p=activeView()[vi]; if(!p) return;
+  const f=(p.fields||[])[fi]; if(!f||!f.remove_action) return;
+  try{ await dispatchAction(f.remove_action,{path:decodeURIComponent(encPath)}); }
+  catch(e){ alert('이미지 제거 실패: '+e.message); }
+}
+/* form 보조 액션(즐겨찾기 토글·삭제 등) — 드릴 데이터 컨텍스트로 실행. back=true면 목록 복귀. */
+async function formAct(vi,ai,btn){
+  const p=activeView()[vi]; if(!p||!p.actions||!p.actions[ai]) return;
+  const a=p.actions[ai];
+  if(a.confirm && !confirm(a.confirm)) return;
+  btn.disabled=true;
+  try{ await dispatchAction(a.action,{},null,{back:a.back}); }
+  catch(e){ alert('실패: '+e.message); }
+  finally{ btn.disabled=false; }
+}
+async function elAdd(vi,btn){
+  const p=activeView()[vi]; if(!p||!p.add) return;
+  const vals={}; (p.add.fields||[]).forEach(f=>{ const el=document.getElementById('ea_'+vi+'_'+f.key); if(el) vals[f.key]=el.value; });
+  btn.disabled=true; try{ await dispatchAction(p.add.action,vals); }catch(e){ alert('추가 실패: '+e.message); } finally{ btn.disabled=false; }
+}
+async function elDelete(vi,ri){
+  const p=activeView()[vi]; if(!p) return;
+  const arr=viewList(VIEW_CTX.data,p.from); const item=arr[ri]; if(item==null) return;
+  try{ await dispatchAction(p.delete_action,{},item); }catch(e){ alert('삭제 실패: '+e.message); }
+}
 function rowItem(vi,ri){
   if(!VIEW_CTX) return null;
-  const p=(VIEW_CTX.view||[])[vi]; if(!p) return null;
+  const p=activeView()[vi]; if(!p) return null;
   const arr=viewList(VIEW_CTX.data,p.from);
   return arr[ri]==null?null:{prim:p,item:arr[ri]};
 }
@@ -1167,16 +1366,21 @@ function openFileOverlay(path){
   document.body.appendChild(ov);
 }
 async function rowDrill(vi,ri){
-  const r=rowItem(vi,ri); if(!r||!r.prim.item_click) return;
-  const dc=r.prim.item_click;
-  const out=document.getElementById('instOut');
-  out.innerHTML='<div class="center"><div class="spin"></div></div>';
+  // split이면 리스트(LIST)에서 행을 찾아 상세 패널(#mdDetail)로, 아니면 현재 view(VIEW_CTX)에서 instOut으로.
+  const src = SPLIT ? LIST : VIEW_CTX; if(!src) return;
+  const p=(src.view||[])[vi]; if(!p||!p.item_click) return;
+  const item=viewList(src.data,p.from)[ri]; if(item==null) return;
+  const dc=p.item_click;
+  const detail = SPLIT ? document.getElementById('mdDetail') : document.getElementById('instOut');
+  detail.innerHTML='<div class="center"><div class="spin"></div></div>';
   try{
-    const d=await ibl(rowAction(dc.action,r.item));
-    if(d&&typeof d==='object') d._item=r.item; /* 드릴 뷰에서 클릭한 행 참조용 */
-    VIEW_CTX={view:dc.view,data:d};
-    out.innerHTML=renderView(dc.view,d);
-  }catch(e){ out.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }
+    const code=rowAction(dc.action,item);
+    const d=await ibl(code);
+    if(d&&typeof d==='object') d._item=item; /* 드릴 뷰에서 클릭한 행 참조용 */
+    VIEW_CTX={view:dc.view,tabs:dc.tabs,activeTab:0,data:d,action:code,item:item,compose:dc.compose,refresh:'drill'};
+    if(SPLIT){ const s=document.getElementById('mdSplit'); if(s) s.classList.add('has-detail'); }
+    renderDrill();
+  }catch(e){ detail.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }
 }
 </script>
 </body>

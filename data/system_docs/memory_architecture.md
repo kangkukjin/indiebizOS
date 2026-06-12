@@ -6,7 +6,7 @@ owner_code: >
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py
-last_updated: 2026-05-31
+last_updated: 2026-06-12
 see_also: [execution_memory.md, architecture.md, ibl.md]
 ---
 

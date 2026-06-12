@@ -1,5 +1,5 @@
 # World Pulse — 오늘의 세계와 나 (자동 주입)
-수집 시각: 2026-06-11T08:29
+수집 시각: 2026-06-12T00:23
 
 > 이 정보는 대화 시작 시 시스템 프롬프트에 자동 포함됩니다.
 > 사용자가 '요즘 세상은 어때', '오늘 경제 상황' 등을 물으면
@@ -16,25 +16,23 @@
 
 ## 시스템 상태
 - 프로젝트 24개, 에이전트 33개 활성
-- 최근 대화: ping (시스템 AI)
+- 최근 대화: 폰을 진동시켜봐 (시스템 AI) / 내 폰을 진동시켜줘 (시스템 AI)
 - 오늘 예정: 없음
-- 저장소 여유: 312.1GB
+- 저장소 여유: 309.3GB
 
 ## 시스템 건강
 - scheduler: 정상
 - channel_poller: 정상
 - system_ai_runner: 정상
-- ⚠ 비정상 액션 (2개): engines:chart, sense:kosis
+- ⚠ 비정상 액션 (3개): engines:chart, limbs:phone, sense:kosis
 
 ## 자가점검 패턴 분석
-- 만성 실패: sense:kosis
-- 응답 느려짐: others:channel_read (2ms → 391ms)
-- 응답 느려짐: others:channel_send (1ms → 1263ms)
+- 만성 실패: engines:chart, sense:kosis
 - 응답 느려짐: sense:crawl (582ms → 3338ms)
-- 복구됨: limbs:radio, sense:crypto, sense:realty, sense:stock, sense:weather
+- 복구됨: others:messages, sense:crypto, sense:realty, sense:stock, sense:weather
 
 ## Digital Proprioception
-- 메모리: 611.0MB
-- CPU: 0.2%
-- 스레드: 14개
+- 메모리: 641.5MB
+- CPU: 0.3%
+- 스레드: 23개
 - 태스크: 실행 0개 / 대기 0개

@@ -21,7 +21,6 @@ import {
   ToolboxDialog,
   SwitchEditDialog,
 } from './launcher-components';
-import { ContactsDialog } from './ContactsDialog';
 import { GuideDialog } from './GuideDialog';
 import { UserManualDialog } from './UserManualDialog';
 import { ActionDesktop } from './ActionDesktop';
@@ -61,7 +60,6 @@ export function Launcher() {
   const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
   const [showToolboxDialog, setShowToolboxDialog] = useState(false);
   const [showSwitchEditDialog, setShowSwitchEditDialog] = useState(false);
-  const [showContactsDialog, setShowContactsDialog] = useState(false);
   const [showGuideDialog, setShowGuideDialog] = useState(false);
   const [showUserManualDialog, setShowUserManualDialog] = useState(false);
   const [showMainMenu, setShowMainMenu] = useState(false);
@@ -909,10 +907,12 @@ export function Launcher() {
             </button>
             <button
               onClick={() => {
-                if (window.electron?.openIndieNetWindow) {
-                  window.electron.openIndieNetWindow();
+                // 커뮤니티 서비스(옛 IndieNet) — 표면과 무관하게 전용 창으로 진입.
+                // 내용은 앱모드와 동일한 IBL 커뮤니티 계기(피드·게시판·내 계정).
+                if (window.electron?.openCommunityWindow) {
+                  window.electron.openCommunityWindow();
                 } else {
-                  console.log('IndieNet: Electron API 없음');
+                  window.location.hash = '#/community';  // 브라우저 폴백
                 }
               }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
@@ -942,9 +942,17 @@ export function Launcher() {
           {/* 그룹 B: 소통 */}
           <div className="flex items-center gap-0.5">
             <button
-              onClick={() => setShowContactsDialog(true)}
+              onClick={() => {
+                // 메신저(=이웃관리 CRM) — 표면과 무관하게 전용 창으로 진입.
+                // 옛 빠른 연락처(ContactsDialog)·이웃관리 창(NeighborManagerDialog)을 대체.
+                if (window.electron?.openMessengerWindow) {
+                  window.electron.openMessengerWindow();
+                } else {
+                  window.location.hash = '#/messenger';  // 브라우저 폴백
+                }
+              }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
-              title="빠른 연락처"
+              title="메신저 · 연락처"
             >
               <Contact size={15} />
               <span className="text-[13px]">연락처</span>
@@ -1384,12 +1392,6 @@ export function Launcher() {
           setShowSwitchEditDialog(false);
           setEditingSwitchData(null);
         }}
-      />
-
-      {/* 연락처 다이얼로그 */}
-      <ContactsDialog
-        show={showContactsDialog}
-        onClose={() => setShowContactsDialog(false)}
       />
 
       {/* 시작 가이드 다이얼로그 */}

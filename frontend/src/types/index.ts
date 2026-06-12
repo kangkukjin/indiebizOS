@@ -176,7 +176,8 @@ export interface ElectronAPI {
   }>;
   openProjectWindow: (projectId: string, projectName: string) => Promise<void>;
   openFolderWindow: (folderId: string, folderName: string) => Promise<void>;
-  openIndieNetWindow: () => Promise<void>;
+  openCommunityWindow: () => Promise<void>;
+  openMessengerWindow: () => Promise<void>;
   openSystemAIWindow: () => Promise<void>;
   openBusinessWindow: () => Promise<void>;
   openMultiChatWindow: (roomId: string, roomName: string) => Promise<void>;

@@ -338,9 +338,19 @@ EXAMPLES = [
     # =========================================================================
 
     ("이메일 보내줘", '[others:channel_send]{to: "user@example.com"}', "others", "single", 1, "others,send_email"),
-    ("이웃 목록 보여줘", '[others:channel_read]', "others", "single", 1, "others,neighbors"),
-    ("이웃 상세 정보 조회", '[others:channel_read]{query: "홍길동"}', "others", "single", 1, "others,neighbor_detail"),
+    ("이웃 목록 보여줘", '[others:neighbor]{op: "list"}', "others", "single", 1, "others,neighbor"),
+    ("이웃 상세 정보 조회", '[others:neighbor]{op: "detail", name: "홍길동"}', "others", "single", 1, "others,neighbor_detail"),
     ("메시지 검색해줘", '[others:channel_read]{query: "미팅"}', "others", "single", 1, "others,search"),
+    # 메신저 (others:messages — op 분기)
+    ("받은 메시지 보여줘", '[others:messages]{op: "inbox"}', "others", "single", 1, "others,messenger,inbox"),
+    ("대화 목록 열어줘", '[others:messages]{op: "inbox"}', "others", "single", 1, "others,messenger,inbox"),
+    ("메신저 열어줘", '[others:messages]{op: "inbox"}', "others", "single", 1, "others,messenger,inbox"),
+    ("홍길동이랑 나눈 메시지 보여줘", '[others:messages]{op: "thread", neighbor_id: 1}', "others", "single", 1, "others,messenger,thread"),
+    # 커뮤니티 (others:feed / others:board)
+    ("커뮤니티 피드 보여줘", '[others:feed]{op: "read"}', "others", "single", 1, "others,community,feed"),
+    ("인디넷에 올라온 글 보여줘", '[others:feed]{op: "read"}', "others", "single", 1, "others,community,feed"),
+    ("커뮤니티에 글 올려줘", '[others:feed]{op: "post", content: "안녕하세요"}', "others", "single", 1, "others,community,post"),
+    ("게시판 목록 보여줘", '[others:board]{op: "list"}', "others", "single", 1, "others,community,board"),
 
     # =========================================================================
     # 파이프라인 — 순차 실행 (>>)

@@ -263,10 +263,8 @@ def init_technical():
 - GET /system-ai/status - 상태 확인
 - GET /system-ai/conversations - 대화 이력
 
-### IndieNet
-- POST /indienet/generate - ID 생성
-- GET /indienet/profile - 프로필 조회
-- POST /indienet/post - 포스트 작성
+### IndieNet (커뮤니티/메신저)
+- IBL 계기로 접근 (전용 REST 폐지): [others:feed]·[others:board] 커뮤니티, [others:messages] 메신저 DM, [others:nostr] 신원/릴레이
 
 ## 설정 파일 위치
 - 시스템 AI 설정: data/system_ai_config.json

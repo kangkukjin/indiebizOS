@@ -187,17 +187,17 @@ The system maintains awareness of itself and the world:
 
 A domain-specific language that unifies all capabilities into one syntax.
 
-**5 Nodes, 111 Atomic Actions:**
+**5 Nodes, 122 Atomic Actions:**
 
 | Node | Actions | Description |
 |------|---------|-------------|
 | **sense** | 38 | Data retrieval (web, Naver Korean search, finance, travel, photos, blog, health, real estate, legal, statistics, phone notifications/location/steps) |
-| **self** | 37 | System management, workflows, triggers, files, notifications, code execution, health records |
-| **limbs** | 16 | UI automation (browser, Android phone, macOS screen), media playback (YouTube, radio) |
-| **others** | 6 | Collaboration, delegation, email, contacts, messaging |
+| **self** | 42 | System management, workflows, triggers, files, memory, business (catalog/items/docs/guidelines), phone sync, code execution, health records |
+| **limbs** | 17 | UI automation (browser, Android phone, macOS screen), phone-native actions, media playback (YouTube, radio) |
+| **others** | 11 | Collaboration, delegation, messaging (DM/feed/board/Nostr), neighbor CRM, contacts, auto-response |
 | **engines** | 14 | Content creation (slides, video, charts, images, websites, architecture) |
 
-> Action counts shrank from 332 → 111 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn (e.g. 45 bespoke Android actions became one `[limbs:android]{op}` centerpiece). Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work.
+> Action counts shrank from 332 → 122 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn (e.g. 45 bespoke Android actions became one `[limbs:android]{op}` centerpiece). Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work.
 
 ```
 User: "Search AI news and save to file"
@@ -214,7 +214,7 @@ User: "Search AI news and save to file"
 
 Two memories learn from you automatically — and keep themselves clean:
 
-- **Hippocampus (procedural memory)** — A fine-tuned 768-dim embedding model maps your natural language to past IBL code (action retrieval ~99% Top-5 in practice; retrained 2026-06-05 on the current vocabulary, ~2,300-example corpus). Successful executions are automatically distilled into reusable examples, so the system gets faster at *your* recurring tasks.
+- **Hippocampus (procedural memory)** — A fine-tuned 768-dim embedding model maps your natural language to past IBL code (~92.6% code / 92.8% description Top-5 on held-out test; retrained locally on Apple Silicon, ~2,400-example corpus). Successful executions are automatically distilled into reusable examples, so the system gets faster at *your* recurring tasks.
 - **Deep Memory (relational memory)** — After each conversation, a lightweight pass extracts durable facts about you — preferences, decisions, key dates — and recalls them, with their last-seen date, when relevant.
 - **Closed feedback loop** — When a recalled example drives an execution, its success or failure is recorded, so proven patterns rise and bad ones sink. Distilled code is validated against the action registry before it can enter the corpus.
 - **Self-cleaning** — A periodic consolidation pass (part of the immune patrol) merges near-duplicates, prunes stale or proven-bad entries, and resolves contradictions — so memory stays sharp instead of bloating.
@@ -266,4 +266,4 @@ cd frontend && npm run electron:dev  # Frontend (Electron)
 
 *IndieBiz OS — An AI system that grows with you, not one that's given to you.*
 
-*Last updated: 2026-06-11*
+*Last updated: 2026-06-12 — Messenger/community/business surfaces unified into IBL app-mode instruments; phone↔PC address-book sync (union merge, `[self:phone_sync]`); phone-native self-sufficiency; hippocampus retrained locally.*

@@ -4,9 +4,25 @@ SQLite DB를 사용하여 비즈니스, 아이템, 문서, 지침 관리
 """
 
 import sqlite3
+import uuid as _uuid
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+
+
+def _new_uuid() -> str:
+    """동기화용 전역 고유 식별자 (정수 rowid 는 기기마다 충돌 → uuid 로 레코드 동일성 판정)."""
+    return _uuid.uuid4().hex
+
+
+# 기본 비즈니스 카테고리는 기기마다 따로 시드됨 → 이름 기반 결정적 uuid 로 양 기기가
+# 같은 식별자를 갖게 해 합집합 머지서 중복 방지. (사용자 생성 비즈니스는 _new_uuid 로 고유.)
+_SYNC_NS = _uuid.UUID("6f1b2c3d-0000-4000-8000-000000000001")
+_DEFAULT_BUSINESS_NAMES = {"나눕니다", "구합니다", "놉시다", "빌려줍니다", "소개합니다", "팔아요", "할수있습니다"}
+
+
+def _default_business_uuid(name: str) -> str:
+    return _uuid.uuid5(_SYNC_NS, "business:" + name).hex
 
 # DB 경로
 BACKEND_PATH = Path(__file__).parent
@@ -218,6 +234,88 @@ class BusinessManager:
         # Nostr hex pubkey → npub 마이그레이션 (한 번만 실행)
         self._migrate_nostr_hex_to_npub()
 
+        # 동기화용 컬럼(uuid/parent_uuid/updated_at/deleted) — 폰↔PC 합집합 머지 토대
+        self._migrate_sync_columns()
+
+    def _migrate_sync_columns(self):
+        """동기화용 컬럼 추가 + 기존 행 backfill (멱등).
+
+        폰↔PC business.db 를 합집합(union) 머지하기 위한 토대. 머지는 레코드별
+        last-write-wins(updated_at 늦은 쪽이 이김) + tombstone(deleted=1, 삭제도 데이터로 전파해
+        합집합서 부활 방지) + uuid(정수 rowid 는 기기마다 달라 레코드 동일성 판정 불가).
+        대상=주소록 메타데이터(이웃·연락처·사업·아이템). 문서/지침은 level 로 식별(컬럼 불요).
+        메시지/채널설정은 제외(내용=릴레이/Gmail 진실원, 설정=PC 전용)."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        def _add(table, coldef):
+            try:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN {coldef}")
+            except sqlite3.OperationalError:
+                pass  # 이미 존재
+
+        # 엔티티: uuid + deleted
+        _add("neighbors", "uuid TEXT")
+        _add("neighbors", "deleted INTEGER DEFAULT 0")
+        _add("businesses", "uuid TEXT")
+        _add("businesses", "deleted INTEGER DEFAULT 0")
+        # 자식: uuid + parent_uuid + deleted (+ contacts 는 updated_at 도 없어 추가)
+        _add("contacts", "uuid TEXT")
+        _add("contacts", "neighbor_uuid TEXT")
+        _add("contacts", "updated_at TEXT")
+        _add("contacts", "deleted INTEGER DEFAULT 0")
+        _add("business_items", "uuid TEXT")
+        _add("business_items", "business_uuid TEXT")
+        _add("business_items", "deleted INTEGER DEFAULT 0")
+
+        # uuid 조회 인덱스
+        for t in ("neighbors", "businesses", "contacts", "business_items"):
+            cursor.execute(f"CREATE INDEX IF NOT EXISTS idx_{t}_uuid ON {t}(uuid)")
+
+        # backfill: uuid 없는 기존 행에 부여 (부모 먼저 → 자식 parent_uuid remap 가능)
+        for t in ("neighbors", "businesses", "contacts", "business_items"):
+            if t == "businesses":
+                # 기본 카테고리는 결정적 uuid(양 기기 일치), 사용자 생성분은 무작위
+                cursor.execute("SELECT id, name FROM businesses WHERE uuid IS NULL OR uuid = ''")
+                for rid, name in cursor.fetchall():
+                    u = _default_business_uuid(name) if name in _DEFAULT_BUSINESS_NAMES else _new_uuid()
+                    cursor.execute("UPDATE businesses SET uuid = ? WHERE id = ?", (u, rid))
+            else:
+                cursor.execute(f"SELECT id FROM {t} WHERE uuid IS NULL OR uuid = ''")
+                for (rid,) in cursor.fetchall():
+                    cursor.execute(f"UPDATE {t} SET uuid = ? WHERE id = ?", (_new_uuid(), rid))
+
+        # contacts.updated_at backfill = created_at (없으면 now)
+        cursor.execute(
+            "UPDATE contacts SET updated_at = COALESCE(NULLIF(created_at, ''), ?) "
+            "WHERE updated_at IS NULL OR updated_at = ''",
+            (datetime.now().isoformat(),))
+
+        # 자식 parent_uuid backfill (부모 uuid 연결)
+        cursor.execute(
+            "UPDATE contacts SET neighbor_uuid = "
+            "(SELECT uuid FROM neighbors WHERE neighbors.id = contacts.neighbor_id) "
+            "WHERE (neighbor_uuid IS NULL OR neighbor_uuid = '') AND neighbor_id IS NOT NULL")
+        cursor.execute(
+            "UPDATE business_items SET business_uuid = "
+            "(SELECT uuid FROM businesses WHERE businesses.id = business_items.business_id) "
+            "WHERE (business_uuid IS NULL OR business_uuid = '') AND business_id IS NOT NULL")
+
+        # 기본 카테고리 reconcile: 이전 마이그레이션이 무작위 uuid 를 부여했을 수 있어,
+        # 이름 기반 결정적 uuid 로 강제(양 기기 수렴). 자식 items 의 business_uuid 도 함께 동기.
+        # 멱등: 이미 결정적이면 건너뜀.
+        for name in _DEFAULT_BUSINESS_NAMES:
+            du = _default_business_uuid(name)
+            cursor.execute("SELECT id, uuid FROM businesses WHERE name = ?", (name,))
+            for bid, old_uuid in cursor.fetchall():
+                if old_uuid == du:
+                    continue
+                cursor.execute("UPDATE businesses SET uuid = ? WHERE id = ?", (du, bid))
+                cursor.execute("UPDATE business_items SET business_uuid = ? WHERE business_id = ?", (du, bid))
+
+        conn.commit()
+        conn.close()
+
     def _migrate_nostr_hex_to_npub(self):
         """DB의 nostr contact_value가 hex면 npub로 변환"""
         try:
@@ -285,7 +383,7 @@ class BusinessManager:
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        query = "SELECT * FROM businesses WHERE 1=1"
+        query = "SELECT * FROM businesses WHERE (deleted IS NOT 1)"
         params = []
 
         if level is not None:
@@ -308,7 +406,7 @@ class BusinessManager:
         """비즈니스 상세 조회"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM businesses WHERE id = ?", (business_id,))
+        cursor.execute("SELECT * FROM businesses WHERE id = ? AND (deleted IS NOT 1)", (business_id,))
         row = cursor.fetchone()
         conn.close()
         return self._row_to_dict(row)
@@ -320,9 +418,9 @@ class BusinessManager:
 
         now = datetime.now().isoformat()
         cursor.execute("""
-            INSERT INTO businesses (name, level, description, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (name, level, description, now, now))
+            INSERT INTO businesses (name, level, description, created_at, updated_at, uuid)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (name, level, description, now, now, _new_uuid()))
 
         business_id = cursor.lastrowid
         conn.commit()
@@ -363,10 +461,12 @@ class BusinessManager:
         return self.get_business(business_id)
 
     def delete_business(self, business_id: int):
-        """비즈니스 삭제 (관련 아이템도 함께 삭제)"""
+        """비즈니스 삭제 (소프트 삭제 — tombstone 으로 합집합 머지서 부활 방지, 아이템도 함께)"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM businesses WHERE id = ?", (business_id,))
+        now = datetime.now().isoformat()
+        cursor.execute("UPDATE businesses SET deleted = 1, updated_at = ? WHERE id = ?", (now, business_id))
+        cursor.execute("UPDATE business_items SET deleted = 1, updated_at = ? WHERE business_id = ?", (now, business_id))
         conn.commit()
         conn.close()
 
@@ -377,7 +477,7 @@ class BusinessManager:
         conn = self._get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT * FROM business_items WHERE business_id = ? ORDER BY created_at DESC
+            SELECT * FROM business_items WHERE business_id = ? AND (deleted IS NOT 1) ORDER BY created_at DESC
         """, (business_id,))
         rows = cursor.fetchall()
         conn.close()
@@ -387,7 +487,7 @@ class BusinessManager:
         """비즈니스 아이템 상세 조회"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM business_items WHERE id = ?", (item_id,))
+        cursor.execute("SELECT * FROM business_items WHERE id = ? AND (deleted IS NOT 1)", (item_id,))
         row = cursor.fetchone()
         conn.close()
         return self._row_to_dict(row)
@@ -400,10 +500,13 @@ class BusinessManager:
         cursor = conn.cursor()
 
         now = datetime.now().isoformat()
+        cursor.execute("SELECT uuid FROM businesses WHERE id = ?", (business_id,))
+        _r = cursor.fetchone()
+        business_uuid = _r[0] if _r else None
         cursor.execute("""
-            INSERT INTO business_items (business_id, title, details, attachment_path, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (business_id, title, details, attachment_path, now, now))
+            INSERT INTO business_items (business_id, title, details, attachment_path, created_at, updated_at, uuid, business_uuid)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (business_id, title, details, attachment_path, now, now, _new_uuid(), business_uuid))
 
         item_id = cursor.lastrowid
         conn.commit()
@@ -445,10 +548,11 @@ class BusinessManager:
         return self.get_business_item(item_id)
 
     def delete_business_item(self, item_id: int):
-        """비즈니스 아이템 삭제"""
+        """비즈니스 아이템 삭제 (소프트 삭제 — tombstone)"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM business_items WHERE id = ?", (item_id,))
+        now = datetime.now().isoformat()
+        cursor.execute("UPDATE business_items SET deleted = 1, updated_at = ? WHERE id = ?", (now, item_id))
         conn.commit()
         conn.close()
 
@@ -542,7 +646,7 @@ class BusinessManager:
                 cursor.execute("""
                     SELECT b.id, b.name, b.level, b.description
                     FROM businesses b
-                    WHERE b.level >= 0 AND b.level <= ?
+                    WHERE b.level >= 0 AND b.level <= ? AND (b.deleted IS NOT 1)
                     ORDER BY b.level ASC, b.name ASC
                 """, (doc_level,))
                 businesses = cursor.fetchall()
@@ -555,7 +659,7 @@ class BusinessManager:
                     # 비즈니스 아이템 조회 (최대 5개)
                     cursor.execute("""
                         SELECT title FROM business_items
-                        WHERE business_id = ?
+                        WHERE business_id = ? AND (deleted IS NOT 1)
                         ORDER BY created_at DESC
                         LIMIT 5
                     """, (biz_id,))
@@ -598,7 +702,7 @@ class BusinessManager:
         conn = self._get_connection()
         cursor = conn.cursor()
 
-        query = "SELECT * FROM neighbors WHERE 1=1"
+        query = "SELECT * FROM neighbors WHERE (deleted IS NOT 1)"
         params = []
 
         if search:
@@ -621,7 +725,7 @@ class BusinessManager:
         """이웃 상세 조회"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM neighbors WHERE id = ?", (neighbor_id,))
+        cursor.execute("SELECT * FROM neighbors WHERE id = ? AND (deleted IS NOT 1)", (neighbor_id,))
         row = cursor.fetchone()
         conn.close()
         return self._row_to_dict(row)
@@ -634,6 +738,7 @@ class BusinessManager:
             SELECT n.* FROM neighbors n
             JOIN contacts c ON n.id = c.neighbor_id
             WHERE c.contact_type = ? AND c.contact_value = ?
+              AND (n.deleted IS NOT 1) AND (c.deleted IS NOT 1)
         """, (contact_type, contact_value))
         row = cursor.fetchone()
         conn.close()
@@ -653,9 +758,9 @@ class BusinessManager:
 
         now = datetime.now().isoformat()
         cursor.execute("""
-            INSERT INTO neighbors (name, info_level, rating, additional_info, business_doc, info_share, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (name, info_level, rating, additional_info, business_doc, info_share, now, now))
+            INSERT INTO neighbors (name, info_level, rating, additional_info, business_doc, info_share, created_at, updated_at, uuid)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (name, info_level, rating, additional_info, business_doc, info_share, now, now, _new_uuid()))
 
         neighbor_id = cursor.lastrowid
         conn.commit()
@@ -713,10 +818,12 @@ class BusinessManager:
         return self.get_neighbor(neighbor_id)
 
     def delete_neighbor(self, neighbor_id: int):
-        """이웃 삭제"""
+        """이웃 삭제 (소프트 삭제 — tombstone, 연락처도 함께)"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM neighbors WHERE id = ?", (neighbor_id,))
+        now = datetime.now().isoformat()
+        cursor.execute("UPDATE neighbors SET deleted = 1, updated_at = ? WHERE id = ?", (now, neighbor_id))
+        cursor.execute("UPDATE contacts SET deleted = 1, updated_at = ? WHERE neighbor_id = ?", (now, neighbor_id))
         conn.commit()
         conn.close()
 
@@ -724,7 +831,7 @@ class BusinessManager:
         """빠른 연락처(즐겨찾기) 이웃 목록 조회"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM neighbors WHERE favorite = 1 ORDER BY name")
+        cursor.execute("SELECT * FROM neighbors WHERE favorite = 1 AND (deleted IS NOT 1) ORDER BY name")
         rows = cursor.fetchall()
         conn.close()
         return [self._row_to_dict(row) for row in rows]
@@ -744,7 +851,7 @@ class BusinessManager:
         conn = self._get_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT * FROM contacts WHERE neighbor_id = ? ORDER BY contact_type
+            SELECT * FROM contacts WHERE neighbor_id = ? AND (deleted IS NOT 1) ORDER BY contact_type
         """, (neighbor_id,))
         rows = cursor.fetchall()
         conn.close()
@@ -756,10 +863,13 @@ class BusinessManager:
         cursor = conn.cursor()
 
         now = datetime.now().isoformat()
+        cursor.execute("SELECT uuid FROM neighbors WHERE id = ?", (neighbor_id,))
+        _r = cursor.fetchone()
+        neighbor_uuid = _r[0] if _r else None
         cursor.execute("""
-            INSERT INTO contacts (neighbor_id, contact_type, contact_value, created_at)
-            VALUES (?, ?, ?, ?)
-        """, (neighbor_id, contact_type, contact_value, now))
+            INSERT INTO contacts (neighbor_id, contact_type, contact_value, created_at, updated_at, uuid, neighbor_uuid)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (neighbor_id, contact_type, contact_value, now, now, _new_uuid(), neighbor_uuid))
 
         contact_id = cursor.lastrowid
         conn.commit()
@@ -773,7 +883,7 @@ class BusinessManager:
         """연락처 상세 조회"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM contacts WHERE id = ?", (contact_id,))
+        cursor.execute("SELECT * FROM contacts WHERE id = ? AND (deleted IS NOT 1)", (contact_id,))
         row = cursor.fetchone()
         conn.close()
         return self._row_to_dict(row)
@@ -795,6 +905,8 @@ class BusinessManager:
             params.append(contact_value)
 
         if updates:
+            updates.append("updated_at = ?")  # LWW 충돌 해소 기준
+            params.append(datetime.now().isoformat())
             params.append(contact_id)
             cursor.execute(f"""
                 UPDATE contacts SET {', '.join(updates)} WHERE id = ?
@@ -805,10 +917,11 @@ class BusinessManager:
         return self.get_contact(contact_id)
 
     def delete_contact(self, contact_id: int):
-        """연락처 삭제"""
+        """연락처 삭제 (소프트 삭제 — tombstone)"""
         conn = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
+        now = datetime.now().isoformat()
+        cursor.execute("UPDATE contacts SET deleted = 1, updated_at = ? WHERE id = ?", (now, contact_id))
         conn.commit()
         conn.close()
 

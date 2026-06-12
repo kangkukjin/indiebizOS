@@ -378,11 +378,16 @@ def gen(code, intents):
     elif a == "others:channel_search":
         q = p(code, "query")
         results += [f"{q} 관련 메시지 있어?", f"{q} 검색해봐"]
-    elif a == "others:neighbors":
-        results += ["이웃 목록 좀", "주변 사람들 누가 있지", "이웃 보여줘"]
-    elif a == "others:neighbor_detail":
-        name = p(code, "name")
-        results += [f"{name} 정보 좀", f"{name} 알려줘", f"{name} 누구야"]
+    elif a == "others:neighbor":
+        op = p(code, "op") or "list"
+        if op == "detail":
+            name = p(code, "name")
+            results += ([f"{name} 정보 좀", f"{name} 알려줘", f"{name} 누구야"] if name
+                        else ["그 이웃 상세 정보", "이웃 정보 봐"])
+        elif op == "save":
+            results += ["이웃 추가해줘", "이웃 정보 저장", "이웃 등록해"]
+        else:
+            results += ["이웃 목록 좀", "주변 사람들 누가 있지", "이웃 보여줘"]
     elif a == "others:messages":
         contact = p(code, "contact")
         results += [f"{contact}이랑 대화 내용", f"{contact} 메시지 봐", f"{contact} 이력"]

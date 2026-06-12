@@ -3,7 +3,6 @@
  *
  * 코어 + 도메인별 mixin 구성:
  *   api-system-ai.ts  - 시스템 AI (설정, 프롬프트, 대화, Todo, 질문, 계획)
- *   api-indienet.ts   - IndieNet (상태, 게시, DM, 보드)
  *   api-packages.ts   - 도구 패키지 (CRUD, 분석, Nostr)
  *   api-business.ts   - 비즈니스 (관리, 이웃, 메시지, 자동응답, 통신채널)
  *   api-multi-chat.ts - 다중채팅 (방, 참가자, 메시지)
@@ -11,7 +10,6 @@
 
 import type { Project, Switch, Agent, Message, Tool, SchedulerTask, SchedulerAction } from '../types';
 import { applySystemAIMethods } from './api-system-ai';
-import { applyIndieNetMethods } from './api-indienet';
 import { applyPackagesMethods } from './api-packages';
 import { applyBusinessMethods } from './api-business';
 import { applyMultiChatMethods } from './api-multi-chat';
@@ -617,8 +615,7 @@ class APIClientBase {
 function createAPIClient() {
   const base = new APIClientBase();
   const withSystemAI = applySystemAIMethods(base);
-  const withIndieNet = applyIndieNetMethods(withSystemAI);
-  const withPackages = applyPackagesMethods(withIndieNet);
+  const withPackages = applyPackagesMethods(withSystemAI);
   const withBusiness = applyBusinessMethods(withPackages);
   const withMultiChat = applyMultiChatMethods(withBusiness);
   const withLectureWorkspace = applyLectureWorkspaceMethods(withMultiChat);

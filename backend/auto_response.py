@@ -19,6 +19,8 @@ from runtime_utils import get_base_path as _get_base_path
 DATA_PATH = _get_base_path() / "data"
 SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
 AUTORESPONSE_PROMPT_PATH = DATA_PATH / "common_prompts" / "base_prompt_autoresponse.md"
+# 자동응답 on/off 사용자 의사 영속(재시작에도 유지). 없으면 기본 켜짐(기존 동작 보존).
+AUTO_RESPONSE_STATE_PATH = DATA_PATH / "auto_response_state.json"
 
 
 # =============================================================================
@@ -268,6 +270,35 @@ class AutoResponseService:
         if self._thread:
             self._thread.join(timeout=5)
         self._log("자동응답 서비스 중지")
+
+    # ── on/off 사용자 의사 영속(재시작에도 유지) ──
+    def is_enabled(self) -> bool:
+        """사용자가 자동응답을 켜둔 상태인지(영속). 파일 없으면 기본 켜짐(기존 동작 보존)."""
+        try:
+            if AUTO_RESPONSE_STATE_PATH.exists():
+                with open(AUTO_RESPONSE_STATE_PATH, 'r', encoding='utf-8') as f:
+                    return bool(json.load(f).get("enabled", True))
+        except Exception:
+            pass
+        return True
+
+    def _set_enabled(self, enabled: bool):
+        try:
+            AUTO_RESPONSE_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(AUTO_RESPONSE_STATE_PATH, 'w', encoding='utf-8') as f:
+                json.dump({"enabled": bool(enabled)}, f)
+        except Exception as e:
+            self._log(f"자동응답 상태 저장 실패: {e}")
+
+    def enable(self):
+        """사용자가 자동응답 켜기 — 영속 저장 + 즉시 시작. (재시작 시 channel_poller 가 is_enabled 로 자동 시작)"""
+        self._set_enabled(True)
+        self.start()
+
+    def disable(self):
+        """사용자가 자동응답 끄기 — 영속 저장 + 즉시 중지. (재시작해도 꺼진 상태 유지)"""
+        self._set_enabled(False)
+        self.stop()
 
     def _run_loop(self):
         while self._running and not self._stop_event.is_set():

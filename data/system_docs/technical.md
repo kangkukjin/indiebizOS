@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-05-28
+last_updated: 2026-06-12
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -100,10 +100,18 @@ see_also: [architecture.md, ibl.md]
 - `GET /business/neighbors` - 이웃 목록
 - `POST /business/neighbors` - 이웃 생성
 - `PUT /business/neighbors/{id}` - 이웃 수정
-- `DELETE /business/neighbors/{id}` - 이웃 삭제
+- `DELETE /business/neighbors/{id}` - 이웃 삭제 (소프트 삭제 — tombstone)
 - `GET /business/neighbors/{id}/contacts` - 연락처 목록
 - `POST /business/neighbors/{id}/contacts` - 연락처 추가
 - `DELETE /business/contacts/{id}` - 연락처 삭제
+
+### 폰↔PC 동기화 (/business/sync)
+- `GET /business/sync/export` - business.db 동기화 스냅샷(삭제 tombstone 포함)
+- `POST /business/sync/merge` - 다른 기기 export를 합집합 머지(LWW+tombstone) 후 최신 스냅샷 반환
+- 주소록 메타데이터(이웃·연락처·사업·아이템·문서·지침)만 대상. 메시지/글 내용은 릴레이/Gmail 수렴이라 제외.
+- 인증: `remote_access_guard`가 외부(터널) 요청에 launcher 세션 강제, localhost(데스크탑) 통과.
+- 트리거: `[self:phone_sync]` IBL 액션(맥 주도 USB adb) 또는 폰 `phone_api` 직접 호출.
+- ※ IndieNet 전용 REST(`/indienet/*`)는 제거됨 — 커뮤니티/메신저는 IBL 계기(others:feed/board/messages/nostr)로만 접근.
 
 ### 메시지 관리 (/business/messages)
 - `GET /business/messages` - 메시지 목록
@@ -145,7 +153,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 
 ## IBL 도구 — execute_ibl
 
-모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 5노드(sense/self/limbs/others/engines) 109 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
+모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 5노드(sense/self/limbs/others/engines) 122 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
 
 예시:
 ```
@@ -253,4 +261,4 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
 
 ---
-*마지막 업데이트: 2026-06-10 — 중급 모델 Reflex 전용화(EXECUTE는 본격 모델), 폰 컴패니언 피드(/phone API + phone_notifications.db), NIP-17/44 모듈, 해마 2026-06-05 재학습 수치, 35 패키지. 이전(2026-05-28): op 어휘 단일화 + 삼각 검증 인프라 + dispatcher 표준. 이전(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*
+*마지막 업데이트: 2026-06-12 — /business/sync/* 동기화 엔드포인트(LWW+tombstone, self:phone_sync) + api_indienet REST 제거(IndieNet→IBL 계기) + 122 액션 정합화 + 해마 로컬 M4 Pro 재학습(code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 중급 모델 Reflex 전용화, 폰 컴패니언 피드(/phone API), NIP-17/44 모듈. 이전(2026-05-28): op 어휘 단일화 + 삼각 검증. 이전(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*

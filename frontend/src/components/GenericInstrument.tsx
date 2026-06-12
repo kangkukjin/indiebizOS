@@ -6,8 +6,12 @@
  * 새 IBL 액션에 app: 블록만 달면 데스크탑·원격에 동시 등장.
  *
  * 어휘 명세: docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md
- *  - view 프리미티브 7종: metric / kv / kv_list / card_list(+item_click 드릴) /
- *    image_grid / sparkline / list_action
+ *  - view 프리미티브 10종: metric / kv / kv_list / card_list(+item_click 드릴·탭) /
+ *    image_grid / sparkline / list_action / thread(채팅 버블+status) /
+ *    form(편집 필드+저장) / editable_list(행 CRUD)
+ *  - compose: 하단 작성바 — $text=작성, {field}=드릴 데이터. 전송 후 새로고침.
+ *  - item_click.tabs: 드릴 상세 탭(대화↔이웃정보) — 한 액션 데이터를 탭별 view 로.
+ *  - form/editable_list: $field=입력값, {field}=드릴 데이터 → 저장/추가/삭제 후 새로고침(dispatch).
  *  - 표시 템플릿 "{path|filter}": round·num·abs·arrow·opt:앞,뒤·trunc:N
  *  - action 템플릿: $key=사용자 입력(빈 입력 파라미터 자동 제거), {path}=데이터 행 필드
  *
@@ -35,15 +39,56 @@ export interface AppInput {
   option_label?: string;
 }
 
-export interface AppButton { label: string; action: string }
+export interface AppButton { label: string; action: string; refresh?: boolean }
+
+export interface AppCompose {
+  placeholder?: string;
+  action: string;   // $text=작성 내용, {field}=드릴 행 필드 (예: 대화 상대의 channel/name)
+  button?: string;  // 전송 버튼 라벨 (기본 '전송')
+  channels?: AppComposeChannels;  // 발신 채널 선택 — 다채널 이웃에서 어느 연락처로 보낼지($channel_type/$to 주입)
+}
+
+// compose 채널 선택 — 드릴 데이터의 연락처 배열에서 발신 가능한 채널만 골라 드롭다운 제공.
+// 단일(또는 0)이면 드롭다운 없이 기본값 사용. 선택값은 action 의 $channel_type/$to 로 주입.
+export interface AppComposeChannels {
+  from: string;       // 드릴 데이터의 연락처 배열 필드 (예: contacts)
+  type: string;       // 연락처 항목의 채널 타입 필드 (예: contact_type) → channel_type
+  value: string;      // 연락처 항목의 주소 필드 (예: contact_value) → to
+  sendable?: string[]; // 발신 가능한 채널 타입 화이트리스트 (예: [gmail, nostr]). 생략 시 전부.
+}
 
 export interface AppViewPrim {
-  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action';
+  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list';
   [k: string]: unknown;
 }
 
-export interface AppPeriods {
-  key?: string;  // 액션 템플릿이 참조하는 파라미터명 ($key) — 기본 'period'
+export interface AppFormField {
+  key: string;
+  label?: string;
+  type: 'text' | 'select' | 'toggle' | 'textarea' | 'images';
+  value?: string;        // 초기값 템플릿 (데이터에서 채움)
+  placeholder?: string;
+  options?: { value: string | number; label: string }[];
+  // type:'images' 전용 — 업로드 즉시 영속(form save 와 무관). add 는 데스크탑(window.electron)만.
+  add_action?: string;    // [..]{op:add_image, ..., path:"$path"} — $path=소스 파일경로
+  remove_action?: string; // [..]{op:remove_image, ..., path:"$path"} — $path=제거할 첨부
+}
+
+// form 보조 액션 — 저장 외 부가 동작(즐겨찾기 토글·삭제 등). 드릴 데이터 컨텍스트로 실행.
+export interface FormAction {
+  label: string;       // 표시 템플릿 ({path} 치환 가능)
+  action: string;      // IBL 코드 — {path}는 드릴 데이터로 치환
+  style?: 'danger';    // 위험(삭제) 스타일
+  confirm?: string;    // 클릭 시 확인 다이얼로그 문구
+  back?: boolean;      // 성공 후 목록으로 복귀(상세가 사라지는 삭제 등)
+}
+
+// 액션 실행기: $field 치환 + {path}(rowContext, 기본 드릴 데이터) 치환 → 실행 → 현재 뷰 새로고침
+// opts.back: 성공 시 새로고침 대신 드릴을 닫고 목록으로 복귀(삭제 등 — 현재 상세가 사라지는 경우)
+type Dispatch = (template: string, fieldValues?: Record<string, string>, rowContext?: Json, opts?: { back?: boolean }) => Promise<boolean>;
+
+export interface AppFilter {
+  key?: string;  // 액션 템플릿이 참조하는 파라미터명 ($key) — 기본 'filter'
   items: { label: string; value: string | number; default?: boolean }[];
 }
 
@@ -56,7 +101,8 @@ export interface AppMode {
   buttons?: AppButton[];
   action?: string;
   view?: AppViewPrim[];
-  periods?: AppPeriods;  // 차트 기간 토글 — 클릭 즉시 그 기간으로 재조회
+  filter?: AppFilter;  // 단일선택 필터 칩(기간·레벨 양용) — 클릭 즉시 그 값으로 재조회
+  compose?: AppCompose;  // 하단 작성바 (커뮤니티 글 작성 등) — 전송 후 현재 뷰 자동 새로고침
 }
 
 export interface AppInstrument extends AppMode {
@@ -117,7 +163,9 @@ function tpl(t: unknown, data: unknown): string {
 function buildAction(template: string, values: Record<string, string>): string {
   let code = template.replace(/\$(\w+)/g, (_, k: string) => {
     const v = values[k];
-    return v == null ? '' : String(v).replace(/\\/g, '').replace(/"/g, '');
+    // IBL 값은 JSON5 문자열 리터럴로 파싱됨 → 스트립이 아니라 이스케이프(백슬래시·따옴표).
+    // 스트립하면 Windows 경로(C:\Users\…)의 백슬래시가 사라져 깨짐. 이스케이프하면 파서가 복원.
+    return v == null ? '' : String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   });
   code = code.replace(/\w+:\s*"",?\s*/g, '');
   code = code.replace(/,\s*\}/g, '}').replace(/\{\s*,/g, '{');
@@ -142,6 +190,24 @@ function asList(data: unknown, from: unknown): Json[] {
   if (from === '.') return [data as Json]; // 응답 자체를 1행으로 (단일 객체에 행 버튼 달기)
   const arr = jget(data, from as string);
   return Array.isArray(arr) ? (arr as Json[]) : [];
+}
+
+// compose 채널 선택 후보 — 연락처 배열에서 발신 가능한 채널만, 없으면 기본(primary) 채널로 폴백.
+type ChannelOpt = { key: string; channel_type: string; to: string; label: string };
+function composeChannelOptions(cmp: AppCompose | undefined, data: unknown): ChannelOpt[] {
+  const ch = cmp?.channels;
+  if (!ch || !data || typeof data !== 'object') return [];
+  const mk = (channel_type: string, to: string, label: string): ChannelOpt => ({ key: channel_type + '|' + to, channel_type, to, label });
+  let opts = asList(data, ch.from)
+    .map((c) => ({ ct: String(jget(c, ch.type) ?? ''), to: String(jget(c, ch.value) ?? '') }))
+    .filter((o) => o.to && (!ch.sendable || ch.sendable.includes(o.ct)))
+    .map((o) => mk(o.ct, o.to, o.ct + ' · ' + o.to));
+  if (opts.length === 0) {
+    const ct = String(jget(data, 'channel') ?? ''); const to = String(jget(data, 'to') ?? '');
+    if (to) opts = [mk(ct, to, ct || '기본')];
+  }
+  const seen = new Set<string>();
+  return opts.filter((o) => (seen.has(o.key) ? false : (seen.add(o.key), true)));
 }
 
 // ===== 뷰 프리미티브 =====
@@ -186,11 +252,180 @@ function Sparkline({ p, data }: { p: AppViewPrim; data: unknown }) {
   );
 }
 
-function ViewPrim({ p, data, onDrill, onRowAction, busyRow }: {
+const fieldCls = 'px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400';
+
+function statusGlyph(s: string): string {
+  return s === 'sent' ? '✓' : s === 'pending' ? '⏳' : s === 'failed' ? '⚠' : '';
+}
+
+// ===== 편집 프리미티브 (form / editable_list) =====
+
+const IMAGE_BASE = IBL_ENDPOINT.replace(/\/ibl\/execute$/, '');  // 'http://127.0.0.1:8765'
+const imageUrl = (p: string) => `${IMAGE_BASE}/image?path=${encodeURIComponent(p)}`;
+
+/** attachment_path(JSON 배열 또는 레거시 단일 문자열) → 경로 배열 */
+function parseImagePaths(v: unknown): string[] {
+  const s = String(v ?? '').trim();
+  if (!s) return [];
+  try { const a = JSON.parse(s); if (Array.isArray(a)) return a.map(String); } catch { /* 레거시 단일 */ }
+  return [s];
+}
+
+// 첨부 이미지 필드 — 썸네일(전 표면, /image?path=) + 제거(어디서나) + 추가(데스크탑 window.electron 만).
+// form save 와 무관: 업로드 즉시 add_image/remove_image 로 영속 후 새로고침.
+function ImagesField({ f, value, dispatch, busy, setBusy }:
+  { f: AppFormField; value: string; dispatch: Dispatch; busy: boolean; setBusy: (b: boolean) => void }) {
+  const paths = parseImagePaths(value);
+  const electron = (window as unknown as { electron?: { selectImages?: () => Promise<string[]> } }).electron;
+  const canAdd = !!(electron?.selectImages && f.add_action);
+  const add = async () => {
+    if (!electron?.selectImages || !f.add_action) return;
+    const picked = await electron.selectImages();
+    if (!picked || !picked.length) return;
+    setBusy(true);
+    for (const src of picked) await dispatch(f.add_action, { path: src });  // 각 파일 즉시 첨부+새로고침
+    setBusy(false);
+  };
+  const remove = async (p: string) => {
+    if (!f.remove_action) return;
+    setBusy(true);
+    await dispatch(f.remove_action, { path: p });
+    setBusy(false);
+  };
+  return (
+    <div className="flex flex-wrap gap-2 items-center">
+      {paths.map((p, i) => (
+        <div key={i} className="relative group">
+          <img src={imageUrl(p)} alt="" className="w-16 h-16 object-cover rounded-lg border border-stone-200" />
+          {f.remove_action && (
+            <button disabled={busy} onClick={() => remove(p)} title="제거"
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-stone-800 text-white text-xs leading-none opacity-0 group-hover:opacity-100 disabled:opacity-40">×</button>
+          )}
+        </div>
+      ))}
+      {canAdd && (
+        <button disabled={busy} onClick={add}
+          className="w-16 h-16 rounded-lg border border-dashed border-stone-300 text-stone-400 text-2xl hover:border-stone-500 hover:text-stone-600 disabled:opacity-40">＋</button>
+      )}
+      {paths.length === 0 && !canAdd && <span className="text-xs text-stone-400">이미지 없음</span>}
+    </div>
+  );
+}
+
+function FormPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown; dispatch: Dispatch }) {
+  const fields = (p.fields as AppFormField[]) || [];
+  const initVals = useCallback(
+    () => Object.fromEntries(fields.map((f) => [f.key, tpl(f.value ?? '', data)])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data]
+  );
+  const [vals, setVals] = useState<Record<string, string>>(initVals);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { setVals(initVals()); }, [initVals]);
+  const set = (k: string, v: string) => setVals((s) => ({ ...s, [k]: v }));
+  const save = async () => { setSaving(true); await dispatch(p.action as string, vals); setSaving(false); };
+  // 보조 액션(즐겨찾기 토글·삭제 등): form 값이 아니라 드릴 데이터 컨텍스트로 실행. back=true면 성공 후 목록 복귀.
+  const actions = (p.actions as FormAction[]) || [];
+  const fire = async (a: FormAction) => {
+    if (a.confirm && !window.confirm(a.confirm)) return;
+    setSaving(true);
+    await dispatch(a.action, {}, undefined, { back: a.back });
+    setSaving(false);
+  };
+
+  return (
+    <Card>
+      {p.title != null && <div className="text-xs font-semibold text-stone-400 uppercase mb-2">{String(p.title)}</div>}
+      <div className="flex flex-col gap-2.5">
+        {fields.map((f, i) => (
+          <div key={i} className="flex flex-col gap-1">
+            {f.label && <label className="text-xs text-stone-500">{f.label}</label>}
+            {f.type === 'select' ? (
+              <select value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} className={fieldCls}>
+                {(f.options || []).map((o, j) => <option key={j} value={String(o.value)}>{o.label}</option>)}
+              </select>
+            ) : f.type === 'toggle' ? (
+              <button onClick={() => set(f.key, vals[f.key] === '1' ? '0' : '1')}
+                className={`self-start px-3 py-1.5 rounded-lg border text-sm ${vals[f.key] === '1' ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-200'}`}>
+                {vals[f.key] === '1' ? '켜짐' : '꺼짐'}
+              </button>
+            ) : f.type === 'textarea' ? (
+              <textarea value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} rows={3} placeholder={f.placeholder || ''} className={`${fieldCls} resize-y`} />
+            ) : f.type === 'images' ? (
+              <ImagesField f={f} value={vals[f.key] ?? ''} dispatch={dispatch} busy={saving} setBusy={setSaving} />
+            ) : (
+              <input value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder || ''} className={fieldCls} />
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button disabled={saving} onClick={save}
+          className="px-4 py-2 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40">
+          {saving ? '…' : ((p.button as string) || '저장')}
+        </button>
+        {actions.map((a, i) => (
+          <button key={i} disabled={saving} onClick={() => fire(a)}
+            className={`px-3 py-2 rounded-lg text-sm border disabled:opacity-40 ${
+              a.style === 'danger'
+                ? 'border-red-200 text-red-600 hover:bg-red-50'
+                : 'border-stone-200 text-stone-600 hover:border-stone-400'}`}>
+            {tpl(a.label, data)}
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function EditableListPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown; dispatch: Dispatch }) {
+  const arr = asList(data, p.from);
+  const add = p.add as { fields: AppFormField[]; action: string; button?: string } | undefined;
+  const [addVals, setAddVals] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const del = async (item: Json) => { setBusy(true); await dispatch(p.delete_action as string, {}, item); setBusy(false); };
+  const doAdd = async () => { setBusy(true); const ok = await dispatch(add!.action, addVals); if (ok) setAddVals({}); setBusy(false); };
+
+  return (
+    <Card>
+      {p.title != null && <div className="text-xs font-semibold text-stone-400 uppercase mb-2">{String(p.title)}</div>}
+      {arr.length === 0 && <p className="text-sm text-stone-400 mb-2">{String(p.empty || '없음')}</p>}
+      {arr.map((it, i) => (
+        <div key={i} className="flex items-center justify-between py-1.5 border-b border-stone-100 last:border-0 text-sm">
+          <span className="text-stone-800 min-w-0 truncate">{tpl(p.display, it)}</span>
+          {p.delete_action != null && (
+            <button disabled={busy} onClick={() => del(it)} className="text-xs text-stone-400 hover:text-red-500 shrink-0 ml-2 disabled:opacity-40">삭제</button>
+          )}
+        </div>
+      ))}
+      {add && (
+        <div className="flex gap-2 mt-2.5">
+          {add.fields.map((f, i) => f.type === 'select' ? (
+            <select key={i} value={addVals[f.key] ?? ''} onChange={(e) => setAddVals((s) => ({ ...s, [f.key]: e.target.value }))}
+              className={`${fieldCls} shrink-0`}>
+              <option value="">{f.placeholder || '선택'}</option>
+              {(f.options || []).map((o, j) => <option key={j} value={String(o.value)}>{o.label}</option>)}
+            </select>
+          ) : (
+            <input key={i} value={addVals[f.key] ?? ''} onChange={(e) => setAddVals((s) => ({ ...s, [f.key]: e.target.value }))}
+              placeholder={f.placeholder || ''} className={`${fieldCls} flex-1 min-w-0`} />
+          ))}
+          <button disabled={busy} onClick={doAdd}
+            className="px-3 py-2 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40 shrink-0">
+            {add.button || '추가'}
+          </button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ViewPrim({ p, data, onDrill, onRowAction, busyRow, dispatch }: {
   p: AppViewPrim; data: unknown;
   onDrill: (p: AppViewPrim, item: Json) => void;
   onRowAction: (action: string, item: Json, rowKey: string) => void;
   busyRow: string | null;
+  dispatch: Dispatch;
 }) {
   if (p.type === 'metric') {
     const col = trendClass(p, data);
@@ -291,7 +526,35 @@ function ViewPrim({ p, data, onDrill, onRowAction, busyRow }: {
     );
   }
 
+  if (p.type === 'thread') {
+    const arr = asList(data, p.from);
+    if (!arr.length) return <EmptyMsg p={p} data={data} />;
+    return (
+      <div className="flex flex-col gap-1.5 py-1">
+        {arr.map((it, i) => {
+          const mine = p.mine ? !!jget(it, p.mine as string) : false;
+          const meta = p.meta ? tpl(p.meta, it) : '';
+          const time = p.time ? tpl(p.time, it) : '';
+          const status = p.status ? statusGlyph(String(jget(it, p.status as string) || '')) : '';
+          const foot = [meta, time, status].filter(Boolean).join(' · ');
+          return (
+            <div key={i} className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
+              <div className={`max-w-[78%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                mine ? 'bg-stone-800 text-white rounded-br-sm' : 'bg-white border border-stone-200 text-stone-800 rounded-bl-sm'}`}>
+                {tpl(p.text, it)}
+              </div>
+              {foot && <div className="text-[10px] text-stone-400 mt-0.5 px-1">{foot}</div>}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   if (p.type === 'sparkline') return <Sparkline p={p} data={data} />;
+
+  if (p.type === 'form') return <FormPrim p={p} data={data} dispatch={dispatch} />;
+  if (p.type === 'editable_list') return <EditableListPrim p={p} data={data} dispatch={dispatch} />;
 
   if (p.type === 'list_action') {
     const arr = asList(data, p.from);
@@ -327,18 +590,19 @@ function ViewPrim({ p, data, onDrill, onRowAction, busyRow }: {
   return null;
 }
 
-function ViewRenderer({ view, data, onDrill, onRowAction, busyRow }: {
+function ViewRenderer({ view, data, onDrill, onRowAction, busyRow, dispatch }: {
   view: AppViewPrim[]; data: Json;
   onDrill: (p: AppViewPrim, item: Json) => void;
   onRowAction: (action: string, item: Json, rowKey: string) => void;
   busyRow: string | null;
+  dispatch: Dispatch;
 }) {
   if (data.error) return <p className="text-sm text-stone-400">{String(data.error)}</p>;
   if (data.success === false) return <p className="text-sm text-stone-400">{String(data.message || '실패')}</p>;
   return (
     <>
       {view.map((p, i) => (
-        <ViewPrim key={i} p={p} data={data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} />
+        <ViewPrim key={i} p={p} data={data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} dispatch={dispatch} />
       ))}
     </>
   );
@@ -352,7 +616,7 @@ function resolveOptionsAction(template: string, values: Record<string, string>):
   const code = template.replace(/\$(\w+)/g, (_, k: string) => {
     const v = values[k] || '';
     if (!v) missing = true;
-    return v.replace(/"/g, '');
+    return v.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   });
   return { code, missing };
 }
@@ -398,23 +662,30 @@ function SelectInput({ inp, values, onChange }: { inp: AppInput; values: Record<
   );
 }
 
+type DrillTab = { name: string; view: AppViewPrim[]; compose?: AppCompose };
+type DrillState = { data: Json; action: string; item: Json; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] };
+
 function ModePane({ mode }: { mode: AppMode }) {
   const initVals = useCallback(() => {
     const v: Record<string, string> = {};
     (mode.inputs || []).forEach((inp) => { v[inp.key] = inp.default || ''; });
-    if (mode.periods?.items?.length) {
-      const def = mode.periods.items.find((x) => x.default) || mode.periods.items[0];
-      v[mode.periods.key || 'period'] = String(def.value);
+    if (mode.filter?.items?.length) {
+      const def = mode.filter.items.find((x) => x.default) || mode.filter.items[0];
+      v[mode.filter.key || 'filter'] = String(def.value);
     }
     return v;
   }, [mode]);
 
   const [values, setValues] = useState<Record<string, string>>(initVals);
   const [data, setData] = useState<Json | null>(null);
-  const [drill, setDrill] = useState<{ view: AppViewPrim[]; data: Json } | null>(null);
+  const [drill, setDrill] = useState<DrillState | null>(null);
+  const [tabIdx, setTabIdx] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyRow, setBusyRow] = useState<string | null>(null);
+  const [composeText, setComposeText] = useState('');
+  const [composeCh, setComposeCh] = useState('');  // 선택된 발신 채널 키 (빈값=첫 후보)
+  const [sending, setSending] = useState(false);
   const valuesRef = useRef(values);
   valuesRef.current = values;
 
@@ -435,24 +706,66 @@ function ModePane({ mode }: { mode: AppMode }) {
   // 모드 진입 시 초기화 + auto_run
   useEffect(() => {
     const v = initVals();
-    setValues(v); setData(null); setDrill(null); setError(null);
+    setValues(v); setData(null); setDrill(null); setError(null); setComposeText(''); setComposeCh('');
     if (mode.auto_run) run(v);
   }, [mode, initVals, run]);
 
   const onDrill = useCallback(async (p: AppViewPrim, item: Json) => {
-    const dc = p.item_click as { action: string; view: AppViewPrim[] } | undefined;
+    const dc = p.item_click as { action: string; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] } | undefined;
     if (!dc) return;
-    setLoading(true); setError(null);
+    setLoading(true); setError(null); setComposeText(''); setComposeCh(''); setTabIdx(0);
     try {
-      const d = await runIBL(rowAction(dc.action, item));
+      const code = rowAction(dc.action, item);
+      const d = await runIBL(code);
       if (d && typeof d === 'object') (d as Json)._item = item; // 드릴 뷰에서 클릭 행 참조용
-      setDrill({ view: dc.view, data: d });
+      setDrill({ data: d, action: code, item, view: dc.view, compose: dc.compose, tabs: dc.tabs });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // 현재 뷰 새로고침 (드릴이면 드릴 액션 재실행, 아니면 모드 액션)
+  const refreshCurrent = useCallback(async () => {
+    if (drill) {
+      const nd = await runIBL(drill.action);
+      if (nd && typeof nd === 'object') (nd as Json)._item = drill.item;
+      setDrill((s) => (s ? { ...s, data: nd } : s));
+    } else {
+      run();
+    }
+  }, [drill, run]);
+
+  // 액션 실행기: $field 치환 + {path}(rowContext, 기본 드릴 데이터) 치환 → 실행 → 새로고침
+  const dispatch = useCallback<Dispatch>(async (template, fieldValues, rowContext, opts) => {
+    try {
+      let code = buildAction(template, fieldValues || {});
+      const ctx = rowContext ?? (drill ? drill.data : undefined);
+      if (ctx) code = rowAction(code, ctx);
+      const d = await runIBL(code);
+      if (d?.error || d?.success === false) { alert(String(d.error || d.message || '실패')); return false; }
+      if (opts?.back && drill) { setDrill(null); setComposeText(''); setComposeCh(''); }
+      else await refreshCurrent();
+      return true;
+    } catch (e) {
+      alert('실패: ' + (e instanceof Error ? e.message : String(e)));
+      return false;
+    }
+  }, [drill, refreshCurrent]);
+
+  // 작성바 전송 — $text + {path}(드릴 데이터) 치환 → 실행 → 새로고침
+  const composeSend = useCallback(async (cmp: AppCompose) => {
+    const text = composeText.trim();
+    if (!text) return;
+    setSending(true);
+    const opts = composeChannelOptions(cmp, drill?.data);
+    const sel = opts.find((o) => o.key === composeCh) || opts[0];
+    const extra = sel ? { channel_type: sel.channel_type, to: sel.to } : {};
+    const ok = await dispatch(cmp.action, { text, ...extra });
+    if (ok) setComposeText('');
+    setSending(false);
+  }, [composeText, composeCh, drill, dispatch]);
 
   const onRowAction = useCallback(async (action: string, item: Json, rowKey: string) => {
     setBusyRow(rowKey);
@@ -469,15 +782,66 @@ function ModePane({ mode }: { mode: AppMode }) {
   const fireButton = useCallback(async (b: AppButton) => {
     try {
       const d = await runIBL(b.action);
-      if (d?.error) alert(String(d.error));
+      if (d?.error) { alert(String(d.error)); return; }
+      if (b.refresh) run();  // 실행 후 현재 모드 재조회(토글/재생성 결과 즉시 반영)
     } catch (e) {
       alert('실행 실패: ' + (e instanceof Error ? e.message : String(e)));
     }
-  }, []);
+  }, [run]);
 
   const inputs = mode.inputs || [];
+  // master_detail card_list → 반응형 2분할(PC: 리스트 좌+상세 우 동시 / 폰: 리스트→선택→상세→뒤로)
+  const isSplit = !mode.modes && (mode.view || []).some((p) => p.type === 'card_list' && !!p.master_detail);
+  const drillTabs = drill?.tabs;
+  const activeCompose = drill
+    ? (drillTabs ? drillTabs[Math.min(tabIdx, drillTabs.length - 1)]?.compose : drill.compose)
+    : mode.compose;
+
+  const composeBarEl = (cmp?: AppCompose) => {
+    if (!cmp || loading) return null;
+    const chOpts = composeChannelOptions(cmp, drill?.data);
+    const selKey = chOpts.find((o) => o.key === composeCh) ? composeCh : (chOpts[0]?.key || '');
+    return (
+      <div className="sticky bottom-0 mt-2 px-1 py-2.5 bg-stone-50/95 backdrop-blur border-t border-stone-200 flex gap-2 shrink-0">
+        {chOpts.length >= 2 && (
+          <select value={selKey} onChange={(e) => setComposeCh(e.target.value)}
+            title="발신 채널"
+            className="shrink-0 px-2 py-2 rounded-full border border-stone-200 bg-white text-xs text-stone-700 focus:outline-none focus:border-stone-400 max-w-[42%]">
+            {chOpts.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+          </select>
+        )}
+        <input value={composeText} onChange={(e) => setComposeText(e.target.value)}
+          placeholder={cmp.placeholder || '메시지 입력…'}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !sending) composeSend(cmp); }}
+          className="flex-1 min-w-0 px-3.5 py-2 rounded-full border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400" />
+        <button disabled={sending || !composeText.trim()} onClick={() => composeSend(cmp)}
+          className="px-4 py-2 rounded-full bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40 shrink-0">
+          {sending ? '…' : (cmp.button || '전송')}
+        </button>
+      </div>
+    );
+  };
+
+  const drillTabsEl = drillTabs && drillTabs.length > 0 ? (
+    <div className="flex gap-1.5 mb-3 shrink-0">
+      {drillTabs.map((t, i) => (
+        <button key={i} onClick={() => { setTabIdx(i); setComposeText(''); setComposeCh(''); }}
+          className={`px-3.5 py-1.5 rounded-lg text-sm border transition ${
+            i === tabIdx ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}>
+          {t.name}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  const drillViewEl = drill ? (
+    <ViewRenderer
+      view={drillTabs ? (drillTabs[Math.min(tabIdx, drillTabs.length - 1)]?.view || []) : (drill.view || [])}
+      data={drill.data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} dispatch={dispatch} />
+  ) : null;
+
   return (
-    <div className="max-w-2xl mx-auto p-5">
+    <div className={`${isSplit ? 'max-w-5xl' : 'max-w-2xl'} mx-auto p-5`}>
       {mode.note && (
         <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
           {mode.note}
@@ -514,10 +878,10 @@ function ModePane({ mode }: { mode: AppMode }) {
         </div>
       ))}
 
-      {mode.periods?.items?.length && (
+      {mode.filter?.items?.length && (
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {mode.periods.items.map((x) => {
-            const pk = mode.periods!.key || 'period';
+          {mode.filter.items.map((x) => {
+            const pk = mode.filter!.key || 'filter';
             const on = String(values[pk]) === String(x.value);
             return (
               <button key={String(x.value)}
@@ -545,16 +909,44 @@ function ModePane({ mode }: { mode: AppMode }) {
       {loading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-stone-200 border-t-stone-600 rounded-full animate-spin" /></div>}
       {error && <p className="text-sm text-stone-400">오류: {error}</p>}
 
-      {!loading && drill && (
+      {/* === master-detail 반응형: PC=2분할(리스트+상세 동시) / 폰=드릴(선택→상세→뒤로) === */}
+      {isSplit && !loading && data && (
+        <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-210px)]">
+          <div className={`md:w-72 md:shrink-0 md:overflow-y-auto md:pr-1 ${drill ? 'hidden md:block' : 'block'}`}>
+            <ViewRenderer view={mode.view || []} data={data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} dispatch={dispatch} />
+          </div>
+          <div className={`flex-1 min-w-0 md:border-l md:border-stone-200 md:pl-4 ${drill ? 'flex flex-col min-h-0' : 'hidden md:flex md:flex-col'}`}>
+            {drill ? (
+              <>
+                <button onClick={() => { setDrill(null); setComposeText(''); setComposeCh(''); }}
+                  className="md:hidden self-start text-xs text-stone-500 hover:text-stone-800 mb-2">‹ 목록</button>
+                {drillTabsEl}
+                <div className="flex-1 min-h-0 md:overflow-y-auto">{drillViewEl}</div>
+                {composeBarEl(activeCompose)}
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center min-h-[280px] text-sm text-stone-400">← 목록에서 대화를 선택하세요</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!isSplit && !loading && drill && (
         <>
-          <button onClick={() => setDrill(null)}
+          <button onClick={() => { setDrill(null); setComposeText(''); setComposeCh(''); }}
             className="text-xs text-stone-500 hover:text-stone-800 mb-2">‹ 결과 목록으로</button>
-          <ViewRenderer view={drill.view} data={drill.data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} />
+          {drillTabsEl}
+          {drillViewEl}
         </>
       )}
-      {!loading && !drill && data && mode.view && (
-        <ViewRenderer view={mode.view} data={data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} />
+      {!isSplit && !loading && !drill && data && mode.view && (
+        <ViewRenderer view={mode.view} data={data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} dispatch={dispatch} />
       )}
+      {!isSplit && (() => {
+        const cmp = drill ? activeCompose : mode.compose;
+        if (!cmp || loading || (!drill && !data)) return null;
+        return <div className="-mx-5 px-5">{composeBarEl(cmp)}</div>;
+      })()}
     </div>
   );
 }

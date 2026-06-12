@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- IBL 신경망 허브: 중앙 노드 + 3 위성 노드, 흰색 (앰버 배경 위) -->
+    <!-- 연결선 -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L54,32 M54,54 L35,67 M54,54 L73,67" />
+    <!-- 위성 노드 (위 / 좌하 / 우하) -->
+    <path android:fillColor="#FFFFFF" android:pathData="M54,32 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M35,67 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M73,67 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0" />
+    <!-- 중앙 허브 노드 -->
+    <path android:fillColor="#FFFFFF" android:pathData="M54,54 m-12,0 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0" />
+    <!-- 중앙 노드 안 앰버 점(깊이) -->
+    <path android:fillColor="#D97706" android:pathData="M54,54 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" />
+</vector>

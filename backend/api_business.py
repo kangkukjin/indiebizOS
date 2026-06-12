@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Body
 from pydantic import BaseModel
 from typing import Optional, List
 from business_manager import BusinessManager
@@ -135,6 +135,41 @@ def init_manager():
     """매니저 초기화"""
     global business_manager
     business_manager = BusinessManager()
+
+
+# ============ 폰↔PC 동기화 (합집합 머지 — LWW + tombstone) ============
+# business.db 주소록 메타데이터(이웃·연락처·사업·아이템·문서·지침)를 다른 기기(폰)와 합집합 머지.
+# 자동응답=PC전용, 메시지/글 내용=릴레이/Gmail 수렴이라 머지 대상 아님. (business_sync.py)
+# ★인증: api.py 의 remote_access_guard 미들웨어가 외부(터널) 요청에 launcher 세션(X-Launcher-Session)을
+#        강제한다(localhost=데스크탑은 통과). 주소록 전체를 노출하는 데이터 엔드포인트라 public
+#        화이트리스트(is_public_remote_path)에 넣지 않는다 → 외부는 반드시 로그인 후 접근.
+
+@router.get("/sync/export")
+async def business_sync_export():
+    """이 기기의 business.db 동기화 스냅샷(삭제 tombstone 포함)을 내보냄."""
+    try:
+        from business_sync import export_business_db
+        return {"success": True, "data": export_business_db(business_manager)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/sync/merge")
+async def business_sync_merge(payload: dict = Body(...)):
+    """다른 기기의 export 를 이 기기에 합집합 머지(LWW+tombstone) 후, 머지된 이 기기의 최신
+    스냅샷을 반환 → 호출자가 그걸 다시 머지하면 1왕복으로 양방향 동기화(머지는 교환·멱등).
+    payload = {"data": {table: [rows]}} 또는 {table: [rows]} 직접."""
+    try:
+        from business_sync import export_business_db, merge_business_db
+        remote = payload.get("data") if isinstance(payload, dict) and "data" in payload else payload
+        if not isinstance(remote, dict):
+            raise HTTPException(status_code=400, detail="sync 페이로드 형식 오류(dict 필요)")
+        stats = merge_business_db(business_manager, remote)
+        return {"success": True, "stats": stats, "data": export_business_db(business_manager)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============ Pydantic 모델 ============
@@ -857,11 +892,11 @@ async def get_auto_response_status():
 
 @router.post("/auto-response/start")
 async def start_auto_response():
-    """자동응답 서비스 시작"""
+    """자동응답 서비스 시작 (영속 — 재시작에도 켜진 상태 유지)"""
     try:
         from auto_response import get_auto_response_service
         service = get_auto_response_service()
-        service.start()
+        service.enable()
         return {"status": "started", "running": service._running}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -869,11 +904,11 @@ async def start_auto_response():
 
 @router.post("/auto-response/stop")
 async def stop_auto_response():
-    """자동응답 서비스 중지"""
+    """자동응답 서비스 중지 (영속 — 재시작해도 꺼진 상태 유지)"""
     try:
         from auto_response import get_auto_response_service
         service = get_auto_response_service()
-        service.stop()
+        service.disable()
         return {"status": "stopped", "running": service._running}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

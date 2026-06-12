@@ -107,20 +107,21 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 
 뇌의 해마처럼 fine-tuned 임베딩 모델이 밀리초 내에 관련 IBL 코드 사례를 인출한다.
 
-### 현재 성능 (2026-06-05 Modal GPU 재학습 — android 어휘 흡수, code Top-5 92.8%/desc 94.5%)
+### 현재 성능 (2026-06-12 **로컬 Mac M4 Pro 재학습** — code Top-5 92.6%/desc 92.8%)
 
-직전 2026-06-04 재학습(144 액션 어휘)의 측정표:
+2026-06-12 재학습(122 액션 어휘, 2424 코퍼스)의 측정표:
 
 | 지표 | Baseline (범용 ko-sroberta) | Fine-tuned 해마 | 개선 |
 |---|---|---|---|
-| Top-1 (code) | 24.3% | **72.1%** | +47.8%p |
-| Top-3 (code) | 38.5% | **89.2%** | +50.7%p |
-| Top-5 (code) | 45.4% | **94.5%** | +49.1%p |
-| Top-5 (description) | 67.0% | **93.5%** | +26.5%p |
+| Top-1 (code) | 23.6% | **61.5%** | +37.9%p |
+| Top-3 (code) | 36.8% | **83.7%** | +46.9%p |
+| Top-5 (code) | 43.9% | **92.6%** | +48.7%p |
+| Top-5 (description) | 67.6% | **92.8%** | +25.2%p |
 
-- **실제 런타임 검색 정확도 ~99%**: 위 벤치마크(query→벌거벗은 코드 패턴)는 보수적 프록시다. 런타임은 query→저장용례(`intent×3 + code`)로 검색하므로(아래 "검색 방식") 액션단위 Top-5 ≈ **99.3%**(Top-1 96.4%)로 천장.
-- **어휘 격차 (2026-06-10 기준, 소폭)**: 2026-06-05 재학습으로 android 시대 어휘까지 흡수됨. 이후 신설된 소수 어휘([sense:phone] 등)만 다음 배치 재학습 대기 — 라이브 검색이 intent 의미 매칭이라 강건하므로 운용 무리 없음. 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인 유지(~2,332건).
-- 학습 환경: **Modal 서버리스 GPU(T4, cuda)**, batch=16, max_seq 128, 10 epoch. 트레이너 개선(조기종료 code+desc 블렌드 모니터·`torch.manual_seed`·밸런싱 상한 30). 베이스 `jhgan/ko-sroberta-multitask`.
+- **재학습 경로 = 로컬**: 클라우드(Modal/Colab)는 옛 맥에어 OOM 때문이었음. 현 Mac M4 Pro 24GB는 OOM 없고 데이터셋이 작아 로컬 MPS가 더 빠름(클라우드 콜드스타트·400MB 다운로드 회피). lib 버전도 트레이너 검증값과 일치(torch/MPS·st 5.2.2·transformers 5.1.0). 파이프라인=백업→`backend/ibl_embedding_trainer.py`→rebuild_index→백엔드 touch.
+- **실제 런타임 검색 정확도 ~99%**: 위 벤치마크(query→벌거벗은 코드 패턴)는 보수적 프록시다. 런타임은 query→저장용례(`intent×3 + code`)로 검색하므로(아래 "검색 방식") 액션단위 Top-5 ≈ **99%**로 천장.
+- **어휘 정합**: neighbor 통합 후 `[others:neighbors]`→`[others:neighbor]{op}` relabel + phone_sync·neighbor save/favorite 용례 보강. 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인 유지(~2,424건).
+- 학습 환경: **로컬 Mac M4 Pro(MPS)**, batch=8(로컬최선), max_seq 64, 10 epoch, patience 3. 베이스 `jhgan/ko-sroberta-multitask`. (클라우드 Modal 경로 cloud_training/ 은 보존하되 기본은 로컬 — OOM 없는 M4 Pro에선 로컬이 빠름.)
 
 > **결론(2026-06-04): 모델은 런타임 천장(99.3%)이라 재학습은 거의 무차별.** batch 스윕(b4~b64)·트레이너 변수 조정 모두 런타임 검색을 의미 있게 못 올림 — 해마는 IBL *어휘*가 아니라 query↔저장 intent *의미*를 매칭해 vocab 변경에 본질적으로 강건하기 때문. 검색 품질을 더 올리려면 임베딩이 아니라 **하이브리드 alpha/FTS5**가 레버. (관찰된 오랭킹 사례는 FTS5 키워드 artifact였지 임베딩 실패가 아님.)
 
@@ -246,7 +247,7 @@ IBLUsageDB.add_example() → DB 저장 + 임베딩 즉시 생성 (~8ms)
 
 ```
 data/training/
-├── ibl_training_balanced_20260516.json   ← 현재 학습 데이터 (android 어휘 흡수 재학습 2026-06-05, usage_db ~2,332건)
+├── ibl_training_balanced_20260516.json   ← 현재 학습 데이터 (로컬 M4 Pro 재학습 2026-06-12, usage_db ~2,424건)
 └── _archive/                              ← 옛 학습 데이터 및 중간 산출물
     ├── ibl_synthetic_opus_final_2479.json
     ├── ibl_distilled.json
@@ -355,4 +356,4 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 
 ---
 
-*마지막 업데이트: 2026-06-05 — 해마 Modal GPU 재학습(android 어휘 흡수, batch=16, code Top-5 92.8%/desc 94.5%/런타임 ~99%, 코퍼스 ~2,316). 신규 어휘([sense:phone] 등)는 다음 배치 재학습 대기 — 임베딩이 intent 의미를 매칭해 vocab 변경에 강건하므로 운용 무리 없음. 이전: 2026-06-04 144 액션 재학습(런타임 천장 판명), 2026-05-31 199액션 재학습, 2026-05-17 단일 검색 일원화·심층메모리 시맨틱 검색·점수 정규화*
+*마지막 업데이트: 2026-06-12 — 해마 **로컬 Mac M4 Pro 재학습**(batch=8, code Top-5 92.6%/desc 92.8%/런타임 ~99%, 코퍼스 ~2,424). 클라우드는 옛 맥에어 OOM 한정이었음 — 이제 재학습=로컬 5~10분. neighbor 통합 relabel + phone_sync·neighbor save/favorite 용례 보강 반영. 이전: 2026-06-05 Modal GPU 재학습(android 어휘), 2026-06-04 144 액션 재학습(런타임 천장 판명), 2026-05-17 단일 검색 일원화·심층메모리 시맨틱 검색·점수 정규화*

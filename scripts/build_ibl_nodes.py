@@ -504,10 +504,11 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
 # === app: 블록 검증 (2026-06-11, 원격 앱 표면 제네릭화 2단계) ===
 # 액션이 자기 앱 표면(inputs/action 템플릿/view)을 선언하면 원격 런처가 자동 파생.
 # 어휘 명세: docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md. 소비자: api_launcher_web._derive_instruments.
-APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action"}
+APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list"}
 APP_INPUT_TYPES = {"text", "select"}
+APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images"}
 APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes",
-            "note", "auto_run", "inputs", "buttons", "action", "view", "renderer"}
+            "note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter"}
 APP_TPL_FILTERS = {"round", "num", "abs", "arrow"}  # + 'opt:' / 'trunc:' 접두 허용
 
 
@@ -517,6 +518,9 @@ def _app_action_templates(app: dict) -> list[str]:
     out: list[str] = []
     if isinstance(app.get("action"), str):
         out.append(app["action"])
+    cmp = app.get("compose")  # 블록 레벨 작성바(채팅/피드) — $text + {행필드} 템플릿
+    if isinstance(cmp, dict) and isinstance(cmp.get("action"), str):
+        out.append(cmp["action"])
     for b in app.get("buttons") or []:
         if isinstance(b, dict) and isinstance(b.get("action"), str):
             out.append(b["action"])
@@ -528,6 +532,24 @@ def _app_action_templates(app: dict) -> list[str]:
         for p in view or []:
             if not isinstance(p, dict):
                 continue
+            # form(저장) / editable_list(추가·삭제) 액션
+            if p.get("type") == "form" and isinstance(p.get("action"), str):
+                out.append(p["action"])
+            if p.get("type") == "form":  # 보조 액션(즐겨찾기 토글·삭제 등)
+                for a in p.get("actions") or []:
+                    if isinstance(a, dict) and isinstance(a.get("action"), str):
+                        out.append(a["action"])
+                for f in p.get("fields") or []:  # images 필드의 add_image/remove_image 템플릿
+                    if isinstance(f, dict) and f.get("type") == "images":
+                        for k in ("add_action", "remove_action"):
+                            if isinstance(f.get(k), str):
+                                out.append(f[k])
+            if p.get("type") == "editable_list":
+                if isinstance(p.get("delete_action"), str):
+                    out.append(p["delete_action"])
+                add = p.get("add")
+                if isinstance(add, dict) and isinstance(add.get("action"), str):
+                    out.append(add["action"])
             btn = p.get("button")
             if isinstance(btn, dict) and isinstance(btn.get("action"), str):
                 out.append(btn["action"])
@@ -535,10 +557,78 @@ def _app_action_templates(app: dict) -> list[str]:
             if isinstance(drill, dict):
                 if isinstance(drill.get("action"), str):
                     out.append(drill["action"])
+                dcmp = drill.get("compose")  # 드릴(스레드) 레벨 작성바
+                if isinstance(dcmp, dict) and isinstance(dcmp.get("action"), str):
+                    out.append(dcmp["action"])
                 walk_view(drill.get("view"))
+                for tab in drill.get("tabs") or []:  # 드릴 상세 탭(대화/정보)
+                    if isinstance(tab, dict):
+                        tcmp = tab.get("compose")
+                        if isinstance(tcmp, dict) and isinstance(tcmp.get("action"), str):
+                            out.append(tcmp["action"])
+                        walk_view(tab.get("view"))
 
     walk_view(app.get("view"))
     return out
+
+
+def _block_local_keys(blk: dict) -> set:
+    """블록 내 암묵 입력 키 집합 — compose($text), form 필드, editable_list add 필드.
+    드릴 view·tabs 까지 재귀. validate 의 $key↔input 검사에 합류."""
+    keys: set = set()
+
+    def from_compose(c):
+        if isinstance(c, dict) and c.get("action"):
+            keys.add("text")
+            if isinstance(c.get("channels"), dict):  # 채널 선택 → action 의 $channel_type/$to 주입
+                keys.update(("channel_type", "to"))
+
+    def from_fields(fields):
+        for f in fields or []:
+            if isinstance(f, dict) and f.get("key"):
+                keys.add(f["key"])
+            if isinstance(f, dict) and f.get("type") == "images":  # add/remove_image 가 $path 런타임 주입
+                keys.add("path")
+
+    def walk(view):
+        for p in view or []:
+            if not isinstance(p, dict):
+                continue
+            if p.get("type") == "form":
+                from_fields(p.get("fields"))
+            if p.get("type") == "editable_list" and isinstance(p.get("add"), dict):
+                from_fields(p["add"].get("fields"))
+            drill = p.get("item_click")
+            if isinstance(drill, dict):
+                from_compose(drill.get("compose"))
+                walk(drill.get("view"))
+                for tab in drill.get("tabs") or []:
+                    if isinstance(tab, dict):
+                        from_compose(tab.get("compose"))
+                        walk(tab.get("view"))
+
+    from_compose(blk.get("compose"))
+    walk(blk.get("view"))
+    return keys
+
+
+def _check_compose_channels(where: str, cmp) -> list[str]:
+    """compose.channels(발신 채널 선택) 스키마 검증 — from/type/value 필수, sendable 은 리스트."""
+    issues: list[str] = []
+    if not isinstance(cmp, dict):
+        return issues
+    ch = cmp.get("channels")
+    if ch is None:
+        return issues
+    if not isinstance(ch, dict):
+        issues.append(f"{where}: compose.channels 는 매핑")
+        return issues
+    for k in ("from", "type", "value"):
+        if not isinstance(ch.get(k), str) or not ch.get(k):
+            issues.append(f"{where}: compose.channels.{k}(필드명) 필수")
+    if ch.get("sendable") is not None and not isinstance(ch.get("sendable"), list):
+        issues.append(f"{where}: compose.channels.sendable 은 채널 타입 리스트")
+    return issues
 
 
 def _app_check_view(qualified: str, view, depth: int = 0) -> list[str]:
@@ -556,10 +646,43 @@ def _app_check_view(qualified: str, view, depth: int = 0) -> list[str]:
         if ptype not in APP_VIEW_TYPES:
             issues.append(f"{where}: 미지의 프리미티브 type={ptype!r} (어휘: {sorted(APP_VIEW_TYPES)})")
             continue
-        if ptype in ("kv_list", "card_list", "image_grid", "sparkline", "list_action") and not p.get("from"):
+        if ptype in ("kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "editable_list") and not p.get("from"):
             issues.append(f"{where}: {ptype} 는 from(데이터 경로) 필수")
         if ptype == "card_list" and not isinstance(p.get("card"), dict):
             issues.append(f"{where}: card_list 는 card 매핑 필수")
+        if ptype == "thread" and not p.get("text"):
+            issues.append(f"{where}: thread 는 text(버블 본문 템플릿) 필수")
+        if ptype == "form":
+            if not isinstance(p.get("action"), str):
+                issues.append(f"{where}: form 은 action(저장 IBL 템플릿) 필수")
+            fields = p.get("fields")
+            if not isinstance(fields, list) or not fields:
+                issues.append(f"{where}: form 은 fields(필드 리스트) 필수")
+            else:
+                for fi, f in enumerate(fields):
+                    if not isinstance(f, dict) or not f.get("key"):
+                        issues.append(f"{where}: form.fields[{fi}] key 필수")
+                    elif f.get("type") not in APP_FORM_FIELD_TYPES:
+                        issues.append(f"{where}: form.fields[{fi}] type={f.get('type')!r} (허용: {sorted(APP_FORM_FIELD_TYPES)})")
+            # 보조 액션(즐겨찾기 토글·삭제 등) — label + action 필수, style 은 danger 만
+            acts = p.get("actions")
+            if acts is not None:
+                if not isinstance(acts, list):
+                    issues.append(f"{where}: form.actions 는 리스트")
+                else:
+                    for ai, a in enumerate(acts):
+                        if not isinstance(a, dict) or not a.get("label") or not isinstance(a.get("action"), str):
+                            issues.append(f"{where}: form.actions[{ai}] label·action(IBL 템플릿) 필수")
+                        elif a.get("style") not in (None, "danger"):
+                            issues.append(f"{where}: form.actions[{ai}] style={a.get('style')!r} (허용: danger)")
+        if ptype == "editable_list":
+            if not p.get("display"):
+                issues.append(f"{where}: editable_list 는 display(행 표시 템플릿) 필수")
+            add = p.get("add")
+            if add is not None and (not isinstance(add, dict) or not isinstance(add.get("action"), str)):
+                issues.append(f"{where}: editable_list.add 는 action(IBL 템플릿) 필수")
+            if p.get("delete_action") is not None and not isinstance(p.get("delete_action"), str):
+                issues.append(f"{where}: editable_list.delete_action 은 IBL 템플릿 문자열")
         drill = p.get("item_click")
         if drill is not None:
             if ptype != "card_list":
@@ -567,9 +690,28 @@ def _app_check_view(qualified: str, view, depth: int = 0) -> list[str]:
             elif not isinstance(drill, dict) or not isinstance(drill.get("action"), str):
                 issues.append(f"{where}: item_click 은 action 템플릿 필수")
             else:
-                issues.extend(_app_check_view(qualified, drill.get("view"), depth + 1))
+                tabs = drill.get("tabs")
+                if isinstance(tabs, list) and tabs:  # 상세 탭(대화/정보)
+                    for ti, tab in enumerate(tabs):
+                        if not isinstance(tab, dict) or not tab.get("name"):
+                            issues.append(f"{where}: item_click.tabs[{ti}] name 필수")
+                            continue
+                        issues.extend(_app_check_view(qualified, tab.get("view"), depth + 1))
+                        tcmp = tab.get("compose")
+                        if tcmp is not None and (not isinstance(tcmp, dict) or not isinstance(tcmp.get("action"), str)):
+                            issues.append(f"{where}: item_click.tabs[{ti}].compose 는 action 필수")
+                        issues.extend(_check_compose_channels(where, tcmp))
+                elif "tabs" in drill:
+                    issues.append(f"{where}: item_click.tabs 는 비어있지 않은 리스트여야 함")
+                else:
+                    issues.extend(_app_check_view(qualified, drill.get("view"), depth + 1))
+                    dcmp = drill.get("compose")
+                    if dcmp is not None and (not isinstance(dcmp, dict) or not isinstance(dcmp.get("action"), str)):
+                        issues.append(f"{where}: item_click.compose 는 action(IBL 템플릿) 필수")
+                    issues.extend(_check_compose_channels(where, dcmp))
+        # button: list_action 은 {action} 행 버튼. form/editable_list 의 button 은 라벨 문자열이라 제외.
         btn = p.get("button")
-        if btn is not None and (not isinstance(btn, dict) or not isinstance(btn.get("action"), str)):
+        if ptype not in ("form", "editable_list") and btn is not None and (not isinstance(btn, dict) or not isinstance(btn.get("action"), str)):
             issues.append(f"{where}: button 은 action 템플릿 필수")
     return issues
 
@@ -653,11 +795,17 @@ def validate_app_blocks(data: dict) -> list[str]:
                 if not isinstance(blk.get("action"), str):
                     issues.append(f"{blabel}: app.action(IBL 템플릿) 필수")
                 issues.extend(_app_check_view(blabel, blk.get("view")))
+                _cmp = blk.get("compose")
+                if _cmp is not None and (not isinstance(_cmp, dict) or not isinstance(_cmp.get("action"), str)):
+                    issues.append(f"{blabel}: app.compose 는 action(IBL 템플릿) 필수")
+                issues.extend(_check_compose_channels(blabel, _cmp))
                 input_keys: set[str] = set()
-                # 기간 토글(periods)도 액션 $key 의 출처 — input_keys 에 합류
-                _pd = blk.get("periods")
+                # 암묵 입력 키: compose($text)/form 필드/editable_list add 필드
+                input_keys |= _block_local_keys(blk)
+                # 필터 칩(filter, 기간·레벨 양용)도 액션 $key 의 출처 — input_keys 에 합류
+                _pd = blk.get("filter")
                 if isinstance(_pd, dict):
-                    input_keys.add(_pd.get("key") or "period")
+                    input_keys.add(_pd.get("key") or "filter")
                 for j, inp in enumerate(blk.get("inputs") or []):
                     if not isinstance(inp, dict) or not inp.get("key"):
                         issues.append(f"{blabel}: app.inputs[{j}] 에 key 없음")

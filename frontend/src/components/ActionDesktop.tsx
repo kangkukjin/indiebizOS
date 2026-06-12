@@ -7,7 +7,7 @@
  * 프로젝트 탭이 '에이전트에게 맡기는' 오토파일럿이라면,
  * 이 탭은 '내가 직접 다이얼을 도는' 수동 운전이다. 같은 도메인의 두 얼굴.
  */
-import { useState, useEffect, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
 import { RealtyInstrument } from './RealtyInstrument';
 import { CommercialInstrument } from './CommercialInstrument';
 import { DirectionsInstrument } from './DirectionsInstrument';
@@ -94,12 +94,21 @@ export function ActionDesktop() {
   const [instrumentId, setInstrumentId] = useState<string | null>(null);
   const [manifest, setManifest] = useState<AppInstrument[]>([]);
 
-  useEffect(() => {
+  // 매니페스트 로드 — app: 블록 변경(계기/어휘)을 앱 재시작 없이 반영하기 위해 재호출 가능하게 함.
+  // 백엔드 /launcher/instruments 는 ibl_nodes.yaml mtime 캐시라 변경 없으면 재fetch 비용 거의 없음.
+  const loadManifest = useCallback(() => {
     fetch('http://127.0.0.1:8765/launcher/instruments')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d) => setManifest(d.instruments || []))
       .catch(() => { /* 백엔드 미기동 시 static 도메인만 표시 */ });
   }, []);
+
+  // 마운트(앱 탭 진입 = remount) 시 + 창 포커스 복귀 시 재fetch — 다른 창에서 IBL 어휘 편집 후 돌아오면 갱신.
+  useEffect(() => {
+    loadManifest();
+    window.addEventListener('focus', loadManifest);
+    return () => window.removeEventListener('focus', loadManifest);
+  }, [loadManifest]);
 
   const DOMAINS = useMemo<Domain[]>(() => {
     const byId = new Map<string, Domain>();

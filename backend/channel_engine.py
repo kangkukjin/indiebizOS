@@ -196,6 +196,14 @@ def execute_channel_action(action: str, params: dict,
         project_path: 프로젝트 경로
         agent_id: 에이전트 ID (identity 결정에 사용)
     """
+    # 커뮤니티(IndieNet) — channel_type 없는 별도 액션(피드/보드/계정)은 채널 게이트 이전에 분기.
+    if action == "feed":
+        return _community_feed(params)
+    if action == "board":
+        return _community_board(params)
+    if action == "nostr":
+        return _nostr_identity(params)
+
     channel_type_raw = params.get("channel_type", "")
     if not channel_type_raw:
         # 수신자가 이메일 형식이면 gmail로 추론 (코퍼스 다수가 channel_type 생략).
@@ -291,6 +299,152 @@ def _get_indienet():
     if not indienet.is_initialized():
         raise Exception("IndieNet이 초기화되지 않았습니다. Nostr 설정을 먼저 완료하세요.")
     return indienet
+
+
+# === 커뮤니티 (IndieNet 피드/보드) — others:feed / others:board ===
+
+def _fmt_unix(ts) -> str:
+    """Unix timestamp → 'MM/DD HH:MM' (실패 시 빈 문자열)."""
+    try:
+        from datetime import datetime
+        return datetime.fromtimestamp(int(ts)).strftime("%m/%d %H:%M")
+    except Exception:
+        return ""
+
+
+def _community_feed(params: dict) -> dict:
+    """커뮤니티 피드 — op:read(조회)/post(게시). IndieNet(Nostr) 기반, 릴레이가 진실원."""
+    op = (params.get("op") or "read").lower()
+    try:
+        indienet = _get_indienet()
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+    if op == "post":
+        content = params.get("content") or params.get("body") or params.get("text")
+        if not content:
+            return {"success": False, "error": "게시할 내용(content)이 필요합니다."}
+        hashtag = params.get("hashtag") or params.get("board")
+        try:
+            event_id = indienet.post_to_board(content=content, hashtag=hashtag)
+            if not event_id:
+                return {"success": False, "error": "게시 실패 (릴레이 발행 실패)"}
+            return {"success": True, "event_id": event_id, "message": "게시했습니다."}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    # read
+    limit = int(params.get("limit") or 50)
+    hashtag = params.get("hashtag") or params.get("board")
+    try:
+        raw = (indienet.fetch_board_posts(hashtag=hashtag, limit=limit)
+               if hashtag else indienet.fetch_posts(limit=limit))
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+    posts = []
+    for p in raw or []:
+        author = p.get("author", "") or ""
+        short = (author[:10] + "…") if author.startswith("npub") and len(author) > 12 else author
+        posts.append({
+            "author": short,
+            "content": (p.get("content", "") or "").strip(),
+            "time": _fmt_unix(p.get("created_at")),
+            "id": p.get("id", ""),
+        })
+    return {"posts": posts, "count": len(posts), "message": "" if posts else "아직 글이 없습니다."}
+
+
+def _community_board(params: dict) -> dict:
+    """커뮤니티 보드 — op:list/create/switch."""
+    op = (params.get("op") or "list").lower()
+    try:
+        indienet = _get_indienet()
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+    if op == "create":
+        name = params.get("name") or params.get("board_name")
+        hashtag = params.get("hashtag") or params.get("tag")
+        if not name or not hashtag:
+            return {"success": False, "error": "보드 이름(name)과 해시태그(hashtag)가 필요합니다."}
+        try:
+            board = indienet.create_board(name=name, hashtag=hashtag)
+            return {"success": True, "board": board, "message": f"보드 '{name}' 생성"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    if op == "switch":
+        hashtag = params.get("hashtag") or params.get("tag")  # 없으면 기본 보드
+        try:
+            ok = indienet.set_active_board(hashtag.lstrip('#') if hashtag else None)
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+        return {"success": bool(ok), "active": (hashtag or "indienet"),
+                "message": "보드를 전환했습니다." if ok else "전환 실패 (보드 없음)"}
+
+    # list — 기본 #indienet + 사용자 보드, 활성 표시
+    active = (getattr(indienet.settings, "active_board", None) or "indienet")
+    boards = [{"name": "IndieNet", "hashtag": "indienet"}] + list(indienet.get_boards() or [])
+    out = [{"name": b.get("name", ""), "hashtag": b.get("hashtag", ""),
+            "active": (b.get("hashtag") == active)} for b in boards]
+    return {"boards": out, "active": active, "message": "" if out else "보드가 없습니다."}
+
+
+def _nostr_identity(params: dict) -> dict:
+    """IndieNet/Nostr 계정 — op:profile/rename/relays/import_key/reset_identity.
+    IndieNet 창의 신원·설정 기능을 IBL 로 노출(창 은퇴 대비)."""
+    op = (params.get("op") or "profile").lower()
+    try:
+        indienet = _get_indienet()
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+    idy = indienet.identity
+    s = indienet.settings
+
+    if op == "rename":
+        name = params.get("name") or params.get("display_name")
+        if not name:
+            return {"success": False, "error": "표시 이름(name)이 필요합니다."}
+        ok = idy.set_display_name(name)
+        return {"success": bool(ok), "display_name": name,
+                "message": "표시 이름을 바꿨습니다." if ok else "변경 실패"}
+
+    if op == "relays":
+        if params.get("restore_defaults"):
+            from indienet import DEFAULT_RELAYS
+            s.relays = list(DEFAULT_RELAYS); s.save()
+            return {"success": True, "relays": [{"url": r} for r in s.relays], "message": "기본 릴레이로 초기화"}
+        new = params.get("set") or params.get("relays")
+        if new:
+            s.relays = new if isinstance(new, list) else [x.strip() for x in str(new).split(",") if x.strip()]
+            s.save()
+            return {"success": True, "relays": [{"url": r} for r in s.relays], "message": "릴레이를 갱신했습니다."}
+        return {"relays": [{"url": r} for r in s.relays], "count": len(s.relays)}
+
+    if op == "import_key":
+        nsec = params.get("nsec")
+        if not nsec:
+            return {"success": False, "error": "nsec가 필요합니다."}
+        ok = idy.import_nsec(nsec)
+        return {"success": bool(ok), "identity": idy.to_dict() if ok else None,
+                "message": "신원을 가져왔습니다." if ok else "가져오기 실패 (nsec 확인)"}
+
+    if op == "reset_identity":
+        ok = idy.reset_identity()
+        return {"success": bool(ok), "identity": idy.to_dict() if ok else None,
+                "message": "새 신원을 생성했습니다." if ok else "초기화 실패"}
+
+    # profile (기본) — npub·표시이름·활성보드·릴레이 한 번에
+    active = (getattr(s, "active_board", None) or "indienet")
+    return {
+        "npub": idy.npub or "",
+        "display_name": idy.display_name or "(미설정)",
+        "created_at": (idy.created_at or "")[:10],
+        "active_board": active,
+        "relays": [{"url": r} for r in s.relays],
+        "relay_count": len(s.relays),
+    }
 
 
 # === 내부 구현 ===

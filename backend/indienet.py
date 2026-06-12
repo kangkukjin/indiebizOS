@@ -43,11 +43,14 @@ DMS_DB = INDIENET_DIR / 'dms.db'      # 수신 DM 영구 캐시 (릴레이 prune
 
 # 기본 릴레이
 DEFAULT_RELAYS = [
-    'wss://relay.damus.io',
-    'wss://relay.nostr.band',
+    # 2026-06-12: 도달성 실측 후 정리 — nostr.wine(403 유료 거부)·nostr.band(상시 타임아웃) 제거,
+    # 확인된 무료 릴레이로 중복성 확보(글 prune 대비 fan-out 읽기/쓰기 대상).
     'wss://nos.lol',
+    'wss://relay.damus.io',
     'wss://relay.primal.net',
-    'wss://nostr.wine'
+    'wss://relay.snort.social',
+    'wss://nostr.mom',
+    'wss://purplepag.es',
 ]
 
 # IndieNet 해시태그

@@ -108,9 +108,9 @@ class ChannelPoller:
         # Nostr 관련
         self._nostr_private_key = None
         self._nostr_public_key = None
-        self._nostr_ws = None
+        self._nostr_wss = []  # 활성 WebSocket 목록(릴레이별 1개) — stop/토글오프 시 전체 close
         self._nostr_seen_ids = set()
-        self._nostr_last_active = time.time()  # 하이버네이션 감지용
+        self._nostr_seen_lock = threading.Lock()  # 멀티릴레이 동시 수신 시 dedupe 체크-추가 원자화
 
         # 비즈니스 매니저 참조
         self._business_manager = None
@@ -174,10 +174,13 @@ class ChannelPoller:
         # pending 메시지 발송 스레드 시작
         self._start_pending_message_sender()
 
-        # 자동응답 서비스 시작
+        # 자동응답 서비스 시작 — 단, 사용자가 영속적으로 꺼뒀으면(is_enabled=False) 부팅 시 자동 시작 안 함.
         try:
             auto_response = self._get_auto_response()
-            auto_response.start()
+            if auto_response.is_enabled():
+                auto_response.start()
+            else:
+                self._log("자동응답은 사용자 설정으로 꺼져 있음(부팅 자동 시작 생략)")
         except Exception as e:
             self._log(f"자동응답 서비스 시작 실패: {e}")
 
@@ -196,10 +199,10 @@ class ChannelPoller:
             except Exception as e:
                 self._log(f"자동응답 서비스 중지 실패: {e}")
 
-        # Nostr WebSocket 종료
-        if self._nostr_ws:
+        # Nostr WebSocket 종료 (릴레이별 전체)
+        for ws in list(self._nostr_wss):
             try:
-                self._nostr_ws.close()
+                ws.close()
             except Exception as e:
                 self._log(f"Nostr WebSocket 종료 실패: {e}")
 
@@ -263,13 +266,14 @@ class ChannelPoller:
             self.stop_events[channel_type].set()
             del self.stop_events[channel_type]
 
-        # Nostr WebSocket 종료
-        if channel_type == 'nostr' and self._nostr_ws:
-            try:
-                self._nostr_ws.close()
-            except Exception as e:
-                self._log(f"Nostr WebSocket 종료 실패: {e}")
-            self._nostr_ws = None
+        # Nostr WebSocket 종료 (릴레이별 전체)
+        if channel_type == 'nostr':
+            for ws in list(self._nostr_wss):
+                try:
+                    ws.close()
+                except Exception as e:
+                    self._log(f"Nostr WebSocket 종료 실패: {e}")
+            self._nostr_wss = []
 
         if channel_type in self.threads:
             self.threads[channel_type].join(timeout=2)
@@ -299,36 +303,65 @@ class ChannelPoller:
     # ============ Nostr 실시간 리스닝 ============
 
     def _nostr_realtime_loop(self, stop_event: threading.Event):
-        """Nostr 실시간 WebSocket 루프"""
+        """Nostr 실시간 WebSocket 루프 — 설정된 모든 릴레이를 동시 구독.
+
+        과거엔 relays[0] 한 곳만 실시간 구독해서, 우리 kind:10050 DM inbox 가 여러 릴레이면
+        다른 릴레이로만 온 gift-wrap(NIP-17) 이 실시간 누락 → 자동응답 미트리거였다(주기 fetch 는
+        dms.db 만 채움). 이제 릴레이마다 독립 리스너를 띄운다. 같은 이벤트가 여러 릴레이서 중복
+        수신돼도 _nostr_seen_ids 락 + external_id DB dedup 으로 자동응답은 1회만 트리거된다.
+        """
         if not HAS_NOSTR:
             self._log("Nostr 라이브러리 없음 (pip install pynostr websocket-client)")
             return
 
+        # NIP-17 백필 가드 기준 시각(리스닝 시작 시점). 재연결돼도 리셋 안 함 —
+        # 이 시각 이전(다운타임 포함) 메시지는 자동응답 대량 발송을 막기 위해 business.db 미저장.
+        if not getattr(self, '_nostr_listen_started', None):
+            self._nostr_listen_started = int(time.time())
+
+        # 키·릴레이 목록 확보 (활성화·키 준비될 때까지 대기)
+        relays = None
         while not stop_event.is_set() and self.running:
             try:
-                # 키 초기화
                 if not self._init_nostr_keys():
                     self._log("Nostr 키 초기화 실패 - 60초 후 재시도")
                     time.sleep(60)
                     continue
-
-                # 릴레이 설정 가져오기
                 bm = self._get_business_manager()
                 channel = bm.get_channel_setting('nostr')
                 if not channel or channel['enabled'] != 1:
                     time.sleep(10)
                     continue
-
                 config = json.loads(channel.get('config', '{}'))
-                relays = config.get('relays', ['wss://relay.damus.io'])
-                relay_url = relays[0] if relays else 'wss://relay.damus.io'
-
-                # WebSocket 연결
-                self._connect_nostr_websocket(relay_url, stop_event)
-
+                relays = config.get('relays') or ['wss://relay.damus.io']
+                break
             except Exception as e:
                 self._log(f"Nostr 오류: {e}")
+                time.sleep(5)
 
+        if not relays or stop_event.is_set() or not self.running:
+            return
+
+        # 릴레이별 독립 리스너 스레드 (각자 연결·재연결 관리)
+        for relay_url in relays:
+            threading.Thread(
+                target=self._nostr_relay_listener,
+                args=(relay_url, stop_event),
+                daemon=True
+            ).start()
+        self._log(f"Nostr 실시간 구독: {len(relays)}개 릴레이")
+
+        # stop_event 까지 대기 (리스너 스레드들이 각자 재연결 관리)
+        while not stop_event.is_set() and self.running:
+            time.sleep(1)
+
+    def _nostr_relay_listener(self, relay_url: str, stop_event: threading.Event):
+        """단일 릴레이 연결 + 재연결 루프 (릴레이마다 독립 스레드)."""
+        while not stop_event.is_set() and self.running:
+            try:
+                self._connect_nostr_websocket(relay_url, stop_event)
+            except Exception as e:
+                self._log(f"Nostr 릴레이 오류({relay_url}): {e}")
             # 재연결 대기 (로그 없이 조용히)
             if not stop_event.is_set() and self.running:
                 time.sleep(5)
@@ -406,10 +439,11 @@ class ChannelPoller:
             return False
 
     def _connect_nostr_websocket(self, relay_url: str, stop_event: threading.Event):
-        """Nostr WebSocket 연결"""
+        """Nostr WebSocket 연결 (단일 릴레이). 멀티릴레이 동시 연결을 위해 ws·last_active 는 연결별 로컬."""
         import uuid
 
         connected = threading.Event()
+        last_active = [time.time()]  # 연결별 하이버네이션 감지용 (closure-local)
         HIBERNATION_THRESHOLD = 30  # 30초 이상 점프하면 하이버네이션으로 판단
         PING_INTERVAL = 20  # 20초마다 ping
 
@@ -418,8 +452,10 @@ class ChannelPoller:
                 data = json.loads(message)
                 if data[0] == "EVENT":
                     event = data[2]
-                    if event.get('kind') == 4:  # DM
+                    if event.get('kind') == 4:  # NIP-04 DM (레거시)
                         self._handle_nostr_dm(event)
+                    elif event.get('kind') == 1059:  # NIP-17 gift-wrap DM (최신 클라이언트)
+                        self._handle_nostr_giftwrap(event)
             except Exception as e:
                 pass
 
@@ -427,14 +463,14 @@ class ChannelPoller:
             # 정상적인 연결 끊김은 로그 안 남김
             error_str = str(error)
             if "Connection to remote host was lost" not in error_str:
-                self._log(f"Nostr WebSocket 에러: {error}")
+                self._log(f"Nostr WebSocket 에러({relay_url}): {error}")
 
         def on_close(ws, close_status_code, close_msg):
             pass  # 정상적인 닫힘은 로그 안 남김
 
         def on_open(ws):
             connected.set()
-            # 나에게 온 DM 구독 (현재 시점부터)
+            # 나에게 온 NIP-04 DM 구독 (현재 시점부터)
             req = json.dumps([
                 "REQ",
                 f"dm_{uuid.uuid4().hex[:8]}",
@@ -445,24 +481,38 @@ class ChannelPoller:
                 }
             ])
             ws.send(req)
-            self._nostr_last_active = time.time()
+            # 나에게 온 NIP-17 gift-wrap(kind:1059) 구독.
+            # gift-wrap created_at 은 과거로 무작위화되므로 since 를 못 쓴다 →
+            # limit 로 받고, 언랩 후 rumor 실제 시각으로 freshness 판단(_handle_nostr_giftwrap).
+            req17 = json.dumps([
+                "REQ",
+                f"gw_{uuid.uuid4().hex[:8]}",
+                {
+                    "kinds": [1059],
+                    "#p": [self._nostr_public_key.hex()],
+                    "limit": 50
+                }
+            ])
+            ws.send(req17)
+            last_active[0] = time.time()
             # 최초 연결 시에만 로그
             if not hasattr(self, '_nostr_connected_once'):
                 self._log(f"Nostr 연결됨: {relay_url}")
                 self._nostr_connected_once = True
             self._update_last_poll_time('nostr')
 
-        self._nostr_ws = websocket.WebSocketApp(
+        ws = websocket.WebSocketApp(
             relay_url,
             on_open=on_open,
             on_message=on_message,
             on_error=on_error,
             on_close=on_close
         )
+        self._nostr_wss.append(ws)  # stop/토글오프 시 전체 close 대상
 
         # 별도 스레드에서 WebSocket 실행 (ping으로 좀비 연결 감지)
         ws_thread = threading.Thread(
-            target=self._nostr_ws.run_forever,
+            target=ws.run_forever,
             kwargs={"ping_interval": PING_INTERVAL, "ping_timeout": 10},
             daemon=True
         )
@@ -472,33 +522,41 @@ class ChannelPoller:
         connected.wait(timeout=10)
 
         # stop_event가 설정될 때까지 대기 + 하이버네이션 감지
-        while not stop_event.is_set() and self.running:
-            if not ws_thread.is_alive():
-                break
+        try:
+            while not stop_event.is_set() and self.running:
+                if not ws_thread.is_alive():
+                    break
 
-            # 하이버네이션 감지: 시간 점프 체크
-            now = time.time()
-            elapsed = now - self._nostr_last_active
-            if elapsed > HIBERNATION_THRESHOLD:
-                self._log(f"하이버네이션 감지 ({int(elapsed)}초 경과) - Nostr 재연결")
-                break  # while 탈출 → ws.close() → _nostr_realtime_loop에서 재연결
+                # 하이버네이션 감지: 시간 점프 체크
+                now = time.time()
+                elapsed = now - last_active[0]
+                if elapsed > HIBERNATION_THRESHOLD:
+                    self._log(f"하이버네이션 감지 ({int(elapsed)}초 경과) - Nostr 재연결({relay_url})")
+                    break  # while 탈출 → ws.close() → 릴레이 리스너에서 재연결
 
-            self._nostr_last_active = now
-            time.sleep(1)
-
-        # 종료
-        if self._nostr_ws:
-            self._nostr_ws.close()
+                last_active[0] = now
+                time.sleep(1)
+        finally:
+            # 종료 — 로컬 ws 닫고 활성 목록에서 제거
+            try:
+                ws.close()
+            except Exception:
+                pass
+            try:
+                self._nostr_wss.remove(ws)
+            except ValueError:
+                pass
 
     def _handle_nostr_dm(self, event: dict):
         """Nostr DM 처리 → DB 저장"""
         try:
             event_id = event.get('id')
 
-            # 중복 체크
-            if event_id in self._nostr_seen_ids:
-                return
-            self._nostr_seen_ids.add(event_id)
+            # 중복 체크 (멀티릴레이 동시 수신 — 체크-추가 원자화)
+            with self._nostr_seen_lock:
+                if event_id in self._nostr_seen_ids:
+                    return
+                self._nostr_seen_ids.add(event_id)
 
             # 나에게 온 DM인지 확인
             is_for_me = False
@@ -545,6 +603,57 @@ class ChannelPoller:
 
         except Exception as e:
             self._log(f"Nostr DM 처리 실패: {e}")
+
+    def _handle_nostr_giftwrap(self, event: dict):
+        """NIP-17 gift-wrap(kind:1059) DM 처리 → unwrap → business.db (자동응답 입력).
+
+        kind:4(NIP-04)와 동일하게 _save_message_to_db 로 흘려보낸다(이웃 매칭·소유자 분기·미응답
+        저장 모두 거기서 처리). 차이: ①gift-wrap unwrap(nip17) ②freshness 가드 — 리스닝 시작 이전
+        rumor 는 스킵(릴레이가 과거 gift-wrap 을 한꺼번에 내려줄 때 옛 DM 에 대량 자동응답 방지).
+        """
+        try:
+            event_id = event.get('id')
+            # 중복 체크 (멀티릴레이 동시 수신 — 체크-추가 원자화)
+            with self._nostr_seen_lock:
+                if not event_id or event_id in self._nostr_seen_ids:
+                    return
+                self._nostr_seen_ids.add(event_id)
+
+            try:
+                import nip17
+                out = nip17.unwrap_dm(self._nostr_private_key.hex(), event)
+            except Exception:
+                return  # 우리 대상 아님 / 복호·검증 실패 → 스킵
+
+            content = (out or {}).get('content')
+            if not content:
+                return
+
+            # 백필 가드: 리스닝 시작 이전(여유 120초) 메시지는 자동응답 트리거 안 함(이미 dms.db 에 있음).
+            rumor_ca = out.get('created_at') or 0
+            started = getattr(self, '_nostr_listen_started', 0)
+            if rumor_ca and started and rumor_ca < started - 120:
+                return
+
+            sender_npub = _hex_to_npub(out.get('sender', ''))
+            rumor_id = (out.get('rumor') or {}).get('id') or event_id  # dms.db 와 dedupe 정합
+            ts = rumor_ca or int(time.time())
+            kst = timezone(timedelta(hours=9))
+            dt = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(kst)
+
+            self._log(f"Nostr DM(NIP-17) 수신: from={sender_npub[:20]}...")
+            self._save_message_to_db(
+                contact_type='nostr',
+                contact_value=sender_npub,
+                subject='Nostr DM',
+                content=content,
+                external_id=rumor_id,
+                message_time=dt.isoformat(),
+            )
+            self._update_last_poll_time('nostr')
+
+        except Exception as e:
+            self._log(f"Nostr NIP-17 DM 처리 실패: {e}")
 
     # ============ Gmail 폴링 ============
 

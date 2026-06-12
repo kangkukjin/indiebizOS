@@ -6,15 +6,292 @@
   "author": "System AI",
   "tools": [
     {
-      "name": "neighbors_op",
-      "description": "이웃(연락처) 통합 조회. neighbor_id 또는 name이 있으면 단건 상세, 없으면 목록.\n\n## 사용 예시\n- 전체 목록: neighbors_op()\n- 검색: neighbors_op(search='홍길동')\n- 레벨별 필터: neighbors_op(info_level=2)\n- 단건 상세 (ID): neighbors_op(neighbor_id=1)\n- 단건 상세 (이름 정확 일치): neighbors_op(name='홍길동')\n\n## 분기 규칙\n- neighbor_id 또는 name 제공 → get_neighbor_detail 동작 (상세 정보 + 연락처 + 최근 메시지)\n- 둘 다 없음 → get_neighbors 동작 (목록, search/info_level 필터 적용)",
+      "name": "messages_op",
+      "description": "메신저 — 대화 목록 또는 한 대화의 메시지 스레드. business.db(다채널 이웃, 양방향) + dms.db(IndieNet Nostr DM)를 Nostr 이벤트 id로 dedupe하며 통합.\n\n## op 분기\n- thread (기본): neighbor_id(이웃) 또는 pubkey(비이웃 npub) 중 하나. 그 대화의 메시지 전체(시간 오름차순). 반환 {name, channel, to, messages:[{content,is_from_user,contact_type,time}]}\n- inbox: 파라미터 없음. 이웃+Nostr DM 통합 대화 목록(최근순). 반환 {conversations:[{id,pubkey,name,channel,to,preview,time,unread}]}",
       "input_schema": {
         "type": "object",
         "properties": {
-          "search": { "type": "string", "description": "이름 부분 일치 검색 (목록 모드)" },
-          "info_level": { "type": "integer", "description": "정보 공개 레벨 필터 0-4 (목록 모드)" },
-          "neighbor_id": { "type": "integer", "description": "이웃 ID (단건 상세 모드)" },
-          "name": { "type": "string", "description": "이웃 이름 정확 일치 (단건 상세 모드)" }
+          "op": {
+            "type": "string",
+            "enum": [
+              "thread",
+              "inbox"
+            ],
+            "default": "thread",
+            "description": "thread=한 대화 스레드(neighbor_id 또는 pubkey) / inbox=대화 목록"
+          },
+          "neighbor_id": {
+            "type": "integer",
+            "description": "이웃 ID (op:thread, 이웃 대화)"
+          },
+          "pubkey": {
+            "type": "string",
+            "description": "상대 npub (op:thread, 비이웃 Nostr DM 대화)"
+          }
+        }
+      }
+    },
+    {
+      "name": "neighbor_op",
+      "description": "이웃(비즈니스 파트너) 조회·관리.\n\n## op 분기\n- list (기본): search(부분일치)/info_level(0-4) 필터로 이웃 목록. 반환 {neighbors:[...]}\n- detail: neighbor_id 또는 name. 상세+연락처+최근 메시지. 반환 {neighbor, contacts, messages}\n- save: id 없으면 생성(name 필수), 있으면 수정. 필드 name/info_level/rating/info_share/additional_info/business_doc\n- delete: id 필수\n- favorite: id 필수, 즐겨찾기 토글",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "list",
+              "detail",
+              "save",
+              "delete",
+              "favorite"
+            ],
+            "default": "list",
+            "description": "list=목록(기본) / detail=상세 / save=생성·수정 / delete=삭제 / favorite=즐겨찾기 토글"
+          },
+          "id": {
+            "type": "integer",
+            "description": "이웃 ID (수정/삭제/즐겨찾기 시)"
+          },
+          "name": {
+            "type": "string",
+            "description": "이름 (생성 시 필수)"
+          },
+          "info_level": {
+            "type": "integer",
+            "description": "정보 공개 수준 0-4"
+          },
+          "rating": {
+            "type": "integer",
+            "description": "평점 0-5"
+          },
+          "info_share": {
+            "type": "integer",
+            "description": "정보 공유 동의 0/1"
+          },
+          "additional_info": {
+            "type": "string",
+            "description": "메모/추가 정보"
+          },
+          "business_doc": {
+            "type": "string",
+            "description": "이 이웃에게 공개할 비즈니스 문서"
+          },
+          "search": {
+            "type": "string",
+            "description": "이름 부분 일치 (list 모드)"
+          },
+          "neighbor_id": {
+            "type": "integer",
+            "description": "이웃 ID (detail 모드 — id 대신 사용 가능)"
+          }
+        }
+      }
+    },
+    {
+      "name": "contact_op",
+      "description": "이웃 연락처 CRUD.\n\n## op 분기\n- add (기본): neighbor_id·contact_type·contact_value 필수\n- update: contact_id 필수\n- delete: contact_id 필수\n\ncontact_type: email/phone/kakao/telegram/line/nostr/other",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "add",
+              "update",
+              "delete"
+            ],
+            "default": "add",
+            "description": "add=추가 / update=수정 / delete=삭제"
+          },
+          "neighbor_id": {
+            "type": "integer",
+            "description": "이웃 ID (add 시 필수)"
+          },
+          "contact_id": {
+            "type": "integer",
+            "description": "연락처 ID (update/delete 시 필수)"
+          },
+          "contact_type": {
+            "type": "string",
+            "description": "email/phone/kakao/telegram/line/nostr/other"
+          },
+          "contact_value": {
+            "type": "string",
+            "description": "연락처 값"
+          }
+        }
+      }
+    },
+    {
+      "name": "business_op",
+      "description": "나의 비즈니스(사업) CRUD.\n\n## op 분기\n- list (기본): level(0-4)/search 필터로 비즈니스 목록. 반환 {businesses:[{id,name,level,description}]}\n- detail: id 필수. 단건 + 소속 아이템. 반환 {business, items}\n- save: id 없으면 생성(name 필수), 있으면 수정. 필드: name, level(0-4 공개수준), description\n- delete: id 필수 (소속 아이템도 함께 삭제)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "list",
+              "detail",
+              "save",
+              "delete"
+            ],
+            "default": "list",
+            "description": "list=목록 / detail=상세 / save=생성·수정 / delete=삭제"
+          },
+          "id": {
+            "type": "integer",
+            "description": "비즈니스 ID (detail/save 수정/delete 시)"
+          },
+          "name": {
+            "type": "string",
+            "description": "비즈니스 이름 (생성 시 필수)"
+          },
+          "level": {
+            "type": "integer",
+            "description": "공개 수준 0-4 (list 필터 / save)"
+          },
+          "description": {
+            "type": "string",
+            "description": "비즈니스 설명"
+          },
+          "search": {
+            "type": "string",
+            "description": "이름 부분 일치 (list 모드)"
+          }
+        }
+      }
+    },
+    {
+      "name": "business_item_op",
+      "description": "비즈니스 아이템(상품/항목) CRUD + 첨부 이미지.\n\n## op 분기\n- list (기본): business_id 필수. 그 비즈니스의 아이템 목록. 반환 {items:[{id,business_id,title,details,attachment_path}], business_id}\n- detail: item_id 필수\n- save: id 없으면 생성(business_id·title 필수), 있으면 수정. 필드: title, details, attachment_path\n- delete: item_id 필수\n- add_image: item_id·path 필수. 로컬 이미지 파일을 business_images 로 복사해 첨부(attachment_path JSON 배열에 추가)\n- remove_image: item_id·path 필수. 첨부 이미지 제거 + 파일 삭제",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "list",
+              "detail",
+              "save",
+              "delete",
+              "add_image",
+              "remove_image"
+            ],
+            "default": "list",
+            "description": "list=목록 / detail=상세 / save=생성·수정 / delete=삭제 / add_image=이미지 추가 / remove_image=이미지 제거"
+          },
+          "id": {
+            "type": "integer",
+            "description": "아이템 ID (detail/save 수정/delete 시)"
+          },
+          "item_id": {
+            "type": "integer",
+            "description": "아이템 ID (add_image/remove_image 시)"
+          },
+          "business_id": {
+            "type": "integer",
+            "description": "소속 비즈니스 ID (list / 생성 시 필수)"
+          },
+          "title": {
+            "type": "string",
+            "description": "아이템 제목 (생성 시 필수)"
+          },
+          "details": {
+            "type": "string",
+            "description": "상세 설명"
+          },
+          "attachment_path": {
+            "type": "string",
+            "description": "첨부 경로/URL (JSON 배열)"
+          },
+          "path": {
+            "type": "string",
+            "description": "이미지 파일 경로 (add_image=소스 / remove_image=제거할 첨부)"
+          }
+        }
+      }
+    },
+    {
+      "name": "business_document_op",
+      "description": "레벨별 공개 비즈니스 문서(이웃에게 정보 공개 수준별로 보여줄 문서) 관리.\n\n## op 분기\n- list (기본): 레벨 0-4 문서 전체. 반환 {documents:[{level,title,content}]}\n- detail: level 필수\n- update: level 필수 + title·content\n- regenerate: 파라미터 없음. 비즈니스 목록·아이템 기반으로 레벨별 문서 자동 재생성",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "list",
+              "detail",
+              "update",
+              "regenerate"
+            ],
+            "default": "list",
+            "description": "list=전체 / detail=레벨 상세 / update=레벨 수정 / regenerate=자동 재생성"
+          },
+          "level": {
+            "type": "integer",
+            "description": "문서 레벨 0-4 (detail/update 시)"
+          },
+          "title": {
+            "type": "string",
+            "description": "문서 제목 (update 시)"
+          },
+          "content": {
+            "type": "string",
+            "description": "문서 내용 (update 시)"
+          }
+        }
+      }
+    },
+    {
+      "name": "work_guideline_op",
+      "description": "레벨별 근무 지침(업무 가이드라인) 관리.\n\n## op 분기\n- list (기본): 레벨 0-4 지침 전체. 반환 {guidelines:[{level,title,content}]}\n- detail: level 필수\n- update: level 필수 + title·content",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "list",
+              "detail",
+              "update"
+            ],
+            "default": "list",
+            "description": "list=전체 / detail=레벨 상세 / update=레벨 수정"
+          },
+          "level": {
+            "type": "integer",
+            "description": "지침 레벨 0-4 (detail/update 시)"
+          },
+          "title": {
+            "type": "string",
+            "description": "지침 제목 (update 시)"
+          },
+          "content": {
+            "type": "string",
+            "description": "지침 내용 (update 시)"
+          }
+        }
+      }
+    },
+    {
+      "name": "auto_response_op",
+      "description": "외부 메시지(Gmail/Nostr) 자동응답 서비스 제어.\n\n## op 분기\n- status (기본): 현재 가동 여부·켜짐 설정·점검주기·처리수 조회. 반환 {running, enabled, check_interval, processed_count}\n- start: 자동응답 켜기 (영속 — 재시작에도 유지)\n- stop: 자동응답 끄기 (영속 — 재시작에도 유지)\n\n자동응답은 이웃의 정보공개수준(info_level)별 근무지침·비즈니스문서를 맥락으로 AI가 응답을 생성·발송한다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "status",
+              "start",
+              "stop"
+            ],
+            "default": "status",
+            "description": "status=상태 조회 / start=켜기 / stop=끄기"
+          }
         }
       }
     },
@@ -24,8 +301,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "search": { "type": "string", "description": "이름으로 검색 (부분 일치)" },
-          "info_level": { "type": "integer", "description": "정보 공개 레벨로 필터링 (0-4)" }
+          "search": {
+            "type": "string",
+            "description": "이름으로 검색 (부분 일치)"
+          },
+          "info_level": {
+            "type": "integer",
+            "description": "정보 공개 레벨로 필터링 (0-4)"
+          }
         }
       }
     },
@@ -35,9 +318,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "neighbor_id": { "type": "integer", "description": "이웃 ID" },
-          "name": { "type": "string", "description": "이웃 이름 (정확히 일치)" }
+          "neighbor_id": {
+            "type": "integer",
+            "description": "이웃 ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "이웃 이름 (정확히 일치)"
+          }
         }
+      }
+    },
+    {
+      "name": "phone_sync",
+      "description": "폰과 PC의 주소록 데이터(business.db: 이웃·연락처·사업·아이템·문서·지침)를 USB(adb)로 합집합 동기화한다. 폰이 USB로 연결돼 있어야 하며(미기동 시 앱 자동 기동 시도), 양방향 1회 머지(추가는 합치고 수정은 최신이 이김, 삭제는 양쪽 반영). 메시지/글 내용은 동기화 대상이 아니다(릴레이/Gmail이 진실원). 파라미터 없음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
       }
     }
   ]

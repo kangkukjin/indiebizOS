@@ -82,6 +82,8 @@ def _ENGINE_MODULES = [
     'api_launcher_web',
     'phone_notifications',   // M3: [sense:phone] 로컬 알림 reader
     'runtime_utils',         // scope=system/workspace 액션의 get_base_path (sense:phone 등)
+    'business_manager',      // 폰 로컬 business.db(주소록 메타데이터) — 합집합 동기화용
+    'business_sync',         // 폰↔맥 business.db LWW+tombstone 머지(export/merge)
 ]
 // 폰 번들 패키지 = data/phone_manifest.json 의 packages (runs_on 단일 진실 소스에서 파생).
 // 옛 하드코딩 리스트를 폐기 — build_ibl_nodes.py 의 PHONE_VERIFIED_PACKAGES 가 SSOT.

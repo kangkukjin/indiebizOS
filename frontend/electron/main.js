@@ -22,8 +22,9 @@ let mainWindow = null;
 let projectWindows = new Map(); // 프로젝트 창 관리
 let folderWindows = new Map(); // 폴더 창 관리
 let multiChatWindows = new Map(); // 다중채팅방 창 관리
-let indieNetWindow = null; // IndieNet 창
 let businessWindow = null; // 비즈니스 관리 창
+let communityWindow = null; // 커뮤니티 창 (옛 IndieNet — IBL 커뮤니티 계기)
+let messengerWindow = null; // 메신저 창 (옛 이웃관리·빠른 연락처 — IBL 메신저 계기)
 let pcManagerWindow = null; // PC Manager 창
 let photoManagerWindow = null; // Photo Manager 창
 let androidManagerWindow = null; // Android Manager 창
@@ -665,59 +666,6 @@ function createFolderWindow(folderId, folderName) {
   return folderWindow;
 }
 
-/**
- * IndieNet 창 생성
- */
-function createIndieNetWindow() {
-  // 이미 열려있으면 포커스
-  if (indieNetWindow && !indieNetWindow.isDestroyed()) {
-    indieNetWindow.focus();
-    return;
-  }
-
-  indieNetWindow = new BrowserWindow({
-    width: 600,
-    height: 800,
-    minWidth: 400,
-    minHeight: 600,
-    title: 'IndieNet',
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 15, y: 15 },
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
-    }
-  });
-
-  if (isDev) {
-    indieNetWindow.loadURL('http://localhost:5173/#/indienet');
-  } else {
-    indieNetWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
-      hash: '/indienet'
-    });
-  }
-
-  // 외부 링크는 기본 브라우저에서 열기
-  indieNetWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
-  // 페이지 내 링크 클릭도 처리
-  indieNetWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
-      event.preventDefault();
-      shell.openExternal(url);
-    }
-  });
-
-  indieNetWindow.on('closed', () => {
-    indieNetWindow = null;
-  });
-
-  return indieNetWindow;
-}
 
 /**
  * 시스템 AI 창 생성
@@ -824,6 +772,105 @@ function createBusinessWindow() {
   });
 
   return businessWindow;
+}
+
+/**
+ * 커뮤니티 창 생성 (옛 IndieNet 전용 창 대체 — IBL 커뮤니티 계기를 전용 창으로 렌더)
+ */
+function createCommunityWindow() {
+  if (communityWindow && !communityWindow.isDestroyed()) {
+    communityWindow.focus();
+    return;
+  }
+
+  communityWindow = new BrowserWindow({
+    width: 600,
+    height: 800,
+    minWidth: 400,
+    minHeight: 600,
+    title: '커뮤니티',
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 15, y: 15 },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  if (isDev) {
+    communityWindow.loadURL('http://localhost:5173/#/community');
+  } else {
+    communityWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
+      hash: '/community'
+    });
+  }
+
+  communityWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  communityWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  communityWindow.on('closed', () => {
+    communityWindow = null;
+  });
+
+  return communityWindow;
+}
+
+function createMessengerWindow() {
+  if (messengerWindow && !messengerWindow.isDestroyed()) {
+    messengerWindow.focus();
+    return;
+  }
+
+  messengerWindow = new BrowserWindow({
+    width: 900,
+    height: 760,
+    minWidth: 480,
+    minHeight: 600,
+    title: '메신저',
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 15, y: 15 },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  if (isDev) {
+    messengerWindow.loadURL('http://localhost:5173/#/messenger');
+  } else {
+    messengerWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
+      hash: '/messenger'
+    });
+  }
+
+  messengerWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  messengerWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  messengerWindow.on('closed', () => {
+    messengerWindow = null;
+  });
+
+  return messengerWindow;
 }
 
 /**
@@ -1157,11 +1204,6 @@ function setupIPC() {
     createFolderWindow(folderId, folderName);
   });
 
-  // IndieNet 창 열기
-  ipcMain.handle('open-indienet-window', () => {
-    createIndieNetWindow();
-  });
-
   // 시스템 AI 창 열기
   ipcMain.handle('open-system-ai-window', () => {
     createSystemAIWindow();
@@ -1170,6 +1212,16 @@ function setupIPC() {
   // 비즈니스 관리 창 열기
   ipcMain.handle('open-business-window', () => {
     createBusinessWindow();
+  });
+
+  // 커뮤니티 창 열기 (옛 IndieNet 대체)
+  ipcMain.handle('open-community-window', () => {
+    createCommunityWindow();
+  });
+
+  // 메신저 창 열기 (옛 이웃관리·빠른 연락처 대체)
+  ipcMain.handle('open-messenger-window', () => {
+    createMessengerWindow();
   });
 
   // 다중채팅방 창 열기
@@ -1334,9 +1386,6 @@ function startLauncherWS() {
             break;
           case 'open_system_ai_window':
             createSystemAIWindow();
-            break;
-          case 'open_indienet_window':
-            createIndieNetWindow();
             break;
           case 'open_business_window':
             createBusinessWindow();

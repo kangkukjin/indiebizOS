@@ -7,8 +7,9 @@ import { useAppStore } from './stores/appStore';
 import { Launcher } from './components/Launcher';
 import { Manager } from './components/Manager';
 import { FolderView } from './components/FolderView';
-import { IndieNet } from './components/IndieNet';
-import { BusinessManager } from './components/BusinessManager';
+import { CommunityInstrumentView } from './components/CommunityInstrumentView';
+import { MessengerInstrumentView } from './components/MessengerInstrumentView';
+import { BusinessInstrumentView } from './components/BusinessInstrumentView';
 import { MultiChat } from './components/MultiChat';
 import { PCManager } from './components/PCManager';
 import { PhotoManager } from './components/PhotoManager';
@@ -25,7 +26,8 @@ function App() {
   const [initialAgent, setInitialAgent] = useState<string | null>(null);
   const [folderId, setFolderId] = useState<string | null>(null);
   const [multiChatRoomId, setMultiChatRoomId] = useState<string | null>(null);
-  const [isIndieNet, setIsIndieNet] = useState(false);
+  const [isCommunity, setIsCommunity] = useState(false);
+  const [isMessenger, setIsMessenger] = useState(false);
   const [isBusiness, setIsBusiness] = useState(false);
   const [isPCManager, setIsPCManager] = useState(false);
   const [pcManagerPath, setPCManagerPath] = useState<string | null>(null);
@@ -40,11 +42,13 @@ function App() {
   const [lectureId, setLectureId] = useState<string | null>(null);
   const [isRealty, setIsRealty] = useState(false);
 
-  // URL 해시에서 프로젝트/폴더/IndieNet 확인
+  // URL 해시에서 프로젝트/폴더 확인
   useEffect(() => {
     const checkHash = () => {
       const hash = window.location.hash;
       setIsRealty(false); // 매 해시 변경마다 초기화 (계기 라우트)
+      setIsCommunity(false);
+      setIsMessenger(false);
 
       // 부동산 실거래가 계기 (직접 조작 인스트루먼트)
       if (hash === '#/realty') {
@@ -52,11 +56,28 @@ function App() {
         return;
       }
 
+      // 커뮤니티 계기 (옛 IndieNet 전용 창 대체 — others:feed/board/nostr)
+      if (hash === '#/community') {
+        setIsCommunity(true);
+        setProjectId(null);
+        setFolderId(null);
+        setMultiChatRoomId(null);
+        return;
+      }
+
+      // 메신저 계기 (옛 이웃관리 창·빠른 연락처 대체 — others:messages CRM)
+      if (hash === '#/messenger') {
+        setIsMessenger(true);
+        setProjectId(null);
+        setFolderId(null);
+        setMultiChatRoomId(null);
+        return;
+      }
+
       // 시스템 AI 체크
       if (hash === '#/system-ai') {
         setIsSystemAI(true);
         setIsLogViewer(false);
-        setIsIndieNet(false);
         setIsBusiness(false);
         setIsPCManager(false);
         setIsPhotoManager(false);
@@ -72,9 +93,7 @@ function App() {
       if (hash.startsWith('#/lecture-workspace')) {
         setIsLectureWorkspace(true);
         setIsSystemAI(false);
-        setIsLogViewer(false);
-        setIsIndieNet(false);
-        setIsBusiness(false);
+        setIsLogViewer(false);        setIsBusiness(false);
         setIsPCManager(false);
         setIsPhotoManager(false);
         setIsAndroidManager(false);
@@ -90,9 +109,7 @@ function App() {
       // 로그 뷰어 체크
       if (hash === '#/log-viewer') {
         setIsSystemAI(false);
-        setIsLogViewer(true);
-        setIsIndieNet(false);
-        setIsBusiness(false);
+        setIsLogViewer(true);        setIsBusiness(false);
         setIsPCManager(false);
         setIsPhotoManager(false);
         setIsAndroidManager(false);
@@ -102,22 +119,9 @@ function App() {
         return;
       }
 
-      // IndieNet 체크
-      if (hash === '#/indienet') {
-        setIsLogViewer(false);
-        setIsIndieNet(true);
-        setIsBusiness(false);
-        setProjectId(null);
-        setFolderId(null);
-        setMultiChatRoomId(null);
-        return;
-      }
-
       // Business 체크
       if (hash === '#/business') {
-        setIsBusiness(true);
-        setIsIndieNet(false);
-        setIsPCManager(false);
+        setIsBusiness(true);        setIsPCManager(false);
         setProjectId(null);
         setFolderId(null);
         setMultiChatRoomId(null);
@@ -126,9 +130,7 @@ function App() {
 
       // PC Manager 체크
       if (hash.startsWith('#/pcmanager')) {
-        setIsPCManager(true);
-        setIsIndieNet(false);
-        setIsBusiness(false);
+        setIsPCManager(true);        setIsBusiness(false);
         setIsPhotoManager(false);
         setProjectId(null);
         setFolderId(null);
@@ -146,9 +148,7 @@ function App() {
       // Photo Manager 체크
       if (hash.startsWith('#/photo')) {
         setIsPhotoManager(true);
-        setIsPCManager(false);
-        setIsIndieNet(false);
-        setIsBusiness(false);
+        setIsPCManager(false);        setIsBusiness(false);
         setIsAndroidManager(false);
         setProjectId(null);
         setFolderId(null);
@@ -167,9 +167,7 @@ function App() {
       if (hash.startsWith('#/android')) {
         setIsAndroidManager(true);
         setIsPhotoManager(false);
-        setIsPCManager(false);
-        setIsIndieNet(false);
-        setIsBusiness(false);
+        setIsPCManager(false);        setIsBusiness(false);
         setProjectId(null);
         setFolderId(null);
         setMultiChatRoomId(null);
@@ -193,9 +191,7 @@ function App() {
       // MultiChat 체크 (URL 인코딩된 ID 디코딩)
       const multiChatMatch = hash.match(/^#\/multichat\/(.+)$/);
       if (multiChatMatch) {
-        setMultiChatRoomId(decodeURIComponent(multiChatMatch[1]));
-        setIsIndieNet(false);
-        setIsBusiness(false);
+        setMultiChatRoomId(decodeURIComponent(multiChatMatch[1]));        setIsBusiness(false);
         setProjectId(null);
         setFolderId(null);
         return;
@@ -208,9 +204,7 @@ function App() {
         // ?agent= 쿼리에서 초기 에이전트 추출 (스케줄 결과 전달용)
         const agentMatch = projectMatch[2]?.match(/agent=([^&]+)/);
         setInitialAgent(agentMatch ? decodeURIComponent(agentMatch[1]) : null);
-        setFolderId(null);
-        setIsIndieNet(false);
-        setIsBusiness(false);
+        setFolderId(null);        setIsBusiness(false);
         setMultiChatRoomId(null);
         return;
       }
@@ -219,9 +213,7 @@ function App() {
       const folderMatch = hash.match(/^#\/folder\/(.+)$/);
       if (folderMatch) {
         setFolderId(decodeURIComponent(folderMatch[1]));
-        setProjectId(null);
-        setIsIndieNet(false);
-        setIsBusiness(false);
+        setProjectId(null);        setIsBusiness(false);
         setMultiChatRoomId(null);
         return;
       }
@@ -229,7 +221,6 @@ function App() {
       // 기본
       setProjectId(null);
       setFolderId(null);
-      setIsIndieNet(false);
       setIsBusiness(false);
       setIsPCManager(false);
       setIsPhotoManager(false);
@@ -328,22 +319,29 @@ function App() {
     );
   }
 
-  // IndieNet 창인 경우
-  if (isIndieNet) {
+  // 커뮤니티 계기 창인 경우 (옛 IndieNet 창 대체)
+  if (isCommunity) {
     return (
       <div className="h-screen w-screen overflow-hidden">
-        <IndieNet />
+        <CommunityInstrumentView />
       </div>
     );
   }
 
-  // Business 창인 경우
+  // 메신저 계기 창인 경우 (옛 이웃관리 창·빠른 연락처 대체)
+  if (isMessenger) {
+    return (
+      <div className="h-screen w-screen overflow-hidden">
+        <MessengerInstrumentView />
+      </div>
+    );
+  }
+
+  // Business 창인 경우 (옛 BusinessManager → IBL 비즈니스 계기 전용 창으로 대체)
   if (isBusiness) {
     return (
-      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
-        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
-          <BusinessManager />
-        </div>
+      <div className="h-screen w-screen overflow-hidden">
+        <BusinessInstrumentView />
       </div>
     );
   }

@@ -5,36 +5,35 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:3474
+- dataset_size:3465
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: '사용자의 현재 위치 또는 관심 지역 근처에서 특정 기간(예: 이번 주말, 이번 달)에 열리는 축제나 행사를 찾고,
-    동시에 해당 지역 근처의 특정 장소(예: 스타벅스)를 검색하는 것'
+- source_sentence: 비즈니스 1번 품목들 보여줄래
   sentences:
-  - '[sense:weather]'
-  - '[sense:search_ddg] & [sense:search_ddg]'
-  - '[sense:startup]'
-- source_sentence: 달력 확인해봐
+  - '[self:business_item]'
+  - '[limbs:android]'
+  - '[sense:collect]'
+- source_sentence: 최근에 올라온 블로그 포스트 봐줘
   sentences:
-  - '[self:manage_events]'
-  - '[sense:book]'
-  - '[self:list]'
-- source_sentence: 브라우저 쿠키 저장해
+  - 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
+  - '[sense:search_youtube]'
+  - '[self:blog]'
+- source_sentence: 작업 지침 전체 리스트
   sentences:
-  - '[sense:search_local]'
-  - '[engines:newspaper]'
-  - '[limbs:browser]'
-- source_sentence: Finder로 /Users/me 오픈해줘
+  - '[self:work_guideline]'
+  - '[sense:classic]'
+  - '[limbs:cctv]'
+- source_sentence: 데스크톱 아래로 스크롤
   sentences:
-  - '[limbs:explorer]'
-  - 인터넷 라디오 재생·중지 (op 분기). play/stop.
-  - '[self:run_pipeline]'
-- source_sentence: 연락처 목록 보여줘 좀 봐
+  - '[self:edit]'
+  - 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr).
+  - '[limbs:screen]'
+- source_sentence: 글로벌 핵심 종목 한눈에
   sentences:
-  - 스케줄 실행 (지연 실행, 특정 시간, 반복 등)
-  - '[limbs:os_open]'
-  - '[others:channel_read]'
+  - '[sense:crawl] >> [self:write]'
+  - '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
+  - 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -48,7 +47,7 @@ This is a [sentence-transformers](https://www.SBERT.net) model finetuned from [j
 ### Model Description
 - **Model Type:** Sentence Transformer
 - **Base model:** [jhgan/ko-sroberta-multitask](https://huggingface.co/jhgan/ko-sroberta-multitask) <!-- at revision 1050bd4e2ca90c0b9b62f0c1fbd83edc85ba8483 -->
-- **Maximum Sequence Length:** 128 tokens
+- **Maximum Sequence Length:** 64 tokens
 - **Output Dimensionality:** 768 dimensions
 - **Similarity Function:** Cosine Similarity
 <!-- - **Training Dataset:** Unknown -->
@@ -65,7 +64,7 @@ This is a [sentence-transformers](https://www.SBERT.net) model finetuned from [j
 
 ```
 SentenceTransformer(
-  (0): Transformer({'max_seq_length': 128, 'do_lower_case': False, 'architecture': 'RobertaModel'})
+  (0): Transformer({'max_seq_length': 64, 'do_lower_case': False, 'architecture': 'RobertaModel'})
   (1): Pooling({'word_embedding_dimension': 768, 'pooling_mode_cls_token': False, 'pooling_mode_mean_tokens': True, 'pooling_mode_max_tokens': False, 'pooling_mode_mean_sqrt_len_tokens': False, 'pooling_mode_weightedmean_tokens': False, 'pooling_mode_lasttoken': False, 'include_prompt': True})
 )
 ```
@@ -88,9 +87,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '연락처 목록 보여줘 좀 봐',
-    '[others:channel_read]',
-    '[limbs:os_open]',
+    '글로벌 핵심 종목 한눈에',
+    '주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.',
+    '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -99,9 +98,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[1.0000, 0.6291, 0.1520],
-#         [0.6291, 1.0000, 0.2461],
-#         [0.1520, 0.2461, 1.0000]])
+# tensor([[1.0000, 0.4779, 0.2633],
+#         [0.4779, 1.0000, 0.3018],
+#         [0.2633, 0.3018, 1.0000]])
 ```
 
 <!--
@@ -146,19 +145,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 3,474 training samples
+* Size: 3,465 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
-  |         | sentence_0                                                                       | sentence_1                                                                        |
-  |:--------|:---------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
-  | type    | string                                                                           | string                                                                            |
-  | details | <ul><li>min: 3 tokens</li><li>mean: 10.9 tokens</li><li>max: 94 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 18.79 tokens</li><li>max: 94 tokens</li></ul> |
+  |         | sentence_0                                                                        | sentence_1                                                                        |
+  |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
+  | type    | string                                                                            | string                                                                            |
+  | details | <ul><li>min: 3 tokens</li><li>mean: 10.78 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 19.06 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                 | sentence_1                                                     |
-  |:---------------------------|:---------------------------------------------------------------|
-  | <code>웹 코드 미리보기</code>     | <code>[engines:render_html]</code>                             |
-  | <code>고속도로 밀리는지 좀 봐</code> | <code>[sense:cctv]</code>                                      |
-  | <code>홍길동이랑 주고받은 거</code>  | <code>한 이웃과 주고받은 메시지 채널 통합 이력 (Gmail/Nostr/Telegram 등).</code> |
+  | sentence_0                            | sentence_1                                                                                             |
+  |:--------------------------------------|:-------------------------------------------------------------------------------------------------------|
+  | <code>이 워드 파일 읽고 마크다운으로 기록해줘해줘</code> | <code>[self:read] >> [self:write]</code>                                                               |
+  | <code>홈페이지 색상 테마를 다크 모드로 변경</code>    | <code>[engines:web]</code>                                                                             |
+  | <code>체크 해제 — opt_in_news</code>      | <code>브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -171,8 +170,6 @@ You can finetune this model on your own dataset.
 ### Training Hyperparameters
 #### Non-Default Hyperparameters
 
-- `per_device_train_batch_size`: 16
-- `per_device_eval_batch_size`: 16
 - `num_train_epochs`: 1
 - `multi_dataset_batch_sampler`: round_robin
 
@@ -182,8 +179,8 @@ You can finetune this model on your own dataset.
 - `do_predict`: False
 - `eval_strategy`: no
 - `prediction_loss_only`: True
-- `per_device_train_batch_size`: 16
-- `per_device_eval_batch_size`: 16
+- `per_device_train_batch_size`: 8
+- `per_device_eval_batch_size`: 8
 - `gradient_accumulation_steps`: 1
 - `eval_accumulation_steps`: None
 - `torch_empty_cache_steps`: None
@@ -280,12 +277,12 @@ You can finetune this model on your own dataset.
 </details>
 
 ### Framework Versions
-- Python: 3.11.12
+- Python: 3.14.5
 - Sentence Transformers: 5.2.2
 - Transformers: 5.1.0
-- PyTorch: 2.12.0+cu130
+- PyTorch: 2.10.0
 - Accelerate: 1.13.0
-- Datasets: 4.8.5
+- Datasets: 4.8.4
 - Tokenizers: 0.22.2
 
 ## Citation

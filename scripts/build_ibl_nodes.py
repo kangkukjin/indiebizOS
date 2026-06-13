@@ -84,6 +84,9 @@ PROFILE_BRANCH_ALLOWLIST = {
     "backend/indienet.py",            # nostr 통합 바인딩
     "backend/nostr_phone_bridge.py",  # 폰 네이티브 nostr 브리지(HW 바인딩)
     "backend/phone_notifications.py", # 폰 알림 센서 바인딩
+    "backend/calendar_actions.py",    # 스케줄 발화 실행 substrate — 맥=GUI창+WS '보이는 실행' /
+                                      # 폰=창·WS 없어 헤드리스 폰-로컬 execute_pipeline. "무엇을 실행"(어휘)이
+                                      # 아니라 "어떤 몸 메커니즘으로 실행"(바인딩)이라 이음매 아래.
     "data/packages/installed/tools/radio/tool_radio.py",     # 핸들러(이음매 아래)
     "data/packages/installed/tools/android/handler.py",      # 핸들러(이음매 아래)
 }

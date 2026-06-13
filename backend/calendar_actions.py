@@ -133,6 +133,16 @@ class CalendarActionsMixin:
         owner_agent_id = task.get("owner_agent_id", "")
         is_system_ai = (owner_project_id == "__system_ai__")
 
+        # 폰-자아: 폰엔 Electron 창도 WS 도 없으므로 "보이는 실행"(_execute_visible_*) 경로가
+        # 성립하지 않는다. 소유자 유무와 무관하게 아래 else 레거시 분기(ibl_parse +
+        # execute_pipeline — 둘 다 폰 번들)로 흐르게 owner 를 비운다. 결과 전달은 pipeline 자체의
+        # [limbs:phone]{op:notify}(창 없는 몸의 출력 짝)로. 이음매 아래 fork-guard(INDIEBIZ_PROFILE).
+        import os as _os
+        if _os.environ.get("INDIEBIZ_PROFILE") == "phone":
+            is_system_ai = False
+            owner_project_id = ""
+            owner_agent_id = task.get("owner_agent_id", "") or "phone"
+
         if not pipeline:
             self._log(f"파이프라인이 없습니다: {task.get('title')}")
             return {"success": False, "error": "pipeline 누락"}

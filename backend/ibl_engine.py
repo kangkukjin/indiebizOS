@@ -139,17 +139,24 @@ def _phone_runnable(node: str, action: str) -> bool:
     return True if rs is None else (f"{node}:{action}" in rs)
 
 
-def _forward_to_phone(phone_url: str, node: str, action: str, params: dict) -> Dict:
+def _forward_to_phone(phone_url: str, node: str, action: str, params: dict,
+                      agent_id: str = None) -> Dict:
     """분산 IBL(#2) — phone_only 액션을 폰 /ibl/execute 로 HTTP 포워드(몸=폰).
 
     맥(두뇌)에서 도는 에이전트가 [limbs:phone] 같은 폰 전용 동작을 만나면, 맥에서
     `from java` 로 실패(graceful 거부)하는 대신 폰이 실제 네이티브 effector(진동·알림·
     TTS 등)를 구동하게 보낸다. 호출부는 INDIEBIZ_PHONE_URL 설정 시에만 이 함수를 부르므로,
     여기선 항상 dict 를 돌려준다(폰 미도달도 명확한 에러 dict — 맥서 USB-ADB 하라는 오인 회피).
+
+    agent_id: 빌림은 호출하는 주체가 액션 주체(설계결정 §6.4) — 호출자 신원을 폰에 전파해
+    폰이 system_ai 로 떨구지 않고 진짜 호출자로 기록한다(폰 honor는 phone_api 측, 미설정이면 무해).
     """
     code = f"[{node}:{action}]"
     if params:
         code += json.dumps(params, ensure_ascii=False)
+    payload = {"code": code}
+    if agent_id:
+        payload["agent_id"] = agent_id
     try:
         import requests
         headers = {"Content-Type": "application/json"}
@@ -157,7 +164,7 @@ def _forward_to_phone(phone_url: str, node: str, action: str, params: dict) -> D
         if token:
             headers["X-Phone-Token"] = token  # #3 인에이블러(폰 인증) 대비 — 미설정이면 미동봉
         r = requests.post(f"{phone_url.rstrip('/')}/ibl/execute",
-                          json={"code": code}, headers=headers, timeout=30)
+                          json=payload, headers=headers, timeout=30)
     except Exception as e:
         return {"error": f"[{node}:{action}]은 폰에서 실행되는 동작인데 폰({phone_url})에 "
                          f"연결할 수 없습니다. 폰 백엔드가 켜져 있는지 확인하세요. "
@@ -179,7 +186,7 @@ def _forward_to_phone(phone_url: str, node: str, action: str, params: dict) -> D
 _mac_session_cache = {"session": None}
 
 
-def _forward_to_mac(node: str, action: str, params: dict) -> Dict:
+def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None) -> Dict:
     """분산 IBL — 폰서 못 도는 액션을 맥 /ibl/execute 로 단건 포워드(머리=맥).
 
     `_forward_to_phone`(맥→폰)의 대칭(폰→맥). 이게 "액션이 진짜 실행 단위" 의 핵심:
@@ -187,7 +194,9 @@ def _forward_to_mac(node: str, action: str, params: dict) -> Dict:
     액션이 여기서 개별적으로 로컬/맥을 결정한다 → 혼합 code 도 액션별로 쪼개져 실행.
 
     맥은 원격 런처 인증 뒤에 있어 세션 로그인 필요(INDIEBIZ_MAC_URL + INDIEBIZ_MAC_PASSWORD).
-    project_id=앱모드 로 프로젝트 경로+신원(system_ai, 앱 표면 의미론) 확보. 엔진은 맥에서도
+    project_id=앱모드 로 프로젝트 경로 확보. 신원은 호출자 agent_id 를 전파한다(설계결정 §6.4
+    — 빌림은 호출하는 주체가 액션 주체). 미동봉이면 맥서 앱모드 기본(system_ai)으로 떨어지는데,
+    그건 폰-자아가 자기 신원을 잃는 버그였다(PHONE_SELF_HOSTING_HANDOFF §6.2). 엔진은 맥에서도
     도므로(INDIEBIZ_PROFILE!=phone) 이 경로는 폰에서만 진입 → 재포워드 루프 없음."""
     mac_url = (os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/")
     if not mac_url:
@@ -197,7 +206,9 @@ def _forward_to_mac(node: str, action: str, params: dict) -> Dict:
     code = f"[{node}:{action}]"
     if params:
         code += json.dumps(params, ensure_ascii=False)
-    payload = {"code": code, "project_id": "앱모드"}  # agent_id 미동봉 → 맥서 앱모드 기본 신원(system_ai)
+    payload = {"code": code, "project_id": "앱모드"}
+    if agent_id:
+        payload["agent_id"] = agent_id  # 호출자 신원 전파 — 맥서 폰-자아로 기록(미동봉 시만 system_ai 폴백)
     password = os.environ.get("INDIEBIZ_MAC_PASSWORD")
     import requests
 
@@ -463,7 +474,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     # 를 거치므로, 혼합 code 도 액션별로 쪼개져 로컬/맥에서 따로 실행된다(weather=로컬·
     # world_bank=맥). 맥 미설정이면 _forward_to_mac 이 graceful 에러 dict 안내.
     if not _phone_runnable(node, action):
-        return _forward_to_mac(node, action, tool_input.get("params", {}))
+        return _forward_to_mac(node, action, tool_input.get("params", {}), agent_id=agent_id)
 
     router = action_config.get("router")
     params = tool_input.get("params", {})
@@ -488,7 +499,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
             and os.environ.get("INDIEBIZ_PROFILE") != "phone":
         _phone_url = os.environ.get("INDIEBIZ_PHONE_URL")
         if _phone_url:
-            return _forward_to_phone(_phone_url, node, action, params)
+            return _forward_to_phone(_phone_url, node, action, params, agent_id=agent_id)
 
     # 라우터별 실행 + 개별 액션 기록 (X-Ray용)
     import time as _time

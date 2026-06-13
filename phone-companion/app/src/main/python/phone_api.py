@@ -47,6 +47,13 @@ def _init_base(base_path):
     os.environ["INDIEBIZ_BASE_PATH"] = base_path
     os.environ["INDIEBIZ_PROFILE"] = "phone"  # #3: runs_on 필터/가드 활성
 
+    # 영속 userdata 디렉토리(filesDir/userdata = indiebiz_base 의 sibling, BaseBundle 재추출에
+    # 안 지워짐 — business.db 선례). system_ai_memory 가 대화 DB 를 여기 둔다(동기화 없는 대화는
+    # wipe=영구손실). system_ai_memory import 전에 설정해야 모듈 상수가 이 경로를 집는다.
+    _userdata = os.path.join(os.path.dirname(base_path), "userdata")
+    os.makedirs(_userdata, exist_ok=True)
+    os.environ["INDIEBIZ_USERDATA"] = _userdata
+
     # #4 API 키 주입: filesDir/secrets/keys.json (BaseBundle 가 안 지우는 sibling,
     # app-private, APK 밖, git 밖). 핸들러가 os.environ 우선 조회하므로 그대로 동작.
     # 프로비저닝=phone-companion/scripts/provision_phone_keys.py (정본 .env 부분집합 adb 푸시).
@@ -457,13 +464,20 @@ def _run_local_harness(message: str, images: list):
     폴백=detect_body)으로 추론하고, 모델은 3티어(경량 gemini_http 직접 / 중급·본격 claude_code_remote
     맥 렌트)로 빌리며, IBL 실행은 폰 로컬(빌린 액션만 맥 위임), 해마는 렌트 인덱스. 실패 시 None."""
     from system_ai_core import process_system_ai_message
+    from system_ai_memory import save_conversation, get_history_for_ai
     images_data = None
     if images:
         images_data = [{"base64": i.get("base64"), "media_type": i.get("media_type", "image/png")}
                        for i in images if i.get("base64")]
+    # 직전 대화 로드 → AI 가 turn 사이를 기억(맥 GUI 와 동형). 그리고 이번 사용자 메시지 저장.
+    history = get_history_for_ai(limit=7)
+    save_conversation("user", message, source="phone")
     response_text, _tool_images = process_system_ai_message(
-        message=message, history=[], images=images_data
+        message=message, history=history, images=images_data
     )
+    # AI 응답 저장 → 과거 대화 뷰 + 다음 turn 기억의 소스.
+    if response_text:
+        save_conversation("assistant", response_text, source="phone-self")
     return {"response": response_text, "provider": "phone-self", "ts": "local"}
 
 
@@ -497,6 +511,19 @@ async def system_ai_chat(request: Request):
     if r == "error":
         return JSONResponse({"response": "맥 백엔드 연결에 실패했습니다. 집 PC와 네트워크를 확인하세요."})
     return _relay(r)
+
+
+@app.get("/system-ai/conversations")
+async def system_ai_conversations(limit: int = 40):
+    """폰-자아 과거 대화 조회(로컬 system_ai_memory). 맥 /system-ai/conversations 미러 —
+    폰 로컬 하네스가 save_conversation 으로 영속(userdata)한 대화를 런처 이력 뷰가 읽는다.
+    맥 프록시 아님: 폰 대화는 폰-자아의 사적 기억(두-자아 원칙)."""
+    try:
+        from system_ai_memory import get_recent_conversations
+        convs = await asyncio.to_thread(get_recent_conversations, limit)
+        return JSONResponse({"conversations": convs})
+    except Exception as e:
+        return JSONResponse({"conversations": [], "error": str(e)})
 
 
 @app.post("/projects/{project_id}/agents/{agent_id}/start")

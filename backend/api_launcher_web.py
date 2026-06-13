@@ -418,6 +418,7 @@ input,textarea,select{ font-family:inherit; }
 .av{ width:30px; height:30px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:15px; }
 .bub{ max-width:78%; background:var(--bg2); border:1px solid var(--line); padding:10px 13px; border-radius:13px; font-size:14px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
 .msg.user .bub{ background:var(--acc); border-color:var(--acc); }
+.ap-hist-sep{ text-align:center; color:var(--dim); font-size:12px; margin:14px 0 4px; opacity:.7; }
 .composer{ padding:12px 16px; background:var(--bg2); border-top:1px solid var(--line); display:flex; gap:8px; }
 .composer textarea{ flex:1; padding:11px 14px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--txt); font-size:14px; resize:none; max-height:120px; }
 .composer textarea:focus{ outline:none; border-color:var(--acc); }
@@ -770,7 +771,21 @@ function apOpenChat(title,sub){
   document.getElementById('apSub').textContent=sub||'';
   document.getElementById('apMsgs').innerHTML='<div class="empty">메시지를 입력해 시작하세요.</div>';
   apShowChat();
+  if(apChat.type==='system') apLoadHistory();  // 시스템 AI = 과거 대화 자동 로드(연속성)
   setTimeout(()=>{ try{ document.getElementById('apInput').focus(); }catch(e){} },50);
+}
+/* 과거 대화 로드 — 시스템 AI 진입 시 이전 대화를 버블로 표시(맥/폰 공통: /system-ai/conversations) */
+async function apLoadHistory(){
+  try{
+    const r=await jfetch('/system-ai/conversations?limit=40');
+    if(!r.ok) return;
+    const d=await r.json(); const convs=d.conversations||[];
+    if(!convs.length) return;  // 이력 없으면 안내문 유지
+    const c=document.getElementById('apMsgs'); c.innerHTML='';
+    convs.forEach(m=>{ apAddMsg((m.role==='user')?'user':'assistant', m.content||''); });
+    const sep=document.createElement('div'); sep.className='ap-hist-sep'; sep.textContent='― 여기부터 새 대화 ―';
+    c.appendChild(sep); c.scrollTop=c.scrollHeight;
+  }catch(e){}
 }
 function apExitChat(){ apBrowseRoot(); }
 async function apRunSwitch(id,btn){

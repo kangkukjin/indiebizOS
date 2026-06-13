@@ -1455,3 +1455,31 @@
   - ⚠️함께 수정: step7(f10eb6a)부터 _init_base 의 _lw/_scratch 전역 바인딩이 _ensure_phone_ai_configs
     함수 안으로 잘못 들어가 _lw=None→런처 UI(instruments/app) 500("internal server error"). step7
     "기동 OK" 체크가 비어있지않음만 봐서 500 문자열 통과시킨 거짓 양성으로 못 잡았음. _init_base 로 복원.
+
+[2026-06-13] 폰-자아 두뇌를 폰-로컬 Gemini로 전환 + 마이크로 명령어 자기인식 + 역방향 장치 은퇴
+  근원 통찰(사용자): 빌려온 두뇌(claude_code)는 *자기 몸을 데려온다* — claude_code 는 맥에 사는
+  에이전트(네이티브 Bash/Read/Write 가 맥에서 동작)라, 폰-자아가 렌트하면 손이 맥에 있게 됨. "폰이
+  자기 위에서 코드 실행"엔 결을 거스르는 우회(IBL→WS 라우팅+Bash 억제)가 필요했음. 더 단순한 진실:
+  Anthropic API(클로드 모델)·Gemini API 는 폰서 직접 호출 가능(그냥 HTTPS) — claude_code "프로그램"
+  (Node CLI, 데스크탑 가정)만 폰서 못 돎. 구독 과금이 그 CLI 에 묶여 맥을 거쳤을 뿐. → 폰-자아 두뇌를
+  폰-로컬 in-process Gemini 로 전환하면 추론 루프·도구 실행·jclass 가 전부 폰에 있게 되고, away-case
+  역방향 장치가 통째로 불필요해짐(폰은 outbound 로만 맥을 부름=NAT 무관).
+
+  변경:
+  - 폰 3티어 config → 전부 gemini_http(REST): 경량=gemini-3.1-flash-lite, 중급·본격=gemini-3.5-flash.
+    _ensure_phone_ai_configs 가 옛 claude_code_remote 를 마이그레이션. (맥-자아는 claude_code 유지 —
+    맥에선 손이 맥에 있는 게 맞음. 두 자아가 각자 몸-네이티브 두뇌.)
+  - 마이크로 명령어 자기인식(Part1): runtime_utils.detect_local_micros() {local,borrowed} — 데스크탑
+    판별 프록시=standalone python3 유무(안드로이드 toybox sh 오판 회피). build_capability_portrait 에
+    micros 추가 → world_pulse_health/prompt_builder 폴백이 "직접 할 수 있는 원시/빌려야 하는 원시"를
+    프롬프트 주입. A36: 폰이 "Python·HTML 직접, Node·Shell 빌림, 무거운 건 맥미니 위임" 자기표현.
+  - 폰 네이티브 Python 실행(Part2): python-exec handler capability-gate(_has_standalone_python) —
+    맥=subprocess 격리, 폰=인-프로세스 exec(분리 namespace+thread 타임아웃+stdout캡처+BaseException).
+    system_ai_tools 가 shell 비로컬(=폰)일 때만 execute_python 노출(capability-gate). PHONE_VERIFIED_PACKAGES
+    += python-exec(stdlib만, import 안전). gemini_http 가 in-process 도구라 폰서 reach 됨.
+  - ★A36 종단: 폰 "1~5000 7의배수 합 코드로" → provider:phone-self, gemini-3.5-flash 로컬 루프 →
+    [tool:execute_python] 인-프로세스 실행(54ms) → 1786785(정확). 폰이 자기 위에서 Python 실행 입증.
+  - 은퇴(제거): claude_code_remote provider, phone_self_channel, /ws/phone-self, remote_turn 엔드포인트,
+    route_to_phone_ws(api_ibl), ClaudeCodeProvider backend_url/route_to_phone, mcp_server ROUTE_TO_PHONE,
+    phone_ws_client, websockets pip. away-case 문제 자체가 증발(두뇌가 폰에 있으니 맥→폰 역방향 불요).
+    맥-자아 claude_code 무영향 확인. /embed 인코더 렌트·_forward_to_mac(home_only outbound 빌림)은 유지.

@@ -1,22 +1,22 @@
 # IndieBiz OS 진단 리포트
-생성: 2026-06-13T14:58
+생성: 2026-06-13T16:36
 
 ## 시스템 상태: warning
 - 서비스: scheduler ✅ | channel_poller ✅ | system_ai_runner ✅
-- 디스크: 307.8GB 여유
-- 최근 6시간 펄스: 6회 (마지막: 2026-06-13T14:47)
+- 디스크: 307.7GB 여유
+- 최근 6시간 펄스: 6회 (마지막: 2026-06-13T15:48)
 
 ## 액션 건강
-- 전체 125개: verified 93 | assumed 27 | failed 5
-- 평균 성공률: 77.2%
+- 전체 125개: verified 95 | assumed 27 | failed 3
+- 평균 성공률: 77.7%
 - 만성 실패: engines:chart, sense:kosis
 - 성능 저하: self:time, sense:cctv, sense:legal
 - 속도 저하: limbs:music
 - 회복됨: limbs:music, others:messages, sense:crypto, sense:realty, sense:stock
 
 ### 최근 7일 실패 빈도 Top
-- [sense:kosis]: 12회 (마지막: 2026-06-13T03:16)
-- [self:run_pipeline]: 9회 (마지막: 2026-06-09T15:13)
+- [sense:kosis]: 12회 (마지막: 2026-06-13T15:17)
+- [self:run_pipeline]: 8회 (마지막: 2026-06-09T15:13)
 - [engines:chart]: 3회 (마지막: 2026-06-13T03:16)
 - [limbs:music]: 2회 (마지막: 2026-06-13T09:28)
 - [sense:crypto]: 2회 (마지막: 2026-06-11T16:42)

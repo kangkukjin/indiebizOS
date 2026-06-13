@@ -29,7 +29,10 @@ def get_all_system_ai_tools() -> List[Dict]:
         tools.append(ibl_schema)
 
     # 범용 도구 (프로젝트 에이전트와 동일)
-    # Python/Node.js 실행기는 제거됨 — 코드는 [self:write]로 파일에 쓴 후 run_command로 실행 (write→run 패턴)
+    # 코드 실행 탈출구는 *몸의 네이티브 런타임*에 묶인다(마이크로 명령어):
+    # - PC/맥: shell 이 있어 run_command 로 write→run (Python/Node 실행기는 제거됨).
+    # - 폰: shell·standalone python 바이너리 부재. 대신 Chaquopy 인-프로세스 Python 이 유일한 탈출구.
+    #   → shell 이 로컬에 없는 몸(폰)에만 execute_python 을 노출(capability-gate, profile 아님 — 무포크).
     pkg_base = Path(__file__).parent.parent / "data" / "packages" / "installed" / "tools"
     lang_tools = [
         ("system_essentials", "run_command"),
@@ -39,6 +42,14 @@ def get_all_system_ai_tools() -> List[Dict]:
         ("system_essentials", "enter_plan_mode"),
         ("system_essentials", "exit_plan_mode"),
     ]
+    try:
+        from runtime_utils import detect_local_micros
+        _micros = detect_local_micros()
+        if "shell" not in _micros.get("local", []):
+            # 이 몸엔 shell 탈출구가 없다(폰) → 네이티브 Python(인-프로세스) 탈출구를 노출.
+            lang_tools.append(("python-exec", "execute_python"))
+    except Exception as e:
+        print(f"[시스템AI] 마이크로 감지 실패(execute_python 미노출): {e}")
     for pkg_id, tool_name in lang_tools:
         tool_json = pkg_base / pkg_id / "tool.json"
         if tool_json.exists():

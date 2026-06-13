@@ -30,12 +30,20 @@ SYNC_TABLES = ENTITY_TABLES + list(CHILD_TABLES.keys())  # persons 먼저(자식
 _MAX_IMG = 8 * 1024 * 1024  # 개별 이미지 8MB 상한(초과=메타만 동기화, 경고)
 
 
+def _health_dir() -> str:
+    """health 데이터 디렉토리. INDIEBIZ_USERDATA 가 있으면 userdata/health(폰=영속, APK
+    업그레이드에도 안 지워짐), 없으면 data/health(맥 기본). storage.py 의 DATA_DIR 와 동일
+    로직 — 반드시 같은 경로를 가리켜야 sync 가 옳은 DB 를 읽는다."""
+    ud = (os.environ.get("INDIEBIZ_USERDATA") or "").strip()
+    return os.path.join(ud, "health") if ud else os.path.join(str(get_base_path()), "data", "health")
+
+
 def _db_path() -> str:
-    return os.path.join(str(get_base_path()), "data", "health", "health_records.db")
+    return os.path.join(_health_dir(), "health_records.db")
 
 
 def _images_dir() -> str:
-    return os.path.join(str(get_base_path()), "data", "health", "images")
+    return os.path.join(_health_dir(), "images")
 
 
 def _ensure_db():

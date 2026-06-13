@@ -393,18 +393,26 @@ input,textarea,select{ font-family:inherit; }
 .center{ display:flex; align-items:center; justify-content:center; gap:10px; padding:30px; color:var(--dim); }
 .pill{ display:inline-block; padding:2px 8px; border-radius:8px; font-size:11px; font-weight:600; }
 
-/* === 자율주행 === */
-.ap{ flex:1; display:flex; min-height:0; }
-.ap-side{ width:200px; background:var(--bg2); border-right:1px solid var(--line); overflow-y:auto; flex-shrink:0; }
-.ap-side h3{ font-size:10px; text-transform:uppercase; color:var(--dim); padding:14px 14px 6px; letter-spacing:.5px; }
-.ap-item{ padding:10px 14px; display:flex; align-items:center; gap:9px; font-size:14px; }
-.ap-item:hover{ background:var(--bg3); }
-.ap-item.on{ background:var(--acc); }
-.ap-main{ flex:1; display:flex; flex-direction:column; min-width:0; }
-.ap-head{ padding:12px 16px; background:var(--bg2); border-bottom:1px solid var(--line); }
-.ap-head h2{ font-size:15px; }
-.ap-head p{ font-size:11px; color:var(--dim); margin-top:2px; }
+/* === 자율주행 (드릴다운: 대상 선택 → 대화, 전체 폭) === */
+.ap-browse{ flex:1; overflow-y:auto; padding:14px; }
+.ap-browse h3{ font-size:11px; text-transform:uppercase; color:var(--dim); margin:16px 4px 8px; letter-spacing:.5px; }
+.ap-browse h3:first-child{ margin-top:2px; }
+.ap-bhead{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.ap-bhead h2{ font-size:18px; }
+.ap-card{ display:flex; align-items:center; gap:13px; padding:15px 16px; background:var(--bg2); border:1px solid var(--line); border-radius:13px; margin-bottom:9px; }
+.ap-card:hover{ border-color:var(--acc); }
+.ap-card .ic{ font-size:22px; width:28px; text-align:center; flex-shrink:0; }
+.ap-card .tx{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.ap-card .tx .nm{ font-weight:600; font-size:15px; }
+.ap-card .tx .ds{ font-size:12px; color:var(--dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ap-card .chev{ color:var(--dim); font-size:20px; flex-shrink:0; }
+.ap-chat{ flex:1; display:flex; flex-direction:column; min-height:0; }
+.ap-head{ padding:11px 14px; background:var(--bg2); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
+.ap-head .ap-head-t{ min-width:0; flex:1; }
+.ap-head h2{ font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ap-head p{ font-size:11px; color:var(--dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .msgs{ flex:1; overflow-y:auto; padding:16px; }
+.msgs .empty{ color:var(--dim); text-align:center; padding:40px 20px; font-size:14px; line-height:1.6; }
 .msg{ margin-bottom:14px; display:flex; gap:10px; }
 .msg.user{ flex-direction:row-reverse; }
 .av{ width:30px; height:30px; border-radius:50%; background:var(--bg3); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:15px; }
@@ -518,7 +526,6 @@ input,textarea,select{ font-family:inherit; }
 }
 a{ color:var(--info); }
 @media(max-width:560px){
-  .ap-side{ width:150px; }
   .grid{ grid-template-columns:repeat(3,1fr); }
   .surf-tab .hint{ display:none; }
 }
@@ -555,23 +562,26 @@ a{ color:var(--info); }
       <span class="em">📱</span><span>앱</span><span class="hint">속도·주권</span></button>
   </div>
 
-  <!-- 자율주행 -->
+  <!-- 자율주행 — 드릴다운: ① 대상 선택(시스템AI/스위치/프로젝트→에이전트) → ② 대화/결과 -->
   <div class="panel on" id="p-autopilot">
-    <div class="ap">
-      <div class="ap-side">
-        <h3>시스템</h3>
-        <div class="ap-item on" id="nav-system" onclick="apSelectSystem()"><span>🤖</span><span>시스템 AI</span></div>
-        <div class="ap-item" id="nav-switch" onclick="apShowSwitches()"><span>⚡</span><span>스위치</span></div>
-        <h3>프로젝트</h3>
-        <div id="ap-projects"></div>
+    <!-- ① 대상 브라우저 (루트 ↔ 프로젝트 에이전트 드릴) -->
+    <div class="ap-browse" id="ap-browse">
+      <div class="ap-bhead" id="ap-bhead" style="display:none">
+        <button class="back" onclick="apBrowseRoot()">←</button>
+        <h2 id="apBrowseTitle"></h2>
       </div>
-      <div class="ap-main">
-        <div class="ap-head"><h2 id="apTitle">시스템 AI</h2><p id="apSub">IndieBiz OS 전체를 관리합니다</p></div>
-        <div class="msgs" id="apMsgs"></div>
-        <div class="composer" id="apComposer">
-          <textarea id="apInput" rows="1" placeholder="메시지..." onkeydown="apKey(event)"></textarea>
-          <button class="go" id="apSend" onclick="apSend()">전송</button>
-        </div>
+      <div id="apBrowse"></div>
+    </div>
+    <!-- ② 대화 / 결과 (전체 폭) -->
+    <div class="ap-chat" id="ap-chat" style="display:none">
+      <div class="ap-head">
+        <button class="back" onclick="apExitChat()">←</button>
+        <div class="ap-head-t"><h2 id="apTitle">시스템 AI</h2><p id="apSub"></p></div>
+      </div>
+      <div class="msgs" id="apMsgs"></div>
+      <div class="composer" id="apComposer">
+        <textarea id="apInput" rows="1" placeholder="메시지..." onkeydown="apKey(event)"></textarea>
+        <button class="go" id="apSend" onclick="apSend()">전송</button>
       </div>
     </div>
   </div>
@@ -691,57 +701,78 @@ function refreshSurface(){
   else if(surface==='app'){ appBackHome(); appHomeRendered=false; renderAppHome(true); }  /* 매니페스트 강제 재fetch */
 }
 
-/* ================= 자율주행 ================= */
-async function apLoad(){ await apLoadProjects(); await apLoadSwitches(); }
+/* ================= 자율주행 (드릴다운) ================= */
+let apAgents=[]; let apAgProject=null;
+async function apLoad(){ await apLoadProjects(); await apLoadSwitches(); apBrowseRoot(); }
 async function apLoadProjects(){
-  try{ const r=await jfetch('/projects'); if(r.ok){ const d=await r.json(); apProjects=d.projects||[]; apRenderProjects(); } }catch(e){}
-}
-function apRenderProjects(){
-  document.getElementById('ap-projects').innerHTML=apProjects.map(p=>
-    '<div class="ap-item" onclick="apSelectProject(\\''+esc(p.id)+'\\')"><span>'+(p.icon||'📁')+'</span><span>'+esc(p.name)+'</span></div>'
-  ).join('');
+  try{ const r=await jfetch('/projects'); if(r.ok){ const d=await r.json(); apProjects=d.projects||[]; } }catch(e){}
 }
 async function apLoadSwitches(){
   try{ const r=await jfetch('/switches'); if(r.ok){ const d=await r.json(); apSwitches=d.switches||[]; } }catch(e){}
 }
-function apClearActive(){ document.querySelectorAll('.ap-item').forEach(e=>e.classList.remove('on')); }
-function apSelectSystem(){
-  apChat={ type:'system', projectId:null, agentId:null, agentName:null };
-  apClearActive(); document.getElementById('nav-system').classList.add('on');
-  document.getElementById('apComposer').style.display='flex';
-  document.getElementById('apTitle').textContent='시스템 AI';
-  document.getElementById('apSub').textContent='IndieBiz OS 전체를 관리합니다';
-  document.getElementById('apMsgs').innerHTML='';
+function apShowBrowse(){ document.getElementById('ap-browse').style.display=''; document.getElementById('ap-chat').style.display='none'; }
+function apShowChat(){ document.getElementById('ap-browse').style.display='none'; document.getElementById('ap-chat').style.display='flex'; }
+function apCard(ic,nm,ds,onclick,chev){
+  return '<div class="ap-card" onclick="'+onclick+'"><span class="ic">'+ic+'</span>'+
+    '<span class="tx"><span class="nm">'+esc(nm)+'</span>'+(ds?'<span class="ds">'+esc(ds)+'</span>':'')+'</span>'+
+    (chev?'<span class="chev">›</span>':'')+'</div>';
 }
-async function apSelectProject(pid){
+/* ① 루트: 시스템 AI / 스위치 / 프로젝트 */
+function apBrowseRoot(){
+  apShowBrowse();
+  document.getElementById('ap-bhead').style.display='none';
+  let h='<h3>시스템</h3>';
+  h+=apCard('🤖','시스템 AI','IndieBiz OS 전체를 관리','apPickSystem()',false);
+  h+=apCard('⚡','스위치','원클릭 자동화 실행','apBrowseSwitches()',true);
+  h+='<h3>프로젝트 '+apProjects.length+'</h3>';
+  h+=apProjects.map(p=>apCard(p.icon||'📁', p.name, '에이전트 선택', "apBrowseProject('"+esc(p.id)+"')", true)).join('');
+  document.getElementById('apBrowse').innerHTML=h;
+}
+/* ①-b 프로젝트 드릴 → 에이전트 전체 목록 (옛 ags[0] 자동선택 버그 제거) */
+async function apBrowseProject(pid){
   const p=apProjects.find(x=>x.id===pid); if(!p) return;
   try{
     const r=await jfetch('/projects/'+encodeURIComponent(pid)+'/agents');
-    if(r.ok){
-      const d=await r.json(); const ags=d.agents||[];
-      if(!ags.length){ alert('이 프로젝트에 에이전트가 없습니다.'); return; }
-      const a=ags[0];
-      apChat={ type:'agent', projectId:pid, agentId:a.id, agentName:a.name };
-      apClearActive(); if(event&&event.target) event.target.closest('.ap-item').classList.add('on');
-      document.getElementById('apComposer').style.display='flex';
-      document.getElementById('apTitle').textContent=p.name+' — '+a.name;
-      document.getElementById('apSub').textContent=(a.role||'').substring(0,80);
-      document.getElementById('apMsgs').innerHTML='';
-    }
+    if(!r.ok){ alert('에이전트 로드 실패'); return; }
+    const d=await r.json(); apAgents=d.agents||[]; apAgProject=p;
+    if(!apAgents.length){ alert('이 프로젝트에 에이전트가 없습니다.'); return; }
+    apShowBrowse();
+    document.getElementById('ap-bhead').style.display='flex';
+    document.getElementById('apBrowseTitle').textContent=p.name;
+    document.getElementById('apBrowse').innerHTML='<h3>에이전트 '+apAgents.length+'</h3>'+
+      apAgents.map((a,i)=>apCard('👤', a.name, (a.role||'').substring(0,48)||'에이전트', 'apPickAgent('+i+')', false)).join('');
   }catch(e){ alert('에이전트 로드 실패'); }
 }
-function apShowSwitches(){
-  apClearActive(); document.getElementById('nav-switch').classList.add('on');
-  document.getElementById('apComposer').style.display='none';
-  document.getElementById('apTitle').textContent='스위치';
-  document.getElementById('apSub').textContent='원클릭 자동화 실행';
-  const box=document.getElementById('apMsgs');
-  if(!apSwitches.length){ box.innerHTML='<p class="muted" style="padding:20px">스위치가 없습니다</p>'; return; }
-  box.innerHTML=apSwitches.map(s=>
-    '<div class="card sw-item"><span>⚡</span><div style="flex:1"><div class="nm">'+esc(s.name)+'</div><div class="pr">'+esc((s.prompt||'').substring(0,60))+'</div></div>'+
+/* ①-c 스위치 목록 */
+function apBrowseSwitches(){
+  apShowBrowse();
+  document.getElementById('ap-bhead').style.display='flex';
+  document.getElementById('apBrowseTitle').textContent='스위치';
+  const box=document.getElementById('apBrowse');
+  if(!apSwitches.length){ box.innerHTML='<p class="muted" style="padding:30px;text-align:center">스위치가 없습니다</p>'; return; }
+  box.innerHTML='<h3>스위치 '+apSwitches.length+'</h3>'+apSwitches.map(s=>
+    '<div class="ap-card"><span class="ic">⚡</span><span class="tx"><span class="nm">'+esc(s.name)+'</span><span class="ds">'+esc((s.prompt||'').substring(0,50))+'</span></span>'+
     '<button class="btn2" onclick="apRunSwitch(\\''+esc(s.id)+'\\',this)">실행</button></div>'
   ).join('');
 }
+/* ② 대상 확정 → 대화/결과 (전체 폭) */
+function apPickSystem(){
+  apChat={ type:'system', projectId:null, agentId:null, agentName:null };
+  apOpenChat('🤖 시스템 AI','IndieBiz OS 전체를 관리합니다');
+}
+function apPickAgent(i){
+  const a=apAgents[i], p=apAgProject; if(!a||!p) return;
+  apChat={ type:'agent', projectId:p.id, agentId:a.id, agentName:a.name };
+  apOpenChat(p.name+' · '+a.name, (a.role||'').substring(0,80));
+}
+function apOpenChat(title,sub){
+  document.getElementById('apTitle').textContent=title;
+  document.getElementById('apSub').textContent=sub||'';
+  document.getElementById('apMsgs').innerHTML='<div class="empty">메시지를 입력해 시작하세요.</div>';
+  apShowChat();
+  setTimeout(()=>{ try{ document.getElementById('apInput').focus(); }catch(e){} },50);
+}
+function apExitChat(){ apBrowseRoot(); }
 async function apRunSwitch(id,btn){
   btn.disabled=true; btn.textContent='실행 중...';
   try{ const r=await jfetch('/switches/'+encodeURIComponent(id)+'/execute',{method:'POST'}); alert(r.ok?'스위치를 실행했습니다':'실행 실패'); }
@@ -750,6 +781,7 @@ async function apRunSwitch(id,btn){
 }
 function apAddMsg(role,text){
   const c=document.getElementById('apMsgs');
+  const ph=c.querySelector('.empty'); if(ph) ph.remove();
   const el=document.createElement('div'); el.className='msg '+role;
   el.innerHTML='<div class="av">'+(role==='user'?'🧑':'🤖')+'</div><div class="bub">'+esc(text)+'</div>';
   c.appendChild(el); c.scrollTop=c.scrollHeight;

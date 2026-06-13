@@ -38,10 +38,11 @@ stdlib만이라 폰 import 위험0 → 다음 APK 빌드 자동 번들. 액션 1
   keyword)로 필터→매칭 시 `_fire_channel_pipeline`(데몬스레드 execute_pipeline, 메시지를 _prev_result
   주입, calendar_actions 레거시 직접실행과 동형). 격리+통합 검증(매칭/비매칭/채널필터/dedup/컨텍스트주입).
   **⚠️ 라이브 백엔드 poller는 재시작 전까지 구 코드** — 실 메시지 발화는 백엔드 재시작 후.
-- **② 폰 번들링 — 미착수(더 무겁고 별도)**: channel_poller + auto_response + business_manager 폰 번들 +
-  ★Nostr 수신을 pynostr(채널_poller 모듈레벨 try-import) → `nostr_phone_bridge`(Kotlin, indienet `_ON_PHONE`
-  경로) 로 적응 필요. Gmail 폴링 폰 경로도. build.gradle 주석이 명시적으로 deferred. **사용자와 substrate
-  접근 결정 필요**(채널_poller 통째 vs 폰 전용 경량 poller).
+- **② 폰 번들링 — ❌ 안 함(사용자 결정 2026-06-14)**: "폰에서는 폴링으로 메시지를 주기적으로 체크하지
+  마라. 그건 PC에서 한다." → channel 트리거는 **본질적으로 PC쪽 일**. 메시지 수신/폴링=PC 담당
+  ([[architecture_remote_as_remote_control]] 폰=리모컨 · [[project_business_db_sync]] 자동응답=PC전용과
+  정합). 폰에 channel_poller 번들/DM 폴링 추가 안 함. 맥 발화 경로(①)가 완전한 구현. (PC 트리거 발화 시
+  폰 알림이 필요하면 그건 파이프라인의 mac→phone 전달 문제로 별건 — 미요청.)
 - "그만할 때까지 받아쓰기"(연속 스트리밍) = `sense:listen` 연속 모드(트리거 의미 밖, 새 메커니즘). 미착수.
 - 본문: [[project_phone_standing_jobs.md]](폰 상주 스케줄러는 schedule 타입 완료, channel ①맥 완료/②폰 잔여).
 

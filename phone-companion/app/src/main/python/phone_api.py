@@ -417,11 +417,15 @@ async def execute(req: Request):
     if not code:
         return JSONResponse({"success": False, "error": "code 파라미터가 필요합니다."})
 
+    # 빌림은 호출하는 주체가 액션 주체(설계결정 §6.4): 맥→폰 위임(_forward_to_phone)이 호출자
+    # 신원을 실어 보내면 그걸로 기록하고, 폰 자체 표면 호출(미동봉)이면 폰-자아("phone")로 떨어진다.
+    agent_id = body.get("agent_id") or "phone"
+
     # 무거운 import(system_tools→api_engine 등)는 첫 호출 시 지연 — 트리 + env 준비 후라 안전.
     from system_tools import _execute_ibl_unified
 
     def _run():
-        return _execute_ibl_unified({"code": code}, _scratch, agent_id="phone")
+        return _execute_ibl_unified({"code": code}, _scratch, agent_id=agent_id)
 
     # 엔진은 동기(내부에 자체 이벤트 루프 관리). 서버 asyncio 루프 블록 방지 위해 스레드로.
     result = await asyncio.to_thread(_run)

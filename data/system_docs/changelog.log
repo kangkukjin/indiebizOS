@@ -1336,3 +1336,19 @@
     _app_action_templates·_block_local_keys($title/$date 주입) calendar 합류. CSS calgrid/calday/caldot/calsel/calpanel.
   - A36 종단검증: 폰서 create/list/delete 전부 맥 위임 작동(_forwarded_to:mac) + **달력 2026년 6월 그리드에 감자캐기(6/20)·생일 점 표시,
     20일 탭→날짜 패널(감자캐기+삭제+추가폼) 렌더**. node --check 통과.
+
+[2026-06-13] 폰-자아 호스팅 기반공사 1·2 — 포크-가드(--check) + 빌림 신원 전파
+  핸드오프 docs/PHONE_SELF_HOSTING_HANDOFF.md §6 의 권장 선행 2건(둘 다 독립적으로 유용).
+  1) 포크-가드(무포크 규율 강제): build_ibl_nodes.py --check 에 check_profile_branches() 합류.
+     이음매 위(하네스·인지·어휘) 모듈에 INDIEBIZ_PROFILE 분기가 침투하면 실패. 이음매 아래
+     (핸들러·프로토콜/센서 바인딩·라우팅 substrate·capability 감지)만 PROFILE_BRANCH_ALLOWLIST(9파일)로
+     허용 — allowlist 밖 .py가 INDIEBIZ_PROFILE 참조하면 적발. stale(분기 사라진 등록 파일)도 청소 안내.
+     판별="반대편 HW가 같은 능력 잃으면 같은 경로 타나?"→capability-gate(detect_body)로, 진짜 HW면 아래로.
+     검증: 이음매 위 임시파일에 분기 심으면 --check 종료1, 제거 시 0. pre-commit·self-check에 자동 합류.
+  2) 빌림 신원 전파(설계결정 §6.4 "호출하는 주체가 액션 주체"): _forward_to_mac/_forward_to_phone 이
+     호출자 agent_id 를 payload 에 동봉(ibl_engine.py). 종전 미동봉→맥서 앱모드 기본(system_ai)으로
+     떨궈 폰-자아가 자기 신원을 잃던 버그(handoff §6.2). 수신측 api_ibl.py 는 이미 req.agent_id 소비 →
+     송신측만 고치면 종단 완성. 미동봉 시 키 부재로 종전 system_ai 폴백 보존(무회귀). phone_api.py 도
+     incoming agent_id honor("phone" 폴백)로 대칭. 검증: 송신 payload 단위테스트 3종(전파/미동봉폴백/폰방향)
+     + 라이브 맥 /ibl/execute 에 agent_id=phone 빌림(world_bank KR) 정상 실행. 폰 번들 반영=APK 재빌드 후
+     (폰-자아 에이전트 존재 시 의미있게 검증 — steps 4~7 후).

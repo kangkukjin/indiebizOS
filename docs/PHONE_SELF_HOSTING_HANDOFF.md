@@ -28,7 +28,7 @@
 - **profile 보지 말고 capability 봐라**: `if not local_claude_code_available()` ○ / `if INDIEBIZ_PROFILE=="phone"` ✗. 판별="반대편 HW가 같은 능력 잃으면 같은 경로 타나?".
 - **"폰전용"은 [이음매](architecture) 아래(핸들러·Java브리지·호스트)에만.** 위(하네스·인지·어휘)의 `INDIEBIZ_PROFILE` 분기 = 포크냄새, 0으로.
 - 현재 `INDIEBIZ_PROFILE` 분기 = **12개/8파일**(runtime_utils, indienet, phone_notifications, api_launcher_web, world_pulse_collectors, nostr_phone_bridge, ibl_engine, channel_engine). 추세 하향 못박기.
-- **제안 가드**: `build_ibl_nodes.py --check`에 "이음매 위 모듈의 INDIEBIZ_PROFILE 분기 적발" 합류(IBL --check·pre-commit 선례). 구현 전 깔면 발산 원천 차단.
+- ✅ **(구현됨 2026-06-13) 포크 가드**: `build_ibl_nodes.py --check`의 `check_profile_branches()`가 "이음매 위 모듈의 INDIEBIZ_PROFILE 분기 적발". `PROFILE_BRANCH_ALLOWLIST`(이음매-아래 9파일) 밖에서 참조 시 --check 실패. pre-commit·self-check에 합류. 발산 원천 차단 완료.
 - 4규율: ①capability-게이트 ②차이는 데이터(runs_on/config)로 ③번들 손-리스트(`_ENGINE_MODULES`) 말고 선언서 파생 ④`phone_api.py`(현 509줄·28라우트)를 0으로 수렴 — 자라면 포크중, 줄면 수렴중.
 
 ## 4. 이미 된 것 (이 세션, 전부 미커밋)
@@ -49,9 +49,9 @@
 
 ## 6. 다음 단계 (순서)
 
-1. **(권장 선행) 포크-가드**를 `build_ibl_nodes.py --check`에 합류 — 이후 발산을 처음부터 못 막게.
-2. **신원 전파 수정**(독립적으로 유용): `_forward_to_mac`/`_forward_to_phone`이 호출자 `agent_id` 전파. `_build_env` 주입 패턴(`project_agent_id_propagation_fix` 참조). 현재 `ibl_engine.py:200` payload가 agent_id 미동봉→맥서 system_ai 기본.
-3. **맥 `/embed` 엔드포인트**: 임의 텍스트→768벡터(맥엔 모델 떠 있으니 노출만). 폰 해마의 전제.
+1. ✅ **(완료 2026-06-13) 포크-가드**를 `build_ibl_nodes.py --check`에 합류 — `check_profile_branches()` + `PROFILE_BRANCH_ALLOWLIST`(이음매-아래 9파일). allowlist 밖 .py가 `INDIEBIZ_PROFILE` 참조하면 --check 실패(stale도 안내). 임시 위반 파일로 종료1 검증, pre-commit/self-check 자동 합류.
+2. ✅ **(완료 2026-06-13) 신원 전파 수정**: `_forward_to_mac`/`_forward_to_phone`이 호출자 `agent_id`를 payload에 동봉(`ibl_engine.py`). 수신측 `api_ibl.py`는 이미 `req.agent_id` 소비라 송신측만 고쳐 종단 완성. 미동봉 시 키 부재→종전 system_ai 폴백 보존(무회귀). `phone_api.py`도 incoming agent_id honor("phone" 폴백)로 대칭. 송신 payload 단위테스트 3종 + 라이브 맥 빌림(world_bank) 검증. **폰 번들 반영은 APK 재빌드 후**(폰-자아 에이전트 존재 시 의미있게 종단검증 — steps 4~7 후).
+3. **맥 `/embed` 엔드포인트**: 임의 텍스트→768벡터(맥엔 모델 떠 있으니 노출만). 폰 해마의 전제. ← **다음 시작점**
 4. **하네스를 폰 번들로**: `phone-companion/app/build.gradle`의 `_ENGINE_MODULES`에 추가 — `world_pulse_collectors`·`world_pulse_health`·`prompt_builder`·`agent_cognitive`·`consciousness_agent`·`agent_runner`·`goal_evaluator`·`providers/*`·`conversation_db` + `data/common_prompts/*` 에셋. (De-risk 완료: 벤더 SDK 지연 import라 폰 import 안전.)
 5. **폰-자아 모델 프로바이더**: 폰 `system_ai_config`가 맥 3티어 미러 — 경량=`google`(Gemini-직접, 폰이 구글API 호출, 맥과 동일) / 중급·본격=**claude_code 원격 렌트**. 새 프로바이더 `claude_code_remote` 필요: 맥이 claude_code 세션을 폰-가리킨 실행기(`INDIEBIZOS_BACKEND_URL`=폰)로 돌려주는 엔드포인트. **이건 실제 인프라**(세션·인증·수명), 환경변수 하나 아님.
 6. **폰 해마**: 맥 인코더 렌트(#3) + 폰 로컬 인덱스 brute-force 코사인(~2400개라 sqlite-vec 불필요). torch·ONNX 폰에 불필요.

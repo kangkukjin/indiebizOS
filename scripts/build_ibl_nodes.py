@@ -67,6 +67,64 @@ PHONE_VERIFIED_PACKAGES = {
     "cctv",      # CCTV 검색(sense:cctv search) — 모듈 import importlib.util(stdlib)뿐, HLS는 WebView <video>+hls.js 재생.
 }
 
+# === 포크-가드: INDIEBIZ_PROFILE 분기 위치 통제 (2026-06-13, 폰-자아 호스팅) ===
+# 무포크 규율(docs/PHONE_SELF_HOSTING_HANDOFF.md §3): "폰전용" 분기는 *이음매 아래*
+# (핸들러·프로토콜/채널 바인딩·센서 바인딩·라우팅 substrate·capability 감지)에만 허용.
+# 이음매 *위*(하네스·인지·어휘: agent_cognitive/consciousness_agent/prompt_builder/
+# agent_runner/goal_evaluator/ibl_nodes_src/common_prompts)의 INDIEBIZ_PROFILE 분기 = 포크냄새 → 0.
+# 판별: "반대편 HW가 같은 능력을 잃으면 같은 경로를 타나?" 그렇다면 capability-gate(detect_body)로,
+# 진짜 HW 바인딩이면 이 allowlist의 이음매-아래 파일에.
+# allowlist에 파일을 추가하려면 "이게 정말 이음매 아래인가?"를 의식적으로 답할 것 (추세 하향 못박기).
+PROFILE_BRANCH_ALLOWLIST = {
+    "backend/runtime_utils.py",       # detect_body — capability 감지 본체(정당한 거처)
+    "backend/ibl_engine.py",          # chokepoint 라우팅(_forward_to_mac/_forward_to_phone)
+    "backend/api_launcher_web.py",    # phone_manifest runnable 필터(라우팅/렌더 substrate)
+    "backend/channel_engine.py",      # nostr 채널 프로토콜 바인딩(드라이버)
+    "backend/indienet.py",            # nostr 통합 바인딩
+    "backend/nostr_phone_bridge.py",  # 폰 네이티브 nostr 브리지(HW 바인딩)
+    "backend/phone_notifications.py", # 폰 알림 센서 바인딩
+    "data/packages/installed/tools/radio/tool_radio.py",     # 핸들러(이음매 아래)
+    "data/packages/installed/tools/android/handler.py",      # 핸들러(이음매 아래)
+}
+# 스캔 대상 루트(이음매 위/아래 모두) — allowlist 밖에서 분기가 나타나면 적발.
+PROFILE_SCAN_DIRS = ["backend", "data/packages/installed"]
+
+
+def check_profile_branches(root: Path) -> list[str]:
+    """이음매 위 모듈에 INDIEBIZ_PROFILE 분기가 침투했는지 적발(포크-가드).
+    allowlist(이음매 아래) 밖의 .py 파일이 INDIEBIZ_PROFILE 를 참조하면 위반."""
+    issues: list[str] = []
+    seen_allowed: set[str] = set()
+    for rel in PROFILE_SCAN_DIRS:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*.py"):
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            if "INDIEBIZ_PROFILE" not in text:
+                continue
+            rel_path = path.relative_to(root).as_posix()
+            if rel_path in PROFILE_BRANCH_ALLOWLIST:
+                seen_allowed.add(rel_path)
+                continue
+            issues.append(
+                f"{rel_path}: 이음매 위 모듈에 INDIEBIZ_PROFILE 분기 — "
+                f"capability-gate(detect_body)로 바꾸거나, 진짜 이음매-아래면 "
+                f"PROFILE_BRANCH_ALLOWLIST 에 의식적으로 추가"
+            )
+    # allowlist에 등록됐지만 더 이상 분기를 안 쓰는 파일 = stale(청소 권장, 실패는 아님).
+    stale = PROFILE_BRANCH_ALLOWLIST - seen_allowed
+    for rel_path in sorted(stale):
+        issues.append(
+            f"(stale) {rel_path}: allowlist에 있으나 INDIEBIZ_PROFILE 분기 없음 — "
+            f"PROFILE_BRANCH_ALLOWLIST 에서 제거 권장"
+        )
+    return issues
+
+
 # === 코퍼스 param 정합 검사 (2026-06-04) ===
 # 모든 액션이 자연히 받는 보편 키 (op 디스패치/레거시 target).
 UNIVERSAL_PARAM_KEYS = {"op", "target"}
@@ -1047,8 +1105,27 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 코퍼스 param 정합 통과 ✓")
 
+    # --- 포크-가드: INDIEBIZ_PROFILE 분기 위치 (--check/--validate 전용) ---
+    profile_failed = False
+    if check or validate_only:
+        pissues = check_profile_branches(root)
+        if pissues:
+            profile_failed = True
+            print(
+                f"[build_ibl_nodes] 포크-가드 실패: {len(pissues)}건 "
+                f"(이음매 위 INDIEBIZ_PROFILE 분기)",
+                file=sys.stderr,
+            )
+            for issue in pissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print(
+                f"[build_ibl_nodes] 포크-가드 통과 ✓ "
+                f"(INDIEBIZ_PROFILE 분기 {len(PROFILE_BRANCH_ALLOWLIST)}개, 전부 이음매 아래)"
+            )
+
     if validate_only:
-        return 1 if (validation_failed or corpus_failed) else 0
+        return 1 if (validation_failed or corpus_failed or profile_failed) else 0
 
     # 폰 매니페스트 파생 (runs_on + 검증된 폰 패키지). data 파싱 성공 시에만.
     manifest_path = root / "data" / "phone_manifest.json"
@@ -1086,7 +1163,8 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 )
             else:
                 print("[build_ibl_nodes] check: phone_manifest.json 일치 ✓")
-        return 0 if (bytes_ok and manifest_ok and not validation_failed and not corpus_failed) else 1
+        return 0 if (bytes_ok and manifest_ok and not validation_failed
+                     and not corpus_failed and not profile_failed) else 1
 
     if validation_failed:
         print(

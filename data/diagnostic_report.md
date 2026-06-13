@@ -1,5 +1,5 @@
 # IndieBiz OS 진단 리포트
-생성: 2026-06-13T12:10
+생성: 2026-06-13T12:26
 
 ## 시스템 상태: warning
 - 서비스: scheduler ✅ | channel_poller ✅ | system_ai_runner ✅

@@ -105,6 +105,13 @@ def _ENGINE_MODULES = [
     'agent_communication',   // 에이전트 간 통신(agent_runner 의존)
     'agent_goals',           // 에이전트 목표(agent_runner 의존)
     'conversation_db',       // 대화 DB(폰-자아 일화기억 로컬·사적)
+
+    // === 폰-자아 호스팅 step 6: 렌트 해마 (§6) ===
+    // 폰엔 torch/sqlite-vec 없음 → 질의 임베딩은 맥 /embed 렌트, 문서 인덱스는 정적 파일(아래
+    // ibl_hippo_*) 인메모리 brute-force 코사인. ibl_usage_db 가 capability 게이트로 렌트 경로 분기.
+    'ibl_usage_db',          // 해마 검색(렌트 모드=인메모리 brute-force) + 실행기억
+    'ibl_usage_rag',         // 실행기억 XML 주입(get_references→search_hybrid)
+    'korean_utils',          // FTS5 토크나이저(ibl_usage_rag 의존) — 렌트 모드는 시맨틱뿐이나 import 정합
 ]
 // 폰 번들 패키지 = data/phone_manifest.json 의 packages (runs_on 단일 진실 소스에서 파생).
 // 옛 하드코딩 리스트를 폐기 — build_ibl_nodes.py 의 PHONE_VERIFIED_PACKAGES 가 SSOT.
@@ -126,6 +133,8 @@ tasks.register('bundleIndiebizBase', Zip) {
         if (!file("${_ROOT}/backend/common").exists()) missing << "backend/common"
         if (!file("${_ROOT}/backend/providers").exists()) missing << "backend/providers"
         if (!file("${_ROOT}/data/common_prompts").exists()) missing << "data/common_prompts"
+        if (!file("${_ROOT}/data/ibl_hippo_index.json").exists()) missing << "data/ibl_hippo_index.json (scripts/export_hippo_index.py 실행)"
+        if (!file("${_ROOT}/data/ibl_hippo_vecs.f32").exists()) missing << "data/ibl_hippo_vecs.f32 (scripts/export_hippo_index.py 실행)"
         if (!file("${_ROOT}/data/ibl_nodes.yaml").exists()) missing << "data/ibl_nodes.yaml"
         _PHONE_PACKAGES.each { p -> if (!file("${_ROOT}/data/packages/installed/tools/${p}").exists()) missing << "tools/${p}" }
         if (missing) throw new GradleException("정본 누락: ${missing.join(', ')} — 폰 엔진 번들을 만들 수 없습니다(드리프트 방지).")
@@ -152,6 +161,9 @@ tasks.register('bundleIndiebizBase', Zip) {
     from("${_ROOT}/data/common_prompts") {
         into 'data/common_prompts'
     }
+    // 렌트 해마 정적 인덱스 (step6: export_hippo_index.py 파생 — 메타 JSON + 정규화 벡터 f32)
+    from("${_ROOT}/data/ibl_hippo_index.json") { into 'data' }
+    from("${_ROOT}/data/ibl_hippo_vecs.f32") { into 'data' }
     // 폰안전 패키지(handler.py + tool.json + 가이드 등) → 원 구조 보존
     _PHONE_PACKAGES.each { p ->
         from("${_ROOT}/data/packages/installed/tools/${p}") {

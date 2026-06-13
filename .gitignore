@@ -131,6 +131,7 @@ data/conversations.db*
 # 재귀적 데이터 보호
 data/**/*.db*
 data/**/*.json
+data/ibl_hippo_vecs.f32
 !data/guide_db.json
 !data/world_pulse_config.json
 !data/ibl_nodes.yaml

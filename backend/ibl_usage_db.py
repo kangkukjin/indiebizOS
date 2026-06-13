@@ -76,6 +76,13 @@ class IBLUsageDB:
     _model_loading = False  # 백그라운드 로딩 진행 중 플래그
     _sqlite_vec_available = None
 
+    # 렌트 해마 (폰-자아 호스팅 §6): 로컬 model/sqlite-vec 가 없는 몸(폰)에서, 정적 인덱스를
+    # 인메모리로 로드하고 질의 임베딩은 맥 /ibl/embed 로 렌트해 brute-force 코사인.
+    # (인코더=공유 substrate, 인덱스=배포된 합성 코퍼스. export_hippo_index.py 가 정본→파생.)
+    _rented_vecs = None        # np.ndarray (count, dim), L2 정규화
+    _rented_metas = None       # list[dict] — 행 순서가 _rented_vecs 와 1:1
+    _rented_load_attempted = False
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -721,6 +728,133 @@ class IBLUsageDB:
     # 검색
     # =========================================================================
 
+    # =========================================================================
+    # 렌트 해마 (폰-자아 호스팅 §6) — 로컬 인코더/벡터스토어 없는 몸에서 검색
+    # =========================================================================
+
+    @classmethod
+    def _rented_mode(cls) -> bool:
+        """렌트 모드 여부: 로컬 시맨틱 스택(model+sqlite-vec)이 없고, 정적 인덱스를 로드할 수 있으며,
+        질의 임베딩을 빌릴 맥(INDIEBIZ_MAC_URL)이 있을 때. capability 게이트(profile 분기 아님)."""
+        if cls.is_semantic_available():
+            return False
+        if not (os.environ.get("INDIEBIZ_MAC_URL") or "").strip():
+            return False
+        return cls._ensure_rented_index()
+
+    @classmethod
+    def _ensure_rented_index(cls) -> bool:
+        """ibl_hippo_index.json + ibl_hippo_vecs.f32 를 인메모리로 1회 로드(numpy 행렬)."""
+        if cls._rented_vecs is not None:
+            return True
+        if cls._rented_load_attempted:
+            return cls._rented_vecs is not None
+        cls._rented_load_attempted = True
+        try:
+            import numpy as np
+            base = os.environ.get("INDIEBIZ_BASE_PATH") or str(Path(__file__).resolve().parent.parent)
+            data_dir = Path(base) / "data"
+            idx = json.loads((data_dir / "ibl_hippo_index.json").read_text(encoding="utf-8"))
+            n, dim = idx["count"], idx["dim"]
+            raw = (data_dir / "ibl_hippo_vecs.f32").read_bytes()
+            vecs = np.frombuffer(raw, dtype=np.float32)
+            if vecs.size != n * dim:
+                logger.error(f"[IBL 렌트해마] 벡터 크기 불일치: {vecs.size} != {n}x{dim}")
+                return False
+            cls._rented_vecs = vecs.reshape(n, dim)
+            cls._rented_metas = idx["examples"]
+            logger.info(f"[IBL 렌트해마] 인덱스 로드: {n}개 x {dim}차원 (질의는 맥 /embed 렌트)")
+            return True
+        except Exception as e:
+            logger.warning(f"[IBL 렌트해마] 인덱스 로드 실패(렌트 검색 비활성): {e}")
+            return False
+
+    def _rent_query_vec(self, query: str):
+        """맥 /ibl/embed 로 질의 텍스트→768벡터 렌트. 인증=원격 런처 세션(_forward_to_mac 패턴)."""
+        mac_url = (os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/")
+        if not mac_url:
+            return None
+        import requests
+        import numpy as np
+        # ibl_engine 의 맥 세션 캐시를 재사용(있으면) — 동일 프로세스 전역.
+        try:
+            from ibl_engine import _mac_session_cache as _sess
+        except Exception:
+            _sess = {"session": None}
+
+        def _post():
+            headers = {"Content-Type": "application/json"}
+            if _sess.get("session"):
+                headers["X-Launcher-Session"] = _sess["session"]
+            return requests.post(f"{mac_url}/ibl/embed", json={"text": query},
+                                 headers=headers, timeout=20)
+
+        def _login() -> bool:
+            pw = os.environ.get("INDIEBIZ_MAC_PASSWORD")
+            if not pw:
+                return False
+            try:
+                r = requests.post(f"{mac_url}/launcher/auth/login", json={"password": pw}, timeout=15)
+                if r.status_code == 200:
+                    sid = (r.json() or {}).get("session_id")
+                    if sid:
+                        _sess["session"] = sid
+                        return True
+            except Exception:
+                pass
+            return False
+
+        try:
+            r = _post()
+            if r.status_code in (401, 403) and _login():
+                r = _post()
+            if r.status_code != 200:
+                logger.warning(f"[IBL 렌트해마] /embed 실패 HTTP {r.status_code}")
+                return None
+            vec = (r.json() or {}).get("vector")
+            return np.array(vec, dtype=np.float32) if vec else None
+        except Exception as e:
+            logger.warning(f"[IBL 렌트해마] /embed 호출 실패: {e}")
+            return None
+
+    def _search_rented(self, query: str, top_k: int, allowed_nodes: set = None,
+                       category: str = None) -> List["UsageExample"]:
+        """렌트 모드 검색: 맥 /embed 질의벡터 + 인메모리 brute-force 코사인 → UsageExample.
+        벡터·문서 모두 L2 정규화라 dot = 코사인. FTS5 없이 순수 시맨틱(handoff '브루트포스 코사인')."""
+        if not self._ensure_rented_index():
+            return []
+        import numpy as np
+        qv = self._rent_query_vec(query)
+        if qv is None:
+            return []
+        sims = self._rented_vecs @ qv  # (count,)
+        # over-fetch 후 필터링(노드/카테고리)
+        over = min(len(sims), max(top_k * 5, top_k))
+        cand = np.argpartition(-sims, over - 1)[:over]
+        cand = cand[np.argsort(-sims[cand])]
+        results: List[UsageExample] = []
+        for i in cand:
+            meta = self._rented_metas[int(i)]
+            if allowed_nodes:
+                ex_nodes = set(meta["nodes"].split(",")) if meta.get("nodes") else set()
+                if ex_nodes and not ex_nodes.intersection(allowed_nodes):
+                    continue
+            if category and meta.get("category") != category:
+                continue
+            total = meta.get("success_count", 0) + meta.get("fail_count", 0)
+            success_rate = (meta["success_count"] / total) if total else -1.0
+            results.append(UsageExample(
+                id=meta["id"], intent=meta["intent"], ibl_code=meta["ibl_code"],
+                nodes=meta.get("nodes", ""), category=meta.get("category", "single"),
+                difficulty=meta.get("difficulty", 1),
+                score=round(float(sims[int(i)]), 4),
+                source=meta.get("source", "synthetic"),
+                success_rate=round(success_rate, 2) if total else -1.0,
+            ))
+            if len(results) >= top_k:
+                break
+        return results
+
     def search_semantic(self, query: str, top_k: int = 10) -> List[Tuple[int, float]]:
         """시맨틱 검색. (id, similarity_score) 리스트 반환"""
         emb = self._generate_embedding(query)
@@ -845,6 +979,12 @@ class IBLUsageDB:
         cached = self._get_cached(cache_key)
         if cached is not None:
             return cached
+
+        # 렌트 모드(폰-자아 §6): 로컬 시맨틱 스택이 없으면 맥 /embed 렌트 + 인메모리 brute-force.
+        if self._rented_mode():
+            results = self._search_rented(query, top_k, allowed_nodes, category)
+            self._set_cached(cache_key, results)
+            return results
 
         over_fetch = top_k * 3  # 필터링 후 충분한 결과를 위해 넉넉히
         use_semantic = self.is_semantic_available() and alpha > 0

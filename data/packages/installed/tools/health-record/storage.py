@@ -28,11 +28,16 @@ def _now() -> str:
 
 # 데이터 저장 경로
 # 패키지 위치: data/packages/installed/tools/health-record
-# 저장 위치: data/health
+# 저장 위치: 기본 data/health, 단 INDIEBIZ_USERDATA 가 있으면 userdata/health
 _PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
 # installed/tools/health-record → installed/tools → installed → packages → data
 _DATA_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(_PACKAGE_DIR))))
-DATA_DIR = os.path.join(_DATA_DIR, 'health')
+# 영속 위치: INDIEBIZ_USERDATA 가 있으면 거기(폰=filesDir/userdata, BaseBundle 재추출에 안
+# 지워짐 — business.db·대화 DB 선례). 없으면 data/(맥 기본, 회귀0). 폰 health 는 동기화가
+# 있으나 indiebiz_base/data 에 있어 매 APK 업그레이드마다 wipe→재동기화 번거로움을 해소.
+# health_sync._db_path()/_images_dir() 와 동일 로직(반드시 같은 경로를 가리켜야 함).
+_USERDATA = (os.environ.get("INDIEBIZ_USERDATA") or "").strip()
+DATA_DIR = os.path.join(_USERDATA, 'health') if _USERDATA else os.path.join(_DATA_DIR, 'health')
 DB_PATH = os.path.join(DATA_DIR, 'health_records.db')
 IMAGES_DIR = os.path.join(DATA_DIR, 'images')
 

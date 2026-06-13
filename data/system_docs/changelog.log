@@ -1416,3 +1416,23 @@
     **A36 종단: rented_mode:true, index 2475 로드, mac_url=터널, "서울 날씨"→id4 [sense:weather]{서울} 0.906**
     (맥 정본 top1과 동일). 폰이 터널로 /embed 렌트→로컬 brute-force로 맥 시맨틱 검색 재현.
   - 전체 인지 루프(폰 하네스가 이 recall 사용)는 step7 진입점 전환 후.
+
+[2026-06-13] 폰-자아 호스팅 기반공사 7 — 진입점 전환 (로컬 하네스 + 폰 정체성, A36 종단)
+  핸드오프 §6 step 7(마지막). phone_api /system-ai/chat 을 _mac_proxy→로컬 하네스(process_system_ai_message)
+  실행으로 전환. 로컬 미가용/실패/빈응답 시 맥 프록시 폴백(전환 안전). step4 하네스+5 provider+6 해마가 종단.
+  - build.gradle _ENGINE_MODULES += system_ai_core/system_ai_memory/system_ai_tools(import 안전 확인).
+  - 폰 3티어 config 자동생성(_ensure_phone_ai_configs, 없을 때만): 경량=gemini_http(폰 직접, GEMINI_API_KEY
+    env 폴백), 중급=claude_code_remote/sonnet, 본격=claude_code_remote/opus. provision_phone_keys 에 GEMINI_API_KEY
+    추가(경량 자급). .env 에 INDIEBIZ_MAC_URL 복원(provision 이 빼던 버그 — 폰 맥도달 끊김 방지).
+  - 정체성 폴백(prompt_builder._load_world_pulse): world_pulse.md 없는 몸(펄스 미수집 폰)서도 capability
+    portrait(detect_body, body-neutral)로 "## 나는 누구인가"를 주입 → 자기-모델이 깨지지 않음(집밖 폰이
+    자기를 맥이라 오인하던 §1 위험 해소). 맥은 world_pulse.md 있어 폴백 미발동(무회귀).
+  - ★A36 종단: /system-ai/chat "어떤 몸이야?"→ provider:phone-self(로컬 하네스) + "나는 안드로이드 폰
+    삼성 SM-A366N, Android 16…"(맥 아님=정체성 정확). "서울 날씨"→ 폰 logcat [연상:실행기억] top_score=0.906
+    [sense:weather]{서울}(렌트 해마가 인지에 통합·발화) → Reflex EXECUTE 파이프라인. 분류 gemini_http·실행
+    claude_code_remote 3티어 작동.
+  - ⚠️ IBL *완수*는 mac→폰 도달성 필요(집/LAN): 맥 claude_code 의 execute_ibl 이 backend_url(=맥의
+    INDIEBIZ_PHONE_URL)로 폰을 때리는데, 폰이 LTE(stale LAN IP)면 connection refused → 액션 실패(graceful
+    안내). IBL-on-폰 leg 자체는 step5서 입증(backend_url 도달 시 POST /ibl/execute 200). away-case(LTE)
+    IBL 라우팅은 step5 결정대로 home-first deferred. 운영: 집에선 INDIEBIZ_PHONE_URL=폰 현재 LAN IP 필요.
+  - 핸드오프 §6 step 1~7 전부 완료. 폰=두 번째 독립 자아(자기 하네스+기억+정체성, 맥 substrate 렌트).

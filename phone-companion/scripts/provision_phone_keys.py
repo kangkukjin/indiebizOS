@@ -23,7 +23,7 @@ from pathlib import Path
 PKG = "com.indiebiz.phoneagent"
 
 # 폰 패키지 6개가 실제 참조하는 데이터 API 키 (handler 전수 스캔 결과, 2026-06-11).
-# 식별/인프라(OWNER_*, CLOUDFLARE_*, VERCEL, GEMINI, CONTEXT7, SYSTEM_AI_GMAIL)는 의도적 제외.
+# 식별/인프라(OWNER_*, CLOUDFLARE_*, VERCEL, CONTEXT7, SYSTEM_AI_GMAIL)는 의도적 제외.
 PHONE_KEYS = [
     # location-services (항공/호텔·맛집)
     "AMADEUS_API_KEY", "AMADEUS_API_SECRET", "KAKAO_REST_API_KEY",
@@ -36,6 +36,9 @@ PHONE_KEYS = [
     "GUARDIAN_API_KEY",
     # real-estate (실거래가)
     "MOLIT_API_KEY",
+    # 폰-자아 호스팅 step7: 경량 티어 = gemini_http(폰이 구글 API 직접 호출). 추론 자아의
+    # 분류·평가를 맥 안 거치고 폰서 직접 — 맥과 동일 모델(Gemini), 자급도↑.
+    "GEMINI_API_KEY",
 ]
 
 # 분산 IBL 위임 설정 — 폰 자율주행 표면이 맥 백엔드로 프록시할 대상.

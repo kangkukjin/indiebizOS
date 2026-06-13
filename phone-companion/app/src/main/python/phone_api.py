@@ -67,6 +67,35 @@ def _init_base(base_path):
     _mac_url = (os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/") or None
     _mac_password = os.environ.get("INDIEBIZ_MAC_PASSWORD") or None
     _mac_session = None
+
+    # 폰-자아 호스팅 step7: 3티어 모델 config 생성(없으면). 폰-자아가 로컬 하네스로 추론할 때
+    # 쓰는 프로바이더. 경량=gemini_http(폰이 구글 API 직접, GEMINI_API_KEY env), 중급·본격=
+    # claude_code_remote(맥 claude_code 렌트, 키 불필요). apiKey="" → 프로바이더가 env 폴백.
+    _ensure_phone_ai_configs(base_path)
+
+
+def _ensure_phone_ai_configs(base_path):
+    """폰 3티어 모델 config 를 data/ 에 생성(없을 때만 — 사용자 수정 보존)."""
+    import json as _json
+    cfg_dir = os.path.join(base_path, "data")
+    os.makedirs(cfg_dir, exist_ok=True)
+    defaults = {
+        "system_ai_config.json": {"enabled": True, "provider": "claude_code_remote",
+                                   "model": "opus", "apiKey": "", "role": ""},
+        "midtier_ai_config.json": {"enabled": True, "provider": "claude_code_remote",
+                                   "model": "sonnet", "apiKey": ""},
+        "lightweight_ai_config.json": {"enabled": True, "provider": "gemini_http",
+                                       "model": "gemini-3.1-flash-lite", "apiKey": ""},
+    }
+    for name, cfg in defaults.items():
+        path = os.path.join(cfg_dir, name)
+        if not os.path.exists(path):
+            try:
+                with open(path, "w", encoding="utf-8") as f:
+                    _json.dump(cfg, f, ensure_ascii=False, indent=2)
+                print(f"[phone_api] 폰 AI config 생성: {name} ({cfg['provider']}/{cfg['model']})")
+            except Exception as e:
+                print(f"[phone_api] config 생성 실패 {name}: {e}")
     if _mac_url:
         print(f"[phone_api] 맥 위임 대상: {_mac_url} (비번 {'설정됨' if _mac_password else '없음'})")
 
@@ -362,9 +391,45 @@ async def switch_execute(switch_id: str, request: Request):
     return _relay(r)
 
 
+def _run_local_harness(message: str, images: list):
+    """폰-자아 로컬 하네스 추론 (process_system_ai_message). 폰이 자기 정체성(world_pulse
+    폴백=detect_body)으로 추론하고, 모델은 3티어(경량 gemini_http 직접 / 중급·본격 claude_code_remote
+    맥 렌트)로 빌리며, IBL 실행은 폰 로컬(빌린 액션만 맥 위임), 해마는 렌트 인덱스. 실패 시 None."""
+    from system_ai_core import process_system_ai_message
+    images_data = None
+    if images:
+        images_data = [{"base64": i.get("base64"), "media_type": i.get("media_type", "image/png")}
+                       for i in images if i.get("base64")]
+    response_text, _tool_images = process_system_ai_message(
+        message=message, history=[], images=images_data
+    )
+    return {"response": response_text, "provider": "phone-self", "ts": "local"}
+
+
 @app.post("/system-ai/chat")
 async def system_ai_chat(request: Request):
-    # 시스템 AI 채팅=맥 claude_code 의식+실행 — LLM 왕복이라 긴 타임아웃.
+    """폰-자아 호스팅 step7: 로컬 하네스 실행이 1순위(폰이 자기 몸 위에서 추론=자기-모델 참).
+    로컬 하네스 미가용/실패 시 맥 프록시 폴백(전환 안전). LLM 왕복이라 긴 타임아웃."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    message = body.get("message", "")
+    images = body.get("images")
+
+    # 1순위: 로컬 하네스 (폰-자아). 스레드풀에서 — 동기 파이프라인이 재진입 /ibl/execute 와
+    # 같은 루프를 막지 않게(맥 chat_with_system_ai 가 def 인 것과 동일 이유).
+    if message:
+        try:
+            result = await asyncio.to_thread(_run_local_harness, message, images)
+            if result and result.get("response"):
+                return JSONResponse(result)
+            print("[phone_api] 로컬 하네스 빈 응답 → 맥 프록시 폴백")
+        except Exception as e:
+            import traceback
+            print(f"[phone_api] 로컬 하네스 실패 → 맥 프록시 폴백: {e}\n{traceback.format_exc()[-500:]}")
+
+    # 폴백: 맥 프록시 (로컬 하네스 미가용 — 하네스 미번들/모델 미설정/맥 의존 등)
     r = await _mac_proxy(request, "/system-ai/chat", timeout=300.0)
     if r is None:
         return JSONResponse({"response": "맥 백엔드에 연결되어 있지 않습니다. (INDIEBIZ_MAC_URL 미설정 — 집 PC가 켜져 있어야 자율주행이 동작합니다.)"})

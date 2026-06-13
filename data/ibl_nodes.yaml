@@ -607,7 +607,7 @@ nodes:
         implementation: Google Books API로 글로벌 도서 검색 (영어/다국어). 한국 도서는 sense:book 사용.
         target_key: query
       search_shopping:
-        description: 상품 검색 및 가격 비교 (네이버+다나와+중고나라+번개장터)
+        description: 상품 검색 및 가격 비교 (네이버 API=어디서나; 다나와·중고는 브라우저 스크래핑이라 맥 전용, 폰선 네이버만)
         group: research
         target_description: 상품명
         router: handler
@@ -876,6 +876,7 @@ nodes:
           type: compress
           prompt: 같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라.
       collect:
+        runs_on: mac_only
         description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.
         target_description: |
           op로 분기 (기본 run).
@@ -989,6 +990,7 @@ nodes:
               - '{법정동} · {면적}㎡ · {층}층 · {건축년도}년'
               - '{거래금액}만원'
       video:
+        runs_on: mac_only
         description: 유튜브 동영상 조회 (op 분기). 메타·자막·요약. 검색은 search_youtube, 재생은 limbs:music.
         target_description: |
           op로 분기 (기본 info). url 또는 video_id 필수.
@@ -1015,6 +1017,7 @@ nodes:
         - 자막
         - 영상요약
       search_youtube:
+        runs_on: mac_only
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
         group: media
         keywords:
@@ -1299,6 +1302,7 @@ nodes:
   self:
     actions:
       photo:
+        runs_on: mac_only
         description: 사진·동영상 라이브러리 관리 (op 분기). 스캔(인덱싱)/조회/검색/통계/타임라인/중복/상세 통합. scan이 모든 조회의 전제.
         target_description: 'scan/gallery/stats/timeline/duplicates는 path(폴더 경로) 필요(생략 시 가장 큰 스캔 자동). search는 query + 옵션(media_type, start_date, end_date, limit). detail은 media_id. list_scans는 파라미터 없음. timeline에 year 옵션.'
         group: photo
@@ -1328,6 +1332,7 @@ nodes:
         - 중복 사진
         - 사진 상세
       blog:
+        runs_on: mac_only
         description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스.
         target_description: |
           op로 분기 (기본 posts).
@@ -1380,7 +1385,7 @@ nodes:
         - 목록
         - 팀
       memory:
-        description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도.
+        description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도. 자아별 사적 기억(폰·맥 각자 로컬, 동기화 안 함). 폰선 시맨틱 모델 없어 키워드(LIKE/FTS) 검색.
         group: memory
         target_description: 'save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.'
         target_key: op
@@ -1459,7 +1464,7 @@ nodes:
         group: schedule
         router: system
         func: manage_events
-        runs_on: home_only   # event_engine→api_system_ai 무거운 의존(폰 미번들). 폰은 맥 라우팅으로 접근.
+        runs_on: mac_only   # event_engine→api_system_ai 무거운 의존(폰 미번들). 폰은 맥 라우팅으로 접근.
         implementation: event_engine으로 이벤트/스케줄 CRUD (SQLite 기반)
         keywords:
         - 일정
@@ -1484,7 +1489,7 @@ nodes:
         group: schedule
         router: system
         func: show_calendar
-        runs_on: home_only   # calendar_manager.open_in_browser()=데스크탑 브라우저 — 폰 부적합. 폰은 manage_events 계기로 일정 조회.
+        runs_on: mac_only   # calendar_manager.open_in_browser()=데스크탑 브라우저 — 폰 부적합. 폰은 manage_events 계기로 일정 조회.
         implementation: calendar_manager.open_in_browser() — HTML 캘린더 생성 후 브라우저 자동
           열기
         keywords:
@@ -1789,6 +1794,7 @@ nodes:
             get: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       lecture:
+        runs_on: mac_only
         description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
         group: lecture
         target_description: 'create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면). delete는 confirm=true 추가.'
@@ -1812,6 +1818,7 @@ nodes:
         - 강의 워크스페이스
         scope: workspace
       slide:
+        runs_on: mac_only
         description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더.
         group: lecture
         target_description: '공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체). create/edit만 AI 호출.'
@@ -1835,6 +1842,7 @@ nodes:
         - 다음 슬라이드
         scope: workspace
       material:
+        runs_on: mac_only
         description: 강의 재료 관리 (op 분기). 추가/삭제.
         group: lecture
         target_description: '공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.'
@@ -1853,6 +1861,7 @@ nodes:
         - 자료 추가
         scope: workspace
       deck:
+        runs_on: mac_only
         description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기.
         group: lecture
         target_description: '공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx).'
@@ -2133,7 +2142,7 @@ nodes:
         target_description: '(파라미터 없음). 폰 USB 연결 필요(미기동 시 앱 자동 기동). 양방향 1회 머지 — 추가는 합치고 수정은 최신 우선, 삭제는 양쪽 반영. 메시지/글 내용은 비대상(릴레이/Gmail 진실원).'
         router: handler
         tool: phone_sync
-        runs_on: home_only
+        runs_on: mac_only
         implementation: business 패키지 phone_sync — adb forward 로 폰 백엔드(:8765) 도달 후 export/merge 양방향. business_sync.merge_business_db(LWW+tombstone).
         keywords:
         - 폰 동기화
@@ -2164,6 +2173,7 @@ nodes:
   limbs:
     actions:
       browser:
+        runs_on: mac_only
         description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
         target_description: 'op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).'
         group: browser
@@ -2206,6 +2216,7 @@ nodes:
         - 입력
         - 페이지
       screen:
+        runs_on: mac_only
         description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
         target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
         group: desktop
@@ -2310,13 +2321,14 @@ nodes:
         target_key: path
         router: system
         func: output_open
-        runs_on: home_only   # 집 PC Finder/탐색기 GUI — 폰 무의미
+        runs_on: mac_only   # 집 PC Finder/탐색기 GUI — 폰 무의미
         implementation: subprocess로 OS 기본 앱(Finder/브라우저) 실행
         keywords:
         - 열기
         - URL
         - 브라우저
       music:
+        runs_on: mac_only
         description: 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
         group: media
         target_description: 'play/add — query 파라미터로 검색어 또는 URL. download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.'
@@ -2472,6 +2484,7 @@ nodes:
         implementation: Kakao Map API로 좌표 기반 지도 HTML 생성 (프론트엔드 렌더링용)
         target_key: query
       explorer:
+        runs_on: mac_only
         description: 파일 탐색기로 폴더 열기 (macOS Finder, Windows 탐색기). 파일 자체 열기는 os_open.
         group: open
         target_description: 폴더 경로 (절대 또는 상대). 파일이면 파일 위치 폴더가 열림.
@@ -2480,6 +2493,7 @@ nodes:
         implementation: subprocess로 macOS Finder/Windows Explorer 실행
         target_key: path
       photo_manager:
+        runs_on: mac_only
         description: indiebizOS 내장 Photo Manager GUI 실행 (Electron). 사진 분류·검색·인덱싱.
         group: open
         target_description: 폴더 경로 (선택, 미지정 시 기본 라이브러리 폴더).
@@ -2518,7 +2532,7 @@ nodes:
         target_key: app
         router: system
         func: launcher_command
-        runs_on: home_only   # Electron 데스크탑 런처 창 — 폰 무의미
+        runs_on: mac_only   # Electron 데스크탑 런처 창 — 폰 무의미
         implementation: WebSocket으로 Electron Launcher에 open_<app>_window 명령 전송
         keywords:
         - 창
@@ -2787,7 +2801,7 @@ nodes:
       auto_response:
         description: 외부 메시지 자동응답 서비스 제어 — op:status(기본)/start/stop. on/off 는 영속(재시작 유지).
         group: channel
-        runs_on: home_only
+        runs_on: mac_only
         target_description: 'op:status(가동 여부·켜짐설정·점검주기·처리수) / start(켜기, 영속) / stop(끄기, 영속). 자동응답은 이웃 정보공개수준별 근무지침·비즈니스문서를 맥락으로 AI가 응답 생성·발송.'
         target_key: op
         router: handler
@@ -2982,6 +2996,7 @@ nodes:
               label: 🖥 띄우기
               action: '[limbs:os_open]{path: "{file}"}'
       html_video:
+        runs_on: mac_only
         description: '완성된 HTML/CSS 씬을 MP4 영상으로 합성. scenes(HTML 배열) 또는 scene_dir(저장된 씬)로 호출. 주제→슬라이드 자동생성은 slide/lecture 사용. (가이드 html_video.md)'
         target_description: 'scenes(완전한 HTML 문서 배열, 각 {html, duration})을 직접 전달하거나 scene_dir(저장된 씬 디렉토리)을 지정. scene_dir이 있으면 렌더링 단계만 실행. narration_texts로 씬별 나레이션 추가.'
         group: media_produce
@@ -2996,6 +3011,7 @@ nodes:
         - 렌더링
         - HTML영상
       chart:
+        runs_on: mac_only
         description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
         target_description: |
           title (필수). chart_type으로 종류 분기 (기본 line).
@@ -3034,6 +3050,7 @@ nodes:
         - 대시보드
         - 복합차트
       spreadsheet:
+        runs_on: mac_only
         description: 행 데이터(rows/sheets) → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
         target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
         group: chart
@@ -3049,6 +3066,7 @@ nodes:
         - 시트
         - 장부
       remotion:
+        runs_on: mac_only
         description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
         target_description: |
           op로 분기 (기본 render_inline).
@@ -3069,6 +3087,7 @@ nodes:
         - 렌더링
         - 상태
       tts:
+        runs_on: mac_only
         description: 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
         target_description: 음성으로 만들 텍스트. voice 옵션으로 화자 선택 (기본 한국어 여성).
         group: media_produce
@@ -3088,6 +3107,7 @@ nodes:
         - TTS
         - 나레이션
       slide_shadcn:
+        runs_on: mac_only
         description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅·강의·일러스트 통합 레이아웃 + design_system. 자세한 layout/스타일은 read_guide(query="슬라이드").'
         target_description: |
           slides 배열 (각 슬라이드 {layout, title, ...}) + design_system/theme/output_dir/width/height 옵션. 인라인 배열만 (topic 미지원).
@@ -3123,6 +3143,7 @@ nodes:
         - Shadcn
         - PNG
       slide:
+        runs_on: mac_only
         description: '명령 한 줄 → 슬라이드 1장(PNG). 메시지 큐레이션+자유형 디자인까지 AI가 저작. (완성 spec 직접 렌더는 slide_shadcn)'
         target_description: |
           instruction(필수) — 무엇을 말하는 한 장인지 자연어로. content(선택) — 근거 사실·원문(환각 방지).
@@ -3142,6 +3163,7 @@ nodes:
         - 발표자료
         - 카드
       image_gemini:
+        runs_on: mac_only
         description: 'Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").'
         target_description: |
           prompt (필수). 옵션:
@@ -3172,6 +3194,7 @@ nodes:
         - 이미지생성
         - AI이미지
       render_html:
+        runs_on: mac_only
         description: HTML 페이지를 PNG 이미지로 렌더링. 슬라이드·차트 결과를 이미지화.
         target_description: 렌더링할 HTML 문자열 또는 경로. 결과 PNG 경로 반환.
         group: media_produce
@@ -3184,6 +3207,7 @@ nodes:
         - 이미지
         - 렌더링
       web_site:
+        runs_on: mac_only
         description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
         target_description: |
           op로 분기 (기본 list).
@@ -3202,6 +3226,7 @@ nodes:
         - 사이트삭제
         - 사이트수정
       web:
+        runs_on: mac_only
         description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
         target_description: |
           op로 분기 (기본 preview).
@@ -3234,6 +3259,7 @@ nodes:
         - 미리보기
         - vercel
       web_component:
+        runs_on: mac_only
         description: '웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).'
         target_description: |
           op로 분기 (기본 fetch).
@@ -3257,6 +3283,7 @@ nodes:
         - shadcn
         - UI
       image_critic:
+        runs_on: mac_only
         description: 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 반환: passed/score/issues/notes. ILLUSTRATE 단계 자동 평가용.'
         target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. style_preset/checks(추가 체크 배열) 옵션. 기본 체크 — 다이어그램형/한글 미포함/빈 공간/객체 명확성/디자인 톤 일관성. 한글 검출 시 무조건 passed=false.'
         group: media_produce

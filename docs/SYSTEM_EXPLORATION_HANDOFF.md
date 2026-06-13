@@ -20,7 +20,7 @@
 - **폰 네이티브 Python 실행**: `execute_python`(인-프로세스 exec, capability-gate). A36 검증(소수 계산·7배수 합 폰서 직접). `jclass` 브리지가 그 exec 컨텍스트에 살아있음 → 안드로이드 SDK 도달 가능.
 - **마이크로 자기인식**: `runtime_utils.detect_local_micros()` → `{escape, local, borrowed}`. 폰=`{escape:python, local:[python,html], borrowed:[node]}`(셸은 python 에 포섭). 프롬프트에 "만능 탈출구=python" 주입.
 - **해마**: 맥 `/ibl/embed` 인코더 렌트(outbound) + 폰 로컬 인덱스 brute-force.
-- **빌림**: home_only 액션은 `_forward_to_mac`(폰→맥 outbound, NAT 무관). `/embed` 도 outbound.
+- **빌림**: mac_only 액션은 `_forward_to_mac`(폰→맥 outbound, NAT 무관). `/embed` 도 outbound.
 
 **유지된 인프라**: `/ibl/embed`(맥, 해마 렌트), `_forward_to_mac`/`_forward_to_phone`(양방향 빌림, 단 _forward_to_phone 은 LAN 한정), business.db 양방향 sync, detect_body, 폰 번들 파이프라인(build.gradle `_ENGINE_MODULES`).
 

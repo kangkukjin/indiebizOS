@@ -131,6 +131,9 @@ def _ENGINE_MODULES = [
     'calendar_actions',      // run_pipeline 등 액션 믹스인(폰 fork-guard 로 GUI/WS 우회)
     'calendar_html',         // calendar_manager 가 모듈레벨 import 하는 믹스인(렌더 — 폰선 미사용이나 import 정합)
     'safe_store',            // trigger_engine._save_triggers 의 원자적 JSON 저장(지연 import)
+
+    // === 의료기록 폰↔PC 동기화 (business.db 선례, LWW+tombstone+이미지) ===
+    'health_sync',           // health_records.db export/merge(phone_api /health/sync/run 이 import). storage 는 health-record 패키지(phone_manifest)로 번들.
 ]
 // 폰 번들 패키지 = data/phone_manifest.json 의 packages (runs_on 단일 진실 소스에서 파생).
 // 옛 하드코딩 리스트를 폐기 — build_ibl_nodes.py 의 PHONE_VERIFIED_PACKAGES 가 SSOT.

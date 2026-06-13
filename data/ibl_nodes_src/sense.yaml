@@ -529,7 +529,7 @@
         implementation: Google Books API로 글로벌 도서 검색 (영어/다국어). 한국 도서는 sense:book 사용.
         target_key: query
       search_shopping:
-        description: 상품 검색 및 가격 비교 (네이버+다나와+중고나라+번개장터)
+        description: 상품 검색 및 가격 비교 (네이버 API=어디서나; 다나와·중고는 브라우저 스크래핑이라 맥 전용, 폰선 네이버만)
         group: research
         target_description: 상품명
         router: handler
@@ -798,6 +798,7 @@
           type: compress
           prompt: 같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라.
       collect:
+        runs_on: mac_only
         description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.
         target_description: |
           op로 분기 (기본 run).
@@ -911,6 +912,7 @@
               - '{법정동} · {면적}㎡ · {층}층 · {건축년도}년'
               - '{거래금액}만원'
       video:
+        runs_on: mac_only
         description: 유튜브 동영상 조회 (op 분기). 메타·자막·요약. 검색은 search_youtube, 재생은 limbs:music.
         target_description: |
           op로 분기 (기본 info). url 또는 video_id 필수.
@@ -937,6 +939,7 @@
         - 자막
         - 영상요약
       search_youtube:
+        runs_on: mac_only
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
         group: media
         keywords:

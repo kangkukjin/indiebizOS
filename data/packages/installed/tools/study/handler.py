@@ -1,4 +1,3 @@
-import arxiv
 import os
 import time
 import requests
@@ -15,40 +14,67 @@ _OP_DEFAULTS = {"paper_op": "search"}
 
 
 def _search_arxiv(tool_input: dict) -> str:
-    """arXiv 프리프린트 검색."""
-    client = arxiv.Client()
-    search = arxiv.Search(
-        query=tool_input.get("query"),
-        max_results=tool_input.get("max_results", 5),
-        sort_by=arxiv.SortCriterion.Relevance,
-    )
+    """arXiv 프리프린트 검색 — arxiv 라이브러리 대신 Atom API(https) 직접 호출.
+    arxiv 4.x 는 lxml(네이티브)→Chaquopy 불가, 1.4.x 는 http→301 실패. requests+feedparser(폰·맥 공통,
+    순수파이썬)로 직접 호출해 라이브러리 의존 제거 + 양쪽 몸에서 동일 작동(이식 가능)."""
+    import urllib.parse
+    query = tool_input.get("query", "")
+    max_results = tool_input.get("max_results", 5)
+    url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode({
+        "search_query": f"all:{query}", "start": 0, "max_results": max_results,
+        "sortBy": "relevance", "sortOrder": "descending"})
+    r = requests.get(url, timeout=20)
+    r.raise_for_status()
+    feed = feedparser.parse(r.text)
     results = []
-    for result in client.results(search):
+    for e in feed.entries:
+        aid = (e.get("id", "") or "").split("/")[-1]
+        authors = ", ".join(a.get("name", "") for a in e.get("authors", []))
+        published = (e.get("published", "") or "")[:10]
+        summary = (e.get("summary", "") or "").strip().replace("\n", " ")[:200]
         results.append(
-            f"Title: {result.title}\n"
-            f"ArXiv ID: {result.entry_id.split('/')[-1]}\n"
-            f"Authors: {', '.join(author.name for author in result.authors)}\n"
-            f"Published: {result.published.strftime('%Y-%m-%d')}\n"
-            f"Summary: {result.summary[:200]}...\n"
+            f"Title: {(e.get('title','') or '').strip()}\n"
+            f"ArXiv ID: {aid}\n"
+            f"Authors: {authors}\n"
+            f"Published: {published}\n"
+            f"Summary: {summary}...\n"
             "--------------------------------------"
         )
     return "\n".join(results) if results else "No papers found for the given query."
 
 
 def _download_arxiv_pdf(tool_input: dict, context) -> str:
-    """arXiv 논문 PDF 다운로드."""
-    client = arxiv.Client()
+    """arXiv 논문 PDF 다운로드 — Atom API 로 메타 조회 후 pdf URL 을 requests 로 받음(폰·맥 공통)."""
+    import urllib.parse
     arxiv_id = tool_input.get("arxiv_id") or tool_input.get("id")
+    if not arxiv_id:
+        return "arxiv_id가 필요합니다."
     filename = tool_input.get("filename")
     download_dir = context.resolve_path("papers")
     os.makedirs(download_dir, exist_ok=True)
-    paper = next(client.results(arxiv.Search(id_list=[arxiv_id])), None)
-    if not paper:
+    meta_url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode({"id_list": arxiv_id, "max_results": 1})
+    r = requests.get(meta_url, timeout=20)
+    r.raise_for_status()
+    feed = feedparser.parse(r.text)
+    if not feed.entries:
         return f"Could not find paper with ID: {arxiv_id}"
+    entry = feed.entries[0]
+    title = (entry.get("title", arxiv_id) or arxiv_id).strip()
+    pdf_url = None
+    for link in entry.get("links", []):
+        if link.get("type") == "application/pdf" or link.get("title") == "pdf":
+            pdf_url = link.get("href")
+            break
+    if not pdf_url:
+        pdf_url = f"https://arxiv.org/pdf/{arxiv_id}"
     if not filename:
-        filename = "".join([c if c.isalnum() else "_" for c in paper.title]) + ".pdf"
-    path = paper.download_pdf(dirpath=download_dir, filename=filename)
-    return f"Paper '{paper.title}' downloaded successfully to: {path}"
+        filename = "".join([c if c.isalnum() else "_" for c in title]) + ".pdf"
+    path = os.path.join(download_dir, filename)
+    pr = requests.get(pdf_url, timeout=60)
+    pr.raise_for_status()
+    with open(path, "wb") as f:
+        f.write(pr.content)
+    return f"Paper '{title}' downloaded successfully to: {path}"
 
 
 def _paper_op(tool_input: dict, context) -> str:

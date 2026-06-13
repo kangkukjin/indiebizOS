@@ -314,6 +314,51 @@ async def business_sync_merge(payload: dict = Body(...)):
         return JSONResponse({"success": False, "error": str(e)})
 
 
+# === 의료기록 폰↔맥 동기화 (health_records.db — business 선례 동형, LWW+tombstone+이미지) ===
+@app.post("/health/sync/run")
+async def health_sync_run():
+    """폰↔맥 의료기록 양방향 합집합 동기화(1왕복): 폰 export → 맥 /health/sync/merge
+    (맥이 폰 데이터 머지 후 자기 스냅샷 반환) → 폰이 그 스냅샷을 머지. 이미지 base64 포함이라 긴 타임아웃."""
+    try:
+        from health_sync import export_health_db, merge_health_db
+        phone_export = export_health_db()
+        r = await _mac_post_json("/health/sync/merge", {"data": phone_export}, timeout=120.0)
+        if r is None or getattr(r, "status_code", 0) != 200:
+            return JSONResponse({"success": False, "error": "맥 미도달/인증실패",
+                                 "status": getattr(r, "status_code", None)})
+        mac_payload = r.json() or {}
+        stats = merge_health_db(mac_payload.get("data") or {})
+        return JSONResponse({"success": True, "merged_from_mac": stats,
+                             "mac_received_from_phone": mac_payload.get("stats")})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"success": False, "error": str(e)})
+
+
+@app.get("/health/sync/export")
+async def health_sync_export():
+    """폰 health_records.db 동기화 스냅샷(5테이블 + 문서 이미지 base64, tombstone 포함)."""
+    try:
+        from health_sync import export_health_db
+        return {"success": True, "data": export_health_db()}
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
+
+
+@app.get("/health/sync/peek")
+async def health_sync_peek():
+    """폰 로컬 health_records.db 점검(테스트용) — 테이블별 행 수 + 이미지 수."""
+    try:
+        from health_sync import export_health_db
+        d = export_health_db()
+        out = {t: len(d.get(t, [])) for t in ["persons", "measurements", "symptoms", "medications", "documents"]}
+        out["images"] = len(d.get("images", {}))
+        return out
+    except Exception as e:
+        return JSONResponse({"error": str(e)})
+
+
 # === 폰 입력 기능: 이웃(주소록) 추가 — 폰 자급 + phone→맥 동기화의 입력측 ===
 @app.post("/business/neighbor/add")
 async def business_neighbor_add(payload: dict = Body(...)):
@@ -476,7 +521,7 @@ async def agent_command(project_id: str, agent_id: str, request: Request):
 @app.get("/output/{name}")
 def output_file(name: str):
     """폰 로컬 생성물(신문 등 HTML)을 런처 오버레이가 띄우도록 서빙.
-    os_open(집 PC GUI)이 home_only 라 폰에선 이 라우트 + 인앱 iframe 으로 본다."""
+    os_open(집 PC GUI)이 mac_only 라 폰에선 이 라우트 + 인앱 iframe 으로 본다."""
     from fastapi.responses import FileResponse
     safe = os.path.basename(name)
     path = os.path.join(_scratch, "outputs", safe)

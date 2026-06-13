@@ -1379,3 +1379,22 @@
     검증 후 엔드포인트 제거+클린 재빌드(no-temporary-patches, phone_api 0 수렴 §3④). 클린 APK 기동 정상·시작에러0.
   - doFirst 드리프트 가드에 backend/providers·data/common_prompts 존재 확인 추가.
   - 실제 추론 배선은 step5(claude_code_remote 프로바이더)·step7(진입점 전환). 여기선 모듈 실재+import 안전까지.
+
+[2026-06-13] 폰-자아 호스팅 기반공사 5 — claude_code 원격 렌트 (맥 추론 substrate / 폰 IBL 실행)
+  핸드오프 §6 step 5(실제 인프라). claude_code 는 에이전트(자기 루프)라 맥 CLI 에서만 돔 — 폰은
+  원격 렌트만 가능. 폰-자아의 인지 하네스(중급·본격 티어)가 LLM 한 턴을 맥에서 빌리되, 추론 자아의
+  정체성은 폰이 보낸 system_prompt(폰 world_pulse 기반)가 실어 나르고 IBL 실행은 폰에서 일어난다.
+  - ClaudeCodeProvider +backend_url: _build_env 가 INDIEBIZOS_BACKEND_URL 주입 → MCP 서버(mcp_server.py)가
+    그 백엔드로 execute_ibl 라우팅. backend_url=폰 이면 세션의 IBL 실행이 폰(폰-자아의 몸)에서.
+  - 맥 엔드포인트 POST /providers/claude_code/remote_turn (api_system_ai.py): {message, system_prompt,
+    history, agent_id, model, backend_url} → ClaudeCodeProvider 한 턴 실행, {response, tool_results,
+    executed_on}. backend_url 기본=맥 INDIEBIZ_PHONE_URL(맥이 폰 위치 진실원). 인증=remote_access_guard
+    (외부=런처 세션). claude_code out-of-process라 execute_tool 불필요.
+  - 폰 ClaudeCodeRemoteProvider (providers/claude_code_remote.py): process_message 가 맥 엔드포인트에 POST,
+    런처 세션 인증(_forward_to_mac 패턴 재사용). 레지스트리 등록(claude_code_remote). 최상위 import=requests
+    뿐(폰 import 안전, providers/ step4 번들에 자동 포함). 폰 config 중급·본격 티어가 이걸 가리키게=step7.
+  - ★A36 종단검증(backend_url=adb-forward localhost:8799=폰): 맥이 claude_code 실행 → 폰 logcat
+    "[IBL_DEBUG] code=[sense:weather]{city:서울}" + "POST /ibl/execute 200 OK". 맥 추론·폰 IBL 실행 입증.
+    (함정 기록: backend_url 미지정+폰 WiFi off→stale INDIEBIZ_PHONE_URL 도달실패 시 claude_code 가 자체
+     WebSearch로 폴백해 답이 그럴듯하게 나옴=오검증 위험. 반드시 폰 logcat으로 POST /ibl/execute 확인.)
+  - 폰 provider 전체 루프(폰 하네스→provider→맥→claude_code→폰 IBL)는 step7 진입점 배선 후 완성.

@@ -124,6 +124,9 @@ class ChannelPoller:
         # 처리된 소유자 메시지 external_id 캐시 (business DB 미저장으로 인한 재처리 방지)
         self._processed_owner_ids: set = set()
 
+        # 발화한 채널 트리거 (trigger_id:msg) 캐시 — 같은 메시지 재발화 방지
+        self._fired_channel_triggers: set = set()
+
     def _is_from_owner(self, contact_type: str, contact_value: str) -> bool:
         """메시지가 소유자(사용자)로부터 왔는지 확인"""
         contact_value = contact_value.lower().strip()
@@ -750,6 +753,87 @@ class ChannelPoller:
         except Exception as e:
             self._log(f"수신 시간 업데이트 실패: {e}")
 
+    def _check_channel_triggers(self, contact_type: str, contact_value: str,
+                                subject: str, content: str, external_id: str = None):
+        """수신 메시지를 type:channel 트리거 규칙과 대조 → 일치 시 파이프라인 발화.
+
+        event_triggers.json 의 enabled 채널 트리거를 읽어 config 로 필터:
+          - channel: gmail | nostr (비우면 모든 채널)
+          - from: 발신자 부분일치 필터 (옵션)
+          - keyword: 제목+본문 부분일치 필터 (옵션)
+        schedule 트리거가 calendar_manager 폴링으로 발화하듯, 채널 트리거는 이 수신 훅으로 발화.
+        메시지 텍스트는 파이프라인 첫 step 의 _prev_result 로 주입(자동 데이터 전달)."""
+        try:
+            from trigger_engine import _load_triggers
+        except Exception:
+            return  # trigger_engine 미가용 — graceful (폰 등)
+        try:
+            triggers = [t for t in (_load_triggers().get("triggers") or [])
+                        if t.get("type") == "channel" and t.get("enabled", True)]
+        except Exception as e:
+            self._log(f"채널 트리거 로드 실패: {e}")
+            return
+        if not triggers:
+            return
+
+        haystack = f"{subject or ''} {content or ''}".lower()
+        cval = (contact_value or "").lower()
+        for t in triggers:
+            cfg = t.get("config") or {}
+            want_ch = (cfg.get("channel") or "").strip().lower()
+            if want_ch and want_ch != contact_type:
+                continue
+            want_from = (cfg.get("from") or "").strip().lower()
+            if want_from and want_from not in cval:
+                continue
+            kw = (cfg.get("keyword") or "").strip().lower()
+            if kw and kw not in haystack:
+                continue
+            # 같은 메시지로 같은 트리거 재발화 방지 (external_id 우선, 없으면 본문 일부)
+            fire_key = f"{t.get('id')}:{external_id or haystack[:48]}"
+            if fire_key in self._fired_channel_triggers:
+                continue
+            self._fired_channel_triggers.add(fire_key)
+            self._fire_channel_pipeline(t, contact_type, contact_value, subject, content)
+
+    def _fire_channel_pipeline(self, trigger: dict, contact_type: str,
+                               contact_value: str, subject: str, content: str):
+        """채널 트리거 파이프라인을 데몬 스레드에서 실행 (폴링 루프 블로킹 방지).
+        calendar_actions._action_run_pipeline 의 '소유자 없는 레거시 직접실행' 경로와 동형."""
+        pipeline = trigger.get("pipeline", "")
+        if not pipeline:
+            self._log(f"채널 트리거 '{trigger.get('name')}' pipeline 누락 — 발화 생략")
+            return
+
+        def _run():
+            try:
+                from ibl_parser import parse as ibl_parse, IBLSyntaxError
+                from workflow_engine import execute_pipeline
+                try:
+                    steps = ibl_parse(pipeline)
+                except IBLSyntaxError as e:
+                    self._log(f"채널 트리거 IBL 문법 오류: {e}")
+                    return
+                msg_ctx = f"[{contact_type}] {contact_value}: {subject or ''} {content or ''}".strip()
+                self._log(f"채널 트리거 발화: {trigger.get('name')} ← {contact_type} 메시지")
+                result = execute_pipeline(steps, ".", context={"_prev_result": msg_ctx},
+                                          agent_id="system_ai")
+                try:
+                    from trigger_engine import _add_history
+                    _add_history(trigger.get("id"), trigger.get("name", ""), True, str(result)[:200])
+                except Exception:
+                    pass
+            except Exception as e:
+                self._log(f"채널 트리거 실행 실패: {e}")
+                try:
+                    from trigger_engine import _add_history
+                    _add_history(trigger.get("id"), trigger.get("name", ""), False, str(e)[:200])
+                except Exception:
+                    pass
+
+        threading.Thread(target=_run, daemon=True,
+                         name=f"chtrig-{str(trigger.get('id'))[:8]}").start()
+
     def _save_message_to_db(self, contact_type: str, contact_value: str,
                            subject: str, content: str, external_id: str = None,
                            message_time: str = None):
@@ -762,6 +846,10 @@ class ChannelPoller:
                 existing = bm.get_message_by_external_id(external_id)
                 if existing:
                     return  # 이미 저장됨
+
+            # 채널 트리거 대조 (수신 메시지 전부 — 소유자/외부 무관). "Y 메시지 오면 X 실행"
+            # = self:trigger{type:channel}. 저장/자동응답과 독립적인 push 발화 경로.
+            self._check_channel_triggers(contact_type, contact_value, subject, content, external_id)
 
             # 사용자(소유자) 여부 확인
             is_owner = self._is_from_owner(contact_type, contact_value)

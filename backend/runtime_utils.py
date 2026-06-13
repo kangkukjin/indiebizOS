@@ -338,15 +338,51 @@ def detect_body() -> dict:
 
 
 # ── 능력 자기-모델 (capability self-portrait) ──
-# 최소: "나는 누구다" + "빌릴 수 있는 상대"만. 액션 목록은 IBL 어휘가 따로 가르치고,
-# 실시간 연결 상태는 월드펄스 생성 주기와 어긋나 stale 거짓말이 되므로 넣지 않는다
-# (피어 닿는지는 실행 시점에 엔진이 phone_unreachable 로 명확히 알려준다).
+# 최소: "나는 누구다" + "내 마이크로 명령어 집합" + "빌릴 수 있는 상대"만. 큐레이션 액션 목록은 IBL
+# 어휘가 따로 가르치고, 실시간 연결 상태는 월드펄스 생성 주기와 어긋나 stale 거짓말이 되므로 넣지 않는다
+# (피어 닿는지는 실행 시점에 엔진이 phone_unreachable 로 명확히 알려준다). 단 마이크로 집합은
+# *부팅 시점 정적 능력*(같은 프로세스에서 안 바뀜)이라 stale 위험 없음 → 자화상에 포함.
+
+
+def detect_local_micros() -> dict:
+    """이 몸이 *로컬로* 실행 가능한 Layer0 마이크로 명령어(실행/렌더 원시) 집합.
+
+    capability 기반(INDIEBIZ_PROFILE 무관 — 무포크). 고정 IBL 어휘를 벗어나는 '탈출구'를
+    에이전트가 정확히 reach 하도록: 내가 직접 가진 원시 vs 반대편 몸에서 빌려야 하는 원시.
+    Returns: {"local": [...], "borrowed": [...]}.
+    """
+    import shutil
+    local, borrowed = [], []
+
+    # 데스크탑 판별 프록시 = standalone python3 바이너리 유무. 폰(Chaquopy=JVM 임베디드)엔 없고,
+    # 맥/PC엔 있음. 핸들러의 _has_standalone_python 과 동일 신호(안드로이드 toybox sh 오판 회피).
+    py_cmd = os.environ.get("INDIEBIZ_PYTHON_PATH") or ("python" if os.name == "nt" else "python3")
+    has_standalone_py = Path(py_cmd).exists() if os.path.isabs(py_cmd) else (shutil.which(py_cmd) is not None)
+
+    # python: 두 몸 공통 — 맥/PC=subprocess(standalone python3), 폰=인-프로세스(Chaquopy). 항상 로컬.
+    local.append("python")
+
+    # node: standalone 바이너리 있어야 함. 폰엔 부재 → 빌림.
+    node = os.environ.get("INDIEBIZ_NODE_PATH") or "node"
+    node_ok = Path(node).exists() if os.path.isabs(node) else (shutil.which(node) is not None)
+    (local if node_ok else borrowed).append("node")
+
+    # shell: 안드로이드도 최소 toybox sh 는 있지만 PC급 셸 생태계(coreutils)·run_command 도구가 없어
+    # 실효 셸 탈출구가 아니다. 데스크탑(standalone python3)일 때만 로컬로 본다.
+    (local if has_standalone_py else borrowed).append("shell")
+
+    # html: 맥=Electron/브라우저 렌더, 폰=WebView. 두 몸 공통 로컬.
+    local.append("html")
+
+    return {"local": local, "borrowed": borrowed}
+
 
 def build_capability_portrait() -> dict:
-    """능력 자기-모델 — 정체성 + 빌림 상대(피어 설정 시)."""
+    """능력 자기-모델 — 정체성 + 마이크로 명령어 집합 + 빌림 상대(피어 설정 시)."""
     body = detect_body()
     kind = body.get("kind", "mac")
     p = {"body": body.get("label", ""), "kind": kind}
+    p["micros"] = detect_local_micros()   # 내가 직접 할 수 있는 / 빌려야 하는 실행 원시
     if kind == "phone":
         peer_url = os.environ.get("INDIEBIZ_MAC_URL")
         p["peer_name"] = "맥미니(집 PC)"

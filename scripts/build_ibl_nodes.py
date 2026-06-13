@@ -65,6 +65,7 @@ PHONE_VERIFIED_PACKAGES = {
     "android",   # M3: [sense:phone] 폰 로컬 알림. limbs:android(android_op)은 home_only 태그로 제외.
     "business",  # 메신저(others:messages/neighbor/contact)+비즈니스 CRM(self:business*). business.db 폰 머지 토대 위. auto_response 는 home_only 로 제외(PC 전용 폴러).
     "cctv",      # CCTV 검색(sense:cctv search) — 모듈 import importlib.util(stdlib)뿐, HLS는 WebView <video>+hls.js 재생.
+    "python-exec",  # 폰 네이티브 코드 실행 탈출구 — handler 가 capability-gate 로 폰서 Chaquopy 인-프로세스 exec(맥=subprocess). stdlib만 import(서드파티 0). execute_python 은 IBL 액션 아니라 직접 도구라 runnable_actions 엔 미포함(정상).
 }
 
 # === 포크-가드: INDIEBIZ_PROFILE 분기 위치 통제 (2026-06-13, 폰-자아 호스팅) ===

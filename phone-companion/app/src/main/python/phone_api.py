@@ -83,49 +83,48 @@ def _init_base(base_path):
 
 
 def _ensure_phone_ai_configs(base_path):
-    """폰 3티어 모델 config 를 data/ 에 생성(없을 때만 — 사용자 수정 보존)."""
+    """폰 3티어 모델 config 생성(없거나 옛 claude_code_remote 면 마이그레이션).
+
+    폰-자아의 두뇌 = 폰 in-process Gemini(gemini_http, REST 직결). 추론 루프·도구 실행·jclass 가
+    전부 폰에서 일어나 손이 폰에 있다(맥 claude_code 렌트·역방향 WS 장치 불필요). GEMINI_API_KEY 는
+    keys.json 에서 env 주입 → apiKey="" 면 프로바이더가 env 폴백.
+    """
     import json as _json
     cfg_dir = os.path.join(base_path, "data")
     os.makedirs(cfg_dir, exist_ok=True)
     defaults = {
-        "system_ai_config.json": {"enabled": True, "provider": "claude_code_remote",
-                                   "model": "opus", "apiKey": "", "role": ""},
-        "midtier_ai_config.json": {"enabled": True, "provider": "claude_code_remote",
-                                   "model": "sonnet", "apiKey": ""},
+        "system_ai_config.json": {"enabled": True, "provider": "gemini_http",
+                                   "model": "gemini-3.5-flash", "apiKey": "", "role": ""},
+        "midtier_ai_config.json": {"enabled": True, "provider": "gemini_http",
+                                   "model": "gemini-3.5-flash", "apiKey": ""},
         "lightweight_ai_config.json": {"enabled": True, "provider": "gemini_http",
                                        "model": "gemini-3.1-flash-lite", "apiKey": ""},
     }
+    _RETIRED = {"claude_code_remote", "claude_code", "claude-code-remote"}
     for name, cfg in defaults.items():
         path = os.path.join(cfg_dir, name)
-        if not os.path.exists(path):
+        write = not os.path.exists(path)
+        if not write:
+            # 옛 claude_code_remote 두뇌면 Gemini 로 마이그레이션(그 외 사용자 값은 보존).
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    cur = _json.load(f) or {}
+                if cur.get("provider") in _RETIRED:
+                    write = True
+            except Exception:
+                write = True
+        if write:
             try:
                 with open(path, "w", encoding="utf-8") as f:
                     _json.dump(cfg, f, ensure_ascii=False, indent=2)
-                print(f"[phone_api] 폰 AI config 생성: {name} ({cfg['provider']}/{cfg['model']})")
+                print(f"[phone_api] 폰 AI config: {name} → {cfg['provider']}/{cfg['model']}")
             except Exception as e:
                 print(f"[phone_api] config 생성 실패 {name}: {e}")
     if _mac_url:
-        print(f"[phone_api] 맥 위임 대상: {_mac_url} (비번 {'설정됨' if _mac_password else '없음'})")
+        print(f"[phone_api] 맥 위임 대상(빌림 전용): {_mac_url} (비번 {'설정됨' if _mac_password else '없음'})")
 
 
 app = FastAPI()
-
-
-@app.on_event("startup")
-async def _start_phone_self_ws():
-    """폰-자아 역방향 WS 채널 시작 — 맥이 집밖 폰에도 execute_ibl 을 보낼 수 있게(away-case)."""
-    try:
-        import phone_ws_client
-        from system_tools import _execute_ibl_unified
-
-        def _exec_local(code, agent_id):
-            # 맥이 보낸 IBL 을 폰 정본 엔진으로 로컬 실행(폰이 못 하는 home_only 만 다시 맥 위임).
-            return _execute_ibl_unified({"code": code}, _scratch, agent_id=agent_id or "phone")
-
-        asyncio.create_task(phone_ws_client.run_ws_client(_exec_local))
-        print("[phone_api] 폰-자아 역방향 WS 채널 태스크 시작")
-    except Exception as e:
-        print(f"[phone_api] 역방향 WS 채널 시작 실패(무시): {e}")
 
 
 @app.get("/launcher/app")

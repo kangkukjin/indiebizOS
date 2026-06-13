@@ -1,10 +1,20 @@
 """
 python-exec 도구 핸들러
+
+폰-자아 마이크로 명령어(폰-네이티브 Python 탈출구): 같은 어휘(execute_python)·파라미터(code)지만
+실행 메커니즘이 몸별로 다르다 — capability-gate(profile 아님):
+- standalone python3 바이너리가 있으면(맥/PC) subprocess 격리 실행(기존).
+- 없으면(폰 Chaquopy=JVM 임베디드, standalone python 없음) 인-프로세스 exec(best-effort 격리).
 """
 import json
 import os
 import subprocess
 import platform
+import shutil
+import threading
+import contextlib
+import io
+import traceback
 from pathlib import Path
 from datetime import datetime
 
@@ -75,39 +85,95 @@ def get_python_cmd():
     return python_cmd
 
 
+def _has_standalone_python() -> bool:
+    """subprocess 로 격리 실행할 standalone python 바이너리가 있는가.
+    맥/PC=있음(번들 or 시스템 python3) → subprocess. 폰(Chaquopy=JVM 임베디드)=없음 → 인-프로세스.
+    프로파일 플래그가 아니라 *능력*을 본다(무포크 — 맥서 python3 가 사라지면 맥도 인-프로세스 경로)."""
+    cmd = get_python_cmd()
+    p = Path(cmd)
+    if p.is_absolute():
+        return p.exists()
+    return shutil.which(cmd) is not None
+
+
 def execute(tool_input: dict, context) -> str:
-    """Python 코드 실행 도구 (ToolContext 기반 신규 시그니처)."""
+    """Python 코드 실행 도구 (ToolContext 기반 신규 시그니처).
+    capability-gate: standalone python 있으면 subprocess(격리), 없으면(폰) 인-프로세스 exec."""
     tool_name = context.tool_name
-    if tool_name == "execute_python":
-        code = tool_input.get("code", "")
+    if tool_name != "execute_python":
+        return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
+    code = tool_input.get("code", "")
+    if _has_standalone_python():
+        return _execute_subprocess(code, context)
+    return _execute_in_process(code, context)
+
+
+def _execute_subprocess(code: str, context) -> str:
+    """맥/PC — standalone python3 별도 프로세스(진짜 격리). 기존 동작 그대로."""
+    try:
+        python_cmd = get_python_cmd()
+        result = subprocess.run(
+            [python_cmd, "-c", code],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=context.project_path
+        )
+        output = result.stdout
+        if result.stderr:
+            output += f"\n[stderr]: {result.stderr}"
+
+        if not output:
+            return "(실행 완료, 출력 없음)"
+
+        # 출력이 임계값을 초과하면 파일로 저장
+        if len(output) > OUTPUT_THRESHOLD:
+            return _save_large_output(output)
+
+        return output
+
+    except subprocess.TimeoutExpired:
+        return "실행 시간 초과 (30초)"
+    except Exception as e:
+        return f"실행 오류: {str(e)}"
+
+
+def _execute_in_process(code: str, context) -> str:
+    """폰(Chaquopy) — standalone python 부재라 백엔드 인터프리터 안에서 exec.
+
+    best-effort 격리: 분리 namespace + 스레드 타임아웃 + stdout/stderr 캡처 + BaseException 포획.
+    한계(진짜 프로세스 격리 불가): os._exit()/C-segfault 는 못 막고, 타임아웃 스레드는 강제종료 불가
+    (daemon 으로 방치). 무한루프·블로킹 코드 금지(tool.json 경고). signal.alarm 은 Chaquopy 불가
+    (메인스레드 전용·안드로이드 SIGALRM 불안정)라 thread+join 만 신뢰."""
+    out_buf = io.StringIO()
+    box = {"exc": None}
+    # 분리 namespace — 백엔드 globals 와 격리. __main__ 으로 `if __name__=="__main__"` 가드 동작.
+    ns = {"__name__": "__main__", "__builtins__": __builtins__}
+
+    def _run():
         try:
-            python_cmd = get_python_cmd()
-            result = subprocess.run(
-                [python_cmd, "-c", code],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                cwd=context.project_path
-            )
-            output = result.stdout
-            if result.stderr:
-                output += f"\n[stderr]: {result.stderr}"
+            with contextlib.redirect_stdout(out_buf), contextlib.redirect_stderr(out_buf):
+                exec(compile(code, "<execute_python>", "exec"), ns)
+        except BaseException as e:   # SystemExit/KeyboardInterrupt 포함 — 백엔드 보호
+            box["exc"] = e
+            traceback.print_exc(file=out_buf)
 
-            if not output:
-                return "(실행 완료, 출력 없음)"
+    t = threading.Thread(target=_run, daemon=True, name="execute_python")
+    t.start()
+    t.join(timeout=30)
 
-            # 출력이 임계값을 초과하면 파일로 저장
-            if len(output) > OUTPUT_THRESHOLD:
-                return _save_large_output(output)
+    if t.is_alive():
+        return ("실행 시간 초과 (30초) — 폰 인-프로세스 실행은 강제 중단이 불가해 스레드가 "
+                "백그라운드로 방치됩니다. 무한루프/블로킹 코드를 피하세요.")
 
-            return output
-
-        except subprocess.TimeoutExpired:
-            return "실행 시간 초과 (30초)"
-        except Exception as e:
-            return f"실행 오류: {str(e)}"
-
-    return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
+    output = out_buf.getvalue()
+    if box["exc"] is not None:
+        output += f"\n[예외]: {type(box['exc']).__name__}: {box['exc']}"
+    if not output:
+        return "(실행 완료, 출력 없음)"
+    if len(output) > OUTPUT_THRESHOLD:
+        return _save_large_output(output)
+    return output
 
 
 def _save_large_output(output: str) -> str:

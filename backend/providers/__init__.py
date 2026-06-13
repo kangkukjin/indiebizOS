@@ -19,7 +19,6 @@ from .openrouter import OpenRouterProvider
 from .ollama import OllamaProvider
 from .claude_code import ClaudeCodeProvider
 from .gemini_http import GeminiHTTPProvider  # SDK 없는 Gemini REST (폰 네이티브)
-from .claude_code_remote import ClaudeCodeRemoteProvider  # 폰-자아가 맥 claude_code 추론 원격 렌트
 
 __all__ = [
     'BaseProvider',
@@ -30,7 +29,6 @@ __all__ = [
     'OllamaProvider',
     'ClaudeCodeProvider',
     'GeminiHTTPProvider',
-    'ClaudeCodeRemoteProvider',
 ]
 
 
@@ -49,8 +47,6 @@ def get_provider(provider_name: str, **kwargs):
         'gemini_http': GeminiHTTPProvider,
         'gemini-http': GeminiHTTPProvider,
         'google_http': GeminiHTTPProvider,
-        'claude_code_remote': ClaudeCodeRemoteProvider,
-        'claude-code-remote': ClaudeCodeRemoteProvider,
     }
 
     provider_class = providers.get(provider_name.lower())

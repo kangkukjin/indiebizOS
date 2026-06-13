@@ -18,29 +18,30 @@
 - 프로젝트 24개, 에이전트 33개 활성
 - 최근 대화: 폰을 진동시켜봐 (시스템 AI)
 - 오늘 예정: 없음
-- 저장소 여유: 307.8GB
+- 저장소 여유: 307.7GB
 
 ## 시스템 건강
 - scheduler: 정상
 - channel_poller: 정상
 - system_ai_runner: 정상
-- ⚠ 비정상 액션 (5개): engines:chart, limbs:phone, self:time, sense:kosis, sense:legal
+- ⚠ 비정상 액션 (3개): engines:chart, limbs:phone, sense:kosis
 
 ## 자가점검 패턴 분석
 - 만성 실패: engines:chart, sense:kosis
 - 성공률 하락: self:time (100% → 50%)
 - 성공률 하락: sense:cctv (100% → 50%)
-- 성공률 하락: sense:legal (100% → 0%)
+- 성공률 하락: sense:legal (100% → 50%)
 - 성공률 하락: sense:search_books (100% → 50%)
 - 응답 느려짐: limbs:music (758ms → 3019ms)
 - 복구됨: limbs:music, others:messages, sense:crypto, sense:realty, sense:stock, sense:weather, sense:world_bank
 
 ## 나는 누구인가
 - 나는 지금 **맥 · Apple M4 Pro · macOS 26.5.1** 에서 돈다.
+- 내가 *직접* 할 수 있는 실행 원시: python, node, shell, html (고정 IBL 액션 너머는 이걸 조립해 직접 해결).
 - 안드로이드 폰의 액션을 빌릴 수 있다 (내 몸에서 못 하는 건 분산 IBL 이 자동 위임 — 닿지 않으면 실행 시 알림).
 
 ## Digital Proprioception
-- 메모리: 147.2MB
-- CPU: 100.1%
+- 메모리: 143.9MB
+- CPU: 92.9%
 - 스레드: 18개
 - 태스크: 실행 0개 / 대기 0개

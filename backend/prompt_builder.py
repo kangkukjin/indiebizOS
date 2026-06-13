@@ -113,9 +113,15 @@ class PromptBuilder:
             if cap and cap.get("body"):
                 lines = ["# 나는 누구인가 (자동 주입)",
                          f"- 나는 지금 **{cap['body']}** 에서 돈다."]
+                micros = cap.get("micros") or {}
+                if micros.get("local"):
+                    lines.append(f"- 내가 *직접* 할 수 있는 실행 원시: {', '.join(micros['local'])} "
+                                 "(고정 IBL 액션 너머는 이걸 조립해 직접 해결).")
+                if micros.get("borrowed"):
+                    lines.append(f"- 내 몸엔 없어 *빌려야* 하는 원시: {', '.join(micros['borrowed'])}.")
                 if cap.get("has_peer"):
                     lines.append(f"- 못 하는 일은 {cap.get('peer_name','상대 노드')}의 액션을 빌릴 수 있다(분산 IBL 자동 위임).")
-                logger.info("[PromptBuilder] World Pulse 부재 → 정체성 폴백 주입")
+                logger.info("[PromptBuilder] World Pulse 부재 → 정체성+마이크로 폴백 주입")
                 return "\n".join(lines)
         except Exception as e:
             logger.debug(f"[PromptBuilder] 정체성 폴백 실패: {e}")

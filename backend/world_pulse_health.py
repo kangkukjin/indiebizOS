@@ -218,6 +218,13 @@ def generate_guide():
                 lines.append("")
                 lines.append("## 나는 누구인가")
                 lines.append(f"- 나는 지금 **{cap['body']}** 에서 돈다.")
+                micros = cap.get("micros") or {}
+                if micros.get("local"):
+                    lines.append(f"- 내가 *직접* 할 수 있는 실행 원시: {', '.join(micros['local'])} "
+                                 "(고정 IBL 액션 너머는 이걸 조립해 직접 해결).")
+                if micros.get("borrowed"):
+                    lines.append(f"- 내 몸엔 없어 *빌려야* 하는 원시: {', '.join(micros['borrowed'])} "
+                                 "(분산 IBL 이 자동 위임).")
                 if cap.get("has_peer"):
                     lines.append(f"- {cap['peer_name']}의 액션을 빌릴 수 있다 "
                                  "(내 몸에서 못 하는 건 분산 IBL 이 자동 위임 — 닿지 않으면 실행 시 알림).")

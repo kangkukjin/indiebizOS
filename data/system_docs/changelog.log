@@ -1483,3 +1483,14 @@
     route_to_phone_ws(api_ibl), ClaudeCodeProvider backend_url/route_to_phone, mcp_server ROUTE_TO_PHONE,
     phone_ws_client, websockets pip. away-case 문제 자체가 증발(두뇌가 폰에 있으니 맥→폰 역방향 불요).
     맥-자아 claude_code 무영향 확인. /embed 인코더 렌트·_forward_to_mac(home_only outbound 빌림)은 유지.
+
+[2026-06-13] 마이크로 자기상 정련 — 만능 탈출구(escape) 개념, 폰서 셸은 '빌림' 아니라 python 포섭
+  사용자 통찰: 맥은 셸이 만능 탈출구라 별도 python 실행기 불필요(셸⊇python). 폰은 역전 — standalone
+  python3 가 없어 셸이 python 을 못 띄우니 python 이 만능(python⊇셸: 약한 toybox sh 는 subprocess 로
+  포섭, jclass 로 SDK 도달). 그래서 폰 자기상의 '빌림: shell' 은 오기 — 셸은 python 에 포섭됨.
+  - detect_local_micros() 반환에 `escape`("shell"|"python") 추가. 맥={escape:shell, local:[shell,python,
+    html,node]}, 폰={escape:python, local:[python,html], borrowed:[node]} — 셸은 폰 목록서 제외(포섭).
+  - 프롬프트(world_pulse_health/prompt_builder 폴백)가 "만능 탈출구=X" 줄 주입. system_ai_tools 게이트도
+    escape=="python" 으로(견고). A36: 폰이 "만능 탈출구=인-프로세스 Python, 셸은 subprocess 로 포섭" 자기표현.
+  - 코드베이스 비대칭(맥=run_command만, 폰=execute_python만, capability-gate)이 정확함을 재확인 —
+    각 몸이 자기 만능 탈출구 하나만 갖고 나머지는 그걸 통하거나 부재.

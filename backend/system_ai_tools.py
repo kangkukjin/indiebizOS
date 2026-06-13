@@ -44,9 +44,8 @@ def get_all_system_ai_tools() -> List[Dict]:
     ]
     try:
         from runtime_utils import detect_local_micros
-        _micros = detect_local_micros()
-        if "shell" not in _micros.get("local", []):
-            # 이 몸엔 shell 탈출구가 없다(폰) → 네이티브 Python(인-프로세스) 탈출구를 노출.
+        if detect_local_micros().get("escape") == "python":
+            # 이 몸의 만능 탈출구가 python(=폰, 셸이 만능이 아님) → 네이티브 Python(인-프로세스) 노출.
             lang_tools.append(("python-exec", "execute_python"))
     except Exception as e:
         print(f"[시스템AI] 마이크로 감지 실패(execute_python 미노출): {e}")

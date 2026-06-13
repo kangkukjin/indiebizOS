@@ -298,7 +298,7 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 - **통신**: Gmail, Nostr (DM은 NIP-17 gift-wrap, 구 NIP-04 호환 수신), Telegram
 - **NAS**: 음악 스트리밍, 자막 관리, 웹앱 호스팅
 - **안드로이드 (양방향)**: 제어=ADB 기반 `[limbs:android]{op}` (snapshot→요소 탭) / 감각=폰 컴패니언 앱(NotificationListener)이 알림·위치·걸음을 NIP-17 한방향 피드로 전송 → `[sense:phone]{op}` + `/phone/*` API.
-- **폰 네이티브 (indiebizOS 폰 자체 구동)**: phone-companion/ (Kotlin+Chaquopy) 네이티브 앱이 **폰에서 온디바이스 Python 백엔드**를 띄워 앱모드 슈퍼앱을 서빙하고 **실제 IBL 엔진**이 폰 안전 패키지(`build_ibl_nodes.PHONE_VERIFIED_PACKAGES`)를 로컬 실행한다. 빌드가 정본 트리(엔진+패키지+`ibl_nodes.yaml`)를 `indiebiz_base.zip` 에셋으로 번들→filesDir 추출. `runs_on` 능력 태그(`anywhere`/`home_only`/`phone_only`)와 `data/phone_manifest.json`이 폰 못 도는 계기/액션을 숨기거나 거부. 캡처 알림은 폰 로컬 JSONL→`[sense:phone]`, 라디오는 mpv 대신 stream URL을 WebView(hls.js)로 돌려 **폰 스피커** 재생. API 키는 app-private `filesDir/secrets/keys.json`로 주입(APK 밖). 폰=리모컨 아닌 진짜 sense+limbs 노드.
+- **폰 네이티브 (indiebizOS 폰 자체 구동)**: phone-companion/ (Kotlin+Chaquopy) 네이티브 앱이 **폰에서 온디바이스 Python 백엔드**를 띄워 앱모드 슈퍼앱을 서빙하고 **실제 IBL 엔진**이 폰 안전 패키지(`build_ibl_nodes.PHONE_VERIFIED_PACKAGES`)를 로컬 실행한다. 빌드가 정본 트리(엔진+패키지+`ibl_nodes.yaml`)를 `indiebiz_base.zip` 에셋으로 번들→filesDir 추출. `runs_on` 능력 태그(`anywhere`/`mac_only`/`phone_only`)와 `data/phone_manifest.json`이 폰 못 도는 계기/액션을 숨기거나 거부. 캡처 알림은 폰 로컬 JSONL→`[sense:phone]`, 라디오는 mpv 대신 stream URL을 WebView(hls.js)로 돌려 **폰 스피커** 재생. API 키는 app-private `filesDir/secrets/keys.json`로 주입(APK 밖). 폰=리모컨 아닌 진짜 sense+limbs 노드.
 - **원격**: Cloudflare Tunnel (Finder + 런처). 원격 런처=집 PC 리모컨 의미론(라디오 재생은 집 PC 스피커).
 - **브라우저**: Playwright 기반 자동화
 

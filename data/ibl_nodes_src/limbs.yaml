@@ -1,6 +1,7 @@
   limbs:
     actions:
       browser:
+        runs_on: mac_only
         description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
         target_description: 'op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).'
         group: browser
@@ -43,6 +44,7 @@
         - 입력
         - 페이지
       screen:
+        runs_on: mac_only
         description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
         target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
         group: desktop
@@ -147,13 +149,14 @@
         target_key: path
         router: system
         func: output_open
-        runs_on: home_only   # 집 PC Finder/탐색기 GUI — 폰 무의미
+        runs_on: mac_only   # 집 PC Finder/탐색기 GUI — 폰 무의미
         implementation: subprocess로 OS 기본 앱(Finder/브라우저) 실행
         keywords:
         - 열기
         - URL
         - 브라우저
       music:
+        runs_on: mac_only
         description: 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
         group: media
         target_description: 'play/add — query 파라미터로 검색어 또는 URL. download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.'
@@ -309,6 +312,7 @@
         implementation: Kakao Map API로 좌표 기반 지도 HTML 생성 (프론트엔드 렌더링용)
         target_key: query
       explorer:
+        runs_on: mac_only
         description: 파일 탐색기로 폴더 열기 (macOS Finder, Windows 탐색기). 파일 자체 열기는 os_open.
         group: open
         target_description: 폴더 경로 (절대 또는 상대). 파일이면 파일 위치 폴더가 열림.
@@ -317,6 +321,7 @@
         implementation: subprocess로 macOS Finder/Windows Explorer 실행
         target_key: path
       photo_manager:
+        runs_on: mac_only
         description: indiebizOS 내장 Photo Manager GUI 실행 (Electron). 사진 분류·검색·인덱싱.
         group: open
         target_description: 폴더 경로 (선택, 미지정 시 기본 라이브러리 폴더).
@@ -355,7 +360,7 @@
         target_key: app
         router: system
         func: launcher_command
-        runs_on: home_only   # Electron 데스크탑 런처 창 — 폰 무의미
+        runs_on: mac_only   # Electron 데스크탑 런처 창 — 폰 무의미
         implementation: WebSocket으로 Electron Launcher에 open_<app>_window 명령 전송
         keywords:
         - 창

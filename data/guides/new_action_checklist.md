@@ -87,8 +87,8 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         implementation: 내부 동작 요약 (UI 전용)
         target_key: query         # tool_input 의 주 파라미터 키
         keywords: [한글키워드, english_keyword]
-        # runs_on: home_only      # (선택) 폰 네이티브: 집 PC 전용이면. 기본 anywhere.
-        #   집 하드웨어/무거운 의존/미검증 패키지=home_only · 폰 센서=phone_only.
+        # runs_on: mac_only      # (선택) 폰 네이티브: 집 PC 전용이면. 기본 anywhere.
+        #   집 하드웨어/무거운 의존/미검증 패키지=mac_only · 폰 센서=phone_only.
         #   build 가 data/phone_manifest.json 파생(폰 번들/계기필터/엔진가드 SSOT).
         # op 분기 액션이면:
         ops:

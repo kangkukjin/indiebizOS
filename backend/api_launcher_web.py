@@ -1542,9 +1542,9 @@ async function rowBtn(vi,ri,btn,key){
     if(d&&d.play_in_client&&d.stream_url){ playRadioStream(d.stream_url,d.volume,d.title||d.station||d.name); }  // 폰 라디오·유튜브뮤직: WebView 직접 재생 + 미니플레이어
     else if(d&&d.download_in_client){ toast(d.saved===false?('⚠ '+(d.message||'저장 실패')):('📥 '+(d.message||'저장됨'))); }  // mp3 폰 저장 결과
     else if(d&&d.error){
-      // 폰: os_open(집 PC GUI)이 home_only 로 막히면, 로컬 생성한 HTML 을 인앱 뷰어로 띄운다.
+      // 폰: os_open(집 PC GUI)이 mac_only 로 막히면, 로컬 생성한 HTML 을 인앱 뷰어로 띄운다.
       const m=action.match(/path:\\s*"([^"]+\\.html?)"/i);
-      if(d.home_only && m){ openFileOverlay(m[1]); }
+      if(d.mac_only && m){ openFileOverlay(m[1]); }
       else alert(d.error);
     }
   }

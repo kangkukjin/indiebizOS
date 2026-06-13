@@ -46,9 +46,9 @@ PACKAGE_DIRS = [
 ]
 
 # === runs_on 능력 태그 (2026-06-11, #3 폰 네이티브) ===
-# 액션이 어디서 도는가: anywhere(기본·이식가능 로직/HTTP) / home_only(집 PC 하드웨어·
+# 액션이 어디서 도는가: anywhere(기본·이식가능 로직/HTTP) / mac_only(집 PC 하드웨어·
 # 무거운 의존·미검증 패키지) / phone_only(폰 하드웨어=알림·센서, 미래 M3).
-VALID_RUNS_ON = {"anywhere", "home_only", "phone_only"}
+VALID_RUNS_ON = {"anywhere", "mac_only", "phone_only"}
 DEFAULT_RUNS_ON = "anywhere"
 
 # 실기기(Galaxy A36)에서 import+종단 실행이 검증된 폰안전 패키지 — 폰 프로파일의 단일 진실 소스.
@@ -62,9 +62,27 @@ PHONE_VERIFIED_PACKAGES = {
     "radio",
     "web",
     "real-estate",
-    "android",   # M3: [sense:phone] 폰 로컬 알림. limbs:android(android_op)은 home_only 태그로 제외.
-    "business",  # 메신저(others:messages/neighbor/contact)+비즈니스 CRM(self:business*). business.db 폰 머지 토대 위. auto_response 는 home_only 로 제외(PC 전용 폴러).
+    "android",   # M3: [sense:phone] 폰 로컬 알림. limbs:android(android_op)은 mac_only 태그로 제외.
+    "business",  # 메신저(others:messages/neighbor/contact)+비즈니스 CRM(self:business*). business.db 폰 머지 토대 위. auto_response 는 mac_only 로 제외(PC 전용 폴러).
     "cctv",      # CCTV 검색(sense:cctv search) — 모듈 import importlib.util(stdlib)뿐, HLS는 WebView <video>+hls.js 재생.
+    "health-record",  # 의료기록(self:health save/query) — storage 가 stdlib(sqlite)만. health_records.db 폰↔맥 합집합 머지(health_sync, business.db 선례) 토대.
+    # 2026-06-13 runs_on 정직성 회복: anywhere 인데 폰 미번들이던 이식 가능 패키지(HTTP API 조회류,
+    # 자원이 외부라 몸 무관). 의존성 모듈레벨 스캔=stdlib/HTTP. A36 대표 액션 실행으로 import 확정.
+    "cloudflare",       # Cloudflare API(HTTP)
+    "context7",         # 라이브러리 문서 검색(HTTP)
+    "kosis",            # 통계청 KOSIS API(HTTP)
+    "legal",            # 법령/판례 검색(HTTP)
+    "startup",          # 창업 정보(HTTP + stdlib xml)
+    "local-info",       # 지역 정보 검색(HTTP)
+    "shopping-assistant",  # 네이버 쇼핑 검색(API). 다나와·중고(playwright)는 지연 import→폰선 graceful 미지원. arxiv 선례.
+    "memory",   # 심층기억(self:memory). 자아별 사적 로컬 DB(동기화 안 함). 모듈레벨 stdlib만(numpy/sqlite_vec 지연) → 폰서 import 안전, 시맨틱 미가용 시 LIKE/FTS 키워드 폴백(기존 graceful 강등). 시맨틱-온-폰(/embed 렌트+brute-force)은 후속.
+    # self 노드 = AI 자신 → file 액션은 자기 몸의 fs 에 작용(각 몸 자기 파일·시계). 둘 다 모듈레벨 stdlib,
+    # 무거운 것(fitz/docx/openpyxl·api_pcmanager)은 지연 import → 폰 import 안전. read 의 PDF/docx 포맷만
+    # 폰서 graceful 실패(텍스트는 됨). explorer(GUI)·spreadsheet(openpyxl write)는 액션별 mac_only 유지.
+    "system_essentials",  # self:time(자기 시계)·read/write/list/grep/copy/move/delete/file_find/edit(자기 fs)
+    "pc-manager",         # self:storage/fs_query/folder_note(자기 fs 인덱스·주석). limbs:explorer(GUI)는 mac_only 유지.
+
+    "study",            # 연구 검색(HTTP + stdlib; study:paper 만 arxiv 3p — A36서 안 되면 그 액션 mac_only)
     "python-exec",  # 폰 네이티브 코드 실행 탈출구 — handler 가 capability-gate 로 폰서 Chaquopy 인-프로세스 exec(맥=subprocess). stdlib만 import(서드파티 0). execute_python 은 IBL 액션 아니라 직접 도구라 runnable_actions 엔 미포함(정상).
 }
 
@@ -952,15 +970,46 @@ def validate_runs_on(data: dict) -> list[str]:
     return issues
 
 
+def validate_phone_reachability(data: dict, root: Path) -> list[str]:
+    """runs_on 정직성: anywhere(기본) 액션인데 handler/driver 패키지가 PHONE_VERIFIED 가 아니면
+    적발. 그런 액션은 폰서 _phone_runnable=False → 조용히 _forward_to_mac 된다(ibl_engine.py).
+    즉 anywhere 와 mac_only 가 폰에서 행동이 같아 태그가 거짓 → silent-forward 라 self-check 가
+    못 잡던 부류. 해소: 패키지를 PHONE_VERIFIED 에 넣거나(폰 로컬 실행) 액션에 runs_on: mac_only
+    명시(맥 포워드 명시). 비-패키지(system/engine 등) 액션은 대상 아님(번들 모듈로 폰서 실행)."""
+    issues: list[str] = []
+    tool_index = build_tool_index(root)
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            if not isinstance(action, dict):
+                continue
+            ro = action.get("runs_on", DEFAULT_RUNS_ON)
+            if ro != "anywhere":
+                continue  # mac_only/phone_only = 명시적(정직)
+            tool = action.get("tool")
+            if not tool or tool not in tool_index:
+                continue  # 비-패키지 액션(system/engine 등) — 번들 모듈로 폰 실행
+            pkg = tool_index[tool][0].name
+            if pkg not in PHONE_VERIFIED_PACKAGES:
+                issues.append(
+                    f"{node_name}:{action_name} — runs_on=anywhere 인데 패키지 '{pkg}' 폰 미검증 "
+                    f"→ 폰서 조용히 맥 포워드(태그 거짓). 패키지를 PHONE_VERIFIED_PACKAGES 에 넣거나 "
+                    f"액션에 'runs_on: mac_only' 명시."
+                )
+    return issues
+
+
 def derive_phone_manifest(data: dict, root: Path) -> dict:
     """runs_on + 검증된 폰 패키지 → 폰 프로파일 매니페스트.
 
     runnable_actions(폰서 실행 가능):
       - runs_on == phone_only  → 폰 전용 하드웨어 액션(항상 포함)
-      - runs_on == home_only   → 제외
+      - runs_on == mac_only   → 제외
       - runs_on == anywhere(기본):
           · handler/driver 라우터(패키지 보유) → 패키지가 PHONE_VERIFIED 일 때만
-          · 비-패키지(system/engine 등) → 기본 포함(home_only 로 명시 태그 안 한 한)
+          · 비-패키지(system/engine 등) → 기본 포함(mac_only 로 명시 태그 안 한 한)
     packages: 폰에 번들할 패키지 = PHONE_VERIFIED (Gradle 이 읽음).
     """
     tool_index = build_tool_index(root)
@@ -974,7 +1023,7 @@ def derive_phone_manifest(data: dict, root: Path) -> dict:
                 continue
             qualified = f"{node_name}:{action_name}"
             ro = action.get("runs_on", DEFAULT_RUNS_ON)
-            if ro == "home_only":
+            if ro == "mac_only":
                 continue
             if ro == "phone_only":
                 runnable.append(qualified)
@@ -1012,6 +1061,7 @@ def validate(data: dict, root: Path) -> list[str]:
             issues.extend(_check_action(qualified, action, tool_index))
     issues.extend(validate_app_blocks(data))
     issues.extend(validate_runs_on(data))
+    issues.extend(validate_phone_reachability(data, root))
     return issues
 
 

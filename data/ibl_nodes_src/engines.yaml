@@ -38,6 +38,7 @@
               label: 🖥 띄우기
               action: '[limbs:os_open]{path: "{file}"}'
       html_video:
+        runs_on: mac_only
         description: '완성된 HTML/CSS 씬을 MP4 영상으로 합성. scenes(HTML 배열) 또는 scene_dir(저장된 씬)로 호출. 주제→슬라이드 자동생성은 slide/lecture 사용. (가이드 html_video.md)'
         target_description: 'scenes(완전한 HTML 문서 배열, 각 {html, duration})을 직접 전달하거나 scene_dir(저장된 씬 디렉토리)을 지정. scene_dir이 있으면 렌더링 단계만 실행. narration_texts로 씬별 나레이션 추가.'
         group: media_produce
@@ -52,6 +53,7 @@
         - 렌더링
         - HTML영상
       chart:
+        runs_on: mac_only
         description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
         target_description: |
           title (필수). chart_type으로 종류 분기 (기본 line).
@@ -90,6 +92,7 @@
         - 대시보드
         - 복합차트
       spreadsheet:
+        runs_on: mac_only
         description: 행 데이터(rows/sheets) → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
         target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
         group: chart
@@ -105,6 +108,7 @@
         - 시트
         - 장부
       remotion:
+        runs_on: mac_only
         description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
         target_description: |
           op로 분기 (기본 render_inline).
@@ -125,6 +129,7 @@
         - 렌더링
         - 상태
       tts:
+        runs_on: mac_only
         description: 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
         target_description: 음성으로 만들 텍스트. voice 옵션으로 화자 선택 (기본 한국어 여성).
         group: media_produce
@@ -144,6 +149,7 @@
         - TTS
         - 나레이션
       slide_shadcn:
+        runs_on: mac_only
         description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅·강의·일러스트 통합 레이아웃 + design_system. 자세한 layout/스타일은 read_guide(query="슬라이드").'
         target_description: |
           slides 배열 (각 슬라이드 {layout, title, ...}) + design_system/theme/output_dir/width/height 옵션. 인라인 배열만 (topic 미지원).
@@ -179,6 +185,7 @@
         - Shadcn
         - PNG
       slide:
+        runs_on: mac_only
         description: '명령 한 줄 → 슬라이드 1장(PNG). 메시지 큐레이션+자유형 디자인까지 AI가 저작. (완성 spec 직접 렌더는 slide_shadcn)'
         target_description: |
           instruction(필수) — 무엇을 말하는 한 장인지 자연어로. content(선택) — 근거 사실·원문(환각 방지).
@@ -198,6 +205,7 @@
         - 발표자료
         - 카드
       image_gemini:
+        runs_on: mac_only
         description: 'Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").'
         target_description: |
           prompt (필수). 옵션:
@@ -228,6 +236,7 @@
         - 이미지생성
         - AI이미지
       render_html:
+        runs_on: mac_only
         description: HTML 페이지를 PNG 이미지로 렌더링. 슬라이드·차트 결과를 이미지화.
         target_description: 렌더링할 HTML 문자열 또는 경로. 결과 PNG 경로 반환.
         group: media_produce
@@ -240,6 +249,7 @@
         - 이미지
         - 렌더링
       web_site:
+        runs_on: mac_only
         description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
         target_description: |
           op로 분기 (기본 list).
@@ -258,6 +268,7 @@
         - 사이트삭제
         - 사이트수정
       web:
+        runs_on: mac_only
         description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
         target_description: |
           op로 분기 (기본 preview).
@@ -290,6 +301,7 @@
         - 미리보기
         - vercel
       web_component:
+        runs_on: mac_only
         description: '웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).'
         target_description: |
           op로 분기 (기본 fetch).
@@ -313,6 +325,7 @@
         - shadcn
         - UI
       image_critic:
+        runs_on: mac_only
         description: 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 반환: passed/score/issues/notes. ILLUSTRATE 단계 자동 평가용.'
         target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. style_preset/checks(추가 체크 배열) 옵션. 기본 체크 — 다이어그램형/한글 미포함/빈 공간/객체 명확성/디자인 톤 일관성. 한글 검출 시 무조건 passed=false.'
         group: media_produce

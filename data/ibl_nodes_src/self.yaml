@@ -1,6 +1,7 @@
   self:
     actions:
       photo:
+        runs_on: mac_only
         description: 사진·동영상 라이브러리 관리 (op 분기). 스캔(인덱싱)/조회/검색/통계/타임라인/중복/상세 통합. scan이 모든 조회의 전제.
         target_description: 'scan/gallery/stats/timeline/duplicates는 path(폴더 경로) 필요(생략 시 가장 큰 스캔 자동). search는 query + 옵션(media_type, start_date, end_date, limit). detail은 media_id. list_scans는 파라미터 없음. timeline에 year 옵션.'
         group: photo
@@ -30,6 +31,7 @@
         - 중복 사진
         - 사진 상세
       blog:
+        runs_on: mac_only
         description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스.
         target_description: |
           op로 분기 (기본 posts).
@@ -82,7 +84,7 @@
         - 목록
         - 팀
       memory:
-        description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도.
+        description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도. 자아별 사적 기억(폰·맥 각자 로컬, 동기화 안 함). 폰선 시맨틱 모델 없어 키워드(LIKE/FTS) 검색.
         group: memory
         target_description: 'save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.'
         target_key: op
@@ -161,7 +163,7 @@
         group: schedule
         router: system
         func: manage_events
-        runs_on: home_only   # event_engine→api_system_ai 무거운 의존(폰 미번들). 폰은 맥 라우팅으로 접근.
+        runs_on: mac_only   # event_engine→api_system_ai 무거운 의존(폰 미번들). 폰은 맥 라우팅으로 접근.
         implementation: event_engine으로 이벤트/스케줄 CRUD (SQLite 기반)
         keywords:
         - 일정
@@ -186,7 +188,7 @@
         group: schedule
         router: system
         func: show_calendar
-        runs_on: home_only   # calendar_manager.open_in_browser()=데스크탑 브라우저 — 폰 부적합. 폰은 manage_events 계기로 일정 조회.
+        runs_on: mac_only   # calendar_manager.open_in_browser()=데스크탑 브라우저 — 폰 부적합. 폰은 manage_events 계기로 일정 조회.
         implementation: calendar_manager.open_in_browser() — HTML 캘린더 생성 후 브라우저 자동
           열기
         keywords:
@@ -491,6 +493,7 @@
             get: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       lecture:
+        runs_on: mac_only
         description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
         group: lecture
         target_description: 'create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면). delete는 confirm=true 추가.'
@@ -514,6 +517,7 @@
         - 강의 워크스페이스
         scope: workspace
       slide:
+        runs_on: mac_only
         description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더.
         group: lecture
         target_description: '공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체). create/edit만 AI 호출.'
@@ -537,6 +541,7 @@
         - 다음 슬라이드
         scope: workspace
       material:
+        runs_on: mac_only
         description: 강의 재료 관리 (op 분기). 추가/삭제.
         group: lecture
         target_description: '공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.'
@@ -555,6 +560,7 @@
         - 자료 추가
         scope: workspace
       deck:
+        runs_on: mac_only
         description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기.
         group: lecture
         target_description: '공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx).'
@@ -835,7 +841,7 @@
         target_description: '(파라미터 없음). 폰 USB 연결 필요(미기동 시 앱 자동 기동). 양방향 1회 머지 — 추가는 합치고 수정은 최신 우선, 삭제는 양쪽 반영. 메시지/글 내용은 비대상(릴레이/Gmail 진실원).'
         router: handler
         tool: phone_sync
-        runs_on: home_only
+        runs_on: mac_only
         implementation: business 패키지 phone_sync — adb forward 로 폰 백엔드(:8765) 도달 후 export/merge 양방향. business_sync.merge_business_db(LWW+tombstone).
         keywords:
         - 폰 동기화

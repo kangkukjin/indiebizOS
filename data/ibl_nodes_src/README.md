@@ -38,9 +38,9 @@ python scripts/build_ibl_nodes.py
 
 ## 선택 필드: `runs_on` (어디서 도는가 — 폰 네이티브 #3)
 
-액션에 `runs_on: anywhere|home_only|phone_only`를 달아 실행 환경을 선언한다 (미지정=`anywhere`).
+액션에 `runs_on: anywhere|mac_only|phone_only`를 달아 실행 환경을 선언한다 (미지정=`anywhere`).
 - `anywhere` (기본): 이식 가능 로직/HTTP. handler/driver 라우터면 **검증된 폰 패키지**(`build_ibl_nodes.PHONE_VERIFIED_PACKAGES`)일 때만 폰서 실행.
-- `home_only`: 집 PC 하드웨어·무거운 의존·미검증 패키지. **폰서 직접 실행 못 함 → 맥(연합 두뇌)에 단건 라우팅**(예: `limbs:os_open`/`open_window`=데스크탑 GUI, `self:manage_events`=무거운 api_system_ai 의존).
+- `mac_only`: 집 PC 하드웨어·무거운 의존·미검증 패키지. **폰서 직접 실행 못 함 → 맥(연합 두뇌)에 단건 라우팅**(예: `limbs:os_open`/`open_window`=데스크탑 GUI, `self:manage_events`=무거운 api_system_ai 의존).
 - `phone_only`: 폰 하드웨어 전용. 입력=`sense:phone`(알림 피드)·`sense:here`(현재위치 온디맨드 1회 조회 — 상시 추적 아님), 출력=`limbs:phone`(알림·진동·토스트·복사·TTS·앱실행 + 문자·전화 스테이징, Chaquopy→Kotlin PhoneActions). PC선 graceful 거부(또는 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 로 폰에 포워드).
 
 **분산 IBL 라우팅 (액션이 실행 단위)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션(`runnable_actions` 밖)을 거부하지 않고 **맥에 단건 위임**한다(`_forward_to_mac`, `_forward_to_phone`의 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로, **혼합 code도 액션별로 쪼개져** 일부는 폰서·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. 추상화 의도=라우팅은 "맥에 프록시"가 아니라 "신뢰 노드(신원)에 위임" — 미래 피어(허가한 친구)가 같은 뼈대에 슬롯인(허가 층만 미구현).

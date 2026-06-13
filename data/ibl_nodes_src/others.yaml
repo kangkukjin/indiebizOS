@@ -237,7 +237,7 @@
       auto_response:
         description: 외부 메시지 자동응답 서비스 제어 — op:status(기본)/start/stop. on/off 는 영속(재시작 유지).
         group: channel
-        runs_on: home_only
+        runs_on: mac_only
         target_description: 'op:status(가동 여부·켜짐설정·점검주기·처리수) / start(켜기, 영속) / stop(끄기, 영속). 자동응답은 이웃 정보공개수준별 근무지침·비즈니스문서를 맥락으로 AI가 응답 생성·발송.'
         target_key: op
         router: handler

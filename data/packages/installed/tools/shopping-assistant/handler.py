@@ -7,7 +7,9 @@ import sys
 import os
 import json
 import asyncio
-from playwright.async_api import async_playwright
+# playwright 는 다나와·중고 스크래핑(브라우저 자동화)에만 필요 — 모듈 레벨이면 폰서 import 실패해
+# 순수 API 인 네이버 쇼핑 검색(search_naver_shopping)까지 막힌다(study:arxiv 와 동일 함정).
+# → 지연 import 로 내려, 폰선 네이버 검색이 로컬 작동하고 다나와/중고만 graceful 미지원.
 
 # backend/common 모듈 경로 추가
 _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
@@ -52,6 +54,10 @@ def search_naver_shopping(query: str, display: int = 5):
 
 async def search_danawa_shopping_async(query: str, display: int = 5):
     """다나와 검색 (Playwright 사용)"""
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError:
+        return {"total": 0, "items": [], "error": "다나와 검색은 이 기기에서 미지원(브라우저 자동화 — 맥 전용)"}
     async with async_playwright() as p:
         try:
             browser = await p.chromium.launch(headless=True)
@@ -102,6 +108,10 @@ async def search_danawa_shopping_async(query: str, display: int = 5):
 
 async def search_used_items_async(query: str, display: int = 5):
     """중고 거래 사이트 검색 (중고나라, 번개장터)"""
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError:
+        return {"total": 0, "items": [], "error": "중고 검색은 이 기기에서 미지원(브라우저 자동화 — 맥 전용)"}
     async with async_playwright() as p:
         try:
             browser = await p.chromium.launch(headless=True)

@@ -30,7 +30,7 @@ interface Domain { id: string; icon: string; label: string; soon?: boolean; onOp
 // (도서=대출통계·추천 드릴 / 투자=recharts 차트·3탭 / 라디오=즐겨찾기·볼륨)
 const OVERRIDES: Record<string, ReactNode> = {
   newspaper: <NewspaperInstrument />,   // electron 창으로 바로 열기 등(인앱 오버레이)
-  ytmusic: <YtMusicInstrument />,       // 다운로드·큐 통합 UI(youtube=home_only)
+  ytmusic: <YtMusicInstrument />,       // 다운로드·큐 통합 UI(youtube=mac_only)
 };
 
 // 데스크탑 전용 도메인 — 지도·네이티브 창·파일 경로 등 렌더 어휘 밖(영구 escape).

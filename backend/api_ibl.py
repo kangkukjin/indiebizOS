@@ -16,6 +16,13 @@ class IBLRequest(BaseModel):
                                        # MCP→HTTP로 자기 agent_id를 실어 보내는 통로. None이면 신원 없음(외부 채널 차단).
 
 
+class EmbedRequest(BaseModel):
+    """폰-자아 해마 인코더 렌트(PHONE_SELF_HOSTING_HANDOFF §6.3): 텍스트→768벡터.
+    단건은 text, 배치는 texts. 둘 다 오면 texts 우선."""
+    text: Optional[str] = None
+    texts: Optional[List[str]] = None
+
+
 class TranslateRequest(BaseModel):
     """수동 모드: 자연어 의도 → IBL 코드 번역 요청"""
     intent: str
@@ -68,6 +75,36 @@ async def execute_ibl_code(req: IBLRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/embed")
+async def embed_text(req: EmbedRequest):
+    """텍스트 → 768차원 L2 정규화 벡터 (폰-자아 해마의 인코더 렌트).
+
+    상시 켜둔 맥엔 fine-tuned 임베딩 모델이 떠 있다. 폰-자아는 무거운 torch 런타임을
+    번들하는 대신 이 엔드포인트로 질의 텍스트를 보내 벡터를 받고, 자기 로컬 인덱스에서
+    brute-force 코사인 검색한다(인코더=공유 substrate / 인덱스=사적 경험, 절단면 일치).
+    문서 인덱싱과 동일 encode+정규화라 같은 벡터공간 — search_semantic 과 동치.
+    (PHONE_SELF_HOSTING_HANDOFF §6.3·§6.6)"""
+    inputs = req.texts if req.texts is not None else ([req.text] if req.text else [])
+    if not inputs:
+        raise HTTPException(status_code=400, detail="text 또는 texts 가 필요합니다.")
+    try:
+        import asyncio
+        from ibl_usage_db import IBLUsageDB
+        db = IBLUsageDB()
+        vectors = await asyncio.to_thread(db.embed_vectors, inputs)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    if vectors is None:
+        raise HTTPException(status_code=503,
+                            detail="임베딩 모델 미가용 (sentence-transformers 미설치 또는 로드 실패)")
+    out = {"dim": IBLUsageDB.EMBEDDING_DIM, "count": len(vectors)}
+    if req.texts is not None:
+        out["vectors"] = vectors
+    else:
+        out["vector"] = vectors[0]
+    return out
 
 
 @router.get("/actions/catalog")

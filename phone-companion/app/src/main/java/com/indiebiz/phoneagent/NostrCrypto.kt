@@ -1,6 +1,8 @@
 package com.indiebiz.phoneagent
 
 import fr.acinq.secp256k1.Secp256k1
+import org.json.JSONArray
+import org.json.JSONObject
 import java.security.MessageDigest
 import java.security.SecureRandom
 
@@ -105,5 +107,35 @@ object NostrCrypto {
             }
         }
         return sb.append("\"").toString()
+    }
+
+    /**
+     * nostr 이벤트 빌드+서명 → 완성 event JSON 문자열.
+     * 파이썬 indienet 의 폰 대응물(pynostr Event.sign 우회). id 는 NIP-01 정규직렬화로
+     * 계산되므로 반환 JSON 의 키 순서는 무관(릴레이는 키로 파싱).
+     * @param tagsJson 태그 배열 JSON 예: [["t","indienet"],["p","<hex>"]]
+     */
+    fun buildEvent(privHex: String, kind: Int, tagsJson: String, content: String, createdAt: Long): String {
+        val priv = fromHex(privHex)
+        val pub = toHex(xonlyPub(priv))
+        val tagsArr = JSONArray(tagsJson)
+        val tags = ArrayList<List<String>>()
+        for (i in 0 until tagsArr.length()) {
+            val t = tagsArr.getJSONArray(i)
+            val inner = ArrayList<String>()
+            for (j in 0 until t.length()) inner.add(t.getString(j))
+            tags.add(inner)
+        }
+        val id = eventId(pub, createdAt, kind, tags, content)
+        val sig = signSchnorr(id, priv)
+        val ev = JSONObject()
+        ev.put("id", toHex(id))
+        ev.put("pubkey", pub)
+        ev.put("created_at", createdAt)
+        ev.put("kind", kind)
+        ev.put("tags", tagsArr)
+        ev.put("content", content)
+        ev.put("sig", toHex(sig))
+        return ev.toString()
     }
 }

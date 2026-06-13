@@ -229,3 +229,129 @@ def setup_bundled_runtime_paths():
         if node_dir not in current_path:
             os.environ["PATH"] = node_dir + os.pathsep + current_path
             print(f"[Runtime] PATH에 Node.js 추가: {node_dir}")
+
+
+# ============================================================
+# 자기수용감각 (Proprioception) — 자기 몸 감지
+# ============================================================
+# 같은 코드베이스가 폰/맥(PC)에서 모두 돈다. 실행 위치를 프롬프트에
+# 정적으로 박으면 다른 몸에서 돌 때 거짓말이 되므로, 런타임에 감지한다.
+# 부팅 때 1회 감지 후 캐시 (한 프로세스 안에서 몸은 안 바뀜).
+
+_BODY_CACHE = None
+
+
+def _sysctl(key: str) -> str:
+    """macOS sysctl 단일 키 조회 (실패 시 빈 문자열)."""
+    try:
+        import subprocess
+        out = subprocess.run(
+            ["sysctl", "-n", key], capture_output=True, text=True, timeout=3
+        )
+        return out.stdout.strip()
+    except Exception:
+        return ""
+
+
+def _detect_android_body() -> dict:
+    """폰 프로세스 — Chaquopy로 android.os.Build 읽기 (검증된 jclass 경로)."""
+    info = {"kind": "phone", "device": "안드로이드 폰", "os": "Android", "arch": ""}
+    try:
+        from java import jclass
+        Build = jclass("android.os.Build")
+        manufacturer = str(getattr(Build, "MANUFACTURER", "") or "").strip()
+        model = str(getattr(Build, "MODEL", "") or "").strip()
+        device_name = " ".join(p for p in [manufacturer, model] if p)
+        if device_name:
+            info["device"] = device_name
+        try:
+            Version = jclass("android.os.Build$VERSION")
+            release = str(getattr(Version, "RELEASE", "") or "").strip()
+            if release:
+                info["os"] = f"Android {release}"
+        except Exception:
+            pass
+        try:
+            abis = Build.SUPPORTED_ABIS
+            if abis:
+                info["arch"] = str(abis[0])
+        except Exception:
+            pass
+    except Exception:
+        pass
+    info["label"] = f"안드로이드 폰 · {info['device']} · {info['os']}".strip(" ·")
+    return info
+
+
+def _detect_desktop_body() -> dict:
+    """맥/PC 프로세스 — platform + macOS sysctl로 칩/OS 정체성 읽기."""
+    system = platform.system()        # Darwin / Windows / Linux
+    arch = platform.machine()         # arm64 / x86_64
+    info = {"arch": arch}
+    if system == "Darwin":
+        info["kind"] = "mac"
+        chip = _sysctl("machdep.cpu.brand_string") or (
+            "Apple Silicon" if arch == "arm64" else "Intel Mac"
+        )
+        hw_model = _sysctl("hw.model")
+        ver = platform.mac_ver()[0] or ""
+        info["device"] = chip + (f" ({hw_model})" if hw_model else "")
+        info["os"] = f"macOS {ver}".strip()
+        info["label"] = f"맥 · {chip} · macOS {ver}".strip(" ·")
+    elif system == "Windows":
+        info["kind"] = "pc"
+        info["device"] = platform.processor() or "Windows PC"
+        info["os"] = f"Windows {platform.release()}"
+        info["label"] = f"PC · {info['device']} · {info['os']}".strip(" ·")
+    else:
+        info["kind"] = "pc"
+        info["device"] = platform.processor() or f"{system} machine"
+        info["os"] = f"{system} {platform.release()}"
+        info["label"] = f"{system} · {info['device']}".strip(" ·")
+    return info
+
+
+def detect_body() -> dict:
+    """지금 이 프로세스가 어느 '몸'에서 도는지 감지 (부팅 1회·캐시).
+
+    INDIEBIZ_PROFILE 로 폰/맥을 가르고, 각 몸의 네이티브 경로
+    (Android Build / macOS sysctl)로 상세 정체성을 읽는다. 전 구간
+    방어 — 감지 실패해도 부팅을 막지 않는다.
+
+    Returns:
+        {profile, kind, device, os, arch, label}
+        label = 프롬프트용 한 줄 (예: "맥 · Apple M4 Pro · macOS 15.3")
+    """
+    global _BODY_CACHE
+    if _BODY_CACHE is not None:
+        return _BODY_CACHE
+
+    profile = os.environ.get("INDIEBIZ_PROFILE", "")
+    body = {"profile": profile or "mac"}
+    if profile == "phone":
+        body.update(_detect_android_body())
+    else:
+        body.update(_detect_desktop_body())
+
+    _BODY_CACHE = body
+    return body
+
+
+# ── 능력 자기-모델 (capability self-portrait) ──
+# 최소: "나는 누구다" + "빌릴 수 있는 상대"만. 액션 목록은 IBL 어휘가 따로 가르치고,
+# 실시간 연결 상태는 월드펄스 생성 주기와 어긋나 stale 거짓말이 되므로 넣지 않는다
+# (피어 닿는지는 실행 시점에 엔진이 phone_unreachable 로 명확히 알려준다).
+
+def build_capability_portrait() -> dict:
+    """능력 자기-모델 — 정체성 + 빌림 상대(피어 설정 시)."""
+    body = detect_body()
+    kind = body.get("kind", "mac")
+    p = {"body": body.get("label", ""), "kind": kind}
+    if kind == "phone":
+        peer_url = os.environ.get("INDIEBIZ_MAC_URL")
+        p["peer_name"] = "맥미니(집 PC)"
+    else:
+        peer_url = os.environ.get("INDIEBIZ_PHONE_URL")
+        p["peer_name"] = "안드로이드 폰"
+    p["has_peer"] = bool(peer_url)
+    return p

@@ -79,24 +79,27 @@
         - 화면분석
         - 버튼찾기
       android:
-        description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. USB 디버깅 연결 폰. 데스크톱은 limbs:screen, 웹은 limbs:browser.
-        target_description: '흐름 — snapshot(요소+라벨+좌표 읽기, 기본) → tap(query 라벨/id 일부 권장, 또는 x,y) → type(text). 입력 후 전송 등 동적 버튼은 반드시 snapshot 다시. 주요 파라미터 — query(탭할 요소 라벨), x/y(snapshot이 준 좌표), text(입력), key(back/home/enter/recent), package_name(앱 실행, 예 com.kakao.talk), direction(swipe up/down/left/right). device_id 생략 시 첫 기기. 가이드 android.md 참조.'
+        description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.
+        target_description: '흐름 — snapshot(요소+라벨+좌표 읽기, 기본) → tap(query 라벨/id 일부 권장, 또는 x,y) → type(text). 입력 후 전송 등 동적 버튼은 반드시 snapshot 다시. 주요 파라미터 — query(탭할 요소 라벨), x/y(snapshot이 준 좌표), text(입력), key(back/home/recent), package_name(앱 실행, 예 com.kakao.talk), direction(swipe up/down/left/right). device_id 생략 시 첫 기기(PC 경로). 가이드 android.md 참조.'
         group: device
         target_key: op
         router: handler
         tool: android_op
-        runs_on: home_only   # PC-ADB로 폰 제어 — 폰 자신에선 무의미(sense:phone은 폰가능)
+        scope: system   # 폰 화면 조작 — 프로젝트 컨텍스트 불필요(sense:phone/here/listen/see 와 동형)
+        runs_on: anywhere   # 집 PC=PC-ADB(ui_control), 폰 프로파일=네이티브 AccessibilityService(자급). 핸들러가 INDIEBIZ_PROFILE로 분기
         ops:
           default: snapshot
           values:
             snapshot: 화면 독해 — 누를 수 있는 요소를 라벨+좌표로 반환 (탭 전 필수)
             tap: 요소 탭 (query 라벨/id 일부 권장, 또는 x,y)
-            type: 포커스된 입력창에 텍스트 입력 (한글은 IME 필요)
+            type: 포커스된 입력창에 텍스트 입력 (폰 네이티브는 ACTION_SET_TEXT라 한글 IME 불필요)
             swipe: 스와이프·스크롤 (direction up/down/left/right 또는 x1,y1,x2,y2)
-            key: 시스템 키 (back/home/enter/recent 등)
+            key: 시스템 키 (back/home/recent 등. 폰 네이티브는 enter 미지원)
             long_press: 길게 누르기 (x,y)
             open_app: 앱 실행 (package_name)
-        implementation: ADB(uiautomator dump + input)로 폰 화면 독해·터치·입력 op 분기
+        implementation: 집 PC=ADB(uiautomator dump+input, ui_control.py), 폰 자신=네이티브 AccessibilityService
+          (PhoneAccessibilityService — getRootInActiveWindow 독해 + dispatchGesture 터치 + ACTION_SET_TEXT 입력).
+          핸들러가 INDIEBIZ_PROFILE=phone 이면 네이티브로 분기. 폰은 1회 접근성 권한 활성 필요.
         keywords:
         - 안드로이드
         - 폰
@@ -186,6 +189,7 @@
           instrument: ytmusic
           mode: 큐
           mode_order: 1
+          phone_render: false   # 큐=서버측 mpv 대기열 — 폰 클라이언트 재생(mode:client)엔 무의미해 숨김
           auto_run: true
           buttons:
           - label: ⏭ 다음 곡

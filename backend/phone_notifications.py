@@ -55,27 +55,7 @@ def _conn():
             raw         TEXT
         )"""
     )
-    conn.execute(
-        """CREATE TABLE IF NOT EXISTS locations (
-            event_id    TEXT PRIMARY KEY,
-            sender      TEXT,
-            lat         REAL,
-            lng         REAL,
-            accuracy    REAL,
-            captured_at INTEGER,
-            received_at INTEGER
-        )"""
-    )
-    conn.execute(
-        """CREATE TABLE IF NOT EXISTS steps (
-            date        TEXT PRIMARY KEY,
-            sender      TEXT,
-            steps       INTEGER,
-            cumulative  INTEGER,
-            captured_at INTEGER,
-            received_at INTEGER
-        )"""
-    )
+    # (2026-06-12 location/steps 상시 수집 폐기 — 위치는 [sense:here] 온디맨드 1회 조회로 분리.)
     return conn
 
 
@@ -98,63 +78,6 @@ def store(event_id: str, sender: str, payload: dict, posted_at, received_at) -> 
     except Exception as e:
         print(f"[phone_notifications] store 실패: {e}")
         return False
-
-
-def store_location(event_id: str, sender: str, payload: dict, received_at) -> bool:
-    try:
-        conn = _conn()
-        cur = conn.execute(
-            "INSERT OR IGNORE INTO locations "
-            "(event_id, sender, lat, lng, accuracy, captured_at, received_at) VALUES (?,?,?,?,?,?,?)",
-            (event_id, sender, payload.get("lat"), payload.get("lng"),
-             payload.get("accuracy"), int(payload.get("captured_at") or 0), int(received_at)),
-        )
-        conn.commit()
-        inserted = cur.rowcount > 0
-        conn.close()
-        return inserted
-    except Exception as e:
-        print(f"[phone_notifications] store_location 실패: {e}")
-        return False
-
-
-def store_steps(sender: str, payload: dict, received_at) -> bool:
-    """걸음수는 날짜당 1행 (최신값으로 갱신)."""
-    try:
-        conn = _conn()
-        conn.execute(
-            "INSERT OR REPLACE INTO steps "
-            "(date, sender, steps, cumulative, captured_at, received_at) VALUES (?,?,?,?,?,?)",
-            (payload.get("date"), sender, int(payload.get("steps") or 0),
-             int(payload.get("cumulative") or 0), int(payload.get("captured_at") or 0), int(received_at)),
-        )
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        print(f"[phone_notifications] store_steps 실패: {e}")
-        return False
-
-
-def recent_locations(limit: int = 50) -> List[Dict]:
-    conn = _conn()
-    rows = conn.execute(
-        "SELECT lat, lng, accuracy, captured_at, received_at FROM locations "
-        "ORDER BY COALESCE(NULLIF(captured_at,0), received_at) DESC LIMIT ?", (limit,)
-    ).fetchall()
-    conn.close()
-    cols = ["lat", "lng", "accuracy", "captured_at", "received_at"]
-    return [dict(zip(cols, r)) for r in rows]
-
-
-def recent_steps(limit: int = 30) -> List[Dict]:
-    conn = _conn()
-    rows = conn.execute(
-        "SELECT date, steps, cumulative, captured_at FROM steps ORDER BY date DESC LIMIT ?", (limit,)
-    ).fetchall()
-    conn.close()
-    cols = ["date", "steps", "cumulative", "captured_at"]
-    return [dict(zip(cols, r)) for r in rows]
 
 
 # === M3 하드웨어 다리: 폰 로컬 캡처 (Nostr 왕복 없이) ===
@@ -256,12 +179,7 @@ def ingest_once(log=print) -> int:
         if t in ("notification", "test"):
             if store(dm.get("id"), sender, payload, dm.get("created_at"), now):
                 n += 1
-        elif t == "location":
-            if store_location(dm.get("id"), sender, payload, now):
-                n += 1
-        elif t == "steps":
-            if store_steps(sender, payload, now):
-                n += 1
+        # (location/steps 타입은 2026-06-12 폐기 — 폰이 더 이상 상시 push 하지 않음.)
     if n:
         log(f"[phone_notifications] 폰 신호 {n}건 저장")
     return n

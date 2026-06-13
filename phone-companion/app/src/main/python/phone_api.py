@@ -406,7 +406,12 @@ def output_file(name: str):
 
 @app.post("/ibl/execute")
 async def execute(req: Request):
-    """정본 통합 실행기로 라우팅 — PC /ibl/execute 와 동일 계약."""
+    """정본 통합 실행기로 라우팅 — PC /ibl/execute 와 동일 계약.
+
+    분산 라우팅은 엔진(ibl_engine.execute_ibl)이 액션 단위로 수행한다: 폰서 못 도는
+    액션을 만나면 그 액션만 맥(연합 두뇌)에 위임(_forward_to_mac)하고 결과를 받아온다.
+    합성 code(&/>>/??)의 각 leaf 가 chokepoint 를 거치므로 혼합 code 도 액션별로 쪼개져
+    로컬/맥에서 따로 실행된다. 여기선 항상 로컬 엔진에 넘기면 됨(엔진이 알아서 라우팅)."""
     body = await req.json()
     code = body.get("code", "")
     if not code:
@@ -421,12 +426,42 @@ async def execute(req: Request):
     # 엔진은 동기(내부에 자체 이벤트 루프 관리). 서버 asyncio 루프 블록 방지 위해 스레드로.
     result = await asyncio.to_thread(_run)
 
-    if isinstance(result, str):
+    obj = result
+    if isinstance(obj, str):
         try:
-            return JSONResponse(json.loads(result))
+            obj = json.loads(obj)
         except json.JSONDecodeError:
-            return JSONResponse({"result": result})
-    return JSONResponse(result)
+            return JSONResponse({"result": obj})
+    # 분산 IBL: 맥서 위임받은 mp3(b64)를 폰 Music 폴더에 네이티브 저장(빌린 연산→로컬 산출물).
+    # b64 는 WebView 로 안 보냄(Python↔Kotlin 으로만). 큰 파일도 JS 브리지 우회.
+    if isinstance(obj, dict) and obj.get("download_in_client") and obj.get("b64"):
+        obj = await asyncio.to_thread(_save_audio_to_phone, obj)
+    return JSONResponse(obj)
+
+
+def _save_audio_to_phone(obj: dict) -> dict:
+    """맥서 받은 mp3(b64) → 디코드 → Kotlin MediaSaver 로 폰 Music 폴더 저장.
+    b64 는 응답에서 제거. 성공/실패를 saved 플래그+message 로 WebView 에 알린다."""
+    import base64
+    b64 = obj.pop("b64", "")
+    fn = obj.get("filename") or "track.mp3"
+    try:
+        data = base64.b64decode(b64)
+        from java import jclass
+        media_saver = jclass("com.indiebiz.phoneagent.MediaSaver")
+        res = media_saver.saveAudio(data, fn)
+        res = str(res)
+        if res.startswith("ERROR"):
+            obj["saved"] = False
+            obj["message"] = f"폰 저장 실패: {res}"
+        else:
+            obj["saved"] = True
+            obj["saved_path"] = res
+            obj["message"] = f"폰 음악 폴더에 저장됨: {fn}"
+    except Exception as e:
+        obj["saved"] = False
+        obj["message"] = f"폰 저장 실패: {e.__class__.__name__}: {e}"
+    return obj
 
 
 # 서버 생명주기 — 액티비티가 start(앱 열기)/stop(앱 닫기)으로 제어.

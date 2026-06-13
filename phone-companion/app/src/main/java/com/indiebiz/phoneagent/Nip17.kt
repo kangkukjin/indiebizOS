@@ -70,4 +70,26 @@ object Nip17 {
 
         return wrap.toString()
     }
+
+    /**
+     * gift wrap(1059) 수신 → 언랩. wrapDm 역순: gift 복호 → seal 복호 → rumor.
+     * @return JSON {sender(발신 pubkey hex), content(평문), created_at(rumor 시각)}
+     */
+    fun unwrapDm(recipientPrivHex: String, giftWrapJson: String): String {
+        val wrap = JSONObject(giftWrapJson)
+        val ephPub = wrap.getString("pubkey")
+        // 1) gift wrap 복호(임시키→나) → seal
+        val wrapCk = Nip44.conversationKey(recipientPrivHex, ephPub)
+        val seal = JSONObject(Nip44.decrypt(wrap.getString("content"), wrapCk))
+        // 2) seal 복호(발신자→나) → rumor
+        val senderPub = seal.getString("pubkey")
+        val sealCk = Nip44.conversationKey(recipientPrivHex, senderPub)
+        val rumor = JSONObject(Nip44.decrypt(seal.getString("content"), sealCk))
+        // 3) rumor.pubkey 가 진짜 발신자(seal.pubkey 와 같아야 정상)
+        return JSONObject()
+            .put("sender", rumor.getString("pubkey"))
+            .put("content", rumor.getString("content"))
+            .put("created_at", rumor.optLong("created_at"))
+            .toString()
+    }
 }

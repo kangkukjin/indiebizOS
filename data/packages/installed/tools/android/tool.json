@@ -63,13 +63,13 @@
     },
     {
       "name": "phone_op",
-      "description": "폰 컴패니언 sense 피드 조회. 폰 에이전트가 보낸 알림/위치/걸음을 읽음(USB-ADB 불필요). op=notifications(기본): 최근 폰 알림 — '지금 폰에 연락/알림 오나'의 정답 소스. location: 최근 위치. steps: 일별 걸음수.",
+      "description": "폰 컴패니언 알림 피드 조회. 폰 에이전트가 보낸 최근 알림을 읽음(USB-ADB 불필요) — '지금 폰에 연락/알림 오나'의 정답 소스. (위치는 sense:here 온디맨드로 분리, 상시 수집 폐기.)",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["notifications", "location", "steps"],
+            "enum": ["notifications"],
             "default": "notifications",
             "description": "조회 종류"
           },
@@ -79,9 +79,57 @@
           },
           "pkg": {
             "type": "string",
-            "description": "특정 앱 패키지만 필터 (op=notifications), 예: com.kakao.talk"
+            "description": "특정 앱 패키지만 필터, 예: com.kakao.talk"
           }
         }
+      }
+    },
+    {
+      "name": "phone_locate",
+      "description": "폰의 현재 위치를 즉석에서 한 번 조회 (fused GPS). 상시 추적/저장 없이 물을 때만. 위경도+주소(역지오코딩) 반환. '지금 어디', '내 위치', 날씨/맛집/길찾기의 출발점. 폰 네이티브 전용(맥/원격은 분산 IBL 로 폰에 포워드).",
+      "input_schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "phone_listen",
+      "description": "폰 마이크 온디맨드 입력. op=transcribe(기본): 지금 발화를 받아써 텍스트로(STT, ko-KR, timeout_sec 대기). record: duration_sec 초 녹음해 파일로(경로 반환). 상시 청취 아닌 호출 시 1회. 폰 네이티브 전용(맥/원격은 분산 IBL 포워드 — transcribe 텍스트는 무손실, record 파일은 폰 잔류).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": ["transcribe", "record"],
+            "default": "transcribe",
+            "description": "transcribe=받아쓰기(STT→텍스트), record=녹음(→오디오 파일)"
+          },
+          "timeout_sec": {
+            "type": "integer",
+            "description": "받아쓰기 발화 대기 한도 초 (op=transcribe, 기본 15, 5~60)"
+          },
+          "duration_sec": {
+            "type": "integer",
+            "description": "녹음 길이 초 (op=record, 기본 5, 1~300)"
+          }
+        }
+      }
+    },
+    {
+      "name": "phone_capture",
+      "description": "폰 카메라로 사진 1장 촬영 (미리보기 없이 정지 캡처). 상시 촬영 아닌 호출 시 1회. facing=back(기본)/front. 폰에 jpg 저장 후 경로 반환. 폰 네이티브 전용(맥/원격은 분산 IBL 포워드 — 파일은 폰 잔류). 앱 포그라운드일 때 가장 안정적.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "facing": {
+            "type": "string",
+            "enum": ["back", "front"],
+            "default": "back",
+            "description": "후면(back, 기본) 또는 전면(front) 카메라"
+          }
+        },
+        "additionalProperties": true
       }
     },
     {

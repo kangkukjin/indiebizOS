@@ -1,20 +1,46 @@
 package com.indiebiz.phoneagent
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.ImageFormat
+import android.graphics.SurfaceTexture
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraDevice
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CaptureRequest
+import android.location.Geocoder
+import android.media.ImageReader
+import android.media.MediaRecorder
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.util.Size
+import android.view.Surface
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import org.json.JSONObject
+import java.io.File
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * 송신측(폰→동작) effector 다리: 폰의 파이썬 뇌([limbs:phone])가 폰 하드웨어를 직접 만지게 한다.
@@ -23,8 +49,9 @@ import java.util.Locale
  * `jclass("com.indiebiz.phoneagent.PhoneActions").notify(...)` 식으로 부른다.
  * 모든 메서드는 @JvmStatic(폰 프로파일 전용; PC에선 from java import 자체가 실패해 graceful 거부).
  *
- * [sense:phone](하드웨어 입력)의 출력 짝. 새 위험 권한 없이 견고한 첫 세트:
- * notify/vibrate/toast/clipboard/speak/openApp. SMS·통화는 민감(메시지 발송)이라 제외.
+ * 출력(effector): notify/vibrate/toast/clipboard/speak/openApp (SMS·통화는 민감해 제외).
+ * 입력(sense): getCurrentLocationNow([sense:here] 위치) · transcribeFromMic/recordAudio([sense:listen] 귀)
+ *   · capturePhoto([sense:see] 눈). 전부 온디맨드(상시 수집 아님) — 물을 때 1회.
  */
 object PhoneActions {
     @Volatile private var appContext: Context? = null
@@ -181,5 +208,253 @@ object PhoneActions {
         } catch (e: Throwable) {
             android.util.Log.e("PhoneActions", "openApp failed: $e"); false
         }
+    }
+
+    /**
+     * 현재 위치를 즉석에서 한 번 조회 ([sense:here] 의 하드웨어 다리).
+     *
+     * 상시 추적·저장이 아니라, 물을 때 그 순간만 fused GPS 로 한 번 가져온다(augmentation).
+     * Chaquopy 가 동기 호출하므로 비동기 fused Task 를 CountDownLatch 로 블록해 결과를 기다린다.
+     * 반환=JSON 문자열: {lat,lng,accuracy,captured_at[,address]} 또는 {error}. 핸들러가 파싱.
+     */
+    @JvmStatic
+    fun getCurrentLocationNow(): String {
+        val ctx = appContext ?: return """{"error":"context 미초기화"}"""
+        val fine = ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        val coarse = ctx.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!fine && !coarse) {
+            return """{"error":"위치 권한 없음 — 설정에서 IndieBiz 위치 권한을 허용하세요"}"""
+        }
+        val fused = LocationServices.getFusedLocationProviderClient(ctx)
+        val latch = CountDownLatch(1)
+        val holder = arrayOfNulls<android.location.Location>(1)
+        val errMsg = arrayOfNulls<String>(1)
+        try {
+            fused.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                .addOnSuccessListener { loc -> holder[0] = loc; latch.countDown() }
+                .addOnFailureListener { e -> errMsg[0] = e.message; latch.countDown() }
+        } catch (se: SecurityException) {
+            return """{"error":"위치 권한 거부(SecurityException)"}"""
+        }
+        if (!latch.await(15, TimeUnit.SECONDS)) {
+            return """{"error":"위치 조회 시간초과(15초)"}"""
+        }
+        val loc = holder[0]
+            ?: return """{"error":"위치 null${if (errMsg[0] != null) " — ${errMsg[0]}" else ""}"}"""
+        val out = JSONObject()
+            .put("lat", loc.latitude)
+            .put("lng", loc.longitude)
+            .put("accuracy", loc.accuracy.toDouble())
+            .put("captured_at", System.currentTimeMillis() / 1000)
+        // 역지오코딩(주소) — best-effort, 오프라인/실패 시 좌표만. "어디"에 사람이 읽을 답을 준다.
+        try {
+            @Suppress("DEPRECATION")
+            val addrs = Geocoder(ctx, Locale.KOREA).getFromLocation(loc.latitude, loc.longitude, 1)
+            if (!addrs.isNullOrEmpty()) out.put("address", addrs[0].getAddressLine(0))
+        } catch (_: Throwable) {}
+        return out.toString()
+    }
+
+    private fun errJson(msg: String): String = JSONObject().put("error", msg).toString()
+
+    /**
+     * 마이크 음성 받아쓰기 ([sense:listen]{op:transcribe} 의 다리) — STT → 텍스트.
+     *
+     * Android SpeechRecognizer(온디바이스/Google) 로 지금 발화를 듣고 텍스트로. ko-KR.
+     * 메인스레드 바인딩 + 비동기 결과라 main.post + CountDownLatch 로 동기화(location 과 동형).
+     * 반환=JSON: {text} 또는 {error}. 포워드 시 텍스트라 맥↔폰 무손실.
+     */
+    @JvmStatic
+    fun transcribeFromMic(timeoutSec: Int): String {
+        val ctx = appContext ?: return errJson("context 미초기화")
+        if (ctx.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+            return errJson("마이크 권한 없음 — 설정에서 IndieBiz 마이크 권한을 허용하세요")
+        if (!SpeechRecognizer.isRecognitionAvailable(ctx))
+            return errJson("음성 인식 서비스 없음(Google 앱/온디바이스 STT 미설치)")
+        val latch = CountDownLatch(1)
+        val text = arrayOfNulls<String>(1)
+        val err = arrayOfNulls<String>(1)
+        main.post {
+            try {
+                val sr = SpeechRecognizer.createSpeechRecognizer(ctx)
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
+                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                }
+                sr.setRecognitionListener(object : RecognitionListener {
+                    override fun onResults(b: Bundle) {
+                        text[0] = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
+                        sr.destroy(); latch.countDown()
+                    }
+                    override fun onError(code: Int) {
+                        err[0] = when (code) {
+                            SpeechRecognizer.ERROR_SPEECH_TIMEOUT, SpeechRecognizer.ERROR_NO_MATCH -> "발화 감지 못함(무음/미인식)"
+                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "마이크 권한 부족"
+                            else -> "STT 오류코드 $code"
+                        }
+                        sr.destroy(); latch.countDown()
+                    }
+                    override fun onReadyForSpeech(p: Bundle?) {}
+                    override fun onBeginningOfSpeech() {}
+                    override fun onRmsChanged(r: Float) {}
+                    override fun onBufferReceived(b: ByteArray?) {}
+                    override fun onEndOfSpeech() {}
+                    override fun onPartialResults(p: Bundle?) {}
+                    override fun onEvent(t: Int, p: Bundle?) {}
+                })
+                sr.startListening(intent)
+            } catch (t: Throwable) { err[0] = t.message; latch.countDown() }
+        }
+        if (!latch.await(timeoutSec.toLong().coerceIn(5, 60), TimeUnit.SECONDS))
+            return errJson("음성 인식 시간초과(${timeoutSec}초) — 발화 없음")
+        err[0]?.let { return errJson(it) }
+        return JSONObject().put("text", text[0] ?: "").toString()
+    }
+
+    /**
+     * 마이크 녹음 ([sense:listen]{op:record} 의 다리) — durationSec 초 동안 녹음해 파일로.
+     *
+     * MediaRecorder(AAC/m4a) → filesDir/recordings/. 동기 호출이라 호출 스레드에서 dur 초 블록.
+     * 반환=JSON: {path, duration_sec, bytes} 또는 {error}. 파일은 폰에 잔류(맥 포워드 시 경로만 — 회수는 후속).
+     */
+    @JvmStatic
+    fun recordAudio(durationSec: Int): String {
+        val ctx = appContext ?: return errJson("context 미초기화")
+        if (ctx.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+            return errJson("마이크 권한 없음 — 설정에서 IndieBiz 마이크 권한을 허용하세요")
+        val dur = durationSec.coerceIn(1, 300)
+        val dir = File(ctx.filesDir, "recordings").apply { mkdirs() }
+        val out = File(dir, "rec_${System.currentTimeMillis()}.m4a")
+        @Suppress("DEPRECATION")
+        val rec = if (Build.VERSION.SDK_INT >= 31) MediaRecorder(ctx) else MediaRecorder()
+        return try {
+            rec.setAudioSource(MediaRecorder.AudioSource.MIC)
+            rec.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            rec.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            rec.setOutputFile(out.absolutePath)
+            rec.prepare(); rec.start()
+            Thread.sleep(dur * 1000L)
+            rec.stop(); rec.release()
+            JSONObject().put("path", out.absolutePath).put("duration_sec", dur)
+                .put("bytes", out.length()).toString()
+        } catch (t: Throwable) {
+            try { rec.release() } catch (_: Throwable) {}
+            errJson("녹음 실패: ${t.message}")
+        }
+    }
+
+    /**
+     * 카메라로 사진 1장 촬영 ([sense:see] 의 다리) — 미리보기 없이 정지 캡처.
+     *
+     * Camera2 + ImageReader(JPEG) — 백그라운드 HandlerThread 에서 비동기 진행을 CountDownLatch 로 동기화.
+     * facing=back(기본)/front. 반환=JSON: {path, bytes, facing} 또는 {error}. 파일은 폰에 잔류(맥 포워드 시 경로만).
+     * 주의: 앱이 포그라운드일 때 가장 안정적(백그라운드 카메라 접근은 OS 제약 — 호출 시 보통 앱이 떠 있음).
+     */
+    @JvmStatic
+    fun capturePhoto(facing: String): String {
+        val ctx = appContext ?: return errJson("context 미초기화")
+        if (ctx.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
+            return errJson("카메라 권한 없음 — 설정에서 IndieBiz 카메라 권한을 허용하세요")
+        val cm = ctx.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        val wantFront = facing.equals("front", true)
+        var camId: String? = null
+        var jpegSize = Size(1920, 1080)
+        try {
+            for (id in cm.cameraIdList) {
+                val chars = cm.getCameraCharacteristics(id)
+                val lens = chars.get(CameraCharacteristics.LENS_FACING)
+                val match = (wantFront && lens == CameraCharacteristics.LENS_FACING_FRONT) ||
+                    (!wantFront && lens == CameraCharacteristics.LENS_FACING_BACK)
+                if (match || camId == null) {
+                    val map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                    val sizes = map?.getOutputSizes(ImageFormat.JPEG)
+                    val best = sizes?.maxByOrNull { it.width.toLong() * it.height }
+                    if (camId == null || match) { camId = id; if (best != null) jpegSize = best }
+                    if (match) break
+                }
+            }
+        } catch (t: Throwable) { return errJson("카메라 조회 실패: ${t.message}") }
+        val useId = camId ?: return errJson("카메라 없음")
+
+        val dir = File(ctx.filesDir, "photos").apply { mkdirs() }
+        val out = File(dir, "photo_${System.currentTimeMillis()}.jpg")
+        val latch = CountDownLatch(1)
+        val err = arrayOfNulls<String>(1)
+        val thread = HandlerThread("cam-capture").apply { start() }
+        val handler = Handler(thread.looper)
+        val reader = ImageReader.newInstance(jpegSize.width, jpegSize.height, ImageFormat.JPEG, 1)
+        reader.setOnImageAvailableListener({ r ->
+            try {
+                val img = r.acquireNextImage()
+                val buf = img.planes[0].buffer
+                val bytes = ByteArray(buf.remaining()); buf.get(bytes)
+                out.writeBytes(bytes)
+                img.close()
+            } catch (t: Throwable) { err[0] = "이미지 저장 실패: ${t.message}" }
+            latch.countDown()
+        }, handler)
+        // 더미 프리뷰 표면(화면 없음) — 3A(자동노출/초점) 수렴용. 없으면 첫 정지캡처가 센서 바닥값(흑색)으로 나온다.
+        val previewTex = SurfaceTexture(0).apply { setDefaultBufferSize(jpegSize.width, jpegSize.height) }
+        val previewSurface = Surface(previewTex)
+
+        var camera: CameraDevice? = null
+        try {
+            cm.openCamera(useId, object : CameraDevice.StateCallback() {
+                override fun onOpened(device: CameraDevice) {
+                    camera = device
+                    try {
+                        device.createCaptureSession(listOf(previewSurface, reader.surface), object : CameraCaptureSession.StateCallback() {
+                            override fun onConfigured(session: CameraCaptureSession) {
+                                try {
+                                    // 1) 프리뷰 반복요청으로 노출/초점 수렴
+                                    val preview = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                                    preview.addTarget(previewSurface)
+                                    preview.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                                    preview.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                                    session.setRepeatingRequest(preview.build(), null, handler)
+                                    // 2) 수렴 시간(1.5초) 뒤 정지 캡처
+                                    handler.postDelayed({
+                                        try {
+                                            val still = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                                            still.addTarget(reader.surface)
+                                            still.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                                            still.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                                            session.stopRepeating()
+                                            session.capture(still.build(), null, handler)
+                                        } catch (t: Throwable) { err[0] = "캡처 실패: ${t.message}"; latch.countDown() }
+                                    }, 1500)
+                                } catch (t: Throwable) { err[0] = "프리뷰 시작 실패: ${t.message}"; latch.countDown() }
+                            }
+                            override fun onConfigureFailed(session: CameraCaptureSession) {
+                                err[0] = "캡처 세션 설정 실패"; latch.countDown()
+                            }
+                        }, handler)
+                    } catch (t: Throwable) { err[0] = "세션 생성 실패: ${t.message}"; latch.countDown() }
+                }
+                override fun onDisconnected(device: CameraDevice) { device.close() }
+                override fun onError(device: CameraDevice, e: Int) {
+                    err[0] = "카메라 오류코드 $e"; device.close(); latch.countDown()
+                }
+            }, handler)
+        } catch (t: Throwable) {
+            thread.quitSafely(); previewSurface.release(); previewTex.release()
+            return errJson("openCamera 실패: ${t.message}")
+        }
+
+        val ok = latch.await(15, TimeUnit.SECONDS)
+        try { camera?.close() } catch (_: Throwable) {}
+        try { reader.close() } catch (_: Throwable) {}
+        try { previewSurface.release() } catch (_: Throwable) {}
+        try { previewTex.release() } catch (_: Throwable) {}
+        thread.quitSafely()
+        if (!ok) return errJson("촬영 시간초과(15초)")
+        err[0]?.let { return errJson(it) }
+        if (!out.exists() || out.length() == 0L) return errJson("촬영 실패(빈 파일)")
+        return JSONObject().put("path", out.absolutePath).put("bytes", out.length())
+            .put("facing", if (wantFront) "front" else "back")
+            .put("width", jpegSize.width).put("height", jpegSize.height).toString()
     }
 }

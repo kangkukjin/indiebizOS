@@ -17,18 +17,7 @@ async def get_phone_notifications(limit: int = 30, pkg: Optional[str] = None):
     return {"notifications": items, "count": len(items)}
 
 
-@router.get("/phone/locations")
-async def get_phone_locations(limit: int = 50):
-    """최근 위치 기록 (시간 내림차순). lat/lng/accuracy/captured_at."""
-    items = phone_notifications.recent_locations(limit=limit)
-    return {"locations": items, "count": len(items)}
-
-
-@router.get("/phone/steps")
-async def get_phone_steps(limit: int = 30):
-    """일별 걸음수 기록 (날짜 내림차순). date/steps/cumulative."""
-    items = phone_notifications.recent_steps(limit=limit)
-    return {"steps": items, "count": len(items)}
+# (2026-06-12 /phone/locations·/phone/steps 제거 — 상시 수집 폐기. 위치는 [sense:here] 온디맨드.)
 
 
 @router.post("/phone/notifications/poll")

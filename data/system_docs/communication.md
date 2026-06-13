@@ -50,15 +50,18 @@ IndieBiz OS는 GUI 외에도 Gmail, Nostr 등 외부 채널을 통해 사용자 
 ### Nostr (실시간 WebSocket)
 - **인증**: nsec 개인키 (NIP-01)
 - **수신**: 실시간 WebSocket (릴레이 구독). DM 조회는 전체 릴레이 fan-out + dedup (`_query_relays` — 단일 릴레이만 읽던 버그 수정됨)
-- **발송**: **NIP-17 gift-wrap DM** (2026-06-05 전환 — 최신 클라이언트 0xchat 등에서 수신 확인). 구 `send_dm`(NIP-04)은 보존, 수신은 NIP-04(kind:4) + NIP-17(kind:1059) 병행
+- **발송**: **NIP-17 gift-wrap DM 단일** (2026-06-05 전환 → 2026-06-13 NIP-04 완전 은퇴). 모든 발신(메신저 작성·자동응답·REST·폰)이 `send_dm_nip17`. 구 `send_dm`(NIP-04 kind:4)은 최신 앱이 복호 못 해 DM이 깨져 삭제. 수신은 NIP-17(kind:1059) 우선 + NIP-04(kind:4) 레거시 읽기(폰=NIP-17 전용, pynostr 부재)
 - **모듈**: `backend/nip44.py` (NIP-44 암호화, 공식 테스트 벡터 150/150 통과) + `backend/nip17.py` (gift-wrap). DM inbox relay 선언(kind:10050) 자동 발행
 - **기본 릴레이**: wss://relay.damus.io, wss://relay.nostr.band, wss://nos.lol, wss://relay.primal.net, wss://nostr.wine
 
 ### 폰 컴패니언 피드 (한방향 센서, 대화 채널과 분리)
-폰의 네이티브 컴패니언 앱(`phone-companion/`, NotificationListenerService)이 알림·위치·걸음수를 NIP-17 DM으로 전송:
+폰의 네이티브 컴패니언 앱(`phone-companion/`, NotificationListenerService)이 알림을 전송:
 - **수신/저장**: `backend/phone_notifications.py` → `data/phone_notifications.db` (대화용 channel_poller와 분리된 한방향 피드)
 - **인가**: `data/phone_agent.json`의 pubkey만 수용, 그 외 발신자 무시
-- **조회**: `[sense:phone]{op: notifications|location|steps}` 또는 `/phone/*` API — "지금 폰에 연락 오나"의 정답 소스
+- **조회**: `[sense:phone]{op: notifications}` 또는 `/phone/notifications` API — "지금 폰에 연락 오나"의 정답 소스
+- **위치**: `[sense:here]`(phone_only) — 상시 수집 폐기, 물을 때 1회 능동 조회(fused GPS+역지오코딩). 걸음수 수집은 폐기됨(2026-06-12).
+- **카메라**: `[sense:see]`(phone_only) — 온디맨드 촬영(Camera2 정지캡처→폰 jpg, 3A 수렴). facing=back/front.
+- **마이크**: `[sense:listen]{op: transcribe|record}`(phone_only) — 온디맨드 받아쓰기(STT→텍스트, 포워드 무손실)/녹음(→폰 m4a 파일).
 
 ### IndieNet 연동
 Nostr 키는 IndieNet identity와 연동 가능:

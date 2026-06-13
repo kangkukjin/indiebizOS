@@ -10,12 +10,14 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-    <!-- 위치 (인터벌 기록) -->
+    <!-- 위치 ([sense:here] 온디맨드 1회 조회 — 상시/백그라운드 수집 안 함) -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <!-- 걸음수 (1일 1회) -->
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- 마이크 ([sense:listen] 온디맨드 받아쓰기/녹음) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- 카메라 ([sense:see] 온디맨드 촬영) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <application
         android:name=".App"
@@ -50,6 +52,19 @@
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
+        </service>
+
+        <!-- [limbs:android] 폰 네이티브 화면 조작 (AccessibilityService) — USB-ADB 없이 자기 화면 독해·터치 -->
+        <service
+            android:name=".PhoneAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_config" />
         </service>
 
         <!-- 상주용 포그라운드 서비스 (프로세스 생존 유지) -->

@@ -9,6 +9,7 @@ SMS/통화/연락처 등 구조화 기능은 백업(data/packages/_archive/)에 
 표준 ToolContext 시그니처 + _OP_DISPATCHERS (radio 패턴, --check 삼각 검증 대상).
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -31,12 +32,17 @@ _OP_DISPATCHERS = {
         "open_app": None,
     },
     # 2026-06-06 폰 컴패니언 sense 피드 ([sense:phone]). limbs:android(제어)와
-    # 짝을 이루는 입력측 — 폰 에이전트가 NIP-17로 보낸 알림/위치/걸음을 읽는다.
+    # 짝을 이루는 입력측 — 폰 에이전트가 보낸 알림을 읽는다(이벤트 구동, 상시 폴링 아님).
     # raw ADB dumpsys 우회 대신 이 액션이 "지금 폰에 오는 연락"의 정답 소스.
+    # (2026-06-12 location/steps 상시 수집 폐기 — 위치는 [sense:here] 온디맨드로 분리.)
     "phone_op": {
         "notifications": None,
-        "location": None,
-        "steps": None,
+    },
+    # 2026-06-12 폰 현재위치 온디맨드 ([sense:here]) — 단일 목적이라 op 없음(디스패처 미등록).
+    # 2026-06-12 폰 마이크 ([sense:listen]) — transcribe(STT)/record(녹음).
+    "phone_listen": {
+        "transcribe": None,
+        "record": None,
     },
     # 2026-06-11 송신측(폰→동작) — [limbs:phone]. sense:phone(입력)의 출력 짝.
     # Chaquopy Java 브리지로 Kotlin PhoneActions 호출(폰 네이티브 전용, runs_on phone_only).
@@ -53,7 +59,8 @@ _OP_DISPATCHERS = {
         "call": None,
     },
 }
-_OP_DEFAULTS = {"android_op": "snapshot", "phone_op": "notifications", "phone_act": "notify"}
+_OP_DEFAULTS = {"android_op": "snapshot", "phone_op": "notifications",
+                "phone_listen": "transcribe", "phone_act": "notify"}
 
 
 def _snapshot(tool_input: dict) -> dict:
@@ -193,19 +200,9 @@ def _phone(tool_input: dict) -> dict:
             "hint": "ago='방금'/'N분 전'이면 방금 온 연락. 가장 최근이 수시간/수일 전이면 지금 오는 연락은 없음.",
         }
 
-    if op == "location":
-        rows = _pn.recent_locations(limit=limit)
-        for r in rows:
-            r["ago"] = _ago(r.get("captured_at") or r.get("received_at"))
-        return {"success": True, "count": len(rows), "locations": rows}
-
-    if op == "steps":
-        rows = _pn.recent_steps(limit=limit)
-        return {"success": True, "count": len(rows), "steps": rows}
-
     return {
         "success": False,
-        "error": f"알 수 없는 op '{op}'. 사용 가능: notifications/location/steps",
+        "error": f"알 수 없는 op '{op}'. 사용 가능: notifications",
     }
 
 
@@ -299,16 +296,195 @@ def _phone_act(tool_input: dict) -> dict:
             "error": f"알 수 없는 op '{op}'. 사용 가능: notify/vibrate/toast/clipboard/speak/open_app/sms/call"}
 
 
+def _phone_locate(tool_input: dict) -> dict:
+    """현재 위치 온디맨드 조회 ([sense:here]) — 폰 fused GPS (Chaquopy→Kotlin). phone_only.
+
+    상시 수집·저장 없이, 물을 때 그 순간 위치를 한 번 가져온다(augmentation-over-autonomy).
+    PC/원격에서 부르면 분산 IBL(ibl_engine)이 폰으로 포워드하므로, 맥의 AI 도 자기 위치를 안다.
+    반환: {success, lat, lng, accuracy, captured_at, address?}.
+    """
+    try:
+        from java import jclass  # Chaquopy 브리지 — 폰 네이티브 런타임에만 존재
+    except Exception:
+        return {"success": False,
+                "error": "[sense:here] 는 폰 네이티브 앱에서만 동작합니다(Chaquopy 브리지 부재). "
+                         "맥/원격에선 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 이 폰으로 포워드합니다.",
+                "phone_only": True}
+    try:
+        PA = jclass("com.indiebiz.phoneagent.PhoneActions")
+    except Exception as e:
+        return {"success": False, "error": f"PhoneActions 브리지 로드 실패: {e}"}
+
+    import json as _json
+    raw = PA.getCurrentLocationNow()
+    try:
+        data = _json.loads(str(raw))
+    except Exception:
+        return {"success": False, "error": f"위치 응답 파싱 실패: {raw}"}
+    if data.get("error"):
+        return {"success": False, "error": data["error"]}
+    return {"success": True, **data}
+
+
+def _phone_listen(tool_input: dict) -> dict:
+    """폰 마이크 온디맨드 ([sense:listen]) — transcribe(STT→텍스트)/record(녹음→파일). phone_only.
+
+    Chaquopy→Kotlin PhoneActions. transcribe 는 텍스트라 맥↔폰 포워드 무손실;
+    record 파일은 폰에 잔류(경로 반환, 회수는 후속). 상시 수집 아닌 호출 시 1회.
+    """
+    op = (tool_input.get("op") or _OP_DEFAULTS["phone_listen"]).strip()
+    try:
+        from java import jclass  # Chaquopy 브리지 — 폰 네이티브 런타임에만 존재
+    except Exception:
+        return {"success": False,
+                "error": "[sense:listen] 는 폰 네이티브 앱에서만 동작합니다(Chaquopy 브리지 부재). "
+                         "맥/원격에선 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 이 폰으로 포워드합니다.",
+                "phone_only": True}
+    try:
+        PA = jclass("com.indiebiz.phoneagent.PhoneActions")
+    except Exception as e:
+        return {"success": False, "error": f"PhoneActions 브리지 로드 실패: {e}"}
+
+    import json as _json
+    if op == "transcribe":
+        try:
+            timeout = int(tool_input.get("timeout_sec") or 15)
+        except (TypeError, ValueError):
+            timeout = 15
+        raw = PA.transcribeFromMic(timeout)
+    elif op == "record":
+        try:
+            dur = int(tool_input.get("duration_sec") or 5)
+        except (TypeError, ValueError):
+            dur = 5
+        raw = PA.recordAudio(dur)
+    else:
+        return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: transcribe/record"}
+
+    try:
+        data = _json.loads(str(raw))
+    except Exception:
+        return {"success": False, "error": f"마이크 응답 파싱 실패: {raw}"}
+    if data.get("error"):
+        return {"success": False, "error": data["error"]}
+    return {"success": True, **data}
+
+
+def _phone_capture(tool_input: dict) -> dict:
+    """폰 카메라 촬영 온디맨드 ([sense:see]) — 사진 1장 → 폰 파일. phone_only.
+
+    Chaquopy→Kotlin PhoneActions.capturePhoto. facing=back(기본)/front. 파일은 폰에 잔류
+    (경로 반환, 회수는 후속). 상시 촬영 아닌 호출 시 1회. 앱 포그라운드일 때 가장 안정적.
+    """
+    try:
+        from java import jclass  # Chaquopy 브리지 — 폰 네이티브 런타임에만 존재
+    except Exception:
+        return {"success": False,
+                "error": "[sense:see] 는 폰 네이티브 앱에서만 동작합니다(Chaquopy 브리지 부재). "
+                         "맥/원격에선 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 이 폰으로 포워드합니다.",
+                "phone_only": True}
+    try:
+        PA = jclass("com.indiebiz.phoneagent.PhoneActions")
+    except Exception as e:
+        return {"success": False, "error": f"PhoneActions 브리지 로드 실패: {e}"}
+
+    import json as _json
+    facing = str(tool_input.get("facing") or "back").strip()
+    raw = PA.capturePhoto(facing)
+    try:
+        data = _json.loads(str(raw))
+    except Exception:
+        return {"success": False, "error": f"촬영 응답 파싱 실패: {raw}"}
+    if data.get("error"):
+        return {"success": False, "error": data["error"]}
+    return {"success": True, **data}
+
+
+def _android_native(tool_input: dict) -> dict:
+    """[limbs:android] 폰 네이티브 경로 — INDIEBIZ_PROFILE=phone 일 때 PC-ADB 대신 AccessibilityService.
+
+    폰이 USB 없이 자기 화면을 독해·조작한다(Chaquopy→Kotlin PhoneAccessibilityService).
+    PC-ADB(ui_control)와 같은 op·파라미터 계약을 그대로 따른다 — 핸들러 분기만 환경별로.
+    접근성 서비스 미활성이면 needs_accessibility 안내 반환.
+    """
+    op = (tool_input.get("op") or _OP_DEFAULTS["android_op"]).strip()
+    try:
+        from java import jclass  # Chaquopy 브리지 — 폰 네이티브 런타임에만 존재
+    except Exception:
+        return {"success": False,
+                "error": "[limbs:android] 폰 네이티브 경로는 폰 앱에서만 동작합니다(Chaquopy 부재).",
+                "phone_only": True}
+    import json as _json
+    SVC = jclass("com.indiebiz.phoneagent.PhoneAccessibilityService")
+
+    if op == "snapshot":
+        raw = SVC.snapshot()
+    elif op == "tap":
+        query = tool_input.get("query")
+        if query:
+            raw = SVC.tapByText(str(query), int(tool_input.get("index", 0) or 0))
+        else:
+            x, y = tool_input.get("x"), tool_input.get("y")
+            if x is None or y is None:
+                return {"success": False, "message": "tap엔 query(요소 라벨) 또는 x,y 좌표가 필요합니다."}
+            raw = SVC.tap(int(x), int(y))
+    elif op == "type":
+        raw = SVC.typeText(str(tool_input.get("text", "")))
+    elif op == "swipe":
+        direction = tool_input.get("direction")
+        if direction:
+            raw = SVC.swipeDir(str(direction))
+        else:
+            try:
+                raw = SVC.swipe(int(tool_input["x1"]), int(tool_input["y1"]),
+                                int(tool_input["x2"]), int(tool_input["y2"]),
+                                int(tool_input.get("duration_ms", 300)))
+            except (KeyError, TypeError, ValueError):
+                return {"success": False, "message": "swipe엔 direction(up/down/left/right) 또는 x1,y1,x2,y2 가 필요합니다."}
+    elif op == "key":
+        raw = SVC.pressKey(str(tool_input.get("key") or tool_input.get("keycode", "")))
+    elif op == "long_press":
+        x, y = tool_input.get("x"), tool_input.get("y")
+        if x is None or y is None:
+            return {"success": False, "message": "long_press엔 x,y 좌표가 필요합니다."}
+        raw = SVC.longPress(int(x), int(y), int(tool_input.get("duration_ms", 1000)))
+    elif op == "open_app":
+        pkg = tool_input.get("package_name") or tool_input.get("package")
+        if not pkg:
+            return {"success": False, "error": "open_app엔 package_name 이 필요합니다 (예 com.kakao.talk)."}
+        PA = jclass("com.indiebiz.phoneagent.PhoneActions")
+        ok = bool(PA.openApp(str(pkg)))
+        return {"success": ok, "message": f"앱 실행: {pkg}" if ok else f"앱을 찾을 수 없습니다: {pkg}"}
+    else:
+        return {"success": False,
+                "error": f"알 수 없는 op '{op}'. 사용 가능: snapshot/tap/type/swipe/key/long_press/open_app"}
+
+    try:
+        return _json.loads(str(raw))
+    except Exception:
+        return {"success": False, "error": f"네이티브 응답 파싱 실패: {raw}"}
+
+
 def execute(tool_input: dict, context) -> dict:
-    """ToolContext 기반 표준 시그니처. limbs:android(PC-ADB 제어) + sense:phone(컴패니언 입력 피드)
-    + limbs:phone(폰 네이티브 출력 effector) 디스패처."""
+    """ToolContext 기반 표준 시그니처. limbs:android(PC-ADB or 폰 네이티브 접근성) + sense:phone(알림 피드)
+    + sense:here(현재위치) + sense:listen(마이크) + sense:see(카메라) + limbs:phone(폰 네이티브 effector) 디스패처."""
     tool_name = context.tool_name
     if tool_name == "phone_op":
         return _phone(tool_input)
+    if tool_name == "phone_locate":
+        return _phone_locate(tool_input)
+    if tool_name == "phone_listen":
+        return _phone_listen(tool_input)
+    if tool_name == "phone_capture":
+        return _phone_capture(tool_input)
     if tool_name == "phone_act":
         return _phone_act(tool_input)
     if tool_name != "android_op":
         raise ValueError(f"Unknown tool: {tool_name}")
+
+    # 폰 프로파일: PC-ADB(USB) 대신 폰 네이티브 AccessibilityService 로 자기 화면 조작(자급).
+    if os.environ.get("INDIEBIZ_PROFILE") == "phone":
+        return _android_native(tool_input)
 
     op = (tool_input.get("op") or _OP_DEFAULTS["android_op"]).strip()
     device_id = tool_input.get("device_id")

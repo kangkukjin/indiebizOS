@@ -612,6 +612,14 @@ def _collect_self_state() -> Dict:
     # ============================================================
     proprioception = {}
 
+    # 3.5) 능력 자기-모델 (capability self-portrait) — 모델이 "내가 뭘 할 수 있나"를
+    #      정확히 알도록. 정체성 + 내고유/빌림 분류 + 피어 실시간 연결성을 감지 사실로 조립.
+    try:
+        from runtime_utils import build_capability_portrait
+        state["capability"] = build_capability_portrait()
+    except Exception:
+        pass
+
     # 4) 프로세스 메모리 사용량
     try:
         import os

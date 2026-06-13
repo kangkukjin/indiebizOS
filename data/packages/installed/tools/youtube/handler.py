@@ -74,7 +74,10 @@ def execute(tool_input: dict, context):
                  or tool_input.get('file')
                  or tool_input.get('name')
                  or 'output.mp3')
-        return tool_youtube.download_youtube_music(url=tool_input['url'], filename=fname)
+        return tool_youtube.download_youtube_music(
+            url=tool_input.get('url') or tool_input.get('query', ''),
+            filename=fname,
+            mode=tool_input.get('mode', 'server'))
     elif tool_name == 'get_youtube_info':
         # url 또는 video_id 파라미터 지원 (transcript와 동일 해소)
         url = tool_input.get('url')

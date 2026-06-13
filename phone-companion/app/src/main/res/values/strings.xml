@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_desc">IndieBiz 가 폰 화면을 독해하고 탭·입력·스와이프로 조작합니다([limbs:android] 폰 자급 — USB 없이). 이 서비스를 켜면 AI 가 자율주행/수동 모드에서 폰 앱을 직접 다룰 수 있습니다.</string>
+</resources>

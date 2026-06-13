@@ -957,7 +957,7 @@ class ChannelPoller:
             indienet = get_indienet()
 
             if indienet._initialized:
-                event_id = indienet.send_dm(to_pubkey=recipient_pubkey, content=message)
+                event_id = indienet.send_dm_nip17(to_pubkey=recipient_pubkey, content=message)
                 if event_id:
                     self._log(f"Nostr DM 발행 완료 (IndieNet): {event_id[:16]}...")
                 else:

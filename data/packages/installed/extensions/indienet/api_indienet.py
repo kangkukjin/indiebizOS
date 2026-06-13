@@ -219,7 +219,7 @@ async def send_indienet_dm(data: IndieNetDMRequest):
         if not indienet.is_initialized():
             raise HTTPException(status_code=400, detail="IndieNet이 초기화되지 않음")
 
-        event_id = indienet.send_dm(to_pubkey=data.to_pubkey, content=data.content)
+        event_id = indienet.send_dm_nip17(to_pubkey=data.to_pubkey, content=data.content)
 
         if event_id:
             import time

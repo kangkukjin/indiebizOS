@@ -73,6 +73,14 @@ def _init_base(base_path):
     # claude_code_remote(맥 claude_code 렌트, 키 불필요). apiKey="" → 프로바이더가 env 폴백.
     _ensure_phone_ai_configs(base_path)
 
+    # scratch 프로젝트 경로 — scope=project 액션이 경로를 요구하므로 확보(weather/crypto 는 미사용).
+    # BaseBundle 이 지우는 indiebiz_base 의 sibling(filesDir/scratch)에 둬 생성물(신문 등)이 영속.
+    _scratch = os.path.join(os.path.dirname(base_path), "scratch")
+    os.makedirs(os.path.join(_scratch, "outputs"), exist_ok=True)
+
+    import api_launcher_web as lw  # 트리 backend/ 에서. IBL_NODES_PATH 는 정본 상대경로로 자동 해소.
+    _lw = lw
+
 
 def _ensure_phone_ai_configs(base_path):
     """폰 3티어 모델 config 를 data/ 에 생성(없을 때만 — 사용자 수정 보존)."""
@@ -99,16 +107,25 @@ def _ensure_phone_ai_configs(base_path):
     if _mac_url:
         print(f"[phone_api] 맥 위임 대상: {_mac_url} (비번 {'설정됨' if _mac_password else '없음'})")
 
-    # scratch 프로젝트 경로 — scope=project 액션이 경로를 요구하므로 확보(weather/crypto 는 미사용).
-    # BaseBundle 이 지우는 indiebiz_base 의 sibling(filesDir/scratch)에 둬 생성물(신문 등)이 영속.
-    _scratch = os.path.join(os.path.dirname(base_path), "scratch")
-    os.makedirs(os.path.join(_scratch, "outputs"), exist_ok=True)
-
-    import api_launcher_web as lw  # 트리 backend/ 에서. IBL_NODES_PATH 는 정본 상대경로로 자동 해소.
-    _lw = lw
-
 
 app = FastAPI()
+
+
+@app.on_event("startup")
+async def _start_phone_self_ws():
+    """폰-자아 역방향 WS 채널 시작 — 맥이 집밖 폰에도 execute_ibl 을 보낼 수 있게(away-case)."""
+    try:
+        import phone_ws_client
+        from system_tools import _execute_ibl_unified
+
+        def _exec_local(code, agent_id):
+            # 맥이 보낸 IBL 을 폰 정본 엔진으로 로컬 실행(폰이 못 하는 home_only 만 다시 맥 위임).
+            return _execute_ibl_unified({"code": code}, _scratch, agent_id=agent_id or "phone")
+
+        asyncio.create_task(phone_ws_client.run_ws_client(_exec_local))
+        print("[phone_api] 폰-자아 역방향 WS 채널 태스크 시작")
+    except Exception as e:
+        print(f"[phone_api] 역방향 WS 채널 시작 실패(무시): {e}")
 
 
 @app.get("/launcher/app")

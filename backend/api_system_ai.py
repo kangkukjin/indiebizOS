@@ -247,21 +247,24 @@ def chat_with_system_ai(chat: ChatMessage):
 async def claude_code_remote_turn(req: RemoteTurnRequest):
     """폰-자아 호스팅(§6.5) — 맥이 claude_code LLM 한 턴을 폰에게 렌트.
 
-    폰의 인지 하네스(중급·본격 티어)가 호출한다. 맥에서 claude_code 를 돌리되:
-    - system_prompt = 폰이 보낸 것(폰 world_pulse.md 기반 = "나는 폰") → 자기-모델이 폰으로 *참*.
-    - INDIEBIZOS_BACKEND_URL = backend_url(폰) → 에이전트의 execute_ibl 이 폰에서 실행(폰-자아의 몸).
-    맥은 LLM 추론(substrate)만 빌려준다. 인증=remote_access_guard(외부=런처 세션 강제).
-    claude_code 는 out-of-process(MCP 브리지)라 execute_tool 불필요."""
+    폰의 인지 하네스(중급·본격 티어)가 호출한다. 맥에서 claude_code 를 돌리되 system_prompt 는
+    폰이 보낸 것(폰 정체성)을 쓴다 → 자기-모델이 폰으로 *참*. execute_ibl(IBL 실행)의 위치는
+    **폰 역방향 WS 연결 여부**로 결정한다(away-case 해결, Cloudflare 터널 위 WS 채널):
+    - 폰 WS 연결됨(폰이 어디 있든 outbound WS 유지) → IBL 을 폰 WS 로 밀어넣어 폰-자아의 몸에서
+      실행(phone_only 센서/effector 포함, 집밖 LTE 에서도). backend_url=맥(localhost), route_to_phone=True.
+    - 폰 WS 미연결(폰 오프라인) → 맥에서 IBL 실행. body-neutral 은 결과 동일, phone_only 만 graceful 거부.
+    추론자아 정체성은 그대로 폰(system_prompt 운반) — "맥은 substrate, 정체성은 하네스".
+    맥은 LLM 추론만 빌려준다. 인증=remote_access_guard. claude_code out-of-process 라 execute_tool 불필요."""
     import asyncio
     from runtime_utils import get_base_path
     from providers import get_provider
+    import phone_self_channel as _ch
 
-    backend_url = (req.backend_url or os.environ.get("INDIEBIZ_PHONE_URL") or "").rstrip("/")
-    if not backend_url:
-        raise HTTPException(
-            status_code=503,
-            detail="폰 백엔드 URL 미설정 (backend_url 인자 또는 맥 INDIEBIZ_PHONE_URL 필요)",
-        )
+    # backend_url 은 맥 자신(claude_code 의 MCP 가 여기로 execute_ibl 을 보냄). 폰 WS 가 연결돼 있으면
+    # 맥의 /ibl/execute 가 route_to_phone_ws 플래그를 보고 그 실행을 폰 WS 로 릴레이한다.
+    backend_url = (os.environ.get("INDIEBIZOS_SELF_URL") or "http://localhost:8765").rstrip("/")
+    route_to_phone = _ch.is_connected()
+    executed_where = "phone(ws)" if route_to_phone else "mac"
     images = [img.dict() for img in (req.images or [])]
     history = req.history or []
 
@@ -274,7 +277,8 @@ async def claude_code_remote_turn(req: RemoteTurnRequest):
             project_path=str(get_base_path()),
             agent_name="폰-자아",
             agent_id=req.agent_id,
-            backend_url=backend_url,         # ★ execute_ibl → 폰
+            backend_url=backend_url,         # 맥 자신(MCP 진입점)
+            route_to_phone=route_to_phone,   # ★ 폰 WS 연결 시 IBL 을 폰으로 릴레이
         )
         if not provider.init_client():
             return {"_error": "claude_code 초기화 실패 (CLI 바이너리/토큰 확인)"}
@@ -298,6 +302,7 @@ async def claude_code_remote_turn(req: RemoteTurnRequest):
         "provider": "claude_code",
         "model": req.model or "",
         "executed_on": backend_url,
+        "executed_where": executed_where,  # phone(집/LAN) | mac(집밖 폴백)
     }
 
 

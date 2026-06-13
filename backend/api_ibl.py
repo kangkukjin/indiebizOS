@@ -14,6 +14,8 @@ class IBLRequest(BaseModel):
     project_path: str = "."
     agent_id: Optional[str] = None     # 발신 신원(channel_send/read 게이트). out-of-process 프로바이더(Claude Code)가
                                        # MCP→HTTP로 자기 agent_id를 실어 보내는 통로. None이면 신원 없음(외부 채널 차단).
+    route_to_phone_ws: bool = False    # 폰-자아 away-case: True 면 이 실행을 폰의 역방향 WS 로 밀어넣어 폰에서
+                                       # 실행(폰=몸). claude_code(맥)의 execute_ibl 진입에만 set — 폰→맥 forward 는 미set(루프 방지).
 
 
 class EmbedRequest(BaseModel):
@@ -61,6 +63,17 @@ async def execute_ibl_code(req: IBLRequest):
         agent_id = req.agent_id
         if not agent_id and req.project_id in ("앱모드", "수동모드"):
             agent_id = "system_ai"
+
+        # 폰-자아 away-case: claude_code(맥)가 폰-자아 턴의 execute_ibl 을 보냈고 폰 역방향 WS 가
+        # 연결돼 있으면, 이 실행을 폰으로 밀어넣어 폰의 몸에서 돌린다(phone_only 센서 포함 어디서나).
+        # 폰 미연결/실패면 아래 맥 로컬 실행으로 폴백(body-neutral 은 결과 동일).
+        if req.route_to_phone_ws:
+            try:
+                import phone_self_channel as _ch
+                if _ch.is_connected():
+                    return await _ch.execute_on_phone(req.code, agent_id=agent_id)
+            except Exception as e:
+                print(f"[ibl/execute] 폰 WS 실행 실패 → 맥 로컬 폴백: {e}")
 
         from system_tools import _execute_ibl_unified
         result = _execute_ibl_unified({"code": req.code}, project_path, agent_id=agent_id)

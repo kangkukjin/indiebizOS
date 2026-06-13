@@ -118,6 +118,36 @@ async def websocket_launcher(websocket: WebSocket):
         print("[WS] Launcher 연결 해제")
 
 
+# ============ 폰-자아 역방향 채널 (away-case: 폰이 outbound WS 로 맥에 닿게) ============
+
+@router.websocket("/ws/phone-self")
+async def websocket_phone_self(websocket: WebSocket):
+    """폰-자아가 맥의 CF 터널로 여는 outbound WS — 맥이 이 길로 execute_ibl 을 폰에 밀어넣는다.
+    인증: 런처 세션(?session= 쿼리). WS 는 HTTP 미들웨어(remote_access_guard)를 안 타므로 in-endpoint 검증."""
+    import phone_self_channel as ch
+    from api_launcher_web import sessions
+    session = websocket.query_params.get("session", "")
+    if session not in sessions:
+        await websocket.close(code=4401)  # 인증 실패
+        print("[WS] phone-self 인증 실패 — 세션 무효")
+        return
+    await websocket.accept()
+    phone_id = websocket.query_params.get("phone_id", "phone")
+    ch.register(phone_id, websocket)
+    print(f"[WS] phone-self 연결됨: {phone_id}")
+    try:
+        while True:
+            data = await websocket.receive_json()
+            t = data.get("type")
+            if t == "ibl_result":
+                ch.resolve(data.get("id"), data.get("result"))
+            elif t == "ping":
+                await websocket.send_json({"type": "pong"})
+    except (WebSocketDisconnect, Exception):
+        ch.unregister(phone_id)
+        print(f"[WS] phone-self 연결 해제: {phone_id}")
+
+
 async def send_launcher_command(command: str, params: dict = None) -> bool:
     """백엔드에서 Launcher로 명령 전송 (예: 프로젝트 창 열기)"""
     global _launcher_ws

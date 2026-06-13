@@ -145,6 +145,9 @@ class ClaudeCodeProvider(BaseProvider):
         # 폰-자아 호스팅(§6.5): 맥이 폰을 대신해 claude_code 를 돌릴 때 폰 백엔드를 가리키면,
         # 에이전트의 IBL 실행이 폰(폰-자아의 몸)에서 일어난다. 미설정이면 MCP 서버 기본(localhost).
         self.backend_url: Optional[str] = kwargs.pop("backend_url", None)
+        # 폰-자아 away-case: True 면 MCP 가 /ibl/execute 에 route_to_phone_ws=True 를 실어 보내,
+        # 맥이 이 세션의 IBL 실행을 폰의 역방향 WS 로 밀어넣게 한다(폰=몸, 어디서나).
+        self.route_to_phone: bool = kwargs.pop("route_to_phone", False)
         super().__init__(**kwargs)
         self._binary_path: Optional[str] = None
         self._effective_token: Optional[str] = None
@@ -690,6 +693,9 @@ class ClaudeCodeProvider(BaseProvider):
         # backend_url=폰 이면 이 세션의 IBL 실행이 폰에서 일어난다(맥은 LLM 추론만 렌트).
         if self.backend_url:
             env["INDIEBIZOS_BACKEND_URL"] = self.backend_url
+        # away-case: 폰 역방향 WS 로 IBL 을 보내게 MCP 가 route_to_phone_ws 를 동봉하도록.
+        if self.route_to_phone:
+            env["INDIEBIZOS_ROUTE_TO_PHONE"] = "1"
         return env
 
     def _save_images_to_temp(self, images: List[Dict]) -> List[str]:

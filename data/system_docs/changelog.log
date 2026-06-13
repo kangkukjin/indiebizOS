@@ -1436,3 +1436,22 @@
     안내). IBL-on-폰 leg 자체는 step5서 입증(backend_url 도달 시 POST /ibl/execute 200). away-case(LTE)
     IBL 라우팅은 step5 결정대로 home-first deferred. 운영: 집에선 INDIEBIZ_PHONE_URL=폰 현재 LAN IP 필요.
   - 핸드오프 §6 step 1~7 전부 완료. 폰=두 번째 독립 자아(자기 하네스+기억+정체성, 맥 substrate 렌트).
+
+[2026-06-13] away-case 해결 — 폰 집밖(LTE/NAT)에서도 IBL 실행 (CF 터널 위 WS 역방향 채널)
+  문제: 폰이 LTE/외부WiFi(NAT) 뒤면 맥이 폰을 dial 못 해, claude_code(맥)의 execute_ibl 이 폰-자아의
+  몸에 못 닿음("서울 날씨"가 집밖서 connection refused). 사용자 통찰: Cloudflare(맥 기존 터널)를 중간
+  서버로. 방향을 뒤집어 폰이 outbound WS 를 연다(폰이 거는 건 NAT 통과).
+  - backend/phone_self_channel.py: 맥↔폰 send-and-await RPC(req id 페어링, 끊김 시 pending 실패처리).
+  - /ws/phone-self (api_websocket): 폰이 맥 CF 터널로 여는 WS. 인증=런처 세션(?session=, WS 는 http
+    미들웨어 미적용이라 in-endpoint 검증). 폰의 ibl_result 를 future 로 resolve.
+  - api_ibl /ibl/execute +route_to_phone_ws: True+폰 WS 연결 시 execute_on_phone 으로 릴레이(폰 몸 실행),
+    미연결/실패 시 맥 로컬 폴백. 루프 방지=claude_code→맥 진입만 플래그 set, 폰→맥 forward 는 미set.
+  - 플래그 경로: remote_turn(폰 WS 연결 감지)→ClaudeCodeProvider(route_to_phone)→_build_env
+    INDIEBIZOS_ROUTE_TO_PHONE→mcp_server payload route_to_phone_ws→api_ibl.
+  - 폰: phone_ws_client.py(websockets, 맥 터널로 outbound WS 유지·재연결, ibl_execute→로컬 엔진 실행→
+    ibl_result), phone_api startup 훅으로 태스크 기동. build.gradle +websockets pip.
+  - ★A36 종단(폰 CELLULAR): "서울 날씨"→provider:phone-self→해마 0.906→Reflex EXECUTE→WS 릴레이→
+    폰 logcat [IBL_DEBUG] [sense:weather]{서울}→실제 Open-Meteo 날씨(28.7°C). 집밖 실패가 작동으로.
+  - ⚠️함께 수정: step7(f10eb6a)부터 _init_base 의 _lw/_scratch 전역 바인딩이 _ensure_phone_ai_configs
+    함수 안으로 잘못 들어가 _lw=None→런처 UI(instruments/app) 500("internal server error"). step7
+    "기동 OK" 체크가 비어있지않음만 봐서 500 문자열 통과시킨 거짓 양성으로 못 잡았음. _init_base 로 복원.

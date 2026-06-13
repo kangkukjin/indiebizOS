@@ -1364,3 +1364,18 @@
   - ★정합성 검증: embed_vectors([q])[0] == _generate_embedding(q) 언팩 (max element diff 1.49e-08,
     cosine 1.0) → /embed 와 인덱싱이 동일 벡터공간. search_semantic 도 _generate_embedding(query) raw
     사용 확인 → 폰 brute-force 코사인이 맥 search_semantic 과 동치. 라이브 맥 단건/배치 검증(norm=1.0).
+
+[2026-06-13] 폰-자아 호스팅 기반공사 4 — 인지 하네스 폰 번들 (A36 import 검증)
+  핸드오프 §6 step 4. 폰이 자기 하네스+기억을 호스팅(두 번째 독립 자아)하려면 인지 파이프라인이
+  폰에 실재해야. build.gradle _ENGINE_MODULES 에 인지 하네스 추가 + providers 패키지 + common_prompts 에셋.
+  - 추가 모듈(최상위 import 폐포 13, AST 분석으로 정확히 산정): prompt_builder, world_pulse_collectors,
+    world_pulse_health, agent_cognitive, consciousness_agent, goal_evaluator, agent_runner, ai_agent,
+    agent_communication, agent_goals, conversation_db + providers/ 패키지(벤더 SDK 지연 import). common_prompts 에셋.
+  - ★import 안전 사전검증(3중): ①최상위 import 폐포의 서드파티가 폰 pip(fastapi/pydantic/uvicorn/yaml/
+    requests/httpx/bs4/feedparser/numpy/Pillow) 밖=0 ②최상위 pydantic 사용=0(gemini_http는 docstring만,
+    실 import는 requests) ③맥 import 스모크 전부 clean. → 함수내 지연 import(anthropic/google-genai SDK)는
+    import 시점 무발동이라 폰 import 안전(de-risk 검증).
+  - A36 온디바이스 검증: 임시 /_debug/import_harness 엔드포인트로 12모듈+providers import → 전부 ok(_all_ok:true).
+    검증 후 엔드포인트 제거+클린 재빌드(no-temporary-patches, phone_api 0 수렴 §3④). 클린 APK 기동 정상·시작에러0.
+  - doFirst 드리프트 가드에 backend/providers·data/common_prompts 존재 확인 추가.
+  - 실제 추론 배선은 step5(claude_code_remote 프로바이더)·step7(진입점 전환). 여기선 모듈 실재+import 안전까지.

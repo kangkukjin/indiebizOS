@@ -1,10 +1,10 @@
 # IndieBiz OS 진단 리포트
-생성: 2026-06-13T12:32
+생성: 2026-06-13T12:46
 
 ## 시스템 상태: warning
 - 서비스: scheduler ✅ | channel_poller ✅ | system_ai_runner ✅
 - 디스크: 308.0GB 여유
-- 최근 6시간 펄스: 6회 (마지막: 2026-06-13T11:46)
+- 최근 6시간 펄스: 6회 (마지막: 2026-06-13T12:46)
 
 ## 액션 건강
 - 전체 125개: verified 93 | assumed 27 | failed 5

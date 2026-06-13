@@ -21,7 +21,7 @@ import storage
 # 값은 None — 분기 로직은 execute 안에 그대로 유지.
 # --check 가 이 dict 키로 src.ops.values 와 정확 비교.
 _OP_DISPATCHERS = {
-    "health_op": {"save": None, "query": None},
+    "health_op": {"save": None, "query": None, "delete": None},
 }
 # health_op는 op 필수 — _OP_DEFAULTS 항목 없음.
 
@@ -37,7 +37,9 @@ def execute(tool_input: dict, context) -> str:
             return save_health_info(tool_input)
         if op == "query":
             return get_health_context(tool_input)
-        return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|query)"}, ensure_ascii=False)
+        if op == "delete":
+            return delete_health_record(tool_input)
+        return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|query|delete)"}, ensure_ascii=False)
     # 옛 도구 이름 (직접 호출 호환)
     if tool_name == "save_health_info":
         return save_health_info(tool_input)
@@ -382,6 +384,53 @@ def get_health_context(input_data: dict) -> str:
         return f"조회 실패: {str(e)}"
 
 
+def delete_health_record(input_data: dict) -> str:
+    """건강 기록 삭제 (soft-delete tombstone → 동기화 전파).
+
+    파라미터: record_type(measurement|symptom|medication|document) + record_id(정수).
+    person 지정 시 해당 사용자 기록만(오삭제 방지). 조회 출력의 (#id) 가 record_id."""
+    # record_type 정규화 (한국어/조회유형 별칭 수용)
+    _RT_MAP = {
+        '측정': 'measurement', '측정값': 'measurement', 'measurements': 'measurement',
+        '증상': 'symptom', 'symptoms': 'symptom',
+        '투약': 'medication', '약': 'medication', '약물': 'medication', 'medications': 'medication',
+        '문서': 'document', '검사': 'document', 'documents': 'document',
+    }
+    record_type = (input_data.get('record_type') or input_data.get('info_type')
+                   or input_data.get('query_type') or '').strip()
+    record_type = _RT_MAP.get(record_type, record_type)
+
+    # record_id 수용 (id/record_id, 문자열 정수 허용)
+    raw_id = input_data.get('record_id', input_data.get('id'))
+    person = input_data.get('person')
+
+    _VALID = {'measurement', 'symptom', 'medication', 'document'}
+    if record_type not in _VALID:
+        return ("삭제 실패: record_type 을 지정하세요 "
+                "(measurement|symptom|medication|document). "
+                "예: {op: delete, record_type: measurement, record_id: 5}")
+    if raw_id in (None, ''):
+        return "삭제 실패: record_id(삭제할 기록 번호)를 지정하세요. 조회 결과의 (#번호)를 사용하세요."
+    try:
+        record_id = int(raw_id)
+    except (TypeError, ValueError):
+        return f"삭제 실패: record_id '{raw_id}' 가 정수가 아닙니다."
+
+    try:
+        ok = storage.soft_delete_record(record_type, record_id, person=person)
+    except Exception as e:
+        return f"삭제 실패: {str(e)}"
+
+    if not ok:
+        person_str = f"[{person}] " if person and person != "나" else ""
+        return f"삭제할 기록을 찾지 못했습니다: {person_str}{record_type} #{record_id}"
+
+    type_ko = {'measurement': '측정', 'symptom': '증상',
+               'medication': '투약', 'document': '문서'}.get(record_type, record_type)
+    person_str = f"[{person}] " if person and person != "나" else ""
+    return f"🗑 {person_str}{type_ko} 기록 #{record_id} 삭제됨"
+
+
 # ===== 유틸리티 함수들 =====
 
 def copy_image_to_storage(source_path: str, doc_type: str, person: str = None) -> str:
@@ -516,7 +565,7 @@ def format_measurements(measurements: list, category: str = None, person: str = 
         value_str = format_measurement_value(m['category'], m['value'])
         date_str = m['measured_at'][:16].replace('T', ' ')
         note_str = f" - {m['note']}" if m['note'] else ""
-        lines.append(f"  {date_str}: {value_str}{note_str}")
+        lines.append(f"  (#{m['id']}) {date_str}: {value_str}{note_str}")
 
     return "\n".join(lines)
 
@@ -530,7 +579,7 @@ def format_symptoms(symptoms: list, person: str = None) -> str:
         status = "진행중" if not s['ended_at'] else f"~{s['ended_at']}"
         sev = f" [{severity_to_korean(s['severity'])}]" if s['severity'] else ""
         desc = f": {s['description']}" if s['description'] else ""
-        lines.append(f"  • {category_to_korean(s['category'])}{sev} ({s['started_at']} {status}){desc}")
+        lines.append(f"  • (#{s['id']}) {category_to_korean(s['category'])}{sev} ({s['started_at']} {status}){desc}")
 
     return "\n".join(lines)
 
@@ -548,14 +597,14 @@ def format_medications(medications: list, person: str = None) -> str:
         for m in active:
             freq = f", {m['frequency']}" if m['frequency'] else ""
             reason = f" (사유: {m['reason']})" if m['reason'] else ""
-            lines.append(f"  • {m['name']} {m['dosage'] or ''}{freq}{reason}")
+            lines.append(f"  • (#{m['id']}) {m['name']} {m['dosage'] or ''}{freq}{reason}")
             lines.append(f"    시작: {m['started_at']}")
         lines.append("")
 
     if inactive:
         lines.append("▷ 과거 복용:")
         for m in inactive[:10]:  # 최대 10개
-            lines.append(f"  • {m['name']} ({m['started_at']} ~ {m['ended_at']})")
+            lines.append(f"  • (#{m['id']}) {m['name']} ({m['started_at']} ~ {m['ended_at']})")
 
     return "\n".join(lines)
 
@@ -566,7 +615,7 @@ def format_documents(documents: list, include_images: bool = False, person: str 
     lines = [f"📄 {person_str}문서/검사 기록 ({len(documents)}건)", ""]
 
     for d in documents:
-        lines.append(f"  • {doc_type_to_korean(d['doc_type'])} ({d['recorded_at']})")
+        lines.append(f"  • (#{d['id']}) {doc_type_to_korean(d['doc_type'])} ({d['recorded_at']})")
         if d['description']:
             lines.append(f"    설명: {d['description']}")
         if d['extracted_data']:

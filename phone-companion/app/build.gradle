@@ -112,6 +112,12 @@ def _ENGINE_MODULES = [
     'ibl_usage_db',          // 해마 검색(렌트 모드=인메모리 brute-force) + 실행기억
     'ibl_usage_rag',         // 실행기억 XML 주입(get_references→search_hybrid)
     'korean_utils',          // FTS5 토크나이저(ibl_usage_rag 의존) — 렌트 모드는 시맨틱뿐이나 import 정합
+
+    // === 폰-자아 호스팅 step 7: 시스템 AI 진입점(로컬 하네스 실행) ===
+    // phone_api /system-ai/chat 이 _mac_proxy 대신 process_system_ai_message 를 로컬 실행.
+    'system_ai_core',        // get_system_ai_runner + process_system_ai_message (인지 파이프라인 진입)
+    'system_ai_memory',      // 시스템 AI 태스크/메모리(로컬 SQLite)
+    'system_ai_tools',       // 시스템 AI 도구 정의
 ]
 // 폰 번들 패키지 = data/phone_manifest.json 의 packages (runs_on 단일 진실 소스에서 파생).
 // 옛 하드코딩 리스트를 폐기 — build_ibl_nodes.py 의 PHONE_VERIFIED_PACKAGES 가 SSOT.

@@ -147,7 +147,7 @@ def main() -> int:
             """INSERT INTO ibl_examples
                (intent, ibl_code, nodes, category, difficulty, source, success_count, fail_count, tags, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))""",
-            (intent, code, "limbs", "round2_boost", "single", "boost_limbs_round2", 0, 0, ""),
+            (intent, code, "limbs", "round2_boost", 1, "boost_limbs_round2", 0, 0, ""),
         )
         db_added += 1
     con.commit()

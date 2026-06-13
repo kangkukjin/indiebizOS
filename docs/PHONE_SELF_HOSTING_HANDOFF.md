@@ -55,7 +55,18 @@
 4. ✅ **(완료 2026-06-13) 하네스를 폰 번들로**: `build.gradle _ENGINE_MODULES`에 인지 하네스 13(최상위 import 폐포 AST 산정) + `providers/` 패키지 + `data/common_prompts/` 에셋. import 안전 3중 사전검증(폰 pip 밖 서드파티 0·최상위 pydantic 0·맥 스모크 clean) + **A36 온디바이스 검증(임시 엔드포인트로 12모듈+providers import → `_all_ok:true`, 검증 후 제거+클린 재빌드)**. doFirst 가드에 providers·common_prompts 추가.
 5. ✅ **(완료 2026-06-13) 폰-자아 모델 프로바이더**: `ClaudeCodeProvider +backend_url`(_build_env→INDIEBIZOS_BACKEND_URL→MCP 라우팅) + 맥 엔드포인트 `POST /providers/claude_code/remote_turn`(claude_code 한 턴, backend_url=폰, remote_access_guard 인증) + 폰 `ClaudeCodeRemoteProvider`(providers/claude_code_remote.py, 레지스트리 등록, 런처세션 인증). **A36 종단검증**: backend_url=adb-forward(폰)로 맥 claude_code 실행→폰 logcat `POST /ibl/execute 200 OK`(맥 추론·폰 IBL 입증). 폰 provider 전체 루프는 step7 후 완성. ⚠️함정: 폰 미도달 시 claude_code 가 WebSearch 폴백→오검증, logcat으로 확인 필수.
 6. ✅ **(완료 2026-06-13) 폰 해마**: `scripts/export_hippo_index.py`(ibl_usage.db→`data/ibl_hippo_index.json`+`ibl_hippo_vecs.f32` 2475x768, gitignore) + IBLUsageDB 렌트 경로(`_rented_mode`/`_ensure_rented_index`/`_rent_query_vec`(맥 /embed)/`_search_rented`(인메모리 brute-force), search_hybrid 게이트, capability 분기·로컬 무회귀) + build.gradle 번들(ibl_usage_db/rag/korean_utils + 인덱스 에셋). **A36 종단**: rented_mode:true·인덱스 2475 로드·터널 /embed→"서울 날씨"→id4 [sense:weather]{서울} 0.906(맥 정본 top1 동일).
-7. **폰 진입점 전환**: `phone_api.py`의 `/system-ai/chat`을 `_mac_proxy`→**로컬 하네스 실행**으로. 로컬 하네스 미가용 시 맥-프록시 폴백(전환 안전). + 폰 system_ai_config 3티어(경량=gemini_http, 중급·본격=claude_code_remote) 작성. 여기서 step5 폰 provider + step6 해마가 전체 인지 루프로 종단. ← **다음 시작점(마지막)**
+7. ✅ **(완료 2026-06-13) 폰 진입점 전환**: phone_api `/system-ai/chat`→`process_system_ai_message`(로컬 하네스), 미가용/실패 시 맥 프록시 폴백. _ENGINE_MODULES += system_ai_core/memory/tools. 폰 3티어 config 자동생성(경량=gemini_http·중급/본격=claude_code_remote, GEMINI_API_KEY provision). 정체성 폴백(prompt_builder: world_pulse.md 없으면 capability portrait 주입). **A36 종단**: "어떤 몸이야?"→provider:phone-self + "안드로이드 폰 SM-A366N"(맥 아님=정체성 정확) / "서울 날씨"→logcat [연상] 0.906 [sense:weather]{서울}(렌트 해마 인지 통합)→Reflex EXECUTE. ⚠️IBL *완수*는 mac→폰 도달(집/LAN, INDIEBIZ_PHONE_URL=폰 현재 IP) 필요 — LTE면 refused(home-first, away deferred). IBL-on-폰 leg은 step5 입증.
+
+---
+
+## ★ 완료 (2026-06-13) — 핸드오프 §6 step 1~7 전부 완료
+폰 = **두 번째 독립 자아**: 자기 하네스(인지 파이프라인)+기억(렌트 해마)+정체성(detect_body capability portrait)을 폰에서 호스팅, LLM 추론·임베딩 인코더는 상시 맥에서 렌트(substrate), IBL 실행은 폰 로컬(빌린 액션만 맥 위임). 자기-모델이 *참*(폰이 자기를 폰으로 인식).
+
+**남은 후속(이 로드맵 밖)**:
+- **away-case(LTE) IBL 라우팅**: 폰이 집밖일 때 mac→폰 역방향 도달 불가 → IBL-on-폰 실패. 옵션: 폰 터널 노출 / 역방향 websocket 릴레이 / away 시 execute_ibl 을 맥-body 로(option B). step5 갈림길서 home-first 택해 deferred.
+- **폰 LAN IP 추적**: 집 WiFi 합류 시 INDIEBIZ_PHONE_URL 자동 갱신(현재 수동/stale 위험).
+- **폰 해마 증류**: 폰-자아의 로컬 경험을 폰 인덱스에 증류(현재 인덱스=정적 배포 코퍼스, 읽기전용). 두-자아 사적 경험 분기.
+- **폰 world_pulse 수집**: 현재 정체성만 폴백 주입 — 폰서 세계 펄스(경제/날씨/뉴스) 수집은 미가동.
 
 ## 7. 검증 (A36 USB 상시 연결)
 

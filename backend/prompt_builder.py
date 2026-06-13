@@ -92,20 +92,34 @@ class PromptBuilder:
         매번 디스크에서 읽습니다. (대화 시작 시 1회만 호출되어 성능 영향 없음)
         """
         pulse_path = get_base_path() / "data" / "guides" / "world_pulse.md"
-        if not pulse_path.exists():
-            logger.debug("[PromptBuilder] World Pulse 파일 없음")
-            return ""
+        content = ""
+        if pulse_path.exists():
+            try:
+                content = pulse_path.read_text(encoding='utf-8').strip()
+            except Exception as e:
+                logger.warning(f"[PromptBuilder] World Pulse 로드 실패: {e}")
+                content = ""
 
-        try:
-            content = pulse_path.read_text(encoding='utf-8').strip()
-            if not content:
-                logger.debug("[PromptBuilder] World Pulse 파일이 비어있음")
-                return ""
+        if content:
             logger.info(f"[PromptBuilder] World Pulse 주입: ~{len(content)}자")
             return content
+
+        # 폴백(폰-자아 호스팅 §6.7): world_pulse.md 가 아직 없는 몸(예: 펄스 수집이 안 도는 폰)
+        # 에서도 *정체성*만은 반드시 주입한다 — "나는 어느 몸인가"를 모르면 자기-모델이 깨진다
+        # (집밖 폰이 자기를 맥이라 오인하는 위험). capability portrait 는 body-neutral(detect_body).
+        try:
+            from runtime_utils import build_capability_portrait
+            cap = build_capability_portrait()
+            if cap and cap.get("body"):
+                lines = ["# 나는 누구인가 (자동 주입)",
+                         f"- 나는 지금 **{cap['body']}** 에서 돈다."]
+                if cap.get("has_peer"):
+                    lines.append(f"- 못 하는 일은 {cap.get('peer_name','상대 노드')}의 액션을 빌릴 수 있다(분산 IBL 자동 위임).")
+                logger.info("[PromptBuilder] World Pulse 부재 → 정체성 폴백 주입")
+                return "\n".join(lines)
         except Exception as e:
-            logger.warning(f"[PromptBuilder] World Pulse 로드 실패: {e}")
-            return ""
+            logger.debug(f"[PromptBuilder] 정체성 폴백 실패: {e}")
+        return ""
 
     def _build_resource_list(self) -> str:
         """자원 목록 생성 — guide_db.json에서 가이드 제목을 읽어 한 줄 목록으로 반환

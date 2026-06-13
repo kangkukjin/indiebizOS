@@ -484,6 +484,12 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
     Returns:
         증류 성공 여부
     """
+    # 해마 비활성(폰 기본)이면 증류도 건너뜀 — 안 그러면 top_score=0.0 이 매 명령마다 증류
+    # LLM 호출을 켜서 오히려 더 느려진다(해마 끄기의 목적 무력화). search 와 한 쌍으로 게이트.
+    from ibl_usage_db import IBLUsageDB
+    if IBLUsageDB.hippo_disabled():
+        return False
+
     if top_score >= DISTILL_THRESHOLD:
         return False
 

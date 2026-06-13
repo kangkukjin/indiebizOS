@@ -733,6 +733,22 @@ class IBLUsageDB:
     # =========================================================================
 
     @classmethod
+    def hippo_disabled(cls) -> bool:
+        """해마(연상검색 + 경험증류) 비활성 여부.
+
+        폰-자아는 로컬 인코더가 없어 질의 임베딩을 맥 /embed 로 *렌트*하는데(질의마다 네트워크
+        왕복), 시스템 AI 응답을 눈에 띄게 느리게 한다. 거기에 증류(top_score<0.7 시 LLM 1회 추가
+        호출)까지 더해진다. → 폰에선 기본 비활성(속도 우선, 사용자 결정 2026-06-14). 폰의 로컬
+        Gemini 는 ibl_nodes.yaml 전체 어휘를 프롬프트로 갖고 있어 용례 없이도 IBL 생성 가능.
+        강제 토글: INDIEBIZ_HIPPO=on(켬)/off(끔). 심층기억(_search_related_memory=로컬 키워드)은 별개."""
+        force = (os.environ.get("INDIEBIZ_HIPPO") or "").strip().lower()
+        if force in ("on", "1", "true", "yes"):
+            return False
+        if force in ("off", "0", "false", "no"):
+            return True
+        return (os.environ.get("INDIEBIZ_PROFILE") or "").strip() == "phone"
+
+    @classmethod
     def _rented_mode(cls) -> bool:
         """렌트 모드 여부: 로컬 시맨틱 스택(model+sqlite-vec)이 없고, 정적 인덱스를 로드할 수 있으며,
         질의 임베딩을 빌릴 맥(INDIEBIZ_MAC_URL)이 있을 때. capability 게이트(profile 분기 아님)."""
@@ -971,6 +987,10 @@ class IBLUsageDB:
         """
         if alpha is None:
             alpha = self.DEFAULT_ALPHA
+
+        # 해마 비활성(폰 기본): 연상검색 자체를 건너뜀 → 맥 /embed 렌트 왕복 0.
+        if self.hippo_disabled():
+            return []
 
         # 캐시 확인
         cache_key = hashlib.md5(

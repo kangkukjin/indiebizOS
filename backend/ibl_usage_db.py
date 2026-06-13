@@ -335,6 +335,25 @@ class IBLUsageDB:
                 logger.info(f"[IBL Usage DB] 임베딩 진행: {i}/{len(texts)}")
         return all_packed
 
+    def embed_vectors(self, texts: List[str]) -> Optional[List[List[float]]]:
+        """텍스트 배치 → L2 정규화된 768차원 float 벡터들 (폰-자아 해마의 인코더 렌트, /embed).
+
+        `_generate_embeddings_batch` 와 *동일한* encode+정규화 — 다만 packed bytes 대신 float
+        리스트를 돌려준다(JSON 직렬화). 문서 인덱스와 같은 벡터공간이라, 폰이 이 벡터로 자기
+        로컬 인덱스에서 brute-force 코사인하면 맥 search_semantic 과 같은 결과를 얻는다.
+        쿼리는 raw 텍스트로 인코딩됨(문서만 _prepare_search_text 로 intent 반복 — search_semantic 동일).
+        모델 미가용(sentence-transformers 미설치 등) 시 None."""
+        if self._model is None and not self._load_model_sync():
+            return None
+        import numpy as np
+        vectors = self._model.encode(
+            texts, convert_to_numpy=True, show_progress_bar=False
+        ).astype('float32')
+        norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+        norms[norms == 0] = 1
+        vectors = vectors / norms
+        return vectors.tolist()
+
     # =========================================================================
     # CRUD - 용례
     # =========================================================================

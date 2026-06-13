@@ -1352,3 +1352,15 @@
      incoming agent_id honor("phone" 폴백)로 대칭. 검증: 송신 payload 단위테스트 3종(전파/미동봉폴백/폰방향)
      + 라이브 맥 /ibl/execute 에 agent_id=phone 빌림(world_bank KR) 정상 실행. 폰 번들 반영=APK 재빌드 후
      (폰-자아 에이전트 존재 시 의미있게 검증 — steps 4~7 후).
+
+[2026-06-13] 폰-자아 호스팅 기반공사 3 — 맥 /embed 엔드포인트 (폰 해마 인코더 렌트)
+  핸드오프 §6 step 3. 상시 켜둔 맥의 fine-tuned 임베딩 모델을 노출 — 폰-자아가 무거운 torch
+  런타임을 번들하는 대신 질의 텍스트를 보내 768벡터를 받고 자기 로컬 인덱스에서 brute-force
+  코사인 검색(인코더=공유 substrate / 인덱스=사적 경험, 절단면 일치).
+  - IBLUsageDB.embed_vectors(texts) 신설: _generate_embeddings_batch 와 동일 encode+L2정규화,
+    packed bytes 대신 float 리스트 반환(JSON). 모델만 있으면 됨(sqlite-vec 불필요), _load_model_sync 게이트.
+  - POST /ibl/embed (api_ibl.py): {text} 단건 또는 {texts} 배치 → {dim:768, count, vector|vectors}.
+    asyncio.to_thread 로 encode 오프로드. 모델 미가용 시 503.
+  - ★정합성 검증: embed_vectors([q])[0] == _generate_embedding(q) 언팩 (max element diff 1.49e-08,
+    cosine 1.0) → /embed 와 인덱싱이 동일 벡터공간. search_semantic 도 _generate_embedding(query) raw
+    사용 확인 → 폰 brute-force 코사인이 맥 search_semantic 과 동치. 라이브 맥 단건/배치 검증(norm=1.0).

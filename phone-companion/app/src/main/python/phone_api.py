@@ -596,6 +596,28 @@ async def execute(req: Request):
     return JSONResponse(obj)
 
 
+# ============================================================================
+# ★ 패리티 기본값 — catch-all 맥 프록시 (반드시 마지막 라우트로 등록).
+# 폰에 명시적 라우트가 없는 모든 요청을 맥으로 포워드(리모컨). FastAPI 는 더 구체적인
+# 명시 라우트를 먼저 매칭하므로, 로컬 하네스(/system-ai/chat·conversations)·sync·ibl 등
+# "충분한 이유가 있어 폰에서 다르게 동작하는" 것만 위에서 가로채고 나머지는 자동으로 맥.
+# → 맥에 새 엔드포인트가 생기면 폰에서 *그냥 된다*. 갈라짐이 기본이 아니라 패리티가 기본.
+# (사용자 원칙 2026-06-14: "맥에서 되는 건 폰에서도 되게, 어길 충분한 이유가 없으면.")
+# ============================================================================
+@app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def _catch_all_mac_proxy(full_path: str, request: Request):
+    path = "/" + full_path
+    r = await _mac_proxy(request, path, timeout=120.0)
+    if r is None:
+        return JSONResponse(
+            {"error": "맥 백엔드 미연결(INDIEBIZ_MAC_URL 미설정 — 이 기능은 집 PC가 필요합니다)"},
+            status_code=503)
+    if r == "error":
+        return JSONResponse({"error": "맥 백엔드 연결 실패 — 집 PC와 네트워크를 확인하세요."},
+                            status_code=502)
+    return _relay(r)
+
+
 def _save_audio_to_phone(obj: dict) -> dict:
     """맥서 받은 mp3(b64) → 디코드 → Kotlin MediaSaver 로 폰 Music 폴더 저장.
     b64 는 응답에서 제거. 성공/실패를 saved 플래그+message 로 WebView 에 알린다."""

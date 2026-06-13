@@ -571,6 +571,19 @@ def serve(port=8765, base_path=None):
         return
     _init_base(base_path)
 
+    # 반응형→능동/백그라운드 층: 상주 스케줄러 폴링 루프 기동. 폰-자아가 "매일 아침 X"·
+    # "N시간마다 Y"(self:trigger{type:schedule}/self:schedule)를 스스로 돌리려면 calendar_manager
+    # 의 60초 폴링 루프가 폰 프로세스 안에서 살아 있어야 한다. 폰 백엔드는 백그라운드 상주
+    # (App.kt 라이프사이클)이라 데몬 루프 viable. 저장소=폰 filesDir/data/calendar_events.json
+    # (폰 자신의 일정 — 두-자아 분리). 실패해도 백엔드 부팅은 계속(앱모드 무관히 동작).
+    try:
+        from calendar_manager import get_calendar_manager
+        get_calendar_manager().start()
+        print("[phone_api] 상주 스케줄러 기동 (self:trigger/schedule 폴링 루프)")
+    except Exception as e:
+        import traceback
+        print(f"[phone_api] 스케줄러 기동 스킵: {e}\n{traceback.format_exc()[-300:]}")
+
     # 기본 localhost 전용(WebView 자기접속). 분산 IBL 에서 맥(두뇌)이 폰(몸)으로 직접
     # phone_only 액션을 포워드하려면 폰이 LAN 도달 가능해야 하므로, keys.json 에
     # INDIEBIZ_BIND_HOST=0.0.0.0 주입 시 LAN 바인딩(=WiFi 노출 → #3 폰 인증 필요).

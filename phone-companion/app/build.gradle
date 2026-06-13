@@ -118,6 +118,19 @@ def _ENGINE_MODULES = [
     'system_ai_core',        // get_system_ai_runner + process_system_ai_message (인지 파이프라인 진입)
     'system_ai_memory',      // 시스템 AI 태스크/메모리(로컬 SQLite)
     'system_ai_tools',       // 시스템 AI 도구 정의
+
+    // === 반응형→능동/백그라운드 층: 상주 스케줄 substrate (새 어휘 없음) ===
+    // self:trigger{type:schedule}/self:schedule 어휘는 이미 있으나, 그 엔진이 폰 미번들이라
+    // 폰에선 ImportError 로 죽었다(어휘 갭 아닌 하부구조 갭). 이 5모듈로 폰 몸에 바인딩 →
+    // 폰이 "매일 아침 X"·"N시간마다 Y" 를 스스로 돌린다(calendar_manager.start() 폴링 루프,
+    // 발화 시 폰-로컬 execute_pipeline + pipeline 의 [limbs:phone]{notify} 로 전달).
+    // 모듈레벨 의존은 전부 stdlib+runtime_utils(번들)로 확인됨. channel_poller(채널 트리거)는
+    // Gmail/Nostr 폴링이라 더 무겁고 별도 — 이번 증분 제외.
+    'trigger_engine',        // self:trigger 라우터 타깃(schedule→calendar_manager 동기화)
+    'calendar_manager',      // 반복 실행 폴링 루프(start/stop) + 이벤트 저장(calendar_events.json)
+    'calendar_actions',      // run_pipeline 등 액션 믹스인(폰 fork-guard 로 GUI/WS 우회)
+    'calendar_html',         // calendar_manager 가 모듈레벨 import 하는 믹스인(렌더 — 폰선 미사용이나 import 정합)
+    'safe_store',            // trigger_engine._save_triggers 의 원자적 JSON 저장(지연 import)
 ]
 // 폰 번들 패키지 = data/phone_manifest.json 의 packages (runs_on 단일 진실 소스에서 파생).
 // 옛 하드코딩 리스트를 폐기 — build_ibl_nodes.py 의 PHONE_VERIFIED_PACKAGES 가 SSOT.

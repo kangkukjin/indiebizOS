@@ -15,6 +15,8 @@ DEFAULT_PROJECT_PATH = os.environ.get("INDIEBIZOS_PROJECT_PATH", ".")
 # 내부 spawn 시 부모가 이 에이전트의 신원(agent_id)을 env로 주입.
 # channel_send/read의 발신 신원 게이트에 사용된다. 외부(Claude Desktop) 사용 시엔 없음 → 신원 없음.
 DEFAULT_AGENT_ID = os.environ.get("INDIEBIZOS_AGENT_ID", "")
+# 폰-자아 away-case: 부모가 "1"로 주입하면 IBL 실행을 폰 역방향 WS 로 보내라고 백엔드에 신호.
+ROUTE_TO_PHONE = os.environ.get("INDIEBIZOS_ROUTE_TO_PHONE", "") == "1"
 
 
 @mcp.tool()
@@ -33,6 +35,8 @@ def execute_ibl(code: str, project_path: str = "") -> str:
     payload = {"code": code, "project_path": effective_path}
     if DEFAULT_AGENT_ID:
         payload["agent_id"] = DEFAULT_AGENT_ID  # env에 신원이 주입됐을 때만 전달 (없으면 현 동작 그대로)
+    if ROUTE_TO_PHONE:
+        payload["route_to_phone_ws"] = True  # 폰-자아 away-case: 백엔드가 폰 WS 로 릴레이
     data = json.dumps(payload).encode()
     req = urllib.request.Request(f"{BASE}/ibl/execute", data=data, headers={"Content-Type": "application/json"})
     try:

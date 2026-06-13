@@ -36,6 +36,8 @@ android {
                 // 베이스라인 측정 유지
                 install "numpy"
                 install "Pillow"
+                // 폰-자아 역방향 WS 채널(away-case): 폰이 맥 CF 터널로 outbound WS 유지(순수파이썬).
+                install "websockets"
             }
         }
     }

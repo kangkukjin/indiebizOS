@@ -63,8 +63,8 @@
 폰 = **두 번째 독립 자아**: 자기 하네스(인지 파이프라인)+기억(렌트 해마)+정체성(detect_body capability portrait)을 폰에서 호스팅, LLM 추론·임베딩 인코더는 상시 맥에서 렌트(substrate), IBL 실행은 폰 로컬(빌린 액션만 맥 위임). 자기-모델이 *참*(폰이 자기를 폰으로 인식).
 
 **남은 후속(이 로드맵 밖)**:
-- **away-case(LTE) IBL 라우팅**: 폰이 집밖일 때 mac→폰 역방향 도달 불가 → IBL-on-폰 실패. 옵션: 폰 터널 노출 / 역방향 websocket 릴레이 / away 시 execute_ibl 을 맥-body 로(option B). step5 갈림길서 home-first 택해 deferred.
-- **폰 LAN IP 추적**: 집 WiFi 합류 시 INDIEBIZ_PHONE_URL 자동 갱신(현재 수동/stale 위험).
+- ✅ **(완료 2026-06-13) away-case(LTE) IBL 라우팅**: 폰이 맥의 *기존* CF 터널로 outbound WS(`/ws/phone-self`)를 열어두고(NAT 통과), 맥이 그 길로 execute_ibl 을 폰에 밀어넣어 폰 몸에서 실행(phone_only 포함). `phone_self_channel`(send-await RPC)+`route_to_phone_ws` 플래그 경로(remote_turn→provider→mcp_server→api_ibl)+`phone_ws_client`(재연결). A36 종단: 폰 CELLULAR 에서 "서울 날씨"→WS 릴레이→폰 [sense:weather] 로컬 실행→실제 날씨. Cloudflare=중간 서버, 새 터널/바이너리 불필요.
+- **폰 LAN IP 추적**: (WS 로 대체로 무의미해짐 — WS 가 어디서나 도달) 집 LAN 직결 최적화는 선택.
 - **폰 해마 증류**: 폰-자아의 로컬 경험을 폰 인덱스에 증류(현재 인덱스=정적 배포 코퍼스, 읽기전용). 두-자아 사적 경험 분기.
 - **폰 world_pulse 수집**: 현재 정체성만 폴백 주입 — 폰서 세계 펄스(경제/날씨/뉴스) 수집은 미가동.
 

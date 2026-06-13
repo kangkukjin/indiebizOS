@@ -345,36 +345,31 @@ def detect_body() -> dict:
 
 
 def detect_local_micros() -> dict:
-    """이 몸이 *로컬로* 실행 가능한 Layer0 마이크로 명령어(실행/렌더 원시) 집합.
+    """이 몸의 Layer0 마이크로 명령어(실행/렌더 원시) 집합 + *만능 탈출구*.
 
-    capability 기반(INDIEBIZ_PROFILE 무관 — 무포크). 고정 IBL 어휘를 벗어나는 '탈출구'를
-    에이전트가 정확히 reach 하도록: 내가 직접 가진 원시 vs 반대편 몸에서 빌려야 하는 원시.
-    Returns: {"local": [...], "borrowed": [...]}.
+    capability 기반(INDIEBIZ_PROFILE 무관 — 무포크). 각 몸은 고정 IBL 어휘를 벗어나는 *하나의*
+    만능 탈출구를 가진다(나머지는 그걸 통하거나 부재):
+    - 맥/PC: 탈출구=**shell**. 셸이 python·node 등을 띄운다(셸 ⊇ python). standalone python3 존재.
+    - 폰: 탈출구=**python**(인-프로세스). standalone python3 가 없어 셸이 python 을 못 띄우니 역전 —
+      python 이 만능(약한 toybox sh 는 subprocess 로 *포섭*, jclass 로 안드로이드 SDK 전체 도달).
+      그래서 셸은 '빌림'이 아니라 python 에 포섭됨 → borrowed 에 넣지 않는다.
+    Returns: {"escape": "shell"|"python", "local": [...], "borrowed": [...]}.
     """
     import shutil
-    local, borrowed = [], []
-
-    # 데스크탑 판별 프록시 = standalone python3 바이너리 유무. 폰(Chaquopy=JVM 임베디드)엔 없고,
-    # 맥/PC엔 있음. 핸들러의 _has_standalone_python 과 동일 신호(안드로이드 toybox sh 오판 회피).
+    # 데스크탑 판별 프록시 = standalone python3 바이너리 유무(핸들러 _has_standalone_python 과 동일 신호,
+    # 안드로이드 toybox sh 오판 회피). 있으면 맥/PC(셸이 만능), 없으면 폰(python 이 만능).
     py_cmd = os.environ.get("INDIEBIZ_PYTHON_PATH") or ("python" if os.name == "nt" else "python3")
     has_standalone_py = Path(py_cmd).exists() if os.path.isabs(py_cmd) else (shutil.which(py_cmd) is not None)
-
-    # python: 두 몸 공통 — 맥/PC=subprocess(standalone python3), 폰=인-프로세스(Chaquopy). 항상 로컬.
-    local.append("python")
-
-    # node: standalone 바이너리 있어야 함. 폰엔 부재 → 빌림.
     node = os.environ.get("INDIEBIZ_NODE_PATH") or "node"
     node_ok = Path(node).exists() if os.path.isabs(node) else (shutil.which(node) is not None)
-    (local if node_ok else borrowed).append("node")
 
-    # shell: 안드로이드도 최소 toybox sh 는 있지만 PC급 셸 생태계(coreutils)·run_command 도구가 없어
-    # 실효 셸 탈출구가 아니다. 데스크탑(standalone python3)일 때만 로컬로 본다.
-    (local if has_standalone_py else borrowed).append("shell")
-
-    # html: 맥=Electron/브라우저 렌더, 폰=WebView. 두 몸 공통 로컬.
-    local.append("html")
-
-    return {"local": local, "borrowed": borrowed}
+    if has_standalone_py:
+        # 맥/PC — 셸이 만능 탈출구(python 은 셸을 통해 띄움).
+        local = ["shell", "python", "html"] + (["node"] if node_ok else [])
+        borrowed = [] if node_ok else ["node"]
+        return {"escape": "shell", "local": local, "borrowed": borrowed}
+    # 폰 — python 이 만능 탈출구(약한 sh 포섭 + jclass SDK). 셸은 별도 원시로 세지 않음.
+    return {"escape": "python", "local": ["python", "html"], "borrowed": ["node"]}
 
 
 def build_capability_portrait() -> dict:

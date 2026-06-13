@@ -219,12 +219,18 @@ def generate_guide():
                 lines.append("## 나는 누구인가")
                 lines.append(f"- 나는 지금 **{cap['body']}** 에서 돈다.")
                 micros = cap.get("micros") or {}
+                esc = micros.get("escape")
+                if esc == "python":
+                    lines.append("- 내 만능 실행 탈출구 = **python**(인-프로세스). 고정 IBL 액션 너머는 "
+                                 "execute_python 으로 직접 해결 — python 이 약한 셸도 subprocess 로 포섭하고 "
+                                 "`from java import jclass` 로 안드로이드 SDK 전체에 닿는다.")
+                elif esc == "shell":
+                    lines.append("- 내 만능 실행 탈출구 = **shell**(run_command). 고정 IBL 액션 너머는 "
+                                 "셸로 python·node 등을 띄워 직접 해결.")
                 if micros.get("local"):
-                    lines.append(f"- 내가 *직접* 할 수 있는 실행 원시: {', '.join(micros['local'])} "
-                                 "(고정 IBL 액션 너머는 이걸 조립해 직접 해결).")
+                    lines.append(f"- 직접 할 수 있는 원시: {', '.join(micros['local'])}.")
                 if micros.get("borrowed"):
-                    lines.append(f"- 내 몸엔 없어 *빌려야* 하는 원시: {', '.join(micros['borrowed'])} "
-                                 "(분산 IBL 이 자동 위임).")
+                    lines.append(f"- 내 몸엔 없어 빌려야 하는 원시(필요 시 맥 위임): {', '.join(micros['borrowed'])}.")
                 if cap.get("has_peer"):
                     lines.append(f"- {cap['peer_name']}의 액션을 빌릴 수 있다 "
                                  "(내 몸에서 못 하는 건 분산 IBL 이 자동 위임 — 닿지 않으면 실행 시 알림).")

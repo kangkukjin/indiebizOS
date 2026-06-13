@@ -1398,3 +1398,21 @@
     (함정 기록: backend_url 미지정+폰 WiFi off→stale INDIEBIZ_PHONE_URL 도달실패 시 claude_code 가 자체
      WebSearch로 폴백해 답이 그럴듯하게 나옴=오검증 위험. 반드시 폰 logcat으로 POST /ibl/execute 확인.)
   - 폰 provider 전체 루프(폰 하네스→provider→맥→claude_code→폰 IBL)는 step7 진입점 배선 후 완성.
+
+[2026-06-13] 폰-자아 호스팅 기반공사 6 — 폰 렌트 해마 (맥 /embed + 인메모리 brute-force, A36 종단)
+  핸드오프 §6 step 6. 폰엔 torch(임베딩 모델)도 sqlite-vec 도 없다 → 폰-자아 해마는 질의 임베딩만
+  맥 /embed 로 렌트(인코더=공유 substrate, step3)하고 문서 인덱스는 정적 파일을 인메모리 brute-force.
+  - scripts/export_hippo_index.py: 맥 ibl_usage.db(메타+vec0)→ data/ibl_hippo_index.json(메타 2475개)
+    + ibl_hippo_vecs.f32(2475x768 L2정규화 float32, 7.4MB). 정본→파생(어휘/코퍼스 갱신 시 재실행).
+    오염 행 방어(difficulty에 'single' 섞인 50행 _safe_int coerce). 둘 다 gitignore(data/ 생성물 관례).
+  - IBLUsageDB 렌트 경로(capability 게이트, profile 분기 아님): _rented_mode()=로컬 model/sqlite-vec
+    없고+INDIEBIZ_MAC_URL 있고+인덱스 로드가능. _ensure_rented_index()(np.frombuffer reshape 1회),
+    _rent_query_vec()(맥 /ibl/embed, 런처세션 인증=_forward_to_mac 패턴), _search_rented()(qv@vecs
+    코사인+노드/카테고리 필터→UsageExample). search_hybrid 상단서 렌트모드면 위임. 로컬 경로 무회귀.
+  - build.gradle: _ENGINE_MODULES += ibl_usage_db·ibl_usage_rag·korean_utils, 에셋 += ibl_hippo_*.
+    doFirst 가드 추가(누락 시 export 안내). import 안전(셋 다 폰 pip밖 최상위 서드파티 0).
+  - ★검증: 맥에서 export 벡터 brute-force == search_semantic(2/3 정확·1/3 동점 tie만 다름) /
+    렌트 경로 시뮬(is_semantic_available→False, MAC_URL=localhost)이 정본 search_hybrid 와 id·순서 완전일치 /
+    **A36 종단: rented_mode:true, index 2475 로드, mac_url=터널, "서울 날씨"→id4 [sense:weather]{서울} 0.906**
+    (맥 정본 top1과 동일). 폰이 터널로 /embed 렌트→로컬 brute-force로 맥 시맨틱 검색 재현.
+  - 전체 인지 루프(폰 하네스가 이 recall 사용)는 step7 진입점 전환 후.

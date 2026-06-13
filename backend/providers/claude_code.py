@@ -141,6 +141,10 @@ class ClaudeCodeProvider(BaseProvider):
     DEFAULT_TIMEOUT_SEC = 600  # 10분
 
     def __init__(self, **kwargs):
+        # backend_url: 이 claude_code 세션의 execute_ibl(MCP 브리지)이 때릴 IBL 백엔드.
+        # 폰-자아 호스팅(§6.5): 맥이 폰을 대신해 claude_code 를 돌릴 때 폰 백엔드를 가리키면,
+        # 에이전트의 IBL 실행이 폰(폰-자아의 몸)에서 일어난다. 미설정이면 MCP 서버 기본(localhost).
+        self.backend_url: Optional[str] = kwargs.pop("backend_url", None)
         super().__init__(**kwargs)
         self._binary_path: Optional[str] = None
         self._effective_token: Optional[str] = None
@@ -682,6 +686,10 @@ class ClaudeCodeProvider(BaseProvider):
         # env가 유일한 통로. channel_send/read의 신원 게이트(시스템 AI=system_ai, 프로젝트 에이전트=자기 계정)에 필요.
         if self.agent_id:
             env["INDIEBIZOS_AGENT_ID"] = str(self.agent_id)
+        # 폰-자아 호스팅(§6.5): MCP 서버(mcp_server.py)가 이 env 를 읽어 execute_ibl 을 라우팅.
+        # backend_url=폰 이면 이 세션의 IBL 실행이 폰에서 일어난다(맥은 LLM 추론만 렌트).
+        if self.backend_url:
+            env["INDIEBIZOS_BACKEND_URL"] = self.backend_url
         return env
 
     def _save_images_to_temp(self, images: List[Dict]) -> List[str]:

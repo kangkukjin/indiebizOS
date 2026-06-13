@@ -53,9 +53,9 @@
 2. ✅ **(완료 2026-06-13) 신원 전파 수정**: `_forward_to_mac`/`_forward_to_phone`이 호출자 `agent_id`를 payload에 동봉(`ibl_engine.py`). 수신측 `api_ibl.py`는 이미 `req.agent_id` 소비라 송신측만 고쳐 종단 완성. 미동봉 시 키 부재→종전 system_ai 폴백 보존(무회귀). `phone_api.py`도 incoming agent_id honor("phone" 폴백)로 대칭. 송신 payload 단위테스트 3종 + 라이브 맥 빌림(world_bank) 검증. **폰 번들 반영은 APK 재빌드 후**(폰-자아 에이전트 존재 시 의미있게 종단검증 — steps 4~7 후).
 3. ✅ **(완료 2026-06-13) 맥 `/embed` 엔드포인트**: `POST /ibl/embed`({text}|{texts}→768 L2정규화 벡터). `IBLUsageDB.embed_vectors()`(=`_generate_embeddings_batch` 와 동일 encode+정규화, float 리스트 반환). **정합성 검증**: `/embed` 벡터 == 인덱싱 벡터(diff 1.49e-08, cosine 1.0), `search_semantic`도 raw query `_generate_embedding` 사용 → 폰 brute-force 코사인이 맥 search_semantic 과 동치. 라이브 단건/배치 검증(norm=1.0).
 4. ✅ **(완료 2026-06-13) 하네스를 폰 번들로**: `build.gradle _ENGINE_MODULES`에 인지 하네스 13(최상위 import 폐포 AST 산정) + `providers/` 패키지 + `data/common_prompts/` 에셋. import 안전 3중 사전검증(폰 pip 밖 서드파티 0·최상위 pydantic 0·맥 스모크 clean) + **A36 온디바이스 검증(임시 엔드포인트로 12모듈+providers import → `_all_ok:true`, 검증 후 제거+클린 재빌드)**. doFirst 가드에 providers·common_prompts 추가.
-5. **폰-자아 모델 프로바이더**: 폰 `system_ai_config`가 맥 3티어 미러 — 경량=`google`(Gemini-직접, 폰이 구글API 호출, 맥과 동일) / 중급·본격=**claude_code 원격 렌트**. 새 프로바이더 `claude_code_remote` 필요: 맥이 claude_code 세션을 폰-가리킨 실행기(`INDIEBIZOS_BACKEND_URL`=폰)로 돌려주는 엔드포인트. **이건 실제 인프라**(세션·인증·수명), 환경변수 하나 아님. ← **다음 시작점**
-6. **폰 해마**: 맥 인코더 렌트(#3) + 폰 로컬 인덱스 brute-force 코사인(~2400개라 sqlite-vec 불필요). torch·ONNX 폰에 불필요.
-7. **폰 진입점 전환**: `phone_api.py`의 `/system-ai/chat`을 `_mac_proxy`→**로컬 하네스 실행**으로. 로컬 하네스 미가용 시 맥-프록시 폴백(전환 안전).
+5. ✅ **(완료 2026-06-13) 폰-자아 모델 프로바이더**: `ClaudeCodeProvider +backend_url`(_build_env→INDIEBIZOS_BACKEND_URL→MCP 라우팅) + 맥 엔드포인트 `POST /providers/claude_code/remote_turn`(claude_code 한 턴, backend_url=폰, remote_access_guard 인증) + 폰 `ClaudeCodeRemoteProvider`(providers/claude_code_remote.py, 레지스트리 등록, 런처세션 인증). **A36 종단검증**: backend_url=adb-forward(폰)로 맥 claude_code 실행→폰 logcat `POST /ibl/execute 200 OK`(맥 추론·폰 IBL 입증). 폰 provider 전체 루프는 step7 후 완성. ⚠️함정: 폰 미도달 시 claude_code 가 WebSearch 폴백→오검증, logcat으로 확인 필수.
+6. **폰 해마**: 맥 인코더 렌트(`/ibl/embed` 완료, #3) + 폰 로컬 인덱스 brute-force 코사인(~2400개라 sqlite-vec 불필요). torch·ONNX 폰에 불필요. ← **다음 시작점**
+7. **폰 진입점 전환**: `phone_api.py`의 `/system-ai/chat`을 `_mac_proxy`→**로컬 하네스 실행**으로. 로컬 하네스 미가용 시 맥-프록시 폴백(전환 안전). + 폰 system_ai_config 3티어(경량=gemini_http, 중급·본격=claude_code_remote) 작성. 여기서 step5 폰 provider 전체 루프 종단.
 
 ## 7. 검증 (A36 USB 상시 연결)
 

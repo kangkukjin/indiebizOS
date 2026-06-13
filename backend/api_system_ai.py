@@ -15,6 +15,7 @@ IndieBiz OS Core
 """
 
 import json
+import os
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -96,6 +97,21 @@ class ChatResponse(BaseModel):
     timestamp: str
     provider: str
     model: str
+
+
+class RemoteTurnRequest(BaseModel):
+    """폰-자아 호스팅(§6.5): 폰이 맥에게 claude_code LLM 한 턴을 렌트.
+
+    폰의 인지 하네스가 중급·본격 티어 LLM 호출을 이 엔드포인트로 위임한다. 맥이 claude_code 를
+    돌리되 system_prompt 는 폰이 보낸 것(=폰 정체성)을 쓰고, execute_ibl 은 backend_url(=폰)로
+    라우팅해 IBL 실행이 폰-자아의 몸에서 일어난다. 맥은 LLM 추론(substrate)만 빌려준다."""
+    message: str
+    system_prompt: str = ""
+    history: Optional[List[Dict[str, Any]]] = None
+    images: Optional[List[ImageData]] = None
+    agent_id: Optional[str] = None
+    model: Optional[str] = None
+    backend_url: Optional[str] = None   # 폰 백엔드 URL. 미지정 시 맥의 INDIEBIZ_PHONE_URL.
 
 
 class PromptConfigUpdate(BaseModel):
@@ -225,6 +241,64 @@ def chat_with_system_ai(chat: ChatMessage):
             provider=provider,
             model=model
         )
+
+
+@router.post("/providers/claude_code/remote_turn")
+async def claude_code_remote_turn(req: RemoteTurnRequest):
+    """폰-자아 호스팅(§6.5) — 맥이 claude_code LLM 한 턴을 폰에게 렌트.
+
+    폰의 인지 하네스(중급·본격 티어)가 호출한다. 맥에서 claude_code 를 돌리되:
+    - system_prompt = 폰이 보낸 것(폰 world_pulse.md 기반 = "나는 폰") → 자기-모델이 폰으로 *참*.
+    - INDIEBIZOS_BACKEND_URL = backend_url(폰) → 에이전트의 execute_ibl 이 폰에서 실행(폰-자아의 몸).
+    맥은 LLM 추론(substrate)만 빌려준다. 인증=remote_access_guard(외부=런처 세션 강제).
+    claude_code 는 out-of-process(MCP 브리지)라 execute_tool 불필요."""
+    import asyncio
+    from runtime_utils import get_base_path
+    from providers import get_provider
+
+    backend_url = (req.backend_url or os.environ.get("INDIEBIZ_PHONE_URL") or "").rstrip("/")
+    if not backend_url:
+        raise HTTPException(
+            status_code=503,
+            detail="폰 백엔드 URL 미설정 (backend_url 인자 또는 맥 INDIEBIZ_PHONE_URL 필요)",
+        )
+    images = [img.dict() for img in (req.images or [])]
+    history = req.history or []
+
+    def _run() -> Dict[str, Any]:
+        provider = get_provider(
+            "claude_code",
+            api_key="",                      # init_client 가 중앙 OAuth 토큰 로드
+            model=req.model or "",
+            system_prompt=req.system_prompt or "",
+            project_path=str(get_base_path()),
+            agent_name="폰-자아",
+            agent_id=req.agent_id,
+            backend_url=backend_url,         # ★ execute_ibl → 폰
+        )
+        if not provider.init_client():
+            return {"_error": "claude_code 초기화 실패 (CLI 바이너리/토큰 확인)"}
+        # 폰-자아의 한 턴은 메타 역할이 아니라 본 대화 — 세션 연속성 유지(기본값).
+        text = provider.process_message(req.message, history, images, execute_tool=None)
+        return {
+            "response": text,
+            "tool_results": getattr(provider, "_last_tool_results", []),
+        }
+
+    try:
+        out = await asyncio.to_thread(_run)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"{e.__class__.__name__}: {e}")
+    if out.get("_error"):
+        raise HTTPException(status_code=503, detail=out["_error"])
+    return {
+        "response": out.get("response", ""),
+        "tool_results": out.get("tool_results", []),
+        "timestamp": datetime.now().isoformat(),
+        "provider": "claude_code",
+        "model": req.model or "",
+        "executed_on": backend_url,
+    }
 
 
 @router.get("/system-ai/welcome")

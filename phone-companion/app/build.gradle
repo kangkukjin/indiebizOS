@@ -88,6 +88,23 @@ def _ENGINE_MODULES = [
     'channel_engine',        // 커뮤니티/메신저 IBL 라우터 타깃(others:feed/board/nostr)
     'indienet',              // Nostr 코어 — 폰선 nostr_phone_bridge 로 프리미티브 위임(pynostr 우회)
     'nostr_phone_bridge',    // 폰 네이티브 nostr 브리지(Chaquopy→Kotlin RelayClient/Sender/NostrCrypto)
+
+    // === 폰-자아 호스팅 step 4: 인지 하네스 (PHONE_SELF_HOSTING_HANDOFF §6.4) ===
+    // 폰이 자기 하네스+기억을 호스팅(두 번째 독립 자아)하려면 인지 파이프라인이 폰에 실재해야.
+    // 최상위 import 폐포(13모듈) AST 분석 + 맥 import 스모크로 import 안전 확인 — 벤더 SDK
+    // (anthropic/google-genai)는 providers 서브모듈에서 지연 import 라 import 시점 무발동.
+    // 실제 추론은 step5(모델 프로바이더)·step7(진입점)에서 배선. 여기선 모듈 실재+import 안전.
+    'prompt_builder',        // 프롬프트 빌더 (world_pulse.md self-state 주입 포함)
+    'world_pulse_collectors',// self-state 수집(capability portrait — 폰 자기인식 줄)
+    'world_pulse_health',    // self-state → world_pulse.md 가이드 렌더
+    'agent_cognitive',       // 3단 인지 파이프라인(분류→의식→실행→평가)
+    'consciousness_agent',   // 의식 에이전트(메타 판단 + achievement_criteria)
+    'goal_evaluator',        // 평가 에이전트(achievement_criteria 대비)
+    'agent_runner',          // AI 에이전트 실행 엔진
+    'ai_agent',              // AI 에이전트 코어
+    'agent_communication',   // 에이전트 간 통신(agent_runner 의존)
+    'agent_goals',           // 에이전트 목표(agent_runner 의존)
+    'conversation_db',       // 대화 DB(폰-자아 일화기억 로컬·사적)
 ]
 // 폰 번들 패키지 = data/phone_manifest.json 의 packages (runs_on 단일 진실 소스에서 파생).
 // 옛 하드코딩 리스트를 폐기 — build_ibl_nodes.py 의 PHONE_VERIFIED_PACKAGES 가 SSOT.
@@ -107,6 +124,8 @@ tasks.register('bundleIndiebizBase', Zip) {
         def missing = []
         _ENGINE_MODULES.each { m -> if (!file("${_ROOT}/backend/${m}.py").exists()) missing << "backend/${m}.py" }
         if (!file("${_ROOT}/backend/common").exists()) missing << "backend/common"
+        if (!file("${_ROOT}/backend/providers").exists()) missing << "backend/providers"
+        if (!file("${_ROOT}/data/common_prompts").exists()) missing << "data/common_prompts"
         if (!file("${_ROOT}/data/ibl_nodes.yaml").exists()) missing << "data/ibl_nodes.yaml"
         _PHONE_PACKAGES.each { p -> if (!file("${_ROOT}/data/packages/installed/tools/${p}").exists()) missing << "tools/${p}" }
         if (missing) throw new GradleException("정본 누락: ${missing.join(', ')} — 폰 엔진 번들을 만들 수 없습니다(드리프트 방지).")
@@ -121,9 +140,18 @@ tasks.register('bundleIndiebizBase', Zip) {
         into 'backend/common'
         include '**/*.py'
     }
+    // backend/providers → zip 안 backend/providers/ (step4: 모델 프로바이더 패키지, 벤더 SDK 지연 import)
+    from("${_ROOT}/backend/providers") {
+        into 'backend/providers'
+        include '**/*.py'
+    }
     // 레지스트리 + 폰 프로파일 매니페스트 (단일 진실 소스)
     from("${_ROOT}/data/ibl_nodes.yaml") { into 'data' }
     from("${_ROOT}/data/phone_manifest.json") { into 'data' }
+    // 공용 프롬프트 에셋 (step4: prompt_builder 가 로드 — base/consciousness/evaluator/unconscious 등)
+    from("${_ROOT}/data/common_prompts") {
+        into 'data/common_prompts'
+    }
     // 폰안전 패키지(handler.py + tool.json + 가이드 등) → 원 구조 보존
     _PHONE_PACKAGES.each { p ->
         from("${_ROOT}/data/packages/installed/tools/${p}") {

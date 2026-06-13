@@ -362,12 +362,14 @@ def get_measurements(category: str = None, days: int = 30, limit: int = 50,
         cursor.execute('''
             SELECT * FROM measurements
             WHERE person_id = ? AND category = ? AND measured_at >= ?
+              AND (deleted IS NULL OR deleted = 0)
             ORDER BY measured_at DESC LIMIT ?
         ''', (person_id, category, since_date, limit))
     else:
         cursor.execute('''
             SELECT * FROM measurements
             WHERE person_id = ? AND measured_at >= ?
+              AND (deleted IS NULL OR deleted = 0)
             ORDER BY measured_at DESC LIMIT ?
         ''', (person_id, since_date, limit))
 
@@ -392,7 +394,7 @@ def get_symptoms(category: str = None, days: int = 30, include_ended: bool = Tru
     person_id = get_person_id(person)
     since_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
 
-    query = 'SELECT * FROM symptoms WHERE person_id = ? AND started_at >= ?'
+    query = 'SELECT * FROM symptoms WHERE person_id = ? AND started_at >= ? AND (deleted IS NULL OR deleted = 0)'
     params = [person_id, since_date]
 
     if category:
@@ -420,6 +422,7 @@ def get_active_medications(person: str = None) -> List[Dict]:
 
     cursor.execute('''
         SELECT * FROM medications WHERE person_id = ? AND is_active = 1
+          AND (deleted IS NULL OR deleted = 0)
         ORDER BY started_at DESC
     ''', (person_id,))
 
@@ -439,11 +442,13 @@ def get_medications(days: int = 90, active_only: bool = False, person: str = Non
     if active_only:
         cursor.execute('''
             SELECT * FROM medications WHERE person_id = ? AND is_active = 1
+              AND (deleted IS NULL OR deleted = 0)
             ORDER BY started_at DESC
         ''', (person_id,))
     else:
         cursor.execute('''
             SELECT * FROM medications WHERE person_id = ? AND started_at >= ?
+              AND (deleted IS NULL OR deleted = 0)
             ORDER BY started_at DESC
         ''', (person_id, since_date))
 
@@ -463,11 +468,13 @@ def get_documents(doc_type: str = None, days: int = 90, person: str = None) -> L
     if doc_type:
         cursor.execute('''
             SELECT * FROM documents WHERE person_id = ? AND doc_type = ? AND recorded_at >= ?
+              AND (deleted IS NULL OR deleted = 0)
             ORDER BY recorded_at DESC
         ''', (person_id, doc_type, since_date))
     else:
         cursor.execute('''
             SELECT * FROM documents WHERE person_id = ? AND recorded_at >= ?
+              AND (deleted IS NULL OR deleted = 0)
             ORDER BY recorded_at DESC
         ''', (person_id, since_date))
 
@@ -495,6 +502,7 @@ def search_records(keyword: str, person: str = None) -> Dict[str, List[Dict]]:
     # 측정값 검색
     cursor.execute('''
         SELECT * FROM measurements WHERE person_id = ? AND (category LIKE ? OR note LIKE ?)
+          AND (deleted IS NULL OR deleted = 0)
         ORDER BY measured_at DESC LIMIT 20
     ''', (person_id, keyword_pattern, keyword_pattern))
     for row in cursor.fetchall():
@@ -506,6 +514,7 @@ def search_records(keyword: str, person: str = None) -> Dict[str, List[Dict]]:
     # 증상 검색
     cursor.execute('''
         SELECT * FROM symptoms WHERE person_id = ? AND (category LIKE ? OR description LIKE ? OR note LIKE ?)
+          AND (deleted IS NULL OR deleted = 0)
         ORDER BY started_at DESC LIMIT 20
     ''', (person_id, keyword_pattern, keyword_pattern, keyword_pattern))
     results['symptoms'] = [dict(row) for row in cursor.fetchall()]
@@ -513,6 +522,7 @@ def search_records(keyword: str, person: str = None) -> Dict[str, List[Dict]]:
     # 투약 검색
     cursor.execute('''
         SELECT * FROM medications WHERE person_id = ? AND (name LIKE ? OR reason LIKE ? OR note LIKE ?)
+          AND (deleted IS NULL OR deleted = 0)
         ORDER BY started_at DESC LIMIT 20
     ''', (person_id, keyword_pattern, keyword_pattern, keyword_pattern))
     results['medications'] = [dict(row) for row in cursor.fetchall()]
@@ -520,6 +530,7 @@ def search_records(keyword: str, person: str = None) -> Dict[str, List[Dict]]:
     # 문서 검색
     cursor.execute('''
         SELECT * FROM documents WHERE person_id = ? AND (doc_type LIKE ? OR description LIKE ? OR note LIKE ?)
+          AND (deleted IS NULL OR deleted = 0)
         ORDER BY recorded_at DESC LIMIT 20
     ''', (person_id, keyword_pattern, keyword_pattern, keyword_pattern))
     for row in cursor.fetchall():
@@ -581,6 +592,41 @@ def end_symptom(symptom_id: int, ended_at: str = None) -> bool:
         ended_at = datetime.now().strftime('%Y-%m-%d')
 
     cursor.execute('UPDATE symptoms SET ended_at = ?, updated_at = ? WHERE id = ?', (ended_at, _now(), symptom_id))
+    conn.commit()
+    affected = cursor.rowcount
+    conn.close()
+    return affected > 0
+
+
+# 삭제 가능한 기록 종류 → 테이블 매핑 (persons 는 제외 — 자식 캐스케이드 위험)
+_DELETABLE_TABLES = {
+    "measurement": "measurements",
+    "symptom": "symptoms",
+    "medication": "medications",
+    "document": "documents",
+}
+
+
+def soft_delete_record(record_type: str, record_id: int, person: str = None) -> bool:
+    """기록 soft-delete (CRDT tombstone). deleted=1 + updated_at 갱신 → 동기화로 전파.
+    person 지정 시 해당 사용자 기록만 삭제(오삭제 방지). 반환: 실제 삭제 여부."""
+    table = _DELETABLE_TABLES.get(record_type)
+    if not table:
+        return False
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if person:
+        person_id = get_person_id(person)
+        cursor.execute(
+            f"UPDATE {table} SET deleted = 1, updated_at = ? WHERE id = ? AND person_id = ?",
+            (_now(), record_id, person_id))
+    else:
+        cursor.execute(
+            f"UPDATE {table} SET deleted = 1, updated_at = ? WHERE id = ?",
+            (_now(), record_id))
+
     conn.commit()
     affected = cursor.rowcount
     conn.close()

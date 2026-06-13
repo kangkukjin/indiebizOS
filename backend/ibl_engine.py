@@ -175,6 +175,75 @@ def _forward_to_phone(phone_url: str, node: str, action: str, params: dict) -> D
     return result
 
 
+# 분산 IBL — 맥(연합 두뇌) 위임 세션 캐시(원격 런처 인증). 폰 프로세스 내 모듈 전역.
+_mac_session_cache = {"session": None}
+
+
+def _forward_to_mac(node: str, action: str, params: dict) -> Dict:
+    """분산 IBL — 폰서 못 도는 액션을 맥 /ibl/execute 로 단건 포워드(머리=맥).
+
+    `_forward_to_phone`(맥→폰)의 대칭(폰→맥). 이게 "액션이 진짜 실행 단위" 의 핵심:
+    execute_ibl 은 합성 code(&/>>/??)의 leaf 액션마다 호출되므로(workflow_engine), 각
+    액션이 여기서 개별적으로 로컬/맥을 결정한다 → 혼합 code 도 액션별로 쪼개져 실행.
+
+    맥은 원격 런처 인증 뒤에 있어 세션 로그인 필요(INDIEBIZ_MAC_URL + INDIEBIZ_MAC_PASSWORD).
+    project_id=앱모드 로 프로젝트 경로+신원(system_ai, 앱 표면 의미론) 확보. 엔진은 맥에서도
+    도므로(INDIEBIZ_PROFILE!=phone) 이 경로는 폰에서만 진입 → 재포워드 루프 없음."""
+    mac_url = (os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/")
+    if not mac_url:
+        return {"error": f"[{node}:{action}]은 집 PC(맥)에서 실행되는 액션인데 위임 대상이 "
+                         "설정돼 있지 않습니다. (집 PC가 켜져 있고 INDIEBIZ_MAC_URL 이 설정돼 있어야 합니다.)",
+                "mac_unreachable": True}
+    code = f"[{node}:{action}]"
+    if params:
+        code += json.dumps(params, ensure_ascii=False)
+    payload = {"code": code, "project_id": "앱모드"}  # agent_id 미동봉 → 맥서 앱모드 기본 신원(system_ai)
+    password = os.environ.get("INDIEBIZ_MAC_PASSWORD")
+    import requests
+
+    def _post():
+        headers = {"Content-Type": "application/json"}
+        sess = _mac_session_cache.get("session")
+        if sess:
+            headers["X-Launcher-Session"] = sess
+        return requests.post(f"{mac_url}/ibl/execute", json=payload, headers=headers, timeout=120)
+
+    def _login() -> bool:
+        if not password:
+            return False
+        try:
+            r = requests.post(f"{mac_url}/launcher/auth/login",
+                              json={"password": password}, timeout=15)
+            if r.status_code == 200:
+                sid = (r.json() or {}).get("session_id")
+                if sid:
+                    _mac_session_cache["session"] = sid
+                    return True
+        except Exception:
+            pass
+        return False
+
+    try:
+        r = _post()
+        if r.status_code in (401, 403) and password:  # 세션 만료/미로그인 → 1회 재로그인
+            if _login():
+                r = _post()
+    except Exception as e:
+        return {"error": f"[{node}:{action}]은 집 PC(맥)에서 실행되는데 맥({mac_url})에 "
+                         f"연결할 수 없습니다. 집 PC가 켜져 있는지 확인하세요. ({e.__class__.__name__})",
+                "mac_unreachable": True}
+    if r.status_code != 200:
+        return {"error": f"집 PC 위임 실패 (HTTP {r.status_code})",
+                "detail": r.text[:300], "mac_forward": True}
+    try:
+        result = r.json()
+    except Exception:
+        return {"result": r.text, "_forwarded_to": "mac"}
+    if isinstance(result, dict):
+        result.setdefault("_forwarded_to", "mac")
+    return result
+
+
 def _load_nodes_config() -> Dict:
     """노드 정의 로드 (캐싱)"""
     global _nodes
@@ -389,12 +458,12 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         return {"error": f"노드 '{node}'에 '{action}' 액션이 없습니다.",
                 "available_actions": available}
 
-    # 폰 프로파일 가드 (#3 runs_on): 폰서 못 도는 액션은 시도 전에 명확히 거부
-    # (ImportError/핸들러없음 대신 "집 PC 전용" 안내).
+    # 폰 프로파일 라우팅 (#3 runs_on / 분산 IBL): 폰서 못 도는 액션은 거부 대신 맥(연합
+    # 두뇌)에 단건 위임 — 액션이 진짜 실행 단위. 합성 code(&/>>/??)의 각 leaf 가 이 chokepoint
+    # 를 거치므로, 혼합 code 도 액션별로 쪼개져 로컬/맥에서 따로 실행된다(weather=로컬·
+    # world_bank=맥). 맥 미설정이면 _forward_to_mac 이 graceful 에러 dict 안내.
     if not _phone_runnable(node, action):
-        return {"error": f"[{node}:{action}] 액션은 집 PC에서만 동작합니다(폰 프로파일 제외). "
-                         "집 데스크탑/원격 런처에서 실행하세요.",
-                "home_only": True}
+        return _forward_to_mac(node, action, tool_input.get("params", {}))
 
     router = action_config.get("router")
     params = tool_input.get("params", {})

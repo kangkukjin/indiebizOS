@@ -62,8 +62,15 @@ def markdown_to_html(content: str, title: str, date_str: str, doc_type: str = "r
 </html>"""
 
 
-def download_youtube_music(url: str, filename: str = "output.mp3") -> dict:
-    """YouTube에서 음악을 MP3로 다운로드"""
+def download_youtube_music(url: str, filename: str = "output.mp3", mode: str = "server") -> dict:
+    """YouTube에서 음악을 MP3로 다운로드.
+
+    mode="server"(기본): 맥 Desktop 에 저장(데스크탑 사용).
+    mode="client": 임시 폴더에 받아 base64 로 반환(빌린 연산→로컬 산출물). 분산 IBL 에서
+      폰이 [limbs:music]{op:download, mode:client} 를 맥에 위임 → 맥이 추출 → b64 로 돌려주면
+      폰 Python(phone_api)이 받아 네이티브 MediaStore 로 폰 Music 폴더에 저장한다.
+      (큰 b64 를 WebView JS 브리지로 안 보내고 Python↔Kotlin 으로만 다룸.)
+    """
     try:
         import yt_dlp
     except ImportError:
@@ -71,15 +78,21 @@ def download_youtube_music(url: str, filename: str = "output.mp3") -> dict:
             'success': False,
             'message': 'yt_dlp 패키지가 설치되지 않았습니다. pip install yt-dlp 실행 필요'
         }
-    
+
+    client = (mode == "client")
+    _tmpdir = None
     try:
-        # 동적으로 Desktop 경로 설정 (크로스 플랫폼 지원)
-        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-        if not os.path.isabs(filename):
-            filename = os.path.join(desktop_path, filename)
-        
-        if not filename.endswith('.mp3'):
-            filename += '.mp3'
+        if client:
+            import tempfile
+            _tmpdir = tempfile.mkdtemp(prefix="ibz_dl_")
+            filename = os.path.join(_tmpdir, "track.mp3")
+        else:
+            # 동적으로 Desktop 경로 설정 (크로스 플랫폼 지원)
+            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+            if not os.path.isabs(filename):
+                filename = os.path.join(desktop_path, filename)
+            if not filename.endswith('.mp3'):
+                filename += '.mp3'
         
         # FFmpeg 경로 찾기 (크로스 플랫폼)
         ffmpeg_path = shutil.which("ffmpeg")
@@ -139,22 +152,41 @@ def download_youtube_music(url: str, filename: str = "output.mp3") -> dict:
             print(f"[YouTube] 다운로드 시작...")
             
             ydl.download([url])
-            
+
             print(f"[YouTube] 완료! 파일: {filename}")
-            
+
+        if client:
+            # 임시 mp3 → base64. 폰(phone_api)이 받아 MediaStore 로 Music 폴더에 저장.
+            import base64
+            with open(filename, 'rb') as _f:
+                _data = _f.read()
+            _b64 = base64.b64encode(_data).decode('ascii')
+            _safe = re.sub(r'[\\/:*?"<>|\n\r\t]+', '_', title).strip()[:90] or 'track'
             return {
                 'success': True,
-                'file_path': filename,
+                'download_in_client': True,
+                'filename': _safe + '.mp3',
+                'b64': _b64,
                 'title': title,
-                'duration': duration,
-                'message': f'다운로드 완료: {title} ({duration}초)'
+                'bytes': len(_data),
+                'message': f'다운로드: {title}',
             }
+        return {
+            'success': True,
+            'file_path': filename,
+            'title': title,
+            'duration': duration,
+            'message': f'다운로드 완료: {title} ({duration}초)'
+        }
     except Exception as e:
         print(f"[YouTube] 오류: {str(e)}")
         return {
             'success': False,
             'message': f'다운로드 실패: {str(e)}'
         }
+    finally:
+        if _tmpdir:
+            shutil.rmtree(_tmpdir, ignore_errors=True)
 
 
 def format_timestamp(seconds: float) -> str:
@@ -991,6 +1023,37 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
                 except NameError:
                     pass
             return result
+
+    # client 모드: 서버측 재생(ffplay) 대신 오디오 URL 을 resolve 해 클라이언트(폰/원격
+    # WebView)가 직접 재생한다 — 라디오의 play_in_client 패턴과 동일(제네릭 런처 표면).
+    # 분산 IBL: 폰서 [limbs:music]{op:play, mode:client} → 맥에 위임 → 맥 yt-dlp resolve →
+    # play_in_client+stream_url 반환 → 폰 WebView <audio> 재생. 맥·폰이 같은 공인 IP(집 WiFi)면
+    # googlevideo URL 직접 도달(실측 확인). 외출 시 모바일데이터는 후속(오디오 프록시 필요).
+    # 서버측 플레이어를 건드리지 않으므로 _close_player() 전에 분기(맥 자신의 재생과 독립).
+    if mode == "client":
+        try:
+            audio_url = _get_audio_url(video_id)
+        except Exception as e:
+            return {'success': False, 'message': f'오디오 URL resolve 실패: {str(e)}'}
+        if not audio_url:
+            return {'success': False, 'message': '오디오 스트림 URL을 가져올 수 없습니다.'}
+        result = {
+            'success': True,
+            'play_in_client': True,
+            'stream_url': audio_url,
+            'video_id': video_id,
+            'title': title,
+            'channel': channel,
+            'duration': _format_duration(duration),
+            'mode': 'client',
+            'message': f'재생: {title} - {channel} ({_format_duration(duration)})',
+        }
+        if not is_url:
+            try:
+                result['search_results'] = search_results
+            except NameError:
+                pass
+        return result
 
     # 이전 재생 종료
     _close_player()

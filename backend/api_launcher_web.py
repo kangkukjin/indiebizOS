@@ -73,23 +73,16 @@ def _derive_instruments() -> dict:
             app = action.get("app")
             if not isinstance(app, dict):
                 continue
-            # 폰 프로파일: 폰서 못 도는 액션은 계기에서 제외
-            if runnable is not None and f"{node_name}:{action_name}" not in runnable:
+            # 폰 프로파일: app: 블록은 기본 노출 — 실행은 라우팅(phone_api._code_needs_mac)이
+            # 로컬/맥 자동 결정한다(폰 불가 액션도 맥 위임 후 폰서 렌더). phone_render:false 만
+            # 숨김 = 폰서 못 보여주는 출력(맥 브라우저·네이티브창) 또는 미검증 보류(ytmusic).
+            if runnable is not None and app.get("phone_render") is False:
                 continue
             gid = app.get("instrument") or action_name
             if gid not in groups:
                 groups[gid] = []
                 group_seq.append(gid)
             groups[gid].append((action_name, app))
-
-    import re as _re
-
-    def _mode_action_qualified(action_str):
-        """모드 action 문자열에서 [node:action] 추출 (폰 runnable 필터용)."""
-        if not action_str:
-            return None
-        m = _re.search(r"\[(\w+):(\w+)\]", str(action_str))
-        return f"{m.group(1)}:{m.group(2)}" if m else None
 
     instruments = []
     for gid in group_seq:
@@ -108,11 +101,9 @@ def _derive_instruments() -> dict:
             for m in explicit:
                 if not isinstance(m, dict):
                     continue
-                # 폰 프로파일: 그 탭의 액션이 폰서 못 돌면 탭 숨김
-                if runnable is not None:
-                    qa = _mode_action_qualified(m.get("action"))
-                    if qa and qa not in runnable:
-                        continue
+                # 폰 프로파일: 탭도 phone_render:false 만 숨김(실행은 라우팅이 결정)
+                if runnable is not None and m.get("phone_render") is False:
+                    continue
                 modes.append(m)
             if not modes:
                 continue  # 모든 탭이 폰서 제외 → 계기 숨김
@@ -339,6 +330,9 @@ def get_launcher_webapp_html():
 <title>IndieBiz OS — Remote Launcher</title>
 <!-- 폰 라디오 재생용: 한국 방송은 HLS(.m3u8)라 Android WebView 직접재생에 hls.js 필요 -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<!-- 지도 render 프리미티브(길찾기·부동산·상권·CCTV): leaflet -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 :root{
@@ -470,6 +464,16 @@ input,textarea,select{ font-family:inherit; }
 .tabs{ display:flex; gap:6px; margin-bottom:12px; }
 .tab{ padding:8px 14px; background:var(--bg2); border:1px solid var(--line); border-radius:9px; font-size:13px; color:var(--dim); }
 .tab.on{ background:var(--acc); border-color:var(--acc); color:#fff; }
+.calgrid{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-top:10px; }
+.calwd{ text-align:center; font-size:11px; color:var(--dim); padding:4px 0; }
+.calday{ position:relative; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:14px; border-radius:8px; background:var(--bg2); cursor:pointer; }
+.calday.calhas{ font-weight:700; }
+.calday.calsel{ background:var(--acc); color:#fff; }
+.caldot{ position:absolute; bottom:5px; left:50%; transform:translateX(-50%); width:5px; height:5px; border-radius:50%; background:var(--acc); }
+.calday.calsel .caldot{ background:#fff; }
+.calpanel{ margin-top:12px; border-top:1px solid var(--line); padding-top:10px; }
+.lmaptoggle{ position:absolute; top:10px; right:10px; z-index:500; background:rgba(20,20,35,.85); color:#fff; border:1px solid var(--line); border-radius:18px; padding:7px 14px; font-size:13px; font-weight:600; }
+.lmaptoggle.on{ background:var(--acc); border-color:var(--acc); }
 .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
 .chip{ padding:6px 12px; background:var(--bg2); border:1px solid var(--line); border-radius:20px; font-size:12px; }
 .filters{ display:flex; gap:6px; flex-wrap:wrap; }
@@ -926,7 +930,7 @@ function openInstrument(ix){
     else document.getElementById('modeBody').innerHTML='<p class="muted">렌더러 없음: '+esc(inst.renderer)+'</p>';
     return;
   }
-  if(inst.modes){
+  if(inst.modes && inst.modes.length>1){  // 모드 1개면 탭 바 불필요(공간 절약) — setMode(0)이 가드(if(t))라 안전
     h+='<div class="tabs">'+inst.modes.map((m,i)=>'<button class="tab" id="modeTab'+i+'" onclick="setMode('+i+')">'+esc(m.name)+'</button>').join('')+'</div>';
   }
   h+='<div id="modeBody"></div>';
@@ -946,7 +950,7 @@ function setMode(i){
     h+='<div class="row" style="flex-wrap:wrap">'+inputs.map(inp=>{
       if(inp.type==='select')
         return '<select class="field" id="in_'+esc(inp.key)+'" style="flex:0 1 130px" onchange="selChanged(\\''+esc(inp.key)+'\\')"><option value="">'+esc(inp.label||'전체')+'</option></select>';
-      return '<input class="field" id="in_'+esc(inp.key)+'" value="'+esc(inp.default||'')+'" placeholder="'+esc(inp.placeholder||'')+'" onkeydown="if(event.key===\\'Enter\\')runMode()">';
+      return '<input class="field" style="min-width:0" id="in_'+esc(inp.key)+'" value="'+esc(inp.default||'')+'" placeholder="'+esc(inp.placeholder||'')+'" onkeydown="if(event.key===\\'Enter\\')runMode()">';
     }).join('')+'<button class="go" onclick="runMode()">조회</button></div>';
   }
   inputs.forEach(inp=>{
@@ -1007,8 +1011,23 @@ function chipRun(key,val){ const el=document.getElementById('in_'+key); if(el) e
 /* 폰 라디오: 백엔드가 play_in_client+stream_url 반환 → WebView 가 직접 재생(소리=폰 스피커).
    한국 방송=HLS(.m3u8)라 hls.js, ICY/mp3 등은 네이티브 <audio>. */
 let _radioHls=null;
-function _radioAudioEl(){ let a=document.getElementById('radioAudio'); if(!a){ a=document.createElement('audio'); a.id='radioAudio'; a.autoplay=true; document.body.appendChild(a); } return a; }
-function playRadioStream(url,vol){
+function _radioAudioEl(){ let a=document.getElementById('radioAudio'); if(!a){ a=document.createElement('audio'); a.id='radioAudio'; a.autoplay=true; a.addEventListener('ended',_npHide); document.body.appendChild(a); } return a; }
+/* 전역 미니플레이어: 클라이언트 오디오(라디오·유튜브뮤직)는 #radioAudio 전역 엘리먼트라
+   계기를 벗어나도 계속 재생된다. 재생 중이면 어디서든 보이는 정지 바를 띄워(클라이언트 관심사=
+   IBL 왕복 없이 stopRadioStream 직접) "멈출 방법 없음" 해소. 곡이 끝나면(ended) 자동 숨김. */
+function _npBar(){
+  let b=document.getElementById('nowPlaying');
+  if(!b){
+    b=document.createElement('div'); b.id='nowPlaying';
+    b.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:9998;display:none;align-items:center;gap:10px;padding:10px 14px;background:#1a1a2e;border-top:1px solid #333;box-shadow:0 -2px 10px rgba(0,0,0,.5)';
+    b.innerHTML='<span style="font-size:18px">\\u266a</span><span id="npTitle" style="flex:1;color:#eee;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><button onclick="stopRadioStream()" style="background:#e94560;color:#fff;border:none;border-radius:18px;padding:8px 18px;font-size:15px;font-weight:bold">\\u25a0 \\uc815\\uc9c0</button>';
+    document.body.appendChild(b);
+  }
+  return b;
+}
+function _npShow(label){ const b=_npBar(); const t=document.getElementById('npTitle'); if(t) t.textContent=label||'\\uc7ac\\uc0dd \\uc911'; b.style.display='flex'; }
+function _npHide(){ const b=document.getElementById('nowPlaying'); if(b) b.style.display='none'; }
+function playRadioStream(url,vol,label){
   const a=_radioAudioEl();
   if(_radioHls){ try{_radioHls.destroy();}catch(e){} _radioHls=null; }
   if(typeof vol==='number') a.volume=Math.max(0,Math.min(1,vol/100));
@@ -1016,10 +1035,37 @@ function playRadioStream(url,vol){
     _radioHls=new Hls(); _radioHls.loadSource(url); _radioHls.attachMedia(a);
     _radioHls.on(Hls.Events.MANIFEST_PARSED,()=>a.play().catch(()=>{}));
   } else { a.src=url; a.play().catch(()=>{}); }
+  _npShow(label);
 }
 function stopRadioStream(){
   if(_radioHls){ try{_radioHls.destroy();}catch(e){} _radioHls=null; }
   const a=document.getElementById('radioAudio'); if(a){ a.pause(); a.removeAttribute('src'); a.load(); }
+  _npHide();
+}
+/* CCTV 영상(item2): 지도 마커 클릭 → 전체화면 <video> 오버레이로 HLS 재생.
+   onclick 은 URL 대신 _streamUrls 정수 인덱스를 넘겨 따옴표 이스케이프 함정을 원천 회피. */
+var _streamUrls=[], _cctvHls=null;
+function playStream(idx){
+  const url=_streamUrls[idx]; if(!url) return;
+  let ov=document.getElementById('streamOverlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='streamOverlay';
+    ov.style.cssText='position:fixed;inset:0;background:#000;z-index:9999;display:flex';
+    ov.innerHTML='<button onclick="closeStream()" style="position:absolute;top:12px;right:12px;z-index:2;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:16px">✕ 닫기</button><video id="streamVideo" controls autoplay playsinline muted style="width:100%;height:100%;object-fit:contain"></video>';
+    document.body.appendChild(ov);
+  }
+  ov.style.display='flex';
+  const v=document.getElementById('streamVideo');
+  if(_cctvHls){ try{_cctvHls.destroy();}catch(e){} _cctvHls=null; }
+  if(/\\.m3u8/i.test(url) && window.Hls && Hls.isSupported()){
+    _cctvHls=new Hls(); _cctvHls.loadSource(url); _cctvHls.attachMedia(v);
+    _cctvHls.on(Hls.Events.MANIFEST_PARSED,()=>v.play().catch(()=>{}));
+  } else { v.src=url; v.play().catch(()=>{}); }
+}
+function closeStream(){
+  if(_cctvHls){ try{_cctvHls.destroy();}catch(e){} _cctvHls=null; }
+  const v=document.getElementById('streamVideo'); if(v){ v.pause(); v.removeAttribute('src'); v.load(); }
+  const ov=document.getElementById('streamOverlay'); if(ov) ov.style.display='none';
 }
 async function fireButton(bi,btn){
   const b=(CUR.mode.buttons||[])[bi]; if(!b) return;
@@ -1080,7 +1126,108 @@ function emptyMsg(p,data){
   const m=(p.empty_from?jget(data,p.empty_from):null)||p.empty||'결과가 없습니다';
   return '<p class="muted" style="margin-top:10px">'+esc(m)+'</p>';
 }
+/* 지도 render 프리미티브 — leaflet. innerHTML 후 initMaps()로 지연 초기화.
+   봉투: route_map{origin,destination,path:[[lat,lng]],summary} | location_map{center,markers:[{name,lat,lng}]}.
+   spec: {type:'map', from:'map_data'(봉투 위치), markers:'cctvs'(추가 마커, 옵션)} */
+var _MAP_QUEUE={}, _mapSeq=0, _LMAPS={};
+/* 지도가 세로 스와이프를 먹어 페이지 스크롤을 막는 문제 해결:
+   기본은 dragging(한 손가락 패닝) 끔 → 한 손가락 스와이프는 페이지 스크롤로 통과.
+   핀치 줌(touchZoom)은 그대로(두 손가락이라 스크롤과 충돌 없음). 패닝이 필요하면 토글로 켠다. */
+function toggleMapDrag(id,btn){
+  const map=_LMAPS[id]; if(!map) return;
+  if(map.dragging.enabled()){ map.dragging.disable(); btn.textContent='🔓 지도 이동'; btn.classList.remove('on'); }
+  else { map.dragging.enable(); btn.textContent='🔒 스크롤'; btn.classList.add('on'); }
+}
+function initMaps(){
+  if(typeof L==='undefined') return;
+  for(const id in _MAP_QUEUE){
+    const el=document.getElementById(id); if(!el||el._inited) continue;
+    el._inited=true; const spec=_MAP_QUEUE[id]; delete _MAP_QUEUE[id];
+    try{
+      const map=L.map(id,{attributionControl:false,dragging:false});  // 한 손가락 패닝 끔(페이지 스크롤 통과). 토글로 켬.
+      _LMAPS[id]=map;
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+      const B=[]; const md=spec.md||{};
+      if(md.path&&md.path.length){
+        L.polyline(md.path,{color:'#e11d48',weight:5,opacity:0.85}).addTo(map);
+        md.path.forEach(ll=>B.push(ll));
+        if(md.origin){ L.marker([md.origin.lat,md.origin.lng]).addTo(map).bindPopup('출발 · '+esc(md.origin.name||'')); B.push([md.origin.lat,md.origin.lng]); }
+        if(md.destination){ L.marker([md.destination.lat,md.destination.lng]).addTo(map).bindPopup('도착 · '+esc(md.destination.name||'')); B.push([md.destination.lat,md.destination.lng]); }
+      }
+      (md.markers||[]).forEach(m=>{ if(m.lat==null||m.lng==null) return; L.marker([m.lat,m.lng]).addTo(map).bindPopup(esc(m.name||'')); B.push([m.lat,m.lng]); });
+      (spec.markers||[]).forEach(m=>{ if(m.lat==null||m.lng==null) return;
+        const mk=L.marker([m.lat,m.lng]).addTo(map); const nm=m.name||'마커';
+        let btn='';
+        if(m.url){ const i=_streamUrls.push(m.url)-1; btn='<br><button class="go" style="margin-top:6px;padding:4px 12px" onclick="playStream('+i+')">▶ 영상</button>'; }
+        mk.bindPopup('<b>'+esc(nm)+'</b>'+btn);
+        B.push([m.lat,m.lng]); });
+      if(B.length) map.fitBounds(B,{padding:[28,28],maxZoom:15});
+      else if(md.center&&md.center.lat!=null) map.setView([md.center.lat,md.center.lng],13);
+      else map.setView([37.4979,127.0276],11);
+      setTimeout(()=>map.invalidateSize(),60);
+    }catch(e){ el.innerHTML='<p class="muted">지도 로드 실패</p>'; }
+  }
+}
+/* 달력 render 프리미티브 — 월 그리드. 날짜 있는 이벤트만 표시(날 없는 반복 스케줄 제외).
+   날짜 탭→그날 일정+삭제+추가(date 자동 주입). 한 번에 하나라 전역 _calCur 로 단순화
+   (onclick=정수 인덱스만→따옴표 함정 회피). 월/선택일은 _calState 로 add/delete 새로고침 너머 보존. */
+var _calCur=null, _calState={y:null,m:null,sel:null};
+function _pad2(n){ return (n<10?'0':'')+n; }
+function _calSetup(p,data){
+  const evs=viewList(data,p.from||'events').filter(e=>e&&e.date);  // 날짜 없는 이벤트 제외
+  const now=new Date();
+  _calCur={prim:p, events:evs,
+    y:(_calState.y!=null?_calState.y:now.getFullYear()),
+    m:(_calState.m!=null?_calState.m:now.getMonth()),
+    sel:_calState.sel};
+}
+function _calDraw(){
+  const host=document.getElementById('calHost'); if(!host||!_calCur) return;
+  const c=_calCur, y=c.y, m=c.m, byDay={};
+  c.events.forEach(e=>{ const ps=String(e.date).split('-'); if(ps.length<3) return;
+    const ey=+ps[0], em=+ps[1]-1, ed=+ps[2], rep=e.repeat||'none';
+    const show=(rep==='yearly')?(em===m):(ey===y&&em===m);  // 생일·기념일은 월-일만, 일회성은 연-월
+    if(show){ (byDay[ed]=byDay[ed]||[]).push(e); } });
+  const first=new Date(y,m,1).getDay(), days=new Date(y,m+1,0).getDate();
+  let h='<div class="card"><div class="row" style="align-items:center;justify-content:space-between">'
+    +'<button class="iconbtn" onclick="_calNav(-1)">◀</button><b>'+y+'년 '+(m+1)+'월</b>'
+    +'<button class="iconbtn" onclick="_calNav(1)">▶</button></div><div class="calgrid">';
+  ['일','월','화','수','목','금','토'].forEach(w=>{ h+='<div class="calwd">'+w+'</div>'; });
+  for(let i=0;i<first;i++) h+='<div></div>';
+  for(let d=1;d<=days;d++){ const hs=byDay[d]?' calhas':'', sl=(c.sel===d)?' calsel':'';
+    h+='<div class="calday'+hs+sl+'" onclick="_calPick('+d+')">'+d+(byDay[d]?'<span class="caldot"></span>':'')+'</div>'; }
+  h+='</div>';
+  if(c.sel){ const list=byDay[c.sel]||[]; c._dayList=list;
+    h+='<div class="calpanel"><div class="step-label">'+y+'-'+_pad2(m+1)+'-'+_pad2(c.sel)+'</div>';
+    if(list.length) list.forEach((e,i)=>{ h+='<div class="kv"><span class="k">'+esc(e.title||'')+'</span>'
+      +(c.prim.delete_action?'<button class="linkbtn" onclick="_calDel('+i+')">삭제</button>':'')+'</div>'; });
+    else h+='<p class="muted">일정 없음</p>';
+    if(c.prim.add) h+='<div class="row" style="margin-top:8px"><input class="field" style="min-width:0" id="calAddTitle" placeholder="일정 제목"><button class="go" onclick="_calAdd()">추가</button></div>';
+    h+='</div>'; }
+  h+='</div>'; host.innerHTML=h;
+}
+function _calNav(delta){ if(!_calCur) return; let m=_calCur.m+delta, y=_calCur.y;
+  if(m<0){m=11;y--;} if(m>11){m=0;y++;} _calCur.m=m; _calCur.y=y; _calCur.sel=null;
+  _calState.y=y; _calState.m=m; _calState.sel=null; _calDraw(); }
+function _calPick(d){ if(!_calCur) return; _calCur.sel=(_calCur.sel===d?null:d); _calState.sel=_calCur.sel; _calDraw(); }
+async function _calAdd(){ if(!_calCur||!_calCur.prim.add||!_calCur.sel) return;
+  const t=document.getElementById('calAddTitle'), title=t?t.value.trim():''; if(!title){ alert('일정 제목을 입력하세요'); return; }
+  const date=_calCur.y+'-'+_pad2(_calCur.m+1)+'-'+_pad2(_calCur.sel);
+  try{ await dispatchAction(_calCur.prim.add.action,{title:title,date:date}); }catch(e){ alert('추가 실패: '+e.message); } }
+async function _calDel(i){ if(!_calCur||!_calCur._dayList) return; const item=_calCur._dayList[i]; if(!item) return;
+  try{ await dispatchAction(_calCur.prim.delete_action,{},item); }catch(e){ alert('삭제 실패: '+e.message); } }
 function renderPrim(p,vi,data){
+  if(p.type==='calendar'){ _calSetup(p,data); setTimeout(_calDraw,0); return '<div id="calHost"></div>'; }
+  if(p.type==='map'){
+    const md=p.from?jget(data,p.from):data;
+    let mk=p.markers?viewList(data,p.markers):[];
+    if(p.max&&mk.length>p.max) mk=mk.slice(0,p.max);  // 마커 폭주 방지(상권 등 수천건)
+    const id='lmap_'+(_mapSeq++);
+    _MAP_QUEUE[id]={md:md,markers:mk};
+    return '<div style="position:relative;margin-bottom:10px">'
+      +'<div id="'+id+'" class="lmap" style="height:320px;border-radius:12px;overflow:hidden;background:var(--bg3)"></div>'
+      +'<button class="lmaptoggle" onclick="toggleMapDrag(\\''+id+'\\',this)">🔓 지도 이동</button></div>';
+  }
   if(p.type==='metric'){
     const col=trendColor(p,data);
     return '<div class="card">'+(p.label?'<div class="muted">'+tpl(p.label,data)+'</div>':'')+
@@ -1168,9 +1315,9 @@ function renderPrim(p,vi,data){
     if(!arr.length) h+='<p class="muted">'+esc(p.empty||'없음')+'</p>';
     arr.forEach((it,ri)=>{ h+='<div class="kv"><span class="k">'+tpl(p.display,it)+'</span>'+(p.delete_action?'<button class="linkbtn" onclick="elDelete('+vi+','+ri+')">삭제</button>':'')+'</div>'; });
     if(p.add){
-      h+='<div class="row" style="margin-top:8px">'+(p.add.fields||[]).map(f=> f.type==='select'
+      h+='<div class="row" style="flex-wrap:wrap;margin-top:8px">'+(p.add.fields||[]).map(f=> f.type==='select'
         ? '<select class="field" id="ea_'+vi+'_'+f.key+'" style="flex:0 1 110px"><option value="">'+esc(f.placeholder||'')+'</option>'+(f.options||[]).map(o=>'<option value="'+esc(String(o.value))+'">'+esc(o.label)+'</option>').join('')+'</select>'
-        : '<input class="field" id="ea_'+vi+'_'+f.key+'" placeholder="'+esc(f.placeholder||'')+'">').join('')
+        : '<input type="'+(f.type==='date'?'date':'text')+'" class="field" style="min-width:0" id="ea_'+vi+'_'+f.key+'" placeholder="'+esc(f.placeholder||'')+'">').join('')
         +'<button class="go" onclick="elAdd('+vi+',this)">'+esc((p.add.button)||'추가')+'</button></div>';
     }
     h+='</div>'; return h;
@@ -1190,7 +1337,8 @@ function renderPrim(p,vi,data){
     return arr.map((it,ri)=>
       '<div class="card sw-item">'+(p.icon?'<span>'+esc(p.icon)+'</span>':'')+
       '<div style="flex:1"><div class="nm">'+tpl(p.title,it)+'</div><div class="pr">'+tpl(p.sub,it)+'</div></div>'+
-      (p.button?'<button class="btn2" onclick="rowBtn('+vi+','+ri+',this)">'+esc(p.button.label||'▶')+'</button>':'')+'</div>'
+      (p.button?'<button class="btn2" onclick="rowBtn('+vi+','+ri+',this)">'+esc(p.button.label||'▶')+'</button>':'')+
+      (p.button2?'<button class="btn2" onclick="rowBtn('+vi+','+ri+',this,\\'button2\\')">'+esc(p.button2.label||'⬇')+'</button>':'')+'</div>'
     ).join('');
   }
   return '';
@@ -1221,9 +1369,11 @@ async function runMode(){
       LIST={view:mode.view,data:d}; VIEW_CTX=null;
       out.innerHTML='<div class="mdsplit" id="mdSplit"><div class="mdlist" id="mdList">'+renderView(mode.view,d)+'</div>'
         +'<div class="mddetail" id="mdDetail"><div class="mdph">← 목록에서 대화를 선택하세요</div></div></div>';
+      initMaps();
     } else {
       LIST=null; VIEW_CTX={view:mode.view,data:d,compose:mode.compose,refresh:'mode'};
       out.innerHTML=renderView(mode.view,d)+renderComposeBar(mode.compose);
+      initMaps();
     }
     // 폰: 생성된 HTML(신문 등)을 조회 직후 자동으로 띄운다(별도 '띄우기' 탭 불필요).
     if(IS_PHONE && d && typeof d==='object' && typeof d.file==='string' && /\\.html?$/i.test(d.file)) openFileOverlay(d.file);
@@ -1287,6 +1437,7 @@ function renderDrill(){
   } else { av=VIEW_CTX.view; ac=VIEW_CTX.compose; }
   VIEW_CTX._activeView=av; VIEW_CTX._activeCompose=ac;
   out.innerHTML=h+renderView(av,VIEW_CTX.data)+renderComposeBar(ac);
+  initMaps();
 }
 function drillTab(i){ if(VIEW_CTX){ VIEW_CTX.activeTab=i; renderDrill(); } }
 function mdBack(){ const s=document.getElementById('mdSplit'); if(s) s.classList.remove('has-detail'); }
@@ -1340,13 +1491,24 @@ function rowItem(vi,ri){
   const arr=viewList(VIEW_CTX.data,p.from);
   return arr[ri]==null?null:{prim:p,item:arr[ri]};
 }
-async function rowBtn(vi,ri,btn){
-  const r=rowItem(vi,ri); if(!r||!r.prim.button) return;
-  const action=rowAction(r.prim.button.action,r.item);
+/* 잠깐 뜨는 토스트(저장 알림 등) — alert 대신 비차단. */
+function toast(msg){
+  let t=document.getElementById('toastMsg');
+  if(!t){ t=document.createElement('div'); t.id='toastMsg';
+    t.style.cssText='position:fixed;left:50%;bottom:80px;transform:translateX(-50%);z-index:9999;background:#222;color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;max-width:80%;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.5)';
+    document.body.appendChild(t); }
+  t.textContent=msg; t.style.display='block';
+  clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';},2600);
+}
+async function rowBtn(vi,ri,btn,key){
+  key=key||'button';
+  const r=rowItem(vi,ri); if(!r||!r.prim[key]) return;
+  const action=rowAction(r.prim[key].action,r.item);
   btn.disabled=true; const old=btn.textContent; btn.textContent='…';
   try{
     const d=await ibl(action);
-    if(d&&d.play_in_client&&d.stream_url){ playRadioStream(d.stream_url,d.volume); }  // 폰 라디오: WebView 직접 재생
+    if(d&&d.play_in_client&&d.stream_url){ playRadioStream(d.stream_url,d.volume,d.title||d.station||d.name); }  // 폰 라디오·유튜브뮤직: WebView 직접 재생 + 미니플레이어
+    else if(d&&d.download_in_client){ toast(d.saved===false?('⚠ '+(d.message||'저장 실패')):('📥 '+(d.message||'저장됨'))); }  // mp3 폰 저장 결과
     else if(d&&d.error){
       // 폰: os_open(집 PC GUI)이 home_only 로 막히면, 로컬 생성한 HTML 을 인앱 뷰어로 띄운다.
       const m=action.match(/path:\\s*"([^"]+\\.html?)"/i);

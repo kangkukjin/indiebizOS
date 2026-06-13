@@ -79,10 +79,10 @@ nodes:
   sense:
     actions:
       phone:
-        description: 폰 컴패니언이 보낸 알림·위치·걸음 조회 (op 분기). "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요.
+        description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요.
         group: device
-        target_description: 'op=notifications(기본): 최근 폰 알림 — latest_ago/ago("방금"·"N분 전")로 지금 오는 연락인지 판별,
-          pkg로 앱 필터(예 com.kakao.talk). location: 폰 최근 위치(lat/lng). steps: 일별 걸음수. limit=개수.'
+        target_description: '최근 폰 알림 — latest_ago/ago("방금"·"N분 전")로 지금 오는 연락인지 판별,
+          pkg로 앱 필터(예 com.kakao.talk). limit=개수.'
         target_key: op
         router: handler
         tool: phone_op
@@ -91,16 +91,74 @@ nodes:
           default: notifications
           values:
             notifications: 최근 폰 알림 (카톡·문자·앱 푸시 — "지금 연락 오나")
-            location: 폰 최근 위치 (lat/lng)
-            steps: 일별 걸음수
-        implementation: phone_notifications.py(폰 에이전트가 NIP-17 DM 으로 전송 → 60초 폴링 저장)의
-          recent/recent_locations/recent_steps 조회. android 패키지 phone_op 핸들러(scope:system). raw ADB 우회 대체.
+        implementation: phone_notifications.py(폰 NotificationListener 가 보낸 알림 → 로컬/폴링 저장)의
+          recent 조회. android 패키지 phone_op 핸들러(scope:system). raw ADB 우회 대체.
+          (2026-06-12 location/steps 상시 수집 폐기 — 위치는 sense:here 온디맨드.)
         keywords:
         - 폰알림
         - 연락
         - 카톡
-        - 폰위치
-        - 걸음수
+      here:
+        description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
+        group: device
+        target_description: 파라미터 없음 — 호출 즉시 폰의 현재 위치(위경도+역지오코딩 주소)를 한 번 가져온다.
+          "지금 어디", "내 위치", 날씨/맛집/길찾기의 출발점.
+        router: handler
+        tool: phone_locate
+        scope: system
+        runs_on: phone_only
+        implementation: 폰 네이티브 fused location 1회 조회(Chaquopy→Kotlin PhoneActions.getCurrentLocationNow)
+          + Android Geocoder 역지오코딩. PC/원격에선 분산 IBL(ibl_engine)이 INDIEBIZ_PHONE_URL 로 폰에 포워드.
+        keywords:
+        - 현재위치
+        - 지금위치
+        - 내위치
+        - 어디
+        - gps
+        - location
+      listen:
+        description: 폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).
+        group: device
+        target_description: 'op=transcribe(기본): 지금 발화를 텍스트로 받아쓴다(ko-KR, timeout_sec 대기).
+          record: duration_sec 초 동안 녹음해 오디오 파일로 저장(경로 반환).'
+        target_key: op
+        router: handler
+        tool: phone_listen
+        scope: system
+        runs_on: phone_only
+        implementation: 폰 네이티브 — transcribe=Android SpeechRecognizer(온디바이스/Google, ko-KR),
+          record=MediaRecorder(AAC/m4a→filesDir). Chaquopy→Kotlin PhoneActions. PC/원격은 분산 IBL 로 폰 포워드
+          (transcribe 텍스트는 무손실, record 파일은 폰 잔류).
+        ops:
+          default: transcribe
+          values:
+            transcribe: 마이크 음성 받아쓰기 (STT → 텍스트)
+            record: 마이크 녹음 (→ 오디오 파일 경로)
+        keywords:
+        - 받아쓰기
+        - 음성인식
+        - 녹음
+        - 마이크
+        - stt
+        - voice
+      see:
+        description: 폰 카메라로 사진 1장 촬영 (호출 시 1회). facing=back(기본)/front. 폰에 jpg 저장 후 경로 반환.
+        group: device
+        target_description: 'facing=back(후면, 기본)/front(전면). 미리보기 없이 정지 캡처 → 폰 파일 경로 반환.
+          "사진 찍어", "촬영해", "카메라로 찍어줘".'
+        router: handler
+        tool: phone_capture
+        scope: system
+        runs_on: phone_only
+        implementation: 폰 네이티브 Camera2 + ImageReader(JPEG) 정지 캡처(미리보기 없음, 백그라운드 HandlerThread).
+          Chaquopy→Kotlin PhoneActions.capturePhoto. PC/원격은 분산 IBL 로 폰 포워드(파일은 폰 잔류).
+        keywords:
+        - 촬영
+        - 사진
+        - 카메라
+        - 찍어
+        - photo
+        - camera
       stock:
         description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
         group: finance
@@ -639,6 +697,27 @@ nodes:
         - 내비
         - 경로
         - 네비게이션
+        app:
+          instrument: directions
+          icon: 🛣️
+          name: 길찾기
+          order: 10
+          inputs:
+          - { key: origin, type: text, label: 출발, placeholder: '출발지 (비우면 기본)' }
+          - { key: destination, type: text, label: 도착, placeholder: '도착지 장소명', required: true }
+          action: '[sense:navigate_route]{origin: "$origin", destination: "$destination"}'
+          view:
+          - type: map
+            from: map_data
+          - type: metric
+            label: 경로 요약
+            big: '{map_data.summary.distance_km}km'
+            sub: '{map_data.summary.duration_min}분 · 통행료 {map_data.summary.toll}원'
+          - type: kv_list
+            from: key_guides
+            title: 주요 안내
+            k: '{name}'
+            v: '{guidance}'
       reverse_geocode:
         description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
         group: places
@@ -709,6 +788,29 @@ nodes:
             webcam: 좌표 근처 해외 경치 웹캠 (Windy 직행, 교통 CCTV 건너뜀)
         implementation: cctv_search/nearby/webcam op 분기 (카카오 우선 → TOPIS/UTIC/ITS →
           Windy 폴백; webcam은 Windy 직행).
+        app:
+          instrument: cctv
+          icon: 📹
+          name: CCTV
+          order: 12
+          inputs:
+          - { key: q, type: text, label: 검색, placeholder: '지역·도로 (예: 해운대, 경부)', default: 해운대 }
+          auto_run: true
+          action: '[sense:cctv]{op: "search", query: "$q"}'
+          view:
+          - type: map
+            markers: cctvs
+            max: 100
+          - type: metric
+            label: 검색 결과
+            big: '{count}개'
+          - type: card_list
+            from: cctvs
+            empty: CCTV를 찾지 못했습니다
+            card:
+              title: '{name}'
+              lines:
+              - '{road_type}{format|opt: · ,}'
       commercial:
         description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
         group: real_estate
@@ -716,6 +818,30 @@ nodes:
         router: handler
         tool: search_commercial_district
         implementation: 소상공인진흥공단 상권정보 공개 API로 업종별 점포 밀집도/분포 분석
+        app:
+          instrument: commercial
+          icon: 🏪
+          name: 상권
+          order: 11
+          inputs:
+          - { key: lat, type: text, label: 위도, default: '37.4979' }
+          - { key: lng, type: text, label: 경도, default: '127.0276' }
+          auto_run: true
+          action: '[sense:commercial]{lat: "$lat", lng: "$lng"}'
+          view:
+          - type: map
+            markers: data
+            max: 200
+          - type: metric
+            label: 주변 점포 수
+            big: '{total_count}개'
+          - type: card_list
+            from: data
+            empty: 점포가 없습니다
+            card:
+              title: '{name}'
+              lines:
+              - '{category} · {address}'
       search_ddg:
         description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는
           search_news, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
@@ -923,7 +1049,10 @@ nodes:
             sub: '{channel} · {duration}'
             button:
               label: ▶
-              action: '[limbs:music]{op: "play", query: "https://www.youtube.com/watch?v={video_id}"}'
+              action: '[limbs:music]{op: "play", mode: "client", query: "https://www.youtube.com/watch?v={video_id}"}'
+            button2:
+              label: ⬇
+              action: '[limbs:music]{op: "download", mode: "client", url: "https://www.youtube.com/watch?v={video_id}"}'
       radio:
         description: 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
         target_description: |
@@ -1330,17 +1459,32 @@ nodes:
         group: schedule
         router: system
         func: manage_events
+        runs_on: home_only   # event_engine→api_system_ai 무거운 의존(폰 미번들). 폰은 맥 라우팅으로 접근.
         implementation: event_engine으로 이벤트/스케줄 CRUD (SQLite 기반)
         keywords:
         - 일정
         - 스케줄관리
         - 예약관리
+        app:
+          instrument: calendar
+          icon: 📅
+          name: 일정
+          order: 13
+          auto_run: true
+          action: '[self:manage_events]{action: "list"}'
+          view:
+          - type: calendar
+            from: events
+            delete_action: '[self:manage_events]{action: "delete", event_id: "{id}"}'
+            add:
+              action: '[self:manage_events]{action: "create", title: "$title", date: "$date"}'
       show_calendar:
         description: 캘린더를 HTML로 생성하여 브라우저에서 표시
         target_description: '(파라미터 없음 — 현재 월 캘린더). month/year 옵션으로 특정 월 지정.'
         group: schedule
         router: system
         func: show_calendar
+        runs_on: home_only   # calendar_manager.open_in_browser()=데스크탑 브라우저 — 폰 부적합. 폰은 manage_events 계기로 일정 조회.
         implementation: calendar_manager.open_in_browser() — HTML 캘린더 생성 후 브라우저 자동
           열기
         keywords:
@@ -2098,24 +2242,27 @@ nodes:
         - 화면분석
         - 버튼찾기
       android:
-        description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. USB 디버깅 연결 폰. 데스크톱은 limbs:screen, 웹은 limbs:browser.
-        target_description: '흐름 — snapshot(요소+라벨+좌표 읽기, 기본) → tap(query 라벨/id 일부 권장, 또는 x,y) → type(text). 입력 후 전송 등 동적 버튼은 반드시 snapshot 다시. 주요 파라미터 — query(탭할 요소 라벨), x/y(snapshot이 준 좌표), text(입력), key(back/home/enter/recent), package_name(앱 실행, 예 com.kakao.talk), direction(swipe up/down/left/right). device_id 생략 시 첫 기기. 가이드 android.md 참조.'
+        description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.
+        target_description: '흐름 — snapshot(요소+라벨+좌표 읽기, 기본) → tap(query 라벨/id 일부 권장, 또는 x,y) → type(text). 입력 후 전송 등 동적 버튼은 반드시 snapshot 다시. 주요 파라미터 — query(탭할 요소 라벨), x/y(snapshot이 준 좌표), text(입력), key(back/home/recent), package_name(앱 실행, 예 com.kakao.talk), direction(swipe up/down/left/right). device_id 생략 시 첫 기기(PC 경로). 가이드 android.md 참조.'
         group: device
         target_key: op
         router: handler
         tool: android_op
-        runs_on: home_only   # PC-ADB로 폰 제어 — 폰 자신에선 무의미(sense:phone은 폰가능)
+        scope: system   # 폰 화면 조작 — 프로젝트 컨텍스트 불필요(sense:phone/here/listen/see 와 동형)
+        runs_on: anywhere   # 집 PC=PC-ADB(ui_control), 폰 프로파일=네이티브 AccessibilityService(자급). 핸들러가 INDIEBIZ_PROFILE로 분기
         ops:
           default: snapshot
           values:
             snapshot: 화면 독해 — 누를 수 있는 요소를 라벨+좌표로 반환 (탭 전 필수)
             tap: 요소 탭 (query 라벨/id 일부 권장, 또는 x,y)
-            type: 포커스된 입력창에 텍스트 입력 (한글은 IME 필요)
+            type: 포커스된 입력창에 텍스트 입력 (폰 네이티브는 ACTION_SET_TEXT라 한글 IME 불필요)
             swipe: 스와이프·스크롤 (direction up/down/left/right 또는 x1,y1,x2,y2)
-            key: 시스템 키 (back/home/enter/recent 등)
+            key: 시스템 키 (back/home/recent 등. 폰 네이티브는 enter 미지원)
             long_press: 길게 누르기 (x,y)
             open_app: 앱 실행 (package_name)
-        implementation: ADB(uiautomator dump + input)로 폰 화면 독해·터치·입력 op 분기
+        implementation: 집 PC=ADB(uiautomator dump+input, ui_control.py), 폰 자신=네이티브 AccessibilityService
+          (PhoneAccessibilityService — getRootInActiveWindow 독해 + dispatchGesture 터치 + ACTION_SET_TEXT 입력).
+          핸들러가 INDIEBIZ_PROFILE=phone 이면 네이티브로 분기. 폰은 1회 접근성 권한 활성 필요.
         keywords:
         - 안드로이드
         - 폰
@@ -2205,6 +2352,7 @@ nodes:
           instrument: ytmusic
           mode: 큐
           mode_order: 1
+          phone_render: false   # 큐=서버측 mpv 대기열 — 폰 클라이언트 재생(mode:client)엔 무의미해 숨김
           auto_run: true
           buttons:
           - label: ⏭ 다음 곡
@@ -2639,6 +2787,7 @@ nodes:
       auto_response:
         description: 외부 메시지 자동응답 서비스 제어 — op:status(기본)/start/stop. on/off 는 영속(재시작 유지).
         group: channel
+        runs_on: home_only
         target_description: 'op:status(가동 여부·켜짐설정·점검주기·처리수) / start(켜기, 영속) / stop(끄기, 영속). 자동응답은 이웃 정보공개수준별 근무지침·비즈니스문서를 맥락으로 AI가 응답 생성·발송.'
         target_key: op
         router: handler

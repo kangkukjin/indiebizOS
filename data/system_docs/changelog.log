@@ -1180,3 +1180,159 @@
   - 코퍼스: ibl_usage.db 2424(phone_sync 신규+neighbor relabel 반영)+training json. 정규화 223 패턴, 학습2429/평가652쌍.
   - 결과: 코드 Top-5 92.6%(baseline 43.9%→+48.8%p)·desc Top-5 92.8%(67.6%→+25.2%p). 메모리 로컬최선(~92.8%) 재현. rebuild_index(2424 재색인 7.2초)+백엔드 touch로 반영.
   - 보강: neighbor save/favorite 코퍼스 용례 0건 공백 발견(통합 시 list/detail만 relabel됨) → 13 용례 추가(이웃추가/즐겨찾기/맛집), 새 모델로 자동 인덱싱. 연상 검증: phone_sync·neighbor list/detail/save/favorite·business·phone vibrate·맛집 전부 Top-1 정상. 백업: data/models/ibl_embedding.bak.20260612_183704.
+
+[2026-06-12] 폰 위치 온디맨드 전환 + 상시 수집 폐기 (sense:here)
+  - 결정(사용자): 위치·걸음 상시 수집/푸시/저장 전면 폐기. 위치는 "물을 때 1회" 능동 조회로.
+  - 신규 [sense:here] (runs_on:phone_only, 122→123 액션): 폰 fused GPS 1회 조회 + Geocoder 역지오코딩
+    → {lat,lng,accuracy,captured_at,address}. PC/원격은 분산 IBL(INDIEBIZ_PHONE_URL)로 폰에 포워드
+    → 맥의 AI 도 자기 위치 인지. Kotlin PhoneActions.getCurrentLocationNow(CountDownLatch 동기 블록).
+  - 폐기: sense:phone 의 location/steps op(→ notifications 단일), SignalCollector.kt(위치·걸음 상시 수집기),
+    phone_notifications 의 locations/steps 테이블·store_*·recent_*·ingest 분기, api_phone /phone/locations·/phone/steps,
+    매니페스트 ACTIVITY_RECOGNITION·ACCESS_BACKGROUND_LOCATION(온디맨드용 FINE/COARSE 만 유지).
+  - 해마: 옛 location/steps 용례 정리(steps 3 drop, location→here 3 전환, DB 6 삭제) + sense:here 16 용례 추가
+    + rebuild_index(2447). 연상 검증 "지금 내 위치"/"나 어디 있어"/"where am I"/"현재 위치" → [sense:here] 1.0.
+  - 검증: build --check ✓(바이트·phone_manifest 일치, sense:here runnable), Kotlin compileDebugKotlin BUILD SUCCESSFUL,
+    PC /ibl/execute [sense:here] → 분산 포워드 시도 후 phone_unreachable(레일 작동 확인). 실기기 종단은 APK 설치 후.
+  - ★실기기 종단 검증 완료(A36/SM_A366N, USB): ①폰-로컬 [sense:here] → 실 GPS 36.6205,127.3178 (±25m) + 한글주소
+    역지오코딩 성공. ②맥→폰 분산 포워드: 맥 /ibl/execute [sense:here] → INDIEBIZ_PHONE_URL(192.168.0.13:8765)
+    포워드 → 폰 GPS → {success, lat/lng, address:"청주시 흥덕구 오송읍...", _forwarded_to:"phone"}. AI가 자기 위치 인지 실증.
+
+[2026-06-12] 폰 마이크 온디맨드 — 받아쓰기/녹음 (sense:listen)
+  - 신규 [sense:listen]{op} (runs_on:phone_only, 123→124 액션): op=transcribe(기본, SpeechRecognizer ko-KR STT→텍스트,
+    timeout_sec)/record(MediaRecorder AAC/m4a→filesDir, duration_sec). Kotlin PhoneActions.transcribeFromMic/recordAudio.
+    transcribe 는 텍스트라 맥↔폰 포워드 무손실; record 파일은 폰 잔류(경로 반환, 회수는 후속).
+  - 매니페스트 RECORD_AUDIO 추가. 해마 15 용례(transcribe/record op 구분) + rebuild_index(2463).
+  - ★A36 실기기 종단(USB): record 3초 → 실 m4a 5238바이트 생성✓. transcribe 8초 → "발화 감지 못함(무음)" =
+    SpeechRecognizer 가용·청취·graceful 확인(실제 단어 받아쓰기는 발화 필요). build --check✓·Kotlin compile✓·APK 46MB.
+
+[2026-06-12] 폰 카메라 온디맨드 — 촬영 (sense:see)
+  - 신규 [sense:see] (runs_on:phone_only, op 없는 단일목적, 124→125 액션): Camera2+ImageReader 정지 캡처
+    → 폰 jpg. facing=back(기본)/front, 최대 JPEG 해상도 자동선택. Kotlin PhoneActions.capturePhoto.
+  - ★3A 수렴 함정 해결: 프리뷰 없이 곧장 정지캡처하면 노출 미수렴으로 흑색(밝기 2.4/255). 더미 SurfaceTexture
+    프리뷰 반복요청 1.5초로 AE/AF 수렴 후 캡처 → 밝기 160/255 정상. (파일크기로 흑색 진단: 균일흑=수십KB, 노이즈=수MB.)
+  - 매니페스트 CAMERA 권한 + camera.any feature(required=false). 해마 12 용례(촬영/셀카 facing 구분) + rebuild_index(2475).
+  - ★A36 실기기 종단(USB): 후면 4080x3060·전면 4000x3000 실 JPEG(삼성 EXIF/GPS/타임스탬프), 천장 장면 육안 확인✓.
+    build --check✓·Kotlin compile✓·APK 46MB. 파일은 폰 잔류(경로 반환, 회수는 후속).
+  - ※폰 온디맨드 감각 삼각 완성: sense:here(위치)·sense:listen(귀)·sense:see(눈). 남은 마일스톤=android 조작루프 자급화.
+
+[2026-06-12] android 조작 루프 폰 자급화 — PC-ADB → 네이티브 AccessibilityService
+  - [limbs:android] 가 폰 자신에서도 동작: 기존 PC-ADB(uiautomator+input, USB 필수) 외에, 폰 프로파일이면
+    네이티브 PhoneAccessibilityService 로 자기 화면 독해·조작(USB 불필요). 핸들러가 INDIEBIZ_PROFILE=phone 분기.
+    runs_on home_only→anywhere + scope:system 추가(프로젝트 컨텍스트 불필요). 액션 125 유지(어휘 불변, 구현 추가).
+  - PhoneAccessibilityService.kt: getRootInActiveWindow 노드트리 독해(라벨+중심좌표+클릭가능) + dispatchGesture
+    탭/스와이프/롱프레스 + ACTION_SET_TEXT 입력(한글 IME 불필요!) + performGlobalAction(back/home/recent).
+    companion @JvmStatic 다리로 Chaquopy 호출. accessibility_config.xml + 매니페스트 서비스 등록 + strings.xml.
+  - ★App.kt 라이프사이클 버그 수정: 앱이 백그라운드 가면 백엔드(uvicorn) 중지하던 설계(onActivityStopped→stopBackend)
+    → 다른 앱 조작하려면 IndieBiz 가 백그라운드여야 하는데 그때 백엔드가 죽어 명령 불가였음. stopBackend 제거
+    → 상주 포그라운드 서비스와 함께 백엔드 상시 생존(폰=AI가 언제든 닿는 몸, 맥→폰 포워드도 백그라운드 도달).
+  - ★A36 실기기 종단(USB, 접근성 adb 활성): 설정 앱 open_app→IndieBiz 백그라운드→백엔드 생존✓→snapshot(25요소)
+    →tap"연결"→화면 이동 확인→type"블루투스"(한글 입력)→결과 표시→key back 복귀. 전 루프 자급 작동.
+  - 1회 설정: 폰 설정>접근성>설치된 서비스>IndieBiz 켜기(보안상 프로그램 활성 불가, 테스트는 adb settings).
+
+[2026-06-12] 폰 네이티브 앱모드에 메신저·비즈니스 계기 노출 (A=폰 자급 노드)
+  - 원인: 폰 프로파일만 runnable_actions 화이트리스트로 거르는데, messenger(others:messages)+
+    business(self:business*)가 전부 business 패키지 소속이고 그 패키지가 PHONE_VERIFIED_PACKAGES에 없었음.
+    community(feed/board/nostr=비패키지)는 기본 폰가능이라 떴음.
+  - 수정 2곳: ①others.yaml auto_response에 runs_on: home_only (PC 전용 폴러 — 폰서 자동응답 탭만 자동 숨김)
+    ②build_ibl_nodes.PHONE_VERIFIED_PACKAGES에 business 추가. 빌드→phone_manifest packages 7→8, runnable 55→65.
+  - business 핸들러 하드뎁(business_manager/sync/runtime_utils) 이미 폰 _ENGINE_MODULES에 번들. 소프트뎁 indienet은
+    미번들이나 _indienet() graceful(메신저는 business.db만으로 동작). 액션 125 유지(runs_on은 빌드타임 태그).
+  - A36 실기기 종단검증(USB adb): assembleDebug→install→폰 /launcher/instruments에 messenger/business/community 등장,
+    [self:business]{op:list} 폰 business.db 실레코드, [others:messages]{op:inbox} graceful, logcat business_op 로드·import에러0.
+    앱 UI 홈그리드 💬메신저·🌐IndieNet·🏢비즈니스 타일 + 비즈니스 4탭(자동응답無)+레벨칩 확인.
+
+[2026-06-13] 폰 네이티브 nostr Kotlin 브리지 — 커뮤니티/메신저 nostr 자급화
+  - 트리거: 폰 IndieNet 앱 "No Module named 'channel_engine'" 크래시.
+  - 근본: 폰 Python은 nostr 불가 — pynostr→coincurve(C·libsecp256k1) Chaquopy 빌드불가(읽기도 pynostr import).
+    폰은 nostr를 Kotlin 네이티브(RelayClient/Sender/NostrCrypto/Nip17/Nip44 + secp256k1-kmp JNI)로 함.
+  - 설계: indienet의 nostr 프리미티브만 폰 분기→Kotlin 위임, 상위 로직(필터/파싱/보드그룹) 공유=드리프트0.
+  - Kotlin 추가: RelayClient.query(REQ 읽기), NostrCrypto.buildEvent(빌드+서명), Nip44.decrypt, Nip17.unwrapDm.
+  - backend/nostr_phone_bridge.py 신설(Chaquopy jclass→Kotlin). 함정: Kotlin object=.INSTANCE 호출,
+    Python list→ArrayList 수동변환, Context=Python.getPlatform().getApplication().
+  - indienet.py 폰 분기(_ON_PHONE): initialize/_query_relays/_post_with_tag/fetch_dms/fetch_dms_nip17/send_dm_nip17.
+  - channel_engine.py: 폰선 nostr 발신=use_system(폰 단일사용자=indienet신원=시스템신원, agent_id 게이트 우회).
+  - 번들: _ENGINE_MODULES + channel_engine/indienet/nostr_phone_bridge.
+  - A36 실기기 3단계 종단검증: P1 읽기(피드/보드/신원) / P2 게시(kind:1 릴레이 OK→피드 왕복) /
+    P3 DM 왕복(NIP-17 자가 send→fetch unwrap 평문 복원). IndieNet 앱 크래시 해소+폰 발행글 피드 렌더.
+
+[2026-06-13] NIP-04 DM 발신 완전 은퇴 — 발신 전 경로 NIP-17 단일화
+  - 사용자 지적: "어차피 NIP-17만 써야" — 잔존 NIP-04 발신이 최신앱(0xchat/Damus)서 DM 깨뜨림.
+  - 마지막 NIP-04 발신처: channel_poller._send_nostr_dm(자동응답 답장) + extension api_indienet REST.
+    둘 다 send_dm_nip17로 이관 → indienet.send_dm(NIP-04 kind:4) 메서드 삭제(호출자 0).
+  - 발신=NIP-17 gift-wrap 단일(메신저 작성·자동응답·REST·폰 브리지 전부). 수신=NIP-17 우선+NIP-04 레거시 읽기.
+  - 폰 회귀검증(send_dm 제거 후): 피드 read·DM 수신 정상.
+
+[2026-06-13] 폰 render 하부구조: leaflet 지도 + video 스트림 프리미티브 (길찾기·상권·CCTV 폰 해금)
+  - 원칙: 폰 작업 단위=능력(횡단 render 프리미티브), 앱별 아님. 하나가 다수 계기 해금.
+  - api_launcher_web.py: `map` view타입(leaflet CDN+initMaps() 지연초기화, route_map/location_map 봉투+markers+max캡)
+    + video 오버레이(playStream(idx)+<video>+hls.js, 라디오 패턴; onclick은 정수인덱스로 따옴표함정 회피).
+  - app 블록: navigate_route→directions(경로), commercial→상권(마커 auto_run), cctv→CCTV(키워드search+영상).
+    instrument 명시로 데스크탑 bespoke 유지(STATIC_INSTRUMENT_IDS 억제). cctv→PHONE_VERIFIED_PACKAGES.
+  - build_ibl_nodes.APP_VIEW_TYPES += "map". 빌드전 서빙HTML 인라인JS node --check(따옴표함정 선검출).
+  - A36 검증: directions 경로 폴리라인 / commercial 강남 마커200 / cctv 해운대 마커+▶영상 버튼, 재생가능 HLS스트림.
+  - realty=좌표없어(법정동단위) 지도불가→리스트유지. calendar=substrate엉킴(show_calendar=데스크탑HTML,
+    manage_events=무거운 api_system_ai)→보류, 결정필요. ★교훈: census ROI는 실제 데이터계약으로 검증.
+
+[2026-06-13] 폰↔맥 일반 라우팅 substrate — 액션이 실행 단위(빌린 액션은 맥 위임, 혼합 code 분할 실행)
+  - 원리: 폰=몸(센서·신원·렌더) 자급, 머리(연산)는 맥 연합. 두 indiebizOS가 협력하는 방식 —
+    클라이언트-서버 아니라 주권 피어들의 연합(self-맥=신뢰전체·게이트없음, 미래 피어는 허가층 슬롯인).
+  - PHASE 1a (phone_api.py): 폰 /ibl/execute 가 항상 로컬 엔진에 넘김(엔진이 액션별 라우팅). 옛 통째-위임 제거.
+  - 모델 정합(혼합 code 분할): 라우팅을 엔진 chokepoint(ibl_engine.execute_ibl)로 내림 — 폰서 못 도는 액션
+    (runnable_actions 밖)을 거부 대신 `_forward_to_mac`(폰→맥 단건, _forward_to_phone 대칭, 런처 세션인증).
+    합성 code(&/>>/??)의 각 leaf가 chokepoint 거치므로 액션별로 쪼개 실행(weather=폰·world_bank=맥, 결과 결합).
+    workflow_engine 폰 번들 추가(합성 오케스트레이터). project_id=앱모드→맥서 경로+system_ai 신원.
+  - PHASE 1b (계기 가시성↔실행 직교): app 블록 기본 폰 노출(실행은 라우팅 결정), `phone_render:false`만 숨김
+    (맥 브라우저·네이티브창·미검증 보류). APP_KEYS += phone_render. _derive_instruments 필터 교체(runnable→phone_render).
+  - calendar 해금: self:manage_events·show_calendar runs_on=home_only(폰 미번들 의존) + manage_events에 calendar
+    app블록(card_list, instrument:calendar→데스크탑 bespoke 유지). ytmusic은 phone_render:false(PHASE3 오디오 전까지 보류).
+  - A36 종단검증: 단일 로컬(weather)·단일 빌림(world_bank=_forwarded_to:mac)·혼합 병렬([weather]&[world_bank]
+    →분기1 로컬/분기2 mac)·순차(>>) 분할·calendar 계기 노출+manage_events 맥라우팅(이벤트17건). 맥/데스크탑 회귀0.
+  - 다음(미룸): ①혼합 code는 됐고 ②빌린-액션 앱 마저 해금(ytmusic 오디오 resolve/proxy=PHASE3).
+
+[2026-06-13] ytmusic 오디오 폰 해금 — 빌린 액션 맥 resolve → 폰 WebView 재생 (PHASE 3 완료)
+  - 갈림길#1 실측 해소: 맥이 yt-dlp로 뽑은 googlevideo URL을 폰이 직접 재생 가능한가(IP잠금?) →
+    폰 공인IP=맥과 동일(같은 집 WiFi/NAT 220.86.226.64)이라 **resolve 방식 작동**(프록시 불필요).
+    외출 시 모바일데이터(다른 공인IP)는 후속(오디오 프록시 필요).
+  - tool_youtube.play_youtube 에 `mode:"client"` 분기: 서버측 ffplay 대신 오디오 URL resolve →
+    `{play_in_client:True, stream_url, title, ...}` 반환(라디오 play_in_client 패턴과 동일, 서버 플레이어 무관).
+  - ytmusic app블록: search_youtube phone_render:false 제거(폰 노출)+▶버튼 action에 `mode:"client"` 추가.
+    limbs:music(큐 탭)은 phone_render:false 유지(서버측 mpv 대기열=폰 클라이언트 재생엔 무의미).
+    데스크탑은 ytmusic OVERRIDE(bespoke YtMusicInstrument=서버측 mpv)라 무영향. 제네릭 표면(폰/원격)=클라이언트 재생.
+  - 폰 재생 경로: rowBtn(api_launcher_web)이 이미 play_in_client+stream_url 일반 처리→playRadioStream(라디오 재사용, 새 JS 0).
+  - A36 종단검증: ytmusic 계기 노출(검색탭만) / 검색 맥위임(결과5) / ▶ 맥위임 resolve(play_in_client+stream_url 1128자)
+    / stream_url 폰네트워크 도달(206 audio/mp4) / **실기기 ▶ 재생 시 폰 스피커서 음악 출력(사용자 확인)**. youtube 패키지는
+    폰 미번들(빌린 액션)이라 tool_youtube는 맥만 갱신.
+  - ★프록시 불필요 확정: 처음엔 "폰=맥 같은 공인IP(집 WiFi)라 직접재생"으로 봤으나 **사용자가 LTE(다른 공인IP)서도
+    재생 확인** → googlevideo URL은 IP잠금 아님, 네트워크 무관. 오디오 프록시 후속과제 폐기. (URL ~6h 만료는 ▶마다 재resolve라 무관.)
+
+[2026-06-13] 클라이언트 오디오 전역 정지 바 + 계기 입력 레이아웃 공간절약 (api_launcher_web 서빙 웹앱)
+  - 버그: 클라 오디오(라디오·ytmusic)=#radioAudio 전역 엘리먼트라 계기 벗어나도 계속 재생, ytmusic 검색탭엔 정지버튼 없음→멈출 방법 없음.
+  - 전역 미니플레이어: 재생 중이면 하단에 항상 보이는 정지 바(#nowPlaying, ♪제목+■정지). 정지=클라 관심사라 IBL 왕복 없이
+    stopRadioStream() 직접. 곡 끝(ended) 자동 숨김. playRadioStream(url,vol,label) label 추가. 라디오에도 적용. 사용자 작동 확인.
+  - 레이아웃(사용자 지적): ①단일 모드는 모드탭 바 숨김(inst.modes.length>1일 때만) ②입력창 min-width:0로 조회 버튼 같은 줄
+    인라인(flex 자식 min-width:auto 래핑 함정 해소). node --check 통과. 사용자 작동 확인.
+
+[2026-06-13] ytmusic mp3 다운로드 → 폰 Music 폴더 (빌린 연산→로컬 산출물)
+  - 원칙: 폰서 누른 다운로드는 폰에 파일이 떨어져야 함. 폰엔 yt-dlp 없으니 추출=맥, 산출물(mp3)=폰.
+  - 맥: tool_youtube.download_youtube_music(mode="client") → 임시폴더 추출 후 base64 반환({download_in_client,filename,b64,bytes}).
+    handler.py 가 mode 전달. (서버 모드는 기존대로 맥 Desktop 저장 — 데스크탑용 무회귀.)
+  - 폰: phone_api /ibl/execute 가 응답의 download_in_client+b64 를 가로채 _save_audio_to_phone → base64 디코드 →
+    Kotlin MediaSaver(신규)로 MediaStore Audio(RELATIVE_PATH Music/)에 저장. **b64 는 WebView 로 안 보냄**(Python↔Kotlin
+    bytes→byte[] 으로만 — 큰 파일도 JS 브리지 우회). 응답엔 saved+saved_path 만.
+  - MediaSaver.kt: API29+ scoped storage(자기 생성 파일이라 저장소 권한 불필요), IS_PENDING 패턴, ctx=(Python.getPlatform()
+    as AndroidPlatform).application. Music 폴더 저장+MediaStore 등록(음악 앱 인식).
+  - UI: list_action 에 button2(⬇) 어휘 신설(하위호환, rowBtn(key) 일반화+_app_action_templates 수집). ytmusic 검색 행에 ▶/⬇.
+    저장 결과는 toast(📥). build --check 통과.
+  - A36 종단검증: 폰 다운로드 액션 → 맥 위임 추출 → /sdcard/Music/"Me at the zoo.mp3"(760822B) 실제 저장 + MediaStore 등록
+    (content query: relative_path=Music/, audio/mpeg) + **사용자 UI ⬇ 실다운로드 성공**. youtube 패키지 폰 미번들이라 맥만 갱신.
+
+[2026-06-13] calendar 쓰기 + 달력(월 그리드) render 프리미티브 (일정 추가/삭제/달력 표시)
+  - self:manage_events 는 create/list/delete 이미 지원(home_only→맥 라우팅). UI만 연결.
+  - 1차: editable_list(추가폼+행삭제)로 연결 → 사용자 지적("시간순 안나옴·달력 아님·날없는 반복스케줄 섞임").
+  - 2차(현재): 새 `calendar` view 프리미티브 — 월 그리드(map 선례). 날짜 있는 이벤트만 점 표시(날 없는 반복 스케줄 자연 제외),
+    repeat=yearly는 월-일 매칭(생일·기념일 매년)·일회성은 연-월. ◀▶ 월 네비, 날짜 탭→그날 일정+삭제+추가(date 자동주입).
+    한 번에 하나라 전역 _calCur/_calState(월·선택일을 add/delete refreshCurrent 너머 보존). onclick=정수 인덱스만(따옴표함정 회피).
+  - app블록: self:manage_events view를 calendar로(delete_action+add.action). build: APP_VIEW_TYPES += calendar,
+    _app_action_templates·_block_local_keys($title/$date 주입) calendar 합류. CSS calgrid/calday/caldot/calsel/calpanel.
+  - A36 종단검증: 폰서 create/list/delete 전부 맥 위임 작동(_forwarded_to:mac) + **달력 2026년 6월 그리드에 감자캐기(6/20)·생일 점 표시,
+    20일 탭→날짜 패널(감자캐기+삭제+추가폼) 렌더**. node --check 통과.

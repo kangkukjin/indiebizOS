@@ -32,6 +32,11 @@ except ImportError:
     class PublicKey:
         pass
 
+# 폰 네이티브: pynostr/coincurve(C·libsecp256k1) 가 Chaquopy 에 빌드 불가 → nostr
+# 프리미티브를 폰 Kotlin 스택(RelayClient/Sender/NostrCrypto/Nip17/Nip44)에 위임한다.
+# (relay 읽기/쓰기·서명·NIP-17/44 = nostr_phone_bridge. 상위 로직은 이 파일에서 공유 → 드리프트 0.)
+_ON_PHONE = os.environ.get("INDIEBIZ_PROFILE") == "phone"
+
 
 # IndieNet 데이터 디렉토리
 INDIENET_DIR = Path.home() / '.indiebiz' / 'indienet'
@@ -296,6 +301,8 @@ class IndieNet:
 
     def initialize(self) -> bool:
         """IndieNet 초기화"""
+        if _ON_PHONE:
+            return self._initialize_phone()
         if not HAS_NOSTR:
             return False
 
@@ -316,6 +323,35 @@ class IndieNet:
         # 이게 있어야 상대 앱이 "이 사람에게 DM 어디로?"를 알고 답장 가능.
         threading.Thread(target=self.publish_dm_relays, daemon=True).start()
 
+        return True
+
+    def _initialize_phone(self) -> bool:
+        """폰: pynostr 대신 Kotlin 브리지로 초기화.
+
+        피드 읽기는 신원 불필요(공개 글). 신원(서명·DM용 priv/pub)은 best-effort 로
+        폰 SharedPreferences 키에서 채우되, 실패해도 _initialized 는 세워 읽기는 살린다.
+        """
+        try:
+            INDIENET_DIR.mkdir(parents=True, exist_ok=True)
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        try:
+            import nostr_phone_bridge as bridge
+            self.identity.public_key_hex = bridge.pub_hex()
+            self.identity.private_key_hex = bridge.priv_hex()
+            self.identity.npub = self.identity.public_key_hex  # bech32 표시 변환은 후속
+            print(f"✓ IndieNet(phone): 신원 로드 pub={self.identity.public_key_hex[:12]}...")
+        except Exception as e:
+            print(f"⚠️  IndieNet(phone): 신원 보류(읽기는 가능) - {e}")
+        try:
+            self.settings.load()
+            self._init_post_cache()
+            self._init_dm_cache()
+        except Exception as e:
+            print(f"⚠️  IndieNet(phone): 캐시/설정 - {e}")
+        self._initialized = True
+        print("✓ IndieNet(phone): Kotlin 브리지 초기화 완료")
         return True
 
     def is_initialized(self) -> bool:
@@ -442,6 +478,31 @@ class IndieNet:
         if not self._initialized:
             print("✗ IndieNet이 초기화되지 않음")
             return None
+
+        # 폰: pynostr Event 대신 Kotlin 브리지로 빌드+서명+발행.
+        if _ON_PHONE:
+            try:
+                import nostr_phone_bridge as bridge
+                full_content = f"{content}\n\n#{hashtag}"
+                created_at = int(time.time())
+                relays = self.settings.relays if self.settings.relays else DEFAULT_RELAYS
+                event_id = bridge.publish_note(1, [['t', hashtag.lower()]], full_content, relays, created_at)
+                if event_id:
+                    print(f"✓ IndieNet(phone): 글 게시 #{hashtag} - {event_id[:16]}...")
+                    try:
+                        self._cache_posts([{
+                            'id': event_id,
+                            'author': getattr(self.identity, 'public_key_hex', ''),
+                            'content': full_content,
+                            'created_at': created_at,
+                            'tags': [['t', hashtag.lower()]],
+                        }])
+                    except Exception as e:
+                        print(f"⚠️  IndieNet(phone): 게시 글 캐시 실패 - {e}")
+                return event_id
+            except Exception as e:
+                print(f"✗ IndieNet(phone): 글 게시 실패 - {e}")
+                return None
 
         try:
             # 태그를 해시태그 형식으로 content에 추가
@@ -910,6 +971,24 @@ class IndieNet:
         """
         if not relays:
             relays = self.settings.relays if self.settings.relays else DEFAULT_RELAYS
+
+        # 폰: Kotlin RelayClient.query 로 위임 (websocket 수집은 네이티브, accept 파싱은 여기서).
+        if _ON_PHONE:
+            try:
+                import nostr_phone_bridge as bridge
+                events = bridge.query_relays(req_filter, relays, timeout)
+                collected_p: Dict[str, dict] = {}
+                for event in events:
+                    item = accept(event)
+                    if item is not None:
+                        eid = event.get('id')
+                        if eid and eid not in collected_p:
+                            collected_p[eid] = item
+                return list(collected_p.values())
+            except Exception as e:
+                print(f"  폰 릴레이 조회 실패: {e}")
+                return []
+
         collected: Dict[str, dict] = {}
         lock = threading.Lock()
 
@@ -1070,6 +1149,22 @@ class IndieNet:
         if not self._initialized:
             return []
 
+        # 폰: NIP-04(kind:4, pynostr decrypt_message) 미지원 → NIP-17 + 영구 캐시만.
+        if _ON_PHONE:
+            try:
+                nip17_dms = self.fetch_dms_nip17(limit=limit, since=since)
+                try:
+                    self._cache_dms(nip17_dms)
+                    dms = self._get_cached_dms(limit=limit, since=since)
+                except Exception:
+                    dms = nip17_dms
+                dms.sort(key=lambda x: x.get('created_at', 0), reverse=True)
+                print(f"✓ IndieNet(phone): {len(dms)}개 DM (NIP-17 {len(nip17_dms)} + 캐시)")
+                return dms[:limit]
+            except Exception as e:
+                print(f"✗ IndieNet(phone): DM 조회 실패 - {e}")
+                return []
+
         try:
             my_hex = self.identity.public_key.hex()
             req_filter = {
@@ -1174,6 +1269,31 @@ class IndieNet:
         """
         if not self._initialized:
             return []
+
+        # 폰: kind:1059 구독은 _query_relays(브리지), unwrap 은 Kotlin Nip17.unwrapDm.
+        if _ON_PHONE:
+            try:
+                import nostr_phone_bridge as bridge
+                my_hex = getattr(self.identity, 'public_key_hex', '')
+
+                def accept_p(event):
+                    out = bridge.unwrap_dm(event)
+                    if not out:
+                        return None
+                    ca = out.get("created_at") or event.get("created_at") or 0
+                    if since and ca < since:
+                        return None
+                    return {"id": event.get("id"), "from": out.get("sender"),
+                            "content": out.get("content"), "created_at": ca, "tags": []}
+
+                return self._query_relays(
+                    {"kinds": [1059], "#p": [my_hex], "limit": limit},
+                    accept_p, relays=self._self_dm_relays(),
+                )
+            except Exception as e:
+                print(f"✗ NIP-17 DM 수신(phone) 실패 - {e}")
+                return []
+
         try:
             import nip17
             my_hex = self.identity.public_key.hex()
@@ -1235,6 +1355,21 @@ class IndieNet:
         if not self._initialized:
             print("✗ IndieNet이 초기화되지 않음")
             return None
+
+        # 폰: nip17(pynostr) 대신 Kotlin Nip17.wrapDm + RelayClient.publish.
+        if _ON_PHONE:
+            try:
+                import nostr_phone_bridge as bridge
+                to_hex = to_pubkey  # 폰: hex 가정(npub 디코드는 후속)
+                dm_relays = self.fetch_dm_relays(to_hex)  # _query_relays 경유(브리지)
+                event_id = bridge.send_dm(to_hex, content, dm_relays)
+                if event_id:
+                    print(f"✓ NIP-17 DM(phone) 발송 - {event_id[:16]}...")
+                return event_id
+            except Exception as e:
+                print(f"✗ NIP-17 DM(phone) 발송 실패 - {e}")
+                return None
+
         try:
             import nip17
             to_hex = self._to_hex(to_pubkey)
@@ -1253,53 +1388,9 @@ class IndieNet:
             print(f"✗ NIP-17 DM 발송 실패 - {e}")
             return None
 
-    def send_dm(self, to_pubkey: str, content: str) -> Optional[str]:
-        """
-        DM 전송 (channels/nostr.py 참조)
-        Args:
-            to_pubkey: 수신자 공개키 (hex 또는 npub)
-            content: 메시지 내용
-        Returns:
-            이벤트 ID (성공시) 또는 None
-        """
-        if not self._initialized:
-            print("✗ IndieNet이 초기화되지 않음")
-            return None
-
-        try:
-            # npub를 hex로 변환
-            if to_pubkey.startswith('npub'):
-                to_hex = PublicKey.from_npub(to_pubkey).hex()
-            else:
-                to_hex = to_pubkey
-
-            print(f"✓ IndieNet DM 전송: to={to_hex[:16]}...")
-
-            # 암호화
-            encrypted_content = self.identity.private_key.encrypt_message(content, to_hex)
-
-            # DM 이벤트 생성 (kind 4)
-            event = Event(
-                pubkey=self.identity.public_key.hex(),
-                content=encrypted_content,
-                kind=EventKind.ENCRYPTED_DIRECT_MESSAGE  # kind 4
-            )
-            event.tags.append(['p', to_hex])
-
-            # 서명
-            event.sign(self.identity.private_key.hex())
-
-            # 발행
-            event_id = self._publish_event(event)
-
-            if event_id:
-                print(f"✓ IndieNet: DM 전송 완료 - {event_id[:16]}...")
-
-            return event_id
-
-        except Exception as e:
-            print(f"✗ IndieNet: DM 전송 실패 - {e}")
-            return None
+# (2026-06-13 은퇴) 구 send_dm(NIP-04 kind:4)은 최신 앱(0xchat/Damus)이 복호 못 해 DM이 깨졌다.
+# 모든 발신을 send_dm_nip17(NIP-17 gift-wrap kind:1059) 단일 경로로 통일 — 호출처(channel_poller
+# 자동응답·extension REST) 전부 이관 후 메서드 삭제. 수신은 NIP-17 우선(폰=NIP-17 전용).
 
 
 # 싱글톤 인스턴스

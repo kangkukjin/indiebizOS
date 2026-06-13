@@ -1,6 +1,6 @@
 ---
 title: IBL (IndieBiz Logic)
-scope: IBL 명세, 5-Node 구조, 122 액션, 파서/엔진/라우팅
+scope: IBL 명세, 5-Node 구조, 125 액션, 파서/엔진/라우팅
 owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
 source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml
 build_tool: scripts/build_ibl_nodes.py
@@ -40,7 +40,7 @@ IBL 표현 계층:     [node:action]{params}
 
 ## 액션 카테고리
 
-총 122개 액션(sense 38, self 41, limbs 17, others 12, engines 14)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
+총 125개 액션(sense 41, self 41, limbs 17, others 12, engines 14)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
 
 | 카테고리 | 의미 | 올바른 사용 예시 |
 |---------|------|----------------|
@@ -71,11 +71,15 @@ IBL 표현 계층:     [node:action]{params}
 
 각 액션은 선택 필드 `runs_on`으로 실행 환경을 선언한다 (미지정=`anywhere`).
 - `anywhere`(기본): 이식 가능 로직/HTTP. 단 handler/driver 라우터는 **검증된 폰 패키지**일 때만 폰서 실행.
-- `home_only`: 집 PC 하드웨어·무거운 의존·미검증 패키지(예: `limbs:os_open`/`open_window`=데스크탑 GUI). 폰서 제외.
-- `phone_only`: 폰 하드웨어 전용. 입력=`sense:phone`(알림·위치·걸음), 출력=`limbs:phone`(알림·진동·토스트·복사·TTS·앱실행 + 문자·전화는 스테이징=작성창/다이얼러를 채워 열고 전송·통화는 사용자 탭). PC에선 graceful 거부.
+- `home_only`: 집 PC 하드웨어·무거운 의존·미검증 패키지(예: `limbs:os_open`/`open_window`=데스크탑 GUI, `self:manage_events`=무거운 api_system_ai 의존). 폰서 직접 실행 못 함 → **맥에 단건 라우팅**(아래 분산 IBL).
+- `phone_only`: 폰 하드웨어 전용. 입력=`sense:phone`(알림 피드)·`sense:here`(현재위치)·`sense:listen`(마이크 받아쓰기/녹음)·`sense:see`(카메라 촬영), 출력=`limbs:phone`(알림·진동·토스트·복사·TTS·앱실행 + 문자·전화는 스테이징=작성창/다이얼러를 채워 열고 전송·통화는 사용자 탭). PC에선 graceful 거부(또는 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 로 폰에 포워드).
+
+**분산 IBL — 액션이 실행 단위(폰↔맥 연합)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션을 거부하지 않고 **맥에 단건 위임**(`_forward_to_mac` ↔ 맥→폰 `_forward_to_phone` 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로 **혼합 code도 액션별로 쪼개져** 일부는 폰·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. 폰=몸(센서·신원·렌더) 자급·머리(연산)는 맥 연합 — 클라이언트-서버 아니라 주권 피어들의 협력(미래 피어=같은 뼈대+허가 층).
+
+계기 가시성은 실행 위치와 **직교**: app 블록은 폰서 기본 노출(실행은 라우팅이 로컬/맥 결정), `app.phone_render: false`만 숨긴다(폰서 못 보여주는 출력=맥 브라우저·네이티브창, 또는 미검증 보류=ytmusic 오디오).
 
 빌드가 `runs_on` + 검증 패키지(`build_ibl_nodes.PHONE_VERIFIED_PACKAGES`)에서 `data/phone_manifest.json`을 파생한다 —
-폰 임베드 빌드의 번들 패키지·앱 계기 필터·엔진 실행 가드의 단일 진실 소스. PC에선 무영향(전 액션 실행).
+폰 임베드 빌드의 번들 패키지·앱 계기 필터·엔진 라우팅의 단일 진실 소스. PC에선 무영향(전 액션 실행).
 
 ---
 
@@ -83,13 +87,13 @@ IBL 표현 계층:     [node:action]{params}
 
 ### 핵심 노드 분류
 
-총 **122 액션** (op 어휘 단일화 + 사용성 재감사 + 어휘 정리 + 안드로이드 얇은 부활 + 폰 컴패니언 + 폰 송신측 limbs:phone + 메신저/커뮤니티 계기 + 메신저 CRM 풍부화 + 비즈니스 도메인 IBL화 + 자동응답 IBL화 + 폰 동기화(self:phone_sync) + neighbor 통합(neighbors 흡수) 후).
+총 **125 액션** (… + 폰 온디맨드 감각 삼각: sense:here(위치)·sense:listen(마이크 받아쓰기/녹음)·sense:see(카메라 촬영), phone_only 후).
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
 | `self` | 42 | 개인 도메인: 시스템 관리, 파일, 트리거/스케줄, 목표/메모리, 비즈니스(사업·아이템·문서·지침), 폰 동기화, 워크플로우 | read, write, file_find, storage, trigger, workflow, goal, memory, business, business_item, phone_sync |
 | `limbs` | 17 | 장치 제어: UI 조작(브라우저, 데스크톱 화면, 안드로이드 폰) + 폰 네이티브 동작(phone) + 미디어 재생 | browser, screen, android, phone, music, radio, cctv, launch, os_open |
-| `sense` | 38 | 감각 확장: 외부 정보 수집 + 내부 데이터 관리 + 폰 컴패니언 피드 | search_naver, search_news, stock, company, travel, world_bank, crawl, realty, weather, phone |
+| `sense` | 41 | 감각 확장: 외부 정보 수집 + 내부 데이터 관리 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search_naver, stock, travel, crawl, realty, weather, phone, here, listen, see |
 | `others` | 11 | 협업·통신: 에이전트 위임 + 메시지/커뮤니티 + 이웃 CRM | delegate, channel_send, channel_read, messages, feed, board, nostr, auto_response, neighbor, contact, agents |
 | `engines` | 14 | 창작: 콘텐츠 생성 (슬라이드, 영상, 차트, 이미지, 웹사이트, 설계) | slide, slide_shadcn, html_video, chart, image_gemini, web, newspaper, tts |
 
@@ -142,7 +146,7 @@ IBL 표현 계층:     [node:action]{params}
 | `snapshot` | 브라우저 페이지 스냅샷 | `[limbs:browser]{op: "snapshot"}` |
 | `click` | 요소 클릭 | `[limbs:browser]{op: "click", element: "검색 버튼"}` |
 | `screen` | 데스크톱 화면 제어 (op: snapshot/click/type) | `[limbs:screen]{op: "snapshot"}` |
-| `android` | 안드로이드 폰 화면 조작 (op: snapshot/tap/type/swipe/key/long_press/open_app) — snapshot으로 요소 읽고 ref/좌표로 탭. ADB+uiautomator 기반, 한글 입력은 cliphelper IME | `[limbs:android]{op: "snapshot"}` → `{op: "tap", ref: "전송"}` |
+| `android` | 안드로이드 폰 화면 조작 (op: snapshot/tap/type/swipe/key/long_press/open_app) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=ADB+uiautomator(USB), 폰 자신=네이티브 AccessibilityService(USB 불필요, 한글은 ACTION_SET_TEXT라 IME 불필요). 핸들러가 INDIEBIZ_PROFILE로 분기 | `[limbs:android]{op: "snapshot"}` → `{op: "tap", query: "전송"}` |
 | `play` | 유튜브/라디오 재생 | `[limbs:music]{op: "play", url: "유튜브 링크"}` |
 | `radio_play` | 라디오 방송 재생 | `[limbs:radio]{op: "play", station: "KBS Classic FM"}` |
 | `download` | 미디어 다운로드 | `[limbs:music]{op: "download", url: "유튜브 링크"}` |

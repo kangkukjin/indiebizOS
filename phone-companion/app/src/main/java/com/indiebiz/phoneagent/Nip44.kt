@@ -76,4 +76,22 @@ object Nip44 {
         val payload = byteArrayOf(2) + nn + ciphertext + mac
         return Base64.encodeToString(payload, Base64.NO_WRAP)
     }
+
+    /** encrypt 역연산. payload(base64) → 평문. MAC 검증 실패 시 예외. */
+    fun decrypt(payload: String, conversationKey: ByteArray): String {
+        val data = Base64.decode(payload, Base64.NO_WRAP)
+        require(data.isNotEmpty() && data[0].toInt() == 2) { "nip44 version != 2" }
+        val nn = data.copyOfRange(1, 33)
+        val mac = data.copyOfRange(data.size - 32, data.size)
+        val ciphertext = data.copyOfRange(33, data.size - 32)
+        val keys = hkdfExpand(conversationKey, nn, 76)
+        val chachaKey = keys.copyOfRange(0, 32)
+        val chachaNonce = keys.copyOfRange(32, 44)
+        val hmacKey = keys.copyOfRange(44, 76)
+        val expected = hmac(hmacKey, nn + ciphertext)   // aad = nonce
+        require(expected.contentEquals(mac)) { "nip44 MAC 불일치" }
+        val padded = ChaCha20.apply(chachaKey, chachaNonce, ciphertext)  // 스트림암호=대칭
+        val len = ((padded[0].toInt() and 0xff) shl 8) or (padded[1].toInt() and 0xff)
+        return String(padded.copyOfRange(2, 2 + len), Charsets.UTF_8)
+    }
 }

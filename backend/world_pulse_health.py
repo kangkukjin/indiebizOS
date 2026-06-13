@@ -212,6 +212,16 @@ def generate_guide():
                         lines.append(f"- 응답 느려짐: {s['action']} ({s['before_ms']}ms → {s['after_ms']}ms)")
                 if patterns.get("recovered"):
                     lines.append(f"- 복구됨: {', '.join(patterns['recovered'])}")
+            # 나는 누구인가 — 정체성 + 빌릴 수 있는 상대 (실시간 연결상태·액션목록은 제외)
+            cap = self_state.get("capability")
+            if cap and cap.get("body"):
+                lines.append("")
+                lines.append("## 나는 누구인가")
+                lines.append(f"- 나는 지금 **{cap['body']}** 에서 돈다.")
+                if cap.get("has_peer"):
+                    lines.append(f"- {cap['peer_name']}의 액션을 빌릴 수 있다 "
+                                 "(내 몸에서 못 하는 건 분산 IBL 이 자동 위임 — 닿지 않으면 실행 시 알림).")
+
             # Digital Proprioception (body schema)
             proprio = self_state.get("proprioception", {})
             if proprio:

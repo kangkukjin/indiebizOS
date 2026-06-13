@@ -63,6 +63,8 @@ PHONE_VERIFIED_PACKAGES = {
     "web",
     "real-estate",
     "android",   # M3: [sense:phone] 폰 로컬 알림. limbs:android(android_op)은 home_only 태그로 제외.
+    "business",  # 메신저(others:messages/neighbor/contact)+비즈니스 CRM(self:business*). business.db 폰 머지 토대 위. auto_response 는 home_only 로 제외(PC 전용 폴러).
+    "cctv",      # CCTV 검색(sense:cctv search) — 모듈 import importlib.util(stdlib)뿐, HLS는 WebView <video>+hls.js 재생.
 }
 
 # === 코퍼스 param 정합 검사 (2026-06-04) ===
@@ -504,11 +506,12 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
 # === app: 블록 검증 (2026-06-11, 원격 앱 표면 제네릭화 2단계) ===
 # 액션이 자기 앱 표면(inputs/action 템플릿/view)을 선언하면 원격 런처가 자동 파생.
 # 어휘 명세: docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md. 소비자: api_launcher_web._derive_instruments.
-APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list"}
+APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list", "map", "calendar"}
 APP_INPUT_TYPES = {"text", "select"}
 APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images"}
 APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes",
-            "note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter"}
+            "note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter",
+            "phone_render"}
 APP_TPL_FILTERS = {"round", "num", "abs", "arrow"}  # + 'opt:' / 'trunc:' 접두 허용
 
 
@@ -544,15 +547,16 @@ def _app_action_templates(app: dict) -> list[str]:
                         for k in ("add_action", "remove_action"):
                             if isinstance(f.get(k), str):
                                 out.append(f[k])
-            if p.get("type") == "editable_list":
+            if p.get("type") in ("editable_list", "calendar"):
                 if isinstance(p.get("delete_action"), str):
                     out.append(p["delete_action"])
                 add = p.get("add")
                 if isinstance(add, dict) and isinstance(add.get("action"), str):
                     out.append(add["action"])
-            btn = p.get("button")
-            if isinstance(btn, dict) and isinstance(btn.get("action"), str):
-                out.append(btn["action"])
+            for _bk in ("button", "button2"):  # list_action 행 버튼(▶ 재생 / ⬇ 다운로드)
+                btn = p.get(_bk)
+                if isinstance(btn, dict) and isinstance(btn.get("action"), str):
+                    out.append(btn["action"])
             drill = p.get("item_click")
             if isinstance(drill, dict):
                 if isinstance(drill.get("action"), str):
@@ -598,6 +602,8 @@ def _block_local_keys(blk: dict) -> set:
                 from_fields(p.get("fields"))
             if p.get("type") == "editable_list" and isinstance(p.get("add"), dict):
                 from_fields(p["add"].get("fields"))
+            if p.get("type") == "calendar" and isinstance(p.get("add"), dict):
+                keys.update(("title", "date"))  # 렌더러가 제목 입력 + 선택일 date 를 add 액션에 주입
             drill = p.get("item_click")
             if isinstance(drill, dict):
                 from_compose(drill.get("compose"))

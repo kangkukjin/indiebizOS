@@ -161,17 +161,32 @@
         group: schedule
         router: system
         func: manage_events
+        runs_on: home_only   # event_engine→api_system_ai 무거운 의존(폰 미번들). 폰은 맥 라우팅으로 접근.
         implementation: event_engine으로 이벤트/스케줄 CRUD (SQLite 기반)
         keywords:
         - 일정
         - 스케줄관리
         - 예약관리
+        app:
+          instrument: calendar
+          icon: 📅
+          name: 일정
+          order: 13
+          auto_run: true
+          action: '[self:manage_events]{action: "list"}'
+          view:
+          - type: calendar
+            from: events
+            delete_action: '[self:manage_events]{action: "delete", event_id: "{id}"}'
+            add:
+              action: '[self:manage_events]{action: "create", title: "$title", date: "$date"}'
       show_calendar:
         description: 캘린더를 HTML로 생성하여 브라우저에서 표시
         target_description: '(파라미터 없음 — 현재 월 캘린더). month/year 옵션으로 특정 월 지정.'
         group: schedule
         router: system
         func: show_calendar
+        runs_on: home_only   # calendar_manager.open_in_browser()=데스크탑 브라우저 — 폰 부적합. 폰은 manage_events 계기로 일정 조회.
         implementation: calendar_manager.open_in_browser() — HTML 캘린더 생성 후 브라우저 자동
           열기
         keywords:

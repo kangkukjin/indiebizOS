@@ -65,6 +65,11 @@ def _resolve_agent_identity(channel_type: str, params: dict,
     Returns:
         {"email": "..."} 또는 {"npub": "..."} 또는 {"use_system": True} 또는 {"error": "..."}
     """
+    # 0-pre) 폰 네이티브: 단일 사용자 기기 — nostr 발신은 폰 indienet 신원(=시스템 신원)으로
+    # 서명한다(폰 /ibl/execute 는 agent_id="phone"). 데스크탑/원격 앱표면이 system_ai 로 doing 것과 동치.
+    if channel_type == "nostr" and os.environ.get("INDIEBIZ_PROFILE") == "phone":
+        return {"use_system": True}
+
     # 0) 시스템 AI — 신뢰된 운영 주체. 시스템 자체 계정 사용.
     if agent_id == SYSTEM_AI_ID:
         account = params.get("account")

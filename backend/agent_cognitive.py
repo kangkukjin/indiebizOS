@@ -313,6 +313,56 @@ class AgentCognitiveMixin:
                 return role_file.read_text(encoding='utf-8')
             return ""
 
+    def _build_health_chart(self) -> str:
+        """의료 프로젝트 에이전트면 현재 환자 기록 전체를 컨텍스트로 조립('차트를 책상에 펼치기').
+
+        의사 에이전트가 [self:health]{op:query} 로 *읽으려고* 수십 번 호출하지 않게 — 데이터를
+        프롬프트에 미리 깐다. 매 호출 시 라이브 DB에서 조립(노트처럼 박제 아님). 쓰기(추가/수정/
+        삭제)만 [self:health]{op:save|delete} 액션으로(sync·스키마·경로는 액션이 책임).
+        의료 외 프로젝트·시스템 AI엔 안 깐다(무관·민감). 몸별 DB 경로는 storage 가 해소(폰=userdata)."""
+        import os as _os
+        pid = self.config.get("_project_id") or ""
+        if pid != "의료" and _os.path.basename(str(self.project_path)) != "의료":
+            return ""
+        try:
+            import importlib.util
+            from runtime_utils import get_base_path
+            sp = _os.path.join(str(get_base_path()), "data", "packages", "installed",
+                               "tools", "health-record", "storage.py")
+            spec = importlib.util.spec_from_file_location("_health_storage_chart", sp)
+            hs = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(hs)
+            persons = hs.list_persons()
+        except Exception:
+            return ""
+
+        def _fmt(cat, v):
+            if not isinstance(v, dict):
+                return str(v)
+            if cat == "blood_pressure":
+                return f"{v.get('systolic','?')}/{v.get('diastolic','?')}"
+            return str(v.get("value", v))
+
+        lines = ["", "# 환자 의료기록 (현재 시점 — 아래 데이터로 바로 답하라. 읽기용 추가 조회 불필요)",
+                 "# 기록을 추가/수정/삭제할 때만 [self:health]{op: save|delete} 액션을 쓴다."]
+        for p in persons:
+            name = p.get("name", "")
+            note = p.get("note")
+            lines.append(f"\n## {name}" + (f" — {note}" if note else ""))
+            try:
+                for m in hs.get_measurements(days=3650, limit=30, person=name):
+                    lines.append(f"  측정 {m['category']} {_fmt(m['category'], m.get('value'))} ({(m.get('measured_at') or '')[:10]})")
+                for s in hs.get_symptoms(days=3650, person=name):
+                    lines.append(f"  증상 {s['category']} {s.get('description') or ''} ({(s.get('started_at') or '')[:10]})")
+                for md in hs.get_medications(days=3650, person=name):
+                    act = "복용중" if md.get("is_active") else "중단"
+                    lines.append(f"  투약 {md['name']} {md.get('dosage') or ''} {md.get('frequency') or ''} ({md.get('reason') or ''}, {act})")
+                for d in hs.get_documents(days=3650, person=name):
+                    lines.append(f"  문서 {d['doc_type']}: {d.get('description') or ''} ({(d.get('recorded_at') or '')[:10]})")
+            except Exception:
+                continue
+        return "\n".join(lines)
+
     def _build_system_prompt_split(self, role: str, consciousness_output: dict = None,
                                     execution_memory: str = "") -> tuple:
         """시스템 프롬프트를 (안정, 가변)로 분리해 반환.
@@ -340,6 +390,12 @@ class AgentCognitiveMixin:
         note_file = self.project_path / f"agent_{agent_name}_note.txt"
         if note_file.exists():
             agent_notes = note_file.read_text(encoding='utf-8').strip()
+
+        # 의료 프로젝트 에이전트: 현재 환자 기록 전체를 컨텍스트에 주입(라이브 조립).
+        # 의사가 호출 없이 바로 답하게 — 읽기 조회 0번. 의료 외 프로젝트엔 빈 문자열.
+        _chart = self._build_health_chart()
+        if _chart:
+            agent_notes = (agent_notes + "\n" + _chart) if agent_notes else _chart
 
         is_delegated_from_system_ai = self.delegated_from_system_ai
         if not is_delegated_from_system_ai:

@@ -88,7 +88,7 @@ agent_name까지 주면 바로 그 에이전트로:
 | "팀 회의실", "여러 명이랑 대화", "에이전트 협업방" | `multichat` |
 | "자주 보는 폴더", "구매 폴더" | `folder` |
 | "강의 만들기 창" | `[self:lecture]{op:"open"}` — 이 액션 아님 |
-| "캘린더" | `[self:show_calendar]` — 이 액션 아님 |
+| "캘린더", "일정 보기" | 앱 모드의 `calendar` 계기 — 이 액션 아님 |
 
 `lecture_open`이 별도 액션인 이유: 강의 워크스페이스는 일반 메인 창과 다른 전용 UI(slide 데크 + 재료 + AI 명령 3패널)라 lecture_workspace 패키지가 자체 윈도우 생성을 관리.
 
@@ -105,6 +105,5 @@ agent_name까지 주면 바로 그 에이전트로:
 ## 관련
 
 - `[self:lecture]{op:"open"}` — 강의 워크스페이스 (별도 윈도우)
-- `[self:show_calendar]` — 캘린더 HTML 표시
 - `[limbs:os_open]` — OS 기본 앱(브라우저/Finder)으로 URL/파일 열기. IndieBiz 작업창 아님.
 - `[limbs:explorer]` — 파일 탐색기 열기

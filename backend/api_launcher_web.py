@@ -558,7 +558,7 @@ a{ color:var(--info); }
 <div class="app" id="app">
   <div class="top">
     <div class="brand"><span>IndieBiz OS</span><span class="badge" id="surfBadge">REMOTE</span></div>
-    <div style="display:flex; gap:8px;">
+    <div style="display:flex; gap:8px;" id="headerActions">
       <button class="iconbtn" onclick="refreshSurface()" title="새로고침">↻</button>
       <button class="iconbtn" onclick="doLogout()" title="로그아웃">⏻</button>
     </div>
@@ -689,10 +689,12 @@ let IS_PHONE=false;
 async function showApp(){
   document.getElementById('login').style.display='none';
   document.getElementById('app').classList.add('on');
-  // 자급 컴패니언(폰-로컬)인지 판별 — REMOTE 배지는 원격 시나리오 전용이라 폰에선 숨긴다.
+  // 자급 컴패니언(폰-로컬)인지 판별 — REMOTE 배지·로그아웃(⏻)·새로고침(↻)은 원격 시나리오
+  // 전용이라 폰에선 숨긴다(폰=자기 몸, 로그아웃/원격 새로고침 의미 없음).
   try{ const r=await jfetch('/launcher/config'); if(r.ok){ const c=await r.json();
     IS_PHONE=(c.host==='phone-local');
-    if(IS_PHONE){ const b=document.getElementById('surfBadge'); if(b) b.style.display='none'; }
+    if(IS_PHONE){ const b=document.getElementById('surfBadge'); if(b) b.style.display='none';
+      const ha=document.getElementById('headerActions'); if(ha) ha.style.display='none'; }
   } }catch(e){}
   apLoad();
 }

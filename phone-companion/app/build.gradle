@@ -134,6 +134,10 @@ def _ENGINE_MODULES = [
 
     // === 의료기록 폰↔PC 동기화 (business.db 선례, LWW+tombstone+이미지) ===
     'health_sync',           // health_records.db export/merge(phone_api /health/sync/run 이 import). storage 는 health-record 패키지(phone_manifest)로 번들.
+
+    // === 폰-자아 프로젝트(자아별 사적 작업공간 — 대화처럼 로컬·동기화X·맥서 시드 복사) ===
+    'project_manager',       // 프로젝트/에이전트 CRUD. 폰은 base_path=userdata 로 영속.
+    'system_docs',           // project_manager create/delete 의 지연 import(인벤토리 갱신). stdlib+runtime_utils.
 ]
 // 폰 번들 패키지 = data/phone_manifest.json 의 packages (runs_on 단일 진실 소스에서 파생).
 // 옛 하드코딩 리스트를 폐기 — build_ibl_nodes.py 의 PHONE_VERIFIED_PACKAGES 가 SSOT.
@@ -193,6 +197,19 @@ tasks.register('bundleIndiebizBase', Zip) {
             exclude '**/__pycache__/**'
             exclude '**/*.pyc'
         }
+    }
+    // 프로젝트 시드(구조만): 폰 첫 부팅 때 userdata/projects 로 1회 복사 → 이후 자아별 독립.
+    // ★대화·기억·런타임 상태는 제외(두-자아: conversations.db/memory_*.db = 맥-자아 사적).
+    // 포함=projects.json + 각 프로젝트의 project.json·agents.yaml·에이전트 역할/메모/공통설정 txt.
+    from("${_ROOT}/projects") {
+        into 'data/_project_seed'
+        include 'projects.json'
+        include '*/project.json'
+        include '*/agents.yaml'
+        include '*/agent_*_role.txt'
+        include '*/agent_*_note.txt'
+        include '*/common_settings.txt'
+        exclude 'trash/**'
     }
 }
 

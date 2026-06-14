@@ -733,7 +733,8 @@ function apBrowseRoot(){
   document.getElementById('ap-bhead').style.display='none';
   let h='<h3>시스템</h3>';
   h+=apCard('🤖','시스템 AI','IndieBiz OS 전체를 관리','apPickSystem()',false);
-  h+=apCard('⚡','스위치','원클릭 자동화 실행','apBrowseSwitches()',true);
+  // 스위치는 폰-자아엔 불필요(사용자 결정) — 폰에선 숨기고 원격/맥에선 노출.
+  if(!IS_PHONE) h+=apCard('⚡','스위치','원클릭 자동화 실행','apBrowseSwitches()',true);
   h+=apCard('⏰','스케줄','반복 작업 보기·삭제','apBrowseSchedules()',true);
   h+='<h3>프로젝트 '+apProjects.length+'</h3>';
   h+='<button class="ap-newbtn" onclick="apProjectCreate()">＋ 프로젝트 만들기</button>';

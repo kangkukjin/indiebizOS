@@ -238,6 +238,57 @@ def _phone_bm():
     return BusinessManager(db_path=Path(os.path.join(userdata, "business.db")))
 
 
+# === 폰-자아 프로젝트 (자아별 사적 작업공간 — 대화처럼 로컬·동기화X·맥서 시드 복사) ===
+# 사용자 결정(2026-06-14): 프로젝트/스위치는 맥과 폰이 각자여야(다른 몸). 초기엔 맥 복사로
+# 시드, 이후 독립 진화. 동기화 안 함. 스위치는 폰에 불필요(제외). 에이전트는 폰 두뇌로 실행.
+_phone_pm_inst = None
+
+
+def _phone_userdata() -> str:
+    ud = os.path.join(os.path.dirname(_base), "userdata")
+    os.makedirs(ud, exist_ok=True)
+    return ud
+
+
+def _seed_projects(userdata: str):
+    """첫 부팅 1회: 번들 _project_seed(구조만) → userdata/projects. 이미 있으면 스킵(독립 보존).
+    ★대화(conversations.db)·기억(memory_*.db)·런타임 상태는 시드에 미포함(맥-자아 사적, 두-자아)."""
+    import shutil
+    proj_dir = os.path.join(userdata, "projects")
+    if os.path.exists(os.path.join(proj_dir, "projects.json")):
+        return  # 이미 시드/사용 중 — 자아별 독립 보존(재시드 안 함)
+    seed = os.path.join(_base, "data", "_project_seed")
+    if not os.path.isdir(seed):
+        print("[phone_api] 프로젝트 시드 소스 없음 — 빈 상태로 시작")
+        return
+    os.makedirs(proj_dir, exist_ok=True)
+    n = 0
+    for name in os.listdir(seed):
+        src = os.path.join(seed, name)
+        dst = os.path.join(proj_dir, name)
+        try:
+            if os.path.isfile(src):
+                shutil.copy2(src, dst)
+            elif os.path.isdir(src):
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+            n += 1
+        except Exception as e:
+            print(f"[phone_api] 프로젝트 시드 '{name}' 실패: {e}")
+    print(f"[phone_api] 프로젝트 시드 완료: {n}개 항목 → {proj_dir}")
+
+
+def _phone_pm():
+    """폰 로컬 ProjectManager (base_path=userdata → projects/templates 영속). 첫 호출 시 시드."""
+    global _phone_pm_inst
+    if _phone_pm_inst is None:
+        from pathlib import Path
+        from project_manager import ProjectManager
+        ud = _phone_userdata()
+        _seed_projects(ud)
+        _phone_pm_inst = ProjectManager(base_path=Path(ud))
+    return _phone_pm_inst
+
+
 async def _mac_post_json(path, payload, *, timeout: float = 60.0):
     """맥 백엔드에 JSON POST(폰이 originator). 401/403 이면 재로그인 후 재시도. 실패 None."""
     if not _mac_url:
@@ -432,9 +483,44 @@ async function add(){
 
 @app.get("/projects")
 async def projects(request: Request):
-    # 맥 연결 시 맥의 프로젝트 목록을 그대로 — 폰이 PC와 같은 프로젝트를 본다.
-    # 미연결/인증실패면 200 빈 목록 → 런처가 로그인 스킵하고 앱모드 진입(checkSession).
-    return _list_or_empty(await _mac_proxy(request, "/projects"), [])
+    # 폰-로컬 프로젝트(자아별 사적, userdata). 맥 프록시 아님 — 폰은 자기 프로젝트를 본다.
+    try:
+        pm = await asyncio.to_thread(_phone_pm)
+        return JSONResponse({"projects": pm.list_projects()})
+    except Exception as e:
+        print(f"[phone_api] 로컬 프로젝트 목록 실패: {e}")
+        return JSONResponse({"projects": []})
+
+
+@app.post("/projects")
+async def project_create(request: Request):
+    """폰-로컬 프로젝트 생성."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JSONResponse({"error": "name 필요"}, status_code=400)
+    try:
+        pm = _phone_pm()
+        res = await asyncio.to_thread(
+            pm.create_project, name, None, body.get("parent_folder"),
+            body.get("template_name", "기본"))
+        return JSONResponse(res)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.delete("/projects/{project_id}")
+async def project_delete(project_id: str):
+    """폰-로컬 프로젝트 삭제."""
+    try:
+        pm = _phone_pm()
+        await asyncio.to_thread(pm.delete_project, project_id)
+        return JSONResponse({"status": "deleted", "project_id": project_id})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.get("/switches")
@@ -442,10 +528,78 @@ async def switches(request: Request):
     return _list_or_empty(await _mac_proxy(request, "/switches"), {"switches": []})
 
 
+def _phone_agents_yaml(project_id: str):
+    """폰 로컬 프로젝트의 agents.yaml 로드 → (data dict, path). 없으면 ({...}, path)."""
+    import yaml
+    pm = _phone_pm()
+    project_path = pm.get_project_path(project_id)
+    af = project_path / "agents.yaml"
+    if not af.exists():
+        return {"agents": [], "common": {}}, af
+    with open(af, "r", encoding="utf-8") as f:
+        return (yaml.safe_load(f) or {"agents": [], "common": {}}), af
+
+
 @app.get("/projects/{project_id}/agents")
 async def project_agents(project_id: str, request: Request):
-    return _list_or_empty(await _mac_proxy(request, f"/projects/{project_id}/agents"),
-                          {"agents": []})
+    # 폰-로컬 프로젝트의 에이전트 목록. 비밀(api_key)은 응답에서 제거.
+    try:
+        data, _ = await asyncio.to_thread(_phone_agents_yaml, project_id)
+        agents = []
+        for a in data.get("agents", []):
+            a = dict(a)
+            a.pop("api_key", None)
+            if isinstance(a.get("ai"), dict):
+                a["ai"] = {k: v for k, v in a["ai"].items() if k != "api_key"}
+            agents.append(a)
+        return JSONResponse({"agents": agents})
+    except Exception as e:
+        print(f"[phone_api] 로컬 에이전트 목록 실패: {e}")
+        return JSONResponse({"agents": []})
+
+
+@app.post("/projects/{project_id}/agents")
+async def agent_create(project_id: str, request: Request):
+    """폰-로컬 에이전트 생성 (agents.yaml 에 추가)."""
+    import yaml, uuid as _uuid
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JSONResponse({"error": "name 필요"}, status_code=400)
+    try:
+        data, af = await asyncio.to_thread(_phone_agents_yaml, project_id)
+        aid = "agent_" + _uuid.uuid4().hex[:8]
+        data.setdefault("agents", []).append({
+            "id": aid, "name": name, "role": body.get("role", ""),
+            "type": body.get("type", "external"),
+        })
+        def _save():
+            with open(af, "w", encoding="utf-8") as f:
+                yaml.safe_dump(data, f, allow_unicode=True)
+        await asyncio.to_thread(_save)
+        return JSONResponse({"status": "created", "agent": {"id": aid, "name": name}})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.delete("/projects/{project_id}/agents/{agent_id}")
+async def agent_delete(project_id: str, agent_id: str):
+    """폰-로컬 에이전트 삭제."""
+    import yaml
+    try:
+        data, af = await asyncio.to_thread(_phone_agents_yaml, project_id)
+        before = len(data.get("agents", []))
+        data["agents"] = [a for a in data.get("agents", []) if a.get("id") != agent_id]
+        def _save():
+            with open(af, "w", encoding="utf-8") as f:
+                yaml.safe_dump(data, f, allow_unicode=True)
+        await asyncio.to_thread(_save)
+        return JSONResponse({"status": "deleted" if len(data["agents"]) < before else "not_found"})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.post("/switches/{switch_id}/execute")
@@ -526,23 +680,72 @@ async def system_ai_conversations(limit: int = 40):
         return JSONResponse({"conversations": [], "error": str(e)})
 
 
+_phone_agent_runners = {}
+
+
+def _run_phone_agent(project_id: str, agent_id: str, command: str) -> dict:
+    """폰-로컬 프로젝트 에이전트 실행 (번들 AgentRunner, 폰 두뇌). 맥 위임 아님.
+    에이전트는 폰의 몸에서 돌고, IBL 은 runs_on 대로 라우팅(anywhere 로컬·mac_only 포워드)."""
+    import yaml
+    from agent_runner import AgentRunner
+    pm = _phone_pm()
+    project_path = pm.get_project_path(project_id)
+    af = project_path / "agents.yaml"
+    if not af.exists():
+        return {"response": "에이전트 설정이 없습니다."}
+    with open(af, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    agent_config = next((a for a in data.get("agents", []) if a.get("id") == agent_id), None)
+    if not agent_config:
+        return {"response": f"에이전트 '{agent_id}'를 찾을 수 없습니다."}
+    agent_config = dict(agent_config)
+    agent_config["_project_path"] = str(project_path)
+    agent_config["_project_id"] = project_id
+    # ★폰 에이전트는 폰의 두뇌(Gemini)로 실행(사용자 결정) — 시드된 맥 claude_code 설정을 덮어씀.
+    # 맥 두뇌(claude CLI)는 폰에 없다. apiKey 는 env(GEMINI_API_KEY, keys.json 주입) 폴백.
+    agent_config["ai"] = {
+        "provider": "gemini_http",
+        "model": "gemini-3.5-flash",
+        "api_key": os.environ.get("GEMINI_API_KEY", ""),
+    }
+    common_config = data.get("common", {})
+
+    key = f"{project_id}/{agent_id}"
+    rec = _phone_agent_runners.get(key)
+    runner = rec.get("runner") if rec else None
+    if not (runner and getattr(runner, "running", False)):
+        runner = AgentRunner(agent_config, common_config)
+        runner.start()
+        _phone_agent_runners[key] = {"runner": runner}
+    if not getattr(runner, "ai", None):
+        return {"response": "에이전트 AI 초기화 실패 — 폰에 해당 제공자 키가 없을 수 있습니다."}
+    resp = runner.ai.process_message_with_history(message_content=command, history=[])
+    return {"response": resp}
+
+
 @app.post("/projects/{project_id}/agents/{agent_id}/start")
 async def agent_start(project_id: str, agent_id: str, request: Request):
-    r = await _mac_proxy(request, f"/projects/{project_id}/agents/{agent_id}/start", timeout=120.0)
-    if r is None or r == "error":
-        return JSONResponse({"success": False, "error": "맥 백엔드 미연결"}, status_code=503)
-    return _relay(r)
+    # 폰-로컬 에이전트는 command 시점에 lazy 시작 — start 는 ack 만.
+    return JSONResponse({"status": "ok", "agent_id": agent_id})
 
 
 @app.post("/projects/{project_id}/agents/{agent_id}/command")
 async def agent_command(project_id: str, agent_id: str, request: Request):
-    # 에이전트 명령=맥 claude_code 실행 — 긴 타임아웃.
-    r = await _mac_proxy(request, f"/projects/{project_id}/agents/{agent_id}/command", timeout=300.0)
-    if r is None:
-        return JSONResponse({"response": "맥 백엔드에 연결되어 있지 않습니다."})
-    if r == "error":
-        return JSONResponse({"response": "맥 백엔드 연결에 실패했습니다."})
-    return _relay(r)
+    # 폰-로컬 에이전트 실행(폰 두뇌). 맥 프록시 아님 — 폰 프로젝트는 자아별 사적.
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    command = body.get("command") or body.get("message") or ""
+    if not command:
+        return JSONResponse({"response": "(빈 명령)"})
+    try:
+        result = await asyncio.to_thread(_run_phone_agent, project_id, agent_id, command)
+        return JSONResponse(result)
+    except Exception as e:
+        import traceback
+        print(f"[phone_api] 로컬 에이전트 실행 실패: {e}\n{traceback.format_exc()[-400:]}")
+        return JSONResponse({"response": f"에이전트 실행 오류: {e}"})
 
 
 @app.get("/output/{name}")

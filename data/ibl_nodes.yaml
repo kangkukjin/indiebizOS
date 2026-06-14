@@ -1484,20 +1484,6 @@ nodes:
             delete_action: '[self:manage_events]{action: "delete", event_id: "{id}"}'
             add:
               action: '[self:manage_events]{action: "create", title: "$title", date: "$date"}'
-      show_calendar:
-        description: 캘린더를 HTML로 생성하여 브라우저에서 표시
-        target_description: '(파라미터 없음 — 현재 월 캘린더). month/year 옵션으로 특정 월 지정.'
-        group: schedule
-        router: system
-        func: show_calendar
-        runs_on: mac_only   # calendar_manager.open_in_browser()=데스크탑 브라우저 — 폰 부적합. 폰은 manage_events 계기로 일정 조회.
-        implementation: calendar_manager.open_in_browser() — HTML 캘린더 생성 후 브라우저 자동
-          열기
-        keywords:
-        - 캘린더
-        - 달력
-        - 일정보기
-        - calendar
       switch:
         description: 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
         target_description: 'list는 파라미터 없음. run은 switch_id 필요.'

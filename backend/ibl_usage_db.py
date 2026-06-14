@@ -736,17 +736,21 @@ class IBLUsageDB:
     def hippo_disabled(cls) -> bool:
         """해마(연상검색 + 경험증류) 비활성 여부.
 
-        폰-자아는 로컬 인코더가 없어 질의 임베딩을 맥 /embed 로 *렌트*하는데(질의마다 네트워크
-        왕복), 시스템 AI 응답을 눈에 띄게 느리게 한다. 거기에 증류(top_score<0.7 시 LLM 1회 추가
-        호출)까지 더해진다. → 폰에선 기본 비활성(속도 우선, 사용자 결정 2026-06-14). 폰의 로컬
-        Gemini 는 ibl_nodes.yaml 전체 어휘를 프롬프트로 갖고 있어 용례 없이도 IBL 생성 가능.
+        기본 = **렌트 모드**(로컬 인코더 없이 맥 /embed 로 질의 임베딩을 빌리는 몸)이면 비활성.
+        렌트는 질의마다 네트워크 왕복이라 시스템 AI 응답을 느리게 하고, 증류(top_score<0.7 시
+        LLM 1회 추가)까지 겹친다. → 속도 우선(사용자 결정 2026-06-14). 폰의 로컬 Gemini 는
+        ibl_nodes.yaml 전체 어휘를 프롬프트로 가져 용례 없이도 IBL 생성 가능.
+
+        ★capability-gate(프로파일 라벨 분기 아님 — 이음매 위 모듈이라 포크-가드 준수):
+        폰(로컬 인코더 없음+맥 렌트)=렌트라 꺼지고, 맥(로컬 인코더)=렌트 아니라 켜지고, 맥 미연결
+        폰=렌트 불가→로컬 FTS(빠름)라 켜진다. '폰이라서'가 아니라 '렌트라 느려서' 끈다.
         강제 토글: INDIEBIZ_HIPPO=on(켬)/off(끔). 심층기억(_search_related_memory=로컬 키워드)은 별개."""
         force = (os.environ.get("INDIEBIZ_HIPPO") or "").strip().lower()
         if force in ("on", "1", "true", "yes"):
             return False
         if force in ("off", "0", "false", "no"):
             return True
-        return (os.environ.get("INDIEBIZ_PROFILE") or "").strip() == "phone"
+        return cls._rented_mode()
 
     @classmethod
     def _rented_mode(cls) -> bool:

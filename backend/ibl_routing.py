@@ -388,17 +388,6 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         from api_system_ai import _execute_manage_events
         return _execute_manage_events(params)
 
-    elif func_name == "show_calendar":
-        from calendar_manager import get_calendar_manager
-        cm = get_calendar_manager()
-        year = params.get("year")
-        month = params.get("month")
-        file_path = cm.open_in_browser(
-            year=int(year) if year else None,
-            month=int(month) if month else None
-        )
-        return {"ok": True, "file": file_path}
-
     elif func_name == "launcher_command":
         # 신규: params.app ("project" 등) → "open_<app>" 합성
         # 호환: params.command ("open_project" 등) 직접 지정도 허용

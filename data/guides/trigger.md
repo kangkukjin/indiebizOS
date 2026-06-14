@@ -2,7 +2,7 @@
 
 `[self:trigger]` · `[self:switch]` 두 단일 액션으로 자동 실행 작업을 등록·관리한다. 둘 다 "조건 충족 시 IBL 파이프라인 실행"이라는 점은 같지만 **트리거는 push (외부 조건)**, **스위치는 pull (사용자 또는 다른 트리거가 호출)** 이다.
 
-`[self:schedule]` (한 번 지연 실행) · `[self:manage_events]` (캘린더 이벤트) · `[self:show_calendar]` (HTML 표시)는 별도 액션. 이 가이드 범위 밖.
+`[self:schedule]` (한 번 지연 실행) · `[self:manage_events]` (캘린더 이벤트)는 별도 액션. 이 가이드 범위 밖. (캘린더 보기는 앱 모드 `calendar` 계기·런처 스케줄 뷰로.)
 
 ---
 
@@ -151,7 +151,7 @@ config:{repeat:"once", date:"2026-06-15", time:"14:00"}
 
 1. **pipeline은 가능한 한 짧게.** 한 트리거가 5단계 이상이면 스위치로 빼고 트리거는 호출만.
 2. **이름은 의도가 보이게.** `trg_xyz` 같은 자동 ID보다 `morning_news`, `weekend_summary` 같은 의도형.
-3. **schedule trigger는 calendar_manager에 자동 동기화.** 즉 트리거를 만들면 캘린더 이벤트도 생긴다. `show_calendar`로 확인 가능.
+3. **schedule trigger는 calendar_manager에 자동 동기화.** 즉 트리거를 만들면 캘린더 이벤트도 생긴다. 앱 모드 `calendar` 계기·런처 스케줄 뷰 또는 `[self:manage_events]{action:"list"}`로 확인 가능.
 4. **channel trigger는 channel_poller 폴러에 등록.** 폴러가 안 돌면 발화 안 함. status로 확인.
 5. **테스트는 once 또는 직접 호출로.** 새 트리거 만들고 schedule을 1분 뒤로 잡거나, 같은 pipeline을 `run_pipeline`으로 직접 실행해서 결과부터 검증.
 

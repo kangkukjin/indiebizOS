@@ -447,6 +447,15 @@ input,textarea,select{ font-family:inherit; }
 .btnrow{ display:flex; gap:8px; flex-wrap:wrap; }
 .btn2{ padding:11px 16px; border:1px solid var(--line); background:var(--bg3); color:var(--txt); border-radius:10px; font-weight:600; font-size:14px; }
 .btn2:hover{ border-color:var(--acc); }
+.btn2.danger{ color:#e5484d; padding:11px 12px; }
+.btn2.danger:hover{ border-color:#e5484d; }
+.ap-newbtn{ width:100%; padding:13px; margin:2px 0 6px; border:1px dashed var(--line); background:transparent; color:var(--acc); border-radius:11px; font-weight:600; font-size:14px; cursor:pointer; }
+.ap-newbtn:hover{ border-color:var(--acc); background:var(--bg2); }
+.ap-form{ display:flex; flex-direction:column; gap:6px; padding:4px; }
+.ap-form label{ font-size:12px; color:var(--dim); margin-top:8px; }
+.ap-form input,.ap-form textarea,.ap-form select{ padding:11px 12px; border:1px solid var(--line); background:var(--bg2); color:var(--txt); border-radius:10px; font-size:14px; font-family:inherit; }
+.ap-form-row{ display:flex; gap:8px; margin-top:14px; }
+.ap-form-row .btn2,.ap-form-row .go{ flex:1; }
 .btn2.prim{ background:var(--acc); border-color:var(--acc); color:#fff; }
 .btn2.prim:hover{ background:var(--acc2); }
 .btn2:disabled{ opacity:.5; }
@@ -726,8 +735,29 @@ function apBrowseRoot(){
   h+=apCard('🤖','시스템 AI','IndieBiz OS 전체를 관리','apPickSystem()',false);
   h+=apCard('⚡','스위치','원클릭 자동화 실행','apBrowseSwitches()',true);
   h+='<h3>프로젝트 '+apProjects.length+'</h3>';
-  h+=apProjects.map(p=>apCard(p.icon||'📁', p.name, '에이전트 선택', "apBrowseProject('"+esc(p.id)+"')", true)).join('');
+  h+='<button class="ap-newbtn" onclick="apProjectCreate()">＋ 프로젝트 만들기</button>';
+  h+=apProjects.map(p=>
+    '<div class="ap-card" onclick="apBrowseProject(\\''+esc(p.id)+'\\')"><span class="ic">'+(p.icon||'📁')+'</span>'+
+    '<span class="tx"><span class="nm">'+esc(p.name)+'</span><span class="ds">에이전트 선택</span></span>'+
+    '<span class="chev">›</span>'+
+    '<button class="btn2 danger" onclick="event.stopPropagation();apProjectDelete(\\''+esc(p.id)+'\\',\\''+esc(p.name)+'\\')">🗑</button></div>'
+  ).join('');
   document.getElementById('apBrowse').innerHTML=h;
+}
+/* 프로젝트 생성/삭제 — POST/DELETE /projects 는 catch-all 로 맥 (패리티) */
+async function apProjectCreate(){
+  const name=(prompt('새 프로젝트 이름:')||'').trim(); if(!name) return;
+  try{ const r=await jfetch('/projects',{method:'POST',body:JSON.stringify({name,template_name:'기본'})});
+    if(r.ok){ await apLoadProjects(); apBrowseRoot(); }
+    else{ const d=await r.json().catch(()=>({})); alert('생성 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+async function apProjectDelete(id,name){
+  if(!confirm('"'+name+'" 프로젝트를 삭제할까요? (에이전트·대화 모두 삭제)')) return;
+  try{ const r=await jfetch('/projects/'+encodeURIComponent(id),{method:'DELETE'});
+    if(r.ok){ await apLoadProjects(); apBrowseRoot(); }
+    else{ const d=await r.json().catch(()=>({})); alert('삭제 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
 }
 /* ①-b 프로젝트 드릴 → 에이전트 전체 목록 (옛 ags[0] 자동선택 버그 제거) */
 async function apBrowseProject(pid){
@@ -741,20 +771,84 @@ async function apBrowseProject(pid){
     document.getElementById('ap-bhead').style.display='flex';
     document.getElementById('apBrowseTitle').textContent=p.name;
     document.getElementById('apBrowse').innerHTML='<h3>에이전트 '+apAgents.length+'</h3>'+
-      apAgents.map((a,i)=>apCard('👤', a.name, (a.role||'').substring(0,48)||'에이전트', 'apPickAgent('+i+')', false)).join('');
+      '<button class="ap-newbtn" onclick="apAgentCreate(\\''+esc(pid)+'\\')">＋ 에이전트 추가</button>'+
+      apAgents.map((a,i)=>
+        '<div class="ap-card" onclick="apPickAgent('+i+')"><span class="ic">👤</span>'+
+        '<span class="tx"><span class="nm">'+esc(a.name)+'</span><span class="ds">'+esc((a.role||'').substring(0,48)||'에이전트')+'</span></span>'+
+        '<button class="btn2 danger" onclick="event.stopPropagation();apAgentDelete(\\''+esc(pid)+'\\',\\''+esc(a.id)+'\\',\\''+esc(a.name)+'\\')">🗑</button></div>'
+      ).join('');
   }catch(e){ alert('에이전트 로드 실패'); }
 }
-/* ①-c 스위치 목록 */
+/* 에이전트 생성/삭제 — POST/DELETE /projects/{id}/agents 는 catch-all 로 맥 (패리티) */
+async function apAgentCreate(pid){
+  const name=(prompt('새 에이전트 이름:')||'').trim(); if(!name) return;
+  const role=(prompt('역할 설명 (선택):')||'').trim();
+  try{ const r=await jfetch('/projects/'+encodeURIComponent(pid)+'/agents',{method:'POST',body:JSON.stringify({name,role})});
+    if(r.ok){ apBrowseProject(pid); }
+    else{ const d=await r.json().catch(()=>({})); alert('생성 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+async function apAgentDelete(pid,aid,name){
+  if(!confirm('"'+name+'" 에이전트를 삭제할까요?')) return;
+  try{ const r=await jfetch('/projects/'+encodeURIComponent(pid)+'/agents/'+encodeURIComponent(aid),{method:'DELETE'});
+    if(r.ok){ apBrowseProject(pid); }
+    else{ const d=await r.json().catch(()=>({})); alert('삭제 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+/* ①-c 스위치 목록 (+ 생성/삭제 — 맥 패리티) */
 function apBrowseSwitches(){
   apShowBrowse();
   document.getElementById('ap-bhead').style.display='flex';
   document.getElementById('apBrowseTitle').textContent='스위치';
   const box=document.getElementById('apBrowse');
-  if(!apSwitches.length){ box.innerHTML='<p class="muted" style="padding:30px;text-align:center">스위치가 없습니다</p>'; return; }
-  box.innerHTML='<h3>스위치 '+apSwitches.length+'</h3>'+apSwitches.map(s=>
-    '<div class="ap-card"><span class="ic">⚡</span><span class="tx"><span class="nm">'+esc(s.name)+'</span><span class="ds">'+esc((s.prompt||'').substring(0,50))+'</span></span>'+
-    '<button class="btn2" onclick="apRunSwitch(\\''+esc(s.id)+'\\',this)">실행</button></div>'
-  ).join('');
+  let h='<button class="ap-newbtn" onclick="apSwitchForm()">＋ 스위치 만들기</button>';
+  if(!apSwitches.length){ h+='<p class="muted" style="padding:24px;text-align:center">스위치가 없습니다</p>'; }
+  else { h+='<h3>스위치 '+apSwitches.length+'</h3>'+apSwitches.map(s=>
+    '<div class="ap-card"><span class="ic">⚡</span><span class="tx"><span class="nm">'+esc(s.name)+'</span><span class="ds">'+esc((s.prompt||s.command||'').substring(0,50))+'</span></span>'+
+    '<button class="btn2" onclick="apRunSwitch(\\''+esc(s.id)+'\\',this)">실행</button>'+
+    '<button class="btn2 danger" onclick="apSwitchDelete(\\''+esc(s.id)+'\\',\\''+esc(s.name)+'\\')">🗑</button></div>'
+  ).join(''); }
+  box.innerHTML=h;
+}
+/* 스위치 생성 폼 (이름+명령+프로젝트→에이전트). POST /switches 는 catch-all 로 맥. */
+function apSwitchForm(){
+  const box=document.getElementById('apBrowse');
+  const projOpts=apProjects.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.name)+'</option>').join('');
+  box.innerHTML='<h3>새 스위치</h3><div class="ap-form">'+
+    '<label>이름</label><input id="swName" placeholder="예: 아침 뉴스 브리핑">'+
+    '<label>명령 (프롬프트)</label><textarea id="swCmd" rows="3" placeholder="이 스위치가 실행할 지시"></textarea>'+
+    '<label>프로젝트</label><select id="swProj" onchange="apSwitchLoadAgents()">'+projOpts+'</select>'+
+    '<label>에이전트</label><select id="swAgent"><option>로딩…</option></select>'+
+    '<div class="ap-form-row"><button class="btn2" onclick="apBrowseSwitches()">취소</button>'+
+    '<button class="go" onclick="apSwitchCreate()">만들기</button></div></div>';
+  apSwitchLoadAgents();
+}
+async function apSwitchLoadAgents(){
+  const ps=document.getElementById('swProj'); if(!ps) return;
+  const sel=document.getElementById('swAgent'); sel.innerHTML='<option>로딩…</option>';
+  try{ const r=await jfetch('/projects/'+encodeURIComponent(ps.value)+'/agents'); const d=await r.json();
+    sel.innerHTML=(d.agents||[]).map(a=>'<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>').join('')||'<option value="">(에이전트 없음)</option>';
+  }catch(e){ sel.innerHTML='<option value="">(로드 실패)</option>'; }
+}
+async function apSwitchCreate(){
+  const name=(document.getElementById('swName').value||'').trim();
+  const command=(document.getElementById('swCmd').value||'').trim();
+  const projectId=document.getElementById('swProj').value;
+  const agentName=document.getElementById('swAgent').value;
+  if(!name||!command){ alert('이름과 명령을 입력하세요'); return; }
+  try{
+    const r=await jfetch('/switches',{method:'POST',body:JSON.stringify({name,command,config:{projectId,agentName},icon:'⚡'})});
+    if(r.ok){ await apLoadSwitches(); apBrowseSwitches(); }
+    else{ const d=await r.json().catch(()=>({})); alert('생성 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+async function apSwitchDelete(id,name){
+  if(!confirm('"'+name+'" 스위치를 삭제할까요?')) return;
+  try{
+    const r=await jfetch('/switches/'+encodeURIComponent(id),{method:'DELETE'});
+    if(r.ok){ await apLoadSwitches(); apBrowseSwitches(); }
+    else{ const d=await r.json().catch(()=>({})); alert('삭제 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
 }
 /* ② 대상 확정 → 대화/결과 (전체 폭) */
 function apPickSystem(){
@@ -771,18 +865,26 @@ function apOpenChat(title,sub){
   document.getElementById('apSub').textContent=sub||'';
   document.getElementById('apMsgs').innerHTML='<div class="empty">메시지를 입력해 시작하세요.</div>';
   apShowChat();
-  if(apChat.type==='system') apLoadHistory();  // 시스템 AI = 과거 대화 자동 로드(연속성)
+  apLoadHistory();  // 시스템 AI·에이전트 모두 과거 대화 자동 로드(연속성)
   setTimeout(()=>{ try{ document.getElementById('apInput').focus(); }catch(e){} },50);
 }
-/* 과거 대화 로드 — 시스템 AI 진입 시 이전 대화를 버블로 표시(맥/폰 공통: /system-ai/conversations) */
+/* 과거 대화 로드 — 채팅 진입 시 이전 대화를 버블로 표시.
+   시스템 AI=/system-ai/conversations / 에이전트=/conversations/{pid}/{aid}/messages (맥/폰 공통) */
 async function apLoadHistory(){
   try{
-    const r=await jfetch('/system-ai/conversations?limit=40');
-    if(!r.ok) return;
-    const d=await r.json(); const convs=d.conversations||[];
+    let convs=[];
+    if(apChat.type==='system'){
+      const r=await jfetch('/system-ai/conversations?limit=40'); if(!r.ok) return;
+      convs=((await r.json()).conversations||[]).map(m=>({role:(m.role==='user')?'user':'assistant', content:m.content||''}));
+    }else if(apChat.type==='agent'){
+      const r=await jfetch('/conversations/'+encodeURIComponent(apChat.projectId)+'/'+encodeURIComponent(apChat.agentId)+'/messages?limit=40');
+      if(!r.ok) return;
+      const msgs=((await r.json()).messages||[]).slice().reverse();  // DESC → 시간순
+      convs=msgs.map(m=>({role:(String(m.from_agent_id)===String(apChat.agentId))?'assistant':'user', content:m.content||''}));
+    }else return;
     if(!convs.length) return;  // 이력 없으면 안내문 유지
     const c=document.getElementById('apMsgs'); c.innerHTML='';
-    convs.forEach(m=>{ apAddMsg((m.role==='user')?'user':'assistant', m.content||''); });
+    convs.forEach(m=>{ apAddMsg(m.role, m.content); });
     const sep=document.createElement('div'); sep.className='ap-hist-sep'; sep.textContent='― 여기부터 새 대화 ―';
     c.appendChild(sep); c.scrollTop=c.scrollHeight;
   }catch(e){}

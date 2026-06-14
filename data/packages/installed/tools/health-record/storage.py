@@ -235,10 +235,10 @@ def get_or_create_person(name: str) -> int:
 
 
 def list_persons() -> List[Dict]:
-    """등록된 사용자 목록"""
+    """등록된 사용자 목록 (soft-delete tombstone 제외)"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM persons ORDER BY id")
+    cursor.execute("SELECT * FROM persons WHERE deleted IS NULL OR deleted = 0 ORDER BY id")
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]

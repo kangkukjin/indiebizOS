@@ -35,6 +35,317 @@ from nas_webapp import get_default_webapp_html
 
 router = APIRouter(prefix="/nas", tags=["nas"])
 
+# 구형 Safari(iOS 10.3+) 호환 경량 Finder 페이지. 최신 런처가 못 뜨는 낡은 WebKit 용.
+# ES6 이하(arrow/?. 회피), 문자열 결합만. /nas/lite 가 서빙. 쿠키(nas_session)로 인증 →
+# img/iframe/file 직링크도 자동 인증. 텍스트=주력, EPUB=서버 추출, PDF=네이티브 새 탭.
+_NAS_LITE_HTML = r'''<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>NAS Finder</title>
+<style>
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; font-family:-apple-system,Helvetica,Arial,sans-serif; background:#111; color:#eee; font-size:17px; }
+  .hide { display:none !important; }
+  .bar { position:-webkit-sticky; position:sticky; top:0; background:#1c1c1e; border-bottom:1px solid #333; padding:8px 10px; display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center; }
+  .bar .path { -webkit-flex:1; flex:1; font-size:12px; color:#9a9a9e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 8px; }
+  button { background:#2c2c2e; color:#eee; border:1px solid #444; border-radius:8px; padding:9px 13px; font-size:15px; }
+  button:active { background:#3a3a3c; }
+  .list { padding:2px 0 50px; }
+  .row { display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center; padding:13px 14px; border-bottom:1px solid #222; }
+  .row .ic { font-size:20px; width:26px; text-align:center; }
+  .row .nm { -webkit-flex:1; flex:1; word-break:break-all; padding:0 10px; }
+  .row .sz { font-size:12px; color:#888; white-space:nowrap; }
+  .row .dl { margin-left:10px; padding:6px 11px; font-size:13px; color:#fff; background:#196127; border-color:#196127; }
+  .login { padding:64px 24px; text-align:center; }
+  .login input { width:100%; max-width:280px; padding:13px; font-size:17px; border-radius:8px; border:1px solid #444; background:#222; color:#eee; margin:12px 0; }
+  .err { color:#ff6b6b; font-size:14px; min-height:18px; }
+  .viewer { position:fixed; top:0; left:0; right:0; bottom:0; background:#111; display:-webkit-flex; display:flex; -webkit-flex-direction:column; flex-direction:column; z-index:10; }
+  .vbar { background:#1c1c1e; border-bottom:1px solid #333; padding:8px 10px; display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center; }
+  .vtitle { -webkit-flex:1; flex:1; font-size:12px; color:#9a9a9e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 8px; }
+  .vbody { -webkit-flex:1; flex:1; overflow:auto; -webkit-overflow-scrolling:touch; }
+  pre.txt { white-space:pre-wrap; word-wrap:break-word; padding:16px; margin:0; font-size:16px; line-height:1.6; font-family:Menlo,monospace; }
+  .epub { padding:18px 20px; line-height:1.8; font-size:18px; }
+  .epub img { max-width:100%; }
+  img.imgv { max-width:100%; display:block; margin:0 auto; }
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <h2>NAS Finder</h2>
+  <input id="pw" type="password" placeholder="비밀번호" autocomplete="current-password">
+  <div><button id="loginBtn">로그인</button></div>
+  <p class="err" id="err"></p>
+</div>
+<div id="app" class="hide">
+  <div class="bar"><button id="up">↑</button><span class="path" id="curpath"></span><button id="logout">나가기</button></div>
+  <div class="list" id="list"></div>
+</div>
+<div id="viewer" class="viewer hide">
+  <div class="vbar"><button id="vclose">← 닫기</button><span class="vtitle" id="vtitle"></span><button id="vminus">A-</button><button id="vplus">A+</button></div>
+  <div class="vbody" id="vbody"></div>
+</div>
+<script>
+(function(){
+  var parentPath = null, fontSize = 17;
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function fmtSize(n){ if(n==null) return ""; if(n<1024) return n+"B"; if(n<1048576) return Math.round(n/1024)+"KB"; return (n/1048576).toFixed(1)+"MB"; }
+  function api(url, opts){ opts = opts || {}; opts.credentials = "same-origin"; return fetch(url, opts); }
+
+  $("loginBtn").addEventListener("click", doLogin);
+  $("pw").addEventListener("keyup", function(e){ if(e.keyCode===13) doLogin(); });
+  function doLogin(){
+    $("err").textContent = "";
+    api("/nas/auth/login", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({password: $("pw").value}) })
+      .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(){ $("login").className="login hide"; $("app").className=""; loadDir(""); })
+      .catch(function(){ $("err").textContent="비밀번호가 올바르지 않습니다"; });
+  }
+  $("logout").addEventListener("click", function(){ api("/nas/auth/logout",{method:"POST"}).then(function(){ location.reload(); }); });
+  $("up").addEventListener("click", function(){ if(parentPath!=null) loadDir(parentPath); });
+
+  function loadDir(path){
+    api("/nas/files?path="+encodeURIComponent(path)).then(function(r){
+      if(r.status===401){ showLogin(); throw 0; }
+      if(!r.ok) throw 0; return r.json();
+    }).then(function(d){
+      parentPath = d.parent;
+      $("curpath").textContent = d.path;
+      $("up").style.opacity = (d.parent==null)?"0.3":"1";
+      renderList(d.items||[]);
+      window.scrollTo(0,0);
+    }).catch(function(){});
+  }
+  function iconFor(it){
+    var n=(it.name||"").toLowerCase();
+    if(it.is_dir) return "[D]";
+    if(n.indexOf(".epub")>=0) return "EP";
+    if(it.category==="pdf") return "PD";
+    if(it.category==="image") return "IM";
+    if(it.category==="video") return "VD";
+    if(it.category==="audio") return "AU";
+    return "TX";
+  }
+  function renderList(items){
+    var h="", i;
+    for(i=0;i<items.length;i++){
+      var it=items[i];
+      var dl = it.is_dir? "" : '<button class="dl" id="d'+i+'">저장</button>';
+      h+='<div class="row"><span class="ic">'+iconFor(it)+'</span><span class="nm">'+esc(it.name)+'</span><span class="sz">'+(it.is_dir?"":fmtSize(it.size))+'</span>'+dl+'</div>';
+    }
+    var list=$("list"); list.innerHTML=h;
+    var rows=list.getElementsByClassName("row");
+    for(i=0;i<rows.length;i++){
+      (function(it, idx){
+        rows[idx].addEventListener("click", function(){ if(it.is_dir) loadDir(it.path); else openFile(it); });
+        if(!it.is_dir){ var b=document.getElementById("d"+idx); if(b){ b.addEventListener("click", function(e){ e.stopPropagation(); exportFile(it); }); } }
+      })(items[i], i);
+    }
+  }
+  function exportFile(it){ var url="/nas/file?path="+encodeURIComponent(it.path); var w=window.open(url,"_blank"); if(!w) window.location.href=url; }
+
+  $("vclose").addEventListener("click", function(){ $("viewer").className="viewer hide"; $("vbody").innerHTML=""; });
+  $("vplus").addEventListener("click", function(){ fontSize+=2; applyFont(); });
+  $("vminus").addEventListener("click", function(){ if(fontSize>10){ fontSize-=2; applyFont(); } });
+  function applyFont(){ var t=$("vbody").querySelector("pre.txt, .epub"); if(t) t.style.fontSize=fontSize+"px"; }
+  function openViewer(title){ $("vtitle").textContent=title; $("viewer").className="viewer"; }
+
+  function isTextName(n){ return /\.(txt|md|markdown|log|csv|json|xml|html?|css|js|py|sh|ini|conf|yaml|yml|srt|vtt|tsv|rtf)$/.test(n); }
+
+  function openFile(it){
+    var name=(it.name||"").toLowerCase();
+    var url="/nas/file?path="+encodeURIComponent(it.path);
+    if(name.indexOf(".epub")>=0){ openEpub(it); return; }
+    if(it.category==="pdf"){ var w=window.open(url,"_blank"); if(!w) window.location.href=url; return; }
+    if(it.category==="image"){ openViewer(it.name); $("vbody").innerHTML='<img class="imgv" src="'+url+'">'; return; }
+    if(it.category==="text" || isTextName(name)){
+      openViewer(it.name);
+      $("vbody").innerHTML='<pre class="txt">불러오는 중...</pre>';
+      api("/nas/text?path="+encodeURIComponent(it.path)).then(function(r){ if(!r.ok) throw 0; return r.json(); })
+        .then(function(d){ var pre=$("vbody").querySelector("pre.txt"); pre.textContent=d.content; pre.style.fontSize=fontSize+"px"; })
+        .catch(function(){ $("vbody").innerHTML='<pre class="txt">텍스트로 열 수 없습니다.</pre>'; });
+      return;
+    }
+    var w2=window.open(url,"_blank"); if(!w2) window.location.href=url;
+  }
+  function openEpub(it){
+    openViewer(it.name);
+    $("vbody").innerHTML='<div class="epub">불러오는 중...</div>';
+    api("/nas/epub?path="+encodeURIComponent(it.path)).then(function(r){ if(!r.ok) throw 0; return r.json(); })
+      .then(function(d){ var div=$("vbody").querySelector(".epub"); div.innerHTML=d.html||"(내용 없음)"; div.style.fontSize=fontSize+"px"; if(d.title) $("vtitle").textContent=d.title; })
+      .catch(function(){ $("vbody").innerHTML='<div class="epub">EPUB을 열 수 없습니다.</div>'; });
+  }
+  function showLogin(){ $("app").className="hide"; $("login").className="login"; }
+
+  api("/nas/auth/check").then(function(r){ return r.json(); }).then(function(d){
+    if(d && d.authenticated){ $("login").className="login hide"; $("app").className=""; loadDir(""); }
+  }).catch(function(){});
+})();
+</script>
+</body>
+</html>'''
+
+
+# 초-구형 기기(iOS 5.1.1 아이패드 1세대 등) 호환 — 순수 ES5 + XMLHttpRequest + 구식 레이아웃.
+# fetch/Promise/현대 flexbox 전혀 안 씀. /nas/lite2 가 서빙. (단 터널 HTTPS는 iPad1 TLS/인증서
+# 한계로 안 될 수 있음 → LAN 평문 HTTP 권장.) 기능은 lite 와 동일(텍스트/EPUB/PDF/이미지).
+_NAS_LITE2_HTML = r'''<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>NAS Finder (old)</title>
+<style>
+  * { -webkit-box-sizing:border-box; box-sizing:border-box; }
+  body { margin:0; font-family:Helvetica,Arial,sans-serif; background:#111; color:#eee; font-size:17px; -webkit-text-size-adjust:none; }
+  .hide { display:none; }
+  #bar { background:#1c1c1e; border-bottom:1px solid #333; padding:8px; overflow:hidden; }
+  #bar #up { float:left; }
+  #bar #logout { float:right; }
+  #curpath { display:block; padding:8px 2px 0; clear:both; font-size:12px; color:#9a9a9e; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  button { background:#2c2c2e; color:#eee; border:1px solid #444; border-radius:6px; padding:9px 13px; font-size:15px; }
+  .row { padding:13px 12px; border-bottom:1px solid #222; overflow:hidden; }
+  .row .ic { display:inline-block; width:30px; color:#8a8a8e; }
+  .row .sz { float:right; font-size:12px; color:#888; padding-top:2px; }
+  .row .dl { float:right; margin-left:10px; padding:6px 11px; font-size:13px; color:#fff; background:#196127; border-color:#196127; }
+  .login { padding:50px 20px; text-align:center; }
+  .login input { width:240px; padding:12px; font-size:17px; border:1px solid #444; border-radius:6px; background:#222; color:#eee; margin:10px 0; }
+  .err { color:#ff6b6b; min-height:18px; }
+  #viewer { position:fixed; top:0; left:0; right:0; bottom:0; background:#111; }
+  #vbar { background:#1c1c1e; border-bottom:1px solid #333; padding:8px; overflow:hidden; }
+  #vbar #vclose { float:left; }
+  #vbar .vctrl { float:right; }
+  #vbody { position:absolute; top:53px; left:0; right:0; bottom:0; overflow:auto; -webkit-overflow-scrolling:touch; }
+  pre.txt { white-space:pre-wrap; word-wrap:break-word; padding:14px; margin:0; font-size:16px; line-height:1.6; }
+  .epub { padding:16px; line-height:1.75; font-size:18px; }
+  .epub img { max-width:100%; }
+  img.imgv { max-width:100%; }
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <h3>NAS Finder</h3>
+  <input id="pw" type="password" placeholder="비밀번호">
+  <div><button id="loginBtn">로그인</button></div>
+  <p class="err" id="err"></p>
+</div>
+<div id="app" class="hide">
+  <div id="bar"><button id="up">위로</button><button id="logout">나가기</button><span id="curpath"></span></div>
+  <div id="list"></div>
+</div>
+<div id="viewer" class="hide">
+  <div id="vbar"><button id="vclose">닫기</button><span class="vctrl"><button id="vminus">A-</button> <button id="vplus">A+</button></span></div>
+  <div id="vbody"></div>
+</div>
+<script>
+(function(){
+  var parentPath=null, fontSize=17;
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ s=(s==null?'':''+s); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtSize(n){ if(n==null) return ''; if(n<1024) return n+'B'; if(n<1048576) return Math.round(n/1024)+'KB'; return Math.round(n/104857.6)/10+'MB'; }
+  function xhr(method,url,jsonBody,cb,errcb){
+    var x=new XMLHttpRequest();
+    x.open(method,url,true);
+    if(jsonBody!=null) x.setRequestHeader('Content-Type','application/json');
+    x.onreadystatechange=function(){
+      if(x.readyState!==4) return;
+      if(x.status>=200 && x.status<300){ cb(x); } else if(errcb){ errcb(x); }
+    };
+    x.send(jsonBody!=null? JSON.stringify(jsonBody): null);
+  }
+  function parse(x){ try{ return JSON.parse(x.responseText); }catch(e){ return null; } }
+
+  $('loginBtn').onclick=doLogin;
+  $('pw').onkeyup=function(e){ if(e.keyCode===13) doLogin(); };
+  function doLogin(){
+    $('err').innerHTML='';
+    xhr('POST','/nas/auth/login',{password:$('pw').value},function(){
+      $('login').className='login hide'; $('app').className=''; loadDir('');
+    },function(){ $('err').innerHTML='비밀번호가 올바르지 않습니다'; });
+  }
+  $('logout').onclick=function(){ xhr('POST','/nas/auth/logout',null,function(){ location.reload(); },function(){ location.reload(); }); };
+  $('up').onclick=function(){ if(parentPath!=null) loadDir(parentPath); };
+
+  function loadDir(path){
+    xhr('GET','/nas/files?path='+encodeURIComponent(path),null,function(x){
+      var d=parse(x); if(!d) return;
+      parentPath=d.parent;
+      $('curpath').innerHTML=esc(d.path);
+      $('up').style.opacity=(d.parent==null)?'0.3':'1';
+      render(d.items||[]);
+      window.scrollTo(0,0);
+    },function(x){ if(x.status===401){ $('app').className='hide'; $('login').className='login'; } });
+  }
+  function iconFor(it){
+    var n=(it.name||'').toLowerCase();
+    if(it.is_dir) return '[D]';
+    if(n.indexOf('.epub')>=0) return 'EP';
+    if(it.category==='pdf') return 'PD';
+    if(it.category==='image') return 'IM';
+    if(it.category==='video') return 'VD';
+    if(it.category==='audio') return 'AU';
+    return 'TX';
+  }
+  function render(items){
+    var h='',i;
+    for(i=0;i<items.length;i++){
+      var it=items[i];
+      var dl=it.is_dir?'':'<button class="dl" id="d'+i+'">저장</button>';
+      h+='<div class="row" id="r'+i+'">'+dl+'<span class="ic">'+iconFor(it)+'</span>'+esc(it.name)+'<span class="sz">'+(it.is_dir?'':fmtSize(it.size))+'</span></div>';
+    }
+    $('list').innerHTML=h;
+    for(i=0;i<items.length;i++){ bindRow(i, items[i]); }
+  }
+  function bindRow(idx, it){
+    $('r'+idx).onclick=function(){ if(it.is_dir) loadDir(it.path); else openFile(it); };
+    if(!it.is_dir){ var b=$('d'+idx); if(b){ b.onclick=function(e){ if(e&&e.stopPropagation) e.stopPropagation(); exportFile(it); return false; }; } }
+  }
+  function exportFile(it){ var url='/nas/file?path='+encodeURIComponent(it.path); var w=window.open(url,'_blank'); if(!w) window.location.href=url; }
+
+  $('vclose').onclick=function(){ $('viewer').className='hide'; $('vbody').innerHTML=''; };
+  $('vplus').onclick=function(){ fontSize+=2; applyFont(); };
+  $('vminus').onclick=function(){ if(fontSize>10){ fontSize-=2; applyFont(); } };
+  function applyFont(){ var t=$('vbody').firstChild; if(t&&t.style) t.style.fontSize=fontSize+'px'; }
+  function openViewer(){ $('viewer').className=''; }
+
+  function isText(n){ return /\.(txt|md|markdown|log|csv|tsv|json|xml|html?|css|js|py|sh|ini|conf|yaml|yml|srt|vtt|rtf)$/.test(n); }
+  function openFile(it){
+    var name=(it.name||'').toLowerCase();
+    var url='/nas/file?path='+encodeURIComponent(it.path);
+    if(name.indexOf('.epub')>=0){ openEpub(it); return; }
+    if(it.category==='pdf'){ var w=window.open(url,'_blank'); if(!w) window.location.href=url; return; }
+    if(it.category==='image'){ openViewer(); $('vbody').innerHTML='<img class="imgv" src="'+url+'">'; return; }
+    if(it.category==='text'||isText(name)){
+      openViewer(); $('vbody').innerHTML='<pre class="txt">불러오는 중...</pre>';
+      xhr('GET','/nas/text?path='+encodeURIComponent(it.path),null,function(x){
+        var d=parse(x); var pre=$('vbody').firstChild;
+        if(d&&pre){ pre.innerHTML=''; pre.appendChild(document.createTextNode(d.content)); pre.style.fontSize=fontSize+'px'; }
+      },function(){ $('vbody').innerHTML='<pre class="txt">텍스트로 열 수 없습니다.</pre>'; });
+      return;
+    }
+    var w2=window.open(url,'_blank'); if(!w2) window.location.href=url;
+  }
+  function openEpub(it){
+    openViewer(); $('vbody').innerHTML='<div class="epub">불러오는 중...</div>';
+    xhr('GET','/nas/epub?path='+encodeURIComponent(it.path),null,function(x){
+      var d=parse(x); var div=$('vbody').firstChild;
+      if(d&&div){ div.innerHTML=d.html||'(내용 없음)'; div.style.fontSize=fontSize+'px'; }
+    },function(){ $('vbody').innerHTML='<div class="epub">EPUB을 열 수 없습니다.</div>'; });
+  }
+
+  xhr('GET','/nas/auth/check',null,function(x){
+    var d=parse(x); if(d&&d.authenticated){ $('login').className='login hide'; $('app').className=''; loadDir(''); }
+  });
+})();
+</script>
+</body>
+</html>'''
+
 # ============ 설정 ============
 
 DATA_PATH = _get_data_path()
@@ -678,6 +989,98 @@ async def get_text_file(
         return {"path": str(safe_path), "content": content, "size": len(content)}
     except UnicodeDecodeError:
         raise HTTPException(status_code=400, detail=f"파일을 {encoding}으로 읽을 수 없습니다")
+
+
+@router.get("/epub")
+async def get_epub_file(request: Request, path: str = Query(..., description="EPUB 파일 경로")):
+    """EPUB → 읽기용 HTML. 구형 Safari(iOS 10)가 epub.js 없이 텍스트로 읽도록
+    스파인(읽기 순서)대로 각 XHTML 의 <body> 본문만 추출해 이어 붙인다(stdlib only)."""
+    config = load_config()
+    if not config.get("enabled"):
+        raise HTTPException(status_code=503, detail="NAS 서비스가 비활성화되어 있습니다")
+    session_token = request.cookies.get('nas_session') or request.headers.get('X-NAS-Session')
+    if not session_token or not verify_session(session_token):
+        raise HTTPException(status_code=401, detail="인증이 필요합니다")
+    allowed_paths = config.get("allowed_paths", [])
+    safe_path = get_safe_path(allowed_paths, path)
+    if not safe_path or not safe_path.exists():
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다")
+    if safe_path.is_dir():
+        raise HTTPException(status_code=400, detail="디렉토리입니다")
+    try:
+        import zipfile, posixpath
+        import re as _re
+        from urllib.parse import unquote as _unquote
+        with zipfile.ZipFile(str(safe_path)) as z:
+            # 1) container.xml → OPF 경로
+            opf_path = None
+            try:
+                cont = z.read("META-INF/container.xml").decode("utf-8", "ignore")
+                m = _re.search(r'full-path="([^"]+)"', cont)
+                if m:
+                    opf_path = m.group(1)
+            except Exception:
+                pass
+            if not opf_path:
+                for n in z.namelist():
+                    if n.lower().endswith(".opf"):
+                        opf_path = n
+                        break
+            if not opf_path:
+                raise HTTPException(status_code=400, detail="EPUB 구조를 읽을 수 없습니다 (OPF 없음)")
+            opf_dir = posixpath.dirname(opf_path)
+            opf = z.read(opf_path).decode("utf-8", "ignore")
+            # 2) manifest: id→href (속성 순서 무관)
+            manifest = {}
+            for tag in _re.findall(r'<item\b[^>]*>', opf):
+                idm = _re.search(r'\bid="([^"]+)"', tag)
+                hm = _re.search(r'\bhref="([^"]+)"', tag)
+                if idm and hm:
+                    manifest[idm.group(1)] = _unquote(hm.group(1))
+            # 3) spine 순서
+            spine = _re.findall(r'<itemref\b[^>]*\bidref="([^"]+)"', opf)
+            tm = _re.search(r'<dc:title[^>]*>([^<]+)</dc:title>', opf)
+            title = tm.group(1).strip() if tm else safe_path.name
+            parts, total = [], 0
+            for sid in spine:
+                href = manifest.get(sid)
+                if not href:
+                    continue
+                full = posixpath.normpath(posixpath.join(opf_dir, href)) if opf_dir else href
+                try:
+                    raw = z.read(full).decode("utf-8", "ignore")
+                except Exception:
+                    continue
+                bm = _re.search(r'(?is)<body[^>]*>(.*?)</body>', raw)
+                body = bm.group(1) if bm else raw
+                body = _re.sub(r'(?is)<script.*?</script>', '', body)
+                body = _re.sub(r'(?is)<style.*?</style>', '', body)
+                body = _re.sub(r'(?is)<img[^>]*>', '', body)  # zip 내부 이미지라 안 뜸 → 제거
+                parts.append(body)
+                total += len(body)
+                if total > 8 * 1024 * 1024:  # 8MB 상한(읽기용)
+                    break
+            return {"path": str(safe_path), "title": title,
+                    "html": "\n<hr/>\n".join(parts), "chapters": len(parts)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"EPUB 파싱 실패: {str(e)}")
+
+
+@router.get("/lite", response_class=HTMLResponse)
+async def serve_nas_lite(request: Request):
+    """구형 기기(iOS 10.3 Safari 등) 호환 경량 Finder — 텍스트/EPUB/PDF/이미지 읽기.
+    최신 런처가 못 뜨는 낡은 WebKit 용. /nas API(files/text/epub/file)를 ES6 이하로 호출."""
+    return HTMLResponse(content=_NAS_LITE_HTML)
+
+
+@router.get("/lite2", response_class=HTMLResponse)
+async def serve_nas_lite2(request: Request):
+    """초-구형 기기(iOS 5.1.1 아이패드 1세대 등) 호환 — 순수 ES5 + XMLHttpRequest.
+    fetch/Promise/현대 flex 안 씀. 같은 /nas API 사용. 터널 HTTPS는 그 기기의 TLS/인증서
+    한계로 막힐 수 있어 LAN 평문 HTTP(http://<맥IP>:8765/nas/lite2) 사용을 권장."""
+    return HTMLResponse(content=_NAS_LITE2_HTML)
 
 
 # ============ 자막 API (nas_subtitle.py에서 로직 처리) ============

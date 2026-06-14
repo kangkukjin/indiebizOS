@@ -403,4 +403,4 @@ agents:
 4. **Nostr 키 관리**: nsec는 채널 설정 또는 IndieNet에서 관리
 
 ---
-*마지막 업데이트: 2026-06-12 — IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신(channel_poller 전 릴레이 구독) + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05 (auto_response.md 통합)*
+*마지막 업데이트: 2026-06-14 — channel 트리거("Y 메시지 오면 X 실행") 맥 발화 경로 신설: channel_poller `_save_message_to_db`(Gmail/Nostr 3수신 경로 공통 깔때기)에 `_check_channel_triggers` 훅 → 매칭 시 데몬 스레드로 파이프라인 발화(메시지를 _prev_result 주입). **폰은 메시지 폴링 안 함**(사용자 결정 2026-06-14) — 메시지 수신/폴링은 PC 담당, 폰=리모컨/두 번째 자아. 이전(2026-06-12): IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신 + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05*

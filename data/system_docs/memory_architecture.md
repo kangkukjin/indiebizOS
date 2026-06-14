@@ -6,7 +6,7 @@ owner_code: >
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py
-last_updated: 2026-06-12
+last_updated: 2026-06-14
 see_also: [execution_memory.md, architecture.md, ibl.md]
 ---
 
@@ -247,6 +247,17 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 
 ### ⚠️ 남은 빈자리 (별도)
 - **C. 뉴스 게이팅이 JSON LIKE**: `world LIKE '%news%'`로 마지막 뉴스 시각 탐색(취약하나 pulse_log 30일 바운드라 실害 적음) → 전용 메타/컬럼이 깔끔.
+
+---
+
+## 다중 자아와 기억의 두 부류 (2026-06-14)
+
+폰이 두 번째 독립 자아(폰-로컬 Gemini 두뇌)가 되면서, 기억은 두 부류로 갈린다:
+
+- **사용자 세계-데이터 (객관)** — 연락처·비즈니스·일정·의료기록. 어느 자아가 보든 같은 사실이므로 **공유·동기화**(business.db는 LWW+tombstone CRDT 합집합 머지, by-need). 자동응답 같은 PC 전용 메타데이터는 PC에 수렴.
+- **자아의 주관적 기억 (마음)** — 대화 이력·해마(절차기억)·자기상태(self-state). 각 자아의 체험이므로 **자아별 사적·비동기화**. 폰 자아는 응답 속도를 위해 해마를 비활성화(키워드 검색으로 충분)했고, 맥 자아만 해마를 운용한다.
+
+정체성은 모델 위치가 아니라 **하네스(프롬프트+기억)**에 있다. 같은 사용자 세계를 보지만 각자의 마음을 가진 두 자아 — `detect_body()`가 각 자아에게 자기 몸(맥/폰)을 인지시킨다.
 
 ---
 

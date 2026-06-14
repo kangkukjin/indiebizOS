@@ -117,7 +117,7 @@ Stop repeating the same AI conversations. **Save them as Switches or Workflows**
 Connect with others through decentralized networks and access your system from anywhere.
 
 - **Nostr Protocol** — No central server, no data collection (DMs use modern NIP-17 gift-wrap encryption)
-- **Phone Native** — A native Android app runs IndieBiz OS *on the phone itself*: an on-device Python backend (Chaquopy) serves the App-mode superapp, and the real IBL engine executes phone-safe packages locally (weather, books, finance, internet radio playing on the phone's own speaker…). `runs_on` capability tags hide or refuse what only the home PC can do; captured notifications/location/steps feed `[sense:phone]` — read locally on the phone, or streamed home over NIP-17 as a one-way feed. The phone becomes a real sense+limbs node, not just a remote control.
+- **Phone Native — a second, independent self** — A native Android app runs IndieBiz OS *on the phone itself*, with its **own on-device LLM brain** (Gemini, in-process: a lightweight tier for classification, a fuller tier for execution). The phone is not a remote control of the home PC — it's a second self with a different body and therefore a different identity. The on-device Python backend (Chaquopy) serves the App-mode superapp, the real IBL engine executes phone-safe packages locally, and the phone can even run Python in-process — making it a general device-programming agent. The model **detects its own hardware** (`detect_body`) and recognizes itself as "the phone" rather than the Mac. `runs_on` capability tags mark each action honestly — `anywhere` (runs on each body locally), `mac_only` (phone forwards to the Mac), `phone_only` (Mac forwards to the phone) — and borrowed actions are forwarded transparently per-leaf. The phone has its own on-demand senses (`[sense:here]` location, `[sense:listen]` mic, `[sense:see]` camera, `[sense:phone]` notifications) and operates its own screen via a native AccessibilityService. **Two memories, two kinds:** the user's world-data (contacts, business, calendar, health records) is shared and synced (CRDT union merge); each self's subjective memory (conversations, hippocampus, self-state) stays private and unsynced.
 - **Remote Access** — Cloudflare Tunnel based Remote Finder and Launcher
 - **Business Network** — Manage partners, auto-respond to inquiries
 
@@ -187,17 +187,17 @@ The system maintains awareness of itself and the world:
 
 A domain-specific language that unifies all capabilities into one syntax.
 
-**5 Nodes, 122 Atomic Actions:**
+**5 Nodes, 124 Atomic Actions:**
 
 | Node | Actions | Description |
 |------|---------|-------------|
-| **sense** | 38 | Data retrieval (web, Naver Korean search, finance, travel, photos, blog, health, real estate, legal, statistics, phone notifications/location/steps) |
-| **self** | 42 | System management, workflows, triggers, files, memory, business (catalog/items/docs/guidelines), phone sync, code execution, health records |
-| **limbs** | 17 | UI automation (browser, Android phone, macOS screen), phone-native actions, media playback (YouTube, radio) |
+| **sense** | 41 | Data retrieval (web, Naver Korean search, finance, travel, photos, blog, health, real estate, legal, statistics, classic literature, performances/exhibitions) and the phone's on-demand senses (notifications, location, microphone, camera) |
+| **self** | 41 | System management, workflows, triggers, files, deep memory, business (catalog/items/docs/guidelines), phone sync, calendar, health records |
+| **limbs** | 17 | UI automation (browser, Android phone, macOS screen), phone-native actions, media playback (YouTube, radio), maps |
 | **others** | 11 | Collaboration, delegation, messaging (DM/feed/board/Nostr), neighbor CRM, contacts, auto-response |
-| **engines** | 14 | Content creation (slides, video, charts, images, websites, architecture) |
+| **engines** | 14 | Content creation (slides, video, charts, images, websites, spreadsheets, TTS) |
 
-> Action counts shrank from 332 → 122 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn (e.g. 45 bespoke Android actions became one `[limbs:android]{op}` centerpiece). Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work.
+> Action counts shrank from 332 → 124 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn (e.g. 45 bespoke Android actions became one `[limbs:android]{op}` centerpiece). Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work.
 
 ```
 User: "Search AI news and save to file"
@@ -206,7 +206,7 @@ User: "Search AI news and save to file"
 ```
 
 **Key design:**
-- **One tool, one language** — AI agents learn one syntax, not 111 tool schemas
+- **One tool, one language** — AI agents learn one syntax, not 124 tool schemas
 - **Per-agent filtering** — Each agent's `allowed_nodes` restricts access
 - **Dynamic loading** — Tool packages are folders; drop one in, it's recognized
 
@@ -266,4 +266,4 @@ cd frontend && npm run electron:dev  # Frontend (Electron)
 
 *IndieBiz OS — An AI system that grows with you, not one that's given to you.*
 
-*Last updated: 2026-06-12 — Messenger/community/business surfaces unified into IBL app-mode instruments; phone↔PC address-book sync (union merge, `[self:phone_sync]`); phone-native self-sufficiency; hippocampus retrained locally.*
+*Last updated: 2026-06-14 — The phone became a second, independent self: its own on-device LLM brain (in-process Gemini), hardware self-detection (`detect_body`), a standing scheduler, and CRDT sync of the user's world-data (business, health records) while each self's subjective memory stays private. 124 actions (sense 41, self 41, limbs 17, others 11, engines 14). Earlier (2026-06-12): messenger/community/business surfaces unified into IBL app-mode instruments; phone↔PC address-book sync; hippocampus retrained locally.*

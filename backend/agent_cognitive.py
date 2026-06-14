@@ -341,24 +341,53 @@ class AgentCognitiveMixin:
                 return str(v)
             if cat == "blood_pressure":
                 return f"{v.get('systolic','?')}/{v.get('diastolic','?')}"
-            return str(v.get("value", v))
+            if "value" in v:
+                u = v.get("unit")
+                return f"{v['value']}{(' ' + u) if u else ''}"
+            return ", ".join(f"{k}={vv}" for k, vv in v.items())
 
-        lines = ["", "# 환자 의료기록 (현재 시점 — 아래 데이터로 바로 답하라. 읽기용 추가 조회 불필요)",
-                 "# 기록을 추가/수정/삭제할 때만 [self:health]{op: save|delete} 액션을 쓴다."]
+        def _cell(x):
+            # 마크다운 표 셀 안전화 — 파이프/줄바꿈이 표를 깨지 않게.
+            return str(x if x is not None else "").replace("|", "\\|").replace("\n", " ").strip()
+
+        lines = ["", "# 환자 의료기록",
+                 "아래 표가 현재 시점의 전체 기록이다. 이 표로 바로 답하라(읽기용 추가 조회 불필요).",
+                 "추가·수정·삭제할 때만 `[self:health]{op: save|delete}` 액션을 쓴다.",
+                 "각 표는 최신순(날짜 내림차순) — 가장 최근 값은 그 표의 첫 행이다."]
         for p in persons:
             name = p.get("name", "")
             note = p.get("note")
-            lines.append(f"\n## {name}" + (f" — {note}" if note else ""))
+            lines.append(f"\n## {_cell(name)}" + (f" — {_cell(note)}" if note else ""))
             try:
-                for m in hs.get_measurements(days=3650, limit=30, person=name):
-                    lines.append(f"  측정 {m['category']} {_fmt(m['category'], m.get('value'))} ({(m.get('measured_at') or '')[:10]})")
-                for s in hs.get_symptoms(days=3650, person=name):
-                    lines.append(f"  증상 {s['category']} {s.get('description') or ''} ({(s.get('started_at') or '')[:10]})")
-                for md in hs.get_medications(days=3650, person=name):
-                    act = "복용중" if md.get("is_active") else "중단"
-                    lines.append(f"  투약 {md['name']} {md.get('dosage') or ''} {md.get('frequency') or ''} ({md.get('reason') or ''}, {act})")
-                for d in hs.get_documents(days=3650, person=name):
-                    lines.append(f"  문서 {d['doc_type']}: {d.get('description') or ''} ({(d.get('recorded_at') or '')[:10]})")
+                ms = hs.get_measurements(days=3650, limit=30, person=name)
+                if ms:
+                    lines.append("\n### 측정 (최신순)")
+                    lines.append("| 날짜 | 항목 | 값 |")
+                    lines.append("|---|---|---|")
+                    for m in ms:
+                        lines.append(f"| {(m.get('measured_at') or '')[:10]} | {_cell(m['category'])} | {_cell(_fmt(m['category'], m.get('value')))} |")
+                ss = hs.get_symptoms(days=3650, person=name)
+                if ss:
+                    lines.append("\n### 증상 (최신순)")
+                    lines.append("| 시작일 | 항목 | 설명 |")
+                    lines.append("|---|---|---|")
+                    for s in ss:
+                        lines.append(f"| {(s.get('started_at') or '')[:10]} | {_cell(s['category'])} | {_cell(s.get('description'))} |")
+                mds = hs.get_medications(days=3650, person=name)
+                if mds:
+                    lines.append("\n### 투약")
+                    lines.append("| 약 | 용량 | 빈도 | 사유 | 상태 |")
+                    lines.append("|---|---|---|---|---|")
+                    for md in mds:
+                        act = "복용중" if md.get("is_active") else "중단"
+                        lines.append(f"| {_cell(md['name'])} | {_cell(md.get('dosage'))} | {_cell(md.get('frequency'))} | {_cell(md.get('reason'))} | {act} |")
+                ds = hs.get_documents(days=3650, person=name)
+                if ds:
+                    lines.append("\n### 문서")
+                    lines.append("| 날짜 | 종류 | 설명 |")
+                    lines.append("|---|---|---|")
+                    for d in ds:
+                        lines.append(f"| {(d.get('recorded_at') or '')[:10]} | {_cell(d['doc_type'])} | {_cell(d.get('description'))} |")
             except Exception:
                 continue
         return "\n".join(lines)

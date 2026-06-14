@@ -335,4 +335,4 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-06-12 — business 패키지 도메인 전면 IBL화(self:business/business_item/business_document/work_guideline op + others:neighbor 통합{list/detail/save/delete/favorite}·contact·messages·feed/board/nostr·auto_response + self:phone_sync USB 동기화). 옛 BusinessManager.tsx·NeighborManagerDialog.tsx 은퇴. 이전(2026-06-10): 35개 정합화(android 얇은 부활, publishing not_installed 이동). 이전(2026-05-28): IBL 단일 진실 소스화*
+*마지막 업데이트: 2026-06-14 — 35개 도구 패키지 유지. 폰 자아 번들=22 패키지(runnable 95) — `build_ibl_nodes.PHONE_VERIFIED_PACKAGES` + runs_on 태그로 파생, 폰 못 도는 액션은 맥에 위임. 라이브러리=비계/API=몸 원칙으로 무거운 의존 대신 경량 HTTP 호출(arxiv·shopping 이식 증명, 지연 import). 이전(2026-06-12): business 패키지 도메인 전면 IBL화(self:business/business_item/business_document/work_guideline op + others:neighbor 통합·contact·messages·feed/board/nostr·auto_response + self:phone_sync). 옛 BusinessManager.tsx·NeighborManagerDialog.tsx 은퇴. 이전(2026-06-10): 35개 정합화. 이전(2026-05-28): IBL 단일 진실 소스화*

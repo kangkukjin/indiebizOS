@@ -218,6 +218,8 @@ def generate_guide():
                 lines.append("")
                 lines.append("## 나는 누구인가")
                 lines.append(f"- 나는 지금 **{cap['body']}** 에서 돈다.")
+                if cap.get("identity"):
+                    lines.append(f"- {cap['identity']}")
                 micros = cap.get("micros") or {}
                 esc = micros.get("escape")
                 if esc == "python":

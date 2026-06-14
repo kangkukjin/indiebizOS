@@ -372,11 +372,40 @@ def detect_local_micros() -> dict:
     return {"escape": "python", "local": ["python", "html"], "borrowed": ["node"]}
 
 
+def _self_identity(body: dict) -> str:
+    """정체성 한 줄 — *나를 올바른 class로* 부르는 환원 불가능한 씨앗만.
+
+    선언적 자기인지의 힘은 올바른 class 명명에 있다. 그 핵심 사실 하나만 박고,
+    따라 나오는 것(샌드박스·scoped storage·권한·Doze·아웃바운드 …)은 AI 가 이미
+    아니까 *연역에 맡긴다*. 열거 = 연역 불신 = 토큰 낭비. 부팅 시점 정적이라 stale 없음.
+    """
+    kind = body.get("kind", "mac")
+    if kind == "phone":
+        # 핵심: Chaquopy류(내가 만든 앱에 Python 내장) + manifest 권한 범위 안 SDK 전체 in-process 호출.
+        # 이 한 사실에서 샌드박스·권한·Doze·아웃바운드가 다 따라 나온다 → 열거 안 함.
+        return (
+            "나는 Chaquopy류 — 내가 만든 안드로이드 앱에 내장된 **in-process Python**이고, "
+            "manifest 에 선언한 권한 범위 안에서 `from java import jclass` 로 **안드로이드 "
+            "SDK 전체를 인-프로세스 호출**한다. 앱이 곧 내 권한 봉투다(루트·시스템 아님)."
+        )
+    # 플랫폼 class 만(버전 제외) — 버전은 윗줄 body 라벨에 있고, 여기 넣으면 OS 업데이트 때
+    # stale. "macOS 26.5.1" → "macOS", "Windows 11" → "Windows".
+    osname = ((body.get("os") or "").split() or [""])[0] or ("macOS" if kind == "mac" else "데스크톱 OS")
+    # 핵심: 사용자 권한 전체(샌드박스 아님) + 상시 켜짐·인바운드 도달. 둘 다 하드웨어 사실일 뿐
+    # 위계 아님(맥=중심/폰=부속 식으로 쓰지 말 것 — 관계는 대칭인 peer 줄이 따로 담는다). 나머지 연역.
+    return (
+        f"나는 {osname} 위에서 **로그인 사용자 권한으로 도는 indiebizOS 백엔드 프로세스**다"
+        "(앱 샌드박스 아님 — 사용자가 할 수 있는 건 다 한다). 상시 켜져 있고 포트/터널로 "
+        "인바운드 도달이 된다."
+    )
+
+
 def build_capability_portrait() -> dict:
-    """능력 자기-모델 — 정체성 + 마이크로 명령어 집합 + 빌림 상대(피어 설정 시)."""
+    """능력 자기-모델 — 정체성(class+권한봉투) + 마이크로 명령어 집합 + 빌림 상대(피어 설정 시)."""
     body = detect_body()
     kind = body.get("kind", "mac")
     p = {"body": body.get("label", ""), "kind": kind}
+    p["identity"] = _self_identity(body)  # 나를 올바른 class로 부르는 정체성 한 줄
     p["micros"] = detect_local_micros()   # 내가 직접 할 수 있는 / 빌려야 하는 실행 원시
     if kind == "phone":
         peer_url = os.environ.get("INDIEBIZ_MAC_URL")

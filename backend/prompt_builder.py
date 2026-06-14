@@ -113,6 +113,8 @@ class PromptBuilder:
             if cap and cap.get("body"):
                 lines = ["# 나는 누구인가 (자동 주입)",
                          f"- 나는 지금 **{cap['body']}** 에서 돈다."]
+                if cap.get("identity"):
+                    lines.append(f"- {cap['identity']}")
                 micros = cap.get("micros") or {}
                 esc = micros.get("escape")
                 if esc == "python":

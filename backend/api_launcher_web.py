@@ -734,6 +734,7 @@ function apBrowseRoot(){
   let h='<h3>시스템</h3>';
   h+=apCard('🤖','시스템 AI','IndieBiz OS 전체를 관리','apPickSystem()',false);
   h+=apCard('⚡','스위치','원클릭 자동화 실행','apBrowseSwitches()',true);
+  h+=apCard('⏰','스케줄','반복 작업 보기·삭제','apBrowseSchedules()',true);
   h+='<h3>프로젝트 '+apProjects.length+'</h3>';
   h+='<button class="ap-newbtn" onclick="apProjectCreate()">＋ 프로젝트 만들기</button>';
   h+=apProjects.map(p=>
@@ -848,6 +849,43 @@ async function apSwitchDelete(id,name){
     const r=await jfetch('/switches/'+encodeURIComponent(id),{method:'DELETE'});
     if(r.ok){ await apLoadSwitches(); apBrowseSwitches(); }
     else{ const d=await r.json().catch(()=>({})); alert('삭제 실패: '+(d.error||d.detail||r.status)); }
+  }catch(e){ alert('오류: '+e.message); }
+}
+/* ①-d 스케줄 목록 (반복 트리거 보기·삭제 — self:trigger op:list/delete via /ibl/execute).
+   trigger_engine 은 폰 로컬 번들이라 이 자아의 스케줄(대화처럼 자아별 사적)을 보여준다. */
+function apScheduleWhen(cfg){
+  cfg=cfg||{};
+  if(cfg.interval_minutes) return cfg.interval_minutes+'분마다';
+  const rep=cfg.repeat||cfg.frequency||''; const time=cfg.time||'';
+  if(rep==='daily') return '매일 '+time;
+  if(rep==='weekly') return '매주 '+time;
+  if(rep) return rep+' '+time;
+  if(time) return time;
+  try{ return JSON.stringify(cfg); }catch(e){ return '예약'; }
+}
+async function apBrowseSchedules(){
+  apShowBrowse();
+  document.getElementById('ap-bhead').style.display='flex';
+  document.getElementById('apBrowseTitle').textContent='스케줄';
+  const box=document.getElementById('apBrowse');
+  box.innerHTML='<p class="muted" style="padding:20px;text-align:center">불러오는 중…</p>';
+  try{
+    const r=await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code:'[self:trigger]{op: "list", type: "schedule"}'})});
+    const d=await r.json(); const trigs=d.triggers||[];
+    if(!trigs.length){ box.innerHTML='<p class="muted" style="padding:24px;text-align:center;line-height:1.7">반복 스케줄이 없습니다.<br><span style="font-size:13px">시스템 AI에게 "매일 아침 9시에 뉴스 알려줘"처럼 말해 만들 수 있어요.</span></p>'; return; }
+    box.innerHTML='<h3>반복 스케줄 '+trigs.length+'</h3>'+trigs.map(t=>{
+      const en=t.enabled!==false;
+      return '<div class="ap-card"><span class="ic">'+(en?'⏰':'⏸️')+'</span>'+
+        '<span class="tx"><span class="nm">'+esc(t.name||t.id)+'</span><span class="ds">'+esc(apScheduleWhen(t.config))+' · '+esc((t.pipeline||'').substring(0,38))+'</span></span>'+
+        '<button class="btn2 danger" onclick="apScheduleDelete(\\''+esc(t.id)+'\\',\\''+esc(t.name||t.id)+'\\')">🗑</button></div>';
+    }).join('');
+  }catch(e){ box.innerHTML='<p class="muted" style="padding:24px;text-align:center">불러오기 실패: '+esc(e.message)+'</p>'; }
+}
+async function apScheduleDelete(id,name){
+  if(!confirm('"'+name+'" 스케줄을 삭제할까요?')) return;
+  try{
+    const r=await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code:'[self:trigger]{op: "delete", id: "'+id+'"}'})});
+    if(r.ok){ apBrowseSchedules(); } else { const d=await r.json().catch(()=>({})); alert('삭제 실패: '+(d.error||d.detail||r.status)); }
   }catch(e){ alert('오류: '+e.message); }
 }
 /* ② 대상 확정 → 대화/결과 (전체 폭) */

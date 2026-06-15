@@ -435,6 +435,24 @@ def _op_merge(prev, params):
     return _emit_records({"records": []}, out)
 
 
+def _suffix_collisions(base_cols, add_cols):
+    """add_cols 이름이 base_cols(또는 서로)와 충돌하면 _2,_3.. 접미사 — *표시 이름만*.
+    (읽기는 원본 이름으로 따로 한다. 동명 열이 겹치면 다운스트림 select/sort가 이름으로
+     둘째 열을 못 집어 조용히 첫째를 오선택하는 침묵 함정을 막는다.)"""
+    used = set(base_cols)
+    out = []
+    for c in add_cols:
+        name = c
+        if name in used:
+            i = 2
+            while f"{c}_{i}" in used:
+                i += 1
+            name = f"{c}_{i}"
+        used.add(name)
+        out.append(name)
+    return out
+
+
 def _op_join(prev, params):
     """두 table을 키 열로 inner join. params.on(양쪽 공통 키 열명, 필수).
 
@@ -462,8 +480,8 @@ def _op_join(prev, params):
     for r in tb.get("rows") or []:
         k = _norm(r[rki] if rki < len(r) else None)
         index.setdefault(k, []).append(r)
-    extra = [c for c in cb if c != on]  # 우측에서 가져올 열(키 제외)
-    out_cols = ca + extra
+    extra = [c for c in cb if c != on]  # 우측에서 가져올 열(키 제외, 읽기는 원본 이름)
+    out_cols = ca + _suffix_collisions(ca, extra)  # 표시 이름만 충돌 회피
     out_rows = []
     for r in ta.get("rows") or []:
         k = _norm(r[lki] if lki < len(r) else None)

@@ -1177,9 +1177,12 @@ function appBackHome(){
 function openInstrument(ix){
   const inst=INSTRUMENTS[ix]; if(!inst) return;
   CUR={inst:inst, mode:null, optCache:{}}; VIEW_CTX=null;
+  // 홈에서 계기로 들어갈 때만 history 항목 push(뒤로가기로 그리드 복귀). 중복 push 방지.
+  const _fromHome=document.getElementById('appHome').style.display!=='none';
   document.getElementById('appHome').style.display='none';
   const box=document.getElementById('appInst'); box.style.display='block';
-  let h='<div class="inst-head"><button class="back" onclick="appBackHome()">←</button><h2>'+esc(inst.icon||'')+' '+esc(inst.name)+'</h2></div>';
+  if(_fromHome){ try{ history.pushState({inst:1}, ''); }catch(e){} }
+  let h='<div class="inst-head"><button class="back" onclick="history.back()">←</button><h2>'+esc(inst.icon||'')+' '+esc(inst.name)+'</h2></div>';
   if(inst.renderer&&inst.renderer.indexOf('custom:')===0){
     box.innerHTML=h+'<div id="modeBody"></div>';
     const fn=CUSTOM_RENDERERS[inst.renderer.slice(7)];
@@ -1807,9 +1810,15 @@ function openFileOverlay(path, html){
   // 앱모드 화면에 머문다(앱 종료 아님).
   try{ history.pushState({fileov:1}, ''); }catch(e){}
 }
+// 안드로이드 뒤로가기 일반 처리 — 가장 위(깊은) 것부터 한 단계만 닫는다. 각 "깊이 들어가기"
+// (계기 열기·오버레이)가 history.pushState 로 항목을 쌓아 두면, 뒤로가기는 여기서 앱 안에서
+// 한 단계 뒤로 가고, 더 닫을 게 없을 때만 네이티브가 앱을 종료한다. 모든 시각 ←/✕ 버튼도
+// history.back() 으로 이 경로를 타 일관성 유지.
 window.addEventListener('popstate', function(){
   const _ov=document.querySelector('.fileov');
-  if(_ov) _ov.remove();
+  if(_ov){ _ov.remove(); return; }              // 1) 파일 오버레이(신문 등)
+  const _inst=document.getElementById('appInst');
+  if(_inst && _inst.style.display!=='none'){ appBackHome(); return; }  // 2) 계기 → 앱 그리드
 });
 async function rowDrill(vi,ri){
   // split이면 리스트(LIST)에서 행을 찾아 상세 패널(#mdDetail)로, 아니면 현재 view(VIEW_CTX)에서 instOut으로.

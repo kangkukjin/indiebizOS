@@ -12,7 +12,11 @@
 1. ✅ **해마 모델 재학습 완료(로컬 MPS, 2026-06-15)** — `cloud_training/ibl_embedding_trainer_cloud.py` batch16/seq64/10ep, M4 Pro(OOM 없음). best=epoch4 **code-Top5 93.4% / desc-Top5 93.3%**(코퍼스 2527, base 42.9%→93.4%). 현 프로덕션(92.8/94.5)과 동등. 새 모델 `data/models/ibl_embedding/` 교체+rebuild_index(2527)+백엔드 touch reload 완료. 백업=`data/models/ibl_embedding.bak.20260615_135146`. **⚠️후속(부분미해소)**: docx-쓰기("워드로"→여전히 read{docx} #1, structure>>document #2)·PPT(→delegate)·book검색 등 **타깃 모호성 충돌 잔존** — 쓰기경로 코퍼스가 적어(각 3~6건) 빈도 많은 옛 경로에 밀림. 해소=write-path 용례 대폭 추가(재균형)+재학습. cloud_training/make_bundle→trainer 그대로 재실행하면 됨.
 2. **별도 트랙 — 폰-자아 후속** (`PHONE_SELF_FOLLOWUPS_HANDOFF.md`): 의료기록 삭제op·channel트리거·받아쓰기 등. 산출물 척추와 무관.
 3. **선택(품질 한 단계 더)**: ①**승격 UX/하향진화** — 만족 워크플로우 동결→앱(아키텍처 미구현 빈자리, [[principle_crystallize_workflow]]) ②"더 나은 결과물" 확산(newspaper식 dedup/중요도/G검증을 다른 목록형에) ③G 루프를 document/chart 산출에 옵션 연결.
-4. **자잘**: web `markdown_to_html` 등 dead code 제거(칩 띄워둠) · self-check가 활성 프로젝트 컨텍스트로 돌게 개선(현재 52건 benign 실패) · health query 반환 string→{text,table} 바뀐 것 health 앱 영향 확인(저위험) · stock quote/world는 의도적 통화 제외(원칙상).
+4. ✅ **자잘 정리 완료(2026-06-15, 커밋 30cf003 척추전체+818591e self-check)**:
+   - ✅ **self-check 활성 프로젝트 컨텍스트** — `world_pulse_health.run_self_check`가 `params.project_id="앱모드"`(앱/수동 런처와 동일 시스템 프로젝트) 주입. 라이브 전수 재점검: **path-error 125→0**, 남은 실패 2건뿐(kosis 404=업스트림 기존·company 'TEST'=테스트파라미터 아티팩트, 실 버그 0). false-positive를 깨끗한 신호로 전환.
+   - ✅ **web markdown dead code** — web/handler.py에 `markdown_to_html` 없음(이미 정리됨), `generate_section`은 뉴스 수집 함수로 live. backend `gen_newspaper.py`/`generate_newspaper.py`는 CLAUDE.md 문서화된 독립 스크립트라 보존(범위 밖).
+   - ✅ **health query 반환형** — `self:health` query는 app/instrument 소비처 0(에이전트 전용), 반환 JSON의 `text` 키에 사람용 텍스트 보존 → 앱 영향 없음 확인.
+   - stock quote/world는 의도적 통화 제외(원칙상) — 무변경.
 
 ---
 

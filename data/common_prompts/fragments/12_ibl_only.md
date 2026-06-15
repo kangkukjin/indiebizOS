@@ -34,7 +34,7 @@ IBL은 외부 세계와 상호작용하기 위한 프로그래밍 언어다. Pyt
 | `sense` | 감각 — 정보를 알아낸다 | 검색, 조회, 수집, 모니터링 (웹, API, DB 등 소스 무관) |
 | `self` | 자기 — 나를 관리한다 | 목표, 일정, 기억, 승인, 알림, 파일, 워크플로우 등 개인 영역 |
 | `limbs` | 손발 — 장치를 조작한다 | 브라우저 클릭, 앱 제어, 미디어 재생, 기기 조작 |
-| `engines` | 엔진 — 결과물을 생성한다 | 슬라이드, 영상, 차트, 웹사이트, 음악, 이미지 제작 |
+| `engines` | 엔진 — 변환·생성한다 | 통화 변환자(filter/sort/join 등), 문서·차트·표 산출, 슬라이드·영상·이미지 제작 |
 | `others` | 타인 — 소통하고 위임한다 | 에이전트 위임, 메시지 송수신, 연락처 관리 |
 
 **판단 순서**: 동사(뭘 하나) → 노드 선택 → 액션 선택. 모르겠으면 `[self:discover]`.
@@ -110,6 +110,28 @@ Chain multiple steps with operators:
 | `\| op:` | Pipe (통화 변환 단축) | `[sense:search_ddg]{query: "부동산"} \| where: "전세" \| sort: price desc \| take: 5` |
 
 `\| where:/sort:/take:/select:/dedup:` 는 목록·표 결과(records/table)를 거르고·정렬·추리는 **단축 문법**이다(각각 `>> [engines:filter/sort/take/select/dedup]{...}` 로 풀림). 검색·조회 뒤에 자연스럽게 잇는다. 뒤에 `>>` 로 산출물 렌더도 가능: `... \| take: 5 >> [engines:document]{}`.
+
+## 통화와 변환자 (Currency & Transformers) — 조합으로 증식
+
+검색·조회(`sense:*` 등)는 **통화**를 낸다 — 두 모양:
+- **records**: 목록형 `[{title, meta, summary, url, image}]` (검색결과·뉴스·도서·매물·논문 등)
+- **table**: 표형 `{columns:[x,s1..], rows:[[..]]}` (시계열·통계·날씨예보 등)
+
+`engines`의 **변환자**는 통화를 받아 *같은 통화*를 낸다 → `>>` 로 임의 깊이 조합(도메인 무관, 모든 목록·표에 적용):
+- **단항**(앞 결과 1개): `filter{where}` · `sort{by, desc}` · `take{n}` · `select{columns}` · `dedup{by}` · `groupby{by, agg}`
+- **이항**(`&` 두 입력): `join{on}`(두 표를 키로 묶음) · `union`(행 결합) · `merge`(두 목록 합치기)
+
+통화는 **산출물**로 흐른다: `document`(문서 — html/pdf/docx/pptx/typst) · `chart` · `spreadsheet`.
+
+→ 핵심 패턴: **[검색/조회] → [변환자 체인] → [산출물]**
+```
+[sense:realty]{region: "강남구"} >> [engines:filter]{where: "전세"} >> [engines:sort]{by: "price"} >> [engines:take]{n: 5} >> [engines:document]{}
+# 단항은 | 단축이 더 짧다:
+[sense:realty]{region: "강남구"} | where: "전세" | sort: price | take: 5
+# 두 소스를 묶기(이항):
+[sense:stock]{op: "history", symbol: "005930"} & [sense:world_bank]{country: "KR"} >> [engines:join]{on: "연도"} >> [engines:chart]{}
+```
+정렬·필터·상위N·중복제거가 필요하면 Python을 짜지 말고 이 변환자로 조합한다 — 데이터를 가공하는 일은 거의 다 이 어휘로 표현된다.
 
 ## Common Patterns
 

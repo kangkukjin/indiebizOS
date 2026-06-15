@@ -153,7 +153,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 
 ## IBL 도구 — execute_ibl
 
-모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 5노드(sense/self/limbs/others/engines) 124 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
+모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 5노드(sense/self/limbs/others/engines) 136 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
 
 예시:
 ```
@@ -261,4 +261,4 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
 
 ---
-*마지막 업데이트: 2026-06-14 — 폰-로컬 in-process Gemini 두뇌(claude_code 원격 렌트 은퇴) + detect_body() 하드웨어 자기감지 + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + 의료기록 CRDT 동기화/삭제 op + channel 트리거 맥 발화 경로 + 124 액션 정합화(폰 감각 삼각 + self:show_calendar 폐지). 이전(2026-06-12): /business/sync/* 동기화 엔드포인트(LWW+tombstone, self:phone_sync) + api_indienet REST 제거(IndieNet→IBL 계기) + 122 액션 + 해마 로컬 M4 Pro 재학습(code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 중급 모델 Reflex 전용화, 폰 컴패니언 피드(/phone API), NIP-17/44 모듈. 이전(2026-05-28): op 어휘 단일화 + 삼각 검증. 이전(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*
+*마지막 업데이트: 2026-06-15 — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 폰-로컬 in-process Gemini 두뇌(claude_code 원격 렌트 은퇴) + detect_body() 하드웨어 자기감지 + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + 의료기록 CRDT 동기화/삭제 op + channel 트리거 맥 발화 경로 + 124 액션 정합화(폰 감각 삼각 + self:show_calendar 폐지). 이전(2026-06-12): /business/sync/* 동기화 엔드포인트(LWW+tombstone, self:phone_sync) + api_indienet REST 제거(IndieNet→IBL 계기) + 122 액션 + 해마 로컬 M4 Pro 재학습(code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 중급 모델 Reflex 전용화, 폰 컴패니언 피드(/phone API), NIP-17/44 모듈. 이전(2026-05-28): op 어휘 단일화 + 삼각 검증. 이전(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*

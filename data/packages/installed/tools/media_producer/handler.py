@@ -1292,6 +1292,9 @@ def render_document(tool_input, output_base="."):
         f.write(doc)
     return _json.dumps({"success": True, "path": out_path, "file": out_path,
                         "title": title, "format": "html", "blocks": len(blocks),
+                        # 렌더된 HTML을 결과에 동봉 — 액션이 다른 몸(맥)으로 포워드돼 파일이
+                        # 거기 생겨도, 호출한 몸(폰)이 파일 위치 의존 없이 콘텐츠로 바로 띄운다.
+                        "html": doc,
                         "message": f"문서 {len(blocks)}블록을 HTML로 렌더했습니다.{note}"},
                        ensure_ascii=False)
 

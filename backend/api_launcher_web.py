@@ -1620,7 +1620,7 @@ async function runMode(){
       initMaps();
     }
     // 폰: 생성된 HTML(신문 등)을 조회 직후 자동으로 띄운다(별도 '띄우기' 탭 불필요).
-    if(IS_PHONE && d && typeof d==='object' && typeof d.file==='string' && /\\.html?$/i.test(d.file)) openFileOverlay(d.file);
+    if(IS_PHONE && d && typeof d==='object' && typeof d.file==='string' && /\\.html?$/i.test(d.file)) openFileOverlay(d.file, d.html);
   }catch(e){ out.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }
 }
 /* 작성바(compose) — $text=작성 내용, 드릴이면 {field}=대화 상대 행 필드. 전송 후 현재 뷰 새로고침. */
@@ -1763,12 +1763,17 @@ async function rowBtn(vi,ri,btn,key){
   catch(e){ alert('실행 실패: '+e.message); }
   finally{ btn.disabled=false; btn.textContent=old; }
 }
-function openFileOverlay(path){
+function openFileOverlay(path, html){
   const name=path.split('/').pop().split('\\\\').pop();
   const ov=document.createElement('div'); ov.className='fileov';
   ov.innerHTML='<div class="fileov-bar"><span>'+esc(name)+'</span>'
-    +'<button class="iconbtn" onclick="this.closest(\\'.fileov\\').remove()">✕</button></div>'
-    +'<iframe src="'+API+'/output/'+encodeURIComponent(name)+'"></iframe>';
+    +'<button class="iconbtn" onclick="this.closest(\\'.fileov\\').remove()">✕</button></div>';
+  // iframe은 DOM으로 만들어 srcdoc/src를 *프로퍼티*로 설정(문자열 이스케이프 불필요).
+  // html 콘텐츠가 동봉됐으면 srcdoc으로 직접 띄운다 — 파일이 다른 몸(맥)에 있어 /output 로
+  // 못 찾는 경우(포워드 산출)에도 콘텐츠로 렌더. 없으면 기존대로 /output 파일 서빙.
+  const ifr=document.createElement('iframe');
+  if(html){ ifr.srcdoc=html; } else { ifr.src=API+'/output/'+encodeURIComponent(name); }
+  ov.appendChild(ifr);
   document.body.appendChild(ov);
 }
 async function rowDrill(vi,ri){

@@ -151,6 +151,13 @@ _NAS_LITE_HTML = r'''<!DOCTYPE html>
   $("vclose").addEventListener("click", function(){ $("viewer").className="viewer hide"; $("vbody").innerHTML=""; });
   $("vplus").addEventListener("click", function(){ fontSize+=2; applyFont(); });
   $("vminus").addEventListener("click", function(){ if(fontSize>10){ fontSize-=2; applyFont(); } });
+  // 탭 페이징 — 위쪽 40% 탭=이전, 아래쪽 40% 탭=다음(가운데 무시). 드래그는 수동 스크롤 유지.
+  $("vbody").addEventListener("click", function(e){
+    var vb=$("vbody"); if(vb.scrollHeight<=vb.clientHeight+4) return;
+    var r=vb.getBoundingClientRect(); var rel=((e.clientY||0)-r.top)/(r.height||vb.clientHeight);
+    var step=vb.clientHeight-48;
+    if(rel<0.4){ vb.scrollTop-=step; } else if(rel>0.6){ vb.scrollTop+=step; }
+  });
   function applyFont(){ var t=$("vbody").querySelector("pre.txt, .epub"); if(t) t.style.fontSize=fontSize+"px"; }
   function openViewer(title){ $("vtitle").textContent=title; $("viewer").className="viewer"; }
 
@@ -313,6 +320,16 @@ _NAS_LITE2_HTML = r'''<!DOCTYPE html>
   $('vclose').onclick=function(){ $('viewer').className='hide'; $('vbody').innerHTML=''; };
   $('vplus').onclick=function(){ fontSize+=2; applyFont(); };
   $('vminus').onclick=function(){ if(fontSize>10){ fontSize-=2; applyFont(); } };
+  // 탭 페이징 — 모멘텀 스크롤이 없어(긴 텍스트 검은화면 방지로 제거) 긴 파일 넘기기가 힘들다.
+  // 위쪽(40%) 탭=이전 페이지, 아래쪽(40%) 탭=다음 페이지, 가운데는 무시. 드래그는 수동 스크롤 그대로.
+  $('vbody').onclick=function(e){
+    var vb=$('vbody'); if(vb.scrollHeight<=vb.clientHeight+4) return;  // 스크롤 불필요(이미지 등)면 무시
+    var y=(e&&e.clientY!=null)?e.clientY:0;
+    var r=vb.getBoundingClientRect?vb.getBoundingClientRect():{top:53,height:vb.clientHeight};
+    var rel=(y-r.top)/(r.height||vb.clientHeight);
+    var step=vb.clientHeight-48;  // 한 화면 - 겹침(맥락 유지)
+    if(rel<0.4){ vb.scrollTop-=step; } else if(rel>0.6){ vb.scrollTop+=step; }
+  };
   function applyFont(){ var t=$('vbody').firstChild; if(t&&t.style) t.style.fontSize=fontSize+'px'; }
   function openViewer(){ $('viewer').className=''; }
 

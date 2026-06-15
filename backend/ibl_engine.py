@@ -179,6 +179,11 @@ def _forward_to_phone(phone_url: str, node: str, action: str, params: dict,
         return {"result": r.text, "_forwarded_to": "phone"}
     if isinstance(result, dict):
         result.setdefault("_forwarded_to", "phone")
+        # ★빌림-완성(대칭): 맥이 phone_only(sense:see 사진 등)를 빌리면, 폰이 만든 파일을
+        # 맥 로컬로 가져온다. 폰 /launcher/file 에서 같은 토큰으로 받음(폰 미도달/미인증 시 graceful).
+        result = _pull_remote_artifacts(
+            result, phone_url.rstrip('/'),
+            {"X-Phone-Token": token} if token else {})
     return result
 
 
@@ -252,20 +257,21 @@ def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None) 
         return {"result": r.text, "_forwarded_to": "mac"}
     if isinstance(result, dict):
         result.setdefault("_forwarded_to", "mac")
-        # ★빌림-완성(borrow-completion): mac_only 는 "폰서 못 함"이 아니라 "맥서 실행되는,
-        # 빌려오는 액션"이다 — 폰서 호출하면 결과(산출물 파일까지)가 폰으로 돌아와야 정상.
-        # 맥이 만든 파일을 폰 로컬로 가져와 경로를 재작성한다(폰 프로파일에서만).
+        # ★빌림-완성: mac_only 는 "폰서 못 함"이 아니라 "맥서 실행되는, 빌려오는 액션"이다.
+        # 폰서 호출하면 맥이 만든 산출 파일이 폰으로 돌아와야 정상(폰 프로파일에서만 풀).
         if os.environ.get("INDIEBIZ_PROFILE") == "phone":
-            result = _pull_mac_artifacts(result, mac_url)
+            sess = _mac_session_cache.get("session")
+            result = _pull_remote_artifacts(result, mac_url, {"X-Launcher-Session": sess} if sess else {})
     return result
 
 
-def _pull_mac_artifacts(result: dict, mac_url: str) -> dict:
-    """포워드 결과 안의 맥 파일 경로를 폰 로컬로 내려받아 경로 재작성.
+def _pull_remote_artifacts(result: dict, remote_url: str, headers: dict) -> dict:
+    """포워드 결과 안의 *원격* 파일 경로를 로컬로 내려받아 경로 재작성 (빌림-완성, 양방향 공용).
 
-    mac_only 산출 액션(chart png·slide·pdf·tts mp3 등)을 폰서 호출해도 파일이 폰에
-    도착하게 한다(전송 완성). 맥 /launcher/file 로 바이트를 받아(포워드 세션 재사용)
-    폰 outputs 에 쓰고, 결과의 file/path 류 필드를 폰 로컬 경로로 바꾼다."""
+    ★빌림은 양쪽 다다 — 폰이 mac_only 를, 맥이 phone_only 를 빌리고, 어느 방향이든 산출
+    파일은 *부른 몸*으로 돌아와야 한다(그게 정상). 원격 /launcher/file 로 바이트를 받아
+    (포워드와 같은 인증 헤더 재사용) 로컬 outputs 에 쓰고, file/path 류 필드를 로컬 경로로 바꾼다.
+    chart 처럼 중첩(data.path)도 있어 재귀 _walk 로 어느 깊이든 탐색."""
     try:
         from runtime_utils import get_base_path
         local_out = os.path.join(str(get_base_path()), "outputs")
@@ -273,8 +279,6 @@ def _pull_mac_artifacts(result: dict, mac_url: str) -> dict:
     except Exception:
         return result
     import requests
-    sess = _mac_session_cache.get("session")
-    headers = {"X-Launcher-Session": sess} if sess else {}
     # 파일 경로를 담는 흔한 키들 — 최상위뿐 아니라 중첩(chart는 data.path)도 있어 재귀 탐색.
     FILE_KEYS = ("file", "path", "output_path", "output", "image", "chart_path",
                  "mp3", "mp4", "audio", "video", "pdf", "png")
@@ -285,7 +289,7 @@ def _pull_mac_artifacts(result: dict, mac_url: str) -> dict:
         if os.path.exists(v):  # 이미 폰 로컬(anywhere 가 로컬 실행한 경우)
             return None
         try:
-            r = requests.get(f"{mac_url}/launcher/file", params={"path": v},
+            r = requests.get(f"{remote_url}/launcher/file", params={"path": v},
                              headers=headers, timeout=60)
             if r.status_code == 200 and r.content:
                 dest = os.path.join(local_out, os.path.basename(v))

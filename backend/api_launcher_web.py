@@ -19,6 +19,31 @@ router = APIRouter(prefix="/launcher")
 # 설정 파일 경로
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "launcher_web_config.json")
 
+
+@router.get("/file")
+async def serve_artifact_file(path: str):
+    """산출물 파일 바이트 서빙 — 빌림-완성(borrow-completion)용.
+
+    폰서 mac_only 액션을 호출하면 맥이 실행해 *맥 fs*에 파일을 만든다. 폰은 그 파일을
+    이 엔드포인트로 되가져와(_forward_to_mac 의 artifact pull) 로컬에 쓴다 → mac_only 도
+    폰서 호출하면 산출물까지 제대로 돌아온다. 인증은 remote_access_guard(외부=세션 필요).
+    보안: BASE_PATH 하위(산출물 트리)만, realpath 로 심볼릭 우회 차단, 파일만.
+    """
+    from fastapi.responses import FileResponse
+    from runtime_utils import get_base_path
+    import mimetypes
+    base = os.path.realpath(str(get_base_path()))
+    p = path
+    if p.startswith('/outputs/') or p.startswith('/captures/'):
+        p = os.path.join(base, 'data', p.lstrip('/'))
+    real = os.path.realpath(p)
+    if not real.startswith(base):
+        return JSONResponse({"error": "접근 권한 없음(산출물 트리 밖)"}, status_code=403)
+    if not os.path.isfile(real):
+        return JSONResponse({"error": "파일 없음"}, status_code=404)
+    mime, _ = mimetypes.guess_type(real)
+    return FileResponse(real, media_type=mime or "application/octet-stream")
+
 # 앱 표면 계기 — ibl_nodes.yaml 의 app: 블록에서 자동 파생 (2단계, 단일 진실 소스).
 # app: 블록을 단 액션은 빌드(--check) 시 정합성 검증을 통과해야 하며, 여기서 계기로 합성된다.
 IBL_NODES_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ibl_nodes.yaml")

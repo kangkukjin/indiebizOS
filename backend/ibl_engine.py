@@ -252,6 +252,45 @@ def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None) 
         return {"result": r.text, "_forwarded_to": "mac"}
     if isinstance(result, dict):
         result.setdefault("_forwarded_to", "mac")
+        # ★빌림-완성(borrow-completion): mac_only 는 "폰서 못 함"이 아니라 "맥서 실행되는,
+        # 빌려오는 액션"이다 — 폰서 호출하면 결과(산출물 파일까지)가 폰으로 돌아와야 정상.
+        # 맥이 만든 파일을 폰 로컬로 가져와 경로를 재작성한다(폰 프로파일에서만).
+        if os.environ.get("INDIEBIZ_PROFILE") == "phone":
+            result = _pull_mac_artifacts(result, mac_url)
+    return result
+
+
+def _pull_mac_artifacts(result: dict, mac_url: str) -> dict:
+    """포워드 결과 안의 맥 파일 경로를 폰 로컬로 내려받아 경로 재작성.
+
+    mac_only 산출 액션(chart png·slide·pdf·tts mp3 등)을 폰서 호출해도 파일이 폰에
+    도착하게 한다(전송 완성). 맥 /launcher/file 로 바이트를 받아(포워드 세션 재사용)
+    폰 outputs 에 쓰고, 결과의 file/path 류 필드를 폰 로컬 경로로 바꾼다."""
+    try:
+        from runtime_utils import get_base_path
+        local_out = os.path.join(str(get_base_path()), "outputs")
+        os.makedirs(local_out, exist_ok=True)
+    except Exception:
+        return result
+    import requests
+    sess = _mac_session_cache.get("session")
+    headers = {"X-Launcher-Session": sess} if sess else {}
+    for k in ("file", "path", "output_path", "output", "image", "chart_path"):
+        v = result.get(k)
+        if not (isinstance(v, str) and v and os.path.isabs(v)):
+            continue
+        if os.path.exists(v):  # 이미 폰 로컬(드묾 — anywhere 가 로컬 실행한 경우)
+            continue
+        try:
+            r = requests.get(f"{mac_url}/launcher/file", params={"path": v},
+                             headers=headers, timeout=60)
+            if r.status_code == 200 and r.content:
+                dest = os.path.join(local_out, os.path.basename(v))
+                with open(dest, "wb") as f:
+                    f.write(r.content)
+                result[k] = dest
+        except Exception:
+            pass
     return result
 
 

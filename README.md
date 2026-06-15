@@ -187,17 +187,17 @@ The system maintains awareness of itself and the world:
 
 A domain-specific language that unifies all capabilities into one syntax.
 
-**5 Nodes, 124 Atomic Actions:**
+**5 Nodes, 136 Atomic Actions:**
 
 | Node | Actions | Description |
 |------|---------|-------------|
-| **sense** | 41 | Data retrieval (web, Naver Korean search, finance, travel, photos, blog, health, real estate, legal, statistics, classic literature, performances/exhibitions) and the phone's on-demand senses (notifications, location, microphone, camera) |
+| **sense** | 42 | Data retrieval (web, Naver Korean search, finance, travel, photos, blog, health, real estate, legal, statistics, classic literature, performances/exhibitions) and the phone's on-demand senses (notifications, location, microphone, camera) |
 | **self** | 41 | System management, workflows, triggers, files, deep memory, business (catalog/items/docs/guidelines), phone sync, calendar, health records |
 | **limbs** | 17 | UI automation (browser, Android phone, macOS screen), phone-native actions, media playback (YouTube, radio), maps |
 | **others** | 11 | Collaboration, delegation, messaging (DM/feed/board/Nostr), neighbor CRM, contacts, auto-response |
-| **engines** | 14 | Content creation (slides, video, charts, images, websites, spreadsheets, TTS) |
+| **engines** | 25 | **Currency transformers** (filter/sort/take/join/union/merge/groupby — compose any data into reports) plus content creation (document IR, slides, video, charts, images, websites, spreadsheets, TTS) |
 
-> Action counts shrank from 332 → 124 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn (e.g. 45 bespoke Android actions became one `[limbs:android]{op}` centerpiece). Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work.
+> Action counts shrank from 332 → 136 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn (e.g. 45 bespoke Android actions became one `[limbs:android]{op}` centerpiece). Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work. The newest layer is the **currency algebra**: domain-agnostic transformers take a shared currency (record lists or tables) and return the *same* currency, so any search result composes into any report via `>>` (with a `|` pipe shorthand) — `[sense:realty]{region:"Gangnam"} | where:"lease" | sort:price | take:5 >> [engines:document]{}`.
 
 ```
 User: "Search AI news and save to file"
@@ -206,7 +206,7 @@ User: "Search AI news and save to file"
 ```
 
 **Key design:**
-- **One tool, one language** — AI agents learn one syntax, not 124 tool schemas
+- **One tool, one language** — AI agents learn one syntax, not 136 tool schemas
 - **Per-agent filtering** — Each agent's `allowed_nodes` restricts access
 - **Dynamic loading** — Tool packages are folders; drop one in, it's recognized
 
@@ -266,4 +266,4 @@ cd frontend && npm run electron:dev  # Frontend (Electron)
 
 *IndieBiz OS — An AI system that grows with you, not one that's given to you.*
 
-*Last updated: 2026-06-14 — The phone became a second, independent self: its own on-device LLM brain (in-process Gemini), hardware self-detection (`detect_body`), a standing scheduler, and CRDT sync of the user's world-data (business, health records) while each self's subjective memory stays private. 124 actions (sense 41, self 41, limbs 17, others 11, engines 14). Earlier (2026-06-12): messenger/community/business surfaces unified into IBL app-mode instruments; phone↔PC address-book sync; hippocampus retrained locally.*
+*Last updated: 2026-06-15 — **Currency algebra**: `engines` gained domain-agnostic currency→currency transformers (unary filter/sort/take/select/dedup/groupby + binary join/union/merge), a `|` pipe shorthand, and a document-IR emitter — so any search result composes into a report of any format (html/pdf/docx/pptx). 124→136 actions (sense 42, self 41, limbs 17, others 11, engines 25). Earlier (2026-06-14): the phone became a second, independent self — its own on-device LLM brain (in-process Gemini), hardware self-detection (`detect_body`), a standing scheduler, and CRDT sync of the user's world-data while each self's subjective memory stays private.*

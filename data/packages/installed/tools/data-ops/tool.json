@@ -1,0 +1,73 @@
+{
+  "id": "data-ops",
+  "name": "Data Ops (통화 변환자)",
+  "description": "통화→통화 변환 동사(currency algebra). 생산자가 내는 공유 통화(records 목록형 / table 표형)를 받아 같은 통화로 변환 — filter/sort/take/select/dedup/groupby. >> 파이프로 임의 깊이 조합. 도메인 무관(한 번 짜서 모든 검색·목록 생산자에 곱해짐).",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "data_filter",
+      "description": "records|table → 조건 부분집합. where: 문자열(전 필드 부분일치) 또는 {field,op,value}(op=eq/ne/lt/le/gt/ge/contains/in) 또는 {열:값} 단축형 또는 조건 배열(AND). >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "where": {"description": "필터 조건. 문자열·{field,op,value}·{열:값}·배열(AND)."}
+        }
+      }
+    },
+    {
+      "name": "data_sort",
+      "description": "records|table → 정렬. by(필드/열명, 필수), desc(bool, 기본 false). 수치 인식 정렬. >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "by": {"type": "string", "description": "정렬 기준 필드/열 이름."},
+          "desc": {"type": "boolean", "description": "내림차순 여부(기본 false)."}
+        },
+        "required": ["by"]
+      }
+    },
+    {
+      "name": "data_take",
+      "description": "records|table → 상위 n개. n(기본 10). 음수면 뒤에서 n개. >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "n": {"type": "integer", "description": "취할 개수(기본 10). 음수=뒤에서 n개."}
+        }
+      }
+    },
+    {
+      "name": "data_select",
+      "description": "table → 열 투영(남길 columns만). records면 해당 필드만 추림. columns(필수). >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "columns": {"type": "array", "items": {"type": "string"}, "description": "남길 열/필드 이름 배열."}
+        },
+        "required": ["columns"]
+      }
+    },
+    {
+      "name": "data_dedup",
+      "description": "records|table → 중복 제거(첫 항목 유지). by(키 필드/열, records 기본 title·table 기본 첫 열). 정규화 후 비교. >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "by": {"type": "string", "description": "중복 판정 키 필드/열(미지정 시 records=title, table=첫 열)."}
+        }
+      }
+    },
+    {
+      "name": "data_groupby",
+      "description": "table → 그룹 집계. by(그룹 키 열, 필수), agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count). >> 앞 table 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "by": {"type": "string", "description": "그룹 키 열 이름."},
+          "agg": {"type": "object", "description": "집계 명세. {새열:[op,원본열]} 또는 {원본열:op}."}
+        },
+        "required": ["by"]
+      }
+    }
+  ]
+}

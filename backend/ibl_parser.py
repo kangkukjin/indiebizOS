@@ -114,6 +114,9 @@ def parse(code: str) -> List[Dict]:
 
     all_steps = []
     for stmt in statements:
+        # 파이프 문법 설탕(| where:/sort:/take:/select:/dedup:)을 >> [engines:동사] 로 desugar.
+        # 의미는 engines 변환자에 이미 있고, 이건 빈도 높은 단항 변환자의 짧은 문법 표면.
+        stmt = _desugar_pipe_sugar(stmt)
         # >> 로 파이프라인 분리
         segments = _split_pipeline(stmt)  # [(text, operator), ...]
         for idx, (seg_text, operator) in enumerate(segments):
@@ -853,6 +856,93 @@ def _split_by_operator(text: str, operator: str) -> List[str]:
         segments.append(seg)
 
     return segments
+
+
+# ───────────────────── 파이프 문법 설탕 (단항 변환자 desugar) ─────────────────────
+# [node:action]{...} | where: X | sort: Y desc | take: N | select: a,b | dedup: f
+#   → ... >> [engines:filter]{where:X} >> [engines:sort]{by:"Y",desc:true} >> ...
+# 닫힌 계급(보편·고빈도) 단항 변환자에만 문법 표면을 준다. 이항(join/union/merge)·
+# 구조적(groupby)은 동사 형태 유지. 의미는 engines 동사가 정본 — 이건 desugar 표면뿐.
+_PIPE_SUGAR = {
+    "where": "filter", "filter": "filter",
+    "sort": "sort", "orderby": "sort", "order_by": "sort",
+    "take": "take", "limit": "take", "head": "take", "top": "take",
+    "select": "select", "project": "select", "columns": "select",
+    "dedup": "dedup", "unique": "dedup", "distinct": "dedup",
+}
+
+
+def _pipe_looks_numeric(s: str) -> bool:
+    try:
+        float(str(s).replace(",", "").strip())
+        return True
+    except Exception:
+        return False
+
+
+def _pipe_block(verb: str, val: str) -> str:
+    """파이프 op 값 → 해당 engines 변환자 블록 문자열."""
+    val = (val or "").strip()
+    if verb == "filter":
+        # where 값은 복합(문자열/{field,op,value})일 수 있어 대체로 그대로.
+        # 단, 따옴표·중괄호·대괄호·숫자가 아닌 맨 단어는 substring 문자열로 자동 인용.
+        v = val
+        if v and v[0] not in "\"'{[" and not _pipe_looks_numeric(v):
+            v = '"%s"' % v
+        return '[engines:filter]{where: %s}' % (v or '""')
+    if verb == "sort":
+        toks = val.split()
+        field = toks[0].strip('"\'') if toks else ""
+        desc = len(toks) > 1 and toks[1].lower() in ("desc", "내림", "내림차순")
+        s = '[engines:sort]{by: "%s"' % field
+        if desc:
+            s += ", desc: true"
+        return s + "}"
+    if verb == "take":
+        n = val if _pipe_looks_numeric(val) else "10"
+        return '[engines:take]{n: %s}' % n
+    if verb == "select":
+        cols = [c.strip().strip('"\'') for c in val.split(",") if c.strip()]
+        arr = ", ".join('"%s"' % c for c in cols)
+        return '[engines:select]{columns: [%s]}' % arr
+    if verb == "dedup":
+        by = val.strip('"\'')
+        return '[engines:dedup]{by: "%s"}' % by if by else '[engines:dedup]{}'
+    return ""
+
+
+def _desugar_pipe_sugar(text: str) -> str:
+    """| op: val 체인을 >> [engines:동사]{...} 로 펼친다. 최상위 | 없으면 그대로."""
+    if "|" not in text:
+        return text
+    parts = _split_by_operator(text, "|")  # { } · 문자열 깊이 인식
+    if len(parts) <= 1:
+        return text
+    out = [parts[0].strip()]
+    for seg in parts[1:]:
+        seg = seg.strip()
+        if not seg:
+            continue
+        # 설탕 op 값 뒤에 >> 가 오면(예: | take: 5 >> [engines:document]{}) 그 뒤는
+        # 일반 파이프라인 연속이다 — 분리해 그대로 잇는다(설탕→렌더 혼용 허용).
+        tail = ""
+        ss = _split_by_operator(seg, ">>")
+        if len(ss) > 1:
+            seg = ss[0].strip()
+            tail = " >> " + " >> ".join(s.strip() for s in ss[1:])
+        if ":" in seg:
+            kw, val = seg.split(":", 1)
+        else:
+            kw, val = seg, ""
+        kw = kw.strip().lower()
+        verb = _PIPE_SUGAR.get(kw)
+        if not verb:
+            raise IBLSyntaxError(
+                f"알 수 없는 파이프 연산자 '| {kw}'. 지원: where/sort/take/select/dedup. "
+                "예: [sense:search_ddg]{query: \"X\"} | where: \"전세\" | sort: price desc | take: 5"
+            )
+        out.append(">> " + _pipe_block(verb, val) + tail)
+    return " ".join(out)
 
 
 # Deprecated action-name aliases → canonical (node, action) [+ optional injected params].

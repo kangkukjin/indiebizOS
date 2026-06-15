@@ -276,6 +276,113 @@ def _render(html: str, out_path: str):
     return out_path
 
 
+# ── G 루프: 생성된 일러스트 비평 + 생성→critique→수정 ────────────────
+def _critique(img_path: str, scene: str, style: str) -> dict:
+    """생성된 원시 일러스트를 Gemini Vision으로 평가한다(합성 전).
+
+    체크는 합성 전 일러스트 전용 — 글자 미포함/여백 보존/객체 배치/톤 일관.
+    반환: {"passed": bool, "score": 0-10, "issues": [...], "notes": "..."}.
+    ★fail-open: 키 부재·읽기 실패·VLM 실패 시 {"passed": True, "_error": ...} —
+    비평은 품질 향상기이지 산출을 막는 게이트가 아니다.
+    """
+    cfg = _system_ai_config()
+    api_key = (cfg.get("apiKey") or "").strip()
+    if not api_key:
+        return {"passed": True, "_error": "no_api_key"}
+    try:
+        b64 = base64.b64encode(open(img_path, "rb").read()).decode()
+    except Exception as e:
+        return {"passed": True, "_error": f"read_fail: {e}"}
+
+    checks = [
+        "이 일러스트는 회화적 '씬'이 아니라 정보 전달용 다이어그램/인포그래픽 양식인가?",
+        "일러스트 안에 글자(한글·영문 단어/문장)가 렌더되어 있는가? (있으면 실패 — 텍스트는 합성 레이어가 따로 얹는다)",
+        "scene이 지정한 빈 공간(여백)이 실제로 그 위치에 비어 있는가? (제목/캡션이 들어갈 자리)",
+        "핵심 객체가 의도한 영역에 명확히 배치되어 있는가?",
+        f"스타일 톤이 '{style}'와 일관되는가?",
+    ]
+    instruction = (
+        "당신은 슬라이드 일러스트 평가자입니다. 아래 일러스트가 '의도'를 잘 표현하는지 엄격히 평가하세요.\n\n"
+        f"**의도(이 일러스트가 그려야 할 장면·여백)**:\n{scene}\n\n"
+        "**체크 항목**:\n" + "\n".join(f"{i+1}. {c}" for i, c in enumerate(checks)) +
+        "\n\nJSON 한 개만 출력(다른 텍스트 금지):\n"
+        '{"passed": true|false, "score": 0-10, "issues": ["체크N 실패 — 구체 이유", ...], "notes": "1~2문장"}\n'
+        "글자가 일러스트에 렌더되어 있으면 무조건 passed=false. issues 없거나 score>=7이면 passed=true."
+    )
+    payload = {
+        "contents": [{"parts": [
+            {"inlineData": {"mimeType": "image/png", "data": b64}},
+            {"text": instruction},
+        ]}],
+        "generationConfig": {"temperature": 0.2, "responseModalities": ["TEXT"]},
+    }
+    last = None
+    for model in ("gemini-3-pro-preview", "gemini-2.5-pro"):
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        try:
+            with httpx.Client(timeout=120.0) as c:
+                r = c.post(url, params={"key": api_key}, json=payload,
+                           headers={"Content-Type": "application/json"})
+                if r.status_code == 404:
+                    continue
+                r.raise_for_status()
+                data = r.json()
+            parts = (data.get("candidates", [{}])[0].get("content", {}) or {}).get("parts", [])
+            text = "".join(p.get("text", "") for p in parts).strip()
+            if text.startswith("```"):
+                text = text.strip("`")
+                if text.lower().startswith("json"):
+                    text = text[4:]
+                text = text.split("```")[0].strip()
+            verdict = json.loads(text)
+            verdict["passed"] = bool(verdict.get("passed"))
+            return verdict
+        except Exception as e:
+            last = e
+            continue
+    return {"passed": True, "_error": f"vlm_fail: {last}"}
+
+
+def _gen_with_critique(illo_prompt, scene, style, base_img_path, output_base,
+                       base, quality, max_rounds):
+    """생성→비평→수정 루프. 최고 점수 일러스트의 (path, verdict, attempts) 반환.
+
+    통과하거나 비평이 fail-open이면 즉시 종료. 끝까지 못 통과하면 최고 점수본 채택.
+    수정 라운드는 critic의 issues를 일러스트 프롬프트에 영어 교정 지시로 되먹인다.
+    """
+    attempts = []
+    best_path, best_verdict, best_score = None, None, -1.0
+    cur_prompt = illo_prompt
+    for rnd in range(1, max_rounds + 1):
+        path_r = base_img_path if rnd == 1 else os.path.join(output_base, f"{base}_img_r{rnd}.png")
+        _gen_image(cur_prompt, path_r, quality=quality)
+        verdict = _critique(path_r, scene, style)
+        try:
+            score = float(verdict.get("score")) if verdict.get("score") is not None else 0.0
+        except Exception:
+            score = 0.0
+        attempts.append({"round": rnd, "passed": verdict.get("passed"),
+                         "score": verdict.get("score"), "issues": verdict.get("issues"),
+                         "error": verdict.get("_error")})
+        if score > best_score:
+            best_path, best_verdict, best_score = path_r, verdict, score
+        # 통과 또는 비평 불가(fail-open) → 현재본으로 종료
+        if verdict.get("_error") or verdict.get("passed"):
+            best_path, best_verdict = path_r, verdict
+            break
+        # 다음 라운드: issues를 교정 지시로 되먹임
+        if rnd < max_rounds:
+            issues = verdict.get("issues") or []
+            cur_prompt = (
+                illo_prompt +
+                "\n\n# Corrections — the previous attempt FAILED these. Fix strictly:\n" +
+                "\n".join(f"- {i}" for i in issues) +
+                "\n- Render NO text, letters, or words inside the image."
+                "\n- Strictly preserve the empty/negative space described in the scene."
+            )
+    return best_path, best_verdict, attempts
+
+
 def create_image_slide(tool_input: dict, output_base: str, style: str, slide_id: str = None) -> str:
     """[engines:slide]{style:...} — 개념 일러스트 슬라이드 1장 저작·생성·합성.
 
@@ -328,12 +435,21 @@ def create_image_slide(tool_input: dict, output_base: str, style: str, slide_id:
     if forced_comp in COMPOSITIONS:
         comp = forced_comp
 
-    # 2) 이미지 생성
+    # 2) 이미지 생성 + 비평 루프 (G 루프: 생성→critique→수정)
     os.makedirs(output_base, exist_ok=True)
     base = slide_id if slide_id else f"slide_{style}_{comp}"
     img_path = os.path.join(output_base, f"{base}_img.png")
+    illo_prompt = styles_mod.build_illustration_prompt(scene, style)
+    _c = tool_input.get("critique", True)
+    critique_on = _c if isinstance(_c, bool) else str(_c).strip().lower() not in ("false", "0", "no", "off")
+    crit_rounds = max(1, int(tool_input.get("critique_rounds") or 2))
+    critique_verdict, critique_attempts = None, []
     try:
-        _gen_image(styles_mod.build_illustration_prompt(scene, style), img_path, quality=quality)
+        if critique_on:
+            img_path, critique_verdict, critique_attempts = _gen_with_critique(
+                illo_prompt, scene, style, img_path, output_base, base, quality, crit_rounds)
+        else:
+            _gen_image(illo_prompt, img_path, quality=quality)
     except Exception as e:
         return json.dumps({"success": False, "message": f"이미지 생성 실패: {e}", "spec": spec}, ensure_ascii=False)
 
@@ -345,10 +461,26 @@ def create_image_slide(tool_input: dict, output_base: str, style: str, slide_id:
         return json.dumps({"success": False, "message": f"합성 렌더 실패: {e}",
                           "image_path": img_path, "spec": spec}, ensure_ascii=False)
 
-    return json.dumps({
+    result = {
         "success": True, "image_path": out_path, "illustration_path": img_path,
         "style": style, "composition": comp, "title": spec.get("title"),
         "kicker": spec.get("kicker"), "reasoning": spec.get("reasoning"),
         "spec": spec,
         "message": f"프리미엄 일러스트 슬라이드 1장 ({st['ko']} · {comp}).",
-    }, ensure_ascii=False)
+    }
+    if critique_verdict is not None:
+        result["critique"] = {
+            "passed": critique_verdict.get("passed"),
+            "score": critique_verdict.get("score"),
+            "issues": critique_verdict.get("issues"),
+            "notes": critique_verdict.get("notes"),
+            "error": critique_verdict.get("_error"),
+            "rounds": len(critique_attempts),
+        }
+        n = len(critique_attempts)
+        if critique_verdict.get("_error"):
+            result["message"] += f" (비평 건너뜀: {critique_verdict.get('_error')})"
+        elif n > 1:
+            verb = "통과" if critique_verdict.get("passed") else "최고점 채택"
+            result["message"] += f" — 비평 {n}라운드 후 {verb}(score={critique_verdict.get('score')})"
+    return json.dumps(result, ensure_ascii=False)

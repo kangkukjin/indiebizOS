@@ -40,6 +40,10 @@ def execute(tool_input: dict, context) -> str:
         return create_html_video(tool_input, output_base)
     elif tool_name == "render_html_to_image":
         return render_html_to_image(tool_input, output_base)
+    elif tool_name == "render_document":
+        return render_document(tool_input, output_base)
+    elif tool_name == "structure_document":
+        return structure_document(tool_input, output_base)
     elif tool_name == "generate_ai_image":
         return generate_ai_image(tool_input, output_base)
     elif tool_name == "generate_gemini_image":
@@ -598,6 +602,700 @@ def create_html_video(tool_input, output_base):
     except Exception as e:
         return f"HTML 동영상 제작 중 오류 발생: {str(e)}"
 
+
+# ── 문서 IR(공유 문서 모델) → 산출물 emitter ───────────────────────────
+# 문서 IR: {title?, blocks:[{type, ...}]}. 블록 타입:
+#   heading{level,text} · paragraph{text} · list{ordered?,items[]} · image{src,caption?}
+#   · table{columns,rows}(=데이터 통화 재사용) · quote{text,cite?} · code{text,lang?} · divider
+# 포맷 중립 IR을 여러 emitter가 렌더(현재 html). slide/newspaper와 달리 단일 IR이 단일 진실 소스.
+def _doc_blocks_to_html(blocks: list) -> str:
+    import html as _html
+
+    def esc(s):
+        return _html.escape(str(s if s is not None else ""))
+
+    parts = []
+    for b in blocks:
+        if not isinstance(b, dict):
+            continue
+        t = (b.get("type") or "paragraph").lower()
+        if t == "heading":
+            lvl = max(1, min(6, int(b.get("level") or 2)))
+            txt = b.get("text")
+            anchor = b.get("anchor") or (str(txt) if txt else "")  # 목차 점프용 id
+            id_attr = f' id="{esc(anchor)}"' if anchor else ""
+            parts.append(f"<h{lvl}{id_attr}>{esc(txt)}</h{lvl}>")
+        elif t == "list":
+            tag = "ol" if b.get("ordered") else "ul"
+            li = []
+            for i in (b.get("items") or []):
+                # 항목은 문자열 또는 {text, url}(링크 — 목차·북마크 등)
+                if isinstance(i, dict):
+                    if i.get("url"):
+                        li.append(f'<li><a href="{esc(i.get("url"))}">{esc(i.get("text"))}</a></li>')
+                    else:
+                        li.append(f"<li>{esc(i.get('text'))}</li>")
+                else:
+                    li.append(f"<li>{esc(i)}</li>")
+            parts.append(f"<{tag}>{''.join(li)}</{tag}>")
+        elif t == "image":
+            src = b.get("src") or b.get("path") or ""
+            cap = b.get("caption")
+            cap_html = f"<figcaption>{esc(cap)}</figcaption>" if cap else ""
+            parts.append(f'<figure><img src="{esc(src)}" alt="{esc(cap)}">{cap_html}</figure>')
+        elif t == "table":
+            # 데이터 통화 재사용: {columns, rows}
+            cols = b.get("columns") or []
+            rows = b.get("rows") or []
+            thead = "".join(f"<th>{esc(c)}</th>" for c in cols)
+            tbody = "".join("<tr>" + "".join(f"<td>{esc(c)}</td>" for c in r) + "</tr>"
+                            for r in rows if isinstance(r, (list, tuple)))
+            parts.append(f"<table><thead><tr>{thead}</tr></thead><tbody>{tbody}</tbody></table>")
+        elif t == "quote":
+            cite = b.get("cite")
+            cite_html = f"<cite>— {esc(cite)}</cite>" if cite else ""
+            parts.append(f"<blockquote>{esc(b.get('text'))}{cite_html}</blockquote>")
+        elif t == "code":
+            parts.append(f"<pre><code>{esc(b.get('text'))}</code></pre>")
+        elif t == "cards":
+            # 링크 달린 카드 그리드 — 뉴스/검색결과/북마크/상품목록 공용 문서 원시.
+            # 각 item: {title, meta?, summary?, url?, link_label?}. columns(기본 2).
+            ncol = max(1, min(4, int(b.get("columns") or 2)))
+            cell = []
+            for it in (b.get("items") or []):
+                if not isinstance(it, dict):
+                    continue
+                img = it.get("image")
+                img_h = f'<img class="card-img" src="{esc(img)}" alt="" loading="lazy">' if img else ""
+                meta_h = f'<p class="card-meta">{esc(it.get("meta"))}</p>' if it.get("meta") else ""
+                sum_h = f'<p class="card-sum">{esc(it.get("summary"))}</p>' if it.get("summary") else ""
+                url = it.get("url")
+                link_h = (f'<a href="{esc(url)}" target="_blank" rel="noopener">'
+                          f'{esc(it.get("link_label") or "열기")}</a>') if url else ""
+                cell.append(f'<div class="card">{img_h}<h3>{esc(it.get("title"))}</h3>{meta_h}{sum_h}{link_h}</div>')
+            parts.append(f'<div class="cards" style="--cols:{ncol}">{"".join(cell)}</div>')
+        elif t == "divider":
+            parts.append("<hr>")
+        else:  # paragraph (기본)
+            parts.append(f"<p>{esc(b.get('text'))}</p>")
+    return "\n".join(parts)
+
+
+def _doc_css(theme: str) -> str:
+    """문서 emitter의 <style> 본문을 테마별로. default(기사형) / newspaper(제호+카드 그리드)."""
+    # 공통: 카드 그리드 골격(테마 무관 동일 구조, 색·여백만 테마가 덧칠)
+    base_cards = """
+.cards{display:grid;grid-template-columns:repeat(var(--cols,2),1fr);gap:18px;margin:1.2em 0}
+@media(max-width:680px){.cards{grid-template-columns:1fr}}
+.card{border:1px solid #e1e4e8;border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;background:#fff}
+.card img.card-img{width:100%;max-height:200px;object-fit:contain;border-radius:6px;margin-bottom:10px;background:#f5f5f5}
+.card h3{margin:0 0 8px;font-size:1.08em;line-height:1.4;color:#22223b}
+.card .card-meta{color:#888;font-size:0.82em;margin:0 0 8px}
+.card .card-sum{color:#444;font-size:0.92em;margin:0 0 10px;flex:1}
+.card a{margin-top:auto;color:#3d5a80;font-weight:bold;font-size:0.9em;text-decoration:none}
+.card a:hover{text-decoration:underline}
+"""
+    if theme == "newspaper":
+        return """
+body{max-width:1100px;margin:30px auto;padding:0 16px;font-family:'Noto Sans KR','Pretendard',-apple-system,sans-serif;line-height:1.6;color:#333;background:#f0f2f5}
+.docwrap{background:#fff;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+h1{color:#1a1a2e;font-size:2.5em;margin:0 0 15px;border-bottom:4px solid #1a1a2e;padding-bottom:15px;text-align:center}
+.doc-meta{text-align:center;color:#666;font-size:0.95em;margin-bottom:30px;background:#f8f9fa;padding:15px;border-radius:8px}
+h2{color:#1a1a2e;font-size:1.8em;margin:40px 0 20px;padding-bottom:8px;border-bottom:2px solid #eee}
+h3{color:#22223b}
+img{max-width:100%;border-radius:8px} figure{margin:1.2em 0} figcaption{color:#666;font-size:0.9em;text-align:center}
+table{border-collapse:collapse;width:100%;margin:1.2em 0} th,td{border:1px solid #ddd;padding:8px 12px;text-align:left} th{background:#f5f5f5}
+blockquote{border-left:4px solid #ccc;margin:1.2em 0;padding:0.5em 1em;color:#555}
+hr{border:none;border-top:1px solid #eee;margin:30px 0}
+""" + base_cards
+    # default(기사형 단일단)
+    return """
+body{max-width:760px;margin:40px auto;padding:0 20px;font-family:'Pretendard','Noto Sans KR',sans-serif;line-height:1.7;color:#1a1a1a}
+.docwrap{}
+h1,h2,h3,h4{line-height:1.3;margin:1.4em 0 0.5em} h1{font-size:2em}
+.doc-meta{color:#666;font-size:0.95em;margin:-0.5em 0 1.5em}
+img{max-width:100%;border-radius:8px} figure{margin:1.5em 0} figcaption{color:#666;font-size:0.9em;text-align:center;margin-top:0.5em}
+table{border-collapse:collapse;width:100%;margin:1.5em 0} th,td{border:1px solid #ddd;padding:8px 12px;text-align:left} th{background:#f5f5f5}
+blockquote{border-left:4px solid #ccc;margin:1.5em 0;padding:0.5em 1em;color:#555} blockquote cite{display:block;margin-top:0.5em;font-size:0.9em}
+pre{background:#f6f8fa;padding:1em;border-radius:6px;overflow:auto} hr{border:none;border-top:1px solid #e0e0e0;margin:2em 0}
+""" + base_cards
+
+
+def _resolve_image_bytes(src: str):
+    """이미지 src(로컬 경로/data URI/http URL)를 file-like(BytesIO)로 해소. 실패 시 None.
+    docx·pptx emitter 공용 — 둘 다 파일/스트림만 받음(HTML <img>와 달리)."""
+    import io
+    import os
+    import base64
+    if not src:
+        return None
+    try:
+        s = str(src).strip()
+        if s.startswith("data:"):  # data:image/png;base64,....
+            b64 = s.split(",", 1)[1]
+            return io.BytesIO(base64.b64decode(b64))
+        if s.startswith("file://"):
+            s = s[7:]
+        if s.startswith(("http://", "https://")):
+            import urllib.request
+            with urllib.request.urlopen(s, timeout=15) as r:
+                return io.BytesIO(r.read())
+        if os.path.isfile(s):
+            with open(s, "rb") as f:
+                return io.BytesIO(f.read())
+    except Exception:
+        return None
+    return None
+
+
+def _typ_esc(s) -> str:
+    """typst 마크업 특수문자 이스케이프."""
+    s = str(s if s is not None else "")
+    for ch in ("\\", "#", "$", "*", "_", "`", "<", ">", "@", "[", "]"):
+        s = s.replace(ch, "\\" + ch)
+    return s
+
+
+def _doc_blocks_to_typst(blocks: list, title: str, meta: str, out_path: str):
+    """문서 IR → typst 컴파일 PDF (책 품질 조판). 산문·보고서에 최적 — 정렬·페이지·타이포가 강점.
+    HTML theme/cards 그리드는 무시(조판 모델이 다름). 한글 = Apple SD Gothic Neo."""
+    import os
+    import subprocess
+    import tempfile
+
+    lines = [
+        '#set text(font: "Apple SD Gothic Neo", size: 11pt, lang: "ko")',
+        '#set page(paper: "a4", margin: (x: 2.2cm, y: 2.4cm), numbering: "1")',
+        '#set par(justify: true, leading: 0.8em)',
+        '#show heading: set block(above: 1.2em, below: 0.6em)',
+        '#set heading(numbering: none)',
+        "",
+    ]
+    if title:
+        lines.append(f'#align(center)[#text(size: 22pt, weight: "bold")[{_typ_esc(title)}]]')
+    if meta:
+        lines.append(f'#align(center)[#text(size: 9pt, fill: gray)[{_typ_esc(meta)}]]')
+    if title or meta:
+        lines.append("#v(0.5em)")
+        lines.append("")
+
+    for b in blocks:
+        if not isinstance(b, dict):
+            continue
+        t = (b.get("type") or "paragraph").lower()
+        if t == "heading":
+            lvl = max(1, min(5, int(b.get("level") or 2)))
+            lines.append("=" * lvl + " " + _typ_esc(b.get("text")))
+        elif t == "list":
+            for it in (b.get("items") or []):
+                txt = it.get("text") if isinstance(it, dict) else it
+                lines.append("- " + _typ_esc(txt))
+        elif t == "table":
+            cols = b.get("columns") or []
+            rows = [r for r in (b.get("rows") or []) if isinstance(r, (list, tuple))]
+            ncol = max([len(cols)] + [len(r) for r in rows] or [0])
+            if ncol:
+                cells = []
+                if cols:
+                    cells += [f"[*{_typ_esc(c)}*]" for c in cols[:ncol]] + ["[]"] * (ncol - len(cols[:ncol]))
+                for r in rows:
+                    cells += [f"[{_typ_esc(v)}]" for v in r[:ncol]] + ["[]"] * (ncol - len(r[:ncol]))
+                lines.append(f"#table(columns: {ncol}, " + ", ".join(cells) + ")")
+        elif t == "cards":
+            for it in (b.get("items") or []):
+                if not isinstance(it, dict):
+                    continue
+                lines.append("=== " + _typ_esc(it.get("title")))
+                if it.get("meta"):
+                    lines.append(f'#text(size: 9pt, fill: gray)[{_typ_esc(it.get("meta"))}]')
+                if it.get("summary"):
+                    lines.append(_typ_esc(it.get("summary")))
+                if it.get("url"):
+                    lines.append(f'#link("{it.get("url")}")[{_typ_esc(it.get("link_label") or "열기")}]')
+        elif t == "quote":
+            cite = b.get("cite")
+            q = f'#quote(block: true)[{_typ_esc(b.get("text"))}]'
+            lines.append(q + (f" #text(size: 9pt, fill: gray)[— {_typ_esc(cite)}]" if cite else ""))
+        elif t == "code":
+            lines.append("```\n" + str(b.get("text") or "") + "\n```")
+        elif t == "image":
+            src = b.get("src") or b.get("path") or ""
+            if src and os.path.isfile(str(src)):
+                lines.append(f'#figure(image("{src}", width: 80%)' +
+                             (f', caption: [{_typ_esc(b.get("caption"))}]' if b.get("caption") else "") + ")")
+        elif t == "divider":
+            lines.append("#line(length: 100%, stroke: 0.5pt + gray)")
+        else:
+            lines.append(_typ_esc(b.get("text")))
+        lines.append("")
+
+    typ_src = "\n".join(lines)
+    with tempfile.NamedTemporaryFile("w", suffix=".typ", delete=False, encoding="utf-8") as tf:
+        tf.write(typ_src)
+        typ_file = tf.name
+    try:
+        proc = subprocess.run(["typst", "compile", typ_file, out_path],
+                              capture_output=True, text=True, timeout=60)
+        if proc.returncode != 0:
+            raise RuntimeError(f"typst compile 실패: {proc.stderr[:300]}")
+    finally:
+        try:
+            os.unlink(typ_file)
+        except Exception:
+            pass
+
+
+def _add_hyperlink(paragraph, url: str, text: str):
+    """python-docx 문단에 클릭 가능한 하이퍼링크 추가(네이티브 미지원이라 관계+XML 수작업)."""
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+    try:
+        part = paragraph.part
+        r_id = part.relate_to(url, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+                              is_external=True)
+        hyperlink = OxmlElement("w:hyperlink")
+        hyperlink.set(qn("r:id"), r_id)
+        new_run = OxmlElement("w:r")
+        rPr = OxmlElement("w:rPr")
+        color = OxmlElement("w:color"); color.set(qn("w:val"), "3D5A80"); rPr.append(color)
+        u = OxmlElement("w:u"); u.set(qn("w:val"), "single"); rPr.append(u)
+        new_run.append(rPr)
+        t = OxmlElement("w:t"); t.text = text or url; new_run.append(t)
+        hyperlink.append(new_run)
+        paragraph._p.append(hyperlink)
+    except Exception:
+        paragraph.add_run(f"{text}: {url}" if text else url)
+
+
+def _doc_blocks_to_docx(blocks: list, title: str, out_path: str):
+    """문서 IR → .docx (python-docx). html emitter와 같은 IR을 소비.
+    table 블록 = 데이터 통화 {columns,rows} 그대로 재사용."""
+    from docx import Document
+    from docx.shared import Pt, Inches
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
+    doc = Document()
+    if title:
+        doc.add_heading(str(title), level=0)
+
+    for b in blocks:
+        if not isinstance(b, dict):
+            continue
+        t = (b.get("type") or "paragraph").lower()
+        if t == "heading":
+            lvl = max(1, min(6, int(b.get("level") or 2)))
+            doc.add_heading(str(b.get("text") or ""), level=lvl)
+        elif t == "list":
+            ordered = bool(b.get("ordered"))
+            style = "List Number" if ordered else "List Bullet"
+            for it in (b.get("items") or []):
+                txt = it.get("text") if isinstance(it, dict) else it
+                doc.add_paragraph(str(txt), style=style)
+        elif t == "image":
+            stream = _resolve_image_bytes(b.get("src") or b.get("path") or "")
+            if stream is not None:
+                try:
+                    doc.add_picture(stream, width=Inches(6.0))
+                except Exception:
+                    pass
+            cap = b.get("caption")
+            if cap:
+                p = doc.add_paragraph(str(cap))
+                p.italic = True
+        elif t == "table":
+            cols = b.get("columns") or []
+            rows = [r for r in (b.get("rows") or []) if isinstance(r, (list, tuple))]
+            ncol = max([len(cols)] + [len(r) for r in rows] or [0])
+            if ncol:
+                tbl = doc.add_table(rows=0, cols=ncol)
+                try:
+                    tbl.style = "Light Grid Accent 1"
+                except Exception:
+                    pass
+                if cols:
+                    hdr = tbl.add_row().cells
+                    for i, c in enumerate(cols[:ncol]):
+                        hdr[i].text = str(c)
+                    for cell in hdr:
+                        for para in cell.paragraphs:
+                            for run in para.runs:
+                                run.bold = True
+                for r in rows:
+                    cells = tbl.add_row().cells
+                    for i, v in enumerate(r[:ncol]):
+                        cells[i].text = str(v)
+        elif t == "quote":
+            p = doc.add_paragraph(str(b.get("text") or ""))
+            try:
+                p.style = "Intense Quote"
+            except Exception:
+                pass
+            cite = b.get("cite")
+            if cite:
+                doc.add_paragraph(f"— {cite}")
+        elif t == "code":
+            p = doc.add_paragraph()
+            run = p.add_run(str(b.get("text") or ""))
+            run.font.name = "Courier New"
+            run.font.size = Pt(9.5)
+        elif t == "cards":
+            for it in (b.get("items") or []):
+                if not isinstance(it, dict):
+                    continue
+                if it.get("image"):  # 썸네일(표지 등) — 다운로드 실패는 graceful
+                    stream = _resolve_image_bytes(it.get("image"))
+                    if stream is not None:
+                        try:
+                            doc.add_picture(stream, width=Inches(1.6))
+                        except Exception:
+                            pass
+                doc.add_heading(str(it.get("title") or ""), level=3)
+                if it.get("meta"):
+                    mp = doc.add_paragraph()
+                    mr = mp.add_run(str(it.get("meta")))
+                    mr.italic = True
+                    mr.font.size = Pt(9)
+                if it.get("summary"):
+                    doc.add_paragraph(str(it.get("summary")))
+                if it.get("url"):
+                    _add_hyperlink(doc.add_paragraph(), str(it.get("url")),
+                                   str(it.get("link_label") or "열기"))
+        elif t == "divider":
+            p = doc.add_paragraph()
+            pPr = p._p.get_or_add_pPr()
+            pbdr = OxmlElement("w:pBdr")
+            bottom = OxmlElement("w:bottom")
+            bottom.set(qn("w:val"), "single")
+            bottom.set(qn("w:sz"), "6")
+            bottom.set(qn("w:space"), "1")
+            bottom.set(qn("w:color"), "auto")
+            pbdr.append(bottom)
+            pPr.append(pbdr)
+        else:  # paragraph
+            doc.add_paragraph(str(b.get("text") or ""))
+
+    doc.save(out_path)
+
+
+def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str):
+    """문서 IR → .pptx (python-pptx). ★종류 경계 주의: 슬라이드 IR이 아니라 *문서 IR을 슬라이드로 투영*.
+    문서 IR이 정본, pptx는 emitter일 뿐 — heading(level≤2)이 새 슬라이드, 그 아래 내용이 글머리표.
+    슬라이드 전용 시각 레이아웃이 필요하면 engines:slide(슬라이드 IR)를 써야지 이걸 쓰면 안 됨."""
+    from pptx import Presentation
+    from pptx.util import Inches, Pt
+
+    prs = Presentation()
+    SW, SH = prs.slide_width, prs.slide_height
+    blank = prs.slide_layouts[6]
+    title_layout = prs.slide_layouts[0]
+
+    # 표지 슬라이드(title 있으면)
+    if title:
+        s = prs.slides.add_slide(title_layout)
+        s.shapes.title.text = str(title)
+
+    state = {"slide": None, "body": None}
+
+    def new_content_slide(heading_text=""):
+        # "제목+내용" 레이아웃(1) — 제목 placeholder + 본문 placeholder
+        s = prs.slides.add_slide(prs.slide_layouts[1])
+        s.shapes.title.text = str(heading_text or "")
+        body_tf = None
+        for ph in s.placeholders:
+            if ph.placeholder_format.idx == 1:
+                body_tf = ph.text_frame
+                break
+        if body_tf is not None:
+            body_tf.clear()
+            body_tf.word_wrap = True
+        state["slide"], state["body"] = s, body_tf
+
+    def add_bullet(text, level=0, italic=False, mono=False):
+        if state["body"] is None:
+            new_content_slide("")
+        tf = state["body"]
+        # clear()가 남긴 빈 첫 문단 재사용, 이후엔 add
+        if len(tf.paragraphs) == 1 and not tf.paragraphs[0].runs:
+            p = tf.paragraphs[0]
+        else:
+            p = tf.add_paragraph()
+        p.text = str(text)
+        p.level = min(4, max(0, level))
+        for run in p.runs:
+            if italic:
+                run.font.italic = True
+            if mono:
+                run.font.name = "Courier New"
+                run.font.size = Pt(14)
+
+    for b in blocks:
+        if not isinstance(b, dict):
+            continue
+        t = (b.get("type") or "paragraph").lower()
+        if t == "heading":
+            lvl = int(b.get("level") or 2)
+            if lvl <= 2 or state["body"] is None:
+                # 큰 섹션, 또는 표·구분선 뒤 첫 제목이면 새 슬라이드 제목으로
+                new_content_slide(b.get("text") or "")
+            else:  # 진행 중 슬라이드의 하위 섹션 = 글머리표
+                add_bullet(b.get("text") or "", level=0)
+        elif t == "paragraph":
+            add_bullet(b.get("text") or "", level=0)
+        elif t == "list":
+            for it in (b.get("items") or []):
+                add_bullet(it.get("text") if isinstance(it, dict) else it, level=1)
+        elif t == "quote":
+            txt = str(b.get("text") or "")
+            cite = b.get("cite")
+            add_bullet(f"“{txt}”" + (f" — {cite}" if cite else ""), level=1, italic=True)
+        elif t == "code":
+            add_bullet(b.get("text") or "", level=1, mono=True)
+        elif t == "cards":
+            for it in (b.get("items") or []):
+                if not isinstance(it, dict):
+                    continue
+                add_bullet(it.get("title") or "", level=0)
+                sub = " / ".join(x for x in [it.get("meta"), it.get("summary")] if x)
+                if sub:
+                    add_bullet(sub, level=1)
+        elif t == "image":
+            stream = _resolve_image_bytes(b.get("src") or b.get("path") or "")
+            if stream is not None:
+                s = prs.slides.add_slide(blank)
+                try:
+                    s.shapes.add_picture(stream, Inches(0.6), Inches(0.6), width=SW - Inches(1.2))
+                except Exception:
+                    pass
+                cap = b.get("caption")
+                if cap:
+                    tb = s.shapes.add_textbox(Inches(0.6), SH - Inches(0.9), SW - Inches(1.2), Inches(0.7))
+                    tb.text_frame.text = str(cap)
+                state["slide"], state["body"] = None, None  # 이미지 후 새 내용 슬라이드 강제
+        elif t == "table":
+            cols = b.get("columns") or []
+            rows = [r for r in (b.get("rows") or []) if isinstance(r, (list, tuple))]
+            ncol = max([len(cols)] + [len(r) for r in rows] or [0])
+            nrow = len(rows) + (1 if cols else 0)
+            if ncol and nrow:
+                s = prs.slides.add_slide(blank)
+                gt = s.shapes.add_table(nrow, ncol, Inches(0.5), Inches(0.6),
+                                        SW - Inches(1.0), Inches(0.4) * nrow).table
+                ri = 0
+                if cols:
+                    for ci, c in enumerate(cols[:ncol]):
+                        gt.cell(0, ci).text = str(c)
+                    ri = 1
+                for r in rows:
+                    for ci, v in enumerate(r[:ncol]):
+                        gt.cell(ri, ci).text = str(v)
+                    ri += 1
+                state["slide"], state["body"] = None, None
+        elif t == "divider":
+            state["slide"], state["body"] = None, None  # 새 슬라이드 경계
+
+    if len(prs.slides) == 0:  # 표지도 내용도 없으면 빈 슬라이드 하나
+        prs.slides.add_slide(blank)
+    prs.save(out_path)
+
+
+# ── B: 구조화 원자 — 콘텐츠 → 문서 IR (A획득→B구조화→IR→emit 파이프라인) ──
+_STRUCTURE_PROMPT = """당신은 콘텐츠를 깔끔한 문서 구조로 정리하는 편집자입니다. 주어진 내용을 문서 IR(JSON)로 변환합니다.
+
+출력은 JSON 한 객체만: {"title": "...", "blocks": [ ... ]}
+블록 타입:
+- {"type":"heading","level":2,"text":"..."}   (level 1~4)
+- {"type":"paragraph","text":"..."}
+- {"type":"list","ordered":false,"items":["...","..."]}
+- {"type":"table","columns":["...","..."],"rows":[["...","..."]]}
+- {"type":"quote","text":"...","cite":"..."}
+- {"type":"code","text":"...","lang":"..."}
+- {"type":"divider"}
+
+원칙: 내용을 지어내지 말고 주어진 것에서만. title=핵심을 담은 명제. 긴 글은 heading으로 섹션화, 나열은 list, 비교·수치는 table. JSON 외 텍스트 금지."""
+
+
+def structure_document(tool_input, output_base="."):
+    """[engines:structure] — 원본 콘텐츠를 문서 IR(blocks)로 구조화 (LLM 편집자).
+
+    파라미터: content(필수, 원본 텍스트) · instruction(선택, 정리 방향).
+    반환: {success, title, blocks, block_count}. render_document로 이어 렌더(>> 파이프 지원).
+    """
+    import json as _json
+
+    content = (tool_input.get("content") or "").strip()
+    # >> 파이프: 이전 액션의 텍스트 결과를 content로 받음
+    if not content:
+        pr = tool_input.get("_prev_result")
+        if isinstance(pr, str):
+            content = pr.strip()
+        elif isinstance(pr, dict):
+            content = str(pr.get("summary") or pr.get("content") or pr.get("text") or "").strip()
+    if not content:
+        return _json.dumps({"success": False, "message": "content(구조화할 원본 내용)가 필요합니다."},
+                           ensure_ascii=False)
+
+    instruction = (tool_input.get("instruction") or "").strip()
+    user = f"# 정리할 내용\n{content[:16000]}"
+    if instruction:
+        user += f"\n\n# 정리 방향\n{instruction}"
+    user += "\n\n위 내용을 문서 IR(JSON 한 객체)로 출력하라."
+
+    try:
+        from consciousness_agent import lightweight_ai_call
+        resp = lightweight_ai_call(user, system_prompt=_STRUCTURE_PROMPT)
+    except Exception as e:
+        return _json.dumps({"success": False, "message": f"구조화 AI 호출 실패: {e}"}, ensure_ascii=False)
+    if not resp or not resp.strip():
+        return _json.dumps({"success": False, "message": "구조화 AI 응답 없음"}, ensure_ascii=False)
+
+    txt = resp.strip()
+    if txt.startswith("```"):
+        txt = txt.strip("`")
+        if txt.lower().startswith("json"):
+            txt = txt[4:]
+        txt = txt.split("```")[0].strip()
+    try:
+        a, b = txt.find("{"), txt.rfind("}")
+        ir = _json.loads(txt[a:b + 1])
+    except Exception as e:
+        return _json.dumps({"success": False, "message": f"IR JSON 파싱 실패: {e}", "raw": resp[:300]},
+                           ensure_ascii=False)
+    blocks = ir.get("blocks")
+    if not isinstance(blocks, list) or not blocks:
+        return _json.dumps({"success": False, "message": "blocks가 없습니다.", "raw": resp[:300]},
+                           ensure_ascii=False)
+    return _json.dumps({"success": True, "title": ir.get("title", ""), "blocks": blocks,
+                        "block_count": len(blocks),
+                        "message": f"{len(blocks)}블록 문서 IR로 구조화."}, ensure_ascii=False)
+
+
+def render_document(tool_input, output_base="."):
+    """문서 IR → 산출물. 현재 emitter: html (단일 IR, 향후 pdf/docx/pptx emitter 추가).
+
+    파라미터: blocks(필수, IR 블록 배열) · title(선택) · format(기본 html) · filename(선택).
+    반환: {success, path, format, blocks}.
+    """
+    import os
+    import html as _html
+    import json as _json
+
+    blocks = tool_input.get("blocks")
+    if not blocks:
+        # >> 파이프: 이전 생산자 결과(_prev_result)의 blocks·title·meta·theme 자동 수용
+        pr = tool_input.get("_prev_result")
+        if pr:
+            try:
+                po = _json.loads(pr) if isinstance(pr, str) else pr
+                if isinstance(po, dict):
+                    if po.get("blocks"):
+                        blocks = po["blocks"]
+                    elif isinstance(po.get("records"), list) and po["records"]:
+                        # 레코드 통화(records: [{title,meta,summary,url,image}]) → cards 블록으로 래핑.
+                        # 목록형 생산자(book·restaurant·검색…)가 그대로 >> document로 흐름.
+                        # (블록 내부 키는 items — 레이어 분리: 생산자=records 명사 / 렌더=cards.items)
+                        blocks = [{"type": "cards", "columns": 2, "items": po["records"]}]
+                    for k in ("title", "meta", "theme"):
+                        if not tool_input.get(k) and po.get(k):
+                            tool_input[k] = po[k]
+            except Exception:
+                pass
+    if isinstance(blocks, str):
+        try:
+            blocks = _json.loads(blocks)
+        except Exception:
+            blocks = None
+    if not isinstance(blocks, list) or not blocks:
+        return _json.dumps({"success": False, "message": "blocks(문서 IR 블록 배열)가 필요합니다."},
+                           ensure_ascii=False)
+
+    title = tool_input.get("title") or ""
+    meta = tool_input.get("meta") or ""
+    theme = (tool_input.get("theme") or "default").strip().lower()
+    fmt = (tool_input.get("format") or "html").strip().lower()
+    note = ""
+    if fmt not in ("html", "pdf", "png", "docx", "pptx", "typst"):
+        note = f" (format '{fmt}' 미지원 — html로 산출)"
+        fmt = "html"
+
+    os.makedirs(output_base, exist_ok=True)
+    base = tool_input.get("filename") or "document"
+    base = os.path.splitext(os.path.basename(str(base)))[0] or "document"
+
+    # typst emitter — 책 품질 조판 PDF(산문·보고서). HTML theme/cards 그리드는 무시(조판 모델 상이).
+    if fmt == "typst":
+        try:
+            out_path = os.path.join(output_base, f"{base}.pdf")
+            _doc_blocks_to_typst(blocks, title, meta, out_path)
+            return _json.dumps({"success": True, "path": out_path, "file": out_path,
+                                "title": title, "format": "typst_pdf", "blocks": len(blocks),
+                                "message": f"문서 {len(blocks)}블록을 typst 책 품질 PDF로 조판했습니다."},
+                               ensure_ascii=False)
+        except Exception as e:
+            note = f" (typst 조판 실패 → 브라우저 PDF 폴백: {e})"
+            fmt = "pdf"
+
+    # docx/pptx emitter — 같은 문서 IR을 사무 포맷으로. pptx는 문서 IR을 슬라이드로 *투영*(종류 경계 주의).
+    if fmt in ("docx", "pptx"):
+        try:
+            out_path = os.path.join(output_base, f"{base}.{fmt}")
+            if fmt == "docx":
+                _doc_blocks_to_docx(blocks, title, out_path)
+            else:
+                _doc_blocks_to_pptx(blocks, title, out_path)
+            return _json.dumps({"success": True, "path": out_path, "file": out_path,
+                                "title": title, "format": fmt, "blocks": len(blocks),
+                                "message": f"문서 {len(blocks)}블록을 {fmt.upper()}로 렌더했습니다."},
+                               ensure_ascii=False)
+        except Exception as e:
+            note = f" ({fmt} 렌더 실패 → HTML 폴백: {e})"
+            fmt = "html"
+
+    body = _doc_blocks_to_html(blocks)
+    title_h = f"<h1>{_html.escape(str(title))}</h1>" if title else ""
+    meta_h = f'<div class="doc-meta">{_html.escape(str(meta))}</div>' if meta else ""
+    doc = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<title>{_html.escape(str(title))}</title><style>{_doc_css(theme)}</style></head><body>
+<div class="docwrap">
+{title_h}
+{meta_h}
+{body}
+</div>
+</body></html>"""
+
+    # 같은 문서 IR을 여러 emitter로 — html/pdf/png. pdf·png는 Playwright로 동일 HTML 렌더.
+    if fmt in ("pdf", "png"):
+        try:
+            from playwright.sync_api import sync_playwright
+            out_path = os.path.join(output_base, f"{base}.{fmt}")
+            with sync_playwright() as pw:
+                br = pw.chromium.launch()
+                pg = br.new_page(viewport={"width": 900, "height": 1200})
+                pg.set_content(doc, wait_until="networkidle")
+                pg.wait_for_timeout(300)
+                if fmt == "pdf":
+                    pg.pdf(path=out_path, format="A4", print_background=True,
+                           margin={"top": "20mm", "bottom": "20mm", "left": "16mm", "right": "16mm"})
+                else:
+                    pg.screenshot(path=out_path, full_page=True)
+                br.close()
+            return _json.dumps({"success": True, "path": out_path, "file": out_path,
+                                "title": title, "format": fmt, "blocks": len(blocks),
+                                "message": f"문서 {len(blocks)}블록을 {fmt.upper()}로 렌더했습니다."},
+                               ensure_ascii=False)
+        except Exception as e:
+            # emitter 실패 시 HTML로 폴백(산출 보존)
+            note = f" ({fmt} 렌더 실패 → HTML 폴백: {e})"
+
+    out_path = os.path.join(output_base, f"{base}.html")
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(doc)
+    return _json.dumps({"success": True, "path": out_path, "file": out_path,
+                        "title": title, "format": "html", "blocks": len(blocks),
+                        "message": f"문서 {len(blocks)}블록을 HTML로 렌더했습니다.{note}"},
+                       ensure_ascii=False)
+
+
 def render_html_to_image(tool_input, output_base="."):
     """HTML을 이미지로 렌더링
 
@@ -834,21 +1532,35 @@ def critique_gemini_image(tool_input, output_base):
 
     checks = tool_input.get("checks") or []
     style_preset = tool_input.get("style_preset", "")
+    # preset: "slide_illustration"(기본, 현행 슬라이드 일러스트 체크) | "general"(임의 산출물 범용)
+    preset = (tool_input.get("preset") or "slide_illustration").strip().lower()
 
-    default_checks = [
-        "이 일러스트는 회화적 '씬(scene)'이 아니라 정보를 전달하는 '다이어그램/인포그래픽'인가? (NotebookLM 양식)",
-        "한글(Hangul) 문자가 일러스트 안에 들어가 있는가? (있으면 실패 — 한글은 텍스트 레이어에서 처리)",
-        "라벨 박스가 들어갈 빈 공간(여백)이 의도된 위치에 정말 비어 있는가? (intent에 명시된 빈 공간 위치 확인)",
-        "주요 객체가 일러스트의 핵심 영역(중앙/지정 위치)에 명확하게 배치되어 있는가?",
-    ]
-    if style_preset:
-        default_checks.append(f"디자인 시스템 톤이 '{style_preset}'와 일관되는가? (색·선·분위기)")
+    if preset == "general":
+        default_checks = [
+            "이미지가 의도(intent)를 정확하고 충분히 충족하는가?",
+            "시각적 결함(텍스트 잘림·겹침, 레이아웃 불균형, 깨짐, 저해상도, 빈 공간 과다)이 없는가?",
+        ]
+        if style_preset:
+            default_checks.append(f"스타일/톤이 '{style_preset}'와 일관되는가?")
+        intro = "당신은 산출물 품질 평가자입니다. 아래 이미지가 의도를 잘 충족하는지 엄격하게 평가하세요."
+        hard_rule = ""
+    else:
+        default_checks = [
+            "이 일러스트는 회화적 '씬(scene)'이 아니라 정보를 전달하는 '다이어그램/인포그래픽'인가? (NotebookLM 양식)",
+            "한글(Hangul) 문자가 일러스트 안에 들어가 있는가? (있으면 실패 — 한글은 텍스트 레이어에서 처리)",
+            "라벨 박스가 들어갈 빈 공간(여백)이 의도된 위치에 정말 비어 있는가? (intent에 명시된 빈 공간 위치 확인)",
+            "주요 객체가 일러스트의 핵심 영역(중앙/지정 위치)에 명확하게 배치되어 있는가?",
+        ]
+        if style_preset:
+            default_checks.append(f"디자인 시스템 톤이 '{style_preset}'와 일관되는가? (색·선·분위기)")
+        intro = "당신은 강의 슬라이드 일러스트 평가자입니다. 다음 일러스트가 의도를 잘 표현하는지 엄격하게 평가하세요."
+        hard_rule = " 한글이 일러스트에 들어가 있으면 무조건 passed=false."
 
     all_checks = default_checks + checks
 
     instruction = (
-        "당신은 강의 슬라이드 일러스트 평가자입니다. 다음 일러스트가 의도를 잘 표현하는지 엄격하게 평가하세요.\n\n"
-        f"**의도 (이 일러스트가 표현해야 할 것)**:\n{intent}\n\n"
+        intro + "\n\n"
+        f"**의도 (이 결과물이 충족해야 할 것)**:\n{intent}\n\n"
         f"**체크 항목** ({len(all_checks)}개):\n"
         + "\n".join(f"{i+1}. {c}" for i, c in enumerate(all_checks))
         + "\n\n반드시 다음 JSON 형식 한 개만 출력하세요. 다른 텍스트 금지.\n"
@@ -860,7 +1572,7 @@ def critique_gemini_image(tool_input, output_base):
         '  "notes": "전반적 평가 (1~2문장)"\n'
         "}\n"
         "```\n"
-        "passed는 issues가 없거나 score>=7일 때 true. 한글이 일러스트에 들어가 있으면 무조건 passed=false."
+        "passed는 issues가 없거나 score>=7일 때 true." + hard_rule
     )
 
     payload = {

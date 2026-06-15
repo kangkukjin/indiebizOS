@@ -1290,6 +1290,71 @@ AI: {ai_response[:500]}"""
 
         return "\n\n".join(files_content) if files_content else ""
 
+    _VISUAL_EXTS = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                    ".webp": "image/webp", ".gif": "image/gif"}
+
+    def _collect_visual_artifacts(self, response: str,
+                                   tool_calls: Optional[List[Dict[str, Any]]] = None,
+                                   max_images: int = 3) -> List[Dict[str, str]]:
+        """생성된 시각 산출물(이미지)을 멀티모달 평가용으로 수집한다 (G 루프 보편 백스톱).
+
+        _collect_created_files는 파일을 UTF-8 텍스트로 읽어 이미지를 조용히 버린다 —
+        이게 평가자가 픽셀을 못 보던 물리적 원인. 여기서는 이미지 경로를 따로 모아
+        base64로 인코딩해 평가자(경량 비전 모델)가 직접 보게 한다.
+
+        수집원: tool_calls의 input(파일 경로 키)·result(산출 경로, 예 image_path)·응답 텍스트.
+        반환: [{"base64","media_type","_path"}], 최신순 max_images개.
+        """
+        import os, base64 as _b64
+        cand: List[str] = []
+        seen: set = set()
+
+        def _add(p):
+            if (isinstance(p, str) and p.startswith("/")
+                    and os.path.splitext(p)[1].lower() in self._VISUAL_EXTS
+                    and p not in seen):
+                seen.add(p)
+                cand.append(p)
+
+        img_re = re.compile(r'(/[^\s"\'<>]+\.(?:png|jpe?g|webp|gif))', re.IGNORECASE)
+
+        if tool_calls:
+            for entry in tool_calls:
+                if not isinstance(entry, dict):
+                    continue
+                inp = entry.get("input") or {}
+                if isinstance(inp, dict):
+                    for key in _FILE_PATH_INPUT_KEYS:
+                        _add(inp.get(key))
+                    params = inp.get("params")
+                    if isinstance(params, dict):
+                        for key in _FILE_PATH_INPUT_KEYS:
+                            _add(params.get(key))
+                res = entry.get("result")
+                if isinstance(res, str):
+                    for m in img_re.findall(res):
+                        _add(m)
+
+        for m in img_re.findall(response or ""):
+            _add(m)
+
+        # 최신순 max_images개 (마지막 산출물이 보통 최종본)
+        chosen = cand[-max_images:] if len(cand) > max_images else cand
+        artifacts: List[Dict[str, str]] = []
+        for path in chosen:
+            try:
+                if not os.path.isfile(path) or os.path.getsize(path) > 6 * 1024 * 1024:
+                    continue
+                with open(path, "rb") as f:
+                    b64 = _b64.b64encode(f.read()).decode("utf-8")
+                mt = self._VISUAL_EXTS.get(os.path.splitext(path)[1].lower(), "image/png")
+                artifacts.append({"base64": b64, "media_type": mt, "_path": path})
+            except Exception:
+                pass
+        if len(cand) > len(artifacts) and artifacts:
+            self._log(f"[GoalEval] 시각 산출물 {len(cand)}개 중 {len(artifacts)}개만 평가 첨부(상한/크기)")
+        return artifacts
+
     _evaluator_prompt_cache: str = ""
 
     @classmethod
@@ -1318,7 +1383,8 @@ AI: {ai_response[:500]}"""
                                response: str, created_files: str,
                                consciousness_output: dict = None,
                                tool_results_str: str = "",
-                               execution_memory: str = "") -> tuple:
+                               execution_memory: str = "",
+                               visual_artifacts: list = None) -> tuple:
         """평가 AI로 달성 기준 충족 여부를 판단한다.
 
         의식 에이전트의 출력(self_awareness, capability_focus, world_state)과
@@ -1379,6 +1445,16 @@ AI: {ai_response[:500]}"""
         if created_files:
             prompt += f"## 생성된 파일 내용\n{created_files}\n\n"
 
+        if visual_artifacts:
+            import os as _os
+            names = ", ".join(_os.path.basename(a.get("_path", "")) for a in visual_artifacts)
+            prompt += (
+                f"## 시각 산출물 검수 ({len(visual_artifacts)}개 첨부: {names})\n"
+                "아래에 **실제 생성된 이미지**가 첨부되어 있다. 텍스트 설명이 아니라 이미지를 "
+                "직접 보고 달성 기준 충족을 판단하라 — 레이아웃·가독성·의도 표현·잘림/깨짐/빈 영역 등 "
+                "실제 시각 품질을 확인할 것.\n\n"
+            )
+
         prompt += "위 정보를 바탕으로 평가하세요. 도구 실행 결과가 있으면 실제로 작업이 수행되었는지 확인하세요."
 
         # 평가 입력 가시화 — 평가자에게 충분한 컨텍스트가 전달되는지 진단.
@@ -1394,7 +1470,12 @@ AI: {ai_response[:500]}"""
         try:
             from consciousness_agent import lightweight_ai_call
 
-            eval_response = lightweight_ai_call(prompt, system_prompt=evaluator_system_prompt)
+            eval_images = None
+            if visual_artifacts:
+                eval_images = [{"base64": a["base64"], "media_type": a["media_type"]}
+                               for a in visual_artifacts]
+            eval_response = lightweight_ai_call(prompt, system_prompt=evaluator_system_prompt,
+                                                images=eval_images)
             if eval_response is None or not eval_response.strip():
                 self._log("[GoalEval] AI 응답 없음 (API 오류 등), 통과 처리")
                 return True, "평가 스킵 (AI 응답 없음)", 0
@@ -1465,13 +1546,16 @@ AI: {ai_response[:500]}"""
 
             # 생성된 파일 수집 (tool_calls의 file_path를 우선 활용)
             created_files = self._collect_created_files(response, tool_calls=_trace_dicts)
+            # 시각 산출물(이미지) 수집 — 평가자가 픽셀을 직접 보게 (G 루프 보편 백스톱)
+            visual_artifacts = self._collect_visual_artifacts(response, tool_calls=_trace_dicts)
 
-            # 달성 여부 평가 (의식 에이전트의 자기 인식 + 도구 실행 이력 + 실행기억)
+            # 달성 여부 평가 (의식 에이전트의 자기 인식 + 도구 실행 이력 + 실행기억 + 시각 산출물)
             achieved, feedback, severity = self._evaluate_achievement(
                 user_message, criteria, response, created_files,
                 consciousness_output=consciousness_output,
                 tool_results_str=tool_results_str,
                 execution_memory=execution_memory,
+                visual_artifacts=visual_artifacts,
             )
 
             eval_time = _time.time() - eval_start

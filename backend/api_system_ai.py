@@ -16,6 +16,7 @@ IndieBiz OS Core
 
 import json
 import os
+import threading
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -90,6 +91,9 @@ class ChatMessage(BaseModel):
     message: str
     context: Optional[Dict[str, Any]] = None
     images: Optional[List[ImageData]] = None
+    # True면 즉시 반환(fire-and-forget) — 수 분짜리 작업이 터널 타임아웃(524)에 걸리지 않도록.
+    # 응답/위임결과는 평소처럼 대화 로그에 저장되니 호출 측이 메시지를 폴링해서 받는다.
+    background: bool = False
 
 
 class ChatResponse(BaseModel):
@@ -157,75 +161,81 @@ def chat_with_system_ai(chat: ChatMessage):
         init_all_docs()
         _docs_initialized = True
 
-    # 태스크 생성
-    task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
-    ws_client_id = chat.context.get("ws_client_id") if chat.context else None
-
-    create_system_ai_task(
-        task_id=task_id,
-        requester="user@gui",
-        requester_channel="gui",
-        original_request=chat.message,
-        delegated_to="system_ai",
-        ws_client_id=ws_client_id
-    )
-
-    # 태스크 컨텍스트 설정
-    set_current_task_id(task_id)
-    clear_called_agent()
-
-    # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
-    history = get_history_for_ai(limit=7)
-
-    # 이미지 데이터 변환
-    images_data = None
-    if chat.images:
-        images_data = [{"base64": img.base64, "media_type": img.media_type} for img in chat.images]
-
-    # 사용자 메시지 저장 (이미지 포함)
-    save_conversation("user", chat.message, images=images_data)
-
-    # AIAgent를 사용한 통합 처리 (모든 프로바이더 자동 지원)
-    try:
-        response_text, tool_images = process_system_ai_message(
-            message=chat.message,
-            history=history,
-            images=images_data
+    def _process() -> str:
+        """태스크 생성 + LLM 처리 + 대화 저장. 스레드 컨텍스트(threading.local)가 필요하므로
+        동기/백그라운드 모두 이 함수 한 덩어리를 한 스레드에서 실행한다. 응답 텍스트를 반환하고
+        (위임 없을 때) assistant 메시지를 대화 로그에 저장한다. 위임이면 최종 결과는
+        system_ai_runner._finalize_task() 가 따로 저장한다."""
+        task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
+        ws_client_id = chat.context.get("ws_client_id") if chat.context else None
+        create_system_ai_task(
+            task_id=task_id,
+            requester="user@gui",
+            requester_channel="gui",
+            original_request=chat.message,
+            delegated_to="system_ai",
+            ws_client_id=ws_client_id
         )
-    except Exception as e:
-        clear_current_task_id()
+        set_current_task_id(task_id)
         clear_called_agent()
+        try:
+            # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
+            history = get_history_for_ai(limit=7)
+
+            # 이미지 데이터 변환
+            images_data = None
+            if chat.images:
+                images_data = [{"base64": img.base64, "media_type": img.media_type} for img in chat.images]
+
+            # 사용자 메시지 저장 (이미지 포함)
+            save_conversation("user", chat.message, images=images_data)
+
+            # AIAgent를 사용한 통합 처리 (모든 프로바이더 자동 지원)
+            response_text, tool_images = process_system_ai_message(
+                message=chat.message,
+                history=history,
+                images=images_data
+            )
+
+            if did_call_agent():
+                # 위임이 발생함 → 결과는 나중에 _finalize_task 가 저장(폴링/WebSocket이 회수)
+                return f"[위임 중] 프로젝트 에이전트에게 작업을 위임했습니다. 결과는 잠시 후 도착합니다.\n\n{response_text}"
+
+            # 위임 없음 → 즉시 응답, 태스크 완료
+            from system_ai_memory import complete_task as complete_system_ai_task
+            complete_system_ai_task(task_id, response_text[:500])
+            save_conversation("assistant", response_text, images=tool_images)
+            return response_text
+        finally:
+            clear_current_task_id()
+            clear_called_agent()
+
+    if chat.background:
+        def _worker():
+            try:
+                _process()
+            except Exception:
+                import traceback
+                traceback.print_exc()
+        threading.Thread(target=_worker, daemon=True).start()
+        return ChatResponse(
+            response="작업을 시작했습니다.",
+            timestamp=datetime.now().isoformat(),
+            provider=provider,
+            model=model
+        )
+
+    try:
+        response_text = _process()
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI 응답 생성 실패: {str(e)}")
 
-    # 위임 여부 확인
-    called_another = did_call_agent()
-
-    # 컨텍스트 정리
-    clear_current_task_id()
-    clear_called_agent()
-
-    if called_another:
-        # 위임이 발생함 → 결과는 나중에 WebSocket으로 전송
-        return ChatResponse(
-            response=f"[위임 중] 프로젝트 에이전트에게 작업을 위임했습니다. 결과는 잠시 후 도착합니다.\n\n{response_text}",
-            timestamp=datetime.now().isoformat(),
-            provider=provider,
-            model=model
-        )
-    else:
-        # 위임 없음 → 즉시 응답, 태스크 완료
-        from system_ai_memory import complete_task as complete_system_ai_task
-        complete_system_ai_task(task_id, response_text[:500])
-
-        # AI 응답 저장 (도구 이미지 포함)
-        save_conversation("assistant", response_text, images=tool_images)
-
-        return ChatResponse(
-            response=response_text,
-            timestamp=datetime.now().isoformat(),
-            provider=provider,
-            model=model
-        )
+    return ChatResponse(
+        response=response_text,
+        timestamp=datetime.now().isoformat(),
+        provider=provider,
+        model=model
+    )
 
 
 @router.get("/system-ai/welcome")

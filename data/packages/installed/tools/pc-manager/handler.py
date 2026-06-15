@@ -39,6 +39,10 @@ def execute(tool_input: dict, context) -> str:
         elif tool_name == "folder_note_op":
             return _folder_note_op(tool_input)
 
+        # 호스트(자기 기계) 자기수용감각 ([sense:host]{op: status|apps|resources})
+        elif tool_name == "host_op":
+            return _host_op(tool_input)
+
         return f"알 수 없는 도구: {tool_name}"
 
     except Exception as e:
@@ -158,6 +162,17 @@ def _query_storage(tool_input: dict) -> str:
             limit=tool_input.get("limit", 100)
         )
 
+    # table 통화(비파괴) — 파일 검색 결과를 표로. fs_query >> [engines:spreadsheet/document].
+    if isinstance(result, dict):
+        files = result.get("files") if isinstance(result.get("files"), list) else (
+            result.get("results") if isinstance(result.get("results"), list) else None)
+        if files and all(isinstance(f, dict) for f in files):
+            rows = [[f.get("name") or f.get("filename") or "",
+                     f.get("size_mb") or f.get("size") or "",
+                     f.get("path") or f.get("full_path") or "",
+                     f.get("modified") or f.get("mtime") or ""] for f in files]
+            result["table"] = {"columns": ["이름", "크기(MB)", "경로", "수정일"], "rows": rows}
+
     return json.dumps(result, ensure_ascii=False)
 
 
@@ -205,8 +220,157 @@ def _get_folder_annotations(tool_input: dict) -> str:
 _OP_DISPATCHERS = {
     "storage_op": {"scan": None, "summary": None, "volumes": None},
     "folder_note_op": {"set": None, "get": None},
+    "host_op": {"status": None, "apps": None, "resources": None},
 }
-_OP_DEFAULTS = {"storage_op": "volumes", "folder_note_op": "get"}
+_OP_DEFAULTS = {"storage_op": "volumes", "folder_note_op": "get", "host_op": "status"}
+
+
+# ── [sense:host] 호스트 자기수용감각 (이 기계 자신의 운영 상태) ───────────
+def _host_frontmost_app() -> str:
+    """현재 전면(frontmost) 앱 이름 — 권한 프롬프트 없는 best-effort (lsappinfo)."""
+    try:
+        import subprocess
+        out = subprocess.run(["lsappinfo", "front"], capture_output=True, text=True, timeout=3)
+        asn = (out.stdout or "").strip()
+        if asn:
+            info = subprocess.run(["lsappinfo", "info", "-only", "name", asn],
+                                  capture_output=True, text=True, timeout=3)
+            # 형식: "LSDisplayName"="Safari"
+            line = (info.stdout or "").strip()
+            if '"' in line:
+                return line.rsplit('=', 1)[-1].strip().strip('"')
+    except Exception:
+        pass
+    return ""
+
+
+def _host_body_name() -> str:
+    """이 몸(하드웨어) 이름 — runtime_utils.detect_body() best-effort."""
+    try:
+        import runtime_utils
+        b = runtime_utils.detect_body()
+        if isinstance(b, dict):
+            return b.get("name") or b.get("model") or ""
+        return str(b or "")
+    except Exception:
+        return ""
+
+
+def _host_status(tool_input: dict) -> str:
+    """[sense:host]{op:status} — 이 기계의 운영 상태 한 눈에 (자기수용감각 1샷)."""
+    import psutil, time
+    try:
+        vm = psutil.virtual_memory()
+        du = psutil.disk_usage("/")
+        try:
+            la = list(psutil.getloadavg())
+        except Exception:
+            la = None
+        bat = None
+        try:
+            b = psutil.sensors_battery()
+            if b is not None:
+                bat = {"percent": round(b.percent), "plugged": bool(b.power_plugged)}
+        except Exception:
+            bat = None
+        uptime_h = round((time.time() - psutil.boot_time()) / 3600.0, 1)
+        result = {
+            "success": True,
+            "body": _host_body_name() or "Mac",
+            "frontmost_app": _host_frontmost_app() or None,
+            "cpu_percent": psutil.cpu_percent(interval=0.3),
+            "memory": {"used_gb": round(vm.used / 1e9, 1), "total_gb": round(vm.total / 1e9, 1),
+                       "percent": vm.percent},
+            "disk_root": {"free_gb": round(du.free / 1e9, 1), "total_gb": round(du.total / 1e9, 1),
+                          "percent": du.percent},
+            "battery": bat,
+            "uptime_hours": uptime_h,
+            "load_avg": [round(x, 2) for x in la] if la else None,
+            "process_count": len(psutil.pids()),
+        }
+        return json.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({"success": False, "error": f"host status 실패: {e}"}, ensure_ascii=False)
+
+
+def _host_apps(tool_input: dict) -> str:
+    """[sense:host]{op:apps} — 자원을 많이 쓰는 프로세스 상위 N (몸을 점유하는 것)."""
+    import psutil
+    limit = int(tool_input.get("limit") or 12)
+    try:
+        procs = []
+        for p in psutil.process_iter(["pid", "name", "memory_percent", "cpu_percent"]):
+            try:
+                procs.append(p.info)
+            except Exception:
+                continue
+        procs.sort(key=lambda x: (x.get("memory_percent") or 0), reverse=True)
+        top = [{
+            "pid": x.get("pid"),
+            "name": x.get("name"),
+            "mem_percent": round(x.get("memory_percent") or 0, 1),
+            "cpu_percent": round(x.get("cpu_percent") or 0, 1),
+        } for x in procs[:limit]]
+        return json.dumps({"success": True, "count": len(procs), "top": top}, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({"success": False, "error": f"host apps 실패: {e}"}, ensure_ascii=False)
+
+
+def _host_resources(tool_input: dict) -> str:
+    """[sense:host]{op:resources} — 상세 지표 (per-CPU·메모리·스왑·디스크 파티션·네트워크·배터리)."""
+    import psutil, time
+    try:
+        parts = []
+        for part in psutil.disk_partitions(all=False):
+            try:
+                u = psutil.disk_usage(part.mountpoint)
+                parts.append({"mount": part.mountpoint, "fs": part.fstype,
+                              "free_gb": round(u.free / 1e9, 1), "total_gb": round(u.total / 1e9, 1),
+                              "percent": u.percent})
+            except Exception:
+                continue
+        sw = psutil.swap_memory()
+        vm = psutil.virtual_memory()
+        net = psutil.net_io_counters()
+        bat = None
+        try:
+            b = psutil.sensors_battery()
+            if b is not None:
+                bat = {"percent": round(b.percent), "plugged": bool(b.power_plugged),
+                       "secs_left": (b.secsleft if b.secsleft and b.secsleft > 0 else None)}
+        except Exception:
+            bat = None
+        result = {
+            "success": True,
+            "cpu": {"percent_overall": psutil.cpu_percent(interval=0.3),
+                    "per_core": psutil.cpu_percent(interval=0.0, percpu=True),
+                    "logical_cores": psutil.cpu_count()},
+            "memory": {"used_gb": round(vm.used / 1e9, 1), "total_gb": round(vm.total / 1e9, 1),
+                       "percent": vm.percent},
+            "swap": {"used_gb": round(sw.used / 1e9, 1), "total_gb": round(sw.total / 1e9, 1),
+                     "percent": sw.percent},
+            "disks": parts,
+            "network": {"sent_gb": round(net.bytes_sent / 1e9, 2), "recv_gb": round(net.bytes_recv / 1e9, 2)},
+            "battery": bat,
+            "uptime_hours": round((time.time() - psutil.boot_time()) / 3600.0, 1),
+        }
+        return json.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        return json.dumps({"success": False, "error": f"host resources 실패: {e}"}, ensure_ascii=False)
+
+
+def _host_op(tool_input: dict) -> str:
+    """[sense:host]{op} — status(기본)/apps/resources 단일 디스패처."""
+    op = (tool_input.get("op") or _OP_DEFAULTS["host_op"]).strip()
+    if op == "status":
+        return _host_status(tool_input)
+    elif op == "apps":
+        return _host_apps(tool_input)
+    elif op == "resources":
+        return _host_resources(tool_input)
+    return json.dumps({"success": False,
+                       "error": f"알 수 없는 op '{op}'. 사용 가능: ['status', 'apps', 'resources']"},
+                      ensure_ascii=False)
 
 
 def _storage_op(tool_input: dict) -> str:

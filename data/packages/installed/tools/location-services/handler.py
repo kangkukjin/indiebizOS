@@ -237,6 +237,14 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
             center={"lat": markers[0]["lat"], "lng": markers[0]["lng"], "name": query},
             markers=markers)
 
+    # 레코드 통화(비파괴) — 맛집 목록 >> [engines:document/spreadsheet]
+    results["records"] = [{
+        "title": r.get("name", ""),
+        "meta": " · ".join(x for x in [r.get("category"), r.get("address"),
+                                       (f"{r.get('distance')}m" if r.get("distance") else None)] if x),
+        "summary": r.get("phone", ""),
+        "url": r.get("url", ""),
+    } for r in results["combined"]]
     return results
 
 
@@ -766,6 +774,42 @@ def amadeus_travel_search(tool_input: dict) -> dict:
 
     if isinstance(result, dict) and notes and "error" not in result:
         result["notes"] = notes
+
+    # 레코드 통화(비파괴) — 여행 목록 >> [engines:document/spreadsheet]
+    # flight-offers는 가격/일정 깊은 중첩(정형 name 없음)이라 건너뜀(rule 6).
+    if isinstance(result, dict) and "error" not in result:
+        items = result.get("results")
+        if op == "hotel" and isinstance(items, list):
+            recs = []
+            for h in items:
+                if not isinstance(h, dict):
+                    continue
+                addr = h.get("address", {})
+                addr_str = ", ".join(addr.get("lines", [])) if isinstance(addr, dict) else ""
+                dist = h.get("distance", {})
+                dist_str = (f"{dist.get('value')}{dist.get('unit', '')}"
+                            if isinstance(dist, dict) and dist.get("value") is not None else "")
+                recs.append({
+                    "title": h.get("name", ""),
+                    "meta": " · ".join(x for x in [h.get("iataCode"), addr_str, dist_str] if x),
+                    "summary": h.get("hotelId", ""),
+                    "url": "",
+                })
+            result["records"] = recs
+        elif op == "poi" and isinstance(items, list):
+            recs = []
+            for p in items:
+                if not isinstance(p, dict):
+                    continue
+                tags = p.get("tags", [])
+                recs.append({
+                    "title": p.get("name", ""),
+                    "meta": " · ".join(x for x in [p.get("category"),
+                                                   (", ".join(tags[:3]) if tags else None)] if x),
+                    "summary": "",
+                    "url": "",
+                })
+            result["records"] = recs
     return result
 
 
@@ -991,6 +1035,22 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
                 "condition": _WMO_CODES.get(daily["weather_code"][i], "알 수 없음"),
                 "precipitation_mm": daily["precipitation_sum"][i],
             })
+
+        # 표준 테이블 통화 — 일별 예보를 시계열 table로 (>> chart/spreadsheet/document)
+        # 첫 열=날짜(x축), 나머지=수치 시리즈. 기존 키는 그대로 보존(ADD only).
+        if result["forecast"]:
+            table_rows = []
+            for f in result["forecast"]:
+                table_rows.append([
+                    f["date"],
+                    f["max_temp"],
+                    f["min_temp"],
+                    f["precipitation_mm"],
+                ])
+            result["table"] = {
+                "columns": ["날짜", "최고기온(℃)", "최저기온(℃)", "강수량(mm)"],
+                "rows": table_rows,
+            }
 
         return result
 

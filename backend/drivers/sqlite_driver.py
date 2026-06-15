@@ -581,7 +581,16 @@ class SqliteDriver(Driver):
 
         rows = conn.execute(sql, args).fetchall()
         items = [dict(r) for r in rows]
-        return self._ok(items, f"최근 대화 {len(items)}건")
+        result = self._ok(items, f"최근 대화 {len(items)}건")
+        # 레코드 통화(비파괴) — 대화 로그 >> [engines:document/spreadsheet]
+        if isinstance(result, dict):
+            result["records"] = [{
+                "title": f"{r.get('from_agent') or '?'} → {r.get('to_agent') or '?'}",
+                "meta": r.get("message_time") or "",
+                "summary": r.get("content_preview") or "",
+                "url": "",
+            } for r in items]
+        return result
 
     def _memory_agents(self, conn) -> dict:
         rows = conn.execute("SELECT id, name, type FROM agents ORDER BY name").fetchall()

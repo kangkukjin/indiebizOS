@@ -343,7 +343,13 @@ def get_health_context(input_data: dict) -> str:
                 cat_str = category_to_korean(category) if category else "측정"
                 person_str = f"{person}의 " if person and person != "나" else ""
                 return f"{person_str}최근 {days}일간 {cat_str} 기록이 없습니다."
-            return format_measurements(measurements, category, person)
+            text = format_measurements(measurements, category, person)
+            # 표준 테이블 통화 — 시계열 측정값을 table로 (>> chart/spreadsheet/document)
+            # 사람용 텍스트는 text 키로 보존하고 table만 ADD (world_bank 선례).
+            table = _measurements_to_table(measurements)
+            if table:
+                return json.dumps({"text": text, "table": table}, ensure_ascii=False)
+            return text
 
         elif query_type == 'symptoms':
             # 증상 조회
@@ -553,6 +559,92 @@ def format_health_summary(summary: dict, include_images: bool = False) -> str:
         return f"{person_str}기록된 건강 정보가 없습니다."
 
     return "\n".join(lines)
+
+
+def _to_number(v):
+    """가능하면 float/int로 변환, 아니면 원값 유지."""
+    if isinstance(v, (int, float)):
+        return v
+    if isinstance(v, str):
+        s = v.strip()
+        try:
+            f = float(s)
+            return int(f) if f.is_integer() else f
+        except (ValueError, TypeError):
+            return v
+    return v
+
+
+def _measurements_to_table(measurements: list):
+    """측정값 목록 → 표준 table 통화.
+
+    첫 열=날짜(x축), 나머지=수치 시리즈.
+    혈압은 수축기/이완기 2 시리즈, 그 외는 단일 값.
+    여러 카테고리가 섞이면 카테고리별 열로 피벗(날짜 = 행).
+    """
+    # 카테고리별 시리즈 키 정의: (열라벨, value dict에서 뽑는 함수)
+    def _series_for(cat):
+        if cat == 'blood_pressure':
+            return [
+                ("수축기(mmHg)", lambda val: _to_number(val.get('systolic'))),
+                ("이완기(mmHg)", lambda val: _to_number(val.get('diastolic'))),
+            ]
+        unit_map = {
+            'blood_sugar': 'mg/dL', 'weight': 'kg',
+            'heart_rate': 'bpm', 'temperature': '℃',
+            'oxygen_saturation': '%',
+        }
+        unit = unit_map.get(cat, '')
+        label = category_to_korean(cat)
+        if unit:
+            label = f"{label}({unit})"
+        return [(label, lambda val: _to_number(val.get('value', val.get('weight'))))]
+
+    # 등장 카테고리 수집 (등장 순서 보존)
+    cats = []
+    for m in measurements:
+        c = m.get('category')
+        if c and c not in cats:
+            cats.append(c)
+    if not cats:
+        return None
+
+    # 각 카테고리의 시리즈 목록
+    cat_series = {c: _series_for(c) for c in cats}
+    # 열 헤더: 날짜 + 모든 시리즈
+    columns = ["날짜"]
+    series_order = []  # (cat, label, getter)
+    for c in cats:
+        for label, getter in cat_series[c]:
+            columns.append(label)
+            series_order.append((c, label, getter))
+
+    # 날짜별 행으로 피벗 (날짜 = measured_at[:10])
+    by_date = {}
+    for m in measurements:
+        date = (m.get('measured_at') or '')[:10]
+        if not date:
+            continue
+        val = m.get('value') or {}
+        row = by_date.setdefault(date, {})
+        for c, label, getter in series_order:
+            if m.get('category') == c:
+                try:
+                    row[label] = getter(val)
+                except Exception:
+                    pass
+
+    if not by_date:
+        return None
+
+    rows = []
+    for date in sorted(by_date.keys()):  # 시간 오름차순
+        r = [date]
+        for c, label, getter in series_order:
+            r.append(by_date[date].get(label))
+        rows.append(r)
+
+    return {"columns": columns, "rows": rows}
 
 
 def format_measurements(measurements: list, category: str = None, person: str = None) -> str:

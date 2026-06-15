@@ -7,6 +7,7 @@ import os
 import json
 import re
 import sys
+import difflib
 import webbrowser
 import importlib.util
 from datetime import datetime
@@ -43,6 +44,19 @@ def load_module(module_name):
 
 # ============== 뉴스 검색 관련 함수 ==============
 # clean_html은 common.html_utils에서 임포트
+
+
+def _text_to_blocks(title, text):
+    """비정형 텍스트 → 문서 IR blocks(heading + 문단들). 0-LLM. crawl·pdf 등 공용 패턴.
+    빈 줄(\\n\\n)로 문단 분리, 너무 긴 문단은 그대로 둠(렌더가 처리)."""
+    blocks = []
+    if title:
+        blocks.append({"type": "heading", "level": 1, "text": str(title)})
+    for para in str(text or "").split("\n\n"):
+        para = para.strip()
+        if para:
+            blocks.append({"type": "paragraph", "text": para})
+    return blocks or [{"type": "paragraph", "text": str(text or "")}]
 
 
 def search_google_news(query: str, count: int = 10, language: str = "ko", region: str = None) -> dict:
@@ -105,240 +119,104 @@ def search_google_news(query: str, count: int = 10, language: str = "ko", region
         }
 
 
+def _norm_title(t: str) -> str:
+    """제목 정규화 — 끝의 ' - 출처' 떼고 소문자·기호 제거(중복 판정용)."""
+    t = re.split(r'\s+[-–|]\s+[^-–|]+$', t or "")[0]  # 끝의 " - 출처명" 제거
+    return re.sub(r'[^\w가-힣]', '', t.lower())
+
+
+def _clean_summary(title: str, summary: str) -> str:
+    """요약이 제목의 반복(구글뉴스 흔한 'title - source' 잡음)이면 버림 — 정보성 없는 카드 방지."""
+    if not summary:
+        return ""
+    ns, nt = _norm_title(summary), _norm_title(title)
+    if not nt:
+        return summary.strip()
+    # 요약이 제목을 거의 그대로 담고 있으면(앞부분 포함/높은 유사) 중복으로 간주
+    if nt in ns or ns in nt or difflib.SequenceMatcher(None, ns, nt).ratio() > 0.75:
+        return ""
+    return summary.strip()
+
+
+def _pub_ts(item: dict) -> float:
+    try:
+        from email.utils import parsedate_to_datetime
+        return parsedate_to_datetime(item.get('published', '')).timestamp()
+    except Exception:
+        return 0.0
+
+
+def _dedup_rank(items: list, limit: int) -> list:
+    """근접 중복 기사 묶고 중요도순 정렬 — 0토큰 결정적 품질 향상.
+    중요도 신호 = coverage(같은 사건을 보도한 매체 수) → 많을수록 위. 대표는 그룹 내 최신 기사.
+    반환 각 항목에 coverage(int) 부착."""
+    groups = []  # {norm, members:[...]}
+    for it in items:
+        nt = _norm_title(it.get('title', ''))
+        if not nt:
+            continue
+        placed = False
+        for g in groups:
+            gn = g['norm']
+            if nt == gn or nt in gn or gn in nt or difflib.SequenceMatcher(None, nt, gn).ratio() > 0.82:
+                g['members'].append(it)
+                placed = True
+                break
+        if not placed:
+            groups.append({'norm': nt, 'members': [it]})
+
+    ranked = []
+    for g in groups:
+        rep = max(g['members'], key=_pub_ts)  # 그룹 대표 = 최신
+        rep = dict(rep)
+        rep['coverage'] = len(g['members'])
+        ranked.append((rep, len(g['members']), _pub_ts(rep)))
+    # 중요도(coverage) 우선, 동률이면 최신
+    ranked.sort(key=lambda x: (x[1], x[2]), reverse=True)
+    return [r[0] for r in ranked[:limit]]
+
+
 def generate_section(keyword: str, news_count: int = 7, exclude_sources: list = None,
                      language: str = "ko", region: str = None) -> dict:
-    """키워드로 뉴스 검색하여 섹션 생성"""
+    """키워드로 뉴스 검색 → 중복 제거 + 중요도순 정렬 + 요약 정리(전부 결정적, 0토큰)."""
     if exclude_sources is None:
         exclude_sources = []
 
-    fetch_count = news_count * 3 if exclude_sources else news_count
+    # 중복 제거 후 news_count개 확보를 위해 넉넉히 수집(over-fetch).
+    fetch_count = min(30, max(news_count * 4, 12))
     result = search_google_news(query=keyword, count=fetch_count, language=language, region=region)
 
     if not result['success'] or not result['results']:
-        return {
-            'keyword': keyword,
-            'markdown': f"## {keyword}\n\n뉴스를 찾을 수 없습니다.\n\n---\n\n",
-            'news_count': 0,
-            'success': False
-        }
+        return {'keyword': keyword, 'items': [], 'news_count': 0, 'success': False}
 
-    filtered_results = []
     excluded_count = 0
-
+    filtered = []
     for item in result['results']:
-        source = item.get('source', '')
-        is_excluded = any(ex in source for ex in exclude_sources)
-
-        if is_excluded:
+        if any(ex in item.get('source', '') for ex in exclude_sources):
             excluded_count += 1
         else:
-            filtered_results.append(item)
-            if len(filtered_results) >= news_count:
-                break
+            filtered.append(item)
 
-    if not filtered_results:
-        return {
-            'keyword': keyword,
-            'markdown': f"## {keyword}\n\n필터링 후 뉴스를 찾을 수 없습니다.\n\n---\n\n",
-            'news_count': 0,
-            'success': False
-        }
+    if not filtered:
+        return {'keyword': keyword, 'items': [], 'news_count': 0, 'success': False}
 
-    section = f"## {keyword}\n\n"
-    section += "[GRID_START]\n\n"
-
-    for i, item in enumerate(filtered_results, 1):
-        section += "[CARD_START]\n\n"
-        section += f"### {i}. {item['title']}\n\n"
-        if language == "ko":
-            section += f"**출처**: {item['source']} | **발행**: {item['published']}\n\n"
-        else:
-            section += f"**Source**: {item['source']} | **Published**: {item['published']}\n\n"
-
-        if item.get('summary') and item['summary'] != item['title']:
-            section += f"{item['summary']}\n\n"
-
-        link_text = "기사 보기" if language == "ko" else "Read Article"
-        section += f"[{link_text}]({item['url']})\n\n"
-        section += "[CARD_END]\n\n"
-
-    section += "[GRID_END]\n\n"
+    items = _dedup_rank(filtered, news_count)  # 중복 묶기 + 중요도순 + 상위 news_count
+    for it in items:
+        it['summary'] = _clean_summary(it.get('title', ''), it.get('summary', ''))  # 요약 잡음 정리
+        # 제목 끝의 ' - 출처' 꼬리 제거(meta에 출처 별도 표시 — 출처와 일치할 때만 안전)
+        title, src = it.get('title', ''), it.get('source', '')
+        m = re.search(r'\s+[-–|]\s+([^-–|]+)$', title)
+        if m and src and (m.group(1).strip() in src or src in m.group(1).strip()):
+            it['title'] = title[:m.start()].strip()
 
     return {
         'keyword': keyword,
-        'markdown': section,
-        'news_count': len(filtered_results),
+        'items': items,  # [{title, url, published, source, summary, coverage}] — 문서 IR 생산용
+        'news_count': len(items),
+        'raw_count': len(filtered),
         'excluded_count': excluded_count,
         'success': True
     }
-
-
-def markdown_to_html(markdown_content: str, title: str, date_str: str, language: str = "ko") -> str:
-    """Markdown을 HTML로 변환"""
-    html_body = markdown_content
-
-    html_body = html_body.replace("[GRID_START]", '<div class="grid">')
-    html_body = html_body.replace("[GRID_END]", '</div>')
-    html_body = html_body.replace("[CARD_START]", '<div class="card">')
-    html_body = html_body.replace("[CARD_END]", '</div>')
-
-    html_body = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html_body, flags=re.MULTILINE)
-    html_body = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html_body)
-    html_body = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2" target="_blank">\1</a>', html_body)
-    html_body = re.sub(r'^---$', r'<hr>', html_body, flags=re.MULTILINE)
-
-    lines = html_body.split('\n')
-    processed_lines = []
-    grid_depth = 0
-
-    for line in lines:
-        if '<div class="grid">' in line or '<div class="card">' in line:
-            grid_depth += 1
-
-        if not line.strip():
-            if grid_depth == 0:
-                processed_lines.append('<div class="spacer"></div>')
-        elif line.startswith('<div') or line.startswith('</div') or line.startswith('<h') or line.startswith('<hr'):
-            processed_lines.append(line)
-        else:
-            processed_lines.append(f'<p>{line}</p>')
-
-        if '</div>' in line and grid_depth > 0:
-            grid_depth -= 1
-
-    html_body = '\n'.join(processed_lines)
-
-    html_lang = "ko" if language == "ko" else "en"
-    font_family = "'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif" if language == "ko" else "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-    meta_labels = {
-        "ko": {"date": "발행일", "publisher": "발행처", "source": "출처", "generated": "생성 시각", "ai_note": "AI 사용: 없음 (토큰 소비 0)"},
-        "en": {"date": "Date", "publisher": "Publisher", "source": "Source", "generated": "Generated", "ai_note": "AI usage: None (0 tokens)"},
-    }
-    labels = meta_labels.get(language, meta_labels["en"])
-
-    return f"""<!DOCTYPE html>
-<html lang="{html_lang}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title}</title>
-    <style>
-        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{
-            font-family: {font_family};
-            line-height: 1.6;
-            color: #333;
-            background: #f0f2f5;
-            padding: 30px 10px;
-        }}
-        .container {{
-            max-width: 1100px;
-            margin: 0 auto;
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        }}
-        h1 {{
-            color: #1a1a2e;
-            font-size: 2.5em;
-            margin-bottom: 15px;
-            border-bottom: 4px solid #1a1a2e;
-            padding-bottom: 15px;
-            text-align: center;
-        }}
-        h2 {{
-            color: #1a1a2e;
-            font-size: 1.8em;
-            margin: 40px 0 20px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #eee;
-        }}
-        .grid {{
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 25px;
-            margin-bottom: 30px;
-        }}
-        @media (max-width: 800px) {{
-            .grid {{ grid-template-columns: 1fr; }}
-            .container {{ padding: 20px; }}
-        }}
-        .card {{
-            background: #fff;
-            border: 1px solid #e1e4e8;
-            padding: 20px;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }}
-        .card:hover {{
-            transform: translateY(-3px);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
-            border-color: #3d5a80;
-        }}
-        h3 {{
-            color: #22223b;
-            font-size: 1.15em;
-            margin-bottom: 12px;
-            line-height: 1.4;
-        }}
-        p {{ margin: 8px 0; font-size: 0.95em; color: #444; }}
-        .spacer {{ height: 10px; }}
-        strong {{ color: #555; font-size: 0.9em; }}
-        a {{
-            display: inline-block;
-            margin-top: auto;
-            color: #3d5a80;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 0.9em;
-            padding: 5px 0;
-        }}
-        a:hover {{ text-decoration: underline; }}
-        hr {{
-            border: none;
-            border-top: 1px solid #eee;
-            margin: 30px 0;
-        }}
-        .meta {{
-            text-align: center;
-            color: #666;
-            font-size: 0.95em;
-            margin-bottom: 30px;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-        }}
-        .footer {{
-            margin-top: 50px;
-            padding-top: 25px;
-            border-top: 1px solid #eee;
-            color: #999;
-            font-size: 0.85em;
-            text-align: center;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>{title}</h1>
-        <div class="meta">
-            <strong>{labels['date']}:</strong> {date_str} |
-            <strong>{labels['publisher']}:</strong> IndieBiz AI |
-            <strong>{labels['source']}:</strong> Google News RSS
-        </div>
-        {html_body}
-        <div class="footer">
-            <p>{labels['generated']}: {datetime.now().strftime('%Y-%m-%d %H:%M') if language != 'ko' else datetime.now().strftime('%Y년 %m월 %d일 %H시 %M분')}</p>
-            <p>{labels['ai_note']}</p>
-        </div>
-    </div>
-</body>
-</html>"""
 
 
 def _search_guardian_for_newspaper(query: str, count: int = 7, language: str = "en") -> dict:
@@ -348,7 +226,7 @@ def _search_guardian_for_newspaper(query: str, count: int = 7, language: str = "
 
     api_key = os.getenv("GUARDIAN_API_KEY")
     if not api_key:
-        return {'keyword': query, 'markdown': f"## {query}\n\nGUARDIAN_API_KEY 환경 변수가 설정되지 않았습니다.\n\n", 'news_count': 0, 'success': False}
+        return {'keyword': query, 'items': [], 'news_count': 0, 'success': False}
 
     try:
         response = requests.get("https://content.guardianapis.com/search", params={
@@ -359,10 +237,10 @@ def _search_guardian_for_newspaper(query: str, count: int = 7, language: str = "
         results_list = response.json().get("response", {}).get("results", [])
 
         if not results_list:
-            return {'keyword': query, 'markdown': f"## {query}\n\n뉴스를 찾을 수 없습니다.\n\n", 'news_count': 0, 'success': False}
+            return {'keyword': query, 'items': [], 'news_count': 0, 'success': False}
 
-        section = f"## {query}\n\n[GRID_START]\n\n"
-        for i, article in enumerate(results_list, 1):
+        items = []
+        for article in results_list:
             fields = article.get("fields", {})
             headline = fields.get("headline", article.get("webTitle", "No title"))
             trail_text = re.sub('<[^<]+?>', '', fields.get("trailText", ""))
@@ -371,23 +249,14 @@ def _search_guardian_for_newspaper(query: str, count: int = 7, language: str = "
             date = article.get("webPublicationDate", "")[:10]
             section_name = article.get("sectionName", "")
 
-            link_text = "기사 보기" if language == "ko" else "Read Article"
-            source_label = "출처" if language == "ko" else "Source"
-            pub_label = "발행" if language == "ko" else "Published"
+            items.append({'title': headline, 'url': url, 'published': date,
+                          'source': f"The Guardian ({section_name})", 'summary': trail_text})
 
-            section += "[CARD_START]\n\n"
-            section += f"### {i}. {headline}\n\n"
-            section += f"**{source_label}**: The Guardian ({section_name}) | **{pub_label}**: {date}\n\n"
-            if trail_text:
-                section += f"{trail_text}\n\n"
-            section += f"[{link_text}]({url})\n\n"
-            section += "[CARD_END]\n\n"
-
-        section += "[GRID_END]\n\n"
-        return {'keyword': query, 'markdown': section, 'news_count': len(results_list), 'success': True}
+        return {'keyword': query, 'items': items,
+                'news_count': len(results_list), 'success': True}
 
     except Exception as e:
-        return {'keyword': query, 'markdown': f"## {query}\n\nGuardian API 오류: {e}\n\n", 'news_count': 0, 'success': False}
+        return {'keyword': query, 'items': [], 'news_count': 0, 'success': False}
 
 
 def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
@@ -416,7 +285,6 @@ def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
 
     today = datetime.now()
     date_str = today.strftime('%B %d, %Y') if language != "ko" else today.strftime('%Y년 %m월 %d일')
-    date_filename = today.strftime('%Y%m%d_%H%M%S')
 
     sections = []
     for keyword in keywords:
@@ -427,47 +295,56 @@ def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
                                        language=language, region=region)
         sections.append(section)
 
-    toc_items = []
+    total_news = sum(s.get('news_count', 0) for s in sections)
+    src_label = "The Guardian" if source == "guardian" else "Google News RSS"
+
+    # 키워드별 섹션을 공유 문서 IR(heading + cards 블록)로 — 결정적 매핑(LLM 미개입, 기사·링크 무손실).
+    blocks = []
+    # 목차(섹션 점프 — 키워드 多일 때 내비게이션). list 항목 링크 + heading 앵커.
+    toc_label = "목차" if language == "ko" else "Contents"
+    toc_items = [{"text": f"{s['keyword']} ({s.get('news_count', 0)}{'개' if language == 'ko' else ''})",
+                  "url": f"#{s['keyword']}"}
+                 for s in sections if s.get('success') and s.get('news_count', 0) > 0]
+    if len(toc_items) > 1:
+        blocks.append({"type": "heading", "level": 3, "text": toc_label})
+        blocks.append({"type": "list", "items": toc_items})
+        blocks.append({"type": "divider"})
     for section in sections:
-        if section['success'] and section['news_count'] > 0:
-            toc_items.append(f"- [{section['keyword']}](#{section['keyword']}) ({section['news_count']}개)")
+        blocks.append({"type": "heading", "level": 2, "text": section['keyword'],
+                       "anchor": section['keyword']})
+        items = section.get('items') or []
+        if section.get('success') and items:
+            cards = []
+            for it in items:
+                meta_bits = [b for b in [it.get('source'), it.get('published')] if b]
+                cov = it.get('coverage') or 1
+                if cov > 1:  # 중요도 신호 — 여러 매체가 보도한 사건
+                    meta_bits.append(f"{cov}개 매체 보도" if language == "ko" else f"{cov} sources")
+                cards.append({
+                    "title": it.get('title', ''),
+                    "meta": " | ".join(meta_bits),
+                    "summary": it.get('summary') or '',  # 이미 generate_section에서 잡음 정리됨
+                    "url": it.get('url', ''),
+                    "link_label": "기사 보기" if language == "ko" else "Read Article",
+                })
+            blocks.append({"type": "cards", "columns": 2, "items": cards})
+        else:
+            blocks.append({"type": "paragraph",
+                           "text": "뉴스를 찾을 수 없습니다." if language == "ko" else "No news found."})
 
-    toc = "\n".join(toc_items)
-    content = "\n\n".join([s['markdown'] for s in sections])
-    total_news = sum(s['news_count'] for s in sections)
+    meta_line = (f"발행일: {date_str} | 발행처: IndieBiz AI | 출처: {src_label} | 총 {total_news}개"
+                 if language == "ko"
+                 else f"Date: {date_str} | Publisher: IndieBiz AI | Source: {src_label} | {total_news} articles")
 
-    newspaper_md = f"""# {title}
-
-**발행일**: {date_str}
-**발행처**: IndieBiz AI
-**총 뉴스**: {total_news}개
-
----
-
-## 목차
-
-{toc}
-
----
-
-{content}
-"""
-
-    out_dir = os.path.join(project_path, OUTPUTS_DIR)
-    os.makedirs(out_dir, exist_ok=True)
-
-    html_content = markdown_to_html(newspaper_md, title, date_str, language=language)
-    filename = f"newspaper_{date_filename}.html"
-    filepath = os.path.join(out_dir, filename)
-
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-
+    # 문서 IR 반환 — `>> [engines:document]{theme:newspaper}`로 html/pdf/docx 등 렌더.
     return {
         'success': True,
-        'message': f'신문 생성 완료: {filepath}',
-        'file': filepath,
+        'message': f'신문 IR 생성 완료 ({len(sections)}섹션 · {total_news}개 기사). >> document로 렌더.',
         'title': title,
+        'meta': meta_line,
+        'theme': 'newspaper',
+        'blocks': blocks,
+        'block_count': len(blocks),
         'sections': len(sections),
         'total_news': total_news
     }
@@ -619,6 +496,9 @@ def execute(tool_input: dict, context):
         try:
             tool_webcrawl = load_module("tool_webcrawl")
             result = tool_webcrawl.crawl_website(url, max_length)
+            # 문서 IR blocks(비파괴) — 크롤한 페이지 텍스트를 문단 블록으로. crawl(url) >> document{pdf}.
+            if isinstance(result, dict) and result.get("success") and result.get("text"):
+                result["blocks"] = _text_to_blocks(result.get("title"), result.get("text"))
             return format_json(result)
         except Exception as e:
             return format_json({"success": False, "error": str(e)})
@@ -640,6 +520,13 @@ def execute(tool_input: dict, context):
             count=tool_input.get("count", 10),
             language=language
         )
+        if isinstance(result, dict) and isinstance(result.get("results"), list):
+            result["records"] = [{  # 레코드 통화 — >> [engines:document/spreadsheet]
+                "title": r.get("title", ""),
+                "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
+                "summary": "" if (r.get("summary") or "") == r.get("title") else (r.get("summary") or ""),
+                "url": r.get("url", ""), "link_label": "기사 보기",
+            } for r in result["results"]]
         return format_json(result)
 
     # 네이버 검색 (웹/뉴스/블로그/카페/지식인/책/백과/전문자료/쇼핑 통합)

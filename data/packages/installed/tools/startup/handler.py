@@ -10,6 +10,40 @@ def load_module(module_name):
     spec.loader.exec_module(module)
     return module
 
+
+def _biz_to_records(data: list) -> list:
+    """지원사업 공고 레코드 → 레코드 통화 records[{title,meta,summary,url,image}].
+    title=사업명 · meta=유형·기관·마감일·상태 등 존재하는 것만 join · url=상세URL."""
+    records = []
+    for it in (data or []):
+        if not isinstance(it, dict):
+            continue
+        title = it.get("사업명") or ""
+        meta_parts = [
+            it.get("사업유형"),
+            it.get("주관기관") or it.get("담당부서"),
+        ]
+        deadline = it.get("접수마감일")
+        if deadline:
+            meta_parts.append(f"마감 {deadline}")
+        status = it.get("공고상태")
+        if status:
+            meta_parts.append(status)
+        records.append({
+            "title": title,
+            "meta": " · ".join(x for x in meta_parts if x),
+            "summary": "",
+            "url": it.get("상세URL") or "",
+        })
+    return records
+
+
+def _attach_records(result):
+    """data 목록이 있으면 비파괴로 records 부착."""
+    if isinstance(result, dict) and isinstance(result.get("data"), list):
+        result["records"] = _biz_to_records(result["data"])
+    return result
+
 def execute(tool_input: dict, context):
     """IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
@@ -20,26 +54,32 @@ def execute(tool_input: dict, context):
         count = tool_input.get("count", 10)
         if source == "kstartup":
             tool = load_module("tool_kstartup")
-            return tool.search_kstartup(query, count)
+            return _attach_records(tool.search_kstartup(query, count))
         elif source == "mss":
             tool = load_module("tool_mss_biz")
-            return tool.search_mss_biz(query, count)
+            return _attach_records(tool.search_mss_biz(query, count))
         else:
             ks = load_module("tool_kstartup").search_kstartup(query, count)
             mss = load_module("tool_mss_biz").search_mss_biz(query, count)
-            return {"kstartup": ks, "mss": mss}
+            # source=all: 합쳐진 봉투엔 최상위 data가 없으므로 두 소스 records를 합쳐 최상위에 부착.
+            records = []
+            if isinstance(ks, dict) and isinstance(ks.get("data"), list):
+                records += _biz_to_records(ks["data"])
+            if isinstance(mss, dict) and isinstance(mss.get("data"), list):
+                records += _biz_to_records(mss["data"])
+            return {"kstartup": ks, "mss": mss, "records": records}
 
     if tool_name == "search_kstartup":
         tool = load_module("tool_kstartup")
         keyword = tool_input.get("keyword", "")
         count = tool_input.get("count", 10)
-        return tool.search_kstartup(keyword, count)
+        return _attach_records(tool.search_kstartup(keyword, count))
 
     elif tool_name == "search_mss_biz":
         tool = load_module("tool_mss_biz")
         keyword = tool_input.get("keyword", "")
         count = tool_input.get("count", 10)
-        return tool.search_mss_biz(keyword, count)
+        return _attach_records(tool.search_mss_biz(keyword, count))
 
     else:
         return {

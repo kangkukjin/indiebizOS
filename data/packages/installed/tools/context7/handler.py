@@ -81,7 +81,15 @@ def _resolve(library_name: str) -> str:
         return json.dumps({"error": f"'{library_name}'을 찾을 수 없습니다."}, ensure_ascii=False)
     results = [{"id": l.get("id", ""), "name": l.get("name", ""),
                 "description": l.get("description", "")[:100]} for l in libs[:5]]
-    return json.dumps({"query": library_name, "count": len(results), "libraries": results},
+    # 레코드 통화(비파괴) — 라이브러리 목록 >> [engines:document/spreadsheet]
+    records = [{
+        "title": r.get("name", ""),
+        "meta": r.get("id", ""),
+        "summary": r.get("description", "") if r.get("description", "") != r.get("name", "") else "",
+        "url": "",
+    } for r in results]
+    return json.dumps({"query": library_name, "count": len(results), "libraries": results,
+                       "records": records},
                       ensure_ascii=False, indent=2)
 
 
@@ -105,7 +113,14 @@ def _search(query: str, library_id: str, library_name: str) -> str:
     docs = _get_docs(library_id, query)
     if not docs or docs.startswith("문서 조회 실패"):
         return json.dumps({"library": lib_name, "library_id": library_id, "error": docs}, ensure_ascii=False)
-    return docs
+    # 문서 IR blocks(비파괴) — 문서 텍스트를 문단 블록으로. devdocs:search >> document. message=원문 보존.
+    blocks = [{"type": "heading", "level": 1, "text": f"{lib_name} — {query}"}]
+    for para in docs.split("\n\n"):
+        para = para.strip()
+        if para:
+            blocks.append({"type": "paragraph", "text": para})
+    return json.dumps({"success": True, "library": lib_name, "library_id": library_id,
+                       "message": docs, "blocks": blocks}, ensure_ascii=False)
 
 
 def execute(tool_input: dict, context) -> str:

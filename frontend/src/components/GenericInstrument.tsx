@@ -121,7 +121,16 @@ async function runIBL(code: string): Promise<Json> {
     body: JSON.stringify({ code, project_id: '앱모드', project_path: '.' }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  // 합성(>>) 액션은 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 — view의 from/{필드}가 풀리도록
+  if (data && typeof data === 'object' && 'final_result' in data) {
+    const fr = (data as Record<string, unknown>).final_result;
+    if (typeof fr === 'string') {
+      try { return JSON.parse(fr) as Json; } catch { return { message: fr } as Json; }
+    }
+    if (fr && typeof fr === 'object') return fr as Json;
+  }
+  return data;
 }
 
 // ===== 템플릿 엔진 (원격 webapp과 동일 의미) =====

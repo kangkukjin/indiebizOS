@@ -555,6 +555,60 @@
         },
         "additionalProperties": true
       }
+    },
+    {
+      "name": "render_document",
+      "description": "문서 IR(공유 문서 모델)을 산출물로 렌더 — [engines:document]. 포맷 중립 IR을 emitter가 렌더(현재 html).\nblocks(필수): 블록 배열. 타입 — heading{level,text}/paragraph{text}/list{ordered?,items[]}/image{src,caption?}/table{columns,rows}(데이터 통화 재사용)/quote{text,cite?}/code{text,lang?}/divider.\ntitle(선택), filename(선택), format(기본 html).\n## 예시\n- render_document(title=\"보고서\", blocks=[{\"type\":\"heading\",\"level\":2,\"text\":\"요약\"},{\"type\":\"paragraph\",\"text\":\"...\"},{\"type\":\"table\",\"columns\":[\"항목\",\"값\"],\"rows\":[[\"매출\",100]]}])",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "description": "문서 IR 블록 배열 (각 블록 {type, ...}). 필수.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "title": {
+            "type": "string",
+            "description": "문서 제목 (선택, 최상단 h1)"
+          },
+          "filename": {
+            "type": "string",
+            "description": "출력 파일명 (선택, 기본 document)"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "html",
+              "pdf",
+              "png"
+            ],
+            "default": "html",
+            "description": "출력 포맷: html(기본)/pdf/png. pdf·png는 동일 HTML을 Playwright로 렌더. docx/pptx는 후속."
+          }
+        },
+        "required": [
+          "blocks"
+        ]
+      }
+    },
+    {
+      "name": "structure_document",
+      "description": "원본 콘텐츠를 문서 IR(blocks)로 구조화 — [engines:structure]. LLM 편집자가 내용을 heading/paragraph/list/table/quote/code/divider 블록으로 정리. render_document로 이어 렌더(>> 파이프 지원: 이전 텍스트 결과를 content로 받음).\ncontent(필수): 원본 텍스트. instruction(선택): 정리 방향(예 \"3섹션 요약 보고서로\").\n## 예시\n- structure_document(content=\"...긴 글...\", instruction=\"핵심만 요약 보고서로\")",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "구조화할 원본 텍스트 (필수, >> 파이프 시 생략 가능)"
+          },
+          "instruction": {
+            "type": "string",
+            "description": "정리 방향 (선택, 예 \"3섹션으로\"·\"표 위주로\")"
+          }
+        }
+      }
     }
   ]
 }

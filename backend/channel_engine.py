@@ -348,16 +348,28 @@ def _community_feed(params: dict) -> dict:
         return {"success": False, "error": str(e)}
 
     posts = []
+    records = []
     for p in raw or []:
         author = p.get("author", "") or ""
         short = (author[:10] + "…") if author.startswith("npub") and len(author) > 12 else author
+        content = (p.get("content", "") or "").strip()
+        time_str = _fmt_unix(p.get("created_at"))
+        ev_id = p.get("id", "") or ""
         posts.append({
             "author": short,
-            "content": (p.get("content", "") or "").strip(),
-            "time": _fmt_unix(p.get("created_at")),
-            "id": p.get("id", ""),
+            "content": content,
+            "time": time_str,
+            "id": ev_id,
         })
-    return {"posts": posts, "count": len(posts), "message": "" if posts else "아직 글이 없습니다."}
+        # 레코드 통화: 목록형 산출 → 공유 records (>> document/spreadsheet 자동 흐름)
+        first_line = content.split("\n", 1)[0].strip() if content else ""
+        title = first_line or short or "(제목 없음)"
+        meta = " · ".join([x for x in (short, time_str, (("#" + hashtag) if hashtag else "")) if x])
+        summary = content if content and content != title else ""
+        url = ("https://njump.me/" + ev_id) if ev_id else ""
+        records.append({"title": title, "meta": meta, "summary": summary, "url": url})
+    return {"posts": posts, "records": records, "count": len(posts),
+            "message": "" if posts else "아직 글이 없습니다."}
 
 
 def _community_board(params: dict) -> dict:
@@ -393,7 +405,16 @@ def _community_board(params: dict) -> dict:
     boards = [{"name": "IndieNet", "hashtag": "indienet"}] + list(indienet.get_boards() or [])
     out = [{"name": b.get("name", ""), "hashtag": b.get("hashtag", ""),
             "active": (b.get("hashtag") == active)} for b in boards]
-    return {"boards": out, "active": active, "message": "" if out else "보드가 없습니다."}
+    # 레코드 통화: 보드 목록 → 공유 records (>> document/spreadsheet 자동 흐름)
+    records = []
+    for b in out:
+        tag = b.get("hashtag", "") or ""
+        meta = " · ".join([x for x in (("#" + tag if tag else ""),
+                                       ("활성" if b.get("active") else "")) if x])
+        records.append({"title": b.get("name", "") or (("#" + tag) if tag else "(이름 없음)"),
+                        "meta": meta, "summary": "", "url": ""})
+    return {"boards": out, "records": records, "active": active,
+            "message": "" if out else "보드가 없습니다."}
 
 
 def _nostr_identity(params: dict) -> dict:

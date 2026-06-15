@@ -662,7 +662,14 @@ function jfetch(url,opt){ return fetch(API+url, Object.assign({headers:{'Content
 async function ibl(code){
   const r=await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'앱모드',project_path:'.'})});
   if(!r.ok) throw new Error('[HTTP '+r.status+']');
-  return r.json();
+  const data=await r.json();
+  /* 합성(>>) 액션은 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 — view의 from/{필드}가 풀리도록 */
+  if(data && typeof data==='object' && 'final_result' in data){
+    const fr=data.final_result;
+    if(typeof fr==='string'){ try{ return JSON.parse(fr); }catch(e){ return {message:fr}; } }
+    if(fr && typeof fr==='object') return fr;
+  }
+  return data;
 }
 
 /* ===== 로그인 ===== */
@@ -945,21 +952,56 @@ function apAddMsg(role,text){
   c.appendChild(el); c.scrollTop=c.scrollHeight;
 }
 function apKey(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); apSend(); } }
+/* 어시스턴트(에이전트/시스템AI 발신) 메시지를 {id,content} 배열(시간순)로 — 폴링용.
+   시스템 AI=/system-ai/conversations(role==assistant), 에이전트=/conversations/.../messages(from==agent).
+   id 를 마커로 쓰는 이유: limit 윈도가 슬라이딩하면 개수 비교는 신규 메시지를 놓칠 수 있다. */
+async function apAssistantMsgs(){
+  if(apChat.type==='system'){
+    const r=await jfetch('/system-ai/conversations?limit=40');
+    if(!r.ok) return null;
+    return ((await r.json()).conversations||[]).filter(m=>m.role==='assistant').map(m=>({id:m.id,content:m.content||''}));
+  }else{
+    const r=await jfetch('/conversations/'+encodeURIComponent(apChat.projectId)+'/'+encodeURIComponent(apChat.agentId)+'/messages?limit=40');
+    if(!r.ok) return null;
+    const msgs=((await r.json()).messages||[]).slice().reverse();  // DESC → 시간순
+    return msgs.filter(m=>String(m.from_agent_id)===String(apChat.agentId)).map(m=>({id:m.id,content:m.content||''}));
+  }
+}
+function apMaxId(arr){ let mx=0; (arr||[]).forEach(m=>{ if(m.id>mx) mx=m.id; }); return mx; }
+function apSleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+/* 백그라운드 명령의 답을 대화 DB 폴링으로 회수. baselineId 보다 큰 id의 어시스턴트 메시지가
+   나타나면 그 내용 반환. 각 폴링은 짧은 요청이라 터널 100초 타임아웃에 안 걸린다. 최대 ~10분. */
+async function apPollAssistant(baselineId,bub){
+  const dots=['작업 중…','작업 중… ·','작업 중… · ·','작업 중… · · ·'];
+  for(let i=0;i<200;i++){
+    await apSleep(i<6?1500:3000);  // 짧은 답은 빨리, 긴 작업은 느슨하게
+    if(bub) bub.textContent=dots[i%dots.length];
+    let a; try{ a=await apAssistantMsgs(); }catch(e){ continue; }  // 일시 오류는 넘김
+    if(a==null) continue;
+    const fresh=a.filter(m=>m.id>baselineId);
+    if(fresh.length) return fresh[fresh.length-1].content;
+  }
+  return '⏳ 아직 처리 중입니다. 잠시 후 대화를 다시 열어 확인해 주세요.';
+}
 async function apSend(){
   const inp=document.getElementById('apInput'); const msg=inp.value.trim(); if(!msg) return;
   apAddMsg('user',msg); inp.value='';
   const btn=document.getElementById('apSend'); btn.disabled=true;
   apAddMsg('assistant','…'); const last=document.getElementById('apMsgs').lastChild.querySelector('.bub');
   try{
+    // 시스템 AI·에이전트 공통: 영상 생성처럼 수 분짜리 작업이 Cloudflare 터널 100초 타임아웃(524)에
+    // 걸려 "실패"로 보이던 문제 해결 — 백그라운드로 보내고(즉시 반환) 대화 DB를 폴링해 답을 받는다.
+    const baselineId=apMaxId(await apAssistantMsgs());
     let r;
     if(apChat.type==='system'){
-      r=await jfetch('/system-ai/chat',{method:'POST',body:JSON.stringify({message:msg})});
+      r=await jfetch('/system-ai/chat',{method:'POST',body:JSON.stringify({message:msg,background:true})});
     }else{
       await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/start',{method:'POST'});
-      r=await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/command',{method:'POST',body:JSON.stringify({command:msg})});
+      r=await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/command',{method:'POST',body:JSON.stringify({command:msg,background:true})});
     }
-    if(r.ok){ const d=await r.json(); last.textContent=d.response||d.message||'(응답 없음)'; }
-    else{ const d=await r.json().catch(()=>({})); last.textContent='['+r.status+'] '+(d.detail||'오류'); }
+    if(!r.ok){ const d=await r.json().catch(()=>({})); last.textContent='['+r.status+'] '+(d.detail||'오류'); return; }
+    last.textContent='작업 중…';
+    last.textContent=await apPollAssistant(baselineId,last);
   }catch(e){ last.textContent='연결 오류: '+e.message; }
   finally{ btn.disabled=false; }
 }

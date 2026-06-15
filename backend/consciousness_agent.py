@@ -563,7 +563,8 @@ def get_consciousness_agent() -> ConsciousnessAgent:
     return _consciousness_instance
 
 
-def lightweight_ai_call(prompt: str, system_prompt: str = None) -> Optional[str]:
+def lightweight_ai_call(prompt: str, system_prompt: str = None,
+                        images: list = None) -> Optional[str]:
     """경량 원샷 AI 호출.
 
     경량 AI 전용 프로바이더가 있으면 우선 사용하고,
@@ -572,6 +573,9 @@ def lightweight_ai_call(prompt: str, system_prompt: str = None) -> Optional[str]
     Args:
         prompt: 전달할 메시지
         system_prompt: 시스템 프롬프트 (지정 시 해당 프롬프트 사용)
+        images: 멀티모달 입력 [{"base64": "...", "media_type": "image/png"}]
+            지정 시 경량 모델이 이미지를 직접 본다(평가자가 시각 산출물을 검수할 때).
+            경량 프로바이더(google gemini)가 비전 가능. None이면 기존 텍스트 전용 동작.
 
     용도: 무의식 에이전트 분류, 달성 기준 평가 등 가벼운 AI 호출.
     """
@@ -595,7 +599,7 @@ def lightweight_ai_call(prompt: str, system_prompt: str = None) -> Optional[str]
         return provider.process_message(
             message=prompt,
             history=[],
-            images=None,
+            images=images,
             execute_tool=None
         )
     except Exception as e:

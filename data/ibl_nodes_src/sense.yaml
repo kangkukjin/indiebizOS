@@ -20,6 +20,33 @@
         - 폰알림
         - 연락
         - 카톡
+      host:
+        description: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라
+          기계를 직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
+        group: device
+        target_description: 'op=status(기본): 전면 앱·CPU·메모리·디스크·배터리·가동시간·로드평균·프로세스 수 한 눈에.
+          apps: 메모리 점유 상위 프로세스(limit 옵션, 기본 12). resources: per-core CPU·스왑·디스크 파티션별·네트워크 상세.'
+        target_key: op
+        router: handler
+        tool: host_op
+        runs_on: mac_only
+        ops:
+          default: status
+          values:
+            status: 이 기계 상태 한 눈에 (전면앱·CPU·메모리·디스크·배터리·가동시간)
+            apps: 자원(메모리)을 많이 쓰는 프로세스 상위 N (limit 옵션)
+            resources: 상세 지표 (per-core CPU·스왑·디스크 파티션·네트워크·배터리)
+        implementation: pc-manager 패키지 host_op 핸들러 — psutil로 CPU/메모리/스왑/디스크/네트워크/배터리,
+          lsappinfo로 전면 앱(권한 프롬프트 無), runtime_utils.detect_body로 몸 이름. 폰은 자기 센서 별도라 mac_only.
+        keywords:
+        - 내컴퓨터
+        - 시스템상태
+        - cpu
+        - 메모리
+        - 디스크
+        - 배터리
+        - 내몸
+        - 프로세스
       here:
         description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
         group: device
@@ -87,7 +114,8 @@
         target_description: 'ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소).
           search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL).
           market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=price(기본), "차트/추이/이력"=history.
-          history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선).'
+          history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선).
+          history는 표준 table 통화(table={columns:[날짜,종가],rows:[...]})도 반환 — 그대로 engines:chart/spreadsheet로 흘리거나 >> 파이프.'
         target_key: op
         router: handler
         tool: stock_op
@@ -512,9 +540,9 @@
           type: compress
           prompt: 같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라.
       world_bank:
-        description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용.
+        description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. 표준 테이블 통화(table) 반환.
         group: world
-        target_description: '지표명 또는 코드 (예 "GDP"/"인구"/"실업률" 자연어 가능, NY.GDP.MKTP.CD 코드도). country는 국가명(한국/미국) 또는 ISO 코드.'
+        target_description: '지표명 또는 코드 (예 "GDP"/"인구"/"실업률" 자연어 가능, NY.GDP.MKTP.CD 코드도). country는 국가명(한국/미국) 또는 ISO 코드. 반환에 table={columns:[연도,지표],rows:[[연도,값],...]} 포함 — 그대로 engines:chart{table:...}/spreadsheet{table:...}로 흘려보내 reshape 없이 시각화/표.'
         router: handler
         tool: fetch_world_bank_data
         implementation: 세계은행 공개 API로 국가별 경제/사회 지표 시계열 조회
@@ -1155,7 +1183,7 @@
       kosis:
         description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. 자세히 read_guide(query="통계").
         group: research
-        target_description: 'query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회.'
+        target_description: 'query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 표준 table 통화도 반환(period=기간 축, 지표·분류 조합=시리즈) → >> [engines:chart/spreadsheet] / [engines:document](table 블록). ⚠️다차원 통계표는 통화가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.'
         router: handler
         tool: kosis_lookup
         implementation: KOSIS API 통합 — org_id+tbl_id면 get_data(또는 info=true시 get_statistics_info), indicator면 get_indicators, query면 integrated_search.

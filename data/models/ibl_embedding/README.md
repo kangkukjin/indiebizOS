@@ -5,35 +5,35 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:3465
+- dataset_size:3924
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 비즈니스 1번 품목들 보여줄래
+- source_sentence: 커뮤니티 언급 DB에 저장
   sentences:
-  - '[self:business_item]'
-  - '[limbs:android]'
-  - '[sense:collect]'
-- source_sentence: 최근에 올라온 블로그 포스트 봐줘
+  - '[self:discover]'
+  - '[sense:listen] >> [self:write]'
+  - '[self:local_save]'
+- source_sentence: 메모 파일 생성해줘해줘
   sentences:
-  - 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
-  - '[sense:search_youtube]'
-  - '[self:blog]'
-- source_sentence: 작업 지침 전체 리스트
+  - '[engines:slide_shadcn] >> [self:write]'
+  - '[limbs:browser]'
+  - '[self:write]'
+- source_sentence: 정부 창업 지원사업 찾아봐해줘
   sentences:
-  - '[self:work_guideline]'
-  - '[sense:classic]'
-  - '[limbs:cctv]'
-- source_sentence: 데스크톱 아래로 스크롤
+  - '[sense:phone]'
+  - '[self:storage]'
+  - '[sense:startup]'
+- source_sentence: evening 스위치 켜
   sentences:
-  - '[self:edit]'
-  - 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr).
-  - '[limbs:screen]'
-- source_sentence: 글로벌 핵심 종목 한눈에
+  - '[engines:spreadsheet]'
+  - '[limbs:browser]'
+  - 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
+- source_sentence: 테슬라 관련 소식
   sentences:
-  - '[sense:crawl] >> [self:write]'
-  - '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
   - 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
+  - '[sense:search_books]'
+  - '[self:read]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -87,9 +87,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '글로벌 핵심 종목 한눈에',
+    '테슬라 관련 소식',
     '주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.',
-    '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).',
+    '[self:read]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -98,9 +98,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[1.0000, 0.4779, 0.2633],
-#         [0.4779, 1.0000, 0.3018],
-#         [0.2633, 0.3018, 1.0000]])
+# tensor([[ 1.0000,  0.4941, -0.0471],
+#         [ 0.4941,  1.0000, -0.0871],
+#         [-0.0471, -0.0871,  1.0000]])
 ```
 
 <!--
@@ -145,19 +145,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 3,465 training samples
+* Size: 3,924 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
   |         | sentence_0                                                                        | sentence_1                                                                        |
   |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type    | string                                                                            | string                                                                            |
-  | details | <ul><li>min: 3 tokens</li><li>mean: 10.78 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 19.06 tokens</li><li>max: 64 tokens</li></ul> |
+  | details | <ul><li>min: 3 tokens</li><li>mean: 11.57 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 19.55 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                            | sentence_1                                                                                             |
-  |:--------------------------------------|:-------------------------------------------------------------------------------------------------------|
-  | <code>이 워드 파일 읽고 마크다운으로 기록해줘해줘</code> | <code>[self:read] >> [self:write]</code>                                                               |
-  | <code>홈페이지 색상 테마를 다크 모드로 변경</code>    | <code>[engines:web]</code>                                                                             |
-  | <code>체크 해제 — opt_in_news</code>      | <code>브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.</code> |
+  | sentence_0                  | sentence_1                                                            |
+  |:----------------------------|:----------------------------------------------------------------------|
+  | <code>수축기 128 이완기 90</code> | <code>[self:health]}</code>                                           |
+  | <code>삼전 국내 시세</code>       | <code>주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.</code> |
+  | <code>유튜브 피아노 좀 봐봐</code>   | <code>[sense:search_youtube]</code>                                   |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -170,6 +170,8 @@ You can finetune this model on your own dataset.
 ### Training Hyperparameters
 #### Non-Default Hyperparameters
 
+- `per_device_train_batch_size`: 16
+- `per_device_eval_batch_size`: 16
 - `num_train_epochs`: 1
 - `multi_dataset_batch_sampler`: round_robin
 
@@ -179,8 +181,8 @@ You can finetune this model on your own dataset.
 - `do_predict`: False
 - `eval_strategy`: no
 - `prediction_loss_only`: True
-- `per_device_train_batch_size`: 8
-- `per_device_eval_batch_size`: 8
+- `per_device_train_batch_size`: 16
+- `per_device_eval_batch_size`: 16
 - `gradient_accumulation_steps`: 1
 - `eval_accumulation_steps`: None
 - `torch_empty_cache_steps`: None

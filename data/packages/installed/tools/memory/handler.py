@@ -106,10 +106,38 @@ def _memory_search(db, tool_input, project_path, agent_id):
     conv_results = _search_conversations(project_path, query, limit=min(limit, 5))
     results.extend(conv_results)
 
+    # 레코드 통화 부착(비파괴) — memories 목록을 records로. >> [engines:document/spreadsheet] 파이프용.
     return json.dumps({
         "count": len(results),
-        "memories": results
+        "memories": results,
+        "records": _memories_to_records(results)
     }, ensure_ascii=False, indent=2)
+
+
+def _memories_to_records(memories: list) -> list:
+    """메모리/대화 검색 결과 → 레코드 통화 records[{title,meta,summary,url}].
+    deep_memory 행(preview/category/keywords/created_at) + conversation 행(preview/from_agent/created_at) 두 형태 수용."""
+    records = []
+    for m in (memories or []):
+        if not isinstance(m, dict):
+            continue
+        preview = m.get("preview") or m.get("content") or ""
+        source = m.get("source")
+        if source == "conversation":
+            frm, to = m.get("from_agent"), m.get("to_agent")
+            title = (f"{frm} → {to}" if frm and to else (frm or to or "대화")) or "대화"
+            meta = [m.get("created_at"), "대화"]
+        else:
+            # deep_memory: 별도 제목 없음 → preview 첫 줄을 제목으로.
+            title = (preview.split("\n", 1)[0][:60]).strip() or "메모"
+            meta = [m.get("created_at"), m.get("category"), m.get("keywords")]
+        records.append({
+            "title": title,
+            "meta": " · ".join(str(x) for x in meta if x),
+            "summary": "" if preview == title else preview,
+            "url": "",
+        })
+    return records
 
 
 def _search_conversations(project_path, query, limit=5):

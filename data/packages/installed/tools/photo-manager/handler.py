@@ -118,12 +118,44 @@ def _dispatch_photo_op(params: Dict[str, Any]) -> Dict[str, Any]:
     return {"success": False, "error": f"알 수 없는 op '{op}'. (scan|list_scans|gallery|search|detail|stats|timeline|duplicates)"}
 
 
+def _photos_to_records(items: list) -> list:
+    """사진 미디어 행(path/filename/taken_date/camera_model/media_type/gps) → 레코드 통화 records.
+    사진은 image가 핵심 — 썸네일 엔드포인트로 URL화(/photo/thumbnail?path=). title=파일명, meta=촬영일·카메라."""
+    from urllib.parse import quote
+    records = []
+    for it in (items or []):
+        if not isinstance(it, dict):
+            continue
+        path = it.get("path") or ""
+        filename = it.get("filename") or os.path.basename(path) or ""
+        meta = []
+        if it.get("taken_date") or it.get("mtime"):
+            meta.append(it.get("taken_date") or it.get("mtime"))
+        camera = it.get("camera_model") or it.get("camera")
+        if camera:
+            meta.append(camera)
+        if it.get("media_type"):
+            meta.append("사진" if it.get("media_type") == "photo" else "동영상")
+        if it.get("gps_lat") and it.get("gps_lon"):
+            meta.append(f"{it.get('gps_lat')},{it.get('gps_lon')}")
+        rec = {
+            "title": filename,
+            "meta": " · ".join(str(x) for x in meta if x),
+            "summary": "",
+            "url": path,
+        }
+        if path:
+            rec["image"] = f"/photo/thumbnail?path={quote(path)}"
+        records.append(rec)
+    return records
+
+
 def _photo_search(params: Dict[str, Any]) -> Dict[str, Any]:
     """파일명/카메라 모델 키워드 검색."""
     root_path = _resolve_scan_path(params)
     if not root_path:
         return {"success": False, "error": "스캔 데이터가 없습니다. 먼저 op=scan으로 폴더를 스캔하세요."}
-    return photo_db.search_media(
+    result = photo_db.search_media(
         root_path=root_path,
         query=params.get("query", ""),
         media_type=params.get("media_type", "all"),
@@ -132,6 +164,10 @@ def _photo_search(params: Dict[str, Any]) -> Dict[str, Any]:
         limit=params.get("limit", 20),
         sort_by=params.get("sort_by", "taken_date DESC"),
     )
+    # 레코드 통화 부착(비파괴) — 원본 items(path 포함)를 records로.
+    if isinstance(result, dict) and isinstance(result.get("items"), list):
+        result["records"] = _photos_to_records(result["items"])
+    return result
 
 
 def _photo_detail(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -252,6 +288,8 @@ def get_gallery(params: Dict[str, Any]) -> Dict[str, Any]:
     if result.get("success"):
         items = result.get("items", [])
         total = result.get("total", 0)
+        # 레코드 통화 — 원본 items(path 포함)를 reformat 전에 records로 캡처.
+        records = _photos_to_records(items)
 
         # 요약 정보
         summary = []
@@ -273,6 +311,7 @@ def get_gallery(params: Dict[str, Any]) -> Dict[str, Any]:
             "success": True,
             "message": f"총 {total}개 중 {page}페이지 ({len(items)}개)",
             "items": summary,
+            "records": records,
             "pagination": {
                 "현재 페이지": page,
                 "페이지당 개수": limit,

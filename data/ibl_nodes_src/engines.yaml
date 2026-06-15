@@ -1,13 +1,14 @@
   engines:
     actions:
       newspaper:
-        description: '"신문 만들어줘"라고 요청할 때만 사용. 키워드별 뉴스 기사를 자동 수집하여 HTML 신문 레이아웃으로 생성.
-          보고서/분석/요약 요청에는 사용하지 말 것.'
-        target_description: keywords 배열 (수집할 뉴스 주제). 결과는 HTML 신문 파일.
+        description: '"신문 만들어줘"라고 요청할 때만 사용. 키워드별 뉴스를 수집해 공유 문서 IR(신문 테마)로 생산.
+          >> [engines:document]로 렌더(html/pdf/docx). 보고서/분석/요약 요청에는 사용하지 말 것.'
+        target_description: 'keywords 배열 (수집할 뉴스 주제) · title(선택, 신문 제호) · source(google 기본/guardian).
+          반환: 문서 IR {title, meta, theme:"newspaper", blocks}(키워드별 heading + cards). 그대로 >> [engines:document]로 렌더.'
         group: media_produce
         router: handler
         tool: generate_newspaper
-        implementation: Google News RSS + Guardian API 수집 → Jinja2 HTML 신문 레이아웃 생성
+        implementation: Google News RSS / Guardian API 수집 → 키워드별 heading + cards 블록으로 결정적 문서 IR 생산(LLM 미개입, 기사·링크 무손실). 렌더는 engines:document(theme:newspaper)가 담당 — 단일 IR이 html/pdf/docx로.
         target_key: keywords
         keywords:
         - 신문
@@ -20,14 +21,14 @@
           icon: 📰
           name: 신문
           order: 7
-          note: 키워드별 최신 뉴스를 모아 HTML 신문을 만들어 "띄우기"로 봅니다.
+          note: 키워드별 최신 뉴스를 모아 신문 문서로 만들어 "띄우기"로 봅니다.
           inputs:
           - key: kw
             type: text
             default: 'AI, 경제, 부동산'
             placeholder: 뉴스 키워드 (쉼표 구분)
             required: true
-          action: '[engines:newspaper]{keywords: "$kw"}'
+          action: '[engines:newspaper]{keywords: "$kw"} >> [engines:document]{theme: "newspaper", format: "html"}'
           view:
           - type: list_action
             from: '.'
@@ -57,6 +58,7 @@
         description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
         target_description: |
           title (필수). chart_type으로 종류 분기 (기본 line).
+          표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(engines:spreadsheet와 같은 통화).
           - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
           - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
           - pie: labels·values 리스트. hole 옵션으로 도넛.
@@ -94,7 +96,7 @@
       spreadsheet:
         runs_on: mac_only
         description: 행 데이터(rows/sheets) → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
-        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
+        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표준 테이블 통화 table={columns,rows}도 수용(headers/rows로 매핑 — engines:chart와 같은 통화). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
         group: chart
         router: handler
         tool: spreadsheet
@@ -150,14 +152,15 @@
         - 나레이션
       slide_shadcn:
         runs_on: mac_only
-        description: 'Shadcn UI 고품질 PNG 슬라이드. 마케팅·강의·일러스트 통합 레이아웃 + design_system. 자세한 layout/스타일은 read_guide(query="슬라이드").'
+        description: 'Shadcn UI 고품질 슬라이드. 슬라이드 IR(slides[])이 단일 진실 소스 → png/pdf/pptx로 emit. 자세한 layout/스타일은 read_guide(query="슬라이드").'
         target_description: |
-          slides 배열 (각 슬라이드 {layout, title, ...}) + design_system/theme/output_dir/width/height 옵션. 인라인 배열만 (topic 미지원).
+          ★슬라이드 IR(슬라이드 전용 — 문서 IR과 별개, 텍스트 문서는 engines:document를 쓸 것): slides 배열, 각 슬라이드 = {layout, title, ...}(named layout 계약). + design_system/theme/output_dir/width/height. 인라인 배열만 (topic 미지원).
           마케팅 layout: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom
           강의 layout: lecture_body/metaphor_story/comparison_table/factbox/quote
           일러스트 통합 layout(NotebookLM 스타일): hero_illustration/illustration_anchor/split_concept/illustration_background/comparison_iconic
           design_system: default/vintage_book/academic_paper/tech_minimal/magazine_modern
           theme(색만): default/blue/green/purple/orange/dark
+          format(png 기본=슬라이드별 이미지 디렉토리 / pdf=슬라이드당 1페이지 / pptx=슬라이드당 풀블리드 이미지): 같은 슬라이드 IR을 여러 emitter로. pdf·pptx는 렌더된 슬라이드를 그대로 보존(디자인 무손실).
         group: media_produce
         router: handler
         tool: create_shadcn_slides
@@ -248,6 +251,44 @@
         - HTML
         - 이미지
         - 렌더링
+      structure:
+        runs_on: mac_only
+        description: 원본 콘텐츠를 문서 IR(blocks)로 구조화하는 편집자 원자. A획득→B구조화→IR→emit 파이프라인의 B. document로 이어 렌더.
+        target_description: 'content(필수, 구조화할 원본 텍스트 — >> 파이프 시 이전 결과를 content로 받아 생략 가능). instruction(선택, 정리 방향 예 "3섹션 요약 보고서로"·"비교는 표로"). 반환에 title·blocks(문서 IR) 포함 — 그대로 engines:document로 >> 파이프하면 렌더.'
+        group: media_produce
+        router: handler
+        tool: structure_document
+        implementation: 경량 LLM 편집자가 콘텐츠를 문서 IR(heading/paragraph/list/table/quote/code/divider) JSON으로 정리. 지어내기 금지·주어진 내용에서만. document emitter의 입력 생산.
+        target_key: content
+        keywords:
+        - 구조화
+        - 정리
+        - 요약정리
+        - 문서화
+        - structure
+      document:
+        runs_on: mac_only
+        description: 문서 IR(공유 문서 모델)을 산출물로 렌더. 포맷 중립 IR을 emitter가 렌더(현재 html). 보고서·문서·페이지 산출의 단일 진실 소스.
+        target_description: |
+          blocks(필수): 문서 IR 블록 배열. 각 블록은 {type, ...}:
+          - heading{level(1~6), text} · paragraph{text} · list{ordered?, items[]}
+          - image{src(경로/URL), caption?} · table{columns, rows}(데이터 통화 그대로 재사용)
+          - cards{columns(기본2), items:[{title, meta?, summary?, url?, link_label?}]}(링크 카드 그리드 — 뉴스·검색결과·북마크·상품목록)
+          - quote{text, cite?} · code{text, lang?} · divider
+          title(선택, 최상단 제목) · meta(선택, 제목 아래 부제/발행정보 한 줄) · theme(default 기본/newspaper 제호+카드그리드)
+          · filename(선택) · format(html 기본/pdf/png/docx/pptx/typst — 같은 IR을 여러 emitter로).
+          결과 산출물 경로(path·file) 반환. 단일 IR → 다중 emitter. typst=책 품질 조판 PDF(산문·보고서에 최적, HTML theme/cards 그리드는 무시). pptx는 문서 구조를 슬라이드로 투영(heading=새 슬라이드) — 시각 레이아웃 슬라이드가 필요하면 engines:slide를 쓸 것.
+        group: media_produce
+        router: handler
+        tool: render_document
+        implementation: 포맷 중립 문서 IR을 emitter로 렌더 — html(_doc_blocks_to_html)·pdf/png(Playwright 동일 HTML)·docx(_doc_blocks_to_docx, python-docx)·pptx(_doc_blocks_to_pptx, python-pptx 슬라이드 투영). table 블록은 데이터 통화({columns,rows}) 재사용. 단일 IR → 다중 emitter.
+        target_key: blocks
+        keywords:
+        - 문서
+        - 보고서
+        - document
+        - 리포트
+        - 페이지
       web_site:
         runs_on: mac_only
         description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
@@ -326,8 +367,8 @@
         - UI
       image_critic:
         runs_on: mac_only
-        description: 'Gemini Vision으로 일러스트가 의도와 정합하는지 평가. 반환: passed/score/issues/notes. ILLUSTRATE 단계 자동 평가용.'
-        target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. style_preset/checks(추가 체크 배열) 옵션. 기본 체크 — 다이어그램형/한글 미포함/빈 공간/객체 명확성/디자인 톤 일관성. 한글 검출 시 무조건 passed=false.'
+        description: 'Gemini Vision으로 산출물(일러스트/차트/이미지 등)이 의도와 정합하는지 평가. 반환: passed/score/issues/notes.'
+        target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. preset 옵션 — slide_illustration(기본: 다이어그램형/한글 미포함/빈 공간/객체 명확성, 한글 검출 시 passed=false) | general(임의 산출물 범용: intent 충족·시각 결함 없음). style_preset/checks(추가 체크 배열) 옵션.'
         group: media_produce
         router: handler
         tool: critique_gemini_image

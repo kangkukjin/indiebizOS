@@ -1,38 +1,38 @@
 # IndieBiz OS 진단 리포트
-생성: 2026-06-13T16:46
+생성: 2026-06-15T14:17
 
 ## 시스템 상태: warning
 - 서비스: scheduler ✅ | channel_poller ✅ | system_ai_runner ✅
-- 디스크: 307.6GB 여유
-- 최근 6시간 펄스: 5회 (마지막: 2026-06-13T15:48)
+- 디스크: 305.9GB 여유
+- 최근 6시간 펄스: 6회 (마지막: 2026-06-15T14:17)
 
 ## 액션 건강
-- 전체 125개: verified 95 | assumed 27 | failed 3
-- 평균 성공률: 77.7%
-- 만성 실패: engines:chart, sense:kosis
-- 성능 저하: self:time, sense:cctv, sense:legal
-- 속도 저하: limbs:music
-- 회복됨: limbs:music, others:messages, sense:crypto, sense:realty, sense:stock
+- 전체 127개: verified 100 | assumed 22 | failed 2
+- 평균 성공률: 73.9%
+- 만성 실패: sense:kosis
+- 성능 저하: sense:legal, sense:search_books
+- 속도 저하: engines:newspaper, limbs:music, self:read
+- 회복됨: engines:chart, limbs:music, others:messages, others:neighbor, self:health
 
 ### 최근 7일 실패 빈도 Top
-- [sense:kosis]: 12회 (마지막: 2026-06-13T15:17)
-- [self:run_pipeline]: 8회 (마지막: 2026-06-09T15:13)
-- [engines:chart]: 3회 (마지막: 2026-06-13T03:16)
-- [limbs:music]: 2회 (마지막: 2026-06-13T09:28)
-- [sense:crypto]: 2회 (마지막: 2026-06-11T16:42)
+- [sense:kosis]: 15회 (마지막: 2026-06-15T11:22)
+- [self:run_pipeline]: 5회 (마지막: 2026-06-09T15:13)
+- [engines:chart]: 4회 (마지막: 2026-06-15T12:44)
+- [sense:world_bank]: 4회 (마지막: 2026-06-15T09:35)
+- [sense:host]: 3회 (마지막: 2026-06-15T09:19)
 
 ## 인지 품질 (최근 7일 vs 이전 7일)
-- 에피소드: 38회 → 2회
-- 해마 점수: 0.734 → 0.711 데이터 부족
+- 에피소드: 34회 → 7회
+- 해마 점수: 0.725 → 0.747 stable
 - EXECUTE 비율: 29% → 0%
-- 평균 실행 라운드: 1.0 → 1.0 데이터 부족
-- 평균 소요시간: 112.8s → 228.7s 데이터 부족
+- 평균 실행 라운드: 1.0 → 1.0 stable
+- 평균 소요시간: 97.2s → 140.2s ⚠ declining
 - 평가 달성률: 100% → 100%
 
 ## 추천 조치
-1. [HIGH] 만성 실패 액션 2개: engines:chart, sense:kosis
+1. [HIGH] 만성 실패 액션 1개: sense:kosis
    → 해당 패키지 handler.py 점검 필요
-2. [MEDIUM] 성능 저하 감지 4개: self:time, sense:cctv, sense:legal
+2. [MEDIUM] 성능 저하 감지 2개: sense:legal, sense:search_books
    → API 소스 또는 네트워크 상태 확인
-3. [LOW] 응답 속도 저하 1개: limbs:music
+3. [LOW] 응답 속도 저하 4개: engines:newspaper, limbs:music, self:read
    → 외부 API 지연 또는 내부 병목 확인

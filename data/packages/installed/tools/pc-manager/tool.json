@@ -63,6 +63,22 @@
           "volume_name": { "type": "string", "description": "root_path 별칭 (스캔된 볼륨 경로)" }
         }
       }
+    },
+    {
+      "name": "host_op",
+      "description": "이 기계(호스트) 자신의 운영 상태를 구조화 데이터로 조회 (op 분기) — [sense:host]. 화면을 보는 게 아니라 기계를 직접 내성하는 자기수용감각.\n- op=status (기본): 몸 상태 한 눈에 — 전면 앱·CPU·메모리·디스크·배터리·가동시간·로드평균·프로세스 수. 파라미터 없음.\n- op=apps: 자원(메모리)을 많이 쓰는 프로세스 상위 N (limit 옵션, 기본 12).\n- op=resources: 상세 지표 — per-core CPU·메모리·스왑·디스크 파티션별·네트워크 누계·배터리.\n\n## 예시\n- host_op()                 # 기본 status\n- host_op(op='apps', limit=8)\n- host_op(op='resources')",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": ["status", "apps", "resources"],
+            "default": "status",
+            "description": "status=상태 한눈에(기본), apps=자원 상위 프로세스, resources=상세 지표"
+          },
+          "limit": { "type": "integer", "description": "[apps] 상위 프로세스 개수 (기본 12)" }
+        }
+      }
     }
   ]
 }

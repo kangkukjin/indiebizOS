@@ -193,8 +193,16 @@ def _msg_thread(bm, tool_input: dict) -> str:
     items.sort(key=lambda x: x["_ts"])
     for it in items:
         it.pop("_ts", None)
+    # 레코드 통화: 스레드 메시지들 → records (>> engines:document/spreadsheet 자동 흐름)
+    _records = []
+    for it in items:
+        sender = name if not it.get("is_from_user") else "나"
+        _meta = " · ".join(p for p in [it.get("time"), it.get("contact_type")] if p)
+        _records.append({"title": sender or (it.get("time") or ""), "meta": _meta,
+                         "summary": it.get("content") or "", "url": ""})
     return json.dumps({
         "name": name, "channel": channel or "nostr", "to": to,
+        "records": _records,
         "neighbor_id": (nb.get("id") if nb else (0 if not has_neighbor else neighbor_id)),
         "info_level": nb.get("info_level", 0) if nb else 0,
         "rating": nb.get("rating", 0) if nb else 0,
@@ -280,7 +288,15 @@ def _msg_inbox(bm, tool_input: dict) -> str:
     convs.sort(key=lambda c: (c.get("favorite", 0), c["_sort"]), reverse=True)  # 즐겨찾기 먼저, 그다음 최근순
     for c in convs:
         c.pop("_sort", None)
-    return json.dumps({"conversations": convs, "message": "" if convs else "대화가 없습니다."}, ensure_ascii=False)
+    # 레코드 통화: 대화 목록(상대별) → records (>> engines:document/spreadsheet 자동 흐름)
+    _records = []
+    for c in convs:
+        _meta = " · ".join(p for p in [
+            c.get("channel"), c.get("time"), c.get("badge")] if p)
+        _records.append({"title": c.get("name") or "", "meta": _meta,
+                         "summary": c.get("preview") or "", "url": ""})
+    return json.dumps({"conversations": convs, "records": _records,
+                       "message": "" if convs else "대화가 없습니다."}, ensure_ascii=False)
 
 
 # === 이웃/연락처 CRUD (neighbor_op / contact_op) ===
@@ -339,10 +355,38 @@ def _nb_favorite(bm, ti: dict) -> str:
     return _ok({"id": nid, "favorite": new}, "")
 
 
+def _nb_record(bm, nb: dict) -> dict:
+    """이웃 dict → 레코드 통화 1건 (title=이름, meta=레벨·평점·채널·즐겨찾기, summary=메모/연락처)."""
+    meta_parts = []
+    lv = nb.get("info_level")
+    if lv is not None:
+        meta_parts.append(f"L{lv}")
+    if _int_or(nb.get("rating"), 0):
+        meta_parts.append("★" + str(_int_or(nb.get("rating"), 0)))
+    try:
+        chans = [c.get("contact_type") for c in (bm.get_contacts(nb.get("id")) or []) if c.get("contact_type")]
+    except Exception:
+        chans = []
+    if chans:
+        meta_parts.append("/".join(dict.fromkeys(chans)))
+    if _int_or(nb.get("favorite"), 0):
+        meta_parts.append("⭐")
+    summary = (nb.get("additional_info") or "").strip()
+    if not summary:
+        try:
+            summary = ", ".join(c.get("contact_value", "") for c in (bm.get_contacts(nb.get("id")) or [])
+                                if c.get("contact_value"))
+        except Exception:
+            summary = ""
+    return {"title": nb.get("name") or "", "meta": " · ".join(meta_parts),
+            "summary": summary, "url": ""}
+
+
 def _nb_list(bm, ti: dict) -> str:
     """이웃 목록 (search 부분일치 / info_level 0-4 필터)."""
     neighbors = bm.get_neighbors(search=ti.get("search"), info_level=ti.get("info_level"))
-    return _ok({"neighbors": neighbors}, f"이웃 {len(neighbors)}명")
+    records = [_nb_record(bm, n) for n in neighbors]
+    return _ok({"neighbors": neighbors, "records": records}, f"이웃 {len(neighbors)}명")
 
 
 def _nb_detail(bm, ti: dict) -> str:

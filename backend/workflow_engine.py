@@ -162,6 +162,16 @@ def execute_pipeline(steps: list, project_path: str = ".",
         # 파이프라인 자동 데이터 전달 (명시적 참조 없으면 params에 주입)
         tool_input = _auto_inject_prev(tool_input, prev_result)
 
+        # >> 파이프 중간 단계는 raw로 실행 — postprocess:compress가 구조화 통화(records/table)를
+        # 죽이지 않게. 압축은 에이전트가 보는 *최종* 출력에만(마지막 step). 중간은 다음 step이 소비하는
+        # 기계용이라 구조 보존이 맞다. (앱·GUI가 쓰던 _raw 메커니즘 재사용)
+        if i < total - 1:
+            _p = tool_input.get("params")
+            if not isinstance(_p, dict):
+                _p = {}
+                tool_input["params"] = _p
+            _p["_raw"] = True
+
         # IBL 실행
         try:
             result = execute_ibl(tool_input, project_path, agent_id=agent_id)

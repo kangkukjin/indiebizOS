@@ -18,7 +18,7 @@ const LAST_KEY = 'newspaper.lastfile';
 const DEFAULT_KEYWORDS = ['청주', 'AI', '문화', '드라마', '영화', '만화', '세종', '경제', '주식'];
 const DEFAULT_TITLE = '청주 데일리';
 
-interface NewspaperResult { success?: boolean; file?: string; total_news?: number; sections?: number; error?: string }
+interface NewspaperResult { success?: boolean; file?: string; path?: string; total_news?: number; sections?: number; error?: string; message?: string }
 
 function loadKeywords(): string[] {
   try {
@@ -57,21 +57,30 @@ export function NewspaperInstrument() {
     setGenerating(true); setError(null); setInfo(null);
     try {
       const t = (title || DEFAULT_TITLE).replace(/"/g, "'");
-      const code = `[engines:newspaper]{keywords: ${JSON.stringify(keywords)}, title: "${t}"}`;
+      // 신문 = 뉴스 수집(문서 IR 생산) >> 문서 렌더(신문 테마). 같은 IR이 pdf/docx로도 흐름.
+      const code = `[engines:newspaper]{keywords: ${JSON.stringify(keywords)}, title: "${t}"} >> [engines:document]{theme: "newspaper", format: "html"}`;
       const res = await fetch(IBL_ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, project_id: PROJECT_ID }),
       });
       const d = await res.json();
-      let r: NewspaperResult = (d && typeof d === 'object' && 'result' in d) ? d.result : d;
-      if (typeof r === 'string') { try { r = JSON.parse(r); } catch { /* keep */ } }
-      if (r?.success && r.file) {
-        localStorage.setItem(LAST_KEY, r.file);
-        setLast(r.file);
-        setInfo(`신문 생성 완료 — 기사 ${r.total_news ?? '?'}개. 브라우저에서 엽니다.`);
-        openInBrowser(r.file);
+      // 합성 결과: final_result=document 출력(file/path), results[0]=newspaper(total_news)
+      let doc: NewspaperResult = d?.final_result ?? ((d && typeof d === 'object' && 'result' in d) ? d.result : d);
+      if (typeof doc === 'string') { try { doc = JSON.parse(doc); } catch { /* keep */ } }
+      let total: number | undefined;
+      try {
+        let s0 = d?.results?.[0]?.result;
+        if (typeof s0 === 'string') s0 = JSON.parse(s0);
+        total = s0?.total_news;
+      } catch { /* ignore */ }
+      const file = doc?.file || doc?.path;
+      if (doc?.success && file) {
+        localStorage.setItem(LAST_KEY, file);
+        setLast(file);
+        setInfo(`신문 생성 완료 — 기사 ${total ?? '?'}개. 브라우저에서 엽니다.`);
+        openInBrowser(file);
       } else {
-        setError(r?.error || '신문 생성에 실패했습니다.');
+        setError(doc?.error || doc?.message || '신문 생성에 실패했습니다.');
       }
     } catch {
       setError('서버에 연결할 수 없습니다.');

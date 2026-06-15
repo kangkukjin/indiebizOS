@@ -132,10 +132,24 @@ def execute(tool_input: dict, context):
             languages=languages
         )
     elif tool_name == 'search_youtube':
-        return tool_youtube.search_youtube(
+        result = tool_youtube.search_youtube(
             query=tool_input.get('query', ''),
             count=tool_input.get('count', 5),
         )
+        # 레코드 통화 부착(비파괴) — results 목록을 records로. >> 파이프가 자동으로 흐름.
+        if isinstance(result, dict) and isinstance(result.get('results'), list):
+            records = []
+            for r in result['results']:
+                meta_parts = [r.get('channel'), r.get('duration')]
+                rec = {
+                    'title': r.get('title', ''),
+                    'meta': ' · '.join(p for p in meta_parts if p),
+                    'summary': '',
+                    'url': r.get('url', ''),
+                }
+                records.append(rec)
+            result['records'] = records
+        return result
     elif tool_name == 'play_youtube':
         return tool_youtube.play_youtube(
             query=tool_input.get('query', ''),

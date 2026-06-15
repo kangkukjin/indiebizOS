@@ -39,6 +39,46 @@ ENDPOINTS = {
     "indicators": "/indicator/indicator.do"
 }
 
+def _to_table_currency(items: list) -> Optional[dict]:
+    """KOSIS long-format(기간×분류×값) → 표준 table 통화로 피벗.
+    period=x축(첫 열), (지표명 + 분류 c1/c2/c3)=각 시리즈 열. value=셀.
+    → [sense:kosis]{...} >> [engines:chart/spreadsheet] / [engines:document](table 블록) 무reshape.
+    다차원이라 시리즈 조합이 많을 수 있음(데이터 본연의 폭)."""
+    if not items:
+        return None
+
+    def series_label(it):
+        name = it.get("item_name") or it.get("indicator_name") or "값"
+        parts = [name] + [it.get(k, "") for k in ("c1_name", "c2_name", "c3_name")]
+        label = " · ".join(p for p in parts if p)
+        unit = it.get("unit")
+        return f"{label} ({unit})" if unit else label
+
+    periods, series, cell = [], [], {}
+    for it in items:
+        p = str(it.get("period", ""))
+        if not p:
+            continue
+        s = series_label(it)
+        if p not in periods:
+            periods.append(p)
+        if s not in series:
+            series.append(s)
+        v = it.get("value", "")
+        try:
+            v = float(v)
+        except (ValueError, TypeError):
+            pass
+        cell[(p, s)] = v
+
+    if not periods or not series:
+        return None
+    periods.sort()
+    columns = ["기간"] + series
+    rows = [[p] + [cell.get((p, s)) for s in series] for p in periods]
+    return {"columns": columns, "rows": rows}
+
+
 # 서비스뷰 코드 설명
 VIEW_CODES = {
     "MT_ZTITLE": "국내통계 주제별",
@@ -222,6 +262,7 @@ def get_statistics_data(
                 })
             result["data"] = items
             result["count"] = len(items)
+            result["table"] = _to_table_currency(items)  # 표준 통화 → >> chart/spreadsheet/document
             result["query"] = {
                 "org_id": org_id,
                 "tbl_id": tbl_id,
@@ -366,6 +407,7 @@ def get_indicators(
                 })
             result["data"] = items
             result["count"] = len(items)
+            result["table"] = _to_table_currency(items)  # 표준 통화 → >> chart/spreadsheet/document
 
     return result
 

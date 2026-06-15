@@ -183,7 +183,22 @@ def execute(tool_input: dict, context) -> str:
         elif tool_name == "list_directory":
             dir_path = os.path.join(project_path, tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or ".")
             items = os.listdir(dir_path)
-            return "\n".join(items)
+            text = "\n".join(items)
+            # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
+            # 파일 목록 → [이름, 크기, 수정일, 경로]. 디렉터리는 크기 "".
+            rows = []
+            for name in items:
+                full = os.path.join(dir_path, name)
+                try:
+                    st = os.stat(full)
+                    is_dir = os.path.isdir(full)
+                    size = "" if is_dir else st.st_size
+                    mtime = datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")
+                except OSError:
+                    size, mtime = "", ""
+                rows.append([name, size, mtime, os.path.abspath(full)])
+            table = {"columns": ["이름", "크기", "수정일", "경로"], "rows": rows}
+            return json.dumps({"text": text, "table": table}, ensure_ascii=False)
 
         elif tool_name == "grep_files":
             pattern = tool_input["pattern"]
@@ -212,6 +227,7 @@ def execute(tool_input: dict, context) -> str:
             ]
 
             results = []
+            match_rows = []  # 공유 통화 table용 [파일, 줄번호, 내용]
             regex_pattern = re.compile(pattern) if use_regex else None
             search_done = False
 
@@ -229,6 +245,7 @@ def execute(tool_input: dict, context) -> str:
                             if matched:
                                 rel_path = os.path.relpath(file_path, project_path)
                                 results.append(f"{rel_path}:{line_num}: {line.rstrip()}")
+                                match_rows.append([rel_path, line_num, line.rstrip()])
                                 if len(results) >= max_results:
                                     search_done = True
                                     break
@@ -237,8 +254,12 @@ def execute(tool_input: dict, context) -> str:
 
             if results:
                 if search_done:
-                    return "\n".join(results) + f"\n... (결과가 {max_results}개에 도달하여 검색 중단)"
-                return "\n".join(results)
+                    text = "\n".join(results) + f"\n... (결과가 {max_results}개에 도달하여 검색 중단)"
+                else:
+                    text = "\n".join(results)
+                # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
+                table = {"columns": ["파일", "줄번호", "내용"], "rows": match_rows}
+                return json.dumps({"text": text, "table": table}, ensure_ascii=False)
             else:
                 return f"No matches found for: {pattern}"
 
@@ -289,7 +310,20 @@ def execute(tool_input: dict, context) -> str:
                     header_parts.append(f"(상위 {max_results}개만 반환 — 더 많으면 max_results 또는 더 좁은 path 사용)")
                 header_parts.append(f"root: {root}")
                 header = " | ".join(header_parts)
-                return header + "\n" + "\n".join(absolute_paths)
+                text = header + "\n" + "\n".join(absolute_paths)
+                # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
+                # 매칭 파일 → [이름, 크기, 수정일, 경로]. 디렉터리는 크기 "".
+                rows = []
+                for p in absolute_paths:
+                    try:
+                        st = os.stat(p)
+                        size = "" if os.path.isdir(p) else st.st_size
+                        mtime = datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")
+                    except OSError:
+                        size, mtime = "", ""
+                    rows.append([os.path.basename(p), size, mtime, p])
+                table = {"columns": ["이름", "크기", "수정일", "경로"], "rows": rows}
+                return json.dumps({"text": text, "table": table}, ensure_ascii=False)
 
             # 결과 없을 때 — 안내 메시지에 path 옵션 힌트 포함
             hint = (
@@ -446,7 +480,7 @@ def execute(tool_input: dict, context) -> str:
 
         elif tool_name == "read_pdf":
             import fitz  # PyMuPDF
-            file_path = tool_input.get("file_path")
+            file_path = tool_input.get("file_path") or tool_input.get("path")  # path 별칭 수용(read 일관성)
             pages = tool_input.get("pages")
 
             if not file_path:
@@ -477,12 +511,19 @@ def execute(tool_input: dict, context) -> str:
 
                 doc.close()
 
+                # 문서 IR blocks(비파괴) — pdf 텍스트를 문단 블록으로. read(x.pdf) >> document.
+                pdf_blocks = []
+                for para in extracted_text.split("\n\n"):
+                    para = para.strip()
+                    if para:
+                        pdf_blocks.append({"type": "paragraph", "text": para})
                 res = {
                     "success": True,
                     "metadata": metadata,
                     "total_pages": total_pages,
                     "extracted_pages_count": len(list(target_pages)),
-                    "text": extracted_text
+                    "text": extracted_text,
+                    "blocks": pdf_blocks or [{"type": "paragraph", "text": extracted_text}],
                 }
                 return json.dumps(res, ensure_ascii=False)
 
@@ -561,7 +602,34 @@ def execute(tool_input: dict, context) -> str:
                 # --- 텍스트 추출 (이미지 위치 마커 포함) ---
                 from docx.oxml.ns import qn
                 extracted_parts = []
+                # === 공유 통화 문서 IR blocks (비파괴 ADD) ===
+                # 단락→{type:paragraph,text}, Heading 스타일→{type:heading,level,text},
+                # 표→{type:table,columns,rows}. read(보고서.docx) >> document{pdf} 포맷변환용.
+                blocks = []
                 para_index = 0
+
+                def _heading_level(el):
+                    # w:pPr/w:pStyle 의 val 이 Heading N / 제목 N 이면 레벨 반환, 아니면 None
+                    try:
+                        ppr = el.find(qn('w:pPr'))
+                        if ppr is None:
+                            return None
+                        pstyle = ppr.find(qn('w:pStyle'))
+                        if pstyle is None:
+                            return None
+                        val = (pstyle.get(qn('w:val')) or "")
+                    except Exception:
+                        return None
+                    low = val.lower()
+                    # "Heading1", "Heading 1", "Title", "제목 1" 등 흡수
+                    if low in ("title",) or "title" in low:
+                        return 1
+                    m = re.search(r'(\d+)', val)
+                    if "heading" in low or "제목" in val:
+                        if m:
+                            return min(6, max(1, int(m.group(1))))
+                        return 1
+                    return None
 
                 for element in doc.element.body:
                     tag = element.tag.split('}')[-1] if '}' in element.tag else element.tag
@@ -585,11 +653,18 @@ def execute(tool_input: dict, context) -> str:
                                     full_text += f"\n[이미지: {img_name}]"
 
                         if full_text.strip():
-                            extracted_parts.append(full_text.strip())
+                            txt = full_text.strip()
+                            extracted_parts.append(txt)
+                            level = _heading_level(element)
+                            if level is not None:
+                                blocks.append({"type": "heading", "level": level, "text": txt})
+                            else:
+                                blocks.append({"type": "paragraph", "text": txt})
                         para_index += 1
 
                     elif tag == 'tbl':  # 표
                         table_lines = ["[표 시작]"]
+                        tbl_rows = []
                         for row in element.iter(qn('w:tr')):
                             cells = []
                             for cell in row.iter(qn('w:tc')):
@@ -602,8 +677,22 @@ def execute(tool_input: dict, context) -> str:
                                     cell_texts.append(''.join(t_parts))
                                 cells.append(' '.join(cell_texts))
                             table_lines.append(" | ".join(cells))
+                            tbl_rows.append(cells)
                         table_lines.append("[표 끝]")
                         extracted_parts.append('\n'.join(table_lines))
+                        # 표 블록: 첫 행을 columns, 나머지를 rows (길이 정규화)
+                        if tbl_rows:
+                            tcols = tbl_rows[0]
+                            ncol = len(tcols)
+                            tbody = []
+                            for r in tbl_rows[1:]:
+                                rr = list(r)
+                                if len(rr) < ncol:
+                                    rr += [""] * (ncol - len(rr))
+                                elif len(rr) > ncol:
+                                    rr = rr[:ncol]
+                                tbody.append(rr)
+                            blocks.append({"type": "table", "columns": tcols, "rows": tbody})
 
                 # --- 부분 읽기 슬라이싱 ---
                 total_blocks = len(extracted_parts)
@@ -650,6 +739,10 @@ def execute(tool_input: dict, context) -> str:
                     "metadata": metadata,
                     "text": text,
                 }
+                # 문서 IR blocks 통화 (비파괴 ADD) — 전체 문서 구조.
+                # 부분 읽기로 text가 잘려도 blocks 자체는 문서 IR이라 전체 제공.
+                if blocks:
+                    res["blocks"] = blocks
                 if images_info:
                     res["images"] = images_info
 
@@ -701,14 +794,68 @@ def execute(tool_input: dict, context) -> str:
                     if truncated:
                         header += f" — 처음 {max_rows}행만 (max_rows로 조정)"
                     parts.append(header + "\n" + "\n".join(rows_text))
+
+                # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
+                # 첫 행을 헤더로. 시트 미지정이면 가장 큰(셀 수 최대) 시트, 지정이면 그 시트.
+                # read(데이터.xlsx) >> chart / spreadsheet 로 흐를 수 있게 함.
+                def _num(v):
+                    # 가능하면 숫자로 — table 통화는 값이 숫자면 더 유용
+                    if isinstance(v, (int, float)):
+                        return v
+                    if isinstance(v, str):
+                        s = v.strip().replace(",", "")
+                        try:
+                            return int(s)
+                        except (ValueError, TypeError):
+                            pass
+                        try:
+                            return float(s)
+                        except (ValueError, TypeError):
+                            pass
+                    return "" if v is None else v
+
+                table = None
+                if sheet_name and sheet_name in all_sheets:
+                    table_sheets = [sheet_name]
+                else:
+                    # 가장 큰 시트 선택 (max_row * max_column)
+                    table_sheets = sorted(
+                        [sn for sn in all_sheets],
+                        key=lambda sn: (wb[sn].max_row or 0) * (wb[sn].max_column or 0),
+                        reverse=True,
+                    )[:1]
+                if table_sheets:
+                    tsn = table_sheets[0]
+                    tws = wb[tsn]
+                    all_rows = []
+                    for i, row in enumerate(tws.iter_rows(values_only=True)):
+                        if i >= max_rows:
+                            break
+                        all_rows.append(list(row))
+                    if all_rows:
+                        columns = ["" if c is None else str(c) for c in all_rows[0]]
+                        body = []
+                        for r in all_rows[1:]:
+                            # columns 길이에 맞춰 패딩/절단
+                            cells = [_num(c) for c in r]
+                            if len(cells) < len(columns):
+                                cells += [""] * (len(columns) - len(cells))
+                            elif len(cells) > len(columns):
+                                cells = cells[:len(columns)]
+                            body.append(cells)
+                        table = {"columns": columns, "rows": body}
+
                 wb.close()
 
-                return json.dumps({
+                res = {
                     "success": True,
                     "sheet_count": len(all_sheets),
                     "sheets": all_sheets,
                     "text": "\n\n".join(parts),
-                }, ensure_ascii=False)
+                }
+                if table is not None:
+                    res["table"] = table
+                return json.dumps(res, ensure_ascii=False)
 
             except Exception as e:
                 return json.dumps({"success": False, "error": f"XLSX를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
@@ -716,6 +863,33 @@ def execute(tool_input: dict, context) -> str:
         elif tool_name == "spreadsheet":
             # [engines:spreadsheet] — 행 데이터 → xlsx 산출 (값만, 수식/서식은 범위 밖)
             import openpyxl
+
+            # >> 파이프: 이전 액션 결과(_prev_result)에 table 통화가 있으면 자동 수용
+            if not tool_input.get("table") and not tool_input.get("rows") and not tool_input.get("sheets"):
+                _pr = tool_input.get("_prev_result")
+                if _pr:
+                    try:
+                        _po = json.loads(_pr) if isinstance(_pr, str) else _pr
+                        if isinstance(_po, dict) and isinstance(_po.get("table"), dict) and _po["table"].get("rows"):
+                            tool_input["table"] = _po["table"]
+                        elif isinstance(_po, dict) and isinstance(_po.get("records"), list) and _po["records"]:
+                            # 레코드 통화(records) → table 투영: 목록형 생산자(book·restaurant·검색…)도 엑셀로.
+                            _it = [x for x in _po["records"] if isinstance(x, dict)]
+                            tool_input["table"] = {
+                                "columns": ["제목", "정보", "요약", "링크"],
+                                "rows": [[x.get("title", ""), x.get("meta", ""),
+                                          x.get("summary", ""), x.get("url", "")] for x in _it],
+                            }
+                    except Exception:
+                        pass
+            # 표준 테이블 통화 수용: {columns, rows} → headers/rows (engines:chart와 동일 통화).
+            # 같은 통화 한 벌이 차트로도, 표로도 흘러감 (데이터 소스 >> 시각화/표).
+            _table = tool_input.get("table")
+            if isinstance(_table, dict) and not tool_input.get("sheets") and not tool_input.get("rows"):
+                if _table.get("columns") and not tool_input.get("headers"):
+                    tool_input["headers"] = _table["columns"]
+                if _table.get("rows"):
+                    tool_input["rows"] = _table["rows"]
 
             raw_path = _get_path(tool_input)
             if not raw_path:

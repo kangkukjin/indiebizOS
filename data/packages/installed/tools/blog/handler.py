@@ -24,6 +24,49 @@ _OP_DISPATCHERS = {
 _OP_DEFAULTS = {"blog_op": "posts"}
 
 
+def _posts_to_records(posts: list) -> list:
+    """블로그 글 목록 → 레코드 통화 records[{title,meta,summary,url}].
+    blog_get_posts 결과(post_id/title/category/pub_date/content_preview/summary?)용."""
+    records = []
+    for p in (posts or []):
+        if not isinstance(p, dict):
+            continue
+        meta = [p.get("pub_date"), p.get("category")]
+        kw = p.get("keywords")
+        if kw:
+            meta.append(kw if isinstance(kw, str) else " ".join(kw))
+        title = p.get("title") or ""
+        summary = p.get("summary") or p.get("content_preview") or ""
+        pid = p.get("post_id")
+        records.append({
+            "title": title,
+            "meta": " · ".join(str(x) for x in meta if x),
+            "summary": "" if summary == title else summary,
+            "url": p.get("link") or (f"/{pid}" if pid else ""),
+        })
+    return records
+
+
+def _results_to_records(results: list) -> list:
+    """블로그 RAG 검색 결과 → 레코드 통화 records[{title,meta,summary,url}].
+    search_blog/semantic 결과(title/content/date/category/post_id/key_insight)용."""
+    records = []
+    for r in (results or []):
+        if not isinstance(r, dict):
+            continue
+        meta = [r.get("date"), r.get("category"), r.get("search_type")]
+        title = r.get("title") or ""
+        summary = r.get("key_insight") or r.get("content") or ""
+        pid = r.get("post_id")
+        records.append({
+            "title": title,
+            "meta": " · ".join(str(x) for x in meta if x),
+            "summary": "" if summary == title else summary,
+            "url": (f"/{pid}" if pid else ""),
+        })
+    return records
+
+
 def execute(tool_input: dict, context) -> str:
     """블로그 도구 실행 통합 핸들러 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
@@ -54,6 +97,9 @@ def execute(tool_input: dict, context) -> str:
                 with_summary=tool_input.get("with_summary", False),
                 only_without_summary=tool_input.get("only_without_summary", False)
             )
+            # 레코드 통화 부착(비파괴) — posts 목록을 records로.
+            if isinstance(result, dict) and isinstance(result.get("posts"), list):
+                result["records"] = _posts_to_records(result["posts"])
             return format_json(result)
 
         elif tool_name == "blog_get_post":
@@ -127,6 +173,9 @@ def execute(tool_input: dict, context) -> str:
                 )
             else:
                 result = {"success": False, "error": f"알 수 없는 mode '{mode}'. (hybrid|semantic|content)"}
+            # 레코드 통화 부착(비파괴) — 검색 results 목록을 records로(content는 단건이라 미부착).
+            if isinstance(result, dict) and isinstance(result.get("results"), list):
+                result["records"] = _results_to_records(result["results"])
             return format_json(result)
 
         # RAG 검색 도구들

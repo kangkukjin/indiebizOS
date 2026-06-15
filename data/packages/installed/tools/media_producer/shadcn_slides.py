@@ -1745,6 +1745,31 @@ def _adapt_legacy_slide_input(tool_input: dict) -> dict:
     return adapted
 
 
+def _bundle_slides(png_paths: list, output_dir: str, fmt: str, width: int, height: int) -> str:
+    """렌더된 슬라이드 PNG들을 단일 공유 파일로 묶음 — 디자인 보존(이미지 그대로).
+    pdf=슬라이드당 1페이지 / pptx=슬라이드당 풀블리드 이미지. 반환: 산출 파일 절대경로."""
+    if fmt == "pdf":
+        from PIL import Image
+        imgs = [Image.open(p).convert("RGB") for p in png_paths]
+        out = os.path.join(output_dir, "slides.pdf")
+        imgs[0].save(out, save_all=True, append_images=imgs[1:])
+        return out
+    if fmt == "pptx":
+        from pptx import Presentation
+        from pptx.util import Emu
+        prs = Presentation()
+        prs.slide_width = Emu(int(width / 96 * 914400))   # px→EMU (96dpi 가정, 슬라이드 비율 유지)
+        prs.slide_height = Emu(int(height / 96 * 914400))
+        blank = prs.slide_layouts[6]
+        for p in png_paths:
+            s = prs.slides.add_slide(blank)
+            s.shapes.add_picture(p, 0, 0, width=prs.slide_width, height=prs.slide_height)
+        out = os.path.join(output_dir, "slides.pptx")
+        prs.save(out)
+        return out
+    raise ValueError(f"지원하지 않는 format: {fmt}")
+
+
 def create_shadcn_slides(tool_input: dict, output_base: str) -> str:
     """
     shadcn 스타일 슬라이드 생성"""
@@ -1851,14 +1876,28 @@ def _create_shadcn_slides_impl(tool_input: dict, output_base: str) -> str:
 
             browser.close()
 
-        return json.dumps({
+        # emitter 정리: 슬라이드 IR(slides[]) → png(기본, 슬라이드별 이미지) / pdf / pptx.
+        # ★슬라이드 layout은 디자인된 HTML이라, pdf·pptx는 렌더된 PNG를 그대로 보존(네이티브 도형 재구성=디자인 파괴).
+        fmt = (tool_input.get("format") or "png").strip().lower()
+        result = {
             "success": True,
             "message": f"{len(generated_paths)}개의 슬라이드가 생성되었습니다",
             "output_dir": output_dir,
             "images": generated_paths,
             "html_files": html_paths,
-            "theme": theme_name
-        }, ensure_ascii=False)
+            "theme": theme_name,
+            "format": "png",
+        }
+        if fmt in ("pdf", "pptx") and generated_paths:
+            try:
+                bundle = _bundle_slides(generated_paths, output_dir, fmt, width, height)
+                result["format"] = fmt
+                result["path"] = bundle
+                result["file"] = bundle
+                result["message"] = f"{len(generated_paths)}개 슬라이드를 {fmt.upper()}로 묶었습니다."
+            except Exception as e:
+                result["message"] += f" (단, {fmt} 묶기 실패 → PNG 유지: {e})"
+        return json.dumps(result, ensure_ascii=False)
 
     except ImportError:
         return json.dumps({

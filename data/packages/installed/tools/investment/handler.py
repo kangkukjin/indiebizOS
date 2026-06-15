@@ -196,6 +196,78 @@ def _company_news(symbol, ti: dict):
 
 # ── 단일 액션 op 디스패처 ───────────────────────────────
 
+def _attach_price_table(result):
+    """주가 이력 결과에 표준 table 통화(날짜·종가 시계열)를 덧붙인다.
+
+    engines:chart{table:...}/spreadsheet{table:...}로 그대로 흘려보냄 + `>>` 자동 파이프 대상.
+    실패해도 원본 그대로 반환(비파괴).
+    """
+    try:
+        obj = result
+        if isinstance(result, str):
+            obj = json.loads(result)
+        if not isinstance(obj, dict) or not obj.get("success"):
+            return result
+        data = obj.get("data") or {}
+        prices = data.get("prices") or data.get("sample") or []
+        rows = [[p.get("date"), p.get("close")] for p in prices
+                if isinstance(p, dict) and p.get("close") is not None]
+        if rows:
+            obj["table"] = {"columns": ["날짜", "종가"], "rows": rows}
+        return obj
+    except Exception:
+        return result
+
+
+# 펀더멘털 dict 키 → 한글 지표명 (없는 키는 키 그대로 표시).
+_COMPANY_LABELS = {
+    # fmp (미국)
+    "symbol": "종목코드", "company_name": "기업명", "price": "주가",
+    "market_cap": "시가총액", "beta": "베타", "volume_avg": "평균거래량",
+    "last_dividend": "최근배당", "range_52week": "52주 범위", "change": "변동",
+    "change_percent": "변동률(%)", "currency": "통화", "exchange": "거래소",
+    "industry": "업종", "sector": "섹터", "country": "국가", "employees": "임직원수",
+    "ceo": "대표자", "website": "홈페이지", "ipo_date": "상장일",
+    # dart (한국)
+    "corp_name": "기업명", "corp_name_eng": "영문명", "stock_code": "종목코드",
+    "ceo_name": "대표자", "address": "주소", "homepage": "홈페이지",
+    "phone": "전화", "fax": "팩스", "establishment_date": "설립일",
+    "accounting_month": "결산월",
+}
+# 표(2열)에 부적합해 제외할 키 (장문 텍스트·내부 식별자·불리언 노이즈).
+_COMPANY_TABLE_SKIP = {
+    "description", "corp_code", "jurir_no", "bizr_no", "is_etf",
+    "is_actively_trading", "corp_cls", "ir_url",
+}
+
+
+def _attach_company_table(result):
+    """기업 펀더멘털 결과(profile)에 표준 table 통화(지표·값 2열)를 덧붙인다.
+
+    data dict의 각 항목을 한 행(지표명, 값)으로 펼침 — engines:spreadsheet{table}/
+    document{table}로 그대로 흐름, `>>` 자동 파이프 대상. 실패해도 원본 그대로(비파괴).
+    """
+    try:
+        obj = result
+        if isinstance(result, str):
+            obj = json.loads(result)
+        if not isinstance(obj, dict) or not obj.get("success"):
+            return result
+        data = obj.get("data")
+        if not isinstance(data, dict) or not data:
+            return result
+        rows = []
+        for key, val in data.items():
+            if key in _COMPANY_TABLE_SKIP or val is None or val == "":
+                continue
+            rows.append([_COMPANY_LABELS.get(key, key), val])
+        if rows:
+            obj["table"] = {"columns": ["지표", "값"], "rows": rows}
+        return obj
+    except Exception:
+        return result
+
+
 def _stock_op(ti: dict):
     """[sense:stock]{op} — 주식 시세·거래 데이터."""
     op = (ti.get("op") or _OP_DEFAULTS["stock_op"]).strip()
@@ -223,12 +295,13 @@ def _stock_op(ti: dict):
         else:
             tool = load_module("tool_fmp")
             price_symbol = ticker
-        return tool.get_stock_price(
+        _res = tool.get_stock_price(
             symbol=price_symbol,
             start_date=ti.get("start_date"),
             end_date=ti.get("end_date"),
             max_points=ti.get("max_points", 10),
         )
+        return _attach_price_table(_res)
     if op == "info":
         tool = load_module("tool_yfinance")
         return tool.get_stock_info(symbol=ticker)
@@ -273,9 +346,11 @@ def _company_op(ti: dict):
     if op == "profile":
         if market == "kr":
             tool = load_module("tool_dart")
-            return tool.get_company_info(corp_code=ti.get("corp_code"), corp_name=ticker)
+            return _attach_company_table(
+                tool.get_company_info(corp_code=ti.get("corp_code"), corp_name=ticker)
+            )
         tool = load_module("tool_fmp")
-        return tool.get_company_profile(symbol=ticker)
+        return _attach_company_table(tool.get_company_profile(symbol=ticker))
     if op == "financials":
         if market == "kr":
             tool = load_module("tool_dart")

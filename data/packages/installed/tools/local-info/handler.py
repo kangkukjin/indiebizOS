@@ -27,6 +27,27 @@ def execute(tool_input: dict, context) -> str:
                 cafe_id=tool_input.get("cafe_id", "osong1"),
                 display=tool_input.get("display", 5)
             )
+            # 레코드 통화(비파괴) — 지역 장소/게시글 목록 >> [engines:document/spreadsheet]
+            # naver_map: name/category/address/phone/link, naver_cafe: title/snippet/date/author/url
+            if isinstance(result, dict) and result.get("success") and isinstance(result.get("results"), list):
+                recs = []
+                for r in result["results"]:
+                    if not isinstance(r, dict):
+                        continue
+                    title = r.get("name") or r.get("title") or ""
+                    meta = " · ".join(x for x in [
+                        r.get("category"), r.get("address"),
+                        (f"{r.get('phone')}" if r.get("phone") else None),
+                        r.get("author"), r.get("date"),
+                    ] if x)
+                    summary = r.get("description") or r.get("snippet") or ""
+                    recs.append({
+                        "title": title,
+                        "meta": meta,
+                        "summary": summary if summary != title else "",
+                        "url": r.get("link") or r.get("url") or "",
+                    })
+                result["records"] = recs
             return json.dumps(result, ensure_ascii=False, indent=2)
 
         # ─── 2. DB 조회 ───

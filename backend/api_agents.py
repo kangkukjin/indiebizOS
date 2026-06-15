@@ -4,6 +4,7 @@ IndieBiz OS Core
 """
 
 import uuid
+import threading
 from datetime import datetime
 from typing import Dict, Any
 from pathlib import Path
@@ -49,6 +50,9 @@ agent_runners: Dict[str, Dict[str, Any]] = {}
 
 class AgentCommand(BaseModel):
     command: str
+    # True면 즉시 반환(fire-and-forget) — 영상 생성 등 수 분짜리 작업이 터널 타임아웃(524)에
+    # 걸리지 않도록. 응답은 평소처럼 conversations.db에 저장되니 호출 측이 메시지를 폴링해서 받는다.
+    background: bool = False
 
 
 class AgentNote(BaseModel):
@@ -256,23 +260,16 @@ async def stop_all_agents(project_id: str):
 
 # ============ 에이전트 명령 ============
 
-@router.post("/projects/{project_id}/agents/{agent_id}/command")
-async def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
-    """에이전트에게 명령 전송"""
+def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
+    """에이전트 명령 처리 코어 — 동기/백그라운드 양쪽이 공유.
+
+    응답 텍스트를 반환하고, 사용자/AI 메시지를 conversations.db에 저장한다.
+    백그라운드 경로에서는 자체 스레드에서 돌므로 스레드 컨텍스트를 여기서 설정/정리한다.
+    """
     from conversation_db import ConversationDB
     from thread_context import set_current_agent_id, set_current_agent_name, set_current_project_id, clear_all_context
 
     try:
-        # 에이전트 실행 중인지 확인
-        if project_id not in agent_runners or agent_id not in agent_runners[project_id]:
-            raise HTTPException(status_code=400, detail="에이전트가 실행 중이 아닙니다.")
-
-        runner_info = agent_runners[project_id][agent_id]
-        runner = runner_info.get("runner")
-
-        if not runner or not runner.ai:
-            raise HTTPException(status_code=400, detail="에이전트 AI가 준비되지 않았습니다.")
-
         project_path = project_manager.get_project_path(project_id)
         agent_name = runner.config.get("name", agent_id)
 
@@ -292,11 +289,11 @@ async def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
         history = db.get_history_for_ai(target_agent_id, user_id)
 
         # 사용자 메시지 저장
-        db.save_message(user_id, target_agent_id, cmd.command)
+        db.save_message(user_id, target_agent_id, command)
 
         # AI 응답 생성
         response = runner.ai.process_message_with_history(
-            message_content=cmd.command,
+            message_content=command,
             from_email="user@gui",
             history=history,
             reply_to="user@gui"
@@ -304,18 +301,49 @@ async def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
 
         # AI 응답 저장
         db.save_message(target_agent_id, user_id, response)
-
-        # 컨텍스트 정리
+        return response
+    finally:
         clear_all_context()
 
+
+@router.post("/projects/{project_id}/agents/{agent_id}/command")
+def send_agent_command(project_id: str, agent_id: str, cmd: AgentCommand):
+    # ★ 동기(def) 엔드포인트로 둔다 (async 아님). _run_agent_command 는 LLM 파이프라인 전체를
+    # 동기로 블로킹한다. async 로 두면 수 분짜리 작업이 이벤트 루프를 통째로 막아, 같은 백엔드의
+    # 다른 요청(NAS 파일 탐색 등)이 그동안 처리되지 못한다. def 로 두면 FastAPI 가 스레드풀에서
+    # 실행해 루프가 자유로워진다(시스템 AI /system-ai/chat 과 같은 설계).
+    """에이전트에게 명령 전송.
+
+    cmd.background=True 면 즉시 반환하고 별도 스레드에서 처리한다(폰 원격런처용 — 영상 생성 등
+    수 분짜리 작업이 Cloudflare 터널 100초 타임아웃에 걸려 524가 뜨던 문제 해결). 응답은
+    평소처럼 conversations.db에 저장되므로 호출 측이 메시지를 폴링해서 받아간다.
+    """
+    # 에이전트 실행 중인지 확인 — 두 경로 모두 즉시 검증해서 빠른 피드백을 준다
+    if project_id not in agent_runners or agent_id not in agent_runners[project_id]:
+        raise HTTPException(status_code=400, detail="에이전트가 실행 중이 아닙니다.")
+
+    runner_info = agent_runners[project_id][agent_id]
+    runner = runner_info.get("runner")
+
+    if not runner or not runner.ai:
+        raise HTTPException(status_code=400, detail="에이전트 AI가 준비되지 않았습니다.")
+
+    if cmd.background:
+        def _worker():
+            try:
+                _run_agent_command(project_id, agent_id, runner, cmd.command)
+            except Exception:
+                import traceback
+                traceback.print_exc()
+        threading.Thread(target=_worker, daemon=True).start()
+        return {"status": "started"}
+
+    try:
+        response = _run_agent_command(project_id, agent_id, runner, cmd.command)
         return {"response": response}
-    except HTTPException:
-        clear_all_context()
-        raise
     except Exception as e:
         import traceback
         traceback.print_exc()
-        clear_all_context()
         raise HTTPException(status_code=500, detail=str(e))
 
 

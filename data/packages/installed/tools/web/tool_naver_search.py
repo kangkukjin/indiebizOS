@@ -158,6 +158,9 @@ def search_naver(
         "success": True,
         "type": normalized_type,
         "total": data.get("total", 0) if isinstance(data, dict) else 0,
-        "items": items,
+        "items": items,  # legacy (title/link/snippet)
+        # 레코드 통화 — >> [engines:document/spreadsheet]
+        "records": [{"title": it.get("title", ""), "meta": "",
+                     "summary": it.get("snippet", ""), "url": it.get("link", "")} for it in items],
         "source": "네이버 검색 API",
     }

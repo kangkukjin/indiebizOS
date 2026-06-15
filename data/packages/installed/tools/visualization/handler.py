@@ -41,6 +41,96 @@ def _resolve_data_file(data_file: str, context) -> str:
     return data_file  # 그대로 반환 (에러는 도구에서 처리)
 
 
+def _extract_table_from_prev(prev):
+    """>> 파이프로 들어온 이전 액션 결과에서 표준 table 통화를 추출 (있으면).
+
+    prev는 문자열(JSON) 또는 dict. {table:{columns,rows}} 형태면 그 table 반환.
+    """
+    if not prev:
+        return None
+    obj = prev
+    if isinstance(prev, str):
+        try:
+            obj = json.loads(prev)
+        except Exception:
+            return None
+    if isinstance(obj, dict):
+        t = obj.get("table")
+        if isinstance(t, dict) and t.get("rows"):
+            return t
+    return None
+
+
+def _extract_ohlc_from_prev(prev):
+    """>> 파이프 이전 결과에서 OHLC 리스트(캔들스틱용)를 제네릭 추출.
+    table 통화(종가만)는 캔들스틱을 못 담으므로, open/high/low/close 키를 가진 dict 리스트를
+    찾는다(stock history의 prices 등). 통화 필드를 늘리지 않고 기존 데이터를 인식만."""
+    if not prev:
+        return None
+    obj = prev
+    if isinstance(prev, str):
+        try:
+            obj = json.loads(prev)
+        except Exception:
+            return None
+
+    def _is_ohlc_list(v):
+        return (isinstance(v, list) and v and isinstance(v[0], dict)
+                and all(k in v[0] for k in ("open", "high", "low", "close")))
+
+    # 최상위 + 한 단계 깊이(data/prices 등 흔한 중첩)에서 탐색
+    stack = [obj]
+    if isinstance(obj, dict):
+        stack += [v for v in obj.values() if isinstance(v, (dict, list))]
+        for v in obj.values():
+            if isinstance(v, dict):
+                stack += list(v.values())
+    for v in stack:
+        if _is_ohlc_list(v):
+            return v
+    return None
+
+
+def _table_to_chart_data(table: dict, chart_type: str) -> dict:
+    """표준 테이블 통화 → 차트 입력 변환.
+
+    통화: {"columns": ["연도","GDP","인구"], "rows": [["2020",1.6,51],["2021",1.8,51.2]]}
+      - 첫 열 = x축/범주, 나머지 열 = 각 시리즈(열 머리글 = 시리즈 이름).
+    반환: {"data", "series_names"?, "x_label"?, "y_label"?}.
+    """
+    cols = table.get("columns") or []
+    rows = table.get("rows") or []
+    if not rows:
+        return {}
+    out: dict = {}
+    if chart_type == "heatmap":
+        # 표=행렬: 첫 열=행 라벨(y), 나머지 열 머리글=열 라벨(x), 값=2D 행렬
+        out["data"] = [[v for v in r[1:]] for r in rows]
+        out["y_labels"] = [str(r[0]) for r in rows]
+        if len(cols) > 1:
+            out["x_labels"] = [str(c) for c in cols[1:]]
+        return out
+    if chart_type in ("pie", "bar"):
+        # 첫 열=라벨, 두번째 열=값 (단일 시리즈)
+        out["data"] = [{"label": str(r[0]), "value": r[1]} for r in rows if len(r) > 1]
+        if len(cols) > 1:
+            out["y_label"] = cols[1]
+    else:  # line/scatter — 다중 시리즈 지원 ({x, s1, s2} 행 dict, x외 키=시리즈)
+        xkey = str(cols[0]) if cols else "x"
+        vcols = [str(c) for c in cols[1:]] if len(cols) > 1 else ["y"]
+        data = []
+        for r in rows:
+            d = {xkey: r[0]}
+            for i, vc in enumerate(vcols):
+                d[vc] = r[i + 1] if (i + 1) < len(r) else None
+            data.append(d)
+        out["data"] = data
+        out["series_names"] = vcols
+        if cols:
+            out["x_label"] = str(cols[0])
+    return out
+
+
 def execute(tool_input: dict, context):
     """도구 실행 진입점 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
@@ -62,6 +152,28 @@ def execute(tool_input: dict, context):
         # 범용 chart 액션: chart_type으로 분기
         if tool_name == "chart":
             chart_type = tool_input.get("chart_type", "line")
+            # 캔들스틱: table 통화(종가만)로 불가 → _prev_result에서 OHLC 리스트 제네릭 수용
+            # (stock history prices 등 open/high/low/close 보유 리스트). 통화 필드 안 늘림.
+            if chart_type == "candlestick" and not tool_input.get("data"):
+                _ohlc = _extract_ohlc_from_prev(tool_input.get("_prev_result"))
+                if _ohlc:
+                    tool_input["data"] = _ohlc
+            # >> 파이프: 이전 액션 결과(_prev_result)에 table 통화가 있으면 자동 수용
+            # → [sense:world_bank]{...} >> [engines:chart]{title,chart_type} 가 무reshape로 흐름.
+            if not tool_input.get("table") and not tool_input.get("data"):
+                _pt = _extract_table_from_prev(tool_input.get("_prev_result"))
+                if _pt:
+                    tool_input["table"] = _pt
+            # 표준 테이블 통화(table currency) → 차트 입력. 데이터 소스가 공유 통화를
+            # 그대로 흘려보내면 손으로 reshape 없이 차트가 됨 (sense:* >> engines:chart).
+            _table = tool_input.get("table")
+            if isinstance(_table, dict) and _table.get("rows") and not tool_input.get("data"):
+                _conv = _table_to_chart_data(_table, chart_type)
+                if _conv.get("data") is not None:
+                    tool_input["data"] = _conv["data"]
+                for _k in ("series_names", "x_label", "y_label", "x_labels", "y_labels"):
+                    if _conv.get(_k) and not tool_input.get(_k):
+                        tool_input[_k] = _conv[_k]
             # flat data + labels 정규화: 코퍼스/사용자는 data:[10,20,30] + labels:[...]로 쓰나
             # 차트 도구는 dict 리스트를 기대 → 종류별 키로 변환 (pie/bar={label,value}, line/scatter={x,y}).
             _d = tool_input.get("data")

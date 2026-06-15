@@ -22,6 +22,34 @@ from common.html_utils import clean_html
 from common.response_formatter import format_json
 
 
+def _products_to_records(items):
+    """상품 목록 → 레코드 통화(records). 비파괴 부착용.
+    title=상품명 · meta=가격·쇼핑몰 · url=링크 · image=상품이미지(있을 때만)."""
+    records = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        price = it.get("price")
+        price_str = ""
+        if price not in (None, "", "0", 0):
+            try:
+                price_str = f"{int(str(price)):,}원"
+            except (ValueError, TypeError):
+                price_str = str(price)
+        meta_parts = [price_str, it.get("mall")]
+        rec = {
+            "title": it.get("name", ""),
+            "meta": " · ".join(p for p in meta_parts if p),
+            "summary": "",
+            "url": it.get("link", ""),
+        }
+        image = it.get("image")
+        if image:
+            rec["image"] = image
+        records.append(rec)
+    return records
+
+
 def search_naver_shopping(query: str, display: int = 5):
     """네이버 쇼핑 검색 API 호출"""
     ok, err = check_api_key("naver")
@@ -216,6 +244,10 @@ def execute(tool_input: dict, context) -> str:
                 result = asyncio.run(search_used_items_async(query, display))
             else:
                 result = asyncio.run(search_all_async(query, display))
+
+            # 레코드 통화 부착(비파괴) — items 목록을 records로. >> 파이프가 자동으로 흐름.
+            if isinstance(result, dict) and isinstance(result.get("items"), list):
+                result["records"] = _products_to_records(result["items"])
 
             return format_json(result)
         except Exception as e:

@@ -1,5 +1,6 @@
 import os
 import time
+import json
 import requests
 import feedparser
 import xml.etree.ElementTree as ET
@@ -26,21 +27,29 @@ def _search_arxiv(tool_input: dict) -> str:
     r = requests.get(url, timeout=20)
     r.raise_for_status()
     feed = feedparser.parse(r.text)
-    results = []
+    lines, items = [], []
     for e in feed.entries:
         aid = (e.get("id", "") or "").split("/")[-1]
+        title = (e.get("title", "") or "").strip()
         authors = ", ".join(a.get("name", "") for a in e.get("authors", []))
         published = (e.get("published", "") or "")[:10]
         summary = (e.get("summary", "") or "").strip().replace("\n", " ")[:200]
-        results.append(
-            f"Title: {(e.get('title','') or '').strip()}\n"
-            f"ArXiv ID: {aid}\n"
-            f"Authors: {authors}\n"
-            f"Published: {published}\n"
-            f"Summary: {summary}...\n"
+        lines.append(
+            f"Title: {title}\nArXiv ID: {aid}\nAuthors: {authors}\n"
+            f"Published: {published}\nSummary: {summary}...\n"
             "--------------------------------------"
         )
-    return "\n".join(results) if results else "No papers found for the given query."
+        items.append({  # 레코드 통화 — message(사람용 문자열)와 함께 반환
+            "title": title,
+            "meta": " · ".join(x for x in [authors, published] if x),
+            "summary": summary,
+            "url": f"https://arxiv.org/abs/{aid}",
+            "link_label": "논문 보기",
+        })
+    if not items:
+        return "No papers found for the given query."
+    # ★string-반환 변형: 포맷 문자열은 message로, 구조는 records 통화로 둘 다 노출(비파괴 + 조합 가능).
+    return {"success": True, "message": "\n".join(lines), "records": items, "count": len(items)}
 
 
 def _download_arxiv_pdf(tool_input: dict, context) -> str:
@@ -170,15 +179,16 @@ def _search_semantic_scholar(tool_input: dict) -> str:
             total = data.get("total", len(papers))
             results = []
             results.append(f"Semantic Scholar 검색 결과: '{query}' (총 {total:,}건 중 {len(papers)}건 표시)\n")
+            records = []
 
             for i, paper in enumerate(papers, 1):
                 authors = ", ".join([a.get("name", "Unknown") for a in paper.get("authors", [])[:3]])
                 if len(paper.get("authors", [])) > 3:
                     authors += " et al."
 
-                abstract = paper.get("abstract", "")
-                if abstract:
-                    abstract = abstract[:200] + "..." if len(abstract) > 200 else abstract
+                raw_abstract = paper.get("abstract", "") or ""
+                if raw_abstract:
+                    abstract = raw_abstract[:200] + "..." if len(raw_abstract) > 200 else raw_abstract
                 else:
                     abstract = "No abstract available"
 
@@ -187,17 +197,31 @@ def _search_semantic_scholar(tool_input: dict) -> str:
                     pdf_url = f"\nPDF (Open Access): {paper['openAccessPdf'].get('url', '')}"
 
                 separator = "-" * 60
+                title = paper.get('title', 'Unknown')
+                year = paper.get('year', 'Unknown')
+                citations = paper.get('citationCount', 0)
+                paper_url = paper.get('url', '')
                 paper_info = (
-                    f"[{i}] {paper.get('title', 'Unknown')}\n"
+                    f"[{i}] {title}\n"
                     f"Authors: {authors}\n"
-                    f"Year: {paper.get('year', 'Unknown')} | Citations: {paper.get('citationCount', 0)}\n"
-                    f"URL: {paper.get('url', '')}{pdf_url}\n"
+                    f"Year: {year} | Citations: {citations}\n"
+                    f"URL: {paper_url}{pdf_url}\n"
                     f"Abstract: {abstract}\n"
                     f"{separator}"
                 )
                 results.append(paper_info)
+                records.append({  # 레코드 통화
+                    "title": title,
+                    "meta": " · ".join(x for x in [
+                        authors,
+                        str(year) if year not in (None, "Unknown") else "",
+                        f"인용 {citations}" if citations else "",
+                    ] if x),
+                    "summary": raw_abstract,
+                    "url": paper_url or "",
+                })
 
-            return "\n".join(results)
+            return {"success": True, "message": "\n".join(results), "records": records, "count": len(records)}
 
         except requests.RequestException as e:
             if attempt < max_retries - 1:
@@ -248,6 +272,7 @@ def _search_pubmed(tool_input: dict) -> str:
         pmc_ids = _get_pmc_ids(id_list)
 
         results = []
+        records = []
         result_data = fetch_data.get("result", {})
 
         for pmid in id_list:
@@ -270,21 +295,33 @@ def _search_pubmed(tool_input: dict) -> str:
             if pmcid:
                 pmc_info = f"\nPMC ID: {pmcid} (Free full text available - use download_pubmed_pdf)"
 
+            paper_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
             paper_info = (
                 f"Title: {title}\n"
                 f"Authors: {authors}\n"
                 f"Journal: {journal}\n"
                 f"Published: {pub_date}\n"
                 f"PMID: {pmid}{pmc_info}\n"
-                f"URL: https://pubmed.ncbi.nlm.nih.gov/{pmid}/\n"
+                f"URL: {paper_url}\n"
                 "--------------------------------------"
             )
             results.append(paper_info)
+            records.append({  # 레코드 통화 (PubMed esummary엔 초록이 없음 → summary 생략)
+                "title": title,
+                "meta": " · ".join(x for x in [
+                    authors,
+                    journal if journal != "Unknown" else "",
+                    pub_date if pub_date != "Unknown" else "",
+                    pmcid if pmcid else "",
+                ] if x),
+                "summary": "",
+                "url": paper_url,
+            })
 
         if not results:
             return "No papers found for the given query."
 
-        return "\n".join(results)
+        return {"success": True, "message": "\n".join(results), "records": records, "count": len(records)}
 
     except requests.RequestException as e:
         return f"Error searching PubMed: {str(e)}"
@@ -495,6 +532,7 @@ def _search_openalex(tool_input: dict) -> str:
 
         results = []
         results.append(f"OpenAlex 검색 결과: '{query}' (총 {total_count:,}건 중 {len(works)}건 표시)\n")
+        records = []
 
         for i, work in enumerate(works, 1):
             # 제목
@@ -530,9 +568,9 @@ def _search_openalex(tool_input: dict) -> str:
             journal_str = f"\nJournal: {journal}" if journal else ""
 
             # 초록 복원 (inverted index에서) — 500자까지 허용
-            abstract = _reconstruct_abstract(work.get("abstract_inverted_index"))
-            if abstract:
-                abstract = abstract[:500] + "..." if len(abstract) > 500 else abstract
+            full_abstract = _reconstruct_abstract(work.get("abstract_inverted_index"))
+            if full_abstract:
+                abstract = full_abstract[:500] + "..." if len(full_abstract) > 500 else full_abstract
                 abstract_str = f"\nAbstract: {abstract}"
             else:
                 abstract_str = ""
@@ -540,6 +578,8 @@ def _search_openalex(tool_input: dict) -> str:
             # OpenAlex ID에서 URL 생성
             work_id = work.get("id", "")
             openalex_url = work_id if work_id else ""
+            # 상세 링크는 DOI(landing page) 우선, 없으면 OpenAlex 페이지
+            record_url = doi if doi else openalex_url
 
             separator = "-" * 60
             paper_info = (
@@ -550,8 +590,19 @@ def _search_openalex(tool_input: dict) -> str:
                 f"{separator}"
             )
             results.append(paper_info)
+            records.append({  # 레코드 통화
+                "title": title,
+                "meta": " · ".join(x for x in [
+                    authors_str if authors_str != "저자 정보 없음" else "",
+                    str(year) if year not in (None, "Unknown") else "",
+                    journal,
+                    f"인용 {citations:,}" if citations else "",
+                ] if x),
+                "summary": full_abstract,
+                "url": record_url or "",
+            })
 
-        return "\n".join(results)
+        return {"success": True, "message": "\n".join(results), "records": records, "count": len(records)}
 
     except requests.RequestException as e:
         return f"OpenAlex 검색 오류: {str(e)}"
@@ -593,19 +644,20 @@ def _fetch_rss(url: str, source_name: str, limit: int = 10) -> str:
             return f"{source_name}에서 기사를 찾을 수 없습니다."
             
         results = [f"### {source_name} 최신 소식 (최대 {limit}건)\n"]
-        
+        records = []
+
         for i, entry in enumerate(feed.entries[:limit], 1):
             title = entry.get("title", "제목 없음")
             link = entry.get("link", "")
             pub_date = entry.get("published", entry.get("updated", ""))
             description = entry.get("summary", entry.get("description", ""))
-            
+
             # HTML 태그 제거 및 언이스케이프
             description = re.sub('<[^<]+?>', '', description)
             description = html.unescape(description).strip()
             if len(description) > 200:
                 description = description[:200] + "..."
-                
+
             item_info = (
                 f"[{i}] {title}\n"
                 f"날짜: {pub_date}\n"
@@ -614,8 +666,14 @@ def _fetch_rss(url: str, source_name: str, limit: int = 10) -> str:
                 "--------------------------------------"
             )
             results.append(item_info)
-            
-        return "\n".join(results)
+            records.append({  # 레코드 통화
+                "title": title,
+                "meta": " · ".join(x for x in [source_name, pub_date] if x),
+                "summary": description,
+                "url": link,
+            })
+
+        return {"success": True, "message": "\n".join(results), "records": records, "count": len(records)}
         
     except Exception as e:
         return f"{source_name} RSS 가져오기 오류: {str(e)}"
@@ -655,7 +713,8 @@ def _search_guardian(tool_input: dict) -> str:
             
         total = data.get("total", 0)
         output = [f"### The Guardian 검색 결과: '{query}' (총 {total:,}건 중 {len(results_list)}건 표시)\n"]
-        
+        records = []
+
         for i, article in enumerate(results_list, 1):
             fields = article.get("fields", {})
             headline = fields.get("headline", article.get("webTitle", "제목 없음"))
@@ -664,11 +723,11 @@ def _search_guardian(tool_input: dict) -> str:
             import re
             trail_text = re.sub('<[^<]+?>', '', trail_text)
             trail_text = html.unescape(trail_text).strip()
-            
+
             url = article.get("webUrl", "")
             date = article.get("webPublicationDate", "")[:10]
             section = article.get("sectionName", "")
-            
+
             article_info = (
                 f"[{i}] {headline}\n"
                 f"날짜: {date} | 섹션: {section}\n"
@@ -677,8 +736,14 @@ def _search_guardian(tool_input: dict) -> str:
                 "--------------------------------------"
             )
             output.append(article_info)
-            
-        return "\n".join(output)
+            records.append({  # 레코드 통화
+                "title": headline,
+                "meta": " · ".join(x for x in [date, section] if x),
+                "summary": trail_text if trail_text != "요약 없음" else "",
+                "url": url,
+            })
+
+        return {"success": True, "message": "\n".join(output), "records": records, "count": len(records)}
         
     except Exception as e:
         return f"The Guardian API 검색 오류: {str(e)}"
@@ -781,33 +846,45 @@ def _fetch_world_bank_data(tool_input: dict) -> str:
         
         # World Bank API 응답 구조: [metadata, data_list]
         if not data or len(data) < 2 or not data[1]:
-            return f"지표 '{indicator}'(국가: {country})에 대한 데이터를 찾을 수 없습니다."
+            return json.dumps({"success": False,
+                               "error": f"지표 '{indicator}'(국가: {country})에 대한 데이터를 찾을 수 없습니다."},
+                              ensure_ascii=False)
             
         data_list = data[1]
-        
+
         indicator_name = data_list[0].get("indicator", {}).get("value", indicator)
-        results = [f"### World Bank 데이터: {indicator_name} ({country})\n"]
-        
+        country_name = (data_list[0].get("country", {}) or {}).get("value", country)
+
+        # 표준 테이블 통화 + 사람용 요약을 함께 산출
+        rows = []
+        summary = [f"### World Bank 데이터: {indicator_name} ({country_name})\n"]
         for entry in data_list:
             year = entry.get("date")
             value = entry.get("value")
-            country_name = entry.get("country", {}).get("value")
-            
             if value is not None:
-                # 수치 포맷팅 (천 단위 콤마)
+                rows.append([year, value])
                 if isinstance(value, (int, float)):
-                    formatted_value = f"{value:,.2f}".rstrip('0').rstrip('.')
+                    fv = f"{value:,.2f}".rstrip('0').rstrip('.')
                 else:
-                    formatted_value = str(value)
-                
-                results.append(f"- {year} ({country_name}): {formatted_value}")
+                    fv = str(value)
+                summary.append(f"- {year}: {fv}")
             else:
-                results.append(f"- {year} ({country_name}): 데이터 없음")
-                
-        return "\n".join(results)
-        
+                summary.append(f"- {year}: 데이터 없음")
+
+        # 연도 오름차순 (차트/표에 자연스러운 시간 순서; WB는 보통 내림차순 반환)
+        rows.sort(key=lambda r: str(r[0]))
+
+        return json.dumps({
+            "success": True,
+            "indicator": indicator_name,
+            "country": country_name,
+            # 표준 테이블 통화 — 그대로 [engines:chart]{table:...} / [engines:spreadsheet]{table:...} 로 흘려보냄
+            "table": {"columns": ["연도", indicator_name], "rows": rows},
+            "summary": "\n".join(summary),
+        }, ensure_ascii=False)
+
     except Exception as e:
-        return f"World Bank API 요청 오류: {str(e)}"
+        return json.dumps({"success": False, "error": f"World Bank API 요청 오류: {str(e)}"}, ensure_ascii=False)
 
 
 def _search_books(tool_input: dict) -> str:
@@ -844,6 +921,7 @@ def _search_books(tool_input: dict) -> str:
 
         # 구조화 반환 — 앱(도서검색)이 그대로 렌더할 수 있게 도서관정보나루(book)와 같은 필드명을 쓴다.
         books = []
+        records = []
         for item in items:
             info = item.get("volumeInfo", {})
             isbn13 = ""
@@ -852,22 +930,38 @@ def _search_books(tool_input: dict) -> str:
                     isbn13 = idf.get("identifier", "")
                     break
             img = info.get("imageLinks") or {}
+            image_url = img.get("thumbnail") or img.get("smallThumbnail") or ""
             books.append({
                 "bookname": info.get("title", ""),
                 "authors": ", ".join(info.get("authors", [])),
                 "publisher": info.get("publisher", ""),
                 "publication_year": (info.get("publishedDate", "") or "")[:4],
                 "isbn13": isbn13,
-                "bookImageURL": img.get("thumbnail") or img.get("smallThumbnail") or "",
+                "bookImageURL": image_url,
                 "description": info.get("description", ""),
                 "categories": ", ".join(info.get("categories", [])),
                 "page_count": info.get("pageCount"),
                 "infoLink": info.get("infoLink", ""),
             })
+            rec = {  # 레코드 통화
+                "title": info.get("title", ""),
+                "meta": " · ".join(x for x in [
+                    ", ".join(info.get("authors", [])),
+                    info.get("publisher", ""),
+                    (info.get("publishedDate", "") or "")[:4],
+                    ", ".join(info.get("categories", [])),
+                ] if x),
+                "summary": info.get("description", "") or "",
+                "url": info.get("infoLink", "") or "",
+            }
+            if image_url:
+                rec["image"] = image_url
+            records.append(rec)
 
         return {
             "count": data.get("totalItems", len(books)),
             "data": books,
+            "records": records,
             "message": f"'{query}' Google Books 검색 {len(books)}건",
         }
 

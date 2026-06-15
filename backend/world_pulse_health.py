@@ -714,6 +714,11 @@ def run_self_check() -> Dict:
 
         # 테스트 계획에서 파라미터 사용
         params = dict(action_info.get("test_params", {}))
+        # self-check는 활성 프로젝트 컨텍스트(thread_context)가 없는 백그라운드
+        # 호출이라, project-scope 액션은 경로를 못 잡아 전부 false-positive 실패했다.
+        # 앱/수동 런처와 동일하게 시스템 프로젝트 '앱모드'를 주입해 실제로 실행시킨다.
+        # (project_id는 메타 키 — workspace/system scope는 무시, 도구 인자 충돌 없음.)
+        params.setdefault("project_id", "앱모드")
 
         start = _time.time()
         try:

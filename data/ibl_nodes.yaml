@@ -3181,7 +3181,7 @@ nodes:
         - 발표자료
         - 카드
       image_gemini:
-        runs_on: mac_only
+        runs_on: anywhere
         description: 'Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").'
         target_description: |
           prompt (필수). 옵션:
@@ -3225,7 +3225,7 @@ nodes:
         - 이미지
         - 렌더링
       structure:
-        runs_on: mac_only
+        runs_on: anywhere
         description: 원본 콘텐츠를 문서 IR(blocks)로 구조화하는 편집자 원자. A획득→B구조화→IR→emit 파이프라인의 B. document로 이어 렌더.
         target_description: 'content(필수, 구조화할 원본 텍스트 — >> 파이프 시 이전 결과를 content로 받아 생략 가능). instruction(선택, 정리 방향 예 "3섹션 요약 보고서로"·"비교는 표로"). 반환에 title·blocks(문서 IR) 포함 — 그대로 engines:document로 >> 파이프하면 렌더.'
         group: media_produce
@@ -3240,7 +3240,7 @@ nodes:
         - 문서화
         - structure
       document:
-        runs_on: mac_only
+        runs_on: anywhere
         description: 문서 IR(공유 문서 모델)을 산출물로 렌더. 포맷 중립 IR을 emitter가 렌더(현재 html). 보고서·문서·페이지 산출의 단일 진실 소스.
         target_description: |
           blocks(필수): 문서 IR 블록 배열. 각 블록은 {type, ...}:
@@ -3474,7 +3474,7 @@ nodes:
         - shadcn
         - UI
       image_critic:
-        runs_on: mac_only
+        runs_on: anywhere
         description: 'Gemini Vision으로 산출물(일러스트/차트/이미지 등)이 의도와 정합하는지 평가. 반환: passed/score/issues/notes.'
         target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. preset 옵션 — slide_illustration(기본: 다이어그램형/한글 미포함/빈 공간/객체 명확성, 한글 검출 시 passed=false) | general(임의 산출물 범용: intent 충족·시각 결함 없음). style_preset/checks(추가 체크 배열) 옵션.'
         group: media_produce

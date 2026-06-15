@@ -3,8 +3,10 @@ import uuid
 import json
 import asyncio
 import base64
-import edge_tts
-from moviepy import ImageSequenceClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, ImageClip, CompositeAudioClip, afx
+# ★무거운 미디어 의존성(edge_tts·moviepy)은 모듈레벨에서 import하지 않는다 — 폰엔 이 라이브러리가
+# 없어 모듈 전체 import가 실패하고, 그러면 같은 파일의 *순수* 연산(document html 렌더·structure·
+# image_critic·image_gemini = 문자열/HTTP뿐)까지 mac에 갇혔다. 무거운 건 쓰는 함수 안에서 지연 import.
+# (moviepy는 이미 각 함수가 로컬 re-import 중이라 모듈레벨 심볼은 0회 사용 — 그냥 제거. edge_tts는 generate_tts로.)
 
 # Helper functions
 def get_image_base64(image_path):
@@ -81,6 +83,7 @@ def execute(tool_input: dict, context) -> str:
     return f"알 수 없는 도구: {tool_name}"
 
 async def generate_tts(text, output_path, voice="ko-KR-SunHiNeural", rate="+0%", pitch="+0Hz"):
+    import edge_tts  # 지연 import — 폰엔 없음(tts는 mac_only라 폰선 호출 안 됨)
     communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
     await communicate.save(output_path)
 

@@ -1182,7 +1182,7 @@ function setMode(i){
     h+='<div class="row" style="flex-wrap:wrap">'+inputs.map(inp=>{
       if(inp.type==='select')
         return '<select class="field" id="in_'+esc(inp.key)+'" style="flex:0 1 130px" onchange="selChanged(\\''+esc(inp.key)+'\\')"><option value="">'+esc(inp.label||'전체')+'</option></select>';
-      return '<input class="field" style="min-width:0" id="in_'+esc(inp.key)+'" value="'+esc(inp.default||'')+'" placeholder="'+esc(inp.placeholder||'')+'" onkeydown="if(event.key===\\'Enter\\')runMode()">';
+      return '<input class="field" style="min-width:0" id="in_'+esc(inp.key)+'" value="'+esc(loadInpVal(inst.id,mode.id,inp.key,inp.default))+'" placeholder="'+esc(inp.placeholder||'')+'" onchange="saveInpVals()" onkeydown="if(event.key===\\'Enter\\')runMode()">';
     }).join('')+'<button class="go" onclick="runMode()">조회</button></div>';
   }
   inputs.forEach(inp=>{
@@ -1577,10 +1577,22 @@ function renderPrim(p,vi,data){
 }
 
 /* ----- 실행/디스패치 ----- */
+/* 계기 입력값 영속화(localStorage) — 데스크탑 bespoke 계기가 쓰던 결정화를 제네릭 렌더러에도.
+   키=계기id+모드id+입력key 별. 바꾼 키워드 등이 리로드 후에도 유지(이전엔 매번 default로 리셋). */
+function _inpLS(instId,modeId,key){ return 'lz.inp.'+instId+'.'+modeId+'.'+key; }
+function loadInpVal(instId,modeId,key,def){
+  try{ const v=localStorage.getItem(_inpLS(instId,modeId,key)); return (v!=null)?v:(def||''); }catch(e){ return def||''; }
+}
+function saveInpVals(){
+  const m=CUR.mode, inst=CUR.inst; if(!m||!inst) return;
+  (m.inputs||[]).forEach(inp=>{ const el=document.getElementById('in_'+inp.key);
+    if(el){ try{ localStorage.setItem(_inpLS(inst.id,m.id,inp.key), el.value); }catch(e){} } });
+}
 function gatherInputs(){
   const vals={};
   (CUR.mode.inputs||[]).forEach(inp=>{ const el=document.getElementById('in_'+inp.key); vals[inp.key]=el?el.value.trim():''; });
   if(CUR.mode.filter&&CUR.filterVal!=null) vals[CUR.mode.filter.key||'filter']=CUR.filterVal;
+  saveInpVals();  // 조회 시점에도 현재 값 영속화(onchange 못 탄 경우 안전망)
   return vals;
 }
 function setFilter(v){

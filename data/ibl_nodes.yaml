@@ -2998,7 +2998,7 @@ nodes:
           inputs:
           - key: kw
             type: text
-            default: 'AI, 경제, 부동산'
+            default: '청주, AI, 문화, 드라마, 영화, 만화, 세종, 경제, 주식'
             placeholder: 뉴스 키워드 (쉼표 구분)
             required: true
           action: '[engines:newspaper]{keywords: "$kw"} >> [engines:document]{theme: "newspaper", format: "html"}'

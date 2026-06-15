@@ -351,6 +351,128 @@ def _op_groupby(prev, params):
     return _emit_table(env, {"columns": out_cols, "rows": out_rows})
 
 
+# ───────────────────────── 이항 동사 (& 병렬 두 입력) ─────────────────────────
+
+def _extract_two(prev):
+    """& 병렬 결과에서 두 객체 추출.
+
+    prev = [elem0, elem1] (각 elem은 dict 또는 JSON 문자열 — 병렬 분기 결과).
+    반환: (obj0, obj1) 둘 다 dict/list로 파싱. 부족하면 (None, None).
+    """
+    if not isinstance(prev, list) or len(prev) < 2:
+        return None, None
+
+    def _parse_elem(e):
+        if isinstance(e, str):
+            try:
+                return json.loads(e)
+            except Exception:
+                return None
+        return e
+
+    return _parse_elem(prev[0]), _parse_elem(prev[1])
+
+
+def _op_union(prev, params):
+    """두 table(또는 두 records)을 행 결합. 같은 통화끼리. params 없음.
+
+    table: 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 다른쪽 None). records: 단순 concat.
+    중복 제거가 필요하면 뒤에 >> dedup.
+    """
+    a, b = _extract_two(prev)
+    if a is None or b is None:
+        return {"error": "union: & 병렬로 두 입력이 필요합니다. 예: [A] & [B] >> [engines:union]"}
+    ta, _ = _get_table(a)
+    tb, _ = _get_table(b)
+    if ta is not None and tb is not None:
+        cols = [str(c) for c in (ta.get("columns") or [])]
+        for c in (tb.get("columns") or []):
+            if str(c) not in cols:
+                cols.append(str(c))
+
+        def remap(t):
+            tcols = [str(c) for c in (t.get("columns") or [])]
+            out = []
+            for r in t.get("rows") or []:
+                d = {tcols[i]: (r[i] if i < len(r) else None) for i in range(len(tcols))}
+                out.append([d.get(c) for c in cols])
+            return out
+
+        return _emit_table({"table": {}}, {"columns": cols, "rows": remap(ta) + remap(tb)})
+    ra, _ = _get_records(a)
+    rb, _ = _get_records(b)
+    if ra is not None and rb is not None:
+        return _emit_records({"records": []}, list(ra) + list(rb))
+    return {"error": "union: 두 입력의 통화 종류가 같아야 합니다(둘 다 table 또는 둘 다 records)."}
+
+
+def _op_merge(prev, params):
+    """두 records를 합친다(concat). params.by 지정 시 그 키로 중복 제거.
+
+    여러 검색 결과를 한 목록으로 모을 때. (table 결합은 union.)
+    """
+    a, b = _extract_two(prev)
+    if a is None or b is None:
+        return {"error": "merge: & 병렬로 두 records 입력이 필요합니다. 예: [A] & [B] >> [engines:merge]"}
+    ra, _ = _get_records(a)
+    rb, _ = _get_records(b)
+    if ra is None or rb is None:
+        return {"error": "merge: 두 입력 모두 records 통화여야 합니다(표형 결합은 engines:union)."}
+    out = list(ra) + list(rb)
+    by = params.get("by")
+    if by or params.get("dedup"):
+        key = by or "title"
+        seen, dd = set(), []
+        for r in out:
+            if not isinstance(r, dict):
+                continue
+            k = _norm(r.get(key))
+            if k and k in seen:
+                continue
+            seen.add(k)
+            dd.append(r)
+        out = dd
+    return _emit_records({"records": []}, out)
+
+
+def _op_join(prev, params):
+    """두 table을 키 열로 inner join. params.on(양쪽 공통 키 열명, 필수).
+
+    결과 열 = 좌측 전체 + 우측(키 제외). 서로 다른 소스를 한 키로 묶어 분석.
+    예: [sense:stock]{op:history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}.
+    """
+    on = params.get("on") or params.get("key")
+    if not on:
+        return {"error": "join: on(조인 키 열 이름)이 필요합니다."}
+    on = str(on)
+    a, b = _extract_two(prev)
+    if a is None or b is None:
+        return {"error": "join: & 병렬로 두 table 입력이 필요합니다. 예: [A] & [B] >> [engines:join]{on: \"연도\"}"}
+    ta, _ = _get_table(a)
+    tb, _ = _get_table(b)
+    if ta is None or tb is None:
+        return {"error": "join: 두 입력 모두 table 통화여야 합니다."}
+    ca = [str(c) for c in (ta.get("columns") or [])]
+    cb = [str(c) for c in (tb.get("columns") or [])]
+    if on not in ca or on not in cb:
+        return {"error": f"join: 키 '{on}'이 양쪽 table 열에 모두 있어야 합니다(좌:{ca} 우:{cb})."}
+    lki, rki = ca.index(on), cb.index(on)
+    # 우측을 키로 인덱싱
+    index = {}
+    for r in tb.get("rows") or []:
+        k = _norm(r[rki] if rki < len(r) else None)
+        index.setdefault(k, []).append(r)
+    extra = [c for c in cb if c != on]  # 우측에서 가져올 열(키 제외)
+    out_cols = ca + extra
+    out_rows = []
+    for r in ta.get("rows") or []:
+        k = _norm(r[lki] if lki < len(r) else None)
+        for rb_row in index.get(k, []):
+            rbd = {cb[i]: (rb_row[i] if i < len(rb_row) else None) for i in range(len(cb))}
+            out_rows.append(list(r) + [rbd.get(c) for c in extra])
+    return _emit_table({"table": {}}, {"columns": out_cols, "rows": out_rows})
+
+
 _DISPATCH = {
     "data_filter": _op_filter,
     "data_sort": _op_sort,
@@ -358,6 +480,9 @@ _DISPATCH = {
     "data_select": _op_select,
     "data_dedup": _op_dedup,
     "data_groupby": _op_groupby,
+    "data_join": _op_join,
+    "data_union": _op_union,
+    "data_merge": _op_merge,
 }
 
 

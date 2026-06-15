@@ -84,7 +84,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if step.get("_parallel"):
             # 병렬 실행
             try:
-                result = _execute_parallel(step["branches"], project_path, prev_result)
+                result = _execute_parallel(step["branches"], project_path, prev_result, raw=(i < total - 1))
             except Exception as e:
                 results.append({
                     "step": i + 1, "type": "parallel",
@@ -242,7 +242,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
 PARALLEL_BRANCH_TIMEOUT = 90
 
 
-def _execute_parallel(branches: list, project_path: str, prev_result: str) -> list:
+def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: bool = False) -> list:
     """
     병렬 실행 - 여러 IBL 액션을 동시에 실행 (Phase 9)
     각 브랜치에 타임아웃 적용 — 한 브랜치가 멈춰도 전체가 멈추지 않음.
@@ -251,6 +251,9 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str) -> li
         branches: 병렬로 실행할 step 리스트
         project_path: 프로젝트 경로
         prev_result: 이전 step 결과 (모든 branch에 동일하게 주입)
+        raw: 병렬 step이 >> 파이프 중간단계일 때 True — 각 분기에 _raw 주입해
+             postprocess:compress가 분기의 구조화 통화(records/table)를 죽이지 않게.
+             ([A] & [B] >> [engines:join/union/merge] 같은 이항 변환자가 분기 통화를 소비)
 
     Returns:
         각 branch 결과를 리스트로 합침
@@ -290,6 +293,12 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str) -> li
             tool_input["_node"] = tool_input.pop("node")
         tool_input = _inject_prev_result(tool_input, prev_result)
         tool_input = _auto_inject_prev(tool_input, prev_result)
+        if raw:  # 병렬 step이 중간단계 — 분기 통화를 다음 변환자가 소비하므로 압축 금지
+            _p = tool_input.get("params")
+            if not isinstance(_p, dict):
+                _p = {}
+                tool_input["params"] = _p
+            _p["_raw"] = True
         try:
             return execute_ibl(tool_input, project_path)
         except Exception as e:

@@ -68,6 +68,32 @@
         },
         "required": ["by"]
       }
+    },
+    {
+      "name": "data_join",
+      "description": "table×table → 키 열로 inner join. on(양쪽 공통 키 열, 필수). 결과 열=좌측 전체+우측(키 제외). & 병렬 두 입력. 예: [A] & [B] >> [engines:join]{on:\"연도\"}.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "on": {"type": "string", "description": "조인 키 열 이름(양쪽 table에 모두 존재)."}
+        },
+        "required": ["on"]
+      }
+    },
+    {
+      "name": "data_union",
+      "description": "두 table(또는 두 records)을 행 결합. 같은 통화끼리. table은 열 이름으로 통합(순서 보존), records는 concat. & 병렬 두 입력. 중복 제거는 뒤에 >> dedup.",
+      "input_schema": {"type": "object", "properties": {}}
+    },
+    {
+      "name": "data_merge",
+      "description": "두 records를 합침(concat). by 지정 시 그 키로 중복 제거. 여러 검색 결과를 한 목록으로. & 병렬 두 입력. (표형 결합은 union.)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "by": {"type": "string", "description": "중복 제거 키 필드(미지정 시 단순 concat)."}
+        }
+      }
     }
   ]
 }

@@ -379,6 +379,51 @@
         - 묶어
         - groupby
         - 통계
+      join:
+        runs_on: mac_only
+        description: '통화 변환자(이항) — 두 표를 공통 키 열로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬 두 입력을 받음.'
+        target_description: 'on(조인 키 열 이름, 양쪽 table에 모두 존재, 필수). 결과 열=좌측 전체+우측(키 제외). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
+        group: transform
+        router: handler
+        tool: data_join
+        implementation: data-ops handler.py — & 병렬 두 table을 on 키로 inner join(우측 인덱싱, 키 정규화 비교). 표형 전용.
+        target_key: on
+        keywords:
+        - 조인
+        - 결합
+        - 합쳐
+        - join
+        - 연결
+      union:
+        runs_on: mac_only
+        description: '통화 변환자(이항) — 두 표(또는 두 목록)를 행 결합. 같은 통화끼리. & 병렬 두 입력을 받음. 중복 제거는 뒤에 >> dedup.'
+        target_description: '파라미터 없음. table은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), records는 단순 concat. 예: [A] & [B] >> [engines:union]. records 합치며 중복까지 지우려면 engines:merge.'
+        group: transform
+        router: handler
+        tool: data_union
+        implementation: data-ops handler.py — & 병렬 두 입력 행 결합(table 열 통합/records concat). 같은 통화 종류만.
+        target_key: ''
+        keywords:
+        - 행결합
+        - 이어붙여
+        - union
+        - 합집합
+        - 세로결합
+      merge:
+        runs_on: mac_only
+        description: '통화 변환자(이항) — 두 목록(records)을 합친다. by 지정 시 그 키로 중복 제거. & 병렬 두 입력을 받음.'
+        target_description: 'by(선택, 중복 제거 키 필드; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 표형 결합은 engines:union. 예: [sense:search_news]{...} & [sense:search_ddg]{...} >> [engines:merge]{by: title}.'
+        group: transform
+        router: handler
+        tool: data_merge
+        implementation: data-ops handler.py — & 병렬 두 records concat(+ by 지정 시 정규화 중복 제거). 목록형 전용.
+        target_key: by
+        keywords:
+        - 합치기
+        - 모아
+        - merge
+        - 통합
+        - 목록합치기
       web_site:
         runs_on: mac_only
         description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'

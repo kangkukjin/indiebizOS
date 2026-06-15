@@ -18,23 +18,24 @@
 - 프로젝트 24개, 에이전트 33개 활성
 - 최근 대화: 안녕 (시스템 AI)
 - 오늘 예정: 없음
-- 저장소 여유: 305.9GB
+- 저장소 여유: 306.0GB
 
 ## 시스템 건강
 - scheduler: 정상
 - channel_poller: 정상
 - system_ai_runner: 정상
-- ⚠ 비정상 액션 (2개): limbs:phone, sense:kosis
+- ⚠ 비정상 액션 (3개): limbs:phone, self:recent_chats, sense:kosis
 
 ## 자가점검 패턴 분석
 - 만성 실패: sense:kosis
-- 성공률 하락: sense:legal (100% → 50%)
+- 성공률 하락: self:recent_chats (100% → 33%)
+- 성공률 하락: sense:navigate_route (100% → 50%)
 - 성공률 하락: sense:search_books (100% → 50%)
 - 응답 느려짐: engines:newspaper (547ms → 2362ms)
 - 응답 느려짐: limbs:music (758ms → 3019ms)
 - 응답 느려짐: self:read (2ms → 37ms)
 - 응답 느려짐: sense:host (2ms → 130ms)
-- 복구됨: engines:chart, limbs:music, others:messages, others:neighbor, self:health, self:list, self:time, sense:crypto, sense:host, sense:realty, sense:search_ddg, sense:stock, sense:weather, sense:world_bank
+- 복구됨: engines:chart, limbs:music, others:messages, others:neighbor, self:health, self:list, self:time, sense:crypto, sense:host, sense:search_ddg, sense:stock, sense:weather, sense:world_bank
 
 ## 나는 누구인가
 - 나는 지금 **맥 · Apple M4 Pro · macOS 26.5.1** 에서 돈다.
@@ -44,7 +45,7 @@
 - 안드로이드 폰의 액션을 빌릴 수 있다 (내 몸에서 못 하는 건 분산 IBL 이 자동 위임 — 닿지 않으면 실행 시 알림).
 
 ## Digital Proprioception
-- 메모리: 636.1MB
+- 메모리: 771.6MB
 - CPU: 0.2%
-- 스레드: 24개
+- 스레드: 27개
 - 태스크: 실행 0개 / 대기 0개

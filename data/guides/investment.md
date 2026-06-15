@@ -20,7 +20,7 @@
 | op | 설명 | 소스 | 주요 파라미터 |
 |----|------|------|--------------|
 | `quote` (기본) | 현재 시세 빠른 조회 | Yahoo | `ticker`, `period`, `interval` |
-| `price` | 기간별 주가 이력 | 한국 KRX / 미국 FMP | `ticker`, `start_date`, `end_date`, `max_points` |
+| `history` | 기간별 주가 이력 | 한국 KRX / 미국 FMP | `ticker`, `start_date`, `end_date`, `max_points` |
 | `info` | 종목 메타 (시총·52주·PER·배당) | Yahoo | `ticker` |
 | `search` | 회사명으로 심볼 검색 | Yahoo | `query` |
 | `investors` | 투자자별 매매동향 (**한국 전용**) | KRX | `ticker`(개별종목) 또는 `market`(STK/KSQ/ALL, 전체시장) |
@@ -30,7 +30,7 @@
 ```
 [sense:stock]{op: "quote", ticker: "005930"}                 # 삼성전자 현재가 (KRW)
 [sense:stock]{op: "quote", ticker: "GC=F", period: "3mo"}    # 금 선물 3개월
-[sense:stock]{op: "price", ticker: "AAPL", start_date: "2026-01-01"}
+[sense:stock]{op: "history", ticker: "AAPL", start_date: "2026-01-01"}
 [sense:stock]{op: "info", ticker: "AAPL"}
 [sense:stock]{op: "search", query: "삼성"}                    # → 005930 등 후보
 [sense:stock]{op: "investors", ticker: "005930"}             # 개별종목 매매동향
@@ -96,7 +96,7 @@
 ```
 [sense:company]{op: "profile", ticker: "삼성전자"}
   >> [sense:company]{op: "financials", ticker: "삼성전자", year: "2024"}
-  >> [sense:stock]{op: "price", ticker: "005930"}
+  >> [sense:stock]{op: "quote", ticker: "005930"}
   >> [sense:company]{op: "disclosures", ticker: "삼성전자"}
 ```
 
@@ -104,13 +104,13 @@
 ```
 [sense:company]{op: "profile", ticker: "AAPL"}
   >> [sense:company]{op: "financials", ticker: "AAPL", statement_type: "income"}
-  >> [sense:stock]{op: "price", ticker: "AAPL"}
+  >> [sense:stock]{op: "quote", ticker: "AAPL"}
   >> [sense:company]{op: "disclosures", ticker: "AAPL", filing_type: "10-K"}
 ```
 
 **시세 조회 → 차트**
 ```
-[sense:stock]{op: "price", ticker: "AAPL", start_date: "2026-03-01"}
+[sense:stock]{op: "history", ticker: "AAPL", start_date: "2026-03-01"}
   >> [engines:chart]{title: "AAPL", chart_type: "line"}
 ```
 주가/재무 데이터가 클 때 `file_path`+`sample`이 반환된다. 차트는 `data_file`에 file_path를 넘기거나, `prices` 배열을 `data`로 변환(`[{"x": p["date"], "y": p["close"]}]`)해 넘긴다.

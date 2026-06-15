@@ -207,7 +207,7 @@ IBL 액션을 연산자로 연결하면 파이프라인이 된다.
 [sense:search_ddg]{query: "AI"} & [sense:search_ddg]{query: "부동산"}
 
 # Fallback: 첫째 실패 시 둘째 시도
-[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:stock]{op: "price", ticker: "AAPL"}
+[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:stock]{op: "info", ticker: "AAPL"}
 
 # 혼합
 [sense:search_ddg]{query: "AI"} & [sense:search_ddg]{query: "부동산"} >> [self:output]{op: "file", path: "briefing.md"}

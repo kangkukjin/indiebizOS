@@ -44,7 +44,7 @@ meta:
     - '[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}  # 병렬 실행'
     - '[self:time] & [sense:stock]{op: "quote", ticker: "005930"} & [sense:stock]{op: "news", ticker: "AAPL"}  #
       병렬 3개'
-    - '[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:stock]{op: "price", ticker: "AAPL"}  # 폴백: 실패시
+    - '[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:stock]{op: "info", ticker: "AAPL"}  # 폴백: 실패시
       대안'
     - 'WRONG: [engines:slide_shadcn]{slides: [{layout: "hero", title: "AI"}]} >> [limbs:os_open]{path: $prev.file}  #
       $prev 문법 없음!'
@@ -58,7 +58,7 @@ meta:
     example: '[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}'
   - op: ??
     name: Fallback
-    example: '[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:stock]{op: "price", ticker: "AAPL"}'
+    example: '[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:stock]{op: "info", ticker: "AAPL"}'
   principles:
   - 'IBL 코드를 execute_ibl의 code 파라미터로 전달. 예: execute_ibl(code=''[sense:stock]{op: "quote", ticker:
     "AAPL"}'')'

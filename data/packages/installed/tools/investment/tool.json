@@ -6,15 +6,15 @@
   "tools": [
     {
       "name": "stock_op",
-      "description": "주식 시세·거래 데이터 조회 (op 분기) — [sense:stock]. ticker는 코드/티커 또는 회사명·ETF명(예 '삼성전자'·'TIGER 200', 내부에서 코드로 자동 해소). 시장(kr/us)은 자동판별(005930·.KS·한글=한국, 그 외=미국), market 파라미터로 강제 지정 가능.\n- op=price (기본): 현재가·현재 시세 ('얼마'·'주가'·'시세' — Yahoo). 한국 005930, 미국 AAPL, ETF SPY.\n- op=history: 기간별 주가 이력 (차트/추이용). period(상대기간 1mo/3mo/6mo/1y/ytd) 또는 start_date/end_date. 한국=KRX, 미국=FMP.\n- op=info: 종목 메타 — 시가총액·52주 최고/최저·PER·배당 (Yahoo).\n- op=search: 회사명·키워드로 심볼 검색. query 사용.\n- op=investors: 투자자별 매매동향 (한국 전용). ticker 있으면 개별종목, 없으면 전체시장(market=STK 코스피/KSQ 코스닥/ALL).\n- op=news: 종목 관련 뉴스 (Finnhub→Yahoo 폴백).\n- op=earnings: 실적발표 일정 (EPS/매출 예상 vs 실적). ticker 비우면 전체 시장.\n\n## 예시\n- stock_op(ticker='삼성전자')                      # 기본 price=현재가\n- stock_op(op='history', ticker='TIGER 200', period='3mo')\n- stock_op(op='search', query='삼성전자')\n- stock_op(op='investors', market='KSQ')          # 코스닥 전체시장",
+      "description": "주식 시세·거래 데이터 조회 (op 분기) — [sense:stock]. ticker는 코드/티커 또는 회사명·ETF명(예 '삼성전자'·'TIGER 200', 내부에서 코드로 자동 해소). 시장(kr/us)은 자동판별(005930·.KS·한글=한국, 그 외=미국), market 파라미터로 강제 지정 가능.\n- op=quote (기본): 현재가·현재 시세 ('얼마'·'주가'·'시세' — Yahoo). 한국 005930, 미국 AAPL, ETF SPY.\n- op=history: 기간별 주가 이력 (차트/추이용). period(상대기간 1mo/3mo/6mo/1y/ytd) 또는 start_date/end_date. 한국=KRX, 미국=FMP.\n- op=info: 종목 메타 — 시가총액·52주 최고/최저·PER·배당 (Yahoo).\n- op=search: 회사명·키워드로 심볼 검색. query 사용.\n- op=investors: 투자자별 매매동향 (한국 전용). ticker 있으면 개별종목, 없으면 전체시장(market=STK 코스피/KSQ 코스닥/ALL).\n- op=news: 종목 관련 뉴스 (Finnhub→Yahoo 폴백).\n- op=earnings: 실적발표 일정 (EPS/매출 예상 vs 실적). ticker 비우면 전체 시장.\n\n## 예시\n- stock_op(ticker='삼성전자')                      # 기본 quote=현재가\n- stock_op(op='history', ticker='TIGER 200', period='3mo')\n- stock_op(op='search', query='삼성전자')\n- stock_op(op='investors', market='KSQ')          # 코스닥 전체시장",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["price", "history", "info", "search", "investors", "news", "earnings"],
-            "default": "price",
-            "description": "price=현재가/현재시세(기본), history=기간이력/차트, info=종목메타, search=심볼검색, investors=매매동향(한국), news=종목뉴스, earnings=실적일정"
+            "enum": ["quote", "history", "info", "search", "investors", "news", "earnings"],
+            "default": "quote",
+            "description": "quote=현재가/현재시세(기본), history=기간이력/차트, info=종목메타, search=심볼검색, investors=매매동향(한국), news=종목뉴스, earnings=실적일정"
           },
           "ticker": {
             "type": "string",
@@ -31,12 +31,12 @@
           "period": {
             "type": "string",
             "enum": ["1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"],
-            "description": "[price] 조회 기간 (기본 5d) / [history] 상대기간(start_date 미지정 시 자동계산)"
+            "description": "[quote] 조회 기간 (기본 5d) / [history] 상대기간(start_date 미지정 시 자동계산)"
           },
           "interval": {
             "type": "string",
             "enum": ["1m", "5m", "15m", "30m", "1h", "1d", "1wk", "1mo"],
-            "description": "[price] 데이터 간격 (기본 1d)"
+            "description": "[quote] 데이터 간격 (기본 1d)"
           },
           "start_date": {
             "type": "string",
@@ -53,7 +53,7 @@
           },
           "max_points": {
             "type": "integer",
-            "description": "[price/history] 반환 데이터 포인트 수 (기본 10)"
+            "description": "[quote/history] 반환 데이터 포인트 수 (기본 10)"
           }
         },
         "required": []

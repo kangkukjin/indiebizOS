@@ -3,7 +3,7 @@ Investment Tools Handler
 한국/미국 기업의 주가·시세·재무·공시·뉴스 + 암호화폐를 조회하는 투자 분석 도구.
 
 2026-06-03 finance 어휘 정리: 옛 16개 도구를 단일 액션 op 분기로 통합.
-- [sense:stock]{op}   → stock_op   (price=현재가/history=이력/info/search/investors/news/earnings)
+- [sense:stock]{op}   → stock_op   (quote=현재가/history=이력/info/search/investors/news/earnings)
 - [sense:company]{op} → company_op (profile/financials/disclosures)
 - [sense:crypto]      → crypto_price (자산군 달라 별도 유지)
 시장(kr/us)은 ticker로 자동판별(005930/한글=kr, 그외=us), market 파라미터로 강제 지정 가능.
@@ -276,11 +276,11 @@ def _stock_op(ti: dict):
     if op != "search":
         ticker, _ = _resolve_ticker(ticker)
     market = _detect_market(ticker, ti.get("market"))  # 해소된 코드로 시장 재판별
-    # 상대기간 period → start/end_date 내부 해소 (price=현재가는 yfinance period native라 제외)
+    # 상대기간 period → start/end_date 내부 해소 (quote=현재가는 yfinance period native라 제외)
     if op in ("history", "news", "earnings", "investors"):
         _resolve_period(ti)
 
-    if op == "price":  # 현재가 스냅샷 (2026-06-04 개명: 옛 quote)
+    if op == "quote":  # 현재가 스냅샷 (2026-06-15 quote로 복원, 옛 price)
         tool = load_module("tool_yfinance")
         return tool.get_stock_price(
             symbol=ticker,
@@ -392,12 +392,12 @@ def _company_op(ti: dict):
 # build_ibl_nodes.py --check 가 이 dict 키로 src.ops.values 와 정확 비교.
 _OP_DISPATCHERS = {
     "stock_op": {
-        "price": None, "history": None, "info": None, "search": None,
+        "quote": None, "history": None, "info": None, "search": None,
         "investors": None, "news": None, "earnings": None,
     },
     "company_op": {"profile": None, "financials": None, "disclosures": None},
 }
-_OP_DEFAULTS = {"stock_op": "price", "company_op": "profile"}
+_OP_DEFAULTS = {"stock_op": "quote", "company_op": "profile"}
 
 
 def execute(tool_input: dict, context):

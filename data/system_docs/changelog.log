@@ -1494,3 +1494,18 @@
     escape=="python" 으로(견고). A36: 폰이 "만능 탈출구=인-프로세스 Python, 셸은 subprocess 로 포섭" 자기표현.
   - 코드베이스 비대칭(맥=run_command만, 폰=execute_python만, capability-gate)이 정확함을 재확인 —
     각 몸이 자기 만능 탈출구 하나만 갖고 나머지는 그걸 통하거나 부재.
+
+[2026-06-15] sense:stock 현재가 op 재개명 price→quote (업계 표준어 정합)
+  - 동기: 실행로그에서 모델이 현재가에 `op:"quote"` 를 반복 오발(quote 가 yfinance /v7/quote·Finnhub /quote·
+    Alpha Vantage GLOBAL_QUOTE 등 금융 API 표준어). IBL=AI가 작성하는 언어이므로 작가(모델)의 prior에 맞춤.
+    history 는 그대로(yfinance .history 정합).
+  - 삼각 일괄: ibl_nodes_src/sense.yaml(ops default+value+app 액션 2+impl 노트) ↔ investment/handler.py
+    (_OP_DISPATCHERS 키·_OP_DEFAULTS·op=="quote" 분기·docstring) ↔ tool.json(enum·default·desc). build --check 통과, 136 액션 유지.
+  - 코퍼스: ibl_distilled.json 4건 + 해마 ibl_usage.db 30건(전수 현재가 의도 확인 후 기계적 price→quote, FTS 트리거 자동 동기)
+    + rebuild_usage_db.py 시드 2건은 원의도(기간별)대로 history 로 교정(2026-06-04 개명 미반영 잔재였음).
+  - 문서: guides/investment.md(원초 스킴 잔재 quote/price→quote/history 정합) + system_docs/ibl.md·meta.yaml
+    의 `??` 폴백 예시(quote ?? price→quote ?? info, price 무효라).
+  - 종단 검증: /ibl/execute op:quote→삼성 337,000 KRW 성공 / op:price→"알 수 없는 op 'price'" 시끄러운 실패(침묵 오답 없음)
+    / /ibl/translate "삼성전자 현재가"→[sense:stock]{op:"quote"} 생성·연상(score 0.776). 전수 스윕 잔재 0.
+  - 교훈(churn): 흔한 금융 prior 단어(quote)를 비표준(price)으로 옮긴 게 모델 오발의 근원이었음.
+    되돌릴 때 옛 price(=이력) 의미 잔재의 침묵 뒤집힘을 경계 — 이번엔 30건 전수 의도확인으로 회피.

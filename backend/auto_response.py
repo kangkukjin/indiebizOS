@@ -18,6 +18,9 @@ BACKEND_PATH = Path(__file__).parent
 from runtime_utils import get_base_path as _get_base_path
 DATA_PATH = _get_base_path() / "data"
 SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
+# 시스템 AI 가 claude_code(중앙 OAuth, SDK 직접호출 불가)일 때 폴백할 설정들.
+LIGHTWEIGHT_AI_CONFIG_PATH = DATA_PATH / "lightweight_ai_config.json"
+MIDTIER_AI_CONFIG_PATH = DATA_PATH / "midtier_ai_config.json"
 AUTORESPONSE_PROMPT_PATH = DATA_PATH / "common_prompts" / "base_prompt_autoresponse.md"
 # 자동응답 on/off 사용자 의사 영속(재시작에도 유지). 없으면 기본 켜짐(기존 동작 보존).
 AUTO_RESPONSE_STATE_PATH = DATA_PATH / "auto_response_state.json"
@@ -235,6 +238,31 @@ class AutoResponseService:
             "model": "claude-sonnet-4-20250514",
             "apiKey": ""
         }
+
+    # auto-response 가 직접(SDK) 호출 가능한 프로바이더. claude_code(중앙 OAuth)는 SDK 불가라 제외.
+    _SDK_PROVIDERS = ("anthropic", "openai", "google")
+
+    @staticmethod
+    def _load_config_file(path) -> dict:
+        try:
+            if path.exists():
+                with open(path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return {}
+
+    def _resolve_tool_capable_config(self) -> Optional[dict]:
+        """도구호출 가능한 설정 선택. 시스템 AI 가 claude_code(중앙 OAuth, SDK 직접호출 불가)면
+        실제 API 키가 있는 경량(google)·중급 설정으로 폴백한다. 자동응답은 '응답 여부 판단 + 짧은
+        답변 생성'이라 경량 모델로 충분하므로, 시스템 AI 가 claude_code여도 메시지를 드롭하지 않는다."""
+        for path in (SYSTEM_AI_CONFIG_PATH, LIGHTWEIGHT_AI_CONFIG_PATH, MIDTIER_AI_CONFIG_PATH):
+            cfg = self._load_config_file(path)
+            if (cfg.get("enabled", True)
+                    and cfg.get("provider") in self._SDK_PROVIDERS
+                    and cfg.get("apiKey")):
+                return cfg
+        return None
 
     def _load_system_prompt(self) -> str:
         if AUTORESPONSE_PROMPT_PATH.exists():
@@ -479,9 +507,14 @@ class AutoResponseService:
         return "알 수 없는 도구"
 
     def _execute_send_response(self, tool_input: dict) -> str:
-        """send_response 도구 실행 - 즉시 발송"""
+        """send_response 도구 실행 - 즉시 발송 (메시지당 1회만)"""
         if not self._current_message_context:
             return "오류: 메시지 컨텍스트가 없습니다."
+
+        # 중복 발송 방지: 한 메시지 처리 중 모델이 send_response 를 여러 번 호출해도(특히 경량
+        # 모델은 도구를 반복 호출하는 경향) 실제 발송은 1회만. 이미 보냈으면 완료 신호만 돌려 루프 종료 유도.
+        if self._response_sent:
+            return "__RESPONSE_SENT__"
 
         message = self._current_message_context['message']
         neighbor = self._current_message_context['neighbor']
@@ -630,14 +663,18 @@ class AutoResponseService:
 
     def _call_ai_with_tools(self, context: dict) -> dict:
         """AI 호출 (Tool Use 포함)"""
-        config = self._load_system_ai_config()
-
-        if not config.get("enabled") or not config.get("apiKey"):
-            return {'no_response': True, 'reason': 'AI 비활성화'}
+        config = self._resolve_tool_capable_config()
+        if not config:
+            self._log("도구호출 가능한 프로바이더(anthropic/openai/google) 설정 없음 — "
+                      "시스템 AI 가 claude_code면 경량 AI(google) 키를 설정해야 자동응답 가능")
+            return {'no_response': True, 'reason': '도구호출 가능 프로바이더 없음'}
 
         provider = config.get("provider", "anthropic")
         model = config.get("model", "claude-sonnet-4-20250514")
         api_key = config.get("apiKey", "")
+        sys_provider = self._load_config_file(SYSTEM_AI_CONFIG_PATH).get("provider")
+        if provider != sys_provider:
+            self._log(f"시스템 AI({sys_provider})는 SDK 직접호출 불가 → 자동응답은 {provider}/{model}로 폴백")
 
         system_prompt = self._load_system_prompt()
         user_prompt = self._build_user_prompt(context)

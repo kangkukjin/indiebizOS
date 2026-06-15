@@ -1797,7 +1797,9 @@ function openFileOverlay(path, html){
   // html 콘텐츠가 동봉됐으면 srcdoc으로 직접 띄운다 — 파일이 다른 몸(맥)에 있어 /output 로
   // 못 찾는 경우(포워드 산출)에도 콘텐츠로 렌더. 없으면 기존대로 /output 파일 서빙.
   const ifr=document.createElement('iframe');
-  if(html){ ifr.srcdoc=html; } else { ifr.src=API+'/output/'+encodeURIComponent(name); }
+  // html 동봉이면 srcdoc, 아니면 로컬 경로를 /launcher/file 로 서빙(옛 /output 은 라우트 없음=404).
+  // 빌림-완성으로 포워드 산출 파일도 폰 로컬에 있어 이 경로로 띄워진다.
+  if(html){ ifr.srcdoc=html; } else { ifr.src=API+'/launcher/file?path='+encodeURIComponent(path); }
   ov.appendChild(ifr);
   document.body.appendChild(ov);
 }

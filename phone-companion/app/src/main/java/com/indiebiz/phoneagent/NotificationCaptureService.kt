@@ -40,10 +40,12 @@ class NotificationCaptureService : NotificationListenerService() {
             .put("posted_at", sbn.postTime / 1000)
             .toString()
 
-        // M3: 폰 로컬 뇌가 [sense:phone] 으로 읽도록 app-private JSONL 에도 기록.
+        // 폰 로컬 뇌가 [sense:phone] 으로 읽도록 app-private JSONL 에 기록 (로컬 전용).
         LocalSignals.appendNotification(applicationContext, payload)
-        // 데스크탑 푸시(기존 경로) — 병행 유지.
-        Sender.sendAsync(applicationContext, payload)
+        // (2026-06-15) 데스크탑 Nostr DM 푸시 제거.
+        // 기존엔 모든 알림(시스템 "USB 충전 중" 등 잡음 포함)을 무차별 NIP-17 DM 으로 발행해
+        // 사용자에게 DM 폭주를 일으켰고 릴레이 rate-limit 까지 유발했다. 폰 로컬 뇌가
+        // LocalSignals 를 [sense:phone] 으로 직접 읽으므로 네트워크 푸시는 불필요 — 로컬에만 적재한다.
     }
 
     companion object {

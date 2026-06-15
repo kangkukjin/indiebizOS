@@ -4,6 +4,8 @@ IndieBiz OS Core
 """
 
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException
 
 from conversation_db import ConversationDB
@@ -44,9 +46,34 @@ async def get_conversations(project_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _resolve_conv_agent_id(project_id: str, agent_id: str, db) -> Optional[int]:
+    """대화 DB의 숫자 agent id 해소.
+    - 숫자 문자열("2") → 그대로 int (데스크탑은 대화 숫자 id 를 직접 넘김)
+    - yaml id("agent_001") → agents.yaml 에서 이름을 찾아 → conversations.db agents 테이블의 숫자 id
+      (원격 런처는 /projects/{pid}/agents 가 주는 yaml id 만 알고 숫자 id 를 모름 → 여기서 다리 놓음)
+    못 찾으면 None."""
+    s = str(agent_id).strip()
+    if s.isdigit():
+        return int(s)
+    try:
+        import yaml
+        agents_file = project_manager.get_project_path(project_id) / "agents.yaml"
+        if agents_file.exists():
+            data = yaml.safe_load(agents_file.read_text(encoding="utf-8")) or {}
+            for a in (data.get("agents") or []):
+                if str(a.get("id")) == s:
+                    row = db.get_agent_by_name(a.get("name"))
+                    if row:
+                        return row.get("id")
+    except Exception:
+        pass
+    return None
+
+
 @router.get("/conversations/{project_id}/{agent_id}/messages")
-async def get_messages(project_id: str, agent_id: int, limit: int = 50, offset: int = 0):
-    """에이전트와의 대화 메시지 조회"""
+async def get_messages(project_id: str, agent_id: str, limit: int = 50, offset: int = 0):
+    """에이전트와의 대화 메시지 조회.
+    agent_id 는 숫자 대화 id(데스크탑) 또는 yaml id 'agent_001'(원격 런처) 둘 다 허용."""
     try:
         project_path = project_manager.get_project_path(project_id)
         db_path = project_path / "conversations.db"
@@ -55,6 +82,9 @@ async def get_messages(project_id: str, agent_id: int, limit: int = 50, offset: 
             return {"messages": []}
 
         db = ConversationDB(str(db_path))
+        num_id = _resolve_conv_agent_id(project_id, agent_id, db)
+        if num_id is None:
+            return {"messages": [], "agent_id": None}
 
         with db.get_connection() as conn:
             cursor = conn.cursor()
@@ -64,7 +94,7 @@ async def get_messages(project_id: str, agent_id: int, limit: int = 50, offset: 
                 WHERE from_agent_id = ? OR to_agent_id = ?
                 ORDER BY message_time DESC
                 LIMIT ? OFFSET ?
-            """, (agent_id, agent_id, limit, offset))
+            """, (num_id, num_id, limit, offset))
 
             messages = []
             for row in cursor.fetchall():
@@ -72,11 +102,13 @@ async def get_messages(project_id: str, agent_id: int, limit: int = 50, offset: 
                     "id": row[0],
                     "from_agent_id": row[1],
                     "to_agent_id": row[2],
+                    # 이 메시지가 해당 에이전트 발신인지 — 원격 런처가 숫자 id 를 몰라도 라벨/필터 가능하게.
+                    "is_agent": (row[1] == num_id),
                     "content": row[3],
                     "timestamp": row[4]
                 })
 
-        return {"messages": messages}
+        return {"messages": messages, "agent_id": num_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

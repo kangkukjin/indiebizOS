@@ -953,7 +953,7 @@ async function apLoadHistory(){
       const r=await jfetch('/conversations/'+encodeURIComponent(apChat.projectId)+'/'+encodeURIComponent(apChat.agentId)+'/messages?limit=40');
       if(!r.ok) return;
       const msgs=((await r.json()).messages||[]).slice().reverse();  // DESC → 시간순
-      convs=msgs.map(m=>({role:(String(m.from_agent_id)===String(apChat.agentId))?'assistant':'user', content:m.content||''}));
+      convs=msgs.map(m=>({role:(m.is_agent===true)?'assistant':'user', content:m.content||''}));
     }else return;
     if(!convs.length) return;  // 이력 없으면 안내문 유지
     const c=document.getElementById('apMsgs'); c.innerHTML='';
@@ -989,7 +989,7 @@ async function apAssistantMsgs(){
     const r=await jfetch('/conversations/'+encodeURIComponent(apChat.projectId)+'/'+encodeURIComponent(apChat.agentId)+'/messages?limit=40');
     if(!r.ok) return null;
     const msgs=((await r.json()).messages||[]).slice().reverse();  // DESC → 시간순
-    return msgs.filter(m=>String(m.from_agent_id)===String(apChat.agentId)).map(m=>({id:m.id,content:m.content||''}));
+    return msgs.filter(m=>m.is_agent===true).map(m=>({id:m.id,content:m.content||''}));
   }
 }
 function apMaxId(arr){ let mx=0; (arr||[]).forEach(m=>{ if(m.id>mx) mx=m.id; }); return mx; }

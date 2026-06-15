@@ -356,19 +356,64 @@ agents:
         projects = self._load_projects_list()
         return [p for p in projects if p.get("in_trash", False)]
 
+    def _resolve_project_dir(self, item: dict):
+        """프로젝트의 실제 디스크 폴더 해소 — path(절대) 우선 → name → id 순으로
+        존재하는 첫 폴더 반환. 없으면 None. (rename·NFC/NFD·id≠name 대비)"""
+        candidates = []
+        if item.get("path"):
+            candidates.append(Path(item["path"]))
+        if item.get("name"):
+            candidates.append(self.projects_path / item["name"])
+        if item.get("id"):
+            candidates.append(self.projects_path / item["id"])
+        for c in candidates:
+            try:
+                if c.exists() and c.is_dir():
+                    return c
+            except Exception:
+                pass
+        return None
+
     def empty_trash(self):
-        """휴지통 비우기 (영구 삭제)"""
+        """휴지통 비우기 (영구 삭제).
+        폴더를 휴지통에 넣으면 그 안의 자식 프로젝트는 in_trash 플래그가 안 켜진 채
+        parent_folder만 가리키므로, 여기서 **자손까지 재귀 수집**해 디스크 폴더+JSON을 함께 제거한다.
+        (예전엔 플래그 켜진 항목만 지워 폴더 안 프로젝트가 고아로 남았음)"""
         projects = self._load_projects_list()
-        trash_items = [p for p in projects if p.get("in_trash", False)]
 
-        for item in trash_items:
-            if item.get("type") == "project":
-                project_path = self.projects_path / item["name"]
-                if project_path.exists():
-                    shutil.rmtree(project_path)
+        # 1) 삭제 대상 id 집합 = 휴지통 항목 + (폴더면) parent_folder 체인의 모든 자손
+        remove_ids = {p["id"] for p in projects if p.get("in_trash", False)}
+        changed = True
+        while changed:
+            changed = False
+            for p in projects:
+                if p.get("id") in remove_ids:
+                    continue
+                if p.get("parent_folder") in remove_ids:
+                    remove_ids.add(p["id"])
+                    changed = True
 
-        projects = [p for p in projects if not p.get("in_trash", False)]
+        # 2) 디스크 폴더 삭제 (프로젝트 타입만 — 폴더 타입은 UI 그룹이라 디스크 폴더 없음)
+        deleted = failed = missing = 0
+        for p in projects:
+            if p.get("id") in remove_ids and p.get("type") == "project":
+                d = self._resolve_project_dir(p)
+                if d is None:
+                    missing += 1
+                    print(f"[ProjectManager] 휴지통 비우기: 폴더 미발견(이미 없음) id={p.get('id')} name={p.get('name')}")
+                    continue
+                try:
+                    shutil.rmtree(d)
+                    deleted += 1
+                    print(f"[ProjectManager] 휴지통 폴더 삭제: {d}")
+                except Exception as e:
+                    failed += 1
+                    print(f"[ProjectManager] 휴지통 폴더 삭제 실패 {d}: {e}")
+
+        # 3) JSON에서 제거 (자손 포함)
+        projects = [p for p in projects if p.get("id") not in remove_ids]
         self._save_projects_list(projects)
+        print(f"[ProjectManager] 휴지통 비우기 완료: 항목 {len(remove_ids)}개, 폴더 삭제 {deleted} / 실패 {failed} / 이미없음 {missing}")
 
     def rename_item(self, item_id: str, new_name: str) -> dict:
         """프로젝트 또는 폴더 이름 변경"""

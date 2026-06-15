@@ -5,35 +5,38 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:3924
+- dataset_size:4068
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 커뮤니티 언급 DB에 저장
+- source_sentence: 폰 진동 울려줘
   sentences:
-  - '[self:discover]'
-  - '[sense:listen] >> [self:write]'
-  - '[self:local_save]'
-- source_sentence: 메모 파일 생성해줘해줘
+  - '[sense:search_ddg] site:daangn.com"} >> [sense:crawl]"}'
+  - '[sense:cctv]'
+  - '[limbs:phone]'
+- source_sentence: 문서 폴더에서 PDF 검색
   sentences:
-  - '[engines:slide_shadcn] >> [self:write]'
-  - '[limbs:browser]'
-  - '[self:write]'
-- source_sentence: 정부 창업 지원사업 찾아봐해줘
+  - 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
+  - '[engines:web_component] >> [engines:web] >> [engines:web]'
+  - 파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트 지정 (절대경로, ~/, 상대경로
+    모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀
+- source_sentence: 이 텍스트 클립보드에 넣어
   sentences:
-  - '[sense:phone]'
-  - '[self:storage]'
-  - '[sense:startup]'
-- source_sentence: evening 스위치 켜
+  - '[self:time]'
+  - '[self:output]'
+  - 맛집/음식점 검색 (카카오+네이버 Local API). 상호명·주소·전화·카테고리·place 링크 반환. 별점·리뷰 숫자는 공개 API 미제공
+    — 카카오 place_url(카카오맵 페이지)에서 확인. 커뮤니티 후기는 sense:search_local.
+- source_sentence: 설정 파일 좀 고쳐줘
   sentences:
-  - '[engines:spreadsheet]'
-  - '[limbs:browser]'
-  - 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
-- source_sentence: 테슬라 관련 소식
+  - '[self:edit]'
+  - '[self:grep] & [self:list] & [self:file_find] & [self:read] & [self:read]'
+  - '[self:blog]'
+- source_sentence: show work guidelines
   sentences:
-  - 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
-  - '[sense:search_books]'
-  - '[self:read]'
+  - '[self:lecture]'
+  - '[self:work_guideline]'
+  - 부동산 실거래가 조회 (op 분기, 국토부). query(실거래가)/codes(법정동 코드). region 이름만 넣으면 코드 자동 변환 —
+    codes는 보통 불필요.
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -87,9 +90,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '테슬라 관련 소식',
-    '주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.',
-    '[self:read]',
+    'show work guidelines',
+    '[self:work_guideline]',
+    '부동산 실거래가 조회 (op 분기, 국토부). query(실거래가)/codes(법정동 코드). region 이름만 넣으면 코드 자동 변환 — codes는 보통 불필요.',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -98,9 +101,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.4941, -0.0471],
-#         [ 0.4941,  1.0000, -0.0871],
-#         [-0.0471, -0.0871,  1.0000]])
+# tensor([[ 1.0000,  0.8313, -0.1418],
+#         [ 0.8313,  1.0000, -0.0598],
+#         [-0.1418, -0.0598,  1.0000]])
 ```
 
 <!--
@@ -145,19 +148,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 3,924 training samples
+* Size: 4,068 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
   |         | sentence_0                                                                        | sentence_1                                                                        |
   |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type    | string                                                                            | string                                                                            |
-  | details | <ul><li>min: 3 tokens</li><li>mean: 11.57 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 19.55 tokens</li><li>max: 64 tokens</li></ul> |
+  | details | <ul><li>min: 3 tokens</li><li>mean: 11.56 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 20.64 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                  | sentence_1                                                            |
-  |:----------------------------|:----------------------------------------------------------------------|
-  | <code>수축기 128 이완기 90</code> | <code>[self:health]}</code>                                           |
-  | <code>삼전 국내 시세</code>       | <code>주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.</code> |
-  | <code>유튜브 피아노 좀 봐봐</code>   | <code>[sense:search_youtube]</code>                                   |
+  | sentence_0                          | sentence_1                                                                                     |
+  |:------------------------------------|:-----------------------------------------------------------------------------------------------|
+  | <code>transcribe what I say</code>  | <code>폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).</code> |
+  | <code>파리 호텔 알아봐</code>              | <code>[sense:travel]</code>                                                                    |
+  | <code>스위치 morning_routine 실행</code> | <code>[self:switch]</code>                                                                     |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {

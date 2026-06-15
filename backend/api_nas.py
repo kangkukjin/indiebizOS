@@ -146,7 +146,7 @@ _NAS_LITE_HTML = r'''<!DOCTYPE html>
       })(items[i], i);
     }
   }
-  function exportFile(it){ var url="/nas/file?path="+encodeURIComponent(it.path)+"&dl=1"; var w=window.open(url,"_blank"); if(!w) window.location.href=url; }
+  function exportFile(it){ var url="/nas/file?path="+encodeURIComponent(it.path); var w=window.open(url,"_blank"); if(!w) window.location.href=url; }
 
   $("vclose").addEventListener("click", function(){ $("viewer").className="viewer hide"; $("vbody").innerHTML=""; });
   $("vplus").addEventListener("click", function(){ fontSize+=2; applyFont(); });
@@ -305,7 +305,7 @@ _NAS_LITE2_HTML = r'''<!DOCTYPE html>
     $('r'+idx).onclick=function(){ if(it.is_dir) loadDir(it.path); else openFile(it); };
     if(!it.is_dir){ var b=$('d'+idx); if(b){ b.onclick=function(e){ if(e&&e.stopPropagation) e.stopPropagation(); exportFile(it); return false; }; } }
   }
-  function exportFile(it){ var url='/nas/file?path='+encodeURIComponent(it.path)+'&dl=1'; var w=window.open(url,'_blank'); if(!w) window.location.href=url; }
+  function exportFile(it){ var url='/nas/file?path='+encodeURIComponent(it.path); var w=window.open(url,'_blank'); if(!w) window.location.href=url; }
 
   $('vclose').onclick=function(){ $('viewer').className='hide'; $('vbody').innerHTML=''; };
   $('vplus').onclick=function(){ fontSize+=2; applyFont(); };
@@ -880,7 +880,6 @@ async def list_files(
 async def get_file(
     request: Request,
     path: str = Query(..., description="파일 경로"),
-    dl: bool = Query(default=False, description="다운로드 의도 — 인라인 렌더 대신 저장/앱선택"),
 ):
     """파일 다운로드/스트리밍"""
     # 인증 확인
@@ -907,16 +906,17 @@ async def get_file(
     if not mime_type:
         mime_type = "application/octet-stream"
 
-    # dl=1: 다운로드 의도 — iOS Safari는 text/plain 등을 Content-Disposition 무시하고 인라인
-    # 렌더해 "다른 앱으로 열기/파일에 저장" 시트가 안 나온다. 렌더 불가 타입(octet-stream)으로
-    # 주면 iOS가 다운로드→공유 시트(저장·앱선택)를 띄운다. (인라인 보기는 dl 없이 호출)
-    if dl:
-        return FileResponse(
-            safe_path,
-            media_type="application/octet-stream",
-            filename=safe_path.name,
-            headers={"Content-Disposition": f'attachment; filename="{safe_path.name}"'},
-        )
+    # 텍스트 파일은 감지된 charset 을 Content-Type 에 명시 — 구형 iOS Safari(lite2 대상)는
+    # 다운로드/공유시트가 없어 브라우저 인라인 보기가 최선인데, charset 이 없으면 cp949/euc-kr
+    # 한글이 utf-8 로 렌더돼 글자가 다 깨졌다. 인코딩만 맞추면 어떤 한글 텍스트도 읽힌다.
+    if mime_type.startswith("text/") and safe_path.stat().st_size <= 10 * 1024 * 1024:
+        for enc in ("utf-8", "utf-8-sig", "cp949", "euc-kr"):
+            try:
+                safe_path.read_text(encoding=enc)
+                mime_type = f"text/plain; charset={'utf-8' if enc == 'utf-8-sig' else enc}"
+                break
+            except (UnicodeDecodeError, LookupError):
+                continue
 
     # Range 요청 처리 (동영상 스트리밍용)
     range_header = request.headers.get("range")

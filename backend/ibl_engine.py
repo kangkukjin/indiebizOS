@@ -275,12 +275,15 @@ def _pull_mac_artifacts(result: dict, mac_url: str) -> dict:
     import requests
     sess = _mac_session_cache.get("session")
     headers = {"X-Launcher-Session": sess} if sess else {}
-    for k in ("file", "path", "output_path", "output", "image", "chart_path"):
-        v = result.get(k)
+    # 파일 경로를 담는 흔한 키들 — 최상위뿐 아니라 중첩(chart는 data.path)도 있어 재귀 탐색.
+    FILE_KEYS = ("file", "path", "output_path", "output", "image", "chart_path",
+                 "mp3", "mp4", "audio", "video", "pdf", "png")
+
+    def _pull_one(v):
         if not (isinstance(v, str) and v and os.path.isabs(v)):
-            continue
-        if os.path.exists(v):  # 이미 폰 로컬(드묾 — anywhere 가 로컬 실행한 경우)
-            continue
+            return None
+        if os.path.exists(v):  # 이미 폰 로컬(anywhere 가 로컬 실행한 경우)
+            return None
         try:
             r = requests.get(f"{mac_url}/launcher/file", params={"path": v},
                              headers=headers, timeout=60)
@@ -288,9 +291,25 @@ def _pull_mac_artifacts(result: dict, mac_url: str) -> dict:
                 dest = os.path.join(local_out, os.path.basename(v))
                 with open(dest, "wb") as f:
                     f.write(r.content)
-                result[k] = dest
+                return dest
         except Exception:
             pass
+        return None
+
+    def _walk(obj):
+        if isinstance(obj, dict):
+            for k, v in list(obj.items()):
+                if k in FILE_KEYS and isinstance(v, str):
+                    nd = _pull_one(v)
+                    if nd:
+                        obj[k] = nd
+                else:
+                    _walk(v)
+        elif isinstance(obj, list):
+            for it in obj:
+                _walk(it)
+
+    _walk(result)
     return result
 
 

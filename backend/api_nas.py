@@ -66,7 +66,7 @@ _NAS_LITE_HTML = r'''<!DOCTYPE html>
   .viewer { position:fixed; top:0; left:0; right:0; bottom:0; background:#111; display:-webkit-flex; display:flex; -webkit-flex-direction:column; flex-direction:column; z-index:10; }
   .vbar { background:#1c1c1e; border-bottom:1px solid #333; padding:8px 10px; display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center; }
   .vtitle { -webkit-flex:1; flex:1; font-size:12px; color:#9a9a9e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 8px; }
-  .vbody { -webkit-flex:1; flex:1; overflow:auto; -webkit-overflow-scrolling:touch; }
+  .vbody { -webkit-flex:1; flex:1; overflow:auto; }  /* -webkit-overflow-scrolling:touch 제거 — 긴 텍스트 검은화면(합성레이어 한계) 방지 */
   pre.txt { white-space:pre-wrap; word-wrap:break-word; padding:16px; margin:0; font-size:16px; line-height:1.6; font-family:Menlo,monospace; }
   .epub { padding:18px 20px; line-height:1.8; font-size:18px; }
   .epub img { max-width:100%; }
@@ -220,7 +220,10 @@ _NAS_LITE2_HTML = r'''<!DOCTYPE html>
   #vbar { background:#1c1c1e; border-bottom:1px solid #333; padding:8px; overflow:hidden; }
   #vbar #vclose { float:left; }
   #vbar .vctrl { float:right; }
-  #vbody { position:absolute; top:53px; left:0; right:0; bottom:0; overflow:auto; -webkit-overflow-scrolling:touch; }
+  /* -webkit-overflow-scrolling:touch 제거 — GPU 합성 스크롤 레이어는 최대 크기 한계가 있어
+     긴 텍스트(1.8MB 등)는 그 한계 넘는 부분이 검게 칠해진다(스크롤 높이는 살아있음). 일반
+     스크롤은 타일링 페인팅이라 전체가 칠해진다(모멘텀만 빠짐 — 리더엔 렌더링이 우선). */
+  #vbody { position:absolute; top:53px; left:0; right:0; bottom:0; overflow:auto; }
   pre.txt { white-space:pre-wrap; word-wrap:break-word; padding:14px; margin:0; font-size:16px; line-height:1.6; }
   .epub { padding:16px; line-height:1.75; font-size:18px; }
   .epub img { max-width:100%; }

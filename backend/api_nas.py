@@ -146,7 +146,7 @@ _NAS_LITE_HTML = r'''<!DOCTYPE html>
       })(items[i], i);
     }
   }
-  function exportFile(it){ var url="/nas/file?path="+encodeURIComponent(it.path); var w=window.open(url,"_blank"); if(!w) window.location.href=url; }
+  function exportFile(it){ var url="/nas/file?path="+encodeURIComponent(it.path)+"&dl=1"; var w=window.open(url,"_blank"); if(!w) window.location.href=url; }
 
   $("vclose").addEventListener("click", function(){ $("viewer").className="viewer hide"; $("vbody").innerHTML=""; });
   $("vplus").addEventListener("click", function(){ fontSize+=2; applyFont(); });
@@ -305,7 +305,7 @@ _NAS_LITE2_HTML = r'''<!DOCTYPE html>
     $('r'+idx).onclick=function(){ if(it.is_dir) loadDir(it.path); else openFile(it); };
     if(!it.is_dir){ var b=$('d'+idx); if(b){ b.onclick=function(e){ if(e&&e.stopPropagation) e.stopPropagation(); exportFile(it); return false; }; } }
   }
-  function exportFile(it){ var url='/nas/file?path='+encodeURIComponent(it.path); var w=window.open(url,'_blank'); if(!w) window.location.href=url; }
+  function exportFile(it){ var url='/nas/file?path='+encodeURIComponent(it.path)+'&dl=1'; var w=window.open(url,'_blank'); if(!w) window.location.href=url; }
 
   $('vclose').onclick=function(){ $('viewer').className='hide'; $('vbody').innerHTML=''; };
   $('vplus').onclick=function(){ fontSize+=2; applyFont(); };
@@ -880,6 +880,7 @@ async def list_files(
 async def get_file(
     request: Request,
     path: str = Query(..., description="파일 경로"),
+    dl: bool = Query(default=False, description="다운로드 의도 — 인라인 렌더 대신 저장/앱선택"),
 ):
     """파일 다운로드/스트리밍"""
     # 인증 확인
@@ -905,6 +906,17 @@ async def get_file(
     mime_type, _ = mimetypes.guess_type(safe_path.name)
     if not mime_type:
         mime_type = "application/octet-stream"
+
+    # dl=1: 다운로드 의도 — iOS Safari는 text/plain 등을 Content-Disposition 무시하고 인라인
+    # 렌더해 "다른 앱으로 열기/파일에 저장" 시트가 안 나온다. 렌더 불가 타입(octet-stream)으로
+    # 주면 iOS가 다운로드→공유 시트(저장·앱선택)를 띄운다. (인라인 보기는 dl 없이 호출)
+    if dl:
+        return FileResponse(
+            safe_path,
+            media_type="application/octet-stream",
+            filename=safe_path.name,
+            headers={"Content-Disposition": f'attachment; filename="{safe_path.name}"'},
+        )
 
     # Range 요청 처리 (동영상 스트리밍용)
     range_header = request.headers.get("range")
@@ -984,11 +996,16 @@ async def get_text_file(
     if safe_path.stat().st_size > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="파일이 너무 큽니다 (최대 10MB)")
 
-    try:
-        content = safe_path.read_text(encoding=encoding)
-        return {"path": str(safe_path), "content": content, "size": len(content)}
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail=f"파일을 {encoding}으로 읽을 수 없습니다")
+    # 인코딩 폴백 — utf-8만 시도하던 게 한글 파일(cp949/euc-kr)·BOM·기타에서 깨졌다.
+    # 호출자가 encoding을 명시하면 그것만, 기본이면 흔한 인코딩을 차례로 시도.
+    candidates = [encoding] if encoding != "utf-8" else ["utf-8", "utf-8-sig", "cp949", "euc-kr", "latin-1"]
+    for enc in candidates:
+        try:
+            content = safe_path.read_text(encoding=enc)
+            return {"path": str(safe_path), "content": content, "size": len(content), "encoding": enc}
+        except (UnicodeDecodeError, LookupError):
+            continue
+    raise HTTPException(status_code=400, detail="텍스트 인코딩을 인식할 수 없습니다(utf-8/cp949/euc-kr 등 모두 실패)")
 
 
 @router.get("/epub")

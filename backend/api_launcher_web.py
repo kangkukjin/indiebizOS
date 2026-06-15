@@ -1792,7 +1792,7 @@ function openFileOverlay(path, html){
   const name=path.split('/').pop().split('\\\\').pop();
   const ov=document.createElement('div'); ov.className='fileov';
   ov.innerHTML='<div class="fileov-bar"><span>'+esc(name)+'</span>'
-    +'<button class="iconbtn" onclick="this.closest(\\'.fileov\\').remove()">✕</button></div>';
+    +'<button class="iconbtn" onclick="history.back()">✕</button></div>';
   // iframe은 DOM으로 만들어 srcdoc/src를 *프로퍼티*로 설정(문자열 이스케이프 불필요).
   // html 콘텐츠가 동봉됐으면 srcdoc으로 직접 띄운다 — 파일이 다른 몸(맥)에 있어 /output 로
   // 못 찾는 경우(포워드 산출)에도 콘텐츠로 렌더. 없으면 기존대로 /output 파일 서빙.
@@ -1802,7 +1802,15 @@ function openFileOverlay(path, html){
   if(html){ ifr.srcdoc=html; } else { ifr.src=API+'/launcher/file?path='+encodeURIComponent(path); }
   ov.appendChild(ifr);
   document.body.appendChild(ov);
+  // 안드로이드 뒤로가기로 닫히게 — SPA 라 WebView 백스택이 비면 뒤로가기가 앱을 종료(홈)시킨다.
+  // history 항목을 push → canGoBack=true → 뒤로가기는 goBack→popstate 로 오버레이만 닫고
+  // 앱모드 화면에 머문다(앱 종료 아님).
+  try{ history.pushState({fileov:1}, ''); }catch(e){}
 }
+window.addEventListener('popstate', function(){
+  const _ov=document.querySelector('.fileov');
+  if(_ov) _ov.remove();
+});
 async function rowDrill(vi,ri){
   // split이면 리스트(LIST)에서 행을 찾아 상세 패널(#mdDetail)로, 아니면 현재 view(VIEW_CTX)에서 instOut으로.
   const src = SPLIT ? LIST : VIEW_CTX; if(!src) return;

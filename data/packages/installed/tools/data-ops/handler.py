@@ -183,8 +183,8 @@ def _sort_key(field):
 # ───────────────────────── 단항 동사 ─────────────────────────
 
 def _op_filter(prev, params):
-    """records|table → 부분집합. params.where (미니 DSL)."""
-    where = params.get("where")
+    """records|table → 부분집합. params.where (미니 DSL). condition 별칭 수용."""
+    where = params.get("where") or params.get("condition")
     recs, env = _get_records(prev)
     if recs is not None:
         return _emit_records(env, [r for r in recs if isinstance(r, dict) and _match(r, where)])
@@ -238,7 +238,7 @@ def _op_take(prev, params):
 
 def _op_select(prev, params):
     """table → 열 투영. params.columns(남길 열 이름 배열). records는 필드 추림."""
-    cols_keep = params.get("columns") or params.get("cols")
+    cols_keep = params.get("columns") or params.get("cols") or params.get("fields")
     if not cols_keep:
         return {"error": "select: columns(남길 열/필드 이름 배열)가 필요합니다."}
     cols_keep = [str(c) for c in cols_keep]
@@ -311,7 +311,7 @@ def _op_groupby(prev, params):
     agg 형태: {새열명: [op, 원본열]} 또는 {원본열: op}. op = count/sum/avg/min/max.
     기본: agg 없으면 그룹별 count.  반환 table = [by열, 집계열들].
     """
-    by = params.get("by") or params.get("key")
+    by = params.get("by") or params.get("key") or params.get("group_by")
     if not by:
         return {"error": "groupby: by(그룹 키 열)가 필요합니다."}
     table, env = _get_table(prev)
@@ -469,7 +469,29 @@ def _op_join(prev, params):
     ta, _ = _get_table(a)
     tb, _ = _get_table(b)
     if ta is None or tb is None:
-        return {"error": "join: 두 입력 모두 table 통화여야 합니다."}
+        # 두 입력이 records 통화면 records inner join (table 분기와 대칭).
+        # records 도 dict 라 키 필드로 조인 가능 — merge/union 이 records 를 받는 것과 일관.
+        ra, _ = _get_records(a)
+        rb, _ = _get_records(b)
+        if ra is None or rb is None:
+            return {"error": "join: 두 입력이 같은 통화여야 합니다(둘 다 table 또는 둘 다 records)."}
+        index = {}
+        for r in rb:
+            if isinstance(r, dict) and r.get(on) is not None:
+                index.setdefault(_norm(r.get(on)), []).append(r)
+        out = []
+        for l in ra:
+            if not isinstance(l, dict) or l.get(on) is None:
+                continue
+            lkeys = list(l.keys())
+            for r in index.get(_norm(l.get(on)), []):
+                add = [k for k in r.keys() if k != on]
+                disp = _suffix_collisions(lkeys, add)  # 동명 필드 _2 (침묵 오선택 방지)
+                merged = dict(l)
+                for orig, name in zip(add, disp):
+                    merged[name] = r[orig]
+                out.append(merged)
+        return _emit_records({"records": []}, out)
     ca = [str(c) for c in (ta.get("columns") or [])]
     cb = [str(c) for c in (tb.get("columns") or [])]
     if on not in ca or on not in cb:
@@ -512,6 +534,22 @@ def execute(tool_input: dict, context):
         return {"error": f"data-ops: 알 수 없는 변환자 '{tool_name}'."}
     params = dict(tool_input or {})
     prev = _parse_prev(params.get("_prev_result"))
+    if prev is None:
+        # 파이프 입력(>>)이 없으면 params 에서 통화를 직접 수용 — 단독 호출/자가점검 지원.
+        # (파이프 통화와 params 통화는 같은 모양이라 정합적이다.)
+        # 이항(merge/join/union): (left,right)/(table1,table2)/(a,b) 쌍 또는 inputs 리스트 → [A, B].
+        # 단항(filter/sort/take/select/dedup/groupby): records 또는 table.
+        for k1, k2 in (("left", "right"), ("table1", "table2"), ("a", "b")):
+            if params.get(k1) is not None and params.get(k2) is not None:
+                prev = [params[k1], params[k2]]
+                break
+        if prev is None:
+            if isinstance(params.get("inputs"), list):
+                prev = params["inputs"]
+            elif params.get("records") is not None:
+                prev = {"records": params["records"]}
+            elif params.get("table") is not None:
+                prev = {"table": params["table"]}
     if prev is None:
         return {"error": (
             f"{tool_name}: 입력 통화가 없습니다. 변환자는 >> 파이프로 앞 액션의 "

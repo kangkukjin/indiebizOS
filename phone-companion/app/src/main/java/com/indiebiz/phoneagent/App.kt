@@ -9,7 +9,8 @@ import com.chaquo.python.android.AndroidPlatform
 /**
  * Chaquopy 파이썬 부팅 + 폰 백엔드(:8765) 생명주기.
  *
- * 백엔드는 첫 포그라운드 진입에 기동한 뒤, 상주 포그라운드 서비스와 함께 계속 살아있다.
+ * 백엔드는 상주 포그라운드 서비스(부팅·START_STICKY)가 기동하므로 앱 UI 를 열지 않아도 살아있다.
+ * (포그라운드 진입에서도 보강 기동 — 둘 다 idempotent.)
  * (앱을 백그라운드로 보내도 중지하지 않음 — 폰=AI가 언제든 닿는 몸. [limbs:android] 가 다른 앱을
  * 조작하려면 IndieBiz 가 백그라운드여야 하는데, 그때도 명령을 받으려면 백엔드가 살아야 한다.
  * 또 맥→폰 분산 IBL 포워드도 폰이 백그라운드일 때 닿을 수 있어야 한다.)
@@ -27,6 +28,11 @@ class App : Application(), Application.ActivityLifecycleCallbacks {
         PhoneActions.init(this)   // 송신측(폰→동작) effector 다리 초기화 — [limbs:phone] 가 호출
         registerActivityLifecycleCallbacks(this)
     }
+
+    /** 상주 포그라운드 서비스(부팅·START_STICKY 재시작)에서 호출 — 앱 UI 를 열지 않아도
+     *  :8765 백엔드를 기동/보장한다. 맥→폰 분산 IBL 포워드가 백그라운드 상태에서도 닿게.
+     *  (idempotent: 이미 살아있으면 startBackend 가 즉시 반환.) */
+    fun ensureBackend() = startBackend()
 
     private fun startBackend() {
         if (backendThread?.isAlive == true) return

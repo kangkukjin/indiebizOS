@@ -1,0 +1,28 @@
+{
+  "tools": [
+    {
+      "name": "report_op",
+      "description": "정기 보고서(예: AI 동향 보고서) 뷰어 + 작성 트리거. op 분기 — list(목록)/read(읽기)/latest(최신)/new(시스템 AI에 작성 요청)/types(타입 목록). 보고서는 맥 outputs/ 폴더에 있고 작성은 맥 시스템 AI가 한다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": ["list", "read", "latest", "new", "types"],
+            "default": "list",
+            "description": "list=타입별 보고서 목록, read=path 지정 읽기(없으면 최신), latest=타입 최신 본문, new=시스템 AI에 작성 요청, types=등록된 보고서 타입"
+          },
+          "type": {
+            "type": "string",
+            "description": "보고서 타입 id (기본 ai_trend). list/latest/new 에서 사용"
+          },
+          "path": {
+            "type": "string",
+            "description": "read 에서 읽을 보고서 파일 절대경로 (등록된 보고서 폴더의 .md 만 허용)"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  ]
+}

@@ -1,4 +1,19 @@
 {
-  "triggers": [],
+  "triggers": [
+    {
+      "id": "trg_13056d2d3e0e",
+      "name": "ai_trend_report_daily",
+      "type": "schedule",
+      "config": {
+        "repeat": "daily",
+        "time": "04:00"
+      },
+      "pipeline": "[self:report]{op:\"new\", type:\"ai_trend\"}",
+      "enabled": true,
+      "created_at": "2026-06-17T07:19:22.918572",
+      "last_run": null,
+      "run_count": 0
+    }
+  ],
   "history": []
 }

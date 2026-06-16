@@ -48,6 +48,9 @@ PHONE_KEYS = [
 MAC_DELEGATION_KEYS = [
     "INDIEBIZ_MAC_URL",
     "INDIEBIZ_MAC_PASSWORD",
+    # #3 폰 인증 토큰 — 설정 시 폰이 LAN(0.0.0.0) 노출 + 비localhost 요청은 이 토큰으로 검증.
+    # 맥 _forward_to_phone 이 같은 토큰을 X-Phone-Token 으로 동봉. (맥·폰 양쪽 .env 동일 값)
+    "INDIEBIZ_PHONE_TOKEN",
 ]
 
 

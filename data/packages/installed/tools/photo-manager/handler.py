@@ -145,7 +145,9 @@ def _photos_to_records(items: list) -> list:
             "url": path,
         }
         if path:
-            rec["image"] = f"/photo/thumbnail?path={quote(path)}"
+            # 동영상은 PIL이 못 여는 컨테이너라 ffmpeg 프레임 썸네일 엔드포인트로 분기.
+            ep = "video-thumbnail" if it.get("media_type") == "video" else "thumbnail"
+            rec["image"] = f"/photo/{ep}?path={quote(path)}"
         records.append(rec)
     return records
 

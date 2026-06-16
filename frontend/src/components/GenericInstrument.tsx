@@ -271,6 +271,9 @@ function statusGlyph(s: string): string {
 
 const IMAGE_BASE = IBL_ENDPOINT.replace(/\/ibl\/execute$/, '');  // 'http://127.0.0.1:8765'
 const imageUrl = (p: string) => `${IMAGE_BASE}/image?path=${encodeURIComponent(p)}`;
+// view 통화의 image 필드: 절대 URL(http…·data:)이면 그대로, 백엔드 상대경로(/photo/thumbnail?path=…)면 IMAGE_BASE 부착.
+// 데스크탑(file://·dev 5173)은 origin이 백엔드와 달라 상대경로가 깨지므로 필수. book/invest 외부 http URL은 무영향.
+const mediaSrc = (u: string) => (u && u.startsWith('/')) ? `${IMAGE_BASE}${u}` : u;
 
 /** attachment_path(JSON 배열 또는 레거시 단일 문자열) → 경로 배열 */
 function parseImagePaths(v: unknown): string[] {
@@ -501,7 +504,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, busyRow, dispatch }: {
             <Card key={i} onClick={p.item_click ? () => onDrill(p, it) : undefined}>
               {c.image ? (
                 <div className="flex gap-3">
-                  {img ? <img src={img} loading="lazy" className="w-14 h-20 object-cover rounded-md bg-stone-100 shrink-0" />
+                  {img ? <img src={mediaSrc(img)} loading="lazy" className="w-14 h-20 object-cover rounded-md bg-stone-100 shrink-0" />
                        : <div className="w-14 h-20 rounded-md bg-stone-100 shrink-0" />}
                   {body}
                 </div>
@@ -522,7 +525,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, busyRow, dispatch }: {
           const img = p.image ? tpl(p.image, it) : '';
           return (
             <div key={i}>
-              {img ? <img src={img} loading="lazy" className="w-full aspect-[3/4] object-cover rounded-lg bg-stone-100" />
+              {img ? <img src={mediaSrc(img)} loading="lazy" className="w-full aspect-[3/4] object-cover rounded-lg bg-stone-100" />
                    : <div className="w-full aspect-[3/4] rounded-lg bg-stone-100" />}
               <div className="font-semibold text-xs text-stone-800 mt-1.5">{tpl(p.title, it)}</div>
               <div className="text-[11px] text-stone-500">

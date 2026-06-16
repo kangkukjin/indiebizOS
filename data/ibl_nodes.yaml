@@ -125,6 +125,56 @@ nodes:
         - 배터리
         - 내몸
         - 프로세스
+        app:
+          instrument: host
+          icon: 🖥️
+          name: 시스템
+          order: 15
+          phone_render: false
+          modes:
+          - name: 상태
+            auto_run: true
+            action: '[sense:host]{op: "status"}'
+            view:
+            - type: metric
+              label: CPU
+              big: '{cpu_percent}'
+              unit: '%'
+              sub: '{body}{frontmost_app|opt:  ·  ,}'
+            - type: kv
+              title: 메모리 · 디스크 · 전원
+              rows:
+              - {k: 메모리, v: '{memory.used_gb} / {memory.total_gb} GB ({memory.percent}%)'}
+              - {k: 디스크 (/), v: '{disk_root.free_gb} GB 여유 / {disk_root.total_gb} GB ({disk_root.percent}%)'}
+              - {k: 배터리, v: '{battery.percent|opt:,%}'}
+              - {k: 가동시간, v: '{uptime_hours} 시간'}
+              - {k: 프로세스 수, v: '{process_count}'}
+          - name: 프로세스
+            auto_run: true
+            action: '[sense:host]{op: "apps", limit: 15}'
+            view:
+            - type: kv_list
+              title: 메모리 점유 상위
+              from: top
+              k: '{name}'
+              v: '{mem_percent}% · CPU {cpu_percent}%'
+          - name: 자원
+            auto_run: true
+            action: '[sense:host]{op: "resources"}'
+            view:
+            - type: kv
+              title: CPU · 메모리 · 스왑 · 네트워크
+              rows:
+              - {k: CPU, v: '{cpu.percent_overall}% · {cpu.logical_cores} 코어'}
+              - {k: 메모리, v: '{memory.used_gb} / {memory.total_gb} GB ({memory.percent}%)'}
+              - {k: 스왑, v: '{swap.used_gb} / {swap.total_gb} GB ({swap.percent}%)'}
+              - {k: 네트워크, v: '↑ {network.sent_gb} · ↓ {network.recv_gb} GB'}
+              - {k: 가동시간, v: '{uptime_hours} 시간'}
+            - type: kv_list
+              title: 디스크 파티션
+              from: disks
+              k: '{mount}'
+              v: '{free_gb} GB 여유 / {total_gb} GB ({percent}%)'
       here:
         description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
         group: device
@@ -1359,6 +1409,57 @@ nodes:
         - 타임라인
         - 중복 사진
         - 사진 상세
+        app:
+          instrument: photo
+          icon: 📷
+          name: 사진
+          order: 14
+          phone_render: false
+          modes:
+          - name: 갤러리
+            auto_run: true
+            note: 스캔된 폴더를 골라 사진·동영상을 봅니다. 폴더 추가 스캔은 데스크탑 사진 창에서.
+            inputs:
+            - key: scan
+              type: select
+              placeholder: 스캔 폴더 선택
+              options_action: '[self:photo]{op: "list_scans"}'
+              options_from: scans
+              option_value: 경로
+              option_label: 이름
+            action: '[self:photo]{op: "gallery", path: "$scan", limit: 30}'
+            view:
+            - type: image_grid
+              from: records
+              image: image
+              title: title
+              lines:
+              - '{meta}'
+          - name: 검색
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 파일명·카메라 검색
+            action: '[self:photo]{op: "search", query: "$q", limit: 30}'
+            view:
+            - type: image_grid
+              from: records
+              image: image
+              title: title
+              lines:
+              - '{meta}'
+          - name: 통계
+            auto_run: true
+            action: '[self:photo]{op: "stats"}'
+            view:
+            - type: kv
+              title: 라이브러리 요약
+              rows:
+              - {k: 사진, v: '{summary.사진}'}
+              - {k: 동영상, v: '{summary.동영상}'}
+              - {k: 총 용량, v: '{summary.총 용량}'}
+              - {k: 마지막 스캔, v: '{summary.마지막 스캔}'}
       blog:
         runs_on: mac_only
         description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스.
@@ -1487,6 +1588,91 @@ nodes:
         router: handler
         tool: get_current_time
         implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
+      report:
+        runs_on: mac_only
+        description: 정기 보고서(AI 동향 등) 뷰어 + 작성 트리거 (op 분기). 최신 보기·목록·새 작성. 보고서는 맥 폴더 저장·맥 시스템 AI가 작성.
+        target_description: 'op로 분기 (기본 list). type(보고서 타입, 기본 ai_trend). read 는 path. new 는 맥 시스템 AI에 작성 요청.'
+        group: report
+        target_key: op
+        router: handler
+        tool: report_op
+        ops:
+          default: list
+          values:
+            list: 타입별 보고서 목록
+            read: 보고서 읽기 (path, 없으면 최신)
+            latest: 타입 최신 보고서 본문
+            new: 시스템 AI에 새 보고서 작성 요청
+            types: 등록된 보고서 타입 목록
+        implementation: report-viewer 패키지 handler.py op 분기. outputs/ 보고서 폴더 조회·읽기 + new 는 SystemAIRunner.send_message 로 맥 시스템 AI 비동기 큐잉.
+        keywords:
+        - 보고서
+        - 정기보고
+        - AI 동향
+        - 동향 보고서
+        - 리포트
+        - report
+        app:
+          instrument: report
+          icon: 📑
+          name: 정기보고
+          order: 16
+          modes:
+          - name: 최신
+            auto_run: true
+            buttons:
+            - label: ✍ 새 AI 동향 보고서 작성
+              action: '[self:report]{op: "new", type: "ai_trend"}'
+            inputs:
+            - key: type
+              type: select
+              placeholder: 보고서 종류
+              options_action: '[self:report]{op: "types"}'
+              options_from: types
+              option_value: value
+              option_label: label
+            action: '[self:report]{op: "latest", type: "$type"}'
+            view:
+            - type: thread
+              from: blocks
+              text: '{text}'
+          - name: 목록
+            auto_run: true
+            inputs:
+            - key: type
+              type: select
+              placeholder: 보고서 종류
+              options_action: '[self:report]{op: "types"}'
+              options_from: types
+              option_value: value
+              option_label: label
+            action: '[self:report]{op: "list", type: "$type"}'
+            view:
+            - type: card_list
+              from: reports
+              empty: 보고서가 없습니다 — 작성 탭에서 새 보고서를 만들어 보세요
+              card:
+                title: '{title}'
+                lines:
+                - '{sub}'
+              item_click:
+                action: '[self:report]{op: "read", path: "{path}"}'
+                view:
+                - type: thread
+                  from: blocks
+                  text: '{text}'
+          - name: 작성
+            auto_run: true
+            action: '[self:report]{op: "types"}'
+            view:
+            - type: list_action
+              from: types
+              icon: 📝
+              title: '{label}'
+              sub: 맥의 시스템 AI가 작성합니다
+              button:
+                label: ✍ 작성
+                action: '[self:report]{op: "new", type: "{value}"}'
       manage_events:
         description: 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
         target_description: action (create/list/delete). 추가 파라미터는 action별로 다름.
@@ -3354,12 +3540,12 @@ nodes:
         - 통계
       join:
         runs_on: anywhere
-        description: '통화 변환자(이항) — 두 표를 공통 키 열로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬 두 입력을 받음.'
-        target_description: 'on(조인 키 열 이름, 양쪽 table에 모두 존재, 필수). 결과 열=좌측 전체+우측(키 제외). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
+        description: '통화 변환자(이항) — 두 입력을 공통 키로 inner join(table은 키 열, records는 키 필드). 서로 다른 소스를 한 키로 묶어 분석. & 병렬 두 입력을 받음.'
+        target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). table=열 기준, records=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
         group: transform
         router: handler
         tool: data_join
-        implementation: data-ops handler.py — & 병렬 두 table을 on 키로 inner join(우측 인덱싱, 키 정규화 비교). 표형 전용.
+        implementation: data-ops handler.py — & 병렬 두 입력을 on 키로 inner join(우측 인덱싱, 키 정규화 비교). table·records 통화 모두 지원(같은 통화끼리).
         target_key: on
         keywords:
         - 조인

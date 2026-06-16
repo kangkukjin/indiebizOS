@@ -65,7 +65,7 @@ Nostr, Gmail, Telegram 등의 소통 채널을 가진 에이전트입니다.
 - 보안이 중요한 작업에 적합
 
 ## 현재 상태
-- 마지막 업데이트: 2026-06-15 — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션
+- 마지막 업데이트: 2026-06-15 22:02
 - IBL: 5노드 136 액션 (sense 42, self 41, limbs 17, others 11, engines 25)
 - 설치된 도구 패키지: 35
 - 최근: 폰이 두 번째 독립 자아로(폰-로컬 Gemini 두뇌·하드웨어 자기감지 detect_body·상주 스케줄러), 사용자 세계-데이터 CRDT 동기화(주관적 기억은 자아별 사적), 의료 에이전트 환자차트 자동주입, 메신저/커뮤니티/비즈니스 IBL 계기화

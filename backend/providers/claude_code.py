@@ -625,10 +625,21 @@ class ClaudeCodeProvider(BaseProvider):
     # 이 네이티브 도구들은 Claude Code 에만 존재하므로, 공용 프롬프트(base_prompt_v5)가 아니라
     # 여기서만 주입한다(Gemini 등 다른 프로바이더는 이런 도구가 없어 안내가 불필요·혼란).
     # 차단된 네이티브 대신 IBL 등가물을 첫 시도에 쓰게 해 헛걸음을 막는다.
+    #
+    # 도구 이름 정규화: Claude Code 에서 IBL 실행기는 MCP 브리지로 노출되므로 정확한 이름이
+    # `mcp__indiebizos__execute_ibl` 다(맨이름 `execute_ibl` 아님). 그런데 공용 프롬프트·해마
+    # 용례·system_docs 는 다른 프로바이더 기준이라 맨이름을 수십 번 가르친다 → 모델이 첫 호출에
+    # 맨이름을 써 `No such tool available: execute_ibl` → ToolSearch round-trip 낭비.
+    # append 는 시스템 프롬프트 *맨 뒤*에 붙으므로, 여기서 정규화 이름을 명시해 앞쪽 priming 을 덮는다.
+    # (공용 프롬프트는 손대지 않는다 — 거긴 맨이름이 정답인 프로바이더들이 공유한다.)
     TOOL_POLICY = (
         "\n\n# 도구 정책\n"
+        "IBL 실행 도구의 정확한 이름은 `mcp__indiebizos__execute_ibl` 다 — 이 이름 그대로 호출하라. "
+        "다른 안내나 과거 용례에 `execute_ibl` 로 줄여 적힌 곳이 있어도, 실제 도구 이름은 "
+        "`mcp__indiebizos__execute_ibl` 뿐이다(맨이름 `execute_ibl` 은 존재하지 않아 호출이 실패한다).\n"
         "파일 읽기·웹 검색·grep 은 네이티브 도구가 아니라 IBL 로 하라. "
-        "`Read`/`WebSearch`/`WebFetch`/`Grep`/`Glob` 은 비활성화돼 있다 — 대신 execute_ibl 로 "
+        "`Read`/`WebSearch`/`WebFetch`/`Grep`/`Glob` 은 비활성화돼 있다 — 대신 "
+        "`mcp__indiebizos__execute_ibl` 로 "
         "`[self:read]`(파일)·`[sense:search_ddg/news/scholar/naver]`(웹검색)·`[sense:crawl]`(웹페이지)·"
         "`[self:grep]`(코드검색) 을 호출하라. "
         "셸·코드 실행(`Bash`)은 그대로 사용 가능하다 — IBL 에 등가물이 없는 탈출구다."

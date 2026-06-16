@@ -134,6 +134,28 @@ def _ensure_phone_ai_configs(base_path):
 app = FastAPI()
 
 
+# #3 폰 인증 게이트 — LAN 노출(0.0.0.0 바인드) 시 인바운드 보호.
+# localhost(WebView 자기접속·adb forward loopback)는 무인증 통과. 비localhost(맥→폰 WiFi
+# 분산 포워드)는 X-Phone-Token == INDIEBIZ_PHONE_TOKEN 일치 요구. 토큰 미설정이면 비localhost
+# 전면 거부(= LAN에 무인증으로 절대 노출 안 함). 맥 _forward_to_phone 이 이 헤더를 동봉한다.
+import hmac as _hmac
+
+
+def _is_local_client(host: str) -> bool:
+    return (not host) or host == "localhost" or host == "::1" or host.startswith("127.")
+
+
+@app.middleware("http")
+async def _phone_token_gate(request: Request, call_next):
+    client = request.client.host if request.client else ""
+    if not _is_local_client(client):
+        token = os.environ.get("INDIEBIZ_PHONE_TOKEN")
+        sent = request.headers.get("X-Phone-Token")
+        if not (token and sent and _hmac.compare_digest(str(sent), str(token))):
+            return JSONResponse({"error": "unauthorized: phone token required"}, status_code=401)
+    return await call_next(request)
+
+
 @app.get("/launcher/app")
 def launcher_app():
     return HTMLResponse(_lw.get_launcher_webapp_html())
@@ -884,8 +906,14 @@ def serve(port=8765, base_path=None):
     # 기본 localhost 전용(WebView 자기접속). 분산 IBL 에서 맥(두뇌)이 폰(몸)으로 직접
     # phone_only 액션을 포워드하려면 폰이 LAN 도달 가능해야 하므로, keys.json 에
     # INDIEBIZ_BIND_HOST=0.0.0.0 주입 시 LAN 바인딩(=WiFi 노출 → #3 폰 인증 필요).
+    # 바인드: 명시 INDIEBIZ_BIND_HOST 우선. 없으면 인증 토큰(INDIEBIZ_PHONE_TOKEN) 보유 시에만
+    # LAN 노출(0.0.0.0) — 노출과 인증을 한 묶음으로 결합(토큰 없이는 절대 LAN 바인드 안 함).
+    _bind = os.environ.get("INDIEBIZ_BIND_HOST")
+    if not _bind:
+        _bind = "0.0.0.0" if os.environ.get("INDIEBIZ_PHONE_TOKEN") else "127.0.0.1"
+    print(f"[phone_api] bind host={_bind} (phone_token={'있음' if os.environ.get('INDIEBIZ_PHONE_TOKEN') else '없음'})")
     config = uvicorn.Config(
-        app, host=os.environ.get("INDIEBIZ_BIND_HOST", "127.0.0.1"),
+        app, host=_bind,
         port=int(port), log_level="info", loop="asyncio")
     _server = uvicorn.Server(config)
     _server.install_signal_handlers = lambda: None

@@ -1,5 +1,5 @@
 # World Pulse — 오늘의 세계와 나 (자동 주입)
-수집 시각: 2026-06-15T07:53
+수집 시각: 2026-06-17T06:28
 
 > 이 정보는 대화 시작 시 시스템 프롬프트에 자동 포함됩니다.
 > 사용자가 '요즘 세상은 어때', '오늘 경제 상황' 등을 물으면
@@ -16,26 +16,26 @@
 
 ## 시스템 상태
 - 프로젝트 24개, 에이전트 33개 활성
-- 최근 대화: 안녕 (시스템 AI)
+- 최근 대화: 77701779-9b06-4d82-a81f-218270 (시스템 AI) / 지금 가디언 뉴스가 검색가능해? 액션중의 하나를 사용해 (시스템 AI)
 - 오늘 예정: 없음
-- 저장소 여유: 306.0GB
+- 저장소 여유: 299.6GB
 
 ## 시스템 건강
 - scheduler: 정상
 - channel_poller: 정상
 - system_ai_runner: 정상
-- ⚠ 비정상 액션 (3개): limbs:phone, self:recent_chats, sense:kosis
+- ⚠ 비정상 액션 (2개): limbs:phone, sense:company
 
 ## 자가점검 패턴 분석
-- 만성 실패: sense:kosis
-- 성공률 하락: self:recent_chats (100% → 33%)
+- 성공률 하락: self:recent_chats (100% → 50%)
+- 성공률 하락: sense:company (100% → 50%)
 - 성공률 하락: sense:navigate_route (100% → 50%)
 - 성공률 하락: sense:search_books (100% → 50%)
-- 응답 느려짐: engines:newspaper (547ms → 2362ms)
-- 응답 느려짐: limbs:music (758ms → 3019ms)
-- 응답 느려짐: self:read (2ms → 37ms)
-- 응답 느려짐: sense:host (2ms → 130ms)
-- 복구됨: engines:chart, limbs:music, others:messages, others:neighbor, self:health, self:list, self:time, sense:crypto, sense:host, sense:search_ddg, sense:stock, sense:weather, sense:world_bank
+- 응답 느려짐: engines:newspaper (653ms → 3003ms)
+- 응답 느려짐: limbs:music (1058ms → 2440ms)
+- 응답 느려짐: self:run_pipeline (1ms → 4ms)
+- 응답 느려짐: sense:host (89ms → 217ms)
+- 복구됨: engines:chart, engines:join, engines:merge, engines:sort, limbs:music, others:messages, others:neighbor, self:grep, self:health, self:list, self:photo, self:report, self:run_pipeline, self:time, sense:crypto, sense:host, sense:search_ddg, sense:stock, sense:weather, sense:world_bank
 
 ## 나는 누구인가
 - 나는 지금 **맥 · Apple M4 Pro · macOS 26.5.1** 에서 돈다.
@@ -45,7 +45,7 @@
 - 안드로이드 폰의 액션을 빌릴 수 있다 (내 몸에서 못 하는 건 분산 IBL 이 자동 위임 — 닿지 않으면 실행 시 알림).
 
 ## Digital Proprioception
-- 메모리: 771.6MB
-- CPU: 0.2%
-- 스레드: 27개
+- 메모리: 642.7MB
+- CPU: 2.0%
+- 스레드: 25개
 - 태스크: 실행 0개 / 대기 0개

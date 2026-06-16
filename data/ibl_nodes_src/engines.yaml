@@ -381,12 +381,12 @@
         - 통계
       join:
         runs_on: anywhere
-        description: '통화 변환자(이항) — 두 표를 공통 키 열로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬 두 입력을 받음.'
-        target_description: 'on(조인 키 열 이름, 양쪽 table에 모두 존재, 필수). 결과 열=좌측 전체+우측(키 제외). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
+        description: '통화 변환자(이항) — 두 입력을 공통 키로 inner join(table은 키 열, records는 키 필드). 서로 다른 소스를 한 키로 묶어 분석. & 병렬 두 입력을 받음.'
+        target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). table=열 기준, records=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
         group: transform
         router: handler
         tool: data_join
-        implementation: data-ops handler.py — & 병렬 두 table을 on 키로 inner join(우측 인덱싱, 키 정규화 비교). 표형 전용.
+        implementation: data-ops handler.py — & 병렬 두 입력을 on 키로 inner join(우측 인덱싱, 키 정규화 비교). table·records 통화 모두 지원(같은 통화끼리).
         target_key: on
         keywords:
         - 조인

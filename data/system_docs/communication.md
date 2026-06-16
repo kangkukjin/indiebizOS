@@ -63,6 +63,14 @@ IndieBiz OS는 GUI 외에도 Gmail, Nostr 등 외부 채널을 통해 사용자 
 - **카메라**: `[sense:see]`(phone_only) — 온디맨드 촬영(Camera2 정지캡처→폰 jpg, 3A 수렴). facing=back/front.
 - **마이크**: `[sense:listen]{op: transcribe|record}`(phone_only) — 온디맨드 받아쓰기(STT→텍스트, 포워드 무손실)/녹음(→폰 m4a 파일).
 
+### 맥↔폰 양방향 연합 (분산 IBL, 2026-06-17 라이브)
+폰↔맥이 서로의 전용 액션을 빌려 쓴다(상세=ibl.md 분산 IBL 절). 통신 관점 요약:
+- **상주**: 폰 백엔드(`:8765`)가 `AgentForegroundService`(START_STICKY·부팅)로 **앱 UI 없이** 떠 있어, 맥이 언제든 닿는다(앱 안 열어도 됨).
+- **맥→폰**: `INDIEBIZ_PHONE_URL`(폰 LAN)로 HTTP 포워드, `INDIEBIZ_PHONE_TOKEN`을 `X-Phone-Token` 헤더로 동봉. 폰은 비localhost 요청에 이 토큰을 검증하고, **토큰이 설정됐을 때만 0.0.0.0(LAN) 바인드**(없으면 localhost 전용 — 노출과 인증이 한 묶음).
+- **폰→맥**: `INDIEBIZ_MAC_URL`(Cloudflare 터널, HTTPS)+`INDIEBIZ_MAC_PASSWORD`(런처 세션)로 위임.
+- **토큰 프로비저닝**: 정본 `.env` → `phone-companion/scripts/provision_phone_keys.py`가 `keys.json`으로 폰에 푸시(맥·폰 동일 값). 인증은 전자동(매 호출 사람 개입 없음).
+- **보안**: 양방향 게이트·인터넷 비노출(폰=LAN 한정). 유일 caveat=맥→폰이 LAN 평문 HTTP라 토큰이 WiFi 평문(가정 WPA2 저위험, 공용 WiFi 금지). 토큰=폰 완전 제어권 → 유출 시 교체.
+
 ### IndieNet 연동
 Nostr 키는 IndieNet identity와 연동 가능:
 - 위치: `~/.indiebiz/indienet/identity.json`
@@ -403,4 +411,4 @@ agents:
 4. **Nostr 키 관리**: nsec는 채널 설정 또는 IndieNet에서 관리
 
 ---
-*마지막 업데이트: 2026-06-14 — channel 트리거("Y 메시지 오면 X 실행") 맥 발화 경로 신설: channel_poller `_save_message_to_db`(Gmail/Nostr 3수신 경로 공통 깔때기)에 `_check_channel_triggers` 훅 → 매칭 시 데몬 스레드로 파이프라인 발화(메시지를 _prev_result 주입). **폰은 메시지 폴링 안 함**(사용자 결정 2026-06-14) — 메시지 수신/폴링은 PC 담당, 폰=리모컨/두 번째 자아. 이전(2026-06-12): IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신 + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05*
+*마지막 업데이트: 2026-06-17 — **맥↔폰 양방향 연합 라이브·인증화**: 폰 백엔드가 앱 UI 없이 상주(`AgentForegroundService` START_STICKY·부팅), 맥→폰 `X-Phone-Token` 인증(폰 phone_api 미들웨어, 토큰 있을 때만 `0.0.0.0` 바인드), `provision_phone_keys.py`가 토큰 푸시 — 인증 전자동. 보안=양방향 게이트·인터넷 비노출·caveat는 LAN 평문 HTTP. 이전(2026-06-14) — channel 트리거("Y 메시지 오면 X 실행") 맥 발화 경로 신설: channel_poller `_save_message_to_db`(Gmail/Nostr 3수신 경로 공통 깔때기)에 `_check_channel_triggers` 훅 → 매칭 시 데몬 스레드로 파이프라인 발화(메시지를 _prev_result 주입). **폰은 메시지 폴링 안 함**(사용자 결정 2026-06-14) — 메시지 수신/폴링은 PC 담당, 폰=리모컨/두 번째 자아. 이전(2026-06-12): IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신 + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05*

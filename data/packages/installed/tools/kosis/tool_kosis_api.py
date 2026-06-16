@@ -35,7 +35,7 @@ ENDPOINTS = {
     "statistics_list": "/statisticsList.do",
     "statistics_data": "/Param/statisticsParameterData.do",
     "statistics_info": "/statisticsInfo.do",
-    "integrated_search": "/search/search.do",
+    "integrated_search": "/statisticsSearch.do",  # 구 /search/search.do 폐지(404) → 통합검색 엔드포인트 이전(2026-06-17 확인)
     "indicators": "/indicator/indicator.do"
 }
 

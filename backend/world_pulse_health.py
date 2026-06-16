@@ -588,6 +588,25 @@ def _evaluate_result(result, elapsed_ms: int) -> Dict:
 
     if is_error:
         error_msg = str(result.get("error", ""))[:200]
+        # 폰/맥 미가용 — 분산 IBL 의 포워드 대상(폰 앱·맥 런처)이 지금 안 떠 있을 뿐
+        # 액션 자체는 정상이다. 폰 앱은 상시 대기가 아니라 띄워야 도는 게 정상이므로,
+        # 이걸 fail 로 찍으면 의식 에이전트가 멀쩡한 phone_only 액션을 영영 회피한다 → skip.
+        _device_offline = (
+            (result.get("phone_unreachable") or result.get("mac_unreachable")
+                or result.get("phone_forward") or result.get("mac_forward"))
+            or any(kw in error_msg for kw in [
+                "폰 네이티브", "폰에서 실행되는 동작", "phone_only",
+                "맥에 연결할 수 없", "INDIEBIZ_PHONE_URL", "INDIEBIZ_MAC",
+                "Chaquopy 브리지 부재",
+            ])
+        )
+        if _device_offline:
+            return {
+                "success": True,          # 액션은 정상 — 몸(폰/맥)만 지금 미가용
+                "response_ms": elapsed_ms,
+                "data_quality": "skipped",
+                "error_message": error_msg,
+            }
         # 파라미터 부족 에러는 테스트 한계 — 액션은 정상으로 간주
         _param_error_keywords = [
             "필요합니다", "required", "missing", "파라미터가",

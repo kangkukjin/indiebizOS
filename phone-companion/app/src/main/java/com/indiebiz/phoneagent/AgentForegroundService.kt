@@ -21,6 +21,9 @@ class AgentForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIF_ID, buildNotification())
         Log.i(TAG, "포그라운드 서비스 시작 — 상주")
+        // 앱 UI 없이도 :8765 백엔드 기동 — 부팅·START_STICKY 재시작 시에도 맥→폰 분산
+        // 포워드가 닿게. (App.ensureBackend 는 idempotent: 이미 떠 있으면 즉시 반환.)
+        (application as? App)?.ensureBackend()
         // 위치·걸음 상시 수집기(SignalCollector)는 제거됨(2026-06-12 — 상시 추적/푸시 폐기).
         // 위치는 이제 [sense:here] 온디맨드 1회 조회(PhoneActions.getCurrentLocationNow)로만.
         return START_STICKY

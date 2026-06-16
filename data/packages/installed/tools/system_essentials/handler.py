@@ -85,8 +85,11 @@ def is_dangerous_command(command: str) -> bool:
     return bool(_DANGEROUS_RE.search(command))
 
 def _get_path(tool_input: dict) -> str:
-    """file_path, path, target 중 사용 가능한 경로 반환"""
-    return tool_input.get("file_path") or tool_input.get("path") or tool_input.get("target") or ""
+    """file_path, path, target 중 사용 가능한 경로 반환 ('~' 홈 디렉토리 확장).
+    expanduser 는 '~' 없는 절대/상대 경로엔 무영향이라 기존 동작은 불변이다.
+    ('~/...' 가 project_path 아래로 잘못 붙어 파일을 못 찾던 버그 방지 — read/write/edit 공통)"""
+    raw = tool_input.get("file_path") or tool_input.get("path") or tool_input.get("target") or ""
+    return os.path.expanduser(raw) if raw else raw
 
 def execute(tool_input: dict, context) -> str:
     """ToolContext 기반 신규 시그니처."""
@@ -181,7 +184,7 @@ def execute(tool_input: dict, context) -> str:
             return json.dumps(result, ensure_ascii=False)
 
         elif tool_name == "list_directory":
-            dir_path = os.path.join(project_path, tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or ".")
+            dir_path = os.path.join(project_path, os.path.expanduser(tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or "."))
             items = os.listdir(dir_path)
             text = "\n".join(items)
             # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
@@ -203,7 +206,7 @@ def execute(tool_input: dict, context) -> str:
         elif tool_name == "grep_files":
             pattern = tool_input["pattern"]
             file_pattern = tool_input.get("file_pattern", "**/*")
-            root = os.path.join(project_path, tool_input.get("root_path", "."))
+            root = os.path.join(project_path, os.path.expanduser(tool_input.get("root_path", ".")))
             use_regex = tool_input.get("regex", False)
             max_results = 100
 
@@ -218,13 +221,20 @@ def execute(tool_input: dict, context) -> str:
                          '.db', '.sqlite', '.sqlite3'}
 
             # 검색할 파일 목록 가져오기 (불필요 파일 필터링)
-            files = glob.glob(os.path.join(root, file_pattern), recursive=True)
-            files = [
-                f for f in files
-                if os.path.isfile(f)
-                and os.path.splitext(f)[1].lower() not in SKIP_EXTS
-                and not any(skip in f.split(os.sep) for skip in SKIP_DIRS)
-            ]
+            # root 가 단일 파일이면 그 파일만 검색한다. file_pattern 기본값 '**/*' 를 파일 경로에
+            # join 하면 'file.py/**/*' 가 되어 빈 목록 → 조용한 "No matches" 버그가 된다.
+            # 모델(Claude Grep 습관)은 흔히 단일 파일을 겨누므로 이 케이스를 명시 처리한다.
+            # 사용자가 직접 지정한 파일이므로 SKIP 확장자/디렉토리 필터도 적용하지 않는다.
+            if os.path.isfile(root):
+                files = [root]
+            else:
+                files = glob.glob(os.path.join(root, file_pattern), recursive=True)
+                files = [
+                    f for f in files
+                    if os.path.isfile(f)
+                    and os.path.splitext(f)[1].lower() not in SKIP_EXTS
+                    and not any(skip in f.split(os.sep) for skip in SKIP_DIRS)
+                ]
 
             results = []
             match_rows = []  # 공유 통화 table용 [파일, 줄번호, 내용]
@@ -408,8 +418,8 @@ def execute(tool_input: dict, context) -> str:
             _dst = tool_input.get("dest") or tool_input.get("destination")
             if not _src or not _dst:
                 return "Error: src(원본)와 dest(대상) 경로가 필요합니다."
-            src = os.path.join(project_path, _src)
-            dst = os.path.join(project_path, _dst)
+            src = os.path.join(project_path, os.path.expanduser(_src))
+            dst = os.path.join(project_path, os.path.expanduser(_dst))
             scope_err = _validate_path_in_scope(dst, project_path)
             if scope_err:
                 return scope_err
@@ -437,8 +447,8 @@ def execute(tool_input: dict, context) -> str:
             _dst = tool_input.get("dest") or tool_input.get("destination")
             if not _src or not _dst:
                 return "Error: src(원본)와 dest(대상) 경로가 필요합니다."
-            src = os.path.join(project_path, _src)
-            dst = os.path.join(project_path, _dst)
+            src = os.path.join(project_path, os.path.expanduser(_src))
+            dst = os.path.join(project_path, os.path.expanduser(_dst))
             scope_err = _validate_path_in_scope(dst, project_path)
             if scope_err:
                 return scope_err
@@ -460,7 +470,7 @@ def execute(tool_input: dict, context) -> str:
             return f"이동 완료: {os.path.abspath(dst)}"
 
         elif tool_name == "delete_path":
-            target = os.path.join(project_path, tool_input["path"])
+            target = os.path.join(project_path, os.path.expanduser(tool_input["path"]))
             scope_err = _validate_path_in_scope(target, project_path)
             if scope_err:
                 return scope_err

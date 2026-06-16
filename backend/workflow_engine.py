@@ -72,6 +72,30 @@ def execute_pipeline(steps: list, project_path: str = ".",
     if not steps:
         return {"success": False, "error": "steps가 비어있습니다.", "steps_completed": 0, "steps_total": 0}
 
+    # steps 정규화 — 원소가 IBL 코드 *문자열*이면 dict step 으로 파싱한다.
+    # 이 함수는 아래에서 step.get(...) 로 dict 를 가정하지만, run_pipeline 액션 문서·해마 용례·
+    # 자가점검·트리거가 모두 steps 를 IBL 코드 문자열 리스트로 넘겨 'str' object has no attribute
+    # 'get' 으로 만성 실패해 왔다. 계약을 정의하는 입구에서 한 번 정규화해 모든 호출처
+    # (run_pipeline·calendar·channel_poller·plans)를 함께 고친다.
+    # 문자열이 '>>'/'&'/'??' 합성을 품으면 ibl_parse 가 여러 step 으로 펼친다.
+    if any(isinstance(s, str) for s in steps):
+        from ibl_parser import parse as ibl_parse, IBLSyntaxError
+        normalized = []
+        for s in steps:
+            if isinstance(s, str):
+                if not s.strip():
+                    continue
+                try:
+                    normalized.extend(ibl_parse(s))
+                except IBLSyntaxError as e:
+                    return {"success": False, "error": f"IBL 문법 오류: {s} → {str(e)}",
+                            "steps_completed": 0, "steps_total": len(steps)}
+            else:
+                normalized.append(s)
+        steps = normalized
+        if not steps:
+            return {"success": False, "error": "steps가 비어있습니다.", "steps_completed": 0, "steps_total": 0}
+
     prev_result = context.get("_prev_result", "") if context else ""
     results = []
     total = len(steps)

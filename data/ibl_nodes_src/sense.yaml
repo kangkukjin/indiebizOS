@@ -47,6 +47,56 @@
         - 배터리
         - 내몸
         - 프로세스
+        app:
+          instrument: host
+          icon: 🖥️
+          name: 시스템
+          order: 15
+          phone_render: false
+          modes:
+          - name: 상태
+            auto_run: true
+            action: '[sense:host]{op: "status"}'
+            view:
+            - type: metric
+              label: CPU
+              big: '{cpu_percent}'
+              unit: '%'
+              sub: '{body}{frontmost_app|opt:  ·  ,}'
+            - type: kv
+              title: 메모리 · 디스크 · 전원
+              rows:
+              - {k: 메모리, v: '{memory.used_gb} / {memory.total_gb} GB ({memory.percent}%)'}
+              - {k: 디스크 (/), v: '{disk_root.free_gb} GB 여유 / {disk_root.total_gb} GB ({disk_root.percent}%)'}
+              - {k: 배터리, v: '{battery.percent|opt:,%}'}
+              - {k: 가동시간, v: '{uptime_hours} 시간'}
+              - {k: 프로세스 수, v: '{process_count}'}
+          - name: 프로세스
+            auto_run: true
+            action: '[sense:host]{op: "apps", limit: 15}'
+            view:
+            - type: kv_list
+              title: 메모리 점유 상위
+              from: top
+              k: '{name}'
+              v: '{mem_percent}% · CPU {cpu_percent}%'
+          - name: 자원
+            auto_run: true
+            action: '[sense:host]{op: "resources"}'
+            view:
+            - type: kv
+              title: CPU · 메모리 · 스왑 · 네트워크
+              rows:
+              - {k: CPU, v: '{cpu.percent_overall}% · {cpu.logical_cores} 코어'}
+              - {k: 메모리, v: '{memory.used_gb} / {memory.total_gb} GB ({memory.percent}%)'}
+              - {k: 스왑, v: '{swap.used_gb} / {swap.total_gb} GB ({swap.percent}%)'}
+              - {k: 네트워크, v: '↑ {network.sent_gb} · ↓ {network.recv_gb} GB'}
+              - {k: 가동시간, v: '{uptime_hours} 시간'}
+            - type: kv_list
+              title: 디스크 파티션
+              from: disks
+              k: '{mount}'
+              v: '{free_gb} GB 여유 / {total_gb} GB ({percent}%)'
       here:
         description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
         group: device

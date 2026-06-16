@@ -592,28 +592,47 @@ class ClaudeCodeProvider(BaseProvider):
     # --allowed-tools 는 restrictive이므로 Claude Code가 흔히 쓰는 built-in + MCP IBL을 명시.
     # 이 목록에 없는 도구는 사용 불가 (트레이드오프: 속도 향상 vs 도구 범위 제한).
     # 더 많은 도구가 필요해지면 여기에 추가.
+    # 원칙: IBL 어휘를 *중복(그림자)* 하는 네이티브는 여기서 빼고 DISALLOWED 로 하드 차단한다.
+    #   Claude Code 2.1.170 에서 MCP execute_ibl 은 deferred(ToolSearch 경유)인데 네이티브는 eager 라,
+    #   중복 네이티브를 남기면 모델이 IBL 대신 그쪽으로 새는 회귀가 생긴다(Read·WebSearch 실측 누수).
+    #   → 누수 차단 = 어휘 일관성·해마 학습·폰 이식성·실행 통제(게이팅/로깅/압축) 보존.
+    # 남기는 것: 셸 탈출구(Bash 계열 — IBL 에 등가물 없는 의도된 peer: Python/Node/임의 명령) +
+    #   파일 쓰기/편집(셸 코드 작성-실행 루프의 짝) + execute_ibl.
+    # 주의: 이 분리는 Claude Code 프로바이더 한정. 일반 프로바이더(Gemini 등)는 이런 네이티브가 애초에 없다.
     EAGER_TOOLS = [
-        # 파일 조작
-        "Read", "Write", "Edit", "MultiEdit", "NotebookEdit",
-        # 셸
+        # 파일 쓰기/편집 — 셸 코드 루프(스크립트 작성→실행)의 일부
+        "Write", "Edit", "MultiEdit", "NotebookEdit",
+        # 셸 탈출구 — IBL 에 등가물 없는 의도된 peer (Python/Node/임의 명령). 일부러 IBL 어휘로 안 만듦.
         "Bash", "BashOutput", "KillShell",
-        # 검색
-        "Grep", "Glob",
-        # 웹
-        "WebSearch", "WebFetch",
-        # 인지·작업 관리
-        # AskUserQuestion 제외 — Claude Code 자체 도구는 indiebizOS UI와 연결되지 않아 응답을 받을 수 없음.
-        # 사용자 질문은 indiebizOS의 ask_user_question (IBL [user:ask])을 사용.
+        # 작업 관리
         "TodoWrite",
-        # MCP — IBL 브리지
+        # MCP — IBL 브리지 (5노드 전체)
         "mcp__indiebizos__execute_ibl",
     ]
 
     # 명시적으로 차단할 도구 — ToolSearch 등을 통해 우회 로드되더라도 호출 거부됨.
-    # AskUserQuestion: indiebizOS UI 미연결, 응답 채널 없음 → 사용자가 답을 못 줘서 모델이 자기 판단으로 진행하는 문제 발생.
+    # AskUserQuestion: indiebizOS UI 미연결, 응답 채널 없음 → IBL [user:ask] 사용.
+    # 아래 네이티브들은 IBL 액션과 1:1 중복이라, 모델이 IBL 대신 새지 못하게 강제로 막는다.
     DISALLOWED_TOOLS = [
-        "AskUserQuestion",
+        "AskUserQuestion",          # → IBL [user:ask] / [self:ask_user]
+        "Read",                     # → [self:read]
+        "Grep", "Glob",             # → [self:grep]
+        "WebSearch",                # → [sense:search_ddg/news/scholar/naver]
+        "WebFetch",                 # → [sense:crawl]
     ]
+
+    # 도구 정책 — 시스템 프롬프트에 append. **Claude Code 프로바이더 전용**:
+    # 이 네이티브 도구들은 Claude Code 에만 존재하므로, 공용 프롬프트(base_prompt_v5)가 아니라
+    # 여기서만 주입한다(Gemini 등 다른 프로바이더는 이런 도구가 없어 안내가 불필요·혼란).
+    # 차단된 네이티브 대신 IBL 등가물을 첫 시도에 쓰게 해 헛걸음을 막는다.
+    TOOL_POLICY = (
+        "\n\n# 도구 정책\n"
+        "파일 읽기·웹 검색·grep 은 네이티브 도구가 아니라 IBL 로 하라. "
+        "`Read`/`WebSearch`/`WebFetch`/`Grep`/`Glob` 은 비활성화돼 있다 — 대신 execute_ibl 로 "
+        "`[self:read]`(파일)·`[sense:search_ddg/news/scholar/naver]`(웹검색)·`[sense:crawl]`(웹페이지)·"
+        "`[self:grep]`(코드검색) 을 호출하라. "
+        "셸·코드 실행(`Bash`)은 그대로 사용 가능하다 — IBL 에 등가물이 없는 탈출구다."
+    )
 
     def _build_command(
         self,
@@ -652,8 +671,8 @@ class ClaudeCodeProvider(BaseProvider):
         if self.model:
             cmd += ["--model", self.model]
 
-        if self.system_prompt:
-            cmd += ["--append-system-prompt", self.system_prompt]
+        # 시스템 프롬프트 + Claude Code 전용 도구 정책(차단 네이티브 → IBL 등가물 안내)
+        cmd += ["--append-system-prompt", (self.system_prompt or "") + self.TOOL_POLICY]
 
         # MCP 브리지 (IBL execute_ibl 등)
         if mcp_config_path:

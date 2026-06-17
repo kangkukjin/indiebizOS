@@ -52,6 +52,8 @@ def execute(tool_input: dict, context) -> str:
         return generate_gemini_image(tool_input, output_base)
     elif tool_name == "critique_gemini_image":
         return critique_gemini_image(tool_input, output_base)
+    elif tool_name == "read_gemini_image":
+        return read_gemini_image(tool_input, output_base)
     elif tool_name == "create_tts":
         return create_tts(tool_input, output_base)
     elif tool_name == "render_html_video":
@@ -1509,10 +1511,11 @@ def critique_gemini_image(tool_input, output_base):
     import base64
     import json as _json
 
-    image_path = tool_input.get("image_path")
+    # path 는 IBL 표준 파라미터(self:read/grep/edit 모두 path) — image_path 미지정 시 폴백 수용.
+    image_path = tool_input.get("image_path") or tool_input.get("path")
     intent = tool_input.get("intent", "")
     if not image_path:
-        return "오류: image_path가 필요합니다."
+        return "오류: image_path(또는 path)가 필요합니다."
     if not intent:
         return "오류: intent(이 일러스트가 무엇을 표현해야 하는지)가 필요합니다."
 
@@ -1638,6 +1641,91 @@ def critique_gemini_image(tool_input, output_base):
     summary_lines.append("")
     summary_lines.append(f"verdict_json: {_json.dumps(verdict, ensure_ascii=False)}")
     return "\n".join(summary_lines)
+
+
+def read_gemini_image(tool_input, output_base):
+    """Gemini Vision으로 이미지를 *읽어* 질문에 자유서술로 답한다 (시각 QA / OCR / 검증).
+
+    critique_gemini_image 와 다른 점: 합격/점수 채점이 아니라, 주어진 질문에 대한 자유 텍스트
+    답을 돌려준다. "스크린샷의 숫자를 읽어줘", "이 그림에 무엇이 보이나", "이 통계 수치가
+    332인가 136인가" 같은 시각 읽기·검증에 쓴다. 생성 일러스트 품질 평가는 image_critic 을 쓸 것.
+
+    파라미터:
+      - image_path (또는 path): 읽을 이미지 절대 경로 또는 base64 data URI (필수)
+      - question (또는 query/intent/prompt): 무엇을 읽거나 답할지 (없으면 전체 묘사)
+      - api_key (선택), model (선택)
+    """
+    import httpx
+    import base64
+
+    image_path = tool_input.get("image_path") or tool_input.get("path")
+    if not image_path:
+        return "오류: image_path(또는 path)가 필요합니다."
+    question = (tool_input.get("question") or tool_input.get("query")
+               or tool_input.get("intent") or tool_input.get("prompt") or "").strip()
+
+    api_key = tool_input.get("api_key") or os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return "오류: GEMINI_API_KEY가 설정되지 않았습니다."
+
+    # 이미지 로드 (절대 경로 또는 data URI) — critique_gemini_image 와 동일.
+    if image_path.startswith("data:"):
+        try:
+            _, b64data = image_path.split(",", 1)
+            mime = image_path.split(";", 1)[0].split(":", 1)[1]
+        except Exception:
+            return "오류: 잘못된 data URI."
+    else:
+        if not os.path.exists(image_path):
+            return f"오류: 파일이 없습니다: {image_path}"
+        with open(image_path, "rb") as f:
+            b64data = base64.b64encode(f.read()).decode("utf-8")
+        ext = os.path.splitext(image_path)[1].lower()
+        mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                ".webp": "image/webp", ".gif": "image/gif"}.get(ext, "image/png")
+
+    if question:
+        instruction = (
+            "당신은 이미지를 정확히 읽는 시각 분석가입니다. 아래 이미지를 보고 질문에 "
+            "사실에 근거해 답하세요. 이미지에 적힌 텍스트·숫자는 보이는 그대로 정확히 옮기고, "
+            "보이지 않거나 불확실하면 추측하지 말고 그렇다고 밝히세요.\n\n"
+            f"**질문**: {question}"
+        )
+    else:
+        instruction = ("아래 이미지를 보고 무엇이 있는지 상세히 묘사하세요. 이미지에 적힌 "
+                       "텍스트·숫자가 있으면 보이는 그대로 정확히 옮기세요.")
+
+    payload = {
+        "contents": [{
+            "parts": [
+                {"inlineData": {"mimeType": mime, "data": b64data}},
+                {"text": instruction},
+            ]
+        }],
+        "generationConfig": {"temperature": 0.0, "responseModalities": ["TEXT"]},
+    }
+    model = tool_input.get("model") or "gemini-3-pro-preview"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
+    try:
+        with httpx.Client(timeout=120.0) as client:
+            r = client.post(url, params={"key": api_key}, json=payload,
+                            headers={"Content-Type": "application/json"})
+            if r.status_code == 404:
+                model = "gemini-2.5-pro"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+                r = client.post(url, params={"key": api_key}, json=payload,
+                                headers={"Content-Type": "application/json"})
+            r.raise_for_status()
+            data = r.json()
+    except Exception as e:
+        return f"오류: VLM 호출 실패: {e}"
+
+    parts = (data.get("candidates", [{}])[0].get("content", {}) or {}).get("parts", [])
+    text = "".join(p.get("text", "") for p in parts).strip()
+    if not text:
+        return "오류: VLM 빈 응답 (이미지를 읽지 못했습니다)."
+    return text
 
 
 def generate_gemini_image(tool_input, output_base):

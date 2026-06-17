@@ -1,6 +1,6 @@
 ---
 title: IBL (IndieBiz Logic)
-scope: IBL 명세, 5-Node 구조, 136 액션, 파서/엔진/라우팅
+scope: IBL 명세, 5-Node 구조, 138 액션, 파서/엔진/라우팅
 owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
 source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml
 build_tool: scripts/build_ibl_nodes.py
@@ -40,7 +40,7 @@ IBL 표현 계층:     [node:action]{params}
 
 ## 액션 카테고리
 
-총 136개 액션(sense 42, self 41, limbs 17, others 11, engines 25)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
+총 138개 액션(sense 42, self 42, limbs 17, others 11, engines 26)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
 
 | 카테고리 | 의미 | 올바른 사용 예시 |
 |---------|------|----------------|
@@ -95,7 +95,7 @@ IBL 표현 계층:     [node:action]{params}
 | `limbs` | 17 | 장치 제어: UI 조작(브라우저, 데스크톱 화면, 안드로이드 폰) + 폰 네이티브 동작(phone) + 미디어 재생 | browser, screen, android, phone, music, radio, cctv, launch, os_open |
 | `sense` | 41 | 감각 확장: 외부 정보 수집 + 내부 데이터 관리 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search_naver, stock, travel, crawl, realty, weather, phone, here, listen, see |
 | `others` | 11 | 협업·통신: 에이전트 위임 + 메시지/커뮤니티 + 이웃 CRM | delegate, channel_send, channel_read, messages, feed, board, nostr, auto_response, neighbor, contact, agents |
-| `engines` | 25 | 변환·창작: 통화 변환자(filter/sort/join 등)·문서IR(document/structure)·차트·표·슬라이드·영상·이미지 | filter, sort, join, document, structure, chart, spreadsheet, slide_shadcn, newspaper |
+| `engines` | 26 | 변환·창작: 통화 변환자(filter/sort/join 등)·문서IR(document/structure)·차트·표·슬라이드·영상·이미지(생성 image_gemini·평가 image_critic·읽기 image_read) | filter, sort, join, document, structure, chart, spreadsheet, slide_shadcn, newspaper, image_read |
 
 **Phase 25 통합 맥락:**
 - source → sense(78): 외부 정보 인식의 "감각 기관" 역할
@@ -180,7 +180,7 @@ IBL 표현 계층:     [node:action]{params}
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `engines` | 25 | 변환·창작: 통화 변환자·문서IR·차트·표·슬라이드·영상·이미지 | filter, sort, join, document, structure, chart, spreadsheet, slide_shadcn, newspaper |
+| `engines` | 26 | 변환·창작: 통화 변환자·문서IR·차트·표·슬라이드·영상·이미지 | filter, sort, join, document, structure, chart, spreadsheet, slide_shadcn, newspaper, image_read |
 
 특징: 복잡한 프로세스를 기동시켜 결과물을 산출하는 엔진 노드.
 
@@ -678,4 +678,4 @@ IBL은 Phase 0(원시 도구 호출)에서 시작하여, 드라이버 기반 프
 *Phase 24: verb 시스템 제거. 런타임 verb→action 해석 삭제. 프롬프트 가독성을 위해 category 태그로 대체 (순수 표시용).*
 *Phase 25: 5-Node 최종 구조 재설계. source→sense(외부 정보), system→self(개인 도메인), interface+stream→limbs(신체/장치), team+messenger→others(협업/통신), forge→engines(엔진/창작). 총 308 액션.*
 *Phase 26: self 노드에 log_attempt, get_attempts (전략 에스컬레이션/라운드 메모리). sense 노드에 cctv_refresh, cctv_stats (UTIC 실시간 API).*
-*최종 업데이트: 2026-06-17 — **맥→폰 분산 IBL 인증 라이브**(`INDIEBIZ_PHONE_TOKEN`·`X-Phone-Token` 게이트·토큰 있을 때만 `0.0.0.0` 바인드·폰 백엔드 앱 UI 없이 상주 `AgentForegroundService`). `engines:join`이 레코드 통화도 inner join(table 외, merge/union과 대칭). 자가점검 평가기=폰/맥 일시 미가용을 fail 아닌 skip 분류. 버그수정: `run_pipeline` 문자열 steps 파싱(만성 'str' object has no attribute 'get' 해소)·`self:grep` 단일파일 경로/`~` 확장(file 액션 전반)·KOSIS 통합검색 엔드포인트(`/statisticsSearch.do`)·Claude Code 프로바이더 execute_ibl 정규화. 이전(2026-06-15) — **136 액션**(sense 42, self 41, limbs 17, others 11, engines 25). 통화 대수: engines에 통화→통화 변환자 9 신설(단항 filter/sort/take/select/dedup/groupby + 이항 join/union/merge, data-ops) + 파이프 문법 단축 `|` + 문서 IR emitter(document/structure, html/pdf/docx/pptx/typst) — 124→136. 이전(2026-06-14): 124 액션 정합화(engines 14). 폰 온디맨드 감각 삼각(sense:here/listen/see, phone_only) + self:show_calendar 폐지(해마 게이트는 capability로) → 125→124. 폰이 두 번째 독립 자아로(폰-로컬 Gemini 두뇌·detect_body 하드웨어 자기감지·상주 스케줄러 self:trigger/schedule 폰 바인딩) + runs_on 정직성(anywhere/mac_only/phone_only, build_ibl_nodes.validate_phone_reachability self-check 합류) + channel 트리거 맥 발화 경로. 이전(2026-06-12): 122 액션 — 메신저/커뮤니티/비즈니스 IBL 앱모드 계기화(others:messages/feed/board/nostr, self:business/business_item/business_document/work_guideline) + 자동응답 IBL화(others:auto_response) + 폰↔PC business.db 합집합 동기화(self:phone_sync) + neighbor 통합. 이전(2026-06-10): 111 액션(안드로이드 얇은 부활 + 폰 컴패니언, 음악 작곡 은퇴).*
+*최종 업데이트: 2026-06-17 — **engines:image_read 신설**(Gemini Vision 시각 읽기/OCR/검증 — 스크린샷 숫자·이미지 텍스트를 자유서술로 읽음, image_critic의 합격/점수 채점과 분리) + image_critic의 image_path가 path 표준 param 폴백 수용. 액션 137→**138**(engines 26). 동기=image_critic을 OCR로 오용하던 패턴 해소(빠진 비전-읽기 어휘 보강). 이전 동일자 — **맥→폰 분산 IBL 인증 라이브**(`INDIEBIZ_PHONE_TOKEN`·`X-Phone-Token` 게이트·토큰 있을 때만 `0.0.0.0` 바인드·폰 백엔드 앱 UI 없이 상주 `AgentForegroundService`). `engines:join`이 레코드 통화도 inner join(table 외, merge/union과 대칭). 자가점검 평가기=폰/맥 일시 미가용을 fail 아닌 skip 분류. 버그수정: `run_pipeline` 문자열 steps 파싱(만성 'str' object has no attribute 'get' 해소)·`self:grep` 단일파일 경로/`~` 확장(file 액션 전반)·KOSIS 통합검색 엔드포인트(`/statisticsSearch.do`)·Claude Code 프로바이더 execute_ibl 정규화. 이전(2026-06-15) — **136 액션**(sense 42, self 41, limbs 17, others 11, engines 25). 통화 대수: engines에 통화→통화 변환자 9 신설(단항 filter/sort/take/select/dedup/groupby + 이항 join/union/merge, data-ops) + 파이프 문법 단축 `|` + 문서 IR emitter(document/structure, html/pdf/docx/pptx/typst) — 124→136. 이전(2026-06-14): 124 액션 정합화(engines 14). 폰 온디맨드 감각 삼각(sense:here/listen/see, phone_only) + self:show_calendar 폐지(해마 게이트는 capability로) → 125→124. 폰이 두 번째 독립 자아로(폰-로컬 Gemini 두뇌·detect_body 하드웨어 자기감지·상주 스케줄러 self:trigger/schedule 폰 바인딩) + runs_on 정직성(anywhere/mac_only/phone_only, build_ibl_nodes.validate_phone_reachability self-check 합류) + channel 트리거 맥 발화 경로. 이전(2026-06-12): 122 액션 — 메신저/커뮤니티/비즈니스 IBL 앱모드 계기화(others:messages/feed/board/nostr, self:business/business_item/business_document/work_guideline) + 자동응답 IBL화(others:auto_response) + 폰↔PC business.db 합집합 동기화(self:phone_sync) + neighbor 통합. 이전(2026-06-10): 111 액션(안드로이드 얇은 부활 + 폰 컴패니언, 음악 작곡 은퇴).*

@@ -543,6 +543,30 @@
       }
     },
     {
+      "name": "read_gemini_image",
+      "description": "Gemini Vision으로 이미지를 읽어 질문에 자유서술로 답한다(시각 QA·OCR·검증). 스크린샷의 숫자/텍스트 읽기, 그림 내용 확인 등. 합격/점수 채점이 아님(그건 critique_gemini_image).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "image_path": {
+            "type": "string",
+            "description": "읽을 이미지 절대 경로 또는 base64 data URI (path 로도 받음, 필수)"
+          },
+          "question": {
+            "type": "string",
+            "description": "무엇을 읽거나 답할지 (query/intent/prompt 로도 받음). 생략 시 전체 묘사"
+          },
+          "api_key": {
+            "type": "string",
+            "description": "선택. 미지정 시 GEMINI_API_KEY 환경변수 사용"
+          }
+        },
+        "required": [
+          "image_path"
+        ]
+      }
+    },
+    {
       "name": "html_video",
       "description": "HTML/CSS 씬을 MP4 영상으로 합성. topic 있으면 풀 파이프라인, scene_dir 있으면 마지막 렌더링만. (가이드 html_video.md)\n\n파라미터: topic(주제) 또는 scene_dir(이미 만든 씬 디렉토리) 중 하나. scene_dir이 있으면 자동으로 렌더링 단계만 실행. scenes 파라미터로 씬 배열 직접 전달도 가능.",
       "input_schema": {

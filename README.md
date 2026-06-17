@@ -187,15 +187,15 @@ The system maintains awareness of itself and the world:
 
 A domain-specific language that unifies all capabilities into one syntax.
 
-**5 Nodes, 136 Atomic Actions:**
+**5 Nodes, 138 Atomic Actions:**
 
 | Node | Actions | Description |
 |------|---------|-------------|
 | **sense** | 42 | Data retrieval (web, Naver Korean search, finance, travel, photos, blog, health, real estate, legal, statistics, classic literature, performances/exhibitions) and the phone's on-demand senses (notifications, location, microphone, camera) |
-| **self** | 41 | System management, workflows, triggers, files, deep memory, business (catalog/items/docs/guidelines), phone sync, calendar, health records |
+| **self** | 42 | System management, workflows, triggers, files, deep memory, business (catalog/items/docs/guidelines), phone sync, calendar, health records, scheduled reports |
 | **limbs** | 17 | UI automation (browser, Android phone, macOS screen), phone-native actions, media playback (YouTube, radio), maps |
 | **others** | 11 | Collaboration, delegation, messaging (DM/feed/board/Nostr), neighbor CRM, contacts, auto-response |
-| **engines** | 25 | **Currency transformers** (filter/sort/take/join/union/merge/groupby — compose any data into reports) plus content creation (document IR, slides, video, charts, images, websites, spreadsheets, TTS) |
+| **engines** | 26 | **Currency transformers** (filter/sort/take/join/union/merge/groupby — compose any data into reports) plus content creation (document IR, slides, video, charts, images, websites, spreadsheets, TTS) and vision read/critique of images |
 
 > Action counts shrank from 332 → 136 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn (e.g. 45 bespoke Android actions became one `[limbs:android]{op}` centerpiece). Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work. The newest layer is the **currency algebra**: domain-agnostic transformers take a shared currency (record lists or tables) and return the *same* currency, so any search result composes into any report via `>>` (with a `|` pipe shorthand) — `[sense:realty]{region:"Gangnam"} | where:"lease" | sort:price | take:5 >> [engines:document]{}`.
 
@@ -206,7 +206,7 @@ User: "Search AI news and save to file"
 ```
 
 **Key design:**
-- **One tool, one language** — AI agents learn one syntax, not 136 tool schemas
+- **One tool, one language** — AI agents learn one syntax, not 138 tool schemas
 - **Per-agent filtering** — Each agent's `allowed_nodes` restricts access
 - **Dynamic loading** — Tool packages are folders; drop one in, it's recognized
 

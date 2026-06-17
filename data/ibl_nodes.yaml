@@ -3678,6 +3678,24 @@ nodes:
         - vision
         - critic
         - image evaluation
+      image_read:
+        runs_on: anywhere
+        description: 'Gemini Vision으로 이미지를 읽어 질문에 답한다(시각 QA·OCR·검증). 스크린샷 숫자/텍스트 읽기, 그림 내용 확인. 합격 채점 아님(그건 image_critic).'
+        target_description: 'image_path(절대 경로 또는 data URI, path 로도 받음) 필수 + question(무엇을 읽거나 답할지, 생략 시 전체 묘사). query/intent/prompt 로도 받음.'
+        group: media_produce
+        router: handler
+        tool: read_gemini_image
+        implementation: 'Gemini 3 Pro Vision(폴백 2.5 Pro)으로 이미지를 읽어 자유서술 답변을 반환. temperature=0. critique_gemini_image(합격/점수 채점)와 달리 OCR·시각 QA·시각 검증 용도. 보이는 텍스트/숫자는 그대로 옮기고 불확실하면 추측 금지.'
+        target_key: image_path
+        achievement_criteria: 이미지에 실제로 보이는 내용을 정확히 옮김 — 텍스트/숫자를 환각 없이 읽고, 안 보이면 안 보인다고 답함.
+        keywords:
+        - 이미지 읽기
+        - 스크린샷 읽기
+        - OCR
+        - 시각 QA
+        - 그림 보기
+        - vision read
+        - image ocr
     description: '작업장: 콘텐츠 생성 및 변환 — 신문, 슬라이드, 영상, 차트, 음악, 웹사이트, 디자인'
     tags:
     - 생성

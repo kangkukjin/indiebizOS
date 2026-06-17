@@ -21,6 +21,11 @@ def get_default_webapp_html() -> str:
         .file-item.selected { background-color: #dbeafe; }
         video { max-height: 70vh; }
         img.preview { max-height: 70vh; max-width: 100%; object-fit: contain; }
+        /* 긴 텍스트 빠른 점프 스크롤바 */
+        #jump-bar { position: absolute; top: 60px; right: 4px; bottom: 8px; width: 22px; cursor: pointer; z-index: 20; touch-action: none; }
+        #jump-bar::before { content: ''; position: absolute; left: 9px; right: 9px; top: 0; bottom: 0; background: #e5e7eb; border-radius: 2px; }
+        #jump-thumb { position: absolute; left: 3px; right: 3px; min-height: 40px; background: #9ca3af; border-radius: 8px; opacity: 0.85; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+        #jump-thumb:active { background: #4b5563; opacity: 1; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -68,7 +73,7 @@ def get_default_webapp_html() -> str:
 
         <!-- 미리보기 모달 -->
         <div id="preview-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden relative">
                 <div class="flex items-center justify-between p-4 border-b">
                     <h3 id="preview-title" class="font-semibold truncate"></h3>
                     <button id="close-preview" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -76,6 +81,8 @@ def get_default_webapp_html() -> str:
                 <div id="preview-content" class="p-4 overflow-auto max-h-[calc(90vh-80px)]">
                     <!-- 미리보기 콘텐츠 -->
                 </div>
+                <!-- 긴 텍스트 빠른 점프 스크롤바 (텍스트 미리보기에서만 표시) -->
+                <div id="jump-bar" class="hidden"><div id="jump-thumb"></div></div>
             </div>
         </div>
     </div>
@@ -252,6 +259,7 @@ def get_default_webapp_html() -> str:
             const content = document.getElementById('preview-content');
 
             title.textContent = name;
+            disableJumpBar();
 
             const fileUrl = API_BASE + '/file?path=' + encodeURIComponent(path);
 
@@ -333,6 +341,7 @@ def get_default_webapp_html() -> str:
                     .then(r => r.json())
                     .then(data => {
                         content.innerHTML = `<pre class="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded">${escapeHtml(data.content)}</pre>`;
+                        enableJumpBar();
                     });
             } else if (category === 'pdf') {
                 content.innerHTML = `<iframe src="${fileUrl}" class="w-full h-[70vh]"></iframe>`;
@@ -358,9 +367,64 @@ def get_default_webapp_html() -> str:
 
         function closePreviewModal() {
             cleanupMediaElements();
+            disableJumpBar();
             document.getElementById('preview-modal').classList.add('hidden');
             document.getElementById('preview-content').innerHTML = '';
         }
+
+        // === 긴 텍스트 빠른 점프 스크롤바 ===
+        // 스크롤바 썸을 잡아끌어 파일 임의 위치로 즉시 점프 (터치/마우스). 텍스트 미리보기에서만 노출.
+        const jumpBar = document.getElementById('jump-bar');
+        const jumpThumb = document.getElementById('jump-thumb');
+        let jumpDragging = false;
+
+        function updateJumpThumb() {
+            if (jumpBar.classList.contains('hidden')) return;
+            const sc = document.getElementById('preview-content');
+            const sh = sc.scrollHeight, ch = sc.clientHeight;
+            if (sh <= ch + 4) { jumpThumb.style.display = 'none'; return; }  // 짧은 파일이면 썸 숨김
+            jumpThumb.style.display = 'block';
+            const trackH = jumpBar.clientHeight;
+            const thumbH = Math.max(40, trackH * ch / sh);
+            const maxTop = trackH - thumbH;
+            const top = maxTop * (sc.scrollTop / (sh - ch));
+            jumpThumb.style.height = thumbH + 'px';
+            jumpThumb.style.top = top + 'px';
+        }
+
+        function enableJumpBar() {
+            jumpBar.classList.remove('hidden');
+            requestAnimationFrame(updateJumpThumb);
+        }
+        function disableJumpBar() {
+            jumpBar.classList.add('hidden');
+            jumpDragging = false;
+        }
+
+        function jumpToY(clientY) {
+            const sc = document.getElementById('preview-content');
+            const rect = jumpBar.getBoundingClientRect();
+            const thumbH = jumpThumb.offsetHeight;
+            const maxTop = rect.height - thumbH;
+            let y = clientY - rect.top - thumbH / 2;  // 썸 중심을 손가락에 맞춤
+            y = Math.max(0, Math.min(maxTop, y));
+            const sh = sc.scrollHeight, ch = sc.clientHeight;
+            sc.scrollTop = (sh - ch) * (maxTop ? y / maxTop : 0);
+            updateJumpThumb();
+        }
+
+        function jumpStart(e) { jumpDragging = true; e.preventDefault(); jumpToY(e.touches ? e.touches[0].clientY : e.clientY); }
+        function jumpMove(e) { if (!jumpDragging) return; e.preventDefault(); jumpToY(e.touches ? e.touches[0].clientY : e.clientY); }
+        function jumpEnd() { jumpDragging = false; }
+
+        document.getElementById('preview-content').addEventListener('scroll', updateJumpThumb);
+        window.addEventListener('resize', updateJumpThumb);
+        jumpBar.addEventListener('mousedown', jumpStart);
+        document.addEventListener('mousemove', jumpMove);
+        document.addEventListener('mouseup', jumpEnd);
+        jumpBar.addEventListener('touchstart', jumpStart, { passive: false });
+        document.addEventListener('touchmove', jumpMove, { passive: false });
+        document.addEventListener('touchend', jumpEnd);
 
         // 미리보기 닫기
         document.getElementById('close-preview').addEventListener('click', closePreviewModal);

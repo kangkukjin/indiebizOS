@@ -208,6 +208,11 @@ def execute(tool_input: dict, context) -> str:
             file_pattern = tool_input.get("file_pattern", "**/*")
             root = os.path.join(project_path, os.path.expanduser(tool_input.get("root_path", ".")))
             use_regex = tool_input.get("regex", False)
+            # output_mode (Claude Grep 습관): content(매칭 라인, 기본) / files_with_matches(파일 목록) /
+            # count(파일별 매칭 수). 알 수 없는 값은 content 로 폴백.
+            output_mode = (tool_input.get("output_mode") or "content").lower()
+            if output_mode not in ("content", "files_with_matches", "count"):
+                output_mode = "content"
             max_results = 100
 
             # 검색 제외 디렉토리/확장자 (바이너리, 캐시, VCS)
@@ -238,6 +243,8 @@ def execute(tool_input: dict, context) -> str:
 
             results = []
             match_rows = []  # 공유 통화 table용 [파일, 줄번호, 내용]
+            file_counts = {}  # output_mode=files_with_matches/count용 {파일: 매칭 수}
+            file_order = []   # 파일 첫 등장 순서 보존
             regex_pattern = re.compile(pattern) if use_regex else None
             search_done = False
 
@@ -256,22 +263,38 @@ def execute(tool_input: dict, context) -> str:
                                 rel_path = os.path.relpath(file_path, project_path)
                                 results.append(f"{rel_path}:{line_num}: {line.rstrip()}")
                                 match_rows.append([rel_path, line_num, line.rstrip()])
+                                if rel_path not in file_counts:
+                                    file_order.append(rel_path)
+                                file_counts[rel_path] = file_counts.get(rel_path, 0) + 1
                                 if len(results) >= max_results:
                                     search_done = True
                                     break
                 except (UnicodeDecodeError, PermissionError, OSError):
                     continue
 
-            if results:
-                if search_done:
-                    text = "\n".join(results) + f"\n... (결과가 {max_results}개에 도달하여 검색 중단)"
-                else:
-                    text = "\n".join(results)
-                # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
-                table = {"columns": ["파일", "줄번호", "내용"], "rows": match_rows}
-                return json.dumps({"text": text, "table": table}, ensure_ascii=False)
-            else:
+            if not results:
                 return f"No matches found for: {pattern}"
+
+            truncated = "\n... (결과가 {0}개에 도달하여 검색 중단)".format(max_results) if search_done else ""
+
+            if output_mode == "files_with_matches":
+                # 매칭된 파일 목록만 (라인 무관). 공유 통화 table {파일}.
+                text = "\n".join(file_order) + truncated
+                table = {"columns": ["파일"], "rows": [[fp] for fp in file_order]}
+                return json.dumps({"text": text, "table": table}, ensure_ascii=False)
+
+            if output_mode == "count":
+                # 파일별 매칭 수. 공유 통화 table {파일, 매칭 수}.
+                rows = [[fp, file_counts[fp]] for fp in file_order]
+                text = "\n".join(f"{fp}: {cnt}" for fp, cnt in rows) + truncated
+                table = {"columns": ["파일", "매칭 수"], "rows": rows}
+                return json.dumps({"text": text, "table": table}, ensure_ascii=False)
+
+            # output_mode == "content" (기본): 매칭 라인 전체.
+            text = "\n".join(results) + truncated
+            # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
+            table = {"columns": ["파일", "줄번호", "내용"], "rows": match_rows}
+            return json.dumps({"text": text, "table": table}, ensure_ascii=False)
 
         elif tool_name == "get_current_time":
             fmt = tool_input.get("format", "%Y-%m-%d %H:%M:%S")

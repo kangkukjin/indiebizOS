@@ -84,6 +84,15 @@
           "regex": {
             "type": "boolean",
             "description": "정규표현식 모드 (기본: false)"
+          },
+          "output_mode": {
+            "type": "string",
+            "enum": [
+              "content",
+              "files_with_matches",
+              "count"
+            ],
+            "description": "출력 형태: content(매칭 라인, 기본) / files_with_matches(파일 목록) / count(파일별 매칭 수)"
           }
         },
         "required": [

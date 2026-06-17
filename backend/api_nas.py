@@ -68,6 +68,11 @@ _NAS_LITE_HTML = r'''<!DOCTYPE html>
   .vtitle { -webkit-flex:1; flex:1; font-size:12px; color:#9a9a9e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 8px; }
   .vbody { -webkit-flex:1; flex:1; overflow:auto; }  /* -webkit-overflow-scrolling:touch 제거 — 긴 텍스트 검은화면(합성레이어 한계) 방지 */
   pre.txt { white-space:pre-wrap; word-wrap:break-word; padding:16px; margin:0; font-size:16px; line-height:1.6; font-family:Menlo,monospace; }
+  /* 빠른 점프 스크롤바 — 썸을 잡아끌어 파일 임의 위치로 즉시 이동(탭 페이징 보완) */
+  .jbar { position:absolute; top:46px; right:2px; bottom:4px; width:28px; z-index:20; cursor:pointer; touch-action:none; display:none; }
+  .jbar:before { content:''; position:absolute; left:12px; right:12px; top:0; bottom:0; background:#2c2c2e; border-radius:2px; }
+  .jthumb { position:absolute; left:4px; right:4px; min-height:46px; background:#0a84ff; border-radius:9px; opacity:0.85; }
+  .jthumb:active { opacity:1; background:#3a9bff; }
   .epub { padding:18px 20px; line-height:1.8; font-size:18px; }
   .epub img { max-width:100%; }
   img.imgv { max-width:100%; display:block; margin:0 auto; }
@@ -87,6 +92,7 @@ _NAS_LITE_HTML = r'''<!DOCTYPE html>
 <div id="viewer" class="viewer hide">
   <div class="vbar"><button id="vclose">← 닫기</button><span class="vtitle" id="vtitle"></span><button id="vminus">A-</button><button id="vplus">A+</button></div>
   <div class="vbody" id="vbody"></div>
+  <div class="jbar" id="jbar"><div class="jthumb" id="jthumb"></div></div>
 </div>
 <script>
 (function(){
@@ -148,7 +154,7 @@ _NAS_LITE_HTML = r'''<!DOCTYPE html>
   }
   function exportFile(it){ var url="/nas/file?path="+encodeURIComponent(it.path); var w=window.open(url,"_blank"); if(!w) window.location.href=url; }
 
-  $("vclose").addEventListener("click", function(){ $("viewer").className="viewer hide"; $("vbody").innerHTML=""; });
+  $("vclose").addEventListener("click", function(){ $("viewer").className="viewer hide"; $("vbody").innerHTML=""; jShow(false); });
   $("vplus").addEventListener("click", function(){ fontSize+=2; applyFont(); });
   $("vminus").addEventListener("click", function(){ if(fontSize>10){ fontSize-=2; applyFont(); } });
   // 탭 페이징 — 위쪽 40% 탭=이전, 아래쪽 40% 탭=다음(가운데 무시). 드래그는 수동 스크롤 유지.
@@ -158,8 +164,36 @@ _NAS_LITE_HTML = r'''<!DOCTYPE html>
     var step=vb.clientHeight-48;
     if(rel<0.4){ vb.scrollTop-=step; } else if(rel>0.6){ vb.scrollTop+=step; }
   });
-  function applyFont(){ var t=$("vbody").querySelector("pre.txt, .epub"); if(t) t.style.fontSize=fontSize+"px"; }
+  function applyFont(){ var t=$("vbody").querySelector("pre.txt, .epub"); if(t) t.style.fontSize=fontSize+"px"; jUpd(); }
   function openViewer(title){ $("vtitle").textContent=title; $("viewer").className="viewer"; }
+
+  // 빠른 점프 스크롤바 — 썸 위치 = vbody 스크롤 비율. 드래그로 파일 임의 위치 즉시 이동.
+  var jbar=$("jbar"), jthumb=$("jthumb"), jdrag=false;
+  function jShow(on){ jbar.style.display=on?"block":"none"; if(on) jUpd(); }
+  function jUpd(){
+    if(jbar.style.display!=="block") return;
+    var vb=$("vbody"), sh=vb.scrollHeight, ch=vb.clientHeight;
+    if(sh<=ch+4){ jthumb.style.display="none"; return; }  // 짧은 파일이면 썸 숨김
+    jthumb.style.display="block";
+    var trackH=jbar.clientHeight, thumbH=Math.max(46, trackH*ch/sh), maxTop=trackH-thumbH;
+    jthumb.style.height=thumbH+"px";
+    jthumb.style.top=(maxTop*(vb.scrollTop/(sh-ch)))+"px";
+  }
+  function jJump(cy){
+    var vb=$("vbody"), rect=jbar.getBoundingClientRect(), thumbH=jthumb.offsetHeight, maxTop=rect.height-thumbH;
+    var y=Math.max(0, Math.min(maxTop, cy-rect.top-thumbH/2)), sh=vb.scrollHeight, ch=vb.clientHeight;
+    vb.scrollTop=(sh-ch)*(maxTop? y/maxTop : 0);
+    jUpd();
+  }
+  function jY(e){ return (e.touches&&e.touches[0])? e.touches[0].clientY : e.clientY; }
+  jbar.addEventListener("mousedown", function(e){ jdrag=true; e.preventDefault(); jJump(jY(e)); });
+  document.addEventListener("mousemove", function(e){ if(jdrag){ e.preventDefault(); jJump(jY(e)); } });
+  document.addEventListener("mouseup", function(){ jdrag=false; });
+  jbar.addEventListener("touchstart", function(e){ jdrag=true; e.preventDefault(); jJump(jY(e)); }, {passive:false});
+  document.addEventListener("touchmove", function(e){ if(jdrag){ e.preventDefault(); jJump(jY(e)); } }, {passive:false});
+  document.addEventListener("touchend", function(){ jdrag=false; });
+  $("vbody").addEventListener("scroll", jUpd);
+  window.addEventListener("resize", jUpd);
 
   function isTextName(n){ return /\.(txt|md|markdown|log|csv|json|xml|html?|css|js|py|sh|ini|conf|yaml|yml|srt|vtt|tsv|rtf)$/.test(n); }
 
@@ -168,22 +202,22 @@ _NAS_LITE_HTML = r'''<!DOCTYPE html>
     var url="/nas/file?path="+encodeURIComponent(it.path);
     if(name.indexOf(".epub")>=0){ openEpub(it); return; }
     if(it.category==="pdf"){ var w=window.open(url,"_blank"); if(!w) window.location.href=url; return; }
-    if(it.category==="image"){ openViewer(it.name); $("vbody").innerHTML='<img class="imgv" src="'+url+'">'; return; }
+    if(it.category==="image"){ openViewer(it.name); jShow(false); $("vbody").innerHTML='<img class="imgv" src="'+url+'">'; return; }
     if(it.category==="text" || isTextName(name)){
-      openViewer(it.name);
+      openViewer(it.name); jShow(false);
       $("vbody").innerHTML='<pre class="txt">불러오는 중...</pre>';
       api("/nas/text?path="+encodeURIComponent(it.path)).then(function(r){ if(!r.ok) throw 0; return r.json(); })
-        .then(function(d){ var pre=$("vbody").querySelector("pre.txt"); pre.textContent=d.content; pre.style.fontSize=fontSize+"px"; })
+        .then(function(d){ var pre=$("vbody").querySelector("pre.txt"); pre.textContent=d.content; pre.style.fontSize=fontSize+"px"; jShow(true); })
         .catch(function(){ $("vbody").innerHTML='<pre class="txt">텍스트로 열 수 없습니다.</pre>'; });
       return;
     }
     var w2=window.open(url,"_blank"); if(!w2) window.location.href=url;
   }
   function openEpub(it){
-    openViewer(it.name);
+    openViewer(it.name); jShow(false);
     $("vbody").innerHTML='<div class="epub">불러오는 중...</div>';
     api("/nas/epub?path="+encodeURIComponent(it.path)).then(function(r){ if(!r.ok) throw 0; return r.json(); })
-      .then(function(d){ var div=$("vbody").querySelector(".epub"); div.innerHTML=d.html||"(내용 없음)"; div.style.fontSize=fontSize+"px"; if(d.title) $("vtitle").textContent=d.title; })
+      .then(function(d){ var div=$("vbody").querySelector(".epub"); div.innerHTML=d.html||"(내용 없음)"; div.style.fontSize=fontSize+"px"; if(d.title) $("vtitle").textContent=d.title; jShow(true); })
       .catch(function(){ $("vbody").innerHTML='<div class="epub">EPUB을 열 수 없습니다.</div>'; });
   }
   function showLogin(){ $("app").className="hide"; $("login").className="login"; }
@@ -232,6 +266,9 @@ _NAS_LITE2_HTML = r'''<!DOCTYPE html>
      스크롤은 타일링 페인팅이라 전체가 칠해진다(모멘텀만 빠짐 — 리더엔 렌더링이 우선). */
   #vbody { position:absolute; top:53px; left:0; right:0; bottom:0; overflow:auto; }
   pre.txt { white-space:pre-wrap; word-wrap:break-word; padding:14px; margin:0; font-size:16px; line-height:1.6; }
+  /* 빠른 점프 스크롤바 — 썸을 잡아끌어 파일 임의 위치로 즉시 이동(탭 페이징 보완) */
+  .jbar { position:absolute; top:55px; right:0; bottom:2px; width:30px; z-index:20; display:none; background:#1c1c1e; border-left:1px solid #333; }
+  .jthumb { position:absolute; left:5px; right:5px; min-height:48px; background:#0a84ff; border-radius:8px; }
   .epub { padding:16px; line-height:1.75; font-size:18px; }
   .epub img { max-width:100%; }
   img.imgv { max-width:100%; }
@@ -251,6 +288,7 @@ _NAS_LITE2_HTML = r'''<!DOCTYPE html>
 <div id="viewer" class="hide">
   <div id="vbar"><button id="vclose">닫기</button><span class="vctrl"><button id="vminus">A-</button> <button id="vplus">A+</button></span></div>
   <div id="vbody"></div>
+  <div class="jbar" id="jbar"><div class="jthumb" id="jthumb"></div></div>
 </div>
 <script>
 (function(){
@@ -317,7 +355,7 @@ _NAS_LITE2_HTML = r'''<!DOCTYPE html>
   }
   function exportFile(it){ var url='/nas/file?path='+encodeURIComponent(it.path); var w=window.open(url,'_blank'); if(!w) window.location.href=url; }
 
-  $('vclose').onclick=function(){ $('viewer').className='hide'; $('vbody').innerHTML=''; };
+  $('vclose').onclick=function(){ $('viewer').className='hide'; $('vbody').innerHTML=''; jShow(false); };
   $('vplus').onclick=function(){ fontSize+=2; applyFont(); };
   $('vminus').onclick=function(){ if(fontSize>10){ fontSize-=2; applyFont(); } };
   // 탭 페이징 — 모멘텀 스크롤이 없어(긴 텍스트 검은화면 방지로 제거) 긴 파일 넘기기가 힘들다.
@@ -330,8 +368,37 @@ _NAS_LITE2_HTML = r'''<!DOCTYPE html>
     var step=vb.clientHeight-48;  // 한 화면 - 겹침(맥락 유지)
     if(rel<0.4){ vb.scrollTop-=step; } else if(rel>0.6){ vb.scrollTop+=step; }
   };
-  function applyFont(){ var t=$('vbody').firstChild; if(t&&t.style) t.style.fontSize=fontSize+'px'; }
+  function applyFont(){ var t=$('vbody').firstChild; if(t&&t.style) t.style.fontSize=fontSize+'px'; jUpd(); }
   function openViewer(){ $('viewer').className=''; }
+
+  // 빠른 점프 스크롤바 — 썸 위치 = vbody 스크롤 비율. 드래그로 파일 임의 위치 즉시 이동.
+  // iOS5 호환: addEventListener 3번째 인자는 불리언만, onscroll/onresize 프로퍼티 사용.
+  var jbar=$('jbar'), jthumb=$('jthumb'), jdrag=false;
+  function jShow(on){ jbar.style.display=on?'block':'none'; if(on) jUpd(); }
+  function jUpd(){
+    if(jbar.style.display!=='block') return;
+    var vb=$('vbody'), sh=vb.scrollHeight, ch=vb.clientHeight;
+    if(sh<=ch+4){ jthumb.style.display='none'; return; }  // 짧은 파일이면 썸 숨김
+    jthumb.style.display='block';
+    var trackH=jbar.clientHeight, thumbH=Math.max(48, trackH*ch/sh), maxTop=trackH-thumbH;
+    jthumb.style.height=thumbH+'px';
+    jthumb.style.top=(maxTop*(vb.scrollTop/(sh-ch)))+'px';
+  }
+  function jJump(cy){
+    var vb=$('vbody'), rect=jbar.getBoundingClientRect(), thumbH=jthumb.offsetHeight, maxTop=rect.height-thumbH;
+    var y=Math.max(0, Math.min(maxTop, cy-rect.top-thumbH/2)), sh=vb.scrollHeight, ch=vb.clientHeight;
+    vb.scrollTop=(sh-ch)*(maxTop? y/maxTop : 0);
+    jUpd();
+  }
+  function jY(e){ return (e.touches&&e.touches[0])? e.touches[0].clientY : (e.clientY||0); }
+  jbar.addEventListener('mousedown', function(e){ jdrag=true; if(e.preventDefault) e.preventDefault(); jJump(jY(e)); }, false);
+  document.addEventListener('mousemove', function(e){ if(jdrag){ if(e.preventDefault) e.preventDefault(); jJump(jY(e)); } }, false);
+  document.addEventListener('mouseup', function(){ jdrag=false; }, false);
+  jbar.addEventListener('touchstart', function(e){ jdrag=true; if(e.preventDefault) e.preventDefault(); jJump(jY(e)); }, false);
+  document.addEventListener('touchmove', function(e){ if(jdrag){ if(e.preventDefault) e.preventDefault(); jJump(jY(e)); } }, false);
+  document.addEventListener('touchend', function(){ jdrag=false; }, false);
+  $('vbody').onscroll=jUpd;
+  window.onresize=jUpd;
 
   function isText(n){ return /\.(txt|md|markdown|log|csv|tsv|json|xml|html?|css|js|py|sh|ini|conf|yaml|yml|srt|vtt|rtf)$/.test(n); }
   function openFile(it){
@@ -339,22 +406,22 @@ _NAS_LITE2_HTML = r'''<!DOCTYPE html>
     var url='/nas/file?path='+encodeURIComponent(it.path);
     if(name.indexOf('.epub')>=0){ openEpub(it); return; }
     if(it.category==='pdf'){ var w=window.open(url,'_blank'); if(!w) window.location.href=url; return; }
-    if(it.category==='image'){ openViewer(); $('vbody').innerHTML='<img class="imgv" src="'+url+'">'; return; }
+    if(it.category==='image'){ openViewer(); jShow(false); $('vbody').innerHTML='<img class="imgv" src="'+url+'">'; return; }
     if(it.category==='text'||isText(name)){
-      openViewer(); $('vbody').innerHTML='<pre class="txt">불러오는 중...</pre>';
+      openViewer(); jShow(false); $('vbody').innerHTML='<pre class="txt">불러오는 중...</pre>';
       xhr('GET','/nas/text?path='+encodeURIComponent(it.path),null,function(x){
         var d=parse(x); var pre=$('vbody').firstChild;
-        if(d&&pre){ pre.innerHTML=''; pre.appendChild(document.createTextNode(d.content)); pre.style.fontSize=fontSize+'px'; }
+        if(d&&pre){ pre.innerHTML=''; pre.appendChild(document.createTextNode(d.content)); pre.style.fontSize=fontSize+'px'; jShow(true); }
       },function(){ $('vbody').innerHTML='<pre class="txt">텍스트로 열 수 없습니다.</pre>'; });
       return;
     }
     var w2=window.open(url,'_blank'); if(!w2) window.location.href=url;
   }
   function openEpub(it){
-    openViewer(); $('vbody').innerHTML='<div class="epub">불러오는 중...</div>';
+    openViewer(); jShow(false); $('vbody').innerHTML='<div class="epub">불러오는 중...</div>';
     xhr('GET','/nas/epub?path='+encodeURIComponent(it.path),null,function(x){
       var d=parse(x); var div=$('vbody').firstChild;
-      if(d&&div){ div.innerHTML=d.html||'(내용 없음)'; div.style.fontSize=fontSize+'px'; }
+      if(d&&div){ div.innerHTML=d.html||'(내용 없음)'; div.style.fontSize=fontSize+'px'; jShow(true); }
     },function(){ $('vbody').innerHTML='<div class="epub">EPUB을 열 수 없습니다.</div>'; });
   }
 

@@ -191,7 +191,8 @@ def _forward_to_phone(phone_url: str, node: str, action: str, params: dict,
 _mac_session_cache = {"session": None}
 
 
-def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None) -> Dict:
+def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None,
+                    mac_url: str = None) -> Dict:
     """분산 IBL — 폰서 못 도는 액션을 맥 /ibl/execute 로 단건 포워드(머리=맥).
 
     `_forward_to_phone`(맥→폰)의 대칭(폰→맥). 이게 "액션이 진짜 실행 단위" 의 핵심:
@@ -202,8 +203,11 @@ def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None) 
     project_id=앱모드 로 프로젝트 경로 확보. 신원은 호출자 agent_id 를 전파한다(설계결정 §6.4
     — 빌림은 호출하는 주체가 액션 주체). 미동봉이면 맥서 앱모드 기본(system_ai)으로 떨어지는데,
     그건 폰-자아가 자기 신원을 잃는 버그였다(PHONE_SELF_HOSTING_HANDOFF §6.2). 엔진은 맥에서도
-    도므로(INDIEBIZ_PROFILE!=phone) 이 경로는 폰에서만 진입 → 재포워드 루프 없음."""
-    mac_url = (os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/")
+    도므로(INDIEBIZ_PROFILE!=phone) 이 경로는 폰에서만 진입 → 재포워드 루프 없음.
+
+    mac_url: 다중 노드 라우팅이 레지스트리서 찾은 compute-class 노드 주소를 넘김. 미지정이면
+    레거시 단수 env(INDIEBIZ_MAC_URL) — 폰 자기등록 전 호환."""
+    mac_url = (mac_url or os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/")
     if not mac_url:
         return {"error": f"[{node}:{action}]은 집 PC(맥)에서 실행되는 액션인데 위임 대상이 "
                          "설정돼 있지 않습니다. (집 PC가 켜져 있고 INDIEBIZ_MAC_URL 이 설정돼 있어야 합니다.)",
@@ -315,6 +319,89 @@ def _pull_remote_artifacts(result: dict, remote_url: str, headers: dict) -> dict
 
     _walk(result)
     return result
+
+
+# ============ 다중 노드 분산 라우팅 ============
+# 폰 수를 고정하지 않는다 — device_registry 라이브 테이블(자기등록+heartbeat)로 "지금 연결된
+# 노드"를 동적 조회해 원격 액션의 대상을 고른다. 설계: docs/MULTINODE_TOPOLOGY_DESIGN.md
+
+def _forward_to_node(entry: dict, node: str, action: str, params: dict,
+                     agent_id: str = None) -> Dict:
+    """레지스트리 항목(노드)으로 포워드. 인증 방식은 항목의 auth/능력으로 분기."""
+    url = (entry.get("url") or "").rstrip("/")
+    auth = entry.get("auth")
+    caps = entry.get("capabilities") or []
+    if auth == "x_phone_token" or "phone-class" in caps:
+        if not url:
+            return {"error": f"노드 '{entry.get('alias')}'의 주소를 모릅니다(미등록).",
+                    "node_unreachable": True}
+        return _forward_to_phone(url, node, action, params, agent_id=agent_id)
+    # compute-class(맥/허브)
+    return _forward_to_mac(node, action, params, agent_id=agent_id, mac_url=url or None)
+
+
+def _resolve_and_maybe_forward(node, action, action_config, params,
+                               target_alias, agent_id):
+    """능력으로 로컬/원격을 판정하고, 원격이면 연결된 노드 중 대상을 고른다.
+
+    반환: 원격으로 처리했으면 결과/에러/되물음 dict, 로컬 실행이면 None.
+    선택 우선순위: 명시 @주소 > 자기-가능(로컬) > (능력 후보) 1대 > 주(主)기기 > 모호하면 되물음.
+    레지스트리 미가용/후보 없음이면 레거시 단수 env 로 폴백(현 단일-폰 셋업 무회귀).
+    """
+    profile = os.environ.get("INDIEBIZ_PROFILE", "")
+    try:
+        import device_registry as dr
+    except Exception:
+        dr = None
+
+    # 1. 명시 주소 @alias 최우선
+    if target_alias:
+        if dr is None:
+            return {"error": f"노드 주소지정(@{target_alias})을 쓸 수 없습니다(레지스트리 미가용)."}
+        entry = dr.get_by_alias(target_alias)
+        if entry is None:
+            live = dr.live_aliases()
+            return {"error": f"'@{target_alias}' 노드를 찾을 수 없습니다. 지금 연결된 노드: "
+                             f"{', '.join(live) if live else '없음'}",
+                    "live_nodes": live}
+        if entry.get("self"):
+            return None  # 자기 자신 → 로컬 실행
+        return _forward_to_node(entry, node, action, params, agent_id)
+
+    # 2. 능력 기반 자동 — 먼저 "로컬에서 되는가?"
+    if profile == "phone":
+        if _phone_runnable(node, action):
+            return None  # 폰 로컬
+        req = dr.COMPUTE_CLASS if dr else "compute-class"
+    else:
+        if action_config.get("runs_on") != "phone_only":
+            return None  # 맥/데스크탑 로컬
+        req = dr.PHONE_CLASS if dr else "phone-class"
+
+    # 3. 원격 후보 = 그 능력 가진 라이브 노드
+    cands = dr.live_with_capability(req) if dr else []
+    if not cands:
+        # 레거시 env 폴백 (폰 자기등록 전 호환)
+        if req == "compute-class":
+            return _forward_to_mac(node, action, params, agent_id=agent_id)
+        purl = os.environ.get("INDIEBIZ_PHONE_URL")
+        if purl:
+            return _forward_to_phone(purl, node, action, params, agent_id=agent_id)
+        return None  # 폰 없음 → 로컬 핸들러가 phone_only graceful 거부
+
+    if len(cands) == 1:
+        return _forward_to_node(cands[0], node, action, params, agent_id)
+
+    # 4. 후보 2+ → 주(主)기기 있으면 그것, 없으면 되물음
+    primary = [c for c in cands if c.get("primary")]
+    if len(primary) == 1:
+        return _forward_to_node(primary[0], node, action, params, agent_id)
+    return {
+        "needs_node_choice": True,
+        "message": f"[{node}:{action}]을(를) 어느 기기에서 실행할까요?",
+        "options": [c.get("alias") for c in cands],
+        "hint": f"[{node}:{action}]@<별칭> 으로 지정하세요.",
+    }
 
 
 def _load_nodes_config() -> Dict:
@@ -531,13 +618,6 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         return {"error": f"노드 '{node}'에 '{action}' 액션이 없습니다.",
                 "available_actions": available}
 
-    # 폰 프로파일 라우팅 (#3 runs_on / 분산 IBL): 폰서 못 도는 액션은 거부 대신 맥(연합
-    # 두뇌)에 단건 위임 — 액션이 진짜 실행 단위. 합성 code(&/>>/??)의 각 leaf 가 이 chokepoint
-    # 를 거치므로, 혼합 code 도 액션별로 쪼개져 로컬/맥에서 따로 실행된다(weather=로컬·
-    # world_bank=맥). 맥 미설정이면 _forward_to_mac 이 graceful 에러 dict 안내.
-    if not _phone_runnable(node, action):
-        return _forward_to_mac(node, action, tool_input.get("params", {}), agent_id=agent_id)
-
     router = action_config.get("router")
     params = tool_input.get("params", {})
 
@@ -554,14 +634,16 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
             if k not in params:
                 params[k] = v
 
-    # 분산 IBL(#2): 맥(두뇌)에서 도는 에이전트가 phone_only 액션을 만나면 폰(몸)으로 포워드.
-    # INDIEBIZ_PHONE_URL 설정 시에만 — 미설정이면 아래 핸들러가 graceful phone_only 거부로 안내.
-    # (폰 프로파일에선 INDIEBIZ_PROFILE=phone 이라 스킵 → 폰이 로컬 핸들러로 실제 실행.)
-    if action_config.get("runs_on") == "phone_only" \
-            and os.environ.get("INDIEBIZ_PROFILE") != "phone":
-        _phone_url = os.environ.get("INDIEBIZ_PHONE_URL")
-        if _phone_url:
-            return _forward_to_phone(_phone_url, node, action, params, agent_id=agent_id)
+    # === 다중 노드 분산 라우팅 ===
+    # 능력(runs_on)으로 로컬/원격을 판정하고, 원격이면 "지금 연결된" 노드 중 대상을 고른다
+    # (명시 @주소 > 자기-가능 > 후보1대 > 주(主)기기 > 모호하면 되물음). 폰 수를 고정하지 않음 —
+    # device_registry 라이브 테이블 동적 조회. 합성 code 의 각 leaf 가 이 chokepoint 를 거쳐
+    # 액션별로 따로 라우팅된다(weather=로컬·world_bank=맥, [sense:here]@폰2=폰2). 레지스트리
+    # 미가용/후보없음이면 레거시 단수 env 폴백(현 단일-폰 셋업 무회귀).
+    _dist = _resolve_and_maybe_forward(node, action, action_config, params,
+                                       tool_input.get("target_node"), agent_id)
+    if _dist is not None:
+        return _dist
 
     # 라우터별 실행 + 개별 액션 기록 (X-Ray용)
     import time as _time

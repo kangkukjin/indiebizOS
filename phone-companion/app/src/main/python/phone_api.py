@@ -334,6 +334,121 @@ async def _mac_post_json(path, payload, *, timeout: float = 60.0):
         return None
 
 
+def _is_rfc1918(ip: str) -> bool:
+    p = ip.split(".")
+    if len(p) != 4:
+        return False
+    try:
+        a, b = int(p[0]), int(p[1])
+    except ValueError:
+        return False
+    return a == 10 or (a == 192 and b == 168) or (a == 172 and 16 <= b <= 31)
+
+
+def _phone_lan_ip():
+    """허브(맥)가 이 폰에 닿을 LAN IP. WiFi(wlan0) 사설 IP를 고른다.
+
+    ★맥 URL 이 터널(launcher.*.uk)이면 "맥으로 가는 경로"는 셀룰러(192.0.0.2)라 맥이 못 닿음.
+    그래서 경로가 아니라 *인터페이스 열거*로 RFC1918(주로 wlan0)을 직접 고른다 — 맥이 같은
+    WiFi LAN 에 있을 때 닿는 주소. (away-case: 다른 LAN/외부면 맥→폰 직결 불가는 별개 과제.)
+    """
+    try:
+        from java import jclass
+        NI = jclass("java.net.NetworkInterface")
+        Collections = jclass("java.util.Collections")
+        # ★Chaquopy 는 추상 Enumeration.nextElement 직접 호출 불가 → Collections.list 로 구체
+        # ArrayList 로 materialize 후 size()/get() (구체 메서드)로 순회.
+        ifaces = Collections.list(NI.getNetworkInterfaces())
+        wlan, other = [], []
+        for i in range(ifaces.size()):
+            ni = ifaces.get(i)
+            try:
+                if ni.isLoopback() or not ni.isUp():
+                    continue
+            except Exception:
+                pass
+            name = ni.getName() or ""
+            addrs = Collections.list(ni.getInetAddresses())
+            for j in range(addrs.size()):
+                host = (addrs.get(j).getHostAddress() or "").split("%")[0]  # IPv6 zone 제거
+                if ":" in host or not _is_rfc1918(host):
+                    continue
+                (wlan if name.startswith("wlan") else other).append(host)
+        if wlan:
+            return wlan[0]
+        if other:
+            return other[0]
+    except Exception as e:
+        print(f"[phone_api] NetworkInterface IP 실패: {e}")
+    # 폴백: 맥(허브) host 로 향하는 인터페이스 (LAN 직결 시 정확)
+    try:
+        import socket
+        host = (_mac_url or "").split("//")[-1].split("/")[0].split(":")[0] or "8.8.8.8"
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect((host, 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return None
+
+
+async def _register_with_hub(port: int):
+    """다중 노드: 이 폰을 허브(맥) 프레즌스 레지스트리에 등록 + 주기 heartbeat.
+
+    폰 수를 고정하지 않는 핵심 — 폰이 부팅 시 스스로 합류하면 허브가 "지금 연결된 노드"를
+    안다(다른 폰·허브 설정 무수정). 허브→폰 도달이 가능할 때만(토큰=LAN 노출) 의미가 있으므로
+    INDIEBIZ_PHONE_TOKEN + 맥 URL 둘 다 있을 때만 활성. device_registry 로 안정 device_id/별칭.
+    """
+    if not _mac_url or not os.environ.get("INDIEBIZ_PHONE_TOKEN"):
+        return  # LAN 미노출이면 허브가 폰에 못 닿음 → 등록 무의미(폰→맥 빌림은 env 로 계속 동작)
+    try:
+        import device_registry as dr
+        device_id = dr.self_device_id()
+        alias = dr.self_alias("phone")
+        caps = [dr.PHONE_CLASS]
+    except Exception as e:
+        print(f"[phone_api] 노드 등록 스킵(device_registry 부재): {e}")
+        return
+
+    ip = _phone_lan_ip()
+    if not ip:
+        print("[phone_api] 노드 등록 스킵: LAN IP 미확인")
+        return
+    payload = {
+        "device_id": device_id, "alias": alias, "capabilities": caps,
+        "url": f"http://{ip}:{port}", "auth": "x_phone_token", "owner": "self",
+        "primary": False,
+    }
+    import asyncio
+    first = True
+    while True:
+        try:
+            if first:
+                r = await _mac_post_json("/nodes/register", payload, timeout=20.0)
+                if r is not None and getattr(r, "status_code", 0) == 200:
+                    print(f"[phone_api] 허브 노드 등록: {alias} @ {payload['url']}")
+                    first = False
+                else:
+                    print(f"[phone_api] 허브 등록 실패(재시도): {getattr(r,'status_code',None)}")
+            else:
+                await _mac_post_json("/nodes/heartbeat", {"device_id": device_id}, timeout=15.0)
+        except Exception as e:
+            print(f"[phone_api] 노드 등록/heartbeat 오류: {e}")
+        await asyncio.sleep(60)
+
+
+def _start_hub_registration(port: int):
+    """별도 스레드 + asyncio 루프에서 허브 등록/heartbeat 데몬 기동(서빙 비차단)."""
+    import threading, asyncio
+    def _run():
+        try:
+            asyncio.run(_register_with_hub(port))
+        except Exception as e:
+            print(f"[phone_api] 허브 등록 루프 종료: {e}")
+    threading.Thread(target=_run, daemon=True).start()
+
+
 @app.post("/business/sync/run")
 async def business_sync_run():
     """폰↔맥 business.db 양방향 합집합 동기화(1왕복): 폰 export → 맥 /business/sync/merge
@@ -912,6 +1027,12 @@ def serve(port=8765, base_path=None):
     if not _bind:
         _bind = "0.0.0.0" if os.environ.get("INDIEBIZ_PHONE_TOKEN") else "127.0.0.1"
     print(f"[phone_api] bind host={_bind} (phone_token={'있음' if os.environ.get('INDIEBIZ_PHONE_TOKEN') else '없음'})")
+
+    # 다중 노드: 허브(맥) 프레즌스 레지스트리에 자기등록 + heartbeat (LAN 노출+토큰 시에만).
+    try:
+        _start_hub_registration(int(port))
+    except Exception as e:
+        print(f"[phone_api] 허브 등록 기동 스킵: {e}")
     config = uvicorn.Config(
         app, host=_bind,
         port=int(port), log_level="info", loop="asyncio")

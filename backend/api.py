@@ -119,6 +119,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[Cleanup] task 정리 중 오류 (무시): {e}")
 
+    # 다중 노드: 이 기기(맥/허브)를 프레즌스 레지스트리에 자기등록. compute-class·주(主).
+    # 폰들이 부팅 시 /nodes/register 로 합류 → "지금 연결된 노드"를 연결로 확인(폰 수 무고정).
+    try:
+        import device_registry as _dr
+        _self = _dr.ensure_self(auth="launcher_session", primary=True)
+        print(f"[device_registry] 자기등록: {_self.get('alias')} ({_self.get('device_id')}) "
+              f"caps={_self.get('capabilities')}")
+    except Exception as e:
+        print(f"[device_registry] 자기등록 실패 (무시): {e}")
+
     # World Pulse: 펄스 수집 & 자가점검 스케줄 등록 (스케줄러 시작 전에 등록해야 함)
     try:
         from world_pulse import register_pulse_tasks
@@ -299,6 +309,7 @@ from api_nas import router as nas_router
 from api_launcher_web import router as launcher_web_router
 from api_tunnel import router as tunnel_router, auto_start_if_enabled as tunnel_auto_start
 from api_ibl import router as ibl_router
+from api_nodes import router as nodes_router
 from api_xray import router as xray_router
 from api_lecture_workspace import router as lecture_workspace_router
 
@@ -340,6 +351,7 @@ app.include_router(nas_router, tags=["nas"])
 app.include_router(launcher_web_router, tags=["launcher-web"])
 app.include_router(tunnel_router, tags=["tunnel"])
 app.include_router(ibl_router, tags=["ibl"])
+app.include_router(nodes_router, tags=["nodes"])
 app.include_router(xray_router, tags=["xray"])
 app.include_router(lecture_workspace_router, tags=["lecture-workspace"])
 

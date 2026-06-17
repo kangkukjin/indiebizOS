@@ -78,6 +78,16 @@ def main() -> int:
     # 분산 IBL 위임 설정도 .env 에 있으면 합류(비밀 아닌 URL + 비번).
     mac_cfg = {k: env[k] for k in MAC_DELEGATION_KEYS if env.get(k)}
     keys.update(mac_cfg)
+
+    # 다중 노드: --alias 로 이 폰의 친화 별칭(@주소지정 이름) 지정. 미지정이면 폰이 device_id
+    # 접미사로 고유 별칭 자동 생성("폰-xxxx"). 여러 폰 구분하려면 폰마다 다르게 주면 됨.
+    if "--alias" in sys.argv:
+        try:
+            keys["INDIEBIZ_NODE_ALIAS"] = sys.argv[sys.argv.index("--alias") + 1]
+        except IndexError:
+            print("[provision] --alias 뒤에 별칭을 주세요 (예: --alias 폰2)", file=sys.stderr)
+            return 2
+
     if not keys:
         print("[provision] .env 에 폰 키가 하나도 없습니다.", file=sys.stderr)
         return 1

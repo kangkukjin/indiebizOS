@@ -107,9 +107,6 @@ Chain multiple steps with operators:
 | `>>` | Sequential | `[sense:search_ddg]{query: "AI"} >> [self:output]{op: "file", path: "result.md"}` |
 | `&` | Parallel | `[sense:stock]{op: "info", ticker: "AAPL"} & [sense:stock]{op: "info", ticker: "MSFT"}` |
 | `??` | Fallback | `[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search_ddg]{query: "AAPL price"}` |
-| `\| op:` | Pipe (통화 변환 단축) | `[sense:search_ddg]{query: "부동산"} \| where: "전세" \| sort: price desc \| take: 5` |
-
-`\| where:/sort:/take:/select:/dedup:` 는 목록·표 결과(records/table)를 거르고·정렬·추리는 **단축 문법**이다(각각 `>> [engines:filter/sort/take/select/dedup]{...}` 로 풀림). 검색·조회 뒤에 자연스럽게 잇는다. 뒤에 `>>` 로 산출물 렌더도 가능: `... \| take: 5 >> [engines:document]{}`.
 
 ## 통화와 변환자 (Currency & Transformers) — 조합으로 증식
 
@@ -126,8 +123,6 @@ Chain multiple steps with operators:
 → 핵심 패턴: **[검색/조회] → [변환자 체인] → [산출물]**
 ```
 [sense:realty]{region: "강남구"} >> [engines:filter]{where: "전세"} >> [engines:sort]{by: "price"} >> [engines:take]{n: 5} >> [engines:document]{}
-# 단항은 | 단축이 더 짧다:
-[sense:realty]{region: "강남구"} | where: "전세" | sort: price | take: 5
 # 두 소스를 묶기(이항):
 [sense:stock]{op: "history", symbol: "005930"} & [sense:world_bank]{country: "KR"} >> [engines:join]{on: "연도"} >> [engines:chart]{}
 ```
@@ -159,7 +154,7 @@ execute_ibl(code='[self:discover]{query: "stock prices"}')
 1. **IBL 우선**: 파일 읽기/쓰기/검색/편집은 우선적으로 IBL 액션(`[self:read]`, `[self:write]`, `[self:file_find]`, `[self:edit]`, `[self:grep]`)으로 한다. IBL 액션이 실패하면 파라미터를 바꿔 재시도하라. Python/Node.js/Shell은 IBL에 해당 액션이 없거나, 복합 처리(읽기+파싱+변환을 한 번에)가 필요할 때 사용한다.
 3. IBL 코드는 `execute_ibl`의 `code` 파라미터에 넣어 실행
 4. 어떤 액션이 있는지 모르겠으면 `[self:discover]` 사용
-5. `>>` 순차, `&` 병렬, `??` 폴백, `| where:/sort:/take:/select:/dedup:` 통화 변환 단축
+5. `>>` 순차, `&` 병렬, `??` 폴백 (목록·표 가공은 `>> [engines:filter/sort/take/select/dedup/groupby]{...}` 로 잇는다)
 6. 모든 파라미터는 `{key: "value"}` 형태
 
 ## Goal / Time / Condition — 목적 기반 실행

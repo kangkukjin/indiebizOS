@@ -83,6 +83,7 @@ def _ENGINE_MODULES = [
     'workflow_engine',       // 합성 code(&/>>/??) 오케스트레이터 — 혼합 code 액션별 분할 실행에 필수
     'phone_notifications',   // M3: [sense:phone] 로컬 알림 reader
     'runtime_utils',         // scope=system/workspace 액션의 get_base_path (sense:phone 등)
+    'device_registry',       // 다중 노드 프레즌스 — 안정 device_id/별칭, 허브 자기등록(@주소 폴백)
     'business_manager',      // 폰 로컬 business.db(주소록 메타데이터) — 합집합 동기화용
     'business_sync',         // 폰↔맥 business.db LWW+tombstone 머지(export/merge)
     'channel_engine',        // 커뮤니티/메신저 IBL 라우터 타깃(others:feed/board/nostr)

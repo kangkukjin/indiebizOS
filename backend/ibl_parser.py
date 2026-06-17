@@ -863,6 +863,11 @@ def _split_by_operator(text: str, operator: str) -> List[str]:
 #   → ... >> [engines:filter]{where:X} >> [engines:sort]{by:"Y",desc:true} >> ...
 # 닫힌 계급(보편·고빈도) 단항 변환자에만 문법 표면을 준다. 이항(join/union/merge)·
 # 구조적(groupby)은 동사 형태 유지. 의미는 engines 동사가 정본 — 이건 desugar 표면뿐.
+#
+# ★교재 안내 은퇴(2026-06-17): `|` 단축은 프롬프트 교재(12_ibl_only.md)·의식 프롬프트에서
+# 제거됨 — 실사용 0(합성/증류 코퍼스·저장 워크플로우 모두), 연상 예시가 100% `>>`라 모델이
+# 안 썼고, `>>`와 기능 동일한 설탕이라 능력 손실 없음. desugar 는 **관대한 입력 호환**으로만
+# 유지(stray `|` 를 에러 대신 >> 로 흡수, 프롬프트 비용 0). 새 코드/문서는 `>> [engines:동사]` 사용.
 _PIPE_SUGAR = {
     "where": "filter", "filter": "filter",
     "sort": "sort", "orderby": "sort", "order_by": "sort",
@@ -1000,12 +1005,22 @@ def _parse_step(text: str) -> Optional[Dict]:
     # params 처리: regex 이후 남은 텍스트에서 { 를 찾아 _extract_bracket으로 추출
     params = {}
     remaining = text[m.end():].strip()
+    tail = remaining
     if remaining.startswith('{'):
-        extracted, _ = _extract_bracket(remaining, 0, '{', '}')
+        extracted, _bend = _extract_bracket(remaining, 0, '{', '}')
         if isinstance(extracted, dict):
             params = extracted
         elif isinstance(extracted, str):
             params = _parse_params(extracted)
+        tail = remaining[_bend:].strip() if isinstance(_bend, int) and _bend > 0 else ""
+
+    # 노드 주소지정 @별칭 (다중 노드): [node:action]{...}@폰2 → target_node="폰2".
+    # params 블록 밖(tail)에서만 찾아 파라미터 값 내 @(이메일 등)와 충돌 없음. 한글 별칭 허용.
+    target_node = None
+    if tail.startswith('@'):
+        mt = re.match(r'@([^\s\(\)\{\}\[\]&|>?@]+)', tail)
+        if mt:
+            target_node = mt.group(1)
 
     # 별칭 정규화로 주입된 파라미터를 병합 (사용자 명시값 우선)
     if injected_params:
@@ -1013,12 +1028,15 @@ def _parse_step(text: str) -> Optional[Dict]:
             if k not in params:
                 params[k] = v
 
-    return {
+    step = {
         "_node": node,
         "action": action,
         "target": "",
         "params": params,
     }
+    if target_node:
+        step["target_node"] = target_node
+    return step
 
 
 

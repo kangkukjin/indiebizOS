@@ -5,9 +5,12 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.MediaStore
+import org.json.JSONArray
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
@@ -258,6 +261,117 @@ object PhoneActions {
     }
 
     private fun errJson(msg: String): String = JSONObject().put("error", msg).toString()
+
+    /**
+     * 미디어 라이브 질의 ([self:photo] 의 폰측 다리) — MediaStore 색인 직접.
+     *
+     * 폰도 OS(MediaStore)가 미디어를 이미 증분 색인 → 선스캔 불필요. file_index 가
+     * filters JSON({kind,q,start_ms,end_ms,has_gps,want_gps,limit}) 으로 부른다.
+     * 위치(GPS)는 Android 10+ 가 기본 가리므로 want_gps 일 때만 ACCESS_MEDIA_LOCATION +
+     * 원본 EXIF 로 읽는다(이미지만, 창 안에서만 — per-file I/O 최소화).
+     * 반환=JSON {items:[{path,name,size,mtime,taken_at,kind,width,height,lat?,lng?}], count}.
+     */
+    @JvmStatic
+    fun queryMedia(filtersJson: String): String {
+        val ctx = appContext ?: return errJson("context 미초기화")
+        val f = try { JSONObject(filtersJson) } catch (e: Exception) { JSONObject() }
+        val kind = f.optString("kind", "media")
+        val q = f.optString("q", "")
+        val startMs = f.optLong("start_ms", 0L)
+        val endMs = f.optLong("end_ms", 0L)
+        val hasGps = f.optBoolean("has_gps", false)
+        val wantGps = f.optBoolean("want_gps", false)
+        val limit = f.optInt("limit", 50).coerceIn(1, 2000)
+
+        val cId = MediaStore.Files.FileColumns._ID
+        val cName = MediaStore.Files.FileColumns.DISPLAY_NAME
+        val cData = MediaStore.Files.FileColumns.DATA
+        val cTaken = MediaStore.Files.FileColumns.DATE_TAKEN
+        val cMod = MediaStore.Files.FileColumns.DATE_MODIFIED
+        val cSize = MediaStore.Files.FileColumns.SIZE
+        val cW = MediaStore.Files.FileColumns.WIDTH
+        val cH = MediaStore.Files.FileColumns.HEIGHT
+        val cType = MediaStore.Files.FileColumns.MEDIA_TYPE
+        val tImage = MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE
+        val tVideo = MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+        val proj = arrayOf(cId, cName, cData, cTaken, cMod,
+            MediaStore.Files.FileColumns.MIME_TYPE, cSize, cW, cH, cType)
+
+        val sel = StringBuilder()
+        val args = ArrayList<String>()
+        when (kind) {
+            "image", "photo" -> { sel.append("$cType=?"); args.add(tImage.toString()) }
+            "video" -> { sel.append("$cType=?"); args.add(tVideo.toString()) }
+            else -> {
+                sel.append("($cType=? OR $cType=?)")
+                args.add(tImage.toString()); args.add(tVideo.toString())
+            }
+        }
+        if (startMs > 0) { sel.append(" AND $cTaken>=?"); args.add(startMs.toString()) }
+        if (endMs > 0) { sel.append(" AND $cTaken<=?"); args.add(endMs.toString()) }
+        if (q.isNotBlank()) { sel.append(" AND $cName LIKE ?"); args.add("%$q%") }
+
+        val uri = MediaStore.Files.getContentUri("external")
+        val iso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+        val items = JSONArray()
+        var total = 0
+        try {
+            ctx.contentResolver.query(uri, proj, sel.toString(), args.toTypedArray(),
+                "$cTaken DESC")?.use { c ->
+                val iId = c.getColumnIndexOrThrow(cId)
+                val iName = c.getColumnIndexOrThrow(cName)
+                val iData = c.getColumnIndex(cData)
+                val iTaken = c.getColumnIndex(cTaken)
+                val iMod = c.getColumnIndex(cMod)
+                val iSize = c.getColumnIndex(cSize)
+                val iW = c.getColumnIndex(cW)
+                val iH = c.getColumnIndex(cH)
+                val iType = c.getColumnIndex(cType)
+                while (c.moveToNext()) {
+                    total++
+                    if (items.length() >= limit) break
+                    val id = c.getLong(iId)
+                    val isVideo = iType >= 0 && c.getInt(iType) == tVideo
+                    // GPS 필터/요청 — 이미지만 EXIF, 영상은 위치 없음.
+                    var lat: Double? = null; var lng: Double? = null
+                    if (wantGps && !isVideo) {
+                        val ll = readGps(ctx, id)
+                        if (ll != null) { lat = ll[0]; lng = ll[1] }
+                    }
+                    if (hasGps && (lat == null || lng == null)) continue  // 위치 없으면 제외
+                    val o = JSONObject()
+                    o.put("path", if (iData >= 0) c.getString(iData) ?: "" else "")
+                    o.put("name", c.getString(iName) ?: "")
+                    o.put("size", if (iSize >= 0) c.getLong(iSize) else 0L)
+                    o.put("mtime", if (iMod >= 0) c.getLong(iMod) else 0L)  // 초 단위
+                    val takenMs = if (iTaken >= 0) c.getLong(iTaken) else 0L
+                    o.put("taken_at", if (takenMs > 0) iso.format(java.util.Date(takenMs)) else "")
+                    o.put("kind", if (isVideo) "video" else "image")
+                    if (iW >= 0) o.put("width", c.getInt(iW))
+                    if (iH >= 0) o.put("height", c.getInt(iH))
+                    if (lat != null && lng != null) { o.put("lat", lat); o.put("lng", lng) }
+                    items.put(o)
+                }
+            }
+        } catch (e: Exception) {
+            return errJson("MediaStore 질의 실패: ${e.message}")
+        }
+        return JSONObject().put("items", items).put("count", total).toString()
+    }
+
+    /** 원본 EXIF 에서 GPS 읽기 (ACCESS_MEDIA_LOCATION 필요). 없거나 거부면 null. */
+    private fun readGps(ctx: Context, id: Long): DoubleArray? {
+        return try {
+            val img = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+            val orig = MediaStore.setRequireOriginal(img)
+            ctx.contentResolver.openInputStream(orig)?.use { ins ->
+                val out = FloatArray(2)
+                val exif = android.media.ExifInterface(ins)
+                if (exif.getLatLong(out) && !(out[0] == 0f && out[1] == 0f))
+                    doubleArrayOf(out[0].toDouble(), out[1].toDouble()) else null
+            }
+        } catch (e: Exception) { null }
+    }
 
     /**
      * 마이크 음성 받아쓰기 ([sense:listen]{op:transcribe} 의 다리) — STT → 텍스트.

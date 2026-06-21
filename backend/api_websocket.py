@@ -885,6 +885,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         runner._distill_deep_memory(message, final_content)
                     except Exception as mem_err:
                         print(f"[심층메모리] 오류 (무시): {mem_err}")
+                    try:
+                        runner._distill_forage_memory(message, final_content)
+                    except Exception as fmem_err:
+                        print(f"[포식기억] 오류 (무시): {fmem_err}")
 
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put(None),  # 종료 신호
@@ -1312,6 +1316,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                         _runner._distill_deep_memory(message, final_content)
                     except Exception as mem_err:
                         print(f"[심층메모리] 오류 (무시): {mem_err}")
+                    try:
+                        _runner._distill_forage_memory(message, final_content)
+                    except Exception as fmem_err:
+                        print(f"[포식기억] 오류 (무시): {fmem_err}")
 
                 asyncio.run_coroutine_threadsafe(event_queue.put(None), loop)
 

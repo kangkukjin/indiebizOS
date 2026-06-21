@@ -144,15 +144,18 @@
     },
     {
       "name": "photo_op",
-      "description": "사진·동영상 라이브러리 관리 (op 분기). 스캔(인덱싱)/조회/검색/통계/타임라인/중복/상세 통합. scan이 모든 조회의 전제.\n\n파라미터: op: scan | list_scans | gallery | search | detail | stats | timeline | duplicates. scan/gallery/stats/timeline/duplicates는 path(폴더 경로) 필요(생략 시 가장 큰 스캔 자동). search는 query + 옵션(media_type, start_date, end_date, limit). detail은 media_id. list_scans는 파라미터 없음. timeline에 year 옵션.",
+      "description": "사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접. 선스캔 불필요·항상 최신.\n\n파라미터: q(파일명·기종 키워드, 선택), kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유 사진만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50).\n\n반환 records[]에 표시 필드(title/meta/image/url)와 구조 필드(path/taken_at/month/kind/size/camera/lat/lng)가 함께 실림 → 타임라인=records→[engines:groupby]{by:month}, 통계=[engines:groupby]{by:kind}, 지도=lat/lng 직결 조합으로 유도.",
       "input_schema": {
         "type": "object",
         "properties": {
-          "op": {
-            "type": "string",
-            "enum": ["scan", "list_scans", "gallery", "search", "detail", "stats", "timeline", "duplicates"],
-            "description": "동작 분기 — target_description 참조"
-          }
+          "q": { "type": "string", "description": "파일명·기종 키워드 부분일치 (선택)" },
+          "kind": { "type": "string", "enum": ["photo", "video", "all"], "description": "미디어 종류 (기본 all)" },
+          "start": { "type": "string", "description": "촬영일 시작 (YYYY-MM 또는 YYYY-MM-DD)" },
+          "end": { "type": "string", "description": "촬영일 끝 (YYYY-MM 또는 YYYY-MM-DD)" },
+          "has_gps": { "type": "boolean", "description": "true면 위치(GPS) 보유 사진만" },
+          "path": { "type": "string", "description": "검색 루트 (생략 시 홈 전체)" },
+          "file": { "type": "string", "description": "단일 파일 절대경로 상세 조회" },
+          "limit": { "type": "integer", "description": "반환 개수 (기본 50)" }
         },
         "additionalProperties": true
       }

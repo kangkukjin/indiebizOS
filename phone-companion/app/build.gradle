@@ -80,6 +80,7 @@ def _ENGINE_MODULES = [
     'ibl_engine', 'ibl_parser', 'ibl_access', 'ibl_routing', 'ibl_executors',
     'tool_loader', 'tool_context', 'system_tools', 'api_engine', 'thread_context',
     'api_launcher_web',
+    'file_index',            // 보편 파일/미디어 색인 어댑터 — self:photo(+후속 fs_query)가 위임. 폰=MediaStore(PhoneActions.queryMedia), 맥=Spotlight. detect_body 몸 분기.
     'workflow_engine',       // 합성 code(&/>>/??) 오케스트레이터 — 혼합 code 액션별 분할 실행에 필수
     'phone_notifications',   // M3: [sense:phone] 로컬 알림 reader
     'runtime_utils',         // scope=system/workspace 액션의 get_base_path (sense:phone 등)

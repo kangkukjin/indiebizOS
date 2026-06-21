@@ -18,6 +18,7 @@ def _load_common():
 
 def create_scatter_plot(data: list = None, data_file: str = None, title: str = None,
                         x_label: str = None, y_label: str = None, show_trendline: bool = False,
+                        bands: list = None, annotations: list = None,
                         output_format: str = "png", output_path: str = None):
     """
     산점도 생성
@@ -44,14 +45,17 @@ def create_scatter_plot(data: list = None, data_file: str = None, title: str = N
 
     try:
         return _create_with_plotly(data, title, x_label, y_label, show_trendline,
-                                   output_format, output_path, common, sampled, original_count)
+                                   output_format, output_path, common, sampled, original_count,
+                                   bands, annotations)
     except ImportError:
         return _create_with_matplotlib(data, title, x_label, y_label, show_trendline,
-                                       output_format, output_path, common, sampled, original_count)
+                                       output_format, output_path, common, sampled, original_count,
+                                       bands, annotations)
 
 
 def _create_with_plotly(data, title, x_label, y_label, show_trendline,
-                        output_format, output_path, common, sampled=False, original_count=0):
+                        output_format, output_path, common, sampled=False, original_count=0,
+                        bands=None, annotations=None):
     """Plotly로 산점도 생성"""
     import plotly.graph_objects as go
 
@@ -108,6 +112,10 @@ def _create_with_plotly(data, title, x_label, y_label, show_trendline,
         showlegend=show_trendline
     )
 
+    # 구간 음영(band)·이벤트 표시(annotation)
+    _, _x_numeric = common.coerce_x(x_values)
+    common.apply_bands_plotly(fig, bands, annotations, _x_numeric)
+
     result = common.save_plotly_figure(fig, output_path, output_format)
 
     image_tag = result.get("image_tag", "")
@@ -126,7 +134,8 @@ def _create_with_plotly(data, title, x_label, y_label, show_trendline,
 
 
 def _create_with_matplotlib(data, title, x_label, y_label, show_trendline,
-                            output_format, output_path, common, sampled=False, original_count=0):
+                            output_format, output_path, common, sampled=False, original_count=0,
+                            bands=None, annotations=None):
     """matplotlib로 산점도 생성"""
     import matplotlib.pyplot as plt
     import numpy as np
@@ -173,6 +182,11 @@ def _create_with_matplotlib(data, title, x_label, y_label, show_trendline,
         ax.set_ylabel(y_label)
 
     ax.grid(True, alpha=0.3)
+
+    # 구간 음영(band)·이벤트 표시(annotation)
+    _, _x_numeric = common.coerce_x(x_values)
+    common.apply_bands_mpl(ax, bands, annotations, x_values, _x_numeric)
+
     plt.tight_layout()
 
     result = common.save_figure(fig, output_path, output_format)

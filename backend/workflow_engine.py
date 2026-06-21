@@ -44,6 +44,57 @@ def _get_workflows_path() -> Path:
 
 # === 파이프라인 실행 ===
 
+def _first_step_project_id(steps: list):
+    """파이프의 어느 leaf 가 명시한 project_id 를 앞 순서로 찾는다(없으면 None).
+
+    순차 step + 병렬 branches + fallback 체인을 재귀로 본다. 합성 코드에서 project_id 는
+    그것을 적은 leaf 의 params 에만 산다 — head 가 정의한 프로젝트 컨텍스트를 집어낸다.
+    """
+    for s in steps:
+        if not isinstance(s, dict):
+            continue
+        if isinstance(s.get("branches"), list):
+            r = _first_step_project_id(s["branches"])
+            if r:
+                return r
+            continue
+        if isinstance(s.get("_fallback_chain"), list):
+            r = _first_step_project_id(s["_fallback_chain"])
+            if r:
+                return r
+            continue
+        p = s.get("params")
+        if isinstance(p, dict):
+            pid = p.get("project_id")
+            if isinstance(pid, str) and pid.strip():
+                return pid.strip()
+    return None
+
+
+def _propagate_project_id(steps: list, pid: str):
+    """pid 를 project_id 미지정 leaf 의 params 에 setdefault (순차/병렬/fallback 재귀).
+
+    leaf 자신이 명시한 project_id 는 보존한다 — [A]{project_id:X} >> [B]{project_id:Y} 같은
+    교차 프로젝트 파이프가 깨지지 않게. workspace 스코프 leaf 는 project_id 를 무시하므로 무해.
+    """
+    for s in steps:
+        if not isinstance(s, dict):
+            continue
+        if isinstance(s.get("branches"), list):
+            _propagate_project_id(s["branches"], pid)
+            continue
+        if isinstance(s.get("_fallback_chain"), list):
+            _propagate_project_id(s["_fallback_chain"], pid)
+            continue
+        p = s.get("params")
+        if not isinstance(p, dict):
+            p = {}
+            s["params"] = p
+        existing = p.get("project_id")
+        if not (isinstance(existing, str) and existing.strip()):
+            p["project_id"] = pid
+
+
 def execute_pipeline(steps: list, project_path: str = ".",
                      context: dict = None, agent_id: str = None) -> dict:
     """
@@ -95,6 +146,18 @@ def execute_pipeline(steps: list, project_path: str = ".",
         steps = normalized
         if not steps:
             return {"success": False, "error": "steps가 비어있습니다.", "steps_completed": 0, "steps_total": 0}
+
+    # project_id 파이프 전파 — 합성 코드(>>/&/??)의 project_id 는 그것을 적은 leaf 의 params 에만
+    # 살아서, 뒤따르는 step 이 그대로면 "활성 프로젝트 경로 확보 불가"로 게이트에서 죽는다
+    # (예: [self:read]{project_id:X} >> [engines:document] — document 가 X 를 모름).
+    # 호출자가 구체 project_path 를 *안* 줬을 때(시스템 AI·스케줄러 등 — top-level project_id 는
+    # api_ibl 에서 이미 경로로 해소됨)에 한해, head leaf 의 project_id 를 미지정 후속 leaf 에 전파한다.
+    # 무회귀: project_path 가 구체적이면(프로젝트 에이전트) 건드리지 않고, 어느 leaf 도 project_id 를
+    # 안 적었으면(전부 미지정) 아무 일도 안 한다 — 기존 thread_context 폴백 그대로.
+    if (not project_path) or str(project_path).strip() in ("", "."):
+        _head_pid = _first_step_project_id(steps)
+        if _head_pid:
+            _propagate_project_id(steps, _head_pid)
 
     prev_result = context.get("_prev_result", "") if context else ""
     results = []

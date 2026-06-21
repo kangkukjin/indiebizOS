@@ -175,6 +175,83 @@ def serialize_tool_trace(
     return serialized
 
 
+# 검증용 액션 원장 — execute_ibl의 code에서 [node:action]을 추출해 '실제 실행된 액션 전수'를
+# 정규화 리스트로 만든다. serialize_tool_trace는 모든 execute_ibl을 'execute_ibl(+code)'로만
+# 보여줘(브리프에 code 미노출) 평가자가 어떤 IBL 액션이 실제 호출됐는지 — 예: 특정 파일을
+# 읽었는지, grep을 돌렸는지 — 를 볼 수 없었다. 이 원장은 그 '부재'를 검증 가능하게 노출한다.
+_IBL_ACTION_RE = re.compile(r'\[([a-z_]+):([a-z_]+)\]')
+_IBL_TARGET_RE = re.compile(
+    r'(?:path|file_path|image_path|source|destination|url|site_id|workflow_id|query|pattern)'
+    r'\s*:\s*"([^"]+)"'
+)
+
+
+def build_action_ledger(items: List[Union[str, Dict[str, Any]]]) -> str:
+    """실제 호출된 액션을 검증용으로 정규화한 원장 문자열.
+
+    execute_ibl 호출은 input.code에서 모든 `[node:action]`과 대상(path/url/query 등)을 추출한다.
+    비-IBL 도구(Bash 등)는 이름 + 핵심 인자로 집계한다. 액션별 호출 횟수와 distinct 대상을 모은다.
+    legacy str 항목(이름·input 없음)은 원장에 기여하지 못하므로 건너뛴다 (그 경우 빈 문자열 반환).
+    """
+    if not items:
+        return ""
+    from collections import OrderedDict
+    ledger: "OrderedDict[str, Dict[str, Any]]" = OrderedDict()
+
+    def _slot(key: str) -> Dict[str, Any]:
+        return ledger.setdefault(key, {"count": 0, "targets": []})
+
+    def _add_target(slot: Dict[str, Any], t: str):
+        if isinstance(t, str) and t:
+            tv = t if len(t) <= 90 else "…" + t[-89:]
+            if tv not in slot["targets"]:
+                slot["targets"].append(tv)
+
+    had_structured = False
+    for it in items:
+        ent = _normalize_tool_entry(it)
+        name = ent["name"]
+        if not name:
+            continue  # legacy str — 이름 없음, 원장 기여 불가
+        had_structured = True
+        inp = ent["input"] if isinstance(ent["input"], dict) else {}
+        code = inp.get("code")
+        if "execute_ibl" in name and isinstance(code, str):
+            acts = _IBL_ACTION_RE.findall(code)
+            targets = _IBL_TARGET_RE.findall(code)
+            if not acts:
+                _slot("execute_ibl(파싱불가)")["count"] += 1
+                continue
+            for node, action in acts:
+                slot = _slot(f"{node}:{action}")
+                slot["count"] += 1
+                for t in targets:
+                    _add_target(slot, t)
+        else:
+            slot = _slot(name)
+            slot["count"] += 1
+            for tk in ("file_path", "path", "command", "url", "query"):
+                v = inp.get(tk)
+                if isinstance(v, str) and v:
+                    _add_target(slot, v)
+                    break
+
+    if not had_structured:
+        return ""
+
+    lines: List[str] = []
+    for key, slot in ledger.items():
+        tgt = ""
+        if slot["targets"]:
+            shown = slot["targets"][:8]
+            tgt = "  → " + " | ".join(shown)
+            extra = len(slot["targets"]) - len(shown)
+            if extra > 0:
+                tgt += f" (외 {extra}개)"
+        lines.append(f"- {key} (×{slot['count']}){tgt}")
+    return "\n".join(lines)
+
+
 # ============================================================
 # SESSION_RESET 핸들러 (모듈 레벨 — call site에서 직접 호출)
 # ============================================================
@@ -595,12 +672,22 @@ class AgentCognitiveMixin:
             if related:
                 result = (result + "\n" + related) if result else related
 
+            # 포식 기억(냄새지도) — ★실행기억처럼 *항상-on*. 회상은 싸고(LLM 0, DB+필터), 무관하면
+            #   query 필터가 빈 결과로 자기-억제한다(비용~0). 주인모델(owner)은 query 무관 상시 노출
+            #   =냄새(scent) → 명시 명령 없이도 능동 포식을 촉발. map 은 query 필터(관련 위치만).
+            #   FORAGER_MULTIBODY_DESIGN §주입(THINK-게이트 폐기, 관련성=query 가 자연 게이트).
+            forage = self._search_forage_memory(user_message)
+            if forage:
+                result = (result + "\n" + forage) if result else forage
+
             if result:
                 parts = []
                 if "execution_memory" in result:
                     parts.append("실행기억")
                 if "related_memory" in result:
                     parts.append("관련기억")
+                if "forage_memory" in result:
+                    parts.append("포식기억")
                 print(f"[연상] {'+'.join(parts)}: \"{user_message[:40]}\"")
             else:
                 print(f"[연상] 빈 결과: \"{user_message[:40]}\"")
@@ -674,6 +761,113 @@ class AgentCognitiveMixin:
 
         except Exception as e:
             print(f"[연상:관련기억] 검색 실패 (무시): {e}")
+            return ""
+
+    # 포식 의도 단서 — *이미 있는 걸 찾기* 의도 게이트(매체 무관, 싸고 너그럽게).
+    #   ★공간(어느 몸: 디스크/코드/웹/책/볼륨…)은 키워드로 재유추하지 않는다 — 증류기 LLM 이
+    #   명명한다(forager=AI, FORAGER_MULTIBODY_DESIGN §9 "불변 2축"). 여기 cue 는 *비용 게이트*일
+    #   뿐: 비포식 잡담에 회상/증류 LLM 을 안 돌리려는 것. 매체가 늘어도 이 목록은 안 늘어난다.
+    _FORAGE_CUES = (
+        "찾", "검색", "어디", "뒤져", "뒤지", "파일", "사진", "자료", "폴더",
+        "문서", "디스크", "볼륨", "찍은", "받은", "저장한", "예전", "지난",
+        "코드", "코드베이스", "함수", "클래스", "구현", "정의", "모듈", "리포",
+        "웹", "온라인", "인터넷", "구글", "논문", "기사",
+        "find", "search", "where", "locate", "file", "photo", "folder",
+        "document", "disk", "volume", "code", "codebase", "function",
+        "implement", "module", "repo", "defined", "web", "online", "scholar", "arxiv",
+    )
+
+    # 포식 *증거* — 응답이 실제로 navigable/반구조 공간을 뒤졌나(증류 2차 비용 게이트).
+    #   디스크 경로·URL·코드 구성·파일확장자를 *한 집합*으로(per-medium 분기 아님 — 매체 무관).
+    _FORAGE_EVIDENCE_RE = re.compile(
+        r"https?://|/[\w가-힣.\-]+/[\w가-힣.\-]+|"
+        r"\.(?:py|ts|tsx|js|jsx|go|rs|java|rb|kt|pdf|jpe?g|png|docx?|xlsx?)\b|"
+        r"\b(?:def |class |import |grep)", re.IGNORECASE)
+    _FORAGE_EVIDENCE_WORDS = (
+        "폴더", "디렉토리", "디스크", "볼륨", "확장자", "파일명", "핸들러", "모듈",
+        "출처", "검색 결과", "검색결과", "논문", "사이트", "scholar", "arxiv",
+    )
+
+    def _repo_root_path(self, *texts: str) -> Optional[str]:
+        """포식 중인 코드 공간의 *루트 절대경로* — 응답 속 소스파일 경로의 .git 조상.
+
+        폴백=cwd 의 git 루트. 못 찾으면 None. _repo_identity(basename)·코드 locus 정규화 공용.
+        포식 *공간* 식별(하드웨어 자아 아님 — FORAGER_MULTIBODY_DESIGN §1).
+        """
+        import os
+        def _git_root(start: str) -> Optional[str]:
+            d = start
+            for _ in range(10):
+                if os.path.isdir(os.path.join(d, ".git")):
+                    return d.rstrip("/") or None
+                nd = os.path.dirname(d)
+                if nd == d:
+                    return None
+                d = nd
+            return None
+        # 1) 응답 속 소스파일 절대경로 → .git 조상
+        for t in texts:
+            for m in re.finditer(r"(/[\w./가-힣-]+?\.(?:py|ts|tsx|js|jsx|go|rs|java|rb|kt))\b",
+                                 t or ""):
+                root = _git_root(os.path.dirname(m.group(1)))
+                if root:
+                    return root
+        # 2) 폴백 — 실행 cwd 의 git 루트
+        try:
+            return _git_root(os.getcwd())
+        except Exception:
+            return None
+
+    def _repo_identity(self, *texts: str) -> Optional[str]:
+        """코드 공간 정체(basename) — body 키 'code:<repo>' 용. _repo_root_path 의 basename."""
+        import os
+        root = self._repo_root_path(*texts)
+        return os.path.basename(root) if root else None
+
+    def _normalize_space(self, space: Optional[str], ai_response: str = "",
+                         user_message: str = "") -> str:
+        """증류기 LLM 이 명명한 공간 라벨을 body 키로 정규화(매체 무관).
+
+        AI 가 무엇을 포식했는지 안다(forager=AI) → 키워드로 재유추하지 않고 *명명*을 받는다.
+        'code'(레포명 없음)면 .git 으로 보강, 빈 값이면 'mac'(기본 디스크). 그 외엔 라벨 그대로
+        (web/book:<제목>/disk:<라벨>/… 매체가 늘어도 코드 변경 0 — FORAGER_MULTIBODY_DESIGN §9).
+        """
+        s = (space or "").strip()
+        if not s:
+            return "mac"
+        # bare "code"(레포명 없음)면 .git basename 으로 보강(케이스 보존 — repo/label 은 식별자).
+        if s.lower() == "code":
+            repo = self._repo_identity(ai_response, user_message)
+            return f"code:{repo}" if repo else "code"
+        return s  # 라벨 그대로(case-sensitive 식별자: code:<repo>/disk:<label>/book:<title>)
+
+    def _search_forage_memory(self, user_message: str) -> str:
+        """포식 기억(냄새지도) 회상 — ★실행기억처럼 항상-on(0단계 _build_execution_memory).
+
+        회상은 싸다(LLM 0, SQLite+키워드필터). 무관하면 query 필터가 빈 결과로 자기-억제(비용~0).
+        map 은 query 필터(관련 위치만), owner(주인모델)는 query 무관 상시 노출=냄새(scent)로 능동
+        포식 촉발(filter_owner=False). 전 body 회상(query 가 자기-스코핑 §9). 해마 <execution_memory>·
+        심층 <related_memory> 의 *공간* 짝(F2). 맥 자아 전용. 실패는 무시(파이프라인 불변).
+        """
+        try:
+            import sys, os
+            bk = os.path.dirname(os.path.abspath(__file__))
+            if bk not in sys.path:
+                sys.path.insert(0, bk)
+            # 하드웨어 자아 게이트(누가 포식) — 폰 자아는 미디어-한정(A3 후속)
+            try:
+                from runtime_utils import detect_body
+                hw = detect_body().get("profile") or "mac"
+            except Exception:
+                hw = "mac"
+            if hw == "phone":
+                return ""
+            import forage_memory
+            xml = forage_memory.recall_xml(body=None, query=user_message, limit=12,
+                                           filter_owner=False)
+            return xml
+        except Exception as e:
+            print(f"[포식기억] 회상 실패 (무시): {e}")
             return ""
 
     def _run_consciousness_or_reuse(self, user_message: str, history: list,
@@ -984,6 +1178,168 @@ AI: {ai_response[:500]}"""
             print(f"[심층메모리] JSON 파싱 실패 (무시)")
         except Exception as e:
             print(f"[심층메모리] 실패 (무시): {e}")
+
+    def _distill_forage_memory(self, user_message: str, ai_response: str):
+        """포식 후 자동 증류 — 냄새지도(forage_map)+주인모델(owner_model)에 *델타만* 누적.
+
+        해마/심층메모리 증류의 *공간* 짝(docs/FORAGER_MEMORY_SCHEMA.md §4.2). forage 의도
+        대화에서, 미래 탐색을 싸게 만들 *일반화 가능한 공간 지식*(폴더 정체·관습·죽은가지·
+        주인 신호)만 추출한다 — 날 내용·이번에 찾은 특정 파일은 저장 안 함. 기존 지도를 함께
+        넘겨 *새롭거나 교정된 것*만 내도록 한다(surprise/교정). dedup 은 저장소 UNIQUE upsert 가
+        기계적으로 처리(재note=강화) → 2차 판정 LLM 불필요. 실패는 무시(파이프라인 불변).
+
+        step 5(surface 카운터-패스): 기존 라벨을 *위반*하는 이질 내용을 만나면 그 항목에
+        surface 표식 → 필터버블 반대힘([[project_augmentation_over_autonomy]]).
+        """
+        try:
+            if not user_message or not ai_response:
+                return
+            msg = user_message.lower()
+            if not any(cue in msg for cue in self._FORAGE_CUES):
+                return  # 비forage 대화 — 증류 없음
+            import sys, os, json
+            bk = os.path.dirname(os.path.abspath(__file__))
+            if bk not in sys.path:
+                sys.path.insert(0, bk)
+            # 하드웨어 자아 게이트(누가 포식) — 공간 body 와 분리(§1)
+            try:
+                from runtime_utils import detect_body
+                hw = detect_body().get("profile") or "mac"
+            except Exception:
+                hw = "mac"
+            if hw == "phone":
+                return  # 폰 자아는 미디어-한정(A3 후속)
+            # 2차 싼 게이트(매체 무관): 응답이 실제 navigable/반구조 공간을 뒤졌나(맛집·영상 검색 등 LLM 낭비 차단).
+            #   디스크 경로·URL·코드 구성·확장자를 한 집합으로 — per-medium 분기 없음(§9).
+            ar_l = ai_response.lower()
+            if not (self._FORAGE_EVIDENCE_RE.search(ai_response)
+                    or any(w in ar_l for w in self._FORAGE_EVIDENCE_WORDS)):
+                return  # 포식 흔적 없음 — 증류 스킵(LLM 호출 안 함)
+            import forage_memory
+            from consciousness_agent import lightweight_ai_call
+
+            # 1) 기존 지도(전 공간) 요약 → "이미 아는 것"으로 (델타만 추출하도록). body 표기로 공간 구분.
+            known = forage_memory.recall(body=None, query=None, limit=40)
+            known_lines = []
+            for m in known.get("map", []):
+                known_lines.append(f'- [{m.get("body","?")}/{m["kind"]}] {m["locus"]}: {m["claim"]}')
+            for o in known.get("owner", []):
+                known_lines.append(f'- [owner:{o["facet"]}] {o["value"]}')
+            known_text = "\n".join(known_lines) if known_lines else "(아직 없음)"
+
+            # 2) 경량 LLM 으로 *일반화 가능한 공간 지식* 델타 추출 — ★공간-중립 단일 프롬프트.
+            #   매체별 분기 없음: AI 가 무엇을 포식했는지 *명명*(space)한다(forager=AI, §9 불변 2축).
+            extract_prompt = f"""이번 대화는 어떤 공간을 *포식*(이미 있는 걸 찾기)한 것이다 — 디스크 폴더·코드레포·웹·책·외장볼륨 중 하나.
+미래의 탐색을 싸게 만들 **일반화 가능한 공간 지식**만 추출하라. 이번에 찾은 특정 항목·날 내용은 제외하고, *다음에도 쓸* 지도만:
+
+먼저 **space**(무엇을 포식했나)를 명명하라:
+- "mac"=내 홈 디스크 / "code:<레포명>"=코드레포 / "web"=웹 / "book:<제목>"=책 / "disk:<라벨>"=외장볼륨
+
+그다음 지도(공간 종류에 맞게 자연히 채워라):
+- map.identity: "이 위치 = X"(폴더/모듈/1차출처의 정체 — 예 "발표자료 폴더", "backend/=라우터", "내 논문=NYU Scholars")
+- map.convention: 주인의 정리·명명·탐색 관습(예 "발표=장소+날짜", "IBL 액션=src에 정의→build로 생성", "동명이인=분야어로 좁힘")
+- map.dead_branch: "여기엔 그것 없음"(+ prune_reason: 왜 아마 없나 — 폐기가능)
+- map.substrate: 기질 가용성(예 "EXIF 색인 없음", "1500줄 파일제한", "이 사이트=페이월")
+- owner.{{identity|domain|affiliation|signal|lexicon|habit}}: 주인 모델(정체·분야·소속·내용지문·어휘매핑·습관) — ★몸 독립, 모든 공간 공유. 웹 포식이면 특히 값지다(다음 검색 중의성 해소).
+
+규칙:
+- **이미 아는 것과 같으면 내지 마라**(새롭거나 교정된 것만).
+- prior_class: 동질이라 싸게 재검증되면 "structural", 의미·정체 주장이면 "semantic".
+- surface: *이미 아는 라벨을 위반*하는 이질 내용을 봤다면(예 "연구 폴더인 줄 알았는데 개인 투자 메모") 그 locus/owner value 를 surface 에 적고 why.
+- 확실치 않으면 비워라. JSON 으로만 응답.
+
+이미 아는 지도(전 공간):
+{known_text[:1500]}
+
+사용자: {user_message[:300]}
+AI 답변: {ai_response[:1400]}
+
+응답 형식(빈 배열 허용):
+{{"space":"mac|code:<repo>|web|book:<title>|disk:<label>",
+ "map":[{{"locus":"위치(파일시스템이면 절대경로)","kind":"identity|convention|dead_branch|substrate","claim":"...","prior_class":"structural|semantic","prune_reason":"(dead_branch면)","generalizes":true}}],
+ "owner":[{{"facet":"domain|identity|...","value":"...","prior_class":"semantic"}}],
+ "surface":[{{"locus":"(있으면)","value":"(owner면)","why":"..."}}]}}"""
+
+            resp = lightweight_ai_call(
+                prompt=extract_prompt,
+                system_prompt="포식 지도 증류기. 포식한 공간을 명명하고 일반화 가능한 공간 지식 델타만 JSON으로. 특정 항목·날 내용 금지."
+            )
+            if not resp:
+                return
+            rc = resp.strip()
+            if rc.startswith("```"):
+                rc = rc.split("\n", 1)[-1]
+                if rc.endswith("```"):
+                    rc = rc[:-3]
+                rc = rc.strip()
+            data = json.loads(rc)
+            if not isinstance(data, dict):
+                return
+
+            # 공간 = AI 가 명명(없으면 mac). 매체가 늘어도 분기 없음 — 라벨 그대로 body 키.
+            body = self._normalize_space(data.get("space"), ai_response, user_message)
+            prov = {"query": user_message[:120]}
+            # 파일시스템 공간(code:): LLM 이 상대경로를 줄 수 있음 → 레포 루트로 정규화(freshness 정확).
+            #   glob(*)·절대경로·비경로(web/book locus)는 그대로.
+            repo_root = self._repo_root_path(ai_response, user_message) if body.startswith("code") else None
+            def _norm_locus(loc: str) -> str:
+                if (repo_root and loc and not loc.startswith("/")
+                        and not loc.startswith("__") and "*" not in loc):
+                    return os.path.join(repo_root, loc)
+                return loc
+            noted = 0
+            for m in (data.get("map") or [])[:6]:
+                locus, kind, claim = m.get("locus"), m.get("kind"), m.get("claim")
+                if not locus or not kind or not claim:
+                    continue
+                locus = _norm_locus(locus)
+                r = forage_memory.note_map(
+                    body=body, locus=locus, kind=kind, claim=claim,
+                    prior_class=m.get("prior_class") or "structural",
+                    confidence=0.7, provenance=dict(prov),
+                    prune_reason=m.get("prune_reason"),
+                    generalizes=bool(m.get("generalizes")))
+                if r.get("success"):
+                    noted += 1
+                    print(f"[포식기억] {r['action']} map[{kind}]: \"{claim[:48]}\"")
+            for o in (data.get("owner") or [])[:4]:
+                facet, value = o.get("facet"), o.get("value")
+                if not facet or not value:
+                    continue
+                r = forage_memory.note_owner(
+                    facet=facet, value=value,
+                    prior_class=o.get("prior_class") or "semantic",
+                    confidence=0.65, provenance=dict(prov))
+                if r.get("success"):
+                    noted += 1
+                    print(f"[포식기억] {r['action']} owner[{facet}]: \"{value[:48]}\"")
+
+            # step 5: surface — 기존 라벨 의심 표식(이질 내용 발견).
+            #   위반은 폴더 라벨(map)일 수도, *주인모델*(owner)일 수도 → 둘 다 독립 표식.
+            for s in (data.get("surface") or [])[:4]:
+                why = s.get("why") or ""
+                loc, val = s.get("locus"), s.get("value")
+                marked = []
+                if loc:  # 위반된 폴더 라벨
+                    for x in forage_memory.recall(body=body, query=loc, limit=5).get("map", []):
+                        if x["locus"] == loc:
+                            forage_memory.mark_surface(entry_id=x["id"], table="forage_map", on=True)
+                            marked.append(f"map#{x['id']}")
+                if val:  # 위반된 주인모델 라벨 — 가장 관련된 semantic 하나(구조적은 surface 무의미)
+                    for o in forage_memory.recall(body=body, query=val, limit=5).get("owner", []):
+                        if o.get("prior_class") == "semantic":
+                            forage_memory.mark_surface(entry_id=o["id"], table="owner_model", on=True)
+                            marked.append(f"owner#{o['id']}")
+                            break
+                if marked:
+                    print(f"[포식기억] surface 표식({','.join(marked)}): \"{why[:48]}\"")
+
+            if noted:
+                print(f"[포식기억] 증류 {noted}건: \"{user_message[:40]}\"")
+        except json.JSONDecodeError:
+            print("[포식기억] JSON 파싱 실패 (무시)")
+        except Exception as e:
+            print(f"[포식기억] 증류 실패 (무시): {e}")
 
     def _consciousness_clarification(self, consciousness_output: dict) -> Optional[str]:
         """의식이 needs_clarification=true로 판단했다면 사용자에게 보낼 질문을 반환.
@@ -1383,6 +1739,7 @@ AI: {ai_response[:500]}"""
                                response: str, created_files: str,
                                consciousness_output: dict = None,
                                tool_results_str: str = "",
+                               action_ledger: str = "",
                                execution_memory: str = "",
                                visual_artifacts: list = None) -> tuple:
         """평가 AI로 달성 기준 충족 여부를 판단한다.
@@ -1402,6 +1759,19 @@ AI: {ai_response[:500]}"""
             f"## 사용자 요청\n{user_message}\n\n"
             f"## 달성 기준\n{criteria}\n\n"
         )
+
+        # 검증용 액션 원장 — 기준 직후에 배치(인접성). 에이전트의 '서술'이 아니라
+        # 실제 호출 로그에서 추출한 '사실'. 안 한 일의 부재를 평가자가 볼 수 있게 한다.
+        if action_ledger:
+            prompt += (
+                "## 실제 실행된 액션 원장 (전수 · 검증 기준)\n"
+                "아래는 에이전트가 *실제로 호출한* 액션의 전수 목록이다 — 에이전트의 서술이 아니라 "
+                "도구 호출 로그에서 추출한 사실. 달성 기준이 특정 액션을 요구하면(예: 특정 파일 읽기, "
+                "grep/검색, 특정 도구 실행), **그 액션이 이 목록에 실제로 있는지로 판정하라.** "
+                "목록에 없으면 그 단계는 *수행되지 않은 것*이다 — 에이전트 응답이 '했다'고 말해도 "
+                "이 원장에 없으면 안 한 것으로 간주하라.\n"
+                f"{action_ledger}\n\n"
+            )
 
         # 의식 에이전트의 메타 판단을 평가 맥락으로 제공
         if consciousness_output:
@@ -1461,10 +1831,12 @@ AI: {ai_response[:500]}"""
         # 어제 208번 같은 오판(도구 결과가 평가자에 부족하게 전달되어 "상상 보고" 판정) 검출용.
         _tool_results_info = f"{len(tool_results_str)}자" if tool_results_str else "없음"
         _created_files_info = f"{len(created_files)}자" if created_files else "없음"
+        _ledger_info = f"{action_ledger.count(chr(10)) + 1}줄" if action_ledger else "없음"
         self._log(
             f"[GoalEval] 평가 입력: prompt={len(prompt)}자, "
             f"criteria={len(criteria)}자, response={len(response)}자, "
-            f"tool_results={_tool_results_info}, created_files={_created_files_info}"
+            f"tool_results={_tool_results_info}, action_ledger={_ledger_info}, "
+            f"created_files={_created_files_info}"
         )
 
         try:
@@ -1537,6 +1909,9 @@ AI: {ai_response[:500]}"""
         # tool_calls가 우선; 없으면 tool_results(legacy) 사용.
         trace_source: list = tool_calls if tool_calls else (tool_results or [])
         tool_results_str = serialize_tool_trace(trace_source)
+        # 검증용 액션 원장 — execute_ibl code에서 [node:action]+대상을 전수 추출.
+        # serialize_tool_trace가 못 보여주던 '실제 호출된 IBL 액션'을 평가자에게 노출한다.
+        action_ledger = build_action_ledger(trace_source)
         # _collect_created_files용: tool_calls가 있으면 그쪽도 활용.
         _trace_dicts = tool_calls if tool_calls else None
 
@@ -1554,6 +1929,7 @@ AI: {ai_response[:500]}"""
                 user_message, criteria, response, created_files,
                 consciousness_output=consciousness_output,
                 tool_results_str=tool_results_str,
+                action_ledger=action_ledger,
                 execution_memory=execution_memory,
                 visual_artifacts=visual_artifacts,
             )

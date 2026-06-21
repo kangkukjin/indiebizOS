@@ -512,6 +512,10 @@ class AgentCommunicationMixin:
                         self._distill_deep_memory(content, response)
                     except Exception as mem_err:
                         self._log(f"[심층메모리] 오류 (무시): {mem_err}")
+                    try:
+                        self._distill_forage_memory(content, response)
+                    except Exception as fmem_err:
+                        self._log(f"[포식기억] 오류 (무시): {fmem_err}")
 
             # 컨텍스트 정리
             clear_current_task_id()

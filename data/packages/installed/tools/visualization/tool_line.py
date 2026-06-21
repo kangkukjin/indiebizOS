@@ -18,6 +18,7 @@ def _load_common():
 
 def create_line_chart(data: list = None, data_file: str = None, title: str = None,
                       x_label: str = None, y_label: str = None, series_names: list = None,
+                      bands: list = None, annotations: list = None,
                       output_format: str = "png", output_path: str = None):
     """
     라인 차트 생성
@@ -29,6 +30,8 @@ def create_line_chart(data: list = None, data_file: str = None, title: str = Non
         x_label: X축 레이블
         y_label: Y축 레이블
         series_names: 시리즈 이름 목록
+        bands: 구간 음영 [{from, to, label?, color?}, ...] — 시기 강조(정권·국면 등)
+        annotations: 이벤트 표시 [{x, text, y?}, ...] — 특정 시점에 점선+라벨
         output_format: 출력 형식 (png, html, base64)
         output_path: 저장 경로
 
@@ -45,15 +48,18 @@ def create_line_chart(data: list = None, data_file: str = None, title: str = Non
     try:
         # Plotly 사용 시도
         return _create_with_plotly(data, title, x_label, y_label, series_names,
-                                   output_format, output_path, common, sampled, original_count)
+                                   output_format, output_path, common, sampled, original_count,
+                                   bands, annotations)
     except ImportError:
         # matplotlib 폴백
         return _create_with_matplotlib(data, title, x_label, y_label, series_names,
-                                       output_format, output_path, common, sampled, original_count)
+                                       output_format, output_path, common, sampled, original_count,
+                                       bands, annotations)
 
 
 def _create_with_plotly(data, title, x_label, y_label, series_names,
-                        output_format, output_path, common, sampled, original_count):
+                        output_format, output_path, common, sampled, original_count,
+                        bands=None, annotations=None):
     """Plotly로 라인 차트 생성"""
     import plotly.graph_objects as go
 
@@ -89,8 +95,8 @@ def _create_with_plotly(data, title, x_label, y_label, series_names,
         if len(reordered_keys) == len(y_keys):
             y_keys = reordered_keys
 
-    # x 값 추출
-    x_values = [item.get(x_key) for item in data]
+    # x 값 추출 — 전부 숫자형이면 숫자축으로(연도 등). band/annotation 좌표와 같은 좌표계.
+    x_values, x_numeric = common.coerce_x([item.get(x_key) for item in data])
 
     # 각 시리즈 추가
     for i, y_key in enumerate(y_keys):
@@ -130,6 +136,9 @@ def _create_with_plotly(data, title, x_label, y_label, series_names,
         hovermode='x unified'
     )
 
+    # 구간 음영(band)·이벤트 표시(annotation) — 공통 적용
+    common.apply_bands_plotly(fig, bands, annotations, x_numeric)
+
     # 저장
     result = common.save_plotly_figure(fig, output_path, output_format)
 
@@ -149,7 +158,8 @@ def _create_with_plotly(data, title, x_label, y_label, series_names,
 
 
 def _create_with_matplotlib(data, title, x_label, y_label, series_names,
-                            output_format, output_path, common, sampled, original_count):
+                            output_format, output_path, common, sampled, original_count,
+                            bands=None, annotations=None):
     """matplotlib로 라인 차트 생성"""
     import matplotlib.pyplot as plt
 
@@ -180,7 +190,7 @@ def _create_with_matplotlib(data, title, x_label, y_label, series_names,
         if len(reordered_keys) == len(y_keys):
             y_keys = reordered_keys
 
-    x_values = [item.get(x_key) for item in data]
+    x_values, x_numeric = common.coerce_x([item.get(x_key) for item in data])
 
     # 각 시리즈 플롯
     for i, y_key in enumerate(y_keys):
@@ -206,6 +216,9 @@ def _create_with_matplotlib(data, title, x_label, y_label, series_names,
 
     ax.legend(loc='upper left')
     ax.grid(True, alpha=0.3)
+
+    # 구간 음영(band)·이벤트 표시(annotation) — 공통 적용
+    common.apply_bands_mpl(ax, bands, annotations, x_values, x_numeric)
 
     # x축 레이블 회전
     plt.xticks(rotation=45, ha='right')

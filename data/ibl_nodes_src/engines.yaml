@@ -58,14 +58,16 @@
         description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
         target_description: |
           title (필수). chart_type으로 종류 분기 (기본 line).
-          표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(engines:spreadsheet와 같은 통화).
+          표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(engines:spreadsheet와 같은 통화). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
           - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
+          - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
           - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
           - pie: labels·values 리스트. hole 옵션으로 도넛.
           - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
           - heatmap: z(매트릭스)·x_labels·y_labels.
           - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
           - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
+          - spec: 위 chart_type으로 부족한 풍부한 표현(이중축·로그축·복합 음영 등)은 Plotly figure JSON을 spec으로 그대로 넘긴다 — matplotlib 코드 작성(self:write+run) 대신. spec={data:[트레이스...], layout:{...}}. 이중축=트레이스에 yaxis:"y2" + layout.yaxis2={overlaying:"y",side:"right"}. 구간음영=layout.shapes(type:rect, yref:"paper"). 주석=layout.annotations. *코드가 아니라 데이터*라 포터블·캐시·검증가능. 예: 한국 GDP(좌축)와 KOSPI(우축) 이중축 + 정권별 shapes 음영.
         group: chart
         router: handler
         tool: chart
@@ -253,6 +255,7 @@
         - 렌더링
       structure:
         runs_on: anywhere
+        scope: workspace
         description: 원본 콘텐츠를 문서 IR(blocks)로 구조화하는 편집자 원자. A획득→B구조화→IR→emit 파이프라인의 B. document로 이어 렌더.
         target_description: 'content(필수, 구조화할 원본 텍스트 — >> 파이프 시 이전 결과를 content로 받아 생략 가능). instruction(선택, 정리 방향 예 "3섹션 요약 보고서로"·"비교는 표로"). 반환에 title·blocks(문서 IR) 포함 — 그대로 engines:document로 >> 파이프하면 렌더.'
         group: media_produce
@@ -291,6 +294,7 @@
         - 페이지
       filter:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 목록/표에서 조건에 맞는 것만 남긴다(부분집합). >> 앞 액션의 records/table 통화를 받아 같은 통화로.'
         target_description: 'where(필터 조건): 문자열(전 필드 부분일치, 예 "전세") · {field, op, value}(op=eq/ne/lt/le/gt/ge/contains/in) · {열:값} 단축형 · 조건 배열(AND). >> 파이프로 앞 통화를 자동 수용. 도메인 무관 — 모든 검색·목록 생산자에 적용.'
         group: transform
@@ -306,6 +310,7 @@
         - filter
       sort:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 목록/표를 기준 필드로 정렬(수치 인식). >> 앞 records/table 통화를 받아 같은 통화로.'
         target_description: 'by(정렬 기준 필드/열명, 필수) · desc(내림차순 bool, 기본 false). 숫자는 수치로, 아니면 문자열로 비교. 예: [...] >> [engines:sort]{by: price, desc: true}.'
         group: transform
@@ -321,6 +326,7 @@
         - 순서
       take:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 목록/표에서 상위 n개만(음수면 뒤에서 n). >> 앞 records/table 통화를 받아 같은 통화로.'
         target_description: 'n(취할 개수, 기본 10; 음수=뒤에서 n개). 보통 sort 뒤에 써 상위 N 추출: [...] >> [engines:sort]{by:..} >> [engines:take]{n:5}.'
         group: transform
@@ -336,6 +342,7 @@
         - top
       select:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 표에서 지정한 열만 남긴다(열 투영). records면 해당 필드만 추림. >> 앞 통화를 받아 같은 통화로.'
         target_description: 'columns(남길 열/필드 이름 배열, 필수). 예: [sense:...] >> [engines:select]{columns: ["연도","GDP"]}. 표가 넓을 때 차트/문서 전에 좁히기.'
         group: transform
@@ -351,6 +358,7 @@
         - 골라
       dedup:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 목록/표에서 중복 제거(첫 항목 유지, 정규화 비교). >> 앞 records/table 통화를 받아 같은 통화로.'
         target_description: 'by(중복 판정 키 필드/열; 미지정 시 records=title, table=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)'
         group: transform
@@ -366,6 +374,7 @@
         - 고유
       groupby:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 표를 키 열로 그룹지어 집계(count/sum/avg/min/max). >> 앞 table 통화를 받아 집계 table로.'
         target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count). 반환 table=[by열, 집계열들]. 예: [...] >> [engines:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
         group: transform
@@ -381,6 +390,7 @@
         - 통계
       join:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자(이항) — 두 입력을 공통 키로 inner join(table은 키 열, records는 키 필드). 서로 다른 소스를 한 키로 묶어 분석. & 병렬 두 입력을 받음.'
         target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). table=열 기준, records=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
         group: transform
@@ -396,6 +406,7 @@
         - 연결
       union:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자(이항) — 두 표(또는 두 목록)를 행 결합. 같은 통화끼리. & 병렬 두 입력을 받음. 중복 제거는 뒤에 >> dedup.'
         target_description: '파라미터 없음. table은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), records는 단순 concat. 예: [A] & [B] >> [engines:union]. records 합치며 중복까지 지우려면 engines:merge.'
         group: transform
@@ -411,6 +422,7 @@
         - 세로결합
       merge:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자(이항) — 두 목록(records)을 합친다. by 지정 시 그 키로 중복 제거. & 병렬 두 입력을 받음.'
         target_description: 'by(선택, 중복 제거 키 필드; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 표형 결합은 engines:union. 예: [sense:search_news]{...} & [sense:search_ddg]{...} >> [engines:merge]{by: title}.'
         group: transform
@@ -502,6 +514,7 @@
         - UI
       image_critic:
         runs_on: anywhere
+        scope: workspace
         description: 'Gemini Vision으로 산출물(일러스트/차트/이미지 등)이 의도와 정합하는지 평가. 반환: passed/score/issues/notes.'
         target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. preset 옵션 — slide_illustration(기본: 다이어그램형/한글 미포함/빈 공간/객체 명확성, 한글 검출 시 passed=false) | general(임의 산출물 범용: intent 충족·시각 결함 없음). style_preset/checks(추가 체크 배열) 옵션.'
         group: media_produce
@@ -521,6 +534,7 @@
         - image evaluation
       image_read:
         runs_on: anywhere
+        scope: workspace
         description: 'Gemini Vision으로 이미지를 읽어 질문에 답한다(시각 QA·OCR·검증). 스크린샷 숫자/텍스트 읽기, 그림 내용 확인. 합격 채점 아님(그건 image_critic).'
         target_description: 'image_path(절대 경로 또는 data URI, path 로도 받음) 필수 + question(무엇을 읽거나 답할지, 생략 시 전체 묘사). query/intent/prompt 로도 받음.'
         group: media_produce

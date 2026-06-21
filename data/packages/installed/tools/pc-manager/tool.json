@@ -65,6 +65,56 @@
       }
     },
     {
+      "name": "forage_op",
+      "description": "포식 기억(냄새지도) — [self:forage]. 과거 디스크·웹 포식에서 배운 폴더 정체·관습·죽은가지·주인모델을 세션 너머로 누적·회상. 루프(forager)는 AI 자신이고 이 도구는 그 *지속 기억*이다.\n- op=recall (기본): 누적된 냄새지도 회상. query(주제)·body(몸, 생략 시 현재 몸).\n- op=note: 단언 누적. layer=map(locus+kind+claim) 또는 layer=owner(facet+value). prior_class=structural만 committal prune 허용(semantic은 위험).\n- op=forget: 잘못된·낡은 항목 폐기 (id + table).\n\n## 예시\n- forage_op(op='recall', query='여행')\n- forage_op(op='note', layer='map', locus='/Volumes/SSD/total/journal', kind='dead_branch', claim='출판논문 — 여행자료 없음', prune_reason='논문폴더', prior_class='structural')\n- forage_op(op='note', layer='owner', facet='domain', value='계산신경과학')\n- forage_op(op='forget', id=3, table='forage_map')",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": ["recall", "note", "forget"],
+            "default": "recall",
+            "description": "recall=회상(기본), note=누적, forget=폐기"
+          },
+          "query": { "type": "string", "description": "[recall] 주제 필터(부분일치)" },
+          "body": { "type": "string", "description": "몸 신원 (mac/disk:uuid 등, 생략 시 현재 몸)" },
+          "limit": { "type": "integer", "description": "[recall] 결과 상한 (기본 20)" },
+          "layer": { "type": "string", "enum": ["map", "owner"], "description": "[note] map=몸별 지도, owner=몸독립 주인모델" },
+          "locus": { "type": "string", "description": "[note map] 곳(절대경로) 또는 __substrate__" },
+          "kind": { "type": "string", "enum": ["identity", "convention", "dead_branch", "substrate"], "description": "[note map] 항목 종류" },
+          "claim": { "type": "string", "description": "[note] 단언(자연어)" },
+          "facet": { "type": "string", "enum": ["identity", "domain", "affiliation", "signal", "lexicon", "habit"], "description": "[note owner] 주인모델 facet" },
+          "value": { "type": "string", "description": "[note owner] facet 값" },
+          "prior_class": { "type": "string", "enum": ["structural", "semantic"], "description": "[note] 구조적(싸게 재검증·committal 허용) vs 의미적(이질억압 위험)" },
+          "confidence": { "type": "number", "description": "[note] 확신 0~1" },
+          "prune_reason": { "type": "string", "description": "[note map] defeasible 이유 — '~라서 아마 없음'" },
+          "generalizes": { "type": "boolean", "description": "[note map convention] 새 가지에도 적용되나" },
+          "id": { "type": "integer", "description": "[forget] 항목 id" },
+          "table": { "type": "string", "enum": ["forage_map", "owner_model"], "description": "[forget] 대상 테이블" }
+        }
+      }
+    },
+    {
+      "name": "residual_op",
+      "description": "탐색 잔여 측정 — [self:residual]. \"거기 없음\"인지 \"덜 봤음\"인지를 *측정*으로 가른다(음성-단언). 포식 후 '없다'·'전부 찾았다'를 단언하기 전에 안 본 더미를 표본조사해 확신을 정량화.\n- op=sample (기본): 질의 모집단(kind/q/path/extension) 중 이미 본 것(seen 경로 배열) 제외한 미관측 더미에서 균일 무작위 n개. 그 표본을 열어 관련성을 판단한다.\n- op=estimate: 표본 판단 결과(relevant=관련 수, sampled=표본 크기, unseen=미관측 모수)로 누락 추정 + Wilson 95% 신뢰구간. 표본 0건이면 '없음' 단언이 강해진다.\n\n## 예시\n- residual_op(op='sample', kind='image', path='/Volumes/SSD/photos', seen=['/a.jpg','/b.jpg'], n=30)\n- residual_op(op='estimate', relevant=0, sampled=30, unseen=1265)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": { "type": "string", "enum": ["sample", "estimate"], "default": "sample", "description": "sample=미관측 표본(기본), estimate=누락 추정" },
+          "kind": { "type": "string", "description": "[sample] 모집단 종류 (image/video/audio/pdf/any)" },
+          "q": { "type": "string", "description": "[sample] 이름/메타 부분일치 필터" },
+          "path": { "type": "string", "description": "[sample] 검색 루트" },
+          "extension": { "type": "string", "description": "[sample] 확장자 필터" },
+          "min_size_mb": { "type": "number", "description": "[sample] 최소 크기" },
+          "seen": { "type": "array", "items": { "type": "string" }, "description": "[sample] 이미 본(판단한) 경로들 — 모집단에서 제외" },
+          "n": { "type": "integer", "description": "[sample] 표본 크기 (기본 20)" },
+          "relevant": { "type": "integer", "description": "[estimate] 표본 중 관련 항목 수" },
+          "sampled": { "type": "integer", "description": "[estimate] 표본 크기" },
+          "unseen": { "type": "integer", "description": "[estimate] 미관측 모수(sample이 돌려준 unseen)" }
+        }
+      }
+    },
+    {
       "name": "host_op",
       "description": "이 기계(호스트) 자신의 운영 상태를 구조화 데이터로 조회 (op 분기) — [sense:host]. 화면을 보는 게 아니라 기계를 직접 내성하는 자기수용감각.\n- op=status (기본): 몸 상태 한 눈에 — 전면 앱·CPU·메모리·디스크·배터리·가동시간·로드평균·프로세스 수. 파라미터 없음.\n- op=apps: 자원(메모리)을 많이 쓰는 프로세스 상위 N (limit 옵션, 기본 12).\n- op=resources: 상세 지표 — per-core CPU·메모리·스왑·디스크 파티션별·네트워크 누계·배터리.\n\n## 예시\n- host_op()                 # 기본 status\n- host_op(op='apps', limit=8)\n- host_op(op='resources')",
       "input_schema": {

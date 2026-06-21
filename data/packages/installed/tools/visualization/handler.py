@@ -151,7 +151,23 @@ def execute(tool_input: dict, context):
     try:
         # 범용 chart 액션: chart_type으로 분기
         if tool_name == "chart":
+            # spec 통과 — Plotly figure JSON(data+layout)이 오면 그래픽 문법 전체를 그대로 렌더.
+            # 이중축·로그축·복합 음영 등 chart_type knob으로 안 되는 롱테일을 *선언형 데이터*로 흡수
+            # (matplotlib 코드 이탈 대체 — 포터블·캐시·검증가능). 흔한 차트는 아래 chart_type 경로.
+            _spec = tool_input.get("spec")
+            if _spec:
+                tool = load_module("tool_spec")
+                return tool.render_spec(
+                    _spec, title=tool_input.get("title"),
+                    output_format=tool_input.get("output_format", "png"),
+                    output_path=tool_input.get("output_path"))
             chart_type = tool_input.get("chart_type", "line")
+            # 모델이 table 통화를 data: 키에 {columns,rows} 로 넣는 흔한 실수 → table 로 인식.
+            # (안 그러면 하위 렌더러가 dict 를 행 리스트로 오인 → KeyError(0)='도구 실행 중 오류 발생: 0')
+            _maybe = tool_input.get("data")
+            if isinstance(_maybe, dict) and _maybe.get("rows") and _maybe.get("columns"):
+                tool_input["table"] = _maybe
+                tool_input["data"] = None
             # 캔들스틱: table 통화(종가만)로 불가 → _prev_result에서 OHLC 리스트 제네릭 수용
             # (stock history prices 등 open/high/low/close 보유 리스트). 통화 필드 안 늘림.
             if chart_type == "candlestick" and not tool_input.get("data"):
@@ -199,6 +215,8 @@ def execute(tool_input: dict, context):
                 x_label=tool_input.get("x_label"),
                 y_label=tool_input.get("y_label"),
                 series_names=tool_input.get("series_names"),
+                bands=tool_input.get("bands"),
+                annotations=tool_input.get("annotations"),
                 output_format=tool_input.get("output_format", "png"),
                 output_path=tool_input.get("output_path")
             )
@@ -214,6 +232,8 @@ def execute(tool_input: dict, context):
                 series_names=tool_input.get("series_names"),
                 horizontal=tool_input.get("horizontal", False),
                 stacked=tool_input.get("stacked", False),
+                bands=tool_input.get("bands"),
+                annotations=tool_input.get("annotations"),
                 output_format=tool_input.get("output_format", "png"),
                 output_path=tool_input.get("output_path")
             )
@@ -250,6 +270,8 @@ def execute(tool_input: dict, context):
                 x_label=tool_input.get("x_label"),
                 y_label=tool_input.get("y_label"),
                 show_trendline=tool_input.get("show_trendline", False),
+                bands=tool_input.get("bands"),
+                annotations=tool_input.get("annotations"),
                 output_format=tool_input.get("output_format", "png"),
                 output_path=tool_input.get("output_path")
             )

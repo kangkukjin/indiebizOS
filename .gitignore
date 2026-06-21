@@ -122,7 +122,7 @@ Thumbs.db
 data/*.db*
 data/*.json
 !data/guide_db.json
-!data/world_pulse_config.json
+!data/world_pulse_config.example.json
 !data/ibl_nodes.yaml
 data/system_ai_state/
 data/world_pulse.db
@@ -134,7 +134,7 @@ data/**/*.db*
 data/**/*.json
 data/ibl_hippo_vecs.f32
 !data/guide_db.json
-!data/world_pulse_config.json
+!data/world_pulse_config.example.json
 !data/ibl_nodes.yaml
 !**/tool.json
 !**/ibl_actions.yaml

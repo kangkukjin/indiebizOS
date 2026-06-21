@@ -19,6 +19,12 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
+    <!-- 미디어 라이브 질의 ([self:photo] — MediaStore 색인 직접). Android 13+ 분리 권한. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- 사진 GPS(EXIF) 원본 접근 — 위치 질의(has_gps) 일 때만 사용. -->
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+
     <application
         android:name=".App"
         android:label="IndieBiz"

@@ -65,7 +65,7 @@
     },
     {
       "name": "grep_files",
-      "description": "파일 내용에서 텍스트/패턴을 검색합니다.\n\n사용법:\n- 매칭되는 라인과 라인 번호 반환\n- 정규표현식 지원 (regex=true)\n- 파일 패턴으로 검색 범위 제한 가능\n\n사용 예시:\n- 함수 정의 찾기: pattern='def my_function', file_pattern='*.py'\n- 클래스 찾기: pattern='class.*Manager', regex=true\n- 특정 문자열 검색: pattern='TODO', root_path='./src'\n\n주의사항:\n- run_command로 grep/rg 사용 대신 이 도구 사용\n- 결과가 많을 수 있으니 file_pattern으로 범위 제한 권장",
+      "description": "파일 내용에서 텍스트/패턴을 검색합니다.\n\n사용법:\n- 매칭되는 라인과 라인 번호 반환\n- 패턴은 기본적으로 정규표현식 (alternation 'a|b', 메타문자 동작). 리터럴 문자열로 검색하려면 regex=false\n- 파일 패턴으로 검색 범위 제한 가능\n\n사용 예시:\n- 함수 정의 찾기: pattern='def my_function', file_pattern='*.py'\n- 클래스 찾기: pattern='class.*Manager', regex=true\n- 특정 문자열 검색: pattern='TODO', root_path='./src'\n\n주의사항:\n- run_command로 grep/rg 사용 대신 이 도구 사용\n- 결과가 많을 수 있으니 file_pattern으로 범위 제한 권장",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -83,7 +83,7 @@
           },
           "regex": {
             "type": "boolean",
-            "description": "정규표현식 모드 (기본: false)"
+            "description": "정규표현식 모드 (기본: true). false로 두면 패턴을 리터럴 문자열로 검색. 잘못된 정규식은 리터럴로 자동 폴백."
           },
           "output_mode": {
             "type": "string",

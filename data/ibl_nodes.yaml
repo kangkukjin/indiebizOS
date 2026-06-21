@@ -1380,24 +1380,14 @@ nodes:
   self:
     actions:
       photo:
-        runs_on: mac_only
-        description: 사진·동영상 라이브러리 관리 (op 분기). 스캔(인덱싱)/조회/검색/통계/타임라인/중복/상세 통합. scan이 모든 조회의 전제.
-        target_description: 'scan/gallery/stats/timeline/duplicates는 path(폴더 경로) 필요(생략 시 가장 큰 스캔 자동). search는 query + 옵션(media_type, start_date, end_date, limit). detail은 media_id. list_scans는 파라미터 없음. timeline에 year 옵션.'
+        runs_on: anywhere
+        description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접. 날짜·위치·기종·키워드로 걸러 records 반환. 선스캔 불필요·항상 최신. 실행되는 몸의 미디어를 가리킨다(맥·폰 각자). 타임라인/통계/중복은 records→engines 변환자(groupby/filter) 조합으로.
+        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50). 결과 records에 lat/lng/taken_at/month/kind/camera/size 구조 필드 포함 → groupby·지도와 직결.'
         group: photo
-        target_key: op
+        target_key: q
         router: handler
         tool: photo_op
-        ops:
-          values:
-            scan: 폴더 인덱싱 (path 필수, 모든 조회의 전제)
-            list_scans: 인덱싱된 스캔 목록 조회
-            gallery: 갤러리 보기 (path)
-            search: 키워드/필터 검색 (query + media_type/날짜/limit)
-            detail: 단일 미디어 상세 (media_id)
-            stats: 통계 (path)
-            timeline: 시간순 보기 (path + year 옵션)
-            duplicates: 중복 미디어 검출 (path)
-        implementation: handler.py가 op로 분기 — scan/list_scans/gallery/stats/timeline/duplicates는 photo_db 함수, search/detail은 photo_db.search_media/get_media_detail.
+        implementation: handler.py _query_photos — mdfind(필터)로 경로, mdls(색인 메타)로 보강. 비색인 경로는 라이브 walk 폴백. photo_db 자체 인덱스 미사용(데스크탑 풍부창 REST만 사용).
         keywords:
         - 사진
         - 동영상
@@ -1418,16 +1408,8 @@ nodes:
           modes:
           - name: 갤러리
             auto_run: true
-            note: 스캔된 폴더를 골라 사진·동영상을 봅니다. 폴더 추가 스캔은 데스크탑 사진 창에서.
-            inputs:
-            - key: scan
-              type: select
-              placeholder: 스캔 폴더 선택
-              options_action: '[self:photo]{op: "list_scans"}'
-              options_from: scans
-              option_value: 경로
-              option_label: 이름
-            action: '[self:photo]{op: "gallery", path: "$scan", limit: 30}'
+            note: 최근 사진·동영상 (OS 색인 직접, 스캔 불필요).
+            action: '[self:photo]{kind: "all", limit: 40}'
             view:
             - type: image_grid
               from: records
@@ -1440,8 +1422,8 @@ nodes:
             inputs:
             - key: q
               type: text
-              placeholder: 파일명·카메라 검색
-            action: '[self:photo]{op: "search", query: "$q", limit: 30}'
+              placeholder: 파일명·기종 검색
+            action: '[self:photo]{q: "$q", limit: 40}'
             view:
             - type: image_grid
               from: records
@@ -1449,17 +1431,17 @@ nodes:
               title: title
               lines:
               - '{meta}'
-          - name: 통계
+          - name: 위치
             auto_run: true
-            action: '[self:photo]{op: "stats"}'
+            note: 위치(GPS) 정보가 있는 사진.
+            action: '[self:photo]{has_gps: true, limit: 40}'
             view:
-            - type: kv
-              title: 라이브러리 요약
-              rows:
-              - {k: 사진, v: '{summary.사진}'}
-              - {k: 동영상, v: '{summary.동영상}'}
-              - {k: 총 용량, v: '{summary.총 용량}'}
-              - {k: 마지막 스캔, v: '{summary.마지막 스캔}'}
+            - type: image_grid
+              from: records
+              image: image
+              title: title
+              lines:
+              - '{meta}'
       blog:
         runs_on: mac_only
         description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스.
@@ -1894,9 +1876,9 @@ nodes:
           결과 상한 (기본 200). 매칭 없으면 path 옵션 안내
         target_key: pattern
       grep:
-        description: 파일 내용에서 패턴 검색 (grep/ripgrep). 정규식 지원. 파일명 검색은 find.
+        description: 파일 내용에서 패턴 검색 (grep/ripgrep). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
         group: file
-        target_description: 검색 패턴 (정규식). path 옵션으로 검색 루트, include로 확장자 필터.
+        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터.
         keywords:
         - 검색
         - 내용검색
@@ -1939,28 +1921,27 @@ nodes:
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
       storage:
-        description: 저장소 인덱스 조작 (op 분기). scan(디스크 스캔→SQLite 인덱스)/summary(사용량 요약)/volumes(스캔된
-          볼륨 목록). 파일 검색은 fs_query.
+        description: 저장소 사용량 요약 도구 (op 분기). summary(사용량 요약)/volumes(스캔된 볼륨 목록)/scan(선택적
+          디스크 스캔 — 비색인 볼륨 대비). 파일 검색은 fs_query(선스캔 불필요).
         group: file
-        target_description: 'scan — path 필수(+volume_name 옵션). summary — volume_name/root_path
-          생략 시 전체 볼륨 통합 요약. volumes — 파라미터 없음.'
+        target_description: 'summary — volume_name/root_path 생략 시 전체 볼륨 통합 요약. volumes — 파라미터 없음. scan — path 필수(비색인 볼륨 대비 선택적 인덱스).'
         target_key: op
         router: handler
         tool: storage_op
         ops:
           default: volumes
           values:
-            scan: 디스크·볼륨 스캔 후 SQLite 인덱스 구축 (path 필수, fs_query 전제)
+            scan: 디스크·볼륨 스캔 후 SQLite 인덱스 구축 (선택적 — 비색인 볼륨 대비. fs_query 는 OS 색인 직접이라 불요)
             summary: 저장소 사용량 요약 (볼륨 생략 시 전체 통합)
             volumes: 스캔된 볼륨 목록 (이름·경로·용량, 파라미터 없음, 기본)
         implementation: scan_storage/get_storage_summary/list_volumes op 분기 (pc-manager)
       fs_query:
-        description: 파일 메타 검색 (이름·확장자·크기, SQLite 인덱스). 내용 검색은 grep, 패턴은 find.
+        description: 파일 메타 검색 (이름·확장자·크기·종류) — OS 색인(맥 Spotlight) 직접. 선스캔 불필요·항상 최신. 내용 검색은 grep, 패턴은 find. self:photo 와 같은 file_index 보편 질의 위의 종류-무관 preset.
         group: file
-        target_description: 검색 조건 (name/ext/size). path로 검색 루트 지정, 생략 시 전체 볼륨 검색.
+        target_description: 'search_term(이름 부분일치) · extension(확장자) · kind(image/video/audio/pdf/any) · min_size_mb · path(검색 루트, 생략 시 홈) · limit(기본 100). 결과 records(보편 파일 필드) + table 통화.'
         router: handler
         tool: query_storage
-        implementation: SQLite DB에서 파일명/확장자/크기 기반 검색
+        implementation: pc-manager _query_storage — backend/file_index.query 위임(mdfind 무상태). 비색인 경로는 라이브 walk 폴백.
         target_key: search_term
       cctv:
         description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신.'
@@ -1994,6 +1975,49 @@ nodes:
             set: 폴더에 메모·주석 추가 (root_path + folder_path + note)
             get: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
+      forage:
+        description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기.
+        group: file
+        target_description: 'recall(기본) — query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상.
+          note — layer(map|owner) + map은 locus/kind(identity|convention|dead_branch|substrate)/claim, owner는 facet/value.
+          confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id + table(forage_map|owner_model).'
+        target_key: op
+        router: handler
+        tool: forage_op
+        scope: workspace
+        ops:
+          default: recall
+          values:
+            recall: 누적된 냄새지도 회상 (query·body 필터, 기본)
+            note: 지도/주인모델에 단언 누적 (layer=map/owner)
+            forget: 잘못된·낡은 항목 폐기 (id + table)
+        keywords:
+        - 포식기억
+        - 냄새지도
+        - 주인모델
+        implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
+      residual:
+        description: 탐색 잔여 측정 — "거기 없음 vs 덜 봤음"을 표본조사로 가른다(음성-단언). op 분기.
+        group: file
+        target_description: 'sample(기본) — 질의 모집단에서 이미 본 것(seen 경로 배열) 제외한 미관측 더미의 균일 무작위 표본 n개.
+          디스크 공간=kind/q/path/extension 으로 모집단, 코드 공간=space:"code:<repo>"+repo(레포 루트)+exts 로 소스파일 모집단.
+          그 표본을 열어 관련성 판단 후 → estimate(relevant=관련 수, sampled=표본 n, unseen=미관측 M)로 누락 추정+Wilson 신뢰구간.
+          "전부 찾았나"·"정말 없나" 단언의 측정 근거. ★열거 가능 공간(디스크·코드) 전용 — 웹은 모집단 무한·비열거라 미지원(웹 "충분함"은 AI의 berrypicking 포화 판단).'
+        target_key: op
+        router: handler
+        tool: residual_op
+        scope: workspace
+        ops:
+          default: sample
+          values:
+            sample: 미관측 더미의 균일 무작위 표본 (모집단−seen, n개)
+            estimate: 표본 결과로 누락 추정 (relevant/sampled/unseen → Wilson CI)
+        keywords:
+        - 잔여
+        - 누락
+        - 전부 찾았나
+        - 정말 없나
+        implementation: file_index.candidate_paths(디스크)·code_candidate_paths(코드) + 균일표본 / Wilson 이항추정 (pc-manager _residual_op)
       lecture:
         runs_on: mac_only
         description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
@@ -3217,14 +3241,16 @@ nodes:
         description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
         target_description: |
           title (필수). chart_type으로 종류 분기 (기본 line).
-          표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(engines:spreadsheet와 같은 통화).
+          표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(engines:spreadsheet와 같은 통화). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
           - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
+          - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
           - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
           - pie: labels·values 리스트. hole 옵션으로 도넛.
           - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
           - heatmap: z(매트릭스)·x_labels·y_labels.
           - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
           - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
+          - spec: 위 chart_type으로 부족한 풍부한 표현(이중축·로그축·복합 음영 등)은 Plotly figure JSON을 spec으로 그대로 넘긴다 — matplotlib 코드 작성(self:write+run) 대신. spec={data:[트레이스...], layout:{...}}. 이중축=트레이스에 yaxis:"y2" + layout.yaxis2={overlaying:"y",side:"right"}. 구간음영=layout.shapes(type:rect, yref:"paper"). 주석=layout.annotations. *코드가 아니라 데이터*라 포터블·캐시·검증가능. 예: 한국 GDP(좌축)와 KOSPI(우축) 이중축 + 정권별 shapes 음영.
         group: chart
         router: handler
         tool: chart
@@ -3412,6 +3438,7 @@ nodes:
         - 렌더링
       structure:
         runs_on: anywhere
+        scope: workspace
         description: 원본 콘텐츠를 문서 IR(blocks)로 구조화하는 편집자 원자. A획득→B구조화→IR→emit 파이프라인의 B. document로 이어 렌더.
         target_description: 'content(필수, 구조화할 원본 텍스트 — >> 파이프 시 이전 결과를 content로 받아 생략 가능). instruction(선택, 정리 방향 예 "3섹션 요약 보고서로"·"비교는 표로"). 반환에 title·blocks(문서 IR) 포함 — 그대로 engines:document로 >> 파이프하면 렌더.'
         group: media_produce
@@ -3450,6 +3477,7 @@ nodes:
         - 페이지
       filter:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 목록/표에서 조건에 맞는 것만 남긴다(부분집합). >> 앞 액션의 records/table 통화를 받아 같은 통화로.'
         target_description: 'where(필터 조건): 문자열(전 필드 부분일치, 예 "전세") · {field, op, value}(op=eq/ne/lt/le/gt/ge/contains/in) · {열:값} 단축형 · 조건 배열(AND). >> 파이프로 앞 통화를 자동 수용. 도메인 무관 — 모든 검색·목록 생산자에 적용.'
         group: transform
@@ -3465,6 +3493,7 @@ nodes:
         - filter
       sort:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 목록/표를 기준 필드로 정렬(수치 인식). >> 앞 records/table 통화를 받아 같은 통화로.'
         target_description: 'by(정렬 기준 필드/열명, 필수) · desc(내림차순 bool, 기본 false). 숫자는 수치로, 아니면 문자열로 비교. 예: [...] >> [engines:sort]{by: price, desc: true}.'
         group: transform
@@ -3480,6 +3509,7 @@ nodes:
         - 순서
       take:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 목록/표에서 상위 n개만(음수면 뒤에서 n). >> 앞 records/table 통화를 받아 같은 통화로.'
         target_description: 'n(취할 개수, 기본 10; 음수=뒤에서 n개). 보통 sort 뒤에 써 상위 N 추출: [...] >> [engines:sort]{by:..} >> [engines:take]{n:5}.'
         group: transform
@@ -3495,6 +3525,7 @@ nodes:
         - top
       select:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 표에서 지정한 열만 남긴다(열 투영). records면 해당 필드만 추림. >> 앞 통화를 받아 같은 통화로.'
         target_description: 'columns(남길 열/필드 이름 배열, 필수). 예: [sense:...] >> [engines:select]{columns: ["연도","GDP"]}. 표가 넓을 때 차트/문서 전에 좁히기.'
         group: transform
@@ -3510,6 +3541,7 @@ nodes:
         - 골라
       dedup:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 목록/표에서 중복 제거(첫 항목 유지, 정규화 비교). >> 앞 records/table 통화를 받아 같은 통화로.'
         target_description: 'by(중복 판정 키 필드/열; 미지정 시 records=title, table=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)'
         group: transform
@@ -3525,6 +3557,7 @@ nodes:
         - 고유
       groupby:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자 — 표를 키 열로 그룹지어 집계(count/sum/avg/min/max). >> 앞 table 통화를 받아 집계 table로.'
         target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count). 반환 table=[by열, 집계열들]. 예: [...] >> [engines:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
         group: transform
@@ -3540,6 +3573,7 @@ nodes:
         - 통계
       join:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자(이항) — 두 입력을 공통 키로 inner join(table은 키 열, records는 키 필드). 서로 다른 소스를 한 키로 묶어 분석. & 병렬 두 입력을 받음.'
         target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). table=열 기준, records=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
         group: transform
@@ -3555,6 +3589,7 @@ nodes:
         - 연결
       union:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자(이항) — 두 표(또는 두 목록)를 행 결합. 같은 통화끼리. & 병렬 두 입력을 받음. 중복 제거는 뒤에 >> dedup.'
         target_description: '파라미터 없음. table은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), records는 단순 concat. 예: [A] & [B] >> [engines:union]. records 합치며 중복까지 지우려면 engines:merge.'
         group: transform
@@ -3570,6 +3605,7 @@ nodes:
         - 세로결합
       merge:
         runs_on: anywhere
+        scope: workspace
         description: '통화 변환자(이항) — 두 목록(records)을 합친다. by 지정 시 그 키로 중복 제거. & 병렬 두 입력을 받음.'
         target_description: 'by(선택, 중복 제거 키 필드; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 표형 결합은 engines:union. 예: [sense:search_news]{...} & [sense:search_ddg]{...} >> [engines:merge]{by: title}.'
         group: transform
@@ -3661,6 +3697,7 @@ nodes:
         - UI
       image_critic:
         runs_on: anywhere
+        scope: workspace
         description: 'Gemini Vision으로 산출물(일러스트/차트/이미지 등)이 의도와 정합하는지 평가. 반환: passed/score/issues/notes.'
         target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. preset 옵션 — slide_illustration(기본: 다이어그램형/한글 미포함/빈 공간/객체 명확성, 한글 검출 시 passed=false) | general(임의 산출물 범용: intent 충족·시각 결함 없음). style_preset/checks(추가 체크 배열) 옵션.'
         group: media_produce
@@ -3680,6 +3717,7 @@ nodes:
         - image evaluation
       image_read:
         runs_on: anywhere
+        scope: workspace
         description: 'Gemini Vision으로 이미지를 읽어 질문에 답한다(시각 QA·OCR·검증). 스크린샷 숫자/텍스트 읽기, 그림 내용 확인. 합격 채점 아님(그건 image_critic).'
         target_description: 'image_path(절대 경로 또는 data URI, path 로도 받음) 필수 + question(무엇을 읽거나 답할지, 생략 시 전체 묘사). query/intent/prompt 로도 받음.'
         group: media_produce

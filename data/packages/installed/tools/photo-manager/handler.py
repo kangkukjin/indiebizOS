@@ -6,6 +6,7 @@ AI 에이전트에서 호출되는 도구 실행 핸들러
 import os
 import sys
 import json
+from urllib.parse import quote
 import requests
 from typing import Dict, Any
 
@@ -14,8 +15,20 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
-import photo_db
-import scanner
+# backend 공용 어댑터(file_index) 경로 확보 — 보편 파일 질의의 단일 출처.
+_BACKEND_DIR = os.path.abspath(os.path.join(CURRENT_DIR, *([".."] * 5), "backend"))
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
+import file_index  # noqa: E402
+
+# photo_db/scanner = 맥 풍부창(REST)·폴백 스캔 전용. 폰 질의 경로는 file_index 만 쓰므로
+# import 실패해도 무상태 질의는 동작하도록 guard (폰 import 안전).
+try:
+    import photo_db
+    import scanner
+except Exception:  # pragma: no cover
+    photo_db = None
+    scanner = None
 
 
 # API 서버 URL
@@ -57,10 +70,10 @@ def execute(tool_input: Dict[str, Any], context) -> Dict[str, Any]:
     """도구 명령 실행 (ToolContext 기반 신규 시그니처)."""
     command = context.tool_name
     try:
-        # 통합 도구 (op 분기) — IBL 어휘에 노출
+        # [self:photo] — OS 색인 위 무상태 라이브 질의 (선스캔 불필요).
         if command == "photo_op":
-            return _dispatch_photo_op(tool_input)
-        # 옛 도구 이름 (직접 호출 호환)
+            return _query_photos(tool_input)
+        # 옛 도구 이름 (직접 호출 호환 — REST 풍부창은 photo_db를 직접 씀, 여기 미경유)
         elif command == "scan_photos":
             return scan_photos(tool_input)
         elif command == "list_scans":
@@ -81,41 +94,86 @@ def execute(tool_input: Dict[str, Any], context) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
-# 2026-05-28 dispatcher 표준화 — 단일 액션 op 키 메타데이터 (browser-action 패턴).
-# 값은 None — 분기 로직은 _dispatch_photo_op 안에 그대로 유지.
-# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
-_OP_DISPATCHERS = {
-    "photo_op": {
-        "scan": None, "list_scans": None, "gallery": None, "search": None,
-        "detail": None, "stats": None, "timeline": None, "duplicates": None,
-    },
-}
-# photo_op는 op 필수 — _OP_DEFAULTS 항목 없음.
+# ============================================================================
+# [self:photo] — 보편 파일 질의(file_index) 위의 얇은 '미디어 preset'.
+#   보편 질의(OS 색인·몸 분기·필터·정렬)는 backend/file_index 가 한 번만 한다.
+#   여기선 사진다운 것만 얹는다: kind=media 선택 + 썸네일 image + GPS·기종 meta.
+#   파생 조회(타임라인·통계·중복)는 records → engines 변환자(groupby/filter) 조합.
+# ============================================================================
+
+# 사진/영상에서 끌어올 facet (보편 질의에 추가로 요청).
+_PHOTO_FACETS = ("taken_at", "lat", "lng", "camera", "width", "height")
 
 
-def _dispatch_photo_op(params: Dict[str, Any]) -> Dict[str, Any]:
-    """[self:photo]{op} 통합 액션 디스패처."""
-    op = (params.get("op") or "").strip()
-    if not op:
-        return {"success": False, "error": "op는 필수입니다. (scan|list_scans|gallery|search|detail|stats|timeline|duplicates)"}
+def _photo_record(it: Dict[str, Any]) -> Dict[str, Any]:
+    """file_index 보편 item → records 통화 + 사진 특수(썸네일·지도) 포장."""
+    path = it.get("path") or ""
+    is_video = it.get("kind") == "video"
+    taken_at = it.get("taken_at") or ""
+    lat, lng = it.get("lat"), it.get("lng")
+    camera = it.get("camera") or ""
 
-    if op == "scan":
-        return scan_photos(params)
-    if op == "list_scans":
-        return list_scans(params)
-    if op == "gallery":
-        return get_gallery(params)
-    if op == "stats":
-        return get_stats(params)
-    if op == "timeline":
-        return get_timeline(params)
-    if op == "duplicates":
-        return find_duplicates(params)
-    if op == "search":
-        return _photo_search(params)
-    if op == "detail":
-        return _photo_detail(params)
-    return {"success": False, "error": f"알 수 없는 op '{op}'. (scan|list_scans|gallery|search|detail|stats|timeline|duplicates)"}
+    bits = []
+    if taken_at:
+        bits.append(str(taken_at)[:16].replace("T", " "))
+    if camera:
+        bits.append(str(camera))
+    bits.append("동영상" if is_video else "사진")
+    if lat is not None and lng is not None:
+        bits.append(f"📍{round(float(lat), 4)},{round(float(lng), 4)}")
+
+    ep = "video-thumbnail" if is_video else "thumbnail"
+    rec = {
+        "title": it.get("name") or os.path.basename(path),
+        "meta": " · ".join(b for b in bits if b),
+        "summary": "",
+        "url": path,
+        "image": f"/photo/{ep}?path={quote(path)}" if path else "",
+        # --- 변환자(filter/sort/groupby/map)용 구조 필드 ---
+        "path": path,
+        "taken_at": taken_at,
+        "month": it.get("month") or "",
+        "kind": it.get("kind"),
+        "size": it.get("size") or 0,
+        "camera": str(camera) if camera else "",
+    }
+    if lat is not None and lng is not None:
+        rec["lat"] = float(lat)
+        rec["lng"] = float(lng)
+    return rec
+
+
+def _query_photos(params: Dict[str, Any]) -> Dict[str, Any]:
+    """[self:photo] — 미디어 라이브 질의 (file_index 위임). 선스캔 불필요·항상 최신."""
+    # 단일 파일 상세 (옛 detail 대체 — id 대신 경로가 곧 신원).
+    one = params.get("file") or params.get("media_path")
+    if one:
+        one = os.path.abspath(os.path.expanduser(one))
+        if not os.path.isfile(one):
+            return {"success": False, "error": f"파일이 없습니다: {one}"}
+        item = file_index.describe(one, facets=_PHOTO_FACETS)
+        return {"success": True, "count": 1, "records": [_photo_record(item)]}
+
+    kind = (params.get("kind") or "media").strip().lower()
+    if kind in ("all", ""):
+        kind = "media"  # 사진+동영상
+
+    res = file_index.query(
+        kind=kind,
+        q=params.get("q") or params.get("query"),
+        start=params.get("start") or params.get("start_date"),
+        end=params.get("end") or params.get("end_date"),
+        has_gps=params.get("has_gps"),
+        path=params.get("path"),
+        limit=params.get("limit") or 50,
+        sort="date",  # 촬영일 내림차순
+        facets=_PHOTO_FACETS,
+    )
+    if not res.get("success"):
+        return res
+    res["records"] = [_photo_record(it) for it in res.get("items", [])]
+    res.pop("items", None)  # 보편 데이터는 records 로 포장해 노출
+    return res
 
 
 def _photos_to_records(items: list) -> list:

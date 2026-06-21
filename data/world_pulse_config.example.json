@@ -1,11 +1,11 @@
 {
   "enabled": true,
-  "location": "Cheongju",
+  "location": "YourCity",
   "profile": {
-    "name": "강국진",
-    "occupation": "물리학자, 작가",
-    "interests": "AI OS 개발, 정치, 물리학, 철학",
-    "memo": "시스템에는 사용자가 작성해온 블로그 데이터를 볼 수 있는 기능이 있다. \n사용자는 한국인 남성으로 1969년생이다. "
+    "name": "사용자 이름",
+    "occupation": "직업",
+    "interests": "관심사 (쉼표로 구분)",
+    "memo": "시스템 AI가 참조할 사용자 배경 메모. 실제 값은 앱에서 설정하세요."
   },
   "economy": {
     "enabled": true,

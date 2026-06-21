@@ -33,6 +33,18 @@ And one day, these individually raised systems will find each other — connecti
 - **Learns from you** — The hippocampus (fine-tuned embedding model) learns from every successful interaction, getting better at understanding *your* patterns
 - **No central authority** — No app store, no mandatory updates, no one-size-fits-all. Your AI agent is the blacksmith, the trainer, and the builder
 
+### Built for execution, not just generation
+
+Most AI harnesses are shaped in the developer's image: tasks that rarely repeat, a text/CLI face, and a dev machine. That's the wrong shape for everyone else — most people's work *repeats*, happens by *clicking in a 2D space*, and increasingly lives on a *phone*.
+
+A coding harness can generate and even run code, but the code and the harness live apart: the moment it runs is a transient step inside a loop, never a surface you *own* and return to. IndieBiz OS optimizes the part those harnesses treat as an afterthought — **execution itself** — and makes the surface first-class:
+
+- **A 2D desktop, not a chat log** — each concern gets its own place, instead of every context smeared into one scroll.
+- **Apps you keep** — a proven flow crystallizes into a one-tap icon (0 tokens), so the AI never re-derives it. This *survives cheaper models*: what you want from a task you do every day isn't a lower token bill — it's **determinism, instant response, and control**.
+- **A phone that runs the system itself** — not a remote control of your PC, but a second self that executes locally, with its own senses and hands. Turn the features you want into apps and the phone becomes a **personal superapp** whose mini-apps are *your* flows, not a store's.
+
+The throughline: other harnesses optimize *how to produce an action* — the part a better model keeps absorbing. IndieBiz OS optimizes *where the action lives, who owns it, how often it repeats, and whose body it runs on* — the part no model absorbs, because it's the life *around* the generation, not the generation itself. **IBL is the single vocabulary that binds these into one system.**
+
 ### How to Get Started (Recommended)
 
 The easiest way to install IndieBiz OS is through **Claude Desktop**.
@@ -162,7 +174,7 @@ User Message
 ```
 
 - **Unconscious Agent** — Lightweight gatekeeper that classifies request complexity
-- **Consciousness Agent** — Meta-judgment: problem framing, achievement criteria, self-awareness, guide selection
+- **Consciousness Agent** — Meta-judgment: it reframes the request into a well-defined problem — task framing, achievement criteria, self-awareness, guide selection — *before* the executor ever sees it. Because the two are **separate subjects**, the executor solves an already-framed problem rather than the raw request: the off-target or unsafe paths a single plan-then-act agent would have to *consider and reject* are largely kept out of its frame from the start — a property one subject can't have, since it can't un-ask its own question
 - **Evaluator Agent** — Post-execution evaluation against achievement criteria
 
 ### Three-Tier Model System

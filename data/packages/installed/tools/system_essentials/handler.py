@@ -207,13 +207,22 @@ def execute(tool_input: dict, context) -> str:
             pattern = tool_input["pattern"]
             file_pattern = tool_input.get("file_pattern", "**/*")
             root = os.path.join(project_path, os.path.expanduser(tool_input.get("root_path", ".")))
-            use_regex = tool_input.get("regex", False)
+            # 정규식이 기본이다(grep/ripgrep·Claude Grep 습관과 동일, src desc도 "정규식"으로 광고).
+            # 과거엔 기본이 fixed-string('a|b' 를 리터럴로 취급)이라 alternation·메타문자가
+            # 조용히 No matches 가 되는 silent-failure 함정이었다. regex=false 로 리터럴 강제 가능.
+            use_regex = tool_input.get("regex", True)
             # output_mode (Claude Grep 습관): content(매칭 라인, 기본) / files_with_matches(파일 목록) /
             # count(파일별 매칭 수). 알 수 없는 값은 content 로 폴백.
             output_mode = (tool_input.get("output_mode") or "content").lower()
             if output_mode not in ("content", "files_with_matches", "count"):
                 output_mode = "content"
             max_results = 100
+            # 줄 수만으로는 토큰 폭발을 못 막는다 — 미니파이드/JSON 한 줄이 수만 자면
+            # 100줄로도 수십만 자가 된다. 줄 길이·총량 상한을 함께 둔다.
+            MAX_LINE_CHARS = 500       # 한 줄 매칭 내용 상한 (초과 시 잘라 표시)
+            MAX_TOTAL_CHARS = 40_000   # content 누적 총량 상한 (초과 시 검색 중단 + 좁히기 안내)
+            total_chars = 0
+            hit_size_cap = False
 
             # 검색 제외 디렉토리/확장자 (바이너리, 캐시, VCS)
             SKIP_DIRS = {'.git', '.svn', '__pycache__', 'node_modules', '.venv', 'venv', '.tox', '.mypy_cache'}
@@ -245,7 +254,16 @@ def execute(tool_input: dict, context) -> str:
             match_rows = []  # 공유 통화 table용 [파일, 줄번호, 내용]
             file_counts = {}  # output_mode=files_with_matches/count용 {파일: 매칭 수}
             file_order = []   # 파일 첫 등장 순서 보존
-            regex_pattern = re.compile(pattern) if use_regex else None
+            # 잘못된 정규식(짝 안 맞는 괄호 등)은 크래시 대신 리터럴 검색으로 폴백한다 —
+            # 절대 크래시도 침묵 실패도 만들지 않는다. 폴백 시 결과에 안내를 덧붙인다.
+            regex_pattern = None
+            regex_error = None
+            if use_regex:
+                try:
+                    regex_pattern = re.compile(pattern)
+                except re.error as e:
+                    regex_error = str(e)
+                    use_regex = False  # 리터럴로 폴백
             search_done = False
 
             for file_path in files:
@@ -261,21 +279,38 @@ def execute(tool_input: dict, context) -> str:
 
                             if matched:
                                 rel_path = os.path.relpath(file_path, project_path)
-                                results.append(f"{rel_path}:{line_num}: {line.rstrip()}")
-                                match_rows.append([rel_path, line_num, line.rstrip()])
+                                snippet = line.rstrip()
+                                if len(snippet) > MAX_LINE_CHARS:
+                                    snippet = snippet[:MAX_LINE_CHARS] + " …(줄 잘림)"
+                                results.append(f"{rel_path}:{line_num}: {snippet}")
+                                match_rows.append([rel_path, line_num, snippet])
                                 if rel_path not in file_counts:
                                     file_order.append(rel_path)
                                 file_counts[rel_path] = file_counts.get(rel_path, 0) + 1
-                                if len(results) >= max_results:
+                                total_chars += len(snippet)
+                                if len(results) >= max_results or total_chars >= MAX_TOTAL_CHARS:
                                     search_done = True
+                                    hit_size_cap = total_chars >= MAX_TOTAL_CHARS
                                     break
                 except (UnicodeDecodeError, PermissionError, OSError):
                     continue
 
-            if not results:
-                return f"No matches found for: {pattern}"
+            regex_note = ""
+            if regex_error:
+                regex_note = (f"\n(주의: 정규식 '{pattern}' 컴파일 실패 [{regex_error}] → "
+                              f"리터럴 문자열로 검색했습니다. 의도가 정규식이면 패턴을 고치세요.)")
 
-            truncated = "\n... (결과가 {0}개에 도달하여 검색 중단)".format(max_results) if search_done else ""
+            if not results:
+                return f"No matches found for: {pattern}{regex_note}"
+
+            if search_done and hit_size_cap:
+                truncated = ("\n... (결과가 너무 큽니다 — root_path/file_pattern 으로 범위를 좁히거나, "
+                             "output_mode='files_with_matches'/'count' 로 먼저 분포를 보세요.)")
+            elif search_done:
+                truncated = "\n... (결과가 {0}개에 도달하여 검색 중단)".format(max_results)
+            else:
+                truncated = ""
+            truncated += regex_note
 
             if output_mode == "files_with_matches":
                 # 매칭된 파일 목록만 (라인 무관). 공유 통화 table {파일}.

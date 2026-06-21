@@ -1,5 +1,5 @@
 # World Pulse — 오늘의 세계와 나 (자동 주입)
-수집 시각: 2026-06-17T06:28
+수집 시각: 2026-06-21T17:35
 
 > 이 정보는 대화 시작 시 시스템 프롬프트에 자동 포함됩니다.
 > 사용자가 '요즘 세상은 어때', '오늘 경제 상황' 등을 물으면
@@ -16,26 +16,31 @@
 
 ## 시스템 상태
 - 프로젝트 24개, 에이전트 33개 활성
-- 최근 대화: 77701779-9b06-4d82-a81f-218270 (시스템 AI) / 지금 가디언 뉴스가 검색가능해? 액션중의 하나를 사용해 (시스템 AI)
+- 최근 대화: 지금 안드로이드 폰에서 파이선을 실행하고 있지 그걸 어 (시스템 AI)
 - 오늘 예정: 없음
-- 저장소 여유: 299.6GB
+- 저장소 여유: 284.1GB
 
 ## 시스템 건강
 - scheduler: 정상
 - channel_poller: 정상
 - system_ai_runner: 정상
-- ⚠ 비정상 액션 (2개): limbs:phone, sense:company
+- ⚠ 비정상 액션 (1개): limbs:android
 
 ## 자가점검 패턴 분석
-- 성공률 하락: self:recent_chats (100% → 50%)
-- 성공률 하락: sense:company (100% → 50%)
-- 성공률 하락: sense:navigate_route (100% → 50%)
-- 성공률 하락: sense:search_books (100% → 50%)
-- 응답 느려짐: engines:newspaper (653ms → 3003ms)
-- 응답 느려짐: limbs:music (1058ms → 2440ms)
+- 성공률 하락: self:recent_chats (100% → 33%)
+- 응답 느려짐: engines:groupby (0ms → 1ms)
+- 응답 느려짐: engines:image_critic (6178ms → 24677ms)
+- 응답 느려짐: engines:newspaper (666ms → 3967ms)
+- 응답 느려짐: engines:spreadsheet (40ms → 122ms)
+- 응답 느려짐: engines:web (2966ms → 6654ms)
+- 응답 느려짐: self:file_find (1ms → 25ms)
+- 응답 느려짐: self:fs_query (234ms → 666ms)
+- 응답 느려짐: self:grep (70ms → 282ms)
+- 응답 느려짐: self:photo (10ms → 1125ms)
 - 응답 느려짐: self:run_pipeline (1ms → 4ms)
+- 응답 느려짐: self:write (1ms → 4ms)
 - 응답 느려짐: sense:host (89ms → 217ms)
-- 복구됨: engines:chart, engines:join, engines:merge, engines:sort, limbs:music, others:messages, others:neighbor, self:grep, self:health, self:list, self:photo, self:report, self:run_pipeline, self:time, sense:crypto, sense:host, sense:search_ddg, sense:stock, sense:weather, sense:world_bank
+- 복구됨: engines:chart, engines:groupby, engines:join, engines:merge, engines:sort, self:grep, self:photo, self:run_pipeline, sense:host, sense:realty, sense:stock, sense:world_bank
 
 ## 나는 누구인가
 - 나는 지금 **맥 · Apple M4 Pro · macOS 26.5.1** 에서 돈다.
@@ -45,7 +50,7 @@
 - 안드로이드 폰의 액션을 빌릴 수 있다 (내 몸에서 못 하는 건 분산 IBL 이 자동 위임 — 닿지 않으면 실행 시 알림).
 
 ## Digital Proprioception
-- 메모리: 642.7MB
-- CPU: 2.0%
-- 스레드: 25개
+- 메모리: 495.3MB
+- CPU: 86.7%
+- 스레드: 30개
 - 태스크: 실행 0개 / 대기 0개

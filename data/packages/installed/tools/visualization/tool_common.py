@@ -248,3 +248,161 @@ PLOTLY_TEMPLATE = {
         'colorway': COLORS,
     }
 }
+
+
+# ───────── 구간 음영(band) · 이벤트 표시(annotation) 공통 (line/scatter/bar 공유) ─────────
+
+# 옅은 색 순환 (plotly rgba / matplotlib hex)
+BAND_COLORS = [
+    "rgba(31,119,180,0.10)", "rgba(255,127,14,0.10)", "rgba(44,160,44,0.10)",
+    "rgba(214,39,40,0.10)", "rgba(148,103,189,0.10)", "rgba(140,86,75,0.10)",
+    "rgba(227,119,194,0.10)", "rgba(127,127,127,0.10)",
+]
+BAND_COLORS_MPL = [
+    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f",
+]
+
+
+def num(v):
+    """숫자/숫자형 문자열이면 float, 아니면 None."""
+    try:
+        return float(str(v).replace(",", "").strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def coerce_x(x_values):
+    """x 값 전체가 숫자형이면 숫자 리스트로 변환(연도 등) → band/annotation이 선과 같은 좌표계.
+    하나라도 숫자가 아니면 원본 그대로(범주축). 반환 (values, is_numeric)."""
+    nums = [num(v) for v in x_values]
+    if x_values and all(n is not None for n in nums):
+        return [int(n) if n == int(n) else n for n in nums], True
+    return list(x_values), False
+
+
+def band_bounds(band):
+    """band dict → (from, to, label, color). from/to=start/end/x0/x1, label=name/text 별칭."""
+    x0 = band.get("from", band.get("start", band.get("x0")))
+    x1 = band.get("to", band.get("end", band.get("x1")))
+    label = band.get("label") or band.get("name") or band.get("text")
+    return x0, x1, label, band.get("color")
+
+
+def anno_point(anno):
+    """annotation dict → (x, text). text=label 별칭."""
+    return anno.get("x"), (anno.get("text") or anno.get("label") or "")
+
+
+def apply_bands_plotly(fig, bands, annotations, x_numeric):
+    """plotly figure에 구간 음영(add_vrect)·이벤트선(add_vline) 적용.
+    x_numeric면 좌표를 숫자로 변환, 아니면(범주축) 원 라벨 그대로. 개별 실패는 건너뜀."""
+    for i, band in enumerate(bands or []):
+        if not isinstance(band, dict):
+            continue
+        x0, x1, label, color = band_bounds(band)
+        if x0 is None or x1 is None:
+            continue
+        if x_numeric:
+            x0 = num(x0) if num(x0) is not None else x0
+            x1 = num(x1) if num(x1) is not None else x1
+        try:
+            fig.add_vrect(x0=x0, x1=x1, layer="below", line_width=0,
+                          fillcolor=color or BAND_COLORS[i % len(BAND_COLORS)],
+                          annotation_text=label or "", annotation_position="top left",
+                          annotation=dict(font_size=11))
+        except Exception:
+            continue
+    for anno in (annotations or []):
+        if not isinstance(anno, dict):
+            continue
+        x, text = anno_point(anno)
+        if x is None:
+            continue
+        if x_numeric and num(x) is not None:
+            x = num(x)
+        try:
+            fig.add_vline(x=x, line_width=1, line_dash="dot", line_color="gray",
+                          annotation_text=text, annotation_position="top",
+                          annotation=dict(font_size=10))
+        except Exception:
+            continue
+
+
+def apply_bands_mpl(ax, bands, annotations, x_values, x_numeric):
+    """matplotlib ax에 구간 음영(axvspan)·이벤트선(axvline) 적용.
+    x_numeric면 숫자 좌표, 아니면(범주/막대축) x_values 내 위치(index)로 매핑."""
+    def _xpos(v):
+        if x_numeric:
+            return num(v)
+        try:
+            return list(x_values).index(v)
+        except (ValueError, AttributeError):
+            try:
+                return [str(x) for x in x_values].index(str(v))
+            except ValueError:
+                return None
+
+    ymax = ax.get_ylim()[1]
+    for i, band in enumerate(bands or []):
+        if not isinstance(band, dict):
+            continue
+        x0, x1, label, color = band_bounds(band)
+        p0, p1 = _xpos(x0), _xpos(x1)
+        if p0 is None or p1 is None:
+            continue
+        ax.axvspan(p0, p1, alpha=0.12, color=color or BAND_COLORS_MPL[i % len(BAND_COLORS_MPL)])
+        if label:
+            ax.text((p0 + p1) / 2, ymax, str(label), ha='center', va='bottom',
+                    fontsize=9, clip_on=False)
+    for anno in (annotations or []):
+        if not isinstance(anno, dict):
+            continue
+        x, text = anno_point(anno)
+        p = _xpos(x)
+        if p is None:
+            continue
+        ax.axvline(p, ls=':', c='gray', lw=1)
+        if text:
+            ax.text(p, ymax, str(text), rotation=90, ha='right', va='top', fontsize=8, color='gray')
+
+
+def apply_bands_plotly_indexed(fig, bands, annotations, labels):
+    """범주축(막대) 전용 — 라벨→index 매핑 후 숫자 좌표로 shape를 그린다.
+    막대를 x=index(0..n-1)로 그린 경우에 호출(범주축에 문자열 좌표 shape가 불안정한 문제 회피)."""
+    idx = {str(l): i for i, l in enumerate(labels)}
+
+    def pos(v):
+        if v is None:
+            return None
+        if str(v) in idx:
+            return idx[str(v)]
+        n = num(v)
+        return n if (n is not None and 0 <= n < len(labels)) else None
+
+    for i, band in enumerate(bands or []):
+        if not isinstance(band, dict):
+            continue
+        x0, x1, label, color = band_bounds(band)
+        p0, p1 = pos(x0), pos(x1)
+        if p0 is None or p1 is None:
+            continue
+        try:
+            fig.add_vrect(x0=p0 - 0.5, x1=p1 + 0.5, layer="below", line_width=0,
+                          fillcolor=color or BAND_COLORS[i % len(BAND_COLORS)],
+                          annotation_text=label or "", annotation_position="top left",
+                          annotation=dict(font_size=11))
+        except Exception:
+            continue
+    for anno in (annotations or []):
+        if not isinstance(anno, dict):
+            continue
+        x, text = anno_point(anno)
+        p = pos(x)
+        if p is None:
+            continue
+        try:
+            fig.add_vline(x=p, line_width=1, line_dash="dot", line_color="gray",
+                          annotation_text=text, annotation_position="top",
+                          annotation=dict(font_size=10))
+        except Exception:
+            continue

@@ -81,6 +81,7 @@ PHONE_VERIFIED_PACKAGES = {
     # 폰서 graceful 실패(텍스트는 됨). explorer(GUI)·spreadsheet(openpyxl write)는 액션별 mac_only 유지.
     "system_essentials",  # self:time(자기 시계)·read/write/list/grep/copy/move/delete/file_find/edit(자기 fs)
     "pc-manager",         # self:storage/fs_query/folder_note(자기 fs 인덱스·주석). limbs:explorer(GUI)는 mac_only 유지.
+    "photo-manager",      # self:photo 라이브 질의 — backend/file_index 가 몸 분기(맥 Spotlight↔폰 MediaStore via PhoneActions.queryMedia). 핸들러 얇은 preset, photo_db/scanner 는 guard import(폰선 질의 경로 미사용). A36 종단 검증.
 
     "study",            # 연구 검색(HTTP + stdlib; study:paper 만 arxiv 3p — A36서 안 되면 그 액션 mac_only)
     "python-exec",  # 폰 네이티브 코드 실행 탈출구 — handler 가 capability-gate 로 폰서 Chaquopy 인-프로세스 exec(맥=subprocess). stdlib만 import(서드파티 0). execute_python 은 IBL 액션 아니라 직접 도구라 runnable_actions 엔 미포함(정상).
@@ -972,6 +973,39 @@ def validate_runs_on(data: dict) -> list[str]:
     return issues
 
 
+def validate_transform_contract(data: dict) -> list[str]:
+    """통화 변환자(group: transform) 계약 강제 — 닫힌-계급 문법/superstructure.
+
+    변환자(filter/sort/groupby/join…)는 통화→통화 순수 함수다 — 몸 무관, 외부 자원 없음.
+    *이름*(현재 engines:)이 아니라 **group 태그가 닫힌 계급의 단일 마커**다(설계 결정:
+    비싼 노드 이전 대신 태그를 load-bearing 으로 — docs/ibl_design_philosophy.md). 계약:
+      - scope: workspace  — 무프로젝트 파이프에서도 돌아야(project 기본이면 0ms 즉시 실패: 과거 버그)
+      - runs_on: anywhere — 통화는 몸 무관(폰-로컬 통화도 그 몸에서 거르고 정렬)
+    새 변환자가 이 계약을 빠뜨리면 침묵-실패가 재발 → 여기서 구조로 막는다.
+    """
+    issues: list[str] = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            if not isinstance(action, dict) or action.get("group") != "transform":
+                continue
+            q = f"{node_name}:{action_name}"
+            if action.get("scope") != "workspace":
+                issues.append(
+                    f"{q} — 변환자(group:transform)는 scope: workspace 필수 "
+                    f"(현재 '{action.get('scope') or '없음=project기본'}'). "
+                    f"무프로젝트 파이프서 즉시 실패 방지."
+                )
+            if action.get("runs_on") != "anywhere":
+                issues.append(
+                    f"{q} — 변환자는 runs_on: anywhere 필수 "
+                    f"(현재 '{action.get('runs_on') or '없음'}'). 통화는 몸 무관."
+                )
+    return issues
+
+
 def validate_phone_reachability(data: dict, root: Path) -> list[str]:
     """runs_on 정직성: anywhere(기본) 액션인데 handler/driver 패키지가 PHONE_VERIFIED 가 아니면
     적발. 그런 액션은 폰서 _phone_runnable=False → 조용히 _forward_to_mac 된다(ibl_engine.py).
@@ -1063,6 +1097,7 @@ def validate(data: dict, root: Path) -> list[str]:
             issues.extend(_check_action(qualified, action, tool_index))
     issues.extend(validate_app_blocks(data))
     issues.extend(validate_runs_on(data))
+    issues.extend(validate_transform_contract(data))
     issues.extend(validate_phone_reachability(data, root))
     return issues
 

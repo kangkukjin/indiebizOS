@@ -19,6 +19,7 @@ def _load_common():
 def create_bar_chart(data: list = None, data_file: str = None, title: str = None,
                      x_label: str = None, y_label: str = None, series_names: list = None,
                      horizontal: bool = False, stacked: bool = False,
+                     bands: list = None, annotations: list = None,
                      output_format: str = "png", output_path: str = None):
     """
     막대 차트 생성
@@ -52,14 +53,17 @@ def create_bar_chart(data: list = None, data_file: str = None, title: str = None
 
     try:
         return _create_with_plotly(data, title, x_label, y_label, series_names,
-                                   horizontal, stacked, output_format, output_path, common)
+                                   horizontal, stacked, output_format, output_path, common,
+                                   bands, annotations)
     except ImportError:
         return _create_with_matplotlib(data, title, x_label, y_label, series_names,
-                                       horizontal, stacked, output_format, output_path, common)
+                                       horizontal, stacked, output_format, output_path, common,
+                                       bands, annotations)
 
 
 def _create_with_plotly(data, title, x_label, y_label, series_names,
-                        horizontal, stacked, output_format, output_path, common):
+                        horizontal, stacked, output_format, output_path, common,
+                        bands=None, annotations=None):
     """Plotly로 막대 차트 생성"""
     import plotly.graph_objects as go
 
@@ -73,6 +77,10 @@ def _create_with_plotly(data, title, x_label, y_label, series_names,
         value_keys = ['value']
 
     labels = [item.get(label_key) for item in data]
+    # band/annotation 오버레이가 있으면 세로 막대를 index 축(0..n-1)으로 그려 숫자 좌표 shape를
+    # 안정적으로 얹는다(범주축 문자열 좌표 shape 불안정 + 숫자형 라벨 선형축 오해 회피).
+    _overlay = (not horizontal) and bool(bands or annotations)
+    _xcat = list(range(len(labels))) if _overlay else labels
 
     # 각 시리즈 추가
     for i, v_key in enumerate(value_keys):
@@ -95,7 +103,7 @@ def _create_with_plotly(data, title, x_label, y_label, series_names,
             ))
         else:
             fig.add_trace(go.Bar(
-                x=labels,
+                x=_xcat,
                 y=values,
                 name=name,
                 marker_color=common.COLORS[i % len(common.COLORS)]
@@ -120,6 +128,13 @@ def _create_with_plotly(data, title, x_label, y_label, series_names,
         ) if len(value_keys) > 1 else dict(visible=False)
     )
 
+    # 구간 음영(band)·이벤트 표시 — 세로 막대에만. index 축으로 그렸으면 눈금을 라벨로 되돌리고
+    # index 기반 shape를 얹는다.
+    if _overlay:
+        fig.update_xaxes(tickmode='array', tickvals=list(range(len(labels))),
+                         ticktext=[str(l) for l in labels])
+        common.apply_bands_plotly_indexed(fig, bands, annotations, labels)
+
     result = common.save_plotly_figure(fig, output_path, output_format)
 
     image_tag = result.get("image_tag", "")
@@ -135,7 +150,8 @@ def _create_with_plotly(data, title, x_label, y_label, series_names,
 
 
 def _create_with_matplotlib(data, title, x_label, y_label, series_names,
-                            horizontal, stacked, output_format, output_path, common):
+                            horizontal, stacked, output_format, output_path, common,
+                            bands=None, annotations=None):
     """matplotlib로 막대 차트 생성"""
     import matplotlib.pyplot as plt
     import numpy as np
@@ -212,6 +228,11 @@ def _create_with_matplotlib(data, title, x_label, y_label, series_names,
         ax.legend()
 
     ax.grid(True, alpha=0.3, axis='y' if not horizontal else 'x')
+
+    # 구간 음영(band)·이벤트 표시 — 세로 막대에만(라벨→막대 위치 index 매핑)
+    if not horizontal:
+        common.apply_bands_mpl(ax, bands, annotations, labels, False)
+
     plt.tight_layout()
 
     result = common.save_figure(fig, output_path, output_format)

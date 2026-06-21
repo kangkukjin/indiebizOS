@@ -12,7 +12,7 @@ see_also: [architecture.md, execution_memory.md]
 
 ## 개요
 - **경로**: `/Users/kangkukjin/Desktop/AI/indiebizOS`
-- **설명**: 개인과 소규모 비즈니스를 위한 AI 기반 통합 관리 시스템
+- **설명**: AI 기반 통합 관리 시스템 (IBL 추상화 위에서 개인·조직 규모 무관하게 동작)
 - **핵심 가치**: 개인화, 자동화, 연결성
 
 ### 주요 기능

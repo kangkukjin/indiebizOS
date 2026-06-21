@@ -36,6 +36,7 @@ see_also: [execution_memory.md, architecture.md, ibl.md]
 | 4 | **절차 기억** (방법) | IBL 액션 + 워크플로우 + **해마** | `ibl_nodes.yaml`, `data/workflows/*.yaml`, `ibl_usage.db` | "어떻게 하는가" — 자연어→IBL 코드 |
 | 5 | **관계 기억** (사용자 사실) | **심층메모리** | 에이전트별 `memory.db` (memory 패키지) | 사용자 선호·결정·중요날짜·작업기록 |
 | 6 | **자기 상태** (항상성) | World Pulse + Self-Check | `world_pulse.db:pulse_log / self_checks / action_health` | 세계·사용자·자신의 실시간 상태와 건강 |
+| 7 | **공간 기억** (포식) | **포식 기억(냄새지도)** | `forage_memory.db:forage_map / owner_model` | "어디에 무엇이 사는가" — 디스크·웹 포식 경험 누적 |
 
 > **핵심 연결**: 매 요청마다 단계 0에서 생성되는 **연상기억(associative memory)** 은
 > #4 해마(`<execution_memory>`)와 #5 심층메모리(`<related_memory>`)를 **하나로 합성**한다.
@@ -107,6 +108,23 @@ see_also: [execution_memory.md, architecture.md, ibl.md]
   - `self_checks` (매 6~12시간, 30일): 부작용 없는 액션 전수 점검 + 정적 정합성 검증(`run_static_ibl_check`)
   - `action_health` (실행마다): 실사용 기반 액션 건강
 - **사용**: 프롬프트에 압축 주입 + 면역 순찰(만성 실패 감지) + `diagnostic_report.md`.
+
+---
+
+## 7. 공간 기억 — 포식 기억 / 냄새지도 (디스크·웹 탐색 경험)
+
+> **"쓰면서 *공간*에 대한 지식을 흡수"의 실현체.** 해마(#4)가 "어떻게 하는가"를 증류한다면, 포식 기억은 "어디에 무엇이 사는가"를 증류한다.
+
+- **문제**: AI는 stateless라 디스크를 한 시간 뒤져 알아낸 것(폴더 정체·죽은 가지·주인 관습)을 세션이 끝나면 잊고 매번 콜드 스타트한다. 그 "어떻게 뒤지나"는 *나만의 것*이라 가중치에도 없다.
+- **저장소** (`backend/forage_memory.py`, `data/forage_memory.db`): **2층** — `forage_map`(이 디스크 전속: 폴더 정체·관습·죽은가지·기질) + `owner_model`(몸독립 주인모델: 정체·분야·신호·습관 — 디스크·웹·코드 공유).
+- **닫힌 루프**: ③ 포식 의도 시 `<forage_memory>` 주입(`_search_forage_memory`, 해마 `<execution_memory>` 옆) → ② AI가 포식(`fs_query`/`grep`/`read`) → ④ 종료 훅에서 *일반화 가능한 지도 델타만* 증류(`_distill_forage_memory`, 날 내용·특정 파일 제외) → ⑤ 기존 라벨 위반 이질 내용은 surface 표식(필터버블 반대힘).
+- **안전판 4**(누적의 그림자 방지): 폐기가능(prune_reason)·prior_class 게이팅(구조적만 committal prune)·surface 카운터패스·provenance+confidence.
+- **부패 무효화**: lazy — 회상 시 폴더 mtime 비교해 `stale`/`missing` 노출(삭제 안 함, 판단은 AI. 손튜닝 감쇠 곡선 안 씀).
+- **수동 액세서**(augmentation): `[self:forage]{op:recall|note|forget}` — 사람이 직접 조회·정정·재오픈.
+- **맥 자아 전용**(주관적 기억은 자아별 사적). **#4 해마와의 차이**: 해마=절차(NL→IBL 코드), 포식=공간(공간→지도 지식). 둘 다 증류+정리 대칭.
+- **상세**: `docs/FORAGER_MEMORY_GUIDE.md`(설명서), `docs/FORAGER_MEMORY_SCHEMA.md`(스키마), `docs/FILE_FORAGING_RESEARCH.md`(연구).
+- **정리 패스**(`forage_consolidation.py`): 의미적 근접중복을 경량 AI로 병합(같은 공간지식만, surface 보호) + LRU 가지치기. `run_maintenance_bundle` item 4로 합류(24h 카덴스). 증류+정리 대칭 = 심층메모리·해마와 동일.
+- **진행**: 증류+주입+surface+정리 패스 완료(2026-06-20). 루프 닫힘. 남은=surface 매칭 정교화·해마 용례 시드.
 
 ---
 

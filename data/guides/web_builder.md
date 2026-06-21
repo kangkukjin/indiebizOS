@@ -7,6 +7,25 @@
 - **강점**: 완전한 코드 제어, 컴포넌트 단위 설계, React 생태계 활용
 - **적합**: 홈페이지, 블로그, 포트폴리오, 랜딩 페이지, 웹앱 등 모든 웹사이트
 
+## 먼저 — 목적을 생각하고, 전문가처럼 짓는다
+
+손대기 전에 묻는다: **이 페이지는 무엇을 위해 있는가? 누가 보고, 무엇을 느끼고, 무엇을 하길 바라는가?** 요청을 글자 그대로 기계처럼 만족시키지 말고, *그 목적에 더 잘 복무하도록* 고친다. "이미지 넣어줘"는 표면이고, 진짜 일은 그 페이지가 *목적을 더 잘 달성하게* 만드는 것이다 — 좋은 디자이너·카피라이터라면 어떻게 할지를 기준 삼는다.
+
+- **목적에서 출발한다**: 이 페이지가 전해야 할 *한 가지*가 첫 화면에서 즉시 와닿는가.
+- **진실 소스와 *메시지*를 맞춘다**: 이 사이트가 설명하는 대상(제품·README·스펙)이 *지금* 무엇을 말하는지 읽고, 페이지의 메시지가 그것과 어긋나면 *페이지를 고친다.* 수치만 맞추는 게 아니라 — 강조점·포지셔닝이 바뀌었으면 그게 페이지에 올라와야 한다. (예: README의 핵심 메시지가 바뀌었는데 히어로 카피가 옛 메시지 그대로면, 그 카피를 바꾼다.)
+- **디폴트로 수렴하지 않는다**: 손대고 나면 아래 [디자인 품질 체크리스트]로 스스로 끌어올린다. 파란 버튼·가운데 히어로에서 멈추지 않는다.
+
+## 너에겐 web-builder보다 큰 몸이 있다
+
+이 작업은 web 액션만의 일이 아니다. **indiebizOS의 IBL 전체가 네 재료 창고다.** 텍스트만 채우거나, 누가 미리 넣어둔 파일만 쓰지 말고, 필요한 걸 *만들어서* 쓴다. 막히면 먼저 떠올린다 — *"이 일에 indiebizOS의 어떤 능력이 도움이 되나?"*
+
+- **이미지가 빈약하면 만든다**: `[engines:image_gemini]`(Nano Banana 2)로 히어로 배경·일러스트·아이콘을 생성하고 `[engines:image_critic]`로 채점해 통과분만 쓴다. (단, 추상 일러스트보다 *실제 제품·화면 스크린샷*이 신뢰를 준다 — 있으면 그쪽이 우선.)
+- **도식·목업이 필요하면**: `[engines:slide]` / `[engines:render_html]`로 다이어그램을 PNG로 렌더해 임베드.
+- **데이터를 보여줘야 하면**: `[engines:chart]`로 차트를. 그리고 *진짜 수치*는 추측하지 말고 소스(README·레지스트리·실제 데이터)에서 길어온다.
+- **결과를 눈으로 본다**: `[engines:image_read]`로 스크린샷을 실제로 읽어 확인한다(아래 [배포 후 시각 검증]).
+
+web 액션은 *출발점*이지 울타리가 아니다.
+
 ## 운영 모드 매트릭스 (2026-05-27 IBL 4기준 재분류)
 
 | 영역 | 모드 | 처리 방식 |
@@ -51,25 +70,21 @@ web_create(site) → web_component(add) → web_create(page) → web(styles) →
 
 ### B. 기존 홈페이지 수정
 
-⚠️ **중요: 홈페이지 수정 요청을 받으면 반드시 첫 번째로 `[engines:web_site]{op: "list"}`를 호출하세요.**
-파일 시스템을 탐색하거나 ls/cat 명령으로 파일을 찾지 마세요. registry에 모든 사이트 정보(경로, 배포 URL, 기술 스택)가 있습니다.
+기존 사이트는 처음부터 만들지 않는다 — `web_create(target=site)`는 새 사이트 전용이다. 시작은 `[engines:web_site]{op: "list"}`: registry가 사이트의 *루트 경로·배포 URL·기술 스택*을 알려준다. 프로젝트 *위치*를 ls/find로 다시 찾을 필요는 없다(registry가 안다). 단, *무엇을 고칠지* 알려면 그 프로젝트 *안*(`src/app`, `src/components/sections` 등)은 `[self:list]`·`[self:read]`로 둘러봐 구조를 파악한다 — 위치 찾기와 구조 파악은 다른 일이다.
 
+권장 흐름(상황에 맞게 조정):
 ```
-[반드시 이 순서]
-web_site(list) → 현재 페이지 확인 → web_snapshot → 파일 직접 읽기/수정 → git push → web_live_check
+web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞게 수정 → 빌드 → 배포 → 시각 검증
 ```
 
-1. **web_site(op=list)**: 등록된 사이트 목록 확인 — ⚠️ 반드시 첫 번째!
-2. **현재 배포된 페이지 내용 확인**: `[sense:crawl]{url: "배포URL"}`로 현재 페이지 내용 크롤링. ⚠️ 브라우저 자동화(`[limbs:browser]{op: "navigate"}`, `[limbs:browser]{op: "content"}`)를 사용하지 마세요 — 크롤링이 훨씬 빠르고 가볍습니다.
-3. **web_snapshot**: 현재 구조 파악 (스크린샷)
-4. **파일 직접 읽기/수정**: `[self:read]` → `[self:edit]`로 기존 코드 수정
-5. **git push**: 변경사항 푸시 (자동 배포 설정 시 자동 반영)
-6. **web_live_check**: 배포된 사이트 상태 점검
+1. **web_site(op=list)**: 사이트의 루트 경로·배포 URL 확보.
+2. **현재 페이지 파악**: `[sense:crawl]{url: "배포URL"}`로 라이브 텍스트를 빠르게 읽고, `[self:read]`로 관련 컴포넌트(page.tsx·해당 섹션들)를 읽어 *지금 페이지가 무엇을·어떻게 말하는지* 본다. (전체 화면을 픽셀로 봐야 하면 `[engines:web]{op:snapshot}` 또는 `[limbs:browser]{op:screenshot}`.)
+3. **목적에 맞게 수정**: `[self:edit]`로 코드를 고친다 — 단순 문자열 교체가 아니라, 위 [목적] 절 기준으로 페이지가 그 목적에 더 잘 복무하도록.
+4. **빌드**: `[engines:web]{op:build}` — 빌드 성공 전엔 배포하지 않는다.
+5. **배포**: 이 사이트가 *어떻게* 배포되는지부터 확인한다(아래 [빌드 및 배포]). git 연동 자동배포일 수도, vercel CLI 토큰 방식일 수도 있다.
+6. **시각 검증**: 아래 [배포 후 시각 검증]을 거쳐야 "완료".
 
-### 핵심 주의사항
-- **기존 사이트 수정 시 절대 `web_create(target=site)`를 호출하지 마세요.**
-- **절대 run_command로 ls, cat, find 등을 사용해 사이트 파일을 찾지 마세요.** registry에 경로가 있습니다.
-- 기존 사이트 개선은 반드시: `web_site(list)` → `web_snapshot` → 파일 읽기 → 직접 수정 → git push
+`web_create(target=site)`는 기존 사이트엔 쓰지 않는다(새 사이트를 또 만들어버린다). 그 외엔 위 흐름을 상황에 맞게 줄이거나 늘린다.
 
 ## web_site 상세
 
@@ -316,11 +331,13 @@ IBL 액션 없음. `globals.css` / `tailwind.config.*` / `theme.json`을 `[self:
 [engines:web]{op: "deploy", project_path: "/path/to/project", production: true, project_name: "my-site"}
 ```
 
-**전제조건 (실패 시 확인):**
+**배포 방식부터 확인한다 (사이트마다 다름):**
+- git 연동 자동배포가 설정된 사이트면 `git push`만으로 반영된다.
+- 아니면 vercel CLI 토큰 배포: 이 환경은 `vercel whoami`가 자격증명 없음으로 실패할 수 있지만, `$VERCEL_TOKEN`이 있고 프로젝트 폴더에 `.vercel/project.json`이 연결돼 있으면 토큰으로 배포된다.
 ```
-run_command('vercel --version')   # 미설치면: npm install -g vercel
-run_command('vercel whoami')      # 미로그인이면: vercel login
+run_command('cd {project_path} && vercel deploy --prod --yes --token="$VERCEL_TOKEN"')
 ```
+`whoami` 실패만 보고 "배포 불가"로 판단하지 말 것 — 토큰 경로를 먼저 확인한다.
 
 ### 파이프라인
 ```
@@ -342,17 +359,17 @@ run_command('vercel whoami')      # 미로그인이면: vercel login
 ```
 
 ### 기존 사이트 수정하기
-⚠️ **절대 파일 시스템을 탐색하지 마세요. registry가 모든 정보를 알려줍니다.**
+registry로 *위치*를 잡고(파일을 ls로 다시 찾지 말 것), 프로젝트 *안*은 둘러봐 구조를 안다.
 ```
-1. [engines:web_site]{op: "list"}            # ⚠️ 반드시 첫 번째!
-2. [engines:web]{op: "snapshot", site_id: "my-site"}  # 현재 구조 파악
-3. [self:read]{path: "/path/to/page.tsx"}   # 경로는 1,2단계에서 알고 있음
-4. [self:edit]{path: "/path/to/page.tsx", ...}
-5. run_command('cd /path && git add -A && git commit -m "update" && git push')
-6. [engines:web]{op: "check", site_id: "my-site"}
+1. [engines:web_site]{op: "list"}                      # 루트 경로·배포 URL 확보
+2. [self:read]{path: ".../page.tsx"} + 관련 섹션 읽기    # 지금 페이지가 뭘 말하는지
+3. [self:edit]{...}                                    # 목적에 맞게 수정
+4. [engines:web]{op: "build", project_path: "..."}     # 빌드 성공 전 배포 금지
+5. 이 사이트의 배포 방식대로 (git push 자동배포 또는 vercel CLI 토큰)
+6. [engines:web]{op: "check", ...} + 배포 후 시각 검증(아래)
 ```
-- ❌ 나쁜 예: `run_command('ls ~/Desktop/AI/HomePages/')`
-- ✅ 좋은 예: `[engines:web_site]{op: "list"}` → registry가 local_path를 알려줌
+- *위치* 찾기는 registry로: ❌ `run_command('ls ~/Desktop/AI/HomePages/')` → ✅ `[engines:web_site]{op: "list"}`가 local_path를 알려줌.
+- *구조* 파악(`[self:list]`로 src/components 둘러보기)은 정상이고 필요하다 — 무엇을 고칠지 알아야 하니까.
 
 ## 마이그레이션 노트 (2026-05-27)
 
@@ -365,3 +382,55 @@ run_command('vercel whoami')      # 미로그인이면: vercel login
 | web_create_site / web_create_page | `web_create {target}` |
 | web_fetch_component / web_add_component | `web_component {op}` |
 | web_edit_styles | `[engines:web]{op: "styles"}` (shadcn 테마/색상/반경 편집) |
+
+---
+
+## 이미지가 필요할 때 (생성 → public/ 저장 → 참조)
+
+섹션 카탈로그에 `hero-image` · `image-text` · `hero-video`가 있지만, **그 이미지를 어디서 구하는지**는 위 매뉴얼이 말해주지 않습니다. 그래서 이미지 없이 텍스트만 채우거나, `public/`에 누가 미리 넣어둔 파일만 쓰게 되기 쉽습니다. indiebizOS에는 이미지 생성·검증 액션이 이미 있으니 연결해서 씁니다 (꼭 매번 생성하라는 뜻은 아님 — 적당한 실사진/소재가 있으면 그걸 우선).
+
+**원칙**: `public/`에 적당한 이미지가 없으면 → 생성 → `public/`에 저장 → 코드에서 참조.
+
+| 액션 | 용도 |
+|---|---|
+| `[engines:image_gemini]` | AI 이미지 생성 (Nano Banana 2). **`style_preset`을 사이트 톤과 통일**해 일관된 일러스트/배경/아이콘 생성 |
+| `[engines:slide]` / `[engines:render_html]` | 도식·목업·다이어그램을 이미지(PNG)로 렌더 (HTML→PNG) |
+| `[engines:image_critic]` | 생성된 이미지가 의도와 맞는지 1차 채점 (반환: passed / score / issues / notes) |
+
+### 절차
+```
+1. [engines:image_gemini]{prompt: "...히어로 배경, 미니멀, 사이트 톤과 일관", style_preset: "<사이트 톤과 동일하게 통일>", output_path: "{project_path}/public/hero.png"}
+2. [engines:image_critic]{path: "{project_path}/public/hero.png", intent: "히어로 배경으로 적합한가 / 톤 일관 / 텍스트 가독 방해 없음"}   # passed=false면 프롬프트 보정 후 재생성
+3. 코드에서 /hero.png 로 참조 (Next.js는 public/ 루트가 / 경로)
+```
+- **style_preset은 사이트 전체에서 하나로 통일**한다 — 히어로·아이콘·배경이 제각각 톤이면 아마추어처럼 보인다.
+- 생성물은 반드시 `image_critic`로 1차 채점하고 통과한 것만 임베드한다.
+
+## 디자인 품질 체크리스트
+
+`[engines:web]{op: "check"}`의 Lighthouse는 **성능·접근성·SEO 점수일 뿐 미적 품질을 측정하지 않는다.** 기준이 없으면 결과물이 shadcn 디폴트(파란 버튼·가운데 정렬 히어로)로 수렴한다. 페이지를 만들거나 고친 뒤 아래를 자가 점검한다.
+
+- [ ] **시각 위계**: 가장 중요한 메시지(주 헤드라인·핵심 CTA)가 한눈에 가장 먼저 들어오는가. 크기·굵기·색 대비로 우선순위가 드러나는가.
+- [ ] **여백(breathing room)**: 섹션 간 충분한 상하 패딩, 요소가 빽빽하지 않은가. 여백은 비용이 아니라 디자인이다.
+- [ ] **폰트 2종 이내**: 본문/제목 합쳐 글꼴 2종 이내. 무분별한 폰트 혼용 금지.
+- [ ] **primary 1색 절제**: 강조색(primary)은 1색으로, CTA·핵심 강조에만. 색을 남발하지 않는다 (globals.css `--primary`).
+- [ ] **모바일 우선**: 좁은 화면에서 레이아웃이 깨지지 않는가. 데스크톱 먼저 만들고 모바일을 방치하지 않는다.
+- [ ] **실제 제품/화면 임베드**: 가능하면 추상 일러스트보다 실제 제품·서비스 화면 스크린샷을 보여준다 (신뢰).
+- [ ] **3초 기준선**: 랜딩이라면 첫 화면(above the fold)에서 "무엇을 하는 제품/서비스인지" 3초 안에 전달되는가.
+
+## 배포 후 시각 검증 (필수)
+
+⚠️ **HTTP 200 ≠ 내용 정확.** `check`의 `screenshot`은 스크린샷을 **찍기만 하고 읽지 않는다.** 캡처 파일이 생겼다고 "통과"로 처리하면, 옛 수치·깨진 이미지·잘못된 카피가 그대로 게시된다 (실제로 stale 숫자가 그대로 배포된 사고의 직접 원인). 아래 단계 **없이 "완료" 선언 금지.**
+
+### 절차
+```
+1. (배포 전) [self:grep]{pattern: "<바뀌어야 할 옛 수치/카피>", path: "{project_path}/src"}
+   # 옛 숫자·문구가 코드 어딘가에 남아있지 않은지 전수 색출. 남아있으면 먼저 고친다.
+2. (배포 후) [engines:web]{op: "check", site_id: "my-site", checks: ["screenshot"]}
+   # 또는 [engines:web]{op: "snapshot", site_id: "my-site"} 로 실제 배포 화면 캡처
+3. [engines:image_read]{path: "<캡처된 스크린샷 경로>", question: "표시된 수치/핵심 카피/이미지/레이아웃이 의도대로인가? 옛 값이 남아있지 않은가?"}
+   # Gemini Vision으로 스크린샷을 실제로 '읽어' 눈으로 확인 (시각 QA·OCR)
+```
+- 스크린샷은 **반드시 `image_read`로 판독**한다. 캡처만 하고 넘어가지 않는다.
+- 수치·날짜·가격처럼 자주 바뀌는 값은 배포 전 `self:grep` 색출 + 배포 후 `image_read` 판독, 이중으로 확인한다.
+- 위 1~3을 통과해야 "개선 완료"라고 보고한다.

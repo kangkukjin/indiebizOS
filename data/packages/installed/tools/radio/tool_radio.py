@@ -23,6 +23,11 @@ from common.api_client import api_call_raw
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 FAVORITES_PATH = os.path.join(DATA_DIR, "favorites.json")
+# mpv 는 os.setsid 로 백엔드에서 분리 실행 → 백엔드(Electron 자식)가 죽어도 계속 재생된다.
+# 그래서 모듈 전역(_player_process)만으로는 새 백엔드가 옛 mpv 를 못 찾아 정지 불가·중복 재생.
+# 해법: 라디오 mpv 명령줄에 이 표식을 박아두고, 정지/재생 때 표식 단 mpv 를 모두 죽인다.
+# (어느 백엔드가 띄웠든 무관 — "정지=음악 프로세스 종료"의 단순·확실한 구현.)
+RADIO_MARKER = "indiebiz-radio-player"
 RADIO_BROWSER_API = "https://de1.api.radio-browser.info"
 USER_AGENT = "IndieBizOS/1.0"
 
@@ -146,6 +151,36 @@ _current_station = None
 _play_start_time = None
 
 
+def _kill_radio_mpv():
+    """표식 단 라디오 mpv 를 모두 종료. 어느 백엔드가 띄웠든(창 닫기·재시작 후 고아 포함)
+    상관없이 정지·중복재생을 한 방에 해결. 다른 용도 mpv 는 표식이 없어 영향 없음."""
+    found = False
+    try:
+        out = subprocess.run(["pgrep", "-f", RADIO_MARKER], capture_output=True, text=True, timeout=5)
+        for line in out.stdout.split():
+            try:
+                os.kill(int(line), signal.SIGTERM)
+                found = True
+            except Exception:
+                pass
+    except Exception:
+        # pgrep 없는 환경 폴백: pkill 시도
+        try:
+            subprocess.run(["pkill", "-f", RADIO_MARKER], timeout=5)
+        except Exception:
+            pass
+    return found
+
+
+def _radio_mpv_running():
+    """표식 단 라디오 mpv 가 살아있는지."""
+    try:
+        out = subprocess.run(["pgrep", "-f", RADIO_MARKER], capture_output=True, text=True, timeout=5)
+        return bool(out.stdout.strip())
+    except Exception:
+        return False
+
+
 # ─── HTTP 헬퍼 (common.api_client 사용) ───
 
 def _http_get(url, timeout=10):
@@ -237,7 +272,9 @@ def search_radio(name=None, tag=None, country=None, state=None, language=None, o
     return json.dumps({
         "success": True,
         "count": len(results),
-        "stations": results,
+        # 단일 통화 — native 방송국 dict(name/country/tags/bitrate/stream_url/favicon 등 풍부)를 items로.
+        # (옛 records 5칸 변환은 bitrate/stream_url 등을 버려 손실적이라 은퇴.)
+        "items": results,
     }, ensure_ascii=False)
 
 
@@ -308,7 +345,7 @@ def get_korean_radio(broadcaster=None):
     return json.dumps({
         "success": True,
         "count": len(stations),
-        "stations": stations,
+        "items": stations,  # 단일 통화 — native 방송국 dict 직접
         "tip": "play_radio의 station_id 파라미터에 station_id를 넣으면 바로 재생됩니다.",
     }, ensure_ascii=False)
 
@@ -375,23 +412,16 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None):
             "error": "mpv가 설치되어 있지 않습니다. 'brew install mpv'로 설치해주세요.",
         }, ensure_ascii=False)
 
-    # 기존 재생 중지
+    # 기존 라디오 mpv 전부 종료(이 백엔드 것·옛 백엔드 고아 모두) → 중복 재생 방지
     with _player_lock:
-        if _player_process and _player_process.poll() is None:
-            try:
-                _player_process.terminate()
-                _player_process.wait(timeout=3)
-            except Exception:
-                try:
-                    _player_process.kill()
-                except Exception:
-                    pass
+        _kill_radio_mpv()
 
-        # mpv 실행
+        # mpv 실행 — --force-media-title 에 표식을 박아 정지 때 명령줄로 찾는다(GUI 없어 부작용 없음)
         cmd = [
             mpv_path,
             "--no-video",
             "--really-quiet",
+            f"--force-media-title={RADIO_MARKER}",
             f"--volume={volume}",
             "--cache=yes",
             "--cache-secs=10",
@@ -450,33 +480,21 @@ def stop_radio():
         return json.dumps({"success": True, "stop_in_client": True, "message": "재생 중지"}, ensure_ascii=False)
 
     with _player_lock:
-        if not _player_process or _player_process.poll() is not None:
-            _player_process = None
-            _current_station = None
-            _play_start_time = None
-            return json.dumps({
-                "success": True,
-                "message": "재생 중인 라디오가 없습니다.",
-            }, ensure_ascii=False)
-
-        station_name = _current_station.get("name", "알 수 없음") if _current_station else "알 수 없음"
-
-        try:
-            os.killpg(os.getpgid(_player_process.pid), signal.SIGTERM)
-            _player_process.wait(timeout=3)
-        except Exception:
-            try:
-                _player_process.kill()
-            except Exception:
-                pass
-
+        station_name = _current_station.get("name") if _current_station else None
+        # 표식 단 라디오 mpv 를 모두 종료 — 이 백엔드 것이든, 창 닫기/재시작으로 생긴 고아든 무관
+        killed = _kill_radio_mpv()
         _player_process = None
         _current_station = None
         _play_start_time = None
 
+    if killed:
+        return json.dumps({
+            "success": True,
+            "message": f"{station_name or '라디오'} 재생을 중지했습니다.",
+        }, ensure_ascii=False)
     return json.dumps({
         "success": True,
-        "message": f"{station_name} 재생을 중지했습니다.",
+        "message": "재생 중인 라디오가 없습니다.",
     }, ensure_ascii=False)
 
 
@@ -491,6 +509,13 @@ def radio_status():
                 _player_process = None
                 _current_station = None
                 _play_start_time = None
+            # 모듈이 추적 못 하는 옛 mpv(이전 백엔드/창 닫기 고아)가 살아있으면 재생 중으로 보고
+            if _radio_mpv_running():
+                return json.dumps({
+                    "success": True,
+                    "playing": True,
+                    "message": "라디오가 재생 중입니다.",
+                }, ensure_ascii=False)
             return json.dumps({
                 "success": True,
                 "playing": False,
@@ -578,7 +603,7 @@ def get_radio_favorites():
     return json.dumps({
         "success": True,
         "count": len(favs),
-        "favorites": favs,
+        "items": favs,  # 단일 통화 — native 즐겨찾기 dict 직접
     }, ensure_ascii=False)
 
 

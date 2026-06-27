@@ -756,20 +756,35 @@ def _run_local_harness(message: str, images: list):
     맥 렌트)로 빌리며, IBL 실행은 폰 로컬(빌린 액션만 맥 위임), 해마는 렌트 인덱스. 실패 시 None."""
     from system_ai_core import process_system_ai_message
     from system_ai_memory import save_conversation, get_history_for_ai
-    images_data = None
-    if images:
-        images_data = [{"base64": i.get("base64"), "media_type": i.get("media_type", "image/png")}
-                       for i in images if i.get("base64")]
-    # 직전 대화 로드 → AI 가 turn 사이를 기억(맥 GUI 와 동형). 그리고 이번 사용자 메시지 저장.
-    history = get_history_for_ai(limit=7)
-    save_conversation("user", message, source="phone")
-    response_text, _tool_images = process_system_ai_message(
-        message=message, history=history, images=images_data
-    )
-    # AI 응답 저장 → 과거 대화 뷰 + 다음 turn 기억의 소스.
-    if response_text:
-        save_conversation("assistant", response_text, source="phone-self")
-    return {"response": response_text, "provider": "phone-self", "ts": "local"}
+    # 에피소드 기록 — 이 1턴(명령→응답)을 world_pulse.db 에 회고용으로 남긴다. 맥
+    # api_websocket 의 start/end_episode 와 동형(에이전트명 "system_ai"). finally 로 성공·
+    # 예외 모두에서 end → 실패/포기한 요청도 기록된다(누락이 바로 이 작업의 발단).
+    try:
+        from episode_logger import EpisodeLogger
+        EpisodeLogger.start_episode("system_ai", message)
+    except Exception:
+        pass
+    try:
+        images_data = None
+        if images:
+            images_data = [{"base64": i.get("base64"), "media_type": i.get("media_type", "image/png")}
+                           for i in images if i.get("base64")]
+        # 직전 대화 로드 → AI 가 turn 사이를 기억(맥 GUI 와 동형). 그리고 이번 사용자 메시지 저장.
+        history = get_history_for_ai(limit=7)
+        save_conversation("user", message, source="phone")
+        response_text, _tool_images = process_system_ai_message(
+            message=message, history=history, images=images_data
+        )
+        # AI 응답 저장 → 과거 대화 뷰 + 다음 turn 기억의 소스.
+        if response_text:
+            save_conversation("assistant", response_text, source="phone-self")
+        return {"response": response_text, "provider": "phone-self", "ts": "local"}
+    finally:
+        try:
+            from episode_logger import EpisodeLogger
+            EpisodeLogger.end_episode()
+        except Exception:
+            pass
 
 
 @app.post("/system-ai/chat")
@@ -825,39 +840,54 @@ def _run_phone_agent(project_id: str, agent_id: str, command: str) -> dict:
     에이전트는 폰의 몸에서 돌고, IBL 은 runs_on 대로 라우팅(anywhere 로컬·mac_only 포워드)."""
     import yaml
     from agent_runner import AgentRunner
-    pm = _phone_pm()
-    project_path = pm.get_project_path(project_id)
-    af = project_path / "agents.yaml"
-    if not af.exists():
-        return {"response": "에이전트 설정이 없습니다."}
-    with open(af, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
-    agent_config = next((a for a in data.get("agents", []) if a.get("id") == agent_id), None)
-    if not agent_config:
-        return {"response": f"에이전트 '{agent_id}'를 찾을 수 없습니다."}
-    agent_config = dict(agent_config)
-    agent_config["_project_path"] = str(project_path)
-    agent_config["_project_id"] = project_id
-    # ★폰 에이전트는 폰의 두뇌(Gemini)로 실행(사용자 결정) — 시드된 맥 claude_code 설정을 덮어씀.
-    # 맥 두뇌(claude CLI)는 폰에 없다. apiKey 는 env(GEMINI_API_KEY, keys.json 주입) 폴백.
-    agent_config["ai"] = {
-        "provider": "gemini_http",
-        "model": "gemini-3.5-flash",
-        "api_key": os.environ.get("GEMINI_API_KEY", ""),
-    }
-    common_config = data.get("common", {})
+    # 에피소드 기록 — 프로젝트 에이전트 1턴을 world_pulse.db 에 남긴다(맥 api_websocket 동형).
+    # 부동산 같은 다단계 에이전트가 "뭘 했는지/어디서 느린지" 를 회고할 수 있게. finally 로
+    # 조기 반환·예외·포기 모두에서 end → 실패한 실행도 기록된다.
+    try:
+        from episode_logger import EpisodeLogger
+        EpisodeLogger.start_episode(f"{project_id}:{agent_id}", command)
+    except Exception:
+        pass
+    try:
+        pm = _phone_pm()
+        project_path = pm.get_project_path(project_id)
+        af = project_path / "agents.yaml"
+        if not af.exists():
+            return {"response": "에이전트 설정이 없습니다."}
+        with open(af, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        agent_config = next((a for a in data.get("agents", []) if a.get("id") == agent_id), None)
+        if not agent_config:
+            return {"response": f"에이전트 '{agent_id}'를 찾을 수 없습니다."}
+        agent_config = dict(agent_config)
+        agent_config["_project_path"] = str(project_path)
+        agent_config["_project_id"] = project_id
+        # ★폰 에이전트는 폰의 두뇌(Gemini)로 실행(사용자 결정) — 시드된 맥 claude_code 설정을 덮어씀.
+        # 맥 두뇌(claude CLI)는 폰에 없다. apiKey 는 env(GEMINI_API_KEY, keys.json 주입) 폴백.
+        agent_config["ai"] = {
+            "provider": "gemini_http",
+            "model": "gemini-3.5-flash",
+            "api_key": os.environ.get("GEMINI_API_KEY", ""),
+        }
+        common_config = data.get("common", {})
 
-    key = f"{project_id}/{agent_id}"
-    rec = _phone_agent_runners.get(key)
-    runner = rec.get("runner") if rec else None
-    if not (runner and getattr(runner, "running", False)):
-        runner = AgentRunner(agent_config, common_config)
-        runner.start()
-        _phone_agent_runners[key] = {"runner": runner}
-    if not getattr(runner, "ai", None):
-        return {"response": "에이전트 AI 초기화 실패 — 폰에 해당 제공자 키가 없을 수 있습니다."}
-    resp = runner.ai.process_message_with_history(message_content=command, history=[])
-    return {"response": resp}
+        key = f"{project_id}/{agent_id}"
+        rec = _phone_agent_runners.get(key)
+        runner = rec.get("runner") if rec else None
+        if not (runner and getattr(runner, "running", False)):
+            runner = AgentRunner(agent_config, common_config)
+            runner.start()
+            _phone_agent_runners[key] = {"runner": runner}
+        if not getattr(runner, "ai", None):
+            return {"response": "에이전트 AI 초기화 실패 — 폰에 해당 제공자 키가 없을 수 있습니다."}
+        resp = runner.ai.process_message_with_history(message_content=command, history=[])
+        return {"response": resp}
+    finally:
+        try:
+            from episode_logger import EpisodeLogger
+            EpisodeLogger.end_episode()
+        except Exception:
+            pass
 
 
 @app.post("/projects/{project_id}/agents/{agent_id}/start")
@@ -937,6 +967,74 @@ async def execute(req: Request):
 
 
 # ============================================================================
+# 사진/미디어 서빙 — 폰 로컬 (몸-로컬 I/O, 맥 프록시 아님). ★catch-all 보다 먼저 등록.
+# [self:photo] 가 반환하는 records.image = "/photo/thumbnail?path=<폰 MediaStore 경로>" 를
+# 앱모드 image_grid 가 <img src> 로 부른다. 이 경로는 *폰 자신*의 파일(/storage/emulated/0/...)
+# 이라 catch-all 로 맥에 프록시하면 맥엔 그 경로가 없어 404 → 사진 뷰어가 통째로 깨졌다(원래 신고건).
+# 사진 뷰어는 몸-로컬: 폰이 자기 미디어를 직접 서빙한다(맥이 자기 미디어를 api_photo 로 서빙하듯,
+# file_index 가 Spotlight↔MediaStore 로 몸 분기하듯 — 패리티 기본·드리프트 0). 정본 api_photo 의
+# 함수(PIL 썸네일·EXIF 회전·FileResponse)를 그대로 위임한다. 폰 사진은 전부 JPEG(A36 검증)라 PIL OK.
+# 지연 import = serve() 의 _init_base 후 호출돼 sys.path/INDIEBIZ_BASE_PATH 준비됨.
+# ============================================================================
+@app.get("/photo/thumbnail")
+async def _photo_thumbnail(path: str, size: int = 200):
+    from api_photo import get_thumbnail
+    return await get_thumbnail(path=path, size=size)
+
+
+@app.get("/photo/video-thumbnail")
+async def _photo_video_thumbnail(path: str, size: int = 200):
+    # 동영상 프레임 썸네일 — api_photo 는 ffmpeg 를 쓰지만 폰엔 ffmpeg 가 없다. Android 네이티브
+    # ThumbnailUtils(OS 디코더, PhoneActions.videoThumbnail)로 프레임을 뽑아 JPEG 로 서빙한다.
+    # 캐시는 api_photo 와 같은 THUMBNAIL_CACHE_DIR 공유(반복 그리드 로드 시 재디코딩 방지).
+    # 네이티브 실패 시 정본 api_photo(ffmpeg) 폴백 — 폰엔 보통 미가용이나 맥/일관성 유지.
+    import hashlib
+    from fastapi.responses import FileResponse
+
+    def _native():
+        try:
+            from api_photo import THUMBNAIL_CACHE_DIR
+            os.makedirs(THUMBNAIL_CACHE_DIR, exist_ok=True)
+            cache = os.path.join(
+                THUMBNAIL_CACHE_DIR,
+                hashlib.md5(f"pv:{path}:{size}".encode()).hexdigest() + ".jpg")
+            if (os.path.exists(cache) and os.path.exists(path)
+                    and os.path.getmtime(cache) >= os.path.getmtime(path)):
+                return cache
+            from java import jclass  # Chaquopy — 폰 네이티브에만 존재
+            PA = jclass("com.indiebiz.phoneagent.PhoneActions")
+            raw = PA.videoThumbnail(path, int(size))
+            data = bytes(raw) if raw else b""
+            if not data:
+                return None
+            with open(cache, "wb") as fh:
+                fh.write(data)
+            return cache
+        except Exception:
+            return None
+
+    cache = await asyncio.to_thread(_native)
+    if cache:
+        return FileResponse(cache, media_type="image/jpeg")
+    from api_photo import get_video_thumbnail
+    return await get_video_thumbnail(path=path, size=size)
+
+
+@app.get("/photo/image")
+async def _photo_image(path: str):
+    # 원본 이미지(라이트박스·상세). FileResponse 라 실제 폰 경로면 그대로 서빙.
+    from api_photo import get_image
+    return await get_image(path=path)
+
+
+@app.get("/photo/video")
+async def _photo_video(path: str, request: Request):
+    # 동영상 재생(Range 지원). FileResponse 라 실제 폰 경로면 그대로 서빙.
+    from api_photo import get_video
+    return await get_video(path=path, request=request)
+
+
+# ============================================================================
 # ★ 패리티 기본값 — catch-all 맥 프록시 (반드시 마지막 라우트로 등록).
 # 폰에 명시적 라우트가 없는 모든 요청을 맥으로 포워드(리모컨). FastAPI 는 더 구체적인
 # 명시 라우트를 먼저 매칭하므로, 로컬 하네스(/system-ai/chat·conversations)·sync·ibl 등
@@ -1004,6 +1102,17 @@ def serve(port=8765, base_path=None):
     if _serving:
         return
     _init_base(base_path)
+
+    # 몸 독립 부팅 배선 — 에피소드 로거 등(맥 api.py 와 같은 공유 함수). 폰도 자기 실행을
+    # (성공·실패 모두) world_pulse.db 에 에피소드로 기록해 회고할 수 있어야 한다. 몸 종속
+    # 부팅(터널·임베딩모델 로딩·world_pulse 수집기)은 폰에서 의도적으로 빼지만, 몸 독립인
+    # 에피소드 기록을 빼는 건 누락(드리프트)이었다 — boot_common 으로 양쪽이 같이 받는다.
+    try:
+        from boot_common import wire_local_subsystems
+        wire_local_subsystems(profile="phone")
+    except Exception as e:
+        import traceback
+        print(f"[phone_api] 부팅 배선 스킵: {e}\n{traceback.format_exc()[-300:]}")
 
     # 반응형→능동/백그라운드 층: 상주 스케줄러 폴링 루프 기동. 폰-자아가 "매일 아침 X"·
     # "N시간마다 Y"(self:trigger{type:schedule}/self:schedule)를 스스로 돌리려면 calendar_manager

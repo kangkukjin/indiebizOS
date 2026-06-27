@@ -15,7 +15,7 @@ import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict
 
-from common import calculate_distance, success_response, error_response, KOREA_BOUNDS
+from cctv_common import calculate_distance, success_response, error_response, KOREA_BOUNDS
 
 # API 설정
 ITS_API_KEY = os.environ.get("ITS_API_KEY", "")

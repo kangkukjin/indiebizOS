@@ -68,11 +68,24 @@ def search_mss_biz(keyword: str = "", count: int = 10):
             raw_response=True,
         )
 
-        # api_call이 에러 dict를 반환한 경우
+        # 게이트웨이 강등: data.go.kr 의 이 MSS 서비스(1421000/mssBizService*)가
+        # 2026-06 현재 폐기되어 404("API not found")·500("Unexpected errors")를 돌려준다.
+        # api_call 은 404 를 에러 dict 로, 500 은 raw 평문(비-XML)으로 주므로 둘 다 잡아
+        # 명확한 안내로 강등한다 (ET 파싱 크래시·cryptic 404 방지). 복구하려면 사용자가
+        # data.go.kr 에서 현행 중기부 사업공고 API(데이터셋 15113297 등)를 활용신청 후
+        # 엔드포인트를 갱신해야 함. 그때까지는 K-Startup(source:kstartup)으로 충분.
+        _UNAVAIL = {
+            "success": False,
+            "available": False,
+            "error": "중기부(MSS) 사업공고 API 미가용 — data.go.kr 엔드포인트 폐기 추정(활용신청 필요). 정부 창업·지원사업은 source:kstartup(K-Startup) 사용 권장.",
+        }
         if isinstance(response_text, dict) and "error" in response_text:
-            return {"success": False, "error": response_text["error"]}
+            return _UNAVAIL
+        txt = response_text if isinstance(response_text, str) else response_text.decode("utf-8", "ignore")
+        if not txt.lstrip().startswith("<"):
+            return _UNAVAIL
 
-        root = ET.fromstring(response_text.encode("utf-8") if isinstance(response_text, str) else response_text)
+        root = ET.fromstring(txt.encode("utf-8"))
         result_code = root.find('.//resultCode')
 
         if result_code is None or result_code.text != '000':

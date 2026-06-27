@@ -212,6 +212,32 @@ def _get_db_path(project_path: str, agent_id: str) -> str:
         return str(project_dir / f"memory_{agent_name}.db")
 
 
+def _ensure_schema(db_path: str):
+    """memories 테이블 보장 — get_db 를 거치지 않는 읽기 경로(search 등)용.
+
+    sqlite 는 connect 시 빈 파일을 생성하므로, 한 번도 save 한 적 없는 신규 프로젝트의
+    첫 search/distill 이 '_search_like → SELECT FROM memories' 에서
+    'no such table: memories' 로 죽던 버그를 막는다.
+    """
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.executescript('''
+            CREATE TABLE IF NOT EXISTS memories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category TEXT DEFAULT '',
+                keywords TEXT DEFAULT '',
+                content TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                used_at DATETIME DEFAULT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_mem_keywords ON memories(keywords);
+            CREATE INDEX IF NOT EXISTS idx_mem_category ON memories(category);
+        ''')
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def get_db(project_path: str, agent_id: str):
     """DB 연결 및 테이블 초기화"""
     db_path = _get_db_path(project_path, agent_id)
@@ -315,6 +341,7 @@ def search(project_path: str, agent_id: str,
     2) 시맨틱이 비었거나(모델 미준비/임계값 미달) 결과 0이면 LIKE 키워드 폴백.
     """
     db_path = _get_db_path(project_path, agent_id)
+    _ensure_schema(db_path)  # 신규 프로젝트(미save) 빈 DB에서 LIKE 폴백이 죽지 않도록 테이블 보장
 
     # 1. 시맨틱 우선
     sem_pairs = _search_semantic(db_path, query, top_k=limit * 2)

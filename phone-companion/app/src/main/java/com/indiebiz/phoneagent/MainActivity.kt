@@ -21,17 +21,14 @@ import android.widget.TextView
  */
 class MainActivity : Activity() {
 
-    private fun notifAccessGranted(): Boolean {
-        val flat = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: return false
-        return flat.split(":").any { it.contains(packageName) }
-    }
-
     private fun batteryExempt(): Boolean {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         return pm.isIgnoringBatteryOptimizations(packageName)
     }
 
-    private fun allReady() = notifAccessGranted() && batteryExempt()
+    // 알림 캡처(NotificationListener)는 제거됨(2026-06-22) — 폰 알림 수집/중계 폐기.
+    // 상주 준비 게이트는 배터리 최적화 제외만으로 충분.
+    private fun allReady() = batteryExempt()
 
     override fun onResume() {
         super.onResume()
@@ -61,24 +58,15 @@ class MainActivity : Activity() {
         })
 
         root.addView(TextView(this).apply {
-            text = "\n시작하려면 두 가지만 한 번 켜주세요.\n주머니 속에서도 알림을 받고 상주합니다.\n"
+            text = "\n시작하려면 한 가지만 한 번 켜주세요.\n주머니 속에서도 백그라운드로 상주합니다.\n"
             textSize = 15f
             setTextColor(Color.DKGRAY)
             gravity = Gravity.CENTER
         })
 
-        if (!notifAccessGranted()) {
-            root.addView(Button(this).apply {
-                text = "① 알림 접근 허용"
-                textSize = 16f
-                setOnClickListener {
-                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                }
-            })
-        }
         if (!batteryExempt()) {
             root.addView(Button(this).apply {
-                text = "② 배터리 최적화 제외"
+                text = "배터리 최적화 제외"
                 textSize = 16f
                 setOnClickListener {
                     val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
@@ -92,7 +80,7 @@ class MainActivity : Activity() {
         }
 
         root.addView(TextView(this).apply {
-            text = "\n둘 다 켜면 자동으로 런처가 열립니다."
+            text = "\n켜면 자동으로 런처가 열립니다."
             textSize = 13f
             setTextColor(Color.parseColor("#2E7D32"))
             gravity = Gravity.CENTER

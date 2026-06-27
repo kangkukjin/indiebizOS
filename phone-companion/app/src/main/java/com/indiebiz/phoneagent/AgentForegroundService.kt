@@ -36,7 +36,7 @@ class AgentForegroundService : Service() {
         nm.createNotificationChannel(ch)
         return Notification.Builder(this, CH_ID)
             .setContentTitle("IndieBiz Phone Agent")
-            .setContentText("알림을 indiebizOS로 중계 중")
+            .setContentText("백엔드 실행 중")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setOngoing(true)
             .build()

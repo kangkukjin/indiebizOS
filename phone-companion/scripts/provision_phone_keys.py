@@ -34,6 +34,11 @@ PHONE_KEYS = [
     "DATA4LIBRARY_API_KEY", "DATA_GO_KR_API_KEY", "KOPIS_API_KEY",
     # web (뉴스)
     "GUARDIAN_API_KEY",
+    # contest (AI 경진대회 — Kaggle Bearer 토큰)
+    "KAGGLE_API_TOKEN",
+    # study (국회도서관 국가학술정보 — 학위논문·연구자검색. auth_manager 'nanet' 레지스트리는
+    # 정적(번들 common/)이고 키는 호출 시점에 os.environ 에서 읽으므로 키 주입만으로 충분).
+    "NANET_API_KEY",
     # real-estate (실거래가)
     "MOLIT_API_KEY",
     # 폰-자아 호스팅 step7: 경량 티어 = gemini_http(폰이 구글 API 직접 호출). 추론 자아의

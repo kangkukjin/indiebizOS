@@ -582,9 +582,9 @@ class SqliteDriver(Driver):
         rows = conn.execute(sql, args).fetchall()
         items = [dict(r) for r in rows]
         result = self._ok(items, f"최근 대화 {len(items)}건")
-        # 레코드 통화(비파괴) — 대화 로그 >> [engines:document/spreadsheet]
+        # 단일 통화 items(records-관습 카드 shape) — 대화 로그 >> 파이프/렌더러. native rows는 data에 잔류.
         if isinstance(result, dict):
-            result["records"] = [{
+            result["items"] = [{
                 "title": f"{r.get('from_agent') or '?'} → {r.get('to_agent') or '?'}",
                 "meta": r.get("message_time") or "",
                 "summary": r.get("content_preview") or "",

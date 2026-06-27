@@ -98,6 +98,19 @@ _AUTH_REGISTRY: Dict[str, dict] = {
         "key_name": "authKey",
         "env_var": "DATA4LIBRARY_API_KEY",
     },
+    # 국회도서관 국가학술정보(LOSI) OpenAPI — 연구자·국내 학술논문·학위논문
+    "nanet": {
+        "type": "query_param",
+        "key_name": "authKey",
+        "env_var": "NANET_API_KEY",
+    },
+    # Kaggle Competitions API — 국제 AI/데이터 경진대회 (단일 Bearer 토큰)
+    "kaggle": {
+        "type": "header",
+        "header_name": "Authorization",
+        "prefix": "Bearer ",
+        "env_var": "KAGGLE_API_TOKEN",
+    },
 }
 
 

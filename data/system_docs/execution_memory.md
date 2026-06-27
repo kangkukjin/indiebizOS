@@ -2,7 +2,7 @@
 title: 연상기억 — 해마 + 심층메모리
 scope: 시맨틱 검색, fine-tuned 임베딩, 경험 증류, 학습 데이터, 인지 파이프라인 단계 0
 owner_code: ibl_usage_db.py, ibl_usage_rag.py, ibl_embedding_trainer.py, agent_cognitive.py, memory_db.py
-last_updated: 2026-05-28
+last_updated: 2026-06-22
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -120,7 +120,7 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 
 - **재학습 경로 = 로컬**: 클라우드(Modal/Colab)는 옛 맥에어 OOM 때문이었음. 현 Mac M4 Pro 24GB는 OOM 없고 데이터셋이 작아 로컬 MPS가 더 빠름(클라우드 콜드스타트·400MB 다운로드 회피). lib 버전도 트레이너 검증값과 일치(torch/MPS·st 5.2.2·transformers 5.1.0). 파이프라인=백업→`backend/ibl_embedding_trainer.py`→rebuild_index→백엔드 touch.
 - **실제 런타임 검색 정확도 ~99%**: 위 벤치마크(query→벌거벗은 코드 패턴)는 보수적 프록시다. 런타임은 query→저장용례(`intent×3 + code`)로 검색하므로(아래 "검색 방식") 액션단위 Top-5 ≈ **99%**로 천장.
-- **어휘 정합**: neighbor 통합 후 `[others:neighbors]`→`[others:neighbor]{op}` relabel + phone_sync·neighbor save/favorite 용례 보강. 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인 유지(~2,424건).
+- **어휘 정합**: neighbor 통합 후 `[others:neighbors]`→`[others:neighbor]{op}` relabel + phone_sync·neighbor save/favorite 용례 보강. 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인 유지(~2,600건, rebuild_index 2605 — 통화 대수·비즈니스·국회도서관 인물/학위논문 용례 누적. 현 5노드 **142 액션** 어휘. 06-12 122-액션 어휘 재학습 이후 신규 액션은 capability 게이트로 보강, 미재학습).
 - 학습 환경: **로컬 Mac M4 Pro(MPS)**, batch=8(로컬최선), max_seq 64, 10 epoch, patience 3. 베이스 `jhgan/ko-sroberta-multitask`. (클라우드 Modal 경로 cloud_training/ 은 보존하되 기본은 로컬 — OOM 없는 M4 Pro에선 로컬이 빠름.)
 
 > **결론(2026-06-04): 모델은 런타임 천장(99.3%)이라 재학습은 거의 무차별.** batch 스윕(b4~b64)·트레이너 변수 조정 모두 런타임 검색을 의미 있게 못 올림 — 해마는 IBL *어휘*가 아니라 query↔저장 intent *의미*를 매칭해 vocab 변경에 본질적으로 강건하기 때문. 검색 품질을 더 올리려면 임베딩이 아니라 **하이브리드 alpha/FTS5**가 레버. (관찰된 오랭킹 사례는 FTS5 키워드 artifact였지 임베딩 실패가 아님.)
@@ -356,4 +356,4 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 
 ---
 
-*마지막 업데이트: 2026-06-15 — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 현재 5노드 136 액션(해마 코퍼스는 06-12 122-액션 어휘 기준, 이후 미재학습 — 신규 액션은 capability 게이트로 보강). **폰 자아는 해마 비활성**(시스템 AI 응답 속도 위해, 사용자 결정) — 폰은 키워드 검색으로 충분, 해마는 맥-자아 전용. 해마 증류/심층기억 시맨틱 검색의 폰 이식은 불필요로 결정(2026-06-14). 이전(2026-06-12): 해마 **로컬 Mac M4 Pro 재학습**(batch=8, code Top-5 92.6%/desc 92.8%/런타임 ~99%, 코퍼스 ~2,424). 클라우드는 옛 맥에어 OOM 한정 — 이제 재학습=로컬 5~10분. neighbor 통합 relabel + phone_sync·neighbor save/favorite 용례 보강. 이전: 2026-06-05 Modal GPU 재학습(android 어휘), 2026-06-04 144 액션 재학습(런타임 천장 판명), 2026-05-17 단일 검색 일원화·심층메모리 시맨틱 검색·점수 정규화*
+*마지막 업데이트: 2026-06-27 — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 현 5노드 **142 액션**(sense 44·self 44·limbs 17·others 11·engines 26), 해마 코퍼스 ~2,600(rebuild_index 2605 — 국회도서관 국가학술정보 인물/학위논문 액션 추가 등 용례 누적). 코퍼스는 06-12 122-액션 어휘 기준 재학습 이후 미재학습 — 신규 액션은 capability 게이트로 보강(해마는 query↔intent 의미 매칭이라 vocab 변경에 강건). 절차기억(해마)은 7종 메모리의 #4b — 통합 지도는 `memory_architecture.md`. 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 5노드 136 액션(해마 코퍼스는 06-12 122-액션 어휘 기준, 이후 미재학습 — 신규 액션은 capability 게이트로 보강). **폰 자아는 해마 비활성**(시스템 AI 응답 속도 위해, 사용자 결정) — 폰은 키워드 검색으로 충분, 해마는 맥-자아 전용. 해마 증류/심층기억 시맨틱 검색의 폰 이식은 불필요로 결정(2026-06-14). 이전(2026-06-12): 해마 **로컬 Mac M4 Pro 재학습**(batch=8, code Top-5 92.6%/desc 92.8%/런타임 ~99%, 코퍼스 ~2,424). 클라우드는 옛 맥에어 OOM 한정 — 이제 재학습=로컬 5~10분. neighbor 통합 relabel + phone_sync·neighbor save/favorite 용례 보강. 이전: 2026-06-05 Modal GPU 재학습(android 어휘), 2026-06-04 144 액션 재학습(런타임 천장 판명), 2026-05-17 단일 검색 일원화·심층메모리 시맨틱 검색·점수 정규화*

@@ -31,7 +31,7 @@
     },
     {
       "name": "amadeus_travel_search",
-      "description": "[sense:travel]{op} — 여행 정보 검색(Amadeus). op=flight(from→to, date)/hotel(city)/poi(city 또는 lat/lng). 도시명·상대날짜 자동 해소. endpoint+params 직접 지정도 가능.",
+      "description": "[sense:travel]{op} — 여행 정보 검색(Amadeus). op=flight(from→to, date)/hotel(city). 도시명·상대날짜 자동 해소. endpoint+params 직접 지정도 가능.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -39,8 +39,7 @@
             "type": "string",
             "enum": [
               "flight",
-              "hotel",
-              "poi"
+              "hotel"
             ],
             "default": "flight",
             "description": "검색 종류"
@@ -67,15 +66,7 @@
           },
           "city": {
             "type": "string",
-            "description": "도시명 (hotel/poi)"
-          },
-          "lat": {
-            "type": "number",
-            "description": "위도 (poi, city 대신)"
-          },
-          "lng": {
-            "type": "number",
-            "description": "경도 (poi, city 대신)"
+            "description": "도시명 (hotel)"
           },
           "endpoint": {
             "type": "string",

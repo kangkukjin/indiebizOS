@@ -173,6 +173,13 @@ def search_statistics(
             result["count"] = len(items)
             result["view_code"] = vw_cd
             result["view_name"] = VIEW_CODES.get(vw_cd, vw_cd)
+            # 단일 통화 items(records-관습 카드 shape) — 통계표 목록 >> 파이프. 실제 수치는 get_statistics_data(table).
+            result["items"] = [{
+                "title": it.get("tbl_name") or it.get("stat_name") or it.get("list_name") or "",
+                "meta": " · ".join(x for x in [it.get("org_name"), it.get("tbl_id")] if x),
+                "summary": it.get("stat_name", "") if it.get("stat_name") != it.get("tbl_name") else "",
+                "url": "",
+            } for it in items]
 
     return result
 
@@ -262,7 +269,10 @@ def get_statistics_data(
                 })
             result["data"] = items
             result["count"] = len(items)
-            result["table"] = _to_table_currency(items)  # 표준 통화 → >> chart/spreadsheet/document
+            # 단일 통화 items(행 dict) — 기간×시리즈 피벗을 행 dict로(소비자가 table 재구성). raw long-format은 data에 잔류.
+            _tbl = _to_table_currency(items)
+            if _tbl and _tbl.get("rows"):
+                result["items"] = [dict(zip(_tbl["columns"], r)) for r in _tbl["rows"]]
             result["query"] = {
                 "org_id": org_id,
                 "tbl_id": tbl_id,
@@ -357,6 +367,13 @@ def integrated_search(
             result["data"] = items
             result["count"] = len(items)
             result["keyword"] = keyword
+            # 단일 통화 items(records-관습 카드 shape) — 통합검색 결과 목록 >> 파이프.
+            result["items"] = [{
+                "title": it.get("tbl_name") or it.get("stat_name") or "",
+                "meta": " · ".join(x for x in [it.get("org_name"), it.get("tbl_id"), it.get("type")] if x),
+                "summary": it.get("description", ""),
+                "url": "",
+            } for it in items]
 
     return result
 
@@ -407,7 +424,10 @@ def get_indicators(
                 })
             result["data"] = items
             result["count"] = len(items)
-            result["table"] = _to_table_currency(items)  # 표준 통화 → >> chart/spreadsheet/document
+            # 단일 통화 items(행 dict) — 기간×시리즈 피벗을 행 dict로(소비자가 table 재구성). raw long-format은 data에 잔류.
+            _tbl = _to_table_currency(items)
+            if _tbl and _tbl.get("rows"):
+                result["items"] = [dict(zip(_tbl["columns"], r)) for r in _tbl["rows"]]
 
     return result
 

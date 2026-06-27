@@ -327,7 +327,14 @@ def detect_body() -> dict:
         return _BODY_CACHE
 
     profile = os.environ.get("INDIEBIZ_PROFILE", "")
-    body = {"profile": profile or "mac"}
+    if not profile:
+        # env 미설정 시 OS 자기-감지로 profile 유도(몸은 이미 자기가 뭔지 안다 —
+        # _detect_desktop_body 가 Windows/Linux 도 정확히 읽음). env override 는 자기-감지가
+        # *거짓말하는* 몸에만 필요: 안드로이드 파이썬은 platform.system()=='Linux' 로 위장하므로
+        # phone_api 가 INDIEBIZ_PROFILE='phone' 을 명시 주입한다. 맥은 'mac' 그대로(무변경).
+        profile = {"Darwin": "mac", "Windows": "windows", "Linux": "linux"}.get(
+            platform.system(), "mac")
+    body = {"profile": profile}
     if profile == "phone":
         body.update(_detect_android_body())
     else:

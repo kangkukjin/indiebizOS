@@ -245,10 +245,6 @@ def execute(tool_input: dict, context) -> str:
             else:
                 result = asyncio.run(search_all_async(query, display))
 
-            # 레코드 통화 부착(비파괴) — items 목록을 records로. >> 파이프가 자동으로 흐름.
-            if isinstance(result, dict) and isinstance(result.get("items"), list):
-                result["records"] = _products_to_records(result["items"])
-
             return format_json(result)
         except Exception as e:
             return f"오류 발생: {str(e)}"

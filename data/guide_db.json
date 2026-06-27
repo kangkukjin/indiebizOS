@@ -1,1 +1,861 @@
-{"description": "가이드 파일 DB - data/guides/ 폴더에서 파일 관리", "guides": [{"id": "video_workflow", "name": "동영상 제작 워크플로우", "description": "HTML 기반 영상 또는 Remotion 영상을 만드는 단계별 워크플로우. 이미지 생성, 코드 작성, 미리보기, TTS, 최종 렌더링까지.", "keywords": ["동영상", "영상", "비디오", "video", "mp4", "렌더링", "TTS", "나레이션"], "file": "video_workflow.md"}, {"id": "html_video", "name": "HTML 영상 제작 기술 가이드", "description": "Playwright 프레임 캡처 기반 MP4 영상 제작의 기술적 상세. HTML 씬 구조, 애니메이션, 오디오 합성.", "keywords": ["html", "영상", "playwright", "프레임", "씬", "scene", "애니메이션"], "file": "html_video.md"}, {"id": "slides", "name": "슬라이드 제작 가이드", "description": "HTML/Playwright 기반 1280x720px PNG 슬라이드. shadcn UI 마케팅/강의 layout(hero, features, pricing, cta, lecture_body 등) + 디자인 시스템.", "keywords": ["슬라이드", "프레젠테이션", "카드뉴스", "slides", "발표", "PNG", "마케팅", "랜딩", "피치덱", "랜딩페이지", "marketing", "landing", "deck", "shadcn", "slide_shadcn", "hero", "features", "stats", "pricing", "cta", "testimonial", "steps", "content_image", "design_system", "vintage_book", "tech_minimal", "magazine_modern", "academic_paper"], "file": "slides.md"}, {"id": "remotion", "name": "Remotion 영상 제작 가이드", "description": "React/TSX 기반 Remotion으로 프로그래밍 방식 MP4 영상 제작. 컴포지션 구조, 애니메이션, Tailwind CSS, Google Fonts, Lottie, 시각 기법 포함.", "keywords": ["remotion", "react", "tsx", "프로그래밍", "컴포지션", "composition", "tailwind", "lottie", "폰트", "시각", "디자인"], "file": "remotion.md"}, {"id": "web_builder", "name": "웹사이트 빌더 가이드", "description": "홈페이지, 블로그, 웹사이트 만들기 및 관리. 사이트 제작/수정 요청 시 반드시 이 가이드를 먼저 읽을 것. Vercel/Cloudflare 배포.", "keywords": ["홈페이지", "웹사이트", "website", "빌더", "배포", "deploy", "pages", "홈페이지 만들기", "사이트", "웹페이지", "landing", "포트폴리오", "홈페이지 수정", "사이트 수정", "업데이트", "homepage", "블로그 만들기", "블로그 사이트", "만들어줘", "제작"], "file": "web_builder.md"}, {"id": "cloudflare", "name": "Cloudflare 서비스 가이드", "description": "Cloudflare Pages, Workers, R2 스토리지, D1 데이터베이스, Tunnel 설정 및 관리.", "keywords": ["cloudflare", "workers", "r2", "d1", "tunnel", "CDN", "서버"], "file": "cloudflare.md"}, {"id": "browser_action", "name": "브라우저 자동화 가이드", "description": "Playwright(헤드리스)와 Chrome MCP(실제 브라우저) 자동화. Snapshot→Ref→Action 패턴, 탭/iframe/쿠키 세션 관리, 폼·드롭다운 조작.", "keywords": ["브라우저", "browser", "자동화", "playwright", "chrome", "크롬", "클릭", "스크린샷", "크롤링", "탭", "iframe", "쿠키", "로그인", "원격제어"], "file": "browser_action.md"}, {"id": "android", "name": "안드로이드 기기 관리 가이드", "description": "ADB 기반 안드로이드 기기 연결, 앱 설치, 화면 제어.", "keywords": ["안드로이드", "android", "adb", "앱", "기기", "스마트폰"], "file": "android.md"}, {"id": "desktop", "name": "데스크톱 자동화 가이드", "description": "macOS 데스크톱 앱(브라우저 밖) 제어 — 좌표 기반 클릭·키보드·스크린샷. screenshot → 판단 → action 흐름과 9개 op 사양.", "keywords": ["데스크톱", "desktop", "macOS", "맥", "자동화", "마우스", "키보드", "스크린샷", "단축키", "Finder", "pyautogui", "좌표"], "file": "desktop.md"}, {"id": "investment", "name": "투자 분석 가이드", "description": "한국 기업 분석 워크플로우. 주식, 재무제표, 공시 정보 조회 및 분석.", "keywords": ["투자", "주식", "기업분석", "재무제표", "공시", "ETF", "채권"], "file": "investment.md"}, {"id": "real_estate", "name": "부동산 정보 및 매물 분석 가이드", "description": "국토부 실거래가(IBL realty) 시세 조회 및 매물 분석 판단 기준(126%룰, 수익률, 전세가율). 실매물 링크·사진은 당근/네이버 포털에서 확보 — 당근 지역 필터는 browser-action 지역선택 UI(search_region 쿠키)로만 가능, crawl은 IP 기본지역 반환.", "keywords": ["부동산", "아파트", "매매", "전세", "국토부", "시세", "매물분석", "수익률", "깡통전세", "126%룰", "다가구", "매물링크", "매물사진", "당근", "daangn", "네이버부동산", "browser-action", "지역선택"], "file": "real_estate.md"}, {"id": "house_designer", "name": "건축 설계 가이드", "description": "2D/3D 건축 설계 도구. 평면도, 입면도, 3D 모델링.", "keywords": ["건축", "설계", "평면도", "3D", "모델링", "도면", "건물"], "file": "house_designer.md"}, {"id": "web_collector", "name": "웹 정보 수집 가이드", "description": "웹 정보 수집 후 DB에 축적하는 워크플로우.", "keywords": ["수집", "스크래핑", "DB", "축적", "정보수집", "데이터"], "file": "web_collector.md"}, {"id": "cctv", "name": "CCTV 영상 가이드", "description": "한국 교통 CCTV 등 실시간 영상 조회.", "keywords": ["CCTV", "교통", "실시간", "영상", "카메라"], "file": "cctv.md"}, {"id": "local_info", "name": "지역 정보 가이드", "description": "동네 가게/상점 정보 검색 및 DB 관리.", "keywords": ["동네", "가게", "상점", "지역", "로컬"], "file": "local_info.md"}, {"id": "agent_publishing", "name": "에이전트 웹 퍼블리싱 가이드", "description": "IndieBiz OS 에이전트를 Cloudflare Workers 기반 웹앱으로 배포하는 절차. Worker 생성, 시크릿 설정, 프론트엔드 HTML, 배포 및 업데이트.", "keywords": ["퍼블리싱", "배포", "deploy", "workers", "웹앱", "cloudflare", "publishing", "에이전트배포"], "file": "agent_publishing.md"}, {"id": "calendar", "name": "캘린더 & 스케줄러 가이드", "description": "캘린더 이벤트(기념일, 생일, 약속)와 스케줄러(반복 작업, 자동 실행) 통합 관리.", "keywords": ["캘린더", "일정", "이벤트", "calendar", "약속", "스케줄", "반복", "자동화", "기념일", "예약", "scheduler"], "file": "calendar.md"}, {"id": "video_subtitle", "name": "동영상 자막 제작 가이드", "description": "스토리텔링 관점의 자막 제작 원칙과 ffmpeg를 활용한 기술적 구현 방법.", "keywords": ["자막", "subtitle", "동영상", "영상", "ffmpeg", "스토리텔링", "나레이션"], "file": "video_subtitle.md"}, {"id": "guide_registration", "name": "가이드 등록 가이드", "description": "시스템에 새로운 작업 가이드를 등록하고 DB를 업데이트하는 방법.", "keywords": ["가이드", "등록", "추가", "guide", "registration", "시스템", "DB"], "file": "guide_registration.md"}, {"id": "newspaper", "name": "신문 제작 가이드", "description": "뉴스를 수집하여 HTML 신문으로 제작. 구글 뉴스, 가디언 등 다양한 소스 지원. 2컬럼 카드 그리드 포맷.", "keywords": ["신문", "뉴스", "뉴스레터", "newspaper", "news", "취합", "통합", "데일리", "가디언", "guardian", "구글뉴스", "기사", "모아서", "수집"], "file": "newspaper_guide.md"}, {"id": "deep_research", "name": "심층연구 가이드", "description": "전문가 수준의 심층 분석과 보고서 작성 방법론. 다관점 리서치, 비판적 사고, 구조화된 논증, 자기검토 프로세스를 포함.", "keywords": ["심층연구", "심층분석", "분석", "보고서", "리서치", "research", "report", "전문가", "깊이", "다관점", "논문", "조사", "검토", "analysis", "deep", "전망", "시사점"], "file": "deep_research.md"}, {"id": "workflow", "name": "워크플로우 저장 & 실행", "description": "자주 쓰는 IBL 파이프라인을 이름 붙여 저장하고, 이름만으로 실행하는 방법.", "keywords": ["워크플로우", "workflow", "저장", "실행", "파이프라인", "반복", "자동화"], "file": "workflow.md"}, {"id": "delegation_agent", "name": "프로젝트 에이전트 위임 가이드", "description": "같은 프로젝트 내 동료 에이전트에게 작업을 위임하는 방법. 병렬/순차 위임, 스테이트리스 원칙, 크로스 위임.", "keywords": ["동료 위임", "delegate", "동료", "작업분배", "병렬위임", "순차위임", "peers"], "file": "delegation_agent.md"}, {"id": "delegation_system_ai", "name": "시스템 AI 위임 가이드", "description": "시스템 AI가 프로젝트 에이전트에게 작업을 위임하는 방법. delegate_project 사용법, 병렬/순차 위임, 크로스 위임.", "keywords": ["시스템 위임", "delegate_project", "시스템AI", "프로젝트 위임", "list_projects"], "file": "delegation_system_ai.md"}, {"id": "work_plan_writing", "name": "작업계획서 작성 가이드", "description": "여러 에이전트를 활용한 작업계획서를 자연어로 작성하는 방법. 목표 설정, 에이전트 배정, 의존성 파악, 실패 대응.", "keywords": ["작업계획서", "계획", "plan", "work plan", "프로젝트 계획", "작업 분배", "멀티에이전트"], "file": "work_plan_writing.md"}, {"id": "search", "name": "검색 가이드", "description": "검색 전 계획 수립 원칙과 사용 가능한 모든 검색 수단(웹, 뉴스, 쇼핑, 논문, 유튜브, 금융, 지역, 내부 데이터 등) 안내. 검색을 하기 전에 반드시 읽을 것.", "keywords": ["검색", "서치", "search", "찾기", "조사", "탐색", "조회", "정보", "리서치"], "file": "search.md"}, {"id": "new_action_checklist", "name": "새 IBL 액션 추가 체크리스트", "description": "새로운 IBL 액션(도구 패키지)을 만들 때 반드시 따라야 할 체크리스트. 명명 헌법, 패키지 생성, src 노드 등록+검증, 해마 데이터, 임베딩, 확인 + 선택: 앱 표면 노출(app: 블록 — 데스크탑·원격 계기 자동 등장).", "keywords": ["액션", "추가", "새로운", "만들기", "등록", "action", "register", "package", "패키지", "체크리스트", "해마", "임베딩", "embedding", "도구", "tool", "ibl_actions", "앱", "계기", "app", "GUI", "instrument", "표면"], "file": "new_action_checklist.md"}, {"id": "action_removal", "name": "IBL 액션 제거 가이드", "description": "중복이거나 작동하지 않는 IBL 액션을 제거할 때의 체크리스트. 액션 정의, 해마 학습 데이터, 벡터 임베딩, 도구 정의 등 모든 참조를 정리하는 절차.", "keywords": ["액션 제거", "액션 삭제", "action removal", "IBL 정리", "중복 액션", "해마", "학습 데이터", "임베딩"], "file": "action_removal.md"}, {"id": "book_publishing", "name": "출판 프로젝트 관리 가이드", "description": "책 쓰기, 원고 관리, 출판 프로젝트 운영 가이드. 폴더 구조, book_plan.md 작성법, 조각글 수집, 문체 참고, 진척 기록, 합본 출력.", "keywords": ["출판", "책", "원고", "글쓰기", "집필", "publishing", "book", "manuscript", "출판사", "챕터", "조각글", "문체", "원고관리", "book_plan", "draft"], "file": "book_publishing.md"}, {"id": "book_typesetting", "name": "책 조판 가이드 (typst 한국어 단행본)", "description": "typst로 한국어 단행본 PDF를 조판하는 가이드. 표준 결정사항(미래상상/신국판/Pretendard), 표지·내지·책등·날개 디자인, 미세조정 vs 출고 검증, PNG 검토 사이클, 인쇄용/디지털 분리, 자주 발견되는 결함 체크리스트. 원고 관리는 book_publishing.md 참조.", "keywords": ["조판", "typst", "단행본", "PDF", "표지", "책등", "내지", "인쇄", "출판", "책", "typesetting", "book", "cover", "pretendard", "신국판", "미래상상", "강국진", "manuscript", "convert"], "file": "book_typesetting.md"}, {"id": "lecture_slides_with_illustrations", "name": "일러스트 강의 슬라이드 (NotebookLM 수준)", "description": "Gemini 자동 일러스트가 들어간 책 강의·발표 슬라이드 5단계 워크플로우. 디자인 시스템별 스타일 프리픽스(vintage_book/academic_paper/tech_minimal/magazine_modern), 일러스트 필요 슬라이드 식별, 병렬 image_gemini 호출, slide_shadcn 통합, 검증 사이클, 할당량 대응. NotebookLM 수준의 시각 완성도가 목표.", "keywords": ["일러스트", "강의", "슬라이드", "이미지", "Gemini", "비주얼", "illustration", "lecture", "slides", "image", "NotebookLM", "고품질", "디자인 시스템", "design_system", "책 강의", "메타포", "vintage_book", "academic_paper", "tech_minimal", "magazine_modern", "image_gemini"], "file": "lecture_slides_with_illustrations.md"}, {"id": "lecture_slide_principles", "name": "강의 슬라이드 작성 원칙 (Mayer·Reynolds 기반)", "description": "강의·교육용 슬라이드 작성 규칙. Mayer의 multimedia learning principles(일관성·중복회피·시그널링·공간근접성), Reynolds의 presentation zen, 시맨틱 블록 라벨(정의/예시/비교/메타포/요약 등), 진행 표시 형식, 출처 표기, 분량 규칙(한 슬라이드=한 아이디어), 스피커 노트 동반 파일 패턴, 표준 강의 흐름. 책 강의·교육 발표·마스터 클래스용. slides.md+lecture_slides_with_illustrations.md와 보완 관계.", "keywords": ["강의", "원칙", "교육", "강사", "수업", "발표", "교육학", "lecture", "education", "principle", "teaching", "Mayer", "Reynolds", "multimedia learning", "시맨틱", "스피커 노트", "speaker notes", "출처", "citation", "분량", "한 아이디어", "마스터 클래스", "워크숍", "정의", "예시", "메타포", "요약", "참고문헌"], "file": "lecture_slide_principles.md"}, {"id": "self_inspection", "name": "자기 점검 가이드", "description": "시스템 AI가 자기 자신의 상태(IBL/메모리/프롬프트/히스토리/가이드/인지)를 진단하고 보고하는 절차. episode_log/world_pulse 등을 활용한 자기 진단.", "keywords": ["자기 점검", "자기점검", "점검", "진단", "자가진단", "self-inspection", "self check", "self-check", "성찰", "회고", "메타인지", "메타 인지", "x-ray", "엑스레이", "시스템 점검", "시스템 진단", "어디 아픈지", "최적화", "최근 어땠어", "뭐 했어", "에피소드", "에피소드 메모리", "episode"], "file": "self_inspection_guide.md"}, {"id": "lecture_workspace", "name": "강의 만들기 워크스페이스", "description": "lecture/slide/material/deck 4개 단일 액션으로 강의 슬라이드를 한 장씩 협업으로 만드는 워크플로우. AI 호출 op vs 직접 op 구분.", "keywords": ["강의", "슬라이드", "강의 만들기", "lecture", "slide", "deck", "워크스페이스", "발표 자료", "강의 워크플로우"], "file": "lecture_workspace.md"}, {"id": "trigger", "name": "트리거·스위치", "description": "자동 실행 작업 등록·관리. 트리거(push, 조건 충족 시 자동) vs 스위치(pull, 명시적 호출). 4타입(schedule/channel/webhook/file) 설정 패턴.", "keywords": ["트리거", "자동 실행", "예약", "스케줄링", "trigger", "스위치", "switch", "자동화", "cron", "정기 실행", "알람", "매일", "매주"], "file": "trigger.md"}, {"id": "realty", "name": "부동산 실거래가", "description": "국토부 공개 실거래가 4종(아파트/주택 × 매매/전월세) 통합 조회. type × deal 매트릭스와 region_code 사용법.", "keywords": ["부동산", "실거래가", "아파트", "매매", "전세", "월세", "주택", "realty", "강남", "지역코드"], "file": "realty.md"}, {"id": "book", "name": "한국 도서 검색", "description": "도서관정보나루 통합 — keyword 검색, isbn 기본 조회, isbn+detail로 대출 통계까지. 3가지 입력 모드.", "keywords": ["도서", "책", "ISBN", "도서관", "대출통계", "한국책", "library", "book"], "file": "book.md"}, {"id": "legal", "name": "법률 정보 (국가법령정보센터)", "description": "법령·판례·행정규칙·자치법규·법령해석·헌재결정·조약·법률용어·서식 10종 영역. query/id × target 매트릭스.", "keywords": ["법률", "법령", "판례", "법", "조항", "헌재", "행정규칙", "조례", "law", "legal", "선의의 제3자", "임대차"], "file": "legal.md"}, {"id": "kosis", "name": "통계청 KOSIS 국가통계", "description": "한국 공식 통계 검색·조회. query(검색)/indicator(주요지표)/(org_id+tbl_id)(특정 통계표) 3가지 모드.", "keywords": ["통계", "kosis", "통계청", "인구", "GDP", "물가", "실업률", "지표", "시계열", "통계표"], "file": "kosis.md"}, {"id": "startup", "name": "정부 창업·중소기업 지원사업", "description": "K-Startup(창업진흥원) + 중기부 MSS 사업공고 통합. source(all/kstartup/mss) 분기, 단계·분야별 매핑.", "keywords": ["창업", "사업공고", "지원사업", "예비창업", "정책자금", "R&D", "수출바우처", "K-Startup", "중기부", "MSS", "TIPS"], "file": "startup.md"}, {"id": "open_window", "name": "런처 창 열기", "description": "IndieBiz OS Electron 런처의 6개 메인 작업창(project/system_ai/indienet/business/multichat/folder) 진입 가이드. app별 파라미터·시나리오·자연어 매핑.", "keywords": ["창", "윈도우", "런처", "앱열기", "프로젝트창", "시스템AI", "인디넷", "비즈니스", "멀티채팅", "폴더", "open_window", "메신저"], "file": "open_window.md"}, {"id": "photo", "name": "사진·동영상 라이브러리", "description": "[self:photo]{op} 8 op 통합 — scan(인덱싱) + list_scans/gallery/search/detail/stats/timeline/duplicates. 워크플로우, 자연어 매핑, 깊은 쿼리 진입점.", "keywords": ["사진", "동영상", "미디어", "갤러리", "스캔", "EXIF", "GPS", "중복사진", "사진검색", "타임라인", "photo", "video"], "file": "photo.md"}, {"id": "gutenberg", "name": "Project Gutenberg 가이드", "description": "저작권 만료된 7만+권 고전 원문 검색·다운로드. Gutendex API. 파라미터(query/topic/author_year/languages), 응답 필드(text_url/html_url), 활용 예시.", "keywords": ["고전", "원문", "gutenberg", "문학", "철학", "고전문학", "원전", "classic", "저작권만료", "무료도서", "서양고전"], "file": "gutenberg.md"}, {"id": "ai_trend_report", "name": "AI 동향 보고서", "description": "AI 분야 투자·경제 + 기술·연구 동향을 두 섹션으로 매일 보고. 직전 보고서를 찾아 읽고 새 조사를 더해 \"무엇이 새로운가\"를 짚는 업데이트 방식. 고정 저장경로·델타 서술·복수 소스 교차검증·스케줄 연결 포함.", "keywords": ["AI 동향", "AI 보고서", "AI 뉴스", "AI 동향 보고서", "동향", "데일리 AI", "AI trend", "AI report", "AI investment", "기술동향", "연구동향", "투자 경제", "매일 보고서", "정기 보고"], "file": "ai_trend_report.md"}]}
+{
+  "description": "가이드 파일 DB - data/guides/ 폴더에서 파일 관리",
+  "guides": [
+    {
+      "id": "video_workflow",
+      "name": "동영상 제작 워크플로우",
+      "description": "HTML 기반 영상 또는 Remotion 영상을 만드는 단계별 워크플로우. 이미지 생성, 코드 작성, 미리보기, TTS, 최종 렌더링까지.",
+      "keywords": [
+        "동영상",
+        "영상",
+        "비디오",
+        "video",
+        "mp4",
+        "렌더링",
+        "TTS",
+        "나레이션"
+      ],
+      "file": "video_workflow.md"
+    },
+    {
+      "id": "html_video",
+      "name": "HTML 영상 제작 기술 가이드",
+      "description": "Playwright 프레임 캡처 기반 MP4 영상 제작의 기술적 상세. HTML 씬 구조, 애니메이션, 오디오 합성.",
+      "keywords": [
+        "html",
+        "영상",
+        "playwright",
+        "프레임",
+        "씬",
+        "scene",
+        "애니메이션"
+      ],
+      "file": "html_video.md"
+    },
+    {
+      "id": "slides",
+      "name": "슬라이드 제작 가이드 (통합)",
+      "description": "슬라이드의 전부 — 만드는 법은 [engines:slide] 하나(native 통짜 이미지, NotebookLM식 시각=의미 융합). 메시지 큐레이션 원칙, 강의 한 장씩 협업, 덱 관리·내보내기([self:lecture]), 빠른 텍스트형(style:text)까지. 발표·강의·카드·마케팅 슬라이드 모두 이 가이드.",
+      "keywords": [
+        "슬라이드",
+        "프레젠테이션",
+        "카드뉴스",
+        "slides",
+        "slide",
+        "발표",
+        "발표 자료",
+        "PNG",
+        "강의",
+        "강의 만들기",
+        "강의 슬라이드",
+        "lecture",
+        "교육",
+        "수업",
+        "강사",
+        "마스터 클래스",
+        "워크숍",
+        "deck",
+        "덱",
+        "native",
+        "NotebookLM",
+        "고품질",
+        "일러스트",
+        "이미지",
+        "비주얼",
+        "메타포",
+        "책 강의",
+        "메시지 큐레이션",
+        "명제",
+        "마케팅",
+        "랜딩",
+        "피치덱",
+        "design_system",
+        "aesthetic",
+        "vintage_book",
+        "dark_keynote",
+        "tech_minimal",
+        "magazine_modern",
+        "academic_paper",
+        "pptx"
+      ],
+      "file": "slides.md"
+    },
+    {
+      "id": "remotion",
+      "name": "Remotion 영상 제작 가이드",
+      "description": "React/TSX 기반 Remotion으로 프로그래밍 방식 MP4 영상 제작. 컴포지션 구조, 애니메이션, Tailwind CSS, Google Fonts, Lottie, 시각 기법 포함.",
+      "keywords": [
+        "remotion",
+        "react",
+        "tsx",
+        "프로그래밍",
+        "컴포지션",
+        "composition",
+        "tailwind",
+        "lottie",
+        "폰트",
+        "시각",
+        "디자인"
+      ],
+      "file": "remotion.md"
+    },
+    {
+      "id": "web_builder",
+      "name": "웹사이트 빌더 가이드",
+      "description": "홈페이지, 블로그, 웹사이트 만들기 및 관리. 사이트 제작/수정 요청 시 반드시 이 가이드를 먼저 읽을 것. Vercel/Cloudflare 배포.",
+      "keywords": [
+        "홈페이지",
+        "웹사이트",
+        "website",
+        "빌더",
+        "배포",
+        "deploy",
+        "pages",
+        "홈페이지 만들기",
+        "사이트",
+        "웹페이지",
+        "landing",
+        "포트폴리오",
+        "홈페이지 수정",
+        "사이트 수정",
+        "업데이트",
+        "homepage",
+        "블로그 만들기",
+        "블로그 사이트",
+        "만들어줘",
+        "제작"
+      ],
+      "file": "web_builder.md"
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare 서비스 가이드",
+      "description": "Cloudflare Pages, Workers, R2 스토리지, D1 데이터베이스, Tunnel 설정 및 관리.",
+      "keywords": [
+        "cloudflare",
+        "workers",
+        "r2",
+        "d1",
+        "tunnel",
+        "CDN",
+        "서버"
+      ],
+      "file": "cloudflare.md"
+    },
+    {
+      "id": "browser_action",
+      "name": "브라우저 자동화 가이드",
+      "description": "Playwright(헤드리스)와 Chrome MCP(실제 브라우저) 자동화. Snapshot→Ref→Action 패턴, 탭/iframe/쿠키 세션 관리, 폼·드롭다운 조작.",
+      "keywords": [
+        "브라우저",
+        "browser",
+        "자동화",
+        "playwright",
+        "chrome",
+        "크롬",
+        "클릭",
+        "스크린샷",
+        "크롤링",
+        "탭",
+        "iframe",
+        "쿠키",
+        "로그인",
+        "원격제어"
+      ],
+      "file": "browser_action.md"
+    },
+    {
+      "id": "android",
+      "name": "안드로이드 기기 관리 가이드",
+      "description": "ADB 기반 안드로이드 기기 연결, 앱 설치, 화면 제어.",
+      "keywords": [
+        "안드로이드",
+        "android",
+        "adb",
+        "앱",
+        "기기",
+        "스마트폰"
+      ],
+      "file": "android.md"
+    },
+    {
+      "id": "desktop",
+      "name": "데스크톱 자동화 가이드",
+      "description": "macOS 데스크톱 앱(브라우저 밖) 제어 — 좌표 기반 클릭·키보드·스크린샷. screenshot → 판단 → action 흐름과 9개 op 사양.",
+      "keywords": [
+        "데스크톱",
+        "desktop",
+        "macOS",
+        "맥",
+        "자동화",
+        "마우스",
+        "키보드",
+        "스크린샷",
+        "단축키",
+        "Finder",
+        "pyautogui",
+        "좌표"
+      ],
+      "file": "desktop.md"
+    },
+    {
+      "id": "investment",
+      "name": "투자 분석 가이드",
+      "description": "한국 기업 분석 워크플로우. 주식, 재무제표, 공시 정보 조회 및 분석.",
+      "keywords": [
+        "투자",
+        "주식",
+        "기업분석",
+        "재무제표",
+        "공시",
+        "ETF",
+        "채권"
+      ],
+      "file": "investment.md"
+    },
+    {
+      "id": "real_estate",
+      "name": "부동산 시세·매물 검색 가이드",
+      "description": "부동산 3개 층(실거래가 시세 source=molit / 현재 매물 호가·사진·링크 source=zigbang / 다가구 주인세대 등 희소 직거래). 직방 source 사용법·내부 API 레퍼런스(geohash·엔드포인트·필드), 당근 SSR JSON-LD 추출과 동·필터 미적용 함정, 네이버 미연동, 다가구 주인세대=현지 부동산 직접 문의. 분석 기준(126%룰·전세가율·수익률·호가-실거래 갭).",
+      "keywords": [
+        "부동산",
+        "아파트",
+        "매매",
+        "전세",
+        "월세",
+        "매물",
+        "호가",
+        "매물검색",
+        "매물링크",
+        "매물사진",
+        "직방",
+        "zigbang",
+        "빌라",
+        "원룸",
+        "오피스텔",
+        "국토부",
+        "시세",
+        "실거래가",
+        "매물분석",
+        "수익률",
+        "깡통전세",
+        "126%룰",
+        "전세가율",
+        "다가구",
+        "주인세대",
+        "당근",
+        "daangn",
+        "네이버부동산"
+      ],
+      "file": "real_estate.md"
+    },
+    {
+      "id": "house_designer",
+      "name": "건축 설계 가이드",
+      "description": "2D/3D 건축 설계 도구. 평면도, 입면도, 3D 모델링.",
+      "keywords": [
+        "건축",
+        "설계",
+        "평면도",
+        "3D",
+        "모델링",
+        "도면",
+        "건물"
+      ],
+      "file": "house_designer.md"
+    },
+    {
+      "id": "web_collector",
+      "name": "웹 정보 수집 가이드",
+      "description": "웹 정보 수집 후 DB에 축적하는 워크플로우.",
+      "keywords": [
+        "수집",
+        "스크래핑",
+        "DB",
+        "축적",
+        "정보수집",
+        "데이터"
+      ],
+      "file": "web_collector.md"
+    },
+    {
+      "id": "cctv",
+      "name": "CCTV 영상 가이드",
+      "description": "한국 교통 CCTV 등 실시간 영상 조회.",
+      "keywords": [
+        "CCTV",
+        "교통",
+        "실시간",
+        "영상",
+        "카메라"
+      ],
+      "file": "cctv.md"
+    },
+    {
+      "id": "local_info",
+      "name": "지역 정보 가이드",
+      "description": "동네 가게/상점 정보 검색 및 DB 관리.",
+      "keywords": [
+        "동네",
+        "가게",
+        "상점",
+        "지역",
+        "로컬"
+      ],
+      "file": "local_info.md"
+    },
+    {
+      "id": "agent_publishing",
+      "name": "에이전트 웹 퍼블리싱 가이드",
+      "description": "IndieBiz OS 에이전트를 Cloudflare Workers 기반 웹앱으로 배포하는 절차. Worker 생성, 시크릿 설정, 프론트엔드 HTML, 배포 및 업데이트.",
+      "keywords": [
+        "퍼블리싱",
+        "배포",
+        "deploy",
+        "workers",
+        "웹앱",
+        "cloudflare",
+        "publishing",
+        "에이전트배포"
+      ],
+      "file": "agent_publishing.md"
+    },
+    {
+      "id": "calendar",
+      "name": "캘린더 & 스케줄러 가이드",
+      "description": "캘린더 이벤트(기념일, 생일, 약속)와 스케줄러(반복 작업, 자동 실행) 통합 관리.",
+      "keywords": [
+        "캘린더",
+        "일정",
+        "이벤트",
+        "calendar",
+        "약속",
+        "스케줄",
+        "반복",
+        "자동화",
+        "기념일",
+        "예약",
+        "scheduler"
+      ],
+      "file": "calendar.md"
+    },
+    {
+      "id": "video_subtitle",
+      "name": "동영상 자막 제작 가이드",
+      "description": "스토리텔링 관점의 자막 제작 원칙과 ffmpeg를 활용한 기술적 구현 방법.",
+      "keywords": [
+        "자막",
+        "subtitle",
+        "동영상",
+        "영상",
+        "ffmpeg",
+        "스토리텔링",
+        "나레이션"
+      ],
+      "file": "video_subtitle.md"
+    },
+    {
+      "id": "guide_registration",
+      "name": "가이드 등록 가이드",
+      "description": "시스템에 새로운 작업 가이드를 등록하고 DB를 업데이트하는 방법.",
+      "keywords": [
+        "가이드",
+        "등록",
+        "추가",
+        "guide",
+        "registration",
+        "시스템",
+        "DB"
+      ],
+      "file": "guide_registration.md"
+    },
+    {
+      "id": "newspaper",
+      "name": "신문 제작 가이드",
+      "description": "뉴스를 수집하여 HTML 신문으로 제작. 구글 뉴스, 가디언 등 다양한 소스 지원. 2컬럼 카드 그리드 포맷.",
+      "keywords": [
+        "신문",
+        "뉴스",
+        "뉴스레터",
+        "newspaper",
+        "news",
+        "취합",
+        "통합",
+        "데일리",
+        "가디언",
+        "guardian",
+        "구글뉴스",
+        "기사",
+        "모아서",
+        "수집"
+      ],
+      "file": "newspaper_guide.md"
+    },
+    {
+      "id": "deep_research",
+      "name": "심층연구 가이드",
+      "description": "전문가 수준의 심층 분석과 보고서 작성 방법론. 다관점 리서치, 비판적 사고, 구조화된 논증, 자기검토 프로세스를 포함.",
+      "keywords": [
+        "심층연구",
+        "심층분석",
+        "분석",
+        "보고서",
+        "리서치",
+        "research",
+        "report",
+        "전문가",
+        "깊이",
+        "다관점",
+        "논문",
+        "조사",
+        "검토",
+        "analysis",
+        "deep",
+        "전망",
+        "시사점"
+      ],
+      "file": "deep_research.md"
+    },
+    {
+      "id": "workflow",
+      "name": "워크플로우 저장 & 실행",
+      "description": "자주 쓰는 IBL 파이프라인을 이름 붙여 저장하고, 이름만으로 실행하는 방법.",
+      "keywords": [
+        "워크플로우",
+        "workflow",
+        "저장",
+        "실행",
+        "파이프라인",
+        "반복",
+        "자동화"
+      ],
+      "file": "workflow.md"
+    },
+    {
+      "id": "delegation_agent",
+      "name": "프로젝트 에이전트 위임 가이드",
+      "description": "같은 프로젝트 내 동료 에이전트에게 작업을 위임하는 방법. 병렬/순차 위임, 스테이트리스 원칙, 크로스 위임.",
+      "keywords": [
+        "동료 위임",
+        "delegate",
+        "동료",
+        "작업분배",
+        "병렬위임",
+        "순차위임",
+        "peers"
+      ],
+      "file": "delegation_agent.md"
+    },
+    {
+      "id": "delegation_system_ai",
+      "name": "시스템 AI 위임 가이드",
+      "description": "시스템 AI가 프로젝트 에이전트에게 작업을 위임하는 방법. delegate_project 사용법, 병렬/순차 위임, 크로스 위임.",
+      "keywords": [
+        "시스템 위임",
+        "delegate_project",
+        "시스템AI",
+        "프로젝트 위임",
+        "list_projects"
+      ],
+      "file": "delegation_system_ai.md"
+    },
+    {
+      "id": "work_plan_writing",
+      "name": "작업계획서 작성 가이드",
+      "description": "여러 에이전트를 활용한 작업계획서를 자연어로 작성하는 방법. 목표 설정, 에이전트 배정, 의존성 파악, 실패 대응.",
+      "keywords": [
+        "작업계획서",
+        "계획",
+        "plan",
+        "work plan",
+        "프로젝트 계획",
+        "작업 분배",
+        "멀티에이전트"
+      ],
+      "file": "work_plan_writing.md"
+    },
+    {
+      "id": "search",
+      "name": "검색 가이드",
+      "description": "검색 전 계획 수립 원칙과 사용 가능한 모든 검색 수단(웹, 뉴스, 쇼핑, 논문, 유튜브, 금융, 지역, 내부 데이터 등) 안내. 검색을 하기 전에 반드시 읽을 것.",
+      "keywords": [
+        "검색",
+        "서치",
+        "search",
+        "찾기",
+        "조사",
+        "탐색",
+        "조회",
+        "정보",
+        "리서치"
+      ],
+      "file": "search.md"
+    },
+    {
+      "id": "new_action_checklist",
+      "name": "새 IBL 액션 추가 체크리스트",
+      "description": "새로운 IBL 액션(도구 패키지)을 만들 때 반드시 따라야 할 체크리스트. 명명 헌법, 패키지 생성, src 노드 등록+검증, 해마 데이터, 임베딩, 확인 + 선택: 앱 표면 노출(app: 블록 — 데스크탑·원격 계기 자동 등장).",
+      "keywords": [
+        "액션",
+        "추가",
+        "새로운",
+        "만들기",
+        "등록",
+        "action",
+        "register",
+        "package",
+        "패키지",
+        "체크리스트",
+        "해마",
+        "임베딩",
+        "embedding",
+        "도구",
+        "tool",
+        "ibl_actions",
+        "앱",
+        "계기",
+        "app",
+        "GUI",
+        "instrument",
+        "표면"
+      ],
+      "file": "new_action_checklist.md"
+    },
+    {
+      "id": "action_removal",
+      "name": "IBL 액션 제거 가이드",
+      "description": "중복이거나 작동하지 않는 IBL 액션을 제거할 때의 체크리스트. 액션 정의, 해마 학습 데이터, 벡터 임베딩, 도구 정의 등 모든 참조를 정리하는 절차.",
+      "keywords": [
+        "액션 제거",
+        "액션 삭제",
+        "action removal",
+        "IBL 정리",
+        "중복 액션",
+        "해마",
+        "학습 데이터",
+        "임베딩"
+      ],
+      "file": "action_removal.md"
+    },
+    {
+      "id": "book_publishing",
+      "name": "출판 프로젝트 관리 가이드",
+      "description": "책 쓰기, 원고 관리, 출판 프로젝트 운영 가이드. 폴더 구조, book_plan.md 작성법, 조각글 수집, 문체 참고, 진척 기록, 합본 출력.",
+      "keywords": [
+        "출판",
+        "책",
+        "원고",
+        "글쓰기",
+        "집필",
+        "publishing",
+        "book",
+        "manuscript",
+        "출판사",
+        "챕터",
+        "조각글",
+        "문체",
+        "원고관리",
+        "book_plan",
+        "draft"
+      ],
+      "file": "book_publishing.md"
+    },
+    {
+      "id": "book_typesetting",
+      "name": "책 조판 가이드 (typst 한국어 단행본)",
+      "description": "typst로 한국어 단행본 PDF를 조판하는 가이드. 표준 결정사항(미래상상/신국판/Pretendard), 표지·내지·책등·날개 디자인, 미세조정 vs 출고 검증, PNG 검토 사이클, 인쇄용/디지털 분리, 자주 발견되는 결함 체크리스트. 원고 관리는 book_publishing.md 참조.",
+      "keywords": [
+        "조판",
+        "typst",
+        "단행본",
+        "PDF",
+        "표지",
+        "책등",
+        "내지",
+        "인쇄",
+        "출판",
+        "책",
+        "typesetting",
+        "book",
+        "cover",
+        "pretendard",
+        "신국판",
+        "미래상상",
+        "manuscript",
+        "convert"
+      ],
+      "file": "book_typesetting.md"
+    },
+    {
+      "id": "self_inspection",
+      "name": "자기 점검 가이드",
+      "description": "시스템 AI가 자기 자신의 상태(IBL/메모리/프롬프트/히스토리/가이드/인지)를 진단하고 보고하는 절차. episode_log/world_pulse 등을 활용한 자기 진단.",
+      "keywords": [
+        "자기 점검",
+        "자기점검",
+        "점검",
+        "진단",
+        "자가진단",
+        "self-inspection",
+        "self check",
+        "self-check",
+        "성찰",
+        "회고",
+        "메타인지",
+        "메타 인지",
+        "x-ray",
+        "엑스레이",
+        "시스템 점검",
+        "시스템 진단",
+        "어디 아픈지",
+        "최적화",
+        "최근 어땠어",
+        "뭐 했어",
+        "에피소드",
+        "에피소드 메모리",
+        "episode"
+      ],
+      "file": "self_inspection_guide.md"
+    },
+    {
+      "id": "trigger",
+      "name": "트리거·스위치",
+      "description": "자동 실행 작업 등록·관리. 트리거(push, 조건 충족 시 자동) vs 스위치(pull, 명시적 호출). 4타입(schedule/channel/webhook/file) 설정 패턴.",
+      "keywords": [
+        "트리거",
+        "자동 실행",
+        "예약",
+        "스케줄링",
+        "trigger",
+        "스위치",
+        "switch",
+        "자동화",
+        "cron",
+        "정기 실행",
+        "알람",
+        "매일",
+        "매주"
+      ],
+      "file": "trigger.md"
+    },
+    {
+      "id": "realty",
+      "name": "부동산 시세·매물 (기술 참조)",
+      "description": "[sense:realty] source 분기. source=molit=국토부 실거래가 6종(아파트/주택/연립 × 매매/전월세) type×deal 매트릭스·region_code. source=zigbang=직방 현재 매물(빌라/원룸/오피스텔 호가·링크). 자주 하는 실수.",
+      "keywords": [
+        "부동산",
+        "실거래가",
+        "아파트",
+        "매매",
+        "전세",
+        "월세",
+        "주택",
+        "realty",
+        "직방",
+        "zigbang",
+        "매물",
+        "호가",
+        "빌라",
+        "원룸",
+        "강남",
+        "지역코드"
+      ],
+      "file": "realty.md"
+    },
+    {
+      "id": "book",
+      "name": "한국 도서 검색",
+      "description": "도서관정보나루 통합 — keyword 검색, isbn 기본 조회, isbn+detail로 대출 통계까지. 3가지 입력 모드.",
+      "keywords": [
+        "도서",
+        "책",
+        "ISBN",
+        "도서관",
+        "대출통계",
+        "한국책",
+        "library",
+        "book"
+      ],
+      "file": "book.md"
+    },
+    {
+      "id": "legal",
+      "name": "법률 정보 (국가법령정보센터)",
+      "description": "법령·판례·행정규칙·자치법규·법령해석·헌재결정·조약·법률용어·서식 10종 영역. query/id × target 매트릭스.",
+      "keywords": [
+        "법률",
+        "법령",
+        "판례",
+        "법",
+        "조항",
+        "헌재",
+        "행정규칙",
+        "조례",
+        "law",
+        "legal",
+        "선의의 제3자",
+        "임대차"
+      ],
+      "file": "legal.md"
+    },
+    {
+      "id": "kosis",
+      "name": "통계청 KOSIS 국가통계",
+      "description": "한국 공식 통계 검색·조회. query(검색)/indicator(주요지표)/(org_id+tbl_id)(특정 통계표) 3가지 모드.",
+      "keywords": [
+        "통계",
+        "kosis",
+        "통계청",
+        "인구",
+        "GDP",
+        "물가",
+        "실업률",
+        "지표",
+        "시계열",
+        "통계표"
+      ],
+      "file": "kosis.md"
+    },
+    {
+      "id": "startup",
+      "name": "정부 창업·중소기업 지원사업",
+      "description": "K-Startup(창업진흥원) + 중기부 MSS 사업공고 통합. source(all/kstartup/mss) 분기, 단계·분야별 매핑.",
+      "keywords": [
+        "창업",
+        "사업공고",
+        "지원사업",
+        "예비창업",
+        "정책자금",
+        "R&D",
+        "수출바우처",
+        "K-Startup",
+        "중기부",
+        "MSS",
+        "TIPS"
+      ],
+      "file": "startup.md"
+    },
+    {
+      "id": "open_window",
+      "name": "런처 창 열기",
+      "description": "IndieBiz OS Electron 런처의 6개 메인 작업창(project/system_ai/indienet/business/multichat/folder) 진입 가이드. app별 파라미터·시나리오·자연어 매핑.",
+      "keywords": [
+        "창",
+        "윈도우",
+        "런처",
+        "앱열기",
+        "프로젝트창",
+        "시스템AI",
+        "인디넷",
+        "비즈니스",
+        "멀티채팅",
+        "폴더",
+        "open_window",
+        "메신저"
+      ],
+      "file": "open_window.md"
+    },
+    {
+      "id": "photo",
+      "name": "사진·동영상 라이브러리",
+      "description": "[self:photo]{op} 8 op 통합 — scan(인덱싱) + list_scans/gallery/search/detail/stats/timeline/duplicates. 워크플로우, 자연어 매핑, 깊은 쿼리 진입점.",
+      "keywords": [
+        "사진",
+        "동영상",
+        "미디어",
+        "갤러리",
+        "스캔",
+        "EXIF",
+        "GPS",
+        "중복사진",
+        "사진검색",
+        "타임라인",
+        "photo",
+        "video"
+      ],
+      "file": "photo.md"
+    },
+    {
+      "id": "gutenberg",
+      "name": "Project Gutenberg 가이드",
+      "description": "저작권 만료된 7만+권 고전 원문 검색·다운로드. Gutendex API. 파라미터(query/topic/author_year/languages), 응답 필드(text_url/html_url), 활용 예시.",
+      "keywords": [
+        "고전",
+        "원문",
+        "gutenberg",
+        "문학",
+        "철학",
+        "고전문학",
+        "원전",
+        "classic",
+        "저작권만료",
+        "무료도서",
+        "서양고전"
+      ],
+      "file": "gutenberg.md"
+    },
+    {
+      "id": "ai_trend_report",
+      "name": "AI 동향 보고서",
+      "description": "AI 분야 투자·경제 + 기술·연구 동향을 두 섹션으로 매일 보고. 직전 보고서를 찾아 읽고 새 조사를 더해 \"무엇이 새로운가\"를 짚는 업데이트 방식. 고정 저장경로·델타 서술·복수 소스 교차검증·스케줄 연결 포함.",
+      "keywords": [
+        "AI 동향",
+        "AI 보고서",
+        "AI 뉴스",
+        "AI 동향 보고서",
+        "동향",
+        "데일리 AI",
+        "AI trend",
+        "AI report",
+        "AI investment",
+        "기술동향",
+        "연구동향",
+        "투자 경제",
+        "매일 보고서",
+        "정기 보고"
+      ],
+      "file": "ai_trend_report.md"
+    },
+    {
+      "id": "ai_startup_report",
+      "name": "AI 창업·응모 정보 보고서",
+      "description": "AI 분야의 정부 창업 지원사업(K-Startup/MSS)과 응모·공모 기회(경진대회·공모전·해커톤·그랜트)를 마감일 중심으로 모아 정기 보고. 직전 보고서를 읽고 신규 공고를 더하고 마감 임박을 앞세우며 마감된 것을 떨어내는 업데이트 방식. 고정 저장경로·델타 서술·마감일 검증 포함.",
+      "keywords": [
+        "AI 창업",
+        "창업 지원",
+        "지원사업",
+        "공모전",
+        "경진대회",
+        "응모",
+        "해커톤",
+        "그랜트",
+        "startup",
+        "contest",
+        "창업 보고서",
+        "응모 정보",
+        "마감",
+        "공모 정보"
+      ],
+      "file": "ai_startup_report.md"
+    },
+    {
+      "id": "codebase_map",
+      "name": "코드베이스 구조 (백엔드/프론트 디렉토리·파일 위치)",
+      "description": "indiebizOS 자기개발·디버깅용 코드 지도 — backend/frontend/data 디렉토리 구조와 각 파일의 역할·위치(어떤 모듈이 무엇을 하는지). 시스템 자신을 고치거나 버그를 추적·코드를 수정할 때 읽는다.",
+      "keywords": [
+        "코드 구조",
+        "코드베이스",
+        "파일 위치",
+        "디렉토리 구조",
+        "백엔드 구조",
+        "어떤 파일",
+        "자기개발",
+        "디버깅",
+        "모듈 위치",
+        "소스 코드",
+        "아키텍처 파일"
+      ],
+      "file": "codebase_map.md"
+    }
+  ]
+}

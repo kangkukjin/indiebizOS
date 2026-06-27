@@ -7,11 +7,11 @@ world_pulse.py에서 분리된 모듈로, 시스템 건강 점검(Self-Check)과
 
 기능:
 1. generate_guide: world_pulse.md 가이드 파일 생성/갱신
-2. Self-Check: 전수 IBL 액션 자가 점검 (면역 순찰)
+2. 일일 건강 점검: ibl_health_check.py(정적+fixture+골든) 1회 + RED 면 알림 (AI 0)
 3. 시스템 건강 요약 API + 패턴 분석
 
 사용:
-    from world_pulse_health import generate_guide, run_self_check, get_system_health
+    from world_pulse_health import generate_guide, run_daily_health_check, get_system_health
 """
 
 import hashlib
@@ -24,96 +24,6 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
-
-
-# ============================================================
-# 정적 정합성 검증 (build_ibl_nodes --check 통합, 2026-05-28)
-# ============================================================
-
-def run_static_ibl_check() -> Dict:
-    """build_ibl_nodes.py 의 정합성 검증을 self-check 사이클에 호출.
-
-    런타임 동작 점검(전수 액션 실행)과 별개로, 정적 정합성(src↔tool.json↔handler)
-    까지 같은 면역 순찰 사이클에서 잡는다. commit pre-commit 훅으로도 잡지만
-    backend 측 정기 검증이 합류하면 src/tool.json/handler 외부 편집(직접 파일
-    수정, AI 자가 픽스 등)도 12시간 사이클로 검출.
-
-    Returns: save_self_check() 와 호환되는 dict (node="__static__", action="ibl_consistency").
-    """
-    BASE = Path(__file__).parent.parent
-    scripts_dir = BASE / "scripts"
-
-    sys.path.insert(0, str(scripts_dir))
-    try:
-        try:
-            import yaml as _yaml
-            from build_ibl_nodes import validate, validate_corpus_params
-        except ImportError as e:
-            return {
-                "node": "__static__",
-                "action": "ibl_consistency",
-                "success": 0,
-                "response_ms": 0,
-                "error_message": f"검증 모듈 import 실패: {e}",
-                "data_quality": "skipped",
-            }
-    finally:
-        if str(scripts_dir) in sys.path:
-            sys.path.remove(str(scripts_dir))
-
-    nodes_yaml = BASE / "data" / "ibl_nodes.yaml"
-    if not nodes_yaml.is_file():
-        return {
-            "node": "__static__",
-            "action": "ibl_consistency",
-            "success": 0,
-            "response_ms": 0,
-            "error_message": f"ibl_nodes.yaml 없음: {nodes_yaml}",
-            "data_quality": "skipped",
-        }
-
-    start = _time.time()
-    try:
-        with open(nodes_yaml, "r", encoding="utf-8") as f:
-            data = _yaml.safe_load(f)
-        issues = validate(data, BASE)
-        # 코퍼스 param 정합도 같은 사이클에서 (조용히 무시되는 키 회귀 방지).
-        cissues = validate_corpus_params(data, BASE)
-        if cissues:
-            issues = issues + cissues
-    except Exception as e:
-        return {
-            "node": "__static__",
-            "action": "ibl_consistency",
-            "success": 0,
-            "response_ms": int((_time.time() - start) * 1000),
-            "error_message": f"검증 중 예외: {e}",
-            "data_quality": "exception",
-        }
-
-    elapsed_ms = int((_time.time() - start) * 1000)
-    if not issues:
-        return {
-            "node": "__static__",
-            "action": "ibl_consistency",
-            "success": 1,
-            "response_ms": elapsed_ms,
-            "error_message": None,
-            "data_quality": "ok",
-        }
-
-    # 실패 — 상위 5개만 요약 (error_message 칼럼 TEXT 한정)
-    summary = f"{len(issues)}건: " + " / ".join(issues[:5])
-    if len(issues) > 5:
-        summary += f" (외 {len(issues) - 5}건)"
-    return {
-        "node": "__static__",
-        "action": "ibl_consistency",
-        "success": 0,
-        "response_ms": elapsed_ms,
-        "error_message": summary[:1000],
-        "data_quality": "consistency_failure",
-    }
 
 
 # ============================================================
@@ -138,12 +48,7 @@ def generate_guide():
 
     lines = [
         "# World Pulse — 오늘의 세계와 나 (자동 주입)",
-        f"수집 시각: {today.get('collected_at', '?')[:16]}",
-        "",
-        "> 이 정보는 대화 시작 시 시스템 프롬프트에 자동 포함됩니다.",
-        "> 사용자가 '요즘 세상은 어때', '오늘 경제 상황' 등을 물으면",
-        "> 아래 데이터를 바로 활용하여 답하세요.",
-        "> [sense:world]{op: \"refresh\"}나 read_guide 호출은 불필요합니다.",
+        f"측정 시각: {today.get('collected_at', '?')[:16]} — 이 시점에 측정된 값",
         "",
     ]
 
@@ -388,269 +293,65 @@ def _parse_ai_json(response: str) -> Optional[list]:
         return None
 
 
-def generate_test_plan(force: bool = False) -> Dict:
-    """AI를 사용하여 테스트 계획 생성.
+def run_ibl_health_check() -> List[Dict]:
+    """IBL 건강검사의 단일 소스 — scripts/ibl_health_check.py 를 subprocess 1회 실행하고
+    §1A 정적 정합성 + §1B 통화(fixture) + §1C 골든파이프 결과를 self_checks 형식으로 반환.
 
-    노드별로 나눠서 AI를 호출하여 응답 크기를 제한합니다.
-    액션 목록이 변경되었거나 force=True일 때만 AI를 호출합니다.
-
-    Returns:
-        {"actions_hash": "...", "generated_at": "...", "actions": [...]}
+    구조 건강이 변하는 건 어휘를 쓸 때뿐이고(그건 커밋 시 --check 가 막는다), 이건 그 정적
+    검사 + fixture 행동검사 + 흐름검사를 하루 1회 회귀 그물로 한 번 더 돌리는 것. AI 0.
     """
-    current_hash = _get_actions_hash()
-
-    # 캐시 확인 — 해시가 같으면 기존 계획 재사용
-    if not force:
-        cached = _load_test_plan()
-        if cached and cached.get("actions_hash") == current_hash:
-            logger.debug("[SelfCheck] 테스트 계획 캐시 사용 (액션 변경 없음)")
-            return cached
-
-    # 전체 액션 메타데이터를 노드별로 수집
+    import subprocess, re
+    _root = Path(__file__).parent.parent
+    _script = _root / "scripts" / "ibl_health_check.py"
+    out = []
+    if not _script.exists():
+        return out
     try:
-        from ibl_engine import _load_nodes_config
-        reg = _load_nodes_config()
-        nodes = reg.get("nodes", {})
-    except Exception as e:
-        logger.warning(f"[SelfCheck] 노드 설정 로드 실패: {e}")
-        return {}
-
-    actions_by_node = {}
-    total_count = 0
-    for node_name in sorted(nodes.keys()):
-        node_def = nodes[node_name]
-        node_actions = []
-        for action_name, action_def in sorted(node_def.get("actions", {}).items()):
-            # router가 handler인 액션만 자가점검 대상
-            # system, workflow_engine, trigger_engine 등은 GUI 열기/실행 부작용 가능
-            router = action_def.get("router", "")
-            if router != "handler":
-                continue
-            node_actions.append({
-                "action": action_name,
-                "description": action_def.get("description", ""),
-                "group": action_def.get("group", ""),
-            })
-        actions_by_node[node_name] = node_actions
-        total_count += len(node_actions)
-
-    # 노드별로 AI 호출 — 시스템 AI 프로바이더 사용
-    all_plan_actions = []
-    provider = None
-    try:
-        from system_ai_runner import SystemAIRunner
-        runner = SystemAIRunner.get_instance()
-        if runner and runner.ai and runner.ai._provider:
-            provider = runner.ai._provider
-    except Exception:
-        pass
-
-    if provider is None:
-        # 시스템 AI 미준비 시 lightweight_ai_call로 폴백
-        try:
-            from consciousness_agent import lightweight_ai_call
-            _use_lightweight = True
-        except Exception as e:
-            logger.warning(f"[SelfCheck] AI 모듈 로드 실패: {e}")
-            cached = _load_test_plan()
-            return cached if cached else {}
-    else:
-        _use_lightweight = False
-
-    for node_name, node_actions in actions_by_node.items():
-        prompt = f"""[{node_name}] 노드의 액션 {len(node_actions)}개를 분류하세요.
-
-{json.dumps(node_actions, ensure_ascii=False)}"""
-
-        try:
-            if _use_lightweight:
-                response = lightweight_ai_call(prompt, system_prompt=_TEST_PLAN_SYSTEM_PROMPT)
-            else:
-                original_sp = provider.system_prompt
-                provider.system_prompt = _TEST_PLAN_SYSTEM_PROMPT
-                try:
-                    response = provider.process_message(
-                        message=prompt, history=[], images=None, execute_tool=None
-                    )
-                finally:
-                    provider.system_prompt = original_sp
-
-            parsed = _parse_ai_json(response)
-            if parsed:
-                for entry in parsed:
-                    entry["node"] = node_name
-                all_plan_actions.extend(parsed)
-                logger.info(f"[SelfCheck] {node_name}: {sum(1 for a in parsed if a.get('safe'))} safe / {sum(1 for a in parsed if not a.get('safe'))} unsafe")
-            else:
-                logger.warning(f"[SelfCheck] {node_name}: AI 응답 파싱 실패")
-        except Exception as e:
-            logger.warning(f"[SelfCheck] {node_name}: AI 호출 실패: {e}")
-
-    if not all_plan_actions:
-        logger.warning("[SelfCheck] 테스트 계획 생성 실패, 캐시 사용")
-        cached = _load_test_plan()
-        return cached if cached else {}
-
-    plan = {
-        "actions_hash": current_hash,
-        "generated_at": datetime.now().isoformat(),
-        "total_actions": total_count,
-        "safe_count": sum(1 for a in all_plan_actions if a.get("safe")),
-        "unsafe_count": sum(1 for a in all_plan_actions if not a.get("safe")),
-        "actions": all_plan_actions,
-    }
-
-    _save_test_plan(plan)
-    logger.info(
-        f"[SelfCheck] 테스트 계획 생성 완료: "
-        f"{plan['safe_count']} safe / {plan['unsafe_count']} unsafe / {plan['total_actions']} total"
-    )
-
-    return plan
-
-
-def _get_safe_actions() -> List[Dict]:
-    """테스트 계획 기반으로 안전한 액션 목록 반환.
-
-    AI가 생성한 테스트 계획에서 safe=true인 액션만 반환합니다.
-    테스트 계획이 없거나 액션 목록이 변경되었으면 자동으로 AI를 호출하여 갱신합니다.
-    """
-    plan = generate_test_plan()
-    if not plan or not plan.get("actions"):
-        logger.warning("[SelfCheck] 테스트 계획 없음 — 점검 불가")
-        return []
-
-    # AI가 safe로 분류한 것 중에서, 확실히 위험한 키워드가 포함된 것은 코드에서 한 번 더 거름
-    _UNSAFE_KEYWORDS = {
-        "open_window", "os_open", "launch", "launch_sites",
-        "screen",  # 구 desktop — 화면 좌표 조작(클릭/타이핑), 부작용
-        "play", "stop", "play_radio", "stop_radio", "set_radio_volume",
-        "write", "delete", "save", "move", "copy", "create", "edit",
-        "rebuild_index", "blog_rebuild_index", "rebuild_search_index",
-        "schedule", "save_workflow", "delete_trigger", "delete_workflow",
-        "run", "run_pipeline", "execute", "notify_user", "send_notification",
-        "send_text", "sms_send", "channel_send", "delegate_project", "ask_sync",
-        "download", "push_file", "upload",
-        "scan_photos", "scan_storage",
-        # [self:cctv]는 기본 op=stats(읽기 전용)라 자가점검 허용. refresh(부작용)는
-        # 명시적 op일 때만 — 기본 호출은 안전.
-        "photo_gallery", "photo_timeline", "photo_duplicates", "photo_stats",
-        "photo_list_scans", "photo_manager", "gallery", "timeline", "list_scans",
-        # browser — 2026-06-04 통합 [limbs:browser]{op}. 라이브 브라우저 필요 + 부작용(클릭/입력/이동) → 통째 제외.
-        "browser",
-        "goal_kill", "log_attempt",
-    }
-
-    # 현재 ibl_nodes.yaml에 실제 존재하는 액션만 필터링
-    _existing_actions = set()
-    try:
-        import yaml as _yaml
-        _nodes_path = Path(__file__).parent.parent / "data" / "ibl_nodes.yaml"
-        if _nodes_path.exists():
-            with open(_nodes_path, "r", encoding="utf-8") as _f:
-                _nodes_data = _yaml.safe_load(_f) or {}
-            for _section_key in ("nodes", "actions"):
-                _section = _nodes_data.get(_section_key, {})
-                if isinstance(_section, dict):
-                    for _node_name, _node_val in _section.items():
-                        if isinstance(_node_val, dict):
-                            _acts = _node_val.get("actions", _node_val)
-                            if isinstance(_acts, dict):
-                                for _act_name in _acts:
-                                    _existing_actions.add((_node_name, _act_name))
-    except Exception:
-        pass  # 로드 실패 시 필터링 없이 진행
-
-    safe_actions = []
-    for entry in plan["actions"]:
-        if not entry.get("safe") or entry["action"] in _UNSAFE_KEYWORDS:
-            continue
-        # 존재하지 않는 액션은 건너뛰기
-        if _existing_actions and (entry["node"], entry["action"]) not in _existing_actions:
-            continue
-        safe_actions.append({
-            "node": entry["node"],
-            "action": entry["action"],
-            "test_params": entry.get("test_params", {}),
-        })
-
-    return safe_actions
-
-
-def _evaluate_result(result, elapsed_ms: int) -> Dict:
-    """LLM 없이 결과 평가
-
-    파라미터 부족/누락으로 인한 에러는 테스트 입력의 문제이지
-    액션 자체의 문제가 아니므로 'skipped'로 분류한다.
-    """
-    is_error = isinstance(result, dict) and "error" in result
-    is_empty = (result is None or result == "" or result == {} or result == [])
-
-    if is_error:
-        error_msg = str(result.get("error", ""))[:200]
-        # 폰/맥 미가용 — 분산 IBL 의 포워드 대상(폰 앱·맥 런처)이 지금 안 떠 있을 뿐
-        # 액션 자체는 정상이다. 폰 앱은 상시 대기가 아니라 띄워야 도는 게 정상이므로,
-        # 이걸 fail 로 찍으면 의식 에이전트가 멀쩡한 phone_only 액션을 영영 회피한다 → skip.
-        _device_offline = (
-            (result.get("phone_unreachable") or result.get("mac_unreachable")
-                or result.get("phone_forward") or result.get("mac_forward"))
-            or any(kw in error_msg for kw in [
-                "폰 네이티브", "폰에서 실행되는 동작", "phone_only",
-                "맥에 연결할 수 없", "INDIEBIZ_PHONE_URL", "INDIEBIZ_MAC",
-                "Chaquopy 브리지 부재",
-            ])
+        proc = subprocess.run(
+            [sys.executable, str(_script)],
+            cwd=str(_root), capture_output=True, text=True, timeout=300,
         )
-        if _device_offline:
-            return {
-                "success": True,          # 액션은 정상 — 몸(폰/맥)만 지금 미가용
-                "response_ms": elapsed_ms,
-                "data_quality": "skipped",
-                "error_message": error_msg,
-            }
-        # 파라미터 부족 에러는 테스트 한계 — 액션은 정상으로 간주
-        _param_error_keywords = [
-            "필요합니다", "required", "missing", "파라미터가",
-            "입력해주세요", "입력해 주세요", "확인하세요", "확인해 주세요",
-            "를 입력", "을 입력", "가 필요", "이 필요",
-        ]
-        is_param_error = any(kw in error_msg for kw in _param_error_keywords)
-        if is_param_error:
-            return {
-                "success": True,  # 액션 자체는 정상 작동 (파라미터 검증 통과)
-                "response_ms": elapsed_ms,
-                "data_quality": "skipped",  # 제대로 테스트하지 못한 것
-                "error_message": error_msg,
-            }
-        return {
-            "success": False,
-            "response_ms": elapsed_ms,
-            "data_quality": "error",
-            "error_message": error_msg,
-        }
-    elif is_empty:
-        return {
-            "success": True,
-            "response_ms": elapsed_ms,
-            "data_quality": "empty",
-            "error_message": None,
-        }
-    else:
-        return {
-            "success": True,
-            "response_ms": elapsed_ms,
-            "data_quality": "ok",
-            "error_message": None,
-        }
+        text = proc.stdout or ""
+    except Exception as e:
+        return [{"node": "__ibl_health__", "action": "ibl_health_check", "success": False,
+                 "response_ms": 0, "data_quality": "error",
+                 "error_message": f"ibl_health_check 실행 실패: {str(e)[:120]}"}]
+
+    # §1A 정적 정합성 (build --check): "→ 정적: GREEN ✅" / "RED ❌"
+    ms = re.search(r"→ 정적:\s*(GREEN|RED)", text)
+    if ms:
+        ok = ms.group(1) == "GREEN"
+        out.append({"node": "__static__", "action": "ibl_consistency",
+                    "success": ok, "response_ms": 0,
+                    "data_quality": "ok" if ok else "consistency_failure",
+                    "error_message": None if ok else "build --check 불일치 — src↔tool.json↔handler/fixture"})
+    # §1B 통화: GREEN N / YELLOW M / RED K
+    m = re.search(r"§1B 통화:\s*GREEN\s*(\d+)\s*/\s*YELLOW\s*(\d+)\s*/\s*RED\s*(\d+)", text)
+    if m:
+        g, y, r = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        reds = re.findall(r"\[RED   \]\s*(\S+)\s+returns:\S+\s+(.+)", text)
+        note = f"GREEN {g} / YELLOW {y} / RED {r}"
+        if reds:
+            note += " — " + "; ".join(f"{n}:{d.strip()[:60]}" for n, d in reds[:5])
+        out.append({"node": "__ibl_health__", "action": "currency",
+                    "success": r == 0, "response_ms": 0,
+                    "data_quality": "ok" if r == 0 else "currency_broken",
+                    "error_message": None if r == 0 else note})
+    # §1C 골든파이프: X/Y PASS
+    mp = re.search(r"§1C 골든파이프:\s*(\d+)\s*/\s*(\d+)\s*PASS", text)
+    if mp:
+        passed, total = int(mp.group(1)), int(mp.group(2))
+        out.append({"node": "__ibl_health__", "action": "golden_pipes",
+                    "success": passed == total, "response_ms": 0,
+                    "data_quality": "ok" if passed == total else "error",
+                    "error_message": None if passed == total else f"{passed}/{total} PASS"})
+    return out
 
 
 def run_maintenance_bundle() -> Dict:
-    """면역 순찰의 기계적 유지보수 번들 — 활성 경로(ai_health_check)와 수동
-    self_check 양쪽에서 호출한다. 각 항목은 자체 카덴스 게이트/저비용이라
-    6h마다 호출돼도 안전하다(대부분 즉시 스킵).
-
-    스케줄러 마이그레이션(self_check 이벤트 비활성화 → ai_health_check)으로
-    run_self_check가 정기 호출되지 않게 되면서 고아가 됐던 유지보수 작업들을
-    활성 경로로 합류시키는 것이 목적이다.
+    """기계적 유지보수 번들 — 일일 건강 점검(run_daily_health_check) 끝에서 호출한다.
+    IBL 건강과는 별개(forage 정리·메모리/해마 정리·연속실패 알림). 각 항목은 자체 카덴스
+    게이트/저비용이라 매일 호출돼도 안전하다(대부분 즉시 스킵).
     """
     result: Dict[str, Any] = {}
 
@@ -699,138 +400,6 @@ def run_maintenance_bundle() -> Dict:
         logger.warning(f"[Maintenance] 포식 정리 실패 (무시): {e}")
 
     return result
-
-
-def run_self_check() -> Dict:
-    """전수 IBL 액션 자가 점검 (면역 순찰)
-
-    부작용 없는 모든 액션을 순차 실행하여 시스템 건강 상태를 전수 점검합니다.
-    타임아웃(기본 10초)을 초과하는 액션은 slow로 기록합니다.
-    """
-    from world_pulse import _load_config
-
-    config = _load_config()
-    sc_config = config.get("self_check", {})
-    if not sc_config.get("enabled", True):
-        return {"status": "disabled"}
-
-    failure_threshold = sc_config.get("failure_alert_threshold", 3)
-    action_timeout = sc_config.get("action_timeout_sec", 10)
-
-    safe_actions = _get_safe_actions()
-    if not safe_actions:
-        return {"status": "no_safe_actions"}
-
-    # 전수 점검
-    results = []
-    stats = {"ok": 0, "fail": 0, "slow": 0, "empty": 0}
-    total_start = _time.time()
-
-    # 0) 정적 정합성 검증 (build_ibl_nodes --check 통합, 2026-05-28)
-    #    런타임 액션 실행 전에 먼저 src↔tool.json↔handler 정합성 확인.
-    #    실패하면 다른 액션도 영향받을 수 있다는 신호.
-    static_result = run_static_ibl_check()
-    save_self_check(static_result)
-    results.append(static_result)
-    if static_result.get("success"):
-        stats["ok"] += 1
-    else:
-        stats["fail"] += 1
-        logger.warning(
-            f"[SelfCheck] 정적 정합성 검증 실패: {static_result.get('error_message', '')[:200]}"
-        )
-
-    for action_info in safe_actions:
-        node = action_info["node"]
-        action = action_info["action"]
-
-        # 테스트 계획에서 파라미터 사용
-        params = dict(action_info.get("test_params", {}))
-        # self-check는 활성 프로젝트 컨텍스트(thread_context)가 없는 백그라운드
-        # 호출이라, project-scope 액션은 경로를 못 잡아 전부 false-positive 실패했다.
-        # 앱/수동 런처와 동일하게 시스템 프로젝트 '앱모드'를 주입해 실제로 실행시킨다.
-        # (project_id는 메타 키 — workspace/system scope는 무시, 도구 인자 충돌 없음.)
-        params.setdefault("project_id", "앱모드")
-
-        start = _time.time()
-        try:
-            from ibl_engine import execute_ibl
-            result = execute_ibl(
-                {"_node": node, "action": action, "params": params},
-                ".",
-                agent_id="__self_check__"
-            )
-        except Exception as e:
-            result = {"error": str(e)}
-
-        elapsed_ms = int((_time.time() - start) * 1000)
-        evaluation = _evaluate_result(result, elapsed_ms)
-        evaluation["node"] = node
-        evaluation["action"] = action
-
-        # 타임아웃 초과 시 slow 표시
-        if elapsed_ms > action_timeout * 1000:
-            evaluation["data_quality"] = "slow"
-
-        # 통계
-        if not evaluation["success"]:
-            stats["fail"] += 1
-        elif evaluation["data_quality"] == "skipped":
-            stats["skipped"] = stats.get("skipped", 0) + 1
-        elif evaluation["data_quality"] == "slow":
-            stats["slow"] += 1
-        elif evaluation["data_quality"] == "empty":
-            stats["empty"] += 1
-        else:
-            stats["ok"] += 1
-
-        # DB 저장
-        save_self_check(evaluation)
-        results.append(evaluation)
-
-        # 실패/slow만 로그 (성공은 조용히)
-        if not evaluation["success"] or evaluation["data_quality"] == "slow":
-            logger.info(
-                f"[SelfCheck] [{node}:{action}] "
-                f"{'FAIL' if not evaluation['success'] else 'SLOW'} "
-                f"({elapsed_ms}ms)"
-            )
-
-    total_elapsed = int((_time.time() - total_start) * 1000)
-
-    # 패턴 분석 실행
-    pattern = analyze_failure_patterns()
-
-    # 기계적 유지보수 번들 (실패 알림 + 메모리/해마 정리) — 활성 경로(ai_health_check)와 공유.
-    # 각 항목은 자체 카덴스 게이트가 있어 두 경로에서 호출돼도 중복 작업 없이 안전.
-    maintenance = run_maintenance_bundle()
-
-    logger.info(
-        f"[SelfCheck] 전수 점검 완료: {len(results)}개 액션, "
-        f"{stats['ok']} OK / {stats['fail']} FAIL / {stats['slow']} SLOW / {stats['empty']} EMPTY "
-        f"({total_elapsed}ms)"
-    )
-
-    # 실패한 액션만 요약 (결과 데이터는 포함하지 않음 — DB에 이미 저장됨)
-    failures = [
-        {"node": r["node"], "action": r["action"], "error": r.get("error_message", "")[:100]}
-        for r in results if not r.get("success")
-    ]
-    slow_list = [
-        {"node": r["node"], "action": r["action"], "ms": r.get("response_ms")}
-        for r in results if r.get("data_quality") == "slow"
-    ]
-
-    return {
-        "status": "completed",
-        "checked": len(results),
-        "stats": stats,
-        "total_elapsed_ms": total_elapsed,
-        "failures": failures,
-        "slow_actions": slow_list,
-        "pattern_analysis": pattern,
-        "maintenance": maintenance,
-    }
 
 
 def save_self_check(result: Dict):
@@ -1171,174 +740,101 @@ def get_system_health() -> Dict:
     }
 
 
-# ============ AI 기반 건강 체크 (Self-Check 대체) ============
+def get_ibl_health_status() -> Dict:
+    """계기판용 — self_checks 에 마지막으로 기록된 IBL 건강(정적·통화·골든)을 읽는다.
 
-def trigger_ai_health_check():
-    """시스템 AI에게 건강 체크 메시지를 보내 assumed 액션을 테스트하게 한다.
-
-    1. ibl_nodes.yaml에서 전체 액션 목록 로드
-    2. action_health + self_checks에서 7일간 기록이 있는 액션 제외
-    3. 남은 assumed 액션 목록을 프롬프트에 삽입
-    4. SystemAIRunner.send_message()로 시스템 AI에게 전송
+    검사를 *실행하지 않는다* (수십 초 걸리는 ibl_health_check.py 호출 X). 마지막 일일/수동
+    점검 결과를 SQL 한 번으로 즉시 돌려준다 — 계기판이 열릴 때마다 가볍게 표시하기 위한 것.
+    아직 한 번도 점검 안 됐으면 ok=None('미점검').
     """
-    import yaml
     from world_pulse import _get_pulse_db
 
-    BASE = Path(__file__).parent.parent
-
-    # 1) 전체 액션 목록 로드
-    all_actions = set()  # {(node, action), ...}
-    nodes_yaml = BASE / "data" / "ibl_nodes.yaml"
-    if nodes_yaml.exists():
-        try:
-            with open(nodes_yaml, "r", encoding="utf-8") as f:
-                nodes_data = yaml.safe_load(f) or {}
-            for section_key in ("nodes", "actions"):
-                section = nodes_data.get(section_key, {})
-                if isinstance(section, dict):
-                    for node_name, node_val in section.items():
-                        if isinstance(node_val, dict):
-                            acts = node_val.get("actions", node_val)
-                            if isinstance(acts, dict):
-                                for act_name in acts:
-                                    all_actions.add((node_name, act_name))
-        except Exception as e:
-            logger.warning(f"[HealthCheck] ibl_nodes.yaml 로드 실패: {e}")
-            return
-
-    if not all_actions:
-        logger.info("[HealthCheck] 액션 목록이 비어있음")
-        return
-
-    # 2) 7일간 성공 기록이 있는 액션(verified) 제외, assumed + failed만 수집
-    verified_actions = set()
-    failed_actions = set()
-    cutoff = (datetime.now() - timedelta(days=7)).isoformat()
+    KEYS = [
+        ("__static__", "ibl_consistency", "정적 정합성 — 어휘 삼각 + fixture"),
+        ("__ibl_health__", "currency", "통화 무결성 — fixture 실행"),
+        ("__ibl_health__", "golden_pipes", "골든 파이프 — >> 흐름"),
+    ]
+    items = []
+    checked_at = None
     try:
         conn = _get_pulse_db()
-        # action_health에서 7일간 액션별 최근 성공/실패 시점
-        rows = conn.execute("""
-            SELECT node, action,
-                   MAX(CASE WHEN success = 1 THEN timestamp END) as last_success,
-                   MAX(CASE WHEN success = 0 THEN timestamp END) as last_failure
-            FROM action_health
-            WHERE timestamp >= ?
-            GROUP BY node, action
-        """, (cutoff,)).fetchall()
-        for r in rows:
-            key = (r["node"], r["action"])
-            ls, lf = r["last_success"], r["last_failure"]
-            if ls and (not lf or ls > lf):
-                verified_actions.add(key)
-            elif lf:
-                failed_actions.add(key)
-        # self_checks 폴백 (하위 호환)
-        rows2 = conn.execute("""
-            SELECT node, action,
-                   MAX(CASE WHEN success = 1 THEN timestamp END) as last_success,
-                   MAX(CASE WHEN success = 0 THEN timestamp END) as last_failure
-            FROM self_checks
-            WHERE timestamp >= ?
-            GROUP BY node, action
-        """, (cutoff,)).fetchall()
-        for r in rows2:
-            key = (r["node"], r["action"])
-            if key in verified_actions:
-                continue  # action_health에서 이미 verified
-            ls, lf = r["last_success"], r["last_failure"]
-            if ls and (not lf or ls > lf):
-                verified_actions.add(key)
-            elif lf and key not in failed_actions:
-                failed_actions.add(key)
+        for node, action, label in KEYS:
+            row = conn.execute(
+                "SELECT success, error_message, timestamp FROM self_checks "
+                "WHERE node=? AND action=? ORDER BY id DESC LIMIT 1",
+                (node, action),
+            ).fetchone()
+            if row:
+                items.append({
+                    "key": action, "label": label, "ok": bool(row["success"]),
+                    "detail": row["error_message"], "checked_at": row["timestamp"],
+                })
+                if not checked_at or (row["timestamp"] or "") > checked_at:
+                    checked_at = row["timestamp"]
+            else:
+                items.append({"key": action, "label": label, "ok": None, "detail": None, "checked_at": None})
         conn.close()
     except Exception as e:
-        logger.debug(f"[HealthCheck] DB 조회 실패: {e}")
+        logger.warning(f"[Dashboard] IBL 건강 조회 실패: {e}")
 
-    # 부작용이 있는 액션은 테스트 후보에서 제외
-    _UNSAFE_KEYWORDS = {
-        "create", "build", "deploy", "edit", "modify", "remove", "delete", "save", "write",
-        "send", "play", "stop", "download", "upload", "push", "copy", "move",
-        "open", "launch", "navigate", "click", "type", "scroll", "screenshot",
-        "desktop",
-        "slide", "video", "image", "tts", "newspaper", "render", "export",
-        "schedule", "kill", "log_attempt", "rebuild", "scan", "refresh",
-        "register", "unregister", "add_component", "snapshot",
-        "photo", "gallery", "duplicates",
+    known = [i for i in items if i["ok"] is not None]
+    return {
+        "checked_at": checked_at,
+        "healthy": (all(i["ok"] for i in known) if known else None),
+        "items": items,
+        "action_count": _count_all_actions(),
     }
 
-    def _is_safe_for_test(action_name: str) -> bool:
-        """테스트해도 안전한 액션인지 판별"""
-        return not any(kw in action_name for kw in _UNSAFE_KEYWORDS)
 
-    # 테스트 후보: assumed(기록 없음) + failed(최근 실패) — 안전한 것만
-    assumed_all = sorted(all_actions - verified_actions - failed_actions)
-    assumed = [(n, a) for n, a in assumed_all if _is_safe_for_test(a)]
-    failed_list = sorted(failed_actions)
+# ============ 일일 건강 체크 (단일 검사 1회 · AI 0) ============
 
-    if not assumed and not failed_list:
-        logger.info("[HealthCheck] 모든 액션이 verified — 건강 체크 스킵")
-        return
+def run_daily_health_check() -> Dict:
+    """매일 1회 IBL 건강 점검 — 단일 검사(ibl_health_check.py) 1회 + RED 면 알림. AI 0.
 
-    # 3) 노드별로 골고루 선택 (한 노드에 치우치지 않게)
-    from collections import defaultdict
-    by_node = defaultdict(list)
-    for node, action in assumed:
-        by_node[node].append((node, action))
+    IBL 구조 건강이 변하는 건 *어휘를 쓸 때뿐*이고, 그건 커밋 시 `--check`(fixture 완전성
+    포함)가 막는다. 이 일일 잡은 그 정적·fixture·골든 검사를 회귀 그물로 한 번 더 돌리는 것 —
+    폴링 sweep 도, AI 턴도 없다(옛 배선은 매일 AI 로 assumed 액션을 routine polling 했다).
 
-    # 라운드 로빈으로 노드별 순환 선택 (최대 30개)
-    selected_assumed = []
-    node_keys = sorted(by_node.keys())
-    idx = 0
-    while len(selected_assumed) < 30 and any(by_node.values()):
-        node = node_keys[idx % len(node_keys)]
-        if by_node[node]:
-            selected_assumed.append(by_node[node].pop(0))
-        idx += 1
-        if idx > len(node_keys) * 30:
-            break
+    1) ibl_health_check.py 1회 → §1A 정적 + §1B fixture 통화 + §1C 골든 (전부 AI 0)
+    2) 결과를 self_checks 에 기록 (x-ray 노출)
+    3) RED 있으면 알림 한 통 (notification_manager — 사람이 본다. AI 아님)
+    4) 기계적 유지보수 번들(forage 정리·메모리·연속실패 알림) — IBL 건강과 무관, 항상
+    """
+    from world_pulse import _load_config
+    if not _load_config().get("self_check", {}).get("enabled", True):
+        return {"status": "disabled"}
 
-    # 4) 프롬프트 생성
-    prompt_path = BASE / "data" / "common_prompts" / "health_check_prompt.md"
-    if prompt_path.exists():
-        template = prompt_path.read_text(encoding="utf-8")
-    else:
-        template = (
-            "너의 IBL 액션 중 아직 확인되지 않은 것들을 테스트해야 해. "
-            "아래 목록에서 최대 10개를 골라서 execute_ibl로 실행해봐. "
-            "쓰기/삭제/재생/발송 등 부작용이 있는 건 하지 마. "
-            "결과를 간략히 보고해.\n\n{assumed_actions}"
-        )
-
-    action_lines = []
-    if failed_list:
-        action_lines.append(f"\n### 비정상 (재확인 필요) — {len(failed_list)}개")
-        for node, action in failed_list[:10]:
-            action_lines.append(f"- [{node}:{action}]")
-    if selected_assumed:
-        action_lines.append(f"\n### 미확인 (assumed) — {len(assumed)}개 중 {len(selected_assumed)}개 선별")
-        for node, action in selected_assumed:
-            action_lines.append(f"- [{node}:{action}]")
-    actions_text = "\n".join(action_lines)
-    message = template.replace("{assumed_actions}", actions_text)
-
-    # 4) 시스템 AI에게 전송
+    reds = []
     try:
-        from system_ai_runner import SystemAIRunner
-        SystemAIRunner.send_message(
-            content=message,
-            from_agent="__health_check__",
-            project_id="__system_ai__",
-        )
-        logger.info(f"[HealthCheck] 시스템 AI에게 건강 체크 요청 전송 (assumed {len(assumed)}개 중 {min(len(assumed), 50)}개 전달)")
+        for ev in run_ibl_health_check():
+            save_self_check(ev)
+            if not ev.get("success"):
+                reds.append(f"[{ev['node']}:{ev['action']}] {ev.get('error_message') or ''}".strip())
     except Exception as e:
-        logger.error(f"[HealthCheck] 시스템 AI 메시지 전송 실패: {e}")
+        logger.warning(f"[HealthCheck] ibl_health_check 실행 실패: {e}")
 
-    # 기계적 유지보수 번들 — 활성 6h 경로(ai_health_check)에 합류해 정기 실행을 보장.
-    # (run_self_check 이벤트 비활성화로 고아가 됐던 메모리/해마 정리·실패 알림 복구)
+    if reds:
+        logger.warning(f"[HealthCheck] IBL 건강 RED {len(reds)}건: {' / '.join(reds)[:300]}")
+        try:
+            from notification_manager import get_notification_manager
+            get_notification_manager().create(
+                title="IBL 건강 경고",
+                message="구조/통화/흐름 결함: " + " / ".join(reds)[:400],
+                type="warning",
+                source="ibl_health",
+            )
+        except Exception as e:
+            logger.warning(f"[HealthCheck] 알림 발송 실패: {e}")
+    else:
+        logger.info("[HealthCheck] IBL 건강 ✅ (정적+fixture+골든 GREEN) — AI 0")
+
+    # 일반 유지보수 (IBL 건강과 별개 — forage 정리·메모리·연속실패 알림)
     try:
         run_maintenance_bundle()
     except Exception as e:
         logger.warning(f"[HealthCheck] 유지보수 번들 실패 (무시): {e}")
+
+    return {"status": "completed", "red": reds, "ai": False}
 
 
 # ============================================================

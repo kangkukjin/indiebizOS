@@ -1,20 +1,20 @@
 ---
-title: 메모리 아키텍처 — 6종 기억 통합 지도
-scope: indiebizOS의 모든 기억 하위 시스템(의미·작업·일화·절차·관계·자기상태)의 저장/사용/학습 흐름
+title: 메모리 아키텍처 — 7종 기억 통합 지도
+scope: indiebizOS의 모든 기억 하위 시스템(의미·작업·일화·절차·관계·자기상태·공간(포식))의 저장/사용/학습 흐름
 owner_code: >
   ibl_usage_db.py, ibl_usage_rag.py, memory_db.py, agent_cognitive.py,
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
-  workflow_engine.py, ibl_engine.py
-last_updated: 2026-06-14
+  workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py
+last_updated: 2026-06-22
 see_also: [execution_memory.md, architecture.md, ibl.md]
 ---
 
-# 메모리 아키텍처 — 6종 기억 통합 지도
+# 메모리 아키텍처 — 7종 기억 통합 지도
 
-> indiebizOS의 메모리는 단일 시스템이 아니라 **여섯 개의 독립 하위 시스템**으로 구성된다.
+> indiebizOS의 메모리는 단일 시스템이 아니라 **일곱 개의 독립 하위 시스템**으로 구성된다.
 > 각각은 인간 기억 분류와 거의 정확히 대응한다. 이 문서는 그 전체 지도다.
-> (해마 단일 시스템의 상세는 `execution_memory.md` 참조 — 본 문서는 그것을 6종 중 하나로 위치시킨다.)
+> (해마 단일 시스템의 상세는 `execution_memory.md` 참조 — 본 문서는 그것을 7종 중 하나로 위치시킨다.)
 
 ## 철학
 
@@ -26,7 +26,7 @@ see_also: [execution_memory.md, architecture.md, ibl.md]
 
 ---
 
-## 한눈에 — 6종 메모리
+## 한눈에 — 7종 메모리
 
 | # | 인간 기억 | indiebizOS 구현 | 저장소 | 무엇을 기억하나 |
 |---|---|---|---|---|
@@ -75,7 +75,7 @@ see_also: [execution_memory.md, architecture.md, ibl.md]
 세 겹으로 구성된다.
 
 **(a) 액션 정의** — 가장 안정된 절차 지식
-`ibl_nodes_src/*.yaml`(단일 진실) → `build_ibl_nodes.py`(삼각 검증) → `ibl_nodes.yaml`(런타임 캐시). 111개 액션이 곧 어휘화된 방법 지식.
+`ibl_nodes_src/*.yaml`(단일 진실) → `build_ibl_nodes.py`(삼각 검증) → `ibl_nodes.yaml`(런타임 캐시). 142개 액션이 곧 어휘화된 방법 지식.
 
 **(b) 해마(실행기억)** — 가장 살아있는 자기 학습 루프 ⭐
 - `ibl_usage.db:ibl_examples`에 `(자연어 의도 → IBL 코드)` 쌍 + 768차원 임베딩 저장
@@ -121,14 +121,15 @@ see_also: [execution_memory.md, architecture.md, ibl.md]
 - **안전판 4**(누적의 그림자 방지): 폐기가능(prune_reason)·prior_class 게이팅(구조적만 committal prune)·surface 카운터패스·provenance+confidence.
 - **부패 무효화**: lazy — 회상 시 폴더 mtime 비교해 `stale`/`missing` 노출(삭제 안 함, 판단은 AI. 손튜닝 감쇠 곡선 안 씀).
 - **수동 액세서**(augmentation): `[self:forage]{op:recall|note|forget}` — 사람이 직접 조회·정정·재오픈.
-- **맥 자아 전용**(주관적 기억은 자아별 사적). **#4 해마와의 차이**: 해마=절차(NL→IBL 코드), 포식=공간(공간→지도 지식). 둘 다 증류+정리 대칭.
-- **상세**: `docs/FORAGER_MEMORY_GUIDE.md`(설명서), `docs/FORAGER_MEMORY_SCHEMA.md`(스키마), `docs/FILE_FORAGING_RESEARCH.md`(연구).
+- **다중 몸**(`forage_map.body`=포식 *공간*): 디스크(`mac`)·코드(`code:<repo>`)·웹(`web`) 등 같은 자아가 여러 공간을 포식하면 body가 갈린다(하드웨어 자아=게이트 / 포식 공간=body 키 분리). `owner_model`은 1명·전 공간 공유 → 한 공간서 강화한 주인모델이 다른 공간 포식까지 풍부화(교차-몸 전이). **맥 자아 전용**(주관적 기억은 자아별 사적). **#4 해마와의 차이**: 해마=절차(NL→IBL 코드), 포식=공간(공간→지도 지식). 둘 다 증류+정리 대칭.
+- **음성-단언 측정** `[self:residual]{op:sample|estimate}`: 포식 출력의 "거기 없음 vs 덜 봤음"을 측정으로 가른다(sample=미관측 균일 무작위 표본 / estimate=Wilson 이항추정). 판단은 AI 몫, 도구는 측정·중립 해석만(열거 가능한 공간 전용 — 웹은 무한·비열거라 제외).
+- **상세**: `docs/FORAGER_MEMORY_GUIDE.md`(설명서), `docs/FORAGER_MEMORY_SCHEMA.md`(스키마), `docs/FORAGER_MULTIBODY_DESIGN.md`(다중 몸), `docs/FILE_FORAGING_RESEARCH.md`(연구).
 - **정리 패스**(`forage_consolidation.py`): 의미적 근접중복을 경량 AI로 병합(같은 공간지식만, surface 보호) + LRU 가지치기. `run_maintenance_bundle` item 4로 합류(24h 카덴스). 증류+정리 대칭 = 심층메모리·해마와 동일.
-- **진행**: 증류+주입+surface+정리 패스 완료(2026-06-20). 루프 닫힘. 남은=surface 매칭 정교화·해마 용례 시드.
+- **진행**: 주입→포식→증류→surface→정리 루프 완전히 닫힘 + 다중 몸(코드·웹) + 음성-단언 측정 완료(2026-06-20). 회상은 실행기억처럼 항상-on, owner 모델은 query 면제(상시 노출=냄새). 증류(쓰기)는 전 티어 post-response 유지.
 
 ---
 
-## 요청 1건에서 6종 메모리가 협력하는 흐름
+## 요청 1건에서 7종 메모리가 협력하는 흐름
 
 ```
 사용자 입력
@@ -136,6 +137,7 @@ see_also: [execution_memory.md, architecture.md, ibl.md]
   ├─[2 작업기억]  최근 7턴 회상 (Observation Masking)
   ├─[4b 해마]     유사 IBL 선례 검색 → 점수 산출 ┐
   ├─[5 심층메모리] 관련 사용자 사실 Top-3 검색   ┘→ 연상기억(<execution_memory>+<related_memory>) 합성
+  ├─[7 포식기억]   포식 의도 시 냄새지도 주입 (<forage_memory>, 해마 옆)
   │     │
   │     ├ 해마 점수 높음 → Reflex(EXECUTE): 의식 건너뜀, 중급 모델로 즉시 실행
   │     └ 해마 점수 낮음 → THINK: 의식 에이전트 호출
@@ -146,7 +148,8 @@ see_also: [execution_memory.md, architecture.md, ibl.md]
   │
   ├─[3 일화기억]   에피소드 로그 + 인지 품질 요약 저장
   ├─[5 심층메모리] 대화에서 사용자 사실 자동 증류 → 저장/업데이트  ← 사용자 지식 흡수 루프
-  └─[4b 해마]      점수<0.7 & 성공 → 경험 증류 → 절차기억 누적     ← 절차 학습 루프
+  ├─[4b 해마]      점수<0.7 & 성공 → 경험 증류 → 절차기억 누적     ← 절차 학습 루프
+  └─[7 포식기억]   포식 시 지도 델타 증류 → surface 표식 → 정리     ← 공간 학습 루프
 ```
 
 **핵심**: 메모리가 곧 라우팅이다. 해마 점수(절차 기억의 친숙도)가 "반사로 처리할지, 의식을 동원할지"를 결정한다. 두 개의 자기 학습 루프(해마 증류 / 심층메모리 증류)가 사용할수록 시스템을 빠르고 개인화되게 만든다.
@@ -279,4 +282,6 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 
 ---
 
-*이 문서는 6종 메모리의 통합 지도다. 개별 시스템 변경 시 본 표와 흐름도를 함께 갱신할 것.*
+*마지막 업데이트: 2026-06-27 — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 포식 기억(forager)을 7번째 메모리로 정합화(제목·"한눈에" 표·흐름도 6종→7종, 다중 몸·`[self:residual]` 음성-단언 측정 반영). 절차기억(#4a) 액션수 111→141. 국회도서관 국가학술정보 인물/학위논문 액션 추가로 코퍼스 갱신.*
+
+*이 문서는 7종 메모리의 통합 지도다. 개별 시스템 변경 시 본 표와 흐름도를 함께 갱신할 것.*

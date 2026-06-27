@@ -454,10 +454,10 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
             return {"success": False, "error": "op 파라미터가 필요합니다. (snapshot|trend|refresh)"}
         return execute_world_pulse(action_name, dict(params))
 
-    # 자가점검: 전수 IBL 액션 면역 순찰
+    # 자가점검: IBL 건강 점검 (정적+fixture+골든, AI 0)
     elif func_name == "self_check":
-        from world_pulse_health import run_self_check
-        return run_self_check()
+        from world_pulse_health import run_daily_health_check
+        return run_daily_health_check()
 
     # Phase 26: Goal 프로세스 관리
     elif func_name == "list_goals":

@@ -49,16 +49,9 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
-        <!-- 알림 캡처 서비스 (NotificationListenerService) -->
-        <service
-            android:name=".NotificationCaptureService"
-            android:label="IndieBiz Notification Capture"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
+        <!-- 알림 캡처 서비스 제거됨(2026-06-22) — 폰 알림 수집/중계 폐기.
+             과거: NotificationListenerService 가 모든 알림을 가로채 로컬 JSONL 적재(+옛 Nostr 푸시).
+             외부 전송은 2026-06-15 제거됐으나 로컬 수집이 남아 있어 완전 폐기. [sense:phone] 알림은 빈 결과. -->
 
         <!-- [limbs:android] 폰 네이티브 화면 조작 (AccessibilityService) — USB-ADB 없이 자기 화면 독해·터치 -->
         <service

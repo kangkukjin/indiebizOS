@@ -12,65 +12,215 @@
 
 ---
 
-## Philosophy
+## The one idea
 
-What we share is not code. It's a philosophy:
+Most AI harnesses get more capable by reaching for *more intelligence* — a bigger model, a longer prompt, more tools. IndieBiz OS makes a different bet:
 
-> **Build a living digital humanoid that grows alongside you — and dream of a world where these beings connect with each other.**
+> **Handle complexity with *structure*, not more intelligence — because structure is the one layer no foundation model absorbs.**
 
-IndieBiz OS is not software you install and use as-is. It's a **living system** — like armor forged to fit your body, or a horse you raise and ride yourself. Mass-produced software gives everyone the same product off the assembly line. IndieBiz OS is the opposite. **You raise it.**
+A better model keeps absorbing *how to produce an action*. It never absorbs *where the action lives, who owns it, how often it repeats, or whose body it runs on* — that's the life *around* the generation, and it's where IndieBiz OS works.
 
-An AI agent sets up the skeleton, asks about your life, and starts building — but the system only becomes *yours* through use. Your habits shape it. Your needs grow it. Your AI agent is not just an installer; it's the blacksmith who keeps forging your armor as you grow.
+That bet rests on two generative cores. Almost everything distinctive about the system *falls out* of them — so instead of listing fifty features, this README shows the two roots and lets the features hang off them as consequences:
 
-**No two IndieBiz OS installations are the same.** A freelancer's system looks nothing like a small business owner's. A music lover's system has packages and agents that a stock trader's doesn't. If you handed your system to someone else, it wouldn't fit — just like armor shaped to your body.
+1. **There is a real language underneath — IBL.** A small, regular vocabulary that every part of the system compiles to.
+2. **A clean seam between the vocabulary and the body.** What a capability *is* stays separate from *which machine runs it*.
 
-And one day, these individually raised systems will find each other — connecting through decentralized networks, collaborating across boundaries, each one unique but speaking the same language. That is the vision.
+If you grasp those two, you can re-derive the feature list yourself. That's the point.
 
-### Why This Matters
+---
 
-- **Starts minimal** — Only the core framework (IBL engine, cognitive pipeline, hippocampus). No bloat, no features you'll never use
-- **Grows on demand** — When you say "track my investments," the investment package appears. When you say "manage my blog," a blog package is built around *your* blog
-- **Learns from you** — The hippocampus (fine-tuned embedding model) learns from every successful interaction, getting better at understanding *your* patterns
-- **No central authority** — No app store, no mandatory updates, no one-size-fits-all. Your AI agent is the blacksmith, the trainer, and the builder
+## What it aims to be — a wearable robot, not an autopilot
 
-### Built for execution, not just generation
+Most harnesses aim at **autonomy**: give a destination and the AI drives there on its own — you specify, you receive. IndieBiz OS aims to be a **cognitive exoskeleton you wear.** It absorbs your *settled* judgment so repeated work happens almost unconsciously, freeing your conscious attention for what doesn't repeat. And it doesn't need a clear destination up front: for the deepest work — research, writing, building, deciding what you even want — the goal isn't *given then pursued*, it's *discovered in the pursuit*. **Autonomy treats the destination as a precondition; an exoskeleton treats it as a product** — co-authored step by step, with you still holding the judgment.
 
-Most AI harnesses are shaped in the developer's image: tasks that rarely repeat, a text/CLI face, and a dev machine. That's the wrong shape for everyone else — most people's work *repeats*, happens by *clicking in a 2D space*, and increasingly lives on a *phone*.
+So the development north star is **fit** (착용감): the exoskeleton disappearing into intention; trials made cheap enough that *your taste* drives a tight loop; your judgment reaching *further* — not you doing *less*. Success is the fruit you couldn't have made bare, never how little of you was needed. A self-driving car's endpoint is to delete the driver's seat; ours is to make the seat worth sitting in even when the system can drive itself. (Full vision: `data/system_docs/vision.md`.)
 
-A coding harness can generate and even run code, but the code and the harness live apart: the moment it runs is a transient step inside a loop, never a surface you *own* and return to. IndieBiz OS optimizes the part those harnesses treat as an afterthought — **execution itself** — and makes the surface first-class:
+---
 
-- **A 2D desktop, not a chat log** — each concern gets its own place, instead of every context smeared into one scroll.
-- **Apps you keep** — a proven flow crystallizes into a one-tap icon (0 tokens), so the AI never re-derives it. This *survives cheaper models*: what you want from a task you do every day isn't a lower token bill — it's **determinism, instant response, and control**.
-- **A phone that runs the system itself** — not a remote control of your PC, but a second self that executes locally, with its own senses and hands. Turn the features you want into apps and the phone becomes a **personal superapp** whose mini-apps are *your* flows, not a store's.
+## Philosophy — a system you raise, not one you're given
 
-The throughline: other harnesses optimize *how to produce an action* — the part a better model keeps absorbing. IndieBiz OS optimizes *where the action lives, who owns it, how often it repeats, and whose body it runs on* — the part no model absorbs, because it's the life *around* the generation, not the generation itself. **IBL is the single vocabulary that binds these into one system.**
+IndieBiz OS is not software you install and use as-is. It's a **living system** — like armor forged to fit your body, or a horse you raise and ride yourself. An AI agent sets up the skeleton, asks about your life, and starts building — but the system only becomes *yours* through use. Your habits shape it; your needs grow it.
 
-### How to Get Started (Recommended)
+**No two installations are the same.** A freelancer's system looks nothing like a small-business owner's; hand yours to someone else and it wouldn't fit. It starts minimal — only the core (IBL engine, cognitive pipeline, hippocampus) — and grows on demand: say "track my investments" and the investment package appears. No app store, no mandatory update, no one-size-fits-all. Your AI agent is the blacksmith who keeps forging it as you grow.
+
+And one day these individually raised systems find each other — connecting over decentralized networks, each unique but speaking the same language. That is the vision.
+
+---
+
+## Why this shape — the whole spectrum, not one end of it
+
+People want two different things from AI, and the market sells them as separate products. One crowd wants **autopilot**: say it, the AI does it — fast, but you own nothing afterward and pay full price every time. Another wants the **artifact**: code-generation agents hand you something durable — but it's *code*, and code needs a production environment (terminal, server, hosting) to run.
+
+A single person doing real work needs both — and a third thing between them — as **one continuum**, not three purchases:
+
+- one-off, exploratory work → **autopilot** (let the model discover the steps)
+- recurring work → **vocabulary** (natural language compiles to a line of IBL you keep)
+- daily work → **an app** (an icon that runs deterministically, 0 tokens)
+
+No single *task* needs all three; a single *life* does. The market doesn't sell the continuum not because it's unwanted, but because it only collapses into one product **at personal scale**. In a company the three stages split across three roles — developers generate, ops run automation, users tap apps — three people, so three products. Put all of it in *one* pair of hands and it has to be one system. **Single-user isn't a limitation here; it's the condition that makes the spectrum coherent.** That is what "IndieBiz" means.
+
+### The phone is where you see it
+
+The clearest demonstration is IndieBiz OS on a phone, where it behaves like a **superapp you authored by using it** — and where the alternatives can't follow. A phone is a sealed *consumption* device: no build toolchain, no server, no way to author-and-run your own app. A code-generation agent's output **strands** there — an app you can't run. IndieBiz OS's "app" is not a compiled binary but a *manifest over the IBL the runtime already speaks*, so **authoring and running collapse into one device and one moment — no store, no build, no deploy.** (How a phone runs the engine at all is Core #2.)
+
+The closest existing thing — Apple Shortcuts, Tasker — proves the demand is real, but it's only the bottom of the spectrum: you still hand-author each shortcut in a fixed visual language, nothing crystallizes from *use*, and it's bound to the OS's actions, not your context. IndieBiz OS is that on-device execution **plus** an autopilot on-ramp **plus** a vocabulary that's yours. Not "like a superapp" — **the first superapp a person builds for themselves, without being a developer.**
+
+---
+
+## Core #1 — There's a real language underneath (IBL)
+
+Every capability — a web search, a file write, a phone notification, a chart — is one line in a single language, **IBL (IndieBiz Logic)**:
+
+```
+[sense:search_ddg]{query: "AI news"} >> [self:file]{path: "result.md"}
+```
+
+Five nodes (`sense`, `self`, `limbs`, `others`, `engines`), one composable vocabulary. The point is *not* that there are 142 actions — it's that there are *only* 142, down from 332, because related tools were folded into single actions with parameter/`op` branching (45 bespoke Android actions became one `[limbs:android]{op}`). **The language got smaller as it got stronger:** fewer, more composable verbs that a human *or a small model* can write one line of and have work. Because everything speaks one vocabulary, your accumulated experience forms a single coherent corpus instead of a pile of incompatible tool calls.
+
+Here is what *falls out* of having a real language:
+
+### → Three surfaces for every task (the trilemma)
+
+Because there's a compile target, the *same* IBL expression can be reached three different ways. Each surface takes two of **{speed, expressiveness, sovereignty}** and gives up the third:
+
+| Surface | How you reach the IBL | Trade-off |
+|---------|----------------------|-----------|
+| **Autopilot** | A flagship model takes your intent and *discovers* the steps, emitting IBL as it goes. Best for new, exploratory work. | speed + expressiveness − sovereignty |
+| **Manual** | A *lightweight* model **translates** your natural language into IBL — a compiler front-end. You review the *effect* (dry-run) and run it. Near-zero cost; intelligence accrues in the language, not the model. | expressiveness + sovereignty − speed |
+| **App** | An icon **invokes** a fixed IBL expression directly — 0 tokens, deterministic. Fastest, most discoverable. | speed + sovereignty − expressiveness |
+
+No other harness can offer this, because no other harness has a compile target: there is nothing for a "manual mode" to translate *into*, no stable expression to dry-run, and nothing for an icon to *invoke*. **The three surfaces are not a UI menu — they are a property of having a language.**
+
+### → Crystallization
+
+Frequency moves a task between surfaces. Autopilot explores it once → its IBL trace seeds Manual → a proven, high-frequency flow crystallizes into an **App icon (0 tokens)** on a 2D desktop you own and return to. A saved shortcut is *not* the same as an icon you keep — the difference is **placement**, and most harnesses have no launcher surface at all, so a proven flow has nowhere to live. This *survives cheaper models*: what you want from a daily task isn't a lower token bill — it's determinism, instant response, and control. **Crystallize only what's proven.**
+
+(Manual mode obeys two rules: side-effecting steps are gated behind explicit confirmation while read-only steps run friction-free, and the hippocampus learns *only the results you approve*. App instruments are declaration-driven — each is an `app:` block on an IBL action, and one declaration renders identically on the desktop, the remote launcher, and the phone.)
+
+### → A currency algebra
+
+`engines` carries domain-agnostic transformers — filter / sort / take / select / dedup / groupby / join / union / merge — that take a shared *currency* (record lists or tables) and return the *same* currency. So any search result composes into a report of any format via `>>` (or the `|` pipe shorthand), with no glue code in between:
+
+```
+[sense:realty]{region: "Gangnam"} | where: "lease" | sort: price | take: 5 >> [engines:document]{}
+```
+
+Coverage is the nouns; depth is the currency verbs. A language *with an algebra* is what turns one line of search into one report.
+
+---
+
+## Core #2 — A clean seam between the vocabulary and the body
+
+A capability's *meaning* (`[sense:here]` = "where am I?") is body-independent; *how* it runs depends on the machine. Keep those two apart with a clean seam, and a second consequence falls out.
+
+### → The phone is a second self, not a remote control
+
+A native Android app runs IndieBiz OS *on the phone itself*, with its own on-device LLM brain (in-process Gemini — a lightweight tier for classification, a fuller tier for execution) and the real IBL engine executing phone-safe packages locally. The model **detects its own hardware** (`detect_body`) and knows it is "the phone," not the Mac — a different body, therefore a different identity.
+
+`runs_on` capability tags mark each action honestly — `anywhere`, `mac_only` (phone forwards to the Mac), `phone_only` (Mac forwards to the phone) — and borrowed actions are forwarded transparently. The federation is **bidirectional and authenticated with no manual login**: the phone runs an always-on foreground service, binds to the LAN only behind a shared token, and each side carries its credential automatically. The Mac borrows the phone's senses (`[sense:here]` location, `[sense:listen]` mic, `[sense:see]` camera); the phone borrows the Mac's heavy compute (`[sense:host]`, video/slide rendering). **No other harness runs *on the phone as a second self*** — "phone access" elsewhere means remote-controlling a PC.
+
+The seam also splits memory cleanly: your world-data (contacts, business, calendar, health) is shared and synced (CRDT union merge), while each self's subjective memory (conversations, hippocampus, self-state) stays private.
+
+---
+
+## The split mind — define the problem, then execute it
+
+Most systems plan-and-act as a single agent. IndieBiz OS splits the mind into **separate subjects**:
+
+```
+User Message
+   │
+[Unconscious] — reflex: EXECUTE or THINK?
+   │ EXECUTE                 │ THINK
+   ▼                         ▼
+[Direct execution]    [Consciousness] — frames the problem:
+                       task framing, achievement criteria,
+                       self-awareness, guide selection
+                             │
+                      [Executor] — solves the already-framed problem
+                             │
+                      [Evaluator] — achieved, or retry? (max 3 rounds)
+```
+
+The consciousness agent reframes the raw request into a well-defined problem *before* the executor ever sees it. Because the two are different subjects, the executor solves an *already-framed* problem: the off-target or unsafe paths a single plan-then-act agent would have to *consider and reject* are largely kept out of its frame from the start. This is **containment, not alignment** — safety dissolved into the goal rather than bolted on as a rule. And it's a property a single agent *cannot* have, because it cannot un-ask its own question — which is exactly why a more capable reasoning model doesn't absorb it.
+
+Three model tiers serve this cheaply: a **lightweight** model classifies and evaluates; a **midtier** model runs the Reflex path the hippocampus already knows with high confidence (score ≥ 0.85, skipping even classification); the **full** model handles EXECUTE and THINK execution.
+
+---
+
+## Memories that learn you — and your spaces
+
+Several memories learn from you automatically and keep themselves clean:
+
+- **Hippocampus (procedural)** — a fine-tuned 768-dim embedding model maps your natural language to past IBL code (~92.6% code / 92.8% description Top-5; retrained locally on Apple Silicon, ~2,600-example corpus). Successful runs distill into reusable examples, so the system gets faster at *your* recurring tasks. A closed loop records whether a recalled example actually worked, so proven patterns rise and bad ones sink.
+- **Deep memory (relational)** — after each conversation a lightweight pass extracts durable facts about you (preferences, decisions, key dates) and recalls them, with their last-seen date, when relevant.
+- **Forager memory (spatial)** — every time the AI *forages* the disk, web, or codebase, it accumulates what it learned about that space across sessions: folder identities, search conventions, dead ends, and an owner-model of whose files live where. A model built foraging the disk disambiguates a web search, and vice versa — a compounding loop. It borrows the vocabulary of Information Foraging Theory; what's new is treating it as the *persistent* faculty a stateless model lacks, and adding only that memory — no controller, no stopping-formula. (`[self:forage]`, the Mac self.)
+
+A periodic consolidation pass (part of the immune patrol below) merges near-duplicates, prunes stale or proven-bad entries, and resolves contradictions, so memory stays sharp instead of bloating.
+
+---
+
+## The system watches itself
+
+- **World Pulse** — hourly: economy, weather, news (every 6h), user activity, system health.
+- **Self-Check** — every 12 hours, a full sweep of side-effect-free IBL actions across all five nodes (an immune patrol). On `/self-inspect`, the system AI retries failures to classify them transient vs reproducible and rate fix difficulty (easy / medium / hard).
+
+---
+
+## Agents you design, teams that delegate
+
+You don't just say "act as a doctor" — you define **who** an agent is and **how** it communicates, and it remembers *your* context (medications, preferences, past conversations):
+
+```yaml
+agents:
+  dr_kim:
+    role: |
+      You are Dr. Kim, an internal-medicine specialist of 20 years.
+      You acknowledge the patient's concern before asking questions,
+      explain terms in everyday language, and always end with clear next steps.
+    model: claude-sonnet
+    allowed_nodes: [sense, self, limbs, others, engines]
+```
+
+Agents form teams and delegate — synchronously (`call_agent`, wait for the result), on a schedule (hand a task to another agent's clock), or via a written plan (`create_plan` → `execute_plan`, each agent runs its part and hands off). Agents with a communication channel (Nostr, Gmail) can take orders remotely and reach other people's agents over **IndieNet** (Nostr; DMs use modern NIP-17 gift-wrap encryption).
+
+---
+
+## Under the hood (reference)
+
+**5 nodes, 142 composable actions** — one tool (`execute_ibl`), one vocabulary, not 142 schemas:
+
+| Node | Actions | What lives here |
+|------|---------|-----------------|
+| **sense** | 44 | Retrieval — web, Naver, finance, travel, photos, blog, health, real estate (official prices + live listings), legal, statistics, classic literature, performances, academic papers/dissertations/researchers, AI grants & contests — plus the phone's on-demand senses (notifications, location, mic, camera) |
+| **self** | 44 | System management, workflows, triggers, files, deep + forager memory, business (catalog/items/docs/guidelines), phone sync, calendar, health records |
+| **limbs** | 17 | UI automation (browser, Android, macOS screen), phone-native actions, media playback (YouTube, radio), maps |
+| **others** | 11 | Collaboration, delegation, messaging (DM/feed/board/Nostr NIP-17), neighbor CRM, contacts, auto-response |
+| **engines** | 26 | Currency transformers + content creation (document IR, slides, video, charts, images, websites, spreadsheets, TTS) + image vision read/critique |
+
+IBL's definition lives in a single source of truth (`data/ibl_nodes_src/`, built to `data/ibl_nodes.yaml` via `scripts/build_ibl_nodes.py`). Tool **packages** (38 installed, growing) are folders — drop one in and it's recognized, independent of the language; an AI agent can build, install, or modify them for you. Per-agent `allowed_nodes` restricts what each agent can reach.
+
+---
+
+## Getting started (recommended)
 
 The easiest way to install IndieBiz OS is through **Claude Desktop**.
 
-1. Open **Claude Desktop** and switch to the **Claude Code** tab
+1. Open **Claude Desktop** and switch to the **Claude Code** tab.
 2. Tell Claude:
 
 ```
 "Install IndieBiz OS from https://github.com/kangkukjin/indiebizOS on my PC"
 ```
 
-3. Claude will handle everything:
-   - Clone the repo
-   - Install dependencies (Python, Node.js)
-   - Ask about your needs and preferences
-   - Set up a personalized system tailored to you
+3. Claude clones the repo, installs dependencies (Python, Node.js), asks about your needs, and sets up a system tailored to you.
 
-> **Why Claude Desktop?**  IndieBiz OS is a living system — not a static app you just `npm install`. The AI agent that installs it also becomes the blacksmith who keeps forging it to fit you. Claude Desktop's Claude Code tab provides the best environment for this interactive, personalized setup process.
+> **Why Claude Desktop?** IndieBiz OS is a living system, not a static `npm install`. The agent that installs it becomes the blacksmith who keeps forging it to fit you.
 
-**You'll need to provide:**
-- **An LLM API key** (Anthropic, Google, or OpenAI)
-- **Answers to a few questions** about what you want your system to do
-- **External API keys** only as needed, when you actually use those features
+**You'll provide:** an LLM API key (Anthropic, Google, or OpenAI); answers to a few questions about what you want; external API keys only as you actually use those features.
 
 <details>
-<summary><strong>Alternative: Manual Setup</strong></summary>
+<summary><strong>Alternative: manual setup</strong></summary>
 
 ```bash
 git clone https://github.com/kangkukjin/indiebizOS.git
@@ -78,184 +228,14 @@ cd indiebizOS
 ./start.sh
 ```
 
-This gets the system running, but you'll need to configure agents, packages, and preferences yourself. The Claude Desktop approach is recommended because the AI handles all of this for you.
+This runs the system, but you configure agents, packages, and preferences yourself. The Claude Desktop path is recommended because the AI handles all of it for you.
 </details>
-
----
-
-## Three Core Values
-
-### 1. Design Your AI Personas
-
-Not just "act as a doctor" — define **who** they are and **how** they communicate.
-
-```yaml
-# Example: A compassionate internal medicine doctor
-agents:
-  dr_kim:
-    role: |
-      You are Dr. Kim, an internal medicine specialist with 20 years of experience.
-      You always start by acknowledging the patient's concerns before asking questions.
-      You explain medical terms in everyday language.
-      You end every consultation with clear next steps and reassurance.
-    model: claude-sonnet
-    allowed_nodes: [sense, self, limbs, others, engines]
-```
-
-**Each agent remembers your context** — your medications, preferences, past conversations. They're not generic assistants; they're **your** specialists.
-
-### 2. One-Click Automation with Switches & Workflows
-
-Stop repeating the same AI conversations. **Save them as Switches or Workflows** and execute with one click.
-
-**Switches** — Save a prompt + agent pair for one-click execution:
-```
-[Toggle] Daily Tech News  ->  Click  ->  Done!
-```
-
-**Workflows** — Chain multiple actions into reusable pipelines using IBL syntax:
-```
-[sense:search_ddg]{query: "AI news"}
-  >> [others:ask_sync]{agent_id: "content/content", message: "Summarize these articles"}
-  >> [self:file]{path: "news_report.html", format: "html"}
-```
-
-- **Natural language or IBL code** — Write prompts or program action chains
-- **Scheduled execution** — Run daily at 8 AM, weekly on Fridays
-- **Pipeline operators** — Sequential (>>), Parallel (&), Fallback (??)
-
-### 3. P2P Network (IndieNet) & Remote Access
-
-Connect with others through decentralized networks and access your system from anywhere.
-
-- **Nostr Protocol** — No central server, no data collection (DMs use modern NIP-17 gift-wrap encryption)
-- **Phone Native — a second, independent self** — A native Android app runs IndieBiz OS *on the phone itself*, with its **own on-device LLM brain** (Gemini, in-process: a lightweight tier for classification, a fuller tier for execution). The phone is not a remote control of the home PC — it's a second self with a different body and therefore a different identity. The on-device Python backend (Chaquopy) serves the App-mode superapp, the real IBL engine executes phone-safe packages locally, and the phone can even run Python in-process — making it a general device-programming agent. The model **detects its own hardware** (`detect_body`) and recognizes itself as "the phone" rather than the Mac. `runs_on` capability tags mark each action honestly — `anywhere` (runs on each body locally), `mac_only` (phone forwards to the Mac), `phone_only` (Mac forwards to the phone) — and borrowed actions are forwarded transparently per-leaf. This federation is **bidirectional and authenticated, with no manual login**: the phone's backend runs as an always-on foreground service (no need to keep the app open), binds to the LAN only when a shared token is configured, and each side carries its credential automatically — so the Mac can borrow the phone's senses (`[sense:here]`) and the phone can borrow the Mac's heavy compute (`[sense:host]`, video/slide rendering), the artifacts flowing back to whichever body asked. The phone has its own on-demand senses (`[sense:here]` location, `[sense:listen]` mic, `[sense:see]` camera, `[sense:phone]` notifications) and operates its own screen via a native AccessibilityService. **Two memories, two kinds:** the user's world-data (contacts, business, calendar, health records) is shared and synced (CRDT union merge); each self's subjective memory (conversations, hippocampus, self-state) stays private and unsynced.
-- **Remote Access** — Cloudflare Tunnel based Remote Finder and Launcher
-- **Business Network** — Manage partners, auto-respond to inquiries
-
----
-
-## The Launcher — Three Surfaces
-
-Every task can be run three ways, all on the same IBL nervous system. Each surface picks two of **{speed, expressiveness, sovereignty}** and gives up the third.
-
-| Mode | What it is | Trade-off |
-|------|-----------|-----------|
-| **Autopilot** | Tell a flagship AI your intent; it handles the multi-step work. Best for new, one-off, exploratory tasks. (formerly "Projects") | speed + expressiveness − sovereignty |
-| **Manual** | A lightweight model translates your natural-language command into IBL (leaning on hippocampus memory); you review the **effect** (dry-run) and run it. A compiler front-end — the model only translates, intelligence accrues in the language (IBL). Near-zero cost. | expressiveness + sovereignty − speed |
-| **App** | Tap an icon to drive a GUI (e.g. real-estate transaction lookup, book search). Fastest, most discoverable. (formerly "Actions") | speed + sovereignty − expressiveness |
-
-Frequency flows a task between modes: Autopilot explores it once → the IBL trace seeds Manual → a proven, high-frequency workflow crystallizes into an App. **Crystallize only what's proven.**
-
-Manual mode is governed by two rules: side-effecting steps are gated behind explicit confirmation (read-only steps run friction-free), and the hippocampus learns *only the results you approve*.
-
-App-mode instruments are **declaration-driven**: each is an `app:` block on an IBL action (in `data/ibl_nodes_src/`), and a single declaration renders identically on the desktop, the remote launcher, and the phone — so a new App is one declaration, not three UIs. A small set of richer hand-built instruments (maps, native windows) stay as escape hatches.
-
----
-
-## Architecture
-
-### Three-Agent Cognitive Pipeline
-
-Every request flows through a human-like cognitive process:
-
-```
-User Message
-    |
-[Unconscious Agent] — Reflex: EXECUTE or THINK?
-    |                        |
-    | EXECUTE (simple)       | THINK (complex)
-    v                        v
-[Direct Execution]    [Consciousness Agent] — Problem definition + achievement criteria
-                             |
-                      [AI Agent Execution]
-                             |
-                      [Evaluator Agent] — Achieved or retry? (max 3 rounds)
-```
-
-- **Unconscious Agent** — Lightweight gatekeeper that classifies request complexity
-- **Consciousness Agent** — Meta-judgment: it reframes the request into a well-defined problem — task framing, achievement criteria, self-awareness, guide selection — *before* the executor ever sees it. Because the two are **separate subjects**, the executor solves an already-framed problem rather than the raw request: the off-target or unsafe paths a single plan-then-act agent would have to *consider and reject* are largely kept out of its frame from the start — a property one subject can't have, since it can't un-ask its own question
-- **Evaluator Agent** — Post-execution evaluation against achievement criteria
-
-### Three-Tier Model System
-
-Cost/speed optimization through tiered model allocation:
-
-| Tier | Purpose | Used For |
-|------|---------|----------|
-| **Lightweight** | Classification, evaluation, one-shot judgment | Unconscious & Evaluator agents |
-| **Midtier** | Reflex path execution | Tasks the hippocampus already knows with high confidence (score ≥ 0.85 — skips even the unconscious classifier) |
-| **Full** | EXECUTE + THINK path execution | EXECUTE skips consciousness but keeps the full model (misclassification costs framing, never intelligence); THINK adds consciousness framing |
-
-### Consciousness Pulse (Self-Awareness)
-
-The system maintains awareness of itself and the world:
-
-- **World Pulse** — Hourly updates: economy, weather, news, user activity, system health
-- **Self-Check** — Every 12 hours: full sweep of side-effect-free IBL actions across all 5 nodes (immune patrol). When the user runs `/self-inspect`, the system AI retries failed actions to classify them as transient vs reproducible and assesses fix difficulty (easy / medium / hard)
-- **Health Monitoring** — Service alive checks, disk usage, anomaly detection
-
-### IBL (IndieBiz Logic) — The Nervous System
-
-A domain-specific language that unifies all capabilities into one syntax.
-
-**5 Nodes, 138 Atomic Actions:**
-
-| Node | Actions | Description |
-|------|---------|-------------|
-| **sense** | 42 | Data retrieval (web, Naver Korean search, finance, travel, photos, blog, health, real estate, legal, statistics, classic literature, performances/exhibitions) and the phone's on-demand senses (notifications, location, microphone, camera) |
-| **self** | 42 | System management, workflows, triggers, files, deep memory, business (catalog/items/docs/guidelines), phone sync, calendar, health records, scheduled reports |
-| **limbs** | 17 | UI automation (browser, Android phone, macOS screen), phone-native actions, media playback (YouTube, radio), maps |
-| **others** | 11 | Collaboration, delegation, messaging (DM/feed/board/Nostr), neighbor CRM, contacts, auto-response |
-| **engines** | 26 | **Currency transformers** (filter/sort/take/join/union/merge/groupby — compose any data into reports) plus content creation (document IR, slides, video, charts, images, websites, spreadsheets, TTS) and vision read/critique of images |
-
-> Action counts shrank from 332 → 136 as related tools were unified into single actions with parameter/`op` branching — fewer, more composable verbs for the AI to learn (e.g. 45 bespoke Android actions became one `[limbs:android]{op}` centerpiece). Actions resolve identifiers internally (city names→codes, natural-language dates, cron strings→schedules) so a human or a small model can write one line and have it work. The newest layer is the **currency algebra**: domain-agnostic transformers take a shared currency (record lists or tables) and return the *same* currency, so any search result composes into any report via `>>` (with a `|` pipe shorthand) — `[sense:realty]{region:"Gangnam"} | where:"lease" | sort:price | take:5 >> [engines:document]{}`.
-
-```
-User: "Search AI news and save to file"
-  → AI: execute_ibl('[sense:search_ddg]{query: "AI news"} >> [self:file]{path: "result.md"}')
-  → IBL Engine: parse → dispatch → return result
-```
-
-**Key design:**
-- **One tool, one language** — AI agents learn one syntax, not 138 tool schemas
-- **Per-agent filtering** — Each agent's `allowed_nodes` restricts access
-- **Dynamic loading** — Tool packages are folders; drop one in, it's recognized
-
-### Memory: Learning from Experience
-
-Two memories learn from you automatically — and keep themselves clean:
-
-- **Hippocampus (procedural memory)** — A fine-tuned 768-dim embedding model maps your natural language to past IBL code (~92.6% code / 92.8% description Top-5 on held-out test; retrained locally on Apple Silicon, ~2,400-example corpus). Successful executions are automatically distilled into reusable examples, so the system gets faster at *your* recurring tasks.
-- **Deep Memory (relational memory)** — After each conversation, a lightweight pass extracts durable facts about you — preferences, decisions, key dates — and recalls them, with their last-seen date, when relevant.
-- **Closed feedback loop** — When a recalled example drives an execution, its success or failure is recorded, so proven patterns rise and bad ones sink. Distilled code is validated against the action registry before it can enter the corpus.
-- **Self-cleaning** — A periodic consolidation pass (part of the immune patrol) merges near-duplicates, prunes stale or proven-bad entries, and resolves contradictions — so memory stays sharp instead of bloating.
-- **Periodic Retraining** — The embedding model is always retrained from the base model (no catastrophic forgetting), with MPS acceleration on Apple Silicon.
-
-### Tool Package System — Your System, Your Tools (35 packages, growing)
-
-Packages are not pre-installed. They grow with your needs.
-
-```
-data/packages/
-├── installed/tools/     # Your active packages
-├── not_installed/       # Available but inactive
-└── dev/                 # Packages you're building
-```
-
-Each package is self-contained:
-- `handler.py` — Implementation
-- `tool.json` — Tool definitions for AI
-
-IBL vocabulary lives in a single source of truth at `data/ibl_nodes_src/` (built into `data/ibl_nodes.yaml` via `scripts/build_ibl_nodes.py`), independent of package install state.
-
-An AI agent can create new packages for you, install existing ones, or modify them to fit your specific needs.
 
 ---
 
 ## Technical Stack
 
-- **Backend**: Python FastAPI
+- **Backend**: Python FastAPI (port 8765)
 - **Frontend**: Electron + React (TypeScript)
 - **AI Providers**: Anthropic (Claude), Google (Gemini), OpenAI (GPT), Ollama (Local)
 - **Database**: SQLite
@@ -278,4 +258,4 @@ cd frontend && npm run electron:dev  # Frontend (Electron)
 
 *IndieBiz OS — An AI system that grows with you, not one that's given to you.*
 
-*Last updated: 2026-06-17 — **Mac↔phone federation is live and authenticated**: the phone backend now runs without opening the app (always-on foreground service), the Mac↔phone borrow is bidirectional over the LAN behind a shared token (the phone binds to the LAN only when that token is present, and each side sends its credential automatically), and the self-check no longer flags a peer being temporarily offline as a failure. Also: `engines:join` now composes record lists too (not just tables); fixes to `run_pipeline` (string steps), `self:grep` (single-file paths, `~` expansion across file actions), and the KOSIS statistics endpoint. Earlier (2026-06-15) — **Currency algebra**: `engines` gained domain-agnostic currency→currency transformers (unary filter/sort/take/select/dedup/groupby + binary join/union/merge), a `|` pipe shorthand, and a document-IR emitter — so any search result composes into a report of any format (html/pdf/docx/pptx). 124→136 actions (sense 42, self 41, limbs 17, others 11, engines 25).*
+*Last updated: 2026-06-27 — **Live real-estate listings, AI opportunities & app-surface polish**: `sense:realty` now serves live asking-price listings (`source: zigbang`) beside official transaction prices (`source: molit`); new `sense:contest` (Kaggle) and `sense:startup` join the nanet academic search. App instruments got a quality sweep — radio favorites, CCTV in-app HLS playback (a reusable client-side `stream` button), flight-search date input + Korean regional airports (e.g. Cheongju/CJJ), an ETF quick-pick, weather & culture quick options, and route distance/ETA — and the phone-native app was rebuilt to match. **142 actions** (sense 44, self 44, limbs 17, others 11, engines 26), 38 tool packages. Earlier (2026-06-22) — **National-academic person & dissertation finding**: new `sense:researcher` (find/coauthor) and `sense:paper{source: nanet}` actions tap the National Assembly Library's academic-info API — a researcher search that splits same-name people by affiliation and birth year (the "common name" wall generic web search can't climb), plus Korean dissertation/journal search. Also: the **forager memory** (7th memory, spatial) is now live — when the AI searches the disk, web, or code, it accumulates a reusable map of that space (folder identities, conventions, dead ends, an owner-model) across sessions. 136→**141 actions** (sense 43, self 44, limbs 17, others 11, engines 26). Earlier (2026-06-17) — **Mac↔phone federation is live and authenticated**: the phone backend now runs without opening the app (always-on foreground service), the Mac↔phone borrow is bidirectional over the LAN behind a shared token (the phone binds to the LAN only when that token is present, and each side sends its credential automatically), and the self-check no longer flags a peer being temporarily offline as a failure. Also: `engines:join` now composes record lists too (not just tables); fixes to `run_pipeline` (string steps), `self:grep` (single-file paths, `~` expansion across file actions), and the KOSIS statistics endpoint. Earlier (2026-06-15) — **Currency algebra**: `engines` gained domain-agnostic currency→currency transformers (unary filter/sort/take/select/dedup/groupby + binary join/union/merge), a `|` pipe shorthand, and a document-IR emitter — so any search result composes into a report of any format (html/pdf/docx/pptx). 124→136 actions (sense 42, self 41, limbs 17, others 11, engines 25).*

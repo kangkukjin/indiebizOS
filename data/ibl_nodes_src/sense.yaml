@@ -1,6 +1,7 @@
   sense:
     actions:
       phone:
+        returns: items
         description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요.
         group: device
         target_description: '최근 폰 알림 — latest_ago/ago("방금"·"N분 전")로 지금 오는 연락인지 판별,
@@ -21,6 +22,7 @@
         - 연락
         - 카톡
       host:
+        returns: scalar
         description: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라
           기계를 직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
         group: device
@@ -98,6 +100,7 @@
               k: '{mount}'
               v: '{free_gb} GB 여유 / {total_gb} GB ({percent}%)'
       here:
+        returns: scalar
         description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
         group: device
         target_description: 파라미터 없음 — 호출 즉시 폰의 현재 위치(위경도+역지오코딩 주소)를 한 번 가져온다.
@@ -116,6 +119,7 @@
         - gps
         - location
       listen:
+        returns: scalar
         description: 폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).
         group: device
         target_description: 'op=transcribe(기본): 지금 발화를 텍스트로 받아쓴다(ko-KR, timeout_sec 대기).
@@ -141,6 +145,7 @@
         - stt
         - voice
       see:
+        returns: scalar
         description: 폰 카메라로 사진 1장 촬영 (호출 시 1회). facing=back(기본)/front. 폰에 jpg 저장 후 경로 반환.
         group: device
         target_description: 'facing=back(후면, 기본)/front(전면). 미리보기 없이 정지 캡처 → 폰 파일 경로 반환.
@@ -159,6 +164,7 @@
         - photo
         - camera
       stock:
+        returns: scalar
         description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
         group: finance
         target_description: 'ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소).
@@ -200,7 +206,7 @@
               type: text
               default: 삼성전자
               placeholder: '회사명(한글)·티커 (예: 삼성전자, AAPL)'
-              chips: [삼성전자, SK하이닉스, AAPL, NVDA, TSLA]
+              chips: [삼성전자, SK하이닉스, TIGER200, AAPL, NVDA, TSLA]
             filter:
               key: period
               items:
@@ -302,7 +308,8 @@
               - k: 거래량
                 v: '{data.volume|num}'
       company:
-        description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. 주가·시세는 stock.
+        returns: items
+        description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. items(행 dict). 주가·시세는 stock.
         group: finance
         target_description: 'ticker=기업명 또는 코드 (삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC 자동판별).
           market="kr"/"us"로 강제 지정 가능. financials는 year(한국)·statement_type·period 옵션, disclosures는
@@ -325,6 +332,7 @@
         - DART
         - SEC
       crypto:
+        returns: scalar
         description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
         group: finance
         target_description: 코인 심볼 (BTC, ETH, SOL 등)
@@ -333,6 +341,7 @@
         implementation: CoinGecko 무료 API로 암호화폐 시세 조회 (requests HTTP)
         target_key: coin_id
       performance:
+        returns: items
         description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book.
         group: culture
         target_description: 'search — query(공연명/키워드)·genre·region·status·days 옵션. venue — query(공연장명, 예 ''예술의전당'')·region. genres/regions — 파라미터 없음(필터 코드 목록).'
@@ -360,6 +369,13 @@
           mode: 공연
           mode_order: 0
           inputs:
+          - key: region
+            type: select
+            label: 전체 지역
+            options_action: '[sense:performance]{op: "regions"}'
+            options_from: regions
+            option_value: code
+            option_label: name
           - key: genre
             type: select
             label: 전체 장르
@@ -370,10 +386,10 @@
           - key: kw
             type: text
             placeholder: 공연명 키워드(선택)
-          action: '[sense:performance]{genre: "$genre", keyword: "$kw"}'
+          action: '[sense:performance]{genre: "$genre", region: "$region", keyword: "$kw"}'
           view:
           - type: image_grid
-            from: data
+            from: items
             empty_from: message
             image: '{poster}'
             title: '{prfnm}'
@@ -382,6 +398,7 @@
             - '{prfpdfrom}~{prfpdto}'
             - '{area} · {prfstate}'
       book:
+        returns: items
         description: 한국 도서 조회 (op 분기, 도서관정보나루). 고전 원문은 classic, 글로벌 도서는 search_books.
         group: culture
         target_description: 'search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계). "제목이 X인 책"은 title:"X". recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).'
@@ -414,7 +431,7 @@
             action: '[sense:book]{keyword: "$q"}'
             view:
             - type: card_list
-              from: data
+              from: items
               empty_from: message
               item_click:
                 action: '[sense:book]{isbn: "{isbn13}", detail: true}'
@@ -470,7 +487,7 @@
             action: '[sense:search_books]{query: "$q"}'
             view:
             - type: card_list
-              from: data
+              from: items
               empty_from: message
               card:
                 image: '{bookImageURL}'
@@ -490,7 +507,7 @@
             action: '[sense:classic]{op: "western", query: "$q"}'
             view:
             - type: card_list
-              from: results
+              from: items
               card:
                 image: '{cover_url}'
                 title: '{title}'
@@ -501,6 +518,7 @@
                   href: '{html_url}'
                   label: 원문 읽기 →
       classic:
+        returns: items
         description: 고전 원문 검색 (op 분기). western=서양 고전(Gutenberg), korean=한국 고전(한국고전종합DB).
         group: culture
         target_description: 'query=검색어. western — Gutenberg(저작권 만료 7만+권), languages·topic·author_year 옵션. korean — 한국고전종합DB(이황·이이 등 원문·번역).'
@@ -519,6 +537,7 @@
         - Gutenberg
         - 한국고전
       exhibit:
+        returns: items
         description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.
         group: culture
         target_description: 검색어 또는 키워드 (예 '국립중앙박물관', '미디어아트').
@@ -539,7 +558,7 @@
           action: '[sense:exhibit]{keyword: "$kw"}'
           view:
           - type: image_grid
-            from: data
+            from: items
             image: '{thumbnail}'
             title: '{title}'
             lines:
@@ -547,11 +566,13 @@
             - '{startDate}~{endDate}'
             - '{area} · {realmName}'
       paper:
-        description: 학술 논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
+        returns: items
+        description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
         target_description: |
           op로 분기 (기본 search).
           - search: query(필수) + source(기본 openalex) + max_results.
             · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).
+            · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.
           - download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).
         target_key: op
         group: research
@@ -560,16 +581,43 @@
         ops:
           default: search
           values:
-            search: '논문 검색 (source openalex/arxiv/pubmed/semantic)'
+            search: '논문·학위논문 검색 (source openalex/arxiv/pubmed/semantic/nanet)'
             download: '논문 PDF 다운로드 (source arxiv/pubmed)'
-        implementation: study 패키지 op/source 분기. search=openalex/arxiv/pubmed/semantic_scholar, download=arxiv/pubmed_pdf.
+        implementation: study 패키지 op/source 분기. search=openalex/arxiv/pubmed/semantic_scholar/nanet(researchTotal), download=arxiv/pubmed_pdf.
         keywords:
         - 논문
         - 학술
         - arxiv
         - pubmed
         - 논문검색
+        - 학위논문
+      researcher:
+        returns: items
+        description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search_ddg.
+        target_description: |
+          op로 분기 (기본 find).
+          - find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.
+            반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).
+          - coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망. 공저자 소속·협업으로 신원 재확인.
+        target_key: op
+        group: research
+        router: handler
+        tool: researcher_op
+        ops:
+          default: find
+          values:
+            find: '연구자 검색 (이름→소속·출생연도·lodID, 동명이인 분리)'
+            coauthor: '공저자망 (lodID→공저자, 신원 재확인)'
+        implementation: study 패키지. find=authorView, coauthor=coAuthor (국회도서관 LOSI OpenAPI, NANET_API_KEY).
+        keywords:
+        - 연구자
+        - 학자
+        - 인물찾기
+        - 동명이인
+        - 공저자
+        - researcher
       pew_research:
+        returns: items
         description: Pew Research 최신 여론조사/리서치 보고서 목록. 미국 사회·정치·기술 트렌드 조사. 파라미터 없이
           호출하면 최신 리서치 목록 반환.
         group: research
@@ -579,18 +627,18 @@
         implementation: Pew Research RSS 피드 파싱 (feedparser). 입력 파라미터 없이 최신 리서치 목록
           반환.
       search_guardian:
+        returns: items
         description: Guardian 신문 아카이브 검색. 영국·국제 기사 위주, 영어 검색.
         group: research
         target_description: 검색어 또는 키워드 (영어).
         router: handler
         tool: search_guardian
-        implementation: Guardian Open Platform API로 뉴스 아카이브 검색 (API키 필요)
+        implementation: Guardian Open Platform API로 뉴스 아카이브 검색 (API키 필요).
+          records[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 폐지(records를 문자열로 파괴하던 결함 제거).
         target_key: query
-        postprocess:
-          type: compress
-          prompt: 같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라.
       world_bank:
-        description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. 표준 테이블 통화(table) 반환.
+        returns: items
+        description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. items(행 dict — 연도+지표값) 반환, 소비자가 table 재구성.
         group: world
         target_description: '지표명 또는 코드 (예 "GDP"/"인구"/"실업률" 자연어 가능, NY.GDP.MKTP.CD 코드도). country는 국가명(한국/미국) 또는 ISO 코드. 반환에 table={columns:[연도,지표],rows:[[연도,값],...]} 포함 — 그대로 engines:chart{table:...}/spreadsheet{table:...}로 흘려보내 reshape 없이 시각화/표.'
         router: handler
@@ -598,6 +646,7 @@
         implementation: 세계은행 공개 API로 국가별 경제/사회 지표 시계열 조회
         target_key: indicator
       search_books:
+        returns: items
         description: 글로벌 도서 검색 (Google Books). 해외 도서·원서 포함. 한국 도서관 소장/대출 정보는 sense:book(도서관정보나루)
           사용.
         group: culture
@@ -607,6 +656,7 @@
         implementation: Google Books API로 글로벌 도서 검색 (영어/다국어). 한국 도서는 sense:book 사용.
         target_key: query
       search_shopping:
+        returns: items
         description: 상품 검색 및 가격 비교 (네이버 API=어디서나; 다나와·중고는 브라우저 스크래핑이라 맥 전용, 폰선 네이버만)
         group: research
         target_description: 상품명
@@ -614,9 +664,8 @@
         tool: search_shopping
         implementation: Naver Shopping API + Playwright로 다나와/중고마켓 비공식 스크래핑 병렬 실행
         target_key: query
-        postprocess:
-          type: compress
       weather:
+        returns: items
         description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat:
           37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
         group: places
@@ -634,7 +683,7 @@
             type: text
             default: 서울
             placeholder: 도시명 (한/영)
-            chips: [서울, 부산, 제주, 수원, 인천, 대구]
+            chips: [서울, 오송, 부산, 제주, 수원, 인천, 대구]
           action: '[sense:weather]{city: "$city", days: 7}'
           view:
           - type: metric
@@ -650,10 +699,11 @@
               v: '{current.wind_speed}m/s'
           - type: kv_list
             title: 7일 예보
-            from: forecast
+            from: items
             k: '{date}'
             v: '{condition} {min_temp|round}° / {max_temp|round}°{precipitation_mm|opt: ☔,mm}'
       restaurant:
+        returns: items
         description: 맛집/음식점 검색 (카카오+네이버 Local API). 상호명·주소·전화·카테고리·place 링크 반환. 별점·리뷰
           숫자는 공개 API 미제공 — 카카오 place_url(카카오맵 페이지)에서 확인. 커뮤니티 후기는 sense:search_local.
         group: places
@@ -675,7 +725,7 @@
           action: '[sense:restaurant]{query: "$q"}'
           view:
           - type: card_list
-            from: combined
+            from: items
             card:
               title: '{name}'
               lines:
@@ -685,6 +735,7 @@
                 href: '{url}'
                 label: 지도/상세 →
       navigate_route:
+        returns: scalar
         description: 카카오 내비 자동차 길찾기. 거리·시간·톨비 반환. 지도 표시는 map.
         target_description: 목적지 (장소명 또는 '경도,위도'). origin 옵션으로 출발지 지정.
         group: places
@@ -719,6 +770,7 @@
             k: '{name}'
             v: '{guidance}'
       reverse_geocode:
+        returns: scalar
         description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
         group: places
         target_description: 위도(lat)와 경도(lng) 두 파라미터. 결과는 시/도/구/동까지 분해.
@@ -726,9 +778,10 @@
         tool: reverse_geocode
         implementation: Kakao Map API로 GPS 좌표→주소 변환
       travel:
-        description: 여행 정보 검색 (Amadeus, op 분기) — 항공권·호텔·관광지. 도시명·상대날짜 내부 해소.
+        returns: items
+        description: 여행 정보 검색 (Amadeus, op 분기) — 항공권·호텔. 도시명·상대날짜 내부 해소.
         group: travel
-        target_description: 'flight — to(도착도시) 필수, from(기본 서울)·date(기본 +7일, "내일"/"다음주 금요일" 등 자연어)·adults 옵션. hotel — city 필수. poi — city 또는 lat/lng. 도시명은 IATA/좌표 자동 해소.'
+        target_description: 'flight — to(도착도시) 필수, from(기본 서울)·date(기본 +7일, "내일"/"다음주 금요일" 등 자연어)·adults 옵션. hotel — city 필수. 도시명은 IATA/도시코드 자동 해소.'
         router: handler
         tool: amadeus_travel_search
         target_key: op
@@ -737,11 +790,43 @@
           values:
             flight: 항공권 검색 (from→to·date). 도시명→IATA·상대날짜 자동 해소
             hotel: 도시 호텔 목록 (city→도시코드 자동)
-            poi: 관광지 검색 (city→좌표 자동, 또는 lat/lng 직접)
-        implementation: Amadeus API(OAuth2). op→endpoint 매핑 + 도시명/날짜 내부 해소 (endpoint+params 직접 지정도 가능)
-        postprocess:
-          type: compress
+        implementation: Amadeus API(OAuth2). op→endpoint 매핑 + 도시명/날짜 내부 해소 (endpoint+params 직접 지정도 가능).
+          두 op 모두 records[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 없이 깨끗(weather/restaurant 형제).
+          (poi=관광지는 Amadeus가 2026 영구 폐기(HTTP 410)해 제거.)
+        app:
+          instrument: travel
+          icon: ✈️
+          name: 여행
+          order: 16
+          modes:
+          - name: 항공권
+            inputs:
+            - { key: to, type: text, label: 도착, placeholder: '도착 도시 (예: 도쿄)', required: true }
+            - { key: from, type: text, label: 출발, placeholder: '출발 (비우면 서울)' }
+            - { key: date, type: text, label: 날짜, placeholder: '예: 내일·다음주 금요일·2026-07-15 (비우면 1주 후)' }
+            action: '[sense:travel]{op: "flight", to: "$to", from: "$from", date: "$date"}'
+            view:
+            - type: card_list
+              from: items
+              empty: 항공편을 찾지 못했습니다
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+          - name: 호텔
+            inputs:
+            - { key: city, type: text, label: 도시, placeholder: '도시 (예: 파리)', required: true }
+            action: '[sense:travel]{op: "hotel", city: "$city"}'
+            view:
+            - type: card_list
+              from: items
+              empty: 호텔을 찾지 못했습니다
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
       search_local:
+        returns: items
         description: 지역 커뮤니티(네이버 카페) 검색. 동네 주민들의 후기·추천·정보 수집용. 가게/음식점 공식 검색은 sense:restaurant(카카오+네이버
           API) 사용.
         group: research
@@ -752,6 +837,7 @@
           검색이 아닌 커뮤니티 의견 수집.
         target_key: query
       local_query:
+        returns: items
         description: 축적된 지역 정보 DB 조회 (정기 수집된 가게·커뮤니티 데이터). 실시간 검색은 search_local.
         group: places
         target_description: 검색어 (FTS5 전문검색, 한국어 토큰화 지원).
@@ -760,6 +846,7 @@
         implementation: SQLite FTS(전문검색)로 축적된 지역 정보 DB 조회
         target_key: query
       cctv:
+        returns: items
         description: CCTV/웹캠 조회 (op 분기). search(키워드 통합검색)/nearby(좌표 근처, lat·lng
           필수). 출력은 항상 lat/lng·playable 포함, stream_tags 동봉 시 채팅창 재생. 자세히 read_guide(query="cctv").
         group: media
@@ -799,19 +886,22 @@
           action: '[sense:cctv]{op: "search", query: "$q"}'
           view:
           - type: map
-            markers: cctvs
+            markers: items
             max: 100
           - type: metric
             label: 검색 결과
             big: '{count}개'
-          - type: card_list
-            from: cctvs
+          - type: list_action
+            from: items
+            icon: 📹
             empty: CCTV를 찾지 못했습니다
-            card:
-              title: '{name}'
-              lines:
-              - '{road_type}{format|opt: · ,}'
+            title: '{name}'
+            sub: '{region}{road_name|opt: · ,}'
+            button:
+              label: ▶ 보기
+              stream: true
       commercial:
+        returns: items
         description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
         group: real_estate
         target_description: 업종 코드 또는 키워드. 좌표(lat/lng) 또는 행정동 코드(district)로 영역 지정.
@@ -830,19 +920,20 @@
           action: '[sense:commercial]{lat: "$lat", lng: "$lng"}'
           view:
           - type: map
-            markers: data
+            markers: items
             max: 200
           - type: metric
             label: 주변 점포 수
             big: '{total_count}개'
           - type: card_list
-            from: data
+            from: items
             empty: 점포가 없습니다
             card:
               title: '{name}'
               lines:
               - '{category} · {address}'
       search_ddg:
+        returns: items
         description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는
           search_news, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
         group: research
@@ -851,10 +942,9 @@
         tool: ddgs_search
         implementation: DuckDuckGo ddgs 라이브러리로 웹 검색. 쿼리 언어 자동 감지(영어→글로벌, 한국어→한국).
         target_key: query
-        postprocess:
-          type: compress
       crawl:
-        description: 웹페이지 원문 읽기 (URL 필요). 검색 스니펫으로 부족할 때 상세 내용 확인용.
+        returns: items
+        description: 웹페이지 원문 읽기 (URL 필요). items=문서 IR(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
         group: research
         target_description: 읽을 페이지 URL (http/https). 검색 결과의 link 필드 그대로 전달 가능.
         router: handler
@@ -862,9 +952,8 @@
         implementation: 1차 requests+BeautifulSoup 정적 크롤링, 콘텐츠 부족 시 Chrome MCP(실제 브라우저)로
           자동 폴백. JS 렌더링 사이트도 처리 가능.
         target_key: url
-        postprocess:
-          type: compress
       search_news:
+        returns: items
         description: 뉴스만 검색 (Google News). 신문 생성, 뉴스 모니터링 등 뉴스 전용 작업에 사용.
         group: research
         target_description: 뉴스 검색어. 언어 자동 감지 — 한국어는 한국 뉴스, 영어는 글로벌 뉴스.
@@ -872,10 +961,8 @@
         tool: google_news_search
         implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
         target_key: query
-        postprocess:
-          type: compress
-          prompt: 같은 사건/주제를 다룬 기사는 하나로 병합하라. 불필요한 메타데이터를 제거하라. URL은 대표 1개만 보존하라.
       collect:
+        returns: items
         runs_on: mac_only
         description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.
         target_description: |
@@ -900,11 +987,14 @@
         - 사이트프로필
         - 축적데이터
       realty:
-        description: 부동산 실거래가 조회 (op 분기, 국토부). query(실거래가)/codes(법정동 코드). region 이름만 넣으면 코드 자동 변환 — codes는 보통 불필요.
+        returns: items
+        description: 부동산 시세·매물 (op 분기). query=시세/매물(source=molit 국토부 실거래가 기본 / source=zigbang 직방 현재 매물·링크·사진), codes=법정동 코드. region 이름만 넣으면 자동 해소.
         group: real_estate
         target_description: |
           op로 분기 (기본 query).
-          - query: region=지역 이름(예 "강남구", 읍·면·동 "오송"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.
+          - query: source로 데이터 종류 선택.
+            · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 "강남구", 읍·면·동 "오송"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.
+            · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 "평택 죽백동", "배다리도서관") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).
           - codes: city=시/도명(서울·경기 등) → 법정동 지역코드 목록. (region 자동변환이 있어 보통 불필요한 보조.)
         target_key: op
         router: handler
@@ -912,9 +1002,9 @@
         ops:
           default: query
           values:
-            query: 실거래가 조회 (apt/house/villa × trade/rent, region 자동해소)
+            query: 시세·매물 조회 (source=molit 실거래가 / source=zigbang 직방 매물)
             codes: 법정동 지역코드 조회 (보조)
-        implementation: query=type×deal 조합 국토부 6종 API(region resolve_region_code 자동해소, 최근 3개월 기본). codes=get_region_codes.
+        implementation: query source=molit=type×deal 국토부 6종 API(region 자동해소). source=zigbang=tool_zigbang(지명→geohash5→직방 리스트→거리필터→상세 병렬→records). codes=get_region_codes.
         keywords:
         - 부동산
         - 실거래가
@@ -923,6 +1013,11 @@
         - 월세
         - 아파트
         - 주택
+        - 매물
+        - 호가
+        - 직방
+        - 빌라
+        - 원룸
         app:
           icon: 🏢
           name: 실거래가
@@ -971,10 +1066,18 @@
             options:
             - { value: trade, label: 매매 }
             - { value: rent, label: 전월세 }
-          action: '[sense:realty]{region_code: "$region", type: "$type", deal: "$deal"}'
+          - key: period
+            type: select
+            label: 기간
+            default: "3"
+            options:
+            - { value: "3", label: 최근 3개월 }
+            - { value: "6", label: 최근 6개월 }
+            - { value: "12", label: 최근 12개월 }
+          action: '[sense:realty]{region_code: "$region", type: "$type", deal: "$deal", months: "$period"}'
           view:
           - type: metric
-            label: 평균 거래가 (최근 3개월)
+            label: 평균 거래가
             big: '{summary.평균가}'
             sub: '{summary.총거래건수}건 · {summary.조회기간}'
           - type: kv
@@ -982,14 +1085,25 @@
             - { k: 최고가, v: '{summary.최고가}' }
             - { k: 최저가, v: '{summary.최저가}' }
           - type: card_list
-            from: data
+            from: items
             empty: 해당 기간 거래가 없습니다
             card:
               title: '{명칭}'
               lines:
               - '{법정동} · {면적}㎡ · {층}층 · {건축년도}년'
-              - '{거래금액}만원'
+              - '{거래금액}만원 · {거래년도}.{거래월}.{거래일}'
+            item_click:
+              action: '[sense:realty]{region_code: "$region", type: "$type", deal: "$deal", months: 12, name: "{명칭}"}'
+              view:
+              - type: card_list
+                from: items
+                empty: 추이 데이터 없음
+                card:
+                  title: '{거래년도}.{거래월}.{거래일}'
+                  lines:
+                  - '{거래금액}만원 · {면적}㎡ · {층}층'
       video:
+        returns: scalar
         runs_on: mac_only
         description: 유튜브 동영상 조회 (op 분기). 메타·자막·요약. 검색은 search_youtube, 재생은 limbs:music.
         target_description: |
@@ -1017,6 +1131,7 @@
         - 자막
         - 영상요약
       search_youtube:
+        returns: items
         runs_on: mac_only
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
         group: media
@@ -1046,7 +1161,7 @@
           action: '[sense:search_youtube]{query: "$q", count: 15}'
           view:
           - type: list_action
-            from: results
+            from: items
             icon: 🎵
             title: '{title|trunc:60}'
             sub: '{channel} · {duration}'
@@ -1057,6 +1172,7 @@
               label: ⬇
               action: '[limbs:music]{op: "download", mode: "client", url: "https://www.youtube.com/watch?v={video_id}"}'
       radio:
+        returns: items
         description: 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
         target_description: |
           op로 분기 (기본 search).
@@ -1092,13 +1208,16 @@
             action: '[sense:radio]{op: "korean"}'
             view:
             - type: list_action
-              from: stations
+              from: items
               icon: 📻
               title: '{name}'
               sub: '{broadcaster} · {description}'
               button:
                 label: ▶
                 action: '[limbs:radio]{op: "play", station_id: "{station_id}"}'
+              button2:
+                label: ♡
+                action: '[limbs:radio_favorite]{op: "add", station_id: "{station_id}", name: "{name}"}'
           - name: 검색
             buttons:
             - label: ■ 정지
@@ -1111,13 +1230,16 @@
             action: '[sense:radio]{op: "search", query: "$q", limit: 30}'
             view:
             - type: list_action
-              from: stations
+              from: items
               icon: 📻
               title: '{name}'
               sub: '{country} · {tags|trunc:40}'
               button:
                 label: ▶
                 action: '[limbs:radio]{op: "play", stream_url: "{stream_url}"}'
+              button2:
+                label: ♡
+                action: '[limbs:radio_favorite]{op: "add", stream_url: "{stream_url}", name: "{name}"}'
           - name: 즐겨찾기
             auto_run: true
             buttons:
@@ -1126,15 +1248,20 @@
             action: '[limbs:radio_favorite]{op: "list"}'
             view:
             - type: list_action
-              from: favorites
-              empty: 즐겨찾기가 없습니다 — 재생 중 자율주행/수동 모드에서 추가하세요
-              icon: ♡
+              from: items
+              empty: 즐겨찾기가 없습니다 — 한국·검색 탭에서 ♡ 를 눌러 추가하세요
+              icon: ♥
               title: '{name}'
               sub: '{added_at}'
               button:
                 label: ▶
-                action: '[limbs:radio]{op: "play", stream_url: "{stream_url}"}'
+                action: '[limbs:radio]{op: "play", station_id: "{station_id}", stream_url: "{stream_url}"}'
+              button2:
+                label: ✕
+                action: '[limbs:radio_favorite]{op: "remove", name: "{name}"}'
+                refresh: true
       world:
+        returns: scalar
         description: 세계 상태 감각 (op 분기). 경제·뉴스·기술·날씨 스냅샷 조회/추이/재수집.
         target_description: |
           op로 분기 (기본 snapshot).
@@ -1166,6 +1293,7 @@
         - 재수집
         - 갱신
       self_check:
+        returns: effect
         description: 전수 자가점검 실행 — 부작용 없는 모든 IBL 액션을 테스트하여 시스템 건강 상태 확인
         target_description: '(파라미터 없음 — 전수 자가점검 실행). 결과는 world_pulse.db에 기록.'
         group: world
@@ -1180,6 +1308,7 @@
         - 셀프체크
         - self-check
       devdocs:
+        returns: items
         description: 소프트웨어 라이브러리/프레임워크 공식 문서 (op 분기, Context7). 코드 작성 시 API 참조용. 논문은 paper.
         target_description: |
           op로 분기 (기본 resolve).
@@ -1195,14 +1324,13 @@
             resolve: 라이브러리 이름 → Context7 ID (첫 단계)
             search: 공식 문서 검색 (library_id + query)
         implementation: context7 패키지 op 분기. resolve=resolve_library, search=search_library_docs.
-        postprocess:
-          type: compress
         keywords:
         - 라이브러리문서
         - API문서
         - context7
         - 공식문서
       search_naver:
+        returns: items
         description: 네이버 검색 API. 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)에서 DuckDuckGo/Google보다
           압도적으로 강함. type 파라미터로 도메인 선택 (기본 webkr). 뉴스 단독 검색은 type='news' 또는 search_news(Google
           News) 중 한국 출처 우선이면 이쪽.
@@ -1213,12 +1341,11 @@
         implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 9개 도메인(webkr/news/blog/cafe/kin/book/encyc/doc/shop)
           모두 호출. 무료 일 25k 쿼리.
         target_key: query
-        postprocess:
-          type: compress
       startup:
-        description: 정부 창업/중소기업 지원사업 공고 검색. 기본은 K-Startup(창업진흥원) + 중기부(MSS) 통합. source로 한쪽만 가능.
+        returns: items
+        description: 정부 창업/중소기업 지원사업 공고 검색 (K-Startup). 다중 키워드는 OR 합집합.
         group: research
-        target_description: 'query(검색 키워드, 예: 예비창업패키지·R&D·정책자금). source 옵션 — all(기본, 둘 다 통합), kstartup(K-Startup만, 창업 특화), mss(중기부만, R&D/수출 포함). count(기본 10, 최대 50).'
+        target_description: 'query(검색 키워드, 예: AI·예비창업패키지·정책자금. 여러 단어면 OR 합집합 — "AI 인공지능"=둘 중 하나라도). source 옵션 — kstartup(기본, K-Startup 창업진흥원), all(통합 시도), mss(중기부). ⚠️중기부(mss)는 data.go.kr API 폐기로 현재 미가용 → kstartup 권장. count(기본 10, 최대 50).'
         router: handler
         tool: startup_search
         implementation: K-Startup + 중기부 사업공고 API 통합. source=all이면 둘 다 호출, kstartup/mss면 한쪽만.
@@ -1230,8 +1357,88 @@
         - 예비창업
         - 정책자금
         - R&D
+        app:
+          icon: 🚀
+          name: 사업공고
+          order: 11
+          modes:
+          - name: 창업·지원
+            inputs:
+            - key: q
+              type: text
+              placeholder: 키워드  예) AI·예비창업·R&D
+              required: true
+            - key: src
+              type: select
+              label: 소스
+              default: kstartup
+              options:
+              - { value: kstartup, label: K-Startup }
+              - { value: mss, label: 중기부 }
+              - { value: all, label: 통합 }
+            action: '[sense:startup]{query: "$q", source: "$src"}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                link:
+                  href: '{url}'
+                  label: 공고 상세 →
+      contest:
+        returns: items
+        description: Kaggle 국제 AI/데이터 경진대회 검색. 상금·마감일·주최로 출품 기회 탐색.
+        group: research
+        target_description: 'query(검색 키워드, 예: AI·LLM·vision·NLP). sort 옵션 — recentlyCreated(기본, 최근 개설)/latestDeadline(마감 늦은 순=진행 중 위주)/prize(상금 큰 순)/numberOfTeams(참가팀 많은 순). category(featured/research/playground 등, 선택). count(기본 10, 최대 50). 반환=records 통화(상금·마감일 meta) → 앱 card_list 직결.'
+        router: handler
+        tool: contest_search
+        scope: workspace
+        implementation: Kaggle Competitions API(/competitions/list, Bearer 토큰 auth_manager 'kaggle'). search/sortBy/category 서버 쿼리, 응답 대회 리스트를 records로 매핑. 폰 네이티브 가능(HTTP+stdlib, KAGGLE_API_TOKEN 폰 프로비저닝).
+        target_key: query
+        keywords:
+        - 공모전
+        - 대회
+        - 경진대회
+        - 해커톤
+        - kaggle
+        - 캐글
+        app:
+          icon: 🏆
+          name: AI 공모전
+          order: 12
+          modes:
+          - name: Kaggle
+            inputs:
+            - key: q
+              type: text
+              placeholder: 키워드  예) AI·LLM·vision (비우면 전체)
+            - key: sort
+              type: select
+              label: 정렬
+              default: recentlyCreated
+              options:
+              - { value: recentlyCreated, label: 최근 개설 }
+              - { value: latestDeadline, label: 진행 중 }
+              - { value: prize, label: 상금순 }
+              - { value: numberOfTeams, label: 인기순 }
+            action: '[sense:contest]{query: "$q", sort: "$sort"}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                image: '{image}'
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{summary}'
+                link:
+                  href: '{url}'
+                  label: 대회 페이지 →
       kosis:
-        description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. 자세히 read_guide(query="통계").
+        returns: items
+        description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. items(행 dict). 자세히 read_guide(query="통계").
         group: research
         target_description: 'query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 표준 table 통화도 반환(period=기간 축, 지표·분류 조합=시리즈) → >> [engines:chart/spreadsheet] / [engines:document](table 블록). ⚠️다차원 통계표는 통화가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.'
         router: handler
@@ -1247,6 +1454,7 @@
         - 물가
         - 실업률
       legal:
+        returns: items
         description: 대한민국 법률 통합 검색 (law.go.kr). query/id 분기, target 10종(법령/판례/규칙 등). 자세히 read_guide(query="법률").
         group: legal
         target_description: 'query(검색어) 또는 id(상세). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(법률서식).'

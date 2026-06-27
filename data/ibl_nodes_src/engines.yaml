@@ -1,6 +1,7 @@
   engines:
     actions:
       newspaper:
+        returns: effect
         description: '"신문 만들어줘"라고 요청할 때만 사용. 키워드별 뉴스를 수집해 공유 문서 IR(신문 테마)로 생산.
           >> [engines:document]로 렌더(html/pdf/docx). 보고서/분석/요약 요청에는 사용하지 말 것.'
         target_description: 'keywords 배열 (수집할 뉴스 주제) · title(선택, 신문 제호) · source(google 기본/guardian).
@@ -39,6 +40,7 @@
               label: 🖥 띄우기
               action: '[limbs:os_open]{path: "{file}"}'
       html_video:
+        returns: effect
         runs_on: mac_only
         description: '완성된 HTML/CSS 씬을 MP4 영상으로 합성. scenes(HTML 배열) 또는 scene_dir(저장된 씬)로 호출. 주제→슬라이드 자동생성은 slide/lecture 사용. (가이드 html_video.md)'
         target_description: 'scenes(완전한 HTML 문서 배열, 각 {html, duration})을 직접 전달하거나 scene_dir(저장된 씬 디렉토리)을 지정. scene_dir이 있으면 렌더링 단계만 실행. narration_texts로 씬별 나레이션 추가.'
@@ -54,6 +56,7 @@
         - 렌더링
         - HTML영상
       chart:
+        returns: effect
         runs_on: mac_only
         description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
         target_description: |
@@ -96,6 +99,7 @@
         - 대시보드
         - 복합차트
       spreadsheet:
+        returns: effect
         runs_on: mac_only
         description: 행 데이터(rows/sheets) → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
         target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표준 테이블 통화 table={columns,rows}도 수용(headers/rows로 매핑 — engines:chart와 같은 통화). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
@@ -112,6 +116,7 @@
         - 시트
         - 장부
       remotion:
+        returns: effect
         runs_on: mac_only
         description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
         target_description: |
@@ -133,6 +138,7 @@
         - 렌더링
         - 상태
       tts:
+        returns: effect
         runs_on: mac_only
         description: 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
         target_description: 음성으로 만들 텍스트. voice 옵션으로 화자 선택 (기본 한국어 여성).
@@ -153,13 +159,16 @@
         - TTS
         - 나레이션
       slide_shadcn:
+        returns: effect
         runs_on: mac_only
-        description: 'Shadcn UI 고품질 슬라이드. 슬라이드 IR(slides[])이 단일 진실 소스 → png/pdf/pptx로 emit. 자세한 layout/스타일은 read_guide(query="슬라이드").'
+        prompt_hidden: true   # 에이전트 카탈로그에서 숨김 — 슬라이드는 [engines:slide](native)가 유일 경로. 이 액션은 내부 렌더/pptx·pdf 내보내기 배관으로만 존속(실행은 가능).
+        description: 'Shadcn UI HTML 슬라이드(2층: 글자 레이어 + 별도 그림 합성). **마케팅·랜딩·피치덱·순수 텍스트 레이아웃 덱 전용.** ★강의·발표·NotebookLM식 슬라이드는 이 액션을 쓰지 말 것 — 대신 [engines:slide]{style:"native"}(슬라이드마다 통짜 이미지) 또는 [self:lecture] 워크스페이스(design_system 미지정=native 기본)를 써라(시각=의미 융합·한글 OCR 검증). 슬라이드 IR(slides[]) → png/pdf/pptx emit.'
         target_description: |
+          ★★강의·발표 슬라이드는 이 액션이 아니다. NotebookLM식 통짜 이미지가 기본 — [engines:slide]{style:"native", aesthetic:...}를 슬라이드마다 호출하거나 [self:lecture] 워크스페이스(native 기본)를 써라. 이 액션은 **마케팅/랜딩/피치덱/순수 텍스트 레이아웃 덱**에만 쓴다.
           ★슬라이드 IR(슬라이드 전용 — 문서 IR과 별개, 텍스트 문서는 engines:document를 쓸 것): slides 배열, 각 슬라이드 = {layout, title, ...}(named layout 계약). + design_system/theme/output_dir/width/height. 인라인 배열만 (topic 미지원).
           마케팅 layout: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom
-          강의 layout: lecture_body/metaphor_story/comparison_table/factbox/quote
-          일러스트 통합 layout(NotebookLM 스타일): hero_illustration/illustration_anchor/split_concept/illustration_background/comparison_iconic
+          강의 layout(레거시 텍스트형 — 통짜 native 권장): lecture_body/metaphor_story/comparison_table/factbox/quote
+          일러스트 통합 layout(레거시 2층 합성 — 통짜 native 권장): hero_illustration/illustration_anchor/split_concept/illustration_background/comparison_iconic
           design_system: default/vintage_book/academic_paper/tech_minimal/magazine_modern
           theme(색만): default/blue/green/purple/orange/dark
           format(png 기본=슬라이드별 이미지 디렉토리 / pdf=슬라이드당 1페이지 / pptx=슬라이드당 풀블리드 이미지): 같은 슬라이드 IR을 여러 emitter로. pdf·pptx는 렌더된 슬라이드를 그대로 보존(디자인 무손실).
@@ -190,13 +199,15 @@
         - Shadcn
         - PNG
       slide:
+        returns: effect
         runs_on: mac_only
-        description: '명령 한 줄 → 슬라이드 1장(PNG). 메시지 큐레이션+자유형 디자인까지 AI가 저작. (완성 spec 직접 렌더는 slide_shadcn)'
+        description: '명령 한 줄 → 슬라이드 1장(PNG). **슬라이드를 만드는 유일한 액션. 미지정이면 native(NotebookLM식 통짜 이미지 — 한글·다이어그램·일러스트를 한 장에 통째로 저작).** 여러 장 덱은 슬라이드마다 호출(각자 한 장)하거나, 덱 관리가 필요하면 [self:lecture] 워크스페이스(native 기본). 마케팅/카드 등 경량은 style:"text".'
         target_description: |
           instruction(필수) — 무엇을 말하는 한 장인지 자연어로. content(선택) — 근거 사실·원문(환각 방지).
-          style(선택) — 두 등급:
-            · 텍스트형(빠름·무료, 기본): 미지정 또는 "text". AI가 자유형 custom HTML로 저작·렌더(이미지 API 안 씀). design_system(default/vintage_book/academic_paper/tech_minimal/magazine_modern/sf_blueprint) 톤 적용.
-            · 프리미엄 이미지형(느림·비용): ink_blueprint / cinematic_3d / isometric / lineart_duotone. 개념을 시각화하는 일러스트(Nano Banana Pro) + 또렷한 타이포 레이어로 합성 — 자동 NotebookLM을 넘는 '정성 한 장' 등급. 한 덱은 한 style로 고정하면 일관된 책이 됨.
+          ★여러 장 강의 덱: 슬라이드 outline(장당 명제+장치)을 먼저 짜고, 슬라이드마다 이 액션을 같은 aesthetic으로 호출(병렬 & 가능).
+          style(선택) — 미지정 기본값="native":
+            · 네이티브 통짜형 "native"(기본): 이미지 모델이 한글 글자·다이어그램·일러스트를 한 장에 통째로 저작 — NotebookLM식 시각=의미 융합(합성층 없음). aesthetic(vintage_book/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint)으로 톤 고정, image_size(1K/2K/4K)·verify(한글 OCR 재생성) 옵션. 한 덱은 한 톤으로 고정하면 일관된 책이 됨.
+            · 텍스트형 "text"(빠름·무료): 자유형 custom HTML(이미지 API 안 씀). 카드/리포트 타일 등 발표 슬라이드가 아닌 경량·대량 용도에만 명시. design_system(vintage_book/academic_paper/tech_minimal/magazine_modern) 톤.
           width/height(선택, 기본 1280x720). 제목=명제·한 장 한 아이디어 원칙. AI가 조합해 리포트→슬라이드 등 더 큰 산출물을 만드는 기층 액션.
         group: media_produce
         router: handler
@@ -210,6 +221,7 @@
         - 발표자료
         - 카드
       image_gemini:
+        returns: effect
         runs_on: anywhere
         description: 'Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").'
         target_description: |
@@ -241,6 +253,7 @@
         - 이미지생성
         - AI이미지
       render_html:
+        returns: effect
         runs_on: mac_only
         description: HTML 페이지를 PNG 이미지로 렌더링. 슬라이드·차트 결과를 이미지화.
         target_description: 렌더링할 HTML 문자열 또는 경로. 결과 PNG 경로 반환.
@@ -254,6 +267,7 @@
         - 이미지
         - 렌더링
       structure:
+        returns: effect
         runs_on: anywhere
         scope: workspace
         description: 원본 콘텐츠를 문서 IR(blocks)로 구조화하는 편집자 원자. A획득→B구조화→IR→emit 파이프라인의 B. document로 이어 렌더.
@@ -270,6 +284,7 @@
         - 문서화
         - structure
       document:
+        returns: effect
         runs_on: anywhere
         description: 문서 IR(공유 문서 모델)을 산출물로 렌더. 포맷 중립 IR을 emitter가 렌더(현재 html). 보고서·문서·페이지 산출의 단일 진실 소스.
         target_description: |
@@ -293,6 +308,7 @@
         - 리포트
         - 페이지
       filter:
+        returns: transform
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자 — 목록/표에서 조건에 맞는 것만 남긴다(부분집합). >> 앞 액션의 records/table 통화를 받아 같은 통화로.'
@@ -309,6 +325,7 @@
         - 만
         - filter
       sort:
+        returns: transform
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자 — 목록/표를 기준 필드로 정렬(수치 인식). >> 앞 records/table 통화를 받아 같은 통화로.'
@@ -325,6 +342,7 @@
         - sort
         - 순서
       take:
+        returns: transform
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자 — 목록/표에서 상위 n개만(음수면 뒤에서 n). >> 앞 records/table 통화를 받아 같은 통화로.'
@@ -341,6 +359,7 @@
         - take
         - top
       select:
+        returns: transform
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자 — 표에서 지정한 열만 남긴다(열 투영). records면 해당 필드만 추림. >> 앞 통화를 받아 같은 통화로.'
@@ -357,6 +376,7 @@
         - select
         - 골라
       dedup:
+        returns: transform
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자 — 목록/표에서 중복 제거(첫 항목 유지, 정규화 비교). >> 앞 records/table 통화를 받아 같은 통화로.'
@@ -373,6 +393,7 @@
         - dedup
         - 고유
       groupby:
+        returns: transform
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자 — 표를 키 열로 그룹지어 집계(count/sum/avg/min/max). >> 앞 table 통화를 받아 집계 table로.'
@@ -389,6 +410,7 @@
         - groupby
         - 통계
       join:
+        returns: transform
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자(이항) — 두 입력을 공통 키로 inner join(table은 키 열, records는 키 필드). 서로 다른 소스를 한 키로 묶어 분석. & 병렬 두 입력을 받음.'
@@ -405,6 +427,7 @@
         - join
         - 연결
       union:
+        returns: transform
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자(이항) — 두 표(또는 두 목록)를 행 결합. 같은 통화끼리. & 병렬 두 입력을 받음. 중복 제거는 뒤에 >> dedup.'
@@ -421,6 +444,7 @@
         - 합집합
         - 세로결합
       merge:
+        returns: transform
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자(이항) — 두 목록(records)을 합친다. by 지정 시 그 키로 중복 제거. & 병렬 두 입력을 받음.'
@@ -437,6 +461,7 @@
         - 통합
         - 목록합치기
       web_site:
+        returns: effect
         runs_on: mac_only
         description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
         target_description: |
@@ -456,6 +481,7 @@
         - 사이트삭제
         - 사이트수정
       web:
+        returns: effect
         runs_on: mac_only
         description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
         target_description: |
@@ -489,6 +515,7 @@
         - 미리보기
         - vercel
       web_component:
+        returns: effect
         runs_on: mac_only
         description: '웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).'
         target_description: |
@@ -513,6 +540,7 @@
         - shadcn
         - UI
       image_critic:
+        returns: effect
         runs_on: anywhere
         scope: workspace
         description: 'Gemini Vision으로 산출물(일러스트/차트/이미지 등)이 의도와 정합하는지 평가. 반환: passed/score/issues/notes.'
@@ -533,6 +561,7 @@
         - critic
         - image evaluation
       image_read:
+        returns: effect
         runs_on: anywhere
         scope: workspace
         description: 'Gemini Vision으로 이미지를 읽어 질문에 답한다(시각 QA·OCR·검증). 스크린샷 숫자/텍스트 읽기, 그림 내용 확인. 합격 채점 아님(그건 image_critic).'

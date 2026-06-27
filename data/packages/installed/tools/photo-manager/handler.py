@@ -128,7 +128,8 @@ def _photo_record(it: Dict[str, Any]) -> Dict[str, Any]:
         "meta": " · ".join(b for b in bits if b),
         "summary": "",
         "url": path,
-        "image": f"/photo/{ep}?path={quote(path)}" if path else "",
+        # size=512 — 그리드 칸이 고DPI 폰에서 ~470 device px라 기본 200 은 확대돼 희미. 512 로 선명.
+        "image": f"/photo/{ep}?path={quote(path)}&size=512" if path else "",
         # --- 변환자(filter/sort/groupby/map)용 구조 필드 ---
         "path": path,
         "taken_at": taken_at,
@@ -152,7 +153,7 @@ def _query_photos(params: Dict[str, Any]) -> Dict[str, Any]:
         if not os.path.isfile(one):
             return {"success": False, "error": f"파일이 없습니다: {one}"}
         item = file_index.describe(one, facets=_PHOTO_FACETS)
-        return {"success": True, "count": 1, "records": [_photo_record(item)]}
+        return {"success": True, "count": 1, "items": [_photo_record(item)]}
 
     kind = (params.get("kind") or "media").strip().lower()
     if kind in ("all", ""):
@@ -171,8 +172,8 @@ def _query_photos(params: Dict[str, Any]) -> Dict[str, Any]:
     )
     if not res.get("success"):
         return res
-    res["records"] = [_photo_record(it) for it in res.get("items", [])]
-    res.pop("items", None)  # 보편 데이터는 records 로 포장해 노출
+    # 단일 통화 items = 카드 shape(_photo_record: title/meta/url=path/image=썸네일). raw items를 카드로 덮어씀.
+    res["items"] = [_photo_record(it) for it in res.get("items", [])]
     return res
 
 
@@ -205,7 +206,7 @@ def _photos_to_records(items: list) -> list:
         if path:
             # 동영상은 PIL이 못 여는 컨테이너라 ffmpeg 프레임 썸네일 엔드포인트로 분기.
             ep = "video-thumbnail" if it.get("media_type") == "video" else "thumbnail"
-            rec["image"] = f"/photo/{ep}?path={quote(path)}"
+            rec["image"] = f"/photo/{ep}?path={quote(path)}&size=512"
         records.append(rec)
     return records
 
@@ -224,9 +225,9 @@ def _photo_search(params: Dict[str, Any]) -> Dict[str, Any]:
         limit=params.get("limit", 20),
         sort_by=params.get("sort_by", "taken_date DESC"),
     )
-    # 레코드 통화 부착(비파괴) — 원본 items(path 포함)를 records로.
+    # 단일 통화 items = 카드 shape(썸네일 URL 포함). raw items를 카드로 덮어씀.
     if isinstance(result, dict) and isinstance(result.get("items"), list):
-        result["records"] = _photos_to_records(result["items"])
+        result["items"] = _photos_to_records(result["items"])
     return result
 
 
@@ -370,8 +371,8 @@ def get_gallery(params: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "success": True,
             "message": f"총 {total}개 중 {page}페이지 ({len(items)}개)",
-            "items": summary,
-            "records": records,
+            "summary_table": summary,  # 사람용 한국어 요약(비통화) — items는 통화 전용(§7.5)
+            "items": records,
             "pagination": {
                 "현재 페이지": page,
                 "페이지당 개수": limit,

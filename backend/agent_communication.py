@@ -306,16 +306,8 @@ class AgentCommunicationMixin:
                 from thread_context import clear_tool_calls, get_tool_calls
                 clear_tool_calls()
 
-                # Reflex 분기 — 해마 점수가 임계값 이상이면 무의식 호출 스킵
-                if _hippocampus_score >= self.REFLEX_SCORE_THRESHOLD and _top_code:
-                    request_type = "EXECUTE"
-                    reflex_hint = _top_code
-                    self._log(f"[연상→실행] Reflex EXECUTE (score={_hippocampus_score:.3f})")
-                else:
-                    # 무의식 에이전트 — 경량 AI로 SESSION_RESET/EXECUTE/THINK 분류
-                    request_type = self._classify_request(content, execution_memory)
-                    reflex_hint = None
-                    self._log(f"[무의식] 분류: {request_type}")
+                # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
+                request_type, reflex_hint = self._decide_request_type(content, _hippocampus_score, _top_code)
 
                 # SESSION_RESET 분기 — Claude Code 세션만 클리어, AI 호출 없이 표준 응답
                 if request_type == "SESSION_RESET":
@@ -402,8 +394,10 @@ class AgentCommunicationMixin:
                     self.ai.system_prompt = stable_prompt
                     if self.ai._provider:
                         self.ai._provider.system_prompt = stable_prompt
-                    if dynamic_context:
-                        augmented_content = f"{dynamic_context}\n\n{content}"
+                    # 사용자 명령 변형: [원문 명령 + 의식 보강]을 한 '사용자 명령' 프레임으로 융합.
+                    from prompt_builder import compile_user_command
+                    fused_command = compile_user_command(content, consciousness_output)
+                    augmented_content = f"{dynamic_context}\n\n{fused_command}" if dynamic_context else fused_command
 
                     # 히스토리 편집 (의식 에이전트 판단에 따라)
                     history = self._apply_consciousness_to_history(history, consciousness_output)

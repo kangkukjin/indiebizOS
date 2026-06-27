@@ -23,7 +23,7 @@ import urllib.request
 from pathlib import Path
 from typing import List, Dict, Optional
 
-from common import calculate_distance, success_response, error_response
+from cctv_common import calculate_distance, success_response, error_response
 
 # 설정
 UTIC_API_KEY = os.environ.get("UTIC_API_KEY", "")

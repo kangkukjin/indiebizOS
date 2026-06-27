@@ -357,7 +357,15 @@ def get_health_context(input_data: dict) -> str:
             if not symptoms:
                 person_str = f"{person}의 " if person and person != "나" else ""
                 return f"{person_str}최근 {days}일간 증상 기록이 없습니다."
-            return format_symptoms(symptoms, person)
+            text = format_symptoms(symptoms, person)
+            # 레코드 통화(비파괴) — 증상 목록 >> [engines:filter/document]. 사람용은 text(measurements 선례).
+            records = [{
+                "title": category_to_korean(s.get("category", "")) or s.get("category", ""),
+                "meta": " · ".join(x for x in [str(s.get("severity") or ""), s.get("started_at", "")] if x),
+                "summary": s.get("description", ""),
+                "url": "",
+            } for s in symptoms]
+            return json.dumps({"text": text, "items": records}, ensure_ascii=False)
 
         elif query_type == 'medications':
             # 투약 기록 조회
@@ -366,7 +374,14 @@ def get_health_context(input_data: dict) -> str:
             if not medications:
                 person_str = f"{person}의 " if person and person != "나" else ""
                 return f"{person_str}투약 기록이 없습니다."
-            return format_medications(medications, person)
+            text = format_medications(medications, person)
+            records = [{
+                "title": m.get("name", ""),
+                "meta": " · ".join(x for x in [m.get("dosage", ""), m.get("frequency", "")] if x),
+                "summary": m.get("reason", ""),
+                "url": "",
+            } for m in medications]
+            return json.dumps({"text": text, "items": records}, ensure_ascii=False)
 
         elif query_type == 'documents':
             # 문서 조회
@@ -374,7 +389,14 @@ def get_health_context(input_data: dict) -> str:
             if not documents:
                 person_str = f"{person}의 " if person and person != "나" else ""
                 return f"{person_str}최근 {days}일간 문서 기록이 없습니다."
-            return format_documents(documents, include_images, person)
+            text = format_documents(documents, include_images, person)
+            records = [{
+                "title": d.get("doc_type", "") or "문서",
+                "meta": d.get("recorded_at", ""),
+                "summary": d.get("description", ""),
+                "url": d.get("image_path", "") or "",
+            } for d in documents]
+            return json.dumps({"text": text, "items": records}, ensure_ascii=False)
 
         elif query_type == 'search':
             # 키워드 검색

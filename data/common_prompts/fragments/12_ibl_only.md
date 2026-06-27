@@ -142,7 +142,7 @@ execute_ibl(code='[sense:stock]{op: "info", ticker: "AAPL"} & [sense:stock]{op: 
 
 **기계적 전달 (파이프라인):**
 ```
-execute_ibl(code='[engines:slide_shadcn]{slides: [{layout: "hero", title: "보고서"}]} >> [limbs:os_open]')  # 생성 → 열기
+execute_ibl(code='[engines:slide]{instruction: "분기 실적 핵심을 한 장으로"} >> [limbs:os_open]')  # 슬라이드(native) 생성 → 열기
 ```
 
 **액션 찾기:**
@@ -277,7 +277,7 @@ IBL은 몸의 언어다. `[sense:search_ddg]`는 "검색하라"는 행위이고,
 
 ### 파이프라인을 쓰는 경우 (기계적 전달만 필요할 때)
 ```
-execute_ibl(code='[engines:slide_shadcn]{slides: [{layout: "hero", title: "보고서"}]} >> [limbs:os_open]')  # 생성 → 열기
+execute_ibl(code='[engines:slide]{instruction: "분기 실적 핵심을 한 장으로"} >> [limbs:os_open]')  # 슬라이드(native) 생성 → 열기
 execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}')  # 병렬 수집
 ```
 

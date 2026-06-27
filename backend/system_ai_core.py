@@ -176,15 +176,8 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     # 인지 파이프라인: 연상 → (Reflex 또는 무의식) → 의식 → 프롬프트 갱신
     execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
 
-    # Reflex 분기 — 해마 점수 임계값 이상이면 무의식 호출 스킵
-    if _hippo_score >= runner.REFLEX_SCORE_THRESHOLD and _top_code:
-        request_type = "EXECUTE"
-        reflex_hint = _top_code
-        print(f"[시스템AI 연상→실행] Reflex EXECUTE (score={_hippo_score:.3f})")
-    else:
-        request_type = runner._classify_request(message, execution_memory)
-        reflex_hint = None
-        print(f"[시스템AI 무의식] 분류: {request_type}")
+    # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
+    request_type, reflex_hint = runner._decide_request_type(message, _hippo_score, _top_code)
 
     consciousness_output = None
     original_provider = None
@@ -213,7 +206,12 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
         )
         runner.ai.system_prompt = stable_prompt
         runner.ai._provider.system_prompt = stable_prompt
-        if dynamic_context:
+        if consciousness_output:
+            # 사용자 명령 변형: [원문 명령 + 의식 보강]을 한 '사용자 명령' 프레임으로 융합.
+            from prompt_builder import compile_user_command
+            _fused = compile_user_command(message, consciousness_output)
+            augmented_message = f"{dynamic_context}\n\n{_fused}" if dynamic_context else _fused
+        elif dynamic_context:
             augmented_message = f"{dynamic_context}\n\n{message}"
 
     # 히스토리 편집
@@ -286,15 +284,8 @@ def process_system_ai_message_stream(
     # 인지 파이프라인: 연상 → (Reflex 또는 무의식) → 의식 → 프롬프트 갱신
     execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
 
-    # Reflex 분기
-    if _hippo_score >= runner.REFLEX_SCORE_THRESHOLD and _top_code:
-        request_type = "EXECUTE"
-        reflex_hint = _top_code
-        print(f"[시스템AI 연상→실행] Reflex EXECUTE (score={_hippo_score:.3f})")
-    else:
-        request_type = runner._classify_request(message, execution_memory)
-        reflex_hint = None
-        print(f"[시스템AI 무의식] 분류: {request_type}")
+    # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
+    request_type, reflex_hint = runner._decide_request_type(message, _hippo_score, _top_code)
 
     consciousness_output = None
     original_provider = None
@@ -326,7 +317,12 @@ def process_system_ai_message_stream(
         )
         runner.ai.system_prompt = stable_prompt
         runner.ai._provider.system_prompt = stable_prompt
-        if dynamic_context:
+        if consciousness_output:
+            # 사용자 명령 변형: [원문 명령 + 의식 보강]을 한 '사용자 명령' 프레임으로 융합.
+            from prompt_builder import compile_user_command
+            _fused = compile_user_command(message, consciousness_output)
+            augmented_message = f"{dynamic_context}\n\n{_fused}" if dynamic_context else _fused
+        elif dynamic_context:
             augmented_message = f"{dynamic_context}\n\n{message}"
 
     # 히스토리 편집

@@ -262,7 +262,8 @@ def _attach_company_table(result):
                 continue
             rows.append([_COMPANY_LABELS.get(key, key), val])
         if rows:
-            obj["table"] = {"columns": ["지표", "값"], "rows": rows}
+            # 단일 통화 items(행 dict — 지표/값). 소비자가 items→table 재구성.
+            obj["items"] = [{"지표": label, "값": val} for label, val in rows]
         return obj
     except Exception:
         return result

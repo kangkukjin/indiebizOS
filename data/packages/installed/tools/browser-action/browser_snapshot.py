@@ -14,13 +14,17 @@ Version: 5.0.0
 """
 
 import asyncio
+import json
 
 from browser_session import (
-    BrowserSession, ensure_active, format_snapshot_text,
+    BrowserSession, ensure_active,
 )
 
-# 이 값을 넘으면 "복잡한 페이지"로 판정하여 축약 모드로 전환
-COMPLEX_PAGE_THRESHOLD = 500
+# 스냅샷 구조화 배열의 직렬화 상한(요소 '개수'가 아니라 '크기'로 묶는다).
+# IBL 엔진이 step 결과를 문자열로 escape(~1.6×)하고 final_result로 복제(2×)하므로,
+# 최종 페이로드 ≈ raw × ~3.2. 이를 감안해 raw를 작게 잡아 MCP 토큰 한도 안쪽에
+# '여유 있게' 들어오도록 보수적으로 설정 → 페이지 크기 무관하게 재튜닝 불필요.
+MAX_RESULT_CHARS = 7000
 
 # CDP 관련 타임아웃 (초)
 CDP_TOTAL_TIMEOUT = 10       # CDP 전체 작업 최대 시간
@@ -148,20 +152,8 @@ async def browser_snapshot(params: dict) -> dict:
         session._snapshot_url = page.url
         page_title = await raw_page.title()
 
-        # 복잡한 페이지 감지
-        if len(elements) > COMPLEX_PAGE_THRESHOLD:
-            return _build_condensed_result(elements, page.url, page_title, session)
-
-        snapshot_text = format_snapshot_text(elements)
-
-        return {
-            "success": True,
-            "snapshot": elements,
-            "snapshot_text": snapshot_text,
-            "element_count": len(elements),
-            "url": page.url,
-            "title": page_title
-        }
+        # 출력 '크기'에 묶어 반환 — 요소 개수와 무관하게 항상 토큰 한도 안쪽
+        return _finalize_snapshot(elements, page.url, page_title)
     except Exception as e:
         return {"success": False, "error": f"스냅샷 캡처 실패: {str(e)}"}
 
@@ -294,52 +286,56 @@ def _extract_elements(ax_nodes: list, session, selectors: dict = None) -> list:
     return elements
 
 
-def _build_condensed_result(elements: list, url: str, title: str, session) -> dict:
-    """복잡한 페이지용 축약 결과 생성"""
+def _strip_for_output(el: dict) -> dict:
+    """출력용 요소 사본 — ref 클릭에 불필요한 필드 제거.
+    selector는 _ref_map에 그대로 남아 클릭은 정상(ref→_ref_map 해소). 여기선 출력 군살만 제거."""
+    return {k: v for k, v in el.items() if k not in ("selector", "_interactive")}
+
+
+def _finalize_snapshot(elements: list, url: str, title: str) -> dict:
+    """스냅샷을 '직렬화 크기'에 묶어 반환한다.
+
+    - interactive 요소(행동 표면)를 먼저 채우고, 남는 예산에 텍스트를 채운다.
+    - 누적 크기가 MAX_RESULT_CHARS를 넘으면 거기서 멈추고, 생략 개수 + 좁히는 법(guide)을
+      돌려준다 — 전부 토해 MCP 토큰 한도를 넘기고 파일 덤프로 빠지는 것을 원천 차단.
+    - 페이지 크기·콘텐츠 종류와 무관하게 결과가 항상 한도 안쪽 → 매직 넘버 재튜닝 불필요.
+    """
     total = len(elements)
 
-    interactive = []
-    text_sample = []
-    text_count = 0
+    # 행동 표면을 먼저 보존: interactive → 텍스트 순
+    interactive = [el for el in elements if el.get("_interactive")]
+    text = [el for el in elements if not el.get("_interactive")]
+    ordered = interactive + text
 
-    for el in elements:
-        if el.get("_interactive"):
-            interactive.append(el)
-        else:
-            text_count += 1
-            if len(text_sample) < 100:
-                text_sample.append(el)
+    included = []
+    size = 0
+    truncated = False
+    for el in ordered:
+        out = _strip_for_output(el)
+        cost = len(json.dumps(out, ensure_ascii=False)) + 2  # +구분자
+        if included and size + cost > MAX_RESULT_CHARS:
+            truncated = True
+            break
+        included.append(out)
+        size += cost
 
-    condensed = interactive + text_sample
-
-    # _interactive 태그 제거
-    for el in condensed:
-        el.pop("_interactive", None)
-    for el in elements:
-        el.pop("_interactive", None)
-
-    snapshot_text = format_snapshot_text(condensed)
-
-    guide = (
-        f"복잡한 페이지입니다 (요소 {total}개, 임계값 {COMPLEX_PAGE_THRESHOLD}개 초과).\n"
-        f"interactive 요소 {len(interactive)}개 + 텍스트 샘플 {len(text_sample)}개만 표시합니다.\n"
-        f"나머지 텍스트 {text_count - len(text_sample)}개는 생략되었습니다.\n\n"
-        f"이 페이지에서 특정 데이터를 추출하려면 browser_evaluate를 사용하세요.\n"
-        f"예시:\n"
-        f'  browser_evaluate(expression="document.querySelector(\'h1\')?.textContent")\n'
-        f'  browser_evaluate(expression="[...document.querySelectorAll(\'table tr\')].map(r => r.textContent).join(\'\\n\')")'
-    )
-
-    return {
+    result = {
         "success": True,
-        "snapshot": condensed,
-        "snapshot_text": snapshot_text,
+        "snapshot": included,
         "element_count": total,
-        "condensed": True,
-        "interactive_count": len(interactive),
-        "text_sample_count": len(text_sample),
-        "text_omitted": text_count - len(text_sample),
+        "shown_count": len(included),
         "url": url,
         "title": title,
-        "guide": guide
     }
+
+    if truncated:
+        omitted = total - len(included)
+        result["truncated"] = True
+        result["omitted_count"] = omitted
+        result["guide"] = (
+            f"페이지가 커서 상위 {len(included)}개 요소(interactive 우선)만 표시하고 "
+            f"{omitted}개를 생략했습니다. 특정 데이터·매물·링크는 "
+            f'[limbs:browser]{{op:"evaluate", expression:"..."}} 로 좁혀 조회하세요.'
+        )
+
+    return result

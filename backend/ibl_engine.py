@@ -755,22 +755,9 @@ def _postprocess(result: Any, action: str, config: dict) -> Any:
         return result
 
 
-def _pp_compress(result: Any, action: str, config: dict) -> Any:
-    """경량 AI로 도구 출력을 압축한다."""
-    # 문자열 변환
-    if isinstance(result, dict):
-        text = json.dumps(result, ensure_ascii=False)
-    elif isinstance(result, str):
-        text = result
-    else:
-        return result
-
-    threshold = config.get("threshold", _DEFAULT_COMPRESS_THRESHOLD)
-    if len(text) < threshold:
-        return result
-
+def _compress_text(text: str, action: str, config: dict) -> Any:
+    """경량 AI로 텍스트 한 덩이의 노이즈를 제거한다. 실패 시 None."""
     prompt_instruction = config.get("prompt", _DEFAULT_COMPRESS_PROMPT)
-
     try:
         from consciousness_agent import lightweight_ai_call
         compressed = lightweight_ai_call(
@@ -782,5 +769,48 @@ def _pp_compress(result: Any, action: str, config: dict) -> Any:
             return compressed
     except Exception as e:
         print(f"[IBL] postprocess:compress 실패 ({action}): {e}")
+    return None
+
+
+def _pp_compress(result: Any, action: str, config: dict) -> Any:
+    """경량 AI로 도구 출력의 '긴 자유 텍스트'만 압축한다 — 통화 보존이 원칙.
+
+    압축은 통화(records/table/blocks) *아래/옆*에서만 일어나야 한다. 그래서:
+      - dict면 config.field 가 가리키는 텍스트 필드 하나만 압축하고 나머지 구조는 보존.
+        field 미지정 dict 는 손대지 않는다(통화 dict 를 통째로 문자열화 → 파괴하던 옛 버그 방지).
+      - handler 가 format_json 으로 JSON '문자열'을 반환하면, field 지정 시 파싱→필드압축→재직렬화.
+      - 구조 없는 bare 문자열만 통째로 압축(레거시, 통화 없음).
+    """
+    threshold = config.get("threshold", _DEFAULT_COMPRESS_THRESHOLD)
+    field = config.get("field")
+
+    # JSON 문자열(format_json 반환)이면 dict 로 파싱해 필드 단위 압축 시도
+    parsed_from_str = False
+    obj = result
+    if isinstance(result, str) and field:
+        try:
+            obj = json.loads(result)
+            parsed_from_str = isinstance(obj, dict)
+        except (json.JSONDecodeError, ValueError):
+            parsed_from_str = False
+
+    # dict: 지정 필드만 압축, 통화/구조 보존
+    if isinstance(obj, dict):
+        if not field:
+            return result  # 필드 미지정 — 통화 파괴 위험이라 손대지 않음
+        text = obj.get(field)
+        if not isinstance(text, str) or len(text) < threshold:
+            return result
+        compressed = _compress_text(text, action, config)
+        if compressed is None:
+            return result
+        obj[field] = compressed
+        return json.dumps(obj, ensure_ascii=False) if parsed_from_str else obj
+
+    # bare 문자열(구조 없음) — 레거시 전체 압축
+    if isinstance(result, str):
+        if len(result) < threshold:
+            return result
+        return _compress_text(result, action, config) or result
 
     return result

@@ -1193,13 +1193,16 @@ def render_document(tool_input, output_base="."):
             try:
                 po = _json.loads(pr) if isinstance(pr, str) else pr
                 if isinstance(po, dict):
+                    _rows = po.get("items") or po.get("records")
                     if po.get("blocks"):
                         blocks = po["blocks"]
-                    elif isinstance(po.get("records"), list) and po["records"]:
-                        # 레코드 통화(records: [{title,meta,summary,url,image}]) → cards 블록으로 래핑.
-                        # 목록형 생산자(book·restaurant·검색…)가 그대로 >> document로 흐름.
-                        # (블록 내부 키는 items — 레이어 분리: 생산자=records 명사 / 렌더=cards.items)
-                        blocks = [{"type": "cards", "columns": 2, "items": po["records"]}]
+                    elif isinstance(_rows, list) and _rows:
+                        if isinstance(_rows[0], dict) and "type" in _rows[0] and "text" in _rows[0]:
+                            # 문서 IR items(type+text — crawl·read 등) = blocks 그 자체(산문).
+                            blocks = _rows
+                        else:
+                            # 단일 통화 items([{title,meta,summary,url,image}]) → cards 블록으로 래핑.
+                            blocks = [{"type": "cards", "columns": 2, "items": _rows}]
                     for k in ("title", "meta", "theme"):
                         if not tool_input.get(k) and po.get(k):
                             tool_input[k] = po[k]

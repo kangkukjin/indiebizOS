@@ -23,6 +23,19 @@ class EmbedRequest(BaseModel):
     texts: Optional[List[str]] = None
 
 
+class GuideRequest(BaseModel):
+    """가이드 읽기 — **claude_code(아웃오브프로세스 MCP) 프로바이더 전용 브리지**.
+
+    in-process 프로바이더(Gemini 등)는 system_tools 의 read_guide → _search_guide 를
+    같은 프로세스에서 직접 부른다(이미 동작). 그러나 claude_code 는 MCP 브리지(execute_ibl)
+    로만 백엔드에 닿아 가이드 읽기 통로가 없었다 — 그래서 read_guide 호출이
+    'No such tool available' 로 실패하고 file_find+경로 하드코딩으로 우회하던 문제(헛걸음).
+    이 엔드포인트가 그 통로다. read_guide 를 IBL 어휘(노드/액션)로 승격하지 않는 이유=
+    그러면 모든 프로바이더의 IBL 표면에 퍼져 '보편화'되기 때문 — claude_code 결손만 메운다."""
+    query: str
+    read: bool = True
+
+
 class TranslateRequest(BaseModel):
     """수동 모드: 자연어 의도 → IBL 코드 번역 요청"""
     intent: str
@@ -62,17 +75,51 @@ async def execute_ibl_code(req: IBLRequest):
         if not agent_id and req.project_id in ("앱모드", "수동모드"):
             agent_id = "system_ai"
 
-        from system_tools import _execute_ibl_unified
-        result = _execute_ibl_unified({"code": req.code}, project_path, agent_id=agent_id)
+        # 직접조작 표면은 thread_context에 자기 project_id를 명시한다.
+        # 이 엔드포인트는 이벤트 루프 스레드에서 동기 실행되므로, 직전 에이전트가
+        # 남긴 project_id가 thread-local에 남아 있을 수 있다(누수). 이를 덮어써,
+        # scope 판단(예: lecture 저장 위치=프로젝트 vs 전역)이 엉뚱한 프로젝트로
+        # 새는 것을 막는다. 호출 후 이전 값으로 복원.
+        from thread_context import set_current_project_id, get_current_project_id
+        _prev_pid = get_current_project_id()
+        if req.project_id:
+            set_current_project_id(req.project_id)
+        try:
+            from system_tools import _execute_ibl_unified
+            result = _execute_ibl_unified({"code": req.code}, project_path, agent_id=agent_id)
+        finally:
+            set_current_project_id(_prev_pid)
 
         # 결과가 str이면 JSON 파싱 시도. 실패 시 plain text로 wrap.
         # (일부 IBL 액션은 JSON이 아닌 평문/markdown/빈문자열을 반환)
         if isinstance(result, str):
             try:
-                return json.loads(result)
+                result = json.loads(result)
             except json.JSONDecodeError:
                 return {"result": result}
-        return result
+        # 단일 통화 정규화 — 이 엔드포인트가 *렌더러 경계*(앱/수동/원격/폰 표면이 모두
+        # /ibl/execute 로 들어옴, 에이전트의 내부 execute_ibl 은 안 거침). 여기서 옛 형태
+        # (records/table/blocks)를 단일 통화 `items`로 파생해 렌더러 view의 from:items 가
+        # 균일하게 풀리게 한다. 에이전트 경로는 거치지 않으므로 tool-result 토큰 중복이 없다.
+        # 파싱 후라 문자열 반환 생산자(world_bank·pc-manager 등)도 함께 커버된다.
+        # 규칙·예외(map_data 제외, items 과적 역방향 금지)는 common.currency.derive_items.
+        from common.currency import derive_items
+        return derive_items(result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/read_guide")
+async def read_guide_bridge(req: GuideRequest):
+    """가이드 DB 검색 — claude_code MCP 브리지(mcp_server.read_guide)가 호출하는 HTTP 통로.
+
+    in-process 경로(system_tools.handle_tool 'read_guide')와 **동일한 _search_guide** 를
+    호출해 프로바이더 간 동작 동치를 보장한다. 이 라우트는 순수 배관(가이드 검색)일 뿐
+    프로바이더 행동을 바꾸지 않는다 — read_guide 도구가 노출되는 곳은 claude_code 의
+    MCP 화이트리스트(EAGER_TOOLS)뿐이다."""
+    try:
+        from ibl_routing import _search_guide
+        return _search_guide(req.query, {"read": req.read})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -186,10 +233,11 @@ def _strip_code_fence(text: str) -> str:
 
 @router.post("/translate")
 async def translate_to_ibl(req: TranslateRequest):
-    """자연어 의도 → IBL 코드 (해마 용례 + 경량 모델). 실행하지 않는다.
+    """자연어 의도 → IBL 코드 (해마 용례 + 본격 system_ai 모델). 실행하지 않는다.
 
-    수동 모드의 1단계. 경량 모델(거의 무료)이 해마(과거 용례)에 기대어
+    수동 모드(계기판)의 1단계. 시스템 AI와 *같은 모델*이 해마(과거 용례)에 기대어
     번역만 하고, 사용자는 다음 단계에서 dry-run으로 검수한다.
+    (경량 모델보다 번역 품질↑ — 지역·맥락 추론 등. 비용은 번역 1회 분.)
     """
     intent = (req.intent or "").strip()
     if not intent:
@@ -204,8 +252,8 @@ async def translate_to_ibl(req: TranslateRequest):
     except Exception:
         references = ""
 
-    # 2) 경량 모델: 용례를 근거로 IBL 코드 번역
-    from consciousness_agent import lightweight_ai_call
+    # 2) 본격 system_ai 모델: 용례를 근거로 IBL 코드 번역
+    from consciousness_agent import system_ai_call
     prompt = f'사용자 명령: "{intent}"\n\n'
     if references:
         prompt += f"참고 용례 (이 액션 이름들만 사용하라):\n{references}\n\n"
@@ -215,9 +263,9 @@ async def translate_to_ibl(req: TranslateRequest):
 
     spec = _load_ibl_spec()
     system_prompt = _IBL_TRANSLATE_TASK + (f"\n\n<ibl_spec>\n{spec}\n</ibl_spec>" if spec else "")
-    raw = lightweight_ai_call(prompt, system_prompt=system_prompt)
+    raw = system_ai_call(prompt, system_prompt=system_prompt)
     if not raw:
-        raise HTTPException(status_code=503, detail="경량 모델이 응답하지 않았습니다. lightweight_ai_config.json을 확인하세요.")
+        raise HTTPException(status_code=503, detail="시스템 AI 모델이 응답하지 않았습니다. system_ai_config.json을 확인하세요.")
 
     ibl_code = _strip_code_fence(raw)
     return {

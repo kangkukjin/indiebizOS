@@ -233,6 +233,9 @@ def is_public_remote_path(method: str, path: str) -> bool:
         return True
     if path in ("/launcher/auth/login", "/launcher/auth/logout"):
         return True
+    # 생존 핑(피어 연결상태 표시용) — 민감정보 없음, 다른 몸이 무인증으로 핑
+    if method == "GET" and path == "/ping":
+        return True
     if method == "GET" and path == "/launcher/config":
         return True
     # 원격 파인더(/nas/*)는 자체 session_token 인증을 사용하므로 위임
@@ -527,8 +530,9 @@ input,textarea,select{ font-family:inherit; }
 .bookcard img{ width:56px; height:80px; object-fit:cover; border-radius:6px; background:var(--bg3); flex-shrink:0; }
 .card .t{ font-weight:600; font-size:14px; margin-bottom:3px; }
 .card .m{ font-size:12px; color:var(--dim); line-height:1.5; }
-.posters{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
-.poster img{ width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:8px; background:var(--bg3); }
+.posters{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.poster{ min-width:0; }
+.poster img{ width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:8px; background:var(--bg3); cursor:pointer; }
 .poster .t{ font-size:13px; font-weight:600; margin-top:6px; }
 .poster .m{ font-size:11px; color:var(--dim); margin-top:2px; }
 .kv{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; }
@@ -624,6 +628,8 @@ a{ color:var(--info); }
   <!-- 수동 -->
   <div class="panel" id="p-manual">
     <div class="wrap">
+      <!-- 다른 몸(피어) 연결상태 — 폰이면 맥, 맥-원격이면 폰 -->
+      <div id="peerStatus" style="display:none"></div>
       <div class="step">
         <div class="step-label">① 의도 (자연어)</div>
         <div class="row">
@@ -729,6 +735,26 @@ async function showApp(){
       const ha=document.getElementById('headerActions'); if(ha) ha.style.display='none'; }
   } }catch(e){}
   apLoad();
+  loadPeer(); setInterval(loadPeer, 20000);  /* 다른 몸 연결상태 폴링(계기판) */
+}
+
+/* ===== 다른 몸(피어) 연결상태 — 계기판 안에 표기 ===== */
+function renderPeer(d){
+  const el=document.getElementById('peerStatus'); if(!el) return;
+  if(!d){ el.style.display='none'; return; }
+  const online = !!(d.has_peer && d.online);
+  const name = d.peer_name || '다른 몸';
+  const status = !d.has_peer ? '미연동' : (online ? '연결됨' : '오프라인');
+  const dot = online ? '#10b981' : '#d6d3d1';
+  el.innerHTML =
+    '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+dot+'"></span>'+
+    '<span style="color:'+(online?'#44403c':'#a8a29e')+';margin-left:8px">📱 '+esc(name)+'</span>'+
+    '<span style="color:'+(online?'#059669':'#a8a29e')+';margin-left:6px">· '+status+'</span>';
+  el.style.cssText='display:flex;align-items:center;font-size:12px;padding:8px 2px;margin-bottom:8px';
+}
+async function loadPeer(){
+  try{ const r=await jfetch('/nodes/peer-status'); if(r.ok){ renderPeer(await r.json()); return; } }catch(e){}
+  renderPeer(null);
 }
 
 /* ===== 표면 토글 ===== */
@@ -1327,6 +1353,31 @@ function closeStream(){
   const v=document.getElementById('streamVideo'); if(v){ v.pause(); v.removeAttribute('src'); v.load(); }
   const ov=document.getElementById('streamOverlay'); if(ov) ov.style.display='none';
 }
+/* 사진 라이트박스(image_grid): 썸네일 클릭 → 원본 이미지/동영상을 전체화면 오버레이로.
+   full URL 은 클릭된 엘리먼트의 <img src>(이미 URL 인코딩됨)에서 파생 — 썸네일→원본 엔드포인트
+   치환(thumbnail→image, video-thumbnail→video)+size 파라미터 제거. 따옴표 이스케이프 무필요. */
+function openMediaFromEl(el){
+  const im=el.querySelector('img'); if(!im) return;
+  const src=im.getAttribute('src')||''; if(!src) return;
+  const isVid=src.indexOf('video-thumbnail')>=0;
+  const full=src.replace('/photo/video-thumbnail','/photo/video').replace('/photo/thumbnail','/photo/image').replace(/[?&]size=\\d+/,'');
+  let ov=document.getElementById('mediaOverlay');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='mediaOverlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:9999;display:flex;align-items:center;justify-content:center';
+    ov.onclick=function(e){ if(e.target===ov||e.target.id==='mediaClose') closeMedia(); };
+    ov.innerHTML='<button id="mediaClose" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-size:16px">✕ 닫기</button><div id="mediaBody" style="max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center"></div>';
+    document.body.appendChild(ov);
+  }
+  document.getElementById('mediaBody').innerHTML = isVid
+    ? '<video src="'+full+'" controls autoplay playsinline style="max-width:100%;max-height:92vh"></video>'
+    : '<img src="'+full+'" style="max-width:100%;max-height:92vh;object-fit:contain">';
+  ov.style.display='flex';
+}
+function closeMedia(){
+  const b=document.getElementById('mediaBody'); if(b) b.innerHTML='';
+  const ov=document.getElementById('mediaOverlay'); if(ov) ov.style.display='none';
+}
 async function fireButton(bi,btn){
   const b=(CUR.mode.buttons||[])[bi]; if(!b) return;
   btn.disabled=true;
@@ -1523,7 +1574,9 @@ function renderPrim(p,vi,data){
     if(!arr.length) return emptyMsg(p,data);
     return '<div class="posters">'+arr.map(it=>{
       const img=p.image?tpl(p.image,it):'';
-      return '<div class="poster">'+(img?'<img src="'+img+'" loading="lazy">':'<div style="aspect-ratio:3/4;background:var(--bg3);border-radius:8px"></div>')+
+      // 클릭=원본/동영상 라이트박스. URL 은 클릭 시 <img src>에서 파생(따옴표 이스케이프 회피, CCTV playStream 선례).
+      const click=img?' onclick="openMediaFromEl(this)" style="cursor:pointer"':'';
+      return '<div class="poster"'+click+'>'+(img?'<img src="'+img+'" loading="lazy">':'<div style="aspect-ratio:3/4;background:var(--bg3);border-radius:8px"></div>')+
         '<div class="t">'+tpl(p.title,it)+'</div><div class="m">'+(p.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div></div>';
     }).join('')+'</div>';
   }
@@ -1775,6 +1828,8 @@ function toast(msg){
 async function rowBtn(vi,ri,btn,key){
   key=key||'button';
   const r=rowItem(vi,ri); if(!r||!r.prim[key]) return;
+  // stream:true 버튼 = 클라이언트 스트림 재생(CCTV '보기'). IBL 실행 없이 행 url 을 playStream(hls.js) 오버레이로.
+  if(r.prim[key].stream){ if(r.item&&r.item.url){ const i=_streamUrls.push(r.item.url)-1; playStream(i); } return; }
   const action=rowAction(r.prim[key].action,r.item);
   btn.disabled=true; const old=btn.textContent; btn.textContent='…';
   try{
@@ -1786,6 +1841,10 @@ async function rowBtn(vi,ri,btn,key){
       const m=action.match(/path:\\s*"([^"]+\\.html?)"/i);
       if(d.mac_only && m){ openFileOverlay(m[1]); }
       else alert(d.error);
+    }
+    else{  // 즐겨찾기 추가/삭제 등: 성공 메시지 토스트 + refresh 플래그면 현재 뷰 재조회
+      if(d&&d.message) toast(d.message);
+      if(r.prim[key].refresh) await refreshCurrent();
     }
   }
   catch(e){ alert('실행 실패: '+e.message); }
@@ -1829,7 +1888,7 @@ async function rowDrill(vi,ri){
   const detail = SPLIT ? document.getElementById('mdDetail') : document.getElementById('instOut');
   detail.innerHTML='<div class="center"><div class="spin"></div></div>';
   try{
-    const code=rowAction(dc.action,item);
+    const code=rowAction(buildAction(dc.action,gatherInputs()),item);  /* $입력(현재 다이얼)+{필드}(클릭 행) 둘 다 치환 */
     const d=await ibl(code);
     if(d&&typeof d==='object') d._item=item; /* 드릴 뷰에서 클릭한 행 참조용 */
     VIEW_CTX={view:dc.view,tabs:dc.tabs,activeTab:0,data:d,action:code,item:item,compose:dc.compose,refresh:'drill'};

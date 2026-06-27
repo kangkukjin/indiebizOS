@@ -1,12 +1,67 @@
 import os
 import glob
 import re
+import time
+import fnmatch
+import unicodedata
 import subprocess
 import shlex
 import shutil
 import json
 from datetime import datetime
 from pathlib import Path
+
+# file_find 무경계 재귀 glob 방지 — 매 호출 홈 전체(node_modules·캐시)를 색인 없이
+# stat 하던 게 타임아웃 원인. 절대-dead 가지치기 + 시간 예산으로 바운드.
+# ★ 절대-dead 목록은 file_index(포식 substrate)와 *공유* — fs_query 와 같은 단일 출처라
+#   드리프트 없음. path-substring 판정이라 ~/Library 통째가 아니라 캐시류만 쳐냄(iCloud 보존).
+try:
+    from file_index import ABSOLUTE_DEAD_SUBSTR as _DEAD_SUBSTR
+except Exception:  # import 경로 미확보 시 폴백(동일 내용)
+    _DEAD_SUBSTR = (
+        "/System/", "/Applications/", "/Library/Caches/",
+        "/Library/Application Support/", "/Library/Containers/",
+        "/Library/Group Containers/", "/node_modules/", "/.Trash", ".app/",
+        "/__pycache__/", "/site-packages/", "/.venv/", "/venv/",
+        "/.git/", "/DerivedData/", "/.gradle/", "/.cargo/", "/.npm/",
+    )
+_FIND_DEADLINE_S = 25.0  # 엔진 타임아웃 전에 부분결과라도 반환
+
+
+def _is_dead_dir(path):
+    """절대-dead(설치트리·캐시) 디렉토리면 True — walk 가 안 들어감(의도 불문 제외)."""
+    p = path.rstrip("/") + "/"
+    return any(n in p for n in _DEAD_SUBSTR)
+
+
+def _bounded_find(root, basename_pat, max_results):
+    """root 하위를 바운드 재귀 순회 — 정크 가지치기 + dot-dir 스킵(glob ** 와 동일) + 시간 예산.
+
+    무한정 walk 로 시스템을 멈추지 않는다. 시간 초과/상한 도달 시 partial=True 로 알린다.
+    """
+    deadline = time.time() + _FIND_DEADLINE_S
+    # macOS 한글 파일명=NFD(자모분해), 패턴은 보통 NFC → fnmatch 바이트비교가 침묵 누락.
+    # 양쪽을 NFC 로 정규화해 비교(mdfind 는 정규화하지만 fnmatch 는 안 함. forage_map #33).
+    pat = unicodedata.normalize("NFC", basename_pat)
+    pat_lower = pat.lower()
+    matches, partial = [], False
+    for dirpath, dirs, files in os.walk(root, topdown=True):
+        if time.time() > deadline:
+            partial = True
+            break
+        # 가지치기: 절대-dead(공유 목록, path-substring) + dot-dir. 제자리 수정으로 walk 가 안 들어감.
+        #   ~/Library 통째가 아니라 캐시류만 → ~/Library/Mobile Documents(iCloud) 는 보존.
+        dirs[:] = [d for d in dirs
+                   if not d.startswith(".") and not _is_dead_dir(os.path.join(dirpath, d))]
+        # 매칭: 파일 + 디렉토리 둘 다 (glob.glob 은 둘 다 매칭했음 — 예: .epub 번들·iCloud 책은 디렉토리).
+        # macOS 파일시스템은 대소문자 무시 → 소문자 비교로 맞춤.
+        for name in files + dirs:
+            nfc = unicodedata.normalize("NFC", name)
+            if fnmatch.fnmatch(nfc.lower(), pat_lower):
+                matches.append(os.path.join(dirpath, name))
+                if len(matches) >= max_results:
+                    return matches, True
+    return matches, partial
 
 # 시스템 AI 전용 상태 폴더 (data/system_ai_state/)
 DATA_PATH = Path(__file__).parent.parent.parent.parent
@@ -190,6 +245,7 @@ def execute(tool_input: dict, context) -> str:
             # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
             # 파일 목록 → [이름, 크기, 수정일, 경로]. 디렉터리는 크기 "".
             rows = []
+            records = []  # records 통화(보편) — 파일=명사. 선언 returns:records와 일치.
             for name in items:
                 full = os.path.join(dir_path, name)
                 try:
@@ -198,15 +254,29 @@ def execute(tool_input: dict, context) -> str:
                     size = "" if is_dir else st.st_size
                     mtime = datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")
                 except OSError:
-                    size, mtime = "", ""
-                rows.append([name, size, mtime, os.path.abspath(full)])
+                    is_dir, size, mtime = False, "", ""
+                abs_full = os.path.abspath(full)
+                rows.append([name, size, mtime, abs_full])
+                records.append({
+                    "title": name + ("/" if is_dir else ""),
+                    "meta": " · ".join(x for x in [
+                        ("디렉터리" if is_dir else (f"{size:,}B" if isinstance(size, int) else None)),
+                        (mtime or None),
+                    ] if x),
+                    "summary": "",
+                    "url": abs_full,
+                })
             table = {"columns": ["이름", "크기", "수정일", "경로"], "rows": rows}
-            return json.dumps({"text": text, "table": table}, ensure_ascii=False)
+            return json.dumps({"text": text, "table": table, "items": records}, ensure_ascii=False)
 
         elif tool_name == "grep_files":
             pattern = tool_input["pattern"]
             file_pattern = tool_input.get("file_pattern", "**/*")
-            root = os.path.join(project_path, os.path.expanduser(tool_input.get("root_path", ".")))
+            # 검색 루트: path > root_path > project_path (glob_files 와 동일 규칙).
+            # ★과거엔 root_path 만 읽어 src 가 광고하는 path 가 조용히 무시됐다(param 불일치 버그).
+            raw_root = tool_input.get("path") or tool_input.get("root_path") or "."
+            expanded = os.path.expanduser(raw_root)
+            root = expanded if os.path.isabs(expanded) else os.path.join(project_path, expanded)
             # 정규식이 기본이다(grep/ripgrep·Claude Grep 습관과 동일, src desc도 "정규식"으로 광고).
             # 과거엔 기본이 fixed-string('a|b' 를 리터럴로 취급)이라 alternation·메타문자가
             # 조용히 No matches 가 되는 silent-failure 함정이었다. regex=false 로 리터럴 강제 가능.
@@ -313,23 +383,23 @@ def execute(tool_input: dict, context) -> str:
             truncated += regex_note
 
             if output_mode == "files_with_matches":
-                # 매칭된 파일 목록만 (라인 무관). 공유 통화 table {파일}.
+                # 매칭된 파일 목록만 (라인 무관). 단일 통화 items(행 dict).
                 text = "\n".join(file_order) + truncated
-                table = {"columns": ["파일"], "rows": [[fp] for fp in file_order]}
-                return json.dumps({"text": text, "table": table}, ensure_ascii=False)
+                items = [{"파일": fp} for fp in file_order]
+                return json.dumps({"text": text, "items": items}, ensure_ascii=False)
 
             if output_mode == "count":
-                # 파일별 매칭 수. 공유 통화 table {파일, 매칭 수}.
+                # 파일별 매칭 수. 단일 통화 items(행 dict).
                 rows = [[fp, file_counts[fp]] for fp in file_order]
                 text = "\n".join(f"{fp}: {cnt}" for fp, cnt in rows) + truncated
-                table = {"columns": ["파일", "매칭 수"], "rows": rows}
-                return json.dumps({"text": text, "table": table}, ensure_ascii=False)
+                items = [{"파일": fp, "매칭 수": cnt} for fp, cnt in rows]
+                return json.dumps({"text": text, "items": items}, ensure_ascii=False)
 
             # output_mode == "content" (기본): 매칭 라인 전체.
             text = "\n".join(results) + truncated
-            # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
-            table = {"columns": ["파일", "줄번호", "내용"], "rows": match_rows}
-            return json.dumps({"text": text, "table": table}, ensure_ascii=False)
+            # === 단일 통화 items(행 dict — 파일/줄번호/내용) ===
+            items = [{"파일": r[0], "줄번호": r[1], "내용": r[2]} for r in match_rows]
+            return json.dumps({"text": text, "items": items}, ensure_ascii=False)
 
         elif tool_name == "get_current_time":
             fmt = tool_input.get("format", "%Y-%m-%d %H:%M:%S")
@@ -350,31 +420,35 @@ def execute(tool_input: dict, context) -> str:
             else:
                 root = os.path.join(project_path, expanded)
 
-            # 자동 recursive: pattern에 ** 없고 root만 지정된 경우, 하위까지 검색
-            search_pattern = pattern
-            if "**" not in pattern and "/" not in pattern:
-                search_pattern = f"**/{pattern}"
-
             try:
                 max_results = int(tool_input.get("max_results", 200))
             except (TypeError, ValueError):
                 max_results = 200
 
-            try:
-                # recursive=True로 ** 패턴 동작
-                matches = glob.glob(os.path.join(root, search_pattern), recursive=True)
-            except Exception as e:
-                return f"검색 오류: {e}"
+            partial = False
+            if "/" not in pattern and "**" not in pattern:
+                # 재귀 basename 검색(지배적 케이스) — 바운드 walk: 정크 가지치기 + 시간예산.
+                # glob.glob('~/**/*X*') 의 색인없는 홈 전체 stat(=타임아웃)을 회피.
+                matches, partial = _bounded_find(root, pattern, max_results)
+            else:
+                # 명시 경로/패턴(`/`·`**` 포함) — 보통 앵커돼 빠름. glob 유지.
+                search_pattern = pattern if "**" in pattern else f"**/{pattern}"
+                try:
+                    matches = glob.glob(os.path.join(root, search_pattern), recursive=True)
+                except Exception as e:
+                    return f"검색 오류: {e}"
 
             absolute_paths = sorted(os.path.abspath(m) for m in matches)
             total = len(absolute_paths)
-            truncated = total > max_results > 0
-            if truncated:
+            truncated = (total > max_results > 0) or partial
+            if total > max_results > 0:
                 absolute_paths = absolute_paths[:max_results]
 
             if absolute_paths:
                 header_parts = [f"{total}개 매칭"]
-                if truncated:
+                if partial:
+                    header_parts.append(f"(시간예산 {int(_FIND_DEADLINE_S)}초/상한 도달 — 부분 결과. 더 좁은 path 로 재검색하거나 fs_query(OS색인) 사용 권장)")
+                elif truncated:
                     header_parts.append(f"(상위 {max_results}개만 반환 — 더 많으면 max_results 또는 더 좁은 path 사용)")
                 header_parts.append(f"root: {root}")
                 header = " | ".join(header_parts)
@@ -382,16 +456,27 @@ def execute(tool_input: dict, context) -> str:
                 # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
                 # 매칭 파일 → [이름, 크기, 수정일, 경로]. 디렉터리는 크기 "".
                 rows = []
+                records = []  # records 통화(보편) — 파일=명사. 선언 returns:records와 일치.
                 for p in absolute_paths:
                     try:
+                        is_dir = os.path.isdir(p)
                         st = os.stat(p)
-                        size = "" if os.path.isdir(p) else st.st_size
+                        size = "" if is_dir else st.st_size
                         mtime = datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")
                     except OSError:
-                        size, mtime = "", ""
+                        is_dir, size, mtime = False, "", ""
                     rows.append([os.path.basename(p), size, mtime, p])
+                    records.append({
+                        "title": os.path.basename(p) + ("/" if is_dir else ""),
+                        "meta": " · ".join(x for x in [
+                            ("디렉터리" if is_dir else (f"{size:,}B" if isinstance(size, int) else None)),
+                            (mtime or None),
+                        ] if x),
+                        "summary": "",
+                        "url": p,
+                    })
                 table = {"columns": ["이름", "크기", "수정일", "경로"], "rows": rows}
-                return json.dumps({"text": text, "table": table}, ensure_ascii=False)
+                return json.dumps({"text": text, "table": table, "items": records}, ensure_ascii=False)
 
             # 결과 없을 때 — 안내 메시지에 path 옵션 힌트 포함
             hint = (
@@ -938,16 +1023,24 @@ def execute(tool_input: dict, context) -> str:
                 if _pr:
                     try:
                         _po = json.loads(_pr) if isinstance(_pr, str) else _pr
+                        _rows_src = (_po.get("items") or _po.get("records")) if isinstance(_po, dict) else None
                         if isinstance(_po, dict) and isinstance(_po.get("table"), dict) and _po["table"].get("rows"):
                             tool_input["table"] = _po["table"]
-                        elif isinstance(_po, dict) and isinstance(_po.get("records"), list) and _po["records"]:
-                            # 레코드 통화(records) → table 투영: 목록형 생산자(book·restaurant·검색…)도 엑셀로.
-                            _it = [x for x in _po["records"] if isinstance(x, dict)]
-                            tool_input["table"] = {
-                                "columns": ["제목", "정보", "요약", "링크"],
-                                "rows": [[x.get("title", ""), x.get("meta", ""),
-                                          x.get("summary", ""), x.get("url", "")] for x in _it],
-                            }
+                        elif isinstance(_rows_src, list) and _rows_src:
+                            # 단일 통화 items(행 dict) → table 투영: 목록형 생산자도 엑셀로.
+                            _it = [x for x in _rows_src if isinstance(x, dict)]
+                            if _it and "title" in _it[0]:
+                                # records-관습 카드 → 사람친화 4열
+                                tool_input["table"] = {
+                                    "columns": ["제목", "정보", "요약", "링크"],
+                                    "rows": [[x.get("title", ""), x.get("meta", ""),
+                                              x.get("summary", ""), x.get("url", "")] for x in _it],
+                                }
+                            elif _it:
+                                # 임의 items(world_bank 연도/지표 등) → 키 순서=열 generic 재구성
+                                _cols = list(_it[0].keys())
+                                tool_input["table"] = {"columns": _cols,
+                                                       "rows": [[x.get(c) for c in _cols] for x in _it]}
                     except Exception:
                         pass
             # 표준 테이블 통화 수용: {columns, rows} → headers/rows (engines:chart와 동일 통화).

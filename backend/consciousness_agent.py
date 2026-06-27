@@ -79,10 +79,14 @@ class ConsciousnessAgent:
             logger.warning(f"[ConsciousnessAgent] 프롬프트 파일 없음: {role_path}")
             self._prompt = self._default_prompt()
 
-        # 시스템 구조 문서 항상 주입
-        structure_path = base_path / "data" / "system_docs" / "system_structure.md"
-        if structure_path.exists():
-            structure = structure_path.read_text(encoding='utf-8')
+        # 시스템 구조 문서(정체성 코어)만 항상 주입 — 디렉토리/파일 트리는
+        # codebase_map 가이드로 분리(get_system_structure_core)
+        try:
+            from prompt_builder import get_system_structure_core
+            structure = get_system_structure_core()
+        except Exception:
+            structure = ""
+        if structure:
             self._prompt += f"\n\n<system_structure>\n{structure}\n</system_structure>"
 
         # IBL 환경 프롬프트 주입 — 의식 에이전트도 IBL 체계를 알아야 올바른 hint를 줄 수 있다
@@ -424,6 +428,8 @@ _lightweight_provider = None  # 경량 AI 전용 프로바이더 (싱글톤)
 _lightweight_provider_initialized = False
 _midtier_provider = None  # 중급 AI 전용 프로바이더 (싱글톤)
 _midtier_provider_initialized = False
+_system_oneshot_provider = None  # 본격(system_ai) 원샷 프로바이더 (싱글톤, 도구·세션 없음)
+_system_oneshot_provider_initialized = False
 _unconscious_prompt_cache: str = ""
 
 
@@ -604,6 +610,87 @@ def lightweight_ai_call(prompt: str, system_prompt: str = None,
         )
     except Exception as e:
         logger.warning(f"[lightweight_ai_call] 실패: {e}")
+        return None
+    finally:
+        if original_system_prompt is not None:
+            provider.system_prompt = original_system_prompt
+
+
+def _get_system_oneshot_provider():
+    """본격(system_ai) 원샷 프로바이더 — system_ai_config 기반, 도구·세션 없는 1회 호출용.
+
+    의식 에이전트의 _provider(시스템 프롬프트·도구 적재)와 달리, 번역 같은 *원샷*용으로
+    깨끗한 프로바이더를 따로 둔다(경량/중급 getter와 같은 패턴)."""
+    global _system_oneshot_provider, _system_oneshot_provider_initialized
+    if _system_oneshot_provider_initialized:
+        return _system_oneshot_provider
+
+    _system_oneshot_provider_initialized = True
+    try:
+        from api_config import SYSTEM_AI_CONFIG_PATH
+        import json as _json
+        if not SYSTEM_AI_CONFIG_PATH.exists():
+            return None
+        with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            config = _json.load(f)
+
+        provider_name = config.get("provider", "google").strip()
+        model_name = config.get("model", "").strip()
+        api_key = config.get("apiKey", "").strip()
+        # claude_code/ollama 는 자체 인증(OAuth/로컬)이라 api_key 불요
+        providers_without_api_key = {"claude_code", "claude-code", "claudecode", "ollama"}
+        if not api_key and provider_name.lower() not in providers_without_api_key:
+            return None
+
+        from providers import get_provider
+        _system_oneshot_provider = get_provider(
+            provider_name,
+            api_key=api_key,
+            model=model_name,
+            system_prompt="",
+            tools=[],
+        )
+        _system_oneshot_provider.init_client()
+        if hasattr(_system_oneshot_provider, "disable_session_persistence"):
+            _system_oneshot_provider.disable_session_persistence = True
+        print(f"[SystemAI oneshot] 초기화 완료 ({provider_name}/{model_name})")
+        return _system_oneshot_provider
+    except Exception as e:
+        print(f"[SystemAI oneshot] 초기화 실패 (의식 에이전트로 폴백): {e}")
+        return None
+
+
+def reset_system_oneshot_provider():
+    """본격 원샷 프로바이더 캐시 초기화 (system_ai_config 변경 시 호출)"""
+    global _system_oneshot_provider, _system_oneshot_provider_initialized
+    _system_oneshot_provider = None
+    _system_oneshot_provider_initialized = False
+
+
+def system_ai_call(prompt: str, system_prompt: str = None,
+                   images: list = None) -> Optional[str]:
+    """본격(system_ai) 모델 원샷 호출 — lightweight_ai_call 과 같은 계약, 모델만 본격.
+
+    수동 모드 번역처럼 '경량 대신 시스템 AI와 같은 모델'로 처리하고 싶을 때 쓴다.
+    system_ai 전용 원샷 프로바이더 우선, 없으면 의식 에이전트(본격) 프로바이더로 폴백.
+    """
+    provider = _get_system_oneshot_provider()
+    if provider is None:
+        agent = get_consciousness_agent()
+        if not agent.is_ready or not agent._provider:
+            return None
+        provider = agent._provider
+
+    original_system_prompt = None
+    if system_prompt is not None:
+        original_system_prompt = provider.system_prompt
+        provider.system_prompt = system_prompt
+    try:
+        return provider.process_message(
+            message=prompt, history=[], images=images, execute_tool=None
+        )
+    except Exception as e:
+        logger.warning(f"[system_ai_call] 실패: {e}")
         return None
     finally:
         if original_system_prompt is not None:

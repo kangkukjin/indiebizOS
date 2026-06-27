@@ -58,6 +58,11 @@ def _extract_table_from_prev(prev):
         t = obj.get("table")
         if isinstance(t, dict) and t.get("rows"):
             return t
+        # 단일 통화 items(행 dict) → table 재구성: 첫 dict의 키 순서=열(첫 열=x축 라벨, 나머지=수치 시리즈).
+        items = obj.get("items")
+        if isinstance(items, list) and items and all(isinstance(x, dict) for x in items):
+            cols = list(items[0].keys())
+            return {"columns": cols, "rows": [[d.get(c) for c in cols] for d in items]}
     return None
 
 

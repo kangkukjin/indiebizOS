@@ -72,52 +72,18 @@ async def lifespan(app: FastAPI):
     from runtime_utils import setup_bundled_runtime_paths
     setup_bundled_runtime_paths()
 
-    # 에피소드 로거 설치 (stdout 가로채기)
+    # 몸 독립 부팅 배선 — 에피소드 로거 등(맥·폰·미래 몸 공통). boot_common 한 곳에서
+    # 켜므로 새 몸의 진입점을 만들 때 베끼다 빠뜨릴 수 없다(헌법1조: 몸 독립은 공유 배선,
+    # 몸 종속만 각 진입점이 profile 게이트로 명시 분기). 폰은 phone_api.serve() 가 같이 호출.
     try:
-        from episode_logger import EpisodeLogger
-        EpisodeLogger.install()
+        from boot_common import wire_local_subsystems
+        wire_local_subsystems(profile="mac")
     except Exception as e:
-        print(f"[EpisodeLogger] 설치 실패: {e}")
+        print(f"[boot] 부팅 배선 실패 (무시): {e}")
 
     print("🚀 IndieBiz OS 서버 시작")
 
-    # 이전 세션의 완료된 task 기록 정리 (현재 세션만 보존)
-    try:
-        from pathlib import Path as _Path
-        import sqlite3 as _sqlite3
-        _projects_file = BASE_PATH / "projects" / "projects.json"
-        if _projects_file.exists():
-            with open(_projects_file, "r", encoding="utf-8") as _f:
-                _projects = json.load(_f)
-            _cleaned = 0
-            for _proj in _projects:
-                if _proj.get("type") != "project":
-                    continue
-                _db = _Path(_proj.get("path", "")) / "conversations.db"
-                if _db.exists():
-                    try:
-                        _conn = _sqlite3.connect(str(_db), timeout=3)
-                        _cnt = _conn.execute("DELETE FROM tasks WHERE status = 'completed'").fetchone()
-                        _conn.commit()
-                        _cleaned += _conn.total_changes
-                        _conn.close()
-                    except Exception:
-                        pass
-            # 시스템 AI 메모리 DB도 정리
-            _sys_db = DATA_PATH / "system_ai_memory.db"
-            if _sys_db.exists():
-                try:
-                    _conn = _sqlite3.connect(str(_sys_db), timeout=3)
-                    _conn.execute("DELETE FROM tasks WHERE status = 'completed'")
-                    _conn.commit()
-                    _cleaned += _conn.total_changes
-                    _conn.close()
-                except Exception:
-                    pass
-            if _cleaned > 0:
-                print(f"[Cleanup] 이전 세션 완료 task {_cleaned}건 정리")
-    except Exception as e:
-        print(f"[Cleanup] task 정리 중 오류 (무시): {e}")
+    # (완료 task 정리는 위 wire_local_subsystems 로 이관 — 몸 독립이라 맥·폰 공유)
 
     # 다중 노드: 이 기기(맥/허브)를 프레즌스 레지스트리에 자기등록. compute-class·주(主).
     # 폰들이 부팅 시 /nodes/register 로 합류 → "지금 연결된 노드"를 연결로 확인(폰 수 무고정).
@@ -378,6 +344,18 @@ async def health_check():
         "timestamp": datetime.now().isoformat(),
         "base_path": str(BASE_PATH)
     }
+
+
+@app.get("/ping")
+async def ping():
+    """경량 생존 신호 — 피어(다른 몸)가 인증 없이 '연결됐나'만 확인. 민감정보 없음.
+    폰 계기판이 맥(집 PC)의 연결상태를 표시할 때 이 엔드포인트를 핑한다(공개 경로)."""
+    try:
+        from runtime_utils import detect_body
+        kind = detect_body().get("kind", "")
+    except Exception:
+        kind = ""
+    return {"ok": True, "kind": kind}
 
 
 # ============ 이미지 서빙 ============

@@ -68,7 +68,7 @@ class LectureCreateRequest(BaseModel):
     audience: Optional[str] = None
     thesis: Optional[str] = None
     duration_minutes: Optional[int] = None
-    design_system: Optional[str] = "vintage_book"
+    design_system: Optional[str] = "native_vintage_book"
 
 
 class DeckMetaUpdateRequest(BaseModel):
@@ -78,6 +78,7 @@ class DeckMetaUpdateRequest(BaseModel):
     thesis: Optional[str] = None
     duration_minutes: Optional[int] = None
     design_system: Optional[str] = None
+    lecture_memo: Optional[str] = None  # 사용자 메모(왼쪽 항상 표시) — AI 미사용
 
 
 class ReorderRequest(BaseModel):
@@ -125,7 +126,7 @@ async def create_lecture(req: LectureCreateRequest):
         audience=req.audience,
         thesis=req.thesis,
         duration_minutes=req.duration_minutes,
-        design_system=req.design_system or "vintage_book",
+        design_system=req.design_system or "native_vintage_book",
     )
     return {
         "lecture_id": deck["lecture_id"],
@@ -201,6 +202,18 @@ async def delete_slide(lecture_id: str, slide_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/{lecture_id}/slides/{slide_id}/duplicate")
+async def duplicate_slide(lecture_id: str, slide_id: str):
+    """슬라이드 복제 — 같은 내용으로 한 장 더 (원본 바로 뒤). AI/렌더 호출 없음(파일 복사)."""
+    ls = _load_lecture_store()
+    if not ls.lecture_exists(lecture_id):
+        raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
+    try:
+        return ls.duplicate_slide(lecture_id, slide_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ─────────────────────────────────────────────────────────────────────
 # 슬라이드 생성/편집 (AI)
 # ─────────────────────────────────────────────────────────────────────
@@ -209,11 +222,13 @@ class SlideCreateRequest(BaseModel):
     instruction: str
     insert_at: Optional[int] = None
     layout: Optional[str] = None  # 강의자가 명시적으로 선택한 layout (없으면 AI 자동)
+    image_quality: Optional[str] = None  # 통짜 이미지 품질: 'pro'(고품질·비쌈) / 'fast'(저가·빠름)
 
 
 class SlideEditRequest(BaseModel):
     instruction: str
     layout: Optional[str] = None
+    image_quality: Optional[str] = None
 
 
 def _load_handler():
@@ -265,6 +280,8 @@ async def create_slide(lecture_id: str, req: SlideCreateRequest):
         tool_input["insert_at"] = req.insert_at
     if req.layout:
         tool_input["layout"] = req.layout
+    if req.image_quality:
+        tool_input["image_quality"] = req.image_quality
 
     import json as _json
     # Playwright sync API + AI 동기 호출 → 스레드풀에서 실행
@@ -279,6 +296,53 @@ async def create_slide(lecture_id: str, req: SlideCreateRequest):
             detail=result.get("error", "슬라이드 생성 실패"),
         )
     return result
+
+
+def _load_slide_ai():
+    """lecture_workspace 패키지의 slide_ai 모듈 동적 로드 (outline 위임)."""
+    base = os.environ.get("INDIEBIZ_BASE_PATH")
+    if not base:
+        base = str(Path(__file__).resolve().parent.parent)
+    pkg_dir = Path(base) / "data" / "packages" / "installed" / "tools" / "lecture_workspace"
+    if str(pkg_dir) not in sys.path:
+        sys.path.insert(0, str(pkg_dir))
+    if "slide_ai" in sys.modules:
+        return sys.modules["slide_ai"]
+    spec = importlib.util.spec_from_file_location("slide_ai", pkg_dir / "slide_ai.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["slide_ai"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class OutlineRequest(BaseModel):
+    count: Optional[int] = None  # 원하는 슬라이드 장수 (없으면 AI 자동)
+
+
+@router.post("/{lecture_id}/outline")
+async def outline_lecture(lecture_id: str, req: OutlineRequest):
+    """강의 자료를 읽어 슬라이드 초안(instruction) 목록을 반환.
+
+    일괄 생성의 1단계 — UI가 이 목록을 받아 한 장씩 /slides 로 순차 생성한다.
+    AI 한 번 호출이라 비교적 빠르지만 동기 호출 → 스레드풀에 위임.
+    """
+    ls = _load_lecture_store()
+    if not ls.lecture_exists(lecture_id):
+        raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
+
+    deck = ls.read_deck(lecture_id)
+    lecture_dir_path = ls.lecture_dir(lecture_id)
+    existing_count = len(deck.get("slide_order", []))  # >0이면 '이어붙이는' 일괄생성
+    slide_ai = _load_slide_ai()
+    try:
+        slides = await run_in_threadpool(
+            slide_ai.outline_from_materials, deck, lecture_dir_path, req.count, existing_count
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"초안 생성 실패: {e}")
+    return {"success": True, "slides": slides, "count": len(slides)}
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -459,6 +523,22 @@ async def patch_slide_spec(lecture_id: str, slide_id: str, req: SlidePatchReques
     return result
 
 
+class SlideNoteRequest(BaseModel):
+    note: str = ""  # 강의 노트(말할 내용). 빈 문자열이면 노트 제거.
+
+
+@router.patch("/{lecture_id}/slides/{slide_id}/note")
+async def set_slide_note(lecture_id: str, slide_id: str, req: SlideNoteRequest):
+    """슬라이드의 강의 노트(말할 내용) 저장. AI/렌더 호출 없음 — deck 메타만 갱신."""
+    ls = _load_lecture_store()
+    if not ls.lecture_exists(lecture_id):
+        raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
+    try:
+        return ls.set_speaker_note(lecture_id, slide_id, req.note)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 @router.post("/{lecture_id}/slides/{slide_id}/rerender")
 async def rerender_slide(lecture_id: str, slide_id: str):
     """슬라이드 spec 변경 없이 PNG만 재렌더. design_system 변경 후 사용.
@@ -485,6 +565,39 @@ async def rerender_slide(lecture_id: str, slide_id: str):
     return result
 
 
+class SlideImageEditRequest(BaseModel):
+    instruction: str
+    image_quality: Optional[str] = None  # 'pro' / 'fast'
+
+
+@router.post("/{lecture_id}/slides/{slide_id}/image-edit")
+async def image_edit_slide(lecture_id: str, slide_id: str, req: SlideImageEditRequest):
+    """통짜 이미지/이미지 슬라이드 '부분 수정' — 다시 그리지 않고 현재 이미지를 편집.
+
+    제목 한 줄 등 일부만 바꿀 때 사용. 이미지 모델 호출이라 스레드풀에서 실행.
+    """
+    ls = _load_lecture_store()
+    if not ls.lecture_exists(lecture_id):
+        raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
+    if not req.instruction.strip():
+        raise HTTPException(status_code=400, detail="instruction은 필수입니다.")
+
+    handler_mod = _load_handler()
+    import json as _json
+    edit_input = {"lecture_id": lecture_id, "slide_id": slide_id, "instruction": req.instruction}
+    if req.image_quality:
+        edit_input["image_quality"] = req.image_quality
+    result_str = await run_in_threadpool(
+        handler_mod.execute, edit_input, _MiniCtx("slide_image_edit"),
+    )
+    result = _json.loads(result_str)
+    if not result.get("success"):
+        err_type = result.get("error_type", "")
+        status = 400 if err_type in ("validation", "not_found") else 500
+        raise HTTPException(status_code=status, detail=result.get("error", "이미지 편집 실패"))
+    return result
+
+
 @router.post("/{lecture_id}/slides/{slide_id}/edit")
 async def edit_slide(lecture_id: str, slide_id: str, req: SlideEditRequest):
     """특정 슬라이드 편집(재생성). 슬라이드 생성과 마찬가지로 스레드풀에서 실행."""
@@ -499,6 +612,8 @@ async def edit_slide(lecture_id: str, slide_id: str, req: SlideEditRequest):
     edit_input = {"lecture_id": lecture_id, "slide_id": slide_id, "instruction": req.instruction}
     if req.layout:
         edit_input["layout"] = req.layout
+    if req.image_quality:
+        edit_input["image_quality"] = req.image_quality
     result_str = await run_in_threadpool(
         handler_mod.execute,
         edit_input,

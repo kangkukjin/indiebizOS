@@ -139,7 +139,12 @@ def _extract_json(text: str) -> dict:
         if start == -1 or end == -1 or end <= start:
             raise ValueError("AI 응답에서 JSON을 찾지 못했습니다: " + text[:300])
         candidate = text[start:end + 1]
-    return json.loads(candidate)
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        # 잘못된 이스케이프(\u 뒤 비-16진·스트레이 백슬래시) 교정 후 재시도
+        fixed = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', candidate)
+        return json.loads(fixed)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -181,19 +186,19 @@ def create_slide(tool_input: dict, output_base: str) -> str:
             ensure_ascii=False,
         )
 
-    # 프리미엄 이미지 스타일 분기
-    style = (tool_input.get("style") or "").strip()
-    if style and style not in ("text", "default"):
+    # 스타일 — native(통짜 이미지)가 유일한 기본. 빠른 텍스트형만 style:"text"로 옵트아웃.
+    # (2026-06-23 통합) 프리미엄 일러스트 경로(slide_image) 은퇴 — 미지정·옛 스타일값 전부 native로.
+    style = (tool_input.get("style") or "").strip().lower()
+    if style != "text":
         try:
-            styles_mod = _load_module("slide_styles.py", "slide_styles")
-            if styles_mod.is_image_style(style):
-                slide_image = _load_module("slide_image.py", "slide_image")
-                return slide_image.create_image_slide(tool_input, output_base, style)
+            slide_native = _load_module("slide_native.py", "slide_native")
+            return slide_native.create_native_slide(tool_input, output_base)
         except Exception as e:
             return json.dumps(
-                {"success": False, "message": f"이미지 스타일 처리 실패: {e}"}, ensure_ascii=False
+                {"success": False, "message": f"네이티브 슬라이드 처리 실패: {e}"}, ensure_ascii=False
             )
 
+    # style == "text": 아래 텍스트형(custom HTML) 경로
     content = (tool_input.get("content") or "").strip()
     design_system = (tool_input.get("design_system") or "default").strip()
     width = int(tool_input.get("width") or 1280)

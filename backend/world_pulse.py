@@ -7,14 +7,14 @@ IndieBiz OS Core
 기능:
 1. World Pulse 스냅샷: 세계 상태 (경제, 뉴스, 기술, 날씨)
 2. World Pulse 수집: 매시간 세계/사용자/자신 상태 업데이트
-3. Self-Check: 주기적 IBL 액션 자가 점검 (면역 순찰)
+3. 일일 건강 점검: ibl_health_check.py(정적+fixture+골든) 1회 + RED 면 알림 (AI 0)
 
 사용:
-    from world_pulse import ensure_today_pulse, collect_world_pulse, run_self_check
+    from world_pulse import ensure_today_pulse, collect_world_pulse, run_daily_health_check
 
     ensure_today_pulse()        # 시스템 기동 시
     collect_world_pulse()       # 매시간 펄스 수집
-    run_self_check()            # 매 6시간 자가 점검
+    run_daily_health_check()    # IBL 건강 점검 (config 카덴스, 기본 24h=하루 1회)
 
 모듈화:
 - world_pulse_collectors.py: 세계/사용자/시스템 데이터 수집, 스냅샷 관리
@@ -224,11 +224,10 @@ from world_pulse_collectors import (
 )
 from world_pulse_health import (
     generate_guide,
-    generate_test_plan, _get_safe_actions, _evaluate_result,
-    run_self_check, save_self_check, _check_failure_alerts,
+    save_self_check, _check_failure_alerts,
     analyze_failure_patterns,
     get_action_health_summary, get_recent_self_checks, get_system_health,
-    trigger_ai_health_check,
+    run_daily_health_check, run_ibl_health_check,
 )
 
 
@@ -444,8 +443,8 @@ def register_pulse_tasks():
 
         # 커스텀 액션 등록
         cm.actions["world_pulse"] = lambda task: collect_world_pulse()
-        cm.actions["self_check"] = lambda task: run_self_check()  # 하위 호환
-        cm.actions["ai_health_check"] = lambda task: trigger_ai_health_check()
+        cm.actions["self_check"] = lambda task: run_daily_health_check()  # 하위 호환 별칭
+        cm.actions["ai_health_check"] = lambda task: run_daily_health_check()
 
         # 기존에 등록된 의식 이벤트가 있는지 확인
         existing = {evt.get("title"): evt for evt in cm.list_events()}
@@ -466,22 +465,31 @@ def register_pulse_tasks():
             )
             logger.info(f"[WorldPulse] World Pulse 등록 (매 {interval}시간)")
 
-        # 2) AI 건강 체크 (매 6시간) — 기존 self_check 대체
-        if sc_config.get("enabled", True) and "[WorldPulse] AI 건강체크" not in existing:
-            interval = sc_config.get("interval_hours", 6)
-            next_time = (datetime.now() + timedelta(hours=interval)).strftime("%H:%M")
-            cm.add_event(
-                title="[WorldPulse] AI 건강체크",
-                event_type="schedule",
-                repeat="interval",
-                interval_hours=interval,
-                event_time=next_time,
-                action="ai_health_check",
-                enabled=True,
-                owner_project_id="__system_ai__",
-                owner_agent_id="system_ai",
-            )
-            logger.info(f"[WorldPulse] AI 건강체크 등록 (매 {interval}시간, 다음 실행: {next_time})")
+        # 2) 일일 건강 체크 (카덴스=config self_check.interval_hours, 기본 24h=하루 1회).
+        #    run_daily_health_check: 정적 정합성 + items 통화 단언 + 골든 파이프(전부 AI 0) 를
+        #    먼저 돌리고, RED 가 있을 때만 SystemAI triage 1턴(§4 배치 원칙). 평상시 AI 비용 0.
+        #    이벤트 title 은 호환 위해 유지("AI 건강체크") — 실제론 정적 우선 게이트.
+        if sc_config.get("enabled", True):
+            interval = sc_config.get("interval_hours", 24)
+            _hc_evt = existing.get("[WorldPulse] AI 건강체크")
+            if _hc_evt is None:
+                next_time = (datetime.now() + timedelta(hours=interval)).strftime("%H:%M")
+                cm.add_event(
+                    title="[WorldPulse] AI 건강체크",
+                    event_type="schedule",
+                    repeat="interval",
+                    interval_hours=interval,
+                    event_time=next_time,
+                    action="ai_health_check",
+                    enabled=True,
+                    owner_project_id="__system_ai__",
+                    owner_agent_id="system_ai",
+                )
+                logger.info(f"[WorldPulse] AI 건강체크 등록 (매 {interval}시간, 다음 실행: {next_time})")
+            elif _hc_evt.get("interval_hours") != interval:
+                # config 카덴스 변경 반영 — skip-if-exists 드리프트 방지(2026-06-27 12h→24h)
+                cm.update_event(_hc_evt.get("id"), interval_hours=interval)
+                logger.info(f"[WorldPulse] AI 건강체크 카덴스 갱신 → 매 {interval}시간")
 
         # 기존 self_check 이벤트가 있으면 비활성화 (하위 호환)
         if "[WorldPulse] 자가점검" in existing:

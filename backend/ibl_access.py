@@ -194,6 +194,10 @@ def build_environment(
             if not isinstance(action_config, dict):
                 ungrouped.append((action_name, action_config))
                 continue
+            # prompt_hidden: 에이전트 카탈로그에서만 숨김(실행은 ibl_engine이 별도 yaml 로드라 유지).
+            # 배관 액션(예: slide_shadcn — native가 사용자 경로, slide_shadcn은 내부 렌더/내보내기)에 사용.
+            if action_config.get("prompt_hidden"):
+                continue
             key = action_config.get("group")
             if key:
                 grouped.setdefault(key, []).append((action_name, action_config))

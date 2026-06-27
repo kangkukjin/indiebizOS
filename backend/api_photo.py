@@ -7,7 +7,7 @@ import os
 import sys
 import hashlib
 from typing import Optional
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
 router = APIRouter(prefix="/photo", tags=["photo"])
@@ -253,9 +253,8 @@ async def get_image(path: str = Query(...)):
 
 
 @router.get("/video")
-async def get_video(path: str = Query(...), request: "Request" = None):
+async def get_video(path: str = Query(...), request: Request = None):
     """동영상 파일 반환 (Range 요청 지원)"""
-    from fastapi import Request
     from starlette.responses import StreamingResponse
     import mimetypes
 

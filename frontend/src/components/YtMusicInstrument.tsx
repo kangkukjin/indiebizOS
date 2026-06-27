@@ -124,7 +124,7 @@ export function YtMusicInstrument() {
         <>
           <div className="shrink-0 px-5 pt-3 pb-2 flex gap-2">
             <input value={query} onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && search()}
+              onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && search()}
               placeholder="노래·아티스트 검색 (예: newjeans, 아이유 밤편지)"
               className="flex-1 px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm outline-none focus:border-stone-400" />
             <button onClick={search}
@@ -201,7 +201,7 @@ export function YtMusicInstrument() {
             <div>
               <label className="text-xs text-stone-500">파일 이름 (비우면 자동)</label>
               <input value={dlName} onChange={(e) => setDlName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && download()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && download()}
                 placeholder="예: 아이유 - 밤편지"
                 className="mt-1 w-full px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm outline-none focus:border-stone-400" />
             </div>

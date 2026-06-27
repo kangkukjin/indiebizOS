@@ -135,10 +135,83 @@ def clear_session_for_agent(session_key: str):
         save_session_map(m)
 
 
+# ============ 세션 컨텍스트 크기 추적 (크기 기반 리셋) ============
+# --resume 은 CLI 가 디스크의 전체 트랜스크립트를 재생하므로 세션이 무한 성장한다.
+# (indiebizOS 가 넘기는 5턴/요약 트림은 resume 경로에서 버려짐.) 의미 있는 장기
+# 연속성은 이미 indiebizOS 기억층(연상·심층메모리·의식 요약·포식)이 주입하므로,
+# raw 트랜스크립트가 임계 토큰을 넘으면 다음 턴에 fresh 세션으로 끊고 트림 히스토리로
+# 재시드한다. 턴 수가 아니라 *실측 토큰*(in+cache_read+cache_create)에 거는 이유:
+# 턴 크기가 비균일하다 — 이미지/긴 산출물 한 턴이 폭발 주범이지 턴 수가 아니다.
+SESSION_RESET_TOKEN_THRESHOLD = 150_000
+
+
+def _session_size_path() -> Path:
+    return Path(__file__).resolve().parents[2] / "data" / "claude_code_session_sizes.json"
+
+
+def load_session_sizes() -> Dict[str, int]:
+    p = _session_size_path()
+    if not p.exists():
+        return {}
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_session_sizes(m: Dict[str, int]):
+    p = _session_size_path()
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(m, f, ensure_ascii=False, indent=2)
+    except OSError as e:
+        print(f"[ClaudeCodeProvider] 세션 크기 저장 실패: {e}")
+
+
+def record_session_size(session_key: str, size: int):
+    """직전 턴의 실측 컨텍스트 토큰 수를 기록 (다음 턴 리셋 판단용)."""
+    if not session_key or size <= 0:
+        return
+    m = load_session_sizes()
+    m[session_key] = int(size)
+    save_session_sizes(m)
+
+
+def clear_session_size(session_key: str):
+    m = load_session_sizes()
+    if session_key in m:
+        del m[session_key]
+        save_session_sizes(m)
+
+
 class ClaudeCodeProvider(BaseProvider):
     """Claude Code CLI를 subprocess로 호출하는 provider."""
 
     DEFAULT_TIMEOUT_SEC = 600  # 10분
+
+    # 서버측 일시 과부하(529 Overloaded / overloaded_error 등) 자동 재시도.
+    # 본문이 아직 하나도 안 온(not committed) 경우에만 backoff 후 다시 호출한다.
+    # 입력 크기와 무관한 서버 포화 신호라, 강의 저작처럼 "유효 JSON 한 방"이
+    # 필요한 일회성 호출이 단 한 번의 과부하로 통째 실패하던 걸 흡수한다.
+    OVERLOADED_MAX_RETRIES = 3
+    OVERLOADED_BASE_DELAY_SEC = 2.0
+    OVERLOADED_MAX_DELAY_SEC = 30.0
+
+    @staticmethod
+    def _is_overloaded_error(text: str) -> bool:
+        """일시적 서버 과부하 에러인지 판정 (대소문자 무시).
+
+        주의: 이 검사는 *에러 텍스트*(resume_err_text+stderr)에만 적용된다.
+        'overloaded' 키워드가 1차 신호. '529'는 에러 맥락(error 동반)일 때만
+        인정해 본문 숫자 등 우발적 부분일치 오탐을 막는다.
+        """
+        low = (text or "").lower()
+        if "overloaded" in low:  # "API Error: 529 Overloaded" / overloaded_error 등
+            return True
+        return "529" in low and "error" in low
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -148,6 +221,9 @@ class ClaudeCodeProvider(BaseProvider):
         # 메인 에이전트와 session_key가 충돌하므로 비활성화 가능.
         # 호출 측이 init_client 후 True로 설정.
         self.disable_session_persistence: bool = False
+        # 직전 턴의 실측 컨텍스트 토큰 수(in+cache_read+cache_create) 릴레이.
+        # _translate_stream_event 가 result 이벤트에서 채우고, 세션 저장부가 읽어 영속화.
+        self._last_context_size: int = 0
         # 도구 실행 결과 (non-streaming 경로에서 evaluator가 사용).
         # process_message 시작 시 비워지고 stream 이벤트 소비 중 누적된다.
         self._last_tool_results: List[str] = []
@@ -259,6 +335,9 @@ class ClaudeCodeProvider(BaseProvider):
             yield {"type": "error", "content": "Claude Code provider가 초기화되지 않았습니다."}
             return
 
+        # 턴 시작 시 라운드별 컨텍스트 크기 릴레이 초기화 (이전 턴 값 잔류 방지)
+        self._last_context_size = 0
+
         # 1) 이미지 → 임시 파일 → 프롬프트에 path 주입
         image_paths: List[str] = self._save_images_to_temp(images or [])
 
@@ -282,13 +361,31 @@ class ClaudeCodeProvider(BaseProvider):
             if not history and stored_session_id:
                 clear_session_for_agent(session_key_val)
                 stored_session_id = None
+            # 크기 기반 리셋: 직전 턴 컨텍스트가 임계 초과면 fresh 로 끊는다.
+            # fresh 경로는 _build_prompt_with_history 로 트림된 5턴 히스토리를 재시드하므로
+            # 맥락은 indiebizOS 기억층 + 트림 히스토리로 이어진다 (raw 중복만 제거).
+            if resume_session_id:
+                prev_size = int(load_session_sizes().get(session_key_val) or 0)
+                if prev_size > SESSION_RESET_TOKEN_THRESHOLD:
+                    print(
+                        f"[ClaudeCodeProvider] {self.agent_name}: 세션 컨텍스트 "
+                        f"{prev_size:,} > {SESSION_RESET_TOKEN_THRESHOLD:,} 토큰 → fresh 리셋"
+                    )
+                    clear_session_for_agent(session_key_val)
+                    clear_session_size(session_key_val)
+                    stored_session_id = None
+                    resume_session_id = None
 
-        # 4~6) resume 시도 → 만료/무효 시 fresh 로 자동 재시도 (최대 2회)
+        # 4~6) resume 시도 → 만료/무효 시 fresh 로 자동 재시도 (resume→fresh 1회)
+        #      + 일시 서버 과부하(529 Overloaded) → backoff 후 재시도 (최대 N회)
         # CLI 가 `--resume <소멸한 세션>` 을 만나면 stdout JSON 이 아니라 stderr +
         # 종료코드 1("No conversation found with session ID")로 즉사한다. 첫 시도가
         # 그렇게 실패하면 그 에러를 사용자에게 노출하지 않고 삼킨 뒤(deferred) 매핑을
         # 폐기하고 fresh 로 한 번 더 돌린다. 그래야 stale 매핑이 고착되지 않는다.
-        for attempt in range(2):
+        # 과부하(529)는 입력과 무관한 서버측 신호 → 본문 미수신이면 backoff 후 같은 호출 반복.
+        resume_attempt = 0       # resume→fresh 폴백 횟수 (0 또는 1)
+        overloaded_retries = 0   # 529 과부하 재시도 횟수
+        while True:
             is_resume_attempt = bool(resume_session_id)
 
             # 프롬프트 빌드 — resume 면 CLI 가 자체 세션에서 history 를 알므로 현재 메시지만,
@@ -372,8 +469,10 @@ class ClaudeCodeProvider(BaseProvider):
                         t2 = out_event.get("type")
                         if t2 in ("text", "tool_start", "tool_result", "thinking"):
                             committed = True
-                        # resume 시도이고 아직 본문이 안 왔으면 터미널 에러/final 은 보류
-                        if is_resume_attempt and not committed and t2 in ("error", "final"):
+                        # 아직 본문이 안 왔으면(committed=False) 터미널 에러/final 은 보류.
+                        # resume 실패(만료 세션)·일시 과부하(529) 둘 다 본문 도착 전에만
+                        # 재시도 가능하므로, 보류해 두고 스트림 종료 후 재시도 여부를 판단한다.
+                        if not committed and t2 in ("error", "final"):
                             deferred.append(out_event)
                         else:
                             yield out_event
@@ -408,8 +507,9 @@ class ClaudeCodeProvider(BaseProvider):
             # 멀쩡한 매핑을 폐기하지 않는다 (그 에러는 그대로 사용자에게 보고).
             resume_failed = is_resume_attempt and not committed and session_issue
 
-            if attempt == 0 and resume_failed:
+            if resume_attempt == 0 and resume_failed:
                 # 매핑 폐기 + fresh 재시도 (보류했던 에러는 버린다 → 사용자에 미노출)
+                resume_attempt += 1
                 if session_key_val:
                     clear_session_for_agent(session_key_val)
                 print(
@@ -418,6 +518,28 @@ class ClaudeCodeProvider(BaseProvider):
                 )
                 resume_session_id = None
                 stored_session_id = None
+                continue
+
+            # --- 일시 서버 과부하(529 Overloaded) → backoff 후 재시도 ---
+            # 본문 미수신(not committed) + 과부하 신호일 때만. 보류한 에러는 버리고
+            # (continue 시 deferred 가 다음 루프 진입부에서 초기화됨) 잠시 쉰 뒤 같은 호출 반복.
+            # 한 번의 transient 과부하가 강의 저작 같은 일회성 호출을 통째 실패시키던 걸 흡수.
+            if (
+                not committed
+                and self._is_overloaded_error(combined)
+                and overloaded_retries < self.OVERLOADED_MAX_RETRIES
+            ):
+                delay = min(
+                    self.OVERLOADED_BASE_DELAY_SEC * (2 ** overloaded_retries),
+                    self.OVERLOADED_MAX_DELAY_SEC,
+                )
+                overloaded_retries += 1
+                self.metrics.record_retry()
+                print(
+                    f"[ClaudeCodeProvider] {self.agent_name}: 서버 과부하(529) → "
+                    f"{delay:.0f}초 후 재시도 {overloaded_retries}/{self.OVERLOADED_MAX_RETRIES}"
+                )
+                time.sleep(delay)
                 continue
 
             # --- 최종 attempt: 결과 확정 ---
@@ -438,6 +560,9 @@ class ClaudeCodeProvider(BaseProvider):
                         f"[ClaudeCodeProvider] {self.agent_name}: 세션 저장 "
                         f"({session_key_val} → {captured_session_id[:8]}...)"
                     )
+                # 컨텍스트 크기 기록 — resume 세션은 매 턴 성장하므로 id 변동과 무관하게
+                # 매번 갱신해 다음 턴 리셋 판단의 최신 값을 유지한다.
+                record_session_size(session_key_val, self._last_context_size)
             break
 
     def _translate_stream_event(
@@ -453,6 +578,17 @@ class ClaudeCodeProvider(BaseProvider):
 
         if etype == "assistant":
             msg = event.get("message") or {}
+            # 라운드별 컨텍스트 크기 추적 — 매 assistant 라운드의 입력 컨텍스트
+            # (in+cache_read+cache_create)를 갱신해 *마지막* 라운드 값을 남긴다.
+            # result 이벤트의 usage 는 라운드 누적이라 세션 크기를 7배 부풀린다(버그).
+            # 마지막 라운드 컨텍스트 = 다음 --resume 에서 재생될 트랜스크립트 크기 근사.
+            _u = msg.get("usage") or {}
+            if _u:
+                self._last_context_size = (
+                    int(_u.get("input_tokens") or 0)
+                    + int(_u.get("cache_read_input_tokens") or 0)
+                    + int(_u.get("cache_creation_input_tokens") or 0)
+                )
             for block in msg.get("content", []):
                 btype = block.get("type")
                 if btype == "text":
@@ -550,6 +686,8 @@ class ClaudeCodeProvider(BaseProvider):
             # cache_create = 새로 캐시에 쓰인 input (write 비용)
             cache_read = int(usage.get("cache_read_input_tokens") or 0)
             cache_create = int(usage.get("cache_creation_input_tokens") or 0)
+            # _last_context_size 는 assistant 라운드별로 갱신됨(마지막 라운드 = 세션 크기).
+            # result.usage 는 라운드 누적이라 여기서 쓰면 안 된다.
             self.metrics.record_request(latency_ms, input_tokens, output_tokens)
             err_flag = " (error)" if event.get("is_error") else ""
             cache_info = f" cache_read={cache_read} cache_create={cache_create}" if (cache_read or cache_create) else ""
@@ -608,6 +746,11 @@ class ClaudeCodeProvider(BaseProvider):
         "TodoWrite",
         # MCP — IBL 브리지 (5노드 전체)
         "mcp__indiebizos__execute_ibl",
+        # MCP — 가이드 읽기 브리지. in-process 프로바이더(Gemini 등)는 read_guide 를 자기
+        # 프로세스에서 직접 갖지만, 아웃오브프로세스인 Claude Code 는 MCP 로만 닿아 가이드 읽기
+        # 통로가 없었다(read_guide 호출이 'No such tool' 로 실패→file_find 우회 헛걸음). 이 한 줄이 메운다.
+        # ★Claude Code 한정 — IBL 어휘로 승격하지 않으므로 다른 프로바이더 표면엔 영향 없음.
+        "mcp__indiebizos__read_guide",
     ]
 
     # 명시적으로 차단할 도구 — ToolSearch 등을 통해 우회 로드되더라도 호출 거부됨.
@@ -637,6 +780,9 @@ class ClaudeCodeProvider(BaseProvider):
         "IBL 실행 도구의 정확한 이름은 `mcp__indiebizos__execute_ibl` 다 — 이 이름 그대로 호출하라. "
         "다른 안내나 과거 용례에 `execute_ibl` 로 줄여 적힌 곳이 있어도, 실제 도구 이름은 "
         "`mcp__indiebizos__execute_ibl` 뿐이다(맨이름 `execute_ibl` 은 존재하지 않아 호출이 실패한다).\n"
+        "가이드 읽기 도구의 정확한 이름은 `mcp__indiebizos__read_guide` 다(맨이름 `read_guide` 아님). "
+        "공용 프롬프트·IBL 액션 설명이 `read_guide(query=...)` 로 가르치는 곳은 모두 이 도구를 뜻하니, "
+        "`mcp__indiebizos__read_guide` 로 호출하라(file_find 로 data/guides 를 뒤지지 말 것 — 이 도구가 가이드 DB를 검색해 본문까지 준다).\n"
         "파일 읽기·웹 검색·grep 은 네이티브 도구가 아니라 IBL 로 하라. "
         "`Read`/`WebSearch`/`WebFetch`/`Grep`/`Glob` 은 비활성화돼 있다 — 대신 "
         "`mcp__indiebizos__execute_ibl` 로 "

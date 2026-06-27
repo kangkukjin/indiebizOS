@@ -1,6 +1,7 @@
   others:
     actions:
       delegate:
+        returns: effect
         description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기.
         target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본,비동기 보고)/sync(응답 대기, 파이프라인용)/workflow(steps IBL 위임). scope: same(기본)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용). mode=workflow 시 steps 필수.'
         group: delegation
@@ -19,6 +20,7 @@
         - 프로젝트위임
         - 다른프로젝트
       agents:
+        returns: scalar
         description: 프로젝트·에이전트 조회. agent_id 없으면 전체 트리, 있으면 단건 상세.
         target_description: agent_id ('프로젝트/에이전트' 형식). 생략 시 전체 프로젝트별 에이전트 트리 반환 (위임 대상 확인용).
         group: delegation
@@ -35,6 +37,7 @@
         - 에이전트정보
         - 상세
       messages:
+        returns: items
         description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr).
         target_description: 'op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, 파라미터 없음·최근순).'
         group: channel
@@ -72,7 +75,7 @@
           action: '[others:messages]{op: "inbox", level: "$level", search: "$q"}'
           view:
           - type: card_list
-            from: conversations
+            from: items
             master_detail: true
             empty_from: message
             item_click:
@@ -84,7 +87,7 @@
                   big: '{name}'
                   sub: '{badge}{channel|opt:  ·  ,}'
                 - type: thread
-                  from: messages
+                  from: items
                   text: '{content}'
                   mine: is_from_user
                   meta: '{contact_type}'
@@ -171,6 +174,7 @@
         - 메신저
         - 받은메시지
       neighbor:
+        returns: items
         description: 이웃(비즈니스 파트너) 조회·관리 — op:list(기본)/detail/save/delete/favorite.
         target_description: 'op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc) / delete(id 필수) / favorite(id 필수, 토글).'
         group: neighbor
@@ -193,6 +197,7 @@
         - 이웃수정
         - 즐겨찾기
       contact:
+        returns: effect
         description: 이웃 연락처 CRUD — op:add/update/delete. (email/phone/kakao/telegram/line/nostr/other)
         target_description: 'op:add(neighbor_id·contact_type·contact_value 필수) / update(contact_id 필수) / delete(contact_id 필수).'
         group: neighbor
@@ -211,6 +216,7 @@
         - 연락처수정
         - 연락처삭제
       channel_send:
+        returns: effect
         description: 메시지 발송 (Gmail/Nostr). 발신자는 자기 계정 자동 설정(없으면 차단).
         target_description: '채널 타입 (gmail/nostr). to=수신자 — 이웃 이름(주소록에서 자동 해소) 또는 이메일/npub 주소 직접 지정. subject/body로 내용 구성. 발신자는 호출 주체의 자기 계정(미설정 시 발신 차단).'
         group: channel
@@ -224,6 +230,7 @@
         - 텔레그램
         - 이메일
       channel_read:
+        returns: items
         description: 채널 수신함 조회/검색 (Gmail/Nostr/Telegram). query 있으면 검색, 없으면 최근 수신.
         target_description: 채널 타입 (gmail/nostr/telegram). query 옵션으로 검색어 (Gmail은 Gmail 검색 문법). 검색 미사용 시 max_results로 건수 제한(기본 10).
         group: channel
@@ -235,6 +242,7 @@
         - 수신
         - 메시지검색
       auto_response:
+        returns: effect
         description: 외부 메시지 자동응답 서비스 제어 — op:status(기본)/start/stop. on/off 는 영속(재시작 유지).
         group: channel
         runs_on: mac_only
@@ -255,6 +263,7 @@
         - 자동답장
         - auto reply
       feed:
+        returns: items
         description: 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원.
         target_description: 'op:read(기본 — 최근 글 조회, hashtag 옵션으로 특정 보드) / op:post(content 필수 — 커뮤니티에 글 게시).'
         group: channel
@@ -277,7 +286,7 @@
             action: '[others:feed]{op: "read"}'
             view:
             - type: card_list
-              from: posts
+              from: items
               empty_from: message
               card:
                 title: '{author}'
@@ -303,7 +312,7 @@
             action: '[others:board]{op: "list"}'
             view:
             - type: list_action
-              from: boards
+              from: items
               icon: '#'
               title: '{name}'
               sub: '#{hashtag}'
@@ -345,6 +354,7 @@
         - 글쓰기
         - 인디넷
       nostr:
+        returns: effect
         description: IndieNet/Nostr 계정 — op:profile(신원·릴레이 조회)/rename(표시이름)/relays(릴레이 조회·설정)/import_key(nsec 가져오기)/reset_identity(새 신원).
         target_description: 'op:profile(기본) / rename(name 필수) / relays(set 또는 restore_defaults 로 변경, 없으면 조회) / import_key(nsec 필수 — 기존 신원 대체) / reset_identity(새 키 생성 — 기존 신원 대체, 주의).'
         group: channel
@@ -365,6 +375,7 @@
         - 릴레이
         - 닉네임
       board:
+        returns: items
         description: 커뮤니티 보드(게시판) 관리 (IndieNet) — op:list/create/switch.
         target_description: 'op:list(기본 — 보드 목록) / op:create(name+hashtag 필수 — 새 보드) / op:switch(hashtag — 활성 보드 전환, 생략 시 기본 #indienet).'
         group: channel

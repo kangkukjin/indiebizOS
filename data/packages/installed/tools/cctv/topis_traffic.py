@@ -14,7 +14,7 @@ import time
 import urllib.request
 from typing import List, Dict, Optional
 
-from common import calculate_distance, success_response, error_response
+from cctv_common import calculate_distance, success_response, error_response
 
 TOPIS_LIST_URL = "https://topis.seoul.go.kr/map/cctv/selectCctvList.do"
 TOPIS_INFO_URL = "https://topis.seoul.go.kr/map/selectCctvInfo.do"

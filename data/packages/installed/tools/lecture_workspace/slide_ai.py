@@ -384,6 +384,21 @@ def _build_memo_block(deck: dict) -> str:
     return "\n\n".join(parts)
 
 
+def _build_neighbor_block(neighbor_briefs: Optional[list]) -> str:
+    """앞뒤 이웃 슬라이드 요약 — 텍스트 경로에서 톤·흐름 일관성 참고용(주제 결정 아님)."""
+    if not neighbor_briefs:
+        return ""
+    lines = ["## 앞뒤 이웃 슬라이드 (스타일·흐름 참고용 — 내용 복제 금지)"]
+    for b in neighbor_briefs:
+        pos = b.get("position", "")
+        lines.append(f"- [{pos}] [{b.get('layout', '?')}] {b.get('title', '(제목 없음)')}")
+    lines.append(
+        "→ 이 슬라이드가 같은 덱의 일부로 보이게 톤·강조·layout 언어를 맞추되, "
+        "이웃의 제목·내용을 베끼지 말고 이번 명제만 담아라."
+    )
+    return "\n".join(lines)
+
+
 def _build_meta_block(deck: dict) -> str:
     return (
         f"## 강의 메타\n"
@@ -401,20 +416,27 @@ def build_prompt(
     user_instruction: str,
     focus_slide: Optional[dict] = None,
     forced_layout: Optional[str] = None,
+    neighbor_briefs: Optional[list] = None,
 ) -> str:
-    """전체 사용자 프롬프트 조립 (캐시 없을 때의 폴백).
+    """전체 사용자 프롬프트 조립.
 
-    핵심 순서: 강의자의 요청 → 책 본문 → 컨텍스트(메타·데크·메모) → 출력 지시.
+    핵심 순서: 강의자의 요청 → 컨텍스트(메타·데크·메모) → 출력 지시.
     instruction을 최상단에 두는 이유 — LM의 attention이 앞쪽에 강하고, 누적 메모가
     과도하게 영향을 미쳐서 강의자 instruction을 무시하는 사례가 관찰됨.
+
+    ★자료(원고 등)는 더 이상 매 슬라이드 프롬프트에 넣지 않는다(2026-06-24). 자료는
+    '초안 생성'(outline_from_materials)에서만 통째로 읽는다. 한 장 생성은 instruction이
+    이끈다 — 일괄 생성이면 초안 단계가 자료를 소화해 instruction에 담아 넘긴다.
     """
     blocks = [
         _build_instruction_block(user_instruction, focus_slide, forced_layout),
-        _build_materials_block(deck, lecture_dir),
         _build_meta_block(deck),
         _build_deck_overview(deck),
         f"## 강의자의 호흡 (누적 메모)\n{_build_memo_block(deck)}",
     ]
+    nb = _build_neighbor_block(neighbor_briefs)
+    if nb:
+        blocks.append(nb)
     if focus_slide:
         focus_json = json.dumps(focus_slide, ensure_ascii=False, indent=2)
         blocks.append(
@@ -430,6 +452,7 @@ def _build_dynamic_prompt(
     user_instruction: str,
     focus_slide: Optional[dict] = None,
     forced_layout: Optional[str] = None,
+    neighbor_briefs: Optional[list] = None,
 ) -> str:
     """캐시 위에 얹을 **동적** 부분만 — 책 본문은 캐시에 있다는 전제.
 
@@ -448,6 +471,9 @@ def _build_dynamic_prompt(
         _build_deck_overview(deck),
         f"## 강의자의 호흡 (누적 메모)\n{_build_memo_block(deck)}",
     ]
+    nb = _build_neighbor_block(neighbor_briefs)
+    if nb:
+        blocks.append(nb)
     if focus_slide:
         focus_json = json.dumps(focus_slide, ensure_ascii=False, indent=2)
         blocks.append(
@@ -1050,6 +1076,7 @@ def generate_slide_response(
     user_instruction: str,
     focus_slide: Optional[dict] = None,
     forced_layout: Optional[str] = None,
+    neighbor_briefs: Optional[list] = None,
 ) -> dict:
     """AI 호출 → JSON 응답 파싱.
 
@@ -1058,44 +1085,16 @@ def generate_slide_response(
 
     Returns: {slide, reasoning?, speaker_note?, memo_signals?}
 
-    캐싱 전략:
-      1. 강의별 explicit cache가 있으면 cached_content로 호출 (시스템 프롬프트 + 책 본문 재사용)
-      2. 캐시 없거나 만들기 실패하면 폴백 — 모든 컨텍스트를 한 번에 보냄 (기존 동작)
+    ★자료는 매 슬라이드에 싣지 않는다(2026-06-24). 따라서 강의별 explicit cache(자료 본문 캐싱)도
+    더 이상 쓰지 않는다 — 한 장 프롬프트는 짧아서 캐시가 불필요하다. 자료는 초안 단계 전용.
     """
     if not user_instruction.strip():
         raise ValueError("user_instruction이 비어 있습니다.")
 
-    cfg = _load_system_ai_config()
-    model_name = cfg.get("model", "").strip()
-    response_text = ""
-
-    # 1) 캐시 경로 시도
-    cache_name = None
-    try:
-        cache_name = _ensure_lecture_cache(deck, lecture_dir)
-    except Exception as e:
-        print(f"[SlideCache] 보장 실패 (폴백): {e}")
-
-    if cache_name and model_name:
-        try:
-            user_prompt = _build_dynamic_prompt(
-                deck, user_instruction, focus_slide, forced_layout
-            )
-            response_text = _generate_with_cache(cache_name, user_prompt, model_name)
-        except Exception as e:
-            # 캐시 호출 실패 — 캐시가 만료됐을 수도. state 정리하고 폴백.
-            print(f"[SlideCache] 호출 실패, 폴백 inline: {e}")
-            try:
-                _delete_cache_state(deck["lecture_id"])
-            except Exception:
-                pass
-            response_text = ""  # 폴백 트리거
-
-    # 2) 폴백: 책 본문 inline (기존 방식)
-    if not response_text:
-        prompt = build_prompt(deck, lecture_dir, user_instruction, focus_slide, forced_layout)
-        ai = _get_slide_ai()
-        response_text = ai.process_message(prompt, history=[], images=[], execute_tool=None)
+    prompt = build_prompt(deck, lecture_dir, user_instruction, focus_slide, forced_layout,
+                          neighbor_briefs)
+    ai = _get_slide_ai()
+    response_text = ai.process_message(prompt, history=[], images=[], execute_tool=None)
 
     parsed = extract_json(response_text)
     if "slide" not in parsed:
@@ -1111,3 +1110,98 @@ def generate_slide_response(
             parsed["slide"]["layout"] = forced_layout
 
     return parsed
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 자료 → 슬라이드 초안 목록 (일괄 생성의 1단계: outline)
+# ─────────────────────────────────────────────────────────────────────
+
+_OUTLINE_SYSTEM_PROMPT = """당신은 강의 슬라이드 기획자다. 주어진 강의 자료(책 본문 등)와 강의 메타를 읽고,
+강의 한 편의 흐름에 맞는 **슬라이드 초안 목록**을 설계한다. 각 항목은 '슬라이드 한 장'을 만들기 위한 한 줄 지시문이다.
+
+# 원칙
+1. 첫 장은 표지(강의 제목·핵심 요지). 이후 도입 → 전개 → 정리의 자연스러운 흐름.
+2. 한 장 = 한 명제. 각 instruction은 그 슬라이드가 말할 **단 하나의 핵심 주장**을 담는다.
+   라벨('AI의 역사')이 아니라 그 슬라이드에서 무엇을 말할지가 분명해야 한다.
+3. **자료에 충실** — 자료의 프레임·사실·고유명사에서 뽑고 일반 지식으로 지어내지 말 것.
+4. instruction은 슬라이드 생성 AI가 그대로 받아 한 장을 만들 수 있도록 구체적으로(주제 + 각도). 한국어로.
+5. 너무 잘게 쪼개지 말 것 — 분량(분)을 참고해 적정한 장수로.
+
+# 출력 (JSON 한 객체만, 다른 텍스트 금지)
+{"slides": [{"instruction": "이 슬라이드가 담을 명제/주제 (한 줄)"}, {"instruction": "..."}]}
+"""
+
+
+def outline_from_materials(
+    deck: dict, lecture_dir: Path, count: Optional[int] = None, existing_count: int = 0
+) -> list:
+    """강의 자료를 읽어 슬라이드(instruction) 목록을 만든다 (슬라이드 일괄생성의 1단계).
+
+    Returns: [{"instruction": str}, ...]
+    호출자는 이 목록을 한 장씩 generate_slide_response로 돌려 강의 끝에 덧붙인다.
+    existing_count > 0 이면 '이어붙이는' 생성이므로 전체 표지를 새로 만들지 않게 안내한다
+    (1부·2부를 나눠 생성하는 흐름).
+    """
+    materials_text = _build_full_materials_text(deck, lecture_dir)
+    if not materials_text.strip():
+        raise ValueError("강의 자료가 없습니다. 먼저 자료(파일/메모)를 추가하세요.")
+
+    cfg = _load_system_ai_config()
+    api_key = (cfg.get("apiKey") or "").strip()
+    if not api_key:
+        raise RuntimeError("시스템 AI API 키가 설정되지 않았습니다. (설정 → 시스템 AI)")
+
+    if count is not None:
+        try:
+            count = max(1, min(40, int(count)))
+        except (TypeError, ValueError):
+            count = None
+
+    count_directive = (
+        f"슬라이드를 **정확히 {count}장** 설계하라."
+        if count else
+        "강의 분량과 자료의 밀도에 맞춰 적정한 장수(보통 6~20장)로 설계하라."
+    )
+    if existing_count and existing_count > 0:
+        flow_directive = (
+            f"★이 강의엔 이미 슬라이드 {existing_count}장이 있고, 이번에 만드는 슬라이드는 그 **뒤에 이어붙는다**. "
+            "전체 강의 표지를 새로 만들지 말고 곧장 내용 슬라이드부터 구성하라. "
+            "이 자료가 새로운 부(部)의 시작이라면 짧은 부 도입(섹션 표지) 1장 정도만 허용."
+        )
+    else:
+        flow_directive = "첫 장은 표지(강의 제목·핵심 요지)로 시작해 도입→전개→정리 흐름으로 구성하라."
+    user_prompt = "\n\n".join([
+        f"# 강의 메타\n{_build_meta_block(deck)}",
+        f"# 지시\n{count_directive} {flow_directive} 위 원칙대로 슬라이드 목록을 JSON으로 출력하라.",
+        f"# 강의 자료 (이 내용에서 직접 추출)\n{materials_text}",
+    ])
+
+    from providers import get_provider
+    provider = get_provider(
+        (cfg.get("provider") or "anthropic").strip(),
+        api_key=api_key,
+        model=(cfg.get("model") or "").strip(),
+        system_prompt=_OUTLINE_SYSTEM_PROMPT,
+        tools=[],
+    )
+    provider.init_client()
+    response_text = provider.process_message(user_prompt, history=[], images=[], execute_tool=None)
+
+    parsed = extract_json(response_text)
+    slides = parsed.get("slides")
+    if not isinstance(slides, list) or not slides:
+        raise ValueError("AI가 슬라이드 목록을 만들지 못했습니다. 응답: " + (response_text or "")[:300])
+
+    out = []
+    for s in slides:
+        if isinstance(s, dict):
+            instr = (s.get("instruction") or s.get("title") or "").strip()
+        else:
+            instr = str(s).strip()
+        if instr:
+            out.append({"instruction": instr})
+    if not out:
+        raise ValueError("유효한 슬라이드 초안이 없습니다.")
+    if count:
+        out = out[:count]
+    return out

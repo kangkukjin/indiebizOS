@@ -348,8 +348,10 @@ def _execute_manage_events(tool_input: dict) -> str:
             month = tool_input.get("month")
             events = cm.list_events(year=year, month=month)
             if not events:
-                return json.dumps({"success": True, "events": [], "message": "등록된 이벤트가 없습니다."}, ensure_ascii=False)
-            return json.dumps({"success": True, "events": events, "count": len(events)}, ensure_ascii=False)
+                return json.dumps({"success": True, "items": [], "message": "등록된 이벤트가 없습니다."}, ensure_ascii=False)
+            # 단일 통화 items = native 이벤트(풍부 dict: id/date/time/title/repeat/type/description)
+            # calendar 뷰가 id/date/title 직독, chart/document 소비자는 items에서 칸 탐색.
+            return json.dumps({"success": True, "items": events, "count": len(events)}, ensure_ascii=False)
 
         elif action in ("add", "create"):
             title = tool_input.get("title")

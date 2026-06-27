@@ -99,7 +99,7 @@ def execute(tool_input: dict, context) -> str:
             )
             # 레코드 통화 부착(비파괴) — posts 목록을 records로.
             if isinstance(result, dict) and isinstance(result.get("posts"), list):
-                result["records"] = _posts_to_records(result["posts"])
+                result["items"] = _posts_to_records(result["posts"])
             return format_json(result)
 
         elif tool_name == "blog_get_post":
@@ -175,7 +175,7 @@ def execute(tool_input: dict, context) -> str:
                 result = {"success": False, "error": f"알 수 없는 mode '{mode}'. (hybrid|semantic|content)"}
             # 레코드 통화 부착(비파괴) — 검색 results 목록을 records로(content는 단건이라 미부착).
             if isinstance(result, dict) and isinstance(result.get("results"), list):
-                result["records"] = _results_to_records(result["results"])
+                result["items"] = _results_to_records(result["results"])
             return format_json(result)
 
         # RAG 검색 도구들

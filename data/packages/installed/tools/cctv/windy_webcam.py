@@ -12,7 +12,7 @@ import os
 import requests
 from typing import Optional
 
-from common import calculate_distance, success_response, error_response
+from cctv_common import calculate_distance, success_response, error_response
 
 WINDY_API_KEY = os.environ.get("WINDY_API_KEY", "")
 WINDY_API_BASE = "https://webcams.windy.com/webcams/api/v3/webcams"
@@ -104,6 +104,11 @@ def _format_webcam(webcam: dict, ref_lat: float = None, ref_lon: float = None) -
     if urls:
         result["detail_url"] = urls.get("detail", "")
 
+    # 통화 일관성: 교통 CCTV item(name/url)과 같은 키도 채운다 — 단일 통화 items 가
+    # 소스(windy/kakao/utic…)에 상관없이 같은 모양으로 흐르도록(cctv_open·렌더러가 url·name 직독).
+    result["name"] = result["title"]
+    result["url"] = result["player_url"] or result["detail_url"] or result["image_url"]
+
     # 거리 계산
     if ref_lat is not None and ref_lon is not None and lat and lon:
         result["distance_km"] = round(calculate_distance(ref_lat, ref_lon, lat, lon), 2)
@@ -174,7 +179,7 @@ def get_nearby_webcam(lat: float, lon: float, radius_km: float = 50, count: int 
             source="windy_webcams",
             count=len(formatted),
             search_location={"lat": lat, "lon": lon},
-            webcams=formatted
+            items=formatted  # 단일 통화 = native 웹캠 dict([sense:cctv]{op:webcam})
         )
     except Exception as e:
         return error_response(str(e))

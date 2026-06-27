@@ -464,7 +464,7 @@
     },
     {
       "name": "create_slide",
-      "description": "슬라이드 한 장 저작 기층 액션 [engines:slide]. 자연어 명령 한 줄을 받아 메시지 큐레이션(제목=명제, 한 장 한 아이디어)과 디자인 판단까지 한 뒤, 자유형(custom) HTML 슬라이드 한 장을 PNG로 렌더해 반환한다. slide_shadcn(완성 spec→PNG 렌더러) 위의 저자 층 — AI가 이 액션을 조합해 리포트→슬라이드, 검색결과→카드 등 더 큰 산출물을 만들 수 있다.\n\n## 호출\n[engines:slide]{instruction: \"AI 협업의 핵심을 한 장으로\", design_system: \"vintage_book\"}\n\n참고 사실이 있으면 content로 넘겨 환각 방지. 이미지 API는 호출하지 않음(SVG/이모지/아이콘으로 시각화).",
+      "description": "슬라이드 한 장 저작 기층 액션 [engines:slide]. 자연어 명령 한 줄을 받아 메시지 큐레이션(제목=명제, 한 장 한 아이디어)과 디자인 판단까지 한 뒤 PNG 한 장을 렌더해 반환한다. **기본값은 native(통짜 이미지, NotebookLM식 — 이미지 모델이 한글·다이어그램·일러스트를 한 장에 통째로 저작).** 빠르고 무료인 텍스트형(custom HTML, 이미지 API 안 씀)이 필요하면 style:\"text\"를 명시하라 — 카드/리포트 타일 등 발표 슬라이드가 아닌 대량·경량 용도엔 text가 적합. slide_shadcn(완성 spec→PNG 렌더러) 위의 저자 층.\n\n## 호출\n[engines:slide]{instruction: \"AI 협업의 핵심을 한 장으로\", aesthetic: \"vintage_book\"}  // 기본 native\n[engines:slide]{instruction: \"...\", style: \"text\", design_system: \"vintage_book\"}  // 빠른 텍스트형\n\n참고 사실이 있으면 content로 넘겨 환각 방지.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -490,15 +490,19 @@
           },
           "style": {
             "type": "string",
-            "description": "프리미엄 이미지 스타일: ink_blueprint(잉크+청사진)/cinematic_3d(시네마틱)/isometric(아이소메트릭)/lineart_duotone(라인아트). 지정 시 개념 일러스트(Nano Banana Pro) 생성+합성(느림·비용). 미지정/\"text\"면 텍스트형 빠른 경로. (선택)"
+            "description": "미지정 기본값=\"native\"(통짜 이미지 — 이미지 모델이 한글·다이어그램·일러스트를 한 장에 통째로 저작, NotebookLM식 시각=의미 융합. aesthetic으로 톤 고정, quality/image_size/verify 옵션). 유일한 대안은 \"text\"(자유형 HTML 빠른 경로·무료) — 카드/리포트 타일 등 발표 슬라이드가 아닌 경량 용도에만 명시. (선택)"
+          },
+          "aesthetic": {
+            "type": "string",
+            "description": "native 톤(한 덱을 한 톤으로 고정하면 일관된 책): vintage_book/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint. 미지정 시 design_system에서 매핑, 폴백 vintage_book. (선택)"
+          },
+          "image_size": {
+            "type": "string",
+            "description": "native 해상도: 1K/2K(기본)/4K. (선택)"
           },
           "quality": {
             "type": "string",
-            "description": "이미지 스타일일 때 생성 품질: pro(기본, Nano Banana Pro 2K)/fast. (선택)"
-          },
-          "composition": {
-            "type": "string",
-            "description": "이미지 스타일일 때 구성 강제(선택): diptych(좌우대비)/hero(선언)/side_panel(설명)/center_anchor(중심상징)/annotated(주석도면)/process(3단흐름). 미지정이면 AI가 내용에 맞게 선택."
+            "description": "native 생성 품질: pro(기본, Nano Banana Pro)/fast. (선택)"
           }
         },
         "required": [

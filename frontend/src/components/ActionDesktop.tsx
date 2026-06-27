@@ -8,7 +8,6 @@
  * 이 탭은 '내가 직접 다이얼을 도는' 수동 운전이다. 같은 도메인의 두 얼굴.
  */
 import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
-import { RealtyInstrument } from './RealtyInstrument';
 import { CommercialInstrument } from './CommercialInstrument';
 import { DirectionsInstrument } from './DirectionsInstrument';
 import { CalendarInstrument } from './CalendarInstrument';
@@ -38,7 +37,7 @@ const STATIC_DOMAINS: Domain[] = [
   {
     id: 'realestate', icon: '🏢', label: '부동산',
     instruments: [
-      { id: 'realty', icon: '🏢', label: '실거래가', el: <RealtyInstrument /> },
+      { id: 'realty', icon: '🏢', label: '실거래가' },  // el 은 manifest app: 블록(GenericInstrument)으로 useMemo 에서 주입 — bespoke 은퇴
       { id: 'commercial', icon: '🏪', label: '상권', el: <CommercialInstrument /> },
       { id: 'listing', icon: '🔑', label: '매물', soon: true },
     ],
@@ -57,7 +56,7 @@ const STATIC_DOMAINS: Domain[] = [
     id: 'device', icon: '🖥️', label: '내 기기',
     instruments: [
       { id: 'photo', icon: '📷', label: '사진', onOpen: () => window.electron?.openPhotoManagerWindow?.(null) },
-      { id: 'pcmanager', icon: '🗂️', label: 'PC 관리', onOpen: () => window.electron?.openPCManagerWindow?.(null) },
+      { id: 'files', icon: '🗂️', label: '파일', onOpen: () => window.electron?.openPCManagerWindow?.(null) },
     ],
   },
   // 강의 만들기 — 홈 아이콘 한 번으로 강의 워크스페이스 네이티브 창 열기.
@@ -116,6 +115,17 @@ export function ActionDesktop() {
     // STATIC_DOMAINS가 이미 품은 계기(예: 부동산 안의 realty)는 매니페스트로 덮어쓰지 않는다
     const shown = manifest.filter((i) => !STATIC_INSTRUMENT_IDS.has(i.id));
     shown.forEach((inst) => byId.set(inst.id, manifestToDomain(inst)));
+    // realty: 부동산 도메인 안에서 선언형(manifest app: 블록 → GenericInstrument)으로 렌더한다.
+    // bespoke RealtyInstrument 은퇴 → 맥·폰·원격이 단일 선언을 공유(드리프트 근절).
+    const realtyInst = manifest.find((i) => i.id === 'realty');
+    const realestate = byId.get('realestate');
+    if (realtyInst && realestate) {
+      byId.set('realestate', {
+        ...realestate,
+        instruments: realestate.instruments.map((ins) =>
+          ins.id === 'realty' ? { ...ins, el: <GenericInstrument instrument={realtyInst} /> } : ins),
+      });
+    }
     const ordered = HOME_ORDER.map((id) => byId.get(id)).filter((d): d is Domain => !!d);
     const extras = shown.filter((i) => !HOME_ORDER.includes(i.id)).map(manifestToDomain);
     return [...ordered, ...extras];

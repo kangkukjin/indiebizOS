@@ -24,6 +24,11 @@ interface LectureWorkspaceProps {
   initialLectureId: string | null;
 }
 
+// 통짜 이미지(native) / 업로드 이미지(image) 슬라이드는 글자가 PNG에 구워져 있어
+// 필드 직접 편집(spec patch → HTML 재렌더)이 불가능하다. 이런 슬라이드는 AI 채팅으로
+// '재생성'해서 바꿔야 한다 → 필드 편집(✏️) 버튼을 숨긴다.
+const isBakedImageSlide = (layout: string) => layout === 'native' || layout === 'image';
+
 export function LectureWorkspace({ initialLectureId }: LectureWorkspaceProps) {
   const [lectures, setLectures] = useState<LectureSummary[]>([]);
   const [currentLectureId, setCurrentLectureId] = useState<string | null>(initialLectureId);
@@ -55,6 +60,12 @@ export function LectureWorkspace({ initialLectureId }: LectureWorkspaceProps) {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // deck를 로컬 state에서만 갱신 (전체 리로드 없이) — 노트/메모 자동저장이 로딩 화면을
+  // 띄워 textarea를 언마운트시키던(포커스 유실) 문제를 막는다.
+  const patchDeckLocal = useCallback((mutate: (deck: Deck) => Deck) => {
+    setLoaded((prev) => (prev ? { ...prev, deck: mutate(prev.deck) } : prev));
   }, []);
 
   // 초기 로드
@@ -161,6 +172,7 @@ export function LectureWorkspace({ initialLectureId }: LectureWorkspaceProps) {
       <WorkspaceBody
         loaded={loaded}
         onChange={() => loadLecture(loaded.deck.lecture_id)}
+        onPatchDeck={patchDeckLocal}
       />
     </div>
   );
@@ -354,8 +366,9 @@ function SlidePreviewModal(props: {
 function WorkspaceBody(props: {
   loaded: LectureLoadResponse;
   onChange: () => void;
+  onPatchDeck: (mutate: (deck: Deck) => Deck) => void;
 }) {
-  const { loaded, onChange } = props;
+  const { loaded, onChange, onPatchDeck } = props;
   const [focusSlideId, setFocusSlideId] = useState<string | null>(null);
   const [insertBeforeIndex, setInsertBeforeIndex] = useState<number | null>(null);
   const [previewSlideId, setPreviewSlideId] = useState<string | null>(null);
@@ -414,7 +427,10 @@ function WorkspaceBody(props: {
           lectureId={loaded.deck.lecture_id}
           materials={loaded.deck.materials}
           materialsDir={loaded.materials_dir}
+          lectureMemo={loaded.deck.lecture_memo ?? ''}
+          focusedSlide={focusSlideId ? loaded.deck.slides[focusSlideId] ?? null : null}
           onChange={onChange}
+          onPatchDeck={onPatchDeck}
         />
         <DeckPanel
           lectureId={loaded.deck.lecture_id}
@@ -446,10 +462,14 @@ function WorkspaceBody(props: {
           onNext={() => handlePreviewNav(1)}
           canPrev={previewIndex > 0}
           canNext={previewIndex < order.length - 1}
-          onEdit={() => {
-            setSpecEditSlideId(previewSlideId);
-            setPreviewSlideId(null);
-          }}
+          onEdit={
+            isBakedImageSlide(loaded.deck.slides[previewSlideId].layout)
+              ? undefined
+              : () => {
+                  setSpecEditSlideId(previewSlideId);
+                  setPreviewSlideId(null);
+                }
+          }
         />
       )}
       {specEditSlideId && loaded.deck.slides[specEditSlideId] && (
@@ -481,7 +501,24 @@ function LectureSelectScreen(props: {
   onRefresh: () => void;
   error: string | null;
 }) {
-  const { lectures, showCreateForm, setShowCreateForm, onSelect, onCreated, error } = props;
+  const { lectures, showCreateForm, setShowCreateForm, onSelect, onCreated, onRefresh, error } = props;
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (L: LectureSummary, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm(`강의 "${L.title}"을(를) 삭제할까요?\n\n슬라이드 ${L.slide_count}장과 자료를 포함해 폴더 전체가 영구 삭제됩니다.`)) {
+      return;
+    }
+    setDeletingId(L.lecture_id);
+    try {
+      await api.deleteLecture(L.lecture_id);
+      onRefresh();
+    } catch (err) {
+      alert('삭제 실패: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="h-screen w-screen overflow-y-auto p-8">
@@ -522,7 +559,7 @@ function LectureSelectScreen(props: {
                 <li
                   key={L.lecture_id}
                   onClick={() => onSelect(L.lecture_id)}
-                  className="p-4 hover:bg-stone-50 cursor-pointer flex items-center justify-between"
+                  className="group p-4 hover:bg-stone-50 cursor-pointer flex items-center justify-between gap-3"
                 >
                   <div className="min-w-0">
                     <div className="font-semibold text-stone-800 truncate">{L.title}</div>
@@ -532,7 +569,17 @@ function LectureSelectScreen(props: {
                     </div>
                     <div className="text-xs text-stone-400 mt-0.5 font-mono">{L.lecture_id}</div>
                   </div>
-                  <div className="text-stone-300 text-xl">›</div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={(e) => handleDelete(L, e)}
+                      disabled={deletingId === L.lecture_id}
+                      title="강의 삭제 (폴더 전체)"
+                      className="px-2 py-1 text-xs text-stone-400 hover:text-white hover:bg-red-500 rounded opacity-0 group-hover:opacity-100 transition disabled:opacity-60"
+                    >
+                      {deletingId === L.lecture_id ? '삭제 중…' : '🗑 삭제'}
+                    </button>
+                    <div className="text-stone-300 text-xl">›</div>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -553,8 +600,11 @@ function CreateLectureForm(props: {
   const [thesis, setThesis] = useState('');
   const [duration, setDuration] = useState('60');
   const [designSystem, setDesignSystem] = useState('vintage_book');
+  const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const submit = async () => {
     if (!title.trim()) {
@@ -571,11 +621,25 @@ function CreateLectureForm(props: {
         duration_minutes: parseInt(duration) || undefined,
         design_system: designSystem,
       });
+      // 업로드한 파일을 강의 자료로 등록 (강의 생성 직후). 자료가 있으면 워크스페이스에서
+      // "슬라이드 일괄생성"으로 여러 장을 한 번에 만들어 강의 끝에 덧붙일 수 있다.
+      if (files.length > 0) {
+        for (let i = 0; i < files.length; i++) {
+          setProgress(`자료 업로드 중… (${i + 1}/${files.length}) ${files[i].name}`);
+          try {
+            await api.uploadMaterial(result.lecture_id, files[i]);
+          } catch (e) {
+            // 한 파일 실패해도 강의 생성은 유지 — 경고만
+            console.warn('자료 업로드 실패:', files[i].name, e);
+          }
+        }
+      }
       props.onCreated(result.lecture_id);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSubmitting(false);
+      setProgress(null);
     }
   };
 
@@ -639,6 +703,26 @@ function CreateLectureForm(props: {
             </optgroup>
           </select>
         </Field>
+        <Field label="강의 자료 (선택 — 일괄생성용 원고·파일)">
+          <div className="space-y-1.5">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={(e) => setFiles(Array.from(e.target.files || []))}
+              className="block w-full text-sm text-stone-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-stone-100 file:text-stone-700 hover:file:bg-stone-200"
+            />
+            {files.length > 0 && (
+              <div className="text-xs text-stone-500">
+                {files.length}개 파일 선택됨 — 강의 생성 후 자료로 등록됩니다.
+              </div>
+            )}
+            <div className="text-[11px] text-stone-400">
+              자료는 <b>“슬라이드 일괄생성”</b>에만 쓰입니다 — 매 슬라이드 프롬프트엔 들어가지 않아요. (docx·txt·md·pdf)
+            </div>
+          </div>
+        </Field>
+        {progress && <div className="text-xs text-stone-500">{progress}</div>}
         {error && <div className="text-sm text-red-600">{error}</div>}
         <div className="flex gap-2 pt-2">
           <button
@@ -646,7 +730,7 @@ function CreateLectureForm(props: {
             disabled={submitting}
             className="px-4 py-2 bg-stone-800 text-white rounded hover:bg-stone-700 disabled:opacity-50"
           >
-            {submitting ? '생성 중...' : '만들기'}
+            {submitting ? (progress ? '자료 업로드 중...' : '생성 중...') : '만들기'}
           </button>
           <button
             onClick={props.onCancel}
@@ -681,6 +765,33 @@ function LectureHeader(props: {
   onChange: () => void;
 }) {
   const { deck, onBack, onChange } = props;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(deck.title);
+  const [saving, setSaving] = useState(false);
+
+  const startEdit = () => {
+    setDraft(deck.title);
+    setEditing(true);
+  };
+
+  const save = async () => {
+    const next = draft.trim();
+    if (!next || next === deck.title) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.updateDeckMeta(deck.lecture_id, { title: next });
+      onChange();
+      setEditing(false);
+    } catch (e) {
+      alert('제목 변경 실패: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <header className="px-6 py-3 bg-white border-b border-stone-200 flex items-center gap-4">
       <button
@@ -690,7 +801,29 @@ function LectureHeader(props: {
         ← 목록
       </button>
       <div className="flex-1 min-w-0">
-        <h1 className="text-lg font-semibold text-stone-800 truncate">{deck.title}</h1>
+        {editing ? (
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={save}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); save(); }
+              else if (e.key === 'Escape') { e.preventDefault(); setEditing(false); }
+            }}
+            disabled={saving}
+            autoFocus
+            className="w-full text-lg font-semibold text-stone-900 border border-stone-300 rounded px-2 py-0.5 focus:outline-none focus:border-stone-500 disabled:opacity-60"
+          />
+        ) : (
+          <h1
+            onClick={startEdit}
+            title="클릭하여 제목 수정"
+            className="group/title text-lg font-semibold text-stone-800 truncate cursor-text hover:text-stone-600"
+          >
+            {deck.title}
+            <span className="ml-2 text-xs text-stone-300 group-hover/title:text-stone-500">✏️</span>
+          </h1>
+        )}
         <div className="text-xs text-stone-500 truncate">
           {deck.audience && `${deck.audience}`}
           {deck.duration_minutes ? ` · ${deck.duration_minutes}분` : ''}
@@ -778,13 +911,13 @@ function MaterialsPanel(props: {
   lectureId: string;
   materials: MaterialEntry[];
   materialsDir: string;
+  lectureMemo: string;
+  focusedSlide: SlideMeta | null;
   onChange: () => void;
+  onPatchDeck: (mutate: (deck: Deck) => Deck) => void;
 }) {
-  const { lectureId, materials, onChange } = props;
+  const { lectureId, materials, lectureMemo, focusedSlide, onChange, onPatchDeck } = props;
   const [uploading, setUploading] = useState(false);
-  const [showTextEntry, setShowTextEntry] = useState(false);
-  const [noteText, setNoteText] = useState('');
-  const [noteName, setNoteName] = useState('notes.md');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -805,7 +938,7 @@ function MaterialsPanel(props: {
   };
 
   const handleDelete = async (filename: string) => {
-    if (!confirm(`재료 삭제: ${filename}?`)) return;
+    if (!confirm(`자료 삭제: ${filename}?`)) return;
     try {
       await api.removeMaterial(lectureId, filename);
       onChange();
@@ -814,79 +947,31 @@ function MaterialsPanel(props: {
     }
   };
 
-  const submitText = async () => {
-    if (!noteText.trim() || !noteName.trim()) return;
-    try {
-      await api.addMaterialText(lectureId, noteText, noteName);
-      setNoteText('');
-      setNoteName('notes.md');
-      setShowTextEntry(false);
-      onChange();
-    } catch (err) {
-      alert('추가 실패: ' + (err instanceof Error ? err.message : String(err)));
-    }
-  };
-
   return (
     <aside className="w-72 flex-shrink-0 flex flex-col bg-white border-r border-stone-200">
-      <div className="px-4 py-3 border-b border-stone-100">
-        <h2 className="text-sm font-semibold text-stone-700">📚 재료</h2>
-      </div>
-      <div className="p-3 border-b border-stone-100 space-y-2">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="w-full px-3 py-2 text-sm bg-stone-100 hover:bg-stone-200 rounded text-stone-700 disabled:opacity-50"
-        >
-          {uploading ? '업로드 중...' : '+ 파일 업로드'}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        <button
-          onClick={() => setShowTextEntry(!showTextEntry)}
-          className="w-full px-3 py-2 text-sm bg-stone-50 hover:bg-stone-100 rounded text-stone-600 border border-stone-200"
-        >
-          + 메모 작성
-        </button>
-        {showTextEntry && (
-          <div className="space-y-1 pt-1">
-            <input
-              value={noteName}
-              onChange={(e) => setNoteName(e.target.value)}
-              placeholder="파일명"
-              className="w-full px-2 py-1 text-xs border border-stone-300 rounded text-stone-900 placeholder:text-stone-400"
-            />
-            <textarea
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              placeholder="메모 내용..."
-              rows={5}
-              className="w-full px-2 py-1 text-xs border border-stone-300 rounded resize-y text-stone-900 placeholder:text-stone-400"
-            />
-            <button
-              onClick={submitText}
-              className="w-full px-2 py-1 text-xs bg-stone-700 text-white rounded hover:bg-stone-600"
-            >
-              저장
-            </button>
-          </div>
-        )}
-      </div>
-      <div className="flex-1 overflow-y-auto p-2">
+      {/* 자료 (일괄생성용) — 보통 1개라 상단에 컴팩트하게 */}
+      <div className="px-4 pt-3 pb-2 border-b border-stone-100 shrink-0">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-stone-700">📎 자료</h2>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="px-2 py-1 text-xs bg-stone-100 hover:bg-stone-200 rounded text-stone-700 disabled:opacity-50"
+          >
+            {uploading ? '업로드 중…' : '+ 파일'}
+          </button>
+        </div>
+        <p className="text-[11px] text-stone-400 mt-1 leading-snug">슬라이드 일괄생성에만 사용 · 매 슬라이드엔 미포함</p>
+        <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" />
         {materials.length === 0 ? (
-          <div className="text-xs text-stone-400 px-2 py-4 text-center">
-            아직 재료가 없습니다.
+          <div className="text-[11px] text-stone-400 py-2 leading-snug">
+            아직 자료 없음 — 원고를 올리면 “슬라이드 일괄생성”에 쓰입니다.
           </div>
         ) : (
-          <ul className="space-y-1">
+          <ul className="mt-2 space-y-1 max-h-28 overflow-y-auto">
             {materials.map((m, idx) => (
-              <li key={idx} className="group flex items-center gap-2 px-2 py-1.5 hover:bg-stone-50 rounded">
-                <span className="text-sm flex-1 truncate text-stone-700" title={m.file}>
+              <li key={idx} className="group flex items-center gap-2 px-1.5 py-1 hover:bg-stone-50 rounded">
+                <span className="text-xs flex-1 truncate text-stone-700" title={m.file}>
                   <MaterialIcon type={m.type} /> {m.file.replace('materials/', '')}
                 </span>
                 <button
@@ -901,7 +986,172 @@ function MaterialsPanel(props: {
           </ul>
         )}
       </div>
+
+      {/* 메모 — 가장 큰 영역. 강의 전체 노트(항상 표시, AI 미참조). */}
+      <div className="flex-1 min-h-0 flex flex-col p-3 border-b border-stone-100">
+        <div className="flex items-center justify-between mb-1.5 shrink-0">
+          <h3 className="text-xs font-semibold text-stone-600">📝 메모</h3>
+          <span className="text-[11px] text-stone-400">나만 보기 · AI 미참조</span>
+        </div>
+        <AutoSaveNote
+          noteKey="lecture-memo"
+          value={lectureMemo}
+          onSave={async (text) => {
+            await api.updateDeckMeta(lectureId, { lecture_memo: text });
+            onPatchDeck((d) => ({ ...d, lecture_memo: text }));  // 리로드 없이 로컬 갱신 → 포커스 유지
+          }}
+          placeholder="강의 전체를 위한 노트를 자유롭게 적어두세요…"
+          grow
+        />
+      </div>
+
+      {/* 강의 노트 — 선택한 슬라이드별 (컴팩트) */}
+      <SlideNotePanel
+        lectureId={lectureId}
+        slide={focusedSlide}
+        onPatchDeck={onPatchDeck}
+      />
     </aside>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// 자동 저장 메모 입력칸 (재사용) — 디바운스 + blur + 언마운트 flush + 버튼.
+// blur에만 의존하면 다른 앱/창으로 전환 시 마지막 입력이 유실되던 문제를 막는다.
+// ─────────────────────────────────────────────────────────
+
+function AutoSaveNote(props: {
+  noteKey: string;                          // 정체성(슬라이드 id 등) — 바뀌면 draft 재동기화
+  value: string;                            // 저장된 값
+  onSave: (text: string) => Promise<void>;  // 실제 저장
+  placeholder: string;
+  rows?: number;
+  grow?: boolean;                           // true면 부모 높이를 채움(flex-1)
+}) {
+  const { noteKey, value, onSave, placeholder, rows = 4, grow = false } = props;
+  const [draft, setDraft] = useState(value);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
+
+  // 항상 최신 값을 ref로 — flush·동기화가 stale 클로저를 안 잡게
+  const latest = useRef({ draft, value });
+  latest.current = { draft, value };
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
+  const inFlight = useRef(false);
+
+  // draft는 '대상(noteKey)이 바뀔 때만' 저장본으로 재동기화한다.
+  // value(저장본) 변화에는 재동기화하지 않음 — 자동저장 직후의 echo가 입력 중 텍스트를
+  // 덮어써서 커서/포커스가 튀고 다시 클릭해야 하던 문제를 막는다.
+  useEffect(() => { setDraft(latest.current.value); }, [noteKey]);
+
+  const dirty = draft !== value;
+
+  // 조용한 저장(디바운스·blur·언마운트용) — 실패는 상태로만 표시, alert 안 띄움
+  const flush = useCallback(() => {
+    const { draft, value } = latest.current;
+    if (draft === value || inFlight.current) return;
+    inFlight.current = true;
+    onSaveRef.current(draft)
+      .then(() => setError(false))
+      .catch(() => setError(true))
+      .finally(() => { inFlight.current = false; });
+  }, []);
+
+  // 입력 멈추면 ~1분 뒤 자동 저장 (너무 잦은 저장 방지).
+  // 즉시 저장이 필요한 순간(포커스 벗어남·슬라이드 전환·창 닫기·저장 버튼)은 별도로 항상 저장하므로
+  // 이 간격을 길게 둬도 유실 위험은 없다.
+  useEffect(() => {
+    if (!dirty) return;
+    const t = setTimeout(flush, 60000);
+    return () => clearTimeout(t);
+  }, [draft, dirty, flush]);
+
+  // 슬라이드 전환·창 닫기(언마운트) 시 미저장분 flush
+  useEffect(() => () => flush(), [flush]);
+
+  // 명시적 저장(버튼) — 실패 시 alert
+  const saveNow = async () => {
+    if (saving || !dirty) return;
+    setSaving(true);
+    try {
+      await onSave(draft);
+      setError(false);
+    } catch (e) {
+      setError(true);
+      alert('저장 실패: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className={grow ? 'flex flex-col min-h-0 flex-1' : ''}>
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={flush}
+        placeholder={placeholder}
+        rows={grow ? undefined : rows}
+        className={`w-full px-2 py-1.5 text-xs border border-stone-300 rounded bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-500 ${grow ? 'flex-1 min-h-0 resize-none' : 'resize-y'}`}
+      />
+      <div className="flex items-center justify-between mt-1 shrink-0">
+        <span className={`text-[11px] ${error ? 'text-red-500' : 'text-stone-400'}`}>
+          {saving ? '저장 중…' : error ? '⚠ 저장 실패 — 다시 시도' : dirty ? '자동 저장 대기…' : '저장됨'}
+        </span>
+        <button
+          onClick={saveNow}
+          disabled={saving || !dirty}
+          className="px-2 py-0.5 text-[11px] bg-stone-700 text-white rounded hover:bg-stone-600 disabled:opacity-40"
+        >
+          저장
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// 좌패널 하단: 선택된 슬라이드의 강의 노트 (말할 내용)
+// ─────────────────────────────────────────────────────────
+
+function SlideNotePanel(props: {
+  lectureId: string;
+  slide: SlideMeta | null;
+  onPatchDeck: (mutate: (deck: Deck) => Deck) => void;
+}) {
+  const { lectureId, slide, onPatchDeck } = props;
+
+  return (
+    <div className="border-t border-stone-200 p-3 bg-stone-50/70 flex-shrink-0">
+      <div className="flex items-center justify-between mb-1.5">
+        <h3 className="text-xs font-semibold text-stone-600">🎤 강의 노트 (슬라이드별)</h3>
+        {slide && (
+          <span className="text-[11px] text-stone-400 truncate max-w-[140px]" title={slide.title || slide.id}>
+            {slide.title || slide.id}
+          </span>
+        )}
+      </div>
+      {slide ? (
+        <AutoSaveNote
+          noteKey={slide.id}
+          value={slide.speaker_note ?? ''}
+          onSave={async (text) => {
+            await api.setSlideNote(lectureId, slide.id, text);
+            onPatchDeck((d) => ({
+              ...d,
+              slides: { ...d.slides, [slide.id]: { ...d.slides[slide.id], speaker_note: text } },
+            }));  // 리로드 없이 로컬 갱신 → 포커스 유지, 슬라이드 전환 시에도 최신 노트 표시
+          }}
+          placeholder="이 슬라이드에서 말할 내용을 적어두세요…"
+          rows={4}
+        />
+      ) : (
+        <div className="text-[11px] text-stone-400 py-2 leading-relaxed">
+          슬라이드를 <b>클릭</b>하면 여기에 강의할 때 말할 내용을 적어둘 수 있어요.
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -913,6 +1163,235 @@ function MaterialIcon(props: { type: string }) {
     image: '🖼️',
   };
   return <span className="mr-1">{iconMap[props.type] || '📎'}</span>;
+}
+
+
+// ─────────────────────────────────────────────────────────
+// 슬라이드 일괄생성 (자료 기반 outline → 순차 생성, 강의 끝에 덧붙임)
+// ─────────────────────────────────────────────────────────
+
+function BatchFromMaterials(props: {
+  lectureId: string;
+  hasMaterials: boolean;
+  isNativeDeck: boolean;
+  variant?: 'button' | 'cta';
+  onChange: () => void;
+}) {
+  const { lectureId, hasMaterials, isNativeDeck, variant = 'button', onChange } = props;
+  const [open, setOpen] = useState(false);
+  const [countMode, setCountMode] = useState<'auto' | 'fixed'>('auto');
+  const [count, setCount] = useState('10');
+  const [imageQuality, setImageQuality] = useState<'pro' | 'fast'>('pro');
+  const [running, setRunning] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const cancelRef = useRef(false);
+
+  const run = async () => {
+    setRunning(true);
+    setError(null);
+    cancelRef.current = false;
+    try {
+      setStatus('자료에서 슬라이드 구성 중… (AI 1회 호출)');
+      const desired = countMode === 'fixed' ? (parseInt(count) || undefined) : undefined;
+      const outline = await api.outlineLecture(lectureId, desired);
+      const slides = outline.slides || [];
+      if (slides.length === 0) throw new Error('생성할 슬라이드가 없습니다.');
+
+      for (let i = 0; i < slides.length; i++) {
+        if (cancelRef.current) {
+          setStatus(`중단됨 — ${i}/${slides.length}장까지 생성했습니다.`);
+          break;
+        }
+        setStatus(`슬라이드 생성 중… (${i + 1}/${slides.length})\n${slides[i].instruction.slice(0, 40)}`);
+        try {
+          // insert_at 없이 끝에 추가 → 순서대로 쌓이고, 각 장은 직전 장 스타일을 자동 참고.
+          // 통짜 이미지 덱이면 선택한 이미지 품질(pro/fast)로 생성.
+          await api.createSlide(
+            lectureId, slides[i].instruction, undefined, undefined,
+            isNativeDeck ? imageQuality : undefined,
+          );
+          onChange();
+        } catch (e) {
+          console.warn('슬라이드 생성 실패 (건너뜀):', slides[i].instruction, e);
+        }
+      }
+      if (!cancelRef.current) {
+        setStatus(`완료 — ${slides.length}장 생성했습니다.`);
+        setTimeout(() => { setOpen(false); setStatus(null); }, 1400);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const trigger =
+    variant === 'cta' ? (
+      <button
+        onClick={() => setOpen(true)}
+        disabled={!hasMaterials}
+        className="px-5 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-500 disabled:opacity-40 disabled:cursor-not-allowed"
+        title={hasMaterials ? '자료를 바탕으로 여러 장을 한 번에 생성' : '먼저 좌측에서 자료를 추가하세요'}
+      >
+        📑 슬라이드 일괄생성
+      </button>
+    ) : (
+      <button
+        onClick={() => setOpen(true)}
+        disabled={!hasMaterials}
+        title={hasMaterials ? '자료를 바탕으로 여러 장을 한 번에 생성' : '먼저 좌측에서 자료를 추가하세요'}
+        className="px-2.5 py-1 text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        📑 슬라이드 일괄생성
+      </button>
+    );
+
+  return (
+    <>
+      {trigger}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6"
+          onClick={() => { if (!running) setOpen(false); }}
+        >
+          <div
+            className="bg-white rounded-lg shadow-2xl max-w-md w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3 border-b border-stone-200">
+              <h2 className="text-base font-semibold text-stone-800">슬라이드 일괄생성</h2>
+              <div className="text-xs text-stone-500 mt-0.5">
+                자료(원고)를 바탕으로 적당한 수의 슬라이드를 만들어 <b>현재 강의 맨 끝에 덧붙입니다.</b>
+                자료를 바꿔 올리면 1부·2부처럼 여러 번 나눠 생성할 수 있어요.
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm text-stone-600 mb-1.5">슬라이드 장수</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCountMode('auto')}
+                    disabled={running}
+                    className={`flex-1 px-3 py-2 text-sm rounded border ${
+                      countMode === 'auto'
+                        ? 'bg-stone-800 text-white border-stone-800'
+                        : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+                    }`}
+                  >
+                    AI 자동
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCountMode('fixed')}
+                    disabled={running}
+                    className={`flex-1 px-3 py-2 text-sm rounded border ${
+                      countMode === 'fixed'
+                        ? 'bg-stone-800 text-white border-stone-800'
+                        : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+                    }`}
+                  >
+                    직접 지정
+                  </button>
+                </div>
+                {countMode === 'fixed' && (
+                  <input
+                    type="number"
+                    min={1}
+                    max={40}
+                    value={count}
+                    onChange={(e) => setCount(e.target.value)}
+                    disabled={running}
+                    className="mt-2 w-28 px-3 py-2 text-sm border border-stone-300 rounded text-stone-900"
+                  />
+                )}
+              </div>
+
+              {isNativeDeck && (
+                <div>
+                  <label className="block text-sm text-stone-600 mb-1.5">이미지 품질 (전체 장 공통)</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setImageQuality('pro')}
+                      disabled={running}
+                      title="Nano Banana Pro · 2K · 약 $0.134/장 — 고품질"
+                      className={`flex-1 px-3 py-2 text-sm rounded border ${
+                        imageQuality === 'pro'
+                          ? 'bg-stone-800 text-white border-stone-800'
+                          : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+                      }`}
+                    >
+                      고품질 (Pro)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageQuality('fast')}
+                      disabled={running}
+                      title="Nano Banana 2 (Flash) · 1K · 약 $0.067/장 — 저가·빠름"
+                      className={`flex-1 px-3 py-2 text-sm rounded border ${
+                        imageQuality === 'fast'
+                          ? 'bg-amber-600 text-white border-amber-600'
+                          : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+                      }`}
+                    >
+                      저가 (Fast)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-[11px] text-stone-400 leading-relaxed">
+                디자인 톤은 <b>강의 헤더의 “디자인”</b>(덱 전체 공통)을 따르고, 레이아웃은 장마다 <b>AI 자동</b>입니다.
+              </div>
+
+              {status && (
+                <div className="text-sm text-stone-600 bg-stone-50 border border-stone-200 rounded px-3 py-2 whitespace-pre-wrap">
+                  {running && <span className="inline-block animate-pulse mr-1">⏳</span>}
+                  {status}
+                </div>
+              )}
+              {error && (
+                <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+                  {error}
+                </div>
+              )}
+              <div className="text-[11px] text-stone-400">
+                여러 장(특히 일러스트·통짜 이미지 톤)은 시간이 걸립니다. 중단해도 그때까지 만든 슬라이드는 남습니다.
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-stone-200 flex justify-end gap-2 bg-stone-50">
+              {running ? (
+                <button
+                  onClick={() => { cancelRef.current = true; }}
+                  className="px-4 py-2 text-sm border border-stone-300 rounded hover:bg-stone-100"
+                >
+                  중단
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="px-4 py-2 text-sm border border-stone-300 rounded hover:bg-stone-100"
+                  >
+                    닫기
+                  </button>
+                  <button
+                    onClick={run}
+                    className="px-4 py-2 text-sm bg-amber-600 text-white rounded hover:bg-amber-500"
+                  >
+                    생성 시작
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 
@@ -998,6 +1477,15 @@ function DeckPanel(props: {
     }
   };
 
+  const handleDuplicate = async (slideId: string) => {
+    try {
+      await api.duplicateSlide(lectureId, slideId);
+      onChange();
+    } catch (err) {
+      alert('복제 실패: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  };
+
   return (
     <main className="flex-1 min-w-0 flex flex-col bg-stone-100">
       <div className="px-6 py-3 bg-white border-b border-stone-200 flex items-center justify-between">
@@ -1005,6 +1493,12 @@ function DeckPanel(props: {
           <h2 className="text-sm font-semibold text-stone-700">
             🎴 슬라이드 데크 ({slideIds.length}장)
           </h2>
+          <BatchFromMaterials
+            lectureId={lectureId}
+            hasMaterials={deck.materials.length > 0}
+            isNativeDeck={(deck.design_system || '').startsWith('native')}
+            onChange={onChange}
+          />
           <button
             onClick={() => imgInputRef.current?.click()}
             disabled={uploadingImg}
@@ -1034,12 +1528,37 @@ function DeckPanel(props: {
         {slideIds.length === 0 ? (
           <div className="text-center text-stone-400 mt-12">
             <div className="text-lg">아직 슬라이드가 없습니다</div>
-            <div className="text-sm mt-2">
-              우측 AI 채팅에서 "첫 슬라이드 만들어줘"라고 시작하거나,
-            </div>
-            <div className="text-sm mt-1">
-              위 <span className="font-medium text-stone-500">🖼 이미지 업로드</span>로 이미 만든 이미지를 한 번에 올리세요
-            </div>
+            {deck.materials.length > 0 ? (
+              <>
+                <div className="text-sm mt-2 text-stone-500">
+                  올린 자료로 슬라이드 여러 장을 한 번에 만들 수 있어요
+                </div>
+                <div className="mt-4 flex justify-center">
+                  <BatchFromMaterials
+                    lectureId={lectureId}
+                    hasMaterials
+                    isNativeDeck={(deck.design_system || '').startsWith('native')}
+                    variant="cta"
+                    onChange={onChange}
+                  />
+                </div>
+                <div className="text-xs mt-3">
+                  또는 우측 AI 채팅에서 한 장씩 만들거나, 위 <span className="font-medium text-stone-500">🖼 이미지 업로드</span> 사용
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-sm mt-2">
+                  우측 AI 채팅에서 "첫 슬라이드 만들어줘"라고 시작하거나,
+                </div>
+                <div className="text-sm mt-1">
+                  좌측에서 <span className="font-medium text-stone-500">자료를 추가</span>하면 <span className="font-medium text-stone-500">슬라이드 일괄생성</span>으로 여러 장을 한 번에 만들 수 있어요.
+                </div>
+                <div className="text-sm mt-1">
+                  위 <span className="font-medium text-stone-500">🖼 이미지 업로드</span>로 이미 만든 이미지를 올릴 수도 있습니다.
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2">
@@ -1066,6 +1585,7 @@ function DeckPanel(props: {
                     onDoubleClick={() => onPreview(sid)}
                     onPreview={() => onPreview(sid)}
                     onSpecEdit={() => onSpecEdit(sid)}
+                    onDuplicate={() => handleDuplicate(sid)}
                     onDragStart={() => onDragStart(idx)}
                     onDragOver={(e) => onDragOver(e, idx)}
                     onDrop={(e) => onDrop(e, idx)}
@@ -1625,12 +2145,13 @@ function SlideCard(props: {
   onDoubleClick: () => void;
   onPreview: () => void;
   onSpecEdit: () => void;
+  onDuplicate: () => void;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
   onDelete: () => void;
 }) {
-  const { lectureId, slide, index, isDragging, isHover, isFocus, onClick, onDoubleClick, onPreview, onSpecEdit, onDragStart, onDragOver, onDrop, onDelete } = props;
+  const { lectureId, slide, index, isDragging, isHover, isFocus, onClick, onDoubleClick, onPreview, onSpecEdit, onDuplicate, onDragStart, onDragOver, onDrop, onDelete } = props;
   // PNG는 백엔드 HTTP 엔드포인트로 (file://은 Electron 보안 정책에 막힘).
   // updated_at을 쿼리에 붙여서 편집 후 캐시 무효화.
   const pngUrl = `${api.slidePngUrl(lectureId, slide.id)}?v=${encodeURIComponent(slide.updated_at)}`;
@@ -1664,7 +2185,7 @@ function SlideCard(props: {
           #{index + 1}
         </div>
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100">
-          {slide.layout !== 'image' && (
+          {!isBakedImageSlide(slide.layout) && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -1685,6 +2206,16 @@ function SlideCard(props: {
             title="확대 미리보기"
           >
             🔍
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate();
+            }}
+            className="px-2 py-0.5 bg-black/40 hover:bg-black/70 text-white text-xs rounded"
+            title="복제 (같은 슬라이드 하나 더, 바로 뒤에)"
+          >
+            ⧉
           </button>
           <button
             onClick={(e) => {
@@ -1750,8 +2281,19 @@ function AIChatPanel(props: {
   ]);
   const [input, setInput] = useState('');
   const [layoutChoice, setLayoutChoice] = useState<string>(''); // '' = AI 자동
+  const [imageQuality, setImageQuality] = useState<'pro' | 'fast'>('pro'); // 통짜 이미지 품질
+  const [editMode, setEditMode] = useState<'image' | 'regen'>('image'); // 통짜 편집: 부분수정 vs 전체재생성
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 통짜 이미지(native) 덱일 때만 이미지 품질 선택이 의미 있음
+  const isNativeDeck = (deck.design_system || '').startsWith('native');
+
+  // 편집 대상 슬라이드의 종류 — 통짜 이미지(native)/업로드 이미지(image)면 '이미지 편집' 경로 가능
+  const focusedSlide = focusSlideId ? deck.slides[focusSlideId] : null;
+  const focusNative = focusedSlide?.layout === 'native';
+  const focusImage = focusedSlide?.layout === 'image';
+  const focusBaked = focusNative || focusImage;
 
   // 모드 결정
   const mode: 'edit' | 'insert' | 'append' = focusSlideId
@@ -1783,6 +2325,7 @@ function AIChatPanel(props: {
     const isRerenderIntent =
       mode === 'edit' &&
       focusSlideId !== null &&
+      !focusBaked &&    // 통짜/이미지 슬라이드는 spec 재렌더가 불가 — 아래 경로로 보냄
       !chosenLayout &&  // layout 강제하면 spec을 바꾸려는 명백한 의도
       RERENDER_INTENT_RE.test(text);
 
@@ -1796,13 +2339,29 @@ function AIChatPanel(props: {
         return;
       }
 
+      const q = isNativeDeck ? imageQuality : undefined;
+
+      // 통짜/이미지 슬라이드 편집: '부분수정'(이미지 편집) 또는 image 슬라이드는 무조건 이미지 편집.
+      // → 다시 그리지 않고 현재 이미지에서 시키는 부분만 수정 (구도 보존).
+      if (mode === 'edit' && focusSlideId && (focusImage || (focusNative && editMode === 'image'))) {
+        const r = await api.imageEditSlide(deck.lecture_id, focusSlideId, text, q);
+        setMessages((m) => [...m, {
+          role: 'ai',
+          text: `🖌 이미지 부분 수정됨 (기존 그림 유지) — ${r.slide_id}: 「${r.title || r.slide_id}」`,
+          slideId: r.slide_id, mode: 'edit',
+        }]);
+        clearModes();
+        onChange();
+        return;
+      }
+
       let result: SlideCreateResponse;
       if (mode === 'edit' && focusSlideId) {
-        result = await api.editSlide(deck.lecture_id, focusSlideId, text, chosenLayout);
+        result = await api.editSlide(deck.lecture_id, focusSlideId, text, chosenLayout, q);
       } else if (mode === 'insert' && insertBeforeIndex !== null) {
-        result = await api.createSlide(deck.lecture_id, text, insertBeforeIndex, chosenLayout);
+        result = await api.createSlide(deck.lecture_id, text, insertBeforeIndex, chosenLayout, q);
       } else {
-        result = await api.createSlide(deck.lecture_id, text, undefined, chosenLayout);
+        result = await api.createSlide(deck.lecture_id, text, undefined, chosenLayout, q);
       }
 
       const slideTitle = (result.slide?.title as string) || result.slide_id;
@@ -1848,7 +2407,9 @@ function AIChatPanel(props: {
         : '슬라이드 생성 AI (끝에 추가)';
   const placeholder =
     mode === 'edit'
-      ? `${focusSlideId}을 어떻게 바꿀까요?`
+      ? (focusBaked && (focusImage || editMode === 'image')
+          ? `이 부분만 바꿔줘 (예: 제목을 '...'로). 나머지는 유지됩니다`
+          : `${focusSlideId}을 어떻게 바꿀까요?`)
       : mode === 'insert'
         ? `위치 ${(insertBeforeIndex ?? 0) + 1}에 어떤 슬라이드?`
         : '다음 슬라이드는 어떤 명제로?';
@@ -1908,6 +2469,72 @@ function AIChatPanel(props: {
           >
             🔄 spec 그대로 재렌더 (현재 디자인 적용)
           </button>
+        )}
+        {mode === 'edit' && focusNative && (
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-stone-500 shrink-0">수정</label>
+            <div className="flex gap-1 flex-1">
+              <button
+                type="button"
+                onClick={() => setEditMode('image')}
+                disabled={busy}
+                title="기존 그림은 그대로 두고 시키는 부분만 편집 (구도·그림 보존, 제목 한 줄 고치기 등)"
+                className={`flex-1 px-2 py-1 text-xs rounded border ${
+                  editMode === 'image'
+                    ? 'bg-stone-800 text-white border-stone-800'
+                    : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+                } disabled:opacity-50`}
+              >
+                🖌 부분수정
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditMode('regen')}
+                disabled={busy}
+                title="처음부터 다시 그림 (구도·그림이 달라질 수 있음)"
+                className={`flex-1 px-2 py-1 text-xs rounded border ${
+                  editMode === 'regen'
+                    ? 'bg-stone-800 text-white border-stone-800'
+                    : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+                } disabled:opacity-50`}
+              >
+                🔁 전체 재생성
+              </button>
+            </div>
+          </div>
+        )}
+        {isNativeDeck && (
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-stone-500 shrink-0">이미지</label>
+            <div className="flex gap-1 flex-1">
+              <button
+                type="button"
+                onClick={() => setImageQuality('pro')}
+                disabled={busy}
+                title="Nano Banana Pro (Gemini 3 Pro Image) · 2K · 약 $0.134/장 — 고품질"
+                className={`flex-1 px-2 py-1 text-xs rounded border ${
+                  imageQuality === 'pro'
+                    ? 'bg-stone-800 text-white border-stone-800'
+                    : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+                } disabled:opacity-50`}
+              >
+                고품질 (Pro)
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageQuality('fast')}
+                disabled={busy}
+                title="Nano Banana 2 (Gemini 3.1 Flash Image) · 1K · 약 $0.067/장 — 저가·빠름"
+                className={`flex-1 px-2 py-1 text-xs rounded border ${
+                  imageQuality === 'fast'
+                    ? 'bg-amber-600 text-white border-amber-600'
+                    : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+                } disabled:opacity-50`}
+              >
+                저가 (Fast)
+              </button>
+            </div>
+          </div>
         )}
         <LayoutSelect
           value={layoutChoice}

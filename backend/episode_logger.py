@@ -6,7 +6,7 @@ IndieBiz OS Core
 stdout을 가로채서 에피소드 진행 중 print 출력을 버퍼에 수집하고,
 에피소드 종료 시 DB에 저장한다.
 
-- episode_log: 전체 로그 (최근 100개만 보존)
+- episode_log: 전체 로그 (최근 1000개만 보존)
 - episode_summary: 요약 지표 (영구 보존)
 """
 
@@ -36,13 +36,17 @@ class EpisodeLogger:
 
     @classmethod
     def install(cls):
-        """서버 시작 시 1회 호출. stdout/stderr를 래핑."""
+        """서버 시작 시 1회 호출. stdout/stderr를 래핑 + 자기 스키마 보장."""
         if cls._original_stdout is not None:
             return  # 이미 설치됨
         cls._original_stdout = sys.stdout
         cls._original_stderr = sys.stderr
         sys.stdout = _TeeWriter(cls._original_stdout, cls)
         sys.stderr = _TeeWriter(cls._original_stderr, cls)
+        # writer 가 자기 테이블을 소유 — 이전엔 world_pulse._init_pulse_db() 에만 있어,
+        # 그게 안 도는 몸(폰 진입점)에선 INSERT 가 조용히 실패했다(테이블 부재).
+        # 이제 로거가 직접 보장 → 어느 몸에서든 기록된다(world_pulse 의존 제거).
+        _ensure_episode_tables()
 
     @classmethod
     def start_episode(cls, agent: str, user_message: str):
@@ -158,10 +162,53 @@ class _TeeWriter:
 def _get_db():
     """world_pulse.db 연결"""
     db_path = get_base_path() / "data" / "world_pulse.db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path), timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _ensure_episode_tables():
+    """episode_log / episode_summary 테이블 보장 (idempotent, CREATE IF NOT EXISTS).
+
+    스키마는 world_pulse._init_pulse_db() 의 것과 동일하다. 거기에도 있지만, world_pulse
+    가 안 도는 몸(폰)에서도 기록되도록 writer 가 자기 스키마를 직접 보장한다. 둘 다
+    IF NOT EXISTS 라 충돌 없음. 에피소드 기록은 몸 독립이므로 이 의존을 끊는 게 맞다."""
+    try:
+        conn = _get_db()
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS episode_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                started_at TEXT NOT NULL,
+                ended_at TEXT,
+                agent TEXT,
+                user_message TEXT,
+                log TEXT,
+                total_ms INTEGER
+            );
+            CREATE TABLE IF NOT EXISTS episode_summary (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                episode_id INTEGER,
+                started_at TEXT NOT NULL,
+                agent TEXT,
+                user_message TEXT,
+                hippocampus_score REAL,
+                unconscious_decision TEXT,
+                consciousness_ms INTEGER,
+                execution_rounds INTEGER,
+                total_ms INTEGER,
+                evaluation_result TEXT
+            );
+        """)
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        try:
+            if EpisodeLogger._original_stdout:
+                EpisodeLogger._original_stdout.write(f"[EpisodeLogger] 테이블 보장 실패: {e}\n")
+        except Exception:
+            pass
 
 
 def _save_episode(started_at, agent, user_message, log_text, total_ms):
@@ -265,7 +312,7 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
 
 
 def _cleanup_old_episodes():
-    """episode_log에서 100개 초과 시 오래된 것 삭제 (episode_summary는 유지)"""
+    """episode_log에서 MAX_EPISODES(1000)개 초과 시 오래된 것 삭제 (episode_summary는 유지)"""
     try:
         conn = _get_db()
         count = conn.execute("SELECT COUNT(*) FROM episode_log").fetchone()[0]
@@ -291,6 +338,32 @@ def get_episode_list(limit: int = 20):
             """SELECT id, started_at, ended_at, agent,
                       SUBSTR(user_message, 1, 100) as user_message, total_ms
                FROM episode_log ORDER BY id DESC LIMIT ?""",
+            (limit,)
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+
+def get_episode_journal(limit: int = 30):
+    """주행기록계 — 분석 가능한(전체 로그 보존) 에피소드를 요약 지표와 함께 반환.
+
+    episode_log(전체 로그, 최근 1000개 cap) LEFT JOIN episode_summary(지표, 영구)로
+    각 주행의 시간·에이전트·요청·해마점수·판단·평가결과·라운드·소요를 한 줄에 담는다.
+    분석 스위치가 쓰는 목록이라 log 가 남아있는 episode_log 기준(요약만 남은 옛 주행 제외).
+    """
+    try:
+        conn = _get_db()
+        rows = conn.execute(
+            """SELECT e.id, e.started_at, e.agent,
+                      SUBSTR(e.user_message, 1, 120) as user_message,
+                      e.total_ms,
+                      s.hippocampus_score, s.unconscious_decision,
+                      s.execution_rounds, s.evaluation_result
+               FROM episode_log e
+               LEFT JOIN episode_summary s ON s.episode_id = e.id
+               ORDER BY e.id DESC LIMIT ?""",
             (limit,)
         ).fetchall()
         conn.close()

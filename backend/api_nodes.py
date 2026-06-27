@@ -74,6 +74,52 @@ async def list_nodes():
     }
 
 
+@router.get("/nodes/peer-status")
+async def peer_status():
+    """피어(다른 몸)의 연결상태 — 계기판이 "연락할 몸이 살아있나"를 표시한다.
+
+    몸-인식(body-aware), 한 엔드포인트로 양방향:
+      · 폰  → 맥(집 PC)의 공개 /ping 을 핑해 온/오프라인.
+      · 맥(허브) → 라이브 노드 테이블(self 제외)에서 연결된 폰을 본다.
+    각 백엔드의 로컬 호출(WebView/Electron → 자기 백엔드)이라 무인증 통과.
+    """
+    import os
+    try:
+        from runtime_utils import detect_body
+        kind = detect_body().get("kind", "mac")
+    except Exception:
+        kind = "mac"
+
+    # 폰 → 맥(집 PC) 생존 핑
+    if kind == "phone":
+        mac_url = (os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/")
+        if not mac_url:
+            return {"has_peer": False, "peer_name": "맥미니(집 PC)", "online": False,
+                    "detail": "맥 주소(INDIEBIZ_MAC_URL) 미설정"}
+
+        def _probe() -> bool:
+            try:
+                import requests
+                return requests.get(f"{mac_url}/ping", timeout=2).status_code == 200
+            except Exception:
+                return False
+        import asyncio
+        online = await asyncio.get_event_loop().run_in_executor(None, _probe)
+        return {"has_peer": True, "peer_name": "맥미니(집 PC)", "online": bool(online), "detail": None}
+
+    # 맥(허브) → 라이브 테이블에서 연결된 폰(self 제외)
+    others = [e for e in dr.list_live() if not e.get("self")]
+    online = len(others) > 0
+    if not online:
+        peer_name = "안드로이드 폰"
+    elif len(others) == 1:
+        peer_name = others[0].get("alias") or "안드로이드 폰"
+    else:
+        peer_name = f"폰 {len(others)}대"
+    return {"has_peer": True, "peer_name": peer_name, "online": online,
+            "nodes": [e.get("alias") for e in others], "detail": None}
+
+
 @router.post("/nodes/primary")
 async def set_primary(req: PrimaryRequest):
     """노드를 그 능력의 주(主)기기로 지정(주소 생략 시 자동선택 대상). 같은 능력의 다른

@@ -59,6 +59,21 @@ def _collect_op(tool_input: dict) -> str:
         else:
             result = db.search_items(query=tool_input.get("query"), site_id=tool_input.get("site_id"),
                                      limit=tool_input.get("limit", 20), offset=tool_input.get("offset", 0))
+        # 레코드 통화(비파괴) — 수집 아이템 목록 >> 파이프. data 스키마가 사이트마다 달라 best-effort.
+        if isinstance(result, dict) and isinstance(result.get("items"), list):
+            recs = []
+            for it in result["items"]:
+                if not isinstance(it, dict):
+                    continue
+                dat = it.get("data") if isinstance(it.get("data"), dict) else {}
+                title = dat.get("title") or dat.get("name") or dat.get("location") or it.get("item_key") or ""
+                summary = " · ".join(f"{k}:{v}" for k, v in list(dat.items())[:4]) if dat else ""
+                recs.append({
+                    "title": str(title),
+                    "meta": " · ".join(x for x in [it.get("site_id"), it.get("collected_at")] if x),
+                    "summary": summary[:200],
+                    "url": dat.get("url") or dat.get("link") or "",
+                })
         return json.dumps(result, ensure_ascii=False, indent=2)
     return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. 사용: run|sites|query"}, ensure_ascii=False)
 
@@ -122,6 +137,21 @@ def execute(tool_input: dict, context) -> str:
                     offset=tool_input.get("offset", 0)
                 )
 
+            # 레코드 통화(비파괴) — 수집 아이템 목록 >> 파이프. data 스키마가 사이트마다 달라 best-effort.
+            if isinstance(result, dict) and isinstance(result.get("items"), list):
+                recs = []
+                for it in result["items"]:
+                    if not isinstance(it, dict):
+                        continue
+                    dat = it.get("data") if isinstance(it.get("data"), dict) else {}
+                    title = dat.get("title") or dat.get("name") or dat.get("location") or it.get("item_key") or ""
+                    summary = " · ".join(f"{k}:{v}" for k, v in list(dat.items())[:4]) if dat else ""
+                    recs.append({
+                        "title": str(title),
+                        "meta": " · ".join(x for x in [it.get("site_id"), it.get("collected_at")] if x),
+                        "summary": summary[:200],
+                        "url": dat.get("url") or dat.get("link") or "",
+                    })
             return json.dumps(result, ensure_ascii=False, indent=2)
 
         else:

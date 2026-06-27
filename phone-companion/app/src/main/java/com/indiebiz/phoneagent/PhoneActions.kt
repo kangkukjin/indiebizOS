@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.MediaStore
 import org.json.JSONArray
+import android.graphics.Bitmap
 import android.graphics.ImageFormat
 import android.graphics.SurfaceTexture
 import android.hardware.camera2.CameraCaptureSession
@@ -21,6 +22,7 @@ import android.hardware.camera2.CaptureRequest
 import android.location.Geocoder
 import android.media.ImageReader
 import android.media.MediaRecorder
+import android.media.ThumbnailUtils
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -40,6 +42,7 @@ import androidx.core.app.NotificationCompat
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
@@ -282,6 +285,9 @@ object PhoneActions {
         val hasGps = f.optBoolean("has_gps", false)
         val wantGps = f.optBoolean("want_gps", false)
         val limit = f.optInt("limit", 50).coerceIn(1, 2000)
+        val minSize = f.optLong("min_size", 0L)   // 바이트 — 큰 파일 필터
+        val sort = f.optString("sort", "")          // size/mtime/name/date(기본 DATE_TAKEN)
+        val ext = f.optString("ext", "")            // 확장자 필터 (소문자, 점 없음)
 
         val cId = MediaStore.Files.FileColumns._ID
         val cName = MediaStore.Files.FileColumns.DISPLAY_NAME
@@ -310,6 +316,16 @@ object PhoneActions {
         if (startMs > 0) { sel.append(" AND $cTaken>=?"); args.add(startMs.toString()) }
         if (endMs > 0) { sel.append(" AND $cTaken<=?"); args.add(endMs.toString()) }
         if (q.isNotBlank()) { sel.append(" AND $cName LIKE ?"); args.add("%$q%") }
+        if (minSize > 0) { sel.append(" AND $cSize>=?"); args.add(minSize.toString()) }
+        if (ext.isNotBlank()) { sel.append(" AND $cName LIKE ?"); args.add("%.$ext") }
+
+        // 정렬: 맥 Spotlight 와 동일 어휘 (size/mtime/name, 기본 DATE_TAKEN 최신순)
+        val order = when (sort) {
+            "size" -> "$cSize DESC"
+            "mtime" -> "$cMod DESC"
+            "name" -> "$cName ASC"
+            else -> "$cTaken DESC"
+        }
 
         val uri = MediaStore.Files.getContentUri("external")
         val iso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
@@ -317,7 +333,7 @@ object PhoneActions {
         var total = 0
         try {
             ctx.contentResolver.query(uri, proj, sel.toString(), args.toTypedArray(),
-                "$cTaken DESC")?.use { c ->
+                order)?.use { c ->
                 val iId = c.getColumnIndexOrThrow(cId)
                 val iName = c.getColumnIndexOrThrow(cName)
                 val iData = c.getColumnIndex(cData)
@@ -570,5 +586,29 @@ object PhoneActions {
         return JSONObject().put("path", out.absolutePath).put("bytes", out.length())
             .put("facing", if (wantFront) "front" else "back")
             .put("width", jpegSize.width).put("height", jpegSize.height).toString()
+    }
+
+    /**
+     * 동영상 썸네일(대표 프레임) — ffmpeg 미번들 폰의 [self:photo] video-thumbnail 다리.
+     *
+     * 사진은 PIL(api_photo)로 되지만 동영상 컨테이너는 PIL이 못 열고 폰엔 ffmpeg가 없다.
+     * Android 네이티브 ThumbnailUtils 가 OS 디코더로 파일에서 프레임을 뽑는다(API 29+).
+     * 반환=JPEG 바이트(Chaquopy→Python bytes). 실패/없음=빈 배열(phone_api 가 폴백).
+     * path=MediaStore DATA 절대경로(/storage/...). 캐싱은 호출부(phone_api)가 담당.
+     */
+    @JvmStatic
+    fun videoThumbnail(path: String, size: Int): ByteArray {
+        return try {
+            val f = File(path)
+            if (!f.exists()) return ByteArray(0)
+            val s = if (size > 0) size else 200
+            val bmp: Bitmap = ThumbnailUtils.createVideoThumbnail(f, Size(s, s), null)
+            val out = ByteArrayOutputStream()
+            bmp.compress(Bitmap.CompressFormat.JPEG, 80, out)
+            bmp.recycle()
+            out.toByteArray()
+        } catch (e: Throwable) {
+            ByteArray(0)
+        }
     }
 }

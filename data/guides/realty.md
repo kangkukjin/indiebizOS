@@ -1,12 +1,14 @@
-# 부동산 실거래가 가이드
+# 부동산 시세·매물 가이드
 
-`[sense:realty]` 단일 액션으로 국토부 공개 실거래가 API 4종(아파트 매매/전월세, 단독·다가구 매매/전월세)을 통합 조회한다. **type × deal 매트릭스**가 핵심 분기.
+`[sense:realty]` 단일 액션. **`source`로 데이터 종류를 가른다:**
+- `source:"molit"` (기본) — 국토부 공개 실거래가(체결된 과거 거래 = **시세**). **type × deal 매트릭스**가 핵심 분기. 링크·사진 없음.
+- `source:"zigbang"` — 직방 **현재 매물**(지금 나온 호가·사진·클릭 링크). 빌라/원룸/오피스텔. ↓ "source=zigbang" 절.
 
-부동산 *시세 정보*(현재 매물 호가)는 별도 — 네이버/다나와류는 `real-estate` 패키지의 다른 도구 또는 `shopping-assistant` 영역. 이 액션은 **거래 완료된 실거래** 데이터다.
+> 매물 검색 전반(당근·네이버·다가구 주인세대 등 희소 매물)은 `real_estate.md` 가이드 참조.
 
 ---
 
-## 핵심 분기: type × deal
+## source=molit — 핵심 분기: type × deal
 
 ```
 [sense:realty]{region_code:"11680", type:"apt", deal:"trade"}
@@ -16,8 +18,21 @@
 |---|---|---|
 | `type:"apt"` (아파트) | 아파트 매매 실거래 | 아파트 전월세 |
 | `type:"house"` (단독/다가구) | 단독·다가구 매매 | 단독·다가구 전월세 |
+| `type:"villa"` (연립/다세대) | 연립·다세대 매매 | 연립·다세대 전월세 |
 
-기본값: `type:"apt"`, `deal:"trade"`. 즉 파라미터 생략하면 **아파트 매매** 조회.
+기본값: `type:"apt"`, `deal:"trade"`. 즉 파라미터 생략하면 **아파트 매매** 조회. `region` 이름(예 "강남구")만 줘도 코드 자동 해소.
+
+---
+
+## source=zigbang — 현재 매물(호가·링크)
+
+```
+[sense:realty]{source:"zigbang", region:"평택 죽백동", type:"villa", deal:"rent", lease:"전세"}
+```
+- `region`(동·지명·건물명) 또는 `lat`/`lng`. `type`=villa/oneroom/officetel. `deal`=trade/rent + `lease`=전세|월세(좁힘).
+- `deposit_max`·`rent_max`(만원), `radius`(m, 기본 3000), `limit`(기본 30).
+- 반환 records `{title, meta, summary, url, image}` — url=직방 매물 페이지, image=썸네일.
+- **아파트·단독/다가구는 직방 약함** → real_estate.md §4·§5(네이버·당근·현지 부동산).
 
 ---
 
@@ -90,5 +105,5 @@
 
 ## 관련
 
-- 시세(현재 호가) — 별도 영역. shopping-assistant나 네이버부동산 액션이 있으면 그쪽.
+- 현재 매물(호가·사진·링크) — `[sense:realty]{source:"zigbang"}` (빌라/원룸/오피스텔) 또는 매물 검색 전반은 `real_estate.md`.
 - 상권 분석 — `search_commercial_district` (real-estate 패키지에 있음)

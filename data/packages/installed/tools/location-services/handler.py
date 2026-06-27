@@ -237,14 +237,9 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
             center={"lat": markers[0]["lat"], "lng": markers[0]["lng"], "name": query},
             markers=markers)
 
-    # 레코드 통화(비파괴) — 맛집 목록 >> [engines:document/spreadsheet]
-    results["records"] = [{
-        "title": r.get("name", ""),
-        "meta": " · ".join(x for x in [r.get("category"), r.get("address"),
-                                       (f"{r.get('distance')}m" if r.get("distance") else None)] if x),
-        "summary": r.get("phone", ""),
-        "url": r.get("url", ""),
-    } for r in results["combined"]]
+    # 단일 통화 — native 맛집 dict(name/category/address/phone/url/distance 등 풍부)를 items로.
+    # (옛 records 5칸 변환은 distance/phone 등을 납작하게 버려 손실적이라 은퇴.) map_data는 별도 유지.
+    results["items"] = results.pop("combined")
     return results
 
 
@@ -590,6 +585,15 @@ def show_location_map(query: str = None, lat: float = None, lng: float = None,
 _IATA_CITY = {
     "서울": "SEL", "seoul": "SEL", "부산": "PUS", "busan": "PUS",
     "제주": "CJU", "jeju": "CJU",
+    # 인천/김포 (서울 메트로 SEL 에도 포함되나, 명시 지정 대비)
+    "인천": "ICN", "incheon": "ICN", "김포": "GMP", "gimpo": "GMP",
+    # 한국 지방공항 — Amadeus city-search 가 한글 키워드를 못 풀어 명시 매핑(미등록 시 "공항 코드 못 찾음")
+    "청주": "CJJ", "cheongju": "CJJ", "대구": "TAE", "daegu": "TAE",
+    "광주": "KWJ", "gwangju": "KWJ", "여수": "RSU", "yeosu": "RSU",
+    "울산": "USN", "ulsan": "USN", "포항": "KPO", "pohang": "KPO",
+    "양양": "YNY", "yangyang": "YNY", "무안": "MWX", "muan": "MWX",
+    "군산": "KUV", "gunsan": "KUV", "원주": "WJU", "wonju": "WJU",
+    "사천": "HIN", "진주": "HIN", "sacheon": "HIN",
     "도쿄": "TYO", "동경": "TYO", "tokyo": "TYO",
     "오사카": "OSA", "osaka": "OSA", "후쿠오카": "FUK", "fukuoka": "FUK",
     "삿포로": "SPK", "sapporo": "SPK", "나고야": "NGO", "nagoya": "NGO",
@@ -694,9 +698,30 @@ def _resolve_travel_date(s):
 
 # ── op 디스패처 (2026-06-04 travel 자연어 인터페이스화) ──────────────
 _OP_DISPATCHERS = {
-    "amadeus_travel_search": {"flight": None, "hotel": None, "poi": None},
+    "amadeus_travel_search": {"flight": None, "hotel": None},
 }
 _OP_DEFAULTS = {"amadeus_travel_search": "flight"}
+
+
+def _amadeus_short_dt(iso: str) -> str:
+    """'2026-07-03T08:30:00' → '07-03 08:30' (빈/짧은 입력은 '')."""
+    if not iso or len(iso) < 16:
+        return ""
+    return iso[5:16].replace("T", " ")
+
+
+def _amadeus_fmt_dur(iso_dur: str) -> str:
+    """ISO8601 기간 'PT2H30M' → '2시간 30분'."""
+    if not iso_dur or not iso_dur.startswith("PT"):
+        return ""
+    h = re.search(r"(\d+)H", iso_dur)
+    m = re.search(r"(\d+)M", iso_dur)
+    parts = []
+    if h:
+        parts.append(f"{h.group(1)}시간")
+    if m:
+        parts.append(f"{m.group(1)}분")
+    return " ".join(parts)
 
 
 def amadeus_travel_search(tool_input: dict) -> dict:
@@ -754,33 +779,60 @@ def amadeus_travel_search(tool_input: dict) -> dict:
             return {"error": f"도시 '{city}'의 코드를 찾지 못했습니다."}
         result = _amadeus_call("hotel-list", {"cityCode": code})
 
-    elif op == "poi":
-        lat = tool_input.get("lat") if tool_input.get("lat") is not None else tool_input.get("latitude")
-        lng = tool_input.get("lng")
-        if lng is None:
-            lng = tool_input.get("lon") if tool_input.get("lon") is not None else tool_input.get("longitude")
-        if lat is None or lng is None:
-            city = tool_input.get("city") or tool_input.get("query")
-            if not city:
-                return {"error": "관광지는 city 또는 lat/lng가 필요합니다."}
-            coords = _resolve_city_coords(city)
-            if not coords:
-                return {"error": f"도시 '{city}'의 좌표를 찾지 못했습니다."}
-            lat, lng = coords
-        result = _amadeus_call("points-of-interest", {"latitude": float(lat), "longitude": float(lng)})
-
     else:
-        return {"error": f"알 수 없는 op '{op}'. 사용 가능: flight/hotel/poi (또는 endpoint+params 직접 지정)"}
+        # poi(points-of-interest)는 2026 Amadeus가 영구 폐기(HTTP 410 GONE) — 어휘에서 제거됨.
+        return {"error": f"알 수 없는 op '{op}'. 사용 가능: flight/hotel (또는 endpoint+params 직접 지정)"}
 
     if isinstance(result, dict) and notes and "error" not in result:
         result["notes"] = notes
 
-    # 레코드 통화(비파괴) — 여행 목록 >> [engines:document/spreadsheet]
-    # flight-offers는 가격/일정 깊은 중첩(정형 name 없음)이라 건너뜀(rule 6).
+    # 레코드 통화(비파괴) — 세 op 모두 records[{title,meta,summary,url}] 부착.
+    # 앱은 records, >> 파이프(filter/sort/chart)도 records. message=사람용 요약.
+    # (compress 폐지: 깨끗한 records+message가 있으면 LLM 압축은 records를 문자열로 파괴할 뿐.)
     if isinstance(result, dict) and "error" not in result:
         items = result.get("results")
-        if op == "hotel" and isinstance(items, list):
-            recs = []
+        recs = []
+        if op == "flight" and isinstance(items, list):
+            for off in items:
+                if not isinstance(off, dict):
+                    continue
+                price = off.get("price", {}) or {}
+                price_str = (f"{price.get('total')} {price.get('currency', '')}".strip()
+                             if isinstance(price, dict) and price.get("total") else "")
+                itins = off.get("itineraries", []) or []
+                legs = []
+                for it in itins:
+                    segs = it.get("segments", []) or []
+                    if not segs:
+                        continue
+                    dep = segs[0].get("departure", {}).get("iataCode", "")
+                    arr = segs[-1].get("arrival", {}).get("iataCode", "")
+                    if dep and arr:
+                        legs.append(f"{dep}→{arr}")
+                meta_parts = []
+                if price_str:
+                    meta_parts.append(price_str)
+                first = itins[0] if itins else {}
+                fsegs = first.get("segments", []) or []
+                if fsegs:
+                    stops = len(fsegs) - 1
+                    meta_parts.append("직항" if stops == 0 else f"{stops}회 경유")
+                    dep_at = _amadeus_short_dt(fsegs[0].get("departure", {}).get("at", ""))
+                    if dep_at:
+                        meta_parts.append(dep_at)
+                dur = _amadeus_fmt_dur(first.get("duration", ""))
+                if dur:
+                    meta_parts.append(dur)
+                carriers = off.get("validatingAirlineCodes", []) or []
+                if carriers:
+                    meta_parts.append("/".join(carriers))
+                recs.append({
+                    "title": " / ".join(legs) if legs else "항공편",
+                    "meta": " · ".join(m for m in meta_parts if m),
+                    "summary": "",
+                    "url": "",
+                })
+        elif op == "hotel" and isinstance(items, list):
             for h in items:
                 if not isinstance(h, dict):
                     continue
@@ -795,21 +847,19 @@ def amadeus_travel_search(tool_input: dict) -> dict:
                     "summary": h.get("hotelId", ""),
                     "url": "",
                 })
-            result["records"] = recs
-        elif op == "poi" and isinstance(items, list):
-            recs = []
-            for p in items:
-                if not isinstance(p, dict):
-                    continue
-                tags = p.get("tags", [])
-                recs.append({
-                    "title": p.get("name", ""),
-                    "meta": " · ".join(x for x in [p.get("category"),
-                                                   (", ".join(tags[:3]) if tags else None)] if x),
-                    "summary": "",
-                    "url": "",
-                })
-            result["records"] = recs
+        result["items"] = recs
+        result.pop("results", None)  # 원시 중첩 amadeus 페이로드는 records+message로 대체
+        # 사람용 요약(message) — compress 없이도 에이전트가 읽을 깨끗한 텍스트.
+        _labels = {"flight": "항공권", "hotel": "호텔"}
+        lines = [f"{_labels.get(op, op)} 검색 결과 {len(recs)}건"]
+        for i, r in enumerate(recs[:15], 1):
+            seg = f"[{i}] {r['title']}"
+            if r.get("meta"):
+                seg += f" — {r['meta']}"
+            if r.get("summary"):
+                seg += f"\n    {r['summary']}"
+            lines.append(seg)
+        result["message"] = "\n".join(lines)
     return result
 
 
@@ -1023,34 +1073,20 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
                 "wind_speed": current.get("wind_speed_10m"),
                 "condition": _WMO_CODES.get(current.get("weather_code", -1), "알 수 없음"),
             },
-            "forecast": []
+            "items": []
         }
 
+        # 일별 예보 = 단일 통화 items (풍부 dict: date/max_temp/min_temp/condition/precipitation_mm)
+        # chart/spreadsheet 소비자는 items에서 수치 칸을 직접 찾음(table 봉투 불필요).
         times = daily.get("time", [])
         for i, date in enumerate(times):
-            result["forecast"].append({
+            result["items"].append({
                 "date": date,
                 "max_temp": daily["temperature_2m_max"][i],
                 "min_temp": daily["temperature_2m_min"][i],
                 "condition": _WMO_CODES.get(daily["weather_code"][i], "알 수 없음"),
                 "precipitation_mm": daily["precipitation_sum"][i],
             })
-
-        # 표준 테이블 통화 — 일별 예보를 시계열 table로 (>> chart/spreadsheet/document)
-        # 첫 열=날짜(x축), 나머지=수치 시리즈. 기존 키는 그대로 보존(ADD only).
-        if result["forecast"]:
-            table_rows = []
-            for f in result["forecast"]:
-                table_rows.append([
-                    f["date"],
-                    f["max_temp"],
-                    f["min_temp"],
-                    f["precipitation_mm"],
-                ])
-            result["table"] = {
-                "columns": ["날짜", "최고기온(℃)", "최저기온(℃)", "강수량(mm)"],
-                "rows": table_rows,
-            }
 
         return result
 

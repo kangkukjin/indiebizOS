@@ -52,6 +52,40 @@ export interface IblCatalog {
   total: number;
 }
 
+// IBL 건강 점검 결과 — 정적(§1A)·fixture 통화(§1B)·골든 파이프(§1C)
+export interface IblHealthEvent {
+  node: string;            // __static__ | __ibl_health__
+  action: string;          // ibl_consistency | currency | golden_pipes
+  success: boolean;
+  data_quality: string;
+  error_message: string | null;
+}
+
+export interface IblHealthResult {
+  healthy: boolean;
+  events: IblHealthEvent[];
+}
+
+// 계기판 상태 — 마지막으로 기록된 IBL 건강(검사 실행 X) + 핵심 vitals
+export interface IblHealthStatusItem {
+  key: string;
+  label: string;
+  ok: boolean | null;          // null = 아직 미점검
+  detail: string | null;
+  checked_at: string | null;
+}
+
+export interface DashboardStatus {
+  ibl_health: {
+    checked_at: string | null;
+    healthy: boolean | null;   // null = 미점검
+    items: IblHealthStatusItem[];
+    action_count: number;
+  };
+  services: Record<string, boolean>;
+  disk_free_gb: number | null;
+}
+
 export function applyIblMethods<T extends APIClientCore>(client: T) {
   return Object.assign(client, {
 
@@ -90,6 +124,16 @@ export function applyIblMethods<T extends APIClientCore>(client: T) {
         method: 'POST',
         body: JSON.stringify({ intent, code, top_score: topScore }),
       });
+    },
+
+    /** IBL 건강 점검 동기 실행 — 정적+fixture 통화+골든 파이프 (AI 0). 수십 초 걸린다. */
+    async runIblHealthCheck() {
+      return client.request<IblHealthResult>('/world-pulse/ibl-health-check', { method: 'POST' });
+    },
+
+    /** 계기판 상태 — 마지막 IBL 건강 + 핵심 vitals (검사 실행 X, 즉각). */
+    async getDashboardStatus() {
+      return client.request<DashboardStatus>('/world-pulse/dashboard');
     },
   });
 }

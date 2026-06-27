@@ -253,6 +253,12 @@ async def update_system_ai_config(config: Dict[str, Any]):
         }
         with open(SYSTEM_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, ensure_ascii=False, indent=2)
+        # 수동모드 번역용 본격 원샷 프로바이더 캐시 무효화 (모델 변경 즉시 반영)
+        try:
+            from consciousness_agent import reset_system_oneshot_provider
+            reset_system_oneshot_provider()
+        except Exception:
+            pass
         return {"status": "saved", "config": config_dict}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1087,6 +1093,52 @@ async def get_self_checks(limit: int = 20):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/world-pulse/episodes")
+async def get_episodes(limit: int = 30):
+    """주행기록계 — 최근 자율주행/시스템AI 에피소드 목록(요약 지표 포함)."""
+    try:
+        from episode_logger import get_episode_journal
+        return {"episodes": get_episode_journal(limit)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/world-pulse/episodes/{episode_id}/analysis-prompt")
+async def get_episode_analysis_prompt(episode_id: int):
+    """지난 주행 분석 요청 프롬프트 — 분석 스위치를 누르면 시스템 AI 창이 이걸 받아
+    첫 메시지로 보낸다. 전체 실행 로그를 담되 토큰 과대 방지로 끝부분 위주 캡
+    (최근 행동이 결과에 가까움)."""
+    try:
+        from episode_logger import get_episode_detail
+        ep = get_episode_detail(episode_id)
+        if not ep:
+            raise HTTPException(status_code=404, detail="에피소드를 찾을 수 없습니다(로그가 만료됐을 수 있음).")
+        log = ep.get("log") or ""
+        CAP = 16000
+        if len(log) > CAP:
+            log = "…(앞부분 생략)…\n" + log[-CAP:]
+        user_msg = ep.get("user_message") or ""
+        agent = ep.get("agent") or "?"
+        started = ep.get("started_at") or ""
+        prompt = (
+            "#EXECUTE\n"  # 주행기록 분석은 의식(THINK) 불필요 — 무의식 판정을 EXECUTE로 강제
+            f"아래는 지난 자율주행 실행 기록이다(에이전트: {agent}, 시각: {started}).\n"
+            f"이 주행을 분석해줘:\n"
+            f"1) 사용자가 무엇을 원했고, 시스템이 무슨 판단(반사/숙고/실행)으로 어떻게 처리했나\n"
+            f"2) 잘된 점\n"
+            f"3) 문제점·헤맨 지점(불필요한 라운드, 잘못된 IBL, 침묵 실패 등)\n"
+            f"4) 고칠 것 — 가이드/IBL 어휘/프롬프트 중 무엇을 어떻게 바꾸면 다음에 더 나을지\n"
+            f"분석 후, 내가 고치라고 하면 바로 실행해줘.\n\n"
+            f"=== 사용자 요청 ===\n{user_msg}\n\n"
+            f"=== 실행 로그 ===\n{log}\n"
+        )
+        return {"episode_id": episode_id, "prompt": prompt}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/world-pulse/health")
 async def get_health():
     """시스템 전체 건강 요약"""
@@ -1119,15 +1171,53 @@ async def get_diagnostic_report(format: str = "json"):
 
 @router.post("/world-pulse/run-self-check")
 async def trigger_self_check():
-    """자가점검 수동 트리거 — 전수 점검 실행"""
+    """IBL 건강 점검 수동 트리거 (백그라운드) — 정적+fixture+골든 1회 (AI 0)"""
     import threading
-    from world_pulse import run_self_check
+    from world_pulse import run_daily_health_check
 
     def _run():
         try:
-            run_self_check()
+            run_daily_health_check()
         except Exception as e:
-            logger.error(f"[WorldPulse] 수동 자가점검 실패: {e}")
+            logger.error(f"[WorldPulse] 수동 건강 점검 실패: {e}")
 
-    threading.Thread(target=_run, daemon=True, name="manual-self-check").start()
-    return {"status": "started", "message": "전수 점검이 백그라운드에서 시작되었습니다."}
+    threading.Thread(target=_run, daemon=True, name="manual-health-check").start()
+    return {"status": "started", "message": "IBL 건강 점검이 백그라운드에서 시작되었습니다."}
+
+
+@router.get("/world-pulse/dashboard")
+def world_pulse_dashboard():
+    """계기판 상태 — 마지막 IBL 건강 + 핵심 vitals (서비스 alive·디스크). 싸고 즉각(검사 실행 X)."""
+    from world_pulse_health import get_ibl_health_status
+    ibl = get_ibl_health_status()
+    services, disk = {}, None
+    try:
+        from world_pulse import _collect_self_state
+        ss = _collect_self_state()
+        services = ss.get("services", {})
+        disk = ss.get("disk_free_gb")
+    except Exception as e:
+        logger.debug(f"[Dashboard] self_state 수집 실패: {e}")
+    return {"ibl_health": ibl, "services": services, "disk_free_gb": disk}
+
+
+@router.post("/world-pulse/ibl-health-check")
+def run_ibl_health_check_sync():
+    """IBL 건강 점검 동기 실행 — 정적(§1A)+fixture 통화(§1B)+골든 파이프(§1C) 결과 반환 (AI 0).
+
+    수동 모드 '건강확인' 버튼용. sync def 라 FastAPI 가 스레드풀에서 돌려(이벤트 루프 비차단),
+    수십 초 걸리는 점검을 끝까지 기다렸다가 GREEN/RED 요약을 돌려준다. self_checks 에도 기록.
+    """
+    from world_pulse_health import run_ibl_health_check, save_self_check
+    try:
+        events = run_ibl_health_check()
+    except Exception as e:
+        logger.error(f"[WorldPulse] IBL 건강 점검 실패: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    for ev in events:
+        try:
+            save_self_check(ev)
+        except Exception:
+            pass
+    healthy = len(events) > 0 and all(ev.get("success") for ev in events)
+    return {"healthy": healthy, "events": events}

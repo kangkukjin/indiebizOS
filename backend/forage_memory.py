@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS forage_map (
     last_seen    TEXT,
     locus_mtime  REAL NOT NULL DEFAULT 0,     -- 형성 시점 locus mtime (부패 무효화용)
     surface_flag INTEGER NOT NULL DEFAULT 0,  -- 이 라벨을 의심하라(이질 내용 발견)
+    territory    INTEGER NOT NULL DEFAULT 0,  -- 거친 영토 앵커(상시-on, 열거가능 공간만). go/skip 은 런타임 파생
     UNIQUE(body, locus, kind)
 );
 CREATE TABLE IF NOT EXISTS owner_model (
@@ -65,6 +66,30 @@ _MAP_KINDS = ("identity", "convention", "dead_branch", "substrate")
 _OWNER_FACETS = ("identity", "domain", "affiliation", "signal", "lexicon", "habit")
 _PRIOR_CLASSES = ("structural", "semantic")
 
+# 상시-on 영토 지도의 하드 상한 — 프롬프트가 무한정 늘지 않도록.
+# 영토 앵커가 이보다 많이 쌓여도 confidence 상위 N 개만 냄새로 노출(나머지는 query 필터로 강등).
+_TERRITORY_CAP = 10
+_TERRITORY_CLAIM_MAX = 64  # 영토 한 줄 claim 길이 상한(거친 윤곽만)
+# 자동승격: identity 가 reinforced_by 로 이만큼 재확인되면(=여러 번 되돌아온 가지) territory 로 결정화.
+# '빈도가 결정화한다'(자율주행→수동→앱)와 같은 모티프 — 자기-바운딩(대부분 가지는 1회뿐). cap 이 2차 백스톱.
+_TERRITORY_PROMOTE_AT = 2
+
+
+def _territory_eligible(kind: str, locus: str) -> bool:
+    """영토 승격 자격 — 정체(identity)이고 *구체 경로*(열거가능 공간)일 때만.
+    웹 추상 locus·__substrate__·관습은 영토가 아니다(territory=장소 정체 전용 → 웹 자동 배제)."""
+    return kind == "identity" and bool(locus) and (locus.startswith("/") or locus.startswith("~"))
+
+
+def _short(text: str, n: int = _TERRITORY_CLAIM_MAX) -> str:
+    """거친 영토용 짧은 형태 — 첫 문장 또는 n 자에서 자름."""
+    t = (text or "").strip().replace("\n", " ")
+    for sep in (". ", ". ", " — ", " · "):
+        i = t.find(sep)
+        if 0 < i <= n:
+            return t[:i]
+    return t if len(t) <= n else t[: n - 1].rstrip() + "…"
+
 
 def _now() -> str:
     return datetime.now().strftime("%Y-%m-%d")
@@ -74,6 +99,11 @@ def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(os.path.abspath(_DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
+    # 마이그레이션: 기존 DB 에 territory 컬럼 없으면 추가
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(forage_map)")}
+    if "territory" not in cols:
+        conn.execute("ALTER TABLE forage_map ADD COLUMN territory INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
     return conn
 
 
@@ -123,8 +153,11 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
              prior_class: str = "structural", confidence: float = 0.7,
              provenance: Optional[Dict[str, Any]] = None,
              prune_reason: Optional[str] = None, generalizes: bool = False,
-             surface_flag: bool = False) -> Dict[str, Any]:
-    """forage_map 한 항목 upsert (키=body+locus+kind). 재note 시 강화(reinforce)."""
+             surface_flag: bool = False, territory: bool = False) -> Dict[str, Any]:
+    """forage_map 한 항목 upsert (키=body+locus+kind). 재note 시 강화(reinforce).
+
+    territory=True 면 거친 영토 앵커로 표식 — 상시-on 냄새지도에 노출(열거가능 공간의 최상위 가지).
+    """
     if kind not in _MAP_KINDS:
         return {"success": False, "error": f"kind 는 {_MAP_KINDS} 중 하나여야 합니다 (받음: {kind})"}
     if prior_class not in _PRIOR_CLASSES:
@@ -134,34 +167,48 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
     conf = _clamp_conf(confidence, 0.7)
     mtime = _locus_mtime(locus)
     now = _now()
+    promoted = False
     conn = _connect()
     try:
         row = conn.execute(
-            "SELECT id, confidence, provenance FROM forage_map WHERE body=? AND locus=? AND kind=?",
+            "SELECT id, confidence, provenance, territory FROM forage_map WHERE body=? AND locus=? AND kind=?",
             (body, locus, kind)).fetchone()
         if row:
             merged = _merge_provenance(row["provenance"], prov)
             new_conf = max(conf, float(row["confidence"] or 0))  # 재확인은 확신 상향
+            # territory 는 한번 켜지면 유지(재note 가 False 라도 끄지 않음 — 끄기는 consolidation/forget 몫)
+            terr = 1 if (territory or row["territory"]) else 0
+            if not terr and _territory_eligible(kind, locus):
+                # 빈도 게이트: 여러 번 되돌아온 가지 = 영토로 결정화 (cap 이 상한 보호)
+                try:
+                    rb = json.loads(merged).get("reinforced_by") or []
+                except (ValueError, TypeError):
+                    rb = []
+                if len(rb) >= _TERRITORY_PROMOTE_AT:
+                    terr = 1
+                    promoted = True
             conn.execute(
                 "UPDATE forage_map SET claim=?, prior_class=?, confidence=?, provenance=?, "
-                "prune_reason=?, generalizes=?, last_seen=?, locus_mtime=?, surface_flag=? WHERE id=?",
+                "prune_reason=?, generalizes=?, last_seen=?, locus_mtime=?, surface_flag=?, territory=? WHERE id=?",
                 (claim, prior_class, new_conf, merged, prune_reason,
                  1 if generalizes else 0, now, mtime,
-                 1 if surface_flag else 0, row["id"]))
+                 1 if surface_flag else 0, terr, row["id"]))
             entry_id = row["id"]
             action = "reinforced"
         else:
             cur = conn.execute(
                 "INSERT INTO forage_map (body, locus, kind, claim, prior_class, confidence, "
-                "provenance, prune_reason, generalizes, last_seen, locus_mtime, surface_flag) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                "provenance, prune_reason, generalizes, last_seen, locus_mtime, surface_flag, territory) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (body, locus, kind, claim, prior_class, conf,
                  json.dumps(prov, ensure_ascii=False), prune_reason,
-                 1 if generalizes else 0, now, mtime, 1 if surface_flag else 0))
+                 1 if generalizes else 0, now, mtime, 1 if surface_flag else 0,
+                 1 if territory else 0))
             entry_id = cur.lastrowid
             action = "noted"
         conn.commit()
-        return {"success": True, "action": action, "id": entry_id, "table": "forage_map"}
+        return {"success": True, "action": action, "id": entry_id, "table": "forage_map",
+                "promoted_territory": promoted}
     finally:
         conn.close()
 
@@ -242,7 +289,12 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
 
     filter_owner=False 면 owner_model 을 query 로 거르지 않고 *전부* 반환 — 주인모델은
     '냄새(scent)'라 상시 노출이 능동 포식을 촉발한다(FORAGER_MULTIBODY_DESIGN §주입).
-    map 은 큼·위치-특정이라 항상 query 필터.
+    map(상세)은 큼·위치-특정이라 항상 query 필터.
+
+    territory(거친 영토 앵커, territory=1)는 query 면제로 상시 노출 — '내 영토가 무엇으로 이뤄졌나'.
+    go/skip(파나 건너뛰나)은 저장하지 않고 *지금 의도에 맞춰 런타임 파생*. 단 _TERRITORY_CAP 으로
+    상한을 둬 프롬프트가 무한정 늘지 않게 한다(상위 confidence 만 노출). 'dead' 는 장소 속성이
+    아니라 (장소×의도) 관계이므로 영토 정체만 띄우고 배제는 AI 가 판단한다.
     """
     terms = [t.lower() for t in (query or "").split() if len(t) >= 2]
     conn = _connect()
@@ -259,8 +311,27 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     finally:
         conn.close()
 
+    # 영토(상시-on, query 면제, 상한) — '내가 가진 것'의 거친 윤곽.
+    # 단 질의가 그 영토를 *지명*하면 짧은 냄새 대신 아래 map 에서 상세로 보여준다.
+    territory_items: List[Dict[str, Any]] = []
+    for r in map_rows:
+        if not r["territory"]:
+            continue
+        if terms and (_match(r["claim"], terms) or _match(r["locus"], terms)):
+            continue  # 질의 지명 → territory 냄새 생략, map 상세로 넘김
+        d = dict(r)
+        d["freshness"] = _stale_of(r["locus"], r["locus_mtime"])
+        d["short"] = _short(r["claim"])
+        territory_items.append(d)
+        if len(territory_items) >= _TERRITORY_CAP:
+            break  # 하드 상한 — 무한정 증가 차단
+
+    # map(상세, query 필터) — territory 냄새로 이미 뜬 항목만 제외(지명된 영토는 상세로 포함)
+    terr_ids = {t["id"] for t in territory_items}
     map_items: List[Dict[str, Any]] = []
     for r in map_rows:
+        if r["id"] in terr_ids:
+            continue
         if terms and not (_match(r["claim"], terms) or _match(r["locus"], terms)):
             continue
         d = dict(r)
@@ -276,7 +347,36 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         if len(owner_items) >= limit:
             break
     return {"success": True, "map": map_items, "owner": owner_items,
-            "map_count": len(map_items), "owner_count": len(owner_items)}
+            "territory": territory_items,
+            "map_count": len(map_items), "owner_count": len(owner_items),
+            "territory_count": len(territory_items)}
+
+
+def territory_loci(body: Optional[str] = None) -> List[str]:
+    """territory=1 앵커의 locus 목록(중복 제거, confidence 순) — 집중 관심 폴더 *자동 제안*용.
+
+    focus_map 이 사용자 선언 기본값에 더해 '자주 되돌아온 루트'(territory 승격)를 합쳐
+    골격 범위에 넣는다(FORAGER_MULTIBODY_DESIGN territory↔focus). body=None 이면 전 공간.
+    """
+    conn = _connect()
+    try:
+        if body:
+            rows = conn.execute(
+                "SELECT locus FROM forage_map WHERE territory=1 AND body=? "
+                "ORDER BY confidence DESC, last_seen DESC", (body,)).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT locus FROM forage_map WHERE territory=1 "
+                "ORDER BY confidence DESC, last_seen DESC").fetchall()
+    finally:
+        conn.close()
+    seen, out = set(), []
+    for r in rows:
+        loc = r["locus"]
+        if loc and loc not in seen:
+            seen.add(loc)
+            out.append(loc)
+    return out
 
 
 def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
@@ -287,7 +387,7 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
     map 이 없고 owner 만 있으면(=냄새만) 짧은 note 로 비용 절약.
     """
     res = recall(body=body, query=query, limit=limit, filter_owner=filter_owner)
-    if not res["map"] and not res["owner"]:
+    if not res["map"] and not res["owner"] and not res.get("territory"):
         return ""
     if res["map"]:
         note = ('과거 포식에서 누적한 냄새지도입니다. 참고용이며 폐기가능(defeasible) — '
@@ -298,6 +398,16 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
         note = ('주인(나)에 대해 과거 포식에서 배운 모델입니다. 이 주제로 *내 디스크/코드/웹에 자료가 '
                 '있을* 가능성을 떠올리는 단서 — 필요하면 포식(검색)을 시작하세요.')
     lines = [f'<forage_memory note="{note}">']
+    if res.get("territory"):
+        tnote = ('내 영토(열거가능 공간)의 거친 윤곽 — 무엇이 어디 있나. 지금 의도와 *맞는* 가지를 '
+                 '먼저 파고, *안 맞는* 가지는 건너뛰세요(go/skip은 의도에 맞춰 직접 판단 — '
+                 '같은 가지도 의도가 다르면 타겟이 됩니다). 어느 영토와도 안 맞으면 내 것엔 없으니 웹/밖으로.')
+        lines.append(f'  <territory note="{tnote}">')
+        for t in res["territory"]:
+            fr = f' freshness="{t["freshness"]}"' if t.get("freshness") else ''
+            loc = t["locus"] if t["locus"] != "__substrate__" else "(기질)"
+            lines.append(f'    <branch path="{loc}" conf="{t["confidence"]:.2f}"{fr}>{t["short"]}</branch>')
+        lines.append('  </territory>')
     if res["map"]:
         lines.append('  <map>')
         for m in res["map"]:

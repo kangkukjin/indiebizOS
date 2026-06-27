@@ -7,6 +7,8 @@ import sys
 import json
 from pathlib import Path
 
+from common.currency import items  # IBL 단일 통화 생성자
+
 
 # === messages_op: 메신저 (op 분기 — build --check 삼각 검증 대상) ===
 
@@ -193,16 +195,11 @@ def _msg_thread(bm, tool_input: dict) -> str:
     items.sort(key=lambda x: x["_ts"])
     for it in items:
         it.pop("_ts", None)
-    # 레코드 통화: 스레드 메시지들 → records (>> engines:document/spreadsheet 자동 흐름)
-    _records = []
-    for it in items:
-        sender = name if not it.get("is_from_user") else "나"
-        _meta = " · ".join(p for p in [it.get("time"), it.get("contact_type")] if p)
-        _records.append({"title": sender or (it.get("time") or ""), "meta": _meta,
-                         "summary": it.get("content") or "", "url": ""})
+    # 단일 통화 items = native 메시지 dict(content/is_from_user/time/status…). thread 뷰 직독.
+    # contacts(연락처)는 정보 탭 editable_list용 보조 컬렉션 — items와 공존(주=스레드).
     return json.dumps({
         "name": name, "channel": channel or "nostr", "to": to,
-        "records": _records,
+        "items": items,
         "neighbor_id": (nb.get("id") if nb else (0 if not has_neighbor else neighbor_id)),
         "info_level": nb.get("info_level", 0) if nb else 0,
         "rating": nb.get("rating", 0) if nb else 0,
@@ -213,7 +210,7 @@ def _msg_thread(bm, tool_input: dict) -> str:
         "is_neighbor": bool(nb),
         "badge": _badge(bool(nb), nb.get("info_level", 0) if nb else 0, nb.get("rating", 0) if nb else 0),
         "contacts": contacts,
-        "messages": items, "message": "" if items else "주고받은 메시지가 없습니다.",
+        "message": "" if items else "주고받은 메시지가 없습니다.",
     }, ensure_ascii=False)
 
 
@@ -288,14 +285,8 @@ def _msg_inbox(bm, tool_input: dict) -> str:
     convs.sort(key=lambda c: (c.get("favorite", 0), c["_sort"]), reverse=True)  # 즐겨찾기 먼저, 그다음 최근순
     for c in convs:
         c.pop("_sort", None)
-    # 레코드 통화: 대화 목록(상대별) → records (>> engines:document/spreadsheet 자동 흐름)
-    _records = []
-    for c in convs:
-        _meta = " · ".join(p for p in [
-            c.get("channel"), c.get("time"), c.get("badge")] if p)
-        _records.append({"title": c.get("name") or "", "meta": _meta,
-                         "summary": c.get("preview") or "", "url": ""})
-    return json.dumps({"conversations": convs, "records": _records,
+    # 단일 통화 items = native 대화 dict(id/name/channel/preview/unread/badge…). card_list 직독.
+    return json.dumps({"items": convs,
                        "message": "" if convs else "대화가 없습니다."}, ensure_ascii=False)
 
 
@@ -307,6 +298,26 @@ def _ok(payload: dict, message: str = "") -> str:
 
 def _err(message: str) -> str:
     return json.dumps({"success": False, "message": message}, ensure_ascii=False)
+
+
+def _to_records(rows, title_fn, meta_fn=None, summary_fn=None):
+    """리스트를 records 통화로 비파괴 변환(원본 리스트 키는 유지)."""
+    recs = []
+    for r in (rows or []):
+        recs.append({
+            "title": title_fn(r),
+            "meta": meta_fn(r) if meta_fn else None,
+            "summary": summary_fn(r) if summary_fn else None,
+            "url": None,
+        })
+    return recs
+
+
+def _doc_records(docs):
+    return _to_records(docs,
+        lambda d: d.get("title") or f"레벨 {d.get('level', 0)} 문서",
+        lambda d: f"레벨 {d.get('level', 0)}",
+        lambda d: (d.get("content") or "")[:120])
 
 
 def _int_or(v, default=None):
@@ -355,38 +366,11 @@ def _nb_favorite(bm, ti: dict) -> str:
     return _ok({"id": nid, "favorite": new}, "")
 
 
-def _nb_record(bm, nb: dict) -> dict:
-    """이웃 dict → 레코드 통화 1건 (title=이름, meta=레벨·평점·채널·즐겨찾기, summary=메모/연락처)."""
-    meta_parts = []
-    lv = nb.get("info_level")
-    if lv is not None:
-        meta_parts.append(f"L{lv}")
-    if _int_or(nb.get("rating"), 0):
-        meta_parts.append("★" + str(_int_or(nb.get("rating"), 0)))
-    try:
-        chans = [c.get("contact_type") for c in (bm.get_contacts(nb.get("id")) or []) if c.get("contact_type")]
-    except Exception:
-        chans = []
-    if chans:
-        meta_parts.append("/".join(dict.fromkeys(chans)))
-    if _int_or(nb.get("favorite"), 0):
-        meta_parts.append("⭐")
-    summary = (nb.get("additional_info") or "").strip()
-    if not summary:
-        try:
-            summary = ", ".join(c.get("contact_value", "") for c in (bm.get_contacts(nb.get("id")) or [])
-                                if c.get("contact_value"))
-        except Exception:
-            summary = ""
-    return {"title": nb.get("name") or "", "meta": " · ".join(meta_parts),
-            "summary": summary, "url": ""}
-
-
 def _nb_list(bm, ti: dict) -> str:
     """이웃 목록 (search 부분일치 / info_level 0-4 필터)."""
     neighbors = bm.get_neighbors(search=ti.get("search"), info_level=ti.get("info_level"))
-    records = [_nb_record(bm, n) for n in neighbors]
-    return _ok({"neighbors": neighbors, "records": records}, f"이웃 {len(neighbors)}명")
+    # 단일 통화 items = native 이웃 dict(id/name/info_level/rating/favorite…).
+    return _ok({"items": neighbors}, f"이웃 {len(neighbors)}명")
 
 
 def _nb_detail(bm, ti: dict) -> str:
@@ -403,8 +387,9 @@ def _nb_detail(bm, ti: dict) -> str:
     nb = bm.get_neighbor(nid)
     if not nb:
         return _err(f"ID {nid}의 이웃을 찾을 수 없습니다.")
+    # items = 최근 메시지(주 컬렉션), contacts·neighbor는 보조(thread 선례).
     return _ok({"neighbor": nb, "contacts": bm.get_contacts(nid),
-                "messages": bm.get_messages(neighbor_id=nid, limit=5)}, nb.get("name", ""))
+                "items": bm.get_messages(neighbor_id=nid, limit=5)}, nb.get("name", ""))
 
 
 def _ct_add(bm, ti: dict) -> str:
@@ -440,7 +425,9 @@ def _biz_list(bm, ti: dict) -> str:
     lv = ti.get("level")
     level = _int_or(lv) if lv not in (None, "", "all", "전체") else None
     search = (ti.get("search") or "").strip() or None
-    return _ok({"businesses": bm.get_businesses(level=level, search=search)})
+    businesses = bm.get_businesses(level=level, search=search)
+    # 단일 통화 items = native 비즈니스 dict(name/id/level/description). card_list·셀렉터가 직독.
+    return _ok(items(businesses))
 
 
 def _biz_detail(bm, ti: dict) -> str:
@@ -486,7 +473,9 @@ def _item_list(bm, ti: dict) -> str:
     bid = _int_or(ti.get("business_id"))
     if not bid:
         return _ok({"items": [], "business_id": None})
-    return _ok({"items": bm.get_business_items(bid), "business_id": bid})
+    items = bm.get_business_items(bid)
+    # 단일 통화 items = native 아이템 dict(title/details/id). editable_list 직독.
+    return _ok({"items": items, "business_id": bid})
 
 
 def _item_detail(bm, ti: dict) -> str:
@@ -594,7 +583,8 @@ def _item_remove_image(bm, ti: dict) -> str:
 
 def _doc_list(bm, ti: dict) -> str:
     """레벨별 공개 비즈니스 문서 전체(레벨 0-4)."""
-    return _ok({"documents": bm.get_all_business_documents()})
+    docs = bm.get_all_business_documents()
+    return _ok({"items": docs})
 
 
 def _doc_detail(bm, ti: dict) -> str:
@@ -619,13 +609,19 @@ def _doc_regenerate(bm, ti: dict) -> str:
     """비즈니스 목록·아이템 기반으로 레벨별 공개 문서를 자동 재생성."""
     r = bm.regenerate_business_documents()
     if (r or {}).get("status") == "success":
-        return _ok({"documents": bm.get_all_business_documents()}, r.get("message") or "문서를 재생성했습니다.")
+        docs = bm.get_all_business_documents()
+        return _ok({"items": docs}, r.get("message") or "문서를 재생성했습니다.")
     return _err((r or {}).get("message") or "문서 재생성에 실패했습니다.")
 
 
 def _guide_list(bm, ti: dict) -> str:
-    """레벨별 근무 지침 전체(레벨 0-4)."""
-    return _ok({"guidelines": bm.get_all_work_guidelines()})
+    """레벨별 근무 지침 전체(레벨 0-4).
+
+    단일 통화: native 지침 dict(level/title/content 등 풍부 필드)를 그대로 `items`로 낸다.
+    옛 records-관습 변환(_to_records)은 *손실적*(level 필드를 버려 카드 `{level}`이 깨짐)이라
+    은퇴. 카드는 native 필드를 그대로 읽고, derive_items는 items 존재 시 무동작.
+    """
+    return _ok({"items": bm.get_all_work_guidelines()})
 
 
 def _guide_detail(bm, ti: dict) -> str:

@@ -10,8 +10,12 @@ from typing import Optional
 
 # 2026-06-03 학술 논문 어휘 통합 — search_openalex/arxiv/pubmed/semantic + download_arxiv/pubmed
 # → [sense:paper]{op: search|download, source}. op 키만 _OP_DISPATCHERS(소스는 파라미터).
-_OP_DISPATCHERS = {"paper_op": {"search": None, "download": None}}
-_OP_DEFAULTS = {"paper_op": "search"}
+# 2026-06-22 국회도서관 국가학술정보(nanet) — paper source:nanet(학위논문·국내학술) + researcher(연구자·공저자)
+_OP_DISPATCHERS = {
+    "paper_op": {"search": None, "download": None},
+    "researcher_op": {"find": None, "coauthor": None},
+}
+_OP_DEFAULTS = {"paper_op": "search", "researcher_op": "find"}
 
 
 def _search_arxiv(tool_input: dict) -> str:
@@ -49,7 +53,7 @@ def _search_arxiv(tool_input: dict) -> str:
     if not items:
         return "No papers found for the given query."
     # ★string-반환 변형: 포맷 문자열은 message로, 구조는 records 통화로 둘 다 노출(비파괴 + 조합 가능).
-    return {"success": True, "message": "\n".join(lines), "records": items, "count": len(items)}
+    return {"success": True, "message": "\n".join(lines), "items": items, "count": len(items)}
 
 
 def _download_arxiv_pdf(tool_input: dict, context) -> str:
@@ -97,6 +101,8 @@ def _paper_op(tool_input: dict, context) -> str:
             return _search_pubmed(tool_input)
         if source in ("semantic", "semantic_scholar", "s2"):
             return _search_semantic_scholar(tool_input)
+        if source in ("nanet", "kr", "dissertation", "국회도서관"):
+            return _search_nanet(tool_input)  # 국내 학술논문·학위논문(국회도서관)
         return _search_openalex(tool_input)  # openalex = 기본(범용)
     if op == "download":
         if source in ("pubmed", "pmc"):
@@ -107,12 +113,192 @@ def _paper_op(tool_input: dict, context) -> str:
     return f"알 수 없는 op '{op}'. 사용: search|download"
 
 
+# ─── 국회도서관 국가학술정보(LOSI) OpenAPI ──────────────────────────────
+# losi-api.nanet.go.kr — 연구자(authorView)·공저자(coAuthor)·통합검색(researchTotal).
+# 인증키는 .env NANET_API_KEY(auth_manager 'nanet' 레지스트리). POST + authKey.
+_NANET_BASE = "http://losi-api.nanet.go.kr"
+
+
+def _nanet_call(endpoint: str, params: dict) -> dict:
+    """LOSI OpenAPI 호출. authKey 주입(.env) 후 POST. 빈 값 파라미터는 제거."""
+    try:
+        from common.auth_manager import get_auth_query_params
+        auth = get_auth_query_params("nanet")  # {"authKey": key} | None
+    except Exception:
+        auth = None
+    if not auth:
+        return {"_err": "NANET_API_KEY 미설정 — losi-open.nanet.go.kr에서 발급한 국가학술정보 인증키를 .env에 넣으세요."}
+    data = {**auth}
+    for k, v in params.items():
+        if v not in (None, ""):
+            data[k] = v
+    try:
+        r = requests.post(f"{_NANET_BASE}/{endpoint}", data=data, timeout=20)
+        return r.json()
+    except ValueError:
+        return {"_err": "국가학술정보 응답 파싱 실패(비JSON). 인증키 활성/엔드포인트 확인 필요."}
+    except requests.RequestException as e:
+        return {"_err": f"국가학술정보 API 호출 실패: {e}"}
+
+
+def _nanet_rows(j: dict):
+    """LOSI 응답에서 (행 리스트, 에러문자열) 추출. result[0]이 에러 dict이거나 행 리스트."""
+    if j.get("_err"):
+        return None, j["_err"]
+    res = j.get("result")
+    if isinstance(res, list) and res:
+        first = res[0]
+        if isinstance(first, dict) and first.get("error"):
+            e = (first["error"] or [{}])[0]
+            return None, f"[{e.get('code')}] {e.get('message')}"
+        if isinstance(first, list):
+            return first, None          # result:[[ {...}, ... ]]
+        return res, None                # result:[ {...}, ... ]
+    return [], None
+
+
+def _researcher_op(tool_input: dict, context) -> str:
+    """[sense:researcher]{op, ...} — 국회도서관 국가학술정보 연구자·공저자."""
+    op = (tool_input.get("op") or _OP_DEFAULTS["researcher_op"]).strip()
+    if op == "find":
+        return _nanet_author_find(tool_input)
+    if op == "coauthor":
+        return _nanet_coauthor(tool_input)
+    return f"알 수 없는 op '{op}'. 사용: find|coauthor"
+
+
+def _nanet_author_find(tool_input: dict) -> str:
+    """연구자 검색(authorView) — 동명이인을 소속·출생연도·lodID로 분리."""
+    name = tool_input.get("name") or tool_input.get("name_ko") or tool_input.get("query")
+    if not name:
+        return "연구자명(name)이 필요합니다. 예: [sense:researcher]{name: \"정은정\", org: \"서울대\"}"
+    org = tool_input.get("org") or tool_input.get("orgName_ko")
+    params = {
+        "name_ko": name,
+        "name_en": tool_input.get("name_en"),
+        "orgName_ko": org,
+        "display": tool_input.get("max_results") or tool_input.get("display") or 30,
+    }
+    rows, err = _nanet_rows(_nanet_call("authorView", params))
+    if err:
+        return f"국가학술정보 연구자 검색 실패: {err}"
+    # org 필터가 빈 결과면(authorView는 부분일치 안 함) 이름만으로 재조회 후 소속 부분일치로 거름.
+    # — 침묵 빈결과 함정 방지.
+    org_filtered = False
+    if not rows and org:
+        all_rows, err2 = _nanet_rows(_nanet_call("authorView", {**params, "orgName_ko": None}))
+        if err2:
+            return f"국가학술정보 연구자 검색 실패: {err2}"
+        rows = [r for r in (all_rows or []) if isinstance(r, dict) and org in (r.get("orgName_ko") or "")]
+        org_filtered = True
+    if not rows:
+        hint = f"(소속 '{org}' 부분일치 0건 — 소속 빼고 재시도 권장) " if org else ""
+        return f"'{name}' 연구자를 국가학술정보에서 찾지 못했습니다 {hint}(국내 학술 출판 이력 기준 — 산업/비출판 인물은 없을 수 있음)."
+    lines = [f"국가학술정보 연구자 '{name}' — {len(rows)}명 (소속·출생연도로 동명이인 분리):"]
+    records = []
+    for a in rows:
+        if not isinstance(a, dict):
+            continue
+        bd = (a.get("birthday") or "")
+        by = bd[:4] if len(bd) >= 4 else "?"
+        en = a.get("name_en") or ""
+        org_ko = a.get("orgName_ko") or "?"
+        pos = a.get("position") or "-"
+        lid = a.get("lodID")
+        lines.append(
+            f"- {a.get('name_ko')}{(' / ' + en) if en else ''} | 소속:{org_ko} "
+            f"| 출생:{by} | 직위:{pos} | lodID:{lid}"
+        )
+        records.append({  # 레코드 통화 — 동명이인 후보를 소속·생년·lodID로 식별
+            "title": a.get("name_ko") or name,
+            "meta": " · ".join(x for x in [org_ko if org_ko != "?" else None,
+                                            (f"출생 {by}" if by != "?" else None),
+                                            (pos if pos != "-" else None)] if x),
+            "summary": (f"lodID:{lid}" if lid else "") + (f" / {en}" if en else ""),
+            "url": None,
+        })
+    lines.append("→ 후보 좁힌 뒤 [sense:researcher]{op:coauthor, id:\"<lodID>\"}로 공저자망 교차검증 가능.")
+    return {"success": True, "message": "\n".join(lines), "items": records, "count": len(records)}
+
+
+def _nanet_coauthor(tool_input: dict) -> str:
+    """공저자망(coAuthor) — lodID로 협업 네트워크를 떠 신원 재확인."""
+    aid = tool_input.get("id") or tool_input.get("authorID") or tool_input.get("lodID")
+    if not aid:
+        return "coauthor op은 id(연구자 lodID)가 필요합니다. 먼저 [sense:researcher]{op:find, name:...}로 lodID를 얻으세요."
+    params = {
+        "authorID": aid,
+        "name": tool_input.get("name"),
+        "display": tool_input.get("max_results") or tool_input.get("display") or 30,
+    }
+    rows, err = _nanet_rows(_nanet_call("coAuthor", params))
+    if err:
+        return f"공저자 조회 실패: {err}"
+    if not rows:
+        return f"lodID {aid}의 공저자 정보가 없습니다."
+    lines = [f"lodID {aid} 공저자 — {len(rows)}명:"]
+    records = []
+    for a in rows:
+        if not isinstance(a, dict):
+            lines.append(f"- {a}")
+            continue
+        org = a.get("orgName_ko") or a.get("orgId") or "?"
+        lid = a.get("lodID") or a.get("authorID") or a.get("coAuthorID") or ""
+        nm = a.get("name_ko") or a.get("name") or "?"
+        lines.append(f"- {nm} | 소속:{org} | lodID:{lid}")
+        records.append({  # 레코드 통화 — 공저자 신원
+            "title": nm,
+            "meta": (org if org != "?" else None),
+            "summary": (f"lodID:{lid}" if lid else ""),
+            "url": None,
+        })
+    return {"success": True, "message": "\n".join(lines), "items": records, "count": len(records)}
+
+
+def _search_nanet(tool_input: dict) -> str:
+    """통합검색(researchTotal) — 국내 학술논문·학위논문. 학위논문=인물 신원의 결정적 닻."""
+    query = tool_input.get("query") or tool_input.get("q") or tool_input.get("keyword")
+    if not query:
+        return "검색어(query)가 필요합니다."
+    params = {
+        "query": query,
+        "display": tool_input.get("max_results") or tool_input.get("display") or 10,
+        "page": tool_input.get("page") or 1,
+    }
+    if tool_input.get("type"):
+        params["type"] = tool_input["type"]      # 자료유형 필터(예: 학위논문)
+    if tool_input.get("year"):
+        params["year"] = tool_input["year"]
+    rows, err = _nanet_rows(_nanet_call("researchTotal", params))
+    if err:
+        return f"국가학술정보 통합검색 실패: {err}"
+    if not rows:
+        return f"'{query}'에 대한 국가학술정보 결과가 없습니다."
+    lines = [f"국가학술정보 통합검색 '{query}' — {len(rows)}건:"]
+    for it in rows:
+        if not isinstance(it, dict):
+            lines.append(f"- {it}")
+            continue
+        title = it.get("title") or it.get("title_ko") or it.get("articleTitle") or "(제목없음)"
+        author = it.get("author") or it.get("author_ko") or it.get("authorName") or ""
+        org = it.get("publisher") or it.get("orgName_ko") or it.get("degreeOrg") or ""
+        yr = it.get("year") or it.get("pubYear") or it.get("issueYear") or ""
+        typ = it.get("type") or it.get("dataType") or it.get("materialType") or ""
+        meta = " · ".join(x for x in [typ, author, org, str(yr)] if x)
+        url = it.get("url") or it.get("link") or it.get("detailUrl") or ""
+        lines.append(f"- {title}" + (f" [{meta}]" if meta else "") + (f"\n  {url}" if url else ""))
+    return "\n".join(lines)
+
+
 def execute(tool_input: dict, context) -> str:
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name
 
     if tool_name == "paper_op":
         return _paper_op(tool_input, context)
+
+    elif tool_name == "researcher_op":
+        return _researcher_op(tool_input, context)
 
     elif tool_name == "fetch_pew_research":
         return _fetch_rss("https://www.pewresearch.org/feed/", "Pew Research Center", tool_input.get("limit", 10))
@@ -221,7 +407,7 @@ def _search_semantic_scholar(tool_input: dict) -> str:
                     "url": paper_url or "",
                 })
 
-            return {"success": True, "message": "\n".join(results), "records": records, "count": len(records)}
+            return {"success": True, "message": "\n".join(results), "items": records, "count": len(records)}
 
         except requests.RequestException as e:
             if attempt < max_retries - 1:
@@ -321,7 +507,7 @@ def _search_pubmed(tool_input: dict) -> str:
         if not results:
             return "No papers found for the given query."
 
-        return {"success": True, "message": "\n".join(results), "records": records, "count": len(records)}
+        return {"success": True, "message": "\n".join(results), "items": records, "count": len(records)}
 
     except requests.RequestException as e:
         return f"Error searching PubMed: {str(e)}"
@@ -602,7 +788,7 @@ def _search_openalex(tool_input: dict) -> str:
                 "url": record_url or "",
             })
 
-        return {"success": True, "message": "\n".join(results), "records": records, "count": len(records)}
+        return {"success": True, "message": "\n".join(results), "items": records, "count": len(records)}
 
     except requests.RequestException as e:
         return f"OpenAlex 검색 오류: {str(e)}"
@@ -673,7 +859,7 @@ def _fetch_rss(url: str, source_name: str, limit: int = 10) -> str:
                 "url": link,
             })
 
-        return {"success": True, "message": "\n".join(results), "records": records, "count": len(records)}
+        return {"success": True, "message": "\n".join(results), "items": records, "count": len(records)}
         
     except Exception as e:
         return f"{source_name} RSS 가져오기 오류: {str(e)}"
@@ -743,7 +929,7 @@ def _search_guardian(tool_input: dict) -> str:
                 "url": url,
             })
 
-        return {"success": True, "message": "\n".join(output), "records": records, "count": len(records)}
+        return {"success": True, "message": "\n".join(output), "items": records, "count": len(records)}
         
     except Exception as e:
         return f"The Guardian API 검색 오류: {str(e)}"
@@ -878,8 +1064,9 @@ def _fetch_world_bank_data(tool_input: dict) -> str:
             "success": True,
             "indicator": indicator_name,
             "country": country_name,
-            # 표준 테이블 통화 — 그대로 [engines:chart]{table:...} / [engines:spreadsheet]{table:...} 로 흘려보냄
-            "table": {"columns": ["연도", indicator_name], "rows": rows},
+            # 단일 통화 items(행 dict) — 첫 키=연도(x축 라벨), 둘째=지표값(수치 시리즈).
+            # 소비자(chart/spreadsheet)가 items→table 재구성(키 순서=열). §3 table 흡수.
+            "items": [{"연도": r[0], indicator_name: r[1]} for r in rows],
             "summary": "\n".join(summary),
         }, ensure_ascii=False)
 
@@ -960,8 +1147,7 @@ def _search_books(tool_input: dict) -> str:
 
         return {
             "count": data.get("totalItems", len(books)),
-            "data": books,
-            "records": records,
+            "items": books,  # 단일 통화: native 도서 dict(bookname/authors/description/image 등 풍부). 옛 records 은퇴.
             "message": f"'{query}' Google Books 검색 {len(books)}건",
         }
 

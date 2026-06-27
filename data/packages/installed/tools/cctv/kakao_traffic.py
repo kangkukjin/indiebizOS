@@ -19,7 +19,7 @@ import time
 import urllib.request
 from typing import Dict, List, Optional, Tuple
 
-from common import calculate_distance
+from cctv_common import calculate_distance
 
 # ── 상수 ──────────────────────────────────────────────
 KAKAO_CCTV_INFO_URL = "https://map.kakao.com/api/cctvs/"

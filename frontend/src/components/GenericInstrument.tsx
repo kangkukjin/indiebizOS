@@ -19,6 +19,8 @@
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { StreamPlayer } from './StreamPlayer';
+import type { StreamData } from './chat/chatUtils';
 
 const IBL_ENDPOINT = 'http://127.0.0.1:8765/ibl/execute';
 
@@ -39,7 +41,9 @@ export interface AppInput {
   option_label?: string;
 }
 
-export interface AppButton { label: string; action: string; refresh?: boolean }
+// stream:true 버튼은 클라이언트 측 스트림 재생(StreamPlayer) — 행 데이터(url/playable)를
+// 직접 플레이어로 연다. 이 경우 action 은 불필요(서버 IBL 호출 없음).
+export interface AppButton { label: string; action?: string; refresh?: boolean; stream?: boolean }
 
 export interface AppCompose {
   placeholder?: string;
@@ -432,10 +436,11 @@ function EditableListPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown
   );
 }
 
-function ViewPrim({ p, data, onDrill, onRowAction, busyRow, dispatch }: {
+function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch }: {
   p: AppViewPrim; data: unknown;
   onDrill: (p: AppViewPrim, item: Json) => void;
-  onRowAction: (action: string, item: Json, rowKey: string) => void;
+  onRowAction: (action: string, item: Json, rowKey: string, refresh?: boolean) => void;
+  onStream: (item: Json) => void;
   busyRow: string | null;
   dispatch: Dispatch;
 }) {
@@ -572,10 +577,12 @@ function ViewPrim({ p, data, onDrill, onRowAction, busyRow, dispatch }: {
     const arr = asList(data, p.from);
     if (!arr.length) return <EmptyMsg p={p} data={data} />;
     const btn = p.button as AppButton | undefined;
+    const btn2 = p.button2 as AppButton | undefined;
     return (
       <>
         {arr.map((it, i) => {
           const rowKey = `${p.type}-${i}`;
+          const rowKey2 = `${p.type}-${i}-2`;
           return (
             <Card key={i}>
               <div className="flex items-center gap-3">
@@ -586,9 +593,16 @@ function ViewPrim({ p, data, onDrill, onRowAction, busyRow, dispatch }: {
                 </div>
                 {btn && (
                   <button disabled={busyRow === rowKey}
-                    onClick={() => onRowAction(btn.action, it, rowKey)}
+                    onClick={() => btn.stream ? onStream(it) : btn.action && onRowAction(btn.action, it, rowKey, btn.refresh)}
                     className="px-3 py-1.5 rounded-lg border border-stone-200 text-sm text-stone-800 hover:border-stone-400 disabled:opacity-40">
                     {busyRow === rowKey ? '…' : btn.label || '▶'}
+                  </button>
+                )}
+                {btn2 && (
+                  <button disabled={busyRow === rowKey2}
+                    onClick={() => btn2.stream ? onStream(it) : btn2.action && onRowAction(btn2.action, it, rowKey2, btn2.refresh)}
+                    className="px-3 py-1.5 rounded-lg border border-stone-200 text-sm text-stone-800 hover:border-stone-400 disabled:opacity-40">
+                    {busyRow === rowKey2 ? '…' : btn2.label || '⬇'}
                   </button>
                 )}
               </div>
@@ -602,10 +616,11 @@ function ViewPrim({ p, data, onDrill, onRowAction, busyRow, dispatch }: {
   return null;
 }
 
-function ViewRenderer({ view, data, onDrill, onRowAction, busyRow, dispatch }: {
+function ViewRenderer({ view, data, onDrill, onRowAction, onStream, busyRow, dispatch }: {
   view: AppViewPrim[]; data: Json;
   onDrill: (p: AppViewPrim, item: Json) => void;
-  onRowAction: (action: string, item: Json, rowKey: string) => void;
+  onRowAction: (action: string, item: Json, rowKey: string, refresh?: boolean) => void;
+  onStream: (item: Json) => void;
   busyRow: string | null;
   dispatch: Dispatch;
 }) {
@@ -614,7 +629,7 @@ function ViewRenderer({ view, data, onDrill, onRowAction, busyRow, dispatch }: {
   return (
     <>
       {view.map((p, i) => (
-        <ViewPrim key={i} p={p} data={data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} dispatch={dispatch} />
+        <ViewPrim key={i} p={p} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} />
       ))}
     </>
   );
@@ -695,6 +710,8 @@ function ModePane({ mode }: { mode: AppMode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyRow, setBusyRow] = useState<string | null>(null);
+  const [stream, setStream] = useState<Json | null>(null);  // 스트림 재생 오버레이(CCTV '▶ 보기' 등) — 행 데이터를 StreamPlayer 로
+  const [notice, setNotice] = useState<string | null>(null);  // 행 액션 성공 메시지(즐겨찾기 추가 등) — 잠깐 표시
   const [composeText, setComposeText] = useState('');
   const [composeCh, setComposeCh] = useState('');  // 선택된 발신 채널 키 (빈값=첫 후보)
   const [sending, setSending] = useState(false);
@@ -727,7 +744,9 @@ function ModePane({ mode }: { mode: AppMode }) {
     if (!dc) return;
     setLoading(true); setError(null); setComposeText(''); setComposeCh(''); setTabIdx(0);
     try {
-      const code = rowAction(dc.action, item);
+      // 드릴 액션의 $입력(현재 다이얼 값) + {필드}(클릭 행) 둘 다 치환 — realty 추이처럼
+      // "현재 지역·유형 + 클릭한 단지"를 합쳐 묻는 드릴을 지원.
+      const code = rowAction(buildAction(dc.action, valuesRef.current), item);
       const d = await runIBL(code);
       if (d && typeof d === 'object') (d as Json)._item = item; // 드릴 뷰에서 클릭 행 참조용
       setDrill({ data: d, action: code, item, view: dc.view, compose: dc.compose, tabs: dc.tabs });
@@ -779,19 +798,27 @@ function ModePane({ mode }: { mode: AppMode }) {
     setSending(false);
   }, [composeText, composeCh, drill, dispatch]);
 
-  const onRowAction = useCallback(async (action: string, item: Json, rowKey: string) => {
+  const onRowAction = useCallback(async (action: string, item: Json, rowKey: string, refresh?: boolean) => {
     setBusyRow(rowKey);
     try {
       const d = await runIBL(rowAction(action, item));
-      if (d?.error) alert(String(d.error));
+      if (d?.error || d?.success === false) alert(String(d.error || d.message || '실패'));
+      else {
+        if (d?.message) { setNotice(String(d.message)); setTimeout(() => setNotice(null), 2500); }
+        if (refresh) await refreshCurrent();
+      }
     } catch (e) {
       alert('실행 실패: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setBusyRow(null);
     }
-  }, []);
+  }, [refreshCurrent]);
+
+  // 스트림 재생 — 행 데이터(url/playable/name/lat/lng)를 클라이언트 StreamPlayer 로 연다(서버 호출 없음)
+  const onStream = useCallback((item: Json) => setStream(item), []);
 
   const fireButton = useCallback(async (b: AppButton) => {
+    if (!b.action) return;
     try {
       const d = await runIBL(b.action);
       if (d?.error) { alert(String(d.error)); return; }
@@ -849,7 +876,7 @@ function ModePane({ mode }: { mode: AppMode }) {
   const drillViewEl = drill ? (
     <ViewRenderer
       view={drillTabs ? (drillTabs[Math.min(tabIdx, drillTabs.length - 1)]?.view || []) : (drill.view || [])}
-      data={drill.data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} dispatch={dispatch} />
+      data={drill.data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} />
   ) : null;
 
   return (
@@ -920,12 +947,13 @@ function ModePane({ mode }: { mode: AppMode }) {
 
       {loading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-stone-200 border-t-stone-600 rounded-full animate-spin" /></div>}
       {error && <p className="text-sm text-stone-400">오류: {error}</p>}
+      {notice && <p className="mb-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">{notice}</p>}
 
       {/* === master-detail 반응형: PC=2분할(리스트+상세 동시) / 폰=드릴(선택→상세→뒤로) === */}
       {isSplit && !loading && data && (
         <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-210px)]">
           <div className={`md:w-72 md:shrink-0 md:overflow-y-auto md:pr-1 ${drill ? 'hidden md:block' : 'block'}`}>
-            <ViewRenderer view={mode.view || []} data={data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} dispatch={dispatch} />
+            <ViewRenderer view={mode.view || []} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} />
           </div>
           <div className={`flex-1 min-w-0 md:border-l md:border-stone-200 md:pl-4 ${drill ? 'flex flex-col min-h-0' : 'hidden md:flex md:flex-col'}`}>
             {drill ? (
@@ -952,13 +980,27 @@ function ModePane({ mode }: { mode: AppMode }) {
         </>
       )}
       {!isSplit && !loading && !drill && data && mode.view && (
-        <ViewRenderer view={mode.view} data={data} onDrill={onDrill} onRowAction={onRowAction} busyRow={busyRow} dispatch={dispatch} />
+        <ViewRenderer view={mode.view} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} />
       )}
       {!isSplit && (() => {
         const cmp = drill ? activeCompose : mode.compose;
         if (!cmp || loading || (!drill && !data)) return null;
         return <div className="-mx-5 px-5">{composeBarEl(cmp)}</div>;
       })()}
+
+      {/* 스트림 재생 오버레이 — CCTV '▶ 보기' 등. 행 데이터(url/playable)를 StreamPlayer 로 재생 */}
+      {stream && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+          onClick={() => setStream(null)}>
+          <div className="w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-end mb-1">
+              <button onClick={() => setStream(null)}
+                className="px-3 py-1 rounded-lg bg-white/90 text-stone-800 text-sm hover:bg-white">닫기 ✕</button>
+            </div>
+            <StreamPlayer data={stream as unknown as StreamData} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

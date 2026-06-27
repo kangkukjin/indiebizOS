@@ -37,16 +37,24 @@ def _parse_prev(prev):
 
 
 def _get_records(obj):
-    """객체에서 records 리스트를 꺼낸다. ({records:[...]} 또는 리스트 자체)
+    """객체에서 항목 리스트를 꺼낸다.
 
-    반환: (records_list, envelope_dict)  — envelope에 변환 결과를 다시 끼워 비파괴 반환용.
+    ★컷오버 후 키 우선순위 = items 우선 · records 폴백 (§8.3, 2026-06-27):
+    단일 통화 `items`가 1순위. items 생산자(native 풍부 dict)는 records가 버리는 필드까지
+    in-pipe로 흘린다(예: zigbang lat/lng, business level). records 폴백은 *아직 items 안 내는
+    records-관습 생산자*(blog·contest·legal·memory 등 ~18개)를 위한 in-pipe derive_items 역할 —
+    records는 손실 없는 dict 목록이라 그대로 item 목록으로 읽으면 된다. 그 생산자들이 전부 native
+    items로 이주하면 records 줄을 뗀다(전환 꼬리, 동기화 상태 아님). 과적 items(photo 한국어
+    summary)는 Phase 2에서 summary_table로 개명 완료라 충돌 없음.
+
+    반환: (items_list, envelope_dict)  — envelope에 변환 결과를 다시 끼워 비파괴 반환용.
     """
     if isinstance(obj, dict):
-        r = obj.get("records")
+        r = obj.get("items")            # 단일 통화 — 모든 생산자가 items 방출(2026-06-27 컷오버 완료, records 생산자 0)
         if isinstance(r, list):
             return r, obj
     if isinstance(obj, list):
-        return obj, {"records": obj}
+        return obj, {"items": obj}
     return None, None
 
 
@@ -61,13 +69,21 @@ def _get_table(obj):
             return {"columns": t.get("columns") or [], "rows": t["rows"]}, obj
         if isinstance(obj.get("rows"), list) and isinstance(obj.get("columns"), list):
             return {"columns": obj["columns"], "rows": obj["rows"]}, obj
+        # 단일 통화 items(행 dict) → table 재구성: 첫 dict의 키 순서=열, 값=행(§3 table 흡수).
+        items = obj.get("items")
+        if isinstance(items, list) and items and all(isinstance(x, dict) for x in items):
+            cols = list(items[0].keys())
+            return {"columns": cols, "rows": [[d.get(c) for c in cols] for d in items]}, obj
     return None, None
 
 
 def _emit_records(envelope, new_records):
-    """변환된 records를 원 envelope에 비파괴로 끼워 반환."""
+    """변환된 항목들을 원 envelope에 비파괴로 끼워 반환.
+
+    단일 통화 키 `items`로 내보낸다(2026-06-27 컷오버 완료 — 옛 records dual-emit 은퇴).
+    """
     out = dict(envelope) if isinstance(envelope, dict) else {}
-    out["records"] = new_records
+    out["items"] = new_records          # 단일 통화
     out["count"] = len(new_records)
     out.setdefault("success", True)
     return out

@@ -136,19 +136,10 @@ def execute(tool_input: dict, context):
             query=tool_input.get('query', ''),
             count=tool_input.get('count', 5),
         )
-        # 레코드 통화 부착(비파괴) — results 목록을 records로. >> 파이프가 자동으로 흐름.
+        # 단일 통화 — native results(title/channel/duration/video_id/url 등 풍부)를 items로.
+        # (옛 records 5칸 변환은 video_id/duration 등을 버려 손실적이라 은퇴.)
         if isinstance(result, dict) and isinstance(result.get('results'), list):
-            records = []
-            for r in result['results']:
-                meta_parts = [r.get('channel'), r.get('duration')]
-                rec = {
-                    'title': r.get('title', ''),
-                    'meta': ' · '.join(p for p in meta_parts if p),
-                    'summary': '',
-                    'url': r.get('url', ''),
-                }
-                records.append(rec)
-            result['records'] = records
+            result['items'] = result.pop('results')
         return result
     elif tool_name == 'play_youtube':
         return tool_youtube.play_youtube(

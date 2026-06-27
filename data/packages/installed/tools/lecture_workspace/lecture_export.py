@@ -209,8 +209,8 @@ def export_pptx_editable(lecture_id: str, output_path: Optional[Path] = None) ->
             import json
             with open(spec_file, "r", encoding="utf-8") as f:
                 spec = json.load(f)
-            # 프리미엄 이미지 슬라이드(slide_image 경로)는 통째 렌더 PNG — 편집모드에서도 비주얼 보존
-            if spec.get("layout") == "image":
+            # 통째 이미지 슬라이드(native 통짜 / 옛 image 경로)는 구운 PNG라 분해 불가 — 편집모드에서도 비주얼 보존
+            if spec.get("layout") in ("native", "image"):
                 png = lecture_dir / meta.get("png_file", "")
                 if png.exists():
                     slide.shapes.add_picture(

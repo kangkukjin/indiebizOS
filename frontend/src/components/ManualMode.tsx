@@ -10,9 +10,29 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { Terminal, Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert, HelpCircle, Copy, X } from 'lucide-react';
+import { Terminal, Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert, HelpCircle, Copy, X, Stethoscope, RotateCw, HardDrive, Boxes } from 'lucide-react';
 import { api } from '../lib/api';
-import type { IblValidateResult, IblSafety, IblCatalog } from '../lib/api-ibl';
+import { NodePresence } from './launcher-components';
+import { EpisodeJournal } from './EpisodeJournal';
+import type { IblValidateResult, IblSafety, IblCatalog, DashboardStatus } from '../lib/api-ibl';
+
+// 계기판 서비스 라벨
+const SERVICE_LABELS: Record<string, string> = {
+  scheduler: '스케줄러', channel_poller: '채널 폴러', system_ai_runner: '시스템 AI',
+};
+
+// 점검 시각을 "방금 전 / N분 전 / N시간 전 / N일 전"으로
+function relTime(iso: string | null): string {
+  if (!iso) return '미점검';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '미점검';
+  const m = Math.floor((Date.now() - t) / 60000);
+  if (m < 1) return '방금 전';
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  return `${Math.floor(h / 24)}일 전`;
+}
 
 // 수동 모드에서 IBL 액션이 쓰는 프로젝트 컨텍스트 (활성 프로젝트가 없어도 경로 확보)
 const MANUAL_PROJECT_ID = '수동모드';
@@ -119,6 +139,11 @@ export default function ManualMode() {
   // 발견 레이어 (둘러보기 팔레트)
   const [browsing, setBrowsing] = useState(false);
   const [browseQuery, setBrowseQuery] = useState('');
+  const [showAbout, setShowAbout] = useState(false);   // "IBL이란?" 설명 패널
+
+  // 계기판: 시스템 상태 (마지막 IBL 건강 + vitals) + 수동 재점검
+  const [dashboard, setDashboard] = useState<DashboardStatus | null>(null);
+  const [healthChecking, setHealthChecking] = useState(false);
 
   const validateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
@@ -261,6 +286,31 @@ export default function ManualMode() {
     }
   };
 
+  // 계기판 상태 로드 — 마지막 기록된 IBL 건강 + vitals (검사 실행 X, 즉각)
+  const loadDashboard = useCallback(async () => {
+    try {
+      setDashboard(await api.getDashboardStatus());
+    } catch { /* 백엔드 미가동 시 무시 — 계기판은 비워둔다 */ }
+  }, []);
+
+  // 계기판 열릴 때 1회 로드
+  useEffect(() => { loadDashboard(); }, [loadDashboard]);
+
+  // 지금 점검 — fixture 통화+정적+골든을 새로 실행(AI 0, 수십 초) 후 계기판 갱신
+  const handleHealthCheck = async () => {
+    if (healthChecking) return;
+    setErr(null);
+    setHealthChecking(true);
+    try {
+      await api.runIblHealthCheck();
+      await loadDashboard();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'IBL 건강 점검 실패');
+    } finally {
+      setHealthChecking(false);
+    }
+  };
+
   // 학습(증류) — 사용자가 결과를 인정했을 때만 명시적으로 호출. intent가 있어야 함.
   const handleLearn = async () => {
     if (!intent.trim() || !iblCode.trim() || distilling || learned) return;
@@ -291,19 +341,174 @@ export default function ManualMode() {
         <div className="flex items-center justify-between gap-2 text-stone-500">
           <div className="flex items-center gap-2 min-w-0">
             <Terminal size={18} className="shrink-0" />
-            <span className="text-sm truncate">수동 모드 — 명령을 IBL로 번역·검수한 뒤 실행합니다</span>
+            <span className="text-sm truncate">계기판 — 시스템 상태를 보고, 명령을 IBL로 번역·검수해 실행합니다</span>
           </div>
-          <button
-            onClick={() => setBrowsing((v) => !v)}
-            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 border transition ${
-              browsing ? 'bg-stone-800 text-white border-stone-800' : 'bg-white/70 border-stone-200 text-stone-600 hover:bg-white'
-            }`}
-          >
-            <BookOpen size={13} /> 둘러보기
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => { setBrowsing((v) => !v); setShowAbout(false); }}
+              className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 border transition ${
+                browsing ? 'bg-stone-800 text-white border-stone-800' : 'bg-white/70 border-stone-200 text-stone-600 hover:bg-white'
+              }`}
+            >
+              <BookOpen size={13} /> IBL 사전
+            </button>
+            <button
+              onClick={() => { setShowAbout((v) => !v); setBrowsing(false); }}
+              className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 border transition ${
+                showAbout ? 'bg-stone-800 text-white border-stone-800' : 'bg-white/70 border-stone-200 text-stone-600 hover:bg-white'
+              }`}
+            >
+              <HelpCircle size={13} /> IBL이란?
+            </button>
+          </div>
         </div>
 
-        {/* 발견 레이어: 노드별 액션 둘러보기 → 클릭하면 명령줄에 씨앗으로 */}
+        {/* 시스템 상태 (계기판) — 마지막 IBL 건강 + 핵심 vitals. 열 때 즉시(검사 X), '지금 점검'으로 새로. */}
+        <div className="rounded-xl border border-stone-200 bg-white/70 p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold text-stone-700 flex items-center gap-1.5">
+              <Stethoscope size={14} /> 시스템 상태
+            </span>
+            <div className="flex items-center gap-2">
+              {dashboard && (
+                <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded ${
+                  dashboard.ibl_health.healthy == null ? 'text-stone-500 bg-stone-100'
+                    : dashboard.ibl_health.healthy ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'
+                }`}>
+                  {dashboard.ibl_health.healthy == null ? <HelpCircle size={11} />
+                    : dashboard.ibl_health.healthy ? <Check size={11} /> : <AlertTriangle size={11} />}
+                  IBL {dashboard.ibl_health.healthy == null ? '미점검' : dashboard.ibl_health.healthy ? '건강' : '주의'}
+                </span>
+              )}
+              <button
+                onClick={handleHealthCheck}
+                disabled={healthChecking}
+                title="지금 점검 — fixture 통화·정적·골든을 새로 실행 (AI 0, 수십 초)"
+                className="px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 disabled:opacity-50 transition"
+              >
+                {healthChecking ? <Loader2 size={12} className="animate-spin" /> : <RotateCw size={12} />}
+                지금 점검
+              </button>
+            </div>
+          </div>
+
+          {/* 다른 몸(폰) 연결상태 — 연락할 몸이 살아있나 */}
+          <div className="flex items-center gap-2 pb-2 border-b border-stone-100">
+            <NodePresence />
+          </div>
+
+          {/* IBL 건강 3항목 */}
+          <div className="space-y-1">
+            {(dashboard?.ibl_health.items ?? []).map((it) => (
+              <div key={it.key} className="flex items-start gap-2 text-[13px]">
+                <span className="mt-0.5 shrink-0">
+                  {it.ok == null ? <HelpCircle size={14} className="text-stone-400" />
+                    : it.ok ? <Check size={14} className="text-emerald-600" />
+                    : <AlertTriangle size={14} className="text-red-500" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="text-stone-700">{it.label}</span>
+                  {it.ok === false && it.detail && (
+                    <span className="block text-[11px] text-red-600 break-words">{it.detail}</span>
+                  )}
+                </span>
+              </div>
+            ))}
+            {!dashboard && (
+              <div className="text-xs text-stone-400 flex items-center gap-1.5">
+                <Loader2 size={12} className="animate-spin" /> 상태 불러오는 중…
+              </div>
+            )}
+          </div>
+
+          {/* vitals: 점검 시각 · 액션 수 · 디스크 · 서비스 */}
+          {dashboard && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-stone-500 pt-1 border-t border-stone-100">
+              <span>마지막 점검 {relTime(dashboard.ibl_health.checked_at)}</span>
+              <span className="flex items-center gap-1"><Boxes size={11} /> 액션 {dashboard.ibl_health.action_count}개</span>
+              {dashboard.disk_free_gb != null && (
+                <span className="flex items-center gap-1"><HardDrive size={11} /> 디스크 {dashboard.disk_free_gb}GB</span>
+              )}
+              {Object.entries(dashboard.services).map(([k, alive]) => (
+                <span key={k} className="flex items-center gap-1">
+                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${alive ? 'bg-emerald-500' : 'bg-stone-300'}`} />
+                  {SERVICE_LABELS[k] || k}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {healthChecking && (
+            <div className="text-[11px] text-stone-500 flex items-center gap-1.5">
+              <Loader2 size={12} className="animate-spin" />
+              fixture를 실제 실행해 점검 중… 수십 초 걸릴 수 있습니다 (AI 0).
+            </div>
+          )}
+        </div>
+
+        {/* 주행기록계 — 지난 주행 목록 + 분석 스위치 */}
+        <EpisodeJournal />
+
+        {/* IBL이란 무엇인가 — 언어 자체만(어휘·문법·통화). 앱·표면·인프라는 IBL이 아니라 그 위에 지은 것. */}
+        {showAbout && (
+          <div className="rounded-xl border border-stone-200 bg-white/70 p-4 space-y-4 text-sm text-stone-700 leading-relaxed">
+            {/* 본질 */}
+            <div>
+              <span className="font-semibold text-stone-800">IBL (IndieBiz Logic)</span> 은 indiebizOS의{' '}
+              <span className="font-semibold">신경계 역할을 하는 언어</span>입니다.
+            </div>
+            {/* 세 구성요소 */}
+            <div>
+              IBL은 세 가지로 이루어집니다 — <span className="font-semibold">어휘</span>(조합 가능한 액션),{' '}
+              <span className="font-semibold">문법</span>(쓰고 잇는 규칙), 그리고 <span className="font-semibold">통화</span>(액션 사이를 흐르는 데이터).
+            </div>
+
+            {/* 어휘 */}
+            <div>
+              <div className="font-semibold text-stone-800 mb-1">어휘 — 무엇을 할 수 있나</div>
+              <div className="text-[13px]">어휘는 <span className="font-semibold">조합 가능한 액션</span>들입니다. 액션 하나가 IBL이 할 수 있는 일 하나(예: <code className="font-mono">{'[sense:weather]'}</code> — 날씨 조회). 액션들은 다루는 대상에 따라 <span className="font-semibold">5개 노드로 분류</span>됩니다.
+                <ul className="mt-1 ml-4 list-disc space-y-0.5">
+                  <li><span className="font-mono">sense</span> — 감각: 바깥 정보를 수집·검색 (날씨·주가·뉴스·웹·학술)</li>
+                  <li><span className="font-mono">self</span> — 자기: 내 기억·파일·설정·일정</li>
+                  <li><span className="font-mono">limbs</span> — 손발: 기기·도구를 조작 (브라우저·화면·음악·폰)</li>
+                  <li><span className="font-mono">others</span> — 관계: 이웃·위임·메시징·채널</li>
+                  <li><span className="font-mono">engines</span> — 엔진: 콘텐츠를 생성·변환 (문서·슬라이드·차트)</li>
+                </ul>
+                <div className="mt-1.5">액션은 셋 중 하나를 합니다 — <span className="font-semibold">생성</span>(통화를 낸다) · <span className="font-semibold">변환</span>(통화를 바꾼다) · <span className="font-semibold">행동</span>(통화를 쓴다 · 세상에 작용).</div>
+              </div>
+            </div>
+
+            {/* 문법 */}
+            <div>
+              <div className="font-semibold text-stone-800 mb-1">문법 — 어떻게 쓰고 잇나</div>
+              <div className="font-mono text-[12px] bg-stone-100 rounded-md px-2 py-1 inline-block">{'[node:action]{params}'}</div>
+              <ul className="mt-1.5 ml-4 list-disc text-[13px] space-y-0.5">
+                <li>모든 값은 <code className="font-mono">{'{key: 값}'}</code> 형태. 예: <code className="font-mono">{'[sense:weather]{city: "수원"}'}</code></li>
+                <li>한 액션 안의 변형은 <code className="font-mono">op</code> 로: <code className="font-mono">{'[sense:realty]{op: "query", source: "molit"}'}</code></li>
+                <li>잇기 — <code className="font-mono">{'>>'}</code> 순차(앞 결과를 뒤로) · <code className="font-mono">&</code> 병렬 · <code className="font-mono">??</code> 폴백</li>
+              </ul>
+              <div className="mt-2 rounded-lg bg-stone-50 border border-stone-200 p-2.5">
+                <div className="font-mono text-[12px] text-stone-700 break-all">{'[sense:realty]{region:"강남구", type:"apt"} >> [engines:sort]{by:"meta"} >> [engines:take]{n:3}'}</div>
+                <div className="mt-1.5 text-[11px] text-stone-500 leading-relaxed">
+                  <span className="font-semibold text-stone-600">realty</span>(명사 · 생성)가 강남구 아파트를 <span className="font-semibold">items 통화</span>로 길어오면, <span className="font-semibold text-stone-600">sort</span>·<span className="font-semibold text-stone-600">take</span>(동사 · 변환)가 그 통화를 받아 정렬 → 상위 3개로 줄입니다. 통화가 <code className="font-mono">{'>>'}</code>로 흐릅니다.
+                </div>
+              </div>
+            </div>
+
+            {/* 통화 */}
+            <div>
+              <div className="font-semibold text-stone-800 mb-1">통화 — 무엇이 흐르나</div>
+              <div className="text-[13px]">액션의 출력이 표준 모양이라 한 액션의 결과가 다음 액션으로 <code className="font-mono">{'>>'}</code> 흐릅니다 — 이게 IBL을 낱말이 아니라 <span className="font-semibold">문장</span>으로 만듭니다. 통화는 단 하나, <span className="font-semibold">items</span> 입니다.
+                <div className="mt-1.5"><span className="font-semibold">items</span> — 열린 항목들의 목록 <code className="font-mono">{'[{ … }]'}</code>. 가장 흔한 모양은 카드 <code className="font-mono">{'{title, meta, summary, url}'}</code>(검색·매물·뉴스)지만, <span className="font-semibold">같은 items</span>가 통계·시세는 수치 칸을 담은 행(연도·값)으로, 문서는 문단 항목(type·text)으로 흐릅니다.</div>
+                <div className="mt-1.5 text-stone-500">통화가 하나라서 어떤 액션의 결과든 어떤 변환자로든 이어집니다 — 받는 쪽이 필요한 모양(표·차트·문서)으로 <span className="font-semibold">알아서</span> 봅니다.</div>
+                <div className="mt-1.5"><span className="font-semibold">변환자</span> — 통화를 받아 통화를 내는 특수 액션(거르고 잇고 모음): <span className="font-mono text-[12px]">filter · sort · take · select · dedup · groupby · join · union · merge</span></div>
+                <div className="mt-1 text-stone-500">예: <code className="font-mono">{'[sense:search_naver]{query:"AI"} >> filter >> take{n:3}'}</code></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 발견 레이어(IBL 사전): 노드별 액션 둘러보기 → 클릭하면 명령줄에 씨앗으로 */}
         {browsing && (
           <div className="rounded-xl border border-stone-200 bg-white/70 overflow-hidden">
             <div className="p-2 border-b border-stone-100">

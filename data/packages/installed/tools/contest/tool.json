@@ -1,0 +1,37 @@
+{
+  "id": "contest",
+  "name": "AI Contest Search",
+  "description": "Kaggle 국제 AI/데이터 경진대회 검색 도구. 키워드·정렬·카테고리로 상금·마감일이 걸린 출품 기회를 찾는다. indiebizOS 홍보·실력 검증용 대회 탐색에 활용.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "contest_search",
+      "description": "Kaggle 경진대회 검색. query(키워드)·sort(정렬)·category(분류)·count(건수)로 진행 중/예정 대회를 찾는다.\n\n## 사용 시점\n- AI/머신러닝 경진대회·공모전 찾기\n- 상금 걸린 대회, 마감 임박 대회 확인\n- indiebizOS로 출품할 대회 탐색\n\n## 정렬(sort)\n- recentlyCreated(기본): 최근 개설\n- latestDeadline: 마감 늦은 순(진행 중 위주)\n- prize: 상금 큰 순\n- numberOfTeams: 참가팀 많은 순\n\n## 반환\n- records[{title,meta(상금·주최·마감일),summary,url,image}]",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색 키워드 (예: AI, LLM, vision, NLP)"
+          },
+          "sort": {
+            "type": "string",
+            "description": "정렬 — recentlyCreated(기본)/latestDeadline/prize/numberOfTeams"
+          },
+          "category": {
+            "type": "string",
+            "description": "분류 — featured/research/playground/gettingStarted 등 (선택)"
+          },
+          "count": {
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 50,
+            "description": "조회 건수 (기본 10)"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  ]
+}

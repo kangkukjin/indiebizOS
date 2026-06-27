@@ -89,7 +89,7 @@ def _resolve(library_name: str) -> str:
         "url": "",
     } for r in results]
     return json.dumps({"query": library_name, "count": len(results), "libraries": results,
-                       "records": records},
+                       "items": records},
                       ensure_ascii=False, indent=2)
 
 
@@ -119,8 +119,9 @@ def _search(query: str, library_id: str, library_name: str) -> str:
         para = para.strip()
         if para:
             blocks.append({"type": "paragraph", "text": para})
+    # 단일 통화 items = 문서 IR(type+text 항목). 소비자 engines:document가 type/text 감지.
     return json.dumps({"success": True, "library": lib_name, "library_id": library_id,
-                       "message": docs, "blocks": blocks}, ensure_ascii=False)
+                       "message": docs, "items": blocks}, ensure_ascii=False)
 
 
 def execute(tool_input: dict, context) -> str:

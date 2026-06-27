@@ -107,7 +107,14 @@ def search_google_news(query: str, count: int = 10, language: str = "ko", region
             "query": query,
             "count": len(results),
             "language": language,
-            "results": results
+            "results": results,
+            # 단일 통화 items(records-관습 카드 shape) — 뉴스 목록 >> 파이프/렌더러.
+            "items": [{
+                "title": r.get("title", ""),
+                "meta": " · ".join(x for x in [r.get("source", ""), r.get("published", "")] if x),
+                "summary": r.get("summary", ""),
+                "url": r.get("url", ""),
+            } for r in results],
         }
 
     except Exception as e:
@@ -366,11 +373,12 @@ def launch_sites(action: str = "open_ui", name: str = None, url: str = None, pro
         return f"사이트 목록을 읽는 중 오류 발생: {str(e)}"
 
     if action == "list":
-        # 구조화 반환 — 앱 계기(즐겨찾기)가 sites[] 를 직접 렌더. message 는 에이전트/사람용.
+        # 구조화 반환 — 앱 계기(즐겨찾기)가 items[] 를 직접 렌더. message 는 에이전트/사람용.
+        # 단일 통화: native 사이트 dict(name/url)를 그대로 items로.
         if not sites:
-            return {"success": True, "sites": [], "count": 0, "message": "등록된 사이트가 없습니다."}
+            return {"success": True, "items": [], "count": 0, "message": "등록된 사이트가 없습니다."}
         list_str = "\n".join([f"- {s['name']}: {s['url']}" for s in sites])
-        return {"success": True, "sites": sites, "count": len(sites),
+        return {"success": True, "items": sites, "count": len(sites),
                 "message": f"현재 등록된 사이트 목록입니다:\n{list_str}"}
 
     elif action == "add":
@@ -496,9 +504,9 @@ def execute(tool_input: dict, context):
         try:
             tool_webcrawl = load_module("tool_webcrawl")
             result = tool_webcrawl.crawl_website(url, max_length)
-            # 문서 IR blocks(비파괴) — 크롤한 페이지 텍스트를 문단 블록으로. crawl(url) >> document{pdf}.
+            # 단일 통화 items = 문서 IR(type+text 항목) — 크롤한 페이지 텍스트를 문단 블록으로. crawl(url) >> document{pdf}.
             if isinstance(result, dict) and result.get("success") and result.get("text"):
-                result["blocks"] = _text_to_blocks(result.get("title"), result.get("text"))
+                result["items"] = _text_to_blocks(result.get("title"), result.get("text"))
             return format_json(result)
         except Exception as e:
             return format_json({"success": False, "error": str(e)})
@@ -521,7 +529,7 @@ def execute(tool_input: dict, context):
             language=language
         )
         if isinstance(result, dict) and isinstance(result.get("results"), list):
-            result["records"] = [{  # 레코드 통화 — >> [engines:document/spreadsheet]
+            result["items"] = [{  # 단일 통화 items(records-관습 카드 shape)
                 "title": r.get("title", ""),
                 "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
                 "summary": "" if (r.get("summary") or "") == r.get("title") else (r.get("summary") or ""),

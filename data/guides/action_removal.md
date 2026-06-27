@@ -10,10 +10,11 @@
 > 2026-05-28 IBL 단일화 이후: 액션 정의는 `data/ibl_nodes_src/`가 단일 소스다. 패키지별 `ibl_actions.yaml` + `register_actions()`는 폐기됐다.
 
 - [ ] `data/ibl_nodes_src/{node}.yaml` — 해당 node(sense/self/limbs/others/engines)의 `actions:`에서 액션 항목 삭제
+- [ ] `data/ibl_fixtures.json` — 그 액션의 `fixtures`/`exempt` 항목도 삭제 (items/scalar 였던 경우). 안 지우면 `--check` 가 *고아 fixture*로 잡는다.
 - [ ] 빌드 + 검증:
   ```bash
   python scripts/build_ibl_nodes.py          # data/ibl_nodes.yaml 재생성
-  python scripts/build_ibl_nodes.py --check  # 삼각 일치 확인 (비0이면 잔여 참조)
+  python scripts/build_ibl_nodes.py --check  # 삼각 + fixture 완전성 확인 (비0이면 잔여 참조/고아 fixture)
   ```
 
 ### 2. ibl_nodes.yaml 확인
@@ -54,7 +55,6 @@
 
 ### 6. 기타 참조
 - [ ] `data/packages/installed/tools/ibl-core/tool.json` — 레거시 노드 도구의 enum/description에서 제거
-- [ ] `data/self_check_plan.json` — 다음 plan 재생성 시 자동 제거됨 (수동 불필요)
 - [ ] `data/guides/world_pulse.md` — 자동 생성 파일, 다음 펄스에서 자동 갱신됨
 
 ### 7. 검증

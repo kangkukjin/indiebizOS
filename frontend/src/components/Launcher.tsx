@@ -1075,10 +1075,10 @@ export function Launcher() {
         </div>
       </div>
 
-      {/* 탭 토글: 자율주행 ↔ 수동 ↔ 앱 — 캔버스 위 전용 바. 워크스페이스 위에 떠서 아이콘과 겹치지 않도록 자기 영역을 가진다 */}
+      {/* 탭 토글: 자율주행 ↔ 계기판 ↔ 앱 — 캔버스 위 전용 바. 워크스페이스 위에 떠서 아이콘과 겹치지 않도록 자기 영역을 가진다 */}
       <div className="shrink-0 flex justify-center py-2 bg-[#F5F1EB]">
         <div className="inline-flex rounded-full bg-white/85 shadow-sm border border-stone-200 p-0.5">
-          {([['autopilot', '자율주행'], ['manual', '수동'], ['app', '앱']] as const).map(([k, label]) => (
+          {([['autopilot', '자율주행'], ['manual', '계기판'], ['app', '앱']] as const).map(([k, label]) => (
             <button
               key={k}
               onClick={() => setLauncherTab(k)}

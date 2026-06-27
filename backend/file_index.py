@@ -32,11 +32,24 @@ except Exception:  # 폴백 — 능력게이트 부재 시 맥으로 (어댑터 
 
 
 # 사용자 파일이 아닌 시스템/앱/캐시를 기본 배제 (질의 노이즈 제거).
+# 절대-dead 포식 필터 — 어떤 의도로도 사용자 자료가 아닌 가지(설치 의존성·캐시·시스템).
+# fs_query(결과 path-substring 필터)와 file_find(walk 가지치기)가 공유하는 *단일 출처*.
+# ★ ~/Library 를 통째로 빼지 않는다 — ~/Library/Mobile Documents(iCloud Drive)·iBooks 는
+#    실제 사용자 자료(예: iCloud 전자책). 캐시·컨테이너 등 *특정 하위만* 제외.
 _NOISE_SUBSTR = (
     "/System/", "/Applications/", "/Library/Caches/",
     "/Library/Application Support/", "/Library/Containers/",
     "/Library/Group Containers/", "/node_modules/", "/.Trash", ".app/",
+    "/__pycache__/", "/site-packages/", "/.venv/", "/venv/",
+    "/.git/", "/DerivedData/", "/.gradle/", "/.cargo/", "/.npm/",
 )
+# 공개 별칭 — file_find(system_essentials) 가 import 해 같은 목록으로 walk 가지치기.
+ABSOLUTE_DEAD_SUBSTR = _NOISE_SUBSTR
+
+
+def is_dead_path(path: str) -> bool:
+    """절대-dead(설치트리·캐시·시스템) 경로면 True — 모든 포식이 무조건 제외(의도 불문)."""
+    return any(n in path for n in _NOISE_SUBSTR)
 _MAX_CANDIDATES = 20000  # mtime 정렬 상한 가드 (질의를 path/날짜로 좁히도록 권장)
 
 # kind → Spotlight content-type-tree 절. 'media'=이미지+영상.
@@ -302,6 +315,10 @@ def _mediastore_query(*, kind, q, start, end, has_gps, ext, path, limit, sort, f
         "has_gps": bool(has_gps),
         "want_gps": want_gps,
         "limit": int(limit),
+        # 맥 Spotlight 와 동일 필터를 폰 MediaStore 로도 전달 (큰 파일/확장자/정렬 — 누락 시 침묵 무시됐음).
+        "min_size": int(min_size) if min_size else 0,
+        "sort": sort or "",
+        "ext": (ext or "").lower().lstrip("."),
     }
     try:
         PA = jclass("com.indiebiz.phoneagent.PhoneActions")
@@ -399,6 +416,60 @@ def code_candidate_paths(repo_root: str, *, q: Optional[str] = None,
         if len(out) > _MAX_CANDIDATES:
             break
     return out
+
+
+# 거친 골격(디렉토리-온리) 잡음 — basename 기반이라 OS 독립(경로 구분자 무관).
+# 집중 관심 폴더(사용자 콘텐츠) 아래만 도므로 시스템 잡음(/System·Program Files)은
+# 애초에 범위 밖 → dev 잡동사니 + 닷폴더만 쳐내면 충분(크로스플랫폼). OS-특수 basename 은
+# OS_PORTABILITY_SEAM 정신대로 여기에 합집합으로 더한다(폰 .thumbnails, 윈도우 $RECYCLE.BIN 등).
+_SKELETON_NOISE_DIRS = frozenset((
+    # 공통 dev 잡동사니
+    "node_modules", "__pycache__", ".git", "dist", "build", "vendor",
+    ".venv", "venv", ".cache", ".npm", ".yarn", ".gradle", ".idea", ".vscode",
+    "target", ".next", ".pytest_cache", ".mypy_cache", "site-packages",
+    "DerivedData", ".cargo", "_archive",
+    # OS-특수 (basename) — 합집합이라 해당 없는 OS 에선 무해
+    "$RECYCLE.BIN", "System Volume Information",   # windows
+    ".thumbnails", ".Trash", ".Trashes",          # android / mac 휴지통
+))
+
+
+def disk_skeleton(roots: Sequence[str], *, maxdepth: int = 3,
+                  per_root_cap: int = 4000) -> str:
+    """집중 관심 폴더(roots) 아래 거친 디렉토리 골격을 indent 문자열로 — *몸 독립*.
+
+    상시-on 거친 지도("어디에")용. 디렉토리만(파일 미열거 → storage:scan 보다 한두 자릿수 쌈),
+    maxdepth 로 깊이 제한, basename 잡음 제외(OS 독립). 깊은 상세·큐레이션은 forager 몫.
+    OS 무관(os.walk + os.path) — 맥/윈도우/리눅스/폰이 같은 생성기로 자기 roots 아래를 돈다.
+
+    Args:
+        roots: 집중 관심 폴더 절대경로 목록(몸별 해소 결과). 존재하는 것만 처리.
+        maxdepth: roots 각각으로부터의 최대 깊이(기본 3).
+        per_root_cap: root 당 디렉토리 상한(폭주 가드).
+    Returns:
+        루트별 indent 트리를 이어붙인 문자열(없으면 "").
+    """
+    blocks: List[str] = []
+    for raw in roots:
+        root = os.path.abspath(os.path.expanduser(raw))
+        if not os.path.isdir(root):
+            continue
+        base_depth = root.rstrip(os.sep).count(os.sep)
+        lines: List[str] = []
+        for cur, dirs, _files in os.walk(root):
+            dirs[:] = sorted(d for d in dirs
+                             if d not in _SKELETON_NOISE_DIRS and not d.startswith("."))
+            depth = cur.rstrip(os.sep).count(os.sep) - base_depth
+            if depth >= maxdepth:
+                dirs[:] = []
+            name = os.path.basename(cur) or cur
+            lines.append(f"{'  ' * depth}{name}/")
+            if len(lines) >= per_root_cap:
+                lines.append(f"{'  ' * (depth + 1)}… (생략 — {per_root_cap}개 상한)")
+                break
+        if lines:
+            blocks.append("\n".join(lines))
+    return "\n".join(blocks)
 
 
 def query(*, kind: str = "any", q: Optional[str] = None,

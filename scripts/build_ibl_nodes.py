@@ -83,6 +83,7 @@ PHONE_VERIFIED_PACKAGES = {
     "pc-manager",         # self:storage/fs_query/folder_note(자기 fs 인덱스·주석). limbs:explorer(GUI)는 mac_only 유지.
     "photo-manager",      # self:photo 라이브 질의 — backend/file_index 가 몸 분기(맥 Spotlight↔폰 MediaStore via PhoneActions.queryMedia). 핸들러 얇은 preset, photo_db/scanner 는 guard import(폰선 질의 경로 미사용). A36 종단 검증.
 
+    "contest",          # AI 경진대회 검색(sense:contest, Kaggle API HTTP + stdlib). KAGGLE_API_TOKEN 폰 프로비저닝 전제.
     "study",            # 연구 검색(HTTP + stdlib; study:paper 만 arxiv 3p — A36서 안 되면 그 액션 mac_only)
     "python-exec",  # 폰 네이티브 코드 실행 탈출구 — handler 가 capability-gate 로 폰서 Chaquopy 인-프로세스 exec(맥=subprocess). stdlib만 import(서드파티 0). execute_python 은 IBL 액션 아니라 직접 도구라 runnable_actions 엔 미포함(정상).
     "data-ops",  # 통화→통화 변환자(filter/sort/take/select/dedup/groupby/join/union/merge). 순수 superstructure(IBL 문법, 몸 무관)+stdlib만(json/re, 서드파티 0). 폰-로컬 통화(sense:here 등)는 폰서 거르고 정렬해야 맞음 → anywhere 가 정직. 외부 자원 없음.
@@ -146,6 +147,68 @@ def check_profile_branches(root: Path) -> list[str]:
         issues.append(
             f"(stale) {rel_path}: allowlist에 있으나 INDIEBIZ_PROFILE 분기 없음 — "
             f"PROFILE_BRANCH_ALLOWLIST 에서 제거 권장"
+        )
+    return issues
+
+
+# === OS-가드: platform/유닉스-바이너리 의존 위치 통제 (2026-06-21, OS 이식성) ===
+# INDIEBIZ_PROFILE 가드(폰 vs 데스크탑)의 형제 — 이쪽은 맥 vs 윈도우 vs 리눅스를 본다.
+# 목적: 몸 독립(superstructure) backend 코어에 OS 특정 코드(platform.system 분기, 맥/유닉스
+# 전용 바이너리·경로)가 침투하는 걸 막는다. 선언된 이음매 파일(OS_SEAM_ALLOWLIST)만 OS 코드를
+# 담을 수 있고, **그 목록이 곧 "윈도우/리눅스 이식 시 점검 대상" 체크리스트**다(잊혀짐을 사람의
+# 주의력이 아니라 실패하는 빌드로 막는다 — IBL --check 삼각검증과 같은 철학).
+# 패키지 핸들러는 이음매-아래(이미 OS 터치 전제)라 이 가드 범위 밖 — docs/OS_PORTABILITY_SEAM.md 가 tier-2 추적.
+OS_SEAM_ALLOWLIST = {
+    "backend/runtime_utils.py",   # detect_body + 번들 런타임 경로(Win/Unix 분기)
+    "backend/ibl_executors.py",   # 파일 열기·클립보드·탐색기(Darwin/Windows/Linux 3분기)
+    "backend/api_pcmanager.py",   # 드라이브/볼륨 열거·열기(3 OS)
+    "backend/file_index.py",      # 파일 검색(맥=Spotlight mdfind/mdls·폰=MediaStore)
+    "backend/api_nas.py",         # ffmpeg/ffprobe 경로 해석
+    "backend/api.py",             # 부팅: Windows stdout 인코딩 + PATH 보강
+    "backend/calendar_html.py",   # 브라우저 열기(open/start)
+    "backend/api_photo.py",       # 사진 파일 OS 열기(open/startfile/xdg-open) — tier-2: ibl_executors 열기와 통합 후보
+    "backend/api_tunnel.py",      # cloudflared 바이너리 위치 탐색(외부 바이너리 finder) — tier-2: 공유 find_binary 후보
+}
+OS_SCAN_DIRS = ["backend"]
+# 강한 OS 신호만 — 일반 'open'/'start' 같은 건 오탐이라 제외.
+OS_MARKERS = [
+    "platform.system(", "sys.platform", 'os.name ==', "os.name==",
+    "mdfind", "mdls", "osascript", "pbcopy", "pbpaste",
+    "lsappinfo", "screencapture", "caffeinate",
+    "/opt/homebrew", "/usr/local/bin",
+]
+
+
+def check_os_branches(root: Path) -> list[str]:
+    """몸 독립 backend 코어에 OS 특정 코드가 샜는지 적발(OS-가드).
+    allowlist(선언된 OS 이음매) 밖의 .py 가 OS 마커를 쓰면 위반."""
+    issues: list[str] = []
+    seen_allowed: set[str] = set()
+    for rel in OS_SCAN_DIRS:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            hits = sorted({m for m in OS_MARKERS if m in text})
+            if not hits:
+                continue
+            rel_path = path.relative_to(root).as_posix()
+            if rel_path in OS_SEAM_ALLOWLIST:
+                seen_allowed.add(rel_path)
+                continue
+            issues.append(
+                f"{rel_path}: 몸 독립 코어에 OS 의존 {hits} — 이음매"
+                f"(runtime_utils/ibl_executors 등)로 옮기거나, 진짜 이음매면 "
+                f"OS_SEAM_ALLOWLIST 에 의식적으로 추가"
+            )
+    stale = OS_SEAM_ALLOWLIST - seen_allowed
+    for rel_path in sorted(stale):
+        issues.append(
+            f"(stale) {rel_path}: OS_SEAM_ALLOWLIST 에 있으나 OS 마커 없음 — 제거 권장"
         )
     return issues
 
@@ -308,6 +371,25 @@ def _check_action(
     # ops 블록 자체는 어휘 완성을 위해 필수.
     if target_key == "op" and ops is None:
         issues.append(f"{qualified}: target_key:op 인데 ops 블록 없음 ({router or 'unknown'} 라우터)")
+
+    # --- returns(통화 역할) 검증 — 단일 통화(items) 이행 완료(2026-06-27) ---
+    # 모든 액션은 자기 통화 역할을 명시한다: 생성(items) · 변환(transform) · 종착(scalar/effect).
+    # ★단일 통화: 컬렉션은 전부 items {[{…열린 필드…}]}. 옛 records/table/document/currency 는
+    #   전부 items로 흡수 완료 — table(연도×지표 등)·문서IR(type+text)도 items 행dict로, 소비자가 재구성.
+    #   (이행 이력: docs/SINGLE_CURRENCY_MIGRATION_HANDOFF.md / architecture_single_currency_items 메모)
+    #   ※geo/지도는 통화 아님 — map_data 는 *렌더링 봉투*(파이프 변환자 없음).
+    _RETURNS_ENUM = {"items", "transform", "scalar", "effect"}
+    returns = action.get("returns")
+    group = action.get("group")
+    if returns is None:
+        issues.append(f"{qualified}: returns 필드 없음 — 통화 역할 명시 필수 (items|transform|scalar|effect)")
+    elif returns not in _RETURNS_ENUM:
+        issues.append(f"{qualified}: returns={returns!r} 허용 안 됨 (items|transform|scalar|effect)")
+    else:
+        if group == "transform" and returns != "transform":
+            issues.append(f"{qualified}: group:transform 인데 returns={returns!r} — transform 이어야 함")
+        if returns == "transform" and group != "transform":
+            issues.append(f"{qualified}: returns:transform 은 group:transform 액션에만 (현재 group={group!r})")
 
     # --- handler 라우터 등록 검증 ---
     if router == "handler":
@@ -798,10 +880,18 @@ def _app_check_view(qualified: str, view, depth: int = 0) -> list[str]:
                     if dcmp is not None and (not isinstance(dcmp, dict) or not isinstance(dcmp.get("action"), str)):
                         issues.append(f"{where}: item_click.compose 는 action(IBL 템플릿) 필수")
                     issues.extend(_check_compose_channels(where, dcmp))
-        # button: list_action 은 {action} 행 버튼. form/editable_list 의 button 은 라벨 문자열이라 제외.
-        btn = p.get("button")
-        if ptype not in ("form", "editable_list") and btn is not None and (not isinstance(btn, dict) or not isinstance(btn.get("action"), str)):
-            issues.append(f"{where}: button 은 action 템플릿 필수")
+        # button/button2: list_action 은 {action} 행 버튼(2번째=즐겨찾기·다운로드 등). form/editable_list 의 button 은 라벨 문자열이라 제외.
+        if ptype not in ("form", "editable_list"):
+            for _bk in ("button", "button2"):
+                btn = p.get(_bk)
+                if btn is None:
+                    continue
+                # stream:true 버튼 = 클라이언트 측 스트림 재생 지시(StreamPlayer). 행 데이터(url/playable)를
+                # 그대로 플레이어로 연다 — IBL action 없이 동작하므로 action 면제(CCTV '▶ 보기' 등).
+                if isinstance(btn, dict) and btn.get("stream") is True:
+                    continue
+                if not isinstance(btn, dict) or not isinstance(btn.get("action"), str):
+                    issues.append(f"{where}: {_bk} 은 action 템플릿 필수")
     return issues
 
 
@@ -1081,6 +1171,56 @@ def derive_phone_manifest(data: dict, root: Path) -> dict:
     }
 
 
+def validate_fixture_coverage(data: dict, root: Path) -> list[str]:
+    """행동 건강 fixture 완전성 강제 — 신규 액션이 건강검사망을 빠져나갈 수 없게.
+
+    실행 가능한(returns: items|scalar) 액션은 data/ibl_fixtures.json 의 `fixtures`(올바른
+    파라미터 예 하나)나 `exempt`(실행 인자 의존 — 사유 명시) 둘 중 하나에 반드시 있어야 한다.
+    effect(부작용 — 실행 불가)·transform(골든파이프로 흐름검증)은 면제.
+
+    이로써 "어휘를 새로 만들면 fixture 한 줄도 같이"가 권고가 아니라 *커밋 게이트*가 된다
+    (new_action_checklist.md). 삭제 시 fixture/exempt 잔여(고아)도 함께 잡는다.
+    """
+    import json as _json
+    issues: list[str] = []
+    fpath = root / "data" / "ibl_fixtures.json"
+    if not fpath.is_file():
+        return ["data/ibl_fixtures.json 없음 — 행동 건강 fixture 단일 소스가 필요"]
+    try:
+        fx = _json.loads(fpath.read_text(encoding="utf-8"))
+    except Exception as e:
+        return [f"data/ibl_fixtures.json 파싱 실패: {e}"]
+    fixtures = fx.get("fixtures", {}) or {}
+    exempt = fx.get("exempt", {}) or {}
+
+    exec_actions: set[str] = set()
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions", {}) or {}).items():
+            if isinstance(action, dict) and action.get("returns") in ("items", "scalar"):
+                exec_actions.add(f"{node_name}:{action_name}")
+
+    # 1) 실행 액션은 fixture 또는 exempt 에 있어야 함 (누락 = 검사망 탈출)
+    for qual in sorted(exec_actions):
+        if qual not in fixtures and qual not in exempt:
+            issues.append(
+                f"{qual}: returns:items|scalar 인데 fixture 없음 — "
+                f"data/ibl_fixtures.json 의 fixtures 에 올바른 param 예 한 줄 추가 "
+                f"(실행 인자 의존이면 exempt 에 사유와 함께)"
+            )
+    # 2) 고아 fixture/exempt (실존 안 하거나 더 이상 items/scalar 아님) — 삭제 누락 검출
+    for qual in sorted(set(fixtures) | set(exempt)):
+        if qual not in exec_actions:
+            where = "fixtures" if qual in fixtures else "exempt"
+            issues.append(
+                f"{qual}: {where} 에 있으나 items/scalar 실행 액션이 아님(삭제/통화변경됨?) — "
+                f"data/ibl_fixtures.json 에서 제거"
+            )
+    return issues
+
+
 def validate(data: dict, root: Path) -> list[str]:
     """전체 yaml 데이터에 대해 삼각 검증 수행."""
     issues: list[str] = []
@@ -1196,6 +1336,24 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 코퍼스 param 정합 통과 ✓")
 
+    # --- 행동 건강 fixture 완전성 (--check/--validate 전용) ---
+    # 실행 가능한(items/scalar) 액션은 ibl_fixtures.json 에 fixture 또는 exempt 가 있어야 한다.
+    # 신규 어휘가 건강검사망을 조용히 빠져나가는 걸 *커밋 게이트*로 막는다.
+    fixture_failed = False
+    if data is not None and (check or validate_only):
+        xissues = validate_fixture_coverage(data, root)
+        if xissues:
+            fixture_failed = True
+            print(
+                f"[build_ibl_nodes] fixture 완전성 실패: {len(xissues)}건 "
+                f"(items/scalar 액션은 data/ibl_fixtures.json 에 fixture 또는 exempt 필수)",
+                file=sys.stderr,
+            )
+            for issue in xissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] fixture 완전성 통과 ✓ (모든 items/scalar 액션이 fixture/exempt 보유)")
+
     # --- 포크-가드: INDIEBIZ_PROFILE 분기 위치 (--check/--validate 전용) ---
     profile_failed = False
     if check or validate_only:
@@ -1215,8 +1373,28 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 f"(INDIEBIZ_PROFILE 분기 {len(PROFILE_BRANCH_ALLOWLIST)}개, 전부 이음매 아래)"
             )
 
+    # --- OS-가드: platform/유닉스-바이너리 의존 위치 (--check/--validate 전용) ---
+    os_failed = False
+    if check or validate_only:
+        oissues = check_os_branches(root)
+        if oissues:
+            os_failed = True
+            print(
+                f"[build_ibl_nodes] OS-가드 실패: {len(oissues)}건 "
+                f"(몸 독립 코어에 OS 의존)",
+                file=sys.stderr,
+            )
+            for issue in oissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print(
+                f"[build_ibl_nodes] OS-가드 통과 ✓ "
+                f"(OS 이음매 {len(OS_SEAM_ALLOWLIST)}개 파일 — 윈도우/리눅스 이식 점검 대상)"
+            )
+
     if validate_only:
-        return 1 if (validation_failed or corpus_failed or profile_failed) else 0
+        return 1 if (validation_failed or corpus_failed or fixture_failed
+                     or profile_failed or os_failed) else 0
 
     # 폰 매니페스트 파생 (runs_on + 검증된 폰 패키지). data 파싱 성공 시에만.
     manifest_path = root / "data" / "phone_manifest.json"
@@ -1255,7 +1433,8 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             else:
                 print("[build_ibl_nodes] check: phone_manifest.json 일치 ✓")
         return 0 if (bytes_ok and manifest_ok and not validation_failed
-                     and not corpus_failed and not profile_failed) else 1
+                     and not corpus_failed and not fixture_failed
+                     and not profile_failed and not os_failed) else 1
 
     if validation_failed:
         print(

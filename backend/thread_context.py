@@ -98,8 +98,10 @@ def clear_called_agent():
 def set_health_check_mode(enabled: bool = True):
     """현재 스레드가 건강 체크 모드임을 표시
 
-    trigger_ai_health_check()가 시스템 AI를 통해 실행될 때,
-    IBL 액션 결과를 source=self_check으로 기록하기 위한 플래그.
+    SystemAI 가 건강 점검 맥락(from_agent=__health_check__)에서 실행될 때,
+    IBL 액션 결과를 source=self_check 으로 기록하기 위한 플래그.
+    (현 일일 건강 점검 run_daily_health_check 은 SystemAI 를 거치지 않아 이 플래그를
+    켜지 않는다 — 향후 AI triage 가 다시 필요해질 때를 위한 무해한 배관으로 남겨둠.)
     """
     _thread_local.health_check_mode = enabled
 

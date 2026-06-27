@@ -28,7 +28,7 @@ const DEFAULT_CENTER = { lat: 37.4979, lng: 127.0276 }; // 강남역
 interface LatLng { lat: number; lng: number }
 interface Point { text: string; coord: LatLng | null }
 interface KeyGuide { name?: string; guidance?: string; distance?: number }
-interface RouteSummary { distance_km?: number; duration_min?: number; fare?: { toll?: number } }
+interface RouteSummary { distance_km?: number; duration_min?: number; toll?: number; fare?: { toll?: number } }
 interface RouteMapData {
   origin: { lat: number; lng: number; name: string };
   destination: { lat: number; lng: number; name: string };
@@ -36,10 +36,10 @@ interface RouteMapData {
   summary: { distance_km: number; duration_min: number; toll: number };
 }
 interface RouteInfo { summary?: RouteSummary; key_guides?: KeyGuide[] }
-interface RouteResult { routes?: RouteInfo[]; map_data?: RouteMapData; message?: string; error?: string }
+interface RouteResult { summary?: RouteSummary; key_guides?: KeyGuide[]; routes?: RouteInfo[]; map_data?: RouteMapData; message?: string; error?: string }
 
 interface Cctv { name?: string; url?: string; lat?: number; lng?: number; road_type?: string; format?: string; distance_km?: number; source?: string; playable?: boolean }
-interface CctvResult { cctvs?: Cctv[]; count?: number; error?: string }
+interface CctvResult { items?: Cctv[]; count?: number; error?: string }
 
 /* ── IBL 직접 실행 ──────────────────────────────── */
 async function runRoute(origin: string, destination: string): Promise<RouteResult> {
@@ -122,7 +122,7 @@ export function DirectionsInstrument() {
     if (samples[samples.length - 1]?.[0] !== last[0]) samples.push(last);
     const results = await Promise.all(samples.map(([lat, lng]) => runCctvNearby(lat, lng, 2.8, 2)));
     const seen = new Set<string>(); const all: Cctv[] = [];
-    for (const r of results) for (const c of (r.cctvs || [])) {
+    for (const r of results) for (const c of (r.items || [])) {
       const k = c.url || `${c.lat},${c.lng}`;
       if (c.lat && c.lng && !seen.has(k)) { seen.add(k); all.push(c); }
     }
@@ -136,7 +136,7 @@ export function DirectionsInstrument() {
     const c = map.getCenter();
     setCctvLoading(true);
     const r = await runCctvNearby(c.lat, c.lng, 5.5, 12);
-    setCctvs((r.cctvs || []).filter((x) => x.lat && x.lng));
+    setCctvs((r.items || []).filter((x) => x.lat && x.lng));
     setCctvLoading(false);
   }, []);
 
@@ -247,8 +247,9 @@ export function DirectionsInstrument() {
     else setCctvs([]);
   };
 
-  const summary = result?.routes?.[0]?.summary;
-  const guides = (result?.routes?.[0]?.key_guides || []).filter((g) => g.name || g.guidance);
+  // 백엔드는 summary·key_guides 를 최상위로 반환(과거 routes[0] 중첩에서 평탄화됨). map_data.summary 폴백.
+  const summary = result?.summary || result?.routes?.[0]?.summary || result?.map_data?.summary;
+  const guides = (result?.key_guides || result?.routes?.[0]?.key_guides || []).filter((g) => g.name || g.guidance);
 
   return (
     <div className="h-full w-full flex flex-col bg-[#FAFAF8] text-stone-800">
@@ -324,7 +325,7 @@ export function DirectionsInstrument() {
               <div className="flex flex-wrap gap-2">
                 {summary.distance_km != null && <span className="px-3 py-1.5 rounded-full bg-white border border-stone-200 text-sm">🚗 {summary.distance_km}km</span>}
                 {summary.duration_min != null && <span className="px-3 py-1.5 rounded-full bg-white border border-stone-200 text-sm">⏱ {summary.duration_min}분</span>}
-                {summary.fare?.toll ? <span className="px-3 py-1.5 rounded-full bg-white border border-stone-200 text-sm">💳 톨비 {summary.fare.toll.toLocaleString()}원</span> : null}
+                {(() => { const toll = summary.toll ?? summary.fare?.toll; return toll ? <span className="px-3 py-1.5 rounded-full bg-white border border-stone-200 text-sm">💳 톨비 {toll.toLocaleString()}원</span> : null; })()}
               </div>
             )}
 

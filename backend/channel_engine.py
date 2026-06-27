@@ -368,7 +368,8 @@ def _community_feed(params: dict) -> dict:
         summary = content if content and content != title else ""
         url = ("https://njump.me/" + ev_id) if ev_id else ""
         records.append({"title": title, "meta": meta, "summary": summary, "url": url})
-    return {"posts": posts, "records": records, "count": len(posts),
+    # 단일 통화 — native 글 dict(author/content/time/id 등)를 items로. 옛 records 5칸은 손실적이라 은퇴.
+    return {"items": posts, "count": len(posts),
             "message": "" if posts else "아직 글이 없습니다."}
 
 
@@ -413,7 +414,8 @@ def _community_board(params: dict) -> dict:
                                        ("활성" if b.get("active") else "")) if x])
         records.append({"title": b.get("name", "") or (("#" + tag) if tag else "(이름 없음)"),
                         "meta": meta, "summary": "", "url": ""})
-    return {"boards": out, "records": records, "active": active,
+    # 단일 통화 — native 보드 dict(name/hashtag/active)를 items로. 옛 records는 손실적이라 은퇴.
+    return {"items": out, "active": active,
             "message": "" if out else "보드가 없습니다."}
 
 
@@ -587,7 +589,7 @@ def _channel_read(channel_type: str, params: dict, identity: dict) -> dict:
                 "account": identity.get("email"),
                 "count": len(simplified),
                 "query": query,
-                "messages": simplified
+                "items": simplified  # 단일 통화 items = native 메시지 dict(id/subject/from/date/snippet/body)
             }
         except Exception as e:
             return {"success": False, "channel": "gmail", "error": str(e)}
@@ -603,7 +605,7 @@ def _channel_read(channel_type: str, params: dict, identity: dict) -> dict:
                 "success": True,
                 "channel": "nostr",
                 "count": len(dms),
-                "messages": dms
+                "items": dms  # 단일 통화 items = native DM dict
             }
         except Exception as e:
             return {"success": False, "channel": "nostr", "error": str(e)}

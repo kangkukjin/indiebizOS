@@ -6,4 +6,5 @@ export * from './types';
 export { DraggableIcon } from './DraggableIcon';
 export { DraggableTrash } from './DraggableTrash';
 export { ContextMenu } from './ContextMenu';
+export { NodePresence } from './NodePresence';
 export * from './dialogs';

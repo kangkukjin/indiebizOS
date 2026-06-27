@@ -31,8 +31,8 @@ def load_module(module_name):
     module = importlib.util.module_from_spec(spec)
 
     # common 모듈을 sys.modules에 등록 (다른 모듈이 import할 수 있도록)
-    if module_name == "common":
-        sys.modules["common"] = module
+    if module_name == "cctv_common":
+        sys.modules["cctv_common"] = module
 
     spec.loader.exec_module(module)
     _loaded_modules[module_name] = module
@@ -40,12 +40,12 @@ def load_module(module_name):
 
 
 # common 모듈 먼저 로드 (다른 모듈의 의존성)
-load_module("common")
+load_module("cctv_common")
 
 # 주요 지명 → 좌표 매핑 (Windy 웹캠 폴백용)
 def _is_hls_playable(url: str) -> bool:
-    """재생가능 판정은 common.is_hls_playable 단일 소스에 위임."""
-    return load_module("common").is_hls_playable(url)
+    """재생가능 판정은 cctv_common.is_hls_playable 단일 소스에 위임."""
+    return load_module("cctv_common").is_hls_playable(url)
 
 
 def _is_korea(lat: float, lng: float) -> bool:
@@ -154,7 +154,7 @@ _LANDMARKS = {
 def cctv_search(query: str, lat: float = None, lon: float = None,
                 category: str = None, limit: int = 10, **kwargs) -> str:
     """통합 CCTV/웹캠 검색"""
-    common = load_module("common")
+    common = load_module("cctv_common")
     all_results = []
 
     # 1. 카카오맵 (전국 6,892대 — 최우선, API 키 불필요, 모두 HLS)
@@ -225,12 +225,12 @@ def cctv_search(query: str, lat: float = None, lon: float = None,
                     break
 
         if resolved_lat is not None:
-            windy_res = json.loads(windy.get_nearby_webcams(resolved_lat, resolved_lon, limit=limit))
+            windy_res = json.loads(windy.search_webcam(resolved_lat, resolved_lon, limit=limit))
             if windy_res.get("success") and windy_res.get("webcams"):
                 all_results.extend(windy_res["webcams"])
 
     if not all_results:
-        return common.success_response(count=0, message=f"'{query}'에 대한 CCTV를 찾을 수 없습니다.", cctvs=[])
+        return common.success_response(count=0, message=f"'{query}'에 대한 CCTV를 찾을 수 없습니다.", items=[])
 
     results = all_results[:limit]
 
@@ -252,7 +252,7 @@ def cctv_search(query: str, lat: float = None, lon: float = None,
 
     return common.success_response(
         count=len(results),
-        cctvs=results,
+        items=results,  # 단일 통화 = native CCTV dict(name/url/lat/lng/source/playable/distance_km). markers가 좌표 직독.
         stream_tags=stream_tags,
         hint="검색 결과의 stream_tags를 응답에 그대로 포함하면 실시간 스트리밍이 표시됩니다. 캡처할 필요 없이 stream_tags만 출력하세요."
     )
@@ -264,7 +264,7 @@ def nearby(lat: float, lng: float, radius_km: float = 5.0, count: int = 5,
 
     radius_km: 검색 반경(km, 표준 단위). 레거시 radius(도) 호출도 수용해 km로 환산.
     """
-    common = load_module("common")
+    common = load_module("cctv_common")
     if radius is not None:  # 레거시 도(degree) 입력 → km 환산
         radius_km = max(0.5, float(radius) * 111.0)
     all_results = []
@@ -324,7 +324,7 @@ def nearby(lat: float, lng: float, radius_km: float = 5.0, count: int = 5,
         if not all_results:
             try:
                 windy = load_module("windy_webcam")
-                windy_res = json.loads(windy.get_nearby_webcams(lat, lng, limit=count))
+                windy_res = json.loads(windy.search_webcam(lat, lng, limit=count))
                 if windy_res.get("success"):
                     all_results.extend(windy_res.get("webcams", []))
             except Exception:
@@ -351,7 +351,7 @@ def nearby(lat: float, lng: float, radius_km: float = 5.0, count: int = 5,
 
     return common.success_response(
         count=len(results),
-        cctvs=results,
+        items=results,  # 단일 통화 = native CCTV dict(name/url/lat/lng/source/playable/distance_km). markers가 좌표 직독.
         stream_tags=stream_tags,
         hint="검색 결과의 stream_tags를 응답에 그대로 포함하면 실시간 스트리밍이 표시됩니다."
     )
@@ -366,9 +366,11 @@ def cctv_open(url: str = None, name: str = None, lat: float = None, lng: float =
     
     if name:
         res = json.loads(cctv_search(name, limit=1))
-        if res.get("cctvs"):
-            return cctv_open(url=res["cctvs"][0]["url"])
-            
+        items = res.get("items") or []
+        target = items[0].get("url") if items else None
+        if target:
+            return cctv_open(url=target)
+
     return json.dumps({"success": False, "message": "CCTV를 찾을 수 없습니다."})
 
 
@@ -381,8 +383,8 @@ def cctv_capture(url: str, save_path: str = None, name: str = None, **kwargs) ->
     # 이름으로 검색
     if not url and name:
         res = json.loads(cctv_search(name, limit=1))
-        if res.get("cctvs"):
-            url = res["cctvs"][0].get("url", "")
+        if res.get("items"):
+            url = res["items"][0].get("url", "")
         if not url:
             return json.dumps({"success": False, "error": f"'{name}' CCTV를 찾을 수 없습니다."}, ensure_ascii=False)
 

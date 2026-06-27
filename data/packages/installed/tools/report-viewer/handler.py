@@ -22,6 +22,12 @@ REPORT_TYPES = {
         "pattern": "ai_trend_report_*.md",
         "prompt": "AI 동향 보고서 써줘",   # 시스템 AI에게 보낼 작성 의도(가이드가 검색·로드됨)
     },
+    "ai_startup": {
+        "label": "AI 창업·응모 정보 보고서",
+        "folder": "outputs/ai_startup_reports",
+        "pattern": "ai_startup_report_*.md",
+        "prompt": "AI 창업·응모 정보 보고서 써줘",   # 가이드 ai_startup_report.md 가 검색·로드됨
+    },
 }
 DEFAULT_TYPE = "ai_trend"
 
@@ -93,7 +99,7 @@ def _op_list(tool_input: dict, context) -> dict:
         "success": True,
         "type": t,
         "label": cfg["label"],
-        "reports": reports,
+        "items": reports,  # 단일 통화: native 보고서 dict(path/sub/text/title) 직접
         "count": len(reports),
     }
 

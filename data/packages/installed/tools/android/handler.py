@@ -192,11 +192,19 @@ def _phone(tool_input: dict) -> dict:
                 "posted_at": ts,
             })
         latest_ago = items[0]["ago"] if items else None
+        # 레코드 통화(비파괴) — 알림 목록 >> [engines:document] 등
+        records = [{
+            "title": (it.get("title") or it.get("pkg") or "(알림)"),
+            "meta": " · ".join(x for x in [it.get("pkg"), it.get("ago")] if x),
+            "summary": it.get("body") or "",
+            "url": None,
+        } for it in items]
         return {
             "success": True,
             "count": len(items),
             "latest_ago": latest_ago,
             "notifications": items,
+            "items": records,
             "hint": "ago='방금'/'N분 전'이면 방금 온 연락. 가장 최근이 수시간/수일 전이면 지금 오는 연락은 없음.",
         }
 

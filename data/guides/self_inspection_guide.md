@@ -74,18 +74,18 @@ ORDER BY id DESC;
 "
 ```
 
-### C. self-check 결과
-World Pulse의 IBL 액션 자가점검 이력.
+### C. IBL 건강 점검 결과
+일일 건강 점검(`scripts/ibl_health_check.py` = 정적+fixture+골든, AI 0) 이력. `__static__`·`__ibl_health__` 노드가 그 결과다.
 
 ```bash
 sqlite3 data/world_pulse.db "
-SELECT * FROM self_check_log
-WHERE created_at > datetime('now', '-7 days')
+SELECT node, action, success, error_message, timestamp FROM self_checks
+WHERE timestamp > datetime('now', '-7 days')
 ORDER BY id DESC;
 "
 ```
 
-(또는 직접 트리거: `[sense:self_check]` IBL 액션 호출)
+(또는 직접 트리거: `[sense:self_check]` IBL 액션 = `run_daily_health_check`, 혹은 `python scripts/ibl_health_check.py` 단독 실행)
 
 ### D. 시스템 AI 메모리
 시스템 AI의 자체 메모리 (이전 점검 보고서 등이 여기 누적).

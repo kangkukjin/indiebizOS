@@ -158,9 +158,8 @@ def search_naver(
         "success": True,
         "type": normalized_type,
         "total": data.get("total", 0) if isinstance(data, dict) else 0,
-        "items": items,  # legacy (title/link/snippet)
-        # 레코드 통화 — >> [engines:document/spreadsheet]
-        "records": [{"title": it.get("title", ""), "meta": "",
-                     "summary": it.get("snippet", ""), "url": it.get("link", "")} for it in items],
+        # 단일 통화 items(records-관습 카드 shape) — 과적 legacy items 제거(§7.5 함정), 카드 shape만.
+        "items": [{"title": it.get("title", ""), "meta": "",
+                   "summary": it.get("snippet", ""), "url": it.get("link", "")} for it in items],
         "source": "네이버 검색 API",
     }

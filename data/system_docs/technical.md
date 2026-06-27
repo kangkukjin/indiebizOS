@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-06-12
+last_updated: 2026-06-22
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -153,7 +153,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 
 ## IBL 도구 — execute_ibl
 
-모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 5노드(sense/self/limbs/others/engines) 136 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
+모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 5노드(sense/self/limbs/others/engines) 142 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
 
 예시:
 ```
@@ -185,6 +185,7 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 - **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` + `ibl_distilled.json`. usage_db ~2,316건. **2026-06-05 android 어휘 흡수 재학습 완료**(Modal GPU, code Top-5 92.8%/desc 94.5%/런타임 ~99%).
 - **폰 컴패니언 피드 DB**: `data/phone_notifications.db` (SQLite — 알림·위치·걸음. `backend/phone_notifications.py`가 NIP-17 수신분 저장, 인가 폰 신원은 `data/phone_agent.json`). 조회 API `/phone/notifications|locations|steps` (`backend/api_phone.py`) + `[sense:phone]{op}`
 - **NIP-17/NIP-44 모듈**: `backend/nip17.py` (gift-wrap DM) + `backend/nip44.py` (암호화, 공식 테스트 벡터 150/150). channel_engine 송신은 NIP-17, 수신은 NIP-04+NIP-17 병행 fan-out
+- **외부 API 키 (`.env`)**: 패키지 핸들러가 외부 서비스 호출 시 `.env`에서 로드. 예: `NANET_API_KEY` — 국회도서관 국가학술정보(LOSI) OpenAPI (losi-open.nanet.go.kr, 연구자·학위논문 검색 `[sense:researcher]`·`[sense:paper]{source: "nanet"}`, study 패키지, auth_manager 'nanet' 레지스트리).
 - **IBL 노드 정의 (소스)**: `data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml` — 단일 진실 소스, 직접 편집. op-bearing 액션은 `ops: {default, values}` 블록 의무.
 - **IBL 노드 정의 (빌드 산출물)**: `data/ibl_nodes.yaml` — `scripts/build_ibl_nodes.py`로 생성, 런타임 로드, 직접 편집 금지
 - **IBL 검증 게이트**: `scripts/git-hooks/pre-commit` (commit 시점) + `backend/world_pulse_health.run_static_ibl_check` (12시간 self-check)
@@ -221,7 +222,7 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 - `backend/`: 서버 소스 코드
 - `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (35개 — op-bearing 10개 `_OP_DISPATCHERS` 표준)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (37개 — op-bearing 10개 `_OP_DISPATCHERS` 표준)
 - `data/api_registry.yaml`: API 도구 정의 (node 필드로 IBL 자동 병합, 현재 2개 액션)
 - `data/packages/installed/extensions/`: 백엔드 코어 모듈 (9개)
 - `projects/`: 사용자 프로젝트 데이터 (20개)
@@ -261,4 +262,4 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
 
 ---
-*마지막 업데이트: 2026-06-17 — 맥↔폰 양방향 연합 인증 라이브: 환경변수 `INDIEBIZ_PHONE_URL`(맥→폰 LAN)·`INDIEBIZ_PHONE_TOKEN`(공유 인증 토큰, 맥·폰 동일)·`INDIEBIZ_BIND_HOST`(폰 바인드 오버라이드; 미설정 시 토큰 있으면 0.0.0.0·없으면 127.0.0.1). 폰 `phone_api` 미들웨어가 비localhost 요청 토큰 검증, `AgentForegroundService`가 앱 없이 백엔드 상주, `provision_phone_keys.py`가 `.env`→폰 keys.json 토큰 푸시. 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 폰-로컬 in-process Gemini 두뇌(claude_code 원격 렌트 은퇴) + detect_body() 하드웨어 자기감지 + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + 의료기록 CRDT 동기화/삭제 op + channel 트리거 맥 발화 경로 + 124 액션 정합화(폰 감각 삼각 + self:show_calendar 폐지). 이전(2026-06-12): /business/sync/* 동기화 엔드포인트(LWW+tombstone, self:phone_sync) + api_indienet REST 제거(IndieNet→IBL 계기) + 122 액션 + 해마 로컬 M4 Pro 재학습(code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 중급 모델 Reflex 전용화, 폰 컴패니언 피드(/phone API), NIP-17/44 모듈. 이전(2026-05-28): op 어휘 단일화 + 삼각 검증. 이전(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*
+*마지막 업데이트: 2026-06-27 — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보(LOSI) 인물/학위논문 액션 추가: `[sense:researcher]`·`[sense:paper]{source: "nanet"}`(연구자·학위논문 검색, study 패키지). 외부 API 키 `NANET_API_KEY`(`.env`, losi-open.nanet.go.kr) + auth_manager 'nanet' 레지스트리. 5-Node 142 액션(sense 44·self 44·limbs 17·others 11·engines 26) / 38 패키지. 포식기억(forager) 추가로 기억 7종. 이전(2026-06-17) — 맥↔폰 양방향 연합 인증 라이브: 환경변수 `INDIEBIZ_PHONE_URL`(맥→폰 LAN)·`INDIEBIZ_PHONE_TOKEN`(공유 인증 토큰, 맥·폰 동일)·`INDIEBIZ_BIND_HOST`(폰 바인드 오버라이드; 미설정 시 토큰 있으면 0.0.0.0·없으면 127.0.0.1). 폰 `phone_api` 미들웨어가 비localhost 요청 토큰 검증, `AgentForegroundService`가 앱 없이 백엔드 상주, `provision_phone_keys.py`가 `.env`→폰 keys.json 토큰 푸시. 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 폰-로컬 in-process Gemini 두뇌(claude_code 원격 렌트 은퇴) + detect_body() 하드웨어 자기감지 + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + 의료기록 CRDT 동기화/삭제 op + channel 트리거 맥 발화 경로 + 124 액션 정합화(폰 감각 삼각 + self:show_calendar 폐지). 이전(2026-06-12): /business/sync/* 동기화 엔드포인트(LWW+tombstone, self:phone_sync) + api_indienet REST 제거(IndieNet→IBL 계기) + 122 액션 + 해마 로컬 M4 Pro 재학습(code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 중급 모델 Reflex 전용화, 폰 컴패니언 피드(/phone API), NIP-17/44 모듈. 이전(2026-05-28): op 어휘 단일화 + 삼각 검증. 이전(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*

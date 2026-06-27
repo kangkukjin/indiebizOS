@@ -47,7 +47,7 @@ def execute(tool_input: dict, context) -> str:
                         "summary": summary if summary != title else "",
                         "url": r.get("link") or r.get("url") or "",
                     })
-                result["records"] = recs
+                result["items"] = recs
             return json.dumps(result, ensure_ascii=False, indent=2)
 
         # ─── 2. DB 조회 ───
@@ -73,6 +73,23 @@ def execute(tool_input: dict, context) -> str:
                     area=tool_input.get("area"),
                     limit=tool_input.get("limit", 20)
                 )
+            # 레코드 통화(비파괴) — 가게 목록 >> [engines:document/spreadsheet]
+            if isinstance(result, dict) and isinstance(result.get("stores"), list):
+                recs = []
+                for s in result["stores"]:
+                    if not isinstance(s, dict):
+                        continue
+                    meta = " · ".join(x for x in [
+                        s.get("category"), s.get("area"), s.get("address"),
+                        (f"★{s.get('rating')}" if s.get("rating") else None),
+                    ] if x)
+                    recs.append({
+                        "title": s.get("name") or "",
+                        "meta": meta,
+                        "summary": s.get("description") or "",
+                        "url": s.get("source_url") or "",
+                    })
+                result["items"] = recs
             return json.dumps(result, ensure_ascii=False, indent=2)
 
         # ─── 3. DB 저장 ───

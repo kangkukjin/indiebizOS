@@ -1,6 +1,7 @@
   self:
     actions:
       photo:
+        returns: items
         runs_on: anywhere
         description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접. 날짜·위치·기종·키워드로 걸러 records 반환. 선스캔 불필요·항상 최신. 실행되는 몸의 미디어를 가리킨다(맥·폰 각자). 타임라인/통계/중복은 records→engines 변환자(groupby/filter) 조합으로.
         target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50). 결과 records에 lat/lng/taken_at/month/kind/camera/size 구조 필드 포함 → groupby·지도와 직결.'
@@ -25,7 +26,7 @@
           icon: 📷
           name: 사진
           order: 14
-          phone_render: false
+          phone_render: true
           modes:
           - name: 갤러리
             auto_run: true
@@ -33,9 +34,9 @@
             action: '[self:photo]{kind: "all", limit: 40}'
             view:
             - type: image_grid
-              from: records
-              image: image
-              title: title
+              from: items
+              image: '{image}'
+              title: '{title}'
               lines:
               - '{meta}'
           - name: 검색
@@ -47,9 +48,9 @@
             action: '[self:photo]{q: "$q", limit: 40}'
             view:
             - type: image_grid
-              from: records
-              image: image
-              title: title
+              from: items
+              image: '{image}'
+              title: '{title}'
               lines:
               - '{meta}'
           - name: 위치
@@ -58,12 +59,13 @@
             action: '[self:photo]{has_gps: true, limit: 40}'
             view:
             - type: image_grid
-              from: records
-              image: image
-              title: title
+              from: items
+              image: '{image}'
+              title: '{title}'
               lines:
               - '{meta}'
       blog:
+        returns: items
         runs_on: mac_only
         description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스.
         target_description: |
@@ -93,6 +95,7 @@
         - 블로그 통계
         - 인덱스
       recent_chats:
+        returns: items
         description: 최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.
         target_description: '(파라미터 없음). limit 옵션으로 건수 제한 (기본 10).'
         group: conversation
@@ -105,6 +108,7 @@
         - 대화이력
         - 이전
       agents:
+        returns: scalar
         description: 등록된 에이전트 목록 조회 (사용자·AI 구분). conversations.db 기반.
         target_description: '(파라미터 없음 — 전체 에이전트 목록)'
         group: conversation
@@ -117,6 +121,7 @@
         - 목록
         - 팀
       memory:
+        returns: items
         description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도. 자아별 사적 기억(폰·맥 각자 로컬, 동기화 안 함). 폰선 시맨틱 모델 없어 키워드(LIKE/FTS) 검색.
         group: memory
         target_description: 'save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.'
@@ -139,6 +144,7 @@
         - 메모리 삭제
         - 메모리 읽기
       health:
+        returns: items
         description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
         group: health
         target_description: 'save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호).'
@@ -160,6 +166,7 @@
         - 체중
         - 투약
       local_save:
+        returns: effect
         description: 가게 정보·커뮤니티 언급을 지역 DB에 저장 (sense:save와 같은 동작).
         target_description: 저장할 데이터 (JSON). type 옵션으로 store/mention 분류.
         group: system
@@ -172,6 +179,7 @@
         - 커뮤니티
         - 저장
       discover:
+        returns: scalar
         description: 키워드로 적합한 IBL 노드·액션 자동 탐색. 어떤 액션 쓸지 모를 때 첫 단계.
         target_description: 검색 키워드 (자연어). 결과 — 후보 액션 + 사용 예시.
         group: system
@@ -185,6 +193,7 @@
         - 도구검색
         - 액션
       time:
+        returns: scalar
         description: 현재 시간 조회 (로컬 시스템 시계, KST). 날짜·요일·시:분:초 반환.
         group: system
         target_description: '(파라미터 없음). format 옵션으로 포맷 지정 가능.'
@@ -192,6 +201,7 @@
         tool: get_current_time
         implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
       report:
+        returns: effect
         runs_on: mac_only
         description: 정기 보고서(AI 동향 등) 뷰어 + 작성 트리거 (op 분기). 최신 보기·목록·새 작성. 보고서는 맥 폴더 저장·맥 시스템 AI가 작성.
         target_description: 'op로 분기 (기본 list). type(보고서 타입, 기본 ai_trend). read 는 path. new 는 맥 시스템 AI에 작성 요청.'
@@ -226,6 +236,8 @@
             buttons:
             - label: ✍ 새 AI 동향 보고서 작성
               action: '[self:report]{op: "new", type: "ai_trend"}'
+            - label: ✍ 새 AI 창업·응모 보고서 작성
+              action: '[self:report]{op: "new", type: "ai_startup"}'
             inputs:
             - key: type
               type: select
@@ -237,7 +249,7 @@
             action: '[self:report]{op: "latest", type: "$type"}'
             view:
             - type: thread
-              from: blocks
+              from: items
               text: '{text}'
           - name: 목록
             auto_run: true
@@ -252,7 +264,7 @@
             action: '[self:report]{op: "list", type: "$type"}'
             view:
             - type: card_list
-              from: reports
+              from: items
               empty: 보고서가 없습니다 — 작성 탭에서 새 보고서를 만들어 보세요
               card:
                 title: '{title}'
@@ -262,7 +274,7 @@
                 action: '[self:report]{op: "read", path: "{path}"}'
                 view:
                 - type: thread
-                  from: blocks
+                  from: items
                   text: '{text}'
           - name: 작성
             auto_run: true
@@ -277,6 +289,7 @@
                 label: ✍ 작성
                 action: '[self:report]{op: "new", type: "{value}"}'
       manage_events:
+        returns: items
         description: 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
         target_description: action (create/list/delete). 추가 파라미터는 action별로 다름.
         group: schedule
@@ -297,11 +310,12 @@
           action: '[self:manage_events]{action: "list"}'
           view:
           - type: calendar
-            from: events
+            from: items
             delete_action: '[self:manage_events]{action: "delete", event_id: "{id}"}'
             add:
               action: '[self:manage_events]{action: "create", title: "$title", date: "$date"}'
       switch:
+        returns: effect
         description: 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
         target_description: 'list는 파라미터 없음. run은 switch_id 필요.'
         group: schedule
@@ -318,6 +332,7 @@
         - 스위치 목록
         - 스위치 실행
       schedule:
+        returns: effect
         description: 스케줄 실행 (지연 실행, 특정 시간, 반복 등)
         target_description: 실행 시점 (delay/at/cron) + action. 한 번 실행 또는 반복 가능.
         group: schedule
@@ -332,6 +347,7 @@
         - 지연실행
         - 반복
       goal:
+        returns: scalar
         description: 목표 프로세스 관리 (op 분기). list/status/kill/log/attempts. 의식 에이전트가 평가 루프 라운드를 누적·종료하는 메타 인지 도구.
         target_description: 'list — 활성/대기 중 전체. status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. log — task_id + approach_category + description 필수(result/lesson 옵션), 시도 1건 기록. attempts — task_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.'
         group: goal
@@ -355,6 +371,7 @@
         - 시도 이력
         - 진행상황
       notify_user:
+        returns: effect
         description: 사용자에게 알림 전송 (프론트엔드 + 텔레그램). 중요 이벤트 통지용.
         target_description: 알림 메시지. priority 옵션 (info/warn/error).
         group: system
@@ -367,6 +384,7 @@
         - 통지
         - 메시지
       workflow:
+        returns: scalar
         description: 저장된 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. 즉시 실행은 run_pipeline 별도.
         target_description: 'get/delete/run — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — params 옵션으로 워크플로 변수 전달.'
         group: workflow
@@ -388,6 +406,7 @@
         - 워크플로우 삭제
         - 파이프라인 저장
       run_pipeline:
+        returns: effect
         description: IBL 파이프라인 즉시 실행 (steps를 params로 직접 전달, 저장 안 됨).
         target_description: steps 배열 (각 step은 IBL 코드). 저장하려면 save_workflow.
         group: workflow
@@ -398,6 +417,7 @@
         - 실행
         - 단계
       trigger:
+        returns: effect
         description: 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
         target_description: 'create는 name + pipeline(실행할 IBL) 필수, schedule이면 cron("0 9 * * *" 등 표준 cron, 내부에서 일정으로 해소) 또는 config. get/update/delete/enable/disable/history는 id 필요. list/status는 파라미터 없음.'
         group: schedule
@@ -424,6 +444,7 @@
         - 트리거 상태
         - 자동 실행
       output:
+        returns: effect
         description: 결과를 지정한 목적지로 내보냄 (op 분기). gui=UI 표시, file=파일 저장, clipboard=클립보드 복사. 파일 *조작*은 write/read 별도.
         target_description: 'gui — content(HTML/데이터) + format(카드/테이블/HTML). file — path(확장자로 형식 자동) + content. clipboard — content(텍스트).'
         group: output
@@ -445,6 +466,7 @@
         - 복사
         - UI
       download:
+        returns: effect
         description: URL에서 파일 다운로드해 로컬 저장. HTML 페이지 텍스트 추출은 sense:crawl.
         target_description: 다운로드 URL. output 옵션으로 저장 경로 지정.
         group: output
@@ -456,6 +478,7 @@
         - 다운로드
         - 파일받기
       read:
+        returns: scalar
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
         target_description: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션, 시트를 TSV 텍스트로. 스캔 PDF는 별도 OCR 필요.
@@ -464,6 +487,7 @@
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
         target_key: path
       write:
+        returns: effect
         description: 텍스트 파일 새로 쓰기·덮어쓰기. write→run 패턴의 한 축, append 아님.
         group: file
         target_description: 쓸 파일 경로 (절대 또는 상대). 기존 파일은 묻지 않고 덮어쓴다.
@@ -472,6 +496,7 @@
         implementation: Python 파일 I/O로 로컬 파일 쓰기
         target_key: path
       list:
+        returns: items
         description: 디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).
         group: file
         target_description: 조회할 디렉토리 경로. recursive 옵션으로 하위 포함 가능.
@@ -480,6 +505,7 @@
         implementation: os.listdir/pathlib로 디렉토리 내용 조회
         target_key: path
       file_find:
+        returns: items
         description: 파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트
           지정 (절대경로, ~/, 상대경로 모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀
         group: file
@@ -497,7 +523,8 @@
           결과 상한 (기본 200). 매칭 없으면 path 옵션 안내
         target_key: pattern
       grep:
-        description: 파일 내용에서 패턴 검색 (grep/ripgrep). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
+        returns: items
+        description: 파일 내용에서 패턴 검색 (grep/ripgrep). items(행 dict — 파일/줄번호/내용). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
         group: file
         target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터.
         keywords:
@@ -510,6 +537,7 @@
         implementation: subprocess로 grep/ripgrep 실행하여 파일 내용 검색
         target_key: pattern
       edit:
+        returns: effect
         description: 파일 부분 편집 (old_string → new_string 교체). 전체 덮어쓰기는 write.
         group: file
         target_description: 편집할 파일 경로. old_string/new_string 파라미터로 교체할 텍스트 지정.
@@ -518,6 +546,7 @@
         implementation: Python 문자열 치환으로 파일 부분 편집
         target_key: path
       copy:
+        returns: effect
         description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사.
         group: file
         target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용)
@@ -526,6 +555,7 @@
         implementation: shutil.copy/copytree로 파일/폴더 복사
         target_key: source
       move:
+        returns: effect
         description: 파일 또는 폴더 이동·이름 변경. 같은 폴더면 이름 변경, 다른 폴더면 이동.
         group: file
         target_description: src(원본)와 dest(이동/새 이름) 두 파라미터. (source/destination 별칭도 허용)
@@ -534,6 +564,7 @@
         implementation: shutil.move로 파일/폴더 이동/이름변경
         target_key: source
       delete:
+        returns: effect
         description: 파일 또는 폴더 영구 삭제. 휴지통 거치지 않음 — 신중히 사용.
         group: file
         target_description: 삭제할 파일 또는 폴더 경로. 폴더는 재귀 삭제 (rmtree).
@@ -542,21 +573,22 @@
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
       storage:
-        description: 저장소 사용량 요약 도구 (op 분기). summary(사용량 요약)/volumes(스캔된 볼륨 목록)/scan(선택적
-          디스크 스캔 — 비색인 볼륨 대비). 파일 검색은 fs_query(선스캔 불필요).
+        returns: scalar
+        description: 디스크 용량 분석 (op 분기) — 폴더·확장자별 용량 집계. scan(분석 인덱스 구축)/summary(용량 집계)/volumes(볼륨 목록). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
-        target_description: 'summary — volume_name/root_path 생략 시 전체 볼륨 통합 요약. volumes — 파라미터 없음. scan — path 필수(비색인 볼륨 대비 선택적 인덱스).'
+        target_description: '용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.'
         target_key: op
         router: handler
         tool: storage_op
         ops:
           default: volumes
           values:
-            scan: 디스크·볼륨 스캔 후 SQLite 인덱스 구축 (선택적 — 비색인 볼륨 대비. fs_query 는 OS 색인 직접이라 불요)
-            summary: 저장소 사용량 요약 (볼륨 생략 시 전체 통합)
-            volumes: 스캔된 볼륨 목록 (이름·경로·용량, 파라미터 없음, 기본)
+            scan: 용량 분석 인덱스 구축 (treemap·확장자별 집계의 선행 단계)
+            summary: 폴더·확장자별 용량 집계 (scan 선행, 볼륨 생략 시 전체 통합)
+            volumes: 용량 분석된 볼륨 목록 (이름·경로·용량, 기본)
         implementation: scan_storage/get_storage_summary/list_volumes op 분기 (pc-manager)
       fs_query:
+        returns: items
         description: 파일 메타 검색 (이름·확장자·크기·종류) — OS 색인(맥 Spotlight) 직접. 선스캔 불필요·항상 최신. 내용 검색은 grep, 패턴은 find. self:photo 와 같은 file_index 보편 질의 위의 종류-무관 preset.
         group: file
         target_description: 'search_term(이름 부분일치) · extension(확장자) · kind(image/video/audio/pdf/any) · min_size_mb · path(검색 루트, 생략 시 홈) · limit(기본 100). 결과 records(보편 파일 필드) + table 통화.'
@@ -564,7 +596,54 @@
         tool: query_storage
         implementation: pc-manager _query_storage — backend/file_index.query 위임(mdfind 무상태). 비색인 경로는 라이브 walk 폴백.
         target_key: search_term
+        app:
+          instrument: files
+          icon: 🗂️
+          name: 파일
+          order: 16
+          modes:
+          - name: 검색
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 파일명·확장자 검색 (예 report, pdf)
+            action: '[self:fs_query]{search_term: "$q", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+          - name: 문서
+            auto_run: true
+            phone_render: false
+            note: 최근 PDF·문서 (OS 색인 직접 — 스캔 불필요·항상 최신). 폰은 MediaStore=미디어 전용이라 문서 미색인 → mac/원격만.
+            action: '[self:fs_query]{kind: "pdf", sort: "mtime", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+          - name: 큰 파일
+            auto_run: true
+            note: 100MB 이상 — 용량 정리 대상 (큰 순).
+            action: '[self:fs_query]{min_size_mb: 100, sort: "size", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
       cctv:
+        returns: scalar
         description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신.'
         group: cctv
         target_description: '파라미터 없음. op 분기 — stats(기본): 카카오·UTIC·ITS·Windy 전체 소스 CCTV 현황·총수 / refresh: UTIC 실시간 API로 전국 캐시 일괄 갱신(유지보수).'
@@ -583,6 +662,7 @@
         - CCTV 통계
         - CCTV 갱신
       folder_note:
+        returns: scalar
         description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file
         target_description: 'set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. get —
@@ -597,6 +677,7 @@
             get: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
+        returns: scalar
         description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기.
         group: file
         target_description: 'recall(기본) — query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상.
@@ -618,6 +699,7 @@
         - 주인모델
         implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
       residual:
+        returns: scalar
         description: 탐색 잔여 측정 — "거기 없음 vs 덜 봤음"을 표본조사로 가른다(음성-단언). op 분기.
         group: file
         target_description: 'sample(기본) — 질의 모집단에서 이미 본 것(seen 경로 배열) 제외한 미관측 더미의 균일 무작위 표본 n개.
@@ -640,6 +722,7 @@
         - 정말 없나
         implementation: file_index.candidate_paths(디스크)·code_candidate_paths(코드) + 균일표본 / Wilson 이항추정 (pc-manager _residual_op)
       lecture:
+        returns: items
         runs_on: mac_only
         description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
         group: lecture
@@ -664,6 +747,7 @@
         - 강의 워크스페이스
         scope: workspace
       slide:
+        returns: effect
         runs_on: mac_only
         description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더.
         group: lecture
@@ -688,6 +772,7 @@
         - 다음 슬라이드
         scope: workspace
       material:
+        returns: effect
         runs_on: mac_only
         description: 강의 재료 관리 (op 분기). 추가/삭제.
         group: lecture
@@ -707,6 +792,7 @@
         - 자료 추가
         scope: workspace
       deck:
+        returns: effect
         runs_on: mac_only
         description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기.
         group: lecture
@@ -726,6 +812,7 @@
         - PPTX 내보내기
         scope: workspace
       business:
+        returns: items
         description: 나의 비즈니스(사업) CRUD — op:list(기본)/detail/save/delete.
         group: business
         target_description: 'op:list(level 0-4·search 필터) / detail(id 필수, +소속 아이템) / save(id 없으면 생성·name 필수, 있으면 수정 — name/level(0-4 공개수준)/description) / delete(id 필수, 아이템도 함께).'
@@ -771,7 +858,7 @@
             action: '[self:business]{op: "list", level: "$level", search: "$q"}'
             view:
             - type: card_list
-              from: businesses
+              from: items
               master_detail: true
               item_click:
                 action: '[self:business]{op: "detail", id: "{id}"}'
@@ -828,7 +915,7 @@
               type: select
               placeholder: 비즈니스 선택
               options_action: '[self:business]{op: "list"}'
-              options_from: businesses
+              options_from: items
               option_value: id
               option_label: name
             buttons:
@@ -872,7 +959,7 @@
             action: '[self:business_document]{op: "list"}'
             view:
             - type: card_list
-              from: documents
+              from: items
               item_click:
                 action: '[self:business_document]{op: "detail", level: "{level}"}'
                 view:
@@ -892,7 +979,7 @@
             action: '[self:work_guideline]{op: "list"}'
             view:
             - type: card_list
-              from: guidelines
+              from: items
               item_click:
                 action: '[self:work_guideline]{op: "detail", level: "{level}"}'
                 view:
@@ -921,6 +1008,7 @@
               - {k: 안내, v: '{summary}'}
               - {k: 점검, v: '{interval_label}'}
       business_item:
+        returns: items
         description: 비즈니스 아이템(상품/항목) CRUD — op:list(기본)/detail/save/delete.
         group: business
         target_description: 'op:list(business_id 필수) / detail(item_id 필수) / save(id 없으면 생성·business_id+title 필수, 있으면 수정 — title/details/attachment_path) / delete(item_id 필수).'
@@ -944,6 +1032,7 @@
         - 품목
         - 사업 항목
       business_document:
+        returns: items
         description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 관리 — op:list(기본)/detail/update/regenerate.
         group: business
         target_description: 'op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content) / regenerate(비즈니스·아이템 기반 레벨별 자동 재생성, 파라미터 없음).'
@@ -964,6 +1053,7 @@
         - 문서 재생성
         - 레벨별 문서
       work_guideline:
+        returns: items
         description: 레벨별 근무 지침(업무 가이드라인) 관리 — op:list(기본)/detail/update.
         group: business
         target_description: 'op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content).'
@@ -983,6 +1073,7 @@
         - 작업 지침
         - 가이드라인
       phone_sync:
+        returns: effect
         description: 폰과 PC의 주소록(이웃·연락처·사업) USB 합집합 동기화 — "폰 동기화/싱크" 명령 시.
         group: business
         target_description: '(파라미터 없음). 폰 USB 연결 필요(미기동 시 앱 자동 기동). 양방향 1회 머지 — 추가는 합치고 수정은 최신 우선, 삭제는 양쪽 반영. 메시지/글 내용은 비대상(릴레이/Gmail 진실원).'

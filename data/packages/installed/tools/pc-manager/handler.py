@@ -160,11 +160,16 @@ def _query_storage(tool_input: dict) -> str:
     except (TypeError, ValueError):
         limit = 100
 
+    # search_term 동의어 흡수 — LLM 이 query/name/pattern 등으로 자연스레 부른다.
+    #   (param명 불일치는 q=None → mdfind 전체매칭 → 타임아웃 → 거짓 '0'을 낳던 침묵실패. project_ibl_param_name_mismatch)
+    search_term = (tool_input.get("search_term") or tool_input.get("q")
+                   or tool_input.get("query") or tool_input.get("name")
+                   or tool_input.get("pattern"))
     res = file_index.query(
         kind=tool_input.get("kind") or "any",
-        q=tool_input.get("search_term") or tool_input.get("q"),
+        q=search_term,
         ext=tool_input.get("extension"),
-        path=tool_input.get("root_path") or tool_input.get("volume_name"),
+        path=tool_input.get("root_path") or tool_input.get("path") or tool_input.get("volume_name"),
         min_size=min_size_bytes,
         limit=limit,
         sort=tool_input.get("sort") or "mtime",
@@ -194,7 +199,7 @@ def _query_storage(tool_input: dict) -> str:
         "count": res.get("count"),
         "shown": len(records),
         "scope": res.get("scope"),
-        "records": records,
+        "items": records,
         # table 통화(비파괴) — fs_query >> [engines:spreadsheet/document] 호환 유지.
         "table": {"columns": ["이름", "크기(MB)", "경로", "수정일"], "rows": rows},
     }

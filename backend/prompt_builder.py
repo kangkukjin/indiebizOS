@@ -29,6 +29,62 @@ def get_prompt_builder() -> 'PromptBuilder':
     return _prompt_builder_instance
 
 
+# system_structure.md '정체성 코어' 캐시 (mtime 기반 무효화)
+_SYS_STRUCT_CORE_CACHE: Dict[str, object] = {"mtime": None, "core": None}
+
+
+def get_system_structure_core() -> str:
+    """system_structure.md 의 '정체성 코어'를 반환한다.
+
+    CODEBASE_MAP 마커 구간(백엔드/프론트 디렉토리·파일 트리 — 자기개발·디버깅에서만 쓰는
+    *소스 지식*)은 제거하고 한 줄 포인터로 대체한다. 동시에 그 구간을
+    guides/codebase_map.md 로 파생한다(system_structure.md 가 더 새로우면 갱신).
+
+    ★단일 소스는 system_structure.md 다 — 사용자는 그 한 파일만 편집하면 되고,
+      codebase_map.md 는 여기서 자동 파생된다.
+    실행·의식·평가 세 에이전트가 모두 이 함수를 써서 일관되게 코어만 주입한다.
+    """
+    base = get_base_path()
+    doc_path = base / "data" / "system_docs" / "system_structure.md"
+    if not doc_path.exists():
+        return ""
+    mtime = doc_path.stat().st_mtime
+    if _SYS_STRUCT_CORE_CACHE["mtime"] == mtime and _SYS_STRUCT_CORE_CACHE["core"] is not None:
+        return _SYS_STRUCT_CORE_CACHE["core"]  # type: ignore
+
+    raw = doc_path.read_text(encoding="utf-8")
+    START, END = "<!-- CODEBASE_MAP:START -->", "<!-- CODEBASE_MAP:END -->"
+    pointer = (
+        "> **코드베이스 구조**(백엔드/프론트엔드 디렉토리·파일 위치)는 자기개발·디버깅 작업에서만 "
+        "필요하므로 항상 주입하지 않는다. 필요하면 `read_guide(query=\"코드 구조\")` 로 `codebase_map` "
+        "가이드를 읽어라 — 의식 에이전트는 자기개발/디버깅 태스크에서 이 가이드를 자동 선택한다."
+    )
+
+    if START in raw and END in raw:
+        pre, rest = raw.split(START, 1)
+        block, post = rest.split(END, 1)
+        # 파생 가이드 갱신 (stale 시에만 — 단일 소스 = system_structure.md)
+        try:
+            guide_path = base / "data" / "guides" / "codebase_map.md"
+            if (not guide_path.exists()) or (guide_path.stat().st_mtime < mtime):
+                header = (
+                    "# 코드베이스 구조 (codebase_map)\n\n"
+                    "> 자동 생성 — 직접 편집하지 마라. 원본은 "
+                    "`data/system_docs/system_structure.md` 의 CODEBASE_MAP 구간이다. "
+                    "거기서 고치면 다음 로드 때 이 파일이 갱신된다.\n\n"
+                )
+                guide_path.write_text(header + block.strip() + "\n", encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"[codebase_map] 파생 실패: {e}")
+        core = pre.rstrip() + "\n\n" + pointer + "\n" + post
+    else:
+        core = raw
+
+    _SYS_STRUCT_CORE_CACHE["mtime"] = mtime
+    _SYS_STRUCT_CORE_CACHE["core"] = core
+    return core
+
+
 class PromptBuilder:
     """시스템 프롬프트 빌더
 
@@ -200,10 +256,14 @@ class PromptBuilder:
         """
         parts = []
 
-        # 0. 현재 날짜/시간 (모든 에이전트가 현재 시점을 알도록)
+        # 0. 현재 날짜 (모든 에이전트가 현재 시점을 알도록)
+        # ★ 날짜만 — 분 단위 시각을 stable 프롬프트(캐시 prefix 맨 앞)에 넣으면
+        #   prefix 매칭이라 매분 ~60K 전체 캐시가 무효화된다. 정밀 시각은
+        #   _build_dynamic_context(비캐시 — user message 앞)로 옮기고, 그래도
+        #   부족하면 에이전트가 [self:time] 도구로 초 단위까지 얻는다.
         from datetime import datetime
         now = datetime.now()
-        date_info = f"# 현재 시점\n현재 날짜: {now.strftime('%Y년 %m월 %d일 %A')}\n현재 시간: {now.strftime('%H:%M')}"
+        date_info = f"# 현재 시점\n현재 날짜: {now.strftime('%Y년 %m월 %d일 %A')}"
         parts.append(date_info)
 
         # 1. 기본 프롬프트 (항상 포함)
@@ -211,8 +271,9 @@ class PromptBuilder:
         if base:
             parts.append(base)
 
-        # 1.5. 시스템 구조 문서 (항상 포함 — 파일 위치, 아키텍처, 패키지 목록 등)
-        sys_structure = self._load_system_doc("system_structure.md")
+        # 1.5. 시스템 구조 문서 (정체성 코어만 항상 포함 — 디렉토리/파일 트리는
+        #      codebase_map 가이드로 분리되어 자기개발/디버깅 시에만 주입된다)
+        sys_structure = get_system_structure_core()
         if sys_structure:
             parts.append(f"<system_structure>\n{sys_structure}\n</system_structure>")
 
@@ -493,78 +554,92 @@ def _build_dynamic_context(
     builder = get_prompt_builder()
     parts = []
 
+    # 정밀 현재 시각 — stable 프롬프트엔 날짜만 두어 캐시를 보존하고(발견 1),
+    # 분 단위는 캐시되지 않는 dynamic(여기, user message 앞)에 둔다.
+    from datetime import datetime
+    parts.append(f"# 현재 시각\n{datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
     if execution_memory:
         parts.append(execution_memory)
 
+    # 배경 참고만 담는다. 명령을 *형성*하는 것(문제 설정·쓸 액션·가이드 지시·충족 기준)은
+    # 여기 두지 않는다 — 그건 compile_user_command()가 사용자 명령에 융합한다(의식 경로).
     if consciousness_output:
-        consciousness_parts = []
-
-        task_framing = consciousness_output.get("task_framing", "")
-        if task_framing:
-            consciousness_parts.append(f"# 현재 태스크\n{task_framing}")
-
-        achievement_criteria = consciousness_output.get("achievement_criteria", "")
-        if achievement_criteria:
-            consciousness_parts.append(f"# 달성해야 할 목표의 기준\n{achievement_criteria}\n\n이 기준을 모두 충족하도록 응답을 구성하라. 응답 완성 전에 각 항목을 스스로 점검하라.")
-
-        ibl_focus = consciousness_output.get("ibl_focus", {})
-        if ibl_focus:
-            focus_parts = []
-            primary = ibl_focus.get("primary_nodes", [])
-            highlight = ibl_focus.get("highlight_actions", [])
-            hint = ibl_focus.get("hint", "")
-            if primary:
-                focus_parts.append(f"주요 노드: {', '.join(primary)}")
-            if highlight:
-                focus_parts.append(f"주목할 액션: {', '.join(highlight)}")
-            if hint:
-                focus_parts.append(f"접근 방향: {hint}")
-            if focus_parts:
-                consciousness_parts.append(
-                    "<focus note=\"참고용 힌트 — 다른 액션도 자유롭게 사용 가능\">\n"
-                    + "\n".join(focus_parts)
-                    + "\n</focus>"
-                )
-
         context_notes = consciousness_output.get("context_notes", "")
         if context_notes:
-            consciousness_parts.append(f"# 상황 메모\n{context_notes}")
+            parts.append(f"# 상황 메모\n{context_notes}")
 
         self_awareness = consciousness_output.get("self_awareness", "")
         if self_awareness:
             sa_text = f"# 자기 인식\n{self_awareness}"
             if model_name:
                 sa_text += f"\n- AI 모델: {model_name}"
-            consciousness_parts.append(sa_text)
+            parts.append(sa_text)
         elif model_name:
-            consciousness_parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
+            parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
 
         world_state = consciousness_output.get("world_state", "")
         if world_state:
-            consciousness_parts.append(f"# 세계 상태\n{world_state}")
-
-        if consciousness_parts:
-            parts.append("\n".join(consciousness_parts))
+            parts.append(f"# 세계 상태\n{world_state}")
 
         guide_files = consciousness_output.get("guide_files", [])
         for guide in guide_files:
             content = builder._load_guide_file(guide)
             if content:
                 parts.append(f"# 가이드: {guide}\n{content}")
-
     else:
         if model_name:
             parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
 
     if not parts:
         return ""
-
-    body = "\n\n".join(parts)
     return (
-        "<turn_context note=\"이번 턴 한정 부속 정보. 시스템 프롬프트의 일부가 아닙니다.\">\n"
-        f"{body}\n"
-        "</turn_context>"
+        "<turn_context note=\"이번 턴 한정 부속 참고 정보.\">\n"
+        + "\n\n".join(parts)
+        + "\n</turn_context>"
     )
+
+
+def compile_user_command(user_message: str, consciousness_output: dict) -> str:
+    """의식 경로 '사용자 명령 변형기' — [사용자 원문 명령 + 의식의 보강]을 하나의 '사용자 명령'
+    프레임으로 융합한다.
+
+    핵심(사용자 설계): 의식이 더한 것(문제 설정·쓸 수 있는 액션·참고 가이드·충족 기준)을
+    *원문 명령과 구분 안 되게* 같은 프레임 안에 이어 붙여, 실행기가 전부 사용자 명령으로 읽게
+    한다(강한 권위). 원문 명령을 먼저 두고 보강을 잇는다. '이건 명령이다' 선언이나 '정수' 압축은
+    하지 않는다 — 위치·형식이 전부. 무거운 배경(가이드 본문·세계상태 등)은 _build_dynamic_context가
+    turn_context 참고로 따로 둔다.
+    """
+    co = consciousness_output or {}
+    lines = [f"사용자 명령: {(user_message or '').strip()}"]
+
+    task_framing = (co.get("task_framing") or "").strip()
+    if task_framing:
+        lines.append(task_framing)
+
+    ibl_focus = co.get("ibl_focus", {}) or {}
+    foc = []
+    highlight = ibl_focus.get("highlight_actions") or []
+    if highlight:
+        foc.append("쓸 수 있는 IBL 액션: " + ", ".join(highlight) + " (이 밖의 액션도 가능).")
+    hint = (ibl_focus.get("hint") or "").strip()
+    if hint:
+        foc.append(hint)
+    if foc:
+        lines.append(" ".join(foc))
+
+    guide_files = co.get("guide_files") or []
+    if guide_files:
+        lines.append(
+            "참고할 가이드: " + ", ".join(guide_files)
+            + " (위 turn_context에 본문 포함) — 그 지침대로 수행할 것."
+        )
+
+    achievement_criteria = (co.get("achievement_criteria") or "").strip()
+    if achievement_criteria:
+        lines.append(f"충족 기준: {achievement_criteria}")
+
+    return "\n".join(lines)
 
 
 def build_system_ai_prompt_split(

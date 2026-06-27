@@ -2,11 +2,11 @@
 title: 스케줄러 가이드
 scope: 정기 작업 스케줄, 트리거 엔진, 워크플로우, 캘린더 연동
 owner_code: scheduler.py, trigger_engine.py, workflow_engine.py, calendar_manager.py
-last_updated: 2026-05-17
+last_updated: 2026-06-22
 see_also: [architecture.md, delegation.md]
 ---
 
-# manage_schedule 도구 사용 가이드
+# 스케줄러 사용 가이드
 
 > **2026-05-27 라운드 2 통합 (이력)**: 아래 옛 도구명이 op 분기 IBL 액션으로 통합됐다(본문은 새 형식으로 갱신 완료):
 > - `list_switches` / `run_switch` → `[self:switch]{op: "list"}` / `[self:switch]{op: "run", switch_id: ...}`
@@ -103,7 +103,7 @@ action_params:
 }
 ```
 
-**중요**: run_switch를 등록하기 전에 반드시 `list_switches` 도구로 사용 가능한 스위치 목록을 확인하세요.
+**중요**: run_switch를 등록하기 전에 반드시 `[self:switch]{op: "list"}`로 사용 가능한 스위치 목록을 확인하세요.
 
 #### send_notification - 알림 전송
 사용자에게 알림을 보냅니다. 기념일, 약속, 리마인더에 적합합니다.
@@ -251,9 +251,9 @@ monthly 타입은 date 필드의 day 값을 매월 반복일로 사용합니다.
 ## 작업 흐름
 
 1. 사용자가 일정/반복 작업을 요청
-2. 필요시 `list_switches` 도구로 사용 가능한 스위치 확인
-3. `manage_schedule` 도구의 `list` 액션으로 기존 스케줄 확인
-4. `add` 액션으로 새 스케줄 등록
+2. 필요시 `[self:switch]{op: "list"}`로 사용 가능한 스위치 확인
+3. `[self:manage_events]{action: "list"}`로 기존 스케줄 확인
+4. `[self:manage_events]{action: "create", ...}`로 새 스케줄 등록
 5. 등록 결과를 사용자에게 안내
 
 ## 주의사항
@@ -362,4 +362,4 @@ GET /scheduler/calendar/events/by-agent?project_id=투자&agent_id=researcher
 
 ---
 
-*마지막 업데이트: 2026-03-27*
+*마지막 업데이트: 2026-06-27 — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 폐지된 도구명(`manage_schedule`·`list_switches` 도구) 잔재 정정: 현재 스케줄 어휘는 `[self:manage_events]`(등록/조회/삭제)·`[self:schedule]`(지연/예약/반복)·`[self:switch]{op}`·`[self:trigger]{op}`·`[self:workflow]{op}`. 본문 JSON/REST 모델·CalendarManager 데이터 구조는 변경 없음. 이전: 2026-03-27*

@@ -37,6 +37,7 @@ _BASE_URLS: Dict[str, str] = {
     "radio_browser": "https://de1.api.radio-browser.info/json",
     "sec_edgar": "https://data.sec.gov",
     "coingecko": "https://api.coingecko.com/api/v3",
+    "kaggle": "https://www.kaggle.com/api/v1",
 }
 
 # 기본 설정

@@ -26,7 +26,7 @@ from typing import Optional
 
 import requests
 
-from common import success_response, error_response, get_output_dir, HEADERS
+from cctv_common import success_response, error_response, get_output_dir, HEADERS
 
 
 def _find_ffmpeg() -> Optional[str]:

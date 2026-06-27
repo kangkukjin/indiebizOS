@@ -680,6 +680,20 @@ class AgentCognitiveMixin:
             if forage:
                 result = (result + "\n" + forage) if result else forage
 
+            # 거친 디스크 골격(어디에) — ★몸 독립 상시-on. 집중 관심 폴더 아래 거친 디렉토리
+            #   트리(맥/윈도우/리눅스/폰 각자 자기 루트). system_structure.md(자기 폴더 큐레이션
+            #   자기상)의 디스크판 — 깊은 상세·큐레이션은 위 forager 냄새가 관련시 페이징.
+            #   캐시(TTL)라 매 메시지 walk 없음. focus_map.py(헌법1조 substrate/superstructure).
+            skeleton = self._build_disk_skeleton()
+            if skeleton:
+                result = (result + "\n" + skeleton) if result else skeleton
+
+            # 웹 랜드마크(참고지도) — 웹 포식 의도일 때만(상시-on 아님). 비액션 웹 출처
+            #   "어디를·뭘 보러 가나". 수동 큐레이션(data/web_landmarks.md), 자동화는 다음 단계.
+            web_landmarks = self._build_web_landmarks(user_message)
+            if web_landmarks:
+                result = (result + "\n" + web_landmarks) if result else web_landmarks
+
             if result:
                 parts = []
                 if "execution_memory" in result:
@@ -688,6 +702,10 @@ class AgentCognitiveMixin:
                     parts.append("관련기억")
                 if "forage_memory" in result:
                     parts.append("포식기억")
+                if "disk_skeleton" in result:
+                    parts.append("디스크골격")
+                if "web_landmarks" in result:
+                    parts.append("웹랜드마크")
                 print(f"[연상] {'+'.join(parts)}: \"{user_message[:40]}\"")
             else:
                 print(f"[연상] 빈 결과: \"{user_message[:40]}\"")
@@ -868,6 +886,91 @@ class AgentCognitiveMixin:
             return xml
         except Exception as e:
             print(f"[포식기억] 회상 실패 (무시): {e}")
+            return ""
+
+    def _build_disk_skeleton(self) -> str:
+        """거친 디스크 골격 회상 — 데스크탑(맥/윈도우/리눅스) 상시-on(0단계 _build_execution_memory).
+
+        집중 관심 폴더 아래 거친 디렉토리 트리("어디에"). focus 루트는 focus_map 이 몸별 해소 —
+        focus 폴더(어휘)는 몸 독립, 생성기 바인딩만 몸별(헌법1조). 캐시(TTL)라 매 메시지 walk 없음.
+        깊은 상세·큐레이션은 forager 냄새 몫. 실패는 무시(파이프라인 불변).
+
+        ★폰 제외(의도): 안드로이드 스코프드 스토리지라 os.walk 가 공유 스토리지에 안 먹히고
+        (파일 접근은 MediaStore 경유), 폰에선 거친 디스크 지도 실익이 작다(사용자 결정). 빈 결과로
+        '지원하는 척' 안 한다 — _search_forage_memory 의 폰 게이트와 같은 자리.
+        """
+        try:
+            import sys, os
+            bk = os.path.dirname(os.path.abspath(__file__))
+            if bk not in sys.path:
+                sys.path.insert(0, bk)
+            try:
+                from runtime_utils import detect_body
+                profile = detect_body().get("profile") or "mac"
+            except Exception:
+                profile = "mac"
+            if profile == "phone":
+                return ""  # 폰 미지원(스코프드 스토리지·실익 작음)
+            import focus_map
+            return focus_map.build_coarse_map_xml(profile=profile)
+        except Exception as e:
+            print(f"[디스크골격] 생성 실패 (무시): {e}")
+            return ""
+
+    def _build_web_landmarks(self, user_message: str) -> str:
+        """웹 랜드마크(참고지도) 주입 — 웹 포식 의도일 때만(상시-on 아님).
+
+        "웹 보러 갈 때 펴는 지도" — 비액션 출처(어디를·뭘 보러 가나). data/web_landmarks.md
+        (수동 큐레이션, 쓰면서 반성-업데이트). 자동화(forager 증류로 채우기·빈도→졸업/대체불가성
+        →생존)는 다음 단계. 실패는 무시(파이프라인 불변).
+
+        ★세션-인지 게이트(라이브 로그 교정): 웹 포식은 *멀티턴 세션*이라 매-메시지 키워드만으론
+        후속 추적 턴("그녀가…")을 놓치고 디스크 파일찾기("…파일 찾아줘")엔 헛주입된다. 그래서
+        ①키워드(새 웹 턴, 단 디스크-찾기 신호 있으면 제외) OR ②진행 중 웹 framing(재사용될
+        의식 framing 의 highlight_actions 가 search/crawl/paper 면 키워드 없어도) 둘 중 하나로 연다.
+        """
+        try:
+            msg = (user_message or "").lower()
+            strong_web = ("검색", "서치", "search", "인터넷", "웹", "온라인", "조사",
+                          "알아봐", "최신", "뉴스", "논문", "사이트", "출처", "google",
+                          "구글", "리서치", "인물", "누구")
+            find_cue = ("찾아", "찾는", "어디")
+            disk_marker = ("파일", "폴더", "디렉토리", "디스크", "하드", "바탕화면", "다운로드")
+            has_strong = any(s in msg for s in strong_web)
+            # 디스크 작업(파일찾기 등)이면 웹 랜드마크 불필요 — 디스크 골격·forager 담당
+            if any(d in msg for d in disk_marker) and not has_strong:
+                return ""
+            kw_web = has_strong or any(f in msg for f in find_cue)
+            # 세션 신호: 진행 중(재사용될) 의식 framing 이 웹-지향이면 키워드 없어도 주입
+            framing_web = False
+            try:
+                from thread_context import get_current_registry_key
+                key = get_current_registry_key() or "default"
+                prev = framing_cache_get(key)
+                if prev:
+                    acts = " ".join(
+                        prev.get("capability_focus", {}).get("highlight_actions", [])
+                    ).lower()
+                    framing_web = any(v in acts for v in
+                                      ("search", "crawl", "paper", "scholar", "ddg", "news"))
+            except Exception:
+                pass
+            if not (kw_web or framing_web):
+                return ""
+            cls = type(self)
+            cache = getattr(cls, "_web_landmarks_cache", None)
+            if cache is None:
+                from runtime_utils import get_base_path
+                path = get_base_path() / "data" / "web_landmarks.md"
+                cache = path.read_text(encoding="utf-8") if path.exists() else ""
+                cls._web_landmarks_cache = cache
+            if not cache:
+                return ""
+            note = ("웹 출처 참고지도(비액션). 액션 도메인은 IBL 액션으로 — "
+                    "통계·공시·법령·부동산실거래·도서·공연·날씨·CCTV·쇼핑 등.")
+            return f'<web_landmarks note="{note}">\n{cache}\n</web_landmarks>'
+        except Exception as e:
+            print(f"[웹랜드마크] 생성 실패 (무시): {e}")
             return ""
 
     def _run_consciousness_or_reuse(self, user_message: str, history: list,
@@ -1240,10 +1343,11 @@ AI: {ai_response[:500]}"""
 - map.convention: 주인의 정리·명명·탐색 관습(예 "발표=장소+날짜", "IBL 액션=src에 정의→build로 생성", "동명이인=분야어로 좁힘")
 - map.dead_branch: "여기엔 그것 없음"(+ prune_reason: 왜 아마 없나 — 폐기가능)
 - map.substrate: 기질 가용성(예 "EXIF 색인 없음", "1500줄 파일제한", "이 사이트=페이월")
-- owner.{{identity|domain|affiliation|signal|lexicon|habit}}: 주인 모델(정체·분야·소속·내용지문·어휘매핑·습관) — ★몸 독립, 모든 공간 공유. 웹 포식이면 특히 값지다(다음 검색 중의성 해소).
+- owner.{{identity|domain|affiliation|signal|lexicon|habit}}: 주인이 *누구인가* 모델(정체·분야·소속·내용지문·어휘매핑·*개인 정리습관*) — ★몸 독립, 모든 공간 공유. 웹 포식이면 특히 값지다(다음 검색 중의성 해소). ⚠️owner 는 주인이 *누구인가*만 — *어떻게 검색·탐색하나*(방법·기법)는 owner 아니라 map.convention.
 
 규칙:
 - **이미 아는 것과 같으면 내지 마라**(새롭거나 교정된 것만).
+- **owner vs convention 경계**: 검색·탐색 *방법/기법*(예 "흔한 이름은 전공·소속 등 비식별 고유값으로 좁혀라", "동명이인 주의", "본명이 남는 공개기록 우선")은 *주인이 누구인가*가 아니다 → 그 공간의 map.convention 으로(owner 금지). owner.habit/lexicon 은 *주인 자신*에 관한 것만(예 "이력서를 docx+pdf 쌍으로 관리"=정리습관 / "Amari=甘利俊一"=어휘매핑).
 - prior_class: 동질이라 싸게 재검증되면 "structural", 의미·정체 주장이면 "semantic".
 - surface: *이미 아는 라벨을 위반*하는 이질 내용을 봤다면(예 "연구 폴더인 줄 알았는데 개인 투자 메모") 그 locus/owner value 를 surface 에 적고 why.
 - 확실치 않으면 비워라. JSON 으로만 응답.
@@ -1301,7 +1405,8 @@ AI 답변: {ai_response[:1400]}
                     generalizes=bool(m.get("generalizes")))
                 if r.get("success"):
                     noted += 1
-                    print(f"[포식기억] {r['action']} map[{kind}]: \"{claim[:48]}\"")
+                    tag = " ⇧territory(빈도 결정화)" if r.get("promoted_territory") else ""
+                    print(f"[포식기억] {r['action']} map[{kind}]{tag}: \"{claim[:48]}\"")
             for o in (data.get("owner") or [])[:4]:
                 facet, value = o.get("facet"), o.get("value")
                 if not facet or not value:
@@ -1502,6 +1607,38 @@ AI 답변: {ai_response[:1400]}
     # ============================================================
     REFLEX_SCORE_THRESHOLD = 0.85
 
+    def _tag_override(self, message: str) -> Optional[str]:
+        """명령에 박힌 명시 태그로 판정을 강제한다 — 사용자 결정이므로 Reflex·분류를 모두 이긴다.
+        #think → THINK, #execute → EXECUTE (대소문자 무시). 둘 다면 #think 우선(보수적)."""
+        low = (message or "").lower()
+        if "#think" in low:
+            return "THINK"
+        if "#execute" in low:
+            return "EXECUTE"
+        return None
+
+    def _decide_request_type(self, message: str, hippocampus_score: float,
+                             top_code: str) -> tuple:
+        """요청 판정 단일 진입점 — 명시 태그(무조건) → Reflex(해마 고확신) → 무의식 분류.
+
+        4개 호출처(시스템AI×2·프로젝트 에이전트·채널)가 같은 결정을 쓰도록 중앙화.
+        print 로 남기는 판정 로그는 episode_logger 가 정규식으로 읽어 episode_summary 에
+        unconscious_decision 으로 적재하므로 형식([무의식] 분류: / [연상→실행])을 보존한다.
+
+        Returns: (request_type, reflex_hint)  # reflex_hint 는 Reflex EXECUTE 일 때만 top_code
+        """
+        tag = self._tag_override(message)
+        if tag:
+            # 태그 강제 — episode 추출이 잡도록 "[무의식] 분류: X" 형식 유지(+강제 표기)
+            print(f"[무의식] 분류: {tag} (태그 #{tag.lower()} 강제 — Reflex·분류 무시)")
+            return tag, None
+        if (hippocampus_score or 0) >= self.REFLEX_SCORE_THRESHOLD and top_code:
+            print(f"[연상→실행] Reflex EXECUTE (score={hippocampus_score:.3f})")
+            return "EXECUTE", top_code
+        request_type = self._classify_request(message)
+        print(f"[무의식] 분류: {request_type}")
+        return request_type, None
+
     def _classify_request(self, user_message: str,
                           execution_memory: str = "") -> str:
         """사용자 요청을 SESSION_RESET / EXECUTE / THINK로 분류한다.
@@ -1694,21 +1831,24 @@ AI 답변: {ai_response[:1400]}
         for m in img_re.findall(response or ""):
             _add(m)
 
+        # 실존+크기 검증을 max_images 슬라이스 *전에* 수행 — 그래야 상한이 진짜
+        # 이미지에만 쓰인다. (상대경로 'slides/s.png' 안의 '/s.png' 조각 같은 가짜
+        # 후보가 창을 갉아먹어 실제 이미지가 덜 첨부되던 것을 막는다.)
+        valid = [p for p in cand
+                 if os.path.isfile(p) and os.path.getsize(p) <= 6 * 1024 * 1024]
         # 최신순 max_images개 (마지막 산출물이 보통 최종본)
-        chosen = cand[-max_images:] if len(cand) > max_images else cand
+        chosen = valid[-max_images:] if len(valid) > max_images else valid
         artifacts: List[Dict[str, str]] = []
         for path in chosen:
             try:
-                if not os.path.isfile(path) or os.path.getsize(path) > 6 * 1024 * 1024:
-                    continue
                 with open(path, "rb") as f:
                     b64 = _b64.b64encode(f.read()).decode("utf-8")
                 mt = self._VISUAL_EXTS.get(os.path.splitext(path)[1].lower(), "image/png")
                 artifacts.append({"base64": b64, "media_type": mt, "_path": path})
             except Exception:
                 pass
-        if len(cand) > len(artifacts) and artifacts:
-            self._log(f"[GoalEval] 시각 산출물 {len(cand)}개 중 {len(artifacts)}개만 평가 첨부(상한/크기)")
+        if len(valid) > len(artifacts) and artifacts:
+            self._log(f"[GoalEval] 시각 산출물 {len(valid)}개 중 {len(artifacts)}개만 평가 첨부(상한)")
         return artifacts
 
     _evaluator_prompt_cache: str = ""
@@ -1723,10 +1863,14 @@ AI 답변: {ai_response[:1400]}
                 cls._evaluator_prompt_cache = prompt_path.read_text(encoding='utf-8')
             except FileNotFoundError:
                 cls._evaluator_prompt_cache = "달성 기준의 모든 항목을 엄격히 평가하라."
-            # 시스템 구조 문서 항상 주입
-            structure_path = base / "system_docs" / "system_structure.md"
-            if structure_path.exists():
-                structure = structure_path.read_text(encoding='utf-8')
+            # 시스템 구조 문서(정체성 코어)만 항상 주입 — 디렉토리/파일 트리는
+            # codebase_map 가이드로 분리(get_system_structure_core)
+            try:
+                from prompt_builder import get_system_structure_core
+                structure = get_system_structure_core()
+            except Exception:
+                structure = ""
+            if structure:
                 cls._evaluator_prompt_cache += f"\n\n<system_structure>\n{structure}\n</system_structure>"
             # IBL 환경 프롬프트 주입 — 평가 에이전트도 IBL 체계를 알아야 올바른 평가를 할 수 있다
             ibl_only_path = base / "common_prompts" / "fragments" / "12_ibl_only.md"

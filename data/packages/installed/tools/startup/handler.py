@@ -39,9 +39,9 @@ def _biz_to_records(data: list) -> list:
 
 
 def _attach_records(result):
-    """data 목록이 있으면 비파괴로 records 부착."""
+    """data 목록이 있으면 단일 통화 items(records-관습 카드 shape) 부착."""
     if isinstance(result, dict) and isinstance(result.get("data"), list):
-        result["records"] = _biz_to_records(result["data"])
+        result["items"] = _biz_to_records(result["data"])
     return result
 
 def execute(tool_input: dict, context):
@@ -50,7 +50,9 @@ def execute(tool_input: dict, context):
 
     if tool_name == "startup_search":
         query = tool_input.get("query") or tool_input.get("keyword", "")
-        source = tool_input.get("source", "all")
+        # 기본 kstartup — 중기부(MSS) data.go.kr API 폐기로 all 은 실패 호출만 낭비.
+        # source=all/mss 는 여전히 호출 가능(MSS 는 graceful 강등).
+        source = tool_input.get("source", "kstartup")
         count = tool_input.get("count", 10)
         if source == "kstartup":
             tool = load_module("tool_kstartup")
@@ -61,13 +63,13 @@ def execute(tool_input: dict, context):
         else:
             ks = load_module("tool_kstartup").search_kstartup(query, count)
             mss = load_module("tool_mss_biz").search_mss_biz(query, count)
-            # source=all: 합쳐진 봉투엔 최상위 data가 없으므로 두 소스 records를 합쳐 최상위에 부착.
+            # source=all: 합쳐진 봉투엔 최상위 data가 없으므로 두 소스를 합쳐 items로 부착.
             records = []
             if isinstance(ks, dict) and isinstance(ks.get("data"), list):
                 records += _biz_to_records(ks["data"])
             if isinstance(mss, dict) and isinstance(mss.get("data"), list):
                 records += _biz_to_records(mss["data"])
-            return {"kstartup": ks, "mss": mss, "records": records}
+            return {"kstartup": ks, "mss": mss, "items": records}
 
     if tool_name == "search_kstartup":
         tool = load_module("tool_kstartup")

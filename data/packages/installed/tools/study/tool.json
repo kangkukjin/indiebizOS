@@ -105,7 +105,7 @@
     },
     {
       "name": "paper_op",
-      "description": "학술 논문 검색·다운로드 (op 분기) — [sense:paper]. source로 DB 선택. 웹검색은 search_ddg, 라이브러리 문서는 devdocs.\n- op=search(기본): query + source(openalex 기본/arxiv/pubmed/semantic) + max_results. openalex=범용, arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학, semantic=AI/ML 심층(인용그래프).\n- op=download: source(arxiv|pubmed) + id(arxiv_id 또는 PMC ID) + filename.",
+      "description": "학술 논문 검색·다운로드 (op 분기) — [sense:paper]. source로 DB 선택. 웹검색은 search_ddg, 라이브러리 문서는 devdocs.\n- op=search(기본): query + source(openalex 기본/arxiv/pubmed/semantic/nanet) + max_results. openalex=범용, arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학, semantic=AI/ML 심층(인용그래프), nanet=국내 학술논문·학위논문(국회도서관, 한국 인물·국내 학위 추적). nanet은 type(예 학위논문)·year로 좁힘.\n- op=download: source(arxiv|pubmed) + id(arxiv_id 또는 PMC ID) + filename.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -124,10 +124,11 @@
               "openalex",
               "arxiv",
               "pubmed",
-              "semantic"
+              "semantic",
+              "nanet"
             ],
             "default": "openalex",
-            "description": "논문 DB. download는 arxiv|pubmed만"
+            "description": "논문 DB. download는 arxiv|pubmed만. nanet=국내 학술논문·학위논문(국회도서관 국가학술정보)"
           },
           "query": {
             "type": "string",
@@ -144,6 +145,45 @@
           "filename": {
             "type": "string",
             "description": "[download] 저장 파일명(선택)"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "researcher_op",
+      "description": "연구자(학자) 검색 (op 분기) — [sense:researcher]. 국회도서관 국가학술정보. 동명이인을 소속·출생연도·lodID로 분리. 일반 인물 OSINT는 search_ddg.\n- op=find(기본): name(한글, 필수) + org(소속, 동명이인 압축) + name_en + max_results → 후보별 소속·출생연도·직위·lodID.\n- op=coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망(소속·협업으로 신원 재확인).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "find",
+              "coauthor"
+            ],
+            "default": "find",
+            "description": "find(기본)/coauthor"
+          },
+          "name": {
+            "type": "string",
+            "description": "[find] 연구자명(한글)"
+          },
+          "name_en": {
+            "type": "string",
+            "description": "[find] 연구자명(영문, 선택)"
+          },
+          "org": {
+            "type": "string",
+            "description": "[find] 소속 기관(동명이인 압축, 선택)"
+          },
+          "id": {
+            "type": "string",
+            "description": "[coauthor] 연구자 lodID (find 결과에서 획득)"
+          },
+          "max_results": {
+            "type": "integer",
+            "description": "최대 결과 수(기본 30)"
           }
         },
         "required": []

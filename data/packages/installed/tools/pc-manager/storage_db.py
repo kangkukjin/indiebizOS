@@ -373,94 +373,6 @@ def scan_directory(path: str, scan_name: Optional[str] = None, progress_callback
     }
 
 
-def query_files(
-    root_path: str,
-    search_term: Optional[str] = None,
-    extension: Optional[str] = None,
-    min_size_mb: Optional[float] = None,
-    page: int = 1,
-    limit: int = 100
-) -> Dict:
-    """파일 검색"""
-    root_path = _normalize_path(os.path.abspath(os.path.expanduser(root_path)))
-
-    # 스캔 찾기
-    scans = _load_scans_json()
-    scan = None
-    for s in scans:
-        if _normalize_path(s.get('root_path', '')) == root_path:
-            scan = s
-            break
-
-    if not scan:
-        return {"success": False, "error": "스캔 데이터가 없습니다."}
-
-    scan_id = scan['id']
-    db_path = _get_db_path(scan_id)
-
-    if not os.path.exists(db_path):
-        return {"success": False, "error": "DB 파일이 없습니다."}
-
-    conn = _get_connection(scan_id)
-    cursor = conn.cursor()
-
-    offset = (page - 1) * limit
-
-    # 검색어가 있으면 FTS 사용
-    if search_term:
-        query = """
-            SELECT f.*
-            FROM files f
-            JOIN files_fts fts ON f.id = fts.rowid
-            WHERE files_fts MATCH ?
-        """
-        params = [f'"{search_term}"*']
-    else:
-        query = "SELECT * FROM files WHERE 1=1"
-        params = []
-
-    if extension:
-        query += " AND extension = ?"
-        params.append(extension.lower().lstrip('.'))
-
-    if min_size_mb:
-        query += " AND size >= ?"
-        params.append(int(min_size_mb * 1024 * 1024))
-
-    # 전체 개수
-    count_query = query.replace("SELECT f.*", "SELECT COUNT(*) as cnt").replace("SELECT *", "SELECT COUNT(*) as cnt")
-    cursor.execute(count_query, params)
-    total = cursor.fetchone()['cnt']
-
-    # 데이터 조회
-    query += " ORDER BY size DESC LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-
-    results = []
-    for row in rows:
-        results.append({
-            "id": row['id'],
-            "path": row['path'],
-            "filename": row['filename'],
-            "extension": row['extension'],
-            "size_mb": round(row['size'] / (1024 * 1024), 2),
-            "mtime": row['mtime']
-        })
-
-    conn.close()
-
-    return {
-        "success": True,
-        "total": total,
-        "page": page,
-        "limit": limit,
-        "files": results
-    }
-
-
 def get_summary_all() -> Dict:
     """모든 스캔 볼륨의 통합 요약 (root_path 미지정 시 기본 동작)."""
     scans = _load_scans_json()
@@ -490,44 +402,6 @@ def get_summary_all() -> Dict:
         "total_file_count": total_files,
         "total_size_mb": round(total_size / (1024 * 1024), 2),
         "volumes": volumes,
-    }
-
-
-def query_files_all(
-    search_term: Optional[str] = None,
-    extension: Optional[str] = None,
-    min_size_mb: Optional[float] = None,
-    limit: int = 100,
-) -> Dict:
-    """모든 스캔 볼륨을 가로질러 파일 검색 (root_path 미지정 시 기본 동작)."""
-    scans = _load_scans_json()
-    if not scans:
-        return {"success": False,
-                "error": "스캔된 볼륨이 없습니다. [self:storage]{op:scan, path:...}로 먼저 스캔하세요."}
-
-    all_files = []
-    total = 0
-    for s in scans:
-        res = query_files(
-            root_path=s['root_path'],
-            search_term=search_term,
-            extension=extension,
-            min_size_mb=min_size_mb,
-            limit=limit,
-        )
-        if res.get('success'):
-            total += res.get('total', 0)
-            for f in res.get('files', []):
-                f['volume'] = s['name']
-                all_files.append(f)
-
-    # 크기 내림차순 후 limit (전 볼륨 통합 top-N)
-    all_files.sort(key=lambda f: f.get('size_mb', 0), reverse=True)
-    return {
-        "success": True,
-        "total": total,
-        "limit": limit,
-        "files": all_files[:limit],
     }
 
 

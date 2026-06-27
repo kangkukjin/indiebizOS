@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, User, Loader2, X, RefreshCw, History, ArrowLeft, RotateCw, BookOpen } from 'lucide-react';
+import { Bot, User, Loader2, X, RefreshCw, History, ArrowLeft, RotateCw, BookOpen, Zap, Brain, Gauge, Target } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cancelAllAgents, api } from '../../lib/api';
@@ -45,6 +45,10 @@ export interface ChatViewProps {
   onClose?: () => void;
   // 풀페이지 모드: 뒤로가기 핸들러
   onBack?: () => void;
+  // 연결되면 자동으로 한 번 전송할 첫 메시지(예: 지난 주행 분석 요청).
+  // initialMessageLabel이 있으면 화면 버블엔 그것만 보이고, 실제 전송은 initialMessage.
+  initialMessage?: string;
+  initialMessageLabel?: string;
 }
 
 // ── 다이얼로그 크기 관련 상수 ────────────────────────────
@@ -62,7 +66,7 @@ interface DialogPosition { x: number; y: number; }
 
 // ── 메인 컴포넌트 ───────────────────────────────────────
 
-export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose, onBack }: ChatViewProps) {
+export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose, onBack, initialMessage, initialMessageLabel }: ChatViewProps) {
   const isAgent = chatTarget.type === 'agent';
   const isDialog = layout === 'dialog';
   const variant = isDialog ? 'neutral' : 'warm';
@@ -308,6 +312,22 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
         case 'delegated':
           setCurrentToolLabel('⏳ 에이전트가 작업 중... 결과를 기다리는 중');
+          break;
+
+        case 'cognition':
+          // 자율주행 작업전 공개 — 실행 직전 해마점수·판단·달성기준을 칩으로 노출
+          setMessages(prev => [...prev, {
+            id: `cognition-${Date.now()}`,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+            cognition: {
+              decision: data.decision,
+              score: typeof data.score === 'number' ? data.score : 0,
+              action: data.action || '',
+              criteria: data.criteria || '',
+            },
+          }]);
           break;
 
         case 'system_ai_report':
@@ -641,6 +661,38 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
     setSelectedAction(null);  // 전송 후 마법책 선택 자동 초기화
     inputRef.current?.focus();
   };
+
+  // ── 초기 메시지 자동 전송 — 분석 스위치 등이 연결 직후 첫 요청을 흘려보낸다.
+  // 같은 메시지는 한 번만, 새 메시지(다른 주행 분석)면 다시 보낸다.
+  // ★StrictMode 이중 마운트/재연결 대비: 막 열린 연결은 곧 닫힐 수 있다(그 죽은 연결로
+  //   보내면 백엔드가 처리해도 응답이 "연결 없음"으로 버려진다). 약간 지연해 보내고,
+  //   그 사이 연결(ws)이 바뀌면 effect cleanup이 타이머를 취소 → 살아남는 연결에서만 전송. ──
+  const lastSentInitialRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!initialMessage || lastSentInitialRef.current === initialMessage) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN || isLoading) return;
+    const sock = ws;
+    const timer = setTimeout(() => {
+      if (sock.readyState !== WebSocket.OPEN) return;  // 그새 닫혔으면 전송 취소
+      lastSentInitialRef.current = initialMessage;
+      // 화면엔 라벨(있으면)만, 실제 전송은 전체 initialMessage
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'user',
+        content: initialMessageLabel || initialMessage,
+        timestamp: new Date(),
+      }]);
+      if (isAgent && agentName && projectId) {
+        sock.send(JSON.stringify({
+          type: 'chat_stream', message: initialMessage,
+          agent_name: agentName, project_id: projectId,
+        }));
+      } else {
+        sock.send(JSON.stringify({ type: 'system_ai_stream', message: initialMessage }));
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [initialMessage, initialMessageLabel, ws, isLoading, isAgent, agentName, projectId]);
 
   // ── 취소 ──
 
@@ -995,10 +1047,52 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   );
 }
 
+// ── 작업전 공개 칩 (자율주행 신뢰 보정 계기) ──
+
+function CognitionChip({ info }: { info: NonNullable<ChatMessage['cognition']> }) {
+  // 판단별 색·라벨·아이콘 — 표시 분량 자체가 "얼마나 숙고했나" 신호가 된다.
+  const meta = {
+    reflex:  { label: '반사', Icon: Zap,   color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+    execute: { label: '실행', Icon: Gauge, color: 'text-amber-700',   bg: 'bg-amber-50 border-amber-200' },
+    think:   { label: '숙고', Icon: Brain, color: 'text-sky-700',     bg: 'bg-sky-50 border-sky-200' },
+  }[info.decision] || { label: '판단', Icon: Gauge, color: 'text-stone-700', bg: 'bg-stone-50 border-stone-200' };
+  const { Icon } = meta;
+  const pct = Math.round((info.score || 0) * 100);
+
+  return (
+    <div className="flex justify-start">
+      <div className={`max-w-[80%] rounded-xl border px-3 py-2 text-[12px] ${meta.bg}`}>
+        <div className={`flex items-center gap-1.5 font-medium ${meta.color}`}>
+          <Icon size={13} />
+          <span>{meta.label}</span>
+          <span className="text-stone-400">·</span>
+          <span title="해마 연상 확신도">확신 {pct}%</span>
+          {info.action && (
+            <code className="ml-1 px-1.5 py-0.5 rounded bg-white/70 text-stone-600 font-mono text-[11px]">
+              {info.action}
+            </code>
+          )}
+        </div>
+        {info.criteria && (
+          <div className="mt-1.5 flex items-start gap-1.5 text-stone-600">
+            <Target size={12} className="mt-0.5 flex-shrink-0 text-stone-400" />
+            <span>달성 기준: {info.criteria}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── 메시지 버블 ──
 
 function MessageBubble({ message, variant = 'warm' }: { message: ChatMessage; variant?: 'warm' | 'neutral' }) {
   const isUser = message.role === 'user';
+
+  // 작업전 공개 — 일반 버블 대신 계기 칩으로 렌더
+  if (message.cognition) {
+    return <CognitionChip info={message.cognition} />;
+  }
 
   if (variant === 'neutral') {
     return (

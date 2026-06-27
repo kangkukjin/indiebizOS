@@ -156,7 +156,7 @@
     },
     {
       "name": "realty_op",
-      "description": "부동산 실거래가 (op 분기) — [sense:realty].\n- op=query(기본): 실거래가. region(시군구명, 자동코드변환) 또는 region_code(5자리) + type(apt/house/villa) + deal(trade/rent) + dong + start_month/end_month.\n- op=codes: city(시/도명) → 법정동 지역코드 목록(보조, region 자동변환으로 보통 불필요).",
+      "description": "부동산 시세·매물 (op 분기) — [sense:realty].\n- op=query(기본): source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가(체결된 과거 거래, 링크·사진 없음). region(시군구명, 자동코드변환) 또는 region_code(5자리) + type(apt/house/villa) + deal(trade/rent) + dong + start_month/end_month.\n  · source=zigbang: 직방 현재 매물(지금 나온 호가·사진·클릭 링크). region(지명/동/건물명) 또는 lat/lng + type(villa/oneroom/officetel) + deal(trade/rent) + lease(전세/월세로 좁힘) + deposit_max/rent_max(만원) + radius(m,기본3000) + limit. 빌라/원룸/오피스텔 개별 호실 강함, 아파트·단독/다가구 약함.\n- op=codes: city(시/도명) → 법정동 지역코드 목록(보조, region 자동변환으로 보통 불필요).",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -169,22 +169,33 @@
             "default": "query",
             "description": "query(기본)/codes"
           },
+          "source": {
+            "type": "string",
+            "enum": [
+              "molit",
+              "zigbang"
+            ],
+            "default": "molit",
+            "description": "[query] 데이터 소스. molit=국토부 실거래가(체결·기본), zigbang=직방 현재 매물(호가·링크·사진)"
+          },
           "region": {
             "type": "string",
-            "description": "[query] 지역명(강남구 등, 자동 코드변환)"
+            "description": "[query] 지역명(molit=강남구 등 시군구 / zigbang=동·지명·건물명 예 '평택 죽백동', '배다리도서관')"
           },
           "region_code": {
             "type": "string",
-            "description": "[query] 법정동 5자리"
+            "description": "[query molit] 법정동 5자리"
           },
           "type": {
             "type": "string",
             "enum": [
               "apt",
               "house",
-              "villa"
+              "villa",
+              "oneroom",
+              "officetel"
             ],
-            "description": "[query] apt/house/villa"
+            "description": "[query] molit=apt/house/villa · zigbang=villa/oneroom/officetel"
           },
           "deal": {
             "type": "string",
@@ -192,19 +203,51 @@
               "trade",
               "rent"
             ],
-            "description": "[query] trade/rent"
+            "description": "[query] trade(매매)/rent(전월세)"
+          },
+          "lease": {
+            "type": "string",
+            "enum": [
+              "전세",
+              "월세"
+            ],
+            "description": "[query zigbang] deal=rent를 전세/월세로 좁힘"
           },
           "dong": {
             "type": "string",
-            "description": "[query] 법정동으로 결과 좁히기"
+            "description": "[query molit] 법정동으로 결과 좁히기"
+          },
+          "lat": {
+            "type": "number",
+            "description": "[query zigbang] 중심 위도(region 대신 좌표 직접 지정)"
+          },
+          "lng": {
+            "type": "number",
+            "description": "[query zigbang] 중심 경도"
+          },
+          "radius": {
+            "type": "integer",
+            "description": "[query zigbang] 검색 반경(m), 기본 3000"
+          },
+          "deposit_max": {
+            "type": "integer",
+            "description": "[query zigbang] 보증금 상한(만원)"
+          },
+          "rent_max": {
+            "type": "integer",
+            "description": "[query zigbang] 월세 상한(만원)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "[query zigbang] 최대 매물 수(기본 30)"
           },
           "start_month": {
             "type": "string",
-            "description": "[query] YYYYMM"
+            "description": "[query molit] YYYYMM"
           },
           "end_month": {
             "type": "string",
-            "description": "[query] YYYYMM"
+            "description": "[query molit] YYYYMM"
           },
           "city": {
             "type": "string",

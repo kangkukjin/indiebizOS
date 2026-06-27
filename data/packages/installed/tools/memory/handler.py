@@ -110,7 +110,7 @@ def _memory_search(db, tool_input, project_path, agent_id):
     return json.dumps({
         "count": len(results),
         "memories": results,
-        "records": _memories_to_records(results)
+        "items": _memories_to_records(results)
     }, ensure_ascii=False, indent=2)
 
 

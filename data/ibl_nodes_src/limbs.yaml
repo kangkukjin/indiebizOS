@@ -1,6 +1,7 @@
   limbs:
     actions:
       browser:
+        returns: effect
         runs_on: mac_only
         description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
         target_description: 'op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).'
@@ -44,6 +45,7 @@
         - 입력
         - 페이지
       screen:
+        returns: effect
         runs_on: mac_only
         description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
         target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
@@ -81,6 +83,7 @@
         - 화면분석
         - 버튼찾기
       android:
+        returns: effect
         description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.
         target_description: '흐름 — snapshot(요소+라벨+좌표 읽기, 기본) → tap(query 라벨/id 일부 권장, 또는 x,y) → type(text). 입력 후 전송 등 동적 버튼은 반드시 snapshot 다시. 주요 파라미터 — query(탭할 요소 라벨), x/y(snapshot이 준 좌표), text(입력), key(back/home/recent), package_name(앱 실행, 예 com.kakao.talk), direction(swipe up/down/left/right). device_id 생략 시 첫 기기(PC 경로). 가이드 android.md 참조.'
         group: device
@@ -113,6 +116,7 @@
         - 터치
         - 탭
       phone:
+        returns: effect
         description: 폰 네이티브 동작 (op 분기) — 알림/진동/토스트/복사/음성/앱실행. 동작 요청은 sense:phone 진단 없이 바로 실행 — 도달성은 sense:phone(푸시 피드) 신선도와 무관, 미도달이면 phone_unreachable 명시됨.
         group: device
         target_description: 'op=notify(기본): 알림 표시 — title/body. vibrate: 진동 — duration_ms(기본 400).
@@ -143,6 +147,7 @@
         - 클립보드복사
         - 앱실행
       os_open:
+        returns: effect
         description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
         target_description: 열 대상의 경로 또는 URL. http/https는 브라우저, 파일은 Finder/탐색기.
         group: open
@@ -156,6 +161,7 @@
         - URL
         - 브라우저
       music:
+        returns: effect
         runs_on: mac_only
         description: 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
         group: media
@@ -212,6 +218,7 @@
             k: '{position}'
             v: '{title|trunc:40} · {channel}'
       radio:
+        returns: effect
         description: 인터넷 라디오 재생·중지 (op 분기). play/stop.
         target_description: 'play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. stop — 파라미터 없음.'
         group: media
@@ -230,6 +237,7 @@
         - 라디오듣기
         - 라디오중지
       player_status:
+        returns: scalar
         description: 현재 음악·라디오 재생 상태 확인 (재생 중/정지/곡명 등).
         target_description: '(파라미터 없음)'
         group: media
@@ -240,6 +248,7 @@
         - 재생상태
         - 플레이어
       volume:
+        returns: effect
         description: 음악·라디오 재생 볼륨 조절 (mpv IPC). 0-100 범위.
         target_description: 볼륨 값 (0=무음, 100=최대).
         group: media
@@ -252,6 +261,7 @@
         - 소리
         - 음량
       radio_favorite:
+        returns: effect
         description: 라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.
         target_description: 'list — 파라미터 없음, 전체 즐겨찾기 목록. add — station_id(권장) 또는 stream_url 중 하나 + name 옵션. 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — radio_play로 재생 중 마음에 들면 바로 add 호출.'
         group: media
@@ -271,6 +281,7 @@
         - 즐겨찾기 추가
         - 즐겨찾기 삭제
       cloudflare_api:
+        returns: effect
         description: Cloudflare API 호출 (Pages/Workers/R2/D1/Tunnel 모든 서비스 통합).
         target_description: API endpoint 경로 (예 'zones/abc/dns_records'). method/data 옵션으로 요청 구성.
         group: cloudflare
@@ -285,6 +296,7 @@
         - R2
         - Pages
       cctv:
+        returns: effect
         description: CCTV 실시간 영상 열기·캡처 (op 분기). open(브라우저 재생) / capture(이미지 저장).
         group: open
         target_description: 'name 또는 url 중 하나. open — 브라우저에서 HLS/RTSP 재생. capture — ffmpeg로 단일 프레임 PNG 캡처 (save_path 옵션, AI 분석용).'
@@ -304,6 +316,7 @@
         - 스크린샷
         - 찍어
       show_map:
+        returns: effect
         description: 지도에 위치 마커 표시 (HTML 지도 생성). 장소명 입력 시 자동 좌표 변환.
         group: open
         target_description: 장소명 또는 좌표
@@ -312,6 +325,7 @@
         implementation: Kakao Map API로 좌표 기반 지도 HTML 생성 (프론트엔드 렌더링용)
         target_key: query
       explorer:
+        returns: effect
         runs_on: mac_only
         description: 파일 탐색기로 폴더 열기 (macOS Finder, Windows 탐색기). 파일 자체 열기는 os_open.
         group: open
@@ -321,6 +335,7 @@
         implementation: subprocess로 macOS Finder/Windows Explorer 실행
         target_key: path
       photo_manager:
+        returns: effect
         runs_on: mac_only
         description: indiebizOS 내장 Photo Manager GUI 실행 (Electron). 사진 분류·검색·인덱싱.
         group: open
@@ -330,6 +345,7 @@
         implementation: Electron 기반 Photo Manager GUI 실행
         target_key: path
       launch:
+        returns: effect
         description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
         group: open
         target_description: '(미지정 시 대시보드 표시). action으로 register/add/list/remove 등 사이트 관리.'
@@ -346,7 +362,7 @@
           action: '[limbs:launch]{action: "list"}'
           view:
           - type: card_list
-            from: sites
+            from: items
             empty_from: message
             card:
               title: '{name}'
@@ -354,6 +370,7 @@
               - '{url|trunc:54}'
               link: { href: '{url}', label: 열기 → }
       open_window:
+        returns: effect
         description: Electron 런처의 6개 메인 작업창 열기 (project/system_ai/indienet/business/multichat/folder). 자세한 진입 시나리오는 가이드(open_window.md) 참조.
         target_description: 'app 종류: project | system_ai | indienet | business | multichat | folder. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). system_ai/indienet/business는 파라미터 없음.'
         group: open

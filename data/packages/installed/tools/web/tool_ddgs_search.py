@@ -55,8 +55,8 @@ def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
             "query": query,
             "count": len(formatted_results),
             "results": formatted_results,
-            # 레코드 통화 — >> [engines:document/spreadsheet]
-            "records": [{"title": r["title"], "meta": "", "summary": r.get("snippet", ""),
+            # 단일 통화 items(records-관습 카드 shape) — >> 파이프.
+            "items": [{"title": r["title"], "meta": "", "summary": r.get("snippet", ""),
                          "url": r.get("url", "")} for r in formatted_results],
             "_note": "검색 결과는 제목과 요약(snippet)만 포함합니다. 기사/페이지 본문이 필요하면 [sense:crawl]{url: \"...\"}로 URL을 크롤링하세요."
         })

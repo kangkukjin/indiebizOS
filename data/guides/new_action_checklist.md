@@ -20,6 +20,29 @@
 
 ---
 
+## 0.5단계: 역할과 통화 계약 — "올바른 어휘"의 정의
+
+이름을 정했으면 **이 액션이 셋 중 무슨 역할인지** 먼저 정한다. 역할이 *무엇을 반환해야 하는지*(통화 계약)를 결정하고, 핸들러는 그 계약을 지켜야 한다. 기준은 **"출력이 다시 흐르는 통화인가"**:
+
+- **생성 (source)** — 바깥(params)에서 정보를 길어 **통화를 낸다**. 대다수 `sense:*`, `self` 조회.
+- **변환 (transform)** — **통화를 받아 같은 통화를 낸다**(closure). `engines` 변환자(filter/sort/take/…).
+- **행동 (terminal)** — 통화/입력을 받아 **세상에 작용하거나 산출물을 낸다. 더 흐르지 않음.** `limbs` 조작·발신·`engines` 렌더(document/slide/chart/tts).
+
+**올바른 어휘 = 자기 역할의 통화 계약을 지키는 것** (단일 통화 = `items` = `[{…열린 dict…}]`):
+
+| 역할 (returns) | 핸들러가 지켜야 할 계약 | 빠뜨리면 |
+|------|------------------------|----------|
+| **생성 (`items`)** | 결과에 `items`(비어있지 않은 dict 리스트) 부착. 가장 흔한 관습은 카드(`{title,meta,summary,url,image?}`)지만 *title조차 보장 아님*(열린 항목). 옛 수치/시계열도 items **행 dict**로(첫 키=x축 → 소비자 chart/table 이 재구성). | `>>` 로 못 흐름 = 조합 불가(섬). 자가점검은 error 키만 봐서 *못 잡는다* |
+| **변환 (`transform`)** | `_prev_result`에서 items 를 읽어 **items 로** 반환(closure). `group: transform` · `scope: workspace` · `runs_on: anywhere`. | 통화가 끊김 |
+| **단일값 (`scalar`)** | 통화 아님 — 단일 시세·시각·좌표 등. 명확한 dict 반환(에러 없이). | — |
+| **행동 (`effect`)** | 통화 미기대 — 명확한 `success`/`error`(또는 파일 경로·산출물) 반환. **부작용이라 정기 실행 불가** → fixture 면제, `--check` 구조검사만. | — |
+
+> ★**금지: `postprocess: compress`** — 결과 dict 전체를 LLM 압축 *문자열*로 치환해 items 를 **파괴**한다. **생성·변환 액션엔 절대 붙이지 말 것.** 긴 raw 텍스트를 줄이는 일은 *후처리*가 아니라 **핸들러가 items 로 구조화(증류)**하는 것이다 — 구조화가 곧 압축이다.
+
+> ★`returns:` 는 **필수 필드**다. src 액션에 `returns: items | transform | scalar | effect` 한 줄을 명시한다 — `build_ibl_nodes.py --check` 가 존재·enum·transform 정합(`group:transform ⇔ returns:transform`)을 강제한다. 빠뜨리면 `--check` 실패.
+
+---
+
 ## 1단계: 패키지 도구 작성
 
 도구 패키지 디렉토리에 도구의 **구현(handler)**과 **정의(tool.json)**를 둔다. (액션 정의 yaml은 패키지가 아니라 2단계의 src에 둔다.)
@@ -80,6 +103,7 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
 ```yaml
       my_action:
         description: 액션 설명 (시스템 프롬프트에 노출 — 20~50자)
+        returns: items            # ★통화 역할 (items|transform|scalar|effect) — 0.5단계, --check 강제
         group: my_group           # UI 그룹(도메인). 표시용
         target_description: 주요 입력 설명 (UI 전용)
         router: handler
@@ -113,8 +137,30 @@ python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
 - `src.tool` ↔ `tool.json` 의 name
 - `src.ops.values` ↔ `tool.json` `op.enum`, `src.ops.default` ↔ `op.default`
 - `src.ops.values` ↔ `handler.py` `_OP_DISPATCHERS[tool]` 키(AST), `src.ops.default` ↔ `_OP_DEFAULTS[tool]`
+- **fixture 완전성**: `returns: items|scalar` 액션은 `data/ibl_fixtures.json` 에 fixture 또는 exempt 가 있어야 함(다음 2.5단계). 없으면 `--check` 실패.
 
-> 이 `--check`는 pre-commit 훅과 World Pulse self-check(12시간 주기)에도 합류해 있다. 통과해야 커밋이 된다.
+> 이 `--check`는 pre-commit 훅(커밋마다)과 일일 건강 점검(`ibl_health_check.py` §1A, AI 0)에 합류해 있다. 통과해야 커밋이 된다.
+
+---
+
+## 2.5단계: 행동 건강 fixture (실행 가능한 액션이면 필수)
+
+`returns: items` 또는 `scalar` 인 액션(= 실행해서 결과를 내는 것)은 **`data/ibl_fixtures.json` 에 "올바른 파라미터 예 하나"를 등록**한다. 이게 행동 건강검사의 단일 진실 소스다 — `ibl_health_check.py` 가 이 한 줄을 실행해 통화가 유효한지 단언하고, `--check` 가 *모든* items/scalar 액션의 fixture 존재를 강제하므로 **새 액션이 건강검사망을 조용히 빠져나갈 수 없다.**
+
+```jsonc
+// data/ibl_fixtures.json
+{
+  "fixtures": {
+    "sense:my_action": "[sense:my_action]{query: \"올바른 예시 입력\"}"   // ← 한 줄 추가
+  },
+  "exempt": { /* 실행 인자가 꼭 필요해 고정 예시가 불가능하면 여기에 사유와 함께 */ }
+}
+```
+
+- **fixture**: 그 파라미터로 실행하면 GREEN(유효 통화/단일값)이 나오는 *대표 입력 하나*. 외부 키·데이터 의존이면 YELLOW 가능(구조 결함 아님).
+- **exempt**: 파일 경로·좌표 쌍·표본 인자처럼 고정 예시가 부적합하거나, 폰/기기 전용이라 맥서 못 도는 경우. **반드시 사유를 적는다.**
+- **effect(부작용)·transform(변환자)은 등록 안 함** — effect 는 실행 불가(구조검사만), transform 은 골든 파이프(`ibl_health_check.py` §1C)로 흐름 검증.
+- **검증**: `python scripts/ibl_health_check.py` 로 자기 액션이 **GREEN** 인지 확인. RED 면 통화 계약 위반 — 고치기 전엔 미완성. 자세히 `docs/IBL_MAINTENANCE_MANUAL.md`.
 
 ---
 
@@ -193,11 +239,13 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 
 | 단계 | 작업 | 빠뜨리면? |
 |------|------|----------|
+| 0.5. 역할·통화 계약 | 생성/변환/행동 정하고 역할의 통화 계약 충족 (`ibl_health_check.py` GREEN) | 통화 끊김 = 조합 불가(섬), 자가점검도 못 잡음 |
 | 1. 패키지 도구 | handler.py(`execute(tool_input, context)`) + tool.json | 도구 자체가 없음 |
 | 2. src 정의 + 빌드 | `ibl_nodes_src/{node}.yaml` → `build_ibl_nodes.py` → `--check` | IBL 실행 불가 / 검증 실패 |
+| 2.5. fixture | `data/ibl_fixtures.json` 에 한 줄(items/scalar 액션) | `--check` 실패 = 커밋 거부 / 건강검사 누락 |
 | 3. 해마 데이터 | 합성 용례 + 학습 JSON | 에이전트가 연상 못 함 |
 | 4. 임베딩 | `rebuild_index()` | 시맨틱 검색 불가 |
 | 5. 확인 | 등록 + 연상 + 실행 | 배포 후 장애 |
 | (선택) 앱 표면 | src에 `app:` 블록 | 앱 모드 계기로 안 보임 (에이전트 사용엔 무관) |
 
-**1~4를 모두 완료해야 에이전트가 액션을 인식하고 사용할 수 있다.**
+**1~4(+items/scalar이면 2.5)를 모두 완료해야 에이전트가 액션을 인식하고 사용할 수 있다.**

@@ -281,7 +281,7 @@ def _wrap_search_result(raw, target: str) -> dict:
     except Exception:
         records = None  # 파싱 중 어떤 예외도 기존 동작을 깨지 않음
     if records:
-        out["records"] = records
+        out["items"] = records
         out["count"] = len(records)
     return out
 

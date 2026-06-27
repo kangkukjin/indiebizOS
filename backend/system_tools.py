@@ -33,6 +33,11 @@ _action_fail_counter: Dict[str, dict] = {}
 _ACTION_FAIL_LIMIT = 3       # 연속 N번 실패 시 차단(open)
 _ACTION_OPEN_SECONDS = 90    # open 상태 유지 시간(초). 경과 후 half-open 시험 허용.
 
+# IBL_DEBUG 로그 디듀프 — 동일 코드 반복(=UI 라이브-상태 폴링)을 시간창으로 접어
+# 디버그 로그 도배를 막는다. 일회성 명령·서로 다른 조회는 영향 없음.
+_ibl_log_seen: Dict[str, float] = {}
+_IBL_LOG_WINDOW = 30.0       # 같은 코드 재로그 최소 간격(초)
+
 
 def reset_action_breaker(key: Optional[str] = None) -> int:
     """액션 서킷 브레이커를 수동으로 리셋한다.
@@ -966,7 +971,16 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
 
     # 디버그 — 잘림 한도를 500자로 늘림. 8개 병렬 호출 같은 긴 IBL 코드도 회고 가능.
     _c = code if len(code) <= 500 else code[:500] + f"... [trunc, total={len(code)}]"
-    print(f"[IBL_DEBUG] code={_c}")
+    # 폴링 도배 방지 — 동일 코드가 _IBL_LOG_WINDOW 초 안에 또 오면 로그 생략.
+    # (UI 라이브-상태 폴링 op:queue 류가 디버그 로그를 덮는 걸 막음. 일회성 명령·서로 다른 조회는 그대로 보임.)
+    _now_log = time.monotonic()
+    _last_log = _ibl_log_seen.get(code)
+    if _last_log is None or (_now_log - _last_log) > _IBL_LOG_WINDOW:
+        print(f"[IBL_DEBUG] code={_c}")
+    _ibl_log_seen[code] = _now_log
+    if len(_ibl_log_seen) > 256:  # 가벼운 정리 — 창 지난 항목 제거(무한 성장 방지)
+        for _k in [_k for _k, _v in _ibl_log_seen.items() if _now_log - _v >= _IBL_LOG_WINDOW]:
+            _ibl_log_seen.pop(_k, None)
 
     # --- 서킷 브레이커 체크: open 상태면 쿨다운 동안만 차단, 경과하면 half-open 시험 허용 ---
     # 단일 액션만 체크 (파이프라인/병렬은 개별 액션이 아니라 통과)
@@ -1082,11 +1096,22 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 _n = _pre_parsed2[0].get("_node", "")
                 _a = _pre_parsed2[0].get("action", "")
                 _fk = f"{agent_id or 'default'}:{_n}:{_a}"
+                # 성공/실패 판정: *최상위* success/error만 본다. 중첩 "error" 키(예: 성공한
+                # native 슬라이드의 verify.error: null)에 오탐하지 않도록 — 문자열이면 JSON 파싱 후
+                # 최상위 키로 판정. (2026-06-23: '"error" in result' 부분문자열 검색이 성공한
+                #  슬라이드를 실패로 오인 → 서킷 브레이커 오발동·죽음의 나선 버그)
                 _is_err = False
-                if isinstance(result, dict):
-                    _is_err = not result.get("success", True) or "error" in result
+                _ro = result if isinstance(result, dict) else None
+                if _ro is None and isinstance(result, str):
+                    try:
+                        _ro = json.loads(result)
+                    except Exception:
+                        _ro = None
+                if isinstance(_ro, dict):
+                    _is_err = (_ro.get("success") is False) or ("error" in _ro and not _ro.get("success"))
                 elif isinstance(result, str):
-                    _is_err = '"error"' in result or '"success": false' in result or '"success":false' in result
+                    # 파싱 불가한 문자열: 보수적으로 최상위 실패 표식만
+                    _is_err = '"success": false' in result or '"success":false' in result
                 if _is_err:
                     _entry = _action_fail_counter.setdefault(_fk, {"fails": 0, "open_until": None})
                     _entry["fails"] += 1

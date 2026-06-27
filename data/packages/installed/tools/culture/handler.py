@@ -79,9 +79,9 @@ def _performance_op(ti: dict):
             status=ti.get("status", "공연중"),
             days=ti.get("days", 90),
         )
-        # 레코드 통화 부착(비파괴) — data 공연목록을 records로.
+        # 단일 통화 — native data 목록을 items로 노출.
         if isinstance(result, dict) and isinstance(result.get("data"), list):
-            result["records"] = _performances_to_records(result["data"])
+            result["items"] = result.pop("data")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
         return result
     if op == "venue":
         from tool_kopis import get_facilities
@@ -149,7 +149,7 @@ def _book_op(ti: dict):
             return {"success": False, "error": "title/author/keyword/isbn 중 하나가 필요합니다."}
         # 레코드 통화 부착(비파괴) — data 목록이 있으면 records로. 앱은 data, >> 파이프는 records.
         if isinstance(result, dict) and isinstance(result.get("data"), list):
-            result["records"] = _books_to_items(result["data"])
+            result["items"] = result.pop("data")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
         return result
     if op == "recommended":
         from tool_library import get_recommended_books
@@ -225,13 +225,13 @@ def _classic_op(ti: dict):
         )
         # 레코드 통화 부착(비파괴) — results 고전목록을 records로.
         if isinstance(result, dict) and isinstance(result.get("results"), list):
-            result["records"] = _gutenberg_to_records(result["results"])
+            result["items"] = result.pop("results")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
         return result
     if op == "korean":
         from tool_korean_classics import search_korean_classics
         result = search_korean_classics(query=ti.get("query"), rows=ti.get("rows", 10))
         if isinstance(result, dict) and isinstance(result.get("results"), list):
-            result["records"] = _korean_classics_to_records(result["results"])
+            result["items"] = result.pop("results")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
         return result
     return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(_OP_DISPATCHERS['classic_op'])}"}
 
@@ -300,7 +300,7 @@ def execute(tool_input: dict, context) -> str:
             )
             # 레코드 통화 부착(비파괴) — data 전시/행사목록을 records로.
             if isinstance(result, dict) and isinstance(result.get("data"), list):
-                result["records"] = _exhibits_to_records(result["data"])
+                result["items"] = result.pop("data")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
 
         # === 비-IBL 내부/레거시 KOPIS 도구 ===
         elif tool_name == "kopis_search_performances":

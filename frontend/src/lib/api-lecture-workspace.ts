@@ -24,6 +24,7 @@ export interface SlideMeta {
   png_file: string;
   created_at: string;
   updated_at: string;
+  speaker_note?: string;  // 강의 노트(말할 내용) — 선택 시 좌측 하단에 표시/편집
 }
 
 export interface CumulativeMemo {
@@ -54,6 +55,7 @@ export interface Deck {
   slides: Record<string, SlideMeta>;
   cumulative_memo: CumulativeMemo;
   materials: MaterialEntry[];
+  lecture_memo?: string;  // 사용자 메모(왼쪽 항상 표시) — AI 슬라이드 생성에 미사용
 }
 
 export interface LectureLoadResponse {
@@ -77,6 +79,7 @@ export interface DeckMetaUpdate {
   thesis?: string;
   duration_minutes?: number;
   design_system?: string;
+  lecture_memo?: string;
 }
 
 /** 디자인 옵션 — 3그룹:
@@ -158,10 +161,26 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       );
     },
 
+    /** 슬라이드의 강의 노트(말할 내용) 저장. 빈 문자열이면 노트 제거. AI 호출 없음. */
+    async setSlideNote(lectureId: string, slideId: string, note: string) {
+      return client.request<{ slide_id: string; speaker_note: string }>(
+        `/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/note`,
+        { method: 'PATCH', body: JSON.stringify({ note }) }
+      );
+    },
+
     async deleteSlide(lectureId: string, slideId: string) {
       return client.request<{ deleted: string; remaining: string[] }>(
         `/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}`,
         { method: 'DELETE' }
+      );
+    },
+
+    /** 슬라이드 복제 — 같은 내용으로 한 장 더(원본 바로 뒤). 새 슬라이드 메타 반환. */
+    async duplicateSlide(lectureId: string, slideId: string) {
+      return client.request<SlideMeta>(
+        `/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/duplicate`,
+        { method: 'POST' }
       );
     },
 
@@ -172,10 +191,12 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       instruction: string,
       insertAt?: number,
       layout?: string,
+      imageQuality?: string,  // 통짜 이미지: 'pro'(고품질) / 'fast'(저가)
     ) {
       const body: Record<string, unknown> = { instruction };
       if (insertAt !== undefined) body.insert_at = insertAt;
       if (layout) body.layout = layout;
+      if (imageQuality) body.image_quality = imageQuality;
       return client.request<SlideCreateResponse>(
         `/lectures/${encodeURIComponent(lectureId)}/slides`,
         { method: 'POST', body: JSON.stringify(body) }
@@ -257,14 +278,53 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       );
     },
 
+    /**
+     * 강의 자료를 읽어 슬라이드 초안(instruction) 목록을 만든다 (일괄 생성 1단계).
+     * 반환된 목록을 호출자가 한 장씩 createSlide로 순차 생성한다.
+     */
+    async outlineLecture(lectureId: string, count?: number) {
+      const body: Record<string, unknown> = {};
+      if (count !== undefined) body.count = count;
+      return client.request<{ success: boolean; slides: { instruction: string }[]; count: number }>(
+        `/lectures/${encodeURIComponent(lectureId)}/outline`,
+        { method: 'POST', body: JSON.stringify(body) }
+      );
+    },
+
+    /**
+     * 통짜 이미지/이미지 슬라이드 '부분 수정' — 다시 그리지 않고 현재 이미지를 편집.
+     * 제목 한 줄 등만 바꿀 때. 구도·그림 보존(완전 픽셀 동일은 아님).
+     */
+    async imageEditSlide(
+      lectureId: string,
+      slideId: string,
+      instruction: string,
+      imageQuality?: string,
+    ) {
+      const body: Record<string, unknown> = { instruction };
+      if (imageQuality) body.image_quality = imageQuality;
+      return client.request<{
+        success: boolean;
+        slide_id: string;
+        mode: 'image_edit';
+        png_file: string;
+        title: string;
+      }>(
+        `/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/image-edit`,
+        { method: 'POST', body: JSON.stringify(body) }
+      );
+    },
+
     async editSlide(
       lectureId: string,
       slideId: string,
       instruction: string,
       layout?: string,
+      imageQuality?: string,
     ) {
       const body: Record<string, unknown> = { instruction };
       if (layout) body.layout = layout;
+      if (imageQuality) body.image_quality = imageQuality;
       return client.request<SlideCreateResponse>(
         `/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/edit`,
         { method: 'POST', body: JSON.stringify(body) }

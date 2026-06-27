@@ -583,15 +583,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 연상 단계 — 해마+심층메모리, 검색 1회로 점수/코드까지 확보
         execution_memory, _hippocampus_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
 
-        # Reflex 분기 — 해마 점수가 임계값 이상이면 무의식 호출 스킵
-        if _hippocampus_score >= runner.REFLEX_SCORE_THRESHOLD and _top_code:
-            request_type = "EXECUTE"
-            reflex_hint = _top_code
-            print(f"[연상→실행] Reflex EXECUTE (score={_hippocampus_score:.3f}): {reflex_hint[:60]}")
-        else:
-            request_type = runner._classify_request(message, execution_memory)
-            reflex_hint = None
-            print(f"[무의식] 분류: {request_type}")
+        # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
+        request_type, reflex_hint = runner._decide_request_type(message, _hippocampus_score, _top_code)
 
         # SESSION_RESET 분기 — Claude Code 세션 매핑만 제거하고 표준 응답 반환 (AI 호출 없음)
         is_session_reset = (request_type == "SESSION_RESET")
@@ -674,8 +667,11 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             runner.ai.system_prompt = stable_prompt
             if runner.ai._provider:
                 runner.ai._provider.system_prompt = stable_prompt
-            if dynamic_context:
-                augmented_message = f"{dynamic_context}\n\n{message}"
+            # 사용자 명령 변형: [원문 명령 + 의식 보강]을 한 '사용자 명령' 프레임으로 융합.
+            # dynamic_context(배경 참고)는 그 앞에 둔다.
+            from prompt_builder import compile_user_command
+            fused_command = compile_user_command(message, consciousness_output)
+            augmented_message = f"{dynamic_context}\n\n{fused_command}" if dynamic_context else fused_command
             history = runner._apply_consciousness_to_history(history, consciousness_output)
         elif execution_memory or reflex_hint:
             # EXECUTE 경로: 실행기억(+reflex 힌트)만 가변 컨텍스트로 반영
@@ -694,6 +690,31 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 runner.ai._provider.system_prompt = stable_prompt
             if dynamic_context:
                 augmented_message = f"{dynamic_context}\n\n{message}"
+
+        # 자율주행 작업전 공개(계기판 #2) — 실행 직전 채팅창에 "지금 얼마나 확신하나
+        # (해마점수)·무슨 판단(반사/숙고/실행)·무슨 IBL을 연상했나·달성기준(있다면)"을
+        # 먼저 보여준다. 운전자가 "믿고 맡길까"를 행동 전에 읽게 하는 신뢰 보정 계기.
+        if not is_session_reset:
+            try:
+                if reflex_hint:
+                    _decision = "reflex"
+                elif request_type == "THINK":
+                    _decision = "think"
+                else:
+                    _decision = "execute"
+                _criteria = ""
+                if consciousness_output:
+                    _criteria = runner._extract_achievement_criteria(consciousness_output) or ""
+                await manager.send_message(client_id, {
+                    "type": "cognition",
+                    "decision": _decision,
+                    "score": round(float(_hippocampus_score or 0.0), 3),
+                    "action": (reflex_hint or _top_code or ""),
+                    "criteria": _criteria,
+                    "agent": agent_name,
+                })
+            except Exception as _ce:
+                print(f"[WS] 작업전 공개(cognition) 전송 실패 (무시): {_ce}")
 
         # 태스크 생성
         task_id = f"task_{uuid.uuid4().hex[:8]}"

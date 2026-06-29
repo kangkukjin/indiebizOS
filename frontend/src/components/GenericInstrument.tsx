@@ -19,6 +19,8 @@
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { StreamPlayer } from './StreamPlayer';
 import type { StreamData } from './chat/chatUtils';
 
@@ -62,7 +64,7 @@ export interface AppComposeChannels {
 }
 
 export interface AppViewPrim {
-  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list';
+  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map';
   [k: string]: unknown;
 }
 
@@ -92,8 +94,11 @@ export interface FormAction {
 type Dispatch = (template: string, fieldValues?: Record<string, string>, rowContext?: Json, opts?: { back?: boolean }) => Promise<boolean>;
 
 export interface AppFilter {
-  key?: string;  // 액션 템플릿이 참조하는 파라미터명 ($key) — 기본 'filter'
-  items: { label: string; value: string | number; default?: boolean }[];
+  key?: string;  // 정적 필터: 액션 템플릿이 참조하는 파라미터명 ($key) — 기본 'filter'
+  items?: { label: string; value: string | number; default?: boolean }[];  // 정적 칩(선택 시 재조회)
+  // 동적 필터: 결과 items 의 이 필드 distinct 값으로 칩 생성 + 클라이언트 측 거르기(재조회 없음).
+  from_field?: string;
+  from?: string;  // 거를 배열 경로 (기본 'items')
 }
 
 export interface AppMode {
@@ -436,14 +441,141 @@ function EditableListPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown
   );
 }
 
-function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch }: {
+// 지도 마커 아이콘 — 번들러 이미지 의존 없는 divIcon (DirectionsInstrument 선례)
+const dotIcon = (color: string) => L.divIcon({
+  className: '',
+  html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
+  iconSize: [16, 16], iconAnchor: [8, 8],
+});
+const escHtml = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+
+type MapEnvelope = {
+  path?: [number, number][]; center?: { lat: number; lng: number };
+  origin?: { lat: number; lng: number; name?: string }; destination?: { lat: number; lng: number; name?: string };
+  markers?: { lat?: number; lng?: number; name?: string }[];
+};
+// 뷰-이벤트 콜백 — 프리미티브(현재 map)가 사용자 조작을 액션 템플릿+페이로드로 흘린다. ModePane 가 재조회.
+type ViewEvent = (template: string, payload: Record<string, string>) => void;
+
+/** map 프리미티브 — leaflet. 정적(원격 initMaps 동치) + 인터랙티브(`on:` 뷰-이벤트).
+ *  봉투(p.from, 기본 map_data): {center, markers:[{lat,lng,name}], path:[[lat,lng]], origin, destination}
+ *  p.markers: 추가 마커 리스트 경로(예: items) — 각 {lat,lng,name|title,meta,url,id}. p.max=마커 상한.
+ *  p.on(인터랙티브): {moveend|center_drag: 재조회 템플릿($lat/$lng/$radius), marker_click: 마커 액션($id/$name/$lat/$lng/$url) | {stream:true}=마커 영상 재생(CCTV)}.
+ *  ★루프 가드: fitBounds 는 첫 로드만(interactive 면 didFit 후 안 함) — 재조회→마커갱신은 viewport 유지.
+ *           moveend 는 progMove(프로그래매틱 이동) 무시 + 디바운스. */
+function MapPrim({ p, data, onViewEvent, onStream }: { p: AppViewPrim; data: unknown; onViewEvent?: ViewEvent; onStream?: (item: Json) => void }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const layerRef = useRef<L.LayerGroup | null>(null);
+  const readyRef = useRef(false);   // 초기 fit 정착 후 true — 그 전(프로그래매틱 fit)의 moveend 는 무시(피드백 루프 차단)
+  const didFit = useRef(false);
+  const debounceRef = useRef<number | null>(null);
+  const pRef = useRef(p);
+  const evRef = useRef(onViewEvent);
+  const streamRef = useRef(onStream);
+  // 최신값 ref 동기화 — 렌더 중 ref 쓰기(react-hooks/refs 위반) 대신 커밋 후 effect 로. 이 ref 들은 이벤트 핸들러(마커클릭·moveend)에서만 읽혀 한 틱 지연 무관.
+  useEffect(() => { pRef.current = p; evRef.current = onViewEvent; streamRef.current = onStream; });
+
+  const on = (p.on as Record<string, string | { stream?: boolean }> | undefined) || undefined;
+  // viewport 보존(첫 로드만 fit) 모드는 *이동 재조회*(moveend/center_drag)가 있을 때만.
+  // marker_click(스트림/액션)만 있는 경우는 정적 fit 유지(CCTV: 매 검색마다 새 결과로 재fit).
+  const interactive = !!(on && (on.moveend || on.center_drag));
+
+  const fireMove = useCallback((lat: number, lng: number) => {
+    const pon = pRef.current.on as Record<string, string | { stream?: boolean }> | undefined;
+    const tpl = (pon?.moveend || pon?.center_drag) as string | undefined;
+    const map = mapRef.current;
+    if (!tpl || !map || !evRef.current) return;
+    const r = Math.round(map.distance(map.getCenter(), map.getBounds().getNorthEast())); // viewport 반경(m)
+    evRef.current(tpl, { lat: lat.toFixed(6), lng: lng.toFixed(6), radius: String(r) });
+  }, []);
+
+  // 지도 1회 생성 + 사용자 이동 이벤트 바인딩 (data 변경에도 재생성 안 함 → viewport 보존)
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || mapRef.current) return;
+    const map = L.map(el, { attributionControl: false });
+    mapRef.current = map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+    layerRef.current = L.layerGroup().addTo(map);
+    const pon = pRef.current.on as Record<string, string | { stream?: boolean }> | undefined;
+    const moveTpl = pon?.moveend || pon?.center_drag;
+    if (moveTpl) {
+      map.on('moveend', () => {
+        if (!readyRef.current) return; // 초기 fit 정착 전(프로그래매틱 이동)은 무시
+        if (debounceRef.current) window.clearTimeout(debounceRef.current);
+        const c = map.getCenter();
+        debounceRef.current = window.setTimeout(() => fireMove(c.lat, c.lng), 600); // 잦은 팬 디바운스
+      });
+    }
+    setTimeout(() => map.invalidateSize(), 60);
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+      map.remove(); mapRef.current = null; layerRef.current = null; didFit.current = false;
+    };
+  }, [fireMove]);
+
+  // data 변경 → 마커/경로 다시 그림 (지도 유지). fit 은 첫 로드만(인터랙티브)·매번(정적).
+  useEffect(() => {
+    const map = mapRef.current, layer = layerRef.current;
+    if (!map || !layer) return;
+    layer.clearLayers();
+    const md = ((p.from ? jget(data, p.from as string) : data) || {}) as MapEnvelope;
+    let mk = p.markers ? asList(data, p.markers) : [];
+    const max = typeof p.max === 'number' ? p.max : undefined;
+    if (max && mk.length > max) mk = mk.slice(0, max); // 마커 폭주 방지(상권 등 수천건)
+    const B: [number, number][] = [];
+    if (md.path && md.path.length) {
+      L.polyline(md.path, { color: '#e11d48', weight: 5, opacity: 0.85 }).addTo(layer);
+      md.path.forEach((ll) => B.push(ll));
+      if (md.origin) { L.marker([md.origin.lat, md.origin.lng], { icon: dotIcon('#22C55E') }).addTo(layer).bindPopup('출발 · ' + escHtml(md.origin.name || '')); B.push([md.origin.lat, md.origin.lng]); }
+      if (md.destination) { L.marker([md.destination.lat, md.destination.lng], { icon: dotIcon('#EF4444') }).addTo(layer).bindPopup('도착 · ' + escHtml(md.destination.name || '')); B.push([md.destination.lat, md.destination.lng]); }
+    }
+    (md.markers || []).forEach((m) => { if (m.lat == null || m.lng == null) return; L.marker([m.lat, m.lng], { icon: dotIcon('#0284c7') }).addTo(layer).bindPopup(escHtml(m.name || '')); B.push([m.lat, m.lng]); });
+    // marker_click: IBL 템플릿(문자열·재조회) | {stream:true}(마커 url 영상 재생, IBL 없음) | 없음(팝업).
+    const clickSpec = on?.marker_click;
+    const clickStream = !!(clickSpec && typeof clickSpec === 'object' && (clickSpec as { stream?: boolean }).stream);
+    const clickTpl = typeof clickSpec === 'string' ? clickSpec : undefined;
+    mk.forEach((m) => {
+      const r = m as { lat?: number; lng?: number; name?: string; title?: string; meta?: string; url?: string; id?: string | number };
+      if (r.lat == null || r.lng == null) return;
+      const marker = L.marker([r.lat, r.lng], { icon: dotIcon('#0284c7') }).addTo(layer);
+      if (clickStream && streamRef.current) {
+        marker.on('click', () => streamRef.current!(m as Json));  // 행 데이터(url/playable/name/lat/lng) → StreamPlayer
+      } else if (clickTpl && evRef.current) {
+        marker.on('click', () => evRef.current!(clickTpl, {
+          id: String(r.id ?? ''), name: String(r.name ?? r.title ?? ''),
+          lat: String(r.lat), lng: String(r.lng), url: String(r.url ?? ''),
+        }));
+      } else {
+        const popup = '<b>' + escHtml(r.name || r.title || '마커') + '</b>' + (r.meta ? '<br>' + escHtml(r.meta) : '') +
+          (r.url ? '<br><a href="' + escHtml(r.url) + '" target="_blank">상세 →</a>' : '');
+        marker.bindPopup(popup);
+      }
+      B.push([r.lat, r.lng]);
+    });
+    const shouldFit = !interactive || !didFit.current; // 인터랙티브는 첫 로드만 fit(이후 viewport 보존)
+    if (shouldFit && B.length) { map.fitBounds(B, { padding: [28, 28], maxZoom: 15, animate: false }); didFit.current = true; }
+    else if (shouldFit && md.center && md.center.lat != null) { map.setView([md.center.lat, md.center.lng], 13, { animate: false }); didFit.current = true; }
+    else if (shouldFit) { map.setView([37.4979, 127.0276], 11); didFit.current = true; }
+    // 초기 fit 정착 후 사용자 이동만 재조회로 인정(프로그래매틱 fit 의 moveend 무시)
+    if (interactive && shouldFit) setTimeout(() => { readyRef.current = true; }, 700);
+    setTimeout(() => map.invalidateSize(), 0);
+  }, [p, data, interactive, on]);
+  return <div ref={ref} style={{ height: 320 }} className="rounded-xl overflow-hidden bg-stone-100 mb-2.5" />;
+}
+
+function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, onViewEvent }: {
   p: AppViewPrim; data: unknown;
   onDrill: (p: AppViewPrim, item: Json) => void;
   onRowAction: (action: string, item: Json, rowKey: string, refresh?: boolean) => void;
   onStream: (item: Json) => void;
   busyRow: string | null;
   dispatch: Dispatch;
+  onViewEvent?: ViewEvent;
 }) {
+  if (p.type === 'map') return <MapPrim p={p} data={data} onViewEvent={onViewEvent} onStream={onStream} />;
+
   if (p.type === 'metric') {
     const col = trendClass(p, data);
     return (
@@ -616,20 +748,21 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch }
   return null;
 }
 
-function ViewRenderer({ view, data, onDrill, onRowAction, onStream, busyRow, dispatch }: {
+function ViewRenderer({ view, data, onDrill, onRowAction, onStream, busyRow, dispatch, onViewEvent }: {
   view: AppViewPrim[]; data: Json;
   onDrill: (p: AppViewPrim, item: Json) => void;
   onRowAction: (action: string, item: Json, rowKey: string, refresh?: boolean) => void;
   onStream: (item: Json) => void;
   busyRow: string | null;
   dispatch: Dispatch;
+  onViewEvent?: ViewEvent;
 }) {
   if (data.error) return <p className="text-sm text-stone-400">{String(data.error)}</p>;
   if (data.success === false) return <p className="text-sm text-stone-400">{String(data.message || '실패')}</p>;
   return (
     <>
       {view.map((p, i) => (
-        <ViewPrim key={i} p={p} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} />
+        <ViewPrim key={i} p={p} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} />
       ))}
     </>
   );
@@ -706,6 +839,7 @@ function ModePane({ mode }: { mode: AppMode }) {
   const [values, setValues] = useState<Record<string, string>>(initVals);
   const [data, setData] = useState<Json | null>(null);
   const [drill, setDrill] = useState<DrillState | null>(null);
+  const [catFilter, setCatFilter] = useState<string | null>(null);  // 동적 필터(from_field) 선택값 — 클라이언트 측 거르기
   const [tabIdx, setTabIdx] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -722,7 +856,7 @@ function ModePane({ mode }: { mode: AppMode }) {
     if (!mode.action) return;
     const vals = override || valuesRef.current;
     for (const inp of mode.inputs || []) if (inp.required && !vals[inp.key]) return;
-    setLoading(true); setError(null); setDrill(null);
+    setLoading(true); setError(null); setDrill(null); setCatFilter(null);
     try {
       setData(await runIBL(buildAction(mode.action, vals)));
     } catch (e) {
@@ -735,7 +869,7 @@ function ModePane({ mode }: { mode: AppMode }) {
   // 모드 진입 시 초기화 + auto_run
   useEffect(() => {
     const v = initVals();
-    setValues(v); setData(null); setDrill(null); setError(null); setComposeText(''); setComposeCh('');
+    setValues(v); setData(null); setDrill(null); setError(null); setComposeText(''); setComposeCh(''); setCatFilter(null);
     if (mode.auto_run) run(v);
   }, [mode, initVals, run]);
 
@@ -792,7 +926,7 @@ function ModePane({ mode }: { mode: AppMode }) {
     setSending(true);
     const opts = composeChannelOptions(cmp, drill?.data);
     const sel = opts.find((o) => o.key === composeCh) || opts[0];
-    const extra = sel ? { channel_type: sel.channel_type, to: sel.to } : {};
+    const extra: Record<string, string> = sel ? { channel_type: sel.channel_type, to: sel.to } : {};
     const ok = await dispatch(cmp.action, { text, ...extra });
     if (ok) setComposeText('');
     setSending(false);
@@ -817,6 +951,18 @@ function ModePane({ mode }: { mode: AppMode }) {
   // 스트림 재생 — 행 데이터(url/playable/name/lat/lng)를 클라이언트 StreamPlayer 로 연다(서버 호출 없음)
   const onStream = useCallback((item: Json) => setStream(item), []);
 
+  // 뷰-이벤트(map moveend/marker_click) → 액션 재조회. ★loading 안 켬: 지도를 언마운트하지 않아야
+  // viewport 가 보존되고(마커만 in-place 갱신) 재조회 피드백 루프가 안 생긴다(MapPrim didFit 가드와 짝).
+  const onViewEvent = useCallback<ViewEvent>((template, payload) => {
+    (async () => {
+      try {
+        const code = buildAction(template, { ...valuesRef.current, ...payload });
+        const d = await runIBL(code);
+        if (d && !d.error) { setData(d); setCatFilter(null); }  // 지도 재조회=새 결과 → 동적 필터 초기화
+      } catch { /* 재조회 실패는 현재 화면 유지 */ }
+    })();
+  }, []);
+
   const fireButton = useCallback(async (b: AppButton) => {
     if (!b.action) return;
     try {
@@ -830,7 +976,19 @@ function ModePane({ mode }: { mode: AppMode }) {
 
   const inputs = mode.inputs || [];
   // master_detail card_list → 반응형 2분할(PC: 리스트 좌+상세 우 동시 / 폰: 리스트→선택→상세→뒤로)
-  const isSplit = !mode.modes && (mode.view || []).some((p) => p.type === 'card_list' && !!p.master_detail);
+  const isSplit = !(mode as { modes?: AppMode[] }).modes && (mode.view || []).some((p) => p.type === 'card_list' && !!p.master_detail);
+
+  // 동적 필터(filter.from_field): 결과 items 의 그 필드 distinct 값으로 칩 + 클라이언트 측 거르기(재조회 없음).
+  // viewData=필터 적용된 데이터(map 마커·card_list 동시 거름). 정적 필터(items)는 별개 경로(재조회).
+  const dynField = mode.filter?.from_field;
+  const dynFrom = (mode.filter?.from as string) || 'items';
+  const dynCats = (dynField && data)
+    ? Array.from(new Set(asList(data, dynFrom).map((it) => jget(it, dynField)).filter(Boolean).map(String)))
+    : [];
+  const activeCat = dynField && catFilter && dynCats.includes(catFilter) ? catFilter : null;
+  const viewData: Json | null = (dynField && activeCat && data)
+    ? ({ ...data, [dynFrom]: asList(data, dynFrom).filter((it) => String(jget(it, dynField)) === activeCat) })
+    : data;
   const drillTabs = drill?.tabs;
   const activeCompose = drill
     ? (drillTabs ? drillTabs[Math.min(tabIdx, drillTabs.length - 1)]?.compose : drill.compose)
@@ -876,7 +1034,7 @@ function ModePane({ mode }: { mode: AppMode }) {
   const drillViewEl = drill ? (
     <ViewRenderer
       view={drillTabs ? (drillTabs[Math.min(tabIdx, drillTabs.length - 1)]?.view || []) : (drill.view || [])}
-      data={drill.data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} />
+      data={drill.data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} />
   ) : null;
 
   return (
@@ -934,6 +1092,22 @@ function ModePane({ mode }: { mode: AppMode }) {
         </div>
       )}
 
+      {/* 동적 필터(from_field) 칩 — 결과 필드 distinct 값. 클라이언트 측 거르기(재조회 없음). */}
+      {dynField && !loading && !drill && dynCats.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          <button onClick={() => setCatFilter(null)}
+            className={`px-3 py-1 rounded-full text-xs border transition ${
+              !activeCat ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}>전체</button>
+          {dynCats.slice(0, 12).map((c) => (
+            <button key={c} onClick={() => setCatFilter(c)}
+              className={`px-3 py-1 rounded-full text-xs border transition ${
+                activeCat === c ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}>
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
       {(mode.buttons || []).length > 0 && (
         <div className="flex gap-2 mb-3">
           {mode.buttons!.map((b, i) => (
@@ -953,7 +1127,7 @@ function ModePane({ mode }: { mode: AppMode }) {
       {isSplit && !loading && data && (
         <div className="flex flex-col md:flex-row gap-3 md:h-[calc(100vh-210px)]">
           <div className={`md:w-72 md:shrink-0 md:overflow-y-auto md:pr-1 ${drill ? 'hidden md:block' : 'block'}`}>
-            <ViewRenderer view={mode.view || []} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} />
+            <ViewRenderer view={mode.view || []} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} />
           </div>
           <div className={`flex-1 min-w-0 md:border-l md:border-stone-200 md:pl-4 ${drill ? 'flex flex-col min-h-0' : 'hidden md:flex md:flex-col'}`}>
             {drill ? (
@@ -979,8 +1153,8 @@ function ModePane({ mode }: { mode: AppMode }) {
           {drillViewEl}
         </>
       )}
-      {!isSplit && !loading && !drill && data && mode.view && (
-        <ViewRenderer view={mode.view} data={data} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} />
+      {!isSplit && !loading && !drill && viewData && mode.view && (
+        <ViewRenderer view={mode.view} data={viewData} onDrill={onDrill} onRowAction={onRowAction} onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} />
       )}
       {!isSplit && (() => {
         const cmp = drill ? activeCompose : mode.compose;

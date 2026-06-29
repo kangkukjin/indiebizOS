@@ -528,10 +528,19 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
 규칙:
 1. 사용자 명령을 일반화하라 (고유명사는 유지하되, 패턴으로서 재사용 가능하게)
 2. 실행된 코드에서 중복/탐색성 호출을 제거하고 핵심만 남겨라
-3. 단일 액션이면 그대로, 여러 액션이면 & 또는 >>로 조합하라
-4. 결과는 반드시 JSON으로만 응답:
+3. 액션 합성(>> 또는 &)은 *데이터가 실제로 흐를 때만* 하라:
+   - 한 액션의 출력이 다음 액션의 입력으로 흐르면(예: 조회 → 변환 → 차트) `>>`,
+     한 동작으로 동시에 묶이면 `&`. 이때만 합성이 *참된 관용구*다.
+   - 독립적으로 하나씩 호출한 단계(예: 문서를 읽고 *별개로* 웹을 검색해 사고·종합하는
+     분석·판단·조사)는 절대 합성하지 마라 — `>>`/`&`는 데이터 흐름을 뜻하므로, 흐르지
+     않는 단계를 이으면 *거짓 관용구*가 되어 해마를 오염시킨다. 이런 경우 가장 핵심
+     (load-bearing)인 단일 액션 하나로 대표하라.
+4. 이 경험에 *재사용 가능한 IBL 패턴이 없으면*(가치가 IBL 코드가 아니라 추론·판단에
+   있던 순수 분석 등) 억지로 대표 코드를 지어내지 말고 code 를 빈 문자열("")로 두어
+   증류를 건너뛰게 하라.
+5. 결과는 반드시 JSON으로만 응답:
 
-{{"intent": "일반화된 사용자 의도", "code": "[node:action]{{params}} 형태의 IBL 코드"}}"""
+{{"intent": "일반화된 사용자 의도", "code": "[node:action]{{params}} 형태의 IBL 코드 (재사용 패턴 없으면 빈 문자열)"}}"""
 
         # 반성 에이전트 프롬프트 로드
         from pathlib import Path
@@ -570,6 +579,10 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
         code = distilled.get("code", "").strip()
 
         if not intent or not code:
+            # code 빈 문자열 = 반성기가 "재사용 IBL 패턴 없음"으로 판단한 의도적 스킵
+            # (분석·판단 등). 거짓 >> 관용구를 박제하느니 증류 안 함.
+            if intent and not code:
+                print(f"[경험증류] 재사용 IBL 패턴 없음 — 증류 스킵: \"{user_message[:40]}\"")
             return False
 
         # 검증 게이트: 환각된(미존재) 액션이 코퍼스에 진입하지 못하도록 정적 검증
@@ -675,6 +688,31 @@ def _consolidate_distilled_json(cap: int = HIPPO_JSON_CAP) -> dict:
     if not isinstance(data, list):
         return {"json": 0}
 
+    n_before = len(data)
+
+    # ── 어휘·문법 재검증 (자동 staleness GC) ─────────────────────────────
+    # 증류물은 *증류 시점*에만 _validate_ibl_actions 를 거친다. 이후 어휘(액션 이름)나 문법이
+    # 바뀌면 옛 항목이 깨진 채 남아 재학습 시드를 오염시킨다. 지금까진 어휘 변경 시 마이그레이션
+    # 스크립트를 손으로 돌려 막아왔으나(빠뜨리면 조용히 새는 구조), 정리 카덴스마다 ①현재
+    # ibl_nodes.yaml 에 액션이 실재하고 ②현재 문법으로 파싱되는 항목만 남겨 자동화한다. AST·파서
+    # 라 LLM 0. ★시간이 아니라 *현재 유효성*이 축 — 오래돼도 유효하면 보존, 최근이라도 깨지면 폐기.
+    # ★fail-safe: _validate_ibl_actions 는 레지스트리 로드 실패 시 True(보수 통과)라 전수 폐기 안 됨.
+    def _still_valid(e):
+        code = e.get("ibl_code", "") or ""
+        if not code or not _validate_ibl_actions(code):
+            return False
+        try:
+            from ibl_parser import parse as _ibl_parse
+            _ibl_parse(code)
+        except Exception:
+            return False
+        return True
+
+    data = [e for e in data if _still_valid(e)]
+    stale_removed = n_before - len(data)
+    if stale_removed:
+        print(f"[해마정리] 어휘·문법 미부합 증류물 {stale_removed}건 폐기 (현재 어휘/문법 기준)")
+
     # 최신 우선 dedup (뒤에서부터 보존), 그 후 최근 cap건
     seen, kept_rev = set(), []
     for e in reversed(data):
@@ -685,13 +723,13 @@ def _consolidate_distilled_json(cap: int = HIPPO_JSON_CAP) -> dict:
         kept_rev.append(e)
     kept = list(reversed(kept_rev))[-cap:]
 
-    removed = len(data) - len(kept)
+    removed = n_before - len(kept)
     if removed > 0:
         try:
             path.write_text(_json.dumps(kept, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception:
             pass
-    return {"json": len(kept), "json_removed": removed}
+    return {"json": len(kept), "json_removed": removed, "json_stale_removed": stale_removed}
 
 
 def run_hippocampus_consolidation(force: bool = False) -> dict:

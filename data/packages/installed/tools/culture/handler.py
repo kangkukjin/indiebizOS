@@ -43,30 +43,6 @@ def _normalize(obj):
 
 # ── 단일 액션 op 디스패처 ───────────────────────────────
 
-def _performances_to_records(rows: list) -> list:
-    """KOPIS 공연(pblprfr <db>) → 레코드 통화 records[{title,meta,summary,url,image?}].
-    poster(이미지)·기간/공연장/지역/장르(meta) → >> [engines:document/spreadsheet]."""
-    out = []
-    for p in (rows or []):
-        if not isinstance(p, dict):
-            continue
-        period = ""
-        if p.get("prfpdfrom") or p.get("prfpdto"):
-            period = f"{p.get('prfpdfrom', '')}~{p.get('prfpdto', '')}"
-        meta = [p.get("fcltynm"), period, p.get("area"), p.get("genrenm"), p.get("prfstate")]
-        rec = {
-            "title": p.get("prfnm") or "",
-            "meta": " · ".join(x for x in meta if x),
-            "summary": "",
-            "url": (f"https://www.kopis.or.kr/por/db/pblprfr/pblprfrView.do?mt20Id={p.get('mt20id')}"
-                    if p.get("mt20id") else ""),
-        }
-        if p.get("poster"):
-            rec["image"] = p.get("poster")
-        out.append(rec)
-    return out
-
-
 def _performance_op(ti: dict):
     """[sense:performance]{op} — KOPIS 공연·공연장·필터코드."""
     op = (ti.get("op") or _OP_DEFAULTS["performance_op"]).strip()
@@ -99,26 +75,6 @@ def _performance_op(ti: dict):
         from tool_kopis import get_region_list
         return get_region_list()
     return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(_OP_DISPATCHERS['performance_op'])}"}
-
-
-def _books_to_items(books: list) -> list:
-    """도서 레코드 → 레코드 통화 items[{title,meta,summary,url,image}].
-    표지(bookImageURL)·상세링크(bookDtlUrl)·대출수(인기 신호) 활용 → >> [engines:document]로 시각 카탈로그."""
-    items = []
-    for b in (books or []):
-        if not isinstance(b, dict):
-            continue
-        meta = [b.get("authors"), b.get("publisher"), b.get("publication_year")]
-        if b.get("loan_count"):
-            meta.append(f"대출 {b.get('loan_count')}")
-        items.append({
-            "title": b.get("bookname") or b.get("title") or "",
-            "meta": " · ".join(x for x in meta if x),
-            "summary": b.get("class_nm") or "",
-            "url": b.get("bookDtlUrl") or "",
-            "image": b.get("bookImageURL") or "",
-        })
-    return items
 
 
 def _book_op(ti: dict):
@@ -166,51 +122,6 @@ def _book_op(ti: dict):
     return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(_OP_DISPATCHERS['book_op'])}"}
 
 
-def _gutenberg_to_records(rows: list) -> list:
-    """Project Gutenberg(results) → 레코드 통화 records.
-    title·저자(meta)·subjects(summary)·html/text 링크(url)·cover_url(image)."""
-    out = []
-    for b in (rows or []):
-        if not isinstance(b, dict):
-            continue
-        authors = b.get("authors") or []
-        langs = b.get("languages") or []
-        meta = []
-        if authors:
-            meta.append(", ".join(a for a in authors if a))
-        if langs:
-            meta.append("/".join(l for l in langs if l))
-        subjects = b.get("subjects") or []
-        rec = {
-            "title": b.get("title") or "",
-            "meta": " · ".join(meta),
-            "summary": ", ".join(s for s in subjects if s),
-            "url": b.get("html_url") or b.get("text_url") or "",
-        }
-        if b.get("cover_url"):
-            rec["image"] = b.get("cover_url")
-        out.append(rec)
-    return out
-
-
-def _korean_classics_to_records(rows: list) -> list:
-    """한국고전종합DB(results) → 레코드 통화 records (이미지 없음)."""
-    out = []
-    for d in (rows or []):
-        if not isinstance(d, dict):
-            continue
-        meta = [d.get("author"), d.get("year")]
-        title = d.get("title") or ""
-        snippet = d.get("content_snippet") or ""
-        out.append({
-            "title": title,
-            "meta": " · ".join(x for x in meta if x),
-            "summary": "" if snippet == title else snippet,
-            "url": d.get("url") or "",
-        })
-    return out
-
-
 def _classic_op(ti: dict):
     """[sense:classic]{op} — 고전 원문 (western=Gutenberg, korean=한국고전DB)."""
     op = (ti.get("op") or _OP_DEFAULTS["classic_op"]).strip()
@@ -234,35 +145,6 @@ def _classic_op(ti: dict):
             result["items"] = result.pop("results")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
         return result
     return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(_OP_DISPATCHERS['classic_op'])}"}
-
-
-def _exhibits_to_records(rows: list) -> list:
-    """KCISA 문화행사(전시 등, data items) → 레코드 통화 records.
-    title·분야/장소/기간/지역(meta)·설명(summary)·url·imageObject(image).
-    KCISA cultureinfo period2 표준 필드 매핑(값 존재 시에만)."""
-    out = []
-    for e in (rows or []):
-        if not isinstance(e, dict):
-            continue
-        period = ""
-        if e.get("startDate") or e.get("endDate"):
-            period = f"{e.get('startDate', '')}~{e.get('endDate', '')}"
-        place = e.get("eventSite") or e.get("place")
-        area = e.get("area") or e.get("sido")
-        meta = [e.get("realmName"), place, period, area]
-        title = e.get("title") or ""
-        desc = e.get("description") or ""
-        rec = {
-            "title": title,
-            "meta": " · ".join(x for x in meta if x),
-            "summary": "" if desc == title else desc,
-            "url": e.get("url") or "",
-        }
-        img = e.get("imageObject") or e.get("imageUrl")
-        if img:
-            rec["image"] = img
-        out.append(rec)
-    return out
 
 
 # 2026-06-03 dispatcher 표준화 — 단일 액션 op 키 메타데이터.

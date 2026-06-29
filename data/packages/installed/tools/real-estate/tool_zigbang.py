@@ -311,16 +311,14 @@ def get_zigbang_listings(tool_input: dict):
                   "lat": r.get("lat"), "lng": r.get("lng"),
                   "distance_m": r.get("distance_m")} for r in rows]
     lease_label = "/".join(sales_types)
-    msg_lines = [f"직방 '{matched or region}' 반경 {radius}m · {cat} {lease_label} — {len(rows)}건:"]
-    for r in rows:
-        msg_lines.append(f"- {r['meta']}\n  {r['url']}")
+    message = f"직방 '{matched or region}' 반경 {radius}m · {cat} {lease_label} — {len(rows)}건 (상세는 items)"
     return {
         "success": True,
         "source": "zigbang",
         "조회지역": matched or region,
         "center": {"lat": lat, "lng": lng},
         "count": len(rows),
-        "message": "\n".join(msg_lines),
+        "message": message,
         "items": items_out,
         "map_data": {"center": {"lat": lat, "lng": lng},
                      "markers": [{"lat": r["lat"], "lng": r["lng"], "name": r["title"],

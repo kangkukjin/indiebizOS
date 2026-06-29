@@ -20,6 +20,16 @@
 3. **classify_currency rec/blk 방어 읽기** — 무해(declared==items만 검사, straggler 방어). 남겨둠.
 **→ 단일 통화 이행은 실질적으로 끝. 추가 작업은 새 생산자 작성 시 `items` 방출 규약만 지키면 됨(§4 생산자 계약).**
 
+### ~~정리(2026-06-28)~~ — 통화 종착 명문화 + stale/dead-code 청소 (보존)
+통화 구조가 narrow-waist 종착(도메인 이름 0)에 도달했다는 판정 후, 그 종착을 *읽을 수 있게* 만드는 청소:
+- **stale docstring 수정**: `data-ops/handler.py` 모듈 docstring("두 통화: records→envelope {records}" → 단일 items)·`_get_records` docstring("records 폴백 ~18개" → items-only, 코드는 이미 그러함). 코드 동작 무변경.
+- **dead-code 삭제(8)**: culture 5 헬퍼 + business `_to_records`+`_doc_records` + study `_search_books` 내부 죽은 records 루프. 전부 호출자 0.
+- **생산자 계약 1쪽 신설**: `docs/IBL_CURRENCY_CONTRACT.md` — 낯선 사용자가 읽는 단일 규약(`items` 방출·평평한 필드·map_data=통화 아님·fail-fast·순수 추가형). map_data를 "통화 아닌 렌더링 사이드채널"로 명시(미완성 마이그레이션 오해 차단).
+- **검증**: build --check 142 GREEN·바이트 일치 / py_compile 4파일 OK / `/packages/reload` 후 라이브 회귀(business_document·search_books·classic·book>>take) 전부 items 정상.
+- **✅ 추가 청소(2026-06-29)**: data-ops `_emit_records` 호출 3곳(union/dedup/join, line 472/502/561)이 base envelope 로 `{"records": []}` 를 넘겨 **출력에 vestigial 빈 `records:[]` 키가 새던 것**을 `{}` 로 교체 — 마지막 records 출력 흔적 제거. 검증=AST OK·`/packages/reload`·라이브 3변환(filter 한식152/dedup 카테고리72/merge 두입력1206) 전부 출력 키에 `records` 없음 확인. (잔여 `records` 참조 1곳=line 617 은 *입력* 수용=정당 backward-compat.)
+- **✅ records producer = 0 종합 확인(2026-06-29, 백엔드 정지 창)**: channel_engine `_community_feed`/`_community_board` 는 *이미* items 방출(stale ⏳ 노트였음 — `records` 단어조차 0). 전 코드베이스 records 출력 생산자 스캔 = **backend 0 · tools 0**(data-ops:617 의 `params["records"]` 는 *입력 수용*=정당 backward-compat, 출력 아님). **단일통화(items) 마이그레이션 기능적 완료.** 남은 records-aware 코드 2곳은 의도적·방어적: ⒜`classify_currency`(scripts/ibl_health_check.py)=records/table/blocks 관용을 *함께* 처리(table/blocks 와 묶임 → 그것들 은퇴까지 유지) ⒝data-ops:617 입력 수용. **둘 다 straggler 아님 — 제거 대상 없음.**
+- **map_data enum 추가는 *하지 않음***(map_data는 returns 값이 아니라 생산자 봉투 필드 — 환각 교정).
+
 ### ~~6차에서 한 것~~ — table·document·currency 흡수, enum 축소 (보존). 전부 라이브·검증
 - **table → items** (4 생산자): **world_bank**(`study/handler.py` `{table}`→`items=[{연도,지표}]`)·**grep_files**(`system_essentials` 3모드 `[{파일,줄번호,내용}]`)·**company**(`investment/handler.py` `_attach_company_table` `[{지표,값}]`)·**kosis**(`tool_kosis_api.py` `_to_table_currency`→행dict). **★소비자가 items→table 재구성**: `data-ops _get_table`·`visualization _extract_table_from_prev`·`system_essentials` spreadsheet(1029, generic 키=열) 셋 다 items(행dict)→table 브릿지 추가. 라이브 **golden `world_bank>>chart` PASS**·`world_bank>>spreadsheet` 파일생성·grep items 6·company items 11.
 - **document → items** (crawl): `web/handler.py` `_text_to_blocks`→`items`(문서 IR [{type,text,level}]). **★소비자 `engines:document`(media_producer 1196)에 type/text 감지 추가**=문서IR items면 blocks로, 아니면 cards로. 라이브 crawl items=2(heading/paragraph)·`crawl>>document` 파일생성.
@@ -72,7 +82,7 @@
 ### ~~3차에서 한 것~~ (cctv + 키스톤 items-우선 플립 + 잔여 정리) — 전부 라이브·검증 (보존)
 - **cctv ✅** (`cctv/handler.py`·`windy_webcam.py`·`DirectionsInstrument.tsx`) — search/nearby `cctvs`+`records` → `items`(native: name/url/lat/lng/source/playable/distance_km). 빈결과·webcam op도 items. **★bespoke STATIC 렌더러**(`DirectionsInstrument.tsx` 길찾기+CCTV 지도)가 `r.cctvs` 직독 → `r.items`로 플립(이게 "map 얽힘"의 정체). app `markers: cctvs`/`from: cctvs`→items, returns records→items. tsc 0 err·라이브 search 10·nearby 5.
 - **§8.3 키스톤 플립 ✅** — `data-ops/handler.py` `_get_records`를 **records-우선 → items-우선·records-폴백**으로 뒤집음. items 생산자(native 풍부 dict)가 in-pipe로 lat/lng·level 등 흘림(zigbang `>>take`에서 lat/lng/distance_m 보존 확인=items-우선의 구체 이득). **records 폴백 유지**=아직 items 안 내는 records-관습 생산자(~18개) in-pipe용(records는 손실 없는 dict 목록=in-pipe derive_items). 골든 5/5 PASS.
-- **잔여 dual-emit·dead 헬퍼 정리 ✅** — zigbang `records`+`data` 제거(items+map_data만)·business_item op:list `records` 제거. dead 헬퍼 삭제: cctv `_cctvs_to_records`·real-estate `_realty_to_records`+`_commercial_to_records`·business `_nb_record`. (business `_to_records`는 docs+없으면 유지 — 라인317 `_doc_records` 사용중이라 보존.)
+- **잔여 dual-emit·dead 헬퍼 정리 ✅** — zigbang `records`+`data` 제거(items+map_data만)·business_item op:list `records` 제거. dead 헬퍼 삭제: cctv `_cctvs_to_records`·real-estate `_realty_to_records`+`_commercial_to_records`·business `_nb_record`. (business `_to_records`+`_doc_records`는 **2026-06-28 삭제 완료** — 호출자 0 재확인 후.)
 
 ### ▶▶ 다음에 할 일 (남은 꼬리 — 거의 다 됨) ◀◀
 **1. records-관습 생산자 ~18개 → items 키 rename (이게 남은 본체, 기계적·저위험)**
@@ -266,7 +276,7 @@ derive_items가 렌더러에 items를 보장하므로, app 블록의 `from:` 키
 - ⏳ **남은 통화 생산자(각 복잡, 개별 작업)**: ①**real-estate** `data`(commercial·realty×2, records) — data를 dong/name으로 *제자리 필터* + `summary` 참조 + map_data 동봉이라 단순 pop 아님. ②**manage_events** `events`(records) — `api_scheduler.py`(backend 코어) 반환 + `calendar_html.py` 내부 events와 구분 필요. ③**business** `businesses`(records) — ★필드 드리프트(items엔 records관습 `title`, card는 native `name`)=card 필드 정합 동반. ④**messages** `conversations`/`messages`/`contacts`(records, 3키 클러스터) + **neighbor** `contacts`(records) — thread/editable_list, CRM 상호참조라 묶어서. ⑤**weather** `forecast`(table) — table 통화를 kv_list로 렌더, table→items 행dict 검토.
 - ✅ **면제(scalar/effect — 통화 아님, 이행 대상 아님)**: host top/disks(scalar 자기상태)·stock/crypto data.prices(scalar 시계열)·navigate_route map_data/key_guides(scalar)·cctv cctvs(effect)·radio_favorite favorites(effect, 단 list는 items화함)·report types(effect)·nostr relays(effect)·music queue(effect). 이들 from: 키는 그대로 둔다(kv_list/sparkline이 scalar 하위구조 직독).
 - **★cctv는 얽힘(막판)**: `cctvs`가 ①카드 ②지도 markers ③소스 집계 내부키(kakao/topis_res["cctvs"]) 삼중 + `_cctvs_to_records` → map_data 컷오버 때 함께.
-- **★컷오버 청소 대기(dead code)**: culture `_performances_to_records`/`_books_to_items`/`_gutenberg_to_records`/`_korean_classics_to_records`/`_exhibits_to_records` + study `_search_books` rec-building 루프 + business `_doc_records`(호출자 0) + channel_engine feed/board의 records-building 루프 — 호출자/소비자 0, 컷오버 때 삭제. (native 이행이 _X_to_records류를 죽인다 = 코드 감소의 실현.)
+- **★컷오버 청소 (대부분 완료 2026-06-28)**: ✅삭제됨 — culture `_performances_to_records`/`_books_to_items`/`_gutenberg_to_records`/`_korean_classics_to_records`/`_exhibits_to_records`(5) + business `_to_records`+`_doc_records`(2) + study `_search_books` 내부 죽은 records 루프(1). 전부 호출자 0 재확인·--check 142 GREEN·라이브 회귀 통과. ⏳잔존 — channel_engine feed/board의 records-building 루프(backend/*.py, uvicorn --reload 자해 위험으로 백엔드 정지 시점에 정리). (native 이행이 _X_to_records류를 죽인다 = 코드 감소의 실현.)
 
 ## 7.9 ★§8.4(부분) ✅ — returns enum에 `items` + 체커 items-우선 (2026-06-27)
 
@@ -296,3 +306,82 @@ native 이행 생산자가 records를 은퇴하자 §1B 체커가 "returns:recor
 - **깊은 중첩 문서**는 flat+depth로 표현력 한계(선택한 포기). **큰 동질 수치 표**는 dict 목록이 columnar보다 무거움(소비자가 내부 투영 → 비용 국소화).
 - dict+관습뿐이라 "바깥 형태 하나만 생성자로 강제"가 현실적 최대치(PowerShell 안전은 밑의 타입시스템 덕분, 우리는 없음).
 - **목록 아닌 출력**(파일 썼다·ok·예/아니오)=효과, 통화 아님. "모든 게 통화"라는 강박이 형태폭증의 뿌리였으니 안 되풀이.
+
+---
+
+## 10. 표현 평면 분리 — `message` O(1) 불변식 (2026-06-28)
+
+### 10.1 발단 (왜 또 났나)
+
+직방 다가구 주인세대 전세 조사 중 `[sense:realty]{...limit:70} >> [engines:filter]{where:"주인세대"}` 가 **결과 68,032자 → claude 바이너리 MCP 캡 초과 → 파일 스필**. 진단: filter는 items를 0건으로 정상 축소했으나, `_emit_records`(data-ops handler.py:80-89)가 `out = dict(envelope)` 로 **봉투를 통째 복사**해, realty가 같이 실은 거대한 `message`(70건을 한 건씩 풀어쓴 산문)가 그대로 따라감. **filter로 못 줄이는 죽은 무게 + 필터 후 stale(items는 0건인데 message는 "70건…"을 떠듦)**.
+
+### 10.2 이게 단일통화 원칙의 사각이다 (붕괴 아님)
+
+- 데이터 평면은 **안 무너졌다** — `items`는 여전히 유일 컬렉션 통화(`_get_records` items만, records EMIT=0). filter/sort/take 전부 items 위에서 돈다. 회귀 아님.
+- 무너진 게 아니라 **원칙의 적용 범위가 표현 축까지 안 갔다.** 단일통화 §2 시험("형태 N개=곱셈=동기화 부채")은 *통화*에만 걸리고, `message`는 "그냥 표현용 문자열"로 분류돼 시험을 안 받았다. 그런데 **items를 한 건씩 렌더한 message는 사실상 items의 두 번째 형태** = 정확히 §2가 금하는 것. 사각에서 샜다.
+
+### 10.3 규칙 (확장된 원칙)
+
+> **봉투의 사람용 텍스트 필드(`message` 등)는 항목 수에 대해 O(1)이어야 한다 — 상태/요약/에러 한 줄("30건 찾음"·"결과 없음"·"위치 못 찾음")만 담는다. 항목을 한 건씩 풀어쓴 O(items) 렌더는 금지. 항목을 화면에 그리는 일은 선언형 렌더러(items→card_list/image_grid)의 몫이며, 생산자가 산문으로 재구현하지 않는다.**
+
+핵심: **`message`를 죽이는 게 아니다.** message에는 정당한 O(1) 소비자가 있다 — 죽이면 그것들이 깨진다(아래 §10.4). 죽이는 건 message **안의 O(items) 덤프**뿐. 정당한 O(1) message는 통화의 복제가 아니라 바운드된 상태문이므로 남는다.
+
+### 10.4 ★`message`를 죽이면 깨지는 곳 (소비자 — 보존 대상)
+
+| 소비자 | 위치 | 의존 형태 | message 사라지면 |
+|---|---|---|---|
+| `empty_from: message` 선언형 빈상태 | `data/ibl_nodes.yaml` (performance·book·exhibit·restaurant 등 수십 액션) | items 비면 message를 "결과 없음"으로 표시 | 빈 결과인지 오류인지 구별 불가 (강의존) |
+| 성공 토스트·실패 표시 | `frontend/.../GenericInstrument.tsx:628,778,805,807` | `data.message`(success=false 에러 / 완료 notice) | 액션 피드백 소실 (강의존) |
+| 원격 HTML 에러 | `backend/api_launcher_web.py:1499,756` | `data.message` 폴백 | 폰/원격서 에러 안 보임 |
+
+**파이프(`>>`)·프롬프트·메모리는 message 비의존** — 다음 액션은 items만 소비, 프롬프트 빌더는 items만 추출, 메모리는 봉투 전체 JSON 저장. 따라서 **O(1)로 줄이는 건 전부 안전, 통째 삭제는 위 3곳을 깬다.**
+
+### 10.5 위반 목록 (6곳 확정 — items와 함께 O(items) 산문 방출)
+
+| # | 파일:줄 | 함수 | 산문 | items 동반 | 상한 |
+|---|---|---|---|---|---|
+| 1 | `real-estate/tool_zigbang.py:314-328` | get_zigbang_listings | 건당 meta+URL | Yes | 없음(기본30) |
+| 2 | `location-services/handler.py:854-862` | amadeus_travel_search | 건당 3-4줄 | Yes | 15 (그래도 선형) |
+| 3 | `study/handler.py:34-56` | _search_arxiv | 논문당 6줄 | Yes | 없음(기본5) |
+| 4 | `study/handler.py:197-221` | _nanet_author_find | 행당 1줄 | Yes | 30 |
+| 5 | `study/handler.py:239-255` | _nanet_coauthor | 행당 1줄 | Yes | 30 |
+| 6 | `health-record/handler.py:743-777` | format_search_results | 건당 1줄(message만, items 없음) | **No** | 없음 |
+
+추가 점검 대상(애매 — `text`/`table` 키로 분리돼 덜 위반이나 같은 결): health-record `format_measurements`(672), `symptoms`(354), `medications`(370). slide_ai.py return부 미확인(검토 필요). **무해 확인**: blog_vault·youtube(O(1) 고정문)·browser_session·media_producer·system_essentials(message 미사용).
+
+### 10.6 수정 레시피 (생산자 1곳당)
+
+1. **items는 그대로 둔다**(대부분 이미 native dict 방출 — 상세는 items가 진실 소스).
+2. **비어있지 않은 분기의 `message`를 O(1) 요약으로 교체**: `message = "\n".join(per-item lines)` → `message = f"{label} {n}건"`. 건당 줄·URL은 **삭제**(items에 이미 있음, 렌더러/에이전트가 items로 읽음).
+3. **빈 분기(n==0)의 message는 유지**(이미 O(1) — "…매물이 없습니다". `empty_from`이 이걸 씀).
+4. #6(health-record format_search_results)은 items가 아예 없음 → **items를 native dict로 추가 방출** + message는 O(1)로. (다른 결의 작업 = 미이행 생산자의 items화.)
+
+예(zigbang #1):
+```python
+# before (314-316)
+msg_lines = [f"직방 '{...}' 반경 {radius}m · {cat} {lease_label} — {len(rows)}건:"]
+for r in rows: msg_lines.append(f"- {r['meta']}\n  {r['url']}")
+# after — 첫 줄만(O(1)), 건당 루프 삭제
+message = f"직방 '{matched or region}' 반경 {radius}m · {cat} {lease_label} — {len(rows)}건"
+```
+
+### 10.7 ★강제 장치 (재발 방지 — 변명 없게)
+
+`--check`(정적)는 핸들러 런타임 산문을 못 본다 → **강제는 런타임 불변식으로**, `ibl_health_check.py`(하루 1회, AI 0, 이미 fixture로 `/ibl/execute` probe)에 합류:
+
+> **불변식: `returns: items` 액션의 봉투에서 `items`를 뺀 나머지 직렬화 크기는 항목 수에 대해 O(1)이어야 한다.**
+>
+> 구현(둘 중 하나, 권장은 ⒜):
+> ⒜ **고정 예산(단일 실행)**: fixture로 실행 → `non_items_bytes = len(json.dumps({k:v for k,v in env.items() if k!="items"}))` → `> 2048` 이면 FAIL(위반 필드명 출력). realty 덤프(~30KB)는 즉시 잡힘, 정당한 상태문(~수십 byte)은 통과.
+> ⒝ **스케일 차등(2회 실행)**: limit=N·2N 두 번 → non_items_bytes가 항목수에 비례 증가하면 FAIL. ⒜보다 정밀하나 fixture가 다항목을 줘야 함.
+
++ `new_action_checklist.md`에 한 줄: *"목록을 내는 액션은 `message`에 항목을 풀어쓰지 마라(O(1) 요약만). 항목 표시는 렌더러가 items로 한다 — §10."* (§5 신호 규율 옆.)
+
+이 두 가지(런타임 불변식 + 체크리스트)가 있어야 7번째 생산자가 같은 실수를 해도 self-check가 잡는다. 문서만으론 또 샌다.
+
+### 10.8 작업 순서
+
+1. **강제 장치 먼저**(§10.7 ⒜) — 불변식을 켜면 위반 6곳이 self-check RED로 *자동 열거*된다(목록을 코드가 유지, 사람이 안 함).
+2. 위반 6곳 §10.6 레시피로 수정 → 핸들러 편집이라 `/packages/reload`(직방·study·location·health)로 라이브. radio류 싱글턴 함정 없음(이들은 매 호출 import).
+3. `empty_from`·토스트 회귀 확인(§10.4 3곳) — message가 O(1)로 남아 있으니 통과해야 함. realty empty 분기·culture empty_from 라이브 1건씩 점검.
+4. health-record #6은 items화(별도, 미이행 생산자 롤아웃 §8.2와 합류).

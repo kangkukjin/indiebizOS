@@ -342,20 +342,10 @@ class PromptBuilder:
             if context_notes:
                 consciousness_parts.append(f"# 상황 메모\n{context_notes}")
 
-            # 자기 인식 (의식 에이전트의 메타 판단 — 이 상황에서 나의 능력과 한계)
-            self_awareness = consciousness_output.get("self_awareness", "")
-            if self_awareness:
-                sa_text = f"# 자기 인식\n{self_awareness}"
-                if model_name:
-                    sa_text += f"\n- AI 모델: {model_name}"
-                consciousness_parts.append(sa_text)
-            elif model_name:
+            # self_awareness·world_state 출력 필드 폐지 (2026-06-28). 의식은 task_framing
+            # 으로 문제를 규정하고 self/world 맥락을 그 안에 녹인다. 모델명만 남긴다.
+            if model_name:
                 consciousness_parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
-
-            # 세계 상태 (의식 에이전트가 맥락에 맞게 압축한 world_pulse)
-            world_state = consciousness_output.get("world_state", "")
-            if world_state:
-                consciousness_parts.append(f"# 세계 상태\n{world_state}")
 
             if consciousness_parts:
                 parts.append("\n".join(consciousness_parts))
@@ -372,13 +362,10 @@ class PromptBuilder:
         if resource_list:
             parts.append(resource_list)
 
-        # 4.6 World Pulse (세계 상태 배경 지식 — 대화 시작 시 1회 주입)
-        # 의식 에이전트가 활성이면 world_state로 대체됨 (위에서 주입)
+        # 4.6 World Pulse 직접 주입 폐지 (2026-06-28) — self/world 스냅샷은 이제 의식
+        # 에이전트 입력으로만 흐르고 task_framing 으로 녹여 전달된다. 실행 에이전트
+        # (EXECUTE/Reflex)는 ambient 주입 없이, 필요 시 sense:here/host/world 로 pull.
         if not consciousness_output:
-            world_pulse = self._load_world_pulse()
-            if world_pulse:
-                parts.append(world_pulse)
-            # 의식 에이전트 없을 때도 모델 이름은 주입
             if model_name:
                 parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
 
@@ -569,18 +556,9 @@ def _build_dynamic_context(
         if context_notes:
             parts.append(f"# 상황 메모\n{context_notes}")
 
-        self_awareness = consciousness_output.get("self_awareness", "")
-        if self_awareness:
-            sa_text = f"# 자기 인식\n{self_awareness}"
-            if model_name:
-                sa_text += f"\n- AI 모델: {model_name}"
-            parts.append(sa_text)
-        elif model_name:
+        # self_awareness·world_state 출력 필드 폐지 (2026-06-28). 모델명만 남긴다.
+        if model_name:
             parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
-
-        world_state = consciousness_output.get("world_state", "")
-        if world_state:
-            parts.append(f"# 세계 상태\n{world_state}")
 
         guide_files = consciousness_output.get("guide_files", [])
         for guide in guide_files:
@@ -602,44 +580,59 @@ def _build_dynamic_context(
 
 def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     """의식 경로 '사용자 명령 변형기' — [사용자 원문 명령 + 의식의 보강]을 하나의 '사용자 명령'
-    프레임으로 융합한다.
+    프레임으로 융합하되, 그 사이에 **당위 앵커**를 끼운다.
 
     핵심(사용자 설계): 의식이 더한 것(문제 설정·쓸 수 있는 액션·참고 가이드·충족 기준)을
-    *원문 명령과 구분 안 되게* 같은 프레임 안에 이어 붙여, 실행기가 전부 사용자 명령으로 읽게
-    한다(강한 권위). 원문 명령을 먼저 두고 보강을 잇는다. '이건 명령이다' 선언이나 '정수' 압축은
-    하지 않는다 — 위치·형식이 전부. 무거운 배경(가이드 본문·세계상태 등)은 _build_dynamic_context가
-    turn_context 참고로 따로 둔다.
+    원문 명령에 이어 붙이되, 그 사이에 "— 다음 절차에 따라 수행하라:" 앵커를 *사용자 목소리의
+    문장 연속*으로 끼워, 뒤따르는 보강 전체를 '참고'가 아닌 '명령'으로 재분류한다.
+
+    (설계 반전 이력) 이전엔 '선언 없이 위치·형식만'으로 원문과 보강을 *구분 안 되게* 붙였다 —
+    "모델이 둘을 구분 못 하고 전부 사용자 명령으로 읽는다"는 가정 위였다. 그러나 모델은 짧은
+    구어체 원문과 길고 분석적인 보강을 쉽게 구분해 보강을 '메타 해설'로 격하시켰다. 그래서
+    seam을 부정하지 않고 *무기화*한다 — 명시적 당위 앵커로 "이 아래는 따른다"를 못박는다.
+
+    두 단서: ① 앵커는 출처(의식 에이전트)를 절대 드러내지 않는다 — 드러내면 '기계 제안'으로
+    읽혀 권위가 도로 약해진다(그래서 새 섹션 헤더가 아니라 사용자 발화의 연속). ② 방법 지시
+    (hint)는 액션 목록의 '(이 밖의 액션도 가능)' 허가 어조에서 떼어 별도 명령문 줄('수행 절차:')로
+    올린다 — 의무가 가용성으로 격하되지 않도록. 무거운 배경(가이드 본문·세계상태 등)은
+    _build_dynamic_context가 turn_context 참고로 따로 둔다.
     """
     co = consciousness_output or {}
-    lines = [f"사용자 명령: {(user_message or '').strip()}"]
+
+    # 보강 줄을 먼저 모은다 — 비어있으면 앵커를 끼우지 않는다(허공 매달림 방지).
+    aug = []
 
     task_framing = (co.get("task_framing") or "").strip()
     if task_framing:
-        lines.append(task_framing)
+        aug.append(task_framing)
 
     ibl_focus = co.get("ibl_focus", {}) or {}
-    foc = []
     highlight = ibl_focus.get("highlight_actions") or []
     if highlight:
-        foc.append("쓸 수 있는 IBL 액션: " + ", ".join(highlight) + " (이 밖의 액션도 가능).")
+        # 팔레트가 열려 있다는 건 사실 — '(이 밖의 액션도 가능)'은 *목록*에만 남긴다.
+        aug.append("쓸 수 있는 IBL 액션: " + ", ".join(highlight) + " (이 밖의 액션도 가능).")
     hint = (ibl_focus.get("hint") or "").strip()
     if hint:
-        foc.append(hint)
-    if foc:
-        lines.append(" ".join(foc))
+        # 방법 지시는 허가 어조에서 분리해 명령문 줄로.
+        aug.append(f"수행 절차: {hint}")
 
     guide_files = co.get("guide_files") or []
     if guide_files:
-        lines.append(
+        aug.append(
             "참고할 가이드: " + ", ".join(guide_files)
             + " (위 turn_context에 본문 포함) — 그 지침대로 수행할 것."
         )
 
     achievement_criteria = (co.get("achievement_criteria") or "").strip()
     if achievement_criteria:
-        lines.append(f"충족 기준: {achievement_criteria}")
+        aug.append(f"충족 기준: {achievement_criteria}")
 
-    return "\n".join(lines)
+    user_cmd = (user_message or "").strip()
+    if not aug:
+        return f"사용자 명령: {user_cmd}"
+
+    # 당위 앵커 — 원문 명령에 사용자 목소리로 이어 붙여, 뒤따르는 보강 전체를 명령으로 재분류.
+    return f"사용자 명령: {user_cmd} — 다음 절차에 따라 수행하라:\n" + "\n".join(aug)
 
 
 def build_system_ai_prompt_split(

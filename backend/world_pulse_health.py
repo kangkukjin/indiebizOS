@@ -31,173 +31,40 @@ logger = logging.getLogger(__name__)
 # ============================================================
 
 def generate_guide():
-    """world_pulse.md 가이드 파일 생성/갱신
+    """world_pulse.md 생성 — 현재 위치 + 금주 일정만 (2026-06-28 단순화).
 
-    오늘의 스냅샷 + 최근 추이를 마크다운으로 저장합니다.
-    에이전트가 대화 시작 시 이 파일을 읽으면 세계 맥락을 알 수 있습니다.
+    의식 에이전트 입력 전용. 나머지(경제·날씨·뉴스·시스템상태·proprioception)는
+    정기 수집 폐지 → on-demand 감각(sense:here/host/world)·계기판 live pull 로 이관.
+    위치·일정은 매번 fresh 로 당긴다(스냅샷 의존 없음).
     """
-    from world_pulse import (
-        get_today_pulse, get_pulse_trend, PULSE_GUIDE_PATH,
-        _collect_user_profile, _collect_system_status, _collect_self_state,
-        _load_config,
-    )
-
-    today = get_today_pulse()
-    if not today:
-        return
+    from world_pulse import PULSE_GUIDE_PATH
+    from world_pulse_collectors import _collect_location, _collect_week_schedule
+    from datetime import datetime as _dt
 
     lines = [
-        "# World Pulse — 오늘의 세계와 나 (자동 주입)",
-        f"측정 시각: {today.get('collected_at', '?')[:16]} — 이 시점에 측정된 값",
+        "# World Pulse — 지금의 나와 세계 (자동 주입)",
+        f"측정 시각: {_dt.now().strftime('%Y-%m-%d %H:%M')}",
         "",
     ]
 
-    # ── 사용자 프로필 ──
-    profile = _collect_user_profile()
-    if profile:
-        lines.append("## 사용자")
-        label_map = {"name": "이름", "occupation": "직업", "interests": "관심사", "memo": "메모"}
-        for key, val in profile.items():
-            label = label_map.get(key, key)
-            lines.append(f"- {label}: {val}")
-        # location도 포함
-        config = _load_config()
-        loc = config.get("location", "")
-        if loc:
-            lines.append(f"- 위치: {loc}")
+    # 현재 위치 (폰 [sense:here] 위임 — 폰이 꺼져 있거나 닿지 않으면 생략)
+    loc = _collect_location()
+    if loc:
+        lines.append("## 현재 위치")
+        lines.append(f"- {loc}")
         lines.append("")
 
-    # ── 시스템 상태 ──
-    sys_status = _collect_system_status()
-    if sys_status:
-        lines.append("## 시스템 상태")
-        if "projects" in sys_status:
-            agents_str = f", 에이전트 {sys_status['agents']}개" if sys_status.get("agents") else ""
-            lines.append(f"- 프로젝트 {sys_status['projects']}개{agents_str} 활성")
-        if sys_status.get("recent_topics"):
-            topics = " / ".join(sys_status["recent_topics"])
-            lines.append(f"- 최근 대화: {topics}")
-        if sys_status.get("today_events"):
-            events = ", ".join(sys_status["today_events"])
-            lines.append(f"- 오늘 예정: {events}")
-        else:
-            lines.append("- 오늘 예정: 없음")
-        if "disk_free_gb" in sys_status:
-            lines.append(f"- 저장소 여유: {sys_status['disk_free_gb']}GB")
+    # 금주 일정 (오늘~이번 주 일요일)
+    events = _collect_week_schedule()
+    if events:
+        lines.append("## 금주 일정")
+        for ev in events:
+            lines.append(f"- {ev}")
         lines.append("")
 
-    # ── 시스템 건강 (World Pulse) ──
-    try:
-        self_state = _collect_self_state()
-        services = self_state.get("services", {})
-        if services:
-            lines.append("## 시스템 건강")
-            for svc, alive in services.items():
-                mark = "정상" if alive else "중단"
-                lines.append(f"- {svc}: {mark}")
-            # 액션 건강 — 비정상만 경고
-            sc_summary = self_state.get("self_check_summary", {})
-            if sc_summary:
-                failed = [k for k, v in sc_summary.items() if v.get("status") == "failed"]
-                if failed:
-                    lines.append(f"- ⚠ 비정상 액션 ({len(failed)}개): {', '.join(failed)}")
-
-            # 패턴 분석 결과
-            patterns = analyze_failure_patterns()
-            if patterns:
-                lines.append("")
-                lines.append("## 자가점검 패턴 분석")
-                if patterns.get("chronic_failures"):
-                    lines.append(f"- 만성 실패: {', '.join(patterns['chronic_failures'])}")
-                if patterns.get("degrading"):
-                    for d in patterns["degrading"]:
-                        lines.append(f"- 성공률 하락: {d['action']} ({d['before']}% → {d['after']}%)")
-                if patterns.get("slowdowns"):
-                    for s in patterns["slowdowns"]:
-                        lines.append(f"- 응답 느려짐: {s['action']} ({s['before_ms']}ms → {s['after_ms']}ms)")
-                if patterns.get("recovered"):
-                    lines.append(f"- 복구됨: {', '.join(patterns['recovered'])}")
-            # 나는 누구인가 — 정체성 + 빌릴 수 있는 상대 (실시간 연결상태·액션목록은 제외)
-            cap = self_state.get("capability")
-            if cap and cap.get("body"):
-                lines.append("")
-                lines.append("## 나는 누구인가")
-                lines.append(f"- 나는 지금 **{cap['body']}** 에서 돈다.")
-                if cap.get("identity"):
-                    lines.append(f"- {cap['identity']}")
-                micros = cap.get("micros") or {}
-                esc = micros.get("escape")
-                if esc == "python":
-                    lines.append("- 내 만능 실행 탈출구 = **python**(인-프로세스). 고정 IBL 액션 너머는 "
-                                 "execute_python 으로 직접 해결 — python 이 약한 셸도 subprocess 로 포섭하고 "
-                                 "`from java import jclass` 로 안드로이드 SDK 전체에 닿는다.")
-                elif esc == "shell":
-                    lines.append("- 내 만능 실행 탈출구 = **shell**(run_command). 고정 IBL 액션 너머는 "
-                                 "셸로 python·node 등을 띄워 직접 해결.")
-                if micros.get("local"):
-                    lines.append(f"- 직접 할 수 있는 원시: {', '.join(micros['local'])}.")
-                if micros.get("borrowed"):
-                    lines.append(f"- 내 몸엔 없어 빌려야 하는 원시(필요 시 맥 위임): {', '.join(micros['borrowed'])}.")
-                if cap.get("has_peer"):
-                    lines.append(f"- {cap['peer_name']}의 액션을 빌릴 수 있다 "
-                                 "(내 몸에서 못 하는 건 분산 IBL 이 자동 위임 — 닿지 않으면 실행 시 알림).")
-
-            # Digital Proprioception (body schema)
-            proprio = self_state.get("proprioception", {})
-            if proprio:
-                lines.append("")
-                lines.append("## Digital Proprioception")
-                if "memory_mb" in proprio:
-                    lines.append(f"- 메모리: {proprio['memory_mb']}MB")
-                if "cpu_percent" in proprio:
-                    lines.append(f"- CPU: {proprio['cpu_percent']}%")
-                if "threads" in proprio:
-                    lines.append(f"- 스레드: {proprio['threads']}개")
-                if "active_tasks" in proprio or "pending_tasks" in proprio:
-                    active = proprio.get("active_tasks", 0)
-                    pending = proprio.get("pending_tasks", 0)
-                    lines.append(f"- 태스크: 실행 {active}개 / 대기 {pending}개")
-                if "ibl_executions_today" in proprio:
-                    lines.append(f"- 오늘 IBL 실행: {proprio['ibl_executions_today']}회")
-                lines.append("")
-    except Exception:
-        pass
-
-    # 경제
-    economy = today.get("economy", {})
-    if economy:
-        lines.append("## 경제")
-        label_map = {
-            "kospi": "코스피", "kosdaq": "코스닥",
-            "sp500": "S&P500", "nasdaq": "나스닥",
-            "usd_krw": "원/달러", "gold": "금", "wti": "유가"
-        }
-        for key, data in economy.items():
-            if isinstance(data, dict):
-                price = data.get("price", "?")
-                pct = data.get("change_pct")
-                pct_str = f" ({pct:+.1f}%)" if isinstance(pct, (int, float)) else ""
-                label = label_map.get(key, key)
-                # 실제 데이터 날짜 표시 (수집일과 다를 수 있음)
-                data_date = data.get("data_date", "")
-                date_str = f" [{data_date}]" if data_date else ""
-                lines.append(f"- {label}: {price}{pct_str}{date_str}")
-        lines.append("")
-
-    # 날씨
-    weather = today.get("weather", "")
-    if weather:
-        lines.append(f"## 날씨\n{weather}")
-        lines.append("")
-
-    # 주요 뉴스, 기술 동향, 최근 추이 — 제거됨
-    # 뉴스는 제목만 있고 실질 정보 없음, 기술 동향은 사이트명만, 추이는 경제 숫자 반복.
-    # 필요 시 [sense:search_news]로 직접 조회.
-
-    # 파일 저장
     PULSE_GUIDE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PULSE_GUIDE_PATH.write_text("\n".join(lines), encoding="utf-8")
-    logger.info("[WorldPulse] 가이드 파일 갱신 완료")
+    PULSE_GUIDE_PATH.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    logger.info("[WorldPulse] 가이드 갱신 완료 (위치+금주일정)")
 
     # 진단 리포트도 함께 갱신 (Pulse 주기 편승, AI 비용 0)
     try:

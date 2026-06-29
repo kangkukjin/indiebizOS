@@ -33,7 +33,7 @@ interface RouteMapData {
   origin: { lat: number; lng: number; name: string };
   destination: { lat: number; lng: number; name: string };
   path: [number, number][];
-  summary: { distance_km: number; duration_min: number; toll: number };
+  summary: { distance_km: number; duration_min: number; toll: number; fare?: { toll?: number } };
 }
 interface RouteInfo { summary?: RouteSummary; key_guides?: KeyGuide[] }
 interface RouteResult { summary?: RouteSummary; key_guides?: KeyGuide[]; routes?: RouteInfo[]; map_data?: RouteMapData; message?: string; error?: string }

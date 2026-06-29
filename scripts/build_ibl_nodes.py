@@ -672,6 +672,10 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
 # 액션이 자기 앱 표면(inputs/action 템플릿/view)을 선언하면 원격 런처가 자동 파생.
 # 어휘 명세: docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md. 소비자: api_launcher_web._derive_instruments.
 APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list", "map", "calendar"}
+# 뷰-이벤트 → 액션 바인딩(상호작용을 데이터로): map 프리미티브가 사용자 조작을 액션으로 흘린다.
+#   marker_click=마커 클릭(IBL 템플릿: 페이로드 $id/$name/$lat/$lng/$url · 또는 {stream: true}=마커 url 을 클라이언트 영상 재생, CCTV) · moveend/center_drag=지도 이동·중심 드래그(재조회, $lat/$lng/$radius)
+APP_VIEW_EVENTS = {"marker_click", "moveend", "center_drag"}
+APP_EVENT_VARS = {"lat", "lng", "id", "name", "radius", "url"}  # 이벤트 페이로드가 액션 템플릿에 주입하는 $변수
 APP_INPUT_TYPES = {"text", "select"}
 APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images"}
 APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes",
@@ -736,6 +740,11 @@ def _app_action_templates(app: dict) -> list[str]:
                         if isinstance(tcmp, dict) and isinstance(tcmp.get("action"), str):
                             out.append(tcmp["action"])
                         walk_view(tab.get("view"))
+            on = p.get("on")  # 뷰-이벤트(마커클릭·지도이동)→액션 템플릿
+            if isinstance(on, dict):
+                for v in on.values():
+                    if isinstance(v, str):
+                        out.append(v)
 
     walk_view(app.get("view"))
     return out
@@ -769,6 +778,8 @@ def _block_local_keys(blk: dict) -> set:
                 from_fields(p["add"].get("fields"))
             if p.get("type") == "calendar" and isinstance(p.get("add"), dict):
                 keys.update(("title", "date"))  # 렌더러가 제목 입력 + 선택일 date 를 add 액션에 주입
+            if isinstance(p.get("on"), dict):  # 뷰-이벤트 액션의 $lat/$lng/$id/$radius 등은 이벤트 페이로드가 주입
+                keys.update(APP_EVENT_VARS)
             drill = p.get("item_click")
             if isinstance(drill, dict):
                 from_compose(drill.get("compose"))
@@ -799,6 +810,28 @@ def _check_compose_channels(where: str, cmp) -> list[str]:
             issues.append(f"{where}: compose.channels.{k}(필드명) 필수")
     if ch.get("sendable") is not None and not isinstance(ch.get("sendable"), list):
         issues.append(f"{where}: compose.channels.sendable 은 채널 타입 리스트")
+    return issues
+
+
+def _app_check_filter_block(where: str, blk: dict) -> list[str]:
+    """app.filter 구조 검증 — 정적(items) 또는 동적(from_field) 둘 중 하나.
+    items=재조회 칩([{label,value,default?}], 선택 시 $key 로 액션 재호출).
+    from_field=클라이언트 측 결과-필드 동적 칩(distinct 값, 재조회 없이 items 거름). from=거를 배열 경로(기본 items)."""
+    issues: list[str] = []
+    f = blk.get("filter")
+    if f is None:
+        return issues
+    if not isinstance(f, dict):
+        issues.append(f"{where}: app.filter 는 매핑이어야 함")
+        return issues
+    has_items = isinstance(f.get("items"), list) and bool(f["items"])
+    has_ff = isinstance(f.get("from_field"), str) and bool(f["from_field"])
+    if not has_items and not has_ff:
+        issues.append(f"{where}: app.filter 는 items(정적 칩) 또는 from_field(결과-필드 동적 칩) 필수")
+    if has_items and has_ff:
+        issues.append(f"{where}: app.filter 는 items 와 from_field 중 하나만(정적 vs 동적)")
+    if f.get("from") is not None and not isinstance(f.get("from"), str):
+        issues.append(f"{where}: app.filter.from 은 거를 배열 경로(문자열)")
     return issues
 
 
@@ -854,6 +887,24 @@ def _app_check_view(qualified: str, view, depth: int = 0) -> list[str]:
                 issues.append(f"{where}: editable_list.add 는 action(IBL 템플릿) 필수")
             if p.get("delete_action") is not None and not isinstance(p.get("delete_action"), str):
                 issues.append(f"{where}: editable_list.delete_action 은 IBL 템플릿 문자열")
+        if True in p or False in p:  # ★YAML 1.1 함정: 따옴표 없는 on/off/yes/no 키가 불리언으로 파싱됨
+            issues.append(f"{where}: 불리언 키 발견 — 'on'(또는 off/yes/no) 키는 YAML 불리언으로 해석됨. 따옴표로 감싸세요('on':)")
+        if "on" in p:  # 뷰-이벤트→액션 바인딩 — 현재 map 전용
+            on = p.get("on")
+            if ptype != "map":
+                issues.append(f"{where}: on(뷰-이벤트) 은 map 전용")
+            elif not isinstance(on, dict) or not on:
+                issues.append(f"{where}: on 은 비어있지 않은 매핑(event→IBL 템플릿)")
+            else:
+                for ev, atpl in on.items():
+                    if ev not in APP_VIEW_EVENTS:
+                        issues.append(f"{where}: on 미지의 이벤트 {ev!r} (허용: {sorted(APP_VIEW_EVENTS)})")
+                    # marker_click 은 IBL 템플릿(문자열·재조회) 또는 클라이언트 스트림 재생 {stream: true}(CCTV 영상 등) 둘 중 하나.
+                    if ev == "marker_click" and isinstance(atpl, dict):
+                        if atpl.get("stream") is not True or (set(atpl) - {"stream"}):
+                            issues.append(f"{where}: on.marker_click 객체형은 {{stream: true}} 만 허용")
+                    elif not isinstance(atpl, str) or not atpl:
+                        issues.append(f"{where}: on.{ev} 은 IBL 액션 템플릿 문자열(또는 marker_click 의 {{stream: true}})")
         drill = p.get("item_click")
         if drill is not None:
             if ptype != "card_list":
@@ -981,9 +1032,11 @@ def validate_app_blocks(data: dict) -> list[str]:
                 input_keys: set[str] = set()
                 # 암묵 입력 키: compose($text)/form 필드/editable_list add 필드
                 input_keys |= _block_local_keys(blk)
-                # 필터 칩(filter, 기간·레벨 양용)도 액션 $key 의 출처 — input_keys 에 합류
+                # 정적 필터 칩(filter.items, 기간·레벨 양용)은 액션 $key 의 출처 — input_keys 에 합류.
+                # 동적 필터(filter.from_field)는 클라이언트 측 결과-필드 거르기라 재조회 $key 가 없음 → 합류 안 함.
+                issues.extend(_app_check_filter_block(blabel, blk))
                 _pd = blk.get("filter")
-                if isinstance(_pd, dict):
+                if isinstance(_pd, dict) and not _pd.get("from_field"):
                     input_keys.add(_pd.get("key") or "filter")
                 for j, inp in enumerate(blk.get("inputs") or []):
                     if not isinstance(inp, dict) or not inp.get("key"):

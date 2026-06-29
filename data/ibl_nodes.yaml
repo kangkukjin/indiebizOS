@@ -966,6 +966,9 @@ nodes:
           - type: map
             markers: items
             max: 100
+            # 지도 마커 클릭 = 영상 재생(마커 url 을 HLS 오버레이로). 목록 '▶ 보기'와 같은 스트림, 진입점만 추가.
+            'on':
+              marker_click: { stream: true }
           - type: metric
             label: 검색 결과
             big: '{count}개'
@@ -996,10 +999,18 @@ nodes:
           - { key: lng, type: text, label: 경도, default: '127.0276' }
           auto_run: true
           action: '[sense:commercial]{lat: "$lat", lng: "$lng"}'
+          # 업종 동적 필터 — 결과 items 의 category distinct 값으로 칩 생성, 선택 시 클라이언트 측 거르기(재조회 아님).
+          # bespeke CommercialInstrument 의 cats=Array.from(new Set(...)) 칩을 선언으로 승격.
+          filter:
+            from_field: category
           view:
           - type: map
             markers: items
-            max: 200
+            max: 1500
+            # ★YAML 1.1 은 on/off/yes/no 를 불리언으로 파싱 → 키를 반드시 따옴표로('on'). 안 그러면 True 키가 돼 조용히 무시됨.
+            'on':
+              # 지도를 끌면(pan/zoom) 그 viewport 중심·반경으로 재조회 — lat/lng 텍스트 입력 대신 지도 자체가 입력.
+              moveend: '[sense:commercial]{lat: "$lat", lng: "$lng", radius: "$radius"}'
           - type: metric
             label: 주변 점포 수
             big: '{total_count}개'
@@ -1010,6 +1021,21 @@ nodes:
               title: '{name}'
               lines:
               - '{category} · {address}'
+            # 가게 클릭 → 카카오·네이버 맛집 검색(평점·전화·place 링크). bespoke 의 가게 상세 모달을 드릴로.
+            item_click:
+              action: '[sense:restaurant]{query: "{name}", x: {lng}, y: {lat}, radius: 300}'
+              view:
+              - type: card_list
+                from: items
+                empty: 카카오·네이버에서 일치하는 가게를 찾지 못했습니다 (소상공인 등록 정보만 있음).
+                card:
+                  title: '{name}'
+                  lines:
+                  - '{category}{phone|opt:  ·  ☎ ,}'
+                  - '📍 {address}'
+                  link:
+                    href: '{url}'
+                    label: 카카오맵·상세 보기 →
       search_ddg:
         returns: items
         description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는

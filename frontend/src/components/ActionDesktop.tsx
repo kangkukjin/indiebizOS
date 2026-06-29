@@ -8,7 +8,6 @@
  * 이 탭은 '내가 직접 다이얼을 도는' 수동 운전이다. 같은 도메인의 두 얼굴.
  */
 import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
-import { CommercialInstrument } from './CommercialInstrument';
 import { DirectionsInstrument } from './DirectionsInstrument';
 import { CalendarInstrument } from './CalendarInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
@@ -38,7 +37,7 @@ const STATIC_DOMAINS: Domain[] = [
     id: 'realestate', icon: '🏢', label: '부동산',
     instruments: [
       { id: 'realty', icon: '🏢', label: '실거래가' },  // el 은 manifest app: 블록(GenericInstrument)으로 useMemo 에서 주입 — bespoke 은퇴
-      { id: 'commercial', icon: '🏪', label: '상권', el: <CommercialInstrument /> },
+      { id: 'commercial', icon: '🏪', label: '상권' },  // el 은 manifest 주입 — 동적 업종필터+가게 상세드릴 선언화로 bespoke 은퇴
       { id: 'listing', icon: '🔑', label: '매물', soon: true },
     ],
   },
@@ -115,15 +114,17 @@ export function ActionDesktop() {
     // STATIC_DOMAINS가 이미 품은 계기(예: 부동산 안의 realty)는 매니페스트로 덮어쓰지 않는다
     const shown = manifest.filter((i) => !STATIC_INSTRUMENT_IDS.has(i.id));
     shown.forEach((inst) => byId.set(inst.id, manifestToDomain(inst)));
-    // realty: 부동산 도메인 안에서 선언형(manifest app: 블록 → GenericInstrument)으로 렌더한다.
-    // bespoke RealtyInstrument 은퇴 → 맥·폰·원격이 단일 선언을 공유(드리프트 근절).
-    const realtyInst = manifest.find((i) => i.id === 'realty');
+    // realty·commercial: 부동산 도메인 안에서 선언형(manifest app: 블록 → GenericInstrument)으로 렌더한다.
+    // bespoke RealtyInstrument·CommercialInstrument 은퇴 → 맥·폰·원격이 단일 선언을 공유(드리프트 근절).
     const realestate = byId.get('realestate');
-    if (realtyInst && realestate) {
+    if (realestate) {
+      const manById = new Map(manifest.map((i) => [i.id, i]));
       byId.set('realestate', {
         ...realestate,
-        instruments: realestate.instruments.map((ins) =>
-          ins.id === 'realty' ? { ...ins, el: <GenericInstrument instrument={realtyInst} /> } : ins),
+        instruments: realestate.instruments.map((ins) => {
+          const inst = manById.get(ins.id);
+          return inst ? { ...ins, el: <GenericInstrument instrument={inst} /> } : ins;
+        }),
       });
     }
     const ordered = HOME_ORDER.map((id) => byId.get(id)).filter((d): d is Domain => !!d);

@@ -476,6 +476,25 @@ input,textarea,select{ font-family:inherit; }
 .btn2{ padding:11px 16px; border:1px solid var(--line); background:var(--bg3); color:var(--txt); border-radius:10px; font-weight:600; font-size:14px; }
 .btn2:hover{ border-color:var(--acc); }
 .btn2.danger{ color:#e5484d; padding:11px 12px; }
+/* 계기판 헤더 + IBL이란 설명 */
+.dash-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+.dash-titles{ min-width:0; }
+.dash-title{ font-size:17px; font-weight:700; color:var(--txt); }
+.dash-sub{ font-size:11px; color:var(--dim); margin-top:2px; }
+.dash-btns{ display:flex; gap:7px; flex-shrink:0; }
+.dash-btn{ padding:7px 13px; border:1px solid var(--line); background:var(--bg2); color:var(--dim); border-radius:999px; font-size:12.5px; font-weight:600; transition:all .15s; }
+.dash-btn:hover{ border-color:var(--acc); color:var(--txt); }
+.dash-btn.on{ background:var(--acc); border-color:var(--acc); color:#fff; }
+.about{ background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:15px 16px; margin-bottom:14px; font-size:13px; line-height:1.6; color:var(--txt); }
+.about p{ margin:0 0 8px; }
+.about b{ color:#fff; font-weight:700; }
+.about .about-h{ font-size:15px; font-weight:700; color:var(--acc2); margin-bottom:8px; }
+.about .about-sec{ font-size:12.5px; font-weight:700; color:var(--txt); margin:14px 0 6px; padding-top:11px; border-top:1px solid var(--line); }
+.about ul{ margin:6px 0 8px; padding-left:18px; }
+.about li{ margin-bottom:3px; }
+.about code{ font-family:'SF Mono',Menlo,monospace; font-size:11.5px; background:var(--bg); color:#a5d6ff; padding:1px 5px; border-radius:5px; }
+.about .about-dim{ color:var(--dim); font-size:12px; }
+.about .about-code{ font-family:'SF Mono',Menlo,monospace; font-size:12px; background:var(--bg); color:#a5d6ff; border:1px solid var(--line); border-radius:8px; padding:9px 11px; margin:6px 0 4px; word-break:break-all; }
 .btn2.danger:hover{ border-color:#e5484d; }
 .ap-newbtn{ width:100%; padding:13px; margin:2px 0 6px; border:1px dashed var(--line); background:transparent; color:var(--acc); border-radius:11px; font-weight:600; font-size:14px; cursor:pointer; }
 .ap-newbtn:hover{ border-color:var(--acc); background:var(--bg2); }
@@ -596,7 +615,7 @@ a{ color:var(--info); }
     <button class="surf-tab on" id="t-autopilot" onclick="setSurface('autopilot')">
       <span class="em">🛰️</span><span>자율주행</span><span class="hint">속도·표현력</span></button>
     <button class="surf-tab" id="t-manual" onclick="setSurface('manual')">
-      <span class="em">⚙️</span><span>수동</span><span class="hint">표현력·주권</span></button>
+      <span class="em">⚙️</span><span>계기판</span><span class="hint">표현력·주권</span></button>
     <button class="surf-tab" id="t-app" onclick="setSurface('app')">
       <span class="em">📱</span><span>앱</span><span class="hint">속도·주권</span></button>
   </div>
@@ -625,9 +644,48 @@ a{ color:var(--info); }
     </div>
   </div>
 
-  <!-- 수동 -->
+  <!-- 계기판 -->
   <div class="panel" id="p-manual">
     <div class="wrap">
+      <!-- 계기판 헤더 — IBL 사전 / IBL이란? -->
+      <div class="dash-head">
+        <div class="dash-titles">
+          <div class="dash-title">계기판</div>
+          <div class="dash-sub">자연어를 IBL로 번역·검수해 실행합니다</div>
+        </div>
+        <div class="dash-btns">
+          <button class="dash-btn" id="btnDict" onclick="togglePalette()">📖 IBL 사전</button>
+          <button class="dash-btn" id="btnAbout" onclick="toggleAbout()">❔ IBL이란?</button>
+        </div>
+      </div>
+      <!-- IBL이란? 설명 -->
+      <div id="mAbout" class="about" style="display:none">
+        <div class="about-h">IBL (IndieBiz Logic)</div>
+        <p>indiebizOS의 <b>신경계 역할을 하는 언어</b>. 세 가지로 이루어집니다 — <b>어휘</b>(조합 가능한 액션) · <b>문법</b>(쓰고 잇는 규칙) · <b>통화</b>(흐르는 데이터).</p>
+        <div class="about-sec">어휘 — 무엇을 할 수 있나</div>
+        <p>액션 하나가 IBL이 할 수 있는 일 하나. 예: <code>[sense:weather]</code>. 대상에 따라 <b>5개 노드</b>로 나뉩니다.</p>
+        <ul>
+          <li><code>sense</code> 감각 — 바깥 정보 수집·검색 (날씨·주가·뉴스·웹)</li>
+          <li><code>self</code> 자기 — 내 기억·파일·설정·일정</li>
+          <li><code>limbs</code> 손발 — 기기·도구 조작 (브라우저·화면·음악·폰)</li>
+          <li><code>others</code> 관계 — 이웃·위임·메시징</li>
+          <li><code>engines</code> 엔진 — 콘텐츠 생성·변환 (문서·슬라이드·차트)</li>
+        </ul>
+        <p class="about-dim">액션은 셋 중 하나를 합니다 — <b>생성</b>(통화를 낸다) · <b>변환</b>(통화를 바꾼다) · <b>행동</b>(세상에 작용).</p>
+        <div class="about-sec">문법 — 어떻게 쓰고 잇나</div>
+        <div class="about-code">[node:action]{params}</div>
+        <ul>
+          <li>값은 <code>{key: 값}</code>. 예: <code>[sense:weather]{city:"수원"}</code></li>
+          <li>한 액션 안의 변형은 <code>op</code> 로: <code>{op:"query"}</code></li>
+          <li>잇기 — <code>&gt;&gt;</code> 순차(앞 결과를 뒤로) · <code>&amp;</code> 병렬 · <code>??</code> 폴백</li>
+        </ul>
+        <div class="about-sec">통화 — 무엇이 흐르나</div>
+        <p>통화는 단 하나, <b>items</b> — 열린 항목들의 목록. 한 액션의 결과가 다음으로 <code>&gt;&gt;</code> 흐릅니다. 이게 IBL을 낱말이 아니라 <b>문장</b>으로 만듭니다.</p>
+        <p class="about-dim"><b>변환자</b>(통화를 받아 통화를 냄): <code>filter · sort · take · select · dedup · groupby · join · union · merge</code></p>
+        <div class="about-code">[sense:realty]{region:"강남구"} &gt;&gt; sort &gt;&gt; take{n:3}</div>
+      </div>
+      <!-- IBL 사전(액션 팔레트) -->
+      <div id="palette" class="palette" style="display:none"></div>
       <!-- 다른 몸(피어) 연결상태 — 폰이면 맥, 맥-원격이면 폰 -->
       <div id="peerStatus" style="display:none"></div>
       <div class="step">
@@ -636,8 +694,6 @@ a{ color:var(--info); }
           <input class="field" id="mIntent" placeholder='예: 서울 날씨 알려줘 / 강남구 아파트 실거래가' onkeydown="if(event.key==='Enter')mTranslate()">
           <button class="go" id="mTransBtn" onclick="mTranslate()">번역</button>
         </div>
-        <button class="linkbtn" onclick="togglePalette()">＋ 둘러보기 (액션 팔레트)</button>
-        <div id="palette" class="palette" style="display:none"></div>
       </div>
       <div id="mAfterTranslate" style="display:none">
         <div class="step">
@@ -748,7 +804,7 @@ function renderPeer(d){
   const dot = online ? '#10b981' : '#d6d3d1';
   el.innerHTML =
     '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+dot+'"></span>'+
-    '<span style="color:'+(online?'#44403c':'#a8a29e')+';margin-left:8px">📱 '+esc(name)+'</span>'+
+    '<span style="color:'+(online?'#44403c':'#a8a29e')+';margin-left:8px">'+((d.peer_icon||'📱'))+' '+esc(name)+'</span>'+
     '<span style="color:'+(online?'#059669':'#a8a29e')+';margin-left:6px">· '+status+'</span>';
   el.style.cssText='display:flex;align-items:center;font-size:12px;padding:8px 2px;margin-bottom:8px';
 }
@@ -1136,10 +1192,21 @@ async function mDistill(){
 }
 /* 둘러보기 팔레트 */
 let paletteLoaded=false;
+function closeAbout(){ const a=document.getElementById('mAbout'); if(a) a.style.display='none'; const b=document.getElementById('btnAbout'); if(b) b.classList.remove('on'); }
+function closePalette(){ const p=document.getElementById('palette'); if(p) p.style.display='none'; const b=document.getElementById('btnDict'); if(b) b.classList.remove('on'); }
 async function togglePalette(){
   const p=document.getElementById('palette');
-  if(p.style.display==='none'){ p.style.display='block'; if(!paletteLoaded) await loadPalette(); }
-  else p.style.display='none';
+  const open = p.style.display==='none';
+  closeAbout();
+  if(open){ p.style.display='block'; document.getElementById('btnDict').classList.add('on'); if(!paletteLoaded) await loadPalette(); }
+  else closePalette();
+}
+function toggleAbout(){
+  const a=document.getElementById('mAbout');
+  const open = a.style.display==='none';
+  closePalette();
+  a.style.display = open?'block':'none';
+  document.getElementById('btnAbout').classList.toggle('on', open);
 }
 async function loadPalette(){
   const p=document.getElementById('palette'); p.innerHTML='<div class="center"><div class="spin"></div></div>';
@@ -1228,6 +1295,7 @@ function setMode(i){
   CUR.mode=mode; VIEW_CTX=null; SPLIT=false; LIST=null;
   if(inst.modes) modes.forEach((m,j)=>{ const t=document.getElementById('modeTab'+j); if(t)t.classList.toggle('on',j===i); });
   CUR.optCache={};
+  CUR.catFilter=null;  // 동적 필터(from_field) 선택값 — 모드 진입 시 초기화
   CUR.filterVal=(mode.filter&&mode.filter.items)?((mode.filter.items.find(x=>x.default)||mode.filter.items[0]||{}).value):null;
   let h='';
   if(mode.note) h+='<div class="note">'+esc(mode.note)+'</div>';
@@ -1432,6 +1500,39 @@ function renderView(view,data){
   if(data&&data.success===false) return '<p class="muted">'+esc(data.message||'실패')+'</p>';
   return (view||[]).map((p,vi)=>renderPrim(p,vi,data)).join('');
 }
+/* ----- 동적 필터(filter.from_field): 결과-필드 distinct 칩 + 클라이언트 측 거르기(재조회 없음) ----- */
+function dynFilterOf(mode){ return (mode&&mode.filter&&mode.filter.from_field)?mode.filter:null; }
+function applyCatFilter(mode,data){  /* CUR.catFilter 적용된 데이터(map 마커·card_list 동시 거름) */
+  const f=dynFilterOf(mode); if(!f||CUR.catFilter==null||!data) return data;
+  const from=f.from||'items';
+  const arr=viewList(data,from).filter(it=>String(jget(it,f.from_field))===String(CUR.catFilter));
+  const nd={}; for(const k in data) nd[k]=data[k]; nd[from]=arr; return nd;
+}
+function renderDynFilter(mode,data){
+  const f=dynFilterOf(mode); if(!f||!data) return '';
+  const from=f.from||'items'; const seen={}; const cats=[];
+  viewList(data,from).forEach(it=>{ const v=jget(it,f.from_field); if(v&&!seen[v]){ seen[v]=1; cats.push(String(v)); } });
+  if(!cats.length) return '';
+  // 칩 값은 data-c 속성에 담고(esc), 클릭은 그 속성을 읽는다 — onclick 인라인 따옴표 이스케이프 회피.
+  let h='<div class="filters" style="margin-bottom:10px">';
+  h+='<button class="fchip'+(CUR.catFilter==null?' on':'')+'" onclick="setCatFilter(null)">전체</button>';
+  h+=cats.slice(0,12).map(c=>'<button class="fchip'+(String(CUR.catFilter)===String(c)?' on':'')
+    +'" data-c="'+esc(c)+'" onclick="setCatFilter(this.getAttribute(\\'data-c\\'))">'+esc(c)+'</button>').join('');
+  return h+'</div>';
+}
+/* 비분할 모드 본문 = 동적필터 칩 + (필터 적용된) 뷰 + 작성바. runMode/mapViewEvent/setCatFilter 공유. */
+function renderModeBody(mode,data){
+  return renderDynFilter(mode,data)+renderView(mode.view,applyCatFilter(mode,data))+renderComposeBar(mode.compose);
+}
+function setCatFilter(v){
+  CUR.catFilter=v;
+  if(!VIEW_CTX||VIEW_CTX.refresh!=='mode') return;
+  // 인터랙티브 지도 viewport 보존 — 재렌더가 지도를 재생성하므로(데스크탑은 map 유지라 불필요)
+  for(const k in _LMAPS){ const m=_LMAPS[k];
+    try{ if(m&&m.getContainer&&document.body.contains(m.getContainer())) _mapKeepView={c:m.getCenter(),z:m.getZoom()}; }catch(e){} }
+  const out=document.getElementById('instOut'); if(!out) return;
+  out.innerHTML=renderModeBody(CUR.mode,VIEW_CTX.data); initMaps();
+}
 function trendColor(p,data){ if(!p.trend) return null; return (Number(jget(data,p.trend))||0)>=0?'var(--up)':'var(--down)'; }
 function emptyMsg(p,data){
   const m=(p.empty_from?jget(data,p.empty_from):null)||p.empty||'결과가 없습니다';
@@ -1441,6 +1542,22 @@ function emptyMsg(p,data){
    봉투: route_map{origin,destination,path:[[lat,lng]],summary} | location_map{center,markers:[{name,lat,lng}]}.
    spec: {type:'map', from:'map_data'(봉투 위치), markers:'cctvs'(추가 마커, 옵션)} */
 var _MAP_QUEUE={}, _mapSeq=0, _LMAPS={};
+// 인터랙티브 지도(on:) — _mapProg=프로그래매틱 이동(fitBounds/setView) 가드(재조회 피드백 루프 차단),
+// _mapKeepView=재조회 재렌더 너머 viewport 보존(데스크탑 didFit 가드의 원격판).
+var _mapProg=false, _mapKeepView=null;
+/* 뷰-이벤트(map moveend/marker_click) → 액션 재조회 후 현재 모드 view 재렌더. viewport 는 _mapKeepView 로 보존. */
+async function mapViewEvent(tpl,payload){
+  if(!tpl||!VIEW_CTX) return;
+  const vals=Object.assign({},gatherInputs(),payload);
+  let d; try{ d=await ibl(buildAction(tpl,vals)); }catch(e){ return; }
+  if(!d||d.error||d.success===false) return;
+  VIEW_CTX.data=d;
+  const out=document.getElementById('instOut'); if(!out) return;
+  // 모드 뷰면 동적필터 재적용(새 결과 → catFilter 초기화), 드릴 뷰면 그대로.
+  if(VIEW_CTX.refresh==='mode'){ CUR.catFilter=null; out.innerHTML=renderModeBody(CUR.mode,d); }
+  else out.innerHTML=renderView(VIEW_CTX.view,d)+renderComposeBar(VIEW_CTX.compose);
+  initMaps();
+}
 /* 지도가 세로 스와이프를 먹어 페이지 스크롤을 막는 문제 해결:
    기본은 dragging(한 손가락 패닝) 끔 → 한 손가락 스와이프는 페이지 스크롤로 통과.
    핀치 줌(touchZoom)은 그대로(두 손가락이라 스크롤과 충돌 없음). 패닝이 필요하면 토글로 켠다. */
@@ -1451,6 +1568,10 @@ function toggleMapDrag(id,btn){
 }
 function initMaps(){
   if(typeof L==='undefined') return;
+  // 재렌더로 DOM 에서 분리된 옛 지도 정리 — 누수 + 분리된 지도의 moveend 핸들러가 전역 가드 간섭하는 것 방지.
+  for(const k in _LMAPS){ const mp=_LMAPS[k];
+    try{ if(!mp||!mp.getContainer||!document.body.contains(mp.getContainer())){ if(mp&&mp.remove) mp.remove(); delete _LMAPS[k]; } }
+    catch(e){ delete _LMAPS[k]; } }
   for(const id in _MAP_QUEUE){
     const el=document.getElementById(id); if(!el||el._inited) continue;
     el._inited=true; const spec=_MAP_QUEUE[id]; delete _MAP_QUEUE[id];
@@ -1466,15 +1587,38 @@ function initMaps(){
         if(md.destination){ L.marker([md.destination.lat,md.destination.lng]).addTo(map).bindPopup('도착 · '+esc(md.destination.name||'')); B.push([md.destination.lat,md.destination.lng]); }
       }
       (md.markers||[]).forEach(m=>{ if(m.lat==null||m.lng==null) return; L.marker([m.lat,m.lng]).addTo(map).bindPopup(esc(m.name||'')); B.push([m.lat,m.lng]); });
+      // marker_click: IBL 템플릿(문자열·재조회) | {stream:true}(마커 url 영상 재생, IBL 없음·_mapKeepView 안 건드림) | 없음(팝업+▶영상버튼).
+      const clickSpec=spec.on&&spec.on.marker_click;
+      const clickStream=clickSpec&&typeof clickSpec==='object'&&clickSpec.stream;
+      const clickTpl=(typeof clickSpec==='string')?clickSpec:null;
       (spec.markers||[]).forEach(m=>{ if(m.lat==null||m.lng==null) return;
-        const mk=L.marker([m.lat,m.lng]).addTo(map); const nm=m.name||'마커';
-        let btn='';
-        if(m.url){ const i=_streamUrls.push(m.url)-1; btn='<br><button class="go" style="margin-top:6px;padding:4px 12px" onclick="playStream('+i+')">▶ 영상</button>'; }
-        mk.bindPopup('<b>'+esc(nm)+'</b>'+btn);
+        const mk=L.marker([m.lat,m.lng]).addTo(map); const nm=m.name||m.title||'마커';
+        if(clickStream){
+          if(m.url){ const i=_streamUrls.push(m.url)-1; mk.on('click',()=>playStream(i)); }
+          else mk.bindPopup('<b>'+esc(nm)+'</b>');
+        } else if(clickTpl){
+          mk.on('click',()=>{ _mapKeepView={c:map.getCenter(),z:map.getZoom()};
+            mapViewEvent(clickTpl,{id:String(m.id==null?'':m.id),name:String(nm),lat:String(m.lat),lng:String(m.lng),url:String(m.url==null?'':m.url)}); });
+        } else {
+          let btn='';
+          if(m.url){ const i=_streamUrls.push(m.url)-1; btn='<br><button class="go" style="margin-top:6px;padding:4px 12px" onclick="playStream('+i+')">▶ 영상</button>'; }
+          mk.bindPopup('<b>'+esc(nm)+'</b>'+btn);
+        }
         B.push([m.lat,m.lng]); });
-      if(B.length) map.fitBounds(B,{padding:[28,28],maxZoom:15});
-      else if(md.center&&md.center.lat!=null) map.setView([md.center.lat,md.center.lng],13);
+      // 인터랙티브(on:)면 viewport 보존(첫 로드만 fit)·재조회 피드백 가드. 정적이면 매번 fit(기존 동작).
+      if(spec.on&&_mapKeepView){ _mapProg=true; map.setView(_mapKeepView.c,_mapKeepView.z); _mapKeepView=null; }
+      else if(B.length){ if(spec.on) _mapProg=true; map.fitBounds(B,{padding:[28,28],maxZoom:15}); }
+      else if(md.center&&md.center.lat!=null){ if(spec.on) _mapProg=true; map.setView([md.center.lat,md.center.lng],13); }
       else map.setView([37.4979,127.0276],11);
+      if(spec.on){
+        const moveTpl=spec.on.moveend||spec.on.center_drag;
+        if(moveTpl) map.on('moveend',()=>{ if(_mapProg){ _mapProg=false; return; } // 프로그래매틱 이동 무시
+          if(map._reqT) clearTimeout(map._reqT);
+          map._reqT=setTimeout(()=>{ const c=map.getCenter(); _mapKeepView={c:c,z:map.getZoom()};
+            const r=Math.round(map.distance(c,map.getBounds().getNorthEast()));
+            mapViewEvent(moveTpl,{lat:c.lat.toFixed(6),lng:c.lng.toFixed(6),radius:String(r)}); },600); });
+        setTimeout(()=>{ _mapProg=false; },500); // fit 이 moveend 안 내도 가드 해제(백업)
+      }
       setTimeout(()=>map.invalidateSize(),60);
     }catch(e){ el.innerHTML='<p class="muted">지도 로드 실패</p>'; }
   }
@@ -1534,7 +1678,7 @@ function renderPrim(p,vi,data){
     let mk=p.markers?viewList(data,p.markers):[];
     if(p.max&&mk.length>p.max) mk=mk.slice(0,p.max);  // 마커 폭주 방지(상권 등 수천건)
     const id='lmap_'+(_mapSeq++);
-    _MAP_QUEUE[id]={md:md,markers:mk};
+    _MAP_QUEUE[id]={md:md,markers:mk,on:p.on||null};
     return '<div style="position:relative;margin-bottom:10px">'
       +'<div id="'+id+'" class="lmap" style="height:320px;border-radius:12px;overflow:hidden;background:var(--bg3)"></div>'
       +'<button class="lmaptoggle" onclick="toggleMapDrag(\\''+id+'\\',this)">🔓 지도 이동</button></div>';
@@ -1696,8 +1840,8 @@ async function runMode(){
         +'<div class="mddetail" id="mdDetail"><div class="mdph">← 목록에서 대화를 선택하세요</div></div></div>';
       initMaps();
     } else {
-      LIST=null; VIEW_CTX={view:mode.view,data:d,compose:mode.compose,refresh:'mode'};
-      out.innerHTML=renderView(mode.view,d)+renderComposeBar(mode.compose);
+      LIST=null; VIEW_CTX={view:mode.view,data:d,compose:mode.compose,refresh:'mode'}; CUR.catFilter=null;
+      out.innerHTML=renderModeBody(mode,d);
       initMaps();
     }
     // 폰: 생성된 HTML(신문 등)을 조회 직후 자동으로 띄운다(별도 '띄우기' 탭 불필요).
@@ -1883,7 +2027,9 @@ async function rowDrill(vi,ri){
   // split이면 리스트(LIST)에서 행을 찾아 상세 패널(#mdDetail)로, 아니면 현재 view(VIEW_CTX)에서 instOut으로.
   const src = SPLIT ? LIST : VIEW_CTX; if(!src) return;
   const p=(src.view||[])[vi]; if(!p||!p.item_click) return;
-  const item=viewList(src.data,p.from)[ri]; if(item==null) return;
+  // 동적 카테고리 필터가 활성이면 카드가 필터된 배열로 렌더되므로 ri 도 그 기준 → 같은 필터 적용 후 인덱싱(비분할만; split=master_detail 은 동적필터 없음).
+  const drillData = SPLIT ? src.data : applyCatFilter(CUR.mode, src.data);
+  const item=viewList(drillData,p.from)[ri]; if(item==null) return;
   const dc=p.item_click;
   const detail = SPLIT ? document.getElementById('mdDetail') : document.getElementById('instOut');
   detail.innerHTML='<div class="center"><div class="spin"></div></div>';

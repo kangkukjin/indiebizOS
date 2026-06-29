@@ -26,6 +26,9 @@ from runtime_utils import get_base_path
 CADENCE_HOURS = 24      # DB당 정리 최소 간격
 MIN_ROWS_FOR_CLUSTER = 8   # 이 미만이면 클러스터 병합 스킵 (가지치기만)
 MAX_CLUSTERS_PER_DB = 12   # 한 사이클에서 LLM 병합할 클러스터 상한 (비용 가드)
+BOCHUNG_COMPACT_MIN = 4    # [보충] 줄이 이 이상인 단일 레코드 = 압축 후보(자석 비대)
+COMPACT_LEN_FLOOR = 800    # 또는 content 길이가 이 이상이면 후보
+MAX_COMPACT_PER_DB = 8     # 한 사이클 단일레코드 압축 LLM 호출 상한 (비용 가드)
 
 
 def _memory_db():
@@ -132,16 +135,65 @@ JSON으로만 응답:
     return out
 
 
+def _compact_record_llm(item: Dict, today: str) -> Optional[Dict]:
+    """[보충]으로 비대해진 *단일* 레코드를 경량 AI로 간결 재작성.
+
+    근접중복 '병합'(별개 레코드 2+)과 달리, 이건 *한 레코드*가 증류 UPDATE 로 [보충] 누적돼
+    부푼 것을 푼다 — 자주 회상돼 used_at 최신이라 LRU 가지치기에도 안 걸리는 '회상 자석'을
+    줄이는 사각지대 패스. 구별되는 사실은 보존하고 중복·옛 정보만 버린다.
+    반환 {content, keywords} 또는 None(실패/압축 효과 없음 → 스킵)."""
+    from consciousness_agent import lightweight_ai_call
+
+    content = item.get("content", "") or ""
+    prompt = f"""아래는 같은 주제로 여러 번 [보충]되며 비대해진 하나의 기억이다. 오늘 날짜는 {today}.
+이를 *간결한 하나의 기억*으로 다시 써라.
+- 서로 구별되는 사실은 모두 보존한다(정보 손실 금지).
+- 중복·이미 더 최신 정보로 대체된 내용만 버린다.
+- "[보충]" 표식은 없애고 자연스러운 문장으로 합쳐라.
+- "어제"·"다음 주" 같은 상대 시간은 오늘({today}) 기준 절대 날짜로 바꿔라.
+- keywords 는 핵심만 추려 새로 만든다(나열 과다 금지).
+
+기억:
+{content}
+
+JSON으로만 응답: {{"content": "<압축본>", "keywords": "k1,k2,..."}}"""
+    resp = lightweight_ai_call(
+        prompt=prompt,
+        system_prompt="기억 압축기. 구별되는 사실은 보존하고 중복만 제거. JSON으로만 응답.",
+    )
+    if not resp:
+        return None
+    cleaned = resp.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        cleaned = cleaned.strip()
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    new_content = (data.get("content") or "").strip()
+    new_keywords = (data.get("keywords") or "").strip()
+    # 안전: 비었거나 압축 효과 없으면(원본 이상) 스킵 — 정보손실/무의미 갱신 방지
+    if not new_content or len(new_content) >= len(content):
+        return None
+    return {"content": new_content, "keywords": new_keywords}
+
+
 def consolidate_one(db_path: str, force: bool = False) -> Dict:
-    """단일 DB 정리 — 카테고리 정규화 → 근접중복 병합 → LRU 가지치기."""
+    """단일 DB 정리 — 카테고리 정규화 → 근접중복 병합 → [보충] 비대 압축 → LRU 가지치기."""
     mdb = _memory_db()
     if not _is_dirty(db_path, force):
         return {"db": db_path, "skipped": "cadence"}
 
     total = mdb.count_at(db_path)
+    today = datetime.now().date().isoformat()
     stats = {"db": os.path.basename(db_path), "rows": total,
              "normalized": 0, "clusters": 0, "merged": 0,
-             "dropped": 0, "pruned": 0}
+             "dropped": 0, "compacted": 0, "pruned": 0}
 
     # 1) 카테고리 정규화 (빈칸 제외, 쓰레기 값만)
     stats["normalized"] = mdb.normalize_all_categories(db_path)
@@ -150,7 +202,6 @@ def consolidate_one(db_path: str, force: bool = False) -> Dict:
     if total >= MIN_ROWS_FOR_CLUSTER:
         clusters = mdb.find_duplicate_clusters(db_path)
         stats["clusters"] = len(clusters)
-        today = datetime.now().date().isoformat()
         for cluster in clusters[:MAX_CLUSTERS_PER_DB]:
             items = [mdb.get_by_id(db_path, cid) for cid in cluster]
             items = [it for it in items if it]
@@ -168,6 +219,27 @@ def consolidate_one(db_path: str, force: bool = False) -> Dict:
                 )
                 stats["merged"] += 1
                 stats["dropped"] += len(mg["drop_ids"])
+
+    # 2.5) [보충] 비대 단일 레코드 압축 (클러스터 병합 사각지대 = '회상 자석')
+    for rec in mdb.list_all(db_path):
+        if stats["compacted"] >= MAX_COMPACT_PER_DB:
+            break
+        content = rec.get("content") or ""
+        if content.count("[보충]") < BOCHUNG_COMPACT_MIN and len(content) < COMPACT_LEN_FLOOR:
+            continue
+        try:
+            new = _compact_record_llm(rec, today)
+        except Exception as e:
+            print(f"[정리] 압축 판정 실패 (스킵): {e}")
+            continue
+        if not new:
+            continue
+        # apply_merge 를 drop_ids=[] 로 = 단일 레코드 content/keywords 갱신 + 재임베딩.
+        # used_at 미변경이라 자석은 유지하되 *크기만* 줄인다(키워드 표면·내용 압축).
+        mdb.apply_merge(db_path, rec["id"], new["content"],
+                        new["keywords"] or (rec.get("keywords") or ""),
+                        rec.get("category") or "", [])
+        stats["compacted"] += 1
 
     # 3) 상한 초과 시 LRU 가지치기 (보호 카테고리 제외)
     stats["pruned"] = mdb.prune_lru(db_path)

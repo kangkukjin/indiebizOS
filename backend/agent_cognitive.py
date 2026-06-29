@@ -680,11 +680,11 @@ class AgentCognitiveMixin:
             if forage:
                 result = (result + "\n" + forage) if result else forage
 
-            # 거친 디스크 골격(어디에) — ★몸 독립 상시-on. 집중 관심 폴더 아래 거친 디렉토리
-            #   트리(맥/윈도우/리눅스/폰 각자 자기 루트). system_structure.md(자기 폴더 큐레이션
-            #   자기상)의 디스크판 — 깊은 상세·큐레이션은 위 forager 냄새가 관련시 페이징.
-            #   캐시(TTL)라 매 메시지 walk 없음. focus_map.py(헌법1조 substrate/superstructure).
-            skeleton = self._build_disk_skeleton()
+            # 거친 디스크 골격(어디에) — ★포식 의도일 때만(상시-on 폐기, 웹랜드마크와 같은 게이트).
+            #   집중 관심 폴더 아래 거친 디렉토리 트리(맥/윈도우/리눅스 각자 자기 루트). ~5천 자라
+            #   파일·디스크 질의에만 값을 하고 그 외엔 무관 → _FORAGE_CUES 없으면 빈 결과(메서드 내 게이트).
+            #   깊은 상세·큐레이션은 위 forager 냄새가 관련시 페이징. focus_map.py(헌법1조).
+            skeleton = self._build_disk_skeleton(user_message)
             if skeleton:
                 result = (result + "\n" + skeleton) if result else skeleton
 
@@ -739,11 +739,16 @@ class AgentCognitiveMixin:
             agent_id = get_current_agent_id()
             project_path = str(self.project_path)
 
+            # ★점수 바닥(자동 주입은 정밀도 우선): LIKE 폴백 끄고(semantic_only) 시맨틱 컷오프를
+            #   0.45 로 올린다 — 키워드만 겹치는 무관 기억(예: 'kind:operator' 질의에 무의식-분류기)
+            #   이 매번 3건 끌려오던 노이즈 제거. 바닥 미달이면 빈 결과 = 주입 안 함.
             results = memory_db.search(
                 project_path=project_path,
                 agent_id=agent_id,
                 query=user_message,
                 limit=3,
+                semantic_only=True,
+                min_score=0.45,
             )
             if not results:
                 return ""
@@ -888,17 +893,24 @@ class AgentCognitiveMixin:
             print(f"[포식기억] 회상 실패 (무시): {e}")
             return ""
 
-    def _build_disk_skeleton(self) -> str:
-        """거친 디스크 골격 회상 — 데스크탑(맥/윈도우/리눅스) 상시-on(0단계 _build_execution_memory).
+    def _build_disk_skeleton(self, user_message: str = "") -> str:
+        """거친 디스크 골격 회상 — 데스크탑(맥/윈도우/리눅스), *포식 의도일 때만*(웹랜드마크와 같은 게이트).
 
         집중 관심 폴더 아래 거친 디렉토리 트리("어디에"). focus 루트는 focus_map 이 몸별 해소 —
         focus 폴더(어휘)는 몸 독립, 생성기 바인딩만 몸별(헌법1조). 캐시(TTL)라 매 메시지 walk 없음.
         깊은 상세·큐레이션은 forager 냄새 몫. 실패는 무시(파이프라인 불변).
 
+        ★게이트(상시-on 폐기): 디스크 골격은 ~5천 자인데 *파일·디스크 질의*에만 값을 한다 — 아키텍처
+        ·대화·버그 질의엔 무관 폴더 목록을 매번 깔던 낭비(측정). _FORAGE_CUES(찾기·파일·폴더·디스크…)
+        없으면 빈 결과. 웹랜드마크가 "웹 의도일 때만"인 것과 같은 의도 게이트.
+
         ★폰 제외(의도): 안드로이드 스코프드 스토리지라 os.walk 가 공유 스토리지에 안 먹히고
         (파일 접근은 MediaStore 경유), 폰에선 거친 디스크 지도 실익이 작다(사용자 결정). 빈 결과로
         '지원하는 척' 안 한다 — _search_forage_memory 의 폰 게이트와 같은 자리.
         """
+        # 포식 의도 게이트 — 비포식(아키텍처·대화·버그) 질의엔 골격을 넣지 않는다.
+        if not any(cue in (user_message or "").lower() for cue in self._FORAGE_CUES):
+            return ""
         try:
             import sys, os
             bk = os.path.dirname(os.path.abspath(__file__))
@@ -1872,11 +1884,9 @@ AI 답변: {ai_response[:1400]}
                 structure = ""
             if structure:
                 cls._evaluator_prompt_cache += f"\n\n<system_structure>\n{structure}\n</system_structure>"
-            # IBL 환경 프롬프트 주입 — 평가 에이전트도 IBL 체계를 알아야 올바른 평가를 할 수 있다
-            ibl_only_path = base / "common_prompts" / "fragments" / "12_ibl_only.md"
-            if ibl_only_path.exists():
-                ibl_only = ibl_only_path.read_text(encoding='utf-8')
-                cls._evaluator_prompt_cache += f"\n\n{ibl_only}"
+            # IBL 카탈로그(12_ibl_only, ~15K) 주입 폐지 (2026-06-28) — 평가는 IBL 체계 전문이
+            # 아니라 criteria + action_ledger(실제 호출 사실) + capability_focus(추천 도구)로 판정한다.
+            # evaluator_prompt.md 어디도 IBL 카탈로그를 참조하지 않아 dead weight 였다.
         return cls._evaluator_prompt_cache
 
     def _evaluate_achievement(self, user_message: str, criteria: str,
@@ -1888,9 +1898,9 @@ AI 답변: {ai_response[:1400]}
                                visual_artifacts: list = None) -> tuple:
         """평가 AI로 달성 기준 충족 여부를 판단한다.
 
-        의식 에이전트의 출력(self_awareness, capability_focus, world_state)과
-        실행기억(사용 가능한 도구, 코드 사례, implementation)을 활용하여
-        결과물뿐 아니라 도구 활용의 적절성까지 평가한다.
+        의식 에이전트의 출력(task_framing, capability_focus)과 action_ledger
+        (실제 호출된 액션의 사실 기록)를 활용하여 결과물뿐 아니라
+        도구 활용의 적절성까지 평가한다.
 
         Returns:
             (achieved: bool, feedback: str, severity: int)
@@ -1927,10 +1937,7 @@ AI 답변: {ai_response[:1400]}
             if history_summary:
                 prompt += f"## 이전 대화 맥락\n{history_summary}\n\n"
 
-            self_awareness = consciousness_output.get("self_awareness", "")
-            if self_awareness:
-                prompt += f"## 에이전트 자기 인식 (의식 에이전트 판단)\n{self_awareness}\n\n"
-
+            # self_awareness 출력 필드 폐지 (2026-06-28) — task_framing 으로 흡수.
             cap_focus = consciousness_output.get("capability_focus", {})
             if isinstance(cap_focus, dict):
                 hint = cap_focus.get("hint", "")
@@ -1943,13 +1950,11 @@ AI 답변: {ai_response[:1400]}
                         prompt += f"- 접근 방향: {hint}\n"
                     prompt += "\n"
 
-            world_state = consciousness_output.get("world_state", "")
-            if world_state:
-                prompt += f"## 세계 상태\n{world_state}\n\n"
+            # world_state 출력 필드 폐지 (2026-06-28) — task_framing 으로 흡수.
 
-        if execution_memory:
-            # <execution_memory>(해마) + <related_memory>(심층메모리) 묶음 — 자식 태그가 self-describing
-            prompt += f"## 연상기억\n{execution_memory}\n\n"
+        # 연상기억(execution_memory=해마 IBL 레퍼런스) 주입 폐지 (2026-06-28) — 평가는
+        # action_ledger(실제 호출 사실)와 capability_focus(추천 도구)로 도구 적절성을 판정한다.
+        # 과거 코드 사례 블록은 "기준 충족 여부" 판단에 불필요했다.
 
         if tool_results_str:
             prompt += f"## 도구 실행 결과\n{tool_results_str}\n\n"
@@ -1984,14 +1989,19 @@ AI 답변: {ai_response[:1400]}
         )
 
         try:
-            from consciousness_agent import lightweight_ai_call
+            # 평가기 = 의식 모델과 동일(system_ai_config). 평가 프롬프트의 정교한 루브릭(원장
+            # 교차검증·열린문제 노력선·표면 vs 실질)을 경량 flash-lite 가 실행하지 못해 거짓합격을
+            # 내던 것을 본격 모델로 교정. system_ai_call = lightweight_ai_call 과 같은 계약
+            # (prompt/system_prompt/images), 모델만 의식·실행과 같은 본격. system_ai 모델을 바꾸면
+            # 의식·실행·평가가 함께 따라간다.
+            from consciousness_agent import system_ai_call
 
             eval_images = None
             if visual_artifacts:
                 eval_images = [{"base64": a["base64"], "media_type": a["media_type"]}
                                for a in visual_artifacts]
-            eval_response = lightweight_ai_call(prompt, system_prompt=evaluator_system_prompt,
-                                                images=eval_images)
+            eval_response = system_ai_call(prompt, system_prompt=evaluator_system_prompt,
+                                           images=eval_images)
             if eval_response is None or not eval_response.strip():
                 self._log("[GoalEval] AI 응답 없음 (API 오류 등), 통과 처리")
                 return True, "평가 스킵 (AI 응답 없음)", 0
@@ -2035,7 +2045,7 @@ AI 답변: {ai_response[:1400]}
             criteria: 달성 기준
             initial_response: 에이전트 첫 응답
             history: 대화 히스토리
-            consciousness_output: 의식 에이전트 출력 (self_awareness, capability_focus 등)
+            consciousness_output: 의식 에이전트 출력 (task_framing, capability_focus 등)
             max_rounds: 최대 평가 횟수 (기본 2)
             tool_results: 도구 실행 결과 문자열 리스트 (legacy — 이름·인풋 없음)
             tool_calls: 도구 호출 구조화 이력 `{name,input,result,is_error}` 리스트.
@@ -2068,13 +2078,13 @@ AI 답변: {ai_response[:1400]}
             # 시각 산출물(이미지) 수집 — 평가자가 픽셀을 직접 보게 (G 루프 보편 백스톱)
             visual_artifacts = self._collect_visual_artifacts(response, tool_calls=_trace_dicts)
 
-            # 달성 여부 평가 (의식 에이전트의 자기 인식 + 도구 실행 이력 + 실행기억 + 시각 산출물)
+            # 달성 여부 평가 (criteria + action_ledger(실제 호출 사실) + capability_focus + 시각 산출물)
+            # execution_memory(해마)는 평가에 불필요해 미전달 (2026-06-28).
             achieved, feedback, severity = self._evaluate_achievement(
                 user_message, criteria, response, created_files,
                 consciousness_output=consciousness_output,
                 tool_results_str=tool_results_str,
                 action_ledger=action_ledger,
-                execution_memory=execution_memory,
                 visual_artifacts=visual_artifacts,
             )
 
@@ -2145,6 +2155,24 @@ AI 답변: {ai_response[:1400]}
                 if retry_response and retry_response.strip():
                     response = retry_response
                     self._log(f"[GoalEval] 재실행 완료: {len(response)}자")
+                    # ★재실행이 만든 새 도구 호출을 누적해 ledger·trace 를 갱신한다.
+                    # 안 하면 다음 라운드 평가가 라운드 1의 stale 원장으로 새 응답을
+                    # 판정 → 실제로 크롤링/검색을 해놓고도 "원장에 없으니 안 했다 = 조작"
+                    # 이라는 거짓 양성이 난다(재실행 루프가 영원히 통과 못 함). 누적인 이유:
+                    # session=resume 면 이전 라운드의 도구 결과가 컨텍스트에 남아 새 응답을
+                    # 떠받치므로, 이 응답을 떠받친 액션은 '여태까지 호출된 전부'다.
+                    try:
+                        _new_calls = self.ai.get_last_tool_calls()
+                    except Exception:
+                        _new_calls = None
+                    if _new_calls:
+                        if trace_source and isinstance(trace_source[0], dict):
+                            trace_source = list(trace_source) + list(_new_calls)
+                        else:
+                            trace_source = list(_new_calls)
+                        tool_results_str = serialize_tool_trace(trace_source)
+                        action_ledger = build_action_ledger(trace_source)
+                        _trace_dicts = trace_source
                 else:
                     self._log(f"[GoalEval] 재실행 결과 비어있음, 이전 응답 유지 ({len(response)}자)")
             except Exception as e:

@@ -250,25 +250,13 @@ def ensure_today_pulse() -> Dict:
         logger.info("[WorldPulse] 비활성화 상태")
         return {"status": "disabled"}
 
-    existing = get_today_pulse()
-    if existing:
-        logger.info("[WorldPulse] 오늘 스냅샷 이미 존재")
-        generate_guide()
-        return {"status": "exists", "date": date.today().isoformat()}
-
-    logger.info("[WorldPulse] 스냅샷 수집 시작 (동기)")
+    # 부팅 시엔 위치+금주일정만 fresh 로 당겨 world_pulse.md 생성 (경제·날씨 수집 폐지).
     try:
-        snapshot = collect_snapshot()
-        if "error" not in snapshot:
-            save_snapshot(snapshot)
-            generate_guide()
-            logger.info("[WorldPulse] 스냅샷 수집 & 가이드 생성 완료")
-            return {"status": "collected", "date": date.today().isoformat()}
-        else:
-            logger.warning(f"[WorldPulse] 수집 실패: {snapshot}")
-            return {"status": "error", "detail": snapshot.get("error")}
+        generate_guide()
+        logger.info("[WorldPulse] 기동 가이드 생성 완료 (위치+금주일정)")
+        return {"status": "generated", "date": date.today().isoformat()}
     except Exception as e:
-        logger.error(f"[WorldPulse] 수집 실패: {e}")
+        logger.error(f"[WorldPulse] 가이드 생성 실패: {e}")
         return {"status": "error", "detail": str(e)}
 
 
@@ -281,13 +269,12 @@ def execute_world_pulse(action: str, params: dict) -> Any:
     (op→내부 action_name 매핑은 ibl_routing._route_system의 world_op 분기에서.)
     """
     if action == "world_pulse":
-        pulse = get_today_pulse()
-        if pulse:
-            return pulse
-        result = ensure_today_pulse()
-        if result.get("status") == "collecting":
-            return {"message": "세계 상태를 수집 중입니다. 잠시 후 다시 조회해주세요."}
-        return get_today_pulse() or {"message": "아직 수집된 데이터가 없습니다."}
+        # on-demand [sense:world] — 경제·날씨를 즉석 수집(정기 수집은 폐지). 호출 시 fresh.
+        snapshot = collect_snapshot()
+        if isinstance(snapshot, dict) and "error" not in snapshot:
+            save_snapshot(snapshot)
+            return snapshot
+        return get_today_pulse() or {"message": "세계 상태 수집에 실패했습니다."}
 
     elif action == "world_trend":
         days = params.get("days", 7)
@@ -326,44 +313,18 @@ def get_world_pulse_for_prompt() -> str:
 # ============================================================
 
 def collect_world_pulse() -> Dict:
-    """매시간 World Pulse 수집 — 세계/사용자/자신 통합"""
+    """정기 World Pulse — 위치 + 금주 일정만 갱신 (2026-06-28 단순화).
+
+    경제·뉴스·날씨·user_state·self_state 정기 수집 폐지. generate_guide 가
+    위치([sense:here])·금주 일정을 매번 fresh 로 당겨 world_pulse.md 를 쓴다.
+    (on-demand [sense:world]·계기판 live pull 은 별도 경로로 유지.)
+    """
     config = _load_config()
     cp_config = config.get("pulse_schedule", {})
     if not cp_config.get("enabled", True):
         return {"status": "disabled"}
 
-    logger.info("[WorldPulse] World Pulse 수집 시작")
-
-    pulse = {
-        "timestamp": datetime.now().isoformat(),
-        "world": _collect_world_delta(),
-        "user_state": _collect_user_state(),
-        "self_state": _collect_self_state(),
-    }
-
-    # 상태 판정
-    services = pulse["self_state"].get("services", {})
-    all_alive = all(services.values()) if services else True
-    pulse["status"] = "healthy" if all_alive else "degraded"
-
-    # DB 저장
-    save_pulse(pulse)
-
-    # 가이드 파일 갱신 (세계 스냅샷도 갱신)
-    world = pulse["world"]
-    if world.get("economy"):
-        today = get_today_pulse()
-        if today:
-            today["economy"] = world["economy"]
-            if world.get("weather"):
-                today["weather"] = world["weather"]
-            if world.get("news"):
-                today["news"] = world["news"]
-            if world.get("tech"):
-                today["tech"] = world["tech"]
-            today["collected_at"] = datetime.now().isoformat()
-            save_snapshot(today)
-
+    logger.info("[WorldPulse] 정기 갱신 (위치+금주일정)")
     generate_guide()
 
     # 오래된 데이터 정리 (하루 한 번, 결정적 게이트)
@@ -371,8 +332,7 @@ def collect_world_pulse() -> Dict:
         _cleanup_old_data()
         _touch_cleanup_marker()
 
-    logger.info(f"[WorldPulse] World Pulse 완료: {pulse['status']}")
-    return pulse
+    return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
 
 # ============================================================

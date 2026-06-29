@@ -72,9 +72,10 @@ export function YtMusicInstrument() {
     const q = query.trim();
     if (!q) return;
     setSearching(true); setError(null); setResults(null);
-    const r = await runIBL<{ results?: Video[] }>(`[sense:search_youtube]{query: "${esc(q)}", count: 15}`);
+    // search_youtube 는 단일통화 이행 후 결과를 `items` 로 반환한다(옛 `results` 아님 — 2026-06-28 수정).
+    const r = await runIBL<{ items?: Video[] }>(`[sense:search_youtube]{query: "${esc(q)}", count: 15}`);
     setSearching(false);
-    if (r.error) setError(r.error); else setResults(r.results || []);
+    if (r.error) setError(r.error); else setResults(r.items || []);
   }, [query]);
 
   // ----- 재생 컨트롤 (mpv가 이 PC에서 재생) -----

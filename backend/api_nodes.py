@@ -94,8 +94,8 @@ async def peer_status():
     if kind == "phone":
         mac_url = (os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/")
         if not mac_url:
-            return {"has_peer": False, "peer_name": "맥미니(집 PC)", "online": False,
-                    "detail": "맥 주소(INDIEBIZ_MAC_URL) 미설정"}
+            return {"has_peer": False, "peer_name": "맥미니(집 PC)", "peer_icon": "💻",
+                    "online": False, "detail": "맥 주소(INDIEBIZ_MAC_URL) 미설정"}
 
         def _probe() -> bool:
             try:
@@ -105,7 +105,8 @@ async def peer_status():
                 return False
         import asyncio
         online = await asyncio.get_event_loop().run_in_executor(None, _probe)
-        return {"has_peer": True, "peer_name": "맥미니(집 PC)", "online": bool(online), "detail": None}
+        return {"has_peer": True, "peer_name": "맥미니(집 PC)", "peer_icon": "💻",
+                "online": bool(online), "detail": None}
 
     # 맥(허브) → 라이브 테이블에서 연결된 폰(self 제외)
     others = [e for e in dr.list_live() if not e.get("self")]
@@ -116,7 +117,7 @@ async def peer_status():
         peer_name = others[0].get("alias") or "안드로이드 폰"
     else:
         peer_name = f"폰 {len(others)}대"
-    return {"has_peer": True, "peer_name": peer_name, "online": online,
+    return {"has_peer": True, "peer_name": peer_name, "peer_icon": "📱", "online": online,
             "nodes": [e.get("alias") for e in others], "detail": None}
 
 

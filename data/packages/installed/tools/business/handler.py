@@ -300,26 +300,6 @@ def _err(message: str) -> str:
     return json.dumps({"success": False, "message": message}, ensure_ascii=False)
 
 
-def _to_records(rows, title_fn, meta_fn=None, summary_fn=None):
-    """리스트를 records 통화로 비파괴 변환(원본 리스트 키는 유지)."""
-    recs = []
-    for r in (rows or []):
-        recs.append({
-            "title": title_fn(r),
-            "meta": meta_fn(r) if meta_fn else None,
-            "summary": summary_fn(r) if summary_fn else None,
-            "url": None,
-        })
-    return recs
-
-
-def _doc_records(docs):
-    return _to_records(docs,
-        lambda d: d.get("title") or f"레벨 {d.get('level', 0)} 문서",
-        lambda d: f"레벨 {d.get('level', 0)}",
-        lambda d: (d.get("content") or "")[:120])
-
-
 def _int_or(v, default=None):
     try:
         return int(v)

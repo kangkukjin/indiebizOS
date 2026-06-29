@@ -172,6 +172,41 @@ def launcher_config():
     return {"remote_enabled": True, "has_password": False, "host": "phone-local"}
 
 
+@app.get("/nodes/peer-status")
+async def peer_status_local():
+    """폰 관점의 피어 = 맥(집 PC). 맥 /ping 으로 생존 확인.
+
+    ※반드시 로컬에서 답한다. catch-all 로 맥에 프록시하면 맥이 *자기 관점*(mac-branch =
+    연결된 폰)을 피어로 돌려줘 폰 계기판이 "맥" 대신 "폰"을 가리키는 버그가 난다.
+    api_nodes.peer_status 의 phone-branch 와 동일 의미(폰 백엔드는 그 라우터를 안 올리므로 여기서)."""
+    if not _mac_url:
+        return {"has_peer": False, "peer_name": "맥미니(집 PC)", "peer_icon": "💻",
+                "online": False, "detail": "맥 주소(INDIEBIZ_MAC_URL) 미설정"}
+    online = False
+    try:
+        async with httpx.AsyncClient(timeout=2) as c:
+            r = await c.get(f"{_mac_url}/ping")
+            online = (r.status_code == 200)
+    except Exception:
+        online = False
+    return {"has_peer": True, "peer_name": "맥미니(집 PC)", "peer_icon": "💻",
+            "online": bool(online), "detail": None}
+
+
+@app.get("/ping")
+async def ping_local():
+    """폰 자신의 생존 신호 — "누구냐"엔 폰이 폰으로 답한다(자기-지식은 빌리지 않는다).
+
+    ※로컬 필수. catch-all 로 맥에 프록시하면 폰이 자기 정체를 'mac'으로 답해버린다
+    (맥이 자기 /ping=kind:mac 을 돌려줌). 정체성은 절대 위임 대상이 아니다."""
+    try:
+        from runtime_utils import detect_body
+        kind = detect_body().get("kind", "phone")
+    except Exception:
+        kind = "phone"
+    return {"ok": True, "kind": kind}
+
+
 # === 맥 위임 프록시 (분산 IBL) ===
 
 async def _mac_login() -> bool:

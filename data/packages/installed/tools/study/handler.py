@@ -1108,7 +1108,6 @@ def _search_books(tool_input: dict) -> str:
 
         # 구조화 반환 — 앱(도서검색)이 그대로 렌더할 수 있게 도서관정보나루(book)와 같은 필드명을 쓴다.
         books = []
-        records = []
         for item in items:
             info = item.get("volumeInfo", {})
             isbn13 = ""
@@ -1130,20 +1129,6 @@ def _search_books(tool_input: dict) -> str:
                 "page_count": info.get("pageCount"),
                 "infoLink": info.get("infoLink", ""),
             })
-            rec = {  # 레코드 통화
-                "title": info.get("title", ""),
-                "meta": " · ".join(x for x in [
-                    ", ".join(info.get("authors", [])),
-                    info.get("publisher", ""),
-                    (info.get("publishedDate", "") or "")[:4],
-                    ", ".join(info.get("categories", [])),
-                ] if x),
-                "summary": info.get("description", "") or "",
-                "url": info.get("infoLink", "") or "",
-            }
-            if image_url:
-                rec["image"] = image_url
-            records.append(rec)
 
         return {
             "count": data.get("totalItems", len(books)),

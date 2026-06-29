@@ -334,21 +334,34 @@ def _search_like(db_path: str, query: str, category: str = None,
 
 
 def search(project_path: str, agent_id: str,
-           query: str, category: str = None, limit: int = 10) -> List[Dict]:
+           query: str, category: str = None, limit: int = 10,
+           semantic_only: bool = False, min_score: float = 0.0) -> List[Dict]:
     """시맨틱 우선 + LIKE 폴백 검색 (해마와 동일 패턴).
 
     1) 시맨틱(fine-tuned 임베딩) 검색을 먼저 시도. SEMANTIC_THRESHOLD 통과 항목이 있으면 그것만 반환.
     2) 시맨틱이 비었거나(모델 미준비/임계값 미달) 결과 0이면 LIKE 키워드 폴백.
+
+    ★자동 회상(프롬프트 주입)용 점수 바닥:
+      - semantic_only=True → LIKE 폴백을 끈다. LIKE 는 *점수 없이 키워드만 겹쳐도* 반환하므로
+        자동 주입에선 관련성 게이트가 없는 노이즈원(예: 'kind:operator' 질의에 무의식-분류기
+        기억이 키워드만 겹쳐 끌려옴). 시맨틱 바닥 미달이면 빈 결과 = 주입 안 함.
+      - min_score → 시맨틱 컷오프를 SEMANTIC_THRESHOLD 위로 올린다(주입은 정밀도 우선).
+    명시 검색(memory 액션)·증류 dedup 은 기본값(폴백 유지)이라 무영향.
     """
     db_path = _get_db_path(project_path, agent_id)
     _ensure_schema(db_path)  # 신규 프로젝트(미save) 빈 DB에서 LIKE 폴백이 죽지 않도록 테이블 보장
 
+    eff_threshold = max(SEMANTIC_THRESHOLD, min_score)
+
     # 1. 시맨틱 우선
     sem_pairs = _search_semantic(db_path, query, top_k=limit * 2)
-    sem_pairs = [(mid, s) for mid, s in sem_pairs if s >= SEMANTIC_THRESHOLD]
+    sem_pairs = [(mid, s) for mid, s in sem_pairs if s >= eff_threshold]
 
     if sem_pairs:
         sorted_ids = [mid for mid, _ in sem_pairs[:limit]]
+    elif semantic_only:
+        # 자동 회상: 시맨틱 바닥 미달이면 LIKE 폴백 없이 빈 결과(노이즈 주입 방지).
+        return []
     else:
         # 2. 시맨틱 미준비/매칭 0 → LIKE 폴백
         like_results = _search_like(db_path, query, category, limit=limit)

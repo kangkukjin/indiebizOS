@@ -481,6 +481,63 @@ def _collect_system_status() -> Dict:
 
 
 # ============================================================
+# World Pulse 슬림 수집 (2026-06-28) — 위치 + 금주 일정만
+#   나머지(경제·뉴스·날씨·proprioception·시스템상태)는 정기 수집 폐지.
+#   on-demand 감각([sense:world]/[sense:host])·계기판 live pull 로 이관.
+# ============================================================
+
+def _collect_location() -> str:
+    """현재 위치 — 폰 [sense:here] 위임(phone_only). 폰이 꺼져 있거나 닿지 않으면
+    빈 문자열(graceful). 분산 IBL(ibl_engine)이 맥→폰 포워드를 처리한다."""
+    try:
+        from system_tools import _execute_ibl_unified
+        raw = _execute_ibl_unified({"code": "[sense:here]{}"}, str(BASE_PATH))
+        data = _parse_handler_result(raw)
+        if not data or not data.get("success"):
+            return ""
+        addr = (data.get("address") or "").strip()
+        if addr:
+            return addr
+        lat, lng = data.get("lat"), data.get("lng")
+        if lat is not None and lng is not None:
+            return f"위경도 {lat}, {lng}"
+        return ""
+    except Exception as e:
+        logger.debug(f"[WorldPulse] 위치 수집 실패(폰 미연결 가능): {e}")
+        return ""
+
+
+def _collect_week_schedule() -> List[str]:
+    """이번 주(오늘~돌아오는 일요일) 일정 — calendar_manager. 과거 일정은 제외."""
+    try:
+        from calendar_manager import get_calendar_manager
+        cm = get_calendar_manager()
+        today = date.today()
+        week_end = today + timedelta(days=(6 - today.weekday()))  # 이번 주 일요일
+        rows = []
+        for evt in cm.list_events():
+            if not evt.get("enabled", True):
+                continue
+            d = (evt.get("date") or "").strip()
+            try:
+                ed = date.fromisoformat(d)
+            except (ValueError, TypeError):
+                continue
+            if today <= ed <= week_end:
+                title = (evt.get("title") or evt.get("name") or "").strip()
+                if not title:
+                    continue
+                t = (evt.get("time") or "").strip()
+                label = f"{d}{(' ' + t) if t else ''} — {title}"
+                rows.append((d, t, label))
+        rows.sort(key=lambda x: (x[0], x[1]))
+        return [lbl for _, _, lbl in rows]
+    except Exception as e:
+        logger.debug(f"[WorldPulse] 금주 일정 수집 실패: {e}")
+        return []
+
+
+# ============================================================
 # World Pulse 수집 — 사용자/자기 상태
 # ============================================================
 

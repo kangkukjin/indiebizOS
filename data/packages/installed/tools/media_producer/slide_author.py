@@ -81,6 +81,20 @@ def _load_system_ai_config() -> dict:
     return {"provider": "anthropic", "model": "claude-sonnet-4-20250514", "apiKey": ""}
 
 
+def _resolve_content_text_config() -> dict:
+    """슬라이드 *텍스트* 모델을 모델 기어 'content_text' 역할(실행 축)로 해소.
+    (슬라이드 이미지=Gemini 는 모달리티=기어 밖, 여기서 다루지 않는다.) 실패 시 옛 config 폴백."""
+    try:
+        from model_resolver import resolve
+        d = resolve("content_text")
+        if d.get("model"):
+            return {"provider": d.get("provider", "anthropic"),
+                    "model": d["model"], "apiKey": d.get("api_key", "")}
+    except Exception:
+        pass
+    return _load_system_ai_config()
+
+
 def _load_pattern_library() -> str:
     """같은 패키지의 slide_patterns.py 에서 패턴 라이브러리 텍스트 로드. 실패 시 빈 문자열."""
     try:
@@ -102,16 +116,20 @@ def _build_system_prompt() -> str:
 
 
 def _get_author_ai():
-    """슬라이드 저작용 provider. (모듈이 호출마다 재로드되므로 매번 새로 빌드 — 무방.)"""
-    cfg = _load_system_ai_config()
+    """슬라이드 저작용 provider — 모델 기어 'content_text' 역할로 해소.
+    (모듈이 호출마다 재로드되므로 매번 새로 빌드 — 무방.)"""
+    cfg = _resolve_content_text_config()
+    provider_name = (cfg.get("provider") or "anthropic").strip()
     api_key = (cfg.get("apiKey") or "").strip()
-    if not api_key:
+    # claude_code/ollama 는 자체 인증이라 키 불요.
+    no_key = {"claude_code", "claude-code", "claudecode", "ollama"}
+    if not api_key and provider_name.lower() not in no_key:
         raise RuntimeError(
-            "시스템 AI API 키가 설정되지 않았습니다. 설정 → 시스템 AI에서 API 키를 입력하세요."
+            "텍스트 생성 모델 키가 설정되지 않았습니다. 모델 기어(실행 축) 또는 시스템 AI 설정을 확인하세요."
         )
     from providers import get_provider
     provider = get_provider(
-        (cfg.get("provider") or "anthropic").strip(),
+        provider_name,
         api_key=api_key,
         model=(cfg.get("model") or "").strip(),
         system_prompt=_build_system_prompt(),

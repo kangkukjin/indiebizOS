@@ -34,4 +34,19 @@ if echo "$staged" | grep -qE '^(data/ibl_nodes_src/.*\.yaml|data/packages/instal
   echo "[pre-commit] IBL 정합성 OK ✓"
 fi
 
+# 폰(제약된 몸) 엔진 번들 매니페스트가 backend 변경에 맞게 최신인지 — 드리프트 게이트.
+# backend/*.py 나 몸 프로파일이 스테이징되면 build_body_bundle.py --check 로 파생본 일치 확인.
+if echo "$staged" | grep -qE '^(backend/.*\.py|data/bodies/.*\.json|scripts/build_body_bundle\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 몸 번들 파생 검사 실행..."
+  if ! python3 "$repo_root/scripts/build_body_bundle.py" android --check; then
+    echo "" >&2
+    echo "[pre-commit] 폰 엔진 번들이 backend 변경에 뒤처짐 — 커밋 차단." >&2
+    echo "[pre-commit]   • \`python3 scripts/build_body_bundle.py android\` 재실행하여 매니페스트 갱신" >&2
+    echo "[pre-commit]   • 새 backend 모듈이 폰 비호환이면 data/bodies/android.json 의 absent_packages/force_exclude 에 사유와 함께 선언" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 몸 번들 파생 OK ✓"
+fi
+
 exit 0

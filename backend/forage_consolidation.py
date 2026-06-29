@@ -83,7 +83,8 @@ JSON으로만 응답:
 병합할 게 없으면 {{"merges":[]}}."""
     resp = lightweight_ai_call(
         prompt=prompt,
-        system_prompt="포식 지도 병합 판정기. 같은 공간 지식만 병합. JSON으로만.")
+        system_prompt="포식 지도 병합 판정기. 같은 공간 지식만 병합. JSON으로만.",
+        role="background")
     return _parse_merges(resp, {it["id"] for it in items})
 
 
@@ -107,7 +108,8 @@ JSON으로만 응답:
 없으면 {{"merges":[]}}."""
     resp = lightweight_ai_call(
         prompt=prompt,
-        system_prompt="주인모델 병합 판정기. 같은 사실만 병합. JSON으로만.")
+        system_prompt="주인모델 병합 판정기. 같은 사실만 병합. JSON으로만.",
+        role="background")
     return _parse_merges(resp, {it["id"] for it in items})
 
 

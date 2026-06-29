@@ -480,19 +480,14 @@ async def create_agent(project_id: str, agent_data: AgentUpdate):
         # 새 ID
         new_id = f"agent_{uuid.uuid4().hex[:8]}"
 
+        # ★per-agent 모델 설정 폐지 — 모델은 모델 기어(런처 경량/중급/고급 티어)가 단독 결정.
+        #   ai 블록을 쓰지 않는다(_resolve_execution_config 가 무시·기어로 채움).
         new_agent = {
             "id": new_id,
             "name": agent_data.name,
             "type": agent_data.type,
             "active": True,
-            "ai": {
-                "provider": agent_data.provider,
-                "model": agent_data.model
-            }
         }
-
-        if agent_data.api_key:
-            new_agent["ai"]["api_key"] = agent_data.api_key
 
         # Phase 16: allowed_nodes 우선, 하위 호환으로 allowed_tools도 지원
         if agent_data.allowed_nodes is not None:
@@ -579,13 +574,8 @@ async def update_agent(project_id: str, agent_id: str, agent_data: AgentUpdate):
 
                 agent["name"] = agent_data.name
                 agent["type"] = agent_data.type
-                agent["ai"] = {
-                    "provider": agent_data.provider,
-                    "model": agent_data.model
-                }
-
-                if agent_data.api_key:
-                    agent["ai"]["api_key"] = agent_data.api_key
+                # ★per-agent 모델 설정 폐지 — 모델은 모델 기어가 단독 결정. 레거시 ai 블록은 제거.
+                agent.pop("ai", None)
 
                 # Phase 16: allowed_nodes 우선, 하위 호환으로 allowed_tools도 지원
                 if agent_data.allowed_nodes is not None:

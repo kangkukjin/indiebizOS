@@ -738,7 +738,7 @@
     {
       "id": "open_window",
       "name": "런처 창 열기",
-      "description": "IndieBiz OS Electron 런처의 6개 메인 작업창(project/system_ai/indienet/business/multichat/folder) 진입 가이드. app별 파라미터·시나리오·자연어 매핑.",
+      "description": "IndieBiz OS Electron 런처의 6개 메인 작업창(project/system_ai/messenger/business/multichat/folder) 진입 가이드. app별 파라미터·시나리오·자연어 매핑.",
       "keywords": [
         "창",
         "윈도우",

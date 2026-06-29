@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw, Zap } from 'lucide-react';
+import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw } from 'lucide-react';
 import type { SystemAISettings, LightweightAISettings, MidtierAISettings } from '../types';
 import { api } from '../../../lib/api';
 import { SettingsChannelsTab } from './SettingsChannelsTab';
@@ -56,7 +56,7 @@ export function SettingsDialog({
   onSave,
   onClose,
 }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'ai' | 'lightweight' | 'midtier' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel' | 'world'>('ai');
+  const [activeTab, setActiveTab] = useState<'models' | 'persona' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel' | 'world'>('models');
 
   // 데이터 내보내기/가져오기 상태
   const [isExporting, setIsExporting] = useState(false);
@@ -84,10 +84,20 @@ export function SettingsDialog({
   const [isRefreshingWorld, setIsRefreshingWorld] = useState(false);
   const [worldSaveResult, setWorldSaveResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // 프롬프트 템플릿 로드
+  // 시스템 메모(my_profile) — '시스템 AI 역할' 탭에서 편집 (옛 런처 '메모' 버튼 이관)
+  const [systemMemo, setSystemMemo] = useState('');
+  const [isSavingMemo, setIsSavingMemo] = useState(false);
+  const handleSaveMemo = async () => {
+    setIsSavingMemo(true);
+    try { await api.updateProfile(systemMemo); } catch (e) { console.error('Failed to save memo:', e); }
+    setIsSavingMemo(false);
+  };
+
+  // '시스템 AI 역할' 탭: 프롬프트 템플릿 + 시스템 메모 로드
   useEffect(() => {
-    if (show && activeTab === 'ai') {
+    if (show && activeTab === 'persona') {
       loadPromptTemplates();
+      api.getProfile().then(c => setSystemMemo(c || '')).catch(() => setSystemMemo(''));
     }
   }, [show, activeTab]);
 
@@ -245,9 +255,8 @@ export function SettingsDialog({
         {/* 탭 */}
         <div className="flex border-b border-gray-200 bg-gray-50 shrink-0">
           {([
-            { key: 'ai', icon: Brain, label: '시스템 AI' },
-            { key: 'lightweight', icon: Zap, label: '경량 AI' },
-            { key: 'midtier', icon: Settings, label: '중급 AI' },
+            { key: 'models', icon: Brain, label: '모델 설정' },
+            { key: 'persona', icon: FileText, label: '시스템 AI 역할' },
             { key: 'channels', icon: Radio, label: '통신채널' },
             { key: 'data', icon: Package, label: '데이터' },
             { key: 'nas', icon: HardDrive, label: '원격 Finder' },
@@ -273,12 +282,13 @@ export function SettingsDialog({
         </div>
 
         {/* 내용 */}
-        <div className="flex-1 overflow-auto p-6">
-          {activeTab === 'ai' && (
-            <div className="space-y-6">
+        <div className="flex-1 overflow-auto p-6 flex flex-col gap-8">
+          {activeTab === 'models' && (
+            <div className="space-y-6" style={{ order: 3 }}>
               <div>
+                <h2 className="text-base font-bold text-gray-900 mb-1">고급 (실행·의식 — '최대' 기어)</h2>
                 <p className="text-sm text-gray-700 mb-4">
-                  프로그램 전체에서 사용하는 AI 설정입니다. 프로젝트 시작 시 에이전트들의 도구를 배분하거나 자동 프롬프트 생성에 활용됩니다.
+                  심사숙고·고품질 실행에 쓰는 본격 모델입니다(옛 '시스템 AI'). 기어 '최대'에서 실행·의식 축이 이 모델을 씁니다. 프로젝트 시작 시 도구 배분·자동 프롬프트 생성에도 활용됩니다.
                 </p>
               </div>
 
@@ -331,67 +341,6 @@ export function SettingsDialog({
                   </div>
                 </div>
               </div>
-
-              {/* 프롬프트 템플릿 설정 */}
-              <div className="bg-gray-50 rounded-lg p-5 space-y-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <FileText size={18} className="text-gray-600" />
-                  <h3 className="text-sm font-semibold text-gray-900">프롬프트 템플릿</h3>
-                </div>
-
-                {isLoadingTemplates ? (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#D97706]" />
-                  </div>
-                ) : (
-                  <>
-                    {/* 템플릿 선택 */}
-                    <div className="space-y-2">
-                      {templates.map(template => (
-                        <label
-                          key={template.id}
-                          className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                            selectedTemplate === template.id
-                              ? 'bg-amber-50 border border-amber-200'
-                              : 'bg-white border border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="template"
-                            value={template.id}
-                            checked={selectedTemplate === template.id}
-                            onChange={() => handleTemplateChange(template.id)}
-                            className="mt-1 accent-[#D97706]"
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-gray-900">{template.name}</span>
-                              <span className="text-xs text-gray-500">{template.tokens.toLocaleString()} 토큰</span>
-                            </div>
-                            <p className="text-xs text-gray-600 mt-0.5">{template.description}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-
-                    {/* 역할 프롬프트 (개별역할) */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-700">역할 프롬프트</span>
-                        <span className="text-xs text-gray-500">(시스템 AI의 개별역할)</span>
-                      </div>
-                      <button
-                        onClick={openRolePromptModal}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors text-[#D97706] hover:bg-amber-50"
-                      >
-                        <Edit3 size={14} />
-                        편집
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
             </div>
           )}
 
@@ -443,13 +392,13 @@ export function SettingsDialog({
             </div>
           )}
 
-          {/* 경량 AI 탭 */}
-          {activeTab === 'lightweight' && (
-            <div className="space-y-6">
+          {/* 경량 — 분류·평가·백그라운드 */}
+          {activeTab === 'models' && (
+            <div className="space-y-6" style={{ order: 1 }}>
               <div>
+                <h2 className="text-base font-bold text-gray-900 mb-1">경량 (분류·평가·백그라운드)</h2>
                 <p className="text-sm text-gray-700 mb-4">
-                  요청 분류, 달성 기준 평가 등 경량 판단에 사용하는 AI입니다.
-                  싸고 빠른 모델을 사용하세요.
+                  요청 분류, 달성 기준 평가 등 원샷 판단에 쓰는 가장 싸고 빠른 모델입니다. 모든 기어에서 분류·평가는 이 티어를 권장합니다.
                 </p>
               </div>
 
@@ -515,13 +464,13 @@ export function SettingsDialog({
             </div>
           )}
 
-          {/* 중급 AI 탭 */}
-          {activeTab === 'midtier' && (
-            <div className="space-y-6">
+          {/* 중급 — '균형' 기어의 실행·의식 */}
+          {activeTab === 'models' && (
+            <div className="space-y-6" style={{ order: 2 }}>
               <div>
+                <h2 className="text-base font-bold text-gray-900 mb-1">중급 ('균형' 기어의 실행·의식)</h2>
                 <p className="text-sm text-gray-700 mb-4">
-                  의식 에이전트를 거치지 않는 단순 실행(EXECUTE/Reflex)에 사용하는 AI입니다.
-                  시스템 AI보다 빠르고 저렴한 모델을 설정하세요.
+                  경량과 고급 사이. 기어 '균형'에서 실행·의식 축이 이 모델을 씁니다. 일상 작업을 빠르되 너무 가볍지 않게.
                 </p>
               </div>
 
@@ -583,6 +532,102 @@ export function SettingsDialog({
                   <strong>중급 AI의 역할:</strong> 단순 실행형 요청(음악 재생, 날씨 확인 등)에서 의식 에이전트를 거치지 않고 바로 실행할 때 사용합니다.
                   복잡한 분석이나 보고서 작성 등 판단형 요청에는 시스템 AI(본격 모델)가 사용됩니다.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* 시스템 AI 역할 탭 — 프롬프트 템플릿/개별역할 + 시스템 메모 */}
+          {activeTab === 'persona' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-gray-900 mb-1">시스템 AI 역할</h2>
+                <p className="text-sm text-gray-700 mb-4">시스템 AI의 프롬프트 템플릿·개별역할과, 에이전트가 늘 참고하는 시스템 메모를 한 곳에서 설정합니다.</p>
+              </div>
+
+              {/* 프롬프트 템플릿 설정 */}
+              <div className="bg-gray-50 rounded-lg p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText size={18} className="text-gray-600" />
+                  <h3 className="text-sm font-semibold text-gray-900">프롬프트 템플릿</h3>
+                </div>
+
+                {isLoadingTemplates ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#D97706]" />
+                  </div>
+                ) : (
+                  <>
+                    {/* 템플릿 선택 */}
+                    <div className="space-y-2">
+                      {templates.map(template => (
+                        <label
+                          key={template.id}
+                          className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                            selectedTemplate === template.id
+                              ? 'bg-amber-50 border border-amber-200'
+                              : 'bg-white border border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="template"
+                            value={template.id}
+                            checked={selectedTemplate === template.id}
+                            onChange={() => handleTemplateChange(template.id)}
+                            className="mt-1 accent-[#D97706]"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">{template.name}</span>
+                              <span className="text-xs text-gray-500">{template.tokens.toLocaleString()} 토큰</span>
+                            </div>
+                            <p className="text-xs text-gray-600 mt-0.5">{template.description}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    {/* 역할 프롬프트 (개별역할) */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-700">역할 프롬프트</span>
+                        <span className="text-xs text-gray-500">(시스템 AI의 개별역할)</span>
+                      </div>
+                      <button
+                        onClick={openRolePromptModal}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors text-[#D97706] hover:bg-amber-50"
+                      >
+                        <Edit3 size={14} />
+                        편집
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* 시스템 메모 (옛 런처 '메모' 버튼 이관) */}
+              <div className="bg-gray-50 rounded-lg p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText size={18} className="text-gray-600" />
+                  <h3 className="text-sm font-semibold text-gray-900">시스템 메모</h3>
+                </div>
+                <p className="text-xs text-gray-500">에이전트가 대화 시작 시 늘 참고하는 자유 메모입니다.</p>
+                <textarea
+                  value={systemMemo}
+                  onChange={(e) => setSystemMemo(e.target.value)}
+                  placeholder="시스템 AI에게 늘 알려둘 정보를 자유롭게 적으세요..."
+                  className="w-full h-48 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 font-mono text-sm resize-none"
+                />
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveMemo}
+                    disabled={isSavingMemo}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#B45309] disabled:opacity-50"
+                  >
+                    {isSavingMemo ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <Save size={16} />}
+                    메모 저장
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -951,7 +996,7 @@ export function SettingsDialog({
           >
             취소
           </button>
-          {(activeTab === 'ai' || activeTab === 'lightweight' || activeTab === 'midtier') && (
+          {activeTab === 'models' && (
             <button
               onClick={onSave}
               className="flex items-center gap-2 px-4 py-2 bg-[#D97706] text-white rounded-lg hover:bg-[#B45309]"

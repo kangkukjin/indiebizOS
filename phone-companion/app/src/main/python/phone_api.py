@@ -101,7 +101,7 @@ def _ensure_phone_ai_configs(base_path):
     os.makedirs(cfg_dir, exist_ok=True)
     defaults = {
         "system_ai_config.json": {"enabled": True, "provider": "gemini_http",
-                                   "model": "gemini-3.5-flash", "apiKey": "", "role": ""},
+                                   "model": "gemini-3.1-pro-preview", "apiKey": "", "role": ""},
         "midtier_ai_config.json": {"enabled": True, "provider": "gemini_http",
                                    "model": "gemini-3.5-flash", "apiKey": ""},
         "lightweight_ai_config.json": {"enabled": True, "provider": "gemini_http",
@@ -170,6 +170,130 @@ def instruments():
 def launcher_config():
     # 폰 로컬 = 비번 게이트 없음(localhost 자기 자신)
     return {"remote_enabled": True, "has_password": False, "host": "phone-local"}
+
+
+# ============ 모델 기어 (폰 계기판 변속) — model_resolver 번들 위에서 로컬 ============
+# ★catch-all(맥 프록시) 보다 먼저. 폰은 api_config 미번들이라 여기 인라인(맥 엔드포인트와 동형).
+
+_GEAR_AXIS_ROLES = {"분류": "classify", "평가": "evaluate", "실행": "execution", "의식": "consciousness"}
+
+
+def _gear_describe():
+    import model_resolver as M
+    g = M._load_gear()
+    axes = {}
+    for axis, role in _GEAR_AXIS_ROLES.items():
+        d = M.resolve(role)
+        axes[axis] = {"tier": d.get("tier"), "provider": d.get("provider"), "model": d.get("model")}
+    return {"current_gear": M.get_gear(), "gears": M.list_gears(),
+            "presets": g.get("presets", {}), "axes": axes,
+            "tiers": M.TIERS, "axis_names": M.AXES}
+
+
+def _gear_reset_providers():
+    """기어/프리셋/핀 변경 후 폰 init-시점 provider 핫리로드."""
+    for mod, fn in (("consciousness_agent", "reset_consciousness_agent"),
+                    ("system_ai_core", "reset_system_ai_runner"),
+                    ("consciousness_agent", "reset_midtier_provider"),
+                    ("consciousness_agent", "reset_lightweight_provider"),
+                    ("consciousness_agent", "reset_system_oneshot_provider")):
+        try:
+            import importlib
+            getattr(importlib.import_module(mod), fn)()
+        except Exception as e:
+            print(f"[phone gear] {mod}.{fn} 리셋 경고: {e}")
+
+
+def _gear_list_agents():
+    """핀 대상 — 시스템 AI + 폰 로컬 프로젝트 에이전트. id=핀 키({project}:{agent_id})."""
+    out = [{"id": "system_ai", "name": "시스템 AI", "project": "(시스템)"}]
+    try:
+        import yaml
+        from runtime_utils import get_base_path
+        proj_root = os.path.join(str(get_base_path()), "projects")
+        if os.path.isdir(proj_root):
+            for d in sorted(os.listdir(proj_root)):
+                f = os.path.join(proj_root, d, "agents.yaml")
+                if not os.path.isfile(f):
+                    continue
+                try:
+                    with open(f, "r", encoding="utf-8") as fh:
+                        data = yaml.safe_load(fh) or {}
+                    for a in (data.get("agents") or []):
+                        if isinstance(a, dict) and a.get("id"):
+                            out.append({"id": f"{d}:{a['id']}", "name": a.get("name") or a["id"], "project": d})
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"[phone gear] 에이전트 열거 경고: {e}")
+    return out
+
+
+@app.get("/selfcheck/engine-imports")
+def selfcheck_engine_imports():
+    """이 몸(android)에 번들된 backend 엔진 모듈이 *전부 import 되나* 검증 — 파생 번들의 그라운드-트루스.
+
+    build_body_bundle.py 가 정적으로 파생한 번들이 실제로 이 하드웨어에서 import-안전한지 확인한다.
+    실패가 있으면 = 정적 파생이 놓친 몸-비호환(예: 조건부/동적 import) → data/bodies/android.json
+    absent_packages 에 추가해야 할 신호. 단일 코드베이스 다중 몸의 '자연 동기화' 안전망."""
+    import importlib, os as _os
+    from runtime_utils import get_base_path
+    be = _os.path.join(str(get_base_path()), "backend")
+    ok, failed = [], {}
+    try:
+        names = sorted(f[:-3] for f in _os.listdir(be) if f.endswith(".py") and not f.startswith("_"))
+    except Exception as e:
+        return JSONResponse({"error": f"backend 디렉토리 없음: {e}"}, status_code=500)
+    for n in names:
+        try:
+            importlib.import_module(n)
+            ok.append(n)
+        except Exception as e:
+            failed[n] = f"{type(e).__name__}: {e}"
+    return {"total": len(names), "ok": len(ok), "failed": failed}
+
+
+@app.get("/model-gear")
+def phone_get_gear():
+    try:
+        return _gear_describe()
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.put("/model-gear")
+def phone_set_gear(body: dict = Body(...)):
+    import model_resolver as M
+    name = (body.get("gear") or "").strip()
+    if not name or not M.set_gear(name):
+        return JSONResponse({"error": f"알 수 없는 기어: {name}"}, status_code=400)
+    _gear_reset_providers()
+    return {"status": "changed", **_gear_describe()}
+
+
+@app.put("/model-gear/presets")
+def phone_set_presets(body: dict = Body(...)):
+    import model_resolver as M
+    if not M.set_presets(body.get("presets")):
+        return JSONResponse({"error": f"잘못된 프리셋(축 {M.AXES}, 티어 {M.TIERS})"}, status_code=400)
+    _gear_reset_providers()
+    return {"status": "saved", **_gear_describe()}
+
+
+@app.get("/model-gear/overrides")
+def phone_get_overrides():
+    import model_resolver as M
+    return {"overrides": M.get_overrides(), "agents": _gear_list_agents(), "tiers": M.TIERS}
+
+
+@app.put("/model-gear/overrides")
+def phone_set_overrides(body: dict = Body(...)):
+    import model_resolver as M
+    cleaned = {k: v for k, v in (body.get("overrides") or {}).items() if v}
+    if not M.set_overrides(cleaned):
+        return JSONResponse({"error": f"잘못된 핀(티어 {M.TIERS})"}, status_code=400)
+    _gear_reset_providers()
+    return {"status": "saved", "overrides": M.get_overrides()}
 
 
 @app.get("/nodes/peer-status")

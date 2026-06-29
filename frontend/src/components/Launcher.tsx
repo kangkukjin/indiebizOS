@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, User, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText, HelpCircle, Info, ChevronDown, BookOpen, ScanLine } from 'lucide-react';
+import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText, HelpCircle, Info, ChevronDown, BookOpen, ScanLine } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -14,7 +14,6 @@ import {
   ContextMenu,
   NewProjectDialog,
   NewFolderDialog,
-  ProfileDialog,
   SettingsDialog,
   TrashDialog,
   SchedulerDialog,
@@ -56,7 +55,6 @@ export function Launcher() {
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [showNewMultiChatDialog, setShowNewMultiChatDialog] = useState(false);
-  const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
   const [showToolboxDialog, setShowToolboxDialog] = useState(false);
   const [showSwitchEditDialog, setShowSwitchEditDialog] = useState(false);
@@ -85,7 +83,6 @@ export function Launcher() {
     icon_position?: [number, number];
   }
   const [multiChatRooms, setMultiChatRooms] = useState<MultiChatRoom[]>([]);
-  const [profileContent, setProfileContent] = useState('');
   const [trashHover, setTrashHover] = useState(false);
   const [draggedItem, setDraggedItem] = useState<{ id: string; type: 'project' | 'switch' } | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -381,27 +378,6 @@ export function Launcher() {
       window.electron.openMultiChatWindow(room.id, room.name);
     } else {
       window.location.hash = `/multichat/${room.id}`;
-    }
-  };
-
-  const handleOpenMyProfile = async () => {
-    try {
-      const content = await api.getProfile();
-      setProfileContent(content || '');
-      setShowProfileDialog(true);
-    } catch (error) {
-      console.error('Failed to load profile:', error);
-      setProfileContent('');
-      setShowProfileDialog(true);
-    }
-  };
-
-  const handleSaveProfile = async () => {
-    try {
-      await api.updateProfile(profileContent);
-      setShowProfileDialog(false);
-    } catch (error) {
-      console.error('Failed to save profile:', error);
     }
   };
 
@@ -856,7 +832,7 @@ export function Launcher() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (renamingItem) return;
 
-      if (showNewProjectDialog || showNewFolderDialog || showProfileDialog || showSchedulerDialog) {
+      if (showNewProjectDialog || showNewFolderDialog || showSchedulerDialog) {
         return;
       }
 
@@ -886,7 +862,7 @@ export function Launcher() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedItem, clipboard, renamingItem, projects, switches, showNewProjectDialog, showNewFolderDialog, showProfileDialog, showSchedulerDialog]);
+  }, [selectedItem, clipboard, renamingItem, projects, switches, showNewProjectDialog, showNewFolderDialog, showSchedulerDialog]);
 
   return (
     <div className="h-full flex flex-col bg-[#F5F1EB]">
@@ -978,14 +954,6 @@ export function Launcher() {
             >
               <Clock size={15} />
               <span className="text-[13px]">예약작업</span>
-            </button>
-            <button
-              onClick={handleOpenMyProfile}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
-              title="시스템 메모"
-            >
-              <User size={15} />
-              <span className="text-[13px]">메모</span>
             </button>
           </div>
 
@@ -1328,15 +1296,6 @@ export function Launcher() {
           </div>
         </div>
       )}
-
-      {/* 시스템 메모 다이얼로그 */}
-      <ProfileDialog
-        show={showProfileDialog}
-        content={profileContent}
-        onContentChange={setProfileContent}
-        onSave={handleSaveProfile}
-        onClose={() => setShowProfileDialog(false)}
-      />
 
       {/* 설정 다이얼로그 */}
       <SettingsDialog

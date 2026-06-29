@@ -190,20 +190,33 @@ class AndroidAgent:
     def _init_ai(self):
         """AI 에이전트 초기화"""
         from ai_agent import AIAgent
-        from api_system_ai import load_system_ai_config
         from prompt_builder import build_system_ai_prompt
         from system_ai_memory import load_user_profile
 
-        # 시스템 AI 설정 로드
-        config = load_system_ai_config()
+        # 모델 기어 'android' 역할(실행 축)로 모델 해소. 리졸버 실패 시 옛 system_ai_config 폴백.
+        try:
+            from model_resolver import resolve
+            d = resolve("android")
+        except Exception:
+            d = {}
+        if d.get("model"):
+            ai_config = {
+                "provider": d.get("provider", "anthropic"),
+                "model": d["model"],
+                "api_key": d.get("api_key", ""),
+            }
+        else:
+            from api_system_ai import load_system_ai_config
+            config = load_system_ai_config()
+            ai_config = {
+                "provider": config.get("provider", "anthropic"),
+                "model": config.get("model", "claude-sonnet-4-20250514"),
+                "api_key": config.get("apiKey", ""),
+            }
 
-        ai_config = {
-            "provider": config.get("provider", "anthropic"),
-            "model": config.get("model", "claude-sonnet-4-20250514"),
-            "api_key": config.get("apiKey", "")
-        }
-
-        if not ai_config["api_key"]:
+        # claude_code/ollama 는 자체 인증이라 키 불요. 그 외엔 키 필수.
+        no_key = {"claude_code", "claude-code", "claudecode", "ollama"}
+        if not ai_config["api_key"] and ai_config["provider"].lower() not in no_key:
             raise ValueError("API 키가 설정되지 않았습니다. 설정에서 API 키를 입력해주세요.")
 
         # 사용자 프로필 로드

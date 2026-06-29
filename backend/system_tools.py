@@ -939,6 +939,51 @@ def _replace_file_refs_in_list(lst: list, files: list):
 
 # ============ 통합 도구 실행 함수 ============
 
+def _enrich_error_with_param_hint(result, code: str):
+    """단일-스텝 액션이 에러로 끝나면 그 액션의 description(파라미터 용법 포함)을
+    힌트로 붙인다.
+
+    자율주행 경로의 '실패 가시화' — 모델은 이미 구조화 에러를 받아 다음 턴에 자가교정하지만,
+    'city 또는 lat/lon 필요' 같은 핸들러 에러는 *어떤 파라미터가 유효한지*를 안 알려줘서
+    약한 모델이 자기가 쓴 잘못된 파라미터명(예: location)을 못 고친다(valid≠correct).
+    액션 description은 canonical 파라미터 용법을 담으므로, 실패 지점에서 그걸 돌려준다.
+    (강제 재시도 루프는 더하지 않는다 — 에이전트 루프가 이미 재시도이고, 서킷브레이커가
+    반복 실패를 격리한다. 빠진 건 '재시도'가 아니라 '재시도를 옳게 할 단서'였다.)"""
+    try:
+        # dict 또는 JSON 문자열 모두 수용 — 도구 패키지 핸들러는 json.dumps(...) 문자열을 반환한다.
+        was_str = False
+        obj = result
+        if isinstance(result, str):
+            try:
+                obj = json.loads(result)
+                was_str = True
+            except Exception:
+                return result
+        if not isinstance(obj, dict):
+            return result
+        is_err = (obj.get("success") is False) or ("error" in obj and not obj.get("success"))
+        if not is_err or obj.get("_param_hint") or obj.get("blocked"):
+            return result
+        from ibl_parser import parse as _p
+        parsed = _p(code)
+        if not (parsed and len(parsed) == 1 and not parsed[0].get("_parallel")):
+            return result  # 파이프라인/병렬은 스텝별 결과로 이미 구분됨
+        node = parsed[0].get("_node", "")
+        action = parsed[0].get("action", "")
+        from ibl_access import _load_nodes_data
+        meta = _load_nodes_data().get("nodes", {}).get(node, {}).get("actions", {}).get(action, {})
+        desc = (meta.get("description") or "").strip()
+        if desc:
+            obj["_param_hint"] = (
+                f"[{node}:{action}] 올바른 사용법: {desc} "
+                "— 위 사용법에 맞는 파라미터명/값으로 다시 시도하세요."
+            )
+            return json.dumps(obj, ensure_ascii=False, indent=2) if was_str else obj
+    except Exception:
+        pass
+    return result
+
+
 def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = None, cancel_check=None) -> str:
     """execute_ibl 통합 실행기 — IBL 코드 기반
 
@@ -1109,6 +1154,15 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                         _ro = None
                 if isinstance(_ro, dict):
                     _is_err = (_ro.get("success") is False) or ("error" in _ro and not _ro.get("success"))
+                    # ★환경적 미도달(폰/맥이 일시적으로 안 닿음)은 '액션 고장'이 아니라
+                    # 일시적 환경 조건 → 서킷브레이커가 세면 안 된다. 안 그러면 부팅 직후
+                    # World Pulse 가 [sense:here]{} 를 폰에 보냈다가 폰이 아직 안 깨어나
+                    # 3회 실패 → 90초 차단이 열리고, 그 사이 폰이 깨어난 뒤의 *정상* 호출까지
+                    # 거짓 차단된다(phone_only 거짓양성). 미도달은 카운트 제외.
+                    if _is_err and any(_ro.get(k) for k in
+                                       ("phone_unreachable", "phone_forward",
+                                        "mac_unreachable", "mac_forward")):
+                        _is_err = False
                 elif isinstance(result, str):
                     # 파싱 불가한 문자열: 보수적으로 최상위 실패 표식만
                     _is_err = '"success": false' in result or '"success":false' in result
@@ -1123,6 +1177,9 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                     _action_fail_counter.pop(_fk, None)  # 성공하면 reset → closed
         except Exception:
             pass
+
+        # 단일-스텝 에러면 액션 사용법 힌트 부착 (실패 가시화 → 다음 턴 자가교정)
+        result = _enrich_error_with_param_hint(result, code)
 
         if isinstance(result, dict):
             return json.dumps(result, ensure_ascii=False, indent=2)

@@ -762,7 +762,8 @@ def _compress_text(text: str, action: str, config: dict) -> Any:
         from consciousness_agent import lightweight_ai_call
         compressed = lightweight_ai_call(
             prompt=f"다음은 [{action}] 액션의 실행 결과이다. {prompt_instruction}\n\n{text}",
-            system_prompt=_COMPRESS_SYSTEM_PROMPT
+            system_prompt=_COMPRESS_SYSTEM_PROMPT,
+            role="background"
         )
         if compressed:
             print(f"[IBL] postprocess:compress ({action}): {len(text)}자 → {len(compressed)}자")

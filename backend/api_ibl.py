@@ -263,9 +263,10 @@ async def translate_to_ibl(req: TranslateRequest):
 
     spec = _load_ibl_spec()
     system_prompt = _IBL_TRANSLATE_TASK + (f"\n\n<ibl_spec>\n{spec}\n</ibl_spec>" if spec else "")
-    raw = system_ai_call(prompt, system_prompt=system_prompt)
+    # 수동 모드 번역 = 모델 기어 '실행' 축(role=translate)으로 해소.
+    raw = system_ai_call(prompt, system_prompt=system_prompt, role="translate")
     if not raw:
-        raise HTTPException(status_code=503, detail="시스템 AI 모델이 응답하지 않았습니다. system_ai_config.json을 확인하세요.")
+        raise HTTPException(status_code=503, detail="번역 모델이 응답하지 않았습니다. 모델 기어(실행 축) 설정을 확인하세요.")
 
     ibl_code = _strip_code_fence(raw)
     return {

@@ -255,7 +255,18 @@ class AutoResponseService:
     def _resolve_tool_capable_config(self) -> Optional[dict]:
         """도구호출 가능한 설정 선택. 시스템 AI 가 claude_code(중앙 OAuth, SDK 직접호출 불가)면
         실제 API 키가 있는 경량(google)·중급 설정으로 폴백한다. 자동응답은 '응답 여부 판단 + 짧은
-        답변 생성'이라 경량 모델로 충분하므로, 시스템 AI 가 claude_code여도 메시지를 드롭하지 않는다."""
+        답변 생성'이라 경량 모델로 충분하므로, 시스템 AI 가 claude_code여도 메시지를 드롭하지 않는다.
+
+        1순위: 모델 기어 'auto_response' 역할(실행 축) — 단 SDK 직접호출 가능(claude_code 제외)할 때만.
+        2순위: SDK 가능 config 파일 스캔(폴백)."""
+        try:
+            from model_resolver import resolve
+            d = resolve("auto_response")
+            if d.get("provider") in self._SDK_PROVIDERS and d.get("api_key"):
+                return {"enabled": True, "provider": d["provider"],
+                        "model": d["model"], "apiKey": d["api_key"]}
+        except Exception:
+            pass
         for path in (SYSTEM_AI_CONFIG_PATH, LIGHTWEIGHT_AI_CONFIG_PATH, MIDTIER_AI_CONFIG_PATH):
             cfg = self._load_config_file(path)
             if (cfg.get("enabled", True)

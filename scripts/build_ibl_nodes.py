@@ -213,6 +213,38 @@ def check_os_branches(root: Path) -> list[str]:
     return issues
 
 
+def check_launcher_handlers(root: Path) -> list[str]:
+    """launcher 창 명령(어휘=계약)이 Electron main.js에 실제 핸들러를 갖는지 적발(launcher-가드).
+
+    어휘(open_window app) → ibl_routing.command_map 값(open_X_window) → main.js switch case 의
+    계약이 *효과 계층*까지 닿는지 검증. 이전 indienet 좀비처럼 어휘·라우터는 약속하나
+    main.js 핸들러가 없어 success:true 인데 창이 안 뜨는 침묵 실패를 빌드 단계에서 막는다.
+    (--check 가 백엔드 핸들러에서 멈추던 한계를 효과 계층으로 한 칸 더 확장.)
+    소스 일부 부재(폰/헤드리스 체크아웃)거나 패턴 불검출이면 graceful skip(거짓양성 방지)."""
+    import re as _re
+    issues: list[str] = []
+    routing = root / "backend" / "ibl_routing.py"
+    main_js = root / "frontend" / "electron" / "main.js"
+    if not routing.is_file() or not main_js.is_file():
+        return issues
+    try:
+        rtext = routing.read_text(encoding="utf-8")
+        mtext = main_js.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return issues
+    routed = set(_re.findall(r'"(open_\w+_window)"', rtext))   # command_map 값
+    cases = set(_re.findall(r"case\s+['\"](open_\w+_window)['\"]", mtext))  # switch case
+    if not routed or not cases:
+        return issues  # 형식 변경 — graceful skip
+    for cmd in sorted(routed - cases):
+        issues.append(
+            f"backend/ibl_routing.py 가 '{cmd}' 로 라우팅하나 "
+            f"frontend/electron/main.js switch 에 case 없음 — 침묵 실패(좀비 창). "
+            f"main.js 에 핸들러 추가하거나 command_map 에서 제거."
+        )
+    return issues
+
+
 # === 코퍼스 param 정합 검사 (2026-06-04) ===
 # 모든 액션이 자연히 받는 보편 키 (op 디스패치/레거시 target).
 UNIVERSAL_PARAM_KEYS = {"op", "target"}
@@ -1445,9 +1477,28 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 f"(OS 이음매 {len(OS_SEAM_ALLOWLIST)}개 파일 — 윈도우/리눅스 이식 점검 대상)"
             )
 
+    # --- launcher-가드: 어휘→라우터→main.js 핸들러 계약 (--check/--validate 전용) ---
+    launcher_failed = False
+    if check or validate_only:
+        lissues = check_launcher_handlers(root)
+        if lissues:
+            launcher_failed = True
+            print(
+                f"[build_ibl_nodes] launcher-가드 실패: {len(lissues)}건 "
+                f"(라우팅된 창 명령에 main.js 핸들러 부재 — 침묵 실패)",
+                file=sys.stderr,
+            )
+            for issue in lissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print(
+                "[build_ibl_nodes] launcher-가드 통과 ✓ "
+                "(라우팅된 창 명령 전부 main.js switch 에 핸들러 보유)"
+            )
+
     if validate_only:
         return 1 if (validation_failed or corpus_failed or fixture_failed
-                     or profile_failed or os_failed) else 0
+                     or profile_failed or os_failed or launcher_failed) else 0
 
     # 폰 매니페스트 파생 (runs_on + 검증된 폰 패키지). data 파싱 성공 시에만.
     manifest_path = root / "data" / "phone_manifest.json"
@@ -1487,7 +1538,8 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 print("[build_ibl_nodes] check: phone_manifest.json 일치 ✓")
         return 0 if (bytes_ok and manifest_ok and not validation_failed
                      and not corpus_failed and not fixture_failed
-                     and not profile_failed and not os_failed) else 1
+                     and not profile_failed and not os_failed
+                     and not launcher_failed) else 1
 
     if validation_failed:
         print(

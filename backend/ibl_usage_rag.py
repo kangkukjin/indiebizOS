@@ -29,6 +29,12 @@ class IBLUsageRAG:
     # 매칭되어 잘못된 액션을 추천하는 사고). 증류 임계값(0.7)보다는 살짝
     # 낮춰서, 0.65~0.7 구간(증류 후보)은 ref로 보여 의식이 활용 가능하게.
     MIN_SCORE = 0.65
+    # 저신뢰 바닥. MIN_SCORE 통과분이 하나도 없을 때만, 이 값 이상인 top-2를
+    # '저신뢰 참고'로 넘긴다. 저사양 모델일수록 참조가 더 필요한데 정답 패턴이
+    # 0.5대(애매 매칭) 구간에 몰려 MIN_SCORE에 잘리던 리콜 갭을 닫기 위함.
+    # 0.45 미만은 무관 노이즈로 보고 넘기지 않는다.
+    LOW_CONF_FLOOR = 0.45
+    LOW_CONF_MAX = 2
     CACHE_TTL = 300  # 5분
 
     _instance = None
@@ -86,19 +92,45 @@ class IBLUsageRAG:
             self._set_cached(cache_key, "")
             return ""
 
-        # 최소 점수 필터
-        filtered = [r for r in results if r.score >= self.MIN_SCORE]
-        if not filtered:
+        # 점수 게이트: 통과분(>=MIN_SCORE) 우선. 없으면 저신뢰 top-2(>=LOW_CONF_FLOOR).
+        selected, low_conf = self._select_references(results)
+        if not selected:
             self._set_cached(cache_key, "")
             return ""
 
-        xml = self._format_references(filtered)
+        xml = self._format_references(selected, low_conf=low_conf)
         self._set_cached(cache_key, xml)
         return xml
 
-    def _format_references(self, examples: list) -> str:
+    def _select_references(self, results: list) -> tuple:
+        """참조로 보여줄 용례 선별.
+
+        주 임계값(MIN_SCORE)을 넘는 게 있으면 그것만(고신뢰). 하나도 없으면
+        LOW_CONF_FLOOR 이상인 상위 LOW_CONF_MAX건을 저신뢰 참고로 반환한다.
+        Reflex/증류 판정은 호출 측이 top_score(results[0])로 따로 하므로 영향 없음 —
+        여기는 '의식 에이전트에게 무엇을 보여줄지'만 결정한다.
+
+        Returns:
+            (selected: list, low_conf: bool)
+        """
+        if not results:
+            return ([], False)
+        filtered = [r for r in results if r.score >= self.MIN_SCORE]
+        if filtered:
+            return (filtered, False)
+        low = [r for r in results if r.score >= self.LOW_CONF_FLOOR][:self.LOW_CONF_MAX]
+        return (low, True)
+
+    def _format_references(self, examples: list, low_conf: bool = False) -> str:
         """검색 결과를 프롬프트 주입용 XML로 포맷팅"""
-        lines = ['<ibl_references note="참고 용례. execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라. success_rate는 과거 실행 성공률(0~1)이니 낮으면 신중히 참고하라(없으면 미검증).">']
+        if low_conf:
+            note = ("참고 용례(저신뢰: 정확히 일치하는 과거 사례가 없어 가장 가까운 후보만 보인다. "
+                    "그대로 신뢰하지 말고 액션·파라미터를 직접 검증하라). "
+                    "execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라.")
+        else:
+            note = ("참고 용례. execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라. "
+                    "success_rate는 과거 실행 성공률(0~1)이니 낮으면 신중히 참고하라(없으면 미검증).")
+        lines = [f'<ibl_references note="{note}">']
         for ex in examples:
             # XML 속성용 이스케이프
             intent = ex.intent.replace('"', '&quot;').replace("'", "&apos;")
@@ -222,11 +254,12 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
     top_score = results[0].score if results else 0.0
     top_code = results[0].ibl_code if results else ""
 
-    # 최소 점수 필터
-    filtered = [r for r in results if r.score >= rag.MIN_SCORE]
+    # 점수 게이트 (get_references와 동일 정책): 통과분 없으면 저신뢰 top-2.
+    # top_score는 위에서 results[0]로 이미 확정 — Reflex/증류 판정엔 영향 없음.
+    selected, low_conf = rag._select_references(results)
 
     sections = []
-    refs_xml = rag._format_references(filtered) if filtered else ""
+    refs_xml = rag._format_references(selected, low_conf=low_conf) if selected else ""
     if refs_xml:
         sections.append(refs_xml)
 
@@ -484,6 +517,16 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
     Returns:
         증류 성공 여부
     """
+    # 목표 평가 게이트: 평가가 NOT_ACHIEVED로 끝난 실행(=목표 미달성)은 학습하지 않는다.
+    # 실패한 실행의 IBL 패턴이 해마에 누적되면 시간이 갈수록 추천 품질을 깎는다(복리 출혈).
+    # 판정은 메시지당 1회만 소비 — 읽고 즉시 비워 평가 없는 다음 메시지로 새지 않게 한다.
+    from thread_context import get_goal_eval_outcome, clear_goal_eval_outcome
+    _ge = get_goal_eval_outcome()
+    clear_goal_eval_outcome()
+    if _ge is not None and not _ge.get("achieved", True):
+        print(f"[경험증류] 목표 미달성(severity={_ge.get('severity')}) — 증류 스킵: \"{user_message[:40]}\"")
+        return False
+
     # 해마 비활성(폰 기본)이면 증류도 건너뜀 — 안 그러면 top_score=0.0 이 매 명령마다 증류
     # LLM 호출을 켜서 오히려 더 느려진다(해마 끄기의 목적 무력화). search 와 한 쌍으로 게이트.
     from ibl_usage_db import IBLUsageDB
@@ -549,7 +592,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
 
         # 반성 에이전트: 무의식 에이전트와 같은 경량 AI 사용 (도구 없음, 단순 텍스트)
         from consciousness_agent import lightweight_ai_call
-        result = lightweight_ai_call(prompt=prompt, system_prompt=system_prompt)
+        result = lightweight_ai_call(prompt=prompt, system_prompt=system_prompt, role="background")
 
         if not result:
             return False

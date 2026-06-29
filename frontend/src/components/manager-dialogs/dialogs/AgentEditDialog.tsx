@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { X, Eye, EyeOff } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { Agent } from '../../../types';
 import type { AgentForm, IBLNode } from '../types';
 import { api } from '../../../lib/api';
@@ -26,26 +26,7 @@ export function AgentEditDialog({
   setAgentForm,
   onSaveAgentSettings,
 }: AgentEditDialogProps) {
-  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
-  const [ollamaRunning, setOllamaRunning] = useState(false);
   const [iblNodes, setIblNodes] = useState<IBLNode[]>([]);
-  const [showApiKey, setShowApiKey] = useState(false);
-
-  // Ollama 선택 시 모델 목록 로드
-  useEffect(() => {
-    if (show && agentForm.provider === 'ollama') {
-      api.getOllamaModels().then((data) => {
-        setOllamaModels(data.models);
-        setOllamaRunning(data.running);
-        if (data.models.length === 1 && !agentForm.model) {
-          setAgentForm({ ...agentForm, model: data.models[0] });
-        }
-      }).catch(() => {
-        setOllamaModels([]);
-        setOllamaRunning(false);
-      });
-    }
-  }, [show, agentForm.provider]);
 
   // IBL 노드 목록 로드
   useEffect(() => {
@@ -131,105 +112,15 @@ export function AgentEditDialog({
             </div>
           </div>
 
-          {/* AI 설정 */}
+          {/* 개별 역할 (프롬프트) — 기본 정보 바로 밑 */}
           <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="text-sm font-bold text-gray-700 mb-3">AI 설정</h3>
-            <div className="grid grid-cols-2 gap-4">
-              {/* AI 제공자 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1">AI 제공자</label>
-                <select
-                  value={agentForm.provider}
-                  onChange={(e) => setAgentForm({ ...agentForm, provider: e.target.value, model: '' })}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                >
-                  <option value="google">Google (Gemini)</option>
-                  <option value="anthropic">Anthropic (Claude)</option>
-                  <option value="openai">OpenAI (GPT)</option>
-                  <option value="openrouter">OpenRouter (650+ 모델)</option>
-                  <option value="ollama">Ollama (로컬)</option>
-                  <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
-                </select>
-              </div>
-
-              {/* 모델 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-800 mb-1">모델</label>
-                {agentForm.provider === 'ollama' ? (
-                  ollamaModels.length > 0 ? (
-                    <select
-                      value={agentForm.model}
-                      onChange={(e) => setAgentForm({ ...agentForm, model: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                    >
-                      <option value="">모델 선택</option>
-                      {ollamaModels.map((model) => (
-                        <option key={model} value={model}>{model}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      value={agentForm.model}
-                      onChange={(e) => setAgentForm({ ...agentForm, model: e.target.value })}
-                      placeholder={ollamaRunning ? "설치된 모델 없음" : "Ollama 서버 확인 중..."}
-                      className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-500"
-                      disabled
-                    />
-                  )
-                ) : (
-                  <input
-                    type="text"
-                    value={agentForm.model}
-                    onChange={(e) => setAgentForm({ ...agentForm, model: e.target.value })}
-                    placeholder="gemini-2.0-flash-exp"
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                  />
-                )}
-              </div>
-
-              {/* API 키 (Ollama가 아닐 때만) */}
-              {agentForm.provider !== 'ollama' && (
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-800 mb-1">API 키</label>
-                  <div className="flex gap-2">
-                    <input
-                      type={showApiKey ? 'text' : 'password'}
-                      value={agentForm.apiKey}
-                      onChange={(e) => setAgentForm({ ...agentForm, apiKey: e.target.value })}
-                      placeholder="API 키 (비워두면 공통 설정 사용)"
-                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      className="px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700"
-                    >
-                      {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Ollama 안내 */}
-              {agentForm.provider === 'ollama' && (
-                <div className="col-span-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>Ollama</strong>는 로컬에서 실행되므로 API 키가 필요 없습니다.
-                  </p>
-                  {!ollamaRunning && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      Ollama 서버가 실행 중이 아닙니다. Manager에서 Ollama를 시작하세요.
-                    </p>
-                  )}
-                  {ollamaRunning && ollamaModels.length === 0 && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      설치된 모델이 없습니다. 터미널에서 `ollama pull qwen2.5:3b` 등으로 모델을 설치하세요.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
+            <h3 className="text-sm font-bold text-gray-700 mb-3">개별 역할 (프롬프트)</h3>
+            <textarea
+              value={agentForm.role}
+              onChange={(e) => setAgentForm({ ...agentForm, role: e.target.value })}
+              placeholder="이 에이전트의 역할과 행동 지침을 입력하세요..."
+              className="w-full h-32 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 resize-none"
+            />
           </div>
 
           {/* 채널 설정 (외부 에이전트인 경우만) */}
@@ -322,17 +213,6 @@ export function AgentEditDialog({
               </div>
             </div>
           )}
-
-          {/* 개별 역할 */}
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="text-sm font-bold text-gray-700 mb-3">개별 역할 (프롬프트)</h3>
-            <textarea
-              value={agentForm.role}
-              onChange={(e) => setAgentForm({ ...agentForm, role: e.target.value })}
-              placeholder="이 에이전트의 역할과 행동 지침을 입력하세요..."
-              className="w-full h-32 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 resize-none"
-            />
-          </div>
 
           {/* IBL 노드 설정 (Phase 16) */}
           <div className="border border-gray-200 rounded-lg p-4">

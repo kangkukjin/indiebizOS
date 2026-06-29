@@ -1387,6 +1387,11 @@ function startLauncherWS() {
           case 'open_system_ai_window':
             createSystemAIWindow();
             break;
+          case 'open_messenger_window':
+            // 메신저 창 (옛 indienet/이웃관리 → IBL 메신저 계기). app:"messenger" 및
+            // 레거시 app:"indienet" 둘 다 여기로 라우팅 (이전엔 핸들러 부재로 침묵 실패).
+            createMessengerWindow();
+            break;
           case 'open_business_window':
             createBusinessWindow();
             break;

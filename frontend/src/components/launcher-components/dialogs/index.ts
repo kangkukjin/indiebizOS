@@ -4,7 +4,6 @@
 
 export { NewProjectDialog } from './NewProjectDialog';
 export { NewFolderDialog } from './NewFolderDialog';
-export { ProfileDialog } from './ProfileDialog';
 export { SettingsDialog } from './SettingsDialog';
 export { TrashDialog } from './TrashDialog';
 export { SchedulerDialog } from './SchedulerDialog';

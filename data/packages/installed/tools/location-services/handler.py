@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import time
 import requests
 from datetime import datetime, timedelta
 import re
@@ -985,20 +986,26 @@ def _geocode_kakao(city: str) -> tuple:
 
 
 def _geocode_nominatim(city: str) -> tuple:
-    """OpenStreetMap Nominatim (무키). 전세계 폴백 — 한글 외국 도시까지 처리."""
-    try:
-        resp = requests.get(
-            "https://nominatim.openstreetmap.org/search",
-            params={"q": city, "format": "json", "limit": 1, "accept-language": "ko"},
-            headers={"User-Agent": "indiebizOS/1.0 (weather)"},
-            timeout=8
-        )
-        if resp.ok:
-            arr = resp.json()
-            if arr:
-                return (float(arr[0]["lat"]), float(arr[0]["lon"]))
-    except Exception:
-        pass
+    """OpenStreetMap Nominatim (무키). 전세계 폴백 — 한글 외국 도시까지 처리.
+
+    한글 도시의 주 해소기라 일시 장애(rate-limit/타임아웃)가 곧 날씨 조회 전체 실패로
+    이어진다(이전 '수원 success=False'의 실제 원인). 일시 장애에 한 번 재시도해 견고화."""
+    for attempt in range(2):
+        try:
+            resp = requests.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"q": city, "format": "json", "limit": 1, "accept-language": "ko"},
+                headers={"User-Agent": "indiebizOS/1.0 (weather)"},
+                timeout=8
+            )
+            if resp.ok:
+                arr = resp.json()
+                if arr:
+                    return (float(arr[0]["lat"]), float(arr[0]["lon"]))
+                return None  # 정상 응답인데 결과 없음 — 재시도 무의미
+        except Exception:
+            if attempt == 0:
+                time.sleep(0.6)  # 일시 장애 — 짧은 백오프 후 1회 재시도
     return None
 
 
@@ -1009,16 +1016,18 @@ def _has_hangul(s: str) -> bool:
 def _resolve_city_coords(city: str) -> tuple:
     """도시명 → (lat, lon). 정적표에 없으면 외부 지오코더로 내부 해소(호출자가 좌표를 떠넘길 필요 없음).
 
-    한글 도시는 Open-Meteo가 동음 외국 지명으로 오매칭하므로(예 '전주'→압록강변 40.4N,
-    '청주'→빈 결과) 한글이면 Nominatim(accept-language=ko)을 우선한다. 영문/로마자는
-    날씨 전용인 Open-Meteo가 정확·빠르므로 먼저 쓴다.
+    한글 도시는 Open-Meteo가 동음 외국/타지역 지명으로 오매칭하므로(예 '전주'→압록강변
+    40.4N, '수원'→전남 영광 부근 35.36N) 한글이면 Nominatim(accept-language=ko)·Kakao만
+    쓰고 Open-Meteo는 폴백에서 뺀다 — *틀린 위치의 날씨를 조용히 반환하는 것(침묵 오답)이
+    "못 찾음" 에러보다 나쁘다.* 둘 다 실패하면 차라리 명시적으로 실패한다.
+    영문/로마자는 날씨 전용 Open-Meteo가 정확·빠르므로 먼저 쓴다.
     """
     key = city.lower().strip()
     if key in _CITY_COORDS:
         return _CITY_COORDS[key]
 
     if _has_hangul(city):
-        resolvers = (_geocode_nominatim, _geocode_kakao, _geocode_openmeteo)
+        resolvers = (_geocode_nominatim, _geocode_kakao)
     else:
         resolvers = (_geocode_openmeteo, _geocode_nominatim)
 
@@ -1101,9 +1110,11 @@ def execute(tool_input: dict, context) -> str:
     tool_name = context.tool_name
     if tool_name == "get_weather":
         result = get_weather_openmeteo(
-            city=tool_input.get("city"),
+            # location/place 별칭 수용 — 약한 모델이 city 대신 흔히 쓰는 이름(침묵 실패 방지).
+            # 코드베이스 관용(from/origin·lon/lng)과 동일.
+            city=tool_input.get("city") or tool_input.get("location") or tool_input.get("place"),
             lat=tool_input.get("lat"),
-            lon=tool_input.get("lon"),
+            lon=tool_input.get("lon") or tool_input.get("lng"),
             days=tool_input.get("days", 3)
         )
         return json.dumps(result, ensure_ascii=False, indent=2)

@@ -378,6 +378,154 @@ async def update_midtier_ai_config(config: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============ 모델 기어 (계기판 변속) ============
+
+# 4축 대표 역할 — 기어별로 각 축이 어느 티어/모델로 도는지 표시용.
+_GEAR_AXIS_ROLES = {"분류": "classify", "평가": "evaluate", "실행": "execution", "의식": "consciousness"}
+
+
+def _describe_gear() -> dict:
+    """현재 기어 상태 + 4축이 어느 티어/모델로 해소되는지(UI 표시용)."""
+    import model_resolver as M
+    gear = M._load_gear()
+    axes = {}
+    for axis, role in _GEAR_AXIS_ROLES.items():
+        d = M.resolve(role)
+        axes[axis] = {"tier": d.get("tier"), "provider": d.get("provider"), "model": d.get("model")}
+    return {
+        "current_gear": M.get_gear(),
+        "gears": M.list_gears(),
+        "presets": gear.get("presets", {}),
+        "axes": axes,
+        "tiers": M.TIERS,
+        "axis_names": M.AXES,
+    }
+
+
+def _reset_gear_providers():
+    """기어/프리셋/핀 변경 후 init-시점 provider 핫리로드 — 다음 호출에서 새 티어로 재구성."""
+    for mod, fn in (("consciousness_agent", "reset_consciousness_agent"),
+                    ("system_ai_core", "reset_system_ai_runner"),
+                    ("consciousness_agent", "reset_midtier_provider"),
+                    ("consciousness_agent", "reset_lightweight_provider"),
+                    ("consciousness_agent", "reset_system_oneshot_provider")):
+        try:
+            import importlib
+            getattr(importlib.import_module(mod), fn)()
+        except Exception as reset_err:
+            print(f"[model-gear] {mod}.{fn} 리셋 경고: {reset_err}")
+
+
+def _list_pinnable_agents() -> list:
+    """핀(고정) 대상 에이전트 목록 — 시스템 AI + 전 프로젝트 에이전트. {id,name,project}.
+
+    ★id = 핀 키. 시스템 AI 는 role 'system_ai', 프로젝트 에이전트는 registry_key 형식
+    `{project}:{agent_id}` (agent_id 가 프로젝트 간 중복이라 프로젝트로 한정 — _resolve_execution_config 와 일치)."""
+    out = [{"id": "system_ai", "name": "시스템 AI", "project": "(시스템)"}]
+    try:
+        import yaml
+        from runtime_utils import get_base_path
+        proj_root = get_base_path() / "projects"
+        if proj_root.exists():
+            for d in sorted([p for p in proj_root.iterdir() if p.is_dir()], key=lambda p: p.name):
+                f = d / "agents.yaml"
+                if not f.exists():
+                    continue
+                try:
+                    data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+                    for a in (data.get("agents") or []):
+                        if isinstance(a, dict) and a.get("id"):
+                            out.append({"id": f"{d.name}:{a['id']}",
+                                        "name": a.get("name") or a["id"], "project": d.name})
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"[model-gear] 에이전트 열거 경고: {e}")
+    return out
+
+
+@router.get("/model-gear")
+async def get_model_gear():
+    """현재 모델 기어 + 프리셋 + 4축 해소 결과."""
+    try:
+        return _describe_gear()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/model-gear")
+async def set_model_gear(body: Dict[str, Any]):
+    """기어 변속(절약/균형/최대). set_gear 가 리졸버 provider 캐시를 비우고,
+    init-시점 provider(의식·시스템AI 러너)도 리셋해 *재시작 없이* 다음 작업부터 새 티어로 돈다.
+
+    ※ 이미 실행 중인 프로젝트 에이전트/안드로이드 에이전트는 자기 provider 를 들고 있어
+      다음 (재)시작에서 반영된다(러닝 중 교체는 범위 밖)."""
+    try:
+        import model_resolver as M
+        name = (body.get("gear") or body.get("current_gear") or "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="gear 값이 필요합니다.")
+        if not M.set_gear(name):
+            raise HTTPException(status_code=400, detail=f"알 수 없는 기어: {name} (가능: {M.list_gears()})")
+        _reset_gear_providers()
+        return {"status": "changed", **_describe_gear()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/model-gear/presets")
+async def update_model_gear_presets(body: Dict[str, Any]):
+    """기어 프리셋 정의 갱신 — 각 기어(절약/균형/최대 등)가 4축(분류·평가·실행·의식)을
+    어느 티어(경량/중급/고급)로 매핑하는지 사용자가 직접 편집. body={presets:{기어:{축:티어}}}."""
+    try:
+        import model_resolver as M
+        presets = body.get("presets")
+        if not M.set_presets(presets):
+            raise HTTPException(status_code=400,
+                                detail=f"잘못된 프리셋. 축은 {M.AXES}, 티어는 {M.TIERS} 만 허용.")
+        _reset_gear_providers()
+        return {"status": "saved", **_describe_gear()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/model-gear/overrides")
+async def get_model_gear_overrides():
+    """에이전트 핀(고정) 현황 + 핀 가능한 에이전트 목록 + 티어 옵션."""
+    try:
+        import model_resolver as M
+        return {
+            "overrides": M.get_overrides(),
+            "agents": _list_pinnable_agents(),
+            "tiers": M.TIERS,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/model-gear/overrides")
+async def update_model_gear_overrides(body: Dict[str, Any]):
+    """에이전트/역할 핀 갱신 — 특정 에이전트만 기어 무시하고 티어 고정.
+    body={overrides:{agent_id 또는 role: 티어명}}. 빈 값/누락 키는 핀 해제."""
+    try:
+        import model_resolver as M
+        overrides = body.get("overrides", {})
+        # 빈 문자열/None 값은 핀 해제로 간주 — 정리
+        cleaned = {k: v for k, v in (overrides or {}).items() if v}
+        if not M.set_overrides(cleaned):
+            raise HTTPException(status_code=400, detail=f"잘못된 핀. 티어는 {M.TIERS} 만 허용.")
+        _reset_gear_providers()
+        return {"status": "saved", "overrides": M.get_overrides()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============ Ollama 제어 ============
 
 ollama_process = None

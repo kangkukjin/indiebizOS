@@ -1,0 +1,32 @@
+{
+  "_doc": "몸(body) 프로파일 — 'android' 하드웨어가 indiebizOS 단일 코드베이스에서 무엇을 못 돌리는지 선언한다. 번들은 이 선언에서 *파생*된다(손-리스트 아님). 새 몸(iphone/windows/linux…)을 더하려면 data/bodies/<body>.json 하나를 추가하면 된다. 파생 도구 = scripts/build_body_bundle.py.",
+  "body": "android",
+  "entry": "phone-companion/app/src/main/python/phone_api.py",
+  "_absent_doc": "이 몸에 없는 외부 파이썬 패키지(top-package명). backend 모듈이 이걸 *모듈 최상위에서* import하면 그 몸에선 import 자체가 크래시 → 번들 제외(전이 포함). 가드(try/except·지연 import)된 것은 무관. 안드로이드 Chaquopy pip = fastapi/pydantic/uvicorn/PyYAML/requests/httpx/bs4/feedparser/numpy/Pillow 뿐.",
+  "absent_packages": [
+    "torch", "sentence_transformers", "transformers",
+    "sqlite_vec",
+    "anthropic", "google", "openai", "cohere", "mistralai",
+    "pynostr", "cryptography",
+    "dotenv",
+    "playwright", "selenium",
+    "cv2", "scipy", "pandas", "matplotlib", "sklearn",
+    "pyobjc", "AppKit", "Foundation", "Quartz"
+  ],
+  "_force_exclude_doc": "절대 번들 금지(absent_packages로 안 잡히는 예외 — 맥 진입점·프로토타입·간접 의존). 각 항목은 selfcheck/engine-imports(폰 실측)가 찾은 '선언된 substrate 예외'.",
+  "force_exclude": [
+    "api",
+    "_slide_proto",
+    "api_config",
+    "api_lecture_workspace",
+    "ibl_opus_bulk_gen"
+  ],
+  "_force_exclude_reasons": {
+    "api": "맥 백엔드 진입점(dotenv) — 폰은 phone_api.serve()",
+    "api_config": "python-multipart 부재(FastAPI Form). 폰 설정/기어 REST는 phone_api 가 자체 제공",
+    "api_lecture_workspace": "python-multipart 부재(FastAPI Form/Upload)",
+    "ibl_opus_bulk_gen": "학습데이터 생성 스크립트 — 모듈 import 시 /tmp 파일 읽음(부작용)"
+  },
+  "_force_exclude_glob": ["test_*"],
+  "notes": "absent_packages는 '없는 능력'의 선언이지 손-큐레이션이 아니다. windows/linux 데스크탑 몸은 전체 트리를 소스로 돌리므로(서브셋 번들 불요) 이 파생이 필요 없고, OS 차이는 substrate seam(check_os_branches)이 담당한다 — 이 프로파일 메커니즘은 '제약된 몸'(android·향후 ios)용이다."
+}

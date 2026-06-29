@@ -150,6 +150,27 @@ def clear_tool_calls():
     _thread_local.tool_calls = []
 
 
+# ============ Goal 평가 결과 (증류 게이트용) ============
+# 목표 평가 루프의 최종 판정을 증류 단계로 전달한다. 평가가 NOT_ACHIEVED로
+# 끝난(=목표 미달성) 실행의 IBL 패턴을 해마에 학습하면 실패가 코퍼스에 누적되어
+# 시간이 갈수록 추천 품질을 깎는다(복리 출혈). 증류 전에 이 판정을 보고 거른다.
+# None = 평가 안 함(EXECUTE/Reflex 등) → 증류 허용(기존 동작).
+
+def set_goal_eval_outcome(achieved: bool, severity: int = 0):
+    """현재 스레드의 목표 평가 최종 판정 저장."""
+    _thread_local.goal_eval_outcome = {"achieved": bool(achieved), "severity": int(severity)}
+
+
+def get_goal_eval_outcome():
+    """현재 스레드의 목표 평가 판정 반환. 평가가 없었으면 None."""
+    return getattr(_thread_local, 'goal_eval_outcome', None)
+
+
+def clear_goal_eval_outcome():
+    """현재 스레드의 목표 평가 판정 초기화."""
+    _thread_local.goal_eval_outcome = None
+
+
 # ============ Allowed Nodes (IBL Node Access Control) ============
 
 def set_allowed_nodes(allowed):

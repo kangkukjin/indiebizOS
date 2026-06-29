@@ -36,19 +36,25 @@ class ConsciousnessAgent:
         self._load_prompt()
 
     def _init_provider(self):
-        """시스템 AI의 API 설정을 가져와 프로바이더 초기화"""
+        """모델 기어 '의식' 축으로 프로바이더 초기화.
+
+        과거엔 system_ai_config 를 직접 읽어 시스템AI와 같은 모델로 용접돼 있었으나,
+        이제 model_resolver.resolve('consciousness') 로 의식 축을 따로 해소한다(기어 프리셋이
+        의식과 실행을 다른 티어로 가를 수 있음). 키/모델 비면 비활성(기존 동작 보존)."""
         try:
-            from api_system_ai import load_system_ai_config
+            from model_resolver import resolve
             from providers import get_provider
 
-            config = load_system_ai_config()
-            api_key = config.get("apiKey", "")
-            if not api_key:
-                logger.warning("[ConsciousnessAgent] API 키 없음 — 비활성 상태")
-                return
+            d = resolve("consciousness")
+            provider_name = d.get("provider") or "anthropic"
+            model = d.get("model") or ""
+            api_key = d.get("api_key") or ""
 
-            provider_name = config.get("provider", "anthropic")
-            model = config.get("model", "claude-sonnet-4-20250514")
+            # claude_code/ollama 는 자체 인증(OAuth/로컬)이라 키 불요. 그 외엔 키 없으면 비활성.
+            no_key = {"claude_code", "claude-code", "claudecode", "ollama"}
+            if not model or (not api_key and provider_name.lower() not in no_key):
+                logger.warning(f"[ConsciousnessAgent] 모델/키 없음 — 비활성 (source={d.get('source')})")
+                return
 
             self._provider = get_provider(
                 provider_name,
@@ -62,7 +68,7 @@ class ConsciousnessAgent:
             # claude_code provider의 세션 연속성 비활성화 (no-op on other providers)
             if hasattr(self._provider, "disable_session_persistence"):
                 self._provider.disable_session_persistence = True
-            print(f"[ConsciousnessAgent] 초기화 완료 ({provider_name}/{model})")
+            print(f"[ConsciousnessAgent] 초기화 완료 ({provider_name}/{model}, {d.get('source')})")
         except Exception as e:
             print(f"[ConsciousnessAgent] 초기화 실패: {e}")
             self._provider = None
@@ -496,7 +502,24 @@ _get_unconscious_provider = _get_lightweight_provider
 
 
 def _get_midtier_provider():
-    """중급 AI 전용 프로바이더 반환. 설정이 없으면 None (본격 모델 그대로 사용)."""
+    """중급/reflex 프로바이더 반환 — 모델 기어 'reflex' 역할(실행 축)로 해소.
+
+    reflex(해마 고확신) 경로가 provider 자체를 변이(system_prompt/tools/agent_id 복사)해
+    ai._provider 로 스왑하므로 session 버킷(원샷과 객체 분리)으로 받는다. 같은 reflex 객체를
+    여러 호출이 공유(옛 _midtier_provider 싱글턴과 동일 — 동기 호출이라 변이→사용이 밀착).
+    리졸버 실패/모델 미설정 시 옛 midtier_ai_config 직접 로드로 폴백."""
+    try:
+        from model_resolver import get_provider_for
+        prov, _d = get_provider_for("reflex", oneshot=False)
+        if prov is not None:
+            return prov
+    except Exception as e:
+        print(f"[MidtierAI] 리졸버 해소 실패(옛 config 폴백): {e}")
+    return _get_midtier_provider_legacy()
+
+
+def _get_midtier_provider_legacy():
+    """옛 경로: midtier_ai_config 직접 로드(리졸버 폴백). 3단계서 제거 예정."""
     global _midtier_provider, _midtier_provider_initialized
     if _midtier_provider_initialized:
         return _midtier_provider
@@ -547,11 +570,22 @@ def _get_midtier_provider():
         return None
 
 
+def _clear_resolver_cache():
+    """모델 기어 리졸버의 provider 캐시도 비운다 — 티어 config 변경이 즉시 반영되도록.
+    (리졸버 경로가 옛 싱글턴을 대체했으므로 reset 훅들이 이쪽도 비워야 핫리로드 유지.)"""
+    try:
+        from model_resolver import clear_provider_cache
+        clear_provider_cache()
+    except Exception:
+        pass
+
+
 def reset_midtier_provider():
-    """중급 AI 프로바이더 캐시 초기화 (설정 변경 시 호출)"""
+    """중급/reflex 프로바이더 캐시 초기화 (설정 변경 시 호출)"""
     global _midtier_provider, _midtier_provider_initialized
     _midtier_provider = None
     _midtier_provider_initialized = False
+    _clear_resolver_cache()
 
 
 def reset_lightweight_provider():
@@ -559,6 +593,15 @@ def reset_lightweight_provider():
     global _lightweight_provider, _lightweight_provider_initialized
     _lightweight_provider = None
     _lightweight_provider_initialized = False
+    _clear_resolver_cache()
+
+
+def reset_consciousness_agent():
+    """의식 에이전트 싱글턴 초기화 — 기어/설정 변경 시 호출(다음 호출에서 새 티어로 재구성).
+    리졸버 캐시도 비워 의식 provider 가 새 모델로 다시 빌드되게 한다."""
+    global _consciousness_instance
+    _consciousness_instance = None
+    _clear_resolver_cache()
 
 
 def get_consciousness_agent() -> ConsciousnessAgent:
@@ -569,12 +612,27 @@ def get_consciousness_agent() -> ConsciousnessAgent:
     return _consciousness_instance
 
 
-def lightweight_ai_call(prompt: str, system_prompt: str = None,
-                        images: list = None) -> Optional[str]:
-    """경량 원샷 AI 호출.
+def _resolve_oneshot_provider(role: str):
+    """모델 기어 리졸버로 role 에 맞는 *원샷* 프로바이더 획득.
 
-    경량 AI 전용 프로바이더가 있으면 우선 사용하고,
-    없으면 의식 에이전트의 프로바이더로 폴백한다.
+    리졸버(model_resolver.get_provider_for)가 현재 기어→축→티어로 모델을 해소한다.
+    원샷 계약(분류·평가·증류)이라 oneshot 버킷(세션 비활성)으로 획득 — 메인 에이전트와
+    session_key 충돌 방지 + reflex 같은 변이형 provider 와 캐시 객체 분리.
+    리졸버 실패/모델 미설정 시 None → 호출부가 옛 getter 로 폴백."""
+    try:
+        from model_resolver import get_provider_for
+        provider, _desc = get_provider_for(role, oneshot=True)
+    except Exception as e:
+        logger.warning(f"[model_resolver] role={role} provider 획득 실패: {e}")
+        return None
+    return provider
+
+
+def lightweight_ai_call(prompt: str, system_prompt: str = None,
+                        images: list = None, role: str = "classify") -> Optional[str]:
+    """경량 원샷 AI 호출 — 모델은 기어 리졸버가 role 로 해소한다.
+
+    리졸버 프로바이더 우선 → 옛 경량 getter → 의식 에이전트 순으로 폴백.
 
     Args:
         prompt: 전달할 메시지
@@ -582,13 +640,19 @@ def lightweight_ai_call(prompt: str, system_prompt: str = None,
         images: 멀티모달 입력 [{"base64": "...", "media_type": "image/png"}]
             지정 시 경량 모델이 이미지를 직접 본다(평가자가 시각 산출물을 검수할 때).
             경량 프로바이더(google gemini)가 비전 가능. None이면 기존 텍스트 전용 동작.
+        role: 모델 기어 역할(classify/background/...). 기본 classify.
+            분류·백그라운드(증류·포식·압축) 모두 분류 축→경량 티어로 해소(동일 동작).
 
-    용도: 무의식 에이전트 분류, 달성 기준 평가 등 가벼운 AI 호출.
+    용도: 무의식 에이전트 분류, 경험 증류, 포식 정리 등 가벼운 AI 호출.
     """
-    # 1차: 경량 AI 전용 프로바이더
-    provider = _get_lightweight_provider()
+    # 1차: 기어 리졸버 (role → 축 → 티어 → 모델)
+    provider = _resolve_oneshot_provider(role)
 
-    # 2차: 의식 에이전트 프로바이더로 폴백
+    # 2차: 옛 경량 AI 전용 프로바이더 폴백
+    if provider is None:
+        provider = _get_lightweight_provider()
+
+    # 3차: 의식 에이전트 프로바이더로 폴백
     if provider is None:
         agent = get_consciousness_agent()
         if not agent.is_ready or not agent._provider:
@@ -665,16 +729,21 @@ def reset_system_oneshot_provider():
     global _system_oneshot_provider, _system_oneshot_provider_initialized
     _system_oneshot_provider = None
     _system_oneshot_provider_initialized = False
+    _clear_resolver_cache()
 
 
 def system_ai_call(prompt: str, system_prompt: str = None,
-                   images: list = None) -> Optional[str]:
-    """본격(system_ai) 모델 원샷 호출 — lightweight_ai_call 과 같은 계약, 모델만 본격.
+                   images: list = None, role: str = "translate") -> Optional[str]:
+    """원샷 호출 — 모델은 기어 리졸버가 role 로 해소한다(lightweight_ai_call 과 같은 계약).
 
-    수동 모드 번역처럼 '경량 대신 시스템 AI와 같은 모델'로 처리하고 싶을 때 쓴다.
-    system_ai 전용 원샷 프로바이더 우선, 없으면 의식 에이전트(본격) 프로바이더로 폴백.
+    과거엔 무조건 system_ai(본격) 모델이었으나, 이제 role 로 티어가 갈린다:
+      - translate(수동 번역) → 실행 축
+      - evaluate(달성 기준 평가) → 평가 축(기어 프리셋상 경량 — opus→경량 개선)
+    리졸버 프로바이더 우선 → 옛 system_ai 원샷 getter → 의식 에이전트(본격) 순 폴백.
     """
-    provider = _get_system_oneshot_provider()
+    provider = _resolve_oneshot_provider(role)
+    if provider is None:
+        provider = _get_system_oneshot_provider()
     if provider is None:
         agent = get_consciousness_agent()
         if not agent.is_ready or not agent._provider:

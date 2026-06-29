@@ -12,7 +12,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Terminal, Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert, HelpCircle, Copy, X, Stethoscope, RotateCw, HardDrive, Boxes } from 'lucide-react';
 import { api } from '../lib/api';
-import { NodePresence } from './launcher-components';
+import { NodePresence, ModelGearLever } from './launcher-components';
 import { EpisodeJournal } from './EpisodeJournal';
 import type { IblValidateResult, IblSafety, IblCatalog, DashboardStatus } from '../lib/api-ibl';
 
@@ -362,6 +362,9 @@ export default function ManualMode() {
             </button>
           </div>
         </div>
+
+        {/* 모델 기어 — 계기판 변속 레버(절약/균형/최대). 시스템 전체 모델 등급을 재시작 없이 변속. */}
+        <ModelGearLever />
 
         {/* 시스템 상태 (계기판) — 마지막 IBL 건강 + 핵심 vitals. 열 때 즉시(검사 X), '지금 점검'으로 새로. */}
         <div className="rounded-xl border border-stone-200 bg-white/70 p-4 space-y-3">

@@ -366,6 +366,10 @@ class AgentCognitiveMixin:
             system_prompt = self._build_system_prompt(role)
             tools = self._build_ibl_tools()
 
+            # 모델 기어 '실행' 축 상속/핀 — 우선순위: 기어 중앙 핀(overrides[agent_id]) >
+            # yaml ai 명시 핀 > 기어 실행 축 상속(미지정 에이전트는 개별 설정 불요).
+            ai_config = self._resolve_execution_config(ai_config, agent_id)
+
             self.ai = AIAgent(
                 ai_config=ai_config,
                 system_prompt=system_prompt,
@@ -374,6 +378,37 @@ class AgentCognitiveMixin:
                 project_path=str(self.project_path),
                 tools=tools
             )
+
+    def _resolve_execution_config(self, ai_config: dict, agent_id) -> dict:
+        """프로젝트 에이전트 모델 = 모델 기어가 *단독* 결정한다.
+
+        ★per-agent 모델 설정(yaml ai.provider/model/apiKey)은 폐지됨 — 런처의 모델 티어
+        (경량/중급/고급)가 유일한 모델 설정이다. yaml 의 모델/키는 무시한다.
+        우선순위: 기어 중앙 핀(overrides[agent_id]) > 현재 기어의 실행 축 티어.
+        키도 티어에서 온다(에이전트는 키를 들고 다니지 않는다).
+        ★핀 키 = registry_key 형식 `{project_id}:{agent_id}` — agent_id 는 프로젝트 간 중복
+        (예: 여러 프로젝트가 'agent_001')이라 프로젝트로 한정해야 특정 에이전트만 고정된다.
+        (thinkingBudget 등 비-모델 필드는 보존.)"""
+        ai_config = dict(ai_config or {})
+        # 레거시 per-agent 모델 설정 제거 — 기어가 전적으로 채운다.
+        for k in ("provider", "model", "api_key", "apiKey"):
+            ai_config.pop(k, None)
+        project_id = self.config.get("_project_id") or getattr(self, "project_id", "") or ""
+        pin_key = f"{project_id}:{agent_id}" if (project_id and agent_id) else agent_id
+        try:
+            from model_resolver import resolve
+            d = resolve("execution", agent_id=pin_key)
+        except Exception as e:
+            print(f"[AgentRunner] 실행 축 해소 실패: {e}")
+            return ai_config
+
+        if d.get("model"):
+            ai_config["provider"] = d.get("provider") or "anthropic"
+            ai_config["model"] = d["model"]
+            ai_config["api_key"] = d.get("api_key", "")
+            src = "중앙 핀" if str(d.get("source", "")).startswith("override:") else "실행 축 티어"
+            print(f"[AgentRunner] {pin_key}: 모델 기어({src}) → {ai_config['provider']}/{ai_config['model']} ({d.get('source')})")
+        return ai_config
 
     def _load_role(self) -> str:
         """에이전트 역할 텍스트 로드"""
@@ -1049,6 +1084,7 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
             resp = lightweight_ai_call(
                 prompt,
                 system_prompt="진행 중 태스크 framing의 적합성 판정기. JSON으로만 응답.",
+                role="background",
             )
             if not resp:
                 return None
@@ -1174,7 +1210,8 @@ AI: {ai_response[:500]}"""
 
             result = lightweight_ai_call(
                 prompt=extract_prompt,
-                system_prompt="사실 정보만 추출하라. JSON 배열로만 응답."
+                system_prompt="사실 정보만 추출하라. JSON 배열로만 응답.",
+                role="background",
             )
             if not result:
                 return
@@ -1240,7 +1277,8 @@ AI: {ai_response[:500]}"""
                 )
                 resp = lightweight_ai_call(
                     prompt=batch_prompt,
-                    system_prompt="기억 관계 판정기. 쌍 순서대로 verdict 배열만 JSON으로 응답."
+                    system_prompt="기억 관계 판정기. 쌍 순서대로 verdict 배열만 JSON으로 응답.",
+                    role="background",
                 )
                 if resp:
                     rc = resp.strip()
@@ -1378,7 +1416,8 @@ AI 답변: {ai_response[:1400]}
 
             resp = lightweight_ai_call(
                 prompt=extract_prompt,
-                system_prompt="포식 지도 증류기. 포식한 공간을 명명하고 일반화 가능한 공간 지식 델타만 JSON으로. 특정 항목·날 내용 금지."
+                system_prompt="포식 지도 증류기. 포식한 공간을 명명하고 일반화 가능한 공간 지식 델타만 JSON으로. 특정 항목·날 내용 금지.",
+                role="background",
             )
             if not resp:
                 return
@@ -1991,9 +2030,9 @@ AI 답변: {ai_response[:1400]}
         try:
             # 평가기 = 의식 모델과 동일(system_ai_config). 평가 프롬프트의 정교한 루브릭(원장
             # 교차검증·열린문제 노력선·표면 vs 실질)을 경량 flash-lite 가 실행하지 못해 거짓합격을
-            # 내던 것을 본격 모델로 교정. system_ai_call = lightweight_ai_call 과 같은 계약
-            # (prompt/system_prompt/images), 모델만 의식·실행과 같은 본격. system_ai 모델을 바꾸면
-            # 의식·실행·평가가 함께 따라간다.
+            # 달성 기준 평가는 모델 기어 '평가' 축(role=evaluate)으로 해소된다 —
+            # 기어 프리셋상 평가 축은 경량 티어(과거 opus 고정 → 경량 개선). system_ai_call 은
+            # role 만 다를 뿐 lightweight_ai_call 과 같은 계약(prompt/system_prompt/images).
             from consciousness_agent import system_ai_call
 
             eval_images = None
@@ -2001,7 +2040,7 @@ AI 답변: {ai_response[:1400]}
                 eval_images = [{"base64": a["base64"], "media_type": a["media_type"]}
                                for a in visual_artifacts]
             eval_response = system_ai_call(prompt, system_prompt=evaluator_system_prompt,
-                                           images=eval_images)
+                                           images=eval_images, role="evaluate")
             if eval_response is None or not eval_response.strip():
                 self._log("[GoalEval] AI 응답 없음 (API 오류 등), 통과 처리")
                 return True, "평가 스킵 (AI 응답 없음)", 0
@@ -2057,6 +2096,9 @@ AI 답변: {ai_response[:1400]}
             최종 응답 텍스트
         """
         import time as _time
+        from thread_context import set_goal_eval_outcome, clear_goal_eval_outcome
+        # 이번 평가의 판정을 초기화 — 증류 게이트가 직전 메시지의 stale 판정을 보지 않도록.
+        clear_goal_eval_outcome()
         response = initial_response
 
         # 도구 호출 trace를 직렬화 — 시퀀스 자체는 어떤 경우에도 보존됨.
@@ -2068,6 +2110,36 @@ AI 답변: {ai_response[:1400]}
         action_ledger = build_action_ledger(trace_source)
         # _collect_created_files용: tool_calls가 있으면 그쪽도 활용.
         _trace_dicts = tool_calls if tool_calls else None
+
+        # ★거짓 '허위보고' 버그 근본 수정: 재실행 호출을 self.ai.get_last_tool_calls()로만
+        # 읽었는데 gemini provider는 _last_tool_calls를 안 채워 빈 결과 → action_ledger가 초기
+        # 호출에 멈춤 → "재실행했는데 원장에 없으니 조작"이라는 거짓 양성(루프가 영원히 통과 못 함).
+        # thread_context는 실행기(execute_tool/ibl_engine)가 채우므로 provider와 무관하게 모든
+        # 라운드를 담는 진실 소스 → 여기서 델타를 떠 원장에 누적한다.
+        try:
+            from thread_context import get_tool_calls as _get_tc
+        except Exception:
+            _get_tc = None
+
+        def _tc_calls():
+            """thread_context의 execute_tool 레벨 호출만 (ibl_engine 레벨 ibl: 중복 제외)."""
+            if not _get_tc:
+                return []
+            try:
+                return [c for c in (_get_tc() or [])
+                        if not str(c.get("tool_name", "")).startswith("ibl:")]
+            except Exception:
+                return []
+
+        # 초기 trace가 비면(예: gemini 비-streaming 경로는 provider 호출이력을 안 줌) thread_context로 시드.
+        if not trace_source:
+            _seed = _tc_calls()
+            if _seed:
+                trace_source = list(_seed)
+                tool_results_str = serialize_tool_trace(trace_source)
+                action_ledger = build_action_ledger(trace_source)
+                _trace_dicts = trace_source
+        _tc_seen = len(_tc_calls())
 
         for round_num in range(1, max_rounds + 1):
             self._log(f"[GoalEval] 라운드 {round_num}/{max_rounds} 평가 시작")
@@ -2097,11 +2169,13 @@ AI 답변: {ai_response[:1400]}
             )
 
             if achieved:
+                set_goal_eval_outcome(True, 0)
                 return response
 
-            # 마지막 라운드면 그냥 반환
+            # 마지막 라운드면 그냥 반환 — 미달성으로 끝났음을 증류 게이트에 알린다.
             if round_num >= max_rounds:
-                self._log(f"[GoalEval] 라운드 소진, 현재 응답 반환")
+                set_goal_eval_outcome(False, severity)
+                self._log(f"[GoalEval] 라운드 소진, 현재 응답 반환 (미달성 → 증류 제외)")
                 return response
 
             # 피드백을 주입하여 재실행 — severity에 따라 전략 분기
@@ -2158,13 +2232,18 @@ AI 답변: {ai_response[:1400]}
                     # ★재실행이 만든 새 도구 호출을 누적해 ledger·trace 를 갱신한다.
                     # 안 하면 다음 라운드 평가가 라운드 1의 stale 원장으로 새 응답을
                     # 판정 → 실제로 크롤링/검색을 해놓고도 "원장에 없으니 안 했다 = 조작"
-                    # 이라는 거짓 양성이 난다(재실행 루프가 영원히 통과 못 함). 누적인 이유:
-                    # session=resume 면 이전 라운드의 도구 결과가 컨텍스트에 남아 새 응답을
-                    # 떠받치므로, 이 응답을 떠받친 액션은 '여태까지 호출된 전부'다.
-                    try:
-                        _new_calls = self.ai.get_last_tool_calls()
-                    except Exception:
-                        _new_calls = None
+                    # 이라는 거짓 양성이 난다(재실행 루프가 영원히 통과 못 함).
+                    # 소스: thread_context 델타(provider 독립) 우선, 비면 provider
+                    # get_last_tool_calls 폴백(claude_code MCP 경로 대비). '델타 우선,
+                    # 없으면 폴백'이라 둘 다 채우는 provider여도 이중계상되지 않는다.
+                    _all_tc = _tc_calls()
+                    _new_calls = _all_tc[_tc_seen:]
+                    _tc_seen = len(_all_tc)
+                    if not _new_calls:
+                        try:
+                            _new_calls = self.ai.get_last_tool_calls() or []
+                        except Exception:
+                            _new_calls = []
                     if _new_calls:
                         if trace_source and isinstance(trace_source[0], dict):
                             trace_source = list(trace_source) + list(_new_calls)

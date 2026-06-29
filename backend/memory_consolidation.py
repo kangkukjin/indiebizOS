@@ -103,6 +103,7 @@ JSON으로만 응답:
     resp = lightweight_ai_call(
         prompt=prompt,
         system_prompt="기억 병합 판정기. 같은 사실만 병합. JSON으로만 응답.",
+        role="background",
     )
     if not resp:
         return []
@@ -160,6 +161,7 @@ JSON으로만 응답: {{"content": "<압축본>", "keywords": "k1,k2,..."}}"""
     resp = lightweight_ai_call(
         prompt=prompt,
         system_prompt="기억 압축기. 구별되는 사실은 보존하고 중복만 제거. JSON으로만 응답.",
+        role="background",
     )
     if not resp:
         return None

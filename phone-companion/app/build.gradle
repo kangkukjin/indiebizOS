@@ -75,79 +75,23 @@ android {
 // → 정본에서 indiebiz_base.zip 에셋으로 묶고, 앱이 filesDir 로 풀어 INDIEBIZ_BASE_PATH 로 가리킨다.
 // 핸들러 추출(phone_weather 식 손복사)은 금지 — 그건 우리가 제거한 바로 그 드리프트.
 def _ROOT = "${rootDir}/.."
-// 엔진 클로저(맥 격리 시뮬레이션으로 검증된 최소 집합)
-def _ENGINE_MODULES = [
-    'ibl_engine', 'ibl_parser', 'ibl_access', 'ibl_routing', 'ibl_executors',
-    'tool_loader', 'tool_context', 'system_tools', 'api_engine', 'thread_context',
-    'api_launcher_web',
-    'file_index',            // 보편 파일/미디어 색인 어댑터 — self:photo(+후속 fs_query)가 위임. 폰=MediaStore(PhoneActions.queryMedia), 맥=Spotlight. detect_body 몸 분기.
-    'api_photo',             // 썸네일/원본/동영상 서빙(PIL) — self:photo records.image=/photo/thumbnail?path= 를 폰이 *자기* 미디어로 직접 서빙(맥 프록시면 폰경로가 맥에 없어 404=뷰어 깨짐). 몸-로컬 I/O 라 맥과 동일 정본 함수 위임(phone_api 가 catch-all 앞에 마운트). photo_db/scanner 는 guard import(폰 미사용).
-    'workflow_engine',       // 합성 code(&/>>/??) 오케스트레이터 — 혼합 code 액션별 분할 실행에 필수
-    'phone_notifications',   // M3: [sense:phone] 로컬 알림 reader
-    'runtime_utils',         // scope=system/workspace 액션의 get_base_path (sense:phone 등)
-    'device_registry',       // 다중 노드 프레즌스 — 안정 device_id/별칭, 허브 자기등록(@주소 폴백)
-    'business_manager',      // 폰 로컬 business.db(주소록 메타데이터) — 합집합 동기화용
-    'business_sync',         // 폰↔맥 business.db LWW+tombstone 머지(export/merge)
-    'channel_engine',        // 커뮤니티/메신저 IBL 라우터 타깃(others:feed/board/nostr)
-    'indienet',              // Nostr 코어 — 폰선 nostr_phone_bridge 로 프리미티브 위임(pynostr 우회)
-    'nostr_phone_bridge',    // 폰 네이티브 nostr 브리지(Chaquopy→Kotlin RelayClient/Sender/NostrCrypto)
-
-    // === 폰-자아 호스팅 step 4: 인지 하네스 (PHONE_SELF_HOSTING_HANDOFF §6.4) ===
-    // 폰이 자기 하네스+기억을 호스팅(두 번째 독립 자아)하려면 인지 파이프라인이 폰에 실재해야.
-    // 최상위 import 폐포(13모듈) AST 분석 + 맥 import 스모크로 import 안전 확인 — 벤더 SDK
-    // (anthropic/google-genai)는 providers 서브모듈에서 지연 import 라 import 시점 무발동.
-    // 실제 추론은 step5(모델 프로바이더)·step7(진입점)에서 배선. 여기선 모듈 실재+import 안전.
-    'prompt_builder',        // 프롬프트 빌더 (world_pulse.md self-state 주입 포함)
-    'world_pulse_collectors',// self-state 수집(capability portrait — 폰 자기인식 줄)
-    'world_pulse_health',    // self-state → world_pulse.md 가이드 렌더
-    'agent_cognitive',       // 3단 인지 파이프라인(분류→의식→실행→평가)
-    'consciousness_agent',   // 의식 에이전트(메타 판단 + achievement_criteria)
-    'goal_evaluator',        // 평가 에이전트(achievement_criteria 대비)
-    'agent_runner',          // AI 에이전트 실행 엔진
-    'ai_agent',              // AI 에이전트 코어
-    'agent_communication',   // 에이전트 간 통신(agent_runner 의존)
-    'agent_goals',           // 에이전트 목표(agent_runner 의존)
-    'conversation_db',       // 대화 DB(폰-자아 일화기억 로컬·사적)
-
-    // === 폰-자아 호스팅 step 6: 렌트 해마 (§6) ===
-    // 폰엔 torch/sqlite-vec 없음 → 질의 임베딩은 맥 /embed 렌트, 문서 인덱스는 정적 파일(아래
-    // ibl_hippo_*) 인메모리 brute-force 코사인. ibl_usage_db 가 capability 게이트로 렌트 경로 분기.
-    'ibl_usage_db',          // 해마 검색(렌트 모드=인메모리 brute-force) + 실행기억
-    'ibl_usage_rag',         // 실행기억 XML 주입(get_references→search_hybrid)
-    'korean_utils',          // FTS5 토크나이저(ibl_usage_rag 의존) — 렌트 모드는 시맨틱뿐이나 import 정합
-
-    // === 폰-자아 호스팅 step 7: 시스템 AI 진입점(로컬 하네스 실행) ===
-    // phone_api /system-ai/chat 이 _mac_proxy 대신 process_system_ai_message 를 로컬 실행.
-    'system_ai_core',        // get_system_ai_runner + process_system_ai_message (인지 파이프라인 진입)
-    'system_ai_memory',      // 시스템 AI 태스크/메모리(로컬 SQLite)
-    'system_ai_tools',       // 시스템 AI 도구 정의
-
-    // === 반응형→능동/백그라운드 층: 상주 스케줄 substrate (새 어휘 없음) ===
-    // self:trigger{type:schedule}/self:schedule 어휘는 이미 있으나, 그 엔진이 폰 미번들이라
-    // 폰에선 ImportError 로 죽었다(어휘 갭 아닌 하부구조 갭). 이 5모듈로 폰 몸에 바인딩 →
-    // 폰이 "매일 아침 X"·"N시간마다 Y" 를 스스로 돌린다(calendar_manager.start() 폴링 루프,
-    // 발화 시 폰-로컬 execute_pipeline + pipeline 의 [limbs:phone]{notify} 로 전달).
-    // 모듈레벨 의존은 전부 stdlib+runtime_utils(번들)로 확인됨. channel_poller(채널 트리거)는
-    // Gmail/Nostr 폴링이라 더 무겁고 별도 — 이번 증분 제외.
-    'trigger_engine',        // self:trigger 라우터 타깃(schedule→calendar_manager 동기화)
-    'calendar_manager',      // 반복 실행 폴링 루프(start/stop) + 이벤트 저장(calendar_events.json)
-    'calendar_actions',      // run_pipeline 등 액션 믹스인(폰 fork-guard 로 GUI/WS 우회)
-    'calendar_html',         // calendar_manager 가 모듈레벨 import 하는 믹스인(렌더 — 폰선 미사용이나 import 정합)
-    'safe_store',            // trigger_engine._save_triggers 의 원자적 JSON 저장(지연 import)
-
-    // === 의료기록 폰↔PC 동기화 (business.db 선례, LWW+tombstone+이미지) ===
-    'health_sync',           // health_records.db export/merge(phone_api /health/sync/run 이 import). storage 는 health-record 패키지(phone_manifest)로 번들.
-
-    // === 폰-자아 프로젝트(자아별 사적 작업공간 — 대화처럼 로컬·동기화X·맥서 시드 복사) ===
-    'project_manager',       // 프로젝트/에이전트 CRUD. 폰은 base_path=userdata 로 영속.
-    'system_docs',           // project_manager create/delete 의 지연 import(인벤토리 갱신). stdlib+runtime_utils.
-
-    // === 몸 독립 부팅 배선 (헌법1조: 몸 독립 서브시스템은 공유, phone_api.serve() 가 호출) ===
-    // 에피소드 기록은 순수 로컬 SQLite(world_pulse.db)라 하드웨어 무관 — 폰도 자기 실행을
-    // (성공·실패 모두) 회고할 수 있어야 한다. 맥 진입점에만 배선돼 폰서 침묵 누락됐던 것을 교정.
-    'boot_common',           // wire_local_subsystems — 맥(api.py)·폰(phone_api.serve) 공통 부팅
-    'episode_logger',        // 명령→응답 1턴 기록(자기 스키마 보장 — world_pulse 의존 없음)
-]
+// === 폰 엔진 번들 = data/bodies/android.engine.json (scripts/build_body_bundle.py 파생) ===
+// ★손-리스트 폐기(드리프트 제거): 모든 backend 모듈을 기본 번들하고, android 가 못 돌리는 것
+//   (data/bodies/android.json 의 absent_packages — 없는 외부 의존)만 제외한다 → 새 backend 모듈이
+//   자동으로 폰에 흐른다(자연 동기화). 빌드마다 재생성(드리프트 0) — backend 변경 즉시 반영.
+//   N-body 일반화: 새 몸(ios/windows/linux…)은 data/bodies/<body>.json 하나만 추가하면 같은 도구가 파생.
+def _bodyTool = "${_ROOT}/scripts/build_body_bundle.py"
+def _deriveOut = new ByteArrayOutputStream()
+def _deriveProc = ["python3", _bodyTool, "android"].execute(null, file("${_ROOT}"))
+_deriveProc.waitForProcessOutput(_deriveOut, _deriveOut)
+if (_deriveProc.exitValue() != 0) {
+    throw new GradleException("폰 엔진 번들 파생 실패(build_body_bundle.py):\n${_deriveOut}")
+}
+def _engineManifest = file("${_ROOT}/data/bodies/android.engine.json")
+if (!_engineManifest.exists()) {
+    throw new GradleException("android.engine.json 없음 — `python3 scripts/build_body_bundle.py android` 먼저.")
+}
+def _ENGINE_MODULES = new groovy.json.JsonSlurper().parse(_engineManifest).engine_modules
 // 폰 번들 패키지 = data/phone_manifest.json 의 packages (runs_on 단일 진실 소스에서 파생).
 // 옛 하드코딩 리스트를 폐기 — build_ibl_nodes.py 의 PHONE_VERIFIED_PACKAGES 가 SSOT.
 def _phoneManifest = file("${_ROOT}/data/phone_manifest.json")

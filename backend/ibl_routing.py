@@ -492,7 +492,10 @@ def _execute_launcher_command(action: str, params: dict) -> dict:
     command_map = {
         "open_project": "open_project_window",
         "open_system_ai": "open_system_ai_window",
-        "open_indienet": "open_indienet_window",
+        "open_messenger": "open_messenger_window",
+        # 레거시 별칭: indienet 창은 messenger 계기로 은퇴 → messenger 창으로 라우팅.
+        # (옛 매핑 open_indienet_window 는 Electron switch에 핸들러가 없어 침묵 실패였음)
+        "open_indienet": "open_messenger_window",
         "open_business": "open_business_window",
         "open_multichat": "open_multichat_window",
         "open_folder": "open_folder_window",

@@ -688,6 +688,8 @@ a{ color:var(--info); }
       <div id="palette" class="palette" style="display:none"></div>
       <!-- 다른 몸(피어) 연결상태 — 폰이면 맥, 맥-원격이면 폰 -->
       <div id="peerStatus" style="display:none"></div>
+      <!-- 모델 기어 — 계기판 변속 레버 (절약/균형/최대) + 설정(프리셋·핀) -->
+      <div id="gearLever" class="card" style="display:none"></div>
       <div class="step">
         <div class="step-label">① 의도 (자연어)</div>
         <div class="row">
@@ -792,6 +794,7 @@ async function showApp(){
   } }catch(e){}
   apLoad();
   loadPeer(); setInterval(loadPeer, 20000);  /* 다른 몸 연결상태 폴링(계기판) */
+  loadGear();  /* 모델 기어 레버(계기판) */
 }
 
 /* ===== 다른 몸(피어) 연결상태 — 계기판 안에 표기 ===== */
@@ -812,6 +815,97 @@ async function loadPeer(){
   try{ const r=await jfetch('/nodes/peer-status'); if(r.ok){ renderPeer(await r.json()); return; } }catch(e){}
   renderPeer(null);
 }
+
+/* ===== 모델 기어 — 계기판 변속 레버 + 설정(프리셋·핀). data-속성 위임으로 따옴표 함정 회피 ===== */
+let gearState=null, gearOpen=false, gearAgents=[], gearOverrides={}, gearPresetDraft={};
+const GEAR_DESC={'절약':'전부 경량 — 빠르고 저렴','균형':'실행·의식 중급 — 기본','최대':'실행·의식 고급 — 최고 품질'};
+async function loadGear(){
+  try{ const r=await jfetch('/model-gear'); if(r.ok){ gearState=await r.json(); renderGear(); return; } }catch(e){}
+  const el=document.getElementById('gearLever'); if(el) el.style.display='none';
+}
+function renderGear(){
+  const el=document.getElementById('gearLever'); if(!el||!gearState) return;
+  el.style.display='block'; const g=gearState; let h='';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+  h+='<span style="font-weight:700;font-size:14px">⚙️ 모델 기어</span>';
+  h+='<button data-act="toggle" style="font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:'+(gearOpen?'var(--acc)':'var(--bg3)')+';color:var(--txt)">설정</button></div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">';
+  (g.gears||[]).forEach(function(name){
+    const on=g.current_gear===name;
+    h+='<button data-act="gear" data-g="'+esc(name)+'" style="padding:10px 6px;border-radius:10px;border:1px solid '+(on?'var(--acc)':'var(--line)')+';background:'+(on?'var(--acc)':'var(--bg)')+';color:'+(on?'#fff':'var(--txt)')+';text-align:center">';
+    h+='<div style="font-weight:700;font-size:13px">'+esc(name)+'</div>';
+    h+='<div style="font-size:10px;margin-top:2px;color:'+(on?'rgba(255,255,255,.85)':'var(--dim)')+'">'+esc(GEAR_DESC[name]||'')+'</div></button>';
+  });
+  h+='</div>';
+  if(g.axes){
+    h+='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--dim)">';
+    Object.keys(g.axes).forEach(function(ax){ h+='<span>'+esc(ax)+' <b style="color:var(--txt)">'+esc(g.axes[ax].tier)+'</b></span>'; });
+    h+='<span style="color:var(--dim)">· 티어별 모델은 설정 ▸ 모델 설정</span></div>';
+  }
+  if(gearOpen) h+=renderGearSettings();
+  el.innerHTML=h;
+}
+function renderGearSettings(){
+  const g=gearState, tiers=g.tiers||['경량','중급','고급'], axes=g.axis_names||['분류','평가','실행','의식'];
+  let h='<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:600">기어 프리셋</span><button data-act="savePresets" style="font-size:11px;padding:3px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg3);color:var(--txt)">저장</button></div>';
+  h+='<table style="width:100%;font-size:11px;border-collapse:collapse"><tr style="color:var(--dim)"><td style="padding:2px 4px">기어</td>';
+  axes.forEach(function(ax){ h+='<td style="padding:2px;text-align:center">'+esc(ax)+'</td>'; });
+  h+='</tr>';
+  Object.keys(gearPresetDraft).forEach(function(gn){
+    h+='<tr><td style="padding:3px 4px;font-weight:600">'+esc(gn)+'</td>';
+    axes.forEach(function(ax){
+      h+='<td style="padding:2px"><select data-act="cell" data-gn="'+esc(gn)+'" data-ax="'+esc(ax)+'" style="width:100%;font-size:11px;padding:2px;background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:5px">';
+      tiers.forEach(function(t){ h+='<option'+((gearPresetDraft[gn]||{})[ax]===t?' selected':'')+'>'+esc(t)+'</option>'; });
+      h+='</select></td>';
+    });
+    h+='</tr>';
+  });
+  h+='</table>';
+  h+='<div style="font-size:12px;font-weight:600;margin:12px 0 6px">에이전트 핀 — 특정 에이전트만 고정</div><div style="max-height:200px;overflow-y:auto">';
+  gearAgents.forEach(function(a){
+    const cur=gearOverrides[a.id]||'';
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0">';
+    h+='<span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.name)+' <span style="color:var(--dim);font-size:10px">'+esc(a.project)+'</span></span>';
+    h+='<select data-act="pin" data-id="'+esc(a.id)+'" style="font-size:11px;padding:2px 4px;border-radius:5px;background:'+(cur?'var(--acc)':'var(--bg)')+';color:'+(cur?'#fff':'var(--dim)')+';border:1px solid var(--line)"><option value="">기어 따름</option>';
+    tiers.forEach(function(t){ h+='<option'+(cur===t?' selected':'')+' value="'+esc(t)+'">📌 '+esc(t)+'</option>'; });
+    h+='</select></div>';
+  });
+  h+='</div></div>';
+  return h;
+}
+async function setGearTo(name){
+  try{ const r=await jfetch('/model-gear',{method:'PUT',body:JSON.stringify({gear:name})}); if(r.ok){ gearState=await r.json(); renderGear(); } }catch(e){}
+}
+async function gearToggle(){
+  gearOpen=!gearOpen;
+  if(gearOpen){
+    if(gearState&&gearState.presets) gearPresetDraft=JSON.parse(JSON.stringify(gearState.presets));
+    try{ const r=await jfetch('/model-gear/overrides'); if(r.ok){ const d=await r.json(); gearAgents=d.agents||[]; gearOverrides=d.overrides||{}; } }catch(e){}
+  }
+  renderGear();
+}
+async function saveGearPresets(){
+  try{ const r=await jfetch('/model-gear/presets',{method:'PUT',body:JSON.stringify({presets:gearPresetDraft})}); if(r.ok){ gearState=await r.json(); renderGear(); } }catch(e){}
+}
+async function setGearPin(id,tier){
+  const next=Object.assign({},gearOverrides); if(tier) next[id]=tier; else delete next[id];
+  try{ const r=await jfetch('/model-gear/overrides',{method:'PUT',body:JSON.stringify({overrides:next})}); if(r.ok){ const d=await r.json(); gearOverrides=d.overrides||{}; renderGear(); } }catch(e){}
+}
+/* 위임 핸들러 — 인라인 onclick 없이 data-속성으로(따옴표 함정 회피) */
+document.addEventListener('click',function(ev){
+  const t=ev.target.closest('[data-act]'); if(!t||!document.getElementById('gearLever').contains(t)) return;
+  const act=t.getAttribute('data-act');
+  if(act==='toggle') gearToggle();
+  else if(act==='gear') setGearTo(t.getAttribute('data-g'));
+  else if(act==='savePresets') saveGearPresets();
+});
+document.addEventListener('change',function(ev){
+  const t=ev.target; if(!t.getAttribute||!document.getElementById('gearLever').contains(t)) return;
+  const act=t.getAttribute('data-act');
+  if(act==='cell'){ const gn=t.getAttribute('data-gn'),ax=t.getAttribute('data-ax'); if(!gearPresetDraft[gn])gearPresetDraft[gn]={}; gearPresetDraft[gn][ax]=t.value; }
+  else if(act==='pin') setGearPin(t.getAttribute('data-id'),t.value);
+});
 
 /* ===== 표면 토글 ===== */
 function setSurface(s){

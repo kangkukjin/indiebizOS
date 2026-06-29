@@ -924,10 +924,12 @@ class ChannelPoller:
             # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
             history = get_history_for_ai(limit=10)
 
-            # 시스템 AI 설정 로드
+            # 시스템 AI 설정 로드 (모델 기어 'system_ai' 역할로 해소 — 실행처와 일치)
             config = self._load_system_ai_config()
-            if not config.get('apiKey'):
-                self._log("시스템 AI API 키 없음")
+            no_key = {"claude_code", "claude-code", "claudecode", "ollama"}
+            if not config.get('model') or (
+                not config.get('apiKey') and config.get('provider', '').lower() not in no_key):
+                self._log("시스템 AI 모델/키 없음")
                 return
 
             # AI 처리
@@ -951,7 +953,16 @@ class ChannelPoller:
             traceback.print_exc()
 
     def _load_system_ai_config(self) -> dict:
-        """시스템 AI 설정 로드"""
+        """시스템 AI 설정 — 모델 기어 'system_ai' 역할(실행 축)로 해소(get_system_ai_runner 와 일치).
+        게이트 판정용. 리졸버 실패 시 옛 system_ai_config 직접 로드로 폴백."""
+        try:
+            from model_resolver import resolve
+            d = resolve("system_ai")
+            if d.get("model"):
+                return {"enabled": True, "provider": d.get("provider", ""),
+                        "model": d["model"], "apiKey": d.get("api_key", "")}
+        except Exception:
+            pass
         config_path = _get_base_path() / "data" / "system_ai_config.json"
         if config_path.exists():
             try:

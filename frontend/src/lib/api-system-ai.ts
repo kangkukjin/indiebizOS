@@ -95,6 +95,62 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
       });
     },
 
+    // ============ 모델 기어 (계기판 변속) ============
+
+    async getModelGear() {
+      return client.request<{
+        current_gear: string;
+        gears: string[];
+        presets: Record<string, Record<string, string>>;
+        axes: Record<string, { tier: string; provider: string; model: string }>;
+      }>('/model-gear');
+    },
+
+    async setModelGear(gear: string) {
+      return client.request<{
+        status: string;
+        current_gear: string;
+        gears: string[];
+        presets: Record<string, Record<string, string>>;
+        axes: Record<string, { tier: string; provider: string; model: string }>;
+      }>('/model-gear', {
+        method: 'PUT',
+        body: JSON.stringify({ gear }),
+      });
+    },
+
+    // 기어 프리셋 정의 편집 (각 기어가 4축을 어느 티어로 매핑하는지)
+    async updateModelGearPresets(presets: Record<string, Record<string, string>>) {
+      return client.request<{
+        status: string;
+        current_gear: string;
+        gears: string[];
+        presets: Record<string, Record<string, string>>;
+        axes: Record<string, { tier: string; provider: string; model: string }>;
+        tiers: string[];
+        axis_names: string[];
+      }>('/model-gear/presets', {
+        method: 'PUT',
+        body: JSON.stringify({ presets }),
+      });
+    },
+
+    // 에이전트 핀(고정) 현황 + 핀 가능한 에이전트 목록
+    async getModelGearOverrides() {
+      return client.request<{
+        overrides: Record<string, string>;
+        agents: Array<{ id: string; name: string; project: string }>;
+        tiers: string[];
+      }>('/model-gear/overrides');
+    },
+
+    async updateModelGearOverrides(overrides: Record<string, string>) {
+      return client.request<{ status: string; overrides: Record<string, string> }>(
+        '/model-gear/overrides',
+        { method: 'PUT', body: JSON.stringify({ overrides }) }
+      );
+    },
+
     // ============ 시스템 AI 대화 ============
 
     async chatWithSystemAI(message: string, images?: Array<{ base64: string; media_type: string }>) {

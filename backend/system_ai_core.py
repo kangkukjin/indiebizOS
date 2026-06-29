@@ -65,27 +65,55 @@ from system_ai_tools import get_all_system_ai_tools
 _system_ai_runner = None  # 싱글턴
 
 
+def _resolve_system_ai_config() -> dict:
+    """시스템 AI 모델 설정을 모델 기어 'system_ai' 역할(실행 축)로 해소.
+
+    과거엔 system_ai_config.json 을 직접 읽었으나, 이제 리졸버가 현재 기어→실행 축→티어로
+    모델을 정한다(기어 프리셋이 시스템AI를 중급/고급으로 가를 수 있음). 리졸버 실패/모델
+    미설정 시 옛 system_ai_config 로 폴백(동작 보존)."""
+    try:
+        from model_resolver import resolve
+        d = resolve("system_ai")
+        if d.get("model"):
+            return {
+                "provider": d.get("provider", "anthropic"),
+                "model": d["model"],
+                "api_key": d.get("api_key", ""),
+                "_source": d.get("source", ""),
+            }
+    except Exception as e:
+        print(f"[시스템AI] 기어 해소 실패(옛 config 폴백): {e}")
+    config = load_system_ai_config()
+    return {
+        "provider": config.get("provider", "anthropic"),
+        "model": config.get("model", "claude-sonnet-4-20250514"),
+        "api_key": config.get("apiKey", ""),
+        "_source": "system_ai_config(fallback)",
+    }
+
+
 def get_system_ai_runner():
     """시스템 AI용 AgentRunner 싱글턴 반환.
 
     프로젝트 에이전트와 동일한 인지 파이프라인(무의식→의식→실행→평가)을 사용.
     차이점은 config의 _is_system_ai 플래그로 분기: 도구/프롬프트/권한만 다름.
+    모델은 모델 기어 'system_ai' 역할(실행 축)로 해소 — 기어/설정 변경 시 자동 재생성.
     """
     global _system_ai_runner
 
+    resolved = _resolve_system_ai_config()
+
     if _system_ai_runner is not None and _system_ai_runner.ai is not None:
-        # 설정 변경 시 재생성 (provider/model 변경 감지)
-        config = load_system_ai_config()
+        # 기어/설정 변경 시 재생성 (해소된 provider/model 변경 감지)
         current_ai = _system_ai_runner.config.get("ai", {})
-        if (current_ai.get("provider") != config.get("provider") or
-            current_ai.get("model") != config.get("model")):
+        if (current_ai.get("provider") != resolved["provider"] or
+            current_ai.get("model") != resolved["model"]):
             _system_ai_runner = None
         else:
             return _system_ai_runner
 
     from agent_runner import AgentRunner
 
-    config = load_system_ai_config()
     agent_config = {
         "id": "system_ai",
         "name": "시스템 AI",
@@ -95,9 +123,9 @@ def get_system_ai_runner():
         "type": "internal",
         "allowed_nodes": None,  # 전체 접근
         "ai": {
-            "provider": config.get("provider", "anthropic"),
-            "model": config.get("model", "claude-sonnet-4-20250514"),
-            "api_key": config.get("apiKey", "")
+            "provider": resolved["provider"],
+            "model": resolved["model"],
+            "api_key": resolved["api_key"],
         }
     }
 
@@ -105,8 +133,14 @@ def get_system_ai_runner():
     runner._init_ai()
     runner.running = True
     _system_ai_runner = runner
-    print(f"[시스템AI] AgentRunner 초기화 완료 (provider={config.get('provider')}, model={config.get('model')})")
+    print(f"[시스템AI] AgentRunner 초기화 완료 ({resolved['provider']}/{resolved['model']}, {resolved.get('_source')})")
     return runner
+
+
+def reset_system_ai_runner():
+    """시스템 AI 러너 싱글턴 초기화 — 기어/설정 변경 시 호출(다음 호출에서 새 티어로 재구성)."""
+    global _system_ai_runner
+    _system_ai_runner = None
 
 
 def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAgent:

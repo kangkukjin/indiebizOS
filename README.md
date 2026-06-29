@@ -12,6 +12,24 @@
 
 ---
 
+## In one minute
+
+**IndieBiz OS turns plain language into a real action language — *IBL* — that runs on your own desktop and phone, and lets the things you do often harden into one-tap apps you own.** No app store, no cloud account, no code.
+
+You say what you want. *How* you say it depends only on how often you do it:
+
+| You want to… | You get… | Surface |
+|---|---|---|
+| *"Find lease listings near Gangnam under 500M and put the top 5 in a report"* — a one-off | the AI discovers the steps and just does it | **Autopilot** |
+| the same kind of task, repeatedly | a lightweight model translates it into **one reusable line you review and keep** | **Manual** |
+| a task you do every day | it crystallizes into an **icon you tap — 0 tokens, instant — even on your phone** | **App** |
+
+One system, one person, from a one-off question to a superapp you authored just by using it. It starts minimal and grows only what you ask for; an AI agent is the blacksmith who keeps forging it to fit you.
+
+**New here?** → [What it actually is](#the-one-idea) · [See it on a phone](#the-phone-is-where-you-see-it) · [Install in 3 lines](#getting-started-recommended)
+
+---
+
 ## The one idea
 
 Most AI harnesses get more capable by reaching for *more intelligence* — a bigger model, a longer prompt, more tools. IndieBiz OS makes a different bet:

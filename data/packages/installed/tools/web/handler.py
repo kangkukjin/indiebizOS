@@ -359,19 +359,32 @@ def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
 
 # ============== 사이트 런처 관련 함수 ==============
 
+# 공개 기본 즐겨찾기 — sites.json(개인, .gitignore) 부재 시 첫 화면 시드. 개인정보 없음.
+_DEFAULT_SITES = [
+    {"name": "Hacker News", "url": "https://news.ycombinator.com/"},
+    {"name": "Stratechery", "url": "https://stratechery.com/"},
+    {"name": "Aeon", "url": "https://aeon.co/"},
+    {"name": "Reddit r/LocalLLaMA", "url": "https://www.reddit.com/r/LocalLLaMA/"},
+    {"name": "Lex Fridman (YouTube)", "url": "https://www.youtube.com/@lexfridman"},
+    {"name": "GeekNews", "url": "https://news.hada.io/"},
+    {"name": "GitHub", "url": "https://github.com/"},
+    {"name": "Gemini", "url": "https://gemini.google.com/app"},
+]
+
+
 def launch_sites(action: str = "open_ui", name: str = None, url: str = None, project_path: str = ".") -> str:
     """자주 가는 사이트 런처 및 관리"""
     sites_path = current_dir / "sites.json"
 
-    # sites.json = 런타임 사용자 상태(개인 북마크, .gitignore). 없으면 sites.example.json 시드를
-    # 읽는다(첫 설치 기본값). 쓰기(add/remove)는 항상 sites.json 으로 → 개인 목록은 추적 밖.
+    # sites.json = 런타임 사용자 상태(개인 북마크, .gitignore — 개인 목록은 추적 밖).
+    # 파일이 없으면 공개 기본값(_DEFAULT_SITES)으로 시작하고, 쓰기(add/remove)는 항상
+    # sites.json 으로 영속한다 → 개인 즐겨찾기가 저장소로 새지 않는다.
     try:
-        read_path = sites_path if sites_path.exists() else (current_dir / "sites.example.json")
-        if read_path.exists():
-            with open(read_path, "r", encoding="utf-8") as f:
+        if sites_path.exists():
+            with open(sites_path, "r", encoding="utf-8") as f:
                 sites = json.load(f)
         else:
-            sites = []
+            sites = [dict(s) for s in _DEFAULT_SITES]
     except Exception as e:
         return f"사이트 목록을 읽는 중 오류 발생: {str(e)}"
 

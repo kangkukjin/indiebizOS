@@ -107,6 +107,9 @@ data/business_images/
 data/packages/installed/extensions/gmail/credentials.json
 data/packages/installed/extensions/gmail/credentials_token.json
 
+# 즐겨찾기 = 런타임 사용자 상태(개인 북마크). 추적 금지 — 시드는 sites.example.json.
+data/packages/installed/tools/web/sites.json
+
 # 백업 파일
 data/packages/media_producer_backup/
 

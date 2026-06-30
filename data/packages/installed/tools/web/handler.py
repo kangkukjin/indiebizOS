@@ -363,9 +363,12 @@ def launch_sites(action: str = "open_ui", name: str = None, url: str = None, pro
     """자주 가는 사이트 런처 및 관리"""
     sites_path = current_dir / "sites.json"
 
+    # sites.json = 런타임 사용자 상태(개인 북마크, .gitignore). 없으면 sites.example.json 시드를
+    # 읽는다(첫 설치 기본값). 쓰기(add/remove)는 항상 sites.json 으로 → 개인 목록은 추적 밖.
     try:
-        if sites_path.exists():
-            with open(sites_path, "r", encoding="utf-8") as f:
+        read_path = sites_path if sites_path.exists() else (current_dir / "sites.example.json")
+        if read_path.exists():
+            with open(read_path, "r", encoding="utf-8") as f:
                 sites = json.load(f)
         else:
             sites = []

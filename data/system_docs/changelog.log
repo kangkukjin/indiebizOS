@@ -1193,8 +1193,8 @@
     + rebuild_index(2447). 연상 검증 "지금 내 위치"/"나 어디 있어"/"where am I"/"현재 위치" → [sense:here] 1.0.
   - 검증: build --check ✓(바이트·phone_manifest 일치, sense:here runnable), Kotlin compileDebugKotlin BUILD SUCCESSFUL,
     PC /ibl/execute [sense:here] → 분산 포워드 시도 후 phone_unreachable(레일 작동 확인). 실기기 종단은 APK 설치 후.
-  - ★실기기 종단 검증 완료(A36/SM_A366N, USB): ①폰-로컬 [sense:here] → 실 GPS REDACTED_GPS (±25m) + 한글주소
-    역지오코딩 성공. ②맥→폰 분산 포워드: 맥 /ibl/execute [sense:here] → INDIEBIZ_PHONE_URL(LAN_IP_REDACTED:8765)
+  - ★실기기 종단 검증 완료(A36/SM_A366N, USB): ①폰-로컬 [sense:here] → 실 GPS <REDACTED_GPS> (±25m) + 한글주소
+    역지오코딩 성공. ②맥→폰 분산 포워드: 맥 /ibl/execute [sense:here] → INDIEBIZ_PHONE_URL(<LAN_IP>:8765)
     포워드 → 폰 GPS → {success, lat/lng, address:"청주시 흥덕구 오송읍...", _forwarded_to:"phone"}. AI가 자기 위치 인지 실증.
 
 [2026-06-12] 폰 마이크 온디맨드 — 받아쓰기/녹음 (sense:listen)
@@ -1291,7 +1291,7 @@
 
 [2026-06-13] ytmusic 오디오 폰 해금 — 빌린 액션 맥 resolve → 폰 WebView 재생 (PHASE 3 완료)
   - 갈림길#1 실측 해소: 맥이 yt-dlp로 뽑은 googlevideo URL을 폰이 직접 재생 가능한가(IP잠금?) →
-    폰 공인IP=맥과 동일(같은 집 WiFi/NAT REDACTED_PUBLIC_IP)이라 **resolve 방식 작동**(프록시 불필요).
+    폰 공인IP=맥과 동일(같은 집 WiFi/NAT <REDACTED_PUBLIC_IP>)이라 **resolve 방식 작동**(프록시 불필요).
     외출 시 모바일데이터(다른 공인IP)는 후속(오디오 프록시 필요).
   - tool_youtube.play_youtube 에 `mode:"client"` 분기: 서버측 ffplay 대신 오디오 URL resolve →
     `{play_in_client:True, stream_url, title, ...}` 반환(라디오 play_in_client 패턴과 동일, 서버 플레이어 무관).

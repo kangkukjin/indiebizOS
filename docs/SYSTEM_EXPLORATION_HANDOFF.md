@@ -81,7 +81,7 @@ cd /Users/kangkukjin/Desktop/AI/indiebizOS
 git log --oneline -12                         # 이번 세션 커밋들(f48d914~9c6c2e5)
 python3 scripts/build_ibl_nodes.py --check    # 어휘 정합·포크가드·매니페스트 상태
 curl -s localhost:8765/health                 # 맥 백엔드 살아있나(dev 상시)
-adb devices && adb forward tcp:8799 tcp:8765  # 폰(A36 DEVICE_SERIAL_REDACTED) USB
+adb devices && adb forward tcp:8799 tcp:8765  # 폰(A36 <DEVICE_SERIAL>) USB
 curl -s localhost:8799/launcher/instruments   # 폰 앱모드 계기(JSON 유효한지 — 비어있지않음≠정상!)
 ```
 ⚠️ **온디바이스 검증 교훈(이번 세션 비싼 버그)**: HTTP 200·유효 JSON까지 확인할 것. "비어있지 않음"만 보면 `Internal Server Error` 문자열을 거짓 양성으로 통과시킨다(실제로 그래서 _lw=None 500 버그를 놓쳤음). 폰은 USB 상시 연결, 온디바이스 검증은 직접 할 것(사용자에게 떠넘기지 말 것).

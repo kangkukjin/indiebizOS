@@ -203,7 +203,7 @@ return _forward_to_node(tgt, node, action, params, agent_id)   # 단수 forward 
 
 **구현 상태 (2026-06-17): 백엔드 + 폰 온디바이스 종단까지 완료·검증(A36 실기기, 폰 1대). 2번째 폰 실험만 남음.**
 
-**★온디바이스 종단(A36 DEVICE_SERIAL_REDACTED)**: 폰 자기등록→`/nodes/live`에 맥·폰 2노드(heartbeat 신선)→`POST /nodes/primary {connected_phone:true}`로 폰=주(主)→무주소 `[sense:here]` 맥서 호출→주(主)폰 자동 라우팅→실 GPS(`_forwarded_to:phone`)·`@폰-9f2b` 동일. 이번에 잡은 함정: ①`GET /nodes` 경로 충돌→`/nodes/live` ②`_phone_lan_ip`가 터널 경로의 셀룰러 IP를 잡던 것→인터페이스 열거(RFC1918·wlan0, `Collections.list`로 Chaquopy 추상 Enumeration 우회)로 WiFi LAN IP 등록 ③register가 주(主) 덮어쓰던 것→기존 primary 보존+`set_primary`.
+**★온디바이스 종단(A36 <DEVICE_SERIAL>)**: 폰 자기등록→`/nodes/live`에 맥·폰 2노드(heartbeat 신선)→`POST /nodes/primary {connected_phone:true}`로 폰=주(主)→무주소 `[sense:here]` 맥서 호출→주(主)폰 자동 라우팅→실 GPS(`_forwarded_to:phone`)·`@폰-xxxx` 동일. 이번에 잡은 함정: ①`GET /nodes` 경로 충돌→`/nodes/live` ②`_phone_lan_ip`가 터널 경로의 셀룰러 IP를 잡던 것→인터페이스 열거(RFC1918·wlan0, `Collections.list`로 Chaquopy 추상 Enumeration 우회)로 WiFi LAN IP 등록 ③register가 주(主) 덮어쓰던 것→기존 primary 보존+`set_primary`.
 
 | 영역 | 파일 | 상태 |
 |------|------|------|

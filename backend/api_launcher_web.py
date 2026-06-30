@@ -842,6 +842,13 @@ function renderGear(){
     Object.keys(g.axes).forEach(function(ax){ h+='<span>'+esc(ax)+' <b style="color:var(--txt)">'+esc(g.axes[ax].tier)+'</b></span>'; });
     h+='<span style="color:var(--dim)">· 티어별 모델은 설정 ▸ 모델 설정</span></div>';
   }
+  if(typeof g.consciousness_enabled!=='undefined'){
+    const on=g.consciousness_enabled!==false;
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line)">';
+    h+='<span style="font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b style="color:'+(on?'var(--txt)':'var(--dim)')+'">🧠 의식 '+(on?'켜짐':'꺼짐')+'</b> <span style="color:var(--dim)">'+(on?'— 복잡한 일은 숙고(THINK)':'— 반사+바로 실행, 빠름·저렴')+'</span></span>';
+    h+='<button data-act="mind" role="switch" aria-checked="'+on+'" title="끄면 THINK(의식) 경로를 차단합니다. 반사(고확신)는 유지." style="position:relative;flex-shrink:0;width:40px;height:20px;border-radius:9999px;border:none;cursor:pointer;background:'+(on?'var(--acc)':'var(--line)')+'">';
+    h+='<span style="position:absolute;top:2px;left:'+(on?'22px':'2px')+';width:16px;height:16px;border-radius:9999px;background:#fff;transition:left .15s"></span></button></div>';
+  }
   if(gearOpen) h+=renderGearSettings();
   el.innerHTML=h;
 }
@@ -892,6 +899,9 @@ async function setGearPin(id,tier){
   const next=Object.assign({},gearOverrides); if(tier) next[id]=tier; else delete next[id];
   try{ const r=await jfetch('/model-gear/overrides',{method:'PUT',body:JSON.stringify({overrides:next})}); if(r.ok){ const d=await r.json(); gearOverrides=d.overrides||{}; renderGear(); } }catch(e){}
 }
+async function setConsciousness(enabled){
+  try{ const r=await jfetch('/model-gear/consciousness',{method:'PUT',body:JSON.stringify({enabled:enabled})}); if(r.ok){ gearState=await r.json(); renderGear(); } }catch(e){}
+}
 /* 위임 핸들러 — 인라인 onclick 없이 data-속성으로(따옴표 함정 회피) */
 document.addEventListener('click',function(ev){
   const t=ev.target.closest('[data-act]'); if(!t||!document.getElementById('gearLever').contains(t)) return;
@@ -899,6 +909,7 @@ document.addEventListener('click',function(ev){
   if(act==='toggle') gearToggle();
   else if(act==='gear') setGearTo(t.getAttribute('data-g'));
   else if(act==='savePresets') saveGearPresets();
+  else if(act==='mind') setConsciousness(!(gearState&&gearState.consciousness_enabled!==false));
 });
 document.addEventListener('change',function(ev){
   const t=ev.target; if(!t.getAttribute||!document.getElementById('gearLever').contains(t)) return;

@@ -266,6 +266,21 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 포식 정리 실패 (무시): {e}")
 
+    # 5) IBL 설명 의미 드리프트 점검 (주간 카덴스) — `--check`의 *의미* 판.
+    #    구조 --check가 못 보는 description 산문의 stale 어휘·끊긴 참조를 경량 LLM이 플래그.
+    try:
+        from ibl_description_audit import run_description_drift_check
+        dd = run_description_drift_check()
+        result["description_drift"] = dd
+        if dd.get("flags"):
+            logger.warning(f"[Maintenance] IBL 설명 드리프트 {len(dd['flags'])}건 — ibl_description_flags.json")
+            try:
+                save_self_check(dd)  # self_checks 테이블에 깃발 남김
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"[Maintenance] 설명 드리프트 점검 실패 (무시): {e}")
+
     return result
 
 

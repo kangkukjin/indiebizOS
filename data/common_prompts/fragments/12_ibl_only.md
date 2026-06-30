@@ -85,18 +85,7 @@ RIGHT: [sense:stock]{op: "quote", ticker: "005930"}  # 파라미터가 하나여
 - `<op default="true">`가 있으면 op 생략 가능 (기본값 자동 적용)
 - default 가 없으면 op 필수 — 생략하면 "op 파라미터 필요" 에러
 - op 값은 카탈로그의 `<op name="...">` 목록 안에서만 골라야 함 (오타·창작 금지)
-
-대표 op-bearing 액션:
-- `[limbs:browser]{op: "click", op}` single/double/right
-- `[limbs:browser]{op: "navigate", op}` goto/back/forward
-- `[limbs:music]{op}` play/add/skip/queue/stop/download
-- `[limbs:screen]{op}` screenshot/click/type/key/mouse_move/drag/scroll/cursor_position/screen_info
-- `[self:photo]{op}` scan/list_scans/gallery/search/detail/stats/timeline/duplicates
-- `[self:memory]{op}` save/search/read/delete
-- `[self:goal]{op}` list/status/kill/log/attempts
-- `[self:trigger]{op}` list/get/create/update/delete/enable/disable/status/history
-- `[self:workflow]{op}` list/get/save/delete/run
-- `[others:delegate]{mode, scope}` async/sync/workflow × same/cross
+- 어떤 액션이 op-bearing인지는 **아래 카탈로그**에서 액션 옆 `<op>` 자식으로 확인한다 (여기 재나열하지 않음 — 단일 소스는 카탈로그).
 
 ## Pipeline Operators
 
@@ -110,15 +99,15 @@ Chain multiple steps with operators:
 
 ## 통화와 변환자 (Currency & Transformers) — 조합으로 증식
 
-검색·조회(`sense:*` 등)는 **통화**를 낸다 — 두 모양:
-- **records**: 목록형 `[{title, meta, summary, url, image}]` (검색결과·뉴스·도서·매물·논문 등)
-- **table**: 표형 `{columns:[x,s1..], rows:[[..]]}` (시계열·통계·날씨예보 등)
+검색·조회(`sense:*` 등)는 **통화**를 낸다. 통화는 **하나** — `items` = `[{…열린 dict…}]` (목록형). 같은 items가 시세·통계는 수치 칸을 담은 행 dict(첫 키=x축)로, 문서는 문단 항목으로 흐른다 — *받는 쪽(소비자)이 필요한 view로 재구성*한다.
 
-`engines`의 **변환자**는 통화를 받아 *같은 통화*를 낸다 → `>>` 로 임의 깊이 조합(도메인 무관, 모든 목록·표에 적용):
+액션은 `returns:`로 자기 역할을 선언한다: **items**(통화를 냄) · **transform**(통화→통화) · **scalar**(단일값·통화 아님) · **effect**(행동·종착).
+
+`engines`의 **변환자**(returns:transform)는 통화를 받아 *같은 통화*를 낸다 → `>>` 로 임의 깊이 조합(도메인 무관, 모든 items에 적용):
 - **단항**(앞 결과 1개): `filter{where}` · `sort{by, desc}` · `take{n}` · `select{columns}` · `dedup{by}` · `groupby{by, agg}`
-- **이항**(`&` 두 입력): `join{on}`(두 표를 키로 묶음) · `union`(행 결합) · `merge`(두 목록 합치기)
+- **이항**(`&` 두 입력): `join{on}` · `union`(행 결합) · `merge`(두 목록 합치기)
 
-통화는 **산출물**로 흐른다: `document`(문서 — html/pdf/docx/pptx/typst) · `chart` · `spreadsheet`.
+통화는 **산출물** emitter로 흐른다: `document`(문서 — html/pdf/docx/pptx/typst) · `chart` · `spreadsheet`.
 
 → 핵심 패턴: **[검색/조회] → [변환자 체인] → [산출물]**
 ```

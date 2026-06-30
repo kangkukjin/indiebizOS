@@ -140,6 +140,18 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
     }
   }, [currentProject, loadAgents, loadSwitches]);
 
+  // 모델 기어/프리셋/핀이 계기판(별도 창)에서 바뀌면 에이전트 카드의 effective_model 을 갱신.
+  // 계기판이 같은 origin localStorage 를 bump → 이 창에서 storage 이벤트 수신 → 재조회.
+  useEffect(() => {
+    const onGearChange = (e: StorageEvent) => {
+      if (e.key === '__model_gear_rev' && currentProject) {
+        loadAgents(currentProject.id);
+      }
+    };
+    window.addEventListener('storage', onGearChange);
+    return () => window.removeEventListener('storage', onGearChange);
+  }, [currentProject, loadAgents]);
+
   // 에이전트 자동 활성화 헬퍼: 선택 + 시작 + 연결
   const autoActivateAgent = async (target: Agent) => {
     setCurrentAgent(target);

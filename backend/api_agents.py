@@ -111,6 +111,23 @@ async def get_project_agents(project_id: str, request: Request):
         # is_external_request는 Host 헤더 기반이라 LAN 프록시를 놓칠 수 있어 항상 마스킹.
         agents = _redact_agents_secrets(agents)
 
+        # 표시용 실효 모델 — per-agent yaml 모델은 폐지됨(기어가 단독 결정). 카드/설정 UI가
+        # 옛 ai.provider 대신 *기어가 실제로 해소한* 모델을 보이도록 effective_model 부착.
+        # _resolve_execution_config 과 동일 경로: resolve("execution", "{project}:{agent_id}")
+        # → 에이전트 핀(overrides) 우선, 없으면 현재 기어의 실행 축 티어.
+        try:
+            from model_resolver import resolve
+            for a in agents:
+                aid = a.get("id")
+                pin_key = f"{project_id}:{aid}" if aid else None
+                d = resolve("execution", agent_id=pin_key)
+                a["effective_model"] = {
+                    "provider": d.get("provider"), "model": d.get("model"),
+                    "tier": d.get("tier"), "source": d.get("source"),
+                }
+        except Exception as e:
+            print(f"[api_agents] effective_model 해소 실패(무시): {e}")
+
         return {"agents": agents}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

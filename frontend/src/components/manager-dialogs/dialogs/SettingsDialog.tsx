@@ -327,8 +327,10 @@ export function SettingsDialog({
                           </div>
                         </div>
                         <div className="text-sm text-gray-600">
-                          <p>
-                            AI: {agent.ai?.provider || 'google'} / {agent.ai?.model || '미설정'}
+                          {/* per-agent 모델 폐지 — 기어가 해소한 실효 모델 표시(ai 아님) */}
+                          <p title={agent.effective_model?.source || ''}>
+                            모델(기어): {agent.effective_model?.provider || agent.ai?.provider || 'google'} / {agent.effective_model?.model || '미설정'}
+                            {agent.effective_model?.tier ? ` · ${agent.effective_model.tier}` : ''}
                           </p>
                           {agent.allowed_nodes && agent.allowed_nodes.length > 0 && (
                             <p className="mt-1">

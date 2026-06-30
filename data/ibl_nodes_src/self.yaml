@@ -3,7 +3,7 @@
       photo:
         returns: items
         runs_on: anywhere
-        description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접. 날짜·위치·기종·키워드로 걸러 records 반환. 선스캔 불필요·항상 최신. 실행되는 몸의 미디어를 가리킨다(맥·폰 각자). 타임라인/통계/중복은 records→engines 변환자(groupby/filter) 조합으로.
+        description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환. 실행되는 몸의 미디어(맥·폰 각자). 타임라인/통계/중복은 >> engines 변환자(groupby/filter).
         target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50). 결과 records에 lat/lng/taken_at/month/kind/camera/size 구조 필드 포함 → groupby·지도와 직결.'
         group: photo
         target_key: q
@@ -167,7 +167,7 @@
         - 투약
       local_save:
         returns: effect
-        description: 가게 정보·커뮤니티 언급을 지역 DB에 저장 (sense:save와 같은 동작).
+        description: 가게 정보·커뮤니티 언급을 지역 DB에 저장.
         target_description: 저장할 데이터 (JSON). type 옵션으로 store/mention 분류.
         group: system
         router: handler

@@ -51,11 +51,13 @@ adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS 2>/dev/null \
 say "API 키 주입"
 python3 "$HERE/provision_phone_keys.py" || echo "⚠ 키 주입 건너뜀(.env 확인)"
 
-# 4) 안내 (백엔드 시작은 앱에서 1탭 — 자동화는 후속)
-say "완료 — 마지막 한 단계"
+# 4) 안내 (백엔드는 앱 포그라운드 진입 시 자동 기동 — 별도 버튼 없음)
+say "완료"
 cat <<EOF
-폰에서 'IndieBiz Phone Agent' 앱을 열고 "🌐 폰 백엔드 시작 (:8765)" 을 한 번 탭하세요.
-그러면 폰이 자체 IBL 엔진으로 앱모드·실제 액션·[sense:phone] 알림을 서빙합니다.
+폰에서 'IndieBiz Phone Agent' 앱을 열기만 하면 됩니다.
+앱이 포그라운드로 뜨면 백엔드(:8765)가 자동 기동되어, 폰이 자체 IBL 엔진으로
+앱모드·실제 액션·[sense:phone] 알림을 서빙합니다. (별도 '시작' 버튼 없음)
+※ 키를 새로 주입했다면, 앱 force-stop 후 다시 열어야 새 키가 로드됩니다.
 
 확인:  adb forward tcp:8788 tcp:8765 \\
        && curl -s 127.0.0.1:8788/launcher/instruments | head -c 200 \\

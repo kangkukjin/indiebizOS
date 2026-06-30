@@ -1,8 +1,8 @@
 ---
 title: 도구 패키지 시스템
-scope: 패키지 구조(handler/tool.json), 설치 절차, 37개 패키지 목록. IBL 어휘 등록은 ibl_nodes_src/ 직접 편집(ibl.md 참조). op-bearing 10 패키지는 `_OP_DISPATCHERS` 표준 채택.
+scope: 패키지 구조(handler/tool.json), 설치 절차, 38개 패키지 목록. IBL 어휘 등록은 ibl_nodes_src/ 직접 편집(ibl.md 참조). op-bearing 10 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
-last_updated: 2026-06-22
+last_updated: 2026-06-30
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -232,7 +232,7 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 
 ---
 
-## 현재 설치된 도구 패키지 (37개)
+## 현재 설치된 도구 패키지 (38개)
 
 **op-bearing 10 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): browser-action / youtube / computer-use / radio / cctv / photo-manager / memory / health-record / lecture_workspace / android.
 
@@ -245,6 +245,7 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | cctv | CCTV | CCTV/웹캠 관련 도구 |
 | cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel) |
 | computer-use | Computer Use | 컴퓨터 사용 자동화 |
+| contest | Contest | AI 공모전·경진대회 검색 (Kaggle, `sense:contest`) |
 | context7 | Context7 | Context7 라이브러리 문서 검색 |
 | culture | Culture | 공연(KOPIS), 도서(도서관 정보나루), Project Gutenberg 고전 원문, 한국고전종합DB 등 문화예술 정보 조회 |
 | data-ops | Data Ops | 통화 변환자 9동사 (filter/sort/take/select/dedup/groupby/join/union/merge) — records·table 순수 변환. `group: transform`, `scope: workspace`, `runs_on: anywhere`. 파이프(`>>`·`&`)와 같은 닫힌 계급 |
@@ -337,4 +338,4 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-06-27 — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 38개 도구 패키지(+백엔드 extensions 9). IBL 142 액션. study 패키지에 국회도서관 국가학술정보 기반 인물/학위논문 액션 추가(`sense:researcher`·`sense:paper source:nanet` — 동명이인 분리·국내 학위 추적). 목록에 data-ops(통화 변환자 9동사)·report-viewer 반영. 이전(2026-06-14): 35개 도구 패키지 유지. 폰 자아 번들=22 패키지(runnable 95) — `build_ibl_nodes.PHONE_VERIFIED_PACKAGES` + runs_on 태그로 파생, 폰 못 도는 액션은 맥에 위임. 라이브러리=비계/API=몸 원칙으로 무거운 의존 대신 경량 HTTP 호출(arxiv·shopping 이식 증명, 지연 import). 이전(2026-06-12): business 패키지 도메인 전면 IBL화(self:business/business_item/business_document/work_guideline op + others:neighbor 통합·contact·messages·feed/board/nostr·auto_response + self:phone_sync). 옛 BusinessManager.tsx·NeighborManagerDialog.tsx 은퇴. 이전(2026-06-10): 35개 정합화. 이전(2026-05-28): IBL 단일 진실 소스화*
+*마지막 업데이트: 2026-06-30 — 패키지 목록 정합화(contest 추가로 38개 명시) + **폰 엔진 번들 파생 구조**: 백엔드 코어 모듈(extensions)을 손-유지 리스트(`_ENGINE_MODULES`)가 아니라 `data/bodies/*.json` 몸 프로파일에서 파생(`scripts/build_body_bundle.py`, 3겹 게이트=빌드 재생성+pre-commit `--check`+온디바이스 자가점검) — 새 backend 모듈이 폰에 자동 흐름. 폰 자아 도구 번들은 여전히 `build_ibl_nodes.PHONE_VERIFIED_PACKAGES`+runs_on 파생. 142 액션·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 38개 도구 패키지(+백엔드 extensions 9). IBL 142 액션. study 패키지에 국회도서관 국가학술정보 기반 인물/학위논문 액션 추가(`sense:researcher`·`sense:paper source:nanet` — 동명이인 분리·국내 학위 추적). 목록에 data-ops(통화 변환자 9동사)·report-viewer 반영. 이전(2026-06-14): 35개 도구 패키지 유지. 폰 자아 번들=22 패키지(runnable 95) — `build_ibl_nodes.PHONE_VERIFIED_PACKAGES` + runs_on 태그로 파생, 폰 못 도는 액션은 맥에 위임. 라이브러리=비계/API=몸 원칙으로 무거운 의존 대신 경량 HTTP 호출(arxiv·shopping 이식 증명, 지연 import). 이전(2026-06-12): business 패키지 도메인 전면 IBL화(self:business/business_item/business_document/work_guideline op + others:neighbor 통합·contact·messages·feed/board/nostr·auto_response + self:phone_sync). 옛 BusinessManager.tsx·NeighborManagerDialog.tsx 은퇴. 이전(2026-06-10): 35개 정합화. 이전(2026-05-28): IBL 단일 진실 소스화*

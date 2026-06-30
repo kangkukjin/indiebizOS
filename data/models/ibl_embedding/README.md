@@ -5,38 +5,39 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:4068
+- dataset_size:4099
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 폰 진동 울려줘
+- source_sentence: record audio for 10 seconds
   sentences:
-  - '[sense:search_ddg] site:daangn.com"} >> [sense:crawl]"}'
-  - '[sense:cctv]'
-  - '[limbs:phone]'
-- source_sentence: 문서 폴더에서 PDF 검색
-  sentences:
-  - 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
-  - '[engines:web_component] >> [engines:web] >> [engines:web]'
-  - 파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트 지정 (절대경로, ~/, 상대경로
-    모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀
-- source_sentence: 이 텍스트 클립보드에 넣어
-  sentences:
-  - '[self:time]'
-  - '[self:output]'
-  - 맛집/음식점 검색 (카카오+네이버 Local API). 상호명·주소·전화·카테고리·place 링크 반환. 별점·리뷰 숫자는 공개 API 미제공
-    — 카카오 place_url(카카오맵 페이지)에서 확인. 커뮤니티 후기는 sense:search_local.
-- source_sentence: 설정 파일 좀 고쳐줘
-  sentences:
+  - '[self:trigger]'
+  - 폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).
   - '[self:edit]'
-  - '[self:grep] & [self:list] & [self:file_find] & [self:read] & [self:read]'
-  - '[self:blog]'
-- source_sentence: show work guidelines
+- source_sentence: 브라우저 네트워크 트래픽 보여줘
   sentences:
-  - '[self:lecture]'
-  - '[self:work_guideline]'
-  - 부동산 실거래가 조회 (op 분기, 국토부). query(실거래가)/codes(법정동 코드). region 이름만 넣으면 코드 자동 변환 —
-    codes는 보통 불필요.
+  - '[limbs:browser]'
+  - 'Shadcn UI HTML 슬라이드(2층: 글자 레이어 + 별도 그림 합성). **마케팅·랜딩·피치덱·순수 텍스트 레이아웃 덱 전용.**
+    ★강의·발표·NotebookLM식 슬라이드는 이 액션을 쓰지 말 것 — 대신 [engines:slide]{style:"native"}(슬라이드마다
+    통짜 이미지) 또는 [self:lecture] 워크스페이스(design_system 미지정=native 기본)를 써라(시각=의미 융합·한글
+    OCR 검증). 슬라이드 IR(slides[]) → png/pdf/pptx emit.'
+  - '[others:auto_response]'
+- source_sentence: HTML 돌려줘 결과 봐
+  sentences:
+  - '[limbs:browser]'
+  - 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
+  - HTML 페이지를 PNG 이미지로 렌더링. 슬라이드·차트 결과를 이미지화.
+- source_sentence: 특정 웹 리소스를 참조하여 핵심 개념을 시각적 대비 구조로 요약한 강의 슬라이드 만들어 및 즉시 확인
+  sentences:
+  - '[self:photo]'
+  - 웹페이지 원문 읽기 (URL 필요). items=문서 IR(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
+  - '[self:health]'
+- source_sentence: 전체 기록해줘소 요약 좀
+  sentences:
+  - 디스크 용량 분석 (op 분기) — 폴더·확장자별 용량 집계. scan(분석 인덱스 구축)/summary(용량 집계)/volumes(볼륨 목록).
+    ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
+  - 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더.
+  - '[limbs:radio_favorite]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -49,7 +50,7 @@ This is a [sentence-transformers](https://www.SBERT.net) model finetuned from [j
 
 ### Model Description
 - **Model Type:** Sentence Transformer
-- **Base model:** [jhgan/ko-sroberta-multitask](https://huggingface.co/jhgan/ko-sroberta-multitask) <!-- at revision 1050bd4e2ca90c0b9b62f0c1fbd83edc85ba8483 -->
+- **Base model:** [jhgan/ko-sroberta-multitask](https://huggingface.co/jhgan/ko-sroberta-multitask) <!-- at revision 8fca7c9c98c26599be0e14b9916b11a756a26f19 -->
 - **Maximum Sequence Length:** 64 tokens
 - **Output Dimensionality:** 768 dimensions
 - **Similarity Function:** Cosine Similarity
@@ -90,9 +91,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    'show work guidelines',
-    '[self:work_guideline]',
-    '부동산 실거래가 조회 (op 분기, 국토부). query(실거래가)/codes(법정동 코드). region 이름만 넣으면 코드 자동 변환 — codes는 보통 불필요.',
+    '전체 기록해줘소 요약 좀',
+    '디스크 용량 분석 (op 분기) — 폴더·확장자별 용량 집계. scan(분석 인덱스 구축)/summary(용량 집계)/volumes(볼륨 목록). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).',
+    '[limbs:radio_favorite]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -101,9 +102,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.8313, -0.1418],
-#         [ 0.8313,  1.0000, -0.0598],
-#         [-0.1418, -0.0598,  1.0000]])
+# tensor([[ 1.0000,  0.6602, -0.1586],
+#         [ 0.6602,  1.0000, -0.1120],
+#         [-0.1586, -0.1120,  1.0000]])
 ```
 
 <!--
@@ -148,19 +149,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 4,068 training samples
+* Size: 4,099 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
-  |         | sentence_0                                                                        | sentence_1                                                                        |
-  |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
-  | type    | string                                                                            | string                                                                            |
-  | details | <ul><li>min: 3 tokens</li><li>mean: 11.56 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 20.64 tokens</li><li>max: 64 tokens</li></ul> |
+  |         | sentence_0                                                                        | sentence_1                                                                       |
+  |:--------|:----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|
+  | type    | string                                                                            | string                                                                           |
+  | details | <ul><li>min: 4 tokens</li><li>mean: 13.07 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 21.3 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                          | sentence_1                                                                                     |
-  |:------------------------------------|:-----------------------------------------------------------------------------------------------|
-  | <code>transcribe what I say</code>  | <code>폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).</code> |
-  | <code>파리 호텔 알아봐</code>              | <code>[sense:travel]</code>                                                                    |
-  | <code>스위치 morning_routine 실행</code> | <code>[self:switch]</code>                                                                     |
+  | sentence_0                       | sentence_1                                                                          |
+  |:---------------------------------|:------------------------------------------------------------------------------------|
+  | <code>인공지능 뉴스 최근 거</code>        | <code>[sense:search_news]</code>                                                    |
+  | <code>외장하드 포식하면서 알아낸 거 보여</code> | <code>포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기.</code> |
+  | <code>비트코인 투자할만해?</code>         | <code>암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)</code>                           |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -173,8 +174,6 @@ You can finetune this model on your own dataset.
 ### Training Hyperparameters
 #### Non-Default Hyperparameters
 
-- `per_device_train_batch_size`: 16
-- `per_device_eval_batch_size`: 16
 - `num_train_epochs`: 1
 - `multi_dataset_batch_sampler`: round_robin
 
@@ -184,8 +183,8 @@ You can finetune this model on your own dataset.
 - `do_predict`: False
 - `eval_strategy`: no
 - `prediction_loss_only`: True
-- `per_device_train_batch_size`: 16
-- `per_device_eval_batch_size`: 16
+- `per_device_train_batch_size`: 8
+- `per_device_eval_batch_size`: 8
 - `gradient_accumulation_steps`: 1
 - `eval_accumulation_steps`: None
 - `torch_empty_cache_steps`: None
@@ -280,6 +279,12 @@ You can finetune this model on your own dataset.
 - `learning_rate_mapping`: {}
 
 </details>
+
+### Training Logs
+| Epoch  | Step | Training Loss |
+|:------:|:----:|:-------------:|
+| 0.9747 | 500  | 0.0163        |
+
 
 ### Framework Versions
 - Python: 3.14.5

@@ -2,7 +2,7 @@
 title: 시스템 아키텍처
 scope: 설계 의도, 신체 구조 비유, 인지 파이프라인 큰 그림, 핵심 컴포넌트 개요
 owner_code: 전체 backend/ (개념 수준)
-last_updated: 2026-06-12
+last_updated: 2026-06-30
 see_also: [system_structure.md, execution_memory.md, ibl.md, packages.md, technical.md]
 ---
 
@@ -45,9 +45,10 @@ EXECUTE/Reflex                          [2] framing 재고 확인 → 있고 맞
     │                                      없음/안맞음 → 의식 에이전트(본격 AI): task_framing + 달성 기준
     ↓                                              ↓
 [3] 실행 에이전트
-    Reflex(해마 고확신) → 중급 모델 / EXECUTE·THINK → 본격 모델
-    (2026-06-10: EXECUTE를 중급→본격으로 — 무의식 오분류가 품질 저하로 이어지지 않게 하는 방어.
-     덕분에 무의식 분류기는 EXECUTE 쪽으로 과감하게 기울 수 있다)
+    모델은 **모델 기어**가 결정 (model_resolver: 역할→축→기어→티어).
+    Reflex(해마 고확신)는 'reflex' 축(균형 기어 기본=중급), EXECUTE·THINK는 'execute'·'consciousness' 축.
+    (자동 변속기[무의식 분류기]가 작업마다 티어를 고르고, 수동 레버[절약/균형/최대]가 전체를 변속.
+     상세: system_structure.md "모델 기어")
     ↓
 [4] 평가 (경량 AI, 달성 기준 있을 때만, 최대 3라운드)
     ↓
@@ -56,7 +57,7 @@ EXECUTE/Reflex                          [2] framing 재고 확인 → 있고 맞
 
 - **연상기억**: 파이프라인 최상단에서 1회 생성. 해마(과거 IBL 사례)와 심층메모리(사용자 사실)를 합친 self-describing XML 묶음 (`<execution_memory>` + `<related_memory>`)
 - **단일 검색**: 검색 1회로 top_score까지 확보 (이전 3회 중복 호출 제거, 2026-05-17)
-- **해마**: 베이스 `ko-sroberta-multitask`에서 fine-tuning. code Top-5 92.6%/desc 92.8%, **실제 런타임 검색 ~99%** (2026-06-12 **로컬 Mac M4 Pro 재학습** — 클라우드는 옛 맥에어 OOM 한정이었음, 코퍼스 ~2,424). 모델은 런타임 천장이라 재학습 거의 무차별 — 어휘 아닌 intent 의미를 매칭해 vocab에 강건.
+- **해마**: 베이스 `ko-sroberta-multitask`에서 fine-tuning. code Top-5 88.9%/desc 91.2%, **실제 런타임 검색 ~99%** (2026-06-30 **로컬 Mac M4 Pro 재학습** — 클라우드는 옛 맥에어 OOM 한정이었음, 코퍼스 2,624). 모델은 런타임 천장이라 재학습 거의 무차별 — 어휘 아닌 intent 의미를 매칭해 vocab에 강건.
 - **심층메모리**: 같은 fine-tuned 모델로 시맨틱 검색 (2026-05-16 도입)
 - **점수 정규화**: 모든 검색 경로(시맨틱·하이브리드·FTS5 폴백)에서 0~1 보장
 - 상세: `system_docs/execution_memory.md`
@@ -193,12 +194,12 @@ IBL 파서 밖에서 코드나 긴 텍스트를 전달하기 위한 메커니즘
 
 ### 연상기억 (해마 + 심층메모리)
 fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(심층메모리)을 단계 0에서 1회 검색해 모든 에이전트에 self-describing XML로 주입.
-- 해마: 2026-06-12 로컬 M4 Pro 재학습, code Top-5 92.6%/desc 92.8%/런타임 ~99% — 자동 경험 증류 (점수 < 0.7 시)
+- 해마: 2026-06-30 로컬 M4 Pro 재학습, code Top-5 88.9%/desc 91.2%/런타임 ~99% — 자동 경험 증류 (점수 < 0.7 시)
 - 심층메모리: 같은 모델 공유로 시맨틱 검색 (2026-05-16 도입)
 - 상세 (단계별 흐름·증류 조건·DB 스키마·학습 절차): **execution_memory.md**
 
 ### 도구 패키지 시스템 (노드 구현체)
-37개 패키지가 IBL 노드의 실제 구현체로 동작. 폴더 기반 탐지 + 동적 로딩. op-bearing 10 패키지는 `_OP_DISPATCHERS` 표준 채택(2026-05-28, android 합류 2026-06-05) — `build_ibl_nodes.py --check`가 AST 정확 비교로 src↔tool.json↔handler 일치 검증. 패키지 구조·설치·생성 절차는 **packages.md** 참조.
+38개 패키지가 IBL 노드의 실제 구현체로 동작. 폴더 기반 탐지 + 동적 로딩. op-bearing 10 패키지는 `_OP_DISPATCHERS` 표준 채택(2026-05-28, android 합류 2026-06-05) — `build_ibl_nodes.py --check`가 AST 정확 비교로 src↔tool.json↔handler 일치 검증. 패키지 구조·설치·생성 절차는 **packages.md** 참조.
 
 ### 자동응답 서비스 V3
 - Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
@@ -316,4 +317,4 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 - 설계 철학 (백서): `WHITEPAPER.md`
 
 ---
-*마지막 업데이트: 2026-06-29 — 앱 인터랙티브 렌더 프리미티브 종결: 인터랙티브 `map`(leaflet) + `on:` 뷰-이벤트(moveend 재조회·marker_click IBL 액션 또는 `{stream:true}` HLS 영상) + 결과-필드 동적 필터 `filter:{from_field}`(클라이언트 측 거르기). bespoke CommercialInstrument 은퇴(선언형 흡수)·directions 은퇴 보류·lightbox 불요. 버그수정: 원격 동적필터+카드드릴 인덱스(applyCatFilter 후 인덱싱)·tsc 베이스라인 에러 3개. 단일통화(items) records producer=0 종합확인. 142 액션 불변(렌더링 레이어 변경)·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보 API 흡수: `sense:researcher`(연구자 동명이인 분리)·`sense:paper source:nanet`(학위논문) 신설 → 인물·학위논문 찾기. 5노드 142 액션(sense 44, self 44, limbs 17, others 11, engines 26)·도구 패키지 38개. 기억 7종(2026-06-20 포식 기억 forager가 7번째로 추가 — 디스크/코드/웹 공간을 뒤져 배운 것을 세션 너머로 누적). 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — **폰이 두 번째 독립 자아로**: 폰 두뇌를 claude_code 원격 렌트 → 폰-로컬 in-process Gemini(경량 3.1-flash-lite/본격 3.5-flash)로 전환(away-case 역방향 장치 은퇴, outbound만 유지) + `detect_body()` 하드웨어 자기감지(자신을 맥 아닌 "폰"으로 인식, 두 HW=두 정체성) + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + runs_on 정직성(validate_phone_reachability self-check 합류) + 사용자 세계-데이터 CRDT 동기화(비즈니스·의료기록, 단 주관적 기억은 자아별 사적) + 의료 에이전트 환자차트 자동주입(읽기 조회 0번) + channel 트리거 맥 발화 경로. 폰 온디맨드 감각 삼각(sense:here/listen/see) + self:show_calendar 폐지(해마 게이트 capability化) → 125→124 액션. 이전(2026-06-12): 메신저/커뮤니티/비즈니스 IBL 앱모드 계기화(옛 BusinessManager·NeighborManager·IndieNet 창 은퇴, api_indienet REST 제거) + 자동응답 IBL화 + NIP-17 멀티릴레이 실시간 수신 + 폰↔PC business.db 합집합 동기화(LWW+tombstone CRDT, self:phone_sync) + neighbor 통합 + 해마 로컬 재학습(M4 Pro) → 122 액션. 이전(2026-06-11): 폰 네이티브 정착(Chaquopy 온디바이스 백엔드 + 실제 IBL 엔진 + runs_on + phone_manifest) + 앱 표면 선언 단일소스화 + 라디오 스트림 URL 수정. 이전(2026-06-10): 인지 경로 개편: 중급 모델을 Reflex 전용으로 좁히고 무의식 EXECUTE는 본격 모델 유지(오분류 품질 방어) + 무의식 분류기 재조정(THINK 과잉 축소) + 의식 프롬프트에 "좋은 문제 규정"(메타-메타)·"IBL과 코딩의 우선순위" 섹션. 이전(2026-06-05~06): 안드로이드 얇은 부활([limbs:android]{op}) + 폰 컴패니언 앱(NIP-17 한방향 피드 + [sense:phone]) + Nostr DM NIP-17 전환 + 음악 작곡 은퇴 → 111 액션. 이전(2026-06-04): IBL 사용성 재감사 종결 + ACTION_PARAM_ALIASES 중앙 적용. 이전(2026-05-31): THINK 경로 framing 재사용 게이트. 이전(2026-05-28): 라운드 2 정리 + op 어휘 단일화 + 삼각 검증 인프라.*
+*마지막 업데이트: 2026-06-30 — 모델 기어(계기판 변속) + per-agent 모델 폐지: 모델 선택 ~15곳을 단일 리졸버(`model_resolver.py`, 역할→축→기어→티어)로 통합. 계기판 레버(절약/균형/최대) + 프리셋 편집기 + 에이전트 핀, 전부 핫리로드(`/model-gear` REST). per-agent 모델 설정 폐지(에이전트 yaml의 provider/model/apiKey 무시, 모델·키는 실행 티어 상속). 폰 엔진 번들=`data/bodies/*.json` 프로파일에서 파생(`build_body_bundle.py`, 3겹 게이트). 142 액션 불변·38 도구 패키지. 이전(2026-06-29) — 앱 인터랙티브 렌더 프리미티브 종결: 인터랙티브 `map`(leaflet) + `on:` 뷰-이벤트(moveend 재조회·marker_click IBL 액션 또는 `{stream:true}` HLS 영상) + 결과-필드 동적 필터 `filter:{from_field}`(클라이언트 측 거르기). bespoke CommercialInstrument 은퇴(선언형 흡수)·directions 은퇴 보류·lightbox 불요. 버그수정: 원격 동적필터+카드드릴 인덱스(applyCatFilter 후 인덱싱)·tsc 베이스라인 에러 3개. 단일통화(items) records producer=0 종합확인. 142 액션 불변(렌더링 레이어 변경)·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보 API 흡수: `sense:researcher`(연구자 동명이인 분리)·`sense:paper source:nanet`(학위논문) 신설 → 인물·학위논문 찾기. 5노드 142 액션(sense 44, self 44, limbs 17, others 11, engines 26)·도구 패키지 38개. 기억 7종(2026-06-20 포식 기억 forager가 7번째로 추가 — 디스크/코드/웹 공간을 뒤져 배운 것을 세션 너머로 누적). 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — **폰이 두 번째 독립 자아로**: 폰 두뇌를 claude_code 원격 렌트 → 폰-로컬 in-process Gemini(경량 3.1-flash-lite/본격 3.5-flash)로 전환(away-case 역방향 장치 은퇴, outbound만 유지) + `detect_body()` 하드웨어 자기감지(자신을 맥 아닌 "폰"으로 인식, 두 HW=두 정체성) + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + runs_on 정직성(validate_phone_reachability self-check 합류) + 사용자 세계-데이터 CRDT 동기화(비즈니스·의료기록, 단 주관적 기억은 자아별 사적) + 의료 에이전트 환자차트 자동주입(읽기 조회 0번) + channel 트리거 맥 발화 경로. 폰 온디맨드 감각 삼각(sense:here/listen/see) + self:show_calendar 폐지(해마 게이트 capability化) → 125→124 액션. 이전(2026-06-12): 메신저/커뮤니티/비즈니스 IBL 앱모드 계기화(옛 BusinessManager·NeighborManager·IndieNet 창 은퇴, api_indienet REST 제거) + 자동응답 IBL화 + NIP-17 멀티릴레이 실시간 수신 + 폰↔PC business.db 합집합 동기화(LWW+tombstone CRDT, self:phone_sync) + neighbor 통합 + 해마 로컬 재학습(M4 Pro) → 122 액션. 이전(2026-06-11): 폰 네이티브 정착(Chaquopy 온디바이스 백엔드 + 실제 IBL 엔진 + runs_on + phone_manifest) + 앱 표면 선언 단일소스화 + 라디오 스트림 URL 수정. 이전(2026-06-10): 인지 경로 개편: 중급 모델을 Reflex 전용으로 좁히고 무의식 EXECUTE는 본격 모델 유지(오분류 품질 방어) + 무의식 분류기 재조정(THINK 과잉 축소) + 의식 프롬프트에 "좋은 문제 규정"(메타-메타)·"IBL과 코딩의 우선순위" 섹션. 이전(2026-06-05~06): 안드로이드 얇은 부활([limbs:android]{op}) + 폰 컴패니언 앱(NIP-17 한방향 피드 + [sense:phone]) + Nostr DM NIP-17 전환 + 음악 작곡 은퇴 → 111 액션. 이전(2026-06-04): IBL 사용성 재감사 종결 + ACTION_PARAM_ALIASES 중앙 적용. 이전(2026-05-31): THINK 경로 framing 재사용 게이트. 이전(2026-05-28): 라운드 2 정리 + op 어휘 단일화 + 삼각 검증 인프라.*

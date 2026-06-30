@@ -201,7 +201,7 @@
       slide:
         returns: effect
         runs_on: mac_only
-        description: '명령 한 줄 → 슬라이드 1장(PNG). **슬라이드를 만드는 유일한 액션. 미지정이면 native(NotebookLM식 통짜 이미지 — 한글·다이어그램·일러스트를 한 장에 통째로 저작).** 여러 장 덱은 슬라이드마다 호출(각자 한 장)하거나, 덱 관리가 필요하면 [self:lecture] 워크스페이스(native 기본). 마케팅/카드 등 경량은 style:"text".'
+        description: '명령 한 줄 → 슬라이드 1장(PNG). 기본 native(통짜 이미지, 시각=의미 융합·한글 OK). 여러 장은 슬라이드마다 호출, 덱 관리는 [self:lecture]. 텍스트 위주는 style:"text", 마케팅 덱은 slide_shadcn.'
         target_description: |
           instruction(필수) — 무엇을 말하는 한 장인지 자연어로. content(선택) — 근거 사실·원문(환각 방지).
           ★여러 장 강의 덱: 슬라이드 outline(장당 명제+장치)을 먼저 짜고, 슬라이드마다 이 액션을 같은 aesthetic으로 호출(병렬 & 가능).
@@ -311,7 +311,7 @@
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: '통화 변환자 — 목록/표에서 조건에 맞는 것만 남긴다(부분집합). >> 앞 액션의 records/table 통화를 받아 같은 통화로.'
+        description: '통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴).'
         target_description: 'where(필터 조건): 문자열(전 필드 부분일치, 예 "전세") · {field, op, value}(op=eq/ne/lt/le/gt/ge/contains/in) · {열:값} 단축형 · 조건 배열(AND). >> 파이프로 앞 통화를 자동 수용. 도메인 무관 — 모든 검색·목록 생산자에 적용.'
         group: transform
         router: handler
@@ -328,7 +328,7 @@
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: '통화 변환자 — 목록/표를 기준 필드로 정렬(수치 인식). >> 앞 records/table 통화를 받아 같은 통화로.'
+        description: '통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, desc 옵션).'
         target_description: 'by(정렬 기준 필드/열명, 필수) · desc(내림차순 bool, 기본 false). 숫자는 수치로, 아니면 문자열로 비교. 예: [...] >> [engines:sort]{by: price, desc: true}.'
         group: transform
         router: handler
@@ -345,7 +345,7 @@
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: '통화 변환자 — 목록/표에서 상위 n개만(음수면 뒤에서 n). >> 앞 records/table 통화를 받아 같은 통화로.'
+        description: '통화 변환자 — items에서 상위 n개만(음수면 뒤에서 n). 보통 sort 뒤.'
         target_description: 'n(취할 개수, 기본 10; 음수=뒤에서 n개). 보통 sort 뒤에 써 상위 N 추출: [...] >> [engines:sort]{by:..} >> [engines:take]{n:5}.'
         group: transform
         router: handler
@@ -362,7 +362,7 @@
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: '통화 변환자 — 표에서 지정한 열만 남긴다(열 투영). records면 해당 필드만 추림. >> 앞 통화를 받아 같은 통화로.'
+        description: '통화 변환자 — items에서 지정한 열/필드만 남긴다(투영). 차트·문서 전 좁히기.'
         target_description: 'columns(남길 열/필드 이름 배열, 필수). 예: [sense:...] >> [engines:select]{columns: ["연도","GDP"]}. 표가 넓을 때 차트/문서 전에 좁히기.'
         group: transform
         router: handler
@@ -379,7 +379,7 @@
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: '통화 변환자 — 목록/표에서 중복 제거(첫 항목 유지, 정규화 비교). >> 앞 records/table 통화를 받아 같은 통화로.'
+        description: '통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교).'
         target_description: 'by(중복 판정 키 필드/열; 미지정 시 records=title, table=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)'
         group: transform
         router: handler
@@ -396,7 +396,7 @@
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: '통화 변환자 — 표를 키 열로 그룹지어 집계(count/sum/avg/min/max). >> 앞 table 통화를 받아 집계 table로.'
+        description: '통화 변환자 — items를 키 필드로 그룹지어 집계(count/sum/avg/min/max).'
         target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count). 반환 table=[by열, 집계열들]. 예: [...] >> [engines:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
         group: transform
         router: handler
@@ -413,7 +413,7 @@
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: '통화 변환자(이항) — 두 입력을 공통 키로 inner join(table은 키 열, records는 키 필드). 서로 다른 소스를 한 키로 묶어 분석. & 병렬 두 입력을 받음.'
+        description: '통화 변환자(이항) — 두 입력을 공통 키(on)로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.'
         target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). table=열 기준, records=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
         group: transform
         router: handler
@@ -430,7 +430,7 @@
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: '통화 변환자(이항) — 두 표(또는 두 목록)를 행 결합. 같은 통화끼리. & 병렬 두 입력을 받음. 중복 제거는 뒤에 >> dedup.'
+        description: '통화 변환자(이항) — 두 입력을 행 결합(이어붙이기). & 병렬로 공급. 중복 제거는 뒤에 >> dedup.'
         target_description: '파라미터 없음. table은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), records는 단순 concat. 예: [A] & [B] >> [engines:union]. records 합치며 중복까지 지우려면 engines:merge.'
         group: transform
         router: handler
@@ -447,7 +447,7 @@
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: '통화 변환자(이항) — 두 목록(records)을 합친다. by 지정 시 그 키로 중복 제거. & 병렬 두 입력을 받음.'
+        description: '통화 변환자(이항) — 두 입력을 합치되 by 키로 중복 제거. & 병렬로 공급. (단순 이어붙이기는 union.)'
         target_description: 'by(선택, 중복 제거 키 필드; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 표형 결합은 engines:union. 예: [sense:search_news]{...} & [sense:search_ddg]{...} >> [engines:merge]{by: title}.'
         group: transform
         router: handler

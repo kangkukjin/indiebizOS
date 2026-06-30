@@ -187,7 +187,8 @@ def _gear_describe():
         axes[axis] = {"tier": d.get("tier"), "provider": d.get("provider"), "model": d.get("model")}
     return {"current_gear": M.get_gear(), "gears": M.list_gears(),
             "presets": g.get("presets", {}), "axes": axes,
-            "tiers": M.TIERS, "axis_names": M.AXES}
+            "tiers": M.TIERS, "axis_names": M.AXES,
+            "consciousness_enabled": M.consciousness_enabled()}
 
 
 def _gear_reset_providers():
@@ -268,6 +269,18 @@ def phone_set_gear(body: dict = Body(...)):
     if not name or not M.set_gear(name):
         return JSONResponse({"error": f"알 수 없는 기어: {name}"}, status_code=400)
     _gear_reset_providers()
+    return {"status": "changed", **_gear_describe()}
+
+
+@app.put("/model-gear/consciousness")
+def phone_set_consciousness(body: dict = Body(...)):
+    """의식 토글 — OFF 면 인지 파이프라인이 THINK 경로를 차단(반사 유지 + 나머지 바로 실행).
+    핫리로드(매 _decide_request_type 가 consciousness_enabled() 를 새로 읽음) — 재시작 불요."""
+    import model_resolver as M
+    enabled = body.get("enabled")
+    if enabled is None:
+        return JSONResponse({"error": "enabled(bool) 값이 필요합니다."}, status_code=400)
+    M.set_consciousness(bool(enabled))
     return {"status": "changed", **_gear_describe()}
 
 

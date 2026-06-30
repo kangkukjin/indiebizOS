@@ -45,6 +45,13 @@ export interface Agent {
     api_key?: string;
     model: string;
   };
+  // 표시용 — 기어가 해소한 실효 모델(per-agent 모델 폐지 후 ai 대신 이걸 표시). 백엔드 GET /agents 가 부착.
+  effective_model?: {
+    provider?: string;
+    model?: string;
+    tier?: string;
+    source?: string;
+  };
   allowed_tools?: string[];   // deprecated (하위 호환)
   allowed_nodes?: string[];   // Phase 16: IBL 노드 기반
   ibl_only?: boolean;

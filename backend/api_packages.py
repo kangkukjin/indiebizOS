@@ -144,7 +144,14 @@ async def reload_package_cache():
             reload_nodes()
         except Exception:
             pass
-        return {"status": "ok", "message": "패키지/도구/IBL노드 캐시(카탈로그+실행기)를 초기화했습니다."}
+        # ③ 의식 에이전트 — 시스템 프롬프트에 IBL 카탈로그를 캐시로 박으므로,
+        #    카탈로그가 바뀌면 재빌드해야 stale하지 않다(_load_prompt에서 build_environment 주입).
+        try:
+            from consciousness_agent import reset_consciousness_agent
+            reset_consciousness_agent()
+        except Exception:
+            pass
+        return {"status": "ok", "message": "패키지/도구/IBL노드 캐시(카탈로그+실행기+의식)를 초기화했습니다."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

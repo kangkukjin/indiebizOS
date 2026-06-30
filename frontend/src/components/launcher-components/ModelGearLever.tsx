@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Gauge, Loader2, Settings2, Save, Check } from 'lucide-react';
+import { Gauge, Loader2, Settings2, Save, Check, Brain } from 'lucide-react';
 import { api } from '../../lib/api';
 
 interface GearState {
@@ -20,6 +20,7 @@ interface GearState {
   axes: Record<string, { tier: string; provider: string; model: string }>;
   tiers?: string[];
   axis_names?: string[];
+  consciousness_enabled?: boolean;
 }
 
 interface AgentInfo { id: string; name: string; project: string; }
@@ -36,6 +37,7 @@ export function ModelGearLever() {
   const [gear, setGear] = useState<GearState | null>(null);
   const [changing, setChanging] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [togglingMind, setTogglingMind] = useState(false);
 
   // 프리셋 편집 드래프트
   const [draftPresets, setDraftPresets] = useState<Record<string, Record<string, string>>>({});
@@ -61,11 +63,31 @@ export function ModelGearLever() {
       .catch((e) => console.error('Failed to load overrides:', e));
   }, [showSettings, gear?.presets]);
 
+  // 기어/프리셋/핀 변경 시 다른 창(프로젝트 카드의 effective_model)에 갱신 신호.
+  // 프로젝트 창은 별도 Electron 윈도우 → 같은 origin localStorage 의 storage 이벤트로
+  // 크로스-윈도우 통지(쓴 창 외 다른 창에서 발화). 실시간 폴링이 아니라 변경-이벤트 기반.
+  const signalGearChange = () => {
+    try { localStorage.setItem('__model_gear_rev', String(Date.now())); } catch { /* ignore */ }
+  };
+
   const change = async (name: string) => {
     if (changing || gear?.current_gear === name) return;
     setChanging(true);
-    try { setGear(await api.setModelGear(name)); } catch (e) { console.error('Failed to set gear:', e); }
+    try { setGear(await api.setModelGear(name)); signalGearChange(); } catch (e) { console.error('Failed to set gear:', e); }
     setChanging(false);
+  };
+
+  // 의식 토글 — OFF 면 THINK 경로 차단(반사는 유지, 빠르고 저렴). 핫리로드(다음 작업부터).
+  const conscious = gear?.consciousness_enabled !== false;
+  const toggleConsciousness = async () => {
+    if (togglingMind || !gear) return;
+    setTogglingMind(true);
+    try {
+      const r = await api.setModelGearConsciousness(!conscious);
+      setGear((prev) => (prev ? { ...prev, consciousness_enabled: r.consciousness_enabled } : prev));
+      signalGearChange();
+    } catch (e) { console.error('Failed to toggle consciousness:', e); }
+    setTogglingMind(false);
   };
 
   const setDraftCell = (g: string, axis: string, tier: string) => {
@@ -78,6 +100,7 @@ export function ModelGearLever() {
     try {
       const r = await api.updateModelGearPresets(draftPresets);
       setGear(r);
+      signalGearChange();
       setPresetsSaved(true);
       setTimeout(() => setPresetsSaved(false), 2000);
     } catch (e) { console.error('Failed to save presets:', e); }
@@ -91,6 +114,7 @@ export function ModelGearLever() {
     try {
       const r = await api.updateModelGearOverrides(next);
       setOverrides(r.overrides || {});
+      signalGearChange();
     } catch (e) { console.error('Failed to set pin:', e); }
     setSavingPin(null);
   };
@@ -156,6 +180,35 @@ export function ModelGearLever() {
           <span className="text-stone-400">티어별 모델은 설정 → 모델 설정</span>
         </div>
       )}
+
+      {/* 의식 토글 — OFF 면 THINK(숙고) 경로를 끄고 반사+바로 실행만 (빠르고 저렴) */}
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-100">
+        <span className="text-[11.5px] flex items-center gap-1.5 min-w-0">
+          <Brain size={13} className={conscious ? 'text-stone-600' : 'text-stone-300'} />
+          <span className={`font-medium ${conscious ? 'text-stone-700' : 'text-stone-400'}`}>
+            의식 {conscious ? '켜짐' : '꺼짐'}
+          </span>
+          <span className="text-stone-400 truncate">
+            {conscious ? '— 복잡한 일은 숙고(THINK)' : '— 반사+바로 실행, 빠름·저렴'}
+          </span>
+        </span>
+        <button
+          onClick={toggleConsciousness}
+          disabled={togglingMind || !gear}
+          role="switch"
+          aria-checked={conscious}
+          title="끄면 THINK(의식) 경로를 차단합니다. 반사(고확신)는 유지. #think 로 한 건만 깨울 수 있습니다."
+          className={`relative shrink-0 w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${
+            conscious ? 'bg-stone-800' : 'bg-stone-300'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+              conscious ? 'translate-x-5' : ''
+            }`}
+          />
+        </button>
+      </div>
 
       {/* ⚙ 설정 패널 — 프리셋 편집 + 에이전트 핀 */}
       {showSettings && (

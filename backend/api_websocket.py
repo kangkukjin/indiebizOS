@@ -6,6 +6,7 @@ IndieBiz OS Core
 import re
 import uuid
 import asyncio
+import contextvars
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -203,7 +204,10 @@ async def handle_android_chat(client_id: str, data: dict):
                 loop.call_soon_threadsafe(queue.put_nowait, ("error", str(e)))
 
         # 스레드 풀에서 스트림 실행
-        executor.submit(run_stream)
+        # 현재 컨텍스트(에피소드 contextvar 포함)를 복사해 executor 스레드로 전파 —
+        # run_stream 의 로그가 이 요청의 에피소드 버퍼로 모인다(동시 실행 격리). 에피소드가
+        # 없으면 None 컨텍스트라 무해.
+        executor.submit(contextvars.copy_context().run, run_stream)
 
         # Queue에서 메시지 수신하여 WebSocket으로 전송
         while True:
@@ -917,7 +921,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 )
 
         # 별도 스레드에서 스트리밍 시작
-        executor.submit(run_stream)
+        # 현재 컨텍스트(에피소드 contextvar 포함)를 복사해 executor 스레드로 전파 —
+        # run_stream 의 로그가 이 요청의 에피소드 버퍼로 모인다(동시 실행 격리). 에피소드가
+        # 없으면 None 컨텍스트라 무해.
+        executor.submit(contextvars.copy_context().run, run_stream)
 
         # 이벤트 수신 및 클라이언트 전송
         # 영상 제작 등 오래 걸리는 작업을 위해 타임아웃을 10분으로 설정
@@ -1345,7 +1352,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 asyncio.run_coroutine_threadsafe(event_queue.put(None), loop)
 
         # 스레드에서 스트리밍 시작
-        executor.submit(run_stream)
+        # 현재 컨텍스트(에피소드 contextvar 포함)를 복사해 executor 스레드로 전파 —
+        # run_stream 의 로그가 이 요청의 에피소드 버퍼로 모인다(동시 실행 격리). 에피소드가
+        # 없으면 None 컨텍스트라 무해.
+        executor.submit(contextvars.copy_context().run, run_stream)
 
         # 이벤트 수신 및 클라이언트 전송
         # 영상 제작 등 오래 걸리는 작업을 위해 타임아웃을 10분으로 설정

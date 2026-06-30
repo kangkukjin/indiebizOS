@@ -61,6 +61,7 @@
     "goal_evaluator",
     "health_sync",
     "ibl_access",
+    "ibl_description_audit",
     "ibl_embedding_trainer",
     "ibl_engine",
     "ibl_executors",
@@ -141,8 +142,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 135,
-    "engine": 123,
+    "total": 136,
+    "engine": 124,
     "blocklist": 12
   }
 }

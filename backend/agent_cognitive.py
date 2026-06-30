@@ -1658,6 +1658,20 @@ AI 답변: {ai_response[:1400]}
     # ============================================================
     REFLEX_SCORE_THRESHOLD = 0.85
 
+    # 의식 토글 OFF 일 때 분류기(경량 LLM) 대신 쓰는 세션 리셋 키워드 — 고정밀로 추림
+    # (unconscious_prompt.md 의 SESSION_RESET 트리거에서). 리셋은 파괴적이므로 보수적:
+    # 애매한 단어(맨 "리셋"/"초기화" 단독 — 액션 명령과 충돌)는 일부러 제외, 애매하면 EXECUTE.
+    _RESET_PHRASES = (
+        "새세션", "세션시작", "세션끝", "세션초기화", "세션리셋", "세션그만",
+        "처음부터다시", "깨끗하게시작", "여기까지하자",
+        "그만하자", "다른이야기하자", "새작업으로넘어가",
+    )
+
+    def _is_reset_keyword(self, message: str) -> bool:
+        """의식 OFF 에서 분류기를 스킵하므로, 세션 리셋만 비-LLM 키워드로 대체 탐지(토큰 0)."""
+        low = (message or "").lower().replace(" ", "")
+        return any(p in low for p in self._RESET_PHRASES)
+
     def _tag_override(self, message: str) -> Optional[str]:
         """명령에 박힌 명시 태그로 판정을 강제한다 — 사용자 결정이므로 Reflex·분류를 모두 이긴다.
         #think → THINK, #execute → EXECUTE (대소문자 무시). 둘 다면 #think 우선(보수적)."""
@@ -1686,6 +1700,19 @@ AI 답변: {ai_response[:1400]}
         if (hippocampus_score or 0) >= self.REFLEX_SCORE_THRESHOLD and top_code:
             print(f"[연상→실행] Reflex EXECUTE (score={hippocampus_score:.3f})")
             return "EXECUTE", top_code
+        # 의식 토글 OFF → 무의식 분류(THINK 판정)를 건너뛰고 바로 EXECUTE. 반사는 위에서 이미 처리됨.
+        # SESSION_RESET 만 비-LLM 키워드로 살림(분류기가 잡던 걸 OFF 에서 대체). 확정 2026-06-30.
+        try:
+            from model_resolver import consciousness_enabled
+            _conscious = consciousness_enabled()
+        except Exception:
+            _conscious = True
+        if not _conscious:
+            if self._is_reset_keyword(message):
+                print("[무의식] 분류: SESSION_RESET (키워드 · 의식 OFF)")
+                return "SESSION_RESET", None
+            print("[무의식] 분류: EXECUTE (의식 OFF — THINK 경로 차단)")
+            return "EXECUTE", None
         request_type = self._classify_request(message)
         print(f"[무의식] 분류: {request_type}")
         return request_type, None

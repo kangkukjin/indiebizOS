@@ -218,7 +218,9 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     if request_type == "THINK":
         consciousness_output = runner._run_consciousness_or_reuse(message, history or [], execution_memory)
     elif reflex_hint:
-        # reflex(해마 고확신)만 중급 모델 — 무의식 EXECUTE는 본격 모델 유지 (오분류 품질 방어)
+        # reflex(해마 고확신)는 *경량* 모델 — "이미 찾은 답을 그대로 내보냄"이라 가장 싼 티어로 충분
+        # (확정 2026-06-30). 모델 해소는 기어 'reflex' 역할이 경량 티어로 고정(model_resolver).
+        # 무의식 EXECUTE 는 기어 실행 축 모델 유지.
         original_provider = _switch_to_midtier(runner)
 
     # Clarification fast-path — 정보 부족 시 의식이 만든 질문을 그대로 응답으로 반환.
@@ -326,7 +328,9 @@ def process_system_ai_message_stream(
     if request_type == "THINK":
         consciousness_output = runner._run_consciousness_or_reuse(message, history or [], execution_memory)
     elif reflex_hint:
-        # reflex(해마 고확신)만 중급 모델 — 무의식 EXECUTE는 본격 모델 유지 (오분류 품질 방어)
+        # reflex(해마 고확신)는 *경량* 모델 — "이미 찾은 답을 그대로 내보냄"이라 가장 싼 티어로 충분
+        # (확정 2026-06-30). 모델 해소는 기어 'reflex' 역할이 경량 티어로 고정(model_resolver).
+        # 무의식 EXECUTE 는 기어 실행 축 모델 유지.
         original_provider = _switch_to_midtier(runner)
 
     # Clarification fast-path — 정보 부족 시 텍스트/종료 이벤트만 흘리고 종료.

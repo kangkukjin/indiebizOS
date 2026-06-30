@@ -399,6 +399,7 @@ def _describe_gear() -> dict:
         "axes": axes,
         "tiers": M.TIERS,
         "axis_names": M.AXES,
+        "consciousness_enabled": M.consciousness_enabled(),
     }
 
 
@@ -433,10 +434,14 @@ def _list_pinnable_agents() -> list:
                     continue
                 try:
                     data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+                    # 디렉토리명(파일시스템)은 한글이 NFD일 수 있어 NFC로 정규화 — 핀 키가
+                    # projects.json·URL(NFC)·resolve 와 일관되게 매칭된다.
+                    import unicodedata
+                    pname = unicodedata.normalize("NFC", d.name)
                     for a in (data.get("agents") or []):
                         if isinstance(a, dict) and a.get("id"):
-                            out.append({"id": f"{d.name}:{a['id']}",
-                                        "name": a.get("name") or a["id"], "project": d.name})
+                            out.append({"id": f"{pname}:{a['id']}",
+                                        "name": a.get("name") or a["id"], "project": pname})
                 except Exception:
                     pass
     except Exception as e:
@@ -468,6 +473,23 @@ async def set_model_gear(body: Dict[str, Any]):
         if not M.set_gear(name):
             raise HTTPException(status_code=400, detail=f"알 수 없는 기어: {name} (가능: {M.list_gears()})")
         _reset_gear_providers()
+        return {"status": "changed", **_describe_gear()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/model-gear/consciousness")
+async def set_model_gear_consciousness(body: Dict[str, Any]):
+    """의식 토글 — OFF 면 인지 파이프라인이 THINK 경로를 차단(반사 유지 + 나머지 바로 실행).
+    핫리로드(매 _decide_request_type 가 consciousness_enabled() 를 새로 읽음) — 재시작 불요."""
+    try:
+        import model_resolver as M
+        enabled = body.get("enabled")
+        if enabled is None:
+            raise HTTPException(status_code=400, detail="enabled(bool) 값이 필요합니다.")
+        M.set_consciousness(bool(enabled))
         return {"status": "changed", **_describe_gear()}
     except HTTPException:
         raise

@@ -95,11 +95,20 @@ class ConsciousnessAgent:
         if structure:
             self._prompt += f"\n\n<system_structure>\n{structure}\n</system_structure>"
 
-        # IBL 환경 프롬프트 주입 — 의식 에이전트도 IBL 체계를 알아야 올바른 hint를 줄 수 있다
-        ibl_only_path = base_path / "data" / "common_prompts" / "fragments" / "12_ibl_only.md"
-        if ibl_only_path.exists():
-            ibl_only = ibl_only_path.read_text(encoding='utf-8')
-            self._prompt += f"\n\n{ibl_only}"
+        # IBL 환경 주입 — 문법서 + **액션 카탈로그(사전) 전체**.
+        # 의식이 어떤 액션이 실재하는지 알아야 capability_focus.highlight_actions를 *검증 가능하게*
+        # 줄 수 있다(prompt의 "실제 존재하는 액션만" 규칙이 비로소 지켜짐). build_environment =
+        # 12_ibl_only.md(문법) + 노드별 카탈로그 → 별도 12_ibl_only 주입은 불필요(중복).
+        # ★시스템 프롬프트(캐시 prefix)에 박히므로 비용은 캐시-읽기. 카탈로그가 바뀌면(/packages/reload)
+        #  reset_consciousness_agent 로 재빌드해 stale 방지(api_packages 가 호출).
+        try:
+            from ibl_access import build_environment
+            self._prompt += f"\n\n{build_environment()}"
+        except Exception as e:
+            logger.warning(f"[ConsciousnessAgent] IBL 환경 주입 실패, 문법서 폴백: {e}")
+            ibl_only_path = base_path / "data" / "common_prompts" / "fragments" / "12_ibl_only.md"
+            if ibl_only_path.exists():
+                self._prompt += f"\n\n{ibl_only_path.read_text(encoding='utf-8')}"
 
     def _default_prompt(self) -> str:
         """기본 프롬프트 (파일이 없을 때 폴백)"""
@@ -502,7 +511,8 @@ _get_unconscious_provider = _get_lightweight_provider
 
 
 def _get_midtier_provider():
-    """중급/reflex 프로바이더 반환 — 모델 기어 'reflex' 역할(실행 축)로 해소.
+    """reflex 프로바이더 반환 — 모델 기어 'reflex' 역할로 해소(2026-06-30부터 *경량 티어 고정*).
+    ※ 함수명은 레거시(옛 중급). 실제 모델은 model_resolver 의 reflex→경량 고정이 정한다.
 
     reflex(해마 고확신) 경로가 provider 자체를 변이(system_prompt/tools/agent_id 복사)해
     ai._provider 로 스왑하므로 session 버킷(원샷과 객체 분리)으로 받는다. 같은 reflex 객체를

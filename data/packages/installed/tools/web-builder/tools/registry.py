@@ -147,6 +147,8 @@ def list_sites(package_dir: Path) -> dict:
         summary.append({
             "id": s["id"],
             "name": s["name"],
+            "local_path": s.get("local_path", ""),  # 관리 작업(편집·빌드)의 진입점 — 레지스트리가 진실원인데
+                                                     # 이걸 빼면 에이전트가 디스크를 헤맨다(2026-06-30 갭 수정).
             "deploy_url": s.get("deploy_url", ""),
             "tech_stack": s.get("tech_stack", []),
             "last_checked": s.get("last_checked"),

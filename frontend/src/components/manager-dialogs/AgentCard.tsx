@@ -46,8 +46,12 @@ export function AgentCard({
         <div className="flex-1 min-w-0">
           <div className="font-medium truncate text-[#4A4035] text-sm">{agent.name}</div>
           <div className="flex items-center gap-1.5 text-xs text-[#A09080]">
-            <span className={`w-1.5 h-1.5 rounded-full ${providerColors[agent.ai?.provider || 'google']}`} />
-            <span>{agent.ai?.provider || 'google'}</span>
+            {/* per-agent 모델 폐지 — 모델은 기어가 결정. ai.provider(옛 yaml) 대신
+                기어가 해소한 실효 모델(effective_model)을 표시한다. 핀이 있으면 그 모델. */}
+            <span className={`w-1.5 h-1.5 rounded-full ${providerColors[agent.effective_model?.provider || agent.ai?.provider || 'google']}`} />
+            <span className="truncate" title={agent.effective_model?.source || ''}>
+              {agent.effective_model?.model || agent.effective_model?.provider || agent.ai?.provider || 'google'}
+            </span>
           </div>
         </div>
         <div className={`text-xs ${isRunning ? 'text-green-600' : 'text-gray-400'}`}>

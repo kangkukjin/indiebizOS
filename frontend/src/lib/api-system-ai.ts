@@ -103,7 +103,20 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
         gears: string[];
         presets: Record<string, Record<string, string>>;
         axes: Record<string, { tier: string; provider: string; model: string }>;
+        consciousness_enabled?: boolean;
       }>('/model-gear');
+    },
+
+    // 의식 토글 — OFF 면 THINK 경로 차단(반사 유지 + 바로 실행). 핫리로드.
+    async setModelGearConsciousness(enabled: boolean) {
+      return client.request<{
+        status: string;
+        current_gear: string;
+        consciousness_enabled?: boolean;
+      }>('/model-gear/consciousness', {
+        method: 'PUT',
+        body: JSON.stringify({ enabled }),
+      });
     },
 
     async setModelGear(gear: string) {

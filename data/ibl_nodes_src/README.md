@@ -1,12 +1,12 @@
 # ibl_nodes_src/ — 편집용 소스
 
-`data/ibl_nodes.yaml` (3,400+줄) 편집을 쉽게 하려고 6개 파일로 나눠둔 곳이다.
+`data/ibl_nodes.yaml`(4,300+줄) 편집을 쉽게 하려고 7개 파일로 나눠둔 곳이다.
 **런타임은 이 디렉토리를 보지 않는다** — 항상 단일 `data/ibl_nodes.yaml`만 읽는다.
 
 ## 워크플로
 
 ```bash
-# 1) 여기서 편집
+# 1) 여기서 편집 (또는 패키지 자기완결 어휘 — 아래 참조)
 vi data/ibl_nodes_src/sense.yaml
 
 # 2) 병합 (단일 yaml 갱신)
@@ -22,10 +22,29 @@ python scripts/build_ibl_nodes.py
 | `self.yaml` | self 노드 (자아·내부 데이터) | yes |
 | `limbs.yaml` | limbs 노드 (사지·바깥 손길) | yes |
 | `others.yaml` | others 노드 (위임·채널) | yes |
-| `engines.yaml` | engines 노드 (생성·변환 엔진) | yes |
+| `engines.yaml` | engines 노드 (생성 엔진 — 슬라이드·영상·이미지·신문·웹) | yes |
+| `table.yaml` | table 노드 (표·통화 변환 문법 — filter/sort/take/…/chart/spreadsheet/document/structure, 2026-06-30 engines에서 분리) | yes |
 
 소스 파일들은 모두 단독 yaml로 파싱 가능하다 (PyYAML/IDE/lint 모두 OK).
-노드 파일 4개는 root key가 column 2에 위치하지만 YAML 스펙상 유효하다.
+노드 파일들은 root key가 column 2에 위치하지만 YAML 스펙상 유효하다.
+
+## 패키지 자기완결 어휘 (`ibl_actions.yaml`, 2026-07-01 — 능력 자기완결화)
+
+패키지가 소유하는 액션은 이제 이 중앙 소스가 아니라 **패키지 폴더 자신**에 정의할 수 있다:
+`data/packages/installed/tools/<pkg>/ibl_actions.yaml`(단일노드 `{node, actions}` 또는 다중노드 `{nodes: {...}}` 형식,
+템플릿=`data/packages/not_installed/tools/house-designer/ibl_actions.yaml`).
+
+`build_ibl_nodes.py`가 **중앙 7파일 + 설치된 패키지들의 fragment**를 병합해 `ibl_nodes.yaml`을 만든다
+(`collect_package_fragments`→`merge_fragments`→fragment가 있으면 `serialize_nodes_document`로 재직렬화,
+없으면 기존처럼 바이트 동일). 패키지를 철거하면(폴더 이동) 그 어휘도 다음 빌드에서 카탈로그에서 사라진다(좀비 없음).
+
+기존 패키지를 이 방식으로 옮기려면 `scripts/migrate_package_vocab.py <package_name>`(마이그레이션 하네스) —
+중앙 src에서 그 패키지 소유 액션을 추출→패키지 `ibl_actions.yaml`에 기록→중앙 src에서 텍스트 수술로 제거→
+재빌드→의미 동일(파싱된 dict deep-equal) 단언→`--check`. 실패 시 자동 롤백. **이름은 절대 바꾸지 않는다**(해마 코퍼스 무손상).
+2026-07-01 기준 35개 패키지가 이미 이 방식으로 자기완결화됐다 — 중앙 src는 backend-native 액션(workflow/trigger/
+delegate/world/self_check 등, 특정 패키지 없이 엔진 자체에 속하는 것)만 남아있다.
+
+상세: `docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md`, `docs/CAPABILITY_SELF_CONTAINMENT_HANDOFF.md`.
 
 ## 선택 필드: `app:` 블록 (앱 표면 노출)
 

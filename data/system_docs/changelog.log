@@ -1544,3 +1544,22 @@
   - build --check 삼각 통과(6 노드 142 액션 불변, engines 13/table 13)
   - 해마: 코퍼스 마이그레이션(DB 133행+학습 JSON 130필드) → rebuild_index 2631 재임베딩 → fine-tune 재학습
   - 좀비어휘 일소: ibl_parser desugar/ibl_routing/health_check/12_ibl_only.md/패키지 23파일 (이동 13액션만, 별칭 0)
+
+## 2026-07-01: 능력 자기완결화 Phase 0~3 + Phase 2([self:package])
+- 어휘(액션 정의)를 중앙 data/ibl_nodes_src/에서 패키지별 ibl_actions.yaml로 이관
+  → 패키지=자기완결 능력(설치/철거가 코드+어휘를 원자적으로 넣고 뺌)
+- scripts/build_ibl_nodes.py: 설치된 패키지 fragment 병합기 신설 (Phase 0-①)
+- scripts/migrate_package_vocab.py 신규: 마이그레이션 하네스
+  (추출→기록→중앙 제거→리빌드→의미동일 단언, 실패 시 자동 롤백)
+- radio 파일럿 + 나머지 33개 패키지(118액션) 전량 이관
+  → 중앙 src는 이제 backend-native 25액션만(sense2·self14·limbs2·others7)
+- [self:package]{op: list|info|install|remove} 신규 어휘 (Phase 2)
+  → backend/ibl_routing.py _package_op/_rebuild_ibl_vocab
+  → 라이브 IBL 호출만으로 패키지 설치/철거 왕복 검증(POST /packages/reload 불필요)
+- 142 → 143 액션 (self 44→45)
+- 버그 수정: merge_fragments None-병합 크래시(노드 액션 전량 이관 시 actions:null)
+- 버그 수정: .gitignore CCTV* 패턴이 cctv 패키지 폴더를 통째로 가리던 문제
+  → projects/CCTV*로 스코프 축소
+- 해마: self:package 합성 용례 21개 등록(DB+ibl_distilled.json) + rebuild_index(2662개)
+- 커밋: 301d627..5d8be95 (origin/main 동기)
+- 상세: docs/CAPABILITY_SELF_CONTAINMENT_HANDOFF.md

@@ -11,16 +11,49 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "op": {"type": "string", "enum": ["list", "create", "load", "delete", "open"], "description": "수행할 작업"},
-          "lecture_id": {"type": "string", "description": "강의 ID (load/delete/open에 필요, open은 옵션)"},
-          "title": {"type": "string", "description": "create — 강의 제목 (한글 가능)"},
-          "audience": {"type": "string", "description": "create 옵션 — 청중"},
-          "thesis": {"type": "string", "description": "create 옵션 — 한 줄 요지"},
-          "duration_minutes": {"type": "integer", "description": "create 옵션 — 분량"},
-          "design_system": {"type": "string", "description": "create 옵션 — vintage_book/academic_paper/tech_minimal/magazine_modern"},
-          "confirm": {"type": "boolean", "description": "delete 필수 — true가 아니면 거부"}
+          "op": {
+            "type": "string",
+            "enum": [
+              "list",
+              "create",
+              "load",
+              "delete",
+              "open"
+            ],
+            "description": "수행할 작업"
+          },
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID (load/delete/open에 필요, open은 옵션)"
+          },
+          "title": {
+            "type": "string",
+            "description": "create — 강의 제목 (한글 가능)"
+          },
+          "audience": {
+            "type": "string",
+            "description": "create 옵션 — 청중"
+          },
+          "thesis": {
+            "type": "string",
+            "description": "create 옵션 — 한 줄 요지"
+          },
+          "duration_minutes": {
+            "type": "integer",
+            "description": "create 옵션 — 분량"
+          },
+          "design_system": {
+            "type": "string",
+            "description": "create 옵션 — vintage_book/academic_paper/tech_minimal/magazine_modern"
+          },
+          "confirm": {
+            "type": "boolean",
+            "description": "delete 필수 — true가 아니면 거부"
+          }
         },
-        "required": ["op"]
+        "required": [
+          "op"
+        ]
       }
     },
     {
@@ -29,14 +62,43 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "op": {"type": "string", "enum": ["create", "edit", "delete", "patch", "rerender"], "description": "수행할 작업"},
-          "lecture_id": {"type": "string", "description": "강의 ID (모든 op 필수)"},
-          "slide_id": {"type": "string", "description": "edit/delete/patch/rerender에 필요"},
-          "instruction": {"type": "string", "description": "create/edit 필수 — 강의자 자연어 요청"},
-          "insert_at": {"type": "integer", "description": "create 옵션 — 삽입 위치 (0-based)"},
-          "patch": {"type": "object", "description": "patch 필수 — 변경할 필드 객체. None 값은 필드 삭제. layout 키는 거부."}
+          "op": {
+            "type": "string",
+            "enum": [
+              "create",
+              "edit",
+              "delete",
+              "patch",
+              "rerender",
+              "image_edit"
+            ],
+            "description": "수행할 작업"
+          },
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID (모든 op 필수)"
+          },
+          "slide_id": {
+            "type": "string",
+            "description": "edit/delete/patch/rerender에 필요"
+          },
+          "instruction": {
+            "type": "string",
+            "description": "create/edit 필수 — 강의자 자연어 요청"
+          },
+          "insert_at": {
+            "type": "integer",
+            "description": "create 옵션 — 삽입 위치 (0-based)"
+          },
+          "patch": {
+            "type": "object",
+            "description": "patch 필수 — 변경할 필드 객체. None 값은 필드 삭제. layout 키는 거부."
+          }
         },
-        "required": ["op", "lecture_id"]
+        "required": [
+          "op",
+          "lecture_id"
+        ]
       }
     },
     {
@@ -45,13 +107,35 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "op": {"type": "string", "enum": ["add", "remove"], "description": "수행할 작업"},
-          "lecture_id": {"type": "string", "description": "강의 ID (필수)"},
-          "file_path": {"type": "string", "description": "add 모드 1 — 복사할 원본 파일 절대경로"},
-          "text": {"type": "string", "description": "add 모드 2 — 저장할 텍스트 내용 (filename과 함께)"},
-          "filename": {"type": "string", "description": "add 모드 2 또는 remove — 파일명"}
+          "op": {
+            "type": "string",
+            "enum": [
+              "add",
+              "remove"
+            ],
+            "description": "수행할 작업"
+          },
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID (필수)"
+          },
+          "file_path": {
+            "type": "string",
+            "description": "add 모드 1 — 복사할 원본 파일 절대경로"
+          },
+          "text": {
+            "type": "string",
+            "description": "add 모드 2 — 저장할 텍스트 내용 (filename과 함께)"
+          },
+          "filename": {
+            "type": "string",
+            "description": "add 모드 2 또는 remove — 파일명"
+          }
         },
-        "required": ["op", "lecture_id"]
+        "required": [
+          "op",
+          "lecture_id"
+        ]
       }
     },
     {
@@ -60,12 +144,38 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "op": {"type": "string", "enum": ["reorder", "export"], "description": "수행할 작업"},
-          "lecture_id": {"type": "string", "description": "강의 ID (필수)"},
-          "order": {"type": "array", "items": {"type": "string"}, "description": "reorder 필수 — 새 순서의 slide_id 배열 (기존 슬라이드 전체 포함)"},
-          "format": {"type": "string", "enum": ["pdf", "pptx"], "description": "export 필수 — 출력 형식"}
+          "op": {
+            "type": "string",
+            "enum": [
+              "reorder",
+              "export"
+            ],
+            "description": "수행할 작업"
+          },
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID (필수)"
+          },
+          "order": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "reorder 필수 — 새 순서의 slide_id 배열 (기존 슬라이드 전체 포함)"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "pptx"
+            ],
+            "description": "export 필수 — 출력 형식"
+          }
         },
-        "required": ["op", "lecture_id"]
+        "required": [
+          "op",
+          "lecture_id"
+        ]
       }
     },
     {
@@ -82,13 +192,30 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "title": {"type": "string", "description": "강의 제목 (예: '하네스란 무엇인가? 1부')"},
-          "audience": {"type": "string", "description": "청중 (예: '일반인', '학생', '전문가')"},
-          "thesis": {"type": "string", "description": "강의의 한 줄 요지 (Phase A 합의)"},
-          "duration_minutes": {"type": "integer", "description": "강의 분량 (분 단위, 예: 60)"},
-          "design_system": {"type": "string", "description": "슬라이드 디자인 시스템 (기본: vintage_book). vintage_book / academic_paper / tech_minimal / magazine_modern 중 하나"}
+          "title": {
+            "type": "string",
+            "description": "강의 제목 (예: '하네스란 무엇인가? 1부')"
+          },
+          "audience": {
+            "type": "string",
+            "description": "청중 (예: '일반인', '학생', '전문가')"
+          },
+          "thesis": {
+            "type": "string",
+            "description": "강의의 한 줄 요지 (Phase A 합의)"
+          },
+          "duration_minutes": {
+            "type": "integer",
+            "description": "강의 분량 (분 단위, 예: 60)"
+          },
+          "design_system": {
+            "type": "string",
+            "description": "슬라이드 디자인 시스템 (기본: vintage_book). vintage_book / academic_paper / tech_minimal / magazine_modern 중 하나"
+          }
         },
-        "required": ["title"]
+        "required": [
+          "title"
+        ]
       }
     },
     {
@@ -97,9 +224,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID (슬러그)"}
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID (슬러그)"
+          }
         },
-        "required": ["lecture_id"]
+        "required": [
+          "lecture_id"
+        ]
       }
     },
     {
@@ -108,10 +240,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID"},
-          "confirm": {"type": "boolean", "description": "삭제 확인. true가 아니면 실행 안 됨."}
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID"
+          },
+          "confirm": {
+            "type": "boolean",
+            "description": "삭제 확인. true가 아니면 실행 안 됨."
+          }
         },
-        "required": ["lecture_id", "confirm"]
+        "required": [
+          "lecture_id",
+          "confirm"
+        ]
       }
     },
     {
@@ -120,7 +261,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "(선택) 열 강의 ID. 미지정 시 목록 화면."}
+          "lecture_id": {
+            "type": "string",
+            "description": "(선택) 열 강의 ID. 미지정 시 목록 화면."
+          }
         }
       }
     },
@@ -130,14 +274,22 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID"},
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID"
+          },
           "order": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "새 순서의 slide_id 배열. 기존 슬라이드 전체를 빠짐없이 포함해야 함."
           }
         },
-        "required": ["lecture_id", "order"]
+        "required": [
+          "lecture_id",
+          "order"
+        ]
       }
     },
     {
@@ -146,10 +298,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID"},
-          "slide_id": {"type": "string", "description": "삭제할 슬라이드 ID (예: 's001')"}
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID"
+          },
+          "slide_id": {
+            "type": "string",
+            "description": "삭제할 슬라이드 ID (예: 's001')"
+          }
         },
-        "required": ["lecture_id", "slide_id"]
+        "required": [
+          "lecture_id",
+          "slide_id"
+        ]
       }
     },
     {
@@ -158,12 +319,26 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID"},
-          "file_path": {"type": "string", "description": "복사할 원본 파일의 절대경로"},
-          "text": {"type": "string", "description": "저장할 텍스트 내용 (filename과 함께)"},
-          "filename": {"type": "string", "description": "text 모드에서 저장될 파일명 (예: 'notes.md')"}
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID"
+          },
+          "file_path": {
+            "type": "string",
+            "description": "복사할 원본 파일의 절대경로"
+          },
+          "text": {
+            "type": "string",
+            "description": "저장할 텍스트 내용 (filename과 함께)"
+          },
+          "filename": {
+            "type": "string",
+            "description": "text 모드에서 저장될 파일명 (예: 'notes.md')"
+          }
         },
-        "required": ["lecture_id"]
+        "required": [
+          "lecture_id"
+        ]
       }
     },
     {
@@ -172,10 +347,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID"},
-          "filename": {"type": "string", "description": "삭제할 재료 파일명 (materials/ 안의)"}
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID"
+          },
+          "filename": {
+            "type": "string",
+            "description": "삭제할 재료 파일명 (materials/ 안의)"
+          }
         },
-        "required": ["lecture_id", "filename"]
+        "required": [
+          "lecture_id",
+          "filename"
+        ]
       }
     },
     {
@@ -184,11 +368,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID"},
-          "instruction": {"type": "string", "description": "강의자의 자연어 요청 (예: '첫 슬라이드는 표지로', '다음은 햄릿 메타포 슬라이드', '명제 N번을 좌우 대비로')"},
-          "insert_at": {"type": "integer", "description": "슬라이드 순서상 삽입 위치 (0-based). 미지정 시 끝에 추가."}
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID"
+          },
+          "instruction": {
+            "type": "string",
+            "description": "강의자의 자연어 요청 (예: '첫 슬라이드는 표지로', '다음은 햄릿 메타포 슬라이드', '명제 N번을 좌우 대비로')"
+          },
+          "insert_at": {
+            "type": "integer",
+            "description": "슬라이드 순서상 삽입 위치 (0-based). 미지정 시 끝에 추가."
+          }
         },
-        "required": ["lecture_id", "instruction"]
+        "required": [
+          "lecture_id",
+          "instruction"
+        ]
       }
     },
     {
@@ -197,11 +393,24 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID"},
-          "slide_id": {"type": "string", "description": "편집할 슬라이드 ID (예: 's001')"},
-          "instruction": {"type": "string", "description": "강의자의 편집 요청 (예: '톤을 더 능동적으로', '본문을 짧게', '메타포를 햄릿 비유로')"}
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID"
+          },
+          "slide_id": {
+            "type": "string",
+            "description": "편집할 슬라이드 ID (예: 's001')"
+          },
+          "instruction": {
+            "type": "string",
+            "description": "강의자의 편집 요청 (예: '톤을 더 능동적으로', '본문을 짧게', '메타포를 햄릿 비유로')"
+          }
         },
-        "required": ["lecture_id", "slide_id", "instruction"]
+        "required": [
+          "lecture_id",
+          "slide_id",
+          "instruction"
+        ]
       }
     },
     {
@@ -210,14 +419,24 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID"},
-          "slide_id": {"type": "string", "description": "슬라이드 ID"},
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID"
+          },
+          "slide_id": {
+            "type": "string",
+            "description": "슬라이드 ID"
+          },
           "patch": {
             "type": "object",
             "description": "spec에 병합할 키-값. 예: {title: '새 제목', bullets: ['a','b']}. None 값은 필드 삭제."
           }
         },
-        "required": ["lecture_id", "slide_id", "patch"]
+        "required": [
+          "lecture_id",
+          "slide_id",
+          "patch"
+        ]
       }
     },
     {
@@ -226,10 +445,19 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID"},
-          "slide_id": {"type": "string", "description": "재렌더할 슬라이드 ID"}
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID"
+          },
+          "slide_id": {
+            "type": "string",
+            "description": "재렌더할 슬라이드 ID"
+          }
         },
-        "required": ["lecture_id", "slide_id"]
+        "required": [
+          "lecture_id",
+          "slide_id"
+        ]
       }
     },
     {
@@ -238,10 +466,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "lecture_id": {"type": "string", "description": "강의 ID"},
-          "format": {"type": "string", "enum": ["pdf", "pptx"], "description": "내보낼 파일 형식"}
+          "lecture_id": {
+            "type": "string",
+            "description": "강의 ID"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "pptx"
+            ],
+            "description": "내보낼 파일 형식"
+          }
         },
-        "required": ["lecture_id", "format"]
+        "required": [
+          "lecture_id",
+          "format"
+        ]
       }
     }
   ]

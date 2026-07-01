@@ -28,9 +28,9 @@ actions:
   slide:
     returns: effect
     runs_on: mac_only
-    description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더.
+    description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정.
     group: lecture
-    target_description: 공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체). create/edit만 AI 호출.
+    target_description: 공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+instruction(통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
     target_key: op
     router: handler
     tool: slide_op
@@ -41,7 +41,8 @@ actions:
         delete: 슬라이드 삭제 (slide_id)
         patch: 필드 직접 수정 (slide_id+patch, AI 우회)
         rerender: 재렌더링 (slide_id, AI 우회)
-    implementation: handler.py가 op로 분기. create/edit는 AI 호출, delete/patch/rerender는 AI 우회 (PowerPoint식 직접 편집).
+        image_edit: 이미지 부분수정 (slide_id+instruction, 통짜 이미지/이미지 슬라이드만 — 다시 그리지 않고 현재 PNG 편집)
+    implementation: handler.py가 op로 분기. create/edit/image_edit는 AI 호출, delete/patch/rerender는 AI 우회 (PowerPoint식 직접 편집).
     keywords:
     - 슬라이드 만들기
     - 슬라이드 편집

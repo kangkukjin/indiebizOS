@@ -89,7 +89,7 @@ def _err(message: str, **extra) -> str:
 # --check 가 이 dict 키로 src.ops.values 와 정확 비교.
 _OP_DISPATCHERS = {
     "lecture_op": {"list": None, "create": None, "load": None, "delete": None, "open": None},
-    "slide_op": {"create": None, "edit": None, "delete": None, "patch": None, "rerender": None},
+    "slide_op": {"create": None, "edit": None, "delete": None, "patch": None, "rerender": None, "image_edit": None},
     "material_op": {"add": None, "remove": None},
     "deck_op": {"reorder": None, "export": None},
 }
@@ -178,7 +178,7 @@ def _dispatch_lecture_op(tool_input: dict) -> str:
 def _dispatch_slide_op(tool_input: dict) -> str:
     op = (tool_input.get("op") or "").strip()
     if not op:
-        return _err("op는 필수입니다. (create|edit|delete|patch|rerender)")
+        return _err("op는 필수입니다. (create|edit|delete|patch|rerender|image_edit)")
     if op == "create":
         return _slide_create(tool_input)
     if op == "edit":
@@ -189,7 +189,9 @@ def _dispatch_slide_op(tool_input: dict) -> str:
         return _slide_patch_spec(tool_input)
     if op == "rerender":
         return _slide_rerender(tool_input)
-    return _err(f"알 수 없는 op: {op}. (create|edit|delete|patch|rerender 중 하나)")
+    if op == "image_edit":
+        return _slide_image_edit(tool_input)
+    return _err(f"알 수 없는 op: {op}. (create|edit|delete|patch|rerender|image_edit 중 하나)")
 
 
 def _dispatch_material_op(tool_input: dict) -> str:

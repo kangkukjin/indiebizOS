@@ -1,6 +1,6 @@
 # 능력 자기완결화 (Capability Self-Containment) — 장기 계획
 
-> 상태: **계획 확정, 미착수.** 다음 세션에서 Phase 0부터 시작.
+> 상태: **Phase 0·1·3 완료**(2026-07-01). 다음 세션은 Phase 2 또는 Phase 4부터. 상세=`docs/CAPABILITY_SELF_CONTAINMENT_HANDOFF.md`.
 > 작성: 2026-07-01. 관련 대화: 최소 설치 씨앗 → 업데이트 → 표준/확장 → 어휘·앱 관리.
 
 ## 1. 문제 (한 문장)
@@ -47,26 +47,26 @@
 - [x] **`build_ibl_nodes.py` 병합기** — 중앙 7파일 빌드 후 **설치된 패키지 `ibl_actions.yaml` 병합**. fragment 0개면 `output=merged`(바이트 동일). 있으면 구조 병합 후 재직렬화(`serialize_nodes_document`). 헬퍼: `collect_package_fragments`·`merge_fragments`·`serialize_nodes_document`. `--check` 바이트 비교와 write 모두 `output` 기준. **(2026-07-01 완료·검증)**
 - [x] **fragment 형식 확정** — 단일: `{node: <name>, actions: {...}}` (house-designer 관례) / 다중: `{nodes: {<node>: {actions: {...}}, ...}}` (radio처럼 노드 걸침). 둘 다 collect가 처리.
 - [x] **`--check` 부재-패키지 관용** — *구조적으로 자동 해결*: 빌드는 설치된 패키지 fragment만 흡수 → not_installed 패키지 어휘는 카탈로그에 없음 → 좀비/에러 없음. (단 해당 액션이 아직 중앙 src에 있으면 마이그레이션 전까진 여전히 중앙 소속 — Phase 3에서 패키지별로 이관되며 관용이 실현됨.) 별도 코드 불필요.
-- [ ] **마이그레이션 하네스** 스크립트 (다음 세션): 패키지 하나에 대해 [중앙 src에서 액션 추출(tool→패키지 매핑=`build_tool_index`) → 패키지 `ibl_actions.yaml` 기록 → 중앙 src에서 제거 → 리빌드 → `ibl_nodes.yaml` **의미 동일** 단언]. 이게 Phase 3의 작업마.
+- [x] **마이그레이션 하네스** 스크립트(`scripts/migrate_package_vocab.py`, 완료): 패키지 하나에 대해 [중앙 src에서 액션 추출(tool→패키지 매핑=`build_tool_index`) → 패키지 `ibl_actions.yaml` 기록 → 중앙 src에서 제거 → 리빌드 → `ibl_nodes.yaml` **의미 동일** 단언]. Phase 3의 작업마로 재사용됨.
 - 성공기준: `build --check` 초록, `ibl_nodes.yaml` 의미 동일(diff 0), 해마/카탈로그 무변.
 - **검증 완료**: `--check` 바이트 일치(142 액션·전 가드 통과) / 재직렬화→재파싱==원본(무손실) / 디스크 스캔·단일+다중노드 병합·충돌·미지노드 감지 / 임시 패키지 정리 후 복귀. **미커밋.**
 
-### Phase 1 — 파일럿 1개 패키지
-- [ ] 파일럿 = **`radio`** (coherent·키리스·다중노드[sense+limbs]·제거 가능 = 전체 루프 검증에 최적). 대안: `kosis`·`culture`(단일노드).
-- [ ] 하네스로 radio 마이그레이션 → `build --check` → 의미 동일 확인.
-- [ ] 라이브 왕복: radio **철거** → radio 어휘 사라짐(좀비 0) → **재설치** → 복귀. (설치=코드+어휘 원자성 실증.)
-- 성공기준: 파일럿으로 전 루프 end-to-end 증명.
+### Phase 1 — 파일럿 1개 패키지 ✅ 완료
+- [x] 파일럿 = **`radio`** (coherent·키리스·다중노드[sense+limbs]·제거 가능 = 전체 루프 검증에 최적).
+- [x] 하네스로 radio 마이그레이션 → `build --check` → 의미 동일 확인.
+- [x] 라이브 왕복: radio **철거** → radio 어휘 사라짐(좀비 0) → **재설치** → 복귀.
+- 성공기준: 파일럿으로 전 루프 end-to-end 증명. **달성.**
 
-### Phase 2 — 생애주기 어휘
+### Phase 3 — 대량 마이그레이션 (본 그라인드) ✅ 완료(2026-07-01)
+- [x] 나머지 33 패키지를 하네스로 마이그레이션(118액션). youtube로 왕복 재검증.
+- [ ] **이질 패키지 분할**(고장② 해결, 필요한 곳만): `web` → `web-core`(ddg/crawl) + `kr-search`(naver); `location-services` → 글로벌(weather) + KR(restaurant/navigate) 등. 이름 불변. **미착수 — 분할은 향후 별도 작업.**
+- 종료상태: 중앙 src = backend-native 24액션만(sense2·self13·limbs2·others7); 그 외 전 패키지 액션이 자기 패키지에 co-locate. **달성.**
+- 성공기준: 매 커밋 초록, 전체 완료 후 142 의미 동일. **달성.** 마이그레이션 중 `merge_fragments` null-병합 버그 발견·수정(상세=핸드오프).
+
+### Phase 2 — 생애주기 어휘 (다음 후보)
 - [ ] `[self:package]{op: list/install/remove/info}` IBL 액션 = `package_manager` + 리빌드 + `ibl_access` 핫리로드 래핑.
 - [ ] 파일럿(radio)으로 IBL 경로 왕복 테스트.
 - 성공기준: 시스템이 *자기 언어로* 능력을 설치/철거(고장③ 해결).
-
-### Phase 3 — 대량 마이그레이션 (본 그라인드)
-- [ ] 나머지 ~37 패키지를 하네스로 1개씩(=1커밋). 순서: 키리스·coherent 먼저 → 이질/무거움 나중.
-- [ ] **이질 패키지 분할**(고장② 해결, 필요한 곳만): `web` → `web-core`(ddg/crawl) + `kr-search`(naver); `location-services` → 글로벌(weather) + KR(restaurant/navigate) 등. 이름 불변.
-- 종료상태: 중앙 src = backend-native만; 모든 패키지 액션이 자기 패키지에 co-locate.
-- 성공기준: 매 커밋 초록, 전체 완료 후 142 의미 동일.
 
 ### Phase 4 — 능력 메타 (표준 문제로 넘어가는 다리)
 - [ ] 각 `ibl_actions.yaml`에 `needs_key`·`weight`·`locale`·`tier` 부여 (핸들러에서 자동 도출 + `--check` 검증 = op 어휘 검증과 같은 결).

@@ -45,6 +45,13 @@ PACKAGE_DIRS = [
     "data/packages/installed/extensions",
 ]
 
+# not_installed 미러 — 부재-패키지 관용(Phase 4)에서 "철거됐을 뿐 실존하는 패키지"와
+# "진짜 좀비(정의 자체가 없어진)"를 구분하는 데 쓴다. PACKAGE_DIRS 와 폴더명만 다름.
+NOT_INSTALLED_PACKAGE_DIRS = [
+    "data/packages/not_installed/tools",
+    "data/packages/not_installed/extensions",
+]
+
 # === runs_on 능력 태그 (2026-06-11, #3 폰 네이티브) ===
 # 액션이 어디서 도는가: anywhere(기본·이식가능 로직/HTTP) / mac_only(집 PC 하드웨어·
 # 무거운 의존·미검증 패키지) / phone_only(폰 하드웨어=알림·센서, 미래 M3).
@@ -141,14 +148,33 @@ def check_profile_branches(root: Path) -> list[str]:
                 f"capability-gate(detect_body)로 바꾸거나, 진짜 이음매-아래면 "
                 f"PROFILE_BRANCH_ALLOWLIST 에 의식적으로 추가"
             )
-    # allowlist에 등록됐지만 더 이상 분기를 안 쓰는 파일 = stale(청소 권장, 실패는 아님).
+    # allowlist에 등록됐지만 더 이상 분기를 안 쓰는(또는 못 읽은) 파일 = stale 후보.
+    # 부재-패키지 관용(Phase 4): 파일이 안 읽힌 이유가 "그 패키지가 지금 not_installed로
+    # 옮겨져 있을 뿐"이면 진짜 stale이 아니다(재설치하면 다시 보인다) — 조용히 관용.
+    # 그 외(파일은 있는데 분기가 사라짐, 또는 패키지 자체가 어디에도 없음)만 stale로 적발.
     stale = PROFILE_BRANCH_ALLOWLIST - seen_allowed
     for rel_path in sorted(stale):
+        if _is_dormant_package_path(root, rel_path):
+            continue
         issues.append(
             f"(stale) {rel_path}: allowlist에 있으나 INDIEBIZ_PROFILE 분기 없음 — "
             f"PROFILE_BRANCH_ALLOWLIST 에서 제거 권장"
         )
     return issues
+
+
+def _is_dormant_package_path(root: Path, rel_path: str) -> bool:
+    """rel_path가 `data/packages/installed/<tools|extensions>/<pkg>/...` 형태이고,
+    그 <pkg>가 지금 not_installed 쪽에 존재하면 True(일시 철거, 관용 대상)."""
+    parts = Path(rel_path).parts
+    try:
+        idx = parts.index("installed")
+    except ValueError:
+        return False
+    if idx + 2 >= len(parts) or parts[:idx] != ("data", "packages"):
+        return False
+    pkg_type, pkg_name = parts[idx + 1], parts[idx + 2]
+    return (root / "data" / "packages" / "not_installed" / pkg_type / pkg_name).is_dir()
 
 
 # === OS-가드: platform/유닉스-바이너리 의존 위치 통제 (2026-06-21, OS 이식성) ===
@@ -1295,9 +1321,13 @@ def validate_fixture_coverage(data: dict, root: Path) -> list[str]:
                 f"data/ibl_fixtures.json 의 fixtures 에 올바른 param 예 한 줄 추가 "
                 f"(실행 인자 의존이면 exempt 에 사유와 함께)"
             )
-    # 2) 고아 fixture/exempt (실존 안 하거나 더 이상 items/scalar 아님) — 삭제 누락 검출
+    # 2) 고아 fixture/exempt (실존 안 하거나 더 이상 items/scalar 아님) — 삭제 누락 검출.
+    #    단, 부재-패키지 관용(Phase 4): qual이 현재 not_installed인 패키지가 소유한
+    #    액션이면 "삭제됨"이 아니라 "일시 철거됨"이므로 orphan으로 오탐하지 않는다.
+    import yaml as _yaml_mod
+    dormant = collect_dormant_package_qualifiers(root, _yaml_mod)
     for qual in sorted(set(fixtures) | set(exempt)):
-        if qual not in exec_actions:
+        if qual not in exec_actions and qual not in dormant:
             where = "fixtures" if qual in fixtures else "exempt"
             issues.append(
                 f"{qual}: {where} 에 있으나 items/scalar 실행 액션이 아님(삭제/통화변경됨?) — "
@@ -1384,6 +1414,41 @@ def collect_package_fragments(root: Path, yaml_mod) -> tuple[list, list]:
                     continue
                 fragments.append((pkg_dir.name, node, actions))
     return fragments, issues
+
+
+def collect_dormant_package_qualifiers(root: Path, yaml_mod) -> set[str]:
+    """not_installed 패키지들의 ibl_actions.yaml에서 소유 액션 qualifier(node:action) 집합.
+
+    부재-패키지 관용(Phase 4): "철거됐을 뿐 정의는 실존하는" 액션과 "정의 자체가
+    사라진 진짜 좀비"를 구분하는 판별 집합. best-effort — 형식 오류는 조용히 건너뛴다
+    (dormant 패키지의 fragment 오류는 --check 실패 사유가 아니다, 재설치 시 그때 걸린다).
+    """
+    quals: set[str] = set()
+    for rel in NOT_INSTALLED_PACKAGE_DIRS:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for pkg_dir in sorted(base.iterdir()):
+            frag = pkg_dir / "ibl_actions.yaml"
+            if not frag.is_file():
+                continue
+            try:
+                doc = yaml_mod.safe_load(frag.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                continue
+            if not isinstance(doc, dict):
+                continue
+            if isinstance(doc.get("nodes"), dict):
+                for node, ndef in doc["nodes"].items():
+                    actions = ndef.get("actions") if isinstance(ndef, dict) else None
+                    if isinstance(actions, dict):
+                        quals.update(f"{node}:{a}" for a in actions)
+            else:
+                node = doc.get("node")
+                actions = doc.get("actions")
+                if node and isinstance(actions, dict):
+                    quals.update(f"{node}:{a}" for a in actions)
+    return quals
 
 
 def merge_fragments(data: dict, fragments: list) -> list:

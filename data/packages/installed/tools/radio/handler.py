@@ -41,22 +41,7 @@ def execute(tool_input: dict, context):
     tool_name = context.tool_name
     radio = load_tool_radio()
 
-    if tool_name == "search_radio":
-        return radio.search_radio(
-            name=tool_input.get("name"),
-            tag=tool_input.get("tag"),
-            country=tool_input.get("country"),
-            state=tool_input.get("state"),
-            language=tool_input.get("language"),
-            order=tool_input.get("order"),
-            bitrateMin=tool_input.get("bitrateMin"),
-            limit=tool_input.get("limit", 10),
-        )
-    elif tool_name == "get_korean_radio":
-        return radio.get_korean_radio(
-            broadcaster=tool_input.get("broadcaster"),
-        )
-    elif tool_name == "radio_search_op":
+    if tool_name == "radio_search_op":
         # [sense:radio]{op} — search(전세계)/korean(한국 방송사)
         op = (tool_input.get("op") or _OP_DEFAULTS["radio_search_op"]).strip()
         if op == "korean":
@@ -71,32 +56,11 @@ def execute(tool_input: dict, context):
             bitrateMin=tool_input.get("bitrateMin"),
             limit=tool_input.get("limit", 10),
         )
-    elif tool_name == "play_radio":
-        return radio.play_radio(
-            station_id=tool_input.get("station_id"),
-            stream_url=tool_input.get("stream_url"),
-            volume=tool_input.get("volume", 70),
-            name=tool_input.get("name"),
-        )
-    elif tool_name == "stop_radio":
-        return radio.stop_radio()
     elif tool_name == "radio_status":
         return radio.radio_status()
     elif tool_name == "set_radio_volume":
         return radio.set_radio_volume(
             volume=tool_input.get("volume", 70),
-        )
-    elif tool_name == "get_radio_favorites":
-        return radio.get_radio_favorites()
-    elif tool_name == "save_radio_favorite":
-        return radio.save_radio_favorite(
-            station_id=tool_input.get("station_id"),
-            name=tool_input.get("name"),
-            stream_url=tool_input.get("stream_url"),
-        )
-    elif tool_name == "remove_radio_favorite":
-        return radio.remove_radio_favorite(
-            name=tool_input.get("name"),
         )
     elif tool_name == "radio_op":
         # 2026-05-27 limbs 라운드 2: [limbs:radio]{op} 단일 액션 디스패치

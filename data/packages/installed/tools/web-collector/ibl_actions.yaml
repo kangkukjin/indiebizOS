@@ -1,0 +1,31 @@
+node: sense
+actions:
+  collect:
+    returns: items
+    runs_on: mac_only
+    description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.
+    target_description: 'op로 분기 (기본 run).
+
+      - run: source(프로필 ID 또는 URL) 크롤링. URL이면 selectors/max_items, 없으면 등록된 프로필 목록.
+
+      - sites: 수집 사이트 프로필 CRUD. action(list 기본/register/delete) + site_id + guide_code.
+
+      - query: 축적 데이터 검색. action(search 기본/stats/recent/detail/delete) + query/site_id/item_id/limit.
+
+      '
+    target_key: op
+    group: places
+    router: handler
+    tool: collect_op
+    ops:
+      default: run
+      values:
+        run: 사이트/URL 크롤링 (구조화 수집)
+        sites: 수집 사이트 프로필 관리 (CRUD)
+        query: 축적된 수집 데이터 검색 (로컬 DB)
+    implementation: web-collector 패키지 op 분기. run=backend web_collector 크롤 위임, sites=manage_sites, query=collector_db.
+    keywords:
+    - 수집
+    - 크롤링
+    - 사이트프로필
+    - 축적데이터

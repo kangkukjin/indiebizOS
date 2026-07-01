@@ -1,0 +1,90 @@
+node: self
+actions:
+  report:
+    returns: effect
+    runs_on: mac_only
+    description: 정기 보고서(AI 동향 등) 뷰어 + 작성 트리거 (op 분기). 최신 보기·목록·새 작성. 보고서는 맥 폴더 저장·맥 시스템 AI가 작성.
+    target_description: op로 분기 (기본 list). type(보고서 타입, 기본 ai_trend). read 는 path. new 는 맥 시스템 AI에 작성 요청.
+    group: report
+    target_key: op
+    router: handler
+    tool: report_op
+    ops:
+      default: list
+      values:
+        list: 타입별 보고서 목록
+        read: 보고서 읽기 (path, 없으면 최신)
+        latest: 타입 최신 보고서 본문
+        new: 시스템 AI에 새 보고서 작성 요청
+        types: 등록된 보고서 타입 목록
+    implementation: report-viewer 패키지 handler.py op 분기. outputs/ 보고서 폴더 조회·읽기 + new 는 SystemAIRunner.send_message 로 맥 시스템 AI 비동기 큐잉.
+    keywords:
+    - 보고서
+    - 정기보고
+    - AI 동향
+    - 동향 보고서
+    - 리포트
+    - report
+    app:
+      instrument: report
+      icon: 📑
+      name: 정기보고
+      order: 16
+      modes:
+      - name: 최신
+        auto_run: true
+        buttons:
+        - label: ✍ 새 AI 동향 보고서 작성
+          action: '[self:report]{op: "new", type: "ai_trend"}'
+        - label: ✍ 새 AI 창업·응모 보고서 작성
+          action: '[self:report]{op: "new", type: "ai_startup"}'
+        inputs:
+        - key: type
+          type: select
+          placeholder: 보고서 종류
+          options_action: '[self:report]{op: "types"}'
+          options_from: types
+          option_value: value
+          option_label: label
+        action: '[self:report]{op: "latest", type: "$type"}'
+        view:
+        - type: thread
+          from: items
+          text: '{text}'
+      - name: 목록
+        auto_run: true
+        inputs:
+        - key: type
+          type: select
+          placeholder: 보고서 종류
+          options_action: '[self:report]{op: "types"}'
+          options_from: types
+          option_value: value
+          option_label: label
+        action: '[self:report]{op: "list", type: "$type"}'
+        view:
+        - type: card_list
+          from: items
+          empty: 보고서가 없습니다 — 작성 탭에서 새 보고서를 만들어 보세요
+          card:
+            title: '{title}'
+            lines:
+            - '{sub}'
+          item_click:
+            action: '[self:report]{op: "read", path: "{path}"}'
+            view:
+            - type: thread
+              from: items
+              text: '{text}'
+      - name: 작성
+        auto_run: true
+        action: '[self:report]{op: "types"}'
+        view:
+        - type: list_action
+          from: types
+          icon: 📝
+          title: '{label}'
+          sub: 맥의 시스템 AI가 작성합니다
+          button:
+            label: ✍ 작성
+            action: '[self:report]{op: "new", type: "{value}"}'

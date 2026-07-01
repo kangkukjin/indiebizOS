@@ -1,0 +1,140 @@
+nodes:
+  sense:
+    actions:
+      phone:
+        returns: items
+        description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요.
+        group: device
+        target_description: 최근 폰 알림 — latest_ago/ago("방금"·"N분 전")로 지금 오는 연락인지 판별, pkg로 앱 필터(예 com.kakao.talk). limit=개수.
+        target_key: op
+        router: handler
+        tool: phone_op
+        scope: system
+        ops:
+          default: notifications
+          values:
+            notifications: 최근 폰 알림 (카톡·문자·앱 푸시 — "지금 연락 오나")
+        implementation: phone_notifications.py(폰 NotificationListener 가 보낸 알림 → 로컬/폴링 저장)의 recent 조회. android 패키지 phone_op 핸들러(scope:system). raw ADB 우회 대체. (2026-06-12 location/steps 상시 수집 폐기 — 위치는 sense:here 온디맨드.)
+        keywords:
+        - 폰알림
+        - 연락
+        - 카톡
+      here:
+        returns: scalar
+        description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
+        group: device
+        target_description: 파라미터 없음 — 호출 즉시 폰의 현재 위치(위경도+역지오코딩 주소)를 한 번 가져온다. "지금 어디", "내 위치", 날씨/맛집/길찾기의 출발점.
+        router: handler
+        tool: phone_locate
+        scope: system
+        runs_on: phone_only
+        implementation: 폰 네이티브 fused location 1회 조회(Chaquopy→Kotlin PhoneActions.getCurrentLocationNow) + Android Geocoder 역지오코딩. PC/원격에선 분산 IBL(ibl_engine)이 INDIEBIZ_PHONE_URL 로 폰에 포워드.
+        keywords:
+        - 현재위치
+        - 지금위치
+        - 내위치
+        - 어디
+        - gps
+        - location
+      listen:
+        returns: scalar
+        description: 폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).
+        group: device
+        target_description: 'op=transcribe(기본): 지금 발화를 텍스트로 받아쓴다(ko-KR, timeout_sec 대기). record: duration_sec 초 동안 녹음해 오디오 파일로 저장(경로 반환).'
+        target_key: op
+        router: handler
+        tool: phone_listen
+        scope: system
+        runs_on: phone_only
+        implementation: 폰 네이티브 — transcribe=Android SpeechRecognizer(온디바이스/Google, ko-KR), record=MediaRecorder(AAC/m4a→filesDir). Chaquopy→Kotlin PhoneActions. PC/원격은 분산 IBL 로 폰 포워드 (transcribe 텍스트는 무손실, record 파일은 폰 잔류).
+        ops:
+          default: transcribe
+          values:
+            transcribe: 마이크 음성 받아쓰기 (STT → 텍스트)
+            record: 마이크 녹음 (→ 오디오 파일 경로)
+        keywords:
+        - 받아쓰기
+        - 음성인식
+        - 녹음
+        - 마이크
+        - stt
+        - voice
+      see:
+        returns: scalar
+        description: 폰 카메라로 사진 1장 촬영 (호출 시 1회). facing=back(기본)/front. 폰에 jpg 저장 후 경로 반환.
+        group: device
+        target_description: facing=back(후면, 기본)/front(전면). 미리보기 없이 정지 캡처 → 폰 파일 경로 반환. "사진 찍어", "촬영해", "카메라로 찍어줘".
+        router: handler
+        tool: phone_capture
+        scope: system
+        runs_on: phone_only
+        implementation: 폰 네이티브 Camera2 + ImageReader(JPEG) 정지 캡처(미리보기 없음, 백그라운드 HandlerThread). Chaquopy→Kotlin PhoneActions.capturePhoto. PC/원격은 분산 IBL 로 폰 포워드(파일은 폰 잔류).
+        keywords:
+        - 촬영
+        - 사진
+        - 카메라
+        - 찍어
+        - photo
+        - camera
+  limbs:
+    actions:
+      android:
+        returns: effect
+        description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.
+        target_description: 흐름 — snapshot(요소+라벨+좌표 읽기, 기본) → tap(query 라벨/id 일부 권장, 또는 x,y) → type(text). 입력 후 전송 등 동적 버튼은 반드시 snapshot 다시. 주요 파라미터 — query(탭할 요소 라벨), x/y(snapshot이 준 좌표), text(입력), key(back/home/recent), package_name(앱 실행, 예 com.kakao.talk), direction(swipe up/down/left/right). device_id 생략 시 첫 기기(PC 경로). 가이드 android.md 참조.
+        group: device
+        target_key: op
+        router: handler
+        tool: android_op
+        scope: system
+        runs_on: anywhere
+        ops:
+          default: snapshot
+          values:
+            snapshot: 화면 독해 — 누를 수 있는 요소를 라벨+좌표로 반환 (탭 전 필수)
+            tap: 요소 탭 (query 라벨/id 일부 권장, 또는 x,y)
+            type: 포커스된 입력창에 텍스트 입력 (폰 네이티브는 ACTION_SET_TEXT라 한글 IME 불필요)
+            swipe: 스와이프·스크롤 (direction up/down/left/right 또는 x1,y1,x2,y2)
+            key: 시스템 키 (back/home/recent 등. 폰 네이티브는 enter 미지원)
+            long_press: 길게 누르기 (x,y)
+            open_app: 앱 실행 (package_name)
+        implementation: 집 PC=ADB(uiautomator dump+input, ui_control.py), 폰 자신=네이티브 AccessibilityService (PhoneAccessibilityService — getRootInActiveWindow 독해 + dispatchGesture 터치 + ACTION_SET_TEXT 입력). 핸들러가 INDIEBIZ_PROFILE=phone 이면 네이티브로 분기. 폰은 1회 접근성 권한 활성 필요.
+        keywords:
+        - 안드로이드
+        - 폰
+        - 스마트폰
+        - 카카오톡
+        - 카톡
+        - 앱조작
+        - 화면조작
+        - 터치
+        - 탭
+      phone:
+        returns: effect
+        description: 폰 네이티브 동작 (op 분기) — 알림/진동/토스트/복사/음성/앱실행. 동작 요청은 sense:phone 진단 없이 바로 실행 — 도달성은 sense:phone(푸시 피드) 신선도와 무관, 미도달이면 phone_unreachable 명시됨.
+        group: device
+        target_description: 'op=notify(기본): 알림 표시 — title/body. vibrate: 진동 — duration_ms(기본 400). toast: 화면 토스트 — text. clipboard: 클립보드 복사 — text. speak: TTS 음성 — text. open_app: 앱 실행 — package_name(예 com.kakao.talk). sms: 문자 작성창을 받는사람(to)·본문(text) 채워 열기 — 전송은 사용자 탭. call: 다이얼러를 번호(to) 채워 열기 — 통화는 사용자 탭.'
+        target_key: op
+        router: handler
+        tool: phone_act
+        scope: system
+        runs_on: phone_only
+        ops:
+          default: notify
+          values:
+            notify: 알림 표시 (title/body — "폰에 알림 띄워줘")
+            vibrate: 진동 (duration_ms)
+            toast: 화면에 토스트 메시지 (text)
+            clipboard: 클립보드에 복사 (text)
+            speak: TTS 음성 출력 (text)
+            open_app: 앱 실행 (package_name)
+            sms: 문자 작성창 열기 (to·text 채움, 전송은 사용자 탭 — 자율 발송 아님)
+            call: 다이얼러 열기 (to 채움, 통화는 사용자 탭 — 즉시 발신 아님)
+        implementation: Chaquopy Java 브리지로 Kotlin PhoneActions(@JvmStatic) 호출. android 패키지 phone_act 핸들러(scope:system).
+        keywords:
+        - 폰알림
+        - 진동
+        - 음성
+        - 토스트
+        - 클립보드복사
+        - 앱실행

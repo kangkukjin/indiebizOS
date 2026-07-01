@@ -1,0 +1,25 @@
+node: self
+actions:
+  memory:
+    returns: items
+    description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도. 자아별 사적 기억(폰·맥 각자 로컬, 동기화 안 함). 폰선 시맨틱 모델 없어 키워드(LIKE/FTS) 검색.
+    group: memory
+    target_description: save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.
+    target_key: op
+    router: handler
+    tool: memory_op
+    ops:
+      values:
+        save: 메모리 저장 (content 필수, category/keywords 자동 추출)
+        search: 키워드·자연어 검색 (FTS+시맨틱 통합)
+        read: 전문 조회 (memory_id)
+        delete: 삭제 (memory_id)
+    implementation: handler.py가 op로 분기 — save/search/read/delete 옛 함수에 위임.
+    keywords:
+    - 메모리
+    - 기억
+    - 장기기억
+    - 메모리 저장
+    - 메모리 검색
+    - 메모리 삭제
+    - 메모리 읽기

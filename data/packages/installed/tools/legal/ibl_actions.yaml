@@ -1,0 +1,19 @@
+node: sense
+actions:
+  legal:
+    returns: items
+    description: 대한민국 법률 통합 검색 (law.go.kr). query/id 분기, target 10종(법령/판례/규칙 등). 자세히 read_guide(query="법률").
+    group: legal
+    target_description: query(검색어) 또는 id(상세). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(법률서식).
+    router: handler
+    tool: legal_lookup
+    implementation: 국가법령정보센터 API 통합 — query면 /lawSearch.do, id면 /lawService.do. target 파라미터로 10종 영역 분기.
+    target_key: query
+    keywords:
+    - 법률
+    - 법령
+    - 판례
+    - 법
+    - 조항
+    - 헌재
+    - 행정규칙

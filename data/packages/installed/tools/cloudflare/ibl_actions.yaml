@@ -1,0 +1,17 @@
+node: limbs
+actions:
+  cloudflare_api:
+    returns: effect
+    description: Cloudflare API 호출 (Pages/Workers/R2/D1/Tunnel 모든 서비스 통합).
+    target_description: API endpoint 경로 (예 'zones/abc/dns_records'). method/data 옵션으로 요청 구성.
+    group: cloudflare
+    router: handler
+    tool: cf_api
+    implementation: Cloudflare REST API (Pages/Workers/R2/D1/Tunnel) 통합 HTTP 클라이언트
+    target_key: endpoint
+    keywords:
+    - 클라우드플레어
+    - CDN
+    - Workers
+    - R2
+    - Pages

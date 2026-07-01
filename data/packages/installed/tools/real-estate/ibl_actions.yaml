@@ -1,0 +1,196 @@
+node: sense
+actions:
+  commercial:
+    returns: items
+    description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
+    group: real_estate
+    target_description: 업종 코드 또는 키워드. 좌표(lat/lng) 또는 행정동 코드(district)로 영역 지정.
+    router: handler
+    tool: search_commercial_district
+    implementation: 소상공인진흥공단 상권정보 공개 API로 업종별 점포 밀집도/분포 분석
+    app:
+      instrument: commercial
+      icon: 🏪
+      name: 상권
+      order: 11
+      inputs:
+      - key: lat
+        type: text
+        label: 위도
+        default: '37.4979'
+      - key: lng
+        type: text
+        label: 경도
+        default: '127.0276'
+      auto_run: true
+      action: '[sense:commercial]{lat: "$lat", lng: "$lng"}'
+      filter:
+        from_field: category
+      view:
+      - type: map
+        markers: items
+        max: 1500
+        'on':
+          moveend: '[sense:commercial]{lat: "$lat", lng: "$lng", radius: "$radius"}'
+      - type: metric
+        label: 주변 점포 수
+        big: '{total_count}개'
+      - type: card_list
+        from: items
+        empty: 점포가 없습니다
+        card:
+          title: '{name}'
+          lines:
+          - '{category} · {address}'
+        item_click:
+          action: '[sense:restaurant]{query: "{name}", x: {lng}, y: {lat}, radius: 300}'
+          view:
+          - type: card_list
+            from: items
+            empty: 카카오·네이버에서 일치하는 가게를 찾지 못했습니다 (소상공인 등록 정보만 있음).
+            card:
+              title: '{name}'
+              lines:
+              - '{category}{phone|opt:  ·  ☎ ,}'
+              - 📍 {address}
+              link:
+                href: '{url}'
+                label: 카카오맵·상세 보기 →
+  realty:
+    returns: items
+    description: 부동산 시세·매물 (op 분기). query=시세/매물(source=molit 국토부 실거래가 기본 / source=zigbang 직방 현재 매물·링크·사진), codes=법정동 코드. region 이름만 넣으면 자동 해소.
+    group: real_estate
+    target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n- codes: city=시/도명(서울·경기 등) → 법정동 지역코드 목록. (region 자동변환이 있어 보통 불필요한 보조.)\n"
+    target_key: op
+    router: handler
+    tool: realty_op
+    ops:
+      default: query
+      values:
+        query: 시세·매물 조회 (source=molit 실거래가 / source=zigbang 직방 매물)
+        codes: 법정동 지역코드 조회 (보조)
+    implementation: query source=molit=type×deal 국토부 6종 API(region 자동해소). source=zigbang=tool_zigbang(지명→geohash5→직방 리스트→거리필터→상세 병렬→records). codes=get_region_codes.
+    keywords:
+    - 부동산
+    - 실거래가
+    - 매매
+    - 전세
+    - 월세
+    - 아파트
+    - 주택
+    - 매물
+    - 호가
+    - 직방
+    - 빌라
+    - 원룸
+    app:
+      icon: 🏢
+      name: 실거래가
+      order: 9
+      inputs:
+      - key: province
+        type: select
+        label: 시/도
+        default: 서울
+        options:
+        - value: 서울
+          label: 서울
+        - value: 경기
+          label: 경기
+        - value: 인천
+          label: 인천
+        - value: 부산
+          label: 부산
+        - value: 대구
+          label: 대구
+        - value: 대전
+          label: 대전
+        - value: 광주
+          label: 광주
+        - value: 울산
+          label: 울산
+        - value: 세종
+          label: 세종
+        - value: 강원
+          label: 강원
+        - value: 충북
+          label: 충북
+        - value: 충남
+          label: 충남
+        - value: 전북
+          label: 전북
+        - value: 전남
+          label: 전남
+        - value: 경북
+          label: 경북
+        - value: 경남
+          label: 경남
+        - value: 제주
+          label: 제주
+      - key: region
+        type: select
+        label: 구/군
+        required: true
+        options_action: '[sense:realty]{op: "codes", city: "$province"}'
+        options_from: regions
+      - key: type
+        type: select
+        label: 유형
+        default: apt
+        options:
+        - value: apt
+          label: 아파트
+        - value: house
+          label: 단독·다가구
+        - value: villa
+          label: 연립·다세대
+      - key: deal
+        type: select
+        label: 거래
+        default: trade
+        options:
+        - value: trade
+          label: 매매
+        - value: rent
+          label: 전월세
+      - key: period
+        type: select
+        label: 기간
+        default: '3'
+        options:
+        - value: '3'
+          label: 최근 3개월
+        - value: '6'
+          label: 최근 6개월
+        - value: '12'
+          label: 최근 12개월
+      action: '[sense:realty]{region_code: "$region", type: "$type", deal: "$deal", months: "$period"}'
+      view:
+      - type: metric
+        label: 평균 거래가
+        big: '{summary.평균가}'
+        sub: '{summary.총거래건수}건 · {summary.조회기간}'
+      - type: kv
+        rows:
+        - k: 최고가
+          v: '{summary.최고가}'
+        - k: 최저가
+          v: '{summary.최저가}'
+      - type: card_list
+        from: items
+        empty: 해당 기간 거래가 없습니다
+        card:
+          title: '{명칭}'
+          lines:
+          - '{법정동} · {면적}㎡ · {층}층 · {건축년도}년'
+          - '{거래금액}만원 · {거래년도}.{거래월}.{거래일}'
+        item_click:
+          action: '[sense:realty]{region_code: "$region", type: "$type", deal: "$deal", months: 12, name: "{명칭}"}'
+          view:
+          - type: card_list
+            from: items
+            empty: 추이 데이터 없음
+            card:
+              title: '{거래년도}.{거래월}.{거래일}'
+              lines:
+              - '{거래금액}만원 · {면적}㎡ · {층}층'

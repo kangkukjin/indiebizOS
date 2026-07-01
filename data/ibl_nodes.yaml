@@ -68,6 +68,57 @@ meta:
 nodes:
   sense:
     actions:
+      world:
+        returns: scalar
+        description: 세계 상태 감각 (op 분기). 경제·뉴스·기술·날씨 스냅샷 조회/추이/재수집.
+        target_description: 'op로 분기 (기본 snapshot).
+
+          - snapshot: 오늘의 세계 상태(경제 지표·주요 뉴스·기술 동향·날씨). 파라미터 없음.
+
+          - trend: 최근 N일 추이 (경제 변화·뉴스 흐름). days 옵션(기본 7).
+
+          - refresh: 강제 재수집(오늘 데이터 덮어씀). 외부 API 부하라 빈번 호출 금지. 파라미터 없음.
+
+          '
+        group: world
+        target_key: op
+        router: system
+        func: world_op
+        ops:
+          default: snapshot
+          values:
+            snapshot: 오늘의 세계 상태 스냅샷 (경제·주요뉴스·기술동향·날씨)
+            trend: 최근 N일 추이 (days 옵션, 기본 7)
+            refresh: 강제 재수집 (외부 API 부하, 빈번 호출 금지)
+        implementation: _route_system이 op로 분기 — snapshot=world_pulse / trend=world_trend / refresh=world_refresh, execute_world_pulse에 위임.
+        keywords:
+        - 세계
+        - 오늘뉴스
+        - 경제
+        - 동향
+        - 주요뉴스
+        - 뉴스
+        - 추이
+        - 트렌드
+        - 변화
+        - 뉴스흐름
+        - 재수집
+        - 갱신
+      self_check:
+        returns: effect
+        description: 전수 자가점검 실행 — 부작용 없는 모든 IBL 액션을 테스트하여 시스템 건강 상태 확인
+        target_description: (파라미터 없음 — 전수 자가점검 실행). 결과는 world_pulse.db에 기록.
+        group: world
+        router: system
+        func: self_check
+        implementation: 전체 IBL 액션 중 안전한 액션을 전수 실행, 결과를 world_pulse.db에 기록, 패턴 분석
+        keywords:
+        - 자가점검
+        - 전수점검
+        - 면역
+        - 건강체크
+        - 셀프체크
+        - self-check
       phone:
         returns: items
         description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요.
@@ -86,91 +137,6 @@ nodes:
         - 폰알림
         - 연락
         - 카톡
-      host:
-        returns: scalar
-        description: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라 기계를 직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
-        group: device
-        target_description: 'op=status(기본): 전면 앱·CPU·메모리·디스크·배터리·가동시간·로드평균·프로세스 수 한 눈에. apps: 메모리 점유 상위 프로세스(limit 옵션, 기본 12). resources: per-core CPU·스왑·디스크 파티션별·네트워크 상세.'
-        target_key: op
-        router: handler
-        tool: host_op
-        runs_on: mac_only
-        ops:
-          default: status
-          values:
-            status: 이 기계 상태 한 눈에 (전면앱·CPU·메모리·디스크·배터리·가동시간)
-            apps: 자원(메모리)을 많이 쓰는 프로세스 상위 N (limit 옵션)
-            resources: 상세 지표 (per-core CPU·스왑·디스크 파티션·네트워크·배터리)
-        implementation: pc-manager 패키지 host_op 핸들러 — psutil로 CPU/메모리/스왑/디스크/네트워크/배터리, lsappinfo로 전면 앱(권한 프롬프트 無), runtime_utils.detect_body로 몸 이름. 폰은 자기 센서 별도라 mac_only.
-        keywords:
-        - 내컴퓨터
-        - 시스템상태
-        - cpu
-        - 메모리
-        - 디스크
-        - 배터리
-        - 내몸
-        - 프로세스
-        app:
-          instrument: host
-          icon: 🖥️
-          name: 시스템
-          order: 15
-          phone_render: false
-          modes:
-          - name: 상태
-            auto_run: true
-            action: '[sense:host]{op: "status"}'
-            view:
-            - type: metric
-              label: CPU
-              big: '{cpu_percent}'
-              unit: '%'
-              sub: '{body}{frontmost_app|opt:  ·  ,}'
-            - type: kv
-              title: 메모리 · 디스크 · 전원
-              rows:
-              - k: 메모리
-                v: '{memory.used_gb} / {memory.total_gb} GB ({memory.percent}%)'
-              - k: 디스크 (/)
-                v: '{disk_root.free_gb} GB 여유 / {disk_root.total_gb} GB ({disk_root.percent}%)'
-              - k: 배터리
-                v: '{battery.percent|opt:,%}'
-              - k: 가동시간
-                v: '{uptime_hours} 시간'
-              - k: 프로세스 수
-                v: '{process_count}'
-          - name: 프로세스
-            auto_run: true
-            action: '[sense:host]{op: "apps", limit: 15}'
-            view:
-            - type: kv_list
-              title: 메모리 점유 상위
-              from: top
-              k: '{name}'
-              v: '{mem_percent}% · CPU {cpu_percent}%'
-          - name: 자원
-            auto_run: true
-            action: '[sense:host]{op: "resources"}'
-            view:
-            - type: kv
-              title: CPU · 메모리 · 스왑 · 네트워크
-              rows:
-              - k: CPU
-                v: '{cpu.percent_overall}% · {cpu.logical_cores} 코어'
-              - k: 메모리
-                v: '{memory.used_gb} / {memory.total_gb} GB ({memory.percent}%)'
-              - k: 스왑
-                v: '{swap.used_gb} / {swap.total_gb} GB ({swap.percent}%)'
-              - k: 네트워크
-                v: ↑ {network.sent_gb} · ↓ {network.recv_gb} GB
-              - k: 가동시간
-                v: '{uptime_hours} 시간'
-            - type: kv_list
-              title: 디스크 파티션
-              from: disks
-              k: '{mount}'
-              v: '{free_gb} GB 여유 / {total_gb} GB ({percent}%)'
       here:
         returns: scalar
         description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
@@ -228,206 +194,143 @@ nodes:
         - 찍어
         - photo
         - camera
-      stock:
-        returns: scalar
-        description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
-        group: finance
-        target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). history는 표준 table 통화(table={columns:[날짜,종가],rows:[...]})도 반환 — 그대로 engines:chart/spreadsheet로 흘리거나 >> 파이프.
+      cctv:
+        returns: items
+        description: CCTV/웹캠 조회 (op 분기). search(키워드 통합검색)/nearby(좌표 근처, lat·lng 필수). 출력은 항상 lat/lng·playable 포함, stream_tags 동봉 시 채팅창 재생. 자세히 read_guide(query="cctv").
+        group: media
+        keywords:
+        - cctv
+        - 교통
+        - 실시간
+        - 카메라
+        - 보여줘
+        - 봐줘
+        - traffic
+        - camera
+        - 영상
+        - 근처
+        - 주변
+        target_description: search — query 키워드(전주·해운대·경부 등). nearby/webcam — lat·lng 필수, radius_km(km) 옵션. webcam은 해외 경치 웹캠(Windy).
         target_key: op
         router: handler
-        tool: stock_op
+        tool: cctv_query
         ops:
-          default: quote
+          default: search
           values:
-            quote: 현재가·현재 시세 (기본, "얼마"·"주가"·"시세" — Yahoo)
-            history: 기간별 주가 이력·차트용 (period 또는 날짜, 시장 자동판별)
-            info: 종목 메타 — 시총·52주·PER·배당
-            search: 회사명으로 심볼 검색 (query)
-            investors: 투자자별 매매동향 (한국 전용)
-            news: 종목 관련 뉴스 (Finnhub→Yahoo)
-            earnings: 실적발표 일정 (예상 vs 실적)
-        implementation: market 자동판별(6자리/한글=kr, 그외=us) 후 op 분기. quote(현재가)/info/search=yfinance, history(이력)=krx|fmp, investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
-        keywords:
-        - 주가
-        - 주식
-        - 시세
-        - 종목
-        - 매매동향
+            search: 키워드로 전국 CCTV+해외 웹캠 통합 검색 (기본)
+            nearby: 좌표 근처 CCTV (lat·lng 필수, radius_km km)
+            webcam: 좌표 근처 해외 경치 웹캠 (Windy 직행, 교통 CCTV 건너뜀)
+        implementation: cctv_search/nearby/webcam op 분기 (카카오 우선 → TOPIS/UTIC/ITS → Windy 폴백; webcam은 Windy 직행).
         app:
-          instrument: invest
-          icon: 📈
-          name: 투자
-          order: 4
+          instrument: cctv
+          icon: 📹
+          name: CCTV
+          order: 12
+          inputs:
+          - key: q
+            type: text
+            label: 검색
+            placeholder: '지역·도로 (예: 해운대, 경부)'
+            default: 해운대
+          auto_run: true
+          action: '[sense:cctv]{op: "search", query: "$q"}'
+          view:
+          - type: map
+            markers: items
+            max: 100
+            'on':
+              marker_click:
+                stream: true
+          - type: metric
+            label: 검색 결과
+            big: '{count}개'
+          - type: list_action
+            from: items
+            icon: 📹
+            empty: CCTV를 찾지 못했습니다
+            title: '{name}'
+            sub: '{region}{road_name|opt: · ,}'
+            button:
+              label: ▶ 보기
+              stream: true
+      contest:
+        returns: items
+        description: Kaggle 국제 AI/데이터 경진대회 검색. 상금·마감일·주최로 출품 기회 탐색.
+        group: research
+        target_description: 'query(검색 키워드, 예: AI·LLM·vision·NLP). sort 옵션 — recentlyCreated(기본, 최근 개설)/latestDeadline(마감 늦은 순=진행 중 위주)/prize(상금 큰 순)/numberOfTeams(참가팀 많은 순). category(featured/research/playground 등, 선택). count(기본 10, 최대 50). 반환=records 통화(상금·마감일 meta) → 앱 card_list 직결.'
+        router: handler
+        tool: contest_search
+        scope: workspace
+        implementation: Kaggle Competitions API(/competitions/list, Bearer 토큰 auth_manager 'kaggle'). search/sortBy/category 서버 쿼리, 응답 대회 리스트를 records로 매핑. 폰 네이티브 가능(HTTP+stdlib, KAGGLE_API_TOKEN 폰 프로비저닝).
+        target_key: query
+        keywords:
+        - 공모전
+        - 대회
+        - 경진대회
+        - 해커톤
+        - kaggle
+        - 캐글
+        app:
+          icon: 🏆
+          name: AI 공모전
+          order: 12
           modes:
-          - name: 주식
-            auto_run: true
+          - name: Kaggle
             inputs:
             - key: q
               type: text
-              default: 삼성전자
-              placeholder: '회사명(한글)·티커 (예: 삼성전자, AAPL)'
-              chips:
-              - 삼성전자
-              - SK하이닉스
-              - TIGER200
-              - AAPL
-              - NVDA
-              - TSLA
-            filter:
-              key: period
-              items:
-              - label: 5일
-                value: 5d
-                default: true
-              - label: 1달
-                value: 1mo
-              - label: 3달
-                value: 3mo
-              - label: 1년
-                value: 1y
-            action: '[sense:stock]{op: "quote", ticker: "$q", period: "$period", max_points: 60}'
-            view:
-            - type: metric
-              label: '{data.symbol}'
-              big: '{data.current_price|num}'
-              unit: '{data.currency}'
-              sub: '{data.change|arrow} {data.change|abs|num} ({data.change_percent}%)'
-              trend: data.change
-            - type: sparkline
-              from: data.prices
-              y: close
-              trend: data.change
-            - type: kv
-              rows:
-              - k: 전일
-                v: '{data.previous_close|num}'
-              - k: 시가/고가/저가
-                v: '{data.open|num} / {data.high|num} / {data.low|num}'
-              - k: 거래량
-                v: '{data.volume|num}'
-          - name: 코인
-            auto_run: true
-            inputs:
-            - key: coin
-              type: text
-              default: BTC
-              placeholder: 코인 심볼 (BTC, ETH, SOL …)
-              chips:
-              - BTC
-              - ETH
-              - SOL
-              - XRP
-              - DOGE
-            filter:
-              key: days
-              items:
-              - label: 7일
-                value: 7
-                default: true
-              - label: 1달
-                value: 30
-              - label: 3달
-                value: 90
-            action: '[sense:crypto]{coin_id: "$coin", days: $days}'
-            view:
-            - type: metric
-              label: '{data.name} ({data.symbol})'
-              big: '{data.current_price_krw|num}'
-              unit: 원
-              sub: '{data.change_24h_percent|arrow} {data.change_24h_percent|abs}% (24h)'
-              trend: data.change_24h_percent
-            - type: sparkline
-              from: data.prices
-              y: close
-              trend: data.change_24h_percent
-            - type: kv
-              rows:
-              - k: USD
-                v: ${data.current_price_usd|num}
-              - k: 24h 고가/저가
-                v: ${data.high_24h_usd|num} / ${data.low_24h_usd|num}
-              - k: 시가총액
-                v: '{data.market_cap_formatted} · 랭크 #{data.rank}'
-          - name: 자원
-            auto_run: true
-            inputs:
-            - key: sym
+              placeholder: 키워드  예) AI·LLM·vision (비우면 전체)
+            - key: sort
               type: select
-              label: 자원
-              default: GC=F
+              label: 정렬
+              default: recentlyCreated
               options:
-              - value: GC=F
-                label: 금
-              - value: SI=F
-                label: 은
-              - value: CL=F
-                label: WTI 유가
-              - value: BZ=F
-                label: 브렌트유
-              - value: NG=F
-                label: 천연가스
-              - value: HG=F
-                label: 구리
-            filter:
-              key: period
-              items:
-              - label: 5일
-                value: 5d
-                default: true
-              - label: 1달
-                value: 1mo
-              - label: 3달
-                value: 3mo
-              - label: 1년
-                value: 1y
-            action: '[sense:stock]{op: "quote", ticker: "$sym", period: "$period", max_points: 60}'
+              - value: recentlyCreated
+                label: 최근 개설
+              - value: latestDeadline
+                label: 진행 중
+              - value: prize
+                label: 상금순
+              - value: numberOfTeams
+                label: 인기순
+            action: '[sense:contest]{query: "$q", sort: "$sort"}'
             view:
-            - type: metric
-              label: '{data.symbol}'
-              big: '{data.current_price|num}'
-              unit: '{data.currency}'
-              sub: '{data.change|arrow} {data.change|abs|num} ({data.change_percent}%)'
-              trend: data.change
-            - type: sparkline
-              from: data.prices
-              y: close
-              trend: data.change
-            - type: kv
-              rows:
-              - k: 고가/저가
-                v: '{data.high|num} / {data.low|num}'
-              - k: 거래량
-                v: '{data.volume|num}'
-      company:
+            - type: card_list
+              from: items
+              card:
+                image: '{image}'
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{summary}'
+                link:
+                  href: '{url}'
+                  label: 대회 페이지 →
+      devdocs:
         returns: items
-        description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. items(행 dict). 주가·시세는 stock.
-        group: finance
-        target_description: ticker=기업명 또는 코드 (삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC 자동판별). market="kr"/"us"로 강제 지정 가능. financials는 year(한국)·statement_type·period 옵션, disclosures는 count·기간·유형 옵션.
+        description: 소프트웨어 라이브러리/프레임워크 공식 문서 (op 분기, Context7). 코드 작성 시 API 참조용. 논문은 paper.
+        target_description: 'op로 분기 (기본 resolve).
+
+          - resolve: library_name(예 ''react'',''fastapi'') → Context7 ID. search 전 첫 단계.
+
+          - search: query(알고 싶은 내용) + library_id(resolve 결과).
+
+          '
         target_key: op
+        group: research
         router: handler
-        tool: company_op
+        tool: devdocs_op
         ops:
-          default: profile
+          default: resolve
           values:
-            profile: 기업 기본정보 (대표·업종·시총·섹터)
-            financials: 재무제표 (손익·재무상태·현금흐름)
-            disclosures: 공시 검색 (한국 DART / 미국 SEC)
-        implementation: market 자동판별 후 분기. profile=kr_company_info|us_company_profile, financials=kr_financial_statements|us_financial_statements, disclosures=kr_disclosures|us_sec_filings.
+            resolve: 라이브러리 이름 → Context7 ID (첫 단계)
+            search: 공식 문서 검색 (library_id + query)
+        implementation: context7 패키지 op 분기. resolve=resolve_library, search=search_library_docs.
         keywords:
-        - 기업정보
-        - 재무제표
-        - 공시
-        - DART
-        - SEC
-      crypto:
-        returns: scalar
-        description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
-        group: finance
-        target_description: 코인 심볼 (BTC, ETH, SOL 등)
-        router: handler
-        tool: crypto_price
-        implementation: CoinGecko 무료 API로 암호화폐 시세 조회 (requests HTTP)
-        target_key: coin_id
+        - 라이브러리문서
+        - API문서
+        - context7
+        - 공식문서
       performance:
         returns: items
         description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book.
@@ -653,91 +556,257 @@ nodes:
             - '{place}'
             - '{startDate}~{endDate}'
             - '{area} · {realmName}'
-      paper:
-        returns: items
-        description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
-        target_description: "op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
+      stock:
+        returns: scalar
+        description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
+        group: finance
+        target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). history는 표준 table 통화(table={columns:[날짜,종가],rows:[...]})도 반환 — 그대로 engines:chart/spreadsheet로 흘리거나 >> 파이프.
         target_key: op
-        group: research
         router: handler
-        tool: paper_op
+        tool: stock_op
         ops:
-          default: search
+          default: quote
           values:
-            search: 논문·학위논문 검색 (source openalex/arxiv/pubmed/semantic/nanet)
-            download: 논문 PDF 다운로드 (source arxiv/pubmed)
-        implementation: study 패키지 op/source 분기. search=openalex/arxiv/pubmed/semantic_scholar/nanet(researchTotal), download=arxiv/pubmed_pdf.
+            quote: 현재가·현재 시세 (기본, "얼마"·"주가"·"시세" — Yahoo)
+            history: 기간별 주가 이력·차트용 (period 또는 날짜, 시장 자동판별)
+            info: 종목 메타 — 시총·52주·PER·배당
+            search: 회사명으로 심볼 검색 (query)
+            investors: 투자자별 매매동향 (한국 전용)
+            news: 종목 관련 뉴스 (Finnhub→Yahoo)
+            earnings: 실적발표 일정 (예상 vs 실적)
+        implementation: market 자동판별(6자리/한글=kr, 그외=us) 후 op 분기. quote(현재가)/info/search=yfinance, history(이력)=krx|fmp, investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
         keywords:
-        - 논문
-        - 학술
-        - arxiv
-        - pubmed
-        - 논문검색
-        - 학위논문
-      researcher:
+        - 주가
+        - 주식
+        - 시세
+        - 종목
+        - 매매동향
+        app:
+          instrument: invest
+          icon: 📈
+          name: 투자
+          order: 4
+          modes:
+          - name: 주식
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              default: 삼성전자
+              placeholder: '회사명(한글)·티커 (예: 삼성전자, AAPL)'
+              chips:
+              - 삼성전자
+              - SK하이닉스
+              - TIGER200
+              - AAPL
+              - NVDA
+              - TSLA
+            filter:
+              key: period
+              items:
+              - label: 5일
+                value: 5d
+                default: true
+              - label: 1달
+                value: 1mo
+              - label: 3달
+                value: 3mo
+              - label: 1년
+                value: 1y
+            action: '[sense:stock]{op: "quote", ticker: "$q", period: "$period", max_points: 60}'
+            view:
+            - type: metric
+              label: '{data.symbol}'
+              big: '{data.current_price|num}'
+              unit: '{data.currency}'
+              sub: '{data.change|arrow} {data.change|abs|num} ({data.change_percent}%)'
+              trend: data.change
+            - type: sparkline
+              from: data.prices
+              y: close
+              trend: data.change
+            - type: kv
+              rows:
+              - k: 전일
+                v: '{data.previous_close|num}'
+              - k: 시가/고가/저가
+                v: '{data.open|num} / {data.high|num} / {data.low|num}'
+              - k: 거래량
+                v: '{data.volume|num}'
+          - name: 코인
+            auto_run: true
+            inputs:
+            - key: coin
+              type: text
+              default: BTC
+              placeholder: 코인 심볼 (BTC, ETH, SOL …)
+              chips:
+              - BTC
+              - ETH
+              - SOL
+              - XRP
+              - DOGE
+            filter:
+              key: days
+              items:
+              - label: 7일
+                value: 7
+                default: true
+              - label: 1달
+                value: 30
+              - label: 3달
+                value: 90
+            action: '[sense:crypto]{coin_id: "$coin", days: $days}'
+            view:
+            - type: metric
+              label: '{data.name} ({data.symbol})'
+              big: '{data.current_price_krw|num}'
+              unit: 원
+              sub: '{data.change_24h_percent|arrow} {data.change_24h_percent|abs}% (24h)'
+              trend: data.change_24h_percent
+            - type: sparkline
+              from: data.prices
+              y: close
+              trend: data.change_24h_percent
+            - type: kv
+              rows:
+              - k: USD
+                v: ${data.current_price_usd|num}
+              - k: 24h 고가/저가
+                v: ${data.high_24h_usd|num} / ${data.low_24h_usd|num}
+              - k: 시가총액
+                v: '{data.market_cap_formatted} · 랭크 #{data.rank}'
+          - name: 자원
+            auto_run: true
+            inputs:
+            - key: sym
+              type: select
+              label: 자원
+              default: GC=F
+              options:
+              - value: GC=F
+                label: 금
+              - value: SI=F
+                label: 은
+              - value: CL=F
+                label: WTI 유가
+              - value: BZ=F
+                label: 브렌트유
+              - value: NG=F
+                label: 천연가스
+              - value: HG=F
+                label: 구리
+            filter:
+              key: period
+              items:
+              - label: 5일
+                value: 5d
+                default: true
+              - label: 1달
+                value: 1mo
+              - label: 3달
+                value: 3mo
+              - label: 1년
+                value: 1y
+            action: '[sense:stock]{op: "quote", ticker: "$sym", period: "$period", max_points: 60}'
+            view:
+            - type: metric
+              label: '{data.symbol}'
+              big: '{data.current_price|num}'
+              unit: '{data.currency}'
+              sub: '{data.change|arrow} {data.change|abs|num} ({data.change_percent}%)'
+              trend: data.change
+            - type: sparkline
+              from: data.prices
+              y: close
+              trend: data.change
+            - type: kv
+              rows:
+              - k: 고가/저가
+                v: '{data.high|num} / {data.low|num}'
+              - k: 거래량
+                v: '{data.volume|num}'
+      company:
         returns: items
-        description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search_ddg.
-        target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망. 공저자 소속·협업으로 신원 재확인.\n"
+        description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. items(행 dict). 주가·시세는 stock.
+        group: finance
+        target_description: ticker=기업명 또는 코드 (삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC 자동판별). market="kr"/"us"로 강제 지정 가능. financials는 year(한국)·statement_type·period 옵션, disclosures는 count·기간·유형 옵션.
         target_key: op
-        group: research
         router: handler
-        tool: researcher_op
+        tool: company_op
         ops:
-          default: find
+          default: profile
           values:
-            find: 연구자 검색 (이름→소속·출생연도·lodID, 동명이인 분리)
-            coauthor: 공저자망 (lodID→공저자, 신원 재확인)
-        implementation: study 패키지. find=authorView, coauthor=coAuthor (국회도서관 LOSI OpenAPI, NANET_API_KEY).
+            profile: 기업 기본정보 (대표·업종·시총·섹터)
+            financials: 재무제표 (손익·재무상태·현금흐름)
+            disclosures: 공시 검색 (한국 DART / 미국 SEC)
+        implementation: market 자동판별 후 분기. profile=kr_company_info|us_company_profile, financials=kr_financial_statements|us_financial_statements, disclosures=kr_disclosures|us_sec_filings.
         keywords:
-        - 연구자
-        - 학자
-        - 인물찾기
-        - 동명이인
-        - 공저자
-        - researcher
-      pew_research:
-        returns: items
-        description: Pew Research 최신 여론조사/리서치 보고서 목록. 미국 사회·정치·기술 트렌드 조사. 파라미터 없이 호출하면 최신 리서치 목록 반환.
-        group: research
-        target_description: (파라미터 없음 — 최신 리서치 목록 반환). topic 옵션으로 주제 필터링 가능.
+        - 기업정보
+        - 재무제표
+        - 공시
+        - DART
+        - SEC
+      crypto:
+        returns: scalar
+        description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
+        group: finance
+        target_description: 코인 심볼 (BTC, ETH, SOL 등)
         router: handler
-        tool: fetch_pew_research
-        implementation: Pew Research RSS 피드 파싱 (feedparser). 입력 파라미터 없이 최신 리서치 목록 반환.
-      search_guardian:
+        tool: crypto_price
+        implementation: CoinGecko 무료 API로 암호화폐 시세 조회 (requests HTTP)
+        target_key: coin_id
+      kosis:
         returns: items
-        description: Guardian 신문 아카이브 검색. 영국·국제 기사 위주, 영어 검색.
+        description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. items(행 dict). 자세히 read_guide(query="통계").
         group: research
-        target_description: 검색어 또는 키워드 (영어).
+        target_description: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 표준 table 통화도 반환(period=기간 축, 지표·분류 조합=시리즈) → >> [engines:chart/spreadsheet] / [engines:document](table 블록). ⚠️다차원 통계표는 통화가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.
         router: handler
-        tool: search_guardian
-        implementation: Guardian Open Platform API로 뉴스 아카이브 검색 (API키 필요). records[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 폐지(records를 문자열로 파괴하던 결함 제거).
+        tool: kosis_lookup
+        implementation: KOSIS API 통합 — org_id+tbl_id면 get_data(또는 info=true시 get_statistics_info), indicator면 get_indicators, query면 integrated_search.
         target_key: query
-      world_bank:
+        keywords:
+        - 통계
+        - kosis
+        - 통계청
+        - 인구
+        - GDP
+        - 물가
+        - 실업률
+      legal:
         returns: items
-        description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. items(행 dict — 연도+지표값) 반환, 소비자가 table 재구성.
-        group: world
-        target_description: 지표명 또는 코드 (예 "GDP"/"인구"/"실업률" 자연어 가능, NY.GDP.MKTP.CD 코드도). country는 국가명(한국/미국) 또는 ISO 코드. 반환에 table={columns:[연도,지표],rows:[[연도,값],...]} 포함 — 그대로 engines:chart{table:...}/spreadsheet{table:...}로 흘려보내 reshape 없이 시각화/표.
+        description: 대한민국 법률 통합 검색 (law.go.kr). query/id 분기, target 10종(법령/판례/규칙 등). 자세히 read_guide(query="법률").
+        group: legal
+        target_description: query(검색어) 또는 id(상세). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(법률서식).
         router: handler
-        tool: fetch_world_bank_data
-        implementation: 세계은행 공개 API로 국가별 경제/사회 지표 시계열 조회
-        target_key: indicator
-      search_books:
-        returns: items
-        description: 글로벌 도서 검색 (Google Books). 해외 도서·원서 포함. 한국 도서관 소장/대출 정보는 sense:book(도서관정보나루) 사용.
-        group: culture
-        target_description: 검색 쿼리
-        router: handler
-        tool: search_books
-        implementation: Google Books API로 글로벌 도서 검색 (영어/다국어). 한국 도서는 sense:book 사용.
+        tool: legal_lookup
+        implementation: 국가법령정보센터 API 통합 — query면 /lawSearch.do, id면 /lawService.do. target 파라미터로 10종 영역 분기.
         target_key: query
-      search_shopping:
+        keywords:
+        - 법률
+        - 법령
+        - 판례
+        - 법
+        - 조항
+        - 헌재
+        - 행정규칙
+      search_local:
         returns: items
-        description: 상품 검색 및 가격 비교 (네이버 API=어디서나; 다나와·중고는 브라우저 스크래핑이라 맥 전용, 폰선 네이버만)
+        description: 지역 커뮤니티(네이버 카페) 검색. 동네 주민들의 후기·추천·정보 수집용. 가게/음식점 공식 검색은 sense:restaurant(카카오+네이버 API) 사용.
         group: research
-        target_description: 상품명
+        target_description: 검색어
         router: handler
-        tool: search_shopping
-        implementation: Naver Shopping API + Playwright로 다나와/중고마켓 비공식 스크래핑 병렬 실행
+        tool: local_search
+        implementation: Naver Cafe API로 지역 커뮤니티 글 검색 (주민 후기, 추천, 지역 정보). 공식 가게 DB 검색이 아닌 커뮤니티 의견 수집.
+        target_key: query
+      local_query:
+        returns: items
+        description: 축적된 지역 정보 DB 조회 (정기 수집된 가게·커뮤니티 데이터). 실시간 검색은 search_local.
+        group: places
+        target_description: 검색어 (FTS5 전문검색, 한국어 토큰화 지원).
+        router: handler
+        tool: local_db_query
+        implementation: SQLite FTS(전문검색)로 축적된 지역 정보 DB 조회
         target_key: query
       weather:
         returns: items
@@ -923,83 +992,183 @@ nodes:
                 title: '{title}'
                 lines:
                 - '{meta}'
-      search_local:
-        returns: items
-        description: 지역 커뮤니티(네이버 카페) 검색. 동네 주민들의 후기·추천·정보 수집용. 가게/음식점 공식 검색은 sense:restaurant(카카오+네이버 API) 사용.
-        group: research
-        target_description: 검색어
-        router: handler
-        tool: local_search
-        implementation: Naver Cafe API로 지역 커뮤니티 글 검색 (주민 후기, 추천, 지역 정보). 공식 가게 DB 검색이 아닌 커뮤니티 의견 수집.
-        target_key: query
-      local_query:
-        returns: items
-        description: 축적된 지역 정보 DB 조회 (정기 수집된 가게·커뮤니티 데이터). 실시간 검색은 search_local.
-        group: places
-        target_description: 검색어 (FTS5 전문검색, 한국어 토큰화 지원).
-        router: handler
-        tool: local_db_query
-        implementation: SQLite FTS(전문검색)로 축적된 지역 정보 DB 조회
-        target_key: query
-      cctv:
-        returns: items
-        description: CCTV/웹캠 조회 (op 분기). search(키워드 통합검색)/nearby(좌표 근처, lat·lng 필수). 출력은 항상 lat/lng·playable 포함, stream_tags 동봉 시 채팅창 재생. 자세히 read_guide(query="cctv").
-        group: media
-        keywords:
-        - cctv
-        - 교통
-        - 실시간
-        - 카메라
-        - 보여줘
-        - 봐줘
-        - traffic
-        - camera
-        - 영상
-        - 근처
-        - 주변
-        target_description: search — query 키워드(전주·해운대·경부 등). nearby/webcam — lat·lng 필수, radius_km(km) 옵션. webcam은 해외 경치 웹캠(Windy).
+      host:
+        returns: scalar
+        description: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라 기계를 직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
+        group: device
+        target_description: 'op=status(기본): 전면 앱·CPU·메모리·디스크·배터리·가동시간·로드평균·프로세스 수 한 눈에. apps: 메모리 점유 상위 프로세스(limit 옵션, 기본 12). resources: per-core CPU·스왑·디스크 파티션별·네트워크 상세.'
         target_key: op
         router: handler
-        tool: cctv_query
+        tool: host_op
+        runs_on: mac_only
+        ops:
+          default: status
+          values:
+            status: 이 기계 상태 한 눈에 (전면앱·CPU·메모리·디스크·배터리·가동시간)
+            apps: 자원(메모리)을 많이 쓰는 프로세스 상위 N (limit 옵션)
+            resources: 상세 지표 (per-core CPU·스왑·디스크 파티션·네트워크·배터리)
+        implementation: pc-manager 패키지 host_op 핸들러 — psutil로 CPU/메모리/스왑/디스크/네트워크/배터리, lsappinfo로 전면 앱(권한 프롬프트 無), runtime_utils.detect_body로 몸 이름. 폰은 자기 센서 별도라 mac_only.
+        keywords:
+        - 내컴퓨터
+        - 시스템상태
+        - cpu
+        - 메모리
+        - 디스크
+        - 배터리
+        - 내몸
+        - 프로세스
+        app:
+          instrument: host
+          icon: 🖥️
+          name: 시스템
+          order: 15
+          phone_render: false
+          modes:
+          - name: 상태
+            auto_run: true
+            action: '[sense:host]{op: "status"}'
+            view:
+            - type: metric
+              label: CPU
+              big: '{cpu_percent}'
+              unit: '%'
+              sub: '{body}{frontmost_app|opt:  ·  ,}'
+            - type: kv
+              title: 메모리 · 디스크 · 전원
+              rows:
+              - k: 메모리
+                v: '{memory.used_gb} / {memory.total_gb} GB ({memory.percent}%)'
+              - k: 디스크 (/)
+                v: '{disk_root.free_gb} GB 여유 / {disk_root.total_gb} GB ({disk_root.percent}%)'
+              - k: 배터리
+                v: '{battery.percent|opt:,%}'
+              - k: 가동시간
+                v: '{uptime_hours} 시간'
+              - k: 프로세스 수
+                v: '{process_count}'
+          - name: 프로세스
+            auto_run: true
+            action: '[sense:host]{op: "apps", limit: 15}'
+            view:
+            - type: kv_list
+              title: 메모리 점유 상위
+              from: top
+              k: '{name}'
+              v: '{mem_percent}% · CPU {cpu_percent}%'
+          - name: 자원
+            auto_run: true
+            action: '[sense:host]{op: "resources"}'
+            view:
+            - type: kv
+              title: CPU · 메모리 · 스왑 · 네트워크
+              rows:
+              - k: CPU
+                v: '{cpu.percent_overall}% · {cpu.logical_cores} 코어'
+              - k: 메모리
+                v: '{memory.used_gb} / {memory.total_gb} GB ({memory.percent}%)'
+              - k: 스왑
+                v: '{swap.used_gb} / {swap.total_gb} GB ({swap.percent}%)'
+              - k: 네트워크
+                v: ↑ {network.sent_gb} · ↓ {network.recv_gb} GB
+              - k: 가동시간
+                v: '{uptime_hours} 시간'
+            - type: kv_list
+              title: 디스크 파티션
+              from: disks
+              k: '{mount}'
+              v: '{free_gb} GB 여유 / {total_gb} GB ({percent}%)'
+      radio:
+        returns: items
+        description: 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
+        target_description: 'op로 분기 (기본 search).
+
+          - search: name(방송국 이름)·tag·country·language·limit 등. Radio Browser 전세계.
+
+          - korean: broadcaster(KBS/MBC/SBS/TBS/CBS/EBS, 비우면 전체) 한국 방송사 채널.
+
+          '
+        target_key: op
+        group: media
+        router: handler
+        tool: radio_search_op
         ops:
           default: search
           values:
-            search: 키워드로 전국 CCTV+해외 웹캠 통합 검색 (기본)
-            nearby: 좌표 근처 CCTV (lat·lng 필수, radius_km km)
-            webcam: 좌표 근처 해외 경치 웹캠 (Windy 직행, 교통 CCTV 건너뜀)
-        implementation: cctv_search/nearby/webcam op 분기 (카카오 우선 → TOPIS/UTIC/ITS → Windy 폴백; webcam은 Windy 직행).
+            search: 전세계 인터넷 라디오 검색 (Radio Browser)
+            korean: 한국 주요 방송사 채널 (KBS/MBC/SBS 등)
+        implementation: radio 패키지 op 분기. search=search_radio, korean=get_korean_radio.
+        keywords:
+        - 라디오
+        - 인터넷라디오
+        - 한국라디오
+        - KBS
+        - MBC
+        - SBS
         app:
-          instrument: cctv
-          icon: 📹
-          name: CCTV
-          order: 12
-          inputs:
-          - key: q
-            type: text
-            label: 검색
-            placeholder: '지역·도로 (예: 해운대, 경부)'
-            default: 해운대
-          auto_run: true
-          action: '[sense:cctv]{op: "search", query: "$q"}'
-          view:
-          - type: map
-            markers: items
-            max: 100
-            'on':
-              marker_click:
-                stream: true
-          - type: metric
-            label: 검색 결과
-            big: '{count}개'
-          - type: list_action
-            from: items
-            icon: 📹
-            empty: CCTV를 찾지 못했습니다
-            title: '{name}'
-            sub: '{region}{road_name|opt: · ,}'
-            button:
-              label: ▶ 보기
-              stream: true
+          icon: 📻
+          name: 라디오
+          order: 5
+          modes:
+          - name: 한국
+            auto_run: true
+            buttons:
+            - label: ■ 정지
+              action: '[limbs:radio]{op: "stop"}'
+            action: '[sense:radio]{op: "korean"}'
+            view:
+            - type: list_action
+              from: items
+              icon: 📻
+              title: '{name}'
+              sub: '{broadcaster} · {description}'
+              button:
+                label: ▶
+                action: '[limbs:radio]{op: "play", station_id: "{station_id}"}'
+              button2:
+                label: ♡
+                action: '[limbs:radio_favorite]{op: "add", station_id: "{station_id}", name: "{name}"}'
+          - name: 검색
+            buttons:
+            - label: ■ 정지
+              action: '[limbs:radio]{op: "stop"}'
+            inputs:
+            - key: q
+              type: text
+              placeholder: 방송국 이름·태그  예) jazz, BBC
+              required: true
+            action: '[sense:radio]{op: "search", query: "$q", limit: 30}'
+            view:
+            - type: list_action
+              from: items
+              icon: 📻
+              title: '{name}'
+              sub: '{country} · {tags|trunc:40}'
+              button:
+                label: ▶
+                action: '[limbs:radio]{op: "play", stream_url: "{stream_url}"}'
+              button2:
+                label: ♡
+                action: '[limbs:radio_favorite]{op: "add", stream_url: "{stream_url}", name: "{name}"}'
+          - name: 즐겨찾기
+            auto_run: true
+            buttons:
+            - label: ■ 정지
+              action: '[limbs:radio]{op: "stop"}'
+            action: '[limbs:radio_favorite]{op: "list"}'
+            view:
+            - type: list_action
+              from: items
+              empty: 즐겨찾기가 없습니다 — 한국·검색 탭에서 ♡ 를 눌러 추가하세요
+              icon: ♥
+              title: '{name}'
+              sub: '{added_at}'
+              button:
+                label: ▶
+                action: '[limbs:radio]{op: "play", station_id: "{station_id}", stream_url: "{stream_url}"}'
+              button2:
+                label: ✕
+                action: '[limbs:radio_favorite]{op: "remove", name: "{name}"}'
+                refresh: true
       commercial:
         returns: items
         description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
@@ -1056,62 +1225,6 @@ nodes:
                   link:
                     href: '{url}'
                     label: 카카오맵·상세 보기 →
-      search_ddg:
-        returns: items
-        description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는 search_news, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
-        group: research
-        target_description: 검색어 (영어 권장). region/safesearch 옵션 가능.
-        router: handler
-        tool: ddgs_search
-        implementation: DuckDuckGo ddgs 라이브러리로 웹 검색. 쿼리 언어 자동 감지(영어→글로벌, 한국어→한국).
-        target_key: query
-      crawl:
-        returns: items
-        description: 웹페이지 원문 읽기 (URL 필요). items=문서 IR(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
-        group: research
-        target_description: 읽을 페이지 URL (http/https). 검색 결과의 link 필드 그대로 전달 가능.
-        router: handler
-        tool: crawl_website
-        implementation: 1차 requests+BeautifulSoup 정적 크롤링, 콘텐츠 부족 시 Chrome MCP(실제 브라우저)로 자동 폴백. JS 렌더링 사이트도 처리 가능.
-        target_key: url
-      search_news:
-        returns: items
-        description: 뉴스만 검색 (Google News). 신문 생성, 뉴스 모니터링 등 뉴스 전용 작업에 사용.
-        group: research
-        target_description: 뉴스 검색어. 언어 자동 감지 — 한국어는 한국 뉴스, 영어는 글로벌 뉴스.
-        router: handler
-        tool: google_news_search
-        implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
-        target_key: query
-      collect:
-        returns: items
-        runs_on: mac_only
-        description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.
-        target_description: 'op로 분기 (기본 run).
-
-          - run: source(프로필 ID 또는 URL) 크롤링. URL이면 selectors/max_items, 없으면 등록된 프로필 목록.
-
-          - sites: 수집 사이트 프로필 CRUD. action(list 기본/register/delete) + site_id + guide_code.
-
-          - query: 축적 데이터 검색. action(search 기본/stats/recent/detail/delete) + query/site_id/item_id/limit.
-
-          '
-        target_key: op
-        group: places
-        router: handler
-        tool: collect_op
-        ops:
-          default: run
-          values:
-            run: 사이트/URL 크롤링 (구조화 수집)
-            sites: 수집 사이트 프로필 관리 (CRUD)
-            query: 축적된 수집 데이터 검색 (로컬 DB)
-        implementation: web-collector 패키지 op 분기. run=backend web_collector 크롤 위임, sites=manage_sites, query=collector_db.
-        keywords:
-        - 수집
-        - 크롤링
-        - 사이트프로필
-        - 축적데이터
       realty:
         returns: items
         description: 부동산 시세·매물 (op 분기). query=시세/매물(source=molit 국토부 실거래가 기본 / source=zigbang 직방 현재 매물·링크·사진), codes=법정동 코드. region 이름만 넣으면 자동 해소.
@@ -1250,6 +1363,206 @@ nodes:
                   title: '{거래년도}.{거래월}.{거래일}'
                   lines:
                   - '{거래금액}만원 · {면적}㎡ · {층}층'
+      search_shopping:
+        returns: items
+        description: 상품 검색 및 가격 비교 (네이버 API=어디서나; 다나와·중고는 브라우저 스크래핑이라 맥 전용, 폰선 네이버만)
+        group: research
+        target_description: 상품명
+        router: handler
+        tool: search_shopping
+        implementation: Naver Shopping API + Playwright로 다나와/중고마켓 비공식 스크래핑 병렬 실행
+        target_key: query
+      startup:
+        returns: items
+        description: 정부 창업/중소기업 지원사업 공고 검색 (K-Startup). 다중 키워드는 OR 합집합.
+        group: research
+        target_description: 'query(검색 키워드, 예: AI·예비창업패키지·정책자금. 여러 단어면 OR 합집합 — "AI 인공지능"=둘 중 하나라도). source 옵션 — kstartup(기본, K-Startup 창업진흥원), all(통합 시도), mss(중기부). ⚠️중기부(mss)는 data.go.kr API 폐기로 현재 미가용 → kstartup 권장. count(기본 10, 최대 50).'
+        router: handler
+        tool: startup_search
+        implementation: K-Startup + 중기부 사업공고 API 통합. source=all이면 둘 다 호출, kstartup/mss면 한쪽만.
+        target_key: query
+        keywords:
+        - 창업
+        - 사업공고
+        - 지원사업
+        - 예비창업
+        - 정책자금
+        - R&D
+        app:
+          icon: 🚀
+          name: 사업공고
+          order: 11
+          modes:
+          - name: 창업·지원
+            inputs:
+            - key: q
+              type: text
+              placeholder: 키워드  예) AI·예비창업·R&D
+              required: true
+            - key: src
+              type: select
+              label: 소스
+              default: kstartup
+              options:
+              - value: kstartup
+                label: K-Startup
+              - value: mss
+                label: 중기부
+              - value: all
+                label: 통합
+            action: '[sense:startup]{query: "$q", source: "$src"}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                link:
+                  href: '{url}'
+                  label: 공고 상세 →
+      paper:
+        returns: items
+        description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
+        target_description: "op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
+        target_key: op
+        group: research
+        router: handler
+        tool: paper_op
+        ops:
+          default: search
+          values:
+            search: 논문·학위논문 검색 (source openalex/arxiv/pubmed/semantic/nanet)
+            download: 논문 PDF 다운로드 (source arxiv/pubmed)
+        implementation: study 패키지 op/source 분기. search=openalex/arxiv/pubmed/semantic_scholar/nanet(researchTotal), download=arxiv/pubmed_pdf.
+        keywords:
+        - 논문
+        - 학술
+        - arxiv
+        - pubmed
+        - 논문검색
+        - 학위논문
+      researcher:
+        returns: items
+        description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search_ddg.
+        target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망. 공저자 소속·협업으로 신원 재확인.\n"
+        target_key: op
+        group: research
+        router: handler
+        tool: researcher_op
+        ops:
+          default: find
+          values:
+            find: 연구자 검색 (이름→소속·출생연도·lodID, 동명이인 분리)
+            coauthor: 공저자망 (lodID→공저자, 신원 재확인)
+        implementation: study 패키지. find=authorView, coauthor=coAuthor (국회도서관 LOSI OpenAPI, NANET_API_KEY).
+        keywords:
+        - 연구자
+        - 학자
+        - 인물찾기
+        - 동명이인
+        - 공저자
+        - researcher
+      pew_research:
+        returns: items
+        description: Pew Research 최신 여론조사/리서치 보고서 목록. 미국 사회·정치·기술 트렌드 조사. 파라미터 없이 호출하면 최신 리서치 목록 반환.
+        group: research
+        target_description: (파라미터 없음 — 최신 리서치 목록 반환). topic 옵션으로 주제 필터링 가능.
+        router: handler
+        tool: fetch_pew_research
+        implementation: Pew Research RSS 피드 파싱 (feedparser). 입력 파라미터 없이 최신 리서치 목록 반환.
+      search_guardian:
+        returns: items
+        description: Guardian 신문 아카이브 검색. 영국·국제 기사 위주, 영어 검색.
+        group: research
+        target_description: 검색어 또는 키워드 (영어).
+        router: handler
+        tool: search_guardian
+        implementation: Guardian Open Platform API로 뉴스 아카이브 검색 (API키 필요). records[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 폐지(records를 문자열로 파괴하던 결함 제거).
+        target_key: query
+      world_bank:
+        returns: items
+        description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. items(행 dict — 연도+지표값) 반환, 소비자가 table 재구성.
+        group: world
+        target_description: 지표명 또는 코드 (예 "GDP"/"인구"/"실업률" 자연어 가능, NY.GDP.MKTP.CD 코드도). country는 국가명(한국/미국) 또는 ISO 코드. 반환에 table={columns:[연도,지표],rows:[[연도,값],...]} 포함 — 그대로 engines:chart{table:...}/spreadsheet{table:...}로 흘려보내 reshape 없이 시각화/표.
+        router: handler
+        tool: fetch_world_bank_data
+        implementation: 세계은행 공개 API로 국가별 경제/사회 지표 시계열 조회
+        target_key: indicator
+      search_books:
+        returns: items
+        description: 글로벌 도서 검색 (Google Books). 해외 도서·원서 포함. 한국 도서관 소장/대출 정보는 sense:book(도서관정보나루) 사용.
+        group: culture
+        target_description: 검색 쿼리
+        router: handler
+        tool: search_books
+        implementation: Google Books API로 글로벌 도서 검색 (영어/다국어). 한국 도서는 sense:book 사용.
+        target_key: query
+      search_ddg:
+        returns: items
+        description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는 search_news, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
+        group: research
+        target_description: 검색어 (영어 권장). region/safesearch 옵션 가능.
+        router: handler
+        tool: ddgs_search
+        implementation: DuckDuckGo ddgs 라이브러리로 웹 검색. 쿼리 언어 자동 감지(영어→글로벌, 한국어→한국).
+        target_key: query
+      crawl:
+        returns: items
+        description: 웹페이지 원문 읽기 (URL 필요). items=문서 IR(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
+        group: research
+        target_description: 읽을 페이지 URL (http/https). 검색 결과의 link 필드 그대로 전달 가능.
+        router: handler
+        tool: crawl_website
+        implementation: 1차 requests+BeautifulSoup 정적 크롤링, 콘텐츠 부족 시 Chrome MCP(실제 브라우저)로 자동 폴백. JS 렌더링 사이트도 처리 가능.
+        target_key: url
+      search_news:
+        returns: items
+        description: 뉴스만 검색 (Google News). 신문 생성, 뉴스 모니터링 등 뉴스 전용 작업에 사용.
+        group: research
+        target_description: 뉴스 검색어. 언어 자동 감지 — 한국어는 한국 뉴스, 영어는 글로벌 뉴스.
+        router: handler
+        tool: google_news_search
+        implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
+        target_key: query
+      search_naver:
+        returns: items
+        description: 네이버 검색 API. 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)에서 DuckDuckGo/Google보다 압도적으로 강함. type 파라미터로 도메인 선택 (기본 webkr). 뉴스 단독 검색은 type='news' 또는 search_news(Google News) 중 한국 출처 우선이면 이쪽.
+        group: research
+        target_description: 검색어. type 옵션으로 도메인 선택 (webkr/news/blog/cafe/kin/book/encyc/doc/shop, 기본 webkr).
+        router: handler
+        tool: naver_search
+        implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 9개 도메인(webkr/news/blog/cafe/kin/book/encyc/doc/shop) 모두 호출. 무료 일 25k 쿼리.
+        target_key: query
+      collect:
+        returns: items
+        runs_on: mac_only
+        description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.
+        target_description: 'op로 분기 (기본 run).
+
+          - run: source(프로필 ID 또는 URL) 크롤링. URL이면 selectors/max_items, 없으면 등록된 프로필 목록.
+
+          - sites: 수집 사이트 프로필 CRUD. action(list 기본/register/delete) + site_id + guide_code.
+
+          - query: 축적 데이터 검색. action(search 기본/stats/recent/detail/delete) + query/site_id/item_id/limit.
+
+          '
+        target_key: op
+        group: places
+        router: handler
+        tool: collect_op
+        ops:
+          default: run
+          values:
+            run: 사이트/URL 크롤링 (구조화 수집)
+            sites: 수집 사이트 프로필 관리 (CRUD)
+            query: 축적된 수집 데이터 검색 (로컬 DB)
+        implementation: web-collector 패키지 op 분기. run=backend web_collector 크롤 위임, sites=manage_sites, query=collector_db.
+        keywords:
+        - 수집
+        - 크롤링
+        - 사이트프로필
+        - 축적데이터
       video:
         returns: scalar
         runs_on: mac_only
@@ -1324,319 +1637,6 @@ nodes:
             button2:
               label: ⬇
               action: '[limbs:music]{op: "download", mode: "client", url: "https://www.youtube.com/watch?v={video_id}"}'
-      world:
-        returns: scalar
-        description: 세계 상태 감각 (op 분기). 경제·뉴스·기술·날씨 스냅샷 조회/추이/재수집.
-        target_description: 'op로 분기 (기본 snapshot).
-
-          - snapshot: 오늘의 세계 상태(경제 지표·주요 뉴스·기술 동향·날씨). 파라미터 없음.
-
-          - trend: 최근 N일 추이 (경제 변화·뉴스 흐름). days 옵션(기본 7).
-
-          - refresh: 강제 재수집(오늘 데이터 덮어씀). 외부 API 부하라 빈번 호출 금지. 파라미터 없음.
-
-          '
-        group: world
-        target_key: op
-        router: system
-        func: world_op
-        ops:
-          default: snapshot
-          values:
-            snapshot: 오늘의 세계 상태 스냅샷 (경제·주요뉴스·기술동향·날씨)
-            trend: 최근 N일 추이 (days 옵션, 기본 7)
-            refresh: 강제 재수집 (외부 API 부하, 빈번 호출 금지)
-        implementation: _route_system이 op로 분기 — snapshot=world_pulse / trend=world_trend / refresh=world_refresh, execute_world_pulse에 위임.
-        keywords:
-        - 세계
-        - 오늘뉴스
-        - 경제
-        - 동향
-        - 주요뉴스
-        - 뉴스
-        - 추이
-        - 트렌드
-        - 변화
-        - 뉴스흐름
-        - 재수집
-        - 갱신
-      self_check:
-        returns: effect
-        description: 전수 자가점검 실행 — 부작용 없는 모든 IBL 액션을 테스트하여 시스템 건강 상태 확인
-        target_description: (파라미터 없음 — 전수 자가점검 실행). 결과는 world_pulse.db에 기록.
-        group: world
-        router: system
-        func: self_check
-        implementation: 전체 IBL 액션 중 안전한 액션을 전수 실행, 결과를 world_pulse.db에 기록, 패턴 분석
-        keywords:
-        - 자가점검
-        - 전수점검
-        - 면역
-        - 건강체크
-        - 셀프체크
-        - self-check
-      devdocs:
-        returns: items
-        description: 소프트웨어 라이브러리/프레임워크 공식 문서 (op 분기, Context7). 코드 작성 시 API 참조용. 논문은 paper.
-        target_description: 'op로 분기 (기본 resolve).
-
-          - resolve: library_name(예 ''react'',''fastapi'') → Context7 ID. search 전 첫 단계.
-
-          - search: query(알고 싶은 내용) + library_id(resolve 결과).
-
-          '
-        target_key: op
-        group: research
-        router: handler
-        tool: devdocs_op
-        ops:
-          default: resolve
-          values:
-            resolve: 라이브러리 이름 → Context7 ID (첫 단계)
-            search: 공식 문서 검색 (library_id + query)
-        implementation: context7 패키지 op 분기. resolve=resolve_library, search=search_library_docs.
-        keywords:
-        - 라이브러리문서
-        - API문서
-        - context7
-        - 공식문서
-      search_naver:
-        returns: items
-        description: 네이버 검색 API. 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)에서 DuckDuckGo/Google보다 압도적으로 강함. type 파라미터로 도메인 선택 (기본 webkr). 뉴스 단독 검색은 type='news' 또는 search_news(Google News) 중 한국 출처 우선이면 이쪽.
-        group: research
-        target_description: 검색어. type 옵션으로 도메인 선택 (webkr/news/blog/cafe/kin/book/encyc/doc/shop, 기본 webkr).
-        router: handler
-        tool: naver_search
-        implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 9개 도메인(webkr/news/blog/cafe/kin/book/encyc/doc/shop) 모두 호출. 무료 일 25k 쿼리.
-        target_key: query
-      startup:
-        returns: items
-        description: 정부 창업/중소기업 지원사업 공고 검색 (K-Startup). 다중 키워드는 OR 합집합.
-        group: research
-        target_description: 'query(검색 키워드, 예: AI·예비창업패키지·정책자금. 여러 단어면 OR 합집합 — "AI 인공지능"=둘 중 하나라도). source 옵션 — kstartup(기본, K-Startup 창업진흥원), all(통합 시도), mss(중기부). ⚠️중기부(mss)는 data.go.kr API 폐기로 현재 미가용 → kstartup 권장. count(기본 10, 최대 50).'
-        router: handler
-        tool: startup_search
-        implementation: K-Startup + 중기부 사업공고 API 통합. source=all이면 둘 다 호출, kstartup/mss면 한쪽만.
-        target_key: query
-        keywords:
-        - 창업
-        - 사업공고
-        - 지원사업
-        - 예비창업
-        - 정책자금
-        - R&D
-        app:
-          icon: 🚀
-          name: 사업공고
-          order: 11
-          modes:
-          - name: 창업·지원
-            inputs:
-            - key: q
-              type: text
-              placeholder: 키워드  예) AI·예비창업·R&D
-              required: true
-            - key: src
-              type: select
-              label: 소스
-              default: kstartup
-              options:
-              - value: kstartup
-                label: K-Startup
-              - value: mss
-                label: 중기부
-              - value: all
-                label: 통합
-            action: '[sense:startup]{query: "$q", source: "$src"}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                link:
-                  href: '{url}'
-                  label: 공고 상세 →
-      contest:
-        returns: items
-        description: Kaggle 국제 AI/데이터 경진대회 검색. 상금·마감일·주최로 출품 기회 탐색.
-        group: research
-        target_description: 'query(검색 키워드, 예: AI·LLM·vision·NLP). sort 옵션 — recentlyCreated(기본, 최근 개설)/latestDeadline(마감 늦은 순=진행 중 위주)/prize(상금 큰 순)/numberOfTeams(참가팀 많은 순). category(featured/research/playground 등, 선택). count(기본 10, 최대 50). 반환=records 통화(상금·마감일 meta) → 앱 card_list 직결.'
-        router: handler
-        tool: contest_search
-        scope: workspace
-        implementation: Kaggle Competitions API(/competitions/list, Bearer 토큰 auth_manager 'kaggle'). search/sortBy/category 서버 쿼리, 응답 대회 리스트를 records로 매핑. 폰 네이티브 가능(HTTP+stdlib, KAGGLE_API_TOKEN 폰 프로비저닝).
-        target_key: query
-        keywords:
-        - 공모전
-        - 대회
-        - 경진대회
-        - 해커톤
-        - kaggle
-        - 캐글
-        app:
-          icon: 🏆
-          name: AI 공모전
-          order: 12
-          modes:
-          - name: Kaggle
-            inputs:
-            - key: q
-              type: text
-              placeholder: 키워드  예) AI·LLM·vision (비우면 전체)
-            - key: sort
-              type: select
-              label: 정렬
-              default: recentlyCreated
-              options:
-              - value: recentlyCreated
-                label: 최근 개설
-              - value: latestDeadline
-                label: 진행 중
-              - value: prize
-                label: 상금순
-              - value: numberOfTeams
-                label: 인기순
-            action: '[sense:contest]{query: "$q", sort: "$sort"}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                image: '{image}'
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{summary}'
-                link:
-                  href: '{url}'
-                  label: 대회 페이지 →
-      kosis:
-        returns: items
-        description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. items(행 dict). 자세히 read_guide(query="통계").
-        group: research
-        target_description: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 표준 table 통화도 반환(period=기간 축, 지표·분류 조합=시리즈) → >> [engines:chart/spreadsheet] / [engines:document](table 블록). ⚠️다차원 통계표는 통화가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.
-        router: handler
-        tool: kosis_lookup
-        implementation: KOSIS API 통합 — org_id+tbl_id면 get_data(또는 info=true시 get_statistics_info), indicator면 get_indicators, query면 integrated_search.
-        target_key: query
-        keywords:
-        - 통계
-        - kosis
-        - 통계청
-        - 인구
-        - GDP
-        - 물가
-        - 실업률
-      legal:
-        returns: items
-        description: 대한민국 법률 통합 검색 (law.go.kr). query/id 분기, target 10종(법령/판례/규칙 등). 자세히 read_guide(query="법률").
-        group: legal
-        target_description: query(검색어) 또는 id(상세). target 옵션 — law(기본/법령), prec(판례), admrul(행정규칙), ordin(자치법규), exp(법령해석), detc(헌재결정), trty(조약), eng_law(영문법령), law_term(법률용어), law_form(법률서식).
-        router: handler
-        tool: legal_lookup
-        implementation: 국가법령정보센터 API 통합 — query면 /lawSearch.do, id면 /lawService.do. target 파라미터로 10종 영역 분기.
-        target_key: query
-        keywords:
-        - 법률
-        - 법령
-        - 판례
-        - 법
-        - 조항
-        - 헌재
-        - 행정규칙
-      radio:
-        returns: items
-        description: 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
-        target_description: 'op로 분기 (기본 search).
-
-          - search: name(방송국 이름)·tag·country·language·limit 등. Radio Browser 전세계.
-
-          - korean: broadcaster(KBS/MBC/SBS/TBS/CBS/EBS, 비우면 전체) 한국 방송사 채널.
-
-          '
-        target_key: op
-        group: media
-        router: handler
-        tool: radio_search_op
-        ops:
-          default: search
-          values:
-            search: 전세계 인터넷 라디오 검색 (Radio Browser)
-            korean: 한국 주요 방송사 채널 (KBS/MBC/SBS 등)
-        implementation: radio 패키지 op 분기. search=search_radio, korean=get_korean_radio.
-        keywords:
-        - 라디오
-        - 인터넷라디오
-        - 한국라디오
-        - KBS
-        - MBC
-        - SBS
-        app:
-          icon: 📻
-          name: 라디오
-          order: 5
-          modes:
-          - name: 한국
-            auto_run: true
-            buttons:
-            - label: ■ 정지
-              action: '[limbs:radio]{op: "stop"}'
-            action: '[sense:radio]{op: "korean"}'
-            view:
-            - type: list_action
-              from: items
-              icon: 📻
-              title: '{name}'
-              sub: '{broadcaster} · {description}'
-              button:
-                label: ▶
-                action: '[limbs:radio]{op: "play", station_id: "{station_id}"}'
-              button2:
-                label: ♡
-                action: '[limbs:radio_favorite]{op: "add", station_id: "{station_id}", name: "{name}"}'
-          - name: 검색
-            buttons:
-            - label: ■ 정지
-              action: '[limbs:radio]{op: "stop"}'
-            inputs:
-            - key: q
-              type: text
-              placeholder: 방송국 이름·태그  예) jazz, BBC
-              required: true
-            action: '[sense:radio]{op: "search", query: "$q", limit: 30}'
-            view:
-            - type: list_action
-              from: items
-              icon: 📻
-              title: '{name}'
-              sub: '{country} · {tags|trunc:40}'
-              button:
-                label: ▶
-                action: '[limbs:radio]{op: "play", stream_url: "{stream_url}"}'
-              button2:
-                label: ♡
-                action: '[limbs:radio_favorite]{op: "add", stream_url: "{stream_url}", name: "{name}"}'
-          - name: 즐겨찾기
-            auto_run: true
-            buttons:
-            - label: ■ 정지
-              action: '[limbs:radio]{op: "stop"}'
-            action: '[limbs:radio_favorite]{op: "list"}'
-            view:
-            - type: list_action
-              from: items
-              empty: 즐겨찾기가 없습니다 — 한국·검색 탭에서 ♡ 를 눌러 추가하세요
-              icon: ♥
-              title: '{name}'
-              sub: '{added_at}'
-              button:
-                label: ▶
-                action: '[limbs:radio]{op: "play", station_id: "{station_id}", stream_url: "{stream_url}"}'
-              button2:
-                label: ✕
-                action: '[limbs:radio_favorite]{op: "remove", name: "{name}"}'
-                refresh: true
     description: '감각: 외부 정보 수집 및 질의 — 주가, 날씨, 뉴스, 학술, 부동산, 미디어, 법률, 세계 상태 등 외부 API 및 데이터 소스 접근'
     tags:
     - 검색
@@ -1675,106 +1675,6 @@ nodes:
     - startup.md
   self:
     actions:
-      photo:
-        returns: items
-        runs_on: anywhere
-        description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환. 실행되는 몸의 미디어(맥·폰 각자). 타임라인/통계/중복은 >> engines 변환자(groupby/filter).
-        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50). 결과 records에 lat/lng/taken_at/month/kind/camera/size 구조 필드 포함 → groupby·지도와 직결.'
-        group: photo
-        target_key: q
-        router: handler
-        tool: photo_op
-        implementation: handler.py _query_photos — mdfind(필터)로 경로, mdls(색인 메타)로 보강. 비색인 경로는 라이브 walk 폴백. photo_db 자체 인덱스 미사용(데스크탑 풍부창 REST만 사용).
-        keywords:
-        - 사진
-        - 동영상
-        - 미디어
-        - 사진 검색
-        - 사진 스캔
-        - 갤러리
-        - 사진 통계
-        - 타임라인
-        - 중복 사진
-        - 사진 상세
-        app:
-          instrument: photo
-          icon: 📷
-          name: 사진
-          order: 14
-          phone_render: true
-          modes:
-          - name: 갤러리
-            auto_run: true
-            note: 최근 사진·동영상 (OS 색인 직접, 스캔 불필요).
-            action: '[self:photo]{kind: "all", limit: 40}'
-            view:
-            - type: image_grid
-              from: items
-              image: '{image}'
-              title: '{title}'
-              lines:
-              - '{meta}'
-          - name: 검색
-            auto_run: true
-            inputs:
-            - key: q
-              type: text
-              placeholder: 파일명·기종 검색
-            action: '[self:photo]{q: "$q", limit: 40}'
-            view:
-            - type: image_grid
-              from: items
-              image: '{image}'
-              title: '{title}'
-              lines:
-              - '{meta}'
-          - name: 위치
-            auto_run: true
-            note: 위치(GPS) 정보가 있는 사진.
-            action: '[self:photo]{has_gps: true, limit: 40}'
-            view:
-            - type: image_grid
-              from: items
-              image: '{image}'
-              title: '{title}'
-              lines:
-              - '{meta}'
-      blog:
-        returns: items
-        runs_on: mac_only
-        description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스.
-        target_description: 'op로 분기 (기본 posts).
-
-          - posts: 글 목록. category/count 옵션.
-
-          - search: RAG 검색. query(필수) + mode(hybrid 기본/semantic/content) + limit. content는 post_id 또는 title.
-
-          - check_new: 마지막 조회 이후 새로 추가된 글 확인.
-
-          - rebuild_index: 검색 인덱스(벡터 임베딩) 재구축. 글 다량 추가 후.
-
-          - stats: 전체 글 수·카테고리/기간 분포·활동 트렌드.
-
-          '
-        target_key: op
-        group: blog
-        router: handler
-        tool: blog_op
-        ops:
-          default: posts
-          values:
-            posts: 글 목록 조회 (category/기간 필터)
-            search: RAG 검색 (mode hybrid/semantic/content)
-            check_new: 마지막 조회 이후 새 글 확인
-            rebuild_index: 검색 인덱스(벡터) 재구축
-            stats: 블로그 통계 (글 수·분포·트렌드)
-        implementation: blog 패키지 op 분기. posts=blog_get_posts, search=blog_search_op(mode), check_new=blog_check_new_posts, rebuild_index=rebuild_search_index, stats=blog_stats.
-        keywords:
-        - 블로그
-        - 블로그 검색
-        - 시맨틱
-        - 블로그 통계
-        - 인덱스
       recent_chats:
         returns: items
         description: 최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.
@@ -1801,64 +1701,6 @@ nodes:
         - 에이전트
         - 목록
         - 팀
-      memory:
-        returns: items
-        description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도. 자아별 사적 기억(폰·맥 각자 로컬, 동기화 안 함). 폰선 시맨틱 모델 없어 키워드(LIKE/FTS) 검색.
-        group: memory
-        target_description: save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.
-        target_key: op
-        router: handler
-        tool: memory_op
-        ops:
-          values:
-            save: 메모리 저장 (content 필수, category/keywords 자동 추출)
-            search: 키워드·자연어 검색 (FTS+시맨틱 통합)
-            read: 전문 조회 (memory_id)
-            delete: 삭제 (memory_id)
-        implementation: handler.py가 op로 분기 — save/search/read/delete 옛 함수에 위임.
-        keywords:
-        - 메모리
-        - 기억
-        - 장기기억
-        - 메모리 저장
-        - 메모리 검색
-        - 메모리 삭제
-        - 메모리 읽기
-      health:
-        returns: items
-        description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
-        group: health
-        target_description: 'save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호).'
-        target_key: op
-        router: handler
-        tool: health_op
-        ops:
-          values:
-            save: 건강 정보 저장 (info_type + data)
-            query: 조회 (query_type + keyword 옵션)
-            delete: 기록 삭제 (record_type + record_id)
-        implementation: handler.py가 op로 분기 — save는 save_health_info, query는 get_health_context, delete는 delete_health_record(soft-delete tombstone).
-        keywords:
-        - 건강
-        - 건강 저장
-        - 건강 조회
-        - 혈압
-        - 혈당
-        - 체중
-        - 투약
-      local_save:
-        returns: effect
-        description: 가게 정보·커뮤니티 언급을 지역 DB에 저장.
-        target_description: 저장할 데이터 (JSON). type 옵션으로 store/mention 분류.
-        group: system
-        router: handler
-        tool: local_db_save
-        implementation: SQLite DB에 가게/지역 정보 구조화 저장
-        keywords:
-        - 가게
-        - 지역
-        - 커뮤니티
-        - 저장
       discover:
         returns: scalar
         description: 키워드로 적합한 IBL 노드·액션 자동 탐색. 어떤 액션 쓸지 모를 때 첫 단계.
@@ -1873,102 +1715,6 @@ nodes:
         - 찾기
         - 도구검색
         - 액션
-      time:
-        returns: scalar
-        description: 현재 시간 조회 (로컬 시스템 시계, KST). 날짜·요일·시:분:초 반환.
-        group: system
-        target_description: (파라미터 없음). format 옵션으로 포맷 지정 가능.
-        router: handler
-        tool: get_current_time
-        implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
-      report:
-        returns: effect
-        runs_on: mac_only
-        description: 정기 보고서(AI 동향 등) 뷰어 + 작성 트리거 (op 분기). 최신 보기·목록·새 작성. 보고서는 맥 폴더 저장·맥 시스템 AI가 작성.
-        target_description: op로 분기 (기본 list). type(보고서 타입, 기본 ai_trend). read 는 path. new 는 맥 시스템 AI에 작성 요청.
-        group: report
-        target_key: op
-        router: handler
-        tool: report_op
-        ops:
-          default: list
-          values:
-            list: 타입별 보고서 목록
-            read: 보고서 읽기 (path, 없으면 최신)
-            latest: 타입 최신 보고서 본문
-            new: 시스템 AI에 새 보고서 작성 요청
-            types: 등록된 보고서 타입 목록
-        implementation: report-viewer 패키지 handler.py op 분기. outputs/ 보고서 폴더 조회·읽기 + new 는 SystemAIRunner.send_message 로 맥 시스템 AI 비동기 큐잉.
-        keywords:
-        - 보고서
-        - 정기보고
-        - AI 동향
-        - 동향 보고서
-        - 리포트
-        - report
-        app:
-          instrument: report
-          icon: 📑
-          name: 정기보고
-          order: 16
-          modes:
-          - name: 최신
-            auto_run: true
-            buttons:
-            - label: ✍ 새 AI 동향 보고서 작성
-              action: '[self:report]{op: "new", type: "ai_trend"}'
-            - label: ✍ 새 AI 창업·응모 보고서 작성
-              action: '[self:report]{op: "new", type: "ai_startup"}'
-            inputs:
-            - key: type
-              type: select
-              placeholder: 보고서 종류
-              options_action: '[self:report]{op: "types"}'
-              options_from: types
-              option_value: value
-              option_label: label
-            action: '[self:report]{op: "latest", type: "$type"}'
-            view:
-            - type: thread
-              from: items
-              text: '{text}'
-          - name: 목록
-            auto_run: true
-            inputs:
-            - key: type
-              type: select
-              placeholder: 보고서 종류
-              options_action: '[self:report]{op: "types"}'
-              options_from: types
-              option_value: value
-              option_label: label
-            action: '[self:report]{op: "list", type: "$type"}'
-            view:
-            - type: card_list
-              from: items
-              empty: 보고서가 없습니다 — 작성 탭에서 새 보고서를 만들어 보세요
-              card:
-                title: '{title}'
-                lines:
-                - '{sub}'
-              item_click:
-                action: '[self:report]{op: "read", path: "{path}"}'
-                view:
-                - type: thread
-                  from: items
-                  text: '{text}'
-          - name: 작성
-            auto_run: true
-            action: '[self:report]{op: "types"}'
-            view:
-            - type: list_action
-              from: types
-              icon: 📝
-              title: '{label}'
-              sub: 맥의 시스템 AI가 작성합니다
-              button:
-                label: ✍ 작성
-                action: '[self:report]{op: "new", type: "{value}"}'
       manage_events:
         returns: items
         description: 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
@@ -2157,332 +1903,42 @@ nodes:
         keywords:
         - 다운로드
         - 파일받기
-      read:
-        returns: scalar
-        description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
-        group: file
-        target_description: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션, 시트를 TSV 텍스트로. 스캔 PDF는 별도 OCR 필요.
-        router: handler
-        tool: read_op
-        implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
-        target_key: path
-      write:
-        returns: effect
-        description: 텍스트 파일 새로 쓰기·덮어쓰기. write→run 패턴의 한 축, append 아님.
-        group: file
-        target_description: 쓸 파일 경로 (절대 또는 상대). 기존 파일은 묻지 않고 덮어쓴다.
-        router: handler
-        tool: write_file
-        implementation: Python 파일 I/O로 로컬 파일 쓰기
-        target_key: path
-      list:
-        returns: items
-        description: 디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).
-        group: file
-        target_description: 조회할 디렉토리 경로. recursive 옵션으로 하위 포함 가능.
-        router: handler
-        tool: list_directory
-        implementation: os.listdir/pathlib로 디렉토리 내용 조회
-        target_key: path
-      file_find:
-        returns: items
-        description: 파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트 지정 (절대경로, ~/, 상대경로 모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀
-        group: file
-        target_description: 검색 패턴 (glob, 예 '*.md', '**/*.tsx'). path 옵션으로 검색 루트 지정.
-        keywords:
-        - 파일
-        - 찾기
-        - 검색
-        - find
-        - search
-        - 파일찾기
-        router: handler
-        tool: glob_files
-        implementation: pathlib.glob 패턴 검색. path 파라미터로 검색 루트 지정 (절대경로/~/상대경로). max_results로 결과 상한 (기본 200). 매칭 없으면 path 옵션 안내
-        target_key: pattern
-      grep:
-        returns: items
-        description: 파일 내용에서 패턴 검색 (grep/ripgrep). items(행 dict — 파일/줄번호/내용). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
-        group: file
-        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터.
-        keywords:
-        - 검색
-        - 내용검색
-        - grep
-        - 코드검색
-        router: handler
-        tool: grep_files
-        implementation: subprocess로 grep/ripgrep 실행하여 파일 내용 검색
-        target_key: pattern
-      edit:
-        returns: effect
-        description: 파일 부분 편집 (old_string → new_string 교체). 전체 덮어쓰기는 write.
-        group: file
-        target_description: 편집할 파일 경로. old_string/new_string 파라미터로 교체할 텍스트 지정.
-        router: handler
-        tool: edit_file
-        implementation: Python 문자열 치환으로 파일 부분 편집
-        target_key: path
-      copy:
-        returns: effect
-        description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사.
-        group: file
-        target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용)
-        router: handler
-        tool: copy_path
-        implementation: shutil.copy/copytree로 파일/폴더 복사
-        target_key: source
-      move:
-        returns: effect
-        description: 파일 또는 폴더 이동·이름 변경. 같은 폴더면 이름 변경, 다른 폴더면 이동.
-        group: file
-        target_description: src(원본)와 dest(이동/새 이름) 두 파라미터. (source/destination 별칭도 허용)
-        router: handler
-        tool: move_path
-        implementation: shutil.move로 파일/폴더 이동/이름변경
-        target_key: source
-      delete:
-        returns: effect
-        description: 파일 또는 폴더 영구 삭제. 휴지통 거치지 않음 — 신중히 사용.
-        group: file
-        target_description: 삭제할 파일 또는 폴더 경로. 폴더는 재귀 삭제 (rmtree).
-        router: handler
-        tool: delete_path
-        implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
-        target_key: path
-      storage:
-        returns: scalar
-        description: 디스크 용량 분석 (op 분기) — 폴더·확장자별 용량 집계. scan(분석 인덱스 구축)/summary(용량 집계)/volumes(볼륨 목록). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
-        group: file
-        target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
-        target_key: op
-        router: handler
-        tool: storage_op
-        ops:
-          default: volumes
-          values:
-            scan: 용량 분석 인덱스 구축 (treemap·확장자별 집계의 선행 단계)
-            summary: 폴더·확장자별 용량 집계 (scan 선행, 볼륨 생략 시 전체 통합)
-            volumes: 용량 분석된 볼륨 목록 (이름·경로·용량, 기본)
-        implementation: scan_storage/get_storage_summary/list_volumes op 분기 (pc-manager)
-      fs_query:
-        returns: items
-        description: 파일 메타 검색 (이름·확장자·크기·종류) — OS 색인(맥 Spotlight) 직접. 선스캔 불필요·항상 최신. 내용 검색은 grep, 패턴은 find. self:photo 와 같은 file_index 보편 질의 위의 종류-무관 preset.
-        group: file
-        target_description: search_term(이름 부분일치) · extension(확장자) · kind(image/video/audio/pdf/any) · min_size_mb · path(검색 루트, 생략 시 홈) · limit(기본 100). 결과 records(보편 파일 필드) + table 통화.
-        router: handler
-        tool: query_storage
-        implementation: pc-manager _query_storage — backend/file_index.query 위임(mdfind 무상태). 비색인 경로는 라이브 walk 폴백.
-        target_key: search_term
-        app:
-          instrument: files
-          icon: 🗂️
-          name: 파일
-          order: 16
-          modes:
-          - name: 검색
-            auto_run: true
-            inputs:
-            - key: q
-              type: text
-              placeholder: 파일명·확장자 검색 (예 report, pdf)
-            action: '[self:fs_query]{search_term: "$q", limit: 50}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{path}'
-          - name: 문서
-            auto_run: true
-            phone_render: false
-            note: 최근 PDF·문서 (OS 색인 직접 — 스캔 불필요·항상 최신). 폰은 MediaStore=미디어 전용이라 문서 미색인 → mac/원격만.
-            action: '[self:fs_query]{kind: "pdf", sort: "mtime", limit: 50}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{path}'
-          - name: 큰 파일
-            auto_run: true
-            note: 100MB 이상 — 용량 정리 대상 (큰 순).
-            action: '[self:fs_query]{min_size_mb: 100, sort: "size", limit: 50}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{path}'
-      cctv:
-        returns: scalar
-        description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신.'
-        group: cctv
-        target_description: '파라미터 없음. op 분기 — stats(기본): 카카오·UTIC·ITS·Windy 전체 소스 CCTV 현황·총수 / refresh: UTIC 실시간 API로 전국 캐시 일괄 갱신(유지보수).'
-        target_key: op
-        router: handler
-        tool: cctv_admin
-        ops:
-          default: stats
-          values:
-            stats: 전체 소스 CCTV 현황 통계
-            refresh: UTIC 캐시 갱신 (유지보수)
-        implementation: handler.py _cctv_admin이 op 분기 — stats=cctv_sources(전체 소스 집계), refresh=utic.refresh_cache.
-        keywords:
-        - CCTV
-        - CCTV 현황
-        - CCTV 통계
-        - CCTV 갱신
-      folder_note:
-        returns: scalar
-        description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
-        group: file
-        target_description: set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. get — root_path/volume_name 생략 시 전체 볼륨 주석 통합 조회.
-        target_key: op
-        router: handler
-        tool: folder_note_op
-        ops:
-          default: get
-          values:
-            set: 폴더에 메모·주석 추가 (root_path + folder_path + note)
-            get: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
-        implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
-      forage:
-        returns: scalar
-        description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기.
-        group: file
-        target_description: 'recall(기본) — query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상. note — layer(map|owner) + map은 locus/kind(identity|convention|dead_branch|substrate)/claim, owner는 facet/value. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id + table(forage_map|owner_model).'
-        target_key: op
-        router: handler
-        tool: forage_op
-        scope: workspace
-        ops:
-          default: recall
-          values:
-            recall: 누적된 냄새지도 회상 (query·body 필터, 기본)
-            note: 지도/주인모델에 단언 누적 (layer=map/owner)
-            forget: 잘못된·낡은 항목 폐기 (id + table)
-        keywords:
-        - 포식기억
-        - 냄새지도
-        - 주인모델
-        implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
-      residual:
-        returns: scalar
-        description: 탐색 잔여 측정 — "거기 없음 vs 덜 봤음"을 표본조사로 가른다(음성-단언). op 분기.
-        group: file
-        target_description: sample(기본) — 질의 모집단에서 이미 본 것(seen 경로 배열) 제외한 미관측 더미의 균일 무작위 표본 n개. 디스크 공간=kind/q/path/extension 으로 모집단, 코드 공간=space:"code:<repo>"+repo(레포 루트)+exts 로 소스파일 모집단. 그 표본을 열어 관련성 판단 후 → estimate(relevant=관련 수, sampled=표본 n, unseen=미관측 M)로 누락 추정+Wilson 신뢰구간. "전부 찾았나"·"정말 없나" 단언의 측정 근거. ★열거 가능 공간(디스크·코드) 전용 — 웹은 모집단 무한·비열거라 미지원(웹 "충분함"은 AI의 berrypicking 포화 판단).
-        target_key: op
-        router: handler
-        tool: residual_op
-        scope: workspace
-        ops:
-          default: sample
-          values:
-            sample: 미관측 더미의 균일 무작위 표본 (모집단−seen, n개)
-            estimate: 표본 결과로 누락 추정 (relevant/sampled/unseen → Wilson CI)
-        keywords:
-        - 잔여
-        - 누락
-        - 전부 찾았나
-        - 정말 없나
-        implementation: file_index.candidate_paths(디스크)·code_candidate_paths(코드) + 균일표본 / Wilson 이항추정 (pc-manager _residual_op)
-      lecture:
+      blog:
         returns: items
         runs_on: mac_only
-        description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
-        group: lecture
-        target_description: create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면). delete는 confirm=true 추가.
+        description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스.
+        target_description: 'op로 분기 (기본 posts).
+
+          - posts: 글 목록. category/count 옵션.
+
+          - search: RAG 검색. query(필수) + mode(hybrid 기본/semantic/content) + limit. content는 post_id 또는 title.
+
+          - check_new: 마지막 조회 이후 새로 추가된 글 확인.
+
+          - rebuild_index: 검색 인덱스(벡터 임베딩) 재구축. 글 다량 추가 후.
+
+          - stats: 전체 글 수·카테고리/기간 분포·활동 트렌드.
+
+          '
         target_key: op
+        group: blog
         router: handler
-        tool: lecture_op
+        tool: blog_op
         ops:
+          default: posts
           values:
-            list: 강의 목록 조회
-            create: 새 강의 생성 (title 필수)
-            load: 기존 강의 로드 (lecture_id)
-            delete: 강의 삭제 (lecture_id + confirm=true)
-            open: 강의 창 열기 (lecture_id, 미지정시 목록)
-        implementation: handler.py가 op로 분기 — list/create/load/delete/open 내부 함수 호출.
+            posts: 글 목록 조회 (category/기간 필터)
+            search: RAG 검색 (mode hybrid/semantic/content)
+            check_new: 마지막 조회 이후 새 글 확인
+            rebuild_index: 검색 인덱스(벡터) 재구축
+            stats: 블로그 통계 (글 수·분포·트렌드)
+        implementation: blog 패키지 op 분기. posts=blog_get_posts, search=blog_search_op(mode), check_new=blog_check_new_posts, rebuild_index=rebuild_search_index, stats=blog_stats.
         keywords:
-        - 강의 만들기
-        - 강의 생성
-        - 강의 목록
-        - 강의 삭제
-        - 강의 열기
-        - 강의 워크스페이스
-        scope: workspace
-      slide:
-        returns: effect
-        runs_on: mac_only
-        description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더.
-        group: lecture
-        target_description: 공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체). create/edit만 AI 호출.
-        target_key: op
-        router: handler
-        tool: slide_op
-        ops:
-          values:
-            create: 슬라이드 생성 (instruction, AI 호출)
-            edit: 슬라이드 편집 (slide_id+instruction, AI 호출)
-            delete: 슬라이드 삭제 (slide_id)
-            patch: 필드 직접 수정 (slide_id+patch, AI 우회)
-            rerender: 재렌더링 (slide_id, AI 우회)
-        implementation: handler.py가 op로 분기. create/edit는 AI 호출, delete/patch/rerender는 AI 우회 (PowerPoint식 직접 편집).
-        keywords:
-        - 슬라이드 만들기
-        - 슬라이드 편집
-        - 슬라이드 재렌더
-        - 슬라이드 삭제
-        - 슬라이드 일부 수정
-        - 다음 슬라이드
-        scope: workspace
-      material:
-        returns: effect
-        runs_on: mac_only
-        description: 강의 재료 관리 (op 분기). 추가/삭제.
-        group: lecture
-        target_description: 공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.
-        target_key: op
-        router: handler
-        tool: material_op
-        ops:
-          values:
-            add: 재료 추가 (file_path 또는 text+filename)
-            remove: 재료 삭제 (filename)
-        implementation: handler.py가 op로 분기. add는 file_path 모드/text 모드 자동 감지.
-        keywords:
-        - 재료 추가
-        - 재료 삭제
-        - 원고 추가
-        - 자료 추가
-        scope: workspace
-      deck:
-        returns: effect
-        runs_on: mac_only
-        description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기.
-        group: lecture
-        target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx).
-        target_key: op
-        router: handler
-        tool: deck_op
-        ops:
-          values:
-            reorder: 슬라이드 순서 변경 (order=slide_id 배열, deck.json만 갱신)
-            export: 파일 내보내기 (format=pdf|pptx, PIL/python-pptx 합본)
-        implementation: handler.py가 op로 분기. reorder는 deck.json만 갱신, export는 PIL/python-pptx로 합본.
-        keywords:
-        - 슬라이드 순서 변경
-        - 강의 내보내기
-        - PDF 내보내기
-        - PPTX 내보내기
-        scope: workspace
+        - 블로그
+        - 블로그 검색
+        - 시맨틱
+        - 블로그 통계
+        - 인덱스
       business:
         returns: items
         description: 나의 비즈니스(사업) CRUD — op:list(기본)/detail/save/delete.
@@ -2815,6 +2271,550 @@ nodes:
         - 폰 싱크
         - 주소록 동기화
         - 기기 동기화
+      cctv:
+        returns: scalar
+        description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신.'
+        group: cctv
+        target_description: '파라미터 없음. op 분기 — stats(기본): 카카오·UTIC·ITS·Windy 전체 소스 CCTV 현황·총수 / refresh: UTIC 실시간 API로 전국 캐시 일괄 갱신(유지보수).'
+        target_key: op
+        router: handler
+        tool: cctv_admin
+        ops:
+          default: stats
+          values:
+            stats: 전체 소스 CCTV 현황 통계
+            refresh: UTIC 캐시 갱신 (유지보수)
+        implementation: handler.py _cctv_admin이 op 분기 — stats=cctv_sources(전체 소스 집계), refresh=utic.refresh_cache.
+        keywords:
+        - CCTV
+        - CCTV 현황
+        - CCTV 통계
+        - CCTV 갱신
+      health:
+        returns: items
+        description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
+        group: health
+        target_description: 'save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호).'
+        target_key: op
+        router: handler
+        tool: health_op
+        ops:
+          values:
+            save: 건강 정보 저장 (info_type + data)
+            query: 조회 (query_type + keyword 옵션)
+            delete: 기록 삭제 (record_type + record_id)
+        implementation: handler.py가 op로 분기 — save는 save_health_info, query는 get_health_context, delete는 delete_health_record(soft-delete tombstone).
+        keywords:
+        - 건강
+        - 건강 저장
+        - 건강 조회
+        - 혈압
+        - 혈당
+        - 체중
+        - 투약
+      lecture:
+        returns: items
+        runs_on: mac_only
+        description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
+        group: lecture
+        target_description: create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면). delete는 confirm=true 추가.
+        target_key: op
+        router: handler
+        tool: lecture_op
+        ops:
+          values:
+            list: 강의 목록 조회
+            create: 새 강의 생성 (title 필수)
+            load: 기존 강의 로드 (lecture_id)
+            delete: 강의 삭제 (lecture_id + confirm=true)
+            open: 강의 창 열기 (lecture_id, 미지정시 목록)
+        implementation: handler.py가 op로 분기 — list/create/load/delete/open 내부 함수 호출.
+        keywords:
+        - 강의 만들기
+        - 강의 생성
+        - 강의 목록
+        - 강의 삭제
+        - 강의 열기
+        - 강의 워크스페이스
+        scope: workspace
+      slide:
+        returns: effect
+        runs_on: mac_only
+        description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더.
+        group: lecture
+        target_description: 공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체). create/edit만 AI 호출.
+        target_key: op
+        router: handler
+        tool: slide_op
+        ops:
+          values:
+            create: 슬라이드 생성 (instruction, AI 호출)
+            edit: 슬라이드 편집 (slide_id+instruction, AI 호출)
+            delete: 슬라이드 삭제 (slide_id)
+            patch: 필드 직접 수정 (slide_id+patch, AI 우회)
+            rerender: 재렌더링 (slide_id, AI 우회)
+        implementation: handler.py가 op로 분기. create/edit는 AI 호출, delete/patch/rerender는 AI 우회 (PowerPoint식 직접 편집).
+        keywords:
+        - 슬라이드 만들기
+        - 슬라이드 편집
+        - 슬라이드 재렌더
+        - 슬라이드 삭제
+        - 슬라이드 일부 수정
+        - 다음 슬라이드
+        scope: workspace
+      material:
+        returns: effect
+        runs_on: mac_only
+        description: 강의 재료 관리 (op 분기). 추가/삭제.
+        group: lecture
+        target_description: 공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.
+        target_key: op
+        router: handler
+        tool: material_op
+        ops:
+          values:
+            add: 재료 추가 (file_path 또는 text+filename)
+            remove: 재료 삭제 (filename)
+        implementation: handler.py가 op로 분기. add는 file_path 모드/text 모드 자동 감지.
+        keywords:
+        - 재료 추가
+        - 재료 삭제
+        - 원고 추가
+        - 자료 추가
+        scope: workspace
+      deck:
+        returns: effect
+        runs_on: mac_only
+        description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기.
+        group: lecture
+        target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx).
+        target_key: op
+        router: handler
+        tool: deck_op
+        ops:
+          values:
+            reorder: 슬라이드 순서 변경 (order=slide_id 배열, deck.json만 갱신)
+            export: 파일 내보내기 (format=pdf|pptx, PIL/python-pptx 합본)
+        implementation: handler.py가 op로 분기. reorder는 deck.json만 갱신, export는 PIL/python-pptx로 합본.
+        keywords:
+        - 슬라이드 순서 변경
+        - 강의 내보내기
+        - PDF 내보내기
+        - PPTX 내보내기
+        scope: workspace
+      local_save:
+        returns: effect
+        description: 가게 정보·커뮤니티 언급을 지역 DB에 저장.
+        target_description: 저장할 데이터 (JSON). type 옵션으로 store/mention 분류.
+        group: system
+        router: handler
+        tool: local_db_save
+        implementation: SQLite DB에 가게/지역 정보 구조화 저장
+        keywords:
+        - 가게
+        - 지역
+        - 커뮤니티
+        - 저장
+      memory:
+        returns: items
+        description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도. 자아별 사적 기억(폰·맥 각자 로컬, 동기화 안 함). 폰선 시맨틱 모델 없어 키워드(LIKE/FTS) 검색.
+        group: memory
+        target_description: save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.
+        target_key: op
+        router: handler
+        tool: memory_op
+        ops:
+          values:
+            save: 메모리 저장 (content 필수, category/keywords 자동 추출)
+            search: 키워드·자연어 검색 (FTS+시맨틱 통합)
+            read: 전문 조회 (memory_id)
+            delete: 삭제 (memory_id)
+        implementation: handler.py가 op로 분기 — save/search/read/delete 옛 함수에 위임.
+        keywords:
+        - 메모리
+        - 기억
+        - 장기기억
+        - 메모리 저장
+        - 메모리 검색
+        - 메모리 삭제
+        - 메모리 읽기
+      storage:
+        returns: scalar
+        description: 디스크 용량 분석 (op 분기) — 폴더·확장자별 용량 집계. scan(분석 인덱스 구축)/summary(용량 집계)/volumes(볼륨 목록). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
+        group: file
+        target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
+        target_key: op
+        router: handler
+        tool: storage_op
+        ops:
+          default: volumes
+          values:
+            scan: 용량 분석 인덱스 구축 (treemap·확장자별 집계의 선행 단계)
+            summary: 폴더·확장자별 용량 집계 (scan 선행, 볼륨 생략 시 전체 통합)
+            volumes: 용량 분석된 볼륨 목록 (이름·경로·용량, 기본)
+        implementation: scan_storage/get_storage_summary/list_volumes op 분기 (pc-manager)
+      fs_query:
+        returns: items
+        description: 파일 메타 검색 (이름·확장자·크기·종류) — OS 색인(맥 Spotlight) 직접. 선스캔 불필요·항상 최신. 내용 검색은 grep, 패턴은 find. self:photo 와 같은 file_index 보편 질의 위의 종류-무관 preset.
+        group: file
+        target_description: search_term(이름 부분일치) · extension(확장자) · kind(image/video/audio/pdf/any) · min_size_mb · path(검색 루트, 생략 시 홈) · limit(기본 100). 결과 records(보편 파일 필드) + table 통화.
+        router: handler
+        tool: query_storage
+        implementation: pc-manager _query_storage — backend/file_index.query 위임(mdfind 무상태). 비색인 경로는 라이브 walk 폴백.
+        target_key: search_term
+        app:
+          instrument: files
+          icon: 🗂️
+          name: 파일
+          order: 16
+          modes:
+          - name: 검색
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 파일명·확장자 검색 (예 report, pdf)
+            action: '[self:fs_query]{search_term: "$q", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+          - name: 문서
+            auto_run: true
+            phone_render: false
+            note: 최근 PDF·문서 (OS 색인 직접 — 스캔 불필요·항상 최신). 폰은 MediaStore=미디어 전용이라 문서 미색인 → mac/원격만.
+            action: '[self:fs_query]{kind: "pdf", sort: "mtime", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+          - name: 큰 파일
+            auto_run: true
+            note: 100MB 이상 — 용량 정리 대상 (큰 순).
+            action: '[self:fs_query]{min_size_mb: 100, sort: "size", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+      folder_note:
+        returns: scalar
+        description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
+        group: file
+        target_description: set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. get — root_path/volume_name 생략 시 전체 볼륨 주석 통합 조회.
+        target_key: op
+        router: handler
+        tool: folder_note_op
+        ops:
+          default: get
+          values:
+            set: 폴더에 메모·주석 추가 (root_path + folder_path + note)
+            get: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
+        implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
+      forage:
+        returns: scalar
+        description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기.
+        group: file
+        target_description: 'recall(기본) — query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상. note — layer(map|owner) + map은 locus/kind(identity|convention|dead_branch|substrate)/claim, owner는 facet/value. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id + table(forage_map|owner_model).'
+        target_key: op
+        router: handler
+        tool: forage_op
+        scope: workspace
+        ops:
+          default: recall
+          values:
+            recall: 누적된 냄새지도 회상 (query·body 필터, 기본)
+            note: 지도/주인모델에 단언 누적 (layer=map/owner)
+            forget: 잘못된·낡은 항목 폐기 (id + table)
+        keywords:
+        - 포식기억
+        - 냄새지도
+        - 주인모델
+        implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
+      residual:
+        returns: scalar
+        description: 탐색 잔여 측정 — "거기 없음 vs 덜 봤음"을 표본조사로 가른다(음성-단언). op 분기.
+        group: file
+        target_description: sample(기본) — 질의 모집단에서 이미 본 것(seen 경로 배열) 제외한 미관측 더미의 균일 무작위 표본 n개. 디스크 공간=kind/q/path/extension 으로 모집단, 코드 공간=space:"code:<repo>"+repo(레포 루트)+exts 로 소스파일 모집단. 그 표본을 열어 관련성 판단 후 → estimate(relevant=관련 수, sampled=표본 n, unseen=미관측 M)로 누락 추정+Wilson 신뢰구간. "전부 찾았나"·"정말 없나" 단언의 측정 근거. ★열거 가능 공간(디스크·코드) 전용 — 웹은 모집단 무한·비열거라 미지원(웹 "충분함"은 AI의 berrypicking 포화 판단).
+        target_key: op
+        router: handler
+        tool: residual_op
+        scope: workspace
+        ops:
+          default: sample
+          values:
+            sample: 미관측 더미의 균일 무작위 표본 (모집단−seen, n개)
+            estimate: 표본 결과로 누락 추정 (relevant/sampled/unseen → Wilson CI)
+        keywords:
+        - 잔여
+        - 누락
+        - 전부 찾았나
+        - 정말 없나
+        implementation: file_index.candidate_paths(디스크)·code_candidate_paths(코드) + 균일표본 / Wilson 이항추정 (pc-manager _residual_op)
+      photo:
+        returns: items
+        runs_on: anywhere
+        description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환. 실행되는 몸의 미디어(맥·폰 각자). 타임라인/통계/중복은 >> engines 변환자(groupby/filter).
+        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50). 결과 records에 lat/lng/taken_at/month/kind/camera/size 구조 필드 포함 → groupby·지도와 직결.'
+        group: photo
+        target_key: q
+        router: handler
+        tool: photo_op
+        implementation: handler.py _query_photos — mdfind(필터)로 경로, mdls(색인 메타)로 보강. 비색인 경로는 라이브 walk 폴백. photo_db 자체 인덱스 미사용(데스크탑 풍부창 REST만 사용).
+        keywords:
+        - 사진
+        - 동영상
+        - 미디어
+        - 사진 검색
+        - 사진 스캔
+        - 갤러리
+        - 사진 통계
+        - 타임라인
+        - 중복 사진
+        - 사진 상세
+        app:
+          instrument: photo
+          icon: 📷
+          name: 사진
+          order: 14
+          phone_render: true
+          modes:
+          - name: 갤러리
+            auto_run: true
+            note: 최근 사진·동영상 (OS 색인 직접, 스캔 불필요).
+            action: '[self:photo]{kind: "all", limit: 40}'
+            view:
+            - type: image_grid
+              from: items
+              image: '{image}'
+              title: '{title}'
+              lines:
+              - '{meta}'
+          - name: 검색
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 파일명·기종 검색
+            action: '[self:photo]{q: "$q", limit: 40}'
+            view:
+            - type: image_grid
+              from: items
+              image: '{image}'
+              title: '{title}'
+              lines:
+              - '{meta}'
+          - name: 위치
+            auto_run: true
+            note: 위치(GPS) 정보가 있는 사진.
+            action: '[self:photo]{has_gps: true, limit: 40}'
+            view:
+            - type: image_grid
+              from: items
+              image: '{image}'
+              title: '{title}'
+              lines:
+              - '{meta}'
+      report:
+        returns: effect
+        runs_on: mac_only
+        description: 정기 보고서(AI 동향 등) 뷰어 + 작성 트리거 (op 분기). 최신 보기·목록·새 작성. 보고서는 맥 폴더 저장·맥 시스템 AI가 작성.
+        target_description: op로 분기 (기본 list). type(보고서 타입, 기본 ai_trend). read 는 path. new 는 맥 시스템 AI에 작성 요청.
+        group: report
+        target_key: op
+        router: handler
+        tool: report_op
+        ops:
+          default: list
+          values:
+            list: 타입별 보고서 목록
+            read: 보고서 읽기 (path, 없으면 최신)
+            latest: 타입 최신 보고서 본문
+            new: 시스템 AI에 새 보고서 작성 요청
+            types: 등록된 보고서 타입 목록
+        implementation: report-viewer 패키지 handler.py op 분기. outputs/ 보고서 폴더 조회·읽기 + new 는 SystemAIRunner.send_message 로 맥 시스템 AI 비동기 큐잉.
+        keywords:
+        - 보고서
+        - 정기보고
+        - AI 동향
+        - 동향 보고서
+        - 리포트
+        - report
+        app:
+          instrument: report
+          icon: 📑
+          name: 정기보고
+          order: 16
+          modes:
+          - name: 최신
+            auto_run: true
+            buttons:
+            - label: ✍ 새 AI 동향 보고서 작성
+              action: '[self:report]{op: "new", type: "ai_trend"}'
+            - label: ✍ 새 AI 창업·응모 보고서 작성
+              action: '[self:report]{op: "new", type: "ai_startup"}'
+            inputs:
+            - key: type
+              type: select
+              placeholder: 보고서 종류
+              options_action: '[self:report]{op: "types"}'
+              options_from: types
+              option_value: value
+              option_label: label
+            action: '[self:report]{op: "latest", type: "$type"}'
+            view:
+            - type: thread
+              from: items
+              text: '{text}'
+          - name: 목록
+            auto_run: true
+            inputs:
+            - key: type
+              type: select
+              placeholder: 보고서 종류
+              options_action: '[self:report]{op: "types"}'
+              options_from: types
+              option_value: value
+              option_label: label
+            action: '[self:report]{op: "list", type: "$type"}'
+            view:
+            - type: card_list
+              from: items
+              empty: 보고서가 없습니다 — 작성 탭에서 새 보고서를 만들어 보세요
+              card:
+                title: '{title}'
+                lines:
+                - '{sub}'
+              item_click:
+                action: '[self:report]{op: "read", path: "{path}"}'
+                view:
+                - type: thread
+                  from: items
+                  text: '{text}'
+          - name: 작성
+            auto_run: true
+            action: '[self:report]{op: "types"}'
+            view:
+            - type: list_action
+              from: types
+              icon: 📝
+              title: '{label}'
+              sub: 맥의 시스템 AI가 작성합니다
+              button:
+                label: ✍ 작성
+                action: '[self:report]{op: "new", type: "{value}"}'
+      time:
+        returns: scalar
+        description: 현재 시간 조회 (로컬 시스템 시계, KST). 날짜·요일·시:분:초 반환.
+        group: system
+        target_description: (파라미터 없음). format 옵션으로 포맷 지정 가능.
+        router: handler
+        tool: get_current_time
+        implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
+      read:
+        returns: scalar
+        description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
+        group: file
+        target_description: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션, 시트를 TSV 텍스트로. 스캔 PDF는 별도 OCR 필요.
+        router: handler
+        tool: read_op
+        implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
+        target_key: path
+      write:
+        returns: effect
+        description: 텍스트 파일 새로 쓰기·덮어쓰기. write→run 패턴의 한 축, append 아님.
+        group: file
+        target_description: 쓸 파일 경로 (절대 또는 상대). 기존 파일은 묻지 않고 덮어쓴다.
+        router: handler
+        tool: write_file
+        implementation: Python 파일 I/O로 로컬 파일 쓰기
+        target_key: path
+      list:
+        returns: items
+        description: 디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).
+        group: file
+        target_description: 조회할 디렉토리 경로. recursive 옵션으로 하위 포함 가능.
+        router: handler
+        tool: list_directory
+        implementation: os.listdir/pathlib로 디렉토리 내용 조회
+        target_key: path
+      file_find:
+        returns: items
+        description: 파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트 지정 (절대경로, ~/, 상대경로 모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀
+        group: file
+        target_description: 검색 패턴 (glob, 예 '*.md', '**/*.tsx'). path 옵션으로 검색 루트 지정.
+        keywords:
+        - 파일
+        - 찾기
+        - 검색
+        - find
+        - search
+        - 파일찾기
+        router: handler
+        tool: glob_files
+        implementation: pathlib.glob 패턴 검색. path 파라미터로 검색 루트 지정 (절대경로/~/상대경로). max_results로 결과 상한 (기본 200). 매칭 없으면 path 옵션 안내
+        target_key: pattern
+      grep:
+        returns: items
+        description: 파일 내용에서 패턴 검색 (grep/ripgrep). items(행 dict — 파일/줄번호/내용). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
+        group: file
+        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터.
+        keywords:
+        - 검색
+        - 내용검색
+        - grep
+        - 코드검색
+        router: handler
+        tool: grep_files
+        implementation: subprocess로 grep/ripgrep 실행하여 파일 내용 검색
+        target_key: pattern
+      edit:
+        returns: effect
+        description: 파일 부분 편집 (old_string → new_string 교체). 전체 덮어쓰기는 write.
+        group: file
+        target_description: 편집할 파일 경로. old_string/new_string 파라미터로 교체할 텍스트 지정.
+        router: handler
+        tool: edit_file
+        implementation: Python 문자열 치환으로 파일 부분 편집
+        target_key: path
+      copy:
+        returns: effect
+        description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사.
+        group: file
+        target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용)
+        router: handler
+        tool: copy_path
+        implementation: shutil.copy/copytree로 파일/폴더 복사
+        target_key: source
+      move:
+        returns: effect
+        description: 파일 또는 폴더 이동·이름 변경. 같은 폴더면 이름 변경, 다른 폴더면 이동.
+        group: file
+        target_description: src(원본)와 dest(이동/새 이름) 두 파라미터. (source/destination 별칭도 허용)
+        router: handler
+        tool: move_path
+        implementation: shutil.move로 파일/폴더 이동/이름변경
+        target_key: source
+      delete:
+        returns: effect
+        description: 파일 또는 폴더 영구 삭제. 휴지통 거치지 않음 — 신중히 사용.
+        group: file
+        target_description: 삭제할 파일 또는 폴더 경로. 폴더는 재귀 삭제 (rmtree).
+        router: handler
+        tool: delete_path
+        implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
+        target_key: path
     description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
     tags:
     - 파일
@@ -2838,88 +2838,42 @@ nodes:
     - photo.md
   limbs:
     actions:
-      browser:
+      os_open:
         returns: effect
+        description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
+        target_description: 열 대상의 경로 또는 URL. http/https는 브라우저, 파일은 Finder/탐색기.
+        group: open
+        target_key: path
+        router: system
+        func: output_open
         runs_on: mac_only
-        description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
-        target_description: op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).
-        group: browser
-        target_key: op
-        router: handler
-        tool: browser_op
-        ops:
-          default: snapshot
-          values:
-            snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)
-            navigate: 페이지 이동 (mode goto|back|forward; goto는 url)
-            click: 요소 클릭 (ref; mode single|double|right)
-            type: 입력 필드에 텍스트 입력 (ref, text)
-            press_key: 키보드 키 입력 (Enter/Tab/Escape 등)
-            hover: 요소에 마우스 호버 (ref)
-            drag: 드래그 앤 드롭 (source_ref→target_ref)
-            select: select 박스 옵션 선택 (ref, value/label)
-            check: 체크박스·라디오 토글 (ref)
-            upload_file: 파일 input에 업로드 (ref, path)
-            scroll: 페이지 스크롤 (up/down)
-            wait: 조건 대기 (selector/url/text/networkidle)
-            content: 페이지 콘텐츠 추출 (mode text|html)
-            screenshot: 페이지 스크린샷 PNG 저장 (path, full_page)
-            vision: 스크린샷 base64 반환 (AI 시각 인식용)
-            evaluate: JavaScript 표현식 실행 (expression)
-            pdf: 페이지를 PDF로 저장 (path)
-            find: 자연어로 요소 검색 (query; Chrome MCP 전용)
-            logs: 브라우저 로그 (mode console|network)
-            dialog_info: Alert/Confirm/Prompt 팝업 정보
-            resize: 뷰포트 크기 변경 (width/height)
-            close: 브라우저 세션 종료
-            tab: 탭 관리 (mode list|new|switch|close)
-            iframe: iframe 관리 (mode list|switch|reset)
-            cookies: 쿠키 저장·복원 (mode save|load)
-            chrome: Chrome MCP 원격 제어 (mode connect|disconnect|status)
+        implementation: subprocess로 OS 기본 앱(Finder/브라우저) 실행
         keywords:
+        - 열기
+        - URL
         - 브라우저
-        - 웹 자동화
-        - 클릭
-        - 입력
-        - 페이지
-      screen:
+      open_window:
         returns: effect
+        description: Electron 런처의 6개 메인 작업창 열기 (project/system_ai/messenger/business/multichat/folder). 자세한 진입 시나리오는 가이드(open_window.md) 참조.
+        target_description: 'app 종류: project | system_ai | messenger | business | multichat | folder. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). system_ai/messenger/business는 파라미터 없음. (indienet=messenger 레거시 별칭)'
+        group: open
+        target_key: app
+        router: system
+        func: launcher_command
         runs_on: mac_only
-        description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
-        target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
-        group: desktop
-        target_key: op
-        router: handler
-        tool: computer_op
-        ops:
-          values:
-            snapshot: 화면 독해 — UI 요소(역할/이름)+글자(OCR)+클릭좌표. 클릭 전 화면 파악 (브라우저 snapshot의 데스크톱 판)
-            screenshot: 화면 캡처 이미지 (x,y,width,height 옵션)
-            click: 마우스 클릭 (x,y)
-            type: 텍스트 입력 (text)
-            key: 키 입력 (key)
-            mouse_move: 마우스 이동 (x,y)
-            drag: 드래그 (start_x,start_y,end_x,end_y)
-            scroll: 스크롤 (direction,amount)
-            cursor_position: 현재 커서 좌표 반환
-            screen_info: 화면 해상도 정보 반환
-        implementation: pyautogui로 op 분기 (1280x800 가상 좌표 → 실제 해상도 자동 변환, Retina 대응)
+        implementation: WebSocket으로 Electron Launcher에 open_<app>_window 명령 전송
         keywords:
-        - 데스크톱
-        - macOS
-        - 클릭
-        - 키보드
-        - 스크린샷
-        - 마우스
-        - 드래그
-        - 스크롤
-        - 자동화
-        - 화면독해
-        - 화면읽기
-        - 접근성
-        - OCR
-        - 화면분석
-        - 버튼찾기
+        - 창
+        - 윈도우
+        - 런처
+        - 앱열기
+        - 프로젝트창
+        - 시스템AI
+        - 메신저
+        - 인디넷
+        - 비즈니스
+        - 멀티채팅
+        - 폴더
       android:
         returns: effect
         description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.
@@ -2980,92 +2934,50 @@ nodes:
         - 토스트
         - 클립보드복사
         - 앱실행
-      os_open:
-        returns: effect
-        description: OS 기본 앱으로 열기 — URL은 기본 브라우저, 파일/폴더는 Finder/탐색기
-        target_description: 열 대상의 경로 또는 URL. http/https는 브라우저, 파일은 Finder/탐색기.
-        group: open
-        target_key: path
-        router: system
-        func: output_open
-        runs_on: mac_only
-        implementation: subprocess로 OS 기본 앱(Finder/브라우저) 실행
-        keywords:
-        - 열기
-        - URL
-        - 브라우저
-      music:
+      browser:
         returns: effect
         runs_on: mac_only
-        description: 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
-        group: media
-        target_description: play/add — query 파라미터로 검색어 또는 URL. download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.
+        description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
+        target_description: op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).
+        group: browser
         target_key: op
         router: handler
-        tool: music_op
+        tool: browser_op
         ops:
-          default: play
+          default: snapshot
           values:
-            play: 즉시 재생 (query 검색어/URL, 기본)
-            add: 큐에 추가 (query 검색어/URL)
-            skip: 현재 곡 스킵
-            queue: 큐 목록 조회
-            stop: 재생 중지
-            download: MP3 다운로드 (url + output_path 옵션)
-        implementation: yt-dlp + mpv/ffplay 음악 재생·큐·다운로드 op 분기
+            snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)
+            navigate: 페이지 이동 (mode goto|back|forward; goto는 url)
+            click: 요소 클릭 (ref; mode single|double|right)
+            type: 입력 필드에 텍스트 입력 (ref, text)
+            press_key: 키보드 키 입력 (Enter/Tab/Escape 등)
+            hover: 요소에 마우스 호버 (ref)
+            drag: 드래그 앤 드롭 (source_ref→target_ref)
+            select: select 박스 옵션 선택 (ref, value/label)
+            check: 체크박스·라디오 토글 (ref)
+            upload_file: 파일 input에 업로드 (ref, path)
+            scroll: 페이지 스크롤 (up/down)
+            wait: 조건 대기 (selector/url/text/networkidle)
+            content: 페이지 콘텐츠 추출 (mode text|html)
+            screenshot: 페이지 스크린샷 PNG 저장 (path, full_page)
+            vision: 스크린샷 base64 반환 (AI 시각 인식용)
+            evaluate: JavaScript 표현식 실행 (expression)
+            pdf: 페이지를 PDF로 저장 (path)
+            find: 자연어로 요소 검색 (query; Chrome MCP 전용)
+            logs: 브라우저 로그 (mode console|network)
+            dialog_info: Alert/Confirm/Prompt 팝업 정보
+            resize: 뷰포트 크기 변경 (width/height)
+            close: 브라우저 세션 종료
+            tab: 탭 관리 (mode list|new|switch|close)
+            iframe: iframe 관리 (mode list|switch|reset)
+            cookies: 쿠키 저장·복원 (mode save|load)
+            chrome: Chrome MCP 원격 제어 (mode connect|disconnect|status)
         keywords:
-        - youtube
-        - 유튜브
-        - 음악
-        - 노래
-        - 재생
-        - 틀어줘
-        - 큐
-        - 대기열
-        - 스킵
-        - 다음곡
-        - 정지
-        - 멈춰
-        - 다운로드
-        - mp3
-        app:
-          instrument: ytmusic
-          mode: 큐
-          mode_order: 1
-          phone_render: false
-          auto_run: true
-          buttons:
-          - label: ⏭ 다음 곡
-            action: '[limbs:music]{op: "skip"}'
-          - label: ■ 정지
-            action: '[limbs:music]{op: "stop"}'
-          action: '[limbs:music]{op: "queue"}'
-          view:
-          - type: kv
-            rows:
-            - k: 상태
-              v: '{message}'
-          - type: kv_list
-            from: queue
-            title: 대기열
-            empty: 대기열이 비어 있습니다
-            k: '{position}'
-            v: '{title|trunc:40} · {channel}'
-      cloudflare_api:
-        returns: effect
-        description: Cloudflare API 호출 (Pages/Workers/R2/D1/Tunnel 모든 서비스 통합).
-        target_description: API endpoint 경로 (예 'zones/abc/dns_records'). method/data 옵션으로 요청 구성.
-        group: cloudflare
-        router: handler
-        tool: cf_api
-        implementation: Cloudflare REST API (Pages/Workers/R2/D1/Tunnel) 통합 HTTP 클라이언트
-        target_key: endpoint
-        keywords:
-        - 클라우드플레어
-        - CDN
-        - Workers
-        - R2
-        - Pages
+        - 브라우저
+        - 웹 자동화
+        - 클릭
+        - 입력
+        - 페이지
       cctv:
         returns: effect
         description: CCTV 실시간 영상 열기·캡처 (op 분기). open(브라우저 재생) / capture(이미지 저장).
@@ -3086,6 +2998,59 @@ nodes:
         - 캡처
         - 스크린샷
         - 찍어
+      cloudflare_api:
+        returns: effect
+        description: Cloudflare API 호출 (Pages/Workers/R2/D1/Tunnel 모든 서비스 통합).
+        target_description: API endpoint 경로 (예 'zones/abc/dns_records'). method/data 옵션으로 요청 구성.
+        group: cloudflare
+        router: handler
+        tool: cf_api
+        implementation: Cloudflare REST API (Pages/Workers/R2/D1/Tunnel) 통합 HTTP 클라이언트
+        target_key: endpoint
+        keywords:
+        - 클라우드플레어
+        - CDN
+        - Workers
+        - R2
+        - Pages
+      screen:
+        returns: effect
+        runs_on: mac_only
+        description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
+        target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
+        group: desktop
+        target_key: op
+        router: handler
+        tool: computer_op
+        ops:
+          values:
+            snapshot: 화면 독해 — UI 요소(역할/이름)+글자(OCR)+클릭좌표. 클릭 전 화면 파악 (브라우저 snapshot의 데스크톱 판)
+            screenshot: 화면 캡처 이미지 (x,y,width,height 옵션)
+            click: 마우스 클릭 (x,y)
+            type: 텍스트 입력 (text)
+            key: 키 입력 (key)
+            mouse_move: 마우스 이동 (x,y)
+            drag: 드래그 (start_x,start_y,end_x,end_y)
+            scroll: 스크롤 (direction,amount)
+            cursor_position: 현재 커서 좌표 반환
+            screen_info: 화면 해상도 정보 반환
+        implementation: pyautogui로 op 분기 (1280x800 가상 좌표 → 실제 해상도 자동 변환, Retina 대응)
+        keywords:
+        - 데스크톱
+        - macOS
+        - 클릭
+        - 키보드
+        - 스크린샷
+        - 마우스
+        - 드래그
+        - 스크롤
+        - 자동화
+        - 화면독해
+        - 화면읽기
+        - 접근성
+        - OCR
+        - 화면분석
+        - 버튼찾기
       show_map:
         returns: effect
         description: 지도에 위치 마커 표시 (HTML 지도 생성). 장소명 입력 시 자동 좌표 변환.
@@ -3115,55 +3080,6 @@ nodes:
         tool: open_photo_manager
         implementation: Electron 기반 Photo Manager GUI 실행
         target_key: path
-      launch:
-        returns: effect
-        description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
-        group: open
-        target_description: (미지정 시 대시보드 표시). action으로 register/add/list/remove 등 사이트 관리.
-        router: handler
-        tool: launch_sites
-        scope: workspace
-        implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈) — workspace 도구(프로젝트 무관)
-        target_key: action
-        app:
-          icon: 🔖
-          name: 즐겨찾기
-          order: 10
-          auto_run: true
-          action: '[limbs:launch]{action: "list"}'
-          view:
-          - type: card_list
-            from: items
-            empty_from: message
-            card:
-              title: '{name}'
-              lines:
-              - '{url|trunc:54}'
-              link:
-                href: '{url}'
-                label: 열기 →
-      open_window:
-        returns: effect
-        description: Electron 런처의 6개 메인 작업창 열기 (project/system_ai/messenger/business/multichat/folder). 자세한 진입 시나리오는 가이드(open_window.md) 참조.
-        target_description: 'app 종류: project | system_ai | messenger | business | multichat | folder. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). system_ai/messenger/business는 파라미터 없음. (indienet=messenger 레거시 별칭)'
-        group: open
-        target_key: app
-        router: system
-        func: launcher_command
-        runs_on: mac_only
-        implementation: WebSocket으로 Electron Launcher에 open_<app>_window 명령 전송
-        keywords:
-        - 창
-        - 윈도우
-        - 런처
-        - 앱열기
-        - 프로젝트창
-        - 시스템AI
-        - 메신저
-        - 인디넷
-        - 비즈니스
-        - 멀티채팅
-        - 폴더
       radio:
         returns: effect
         description: 인터넷 라디오 재생·중지 (op 분기). play/stop.
@@ -3227,6 +3143,90 @@ nodes:
         - 라디오즐겨찾기
         - 즐겨찾기 추가
         - 즐겨찾기 삭제
+      launch:
+        returns: effect
+        description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
+        group: open
+        target_description: (미지정 시 대시보드 표시). action으로 register/add/list/remove 등 사이트 관리.
+        router: handler
+        tool: launch_sites
+        scope: workspace
+        implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈) — workspace 도구(프로젝트 무관)
+        target_key: action
+        app:
+          icon: 🔖
+          name: 즐겨찾기
+          order: 10
+          auto_run: true
+          action: '[limbs:launch]{action: "list"}'
+          view:
+          - type: card_list
+            from: items
+            empty_from: message
+            card:
+              title: '{name}'
+              lines:
+              - '{url|trunc:54}'
+              link:
+                href: '{url}'
+                label: 열기 →
+      music:
+        returns: effect
+        runs_on: mac_only
+        description: 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
+        group: media
+        target_description: play/add — query 파라미터로 검색어 또는 URL. download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.
+        target_key: op
+        router: handler
+        tool: music_op
+        ops:
+          default: play
+          values:
+            play: 즉시 재생 (query 검색어/URL, 기본)
+            add: 큐에 추가 (query 검색어/URL)
+            skip: 현재 곡 스킵
+            queue: 큐 목록 조회
+            stop: 재생 중지
+            download: MP3 다운로드 (url + output_path 옵션)
+        implementation: yt-dlp + mpv/ffplay 음악 재생·큐·다운로드 op 분기
+        keywords:
+        - youtube
+        - 유튜브
+        - 음악
+        - 노래
+        - 재생
+        - 틀어줘
+        - 큐
+        - 대기열
+        - 스킵
+        - 다음곡
+        - 정지
+        - 멈춰
+        - 다운로드
+        - mp3
+        app:
+          instrument: ytmusic
+          mode: 큐
+          mode_order: 1
+          phone_render: false
+          auto_run: true
+          buttons:
+          - label: ⏭ 다음 곡
+            action: '[limbs:music]{op: "skip"}'
+          - label: ■ 정지
+            action: '[limbs:music]{op: "stop"}'
+          action: '[limbs:music]{op: "queue"}'
+          view:
+          - type: kv
+            rows:
+            - k: 상태
+              v: '{message}'
+          - type: kv_list
+            from: queue
+            title: 대기열
+            empty: 대기열이 비어 있습니다
+            k: '{position}'
+            v: '{title|trunc:40} · {channel}'
     description: '수족: 작업 도구 및 기기 제어 — 브라우저 자동화, 데스크톱, 미디어 재생(음악/라디오/유튜브), CCTV, URL/파일 열기, Cloudflare'
     tags:
     - 브라우저
@@ -3287,6 +3287,161 @@ nodes:
         - 에이전트목록
         - 에이전트정보
         - 상세
+      channel_send:
+        returns: effect
+        description: 메시지 발송 (Gmail/Nostr). 발신자는 자기 계정 자동 설정(없으면 차단).
+        target_description: 채널 타입 (gmail/nostr). to=수신자 — 이웃 이름(주소록에서 자동 해소) 또는 이메일/npub 주소 직접 지정. subject/body로 내용 구성. 발신자는 호출 주체의 자기 계정(미설정 시 발신 차단).
+        group: channel
+        target_key: channel_type
+        router: channel_engine
+        implementation: channel_engine 추상화 계층을 통해 메시지 발송. Gmail은 SMTP, Nostr은 릴레이 publish. 에이전트 identity 기반 발신자 자동 설정
+        keywords:
+        - 메시지보내기
+        - 발송
+        - 텔레그램
+        - 이메일
+      channel_read:
+        returns: items
+        description: 채널 수신함 조회/검색 (Gmail/Nostr/Telegram). query 있으면 검색, 없으면 최근 수신.
+        target_description: 채널 타입 (gmail/nostr/telegram). query 옵션으로 검색어 (Gmail은 Gmail 검색 문법). 검색 미사용 시 max_results로 건수 제한(기본 10).
+        group: channel
+        target_key: channel_type
+        router: channel_engine
+        implementation: channel_engine 입구가 query 유무로 자동 분기 — query 있으면 _channel_search, 없으면 _channel_read (Gmail IMAP, Nostr 릴레이 구독 등).
+        keywords:
+        - 메시지읽기
+        - 수신
+        - 메시지검색
+      feed:
+        returns: items
+        description: 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원.
+        target_description: op:read(기본 — 최근 글 조회, hashtag 옵션으로 특정 보드) / op:post(content 필수 — 커뮤니티에 글 게시).
+        group: channel
+        target_key: op
+        router: channel_engine
+        ops:
+          default: read
+          values:
+            read: 커뮤니티 피드 조회
+            post: 커뮤니티에 글 게시
+        implementation: channel_engine._community_feed — read=indienet.fetch_posts/fetch_board_posts, post=indienet.post_to_board. 발신 신원=시스템(indienet) 키.
+        app:
+          instrument: community
+          icon: 🌐
+          name: IndieNet
+          order: 8
+          modes:
+          - name: 피드
+            auto_run: true
+            action: '[others:feed]{op: "read"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{author}'
+                lines:
+                - '{content}'
+                - '{time}'
+            compose:
+              placeholder: 커뮤니티에 글 쓰기…
+              action: '[others:feed]{op: "post", content: "$text"}'
+              button: 게시
+          - name: 게시판
+            auto_run: true
+            inputs:
+            - key: name
+              type: text
+              placeholder: 새 보드 이름
+            - key: tag
+              type: text
+              placeholder: 해시태그(영문)
+            buttons:
+            - label: ＋ 보드 만들기
+              action: '[others:board]{op: "create", name: "$name", hashtag: "$tag"}'
+            action: '[others:board]{op: "list"}'
+            view:
+            - type: list_action
+              from: items
+              icon: '#'
+              title: '{name}'
+              sub: '#{hashtag}'
+              button:
+                label: 전환
+                action: '[others:board]{op: "switch", hashtag: "{hashtag}"}'
+          - name: 내 계정
+            auto_run: true
+            note: 표시 이름·릴레이만 여기서. nsec 가져오기/신원 초기화는 수동 모드에서 [others:nostr]{op:"import_key"/"reset_identity"}.
+            inputs:
+            - key: name
+              type: text
+              placeholder: 표시 이름 변경
+            buttons:
+            - label: 이름 저장
+              action: '[others:nostr]{op: "rename", name: "$name"}'
+            - label: 릴레이 기본값으로
+              action: '[others:nostr]{op: "relays", restore_defaults: true}'
+            action: '[others:nostr]{op: "profile"}'
+            view:
+            - type: kv
+              rows:
+              - k: 내 npub
+                v: '{npub}'
+              - k: 표시 이름
+                v: '{display_name}'
+              - k: 활성 보드
+                v: '#{active_board}'
+              - k: 생성일
+                v: '{created_at}'
+            - type: kv_list
+              title: 릴레이
+              from: relays
+              k: '{url}'
+              v: ''
+        keywords:
+        - 커뮤니티
+        - 피드
+        - 글쓰기
+        - 인디넷
+      nostr:
+        returns: effect
+        description: IndieNet/Nostr 계정 — op:profile(신원·릴레이 조회)/rename(표시이름)/relays(릴레이 조회·설정)/import_key(nsec 가져오기)/reset_identity(새 신원).
+        target_description: op:profile(기본) / rename(name 필수) / relays(set 또는 restore_defaults 로 변경, 없으면 조회) / import_key(nsec 필수 — 기존 신원 대체) / reset_identity(새 키 생성 — 기존 신원 대체, 주의).
+        group: channel
+        target_key: op
+        router: channel_engine
+        ops:
+          default: profile
+          values:
+            profile: 내 Nostr 신원·릴레이 조회
+            rename: 표시 이름 변경
+            relays: 릴레이 목록 조회/설정
+            import_key: nsec 가져오기 (기존 신원 대체)
+            reset_identity: 새 신원 생성 (기존 신원 대체)
+        implementation: channel_engine._nostr_identity — indienet.identity(set_display_name/import_nsec/reset_identity) + settings.relays.
+        keywords:
+        - 신원
+        - 계정
+        - 릴레이
+        - 닉네임
+      board:
+        returns: items
+        description: 커뮤니티 보드(게시판) 관리 (IndieNet) — op:list/create/switch.
+        target_description: 'op:list(기본 — 보드 목록) / op:create(name+hashtag 필수 — 새 보드) / op:switch(hashtag — 활성 보드 전환, 생략 시 기본 #indienet).'
+        group: channel
+        target_key: op
+        router: channel_engine
+        ops:
+          default: list
+          values:
+            list: 보드 목록 조회
+            create: 새 보드 생성
+            switch: 활성 보드 전환
+        implementation: channel_engine._community_board — indienet 의 get_boards/create_board/set_active_board.
+        keywords:
+        - 보드
+        - 게시판
+        - 커뮤니티
       messages:
         returns: items
         description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr).
@@ -3506,31 +3661,6 @@ nodes:
         - 연락처추가
         - 연락처수정
         - 연락처삭제
-      channel_send:
-        returns: effect
-        description: 메시지 발송 (Gmail/Nostr). 발신자는 자기 계정 자동 설정(없으면 차단).
-        target_description: 채널 타입 (gmail/nostr). to=수신자 — 이웃 이름(주소록에서 자동 해소) 또는 이메일/npub 주소 직접 지정. subject/body로 내용 구성. 발신자는 호출 주체의 자기 계정(미설정 시 발신 차단).
-        group: channel
-        target_key: channel_type
-        router: channel_engine
-        implementation: channel_engine 추상화 계층을 통해 메시지 발송. Gmail은 SMTP, Nostr은 릴레이 publish. 에이전트 identity 기반 발신자 자동 설정
-        keywords:
-        - 메시지보내기
-        - 발송
-        - 텔레그램
-        - 이메일
-      channel_read:
-        returns: items
-        description: 채널 수신함 조회/검색 (Gmail/Nostr/Telegram). query 있으면 검색, 없으면 최근 수신.
-        target_description: 채널 타입 (gmail/nostr/telegram). query 옵션으로 검색어 (Gmail은 Gmail 검색 문법). 검색 미사용 시 max_results로 건수 제한(기본 10).
-        group: channel
-        target_key: channel_type
-        router: channel_engine
-        implementation: channel_engine 입구가 query 유무로 자동 분기 — query 있으면 _channel_search, 없으면 _channel_read (Gmail IMAP, Nostr 릴레이 구독 등).
-        keywords:
-        - 메시지읽기
-        - 수신
-        - 메시지검색
       auto_response:
         returns: effect
         description: 외부 메시지 자동응답 서비스 제어 — op:status(기본)/start/stop. on/off 는 영속(재시작 유지).
@@ -3552,136 +3682,6 @@ nodes:
         - 자동회신
         - 자동답장
         - auto reply
-      feed:
-        returns: items
-        description: 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원.
-        target_description: op:read(기본 — 최근 글 조회, hashtag 옵션으로 특정 보드) / op:post(content 필수 — 커뮤니티에 글 게시).
-        group: channel
-        target_key: op
-        router: channel_engine
-        ops:
-          default: read
-          values:
-            read: 커뮤니티 피드 조회
-            post: 커뮤니티에 글 게시
-        implementation: channel_engine._community_feed — read=indienet.fetch_posts/fetch_board_posts, post=indienet.post_to_board. 발신 신원=시스템(indienet) 키.
-        app:
-          instrument: community
-          icon: 🌐
-          name: IndieNet
-          order: 8
-          modes:
-          - name: 피드
-            auto_run: true
-            action: '[others:feed]{op: "read"}'
-            view:
-            - type: card_list
-              from: items
-              empty_from: message
-              card:
-                title: '{author}'
-                lines:
-                - '{content}'
-                - '{time}'
-            compose:
-              placeholder: 커뮤니티에 글 쓰기…
-              action: '[others:feed]{op: "post", content: "$text"}'
-              button: 게시
-          - name: 게시판
-            auto_run: true
-            inputs:
-            - key: name
-              type: text
-              placeholder: 새 보드 이름
-            - key: tag
-              type: text
-              placeholder: 해시태그(영문)
-            buttons:
-            - label: ＋ 보드 만들기
-              action: '[others:board]{op: "create", name: "$name", hashtag: "$tag"}'
-            action: '[others:board]{op: "list"}'
-            view:
-            - type: list_action
-              from: items
-              icon: '#'
-              title: '{name}'
-              sub: '#{hashtag}'
-              button:
-                label: 전환
-                action: '[others:board]{op: "switch", hashtag: "{hashtag}"}'
-          - name: 내 계정
-            auto_run: true
-            note: 표시 이름·릴레이만 여기서. nsec 가져오기/신원 초기화는 수동 모드에서 [others:nostr]{op:"import_key"/"reset_identity"}.
-            inputs:
-            - key: name
-              type: text
-              placeholder: 표시 이름 변경
-            buttons:
-            - label: 이름 저장
-              action: '[others:nostr]{op: "rename", name: "$name"}'
-            - label: 릴레이 기본값으로
-              action: '[others:nostr]{op: "relays", restore_defaults: true}'
-            action: '[others:nostr]{op: "profile"}'
-            view:
-            - type: kv
-              rows:
-              - k: 내 npub
-                v: '{npub}'
-              - k: 표시 이름
-                v: '{display_name}'
-              - k: 활성 보드
-                v: '#{active_board}'
-              - k: 생성일
-                v: '{created_at}'
-            - type: kv_list
-              title: 릴레이
-              from: relays
-              k: '{url}'
-              v: ''
-        keywords:
-        - 커뮤니티
-        - 피드
-        - 글쓰기
-        - 인디넷
-      nostr:
-        returns: effect
-        description: IndieNet/Nostr 계정 — op:profile(신원·릴레이 조회)/rename(표시이름)/relays(릴레이 조회·설정)/import_key(nsec 가져오기)/reset_identity(새 신원).
-        target_description: op:profile(기본) / rename(name 필수) / relays(set 또는 restore_defaults 로 변경, 없으면 조회) / import_key(nsec 필수 — 기존 신원 대체) / reset_identity(새 키 생성 — 기존 신원 대체, 주의).
-        group: channel
-        target_key: op
-        router: channel_engine
-        ops:
-          default: profile
-          values:
-            profile: 내 Nostr 신원·릴레이 조회
-            rename: 표시 이름 변경
-            relays: 릴레이 목록 조회/설정
-            import_key: nsec 가져오기 (기존 신원 대체)
-            reset_identity: 새 신원 생성 (기존 신원 대체)
-        implementation: channel_engine._nostr_identity — indienet.identity(set_display_name/import_nsec/reset_identity) + settings.relays.
-        keywords:
-        - 신원
-        - 계정
-        - 릴레이
-        - 닉네임
-      board:
-        returns: items
-        description: 커뮤니티 보드(게시판) 관리 (IndieNet) — op:list/create/switch.
-        target_description: 'op:list(기본 — 보드 목록) / op:create(name+hashtag 필수 — 새 보드) / op:switch(hashtag — 활성 보드 전환, 생략 시 기본 #indienet).'
-        group: channel
-        target_key: op
-        router: channel_engine
-        ops:
-          default: list
-          values:
-            list: 보드 목록 조회
-            create: 새 보드 생성
-            switch: 활성 보드 전환
-        implementation: channel_engine._community_board — indienet 의 get_boards/create_board/set_active_board.
-        keywords:
-        - 보드
-        - 게시판
-        - 커뮤니티
     description: '타자: 외부 에이전트 및 사용자와의 소통 — 위임, 메시징, SMS, 이메일, 연락처, 협업'
     tags:
     - 위임
@@ -3695,43 +3695,102 @@ nodes:
     - 소통
   engines:
     actions:
-      newspaper:
+      web_site:
         returns: effect
-        description: '"신문 만들어줘"라고 요청할 때만 사용. 키워드별 뉴스를 수집해 공유 문서 IR(신문 테마)로 생산. >> [table:document]로 렌더(html/pdf/docx). 보고서/분석/요약 요청에는 사용하지 말 것.'
-        target_description: 'keywords 배열 (수집할 뉴스 주제) · title(선택, 신문 제호) · source(google 기본/guardian). 반환: 문서 IR {title, meta, theme:"newspaper", blocks}(키워드별 heading + cards). 그대로 >> [table:document]로 렌더.'
-        group: media_produce
+        runs_on: mac_only
+        description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
+        target_description: 'op로 분기 (기본 list).
+
+          - list: 파라미터 없음. 등록된 사이트 전체 반환.
+
+          - register: name(필수) + local_path(필수) + repo_url/deploy_url/description(선택).
+
+          - remove: site_id(필수).
+
+          - update: site_id(필수) + 변경할 필드(name/local_path/repo_url/deploy_url/description).
+
+          '
+        group: web_builder
         router: handler
-        tool: generate_newspaper
-        implementation: Google News RSS / Guardian API 수집 → 키워드별 heading + cards 블록으로 결정적 문서 IR 생산(LLM 미개입, 기사·링크 무손실). 렌더는 table:document(theme:newspaper)가 담당 — 단일 IR이 html/pdf/docx로.
-        target_key: keywords
+        tool: web_site
+        implementation: web-builder 패키지의 sites.json 레지스트리 CRUD. 빈번하지 않은 어드민이라 가이드 web_builder.md 참조 권장.
         keywords:
-        - 신문
-        - 신문만들기
-        - 신문생성
-        - 가디언
-        - guardian
-        - world news
-        app:
-          icon: 📰
-          name: 신문
-          order: 7
-          note: 키워드별 최신 뉴스를 모아 신문 문서로 만들어 "띄우기"로 봅니다.
-          inputs:
-          - key: kw
-            type: text
-            default: 청주, AI, 문화, 드라마, 영화, 만화, 세종, 경제, 주식
-            placeholder: 뉴스 키워드 (쉼표 구분)
-            required: true
-          action: '[engines:newspaper]{keywords: "$kw"} >> [table:document]{theme: "newspaper", format: "html"}'
-          view:
-          - type: list_action
-            from: .
-            icon: 📰
-            title: '{title}'
-            sub: '{message}'
-            button:
-              label: 🖥 띄우기
-              action: '[limbs:os_open]{path: "{file}"}'
+        - 사이트
+        - 웹사이트목록
+        - 사이트등록
+        - 사이트삭제
+        - 사이트수정
+      web:
+        returns: effect
+        runs_on: mac_only
+        description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
+        target_description: 'op로 분기 (기본 preview).
+
+          - create: target=site(name + template:blank/landing/portfolio/blog/business + features) 또는 page(project_path + page_name + sections[] + metadata).
+
+          - build: 현재 프로젝트 프로덕션 빌드 (Next.js .next/).
+
+          - deploy: Vercel 배포. project_name/production 옵션.
+
+          - preview: 로컬 미리보기 서버. project_path + action(start/stop/status).
+
+          - snapshot: site_id 스크린샷 캡처.
+
+          - check: site_id Lighthouse 품질검사 (성능·접근성·SEO).
+
+          - styles: shadcn 테마 편집. project_path + theme(프리셋) 또는 custom_colors(HSL) + border_radius.
+
+          '
+        target_key: op
+        group: web_builder
+        router: handler
+        tool: web_op
+        ops:
+          default: preview
+          values:
+            create: 웹 프로젝트/페이지 생성 (target site|page)
+            build: 프로덕션 빌드 (Next.js)
+            deploy: Vercel 배포
+            preview: 로컬 미리보기 서버 (start/stop/status, 기본)
+            snapshot: 사이트 스크린샷 캡처
+            check: Lighthouse 품질 검사 (성능·접근성·SEO)
+            styles: shadcn 테마/색상/반경 구조화 편집 (globals.css)
+        implementation: web-builder 패키지 op 분기. create=create_project|create_page(target), build=build_site, deploy=deploy_vercel, preview=preview_site, snapshot=site_snapshot, check=site_live_check, styles=edit_styles. 가이드 web_builder.md.
+        keywords:
+        - 웹사이트
+        - 빌드
+        - 배포
+        - 미리보기
+        - vercel
+      web_component:
+        returns: effect
+        runs_on: mac_only
+        description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).
+        target_description: 'op로 분기 (기본 fetch).
+
+          - catalog: kind=components(button/card/dialog 등) 또는 sections(hero/features/cta 등). category 옵션.
+
+          - fetch: component(이름 또는 URL, 필수) + style + project_path + output_format(code/file).
+
+          - add: component(필수, 예 button/card) + project_path. shadcn/ui CLI로 설치.
+
+          '
+        target_key: op
+        group: web_builder
+        router: handler
+        tool: web_component_op
+        ops:
+          default: fetch
+          values:
+            catalog: 컴포넌트/섹션 카탈로그 조회 (kind)
+            fetch: 외부 CDN/레지스트리에서 컴포넌트 다운로드 (기본)
+            add: shadcn/ui CLI로 프로젝트에 컴포넌트 설치
+        implementation: catalog=list_components|list_sections(kind), fetch=fetch_component, add=add_component.
+        keywords:
+        - 컴포넌트
+        - 카탈로그
+        - shadcn
+        - UI
       html_video:
         returns: effect
         runs_on: mac_only
@@ -3748,32 +3807,6 @@ nodes:
         - MP4
         - 렌더링
         - HTML영상
-      remotion:
-        returns: effect
-        runs_on: mac_only
-        description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
-        target_description: 'op로 분기 (기본 render_inline).
-
-          - render_inline: composition_code(인라인 TSX 문자열) 필수.
-
-          - render_file: composition_file(TSX 파일 절대경로) 필수.
-
-          - status: 파라미터 없음, Remotion/Node.js 설치 상태만 반환.
-
-          '
-        group: media_produce
-        router: handler
-        tool: remotion
-        implementation: op로 분기. render_inline은 React TSX 컴포지션을 생성하고 Remotion CLI(npx remotion render)로 MP4 렌더링. render_file은 저장된 TSX 파일로 렌더링. status는 which/npm list로 설치 상태 확인.
-        target_key: composition_code
-        keywords:
-        - 영상
-        - React
-        - Remotion
-        - TSX
-        - MP4
-        - 렌더링
-        - 상태
       tts:
         returns: effect
         runs_on: mac_only
@@ -3887,102 +3920,6 @@ nodes:
         - HTML
         - 이미지
         - 렌더링
-      web_site:
-        returns: effect
-        runs_on: mac_only
-        description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
-        target_description: 'op로 분기 (기본 list).
-
-          - list: 파라미터 없음. 등록된 사이트 전체 반환.
-
-          - register: name(필수) + local_path(필수) + repo_url/deploy_url/description(선택).
-
-          - remove: site_id(필수).
-
-          - update: site_id(필수) + 변경할 필드(name/local_path/repo_url/deploy_url/description).
-
-          '
-        group: web_builder
-        router: handler
-        tool: web_site
-        implementation: web-builder 패키지의 sites.json 레지스트리 CRUD. 빈번하지 않은 어드민이라 가이드 web_builder.md 참조 권장.
-        keywords:
-        - 사이트
-        - 웹사이트목록
-        - 사이트등록
-        - 사이트삭제
-        - 사이트수정
-      web:
-        returns: effect
-        runs_on: mac_only
-        description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
-        target_description: 'op로 분기 (기본 preview).
-
-          - create: target=site(name + template:blank/landing/portfolio/blog/business + features) 또는 page(project_path + page_name + sections[] + metadata).
-
-          - build: 현재 프로젝트 프로덕션 빌드 (Next.js .next/).
-
-          - deploy: Vercel 배포. project_name/production 옵션.
-
-          - preview: 로컬 미리보기 서버. project_path + action(start/stop/status).
-
-          - snapshot: site_id 스크린샷 캡처.
-
-          - check: site_id Lighthouse 품질검사 (성능·접근성·SEO).
-
-          - styles: shadcn 테마 편집. project_path + theme(프리셋) 또는 custom_colors(HSL) + border_radius.
-
-          '
-        target_key: op
-        group: web_builder
-        router: handler
-        tool: web_op
-        ops:
-          default: preview
-          values:
-            create: 웹 프로젝트/페이지 생성 (target site|page)
-            build: 프로덕션 빌드 (Next.js)
-            deploy: Vercel 배포
-            preview: 로컬 미리보기 서버 (start/stop/status, 기본)
-            snapshot: 사이트 스크린샷 캡처
-            check: Lighthouse 품질 검사 (성능·접근성·SEO)
-            styles: shadcn 테마/색상/반경 구조화 편집 (globals.css)
-        implementation: web-builder 패키지 op 분기. create=create_project|create_page(target), build=build_site, deploy=deploy_vercel, preview=preview_site, snapshot=site_snapshot, check=site_live_check, styles=edit_styles. 가이드 web_builder.md.
-        keywords:
-        - 웹사이트
-        - 빌드
-        - 배포
-        - 미리보기
-        - vercel
-      web_component:
-        returns: effect
-        runs_on: mac_only
-        description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).
-        target_description: 'op로 분기 (기본 fetch).
-
-          - catalog: kind=components(button/card/dialog 등) 또는 sections(hero/features/cta 등). category 옵션.
-
-          - fetch: component(이름 또는 URL, 필수) + style + project_path + output_format(code/file).
-
-          - add: component(필수, 예 button/card) + project_path. shadcn/ui CLI로 설치.
-
-          '
-        target_key: op
-        group: web_builder
-        router: handler
-        tool: web_component_op
-        ops:
-          default: fetch
-          values:
-            catalog: 컴포넌트/섹션 카탈로그 조회 (kind)
-            fetch: 외부 CDN/레지스트리에서 컴포넌트 다운로드 (기본)
-            add: shadcn/ui CLI로 프로젝트에 컴포넌트 설치
-        implementation: catalog=list_components|list_sections(kind), fetch=fetch_component, add=add_component.
-        keywords:
-        - 컴포넌트
-        - 카탈로그
-        - shadcn
-        - UI
       image_critic:
         returns: effect
         runs_on: anywhere
@@ -4020,6 +3957,69 @@ nodes:
         - 그림 보기
         - vision read
         - image ocr
+      remotion:
+        returns: effect
+        runs_on: mac_only
+        description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
+        target_description: 'op로 분기 (기본 render_inline).
+
+          - render_inline: composition_code(인라인 TSX 문자열) 필수.
+
+          - render_file: composition_file(TSX 파일 절대경로) 필수.
+
+          - status: 파라미터 없음, Remotion/Node.js 설치 상태만 반환.
+
+          '
+        group: media_produce
+        router: handler
+        tool: remotion
+        implementation: op로 분기. render_inline은 React TSX 컴포지션을 생성하고 Remotion CLI(npx remotion render)로 MP4 렌더링. render_file은 저장된 TSX 파일로 렌더링. status는 which/npm list로 설치 상태 확인.
+        target_key: composition_code
+        keywords:
+        - 영상
+        - React
+        - Remotion
+        - TSX
+        - MP4
+        - 렌더링
+        - 상태
+      newspaper:
+        returns: effect
+        description: '"신문 만들어줘"라고 요청할 때만 사용. 키워드별 뉴스를 수집해 공유 문서 IR(신문 테마)로 생산. >> [table:document]로 렌더(html/pdf/docx). 보고서/분석/요약 요청에는 사용하지 말 것.'
+        target_description: 'keywords 배열 (수집할 뉴스 주제) · title(선택, 신문 제호) · source(google 기본/guardian). 반환: 문서 IR {title, meta, theme:"newspaper", blocks}(키워드별 heading + cards). 그대로 >> [table:document]로 렌더.'
+        group: media_produce
+        router: handler
+        tool: generate_newspaper
+        implementation: Google News RSS / Guardian API 수집 → 키워드별 heading + cards 블록으로 결정적 문서 IR 생산(LLM 미개입, 기사·링크 무손실). 렌더는 table:document(theme:newspaper)가 담당 — 단일 IR이 html/pdf/docx로.
+        target_key: keywords
+        keywords:
+        - 신문
+        - 신문만들기
+        - 신문생성
+        - 가디언
+        - guardian
+        - world news
+        app:
+          icon: 📰
+          name: 신문
+          order: 7
+          note: 키워드별 최신 뉴스를 모아 신문 문서로 만들어 "띄우기"로 봅니다.
+          inputs:
+          - key: kw
+            type: text
+            default: 청주, AI, 문화, 드라마, 영화, 만화, 세종, 경제, 주식
+            placeholder: 뉴스 키워드 (쉼표 구분)
+            required: true
+          action: '[engines:newspaper]{keywords: "$kw"} >> [table:document]{theme: "newspaper", format: "html"}'
+          view:
+          - type: list_action
+            from: .
+            icon: 📰
+            title: '{title}'
+            sub: '{message}'
+            button:
+              label: 🖥 띄우기
+              action: '[limbs:os_open]{path: "{file}"}'
     description: '작업장: 미디어 생성 — 신문, 슬라이드, 영상, 이미지, 음성(TTS), 웹사이트. (표·통화 변환 문법은 table 노드.)'
     tags:
     - 생성
@@ -4033,6 +4033,60 @@ nodes:
     - 이미지
   table:
     actions:
+      chart:
+        returns: effect
+        runs_on: mac_only
+        description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
+        target_description: 'title (필수). chart_type으로 종류 분기 (기본 line).
+
+          표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(table:spreadsheet와 같은 통화). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
+
+          - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
+
+          - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
+
+          - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
+
+          - pie: labels·values 리스트. hole 옵션으로 도넛.
+
+          - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
+
+          - heatmap: z(매트릭스)·x_labels·y_labels.
+
+          - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
+
+          - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
+
+          - spec: 위 chart_type으로 부족한 풍부한 표현(이중축·로그축·복합 음영 등)은 Plotly figure JSON을 spec으로 그대로 넘긴다 — matplotlib 코드 작성(self:write+run) 대신. spec={data:[트레이스...], layout:{...}}. 이중축=트레이스에 yaxis:"y2" + layout.yaxis2={overlaying:"y",side:"right"}. 구간음영=layout.shapes(type:rect, yref:"paper"). 주석=layout.annotations. *코드가 아니라 데이터*라 포터블·캐시·검증가능. 예: 한국 GDP(좌축)와 KOSPI(우축) 이중축 + 정권별 shapes 음영.
+
+          '
+        group: chart
+        router: handler
+        tool: chart
+        implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. matplotlib 폴백 내장.
+        target_key: title
+        keywords:
+        - 차트
+        - 그래프
+        - 시각화
+        - 라인차트
+        - 선그래프
+        - 추이
+        - 바차트
+        - 막대그래프
+        - 캔들
+        - 주식차트
+        - OHLCV
+        - 파이차트
+        - 원그래프
+        - 비율
+        - 산점도
+        - 분포
+        - 추세선
+        - 히트맵
+        - 열지도
+        - 대시보드
+        - 복합차트
       filter:
         returns: transform
         runs_on: anywhere
@@ -4186,77 +4240,6 @@ nodes:
         - merge
         - 통합
         - 목록합치기
-      chart:
-        returns: effect
-        runs_on: mac_only
-        description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
-        target_description: 'title (필수). chart_type으로 종류 분기 (기본 line).
-
-          표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(table:spreadsheet와 같은 통화). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
-
-          - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
-
-          - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
-
-          - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
-
-          - pie: labels·values 리스트. hole 옵션으로 도넛.
-
-          - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
-
-          - heatmap: z(매트릭스)·x_labels·y_labels.
-
-          - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
-
-          - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
-
-          - spec: 위 chart_type으로 부족한 풍부한 표현(이중축·로그축·복합 음영 등)은 Plotly figure JSON을 spec으로 그대로 넘긴다 — matplotlib 코드 작성(self:write+run) 대신. spec={data:[트레이스...], layout:{...}}. 이중축=트레이스에 yaxis:"y2" + layout.yaxis2={overlaying:"y",side:"right"}. 구간음영=layout.shapes(type:rect, yref:"paper"). 주석=layout.annotations. *코드가 아니라 데이터*라 포터블·캐시·검증가능. 예: 한국 GDP(좌축)와 KOSPI(우축) 이중축 + 정권별 shapes 음영.
-
-          '
-        group: chart
-        router: handler
-        tool: chart
-        implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. matplotlib 폴백 내장.
-        target_key: title
-        keywords:
-        - 차트
-        - 그래프
-        - 시각화
-        - 라인차트
-        - 선그래프
-        - 추이
-        - 바차트
-        - 막대그래프
-        - 캔들
-        - 주식차트
-        - OHLCV
-        - 파이차트
-        - 원그래프
-        - 비율
-        - 산점도
-        - 분포
-        - 추세선
-        - 히트맵
-        - 열지도
-        - 대시보드
-        - 복합차트
-      spreadsheet:
-        returns: effect
-        runs_on: mac_only
-        description: 행 데이터(rows/sheets) → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
-        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표준 테이블 통화 table={columns,rows}도 수용(headers/rows로 매핑 — table:chart와 같은 통화). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
-        group: chart
-        router: handler
-        tool: spreadsheet
-        implementation: system_essentials handler.py가 openpyxl로 Workbook 생성 — sheets(다중) 또는 rows+headers(단일), 셀은 str/int/float로 강제.
-        target_key: path
-        keywords:
-        - 스프레드시트
-        - 엑셀
-        - xlsx
-        - 표
-        - 시트
-        - 장부
       structure:
         returns: effect
         runs_on: anywhere
@@ -4306,6 +4289,23 @@ nodes:
         - document
         - 리포트
         - 페이지
+      spreadsheet:
+        returns: effect
+        runs_on: mac_only
+        description: 행 데이터(rows/sheets) → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
+        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표준 테이블 통화 table={columns,rows}도 수용(headers/rows로 매핑 — table:chart와 같은 통화). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
+        group: chart
+        router: handler
+        tool: spreadsheet
+        implementation: system_essentials handler.py가 openpyxl로 Workbook 생성 — sheets(다중) 또는 rows+headers(단일), 셀은 str/int/float로 강제.
+        target_key: path
+        keywords:
+        - 스프레드시트
+        - 엑셀
+        - xlsx
+        - 표
+        - 시트
+        - 장부
     description: 표/통화 변환 문법 — 관계대수(filter·sort·take·select·dedup·groupby·join·union·merge)와 통화 emitter(chart·spreadsheet·document·structure). 도메인·몸 무관 IBL 문법 계층.
     tags:
     - 변환

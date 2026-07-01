@@ -1,0 +1,136 @@
+nodes:
+  sense:
+    actions:
+      video:
+        returns: scalar
+        runs_on: mac_only
+        description: 유튜브 동영상 조회 (op 분기). 메타·자막·요약. 검색은 search_youtube, 재생은 limbs:music.
+        target_description: 'op로 분기 (기본 info). url 또는 video_id 필수.
+
+          - info: 메타데이터(제목·조회수·채널).
+
+          - transcript: 자막/스크립트 추출. language 옵션.
+
+          - languages: 사용 가능한 자막 언어 목록.
+
+          - summarize: 자막 추출 + AI 요약 + HTML 보고서 + 브라우저 열기. summary_length 옵션.
+
+          '
+        target_key: op
+        group: media
+        router: handler
+        tool: video_op
+        ops:
+          default: info
+          values:
+            info: 동영상 메타데이터 (제목·조회수·채널)
+            transcript: 자막/스크립트 추출
+            languages: 사용 가능한 자막 언어 목록
+            summarize: 자막+AI요약+HTML 보고서 생성
+        implementation: youtube 패키지 op 분기. info=get_youtube_info, transcript=get_youtube_transcript, languages=list_available_transcripts, summarize=summarize_youtube.
+        keywords:
+        - youtube
+        - 유튜브
+        - 동영상
+        - 자막
+        - 영상요약
+      search_youtube:
+        returns: items
+        runs_on: mac_only
+        description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
+        group: media
+        keywords:
+        - youtube
+        - 유튜브
+        - 영상검색
+        - 동영상검색
+        - video search
+        target_description: 검색어
+        router: handler
+        tool: search_youtube
+        implementation: yt-dlp ytsearch로 유튜브 검색 결과 목록 추출
+        target_key: query
+        app:
+          instrument: ytmusic
+          icon: 🎵
+          name: 유튜브 뮤직
+          order: 8
+          mode: 검색
+          mode_order: 0
+          inputs:
+          - key: q
+            type: text
+            placeholder: 곡·아티스트 검색
+            required: true
+          action: '[sense:search_youtube]{query: "$q", count: 15}'
+          view:
+          - type: list_action
+            from: items
+            icon: 🎵
+            title: '{title|trunc:60}'
+            sub: '{channel} · {duration}'
+            button:
+              label: ▶
+              action: '[limbs:music]{op: "play", mode: "client", query: "https://www.youtube.com/watch?v={video_id}"}'
+            button2:
+              label: ⬇
+              action: '[limbs:music]{op: "download", mode: "client", url: "https://www.youtube.com/watch?v={video_id}"}'
+  limbs:
+    actions:
+      music:
+        returns: effect
+        runs_on: mac_only
+        description: 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
+        group: media
+        target_description: play/add — query 파라미터로 검색어 또는 URL. download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.
+        target_key: op
+        router: handler
+        tool: music_op
+        ops:
+          default: play
+          values:
+            play: 즉시 재생 (query 검색어/URL, 기본)
+            add: 큐에 추가 (query 검색어/URL)
+            skip: 현재 곡 스킵
+            queue: 큐 목록 조회
+            stop: 재생 중지
+            download: MP3 다운로드 (url + output_path 옵션)
+        implementation: yt-dlp + mpv/ffplay 음악 재생·큐·다운로드 op 분기
+        keywords:
+        - youtube
+        - 유튜브
+        - 음악
+        - 노래
+        - 재생
+        - 틀어줘
+        - 큐
+        - 대기열
+        - 스킵
+        - 다음곡
+        - 정지
+        - 멈춰
+        - 다운로드
+        - mp3
+        app:
+          instrument: ytmusic
+          mode: 큐
+          mode_order: 1
+          phone_render: false
+          auto_run: true
+          buttons:
+          - label: ⏭ 다음 곡
+            action: '[limbs:music]{op: "skip"}'
+          - label: ■ 정지
+            action: '[limbs:music]{op: "stop"}'
+          action: '[limbs:music]{op: "queue"}'
+          view:
+          - type: kv
+            rows:
+            - k: 상태
+              v: '{message}'
+          - type: kv_list
+            from: queue
+            title: 대기열
+            empty: 대기열이 비어 있습니다
+            k: '{position}'
+            v: '{title|trunc:40} · {channel}'

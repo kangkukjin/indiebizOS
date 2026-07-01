@@ -1,0 +1,107 @@
+nodes:
+  sense:
+    actions:
+      search_ddg:
+        returns: items
+        description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는 search_news, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
+        group: research
+        target_description: 검색어 (영어 권장). region/safesearch 옵션 가능.
+        router: handler
+        tool: ddgs_search
+        implementation: DuckDuckGo ddgs 라이브러리로 웹 검색. 쿼리 언어 자동 감지(영어→글로벌, 한국어→한국).
+        target_key: query
+      crawl:
+        returns: items
+        description: 웹페이지 원문 읽기 (URL 필요). items=문서 IR(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
+        group: research
+        target_description: 읽을 페이지 URL (http/https). 검색 결과의 link 필드 그대로 전달 가능.
+        router: handler
+        tool: crawl_website
+        implementation: 1차 requests+BeautifulSoup 정적 크롤링, 콘텐츠 부족 시 Chrome MCP(실제 브라우저)로 자동 폴백. JS 렌더링 사이트도 처리 가능.
+        target_key: url
+      search_news:
+        returns: items
+        description: 뉴스만 검색 (Google News). 신문 생성, 뉴스 모니터링 등 뉴스 전용 작업에 사용.
+        group: research
+        target_description: 뉴스 검색어. 언어 자동 감지 — 한국어는 한국 뉴스, 영어는 글로벌 뉴스.
+        router: handler
+        tool: google_news_search
+        implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
+        target_key: query
+      search_naver:
+        returns: items
+        description: 네이버 검색 API. 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)에서 DuckDuckGo/Google보다 압도적으로 강함. type 파라미터로 도메인 선택 (기본 webkr). 뉴스 단독 검색은 type='news' 또는 search_news(Google News) 중 한국 출처 우선이면 이쪽.
+        group: research
+        target_description: 검색어. type 옵션으로 도메인 선택 (webkr/news/blog/cafe/kin/book/encyc/doc/shop, 기본 webkr).
+        router: handler
+        tool: naver_search
+        implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 9개 도메인(webkr/news/blog/cafe/kin/book/encyc/doc/shop) 모두 호출. 무료 일 25k 쿼리.
+        target_key: query
+  limbs:
+    actions:
+      launch:
+        returns: effect
+        description: 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
+        group: open
+        target_description: (미지정 시 대시보드 표시). action으로 register/add/list/remove 등 사이트 관리.
+        router: handler
+        tool: launch_sites
+        scope: workspace
+        implementation: 즐겨찾기 JSON 설정 기반 URL 일괄 오픈 (webbrowser 모듈) — workspace 도구(프로젝트 무관)
+        target_key: action
+        app:
+          icon: 🔖
+          name: 즐겨찾기
+          order: 10
+          auto_run: true
+          action: '[limbs:launch]{action: "list"}'
+          view:
+          - type: card_list
+            from: items
+            empty_from: message
+            card:
+              title: '{name}'
+              lines:
+              - '{url|trunc:54}'
+              link:
+                href: '{url}'
+                label: 열기 →
+  engines:
+    actions:
+      newspaper:
+        returns: effect
+        description: '"신문 만들어줘"라고 요청할 때만 사용. 키워드별 뉴스를 수집해 공유 문서 IR(신문 테마)로 생산. >> [table:document]로 렌더(html/pdf/docx). 보고서/분석/요약 요청에는 사용하지 말 것.'
+        target_description: 'keywords 배열 (수집할 뉴스 주제) · title(선택, 신문 제호) · source(google 기본/guardian). 반환: 문서 IR {title, meta, theme:"newspaper", blocks}(키워드별 heading + cards). 그대로 >> [table:document]로 렌더.'
+        group: media_produce
+        router: handler
+        tool: generate_newspaper
+        implementation: Google News RSS / Guardian API 수집 → 키워드별 heading + cards 블록으로 결정적 문서 IR 생산(LLM 미개입, 기사·링크 무손실). 렌더는 table:document(theme:newspaper)가 담당 — 단일 IR이 html/pdf/docx로.
+        target_key: keywords
+        keywords:
+        - 신문
+        - 신문만들기
+        - 신문생성
+        - 가디언
+        - guardian
+        - world news
+        app:
+          icon: 📰
+          name: 신문
+          order: 7
+          note: 키워드별 최신 뉴스를 모아 신문 문서로 만들어 "띄우기"로 봅니다.
+          inputs:
+          - key: kw
+            type: text
+            default: 청주, AI, 문화, 드라마, 영화, 만화, 세종, 경제, 주식
+            placeholder: 뉴스 키워드 (쉼표 구분)
+            required: true
+          action: '[engines:newspaper]{keywords: "$kw"} >> [table:document]{theme: "newspaper", format: "html"}'
+          view:
+          - type: list_action
+            from: .
+            icon: 📰
+            title: '{title}'
+            sub: '{message}'
+            button:
+              label: 🖥 띄우기
+              action: '[limbs:os_open]{path: "{file}"}'

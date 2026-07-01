@@ -1,0 +1,24 @@
+node: self
+actions:
+  health:
+    returns: items
+    description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
+    group: health
+    target_description: 'save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호).'
+    target_key: op
+    router: handler
+    tool: health_op
+    ops:
+      values:
+        save: 건강 정보 저장 (info_type + data)
+        query: 조회 (query_type + keyword 옵션)
+        delete: 기록 삭제 (record_type + record_id)
+    implementation: handler.py가 op로 분기 — save는 save_health_info, query는 get_health_context, delete는 delete_health_record(soft-delete tombstone).
+    keywords:
+    - 건강
+    - 건강 저장
+    - 건강 조회
+    - 혈압
+    - 혈당
+    - 체중
+    - 투약

@@ -1,0 +1,155 @@
+node: table
+actions:
+  filter:
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴).
+    target_description: 'where(필터 조건): 문자열(전 필드 부분일치, 예 "전세") · {field, op, value}(op=eq/ne/lt/le/gt/ge/contains/in) · {열:값} 단축형 · 조건 배열(AND). >> 파이프로 앞 통화를 자동 수용. 도메인 무관 — 모든 검색·목록 생산자에 적용.'
+    group: transform
+    router: handler
+    tool: data_filter
+    implementation: data-ops handler.py — records|table 통화에서 where 미니 DSL로 부분집합. 비파괴(같은 통화 반환).
+    target_key: where
+    keywords:
+    - 필터
+    - 거르기
+    - 조건
+    - 만
+    - filter
+  sort:
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, desc 옵션).
+    target_description: 'by(정렬 기준 필드/열명, 필수) · desc(내림차순 bool, 기본 false). 숫자는 수치로, 아니면 문자열로 비교. 예: [...] >> [table:sort]{by: price, desc: true}.'
+    group: transform
+    router: handler
+    tool: data_sort
+    implementation: data-ops handler.py — records|table을 by 키로 정렬(_sort_key 수치 우선). 비파괴.
+    target_key: by
+    keywords:
+    - 정렬
+    - 순
+    - 정렬하기
+    - sort
+    - 순서
+  take:
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자 — items에서 상위 n개만(음수면 뒤에서 n). 보통 sort 뒤.
+    target_description: 'n(취할 개수, 기본 10; 음수=뒤에서 n개). 보통 sort 뒤에 써 상위 N 추출: [...] >> [table:sort]{by:..} >> [table:take]{n:5}.'
+    group: transform
+    router: handler
+    tool: data_take
+    implementation: data-ops handler.py — records|table을 n으로 슬라이스. 비파괴.
+    target_key: n
+    keywords:
+    - 상위
+    - 개만
+    - 처음
+    - take
+    - top
+  select:
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자 — items에서 지정한 열/필드만 남긴다(투영). 차트·문서 전 좁히기.
+    target_description: 'columns(남길 열/필드 이름 배열, 필수). 예: [sense:...] >> [table:select]{columns: ["연도","GDP"]}. 표가 넓을 때 차트/문서 전에 좁히기.'
+    group: transform
+    router: handler
+    tool: data_select
+    implementation: data-ops handler.py — table 열 투영(인덱스 매핑), records 필드 추림. 비파괴.
+    target_key: columns
+    keywords:
+    - 열
+    - 컬럼
+    - 투영
+    - select
+    - 골라
+  dedup:
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교).
+    target_description: by(중복 판정 키 필드/열; 미지정 시 records=title, table=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)
+    group: transform
+    router: handler
+    tool: data_dedup
+    implementation: data-ops handler.py — by 키 정규화 후 첫 항목만 유지. 비파괴.
+    target_key: by
+    keywords:
+    - 중복제거
+    - 중복
+    - 유니크
+    - dedup
+    - 고유
+  groupby:
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자 — items를 키 필드로 그룹지어 집계(count/sum/avg/min/max).
+    target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count). 반환 table=[by열, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
+    group: transform
+    router: handler
+    tool: data_groupby
+    implementation: data-ops handler.py — table을 by로 그룹핑 후 agg 명세대로 집계(입력 순서 보존). 표형 전용.
+    target_key: by
+    keywords:
+    - 그룹
+    - 집계
+    - 묶어
+    - groupby
+    - 통계
+  join:
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자(이항) — 두 입력을 공통 키(on)로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.
+    target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). table=열 기준, records=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
+    group: transform
+    router: handler
+    tool: data_join
+    implementation: data-ops handler.py — & 병렬 두 입력을 on 키로 inner join(우측 인덱싱, 키 정규화 비교). table·records 통화 모두 지원(같은 통화끼리).
+    target_key: true
+    keywords:
+    - 조인
+    - 결합
+    - 합쳐
+    - join
+    - 연결
+  union:
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자(이항) — 두 입력을 행 결합(이어붙이기). & 병렬로 공급. 중복 제거는 뒤에 >> dedup.
+    target_description: '파라미터 없음. table은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), records는 단순 concat. 예: [A] & [B] >> [table:union]. records 합치며 중복까지 지우려면 table:merge.'
+    group: transform
+    router: handler
+    tool: data_union
+    implementation: data-ops handler.py — & 병렬 두 입력 행 결합(table 열 통합/records concat). 같은 통화 종류만.
+    target_key: ''
+    keywords:
+    - 행결합
+    - 이어붙여
+    - union
+    - 합집합
+    - 세로결합
+  merge:
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자(이항) — 두 입력을 합치되 by 키로 중복 제거. & 병렬로 공급. (단순 이어붙이기는 union.)
+    target_description: 'by(선택, 중복 제거 키 필드; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 표형 결합은 table:union. 예: [sense:search_news]{...} & [sense:search_ddg]{...} >> [table:merge]{by: title}.'
+    group: transform
+    router: handler
+    tool: data_merge
+    implementation: data-ops handler.py — & 병렬 두 records concat(+ by 지정 시 정규화 중복 제거). 목록형 전용.
+    target_key: by
+    keywords:
+    - 합치기
+    - 모아
+    - merge
+    - 통합
+    - 목록합치기

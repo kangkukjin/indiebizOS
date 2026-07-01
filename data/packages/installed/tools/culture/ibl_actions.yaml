@@ -1,0 +1,227 @@
+node: sense
+actions:
+  performance:
+    returns: items
+    description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book.
+    group: culture
+    target_description: search — query(공연명/키워드)·genre·region·status·days 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록).
+    target_key: op
+    router: handler
+    tool: performance_op
+    ops:
+      default: search
+      values:
+        search: 공연 검색 (연극·뮤지컬·음악회, 기본)
+        venue: 공연장·문화시설 검색
+        genres: 장르 코드 목록 (검색 필터용)
+        regions: 지역 코드 목록 (검색 필터용)
+    implementation: KOPIS(한국공연예술센터) API op 분기. search=search_by_keyword, venue=get_facilities, genres=get_genre_list, regions=get_region_list.
+    keywords:
+    - 공연
+    - 연극
+    - 뮤지컬
+    - 공연장
+    app:
+      instrument: culture
+      icon: 🎭
+      name: 문화공연
+      order: 3
+      mode: 공연
+      mode_order: 0
+      inputs:
+      - key: region
+        type: select
+        label: 전체 지역
+        options_action: '[sense:performance]{op: "regions"}'
+        options_from: regions
+        option_value: code
+        option_label: name
+      - key: genre
+        type: select
+        label: 전체 장르
+        options_action: '[sense:performance]{op: "genres"}'
+        options_from: genres
+        option_value: code
+        option_label: name
+      - key: kw
+        type: text
+        placeholder: 공연명 키워드(선택)
+      action: '[sense:performance]{genre: "$genre", region: "$region", keyword: "$kw"}'
+      view:
+      - type: image_grid
+        from: items
+        empty_from: message
+        image: '{poster}'
+        title: '{prfnm}'
+        lines:
+        - '{fcltynm}'
+        - '{prfpdfrom}~{prfpdto}'
+        - '{area} · {prfstate}'
+  book:
+    returns: items
+    description: 한국 도서 조회 (op 분기, 도서관정보나루). 고전 원문은 classic, 글로벌 도서는 search_books.
+    group: culture
+    target_description: search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계). "제목이 X인 책"은 title:"X". recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
+    target_key: op
+    router: handler
+    tool: book_op
+    ops:
+      default: search
+      values:
+        search: 도서 검색·조회 (필드분기·ISBN·대출통계, 기본)
+        recommended: 추천도서 (마니아·다독자 패턴)
+        codes: 분류 코드 목록 (kdc/지역)
+    implementation: 도서관정보나루 API op 분기. search=library_book 필드분기(search_books/quick_search/get_book_by_isbn/get_book_detail), recommended=get_recommended_books, codes=get_kdc_list|get_region_list(code_type).
+    keywords:
+    - 도서
+    - 책
+    - ISBN
+    - 도서관
+    app:
+      icon: 📚
+      name: 도서
+      order: 1
+      modes:
+      - name: 정보나루
+        inputs:
+        - key: q
+          type: text
+          placeholder: 제목·저자·키워드
+          required: true
+        action: '[sense:book]{keyword: "$q"}'
+        view:
+        - type: card_list
+          from: items
+          empty_from: message
+          item_click:
+            action: '[sense:book]{isbn: "{isbn13}", detail: true}'
+            view:
+            - type: metric
+              label: 전국 누적 대출
+              big: '{book.loan_stats.total|num}'
+              unit: 회
+            - type: kv_list
+              title: 연령별 대출
+              from: book.loan_stats.by_age
+              k: '{name}'
+              v: '{loanCnt|num}'
+            - type: kv_list
+              title: 성별 대출
+              from: book.loan_stats.by_gender
+              k: '{name}'
+              v: '{loanCnt|num}'
+          card:
+            image: '{bookImageURL}'
+            title: '{bookname}'
+            lines:
+            - '{authors}'
+            - '{publisher} · {publication_year}{loan_count|opt: · 대출 ,회}'
+            link:
+              href: '{bookDtlUrl}'
+              label: 상세 →
+      - name: 네이버
+        inputs:
+        - key: q
+          type: text
+          placeholder: 책 제목·저자  예) 한강
+          required: true
+        action: '[sense:search_naver]{query: "$q", type: "book", display: 20, _raw: true}'
+        view:
+        - type: card_list
+          from: items
+          card:
+            image: '{image}'
+            title: '{title}'
+            lines:
+            - '{author}'
+            - '{publisher}'
+            link:
+              href: '{link}'
+              label: 네이버 책 →
+      - name: 글로벌
+        inputs:
+        - key: q
+          type: text
+          placeholder: 원서·해외도서  예) sapiens
+          required: true
+        action: '[sense:search_books]{query: "$q"}'
+        view:
+        - type: card_list
+          from: items
+          empty_from: message
+          card:
+            image: '{bookImageURL}'
+            title: '{bookname}'
+            lines:
+            - '{authors}'
+            - '{categories|opt:,}{page_count|opt: · ,쪽}'
+            link:
+              href: '{infoLink}'
+              label: Google Books →
+      - name: 고전
+        inputs:
+        - key: q
+          type: text
+          placeholder: 서양 고전  예) sherlock, austen
+          required: true
+        action: '[sense:classic]{op: "western", query: "$q"}'
+        view:
+        - type: card_list
+          from: items
+          card:
+            image: '{cover_url}'
+            title: '{title}'
+            lines:
+            - '{authors}'
+            - 내려받기 {download_count|num}회
+            link:
+              href: '{html_url}'
+              label: 원문 읽기 →
+  classic:
+    returns: items
+    description: 고전 원문 검색 (op 분기). western=서양 고전(Gutenberg), korean=한국 고전(한국고전종합DB).
+    group: culture
+    target_description: query=검색어. western — Gutenberg(저작권 만료 7만+권), languages·topic·author_year 옵션. korean — 한국고전종합DB(이황·이이 등 원문·번역).
+    target_key: op
+    router: handler
+    tool: classic_op
+    ops:
+      default: western
+      values:
+        western: 서양 고전 원문 (Project Gutenberg)
+        korean: 한국 고전 (한국고전종합DB)
+    implementation: op 분기. western=tool_gutenberg.search_gutenberg, korean=tool_korean_classics.search_korean_classics.
+    keywords:
+    - 고전
+    - 원문
+    - Gutenberg
+    - 한국고전
+  exhibit:
+    returns: items
+    description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.
+    group: culture
+    target_description: 검색어 또는 키워드 (예 '국립중앙박물관', '미디어아트').
+    router: handler
+    tool: kcisa_quick_search
+    implementation: 한국문화정보원(KCISA) API로 전시/문화행사 검색
+    target_key: keyword
+    app:
+      instrument: culture
+      mode: 전시
+      mode_order: 1
+      inputs:
+      - key: kw
+        type: text
+        default: 전시
+        placeholder: '전시 키워드 (예: 사진, 현대미술)'
+        required: true
+      action: '[sense:exhibit]{keyword: "$kw"}'
+      view:
+      - type: image_grid
+        from: items
+        image: '{thumbnail}'
+        title: '{title}'
+        lines:
+        - '{place}'
+        - '{startDate}~{endDate}'
+        - '{area} · {realmName}'

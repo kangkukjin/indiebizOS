@@ -1,0 +1,40 @@
+node: limbs
+actions:
+  screen:
+    returns: effect
+    runs_on: mac_only
+    description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
+    target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
+    group: desktop
+    target_key: op
+    router: handler
+    tool: computer_op
+    ops:
+      values:
+        snapshot: 화면 독해 — UI 요소(역할/이름)+글자(OCR)+클릭좌표. 클릭 전 화면 파악 (브라우저 snapshot의 데스크톱 판)
+        screenshot: 화면 캡처 이미지 (x,y,width,height 옵션)
+        click: 마우스 클릭 (x,y)
+        type: 텍스트 입력 (text)
+        key: 키 입력 (key)
+        mouse_move: 마우스 이동 (x,y)
+        drag: 드래그 (start_x,start_y,end_x,end_y)
+        scroll: 스크롤 (direction,amount)
+        cursor_position: 현재 커서 좌표 반환
+        screen_info: 화면 해상도 정보 반환
+    implementation: pyautogui로 op 분기 (1280x800 가상 좌표 → 실제 해상도 자동 변환, Retina 대응)
+    keywords:
+    - 데스크톱
+    - macOS
+    - 클릭
+    - 키보드
+    - 스크린샷
+    - 마우스
+    - 드래그
+    - 스크롤
+    - 자동화
+    - 화면독해
+    - 화면읽기
+    - 접근성
+    - OCR
+    - 화면분석
+    - 버튼찾기

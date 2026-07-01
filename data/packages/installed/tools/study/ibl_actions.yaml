@@ -1,0 +1,79 @@
+node: sense
+actions:
+  paper:
+    returns: items
+    description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
+    target_description: "op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
+    target_key: op
+    group: research
+    router: handler
+    tool: paper_op
+    ops:
+      default: search
+      values:
+        search: 논문·학위논문 검색 (source openalex/arxiv/pubmed/semantic/nanet)
+        download: 논문 PDF 다운로드 (source arxiv/pubmed)
+    implementation: study 패키지 op/source 분기. search=openalex/arxiv/pubmed/semantic_scholar/nanet(researchTotal), download=arxiv/pubmed_pdf.
+    keywords:
+    - 논문
+    - 학술
+    - arxiv
+    - pubmed
+    - 논문검색
+    - 학위논문
+  researcher:
+    returns: items
+    description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search_ddg.
+    target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망. 공저자 소속·협업으로 신원 재확인.\n"
+    target_key: op
+    group: research
+    router: handler
+    tool: researcher_op
+    ops:
+      default: find
+      values:
+        find: 연구자 검색 (이름→소속·출생연도·lodID, 동명이인 분리)
+        coauthor: 공저자망 (lodID→공저자, 신원 재확인)
+    implementation: study 패키지. find=authorView, coauthor=coAuthor (국회도서관 LOSI OpenAPI, NANET_API_KEY).
+    keywords:
+    - 연구자
+    - 학자
+    - 인물찾기
+    - 동명이인
+    - 공저자
+    - researcher
+  pew_research:
+    returns: items
+    description: Pew Research 최신 여론조사/리서치 보고서 목록. 미국 사회·정치·기술 트렌드 조사. 파라미터 없이 호출하면 최신 리서치 목록 반환.
+    group: research
+    target_description: (파라미터 없음 — 최신 리서치 목록 반환). topic 옵션으로 주제 필터링 가능.
+    router: handler
+    tool: fetch_pew_research
+    implementation: Pew Research RSS 피드 파싱 (feedparser). 입력 파라미터 없이 최신 리서치 목록 반환.
+  search_guardian:
+    returns: items
+    description: Guardian 신문 아카이브 검색. 영국·국제 기사 위주, 영어 검색.
+    group: research
+    target_description: 검색어 또는 키워드 (영어).
+    router: handler
+    tool: search_guardian
+    implementation: Guardian Open Platform API로 뉴스 아카이브 검색 (API키 필요). records[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 폐지(records를 문자열로 파괴하던 결함 제거).
+    target_key: query
+  world_bank:
+    returns: items
+    description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. items(행 dict — 연도+지표값) 반환, 소비자가 table 재구성.
+    group: world
+    target_description: 지표명 또는 코드 (예 "GDP"/"인구"/"실업률" 자연어 가능, NY.GDP.MKTP.CD 코드도). country는 국가명(한국/미국) 또는 ISO 코드. 반환에 table={columns:[연도,지표],rows:[[연도,값],...]} 포함 — 그대로 engines:chart{table:...}/spreadsheet{table:...}로 흘려보내 reshape 없이 시각화/표.
+    router: handler
+    tool: fetch_world_bank_data
+    implementation: 세계은행 공개 API로 국가별 경제/사회 지표 시계열 조회
+    target_key: indicator
+  search_books:
+    returns: items
+    description: 글로벌 도서 검색 (Google Books). 해외 도서·원서 포함. 한국 도서관 소장/대출 정보는 sense:book(도서관정보나루) 사용.
+    group: culture
+    target_description: 검색 쿼리
+    router: handler
+    tool: search_books
+    implementation: Google Books API로 글로벌 도서 검색 (영어/다국어). 한국 도서는 sense:book 사용.
+    target_key: query

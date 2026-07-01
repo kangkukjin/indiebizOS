@@ -1,0 +1,202 @@
+node: sense
+actions:
+  stock:
+    returns: scalar
+    description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
+    group: finance
+    target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). history는 표준 table 통화(table={columns:[날짜,종가],rows:[...]})도 반환 — 그대로 engines:chart/spreadsheet로 흘리거나 >> 파이프.
+    target_key: op
+    router: handler
+    tool: stock_op
+    ops:
+      default: quote
+      values:
+        quote: 현재가·현재 시세 (기본, "얼마"·"주가"·"시세" — Yahoo)
+        history: 기간별 주가 이력·차트용 (period 또는 날짜, 시장 자동판별)
+        info: 종목 메타 — 시총·52주·PER·배당
+        search: 회사명으로 심볼 검색 (query)
+        investors: 투자자별 매매동향 (한국 전용)
+        news: 종목 관련 뉴스 (Finnhub→Yahoo)
+        earnings: 실적발표 일정 (예상 vs 실적)
+    implementation: market 자동판별(6자리/한글=kr, 그외=us) 후 op 분기. quote(현재가)/info/search=yfinance, history(이력)=krx|fmp, investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
+    keywords:
+    - 주가
+    - 주식
+    - 시세
+    - 종목
+    - 매매동향
+    app:
+      instrument: invest
+      icon: 📈
+      name: 투자
+      order: 4
+      modes:
+      - name: 주식
+        auto_run: true
+        inputs:
+        - key: q
+          type: text
+          default: 삼성전자
+          placeholder: '회사명(한글)·티커 (예: 삼성전자, AAPL)'
+          chips:
+          - 삼성전자
+          - SK하이닉스
+          - TIGER200
+          - AAPL
+          - NVDA
+          - TSLA
+        filter:
+          key: period
+          items:
+          - label: 5일
+            value: 5d
+            default: true
+          - label: 1달
+            value: 1mo
+          - label: 3달
+            value: 3mo
+          - label: 1년
+            value: 1y
+        action: '[sense:stock]{op: "quote", ticker: "$q", period: "$period", max_points: 60}'
+        view:
+        - type: metric
+          label: '{data.symbol}'
+          big: '{data.current_price|num}'
+          unit: '{data.currency}'
+          sub: '{data.change|arrow} {data.change|abs|num} ({data.change_percent}%)'
+          trend: data.change
+        - type: sparkline
+          from: data.prices
+          y: close
+          trend: data.change
+        - type: kv
+          rows:
+          - k: 전일
+            v: '{data.previous_close|num}'
+          - k: 시가/고가/저가
+            v: '{data.open|num} / {data.high|num} / {data.low|num}'
+          - k: 거래량
+            v: '{data.volume|num}'
+      - name: 코인
+        auto_run: true
+        inputs:
+        - key: coin
+          type: text
+          default: BTC
+          placeholder: 코인 심볼 (BTC, ETH, SOL …)
+          chips:
+          - BTC
+          - ETH
+          - SOL
+          - XRP
+          - DOGE
+        filter:
+          key: days
+          items:
+          - label: 7일
+            value: 7
+            default: true
+          - label: 1달
+            value: 30
+          - label: 3달
+            value: 90
+        action: '[sense:crypto]{coin_id: "$coin", days: $days}'
+        view:
+        - type: metric
+          label: '{data.name} ({data.symbol})'
+          big: '{data.current_price_krw|num}'
+          unit: 원
+          sub: '{data.change_24h_percent|arrow} {data.change_24h_percent|abs}% (24h)'
+          trend: data.change_24h_percent
+        - type: sparkline
+          from: data.prices
+          y: close
+          trend: data.change_24h_percent
+        - type: kv
+          rows:
+          - k: USD
+            v: ${data.current_price_usd|num}
+          - k: 24h 고가/저가
+            v: ${data.high_24h_usd|num} / ${data.low_24h_usd|num}
+          - k: 시가총액
+            v: '{data.market_cap_formatted} · 랭크 #{data.rank}'
+      - name: 자원
+        auto_run: true
+        inputs:
+        - key: sym
+          type: select
+          label: 자원
+          default: GC=F
+          options:
+          - value: GC=F
+            label: 금
+          - value: SI=F
+            label: 은
+          - value: CL=F
+            label: WTI 유가
+          - value: BZ=F
+            label: 브렌트유
+          - value: NG=F
+            label: 천연가스
+          - value: HG=F
+            label: 구리
+        filter:
+          key: period
+          items:
+          - label: 5일
+            value: 5d
+            default: true
+          - label: 1달
+            value: 1mo
+          - label: 3달
+            value: 3mo
+          - label: 1년
+            value: 1y
+        action: '[sense:stock]{op: "quote", ticker: "$sym", period: "$period", max_points: 60}'
+        view:
+        - type: metric
+          label: '{data.symbol}'
+          big: '{data.current_price|num}'
+          unit: '{data.currency}'
+          sub: '{data.change|arrow} {data.change|abs|num} ({data.change_percent}%)'
+          trend: data.change
+        - type: sparkline
+          from: data.prices
+          y: close
+          trend: data.change
+        - type: kv
+          rows:
+          - k: 고가/저가
+            v: '{data.high|num} / {data.low|num}'
+          - k: 거래량
+            v: '{data.volume|num}'
+  company:
+    returns: items
+    description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. items(행 dict). 주가·시세는 stock.
+    group: finance
+    target_description: ticker=기업명 또는 코드 (삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC 자동판별). market="kr"/"us"로 강제 지정 가능. financials는 year(한국)·statement_type·period 옵션, disclosures는 count·기간·유형 옵션.
+    target_key: op
+    router: handler
+    tool: company_op
+    ops:
+      default: profile
+      values:
+        profile: 기업 기본정보 (대표·업종·시총·섹터)
+        financials: 재무제표 (손익·재무상태·현금흐름)
+        disclosures: 공시 검색 (한국 DART / 미국 SEC)
+    implementation: market 자동판별 후 분기. profile=kr_company_info|us_company_profile, financials=kr_financial_statements|us_financial_statements, disclosures=kr_disclosures|us_sec_filings.
+    keywords:
+    - 기업정보
+    - 재무제표
+    - 공시
+    - DART
+    - SEC
+  crypto:
+    returns: scalar
+    description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
+    group: finance
+    target_description: 코인 심볼 (BTC, ETH, SOL 등)
+    router: handler
+    tool: crypto_price
+    implementation: CoinGecko 무료 API로 암호화폐 시세 조회 (requests HTTP)
+    target_key: coin_id

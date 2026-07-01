@@ -1,0 +1,198 @@
+nodes:
+  sense:
+    actions:
+      weather:
+        returns: items
+        description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
+        group: places
+        target_description: 도시명 또는 좌표
+        router: handler
+        tool: get_weather
+        implementation: Open-Meteo 무료 API로 날씨 조회 (API키 불필요)
+        app:
+          icon: 🌤️
+          name: 날씨
+          order: 0
+          auto_run: true
+          inputs:
+          - key: city
+            type: text
+            default: 서울
+            placeholder: 도시명 (한/영)
+            chips:
+            - 서울
+            - 오송
+            - 부산
+            - 제주
+            - 수원
+            - 인천
+            - 대구
+          action: '[sense:weather]{city: "$city", days: 7}'
+          view:
+          - type: metric
+            label: '{city}'
+            big: '{current.temp|round}'
+            unit: °
+            sub: '{current.condition} · 체감 {current.feels_like|round}°'
+          - type: kv
+            rows:
+            - k: 💧 습도
+              v: '{current.humidity}%'
+            - k: 🌬 바람
+              v: '{current.wind_speed}m/s'
+          - type: kv_list
+            title: 7일 예보
+            from: items
+            k: '{date}'
+            v: '{condition} {min_temp|round}° / {max_temp|round}°{precipitation_mm|opt: ☔,mm}'
+      restaurant:
+        returns: items
+        description: 맛집/음식점 검색 (카카오+네이버 Local API). 상호명·주소·전화·카테고리·place 링크 반환. 별점·리뷰 숫자는 공개 API 미제공 — 카카오 place_url(카카오맵 페이지)에서 확인. 커뮤니티 후기는 sense:search_local.
+        group: places
+        target_description: 검색어 (강남 파스타 등). x(경도)/y(위도)/radius로 좌표 주변 검색 가능.
+        router: handler
+        tool: search_restaurants
+        implementation: Kakao + Naver Local API 듀얼 검색. 반환 combined[]에 상호명·주소·전화·카테고리·url(카카오는 place.map.kakao.com=평점/리뷰 페이지). 별점 숫자 자체는 API에 없음.
+        target_key: query
+        app:
+          icon: 🍴
+          name: 맛집
+          order: 2
+          inputs:
+          - key: q
+            type: text
+            placeholder: '예: 강남역 맛집 / 성수동 카페'
+            required: true
+          action: '[sense:restaurant]{query: "$q"}'
+          view:
+          - type: card_list
+            from: items
+            card:
+              title: '{name}'
+              lines:
+              - '{category}'
+              - '📍 {address}{phone|opt:  ·  ☎ ,}'
+              link:
+                href: '{url}'
+                label: 지도/상세 →
+      navigate_route:
+        returns: scalar
+        description: 카카오 내비 자동차 길찾기. 거리·시간·톨비 반환. 지도 표시는 map.
+        target_description: 목적지 (장소명 또는 '경도,위도'). origin 옵션으로 출발지 지정.
+        group: places
+        router: handler
+        tool: kakao_navigation
+        implementation: Kakao Map API로 자동차 경로 탐색 (거리/시간/톨비)
+        target_key: destination
+        keywords:
+        - 길찾기
+        - 내비
+        - 경로
+        - 네비게이션
+        app:
+          instrument: directions
+          icon: 🛣️
+          name: 길찾기
+          order: 10
+          inputs:
+          - key: origin
+            type: text
+            label: 출발
+            placeholder: 출발지 (비우면 기본)
+          - key: destination
+            type: text
+            label: 도착
+            placeholder: 도착지 장소명
+            required: true
+          action: '[sense:navigate_route]{origin: "$origin", destination: "$destination"}'
+          view:
+          - type: map
+            from: map_data
+          - type: metric
+            label: 경로 요약
+            big: '{map_data.summary.distance_km}km'
+            sub: '{map_data.summary.duration_min}분 · 통행료 {map_data.summary.toll}원'
+          - type: kv_list
+            from: key_guides
+            title: 주요 안내
+            k: '{name}'
+            v: '{guidance}'
+      reverse_geocode:
+        returns: scalar
+        description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
+        group: places
+        target_description: 위도(lat)와 경도(lng) 두 파라미터. 결과는 시/도/구/동까지 분해.
+        router: handler
+        tool: reverse_geocode
+        implementation: Kakao Map API로 GPS 좌표→주소 변환
+      travel:
+        returns: items
+        description: 여행 정보 검색 (Amadeus, op 분기) — 항공권·호텔. 도시명·상대날짜 내부 해소.
+        group: travel
+        target_description: flight — to(도착도시) 필수, from(기본 서울)·date(기본 +7일, "내일"/"다음주 금요일" 등 자연어)·adults 옵션. hotel — city 필수. 도시명은 IATA/도시코드 자동 해소.
+        router: handler
+        tool: amadeus_travel_search
+        target_key: op
+        ops:
+          default: flight
+          values:
+            flight: 항공권 검색 (from→to·date). 도시명→IATA·상대날짜 자동 해소
+            hotel: 도시 호텔 목록 (city→도시코드 자동)
+        implementation: Amadeus API(OAuth2). op→endpoint 매핑 + 도시명/날짜 내부 해소 (endpoint+params 직접 지정도 가능). 두 op 모두 records[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 없이 깨끗(weather/restaurant 형제). (poi=관광지는 Amadeus가 2026 영구 폐기(HTTP 410)해 제거.)
+        app:
+          instrument: travel
+          icon: ✈️
+          name: 여행
+          order: 16
+          modes:
+          - name: 항공권
+            inputs:
+            - key: to
+              type: text
+              label: 도착
+              placeholder: '도착 도시 (예: 도쿄)'
+              required: true
+            - key: from
+              type: text
+              label: 출발
+              placeholder: 출발 (비우면 서울)
+            - key: date
+              type: text
+              label: 날짜
+              placeholder: '예: 내일·다음주 금요일·2026-07-15 (비우면 1주 후)'
+            action: '[sense:travel]{op: "flight", to: "$to", from: "$from", date: "$date"}'
+            view:
+            - type: card_list
+              from: items
+              empty: 항공편을 찾지 못했습니다
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+          - name: 호텔
+            inputs:
+            - key: city
+              type: text
+              label: 도시
+              placeholder: '도시 (예: 파리)'
+              required: true
+            action: '[sense:travel]{op: "hotel", city: "$city"}'
+            view:
+            - type: card_list
+              from: items
+              empty: 호텔을 찾지 못했습니다
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+  limbs:
+    actions:
+      show_map:
+        returns: effect
+        description: 지도에 위치 마커 표시 (HTML 지도 생성). 장소명 입력 시 자동 좌표 변환.
+        group: open
+        target_description: 장소명 또는 좌표
+        router: handler
+        tool: show_location_map
+        implementation: Kakao Map API로 좌표 기반 지도 HTML 생성 (프론트엔드 렌더링용)
+        target_key: query

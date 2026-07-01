@@ -1,0 +1,11 @@
+node: sense
+actions:
+  search_shopping:
+    returns: items
+    description: 상품 검색 및 가격 비교 (네이버 API=어디서나; 다나와·중고는 브라우저 스크래핑이라 맥 전용, 폰선 네이버만)
+    group: research
+    target_description: 상품명
+    router: handler
+    tool: search_shopping
+    implementation: Naver Shopping API + Playwright로 다나와/중고마켓 비공식 스크래핑 병렬 실행
+    target_key: query

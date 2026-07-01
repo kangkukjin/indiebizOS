@@ -1,0 +1,55 @@
+node: sense
+actions:
+  contest:
+    returns: items
+    description: Kaggle 국제 AI/데이터 경진대회 검색. 상금·마감일·주최로 출품 기회 탐색.
+    group: research
+    target_description: 'query(검색 키워드, 예: AI·LLM·vision·NLP). sort 옵션 — recentlyCreated(기본, 최근 개설)/latestDeadline(마감 늦은 순=진행 중 위주)/prize(상금 큰 순)/numberOfTeams(참가팀 많은 순). category(featured/research/playground 등, 선택). count(기본 10, 최대 50). 반환=records 통화(상금·마감일 meta) → 앱 card_list 직결.'
+    router: handler
+    tool: contest_search
+    scope: workspace
+    implementation: Kaggle Competitions API(/competitions/list, Bearer 토큰 auth_manager 'kaggle'). search/sortBy/category 서버 쿼리, 응답 대회 리스트를 records로 매핑. 폰 네이티브 가능(HTTP+stdlib, KAGGLE_API_TOKEN 폰 프로비저닝).
+    target_key: query
+    keywords:
+    - 공모전
+    - 대회
+    - 경진대회
+    - 해커톤
+    - kaggle
+    - 캐글
+    app:
+      icon: 🏆
+      name: AI 공모전
+      order: 12
+      modes:
+      - name: Kaggle
+        inputs:
+        - key: q
+          type: text
+          placeholder: 키워드  예) AI·LLM·vision (비우면 전체)
+        - key: sort
+          type: select
+          label: 정렬
+          default: recentlyCreated
+          options:
+          - value: recentlyCreated
+            label: 최근 개설
+          - value: latestDeadline
+            label: 진행 중
+          - value: prize
+            label: 상금순
+          - value: numberOfTeams
+            label: 인기순
+        action: '[sense:contest]{query: "$q", sort: "$sort"}'
+        view:
+        - type: card_list
+          from: items
+          card:
+            image: '{image}'
+            title: '{title}'
+            lines:
+            - '{meta}'
+            - '{summary}'
+            link:
+              href: '{url}'
+              label: 대회 페이지 →

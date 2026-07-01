@@ -1,0 +1,38 @@
+node: self
+actions:
+  blog:
+    returns: items
+    runs_on: mac_only
+    description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스.
+    target_description: 'op로 분기 (기본 posts).
+
+      - posts: 글 목록. category/count 옵션.
+
+      - search: RAG 검색. query(필수) + mode(hybrid 기본/semantic/content) + limit. content는 post_id 또는 title.
+
+      - check_new: 마지막 조회 이후 새로 추가된 글 확인.
+
+      - rebuild_index: 검색 인덱스(벡터 임베딩) 재구축. 글 다량 추가 후.
+
+      - stats: 전체 글 수·카테고리/기간 분포·활동 트렌드.
+
+      '
+    target_key: op
+    group: blog
+    router: handler
+    tool: blog_op
+    ops:
+      default: posts
+      values:
+        posts: 글 목록 조회 (category/기간 필터)
+        search: RAG 검색 (mode hybrid/semantic/content)
+        check_new: 마지막 조회 이후 새 글 확인
+        rebuild_index: 검색 인덱스(벡터) 재구축
+        stats: 블로그 통계 (글 수·분포·트렌드)
+    implementation: blog 패키지 op 분기. posts=blog_get_posts, search=blog_search_op(mode), check_new=blog_check_new_posts, rebuild_index=rebuild_search_index, stats=blog_stats.
+    keywords:
+    - 블로그
+    - 블로그 검색
+    - 시맨틱
+    - 블로그 통계
+    - 인덱스

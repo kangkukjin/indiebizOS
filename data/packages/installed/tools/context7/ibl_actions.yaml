@@ -1,0 +1,27 @@
+node: sense
+actions:
+  devdocs:
+    returns: items
+    description: 소프트웨어 라이브러리/프레임워크 공식 문서 (op 분기, Context7). 코드 작성 시 API 참조용. 논문은 paper.
+    target_description: 'op로 분기 (기본 resolve).
+
+      - resolve: library_name(예 ''react'',''fastapi'') → Context7 ID. search 전 첫 단계.
+
+      - search: query(알고 싶은 내용) + library_id(resolve 결과).
+
+      '
+    target_key: op
+    group: research
+    router: handler
+    tool: devdocs_op
+    ops:
+      default: resolve
+      values:
+        resolve: 라이브러리 이름 → Context7 ID (첫 단계)
+        search: 공식 문서 검색 (library_id + query)
+    implementation: context7 패키지 op 분기. resolve=resolve_library, search=search_library_docs.
+    keywords:
+    - 라이브러리문서
+    - API문서
+    - context7
+    - 공식문서

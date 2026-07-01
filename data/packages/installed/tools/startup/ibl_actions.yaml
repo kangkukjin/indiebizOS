@@ -1,0 +1,51 @@
+node: sense
+actions:
+  startup:
+    returns: items
+    description: 정부 창업/중소기업 지원사업 공고 검색 (K-Startup). 다중 키워드는 OR 합집합.
+    group: research
+    target_description: 'query(검색 키워드, 예: AI·예비창업패키지·정책자금. 여러 단어면 OR 합집합 — "AI 인공지능"=둘 중 하나라도). source 옵션 — kstartup(기본, K-Startup 창업진흥원), all(통합 시도), mss(중기부). ⚠️중기부(mss)는 data.go.kr API 폐기로 현재 미가용 → kstartup 권장. count(기본 10, 최대 50).'
+    router: handler
+    tool: startup_search
+    implementation: K-Startup + 중기부 사업공고 API 통합. source=all이면 둘 다 호출, kstartup/mss면 한쪽만.
+    target_key: query
+    keywords:
+    - 창업
+    - 사업공고
+    - 지원사업
+    - 예비창업
+    - 정책자금
+    - R&D
+    app:
+      icon: 🚀
+      name: 사업공고
+      order: 11
+      modes:
+      - name: 창업·지원
+        inputs:
+        - key: q
+          type: text
+          placeholder: 키워드  예) AI·예비창업·R&D
+          required: true
+        - key: src
+          type: select
+          label: 소스
+          default: kstartup
+          options:
+          - value: kstartup
+            label: K-Startup
+          - value: mss
+            label: 중기부
+          - value: all
+            label: 통합
+        action: '[sense:startup]{query: "$q", source: "$src"}'
+        view:
+        - type: card_list
+          from: items
+          card:
+            title: '{title}'
+            lines:
+            - '{meta}'
+            link:
+              href: '{url}'
+              label: 공고 상세 →

@@ -1,0 +1,577 @@
+nodes:
+  self:
+    actions:
+      business:
+        returns: items
+        description: 나의 비즈니스(사업) CRUD — op:list(기본)/detail/save/delete.
+        group: business
+        target_description: op:list(level 0-4·search 필터) / detail(id 필수, +소속 아이템) / save(id 없으면 생성·name 필수, 있으면 수정 — name/level(0-4 공개수준)/description) / delete(id 필수, 아이템도 함께).
+        target_key: op
+        router: handler
+        tool: business_op
+        ops:
+          default: list
+          values:
+            list: 비즈니스 목록 (level/search 필터)
+            detail: 비즈니스 상세 + 소속 아이템 (id 필수)
+            save: 생성(id 없음·name 필수)/수정(id 있음)
+            delete: 비즈니스 삭제 (id 필수)
+        implementation: business 패키지 business_op — business_manager.get_businesses/get_business/create_business/update_business/delete_business.
+        keywords:
+        - 비즈니스
+        - 사업
+        - 비즈니스 목록
+        - 비즈니스 추가
+        - 사업 등록
+        app:
+          instrument: business
+          icon: 🏢
+          name: 비즈니스
+          order: 11
+          modes:
+          - name: 비즈니스
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 이름 검색 · ＋추가
+            filter:
+              key: level
+              items:
+              - label: 전체
+                value: ''
+                default: true
+              - label: L0
+                value: 0
+              - label: L1
+                value: 1
+              - label: L2
+                value: 2
+              - label: L3
+                value: 3
+              - label: L4
+                value: 4
+              - label: 폐쇄
+                value: -1
+            buttons:
+            - label: ＋ 비즈니스 추가
+              action: '[self:business]{op: "save", name: "$q"}'
+              refresh: true
+            action: '[self:business]{op: "list", level: "$level", search: "$q"}'
+            view:
+            - type: card_list
+              from: items
+              master_detail: true
+              item_click:
+                action: '[self:business]{op: "detail", id: "{id}"}'
+                tabs:
+                - name: 정보
+                  view:
+                  - type: form
+                    title: 비즈니스 정보
+                    fields:
+                    - key: name
+                      label: 이름
+                      type: text
+                      value: '{business.name}'
+                    - key: level
+                      label: 공개 수준
+                      type: select
+                      value: '{business.level}'
+                      options:
+                      - value: -1
+                        label: 폐쇄
+                      - value: 0
+                        label: L0 · 최소
+                      - value: 1
+                        label: L1
+                      - value: 2
+                        label: L2
+                      - value: 3
+                        label: L3
+                      - value: 4
+                        label: L4 · 전체
+                    - key: description
+                      label: 설명
+                      type: textarea
+                      value: '{business.description}'
+                    action: '[self:business]{op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
+                    button: 저장
+                    actions:
+                    - label: 비즈니스 삭제
+                      action: '[self:business]{op: "delete", id: "{business.id}"}'
+                      style: danger
+                      confirm: 이 비즈니스를 삭제할까요? 소속 아이템도 함께 사라집니다.
+                      back: true
+                - name: 아이템
+                  view:
+                  - type: editable_list
+                    from: items
+                    title: 아이템 (상품·항목)
+                    display: '{title}{details|opt:  —  ,}'
+                    empty: 등록된 아이템 없음
+                    delete_action: '[self:business_item]{op: "delete", item_id: "{id}"}'
+                    add:
+                      fields:
+                      - key: title
+                        type: text
+                        placeholder: 제목
+                      - key: details
+                        type: text
+                        placeholder: 설명
+                      action: '[self:business_item]{op: "save", business_id: "{business.id}", title: "$title", details: "$details"}'
+                      button: 추가
+              card:
+                title: '{name}'
+                lines:
+                - 레벨 {level} · {description|trunc:44}
+          - name: 아이템
+            auto_run: true
+            note: 비즈니스를 고르면 그 아이템(상품·항목)을 사진까지 편집할 수 있습니다. 사진 추가는 데스크탑(파일 선택)에서만.
+            inputs:
+            - key: biz
+              type: select
+              placeholder: 비즈니스 선택
+              options_action: '[self:business]{op: "list"}'
+              options_from: items
+              option_value: id
+              option_label: name
+            buttons:
+            - label: ＋ 아이템 추가
+              action: '[self:business_item]{op: "save", business_id: "$biz", title: "새 아이템"}'
+              refresh: true
+            action: '[self:business_item]{op: "list", business_id: "$biz"}'
+            view:
+            - type: card_list
+              from: items
+              master_detail: true
+              empty_from: message
+              item_click:
+                action: '[self:business_item]{op: "detail", item_id: "{id}"}'
+                view:
+                - type: form
+                  title: 아이템
+                  fields:
+                  - key: title
+                    label: 제목
+                    type: text
+                    value: '{item.title}'
+                  - key: details
+                    label: 설명
+                    type: textarea
+                    value: '{item.details}'
+                  - key: images
+                    label: 사진
+                    type: images
+                    value: '{item.attachment_path}'
+                    add_action: '[self:business_item]{op: "add_image", item_id: "{item.id}", path: "$path"}'
+                    remove_action: '[self:business_item]{op: "remove_image", item_id: "{item.id}", path: "$path"}'
+                  action: '[self:business_item]{op: "save", id: "{item.id}", title: "$title", details: "$details"}'
+                  button: 저장
+                  actions:
+                  - label: 아이템 삭제
+                    action: '[self:business_item]{op: "delete", item_id: "{item.id}"}'
+                    style: danger
+                    confirm: 이 아이템을 삭제할까요?
+                    back: true
+              card:
+                title: '{title}'
+                lines:
+                - '{details|trunc:50}'
+          - name: 공개문서
+            auto_run: true
+            buttons:
+            - label: ↻ 비즈니스 기반 재생성
+              action: '[self:business_document]{op: "regenerate"}'
+              refresh: true
+            action: '[self:business_document]{op: "list"}'
+            view:
+            - type: card_list
+              from: items
+              item_click:
+                action: '[self:business_document]{op: "detail", level: "{level}"}'
+                view:
+                - type: form
+                  title: 공개 비즈니스 문서
+                  fields:
+                  - key: title
+                    label: 제목
+                    type: text
+                    value: '{document.title}'
+                  - key: content
+                    label: 내용
+                    type: textarea
+                    value: '{document.content}'
+                  action: '[self:business_document]{op: "update", level: "{document.level}", title: "$title", content: "$content"}'
+                  button: 저장
+              card:
+                title: 레벨 {level} · {title}
+                lines:
+                - '{content|trunc:60}'
+          - name: 근무지침
+            auto_run: true
+            action: '[self:work_guideline]{op: "list"}'
+            view:
+            - type: card_list
+              from: items
+              item_click:
+                action: '[self:work_guideline]{op: "detail", level: "{level}"}'
+                view:
+                - type: form
+                  title: 근무 지침
+                  fields:
+                  - key: title
+                    label: 제목
+                    type: text
+                    value: '{guideline.title}'
+                  - key: content
+                    label: 내용
+                    type: textarea
+                    value: '{guideline.content}'
+                  action: '[self:work_guideline]{op: "update", level: "{guideline.level}", title: "$title", content: "$content"}'
+                  button: 저장
+              card:
+                title: 레벨 {level} · {title}
+                lines:
+                - '{content|trunc:60}'
+          - name: 자동응답
+            auto_run: true
+            note: 외부 메시지(Gmail/Nostr) 자동응답을 켜면, 이웃의 정보공개수준별 근무지침·공개문서를 맥락으로 AI가 답합니다.
+            buttons:
+            - label: 켜기
+              action: '[others:auto_response]{op: "start"}'
+              refresh: true
+            - label: 끄기
+              action: '[others:auto_response]{op: "stop"}'
+              refresh: true
+            action: '[others:auto_response]{op: "status"}'
+            view:
+            - type: kv
+              rows:
+              - k: 상태
+                v: '{state_label}'
+              - k: 안내
+                v: '{summary}'
+              - k: 점검
+                v: '{interval_label}'
+      business_item:
+        returns: items
+        description: 비즈니스 아이템(상품/항목) CRUD — op:list(기본)/detail/save/delete.
+        group: business
+        target_description: op:list(business_id 필수) / detail(item_id 필수) / save(id 없으면 생성·business_id+title 필수, 있으면 수정 — title/details/attachment_path) / delete(item_id 필수).
+        target_key: op
+        router: handler
+        tool: business_item_op
+        ops:
+          default: list
+          values:
+            list: 한 비즈니스의 아이템 목록 (business_id 필수)
+            detail: 아이템 상세 (item_id 필수)
+            save: 생성(business_id·title 필수)/수정(id 있음)
+            delete: 아이템 삭제 (item_id 필수)
+            add_image: 첨부 이미지 추가 (item_id·path — 로컬 파일을 business_images 로 복사)
+            remove_image: 첨부 이미지 제거 (item_id·path)
+        implementation: business 패키지 business_item_op — business_manager.get_business_items/get_business_item/create_business_item/update_business_item/delete_business_item. add_image/remove_image 는 attachment_path(JSON 배열) 갱신 + business_images 복사·삭제.
+        keywords:
+        - 비즈니스 아이템
+        - 상품 추가
+        - 상품 목록
+        - 품목
+        - 사업 항목
+      business_document:
+        returns: items
+        description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 관리 — op:list(기본)/detail/update/regenerate.
+        group: business
+        target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content) / regenerate(비즈니스·아이템 기반 레벨별 자동 재생성, 파라미터 없음).
+        target_key: op
+        router: handler
+        tool: business_document_op
+        ops:
+          default: list
+          values:
+            list: 레벨 0-4 공개 문서 전체
+            detail: 특정 레벨 문서 (level 필수)
+            update: 문서 수정 (level + title/content)
+            regenerate: 비즈니스·아이템 기반 레벨별 자동 재생성
+        implementation: business 패키지 business_document_op — business_manager.get_all_business_documents/get_business_document/update_business_document/regenerate_business_documents.
+        keywords:
+        - 비즈니스 문서
+        - 공개 문서
+        - 문서 재생성
+        - 레벨별 문서
+      work_guideline:
+        returns: items
+        description: 레벨별 근무 지침(업무 가이드라인) 관리 — op:list(기본)/detail/update.
+        group: business
+        target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content).
+        target_key: op
+        router: handler
+        tool: work_guideline_op
+        ops:
+          default: list
+          values:
+            list: 레벨 0-4 근무 지침 전체
+            detail: 특정 레벨 지침 (level 필수)
+            update: 지침 수정 (level + title/content)
+        implementation: business 패키지 work_guideline_op — business_manager.get_all_work_guidelines/get_work_guideline/update_work_guideline.
+        keywords:
+        - 근무 지침
+        - 업무 가이드
+        - 작업 지침
+        - 가이드라인
+      phone_sync:
+        returns: effect
+        description: 폰과 PC의 주소록(이웃·연락처·사업) USB 합집합 동기화 — "폰 동기화/싱크" 명령 시.
+        group: business
+        target_description: (파라미터 없음). 폰 USB 연결 필요(미기동 시 앱 자동 기동). 양방향 1회 머지 — 추가는 합치고 수정은 최신 우선, 삭제는 양쪽 반영. 메시지/글 내용은 비대상(릴레이/Gmail 진실원).
+        router: handler
+        tool: phone_sync
+        runs_on: mac_only
+        implementation: business 패키지 phone_sync — adb forward 로 폰 백엔드(:8765) 도달 후 export/merge 양방향. business_sync.merge_business_db(LWW+tombstone).
+        keywords:
+        - 폰 동기화
+        - 폰 싱크
+        - 주소록 동기화
+        - 기기 동기화
+  others:
+    actions:
+      messages:
+        returns: items
+        description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr).
+        target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, 파라미터 없음·최근순).
+        group: channel
+        target_key: op
+        router: handler
+        tool: messages_op
+        ops:
+          default: thread
+          values:
+            thread: 한 이웃과 주고받은 메시지 스레드 (neighbor_id 필수)
+            inbox: 대화 목록 (이웃별 최근 메시지·미응답, 최근순)
+        implementation: handler.py messages_op — op:thread 는 business_manager.get_messages(neighbor_id) 를 시간 오름차순 반환(채팅 순서), op:inbox 는 neighbors⋈messages 조인으로 대화 목록 합성.
+        app:
+          instrument: messenger
+          icon: 💬
+          name: 메신저
+          order: 7
+          auto_run: true
+          inputs:
+          - key: q
+            type: text
+            placeholder: 이름 검색 · ＋추가
+          filter:
+            key: level
+            items:
+            - label: 전체
+              value: ''
+              default: true
+            - label: L0
+              value: 0
+            - label: L1
+              value: 1
+            - label: L2
+              value: 2
+            - label: L3
+              value: 3
+            - label: L4
+              value: 4
+          buttons:
+          - label: ＋ 이웃 추가
+            action: '[others:neighbor]{op: "save", name: "$q"}'
+          action: '[others:messages]{op: "inbox", level: "$level", search: "$q"}'
+          view:
+          - type: card_list
+            from: items
+            master_detail: true
+            empty_from: message
+            item_click:
+              action: '[others:messages]{op: "thread", neighbor_id: "{id}", pubkey: "{pubkey}"}'
+              tabs:
+              - name: 대화
+                view:
+                - type: metric
+                  big: '{name}'
+                  sub: '{badge}{channel|opt:  ·  ,}'
+                - type: thread
+                  from: items
+                  text: '{content}'
+                  mine: is_from_user
+                  meta: '{contact_type}'
+                  time: '{time}'
+                  status: status
+                compose:
+                  placeholder: 메시지 입력…
+                  channels:
+                    from: contacts
+                    type: contact_type
+                    value: contact_value
+                    sendable:
+                    - gmail
+                    - nostr
+                  action: '[others:channel_send]{channel_type: "$channel_type", to: "$to", body: "$text"}'
+              - name: 이웃 정보
+                view:
+                - type: form
+                  title: 이웃 정보
+                  fields:
+                  - key: name
+                    label: 이름
+                    type: text
+                    value: '{name}'
+                  - key: info_level
+                    label: 정보 공개 수준
+                    type: select
+                    value: '{info_level}'
+                    options:
+                    - value: 0
+                      label: L0 · 최소
+                    - value: 1
+                      label: L1
+                    - value: 2
+                      label: L2
+                    - value: 3
+                      label: L3
+                    - value: 4
+                      label: L4 · 전체
+                  - key: rating
+                    label: 평점
+                    type: select
+                    value: '{rating}'
+                    options:
+                    - value: 0
+                      label: 평점 없음
+                    - value: 1
+                      label: ★1
+                    - value: 2
+                      label: ★2
+                    - value: 3
+                      label: ★3
+                    - value: 4
+                      label: ★4
+                    - value: 5
+                      label: ★5
+                  - key: info_share
+                    label: 정보 공유 동의
+                    type: toggle
+                    value: '{info_share}'
+                  - key: additional_info
+                    label: 메모
+                    type: textarea
+                    value: '{additional_info}'
+                  - key: business_doc
+                    label: 비즈니스 문서(공개)
+                    type: textarea
+                    value: '{business_doc}'
+                  action: '[others:neighbor]{op: "save", id: "{neighbor_id}", name: "$name", info_level: "$info_level", rating: "$rating", info_share: "$info_share", additional_info: "$additional_info", business_doc: "$business_doc"}'
+                  button: 저장
+                  actions:
+                  - label: ⭐ 즐겨찾기 토글
+                    action: '[others:neighbor]{op: "favorite", id: "{neighbor_id}"}'
+                  - label: 이웃 삭제
+                    action: '[others:neighbor]{op: "delete", id: "{neighbor_id}"}'
+                    style: danger
+                    confirm: 이 이웃을 삭제할까요? 대화·연락처도 함께 사라집니다.
+                    back: true
+                - type: editable_list
+                  from: contacts
+                  title: 연락처
+                  display: '{contact_type} · {contact_value}'
+                  empty: 연락처 없음
+                  delete_action: '[others:contact]{op: "delete", contact_id: "{id}"}'
+                  add:
+                    fields:
+                    - key: contact_type
+                      type: select
+                      placeholder: 유형
+                      options:
+                      - value: gmail
+                        label: 이메일
+                      - value: phone
+                        label: 전화
+                      - value: nostr
+                        label: Nostr
+                      - value: kakao
+                        label: 카카오
+                      - value: telegram
+                        label: 텔레그램
+                      - value: other
+                        label: 기타
+                    - key: contact_value
+                      type: text
+                      placeholder: 연락처 값
+                    action: '[others:contact]{op: "add", neighbor_id: "{neighbor_id}", contact_type: "$contact_type", contact_value: "$contact_value"}'
+                    button: 추가
+            card:
+              title: '{favorite|opt:⭐ ,}{name}'
+              lines:
+              - '{preview}'
+              - '{badge}{time|opt:  ·  ,}{channel|opt: · ,}'
+        keywords:
+        - 메시지
+        - 대화
+        - 이력
+        - 메신저
+        - 받은메시지
+      neighbor:
+        returns: items
+        description: 이웃(비즈니스 파트너) 조회·관리 — op:list(기본)/detail/save/delete/favorite.
+        target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc) / delete(id 필수) / favorite(id 필수, 토글).
+        group: neighbor
+        target_key: op
+        router: handler
+        tool: neighbor_op
+        ops:
+          default: list
+          values:
+            list: 이웃 목록 (search/info_level 필터)
+            detail: 이웃 상세 (neighbor_id 또는 name, +연락처·최근메시지)
+            save: 이웃 생성(id 없음)/수정(id 있음)
+            delete: 이웃 삭제
+            favorite: 즐겨찾기 토글
+        implementation: business 패키지 neighbor_op — business_manager.get_neighbors/get_neighbor/create_neighbor/update_neighbor/delete_neighbor.
+        keywords:
+        - 이웃
+        - 이웃조회
+        - 이웃추가
+        - 이웃수정
+        - 즐겨찾기
+      contact:
+        returns: effect
+        description: 이웃 연락처 CRUD — op:add/update/delete. (email/phone/kakao/telegram/line/nostr/other)
+        target_description: op:add(neighbor_id·contact_type·contact_value 필수) / update(contact_id 필수) / delete(contact_id 필수).
+        group: neighbor
+        target_key: op
+        router: handler
+        tool: contact_op
+        ops:
+          default: add
+          values:
+            add: 연락처 추가
+            update: 연락처 수정
+            delete: 연락처 삭제
+        implementation: business 패키지 contact_op — business_manager.add_contact/update_contact/delete_contact.
+        keywords:
+        - 연락처추가
+        - 연락처수정
+        - 연락처삭제
+      auto_response:
+        returns: effect
+        description: 외부 메시지 자동응답 서비스 제어 — op:status(기본)/start/stop. on/off 는 영속(재시작 유지).
+        group: channel
+        runs_on: mac_only
+        target_description: op:status(가동 여부·켜짐설정·점검주기·처리수) / start(켜기, 영속) / stop(끄기, 영속). 자동응답은 이웃 정보공개수준별 근무지침·비즈니스문서를 맥락으로 AI가 응답 생성·발송.
+        target_key: op
+        router: handler
+        tool: auto_response_op
+        ops:
+          default: status
+          values:
+            status: 자동응답 가동 상태 조회
+            start: 자동응답 켜기 (재시작에도 유지)
+            stop: 자동응답 끄기 (재시작에도 유지)
+        implementation: business 패키지 auto_response_op — backend auto_response.get_auto_response_service() 의 enable/disable/상태. 상태는 data/auto_response_state.json 에 영속, channel_poller 부팅 시 is_enabled 로 자동 시작 게이트.
+        keywords:
+        - 자동응답
+        - 자동회신
+        - 자동답장
+        - auto reply

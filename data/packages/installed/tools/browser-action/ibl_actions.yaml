@@ -1,0 +1,46 @@
+node: limbs
+actions:
+  browser:
+    returns: effect
+    runs_on: mac_only
+    description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
+    target_description: op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).
+    group: browser
+    target_key: op
+    router: handler
+    tool: browser_op
+    ops:
+      default: snapshot
+      values:
+        snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)
+        navigate: 페이지 이동 (mode goto|back|forward; goto는 url)
+        click: 요소 클릭 (ref; mode single|double|right)
+        type: 입력 필드에 텍스트 입력 (ref, text)
+        press_key: 키보드 키 입력 (Enter/Tab/Escape 등)
+        hover: 요소에 마우스 호버 (ref)
+        drag: 드래그 앤 드롭 (source_ref→target_ref)
+        select: select 박스 옵션 선택 (ref, value/label)
+        check: 체크박스·라디오 토글 (ref)
+        upload_file: 파일 input에 업로드 (ref, path)
+        scroll: 페이지 스크롤 (up/down)
+        wait: 조건 대기 (selector/url/text/networkidle)
+        content: 페이지 콘텐츠 추출 (mode text|html)
+        screenshot: 페이지 스크린샷 PNG 저장 (path, full_page)
+        vision: 스크린샷 base64 반환 (AI 시각 인식용)
+        evaluate: JavaScript 표현식 실행 (expression)
+        pdf: 페이지를 PDF로 저장 (path)
+        find: 자연어로 요소 검색 (query; Chrome MCP 전용)
+        logs: 브라우저 로그 (mode console|network)
+        dialog_info: Alert/Confirm/Prompt 팝업 정보
+        resize: 뷰포트 크기 변경 (width/height)
+        close: 브라우저 세션 종료
+        tab: 탭 관리 (mode list|new|switch|close)
+        iframe: iframe 관리 (mode list|switch|reset)
+        cookies: 쿠키 저장·복원 (mode save|load)
+        chrome: Chrome MCP 원격 제어 (mode connect|disconnect|status)
+    keywords:
+    - 브라우저
+    - 웹 자동화
+    - 클릭
+    - 입력
+    - 페이지

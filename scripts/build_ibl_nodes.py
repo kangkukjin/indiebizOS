@@ -1395,7 +1395,12 @@ def merge_fragments(data: dict, fragments: list) -> list:
         if not isinstance(node_def, dict):
             issues.append(f"{pkg_name}: 알 수 없는 노드 '{node}'")
             continue
-        node_actions = node_def.setdefault("actions", {})
+        # 노드의 모든 액션이 이관되면 중앙 src엔 `actions:`가 빈 값(None)으로 남는다 —
+        # setdefault는 기존 키가 None이어도 덮어쓰지 않으므로 명시적으로 정규화한다.
+        node_actions = node_def.get("actions")
+        if node_actions is None:
+            node_actions = {}
+            node_def["actions"] = node_actions
         for aname, adef in actions.items():
             if aname in node_actions:
                 issues.append(
@@ -1479,7 +1484,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             output = serialize_nodes_document(header, data, _yaml)
         nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
         total_actions = sum(
-            len(n.get("actions", {})) for n in nodes.values() if isinstance(n, dict)
+            len(n.get("actions") or {}) for n in nodes.values() if isinstance(n, dict)
         )
         extra = (
             f", 패키지 fragment {len(fragments)}개(+{frag_action_n} 액션)"

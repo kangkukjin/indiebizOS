@@ -1,0 +1,79 @@
+nodes:
+  self:
+    actions:
+      photo:
+        returns: items
+        runs_on: anywhere
+        description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환. 실행되는 몸의 미디어(맥·폰 각자). 타임라인/통계/중복은 >> engines 변환자(groupby/filter).
+        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50). 결과 records에 lat/lng/taken_at/month/kind/camera/size 구조 필드 포함 → groupby·지도와 직결.'
+        group: photo
+        target_key: q
+        router: handler
+        tool: photo_op
+        implementation: handler.py _query_photos — mdfind(필터)로 경로, mdls(색인 메타)로 보강. 비색인 경로는 라이브 walk 폴백. photo_db 자체 인덱스 미사용(데스크탑 풍부창 REST만 사용).
+        keywords:
+        - 사진
+        - 동영상
+        - 미디어
+        - 사진 검색
+        - 사진 스캔
+        - 갤러리
+        - 사진 통계
+        - 타임라인
+        - 중복 사진
+        - 사진 상세
+        app:
+          instrument: photo
+          icon: 📷
+          name: 사진
+          order: 14
+          phone_render: true
+          modes:
+          - name: 갤러리
+            auto_run: true
+            note: 최근 사진·동영상 (OS 색인 직접, 스캔 불필요).
+            action: '[self:photo]{kind: "all", limit: 40}'
+            view:
+            - type: image_grid
+              from: items
+              image: '{image}'
+              title: '{title}'
+              lines:
+              - '{meta}'
+          - name: 검색
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 파일명·기종 검색
+            action: '[self:photo]{q: "$q", limit: 40}'
+            view:
+            - type: image_grid
+              from: items
+              image: '{image}'
+              title: '{title}'
+              lines:
+              - '{meta}'
+          - name: 위치
+            auto_run: true
+            note: 위치(GPS) 정보가 있는 사진.
+            action: '[self:photo]{has_gps: true, limit: 40}'
+            view:
+            - type: image_grid
+              from: items
+              image: '{image}'
+              title: '{title}'
+              lines:
+              - '{meta}'
+  limbs:
+    actions:
+      photo_manager:
+        returns: effect
+        runs_on: mac_only
+        description: indiebizOS 내장 Photo Manager GUI 실행 (Electron). 사진 분류·검색·인덱싱.
+        group: open
+        target_description: 폴더 경로 (선택, 미지정 시 기본 라이브러리 폴더).
+        router: handler
+        tool: open_photo_manager
+        implementation: Electron 기반 Photo Manager GUI 실행
+        target_key: path

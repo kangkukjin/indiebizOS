@@ -1,0 +1,220 @@
+nodes:
+  engines:
+    actions:
+      html_video:
+        returns: effect
+        runs_on: mac_only
+        description: 완성된 HTML/CSS 씬을 MP4 영상으로 합성. scenes(HTML 배열) 또는 scene_dir(저장된 씬)로 호출. 주제→슬라이드 자동생성은 slide/lecture 사용. (가이드 html_video.md)
+        target_description: scenes(완전한 HTML 문서 배열, 각 {html, duration})을 직접 전달하거나 scene_dir(저장된 씬 디렉토리)을 지정. scene_dir이 있으면 렌더링 단계만 실행. narration_texts로 씬별 나레이션 추가.
+        group: media_produce
+        router: handler
+        tool: html_video
+        implementation: scene_dir이 있으면 render 단계(저장된 HTML 씬 → Playwright + FFmpeg MP4)로, scenes가 있으면 풀 렌더(Playwright 프레임 캡처 → FFmpeg MP4 인코딩)로 분기. topic→씬 자동생성은 미구현(slide/lecture 파이프라인 사용).
+        target_key: scenes
+        keywords:
+        - 영상
+        - 동영상
+        - MP4
+        - 렌더링
+        - HTML영상
+      tts:
+        returns: effect
+        runs_on: mac_only
+        description: 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
+        target_description: 음성으로 만들 텍스트. voice 옵션으로 화자 선택 (기본 한국어 여성).
+        group: media_produce
+        router: handler
+        tool: create_tts
+        implementation: edge-tts(Microsoft Azure TTS)로 텍스트→MP3 변환
+        target_key: text
+        keywords:
+        - speech
+        - voice
+        - 음성
+        - 읽어줘
+        - narration
+        - text to speech
+        - 목소리
+        - 텍스트음성
+        - TTS
+        - 나레이션
+      slide_shadcn:
+        returns: effect
+        runs_on: mac_only
+        prompt_hidden: true
+        description: 'Shadcn UI HTML 슬라이드(2층: 글자 레이어 + 별도 그림 합성). **마케팅·랜딩·피치덱·순수 텍스트 레이아웃 덱 전용.** ★강의·발표·NotebookLM식 슬라이드는 이 액션을 쓰지 말 것 — 대신 [engines:slide]{style:"native"}(슬라이드마다 통짜 이미지) 또는 [self:lecture] 워크스페이스(design_system 미지정=native 기본)를 써라(시각=의미 융합·한글 OCR 검증). 슬라이드 IR(slides[]) → png/pdf/pptx emit.'
+        target_description: '★★강의·발표 슬라이드는 이 액션이 아니다. NotebookLM식 통짜 이미지가 기본 — [engines:slide]{style:"native", aesthetic:...}를 슬라이드마다 호출하거나 [self:lecture] 워크스페이스(native 기본)를 써라. 이 액션은 **마케팅/랜딩/피치덱/순수 텍스트 레이아웃 덱**에만 쓴다.
+
+          ★슬라이드 IR(슬라이드 전용 — 문서 IR과 별개, 텍스트 문서는 table:document를 쓸 것): slides 배열, 각 슬라이드 = {layout, title, ...}(named layout 계약). + design_system/theme/output_dir/width/height. 인라인 배열만 (topic 미지원).
+
+          마케팅 layout: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom
+
+          강의 layout(레거시 텍스트형 — 통짜 native 권장): lecture_body/metaphor_story/comparison_table/factbox/quote
+
+          일러스트 통합 layout(레거시 2층 합성 — 통짜 native 권장): hero_illustration/illustration_anchor/split_concept/illustration_background/comparison_iconic
+
+          design_system: default/vintage_book/academic_paper/tech_minimal/magazine_modern
+
+          theme(색만): default/blue/green/purple/orange/dark
+
+          format(png 기본=슬라이드별 이미지 디렉토리 / pdf=슬라이드당 1페이지 / pptx=슬라이드당 풀블리드 이미지): 같은 슬라이드 IR을 여러 emitter로. pdf·pptx는 렌더된 슬라이드를 그대로 보존(디자인 무손실).
+
+          '
+        group: media_produce
+        router: handler
+        tool: create_shadcn_slides
+        implementation: 'Shadcn UI React 기반 + Playwright PNG 캡처. tool_input: slides(배열, 필수) + theme(선택) + design_system(선택) + output_dir(선택, 미지정 시 자동 생성된 shadcn_slides_<hex>/) + width/height(선택, 기본 1280x720). 마케팅 레이아웃: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom. 강의 레이아웃: lecture_body(본문단락+불릿+인용+푸터), metaphor_story(스토리+결론), comparison_table(헤더/행 순수 텍스트 표), factbox(보조정보), quote(풀스크린 인용). 통합형 일러스트 레이아웃(NotebookLM 스타일 — 이미지와 텍스트가 한 화면으로 융합): hero_illustration(중앙 영웅 일러스트+상하 텍스트, 표지·장 도입), illustration_anchor(상단 큰 일러스트+하단 텍스트(title/body/takeaway), 개념 설명), split_concept(좌우 대비, 양쪽 일러스트+캡션 + conclusion 박스, left_image_path/right_image_path 절대경로 자동 base64 변환 또는 left_image_data/right_image_data + left_title/right_title + left_body/right_body + conclusion), illustration_background(전면 배경 일러스트+오버레이 텍스트, 부 도입·임팩트, text_align="left"/"center" 옵션 — center는 라디얼 스크림으로 가독성 보장), comparison_iconic(이모지/일러스트 헤더가 있는 시각적 비교 표 — label_header + columns:[{title,subtitle,icon,highlighted}] + rows:[{label, cells:[...]}]; 주의: row 필드명은 cells (values 아님 — Jinja dict 메서드 충돌)). image_path 절대경로는 자동 base64 변환되어 image_data로 주입됨 (image_path/left_image_path/right_image_path/avatar_path 모두 지원). theme(색만): default/blue/green/purple/orange/dark. design_system(색+폰트+텍스처+장식+일러스트 통합 묶음): default(없음), vintage_book(베이지 종이+청적갈 잉크+한글 디스플레이+컴퍼스 마크, 책 강의·인문, 일러스트 multiply 블렌드로 종이에 흡수), academic_paper(미색 종이+진남색+진홍 강조+Crimson 세리프, 학술 논문·연구), tech_minimal(다크 남+시안 네온+Inter+JetBrains Mono+그리드, 테크 컨퍼런스·개발자), magazine_modern(흰+검+적색+Bebas/Playfair, 잡지·편집)'
+        keywords:
+        - 슬라이드
+        - Shadcn
+        - PNG
+      slide:
+        returns: effect
+        runs_on: mac_only
+        description: 명령 한 줄 → 슬라이드 1장(PNG). 기본 native(통짜 이미지, 시각=의미 융합·한글 OK). 여러 장은 슬라이드마다 호출, 덱 관리는 [self:lecture]. 텍스트 위주는 style:"text", 마케팅 덱은 slide_shadcn.
+        target_description: "instruction(필수) — 무엇을 말하는 한 장인지 자연어로. content(선택) — 근거 사실·원문(환각 방지).\n★여러 장 강의 덱: 슬라이드 outline(장당 명제+장치)을 먼저 짜고, 슬라이드마다 이 액션을 같은 aesthetic으로 호출(병렬 & 가능).\nstyle(선택) — 미지정 기본값=\"native\":\n  · 네이티브 통짜형 \"native\"(기본): 이미지 모델이 한글 글자·다이어그램·일러스트를 한 장에 통째로 저작 — NotebookLM식 시각=의미 융합(합성층 없음). aesthetic(vintage_book/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint)으로 톤 고정, image_size(1K/2K/4K)·verify(한글 OCR 재생성) 옵션. 한 덱은 한 톤으로 고정하면 일관된 책이 됨.\n  · 텍스트형 \"text\"(빠름·무료): 자유형 custom HTML(이미지 API 안 씀). 카드/리포트 타일 등 발표 슬라이드가 아닌 경량·대량 용도에만 명시. design_system(vintage_book/academic_paper/tech_minimal/magazine_modern) 톤.\nwidth/height(선택, 기본 1280x720). 제목=명제·한 장 한 아이디어 원칙. AI가 조합해 리포트→슬라이드 등 더 큰 산출물을 만드는 기층 액션.\n"
+        group: media_produce
+        router: handler
+        tool: create_slide
+        implementation: 'slide_author.py — 저작 시스템 프롬프트로 system_ai provider 호출 → spec(JSON, custom_html 우선) → 같은 패키지 shadcn_slides.create_shadcn_slides로 단일 슬라이드 렌더. design_system CSS 래퍼를 상속해 톤 일관. tool_input: instruction(필수) + content/design_system/width/height(선택).'
+        target_key: instruction
+        keywords:
+        - 슬라이드
+        - 한장
+        - 저작
+        - 발표자료
+        - 카드
+      image_gemini:
+        returns: effect
+        runs_on: anywhere
+        description: Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").
+        target_description: 'prompt (필수). 옵션:
+
+          - style_preset: vintage_book/academic_paper/tech_minimal/magazine_modern (슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합)
+
+          - aspect_ratio: 1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1
+
+          - image_size: 512/1K/2K/4K (기본 1K)
+
+          - quality: fast(3.1 Flash 기본)/pro(Nano Banana Pro)/legacy
+
+          - output_path, api_key(환경변수 GEMINI_API_KEY 기본)
+
+          '
+        group: media_produce
+        router: handler
+        tool: generate_gemini_image
+        implementation: 'Google Gemini API로 프롬프트 기반 AI 이미지 생성. 기본 모델: gemini-3.1-flash-image-preview (Nano Banana 2, 2026-02 출시, 한국어 텍스트 렌더링 개선, 4K까지). 파라미터: prompt(필수), style_preset(vintage_book/academic_paper/tech_minimal/magazine_modern — 슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합), aspect_ratio(1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1), image_size(512/1K/2K/4K, 기본 1K — 가격 1K $0.045 / 2K 중간 / 4K $0.151), quality(fast=3.1 Flash 기본 / pro=gemini-3-pro-image-preview Pro / legacy=gemini-2.5-flash-image 폴백), model(직접 모델명 지정 시 quality 무시), output_path(선택), api_key(선택, 환경변수 GEMINI_API_KEY 기본)'
+        target_key: prompt
+        keywords:
+        - image generation
+        - 이미지 만들기
+        - AI 이미지
+        - 그림
+        - picture
+        - 사진생성
+        - text to image
+        - 이미지생성
+        - AI이미지
+      render_html:
+        returns: effect
+        runs_on: mac_only
+        description: HTML 페이지를 PNG 이미지로 렌더링. 슬라이드·차트 결과를 이미지화.
+        target_description: 렌더링할 HTML 문자열 또는 경로. 결과 PNG 경로 반환.
+        group: media_produce
+        router: handler
+        tool: render_html_to_image
+        implementation: Playwright로 HTML 페이지 렌더링 후 PNG 캡처
+        target_key: html
+        keywords:
+        - HTML
+        - 이미지
+        - 렌더링
+      image_critic:
+        returns: effect
+        runs_on: anywhere
+        scope: workspace
+        description: 'Gemini Vision으로 산출물(일러스트/차트/이미지 등)이 의도와 정합하는지 평가. 반환: passed/score/issues/notes.'
+        target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. preset 옵션 — slide_illustration(기본: 다이어그램형/한글 미포함/빈 공간/객체 명확성, 한글 검출 시 passed=false) | general(임의 산출물 범용: intent 충족·시각 결함 없음). style_preset/checks(추가 체크 배열) 옵션.'
+        group: media_produce
+        router: handler
+        tool: critique_gemini_image
+        implementation: 'Gemini 3 Pro Vision으로 이미지를 평가. 기본 체크: (1) 다이어그램형인가, (2) 한글이 들어갔는가, (3) 빈 공간이 의도된 위치에 있는가, (4) 주요 객체가 명확히 배치됐는가, (5) 디자인 시스템 톤 일관성. checks 파라미터로 추가 체크 가능. 한글이 일러스트 안에 있으면 무조건 passed=false. 반환: 사람용 요약 + verdict_json (passed/score/issues/notes).'
+        achievement_criteria: 평가 자체의 신뢰성 — JSON 파싱 성공, issues가 구체적 이유를 담음, 한글 검출 시 무조건 passed=false.
+        keywords:
+        - 일러스트 평가
+        - VLM
+        - vision
+        - critic
+        - image evaluation
+      image_read:
+        returns: effect
+        runs_on: anywhere
+        scope: workspace
+        description: Gemini Vision으로 이미지를 읽어 질문에 답한다(시각 QA·OCR·검증). 스크린샷 숫자/텍스트 읽기, 그림 내용 확인. 합격 채점 아님(그건 image_critic).
+        target_description: image_path(절대 경로 또는 data URI, path 로도 받음) 필수 + question(무엇을 읽거나 답할지, 생략 시 전체 묘사). query/intent/prompt 로도 받음.
+        group: media_produce
+        router: handler
+        tool: read_gemini_image
+        implementation: Gemini 3 Pro Vision(폴백 2.5 Pro)으로 이미지를 읽어 자유서술 답변을 반환. temperature=0. critique_gemini_image(합격/점수 채점)와 달리 OCR·시각 QA·시각 검증 용도. 보이는 텍스트/숫자는 그대로 옮기고 불확실하면 추측 금지.
+        target_key: image_path
+        achievement_criteria: 이미지에 실제로 보이는 내용을 정확히 옮김 — 텍스트/숫자를 환각 없이 읽고, 안 보이면 안 보인다고 답함.
+        keywords:
+        - 이미지 읽기
+        - 스크린샷 읽기
+        - OCR
+        - 시각 QA
+        - 그림 보기
+        - vision read
+        - image ocr
+  table:
+    actions:
+      structure:
+        returns: effect
+        runs_on: anywhere
+        scope: workspace
+        description: 원본 콘텐츠를 문서 IR(blocks)로 구조화하는 편집자 원자. A획득→B구조화→IR→emit 파이프라인의 B. document로 이어 렌더.
+        target_description: content(필수, 구조화할 원본 텍스트 — >> 파이프 시 이전 결과를 content로 받아 생략 가능). instruction(선택, 정리 방향 예 "3섹션 요약 보고서로"·"비교는 표로"). 반환에 title·blocks(문서 IR) 포함 — 그대로 table:document로 >> 파이프하면 렌더.
+        group: media_produce
+        router: handler
+        tool: structure_document
+        implementation: 경량 LLM 편집자가 콘텐츠를 문서 IR(heading/paragraph/list/table/quote/code/divider) JSON으로 정리. 지어내기 금지·주어진 내용에서만. document emitter의 입력 생산.
+        target_key: content
+        keywords:
+        - 구조화
+        - 정리
+        - 요약정리
+        - 문서화
+        - structure
+      document:
+        returns: effect
+        runs_on: anywhere
+        description: 문서 IR(공유 문서 모델)을 산출물로 렌더. 포맷 중립 IR을 emitter가 렌더(현재 html). 보고서·문서·페이지 산출의 단일 진실 소스.
+        target_description: 'blocks(필수): 문서 IR 블록 배열. 각 블록은 {type, ...}:
+
+          - heading{level(1~6), text} · paragraph{text} · list{ordered?, items[]}
+
+          - image{src(경로/URL), caption?} · table{columns, rows}(데이터 통화 그대로 재사용)
+
+          - cards{columns(기본2), items:[{title, meta?, summary?, url?, link_label?}]}(링크 카드 그리드 — 뉴스·검색결과·북마크·상품목록)
+
+          - quote{text, cite?} · code{text, lang?} · divider
+
+          title(선택, 최상단 제목) · meta(선택, 제목 아래 부제/발행정보 한 줄) · theme(default 기본/newspaper 제호+카드그리드)
+
+          · filename(선택) · format(html 기본/pdf/png/docx/pptx/typst — 같은 IR을 여러 emitter로).
+
+          결과 산출물 경로(path·file) 반환. 단일 IR → 다중 emitter. typst=책 품질 조판 PDF(산문·보고서에 최적, HTML theme/cards 그리드는 무시). pptx는 문서 구조를 슬라이드로 투영(heading=새 슬라이드) — 시각 레이아웃 슬라이드가 필요하면 engines:slide를 쓸 것.
+
+          '
+        group: media_produce
+        router: handler
+        tool: render_document
+        implementation: 포맷 중립 문서 IR을 emitter로 렌더 — html(_doc_blocks_to_html)·pdf/png(Playwright 동일 HTML)·docx(_doc_blocks_to_docx, python-docx)·pptx(_doc_blocks_to_pptx, python-pptx 슬라이드 투영). table 블록은 데이터 통화({columns,rows}) 재사용. 단일 IR → 다중 emitter.
+        target_key: blocks
+        keywords:
+        - 문서
+        - 보고서
+        - document
+        - 리포트
+        - 페이지

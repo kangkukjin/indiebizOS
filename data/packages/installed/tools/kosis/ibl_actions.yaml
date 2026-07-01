@@ -1,0 +1,19 @@
+node: sense
+actions:
+  kosis:
+    returns: items
+    description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. items(행 dict). 자세히 read_guide(query="통계").
+    group: research
+    target_description: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 표준 table 통화도 반환(period=기간 축, 지표·분류 조합=시리즈) → >> [engines:chart/spreadsheet] / [engines:document](table 블록). ⚠️다차원 통계표는 통화가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.
+    router: handler
+    tool: kosis_lookup
+    implementation: KOSIS API 통합 — org_id+tbl_id면 get_data(또는 info=true시 get_statistics_info), indicator면 get_indicators, query면 integrated_search.
+    target_key: query
+    keywords:
+    - 통계
+    - kosis
+    - 통계청
+    - 인구
+    - GDP
+    - 물가
+    - 실업률

@@ -40,13 +40,7 @@ def execute(tool_input: dict, context) -> str:
         if op == "delete":
             return delete_health_record(tool_input)
         return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|query|delete)"}, ensure_ascii=False)
-    # 옛 도구 이름 (직접 호출 호환)
-    if tool_name == "save_health_info":
-        return save_health_info(tool_input)
-    elif tool_name == "get_health_context":
-        return get_health_context(tool_input)
-    else:
-        return f"알 수 없는 도구: {tool_name}"
+    return f"알 수 없는 도구: {tool_name}"
 
 
 def save_health_info(input_data: dict) -> str:

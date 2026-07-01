@@ -60,50 +60,7 @@ def execute(tool_input: dict, context):
         else:
             return {"success": False, "error": "query / indicator / (org_id + tbl_id) 중 하나가 필요합니다."}
 
-    if tool_name == "kosis_search_statistics":
-        return kosis_api.search_statistics(
-            keyword=tool_input.get("keyword"),
-            vw_cd=tool_input.get("vw_cd", "MT_ZTITLE"),
-            parent_list_id=tool_input.get("parent_list_id")
-        )
-
-    elif tool_name == "kosis_get_data":
-        return kosis_api.get_statistics_data(
-            org_id=tool_input.get("org_id"),
-            tbl_id=tool_input.get("tbl_id"),
-            itm_id=tool_input.get("itm_id", "ALL"),
-            obj_l1=tool_input.get("obj_l1", "ALL"),
-            obj_l2=tool_input.get("obj_l2", "ALL"),
-            obj_l3=tool_input.get("obj_l3", "ALL"),
-            prd_se=tool_input.get("prd_se", "Y"),
-            start_prd_de=tool_input.get("start_prd_de"),
-            end_prd_de=tool_input.get("end_prd_de")
-        )
-
-    elif tool_name == "kosis_get_statistics_info":
-        return kosis_api.get_statistics_info(
-            org_id=tool_input.get("org_id"),
-            tbl_id=tool_input.get("tbl_id")
-        )
-
-    elif tool_name == "kosis_integrated_search":
-        return kosis_api.integrated_search(
-            keyword=tool_input.get("keyword"),
-            count=tool_input.get("count", 10)
-        )
-
-    elif tool_name == "kosis_get_indicators":
-        return kosis_api.get_indicators(
-            indicator_id=tool_input.get("indicator_id"),
-            start_prd_de=tool_input.get("start_prd_de"),
-            end_prd_de=tool_input.get("end_prd_de")
-        )
-
-    else:
-        return {
-            "success": False,
-            "error": f"Unknown tool: {tool_name}"
-        }
+    return {"success": False, "error": f"Unknown tool: {tool_name}"}
 
 def get_definitions():
     """모든 도구 정의 반환"""

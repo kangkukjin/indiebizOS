@@ -5,87 +5,6 @@
   "version": "1.1.0",
   "tools": [
     {
-      "name": "save_health_info",
-      "description": "건강 정보를 저장합니다.\n\n## 정보 유형 (info_type)\n- measurement: 측정값 (혈압, 혈당, 체중 등)\n- symptom: 증상 기록\n- medication: 투약 정보\n- document: 검사 결과 (이미지/문서)\n\n## 다중 사용자 지원\n- person 파라미터로 대상자 구분 (예: '나', '어머니')\n\n## 사용 예시\n- 혈압: info_type='measurement', data={category: 'blood_pressure', value: {systolic: 120, diastolic: 80}}\n- 체중: info_type='measurement', data={category: 'weight', value: {kg: 70}}",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "person": {
-            "type": "string",
-            "description": "대상자 (기본: '나')"
-          },
-          "info_type": {
-            "type": "string",
-            "enum": [
-              "measurement",
-              "symptom",
-              "medication",
-              "document"
-            ],
-            "description": "정보 유형"
-          },
-          "data": {
-            "type": "object",
-            "description": "건강 정보 데이터"
-          },
-          "measured_at": {
-            "type": "string",
-            "description": "측정 일시 (YYYY-MM-DD HH:MM)"
-          },
-          "note": {
-            "type": "string",
-            "description": "추가 메모"
-          }
-        },
-        "required": [
-          "info_type",
-          "data"
-        ]
-      }
-    },
-    {
-      "name": "get_health_context",
-      "description": "건강 기록을 조회합니다.\n\n## 조회 유형 (query_type)\n- summary: 종합 요약\n- measurements: 측정 기록\n- symptoms: 증상 기록\n- medications: 투약 기록\n- documents: 검사 결과\n- search: 키워드 검색\n- list_persons: 등록된 대상자 목록\n\n## 필터 옵션\n- category: 측정 종류 필터 (blood_pressure, weight 등)\n- days: 최근 N일 데이터",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "person": {
-            "type": "string",
-            "description": "대상자 (기본: '나')"
-          },
-          "query_type": {
-            "type": "string",
-            "enum": [
-              "summary",
-              "measurements",
-              "symptoms",
-              "medications",
-              "documents",
-              "search",
-              "list_persons"
-            ],
-            "description": "조회 유형"
-          },
-          "category": {
-            "type": "string",
-            "description": "카테고리 필터"
-          },
-          "days": {
-            "type": "integer",
-            "description": "최근 N일 (기본 30)"
-          },
-          "keyword": {
-            "type": "string",
-            "description": "검색 키워드"
-          },
-          "include_images": {
-            "type": "boolean",
-            "description": "이미지 경로 포함"
-          }
-        }
-      }
-    },
-    {
       "name": "health_op",
       "description": "건강 기록 관리 (op 분기). save/query/delete 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.\n\n파라미터: op: save | query | delete. save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호, soft-delete).",
       "input_schema": {
@@ -93,12 +12,21 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["save", "query", "delete"],
+            "enum": [
+              "save",
+              "query",
+              "delete"
+            ],
             "description": "동작 분기 — target_description 참조"
           },
           "record_type": {
             "type": "string",
-            "enum": ["measurement", "symptom", "medication", "document"],
+            "enum": [
+              "measurement",
+              "symptom",
+              "medication",
+              "document"
+            ],
             "description": "delete 시 삭제할 기록 종류"
           },
           "record_id": {

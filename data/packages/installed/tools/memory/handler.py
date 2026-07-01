@@ -42,19 +42,6 @@ def execute(tool_input: dict, context) -> str:
                 return _memory_delete(memory_db, tool_input, project_path, agent_id)
             return json.dumps({"error": f"알 수 없는 op '{op}'. (save|search|read|delete)"}, ensure_ascii=False)
 
-        # 옛 도구 이름 (직접 호출 호환)
-        if tool_name in ("memory_save", "memory_search", "memory_read", "memory_delete"):
-            import memory_db
-
-            if tool_name == "memory_save":
-                return _memory_save(memory_db, tool_input, project_path, agent_id)
-            elif tool_name == "memory_search":
-                return _memory_search(memory_db, tool_input, project_path, agent_id)
-            elif tool_name == "memory_read":
-                return _memory_read(memory_db, tool_input, project_path, agent_id)
-            elif tool_name == "memory_delete":
-                return _memory_delete(memory_db, tool_input, project_path, agent_id)
-
         return json.dumps({"error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
     except Exception as e:
         return json.dumps({"error": str(e)}, ensure_ascii=False)

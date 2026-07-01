@@ -10,83 +10,44 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "op": {"type": "string", "enum": ["save", "search", "read", "delete"], "description": "수행할 작업"},
-          "content": {"type": "string", "description": "save 필수 — 저장 내용"},
-          "keywords": {"type": "string", "description": "save 옵션 — 검색 키워드(쉼표 구분)"},
-          "category": {"type": "string", "description": "save 옵션 또는 search 필터 — 분류"},
-          "query": {"type": "string", "description": "search 필수 — 검색어"},
-          "top_k": {"type": "integer", "description": "search 옵션 — 반환 개수(기본 10)"},
-          "memory_id": {"type": "integer", "description": "read/delete 필수 — 메모리 ID"}
-        },
-        "required": ["op"]
-      }
-    },
-    {
-      "name": "memory_search",
-      "description": "심층 메모리 통합 검색 (의미 기반 + 키워드). 과거 대화에서 자동 증류된 사용자 선호·작업기록·환경정보를 찾아 현재 맥락에 활용합니다.\n\n사용법:\n- query: 검색 쿼리 (자연어)\n- top_k: 반환 개수 (선택, 기본 10)",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "query": {
+          "op": {
             "type": "string",
-            "description": "검색할 자연어 쿼리"
+            "enum": [
+              "save",
+              "search",
+              "read",
+              "delete"
+            ],
+            "description": "수행할 작업"
           },
-          "top_k": {
-            "type": "integer",
-            "description": "반환할 최대 개수 (기본 10)"
-          }
-        },
-        "required": ["query"]
-      }
-    },
-    {
-      "name": "memory_save",
-      "description": "심층 메모리에 새 항목 저장. 보통은 경험 증류로 자동 저장되므로, 명시적 보존이 필요한 사실만 수동 저장합니다.\n\n사용법:\n- content: 저장할 내용 (필수)\n- keywords: 검색 키워드 (쉼표 구분, 선택)\n- category: 분류 (예: 사용자선호, 작업기록, 환경정보)",
-      "input_schema": {
-        "type": "object",
-        "properties": {
           "content": {
             "type": "string",
-            "description": "저장할 메모리 내용"
+            "description": "save 필수 — 저장 내용"
           },
           "keywords": {
             "type": "string",
-            "description": "검색용 키워드 (쉼표 구분)"
+            "description": "save 옵션 — 검색 키워드(쉼표 구분)"
           },
           "category": {
             "type": "string",
-            "description": "분류 카테고리"
-          }
-        },
-        "required": ["content"]
-      }
-    },
-    {
-      "name": "memory_read",
-      "description": "메모리 ID로 단일 항목 전체 내용 조회. memory_search 결과에서 받은 id로 상세 내용을 확인할 때 사용합니다.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
+            "description": "save 옵션 또는 search 필터 — 분류"
+          },
+          "query": {
+            "type": "string",
+            "description": "search 필수 — 검색어"
+          },
+          "top_k": {
+            "type": "integer",
+            "description": "search 옵션 — 반환 개수(기본 10)"
+          },
           "memory_id": {
             "type": "integer",
-            "description": "조회할 메모리 ID"
+            "description": "read/delete 필수 — 메모리 ID"
           }
         },
-        "required": ["memory_id"]
-      }
-    },
-    {
-      "name": "memory_delete",
-      "description": "메모리 ID로 단일 항목 삭제. 잘못 저장됐거나 더 이상 유효하지 않은 사실을 제거할 때 사용합니다.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "memory_id": {
-            "type": "integer",
-            "description": "삭제할 메모리 ID"
-          }
-        },
-        "required": ["memory_id"]
+        "required": [
+          "op"
+        ]
       }
     }
   ]

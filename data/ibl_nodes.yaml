@@ -3695,102 +3695,6 @@ nodes:
     - 소통
   engines:
     actions:
-      web_site:
-        returns: effect
-        runs_on: mac_only
-        description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
-        target_description: 'op로 분기 (기본 list).
-
-          - list: 파라미터 없음. 등록된 사이트 전체 반환.
-
-          - register: name(필수) + local_path(필수) + repo_url/deploy_url/description(선택).
-
-          - remove: site_id(필수).
-
-          - update: site_id(필수) + 변경할 필드(name/local_path/repo_url/deploy_url/description).
-
-          '
-        group: web_builder
-        router: handler
-        tool: web_site
-        implementation: web-builder 패키지의 sites.json 레지스트리 CRUD. 빈번하지 않은 어드민이라 가이드 web_builder.md 참조 권장.
-        keywords:
-        - 사이트
-        - 웹사이트목록
-        - 사이트등록
-        - 사이트삭제
-        - 사이트수정
-      web:
-        returns: effect
-        runs_on: mac_only
-        description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
-        target_description: 'op로 분기 (기본 preview).
-
-          - create: target=site(name + template:blank/landing/portfolio/blog/business + features) 또는 page(project_path + page_name + sections[] + metadata).
-
-          - build: 현재 프로젝트 프로덕션 빌드 (Next.js .next/).
-
-          - deploy: Vercel 배포. project_name/production 옵션.
-
-          - preview: 로컬 미리보기 서버. project_path + action(start/stop/status).
-
-          - snapshot: site_id 스크린샷 캡처.
-
-          - check: site_id Lighthouse 품질검사 (성능·접근성·SEO).
-
-          - styles: shadcn 테마 편집. project_path + theme(프리셋) 또는 custom_colors(HSL) + border_radius.
-
-          '
-        target_key: op
-        group: web_builder
-        router: handler
-        tool: web_op
-        ops:
-          default: preview
-          values:
-            create: 웹 프로젝트/페이지 생성 (target site|page)
-            build: 프로덕션 빌드 (Next.js)
-            deploy: Vercel 배포
-            preview: 로컬 미리보기 서버 (start/stop/status, 기본)
-            snapshot: 사이트 스크린샷 캡처
-            check: Lighthouse 품질 검사 (성능·접근성·SEO)
-            styles: shadcn 테마/색상/반경 구조화 편집 (globals.css)
-        implementation: web-builder 패키지 op 분기. create=create_project|create_page(target), build=build_site, deploy=deploy_vercel, preview=preview_site, snapshot=site_snapshot, check=site_live_check, styles=edit_styles. 가이드 web_builder.md.
-        keywords:
-        - 웹사이트
-        - 빌드
-        - 배포
-        - 미리보기
-        - vercel
-      web_component:
-        returns: effect
-        runs_on: mac_only
-        description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).
-        target_description: 'op로 분기 (기본 fetch).
-
-          - catalog: kind=components(button/card/dialog 등) 또는 sections(hero/features/cta 등). category 옵션.
-
-          - fetch: component(이름 또는 URL, 필수) + style + project_path + output_format(code/file).
-
-          - add: component(필수, 예 button/card) + project_path. shadcn/ui CLI로 설치.
-
-          '
-        target_key: op
-        group: web_builder
-        router: handler
-        tool: web_component_op
-        ops:
-          default: fetch
-          values:
-            catalog: 컴포넌트/섹션 카탈로그 조회 (kind)
-            fetch: 외부 CDN/레지스트리에서 컴포넌트 다운로드 (기본)
-            add: shadcn/ui CLI로 프로젝트에 컴포넌트 설치
-        implementation: catalog=list_components|list_sections(kind), fetch=fetch_component, add=add_component.
-        keywords:
-        - 컴포넌트
-        - 카탈로그
-        - shadcn
-        - UI
       html_video:
         returns: effect
         runs_on: mac_only
@@ -4020,6 +3924,102 @@ nodes:
             button:
               label: 🖥 띄우기
               action: '[limbs:os_open]{path: "{file}"}'
+      web_site:
+        returns: effect
+        runs_on: mac_only
+        description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
+        target_description: 'op로 분기 (기본 list).
+
+          - list: 파라미터 없음. 등록된 사이트 전체 반환.
+
+          - register: name(필수) + local_path(필수) + repo_url/deploy_url/description(선택).
+
+          - remove: site_id(필수).
+
+          - update: site_id(필수) + 변경할 필드(name/local_path/repo_url/deploy_url/description).
+
+          '
+        group: web_builder
+        router: handler
+        tool: web_site
+        implementation: web-builder 패키지의 sites.json 레지스트리 CRUD. 빈번하지 않은 어드민이라 가이드 web_builder.md 참조 권장.
+        keywords:
+        - 사이트
+        - 웹사이트목록
+        - 사이트등록
+        - 사이트삭제
+        - 사이트수정
+      web:
+        returns: effect
+        runs_on: mac_only
+        description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
+        target_description: 'op로 분기 (기본 preview).
+
+          - create: target=site(name + template:blank/landing/portfolio/blog/business + features) 또는 page(project_path + page_name + sections[] + metadata).
+
+          - build: 현재 프로젝트 프로덕션 빌드 (Next.js .next/).
+
+          - deploy: Vercel 배포. project_name/production 옵션.
+
+          - preview: 로컬 미리보기 서버. project_path + action(start/stop/status).
+
+          - snapshot: site_id 스크린샷 캡처.
+
+          - check: site_id Lighthouse 품질검사 (성능·접근성·SEO).
+
+          - styles: shadcn 테마 편집. project_path + theme(프리셋) 또는 custom_colors(HSL) + border_radius.
+
+          '
+        target_key: op
+        group: web_builder
+        router: handler
+        tool: web_op
+        ops:
+          default: preview
+          values:
+            create: 웹 프로젝트/페이지 생성 (target site|page)
+            build: 프로덕션 빌드 (Next.js)
+            deploy: Vercel 배포
+            preview: 로컬 미리보기 서버 (start/stop/status, 기본)
+            snapshot: 사이트 스크린샷 캡처
+            check: Lighthouse 품질 검사 (성능·접근성·SEO)
+            styles: shadcn 테마/색상/반경 구조화 편집 (globals.css)
+        implementation: web-builder 패키지 op 분기. create=create_project|create_page(target), build=build_site, deploy=deploy_vercel, preview=preview_site, snapshot=site_snapshot, check=site_live_check, styles=edit_styles. 가이드 web_builder.md.
+        keywords:
+        - 웹사이트
+        - 빌드
+        - 배포
+        - 미리보기
+        - vercel
+      web_component:
+        returns: effect
+        runs_on: mac_only
+        description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).
+        target_description: 'op로 분기 (기본 fetch).
+
+          - catalog: kind=components(button/card/dialog 등) 또는 sections(hero/features/cta 등). category 옵션.
+
+          - fetch: component(이름 또는 URL, 필수) + style + project_path + output_format(code/file).
+
+          - add: component(필수, 예 button/card) + project_path. shadcn/ui CLI로 설치.
+
+          '
+        target_key: op
+        group: web_builder
+        router: handler
+        tool: web_component_op
+        ops:
+          default: fetch
+          values:
+            catalog: 컴포넌트/섹션 카탈로그 조회 (kind)
+            fetch: 외부 CDN/레지스트리에서 컴포넌트 다운로드 (기본)
+            add: shadcn/ui CLI로 프로젝트에 컴포넌트 설치
+        implementation: catalog=list_components|list_sections(kind), fetch=fetch_component, add=add_component.
+        keywords:
+        - 컴포넌트
+        - 카탈로그
+        - shadcn
+        - UI
     description: '작업장: 미디어 생성 — 신문, 슬라이드, 영상, 이미지, 음성(TTS), 웹사이트. (표·통화 변환 문법은 table 노드.)'
     tags:
     - 생성
@@ -4033,60 +4033,6 @@ nodes:
     - 이미지
   table:
     actions:
-      chart:
-        returns: effect
-        runs_on: mac_only
-        description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
-        target_description: 'title (필수). chart_type으로 종류 분기 (기본 line).
-
-          표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(table:spreadsheet와 같은 통화). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
-
-          - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
-
-          - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
-
-          - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
-
-          - pie: labels·values 리스트. hole 옵션으로 도넛.
-
-          - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
-
-          - heatmap: z(매트릭스)·x_labels·y_labels.
-
-          - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
-
-          - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
-
-          - spec: 위 chart_type으로 부족한 풍부한 표현(이중축·로그축·복합 음영 등)은 Plotly figure JSON을 spec으로 그대로 넘긴다 — matplotlib 코드 작성(self:write+run) 대신. spec={data:[트레이스...], layout:{...}}. 이중축=트레이스에 yaxis:"y2" + layout.yaxis2={overlaying:"y",side:"right"}. 구간음영=layout.shapes(type:rect, yref:"paper"). 주석=layout.annotations. *코드가 아니라 데이터*라 포터블·캐시·검증가능. 예: 한국 GDP(좌축)와 KOSPI(우축) 이중축 + 정권별 shapes 음영.
-
-          '
-        group: chart
-        router: handler
-        tool: chart
-        implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. matplotlib 폴백 내장.
-        target_key: title
-        keywords:
-        - 차트
-        - 그래프
-        - 시각화
-        - 라인차트
-        - 선그래프
-        - 추이
-        - 바차트
-        - 막대그래프
-        - 캔들
-        - 주식차트
-        - OHLCV
-        - 파이차트
-        - 원그래프
-        - 비율
-        - 산점도
-        - 분포
-        - 추세선
-        - 히트맵
-        - 열지도
-        - 대시보드
-        - 복합차트
       filter:
         returns: transform
         runs_on: anywhere
@@ -4306,6 +4252,60 @@ nodes:
         - 표
         - 시트
         - 장부
+      chart:
+        returns: effect
+        runs_on: mac_only
+        description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
+        target_description: 'title (필수). chart_type으로 종류 분기 (기본 line).
+
+          표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(table:spreadsheet와 같은 통화). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
+
+          - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
+
+          - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
+
+          - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
+
+          - pie: labels·values 리스트. hole 옵션으로 도넛.
+
+          - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
+
+          - heatmap: z(매트릭스)·x_labels·y_labels.
+
+          - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
+
+          - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
+
+          - spec: 위 chart_type으로 부족한 풍부한 표현(이중축·로그축·복합 음영 등)은 Plotly figure JSON을 spec으로 그대로 넘긴다 — matplotlib 코드 작성(self:write+run) 대신. spec={data:[트레이스...], layout:{...}}. 이중축=트레이스에 yaxis:"y2" + layout.yaxis2={overlaying:"y",side:"right"}. 구간음영=layout.shapes(type:rect, yref:"paper"). 주석=layout.annotations. *코드가 아니라 데이터*라 포터블·캐시·검증가능. 예: 한국 GDP(좌축)와 KOSPI(우축) 이중축 + 정권별 shapes 음영.
+
+          '
+        group: chart
+        router: handler
+        tool: chart
+        implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. matplotlib 폴백 내장.
+        target_key: title
+        keywords:
+        - 차트
+        - 그래프
+        - 시각화
+        - 라인차트
+        - 선그래프
+        - 추이
+        - 바차트
+        - 막대그래프
+        - 캔들
+        - 주식차트
+        - OHLCV
+        - 파이차트
+        - 원그래프
+        - 비율
+        - 산점도
+        - 분포
+        - 추세선
+        - 히트맵
+        - 열지도
+        - 대시보드
+        - 복합차트
     description: 표/통화 변환 문법 — 관계대수(filter·sort·take·select·dedup·groupby·join·union·merge)와 통화 emitter(chart·spreadsheet·document·structure). 도메인·몸 무관 IBL 문법 계층.
     tags:
     - 변환

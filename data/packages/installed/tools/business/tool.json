@@ -296,40 +296,6 @@
       }
     },
     {
-      "name": "get_neighbors",
-      "description": "이웃(연락처) 목록을 조회합니다.\n\n## 이웃이란?\nIndieBiz OS에서 관리하는 비즈니스 연락처입니다. 고객, 파트너, 협력사 등 다양한 관계를 이웃으로 등록하고 관리할 수 있습니다.\n\n## 반환 정보\n- id: 이웃 ID (상세 조회 시 사용)\n- name: 이름\n- info_level: 정보 공개 레벨 (0-4, 높을수록 상세 정보 보유)\n- rating: 평가 (0-5점)\n- favorite: 즐겨찾기 여부\n\n## 사용 예시\n- 모든 이웃 목록: get_neighbors()\n- 이름 검색: get_neighbors(search='홍길동')\n- 레벨별 필터: get_neighbors(info_level=2)",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "search": {
-            "type": "string",
-            "description": "이름으로 검색 (부분 일치)"
-          },
-          "info_level": {
-            "type": "integer",
-            "description": "정보 공개 레벨로 필터링 (0-4)"
-          }
-        }
-      }
-    },
-    {
-      "name": "get_neighbor_detail",
-      "description": "특정 이웃의 상세 정보를 조회합니다.\n\n## 반환 정보\n- 기본 정보: id, name, info_level, rating, favorite\n- 연락처 목록: email, phone, telegram, nostr 등\n- 추가 정보: additional_info (메모)\n- 비즈니스 문서: business_doc (이웃별 비즈니스 정보)\n- 최근 메시지: 최근 5개 송수신 메시지\n\n## 사용법\n- ID로 조회: get_neighbor_detail(neighbor_id=1)\n- 이름으로 조회: get_neighbor_detail(name='홍길동')\n\n## 주의\nneighbor_id 또는 name 중 하나는 반드시 제공해야 합니다.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "neighbor_id": {
-            "type": "integer",
-            "description": "이웃 ID"
-          },
-          "name": {
-            "type": "string",
-            "description": "이웃 이름 (정확히 일치)"
-          }
-        }
-      }
-    },
-    {
       "name": "phone_sync",
       "description": "폰과 PC의 주소록 데이터(business.db: 이웃·연락처·사업·아이템·문서·지침)를 USB(adb)로 합집합 동기화한다. 폰이 USB로 연결돼 있어야 하며(미기동 시 앱 자동 기동 시도), 양방향 1회 머지(추가는 합치고 수정은 최신이 이김, 삭제는 양쪽 반영). 메시지/글 내용은 동기화 대상이 아니다(릴레이/Gmail이 진실원). 파라미터 없음.",
       "input_schema": {

@@ -74,7 +74,7 @@
 ## 8. 다음 세션 착수 후보 (우선순위)
 1. ~~**youtube/web-builder/visualization 진짜 정리**~~ **✅완료**(2026-07-02 후속, 커밋 `4798901`·`4eadb4d`·`0e547cb`, push): 세 패키지 모두 op(또는 chart_type)→핸들러 함수 직접-return으로 리팩터(레거시 `if tool_name==` 체인을 `_op_*`/`_render_*`/`_h_*` 모듈함수로 추출), 변종2→변종1 전환. 죽은 tool.json 29개 제거(youtube 9→3·visualization 8→1·web-builder 19→3). `_OP_DISPATCHERS` 이름 유지(값 문자열→함수, `--check`는 키만 읽어 무영향). web-builder는 미지 op→기본 폴백 관용 보존. 각 라이브 스모크 통과.
 2. **Tier 2/3**(§7): ✅경로②(레거시 확장 ai-agent) 폐기(`78d4635`) + ✅경로③(REST 정본이름 개명, `3cb193f`+`cd3e24b`) 모두 완료. 두 비-IBL 병렬경로 해소됨.
-3. **3층 이름 드리프트 전체 감사**(§5 후속): 액션명 vs tool명 vs 함수명 어긋난 것 전수.
+3. ~~**3층 이름 드리프트 전체 감사**~~ **✅완료**(2026-07-02, `3eb2a70`, `docs/NAME_DRIFT_AUDIT_2026-07-02.md`): 어휘 건강 — 층1(액션) 깨끗·층1↔2 상이는 의도된 관습·층2↔3 일치. search_gnews는 이상치였고 패턴 아님. 선택적 위생 2건(내부 tool명 벤더누수 exhibit→kcisa_quick_search·navigate_route→kakao_navigation, 코퍼스 무영향)만 미실행.
 4. (선택) 원격/폰 신문 앱, table:document newspaper 테마 제거, 도구관리 카테고리 멤버십 최종 확정.
 
 ## 9. 이번 세션 핵심 교훈 (반복 방지)

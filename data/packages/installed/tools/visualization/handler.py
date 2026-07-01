@@ -136,6 +136,116 @@ def _table_to_chart_data(table: dict, chart_type: str) -> dict:
     return out
 
 
+# --- chart_type 별 렌더러 (각각 모듈 로드 + 직접 호출·return) ---
+# 2026-07-02: 옛 `tool_name = type_map[chart_type]` 재할당+fall-through(변종2)를
+# chart_type → 렌더러 함수 직접-return(변종1)으로 전환. 레거시 내부 tool명(line_chart 등)은
+# 더 이상 tool_name으로 부활하지 않으므로 tool.json에서도 은퇴 — chart 하나만 IBL 진입점.
+
+def _render_line(tool_input, data_file):
+    tool = load_module("tool_line")
+    return tool.create_line_chart(
+        data=tool_input.get("data"),
+        data_file=data_file,
+        title=tool_input.get("title"),
+        x_label=tool_input.get("x_label"),
+        y_label=tool_input.get("y_label"),
+        series_names=tool_input.get("series_names"),
+        bands=tool_input.get("bands"),
+        annotations=tool_input.get("annotations"),
+        output_format=tool_input.get("output_format", "png"),
+        output_path=tool_input.get("output_path"))
+
+
+def _render_bar(tool_input, data_file):
+    tool = load_module("tool_bar")
+    return tool.create_bar_chart(
+        data=tool_input.get("data"),
+        data_file=data_file,
+        title=tool_input.get("title"),
+        x_label=tool_input.get("x_label"),
+        y_label=tool_input.get("y_label"),
+        series_names=tool_input.get("series_names"),
+        horizontal=tool_input.get("horizontal", False),
+        stacked=tool_input.get("stacked", False),
+        bands=tool_input.get("bands"),
+        annotations=tool_input.get("annotations"),
+        output_format=tool_input.get("output_format", "png"),
+        output_path=tool_input.get("output_path"))
+
+
+def _render_candlestick(tool_input, data_file):
+    tool = load_module("tool_candlestick")
+    return tool.create_candlestick_chart(
+        data=tool_input.get("data"),
+        data_file=data_file,
+        title=tool_input.get("title"),
+        show_volume=tool_input.get("show_volume", True),
+        ma_periods=tool_input.get("ma_periods"),
+        output_format=tool_input.get("output_format", "png"),
+        output_path=tool_input.get("output_path"))
+
+
+def _render_pie(tool_input, data_file):
+    tool = load_module("tool_pie")
+    return tool.create_pie_chart(
+        data=tool_input.get("data"),
+        title=tool_input.get("title"),
+        show_percentage=tool_input.get("show_percentage", True),
+        donut=tool_input.get("donut", False),
+        output_format=tool_input.get("output_format", "png"),
+        output_path=tool_input.get("output_path"))
+
+
+def _render_scatter(tool_input, data_file):
+    tool = load_module("tool_scatter")
+    return tool.create_scatter_plot(
+        data=tool_input.get("data"),
+        data_file=data_file,
+        title=tool_input.get("title"),
+        x_label=tool_input.get("x_label"),
+        y_label=tool_input.get("y_label"),
+        show_trendline=tool_input.get("show_trendline", False),
+        bands=tool_input.get("bands"),
+        annotations=tool_input.get("annotations"),
+        output_format=tool_input.get("output_format", "png"),
+        output_path=tool_input.get("output_path"))
+
+
+def _render_heatmap(tool_input, data_file):
+    tool = load_module("tool_heatmap")
+    return tool.create_heatmap(
+        data=tool_input.get("data"),
+        title=tool_input.get("title"),
+        x_labels=tool_input.get("x_labels"),
+        y_labels=tool_input.get("y_labels"),
+        color_scale=tool_input.get("color_scale", "viridis"),
+        show_values=tool_input.get("show_values", True),
+        output_format=tool_input.get("output_format", "png"),
+        output_path=tool_input.get("output_path"))
+
+
+def _render_multi(tool_input, data_file):
+    tool = load_module("tool_multi")
+    return tool.create_multi_chart(
+        charts=tool_input.get("charts"),
+        title=tool_input.get("title"),
+        layout=tool_input.get("layout", "auto"),
+        output_format=tool_input.get("output_format", "png"),
+        output_path=tool_input.get("output_path"))
+
+
+# chart_type → 렌더러. 미지의 chart_type 은 line 으로 폴백(옛 type_map.get 기본값 보존).
+_RENDERERS = {
+    "line": _render_line,
+    "bar": _render_bar,
+    "pie": _render_pie,
+    "scatter": _render_scatter,
+    "heatmap": _render_heatmap,
+    "multi": _render_multi,
+    "candlestick": _render_candlestick,
+}
+
+
 def execute(tool_input: dict, context):
     """도구 실행 진입점 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
@@ -167,6 +277,7 @@ def execute(tool_input: dict, context):
                     output_format=tool_input.get("output_format", "png"),
                     output_path=tool_input.get("output_path"))
             chart_type = tool_input.get("chart_type", "line")
+            # (아래 통화/데이터 정규화 후, chart_type → 렌더러 함수 직접-return)
             # 모델이 table 통화를 data: 키에 {columns,rows} 로 넣는 흔한 실수 → table 로 인식.
             # (안 그러면 하위 렌더러가 dict 를 행 리스트로 오인 → KeyError(0)='도구 실행 중 오류 발생: 0')
             _maybe = tool_input.get("data")
@@ -204,105 +315,8 @@ def execute(tool_input: dict, context):
                     tool_input["data"] = [{"label": l, "value": v} for l, v in zip(_labels, _d)]
                 elif chart_type in ("line", "scatter"):
                     tool_input["data"] = [{"x": l, "y": v} for l, v in zip(_labels, _d)]
-            type_map = {
-                "line": "line_chart", "bar": "bar_chart", "pie": "pie_chart",
-                "scatter": "scatter_plot", "heatmap": "heatmap", "multi": "multi_chart",
-                "candlestick": "candlestick_chart",
-            }
-            tool_name = type_map.get(chart_type, "line_chart")
-
-        if tool_name == "line_chart":
-            tool = load_module("tool_line")
-            return tool.create_line_chart(
-                data=tool_input.get("data"),
-                data_file=data_file,
-                title=tool_input.get("title"),
-                x_label=tool_input.get("x_label"),
-                y_label=tool_input.get("y_label"),
-                series_names=tool_input.get("series_names"),
-                bands=tool_input.get("bands"),
-                annotations=tool_input.get("annotations"),
-                output_format=tool_input.get("output_format", "png"),
-                output_path=tool_input.get("output_path")
-            )
-
-        elif tool_name == "bar_chart":
-            tool = load_module("tool_bar")
-            return tool.create_bar_chart(
-                data=tool_input.get("data"),
-                data_file=data_file,
-                title=tool_input.get("title"),
-                x_label=tool_input.get("x_label"),
-                y_label=tool_input.get("y_label"),
-                series_names=tool_input.get("series_names"),
-                horizontal=tool_input.get("horizontal", False),
-                stacked=tool_input.get("stacked", False),
-                bands=tool_input.get("bands"),
-                annotations=tool_input.get("annotations"),
-                output_format=tool_input.get("output_format", "png"),
-                output_path=tool_input.get("output_path")
-            )
-
-        elif tool_name == "candlestick_chart":
-            tool = load_module("tool_candlestick")
-            return tool.create_candlestick_chart(
-                data=tool_input.get("data"),
-                data_file=data_file,
-                title=tool_input.get("title"),
-                show_volume=tool_input.get("show_volume", True),
-                ma_periods=tool_input.get("ma_periods"),
-                output_format=tool_input.get("output_format", "png"),
-                output_path=tool_input.get("output_path")
-            )
-
-        elif tool_name == "pie_chart":
-            tool = load_module("tool_pie")
-            return tool.create_pie_chart(
-                data=tool_input.get("data"),
-                title=tool_input.get("title"),
-                show_percentage=tool_input.get("show_percentage", True),
-                donut=tool_input.get("donut", False),
-                output_format=tool_input.get("output_format", "png"),
-                output_path=tool_input.get("output_path")
-            )
-
-        elif tool_name == "scatter_plot":
-            tool = load_module("tool_scatter")
-            return tool.create_scatter_plot(
-                data=tool_input.get("data"),
-                data_file=data_file,
-                title=tool_input.get("title"),
-                x_label=tool_input.get("x_label"),
-                y_label=tool_input.get("y_label"),
-                show_trendline=tool_input.get("show_trendline", False),
-                bands=tool_input.get("bands"),
-                annotations=tool_input.get("annotations"),
-                output_format=tool_input.get("output_format", "png"),
-                output_path=tool_input.get("output_path")
-            )
-
-        elif tool_name == "heatmap":
-            tool = load_module("tool_heatmap")
-            return tool.create_heatmap(
-                data=tool_input.get("data"),
-                title=tool_input.get("title"),
-                x_labels=tool_input.get("x_labels"),
-                y_labels=tool_input.get("y_labels"),
-                color_scale=tool_input.get("color_scale", "viridis"),
-                show_values=tool_input.get("show_values", True),
-                output_format=tool_input.get("output_format", "png"),
-                output_path=tool_input.get("output_path")
-            )
-
-        elif tool_name == "multi_chart":
-            tool = load_module("tool_multi")
-            return tool.create_multi_chart(
-                charts=tool_input.get("charts"),
-                title=tool_input.get("title"),
-                layout=tool_input.get("layout", "auto"),
-                output_format=tool_input.get("output_format", "png"),
-                output_path=tool_input.get("output_path")
-            )
+            renderer = _RENDERERS.get(chart_type, _render_line)
+            return renderer(tool_input, data_file)
 
         else:
             return {

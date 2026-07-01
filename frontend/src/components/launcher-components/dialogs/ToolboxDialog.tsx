@@ -24,6 +24,39 @@ interface PackageInfo {
   package_type?: string;
   files?: string[];
   tools?: Array<{ name: string; description: string }>;
+  // 능력 자기완결화 메타 (package_meta.json 파생, /packages 응답에 포함)
+  locale?: 'universal' | 'kr' | string;
+  weight?: 'light' | 'heavy' | string;
+  needs_key?: string[];
+  missing_keys?: string[];
+  dormant?: boolean;   // 설치됐지만 키 누락 → 대기 상태
+}
+
+// 도구 관리 상위 4개 카테고리. 각 섹션은 열리고 닫히며, 안에 설치됨 + 미설치를 함께 보여준다.
+// ★각 패키지의 소속(멤버십)은 곧 재결정 예정 — categoryOf() 한 곳만 고치면 됨(임시 규칙).
+type Category = 'standard' | 'kr' | 'needs_key' | 'personal';
+const CATEGORY_ORDER: Category[] = ['standard', 'kr', 'needs_key', 'personal'];
+const CATEGORY_LABEL: Record<Category, string> = {
+  standard: '⭐ 표준',
+  kr: '🇰🇷 한국 전용',
+  needs_key: '🔑 키 필요',
+  personal: '👤 개인어휘',
+};
+
+// 임시 멤버십(재결정 중). 키 필요지만 표준으로 취급하는 팩(예외):
+const STANDARD_OVERRIDE = new Set<string>(['cloudflare', 'context7', 'web']);
+// 개인 어휘 팩:
+const PERSONAL_PACKAGES = new Set<string>([
+  'memory', 'blog', 'lecture_workspace', 'media_producer', 'web-builder',
+  'android', 'remotion-video', 'house-designer', 'publishing',
+]);
+
+function categoryOf(pkg: PackageInfo): Category {
+  if (STANDARD_OVERRIDE.has(pkg.id)) return 'standard';
+  if (PERSONAL_PACKAGES.has(pkg.id)) return 'personal';
+  if (pkg.locale === 'kr') return 'kr';
+  if ((pkg.needs_key?.length ?? 0) > 0) return 'needs_key';
+  return 'standard';
 }
 
 interface ToolboxDialogProps {
@@ -61,8 +94,13 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [installedExpanded, setInstalledExpanded] = useState(true);
-  const [availableExpanded, setAvailableExpanded] = useState(true);
+  // 카테고리별 열림 상태 (기본 전부 닫힘)
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(() => new Set<string>());
+  const toggleCat = (c: string) => setExpandedCats((prev) => {
+    const next = new Set(prev);
+    next.has(c) ? next.delete(c) : next.add(c);
+    return next;
+  });
 
   // 폴더 등록 다이얼로그 상태
   const [registerDialog, setRegisterDialog] = useState<RegisterDialogState>({
@@ -277,8 +315,11 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
 
   if (!show) return null;
 
-  const installedPackages = packages.filter(p => p.installed);
-  const availablePackages = packages.filter(p => !p.installed);
+  // 카테고리별 패키지 — 설치됨 먼저, 그 다음 미설치(각 그룹 내 이름순)
+  const packagesInCategory = (cat: Category) =>
+    packages
+      .filter((p) => categoryOf(p) === cat)
+      .sort((a, b) => (Number(b.installed) - Number(a.installed)) || a.name.localeCompare(b.name));
 
   const renderPackageItem = (pkg: PackageInfo) => (
     <div
@@ -301,6 +342,19 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
         <div className="flex-1 min-w-0">
           <h3 className="font-medium text-gray-800 text-sm truncate">{pkg.name}</h3>
           <p className="text-xs text-gray-500 truncate">{pkg.description || '설명 없음'}</p>
+          {/* 능력 메타 배지 */}
+          {(pkg.dormant || (pkg.needs_key && pkg.needs_key.length > 0) || pkg.weight === 'heavy') && (
+            <div className="flex items-center gap-1 mt-1 flex-wrap">
+              {pkg.dormant ? (
+                <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded" title={`키 대기: ${(pkg.missing_keys || []).join(', ')}`}>🔑 키 대기</span>
+              ) : (pkg.needs_key && pkg.needs_key.length > 0) ? (
+                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded" title={pkg.needs_key.join(', ')}>🔑 키 필요</span>
+              ) : null}
+              {pkg.weight === 'heavy' && (
+                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">무거움</span>
+              )}
+            </div>
+          )}
         </div>
         {/* 빠른 액션 버튼 */}
         <button
@@ -327,6 +381,38 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
       </div>
     </div>
   );
+
+  // 카테고리 섹션 — 열리고 닫히며, 안에 설치됨 + 미설치를 함께 보여줌
+  const renderCategorySection = (cat: Category) => {
+    const items = packagesInCategory(cat);
+    const installedCount = items.filter((p) => p.installed).length;
+    const open = expandedCats.has(cat);
+    return (
+      <div key={cat}>
+        <button
+          onClick={() => toggleCat(cat)}
+          className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 hover:text-gray-900 w-full"
+        >
+          {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          <span className="flex items-center gap-2">
+            {CATEGORY_LABEL[cat]}
+            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+              설치 {installedCount} · 가능 {items.length - installedCount}
+            </span>
+          </span>
+        </button>
+        {open && (
+          <div className="space-y-2 ml-1">
+            {items.length === 0 ? (
+              <p className="text-xs text-gray-400 py-2">해당 패키지가 없습니다</p>
+            ) : (
+              items.map(renderPackageItem)
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
@@ -406,55 +492,8 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* 설치됨 섹션 */}
-                <div>
-                  <button
-                    onClick={() => setInstalledExpanded(!installedExpanded)}
-                    className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 hover:text-gray-900"
-                  >
-                    {installedExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                    <span className="flex items-center gap-2">
-                      설치됨
-                      <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-600 rounded">
-                        {installedPackages.length}
-                      </span>
-                    </span>
-                  </button>
-                  {installedExpanded && (
-                    <div className="space-y-2 ml-1">
-                      {installedPackages.length === 0 ? (
-                        <p className="text-xs text-gray-400 py-2">설치된 패키지가 없습니다</p>
-                      ) : (
-                        installedPackages.map(renderPackageItem)
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* 설치 가능 섹션 */}
-                <div>
-                  <button
-                    onClick={() => setAvailableExpanded(!availableExpanded)}
-                    className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 hover:text-gray-900"
-                  >
-                    {availableExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                    <span className="flex items-center gap-2">
-                      설치 가능
-                      <span className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded">
-                        {availablePackages.length}
-                      </span>
-                    </span>
-                  </button>
-                  {availableExpanded && (
-                    <div className="space-y-2 ml-1">
-                      {availablePackages.length === 0 ? (
-                        <p className="text-xs text-gray-400 py-2">모든 패키지가 설치되어 있습니다</p>
-                      ) : (
-                        availablePackages.map(renderPackageItem)
-                      )}
-                    </div>
-                  )}
-                </div>
+                {/* 4개 카테고리 섹션 — 각각 열림/닫힘, 안에 설치됨+미설치 함께 */}
+                {CATEGORY_ORDER.map(renderCategorySection)}
               </div>
             )}
           </div>

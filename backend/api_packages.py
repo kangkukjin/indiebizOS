@@ -75,12 +75,36 @@ class DecodePackageRequest(BaseModel):
 
 # ============ 패키지 목록 API ============
 
+def _enrich_with_meta(pkgs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """각 패키지에 package_meta.json의 locale/weight/needs_key + dormant(설치됐지만 키 누락)를
+    부착 — 도구 관리 UI가 보편/한국 같은 단위로 그룹핑·표시할 수 있게. 단일 진실 소스는
+    package_meta.json(빌드가 코드 스캔으로 도출), 여기선 읽기만."""
+    import os
+    try:
+        from ibl_access import _load_package_meta
+        meta = _load_package_meta().get("packages", {})
+    except Exception:
+        meta = {}
+    for p in pkgs:
+        pid = p.get("id") or p.get("name")
+        m = meta.get(pid) or {}
+        needs = m.get("needs_key", []) or []
+        missing = [k for k in needs if not os.environ.get(k)]
+        p["locale"] = m.get("locale", "universal")
+        p["weight"] = m.get("weight", "light")
+        p["needs_key"] = needs
+        p["missing_keys"] = missing
+        # dormant = 설치됨 + 키 필요한데 하나라도 없음 (능력은 있으나 대기 상태)
+        p["dormant"] = bool(p.get("installed") and needs and missing)
+    return pkgs
+
+
 @router.get("/packages")
 async def list_all_packages(package_type: Optional[str] = None):
-    """모든 도구 패키지 목록 (설치 가능 + 설치됨)"""
+    """모든 도구 패키지 목록 (설치 가능 + 설치됨), locale/weight/needs_key/dormant 메타 포함"""
     try:
-        available = package_manager.list_available()
-        installed = package_manager.list_installed()
+        available = _enrich_with_meta(package_manager.list_available())
+        installed = _enrich_with_meta(package_manager.list_installed())
 
         return {
             "available": available,

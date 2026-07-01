@@ -2,14 +2,15 @@
 
 > 이 문서만 읽으면 대화 맥락 없이 이어갈 수 있게 쓴다.
 > 전략 개요는 `docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md`, 배경은 기억 `project_capability_self_containment`.
-> 최종 갱신: 2026-07-01 (Phase 4 완료 — 런타임 활성 필터까지).
+> 최종 갱신: 2026-07-01 (Phase 4 완료 — 런타임 활성 필터까지. origin/main `140cb9c`).
 
 ---
 
 ## 0. TL;DR (여기부터)
 
 - **하는 일**: 어휘(액션 정의)를 중앙 `data/ibl_nodes_src/`에서 각 패키지 폴더의 `ibl_actions.yaml`로 옮겨 **패키지=자기완결 능력**으로 만든다. 그래야 설치/철거가 코드+어휘를 원자적으로 넣고 뺀다.
-- **완료**: Phase 0(①②③ 전부) + Phase 1(radio 파일럿) + Phase 2(`[self:package]` 생애주기 어휘) + Phase 3(전체 34개 패키지 마이그레이션) + **Phase 4 전부(메타 자동 도출 + 런타임 활성 필터)**. 중앙 src에는 이제 backend-native **25액션**. 143액션 전체. `--check` 전항목 통과. **✅ 커밋·푸시됨**(origin/main `a48d21e`).
+- **완료**: Phase 0(①②③ 전부) + Phase 1(radio 파일럿) + Phase 2(`[self:package]` 생애주기 어휘) + Phase 3(전체 34개 패키지 마이그레이션) + **Phase 4 전부(메타 자동 도출 + 런타임 활성 필터)**. 중앙 src에는 이제 backend-native **25액션**. 143액션 전체. `--check` 전항목 통과. **✅ 커밋·푸시됨**(origin/main `140cb9c`). 워킹트리 clean(무관 pre-existing untracked 2파일만 잔존: `data/packages/installed/tools/cctv/{cctv_common.py,enrich_kakao_coords.py}` — 이 계획과 무관, 손대지 않음).
+- **이 세션의 부수 작업(계획과 직접 관련은 없으나 같은 리포에서 처리됨)**: `backend/package_manager.py`의 `inventory.md` 재생성 시 빈 줄 누적 버그를 사용자가 스폰한 별도 세션이 고쳤고(`_flush()` 헬퍼로 섹션 끝 trailing 빈 줄 pop, idempotent하게), 이 세션이 diff를 검토해 커밋(`140cb9c`). **교훈(운영상 함정)**: 스폰한 백그라운드 세션이 완료됐는데도 `<task-notification>`을 못 받아 "아직 도는 중"이라고 잘못 판단한 채 여러 턴을 보냄 — `mcp__ccd_session_mgmt__list_sessions`로 `isRunning`/`lastActivityAt`을 직접 확인하면 진위를 바로 알 수 있었음. 다음에 "백그라운드 작업이 안 끝난 것 같다"는 신호가 오면 알림을 기다리지 말고 이 도구로 먼저 확인할 것.
 - **Phase 4-① (needs_key/weight/locale 자동 도출)**: `ibl_actions.yaml`에 손수 부여하는 대신 `scripts/build_ibl_nodes.py`의 `derive_package_meta()`가 각 패키지 `.py`를 직접 스캔해 산출 — **단일 진실 소스는 항상 코드**. needs_key=`os.environ.get/getenv/get_api_key` 리터럴 호출 + `check_api_key("서비스")` 호출을 `backend/common/auth_manager.py`의 `_AUTH_REGISTRY`(import로 재사용)에 역참조. weight=무거운 의존성(playwright/moviepy/cv2/torch/whisper/selenium/pyautogui/edge_tts/remotion) import 여부로 light/heavy. locale=needs_key가 한국 공식/상용 API에 걸리면 kr, 아니면 universal. **결과물**=`data/package_meta.json`(`{packages:{...}, action_owner:{qualifier→pkg}}` 두 섹션, phone_manifest.json과 동일 패턴, `--check` 정합 게이트, 46개 패키지·118 qualifier). `tier` 필드는 보류(용도 불명확).
 - **Phase 4-② (런타임 활성 필터)**: `backend/ibl_access.py`에 `_load_package_meta()`(캐시, `invalidate_nodes_cache`가 함께 비움)+`_dormant_reason(node, action)` 추가. `_emit_action_xml`이 이제 `node_name`을 받아 dormant 사유(누락 env var)를 액션 XML에 `dormant="..."` 속성으로 얹는다. **완전히 지우지 않는다** — 지우면 에이전트가 "그런 능력 자체가 없다"고 오판, 조용히 두면 실행 실패를 반복. **라이브 종단검증**: 실제 `.env` 로드 상태로 `build_environment()` 호출 → 전부 정상(키가 다 있어 dormant 0) → `KOSIS_API_KEY`를 일부러 제거 → 실제 카탈로그 XML에 `dormant="kosis 패키지에 필요한 키 없음: KOSIS_API_KEY"` 정확히 나타남 확인 → 복원. 돌아가는 백엔드에 `/packages/reload`+`/ibl/execute` 스모크 통과.
 - **다음**: Phase 5(표준 에디션 프리셋 — `package_meta.json`을 그대로 필터 조건 `needs_key==[] and locale=="universal" and weight=="light"`로 쓸 수 있음. install.sh/seed.py에 에디션+로케일 선택 연결). **능력 자기완결화 계획 Phase 0~4가 전부 끝났으므로, 다음 세션은 계획 문서 재검토부터 시작해도 좋음** — Phase 5는 마지막 단계.

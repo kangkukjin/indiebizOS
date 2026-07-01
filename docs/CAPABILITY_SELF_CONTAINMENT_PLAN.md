@@ -46,7 +46,7 @@
 ### Phase 0 — 토대 & 안전망 (동작 변화 0)
 - [x] **`build_ibl_nodes.py` 병합기** — 중앙 7파일 빌드 후 **설치된 패키지 `ibl_actions.yaml` 병합**. fragment 0개면 `output=merged`(바이트 동일). 있으면 구조 병합 후 재직렬화(`serialize_nodes_document`). 헬퍼: `collect_package_fragments`·`merge_fragments`·`serialize_nodes_document`. `--check` 바이트 비교와 write 모두 `output` 기준. **(2026-07-01 완료·검증)**
 - [x] **fragment 형식 확정** — 단일: `{node: <name>, actions: {...}}` (house-designer 관례) / 다중: `{nodes: {<node>: {actions: {...}}, ...}}` (radio처럼 노드 걸침). 둘 다 collect가 처리.
-- [x] **`--check` 부재-패키지 관용** — *구조적으로 자동 해결*: 빌드는 설치된 패키지 fragment만 흡수 → not_installed 패키지 어휘는 카탈로그에 없음 → 좀비/에러 없음. (단 해당 액션이 아직 중앙 src에 있으면 마이그레이션 전까진 여전히 중앙 소속 — Phase 3에서 패키지별로 이관되며 관용이 실현됨.) 별도 코드 불필요.
+- [x] **`--check` 부재-패키지 관용** — 어휘 소멸 자체는 *구조적으로 자동 해결*(빌드는 설치된 패키지 fragment만 흡수 → not_installed 패키지 어휘는 카탈로그에 없음 → 좀비/에러 없음). **단 최초 판단(2026-07-01 오전)은 절반만 맞았다** — Phase 2에서 `[self:package]{op:remove}`가 실제로 패키지를 철거해보니, fixture 완전성·포크가드 두 검증기가 "그 패키지가 소유한 fixture/allowlist 항목"을 고아로 오탐해 `--check`가 여전히 실패했다(카탈로그는 깨끗해도 검증기는 아니었음). `collect_dormant_package_qualifiers`(not_installed 쪽 `ibl_actions.yaml` 스캔) + `_is_dormant_package_path` 두 헬퍼로 "삭제됨"과 "일시 철거됨"을 구분해 마저 고침(2026-07-01 오후, 커밋 `3dc9d6d`). 라이브 왕복 검증(kosis·radio 철거/재설치)으로 확인.
 - [x] **마이그레이션 하네스** 스크립트(`scripts/migrate_package_vocab.py`, 완료): 패키지 하나에 대해 [중앙 src에서 액션 추출(tool→패키지 매핑=`build_tool_index`) → 패키지 `ibl_actions.yaml` 기록 → 중앙 src에서 제거 → 리빌드 → `ibl_nodes.yaml` **의미 동일** 단언]. Phase 3의 작업마로 재사용됨.
 - 성공기준: `build --check` 초록, `ibl_nodes.yaml` 의미 동일(diff 0), 해마/카탈로그 무변.
 - **검증 완료**: `--check` 바이트 일치(142 액션·전 가드 통과) / 재직렬화→재파싱==원본(무손실) / 디스크 스캔·단일+다중노드 병합·충돌·미지노드 감지 / 임시 패키지 정리 후 복귀. **미커밋.**

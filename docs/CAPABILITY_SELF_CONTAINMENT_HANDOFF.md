@@ -2,32 +2,32 @@
 
 > 이 문서만 읽으면 대화 맥락 없이 이어갈 수 있게 쓴다.
 > 전략 개요는 `docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md`, 배경은 기억 `project_capability_self_containment`.
-> 최종 갱신: 2026-07-01 (Phase 2 완료 반영).
+> 최종 갱신: 2026-07-01 (Phase 0-② 완성 반영 — "부재-패키지 관용" 실제 구현).
 
 ---
 
 ## 0. TL;DR (여기부터)
 
 - **하는 일**: 어휘(액션 정의)를 중앙 `data/ibl_nodes_src/`에서 각 패키지 폴더의 `ibl_actions.yaml`로 옮겨 **패키지=자기완결 능력**으로 만든다. 그래야 설치/철거가 코드+어휘를 원자적으로 넣고 뺀다.
-- **완료**: Phase 0(①+③) + Phase 1(radio 파일럿) + Phase 3(전체 34개 패키지 마이그레이션) + **Phase 2(`[self:package]` 생애주기 어휘)**. 중앙 src에는 이제 backend-native **25액션**(패키지 관리 자체도 backend-native라 24→25). 143액션 전체. `--check` 전항목 통과. **✅ 커밋·푸시됨**(origin/main `c666109`).
-- **Phase 2 상세**: `[self:package]{op: list|info|install|remove}` — `backend/ibl_routing.py`의 `_package_op`+`_rebuild_ibl_vocab`가 `package_manager` 래핑 + install/remove 후 `build_ibl_nodes.py` 서브프로세스 재빌드 + 캐시 초기화(`/packages/reload`와 동형)까지 자동 수행. **라이브 왕복 검증**: radio를 IBL 호출만으로 제거(143→138 클린 소멸)→재설치(143 복귀), 사람이 `/packages/reload`를 따로 안 눌러도 됨.
-- **다음**: Phase 4(메타 needs_key/weight/locale + `--check` 부재-패키지 관용 가드) 또는 Phase 5(표준 에디션). Phase 2로 시스템이 "자기 언어로" 능력을 설치/철거할 수 있게 됐으니, Phase 4에서 "철거된 패키지도 --check 초록"을 마저 채우면 생애주기 관리가 완성된다.
+- **완료**: Phase 0(①+③, **②도 이제 진짜 완성**) + Phase 1(radio 파일럿) + Phase 3(전체 34개 패키지 마이그레이션) + Phase 2(`[self:package]` 생애주기 어휘). 중앙 src에는 이제 backend-native **25액션**. 143액션 전체. `--check` 전항목 통과. **✅ 커밋·푸시됨**(origin/main `3dc9d6d`).
+- **오늘 마지막 작업 — Phase 0-② 완성("부재-패키지 관용")**: Phase 2에서 `[self:package]{op:remove}`가 실제로 패키지를 철거해보니, **어휘 자체는 깨끗이 사라져도 `--check`의 두 검증기(fixture 완전성·포크가드)가 그 패키지 소유 fixture/allowlist 항목을 "고아"로 오탐**해 여전히 실패했다(이전에 "구조적으로 자동 해결됨"이라 적었던 판단이 절반만 맞았던 것). `scripts/build_ibl_nodes.py`에 `collect_dormant_package_qualifiers`(not_installed 쪽 `ibl_actions.yaml`을 스캔해 "정의는 있지만 꺼져있는" qualifier 집합 구축) + `_is_dormant_package_path`(stale allowlist 판정 시 그 패키지가 not_installed에 실존하면 관용) 추가. **라이브 검증**: kosis·radio를 not_installed로 옮긴 뒤 `--check` 완전 통과(재설치 후도 통과) + 돌아가는 백엔드에서 `[self:package]{op:remove}`→`--check` green→`install`로 복귀까지 종단. **네거티브 테스트**: 진짜 좀비(어디에도 없는 가짜 패키지 경로)는 여전히 정확히 flag됨 — 관용이 과하게 넓지 않음을 확인.
+- **다음**: Phase 4(메타 `needs_key`/`weight`/`locale`/`tier` + 런타임 활성 필터 — "키 있음∧하드웨어 충족∧에디션 허용"만 노출) 또는 Phase 5(표준 에디션). 부재-패키지 관용은 이제 진짜 끝났으니, Phase 4는 순수하게 *새 메타 스키마 + 필터링 기능* 추가로 시작하면 된다.
 - **불변식**: 이름 불변(위치만 이동). 마이그레이션 후 검증은 **의미 동일**(바이트 아님) — 하네스가 자동 단언.
-- **알아둘 것(Phase 4 선행조건, 재확인됨)**: 패키지를 물리적으로 철거한 상태에서 `--check`를 돌리면 `fixture 완전성`·`포크-가드`가 실패한다(그 패키지를 참조하는 fixture/allowlist 항목이 "고아"가 됨). 이는 버그가 아니라 **아직 Phase 4(부재-패키지 관용)가 없어서**. **철거 자체(어휘 소멸)는 완전히 깨끗함** — `--check`만 설치 상태를 전제.
 - **Phase 3 중 발견·수정한 버그**: `merge_fragments`가 노드의 액션이 **전부** 이관되어 중앙 src `actions:`가 YAML null이 되는 경우 크래시(`setdefault`는 기존 None 값을 덮어쓰지 않음). `scripts/build_ibl_nodes.py`에서 수정 완료(커밋 `301d627`). engines·table 노드가 정확히 이 케이스(전체가 media_producer/web-builder/remotion-video/data-ops/visualization 소유)였음.
 - **커밋 이력 함정(교훈)**: 배치 루프에서 `git commit -m "..."` 앞에 `--no-verify=false`라는 존재하지 않는 플래그를 써서 8개 커밋이 전부 실패 → 매 반복 `git add -A`만 누적되고 미커밋 상태로 34개 마이그레이션이 쌓임. 결과적으로 빌드 버그 수정 커밋(`301d627`)에 31개 패키지가 함께 실려버림(의도한 1패키지=1커밋 원칙 위반, 부득이 유지 — 재작업 리스크가 이득보다 큼). 이후 3개(visualization/web-builder/cctv)는 올바르게 분리 커밋. **다음 배치 작업 시**: 커밋 명령을 먼저 단독으로 테스트(`git commit -m test --dry-run` 류)하거나, 루프 안에서 매 반복 exit code를 실제로 확인.
 - **Phase 2 중 확인한 기존 코드 함정**: `package_manager.list_available()`은 이름과 달리 installed+not_installed **전부** 반환한다(하위호환 목적). `[self:package]{op:list}`의 `available`은 `installed==False`로 걸러서 노출 — REST `/packages/available`은 옛 동작 그대로 둠(회귀 방지, 건드리지 않음).
+- **교훈(사용자 지적으로 발견)**: 새 어휘를 추가하면 `data/guides/new_action_checklist.md`를 다시 열어 단계별로 대조할 것 — Phase 2에서 3·4단계(해마 합성 용례+`rebuild_index`)를 빠뜨렸다가 뒤늦게 채웠다(`self:package` 합성 용례 21개+재색인). `--check` green이 "다 했다"는 착각을 유발하기 쉬움. 상세는 기억 `feedback_vocab_change_docs`.
 
 ---
 
 ## 1. 지금 어디에 있나
 
-계획 6단계 중 **Phase 0·1·2·3 완료**. Phase 4·5 미착수.
+계획 6단계 중 **Phase 0(①②③ 전부)·1·2·3 완료**. Phase 4·5 미착수.
 
 | Phase | 상태 |
 |---|---|
 | 0-① 빌드 병합기 | ✅ 완료·검증·커밋·푸시(`16bcd39`, origin `7c683d0`) |
-| 0-② 부재-패키지 관용 | ✅ 구조적 자동해결(코드 불필요) |
+| 0-② 부재-패키지 관용 | ✅ **완성**(`3dc9d6d`) — 최초엔 "구조적 자동해결"로 오판, Phase 2가 실사용해보니 fixture/포크가드 오탐 발견 → 수정 |
 | 0-③ 마이그레이션 하네스 | ✅ 완료(`scripts/migrate_package_vocab.py`) |
 | 1 파일럿(radio) | ✅ 완료 — 왕복 검증(철거→137액션 클린 소멸→재설치→142 복귀) |
 | 2 `[self:package]` 어휘 | ✅ 완료(`c666109`) — IBL 호출만으로 라이브 왕복 검증 |
@@ -173,6 +173,6 @@ assert after == before, "의미 변함 — 롤백"
 ## 9. 착수 순서 (다음 세션 — Phase 4 또는 Phase 5)
 
 1. §6 첫 명령으로 현재 상태 초록 확인.
-2. **Phase 4**: 각 패키지 `ibl_actions.yaml`에 `needs_key`/`weight`/`locale`/`tier` 필드 추가 스키마 설계 + `--check`에 부재-패키지 관용 가드 추가(패키지 철거 시 fixture/포크가드가 고아나지 않도록, §0 "알아둘 것" 참조) — 이게 있어야 "패키지 철거→--check도 초록"이 완성된다. `[self:package]{op:remove}`가 이제 실제로 존재하니, 이 갭이 사용자에게 직접 체감되는 지점이 됨(제거해도 앱이 안 죽어야 진짜 완결).
+2. **Phase 4**: 부재-패키지 관용은 이제 완료됐으니(§0), 순수하게 메타 스키마만 남음 — 각 패키지 `ibl_actions.yaml`에 `needs_key`/`weight`/`locale`/`tier` 필드 추가(핸들러에서 자동 도출 가능하면 자동, 아니면 수동 부여) + `--check`에 이 메타 정합성 검증(op 어휘 검증과 같은 결) + 런타임 활성 필터(`prompt_builder`/`ibl_access` — 설치된 것 중 "키 있음∧하드웨어 충족∧에디션 허용"만 카탈로그·프롬프트에 노출, 키 대기=dormant 상태로 표시).
 3. **Phase 5**: 표준 에디션(keyless∧universal∧light) 프리셋 정의 + install.sh/seed.py 연결.
-4. 시작 전 `git log --oneline -12`로 이 세션 커밋들(`301d627`~`c666109`) 확인해 상태 파악.
+4. 시작 전 `git log --oneline -14`로 이 세션 커밋들(`301d627`~`3dc9d6d`) 확인해 상태 파악.

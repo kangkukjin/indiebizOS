@@ -119,6 +119,14 @@
       "success": false,
       "result_summary": "{'error': '활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: report_op. 대상 프로젝트를 params.project_id로 명시하거나 프로젝트 컨텍스트(thread_context.project_id) 안에서 호출하세요. 예: execute_ibl(code=\\'[node:action]{..., project_id: \"컨텐츠\"}\\')'}",
       "duration_ms": 18
+    },
+    {
+      "trigger_id": "trg_13056d2d3e0e",
+      "trigger_name": "[IBL] ai_trend_report_daily",
+      "time": "2026-07-02T04:00:57.232307",
+      "success": false,
+      "result_summary": "{'error': '활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: report_op. 대상 프로젝트를 params.project_id로 명시하거나 프로젝트 컨텍스트(thread_context.project_id) 안에서 호출하세요. 예: execute_ibl(code=\\'[node:action]{..., project_id: \"컨텐츠\"}\\')'}",
+      "duration_ms": 13
     }
   ]
 }

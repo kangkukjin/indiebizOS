@@ -598,7 +598,7 @@
 [2026-03-29 00:00:00] FEATURE_CHANGED: 검색 액션 분리 (sense:search 해체)
   - 기존 4-소스 통합 검색(sense:search) 제거
   - sense:web_search → sense:search_ddg (DuckDuckGo 전용)로 이름 변경
-  - 개별 소스 분리: search_news, search_youtube, search_openalex, search_shopping
+  - 개별 소스 분리: search_gnews, search_youtube, search_openalex, search_shopping
 [2026-03-29 00:00:00] FEATURE_ENHANCED: 크롤링 Chrome MCP 폴백
   - 정적 크롤링 결과가 불충분할 경우 Chrome MCP를 통해 재크롤링
 [2026-03-29 00:00:00] FEATURE_CHANGED: write_file JSON 반환
@@ -790,7 +790,7 @@
 ## 2026-06-03 (4) — 별칭 완전 은퇴: 단일 어휘로 수렴
 - 문제 인식: 코퍼스만 마이그레이션하고 "방출/교재 표면"(meta.yaml IBL 예제·프롬프트 fragment·execute_ibl tool.json·system_docs·운영데이터)은 옛 어휘를 유지 → 프롬프트가 옛 이름을 가르치고 별칭이 조용히 번역 → 어휘가 영원히 수렴 안 하는 자기모순 고리.
 - 조치: 모든 방출/교재 표면을 신규 어휘로 마이그레이션:
-  - ibl_nodes_src/meta.yaml(에이전트 IBL 예제 원천), 12_ibl_only.md·base_prompt_v4.md(프롬프트), ibl-core/tool.json(execute_ibl 스키마), system_docs/ibl.md·technical.md, guides/workflow.md, calendar_events.json(운영 25건). [sense:news] 섹터검색 오용은 search_news로 의미 보정.
+  - ibl_nodes_src/meta.yaml(에이전트 IBL 예제 원천), 12_ibl_only.md·base_prompt_v4.md(프롬프트), ibl-core/tool.json(execute_ibl 스키마), system_docs/ibl.md·technical.md, guides/workflow.md, calendar_events.json(운영 25건). [sense:news] 섹터검색 오용은 search_gnews로 의미 보정.
   - 시드 스크립트(rebuild_usage_db.py·generate_missing_intents.py)는 백그라운드 작업이 이미 정리(라벨 버그 포함).
 - finance 17 + culture 8 별칭 완전 삭제(_ACTION_NAME_ALIASES). 옛 이름은 이제 "노드에 X 액션 없음" + 사용가능목록 에러로 명시적 실패. 조용한 번역 → 명시적 실패.
 - 검증: 방출/교재 표면 grep 0(폐기 안내 문구 제외), [sense:price]/[sense:gutenberg_books] 에러 확인, 신규 동작 확인.

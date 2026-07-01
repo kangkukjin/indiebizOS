@@ -59,7 +59,7 @@ def _text_to_blocks(title, text):
     return blocks or [{"type": "paragraph", "text": str(text or "")}]
 
 
-def search_google_news(query: str, count: int = 10, language: str = "ko", region: str = None) -> dict:
+def search_gnews(query: str, count: int = 10, language: str = "ko", region: str = None) -> dict:
     """Google News RSS 검색
 
     Args:
@@ -297,7 +297,7 @@ def execute(tool_input: dict, context):
             return format_json({"success": False, "error": str(e)})
 
     # Google News 검색
-    elif tool_name == "google_news_search":
+    elif tool_name == "search_gnews":
         query = tool_input.get("query", "")
         if not query:
             return format_json({"success": False, "error": "검색어(query)가 필요합니다."})
@@ -308,7 +308,7 @@ def execute(tool_input: dict, context):
             korean_chars = sum(1 for c in query if '\uac00' <= c <= '\ud7a3' or '\u3131' <= c <= '\u318e')
             language = "ko" if korean_chars > len(query) * 0.2 else "en"
 
-        result = search_google_news(
+        result = search_gnews(
             query=query,
             count=tool_input.get("count", 10),
             language=language

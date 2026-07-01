@@ -56,7 +56,7 @@ ACTION_TEMPLATES = {
         "{query} 검색해봐", "{query} 좀 찾아봐", "{query} 관련 자료 있어?",
         "{query} 대해 알아봐줘", "{query} 뭐 나오는지 봐봐",
     ],
-    "sense:search_news": [
+    "sense:search_gnews": [
         "{query} 뉴스 뭐 있어?", "{query} 최신 소식 알려줘", "{query} 기사 좀 찾아",
         "요즘 {query} 어떻대?", "{query} 관련 뉴스 좀",
     ],

@@ -156,7 +156,7 @@ IBL 표현 계층:     [node:action]{params}
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `sense` | 43 | 외부 정보(웹 검색, API): 금융, 문화, 학술(연구자·논문), 법률, 통계, 부동산, 위치, CCTV, 뉴스 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search_naver, search_news, stock, company, crawl, realty, weather, world_bank, researcher, paper, phone, here, listen, see |
+| `sense` | 43 | 외부 정보(웹 검색, API): 금융, 문화, 학술(연구자·논문), 법률, 통계, 부동산, 위치, CCTV, 뉴스 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search_naver, search_gnews, stock, company, crawl, realty, weather, world_bank, researcher, paper, phone, here, listen, see |
 
 구성: 외부 정보 수집(웹 API, 크롤링) 중심. 사진/블로그/건강 등 로컬 DB 조회는 self 노드로 이동(`[self:photo]`/`[self:blog]`/`[self:health]`).
 
@@ -164,7 +164,7 @@ IBL 표현 계층:     [node:action]{params}
 |----------|------|------|
 | `search_ddg` | 웹 검색 (DuckDuckGo, 영어/글로벌에 적합) | `[sense:search_ddg]{query: "AI 뉴스"}` |
 | `search_naver` | 네이버 검색 (한국어 콘텐츠 압도적, 9개 도메인: webkr/news/blog/cafe/kin/book/encyc/doc/shop) | `[sense:search_naver]{query: "청주 맛집", type: "blog"}` |
-| `search_news` | 뉴스 검색 (Google News RSS) | `[sense:search_news]{keyword: "부동산"}` |
+| `search_gnews` | 뉴스 검색 (Google News RSS) | `[sense:search_gnews]{keyword: "부동산"}` |
 | `stock` | 주가·시세 (op 분기) | `[sense:stock]{op: "quote", ticker: "삼성전자"}` |
 | `crawl` | 웹 크롤링 | `[sense:crawl]{url: "https://..."}` |
 | `company` | 기업 펀더멘털 (op 분기) | `[sense:company]{op: "profile", ticker: "삼성전자"}` |

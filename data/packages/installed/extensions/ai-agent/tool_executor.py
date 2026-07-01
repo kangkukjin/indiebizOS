@@ -167,7 +167,7 @@ class ToolExecutorMixin:
                 result = use_websearch_tool(tool_input)
                 return json.dumps(result, ensure_ascii=False)
 
-            elif tool_name == "google_news_search":
+            elif tool_name == "search_gnews":
                 if use_googlenews_tool is None:
                     return json.dumps({"success": False, "message": "Google News 검색 도구가 설치되지 않았습니다."}, ensure_ascii=False)
                 result = use_googlenews_tool(tool_input)

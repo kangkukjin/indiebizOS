@@ -260,12 +260,12 @@ _PIPELINE_TEMPLATES = [
     ),
     (
         "부동산 뉴스 검색해서 마크다운으로 저장",
-        '[sense:search_news]{query: "부동산"} >> [self:local_save]{path: "부동산뉴스.md"}',
+        '[sense:search_gnews]{query: "부동산"} >> [self:local_save]{path: "부동산뉴스.md"}',
         "sense,self", "pipeline"
     ),
     (
         "반도체 관련 뉴스 찾아서 저장해줘",
-        '[sense:search_news]{query: "반도체"} >> [self:local_save]{path: "반도체뉴스.md"}',
+        '[sense:search_gnews]{query: "반도체"} >> [self:local_save]{path: "반도체뉴스.md"}',
         "sense,self", "pipeline"
     ),
     # 병렬 검색
@@ -298,7 +298,7 @@ _PIPELINE_TEMPLATES = [
     # 검색 → 메신저 전송
     (
         "오늘 뉴스 검색해서 텔레그램으로 보내줘",
-        '[sense:search_news]{query: "오늘 뉴스"} >> [others:channel_send]{channel: "telegram"}',
+        '[sense:search_gnews]{query: "오늘 뉴스"} >> [others:channel_send]{channel: "telegram"}',
         "sense,others", "pipeline"
     ),
     # Fallback 패턴
@@ -334,7 +334,7 @@ _PIPELINE_TEMPLATES = [
     # 3단 파이프라인
     (
         "삼성전자 뉴스 검색 후 분석 에이전트에게 보내고 결과 저장해줘",
-        '[sense:search_news]{query: "삼성전자"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}',
+        '[sense:search_gnews]{query: "삼성전자"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}',
         "sense,others,self", "complex"
     ),
     # 블로그 검색 → 저장
@@ -426,7 +426,7 @@ _PIPELINE_TEMPLATES = [
     # 검색 + Fallback + 저장
     (
         "뉴스 검색 시도하고, 안 되면 종합 검색하고, 결과 저장",
-        '[sense:search_news]{query: "AI"} ?? [sense:search]{query: "AI 뉴스"} >> [self:local_save]{path: "news.md"}',
+        '[sense:search_gnews]{query: "AI"} ?? [sense:search]{query: "AI 뉴스"} >> [self:local_save]{path: "news.md"}',
         "sense,self", "complex"
     ),
     # 워크플로우 관련

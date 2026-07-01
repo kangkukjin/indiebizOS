@@ -1500,7 +1500,7 @@ nodes:
         target_key: query
       search_ddg:
         returns: items
-        description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는 search_news, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
+        description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는 search_gnews, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
         group: research
         target_description: 검색어 (영어 권장). region/safesearch 옵션 가능.
         router: handler
@@ -1516,13 +1516,13 @@ nodes:
         tool: crawl_website
         implementation: 1차 requests+BeautifulSoup 정적 크롤링, 콘텐츠 부족 시 Chrome MCP(실제 브라우저)로 자동 폴백. JS 렌더링 사이트도 처리 가능.
         target_key: url
-      search_news:
+      search_gnews:
         returns: items
         description: 뉴스만 검색 (Google News). 신문 생성, 뉴스 모니터링 등 뉴스 전용 작업에 사용.
         group: research
         target_description: 뉴스 검색어. 언어 자동 감지 — 한국어는 한국 뉴스, 영어는 글로벌 뉴스.
         router: handler
-        tool: google_news_search
+        tool: search_gnews
         implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
         target_key: query
       collect:
@@ -1556,7 +1556,7 @@ nodes:
         - 축적데이터
       search_naver:
         returns: items
-        description: 네이버 검색 API. 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)에서 DuckDuckGo/Google보다 압도적으로 강함. type 파라미터로 도메인 선택 (기본 webkr). 뉴스 단독 검색은 type='news' 또는 search_news(Google News) 중 한국 출처 우선이면 이쪽.
+        description: 네이버 검색 API. 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)에서 DuckDuckGo/Google보다 압도적으로 강함. type 파라미터로 도메인 선택 (기본 webkr). 뉴스 단독 검색은 type='news' 또는 search_gnews(Google News) 중 한국 출처 우선이면 이쪽.
         group: research
         target_description: 검색어. type 옵션으로 도메인 선택 (webkr/news/blog/cafe/kin/book/encyc/doc/shop, 기본 webkr).
         router: handler
@@ -4160,7 +4160,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(이항) — 두 입력을 합치되 by 키로 중복 제거. & 병렬로 공급. (단순 이어붙이기는 union.)
-        target_description: 'by(선택, 중복 제거 키 필드; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 표형 결합은 table:union. 예: [sense:search_news]{...} & [sense:search_ddg]{...} >> [table:merge]{by: title}.'
+        target_description: 'by(선택, 중복 제거 키 필드; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 표형 결합은 table:union. 예: [sense:search_gnews]{...} & [sense:search_ddg]{...} >> [table:merge]{by: title}.'
         group: transform
         router: handler
         tool: data_merge

@@ -263,7 +263,7 @@ sense 89개의 자연스러운 그룹 후보 (descriptio 보고 추정):
 - `real_estate` — apt_rent/apt_trade/house_rent/house_trade/district_codes/commercial (~6개)
 - `book` — book/book_by_isbn/book_detail/library_regions/kdc/recommended_books/search_books (~7개)
 - `culture` — venue/exhibit/genres/performance/performance_regions/travel/korean_classics (~7개)
-- `news_search` — search_ddg/search_naver/search_news/search_guardian/search_local/crawl/pew_research (~7개)
+- `news_search` — search_ddg/search_naver/search_gnews/search_guardian/search_local/crawl/pew_research (~7개)
 - `youtube` — search_youtube/summarize_video/video_info/video_languages/video_transcript (~5개)
 - `cctv` — cctv_search/cctv_capture/cctv_nearby/cctv_by_name/cctv_open/cctv_sources/nearby/webcam/webcam_nearby (~9개)
 - `location` — map/navigate_route/reverse_geocode/show_map (~4개)

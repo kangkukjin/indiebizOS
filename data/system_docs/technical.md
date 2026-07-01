@@ -204,7 +204,7 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 ### 감각 전처리 (Sensory Preprocessing)
 - 정보성 액션의 출력을 경량 AI(flash-lite)로 압축하여 컨텍스트 폭발 방지
 - `data/ibl_nodes_src/<node>.yaml`의 `postprocess` 블록으로 액션별 선언적 설정
-- 적용 액션: `search_ddg`, `crawl`, `search_news`, `travel`
+- 적용 액션: `search_ddg`, `crawl`, `search_gnews`, `travel`
 - 구현: `ibl_engine.py`의 `_postprocess()` → `_pp_compress()`
 
 ### IBL 액션 단일 진실 소스 (2026-05-28~)

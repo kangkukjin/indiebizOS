@@ -6,7 +6,7 @@
   "tools": [
     {
       "name": "ddgs_search",
-      "description": "DuckDuckGo로 웹 검색을 수행합니다.\n\n## 사용 시점\n- 최신 정보 검색 (뉴스, 이벤트, 가격 등)\n- 특정 주제에 대한 웹 자료 찾기\n- 공식 문서/사이트 URL 찾기\n\n## 사용법\n- query: 구체적인 검색 키워드 (한글/영어 모두 가능)\n- count: 필요한 결과 수 (기본 5개, 최대 10개)\n\n## 주의사항\n- 단순 검색만 수행 - 페이지 내용을 읽으려면 crawl_website 사용\n- 검색 결과는 제목, URL, 스니펫만 포함\n- 실시간 데이터가 필요하면 여러 번 검색보다 한 번에 구체적으로\n\n## 다른 도구와의 관계\n- 음식점 검색: search_restaurants 사용 (별도 패키지)\n- 페이지 내용 확인: crawl_website 사용\n- 복잡한 웹 작업: browser_action 사용\n- 뉴스 검색: google_news_search 사용",
+      "description": "DuckDuckGo로 웹 검색을 수행합니다.\n\n## 사용 시점\n- 최신 정보 검색 (뉴스, 이벤트, 가격 등)\n- 특정 주제에 대한 웹 자료 찾기\n- 공식 문서/사이트 URL 찾기\n\n## 사용법\n- query: 구체적인 검색 키워드 (한글/영어 모두 가능)\n- count: 필요한 결과 수 (기본 5개, 최대 10개)\n\n## 주의사항\n- 단순 검색만 수행 - 페이지 내용을 읽으려면 crawl_website 사용\n- 검색 결과는 제목, URL, 스니펫만 포함\n- 실시간 데이터가 필요하면 여러 번 검색보다 한 번에 구체적으로\n\n## 다른 도구와의 관계\n- 음식점 검색: search_restaurants 사용 (별도 패키지)\n- 페이지 내용 확인: crawl_website 사용\n- 복잡한 웹 작업: browser_action 사용\n- 뉴스 검색: search_gnews 사용",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -54,7 +54,7 @@
       }
     },
     {
-      "name": "google_news_search",
+      "name": "search_gnews",
       "description": "Google News RSS로 최신 뉴스를 검색합니다.\n\n## 장점\n- API 키 불필요, 무료\n- 한국어/영어 뉴스 지원\n\n## 사용 시점\n- 특정 주제의 최신 뉴스 검색\n- 시사 정보 수집\n\n## 반환 정보\n- 뉴스 제목, 링크, 출처\n- 발행 시간\n\n## 다른 도구와의 관계\n- 일반 웹 검색: ddgs_search\n- 기사 전문 읽기: crawl_website",
       "input_schema": {
         "type": "object",

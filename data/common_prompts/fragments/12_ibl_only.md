@@ -275,7 +275,7 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 
 **WRONG — 파이프라인으로 한번에 보내기:**
 ```
-execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:search_news]{query: "반도체"} >> [self:output]{op: "file", path: "분석.md"}')
+execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:search_gnews]{query: "반도체"} >> [self:output]{op: "file", path: "분석.md"}')
 ```
 → 검색 결과 JSON이 분석 없이 그대로 파일에 저장됨. 쓸모없다.
 
@@ -283,7 +283,7 @@ execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:search_news]{q
 ```
 1. execute_ibl(code='[sense:search_ddg]{query: "반도체 시장 동향"}')
 2. (결과를 보고 네가 분석 — 핵심 트렌드, 주요 기업 동향 파악)
-3. execute_ibl(code='[sense:search_news]{query: "반도체 투자"}')
+3. execute_ibl(code='[sense:search_gnews]{query: "반도체 투자"}')
 4. (추가 결과와 함께 종합 분석)
 5. execute_ibl(code='[self:output]{op: "file", path: "반도체_분석.md", content: "네가 정리한 분석 내용"}')
 ```

@@ -423,7 +423,7 @@ def blog_stats() -> Dict[str, Any]:
         return {'success': False, 'error': str(e)}
 
 
-def _search_news(keyword: str, max_results: int = 5) -> List[Dict]:
+def _search_gnews(keyword: str, max_results: int = 5) -> List[Dict]:
     results = []
     try:
         from duckduckgo_search import DDGS
@@ -493,7 +493,7 @@ def blog_insight_report(count: int = 50, category: Optional[str] = None, project
         print("🌐 관련 뉴스 및 자료 수집 중...")
         news_section = "\n## 📰 관련 뉴스\n"
         for kw in news_keywords[:3]:
-            for art in _search_news(kw, 3):
+            for art in _search_gnews(kw, 3):
                 news_section += f"- [{art['title']}]({art['link']}) ({art['source']})\n"
         
         # 4. 보고서 조립 및 저장

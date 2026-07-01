@@ -167,8 +167,8 @@ EXAMPLES = [
     ("부동산 정보 찾아줘", '[sense:search_ddg]{query: "부동산"}', "sense", "single", 1, "sense,search"),
     ("경제 정보 검색", '[sense:search_ddg]{query: "경제"}', "sense", "single", 1, "sense,search"),
     # 뉴스 검색 (Google News)
-    ("AI 뉴스 검색해줘", '[sense:search_news]{query: "AI"}', "sense", "single", 1, "sense,search_news"),
-    ("부동산 뉴스 찾아줘", '[sense:search_news]{query: "부동산"}', "sense", "single", 1, "sense,search_news"),
+    ("AI 뉴스 검색해줘", '[sense:search_gnews]{query: "AI"}', "sense", "single", 1, "sense,search_gnews"),
+    ("부동산 뉴스 찾아줘", '[sense:search_gnews]{query: "부동산"}', "sense", "single", 1, "sense,search_gnews"),
     # 웹 크롤링
     ("이 웹페이지 내용 가져와", '[sense:crawl]{url: "https://example.com/article"}', "sense", "single", 1, "sense,crawl"),
     ("네이버 메인 크롤링해줘", '[sense:crawl]{url: "https://naver.com"}', "sense", "single", 1, "sense,crawl"),
@@ -357,9 +357,9 @@ EXAMPLES = [
     # =========================================================================
 
     # 검색 → 저장
-    ("AI 뉴스 검색해서 파일로 저장해줘", '[sense:search_news]{query: "AI"} >> [self:local_save]{path: "ai_news.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
-    ("부동산 뉴스 찾아서 저장해", '[sense:search_news]{query: "부동산"} >> [self:local_save]{path: "부동산뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
-    ("반도체 뉴스 검색해서 정리해줘", '[sense:search_news]{query: "반도체"} >> [self:local_save]{path: "반도체뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
+    ("AI 뉴스 검색해서 파일로 저장해줘", '[sense:search_gnews]{query: "AI"} >> [self:local_save]{path: "ai_news.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
+    ("부동산 뉴스 찾아서 저장해", '[sense:search_gnews]{query: "부동산"} >> [self:local_save]{path: "부동산뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
+    ("반도체 뉴스 검색해서 정리해줘", '[sense:search_gnews]{query: "반도체"} >> [self:local_save]{path: "반도체뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
 
     # 검색 → 차트
     ("삼성전자 주가 조회해서 차트로 그려줘", '[sense:stock]{op: "quote", ticker: "삼성전자"} >> [table:chart]{chart_type: "line", title: "삼성전자 주가 차트"}', "sense,table", "pipeline", 2, "pipeline,sequential"),
@@ -369,8 +369,8 @@ EXAMPLES = [
     ("유튜브 자막 추출해서 파일로 저장해", '[limbs:music]{op: "download", url: "https://youtube.com/watch?v=example"} >> [self:local_save]{path: "transcript.md"}', "limbs,self", "pipeline", 2, "pipeline,sequential"),
 
     # 검색 → 에이전트 분석 (others 노드 파이프라인)
-    ("AI 뉴스 찾아서 투자 에이전트에게 분석 요청해", '[sense:search_news]{query: "AI"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "이 뉴스를 투자 관점에서 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
-    ("부동산 뉴스 찾아서 부동산 에이전트에게 넘겨줘", '[sense:search_news]{query: "부동산"} >> [others:delegate]{mode: "sync", agent_id: "부동산/부동산", message: "이 뉴스에서 시장 동향을 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
+    ("AI 뉴스 찾아서 투자 에이전트에게 분석 요청해", '[sense:search_gnews]{query: "AI"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "이 뉴스를 투자 관점에서 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
+    ("부동산 뉴스 찾아서 부동산 에이전트에게 넘겨줘", '[sense:search_gnews]{query: "부동산"} >> [others:delegate]{mode: "sync", agent_id: "부동산/부동산", message: "이 뉴스에서 시장 동향을 분석해줘"}', "sense,others", "pipeline", 2, "pipeline,sequential"),
 
     # 크롤링 → 저장
     ("웹페이지 크롤링해서 저장해", '[sense:crawl]{url: "https://example.com"} >> [self:local_save]{path: "crawled.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
@@ -385,7 +385,7 @@ EXAMPLES = [
     ("한미 주요 종목 동시 확인", '[sense:stock]{op: "quote", ticker: "005930"} & [sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "SPY"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # 뉴스 동시 검색
-    ("AI 뉴스랑 부동산 뉴스 같이 검색해", '[sense:search_news]{query: "AI"} & [sense:search_news]{query: "부동산"}', "sense", "pipeline", 2, "pipeline,parallel"),
+    ("AI 뉴스랑 부동산 뉴스 같이 검색해", '[sense:search_gnews]{query: "AI"} & [sense:search_gnews]{query: "부동산"}', "sense", "pipeline", 2, "pipeline,parallel"),
 
     # 날씨 비교
     ("서울이랑 부산 날씨 같이 알려줘", '[sense:weather]{city: "서울"} & [sense:weather]{city: "부산"}', "sense", "pipeline", 2, "pipeline,parallel"),
@@ -404,17 +404,17 @@ EXAMPLES = [
     # =========================================================================
 
     # 병렬 → 저장
-    ("AI랑 부동산 뉴스 찾아서 브리핑 파일로 만들어줘", '[sense:search_news]{query: "AI"} & [sense:search_news]{query: "부동산"} >> [self:local_save]{path: "briefing.md"}', "sense,self", "complex", 3, "pipeline,complex"),
+    ("AI랑 부동산 뉴스 찾아서 브리핑 파일로 만들어줘", '[sense:search_gnews]{query: "AI"} & [sense:search_gnews]{query: "부동산"} >> [self:local_save]{path: "briefing.md"}', "sense,self", "complex", 3, "pipeline,complex"),
 
     # 3단 파이프라인 (검색 → 에이전트 분석 → 저장)
-    ("삼성전자 뉴스 찾아서 분석하고 결과 저장해", '[sense:search_news]{query: "삼성전자"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}', "sense,others,self", "complex", 3, "pipeline,complex"),
+    ("삼성전자 뉴스 찾아서 분석하고 결과 저장해", '[sense:search_gnews]{query: "삼성전자"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}', "sense,others,self", "complex", 3, "pipeline,complex"),
 
     # 병렬 위임 (여러 프로젝트에 동시 요청)
     ("의료팀이랑 투자팀 동시에 물어봐", '[others:delegate]{scope: "cross", agent_id: "의료/내과", message: "건강 분석"} & [others:delegate]{scope: "cross", agent_id: "투자/투자컨설팅", message: "투자 분석"}', "others", "complex", 2, "others,parallel_delegation"),
 
     # Fallback
     ("삼성전자 주가 조회하되 실패하면 종목 검색해", '[sense:stock]{op: "quote", ticker: "삼성전자"} ?? [sense:stock]{op: "search", query: "삼성전자"}', "sense", "pipeline", 2, "pipeline,fallback"),
-    ("뉴스 검색 시도하고 안 되면 웹 검색해", '[sense:search_news]{query: "AI"} ?? [sense:search_ddg]{query: "AI 뉴스"}', "sense", "pipeline", 2, "pipeline,fallback"),
+    ("뉴스 검색 시도하고 안 되면 웹 검색해", '[sense:search_gnews]{query: "AI"} ?? [sense:search_ddg]{query: "AI 뉴스"}', "sense", "pipeline", 2, "pipeline,fallback"),
     ("웹 검색 안 되면 유튜브에서 찾아", '[sense:search_ddg]{query: "AI 튜토리얼"} ?? [sense:search_youtube]{query: "AI tutorial"}', "sense", "pipeline", 2, "pipeline,fallback"),
 
     # 유튜브 → 재생

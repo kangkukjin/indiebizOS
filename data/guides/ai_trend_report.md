@@ -56,8 +56,8 @@
 ### 2-1. 투자·경제 섹션 조사
 
 사용할 IBL 검색 액션:
-- `[sense:search_news]{query: "AI 투자"}` — 한국어 뉴스 (Google News)
-- `[sense:search_news]{query: "AI investment funding"}` — 영어 뉴스
+- `[sense:search_gnews]{query: "AI 투자"}` — 한국어 뉴스 (Google News)
+- `[sense:search_gnews]{query: "AI investment funding"}` — 영어 뉴스
 - `[sense:search_naver]{query: "AI 반도체 투자", type: "news"}` — 한국 출처 강화
 - `[sense:search_ddg]{query: "AI chip market Nvidia earnings"}` — 글로벌 웹
 - 필요 시 종목 수치 확인: `[sense:stock]{op: "quote", ticker: "NVDA"}`, `[sense:stock]{op: "news", ...}`
@@ -70,7 +70,7 @@
 ### 2-2. 기술·연구 동향 섹션 조사
 
 사용할 IBL 검색 액션:
-- `[sense:search_news]{query: "AI 신모델 출시"}` / `[sense:search_news]{query: "AI model release"}`
+- `[sense:search_gnews]{query: "AI 신모델 출시"}` / `[sense:search_gnews]{query: "AI model release"}`
 - `[sense:search_ddg]{query: "new LLM benchmark state of the art"}` — 영어 웹
 - `[sense:paper]{op: "search", query: "large language model", source: "arxiv"}` — 최신 논문
 - 중요한 논문/발표는 `[sense:crawl]{url: "..."}`로 원문 확인.
@@ -82,7 +82,7 @@
 사람들이 AI를 **실제로 써서** 새로운 일을 해낸 사례를 찾는다. 모델·자금 뉴스가 아니라, AI가 현실에서 무엇을 가능하게 했는가에 초점을 둔다.
 
 사용할 IBL 검색 액션:
-- `[sense:search_news]{query: "AI 활용 사례"}` / `[sense:search_news]{query: "how people use AI 2026"}`
+- `[sense:search_gnews]{query: "AI 활용 사례"}` / `[sense:search_gnews]{query: "how people use AI 2026"}`
 - `[sense:search_ddg]{query: "impressive AI use case real world 2026"}` — 영어 웹
 - `[sense:search_naver]{query: "AI로 만든", type: "blog"}` — 개인·현장의 실사용담
 - 인상적인 사례는 스니펫에 그치지 말고 `[sense:crawl]{url: "..."}`로 원문을 확인한다.
@@ -105,7 +105,7 @@
 
 ### 2-5. 자료 신선도(시점) 검증 (필수)
 
-이 보고서의 생명은 **최신성**이다. 그런데 `search_news`·`search_ddg`는 발행일과 무관하게 **몇 달~몇 년 전 기사도 섞어** 반환한다. 시점을 검증하지 않으면 낡은 사건이 "오늘의 동향(NEW)"으로 둔갑한다(실제로 첫 보고서에서 6개월 전 'Dec 2025 AI주 급락'이 NEW 항목으로 들어가는 사고가 있었다).
+이 보고서의 생명은 **최신성**이다. 그런데 `search_gnews`·`search_ddg`는 발행일과 무관하게 **몇 달~몇 년 전 기사도 섞어** 반환한다. 시점을 검증하지 않으면 낡은 사건이 "오늘의 동향(NEW)"으로 둔갑한다(실제로 첫 보고서에서 6개월 전 'Dec 2025 AI주 급락'이 NEW 항목으로 들어가는 사고가 있었다).
 
 - **각 자료의 발행 시점을 반드시 확인한다.** 검색 결과 제목/스니펫에 날짜가 없으면 `[sense:crawl]`로 원문 발행일을 확인하고, 끝내 확인 불가하면 "시점 미상"으로 표시하거나 제외한다.
 - **"NEW"·"현재 동향"으로 올릴 자료는 보고 시점(오늘) 기준 대략 최근 1~2주 이내 사건으로 제한**한다. 그보다 오래된 자료는 (a) 최신 흐름을 설명하는 배경 맥락으로만 한두 줄 쓰거나 (b) 제외한다 — 결코 NEW 라벨을 붙이지 않는다.

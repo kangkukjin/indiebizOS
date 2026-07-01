@@ -2,7 +2,7 @@
  * NewspaperInstrument — 신문 "계기(instrument)" (앱 모드)
  *
  * 디자인(제호·섹션·카드 그리드)은 이 컴포넌트에 있고, 내용은 어휘로 채운다:
- * 키워드마다 [sense:search_news] 를 불러 섹션으로 배치한다. 앱 = 어휘 조합 + 약간의 코딩.
+ * 키워드마다 [sense:search_gnews] 를 불러 섹션으로 배치한다. 앱 = 어휘 조합 + 약간의 코딩.
  * (구 방식: [engines:newspaper] 가 수집+조립+디자인을 한 어휘에 박제 → HTML 파일 생성 후 외부
  *  브라우저로 열기. 그 어휘는 은퇴했고, 디자인은 여기로, 팬아웃(키워드별)은 이 컴포넌트 코드로.)
  *
@@ -31,9 +31,9 @@ function loadKeywords(): string[] {
 
 const openExternal = (url?: string) => { if (url) window.electron?.openExternal?.(url); };
 
-// [sense:search_news] 한 키워드 → items. /ibl/execute 응답을 견고하게 파싱.
+// [sense:search_gnews] 한 키워드 → items. /ibl/execute 응답을 견고하게 파싱.
 async function fetchNews(keyword: string): Promise<NewsItem[]> {
-  const code = `[sense:search_news]{query: ${JSON.stringify(keyword)}}`;
+  const code = `[sense:search_gnews]{query: ${JSON.stringify(keyword)}}`;
   const res = await fetch(IBL_ENDPOINT, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code, project_id: PROJECT_ID }),
@@ -71,7 +71,7 @@ export function NewspaperInstrument() {
   const resetKeywords = () => persistKw(DEFAULT_KEYWORDS);
   const onTitle = (t: string) => { setTitle(t); localStorage.setItem(TITLE_KEY, t); };
 
-  // 키워드마다 search_news 팬아웃 → 섹션. (약간의 앱 코드; 언어로 팬아웃하지 않는다.)
+  // 키워드마다 search_gnews 팬아웃 → 섹션. (약간의 앱 코드; 언어로 팬아웃하지 않는다.)
   const load = useCallback(async () => {
     if (!keywords.length) { setSections([]); return; }
     setLoading(true); setError(null);

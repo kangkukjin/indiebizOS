@@ -74,7 +74,7 @@ WRONG: [engines:newspaper]{keywords: "AI"} >> [limbs:os_open]{path: $prev.file}
 각 브랜치에 **90초 타임아웃**이 적용됨 — 한 브랜치가 멈춰도 나머지 결과는 정상 수집됨.
 
 ```
-[sense:search_news]{query: "AI", count: 7} & [sense:search_news]{query: "경제", count: 7}
+[sense:search_gnews]{query: "AI", count: 7} & [sense:search_gnews]{query: "경제", count: 7}
 ```
 
 ### ?? (폴백)

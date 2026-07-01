@@ -25,7 +25,7 @@
 
 ```
 # 동기 (파이프라인용)
-[sense:search_news]{query: "AI"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "투자 관점 분석"}
+[sense:search_gnews]{query: "AI"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "투자 관점 분석"}
 
 # 파이프라인 위임
 [others:delegate]{mode: "workflow", agent_id: "기획", steps: [...]}

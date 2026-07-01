@@ -62,7 +62,7 @@
 **5. map_data 최종 검토**(저우선) — zigbang/commercial/cctv map_data 봉투.
 
 ### ~~4차에서 한 것~~ (records-관습 생산자 ~20개 → items + returns 전수 플립) — 전부 라이브·검증 (보존)
-- **핸들러 records→items rename 20 액션** (records-관습 카드 shape는 그대로, 키만 records→items): study 4(paper/researcher/pew_research/search_guardian — 8 emit)·local-info 2(search_local/local_query)·context7(devdocs)·legal·memory·pc-manager(fs_query)·lecture_workspace(lecture)·android(phone)·web 3(search_ddg/search_news/search_naver)·blog·location-services(travel)·business_item(이미 items, returns만). **delete 계열**(native items 이미 존재 → 손실 records 줄 삭제): web-collector(collect)·shopping(search_shopping). 라이브 items 확인: legal 3·memory 5·shopping 10·lecture 2·phone 20·legal>>take 2·blog>>take 2(in-pipe).
+- **핸들러 records→items rename 20 액션** (records-관습 카드 shape는 그대로, 키만 records→items): study 4(paper/researcher/pew_research/search_guardian — 8 emit)·local-info 2(search_local/local_query)·context7(devdocs)·legal·memory·pc-manager(fs_query)·lecture_workspace(lecture)·android(phone)·web 3(search_ddg/search_gnews/search_naver)·blog·location-services(travel)·business_item(이미 items, returns만). **delete 계열**(native items 이미 존재 → 손실 records 줄 삭제): web-collector(collect)·shopping(search_shopping). 라이브 items 확인: legal 3·memory 5·shopping 10·lecture 2·phone 20·legal>>take 2·blog>>take 2(in-pipe).
 - **returns 전수 플립 ✅** — `returns: records` **27개 전부 → items**(sense 17·self 9·others 1, bulk replace). **★이제 `returns: records` 선언 = 0** (남은 건 `returns: table` 2 + `returns: document` 1뿐).
 - **검증**: §1B GREEN 50/YELLOW 2(둘 다 양성: channel_read=identity 없어 테스트불가·business_item=default op list 무인자라 빈 items)/RED 0 · 골든 5/5 · build 142 · 구조 건강 ✅.
 

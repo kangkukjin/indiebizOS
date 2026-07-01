@@ -1,8 +1,8 @@
-content: '[sense:search_news]{query: "AI", count: 7} & [sense:search_news]{query: "청주",
-  count: 7} & [sense:search_news]{query: "세종", count: 7} & [sense:search_news]{query:
-  "문화", count: 7} & [sense:search_news]{query: "여행", count: 7} & [sense:search_news]{query:
-  "과학", count: 7} & [sense:search_news]{query: "경제", count: 7} & [sense:search_news]{query:
-  "주식", count: 7} & [sense:search_news]{query: "만화", count: 7} & [sense:search_news]{query:
-  "영화", count: 7} & [sense:search_news]{query: "드라마", count: 7} & [sense:search_news]{query:
+content: '[sense:search_gnews]{query: "AI", count: 7} & [sense:search_gnews]{query: "청주",
+  count: 7} & [sense:search_gnews]{query: "세종", count: 7} & [sense:search_gnews]{query:
+  "문화", count: 7} & [sense:search_gnews]{query: "여행", count: 7} & [sense:search_gnews]{query:
+  "과학", count: 7} & [sense:search_gnews]{query: "경제", count: 7} & [sense:search_gnews]{query:
+  "주식", count: 7} & [sense:search_gnews]{query: "만화", count: 7} & [sense:search_gnews]{query:
+  "영화", count: 7} & [sense:search_gnews]{query: "드라마", count: 7} & [sense:search_gnews]{query:
   "책", count: 7} >> [engines:newspaper] >> [self:open]'
 updated: '2026-03-08T12:00:00.000000'

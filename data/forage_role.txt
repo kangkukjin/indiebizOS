@@ -20,7 +20,7 @@
   - 한국어·국내 일반 → `[sense:search_naver]`
   - 글로벌·영어 → `[sense:search_ddg]`
   - 제품·쇼핑·가격비교 → 쇼핑 검색(네이버쇼핑/다나와) 또는 `[sense:search_naver]`
-  - 부동산 매물·시세 → `[sense:realty]` · 도서 → `[sense:book]` · 논문·연구자 → `[sense:paper]`·`[sense:researcher]` · 뉴스 → `[sense:search_news]`
+  - 부동산 매물·시세 → `[sense:realty]` · 도서 → `[sense:book]` · 논문·연구자 → `[sense:paper]`·`[sense:researcher]` · 뉴스 → `[sense:search_gnews]`
   - 그 외 도메인도 어울리는 노드/액션이 있으면 사용
 - 가능하면 홈페이지가 아니라 **필터·검색어가 박힌 결과 페이지 URL**(바로 그 시작선)을 주세요.
 

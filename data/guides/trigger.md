@@ -65,7 +65,7 @@
 [self:trigger]{op:"create", trigger_id:"morning_news",
   type:"schedule",
   config:{repeat:"daily", time:"08:00"},
-  pipeline:'[sense:search_news]{query:"AI"} >> [others:channel_send]{channel:"gmail", to:"me", subject:"오늘의 AI 뉴스"}'
+  pipeline:'[sense:search_gnews]{query:"AI"} >> [others:channel_send]{channel:"gmail", to:"me", subject:"오늘의 AI 뉴스"}'
 }
 ```
 

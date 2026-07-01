@@ -50,7 +50,7 @@ const STATIC_DOMAINS: Domain[] = [
       { id: 'calendar', icon: '📅', label: '일정 캘린더', el: <CalendarInstrument /> },
     ],
   },
-  // 신문 — 디자인은 컴포넌트(NewspaperInstrument), 내용은 [sense:search_news] 조합.
+  // 신문 — 디자인은 컴포넌트(NewspaperInstrument), 내용은 [sense:search_gnews] 조합.
   // engines:newspaper 은퇴로 매니페스트 앵커가 없어 STATIC 계기로 등록(구 OVERRIDE 대체).
   {
     id: 'newspaper', icon: '📰', label: '신문',

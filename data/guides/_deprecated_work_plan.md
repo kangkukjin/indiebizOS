@@ -86,7 +86,7 @@ description: "수집된 데이터를 종합하여 A4 2페이지 분량의 보고
 ### ❌ 잘못된 예 — IBL 코드를 미리 작성
 
 ```
-description: "[sense:search_news]{query: '이란 전쟁', count: 10} >> [self:file_write]{...}"
+description: "[sense:search_gnews]{query: '이란 전쟁', count: 10} >> [self:file_write]{...}"
 description: "[sense:kr_stock_price]{symbol: '005930'} >> [data:analyze]{...}"
 ```
 

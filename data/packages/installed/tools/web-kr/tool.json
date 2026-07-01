@@ -6,7 +6,7 @@
   "tools": [
     {
       "name": "naver_search",
-      "description": "네이버 검색 API로 한국어 콘텐츠를 검색합니다.\n\n## 장점\n- 한국어 검색 품질: 네이버 > 구글 > DDG (한국 블로그/뉴스/카페/지식인 압도적)\n- 같은 API 키로 9개 도메인 모두 호출\n- 무료 (일 25,000 쿼리)\n\n## 사용 시점\n- 한국어 일반 검색 (type='webkr', 기본)\n- 한국 뉴스 (type='news')\n- 한국 블로그 (type='blog') — 후기/리뷰/경험담\n- 카페 글 (type='cafe') — 동호회/지역 커뮤니티\n- 지식인 Q&A (type='kin')\n- 책 정보 (type='book')\n- 한국 백과사전 (type='encyc')\n- 학술 자료 (type='doc')\n- 쇼핑은 shopping-assistant 패키지 우선 사용\n\n## 자연어 별칭\n- type에 '웹', '뉴스', '블로그', '카페', '지식인', '책', '백과' 등 한글로 넘겨도 됨\n\n## 다른 도구와의 관계\n- 영어/글로벌 검색: ddgs_search 사용\n- 페이지 본문 읽기: crawl_website 사용\n- 글로벌 뉴스: google_news_search 사용",
+      "description": "네이버 검색 API로 한국어 콘텐츠를 검색합니다.\n\n## 장점\n- 한국어 검색 품질: 네이버 > 구글 > DDG (한국 블로그/뉴스/카페/지식인 압도적)\n- 같은 API 키로 9개 도메인 모두 호출\n- 무료 (일 25,000 쿼리)\n\n## 사용 시점\n- 한국어 일반 검색 (type='webkr', 기본)\n- 한국 뉴스 (type='news')\n- 한국 블로그 (type='blog') — 후기/리뷰/경험담\n- 카페 글 (type='cafe') — 동호회/지역 커뮤니티\n- 지식인 Q&A (type='kin')\n- 책 정보 (type='book')\n- 한국 백과사전 (type='encyc')\n- 학술 자료 (type='doc')\n- 쇼핑은 shopping-assistant 패키지 우선 사용\n\n## 자연어 별칭\n- type에 '웹', '뉴스', '블로그', '카페', '지식인', '책', '백과' 등 한글로 넘겨도 됨\n\n## 다른 도구와의 관계\n- 영어/글로벌 검색: ddgs_search 사용\n- 페이지 본문 읽기: crawl_website 사용\n- 글로벌 뉴스: search_gnews 사용",
       "input_schema": {
         "type": "object",
         "properties": {

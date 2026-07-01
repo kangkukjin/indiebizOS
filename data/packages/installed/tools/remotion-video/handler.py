@@ -138,14 +138,6 @@ def execute(tool_input: dict, context) -> str:
             return check_remotion_status(tool_input)
         return f"알 수 없는 op: {op} (render_inline/render_file/status)"
 
-    # 옛 tool_name 호환 (학습 데이터/외부 호출 그대로 동작)
-    if tool_name == "create_remotion_video":
-        return create_remotion_video(tool_input, output_base)
-    elif tool_name == "render_remotion_video":
-        return render_remotion_video(tool_input, output_base)
-    elif tool_name == "check_remotion_status":
-        return check_remotion_status(tool_input)
-
     return f"알 수 없는 도구: {tool_name}"
 
 

@@ -71,23 +71,10 @@ def execute(tool_input: dict, context):
                 records += _biz_to_records(mss["data"])
             return {"kstartup": ks, "mss": mss, "items": records}
 
-    if tool_name == "search_kstartup":
-        tool = load_module("tool_kstartup")
-        keyword = tool_input.get("keyword", "")
-        count = tool_input.get("count", 10)
-        return _attach_records(tool.search_kstartup(keyword, count))
-
-    elif tool_name == "search_mss_biz":
-        tool = load_module("tool_mss_biz")
-        keyword = tool_input.get("keyword", "")
-        count = tool_input.get("count", 10)
-        return _attach_records(tool.search_mss_biz(keyword, count))
-
-    else:
-        return {
-            "success": False,
-            "error": f"Unknown tool: {tool_name}"
-        }
+    return {
+        "success": False,
+        "error": f"Unknown tool: {tool_name}"
+    }
 
 def get_definitions():
     """모든 도구 정의 반환"""

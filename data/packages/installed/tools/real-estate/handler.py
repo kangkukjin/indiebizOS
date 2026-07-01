@@ -166,40 +166,7 @@ def execute(tool_input: dict, context):
             result["items"] = result.pop("data")  # 단일 통화 = native 실거래 dict(명칭/법정동/면적/거래금액…)
         return result
 
-    if tool_name == "apt_trade_price":
-        tool = load_module("tool_apt_trade_range")
-        result = tool.get_apt_trade_range(region_code, start_month, end_month, count_per_month)
-        if isinstance(result, dict) and isinstance(result.get("data"), list):
-            result["items"] = result.pop("data")  # 단일 통화 = native 실거래 dict(명칭/법정동/면적/거래금액…)
-        return result
-
-    elif tool_name == "apt_rent_price":
-        tool = load_module("tool_apt_rent")
-        result = tool.get_apt_rent(region_code, start_month, end_month, count_per_month)
-        if isinstance(result, dict) and isinstance(result.get("data"), list):
-            result["items"] = result.pop("data")  # 단일 통화 = native 실거래 dict(명칭/법정동/면적/거래금액…)
-        return result
-
-    elif tool_name == "house_trade_price":
-        tool = load_module("tool_house_trade_range")
-        result = tool.get_house_trade_range(region_code, start_month, end_month, count_per_month)
-        if isinstance(result, dict) and isinstance(result.get("data"), list):
-            result["items"] = result.pop("data")  # 단일 통화 = native 실거래 dict(명칭/법정동/면적/거래금액…)
-        return result
-
-    elif tool_name == "house_rent_price":
-        tool = load_module("tool_house_rent")
-        result = tool.get_house_rent(region_code, start_month, end_month, count_per_month)
-        if isinstance(result, dict) and isinstance(result.get("data"), list):
-            result["items"] = result.pop("data")  # 단일 통화 = native 실거래 dict(명칭/법정동/면적/거래금액…)
-        return result
-
-    elif tool_name == "get_region_codes":
-        tool = load_module("tool_region_codes")
-        city = tool_input.get("city", "")
-        return tool.get_region_codes(city)
-
-    elif tool_name == "search_commercial_district":
+    if tool_name == "search_commercial_district":
         tool = load_module("tool_commercial_district")
         lat = tool_input.get("lat")
         lng = tool_input.get("lng")

@@ -1327,6 +1327,97 @@ def validate(data: dict, root: Path) -> list[str]:
     return issues
 
 
+# === 능력 자기완결화 (Phase 0): 설치된 패키지의 어휘 fragment 병합 ===
+# 각 패키지가 자기 폴더에 `ibl_actions.yaml`({node, actions})을 두면 빌드가 흡수한다.
+# 설치된 fragment 가 하나도 없으면 출력은 기존 텍스트와 바이트 동일(안전 착지).
+# 형식 템플릿: data/packages/not_installed/tools/house-designer/ibl_actions.yaml
+
+def collect_package_fragments(root: Path, yaml_mod) -> tuple[list, list]:
+    """설치된 패키지들의 ibl_actions.yaml 수집.
+
+    반환: (fragments, issues)
+      fragments = [(pkg_name, node, actions_dict), ...]
+      issues    = 형식 오류 메시지 리스트
+    """
+    fragments: list = []
+    issues: list = []
+    for rel in PACKAGE_DIRS:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for pkg_dir in sorted(base.iterdir()):
+            frag = pkg_dir / "ibl_actions.yaml"
+            if not frag.is_file():
+                continue
+            try:
+                doc = yaml_mod.safe_load(frag.read_text(encoding="utf-8"))
+            except Exception as e:  # noqa: BLE001
+                issues.append(f"{pkg_dir.name}/ibl_actions.yaml 파싱 실패: {e}")
+                continue
+            if not isinstance(doc, dict):
+                issues.append(f"{pkg_dir.name}/ibl_actions.yaml: 최상위가 매핑이 아님")
+                continue
+            # 형식 A(단일 노드): {node: <name>, actions: {...}}
+            # 형식 B(다중 노드): {nodes: {<node>: {actions: {...}}, ...}}  ← radio 등 노드 걸침
+            if isinstance(doc.get("nodes"), dict):
+                any_ok = False
+                for node, ndef in doc["nodes"].items():
+                    actions = ndef.get("actions") if isinstance(ndef, dict) else None
+                    if not isinstance(actions, dict):
+                        issues.append(
+                            f"{pkg_dir.name}/ibl_actions.yaml: nodes.{node}.actions 매핑 필요"
+                        )
+                        continue
+                    fragments.append((pkg_dir.name, node, actions))
+                    any_ok = True
+                if not any_ok:
+                    issues.append(
+                        f"{pkg_dir.name}/ibl_actions.yaml: nodes 아래 유효 액션 없음"
+                    )
+            else:
+                node = doc.get("node")
+                actions = doc.get("actions")
+                if not node or not isinstance(actions, dict):
+                    issues.append(
+                        f"{pkg_dir.name}/ibl_actions.yaml: 'node'+'actions' 또는 'nodes' 필수"
+                    )
+                    continue
+                fragments.append((pkg_dir.name, node, actions))
+    return fragments, issues
+
+
+def merge_fragments(data: dict, fragments: list) -> list:
+    """fragments 를 data['nodes'][node]['actions'] 에 병합(data 변경). 반환: 충돌/오류 issues."""
+    issues: list = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for pkg_name, node, actions in fragments:
+        node_def = nodes.get(node)
+        if not isinstance(node_def, dict):
+            issues.append(f"{pkg_name}: 알 수 없는 노드 '{node}'")
+            continue
+        node_actions = node_def.setdefault("actions", {})
+        for aname, adef in actions.items():
+            if aname in node_actions:
+                issues.append(
+                    f"{pkg_name}: 어휘 충돌 '{node}:{aname}' — 코어/타 패키지에 이미 존재"
+                )
+                continue
+            node_actions[aname] = adef
+    return issues
+
+
+def serialize_nodes_document(header: str, data: dict, yaml_mod) -> str:
+    """병합된 data 를 ibl_nodes.yaml 텍스트로 재직렬화 (fragment 존재 시에만 사용)."""
+    body = yaml_mod.safe_dump(
+        data,
+        allow_unicode=True,
+        sort_keys=False,
+        default_flow_style=False,
+        width=1 << 20,
+    )
+    return header + body
+
+
 def build(check: bool = False, validate_only: bool = False) -> int:
     root = repo_root()
     src_dir = root / "data" / "ibl_nodes_src"
@@ -1374,21 +1465,35 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         _yaml = None
 
     data: dict | None = None
+    output = merged          # 기본: 설치된 fragment 가 없으면 바이트 동일(안전 착지)
+    frag_issues: list = []
     if _yaml is not None:
         data = _yaml.safe_load(merged)
+        # --- 설치된 패키지 어휘 fragment 병합 (Phase 0) ---
+        fragments, collect_issues = collect_package_fragments(root, _yaml)
+        merge_issues = merge_fragments(data, fragments) if fragments else []
+        frag_issues = collect_issues + merge_issues
+        frag_action_n = sum(len(a) for _, _, a in fragments)
+        if fragments and not frag_issues:
+            # fragment 가 있고 병합 성공 시에만 재직렬화(그 외엔 기존 텍스트 유지).
+            output = serialize_nodes_document(header, data, _yaml)
         nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
         total_actions = sum(
             len(n.get("actions", {})) for n in nodes.values() if isinstance(n, dict)
         )
+        extra = (
+            f", 패키지 fragment {len(fragments)}개(+{frag_action_n} 액션)"
+            if fragments else ""
+        )
         print(
-            f"[build_ibl_nodes] 노드 {len(nodes)}개, 액션 {total_actions}개 "
-            f"({sum(1 for _ in merged.splitlines())}줄, {len(merged.encode('utf-8'))}바이트)"
+            f"[build_ibl_nodes] 노드 {len(nodes)}개, 액션 {total_actions}개{extra} "
+            f"({sum(1 for _ in output.splitlines())}줄, {len(output.encode('utf-8'))}바이트)"
         )
 
     # --- 삼각 검증 ---
     validation_failed = False
     if data is not None:
-        issues = validate(data, root)
+        issues = frag_issues + validate(data, root)
         if issues:
             validation_failed = True
             print(
@@ -1512,10 +1617,10 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             print(f"[build_ibl_nodes] check: 타깃 부재 — {target}", file=sys.stderr)
             return 1
         current = target.read_text(encoding="utf-8")
-        bytes_ok = current == merged
+        bytes_ok = current == output
         if not bytes_ok:
             h_cur = hashlib.sha256(current.encode("utf-8")).hexdigest()[:12]
-            h_new = hashlib.sha256(merged.encode("utf-8")).hexdigest()[:12]
+            h_new = hashlib.sha256(output.encode("utf-8")).hexdigest()[:12]
             print(
                 f"[build_ibl_nodes] check: 바이트 불일치 — 빌드 결과가 현재 yaml과 다름\n"
                 f"  현재 {h_cur} / 빌드 {h_new}",
@@ -1549,7 +1654,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         )
         return 1
 
-    target.write_text(merged, encoding="utf-8")
+    target.write_text(output, encoding="utf-8")
     print(f"[build_ibl_nodes] 작성: {target}")
     if manifest_text is not None:
         manifest_path.write_text(manifest_text, encoding="utf-8")

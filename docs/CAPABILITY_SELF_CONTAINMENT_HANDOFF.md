@@ -2,16 +2,17 @@
 
 > 이 문서만 읽으면 대화 맥락 없이 이어갈 수 있게 쓴다.
 > 전략 개요는 `docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md`, 배경은 기억 `project_capability_self_containment`.
-> 최종 갱신: 2026-07-01 (Phase 4 착수 — needs_key/weight/locale 자동 도출 완료).
+> 최종 갱신: 2026-07-01 (Phase 4 완료 — 런타임 활성 필터까지).
 
 ---
 
 ## 0. TL;DR (여기부터)
 
 - **하는 일**: 어휘(액션 정의)를 중앙 `data/ibl_nodes_src/`에서 각 패키지 폴더의 `ibl_actions.yaml`로 옮겨 **패키지=자기완결 능력**으로 만든다. 그래야 설치/철거가 코드+어휘를 원자적으로 넣고 뺀다.
-- **완료**: Phase 0(①②③ 전부) + Phase 1(radio 파일럿) + Phase 2(`[self:package]` 생애주기 어휘) + Phase 3(전체 34개 패키지 마이그레이션) + **Phase 4 첫 조각(메타 자동 도출)**. 중앙 src에는 이제 backend-native **25액션**. 143액션 전체. `--check` 전항목 통과(package_meta.json 정합 게이트 포함). **✅ 커밋·푸시됨**(origin/main `39318e9`).
-- **오늘 마지막 작업 — Phase 4 착수(`needs_key`/`weight`/`locale` 자동 도출)**: `ibl_actions.yaml`에 손수 부여하는 대신 `scripts/build_ibl_nodes.py`의 `derive_package_meta()`가 각 패키지 `.py`를 직접 스캔해 산출 — **단일 진실 소스는 항상 코드**(계획 문서의 "핸들러에서 자동 도출" 문구 그대로 구현). needs_key=`os.environ.get/getenv/get_api_key` 리터럴 호출 + `check_api_key("서비스")` 호출을 `backend/common/auth_manager.py`의 `_AUTH_REGISTRY`(단일 소스, import로 재사용·복제 안 함)에 역참조해 env var 이름으로 정규화. weight=무거운 의존성(playwright/moviepy/cv2/torch/whisper/selenium/pyautogui/edge_tts/remotion) import 여부로 light/heavy 이진. locale=needs_key가 한국 공식/상용 API(카카오·네이버·공공데이터·국토부·통계청·KOPIS·도서관정보나루·국회도서관·법제처)에 걸리면 kr, 아니면 universal. **결과물** = `data/package_meta.json`(phone_manifest.json과 동일 패턴 — `--check`가 바이트 정합 검증, gitignore 미추적, 46개 패키지 도출). 수동 크로스체크 일치(kosis→KOSIS_API_KEY/kr, cctv→4키/heavy/kr, radio→키없음/light/universal 등). **`tier` 필드는 보류** — 용도가 불명확해서 억지로 채우지 않음(keyless∧universal∧light 세 축만으로 Phase 5 표준 프리셋 정의에 충분해 보임).
-- **다음**: Phase 4 나머지 조각(런타임 활성 필터 — `prompt_builder`/`ibl_access`가 `package_meta.json`을 읽어 "키 있음∧하드웨어 충족∧에디션 허용"만 카탈로그·프롬프트에 노출, 키 대기=dormant 표시. 이게 있어야 카탈로그가 "쓸 수 없는 액션"으로 부풀지 않는다) 또는 Phase 5(표준 에디션 프리셋).
+- **완료**: Phase 0(①②③ 전부) + Phase 1(radio 파일럿) + Phase 2(`[self:package]` 생애주기 어휘) + Phase 3(전체 34개 패키지 마이그레이션) + **Phase 4 전부(메타 자동 도출 + 런타임 활성 필터)**. 중앙 src에는 이제 backend-native **25액션**. 143액션 전체. `--check` 전항목 통과. **✅ 커밋·푸시됨**(origin/main `a48d21e`).
+- **Phase 4-① (needs_key/weight/locale 자동 도출)**: `ibl_actions.yaml`에 손수 부여하는 대신 `scripts/build_ibl_nodes.py`의 `derive_package_meta()`가 각 패키지 `.py`를 직접 스캔해 산출 — **단일 진실 소스는 항상 코드**. needs_key=`os.environ.get/getenv/get_api_key` 리터럴 호출 + `check_api_key("서비스")` 호출을 `backend/common/auth_manager.py`의 `_AUTH_REGISTRY`(import로 재사용)에 역참조. weight=무거운 의존성(playwright/moviepy/cv2/torch/whisper/selenium/pyautogui/edge_tts/remotion) import 여부로 light/heavy. locale=needs_key가 한국 공식/상용 API에 걸리면 kr, 아니면 universal. **결과물**=`data/package_meta.json`(`{packages:{...}, action_owner:{qualifier→pkg}}` 두 섹션, phone_manifest.json과 동일 패턴, `--check` 정합 게이트, 46개 패키지·118 qualifier). `tier` 필드는 보류(용도 불명확).
+- **Phase 4-② (런타임 활성 필터)**: `backend/ibl_access.py`에 `_load_package_meta()`(캐시, `invalidate_nodes_cache`가 함께 비움)+`_dormant_reason(node, action)` 추가. `_emit_action_xml`이 이제 `node_name`을 받아 dormant 사유(누락 env var)를 액션 XML에 `dormant="..."` 속성으로 얹는다. **완전히 지우지 않는다** — 지우면 에이전트가 "그런 능력 자체가 없다"고 오판, 조용히 두면 실행 실패를 반복. **라이브 종단검증**: 실제 `.env` 로드 상태로 `build_environment()` 호출 → 전부 정상(키가 다 있어 dormant 0) → `KOSIS_API_KEY`를 일부러 제거 → 실제 카탈로그 XML에 `dormant="kosis 패키지에 필요한 키 없음: KOSIS_API_KEY"` 정확히 나타남 확인 → 복원. 돌아가는 백엔드에 `/packages/reload`+`/ibl/execute` 스모크 통과.
+- **다음**: Phase 5(표준 에디션 프리셋 — `package_meta.json`을 그대로 필터 조건 `needs_key==[] and locale=="universal" and weight=="light"`로 쓸 수 있음. install.sh/seed.py에 에디션+로케일 선택 연결). **능력 자기완결화 계획 Phase 0~4가 전부 끝났으므로, 다음 세션은 계획 문서 재검토부터 시작해도 좋음** — Phase 5는 마지막 단계.
 - **불변식**: 이름 불변(위치만 이동). 마이그레이션 후 검증은 **의미 동일**(바이트 아님) — 하네스가 자동 단언.
 - **Phase 0-② 완성 이력("부재-패키지 관용")**: Phase 2에서 `[self:package]{op:remove}`가 실제로 패키지를 철거해보니, 어휘 자체는 깨끗이 사라져도 `--check`의 두 검증기(fixture 완전성·포크가드)가 그 패키지 소유 fixture/allowlist 항목을 "고아"로 오탐해 여전히 실패했다(최초 "구조적으로 자동 해결됨" 판단이 절반만 맞았던 것). `collect_dormant_package_qualifiers`+`_is_dormant_package_path`로 수정(커밋 `3dc9d6d`) — kosis·radio 왕복 + 네거티브 테스트(진짜 좀비는 여전히 flag)로 검증됨.
 - **Phase 3 중 발견·수정한 버그**: `merge_fragments`가 노드의 액션이 **전부** 이관되어 중앙 src `actions:`가 YAML null이 되는 경우 크래시(`setdefault`는 기존 None 값을 덮어쓰지 않음). `scripts/build_ibl_nodes.py`에서 수정 완료(커밋 `301d627`). engines·table 노드가 정확히 이 케이스(전체가 media_producer/web-builder/remotion-video/data-ops/visualization 소유)였음.
@@ -23,7 +24,7 @@
 
 ## 1. 지금 어디에 있나
 
-계획 6단계 중 **Phase 0(①②③ 전부)·1·2·3 완료 + Phase 4 절반**(메타 도출 완료, 런타임 필터 미착수). Phase 5 미착수.
+계획 6단계 중 **Phase 0(①②③ 전부)·1·2·3·4(①②전부) 완료**. Phase 5만 남음.
 
 | Phase | 상태 |
 |---|---|
@@ -33,9 +34,9 @@
 | 1 파일럿(radio) | ✅ 완료 — 왕복 검증(철거→137액션 클린 소멸→재설치→142 복귀) |
 | 2 `[self:package]` 어휘 | ✅ 완료(`c666109`) — IBL 호출만으로 라이브 왕복 검증 |
 | 3 대량 마이그레이션 | ✅ **완료**(2026-07-01) — 나머지 33개 패키지 전부 이관, youtube로 왕복 재검증 |
-| 4-① 메타 자동 도출 | ✅ **완료**(`39318e9`) — `derive_package_meta()` + `data/package_meta.json` |
-| 4-② 런타임 활성 필터 | ⬜ **다음 후보** |
-| 5 표준 에디션+seed 연결 | ⬜ |
+| 4-① 메타 자동 도출 | ✅ 완료(`39318e9`) — `derive_package_meta()` + `data/package_meta.json` |
+| 4-② 런타임 활성 필터 | ✅ **완료**(`a48d21e`) — `ibl_access._dormant_reason` + 카탈로그 `dormant` 속성, 라이브 종단검증 |
+| 5 표준 에디션+seed 연결 | ⬜ **유일하게 남은 단계** |
 
 ### 1.1 하네스 사용법 (Phase 4/5에서도 그대로 유용 — 신규 패키지 추가 시)
 ```bash
@@ -172,10 +173,11 @@ assert after == before, "의미 변함 — 롤백"
 
 ---
 
-## 9. 착수 순서 (다음 세션 — Phase 4-② 또는 Phase 5)
+## 9. 착수 순서 (다음 세션 — Phase 5, 마지막 단계)
 
 1. §6 첫 명령으로 현재 상태 초록 확인 + `cat data/package_meta.json | python3 -m json.tool | head -40`로 메타 결과 재확인(없으면 `python3 scripts/build_ibl_nodes.py`로 재생성).
-2. **Phase 4-② 런타임 활성 필터**(다음 후보): `backend/ibl_access.py`(카탈로그 로더)와 `backend/prompt_builder.py`(시스템 프롬프트 조립)가 `data/package_meta.json`을 읽어, `needs_key`가 비어있지 않은데 해당 env var가 미설정인 액션을 **완전히 숨기지 말고 dormant로 표시**(계획 문서 D 원칙: 임시방편 아닌 SIM 슬롯 비유 — "설치는 됐지만 키가 없어 잠자는 중"이라는 정보 자체가 유용). 구현 지점: 카탈로그 XML 생성부에서 각 액션의 소속 패키지를 `build_tool_index` 역참조로 찾고 `package_meta.json[pkg]["needs_key"]`를 os.environ과 대조. `weight`/`locale`은 아직 활성필터에 안 씀(Phase 5 표준 프리셋에서 소비).
-3. **Phase 5**: 표준 에디션(keyless∧universal∧light) 프리셋 정의 — `package_meta.json`을 그대로 필터 조건으로 쓸 수 있음(`needs_key==[] and locale=="universal" and weight=="light"`). install.sh/seed.py 연결.
-4. 시작 전 `git log --oneline -16`으로 이 세션 커밋들(`301d627`~`39318e9`) 확인해 상태 파악.
+2. **Phase 5**: 표준 에디션(keyless∧universal∧light) 프리셋 정의 — `package_meta.json["packages"]`를 그대로 필터 조건으로 쓸 수 있음(`needs_key==[] and locale=="universal" and weight=="light"`인 패키지 집합 = 표준). 3-상태(available/installed-dormant/live) UX 설계 + install.sh/seed.py에 에디션+로케일 선택 연결(로케일-무관은 설치조차 안 함, 카탈로그엔 있어 on-demand 제안).
+3. **참고**: `[self:package]{op:list}`가 이미 installed/available 목록을 IBL로 노출하니, seed.py/install.sh가 이 IBL 경로를 직접 쓸 수도 있음(REST 대신) — 자기완결화 계획 전체의 최종 소비자가 씨앗 설치기임을 기억할 것(§ 배경 연결).
+4. 시작 전 `git log --oneline -18`로 이 세션 커밋들(`301d627`~`a48d21e`) 확인해 상태 파악.
 5. **주의**: `scripts/build_ibl_nodes.py`의 `derive_package_meta`는 정규식 기반 best-effort 스캔이다(AST 아님) — 새 키 패턴을 쓰는 패키지가 생기면(예: 동적으로 조립된 env var 이름) 놓칠 수 있음. 의심되면 `data/package_meta.json`의 해당 패키지 항목을 직접 눈으로 검증할 것.
+6. **주의**: `_dormant_reason`은 `needs_key`만 본다 — `weight`/`locale`/하드웨어(`runs_on`)는 아직 활성필터에 안 들어감(runs_on은 phone_manifest.json 쪽 별도 경로로 이미 처리됨, 여기 카탈로그 dormant 로직과는 무관). Phase 5에서 weight/locale을 실제로 쓰기 시작하면 그때 통합을 고려.

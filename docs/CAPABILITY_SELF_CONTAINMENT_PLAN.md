@@ -69,8 +69,8 @@
 - 성공기준: 시스템이 *자기 언어로* 능력을 설치/철거(고장③ 해결). **달성.**
 
 ### Phase 4 — 능력 메타 (표준 문제로 넘어가는 다리)
-- [ ] 각 `ibl_actions.yaml`에 `needs_key`·`weight`·`locale`·`tier` 부여 (핸들러에서 자동 도출 + `--check` 검증 = op 어휘 검증과 같은 결).
-- [ ] 런타임 활성 필터(prompt_builder/ibl_access): 설치된 것 중 "키 있음 ∧ 하드웨어 충족 ∧ 에디션 허용"만 노출. 키 대기 = dormant(임시방편 아님, SIM 슬롯).
+- [x] **needs_key/weight/locale 자동 도출**(2026-07-01, 커밋 `39318e9`) — `ibl_actions.yaml`에 손수 부여하는 대신 `scripts/build_ibl_nodes.py`의 `derive_package_meta()`가 각 패키지 `.py` 코드를 직접 스캔해 산출(단일 진실 소스=코드). needs_key=`os.environ.get/getenv/get_api_key` 리터럴+`check_api_key(서비스)`를 `auth_manager._AUTH_REGISTRY`에 역참조. weight=무거운 의존성(playwright/moviepy/cv2/torch/whisper/selenium/pyautogui/edge_tts/remotion) import 여부로 light/heavy. locale=needs_key가 한국 공식/상용 API에 걸리면 kr, 아니면 universal. 결과=`data/package_meta.json`(phone_manifest.json과 동일 패턴, `--check`가 정합 검증). `tier`는 아직 없음(용도 불명확 — 표준 프리셋은 keyless∧universal∧light 세 축만으로 Phase 5에서 충분히 정의 가능해 보류).
+- [ ] 런타임 활성 필터(prompt_builder/ibl_access): 설치된 것 중 "키 있음 ∧ 하드웨어 충족 ∧ 에디션 허용"만 노출. 키 대기 = dormant(임시방편 아님, SIM 슬롯). **다음 세션 착수 지점.**
 
 ### Phase 5 — 표준 에디션 & 설치 선택
 - [ ] 에디션 매니페스트: **표준 = keyless ∧ universal ∧ light** 기본 패키지 집합.

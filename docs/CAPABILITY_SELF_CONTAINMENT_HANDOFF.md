@@ -2,17 +2,18 @@
 
 > 이 문서만 읽으면 대화 맥락 없이 이어갈 수 있게 쓴다.
 > 전략 개요는 `docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md`, 배경은 기억 `project_capability_self_containment`.
-> 최종 갱신: 2026-07-01 (Phase 0-② 완성 반영 — "부재-패키지 관용" 실제 구현).
+> 최종 갱신: 2026-07-01 (Phase 4 착수 — needs_key/weight/locale 자동 도출 완료).
 
 ---
 
 ## 0. TL;DR (여기부터)
 
 - **하는 일**: 어휘(액션 정의)를 중앙 `data/ibl_nodes_src/`에서 각 패키지 폴더의 `ibl_actions.yaml`로 옮겨 **패키지=자기완결 능력**으로 만든다. 그래야 설치/철거가 코드+어휘를 원자적으로 넣고 뺀다.
-- **완료**: Phase 0(①+③, **②도 이제 진짜 완성**) + Phase 1(radio 파일럿) + Phase 3(전체 34개 패키지 마이그레이션) + Phase 2(`[self:package]` 생애주기 어휘). 중앙 src에는 이제 backend-native **25액션**. 143액션 전체. `--check` 전항목 통과. **✅ 커밋·푸시됨**(origin/main `3dc9d6d`).
-- **오늘 마지막 작업 — Phase 0-② 완성("부재-패키지 관용")**: Phase 2에서 `[self:package]{op:remove}`가 실제로 패키지를 철거해보니, **어휘 자체는 깨끗이 사라져도 `--check`의 두 검증기(fixture 완전성·포크가드)가 그 패키지 소유 fixture/allowlist 항목을 "고아"로 오탐**해 여전히 실패했다(이전에 "구조적으로 자동 해결됨"이라 적었던 판단이 절반만 맞았던 것). `scripts/build_ibl_nodes.py`에 `collect_dormant_package_qualifiers`(not_installed 쪽 `ibl_actions.yaml`을 스캔해 "정의는 있지만 꺼져있는" qualifier 집합 구축) + `_is_dormant_package_path`(stale allowlist 판정 시 그 패키지가 not_installed에 실존하면 관용) 추가. **라이브 검증**: kosis·radio를 not_installed로 옮긴 뒤 `--check` 완전 통과(재설치 후도 통과) + 돌아가는 백엔드에서 `[self:package]{op:remove}`→`--check` green→`install`로 복귀까지 종단. **네거티브 테스트**: 진짜 좀비(어디에도 없는 가짜 패키지 경로)는 여전히 정확히 flag됨 — 관용이 과하게 넓지 않음을 확인.
-- **다음**: Phase 4(메타 `needs_key`/`weight`/`locale`/`tier` + 런타임 활성 필터 — "키 있음∧하드웨어 충족∧에디션 허용"만 노출) 또는 Phase 5(표준 에디션). 부재-패키지 관용은 이제 진짜 끝났으니, Phase 4는 순수하게 *새 메타 스키마 + 필터링 기능* 추가로 시작하면 된다.
+- **완료**: Phase 0(①②③ 전부) + Phase 1(radio 파일럿) + Phase 2(`[self:package]` 생애주기 어휘) + Phase 3(전체 34개 패키지 마이그레이션) + **Phase 4 첫 조각(메타 자동 도출)**. 중앙 src에는 이제 backend-native **25액션**. 143액션 전체. `--check` 전항목 통과(package_meta.json 정합 게이트 포함). **✅ 커밋·푸시됨**(origin/main `39318e9`).
+- **오늘 마지막 작업 — Phase 4 착수(`needs_key`/`weight`/`locale` 자동 도출)**: `ibl_actions.yaml`에 손수 부여하는 대신 `scripts/build_ibl_nodes.py`의 `derive_package_meta()`가 각 패키지 `.py`를 직접 스캔해 산출 — **단일 진실 소스는 항상 코드**(계획 문서의 "핸들러에서 자동 도출" 문구 그대로 구현). needs_key=`os.environ.get/getenv/get_api_key` 리터럴 호출 + `check_api_key("서비스")` 호출을 `backend/common/auth_manager.py`의 `_AUTH_REGISTRY`(단일 소스, import로 재사용·복제 안 함)에 역참조해 env var 이름으로 정규화. weight=무거운 의존성(playwright/moviepy/cv2/torch/whisper/selenium/pyautogui/edge_tts/remotion) import 여부로 light/heavy 이진. locale=needs_key가 한국 공식/상용 API(카카오·네이버·공공데이터·국토부·통계청·KOPIS·도서관정보나루·국회도서관·법제처)에 걸리면 kr, 아니면 universal. **결과물** = `data/package_meta.json`(phone_manifest.json과 동일 패턴 — `--check`가 바이트 정합 검증, gitignore 미추적, 46개 패키지 도출). 수동 크로스체크 일치(kosis→KOSIS_API_KEY/kr, cctv→4키/heavy/kr, radio→키없음/light/universal 등). **`tier` 필드는 보류** — 용도가 불명확해서 억지로 채우지 않음(keyless∧universal∧light 세 축만으로 Phase 5 표준 프리셋 정의에 충분해 보임).
+- **다음**: Phase 4 나머지 조각(런타임 활성 필터 — `prompt_builder`/`ibl_access`가 `package_meta.json`을 읽어 "키 있음∧하드웨어 충족∧에디션 허용"만 카탈로그·프롬프트에 노출, 키 대기=dormant 표시. 이게 있어야 카탈로그가 "쓸 수 없는 액션"으로 부풀지 않는다) 또는 Phase 5(표준 에디션 프리셋).
 - **불변식**: 이름 불변(위치만 이동). 마이그레이션 후 검증은 **의미 동일**(바이트 아님) — 하네스가 자동 단언.
+- **Phase 0-② 완성 이력("부재-패키지 관용")**: Phase 2에서 `[self:package]{op:remove}`가 실제로 패키지를 철거해보니, 어휘 자체는 깨끗이 사라져도 `--check`의 두 검증기(fixture 완전성·포크가드)가 그 패키지 소유 fixture/allowlist 항목을 "고아"로 오탐해 여전히 실패했다(최초 "구조적으로 자동 해결됨" 판단이 절반만 맞았던 것). `collect_dormant_package_qualifiers`+`_is_dormant_package_path`로 수정(커밋 `3dc9d6d`) — kosis·radio 왕복 + 네거티브 테스트(진짜 좀비는 여전히 flag)로 검증됨.
 - **Phase 3 중 발견·수정한 버그**: `merge_fragments`가 노드의 액션이 **전부** 이관되어 중앙 src `actions:`가 YAML null이 되는 경우 크래시(`setdefault`는 기존 None 값을 덮어쓰지 않음). `scripts/build_ibl_nodes.py`에서 수정 완료(커밋 `301d627`). engines·table 노드가 정확히 이 케이스(전체가 media_producer/web-builder/remotion-video/data-ops/visualization 소유)였음.
 - **커밋 이력 함정(교훈)**: 배치 루프에서 `git commit -m "..."` 앞에 `--no-verify=false`라는 존재하지 않는 플래그를 써서 8개 커밋이 전부 실패 → 매 반복 `git add -A`만 누적되고 미커밋 상태로 34개 마이그레이션이 쌓임. 결과적으로 빌드 버그 수정 커밋(`301d627`)에 31개 패키지가 함께 실려버림(의도한 1패키지=1커밋 원칙 위반, 부득이 유지 — 재작업 리스크가 이득보다 큼). 이후 3개(visualization/web-builder/cctv)는 올바르게 분리 커밋. **다음 배치 작업 시**: 커밋 명령을 먼저 단독으로 테스트(`git commit -m test --dry-run` 류)하거나, 루프 안에서 매 반복 exit code를 실제로 확인.
 - **Phase 2 중 확인한 기존 코드 함정**: `package_manager.list_available()`은 이름과 달리 installed+not_installed **전부** 반환한다(하위호환 목적). `[self:package]{op:list}`의 `available`은 `installed==False`로 걸러서 노출 — REST `/packages/available`은 옛 동작 그대로 둠(회귀 방지, 건드리지 않음).
@@ -22,7 +23,7 @@
 
 ## 1. 지금 어디에 있나
 
-계획 6단계 중 **Phase 0(①②③ 전부)·1·2·3 완료**. Phase 4·5 미착수.
+계획 6단계 중 **Phase 0(①②③ 전부)·1·2·3 완료 + Phase 4 절반**(메타 도출 완료, 런타임 필터 미착수). Phase 5 미착수.
 
 | Phase | 상태 |
 |---|---|
@@ -32,7 +33,8 @@
 | 1 파일럿(radio) | ✅ 완료 — 왕복 검증(철거→137액션 클린 소멸→재설치→142 복귀) |
 | 2 `[self:package]` 어휘 | ✅ 완료(`c666109`) — IBL 호출만으로 라이브 왕복 검증 |
 | 3 대량 마이그레이션 | ✅ **완료**(2026-07-01) — 나머지 33개 패키지 전부 이관, youtube로 왕복 재검증 |
-| 4 메타(needs_key/weight/locale)+활성필터 | ⬜ **다음 후보** |
+| 4-① 메타 자동 도출 | ✅ **완료**(`39318e9`) — `derive_package_meta()` + `data/package_meta.json` |
+| 4-② 런타임 활성 필터 | ⬜ **다음 후보** |
 | 5 표준 에디션+seed 연결 | ⬜ |
 
 ### 1.1 하네스 사용법 (Phase 4/5에서도 그대로 유용 — 신규 패키지 추가 시)
@@ -170,9 +172,10 @@ assert after == before, "의미 변함 — 롤백"
 
 ---
 
-## 9. 착수 순서 (다음 세션 — Phase 4 또는 Phase 5)
+## 9. 착수 순서 (다음 세션 — Phase 4-② 또는 Phase 5)
 
-1. §6 첫 명령으로 현재 상태 초록 확인.
-2. **Phase 4**: 부재-패키지 관용은 이제 완료됐으니(§0), 순수하게 메타 스키마만 남음 — 각 패키지 `ibl_actions.yaml`에 `needs_key`/`weight`/`locale`/`tier` 필드 추가(핸들러에서 자동 도출 가능하면 자동, 아니면 수동 부여) + `--check`에 이 메타 정합성 검증(op 어휘 검증과 같은 결) + 런타임 활성 필터(`prompt_builder`/`ibl_access` — 설치된 것 중 "키 있음∧하드웨어 충족∧에디션 허용"만 카탈로그·프롬프트에 노출, 키 대기=dormant 상태로 표시).
-3. **Phase 5**: 표준 에디션(keyless∧universal∧light) 프리셋 정의 + install.sh/seed.py 연결.
-4. 시작 전 `git log --oneline -14`로 이 세션 커밋들(`301d627`~`3dc9d6d`) 확인해 상태 파악.
+1. §6 첫 명령으로 현재 상태 초록 확인 + `cat data/package_meta.json | python3 -m json.tool | head -40`로 메타 결과 재확인(없으면 `python3 scripts/build_ibl_nodes.py`로 재생성).
+2. **Phase 4-② 런타임 활성 필터**(다음 후보): `backend/ibl_access.py`(카탈로그 로더)와 `backend/prompt_builder.py`(시스템 프롬프트 조립)가 `data/package_meta.json`을 읽어, `needs_key`가 비어있지 않은데 해당 env var가 미설정인 액션을 **완전히 숨기지 말고 dormant로 표시**(계획 문서 D 원칙: 임시방편 아닌 SIM 슬롯 비유 — "설치는 됐지만 키가 없어 잠자는 중"이라는 정보 자체가 유용). 구현 지점: 카탈로그 XML 생성부에서 각 액션의 소속 패키지를 `build_tool_index` 역참조로 찾고 `package_meta.json[pkg]["needs_key"]`를 os.environ과 대조. `weight`/`locale`은 아직 활성필터에 안 씀(Phase 5 표준 프리셋에서 소비).
+3. **Phase 5**: 표준 에디션(keyless∧universal∧light) 프리셋 정의 — `package_meta.json`을 그대로 필터 조건으로 쓸 수 있음(`needs_key==[] and locale=="universal" and weight=="light"`). install.sh/seed.py 연결.
+4. 시작 전 `git log --oneline -16`으로 이 세션 커밋들(`301d627`~`39318e9`) 확인해 상태 파악.
+5. **주의**: `scripts/build_ibl_nodes.py`의 `derive_package_meta`는 정규식 기반 best-effort 스캔이다(AST 아님) — 새 키 패턴을 쓰는 패키지가 생기면(예: 동적으로 조립된 env var 이름) 놓칠 수 있음. 의심되면 `data/package_meta.json`의 해당 패키지 항목을 직접 눈으로 검증할 것.

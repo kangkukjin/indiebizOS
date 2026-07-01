@@ -67,14 +67,13 @@
 ## 7. Tier 2/3 (비-IBL 병렬 경로) — 경로② 폐기 완료, 경로③ 남음
 감사 중 드러난 **두 개의 비-IBL 도구 실행 경로**(IBL 죽은 코드를 살려두는 원인):
 - ~~**레거시 tool_executor**~~ **✅경로② 폐기**(2026-07-02, 커밋 `78d4635`, push): `data/packages/installed/extensions/ai-agent/`(base.AIAgent(ToolExecutorMixin,…)+`_execute_legacy_tool`) 통째 삭제. `backend/ai_agent.py`+`agent_runner.py`+`providers/`+`tool_selector.py`가 이미 대체한 **pre-IBL 그림자 사본**. 완전 휴면 확증: `.pyc`가 cpython-**312**(2025-12-31)인데 라이브 런타임은 cpython-**314** → 3.14가 한 번도 import 안 함 / tool_loader는 `installed/tools/`만 순회 / 전역 import·sys.path 0 / 시그니처 비호환 / 사본·참조 0. 검증=삭제 후 /health·/packages/reload·IBL execute 무손상.
-- **경로③ 남음 — backend REST**(`api_*.py`)가 패키지 `handler.execute("옛tool명")` 직접 호출: 예 `api_lecture_workspace.py`가 `MiniCtx("slide_create")`. 런처 GUI 앱모드(0토큰 직접실행)가 쓰는 **라이브·정당한 경로** → 폐기 아님.
-- **경로③ 처방**(다음): "IBL로 밀어넣기 아님, 정본 이름으로 부르기". GUI를 `/ibl/execute`로 강제관통하면 앱모드 이점 상실 → REST가 **op-디스패처 정본 이름**을 부르게 개명해 IBL·REST가 같은 단일 핸들러 분기 공유. 그러면 lecture_workspace 등 옛이름 분기도 죽어 추가 정리 가능. 상세=기억 `project_tool_execution_substrates`.
+- ~~**경로③ 남음**~~ **✅경로③ 개명 완료**(2026-07-02, 커밋 `3cb193f`+`cd3e24b`, push): `api_lecture_workspace.py`(전수 sweep 결과 **유일** REST 직접호출 지점)의 5호출을 옛이름(`MiniCtx("slide_create")` 등)→정본 `MiniCtx("slide_op")`+op 주입으로 개명. 선행으로 `_slide_image_edit`(REST 전용이던 능력)을 slide_op의 op `image_edit`로 승격(에이전트도 접근 가능). → handler 옛 직접분기 15개·tool.json 14개 사망→제거. IBL·REST가 slide_op 단일 분기 공유. GUI를 IBL 파싱층으로 강제관통하지 않고 *정본이름 개명*만. 상세=기억 `project_tool_execution_substrates`.
 
 ---
 
 ## 8. 다음 세션 착수 후보 (우선순위)
 1. ~~**youtube/web-builder/visualization 진짜 정리**~~ **✅완료**(2026-07-02 후속, 커밋 `4798901`·`4eadb4d`·`0e547cb`, push): 세 패키지 모두 op(또는 chart_type)→핸들러 함수 직접-return으로 리팩터(레거시 `if tool_name==` 체인을 `_op_*`/`_render_*`/`_h_*` 모듈함수로 추출), 변종2→변종1 전환. 죽은 tool.json 29개 제거(youtube 9→3·visualization 8→1·web-builder 19→3). `_OP_DISPATCHERS` 이름 유지(값 문자열→함수, `--check`는 키만 읽어 무영향). web-builder는 미지 op→기본 폴백 관용 보존. 각 라이브 스모크 통과.
-2. **Tier 2/3**(§7): ✅경로②(레거시 확장 ai-agent) 폐기 완료(`78d4635`). ⏳경로③(REST 직접호출 옛tool명 → op-디스패처 정본이름 개명) 남음.
+2. **Tier 2/3**(§7): ✅경로②(레거시 확장 ai-agent) 폐기(`78d4635`) + ✅경로③(REST 정본이름 개명, `3cb193f`+`cd3e24b`) 모두 완료. 두 비-IBL 병렬경로 해소됨.
 3. **3층 이름 드리프트 전체 감사**(§5 후속): 액션명 vs tool명 vs 함수명 어긋난 것 전수.
 4. (선택) 원격/폰 신문 앱, table:document newspaper 테마 제거, 도구관리 카테고리 멤버십 최종 확정.
 

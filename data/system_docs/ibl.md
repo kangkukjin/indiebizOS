@@ -93,9 +93,10 @@ IBL 표현 계층:     [node:action]{params}
 |--------|---------|------|----------|
 | `self` | 45 | 개인 도메인: 시스템 관리, 파일, 트리거/스케줄, 목표/메모리/포식기억, 비즈니스(사업·아이템·문서·지침), 폰 동기화, 워크플로우, 패키지 생애주기 | read, write, file_find, storage, trigger, workflow, goal, memory, forage, residual, business, business_item, phone_sync, package |
 | `limbs` | 17 | 장치 제어: UI 조작(브라우저, 데스크톱 화면, 안드로이드 폰) + 폰 네이티브 동작(phone) + 미디어 재생 | browser, screen, android, phone, music, radio, cctv, launch, os_open |
-| `sense` | 43 | 감각 확장: 외부 정보 수집(연구자·학술 포함) + 내부 데이터 관리 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search_naver, stock, travel, crawl, realty, weather, researcher, paper, phone, here, listen, see |
+| `sense` | 44 | 감각 확장: 외부 정보 수집(연구자·학술 포함) + 내부 데이터 관리 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search_naver, stock, travel, crawl, realty, weather, researcher, paper, phone, here, listen, see |
 | `others` | 11 | 협업·통신: 에이전트 위임 + 메시지/커뮤니티 + 이웃 CRM | delegate, channel_send, channel_read, messages, feed, board, nostr, auto_response, neighbor, contact, agents |
-| `engines` | 26 | 변환·창작: 통화 변환자(filter/sort/join 등)·문서IR(document/structure)·차트·표·슬라이드·영상·이미지(생성 image_gemini·평가 image_critic·읽기 image_read) | filter, sort, join, document, structure, chart, spreadsheet, slide_shadcn, newspaper, image_read |
+| `engines` | 13 | 창작: 슬라이드·영상·이미지(생성 image_gemini·평가 image_critic·읽기 image_read)·신문·웹·TTS. 통화 변환 문법(document/structure 포함)은 `table` 노드로 분리(2026-06-30). | slide_shadcn, newspaper, image_read, image_gemini, image_critic, html_video, tts, web |
+| `table` | 13 | 표·통화 변환 문법(관계대수 9 + emitter 4). engines에서 분리(2026-06-30) — 무거운 engines를 꺼도(노드 on/off) 가벼운 문법은 생존. | filter, sort, take, select, dedup, groupby, join, union, merge, chart, spreadsheet, document, structure |
 
 **Phase 25 통합 맥락:**
 - source → sense(78): 외부 정보 인식의 "감각 기관" 역할

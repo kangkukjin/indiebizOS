@@ -2,33 +2,43 @@
 
 > 이 문서만 읽으면 대화 맥락 없이 이어갈 수 있게 쓴다.
 > 전략 개요는 `docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md`, 배경은 기억 `project_capability_self_containment`.
-> 최종 갱신: 2026-07-01.
+> 최종 갱신: 2026-07-01 (Phase 0-③ + Phase 1 완료 반영).
 
 ---
 
 ## 0. TL;DR (여기부터)
 
 - **하는 일**: 어휘(액션 정의)를 중앙 `data/ibl_nodes_src/`에서 각 패키지 폴더의 `ibl_actions.yaml`로 옮겨 **패키지=자기완결 능력**으로 만든다. 그래야 설치/철거가 코드+어휘를 원자적으로 넣고 뺀다.
-- **완료**: **Phase 0-① 빌드 병합기**(`scripts/build_ibl_nodes.py`) — 설치된 패키지 `ibl_actions.yaml`을 빌드가 흡수. fragment 0개면 바이트 동일(현재 상태=무동작). 전항목 검증. **✅ 커밋·푸시됨**(origin/main `7c683d0`; Phase0 커밋 자체는 `16bcd39`). 워킹트리 clean.
-- **다음**: **Phase 0-③ 마이그레이션 하네스** 작성 → **Phase 1 파일럿 = `radio`**.
-- **불변식**: 이름 불변(위치만 이동). Phase 0~3은 동작·142액션 무변. 마이그레이션 후 검증은 **의미 동일**(바이트 아님).
+- **완료**: Phase 0-①(빌드 병합기) + Phase 0-③(마이그레이션 하네스 `scripts/migrate_package_vocab.py`) + **Phase 1 파일럿(radio, 5액션 이관)**. 라이브 철거/재설치 왕복 검증(좀비 0 소멸→복귀) + `--check` 전항목 통과. **✅ 커밋·푸시됨**(origin/main `fd8e461`). 워킹트리 clean.
+- **다음**: Phase 2(`[self:package]` 어휘) 또는 Phase 3(대량 마이그레이션 — 하네스로 나머지 33개 패키지 순회, 1패키지=1커밋).
+- **불변식**: 이름 불변(위치만 이동). 마이그레이션 후 검증은 **의미 동일**(바이트 아님) — 하네스가 자동 단언.
+- **알아둘 것(Phase 4 선행조건)**: 패키지를 물리적으로 철거한 상태에서 `--check`를 돌리면 `fixture 완전성`·`포크-가드`가 실패한다(그 패키지를 참조하는 fixture/allowlist 항목이 "고아"가 됨). 이는 버그가 아니라 **아직 Phase 4(부재-패키지 관용)가 없어서** — 정상 설치 상태에서만 `--check`가 초록임을 전제로 한다.
 
 ---
 
 ## 1. 지금 어디에 있나
 
-계획 6단계 중 **Phase 0-①만 완료**. 나머지 미착수.
+계획 6단계 중 **Phase 0(①+③)·Phase 1 완료**.
 
 | Phase | 상태 |
 |---|---|
 | 0-① 빌드 병합기 | ✅ 완료·검증·커밋·푸시(`16bcd39`, origin `7c683d0`) |
 | 0-② 부재-패키지 관용 | ✅ 구조적 자동해결(코드 불필요) |
-| 0-③ 마이그레이션 하네스 | ⬜ **다음 작업** |
-| 1 파일럿(radio) | ⬜ |
-| 2 `[self:package]` 어휘 | ⬜ |
-| 3 대량 마이그레이션 | ⬜ |
-| 4 메타(needs_key/weight/locale)+활성필터 | ⬜ |
+| 0-③ 마이그레이션 하네스 | ✅ 완료(`scripts/migrate_package_vocab.py`, origin `fd8e461`) |
+| 1 파일럿(radio) | ✅ 완료 — 왕복 검증(철거→137액션 클린 소멸→재설치→142 복귀) |
+| 2 `[self:package]` 어휘 | ⬜ **다음 후보** |
+| 3 대량 마이그레이션 | ⬜ **다음 후보** — 하네스 재사용, 1패키지=1커밋 |
+| 4 메타(needs_key/weight/locale)+활성필터 | ⬜ (부재-패키지 관용 완성에 필요) |
 | 5 표준 에디션+seed 연결 | ⬜ |
+
+### 1.1 하네스 사용법 (재사용, Phase 3에서 그대로)
+```bash
+cd /Users/kangkukjin/Desktop/AI/indiebizOS
+python3 scripts/migrate_package_vocab.py <package_name> --dry-run   # 대상 미리보기
+python3 scripts/migrate_package_vocab.py <package_name>             # 실이관 + 재빌드 + 의미동일단언 + --check
+```
+성공 시: 패키지 폴더에 `ibl_actions.yaml` 생성 + 중앙 src에서 해당 액션 블록 제거 + `data/ibl_nodes.yaml`/`phone_manifest.json` 재생성. 실패(빌드 실패/의미 불일치/--check 실패) 시 **자동 롤백**(백업에서 복원, 생성된 fragment 삭제).
+제약: 이미 `ibl_actions.yaml`이 있는 패키지는 재이관 거부(중복 방지). 소유 tool 0건이면 즉시 에러.
 
 ---
 

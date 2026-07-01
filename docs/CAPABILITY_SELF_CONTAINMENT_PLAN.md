@@ -1,6 +1,6 @@
 # 능력 자기완결화 (Capability Self-Containment) — 장기 계획
 
-> 상태: **Phase 0·1·3 완료**(2026-07-01). 다음 세션은 Phase 2 또는 Phase 4부터. 상세=`docs/CAPABILITY_SELF_CONTAINMENT_HANDOFF.md`.
+> 상태: **Phase 0·1·2·3 완료**(2026-07-01). 다음 세션은 Phase 4부터. 상세=`docs/CAPABILITY_SELF_CONTAINMENT_HANDOFF.md`.
 > 작성: 2026-07-01. 관련 대화: 최소 설치 씨앗 → 업데이트 → 표준/확장 → 어휘·앱 관리.
 
 ## 1. 문제 (한 문장)
@@ -63,10 +63,10 @@
 - 종료상태: 중앙 src = backend-native 24액션만(sense2·self13·limbs2·others7); 그 외 전 패키지 액션이 자기 패키지에 co-locate. **달성.**
 - 성공기준: 매 커밋 초록, 전체 완료 후 142 의미 동일. **달성.** 마이그레이션 중 `merge_fragments` null-병합 버그 발견·수정(상세=핸드오프).
 
-### Phase 2 — 생애주기 어휘 (다음 후보)
-- [ ] `[self:package]{op: list/install/remove/info}` IBL 액션 = `package_manager` + 리빌드 + `ibl_access` 핫리로드 래핑.
-- [ ] 파일럿(radio)으로 IBL 경로 왕복 테스트.
-- 성공기준: 시스템이 *자기 언어로* 능력을 설치/철거(고장③ 해결).
+### Phase 2 — 생애주기 어휘 ✅ 완료(2026-07-01)
+- [x] `[self:package]{op: list/install/remove/info}` IBL 액션 = `package_manager` + 리빌드 + `ibl_access`(+ibl_engine+consciousness_agent) 핫리로드 래핑(`backend/ibl_routing.py` `_package_op`/`_rebuild_ibl_vocab`).
+- [x] 파일럿(radio)으로 IBL 경로 왕복 테스트 — `/ibl/execute` 호출만으로 제거→재설치, 사람 개입(`/packages/reload`) 불필요.
+- 성공기준: 시스템이 *자기 언어로* 능력을 설치/철거(고장③ 해결). **달성.**
 
 ### Phase 4 — 능력 메타 (표준 문제로 넘어가는 다리)
 - [ ] 각 `ibl_actions.yaml`에 `needs_key`·`weight`·`locale`·`tier` 부여 (핸들러에서 자동 도출 + `--check` 검증 = op 어휘 검증과 같은 결).

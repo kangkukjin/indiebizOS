@@ -2,25 +2,27 @@
 
 > 이 문서만 읽으면 대화 맥락 없이 이어갈 수 있게 쓴다.
 > 전략 개요는 `docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md`, 배경은 기억 `project_capability_self_containment`.
-> 최종 갱신: 2026-07-01 (Phase 3 대량 마이그레이션 완료 반영).
+> 최종 갱신: 2026-07-01 (Phase 2 완료 반영).
 
 ---
 
 ## 0. TL;DR (여기부터)
 
 - **하는 일**: 어휘(액션 정의)를 중앙 `data/ibl_nodes_src/`에서 각 패키지 폴더의 `ibl_actions.yaml`로 옮겨 **패키지=자기완결 능력**으로 만든다. 그래야 설치/철거가 코드+어휘를 원자적으로 넣고 뺀다.
-- **완료**: Phase 0(①+③) + Phase 1(radio 파일럿) + **Phase 3(전체 34개 패키지 대량 마이그레이션 완료)**. 중앙 src에는 이제 **backend-native 24액션만** 남음(sense 2·self 13·limbs 2·others 7, engines/table은 0 — 전량 이관). `--check` 전항목 통과, 142액션 의미 동일 유지. **✅ 커밋·푸시됨**(origin/main `a35f1b9`). 워킹트리 clean(무관 pre-existing untracked 2파일만 잔존: cctv/cctv_common.py·enrich_kakao_coords.py — 이번 작업과 무관, 손대지 않음).
-- **다음**: Phase 2(`[self:package]{op:list/install/remove/info}` 어휘) — 이제 대상 패키지가 전부 자기완결이라 Phase 2 구현이 더 의미있어짐. Phase 4(메타+부재-패키지 관용)도 착수 가능.
+- **완료**: Phase 0(①+③) + Phase 1(radio 파일럿) + Phase 3(전체 34개 패키지 마이그레이션) + **Phase 2(`[self:package]` 생애주기 어휘)**. 중앙 src에는 이제 backend-native **25액션**(패키지 관리 자체도 backend-native라 24→25). 143액션 전체. `--check` 전항목 통과. **✅ 커밋·푸시됨**(origin/main `c666109`).
+- **Phase 2 상세**: `[self:package]{op: list|info|install|remove}` — `backend/ibl_routing.py`의 `_package_op`+`_rebuild_ibl_vocab`가 `package_manager` 래핑 + install/remove 후 `build_ibl_nodes.py` 서브프로세스 재빌드 + 캐시 초기화(`/packages/reload`와 동형)까지 자동 수행. **라이브 왕복 검증**: radio를 IBL 호출만으로 제거(143→138 클린 소멸)→재설치(143 복귀), 사람이 `/packages/reload`를 따로 안 눌러도 됨.
+- **다음**: Phase 4(메타 needs_key/weight/locale + `--check` 부재-패키지 관용 가드) 또는 Phase 5(표준 에디션). Phase 2로 시스템이 "자기 언어로" 능력을 설치/철거할 수 있게 됐으니, Phase 4에서 "철거된 패키지도 --check 초록"을 마저 채우면 생애주기 관리가 완성된다.
 - **불변식**: 이름 불변(위치만 이동). 마이그레이션 후 검증은 **의미 동일**(바이트 아님) — 하네스가 자동 단언.
-- **알아둘 것(Phase 4 선행조건, 재확인됨)**: 패키지를 물리적으로 철거한 상태에서 `--check`를 돌리면 `fixture 완전성`·`포크-가드`가 실패한다(그 패키지를 참조하는 fixture/allowlist 항목이 "고아"가 됨). 이는 버그가 아니라 **아직 Phase 4(부재-패키지 관용)가 없어서**. **철거 자체(어휘 소멸)는 완전히 깨끗함**(youtube 왕복 재검증: 142→139→142, 좀비 0) — `--check`만 설치 상태를 전제.
+- **알아둘 것(Phase 4 선행조건, 재확인됨)**: 패키지를 물리적으로 철거한 상태에서 `--check`를 돌리면 `fixture 완전성`·`포크-가드`가 실패한다(그 패키지를 참조하는 fixture/allowlist 항목이 "고아"가 됨). 이는 버그가 아니라 **아직 Phase 4(부재-패키지 관용)가 없어서**. **철거 자체(어휘 소멸)는 완전히 깨끗함** — `--check`만 설치 상태를 전제.
 - **Phase 3 중 발견·수정한 버그**: `merge_fragments`가 노드의 액션이 **전부** 이관되어 중앙 src `actions:`가 YAML null이 되는 경우 크래시(`setdefault`는 기존 None 값을 덮어쓰지 않음). `scripts/build_ibl_nodes.py`에서 수정 완료(커밋 `301d627`). engines·table 노드가 정확히 이 케이스(전체가 media_producer/web-builder/remotion-video/data-ops/visualization 소유)였음.
 - **커밋 이력 함정(교훈)**: 배치 루프에서 `git commit -m "..."` 앞에 `--no-verify=false`라는 존재하지 않는 플래그를 써서 8개 커밋이 전부 실패 → 매 반복 `git add -A`만 누적되고 미커밋 상태로 34개 마이그레이션이 쌓임. 결과적으로 빌드 버그 수정 커밋(`301d627`)에 31개 패키지가 함께 실려버림(의도한 1패키지=1커밋 원칙 위반, 부득이 유지 — 재작업 리스크가 이득보다 큼). 이후 3개(visualization/web-builder/cctv)는 올바르게 분리 커밋. **다음 배치 작업 시**: 커밋 명령을 먼저 단독으로 테스트(`git commit -m test --dry-run` 류)하거나, 루프 안에서 매 반복 exit code를 실제로 확인.
+- **Phase 2 중 확인한 기존 코드 함정**: `package_manager.list_available()`은 이름과 달리 installed+not_installed **전부** 반환한다(하위호환 목적). `[self:package]{op:list}`의 `available`은 `installed==False`로 걸러서 노출 — REST `/packages/available`은 옛 동작 그대로 둠(회귀 방지, 건드리지 않음).
 
 ---
 
 ## 1. 지금 어디에 있나
 
-계획 6단계 중 **Phase 0·1·3 완료**. Phase 2·4·5 미착수.
+계획 6단계 중 **Phase 0·1·2·3 완료**. Phase 4·5 미착수.
 
 | Phase | 상태 |
 |---|---|
@@ -28,15 +30,12 @@
 | 0-② 부재-패키지 관용 | ✅ 구조적 자동해결(코드 불필요) |
 | 0-③ 마이그레이션 하네스 | ✅ 완료(`scripts/migrate_package_vocab.py`) |
 | 1 파일럿(radio) | ✅ 완료 — 왕복 검증(철거→137액션 클린 소멸→재설치→142 복귀) |
+| 2 `[self:package]` 어휘 | ✅ 완료(`c666109`) — IBL 호출만으로 라이브 왕복 검증 |
 | 3 대량 마이그레이션 | ✅ **완료**(2026-07-01) — 나머지 33개 패키지 전부 이관, youtube로 왕복 재검증 |
-| 2 `[self:package]` 어휘 | ⬜ **다음 후보** |
 | 4 메타(needs_key/weight/locale)+활성필터 | ⬜ **다음 후보** |
 | 5 표준 에디션+seed 연결 | ⬜ |
 
-### 1.1 하네스 사용법 (Phase 2/4에서도 그대로 유용 — 신규 패키지 추가 시)
-```bash
-
-### 1.1 하네스 사용법 (재사용, Phase 3에서 그대로)
+### 1.1 하네스 사용법 (Phase 4/5에서도 그대로 유용 — 신규 패키지 추가 시)
 ```bash
 cd /Users/kangkukjin/Desktop/AI/indiebizOS
 python3 scripts/migrate_package_vocab.py <package_name> --dry-run   # 대상 미리보기
@@ -160,21 +159,20 @@ assert after == before, "의미 변함 — 롤백"
 |---|---|
 | `scripts/build_ibl_nodes.py` | 빌드/`--check`. `build()`, `collect_package_fragments`, `merge_fragments`(None-방어 수정됨), `serialize_nodes_document`, `build_tool_index`(tool→pkg), `NODE_ORDER`, `PACKAGE_DIRS`, `repo_root`. |
 | `scripts/migrate_package_vocab.py` | 마이그레이션 하네스(완료). `find_owned_actions`, `build_fragment_doc`, `remove_action_block`, `migrate`. |
-| `data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml` | 중앙 어휘 소스. **이제 backend-native 24액션만**(sense 2·self 13·limbs 2·others 7). engines·table은 `actions:` 비어있음(정상, 빌드 시 fragment로 채워짐). |
+| `data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml` | 중앙 어휘 소스. backend-native **25액션**(sense 2·self 14[package 포함]·limbs 2·others 7). engines·table은 `actions:` 비어있음(정상, 빌드 시 fragment로 채워짐). |
 | `data/ibl_nodes.yaml` | 생성물(GENERATED). build 산출. |
 | `data/packages/installed/tools/<pkg>/ibl_actions.yaml` | **35개 패키지 전부 보유**(radio+34). `handler.py`(op 디스패처)·`tool.json`(tool 정의)와 나란히. |
 | `data/packages/not_installed/tools/house-designer/ibl_actions.yaml` | fragment **형식 템플릿**(단일노드 참고용). |
-| `backend/package_manager.py` | `install_package`·`uninstall_package`(폴더 이동). Phase 2 `[self:package]`가 래핑할 대상. |
+| `backend/package_manager.py` | `install_package`·`uninstall_package`(폴더 이동). `[self:package]`가 `backend/ibl_routing.py`의 `_package_op`를 통해 래핑함(완료). |
+| `backend/ibl_routing.py` | `_package_op`(list/info/install/remove)·`_rebuild_ibl_vocab`(재빌드+캐시 초기화) — Phase 2 구현부. |
 | `backend/ibl_access.py` | `ibl_nodes.yaml` 로드→카탈로그. Phase 4 활성필터 지점. |
 | `docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md` | 전략 6단계. |
 
 ---
 
-## 9. 착수 순서 (다음 세션 — Phase 2 또는 Phase 4)
+## 9. 착수 순서 (다음 세션 — Phase 4 또는 Phase 5)
 
 1. §6 첫 명령으로 현재 상태 초록 확인.
-2. **Phase 2 선택 시**: `backend/package_manager.py`의 `install_package`/`uninstall_package`를 살펴보고, `[self:package]{op: list/install/remove/info}` 액션 설계 — install/remove 시 `build_ibl_nodes.build()` 재실행 + `ibl_access` 핫리로드(`/packages/reload` 패턴 참고) 필요. 파일럿은 radio로(이미 자기완결이라 즉시 왕복 테스트 가능).
-3. **Phase 4 선택 시**: 각 패키지 `ibl_actions.yaml`에 `needs_key`/`weight`/`locale`/`tier` 필드 추가 스키마 설계 + `--check`에 부재-패키지 관용 가드 추가(패키지 철거 시 fixture/포크가드가 고아나지 않도록, §0 "알아둘 것" 참조) — 이게 있어야 "패키지 철거→--check도 초록"이 완성된다.
-4. 어느 쪽이든 시작 전 `git log --oneline -10`으로 이 세션 커밋들(`301d627`~`a35f1b9`) 확인해 상태 파악.
-3. §5대로 radio 파일럿 실행 → 철거/재설치 왕복 증명.
-4. 통과 시 커밋(파일럿). 이후 Phase 2(`[self:package]`) 또는 Phase 3(대량) 진행.
+2. **Phase 4**: 각 패키지 `ibl_actions.yaml`에 `needs_key`/`weight`/`locale`/`tier` 필드 추가 스키마 설계 + `--check`에 부재-패키지 관용 가드 추가(패키지 철거 시 fixture/포크가드가 고아나지 않도록, §0 "알아둘 것" 참조) — 이게 있어야 "패키지 철거→--check도 초록"이 완성된다. `[self:package]{op:remove}`가 이제 실제로 존재하니, 이 갭이 사용자에게 직접 체감되는 지점이 됨(제거해도 앱이 안 죽어야 진짜 완결).
+3. **Phase 5**: 표준 에디션(keyless∧universal∧light) 프리셋 정의 + install.sh/seed.py 연결.
+4. 시작 전 `git log --oneline -12`로 이 세션 커밋들(`301d627`~`c666109`) 확인해 상태 파악.

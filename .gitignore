@@ -148,7 +148,7 @@ data/ibl_hippo_vecs.f32
 # 특수 폴더 및 파일
 ..bfg-report/
 data/_ibl_provenance.yaml
-CCTV*
+projects/CCTV*
 backend/conversations.db
 backend/conversations.db.*
 backend/출판사*

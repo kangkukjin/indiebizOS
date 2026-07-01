@@ -73,7 +73,7 @@
 ---
 
 ## 8. 다음 세션 착수 후보 (우선순위)
-1. **youtube/web-builder/visualization 진짜 정리**: op-분기 fall-through를 직접-return 형태로 리팩터(레거시 분기 인라인) → 그 후 죽은 tool.json 제거. 변종2→변종1 전환. 각 라이브 스모크 필수.
+1. ~~**youtube/web-builder/visualization 진짜 정리**~~ **✅완료**(2026-07-02 후속, 커밋 `4798901`·`4eadb4d`·`0e547cb`, push): 세 패키지 모두 op(또는 chart_type)→핸들러 함수 직접-return으로 리팩터(레거시 `if tool_name==` 체인을 `_op_*`/`_render_*`/`_h_*` 모듈함수로 추출), 변종2→변종1 전환. 죽은 tool.json 29개 제거(youtube 9→3·visualization 8→1·web-builder 19→3). `_OP_DISPATCHERS` 이름 유지(값 문자열→함수, `--check`는 키만 읽어 무영향). web-builder는 미지 op→기본 폴백 관용 보존. 각 라이브 스모크 통과.
 2. **Tier 2/3 상위 결정**(§7): tool_executor `_execute_legacy_tool`·REST 직접호출 경로를 IBL로 수렴할지.
 3. **3층 이름 드리프트 전체 감사**(§5 후속): 액션명 vs tool명 vs 함수명 어긋난 것 전수.
 4. (선택) 원격/폰 신문 앱, table:document newspaper 테마 제거, 도구관리 카테고리 멤버십 최종 확정.

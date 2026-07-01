@@ -38,16 +38,12 @@ def execute(tool_input: dict, context) -> str:
             return render_html_video(tool_input, output_base)
         return create_html_video(tool_input, output_base)
 
-    if tool_name == "create_html_video":
-        return create_html_video(tool_input, output_base)
-    elif tool_name == "render_html_to_image":
+    if tool_name == "render_html_to_image":
         return render_html_to_image(tool_input, output_base)
     elif tool_name == "render_document":
         return render_document(tool_input, output_base)
     elif tool_name == "structure_document":
         return structure_document(tool_input, output_base)
-    elif tool_name == "generate_ai_image":
-        return generate_ai_image(tool_input, output_base)
     elif tool_name == "generate_gemini_image":
         return generate_gemini_image(tool_input, output_base)
     elif tool_name == "critique_gemini_image":
@@ -56,8 +52,6 @@ def execute(tool_input: dict, context) -> str:
         return read_gemini_image(tool_input, output_base)
     elif tool_name == "create_tts":
         return create_tts(tool_input, output_base)
-    elif tool_name == "render_html_video":
-        return render_html_video(tool_input, output_base)
     elif tool_name == "create_shadcn_slides":
         # shadcn 스타일 슬라이드 생성 (별도 모듈)
         import importlib.util

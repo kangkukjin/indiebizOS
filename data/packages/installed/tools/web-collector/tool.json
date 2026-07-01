@@ -5,30 +5,6 @@
   "version": "2.0.0",
   "tools": [
     {
-      "name": "wc_save",
-      "description": "AI가 browser-action으로 수집한 데이터를 DB에 저장합니다.\n\n사용 흐름:\n1. wc_sites(action='info')로 사이트 가이드 확인 (필드 정의, key_field)\n2. browser-action 도구로 사이트 탐색하여 데이터 수집\n3. 가이드의 fields 정의에 맞게 데이터를 구조화\n4. wc_save로 DB에 저장 (key_field 기준 중복 자동 제거)\n\n반환: {success, site_id, new, updated, total}",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "site_id": {
-            "type": "string",
-            "description": "사이트 ID (wc_sites에 등록된 ID)"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object"
-            },
-            "description": "저장할 데이터 목록. 각 dict는 SITE_CONFIG.fields에 정의된 필드를 포함해야 하며, key_field 값은 필수."
-          }
-        },
-        "required": [
-          "site_id",
-          "items"
-        ]
-      }
-    },
-    {
       "name": "collect_op",
       "description": "웹 데이터 수집 (op 분기) — [sense:collect]. 실시간 웹 검색은 search_ddg.\n- op=run(기본): source(프로필 ID 또는 URL) 크롤링. URL이면 selectors/max_items, 없으면 프로필 목록.\n- op=sites: 사이트 프로필 CRUD. action(list 기본/register/delete)+site_id+guide_code.\n- op=query: 축적 데이터 검색. action(search 기본/stats/recent/detail/delete)+query/site_id/item_id/limit.",
       "input_schema": {

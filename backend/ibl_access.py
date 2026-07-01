@@ -17,6 +17,7 @@ ibl_access.py - IBL Node Access Control & Environment Builder
 """
 
 import os
+import json
 import yaml
 import logging
 from pathlib import Path
@@ -90,27 +91,35 @@ def get_denied_message(node: str, allowed: Set[str]) -> dict:
 
 # ============ 환경 프롬프트 생성 ============
 
-def _emit_action_xml(action_name: str, action_config, indent: str = "") -> str:
+def _emit_action_xml(node_name: str, action_name: str, action_config, indent: str = "") -> str:
     """단일 액션을 XML 문자열로 직렬화.
 
     ops 블록이 있으면 자식 <op> 요소로 펼친다 — 실행 에이전트가 op 선택 시
     description의 자연어가 아닌 구조화된 정보를 보도록.
 
     2026-05-28: ops 블록 도입과 함께 추가. 비용은 24 op 사용 액션에 한정.
+    2026-07-01 (Phase 4): dormant 표시 추가 — 키가 없어 못 쓰는 패키지 소유 액션은
+    카탈로그에서 지우지 않고 dormant="키이름..." 속성으로 노출한다(SIM 슬롯 비유).
+    지워버리면 에이전트가 "그런 능력 자체가 없다"고 오판해 재발견을 못 하고, 반대로
+    조용히 실행 실패만 하면 헛수고를 반복한다 — dormant 표시가 둘 다 피한다.
     """
+    dormant = _dormant_reason(node_name, action_name)
+
     if not isinstance(action_config, dict):
-        return f'{indent}<action name="{action_name}"/>'
+        attrs = f' dormant="{dormant}"' if dormant else ""
+        return f'{indent}<action name="{action_name}"{attrs}/>'
 
     desc = action_config.get("description", "")
     ops = action_config.get("ops")
+    dormant_attr = f' dormant="{dormant}"' if dormant else ""
 
     if not isinstance(ops, dict) or not ops.get("values"):
-        return f'{indent}<action name="{action_name}" description="{desc}"/>'
+        return f'{indent}<action name="{action_name}" description="{desc}"{dormant_attr}/>'
 
     # ops 펼치기
     values = ops.get("values") or {}
     default = ops.get("default")
-    lines = [f'{indent}<action name="{action_name}" description="{desc}">']
+    lines = [f'{indent}<action name="{action_name}" description="{desc}"{dormant_attr}>']
     for op_name, op_desc in values.items():
         attrs = f'name="{op_name}"'
         if op_name == default:
@@ -213,13 +222,13 @@ def build_environment(
             for grp_name, grp_actions in grouped.items():
                 parts.append(f'<group name="{grp_name}">')
                 for action_name, action_config in grp_actions:
-                    parts.append(_emit_action_xml(action_name, action_config, indent="  "))
+                    parts.append(_emit_action_xml(node_name, action_name, action_config, indent="  "))
                 parts.append("</group>")
 
         if ungrouped:
             parts.append("<actions>")
             for action_name, action_config in ungrouped:
-                parts.append(_emit_action_xml(action_name, action_config, indent="  "))
+                parts.append(_emit_action_xml(node_name, action_name, action_config, indent="  "))
             parts.append("</actions>")
 
         parts.append("</node>")
@@ -315,17 +324,59 @@ def build_environment(
 
 _node_groups_cache = None
 _nodes_data_cache = None
+_package_meta_cache = None
 
 
 def invalidate_nodes_cache():
-    """ibl_nodes.yaml 재빌드 후 노드/그룹 캐시를 비운다.
+    """ibl_nodes.yaml 재빌드 후 노드/그룹/능력메타 캐시를 비운다.
 
     액션 추가·제거·op 변경(build_ibl_nodes.py 결과)을 backend 재시작 없이 반영하기 위해
     /packages/reload 경로에서 호출된다.
     """
-    global _nodes_data_cache, _node_groups_cache
+    global _nodes_data_cache, _node_groups_cache, _package_meta_cache
     _nodes_data_cache = None
     _node_groups_cache = None
+    _package_meta_cache = None
+
+
+def _load_package_meta() -> dict:
+    """data/package_meta.json 로드 (캐시) — Phase 4, needs_key/weight/locale + action_owner.
+
+    파일이 없거나 파싱 실패하면 빈 dict(관용 — 활성 필터가 통째로 죽지 않고 그냥
+    전부-노출로 안전 착지, 부재-패키지 관용과 같은 철학).
+    """
+    global _package_meta_cache
+    if _package_meta_cache is not None:
+        return _package_meta_cache
+    path = _get_base_path() / "data" / "package_meta.json"
+    if not path.is_file():
+        _package_meta_cache = {}
+        return _package_meta_cache
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f) or {}
+        _package_meta_cache = data
+    except Exception:
+        _package_meta_cache = {}
+    return _package_meta_cache
+
+
+def _dormant_reason(node_name: str, action_name: str) -> Optional[str]:
+    """이 액션이 dormant(설치는 됐지만 키가 없어 못 씀)인지 판정.
+
+    Returns: dormant면 사람이 읽을 사유 문자열(누락 env var 나열), 아니면 None.
+    부재-패키지 관용과 같은 결 — 액션을 카탈로그에서 지우지 않고 *왜 못 쓰는지*를
+    보여준다(SIM 슬롯 비유, 임시방편 아님. docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md Phase 4).
+    """
+    meta = _load_package_meta()
+    owner = meta.get("action_owner", {}).get(f"{node_name}:{action_name}")
+    if not owner:
+        return None
+    needs_key = meta.get("packages", {}).get(owner, {}).get("needs_key") or []
+    missing = [k for k in needs_key if not os.environ.get(k)]
+    if not missing:
+        return None
+    return f"{owner} 패키지에 필요한 키 없음: {', '.join(missing)}"
 
 
 def _load_peer_agents(project_path: Optional[str], agent_id: Optional[str]) -> List[Dict]:

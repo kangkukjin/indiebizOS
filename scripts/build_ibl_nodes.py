@@ -1516,10 +1516,16 @@ def _load_auth_registry(root: Path) -> dict:
 
 
 def derive_package_meta(root: Path) -> dict:
-    """설치된 각 패키지의 needs_key/weight/locale을 .py 코드 스캔으로 자동 도출.
+    """설치된 각 패키지의 needs_key/weight/locale을 .py 코드 스캔으로 자동 도출 +
+    action_owner(어느 액션이 어느 패키지 소유인지)까지 함께 산출 — 런타임(ibl_access.py)이
+    "이 액션은 needs_key가 있는데 env var가 없다"를 판정하려면 qualifier→패키지 역참조가
+    필요한데, 그 원천은 collect_package_fragments가 이미 갖고 있어 재사용한다(중복 스캔 방지 X,
+    fragment 자체는 작아서 재파싱 비용은 무시 가능 — 대신 단일 진실 소스 유지가 이득).
 
-    반환: {pkg_name: {needs_key: [env_var,...], weight: light|heavy, locale: kr|universal}}
-    (알파벳순 정렬, 결정적 — 재실행해도 같은 입력에 같은 출력).
+    반환: {
+      "packages": {pkg_name: {needs_key: [env_var,...], weight: light|heavy, locale: kr|universal}},
+      "action_owner": {"node:action": pkg_name, ...},
+    } (양쪽 다 알파벳순 정렬, 결정적).
     """
     registry = _load_auth_registry(root)
     # KR-locked env var 전체 집합 = 직접 확정분 ∪ KR 서비스가 요구하는 env var들.
@@ -1569,7 +1575,22 @@ def derive_package_meta(root: Path) -> dict:
                 "weight": "heavy" if heavy else "light",
                 "locale": "kr" if kr_hit else "universal",
             }
-    return dict(sorted(result.items()))
+
+    action_owner: dict[str, str] = {}
+    try:
+        import yaml as _yaml_for_meta
+    except ImportError:
+        _yaml_for_meta = None
+    if _yaml_for_meta is not None:
+        fragments, _frag_issues = collect_package_fragments(root, _yaml_for_meta)
+        for pkg_name, node, actions in fragments:
+            for aname in actions:
+                action_owner[f"{node}:{aname}"] = pkg_name
+
+    return {
+        "packages": dict(sorted(result.items())),
+        "action_owner": dict(sorted(action_owner.items())),
+    }
 
 
 def merge_fragments(data: dict, fragments: list) -> list:

@@ -288,3 +288,6 @@ data/diagnostic_report.md
 # --- 에디터/프리뷰 로컬 설정 · 옛 프롬프트 보관 ---
 frontend/.claude/
 data/common_prompts/OLD/
+
+# apply_edition.py 파킹 마커 (로컬 런타임 상태)
+**/.edition_parked

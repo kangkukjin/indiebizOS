@@ -2,7 +2,17 @@
 
 > 이 문서만 읽으면 대화 맥락 없이 이어갈 수 있게 쓴다.
 > 전략 개요는 `docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md`, 배경은 기억 `project_capability_self_containment`.
-> 최종 갱신: 2026-07-01 (Phase 4 완료 — 런타임 활성 필터까지. origin/main `140cb9c`).
+> 최종 갱신: 2026-07-01 (**Phase 5 완료 — 계획 6단계 전부 끝. 이제 이 계획은 종결**).
+
+## ★ Phase 5 완료 (2026-07-01) — 표준 에디션 & 설치 선택
+- **무엇**: 설치 시 에디션(standard=keyless∧light / full=전부) + 로케일(universal/kr/all)로 도구 팩을 installed↔not_installed 분할. 새 매니페스트 없이 `data/package_meta.json` 세 축을 그대로 필터.
+- **구현**: `scripts/apply_edition.py`(결정적·재실행가능 — `--list`/`--dry-run`/`--edition`/`--locale`, env `INDIEBIZ_EDITION`·`INDIEBIZ_LOCALE`). `scripts/build_ibl_nodes.py` `derive_package_meta`에 `package_dirs` 인자 추가(not_installed 팩 메타도 도출 — 단일 진실 소스 재사용). `installer/bootstrap.md` step 3 신설(에디션/로케일 질문→apply_edition 실행)+이후 재번호. `installer/seed.py` env knob 문서화. `.gitignore`에 `**/.edition_parked`.
+- **핵심 설계 결정 — 파킹 마커**: apply_edition이 내보낸 팩엔 `.edition_parked` 마커. 재실행으로 넓은 에디션 고르면 *마커 있는*(우리가 내보낸) 팩만 복귀. **출하 시점 not_installed 큐레이션(house-designer·publishing)은 마커 없어 부활 안 함** — "keyless∧light라서 표준에 포함" 필터가 의도적 제외를 덮어쓰는 걸 방지. extensions(백엔드 코어)·_PROTECTED(ibl-core·system_essentials)는 원천 제외.
+- **3-상태는 이미 있었음**: available(not_installed=`[self:package]{op:list}` available)/dormant(Phase 4-②)/live. apply_edition은 available↔installed 분할만.
+- **왕복 검증**(F2급): standard/universal 적용(도구 38→18, 액션 143→87, --check 초록·부재관용) → full/kr 원복(도구 38·액션 143·`ibl_nodes.yaml` md5 **바이트 동일**·마커 0·git status 무잔여). 완전 가역.
+- **부수 발견·수정**: Phase 3 cctv 이관이 `cctv_common.py`(handler/capture/kakao/topis가 import)·`enrich_kakao_coords.py`를 **커밋 누락** → clone 시 cctv 붕괴. 커밋 `31501c7`로 추적.
+
+**아래는 Phase 0~4 이력(참고용, 재작업 불필요).**
 
 ---
 

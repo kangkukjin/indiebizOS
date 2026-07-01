@@ -72,10 +72,11 @@
 - [x] **needs_key/weight/locale 자동 도출**(2026-07-01, 커밋 `39318e9`) — `ibl_actions.yaml`에 손수 부여하는 대신 `scripts/build_ibl_nodes.py`의 `derive_package_meta()`가 각 패키지 `.py` 코드를 직접 스캔해 산출(단일 진실 소스=코드). needs_key=`os.environ.get/getenv/get_api_key` 리터럴+`check_api_key(서비스)`를 `auth_manager._AUTH_REGISTRY`에 역참조. weight=무거운 의존성(playwright/moviepy/cv2/torch/whisper/selenium/pyautogui/edge_tts/remotion) import 여부로 light/heavy. locale=needs_key가 한국 공식/상용 API에 걸리면 kr, 아니면 universal. 결과=`data/package_meta.json`(phone_manifest.json과 동일 패턴, `--check`가 정합 검증). `tier`는 아직 없음(용도 불명확 — 표준 프리셋은 keyless∧universal∧light 세 축만으로 Phase 5에서 충분히 정의 가능해 보류).
 - [x] **런타임 활성 필터**(2026-07-01, 커밋 `a48d21e`) — `backend/ibl_access.py`에 `_load_package_meta`+`_dormant_reason` 추가, `_emit_action_xml`이 카탈로그 XML에 `dormant="누락 env var..."` 속성을 얹는다(액션을 지우지 않음 — SIM 슬롯 비유, 임시방편 아님). 라이브 종단검증(실제 .env 로드 상태에서 정상 + 키 하나 제거해 dormant 속성 정확히 나타남 확인). 하드웨어(`runs_on`)·에디션 필터는 이 조각의 범위 밖(runs_on은 phone_manifest.json 경로에서 이미 별도 처리 중, 에디션은 Phase 5).
 
-### Phase 5 — 표준 에디션 & 설치 선택
-- [ ] 에디션 매니페스트: **표준 = keyless ∧ universal ∧ light** 기본 패키지 집합.
-- [ ] 3-상태: available(카탈로그만) / installed-dormant(코드 있음, 키 대기) / live.
-- [ ] seed/installer(이미 만든 install.sh·seed.py·bootstrap.md)에 **에디션 + 로케일 선택** 연결 → 관련 팩만 설치. 로케일-무관은 *설치조차 안 함*(카탈로그엔 있어 on-demand 제안).
+### Phase 5 — 표준 에디션 & 설치 선택 ✅ 완료(2026-07-01)
+- [x] 에디션 필터(새 매니페스트 아님 — package_meta.json 세 축을 그대로 필터): **standard = keyless ∧ light**, **full = 전부**. 로케일은 직교 축(universal/kr/all). "표준 = keyless ∧ universal ∧ light"는 standard+universal 교집합 = 기본 프리셋. 구현=`scripts/apply_edition.py`(결정적·재실행가능, `--list`/`--dry-run`/env `INDIEBIZ_EDITION`·`INDIEBIZ_LOCALE`). `derive_package_meta`에 `package_dirs` 인자 추가해 not_installed 팩 메타까지 도출(단일 진실 소스 재사용).
+- [x] 3-상태: available(not_installed — `[self:package]{op:list}` available + on-demand) / installed-dormant(Phase 4-② dormant 속성) / live. **이미 Phase 2+4로 구현됨** — apply_edition은 available↔installed 분할만 결정.
+- [x] seed/installer 연결: bootstrap.md 새 step 3(에디션+로케일 질문 → apply_edition 실행) + 이후 단계 재번호, seed.py env knob 문서화. 탈락 팩은 not_installed 로 이동(삭제 아님). **파킹 마커(`.edition_parked`)**로 "우리가 내보낸" 팩만 되돌려 출하 not_installed 큐레이션(house-designer·publishing) 보존. extensions·_PROTECTED(ibl-core·system_essentials) 절대 불변.
+- **왕복 검증**: standard 적용(38→18 도구, 143→87 액션, --check 초록) → full/kr 원복(38 도구·143 액션·ibl_nodes.yaml md5 바이트 동일·마커 0·git 무잔여). 완전 가역·결정적.
 
 ## 5. 불변식 & 리스크
 

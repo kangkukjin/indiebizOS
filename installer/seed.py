@@ -21,6 +21,8 @@ Env knobs:
   INDIEBIZ_PROVIDER  anthropic | openai | google  (else inferred from key)
   INDIEBIZ_MODEL     override the model id
   INDIEBIZ_YES=1     unattended: auto-approve every command (use with care)
+  INDIEBIZ_EDITION   standard | full   (package edition; see installer/bootstrap.md step 3)
+  INDIEBIZ_LOCALE    universal | kr | all   (which regional packages to install)
 """
 
 import os

@@ -1515,12 +1515,16 @@ def _load_auth_registry(root: Path) -> dict:
             _sys.path.remove(backend_dir)
 
 
-def derive_package_meta(root: Path) -> dict:
+def derive_package_meta(root: Path, package_dirs=None) -> dict:
     """설치된 각 패키지의 needs_key/weight/locale을 .py 코드 스캔으로 자동 도출 +
     action_owner(어느 액션이 어느 패키지 소유인지)까지 함께 산출 — 런타임(ibl_access.py)이
     "이 액션은 needs_key가 있는데 env var가 없다"를 판정하려면 qualifier→패키지 역참조가
     필요한데, 그 원천은 collect_package_fragments가 이미 갖고 있어 재사용한다(중복 스캔 방지 X,
     fragment 자체는 작아서 재파싱 비용은 무시 가능 — 대신 단일 진실 소스 유지가 이득).
+
+    package_dirs: 스캔할 패키지 루트 목록(root 상대). None이면 PACKAGE_DIRS(installed).
+      apply_edition.py 가 not_installed 팩의 메타까지 필요할 때 확장 목록을 넘긴다.
+      action_owner 는 항상 installed 기준(collect_package_fragments)이라 이 인자와 무관.
 
     반환: {
       "packages": {pkg_name: {needs_key: [env_var,...], weight: light|heavy, locale: kr|universal}},
@@ -1536,7 +1540,7 @@ def derive_package_meta(root: Path) -> dict:
             kr_env_vars |= _registry_env_vars(cfg)
 
     result: dict[str, dict] = {}
-    for rel in PACKAGE_DIRS:
+    for rel in (package_dirs or PACKAGE_DIRS):
         base = root / rel
         if not base.is_dir():
             continue

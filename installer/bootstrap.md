@@ -55,7 +55,34 @@ You already have a hardware snapshot in the system prompt. Refine only if needed
   profile. If they fail to build on this machine, fall back to `lean` and
   continue — the backend must still boot without them.
 
-### 3. Wire the AI key + provider
+### 3. Choose package edition + locale
+IndieBiz ships with every tool package *installed*. Each package is a
+self-contained capability (code + its IBL vocabulary), so the install set can be
+narrowed by a single deterministic filter — you don't hand-pick packages.
+
+Ask the user two short questions (default in brackets; in unattended mode use the
+defaults or `INDIEBIZ_EDITION` / `INDIEBIZ_LOCALE`):
+- **Edition** [standard]: `standard` = only packages that need **no external API
+  key** and are **lightweight** (they just work out of the box); `full` =
+  everything, including packages that need their own service keys or heavy deps
+  (playwright, torch, moviepy, …). Standard is the right default; the user can
+  add any package later.
+- **Locale** [universal]: `universal` = region-neutral packages only; `kr` =
+  also include Korea-specific packages (real-estate, legal, KOSIS statistics,
+  culture, …). Pick `kr` only if the user is in / works with Korea.
+
+Then apply it with the venv (needs pyyaml, installed in step 2):
+```
+.venv/bin/python scripts/apply_edition.py --edition <standard|full> --locale <universal|kr|all>
+```
+Run `--list` first to show the membership, or `--dry-run` to preview moves.
+Non-selected packages are moved to `not_installed/` (they stay in the catalog as
+*available* for on-demand install — nothing is deleted). This also rebuilds the
+IBL vocabulary. Re-running with a wider edition restores the packages it parked.
+This is safe to skip entirely (everything stays installed) if the user wants all
+packages.
+
+### 4. Wire the AI key + provider
 - Read `.env.example` at the repo root. Create `.env` from it (copy), and set
   any owner/identity fields the user provides. Leave external service keys as
   their placeholders — the user adds those later as they use features.
@@ -68,17 +95,17 @@ You already have a hardware snapshot in the system prompt. Refine only if needed
   — setting the main (`system_ai`) config is enough to boot.
 - Do **not** hardcode a schema you haven't confirmed by reading the repo.
 
-### 4. Model gear (hardware profile → tiers)
+### 5. Model gear (hardware profile → tiers)
 If `data/model_gear.json` exists, read it and set a gear matching the profile
 (lean → most economical, full → max). If it doesn't exist, skip — the system
 has a default.
 
-### 5. Frontend (optional)
+### 6. Frontend (optional)
 Only if installing the desktop UI: ensure Node ≥ 18 (`node --version`); then
 `cd frontend && npm install`. This can be large and slow — tell the user it's
 optional and continue on failure (backend still works).
 
-### 6. Verify the backend boots
+### 7. Verify the backend boots
 - Start it in the background using the venv:
   `.venv/bin/python backend/api.py` (Windows: `.venv\Scripts\python.exe backend\api.py`).
 - Poll `http://localhost:8765/` (or an obvious health/docs route like `/docs`)
@@ -86,7 +113,7 @@ optional and continue on failure (backend still works).
 - Read the startup logs if it fails; fix missing deps (install them) or config
   errors and retry. Then **stop** the test process (don't leave a zombie).
 
-### 7. Finish
+### 8. Finish
 Report the profile chosen, what was installed vs skipped, and the **exact**
 command to run it:
 - macOS/Linux: `cd <repo> && ./start.sh` (backend + frontend), or

@@ -273,6 +273,7 @@ async def create_slide(lecture_id: str, req: SlideCreateRequest):
 
     handler_mod = _load_handler()
     tool_input = {
+        "op": "create",
         "lecture_id": lecture_id,
         "instruction": req.instruction,
     }
@@ -286,7 +287,7 @@ async def create_slide(lecture_id: str, req: SlideCreateRequest):
     import json as _json
     # Playwright sync API + AI 동기 호출 → 스레드풀에서 실행
     result_str = await run_in_threadpool(
-        handler_mod.execute, tool_input, _MiniCtx("slide_create")
+        handler_mod.execute, tool_input, _MiniCtx("slide_op")
     )
     result = _json.loads(result_str)
     if not result.get("success"):
@@ -511,8 +512,8 @@ async def patch_slide_spec(lecture_id: str, slide_id: str, req: SlidePatchReques
     import json as _json
     result_str = await run_in_threadpool(
         handler_mod.execute,
-        {"lecture_id": lecture_id, "slide_id": slide_id, "patch": req.patch},
-        _MiniCtx("slide_patch_spec"),
+        {"op": "patch", "lecture_id": lecture_id, "slide_id": slide_id, "patch": req.patch},
+        _MiniCtx("slide_op"),
     )
     result = _json.loads(result_str)
     if not result.get("success"):
@@ -553,8 +554,8 @@ async def rerender_slide(lecture_id: str, slide_id: str):
     import json as _json
     result_str = await run_in_threadpool(
         handler_mod.execute,
-        {"lecture_id": lecture_id, "slide_id": slide_id},
-        _MiniCtx("slide_rerender"),
+        {"op": "rerender", "lecture_id": lecture_id, "slide_id": slide_id},
+        _MiniCtx("slide_op"),
     )
     result = _json.loads(result_str)
     if not result.get("success"):
@@ -584,11 +585,11 @@ async def image_edit_slide(lecture_id: str, slide_id: str, req: SlideImageEditRe
 
     handler_mod = _load_handler()
     import json as _json
-    edit_input = {"lecture_id": lecture_id, "slide_id": slide_id, "instruction": req.instruction}
+    edit_input = {"op": "image_edit", "lecture_id": lecture_id, "slide_id": slide_id, "instruction": req.instruction}
     if req.image_quality:
         edit_input["image_quality"] = req.image_quality
     result_str = await run_in_threadpool(
-        handler_mod.execute, edit_input, _MiniCtx("slide_image_edit"),
+        handler_mod.execute, edit_input, _MiniCtx("slide_op"),
     )
     result = _json.loads(result_str)
     if not result.get("success"):
@@ -609,7 +610,7 @@ async def edit_slide(lecture_id: str, slide_id: str, req: SlideEditRequest):
 
     handler_mod = _load_handler()
     import json as _json
-    edit_input = {"lecture_id": lecture_id, "slide_id": slide_id, "instruction": req.instruction}
+    edit_input = {"op": "edit", "lecture_id": lecture_id, "slide_id": slide_id, "instruction": req.instruction}
     if req.layout:
         edit_input["layout"] = req.layout
     if req.image_quality:
@@ -617,7 +618,7 @@ async def edit_slide(lecture_id: str, slide_id: str, req: SlideEditRequest):
     result_str = await run_in_threadpool(
         handler_mod.execute,
         edit_input,
-        _MiniCtx("slide_edit"),
+        _MiniCtx("slide_op"),
     )
     result = _json.loads(result_str)
     if not result.get("success"):

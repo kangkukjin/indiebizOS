@@ -104,7 +104,10 @@ def execute(tool_input: dict, context) -> str:
     _apply_roots(context)
 
     try:
-        # 통합 도구 (op 분기) — IBL 어휘에 노출되는 4개
+        # 통합 도구 (op 분기) — IBL 어휘에 노출되는 4개. REST(api_lecture_workspace.py)도
+        # 2026-07-02부터 이 정본 이름(slide_op 등 + op)으로만 호출 → 옛 내부 tool명 직접
+        # 분기(slide_create·lecture_list 등)는 전부 사망해 제거. 내부 _slide_*/_lecture_* 함수는
+        # 각 _dispatch_*_op 가 op로 호출.
         if tool_name == "lecture_op":
             return _dispatch_lecture_op(tool_input)
         elif tool_name == "slide_op":
@@ -113,37 +116,6 @@ def execute(tool_input: dict, context) -> str:
             return _dispatch_material_op(tool_input)
         elif tool_name == "deck_op":
             return _dispatch_deck_op(tool_input)
-        # 옛 도구 이름 (직접 호출 호환 유지)
-        elif tool_name == "lecture_list":
-            return _lecture_list(tool_input)
-        elif tool_name == "lecture_create":
-            return _lecture_create(tool_input)
-        elif tool_name == "lecture_load":
-            return _lecture_load(tool_input)
-        elif tool_name == "lecture_delete":
-            return _lecture_delete(tool_input)
-        elif tool_name == "lecture_open":
-            return _lecture_open(tool_input)
-        elif tool_name == "deck_reorder":
-            return _deck_reorder(tool_input)
-        elif tool_name == "slide_delete":
-            return _slide_delete(tool_input)
-        elif tool_name == "material_add":
-            return _material_add(tool_input)
-        elif tool_name == "material_remove":
-            return _material_remove(tool_input)
-        elif tool_name == "slide_create":
-            return _slide_create(tool_input)
-        elif tool_name == "slide_edit":
-            return _slide_edit(tool_input)
-        elif tool_name == "slide_image_edit":
-            return _slide_image_edit(tool_input)
-        elif tool_name == "slide_rerender":
-            return _slide_rerender(tool_input)
-        elif tool_name == "slide_patch_spec":
-            return _slide_patch_spec(tool_input)
-        elif tool_name == "deck_export":
-            return _deck_export(tool_input)
         else:
             return _err(f"알 수 없는 도구: {tool_name}")
     except FileNotFoundError as e:

@@ -1,0 +1,98 @@
+node: engines
+actions:
+  web_site:
+    returns: effect
+    runs_on: mac_only
+    description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
+    target_description: 'op로 분기 (기본 list).
+
+      - list: 파라미터 없음. 등록된 사이트 전체 반환.
+
+      - register: name(필수) + local_path(필수) + repo_url/deploy_url/description(선택).
+
+      - remove: site_id(필수).
+
+      - update: site_id(필수) + 변경할 필드(name/local_path/repo_url/deploy_url/description).
+
+      '
+    group: web_builder
+    router: handler
+    tool: web_site
+    implementation: web-builder 패키지의 sites.json 레지스트리 CRUD. 빈번하지 않은 어드민이라 가이드 web_builder.md 참조 권장.
+    keywords:
+    - 사이트
+    - 웹사이트목록
+    - 사이트등록
+    - 사이트삭제
+    - 사이트수정
+  web:
+    returns: effect
+    runs_on: mac_only
+    description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
+    target_description: 'op로 분기 (기본 preview).
+
+      - create: target=site(name + template:blank/landing/portfolio/blog/business + features) 또는 page(project_path + page_name + sections[] + metadata).
+
+      - build: 현재 프로젝트 프로덕션 빌드 (Next.js .next/).
+
+      - deploy: Vercel 배포. project_name/production 옵션.
+
+      - preview: 로컬 미리보기 서버. project_path + action(start/stop/status).
+
+      - snapshot: site_id 스크린샷 캡처.
+
+      - check: site_id Lighthouse 품질검사 (성능·접근성·SEO).
+
+      - styles: shadcn 테마 편집. project_path + theme(프리셋) 또는 custom_colors(HSL) + border_radius.
+
+      '
+    target_key: op
+    group: web_builder
+    router: handler
+    tool: web_op
+    ops:
+      default: preview
+      values:
+        create: 웹 프로젝트/페이지 생성 (target site|page)
+        build: 프로덕션 빌드 (Next.js)
+        deploy: Vercel 배포
+        preview: 로컬 미리보기 서버 (start/stop/status, 기본)
+        snapshot: 사이트 스크린샷 캡처
+        check: Lighthouse 품질 검사 (성능·접근성·SEO)
+        styles: shadcn 테마/색상/반경 구조화 편집 (globals.css)
+    implementation: web-builder 패키지 op 분기. create=create_project|create_page(target), build=build_site, deploy=deploy_vercel, preview=preview_site, snapshot=site_snapshot, check=site_live_check, styles=edit_styles. 가이드 web_builder.md.
+    keywords:
+    - 웹사이트
+    - 빌드
+    - 배포
+    - 미리보기
+    - vercel
+  web_component:
+    returns: effect
+    runs_on: mac_only
+    description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).
+    target_description: 'op로 분기 (기본 fetch).
+
+      - catalog: kind=components(button/card/dialog 등) 또는 sections(hero/features/cta 등). category 옵션.
+
+      - fetch: component(이름 또는 URL, 필수) + style + project_path + output_format(code/file).
+
+      - add: component(필수, 예 button/card) + project_path. shadcn/ui CLI로 설치.
+
+      '
+    target_key: op
+    group: web_builder
+    router: handler
+    tool: web_component_op
+    ops:
+      default: fetch
+      values:
+        catalog: 컴포넌트/섹션 카탈로그 조회 (kind)
+        fetch: 외부 CDN/레지스트리에서 컴포넌트 다운로드 (기본)
+        add: shadcn/ui CLI로 프로젝트에 컴포넌트 설치
+    implementation: catalog=list_components|list_sections(kind), fetch=fetch_component, add=add_component.
+    keywords:
+    - 컴포넌트
+    - 카탈로그
+    - shadcn
+    - UI

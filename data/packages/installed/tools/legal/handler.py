@@ -3,7 +3,7 @@
 
 Phase 0 마이그레이션: common 유틸리티 사용
 레코드 통화: 목록 검색(lawSearch.do)의 raw JSON 을 파싱해 records[{title,meta,summary,url}] 로 매핑.
-  → [sense:legal] >> [engines:document] / >> [engines:spreadsheet] 자동 흐름.
+  → [sense:legal] >> [table:document] / >> [table:spreadsheet] 자동 흐름.
   비파괴: message 에 원래 raw 문자열 유지(파싱 실패 시 records 생략, 기존 동작 그대로).
 """
 import sys

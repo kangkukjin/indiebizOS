@@ -51,8 +51,9 @@ ACTION_PARAM_ALIASES: Dict[str, Dict[str, list]] = {
     "limbs:radio_favorite": {"stream_url": ["url"], "name": ["title"]},
     "limbs:show_map": {"query": ["location"]},
     # (은퇴 2026-06-04) limbs:iframe name:[id] 별칭 — switch가 id를 HTML id 속성으로 직접 처리(name 폴백 포함).
+    # === table ===
+    "table:chart": {"chart_type": ["type"]},
     # === engines ===
-    "engines:chart": {"chart_type": ["type"]},
     "engines:image_gemini": {"output_path": ["filename"]},
     # === others ===
     "others:messages": {"neighbor_id": ["contact", "name", "id"]},

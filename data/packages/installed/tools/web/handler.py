@@ -343,7 +343,7 @@ def generate_newspaper(keywords: list, title: str = "IndieBiz Daily",
                  if language == "ko"
                  else f"Date: {date_str} | Publisher: IndieBiz AI | Source: {src_label} | {total_news} articles")
 
-    # 문서 IR 반환 — `>> [engines:document]{theme:newspaper}`로 html/pdf/docx 등 렌더.
+    # 문서 IR 반환 — `>> [table:document]{theme:newspaper}`로 html/pdf/docx 등 렌더.
     return {
         'success': True,
         'message': f'신문 IR 생성 완료 ({len(sections)}섹션 · {total_news}개 기사). >> document로 렌더.',

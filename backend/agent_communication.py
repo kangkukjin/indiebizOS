@@ -489,27 +489,11 @@ class AgentCommunicationMixin:
                 else:
                     self._log("call_agent 호출됨 - 위임 결과 대기")
 
-                # 경험 증류: 해마 점수가 낮은 성공 세션에서 새로운 패턴 학습
-                _tool_calls = get_tool_calls()
-                if response and _tool_calls:
-                    try:
-                        from ibl_usage_rag import distill_experience, record_recall_outcome
-                        distill_experience(content, _tool_calls, _hippocampus_score)
-                        # 해마 피드백: Reflex 경로 top-1 실행 결과를 성공률에 반영
-                        record_recall_outcome(_top_code, _hippocampus_score, _tool_calls)
-                    except Exception as distill_err:
-                        self._log(f"[경험증류] 오류 (무시): {distill_err}")
-
-                # 심층 메모리 증류: 대화에서 기억할 정보 자동 저장
-                if response:
-                    try:
-                        self._distill_deep_memory(content, response)
-                    except Exception as mem_err:
-                        self._log(f"[심층메모리] 오류 (무시): {mem_err}")
-                    try:
-                        self._distill_forage_memory(content, response)
-                    except Exception as fmem_err:
-                        self._log(f"[포식기억] 오류 (무시): {fmem_err}")
+                # 턴 종료 메모리 쓰기(경험+심층+포식) — 초크포인트 한 곳(agent_cognitive._after_response)
+                self._after_response(
+                    content, response,
+                    tool_calls=get_tool_calls(), hippo_score=_hippocampus_score, top_code=_top_code,
+                )
 
             # 컨텍스트 정리
             clear_current_task_id()

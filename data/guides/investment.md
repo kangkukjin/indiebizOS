@@ -111,7 +111,7 @@
 **시세 조회 → 차트**
 ```
 [sense:stock]{op: "history", ticker: "AAPL", start_date: "2026-03-01"}
-  >> [engines:chart]{title: "AAPL", chart_type: "line"}
+  >> [table:chart]{title: "AAPL", chart_type: "line"}
 ```
 주가/재무 데이터가 클 때 `file_path`+`sample`이 반환된다. 차트는 `data_file`에 file_path를 넘기거나, `prices` 배열을 `data`로 변환(`[{"x": p["date"], "y": p["close"]}]`)해 넘긴다.
 

@@ -1534,3 +1534,13 @@
 [2026-06-29 09:00:00] APP_PRIMITIVES: 앱 모드 인터랙티브 렌더 프리미티브 종결 (액션 142 불변=렌더링 레이어). app: 블록 view 어휘 확장 — ①데스크탑 `map`(leaflet, 원격 initMaps 동치) 신설(이전엔 데스크탑서 type:map 미렌더). ②`on:` 뷰-이벤트 문법(상호작용을 데이터로): map 의 moveend→재조회($lat/$lng/$radius), marker_click→IBL 액션($id/$name/$lat/$lng/$url) 또는 `{stream:true}`→마커 url HLS 영상 오버레이(CCTV). ③결과-필드 동적 필터 `filter:{from_field}` — 결과 items 의 distinct 값으로 칩 + 클라이언트 측 거르기(재조회 없음, 지도 마커·목록 동시). 3-동기(build_ibl_nodes.py 체커 + GenericInstrument.tsx + api_launcher_web.py). bespoke CommercialInstrument(268L) 은퇴→선언형 흡수(filter.from_field + item_click restaurant 드릴 + ActionDesktop manifest 주입). directions 은퇴=보류(route+별도CCTV 동시오버레이=apparatus/패키지결합 부당, 2번째 소비자 시 재개)·lightbox=불요(image_grid 이미 openMediaFromEl 풀스크린). 함정: YAML `on:`=불리언 회피('on': 따옴표)·데스크탑 readyRef(StrictMode)·원격 칩 data-c+getAttribute·원격 setCatFilter _mapKeepView 캡처. 검증: build --check 142 GREEN·원격 라이브(commercial 강남 6385 동적칩·restaurant 드릴·CCTV 마커→실스트림 cctvsec.ktict.co.kr).
 [2026-06-29 09:30:00] BUGFIX: ①원격 동적필터 활성 시 카드 item_click 드릴이 필터된 ri 를 원본 src.data 로 인덱싱→엉뚱한 가게 드릴(한식 필터 후 돈가네→진흥공조). 수정=rowDrill 이 `SPLIT?src.data:applyCatFilter(CUR.mode,src.data)` 후 인덱싱(api_launcher_web.py). 라이브 클릭스루로 발견(단위테스트 미커버). 데스크탑은 구조적 무버그(onDrill 이 항목 객체 전달). ②tsc 베이스라인 에러 3개 수정(프로젝트 tsc 가 원래 클린 아니었음, 동작보존): DirectionsInstrument RouteMapData.summary fare? 옵셔널 / GenericInstrument 977 (mode as {modes?}) 구조캐스트 / 928 extra:Record<string,string>. + MapPrim ref 동기화를 렌더-중-쓰기→useEffect(react-hooks/refs 클린). tsc 0 errors.
 [2026-06-29 10:00:00] ARCH: 단일 통화(items) 마무리 — records producer=0 종합확인(backend·tools 전수 스캔). channel_engine feed/board 는 이미 items(stale ⏳ 노트 정정). data-ops _emit_records 호출 3곳(union/dedup/join) base envelope `{"records":[]}`→`{}` 교체로 출력의 vestigial 빈 records:[] 키 제거(마지막 records 출력 흔적). 잔여 records-aware 2곳=방어적(classify_currency 관용·data-ops 입력 수용)·제거 대상 아님. 라이브 검증(filter 한식152/dedup 카테고리72/merge 두입력1206 전부 출력 키에 records 없음).
+[2026-06-30 22:20:00] IBL_NODE_SPLIT: engines → table 노드 분리 (노드 5→6)
+  - engines에 섞여 있던 표·통화 변환 문법 13개를 신규 table 노드로 이관:
+    관계대수 9(filter/sort/take/select/dedup/groupby/join/union/merge) + emitter 4(chart/spreadsheet/document/structure)
+  - engines = 순수 미디어 생성만 잔존(newspaper/slide/slide_shadcn/image_gemini/html_video/remotion/tts/render_html/web/web_site/web_component/image_critic/image_read)
+  - 불변식: tool 매핑 그대로(table:filter→data_filter), 핸들러·패키지 무변경. 노드/액션 이름만 이동
+  - 동기: (1) 의미 분리(생성 vs 변환) (2) 노드 on/off 시 무거운 engines를 꺼도 가벼운 문법(table) 생존
+  - ibl_access._ALWAYS_ALLOWED에 table 추가(문법 항상-on)
+  - build --check 삼각 통과(6 노드 142 액션 불변, engines 13/table 13)
+  - 해마: 코퍼스 마이그레이션(DB 133행+학습 JSON 130필드) → rebuild_index 2631 재임베딩 → fine-tune 재학습
+  - 좀비어휘 일소: ibl_parser desugar/ibl_routing/health_check/12_ibl_only.md/패키지 23파일 (이동 13액션만, 별칭 0)

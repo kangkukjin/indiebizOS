@@ -111,9 +111,9 @@ Chain multiple steps with operators:
 
 → 핵심 패턴: **[검색/조회] → [변환자 체인] → [산출물]**
 ```
-[sense:realty]{region: "강남구"} >> [engines:filter]{where: "전세"} >> [engines:sort]{by: "price"} >> [engines:take]{n: 5} >> [engines:document]{}
+[sense:realty]{region: "강남구"} >> [table:filter]{where: "전세"} >> [table:sort]{by: "price"} >> [table:take]{n: 5} >> [table:document]{}
 # 두 소스를 묶기(이항):
-[sense:stock]{op: "history", symbol: "005930"} & [sense:world_bank]{country: "KR"} >> [engines:join]{on: "연도"} >> [engines:chart]{}
+[sense:stock]{op: "history", symbol: "005930"} & [sense:world_bank]{country: "KR"} >> [table:join]{on: "연도"} >> [table:chart]{}
 ```
 정렬·필터·상위N·중복제거가 필요하면 Python을 짜지 말고 이 변환자로 조합한다 — 데이터를 가공하는 일은 거의 다 이 어휘로 표현된다.
 
@@ -143,7 +143,7 @@ execute_ibl(code='[self:discover]{query: "stock prices"}')
 1. **IBL 우선**: 파일 읽기/쓰기/검색/편집은 우선적으로 IBL 액션(`[self:read]`, `[self:write]`, `[self:file_find]`, `[self:edit]`, `[self:grep]`)으로 한다. IBL 액션이 실패하면 파라미터를 바꿔 재시도하라. Python/Node.js/Shell은 IBL에 해당 액션이 없거나, 복합 처리(읽기+파싱+변환을 한 번에)가 필요할 때 사용한다.
 3. IBL 코드는 `execute_ibl`의 `code` 파라미터에 넣어 실행
 4. 어떤 액션이 있는지 모르겠으면 `[self:discover]` 사용
-5. `>>` 순차, `&` 병렬, `??` 폴백 (목록·표 가공은 `>> [engines:filter/sort/take/select/dedup/groupby]{...}` 로 잇는다)
+5. `>>` 순차, `&` 병렬, `??` 폴백 (목록·표 가공은 `>> [table:filter/sort/take/select/dedup/groupby]{...}` 로 잇는다)
 6. 모든 파라미터는 `{key: "value"}` 형태
 
 ## Goal / Time / Condition — 목적 기반 실행

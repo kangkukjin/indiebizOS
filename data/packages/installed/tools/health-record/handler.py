@@ -358,7 +358,7 @@ def get_health_context(input_data: dict) -> str:
                 person_str = f"{person}의 " if person and person != "나" else ""
                 return f"{person_str}최근 {days}일간 증상 기록이 없습니다."
             text = format_symptoms(symptoms, person)
-            # 레코드 통화(비파괴) — 증상 목록 >> [engines:filter/document]. 사람용은 text(measurements 선례).
+            # 레코드 통화(비파괴) — 증상 목록 >> [table:filter/document]. 사람용은 text(measurements 선례).
             records = [{
                 "title": category_to_korean(s.get("category", "")) or s.get("category", ""),
                 "meta": " · ".join(x for x in [str(s.get("severity") or ""), s.get("started_at", "")] if x),

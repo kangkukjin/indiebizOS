@@ -24,6 +24,7 @@ import { GuideDialog } from './GuideDialog';
 import { UserManualDialog } from './UserManualDialog';
 import { ActionDesktop } from './ActionDesktop';
 import ManualMode from './ManualMode';
+import { ForageBrowser } from './ForageBrowser';
 import type {
   ContextMenuState,
   ClipboardItem,
@@ -52,6 +53,8 @@ export function Launcher() {
   //   manual(수동)        = 표현력+주권−속도 (미구현 — IBL 번역·dry-run 검수·커맨드 팔레트)
   //   app(앱)             = 속도+주권−표현력 (구 'actions', ActionDesktop)
   const [launcherTab, setLauncherTab] = useState<'autopilot' | 'manual' | 'app'>('autopilot');
+  // 포식 브라우저 — 계기판 데스크탑 위로 슬라이드 인하는 진짜 크로미움(공동 포식의 '도로').
+  const [browserOpen, setBrowserOpen] = useState(false);
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [showNewMultiChatDialog, setShowNewMultiChatDialog] = useState(false);
@@ -1043,6 +1046,8 @@ export function Launcher() {
         </div>
       </div>
 
+      {/* 탭 바 + 데스크탑 + 포식 오버레이를 한 relative 래퍼로 — 포식 브라우저가 탭 스위치까지 덮을 수 있게 */}
+      <div className="relative flex-1 flex flex-col min-h-0">
       {/* 탭 토글: 자율주행 ↔ 계기판 ↔ 앱 — 캔버스 위 전용 바. 워크스페이스 위에 떠서 아이콘과 겹치지 않도록 자기 영역을 가진다 */}
       <div className="shrink-0 flex justify-center py-2 bg-[#F5F1EB]">
         <div className="inline-flex rounded-full bg-white/85 shadow-sm border border-stone-200 p-0.5">
@@ -1216,6 +1221,22 @@ export function Launcher() {
               }}
               trashCount={trashItems.projects.length + trashItems.switches.length + (trashItems.chat_rooms?.length || 0)}
             />
+          </>
+        )}
+      </div>
+
+        {/* 포식 브라우저 — 계기판(manual) 탭 전용. 열리면 탭 스위치까지 덮어 공간을 넓게 쓴다(상단 헤더는 보존). */}
+        {launcherTab === 'manual' && (
+          <>
+            {!browserOpen && (
+              <button
+                onClick={() => setBrowserOpen(true)}
+                className="absolute bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-stone-800 text-white text-sm shadow-lg hover:bg-stone-700 transition"
+              >
+                🌐 검색 브라우저
+              </button>
+            )}
+            <ForageBrowser open={browserOpen} onClose={() => setBrowserOpen(false)} />
           </>
         )}
       </div>

@@ -489,6 +489,8 @@ def build_agent_prompt(
 def _build_system_ai_stable_prompt(
     user_profile: str = "",
     git_enabled: bool = False,
+    extra_role: str = "",
+    allowed_set=None,
 ) -> str:
     """시스템 AI 안정 프롬프트 — 매 호출마다 동일한 부분만.
 
@@ -508,7 +510,8 @@ def _build_system_ai_stable_prompt(
     parts = [prompt]
 
     from ibl_access import build_environment
-    ibl_env = build_environment(allowed_nodes=None)
+    # allowed_set 이 오면 그 노드 집합만(포식=sense+self). None이면 전체.
+    ibl_env = build_environment(allowed_nodes=None, allowed_set=allowed_set)
     if ibl_env:
         parts.append(ibl_env)
 
@@ -522,6 +525,10 @@ def _build_system_ai_stable_prompt(
 
     if role and role.strip():
         parts.append(f"# Role\n{role.strip()}")
+
+    # 포식 모드 등 표면별 추가 역할 — 실행 에이전트는 그대로 두고 역할만 덧댄다.
+    if extra_role and extra_role.strip():
+        parts.append(f"# Role (표면별 추가)\n{extra_role.strip()}")
 
     if user_profile and user_profile.strip():
         parts.append(f"# 시스템 메모\n{user_profile.strip()}")
@@ -641,6 +648,8 @@ def build_system_ai_prompt_split(
     consciousness_output: dict = None,
     model_name: str = "",
     execution_memory: str = "",
+    extra_role: str = "",
+    allowed_set=None,
 ) -> tuple:
     """시스템 AI 프롬프트를 (안정, 가변)로 분리해 반환.
 
@@ -648,10 +657,13 @@ def build_system_ai_prompt_split(
     이렇게 해야 매 호출마다 시스템 프롬프트 prefix가 동일해져 Anthropic 프롬프트
     캐시가 hit한다.
 
+    extra_role: 표면별 추가 역할 프롬프트(예: 포식 모드의 "링크를 나열하라"). 안정 부분에
+        들어가므로, 같은 표면의 호출끼리는 prefix가 동일해 캐시가 유지된다.
+
     Returns:
         (stable_prompt, dynamic_context) — dynamic은 빈 문자열일 수 있음
     """
-    stable = _build_system_ai_stable_prompt(user_profile, git_enabled)
+    stable = _build_system_ai_stable_prompt(user_profile, git_enabled, extra_role, allowed_set)
     dynamic = _build_dynamic_context(consciousness_output, model_name, execution_memory)
     return stable, dynamic
 

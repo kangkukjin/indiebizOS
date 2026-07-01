@@ -103,7 +103,7 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
 │      IBL 환경 (ibl_access.py)           │
 │   - 사용 가능한 노드/액션 목록           │
 │   - IBL 문법 가이드                     │
-│   - 시스템 AI: 5개 노드 전체            │
+│   - 시스템 AI: 6개 노드 전체            │
 │   - 에이전트: 허용된 노드만             │
 ├─────────────────────────────────────────┤
 │       조건부 프래그먼트 (fragments/)     │
@@ -145,8 +145,8 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
 ### IBL (IndieBiz Logic) 시스템
 - 노드 기반 추상화: `[node:action]{params}` 문법
 - execute_ibl + 범용 언어 + 인지 도구 (총 9개 최상위 도구)
-- **5개 노드, 142 액션** (라운드 2 통합 + op 어휘화 + 사용성 재감사 + 어휘 정리 + 메신저/비즈니스 IBL화 + neighbor 통합 + 폰 온디맨드 감각 삼각 + 통화 대수/문서 IR emitter + 국회도서관 국가학술정보 인물/학위논문 후)
-  - sense(43), self(44), limbs(17), others(11), engines(26)
+- **6개 노드, 142 액션** (engines 변환자/emitter를 table 노드로 분리 + 라운드 2 통합 + op 어휘화 + 사용성 재감사 + 어휘 정리 + 메신저/비즈니스 IBL화 + neighbor 통합 + 폰 온디맨드 감각 삼각 + 통화 대수/문서 IR emitter + 국회도서관 국가학술정보 인물/학위논문 후)
+  - sense(43), self(44), limbs(17), others(11), engines(13), table(13)
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
 - **프롬프트 가독성**: 액션에 category 태그 부여 → `<action-categories>`로 그룹 표시 (순수 표시용)
 - **액션 라우팅 8종 체계**:

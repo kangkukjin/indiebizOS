@@ -74,7 +74,7 @@ def classify_currency(d, declared):
         return "GREEN", f"records[{len(rec)}]" + ("" if declared == "records" else f" (선언 {declared})")
     if isinstance(tbl, dict) and tbl.get("columns") and tbl.get("rows") is not None:
         return "GREEN", f"table {len(tbl['rows'])}행" + ("" if declared == "table" else f" (선언 {declared})")
-    # 문서IR {blocks} — crawl·read(docx/pdf) → engines:document. type 키 가진 블록 리스트.
+    # 문서IR {blocks} — crawl·read(docx/pdf) → table:document. type 키 가진 블록 리스트.
     if isinstance(blk, list) and blk and all(isinstance(x, dict) and "type" in x for x in blk):
         return "GREEN", f"document blocks[{len(blk)}]" + ("" if declared == "document" else f" (선언 {declared})")
     if isinstance(rec, list) and not rec: return "YELLOW", "records 빈(데이터 없음)"
@@ -124,11 +124,11 @@ if EXEMPT:
 
 # ── §1C 골든 파이프 (문법+통화 흐름) ──
 PIPES = [
-  ("naver>>filter>>take", '[sense:search_naver]{query: "AI"} >> [engines:filter]{where: "title != "} >> [engines:take]{n: 3}', "items"),
-  ("world_bank>>chart",   '[sense:world_bank]{indicator: "인구", country: "한국"} >> [engines:chart]{chart_type: "line"}', "chart"),
-  ("paper>>take>>document",'[sense:paper]{query: "transformer"} >> [engines:take]{n: 5} >> [engines:document]{format: "html"}', "doc"),
-  ("legal>>dedup>>take",  '[sense:legal]{query: "도로교통법"} >> [engines:dedup]{} >> [engines:take]{n: 3}', "items"),
-  ("kosis>>take",         '[sense:kosis]{query: "인구"} >> [engines:take]{n: 5}', "items"),
+  ("naver>>filter>>take", '[sense:search_naver]{query: "AI"} >> [table:filter]{where: "title != "} >> [table:take]{n: 3}', "items"),
+  ("world_bank>>chart",   '[sense:world_bank]{indicator: "인구", country: "한국"} >> [table:chart]{chart_type: "line"}', "chart"),
+  ("paper>>take>>document",'[sense:paper]{query: "transformer"} >> [table:take]{n: 5} >> [table:document]{format: "html"}', "doc"),
+  ("legal>>dedup>>take",  '[sense:legal]{query: "도로교통법"} >> [table:dedup]{} >> [table:take]{n: 3}', "items"),
+  ("kosis>>take",         '[sense:kosis]{query: "인구"} >> [table:take]{n: 5}', "items"),
 ]
 print("\n" + "="*72); print("§1C 골든 파이프 (문법+통화 흐름)"); print("="*72)
 pipe_pass = 0

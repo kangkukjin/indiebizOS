@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = ROOT / "data" / "ibl_nodes_src"
 PKG_DIR = ROOT / "data" / "packages" / "installed" / "tools"
 
-NODES = ["sense", "self", "limbs", "others", "engines"]
+NODES = ["sense", "self", "limbs", "others", "engines", "table"]
 
 
 def load_src() -> dict[tuple[str, str], dict]:

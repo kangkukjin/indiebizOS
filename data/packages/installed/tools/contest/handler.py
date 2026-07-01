@@ -1,7 +1,7 @@
 """
 AI 경진대회 검색 (Kaggle Competitions API)
 - Bearer 토큰 인증 (KAGGLE_API_TOKEN, auth_manager 'kaggle' 레지스트리)
-- records 통화 반환 → 앱모드 card_list / engines:document 직결
+- records 통화 반환 → 앱모드 card_list / table:document 직결
 """
 import os
 import sys

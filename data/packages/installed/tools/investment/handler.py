@@ -199,7 +199,7 @@ def _company_news(symbol, ti: dict):
 def _attach_price_table(result):
     """주가 이력 결과에 표준 table 통화(날짜·종가 시계열)를 덧붙인다.
 
-    engines:chart{table:...}/spreadsheet{table:...}로 그대로 흘려보냄 + `>>` 자동 파이프 대상.
+    table:chart{table:...}/spreadsheet{table:...}로 그대로 흘려보냄 + `>>` 자동 파이프 대상.
     실패해도 원본 그대로 반환(비파괴).
     """
     try:
@@ -244,7 +244,7 @@ _COMPANY_TABLE_SKIP = {
 def _attach_company_table(result):
     """기업 펀더멘털 결과(profile)에 표준 table 통화(지표·값 2열)를 덧붙인다.
 
-    data dict의 각 항목을 한 행(지표명, 값)으로 펼침 — engines:spreadsheet{table}/
+    data dict의 각 항목을 한 행(지표명, 값)으로 펼침 — table:spreadsheet{table}/
     document{table}로 그대로 흐름, `>>` 자동 파이프 대상. 실패해도 원본 그대로(비파괴).
     """
     try:

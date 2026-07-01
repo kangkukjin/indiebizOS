@@ -5,39 +5,36 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:4099
+- dataset_size:4108
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: record audio for 10 seconds
+- source_sentence: 시스템 AI 창 열기
   sentences:
-  - '[self:trigger]'
-  - 폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).
-  - '[self:edit]'
-- source_sentence: 브라우저 네트워크 트래픽 보여줘
+  - '[sense:search_naver]'
+  - '[limbs:open_window]'
+  - '[sense:crawl] >> [engines:slide] >> [limbs:os_open]'
+- source_sentence: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라 기계를
+    직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
   sentences:
+  - '[sense:crypto]'
+  - '[sense:weather] & [sense:search_ddg]'
+  - '[sense:host]'
+- source_sentence: 일러스트가 들어간 강의 슬라이드 만들어
+  sentences:
+  - '[sense:startup]'
   - '[limbs:browser]'
-  - 'Shadcn UI HTML 슬라이드(2층: 글자 레이어 + 별도 그림 합성). **마케팅·랜딩·피치덱·순수 텍스트 레이아웃 덱 전용.**
-    ★강의·발표·NotebookLM식 슬라이드는 이 액션을 쓰지 말 것 — 대신 [engines:slide]{style:"native"}(슬라이드마다
-    통짜 이미지) 또는 [self:lecture] 워크스페이스(design_system 미지정=native 기본)를 써라(시각=의미 융합·한글
-    OCR 검증). 슬라이드 IR(slides[]) → png/pdf/pptx emit.'
-  - '[others:auto_response]'
-- source_sentence: HTML 돌려줘 결과 봐
+  - '[engines:image_gemini] & [engines:image_gemini]'
+- source_sentence: 이 약 기록 잘못됐어 빼줘
   sentences:
-  - '[limbs:browser]'
-  - 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
-  - HTML 페이지를 PNG 이미지로 렌더링. 슬라이드·차트 결과를 이미지화.
-- source_sentence: 특정 웹 리소스를 참조하여 핵심 개념을 시각적 대비 구조로 요약한 강의 슬라이드 만들어 및 즉시 확인
-  sentences:
-  - '[self:photo]'
-  - 웹페이지 원문 읽기 (URL 필요). items=문서 IR(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
+  - '[self:file_find]'
   - '[self:health]'
-- source_sentence: 전체 기록해줘소 요약 좀
+  - '[sense:paper] >> [self:output]'
+- source_sentence: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
   sentences:
-  - 디스크 용량 분석 (op 분기) — 폴더·확장자별 용량 집계. scan(분석 인덱스 구축)/summary(용량 집계)/volumes(볼륨 목록).
-    ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
-  - 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더.
-  - '[limbs:radio_favorite]'
+  - '[limbs:screen] >> [engines:image_read]'
+  - 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.
+  - '[table:document]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -91,9 +88,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '전체 기록해줘소 요약 좀',
-    '디스크 용량 분석 (op 분기) — 폴더·확장자별 용량 집계. scan(분석 인덱스 구축)/summary(용량 집계)/volumes(볼륨 목록). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).',
-    '[limbs:radio_favorite]',
+    'macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.',
+    '[limbs:screen] >> [engines:image_read]',
+    '전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -102,9 +99,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.6602, -0.1586],
-#         [ 0.6602,  1.0000, -0.1120],
-#         [-0.1586, -0.1120,  1.0000]])
+# tensor([[ 1.0000,  0.8024, -0.0384],
+#         [ 0.8024,  1.0000,  0.0134],
+#         [-0.0384,  0.0134,  1.0000]])
 ```
 
 <!--
@@ -149,19 +146,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 4,099 training samples
+* Size: 4,108 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
-  |         | sentence_0                                                                        | sentence_1                                                                       |
-  |:--------|:----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|
-  | type    | string                                                                            | string                                                                           |
-  | details | <ul><li>min: 4 tokens</li><li>mean: 13.07 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 21.3 tokens</li><li>max: 64 tokens</li></ul> |
+  |         | sentence_0                                                                        | sentence_1                                                                        |
+  |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
+  | type    | string                                                                            | string                                                                            |
+  | details | <ul><li>min: 4 tokens</li><li>mean: 13.03 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 21.73 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                       | sentence_1                                                                          |
-  |:---------------------------------|:------------------------------------------------------------------------------------|
-  | <code>인공지능 뉴스 최근 거</code>        | <code>[sense:search_news]</code>                                                    |
-  | <code>외장하드 포식하면서 알아낸 거 보여</code> | <code>포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기.</code> |
-  | <code>비트코인 투자할만해?</code>         | <code>암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)</code>                           |
+  | sentence_0                                                               | sentence_1                                                                                                                                                                                                    |
+  |:-------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+  | <code>{국가명}의 {경제지표}를 {특정 기간} 동안 시각화해줄래</code>                            | <code>세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. items(행 dict — 연도+지표값) 반환, 소비자가 table 재구성.</code>                                                                                                         |
+  | <code>AI 뉴스 영상 좀 검색해줘해</code>                                            | <code>[sense:search_youtube]</code>                                                                                                                                                                           |
+  | <code>특정 도서의 구매 링크를 포함한 홍보 배너 컴포넌트를 만들어줘하여 웹사이트의 특정 섹션에 통합 및 검증하기</code> | <code>[sense:search_naver] 교보문고", type: "book"} >> [self:write]/book-banner-section.tsx", content: ""} >> [self:edit]/page.tsx", old_string: "", new_string: ""} >> [engines:web]"} >> [limbs:browser]</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -283,7 +280,7 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.9747 | 500  | 0.0163        |
+| 0.9728 | 500  | 0.0177        |
 
 
 ### Framework Versions

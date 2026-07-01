@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "구글 번역 프록시 스위치",
+  "version": "1.0",
+  "description": "클릭 한 번으로 현재 페이지를 구글 번역 프록시로 번역합니다.",
+  "permissions": ["activeTab"],
+  "action": {
+    "default_title": "이 페이지 번역하기"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

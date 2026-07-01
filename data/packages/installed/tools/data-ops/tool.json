@@ -71,7 +71,7 @@
     },
     {
       "name": "data_join",
-      "description": "table×table → 키 열로 inner join. on(양쪽 공통 키 열, 필수). 결과 열=좌측 전체+우측(키 제외). & 병렬 두 입력. 예: [A] & [B] >> [engines:join]{on:\"연도\"}.",
+      "description": "table×table → 키 열로 inner join. on(양쪽 공통 키 열, 필수). 결과 열=좌측 전체+우측(키 제외). & 병렬 두 입력. 예: [A] & [B] >> [table:join]{on:\"연도\"}.",
       "input_schema": {
         "type": "object",
         "properties": {

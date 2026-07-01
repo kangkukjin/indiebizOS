@@ -422,7 +422,11 @@ def _list_pinnable_agents() -> list:
 
     ★id = 핀 키. 시스템 AI 는 role 'system_ai', 프로젝트 에이전트는 registry_key 형식
     `{project}:{agent_id}` (agent_id 가 프로젝트 간 중복이라 프로젝트로 한정 — _resolve_execution_config 와 일치)."""
-    out = [{"id": "system_ai", "name": "시스템 AI", "project": "(시스템)"}]
+    out = [
+        {"id": "system_ai", "name": "시스템 AI", "project": "(시스템)"},
+        # 포식 브라우저 검색 에이전트 — 핀 키 'forage'(resolve/force_role 과 일치). 미핀 시 기본 경량.
+        {"id": "forage", "name": "포식 에이전트", "project": "(포식 브라우저)"},
+    ]
     try:
         import yaml
         from runtime_utils import get_base_path

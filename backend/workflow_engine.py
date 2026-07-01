@@ -149,7 +149,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
 
     # project_id 파이프 전파 — 합성 코드(>>/&/??)의 project_id 는 그것을 적은 leaf 의 params 에만
     # 살아서, 뒤따르는 step 이 그대로면 "활성 프로젝트 경로 확보 불가"로 게이트에서 죽는다
-    # (예: [self:read]{project_id:X} >> [engines:document] — document 가 X 를 모름).
+    # (예: [self:read]{project_id:X} >> [table:document] — document 가 X 를 모름).
     # 호출자가 구체 project_path 를 *안* 줬을 때(시스템 AI·스케줄러 등 — top-level project_id 는
     # api_ibl 에서 이미 경로로 해소됨)에 한해, head leaf 의 project_id 를 미지정 후속 leaf 에 전파한다.
     # 무회귀: project_path 가 구체적이면(프로젝트 에이전트) 건드리지 않고, 어느 leaf 도 project_id 를
@@ -340,7 +340,7 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
         prev_result: 이전 step 결과 (모든 branch에 동일하게 주입)
         raw: 병렬 step이 >> 파이프 중간단계일 때 True — 각 분기에 _raw 주입해
              postprocess:compress가 분기의 구조화 통화(records/table)를 죽이지 않게.
-             ([A] & [B] >> [engines:join/union/merge] 같은 이항 변환자가 분기 통화를 소비)
+             ([A] & [B] >> [table:join/union/merge] 같은 이항 변환자가 분기 통화를 소비)
 
     Returns:
         각 branch 결과를 리스트로 합침

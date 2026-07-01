@@ -3,13 +3,13 @@
       newspaper:
         returns: effect
         description: '"신문 만들어줘"라고 요청할 때만 사용. 키워드별 뉴스를 수집해 공유 문서 IR(신문 테마)로 생산.
-          >> [engines:document]로 렌더(html/pdf/docx). 보고서/분석/요약 요청에는 사용하지 말 것.'
+          >> [table:document]로 렌더(html/pdf/docx). 보고서/분석/요약 요청에는 사용하지 말 것.'
         target_description: 'keywords 배열 (수집할 뉴스 주제) · title(선택, 신문 제호) · source(google 기본/guardian).
-          반환: 문서 IR {title, meta, theme:"newspaper", blocks}(키워드별 heading + cards). 그대로 >> [engines:document]로 렌더.'
+          반환: 문서 IR {title, meta, theme:"newspaper", blocks}(키워드별 heading + cards). 그대로 >> [table:document]로 렌더.'
         group: media_produce
         router: handler
         tool: generate_newspaper
-        implementation: Google News RSS / Guardian API 수집 → 키워드별 heading + cards 블록으로 결정적 문서 IR 생산(LLM 미개입, 기사·링크 무손실). 렌더는 engines:document(theme:newspaper)가 담당 — 단일 IR이 html/pdf/docx로.
+        implementation: Google News RSS / Guardian API 수집 → 키워드별 heading + cards 블록으로 결정적 문서 IR 생산(LLM 미개입, 기사·링크 무손실). 렌더는 table:document(theme:newspaper)가 담당 — 단일 IR이 html/pdf/docx로.
         target_key: keywords
         keywords:
         - 신문
@@ -29,7 +29,7 @@
             default: '청주, AI, 문화, 드라마, 영화, 만화, 세종, 경제, 주식'
             placeholder: 뉴스 키워드 (쉼표 구분)
             required: true
-          action: '[engines:newspaper]{keywords: "$kw"} >> [engines:document]{theme: "newspaper", format: "html"}'
+          action: '[engines:newspaper]{keywords: "$kw"} >> [table:document]{theme: "newspaper", format: "html"}'
           view:
           - type: list_action
             from: '.'
@@ -55,66 +55,6 @@
         - MP4
         - 렌더링
         - HTML영상
-      chart:
-        returns: effect
-        runs_on: mac_only
-        description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
-        target_description: |
-          title (필수). chart_type으로 종류 분기 (기본 line).
-          표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(engines:spreadsheet와 같은 통화). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
-          - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
-          - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
-          - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
-          - pie: labels·values 리스트. hole 옵션으로 도넛.
-          - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
-          - heatmap: z(매트릭스)·x_labels·y_labels.
-          - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
-          - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
-          - spec: 위 chart_type으로 부족한 풍부한 표현(이중축·로그축·복합 음영 등)은 Plotly figure JSON을 spec으로 그대로 넘긴다 — matplotlib 코드 작성(self:write+run) 대신. spec={data:[트레이스...], layout:{...}}. 이중축=트레이스에 yaxis:"y2" + layout.yaxis2={overlaying:"y",side:"right"}. 구간음영=layout.shapes(type:rect, yref:"paper"). 주석=layout.annotations. *코드가 아니라 데이터*라 포터블·캐시·검증가능. 예: 한국 GDP(좌축)와 KOSPI(우축) 이중축 + 정권별 shapes 음영.
-        group: chart
-        router: handler
-        tool: chart
-        implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. matplotlib 폴백 내장.
-        target_key: title
-        keywords:
-        - 차트
-        - 그래프
-        - 시각화
-        - 라인차트
-        - 선그래프
-        - 추이
-        - 바차트
-        - 막대그래프
-        - 캔들
-        - 주식차트
-        - OHLCV
-        - 파이차트
-        - 원그래프
-        - 비율
-        - 산점도
-        - 분포
-        - 추세선
-        - 히트맵
-        - 열지도
-        - 대시보드
-        - 복합차트
-      spreadsheet:
-        returns: effect
-        runs_on: mac_only
-        description: 행 데이터(rows/sheets) → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
-        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표준 테이블 통화 table={columns,rows}도 수용(headers/rows로 매핑 — engines:chart와 같은 통화). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
-        group: chart
-        router: handler
-        tool: spreadsheet
-        implementation: system_essentials handler.py가 openpyxl로 Workbook 생성 — sheets(다중) 또는 rows+headers(단일), 셀은 str/int/float로 강제.
-        target_key: path
-        keywords:
-        - 스프레드시트
-        - 엑셀
-        - xlsx
-        - 표
-        - 시트
-        - 장부
       remotion:
         returns: effect
         runs_on: mac_only
@@ -165,7 +105,7 @@
         description: 'Shadcn UI HTML 슬라이드(2층: 글자 레이어 + 별도 그림 합성). **마케팅·랜딩·피치덱·순수 텍스트 레이아웃 덱 전용.** ★강의·발표·NotebookLM식 슬라이드는 이 액션을 쓰지 말 것 — 대신 [engines:slide]{style:"native"}(슬라이드마다 통짜 이미지) 또는 [self:lecture] 워크스페이스(design_system 미지정=native 기본)를 써라(시각=의미 융합·한글 OCR 검증). 슬라이드 IR(slides[]) → png/pdf/pptx emit.'
         target_description: |
           ★★강의·발표 슬라이드는 이 액션이 아니다. NotebookLM식 통짜 이미지가 기본 — [engines:slide]{style:"native", aesthetic:...}를 슬라이드마다 호출하거나 [self:lecture] 워크스페이스(native 기본)를 써라. 이 액션은 **마케팅/랜딩/피치덱/순수 텍스트 레이아웃 덱**에만 쓴다.
-          ★슬라이드 IR(슬라이드 전용 — 문서 IR과 별개, 텍스트 문서는 engines:document를 쓸 것): slides 배열, 각 슬라이드 = {layout, title, ...}(named layout 계약). + design_system/theme/output_dir/width/height. 인라인 배열만 (topic 미지원).
+          ★슬라이드 IR(슬라이드 전용 — 문서 IR과 별개, 텍스트 문서는 table:document를 쓸 것): slides 배열, 각 슬라이드 = {layout, title, ...}(named layout 계약). + design_system/theme/output_dir/width/height. 인라인 배열만 (topic 미지원).
           마케팅 layout: hero/hero_image/features/stats/testimonial/pricing/cta/content_image/steps/custom
           강의 layout(레거시 텍스트형 — 통짜 native 권장): lecture_body/metaphor_story/comparison_table/factbox/quote
           일러스트 통합 layout(레거시 2층 합성 — 통짜 native 권장): hero_illustration/illustration_anchor/split_concept/illustration_background/comparison_iconic
@@ -266,200 +206,6 @@
         - HTML
         - 이미지
         - 렌더링
-      structure:
-        returns: effect
-        runs_on: anywhere
-        scope: workspace
-        description: 원본 콘텐츠를 문서 IR(blocks)로 구조화하는 편집자 원자. A획득→B구조화→IR→emit 파이프라인의 B. document로 이어 렌더.
-        target_description: 'content(필수, 구조화할 원본 텍스트 — >> 파이프 시 이전 결과를 content로 받아 생략 가능). instruction(선택, 정리 방향 예 "3섹션 요약 보고서로"·"비교는 표로"). 반환에 title·blocks(문서 IR) 포함 — 그대로 engines:document로 >> 파이프하면 렌더.'
-        group: media_produce
-        router: handler
-        tool: structure_document
-        implementation: 경량 LLM 편집자가 콘텐츠를 문서 IR(heading/paragraph/list/table/quote/code/divider) JSON으로 정리. 지어내기 금지·주어진 내용에서만. document emitter의 입력 생산.
-        target_key: content
-        keywords:
-        - 구조화
-        - 정리
-        - 요약정리
-        - 문서화
-        - structure
-      document:
-        returns: effect
-        runs_on: anywhere
-        description: 문서 IR(공유 문서 모델)을 산출물로 렌더. 포맷 중립 IR을 emitter가 렌더(현재 html). 보고서·문서·페이지 산출의 단일 진실 소스.
-        target_description: |
-          blocks(필수): 문서 IR 블록 배열. 각 블록은 {type, ...}:
-          - heading{level(1~6), text} · paragraph{text} · list{ordered?, items[]}
-          - image{src(경로/URL), caption?} · table{columns, rows}(데이터 통화 그대로 재사용)
-          - cards{columns(기본2), items:[{title, meta?, summary?, url?, link_label?}]}(링크 카드 그리드 — 뉴스·검색결과·북마크·상품목록)
-          - quote{text, cite?} · code{text, lang?} · divider
-          title(선택, 최상단 제목) · meta(선택, 제목 아래 부제/발행정보 한 줄) · theme(default 기본/newspaper 제호+카드그리드)
-          · filename(선택) · format(html 기본/pdf/png/docx/pptx/typst — 같은 IR을 여러 emitter로).
-          결과 산출물 경로(path·file) 반환. 단일 IR → 다중 emitter. typst=책 품질 조판 PDF(산문·보고서에 최적, HTML theme/cards 그리드는 무시). pptx는 문서 구조를 슬라이드로 투영(heading=새 슬라이드) — 시각 레이아웃 슬라이드가 필요하면 engines:slide를 쓸 것.
-        group: media_produce
-        router: handler
-        tool: render_document
-        implementation: 포맷 중립 문서 IR을 emitter로 렌더 — html(_doc_blocks_to_html)·pdf/png(Playwright 동일 HTML)·docx(_doc_blocks_to_docx, python-docx)·pptx(_doc_blocks_to_pptx, python-pptx 슬라이드 투영). table 블록은 데이터 통화({columns,rows}) 재사용. 단일 IR → 다중 emitter.
-        target_key: blocks
-        keywords:
-        - 문서
-        - 보고서
-        - document
-        - 리포트
-        - 페이지
-      filter:
-        returns: transform
-        runs_on: anywhere
-        scope: workspace
-        description: '통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴).'
-        target_description: 'where(필터 조건): 문자열(전 필드 부분일치, 예 "전세") · {field, op, value}(op=eq/ne/lt/le/gt/ge/contains/in) · {열:값} 단축형 · 조건 배열(AND). >> 파이프로 앞 통화를 자동 수용. 도메인 무관 — 모든 검색·목록 생산자에 적용.'
-        group: transform
-        router: handler
-        tool: data_filter
-        implementation: data-ops handler.py — records|table 통화에서 where 미니 DSL로 부분집합. 비파괴(같은 통화 반환).
-        target_key: where
-        keywords:
-        - 필터
-        - 거르기
-        - 조건
-        - 만
-        - filter
-      sort:
-        returns: transform
-        runs_on: anywhere
-        scope: workspace
-        description: '통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, desc 옵션).'
-        target_description: 'by(정렬 기준 필드/열명, 필수) · desc(내림차순 bool, 기본 false). 숫자는 수치로, 아니면 문자열로 비교. 예: [...] >> [engines:sort]{by: price, desc: true}.'
-        group: transform
-        router: handler
-        tool: data_sort
-        implementation: data-ops handler.py — records|table을 by 키로 정렬(_sort_key 수치 우선). 비파괴.
-        target_key: by
-        keywords:
-        - 정렬
-        - 순
-        - 정렬하기
-        - sort
-        - 순서
-      take:
-        returns: transform
-        runs_on: anywhere
-        scope: workspace
-        description: '통화 변환자 — items에서 상위 n개만(음수면 뒤에서 n). 보통 sort 뒤.'
-        target_description: 'n(취할 개수, 기본 10; 음수=뒤에서 n개). 보통 sort 뒤에 써 상위 N 추출: [...] >> [engines:sort]{by:..} >> [engines:take]{n:5}.'
-        group: transform
-        router: handler
-        tool: data_take
-        implementation: data-ops handler.py — records|table을 n으로 슬라이스. 비파괴.
-        target_key: n
-        keywords:
-        - 상위
-        - 개만
-        - 처음
-        - take
-        - top
-      select:
-        returns: transform
-        runs_on: anywhere
-        scope: workspace
-        description: '통화 변환자 — items에서 지정한 열/필드만 남긴다(투영). 차트·문서 전 좁히기.'
-        target_description: 'columns(남길 열/필드 이름 배열, 필수). 예: [sense:...] >> [engines:select]{columns: ["연도","GDP"]}. 표가 넓을 때 차트/문서 전에 좁히기.'
-        group: transform
-        router: handler
-        tool: data_select
-        implementation: data-ops handler.py — table 열 투영(인덱스 매핑), records 필드 추림. 비파괴.
-        target_key: columns
-        keywords:
-        - 열
-        - 컬럼
-        - 투영
-        - select
-        - 골라
-      dedup:
-        returns: transform
-        runs_on: anywhere
-        scope: workspace
-        description: '통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교).'
-        target_description: 'by(중복 판정 키 필드/열; 미지정 시 records=title, table=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)'
-        group: transform
-        router: handler
-        tool: data_dedup
-        implementation: data-ops handler.py — by 키 정규화 후 첫 항목만 유지. 비파괴.
-        target_key: by
-        keywords:
-        - 중복제거
-        - 중복
-        - 유니크
-        - dedup
-        - 고유
-      groupby:
-        returns: transform
-        runs_on: anywhere
-        scope: workspace
-        description: '통화 변환자 — items를 키 필드로 그룹지어 집계(count/sum/avg/min/max).'
-        target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count). 반환 table=[by열, 집계열들]. 예: [...] >> [engines:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
-        group: transform
-        router: handler
-        tool: data_groupby
-        implementation: data-ops handler.py — table을 by로 그룹핑 후 agg 명세대로 집계(입력 순서 보존). 표형 전용.
-        target_key: by
-        keywords:
-        - 그룹
-        - 집계
-        - 묶어
-        - groupby
-        - 통계
-      join:
-        returns: transform
-        runs_on: anywhere
-        scope: workspace
-        description: '통화 변환자(이항) — 두 입력을 공통 키(on)로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.'
-        target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). table=열 기준, records=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
-        group: transform
-        router: handler
-        tool: data_join
-        implementation: data-ops handler.py — & 병렬 두 입력을 on 키로 inner join(우측 인덱싱, 키 정규화 비교). table·records 통화 모두 지원(같은 통화끼리).
-        target_key: on
-        keywords:
-        - 조인
-        - 결합
-        - 합쳐
-        - join
-        - 연결
-      union:
-        returns: transform
-        runs_on: anywhere
-        scope: workspace
-        description: '통화 변환자(이항) — 두 입력을 행 결합(이어붙이기). & 병렬로 공급. 중복 제거는 뒤에 >> dedup.'
-        target_description: '파라미터 없음. table은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), records는 단순 concat. 예: [A] & [B] >> [engines:union]. records 합치며 중복까지 지우려면 engines:merge.'
-        group: transform
-        router: handler
-        tool: data_union
-        implementation: data-ops handler.py — & 병렬 두 입력 행 결합(table 열 통합/records concat). 같은 통화 종류만.
-        target_key: ''
-        keywords:
-        - 행결합
-        - 이어붙여
-        - union
-        - 합집합
-        - 세로결합
-      merge:
-        returns: transform
-        runs_on: anywhere
-        scope: workspace
-        description: '통화 변환자(이항) — 두 입력을 합치되 by 키로 중복 제거. & 병렬로 공급. (단순 이어붙이기는 union.)'
-        target_description: 'by(선택, 중복 제거 키 필드; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 표형 결합은 engines:union. 예: [sense:search_news]{...} & [sense:search_ddg]{...} >> [engines:merge]{by: title}.'
-        group: transform
-        router: handler
-        tool: data_merge
-        implementation: data-ops handler.py — & 병렬 두 records concat(+ by 지정 시 정규화 중복 제거). 목록형 전용.
-        target_key: by
-        keywords:
-        - 합치기
-        - 모아
-        - merge
-        - 통합
-        - 목록합치기
       web_site:
         returns: effect
         runs_on: mac_only
@@ -580,17 +326,14 @@
         - 그림 보기
         - vision read
         - image ocr
-    description: '작업장: 콘텐츠 생성 및 변환 — 신문, 슬라이드, 영상, 차트, 음악, 웹사이트, 디자인'
+    description: '작업장: 미디어 생성 — 신문, 슬라이드, 영상, 이미지, 음성(TTS), 웹사이트. (표·통화 변환 문법은 table 노드.)'
     tags:
     - 생성
     - 제작
     - 신문
     - 슬라이드
     - 영상
-    - 차트
     - 음악
-    - 작곡
     - 웹사이트
     - 건축
     - 이미지
-    - 시각화

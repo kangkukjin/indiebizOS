@@ -43,7 +43,7 @@ _VOCAB_ANCHOR = """\
 [현재 IBL 어휘 — 이 모델이 진실이다]
 - 통화는 하나뿐: `items` = [{…열린 dict…}] (목록형). 옛 records/table/document 표현은 전부 items로 흡수·은퇴됨. 설명이 "records 통화"·"table 통화"·"두 통화" 같은 옛 모델을 쓰면 드리프트다.
 - 액션의 역할은 `returns:`로 선언: items(통화 냄) / transform(통화→통화 변환자) / scalar(단일값) / effect(행동·종착).
-- 5개 노드만 존재: sense(감각·조회) / self(자기·관리) / limbs(손발·기기) / others(타인·소통) / engines(변환·생성). 다른 노드명은 없다.
+- 6개 노드만 존재: sense(감각·조회) / self(자기·관리) / limbs(손발·기기) / others(타인·소통) / engines(미디어 생성) / table(표·통화 변환 문법). 다른 노드명은 없다.
 - 변환자(returns:transform)는 통화를 받아 같은 통화를 낸다(closure) → `>>` 조합.
 - 변환자에는 단항(입력 1개)과 **이항**(입력 2개, `&` 병렬로 공급: join/union/merge)이 있다. "두 입력"·"두 items"는 이항 변환자의 *정상* 표현이다 — 통화가 둘이라는 뜻이 아니므로 드리프트가 아니다.
 - "통화는 하나"는 *통화의 종류*가 하나라는 뜻이지, 한 번에 입력을 하나만 받는다는 뜻이 아니다.

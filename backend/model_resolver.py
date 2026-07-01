@@ -152,6 +152,13 @@ def resolve(role: str, agent_id: Optional[str] = None) -> dict:
         d.update(axis="(reflex)", source="reflex→경량(고정)")
         return d
 
+    # 포식(forage) 에이전트는 기본 *경량* — 빈도 높은 가벼운 검색이라 최저 티어로 충분.
+    # 계기판 설정의 overrides["forage"] 핀으로 변경(위 override 루프가 먼저 처리하므로 핀이 이긴다).
+    if role == "forage":
+        d = _load_tier_config("경량", gear)
+        d.update(axis="(forage)", source="forage→경량(기본)")
+        return d
+
     # 2. role → axis
     axis = gear.get("role_axis", {}).get(role)
     if axis is None:

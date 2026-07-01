@@ -226,7 +226,7 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 `POST /packages/{id}/uninstall`이 패키지 폴더를 `not_installed/`로 이동한다. **IBL 어휘는 자동 제거되지 않음** — 이 패키지가 노출하던 IBL 액션이 src에 있다면 직접 정리해야 한다 (`ibl_nodes_src/<node>.yaml`에서 제거 → 재빌드).
 
 ### 주의사항
-- **노드 추가 금지**: 기존 5개 노드(sense, self, limbs, others, engines)만 사용. 새 노드는 `data/ibl_nodes_src/meta.yaml` 변경 + 라우팅 코드 합의 후 별건 작업.
+- **노드 추가 금지**: 기존 6개 노드(sense, self, limbs, others, engines, table)만 사용. 새 노드는 `data/ibl_nodes_src/meta.yaml`/`scripts/build_ibl_nodes.py`(NODE_ORDER) 변경 + 라우팅 코드 합의 후 별건 작업.
 - **액션 이름 충돌**: 같은 노드에 같은 이름의 액션이 이미 있으면 src 빌드가 후행 정의로 덮어쓰니, 접두사를 붙여 구분할 것 (예: `radio_play`, `radio_search`).
 - **빌드 산출물 직접 편집 금지**: `data/ibl_nodes.yaml` 첫 줄의 `# GENERATED` 헤더 확인. 수정 시 다음 빌드에서 원복된다.
 

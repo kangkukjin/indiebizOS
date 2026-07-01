@@ -78,6 +78,12 @@ router = APIRouter()
 
 # 시스템 AI 역할 파일 경로
 SYSTEM_AI_ROLE_PATH = DATA_PATH / "system_ai_role.txt"
+# 포식 브라우저 역할 프롬프트 — 실행 에이전트에 "가볼 만한 링크를 나열하라"를 덧대는 표면별 역할.
+# 매 요청마다 읽어 편집이 바로 반영된다(계기판 설정에서 이 파일을 고치는 미래를 위한 이음매).
+FORAGE_ROLE_PATH = DATA_PATH / "forage_role.txt"
+# 웹 검색 가이드(검색법 + 웹 랜드마크 지도). 포식=정의상 항상 웹검색이라 forage_chat 이 *항상 주입*.
+# 일반 에이전트는 read_guide/의식 get_guide_list 로 선택적으로 읽는다(같은 파일). 매 요청 read=라이브.
+WEB_SEARCH_GUIDE_PATH = DATA_PATH / "guides" / "web_search.md"
 
 
 # ============ Pydantic 모델 ============
@@ -235,6 +241,195 @@ def chat_with_system_ai(chat: ChatMessage):
         timestamp=datetime.now().isoformat(),
         provider=provider,
         model=model
+    )
+
+
+class ForageMessage(BaseModel):
+    message: str
+    images: Optional[List[ImageData]] = None
+
+
+class ForageTranslateReq(BaseModel):
+    texts: List[str]
+    target: str = "ko"
+
+
+def _gtx_translate_blob(text: str, target: str) -> str:
+    """무공식 구글 번역 엔드포인트로 한 덩어리 번역 → 세그먼트 이어붙인 번역문 반환(키 불필요).
+
+    translate_a/single 은 문장 단위로 분절한 배열을 주되 원문의 개행(\\n)을 세그먼트에 보존한다
+    (실측). 그래서 텍스트들을 \\n 으로 이어 한 요청에 보내고, 반환 세그먼트를 이어붙이면 개행이
+    제자리에 남아 다시 \\n 으로 쪼개 줄별 매핑할 수 있다. POST 라 GET 길이한계도 회피.
+    """
+    import requests
+    r = requests.post(
+        "https://translate.googleapis.com/translate_a/single",
+        params={"client": "gtx", "sl": "auto", "tl": target, "dt": "t"},
+        data={"q": text},
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=10,
+    )
+    r.raise_for_status()
+    data = r.json()
+    segs = data[0] or []
+    return "".join(s[0] for s in segs if s and s[0] is not None)
+
+
+@router.post("/forage/translate")
+def forage_translate(req: ForageTranslateReq):
+    """포식 브라우저 인라인 DOM 번역 — 텍스트 노드 문자열 배열을 받아 *같은 길이*로 번역해 반환.
+
+    구글 페이지 번역 프록시(translate.goog)가 일부 지역에서 막혀(지역 차단) webview 로 *이동*하는
+    대신, 현재 페이지의 텍스트만 번역해 제자리 치환하는 방식의 백엔드. 무공식 구글 API(키 없음).
+    개행(\\n)을 배치 구분자로 쓰므로 노드 내부 공백은 정규화. 배치 줄 수가 어긋나면 그 배치는 개별
+    번역으로 폴백(정확성 보장). 실패 항목은 원문 유지(graceful). 엔진은 여기만 바꾸면 교체됨.
+    """
+    texts = req.texts or []
+    target = (req.target or "ko").strip() or "ko"
+    out = list(texts)  # 기본 = 원문(빈칸·실패 시 유지)
+    # 번역 대상 = 내용 있는 항목만. 내부 공백/개행은 구분자 충돌 방지로 단일 공백 정규화.
+    work = [(i, " ".join((texts[i] or "").split())) for i in range(len(texts))
+            if texts[i] and texts[i].strip()]
+    CHUNK = 1500  # 문자 예산(응답 안정성)
+
+    def _flush(batch):
+        if not batch:
+            return
+        joined = "\n".join(t for _, t in batch)
+        parts = None
+        try:
+            parts = _gtx_translate_blob(joined, target).split("\n")
+        except Exception as e:
+            print(f"[포식번역] 배치 실패 (개별 폴백): {e}")
+        if parts is not None and len(parts) == len(batch):
+            for (i, _o), p in zip(batch, parts):
+                out[i] = p
+        else:  # 줄 수 불일치·실패 → 개별 번역 폴백
+            for i, t in batch:
+                try:
+                    out[i] = _gtx_translate_blob(t, target)
+                except Exception:
+                    pass  # 원문 유지
+
+    batch, blen = [], 0
+    for i, t in work:
+        if blen + len(t) + 1 > CHUNK and batch:
+            _flush(batch)
+            batch, blen = [], 0
+        batch.append((i, t))
+        blen += len(t) + 1
+    _flush(batch)
+    return {"translations": out}
+
+
+@router.post("/forage/chat", response_model=ChatResponse)
+def forage_chat(chat: ForageMessage):
+    """포식 브라우저 검색 — 실행 에이전트와 *동일한* 인지 파이프라인에 '포식 역할'만 덧댄다.
+
+    에이전트가 사용자 의도를 듣고 스스로 IBL 검색(sense:search_naver/ddg/realty 등)을 골라
+    '가볼 만한 곳'의 링크 목록을 낸다. 무엇을·어떻게 찾을지는 전부 에이전트(프롬프트+IBL) 몫 —
+    여기엔 검색 오케스트레이션 코드가 없다(forager는 AI다, 짓지 않는다).
+    상태 없는 검색이라 대화 로그에 저장하지 않는다.
+    """
+    import uuid
+    from thread_context import (
+        set_current_task_id, clear_current_task_id, clear_called_agent,
+        set_allowed_nodes, get_allowed_nodes,
+    )
+    from system_ai_memory import (
+        create_task as create_system_ai_task,
+        complete_task as complete_system_ai_task,
+    )
+    from episode_logger import EpisodeLogger
+
+    config = load_system_ai_config()
+    if not config.get("enabled", True):
+        raise HTTPException(status_code=400, detail="시스템 AI가 비활성화되어 있습니다.")
+    if not config.get("apiKey", ""):
+        raise HTTPException(status_code=400, detail="API 키가 설정되지 않았습니다.")
+
+    extra_role = FORAGE_ROLE_PATH.read_text(encoding='utf-8') if FORAGE_ROLE_PATH.exists() else ""
+    # ★웹 검색 가이드 항상 주입(포식=늘 웹검색). 이전 bespoke web_landmarks 키워드-게이트 주입을
+    #   대체 — 이제 가이드(검색법 + 랜드마크)가 단일 소스. 일반 에이전트는 read_guide 로 선택적.
+    if WEB_SEARCH_GUIDE_PATH.exists():
+        guide = WEB_SEARCH_GUIDE_PATH.read_text(encoding='utf-8')
+        extra_role = f"{extra_role}\n\n---\n\n{guide}" if extra_role else guide
+
+    images_data = None
+    if chat.images:
+        images_data = [{"base64": img.base64, "media_type": img.media_type} for img in chat.images]
+
+    task_id = f"task_forage_{uuid.uuid4().hex[:8]}"
+    create_system_ai_task(
+        task_id=task_id, requester="user@forage", requester_channel="gui",
+        original_request=chat.message, delegated_to="system_ai",
+    )
+    set_current_task_id(task_id)
+    clear_called_agent()
+    # 포식 노드 스코프 — sense(검색·크롤·소스) + self(자기 출력·상태) + table(통화 변환자: filter/sort/dedup…).
+    # engines(미디어 생성=슬라이드·영상·이미지)는 제외 — 포식은 링크 나열이라 생성기 불요. 변환 문법은
+    #   table 노드로 분리됐으므로 그쪽을 준다(옛 engines는 변환자 때문에 넣었던 것 → table 이 그 자리).
+    # limbs(브라우저 운전=인간 몫)·others(위임·연락=말단 단일 에이전트엔 무용)는 제외.
+    # allowed_set=프롬프트 어휘 스코핑(IBL XML 축소), thread_context=실행 하드 집행 — 같은 집합.
+    forage_nodes = {"sense", "self", "table"}
+    _prev_allowed = get_allowed_nodes()
+    set_allowed_nodes(forage_nodes)
+    # 에피소드 로깅 — agent="forage" 로 주행 기록을 남긴다. 포식은 WebSocket 핸들러를 안 타는
+    # 동기 REST 라 그동안 주행기록계에서 빠져 있었음(분석할 데이터 부재). start/end 한 쌍만 걸면,
+    # 내부 인지 파이프라인이 찍는 [연상]·[무의식] 마커가 그대로 요약 지표로 자동 추출된다.
+    # ★대화 저장·심층/의미 메모리 증류는 WS 핸들러 몫이라 여긴 없음 → 검색 노이즈로 의미기억을
+    #   더럽히지 않는다(stateless 검색 성격 보존). 단 *포식 기억 증류*는 붙인다(아래 스레드) —
+    #   포식 브라우저가 웹 포식의 주 표면이라 owner_model·웹 관습이 여기서 쌓여야 하기 때문.
+    try:
+        EpisodeLogger.start_episode("forage", chat.message)
+    except Exception:
+        pass
+    try:
+        response_text, _imgs = process_system_ai_message(
+            message=chat.message, history=[], images=images_data, extra_role=extra_role,
+            force_role="forage",       # 모델 = 계기판 에이전트 핀(overrides["forage"], 기본 경량). 의식·분류 건너뛰고 빠르게.
+            allowed_set=forage_nodes,  # 어휘를 sense+self+table 로만 — 경량 모델 프롬프트 다이어트 + 라우팅 집중.
+        )
+        complete_system_ai_task(task_id, response_text[:500])
+        # ★포식 기억 증류 — 포식 브라우저는 웹 포식의 *주 표면*이라 owner_model·웹 관습이 여기서
+        #   쌓여야 한다(주입은 이미 코어 _build_execution_memory 가 함). 검색 응답을 막지 않도록
+        #   백그라운드 스레드로 돌리고(동기 REST), assume_forage 로 메시지 cue 게이트를 우회한다
+        #   (정의상 항상 포식). 자기서술·locus 실존검증 게이트가 안전판. 심층/의미 메모리는
+        #   여전히 안 건드림(검색 노이즈 격리) — 포식 기억 전용 증류만 붙인다.
+        if response_text:
+            import threading
+            from system_ai_core import get_system_ai_runner
+
+            def _forage_distill(msg: str, resp: str):
+                try:
+                    # 초크포인트에 forage 만 옵트인(심층/의미·경험 증류는 검색 노이즈 격리로 제외)
+                    get_system_ai_runner()._after_response(
+                        msg, resp,
+                        write_experience=False, write_deep=False,
+                        write_forage=True, assume_forage=True,
+                    )
+                except Exception as fe:
+                    print(f"[포식기억] 브라우저 증류 오류 (무시): {fe}")
+
+            threading.Thread(
+                target=_forage_distill, args=(chat.message, response_text), daemon=True
+            ).start()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"포식 검색 실패: {str(e)}")
+    finally:
+        set_allowed_nodes(_prev_allowed)
+        clear_current_task_id()
+        clear_called_agent()
+        try:
+            EpisodeLogger.end_episode()
+        except Exception:
+            pass
+
+    return ChatResponse(
+        response=response_text,
+        timestamp=datetime.now().isoformat(),
+        provider=config.get("provider", "anthropic"),
+        model=config.get("model", ""),
     )
 
 

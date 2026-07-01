@@ -1014,7 +1014,7 @@ def execute(tool_input: dict, context) -> str:
                 return json.dumps({"success": False, "error": f"XLSX를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
 
         elif tool_name == "spreadsheet":
-            # [engines:spreadsheet] — 행 데이터 → xlsx 산출 (값만, 수식/서식은 범위 밖)
+            # [table:spreadsheet] — 행 데이터 → xlsx 산출 (값만, 수식/서식은 범위 밖)
             import openpyxl
 
             # >> 파이프: 이전 액션 결과(_prev_result)에 table 통화가 있으면 자동 수용
@@ -1043,7 +1043,7 @@ def execute(tool_input: dict, context) -> str:
                                                        "rows": [[x.get(c) for c in _cols] for x in _it]}
                     except Exception:
                         pass
-            # 표준 테이블 통화 수용: {columns, rows} → headers/rows (engines:chart와 동일 통화).
+            # 표준 테이블 통화 수용: {columns, rows} → headers/rows (table:chart와 동일 통화).
             # 같은 통화 한 벌이 차트로도, 표로도 흘러감 (데이터 소스 >> 시각화/표).
             _table = tool_input.get("table")
             if isinstance(_table, dict) and not tool_input.get("sheets") and not tool_input.get("rows"):

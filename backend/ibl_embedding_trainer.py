@@ -254,7 +254,7 @@ def normalize_code_to_pattern(ibl_code: str) -> str:
 
     파라미터를 제거하고 액션 패턴만 남긴다.
     [sense:stock]{op: "info", ticker: "삼성전자"} → [sense:stock]
-    [sense:stock]{op: "quote", ticker: "A"} >> [engines:chart]{type: "line"} → [sense:stock] >> [engines:chart]
+    [sense:stock]{op: "quote", ticker: "A"} >> [table:chart]{type: "line"} → [sense:stock] >> [table:chart]
     [a:b]{...} & [c:d]{...} → [a:b] & [c:d]
     """
     import re

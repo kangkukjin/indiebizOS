@@ -392,17 +392,17 @@ SYNTHETIC_DATA = {
         ("웹사이트 캡처해", '[engines:web]{op: "snapshot"}'),
     ],
     # ── 파일 포맷 (2026-06-05) ──
-    "engines:spreadsheet": [
-        ("엑셀로 표 만들어줘", '[engines:spreadsheet]{path: "표.xlsx", headers: ["항목", "값"], rows: [["사과", 3]]}'),
-        ("xlsx 파일로 저장해줘", '[engines:spreadsheet]{path: "data.xlsx", rows: [["a", 1]]}'),
-        ("이 데이터 스프레드시트로 내보내", '[engines:spreadsheet]{path: "출력.xlsx", rows: [["x", "y"]]}'),
-        ("장부 엑셀로 정리해줘", '[engines:spreadsheet]{path: "장부.xlsx", headers: ["날짜", "금액"], rows: [["2026-06-05", 1000]]}'),
-        ("표를 엑셀 파일로 뽑아줘", '[engines:spreadsheet]{path: "표.xlsx", rows: [["컬럼1", "컬럼2"]]}'),
-        ("매출 데이터 엑셀로 만들어줘", '[engines:spreadsheet]{path: "매출.xlsx", headers: ["월", "매출"], rows: [["1월", 500], ["2월", 700]]}'),
-        ("시트 여러 개로 엑셀 만들어", '[engines:spreadsheet]{path: "보고서.xlsx", sheets: {"매출": [["1월", 500]], "비용": [["임대", 200]]}}'),
-        ("재고 목록 xlsx로 저장", '[engines:spreadsheet]{path: "재고.xlsx", headers: ["품목", "수량"], rows: [["펜", 100]]}'),
-        ("export this table to excel", '[engines:spreadsheet]{path: "export.xlsx", rows: [["a", 1], ["b", 2]]}'),
-        ("엑셀 읽어서 새 시트로 다시 정리", '[self:read]{path: "원본.xlsx", format: "xlsx"} >> [engines:spreadsheet]{path: "정리.xlsx", rows: [["정리", "완료"]]}'),
+    "table:spreadsheet": [
+        ("엑셀로 표 만들어줘", '[table:spreadsheet]{path: "표.xlsx", headers: ["항목", "값"], rows: [["사과", 3]]}'),
+        ("xlsx 파일로 저장해줘", '[table:spreadsheet]{path: "data.xlsx", rows: [["a", 1]]}'),
+        ("이 데이터 스프레드시트로 내보내", '[table:spreadsheet]{path: "출력.xlsx", rows: [["x", "y"]]}'),
+        ("장부 엑셀로 정리해줘", '[table:spreadsheet]{path: "장부.xlsx", headers: ["날짜", "금액"], rows: [["2026-06-05", 1000]]}'),
+        ("표를 엑셀 파일로 뽑아줘", '[table:spreadsheet]{path: "표.xlsx", rows: [["컬럼1", "컬럼2"]]}'),
+        ("매출 데이터 엑셀로 만들어줘", '[table:spreadsheet]{path: "매출.xlsx", headers: ["월", "매출"], rows: [["1월", 500], ["2월", 700]]}'),
+        ("시트 여러 개로 엑셀 만들어", '[table:spreadsheet]{path: "보고서.xlsx", sheets: {"매출": [["1월", 500]], "비용": [["임대", 200]]}}'),
+        ("재고 목록 xlsx로 저장", '[table:spreadsheet]{path: "재고.xlsx", headers: ["품목", "수량"], rows: [["펜", 100]]}'),
+        ("export this table to excel", '[table:spreadsheet]{path: "export.xlsx", rows: [["a", 1], ["b", 2]]}'),
+        ("엑셀 읽어서 새 시트로 다시 정리", '[self:read]{path: "원본.xlsx", format: "xlsx"} >> [table:spreadsheet]{path: "정리.xlsx", rows: [["정리", "완료"]]}'),
     ],
     "self:read_xlsx": [
         ("엑셀 파일 읽어줘", '[self:read]{path: "파일.xlsx", format: "xlsx"}'),

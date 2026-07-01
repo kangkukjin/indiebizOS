@@ -180,13 +180,13 @@ def execute(tool_input: dict, context):
                 if _ohlc:
                     tool_input["data"] = _ohlc
             # >> 파이프: 이전 액션 결과(_prev_result)에 table 통화가 있으면 자동 수용
-            # → [sense:world_bank]{...} >> [engines:chart]{title,chart_type} 가 무reshape로 흐름.
+            # → [sense:world_bank]{...} >> [table:chart]{title,chart_type} 가 무reshape로 흐름.
             if not tool_input.get("table") and not tool_input.get("data"):
                 _pt = _extract_table_from_prev(tool_input.get("_prev_result"))
                 if _pt:
                     tool_input["table"] = _pt
             # 표준 테이블 통화(table currency) → 차트 입력. 데이터 소스가 공유 통화를
-            # 그대로 흘려보내면 손으로 reshape 없이 차트가 됨 (sense:* >> engines:chart).
+            # 그대로 흘려보내면 손으로 reshape 없이 차트가 됨 (sense:* >> table:chart).
             _table = tool_input.get("table")
             if isinstance(_table, dict) and _table.get("rows") and not tool_input.get("data"):
                 _conv = _table_to_chart_data(_table, chart_type)

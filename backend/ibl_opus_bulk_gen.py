@@ -268,8 +268,8 @@ def gen(code, intents):
         app_name = "카톡" if "kakao" in pkg else "앱"
         results += [f"{app_name} 켜줘", f"{app_name} 열어", f"{app_name} 실행해"]
 
-    # ---- engines:chart / line / bar / pie 등 ----
-    elif a in ("engines:line", "engines:bar", "engines:pie", "engines:candlestick", "engines:chart", "engines:heatmap", "engines:scatter", "engines:multi"):
+    # ---- table:chart / line / bar / pie 등 ----
+    elif a in ("table:line", "table:bar", "table:pie", "table:candlestick", "table:chart", "table:heatmap", "table:scatter", "table:multi"):
         title = p(code, "title")
         if title:
             results += [f"{title} 차트 그려줘", f"{title} 그래프 만들어", f"{title} 시각화해줘"]

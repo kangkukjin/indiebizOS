@@ -663,13 +663,14 @@ a{ color:var(--info); }
         <div class="about-h">IBL (IndieBiz Logic)</div>
         <p>indiebizOS의 <b>신경계 역할을 하는 언어</b>. 세 가지로 이루어집니다 — <b>어휘</b>(조합 가능한 액션) · <b>문법</b>(쓰고 잇는 규칙) · <b>통화</b>(흐르는 데이터).</p>
         <div class="about-sec">어휘 — 무엇을 할 수 있나</div>
-        <p>액션 하나가 IBL이 할 수 있는 일 하나. 예: <code>[sense:weather]</code>. 대상에 따라 <b>5개 노드</b>로 나뉩니다.</p>
+        <p>액션 하나가 IBL이 할 수 있는 일 하나. 예: <code>[sense:weather]</code>. 대상에 따라 <b>6개 노드</b>로 나뉩니다.</p>
         <ul>
           <li><code>sense</code> 감각 — 바깥 정보 수집·검색 (날씨·주가·뉴스·웹)</li>
           <li><code>self</code> 자기 — 내 기억·파일·설정·일정</li>
           <li><code>limbs</code> 손발 — 기기·도구 조작 (브라우저·화면·음악·폰)</li>
           <li><code>others</code> 관계 — 이웃·위임·메시징</li>
-          <li><code>engines</code> 엔진 — 콘텐츠 생성·변환 (문서·슬라이드·차트)</li>
+          <li><code>engines</code> 엔진 — 미디어 생성 (문서·슬라이드·영상·이미지)</li>
+          <li><code>table</code> 표 — 통화 변환 문법 (필터·정렬·집계·조인·차트)</li>
         </ul>
         <p class="about-dim">액션은 셋 중 하나를 합니다 — <b>생성</b>(통화를 낸다) · <b>변환</b>(통화를 바꾼다) · <b>행동</b>(세상에 작용).</p>
         <div class="about-sec">문법 — 어떻게 쓰고 잇나</div>

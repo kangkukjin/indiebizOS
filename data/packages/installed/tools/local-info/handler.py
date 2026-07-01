@@ -27,7 +27,7 @@ def execute(tool_input: dict, context) -> str:
                 cafe_id=tool_input.get("cafe_id", "osong1"),
                 display=tool_input.get("display", 5)
             )
-            # 레코드 통화(비파괴) — 지역 장소/게시글 목록 >> [engines:document/spreadsheet]
+            # 레코드 통화(비파괴) — 지역 장소/게시글 목록 >> [table:document/spreadsheet]
             # naver_map: name/category/address/phone/link, naver_cafe: title/snippet/date/author/url
             if isinstance(result, dict) and result.get("success") and isinstance(result.get("results"), list):
                 recs = []
@@ -73,7 +73,7 @@ def execute(tool_input: dict, context) -> str:
                     area=tool_input.get("area"),
                     limit=tool_input.get("limit", 20)
                 )
-            # 레코드 통화(비파괴) — 가게 목록 >> [engines:document/spreadsheet]
+            # 레코드 통화(비파괴) — 가게 목록 >> [table:document/spreadsheet]
             if isinstance(result, dict) and isinstance(result.get("stores"), list):
                 recs = []
                 for s in result["stores"]:

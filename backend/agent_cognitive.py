@@ -10,7 +10,7 @@ AI 인지 아키텍처에 해당하는 로직을 포함한다.
 import json
 import re
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, Tuple
 
 from ai_agent import AIAgent
 
@@ -641,7 +641,8 @@ class AgentCognitiveMixin:
         )
 
     def _build_system_ai_prompt_split(self, role: str, consciousness_output: dict = None,
-                                      execution_memory: str = "") -> tuple:
+                                      execution_memory: str = "", extra_role: str = "",
+                                      allowed_set=None) -> tuple:
         """시스템 AI 프롬프트를 (안정, 가변)로 분리.
 
         안정 부분만 system_prompt로 넘기면 프롬프트 캐시 prefix가 매 호출마다
@@ -663,6 +664,8 @@ class AgentCognitiveMixin:
             consciousness_output=consciousness_output,
             model_name=self.config.get("ai", {}).get("model", ""),
             execution_memory=execution_memory,
+            extra_role=extra_role,
+            allowed_set=allowed_set,
         )
 
     def _build_execution_memory(self, user_message: str, action_hint: Optional[str] = None) -> tuple:
@@ -723,11 +726,10 @@ class AgentCognitiveMixin:
             if skeleton:
                 result = (result + "\n" + skeleton) if result else skeleton
 
-            # 웹 랜드마크(참고지도) — 웹 포식 의도일 때만(상시-on 아님). 비액션 웹 출처
-            #   "어디를·뭘 보러 가나". 수동 큐레이션(data/web_landmarks.md), 자동화는 다음 단계.
-            web_landmarks = self._build_web_landmarks(user_message)
-            if web_landmarks:
-                result = (result + "\n" + web_landmarks) if result else web_landmarks
+            # ★웹 랜드마크(참고지도)는 여기서 bespoke 주입하던 것을 폐기 —
+            #   data/guides/web_search.md(웹 검색 가이드) 안으로 접었다. 일반 에이전트는
+            #   read_guide/의식 get_guide_list 로 선택적으로 읽고, 포식 표면은 forage_chat 이
+            #   그 가이드를 항상 주입한다(포식=정의상 항상 웹검색). 키워드 게이트 사각지대 제거.
 
             if result:
                 parts = []
@@ -739,8 +741,6 @@ class AgentCognitiveMixin:
                     parts.append("포식기억")
                 if "disk_skeleton" in result:
                     parts.append("디스크골격")
-                if "web_landmarks" in result:
-                    parts.append("웹랜드마크")
                 print(f"[연상] {'+'.join(parts)}: \"{user_message[:40]}\"")
             else:
                 print(f"[연상] 빈 결과: \"{user_message[:40]}\"")
@@ -846,6 +846,32 @@ class AgentCognitiveMixin:
         "출처", "검색 결과", "검색결과", "논문", "사이트", "scholar", "arxiv",
     )
 
+    # ★자기서술 게이트(Fix 2): 시스템이 자기 인지·기억 코드를 포식할 때, 증류가 자신의
+    #   사고방식(포식 기억·냄새지도·의식 에이전트·인지 파이프라인…)을 자신에게 다시 적는
+    #   순환을 차단한다. 마커는 *이 시스템의 인지 기계장치 고유명*뿐 — 일반 코드 관습
+    #   (IBL·build·op 분기·통화 봉투)은 포함하지 않는다(그건 값진 코드 지식이라 통과).
+    #   claim+locus 결합 텍스트에 하나라도 있으면 자기서술로 보고 그 항목만 드롭.
+    _SELF_COGNITION_MARKERS = (
+        "포식 기억", "포식기억", "냄새지도", "forage_memory", "forage_agent",
+        "foraging_system", "foraging_agent", "owner_model", "주인모델",
+        "의식 에이전트", "무의식 에이전트", "무의식 분류", "인지 파이프라인",
+        "인지 아키텍처", "cognitive_pipeline", "_build_execution_memory",
+        "execution_memory", "메모리 동기화", "achievement_criteria",
+        "냄새(scent)", "reflex 분기", "reflex)", "증류 단계",
+    )
+
+    def _is_self_narration(self, *texts: str) -> bool:
+        """포식 증류가 이 시스템의 인지·기억 사고방식을 자기 자신에게 다시 적는지 판정.
+
+        forager 가 자기 인지 코드를 포식하면 냄새지도·의식 에이전트·증류 같은 자기 기계장치를
+        서술하는 순환이 생긴다(피드백 루프). 그 서술만 걸러낸다 — 같은 코드베이스의 *일반화 가능한
+        코드 관습*(핸들러 op 분기·IBL 빌드·통화 봉투)은 마커에 없어 통과한다.
+        """
+        blob = " ".join(t for t in texts if t).lower()
+        if not blob:
+            return False
+        return any(mk.lower() in blob for mk in self._SELF_COGNITION_MARKERS)
+
     def _repo_root_path(self, *texts: str) -> Optional[str]:
         """포식 중인 코드 공간의 *루트 절대경로* — 응답 속 소스파일 경로의 .git 조상.
 
@@ -898,6 +924,62 @@ class AgentCognitiveMixin:
             repo = self._repo_identity(ai_response, user_message)
             return f"code:{repo}" if repo else "code"
         return s  # 라벨 그대로(case-sensitive 식별자: code:<repo>/disk:<label>/book:<title>)
+
+    @staticmethod
+    def _is_fs_space(body: str) -> bool:
+        """파일시스템 공간인가 — mac(홈디스크)·code:<repo>·disk:<label>. web/book 은 추상."""
+        b = body or ""
+        return b == "mac" or b.startswith("code") or b.startswith("disk")
+
+    def _resolve_fs_locus(self, loc: str, repo_root: Optional[str], body: str) -> Tuple[str, bool]:
+        """파일시스템 공간 locus 를 *실존 검증*해 정규화(Fix 1). 반환 (locus, is_real).
+
+        LLM 이 상대 슬러그·추상 개념명·라인접미사(:288)를 locus 로 줄 수 있다. 이를 무조건
+        repo_root 에 join 하면 `/…/code:repo/foo` 같은 *실존하지 않는 /-접두 경로*가 생겨
+        영구 "missing" 잡음이 된다(냄새지도 오염). 그래서:
+          1) 후보(절대=그대로 / 상대=repo_root 결합, 라인접미사 벗겨 재시도)를 실존 검증.
+          2) 실존 → 절대경로 canonical 반환(freshness 추적 정상).
+          3) 미해소 → web 처럼 *추상 locus* 로 강등(비-'/' 접두 → _stale_of·mtime 면제).
+             locus 는 안정 키일 뿐, 의미는 claim 이 진다. `{body}/{tail}` 형태.
+        """
+        import os, re
+        raw = (loc or "").strip()
+        if not raw:
+            return raw, False
+        # glob 패턴·substrate 표식(__…)은 실존 대상 아님 → 추상 그대로
+        if "*" in raw or raw.startswith("__"):
+            return raw, False
+
+        def _candidates(p: str):
+            yield p
+            m = re.search(r":\d+(?:-\d+)?$", p)  # tool.py:288 / handler.py:10-20
+            if m:
+                yield p[:m.start()]
+
+        for base in _candidates(raw):
+            if base.startswith("/") or base.startswith("~"):
+                cand = os.path.expanduser(base)
+            elif repo_root:
+                cand = os.path.join(repo_root, base)
+            else:
+                continue  # 상대인데 repo 없음(mac) → 실존 확인 불가
+            if os.path.exists(cand):
+                return cand, True  # 실존 → canonical 절대경로
+
+        # 미해소 → 추상 locus 강등(freshness 면제). 의미 있는 꼬리만 슬러그로.
+        tail = raw
+        m = re.search(r":\d+(?:-\d+)?$", tail)
+        if m:
+            tail = tail[:m.start()]
+        # repo_root 하위 절대경로면 조상 경로가 노이즈 → 상대 꼬리만 남긴다(하드코딩 없음).
+        if repo_root and tail.startswith(repo_root.rstrip("/") + "/"):
+            tail = tail[len(repo_root.rstrip("/")) + 1:]
+        # 남은 노이즈: body 의 레포/라벨 중복 세그먼트 제거(code:indiebizOS → indiebizOS)
+        repo_part = body.split(":", 1)[-1] if ":" in body else body
+        segs = [s for s in tail.strip("/").split("/")
+                if s and s != repo_part and s != body]
+        slug = "/".join(segs[-2:])[:80] if segs else "unknown"
+        return f"{body}/{slug}", False
 
     def _search_forage_memory(self, user_message: str) -> str:
         """포식 기억(냄새지도) 회상 — ★실행기억처럼 항상-on(0단계 _build_execution_memory).
@@ -962,62 +1044,6 @@ class AgentCognitiveMixin:
             return focus_map.build_coarse_map_xml(profile=profile)
         except Exception as e:
             print(f"[디스크골격] 생성 실패 (무시): {e}")
-            return ""
-
-    def _build_web_landmarks(self, user_message: str) -> str:
-        """웹 랜드마크(참고지도) 주입 — 웹 포식 의도일 때만(상시-on 아님).
-
-        "웹 보러 갈 때 펴는 지도" — 비액션 출처(어디를·뭘 보러 가나). data/web_landmarks.md
-        (수동 큐레이션, 쓰면서 반성-업데이트). 자동화(forager 증류로 채우기·빈도→졸업/대체불가성
-        →생존)는 다음 단계. 실패는 무시(파이프라인 불변).
-
-        ★세션-인지 게이트(라이브 로그 교정): 웹 포식은 *멀티턴 세션*이라 매-메시지 키워드만으론
-        후속 추적 턴("그녀가…")을 놓치고 디스크 파일찾기("…파일 찾아줘")엔 헛주입된다. 그래서
-        ①키워드(새 웹 턴, 단 디스크-찾기 신호 있으면 제외) OR ②진행 중 웹 framing(재사용될
-        의식 framing 의 highlight_actions 가 search/crawl/paper 면 키워드 없어도) 둘 중 하나로 연다.
-        """
-        try:
-            msg = (user_message or "").lower()
-            strong_web = ("검색", "서치", "search", "인터넷", "웹", "온라인", "조사",
-                          "알아봐", "최신", "뉴스", "논문", "사이트", "출처", "google",
-                          "구글", "리서치", "인물", "누구")
-            find_cue = ("찾아", "찾는", "어디")
-            disk_marker = ("파일", "폴더", "디렉토리", "디스크", "하드", "바탕화면", "다운로드")
-            has_strong = any(s in msg for s in strong_web)
-            # 디스크 작업(파일찾기 등)이면 웹 랜드마크 불필요 — 디스크 골격·forager 담당
-            if any(d in msg for d in disk_marker) and not has_strong:
-                return ""
-            kw_web = has_strong or any(f in msg for f in find_cue)
-            # 세션 신호: 진행 중(재사용될) 의식 framing 이 웹-지향이면 키워드 없어도 주입
-            framing_web = False
-            try:
-                from thread_context import get_current_registry_key
-                key = get_current_registry_key() or "default"
-                prev = framing_cache_get(key)
-                if prev:
-                    acts = " ".join(
-                        prev.get("capability_focus", {}).get("highlight_actions", [])
-                    ).lower()
-                    framing_web = any(v in acts for v in
-                                      ("search", "crawl", "paper", "scholar", "ddg", "news"))
-            except Exception:
-                pass
-            if not (kw_web or framing_web):
-                return ""
-            cls = type(self)
-            cache = getattr(cls, "_web_landmarks_cache", None)
-            if cache is None:
-                from runtime_utils import get_base_path
-                path = get_base_path() / "data" / "web_landmarks.md"
-                cache = path.read_text(encoding="utf-8") if path.exists() else ""
-                cls._web_landmarks_cache = cache
-            if not cache:
-                return ""
-            note = ("웹 출처 참고지도(비액션). 액션 도메인은 IBL 액션으로 — "
-                    "통계·공시·법령·부동산실거래·도서·공연·날씨·CCTV·쇼핑 등.")
-            return f'<web_landmarks note="{note}">\n{cache}\n</web_landmarks>'
-        except Exception as e:
-            print(f"[웹랜드마크] 생성 실패 (무시): {e}")
             return ""
 
     def _run_consciousness_or_reuse(self, user_message: str, history: list,
@@ -1332,8 +1358,13 @@ AI: {ai_response[:500]}"""
         except Exception as e:
             print(f"[심층메모리] 실패 (무시): {e}")
 
-    def _distill_forage_memory(self, user_message: str, ai_response: str):
+    def _distill_forage_memory(self, user_message: str, ai_response: str,
+                               assume_forage: bool = False):
         """포식 후 자동 증류 — 냄새지도(forage_map)+주인모델(owner_model)에 *델타만* 누적.
+
+        assume_forage=True(포식 브라우저 등 *정의상 항상 포식*인 표면): 메시지 cue 게이트를
+        건너뛴다("강남 맛집"처럼 cue 단어 없는 정당한 포식을 놓치지 않도록). 응답 증거 게이트
+        (URL·경로 유무)는 유지 — 빈 검색은 여전히 스킵.
 
         해마/심층메모리 증류의 *공간* 짝(docs/FORAGER_MEMORY_SCHEMA.md §4.2). forage 의도
         대화에서, 미래 탐색을 싸게 만들 *일반화 가능한 공간 지식*(폴더 정체·관습·죽은가지·
@@ -1348,8 +1379,8 @@ AI: {ai_response[:500]}"""
             if not user_message or not ai_response:
                 return
             msg = user_message.lower()
-            if not any(cue in msg for cue in self._FORAGE_CUES):
-                return  # 비forage 대화 — 증류 없음
+            if not assume_forage and not any(cue in msg for cue in self._FORAGE_CUES):
+                return  # 비forage 대화 — 증류 없음 (포식 표면은 assume_forage 로 우회)
             import sys, os, json
             bk = os.path.dirname(os.path.abspath(__file__))
             if bk not in sys.path:
@@ -1397,6 +1428,7 @@ AI: {ai_response[:500]}"""
 
 규칙:
 - **이미 아는 것과 같으면 내지 마라**(새롭거나 교정된 것만).
+- **★자기서술 금지(포식≠자기소개)**: 포식 대상이 이 시스템(IndieBiz OS) 자신의 코드라도, *자신의 인지·기억 사고방식*(포식 기억·냄새지도·의식/무의식 에이전트·인지 파이프라인·증류·해마·Reflex·execution_memory·owner_model)을 서술하는 것은 공간 지식이 아니라 자기 자신을 자신에게 다시 적는 순환이다 → 기록 금지. 코드 공간을 포식했다면 *일반화 가능한 코드 관습·구조*(예 "핸들러 op 분기=`_OP_DISPATCHERS`", "IBL 액션=src에 정의→build로 생성", "통화 봉투=message+items 분리")만 기록하라 — 그 코드가 *무엇을 하는 인지 시스템인지*를 논평하지 마라.
 - **owner vs convention 경계**: 검색·탐색 *방법/기법*(예 "흔한 이름은 전공·소속 등 비식별 고유값으로 좁혀라", "동명이인 주의", "본명이 남는 공개기록 우선")은 *주인이 누구인가*가 아니다 → 그 공간의 map.convention 으로(owner 금지). owner.habit/lexicon 은 *주인 자신*에 관한 것만(예 "이력서를 docx+pdf 쌍으로 관리"=정리습관 / "Amari=甘利俊一"=어휘매핑).
 - prior_class: 동질이라 싸게 재검증되면 "structural", 의미·정체 주장이면 "semantic".
 - surface: *이미 아는 라벨을 위반*하는 이질 내용을 봤다면(예 "연구 폴더인 줄 알았는데 개인 투자 메모") 그 locus/owner value 를 surface 에 적고 why.
@@ -1434,20 +1466,22 @@ AI 답변: {ai_response[:1400]}
             # 공간 = AI 가 명명(없으면 mac). 매체가 늘어도 분기 없음 — 라벨 그대로 body 키.
             body = self._normalize_space(data.get("space"), ai_response, user_message)
             prov = {"query": user_message[:120]}
-            # 파일시스템 공간(code:): LLM 이 상대경로를 줄 수 있음 → 레포 루트로 정규화(freshness 정확).
-            #   glob(*)·절대경로·비경로(web/book locus)는 그대로.
+            # 파일시스템 공간(mac/code:/disk:): LLM 이 상대경로·추상 슬러그를 줄 수 있음
+            #   → 실존 검증 후 정규화(Fix 1). 실존하면 절대경로(freshness 추적), 아니면
+            #   web 처럼 추상 locus 로 강등(mtime 면제). web/book: 은 이미 추상 → 그대로.
+            is_fs = self._is_fs_space(body)
             repo_root = self._repo_root_path(ai_response, user_message) if body.startswith("code") else None
-            def _norm_locus(loc: str) -> str:
-                if (repo_root and loc and not loc.startswith("/")
-                        and not loc.startswith("__") and "*" not in loc):
-                    return os.path.join(repo_root, loc)
-                return loc
             noted = 0
             for m in (data.get("map") or [])[:6]:
                 locus, kind, claim = m.get("locus"), m.get("kind"), m.get("claim")
                 if not locus or not kind or not claim:
                     continue
-                locus = _norm_locus(locus)
+                # Fix 2: 자기 인지·기억 사고방식 서술은 공간 지식이 아니다 → 드롭.
+                if self._is_self_narration(claim, locus):
+                    print(f"[포식기억] 자기서술 드롭 map[{kind}]: \"{str(claim)[:48]}\"")
+                    continue
+                if is_fs:
+                    locus, _real = self._resolve_fs_locus(locus, repo_root, body)
                 r = forage_memory.note_map(
                     body=body, locus=locus, kind=kind, claim=claim,
                     prior_class=m.get("prior_class") or "structural",
@@ -1461,6 +1495,11 @@ AI 답변: {ai_response[:1400]}
             for o in (data.get("owner") or [])[:4]:
                 facet, value = o.get("facet"), o.get("value")
                 if not facet or not value:
+                    continue
+                # Fix 2: 주인모델도 인지 기계장치 서술은 드롭(정체성 "인지 외골격 구축자"
+                #   같은 값은 마커에 없어 통과 — 기계장치 고유명 서술만 차단).
+                if self._is_self_narration(value):
+                    print(f"[포식기억] 자기서술 드롭 owner[{facet}]: \"{str(value)[:48]}\"")
                     continue
                 r = forage_memory.note_owner(
                     facet=facet, value=value,
@@ -1496,6 +1535,45 @@ AI 답변: {ai_response[:1400]}
             print("[포식기억] JSON 파싱 실패 (무시)")
         except Exception as e:
             print(f"[포식기억] 증류 실패 (무시): {e}")
+
+    def _after_response(self, user_message: str, response: str, *,
+                        tool_calls=None, hippo_score: float = None, top_code: str = None,
+                        write_experience: bool = True, write_deep: bool = True,
+                        write_forage: bool = True, assume_forage: bool = False):
+        """턴 종료 후 메모리 쓰기 초크포인트 — 진입점마다 복붙되던 증류 배선을 한 곳으로.
+
+        WS 채팅·에이전트 채널·포식 브라우저가 각자 복붙하던 [경험증류 + 심층메모리 + 포식기억]
+        블록을 흡수한다([[architecture_entrypoint_drift_shared_boot]] 축적흡수 균열 방어). *무엇을
+        쓸지*는 진입점이 플래그로 선언(forage 브라우저=forage만), *어떻게·순서·에러격리*는 여기
+        한 곳. 새 메모리 종류 추가=이 메서드 한 곳 / 새 진입점=이 한 줄 호출(개별 종류 못 빠뜨림).
+
+        입력 획득(tool_calls/hippo_score/top_code)은 진입점마다 방식이 달라(스코프 변수 vs 재계산)
+        호출부에 남긴다 — 여기선 받은 값만 쓴다. 각 쓰기는 독립 try 로 격리(하나 실패가 나머지
+        안 막음). response 없으면 아무것도 안 씀. 실패는 파이프라인 불변(무시).
+        """
+        if not response:
+            return
+        log = getattr(self, "_log", None) or print
+        # 1) 경험 증류(해마) — 도구 실행이 있었을 때만. + Reflex top-1 성공률 피드백.
+        if write_experience and tool_calls:
+            try:
+                from ibl_usage_rag import distill_experience, record_recall_outcome
+                distill_experience(user_message, tool_calls, hippo_score)
+                record_recall_outcome(top_code, hippo_score, tool_calls)
+            except Exception as e:
+                log(f"[경험증류] 오류 (무시): {e}")
+        # 2) 심층/의미 메모리 증류.
+        if write_deep:
+            try:
+                self._distill_deep_memory(user_message, response)
+            except Exception as e:
+                log(f"[심층메모리] 오류 (무시): {e}")
+        # 3) 포식 기억 증류(냄새지도·주인모델).
+        if write_forage:
+            try:
+                self._distill_forage_memory(user_message, response, assume_forage=assume_forage)
+            except Exception as e:
+                log(f"[포식기억] 오류 (무시): {e}")
 
     def _consciousness_clarification(self, consciousness_output: dict) -> Optional[str]:
         """의식이 needs_clarification=true로 판단했다면 사용자에게 보낼 질문을 반환.

@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 # 항상 허용되는 인프라 노드
 # Phase 19-22: system, team
 # Phase 23: 5-노드 체계 (system→self, team→others)
-_ALWAYS_ALLOWED = {"self", "others"}
+# table 분리: table = IBL 문법 계층(통화 변환자). 어떤 노드 선별에서도 꺼지면 파이프라인이
+#   깨지므로 self/others 처럼 항상 허용한다(노드 on/off 시 문법 항상-on 보장).
+_ALWAYS_ALLOWED = {"self", "others", "table"}
 
 
 # ============ 접근 제어 ============
@@ -42,9 +44,9 @@ def resolve_allowed_nodes(allowed_nodes: Optional[List[str]]) -> Optional[Set[st
 
     Examples:
         None / []           → None (제한 없음)
-        ["sense"]           → {"sense", "self", "others"}
-        ["sense", "engines"]  → {"sense", "engines", "self", "others"}
-        ["limbs"]           → {"limbs", "self", "others"}
+        ["sense"]           → {"sense", "self", "others", "table"}
+        ["sense", "engines"]  → {"sense", "engines", "self", "others", "table"}
+        ["limbs"]           → {"limbs", "self", "others", "table"}
     """
     if not allowed_nodes:
         return None
@@ -121,7 +123,8 @@ def _emit_action_xml(action_name: str, action_config, indent: str = "") -> str:
 def build_environment(
     allowed_nodes: Optional[List[str]] = None,
     project_path: Optional[str] = None,
-    agent_id: Optional[str] = None
+    agent_id: Optional[str] = None,
+    allowed_set: Optional[Set[str]] = None
 ) -> str:
     """
     에이전트의 IBL 환경 프롬프트를 동적 생성.
@@ -142,7 +145,9 @@ def build_environment(
     if not nodes_data:
         return ""
 
-    allowed = resolve_allowed_nodes(allowed_nodes)
+    # allowed_set(이미 해소된 집합)이 오면 always-allow 보강 없이 *그대로* 쓴다 —
+    # 포식처럼 "정확히 이 노드만"(예: {sense, self}, others 제외)을 강제할 때.
+    allowed = allowed_set if allowed_set is not None else resolve_allowed_nodes(allowed_nodes)
     nodes = nodes_data.get("nodes", {})
 
     # 허용된 노드만 필터링
@@ -405,7 +410,7 @@ def _load_node_groups() -> dict:
 
     하위 호환:
       - "info:*", "store:*" 등 그룹 접두어 → resolve_allowed_nodes에서 처리
-      - 5-노드 체계: sense, self, limbs, others, engines
+      - 6-노드 체계: sense, self, limbs, others, engines, table
     """
     global _node_groups_cache
     if _node_groups_cache is not None:

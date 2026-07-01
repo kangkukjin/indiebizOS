@@ -58,7 +58,7 @@ export function NewspaperInstrument() {
     try {
       const t = (title || DEFAULT_TITLE).replace(/"/g, "'");
       // 신문 = 뉴스 수집(문서 IR 생산) >> 문서 렌더(신문 테마). 같은 IR이 pdf/docx로도 흐름.
-      const code = `[engines:newspaper]{keywords: ${JSON.stringify(keywords)}, title: "${t}"} >> [engines:document]{theme: "newspaper", format: "html"}`;
+      const code = `[engines:newspaper]{keywords: ${JSON.stringify(keywords)}, title: "${t}"} >> [table:document]{theme: "newspaper", format: "html"}`;
       const res = await fetch(IBL_ENDPOINT, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, project_id: PROJECT_ID }),

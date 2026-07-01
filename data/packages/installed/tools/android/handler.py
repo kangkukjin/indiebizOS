@@ -192,7 +192,7 @@ def _phone(tool_input: dict) -> dict:
                 "posted_at": ts,
             })
         latest_ago = items[0]["ago"] if items else None
-        # 레코드 통화(비파괴) — 알림 목록 >> [engines:document] 등
+        # 레코드 통화(비파괴) — 알림 목록 >> [table:document] 등
         records = [{
             "title": (it.get("title") or it.get("pkg") or "(알림)"),
             "meta": " · ".join(x for x in [it.get("pkg"), it.get("ago")] if x),

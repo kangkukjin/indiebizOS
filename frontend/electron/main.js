@@ -9,6 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import net from 'net';
+import * as foragePw from './forage-passwords.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -495,7 +496,10 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      // 포식 브라우저(ForageBrowser) — 계기판 안에 진짜 크로미움을 박기 위한 <webview> 허용.
+      // 외골격형 공동 포식의 '도로'. DOM 접근(executeJavaScript)이 나중에 AI '곁눈'이 붙을 이음매다.
+      webviewTag: true
     }
   });
 
@@ -519,6 +523,25 @@ function createWindow() {
       event.preventDefault();
       shell.openExternal(url);
     }
+  });
+
+  // 포식 브라우저 <webview> 안에서 target=_blank / window.open 으로 뜨려는 새 창을 막고,
+  // 같은 webview 안에서 그 URL 로 이동시킨다 — 별도 OS 창 대신 인플레이스(브라우저 안에서 열림).
+  // (Electron 39 는 렌더러 'new-window' 이벤트가 제거돼 메인에서 guest webContents 로 처리해야 한다.)
+  mainWindow.webContents.on('did-attach-webview', (_e, guest) => {
+    guest.setWindowOpenHandler(({ url }) => {
+      if (url && /^https?:\/\//i.test(url)) guest.loadURL(url);
+      return { action: 'deny' };
+    });
+
+    // 크롬식 Ctrl(⌘) +/-/0 줌 — 페이지에 포커스가 있어도 먹도록 guest 에서 직접 잡는다(탭별 독립).
+    guest.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown' || !(input.control || input.meta)) return;
+      const k = input.key;
+      if (k === '=' || k === '+') { guest.setZoomLevel(Math.min(guest.getZoomLevel() + 0.5, 5)); event.preventDefault(); }
+      else if (k === '-' || k === '_') { guest.setZoomLevel(Math.max(guest.getZoomLevel() - 0.5, -3)); event.preventDefault(); }
+      else if (k === '0') { guest.setZoomLevel(0); event.preventDefault(); }
+    });
   });
 
   mainWindow.on('closed', () => {
@@ -1327,6 +1350,29 @@ function setupIPC() {
     }
 
     return result.filePaths[0];
+  });
+
+  // ─── 포식 브라우저 비밀번호 금고 (safeStorage = OS 키체인) ───
+  // 평문 비밀번호는 여기(main)와 renderer 사이 IPC 안에서만 흐른다. HTTP/백엔드로 안 나간다.
+  ipcMain.handle('forage-pw-list-host', (_, url) => {
+    try { return foragePw.listForHost(url); } catch { return []; }
+  });
+  ipcMain.handle('forage-pw-get', (_, url, username) => {
+    try { return foragePw.getCredential(url, username ?? null); } catch { return null; }
+  });
+  ipcMain.handle('forage-pw-save', (_, origin, username, password) => {
+    try { return foragePw.upsert(origin, username, password); }
+    catch (e) { return { error: e.message }; }
+  });
+  ipcMain.handle('forage-pw-remove', (_, origin, username) => {
+    try { return foragePw.remove(origin, username); } catch { return false; }
+  });
+  ipcMain.handle('forage-pw-list-all', () => {
+    try { return foragePw.listAll(); } catch { return []; }
+  });
+  ipcMain.handle('forage-pw-import-chrome', () => {
+    try { return foragePw.importFromChrome(); }
+    catch (e) { return { error: e.message }; }
   });
 
   // 이미지 파일 선택 다이얼로그 (다중 선택)

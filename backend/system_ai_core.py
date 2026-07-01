@@ -192,10 +192,42 @@ def _restore_provider(runner, original_provider):
         runner.ai._provider = original_provider
 
 
+def _switch_to_role(runner, role):
+    """지정 역할(예: 'forage')로 해소된 provider 로 전환 — _switch_to_midtier 의 일반화.
+
+    model_resolver 가 role → 티어 → 모델로 해소(forage 는 기본 경량, 계기판 override 로 변경).
+    현재 provider 의 시스템 프롬프트·도구·발신 신원을 복사해 IBL 도구를 그대로 쓰게 한다.
+    전환 성공 시 원래 provider 반환(호출 측이 finally 에서 복원)."""
+    try:
+        from model_resolver import get_provider_for
+        prov, d = get_provider_for(role, oneshot=False)
+        if prov is None:
+            return None  # 해당 티어 설정/키 없음 → 기존(본격) 모델 유지
+        cur = runner.ai._provider
+        prov.system_prompt = cur.system_prompt
+        prov.tools = cur.tools
+        prov.agent_id = cur.agent_id
+        prov.project_path = cur.project_path
+        prov.agent_name = cur.agent_name
+        if hasattr(prov, '_cached_gemini_tools') and prov.tools:
+            try:
+                from google.genai import types
+                prov._cached_gemini_tools = [types.Tool(function_declarations=prov._convert_tools())]
+            except Exception:
+                pass
+        runner.ai._provider = prov
+        print(f"[{role}] 모델 전환: {d.get('model')} ({d.get('source')})")
+        return cur
+    except Exception as e:
+        print(f"[{role}] 모델 전환 실패 (기존 모델 유지): {e}")
+        return None
+
+
 # ============ 메시지 처리 (AgentRunner 인지 파이프라인 사용) ============
 
 def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None,
-                              action_hint: str = None):
+                              action_hint: str = None, extra_role: str = "", force_role: str = "",
+                              allowed_set=None):
     """시스템 AI 메시지 처리 (동기 모드, AgentRunner 인지 파이프라인)
 
     Args:
@@ -211,11 +243,19 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
 
     # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
-    request_type, reflex_hint = runner._decide_request_type(message, _hippo_score, _top_code)
+    if force_role:
+        # 포식 등 강제 EXECUTE 표면: 어차피 EXECUTE 고정 → 무의식 분류기(경량 LLM 1회 호출)를 건너뛴다.
+        request_type, reflex_hint = "EXECUTE", None
+        print(f"[무의식] 분류: EXECUTE (force_role={force_role} — 분류기 건너뜀)")
+    else:
+        request_type, reflex_hint = runner._decide_request_type(message, _hippo_score, _top_code)
 
     consciousness_output = None
     original_provider = None
-    if request_type == "THINK":
+    if force_role:
+        # 포식 등 표면별 전용 에이전트: 의식(THINK) 건너뛰고 지정 모델(기본 경량)로 바로 실행 — 빠르고 싸게.
+        original_provider = _switch_to_role(runner, force_role)
+    elif request_type == "THINK":
         consciousness_output = runner._run_consciousness_or_reuse(message, history or [], execution_memory)
     elif reflex_hint:
         # reflex(해마 고확신)는 *경량* 모델 — "이미 찾은 답을 그대로 내보냄"이라 가장 싼 티어로 충분
@@ -233,12 +273,12 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     # 프롬프트 갱신 — 안정/가변 분리 (캐시 prefix 보존)
     role = runner._load_role()
     augmented_message = message
-    if consciousness_output or execution_memory or reflex_hint:
+    if consciousness_output or execution_memory or reflex_hint or extra_role:
         _exec_mem = execution_memory
         if reflex_hint:
             _exec_mem = f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}" if execution_memory else f"[Reflex 매칭] {reflex_hint}"
         stable_prompt, dynamic_context = runner._build_system_ai_prompt_split(
-            role, consciousness_output, _exec_mem
+            role, consciousness_output, _exec_mem, extra_role=extra_role, allowed_set=allowed_set
         )
         runner.ai.system_prompt = stable_prompt
         runner.ai._provider.system_prompt = stable_prompt
@@ -300,7 +340,10 @@ def process_system_ai_message_stream(
     history: List[Dict] = None,
     images: List[Dict] = None,
     cancel_check: Callable = None,
-    action_hint: str = None
+    action_hint: str = None,
+    extra_role: str = "",
+    force_role: str = "",
+    allowed_set=None
 ) -> Generator:
     """시스템 AI 메시지 처리 (스트리밍 모드, AgentRunner 인지 파이프라인)
 
@@ -321,11 +364,19 @@ def process_system_ai_message_stream(
     execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
 
     # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
-    request_type, reflex_hint = runner._decide_request_type(message, _hippo_score, _top_code)
+    if force_role:
+        # 포식 등 강제 EXECUTE 표면: 어차피 EXECUTE 고정 → 무의식 분류기(경량 LLM 1회 호출)를 건너뛴다.
+        request_type, reflex_hint = "EXECUTE", None
+        print(f"[무의식] 분류: EXECUTE (force_role={force_role} — 분류기 건너뜀)")
+    else:
+        request_type, reflex_hint = runner._decide_request_type(message, _hippo_score, _top_code)
 
     consciousness_output = None
     original_provider = None
-    if request_type == "THINK":
+    if force_role:
+        # 포식 등 표면별 전용 에이전트: 의식(THINK) 건너뛰고 지정 모델(기본 경량)로 바로 실행 — 빠르고 싸게.
+        original_provider = _switch_to_role(runner, force_role)
+    elif request_type == "THINK":
         consciousness_output = runner._run_consciousness_or_reuse(message, history or [], execution_memory)
     elif reflex_hint:
         # reflex(해마 고확신)는 *경량* 모델 — "이미 찾은 답을 그대로 내보냄"이라 가장 싼 티어로 충분
@@ -346,12 +397,12 @@ def process_system_ai_message_stream(
     # 프롬프트 갱신 — 안정/가변 분리 (캐시 prefix 보존)
     role = runner._load_role()
     augmented_message = message
-    if consciousness_output or execution_memory or reflex_hint:
+    if consciousness_output or execution_memory or reflex_hint or extra_role:
         _exec_mem = execution_memory
         if reflex_hint:
             _exec_mem = f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}" if execution_memory else f"[Reflex 매칭] {reflex_hint}"
         stable_prompt, dynamic_context = runner._build_system_ai_prompt_split(
-            role, consciousness_output, _exec_mem
+            role, consciousness_output, _exec_mem, extra_role=extra_role, allowed_set=allowed_set
         )
         runner.ai.system_prompt = stable_prompt
         runner.ai._provider.system_prompt = stable_prompt

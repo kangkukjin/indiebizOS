@@ -3,7 +3,7 @@
 IBL의 깊이(depth)를 만드는 부품. 생산자(sense:* 등)가 내는 공유 통화를 입력으로,
 같은 통화를 출력하는 닫힌(closure) 동사들. >> 파이프로 임의 깊이 조합:
 
-    [sense:realty]{...} >> [engines:filter]{where:"전세"} >> [engines:sort]{by:price} >> [engines:take]{n:5}
+    [sense:realty]{...} >> [table:filter]{where:"전세"} >> [table:sort]{by:price} >> [table:take]{n:5}
 
 각 동사는 도메인에 무관 — 한 번 짜서 34개 생산자 × 임의 깊이에 곱해진다. 이 파일이
 없던 시절엔 sort/top-N/dedup이 ~19개 핸들러에 사적으로 중복 구현돼 있었다(부채 회수).
@@ -448,7 +448,7 @@ def _op_union(prev, params):
     """
     a, b = _extract_two(prev)
     if a is None or b is None:
-        return {"error": "union: & 병렬로 두 입력이 필요합니다. 예: [A] & [B] >> [engines:union]"}
+        return {"error": "union: & 병렬로 두 입력이 필요합니다. 예: [A] & [B] >> [table:union]"}
     ta, _ = _get_table(a)
     tb, _ = _get_table(b)
     if ta is not None and tb is not None:
@@ -480,11 +480,11 @@ def _op_merge(prev, params):
     """
     a, b = _extract_two(prev)
     if a is None or b is None:
-        return {"error": "merge: & 병렬로 두 records 입력이 필요합니다. 예: [A] & [B] >> [engines:merge]"}
+        return {"error": "merge: & 병렬로 두 records 입력이 필요합니다. 예: [A] & [B] >> [table:merge]"}
     ra, _ = _get_records(a)
     rb, _ = _get_records(b)
     if ra is None or rb is None:
-        return {"error": "merge: 두 입력 모두 records 통화여야 합니다(표형 결합은 engines:union)."}
+        return {"error": "merge: 두 입력 모두 records 통화여야 합니다(표형 결합은 table:union)."}
     out = list(ra) + list(rb)
     by = params.get("by")
     if by or params.get("dedup"):
@@ -524,7 +524,7 @@ def _op_join(prev, params):
     """두 table을 키 열로 inner join. params.on(양쪽 공통 키 열명, 필수).
 
     결과 열 = 좌측 전체 + 우측(키 제외). 서로 다른 소스를 한 키로 묶어 분석.
-    예: [sense:stock]{op:history} & [sense:world_bank]{...} >> [engines:join]{on: "연도"}.
+    예: [sense:stock]{op:history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}.
     """
     on = params.get("on") or params.get("key")
     if not on:
@@ -532,7 +532,7 @@ def _op_join(prev, params):
     on = str(on)
     a, b = _extract_two(prev)
     if a is None or b is None:
-        return {"error": "join: & 병렬로 두 table 입력이 필요합니다. 예: [A] & [B] >> [engines:join]{on: \"연도\"}"}
+        return {"error": "join: & 병렬로 두 table 입력이 필요합니다. 예: [A] & [B] >> [table:join]{on: \"연도\"}"}
     ta, _ = _get_table(a)
     tb, _ = _get_table(b)
     if ta is None or tb is None:
@@ -620,6 +620,6 @@ def execute(tool_input: dict, context):
     if prev is None:
         return {"error": (
             f"{tool_name}: 입력 통화가 없습니다. 변환자는 >> 파이프로 앞 액션의 "
-            "records/table 통화를 받습니다. 예: [sense:search]{...} >> [engines:filter]{where:...}"
+            "records/table 통화를 받습니다. 예: [sense:search]{...} >> [table:filter]{where:...}"
         )}
     return fn(prev, params)

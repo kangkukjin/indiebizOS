@@ -124,6 +124,16 @@ contextBridge.exposeInMainWorld('electron', {
   // 이미지 파일 선택 다이얼로그 (다중 선택)
   selectImages: () => ipcRenderer.invoke('select-images'),
 
+  // === 포식 브라우저 비밀번호 금고 (크롬 비번 채우기) ===
+  foragePwListHost: (url) => ipcRenderer.invoke('forage-pw-list-host', url),
+  foragePwGet: (url, username) => ipcRenderer.invoke('forage-pw-get', url, username),
+  foragePwSave: (origin, username, password) =>
+    ipcRenderer.invoke('forage-pw-save', origin, username, password),
+  foragePwRemove: (origin, username) =>
+    ipcRenderer.invoke('forage-pw-remove', origin, username),
+  foragePwListAll: () => ipcRenderer.invoke('forage-pw-list-all'),
+  foragePwImportChrome: () => ipcRenderer.invoke('forage-pw-import-chrome'),
+
   // === 로그 뷰어 관련 ===
   // 로그 창 열기
   openLogWindow: () => ipcRenderer.invoke('open-log-window'),

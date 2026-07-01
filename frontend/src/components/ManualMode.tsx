@@ -491,7 +491,7 @@ export default function ManualMode() {
                 <li>잇기 — <code className="font-mono">{'>>'}</code> 순차(앞 결과를 뒤로) · <code className="font-mono">&</code> 병렬 · <code className="font-mono">??</code> 폴백</li>
               </ul>
               <div className="mt-2 rounded-lg bg-stone-50 border border-stone-200 p-2.5">
-                <div className="font-mono text-[12px] text-stone-700 break-all">{'[sense:realty]{region:"강남구", type:"apt"} >> [engines:sort]{by:"meta"} >> [engines:take]{n:3}'}</div>
+                <div className="font-mono text-[12px] text-stone-700 break-all">{'[sense:realty]{region:"강남구", type:"apt"} >> [table:sort]{by:"meta"} >> [table:take]{n:3}'}</div>
                 <div className="mt-1.5 text-[11px] text-stone-500 leading-relaxed">
                   <span className="font-semibold text-stone-600">realty</span>(명사 · 생성)가 강남구 아파트를 <span className="font-semibold">items 통화</span>로 길어오면, <span className="font-semibold text-stone-600">sort</span>·<span className="font-semibold text-stone-600">take</span>(동사 · 변환)가 그 통화를 받아 정렬 → 상위 3개로 줄입니다. 통화가 <code className="font-mono">{'>>'}</code>로 흐릅니다.
                 </div>

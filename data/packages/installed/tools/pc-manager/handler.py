@@ -200,7 +200,7 @@ def _query_storage(tool_input: dict) -> str:
         "shown": len(records),
         "scope": res.get("scope"),
         "items": records,
-        # table 통화(비파괴) — fs_query >> [engines:spreadsheet/document] 호환 유지.
+        # table 통화(비파괴) — fs_query >> [table:spreadsheet/document] 호환 유지.
         "table": {"columns": ["이름", "크기(MB)", "경로", "수정일"], "rows": rows},
     }
     if res.get("fallback"):

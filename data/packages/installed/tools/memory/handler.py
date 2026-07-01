@@ -106,7 +106,7 @@ def _memory_search(db, tool_input, project_path, agent_id):
     conv_results = _search_conversations(project_path, query, limit=min(limit, 5))
     results.extend(conv_results)
 
-    # 레코드 통화 부착(비파괴) — memories 목록을 records로. >> [engines:document/spreadsheet] 파이프용.
+    # 레코드 통화 부착(비파괴) — memories 목록을 records로. >> [table:document/spreadsheet] 파이프용.
     return json.dumps({
         "count": len(results),
         "memories": results,

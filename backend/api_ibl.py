@@ -158,7 +158,7 @@ async def embed_text(req: EmbedRequest):
 async def get_actions_catalog():
     """IBL 액션 카탈로그 — 마법책 UI 데이터 소스.
 
-    5개 노드(sense, self, limbs, others, engines)별로 분류된
+    6개 노드(sense, self, limbs, others, engines, table)별로 분류된
     전체 IBL 액션 목록을 반환한다. 프론트의 액션 사전 모달이
     이 데이터로 책장을 그린다.
     """
@@ -258,7 +258,7 @@ async def translate_to_ibl(req: TranslateRequest):
     if references:
         prompt += f"참고 용례 (이 액션 이름들만 사용하라):\n{references}\n\n"
     else:
-        prompt += "(관련 과거 용례 없음 — 위 5개 노드 지식으로 직접 번역하라.)\n\n"
+        prompt += "(관련 과거 용례 없음 — 위 6개 노드 지식으로 직접 번역하라.)\n\n"
     prompt += "위 명령을 IBL 코드로 번역하라. IBL 코드만 출력."
 
     spec = _load_ibl_spec()

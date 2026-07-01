@@ -393,7 +393,7 @@ def get_disclosures(corp_code: str = None, corp_name: str = None,
             "url": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={item.get('rcept_no')}"
         })
 
-    # 레코드 통화(비파괴) — 공시 목록 >> [engines:document/spreadsheet]
+    # 레코드 통화(비파괴) — 공시 목록 >> [table:document/spreadsheet]
     records = [{
         "title": d.get("report_name") or "(공시)",
         "meta": " · ".join(x for x in [d.get("corp_name"), d.get("rcept_dt"), d.get("flr_nm")] if x),

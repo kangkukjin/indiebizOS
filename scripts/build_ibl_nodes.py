@@ -37,7 +37,7 @@ from pathlib import Path
 
 
 # 순서가 중요 — 원본 yaml의 노드 순서와 동일해야 함.
-NODE_ORDER = ["sense", "self", "limbs", "others", "engines"]
+NODE_ORDER = ["sense", "self", "limbs", "others", "engines", "table"]
 
 # 패키지 탐색 경로 — installed/tools 가 표준, extensions 도 함께 스캔.
 PACKAGE_DIRS = [
@@ -1429,7 +1429,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
 
     header = (
         "# GENERATED — DO NOT EDIT\n"
-        "# Source : data/ibl_nodes_src/{meta,sense,self,limbs,others,engines}.yaml\n"
+        "# Source : data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml\n"
         "# Rebuild: python3 scripts/build_ibl_nodes.py\n"
         "# Check  : python3 scripts/build_ibl_nodes.py --check\n"
         "\n"

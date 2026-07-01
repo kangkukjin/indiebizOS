@@ -81,7 +81,7 @@ def _resolve(library_name: str) -> str:
         return json.dumps({"error": f"'{library_name}'을 찾을 수 없습니다."}, ensure_ascii=False)
     results = [{"id": l.get("id", ""), "name": l.get("name", ""),
                 "description": l.get("description", "")[:100]} for l in libs[:5]]
-    # 레코드 통화(비파괴) — 라이브러리 목록 >> [engines:document/spreadsheet]
+    # 레코드 통화(비파괴) — 라이브러리 목록 >> [table:document/spreadsheet]
     records = [{
         "title": r.get("name", ""),
         "meta": r.get("id", ""),
@@ -119,7 +119,7 @@ def _search(query: str, library_id: str, library_name: str) -> str:
         para = para.strip()
         if para:
             blocks.append({"type": "paragraph", "text": para})
-    # 단일 통화 items = 문서 IR(type+text 항목). 소비자 engines:document가 type/text 감지.
+    # 단일 통화 items = 문서 IR(type+text 항목). 소비자 table:document가 type/text 감지.
     return json.dumps({"success": True, "library": lib_name, "library_id": library_id,
                        "message": docs, "items": blocks}, ensure_ascii=False)
 

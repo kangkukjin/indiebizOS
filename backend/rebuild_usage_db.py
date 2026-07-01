@@ -232,10 +232,10 @@ EXAMPLES = [
     ("체중 기록해줘", '[self:health]{op: "save", category: "체중", value: 75}', "self", "single", 1, "self,health_save"),
 
     # 홈페이지/웹 관리
-    ("관리하는 홈페이지 목록 보여줘", '[engines:web_site]{op: "list"}', "engines", "single", 1, "engines,web_site_list"),
-    ("등록된 사이트 몇 개야?", '[engines:web_site]{op: "list"}', "engines", "single", 1, "engines,web_site_list"),
-    ("새 사이트 등록해줘", '[engines:web_site]{op: "register", name: "내 사이트", local_path: "/path/to/site"}', "engines", "single", 1, "engines,web_site_register"),
-    ("사이트 삭제해줘", '[engines:web_site]{op: "remove", site_id: "my-site"}', "engines", "single", 1, "engines,web_site_remove"),
+    ("관리하는 홈페이지 목록 보여줘", '[engines:web_site]{op: "list"}', "table", "single", 1, "table,web_site_list"),
+    ("등록된 사이트 몇 개야?", '[engines:web_site]{op: "list"}', "table", "single", 1, "table,web_site_list"),
+    ("새 사이트 등록해줘", '[engines:web_site]{op: "register", name: "내 사이트", local_path: "/path/to/site"}', "table", "single", 1, "table,web_site_register"),
+    ("사이트 삭제해줘", '[engines:web_site]{op: "remove", site_id: "my-site"}', "table", "single", 1, "table,web_site_remove"),
 
     # 학술
     ("AI 논문 검색해줘", '[sense:paper]{op: "search", source: "openalex", query: "artificial intelligence"}', "sense", "single", 1, "sense,search_openalex"),
@@ -279,37 +279,37 @@ EXAMPLES = [
     # =========================================================================
 
     # 신문
-    ("신문 만들어줘", '[engines:newspaper]{keywords: "AI, 경제, 문화"}', "engines", "single", 1, "engines,newspaper"),
-    ("AI 뉴스 신문 만들어", '[engines:newspaper]{keywords: "AI"}', "engines", "single", 1, "engines,newspaper"),
-    ("구글뉴스 신문 생성해줘", '[engines:newspaper]{keywords: "AI, 청주, 세종, 문화, 여행, 과학, 경제"}', "engines", "single", 1, "engines,newspaper"),
+    ("신문 만들어줘", '[engines:newspaper]{keywords: "AI, 경제, 문화"}', "table", "single", 1, "table,newspaper"),
+    ("AI 뉴스 신문 만들어", '[engines:newspaper]{keywords: "AI"}', "table", "single", 1, "table,newspaper"),
+    ("구글뉴스 신문 생성해줘", '[engines:newspaper]{keywords: "AI, 청주, 세종, 문화, 여행, 과학, 경제"}', "table", "single", 1, "table,newspaper"),
     # 신문 파이프라인 (생성 → 브라우저)
     ("AI 뉴스 신문 만들어서 열어줘", '[engines:newspaper]{keywords: "AI"} >> [limbs:os_open]', "engines,limbs", "pipeline", 2, "engines,newspaper,limbs,os_open"),
 
     # 차트/시각화
-    ("라인 차트 그려줘", '[engines:chart]{chart_type: "line", title: "주가 추이"}', "engines", "single", 1, "engines,line"),
-    ("바 차트 만들어줘", '[engines:chart]{chart_type: "bar", title: "매출 비교"}', "engines", "single", 1, "engines,bar"),
-    ("파이 차트 그려줘", '[engines:chart]{chart_type: "pie", title: "시장 점유율"}', "engines", "single", 1, "engines,pie"),
-    ("캔들스틱 차트 그려줘", '[engines:chart]{chart_type: "candlestick", title: "삼성전자 주가"}', "engines", "single", 1, "engines,candlestick"),
-    ("히트맵 만들어줘", '[engines:chart]{chart_type: "heatmap", title: "상관관계"}', "engines", "single", 1, "engines,heatmap"),
-    ("차트 대시보드 만들어줘", '[engines:chart]{chart_type: "multi", title: "투자 대시보드"}', "engines", "single", 1, "engines,multi"),
+    ("라인 차트 그려줘", '[table:chart]{chart_type: "line", title: "주가 추이"}', "table", "single", 1, "table,line"),
+    ("바 차트 만들어줘", '[table:chart]{chart_type: "bar", title: "매출 비교"}', "table", "single", 1, "table,bar"),
+    ("파이 차트 그려줘", '[table:chart]{chart_type: "pie", title: "시장 점유율"}', "table", "single", 1, "table,pie"),
+    ("캔들스틱 차트 그려줘", '[table:chart]{chart_type: "candlestick", title: "삼성전자 주가"}', "table", "single", 1, "table,candlestick"),
+    ("히트맵 만들어줘", '[table:chart]{chart_type: "heatmap", title: "상관관계"}', "table", "single", 1, "table,heatmap"),
+    ("차트 대시보드 만들어줘", '[table:chart]{chart_type: "multi", title: "투자 대시보드"}', "table", "single", 1, "table,multi"),
 
     # 슬라이드/영상
-    ("발표 슬라이드 만들어줘", '[engines:slide_shadcn]{slides: [{layout: "hero", title: "AI 트렌드 2026"}]}', "engines", "single", 1, "engines,slide"),
-    ("고품질 슬라이드 만들어줘", '[engines:slide_shadcn]{topic: "분기 실적"}', "engines", "single", 1, "engines,slide_shadcn"),
-    ("영상 만들어줘", '[engines:html_video]{topic: "회사 소개"}', "engines", "single", 1, "engines,html_video"),
-    ("TTS로 음성 변환해줘", '[engines:tts]{text: "안녕하세요, 오늘 뉴스입니다"}', "engines", "single", 1, "engines,tts"),
+    ("발표 슬라이드 만들어줘", '[engines:slide_shadcn]{slides: [{layout: "hero", title: "AI 트렌드 2026"}]}', "table", "single", 1, "table,slide"),
+    ("고품질 슬라이드 만들어줘", '[engines:slide_shadcn]{topic: "분기 실적"}', "table", "single", 1, "table,slide_shadcn"),
+    ("영상 만들어줘", '[engines:html_video]{topic: "회사 소개"}', "table", "single", 1, "table,html_video"),
+    ("TTS로 음성 변환해줘", '[engines:tts]{text: "안녕하세요, 오늘 뉴스입니다"}', "table", "single", 1, "table,tts"),
 
     # AI 이미지
-    ("AI 이미지 만들어줘", '[engines:image_gemini]{prompt: "아름다운 한국 산 풍경"}', "engines", "single", 1, "engines,image_gemini"),
+    ("AI 이미지 만들어줘", '[engines:image_gemini]{prompt: "아름다운 한국 산 풍경"}', "table", "single", 1, "table,image_gemini"),
 
     # 웹사이트
-    ("웹사이트 만들어줘", '[engines:create_site]{name: "카페 홈페이지"}', "engines", "single", 1, "engines,create_site"),
-    ("랜딩 페이지 만들어줘", '[engines:create_site]{name: "제품 소개 페이지"}', "engines", "single", 1, "engines,create_site"),
+    ("웹사이트 만들어줘", '[engines:create_site]{name: "카페 홈페이지"}', "table", "single", 1, "table,create_site"),
+    ("랜딩 페이지 만들어줘", '[engines:create_site]{name: "제품 소개 페이지"}', "table", "single", 1, "table,create_site"),
     ("사이트 배포해줘", 'run_command("cd /path/to/site && vercel --prod --yes")', "run_command", "single", 1, "run_command"),
 
     # 설계
-    ("집 설계 시작해줘", '[engines:arch_create]{name: "내 집"}', "engines", "single", 1, "engines,arch_create"),
-    ("평면도 그려줘", '[engines:arch_floor_plan]{design_id: "design_1"}', "engines", "single", 1, "engines,arch_floor_plan"),
+    ("집 설계 시작해줘", '[engines:arch_create]{name: "내 집"}', "table", "single", 1, "table,arch_create"),
+    ("평면도 그려줘", '[engines:arch_floor_plan]{design_id: "design_1"}', "table", "single", 1, "table,arch_floor_plan"),
 
     # =========================================================================
     # tools 노드 — 브라우저/안드로이드/데스크탑
@@ -362,8 +362,8 @@ EXAMPLES = [
     ("반도체 뉴스 검색해서 정리해줘", '[sense:search_news]{query: "반도체"} >> [self:local_save]{path: "반도체뉴스.md"}', "sense,self", "pipeline", 2, "pipeline,sequential"),
 
     # 검색 → 차트
-    ("삼성전자 주가 조회해서 차트로 그려줘", '[sense:stock]{op: "quote", ticker: "삼성전자"} >> [engines:chart]{chart_type: "line", title: "삼성전자 주가 차트"}', "sense,forge", "pipeline", 2, "pipeline,sequential"),
-    ("애플 주가 차트 만들어줘", '[sense:stock]{op: "quote", ticker: "AAPL"} >> [engines:chart]{chart_type: "line", title: "AAPL 주가 차트"}', "sense,forge", "pipeline", 2, "pipeline,sequential"),
+    ("삼성전자 주가 조회해서 차트로 그려줘", '[sense:stock]{op: "quote", ticker: "삼성전자"} >> [table:chart]{chart_type: "line", title: "삼성전자 주가 차트"}', "sense,table", "pipeline", 2, "pipeline,sequential"),
+    ("애플 주가 차트 만들어줘", '[sense:stock]{op: "quote", ticker: "AAPL"} >> [table:chart]{chart_type: "line", title: "AAPL 주가 차트"}', "sense,table", "pipeline", 2, "pipeline,sequential"),
 
     # 유튜브 → 저장
     ("유튜브 자막 추출해서 파일로 저장해", '[limbs:music]{op: "download", url: "https://youtube.com/watch?v=example"} >> [self:local_save]{path: "transcript.md"}', "limbs,self", "pipeline", 2, "pipeline,sequential"),

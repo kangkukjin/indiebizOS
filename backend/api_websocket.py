@@ -894,26 +894,11 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 except Exception:
                     pass
 
-                # 경험 증류: 해마 점수가 낮은 성공 세션에서 새로운 패턴 학습
-                if final_content and tool_calls_log:
-                    try:
-                        from ibl_usage_rag import distill_experience, record_recall_outcome
-                        distill_experience(message, tool_calls_log, _hippocampus_score)
-                        # 해마 피드백: Reflex 경로 top-1 실행 결과를 성공률에 반영
-                        record_recall_outcome(_top_code, _hippocampus_score, tool_calls_log)
-                    except Exception as distill_err:
-                        print(f"[경험증류] 오류 (무시): {distill_err}")
-
-                # 연상기억 증류: 대화에서 기억할 정보 자동 저장
-                if final_content:
-                    try:
-                        runner._distill_deep_memory(message, final_content)
-                    except Exception as mem_err:
-                        print(f"[심층메모리] 오류 (무시): {mem_err}")
-                    try:
-                        runner._distill_forage_memory(message, final_content)
-                    except Exception as fmem_err:
-                        print(f"[포식기억] 오류 (무시): {fmem_err}")
+                # 턴 종료 메모리 쓰기(경험+심층+포식) — 초크포인트 한 곳(agent_cognitive._after_response)
+                runner._after_response(
+                    message, final_content,
+                    tool_calls=tool_calls_log, hippo_score=_hippocampus_score, top_code=_top_code,
+                )
 
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put(None),  # 종료 신호
@@ -1324,30 +1309,21 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 from system_ai_core import get_system_ai_runner
                 _runner = get_system_ai_runner()
 
-                # 경험 증류: 해마 점수가 낮은 성공 세션에서 새로운 패턴 학습
-                if final_content:
-                    try:
-                        from ibl_usage_rag import get_top as _get_top, distill_experience, record_recall_outcome
-                        from thread_context import get_tool_calls as _get_tc
-                        _hippocampus_score, _sys_top_code = _get_top(message)
-                        _tool_calls = _get_tc()
-                        if _tool_calls:
-                            distill_experience(message, _tool_calls, _hippocampus_score)
-                            # 해마 피드백: Reflex 경로 top-1 실행 결과를 성공률에 반영
-                            record_recall_outcome(_sys_top_code, _hippocampus_score, _tool_calls)
-                    except Exception as distill_err:
-                        print(f"[경험증류] 시스템AI 오류 (무시): {distill_err}")
-
-                # 연상기억 증류: 대화에서 기억할 정보 자동 저장
+                # 턴 종료 메모리 쓰기(경험+심층+포식) — 초크포인트 한 곳. 시스템AI 경로는
+                # hippo/tool_calls 가 스코프에 없어 여기서 재계산해 넘긴다(입력 획득만 진입점 몫).
                 if final_content and _runner:
+                    _hs = _tc_top = _tcalls = None
                     try:
-                        _runner._distill_deep_memory(message, final_content)
-                    except Exception as mem_err:
-                        print(f"[심층메모리] 오류 (무시): {mem_err}")
-                    try:
-                        _runner._distill_forage_memory(message, final_content)
-                    except Exception as fmem_err:
-                        print(f"[포식기억] 오류 (무시): {fmem_err}")
+                        from ibl_usage_rag import get_top as _get_top
+                        from thread_context import get_tool_calls as _get_tc
+                        _hs, _tc_top = _get_top(message)
+                        _tcalls = _get_tc()
+                    except Exception as top_err:
+                        print(f"[경험증류] 시스템AI 입력 획득 실패 (무시): {top_err}")
+                    _runner._after_response(
+                        message, final_content,
+                        tool_calls=_tcalls, hippo_score=_hs, top_code=_tc_top,
+                    )
 
                 asyncio.run_coroutine_threadsafe(event_queue.put(None), loop)
 

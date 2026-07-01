@@ -113,6 +113,9 @@ data/packages/installed/tools/web/sites.json
 # 백업 파일
 data/packages/media_producer_backup/
 
+# 마이그레이션 백업 (대용량 — 모델 safetensors·DB 포함, 로컬 안전 스냅샷)
+data/_migration_backup_*/
+
 # OS 파일
 .DS_Store
 Thumbs.db

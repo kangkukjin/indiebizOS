@@ -144,7 +144,7 @@
     },
     {
       "name": "photo_op",
-      "description": "사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접. 선스캔 불필요·항상 최신.\n\n파라미터: q(파일명·기종 키워드, 선택), kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유 사진만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50).\n\n반환 records[]에 표시 필드(title/meta/image/url)와 구조 필드(path/taken_at/month/kind/size/camera/lat/lng)가 함께 실림 → 타임라인=records→[engines:groupby]{by:month}, 통계=[engines:groupby]{by:kind}, 지도=lat/lng 직결 조합으로 유도.",
+      "description": "사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접. 선스캔 불필요·항상 최신.\n\n파라미터: q(파일명·기종 키워드, 선택), kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유 사진만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50).\n\n반환 records[]에 표시 필드(title/meta/image/url)와 구조 필드(path/taken_at/month/kind/size/camera/lat/lng)가 함께 실림 → 타임라인=records→[table:groupby]{by:month}, 통계=[table:groupby]{by:kind}, 지도=lat/lng 직결 조합으로 유도.",
       "input_schema": {
         "type": "object",
         "properties": {

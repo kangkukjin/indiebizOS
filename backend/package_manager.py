@@ -655,7 +655,7 @@ class PackageManager:
         lines.append("|----|------|------|------|")
         for pkg in sorted(tools, key=lambda x: x['id']):
             status = "설치됨" if pkg.get("installed") else "미설치"
-            desc = pkg.get("description", "")[:40]
+            desc = pkg.get("description", "").replace("\n", " ").replace("|", "/").strip()[:40]
             lines.append(f"| {pkg['id']} | {pkg['name']} | {desc} | {status} |")
         lines.append("")
 
@@ -694,44 +694,45 @@ class PackageManager:
         current_section = None
         current_lines = []
 
+        def _flush():
+            # 섹션 끝의 빈 줄은 보존하지 않음 (재생성 시 매번 새로 붙기 때문에 누적 방지)
+            while current_lines and current_lines[-1] == "":
+                current_lines.pop()
+            if current_section:
+                sections[current_section] = current_lines
+
         for line in content.split('\n'):
             if line.startswith('## 프로젝트'):
-                if current_section:
-                    sections[current_section] = current_lines
+                _flush()
                 current_section = "projects"
                 current_lines = [line]
             elif line.startswith('## 폴더'):
-                if current_section:
-                    sections[current_section] = current_lines
+                _flush()
                 current_section = "folders"
                 current_lines = [line]
             elif line.startswith('## 도구'):
-                if current_section:
-                    sections[current_section] = current_lines
+                _flush()
                 current_section = None
                 current_lines = []
             elif line.startswith('## 템플릿'):
-                if current_section:
-                    sections[current_section] = current_lines
+                _flush()
                 current_section = "templates"
                 current_lines = [line]
             elif line.startswith('## 스위치'):
-                if current_section:
-                    sections[current_section] = current_lines
+                _flush()
                 current_section = "switches"
                 current_lines = [line]
             elif line.startswith('## 에이전트'):
-                if current_section:
-                    sections[current_section] = current_lines
+                _flush()
                 current_section = "agents"
                 current_lines = [line]
             elif line.startswith('---'):
-                if current_section:
-                    sections[current_section] = current_lines
+                _flush()
                 current_section = None
                 current_lines = []
             elif current_section:
                 current_lines.append(line)
+        _flush()
 
         if current_section:
             sections[current_section] = current_lines

@@ -1,0 +1,11 @@
+node: sense
+actions:
+  search_naver:
+    returns: items
+    description: 네이버 검색 API. 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)에서 DuckDuckGo/Google보다 압도적으로 강함. type 파라미터로 도메인 선택 (기본 webkr). 뉴스 단독 검색은 type='news' 또는 search_news(Google News) 중 한국 출처 우선이면 이쪽.
+    group: research
+    target_description: 검색어. type 옵션으로 도메인 선택 (webkr/news/blog/cafe/kin/book/encyc/doc/shop, 기본 webkr).
+    router: handler
+    tool: naver_search
+    implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 9개 도메인(webkr/news/blog/cafe/kin/book/encyc/doc/shop) 모두 호출. 무료 일 25k 쿼리.
+    target_key: query

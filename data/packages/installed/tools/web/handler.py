@@ -553,17 +553,6 @@ def execute(tool_input: dict, context):
             } for r in result["results"]]
         return format_json(result)
 
-    # 네이버 검색 (웹/뉴스/블로그/카페/지식인/책/백과/전문자료/쇼핑 통합)
-    elif tool_name == "naver_search":
-        tool_naver = load_module("tool_naver_search")
-        result = tool_naver.search_naver(
-            query=tool_input.get("query", ""),
-            type=tool_input.get("type", "webkr"),
-            display=tool_input.get("display", 5),
-            sort=tool_input.get("sort", "sim"),
-        )
-        return format_json(result)
-
     # 신문 생성
     elif tool_name == "generate_newspaper":
         keywords = tool_input.get("keywords", [])

@@ -69,6 +69,7 @@ PHONE_VERIFIED_PACKAGES = {
     "culture",
     "radio",
     "web",
+    "web-kr",     # web에서 분리된 네이버 검색(naver_search). 순수 HTTP API — web과 동일하게 폰서 동작(분리 전 web으로 검증됨).
     "real-estate",
     "android",   # M3: [sense:phone] 폰 로컬 알림. limbs:android(android_op)은 mac_only 태그로 제외.
     "business",  # 메신저(others:messages/neighbor/contact)+비즈니스 CRM(self:business*). business.db 폰 머지 토대 위. auto_response 는 mac_only 로 제외(PC 전용 폴러).

@@ -564,11 +564,6 @@ def execute(tool_input: dict, context):
         )
         return format_json(result)
 
-    # 종합 검색
-    elif tool_name == "unified_search":
-        tool_unified = load_module("tool_unified_search")
-        return tool_unified.use_tool(tool_input)
-
     # 신문 생성
     elif tool_name == "generate_newspaper":
         keywords = tool_input.get("keywords", [])

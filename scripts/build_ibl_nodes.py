@@ -731,7 +731,7 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
 # === app: 블록 검증 (2026-06-11, 원격 앱 표면 제네릭화 2단계) ===
 # 액션이 자기 앱 표면(inputs/action 템플릿/view)을 선언하면 원격 런처가 자동 파생.
 # 어휘 명세: docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md. 소비자: api_launcher_web._derive_instruments.
-APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list", "map", "calendar"}
+APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list", "map", "calendar", "group"}
 # 뷰-이벤트 → 액션 바인딩(상호작용을 데이터로): map 프리미티브가 사용자 조작을 액션으로 흘린다.
 #   marker_click=마커 클릭(IBL 템플릿: 페이로드 $id/$name/$lat/$lng/$url · 또는 {stream: true}=마커 url 을 클라이언트 영상 재생, CCTV) · moveend/center_drag=지도 이동·중심 드래그(재조회, $lat/$lng/$radius)
 APP_VIEW_EVENTS = {"marker_click", "moveend", "center_drag"}
@@ -895,8 +895,13 @@ def _app_check_filter_block(where: str, blk: dict) -> list[str]:
     return issues
 
 
-def _app_check_view(qualified: str, view, depth: int = 0) -> list[str]:
-    """view 프리미티브 배열 구조 검증 (드릴 뷰 재귀 포함)."""
+def _app_check_view(qualified: str, view, depth: int = 0, in_group: bool = False) -> list[str]:
+    """view 프리미티브 배열 구조 검증 (드릴 뷰 재귀 포함).
+
+    in_group=True 는 group 콤비네이터 내부 view — 원격 rowDrill 이 최상위 view[vi] 로만 항목을 찾아
+    중첩 카드의 item_click 을 못 잇는다. 데스크탑만 되고 원격이 깨지는 드리프트를 막으려 item_click 금지
+    (링크·버튼은 됨). group-내부-드릴이 필요해지면 원격 rowDrill 을 group 인지하게 고친 뒤 허용.
+    """
     issues: list[str] = []
     if not isinstance(view, list) or not view:
         issues.append(f"{qualified}: app.view 는 비어있지 않은 리스트여야 함")
@@ -939,6 +944,12 @@ def _app_check_view(qualified: str, view, depth: int = 0) -> list[str]:
                             issues.append(f"{where}: form.actions[{ai}] label·action(IBL 템플릿) 필수")
                         elif a.get("style") not in (None, "danger"):
                             issues.append(f"{where}: form.actions[{ai}] style={a.get('style')!r} (허용: danger)")
+        if ptype == "group":
+            # 파티션 콤비네이터 — from 리스트를 by 키로 나눠 그룹마다 내부 view 를 재귀 렌더(data={items: 멤버}).
+            # table:groupby(집계)와 달리 멤버를 유지한다. 뷰-계층의 groupby. 내부 view 는 from:items 로 그룹 슬라이스 참조.
+            if not isinstance(p.get("by"), str) or not p.get("by"):
+                issues.append(f"{where}: group 은 by(파티션 키 템플릿, 예 '{{query}}') 필수")
+            issues.extend(_app_check_view(qualified, p.get("view"), depth + 1, in_group=True))
         if ptype == "editable_list":
             if not p.get("display"):
                 issues.append(f"{where}: editable_list 는 display(행 표시 템플릿) 필수")
@@ -967,6 +978,8 @@ def _app_check_view(qualified: str, view, depth: int = 0) -> list[str]:
                         issues.append(f"{where}: on.{ev} 은 IBL 액션 템플릿 문자열(또는 marker_click 의 {{stream: true}})")
         drill = p.get("item_click")
         if drill is not None:
+            if in_group:
+                issues.append(f"{where}: group 내부 view 는 item_click(드릴) 미지원 — 원격 rowDrill 제약. 링크(card.link)·버튼 사용")
             if ptype != "card_list":
                 issues.append(f"{where}: item_click 은 card_list 전용")
             elif not isinstance(drill, dict) or not isinstance(drill.get("action"), str):

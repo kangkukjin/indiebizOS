@@ -1789,6 +1789,25 @@ function renderPrim(p,vi,data){
       +'<div id="'+id+'" class="lmap" style="height:320px;border-radius:12px;overflow:hidden;background:var(--bg3)"></div>'
       +'<button class="lmaptoggle" onclick="toggleMapDrag(\\''+id+'\\',this)">🔓 지도 이동</button></div>';
   }
+  if(p.type==='group'){
+    // 파티션 콤비네이터(데스크탑 ViewPrim group 의 원격 쌍). from 리스트를 by 키로 나눠(입력순 보존)
+    // 그룹마다 헤더 + 내부 view 재귀 렌더(data={items:멤버}=단일통화). table:groupby(집계)와 달리 멤버 유지.
+    // ★내부 view 의 item_click 은 검증기가 금지(원격 rowDrill 이 최상위 view[vi] 로만 찾음) — 링크/버튼만.
+    const arr=viewList(data,p.from);
+    if(!arr.length) return emptyMsg(p,data);
+    const order=[], groups={};
+    arr.forEach(it=>{ const key=tpl(p.by,it); if(!(key in groups)){ groups[key]=[]; order.push(key); } groups[key].push(it); });
+    const keys=(p.max_groups?order.slice(0,p.max_groups):order);
+    const inner=p.view||[];
+    return keys.map((key,gi)=>{
+      const members=groups[key];
+      const header=p.label?tpl(p.label,members[0]):key;
+      const gdata={items:members};
+      return '<div style="margin-bottom:22px"><h3 style="font-size:17px;font-weight:700;color:var(--fg);'
+        +'border-bottom:2px solid var(--bd);padding-bottom:6px;margin:0 0 12px">'+esc(header)+'</h3>'
+        +inner.map((ip,j)=>renderPrim(ip,vi*100+gi*10+j,gdata)).join('')+'</div>';
+    }).join('');
+  }
   if(p.type==='metric'){
     const col=trendColor(p,data);
     return '<div class="card">'+(p.label?'<div class="muted">'+tpl(p.label,data)+'</div>':'')+

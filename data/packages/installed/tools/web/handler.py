@@ -109,11 +109,13 @@ def search_gnews(query: str, count: int = 10, language: str = "ko", region: str 
             "language": language,
             "results": results,
             # 단일 통화 items(records-관습 카드 shape) — 뉴스 목록 >> 파이프/렌더러.
+            # query 필드 = 어느 검색어가 낸 항목인지 태그 → group 뷰(by:"{query}")·table:groupby 로 섹션화 가능.
             "items": [{
                 "title": r.get("title", ""),
                 "meta": " · ".join(x for x in [r.get("source", ""), r.get("published", "")] if x),
                 "summary": r.get("summary", ""),
                 "url": r.get("url", ""),
+                "query": query,
             } for r in results],
         }
 
@@ -298,9 +300,41 @@ def execute(tool_input: dict, context):
 
     # Google News 검색
     elif tool_name == "search_gnews":
+        # 배치 팬아웃(queries: 리스트/콤마·개행) — 각 검색어를 돌려 query 태그된 항목을 한 목록으로.
+        # group 뷰(신문 섹션)·table:groupby 에 바로 먹인다. N-way 팬아웃을 액션 하나로(신문 계기용).
+        _queries = tool_input.get("queries")
+        if _queries:
+            if isinstance(_queries, str):
+                _queries = re.split(r"[,\n]", _queries)
+            _queries = [str(q).strip() for q in _queries if str(q).strip()]
+            if not _queries:
+                return format_json({"success": False, "error": "검색어(queries)가 비었습니다."})
+            _count = tool_input.get("count", 10)
+            _lang = tool_input.get("language", "auto")
+
+            def _dl(q):
+                if _lang != "auto":
+                    return _lang
+                kc = sum(1 for c in q if '가' <= c <= '힣' or 'ㄱ' <= c <= 'ㆎ')
+                return "ko" if kc > len(q) * 0.2 else "en"
+
+            all_items, sections = [], []
+            for q in _queries:
+                res = search_gnews(query=q, count=_count, language=_dl(q))
+                items = [{
+                    "title": r.get("title", ""),
+                    "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
+                    "summary": "" if (r.get("summary") or "") == r.get("title") else (r.get("summary") or ""),
+                    "url": r.get("url", ""), "link_label": "기사 보기", "query": q,
+                } for r in (res.get("results") or [])]
+                all_items.extend(items)
+                sections.append({"query": q, "count": len(items)})
+            return format_json({"success": True, "queries": _queries, "count": len(all_items),
+                                "sections": sections, "items": all_items})
+
         query = tool_input.get("query", "")
         if not query:
-            return format_json({"success": False, "error": "검색어(query)가 필요합니다."})
+            return format_json({"success": False, "error": "검색어(query 또는 queries)가 필요합니다."})
 
         # 언어 자동 감지: 명시적 지정이 없으면 쿼리에서 판단
         language = tool_input.get("language", "auto")
@@ -319,6 +353,7 @@ def execute(tool_input: dict, context):
                 "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
                 "summary": "" if (r.get("summary") or "") == r.get("title") else (r.get("summary") or ""),
                 "url": r.get("url", ""), "link_label": "기사 보기",
+                "query": query,  # 검색어 태그 → group 뷰/table:groupby 섹션화용
             } for r in result["results"]]
         return format_json(result)
 

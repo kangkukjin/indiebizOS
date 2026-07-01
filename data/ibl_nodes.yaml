@@ -1525,6 +1525,33 @@ nodes:
         tool: search_gnews
         implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
         target_key: query
+        app:
+          instrument: newspaper
+          icon: 📰
+          name: 신문
+          order: 12
+          auto_run: true
+          inputs:
+          - key: keywords
+            type: text
+            label: 키워드(쉼표로 구분)
+            default: 청주,AI,문화,드라마,영화,만화,세종,경제,주식
+          action: '[sense:search_gnews]{queries: "$keywords", count: 5}'
+          view:
+          - type: group
+            from: items
+            by: '{query}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{summary}'
+                link:
+                  href: '{url}'
+                  label: 기사 보기 →
       collect:
         returns: items
         runs_on: mac_only

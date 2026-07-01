@@ -2,6 +2,16 @@
 
 > 작성: 2026-06-11 · 상태: **전 단계 완료(2026-06-11)** — 1·2단계 + 데스크탑 흡수 + 승격 1·2차(11계기). "모든 표면이 한 정의" 달성.
 
+## ✅ group 뷰 콤비네이터 + 신문 매니페스트 복원 (2026-07-02)
+
+- **view 프리미티브 13종(12 → +group):** `group` = **파티션 콤비네이터**. `from` 리스트를 `by` 키 템플릿으로 나눠(입력 순서 보존) 그룹마다 헤더 + 내부 `view` 를 **재귀 렌더**(각 그룹에 단일통화 `{items: 멤버}` 전달 → 내부 프리미티브는 `from: items` 로 슬라이스 참조). `table:groupby`(집계=멤버 버림)와 달리 **멤버 유지** — 뷰-계층의 groupby. `max_groups`(그룹 상한)·`label`(헤더 템플릿, 기본=키) 옵션.
+  - **설계 근거**: 통화 계층이 관계대수(filter/sort/groupby…)로 닫힌 것처럼 **뷰 계층도 직교 콤비네이터의 닫힌 대수**로. 앱-특정 프리미티브(newspaper 원자 등) = land-grab → 거부. `group` 은 재사용(모든 다중토픽/섹션 뷰)이라 승격 가치.
+  - **드리프트 가드**: 원격 `rowDrill` 이 최상위 `view[vi]` 로만 항목을 찾아 group 내부 중첩 카드의 `item_click`(드릴)을 못 잇는다 → 데스크탑만 되고 원격 깨지는 드리프트 방지로 **검증기가 group 내부 item_click 금지**(`_app_check_view(in_group=True)`). 링크(`card.link`)·버튼은 됨. group-내부-드릴 필요 시 원격 rowDrill 을 group 인지하게 고친 뒤 허용.
+  - **양 렌더러 동시 구현**: 데스크탑 `GenericInstrument.tsx` ViewPrim(`<ViewPrim>` 재귀), 원격 `api_launcher_web.py` renderPrim(재귀). `--check` 의 `_app_check_view` 가 by 필수 + 내부 view 재귀 검증.
+- **신문 계기 매니페스트 복원**(instrument `newspaper`, `[sense:search_gnews]` app 블록): `engines:newspaper` 은퇴로 앵커 잃었던 신문을 원격·폰 전 표면에 복원. keywords 입력(기본=데스크탑 bespoke와 동일 `청주,AI,문화,…`) → `queries` 배치 팬아웃 → `group{by:"{query}"}` 키워드별 섹션 → card_list(제목·meta·summary·기사링크). **데스크탑은 bespoke `NewspaperInstrument` 유지**(masthead·localStorage 키워드 편집 풍부판, STATIC_INSTRUMENT_IDS 차폐) — 원격만 신규 등장(리모컨 파리티).
+- **search_gnews `queries`(복수) 배치 파라미터**(web/handler.py): 리스트/콤마·개행 문자열 → 각 검색어 팬아웃, **항목마다 `query` 태그**(단일 모드도 태그 추가) → group/table:groupby 섹션화. N-way 팬아웃을 액션 하나로(매니페스트 정적 action 은 런타임 가변 리스트 팬아웃 불가 → 배치 파라미터가 해법). 앱-특정 아님(search_gnews 배치 모드). 액션 수 142 불변(뷰 어휘·핸들러 파라미터만).
+- **검증**: build --check 통과(group 어휘+신문 app 블록+in_group 가드) · tsc GREEN · 라이브 배치 팬아웃(9키워드 태그) · 매니페스트 파생(group 뷰) · node 하니스로 원격 group 렌더 로직 라이브 데이터 검증(섹션 N·카드·제목·링크). **남은=데스크탑 group 런타임 소비자 없음**(신문은 원격 전용, tsc-clean·원격과 동일 로직) · 배치 팬아웃 순차(9 RSS 순차 — 느리면 병렬화).
+
 ## ✅ 비즈니스 창 은퇴 → IBL 비즈니스 멀티모드 계기 (2026-06-12)
 
 - 옛 `BusinessManager.tsx`(930줄) **삭제**, `#/business` 전용창이 `BusinessInstrumentView`(id:business 계기)를 렌더. 비즈니스 버튼·IPC·창 유지(메신저/커뮤니티 선례). `self:business` 액션 `app:{instrument:business, modes:[...]}` 4탭:

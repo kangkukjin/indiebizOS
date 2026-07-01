@@ -64,7 +64,7 @@ export interface AppComposeChannels {
 }
 
 export interface AppViewPrim {
-  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map';
+  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map' | 'group';
   [k: string]: unknown;
 }
 
@@ -575,6 +575,42 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
   onViewEvent?: ViewEvent;
 }) {
   if (p.type === 'map') return <MapPrim p={p} data={data} onViewEvent={onViewEvent} onStream={onStream} />;
+
+  // group — 파티션 콤비네이터. from 리스트를 by 키로 나눠(입력 순서 보존) 그룹마다 헤더 + 내부 view 재귀 렌더.
+  // 각 그룹은 단일통화 {items: 멤버}로 내부 view 에 전달 → 내부 프리미티브는 from:items 로 슬라이스 참조.
+  // table:groupby(집계)와 달리 멤버 유지 = 뷰-계층의 groupby(신문 섹션 등). ★뷰-계층에 유일한 재귀 지점.
+  if (p.type === 'group') {
+    const arr = asList(data, p.from);
+    if (!arr.length) return <EmptyMsg p={p} data={data} />;
+    const order: string[] = [];
+    const groups: Record<string, Json[]> = {};
+    for (const it of arr) {
+      const key = tpl(p.by, it);
+      if (!(key in groups)) { groups[key] = []; order.push(key); }
+      groups[key].push(it);
+    }
+    const cap = typeof p.max_groups === 'number' ? p.max_groups : undefined;
+    const keys = cap ? order.slice(0, cap) : order;
+    const inner = (p.view as AppViewPrim[]) || [];
+    return (
+      <>
+        {keys.map((key) => {
+          const members = groups[key];
+          const header = p.label ? tpl(p.label, members[0]) : key;
+          const gdata = { items: members };
+          return (
+            <div key={key} className="mb-6">
+              <h3 className="text-lg font-bold text-stone-800 border-b-2 border-stone-300 pb-1.5 mb-3">{header}</h3>
+              {inner.map((ip, j) => (
+                <ViewPrim key={j} p={ip} data={gdata} onDrill={onDrill} onRowAction={onRowAction}
+                  onStream={onStream} busyRow={busyRow} dispatch={dispatch} onViewEvent={onViewEvent} />
+              ))}
+            </div>
+          );
+        })}
+      </>
+    );
+  }
 
   if (p.type === 'metric') {
     const col = trendClass(p, data);

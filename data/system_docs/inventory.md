@@ -27,7 +27,9 @@
 | 홍보 | 홍보 | 홍보/마케팅 콘텐츠 제작 |
 
 
-## 도구 패키지 (Tools) - 37개
+
+
+## 도구 패키지 (Tools) - 40개
 에이전트가 사용할 수 있는 유틸리티
 
 | ID | 이름 | 설명 | 상태 |
@@ -42,8 +44,10 @@
 - UTIC 도시교통정보 | 설치됨 |
 | cloudflare | Cloudflare | Cloudflare API 통합 도구. Pages, Workers, R2 | 설치됨 |
 | computer-use | Computer Use | macOS 데스크톱 자동화. AI가 화면을 직접 보고 마우스/키보드를 조 | 설치됨 |
+| contest | AI Contest Search | Kaggle 국제 AI/데이터 경진대회 검색 도구. 키워드·정렬·카테고리 | 설치됨 |
 | context7 | Context7 Docs | 라이브러리/프레임워크 최신 공식 문서 검색. 코드 생성 시 최신 API와 | 설치됨 |
 | culture | Culture & Arts | 공연, 도서, 전시 등 문화 예술 정보 조회 도구. KOPIS API로  | 설치됨 |
+| data-ops | Data Ops (통화 변환자) | 통화→통화 변환 동사(currency algebra). 생산자가 내는 공 | 설치됨 |
 | health-record | Health Record | 건강 정보 기록 및 조회 도구. 혈압, 혈당, 체중 측정값과 증상, 투약 | 설치됨 |
 | house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중  | 미설치 |
 | ibl-core | IBL Core | IBL(IndieBiz Logic) 노드-액션 통합 도구. 여러 도구를  | 설치됨 |
@@ -65,6 +69,7 @@
 | radio | Radio Tools | 인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전 | 설치됨 |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API 도구. 아파트/주택의 매매·전월세 실거 | 설치됨 |
 | remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프 | 설치됨 |
+| report-viewer | Report Viewer |  | 설치됨 |
 | shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색  | 설치됨 |
 | startup | Startup Support | 정부 창업지원 사업공고 검색 도구. K-Startup(창업진흥원)과 중소 | 설치됨 |
 | study | Academic Research | 학술 논문 검색, 여론 조사, 뉴스 아카이브 및 글로벌 경제 지표 접근  | 설치됨 |
@@ -78,4 +83,4 @@
 | youtube | YouTube Tools | YouTube 영상 도구. 영상 정보 조회, 자막 추출 및 요약, MP3 | 설치됨 |
 
 ---
-*마지막 업데이트: 2026-06-15 22:02*
+*마지막 업데이트: 2026-07-01 19:38*

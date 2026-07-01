@@ -479,7 +479,111 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         from ibl_engine import _get_attempts
         return _get_attempts(params, project_path)
 
+    # 능력 자기완결화 Phase 2: 패키지 생애주기 — self:package {op: list|info|install|remove}
+    elif func_name == "package_op":
+        return _package_op(dict(params))
+
     return {"error": f"알 수 없는 시스템 함수: {func_name}"}
+
+
+def _rebuild_ibl_vocab() -> Optional[str]:
+    """build_ibl_nodes.py 재실행 + 런타임 캐시 초기화 (POST /packages/reload와 동형).
+
+    패키지 install/remove로 ibl_actions.yaml fragment 구성이 바뀐 뒤 호출한다.
+    성공하면 None, 실패하면 에러 메시지를 반환한다(호출부가 install/remove 결과에 경고로 얹음).
+    """
+    import subprocess
+    import sys
+
+    root = Path(__file__).resolve().parent.parent
+    script = root / "scripts" / "build_ibl_nodes.py"
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(script)],
+            cwd=str(root), capture_output=True, text=True, timeout=60,
+        )
+        if proc.returncode != 0:
+            return f"어휘 재빌드 실패: {proc.stderr.strip()[-500:]}"
+    except Exception as e:  # noqa: BLE001
+        return f"어휘 재빌드 예외: {e}"
+
+    # /packages/reload와 동일한 캐시 초기화 절차.
+    try:
+        from package_manager import package_manager
+        package_manager.invalidate_cache()
+    except Exception:
+        pass
+    try:
+        from ibl_access import invalidate_nodes_cache
+        invalidate_nodes_cache()
+    except Exception:
+        pass
+    try:
+        from ibl_engine import reload_nodes
+        reload_nodes()
+    except Exception:
+        pass
+    try:
+        from consciousness_agent import reset_consciousness_agent
+        reset_consciousness_agent()
+    except Exception:
+        pass
+    return None
+
+
+def _package_op(params: dict) -> dict:
+    """[self:package]{op} — list/info/install/remove. package_manager 래핑 + 어휘 재빌드."""
+    from package_manager import package_manager
+
+    op = (params.get("op") or "list").strip()
+
+    if op == "list":
+        installed = package_manager.list_installed(package_type="tools")
+        # list_available은 하위호환 때문에 installed+not_installed 전부 반환 — 여기선
+        # 미설치만 걸러 IBL 어휘의 "list" op가 의미하는 대로(설치 후보) 좁힌다.
+        not_installed = [
+            p for p in package_manager.list_available(package_type="tools")
+            if not p.get("installed")
+        ]
+        return {
+            "success": True,
+            "installed": [{"package_id": p.get("id") or p.get("name"), "name": p.get("name")} for p in installed],
+            "available": [{"package_id": p.get("id") or p.get("name"), "name": p.get("name")} for p in not_installed],
+        }
+
+    package_id = (params.get("package_id") or params.get("name") or "").strip()
+    if not package_id:
+        return {"success": False, "error": "package_id 파라미터가 필요합니다."}
+
+    if op == "info":
+        info = package_manager.get_package_info(package_id)
+        if not info:
+            return {"success": False, "error": f"패키지를 찾을 수 없습니다: {package_id}"}
+        return {"success": True, "package": info}
+
+    if op == "install":
+        try:
+            result = package_manager.install_package(package_id, skip_validation=False)
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
+        warn = _rebuild_ibl_vocab()
+        if warn:
+            result.setdefault("warnings", []).append(warn)
+        result["success"] = True
+        return result
+
+    if op == "remove":
+        try:
+            result = package_manager.uninstall_package(package_id)
+        except ValueError as e:
+            return {"success": False, "error": str(e)}
+        warn = _rebuild_ibl_vocab()
+        if warn:
+            result.setdefault("warnings", []).append(warn)
+        result["success"] = True
+        return result
+
+    return {"success": False, "error": "op 파라미터가 필요합니다. (list|info|install|remove)"}
 
 
 def _execute_launcher_command(action: str, params: dict) -> dict:

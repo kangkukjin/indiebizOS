@@ -229,6 +229,30 @@
         keywords:
         - 다운로드
         - 파일받기
+      package:
+        returns: effect
+        description: 도구 패키지 생애주기 관리 (op 분기). list=설치됨/설치가능 목록, info=상세, install/remove=폴더 이동+IBL 어휘 재빌드+캐시 초기화.
+        target_description: 'list — (파라미터 없음). info/install/remove — package_id(필수).'
+        group: system
+        target_key: op
+        router: system
+        func: package_op
+        ops:
+          default: list
+          values:
+            list: 설치됨/설치가능 패키지 목록 (package_id, 어휘 액션 수 포함)
+            info: 패키지 상세 정보 (package_id)
+            install: not_installed→installed 이동 + IBL 어휘 재빌드 + 캐시 초기화 (package_id)
+            remove: installed→not_installed 이동 + IBL 어휘 재빌드 + 캐시 초기화 (package_id)
+        implementation: package_manager.PackageManager 래핑. install/remove 후 build_ibl_nodes.py 서브프로세스 재빌드 +
+          ibl_access/ibl_engine/consciousness_agent 캐시 초기화(POST /packages/reload와 동형 절차).
+        keywords:
+        - 패키지
+        - 도구
+        - 설치
+        - 제거
+        - 능력
+        - 확장
     description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
     tags:
     - 파일

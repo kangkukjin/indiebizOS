@@ -27,7 +27,6 @@ interface Domain { id: string; icon: string; label: string; soon?: boolean; onOp
 // escape hatch: 매니페스트보다 풍부한 데스크탑 전용 컴포넌트가 있으면 그걸 쓴다.
 // (도서=대출통계·추천 드릴 / 투자=recharts 차트·3탭 / 라디오=즐겨찾기·볼륨)
 const OVERRIDES: Record<string, ReactNode> = {
-  newspaper: <NewspaperInstrument />,   // electron 창으로 바로 열기 등(인앱 오버레이)
   ytmusic: <YtMusicInstrument />,       // 다운로드·큐 통합 UI(youtube=mac_only)
 };
 
@@ -49,6 +48,14 @@ const STATIC_DOMAINS: Domain[] = [
     id: 'calendar', icon: '📅', label: '일정',
     instruments: [
       { id: 'calendar', icon: '📅', label: '일정 캘린더', el: <CalendarInstrument /> },
+    ],
+  },
+  // 신문 — 디자인은 컴포넌트(NewspaperInstrument), 내용은 [sense:search_news] 조합.
+  // engines:newspaper 은퇴로 매니페스트 앵커가 없어 STATIC 계기로 등록(구 OVERRIDE 대체).
+  {
+    id: 'newspaper', icon: '📰', label: '신문',
+    instruments: [
+      { id: 'newspaper', icon: '📰', label: '신문', el: <NewspaperInstrument /> },
     ],
   },
   {

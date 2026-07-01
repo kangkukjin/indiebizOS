@@ -1,0 +1,105 @@
+nodes:
+  sense:
+    actions:
+      cctv:
+        returns: items
+        description: CCTV/웹캠 조회 (op 분기). search(키워드 통합검색)/nearby(좌표 근처, lat·lng 필수). 출력은 항상 lat/lng·playable 포함, stream_tags 동봉 시 채팅창 재생. 자세히 read_guide(query="cctv").
+        group: media
+        keywords:
+        - cctv
+        - 교통
+        - 실시간
+        - 카메라
+        - 보여줘
+        - 봐줘
+        - traffic
+        - camera
+        - 영상
+        - 근처
+        - 주변
+        target_description: search — query 키워드(전주·해운대·경부 등). nearby/webcam — lat·lng 필수, radius_km(km) 옵션. webcam은 해외 경치 웹캠(Windy).
+        target_key: op
+        router: handler
+        tool: cctv_query
+        ops:
+          default: search
+          values:
+            search: 키워드로 전국 CCTV+해외 웹캠 통합 검색 (기본)
+            nearby: 좌표 근처 CCTV (lat·lng 필수, radius_km km)
+            webcam: 좌표 근처 해외 경치 웹캠 (Windy 직행, 교통 CCTV 건너뜀)
+        implementation: cctv_search/nearby/webcam op 분기 (카카오 우선 → TOPIS/UTIC/ITS → Windy 폴백; webcam은 Windy 직행).
+        app:
+          instrument: cctv
+          icon: 📹
+          name: CCTV
+          order: 12
+          inputs:
+          - key: q
+            type: text
+            label: 검색
+            placeholder: '지역·도로 (예: 해운대, 경부)'
+            default: 해운대
+          auto_run: true
+          action: '[sense:cctv]{op: "search", query: "$q"}'
+          view:
+          - type: map
+            markers: items
+            max: 100
+            'on':
+              marker_click:
+                stream: true
+          - type: metric
+            label: 검색 결과
+            big: '{count}개'
+          - type: list_action
+            from: items
+            icon: 📹
+            empty: CCTV를 찾지 못했습니다
+            title: '{name}'
+            sub: '{region}{road_name|opt: · ,}'
+            button:
+              label: ▶ 보기
+              stream: true
+  self:
+    actions:
+      cctv:
+        returns: scalar
+        description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신.'
+        group: cctv
+        target_description: '파라미터 없음. op 분기 — stats(기본): 카카오·UTIC·ITS·Windy 전체 소스 CCTV 현황·총수 / refresh: UTIC 실시간 API로 전국 캐시 일괄 갱신(유지보수).'
+        target_key: op
+        router: handler
+        tool: cctv_admin
+        ops:
+          default: stats
+          values:
+            stats: 전체 소스 CCTV 현황 통계
+            refresh: UTIC 캐시 갱신 (유지보수)
+        implementation: handler.py _cctv_admin이 op 분기 — stats=cctv_sources(전체 소스 집계), refresh=utic.refresh_cache.
+        keywords:
+        - CCTV
+        - CCTV 현황
+        - CCTV 통계
+        - CCTV 갱신
+  limbs:
+    actions:
+      cctv:
+        returns: effect
+        description: CCTV 실시간 영상 열기·캡처 (op 분기). open(브라우저 재생) / capture(이미지 저장).
+        group: open
+        target_description: name 또는 url 중 하나. open — 브라우저에서 HLS/RTSP 재생. capture — ffmpeg로 단일 프레임 PNG 캡처 (save_path 옵션, AI 분석용).
+        target_key: op
+        router: handler
+        tool: cctv_op
+        ops:
+          default: open
+          values:
+            open: 브라우저에서 HLS/RTSP 영상 재생 (기본)
+            capture: ffmpeg 단일 프레임 PNG 캡처 (AI 분석용)
+        implementation: cctv_open/cctv_capture op 분기 (HLS 브라우저 재생 + ffmpeg 프레임 캡처)
+        keywords:
+        - cctv
+        - 열기
+        - 캡처
+        - 스크린샷
+        - 찍어

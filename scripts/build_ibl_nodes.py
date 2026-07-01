@@ -32,6 +32,7 @@ import argparse
 import ast
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -1451,6 +1452,126 @@ def collect_dormant_package_qualifiers(root: Path, yaml_mod) -> set[str]:
     return quals
 
 
+# === 능력 메타 자동 도출 (Phase 4, 2026-07-01) ===
+# 패키지별 needs_key/weight/locale을 손수 유지하는 어노테이션이 아니라 코드에서 직접
+# 스캔해 도출한다 — 단일 진실 소스는 항상 코드(핸들러 자신)이지 사람이 손으로 미러링한
+# 메타데이터가 아니다(드리프트 방지, docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md Phase 4).
+_KEY_ENV_SUFFIX_RE = re.compile(
+    r"^[A-Z][A-Z0-9_]*_(?:API_KEY|API_TOKEN|TOKEN|API_SECRET|SECRET|CLIENT_ID|CLIENT_SECRET|ACCOUNT_ID)$"
+)
+_DIRECT_ENV_CALL_RE = re.compile(
+    r'(?:os\.environ\.get|os\.getenv|get_api_key)\(\s*["\']([A-Z0-9_]+)["\']'
+)
+_CHECK_API_KEY_RE = re.compile(r'check_api_key\(\s*["\']([a-z0-9_]+)["\']')
+
+# 시스템/런타임 경로 변수 — API 키가 아니므로 needs_key에서 제외.
+_META_KEY_EXCLUDE_ENV_VARS = {
+    "INDIEBIZ_PROFILE", "INDIEBIZ_USERDATA", "INDIEBIZ_NODE_PATH",
+    "INDIEBIZ_RUNTIME_PATH", "INDIEBIZ_PYTHON_PATH",
+}
+# auth_manager._AUTH_REGISTRY 서비스 중 한국 공식/상용 API로 잠긴 것 (locale:kr 판정 근거).
+_KR_LOCKED_AUTH_SERVICES = {
+    "kakao", "naver", "law", "dart", "kosis", "data_go_kr", "molit",
+    "kopis", "data4library", "nanet",
+}
+# 레지스트리 밖 직접 env var 중 KR 확정분(교통정보 등 한국 전용 공공 API).
+_KR_LOCKED_ENV_VARS = {"ITS_API_KEY", "UTIC_API_KEY"}
+# 무거운 의존성(브라우저 자동화·CV·GUI 자동화·영상/TTS 처리) — 표준=keyless∧universal∧light
+# 프리셋(Phase 5)의 "light" 판정 근거.
+_HEAVY_DEP_MARKERS = (
+    "playwright", "moviepy", "cv2", "torch", "whisper", "selenium",
+    "pyautogui", "edge_tts", "remotion",
+)
+
+
+def _registry_env_vars(auth_config: dict) -> set[str]:
+    """auth_manager._AUTH_REGISTRY 항목 하나에서 env var 이름(들) 추출."""
+    t = auth_config.get("type")
+    if t in ("header", "query_param"):
+        v = auth_config.get("env_var")
+        return {v} if v else set()
+    if t == "header_pair":
+        return set(auth_config.get("headers", {}).values())
+    if t == "oauth2":
+        return set(auth_config.get("env_vars", {}).values())
+    return set()
+
+
+def _load_auth_registry(root: Path) -> dict:
+    """backend/common/auth_manager.py 의 _AUTH_REGISTRY 재사용 — 매핑을 복제하지 않고
+    단일 소스를 그대로 import(KR-lock 서비스가 그쪽에서 바뀌면 이쪽도 즉시 정합)."""
+    import sys as _sys
+    backend_dir = str(root / "backend")
+    added = backend_dir not in _sys.path
+    if added:
+        _sys.path.insert(0, backend_dir)
+    try:
+        from common.auth_manager import _AUTH_REGISTRY  # type: ignore
+        return dict(_AUTH_REGISTRY)
+    except Exception:  # noqa: BLE001
+        return {}
+    finally:
+        if added:
+            _sys.path.remove(backend_dir)
+
+
+def derive_package_meta(root: Path) -> dict:
+    """설치된 각 패키지의 needs_key/weight/locale을 .py 코드 스캔으로 자동 도출.
+
+    반환: {pkg_name: {needs_key: [env_var,...], weight: light|heavy, locale: kr|universal}}
+    (알파벳순 정렬, 결정적 — 재실행해도 같은 입력에 같은 출력).
+    """
+    registry = _load_auth_registry(root)
+    # KR-locked env var 전체 집합 = 직접 확정분 ∪ KR 서비스가 요구하는 env var들.
+    kr_env_vars = set(_KR_LOCKED_ENV_VARS)
+    for svc in _KR_LOCKED_AUTH_SERVICES:
+        cfg = registry.get(svc)
+        if cfg:
+            kr_env_vars |= _registry_env_vars(cfg)
+
+    result: dict[str, dict] = {}
+    for rel in PACKAGE_DIRS:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for pkg_dir in sorted(base.iterdir()):
+            if not pkg_dir.is_dir():
+                continue
+            py_files = list(pkg_dir.rglob("*.py"))
+            if not py_files:
+                continue
+            needs_key: set[str] = set()
+            kr_hit = False
+            heavy = False
+            for f in py_files:
+                try:
+                    text = f.read_text(encoding="utf-8")
+                except (OSError, UnicodeDecodeError):
+                    continue
+                for m in _DIRECT_ENV_CALL_RE.finditer(text):
+                    name = m.group(1)
+                    if name in _META_KEY_EXCLUDE_ENV_VARS or not _KEY_ENV_SUFFIX_RE.match(name):
+                        continue
+                    needs_key.add(name)
+                    if name in kr_env_vars:
+                        kr_hit = True
+                for m in _CHECK_API_KEY_RE.finditer(text):
+                    svc = m.group(1)
+                    cfg = registry.get(svc)
+                    if cfg:
+                        needs_key.update(_registry_env_vars(cfg))
+                        if svc in _KR_LOCKED_AUTH_SERVICES:
+                            kr_hit = True
+                if any(marker in text for marker in _HEAVY_DEP_MARKERS):
+                    heavy = True
+            result[pkg_dir.name] = {
+                "needs_key": sorted(needs_key),
+                "weight": "heavy" if heavy else "light",
+                "locale": "kr" if kr_hit else "universal",
+            }
+    return dict(sorted(result.items()))
+
+
 def merge_fragments(data: dict, fragments: list) -> list:
     """fragments 를 data['nodes'][node]['actions'] 에 병합(data 변경). 반환: 충돌/오류 issues."""
     issues: list = []
@@ -1682,6 +1803,10 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         manifest = derive_phone_manifest(data, root)
         manifest_text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
 
+    # 능력 메타 파생 (Phase 4, needs_key/weight/locale — 코드 스캔, 손수 유지 아님).
+    pkg_meta_path = root / "data" / "package_meta.json"
+    pkg_meta_text = json.dumps(derive_package_meta(root), ensure_ascii=False, indent=2) + "\n"
+
     if check:
         if not target.is_file():
             print(f"[build_ibl_nodes] check: 타깃 부재 — {target}", file=sys.stderr)
@@ -1711,7 +1836,18 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 )
             else:
                 print("[build_ibl_nodes] check: phone_manifest.json 일치 ✓")
-        return 0 if (bytes_ok and manifest_ok and not validation_failed
+        # 능력 메타 정합 (드리프트 방지 — needs_key/weight/locale 은 코드가 유일한 소스)
+        pkg_meta_on_disk = pkg_meta_path.read_text(encoding="utf-8") if pkg_meta_path.is_file() else None
+        pkg_meta_ok = pkg_meta_on_disk == pkg_meta_text
+        if not pkg_meta_ok:
+            print(
+                f"[build_ibl_nodes] check: package_meta.json 불일치 — "
+                f"`python3 scripts/build_ibl_nodes.py` 로 재생성 필요",
+                file=sys.stderr,
+            )
+        else:
+            print("[build_ibl_nodes] check: package_meta.json 일치 ✓")
+        return 0 if (bytes_ok and manifest_ok and pkg_meta_ok and not validation_failed
                      and not corpus_failed and not fixture_failed
                      and not profile_failed and not os_failed
                      and not launcher_failed) else 1
@@ -1730,6 +1866,8 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         manifest_path.write_text(manifest_text, encoding="utf-8")
         print(f"[build_ibl_nodes] 작성: {manifest_path} "
               f"(폰 패키지 {len(PHONE_VERIFIED_PACKAGES)}, runnable {manifest_text.count(':')})")
+    pkg_meta_path.write_text(pkg_meta_text, encoding="utf-8")
+    print(f"[build_ibl_nodes] 작성: {pkg_meta_path}")
     return 0
 
 

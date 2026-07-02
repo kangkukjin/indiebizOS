@@ -317,6 +317,7 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
       const d = await r.json();
       const { text, destinations } = extractDestinations(d.response || '');
       setAnswer(text); setDestinations(destinations);
+      setQuery('');           // 결과가 나오면 검색창을 비운다
       att.clearAttachments();
     } catch (e: any) {
       setError(e?.message || '검색 중 오류가 발생했습니다.');

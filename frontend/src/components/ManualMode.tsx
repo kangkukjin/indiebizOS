@@ -109,10 +109,11 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-// IBL 5개 노드의 뜻 — 둘러보기에서 "이게 무슨 종류의 일인지" 보여준다
+// IBL 6개 노드의 뜻 — 둘러보기에서 "이게 무슨 종류의 일인지" 보여준다
 const NODE_GLOSS: Record<string, string> = {
   sense: '감각 · 수집/검색', self: '자기 · 기억/파일/설정',
   limbs: '손발 · 조작', others: '관계 · 이웃/위임/채널', engines: '엔진 · 생성',
+  table: '표 · 통화 변환',
 };
 
 export default function ManualMode() {
@@ -469,13 +470,14 @@ export default function ManualMode() {
             {/* 어휘 */}
             <div>
               <div className="font-semibold text-stone-800 mb-1">어휘 — 무엇을 할 수 있나</div>
-              <div className="text-[13px]">어휘는 <span className="font-semibold">조합 가능한 액션</span>들입니다. 액션 하나가 IBL이 할 수 있는 일 하나(예: <code className="font-mono">{'[sense:weather]'}</code> — 날씨 조회). 액션들은 다루는 대상에 따라 <span className="font-semibold">5개 노드로 분류</span>됩니다.
+              <div className="text-[13px]">어휘는 <span className="font-semibold">조합 가능한 액션</span>들입니다. 액션 하나가 IBL이 할 수 있는 일 하나(예: <code className="font-mono">{'[sense:weather]'}</code> — 날씨 조회). 액션들은 다루는 대상에 따라 <span className="font-semibold">6개 노드로 분류</span>됩니다.
                 <ul className="mt-1 ml-4 list-disc space-y-0.5">
                   <li><span className="font-mono">sense</span> — 감각: 바깥 정보를 수집·검색 (날씨·주가·뉴스·웹·학술)</li>
                   <li><span className="font-mono">self</span> — 자기: 내 기억·파일·설정·일정</li>
                   <li><span className="font-mono">limbs</span> — 손발: 기기·도구를 조작 (브라우저·화면·음악·폰)</li>
                   <li><span className="font-mono">others</span> — 관계: 이웃·위임·메시징·채널</li>
-                  <li><span className="font-mono">engines</span> — 엔진: 콘텐츠를 생성·변환 (문서·슬라이드·차트)</li>
+                  <li><span className="font-mono">engines</span> — 엔진: 콘텐츠를 생성 (슬라이드·영상·이미지·신문·웹)</li>
+                  <li><span className="font-mono">table</span> — 표: 통화(데이터)를 변환 (필터·정렬·집계·차트·표·문서)</li>
                 </ul>
                 <div className="mt-1.5">액션은 셋 중 하나를 합니다 — <span className="font-semibold">생성</span>(통화를 낸다) · <span className="font-semibold">변환</span>(통화를 바꾼다) · <span className="font-semibold">행동</span>(통화를 쓴다 · 세상에 작용).</div>
               </div>

@@ -160,7 +160,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
         <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
           <p className="text-gray-600">
             에이전트는 <strong>IBL(IndieBiz Logic)</strong>이라는 통합 명령어로<br/>
-            5개 노드의 <strong>321가지 액션</strong>을 실행합니다.
+            6개 노드의 <strong>142가지 액션</strong>을 실행합니다.
           </p>
           <div className="grid grid-cols-3 gap-2 text-sm">
             <div className="bg-blue-50 p-2 rounded text-center">
@@ -182,6 +182,10 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             <div className="bg-amber-50 p-2 rounded text-center">
               <p className="text-amber-700 font-medium">engines</p>
               <p className="text-amber-600 text-xs">콘텐츠 생성</p>
+            </div>
+            <div className="bg-rose-50 p-2 rounded text-center">
+              <p className="text-rose-700 font-medium">table</p>
+              <p className="text-rose-600 text-xs">통화(데이터) 변환</p>
             </div>
           </div>
           <div className="bg-gray-50 p-3 rounded-lg text-sm">

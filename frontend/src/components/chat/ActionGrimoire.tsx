@@ -40,10 +40,11 @@ const NODE_LABELS: Record<string, { ko: string; sub: string }> = {
   self: { ko: '자아', sub: '스스로의 기억과 행위' },
   limbs: { ko: '사지', sub: '바깥에 손을 뻗다' },
   others: { ko: '타자', sub: '이웃과 협력자' },
-  engines: { ko: '엔진', sub: '복합 생성과 변환' },
+  engines: { ko: '엔진', sub: '복합 콘텐츠 생성' },
+  table: { ko: '표', sub: '통화(데이터) 변환' },
 };
 
-const NODE_ORDER = ['sense', 'self', 'limbs', 'others', 'engines'];
+const NODE_ORDER = ['sense', 'self', 'limbs', 'others', 'engines', 'table'];
 
 // 그룹 한국어 라벨 + 표시 순서. yaml의 group 값이 매칭되지 않으면 raw 값을 그대로 보여준다.
 const GROUP_LABELS: Record<string, string> = {
@@ -175,7 +176,7 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
               <h2 className="text-lg font-semibold text-[#4A4035]">마법책 — IBL 액션 사전</h2>
               {catalog && (
                 <p className="text-xs text-[#A09080]">
-                  {catalog.total}개 액션 · 5개 노드 · 클릭하여 선택
+                  {catalog.total}개 액션 · 6개 노드 · 클릭하여 선택
                 </p>
               )}
             </div>

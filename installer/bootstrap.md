@@ -156,6 +156,10 @@ command to run it:
 - Windows: `.venv\Scripts\python.exe backend\api.py` for the backend; the
   frontend via `cd frontend; npm run electron:dev` if installed.
 
+Mention that the system replies in whatever language the user writes to it (no
+language setting needed), while the bundled guides and UI labels are currently
+Korean. Say this in the user's own language.
+
 Then call the `finish` tool with `ok: true`.
 
 ## Principles

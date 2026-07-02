@@ -253,6 +253,17 @@ $env:INDIEBIZ_API_KEY="sk-ant-..."; irm https://raw.githubusercontent.com/kangku
 
 The key is used only to run the installer and is written into your local config; it never leaves your machine except as the auth header to your chosen provider. See `installer/` for the seed and its install guide.
 
+**Language:** the installer and the running system both work in English — the AI replies in whatever language you write to it, so no setting is needed. (The bundled guides and desktop UI labels are currently Korean; the AI reads them and still answers you in your language.)
+
+**Re-installing / updating** an existing install overwrites it with the latest GitHub code while your `.env`, keys, and personal data are always kept (`.gitignore` is the preservation boundary). Two modes:
+```bash
+# keep your learning & settings, refresh code + shipped vocabulary:
+curl -fsSL https://raw.githubusercontent.com/kangkukjin/indiebizOS/main/install.sh | INDIEBIZ_UPDATE=standard bash
+# factory-reset learned data & tuning too (still keeps .env + personal data):
+curl -fsSL https://raw.githubusercontent.com/kangkukjin/indiebizOS/main/install.sh | INDIEBIZ_UPDATE=full bash
+```
+(Windows: set `$env:INDIEBIZ_UPDATE="standard"` before the `irm … | iex` line. Omit the variable and you'll be asked which mode.)
+
 </details>
 
 <details>

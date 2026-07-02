@@ -1600,6 +1600,11 @@ function tpl(t,data){
 
 function statusGlyph(s){ return s==='sent'?'✓':s==='pending'?'⏳':s==='failed'?'⚠':''; }
 
+// 반복 주기 표준 어휘 — recurrence 필드 타입 baked 옵션(manage_events repeat 값과 일치, 데스크탑 RECURRENCE_OPTS 쌍).
+var _RECUR_OPTS=[['none','한 번'],['daily','매일'],['weekly','매주'],['monthly','매월'],['yearly','매년']];
+function _recurSelect(id,val){ const v=val||'none'; return '<select class="field" id="'+id+'">'+_RECUR_OPTS.map(o=>'<option value="'+o[0]+'"'+(o[0]===v?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'; }
+function _dateInputType(t){ return t==='datetime'?'datetime-local':t; } // date/time 그대로, datetime→datetime-local
+
 /* ----- 뷰 렌더 (순수 함수: view+data → HTML 문자열) ----- */
 function renderView(view,data){
   if(data&&data.error) return '<p class="muted">'+esc(data.error)+'</p>';
@@ -1878,6 +1883,8 @@ function renderPrim(p,vi,data){
         if(!arr.length) h+='<span class="muted" style="font-size:12px">이미지 없음 (사진 추가는 데스크탑에서)</span>';
         h+='</div>';
       }
+      else if(f.type==='recurrence') h+=_recurSelect(id,val);
+      else if(f.type==='date'||f.type==='time'||f.type==='datetime') h+='<input type="'+_dateInputType(f.type)+'" class="field" id="'+id+'" value="'+esc(val)+'">';
       else h+='<input class="field" id="'+id+'" value="'+esc(val)+'" placeholder="'+esc(f.placeholder||'')+'">';
       h+='</div>';
     });
@@ -1897,9 +1904,11 @@ function renderPrim(p,vi,data){
     if(!arr.length) h+='<p class="muted">'+esc(p.empty||'없음')+'</p>';
     arr.forEach((it,ri)=>{ h+='<div class="kv"><span class="k">'+tpl(p.display,it)+'</span>'+(p.delete_action?'<button class="linkbtn" onclick="elDelete('+vi+','+ri+')">삭제</button>':'')+'</div>'; });
     if(p.add){
-      h+='<div class="row" style="flex-wrap:wrap;margin-top:8px">'+(p.add.fields||[]).map(f=> f.type==='select'
-        ? '<select class="field" id="ea_'+vi+'_'+f.key+'" style="flex:0 1 110px"><option value="">'+esc(f.placeholder||'')+'</option>'+(f.options||[]).map(o=>'<option value="'+esc(String(o.value))+'">'+esc(o.label)+'</option>').join('')+'</select>'
-        : '<input type="'+(f.type==='date'?'date':'text')+'" class="field" style="min-width:0" id="ea_'+vi+'_'+f.key+'" placeholder="'+esc(f.placeholder||'')+'">').join('')
+      h+='<div class="row" style="flex-wrap:wrap;margin-top:8px">'+(p.add.fields||[]).map(f=>{ const eid='ea_'+vi+'_'+f.key;
+          if(f.type==='select') return '<select class="field" id="'+eid+'" style="flex:0 1 110px"><option value="">'+esc(f.placeholder||'')+'</option>'+(f.options||[]).map(o=>'<option value="'+esc(String(o.value))+'">'+esc(o.label)+'</option>').join('')+'</select>';
+          if(f.type==='recurrence') return _recurSelect(eid,'');
+          if(f.type==='date'||f.type==='time'||f.type==='datetime') return '<input type="'+_dateInputType(f.type)+'" class="field" style="min-width:0" id="'+eid+'">';
+          return '<input class="field" style="min-width:0" id="'+eid+'" placeholder="'+esc(f.placeholder||'')+'">'; }).join('')
         +'<button class="go" onclick="elAdd('+vi+',this)">'+esc((p.add.button)||'추가')+'</button></div>';
     }
     h+='</div>'; return h;

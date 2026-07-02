@@ -2,6 +2,15 @@
 
 > 작성: 2026-06-11 · 상태: **전 단계 완료(2026-06-11)** — 1·2단계 + 데스크탑 흡수 + 승격 1·2차(11계기). "모든 표면이 한 정의" 달성.
 
+## ✅ form 날짜·시간·반복 필드 타입 (2026-07-02)
+
+- **form 필드 타입 5 → 9종**: `date`(`<input type=date>`)·`time`(`type=time`)·`datetime`(`type=datetime-local`)·`recurrence`(baked 옵션 select: 한 번/매일/매주/매월/매년 = none/daily/weekly/monthly/yearly, manage_events repeat 값과 일치). 기존 text/select/toggle/textarea/images에 추가. **form + editable_list add.fields 양쪽**, **양 렌더러**(데스크탑 `FormPrim`·`EditableListPrim`, 원격 form·editable_list 렌더) + `--check`의 `APP_FORM_FIELD_TYPES`.
+  - **어휘 완성 성격**: form 필드 어휘의 빈 칸(날짜/시간/반복)을 메움 — 통화·뷰 대수 완성과 같은 결. 새 primitive·콤비네이터 아님(기존 form에 입력 타입만).
+  - **종단 배선**: date/time/datetime=네이티브 input, recurrence=select. 값 수집은 `formSave`/`elAdd`가 id(`ff_`/`ea_`)로 일반 `.value` 읽기 → 타입별 특수처리 0. 데스크탑은 controlled `vals` state.
+  - **공유 상수**: `RECURRENCE_OPTS`(데스크탑)·`_RECUR_OPTS`(원격) 쌍 + `dateInputType`/`_dateInputType`(datetime→datetime-local).
+- **뭘 풀어주나(어휘만 추가, 소비 앱 미변경)**: calendar 단일소스화(bespoke `CalendarInstrument`의 시간·반복·타입 폼을 매니페스트가 따라잡을 토대 — 은퇴는 별도 결정)·스케줄러/트리거 UI·날짜 입력 앱 전반. **이번엔 어휘만**(calendar 변환은 downstream, 미실행).
+- **검증**: build --check ✓(APP_FORM_FIELD_TYPES 9종) · tsc GREEN · 원격 구문 ✓ · node 하니스(date/time/datetime-local input·recurrence 5옵션·none 기본·한글 라벨·text 회귀) ✓. 액션 142 불변(폼 필드 어휘만).
+
 ## ✅ group 뷰 콤비네이터 + 신문 매니페스트 복원 (2026-07-02)
 
 - **view 프리미티브 13종(12 → +group):** `group` = **파티션 콤비네이터**. `from` 리스트를 `by` 키 템플릿으로 나눠(입력 순서 보존) 그룹마다 헤더 + 내부 `view` 를 **재귀 렌더**(각 그룹에 단일통화 `{items: 멤버}` 전달 → 내부 프리미티브는 `from: items` 로 슬라이스 참조). `table:groupby`(집계=멤버 버림)와 달리 **멤버 유지** — 뷰-계층의 groupby. `max_groups`(그룹 상한)·`label`(헤더 템플릿, 기본=키) 옵션.

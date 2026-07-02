@@ -71,7 +71,7 @@ export interface AppViewPrim {
 export interface AppFormField {
   key: string;
   label?: string;
-  type: 'text' | 'select' | 'toggle' | 'textarea' | 'images';
+  type: 'text' | 'select' | 'toggle' | 'textarea' | 'images' | 'date' | 'time' | 'datetime' | 'recurrence';
   value?: string;        // 초기값 템플릿 (데이터에서 채움)
   placeholder?: string;
   options?: { value: string | number; label: string }[];
@@ -333,6 +333,10 @@ function ImagesField({ f, value, dispatch, busy, setBusy }:
   );
 }
 
+// 반복 주기 표준 어휘 — recurrence 필드 타입의 baked 옵션(manage_events repeat 값과 일치). date/time 은 네이티브 input.
+const RECURRENCE_OPTS: [string, string][] = [['none', '한 번'], ['daily', '매일'], ['weekly', '매주'], ['monthly', '매월'], ['yearly', '매년']];
+const dateInputType = (t: string) => (t === 'datetime' ? 'datetime-local' : t); // date/time 은 그대로, datetime → datetime-local
+
 function FormPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown; dispatch: Dispatch }) {
   const fields = (p.fields as AppFormField[]) || [];
   const initVals = useCallback(
@@ -374,6 +378,12 @@ function FormPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown; dispat
               <textarea value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} rows={3} placeholder={f.placeholder || ''} className={`${fieldCls} resize-y`} />
             ) : f.type === 'images' ? (
               <ImagesField f={f} value={vals[f.key] ?? ''} dispatch={dispatch} busy={saving} setBusy={setSaving} />
+            ) : f.type === 'recurrence' ? (
+              <select value={vals[f.key] || 'none'} onChange={(e) => set(f.key, e.target.value)} className={fieldCls}>
+                {RECURRENCE_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            ) : (f.type === 'date' || f.type === 'time' || f.type === 'datetime') ? (
+              <input type={dateInputType(f.type)} value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} className={fieldCls} />
             ) : (
               <input value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} placeholder={f.placeholder || ''} className={fieldCls} />
             )}
@@ -427,6 +437,14 @@ function EditableListPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown
               <option value="">{f.placeholder || '선택'}</option>
               {(f.options || []).map((o, j) => <option key={j} value={String(o.value)}>{o.label}</option>)}
             </select>
+          ) : f.type === 'recurrence' ? (
+            <select key={i} value={addVals[f.key] || 'none'} onChange={(e) => setAddVals((s) => ({ ...s, [f.key]: e.target.value }))}
+              className={`${fieldCls} shrink-0`}>
+              {RECURRENCE_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          ) : (f.type === 'date' || f.type === 'time' || f.type === 'datetime') ? (
+            <input key={i} type={dateInputType(f.type)} value={addVals[f.key] ?? ''} onChange={(e) => setAddVals((s) => ({ ...s, [f.key]: e.target.value }))}
+              className={`${fieldCls} shrink-0`} />
           ) : (
             <input key={i} value={addVals[f.key] ?? ''} onChange={(e) => setAddVals((s) => ({ ...s, [f.key]: e.target.value }))}
               placeholder={f.placeholder || ''} className={`${fieldCls} flex-1 min-w-0`} />

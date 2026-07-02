@@ -737,7 +737,7 @@ APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkli
 APP_VIEW_EVENTS = {"marker_click", "moveend", "center_drag"}
 APP_EVENT_VARS = {"lat", "lng", "id", "name", "radius", "url"}  # 이벤트 페이로드가 액션 템플릿에 주입하는 $변수
 APP_INPUT_TYPES = {"text", "select"}
-APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images"}
+APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images", "date", "time", "datetime", "recurrence"}
 APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes",
             "note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter",
             "phone_render"}

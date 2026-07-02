@@ -74,12 +74,10 @@
     - 창업
     - 지원사업
     guides:
-    - investment/investment_guide.md
-    - location-services/location_services_guide.md
-    - real-estate/real_estate_guide.md
-    - study/study_guide.md
-    - web/web_guide.md
-    - context7/context7_guide.md
+    - investment.md
+    - local_info.md
+    - real_estate.md
+    - web_search.md
     - realty.md
     - book.md
     - legal.md

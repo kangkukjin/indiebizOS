@@ -433,6 +433,150 @@ def forage_chat(chat: ForageMessage):
     )
 
 
+# ============ 인지 패널 상태 (질문 / TODO / 계획 모드) ============
+# 에이전트의 ask_user_question · todo_write · enter/exit_plan_mode 는 그 결과를
+# data/system_ai_state/*.json 에 남길 뿐, 이제껏 그걸 읽어 사용자에게 띄우고 답을
+# 되돌리는 HTTP 엔드포인트가 없었다(프론트는 폴링했지만 백엔드가 404). 그래서
+# 에이전트는 "응답 대기 중"에 멈추고 사용자는 질문을 보지도 답하지도 못하는 교착이
+# 났다. 아래가 그 빠진 절반이다: 계기판(ChatView)이 2초 폴링으로 상태를 읽어 패널을
+# 띄우고, 답/승인을 여기로 되돌린다. 실제 에이전트 재개는 프론트가 답을 일반 대화
+# 메시지(system_ai_stream)로 흘려보내 다음 턴을 여는 방식(히스토리에 질문이 남아
+# 맥락 유지) — 핸들러가 논블로킹이라 원래 턴은 이미 끝나 있기 때문이다.
+
+_SYS_STATE_DIR = DATA_PATH / "system_ai_state"
+
+
+def _read_sys_state(name: str) -> Optional[Any]:
+    """data/system_ai_state/<name> 을 읽어 파싱 (없으면 None)."""
+    p = _SYS_STATE_DIR / name
+    if not p.exists():
+        return None
+    try:
+        with open(p, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _write_sys_state(name: str, data: dict) -> None:
+    _SYS_STATE_DIR.mkdir(parents=True, exist_ok=True)
+    with open(_SYS_STATE_DIR / name, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _clear_sys_state(name: str) -> None:
+    p = _SYS_STATE_DIR / name
+    try:
+        if p.exists():
+            p.unlink()
+    except Exception:
+        pass
+
+
+class QuestionAnswerBody(BaseModel):
+    answers: Dict[str, Any]
+
+
+class PlanRejectBody(BaseModel):
+    reason: Optional[str] = None
+
+
+# ---- 질문 (ask_user_question ↔ QuestionPanel) ----
+@router.get("/system-ai/questions")
+def get_system_ai_questions():
+    """대기 중인 사용자 질문. 프론트가 2초 폴링해 status=='pending'이면 패널을 띄운다."""
+    st = _read_sys_state("question_state.json")
+    if not st:
+        return {"questions": [], "status": "none", "answers": None}
+    return {
+        "questions": st.get("questions", []),
+        "status": st.get("status", "none"),
+        "answers": st.get("answers"),
+    }
+
+
+@router.post("/system-ai/questions/answer")
+def answer_system_ai_question(body: QuestionAnswerBody):
+    """사용자 답을 기록하고 질문을 마감(status=answered → 다음 폴링이 패널을 내린다).
+    에이전트 재개는 프론트가 답을 일반 대화 메시지로 흘려보내 처리한다."""
+    st = _read_sys_state("question_state.json") or {}
+    st["status"] = "answered"
+    st["answers"] = body.answers
+    st["answered_at"] = datetime.now().isoformat()
+    _write_sys_state("question_state.json", st)
+    return {"status": "answered", "answers": body.answers}
+
+
+@router.delete("/system-ai/questions")
+def clear_system_ai_questions():
+    _clear_sys_state("question_state.json")
+    return {"status": "cleared"}
+
+
+# ---- TODO (todo_write ↔ TodoPanel) ----
+@router.get("/system-ai/todos")
+def get_system_ai_todos():
+    st = _read_sys_state("todo_state.json")
+    if not st:
+        return {"todos": [], "updated_at": None}
+    if isinstance(st, list):  # 옛 형식 방어
+        return {"todos": st, "updated_at": None}
+    return {"todos": st.get("todos", []), "updated_at": st.get("updated_at")}
+
+
+@router.delete("/system-ai/todos")
+def clear_system_ai_todos():
+    _clear_sys_state("todo_state.json")
+    return {"status": "cleared"}
+
+
+# ---- 계획 모드 (enter/exit_plan_mode ↔ PlanModePanel) ----
+@router.get("/system-ai/plan-mode")
+def get_system_ai_plan_mode():
+    st = _read_sys_state("plan_mode_state.json")
+    if not st:
+        return {"active": False, "phase": None}
+    plan_content = st.get("plan_content")
+    if not plan_content:  # exit_plan_mode 가 상태에 안 넣었으면 파일에서 읽기
+        pf = _SYS_STATE_DIR / "current_plan.md"
+        if pf.exists():
+            try:
+                plan_content = pf.read_text(encoding="utf-8")
+            except Exception:
+                plan_content = None
+    return {
+        "active": st.get("active", False),
+        "phase": st.get("phase"),
+        "plan_content": plan_content,
+        "entered_at": st.get("entered_at"),
+    }
+
+
+@router.post("/system-ai/plan-mode/approve")
+def approve_system_ai_plan():
+    st = _read_sys_state("plan_mode_state.json") or {}
+    st["phase"] = "approved"
+    st["approved_at"] = datetime.now().isoformat()
+    _write_sys_state("plan_mode_state.json", st)
+    return {"status": "approved"}
+
+
+@router.post("/system-ai/plan-mode/reject")
+def reject_system_ai_plan(body: PlanRejectBody = None):
+    st = _read_sys_state("plan_mode_state.json") or {}
+    st["phase"] = "revision_requested"
+    if body and body.reason:
+        st["reject_reason"] = body.reason
+    _write_sys_state("plan_mode_state.json", st)
+    return {"status": "revision_requested"}
+
+
+@router.delete("/system-ai/plan-mode")
+def clear_system_ai_plan_mode():
+    _clear_sys_state("plan_mode_state.json")
+    return {"status": "cleared"}
+
+
 @router.get("/system-ai/welcome")
 async def get_welcome_message():
     """

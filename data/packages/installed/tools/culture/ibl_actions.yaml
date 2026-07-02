@@ -240,8 +240,8 @@ tool_json:
     version: 2.0.0
   tools:
   # 2026-07-03 미소유 도구 감사: 죽은 tool.json 항목 14개 제거(kopis_*/library_*/kcisa_search_culture 등).
-  # performance_op/book_op/classic_op가 함수 직접 호출로 대체 — handler.py의 해당 elif 분기는 도달 불가 레거시.
-  # data/api_registry.yaml의 동명 항목도 휴면(호출자 0) — 별도 정리 후보.
+  # performance_op/book_op/classic_op가 함수 직접 호출로 대체 — handler.py의 해당 elif 분기도 같은 날 제거 완료.
+  # data/api_registry.yaml의 동명 휴면 항목(14 tools + kopis/data4library 서비스 블록)도 같은 날 제거 완료.
   - name: kcisa_quick_search
     description: 키워드로 문화 정보를 빠르게 검색합니다.
     input_schema:

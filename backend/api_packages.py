@@ -157,10 +157,18 @@ async def reload_package_cache():
     try:
         package_manager.invalidate_cache()
         # IBL 노드 캐시 전부 비운다 — 액션 추가·제거·op 변경(ibl_nodes.yaml 재빌드) 반영.
-        #  ① ibl_access(카탈로그/시스템프롬프트)  ② ibl_engine(실행기) + ibl_executors(파생, reload_nodes가 함께)
+        #  ① ibl_access(카탈로그/시스템프롬프트)  ② api_engine 레지스트리(reload_nodes가 재병합하므로 먼저)
+        #  ③ ibl_engine(실행기) + ibl_executors(파생, reload_nodes가 함께)
         try:
             from ibl_access import invalidate_nodes_cache
             invalidate_nodes_cache()
+        except Exception:
+            pass
+        # api_registry.yaml 편집 반영 — 안 비우면 reload_nodes가 낡은 레지스트리를 재병합해
+        # 삭제된 registry 액션이 실행기에 유령으로 남는다 (2026-07-03 발견).
+        try:
+            from api_engine import reload_registry
+            reload_registry()
         except Exception:
             pass
         try:
@@ -168,7 +176,7 @@ async def reload_package_cache():
             reload_nodes()
         except Exception:
             pass
-        # ③ 의식 에이전트 — 시스템 프롬프트에 IBL 카탈로그를 캐시로 박으므로,
+        # ④ 의식 에이전트 — 시스템 프롬프트에 IBL 카탈로그를 캐시로 박으므로,
         #    카탈로그가 바뀌면 재빌드해야 stale하지 않다(_load_prompt에서 build_environment 주입).
         try:
             from consciousness_agent import reset_consciousness_agent

@@ -6,7 +6,7 @@
  * 거기서 곧바로 고칠 것을 명령할 수 있다(수동적 상태판 → 능동적 수리대).
  */
 import { useEffect, useState, useCallback } from 'react';
-import { Activity, RotateCw, Loader2, Check, AlertTriangle, Zap, Brain, Gauge, Microscope, ChevronDown } from 'lucide-react';
+import { Activity, RotateCw, Loader2, Check, AlertTriangle, Zap, Brain, Gauge, Microscope, ChevronDown, ChevronRight } from 'lucide-react';
 
 const API_BASE = 'http://127.0.0.1:8765';
 
@@ -67,6 +67,22 @@ export function EpisodeJournal() {
   const [open, setOpen] = useState(false);   // 기본 접힘 — 버튼 누르면 펼침
   const [rows, setRows] = useState<EpisodeRow[] | null>(null);
   const [loading, setLoading] = useState(false);
+  // 사용자 명령을 누르면 그 주행의 실행기억(전체 로그)을 인라인으로 펼친다. 한 번에 하나.
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [logs, setLogs] = useState<Record<number, { status: 'loading' | 'ok' | 'error'; text?: string }>>({});
+
+  const toggleLog = useCallback((id: number) => {
+    const willExpand = expandedId !== id;
+    setExpandedId(willExpand ? id : null);
+    // 펼치는 순간, 아직 못 받았거나 실패했던 로그만 (다시) 가져온다 — 전체 로그를 그대로 보여준다.
+    if (willExpand && (!logs[id] || logs[id].status === 'error')) {
+      setLogs((p) => ({ ...p, [id]: { status: 'loading' } }));
+      fetch(`${API_BASE}/xray/episodes/${id}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+        .then((data) => setLogs((p) => ({ ...p, [id]: { status: 'ok', text: data.log || '' } })))
+        .catch(() => setLogs((p) => ({ ...p, [id]: { status: 'error' } })));
+    }
+  }, [expandedId, logs]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -128,35 +144,64 @@ export function EpisodeJournal() {
       )}
 
       <div className={`space-y-1.5 ${open ? '' : 'hidden'}`}>
-        {(rows ?? []).map((ep) => (
-          <div key={ep.id} className="flex items-start gap-2 py-1.5 border-b border-stone-100 last:border-0">
-            <div className="min-w-0 flex-1">
-              <div className="text-[13px] text-stone-700 truncate">{ep.user_message || '(요청 없음)'}</div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px] text-stone-400">
-                <span>{relTime(ep.started_at)}</span>
-                {ep.agent && <span>· {ep.agent}</span>}
-                {ep.hippocampus_score != null && (
-                  <span title="해마 연상 확신도">· 확신 {Math.round(ep.hippocampus_score * 100)}%</span>
-                )}
-                {ep.execution_rounds != null && ep.execution_rounds > 1 && (
-                  <span>· {ep.execution_rounds}라운드</span>
-                )}
-                {ep.total_ms != null && <span>· {(ep.total_ms / 1000).toFixed(1)}초</span>}
-                <DecisionBadge d={ep.unconscious_decision} />
-                <EvalBadge r={ep.evaluation_result} />
+        {(rows ?? []).map((ep) => {
+          const expanded = expandedId === ep.id;
+          const logState = logs[ep.id];
+          return (
+          <div key={ep.id} className="py-1.5 border-b border-stone-100 last:border-0">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <button
+                  onClick={() => toggleLog(ep.id)}
+                  title="이 주행의 실행기억(전체 로그)을 그대로 펼쳐 봅니다"
+                  aria-expanded={expanded}
+                  className="w-full text-left text-[13px] text-stone-700 hover:text-stone-900 flex items-center gap-1 group"
+                >
+                  <ChevronRight size={12} className={`shrink-0 text-stone-400 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+                  <span className="truncate group-hover:underline decoration-dotted underline-offset-2">{ep.user_message || '(요청 없음)'}</span>
+                </button>
+                <div className="flex flex-wrap items-center gap-1.5 mt-1 pl-4 text-[10px] text-stone-400">
+                  <span>{relTime(ep.started_at)}</span>
+                  {ep.agent && <span>· {ep.agent}</span>}
+                  {ep.hippocampus_score != null && (
+                    <span title="해마 연상 확신도">· 확신 {Math.round(ep.hippocampus_score * 100)}%</span>
+                  )}
+                  {ep.execution_rounds != null && ep.execution_rounds > 1 && (
+                    <span>· {ep.execution_rounds}라운드</span>
+                  )}
+                  {ep.total_ms != null && <span>· {(ep.total_ms / 1000).toFixed(1)}초</span>}
+                  <DecisionBadge d={ep.unconscious_decision} />
+                  <EvalBadge r={ep.evaluation_result} />
+                </div>
               </div>
+              {canAnalyze && (
+                <button
+                  onClick={() => analyze(ep.id)}
+                  title="이 주행을 시스템 AI로 분석 — 잘된 점·문제점·고칠 것"
+                  className="shrink-0 px-2.5 py-1 rounded-lg text-[11px] flex items-center gap-1 border border-stone-200 bg-white text-stone-600 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition"
+                >
+                  <Microscope size={12} /> 분석
+                </button>
+              )}
             </div>
-            {canAnalyze && (
-              <button
-                onClick={() => analyze(ep.id)}
-                title="이 주행을 시스템 AI로 분석 — 잘된 점·문제점·고칠 것"
-                className="shrink-0 px-2.5 py-1 rounded-lg text-[11px] flex items-center gap-1 border border-stone-200 bg-white text-stone-600 hover:bg-stone-800 hover:text-white hover:border-stone-800 transition"
-              >
-                <Microscope size={12} /> 분석
-              </button>
+            {expanded && (
+              <div className="mt-2 ml-4 rounded-lg border border-stone-200 bg-stone-50/80 overflow-hidden">
+                {(!logState || logState.status === 'loading') && (
+                  <div className="px-3 py-2 text-[11px] text-stone-400 flex items-center gap-1.5">
+                    <Loader2 size={12} className="animate-spin" /> 실행기억 불러오는 중…
+                  </div>
+                )}
+                {logState?.status === 'error' && (
+                  <div className="px-3 py-2 text-[11px] text-red-500">기록을 불러오지 못했습니다 (로그가 만료됐을 수 있습니다).</div>
+                )}
+                {logState?.status === 'ok' && (
+                  <pre className="max-h-96 overflow-auto px-3 py-2 text-[11px] leading-relaxed text-stone-700 font-mono whitespace-pre-wrap break-words">{logState.text || '(로그가 비어 있습니다)'}</pre>
+                )}
+              </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

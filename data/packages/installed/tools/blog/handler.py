@@ -19,7 +19,7 @@ from common.response_formatter import format_json
 
 # 2026-06-03 dispatcher 표준화 — [self:blog]{op} 키 메타데이터. 분기는 execute() 상단.
 _OP_DISPATCHERS = {
-    "blog_op": {"posts": None, "search": None, "check_new": None, "rebuild_index": None, "stats": None},
+    "blog_op": {"posts": None, "search": None, "check_new": None, "rebuild_index": None, "stats": None, "vault": None},
 }
 _OP_DEFAULTS = {"blog_op": "posts"}
 
@@ -74,13 +74,26 @@ def execute(tool_input: dict, context) -> str:
     # 2026-06-03 어휘 정리: [self:blog]{op} 단일 액션 → 내부 tool_name으로 디스패치.
     if tool_name == "blog_op":
         op = (tool_input.get("op") or _OP_DEFAULTS["blog_op"]).strip()
-        tool_name = {
-            "posts": "blog_get_posts",
-            "search": "blog_search_op",
-            "check_new": "blog_check_new_posts",
-            "rebuild_index": "rebuild_search_index",
-            "stats": "blog_stats",
-        }.get(op, "blog_get_posts")
+        if op == "vault":
+            # 2026-07-03 고아 기능 op 승격 — vault(진실소스) 운영은 mode로 재분기.
+            mode = (tool_input.get("mode") or "stats").strip()
+            vault_tools = {
+                "stats": "blog_vault_stats",
+                "export": "blog_vault_export",
+                "rebuild": "blog_vault_rebuild",
+                "link": "blog_vault_link",
+            }
+            if mode not in vault_tools:
+                return format_json({"success": False, "error": f"알 수 없는 vault mode '{mode}'. (stats|export|rebuild|link)"})
+            tool_name = vault_tools[mode]
+        else:
+            tool_name = {
+                "posts": "blog_get_posts",
+                "search": "blog_search_op",
+                "check_new": "blog_check_new_posts",
+                "rebuild_index": "rebuild_search_index",
+                "stats": "blog_stats",
+            }.get(op, "blog_get_posts")
     try:
         # 인사이트 도구들
         if tool_name == "blog_check_new_posts":
@@ -100,11 +113,6 @@ def execute(tool_input: dict, context) -> str:
             # 레코드 통화 부착(비파괴) — posts 목록을 records로.
             if isinstance(result, dict) and isinstance(result.get("posts"), list):
                 result["items"] = _posts_to_records(result["posts"])
-            return format_json(result)
-
-        elif tool_name == "blog_get_post":
-            from tool_blog_insight import blog_get_post
-            result = blog_get_post(post_id=tool_input.get("post_id"))
             return format_json(result)
 
         elif tool_name == "blog_get_summaries":
@@ -176,30 +184,6 @@ def execute(tool_input: dict, context) -> str:
             # 레코드 통화 부착(비파괴) — 검색 results 목록을 records로(content는 단건이라 미부착).
             if isinstance(result, dict) and isinstance(result.get("results"), list):
                 result["items"] = _results_to_records(result["results"])
-            return format_json(result)
-
-        # RAG 검색 도구들
-        elif tool_name == "search_blog_rag":
-            from tool_blog_rag import search_blog
-            result = search_blog(
-                query=tool_input.get("query"),
-                limit=tool_input.get("limit", 5)
-            )
-            return format_json(result)
-
-        elif tool_name == "get_post_content_rag":
-            from tool_blog_rag import get_post_content
-            result = get_post_content(
-                post_id=tool_input.get("post_id")
-            )
-            return format_json(result)
-
-        elif tool_name == "search_blog_semantic":
-            from tool_blog_rag import search_blog_semantic
-            result = search_blog_semantic(
-                query=tool_input.get("query"),
-                limit=tool_input.get("limit", 5)
-            )
             return format_json(result)
 
         elif tool_name == "rebuild_search_index":

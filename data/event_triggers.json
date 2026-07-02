@@ -127,6 +127,14 @@
       "success": false,
       "result_summary": "{'error': '활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: report_op. 대상 프로젝트를 params.project_id로 명시하거나 프로젝트 컨텍스트(thread_context.project_id) 안에서 호출하세요. 예: execute_ibl(code=\\'[node:action]{..., project_id: \"컨텐츠\"}\\')'}",
       "duration_ms": 13
+    },
+    {
+      "trigger_id": "trg_13056d2d3e0e",
+      "trigger_name": "[IBL] ai_trend_report_daily",
+      "time": "2026-07-03T04:00:04.549096",
+      "success": false,
+      "result_summary": "{'error': \"노드 'self'에 'report' 액션이 없습니다.\", 'available_actions': ['recent_chats', 'agents', 'discover', 'manage_events', 'switch', 'schedule', 'goal', 'notify_user', 'workflow', 'run_pipeline', 'trigger', 'output', 'download', 'package', 'blog', 'business', 'business_item', 'business_document', 'work_guideline', 'phone_sync', 'cctv', 'health', 'lecture', 'slide', 'material', 'deck', 'local_save', 'memory', 'storage', 'fs_query', 'folder_note', 'forage', 'residual', 'photo', 'time', 'read', 'write",
+      "duration_ms": 4
     }
   ]
 }

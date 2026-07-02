@@ -92,27 +92,6 @@ services:
       key_name: token
       env_var: FINNHUB_API_KEY
     timeout: 15
-
-  # === 공연 정보 (KOPIS) ===
-  kopis:
-    base_url: "http://www.kopis.or.kr/openApi/restful"
-    auth:
-      type: query_param
-      key_name: service
-      env_var: KOPIS_API_KEY
-    timeout: 15
-    response_format: xml
-
-  # === 도서관 ===
-  data4library:
-    base_url: "http://data4library.kr/api"
-    auth:
-      type: query_param
-      key_name: authKey
-      env_var: DATA4LIBRARY_API_KEY
-    timeout: 15
-    response_format: xml
-
   # === 공공데이터포털 ===
   data-go-kr:
     base_url: "https://apis.data.go.kr"
@@ -239,7 +218,6 @@ services:
       key_name: serviceKey
       env_var: MOLIT_API_KEY
     timeout: 20
-
 
 # =====================================================
 # 도구 → API 매핑
@@ -1071,271 +1049,6 @@ tools:
         count: _count
         data: _results
 
-  # === 공연 - KOPIS ===
-  kopis_get_performance:
-    service: kopis
-    endpoint: /pblprfr/{performance_id}
-    response_type: xml
-    response:
-      extract: db
-      first: true
-      wrap:
-        success: true
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: performance_detail
-    description: "공연 상세 정보 조회"
-    target_key: performance_id
-    target_description: "공연 ID"
-
-  kopis_search_performances:
-    service: kopis
-    endpoint: /pblprfr
-    param_map:
-      keyword: shprfnm
-      genre: shcate
-      region: signgucode
-      status: prfstate
-      start_date: stdate
-      end_date: eddate
-      rows: rows
-      page: cpage
-    defaults:
-      status: "02"
-      rows: 20
-      page: 1
-    response_type: xml
-    response:
-      extract: db
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: performance_search
-    description: "공연 상세 검색 (기간, 장르, 지역 필터)"
-    target_key: keyword
-    target_description: "검색 키워드"
-
-  kopis_box_office:
-    service: kopis
-    endpoint: /boxoffice
-    param_map:
-      period: ststype
-      date: date
-      genre: catecode
-      region: area
-    defaults:
-      period: day
-    response_type: xml
-    response:
-      extract: db
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: box_office
-    description: "인기 공연/박스오피스 순위"
-
-  kopis_search_festivals:
-    service: kopis
-    endpoint: /prffest
-    param_map:
-      start_date: stdate
-      end_date: eddate
-      genre: shcate
-      region: signgucode
-      rows: rows
-      page: cpage
-    defaults:
-      rows: 20
-      page: 1
-    response_type: xml
-    response:
-      extract: db
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: festival
-    description: "축제/특별 행사 검색"
-
-  # === 도서관 ===
-  library_search_books:
-    service: data4library
-    endpoint: /srchBooks
-    param_map:
-      keyword: keyword
-      page: pageNo
-      rows: pageSize
-    defaults:
-      page: 1
-      rows: 10
-    response_type: xml
-    response:
-      extract: doc
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: book_search
-    description: "도서관 정보나루 도서 상세 검색"
-    target_key: keyword
-    target_description: "검색 키워드"
-
-  library_search_libraries:
-    service: data4library
-    endpoint: /libSrch
-    param_map:
-      name: libName
-      region: region
-      page: pageNo
-      rows: pageSize
-    defaults:
-      page: 1
-      rows: 10
-    response_type: xml
-    response:
-      extract: lib
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: library
-    description: "전국 도서관 검색"
-    target_key: name
-    target_description: "도서관명"
-
-  library_search_by_book:
-    service: data4library
-    endpoint: /libSrchByBook
-    param_map:
-      isbn13: isbn
-      region: region
-      page: pageNo
-      rows: pageSize
-    defaults:
-      page: 1
-      rows: 10
-    response_type: xml
-    response:
-      extract: lib
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: book_library
-    description: "특정 도서를 소장한 도서관 찾기"
-    target_key: isbn13
-    target_description: "도서 ISBN13"
-
-  library_get_popular_books:
-    service: data4library
-    endpoint: /loanItemSrch
-    param_map:
-      start_date: startDt
-      end_date: endDt
-      gender: gender
-      from_age: from_age
-      to_age: to_age
-      region: region
-      kdc: kdc
-      page: pageNo
-      rows: pageSize
-    defaults:
-      page: 1
-      rows: 10
-    response_type: xml
-    response:
-      extract: doc
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: popular_books
-    description: "인기 대출 도서"
-
-  library_get_trending_books:
-    service: data4library
-    endpoint: /hotTrend
-    param_map:
-      base_date: searchDt
-    response_type: xml
-    response:
-      extract: doc
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: trending_books
-    description: "대출 급증 도서"
-
-  # === 문화정보 - KCISA ===
-  kcisa_get_event_detail:
-    service: data-go-kr
-    endpoint: /B553457/cultureinfo/detail2
-    param_map:
-      seq: seq
-    default_params:
-      type: json
-    response_type: xml
-    response:
-      extract: item
-      first: true
-      wrap:
-        success: true
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: exhibit_detail
-    description: "전시/문화행사 상세 정보"
-    target_key: seq
-    target_description: "행사 seq"
-
-  kcisa_search_culture:
-    service: data-go-kr
-    endpoint: /B553457/cultureinfo/period2
-    param_map:
-      start_date: from
-      end_date: to
-      keyword: keyword
-      area: sido
-      rows: numOfrows
-      page: PageNo
-    defaults:
-      rows: 10
-      page: 1
-    response_type: xml
-    response:
-      extract: item
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    # IBL node binding
-    node: sense
-    action_name: exhibit_search
-    description: "KCISA 전시/문화행사 상세 검색 (기간, 지역 필터)"
-    target_key: keyword
-    target_description: "검색어"
-
-
   # =====================================================
   # 학술/연구 도구 (Study)
   # =====================================================
@@ -1538,87 +1251,6 @@ tools:
     target_key: query
     target_description: "검색어 (도서명, 저자 등)"
 
-
-  # =====================================================
-  # 문화 추가 도구
-  # =====================================================
-
-  # --- KOPIS 공연시설 검색 ---
-  kopis_search_facilities:
-    service: kopis
-    endpoint: /prfplc
-    param_map:
-      keyword: shprfnmfct
-      region: signgucode
-      rows: rows
-      page: cpage
-    defaults:
-      rows: 20
-      cpage: 1
-    response_type: xml
-    response:
-      extract: db
-      fields:
-        facility_id: {from: mt10id}
-        name: {from: fcltynm}
-        address: {from: adres}
-        phone: {from: telno}
-        seats: {from: seatscale}
-        region: {from: sidonm}
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    node: sense
-    action_name: facilities
-    description: "KOPIS 공연시설 검색"
-    target_key: keyword
-    target_description: "시설명 검색어"
-
-  # --- 도서관 도서 상세 ---
-  library_get_book_detail:
-    service: data4library
-    endpoint: /srchDtlList
-    param_map:
-      isbn: isbn13
-    defaults:
-      loaninfoYN: "Y"
-    response_type: xml
-    response:
-      extract: detail
-      first: true
-      wrap:
-        success: true
-        data: _results
-    node: sense
-    action_name: book_detail
-    description: "도서 상세 정보 조회 (대출 통계 포함)"
-    target_key: isbn
-    target_description: "ISBN13"
-
-  # --- 도서관 추천 도서 ---
-  library_get_recommended_books:
-    service: data4library
-    endpoint: /recommandList
-    param_map:
-      isbn: isbn13
-      rec_type: type
-    defaults:
-      type: "mania"
-    response_type: xml
-    response:
-      extract: doc
-      wrap:
-        success: true
-        count: _count
-        data: _results
-    node: sense
-    action_name: book_recommend
-    description: "비슷한 도서 추천 (ISBN 기반)"
-    target_key: isbn
-    target_description: "기준 도서의 ISBN13"
-
-
   # =====================================================
   # 위치/지역 추가 도구
   # =====================================================
@@ -1678,7 +1310,6 @@ tools:
     target_key: longitude
     target_description: "경도"
 
-
   # =====================================================
   # 투자 추가 도구
   # =====================================================
@@ -1715,7 +1346,6 @@ tools:
     description: "암호화폐 시세 조회 (CoinGecko)"
     target_key: coin_id
     target_description: "코인 ID (예: bitcoin, ethereum, solana)"
-
 
   # =====================================================
   # CCTV / 웹캠 도구
@@ -1791,7 +1421,6 @@ tools:
     description: "전세계 웹캠 검색 (Windy)"
     target_key: lat_lon_radius
     target_description: "위도,경도,반경km (예: 37.5,127.0,50)"
-
 
   # =====================================================
   # 부동산 추가 도구

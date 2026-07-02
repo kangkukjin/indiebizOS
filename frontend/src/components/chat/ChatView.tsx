@@ -722,28 +722,43 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   // ── 질문/계획 모드 핸들러 ──
 
+  // 인지 패널(질문/계획)의 응답을 에이전트로 되돌린다.
+  // 핸들러가 논블로킹이라 질문을 던진 원래 턴은 이미 끝나 있다 → 답을 일반 대화
+  // 메시지(system_ai_stream)로 흘려보내 다음 턴을 연다(히스토리에 질문이 남아 맥락 유지).
+  // API 호출은 상태 파일을 마감(패널 내림)하는 역할.
+  const continueSystemAI = (message: string) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'system_ai_stream', message }));
+    }
+  };
+
   const handleSubmitAnswer = async (answers: Record<number, string | string[]>) => {
+    const answerText = Object.entries(answers)
+      .map(([idx, ans]) => {
+        const q = questions[parseInt(idx)];
+        return `**${q?.header}**: ${Array.isArray(ans) ? ans.join(', ') : ans}`;
+      })
+      .join('\n');
     try {
       await api.submitSystemAIQuestionAnswer?.(answers);
-      const answerText = Object.entries(answers)
-        .map(([idx, ans]) => {
-          const q = questions[parseInt(idx)];
-          return `**${q?.header}**: ${Array.isArray(ans) ? ans.join(', ') : ans}`;
-        })
-        .join('\n');
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: answerText, timestamp: new Date() }]);
     } catch (err) {
       console.error('Failed to submit answer:', err);
     }
+    // 패널 즉시 숨김(다음 폴링이 확정) + 답을 화면에 표시하고 에이전트 재개
+    setQuestionStatus('none');
+    setQuestions([]);
+    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: answerText, timestamp: new Date() }]);
+    continueSystemAI(`[질문 답변]\n${answerText}`);
   };
 
   const handleApprovePlan = async () => {
     try {
       await api.approveSystemAIPlan?.();
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: '계획을 승인합니다. 진행해주세요.', timestamp: new Date() }]);
     } catch (err) {
       console.error('Failed to approve plan:', err);
     }
+    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: '계획을 승인합니다. 진행해주세요.', timestamp: new Date() }]);
+    continueSystemAI('계획을 승인합니다. 진행해주세요.');
   };
 
   const handleRejectPlan = async () => {
@@ -751,10 +766,12 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
     if (reason !== null) {
       try {
         await api.rejectSystemAIPlan?.(reason);
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: `계획 수정 요청: ${reason || '다시 검토해주세요.'}`, timestamp: new Date() }]);
       } catch (err) {
         console.error('Failed to reject plan:', err);
       }
+      const msg = `계획 수정 요청: ${reason || '다시 검토해주세요.'}`;
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: msg, timestamp: new Date() }]);
+      continueSystemAI(msg);
     }
   };
 

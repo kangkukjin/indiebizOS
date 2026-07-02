@@ -539,7 +539,7 @@ export default function ManualMode() {
                             title={a.description}
                             className="px-2 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-[12px] text-stone-700 font-mono transition"
                           >
-                            {a.name}
+                            <span className="text-stone-400">{g.node}:</span>{a.name}
                           </button>
                           {a.ops.length > 0 && <span className="text-[10px] text-stone-400">op:</span>}
                           {a.ops.map((o) => (

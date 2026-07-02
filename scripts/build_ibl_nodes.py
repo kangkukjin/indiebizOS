@@ -1510,6 +1510,24 @@ def validate_fixture_coverage(data: dict, root: Path) -> list[str]:
     return issues
 
 
+def validate_node_guides(data: dict, root: Path) -> list[str]:
+    """노드 레벨 guides: 목록이 data/guides/ 실존 파일을 가리키는지 검증.
+
+    유령 등재는 의식 에이전트/read_guide 경로에서 침묵 실패(_load_guide_file 이
+    빈 문자열 반환)로 이어지므로 빌드에서 막는다.
+    """
+    issues: list[str] = []
+    guides_dir = root / "data" / "guides"
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for g in node.get("guides") or []:
+            if not (guides_dir / str(g)).exists():
+                issues.append(f"[{node_name}] guides 유령 등재: data/guides/{g} 실존하지 않음")
+    return issues
+
+
 def validate(data: dict, root: Path) -> list[str]:
     """전체 yaml 데이터에 대해 삼각 검증 수행."""
     issues: list[str] = []
@@ -1529,6 +1547,7 @@ def validate(data: dict, root: Path) -> list[str]:
     issues.extend(validate_runs_on(data))
     issues.extend(validate_transform_contract(data))
     issues.extend(validate_phone_reachability(data, root))
+    issues.extend(validate_node_guides(data, root))
     return issues
 
 

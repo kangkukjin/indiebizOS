@@ -282,8 +282,6 @@
     - 저장소
     - 수집
     guides:
-    - blog/blog_guide.md
-    - memory/memory_guide.md
     - lecture_workspace.md
     - trigger.md
     - photo.md

@@ -154,6 +154,18 @@ def execute(tool_input: dict, context) -> str:
 
     # 단일 액션 패턴: read {format} 통합 액션. format 명시 또는 확장자 자동 인식.
     if tool_name == "read_op":
+        # 파이프라인 자동 바인딩: path 가 없으면 직전 step 결과에서 파일 경로 추출.
+        # "방금 찾은 파일을 읽기"([self:file_find]{...} | take: 1 >> [self:read]) 조합 개통.
+        if not (tool_input.get("path") or tool_input.get("file_path") or tool_input.get("target")):
+            prev = tool_input.get("_prev_result") or tool_input.get("params", {}).get("_prev_result", "")
+            if prev:
+                try:
+                    from ibl_executors import _extract_path_from_prev
+                    extracted = _extract_path_from_prev(prev if isinstance(prev, str) else json.dumps(prev, ensure_ascii=False))
+                    if extracted:
+                        tool_input = {**tool_input, "path": extracted}
+                except Exception:  # noqa: BLE001 — 추출 실패 시 기존 경로 없음 흐름
+                    pass
         fmt = (tool_input.get("format") or "").strip().lower()
         if not fmt:
             raw = tool_input.get("path") or ""
@@ -185,6 +197,15 @@ def execute(tool_input: dict, context) -> str:
                 path = str(get_base_path() / "data" / raw_path)
             else:
                 path = os.path.join(project_path, raw_path)
+            # blocks: 문서를 빈 줄 기준 문단 items 로 분할해 반환(문서 뷰어 앱이 thread/list
+            # 로 렌더). 원문은 message 로도 보존. 어느 파일이든 쓰는 일반 표시 옵션.
+            if tool_input.get("blocks"):
+                import re as _re
+                with open(path, 'r', encoding='utf-8') as f:
+                    _txt = f.read()
+                _parts = [{"text": p.strip()} for p in _re.split(r"\n\s*\n", _txt) if p.strip()]
+                return json.dumps({"success": True, "items": _parts, "message": _txt,
+                                   "path": path, "count": len(_parts)}, ensure_ascii=False)
             offset = tool_input.get("offset", 0) or 0
             limit = tool_input.get("limit")
             file_size = os.path.getsize(path)

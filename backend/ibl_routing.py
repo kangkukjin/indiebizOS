@@ -801,9 +801,26 @@ def _search_guide(query: str, params: dict) -> Any:
 
 
 def _delegate_unified(params: dict, project_path: str) -> Any:
-    """위임 통합 디스패처 — mode(async/sync/workflow) × scope(same/cross)."""
+    """위임 통합 디스패처 — mode(async/sync/workflow) × scope(same/cross/system)."""
     mode = (params.get("mode") or "async").lower()
     scope = (params.get("scope") or "same").lower()
+
+    if scope == "system":
+        # 시스템 AI(자율주행 top-level)에게 자연어 의도를 fire-and-forget 위임.
+        # 프로젝트 에이전트 레지스트리 밖의 자율주행이 대상 — 앱 "생성" 버튼처럼
+        # "이거 알아서 해줘"를 넘길 때. report-viewer 가 파이썬 send_message 를 직접
+        # 때렸던 그 능력의 일반 어휘화(scope 차원 확장, 새 액션 아님).
+        message = params.get("message", params.get("query", ""))
+        if not message:
+            return {"error": "message 파라미터가 필요합니다. 예: {scope: \"system\", message: \"AI 동향 보고서 써줘\"}"}
+        try:
+            from system_ai_runner import SystemAIRunner
+            SystemAIRunner.send_message(content=message,
+                                        from_agent=params.get("from_agent") or "앱")
+        except Exception as e:  # noqa: BLE001 — 큐잉 실패는 그대로 보고
+            return {"error": f"시스템 AI 위임 실패: {e}"}
+        return {"success": True, "queued": True, "target": "시스템 AI",
+                "message": "시스템 AI에 요청을 전달했습니다. 완료되면 결과를 확인하세요."}
 
     if scope == "cross":
         from system_ai_tools import _execute_call_project_agent

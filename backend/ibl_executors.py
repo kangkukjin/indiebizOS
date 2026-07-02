@@ -221,13 +221,22 @@ def _extract_path_from_prev(prev_result: str) -> Optional[str]:
     """
     if not prev_result:
         return None
+    _KEYS = ("file", "path", "url", "opened",
+             "output_file", "output_path", "report_path",
+             "html_path", "file_path", "filepath")
     try:
         data = json.loads(prev_result)
         if isinstance(data, dict):
+            # 0차: items 통화 — file_find/list 등이 반환한 items[0]에서 경로 추출.
+            # "방금 찾은 파일을 읽기"(file_find | take 1 >> read) 조합을 개통한다.
+            items = data.get("items")
+            if isinstance(items, list) and items and isinstance(items[0], dict):
+                for key in _KEYS:
+                    val = items[0].get(key)
+                    if val and isinstance(val, str):
+                        return val
             # 1차: 명시적 키 매칭 (우선순위순)
-            for key in ("file", "path", "url", "opened",
-                        "output_file", "output_path", "report_path",
-                        "html_path", "file_path", "filepath"):
+            for key in _KEYS:
                 val = data.get(key)
                 if val and isinstance(val, str):
                     return val

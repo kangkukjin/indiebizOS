@@ -1065,6 +1065,110 @@ def _app_check_filters(qualified: str, app: dict) -> list[str]:
     return issues
 
 
+def _validate_app_block(blabel: str, blk: dict, qualified_set: set) -> list[str]:
+    """단일 앱 블록(탭 또는 단독 계기) 검증 — 노드 app: 블록과 standalone 매니페스트 공용.
+
+    action(IBL 템플릿) 필수 · view 어휘 · compose · inputs(key/type/select) ·
+    템플릿의 [node:action] 실존 · $key↔inputs 대응.
+    """
+    import re
+    issues: list[str] = []
+    if not isinstance(blk.get("action"), str) and not blk.get("buttons"):
+        issues.append(f"{blabel}: app.action(IBL 템플릿) 또는 buttons 필수")
+    # action 있는 블록은 결과를 그릴 view 필수. 버튼 전용(action 없음)은 그릴 데이터가
+    # 없어 view 생략 가능 — 단 view 를 선언했으면 구조는 검증한다.
+    _view = blk.get("view")
+    if isinstance(blk.get("action"), str) or _view is not None:
+        issues.extend(_app_check_view(blabel, _view))
+    _cmp = blk.get("compose")
+    if _cmp is not None and (not isinstance(_cmp, dict) or not isinstance(_cmp.get("action"), str)):
+        issues.append(f"{blabel}: app.compose 는 action(IBL 템플릿) 필수")
+    issues.extend(_check_compose_channels(blabel, _cmp))
+    input_keys: set = set()
+    input_keys |= _block_local_keys(blk)
+    issues.extend(_app_check_filter_block(blabel, blk))
+    _pd = blk.get("filter")
+    if isinstance(_pd, dict) and not _pd.get("from_field"):
+        input_keys.add(_pd.get("key") or "filter")
+    for j, inp in enumerate(blk.get("inputs") or []):
+        if not isinstance(inp, dict) or not inp.get("key"):
+            issues.append(f"{blabel}: app.inputs[{j}] 에 key 없음")
+            continue
+        input_keys.add(inp["key"])
+        itype = inp.get("type")
+        if itype not in APP_INPUT_TYPES:
+            issues.append(f"{blabel}: app.inputs[{j}] type={itype!r} (허용: {sorted(APP_INPUT_TYPES)})")
+        if itype == "select":
+            if inp.get("options"):
+                opts = inp["options"]
+                if not isinstance(opts, list) or not all(
+                    isinstance(o, dict) and "value" in o and "label" in o for o in opts
+                ):
+                    issues.append(f"{blabel}: app.inputs[{j}] 정적 options 는 [{{value,label}}] 배열")
+            elif inp.get("options_action"):
+                if not inp.get("options_from"):
+                    issues.append(f"{blabel}: app.inputs[{j}] select options_action 에 options_from 필수")
+            else:
+                issues.append(f"{blabel}: app.inputs[{j}] select 는 정적 options 또는 options_action 필수")
+    for t in _app_action_templates(blk):
+        for ref_node, ref_action in re.findall(r"\[(\w+):(\w+)\]", t):
+            if f"{ref_node}:{ref_action}" not in qualified_set:
+                issues.append(f"{blabel}: app 템플릿이 미존재 액션 [{ref_node}:{ref_action}] 참조 ({t!r})")
+        for key in re.findall(r"\$(\w+)", t):
+            if key not in input_keys:
+                issues.append(f"{blabel}: app 템플릿 $%s 에 대응하는 input 없음 ({t!r})" % key)
+    return issues
+
+
+def validate_standalone_instruments(data: dict) -> list[str]:
+    """data/instruments/*.yaml (어휘 없는 순수 앱) 검증 — 노드 app: 블록과 같은 어휘.
+
+    각 파일은 하나의 계기: instrument/icon/name 필수 + 각 모드가 앱 블록.
+    모드 action: 의 [node:action] 이 실존하는지 검사 → 앱→어휘 참조 깨짐을 저술 시점에 잡음.
+    """
+    import glob
+    import os
+    import re
+    import yaml
+    issues: list[str] = []
+    inst_dir = os.path.join(os.path.dirname(__file__), "..", "data", "instruments")
+    if not os.path.isdir(inst_dir):
+        return issues
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    qualified_set = {
+        f"{n}:{a}"
+        for n, nd in nodes.items() if isinstance(nd, dict)
+        for a in (nd.get("actions") or {})
+    }
+    for fp in sorted(glob.glob(os.path.join(inst_dir, "*.yaml"))):
+        name = os.path.basename(fp)
+        try:
+            with open(fp, "r", encoding="utf-8") as f:
+                m = yaml.safe_load(f) or {}
+        except Exception as e:  # noqa: BLE001
+            issues.append(f"instruments/{name}: YAML 파싱 실패 — {e}")
+            continue
+        if not isinstance(m, dict):
+            issues.append(f"instruments/{name}: 매핑이어야 함")
+            continue
+        for req in ("instrument", "icon", "name"):
+            if not m.get(req):
+                issues.append(f"instruments/{name}: {req} 필수")
+        # %BASE% 는 서버측 치환 토큰이라 검증 시엔 그대로 둔 채 [node:action]·$key 만 본다.
+        modes = m.get("modes")
+        if isinstance(modes, list) and modes:
+            for mi, mode in enumerate(modes):
+                if not isinstance(mode, dict):
+                    issues.append(f"instruments/{name}: modes[{mi}] 가 매핑이 아님")
+                    continue
+                if not mode.get("name"):
+                    issues.append(f"instruments/{name}: modes[{mi}] name(탭 이름) 필수")
+                issues.extend(_validate_app_block(f"instruments/{name} modes[{mi}]", mode, qualified_set))
+        else:
+            issues.append(f"instruments/{name}: modes(비어있지 않은 리스트) 필수")
+    return issues
+
+
 def validate_app_blocks(data: dict) -> list[str]:
     """app: 블록 정합성 — 액션 템플릿의 [node:action] 실존, $key↔inputs, view 어휘, 계기 그룹."""
     import re
@@ -1112,49 +1216,7 @@ def validate_app_blocks(data: dict) -> list[str]:
                 blocks = [(qualified, app)]
 
             for blabel, blk in blocks:
-                if not isinstance(blk.get("action"), str):
-                    issues.append(f"{blabel}: app.action(IBL 템플릿) 필수")
-                issues.extend(_app_check_view(blabel, blk.get("view")))
-                _cmp = blk.get("compose")
-                if _cmp is not None and (not isinstance(_cmp, dict) or not isinstance(_cmp.get("action"), str)):
-                    issues.append(f"{blabel}: app.compose 는 action(IBL 템플릿) 필수")
-                issues.extend(_check_compose_channels(blabel, _cmp))
-                input_keys: set[str] = set()
-                # 암묵 입력 키: compose($text)/form 필드/editable_list add 필드
-                input_keys |= _block_local_keys(blk)
-                # 정적 필터 칩(filter.items, 기간·레벨 양용)은 액션 $key 의 출처 — input_keys 에 합류.
-                # 동적 필터(filter.from_field)는 클라이언트 측 결과-필드 거르기라 재조회 $key 가 없음 → 합류 안 함.
-                issues.extend(_app_check_filter_block(blabel, blk))
-                _pd = blk.get("filter")
-                if isinstance(_pd, dict) and not _pd.get("from_field"):
-                    input_keys.add(_pd.get("key") or "filter")
-                for j, inp in enumerate(blk.get("inputs") or []):
-                    if not isinstance(inp, dict) or not inp.get("key"):
-                        issues.append(f"{blabel}: app.inputs[{j}] 에 key 없음")
-                        continue
-                    input_keys.add(inp["key"])
-                    itype = inp.get("type")
-                    if itype not in APP_INPUT_TYPES:
-                        issues.append(f"{blabel}: app.inputs[{j}] type={itype!r} (허용: {sorted(APP_INPUT_TYPES)})")
-                    if itype == "select":
-                        if inp.get("options"):
-                            opts = inp["options"]
-                            if not isinstance(opts, list) or not all(
-                                isinstance(o, dict) and "value" in o and "label" in o for o in opts
-                            ):
-                                issues.append(f"{blabel}: app.inputs[{j}] 정적 options 는 [{{value,label}}] 배열")
-                        elif inp.get("options_action"):
-                            if not inp.get("options_from"):
-                                issues.append(f"{blabel}: app.inputs[{j}] select options_action 에 options_from 필수")
-                        else:
-                            issues.append(f"{blabel}: app.inputs[{j}] select 는 정적 options 또는 options_action 필수")
-                for t in _app_action_templates(blk):
-                    for ref_node, ref_action in re.findall(r"\[(\w+):(\w+)\]", t):
-                        if f"{ref_node}:{ref_action}" not in qualified_set:
-                            issues.append(f"{blabel}: app 템플릿이 미존재 액션 [{ref_node}:{ref_action}] 참조 ({t!r})")
-                    for key in re.findall(r"\$(\w+)", t):
-                        if key not in input_keys:
-                            issues.append(f"{blabel}: app 템플릿 $%s 에 대응하는 input 없음 ({t!r})" % key)
+                issues.extend(_validate_app_block(blabel, blk, qualified_set))
 
             issues.extend(_app_check_filters(qualified, app))
 
@@ -1395,6 +1457,7 @@ def validate(data: dict, root: Path) -> list[str]:
             qualified = f"{node_name}:{action_name}"
             issues.extend(_check_action(qualified, action, tool_index))
     issues.extend(validate_app_blocks(data))
+    issues.extend(validate_standalone_instruments(data))
     issues.extend(validate_runs_on(data))
     issues.extend(validate_transform_contract(data))
     issues.extend(validate_phone_reachability(data, root))

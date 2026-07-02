@@ -47,7 +47,65 @@ async def serve_artifact_file(path: str):
 # 앱 표면 계기 — ibl_nodes.yaml 의 app: 블록에서 자동 파생 (2단계, 단일 진실 소스).
 # app: 블록을 단 액션은 빌드(--check) 시 정합성 검증을 통과해야 하며, 여기서 계기로 합성된다.
 IBL_NODES_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ibl_nodes.yaml")
+# 어휘 없는 순수 앱(상부구조): 파일 하나 = 앱 하나. app: 블록과 동일 스키마이되
+# 노드 액션에 매달리지 않는다 — 모드의 action: 은 전부 일반 어휘를 호출한다.
+# (하부구조=어휘 / 상부구조=앱 의 깨끗한 이음매 — docs/APP_AS_MANIFEST_DESIGN.md)
+INSTRUMENTS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "instruments")
 _instruments_cache = {"mtime": None, "payload": None}
+
+
+def _repo_base() -> str:
+    """레포 루트 절대경로 (매니페스트 %BASE% 토큰 치환용)."""
+    try:
+        from runtime_utils import get_base_path
+        return str(get_base_path())
+    except Exception:
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+
+def _subst_base(obj, base: str):
+    """매니페스트 안 %BASE% 토큰을 레포 루트로 재귀 치환 (서버측 — 클라이언트는 실경로만 봄).
+    $key/{field} 치환과 무충돌하도록 %BASE% 라는 별도 토큰을 쓴다(폰/타 머신 이식성)."""
+    if isinstance(obj, str):
+        return obj.replace("%BASE%", base)
+    if isinstance(obj, list):
+        return [_subst_base(x, base) for x in obj]
+    if isinstance(obj, dict):
+        return {k: _subst_base(v, base) for k, v in obj.items()}
+    return obj
+
+
+def _load_standalone_instruments() -> list:
+    """data/instruments/*.yaml → [(instrument_id, app_dict), ...]. %BASE% 치환 적용."""
+    import glob
+    import yaml
+    out = []
+    base = _repo_base()
+    for fp in sorted(glob.glob(os.path.join(INSTRUMENTS_DIR, "*.yaml"))):
+        try:
+            with open(fp, "r", encoding="utf-8") as f:
+                m = yaml.safe_load(f) or {}
+            if not isinstance(m, dict) or not m.get("instrument"):
+                continue
+            m = _subst_base(m, base)
+            out.append((m["instrument"], m))
+        except Exception:
+            continue  # 깨진 매니페스트는 조용히 건너뜀(build --check 가 저술 시점에 잡음)
+    return out
+
+
+def _instruments_mtime() -> float:
+    """ibl_nodes.yaml + instruments/ 디렉토리의 최신 mtime (둘 중 어느 쪽이 바뀌어도 캐시 무효화)."""
+    m = os.path.getmtime(IBL_NODES_PATH)
+    if os.path.isdir(INSTRUMENTS_DIR):
+        m = max(m, os.path.getmtime(INSTRUMENTS_DIR))
+        import glob
+        for fp in glob.glob(os.path.join(INSTRUMENTS_DIR, "*.yaml")):
+            try:
+                m = max(m, os.path.getmtime(fp))
+            except OSError:
+                pass
+    return m
 
 # app 블록에서 모드(탭) 레벨로 그대로 전달되는 필드
 _APP_MODE_FIELDS = ("note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter")
@@ -108,6 +166,15 @@ def _derive_instruments() -> dict:
                 groups[gid] = []
                 group_seq.append(gid)
             groups[gid].append((action_name, app))
+
+    # (신규) 어휘 없는 순수 앱 — data/instruments/*.yaml. 노드 app: 블록과 동일 처리.
+    for gid, app in _load_standalone_instruments():
+        if runnable is not None and app.get("phone_render") is False:
+            continue
+        if gid not in groups:
+            groups[gid] = []
+            group_seq.append(gid)
+        groups[gid].append((gid, app))
 
     instruments = []
     for gid in group_seq:
@@ -287,7 +354,7 @@ async def get_instruments():
     (화이트리스트 아님 — 데이터 엔드포인트라 로그인 후 접근이 맞음).
     """
     try:
-        mtime = os.path.getmtime(IBL_NODES_PATH)
+        mtime = _instruments_mtime()
         if _instruments_cache["mtime"] != mtime:
             _instruments_cache["payload"] = _derive_instruments()
             _instruments_cache["mtime"] = mtime

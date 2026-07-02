@@ -61,7 +61,6 @@
 | radio | Radio Tools | 인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전 | 설치됨 |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API 도구. 아파트/주택의 매매·전월세 실거 | 설치됨 |
 | remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프 | 설치됨 |
-| report-viewer | Report Viewer |  | 설치됨 |
 | shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색  | 설치됨 |
 | startup | Startup Support | 정부 창업지원 사업공고 검색 도구. K-Startup(창업진흥원)과 중소 | 설치됨 |
 | study | Academic Research | 학술 논문 검색, 여론 조사, 뉴스 아카이브 및 글로벌 경제 지표 접근  | 설치됨 |

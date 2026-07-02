@@ -281,6 +281,21 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 설명 드리프트 점검 실패 (무시): {e}")
 
+    # 6) 어휘 결정화 감지 (주간 카덴스) — §4 마찰 신호 텔레메트리.
+    #    raw-코드 추락(카탈로그 굶주림 경보 겸용)·IBL 실패→쉘 폴백·반복 다단 조합을
+    #    에피소드 로그에서 세어 승격 후보를 깃발로 표출. 감지는 시스템, 결정은 사용자.
+    try:
+        from vocab_crystallization import run_crystallization_scan
+        cz = run_crystallization_scan()
+        result["crystallization"] = cz
+        if cz.get("node"):  # 실제 실행됨 (카덴스 스킵이 아님)
+            try:
+                save_self_check(cz)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"[Maintenance] 결정화 감지 실패 (무시): {e}")
+
     return result
 
 

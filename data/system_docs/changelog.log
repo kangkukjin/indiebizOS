@@ -1569,3 +1569,11 @@
 - Goal/if/case 문법 → 주문형 가이드 이동: data/guides/goal.md 신설+guide_db 등록(45개), 교재엔 read_guide 안내 스텁만. 교재 14,915→12,497바이트(−16%), 상시 프롬프트 3소비자(에이전트 환경·의식·수동번역)에 적용
 - 교재-가드 신설: build --check에 check_textbook 합류 — 교재 [node:action] 스니펫 실존(WRONG 반례 면제) + 노드 선택표 집합·개수 = 카탈로그 정합. 음성 테스트로 기존 드리프트 2건 검출 확인 후 수정. 역사 반교습("(target) 폐지됨")은 무시간 규칙("positional 인자 없음")으로 재서술
 - 반영: build+--check 전 가드 통과, /packages/reload 라이브(노드 6·액션 141·table 13 확인). api_ibl 번역 프롬프트 문구(5노드→노드 체계)는 모듈 상수라 다음 백엔드 재시작 시 반영
+[2026-07-03] TOOL_JSON_DERIVED: tool.json 파생화 — 정합성을 검증에서 구조로 (커밋 0a88b0c)
+- 원본=각 패키지 ibl_actions.yaml의 tool_json: 블록. op-bearing 도구의 op enum/default는 저장 금지, 빌드가 actions의 ops에서 주입 → src↔tool.json 드리프트 구조적 불가능
+- tool.json=_generated 마커 빌드 산출물. --check 바이트 일치 검증, 오염은 일반 빌드가 치유(build_tool_index가 파생 결과를 읽어 부트스트랩 교착 제거)
+- 35개 전 패키지 이관(migrate_tool_schema.py — deep-equal 단언+롤백). 미소유 도구 85개는 내부 배관이라 원문 보존, 생사 감사 별도 태스크
+[2026-07-03] VOCAB_CRYSTALLIZATION: 어휘 결정화 감지기 신설 (backend/vocab_crystallization.py)
+- §4 마찰 신호 텔레메트리: A.raw-코드 추락(굶주림 경보 겸용) B.IBL 실패→쉘 폴백 C.반복 다단 조합(단어 주조 후보). 은퇴깃발·자동승격 없음(감지=시스템, 결정=사용자)
+- 데이터=episode_log 구조화 stdout 라인([tool:...]/[node:action] 화살표 + IBL_DEBUG code). ibl_execution_logs 테이블은 호출자 0 죽은 배관으로 확인, 미사용
+- run_maintenance_bundle 항목 6(주간 카덴스) + self_checks(__telemetry__) + 알림 + data/vocab_crystallization_flags.json. 첫 실측: 7일 156 에피소드, 우회율 17.7%, 후보 6건(ep548 self:read 실패→grep 폴백 등). ★백엔드 재시작 후 번들 합류 라이브

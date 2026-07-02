@@ -120,6 +120,7 @@
     "tool_loader",
     "tool_selector",
     "trigger_engine",
+    "vocab_crystallization",
     "web_collector",
     "websocket_manager",
     "workflow_engine",
@@ -142,8 +143,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 136,
-    "engine": 124,
+    "total": 137,
+    "engine": 125,
     "blocklist": 12
   }
 }

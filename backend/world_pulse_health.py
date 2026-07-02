@@ -309,6 +309,37 @@ def save_self_check(result: Dict):
         logger.warning(f"[SelfCheck] 저장 실패: {e}")
 
 
+def purge_action_records(actions: List[str]) -> Dict:
+    """제거된 액션의 건강기록을 world_pulse.db에서 삭제한다.
+
+    action_health / self_checks 두 테이블의 `action` 컬럼은 `node:` 없는 **맨
+    액션명**(예: 'chart', 'filter')이다. 액션을 제거하고도 이 기록을 남기면
+    X-Ray에 존재하지 않는 액션이 계속 비정상으로 표시된다(action_removal.md 5번).
+    패키지 제거 경로가 호출한다. 반환: {"action_health": n, "self_checks": n}.
+    """
+    result = {"action_health": 0, "self_checks": 0}
+    names = [a for a in (actions or []) if a]
+    if not names:
+        return result
+    from world_pulse import _get_pulse_db
+    ph = ",".join("?" * len(names))
+    try:
+        conn = _get_pulse_db()
+        for table in ("action_health", "self_checks"):
+            try:
+                cur = conn.execute(
+                    f"DELETE FROM {table} WHERE action IN ({ph})", names
+                )
+                result[table] = cur.rowcount
+            except Exception as e:
+                logger.warning(f"[SelfCheck] {table} 정리 실패: {e}")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"[SelfCheck] 건강기록 정리 실패: {e}")
+    return result
+
+
 def _check_failure_alerts(threshold: int = 3):
     """연속 실패 액션 감지 및 알림"""
     from world_pulse import _get_pulse_db

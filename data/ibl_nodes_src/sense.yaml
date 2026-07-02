@@ -2,6 +2,7 @@
     actions:
       world:
         returns: scalar
+        fixture: '[sense:world]{op: "snapshot"}'
         description: 세계 상태 감각 (op 분기). 경제·뉴스·기술·날씨 스냅샷 조회/추이/재수집.
         target_description: |
           op로 분기 (기본 snapshot).

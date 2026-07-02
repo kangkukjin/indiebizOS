@@ -26,7 +26,7 @@
 | 행정_서비스 | 행정_서비스 | 정부24 및 민원 서비스 지원 |
 | 홍보 | 홍보 | 홍보/마케팅 콘텐츠 제작 |
 
-## 도구 패키지 (Tools) - 40개
+## 도구 패키지 (Tools) - 41개
 에이전트가 사용할 수 있는 유틸리티
 
 | ID | 이름 | 설명 | 상태 |
@@ -53,11 +53,11 @@
 | location-services | Location Services | 위치 기반 서비스 도구. 날씨/대기질 조회, 맛집 검색, 자동차 길찾기, | 설치됨 |
 | media_producer | Media Producer | 홍보용 슬라이드 이미지, HTML 기반 MP4 동영상, AI 이미지 생성 | 설치됨 |
 | memory | Memory | 에이전트 심층 메모리. 연상기억에서 자동으로 검색·저장되며, IBL [s | 설치됨 |
-| nodejs | Node.js Executor | Node.js/JavaScript 코드 실행 환경. JSON 처리, 비동 | 설치됨 |
+| nodejs | Node.js Executor | Node.js/JavaScript 코드 실행 환경. JSON 처리, 비동 | 미설치 |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 도구. 파일 탐색기 GUI | 설치됨 |
 | photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 도구.  ## 스캔 D | 설치됨 |
 | publishing | Publishing Project Manager | 출판 프로젝트(책) 관리 도구. 원고 관리, 구조 기획, 조각글 수집 등 | 미설치 |
-| python-exec | Python Executor | Python 코드 실행 환경. 수학 계산, 데이터 처리, 파일 파싱(JS | 설치됨 |
+| python-exec | Python Executor | Python 코드 실행 환경. 수학 계산, 데이터 처리, 파일 파싱(JS | 미설치 |
 | radio | Radio Tools | 인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전 | 설치됨 |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API 도구. 아파트/주택의 매매·전월세 실거 | 설치됨 |
 | remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프 | 설치됨 |
@@ -67,10 +67,11 @@
 | study | Academic Research | 학술 논문 검색, 여론 조사, 뉴스 아카이브 및 글로벌 경제 지표 접근  | 설치됨 |
 | system_essentials | System Essentials Kit | 에이전트 기본 도구 모음. 파일 읽기/쓰기/검색, 작업 목록(todo)  | 설치됨 |
 | visualization | Visualization Tools | 데이터 시각화 도구. 라인차트, 막대차트, 파이차트, 산점도, 히트맵,  | 설치됨 |
-| web | Web Tools | 웹 검색 및 크롤링 도구. 종합 검색(웹+뉴스+유튜브 병렬), DuckD | 설치됨 |
+| web | Web Tools | 웹 검색 및 크롤링 도구. DuckDuckGo 웹 검색, 웹페이지 텍스트 | 설치됨 |
 | web-builder | Web Builder & Homepage Manager | 홈페이지 제작과 관리를 위한 통합 도구 패키지.  ## 두 가지 시나리오 | 설치됨 |
 | web-collector | Web Collector | 웹 정보 수집 가이드 + DB 프레임워크. 사이트별 가이드(어디서 뭘 어 | 설치됨 |
+| web-kr | Web Search (Korea) | 네이버 검색 API로 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/ | 설치됨 |
 | youtube | YouTube Tools | YouTube 영상 도구. 영상 정보 조회, 자막 추출 및 요약, MP3 | 설치됨 |
 
 ---
-*마지막 업데이트: 2026-07-01 21:09*
+*마지막 업데이트: 2026-07-02 09:44*

@@ -3,6 +3,7 @@ nodes:
     actions:
       cctv:
         returns: items
+        fixture: '[sense:cctv]{op: "search", query: "해운대"}'
         description: CCTV/웹캠 조회 (op 분기). search(키워드 통합검색)/nearby(좌표 근처, lat·lng 필수). 출력은 항상 lat/lng·playable 포함, stream_tags 동봉 시 채팅창 재생. 자세히 read_guide(query="cctv").
         group: media
         keywords:
@@ -64,6 +65,7 @@ nodes:
     actions:
       cctv:
         returns: scalar
+        exempt: '기기 의존(카메라 연결)'
         description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신.'
         group: cctv
         target_description: '파라미터 없음. op 분기 — stats(기본): 카카오·UTIC·ITS·Windy 전체 소스 CCTV 현황·총수 / refresh: UTIC 실시간 API로 전국 캐시 일괄 갱신(유지보수).'

@@ -2,6 +2,7 @@ node: self
 actions:
   health:
     returns: items
+    fixture: '[self:health]{op: "query", query_type: "medications"}'
     description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
     group: health
     target_description: 'save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호).'

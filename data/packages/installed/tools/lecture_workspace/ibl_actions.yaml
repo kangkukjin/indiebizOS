@@ -2,6 +2,7 @@ node: self
 actions:
   lecture:
     returns: items
+    fixture: '[self:lecture]{op: "list"}'
     runs_on: mac_only
     description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
     group: lecture

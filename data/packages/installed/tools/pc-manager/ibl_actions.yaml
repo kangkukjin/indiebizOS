@@ -3,6 +3,7 @@ nodes:
     actions:
       host:
         returns: scalar
+        fixture: '[sense:host]{op: "status"}'
         description: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라 기계를 직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
         group: device
         target_description: 'op=status(기본): 전면 앱·CPU·메모리·디스크·배터리·가동시간·로드평균·프로세스 수 한 눈에. apps: 메모리 점유 상위 프로세스(limit 옵션, 기본 12). resources: per-core CPU·스왑·디스크 파티션별·네트워크 상세.'
@@ -90,6 +91,7 @@ nodes:
     actions:
       storage:
         returns: scalar
+        fixture: '[self:storage]{op: "volumes"}'
         description: 디스크 용량 분석 (op 분기) — 폴더·확장자별 용량 집계. scan(분석 인덱스 구축)/summary(용량 집계)/volumes(볼륨 목록). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
         target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
@@ -105,6 +107,7 @@ nodes:
         implementation: scan_storage/get_storage_summary/list_volumes op 분기 (pc-manager)
       fs_query:
         returns: items
+        fixture: '[self:fs_query]{kind: "pdf"}'
         description: 파일 메타 검색 (이름·확장자·크기·종류) — OS 색인(맥 Spotlight) 직접. 선스캔 불필요·항상 최신. 내용 검색은 grep, 패턴은 find. self:photo 와 같은 file_index 보편 질의 위의 종류-무관 preset.
         group: file
         target_description: search_term(이름 부분일치) · extension(확장자) · kind(image/video/audio/pdf/any) · min_size_mb · path(검색 루트, 생략 시 홈) · limit(기본 100). 결과 records(보편 파일 필드) + table 통화.
@@ -160,6 +163,7 @@ nodes:
                 - '{path}'
       folder_note:
         returns: scalar
+        fixture: '[self:folder_note]{op: "get"}'
         description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file
         target_description: set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. get — root_path/volume_name 생략 시 전체 볼륨 주석 통합 조회.
@@ -174,6 +178,7 @@ nodes:
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
         returns: scalar
+        fixture: '[self:forage]{op: "recall", query: "test"}'
         description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기.
         group: file
         target_description: 'recall(기본) — query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상. note — layer(map|owner) + map은 locus/kind(identity|convention|dead_branch|substrate)/claim, owner는 facet/value. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id + table(forage_map|owner_model).'
@@ -194,6 +199,7 @@ nodes:
         implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
       residual:
         returns: scalar
+        exempt: '모집단 표본 인자 필요(sample/estimate)'
         description: 탐색 잔여 측정 — "거기 없음 vs 덜 봤음"을 표본조사로 가른다(음성-단언). op 분기.
         group: file
         target_description: sample(기본) — 질의 모집단에서 이미 본 것(seen 경로 배열) 제외한 미관측 더미의 균일 무작위 표본 n개. 디스크 공간=kind/q/path/extension 으로 모집단, 코드 공간=space:"code:<repo>"+repo(레포 루트)+exts 로 소스파일 모집단. 그 표본을 열어 관련성 판단 후 → estimate(relevant=관련 수, sampled=표본 n, unseen=미관측 M)로 누락 추정+Wilson 신뢰구간. "전부 찾았나"·"정말 없나" 단언의 측정 근거. ★열거 가능 공간(디스크·코드) 전용 — 웹은 모집단 무한·비열거라 미지원(웹 "충분함"은 AI의 berrypicking 포화 판단).

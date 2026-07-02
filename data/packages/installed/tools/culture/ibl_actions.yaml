@@ -2,6 +2,7 @@ node: sense
 actions:
   performance:
     returns: items
+    fixture: '[sense:performance]{}'
     description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book.
     group: culture
     target_description: search — query(공연명/키워드)·genre·region·status·days 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록).
@@ -59,6 +60,7 @@ actions:
         - '{area} · {prfstate}'
   book:
     returns: items
+    fixture: '[sense:book]{query: "역사"}'
     description: 한국 도서 조회 (op 분기, 도서관정보나루). 고전 원문은 classic, 글로벌 도서는 search_books.
     group: culture
     target_description: search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계). "제목이 X인 책"은 title:"X". recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
@@ -179,6 +181,7 @@ actions:
               label: 원문 읽기 →
   classic:
     returns: items
+    fixture: '[sense:classic]{op: "western", query: "plato"}'
     description: 고전 원문 검색 (op 분기). western=서양 고전(Gutenberg), korean=한국 고전(한국고전종합DB).
     group: culture
     target_description: query=검색어. western — Gutenberg(저작권 만료 7만+권), languages·topic·author_year 옵션. korean — 한국고전종합DB(이황·이이 등 원문·번역).
@@ -198,6 +201,7 @@ actions:
     - 한국고전
   exhibit:
     returns: items
+    fixture: '[sense:exhibit]{query: "미술"}'
     description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.
     group: culture
     target_description: 검색어 또는 키워드 (예 '국립중앙박물관', '미디어아트').

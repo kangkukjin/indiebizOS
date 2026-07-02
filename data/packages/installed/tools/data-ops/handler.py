@@ -36,17 +36,17 @@ def _parse_prev(prev):
     return None
 
 
-def _get_records(obj):
+def _get_items(obj):
     """객체에서 항목 리스트를 꺼낸다.
 
-    단일 통화 `items`가 유일한 키다(2026-06-27 컷오버 완료 — records 생산자 0). 모든 생산자가
-    native 풍부 dict를 items로 방출하므로 records가 버리던 필드까지 in-pipe로 흐른다
+    단일 통화 `items`가 유일한 키다(2026-06-27 단일통화 컷오버 완료). 모든 생산자가
+    native 풍부 dict를 items로 방출하므로 옛 카드 통화가 버리던 필드까지 in-pipe로 흐른다
     (예: zigbang lat/lng, business level). dict/list 가 아니면 통화 아님으로 (None, None) 반환.
 
     반환: (items_list, envelope_dict)  — envelope에 변환 결과를 다시 끼워 비파괴 반환용.
     """
     if isinstance(obj, dict):
-        r = obj.get("items")            # 단일 통화 — 모든 생산자가 items 방출(2026-06-27 컷오버 완료, records 생산자 0)
+        r = obj.get("items")            # 단일 통화 — 모든 생산자가 items 방출
         if isinstance(r, list):
             return r, obj
     if isinstance(obj, list):
@@ -73,15 +73,15 @@ def _get_table(obj):
     return None, None
 
 
-def _emit_records(envelope, new_records):
+def _emit_items(envelope, new_items):
     """변환된 항목들을 원 envelope에 비파괴로 끼워 반환.
 
-    단일 통화 키 `items`로 내보낸다(2026-06-27 컷오버 완료 — 옛 records dual-emit 은퇴).
+    단일 통화 키 `items`로 내보낸다(2026-06-27 단일통화 컷오버 완료 — 옛 이중방출 은퇴).
     """
     out = dict(envelope) if isinstance(envelope, dict) else {}
     out.pop("message", None)            # 변환 후 stale·O(items) 산문 제거 (파이프 블로업·정합성)
-    out["items"] = new_records          # 단일 통화
-    out["count"] = len(new_records)
+    out["items"] = new_items          # 단일 통화
+    out["count"] = len(new_items)
     out.setdefault("success", True)
     return out
 
@@ -99,7 +99,7 @@ def _emit_table(envelope, new_table):
 
 
 def _row_dicts(table):
-    """table rows → [{col: val}] (where/sort/dedup이 records와 같은 코드 쓰도록)."""
+    """table rows → [{col: val}] (where/sort/dedup이 items와 같은 코드 쓰도록)."""
     cols = table.get("columns") or []
     out = []
     for r in table.get("rows") or []:
@@ -213,30 +213,30 @@ def _sort_key(field):
 # ───────────────────────── 단항 동사 ─────────────────────────
 
 def _op_filter(prev, params):
-    """records|table → 부분집합. params.where (미니 DSL). condition 별칭 수용."""
+    """items|table → 부분집합. params.where (미니 DSL). condition 별칭 수용."""
     where = params.get("where") or params.get("condition")
-    recs, env = _get_records(prev)
+    recs, env = _get_items(prev)
     if recs is not None:
-        return _emit_records(env, [r for r in recs if isinstance(r, dict) and _match(r, where)])
+        return _emit_items(env, [r for r in recs if isinstance(r, dict) and _match(r, where)])
     table, env = _get_table(prev)
     if table is not None:
         kept = [d for d in _row_dicts(table) if _match(d, where)]
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in kept]
         return _emit_table(env, {"columns": cols, "rows": rows})
-    return {"error": "filter: 입력에서 records/table 통화를 찾지 못했습니다."}
+    return {"error": "filter: 입력에서 items 통화를 찾지 못했습니다."}
 
 
 def _op_sort(prev, params):
-    """records|table → 정렬. params.by(필드/열명), params.desc(bool)."""
+    """items|table → 정렬. params.by(필드/열명), params.desc(bool)."""
     by = params.get("by")
     desc = bool(params.get("desc", False))
     if not by:
         return {"error": "sort: by(정렬 기준 필드/열명)가 필요합니다."}
-    recs, env = _get_records(prev)
+    recs, env = _get_items(prev)
     if recs is not None:
         srt = sorted([r for r in recs if isinstance(r, dict)], key=_sort_key(by), reverse=desc)
-        return _emit_records(env, srt)
+        return _emit_items(env, srt)
     table, env = _get_table(prev)
     if table is not None:
         dicts = _row_dicts(table)
@@ -244,30 +244,30 @@ def _op_sort(prev, params):
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in dicts]
         return _emit_table(env, {"columns": cols, "rows": rows})
-    return {"error": "sort: 입력에서 records/table 통화를 찾지 못했습니다."}
+    return {"error": "sort: 입력에서 items 통화를 찾지 못했습니다."}
 
 
 def _op_take(prev, params):
-    """records|table → 상위 n. params.n (기본 10). 음수면 뒤에서 n개."""
+    """items|table → 상위 n. params.n (기본 10). 음수면 뒤에서 n개."""
     n = params.get("n", params.get("limit", 10))
     try:
         n = int(n)
     except Exception:
         n = 10
-    recs, env = _get_records(prev)
+    recs, env = _get_items(prev)
     if recs is not None:
         sliced = recs[n:] if n < 0 else recs[:n]
-        return _emit_records(env, sliced)
+        return _emit_items(env, sliced)
     table, env = _get_table(prev)
     if table is not None:
         rows = table.get("rows") or []
         sliced = rows[n:] if n < 0 else rows[:n]
         return _emit_table(env, {"columns": table.get("columns") or [], "rows": sliced})
-    return {"error": "take: 입력에서 records/table 통화를 찾지 못했습니다."}
+    return {"error": "take: 입력에서 items 통화를 찾지 못했습니다."}
 
 
 def _op_select(prev, params):
-    """table → 열 투영. params.columns(남길 열 이름 배열). records는 필드 추림."""
+    """table → 열 투영. params.columns(남길 열 이름 배열). items는 필드 추림."""
     cols_keep = params.get("columns") or params.get("cols") or params.get("fields")
     if not cols_keep:
         return {"error": "select: columns(남길 열/필드 이름 배열)가 필요합니다."}
@@ -279,11 +279,11 @@ def _op_select(prev, params):
         new_cols = [src_cols[i] for i in idx]
         new_rows = [[(r[i] if i < len(r) else None) for i in idx] for r in (table.get("rows") or [])]
         return _emit_table(env, {"columns": new_cols, "rows": new_rows})
-    recs, env = _get_records(prev)
+    recs, env = _get_items(prev)
     if recs is not None:
         out = [{k: r.get(k) for k in cols_keep if k in r} for r in recs if isinstance(r, dict)]
-        return _emit_records(env, out)
-    return {"error": "select: 입력에서 records/table 통화를 찾지 못했습니다."}
+        return _emit_items(env, out)
+    return {"error": "select: 입력에서 items 통화를 찾지 못했습니다."}
 
 
 def _norm(s):
@@ -292,13 +292,13 @@ def _norm(s):
 
 
 def _op_dedup(prev, params):
-    """records|table → 중복 제거(첫 항목 유지). params.by(키 필드/열, 기본 title).
+    """items|table → 중복 제거(첫 항목 유지). params.by(키 필드/열, 기본 title).
 
-    by 미지정 시 records는 title, table은 첫 열을 키로. 정규화(공백/대소문자) 후 동등 비교.
+    by 미지정 시 items는 title, table은 첫 열을 키로. 정규화(공백/대소문자) 후 동등 비교.
     (newspaper 내부에 묻혀있던 _dedup_rank를 통화 동사로 끌어올림 — 전 생산자 공용화.)
     """
     by = params.get("by")
-    recs, env = _get_records(prev)
+    recs, env = _get_items(prev)
     if recs is not None:
         key = by or "title"
         seen, out = set(), []
@@ -310,7 +310,7 @@ def _op_dedup(prev, params):
                 continue
             seen.add(k)
             out.append(r)
-        return _emit_records(env, out)
+        return _emit_items(env, out)
     table, env = _get_table(prev)
     if table is not None:
         cols = [str(c) for c in (table.get("columns") or [])]
@@ -323,7 +323,7 @@ def _op_dedup(prev, params):
             seen.add(k)
             rows.append(r)
         return _emit_table(env, {"columns": cols, "rows": rows})
-    return {"error": "dedup: 입력에서 records/table 통화를 찾지 못했습니다."}
+    return {"error": "dedup: 입력에서 items 통화를 찾지 못했습니다."}
 
 
 _AGG = {
@@ -338,9 +338,9 @@ _AGG = {
 def _rows_for_field(obj, field):
     """그룹/집계 키 field 를 실제로 담은 표현을 골라 list-of-dicts 로 반환.
 
-    공유 통화(table/records) 외에도 도메인 생산자가 원천 행을 담는 흔한 키
-    (data/items/results)까지 후보로 본다. records 투영이 도메인 필드를 접어버려
-    groupby 가 그 필드를 못 찾는 문제(예: realty records 가 '법정동'을 meta 문자열로
+    공유 통화 items(및 table) 외에도 도메인 생산자가 원천 행을 다른 키
+    (data/results)에 담는 경우까지 후보로 본다. 옛 손실적 카드 투영이 도메인 필드를
+    meta 문자열로 접어 groupby 가 그 필드를 못 찾던 문제(예: realty 가 '법정동'을 meta 로
     접음 — 원천은 data:[{...법정동...}] 에 그대로 있음)를 푼다.
 
     후보 중 field 를 가진 첫 리스트를 우선(없으면 첫 비어있지 않은 리스트)으로 고른다.
@@ -352,7 +352,7 @@ def _rows_for_field(obj, field):
         t, _ = _get_table(obj)
         if t is not None:
             cands.append(("table", _row_dicts(t)))
-        for k in ("data", "items", "results", "records"):
+        for k in ("data", "items", "results"):
             v = obj.get(k)
             if isinstance(v, list) and any(isinstance(x, dict) for x in v):
                 cands.append((k, [x for x in v if isinstance(x, dict)]))
@@ -369,12 +369,12 @@ def _rows_for_field(obj, field):
 
 
 def _op_groupby(prev, params):
-    """records|table|도메인 행목록 → 그룹 집계. params.by(그룹 키), params.agg.
+    """items|table|도메인 행목록 → 그룹 집계. params.by(그룹 키), params.agg.
 
     agg 형태: {새열명: [op, 원본열]} 또는 {원본열: op}. op = count/sum/avg/min/max.
     기본: agg 없으면 그룹별 count.  반환 table = [by열, 집계열들].
 
-    형제 동사들처럼 records 도 받는다. 나아가 records 투영이 그룹 키를 접은 경우
+    형제 동사들처럼 items 를 받는다. 나아가 옛 카드 투영이 그룹 키를 접은 경우
     원천 data/items 행까지 거슬러 키를 찾는다(_rows_for_field).
     """
     by = params.get("by") or params.get("key") or params.get("group_by")
@@ -383,7 +383,7 @@ def _op_groupby(prev, params):
     by = str(by)
     dicts = _rows_for_field(prev, by)
     if not dicts:
-        return {"error": "groupby: 입력에서 records/table 통화(또는 data/items 행 목록)를 찾지 못했습니다."}
+        return {"error": "groupby: 입력에서 items 통화(또는 data/items 행 목록)를 찾지 못했습니다."}
     _, env = _get_table(prev)
     env = env or {}
     agg = params.get("agg")
@@ -441,9 +441,9 @@ def _extract_two(prev):
 
 
 def _op_union(prev, params):
-    """두 table(또는 두 records)을 행 결합. 같은 통화끼리. params 없음.
+    """두 table(또는 두 items)을 행 결합. 같은 통화끼리. params 없음.
 
-    table: 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 다른쪽 None). records: 단순 concat.
+    table: 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 다른쪽 None). items: 단순 concat.
     중복 제거가 필요하면 뒤에 >> dedup.
     """
     a, b = _extract_two(prev)
@@ -466,25 +466,25 @@ def _op_union(prev, params):
             return out
 
         return _emit_table({"table": {}}, {"columns": cols, "rows": remap(ta) + remap(tb)})
-    ra, _ = _get_records(a)
-    rb, _ = _get_records(b)
+    ra, _ = _get_items(a)
+    rb, _ = _get_items(b)
     if ra is not None and rb is not None:
-        return _emit_records({}, list(ra) + list(rb))
-    return {"error": "union: 두 입력의 통화 종류가 같아야 합니다(둘 다 table 또는 둘 다 records)."}
+        return _emit_items({}, list(ra) + list(rb))
+    return {"error": "union: 두 입력의 통화 종류가 같아야 합니다(둘 다 table 또는 둘 다 items)."}
 
 
 def _op_merge(prev, params):
-    """두 records를 합친다(concat). params.by 지정 시 그 키로 중복 제거.
+    """두 items를 합친다(concat). params.by 지정 시 그 키로 중복 제거.
 
     여러 검색 결과를 한 목록으로 모을 때. (table 결합은 union.)
     """
     a, b = _extract_two(prev)
     if a is None or b is None:
-        return {"error": "merge: & 병렬로 두 records 입력이 필요합니다. 예: [A] & [B] >> [table:merge]"}
-    ra, _ = _get_records(a)
-    rb, _ = _get_records(b)
+        return {"error": "merge: & 병렬로 두 items 입력이 필요합니다. 예: [A] & [B] >> [table:merge]"}
+    ra, _ = _get_items(a)
+    rb, _ = _get_items(b)
     if ra is None or rb is None:
-        return {"error": "merge: 두 입력 모두 records 통화여야 합니다(표형 결합은 table:union)."}
+        return {"error": "merge: 두 입력 모두 items 통화여야 합니다(표형 결합은 table:union)."}
     out = list(ra) + list(rb)
     by = params.get("by")
     if by or params.get("dedup"):
@@ -499,7 +499,7 @@ def _op_merge(prev, params):
             seen.add(k)
             dd.append(r)
         out = dd
-    return _emit_records({}, out)
+    return _emit_items({}, out)
 
 
 def _suffix_collisions(base_cols, add_cols):
@@ -536,12 +536,12 @@ def _op_join(prev, params):
     ta, _ = _get_table(a)
     tb, _ = _get_table(b)
     if ta is None or tb is None:
-        # 두 입력이 records 통화면 records inner join (table 분기와 대칭).
-        # records 도 dict 라 키 필드로 조인 가능 — merge/union 이 records 를 받는 것과 일관.
-        ra, _ = _get_records(a)
-        rb, _ = _get_records(b)
+        # 두 입력이 items 통화면 items inner join (table 분기와 대칭).
+        # items 행도 dict 라 키 필드로 조인 가능 — merge/union 이 items 를 받는 것과 일관.
+        ra, _ = _get_items(a)
+        rb, _ = _get_items(b)
         if ra is None or rb is None:
-            return {"error": "join: 두 입력이 같은 통화여야 합니다(둘 다 table 또는 둘 다 records)."}
+            return {"error": "join: 두 입력이 같은 통화여야 합니다(둘 다 table 또는 둘 다 items)."}
         index = {}
         for r in rb:
             if isinstance(r, dict) and r.get(on) is not None:
@@ -558,7 +558,7 @@ def _op_join(prev, params):
                 for orig, name in zip(add, disp):
                     merged[name] = r[orig]
                 out.append(merged)
-        return _emit_records({}, out)
+        return _emit_items({}, out)
     ca = [str(c) for c in (ta.get("columns") or [])]
     cb = [str(c) for c in (tb.get("columns") or [])]
     if on not in ca or on not in cb:
@@ -605,7 +605,7 @@ def execute(tool_input: dict, context):
         # 파이프 입력(>>)이 없으면 params 에서 통화를 직접 수용 — 단독 호출/자가점검 지원.
         # (파이프 통화와 params 통화는 같은 모양이라 정합적이다.)
         # 이항(merge/join/union): (left,right)/(table1,table2)/(a,b) 쌍 또는 inputs 리스트 → [A, B].
-        # 단항(filter/sort/take/select/dedup/groupby): records 또는 table.
+        # 단항(filter/sort/take/select/dedup/groupby): items(단일 통화) 또는 table(표형).
         for k1, k2 in (("left", "right"), ("table1", "table2"), ("a", "b")):
             if params.get(k1) is not None and params.get(k2) is not None:
                 prev = [params[k1], params[k2]]
@@ -613,13 +613,13 @@ def execute(tool_input: dict, context):
         if prev is None:
             if isinstance(params.get("inputs"), list):
                 prev = params["inputs"]
-            elif params.get("records") is not None:
-                prev = {"records": params["records"]}
+            elif params.get("items") is not None:
+                prev = {"items": params["items"]}
             elif params.get("table") is not None:
                 prev = {"table": params["table"]}
     if prev is None:
         return {"error": (
             f"{tool_name}: 입력 통화가 없습니다. 변환자는 >> 파이프로 앞 액션의 "
-            "records/table 통화를 받습니다. 예: [sense:search]{...} >> [table:filter]{where:...}"
+            "items 통화(표형은 table)를 받습니다. 예: [sense:search]{...} >> [table:filter]{where:...}"
         )}
     return fn(prev, params)

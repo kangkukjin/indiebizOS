@@ -3,6 +3,7 @@ nodes:
     actions:
       video:
         returns: scalar
+        fixture: '[sense:video]{op: "meta", query: "jazz"}'
         runs_on: mac_only
         description: 유튜브 동영상 조회 (op 분기). 메타·자막·요약. 검색은 search_youtube, 재생은 limbs:music.
         target_description: 'op로 분기 (기본 info). url 또는 video_id 필수.
@@ -36,6 +37,7 @@ nodes:
         - 영상요약
       search_youtube:
         returns: items
+        fixture: '[sense:search_youtube]{query: "jazz"}'
         runs_on: mac_only
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
         group: media

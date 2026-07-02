@@ -1187,7 +1187,7 @@ def render_document(tool_input, output_base="."):
             try:
                 po = _json.loads(pr) if isinstance(pr, str) else pr
                 if isinstance(po, dict):
-                    _rows = po.get("items") or po.get("records")
+                    _rows = po.get("items")
                     if po.get("blocks"):
                         blocks = po["blocks"]
                     elif isinstance(_rows, list) and _rows:

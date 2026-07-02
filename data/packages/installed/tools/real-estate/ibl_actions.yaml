@@ -2,6 +2,7 @@ node: sense
 actions:
   commercial:
     returns: items
+    fixture: '[sense:commercial]{lat: 37.5, lng: 127.0}'
     description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
     group: real_estate
     target_description: 업종 코드 또는 키워드. 좌표(lat/lng) 또는 행정동 코드(district)로 영역 지정.
@@ -58,6 +59,7 @@ actions:
                 label: 카카오맵·상세 보기 →
   realty:
     returns: items
+    fixture: '[sense:realty]{op: "query", region: "강남구"}'
     description: 부동산 시세·매물 (op 분기). query=시세/매물(source=molit 국토부 실거래가 기본 / source=zigbang 직방 현재 매물·링크·사진), codes=법정동 코드. region 이름만 넣으면 자동 해소.
     group: real_estate
     target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n- codes: city=시/도명(서울·경기 등) → 법정동 지역코드 목록. (region 자동변환이 있어 보통 불필요한 보조.)\n"

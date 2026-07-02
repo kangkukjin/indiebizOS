@@ -2,6 +2,7 @@
     actions:
       recent_chats:
         returns: items
+        fixture: '[self:recent_chats]{}'
         description: 최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.
         target_description: '(파라미터 없음). limit 옵션으로 건수 제한 (기본 10).'
         group: conversation
@@ -15,6 +16,7 @@
         - 이전
       agents:
         returns: scalar
+        fixture: '[self:agents]{}'
         description: 등록된 에이전트 목록 조회 (사용자·AI 구분). conversations.db 기반.
         target_description: '(파라미터 없음 — 전체 에이전트 목록)'
         group: conversation
@@ -28,6 +30,7 @@
         - 팀
       discover:
         returns: scalar
+        fixture: '[self:discover]{query: "주가"}'
         description: 키워드로 적합한 IBL 노드·액션 자동 탐색. 어떤 액션 쓸지 모를 때 첫 단계.
         target_description: 검색 키워드 (자연어). 결과 — 후보 액션 + 사용 예시.
         group: system
@@ -42,6 +45,7 @@
         - 액션
       manage_events:
         returns: items
+        fixture: '[self:manage_events]{action: "list"}'
         description: 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
         target_description: action (create/list/delete). 추가 파라미터는 action별로 다름.
         group: schedule
@@ -107,6 +111,7 @@
         - 반복
       goal:
         returns: scalar
+        fixture: '[self:goal]{op: "list"}'
         description: 목표 프로세스 관리 (op 분기). list/status/kill/log/attempts. 의식 에이전트가 평가 루프 라운드를 누적·종료하는 메타 인지 도구.
         target_description: 'list — 활성/대기 중 전체. status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. log — task_id + approach_category + description 필수(result/lesson 옵션), 시도 1건 기록. attempts — task_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.'
         group: goal
@@ -144,6 +149,7 @@
         - 메시지
       workflow:
         returns: scalar
+        fixture: '[self:workflow]{op: "list"}'
         description: 저장된 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. 즉시 실행은 run_pipeline 별도.
         target_description: 'get/delete/run — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — params 옵션으로 워크플로 변수 전달.'
         group: workflow

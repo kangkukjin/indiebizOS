@@ -2,6 +2,7 @@ node: self
 actions:
   blog:
     returns: items
+    fixture: '[self:blog]{op: "list"}'
     runs_on: mac_only
     description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스.
     target_description: 'op로 분기 (기본 posts).

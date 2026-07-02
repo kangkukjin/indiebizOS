@@ -44,7 +44,7 @@ def classify_currency(d, declared):
     records/table/currency/document 선언은 전부 items로 흡수됨).
     scalar/effect/transform은 통화 면제 — 단 liveness(에러 없이 살았나)는 본다(핸들러 크래시·
     param 키 불일치 검출). 통화 계약이 없으므로 RED 는 안 만든다(에러=YELLOW, 정상/한계=SKIP).
-    아래 rec/tbl/blk 읽기는 straggler(stock table·context7/report blocks 등 items 미선언 부가방출) 방어용."""
+    아래 tbl/blk 읽기는 straggler(stock table·context7/report blocks 등 items 미선언 부가방출) 방어용."""
     if declared != "items":
         # 통화 면제 — liveness만 본다.
         if not isinstance(d, dict):
@@ -63,21 +63,19 @@ def classify_currency(d, declared):
         return "YELLOW", "non-dict"
     if d.get("_transport_error"): return "YELLOW", "transport:" + d["_transport_error"][:40]
     if d.get("_string") is not None: return "RED", f"{declared} 선언인데 문자열 반환(통화 파괴?)"
-    rec = d.get("records"); tbl = d.get("table"); blk = d.get("blocks")
+    tbl = d.get("table"); blk = d.get("blocks")
     # 단일 통화 items 우선 — 비어있지 않은 dict 리스트면 통화 유효(title 불요, 열린 항목).
-    # derive_items(렌더러 경계)가 records/table/blocks도 items로 파생하므로 대부분 여기서 GREEN.
+    # derive_items(렌더러 경계)가 table/blocks도 items로 파생하므로 대부분 여기서 GREEN.
     itm = d.get("items")
     if isinstance(itm, list) and itm and all(isinstance(x, dict) for x in itm):
         return "GREEN", f"items[{len(itm)}]" + ("" if declared == "items" else f" (선언 {declared})")
-    # 유효 통화 present → GREEN (op 변형 허용: records 선언인데 table 나와도 통화는 통화)
-    if isinstance(rec, list) and rec and all(isinstance(x, dict) and "title" in x for x in rec):
-        return "GREEN", f"records[{len(rec)}]" + ("" if declared == "records" else f" (선언 {declared})")
+    # 유효 통화 present → GREEN (선언과 다른 표현이 나와도 통화는 통화)
     if isinstance(tbl, dict) and tbl.get("columns") and tbl.get("rows") is not None:
         return "GREEN", f"table {len(tbl['rows'])}행" + ("" if declared == "table" else f" (선언 {declared})")
     # 문서IR {blocks} — crawl·read(docx/pdf) → table:document. type 키 가진 블록 리스트.
     if isinstance(blk, list) and blk and all(isinstance(x, dict) and "type" in x for x in blk):
         return "GREEN", f"document blocks[{len(blk)}]" + ("" if declared == "document" else f" (선언 {declared})")
-    if isinstance(rec, list) and not rec: return "YELLOW", "records 빈(데이터 없음)"
+    if isinstance(itm, list) and not itm: return "YELLOW", "items 빈(데이터 없음)"
     if "error" in d: return "YELLOW", "error:" + str(d.get("error"))[:45]
     # 통화 선언인데 통화 없음 — 목록형 산출이 있으면 명백한 계약 위반(통화 미부착)
     listed = [k for k, v in d.items() if k != "notes" and isinstance(v, list) and v and all(isinstance(x, dict) for x in v)]

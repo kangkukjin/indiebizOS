@@ -2,6 +2,7 @@ node: sense
 actions:
   collect:
     returns: items
+    fixture: '[sense:collect]{op: "query", action: "recent"}'
     runs_on: mac_only
     description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.
     target_description: 'op로 분기 (기본 run).

@@ -2,6 +2,7 @@ node: sense
 actions:
   devdocs:
     returns: items
+    fixture: '[sense:devdocs]{op: "resolve", library_name: "react"}'
     description: 소프트웨어 라이브러리/프레임워크 공식 문서 (op 분기, Context7). 코드 작성 시 API 참조용. 논문은 paper.
     target_description: 'op로 분기 (기본 resolve).
 

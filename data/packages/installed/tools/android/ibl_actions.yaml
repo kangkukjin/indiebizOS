@@ -3,6 +3,7 @@ nodes:
     actions:
       phone:
         returns: items
+        fixture: '[sense:phone]{}'
         description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요.
         group: device
         target_description: 최근 폰 알림 — latest_ago/ago("방금"·"N분 전")로 지금 오는 연락인지 판별, pkg로 앱 필터(예 com.kakao.talk). limit=개수.
@@ -21,6 +22,7 @@ nodes:
         - 카톡
       here:
         returns: scalar
+        exempt: '폰 GPS 센서 — 맥서 오프라인'
         description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
         group: device
         target_description: 파라미터 없음 — 호출 즉시 폰의 현재 위치(위경도+역지오코딩 주소)를 한 번 가져온다. "지금 어디", "내 위치", 날씨/맛집/길찾기의 출발점.
@@ -38,6 +40,7 @@ nodes:
         - location
       listen:
         returns: scalar
+        exempt: '폰 마이크 — 맥서 오프라인'
         description: 폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).
         group: device
         target_description: 'op=transcribe(기본): 지금 발화를 텍스트로 받아쓴다(ko-KR, timeout_sec 대기). record: duration_sec 초 동안 녹음해 오디오 파일로 저장(경로 반환).'
@@ -61,6 +64,7 @@ nodes:
         - voice
       see:
         returns: scalar
+        exempt: '폰 카메라 — 맥서 오프라인'
         description: 폰 카메라로 사진 1장 촬영 (호출 시 1회). facing=back(기본)/front. 폰에 jpg 저장 후 경로 반환.
         group: device
         target_description: facing=back(후면, 기본)/front(전면). 미리보기 없이 정지 캡처 → 폰 파일 경로 반환. "사진 찍어", "촬영해", "카메라로 찍어줘".

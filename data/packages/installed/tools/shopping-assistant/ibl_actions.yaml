@@ -2,6 +2,7 @@ node: sense
 actions:
   search_shopping:
     returns: items
+    fixture: '[sense:search_shopping]{query: "노트북"}'
     description: 상품 검색 및 가격 비교 (네이버 API=어디서나; 다나와·중고는 브라우저 스크래핑이라 맥 전용, 폰선 네이버만)
     group: research
     target_description: 상품명

@@ -2,7 +2,9 @@
 
 새 액션(도구)을 만들 때 **반드시 아래 전체를 완료**해야 한다. 하나라도 빠지면 에이전트가 해당 액션을 사용할 수 없다.
 
-> **갱신 (2026-05-28 IBL 단일화 반영)**: 더 이상 패키지별 `ibl_actions.yaml` + `register_actions()` 자동 등록을 쓰지 않는다. 액션 정의의 단일 진실 소스는 `data/ibl_nodes_src/`이며, `scripts/build_ibl_nodes.py`로 빌드한다. 핸들러 시그니처도 ToolContext SDK(`execute(tool_input, context)`)로 통일됐다.
+> **갱신 (2026-07 능력 자기완결화 반영)**: 도구 패키지의 액션 정의는 **그 패키지 폴더 안 `ibl_actions.yaml`**에 산다 — 코드(handler)와 어휘(액션 정의)가 한 능력에 원자적으로 묶여, 설치/제거로 어휘가 함께 들고난다(설치된 37개 도구 중 36개가 이 형식). `scripts/build_ibl_nodes.py`가 **설치된 패키지들의 `ibl_actions.yaml` + 중앙 `data/ibl_nodes_src/`(6개 코어 노드의 backend-내장 액션)**를 병합해 런타임 파일 `data/ibl_nodes.yaml`을 만든다. 핸들러 시그니처는 ToolContext SDK(`execute(tool_input, context)`).
+>
+> → 즉 아래 2단계의 "src"는 **패키지 능력이면 그 패키지의 `ibl_actions.yaml`, 코어 노드 액션이면 중앙 `ibl_nodes_src/`**를 뜻한다. (옛 `register_actions()` *런타임 자동 등록*은 폐기 유지 — 지금은 등록이 아니라 **빌드 시 병합**이다.)
 
 ---
 
@@ -94,12 +96,17 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
 
 ---
 
-## 2단계: 액션 정의 (단일 소스 src → 빌드 → 검증)
+## 2단계: 액션 정의 (src → 빌드 → 검증)
 
-**액션 정의는 패키지가 아니라 `data/ibl_nodes_src/{node}.yaml`에 추가한다.** (node = `sense`/`self`/`limbs`/`others`/`engines`)
+액션 정의를 **알맞은 단일 소스**에 둔다 — 둘 중 하나:
 
-### src에 액션 추가
-해당 노드 파일의 `actions:` 아래에 항목을 추가:
+- **도구 패키지 능력**(대다수) → 그 패키지 폴더의 **`ibl_actions.yaml`**. 최상위에 `node: <노드>`(단일 노드) 또는 `nodes: {…}`(복수 노드) 래퍼를 두고 그 아래 `actions:`를 둔다. 코드+어휘가 한 능력에 묶여 설치/제거로 함께 들고난다.
+- **6개 코어 노드의 backend-내장 액션**(패키지 없이 backend가 직접 처리 — `router: system`/`workflow_engine` 등) → 중앙 **`data/ibl_nodes_src/{node}.yaml`**의 `actions:`.
+
+어느 쪽이든 아래 **액션 항목 스키마는 동일**하다 (패키지 파일에선 `node:`/`nodes:` 래퍼 아래 들어갈 뿐).
+
+### 액션 항목 추가
+해당 `actions:` 아래에 항목을 추가:
 ```yaml
       my_action:
         description: 액션 설명 (시스템 프롬프트에 노출 — 20~50자)
@@ -145,21 +152,20 @@ python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
 
 ## 2.5단계: 행동 건강 fixture (실행 가능한 액션이면 필수)
 
-`returns: items` 또는 `scalar` 인 액션(= 실행해서 결과를 내는 것)은 **`data/ibl_fixtures.json` 에 "올바른 파라미터 예 하나"를 등록**한다. 이게 행동 건강검사의 단일 진실 소스다 — `ibl_health_check.py` 가 이 한 줄을 실행해 통화가 유효한지 단언하고, `--check` 가 *모든* items/scalar 액션의 fixture 존재를 강제하므로 **새 액션이 건강검사망을 조용히 빠져나갈 수 없다.**
+`returns: items` 또는 `scalar` 인 액션은 **자기 정의(2단계의 `ibl_actions.yaml` / `ibl_nodes_src`)에 `fixture:` 필드 한 줄**을 단다 — `returns`/`ops`/`tool` 과 같은 액션 메타로. build 가 이 필드들을 모아 `data/ibl_fixtures.json`(**파생물**)으로 만들고, `ibl_health_check.py` 가 그 한 줄을 실행해 통화가 유효한지 단언한다. `--check` 가 *모든* items/scalar 액션의 `fixture`/`exempt` 필드 존재를 강제하므로 **새 액션이 건강검사망을 조용히 빠져나갈 수 없다.**
 
-```jsonc
-// data/ibl_fixtures.json
-{
-  "fixtures": {
-    "sense:my_action": "[sense:my_action]{query: \"올바른 예시 입력\"}"   // ← 한 줄 추가
-  },
-  "exempt": { /* 실행 인자가 꼭 필요해 고정 예시가 불가능하면 여기에 사유와 함께 */ }
-}
+```yaml
+      my_action:
+        returns: items
+        fixture: '[sense:my_action]{query: "올바른 예시 입력"}'   # ← returns 옆에 한 줄
+        # 실행 인자가 꼭 필요해 고정 예시가 불가능하면 fixture 대신:
+        # exempt: '파일 경로 인자 필요(고정 fixture 부적합)'
 ```
 
 - **fixture**: 그 파라미터로 실행하면 GREEN(유효 통화/단일값)이 나오는 *대표 입력 하나*. 외부 키·데이터 의존이면 YELLOW 가능(구조 결함 아님).
 - **exempt**: 파일 경로·좌표 쌍·표본 인자처럼 고정 예시가 부적합하거나, 폰/기기 전용이라 맥서 못 도는 경우. **반드시 사유를 적는다.**
-- **effect(부작용)·transform(변환자)은 등록 안 함** — effect 는 실행 불가(구조검사만), transform 은 골든 파이프(`ibl_health_check.py` §1C)로 흐름 검증.
+- **effect(부작용)·transform(변환자)은 필드 없음** — effect 는 실행 불가(구조검사만), transform 은 골든 파이프(`ibl_health_check.py` §1C)로 흐름 검증.
+- **파생**: `data/ibl_fixtures.json` 은 build 산출물이다(**직접 편집 금지** — 소스는 액션 필드). fixture 가 액션과 한 몸이라 **설치/제거를 자동으로 따라가고 고아 fixture 가 생기지 않는다**(2026-07-02 자기완결화). 패키지 능력이면 그 패키지 `ibl_actions.yaml`, 코어 노드면 `ibl_nodes_src` 에 필드를 둔다.
 - **검증**: `python scripts/ibl_health_check.py` 로 자기 액션이 **GREEN** 인지 확인. RED 면 통화 계약 위반 — 고치기 전엔 미완성. 자세히 `docs/IBL_MAINTENANCE_MANUAL.md`.
 
 ---
@@ -204,6 +210,18 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 
 ---
 
+## 자동 경로: 패키지를 통째로 설치할 때
+
+위 1~5단계는 **한 패키지 안에 액션을 손으로 저술**하는 절차다. 이미 완성된 패키지를 **설치**하는 경우엔 `[self:package]{op:"install", package_id:"…"}`(= `package_manager.install_package`)가 다음을 자동으로 한다:
+
+- not_installed → installed 이동 + 패키지 검증(`validate_tool_package`)
+- 어휘 재빌드(그 패키지 `ibl_actions.yaml` 병합) + 런타임 캐시 리로드 (`_rebuild_ibl_vocab`)
+- **해마 용례 자동 생성(3단계)** — `generate_for_package`가 그 패키지의 각 액션에 기본 용례를 심고 인라인 색인(4단계 포함)
+
+즉 **설치는 3·4단계를 대신 해준다.** fixture(2.5)도 이제 패키지 `ibl_actions.yaml` 의 액션 필드라, 재빌드가 중앙 `data/ibl_fixtures.json` 으로 **파생** — 설치/제거를 자동으로 따라간다(손수 유지 불필요). **제거의 대칭 절차는 `action_removal.md` 참조.**
+
+---
+
 ## 선택 단계: 앱 표면 노출 (`app:` 블록)
 
 액션을 **앱 모드 계기(GUI)**로도 쓰게 하려면 src 액션 정의에 `app:` 블록을 단다 — 그러면 데스크탑(`GenericInstrument.tsx`)과 원격 런처에 **계기로 자동 등장**한다(표면별 코드 0줄, `GET /launcher/instruments` 파생).
@@ -242,7 +260,7 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 | 0.5. 역할·통화 계약 | 생성/변환/행동 정하고 역할의 통화 계약 충족 (`ibl_health_check.py` GREEN) | 통화 끊김 = 조합 불가(섬), 자가점검도 못 잡음 |
 | 1. 패키지 도구 | handler.py(`execute(tool_input, context)`) + tool.json | 도구 자체가 없음 |
 | 2. src 정의 + 빌드 | `ibl_nodes_src/{node}.yaml` → `build_ibl_nodes.py` → `--check` | IBL 실행 불가 / 검증 실패 |
-| 2.5. fixture | `data/ibl_fixtures.json` 에 한 줄(items/scalar 액션) | `--check` 실패 = 커밋 거부 / 건강검사 누락 |
+| 2.5. fixture | 액션에 `fixture:`/`exempt:` 필드(items/scalar) → build 가 `ibl_fixtures.json` 파생 | `--check` 실패 = 커밋 거부 / 건강검사 누락 |
 | 3. 해마 데이터 | 합성 용례 + 학습 JSON | 에이전트가 연상 못 함 |
 | 4. 임베딩 | `rebuild_index()` | 시맨틱 검색 불가 |
 | 5. 확인 | 등록 + 연상 + 실행 | 배포 후 장애 |

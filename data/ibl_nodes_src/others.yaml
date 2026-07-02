@@ -21,6 +21,7 @@
         - 다른프로젝트
       agents:
         returns: scalar
+        fixture: '[others:agents]{}'
         description: 프로젝트·에이전트 조회. agent_id 없으면 전체 트리, 있으면 단건 상세.
         target_description: agent_id ('프로젝트/에이전트' 형식). 생략 시 전체 프로젝트별 에이전트 트리 반환 (위임 대상 확인용).
         group: delegation
@@ -52,6 +53,7 @@
         - 이메일
       channel_read:
         returns: items
+        fixture: '[others:channel_read]{channel_type: "gmail"}'
         description: 채널 수신함 조회/검색 (Gmail/Nostr/Telegram). query 있으면 검색, 없으면 최근 수신.
         target_description: 채널 타입 (gmail/nostr/telegram). query 옵션으로 검색어 (Gmail은 Gmail 검색 문법). 검색 미사용 시 max_results로 건수 제한(기본 10).
         group: channel
@@ -64,6 +66,7 @@
         - 메시지검색
       feed:
         returns: items
+        fixture: '[others:feed]{op: "read"}'
         description: 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원.
         target_description: 'op:read(기본 — 최근 글 조회, hashtag 옵션으로 특정 보드) / op:post(content 필수 — 커뮤니티에 글 게시).'
         group: channel
@@ -176,6 +179,7 @@
         - 닉네임
       board:
         returns: items
+        fixture: '[others:board]{op: "list"}'
         description: 커뮤니티 보드(게시판) 관리 (IndieNet) — op:list/create/switch.
         target_description: 'op:list(기본 — 보드 목록) / op:create(name+hashtag 필수 — 새 보드) / op:switch(hashtag — 활성 보드 전환, 생략 시 기본 #indienet).'
         group: channel

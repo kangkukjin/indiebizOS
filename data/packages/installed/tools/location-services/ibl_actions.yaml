@@ -3,6 +3,7 @@ nodes:
     actions:
       weather:
         returns: items
+        fixture: '[sense:weather]{city: "서울"}'
         description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
         group: places
         target_description: 도시명 또는 좌표
@@ -47,6 +48,7 @@ nodes:
             v: '{condition} {min_temp|round}° / {max_temp|round}°{precipitation_mm|opt: ☔,mm}'
       restaurant:
         returns: items
+        fixture: '[sense:restaurant]{query: "강남 파스타"}'
         description: 맛집/음식점 검색 (카카오+네이버 Local API). 상호명·주소·전화·카테고리·place 링크 반환. 별점·리뷰 숫자는 공개 API 미제공 — 카카오 place_url(카카오맵 페이지)에서 확인. 커뮤니티 후기는 sense:search_local.
         group: places
         target_description: 검색어 (강남 파스타 등). x(경도)/y(위도)/radius로 좌표 주변 검색 가능.
@@ -77,6 +79,7 @@ nodes:
                 label: 지도/상세 →
       navigate_route:
         returns: scalar
+        exempt: '출발/도착 좌표 쌍 필요'
         description: 카카오 내비 자동차 길찾기. 거리·시간·톨비 반환. 지도 표시는 map.
         target_description: 목적지 (장소명 또는 '경도,위도'). origin 옵션으로 출발지 지정.
         group: places
@@ -119,6 +122,7 @@ nodes:
             v: '{guidance}'
       reverse_geocode:
         returns: scalar
+        fixture: '[sense:reverse_geocode]{lat: 37.5665, lon: 126.978}'
         description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
         group: places
         target_description: 위도(lat)와 경도(lng) 두 파라미터. 결과는 시/도/구/동까지 분해.
@@ -127,6 +131,7 @@ nodes:
         implementation: Kakao Map API로 GPS 좌표→주소 변환
       travel:
         returns: items
+        fixture: '[sense:travel]{op: "flight", to: "도쿄"}'
         description: 여행 정보 검색 (Amadeus, op 분기) — 항공권·호텔. 도시명·상대날짜 내부 해소.
         group: travel
         target_description: flight — to(도착도시) 필수, from(기본 서울)·date(기본 +7일, "내일"/"다음주 금요일" 등 자연어)·adults 옵션. hotel — city 필수. 도시명은 IATA/도시코드 자동 해소.

@@ -1023,7 +1023,7 @@ def execute(tool_input: dict, context) -> str:
                 if _pr:
                     try:
                         _po = json.loads(_pr) if isinstance(_pr, str) else _pr
-                        _rows_src = (_po.get("items") or _po.get("records")) if isinstance(_po, dict) else None
+                        _rows_src = _po.get("items") if isinstance(_po, dict) else None
                         if isinstance(_po, dict) and isinstance(_po.get("table"), dict) and _po["table"].get("rows"):
                             tool_input["table"] = _po["table"]
                         elif isinstance(_rows_src, list) and _rows_src:

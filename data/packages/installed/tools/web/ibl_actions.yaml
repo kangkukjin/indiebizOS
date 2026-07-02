@@ -3,6 +3,7 @@ nodes:
     actions:
       search_ddg:
         returns: items
+        fixture: '[sense:search_ddg]{query: "climate policy"}'
         description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는 search_gnews, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
         group: research
         target_description: 검색어 (영어 권장). region/safesearch 옵션 가능.
@@ -12,6 +13,7 @@ nodes:
         target_key: query
       crawl:
         returns: items
+        fixture: '[sense:crawl]{url: "https://example.com"}'
         description: 웹페이지 원문 읽기 (URL 필요). items=문서 IR(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
         group: research
         target_description: 읽을 페이지 URL (http/https). 검색 결과의 link 필드 그대로 전달 가능.
@@ -21,6 +23,7 @@ nodes:
         target_key: url
       search_gnews:
         returns: items
+        fixture: '[sense:search_gnews]{query: "경제"}'
         description: 뉴스만 검색 (Google News). 신문 생성, 뉴스 모니터링 등 뉴스 전용 작업에 사용.
         group: research
         target_description: 뉴스 검색어. 언어 자동 감지 — 한국어는 한국 뉴스, 영어는 글로벌 뉴스.

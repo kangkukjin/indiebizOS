@@ -602,12 +602,27 @@ class PackageManager:
         # 캐시 무효화
         self.invalidate_cache()
 
+        # 어휘 대칭 정리 (install_package 의 generate_for_package 대칭):
+        # 설치가 심은 해마 용례를 회수(RAG 유령 방지)하고 world_pulse 건강기록의
+        # 유령을 지운다. 폴더는 방금 not_installed 로 이동했으므로 거기서 액션을 읽는다.
+        cleanup = {}
+        try:
+            from ibl_usage_generator import remove_for_package
+            hip = remove_for_package(package_id)
+            bare = [k.split(":", 1)[-1] for k in hip.get("actions", [])]
+            from world_pulse_health import purge_action_records
+            health = purge_action_records(bare)
+            cleanup = {"hippocampus": hip.get("removed", 0), "health_records": health}
+        except Exception as e:
+            print(f"[PackageManager] 어휘 대칭 정리 실패 (무시): {e}")
+
         # inventory.md 자동 업데이트
         self._update_inventory()
 
         return {
             "status": "uninstalled",
             "package_id": package_id,
+            "cleanup": cleanup,
             "message": f"'{pkg_name}' 패키지가 제거되었습니다."
         }
 
@@ -950,6 +965,19 @@ README 존재: {basic_analysis['has_readme']}
         pkg_info = self._scan_package(available_path)
         pkg_name = pkg_info.get("name", package_id)
 
+        # 어휘 대칭 정리 — rmtree 전에 (ibl_actions.yaml 을 읽어야 하므로).
+        # 하드 삭제라 되돌릴 수 없으니 해마 용례·건강기록도 함께 회수한다.
+        cleanup = {}
+        try:
+            from ibl_usage_generator import remove_for_package
+            hip = remove_for_package(package_id)
+            bare = [k.split(":", 1)[-1] for k in hip.get("actions", [])]
+            from world_pulse_health import purge_action_records
+            health = purge_action_records(bare)
+            cleanup = {"hippocampus": hip.get("removed", 0), "health_records": health}
+        except Exception as e:
+            print(f"[PackageManager] 어휘 대칭 정리 실패 (무시): {e}")
+
         # 설치된 상태면 먼저 제거
         if installed_path.exists():
             shutil.rmtree(installed_path)
@@ -963,6 +991,7 @@ README 존재: {basic_analysis['has_readme']}
         return {
             "status": "removed",
             "package_id": package_id,
+            "cleanup": cleanup,
             "message": f"'{pkg_name}' 패키지가 목록에서 제거되었습니다."
         }
 

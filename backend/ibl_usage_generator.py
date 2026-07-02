@@ -246,6 +246,65 @@ def generate_for_package(package_id: str) -> int:
     return added
 
 
+def _package_action_keys(package_id: str) -> set:
+    """패키지 ibl_actions.yaml에서 (node, action) 키 집합 추출.
+    installed → not_installed 순으로 찾는다(제거 시점에 폴더가 어느 쪽이든 관용)."""
+    from runtime_utils import get_base_path
+    base = get_base_path() / "data" / "packages"
+    keys = set()
+    for loc in ("installed", "not_installed"):
+        actions_file = base / loc / "tools" / package_id / "ibl_actions.yaml"
+        if not actions_file.exists():
+            continue
+        try:
+            with open(actions_file, 'r', encoding='utf-8') as f:
+                pkg_def = yaml.safe_load(f) or {}
+        except Exception:
+            return keys
+        if 'actions' in pkg_def and 'node' in pkg_def:
+            node_name = pkg_def['node']
+            for action_name in (pkg_def.get('actions') or {}):
+                keys.add((node_name, action_name))
+        elif 'nodes' in pkg_def:
+            for node_name, node_def in (pkg_def.get('nodes') or {}).items():
+                if isinstance(node_def, dict):
+                    for action_name in (node_def.get('actions') or {}):
+                        keys.add((node_name, action_name))
+        break  # 첫 번째로 찾은 위치만 사용
+    return keys
+
+
+def remove_for_package(package_id: str) -> dict:
+    """generate_for_package의 대칭 — 패키지 제거 시 그 어휘의 해마 흔적을 회수한다.
+
+    그 패키지 ibl_actions.yaml이 선언한 모든 [node:action]을 참조하는 용례를
+    찾아 삭제(행 + 벡터, `_delete_examples`). synthetic 씨앗·distilled 실사용·
+    이 액션을 낀 파이프라인 용례를 모두 포함 — 액션이 사라졌으니 그 용례는
+    죽은 참조이고, 남겨두면 RAG가 죽은 액션을 연상해 에이전트에 건넨다.
+
+    반환: {"removed": 삭제 용례 수, "actions": ["node:action", ...]}
+    """
+    keys = _package_action_keys(package_id)
+    result = {"removed": 0, "actions": sorted(f"{n}:{a}" for n, a in keys)}
+    if not keys:
+        return result
+
+    from ibl_usage_db import IBLUsageDB
+    db = IBLUsageDB()
+    needles = [f"[{n}:{a}]" for n, a in keys]
+    to_delete = []
+    with db._get_connection() as conn:
+        for row in conn.execute("SELECT id, ibl_code FROM ibl_examples").fetchall():
+            code = row["ibl_code"] or ""
+            if any(needle in code for needle in needles):
+                to_delete.append(row["id"])
+    if to_delete:
+        db._delete_examples(to_delete)
+        print(f"[IBL Generator] {package_id}: 해마 용례 {len(to_delete)}개 회수")
+    result["removed"] = len(to_delete)
+    return result
+
+
 # =============================================================================
 # Stage 2: 파이프라인 (템플릿 기반)
 # =============================================================================

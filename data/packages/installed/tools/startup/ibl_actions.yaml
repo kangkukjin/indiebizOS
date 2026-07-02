@@ -2,6 +2,7 @@ node: sense
 actions:
   startup:
     returns: items
+    fixture: '[sense:startup]{query: "AI"}'
     description: 정부 창업/중소기업 지원사업 공고 검색 (K-Startup). 다중 키워드는 OR 합집합.
     group: research
     target_description: 'query(검색 키워드, 예: AI·예비창업패키지·정책자금. 여러 단어면 OR 합집합 — "AI 인공지능"=둘 중 하나라도). source 옵션 — kstartup(기본, K-Startup 창업진흥원), all(통합 시도), mss(중기부). ⚠️중기부(mss)는 data.go.kr API 폐기로 현재 미가용 → kstartup 권장. count(기본 10, 최대 50).'

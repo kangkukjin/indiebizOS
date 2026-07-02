@@ -3,6 +3,7 @@ nodes:
     actions:
       radio:
         returns: items
+        fixture: '[sense:radio]{op: "search", query: "jazz"}'
         description: 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
         target_description: 'op로 분기 (기본 search).
 
@@ -116,6 +117,7 @@ nodes:
         - 라디오중지
       player_status:
         returns: scalar
+        exempt: '재생 기기 상태 — 상시 가용 아님'
         description: 현재 음악·라디오 재생 상태 확인 (재생 중/정지/곡명 등).
         target_description: (파라미터 없음)
         group: media

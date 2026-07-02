@@ -3,6 +3,7 @@ nodes:
     actions:
       business:
         returns: items
+        fixture: '[self:business]{op: "list"}'
         description: 나의 비즈니스(사업) CRUD — op:list(기본)/detail/save/delete.
         group: business
         target_description: op:list(level 0-4·search 필터) / detail(id 필수, +소속 아이템) / save(id 없으면 생성·name 필수, 있으면 수정 — name/level(0-4 공개수준)/description) / delete(id 필수, 아이템도 함께).
@@ -256,6 +257,7 @@ nodes:
                 v: '{interval_label}'
       business_item:
         returns: items
+        fixture: '[self:business_item]{op: "list"}'
         description: 비즈니스 아이템(상품/항목) CRUD — op:list(기본)/detail/save/delete.
         group: business
         target_description: op:list(business_id 필수) / detail(item_id 필수) / save(id 없으면 생성·business_id+title 필수, 있으면 수정 — title/details/attachment_path) / delete(item_id 필수).
@@ -280,6 +282,7 @@ nodes:
         - 사업 항목
       business_document:
         returns: items
+        fixture: '[self:business_document]{op: "list"}'
         description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 관리 — op:list(기본)/detail/update/regenerate.
         group: business
         target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content) / regenerate(비즈니스·아이템 기반 레벨별 자동 재생성, 파라미터 없음).
@@ -301,6 +304,7 @@ nodes:
         - 레벨별 문서
       work_guideline:
         returns: items
+        fixture: '[self:work_guideline]{op: "list"}'
         description: 레벨별 근무 지침(업무 가이드라인) 관리 — op:list(기본)/detail/update.
         group: business
         target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content).
@@ -337,6 +341,7 @@ nodes:
     actions:
       messages:
         returns: items
+        fixture: '[others:messages]{op: "inbox"}'
         description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr).
         target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, 파라미터 없음·최근순).
         group: channel
@@ -514,6 +519,7 @@ nodes:
         - 받은메시지
       neighbor:
         returns: items
+        fixture: '[others:neighbor]{op: "list"}'
         description: 이웃(비즈니스 파트너) 조회·관리 — op:list(기본)/detail/save/delete/favorite.
         target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc) / delete(id 필수) / favorite(id 필수, 토글).
         group: neighbor

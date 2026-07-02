@@ -23,6 +23,10 @@ Env knobs:
   INDIEBIZ_YES=1     unattended: auto-approve every command (use with care)
   INDIEBIZ_EDITION   standard | full   (package edition; see installer/bootstrap.md step 3)
   INDIEBIZ_LOCALE    universal | kr | all   (which regional packages to install)
+  INDIEBIZ_UPDATE    standard | full | off  (set by the bootstrap when re-installing over
+                     an existing clone; the code + vocabulary were already overwritten from
+                     GitHub, and for 'full' the learned/tuning state was factory-reset —
+                     see the "Updating an existing install" section of installer/bootstrap.md)
 """
 
 import os
@@ -544,7 +548,35 @@ def load_bootstrap():
     except Exception:
         return FALLBACK_BOOTSTRAP
 
-def build_system(provider, model, facts):
+def _update_note(update_mode):
+    if update_mode not in ("standard", "full"):
+        return ""
+    common = (
+        "\n\n=== THIS IS AN UPDATE (INDIEBIZ_UPDATE=%s) ===\n"
+        "The bootstrap already overwrote all tracked GitHub code + the shipped IBL "
+        "vocabulary via `git reset --hard`. Every git-IGNORED file (.env, keys, "
+        "data/*_ai_config.json, profile, conversation DBs, projects/, world_pulse.db) "
+        "was left intact. So on this run you must NOT recreate or overwrite .env or the "
+        "existing AI config files — read them, don't clobber them. Focus on: (a) make "
+        "sure deps are still satisfied for the profile, (b) rebuild the IBL vocabulary "
+        "(`python scripts/build_ibl_nodes.py`), (c) verify the backend still boots, "
+        "(d) finish. Do NOT re-run the edition/locale step unless the user asks."
+        % update_mode
+    )
+    if update_mode == "full":
+        common += (
+            "\nBecause this is a FULL update, the learned/tuning state (hippocampus "
+            "index data/ibl_usage.db, forager memory, distilled recipes, model_gear.json, "
+            "package_meta.json) was also factory-reset to shipped defaults by "
+            "scripts/reset_runtime_state.py. After rebuilding the vocabulary, rebuild the "
+            "hippocampus index from the SHIPPED training corpus if the heavy deps are "
+            "present (look for backend/rebuild_usage_db.py or a rebuild routine); the "
+            "backend also rebuilds a missing hippocampus on boot, so this is best-effort."
+        )
+    return common
+
+
+def build_system(provider, model, facts, update_mode=""):
     return (
         "You are the IndieBiz OS installer agent. Your job: install IndieBiz OS "
         "onto THIS machine, adapting to its hardware, then verify it boots.\n\n"
@@ -553,10 +585,10 @@ def build_system(provider, model, facts):
         "held by the installer; reference it only via the {{LLM_API_KEY}} placeholder).\n\n"
         "Machine snapshot:\n%s\n\n"
         "Work by calling tools. Read the repo to confirm real paths/schemas before "
-        "writing. Do not run destructive commands. When done (or blocked), call finish.\n\n"
+        "writing. Do not run destructive commands. When done (or blocked), call finish.%s\n\n"
         "=== INSTALL GUIDE (compose against the real repo; it may be slightly stale) ===\n%s"
         % (ROOT, REPO_URL, provider, model, json.dumps(facts, indent=2, ensure_ascii=False),
-           load_bootstrap())
+           _update_note(update_mode), load_bootstrap())
     )
 
 # --------------------------------------------------------------------------
@@ -575,15 +607,28 @@ def main():
         % (facts.get("os"), facts.get("arch"), facts.get("cpu_count"),
            facts.get("ram_gb", "?"), facts.get("node")))
 
-    system = build_system(provider, model, facts)
+    update_mode = os.environ.get("INDIEBIZ_UPDATE", "").strip().lower()
+    if update_mode in ("standard", "full"):
+        say("update mode: %s (code + vocabulary already overwritten from GitHub)" % update_mode)
+
+    system = build_system(provider, model, facts, update_mode)
     client = make_client(provider, key, model, system)
     creds = (key, provider, model)
 
-    client.user(
-        "Begin installing IndieBiz OS on this machine. Start by reading the repo "
-        "root layout and looking for dependency and config files. Then proceed "
-        "through the install guide, adapting to the machine snapshot."
-    )
+    if update_mode in ("standard", "full"):
+        client.user(
+            "This is an UPDATE over an existing install (mode=%s). The tracked code and "
+            "IBL vocabulary were already overwritten from GitHub; .env and personal data "
+            "were preserved. Do NOT recreate .env or clobber existing AI config files. "
+            "Read the repo, make sure deps match the profile, rebuild the IBL vocabulary, "
+            "verify the backend boots, then finish." % update_mode
+        )
+    else:
+        client.user(
+            "Begin installing IndieBiz OS on this machine. Start by reading the repo "
+            "root layout and looking for dependency and config files. Then proceed "
+            "through the install guide, adapting to the machine snapshot."
+        )
 
     for turn in range(MAX_TURNS):
         try:

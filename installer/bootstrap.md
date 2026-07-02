@@ -24,6 +24,41 @@ into a config, use the literal placeholder **`{{LLM_API_KEY}}`** (also
 `{{LLM_PROVIDER}}`, `{{LLM_MODEL}}`). The installer substitutes the real values
 locally on write/run, so the raw key never enters your context or any log.
 
+## Updating / reinstalling over an existing install
+
+If the environment variable `INDIEBIZ_UPDATE` is `standard` or `full`, this is a
+re-install over an existing clone, **not** a fresh install. The dumb bootstrap
+has already done the overwrite before handing off to you:
+
+- It ran `git fetch` + `git reset --hard`, so **every tracked file** (all backend
+  / frontend / scripts code, and the shipped "standard" IBL vocabulary under
+  `data/ibl_nodes_src/` + `data/ibl_nodes.yaml` + guides + system docs) is now
+  exactly the GitHub state.
+- **`.gitignore` is the preservation boundary.** `git reset --hard` never touches
+  untracked/ignored files, so the user's `.env`, API keys, `data/*_ai_config.json`,
+  `data/my_profile.txt`, conversation/business/calendar DBs, `data/world_pulse.db`
+  (episodic history), and everything under `projects/` are all intact.
+- For `INDIEBIZ_UPDATE=full` only, the bootstrap additionally ran
+  `scripts/reset_runtime_state.py`, which factory-reset the *learned/tuning*
+  artifacts (hippocampus `data/ibl_usage.db`, forager memory, distilled recipes,
+  `data/model_gear.json`, `data/package_meta.json`) back to shipped defaults.
+  `standard` keeps all of that learning.
+
+**On an update your job is narrower — do NOT run the full fresh-install flow:**
+1. Do **not** recreate `.env` or overwrite any existing `data/*_ai_config.json` —
+   they hold the user's keys and were deliberately preserved. Read them if you
+   need to; never clobber them.
+2. Make sure the venv + dependencies still satisfy the profile (a `pip install`
+   is idempotent; add anything the fresh code now imports).
+3. Rebuild the IBL vocabulary: `.venv/bin/python scripts/build_ibl_nodes.py`
+   (this also regenerates `data/package_meta.json`). Confirm `--check` passes.
+4. For a `full` update, the hippocampus index was wiped — rebuild it from the
+   **shipped** training corpus if the heavy deps are installed (look for
+   `backend/rebuild_usage_db.py` or the rebuild routine). The backend also
+   rebuilds a missing hippocampus on boot, so treat this as best-effort.
+5. Skip the edition/locale step (§3) unless the user explicitly asks to change it.
+6. Verify the backend boots (§7) and finish (§8).
+
 ## Steps
 
 ### 1. Understand this machine

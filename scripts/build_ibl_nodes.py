@@ -399,6 +399,58 @@ def _extract_op_defaults(handler_text: str) -> dict[str, str] | None:
     return None
 
 
+def check_textbook(root: Path, data: dict | None) -> list[str]:
+    """교재-가드: 12_ibl_only.md ↔ 카탈로그 정합 검증.
+
+    산문 교재는 삼각검증 밖이라 어휘 이동 시 조용히 낡는다 (실사례: 2026-06-30
+    engines→table 분리 때 코드 예시는 갱신됐지만 노드 선택표·변환자 귀속 산문이
+    낡은 채 남아 에이전트를 [engines:filter] 오경로로 안내). 두 가지를 커밋
+    게이트로 잡는다:
+      1) 교재 안 모든 [node:action] 스니펫이 카탈로그에 실존
+         (WRONG: 표기가 있는 줄은 반례 교보재이므로 면제)
+      2) 노드 선택표('## N Nodes' 절)의 노드 집합·개수가 카탈로그와 정확히 일치
+    """
+    issues: list[str] = []
+    path = root / "data" / "common_prompts" / "fragments" / "12_ibl_only.md"
+    if not path.is_file():
+        return [f"교재 부재: {path}"]
+    if data is None:
+        return issues
+    nodes = data.get("nodes") or {}
+    text = path.read_text(encoding="utf-8")
+
+    # 1) 스니펫 실존 (제어 블록 어휘와 [node:action] 플레이스홀더는 제외)
+    _control = {"goal", "if", "else", "case"}
+    for line in text.splitlines():
+        if "WRONG" in line:
+            continue
+        for m in re.finditer(r"\[(\w+):(\w+)\]", line):
+            n, a = m.group(1), m.group(2)
+            if n in _control or (n, a) == ("node", "action"):
+                continue
+            if n not in nodes:
+                issues.append(f"교재 스니펫의 노드 미실존: [{n}:{a}]")
+            elif a not in (nodes[n].get("actions") or {}):
+                issues.append(f"교재 스니펫의 액션 미실존: [{n}:{a}]")
+
+    # 2) 노드 선택표 ↔ 카탈로그 노드 집합
+    sec = re.search(r"^## (\d+) Nodes\b.*?\n(.*?)(?=^## )", text, re.M | re.S)
+    if not sec:
+        issues.append("교재에 '## N Nodes' 절이 없음 (노드 선택표 실종)")
+    else:
+        count = int(sec.group(1))
+        listed = set(re.findall(r"^\| `(\w+)`", sec.group(2), re.M))
+        catalog = set(nodes.keys())
+        for n in sorted(catalog - listed):
+            issues.append(f"교재 노드 선택표에 카탈로그 노드 누락: {n}")
+        for n in sorted(listed - catalog):
+            issues.append(f"교재 노드 선택표에 카탈로그 밖 노드: {n}")
+        if count != len(catalog):
+            issues.append(f"교재 제목의 노드 수({count}) ≠ 카탈로그({len(catalog)})")
+
+    return list(dict.fromkeys(issues))
+
+
 def _check_action(
     qualified: str,
     action: dict,
@@ -1923,9 +1975,26 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 "(라우팅된 창 명령 전부 main.js switch 에 핸들러 보유)"
             )
 
+    # --- 교재-가드: 12_ibl_only.md ↔ 카탈로그 (--check/--validate 전용) ---
+    textbook_failed = False
+    if check or validate_only:
+        tissues = check_textbook(root, data)
+        if tissues:
+            textbook_failed = True
+            print(
+                f"[build_ibl_nodes] 교재-가드 실패: {len(tissues)}건 "
+                f"(12_ibl_only.md 스니펫/노드표가 카탈로그와 불일치)",
+                file=sys.stderr,
+            )
+            for issue in tissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 교재-가드 통과 ✓ (스니펫 실존 + 노드 선택표 집합 일치)")
+
     if validate_only:
         return 1 if (validation_failed or corpus_failed or fixture_failed
-                     or profile_failed or os_failed or launcher_failed) else 0
+                     or profile_failed or os_failed or launcher_failed
+                     or textbook_failed) else 0
 
     # 폰 매니페스트 파생 (runs_on + 검증된 폰 패키지). data 파싱 성공 시에만.
     manifest_path = root / "data" / "phone_manifest.json"
@@ -2001,7 +2070,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      and not validation_failed
                      and not corpus_failed and not fixture_failed
                      and not profile_failed and not os_failed
-                     and not launcher_failed) else 1
+                     and not launcher_failed and not textbook_failed) else 1
 
     if validation_failed:
         print(

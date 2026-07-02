@@ -2,6 +2,27 @@
   "description": "가이드 파일 DB - data/guides/ 폴더에서 파일 관리",
   "guides": [
     {
+      "id": "goal",
+      "name": "목표 선언(Goal) 문법 가이드",
+      "description": "반복·예약·조건부 실행이 필요할 때 goal 블록을 작성하는 문법 정본. if/case 분기, every/until/deadline 시간 표현, 필수 안전장치(max_rounds/max_cost), 전략 전환 규칙.",
+      "keywords": [
+        "목표",
+        "goal",
+        "반복",
+        "매일",
+        "주기적",
+        "예약",
+        "스케줄",
+        "자동으로",
+        "모니터링",
+        "조건부",
+        "until",
+        "deadline",
+        "달성"
+      ],
+      "file": "goal.md"
+    },
+    {
       "id": "video_workflow",
       "name": "동영상 제작 워크플로우",
       "description": "HTML 기반 영상 또는 Remotion 영상을 만드는 단계별 워크플로우. 이미지 생성, 코드 작성, 미리보기, TTS, 최종 렌더링까지.",

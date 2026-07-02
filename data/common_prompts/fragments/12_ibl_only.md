@@ -25,7 +25,7 @@ IBL은 외부 세계와 상호작용하기 위한 프로그래밍 언어다. Pyt
    ```
 3. 임시 스크립트는 `/tmp/` 아래에 두어 작업 디렉토리를 오염시키지 않는다.
 
-## 5 Nodes — 노드 선택 기준
+## 6 Nodes — 노드 선택 기준
 
 어떤 작업이든 먼저 "이 행위의 성격이 무엇인가"로 노드를 고른다:
 
@@ -34,7 +34,8 @@ IBL은 외부 세계와 상호작용하기 위한 프로그래밍 언어다. Pyt
 | `sense` | 감각 — 정보를 알아낸다 | 검색, 조회, 수집, 모니터링 (웹, API, DB 등 소스 무관) |
 | `self` | 자기 — 나를 관리한다 | 목표, 일정, 기억, 승인, 알림, 파일, 워크플로우 등 개인 영역 |
 | `limbs` | 손발 — 장치를 조작한다 | 브라우저 클릭, 앱 제어, 미디어 재생, 기기 조작 |
-| `engines` | 엔진 — 변환·생성한다 | 통화 변환자(filter/sort/join 등), 문서·차트·표 산출, 슬라이드·영상·이미지 제작 |
+| `engines` | 엔진 — 생성한다 | 슬라이드·영상·이미지·신문·웹 등 미디어 산출물 제작 |
+| `table` | 표 — 통화를 변환·산출한다 | 목록 가공(filter/sort/take/select/dedup/groupby/join/union/merge)과 산출(chart/spreadsheet/document/structure) |
 | `others` | 타인 — 소통하고 위임한다 | 에이전트 위임, 메시지 송수신, 연락처 관리 |
 
 **판단 순서**: 동사(뭘 하나) → 노드 선택 → 액션 선택. 모르겠으면 `[self:discover]`.
@@ -54,31 +55,31 @@ execute_ibl(code='[node:action]{param: "value"}')
 
 ```
 WRONG: [self:get]{type: "time"}           # get은 액션이 아님. [self:time]을 써야 함
-WRONG: [sense:stock]("AAPL")             # (target) 문법은 폐지됨! {params}를 사용할 것
+WRONG: [sense:stock]("AAPL")             # positional 인자 없음 — 모든 값은 {params} 안에
 RIGHT: [self:time]                        # 직접 액션명 사용
 RIGHT: [sense:stock]{op: "quote", ticker: "AAPL"}    # 모든 값은 named parameter
 RIGHT: [sense:stock]{op: "quote", ticker: "005930"}  # 파라미터가 하나여도 named
 ```
-- action-categories의 이름(get, run 등)은 쓰지 말 것. 항상 구체적 액션명을 사용하라.
-- (target) 문법은 폐지되어 에러 발생함. 모든 값은 `{key: val}` 안에 작성.
+- 일반 동사(get, run 등)는 액션명이 아니다. 항상 구체적 액션명을 사용하라.
+- 괄호 positional 인자는 존재하지 않는다. 모든 값은 `{key: val}` 안에 작성.
 
 ## 단일 액션 + op 분기 패턴 (라운드 2 통합 후 표준)
 
 같은 도메인의 여러 도구는 **하나의 IBL 액션 + op 파라미터**로 통합되어 있다. 카탈로그에서 액션 옆에 `<op>` 자식 요소가 보이면 이 패턴이다.
 
 ```
-<action name="click" description="브라우저 요소 클릭...">
-  <op name="single" default="true">좌클릭 (기본)</op>
-  <op name="double">더블클릭 — 표 셀 편집·파일 열기</op>
-  <op name="right">우클릭 — 컨텍스트 메뉴</op>
+<action name="browser" description="브라우저(웹) 조작 — DOM ref 기반 (op 분기)...">
+  <op name="snapshot" default="true">접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)</op>
+  <op name="click">요소 클릭 (ref; mode single|double|right)</op>
+  <op name="type">입력 필드에 텍스트 입력 (ref, text)</op>
 </action>
 ```
 
 호출:
 ```
-[limbs:browser]{op: "click", ref: "abc"}                 # op 생략 → default "single" 적용
-[limbs:browser]{op: "click", mode: "double", ref: "abc"}   # 명시
-[limbs:browser]{op: "click", mode: "right", ref: "abc"}    # 명시
+[limbs:browser]                                        # op 생략 → default "snapshot" 적용
+[limbs:browser]{op: "click", ref: "abc"}                # op 명시 + op별 파라미터
+[limbs:browser]{op: "type", ref: "e5", text: "검색어"}   # op별 파라미터는 <op> 설명 참조
 ```
 
 **규약**:
@@ -103,11 +104,11 @@ Chain multiple steps with operators:
 
 액션은 `returns:`로 자기 역할을 선언한다: **items**(통화를 냄) · **transform**(통화→통화) · **scalar**(단일값·통화 아님) · **effect**(행동·종착).
 
-`engines`의 **변환자**(returns:transform)는 통화를 받아 *같은 통화*를 낸다 → `>>` 로 임의 깊이 조합(도메인 무관, 모든 items에 적용):
+`table`의 **변환자**(returns:transform)는 통화를 받아 *같은 통화*를 낸다 → `>>` 로 임의 깊이 조합(도메인 무관, 모든 items에 적용):
 - **단항**(앞 결과 1개): `filter{where}` · `sort{by, desc}` · `take{n}` · `select{columns}` · `dedup{by}` · `groupby{by, agg}`
 - **이항**(`&` 두 입력): `join{on}` · `union`(행 결합) · `merge`(두 목록 합치기)
 
-통화는 **산출물** emitter로 흐른다: `document`(문서 — html/pdf/docx/pptx/typst) · `chart` · `spreadsheet`.
+통화는 `table`의 **산출물** emitter로 흐른다: `document`(문서 — html/pdf/docx/pptx/typst) · `chart` · `spreadsheet`.
 
 → 핵심 패턴: **[검색/조회] → [변환자 체인] → [산출물]**
 ```
@@ -141,119 +142,19 @@ execute_ibl(code='[self:discover]{query: "stock prices"}')
 
 ## Key Principles
 1. **IBL 우선**: 파일 읽기/쓰기/검색/편집은 우선적으로 IBL 액션(`[self:read]`, `[self:write]`, `[self:file_find]`, `[self:edit]`, `[self:grep]`)으로 한다. IBL 액션이 실패하면 파라미터를 바꿔 재시도하라. Python/Node.js/Shell은 IBL에 해당 액션이 없거나, 복합 처리(읽기+파싱+변환을 한 번에)가 필요할 때 사용한다.
+2. **전문 액션 우선**: 전문 데이터 액션이 있으면 파일 직접 탐색(`[self:list]`+`[self:read]`)보다 반드시 우선 사용. 예: 건강기록→`[self:health]{op: "query"}`, 메모리→`[self:memory]{op: "search"}`
 3. IBL 코드는 `execute_ibl`의 `code` 파라미터에 넣어 실행
 4. 어떤 액션이 있는지 모르겠으면 `[self:discover]` 사용
 5. `>>` 순차, `&` 병렬, `??` 폴백 (목록·표 가공은 `>> [table:filter/sort/take/select/dedup/groupby]{...}` 로 잇는다)
 6. 모든 파라미터는 `{key: "value"}` 형태
+7. 작업을 계획만 하고 끝내지 말 것. 계획했으면 반드시 `execute_ibl`로 실행까지 완료할 것.
 
-## Goal / Time / Condition — 목적 기반 실행
+## Goal — 반복·예약·조건부 실행 (주문형 문법)
 
-IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 선언하면 에이전트가 달성 여부를 스스로 판단하고 반복한다.
+일회성 명령을 넘어 **목적 선언**이 필요할 때 — "매일 아침 확인해줘", "조건 충족까지 반복", "기한 내 완료" — IBL의 `[goal: "..."]{...}` 블록을 쓴다 (if/case 분기, every/until/deadline 시간 표현 포함).
 
-### Goal Block (목적 선언)
-
-```
-[goal: "에어컨 최적 구매"]{
-  success_condition: "가격/성능/배송 비교 완료",
-  resources: ["shopping-assistant", "web"],
-  max_rounds: 20,
-  max_cost: 1000,
-  by: "오늘 저녁",
-  report_to: "사용자"
-}
-```
-
-- `success_condition`: 에이전트가 달성 여부를 판단하는 기준
-- `resources`: 사용할 도구 패키지
-- `report_to`: 완료 시 보고 대상
-- **필수 안전장치**: 모든 Goal에 `max_rounds` 또는 `max_cost` 중 하나 이상 필수 (무한루프 방지)
-
-### 시간 표현
-
-**종료 통제 (언제 멈추는가):**
-
-| 표현 | 의미 | 예시 |
-|------|------|------|
-| `deadline` | 최종 기한 | `deadline: "2026-12-31"` |
-| `until` | 조건 달성까지 | `until: "매수결정"` |
-| `within` | 기한 내 완료 | `within: "2h"` |
-| `by` | 특정 시점까지 보고 | `by: "오늘 저녁"` |
-
-**빈도 통제 (얼마나 자주 하는가):**
-
-| 표현 | 의미 | 예시 |
-|------|------|------|
-| `every` | 반복 실행 주기 | `every: "매일 08:00"` |
-| `schedule` | 일회성 예약 실행 | `schedule: "2026-04-01 09:00"` |
-
-**종료 우선순위**: `until` 충족 > `deadline` 도달 > `max_rounds`/`max_cost` 도달
-
-### 조건문 (if/else)
-
-상황에 따라 다른 Goal을 활성화한다:
-
-```
-[if: sense:price{symbol: "^KS11"}.current_price < 2400]{
-  [goal: "방어적 포트폴리오 재편"]{deadline: "즉시", max_rounds: 10}
-} [else]{
-  [goal: "성장주 모니터링 유지"]{every: "매일 09:00", max_rounds: 30}
-}
-```
-
-조건식의 좌변은 `node:action{params}.field` 형태로 쓸 수 있다. `.field`는 액션 결과 dict에서 점 표기법으로 값을 꺼낸다. 생략하면 결과의 `value` → `result` → 전체 dict 순으로 폴백한다.
-
-### 케이스문 (case)
-
-여러 경우를 분기할 때:
-
-```
-[case: sense:price{symbol: "^KS11"}.current_price]{
-  "> 3000": [goal: "공격적 매수"]{max_rounds: 20},
-  "2400~3000": [goal: "추가 비교"]{max_rounds: 15},
-  "< 2400": [goal: "손절 점검"]{max_rounds: 10},
-  default: [goal: "관망"]{max_rounds: 5}
-}
-```
-
-범위 표현식: `> N`, `>= N`, `< N`, `<= N`, `== N`, `N~M` 지원.
-
-### Goal 프로세스 관리
-
-`[self:goal]` 단일 액션의 `op` 파라미터로 분기한다.
-
-```
-[self:goal]{op: "list", status: "active"}        # 진행 중인 목표 조회
-[self:goal]{op: "status", goal_id: "goal_001"}   # 특정 목표 상태 조회
-[self:goal]{op: "kill", goal_id: "goal_001"}     # 목표 중단
-```
-
-**Goal 상태**: `pending` → `active` → `achieved` / `expired` / `limit_reached` / `cancelled`
-
-### 전략 전환 규칙
-
-- 매 시도 후 `[self:goal]{op: "log", goal_id, strategy, result}`로 접근 범주·결과·배운 점을 기록
-- 동일 접근이 3회 연속 실패하면 근본적으로 다른 접근으로 전환
-- 새 시도 전에 `[self:goal]{op: "attempts", goal_id}`로 이전 이력 확인하여 같은 실수 반복 방지
-- 모든 접근 범주가 소진되면 사용자에게 상황 보고
-
-### 통합 예시
-
-```
-[goal: "청주 투자 적기 판단"]{
-  every: "매일 08:00",
-  deadline: "2026-09-30",
-  until: "매수 결정",
-  max_rounds: 200,
-  max_cost: 50000,
-  strategy: [case: sense:price{symbol: "^IRX"}.current_price]{
-    "< 4": [sense:realty]{type: "apt", deal: "trade", region: "청주"},
-    "> 5": [goal: "관망"]{max_rounds: 1},
-    default: [sense:realty]{type: "apt", deal: "trade", region: "청주"}
-  }
-}
-```
-
-→ 금리 상황을 읽고, 그에 맞는 깊이로 탐색하고, 조건 충족까지 매일 반복한다.
+- **문법은 외워서 쓰지 말 것**: goal 블록을 작성하기 전에 반드시 `read_guide`로 **goal 가이드**("목표 선언", "반복 실행")를 읽어라. 필수 안전장치(`max_rounds`/`max_cost`) 등 규약이 있다.
+- 진행 중인 목표의 관리(조회·중단·기록)는 카탈로그의 `[self:goal]{op: "list"|"status"|"kill"|"log"|"attempts"}` 로 한다.
 
 ## ⚠️ 파이프라인 vs 에이전틱 사고 — 가장 중요한 원칙
 

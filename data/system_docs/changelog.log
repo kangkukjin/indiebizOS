@@ -1563,3 +1563,9 @@
 - 해마: self:package 합성 용례 21개 등록(DB+ibl_distilled.json) + rebuild_index(2662개)
 - 커밋: 301d627..5d8be95 (origin/main 동기)
 - 상세: docs/CAPABILITY_SELF_CONTAINMENT_HANDOFF.md
+[2026-07-03] IBL_TEXTBOOK_OPTIMIZED: 교재(12_ibl_only.md)·meta.yaml 정비 — 4갈래
+- 버그 수정: 노드 선택표 5→6(table 분리 반영, engines=생성/table=변환 귀속 교정), op-분기 예시를 실존 카탈로그([limbs:browser])로 교체(기존 예시는 미실존 구조), Key Principles 결번 보충(2=전문 액션 우선, 7=실행까지 완료 — meta.yaml에서 구출), 죽은 어휘 [sense:price] 예시 2건 → [sense:stock]{op:"quote"} 교정
+- meta.yaml 좀비 정리: usage/pipeline/principles 블록 삭제(런타임 소비자가 constraint뿐 — ibl_access:187), 교재가 단일 소스. ibl_nodes.yaml 4352→4292줄
+- Goal/if/case 문법 → 주문형 가이드 이동: data/guides/goal.md 신설+guide_db 등록(45개), 교재엔 read_guide 안내 스텁만. 교재 14,915→12,497바이트(−16%), 상시 프롬프트 3소비자(에이전트 환경·의식·수동번역)에 적용
+- 교재-가드 신설: build --check에 check_textbook 합류 — 교재 [node:action] 스니펫 실존(WRONG 반례 면제) + 노드 선택표 집합·개수 = 카탈로그 정합. 음성 테스트로 기존 드리프트 2건 검출 확인 후 수정. 역사 반교습("(target) 폐지됨")은 무시간 규칙("positional 인자 없음")으로 재서술
+- 반영: build+--check 전 가드 통과, /packages/reload 라이브(노드 6·액션 141·table 13 확인). api_ibl 번역 프롬프트 문구(5노드→노드 체계)는 모듈 상수라 다음 백엔드 재시작 시 반영

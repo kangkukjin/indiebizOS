@@ -18,7 +18,7 @@
  * 더 풍부한 데스크탑 전용 계기(도서·투자·라디오 등)는 ActionDesktop의
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.
  */
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { StreamPlayer } from './StreamPlayer';
@@ -64,7 +64,7 @@ export interface AppComposeChannels {
 }
 
 export interface AppViewPrim {
-  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map' | 'group';
+  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map' | 'group' | 'calendar';
   [k: string]: unknown;
 }
 
@@ -583,6 +583,165 @@ function MapPrim({ p, data, onViewEvent, onStream }: { p: AppViewPrim; data: unk
   return <div ref={ref} style={{ height: 320 }} className="rounded-xl overflow-hidden bg-stone-100 mb-2.5" />;
 }
 
+// calendar 프리미티브 — 월 그리드 + 선택일 상세 + 정기목록 + 추가/삭제. 데이터=manifest items(자동 월필터),
+// add/delete=dispatch. bespoke CalendarInstrument 를 대체(단일소스). add.fields 는 form 필드 어휘 재사용(date 자동주입).
+const CAL_TYPE_COLOR: Record<string, string> = {
+  birthday: 'bg-pink-400', anniversary: 'bg-rose-400', holiday: 'bg-red-400',
+  meeting: 'bg-blue-400', task: 'bg-amber-400', report: 'bg-violet-400', schedule: 'bg-teal-400',
+};
+const CAL_REPEAT_LABEL: Record<string, string> = { daily: '매일', weekly: '매주', monthly: '매월', yearly: '매년', interval: '주기' };
+const pad2 = (n: number) => String(n).padStart(2, '0');
+type CalEvt = { id?: string; date?: string; time?: string; title?: string; repeat?: string; type?: string; description?: string };
+
+function CalendarPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown; dispatch: Dispatch }) {
+  const events = asList(data, p.from) as CalEvt[];
+  const colorField = (p.color_field as string) || 'type';
+  const colorOf = (e: CalEvt) => CAL_TYPE_COLOR[String((e as Record<string, unknown>)[colorField] ?? '')] || 'bg-stone-400';
+  const today = useMemo(() => new Date(), []);
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth() + 1); // 1-12
+  const [selDay, setSelDay] = useState<number | null>(today.getDate());
+  const [addVals, setAddVals] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const add = p.add as { fields?: AppFormField[]; action: string; button?: string } | undefined;
+
+  // 날짜 명확 이벤트(none/monthly/yearly)를 일자 → 이벤트[] 로 매핑 (bespoke 로직 그대로)
+  const eventsByDay = useMemo(() => {
+    const map: Record<number, CalEvt[]> = {};
+    const daysInMonth = new Date(year, month, 0).getDate();
+    for (const e of events) {
+      const rep = e.repeat || 'none';
+      const parsed = e.date ? e.date.split('-').map(Number) : null;
+      let day: number | null = null;
+      if (rep === 'none' && parsed && parsed[0] === year && parsed[1] === month) day = parsed[2];
+      else if (rep === 'monthly' && parsed) day = parsed[2];
+      else if (rep === 'yearly' && parsed && parsed[1] === month) day = parsed[2];
+      if (day && day >= 1 && day <= daysInMonth) (map[day] ||= []).push(e);
+    }
+    return map;
+  }, [events, year, month]);
+  const recurring = useMemo(() => events.filter((e) => ['daily', 'weekly', 'interval'].includes(e.repeat || '')), [events]);
+  const cells = useMemo(() => {
+    const firstWd = new Date(year, month - 1, 1).getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const arr: (number | null)[] = Array(firstWd).fill(null);
+    for (let d = 1; d <= daysInMonth; d++) arr.push(d);
+    while (arr.length % 7 !== 0) arr.push(null);
+    return arr;
+  }, [year, month]);
+  const go = (delta: number) => { let m = month + delta, y = year; if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; } setMonth(m); setYear(y); setSelDay(null); };
+  const isToday = (d: number) => today.getFullYear() === year && today.getMonth() + 1 === month && today.getDate() === d;
+  const selEvents = selDay ? (eventsByDay[selDay] || []) : [];
+
+  const doAdd = async () => {
+    if (!add || !selDay) return;
+    const date = `${year}-${pad2(month)}-${pad2(selDay)}`;
+    setBusy(true);
+    const ok = await dispatch(add.action, { ...addVals, date });
+    if (ok) setAddVals({});
+    setBusy(false);
+  };
+  const del = async (e: CalEvt) => { if (!p.delete_action) return; setBusy(true); await dispatch(p.delete_action as string, {}, e as Json); setBusy(false); };
+
+  const WD = ['일', '월', '화', '수', '목', '금', '토'];
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => go(-1)} className="w-7 h-7 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-stone-500">‹</button>
+          <div className="text-base font-semibold tabular-nums">{year}년 {month}월</div>
+          <button onClick={() => go(1)} className="w-7 h-7 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-stone-500">›</button>
+        </div>
+        <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth() + 1); setSelDay(today.getDate()); }}
+          className="px-2.5 py-1 rounded-lg border border-stone-200 bg-white text-xs text-stone-600 hover:bg-stone-50">오늘</button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {WD.map((w, i) => <div key={w} className={`text-center text-xs py-1 ${i === 0 ? 'text-rose-500' : i === 6 ? 'text-blue-500' : 'text-stone-400'}`}>{w}</div>)}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d, i) => {
+          if (d === null) return <div key={i} className="min-h-[3.25rem]" />;
+          const evs = eventsByDay[d] || [];
+          const wd = i % 7;
+          const sel = selDay === d;
+          return (
+            <button key={i} onClick={() => setSelDay(d)}
+              className={`min-h-[3.25rem] rounded-lg border p-1 flex flex-col items-stretch text-left transition ${sel ? 'border-stone-800 bg-white shadow-sm' : 'border-stone-200 bg-white hover:border-stone-400'}`}>
+              <span className={`self-start text-xs leading-none ${isToday(d) ? 'w-5 h-5 flex items-center justify-center rounded-full bg-stone-800 text-white' : wd === 0 ? 'text-rose-500' : wd === 6 ? 'text-blue-500' : 'text-stone-600'}`}>{d}</span>
+              <div className="mt-0.5 space-y-0.5 overflow-hidden">
+                {evs.slice(0, 2).map((e, k) => <div key={k} title={e.title} className={`truncate rounded px-1 py-0.5 text-[10px] leading-tight text-white ${colorOf(e)}`}>{e.title}</div>)}
+                {evs.length > 2 && <div className="px-1 text-[10px] text-stone-400">+{evs.length - 2}</div>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {selDay && (
+        <div className="mt-3">
+          <div className="text-sm font-medium text-stone-700 mb-1.5">{month}월 {selDay}일 {isToday(selDay) && <span className="text-xs text-stone-400">(오늘)</span>}</div>
+          {selEvents.length === 0 ? <div className="text-sm text-stone-400 py-1">일정 없음</div> : (
+            <div className="space-y-1.5">
+              {selEvents.map((e, k) => (
+                <div key={k} className="bg-white rounded-xl border border-stone-200 px-3 py-2 flex items-start gap-2.5">
+                  <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${colorOf(e)}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">{e.title}
+                      {e.time && <span className="ml-2 text-xs text-stone-400">{e.time}</span>}
+                      {e.repeat && e.repeat !== 'none' && <span className="ml-2 text-[11px] text-stone-400">{CAL_REPEAT_LABEL[e.repeat] || e.repeat}</span>}
+                    </div>
+                    {e.description && <div className="text-xs text-stone-500 mt-0.5">{e.description}</div>}
+                  </div>
+                  {p.delete_action != null && e.id && <button disabled={busy} onClick={() => del(e)} title="삭제" className="shrink-0 text-stone-300 hover:text-rose-500 leading-none disabled:opacity-40">✕</button>}
+                </div>
+              ))}
+            </div>
+          )}
+          {add && (
+            <div className="mt-2 flex flex-wrap gap-2 items-center">
+              {(add.fields || [{ key: 'title', type: 'text', placeholder: '일정 제목' }]).map((f, i) => (
+                <CalField key={i} f={f} value={addVals[f.key] ?? ''} onChange={(v) => setAddVals((s) => ({ ...s, [f.key]: v }))} />
+              ))}
+              <button disabled={busy} onClick={doAdd} className="px-3 py-2 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40 shrink-0">{add.button || '추가'}</button>
+            </div>
+          )}
+        </div>
+      )}
+      {recurring.length > 0 && (
+        <div className="mt-4">
+          <div className="text-xs text-stone-400 mb-1.5">정기 일정</div>
+          <div className="flex flex-wrap gap-1.5">
+            {recurring.map((e, k) => (
+              <span key={k} className="px-2.5 py-1 rounded-full bg-white border border-stone-200 text-xs text-stone-600">
+                <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle ${colorOf(e)}`} />
+                {e.title}<span className="ml-1.5 text-stone-400">{CAL_REPEAT_LABEL[e.repeat || ''] || e.repeat}{e.time ? ` ${e.time}` : ''}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// calendar add 폼의 단일 필드 렌더 — form 필드 어휘 재사용(text/time/date/recurrence/select/textarea)
+function CalField({ f, value, onChange }: { f: AppFormField; value: string; onChange: (v: string) => void }) {
+  const cls = `${fieldCls} shrink-0`;
+  if (f.type === 'select') return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={cls}>
+      <option value="">{f.placeholder || '선택'}</option>
+      {(f.options || []).map((o, j) => <option key={j} value={String(o.value)}>{o.label}</option>)}
+    </select>
+  );
+  if (f.type === 'recurrence') return (
+    <select value={value || 'none'} onChange={(e) => onChange(e.target.value)} className={cls}>
+      {RECURRENCE_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+    </select>
+  );
+  if (f.type === 'textarea') return <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={f.placeholder || ''} className={`${fieldCls} flex-1 min-w-[8rem]`} />;
+  if (f.type === 'date' || f.type === 'time' || f.type === 'datetime') return <input type={dateInputType(f.type)} value={value} onChange={(e) => onChange(e.target.value)} className={cls} />;
+  return <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={f.placeholder || ''} className={`${fieldCls} flex-1 min-w-[8rem]`} />;
+}
+
 function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, onViewEvent }: {
   p: AppViewPrim; data: unknown;
   onDrill: (p: AppViewPrim, item: Json) => void;
@@ -758,6 +917,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
 
   if (p.type === 'form') return <FormPrim p={p} data={data} dispatch={dispatch} />;
   if (p.type === 'editable_list') return <EditableListPrim p={p} data={data} dispatch={dispatch} />;
+  if (p.type === 'calendar') return <CalendarPrim p={p} data={data} dispatch={dispatch} />;
 
   if (p.type === 'list_action') {
     const arr = asList(data, p.from);

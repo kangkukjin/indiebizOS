@@ -352,7 +352,7 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
   const normUrl = (u: string) => (u || '').replace(/\/+$/, '').toLowerCase();
   const currentFav = favorites.find((f) => normUrl(f.url) === normUrl(addr));
 
-  // IBL 문자열 파라미터 이스케이프(따옴표·개행 제거) — CalendarInstrument 와 같은 방식.
+  // IBL 문자열 파라미터 이스케이프(따옴표·개행 제거).
   const escq = (s: string) => (s || '').replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim();
 
   // 현재 브라우징 중인 페이지를 즐겨찾기에 담기/빼기(토글). 추가는 자동 augmentation.

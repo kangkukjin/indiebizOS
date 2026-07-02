@@ -837,7 +837,8 @@ def _block_local_keys(blk: dict) -> set:
             if p.get("type") == "editable_list" and isinstance(p.get("add"), dict):
                 from_fields(p["add"].get("fields"))
             if p.get("type") == "calendar" and isinstance(p.get("add"), dict):
-                keys.update(("title", "date"))  # 렌더러가 제목 입력 + 선택일 date 를 add 액션에 주입
+                from_fields(p["add"].get("fields"))  # add.fields 키(제목/시간/반복/타입/메모 등)
+                keys.add("date")  # 렌더러가 선택일 date 를 add 액션에 자동 주입
             if isinstance(p.get("on"), dict):  # 뷰-이벤트 액션의 $lat/$lng/$id/$radius 등은 이벤트 페이로드가 주입
                 keys.update(APP_EVENT_VARS)
             drill = p.get("item_click")
@@ -950,6 +951,22 @@ def _app_check_view(qualified: str, view, depth: int = 0, in_group: bool = False
             if not isinstance(p.get("by"), str) or not p.get("by"):
                 issues.append(f"{where}: group 은 by(파티션 키 템플릿, 예 '{{query}}') 필수")
             issues.extend(_app_check_view(qualified, p.get("view"), depth + 1, in_group=True))
+        if ptype == "calendar":
+            # 월 그리드 + 선택일 상세 + add.fields 폼(form 필드 어휘 재사용, date 자동주입). from=이벤트 리스트.
+            if not p.get("from"):
+                issues.append(f"{where}: calendar 는 from(이벤트 리스트 경로) 필수")
+            add = p.get("add")
+            if add is not None:
+                if not isinstance(add, dict) or not isinstance(add.get("action"), str):
+                    issues.append(f"{where}: calendar.add 는 action(IBL 템플릿) 필수")
+                else:
+                    for fi, f in enumerate(add.get("fields") or []):
+                        if not isinstance(f, dict) or not f.get("key"):
+                            issues.append(f"{where}: calendar.add.fields[{fi}] key 필수")
+                        elif f.get("type") not in APP_FORM_FIELD_TYPES:
+                            issues.append(f"{where}: calendar.add.fields[{fi}] type={f.get('type')!r} (허용: {sorted(APP_FORM_FIELD_TYPES)})")
+            if p.get("delete_action") is not None and not isinstance(p.get("delete_action"), str):
+                issues.append(f"{where}: calendar.delete_action 은 IBL 템플릿 문자열")
         if ptype == "editable_list":
             if not p.get("display"):
                 issues.append(f"{where}: editable_list 는 display(행 표시 템플릿) 필수")

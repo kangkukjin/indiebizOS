@@ -1765,9 +1765,37 @@ nodes:
           view:
           - type: calendar
             from: items
+            color_field: type
             delete_action: '[self:manage_events]{action: "delete", event_id: "{id}"}'
             add:
-              action: '[self:manage_events]{action: "create", title: "$title", date: "$date"}'
+              action: '[self:manage_events]{action: "create", title: "$title", date: "$date", time: "$time", repeat: "$repeat", type: "$type", description: "$description"}'
+              fields:
+              - key: title
+                type: text
+                placeholder: 제목
+              - key: time
+                type: time
+              - key: repeat
+                type: recurrence
+              - key: type
+                type: select
+                placeholder: 종류
+                options:
+                - value: other
+                  label: 기타
+                - value: meeting
+                  label: 회의/약속
+                - value: task
+                  label: 할 일
+                - value: birthday
+                  label: 생일
+                - value: anniversary
+                  label: 기념일
+                - value: holiday
+                  label: 휴일
+              - key: description
+                type: text
+                placeholder: 메모
       switch:
         returns: effect
         description: 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.

@@ -9,7 +9,6 @@
  */
 import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
 import { DirectionsInstrument } from './DirectionsInstrument';
-import { CalendarInstrument } from './CalendarInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
 import { YtMusicInstrument } from './YtMusicInstrument';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
@@ -44,12 +43,8 @@ const STATIC_DOMAINS: Domain[] = [
   // 진실 소스 vault: ~/Documents/iRepublic-Vault (markdown). shell.openExternal 경유.
   { id: 'obsidian', icon: '💎', label: '블로그(Obsidian)',
     onOpen: () => window.electron?.openExternal?.('obsidian://open?vault=iRepublic-Vault'), instruments: [] },
-  {
-    id: 'calendar', icon: '📅', label: '일정',
-    instruments: [
-      { id: 'calendar', icon: '📅', label: '일정 캘린더', el: <CalendarInstrument /> },
-    ],
-  },
+  // calendar 은퇴 — 매니페스트 [self:manage_events] app 블록(type:calendar)이 GenericInstrument 의 CalendarPrim 으로
+  // 렌더(데스크탑·원격·폰 단일소스). 옛 bespoke CalendarInstrument 삭제. HOME_ORDER 의 'calendar' 가 위치 유지.
   // 신문 — 디자인은 컴포넌트(NewspaperInstrument), 내용은 [sense:search_gnews] 조합.
   // engines:newspaper 은퇴로 매니페스트 앵커가 없어 STATIC 계기로 등록(구 OVERRIDE 대체).
   {

@@ -2,6 +2,14 @@
 
 > 작성: 2026-06-11 · 상태: **전 단계 완료(2026-06-11)** — 1·2단계 + 데스크탑 흡수 + 승격 1·2차(11계기). "모든 표면이 한 정의" 달성.
 
+## ✅ calendar 단일소스화 — bespoke 은퇴 (2026-07-02)
+
+- **데스크탑 `CalendarPrim` 신설**(GenericInstrument view 프리미티브 +calendar): 월 그리드(타입색 점)·선택일 상세(시간·반복·설명·삭제)·정기일정 목록·add 폼. 데이터=manifest items(자동 월필터·클라이언트 월네비, list가 전 이벤트 반환), add/delete=dispatch. **옛 bespoke `CalendarInstrument.tsx`(321줄) 삭제** + ActionDesktop STATIC_DOMAINS 엔트리·import 제거 → 데스크탑·원격·폰이 매니페스트 `[self:manage_events]` app 블록 단일 정의를 공유. HOME_ORDER 의 'calendar' 가 위치 유지.
+- **calendar `add` 를 `fields` 지원으로 확장**(양 렌더러): 옛 title-only 인라인 add → `add.fields`(form 필드 어휘 재사용: title/time/**recurrence**/select/description) + **date 자동주입**(선택일). 방금 만든 date/time/recurrence 필드 타입의 첫 소비자. `color_field`(기본 type)로 이벤트 점 타입색. 원격 `_calDraw` 도 동일 강화(monthly 그리드 추가·타입색·정기목록·add.fields).
+- **검증기**: `_app_check_view` calendar 블록(from 필수·add.fields 를 APP_FORM_FIELD_TYPES 로 검증) + `_block_local_keys` 가 calendar add.fields 키를 수집(옛 하드코딩 title/date → from_fields+date 자동). $key↔input 검사 통과.
+- **성격**: 어휘(date/recurrence 필드)의 **부산물**로 풀린 단일소스화 — 신문이 group 부산물이었던 것과 동형. 이 어휘 없었으면 은퇴=다운그레이드였음(데스크탑판이 시간·반복·타입으로 더 풍부). 이제 은퇴=원격/폰까지 **풍부판으로 업그레이드**.
+- **검증**: build --check ✓ · tsc GREEN(CalendarPrim) · 원격 구문 ✓ · node 하니스(라이브 23이벤트: yearly 생일 그리드·타입색 hex·add 3필드·정기 3건) ✓ · **라이브 create→list→delete 종단**(time/type/description/repeat 보존) ✓ · 매니페스트 add.fields 파생 ✓. 액션 142 불변. **★데스크탑 CalendarPrim 런타임은 브라우저 확장 부재로 미검증(tsc-only) — 사용자 육안 확인 필요**(bespoke 삭제됨, git 롤백 가능).
+
 ## ✅ form 날짜·시간·반복 필드 타입 (2026-07-02)
 
 - **form 필드 타입 5 → 9종**: `date`(`<input type=date>`)·`time`(`type=time`)·`datetime`(`type=datetime-local`)·`recurrence`(baked 옵션 select: 한 번/매일/매주/매월/매년 = none/daily/weekly/monthly/yearly, manage_events repeat 값과 일치). 기존 text/select/toggle/textarea/images에 추가. **form + editable_list add.fields 양쪽**, **양 렌더러**(데스크탑 `FormPrim`·`EditableListPrim`, 원격 form·editable_list 렌더) + `--check`의 `APP_FORM_FIELD_TYPES`.

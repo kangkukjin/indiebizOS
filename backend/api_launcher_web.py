@@ -1734,13 +1734,22 @@ function initMaps(){
     }catch(e){ el.innerHTML='<p class="muted">지도 로드 실패</p>'; }
   }
 }
-/* 달력 render 프리미티브 — 월 그리드. 날짜 있는 이벤트만 표시(날 없는 반복 스케줄 제외).
-   날짜 탭→그날 일정+삭제+추가(date 자동 주입). 한 번에 하나라 전역 _calCur 로 단순화
-   (onclick=정수 인덱스만→따옴표 함정 회피). 월/선택일은 _calState 로 add/delete 새로고침 너머 보존. */
+/* 달력 render 프리미티브 — 월 그리드 + 선택일 상세(시간·반복·삭제) + 정기목록 + add.fields 폼.
+   그리드=none(연월)·monthly(항상)·yearly(월-일); daily/weekly/interval=정기목록. 타입색=color_field.
+   add.fields=form 필드 어휘(date 자동 주입). 데스크탑 CalendarPrim 과 동일 어휘. 전역 _calCur 로 단순화. */
 var _calCur=null, _calState={y:null,m:null,sel:null};
 function _pad2(n){ return (n<10?'0':'')+n; }
+var _CAL_COLOR={birthday:'#f472b6',anniversary:'#fb7185',holiday:'#f87171',meeting:'#60a5fa',task:'#fbbf24',report:'#a78bfa',schedule:'#2dd4bf'};
+var _CAL_REPEAT={daily:'매일',weekly:'매주',monthly:'매월',yearly:'매년',interval:'주기'};
+function _calColor(e,field){ return _CAL_COLOR[String((e||{})[field||'type']||'')]||'#a8a29e'; }
+function _calAddField(f){ const id='calAdd_'+f.key;
+  if(f.type==='select') return '<select class="field" id="'+id+'" style="min-width:0"><option value="">'+esc(f.placeholder||'')+'</option>'+(f.options||[]).map(o=>'<option value="'+esc(String(o.value))+'">'+esc(o.label)+'</option>').join('')+'</select>';
+  if(f.type==='recurrence') return _recurSelect(id,'');
+  if(f.type==='date'||f.type==='time'||f.type==='datetime') return '<input type="'+_dateInputType(f.type)+'" class="field" style="min-width:0" id="'+id+'">';
+  return '<input class="field" style="min-width:0" id="'+id+'" placeholder="'+esc(f.placeholder||'')+'">';
+}
 function _calSetup(p,data){
-  const evs=viewList(data,p.from||'events').filter(e=>e&&e.date);  // 날짜 없는 이벤트 제외
+  const evs=viewList(data,p.from||'items');  // 전 이벤트(정기=날짜없음 포함). 필터는 draw 에서.
   const now=new Date();
   _calCur={prim:p, events:evs,
     y:(_calState.y!=null?_calState.y:now.getFullYear()),
@@ -1749,10 +1758,12 @@ function _calSetup(p,data){
 }
 function _calDraw(){
   const host=document.getElementById('calHost'); if(!host||!_calCur) return;
-  const c=_calCur, y=c.y, m=c.m, byDay={};
-  c.events.forEach(e=>{ const ps=String(e.date).split('-'); if(ps.length<3) return;
-    const ey=+ps[0], em=+ps[1]-1, ed=+ps[2], rep=e.repeat||'none';
-    const show=(rep==='yearly')?(em===m):(ey===y&&em===m);  // 생일·기념일은 월-일만, 일회성은 연-월
+  const c=_calCur, y=c.y, m=c.m, byDay={}, cf=c.prim.color_field||'type';
+  c.events.forEach(e=>{ const rep=e.repeat||'none';
+    if(rep==='daily'||rep==='weekly'||rep==='interval') return;  // 정기는 그리드 제외(아래 정기목록)
+    const ps=String(e.date||'').split('-'); if(ps.length<3) return;
+    const ey=+ps[0], em=+ps[1]-1, ed=+ps[2];
+    const show=(rep==='yearly')?(em===m):(rep==='monthly')?true:(ey===y&&em===m);
     if(show){ (byDay[ed]=byDay[ed]||[]).push(e); } });
   const first=new Date(y,m,1).getDay(), days=new Date(y,m+1,0).getDate();
   let h='<div class="card"><div class="row" style="align-items:center;justify-content:space-between">'
@@ -1761,15 +1772,22 @@ function _calDraw(){
   ['일','월','화','수','목','금','토'].forEach(w=>{ h+='<div class="calwd">'+w+'</div>'; });
   for(let i=0;i<first;i++) h+='<div></div>';
   for(let d=1;d<=days;d++){ const hs=byDay[d]?' calhas':'', sl=(c.sel===d)?' calsel':'';
-    h+='<div class="calday'+hs+sl+'" onclick="_calPick('+d+')">'+d+(byDay[d]?'<span class="caldot"></span>':'')+'</div>'; }
+    h+='<div class="calday'+hs+sl+'" onclick="_calPick('+d+')">'+d+(byDay[d]?'<span class="caldot" style="background:'+_calColor(byDay[d][0],cf)+'"></span>':'')+'</div>'; }
   h+='</div>';
   if(c.sel){ const list=byDay[c.sel]||[]; c._dayList=list;
     h+='<div class="calpanel"><div class="step-label">'+y+'-'+_pad2(m+1)+'-'+_pad2(c.sel)+'</div>';
-    if(list.length) list.forEach((e,i)=>{ h+='<div class="kv"><span class="k">'+esc(e.title||'')+'</span>'
+    if(list.length) list.forEach((e,i)=>{ const tm=e.time?' <span class="muted" style="font-size:11px">'+esc(e.time)+'</span>':'';
+      const rl=(e.repeat&&e.repeat!=='none')?' <span class="muted" style="font-size:11px">'+(_CAL_REPEAT[e.repeat]||e.repeat)+'</span>':'';
+      h+='<div class="kv"><span class="k"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:'+_calColor(e,cf)+'"></span>'+esc(e.title||'')+tm+rl+'</span>'
       +(c.prim.delete_action?'<button class="linkbtn" onclick="_calDel('+i+')">삭제</button>':'')+'</div>'; });
     else h+='<p class="muted">일정 없음</p>';
-    if(c.prim.add) h+='<div class="row" style="margin-top:8px"><input class="field" style="min-width:0" id="calAddTitle" placeholder="일정 제목"><button class="go" onclick="_calAdd()">추가</button></div>';
+    if(c.prim.add){ const fields=c.prim.add.fields||[{key:'title',type:'text',placeholder:'일정 제목'}];
+      h+='<div class="row" style="flex-wrap:wrap;margin-top:8px">'+fields.map(_calAddField).join('')+'<button class="go" onclick="_calAdd()">'+esc(c.prim.add.button||'추가')+'</button></div>'; }
     h+='</div>'; }
+  const periodic=c.events.filter(e=>['daily','weekly','interval'].includes(e.repeat||''));
+  if(periodic.length){ h+='<div style="margin-top:12px"><div class="muted" style="font-size:11px;margin-bottom:6px">정기 일정</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    periodic.forEach(e=>{ h+='<span style="padding:4px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;background:'+_calColor(e,cf)+'"></span>'+esc(e.title||'')+' <span class="muted">'+(_CAL_REPEAT[e.repeat]||e.repeat)+(e.time?' '+esc(e.time):'')+'</span></span>'; });
+    h+='</div></div>'; }
   h+='</div>'; host.innerHTML=h;
 }
 function _calNav(delta){ if(!_calCur) return; let m=_calCur.m+delta, y=_calCur.y;
@@ -1777,9 +1795,11 @@ function _calNav(delta){ if(!_calCur) return; let m=_calCur.m+delta, y=_calCur.y
   _calState.y=y; _calState.m=m; _calState.sel=null; _calDraw(); }
 function _calPick(d){ if(!_calCur) return; _calCur.sel=(_calCur.sel===d?null:d); _calState.sel=_calCur.sel; _calDraw(); }
 async function _calAdd(){ if(!_calCur||!_calCur.prim.add||!_calCur.sel) return;
-  const t=document.getElementById('calAddTitle'), title=t?t.value.trim():''; if(!title){ alert('일정 제목을 입력하세요'); return; }
-  const date=_calCur.y+'-'+_pad2(_calCur.m+1)+'-'+_pad2(_calCur.sel);
-  try{ await dispatchAction(_calCur.prim.add.action,{title:title,date:date}); }catch(e){ alert('추가 실패: '+e.message); } }
+  const add=_calCur.prim.add, fields=add.fields||[{key:'title',type:'text'}];
+  const vals={}; fields.forEach(f=>{ const el=document.getElementById('calAdd_'+f.key); if(el) vals[f.key]=el.value; });
+  if(!String(vals.title||'').trim()){ alert('일정 제목을 입력하세요'); return; }
+  vals.date=_calCur.y+'-'+_pad2(_calCur.m+1)+'-'+_pad2(_calCur.sel);  // 선택일 자동 주입
+  try{ await dispatchAction(add.action,vals); }catch(e){ alert('추가 실패: '+e.message); } }
 async function _calDel(i){ if(!_calCur||!_calCur._dayList) return; const item=_calCur._dayList[i]; if(!item) return;
   try{ await dispatchAction(_calCur.prim.delete_action,{},item); }catch(e){ alert('삭제 실패: '+e.message); } }
 function renderPrim(p,vi,data){

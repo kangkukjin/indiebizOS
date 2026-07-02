@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "business",
   "name": "Business & Contacts",
   "description": "비즈니스 관계 및 연락처(이웃) 관리 도구. 이웃 목록 조회, 상세 정보 확인, 연락처 관리 기능을 제공합니다.",
@@ -13,12 +14,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "thread=한 대화 스레드(neighbor_id 또는 pubkey) / inbox=대화 목록",
             "enum": [
               "thread",
               "inbox"
             ],
-            "default": "thread",
-            "description": "thread=한 대화 스레드(neighbor_id 또는 pubkey) / inbox=대화 목록"
+            "default": "thread"
           },
           "neighbor_id": {
             "type": "integer",
@@ -39,6 +40,7 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "list=목록(기본) / detail=상세 / save=생성·수정 / delete=삭제 / favorite=즐겨찾기 토글",
             "enum": [
               "list",
               "detail",
@@ -46,8 +48,7 @@
               "delete",
               "favorite"
             ],
-            "default": "list",
-            "description": "list=목록(기본) / detail=상세 / save=생성·수정 / delete=삭제 / favorite=즐겨찾기 토글"
+            "default": "list"
           },
           "id": {
             "type": "integer",
@@ -96,13 +97,13 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "add=추가 / update=수정 / delete=삭제",
             "enum": [
               "add",
               "update",
               "delete"
             ],
-            "default": "add",
-            "description": "add=추가 / update=수정 / delete=삭제"
+            "default": "add"
           },
           "neighbor_id": {
             "type": "integer",
@@ -131,14 +132,14 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "list=목록 / detail=상세 / save=생성·수정 / delete=삭제",
             "enum": [
               "list",
               "detail",
               "save",
               "delete"
             ],
-            "default": "list",
-            "description": "list=목록 / detail=상세 / save=생성·수정 / delete=삭제"
+            "default": "list"
           },
           "id": {
             "type": "integer",
@@ -171,6 +172,7 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "list=목록 / detail=상세 / save=생성·수정 / delete=삭제 / add_image=이미지 추가 / remove_image=이미지 제거",
             "enum": [
               "list",
               "detail",
@@ -179,8 +181,7 @@
               "add_image",
               "remove_image"
             ],
-            "default": "list",
-            "description": "list=목록 / detail=상세 / save=생성·수정 / delete=삭제 / add_image=이미지 추가 / remove_image=이미지 제거"
+            "default": "list"
           },
           "id": {
             "type": "integer",
@@ -221,14 +222,14 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "list=전체 / detail=레벨 상세 / update=레벨 수정 / regenerate=자동 재생성",
             "enum": [
               "list",
               "detail",
               "update",
               "regenerate"
             ],
-            "default": "list",
-            "description": "list=전체 / detail=레벨 상세 / update=레벨 수정 / regenerate=자동 재생성"
+            "default": "list"
           },
           "level": {
             "type": "integer",
@@ -253,13 +254,13 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "list=전체 / detail=레벨 상세 / update=레벨 수정",
             "enum": [
               "list",
               "detail",
               "update"
             ],
-            "default": "list",
-            "description": "list=전체 / detail=레벨 상세 / update=레벨 수정"
+            "default": "list"
           },
           "level": {
             "type": "integer",
@@ -284,13 +285,13 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "status=상태 조회 / start=켜기 / stop=끄기",
             "enum": [
               "status",
               "start",
               "stop"
             ],
-            "default": "status",
-            "description": "status=상태 조회 / start=켜기 / stop=끄기"
+            "default": "status"
           }
         }
       }

@@ -78,3 +78,85 @@ nodes:
         tool: open_photo_manager
         implementation: Electron 기반 Photo Manager GUI 실행
         target_key: path
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: photo-manager
+    name: Photo Manager
+    description: '사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 도구.
+
+
+      ## 스캔 DB 직접 활용
+
+      제공된 도구만으로 부족할 때 python-exec로 DB에 직접 SQL 쿼리가 가능합니다.
+
+      - list_scans 결과의 DB 경로로 sqlite3.connect() 하여 사용
+
+      - 테이블: media_files
+
+      - 주요 컬럼: path(파일경로), filename, taken_date(촬영일 ISO8601), gps_lat(위도), gps_lon(경도), media_type(''photo''/''video''), size,
+      camera_model
+
+      - 예: 특정 기간 사진 조회, GPS 좌표 범위로 장소별 필터링, 조건에 맞는 파일 경로 추출 후 copy_path로 복사 등'
+    version: 1.2.0
+    guide_file: guide.md
+  tools:
+  - name: open_photo_manager
+    description: 'Photo Manager GUI를 엽니다.
+
+
+      ## 사용 시점
+
+      - 시각적으로 사진 관리
+
+      - 갤러리 브라우징'
+    input_schema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: 초기 경로 (선택)
+  - name: photo_op
+    description: '사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접. 선스캔 불필요·항상 최신.
+
+
+      파라미터: q(파일명·기종 키워드, 선택), kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유
+      사진만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50).
+
+
+      반환 records[]에 표시 필드(title/meta/image/url)와 구조 필드(path/taken_at/month/kind/size/camera/lat/lng)가 함께 실림 → 타임라인=records→[table:groupby]{by:month},
+      통계=[table:groupby]{by:kind}, 지도=lat/lng 직결 조합으로 유도.'
+    input_schema:
+      type: object
+      properties:
+        q:
+          type: string
+          description: 파일명·기종 키워드 부분일치 (선택)
+        kind:
+          type: string
+          enum:
+          - photo
+          - video
+          - all
+          description: 미디어 종류 (기본 all)
+        start:
+          type: string
+          description: 촬영일 시작 (YYYY-MM 또는 YYYY-MM-DD)
+        end:
+          type: string
+          description: 촬영일 끝 (YYYY-MM 또는 YYYY-MM-DD)
+        has_gps:
+          type: boolean
+          description: true면 위치(GPS) 보유 사진만
+        path:
+          type: string
+          description: 검색 루트 (생략 시 홈 전체)
+        file:
+          type: string
+          description: 단일 파일 절대경로 상세 조회
+        limit:
+          type: integer
+          description: 반환 개수 (기본 50)
+      additionalProperties: true

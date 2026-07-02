@@ -24,3 +24,54 @@ actions:
     - 메모리 검색
     - 메모리 삭제
     - 메모리 읽기
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: memory
+    name: Memory
+    description: 에이전트 심층 메모리. 연상기억에서 자동으로 검색·저장되며, IBL [self:memory]{op} 통합 액션으로 직접 호출 가능. 옛 4개 도구(memory_search/save/read/delete)는
+      직접 호출 호환용으로 유지.
+    version: 2.2.0
+  tools:
+  - name: memory_op
+    description: '심층 메모리 통합 도구 (op 분기). save/search/read/delete.
+
+
+      - op=save: content 필수(+keywords, category 옵션, 둘 다 생략 시 자동 추출·분류)
+
+      - op=search: query 필수(자연어/키워드, FTS+시맨틱 통합) + category 필터 옵션, top_k 옵션
+
+      - op=read: memory_id 필수
+
+      - op=delete: memory_id 필수
+
+
+      워크플로: save로 누적 → search로 자연어 검색 → preview 잘렸으면 read로 전문 → 잘못 저장은 delete.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 수행할 작업
+        content:
+          type: string
+          description: save 필수 — 저장 내용
+        keywords:
+          type: string
+          description: save 옵션 — 검색 키워드(쉼표 구분)
+        category:
+          type: string
+          description: save 옵션 또는 search 필터 — 분류
+        query:
+          type: string
+          description: search 필수 — 검색어
+        top_k:
+          type: integer
+          description: search 옵션 — 반환 개수(기본 10)
+        memory_id:
+          type: integer
+          description: read/delete 필수 — 메모리 ID
+      required:
+      - op

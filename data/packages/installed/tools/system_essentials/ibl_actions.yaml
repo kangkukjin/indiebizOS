@@ -126,3 +126,744 @@ nodes:
         - 표
         - 시트
         - 장부
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: system_essentials
+    name: System Essentials Kit
+    description: 에이전트 기본 도구 모음. 파일 읽기/쓰기/검색, 작업 목록(todo) 관리, 계획 모드, 사용자 질문, 이웃(연락처) 조회 기능을 제공합니다. 모든 에이전트에게 기본 배분되는 핵심 패키지입니다.
+    version: 1.1.0
+    author: System AI
+  tools:
+  - name: read_file
+    description: '파일 내용을 읽습니다.
+
+
+      사용법:
+
+      - 절대 경로 또는 상대 경로 모두 사용 가능
+
+      - 기본적으로 전체 파일 내용 반환
+
+      - offset/limit으로 부분 읽기 가능 (대용량 파일 처리에 유용)
+
+      - 이미지 파일(PNG, JPG 등)도 읽을 수 있음
+
+
+      주의사항:
+
+      - 수정하려는 파일은 반드시 먼저 read_file로 읽어야 함
+
+      - 대용량 파일(1MB 이상)은 결과가 잘릴 수 있음 (offset/limit 사용 권장)
+
+      - 디렉토리는 읽을 수 없음 - list_directory 사용'
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+          description: 읽을 파일의 경로 (절대/상대)
+        offset:
+          type: integer
+          description: 읽기 시작할 줄 번호 (0부터, 기본값 0)
+        limit:
+          type: integer
+          description: '읽을 최대 줄 수 (기본값: 전체)'
+      required:
+      - file_path
+  - name: write_file
+    description: '파일에 내용을 씁니다 (기존 파일 덮어쓰기).
+
+
+      사용법:
+
+      - 새 파일 생성 또는 기존 파일 완전 교체
+
+      - 디렉토리가 없으면 자동 생성
+
+
+      주의사항:
+
+      - 기존 파일 수정 시 반드시 먼저 read_file로 읽어야 함
+
+      - 부분 수정은 edit_file 사용 권장 (전체 재작성 불필요)
+
+      - 꼭 필요한 경우에만 파일 생성 - 기존 파일 편집 우선'
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+          description: 파일 경로
+        content:
+          type: string
+          description: 기록할 전체 내용
+      required:
+      - file_path
+      - content
+  - name: list_directory
+    description: '디렉토리의 파일/폴더 목록을 조회합니다.
+
+
+      사용법:
+
+      - 지정된 디렉토리의 직속 항목만 반환 (재귀 아님)
+
+      - 파일/폴더 구분하여 표시
+
+
+      주의사항:
+
+      - 재귀적 탐색이 필요하면 glob_files 사용 (예: ''**/*'')
+
+      - run_command로 ''ls -R'' 사용 금지 - 대용량 출력으로 토큰 초과 위험
+
+      - 파일 내용 검색은 grep_files 사용'
+    input_schema:
+      type: object
+      properties:
+        dir_path:
+          type: string
+          description: '디렉토리 경로 (기본: 현재 작업 디렉토리)'
+  - name: grep_files
+    description: '파일 내용에서 텍스트/패턴을 검색합니다.
+
+
+      사용법:
+
+      - 매칭되는 라인과 라인 번호 반환
+
+      - 패턴은 기본적으로 정규표현식 (alternation ''a|b'', 메타문자 동작). 리터럴 문자열로 검색하려면 regex=false
+
+      - 파일 패턴으로 검색 범위 제한 가능
+
+
+      사용 예시:
+
+      - 함수 정의 찾기: pattern=''def my_function'', file_pattern=''*.py''
+
+      - 클래스 찾기: pattern=''class.*Manager'', regex=true
+
+      - 특정 문자열 검색: pattern=''TODO'', root_path=''./src''
+
+
+      주의사항:
+
+      - run_command로 grep/rg 사용 대신 이 도구 사용
+
+      - 결과가 많을 수 있으니 file_pattern으로 범위 제한 권장'
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+          description: 검색할 텍스트 또는 정규표현식
+        file_pattern:
+          type: string
+          description: '파일 패턴 (예: ''*.py'', ''*.js'')'
+        root_path:
+          type: string
+          description: 검색 시작 경로
+        regex:
+          type: boolean
+          description: '정규표현식 모드 (기본: true). false로 두면 패턴을 리터럴 문자열로 검색. 잘못된 정규식은 리터럴로 자동 폴백.'
+        output_mode:
+          type: string
+          enum:
+          - content
+          - files_with_matches
+          - count
+          description: '출력 형태: content(매칭 라인, 기본) / files_with_matches(파일 목록) / count(파일별 매칭 수)'
+      required:
+      - pattern
+  - name: get_current_time
+    description: '현재 날짜와 시간을 조회합니다.
+
+
+      사용법:
+
+      - 파라미터 없이 호출하면 기본 포맷으로 반환
+
+      - 커스텀 포맷 지정 가능'
+    input_schema:
+      type: object
+      properties:
+        format:
+          type: string
+          description: '시간 포맷 (기본: %Y-%m-%d %H:%M:%S)'
+  - name: run_command
+    description: "쉘 명령어를 실행합니다. execute_ibl과 함께 에이전트의 두 가지 실행 경로 중 하나.\n\n주의사항 - 반드시 읽으세요:\n1. 파일/디렉토리 작업은 IBL 액션을 우선 사용:\n\
+      \   - 디렉토리 목록: execute_ibl [self:list] (ls 대신)\n   - 파일 검색: execute_ibl [self:file_find] (find 대신)\n   - 내용 검색: execute_ibl\
+      \ [self:grep] (grep/rg 대신)\n   - 파일 읽기: execute_ibl [self:read] (cat/head/tail 대신)\n   - 파일 쓰기: execute_ibl [self:write]\
+      \ (echo > 대신)\n   - 파일 수정: execute_ibl [self:edit] (sed/awk 대신)\n\n2. Python/Node.js 코드 실행 — write→run 패턴:\n   - 멀티라인:\
+      \ [self:write]로 /tmp/*.py 파일 생성 후 run_command 'python3 /tmp/x.py'\n   - 한 줄: run_command 'python3 -c \"...\"' 또는 'node\
+      \ -e \"...\"'\n   - 별도의 execute_python/execute_node 도구는 없음 (이스케이프·traceback 손실 회피)\n\n3. 금지된 명령어 (대용량 출력 위험):\n   -\
+      \ ls -R, ls -la -R (재귀 목록)\n   - find / (루트 검색)\n   - cat 대용량파일\n   - 출력 제한 없는 검색 명령\n\n4. 위험 명령은 approved=true 필요:\n\
+      \   - rm, rmdir (삭제)\n   - sudo (권한 상승)\n   - chmod, chown (권한 변경)\n\nrun_command가 어울리는 경우:\n- git 명령어 (git status,\
+      \ git log --oneline -10)\n- 패키지 관리 (npm install, pip install)\n- 빌드/테스트 (npm run build, pytest)\n- 프로세스 관리 (ps, kill)\n\
+      - write→run 패턴의 실행 단계 (python3/node 스크립트 실행)\n- IBL 액션에 해당하지 않는 시스템 명령"
+    input_schema:
+      type: object
+      properties:
+        command:
+          type: string
+          description: 실행할 쉘 명령어
+        timeout:
+          type: number
+          description: '제한시간 초 (기본: 60, 최대: 300)'
+        approved:
+          type: boolean
+          description: 위험 명령 승인 (rm, sudo 등)
+      required:
+      - command
+  - name: glob_files
+    description: 'glob 패턴으로 파일을 검색합니다. 프로젝트 안뿐 아니라 컴퓨터 어느 디렉토리든 검색 가능.
+
+
+      ## 검색 범위 (path 파라미터)
+
+      - 미지정: 프로젝트 디렉토리 (기본)
+
+      - 절대경로: 그대로 사용 (예: ''/Users/me/Desktop'', ''/etc'')
+
+      - ~ 시작: 홈 디렉토리 확장 (예: ''~/Documents'', ''~'')
+
+      - 상대경로: 프로젝트 디렉토리 기준
+
+
+      ## 패턴 동작
+
+      - 패턴에 ''**''나 ''/''가 없으면 자동으로 모든 하위 디렉토리까지 검색 (''*.docx'' → ''**/*.docx'' 효과)
+
+      - 명시적 재귀: ''**/*.py'' (모든 하위)
+
+      - 디렉토리 한정: ''src/**/*.{js,ts}''
+
+
+      ## 사용 예시
+
+      - 프로젝트 안 Python 파일: pattern=''**/*.py''
+
+      - 바탕화면의 docx: pattern=''*.docx'', path=''~/Desktop''
+
+      - 컴퓨터 전체에서 특정 파일: pattern=''**/하네스*.docx'', path=''/Users''
+
+      - 다운로드 폴더의 PDF: pattern=''*.pdf'', path=''~/Downloads''
+
+
+      ## 결과
+
+      - ''{총_매칭수}개 매칭 | root: {검색루트}'' 헤더 + 절대경로 목록
+
+      - 기본 200개까지 반환 (max_results로 조정, 0이면 무제한 — 컨텍스트 폭주 주의)
+
+      - 매칭 없으면 path 옵션 사용 힌트 안내
+
+
+      ## 주의
+
+      - run_command로 ''find'' 사용하지 말 것 — 이 도구가 컴퓨터 전체 검색 지원
+
+      - 너무 넓은 범위(예: path=''/'')는 시간이 오래 걸리고 결과가 폭주'
+    input_schema:
+      type: object
+      properties:
+        pattern:
+          type: string
+          description: 'glob 패턴 (예: ''*.docx'', ''**/*.py''). ''**''나 ''/''가 없으면 자동 재귀'
+        path:
+          type: string
+          description: 검색 루트. 절대경로(/Users/...), ~ 확장(~/Desktop), 상대경로(./src) 모두 가능. 미지정 시 프로젝트 디렉토리
+        root_path:
+          type: string
+          description: (deprecated) path와 동일. path 사용 권장
+        max_results:
+          type: integer
+          description: 반환할 최대 파일 수 (기본 200). 0이면 무제한 (큰 검색 시 컨텍스트 폭주 위험)
+      required:
+      - pattern
+  - name: edit_file
+    description: '파일의 특정 부분을 수정합니다 (문자열 교체).
+
+
+      사용법:
+
+      - old_string을 new_string으로 교체
+
+      - 파일 전체를 다시 쓰지 않고 정확한 위치만 수정
+
+
+      주의사항:
+
+      - 반드시 먼저 read_file로 파일 내용을 확인해야 함
+
+      - old_string은 파일 내에서 고유해야 함 (중복되면 실패)
+
+      - 중복되는 경우 더 많은 컨텍스트(주변 코드)를 포함
+
+      - 들여쓰기(탭/스페이스)를 정확히 맞춰야 함
+
+      - write_file보다 이 도구 사용 권장 (부분 수정에 적합)'
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+          description: 파일 경로
+        old_string:
+          type: string
+          description: 교체할 기존 문자열 (파일 내 고유해야 함)
+        new_string:
+          type: string
+          description: 새 문자열
+      required:
+      - file_path
+      - old_string
+      - new_string
+  - name: read_pdf
+    description: 'PDF 파일의 내용을 읽고 텍스트를 추출합니다.
+
+
+      ## 사용 시점
+
+      - PDF 문서의 내용을 파악해야 할 때
+
+      - 특정 페이지의 텍스트가 필요할 때
+
+      - 문서의 메타데이터(제목, 저자 등)를 확인해야 할 때
+
+
+      ## 주의 사항
+
+      - 텍스트가 없는 이미지 기반 PDF는 추출이 어려울 수 있습니다.
+
+      - 파일 경로가 절대경로가 아니면 현재 프로젝트 경로를 기준으로 찾습니다.'
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+          description: 읽을 PDF 파일 경로 (절대경로 권장)
+        pages:
+          type: array
+          items:
+            type: integer
+          description: 읽을 페이지 번호 목록 (0부터 시작, 생략 시 전체)
+      required:
+      - file_path
+  - name: read_docx
+    description: 'DOCX(Word) 파일의 텍스트, 표, 이미지를 추출합니다. 텍스트 내 이미지 위치가 마커로 표시되며, 이미지 파일은 별도 폴더에 저장됩니다.
+
+
+      ## 부분 읽기 (큰 문서 대응)
+
+      블록(문단 또는 표 하나)을 단위로 슬라이싱할 수 있습니다.
+
+      - 기본값으로 최대 300블록까지만 반환 (대용량 docx가 컨텍스트를 잠식하지 않도록)
+
+      - 응답 metadata에 `total_blocks`, `returned_blocks`, `truncated`, `next_offset`이 포함됨
+
+      - truncated가 true면 다음 호출에 `offset=next_offset`을 넘겨 이어 읽기
+
+      - 전체를 한 번에 읽으려면 `max_blocks=0` (무제한, 단 컨텍스트 부담)
+
+      - 작은 청크씩 보려면 `offset`+`limit` 조합 사용'
+    input_schema:
+      type: object
+      properties:
+        file_path:
+          type: string
+          description: 읽을 DOCX 파일 경로 (절대경로 권장)
+        extract_images:
+          type: boolean
+          description: '이미지 추출 여부 (기본값: true). false면 텍스트만 추출'
+        offset:
+          type: integer
+          description: 시작 블록 인덱스 (0부터). 기본값 0. 이어 읽기 시 이전 응답의 metadata.next_offset 사용
+        limit:
+          type: integer
+          description: 반환할 최대 블록 수. 지정하면 max_blocks보다 우선. 미지정 시 max_blocks 적용
+        max_blocks:
+          type: integer
+          description: 안전 상한 (기본 300). limit 미지정 시 적용. 0이면 무제한 (큰 문서는 컨텍스트 폭주 위험)
+      required:
+      - file_path
+  - name: todo_write
+    description: '작업 목록을 생성하고 관리합니다. 진행 상황을 추적하고 복잡한 작업을 체계적으로 관리합니다.
+
+
+      ## 중요: 유일한 todo 도구
+
+      이 도구가 todo 관련 유일한 도구입니다.
+
+      - 항목 추가: 기존 목록 + 새 항목으로 전체 목록 작성
+
+      - 상태 변경: 해당 항목의 status만 바꿔서 전체 목록 다시 작성
+
+      - 항목 삭제: 해당 항목 제외하고 전체 목록 다시 작성
+
+
+      ## 사용 시점
+
+      1. 복잡한 다단계 작업 (3개 이상의 구분된 단계)
+
+      2. 사용자가 여러 작업을 요청한 경우 (번호 목록, 쉼표로 구분)
+
+      3. 신중한 계획이 필요한 비단순 작업
+
+
+      ## 사용하지 않을 때
+
+      1. 단일하고 직접적인 작업
+
+      2. 추적해도 조직적 이점이 없는 사소한 작업
+
+      3. 3단계 미만의 사소한 단계로 완료 가능한 작업
+
+      4. 순수한 대화나 정보 요청
+
+
+      참고: 사소한 단일 작업만 있다면 이 도구를 사용하지 마세요.
+
+
+      ## 상태 관리
+
+      - pending: 대기 중
+
+      - in_progress: 진행 중 (한 번에 하나만)
+
+      - completed: 완료
+
+
+      작업 완료 시 상태를 completed로 표시하세요.'
+    input_schema:
+      type: object
+      properties:
+        todos:
+          type: array
+          description: 작업 목록
+          items:
+            type: object
+            properties:
+              content:
+                type: string
+                description: '작업 내용 (명령형: ''테스트 실행'')'
+              status:
+                type: string
+                enum:
+                - pending
+                - in_progress
+                - completed
+                description: 상태
+              activeForm:
+                type: string
+                description: '진행 중 표시 (현재형: ''테스트 실행 중'')'
+            required:
+            - content
+            - status
+            - activeForm
+      required:
+      - todos
+  - name: ask_user_question
+    description: '실행 중 사용자에게 질문이 필요할 때 사용합니다.
+
+
+      ## 사용 시점
+
+      1. 사용자 선호도나 요구사항 파악
+
+      2. 모호한 지시 명확화
+
+      3. 구현 방식 선택 필요
+
+      4. 진행 방향에 대한 사용자 의견 필요
+
+
+      ## 사용하지 않을 때
+
+      1. 이미 충분한 정보가 있는 경우
+
+      2. 합리적인 기본 선택이 명확한 경우
+
+      3. 사용자가 이미 명시적 지시를 한 경우
+
+
+      ## 사용법
+
+      - 2-4개의 선택지 제공
+
+      - 권장 옵션은 첫 번째에 배치하고 ''(권장)'' 표시
+
+      - multiSelect=true로 복수 선택 허용 가능
+
+      - 사용자는 항상 ''기타''로 직접 입력 가능
+
+
+      참고: 플랜 모드에서는 요구사항 명확화에 사용하고, ''계획 진행할까요?''는 exit_plan_mode 사용'
+    input_schema:
+      type: object
+      properties:
+        questions:
+          type: array
+          description: 질문 목록 (1-4개)
+          items:
+            type: object
+            properties:
+              question:
+                type: string
+                description: 질문 내용
+              header:
+                type: string
+                description: 짧은 라벨 (최대 12자)
+              options:
+                type: array
+                description: 선택지 (2-4개)
+                items:
+                  type: object
+                  properties:
+                    label:
+                      type: string
+                      description: 선택지 텍스트
+                    description:
+                      type: string
+                      description: 선택지 설명
+                  required:
+                  - label
+                  - description
+              multiSelect:
+                type: boolean
+                description: 복수 선택 허용 (기본 false)
+            required:
+            - question
+            - header
+            - options
+      required:
+      - questions
+  - name: enter_plan_mode
+    description: '비단순 구현 작업 전 계획 모드로 전환합니다. 코드 작성 전 사용자 동의를 구하는 용도입니다.
+
+
+      ## 사용 고려 상황
+
+      단순하지 않은 구현 작업에서 사용을 고려하세요:
+
+      1. 새 기능 구현 - 배치 위치, 클릭 시 동작 등 결정 필요
+
+      2. 여러 접근 방식 가능 - 캐싱 방식, 성능 개선 전략 등
+
+      3. 기존 동작/구조 변경 - 무엇이 바뀌어야 하는지 명확화
+
+      4. 아키텍처 결정 - WebSocket vs SSE, 상태 관리 방식 등
+
+      5. 다중 파일 변경 (2-3개 초과)
+
+      6. 요구사항 탐색 필요 - 먼저 파악 후 범위 이해
+
+      7. 사용자 선호도 중요 - 여러 방향 가능
+
+
+      ## 사용하지 않을 때
+
+      단순한 작업은 바로 진행:
+
+      - 한두 줄 수정 (오타, 명확한 버그, 작은 조정)
+
+      - 명확한 요구사항의 단일 함수 추가
+
+      - 사용자가 상세한 구체적 지시를 한 경우
+
+      - 순수 조사/탐색 작업 (구현 계획이 아님)
+
+
+      ## 계획 모드에서 할 일
+
+      1. glob_files, grep_files, read_file로 코드베이스 탐색
+
+      2. 기존 패턴과 아키텍처 이해
+
+      3. 구현 방안 설계
+
+      4. 접근 방식 명확화 필요시 ask_user_question 사용
+
+      5. 구현 준비 완료시 exit_plan_mode로 승인 요청
+
+
+      참고: 이 도구는 사용자 승인이 필요합니다 - 계획 모드 진입에 동의해야 합니다.'
+    input_schema:
+      type: object
+      properties: {}
+  - name: exit_plan_mode
+    description: '계획 파일 작성 완료 후 사용자 승인을 요청합니다.
+
+
+      ## 이 도구의 동작
+
+      - 계획 파일에서 내용을 읽어 사용자에게 표시
+
+      - 계획 내용을 파라미터로 받지 않음
+
+      - 사용자가 계획을 검토하고 승인/수정 요청
+
+
+      ## 사용 시점
+
+      코드 구현이 필요한 계획이 완료되었을 때만 사용:
+
+      - 계획이 완성되고 명확할 때
+
+      - 구현할 준비가 되었을 때
+
+
+      ## 사용하지 않을 때
+
+      - 요구사항이나 접근 방식에 미해결 질문이 있으면 ask_user_question 먼저 사용
+
+      - 조사/탐색 작업 - 구현 계획이 아니면 이 도구 불필요
+
+
+      중요: ''이 계획 괜찮나요?'', ''진행할까요?''를 ask_user_question으로 묻지 마세요 - 그것이 바로 이 도구의 역할입니다.'
+    input_schema:
+      type: object
+      properties: {}
+  - name: copy_path
+    description: '파일 또는 폴더를 복사합니다.
+
+
+      사용법:
+
+      - 파일 복사: 단일 파일을 다른 위치로 복사
+
+      - 폴더 복사: 폴더 전체를 하위 내용 포함하여 복사
+
+      - 대상 경로의 상위 디렉토리가 없으면 자동 생성
+
+
+      사용 예시:
+
+      - 사진 파일 복사: source=''/Photos/IMG_001.jpg'', destination=''~/Desktop/backup/IMG_001.jpg''
+
+      - 폴더 통째로 복사: source=''/data/project'', destination=''/backup/project''
+
+
+      주의사항:
+
+      - 대상 경로에 이미 파일/폴더가 있으면 덮어씁니다
+
+      - 매우 큰 폴더 복사는 시간이 걸릴 수 있습니다'
+    input_schema:
+      type: object
+      properties:
+        source:
+          type: string
+          description: 원본 파일 또는 폴더 경로
+        destination:
+          type: string
+          description: 복사 대상 경로
+      required:
+      - source
+      - destination
+  - name: move_path
+    description: '파일 또는 폴더를 이동합니다 (이름 변경 포함).
+
+
+      사용법:
+
+      - 파일/폴더를 다른 위치로 이동
+
+      - 같은 디렉토리 내에서 이름 변경에도 사용 가능
+
+      - 대상 경로의 상위 디렉토리가 없으면 자동 생성
+
+
+      사용 예시:
+
+      - 파일 이동: source=''./temp/report.pdf'', destination=''./docs/report.pdf''
+
+      - 이름 변경: source=''./old_name.txt'', destination=''./new_name.txt''
+
+
+      주의사항:
+
+      - 원본이 삭제됩니다 (이동이므로)
+
+      - 대상 경로에 이미 파일이 있으면 덮어씁니다'
+    input_schema:
+      type: object
+      properties:
+        source:
+          type: string
+          description: 원본 파일 또는 폴더 경로
+        destination:
+          type: string
+          description: 이동 대상 경로
+      required:
+      - source
+      - destination
+  - name: delete_path
+    description: '파일 또는 폴더를 삭제합니다.
+
+
+      사용법:
+
+      - 파일 삭제: 단일 파일 제거
+
+      - 폴더 삭제: 폴더와 하위 내용 전체 제거
+
+
+      주의사항:
+
+      - 이 작업은 되돌릴 수 없습니다 (휴지통으로 이동하지 않음)
+
+      - 사용자에게 반드시 확인 후 실행하세요'
+    input_schema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: 삭제할 파일 또는 폴더 경로
+      required:
+      - path
+  - name: read_op
+    description: '파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
+
+
+      파라미터: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 ''1-5'').
+      docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션. 스캔 PDF는 별도 OCR 필요.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 동작 분기 — target_description 참조
+      additionalProperties: true
+  - name: spreadsheet
+    description: '행 데이터를 xlsx 스프레드시트로 씁니다 (값만, 수식·서식 제외).
+
+
+      단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택)/sheet_name(선택). 다중 시트: sheets={시트명: rows}. path는 .xlsx 자동 보정, bare 파일명은 outputs/로.'
+    input_schema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: 출력 파일 경로 (.xlsx 자동 보정)
+        rows:
+          type: array
+          items:
+            type: array
+          description: 행 배열 — 각 행은 셀 값 배열 (단일 시트)
+        headers:
+          type: array
+          items:
+            type: string
+          description: 열 머리글 (선택, 첫 행으로 삽입)
+        sheet_name:
+          type: string
+          description: 단일 시트 이름 (기본 Sheet1)
+        sheets:
+          type: object
+          description: '다중 시트 {시트명: rows}. 주면 rows보다 우선.'
+      required:
+      - path

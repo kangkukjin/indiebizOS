@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "kosis",
   "name": "KOSIS Statistics",
   "description": "통계청 KOSIS API를 통한 국가통계 조회 도구. 인구, GDP, 물가, 고용 등 공식 통계 데이터를 검색하고 조회합니다. 경제 분석, 시장 조사, 정책 연구에 필요한 신뢰할 수 있는 국가 통계 제공.",

@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "web-collector",
   "name": "Web Collector",
   "description": "웹 정보 수집 가이드 + DB 프레임워크. 사이트별 가이드(어디서 뭘 어떻게 찾고, 어떤 형식으로 저장할지)를 관리하고, AI가 browser-action으로 수집한 데이터를 DB에 저장/조회합니다.",
@@ -12,13 +13,13 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "run(기본)/sites/query",
             "enum": [
               "run",
               "sites",
               "query"
             ],
-            "default": "run",
-            "description": "run(기본)/sites/query"
+            "default": "run"
           },
           "source": {
             "type": "string",

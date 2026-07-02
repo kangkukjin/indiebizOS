@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "android",
   "name": "Android Phone Control",
   "description": "ADB(uiautomator)로 안드로이드 폰 화면을 독해·터치·입력하는 얇은 센터피스. snapshot으로 요소를 읽고 ref/좌표로 조작.",
@@ -12,9 +13,17 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["snapshot", "tap", "type", "swipe", "key", "long_press", "open_app"],
-            "default": "snapshot",
-            "description": "수행할 동작"
+            "description": "수행할 동작",
+            "enum": [
+              "snapshot",
+              "tap",
+              "type",
+              "swipe",
+              "key",
+              "long_press",
+              "open_app"
+            ],
+            "default": "snapshot"
           },
           "query": {
             "type": "string",
@@ -38,14 +47,34 @@
           },
           "direction": {
             "type": "string",
-            "enum": ["up", "down", "left", "right"],
+            "enum": [
+              "up",
+              "down",
+              "left",
+              "right"
+            ],
             "description": "스와이프/스크롤 방향 (op=swipe)"
           },
-          "x1": {"type": "integer", "description": "스와이프 시작 X (op=swipe, 좌표 방식)"},
-          "y1": {"type": "integer", "description": "스와이프 시작 Y (op=swipe, 좌표 방식)"},
-          "x2": {"type": "integer", "description": "스와이프 끝 X (op=swipe, 좌표 방식)"},
-          "y2": {"type": "integer", "description": "스와이프 끝 Y (op=swipe, 좌표 방식)"},
-          "duration_ms": {"type": "integer", "description": "스와이프/롱프레스 지속 시간 ms"},
+          "x1": {
+            "type": "integer",
+            "description": "스와이프 시작 X (op=swipe, 좌표 방식)"
+          },
+          "y1": {
+            "type": "integer",
+            "description": "스와이프 시작 Y (op=swipe, 좌표 방식)"
+          },
+          "x2": {
+            "type": "integer",
+            "description": "스와이프 끝 X (op=swipe, 좌표 방식)"
+          },
+          "y2": {
+            "type": "integer",
+            "description": "스와이프 끝 Y (op=swipe, 좌표 방식)"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "description": "스와이프/롱프레스 지속 시간 ms"
+          },
           "key": {
             "type": "string",
             "description": "시스템 키 (op=key): back/home/enter/recent/delete/menu 등"
@@ -69,9 +98,11 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["notifications"],
-            "default": "notifications",
-            "description": "조회 종류"
+            "description": "조회 종류",
+            "enum": [
+              "notifications"
+            ],
+            "default": "notifications"
           },
           "limit": {
             "type": "integer",
@@ -101,9 +132,12 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["transcribe", "record"],
-            "default": "transcribe",
-            "description": "transcribe=받아쓰기(STT→텍스트), record=녹음(→오디오 파일)"
+            "description": "transcribe=받아쓰기(STT→텍스트), record=녹음(→오디오 파일)",
+            "enum": [
+              "transcribe",
+              "record"
+            ],
+            "default": "transcribe"
           },
           "timeout_sec": {
             "type": "integer",
@@ -124,7 +158,10 @@
         "properties": {
           "facing": {
             "type": "string",
-            "enum": ["back", "front"],
+            "enum": [
+              "back",
+              "front"
+            ],
             "default": "back",
             "description": "후면(back, 기본) 또는 전면(front) 카메라"
           }
@@ -140,9 +177,18 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["notify", "vibrate", "toast", "clipboard", "speak", "open_app", "sms", "call"],
-            "default": "notify",
-            "description": "수행할 동작"
+            "description": "수행할 동작",
+            "enum": [
+              "notify",
+              "vibrate",
+              "toast",
+              "clipboard",
+              "speak",
+              "open_app",
+              "sms",
+              "call"
+            ],
+            "default": "notify"
           },
           "to": {
             "type": "string",

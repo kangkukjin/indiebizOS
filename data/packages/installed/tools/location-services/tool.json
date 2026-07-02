@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "location-services",
   "name": "Location Services",
   "description": "위치 기반 서비스 도구. 날씨/대기질 조회, 맛집 검색, 자동차 길찾기, 지도 표시, 여행 정보(항공권/호텔/관광지) 검색을 제공합니다.",
@@ -37,12 +38,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "검색 종류",
             "enum": [
               "flight",
               "hotel"
             ],
-            "default": "flight",
-            "description": "검색 종류"
+            "default": "flight"
           },
           "to": {
             "type": "string",

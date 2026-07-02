@@ -203,3 +203,203 @@ actions:
     tool: crypto_price
     implementation: CoinGecko 무료 API로 암호화폐 시세 조회 (requests HTTP)
     target_key: coin_id
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: investment
+    name: Investment Tools
+    description: 한국/미국 기업의 주가·시세·재무·공시·뉴스 및 암호화폐 정보를 조회하는 투자 분석 도구 (op 분기 통합)
+    version: 2.0.0
+  tools:
+  - name: stock_op
+    description: '주식 시세·거래 데이터 조회 (op 분기) — [sense:stock]. ticker는 코드/티커 또는 회사명·ETF명(예 ''삼성전자''·''TIGER 200'', 내부에서 코드로 자동
+      해소). 시장(kr/us)은 자동판별(005930·.KS·한글=한국, 그 외=미국), market 파라미터로 강제 지정 가능.
+
+      - op=quote (기본): 현재가·현재 시세 (''얼마''·''주가''·''시세'' — Yahoo). 한국 005930, 미국 AAPL, ETF SPY.
+
+      - op=history: 기간별 주가 이력 (차트/추이용). period(상대기간 1mo/3mo/6mo/1y/ytd) 또는 start_date/end_date. 한국=KRX, 미국=FMP.
+
+      - op=info: 종목 메타 — 시가총액·52주 최고/최저·PER·배당 (Yahoo).
+
+      - op=search: 회사명·키워드로 심볼 검색. query 사용.
+
+      - op=investors: 투자자별 매매동향 (한국 전용). ticker 있으면 개별종목, 없으면 전체시장(market=STK 코스피/KSQ 코스닥/ALL).
+
+      - op=news: 종목 관련 뉴스 (Finnhub→Yahoo 폴백).
+
+      - op=earnings: 실적발표 일정 (EPS/매출 예상 vs 실적). ticker 비우면 전체 시장.
+
+
+      ## 예시
+
+      - stock_op(ticker=''삼성전자'')                      # 기본 quote=현재가
+
+      - stock_op(op=''history'', ticker=''TIGER 200'', period=''3mo'')
+
+      - stock_op(op=''search'', query=''삼성전자'')
+
+      - stock_op(op=''investors'', market=''KSQ'')          # 코스닥 전체시장'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: quote=현재가/현재시세(기본), history=기간이력/차트, info=종목메타, search=심볼검색, investors=매매동향(한국), news=종목뉴스, earnings=실적일정
+        ticker:
+          type: string
+          description: 종목코드/티커 (005930=한국, AAPL=미국, 자동 시장판별). 한국 종목명도 가능.
+        query:
+          type: string
+          description: '[search] 검색어 (회사명 또는 키워드, 예 ''삼성전자'', ''apple'')'
+        market:
+          type: string
+          description: '시장 강제 지정: ''kr''/''us''. [investors] 전체시장 시에는 STK(코스피)/KSQ(코스닥)/ALL.'
+        period:
+          type: string
+          enum:
+          - 1d
+          - 5d
+          - 1mo
+          - 3mo
+          - 6mo
+          - 1y
+          - 2y
+          - 5y
+          - 10y
+          - ytd
+          - max
+          description: '[quote] 조회 기간 (기본 5d) / [history] 상대기간(start_date 미지정 시 자동계산)'
+        interval:
+          type: string
+          enum:
+          - 1m
+          - 5m
+          - 15m
+          - 30m
+          - 1h
+          - 1d
+          - 1wk
+          - 1mo
+          description: '[quote] 데이터 간격 (기본 1d)'
+        start_date:
+          type: string
+          description: '[history/investors/news/earnings] 조회 시작일 (YYYY-MM-DD). history는 period로 대체 가능'
+        end_date:
+          type: string
+          description: '[history/investors/news/earnings] 조회 종료일 (YYYY-MM-DD)'
+        search_type:
+          type: string
+          enum:
+          - all
+          - quotes
+          - news
+          description: '[search] 검색 유형 (기본 quotes)'
+        max_points:
+          type: integer
+          description: '[quote/history] 반환 데이터 포인트 수 (기본 10)'
+      required: []
+  - name: company_op
+    description: '기업 펀더멘털 조회 (op 분기) — [sense:company]. 시장(kr/us)은 ticker로 자동판별(삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC), market
+      파라미터로 강제 지정 가능. 주가·시세는 stock_op.
+
+      - op=profile (기본): 기업 기본정보 — 대표·업종·주소·시총·섹터. 한국 DART / 미국 FMP.
+
+      - op=financials: 재무제표 — 재무상태표·손익계산서·현금흐름표. 한국은 year 필요, 미국은 statement_type/period.
+
+      - op=disclosures: 공시 검색. 한국 DART(정기/주요사항/지분/거래소), 미국 SEC EDGAR(10-K/10-Q/8-K).
+
+
+      ## 예시
+
+      - company_op(ticker=''삼성전자'')                              # 기본 profile (한국)
+
+      - company_op(op=''financials'', ticker=''삼성전자'', year=''2024'')
+
+      - company_op(op=''financials'', ticker=''AAPL'', statement_type=''income'')
+
+      - company_op(op=''disclosures'', ticker=''AAPL'', filing_type=''10-K'')'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: profile=기업정보(기본), financials=재무제표, disclosures=공시
+        ticker:
+          type: string
+          description: 기업명 또는 코드 (삼성전자/005930=한국, AAPL=미국, 자동 시장판별)
+        market:
+          type: string
+          description: '시장 강제 지정: ''kr''(DART)/''us''(FMP·SEC)'
+        corp_code:
+          type: string
+          description: '[한국] DART 고유번호 (8자리). ticker로 회사명 주면 불필요.'
+        year:
+          type: string
+          description: '[financials, 한국] 사업연도 (예 2024)'
+        report_type:
+          type: string
+          description: '[financials, 한국] 11011(연간)/11012(반기)/11013(1분기)/11014(3분기)'
+          default: '11011'
+        statement_type:
+          type: string
+          description: '[financials, 미국] income/balance/cashflow'
+          default: income
+        period:
+          type: string
+          description: '[financials, 미국] annual/quarter'
+          default: annual
+        limit:
+          type: integer
+          description: '[financials, 미국] 조회 기간 수 (기본 5)'
+          default: 5
+        pblntf_ty:
+          type: string
+          description: '[disclosures, 한국] A(정기)/B(주요사항)/D(지분)/I(거래소)'
+        filing_type:
+          type: string
+          description: '[disclosures, 미국] 10-K/10-Q/8-K (비우면 전체)'
+        start_date:
+          type: string
+          description: '[disclosures, 한국] 검색 시작일 (YYYYMMDD)'
+        end_date:
+          type: string
+          description: '[disclosures, 한국] 검색 종료일 (YYYYMMDD)'
+        count:
+          type: integer
+          description: '[disclosures] 조회할 공시 수 (한국 기본 20, 미국 기본 10)'
+      required: []
+  - name: crypto_price
+    description: 'CoinGecko API로 암호화폐 가격을 조회합니다 — [sense:crypto] (무료, API 키 불필요).
+
+
+      ## 장점
+
+      - API 키 불필요, 완전 무료
+
+      - USD/KRW 동시 조회
+
+
+      ## 지원 코인
+
+      - bitcoin (BTC), ethereum (ETH), ripple (XRP)
+
+      - dogecoin (DOGE), solana (SOL), cardano (ADA)
+
+      - 심볼(BTC, ETH)도 자동 변환
+
+
+      ## 반환 정보
+
+      - USD/KRW 현재가, 24시간 변동률
+
+      - 시가총액, 거래량, 역대 최고가'
+    input_schema:
+      type: object
+      properties:
+        coin_id:
+          type: string
+          description: 코인 ID 또는 심볼 (bitcoin, BTC 등)
+      required:
+      - coin_id

@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "lecture_workspace",
   "name": "강의 만들기 워크스페이스",
   "description": "강의 슬라이드를 한 장씩 협업으로 만드는 도구. indiebizOS/outputs/lectures/ 밑에 강의별 폴더(deck.json + materials/ + slides/)를 두고, 별도 Electron 창에서 재료/슬라이드 데크/AI 명령을 한 화면에 보며 작업한다.\n\n## IBL 통합 도구 (4개, op 분기)\n- lecture_op {op: list|create|load|delete|open}\n- slide_op {op: create|edit|delete|patch|rerender}\n- material_op {op: add|remove}\n- deck_op {op: reorder|export}\n\n옛 14개 단일 도구(lecture_create, slide_create 등)도 직접 호출 호환용으로 유지.",
@@ -13,14 +14,14 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "수행할 작업",
             "enum": [
               "list",
               "create",
               "load",
               "delete",
               "open"
-            ],
-            "description": "수행할 작업"
+            ]
           },
           "lecture_id": {
             "type": "string",
@@ -64,6 +65,7 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "수행할 작업",
             "enum": [
               "create",
               "edit",
@@ -71,8 +73,7 @@
               "patch",
               "rerender",
               "image_edit"
-            ],
-            "description": "수행할 작업"
+            ]
           },
           "lecture_id": {
             "type": "string",
@@ -109,11 +110,11 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "수행할 작업",
             "enum": [
               "add",
               "remove"
-            ],
-            "description": "수행할 작업"
+            ]
           },
           "lecture_id": {
             "type": "string",
@@ -146,11 +147,11 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "수행할 작업",
             "enum": [
               "reorder",
               "export"
-            ],
-            "description": "수행할 작업"
+            ]
           },
           "lecture_id": {
             "type": "string",

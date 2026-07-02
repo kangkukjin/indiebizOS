@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "data-ops",
   "name": "Data Ops (통화 변환자)",
   "description": "통화→통화 변환 동사(currency algebra). 생산자가 내는 공유 통화(records 목록형 / table 표형)를 받아 같은 통화로 변환 — filter/sort/take/select/dedup/groupby. >> 파이프로 임의 깊이 조합. 도메인 무관(한 번 짜서 모든 검색·목록 생산자에 곱해짐).",
@@ -10,7 +11,9 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "where": {"description": "필터 조건. 문자열·{field,op,value}·{열:값}·배열(AND)."}
+          "where": {
+            "description": "필터 조건. 문자열·{field,op,value}·{열:값}·배열(AND)."
+          }
         }
       }
     },
@@ -20,10 +23,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "by": {"type": "string", "description": "정렬 기준 필드/열 이름."},
-          "desc": {"type": "boolean", "description": "내림차순 여부(기본 false)."}
+          "by": {
+            "type": "string",
+            "description": "정렬 기준 필드/열 이름."
+          },
+          "desc": {
+            "type": "boolean",
+            "description": "내림차순 여부(기본 false)."
+          }
         },
-        "required": ["by"]
+        "required": [
+          "by"
+        ]
       }
     },
     {
@@ -32,7 +43,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "n": {"type": "integer", "description": "취할 개수(기본 10). 음수=뒤에서 n개."}
+          "n": {
+            "type": "integer",
+            "description": "취할 개수(기본 10). 음수=뒤에서 n개."
+          }
         }
       }
     },
@@ -42,9 +56,17 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "columns": {"type": "array", "items": {"type": "string"}, "description": "남길 열/필드 이름 배열."}
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "남길 열/필드 이름 배열."
+          }
         },
-        "required": ["columns"]
+        "required": [
+          "columns"
+        ]
       }
     },
     {
@@ -53,7 +75,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "by": {"type": "string", "description": "중복 판정 키 필드/열(미지정 시 records=title, table=첫 열)."}
+          "by": {
+            "type": "string",
+            "description": "중복 판정 키 필드/열(미지정 시 records=title, table=첫 열)."
+          }
         }
       }
     },
@@ -63,10 +88,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "by": {"type": "string", "description": "그룹 키 열 이름."},
-          "agg": {"type": "object", "description": "집계 명세. {새열:[op,원본열]} 또는 {원본열:op}."}
+          "by": {
+            "type": "string",
+            "description": "그룹 키 열 이름."
+          },
+          "agg": {
+            "type": "object",
+            "description": "집계 명세. {새열:[op,원본열]} 또는 {원본열:op}."
+          }
         },
-        "required": ["by"]
+        "required": [
+          "by"
+        ]
       }
     },
     {
@@ -75,15 +108,23 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "on": {"type": "string", "description": "조인 키 열 이름(양쪽 table에 모두 존재)."}
+          "on": {
+            "type": "string",
+            "description": "조인 키 열 이름(양쪽 table에 모두 존재)."
+          }
         },
-        "required": ["on"]
+        "required": [
+          "on"
+        ]
       }
     },
     {
       "name": "data_union",
       "description": "두 table(또는 두 records)을 행 결합. 같은 통화끼리. table은 열 이름으로 통합(순서 보존), records는 concat. & 병렬 두 입력. 중복 제거는 뒤에 >> dedup.",
-      "input_schema": {"type": "object", "properties": {}}
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
     },
     {
       "name": "data_merge",
@@ -91,7 +132,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "by": {"type": "string", "description": "중복 제거 키 필드(미지정 시 단순 concat)."}
+          "by": {
+            "type": "string",
+            "description": "중복 제거 키 필드(미지정 시 단순 concat)."
+          }
         }
       }
     }

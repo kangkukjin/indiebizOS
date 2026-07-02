@@ -196,3 +196,147 @@ actions:
               title: '{거래년도}.{거래월}.{거래일}'
               lines:
               - '{거래금액}만원 · {면적}㎡ · {층}층'
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: real-estate
+    name: Real Estate
+    description: 국토교통부 부동산 실거래가 API 도구. 아파트/주택의 매매·전월세 실거래가 조회, 지역코드 검색, 상권 분석 기능을 제공합니다. 시세 파악, 가격 추이 분석, 투자 검토에 활용.
+    version: 1.1.0
+  tools:
+  - name: search_commercial_district
+    description: '특정 위치 주변 또는 특정 행정동의 상권 정보(상가 목록)를 조회합니다.
+
+
+      ## 사용 시점
+
+      - 창업 전 주변 경쟁 업체 분석
+
+      - 특정 지역의 업종 분포 파악
+
+      - 부동산 매물 주변 상권 활성도 확인
+
+
+      ## 주요 파라미터
+
+      - lat, lng: 위경도 좌표
+
+      - radius: 검색 반경 (미터 단위)
+
+      - region_code: 행정동 코드 (10자리)
+
+      - indsLclsCd: 업종 대분류 (I: 음식, Q: 숙박, S: 서비스 등)
+
+
+      ## 반환 데이터 형식
+
+      각 상가: {name, branch, category, subcategory, address, lat, lng}
+
+      - name: 상호명
+
+      - lat, lng: 위경도 (show_location_map markers와 동일한 형식)
+
+
+      ## 지도 시각화 방법
+
+      결과의 data 배열을 show_location_map의 markers 파라미터로 직접 전달 가능
+
+      예: show_location_map(lat=중심위도, lng=중심경도, markers=결과.data)'
+    input_schema:
+      type: object
+      properties:
+        lat:
+          type: number
+          description: '위도 (예: 37.498)'
+        lng:
+          type: number
+          description: '경도 (예: 127.028)'
+        radius:
+          type: integer
+          description: 검색 반경 (m), 기본 500m
+          default: 500
+        region_code:
+          type: string
+          description: 행정동 코드 10자리
+        indsLclsCd:
+          type: string
+          description: '업종 대분류 코드 (I: 음식, Q: 숙박, R: 학문/교육, S: 소매, T: 생활서비스, U: 의료, V: 부동산, W: 관광/여가/오락)'
+  - name: realty_op
+    description: "부동산 시세·매물 (op 분기) — [sense:realty].\n- op=query(기본): source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가(체결된\
+      \ 과거 거래, 링크·사진 없음). region(시군구명, 자동코드변환) 또는 region_code(5자리) + type(apt/house/villa) + deal(trade/rent) + dong + start_month/end_month.\n\
+      \  · source=zigbang: 직방 현재 매물(지금 나온 호가·사진·클릭 링크). region(지명/동/건물명) 또는 lat/lng + type(villa/oneroom/officetel) + deal(trade/rent)\
+      \ + lease(전세/월세로 좁힘) + deposit_max/rent_max(만원) + radius(m,기본3000) + limit. 빌라/원룸/오피스텔 개별 호실 강함, 아파트·단독/다가구 약함.\n- op=codes:\
+      \ city(시/도명) → 법정동 지역코드 목록(보조, region 자동변환으로 보통 불필요)."
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: query(기본)/codes
+        source:
+          type: string
+          enum:
+          - molit
+          - zigbang
+          default: molit
+          description: '[query] 데이터 소스. molit=국토부 실거래가(체결·기본), zigbang=직방 현재 매물(호가·링크·사진)'
+        region:
+          type: string
+          description: '[query] 지역명(molit=강남구 등 시군구 / zigbang=동·지명·건물명 예 ''평택 죽백동'', ''배다리도서관'')'
+        region_code:
+          type: string
+          description: '[query molit] 법정동 5자리'
+        type:
+          type: string
+          enum:
+          - apt
+          - house
+          - villa
+          - oneroom
+          - officetel
+          description: '[query] molit=apt/house/villa · zigbang=villa/oneroom/officetel'
+        deal:
+          type: string
+          enum:
+          - trade
+          - rent
+          description: '[query] trade(매매)/rent(전월세)'
+        lease:
+          type: string
+          enum:
+          - 전세
+          - 월세
+          description: '[query zigbang] deal=rent를 전세/월세로 좁힘'
+        dong:
+          type: string
+          description: '[query molit] 법정동으로 결과 좁히기'
+        lat:
+          type: number
+          description: '[query zigbang] 중심 위도(region 대신 좌표 직접 지정)'
+        lng:
+          type: number
+          description: '[query zigbang] 중심 경도'
+        radius:
+          type: integer
+          description: '[query zigbang] 검색 반경(m), 기본 3000'
+        deposit_max:
+          type: integer
+          description: '[query zigbang] 보증금 상한(만원)'
+        rent_max:
+          type: integer
+          description: '[query zigbang] 월세 상한(만원)'
+        limit:
+          type: integer
+          description: '[query zigbang] 최대 매물 수(기본 30)'
+        start_month:
+          type: string
+          description: '[query molit] YYYYMM'
+        end_month:
+          type: string
+          description: '[query molit] YYYYMM'
+        city:
+          type: string
+          description: '[codes] 시/도명'
+      required: []

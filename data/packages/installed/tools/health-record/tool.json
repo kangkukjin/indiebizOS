@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "health-record",
   "name": "Health Record",
   "description": "건강 정보 기록 및 조회 도구. 혈압, 혈당, 체중 측정값과 증상, 투약 정보를 저장하고 분석합니다. 가족 구성원별 관리 지원. 건강 추이 확인, 병원 방문 전 기록 정리에 활용.",
@@ -12,12 +13,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "동작 분기 — target_description 참조",
             "enum": [
               "save",
               "query",
               "delete"
-            ],
-            "description": "동작 분기 — target_description 참조"
+            ]
           },
           "record_type": {
             "type": "string",

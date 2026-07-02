@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "study",
   "name": "Academic Research",
   "description": "학술 논문 검색, 여론 조사, 뉴스 아카이브 및 글로벌 경제 지표 접근 도구 (OpenAlex, arXiv, Pew Research, The Guardian, World Bank 등)",
@@ -111,12 +112,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "search(기본)/download",
             "enum": [
               "search",
               "download"
             ],
-            "default": "search",
-            "description": "search(기본)/download"
+            "default": "search"
           },
           "source": {
             "type": "string",
@@ -158,12 +159,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "find(기본)/coauthor",
             "enum": [
               "find",
               "coauthor"
             ],
-            "default": "find",
-            "description": "find(기본)/coauthor"
+            "default": "find"
           },
           "name": {
             "type": "string",

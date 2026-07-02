@@ -26,3 +26,32 @@ actions:
     - MP4
     - 렌더링
     - 상태
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: remotion-video
+    name: Remotion Video
+    description: React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프레임워크를 사용하여 React/TSX 컴포넌트를 MP4 동영상으로 렌더링합니다.
+    version: 1.0.0
+  tools:
+  - name: remotion
+    description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status
+      (기본 render_inline).
+
+
+      파라미터: op로 분기 (기본 render_inline).
+
+      - render_inline: composition_code(인라인 TSX 문자열) 필수.
+
+      - render_file: composition_file(TSX 파일 절대경로) 필수.
+
+      - status: 파라미터 없음, Remotion/Node.js 설치 상태만 반환.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 동작 분기 — target_description 참조
+      additionalProperties: true

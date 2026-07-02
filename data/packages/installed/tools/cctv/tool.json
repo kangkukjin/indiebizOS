@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "cctv",
   "name": "CCTV 실시간 영상",
   "description": "CCTV 및 실시간 웹캠 통합 도구\n\n## 소스\n- UTIC 도시교통정보센터 (한국 시내도로 CCTV, 16,000+대 실시간 API)\n- ITS 국가교통정보센터 (한국 고속도로/국도 CCTV)\n- Windy Webcams (전세계 웹캠)\n\n## 주요 기능\n- 위치/키워드 기반 CCTV 검색 (UTIC+ITS+Windy 통합)\n- 가장 가까운 CCTV 찾기\n- 실시간 영상 URL 제공\n- 화면 캡처 (ffmpeg/이미지)\n- UTIC 실시간 API 연동 (캐시 자동 갱신)\n\n## 필요 환경변수\n- UTIC_API_KEY: 도시교통정보센터 API 키\n- ITS_API_KEY: 국가교통정보센터 API 키\n- WINDY_API_KEY: Windy Webcams API 키 (선택)",
@@ -12,13 +13,13 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "search=키워드 검색(기본), nearby=좌표 근처 CCTV, webcam=좌표 근처 해외 경치 웹캠",
             "enum": [
               "search",
               "nearby",
               "webcam"
             ],
-            "default": "search",
-            "description": "search=키워드 검색(기본), nearby=좌표 근처 CCTV, webcam=좌표 근처 해외 경치 웹캠"
+            "default": "search"
           },
           "query": {
             "type": "string",
@@ -59,12 +60,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "stats=전체 소스 현황 통계 / refresh=UTIC 캐시 갱신(유지보수)",
             "enum": [
               "stats",
               "refresh"
             ],
-            "default": "stats",
-            "description": "stats=전체 소스 현황 통계 / refresh=UTIC 캐시 갱신(유지보수)"
+            "default": "stats"
           }
         }
       }
@@ -77,12 +78,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "CCTV 동작",
             "enum": [
               "open",
               "capture"
             ],
-            "default": "open",
-            "description": "CCTV 동작"
+            "default": "open"
           },
           "url": {
             "type": "string",

@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "youtube",
   "name": "YouTube Tools",
   "description": "YouTube 영상 도구. 영상 정보 조회, 자막 추출 및 요약, MP3 다운로드, PC 스피커 음악 재생 기능을 제공합니다. 영상 내용 분석, 음악 감상, 팟캐스트 청취, 영상 요약 문서화에 활용.",
@@ -32,6 +33,7 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "음악 동작",
             "enum": [
               "play",
               "add",
@@ -40,8 +42,7 @@
               "stop",
               "download"
             ],
-            "default": "play",
-            "description": "음악 동작"
+            "default": "play"
           },
           "query": {
             "type": "string",
@@ -78,14 +79,14 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "info(기본)/transcript/languages/summarize",
             "enum": [
               "info",
               "transcript",
               "languages",
               "summarize"
             ],
-            "default": "info",
-            "description": "info(기본)/transcript/languages/summarize"
+            "default": "info"
           },
           "url": {
             "type": "string",

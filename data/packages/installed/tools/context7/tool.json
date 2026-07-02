@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "context7",
   "name": "Context7 Docs",
   "description": "라이브러리/프레임워크 최신 공식 문서 검색. 코드 생성 시 최신 API와 사용법을 실시간으로 조회하여 정확한 코드를 작성할 수 있도록 지원합니다.",
@@ -12,12 +13,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "resolve(기본)/search",
             "enum": [
               "resolve",
               "search"
             ],
-            "default": "resolve",
-            "description": "resolve(기본)/search"
+            "default": "resolve"
           },
           "library_name": {
             "type": "string",

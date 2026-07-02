@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "contest",
   "name": "AI Contest Search",
   "description": "Kaggle 국제 AI/데이터 경진대회 검색 도구. 키워드·정렬·카테고리로 상금·마감일이 걸린 출품 기회를 찾는다. indiebizOS 홍보·실력 검증용 대회 탐색에 활용.",

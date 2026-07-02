@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "culture",
   "name": "Culture & Arts",
   "description": "공연, 도서, 전시 등 문화 예술 정보 조회 도구. KOPIS API로 공연/박스오피스/공연장 정보를, 도서관 정보나루 API로 도서 검색/인기대출/추천도서 정보를 제공합니다.",
@@ -410,14 +411,14 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "search=공연검색(기본), venue=공연장, genres=장르코드, regions=지역코드",
             "enum": [
               "search",
               "venue",
               "genres",
               "regions"
             ],
-            "default": "search",
-            "description": "search=공연검색(기본), venue=공연장, genres=장르코드, regions=지역코드"
+            "default": "search"
           },
           "keyword": {
             "type": "string",
@@ -463,13 +464,13 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "search=도서검색(기본), recommended=추천도서, codes=분류코드목록",
             "enum": [
               "search",
               "recommended",
               "codes"
             ],
-            "default": "search",
-            "description": "search=도서검색(기본), recommended=추천도서, codes=분류코드목록"
+            "default": "search"
           },
           "title": {
             "type": "string",
@@ -531,12 +532,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "western=Gutenberg 서양고전(기본), korean=한국고전종합DB",
             "enum": [
               "western",
               "korean"
             ],
-            "default": "western",
-            "description": "western=Gutenberg 서양고전(기본), korean=한국고전종합DB"
+            "default": "western"
           },
           "query": {
             "type": "string",

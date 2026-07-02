@@ -18,3 +18,28 @@ actions:
     - 조항
     - 헌재
     - 행정규칙
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: legal
+    name: Legal
+    description: 대한민국 법률 정보 검색 도구. 국가법령정보센터(law.go.kr) API를 통해 법령, 판례, 행정규칙, 자치법규, 법령해석, 헌재결정례 등을 검색하고 상세 내용을 조회합니다.
+    version: 1.0.0
+  tools:
+  - name: legal_lookup
+    description: 대한민국 법률 정보 통합 조회 (국가법령정보센터 law.go.kr). query를 주면 검색, id를 주면 상세. target으로 종류 지정(law/prec/admrul/ordin/exp/detc/trty/eng_law/law_term/law_form).
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 검색어 (id 없을 때 사용)
+        id:
+          type: string
+          description: 상세 조회용 항목 ID (query 없을 때 사용)
+        target:
+          type: string
+          description: 대상 (law/prec/admrul/ordin/exp/detc/trty/eng_law/law_term/law_form)
+          default: law

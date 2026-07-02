@@ -160,3 +160,105 @@ nodes:
         - 라디오즐겨찾기
         - 즐겨찾기 추가
         - 즐겨찾기 삭제
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: radio
+    name: Radio Tools
+    description: 인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전세계 라디오를 검색하고, 한국 주요 방송사(KBS/MBC/SBS/TBS/CBS) 직접 스트리밍을 지원합니다. PC 스피커로
+      라디오를 들을 수 있습니다.
+    version: 1.0.0
+  tools:
+  - name: radio_status
+    description: '현재 라디오 재생 상태를 확인합니다.
+
+
+      ## 반환 정보
+
+      - 재생 중 여부
+
+      - 재생 중인 방송국 이름
+
+      - 재생 시간'
+    input_schema:
+      type: object
+      properties: {}
+  - name: set_radio_volume
+    description: 라디오 볼륨을 조절합니다.
+    input_schema:
+      type: object
+      properties:
+        volume:
+          type: integer
+          description: 볼륨 (0-100)
+      required:
+      - volume
+  - name: radio_favorite_op
+    description: 라디오 즐겨찾기 관리 단일 디스패처. op으로 list/add/remove 분기.
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 즐겨찾기 동작
+        name:
+          type: string
+          description: 별칭 (add/remove)
+        station_id:
+          type: string
+          description: 방송국 ID (add)
+        stream_url:
+          type: string
+          description: 스트림 URL (add)
+      required:
+      - op
+  - name: radio_op
+    description: 라디오 재생/중지 단일 디스패처. op으로 play/stop 분기 (기본 play).
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 재생 동작
+        station_id:
+          type: string
+          description: 방송국 ID (op=play 시)
+        stream_url:
+          type: string
+          description: 스트림 URL (op=play 시)
+        volume:
+          type: integer
+          description: 볼륨 0-100 (op=play 시, 기본 70)
+  - name: radio_search_op
+    description: '라디오 방송국 검색·탐색 (op 분기) — [sense:radio]. 재생은 [limbs:radio].
+
+      - op=search(기본): 전세계 인터넷 라디오 (Radio Browser). name/tag/country/language/limit.
+
+      - op=korean: 한국 방송사 채널 (KBS/MBC/SBS/TBS/CBS/EBS). broadcaster(비우면 전체).'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: search(기본)/korean
+        name:
+          type: string
+          description: '[search] 방송국 이름'
+        tag:
+          type: string
+          description: '[search] 장르 태그'
+        country:
+          type: string
+          description: '[search] 국가'
+        language:
+          type: string
+          description: '[search] 언어'
+        limit:
+          type: integer
+          description: '[search] 결과 수(기본 10)'
+        broadcaster:
+          type: string
+          description: '[korean] KBS/MBC/SBS 등(비우면 전체)'
+      required: []

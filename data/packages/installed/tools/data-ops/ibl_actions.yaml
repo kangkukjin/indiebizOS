@@ -153,3 +153,100 @@ actions:
     - merge
     - 통합
     - 목록합치기
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: data-ops
+    name: Data Ops (통화 변환자)
+    description: 통화→통화 변환 동사(currency algebra). 생산자가 내는 공유 통화(records 목록형 / table 표형)를 받아 같은 통화로 변환 — filter/sort/take/select/dedup/groupby.
+      >> 파이프로 임의 깊이 조합. 도메인 무관(한 번 짜서 모든 검색·목록 생산자에 곱해짐).
+    version: 1.0.0
+  tools:
+  - name: data_filter
+    description: 'records|table → 조건 부분집합. where: 문자열(전 필드 부분일치) 또는 {field,op,value}(op=eq/ne/lt/le/gt/ge/contains/in) 또는
+      {열:값} 단축형 또는 조건 배열(AND). >> 앞 통화를 받음.'
+    input_schema:
+      type: object
+      properties:
+        where:
+          description: 필터 조건. 문자열·{field,op,value}·{열:값}·배열(AND).
+  - name: data_sort
+    description: records|table → 정렬. by(필드/열명, 필수), desc(bool, 기본 false). 수치 인식 정렬. >> 앞 통화를 받음.
+    input_schema:
+      type: object
+      properties:
+        by:
+          type: string
+          description: 정렬 기준 필드/열 이름.
+        desc:
+          type: boolean
+          description: 내림차순 여부(기본 false).
+      required:
+      - by
+  - name: data_take
+    description: records|table → 상위 n개. n(기본 10). 음수면 뒤에서 n개. >> 앞 통화를 받음.
+    input_schema:
+      type: object
+      properties:
+        n:
+          type: integer
+          description: 취할 개수(기본 10). 음수=뒤에서 n개.
+  - name: data_select
+    description: table → 열 투영(남길 columns만). records면 해당 필드만 추림. columns(필수). >> 앞 통화를 받음.
+    input_schema:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            type: string
+          description: 남길 열/필드 이름 배열.
+      required:
+      - columns
+  - name: data_dedup
+    description: records|table → 중복 제거(첫 항목 유지). by(키 필드/열, records 기본 title·table 기본 첫 열). 정규화 후 비교. >> 앞 통화를 받음.
+    input_schema:
+      type: object
+      properties:
+        by:
+          type: string
+          description: 중복 판정 키 필드/열(미지정 시 records=title, table=첫 열).
+  - name: data_groupby
+    description: table → 그룹 집계. by(그룹 키 열, 필수), agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count).
+      >> 앞 table 통화를 받음.
+    input_schema:
+      type: object
+      properties:
+        by:
+          type: string
+          description: 그룹 키 열 이름.
+        agg:
+          type: object
+          description: 집계 명세. {새열:[op,원본열]} 또는 {원본열:op}.
+      required:
+      - by
+  - name: data_join
+    description: 'table×table → 키 열로 inner join. on(양쪽 공통 키 열, 필수). 결과 열=좌측 전체+우측(키 제외). & 병렬 두 입력. 예: [A] & [B] >> [table:join]{on:"연도"}.'
+    input_schema:
+      type: object
+      properties:
+        'on':
+          type: string
+          description: 조인 키 열 이름(양쪽 table에 모두 존재).
+      required:
+      - 'on'
+  - name: data_union
+    description: 두 table(또는 두 records)을 행 결합. 같은 통화끼리. table은 열 이름으로 통합(순서 보존), records는 concat. & 병렬 두 입력. 중복 제거는 뒤에 >> dedup.
+    input_schema:
+      type: object
+      properties: {}
+  - name: data_merge
+    description: 두 records를 합침(concat). by 지정 시 그 키로 중복 제거. 여러 검색 결과를 한 목록으로. & 병렬 두 입력. (표형 결합은 union.)
+    input_schema:
+      type: object
+      properties:
+        by:
+          type: string
+          description: 중복 제거 키 필드(미지정 시 단순 concat).

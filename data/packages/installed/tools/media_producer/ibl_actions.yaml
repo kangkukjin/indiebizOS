@@ -218,3 +218,416 @@ nodes:
         - document
         - 리포트
         - 페이지
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: media_producer
+    name: Media Producer
+    description: 홍보용 슬라이드 이미지, HTML 기반 MP4 동영상, AI 이미지 생성 도구. HTML+CSS 애니메이션을 Playwright로 녹화하여 동영상을 제작합니다.
+    version: 1.0.0
+  tools:
+  - name: render_html_to_image
+    description: 'HTML/CSS 코드를 이미지(PNG)로 렌더링합니다. Playwright 브라우저 엔진을 사용하여 고품질 렌더링을 지원합니다.
+
+
+      로컬 이미지 사용: base_path를 지정하면 HTML 내 상대 경로 이미지와 CSS background-image가 자동으로 Base64 변환되어 로드됩니다.'
+    input_schema:
+      type: object
+      properties:
+        html:
+          type: string
+          description: 렌더링할 전체 HTML 코드 (CSS 포함 권장)
+        output_path:
+          type: string
+          description: '저장할 파일명 (예: slide.png). 경로는 자동으로 프로젝트 outputs 폴더에 저장됨'
+        base_path:
+          type: string
+          description: 'HTML 내 상대 경로 이미지의 기준 디렉토리. 예: /Users/.../project 지정 시 <img src="images/photo.jpg">가 자동 로드됨'
+        width:
+          type: integer
+          description: '이미지 가로 크기 (기본: 1280)'
+          default: 1280
+        height:
+          type: integer
+          description: '이미지 세로 크기 (기본: 720)'
+          default: 720
+        selector:
+          type: string
+          description: 특정 요소만 캡처하고 싶은 경우의 CSS 셀렉터 (선택)
+      required:
+      - html
+  - name: generate_gemini_image
+    description: 'Google Gemini API로 AI 이미지를 생성합니다. 고품질 이미지 생성에 적합하며, 텍스트 렌더링 성능이 뛰어납니다.
+
+
+      환경변수 GEMINI_API_KEY를 설정하거나 api_key 파라미터로 전달하세요.
+
+
+      비율 옵션: 1:1(기본), 16:9, 9:16, 4:3, 3:4'
+    input_schema:
+      type: object
+      properties:
+        prompt:
+          type: string
+          description: 이미지를 설명하는 텍스트 프롬프트 (영어 권장)
+        output_path:
+          type: string
+          description: '저장할 파일명 (예: cover.png). 경로는 자동으로 프로젝트 outputs 폴더에 저장됨. 지정하지 않으면 자동 생성'
+        aspect_ratio:
+          type: string
+          description: 이미지 비율 (1:1, 16:9, 9:16, 4:3, 3:4)
+          default: '1:1'
+        api_key:
+          type: string
+          description: Gemini API 키 (환경변수 GEMINI_API_KEY가 없을 때 사용)
+      required:
+      - prompt
+  - name: create_tts
+    description: 텍스트를 음성 파일(MP3)로 변환합니다. Edge TTS 사용. 나레이션 생성용.
+    input_schema:
+      type: object
+      properties:
+        text:
+          type: string
+          description: 음성으로 변환할 텍스트
+        voice:
+          type: string
+          description: '목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성, ko-KR-HyunsuMultilingualNeural: 중성/멀티링구얼)'
+          default: ko-KR-SunHiNeural
+        rate:
+          type: string
+          description: '말하기 속도 (예: +0%, -10%, +20%)'
+          default: +0%
+        pitch:
+          type: string
+          description: '목소리 톤/피치 (예: +0Hz, -5Hz, +10Hz)'
+          default: +0Hz
+        output_filename:
+          type: string
+          description: '저장할 파일명 (예: narration_01.mp3)'
+      required:
+      - text
+  - name: create_shadcn_slides
+    description: "shadcn/ui 스타일 고품질 슬라이드(PNG) 생성. 마케팅용 + 강의용 레이아웃 모두 지원, 디자인 시스템으로 책 단위 비주얼 정체성 부여.\n\n## 유일한 호출 형식\n반드시 `slides`\
+      \ 배열을 인라인으로 전달. `topic` 같은 호출 형식은 없음 (전달해도 명시적 오류).\n\n```\n[engines:slide_shadcn]{slides: [\n  {layout: \"hero\", title:\
+      \ \"제목\", subtitle: \"부제\"},\n  {layout: \"lecture_body\", eyebrow: \"1장\", title: \"...\", body: \"...\", bullets:\
+      \ [\"...\"], quote: \"...\"}\n], design_system: \"vintage_book\"}\n```\n\n## 마케팅·제품 레이아웃\n- `hero`: 제목 중앙 정렬 (표지)\n\
+      - `hero_image`: 좌 텍스트 + 우 이미지 (image_path)\n- `features`: 3열 카드 (features: [{title, description}])\n- `stats`: 4열 숫자\
+      \ (stats: [{value, label}])\n- `testimonial`: 인용 카드 (quote, author, role)\n- `pricing`: 가격표 (plans: [{name, price, features,\
+      \ highlighted}])\n- `cta`: 행동 유도 풀스크린 (title, subtitle, cta_text)\n- `content_image`: 좌 텍스트 + 우 이미지 (title, content,\
+      \ image_path)\n- `steps`: 가로 단계 (steps: [{title, description}])\n- `custom`: Tailwind 자유 작성 (custom_html)\n\n## 강의·콘텐츠\
+      \ 레이아웃 (강의·발표·책 강의용 — 본문 분량이 많을 때)\n- `lecture_body`: 강의 본문 — 한 슬라이드에 제목+본문 단락+불릿+강조 인용까지. 가장 자주 쓰는 강의 슬라이드. 키: `eyebrow`(부\
+      \ 이름), `title`, `subtitle`, `body`(단락), `bullets`(리스트), `quote`(좌측 강조선 인용), `footer`(하단 한 줄)\n- `metaphor_story`: 메타포\
+      \ 스토리 — 큰 본문 스토리 + 한 줄 결론. 햄릿/깜깜한 계단 같은 핵심 메타포에 적합. 키: `label`, `story`(긴 본문), `takeaway`(강조 결론)\n- `comparison_table`:\
+      \ 비교 표 — 좌우/다열 비교 (v0 vs v5 등). 키: `eyebrow`, `title`, `subtitle`, `headers`(컬럼명 배열), `rows`(2차원 배열), `footer`\n- `factbox`:\
+      \ 팩트박스 — 책의 보조 정보 (역사, 정의, 수치). 키: `label`(기본 \"팩트박스\"), `title`, `body`(단락), `items`(불릿), `source`(출처)\n- `quote`:\
+      \ 인용 풀스크린 — 강력한 핵심 인용 한 줄. 키: `quote`, `attribution`, `context`(부연)\n\n## 테마 (theme 키, 색만 바꿈)\ndefault, blue, green,\
+      \ purple, orange, dark\n\n## 디자인 시스템 (design_system 키, 책 단위 비주얼 정체성)\n색·폰트·배경 텍스처·장식까지 한 묶음으로 적용. theme보다 우선. 모든 슬라이드가\
+      \ 한 권의 책의 한 페이지처럼 일관됨.\n- `default`: 기본 (디자인 시스템 없음, theme만 적용)\n- `vintage_book`: 베이지 종이 + 청·적갈 잉크 + Gowun Batang 명조\
+      \ 디스플레이 + Noto Serif KR 본문 + 종이 노이즈 + 컴퍼스 코너 마크. 책 강의·인문 발표·고전 양식.\n- `academic_paper`: 미색 종이 + 진남색 + 진홍색 강조 + Crimson\
+      \ Text 세리프 + IBM Plex 라벨 + 중앙 푸터. 학술 논문·연구 발표·기술 보고서.\n- `tech_minimal`: 다크 남색 + 시안 네온 + Inter + JetBrains Mono 라벨 +\
+      \ 그리드 배경 + 빛나는 시안 점. 테크 컨퍼런스·제품 데모·개발자 발표.\n- `magazine_modern`: 흰 배경 + 검정 + 선명한 적색 강조 + Bebas Neue 헤드라인 + Playfair\
+      \ Display 본문 + 굵은 적색 막대. 편집·잡지·트렌드 콘텐츠.\n\n## 강의용 슬라이드 작성 팁\n- 본문 분량이 많고 강사가 설명할 거리가 필요하면 `lecture_body`\n- 비교가 핵심이면\
+      \ `comparison_table` (마케팅용 features보다 표가 훨씬 가독성 좋음)\n- 메타포/스토리는 `metaphor_story` 1장 + 결론 슬라이드 1장 식으로 분할\n- 핵심 명제 한 줄은\
+      \ `quote`로 임팩트 있게\n- 부연 정보(역사·정의·수치)는 `factbox`로 본문과 분리\n\n자세한 사용 예시는 read_guide(query=\"슬라이드\")로 확인."
+    input_schema:
+      type: object
+      properties:
+        slides:
+          type: array
+          description: 슬라이드 목록
+          items:
+            type: object
+            properties:
+              layout:
+                type: string
+                enum:
+                - hero
+                - hero_image
+                - features
+                - stats
+                - testimonial
+                - pricing
+                - cta
+                - content_image
+                - steps
+                - custom
+                description: 슬라이드 레이아웃 타입
+              title:
+                type: string
+                description: 제목
+              subtitle:
+                type: string
+                description: 부제목
+              badge:
+                type: string
+                description: 배지 텍스트 (hero 레이아웃)
+              cta_text:
+                type: string
+                description: CTA 버튼 텍스트
+              image_path:
+                type: string
+                description: 이미지 파일 경로
+              image_position:
+                type: string
+                enum:
+                - left
+                - right
+                description: 이미지 위치 (content_image 레이아웃)
+              content:
+                type: string
+                description: 본문 내용 (content_image 레이아웃)
+              features:
+                type: array
+                description: 기능 목록 (features 레이아웃)
+                items:
+                  type: object
+                  properties:
+                    icon:
+                      type: string
+                      description: 이모지 또는 아이콘
+                    title:
+                      type: string
+                    description:
+                      type: string
+              stats:
+                type: array
+                description: 통계 목록 (stats 레이아웃)
+                items:
+                  type: object
+                  properties:
+                    value:
+                      type: string
+                    label:
+                      type: string
+              quote:
+                type: string
+                description: 인용문 (testimonial 레이아웃)
+              author:
+                type: string
+                description: 인용 작성자
+              role:
+                type: string
+                description: 작성자 역할
+              avatar_path:
+                type: string
+                description: 아바타 이미지 경로
+              plans:
+                type: array
+                description: 가격 플랜 (pricing 레이아웃)
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    price:
+                      type: string
+                    period:
+                      type: string
+                      default: /월
+                    description:
+                      type: string
+                    features:
+                      type: array
+                      items:
+                        type: string
+                    cta_text:
+                      type: string
+                    highlighted:
+                      type: boolean
+              steps:
+                type: array
+                description: 단계 목록 (steps 레이아웃)
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    description:
+                      type: string
+              custom_html:
+                type: string
+                description: 커스텀 HTML (custom 레이아웃, Tailwind 사용 가능)
+            required:
+            - layout
+        theme:
+          type: string
+          enum:
+          - default
+          - blue
+          - green
+          - purple
+          - orange
+          - dark
+          description: 전체 테마 (web-builder와 동일)
+          default: default
+        output_dir:
+          type: string
+          description: 결과물 저장 디렉토리
+        width:
+          type: integer
+          description: '슬라이드 너비 (기본: 1280)'
+          default: 1280
+        height:
+          type: integer
+          description: '슬라이드 높이 (기본: 720)'
+          default: 720
+      required:
+      - slides
+  - name: create_slide
+    description: '슬라이드 한 장 저작 기층 액션 [engines:slide]. 자연어 명령 한 줄을 받아 메시지 큐레이션(제목=명제, 한 장 한 아이디어)과 디자인 판단까지 한 뒤 PNG 한 장을 렌더해
+      반환한다. **기본값은 native(통짜 이미지, NotebookLM식 — 이미지 모델이 한글·다이어그램·일러스트를 한 장에 통째로 저작).** 빠르고 무료인 텍스트형(custom HTML, 이미지 API 안
+      씀)이 필요하면 style:"text"를 명시하라 — 카드/리포트 타일 등 발표 슬라이드가 아닌 대량·경량 용도엔 text가 적합. slide_shadcn(완성 spec→PNG 렌더러) 위의 저자 층.
+
+
+      ## 호출
+
+      [engines:slide]{instruction: "AI 협업의 핵심을 한 장으로", aesthetic: "vintage_book"}  // 기본 native
+
+      [engines:slide]{instruction: "...", style: "text", design_system: "vintage_book"}  // 빠른 텍스트형
+
+
+      참고 사실이 있으면 content로 넘겨 환각 방지.'
+    input_schema:
+      type: object
+      properties:
+        instruction:
+          type: string
+          description: 만들 슬라이드 설명 — 무엇을 말하는 한 장인지. (필수)
+        content:
+          type: string
+          description: 슬라이드의 근거가 될 사실·원문. 주어지면 여기서 인용하고 지어내지 않음. (선택)
+        design_system:
+          type: string
+          description: '톤 묶음: default/vintage_book/academic_paper/tech_minimal/magazine_modern/sf_blueprint. custom_html이
+            이 CSS 변수를 상속. (기본 default)'
+        width:
+          type: integer
+          description: 슬라이드 너비 px (기본 1280)
+        height:
+          type: integer
+          description: 슬라이드 높이 px (기본 720)
+        style:
+          type: string
+          description: 미지정 기본값="native"(통짜 이미지 — 이미지 모델이 한글·다이어그램·일러스트를 한 장에 통째로 저작, NotebookLM식 시각=의미 융합. aesthetic으로 톤 고정,
+            quality/image_size/verify 옵션). 유일한 대안은 "text"(자유형 HTML 빠른 경로·무료) — 카드/리포트 타일 등 발표 슬라이드가 아닌 경량 용도에만 명시. (선택)
+        aesthetic:
+          type: string
+          description: 'native 톤(한 덱을 한 톤으로 고정하면 일관된 책): vintage_book/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint.
+            미지정 시 design_system에서 매핑, 폴백 vintage_book. (선택)'
+        image_size:
+          type: string
+          description: 'native 해상도: 1K/2K(기본)/4K. (선택)'
+        quality:
+          type: string
+          description: 'native 생성 품질: pro(기본, Nano Banana Pro)/fast. (선택)'
+      required:
+      - instruction
+  - name: critique_gemini_image
+    description: Gemini Vision으로 이미지가 의도와 정합하는지 평가. 일러스트 자가 점검용. 반환은 JSON({passed, score, issues, notes}) + 사람 가독 요약.
+    input_schema:
+      type: object
+      properties:
+        image_path:
+          type: string
+          description: 평가할 이미지 절대 경로 또는 base64 data URI (필수)
+        intent:
+          type: string
+          description: 이 일러스트가 무엇을 표현해야 하는가 — 자연어 설명 (필수)
+        checks:
+          type: array
+          description: '추가 체크 항목 (예: [''다이어그램형인가'', ''오른쪽 1/3이 비어있는가''])'
+          items:
+            type: string
+        style_preset:
+          type: string
+          description: '디자인 시스템 톤 평가 기준 (예: sf_blueprint)'
+        api_key:
+          type: string
+          description: 선택. 미지정 시 GEMINI_API_KEY 환경변수 사용
+      required:
+      - image_path
+      - intent
+  - name: read_gemini_image
+    description: Gemini Vision으로 이미지를 읽어 질문에 자유서술로 답한다(시각 QA·OCR·검증). 스크린샷의 숫자/텍스트 읽기, 그림 내용 확인 등. 합격/점수 채점이 아님(그건 critique_gemini_image).
+    input_schema:
+      type: object
+      properties:
+        image_path:
+          type: string
+          description: 읽을 이미지 절대 경로 또는 base64 data URI (path 로도 받음, 필수)
+        question:
+          type: string
+          description: 무엇을 읽거나 답할지 (query/intent/prompt 로도 받음). 생략 시 전체 묘사
+        api_key:
+          type: string
+          description: 선택. 미지정 시 GEMINI_API_KEY 환경변수 사용
+      required:
+      - image_path
+  - name: html_video
+    description: 'HTML/CSS 씬을 MP4 영상으로 합성. topic 있으면 풀 파이프라인, scene_dir 있으면 마지막 렌더링만. (가이드 html_video.md)
+
+
+      파라미터: topic(주제) 또는 scene_dir(이미 만든 씬 디렉토리) 중 하나. scene_dir이 있으면 자동으로 렌더링 단계만 실행. scenes 파라미터로 씬 배열 직접 전달도 가능.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 동작 분기 — target_description 참조
+      additionalProperties: true
+  - name: render_document
+    description: '문서 IR(공유 문서 모델)을 산출물로 렌더 — [table:document]. 포맷 중립 IR을 emitter가 렌더(현재 html).
+
+      blocks(필수): 블록 배열. 타입 — heading{level,text}/paragraph{text}/list{ordered?,items[]}/image{src,caption?}/table{columns,rows}(데이터
+      통화 재사용)/quote{text,cite?}/code{text,lang?}/divider.
+
+      title(선택), filename(선택), format(기본 html).
+
+      ## 예시
+
+      - render_document(title="보고서", blocks=[{"type":"heading","level":2,"text":"요약"},{"type":"paragraph","text":"..."},{"type":"table","columns":["항목","값"],"rows":[["매출",100]]}])'
+    input_schema:
+      type: object
+      properties:
+        blocks:
+          type: array
+          description: 문서 IR 블록 배열 (각 블록 {type, ...}). 필수.
+          items:
+            type: object
+        title:
+          type: string
+          description: 문서 제목 (선택, 최상단 h1)
+        filename:
+          type: string
+          description: 출력 파일명 (선택, 기본 document)
+        format:
+          type: string
+          enum:
+          - html
+          - pdf
+          - png
+          default: html
+          description: '출력 포맷: html(기본)/pdf/png. pdf·png는 동일 HTML을 Playwright로 렌더. docx/pptx는 후속.'
+      required:
+      - blocks
+  - name: structure_document
+    description: '원본 콘텐츠를 문서 IR(blocks)로 구조화 — [table:structure]. LLM 편집자가 내용을 heading/paragraph/list/table/quote/code/divider
+      블록으로 정리. render_document로 이어 렌더(>> 파이프 지원: 이전 텍스트 결과를 content로 받음).
+
+      content(필수): 원본 텍스트. instruction(선택): 정리 방향(예 "3섹션 요약 보고서로").
+
+      ## 예시
+
+      - structure_document(content="...긴 글...", instruction="핵심만 요약 보고서로")'
+    input_schema:
+      type: object
+      properties:
+        content:
+          type: string
+          description: 구조화할 원본 텍스트 (필수, >> 파이프 시 생략 가능)
+        instruction:
+          type: string
+          description: 정리 방향 (선택, 예 "3섹션으로"·"표 위주로")

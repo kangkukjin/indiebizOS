@@ -26,3 +26,35 @@ actions:
     - API문서
     - context7
     - 공식문서
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: context7
+    name: Context7 Docs
+    description: 라이브러리/프레임워크 최신 공식 문서 검색. 코드 생성 시 최신 API와 사용법을 실시간으로 조회하여 정확한 코드를 작성할 수 있도록 지원합니다.
+    version: 1.0.0
+  tools:
+  - name: devdocs_op
+    description: '소프트웨어 라이브러리/프레임워크 공식 문서 (op 분기, Context7) — [sense:devdocs]. 코드 작성 시 API 참조용.
+
+      - op=resolve(기본): library_name(예 react/fastapi) → Context7 ID 후보.
+
+      - op=search: query + library_id(resolve 결과) 또는 library_name(자동 해소).'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: resolve(기본)/search
+        library_name:
+          type: string
+          description: 라이브러리 이름 (resolve 또는 search 자동해소용)
+        library_id:
+          type: string
+          description: '[search] Context7 ID (resolve 결과)'
+        query:
+          type: string
+          description: '[search] 알고 싶은 내용'
+      required: []

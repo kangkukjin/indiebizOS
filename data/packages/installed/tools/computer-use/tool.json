@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "computer-use",
   "name": "Computer Use",
   "description": "macOS 데스크톱 자동화. AI가 화면을 직접 보고 마우스/키보드를 조작합니다. 모든 좌표는 1280x800 가상 해상도 기준이며, 실제 해상도로 자동 변환됩니다.",
@@ -267,6 +268,7 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "수행할 동작 (snapshot=화면 독해: AX 요소+OCR 글자+클릭좌표)",
             "enum": [
               "snapshot",
               "screenshot",
@@ -278,8 +280,7 @@
               "scroll",
               "cursor_position",
               "screen_info"
-            ],
-            "description": "수행할 동작 (snapshot=화면 독해: AX 요소+OCR 글자+클릭좌표)"
+            ]
           },
           "ref": {
             "type": "string",

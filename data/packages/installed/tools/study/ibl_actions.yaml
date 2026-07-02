@@ -83,3 +83,229 @@ actions:
     tool: search_books
     implementation: Google Books API로 글로벌 도서 검색 (영어/다국어). 한국 도서는 sense:book 사용.
     target_key: query
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: study
+    name: Academic Research
+    description: 학술 논문 검색, 여론 조사, 뉴스 아카이브 및 글로벌 경제 지표 접근 도구 (OpenAlex, arXiv, Pew Research, The Guardian, World Bank 등)
+    version: 1.3.0
+  tools:
+  - name: fetch_pew_research
+    description: 'Pew Research Center의 최신 연구 및 여론 조사 결과를 가져옵니다.
+
+
+      ## Pew Research Center란?
+
+      - 사회적 이슈, 여론, 인구 통계 분야의 세계적 권위
+
+      - 데이터 중심의 중립적 분석 제공
+
+
+      ## 사용 시점
+
+      - 최신 사회 트렌드 파악
+
+      - 여론 조사 데이터 확인
+
+      - 인구 통계학적 근거가 필요할 때'
+    input_schema:
+      type: object
+      properties:
+        limit:
+          type: integer
+          description: 가져올 항목 수 (기본 10)
+          default: 10
+  - name: search_guardian
+    description: 'The Guardian의 기사를 검색합니다.
+
+
+      ## The Guardian API란?
+
+      - 가디언지의 방대한 기사 아카이브 접근
+
+      - 섹션, 태그, 날짜별 정교한 검색 지원
+
+
+      ## 사용 시점
+
+      - 특정 이슈에 대한 언론의 시각 파악
+
+      - 과거 기사 아카이브 검색
+
+      - 글로벌 뉴스 트렌드 분석'
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: '검색어 (예: ''South Korea education'')'
+        page_size:
+          type: integer
+          description: 결과 수 (기본 10)
+          default: 10
+        from_date:
+          type: string
+          description: 시작 날짜 (YYYY-MM-DD)
+        to_date:
+          type: string
+          description: 종료 날짜 (YYYY-MM-DD)
+      required:
+      - query
+  - name: fetch_world_bank_data
+    description: 'World Bank API를 사용하여 국가별 경제 및 사회 지표 데이터를 가져옵니다.
+
+
+      ## World Bank API란?
+
+      - 전 세계 국가의 경제 성장, 인구, 빈곤, 교육 등 수천 개의 지표 제공
+
+      - 시계열 데이터(연도별) 분석에 최적화
+
+
+      ## 주요 지표 코드 (Indicator Codes)
+
+      - NY.GDP.MKTP.CD: GDP (현재 US$)
+
+      - SP.POP.TOTL: 총 인구
+
+      - FP.CPI.TOTL.ZG: 인플레이션 (소비자 물가, 연간 %)
+
+      - SL.UEM.TOTL.ZS: 실업률 (총 노동력의 %)
+
+      - NY.GDP.PCAP.CD: 1인당 GDP (현재 US$)
+
+
+      ## 사용 시점
+
+      - 국가별 경제 성장 트렌드 분석
+
+      - 인구 통계 및 사회적 지표 확인
+
+      - 보고서에 객관적인 통계 수치 삽입
+
+
+      ## 반환 정보
+
+      - 연도별 지표 값, 국가명, 지표명'
+    input_schema:
+      type: object
+      properties:
+        indicator:
+          type: string
+          description: '지표 코드 (예: ''NY.GDP.MKTP.CD'')'
+        country:
+          type: string
+          description: '국가 코드 (ISO 3자리, 예: ''KOR'', ''USA'', ''all'')'
+          default: all
+        date:
+          type: string
+          description: '날짜 범위 (예: ''2010:2022'')'
+        per_page:
+          type: integer
+          description: 페이지당 결과 수 (기본 50)
+          default: 50
+      required:
+      - indicator
+  - name: search_books
+    description: 'Google Books API를 사용하여 도서 정보를 검색합니다.
+
+
+      ## 사용 시점
+
+      - 책을 인용하거나 참고 문헌 정보를 찾을 때
+
+      - 특정 주제에 대한 전문 서적 목록을 확인할 때
+
+      - ISBN, 저자, 출판사 등 상세 도서 정보를 확인할 때
+
+
+      ## 반환 정보
+
+      - 제목, 저자, 출판사, 발행일, ISBN
+
+      - 도서 요약(Description)
+
+      - 페이지 수, 카테고리'
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 검색어 (제목, 저자, 주제 등)
+        max_results:
+          type: integer
+          description: 최대 결과 수 (기본 5, 최대 40)
+          default: 5
+        order_by:
+          type: string
+          description: '정렬 기준: ''relevance''(관련성), ''newest''(최신순)'
+          default: relevance
+      required:
+      - query
+  - name: paper_op
+    description: '학술 논문 검색·다운로드 (op 분기) — [sense:paper]. source로 DB 선택. 웹검색은 search_ddg, 라이브러리 문서는 devdocs.
+
+      - op=search(기본): query + source(openalex 기본/arxiv/pubmed/semantic/nanet) + max_results. openalex=범용, arxiv=AI/CS/물리/수학
+      프리프린트, pubmed=생의학, semantic=AI/ML 심층(인용그래프), nanet=국내 학술논문·학위논문(국회도서관, 한국 인물·국내 학위 추적). nanet은 type(예 학위논문)·year로 좁힘.
+
+      - op=download: source(arxiv|pubmed) + id(arxiv_id 또는 PMC ID) + filename.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: search(기본)/download
+        source:
+          type: string
+          enum:
+          - openalex
+          - arxiv
+          - pubmed
+          - semantic
+          - nanet
+          default: openalex
+          description: 논문 DB. download는 arxiv|pubmed만. nanet=국내 학술논문·학위논문(국회도서관 국가학술정보)
+        query:
+          type: string
+          description: '[search] 검색 쿼리'
+        max_results:
+          type: integer
+          description: '[search] 최대 결과 수(기본 5)'
+        id:
+          type: string
+          description: '[download] arxiv_id(예 2301.07041) 또는 PMC ID(예 PMC1234567)'
+        filename:
+          type: string
+          description: '[download] 저장 파일명(선택)'
+      required: []
+  - name: researcher_op
+    description: '연구자(학자) 검색 (op 분기) — [sense:researcher]. 국회도서관 국가학술정보. 동명이인을 소속·출생연도·lodID로 분리. 일반 인물 OSINT는 search_ddg.
+
+      - op=find(기본): name(한글, 필수) + org(소속, 동명이인 압축) + name_en + max_results → 후보별 소속·출생연도·직위·lodID.
+
+      - op=coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망(소속·협업으로 신원 재확인).'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: find(기본)/coauthor
+        name:
+          type: string
+          description: '[find] 연구자명(한글)'
+        name_en:
+          type: string
+          description: '[find] 연구자명(영문, 선택)'
+        org:
+          type: string
+          description: '[find] 소속 기관(동명이인 압축, 선택)'
+        id:
+          type: string
+          description: '[coauthor] 연구자 lodID (find 결과에서 획득)'
+        max_results:
+          type: integer
+          description: 최대 결과 수(기본 30)
+      required: []

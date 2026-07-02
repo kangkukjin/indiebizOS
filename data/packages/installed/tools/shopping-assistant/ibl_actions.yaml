@@ -10,3 +10,42 @@ actions:
     tool: search_shopping
     implementation: Naver Shopping API + Playwright로 다나와/중고마켓 비공식 스크래핑 병렬 실행
     target_key: query
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: shopping-assistant
+    name: Shopping Assistant
+    description: 네이버 쇼핑, 다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색 도구. 최저가 찾기, 상품 정보 조회에 활용합니다.
+    version: 1.1.0
+  tools:
+  - name: search_shopping
+    description: '상품 검색을 수행합니다. 네이버 쇼핑(API), 다나와(크롤링), 중고 거래 사이트(중고나라, 번개장터 등)를 지원합니다.
+
+
+      지원 사이트: naver, danawa, used, all
+
+
+      데이터 형식: {items: [{name, price, mall, link, image, category, site}], total}'
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 검색할 상품명
+        site:
+          type: string
+          description: 검색할 사이트 (naver, danawa, used, all)
+          enum:
+          - naver
+          - danawa
+          - used
+          - all
+          default: all
+        display:
+          type: integer
+          description: 검색 결과 개수 (최대 10)
+          default: 5
+      required:
+      - query

@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "browser-action",
   "name": "Browser Action",
   "description": "Playwright + Chrome MCP 듀얼 드라이버 브라우저 자동화.\n\n[드라이버]\n- auto (기본): Chrome MCP 연결 시 Chrome 사용, 미연결 시 Playwright 폴백\n- chrome: 실제 Chrome 브라우저 제어 (로그인 상태/쿠키 유지)\n- playwright: 별도 Chromium 인스턴스 (헤드리스, stealth)\n\n[Chrome 드라이버 사용법]\n1. browser_chrome_connect로 Chrome MCP 서버 연결\n2. 이후 모든 도구가 자동으로 Chrome 드라이버 사용\n3. 실제 Chrome의 로그인 세션, 쿠키, 확장 프로그램 그대로 활용\n\n[Playwright 워크플로우]\n1. navigate → snapshot → ref 확인 → click/type (이 순서 필수)\n2. 페이지 이동/클릭 후 반드시 snapshot 재호출 (ref가 무효화됨)\n3. 복잡한 페이지(500+요소)에서는 evaluate로 JS 직접 실행\n4. 로그인 유지: cookies_save → 다음 세션에서 cookies_load",
@@ -12,6 +13,7 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "브라우저 동작",
             "enum": [
               "snapshot",
               "navigate",
@@ -40,8 +42,7 @@
               "cookies",
               "chrome"
             ],
-            "default": "snapshot",
-            "description": "브라우저 동작"
+            "default": "snapshot"
           },
           "mode": {
             "type": "string",

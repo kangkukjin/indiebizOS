@@ -136,3 +136,83 @@ nodes:
             empty: 대기열이 비어 있습니다
             k: '{position}'
             v: '{title|trunc:40} · {channel}'
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: youtube
+    name: YouTube Tools
+    description: YouTube 영상 도구. 영상 정보 조회, 자막 추출 및 요약, MP3 다운로드, PC 스피커 음악 재생 기능을 제공합니다. 영상 내용 분석, 음악 감상, 팟캐스트 청취, 영상 요약 문서화에
+      활용.
+    version: 1.1.0
+  tools:
+  - name: search_youtube
+    description: 유튜브 검색 (재생하지 않고 결과 목록만 반환). 검색어로 영상을 찾고 video_id, title, channel, duration, url 정보를 포함한 결과 목록을 반환합니다. 재생/다운로드/자막추출
+      전에 원하는 영상을 먼저 찾을 때 사용.
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: '검색어. 예: ''김필 너무 아픈 사랑은'', ''빅뱅 판타스틱베이비'''
+        count:
+          type: integer
+          description: 검색 결과 수 (1-10, 기본 5)
+      required:
+      - query
+  - name: music_op
+    description: 유튜브 음악 재생/대기열 단일 디스패처. op으로 play/add/skip/queue/stop/download 분기 (기본 play).
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 음악 동작
+        query:
+          type: string
+          description: 검색어 또는 URL (op=play/add 시)
+        url:
+          type: string
+          description: 유튜브 URL (op=download 시)
+        mode:
+          type: string
+          enum:
+          - audio
+          - video
+          description: 재생 모드 (op=play 시, 기본 audio)
+        count:
+          type: integer
+          description: 곡 수 (op=play/add 시)
+        output_path:
+          type: string
+          description: MP3 저장 경로 (op=download 시)
+  - name: video_op
+    description: '유튜브 동영상 조회 (op 분기) — [sense:video]. url 또는 video_id 필수. 검색은 search_youtube, 재생은 [limbs:music].
+
+      - op=info(기본): 메타데이터(제목·조회수·채널).
+
+      - op=transcript: 자막/스크립트. language 옵션.
+
+      - op=languages: 사용 가능한 자막 언어 목록.
+
+      - op=summarize: 자막+AI요약+HTML 보고서+브라우저 열기. summary_length 옵션.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: info(기본)/transcript/languages/summarize
+        url:
+          type: string
+          description: 유튜브 URL
+        video_id:
+          type: string
+          description: 유튜브 video_id (url 대신)
+        language:
+          type: string
+          description: '[transcript] 자막 언어 (예 ko/en)'
+        summary_length:
+          type: integer
+          description: '[summarize] 요약 길이(기본 3000)'
+      required: []

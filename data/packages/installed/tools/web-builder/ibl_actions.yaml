@@ -96,3 +96,192 @@ actions:
     - 카탈로그
     - shadcn
     - UI
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: web-builder
+    name: Web Builder & Homepage Manager
+    description: '홈페이지 제작과 관리를 위한 통합 도구 패키지.
+
+
+      ## 두 가지 시나리오
+
+
+      ### A. 새 홈페이지 만들기
+
+      create_project → add_component → create_page → edit_styles → preview_site → build_site → deploy_vercel
+
+
+      ### B. 기존 홈페이지 개선/수정
+
+      1) site_list로 등록된 사이트 확인
+
+      2) site_snapshot으로 현재 구조 파악
+
+      3) 기존 파일을 직접 읽고 수정
+
+      4) git push → 자동 배포 (또는 deploy_vercel)
+
+      5) site_live_check로 결과 확인
+
+
+      주의: 기존 사이트를 개선할 때 create_project를 호출하지 마세요.'
+    version: 2.0.0
+  tools:
+  - name: web_site
+    description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.
+
+
+      파라미터: op로 분기 (기본 list).
+
+      - list: 파라미터 없음. 등록된 사이트 전체 반환.
+
+      - register: name(필수) + local_path(필수) + repo_url/deploy_url/description(선택).
+
+      - remove: site_id(필수).
+
+      - update: site_id(필수) + 변경할 필드(name/local_path/repo_url/deploy_url/description).'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 동작 분기 — target_description 참조
+      additionalProperties: true
+  - name: web_op
+    description: '웹 프로젝트 생애주기 작업 (op 분기) — [engines:web]. UI 컴포넌트는 web_component_op, 사이트 목록은 web_site.
+
+      - op=preview(기본): 로컬 미리보기 서버. project_path + action(start/stop/status).
+
+      - op=create: 프로젝트/페이지 생성. target=site(name+template+features) | page(project_path+page_name+sections+metadata).
+
+      - op=build: 프로덕션 빌드(Next.js).
+
+      - op=deploy: Vercel 배포(project_name/production).
+
+      - op=snapshot: site_id 스크린샷.
+
+      - op=check: site_id Lighthouse 품질검사.
+
+      - op=styles: shadcn 테마 편집. project_path + theme(프리셋) 또는 custom_colors(HSL) + border_radius.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: preview(기본)/create/build/deploy/snapshot/check/styles
+        target:
+          type: string
+          enum:
+          - site
+          - page
+          description: '[create] site=새 프로젝트, page=페이지 추가'
+        name:
+          type: string
+          description: '[create site] 프로젝트 이름'
+        template:
+          type: string
+          description: '[create site] blank/landing/portfolio/blog/business'
+        features:
+          type: array
+          items:
+            type: string
+          description: '[create site] 기능 목록'
+        project_path:
+          type: string
+          description: 프로젝트 경로 (create page/preview/build/deploy)
+        page_name:
+          type: string
+          description: '[create page] 페이지 이름'
+        sections:
+          type: array
+          items:
+            type: string
+          description: '[create page] 섹션 배열'
+        metadata:
+          type: object
+          description: '[create page] 메타데이터'
+        action:
+          type: string
+          enum:
+          - start
+          - stop
+          - status
+          description: '[preview] 서버 제어'
+        port:
+          type: integer
+          description: '[preview] 포트(기본 3000)'
+        production:
+          type: boolean
+          description: '[deploy] 프로덕션 배포'
+        project_name:
+          type: string
+          description: '[deploy] Vercel 프로젝트명'
+        site_id:
+          type: string
+          description: '[snapshot/check] 등록된 사이트 ID'
+        theme:
+          type: string
+          enum:
+          - default
+          - blue
+          - green
+          - purple
+          - orange
+          - red
+          - custom
+          description: '[styles] 테마 프리셋 (custom이면 custom_colors 사용)'
+        custom_colors:
+          type: object
+          description: '[styles] theme=custom일 때 HSL 색상 (primary/background/foreground)'
+        border_radius:
+          type: string
+          enum:
+          - none
+          - sm
+          - md
+          - lg
+          - full
+          description: '[styles] 테두리 반경 (기본 md)'
+      required: []
+  - name: web_component_op
+    description: '웹 UI 컴포넌트 (op 분기) — [engines:web_component].
+
+      - op=fetch(기본): 외부 CDN/레지스트리에서 컴포넌트 코드 다운로드. component(이름/URL)+style+project_path+output_format(code/file).
+
+      - op=catalog: 카탈로그 조회. kind=components(button/card 등)|sections(hero/features 등), category 옵션.
+
+      - op=add: shadcn/ui CLI로 프로젝트에 설치. component+project_path.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: fetch(기본)/catalog/add
+        component:
+          type: string
+          description: '[fetch/add] 컴포넌트 이름 또는 URL'
+        kind:
+          type: string
+          enum:
+          - components
+          - sections
+          description: '[catalog] components 또는 sections'
+        category:
+          type: string
+          description: '[catalog] 카테고리 필터'
+        style:
+          type: string
+          description: '[fetch] 스타일(기본 new-york)'
+        project_path:
+          type: string
+          description: '[fetch/add] 프로젝트 경로'
+        output_format:
+          type: string
+          enum:
+          - code
+          - file
+          description: '[fetch] 출력 형식'
+      required: []

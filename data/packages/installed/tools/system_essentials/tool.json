@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "system_essentials",
   "name": "System Essentials Kit",
   "description": "에이전트 기본 도구 모음. 파일 읽기/쓰기/검색, 작업 목록(todo) 관리, 계획 모드, 사용자 질문, 이웃(연락처) 조회 기능을 제공합니다. 모든 에이전트에게 기본 배분되는 핵심 패키지입니다.",
@@ -448,12 +449,16 @@
           },
           "rows": {
             "type": "array",
-            "items": {"type": "array"},
+            "items": {
+              "type": "array"
+            },
             "description": "행 배열 — 각 행은 셀 값 배열 (단일 시트)"
           },
           "headers": {
             "type": "array",
-            "items": {"type": "string"},
+            "items": {
+              "type": "string"
+            },
             "description": "열 머리글 (선택, 첫 행으로 삽입)"
           },
           "sheet_name": {
@@ -465,7 +470,9 @@
             "description": "다중 시트 {시트명: rows}. 주면 rows보다 우선."
           }
         },
-        "required": ["path"]
+        "required": [
+          "path"
+        ]
       }
     }
   ]

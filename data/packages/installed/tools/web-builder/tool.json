@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "web-builder",
   "name": "Web Builder & Homepage Manager",
   "description": "홈페이지 제작과 관리를 위한 통합 도구 패키지.\n\n## 두 가지 시나리오\n\n### A. 새 홈페이지 만들기\ncreate_project → add_component → create_page → edit_styles → preview_site → build_site → deploy_vercel\n\n### B. 기존 홈페이지 개선/수정\n1) site_list로 등록된 사이트 확인\n2) site_snapshot으로 현재 구조 파악\n3) 기존 파일을 직접 읽고 수정\n4) git push → 자동 배포 (또는 deploy_vercel)\n5) site_live_check로 결과 확인\n\n주의: 기존 사이트를 개선할 때 create_project를 호출하지 마세요.",
@@ -26,6 +27,7 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "preview(기본)/create/build/deploy/snapshot/check/styles",
             "enum": [
               "create",
               "build",
@@ -35,8 +37,7 @@
               "check",
               "styles"
             ],
-            "default": "preview",
-            "description": "preview(기본)/create/build/deploy/snapshot/check/styles"
+            "default": "preview"
           },
           "target": {
             "type": "string",
@@ -145,13 +146,13 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "fetch(기본)/catalog/add",
             "enum": [
               "catalog",
               "fetch",
               "add"
             ],
-            "default": "fetch",
-            "description": "fetch(기본)/catalog/add"
+            "default": "fetch"
           },
           "component": {
             "type": "string",

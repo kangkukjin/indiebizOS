@@ -18,3 +18,28 @@ actions:
     - GDP
     - 물가
     - 실업률
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: kosis
+    name: KOSIS Statistics
+    description: 통계청 KOSIS API를 통한 국가통계 조회 도구. 인구, GDP, 물가, 고용 등 공식 통계 데이터를 검색하고 조회합니다. 경제 분석, 시장 조사, 정책 연구에 필요한 신뢰할 수 있는
+      국가 통계 제공.
+    version: 1.1.0
+  tools:
+  - name: kosis_lookup
+    description: '통계청 KOSIS 국가통계 검색·조회. query는 통합 검색, indicator는 주요지표(GDP·물가·인구·고용 등), org_id+tbl_id는 특정 통계표 데이터(info=true면
+      메타).
+
+
+      파라미터: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id
+      확인 후 조회.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 동작 분기 — target_description 참조
+      additionalProperties: true

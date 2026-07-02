@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "blog",
   "name": "Blog Tools",
   "description": "개인 블로그(K의 생각) RAG 검색 및 분석 도구. 티스토리 블로그 글 검색, 전문 조회, 카테고리별 필터링, 글 기반 인사이트 생성 기능을 제공합니다. 과거 글 검색, 블로그 트렌드 분석에 활용.",
@@ -197,6 +198,7 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "posts(기본)/search/check_new/rebuild_index/stats",
             "enum": [
               "posts",
               "search",
@@ -204,8 +206,7 @@
               "rebuild_index",
               "stats"
             ],
-            "default": "posts",
-            "description": "posts(기본)/search/check_new/rebuild_index/stats"
+            "default": "posts"
           },
           "query": {
             "type": "string",

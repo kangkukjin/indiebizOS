@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "pc-manager",
   "name": "PC Manager",
   "description": "PC 파일 탐색, 외장하드 관리, 저장소 스캔 도구. 파일 탐색기 GUI, 대용량 저장소 인덱싱, 파일 검색, 폴더 구조 분석 기능을 제공합니다. 파일 정리, 중복 파일 찾기, 저장소 관리에 활용.",
@@ -10,7 +11,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "path": { "type": "string", "description": "초기 경로 (생략시 홈 디렉토리)" }
+          "path": {
+            "type": "string",
+            "description": "초기 경로 (생략시 홈 디렉토리)"
+          }
         }
       }
     },
@@ -20,11 +24,26 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "volume_name": { "type": "string", "description": "볼륨 이름 (생략시 전체)" },
-          "search_term": { "type": "string", "description": "파일명 검색어" },
-          "extension": { "type": "string", "description": "확장자 필터" },
-          "min_size_mb": { "type": "number", "description": "최소 크기 (MB)" },
-          "limit": { "type": "integer", "description": "결과 개수 (기본 100)" }
+          "volume_name": {
+            "type": "string",
+            "description": "볼륨 이름 (생략시 전체)"
+          },
+          "search_term": {
+            "type": "string",
+            "description": "파일명 검색어"
+          },
+          "extension": {
+            "type": "string",
+            "description": "확장자 필터"
+          },
+          "min_size_mb": {
+            "type": "number",
+            "description": "최소 크기 (MB)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "결과 개수 (기본 100)"
+          }
         }
       }
     },
@@ -36,12 +55,22 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["scan", "summary", "volumes"],
-            "default": "volumes",
-            "description": "volumes=볼륨 목록(기본), scan=스캔/인덱싱, summary=사용량 요약"
+            "description": "volumes=볼륨 목록(기본), scan=스캔/인덱싱, summary=사용량 요약",
+            "enum": [
+              "scan",
+              "summary",
+              "volumes"
+            ],
+            "default": "volumes"
           },
-          "path": { "type": "string", "description": "[scan] 스캔할 경로 (예: /Volumes/MyDrive)" },
-          "volume_name": { "type": "string", "description": "[scan] 볼륨 식별 이름(생략시 자동) / [summary] 대상 볼륨(필수)" }
+          "path": {
+            "type": "string",
+            "description": "[scan] 스캔할 경로 (예: /Volumes/MyDrive)"
+          },
+          "volume_name": {
+            "type": "string",
+            "description": "[scan] 볼륨 식별 이름(생략시 자동) / [summary] 대상 볼륨(필수)"
+          }
         }
       }
     },
@@ -53,14 +82,29 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["set", "get"],
-            "default": "get",
-            "description": "get=주석 조회(기본), set=주석 추가"
+            "description": "get=주석 조회(기본), set=주석 추가",
+            "enum": [
+              "set",
+              "get"
+            ],
+            "default": "get"
           },
-          "root_path": { "type": "string", "description": "스캔된 볼륨 경로 (set/get 모두 필수). volume_name으로도 받음" },
-          "folder_path": { "type": "string", "description": "[set] 주석 달 폴더 경로" },
-          "note": { "type": "string", "description": "[set] 폴더 설명/주석" },
-          "volume_name": { "type": "string", "description": "root_path 별칭 (스캔된 볼륨 경로)" }
+          "root_path": {
+            "type": "string",
+            "description": "스캔된 볼륨 경로 (set/get 모두 필수). volume_name으로도 받음"
+          },
+          "folder_path": {
+            "type": "string",
+            "description": "[set] 주석 달 폴더 경로"
+          },
+          "note": {
+            "type": "string",
+            "description": "[set] 폴더 설명/주석"
+          },
+          "volume_name": {
+            "type": "string",
+            "description": "root_path 별칭 (스캔된 볼륨 경로)"
+          }
         }
       }
     },
@@ -72,25 +116,100 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["recall", "note", "forget"],
-            "default": "recall",
-            "description": "recall=회상(기본), note=누적, forget=폐기"
+            "description": "recall=회상(기본), note=누적, forget=폐기",
+            "enum": [
+              "recall",
+              "note",
+              "forget"
+            ],
+            "default": "recall"
           },
-          "query": { "type": "string", "description": "[recall] 주제 필터(부분일치)" },
-          "body": { "type": "string", "description": "몸 신원 (mac/disk:uuid 등, 생략 시 현재 몸)" },
-          "limit": { "type": "integer", "description": "[recall] 결과 상한 (기본 20)" },
-          "layer": { "type": "string", "enum": ["map", "owner"], "description": "[note] map=몸별 지도, owner=몸독립 주인모델" },
-          "locus": { "type": "string", "description": "[note map] 곳(절대경로) 또는 __substrate__" },
-          "kind": { "type": "string", "enum": ["identity", "convention", "dead_branch", "substrate"], "description": "[note map] 항목 종류" },
-          "claim": { "type": "string", "description": "[note] 단언(자연어)" },
-          "facet": { "type": "string", "enum": ["identity", "domain", "affiliation", "signal", "lexicon", "habit"], "description": "[note owner] 주인모델 facet" },
-          "value": { "type": "string", "description": "[note owner] facet 값" },
-          "prior_class": { "type": "string", "enum": ["structural", "semantic"], "description": "[note] 구조적(싸게 재검증·committal 허용) vs 의미적(이질억압 위험)" },
-          "confidence": { "type": "number", "description": "[note] 확신 0~1" },
-          "prune_reason": { "type": "string", "description": "[note map] defeasible 이유 — '~라서 아마 없음'" },
-          "generalizes": { "type": "boolean", "description": "[note map convention] 새 가지에도 적용되나" },
-          "id": { "type": "integer", "description": "[forget] 항목 id" },
-          "table": { "type": "string", "enum": ["forage_map", "owner_model"], "description": "[forget] 대상 테이블" }
+          "query": {
+            "type": "string",
+            "description": "[recall] 주제 필터(부분일치)"
+          },
+          "body": {
+            "type": "string",
+            "description": "몸 신원 (mac/disk:uuid 등, 생략 시 현재 몸)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "[recall] 결과 상한 (기본 20)"
+          },
+          "layer": {
+            "type": "string",
+            "enum": [
+              "map",
+              "owner"
+            ],
+            "description": "[note] map=몸별 지도, owner=몸독립 주인모델"
+          },
+          "locus": {
+            "type": "string",
+            "description": "[note map] 곳(절대경로) 또는 __substrate__"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "identity",
+              "convention",
+              "dead_branch",
+              "substrate"
+            ],
+            "description": "[note map] 항목 종류"
+          },
+          "claim": {
+            "type": "string",
+            "description": "[note] 단언(자연어)"
+          },
+          "facet": {
+            "type": "string",
+            "enum": [
+              "identity",
+              "domain",
+              "affiliation",
+              "signal",
+              "lexicon",
+              "habit"
+            ],
+            "description": "[note owner] 주인모델 facet"
+          },
+          "value": {
+            "type": "string",
+            "description": "[note owner] facet 값"
+          },
+          "prior_class": {
+            "type": "string",
+            "enum": [
+              "structural",
+              "semantic"
+            ],
+            "description": "[note] 구조적(싸게 재검증·committal 허용) vs 의미적(이질억압 위험)"
+          },
+          "confidence": {
+            "type": "number",
+            "description": "[note] 확신 0~1"
+          },
+          "prune_reason": {
+            "type": "string",
+            "description": "[note map] defeasible 이유 — '~라서 아마 없음'"
+          },
+          "generalizes": {
+            "type": "boolean",
+            "description": "[note map convention] 새 가지에도 적용되나"
+          },
+          "id": {
+            "type": "integer",
+            "description": "[forget] 항목 id"
+          },
+          "table": {
+            "type": "string",
+            "enum": [
+              "forage_map",
+              "owner_model"
+            ],
+            "description": "[forget] 대상 테이블"
+          }
         }
       }
     },
@@ -100,17 +219,58 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "op": { "type": "string", "enum": ["sample", "estimate"], "default": "sample", "description": "sample=미관측 표본(기본), estimate=누락 추정" },
-          "kind": { "type": "string", "description": "[sample] 모집단 종류 (image/video/audio/pdf/any)" },
-          "q": { "type": "string", "description": "[sample] 이름/메타 부분일치 필터" },
-          "path": { "type": "string", "description": "[sample] 검색 루트" },
-          "extension": { "type": "string", "description": "[sample] 확장자 필터" },
-          "min_size_mb": { "type": "number", "description": "[sample] 최소 크기" },
-          "seen": { "type": "array", "items": { "type": "string" }, "description": "[sample] 이미 본(판단한) 경로들 — 모집단에서 제외" },
-          "n": { "type": "integer", "description": "[sample] 표본 크기 (기본 20)" },
-          "relevant": { "type": "integer", "description": "[estimate] 표본 중 관련 항목 수" },
-          "sampled": { "type": "integer", "description": "[estimate] 표본 크기" },
-          "unseen": { "type": "integer", "description": "[estimate] 미관측 모수(sample이 돌려준 unseen)" }
+          "op": {
+            "type": "string",
+            "description": "sample=미관측 표본(기본), estimate=누락 추정",
+            "enum": [
+              "sample",
+              "estimate"
+            ],
+            "default": "sample"
+          },
+          "kind": {
+            "type": "string",
+            "description": "[sample] 모집단 종류 (image/video/audio/pdf/any)"
+          },
+          "q": {
+            "type": "string",
+            "description": "[sample] 이름/메타 부분일치 필터"
+          },
+          "path": {
+            "type": "string",
+            "description": "[sample] 검색 루트"
+          },
+          "extension": {
+            "type": "string",
+            "description": "[sample] 확장자 필터"
+          },
+          "min_size_mb": {
+            "type": "number",
+            "description": "[sample] 최소 크기"
+          },
+          "seen": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "[sample] 이미 본(판단한) 경로들 — 모집단에서 제외"
+          },
+          "n": {
+            "type": "integer",
+            "description": "[sample] 표본 크기 (기본 20)"
+          },
+          "relevant": {
+            "type": "integer",
+            "description": "[estimate] 표본 중 관련 항목 수"
+          },
+          "sampled": {
+            "type": "integer",
+            "description": "[estimate] 표본 크기"
+          },
+          "unseen": {
+            "type": "integer",
+            "description": "[estimate] 미관측 모수(sample이 돌려준 unseen)"
+          }
         }
       }
     },
@@ -122,11 +282,18 @@
         "properties": {
           "op": {
             "type": "string",
-            "enum": ["status", "apps", "resources"],
-            "default": "status",
-            "description": "status=상태 한눈에(기본), apps=자원 상위 프로세스, resources=상세 지표"
+            "description": "status=상태 한눈에(기본), apps=자원 상위 프로세스, resources=상세 지표",
+            "enum": [
+              "status",
+              "apps",
+              "resources"
+            ],
+            "default": "status"
           },
-          "limit": { "type": "integer", "description": "[apps] 상위 프로세스 개수 (기본 12)" }
+          "limit": {
+            "type": "integer",
+            "description": "[apps] 상위 프로세스 개수 (기본 12)"
+          }
         }
       }
     }

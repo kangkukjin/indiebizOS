@@ -300,7 +300,20 @@ def repo_root() -> Path:
 
 
 def build_tool_index(root: Path) -> dict[str, tuple[Path, dict]]:
-    """모든 패키지 tool.json 을 스캔해 {tool_name: (pkg_dir, tool_def)} 사전 구축."""
+    """모든 패키지 tool.json 을 스캔해 {tool_name: (pkg_dir, tool_def)} 사전 구축.
+
+    이관 패키지(ibl_actions.yaml 에 tool_json 블록 보유)는 디스크의 tool.json
+    (파생 산출물) 대신 *파생 결과*를 읽는다 — 그래야 검증이 소스 수준에서 돌아,
+    산출물이 오염돼도 검증은 무결한 소스를 보고(통과), 오염 자체는 --check 의
+    바이트 비교가 잡고, 일반 빌드가 재생성으로 치유한다. (산출물을 소스처럼
+    검증하면 오염이 빌드를 막아 치유가 불가능해지는 부트스트랩 교착이 생긴다.)
+    """
+    derived: dict = {}
+    try:
+        import yaml as _yaml_for_idx
+        derived, _ = derive_tool_json_docs(root, _yaml_for_idx)
+    except ImportError:
+        pass
     index: dict[str, tuple[Path, dict]] = {}
     for rel in PACKAGE_DIRS:
         base = root / rel
@@ -310,16 +323,19 @@ def build_tool_index(root: Path) -> dict[str, tuple[Path, dict]]:
             if not pkg_dir.is_dir():
                 continue
             tool_json = pkg_dir / "tool.json"
-            if not tool_json.is_file():
+            if tool_json in derived:
+                data = json.loads(derived[tool_json])
+            elif not tool_json.is_file():
                 continue
-            try:
-                data = json.loads(tool_json.read_text(encoding="utf-8"))
-            except json.JSONDecodeError as e:
-                print(
-                    f"[build_ibl_nodes] tool.json 파싱 실패 ({pkg_dir.name}): {e}",
-                    file=sys.stderr,
-                )
-                continue
+            else:
+                try:
+                    data = json.loads(tool_json.read_text(encoding="utf-8"))
+                except json.JSONDecodeError as e:
+                    print(
+                        f"[build_ibl_nodes] tool.json 파싱 실패 ({pkg_dir.name}): {e}",
+                        file=sys.stderr,
+                    )
+                    continue
             for tool in data.get("tools", []) or []:
                 name = tool.get("name")
                 if name:
@@ -1575,6 +1591,108 @@ def collect_package_fragments(root: Path, yaml_mod) -> tuple[list, list]:
     return fragments, issues
 
 
+_TOOL_JSON_MARKER = (
+    "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. "
+    "op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스."
+)
+
+
+def derive_tool_json_docs(root: Path, yaml_mod) -> tuple[dict, list[str]]:
+    """설치 패키지들의 tool.json을 ibl_actions.yaml `tool_json:` 블록에서 파생.
+
+    정합성을 검증에서 구조로: 예전에는 src.ops ↔ tool.json op enum/default 를
+    삼각검증이 *비교*했다(어긋날 수 있으니). 이제 op-bearing 도구의 enum/default 는
+    tool.json 에 저장되지 않고 이 함수가 액션의 ops 블록에서 *주입*한다 —
+    어긋남이 존재할 수 없다 (fixture: 필드 → ibl_fixtures.json 파생과 같은 수).
+
+    tool_json 블록 형식 (ibl_actions.yaml 최상위):
+      tool_json:
+        header: {id, name, description, version, ...}   # tool.json 최상위(tools 외) 통째
+        tools:  [{name, description, input_schema, ...}, ...]
+                # 액션이 소유(action.tool == name)하고 그 액션에 ops 가 있으면
+                # input_schema.properties.op 의 enum/default 는 여기 없어야 한다(빌드가 주입).
+                # 액션 미소유 도구(내부 배관 — world_pulse_collectors/web_collector/system_tools
+                # 가 이름으로 직접 디스패치)는 원문 그대로 보존된다.
+
+    반환: ({pkg_tool_json_path: canonical_text}, issues)
+    블록이 없는 패키지(예: ibl-core, 미이관)는 건너뛴다(손수 유지 유지).
+    """
+    import copy as _copy
+
+    docs: dict = {}
+    issues: list[str] = []
+    for rel in PACKAGE_DIRS:
+        base = root / rel
+        if not base.is_dir():
+            continue
+        for pkg_dir in sorted(base.iterdir()):
+            frag = pkg_dir / "ibl_actions.yaml"
+            if not frag.is_file():
+                continue
+            try:
+                doc = yaml_mod.safe_load(frag.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                continue  # 파싱 오류는 collect_package_fragments 가 이미 보고
+            if not isinstance(doc, dict) or not isinstance(doc.get("tool_json"), dict):
+                continue
+
+            tj = doc["tool_json"]
+            header = tj.get("header")
+            tools_src = tj.get("tools")
+            if not isinstance(header, dict) or not isinstance(tools_src, list):
+                issues.append(f"{pkg_dir.name}: tool_json 블록에 header(dict)+tools(list) 필수")
+                continue
+
+            # 액션 소유 맵: tool_name → ops 블록 (형식 A/B 모두)
+            owned_ops: dict = {}
+            node_defs = (
+                doc["nodes"].items() if isinstance(doc.get("nodes"), dict)
+                else [(doc.get("node"), {"actions": doc.get("actions") or {}})]
+            )
+            for _node, ndef in node_defs:
+                for aname, acfg in ((ndef or {}).get("actions") or {}).items():
+                    if isinstance(acfg, dict) and acfg.get("tool"):
+                        owned_ops[acfg["tool"]] = acfg.get("ops")
+
+            out_tools = []
+            for entry in tools_src:
+                entry = _copy.deepcopy(entry)
+                name = entry.get("name")
+                if not name:
+                    issues.append(f"{pkg_dir.name}: tools 항목에 name 없음")
+                    continue
+                ops = owned_ops.get(name)
+                op_prop = (
+                    entry.get("input_schema", {}).get("properties", {}).get("op")
+                    if isinstance(entry.get("input_schema"), dict) else None
+                )
+                if isinstance(ops, dict) and ops.get("values"):
+                    if not isinstance(op_prop, dict):
+                        issues.append(
+                            f"{pkg_dir.name}/{name}: 소유 액션에 ops 가 있는데 "
+                            f"input_schema.properties.op 자리가 없음"
+                        )
+                        continue
+                    if "enum" in op_prop or "default" in op_prop:
+                        issues.append(
+                            f"{pkg_dir.name}/{name}: tool_json 블록에 op enum/default 가 "
+                            f"저장돼 있음 — 단일 소스 위반 (actions 의 ops 만 유지하고 지울 것)"
+                        )
+                        continue
+                    op_prop["enum"] = list(ops["values"].keys())
+                    if ops.get("default") is not None:
+                        op_prop["default"] = ops["default"]
+                out_tools.append(entry)
+
+            merged = {"_generated": _TOOL_JSON_MARKER}
+            merged.update(header)
+            merged["tools"] = out_tools
+            docs[pkg_dir / "tool.json"] = (
+                json.dumps(merged, ensure_ascii=False, indent=2) + "\n"
+            )
+    return docs, issues
+
+
 def collect_dormant_package_qualifiers(root: Path, yaml_mod) -> set[str]:
     """not_installed 패키지들의 ibl_actions.yaml에서 소유 액션 qualifier(node:action) 집합.
 
@@ -2013,6 +2131,24 @@ def build(check: bool = False, validate_only: bool = False) -> int:
     if data is not None:
         fixtures_text = json.dumps(derive_fixtures(data), ensure_ascii=False, indent=2) + "\n"
 
+    # tool.json 파생 (tool_json 블록 보유 패키지만 — 정합성을 검증에서 구조로).
+    # op-bearing 도구의 enum/default 는 저장이 아니라 액션 ops 에서 주입되므로
+    # src ↔ tool.json 드리프트가 이관 패키지에선 구조적으로 불가능하다.
+    tool_json_docs: dict = {}
+    try:
+        import yaml as _yaml_for_tj
+        tool_json_docs, tj_issues = derive_tool_json_docs(root, _yaml_for_tj)
+        if tj_issues:
+            validation_failed = True
+            print(
+                f"[build_ibl_nodes] tool.json 파생 실패: {len(tj_issues)}건",
+                file=sys.stderr,
+            )
+            for issue in tj_issues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+    except ImportError:
+        pass
+
     if check:
         if not target.is_file():
             print(f"[build_ibl_nodes] check: 타깃 부재 — {target}", file=sys.stderr)
@@ -2066,7 +2202,21 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 )
             else:
                 print("[build_ibl_nodes] check: ibl_fixtures.json 일치 ✓")
+        # tool.json 파생 정합 (드리프트 방지 — 소스는 ibl_actions.yaml tool_json 블록 + ops)
+        tool_json_ok = True
+        for tj_path, tj_text in sorted(tool_json_docs.items()):
+            on_disk = tj_path.read_text(encoding="utf-8") if tj_path.is_file() else None
+            if on_disk != tj_text:
+                tool_json_ok = False
+                print(
+                    f"[build_ibl_nodes] check: {tj_path.parent.name}/tool.json 불일치 — "
+                    f"`python3 scripts/build_ibl_nodes.py` 로 재생성 필요",
+                    file=sys.stderr,
+                )
+        if tool_json_ok and tool_json_docs:
+            print(f"[build_ibl_nodes] check: tool.json 파생 일치 ✓ ({len(tool_json_docs)}개 패키지)")
         return 0 if (bytes_ok and manifest_ok and pkg_meta_ok and fixtures_ok
+                     and tool_json_ok
                      and not validation_failed
                      and not corpus_failed and not fixture_failed
                      and not profile_failed and not os_failed
@@ -2091,6 +2241,17 @@ def build(check: bool = False, validate_only: bool = False) -> int:
     if fixtures_text is not None:
         fixtures_path.write_text(fixtures_text, encoding="utf-8")
         print(f"[build_ibl_nodes] 작성: {fixtures_path}")
+    tj_written = 0
+    for tj_path, tj_text in sorted(tool_json_docs.items()):
+        current = tj_path.read_text(encoding="utf-8") if tj_path.is_file() else None
+        if current != tj_text:
+            tj_path.write_text(tj_text, encoding="utf-8")
+            tj_written += 1
+    if tool_json_docs:
+        print(
+            f"[build_ibl_nodes] tool.json 파생: {len(tool_json_docs)}개 패키지 "
+            f"(갱신 {tj_written}개)"
+        )
     return 0
 
 

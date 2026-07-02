@@ -201,3 +201,235 @@ nodes:
         tool: show_location_map
         implementation: Kakao Map API로 좌표 기반 지도 HTML 생성 (프론트엔드 렌더링용)
         target_key: query
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: location-services
+    name: Location Services
+    description: 위치 기반 서비스 도구. 날씨/대기질 조회, 맛집 검색, 자동차 길찾기, 지도 표시, 여행 정보(항공권/호텔/관광지) 검색을 제공합니다.
+    version: 1.3.0
+  tools:
+  - name: get_weather
+    description: '날씨 조회 (Open-Meteo, 무료/키불필요). 도시명(한글/영문) 또는 좌표로 현재 날씨 + 예보 조회.
+
+
+      ## 사용 예시
+
+      - city=''수원'' 또는 city=''Seoul''
+
+      - lat=37.26, lon=127.03
+
+      - days=3 (예보 일수, 기본 3, 최대 7)'
+    input_schema:
+      type: object
+      properties:
+        city:
+          type: string
+          description: 도시명 (한글 또는 영문)
+        lat:
+          type: number
+          description: 위도
+        lon:
+          type: number
+          description: 경도
+        days:
+          type: integer
+          description: 예보 일수 (기본 3, 최대 7)
+  - name: amadeus_travel_search
+    description: '[sense:travel]{op} — 여행 정보 검색(Amadeus). op=flight(from→to, date)/hotel(city). 도시명·상대날짜 자동 해소. endpoint+params
+      직접 지정도 가능.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 검색 종류
+        to:
+          type: string
+          description: '도착 도시명 (flight). 예: 도쿄'
+        from:
+          type: string
+          description: 출발 도시명 (flight, 기본 서울)
+        date:
+          type: string
+          description: 출발일 (flight). "내일"/"다음주 금요일"/YYYY-MM-DD. 기본 +7일
+        return_date:
+          type: string
+          description: 귀국일 (flight, 옵션)
+        adults:
+          type: integer
+          description: 성인 수 (flight, 기본 1)
+        city:
+          type: string
+          description: 도시명 (hotel)
+        endpoint:
+          type: string
+          description: (파워유저) Amadeus 원본 endpoint 직접 지정
+        params:
+          type: object
+          description: (파워유저) endpoint별 원본 파라미터
+  - name: search_restaurants
+    description: '한국 맛집/음식점을 검색합니다 (카카오+네이버 통합).
+
+
+      ## 반환 정보
+
+      - 카카오 최대 10개 + 네이버 5개 = 최대 15개 결과
+
+      - 가게명, 주소, 전화번호, 영업시간, 평점
+
+
+      ## 사용법
+
+      - query에 ''지역 + 음식종류'' 조합 권장
+
+      - 예: ''강남 파스타'', ''홍대 맛집'', ''대전 유성구 삼겹살''
+
+
+      ## 주의사항
+
+      - 한 번 호출로 충분한 결과 반환 - 중복 호출 불필요
+
+      - 일반 웹 검색은 ddgs_search 사용'
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: '검색 키워드 (예: ''강남 파스타'')'
+        x:
+          type: string
+          description: 중심 경도 (선택)
+        y:
+          type: string
+          description: 중심 위도 (선택)
+        radius:
+          type: integer
+          description: 검색 반경 미터 (기본 5000, 최대 20000)
+      required:
+      - query
+  - name: kakao_navigation
+    description: '카카오모빌리티 API로 자동차 길찾기를 수행합니다.
+
+
+      ## 반환 정보
+
+      - 거리, 예상 소요시간, 톨비
+
+      - 경로 지도 (map_data)
+
+      - 주요 구간 안내
+
+
+      ## 출발지/목적지 형식
+
+      - 장소명: ''오송역'', ''수원 포레파크원'' (자동 좌표 변환)
+
+      - 좌표: ''127.0276,37.4979''
+
+
+      ## 경로 옵션
+
+      - priority: RECOMMEND(추천), TIME(최단시간), DISTANCE(최단거리)
+
+      - avoid: toll(유료도로), motorway(고속도로) 회피'
+    input_schema:
+      type: object
+      properties:
+        origin:
+          type: string
+          description: 출발지 좌표 (경도,위도)
+        destination:
+          type: string
+          description: 목적지 좌표 (경도,위도)
+        waypoints:
+          type: string
+          description: 경유지 (|로 구분, 최대 5개)
+        priority:
+          type: string
+          enum:
+          - RECOMMEND
+          - TIME
+          - DISTANCE
+          description: 경로 우선순위
+        avoid:
+          type: string
+          description: 회피 옵션 (toll, motorway 등)
+        alternatives:
+          type: boolean
+          description: 대안 경로 제공
+        summary:
+          type: boolean
+          description: 요약만 반환 (지도 생략)
+        generate_map:
+          type: boolean
+          description: HTML 지도 생성 (기본 true)
+      required:
+      - origin
+      - destination
+  - name: show_location_map
+    description: '특정 위치의 지도를 대화창에 표시합니다.
+
+
+      ## 사용 시점
+
+      - 장소 검색 결과 시각화
+
+      - 위치 안내
+
+      - 여러 장소 비교 (markers 사용)
+
+
+      ## 사용법
+
+      - query로 장소명 검색
+
+      - 또는 lat, lng로 직접 좌표 지정
+
+      - markers로 여러 마커 추가 가능'
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: '장소명 (예: ''강남역'')'
+        lat:
+          type: number
+          description: 위도 (직접 지정시)
+        lng:
+          type: number
+          description: 경도 (직접 지정시)
+        zoom:
+          type: integer
+          description: 줌 레벨 (기본 15, 1-18)
+        markers:
+          type: array
+          description: 추가 마커 [{name, lat, lng}, ...]
+  - name: reverse_geocode
+    description: 'GPS 좌표를 행정구역 주소로 변환합니다 (카카오 로컬 API).
+
+
+      ## 반환 정보
+
+      - address: 전체 주소 (예: ''부산광역시 기장군 기장읍'')
+
+      - region_1depth~4depth: 시/도, 시/군/구, 읍/면/동, 리
+
+
+      ## 사용 예시
+
+      - lat=35.32, lon=129.27 → ''경상남도 울산광역시 울주군'''
+    input_schema:
+      type: object
+      properties:
+        lat:
+          type: number
+          description: 위도 (latitude)
+        lon:
+          type: number
+          description: 경도 (longitude)
+      required:
+      - lat
+      - lon

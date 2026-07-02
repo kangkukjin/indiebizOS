@@ -30,3 +30,58 @@ actions:
     - 크롤링
     - 사이트프로필
     - 축적데이터
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: web-collector
+    name: Web Collector
+    description: 웹 정보 수집 가이드 + DB 프레임워크. 사이트별 가이드(어디서 뭘 어떻게 찾고, 어떤 형식으로 저장할지)를 관리하고, AI가 browser-action으로 수집한 데이터를 DB에 저장/조회합니다.
+    version: 2.0.0
+  tools:
+  - name: collect_op
+    description: '웹 데이터 수집 (op 분기) — [sense:collect]. 실시간 웹 검색은 search_ddg.
+
+      - op=run(기본): source(프로필 ID 또는 URL) 크롤링. URL이면 selectors/max_items, 없으면 프로필 목록.
+
+      - op=sites: 사이트 프로필 CRUD. action(list 기본/register/delete)+site_id+guide_code.
+
+      - op=query: 축적 데이터 검색. action(search 기본/stats/recent/detail/delete)+query/site_id/item_id/limit.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: run(기본)/sites/query
+        source:
+          type: string
+          description: '[run] 프로필 ID 또는 URL'
+        url:
+          type: string
+          description: '[run] URL (source 대체)'
+        selectors:
+          type: object
+          description: '[run] ad-hoc 셀렉터'
+        max_items:
+          type: integer
+          description: '[run] 최대 항목'
+        action:
+          type: string
+          description: '[sites] list/register/delete | [query] search/stats/recent/detail/delete'
+        site_id:
+          type: string
+          description: 사이트 ID
+        guide_code:
+          type: string
+          description: '[sites register] 크롤링 가이드 코드'
+        query:
+          type: string
+          description: '[query search] 검색어'
+        item_id:
+          type: string
+          description: '[query detail/delete] 항목 ID'
+        limit:
+          type: integer
+          description: '[query] 결과 수'
+      required: []

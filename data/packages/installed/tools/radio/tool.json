@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "radio",
   "name": "Radio Tools",
   "description": "인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전세계 라디오를 검색하고, 한국 주요 방송사(KBS/MBC/SBS/TBS/CBS) 직접 스트리밍을 지원합니다. PC 스피커로 라디오를 들을 수 있습니다.",
@@ -36,12 +37,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "즐겨찾기 동작",
             "enum": [
               "list",
               "add",
               "remove"
-            ],
-            "description": "즐겨찾기 동작"
+            ]
           },
           "name": {
             "type": "string",
@@ -69,12 +70,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "재생 동작",
             "enum": [
               "play",
               "stop"
             ],
-            "default": "play",
-            "description": "재생 동작"
+            "default": "play"
           },
           "station_id": {
             "type": "string",
@@ -99,12 +100,12 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "search(기본)/korean",
             "enum": [
               "search",
               "korean"
             ],
-            "default": "search",
-            "description": "search(기본)/korean"
+            "default": "search"
           },
           "name": {
             "type": "string",

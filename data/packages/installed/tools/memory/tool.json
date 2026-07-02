@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "memory",
   "name": "Memory",
   "description": "에이전트 심층 메모리. 연상기억에서 자동으로 검색·저장되며, IBL [self:memory]{op} 통합 액션으로 직접 호출 가능. 옛 4개 도구(memory_search/save/read/delete)는 직접 호출 호환용으로 유지.",
@@ -12,13 +13,13 @@
         "properties": {
           "op": {
             "type": "string",
+            "description": "수행할 작업",
             "enum": [
               "save",
               "search",
               "read",
               "delete"
-            ],
-            "description": "수행할 작업"
+            ]
           },
           "content": {
             "type": "string",

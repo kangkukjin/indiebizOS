@@ -10,3 +10,84 @@ actions:
     tool: naver_search
     implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 9개 도메인(webkr/news/blog/cafe/kin/book/encyc/doc/shop) 모두 호출. 무료 일 25k 쿼리.
     target_key: query
+
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: web-kr
+    name: Web Search (Korea)
+    description: 네이버 검색 API로 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)를 검색합니다. web 패키지의 보편 검색과 분리된 한국 전용 검색 능력.
+    version: 1.0.0
+  tools:
+  - name: naver_search
+    description: '네이버 검색 API로 한국어 콘텐츠를 검색합니다.
+
+
+      ## 장점
+
+      - 한국어 검색 품질: 네이버 > 구글 > DDG (한국 블로그/뉴스/카페/지식인 압도적)
+
+      - 같은 API 키로 9개 도메인 모두 호출
+
+      - 무료 (일 25,000 쿼리)
+
+
+      ## 사용 시점
+
+      - 한국어 일반 검색 (type=''webkr'', 기본)
+
+      - 한국 뉴스 (type=''news'')
+
+      - 한국 블로그 (type=''blog'') — 후기/리뷰/경험담
+
+      - 카페 글 (type=''cafe'') — 동호회/지역 커뮤니티
+
+      - 지식인 Q&A (type=''kin'')
+
+      - 책 정보 (type=''book'')
+
+      - 한국 백과사전 (type=''encyc'')
+
+      - 학술 자료 (type=''doc'')
+
+      - 쇼핑은 shopping-assistant 패키지 우선 사용
+
+
+      ## 자연어 별칭
+
+      - type에 ''웹'', ''뉴스'', ''블로그'', ''카페'', ''지식인'', ''책'', ''백과'' 등 한글로 넘겨도 됨
+
+
+      ## 다른 도구와의 관계
+
+      - 영어/글로벌 검색: ddgs_search 사용
+
+      - 페이지 본문 읽기: crawl_website 사용
+
+      - 글로벌 뉴스: search_gnews 사용'
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 검색 키워드
+        type:
+          type: string
+          default: webkr
+          description: 검색 도메인 (webkr/news/blog/cafe/kin/book/encyc/doc/shop). 자연어 별칭(웹/뉴스/블로그/카페/지식인/책/백과) 허용
+        display:
+          type: integer
+          default: 5
+          minimum: 1
+          maximum: 100
+          description: 결과 수 (기본 5, 최대 100)
+        sort:
+          type: string
+          enum:
+          - sim
+          - date
+          default: sim
+          description: 정렬 — sim(정확도, 기본) 또는 date(최신순)
+      required:
+      - query

@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "web-kr",
   "name": "Web Search (Korea)",
   "description": "네이버 검색 API로 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)를 검색합니다. web 패키지의 보편 검색과 분리된 한국 전용 검색 능력.",

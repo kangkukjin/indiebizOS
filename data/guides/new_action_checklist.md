@@ -47,14 +47,15 @@
 
 ## 1단계: 패키지 도구 작성
 
-도구 패키지 디렉토리에 도구의 **구현(handler)**과 **정의(tool.json)**를 둔다. (액션 정의 yaml은 패키지가 아니라 2단계의 src에 둔다.)
+도구 패키지 디렉토리에 도구의 **구현(handler)**을 두고, 도구 **정의는 `ibl_actions.yaml`의 `tool_json:` 블록**에 둔다. (2026-07-03부터 `tool.json`은 빌드 산출물 — 직접 편집 금지, 빌드가 재생성한다.)
 
 **경로**: `data/packages/installed/tools/{패키지ID}/`
 
 | 파일 | 필수 | 설명 |
 |------|------|------|
 | `handler.py` | ✅ | `execute(tool_input, context)` — ToolContext SDK 시그니처 |
-| `tool.json` | ✅ | `tools[]` 배열에 도구 정의 (name, description, input_schema) |
+| `ibl_actions.yaml` | ✅ | 액션 정의(2단계) + `tool_json:` 블록(도구 정의 — 아래 템플릿) |
+| `tool.json` | 산출물 | **빌드가 생성** (`_generated` 마커). 손편집하면 `--check` 실패 |
 | `__init__.py` | ✅ | 빈 파일 |
 
 ### handler.py 템플릿 (ToolContext SDK)
@@ -69,22 +70,24 @@ def execute(tool_input: dict, context):
 ```
 > `context`는 `ToolContext`(backend/tool_context.py): `tool_name`, `project_path`(절대경로), `project_id`, `agent_id`, `task_id` + `output_dir()`, `resolve_path()`. 산출물은 `context.output_dir()` 아래에 쓴다.
 
-### tool.json 템플릿
-```json
-{
-  "tools": [
-    {
-      "name": "my_action",
-      "description": "도구 설명 (에이전트가 읽는다)",
-      "input_schema": {
-        "type": "object",
-        "properties": { "query": { "type": "string", "description": "..." } },
-        "additionalProperties": true
-      }
-    }
-  ]
-}
+### 도구 정의 — `ibl_actions.yaml` 의 `tool_json:` 블록 템플릿
+```yaml
+tool_json:
+  header:                # tool.json 최상위 메타 (id/name/description/version)
+    id: my-package
+    name: My Package
+    description: 패키지 설명
+    version: 1.0.0
+  tools:
+  - name: my_action
+    description: 도구 설명 (에이전트가 읽는다)
+    input_schema:
+      type: object
+      properties:
+        query: { type: string, description: "..." }
+      additionalProperties: true
 ```
+빌드(`python scripts/build_ibl_nodes.py`)가 이 블록에서 `tool.json`을 생성한다.
 
 ### op 분기 액션(단일 액션 + op 파라미터)이면
 핸들러에 디스패처를 표준 형태로 둔다 — `--check`가 AST로 키를 정확 비교한다:
@@ -92,7 +95,7 @@ def execute(tool_input: dict, context):
 _OP_DISPATCHERS = { "my_action": { "list": _list, "new": _new, "close": _close } }
 _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
 ```
-그리고 tool.json `input_schema.properties.op.enum` = op 값들, `op.default` = 기본값으로 맞춘다.
+`tool_json:` 블록의 op property 에는 **enum/default 를 쓰지 않는다** — 자리(`op: {type: string, description: ...}`)만 두면 빌드가 액션의 `ops:` 블록(2단계)에서 enum/default 를 **주입**한다. 저장하면 단일 소스 위반으로 빌드가 거부한다.
 
 ---
 
@@ -141,9 +144,10 @@ python scripts/build_ibl_nodes.py
 python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
 ```
 `router:handler` 액션에 대해 다음을 정확 비교한다:
-- `src.tool` ↔ `tool.json` 의 name
-- `src.ops.values` ↔ `tool.json` `op.enum`, `src.ops.default` ↔ `op.default`
+- `src.tool` ↔ `tool_json:` 블록의 tools name (액션이 가리키는 도구의 실존)
 - `src.ops.values` ↔ `handler.py` `_OP_DISPATCHERS[tool]` 키(AST), `src.ops.default` ↔ `_OP_DEFAULTS[tool]`
+- `tool.json` 파일 ↔ 파생 결과 바이트 일치 (손편집·drift 검출 — 빌드로 재생성)
+- (op enum/default 의 src↔tool.json 비교는 파생 구조로 **불필요해짐** — 빌드가 주입하므로 어긋날 수 없다)
 - **fixture 완전성**: `returns: items|scalar` 액션은 `data/ibl_fixtures.json` 에 fixture 또는 exempt 가 있어야 함(다음 2.5단계). 없으면 `--check` 실패.
 
 > 이 `--check`는 pre-commit 훅(커밋마다)과 일일 건강 점검(`ibl_health_check.py` §1A, AI 0)에 합류해 있다. 통과해야 커밋이 된다.

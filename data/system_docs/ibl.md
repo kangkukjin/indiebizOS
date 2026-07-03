@@ -55,6 +55,23 @@ IBL 표현 계층:     [node:action]{params}
 
 **집행**: `build_ibl_nodes.py --check`의 **표준-코어 가드**(always_on 집합 = `STANDARD_CORE_NODES` 선언 일치, 파서 desugar 타깃이 표준 코어의 실존 액션인지) — pre-commit 훅과 self-check 12h 순찰에 합류.
 
+### 표현 언어의 층위 (부속 조항, 2026-07-03)
+
+IBL(실행 언어) 위에 표현을 맡는 언어가 두 부류 더 있고, 셋은 섞이지 않는다. 판별축은 **파이프를 타는가**:
+
+1. **페이로드 IR** — 파이프 안을 데이터로 흐르는 산출물 기술 언어: 문서 IR(blocks), 슬라이드 IR(slides), 차트 스펙(chart_type·bands·Plotly spec). 각각 특정 액션의 파라미터 계약이며 emitter가 소비해 산출물이 된다. 규율: 표준 외부 언어와 동형인 구간(문서 IR↔Markdown, 차트↔Plotly figure JSON)은 변환자로 왕복 가능하게 유지 — 언제든 표준 쪽으로 접을 수 있는 상태가 목표.
+2. **표면 언어(`app:` 뷰 어휘)** — 파이프 밖에서 표면(계기)이 읽는 선언: 뷰 프리미티브·form 필드·뷰-이벤트. 렌더링 언어가 아니라 **통화↔액션 바인딩 언어**다(외부 표준이 존재하지 않는 유일한 층 — 픽셀·문서·차트는 전부 표준어에 위임돼 있다). 표현력 경쟁은 이 언어의 종목이 아니다(그건 escape=React·HTML 표준어의 일). 이 언어의 존재 이유는 {0토큰 표면 · 결정론(주권) · 저술 시점 검증 · 경량 모델 저술 가능}.
+
+**표면 언어의 표준/사전 경계**: 어휘 집합과 해석기 — `build_ibl_nodes.py`의 `APP_VIEW_TYPES`·`APP_FORM_FIELD_TYPES`·`APP_VIEW_EVENTS` 선언 + 렌더러 2곳(`GenericInstrument.tsx`/`api_launcher_web.py`) + `validate_app_blocks` — 은 **표준**(본체 코드, 기본 설치)이다. 패키지는 뷰 단어를 추가할 수 없다(리트머스). `app:` 블록(어휘의 *사용*)은 **사전**(패키지 yaml·`data/instruments/` 데이터)이다.
+
+**뷰 어휘 승격 기준(4)** — 새 뷰 단어는 전부 만족할 때만:
+1. 기존 escape(bespoke 컴포넌트) 하나 이상을 은퇴시킨다 — 계기 하나의 미감은 사유가 아님(투기적 승격 금지)
+2. 통화(items/blocks)를 소비한다
+3. 3표면(데스크탑·원격·폰) 투영이 모두 의미 있다
+4. 데이터-패턴/상호작용 계약이다 — **레이아웃·스타일(간격·색·열 배치)을 기술하기 시작하면 거부**. 그건 HTML 재발명의 냄새 = 정지 신호, escape로 보낸다. (UI 원자는 유한한 닫힌 부류라 이 어휘는 점근 수렴해야 정상 — escape 수가 다시 늘면 어휘 부족이 아니라 애초에 어휘로 풀 문제가 아니었는지부터 의심.)
+
+**변경 = 언어 개정**: 뷰 단어의 추가·제거는 렌더러 2곳+검증자+문서 2곳(이 문서 "앱 표면 노출" 절 · `new_action_checklist.md`)을 함께 바꾸는 행위다. **집행**: 빌드의 **뷰-어휘 문서-동기 가드**가 두 문서의 어휘 줄("view 프리미티브 N종: …" / "form 필드 N종: …")을 코드 선언과 대조해 어긋나면 차단.
+
 ---
 
 ## 액션 카테고리
@@ -420,13 +437,16 @@ self:
           inputs:                 # text/select(+options_action)/chips/required/default
           - { key: coin, type: text, default: BTC, chips: [BTC, ETH] }
           action: '[sense:crypto]{coin_id: "$coin"}'   # $key=입력 치환, 빈 입력 파라미터 자동 제거
-          view:                   # 프리미티브 12종: metric/kv/kv_list/card_list(+item_click 드릴·탭·compose)/image_grid/sparkline/list_action/thread(채팅 버블+status)/form(편집 필드+저장)/editable_list(행 CRUD)/map(leaflet 지도)/calendar(월 그리드)
+          view:                   # 프리미티브 목록은 아래 어휘 줄 참조(빌드 가드가 동기 검증)
           # compose: 하단 작성바 — $text=작성, {field}=드릴 데이터. 전송 후 새로고침
           # item_click.tabs: 드릴 상세 탭(대화↔이웃정보 등) — 한 액션 데이터를 탭별 view 로 분할
           # form/editable_list: $field=입력값, {field}=드릴 데이터 → 저장/추가/삭제 액션 실행 후 새로고침
           - { type: metric, big: '{data.current_price_krw|num}', trend: data.change_24h_percent }
 ```
 
+- view 프리미티브 13종: metric / kv / kv_list / card_list / image_grid / sparkline / list_action / thread / form / editable_list / map / calendar / group — card_list=+item_click 드릴·탭·compose, thread=채팅 버블+status, form=편집 필드+저장, editable_list=행 CRUD, map=leaflet 지도, calendar=월 그리드, group=파티션 콤비네이터(`by` 키 템플릿으로 items를 나눠 그룹마다 내부 `view:` 재귀 렌더 — table:groupby(집계)와 달리 멤버 유지, 뷰-계층의 groupby).
+- form 필드 9종: text / select / toggle / textarea / images / date / time / datetime / recurrence
+- ★위 두 어휘 줄은 빌드의 **뷰-어휘 문서-동기 가드**가 코드 선언(`APP_VIEW_TYPES`/`APP_FORM_FIELD_TYPES`)과 자동 대조 — `new_action_checklist.md`의 같은 줄과 함께, 뷰 어휘 변경 시 두 문서를 같이 고쳐야 빌드 통과.
 - 표시 템플릿 `{path|filter}` — 필터: round/num/abs/arrow/`opt:앞,뒤`/`trunc:N`. 드릴 응답엔 클릭 행이 `_item`으로 주입.
 - 리스트 프리미티브의 `from: "."` = 응답 자체를 1행으로 (단일 객체 응답에 행 버튼 달기 — 예: 신문 생성 결과에 "띄우기").
 - **select 입력 2종:** ①정적 `options: [{value,label}]` (IBL 호출 없음 — 시/도·유형 등 고정 목록) ②동적 `options_action`+`options_from` (IBL로 옵션 조회; 응답이 배열이면 option_value/option_label로, 딕셔너리 `{이름:코드}`면 자동 entries 정규화). **종속(cascade):** options_action 안에 `$형제키`를 쓰면 그 형제 select가 바뀔 때 자동 재조회 — 예: 구/군 `options_action: '[sense:realty]{op:"codes", city:"$province"}'` 가 시/도 선택에 따라 갱신. 실거래가 계기가 시연.

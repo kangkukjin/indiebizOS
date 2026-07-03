@@ -817,6 +817,50 @@ APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes"
             "phone_render"}
 APP_TPL_FILTERS = {"round", "num", "abs", "arrow"}  # + 'opt:' / 'trunc:' 접두 허용
 
+# === 뷰-어휘 문서-동기 가드 (2026-07-03, ibl.md '표현 언어의 층위' 조항 집행) ===
+# app: 뷰 어휘는 표면 언어의 표준 코어(위 APP_* 선언 + 렌더러 2곳)인데, 에이전트가
+# 앱 저술 때 읽는 교육 문서의 어휘 줄은 삼각검증 밖이라 조용히 낡는다(실사례:
+# new_action_checklist.md "7종"·ibl.md "12종" 박제 — 실제 13종). 두 문서의 정형 줄
+# "view 프리미티브 N종: a / b / …" · "form 필드 N종: …" 을 코드 선언과 집합 대조한다.
+_APP_VOCAB_DOC_PATHS = (
+    "data/system_docs/ibl.md",
+    "data/guides/new_action_checklist.md",
+)
+
+
+def check_app_vocab_docs(root: Path) -> list[str]:
+    """교육 문서의 뷰-어휘 줄 ↔ APP_VIEW_TYPES/APP_FORM_FIELD_TYPES 집합·개수 대조."""
+    import re as _re
+
+    declared = {"view 프리미티브": APP_VIEW_TYPES, "form 필드": APP_FORM_FIELD_TYPES}
+    issues: list[str] = []
+    for rel in _APP_VOCAB_DOC_PATHS:
+        fp = root / rel
+        if not fp.is_file():
+            issues.append(f"{rel}: 문서 부재")
+            continue
+        text = fp.read_text(encoding="utf-8")
+        for label, decl in declared.items():
+            # 어휘 줄: "<label> N종: a / b / …" (— 이후는 부연이라 절단). N종에 숫자 필수
+            # 라 조항 산문의 "N종: …" 예시는 매치되지 않는다.
+            matches = _re.findall(rf"{_re.escape(label)}\s*(\d+)종:\s*([^\n—]+)", text)
+            if not matches:
+                issues.append(f"{rel}: '{label} N종: …' 정형 어휘 줄 없음")
+                continue
+            for n_str, names_str in matches:
+                names = {w.strip() for w in names_str.split("/") if w.strip()}
+                if int(n_str) != len(decl):
+                    issues.append(
+                        f"{rel}: {label} 개수 불일치 — 문서 {n_str}종 vs 코드 선언 {len(decl)}종"
+                    )
+                if names != decl:
+                    missing = sorted(decl - names)
+                    extra = sorted(names - decl)
+                    issues.append(
+                        f"{rel}: {label} 집합 불일치 — 문서에 없음 {missing} / 문서에만 있음 {extra}"
+                    )
+    return issues
+
 
 def _app_action_templates(app: dict) -> list[str]:
     """app 블록에서 IBL 액션 템플릿 문자열 전부 수집 (참조 존재 검증용)."""
@@ -2211,10 +2255,30 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 교재-가드 통과 ✓ (스니펫 실존 + 노드 선택표 집합 일치)")
 
+    # --- 뷰-어휘 문서-동기 가드: APP_* 선언 ↔ 교육 문서 어휘 줄 (--check/--validate 전용) ---
+    appvocab_failed = False
+    if check or validate_only:
+        avissues = check_app_vocab_docs(root)
+        if avissues:
+            appvocab_failed = True
+            print(
+                f"[build_ibl_nodes] 뷰-어휘 가드 실패: {len(avissues)}건 "
+                f"(교육 문서 어휘 줄이 APP_VIEW_TYPES/APP_FORM_FIELD_TYPES 와 불일치 — "
+                f"뷰 어휘 변경은 문서 2곳 동시 갱신이 언어 개정 절차)",
+                file=sys.stderr,
+            )
+            for issue in avissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print(
+                "[build_ibl_nodes] 뷰-어휘 가드 통과 ✓ "
+                "(ibl.md·new_action_checklist.md 어휘 줄 = 코드 선언)"
+            )
+
     if validate_only:
         return 1 if (validation_failed or corpus_failed or fixture_failed
                      or profile_failed or os_failed or launcher_failed
-                     or textbook_failed) else 0
+                     or textbook_failed or appvocab_failed) else 0
 
     # 폰 매니페스트 파생 (runs_on + 검증된 폰 패키지). data 파싱 성공 시에만.
     manifest_path = root / "data" / "phone_manifest.json"
@@ -2322,7 +2386,8 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      and not validation_failed
                      and not corpus_failed and not fixture_failed
                      and not profile_failed and not os_failed
-                     and not launcher_failed and not textbook_failed) else 1
+                     and not launcher_failed and not textbook_failed
+                     and not appvocab_failed) else 1
 
     if validation_failed:
         print(

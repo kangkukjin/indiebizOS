@@ -16,9 +16,20 @@ and may be skipped on weak hardware without failing the install.
 
 ## Landmarks (things worth knowing so you don't have to rediscover them)
 
-- **Python lives in a `.venv` at the repo root, by convention.** Create one and
-  use it for all Python (the OS's system Python won't have the deps). `start.sh`
-  looks for `.venv` first, so this is also what makes the run command work later.
+- **The code requires Python ≥ 3.11.** It uses modern syntax (`dict[...]`,
+  `X | Y` unions) that older interpreters cannot even import. **If the machine's
+  `python3` is older, the fix is to get a newer Python — NOT to rewrite the code
+  to fit the old one** (that path never converges and corrupts the source). Do
+  not confuse the installer's own bundled Python with the system `python3`; check
+  the real one (`python3 --version`). To get a modern Python with no admin rights
+  or package manager, download a self-contained build from
+  `github.com/indygreg/python-build-standalone` (the `install_only` tarball for
+  this OS+arch), extract it somewhere under the repo (e.g. `runtime/`), and build
+  the venv with **that** interpreter. Only then proceed.
+- **Python lives in a `.venv` at the repo root, by convention.** Create one (with
+  a Python ≥ 3.11 per above) and use it for all Python — the OS's system Python
+  won't have the deps. `start.sh` looks for `.venv` first, so this is also what
+  makes the run command work later.
 - **Dependencies**: prefer a real list if the repo has one (a `requirements*.txt`,
   `pyproject.toml`, …). If there isn't one, infer from the backend's imports and
   let import errors during verification tell you what's still missing. The heavy

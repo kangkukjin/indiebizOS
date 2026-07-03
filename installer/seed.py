@@ -563,12 +563,25 @@ def _try(cmd):
     except Exception:
         return ""
 
+def _system_python():
+    """The `python3` the venv will actually be built on — NOT this frozen binary's
+    bundled interpreter. On old machines these differ sharply (e.g. a PyInstaller
+    3.12 binary on a Mac whose system python3 is 3.8), and the repo needs a modern
+    Python. Report the real one so the agent sees a too-old interpreter up front."""
+    for cand in ("python3", "python3.12", "python3.11", "python3.10", "python"):
+        v = _try("%s -c 'import platform;print(platform.python_version())'" % cand)
+        if v and v[0].isdigit():
+            return "%s (%s)" % (v, cand)
+    return "not found"
+
+
 def hardware_facts():
     f = {
         "os": platform.system(),
         "os_release": platform.release(),
         "arch": platform.machine(),
-        "python": platform.python_version(),
+        # system python3 (what the venv uses), not the frozen installer's Python
+        "python3": _system_python(),
         "cpu_count": os.cpu_count(),
     }
     # RAM
@@ -721,9 +734,9 @@ def main():
     say("LLM: %s / %s" % (provider, model))
 
     facts = hardware_facts()
-    say("machine: %s %s, %s cores, %s GB RAM, node %s"
+    say("machine: %s %s, %s cores, %s GB RAM, python3 %s, node %s"
         % (facts.get("os"), facts.get("arch"), facts.get("cpu_count"),
-           facts.get("ram_gb", "?"), facts.get("node")))
+           facts.get("ram_gb", "?"), facts.get("python3"), facts.get("node")))
 
     update_mode = os.environ.get("INDIEBIZ_UPDATE", "").strip().lower()
     if update_mode in ("standard", "full"):

@@ -676,7 +676,12 @@ def _clone_note():
         "%s/archive/refs/heads/main.zip (curl -L on mac/linux, Invoke-WebRequest "
         "on Windows PowerShell) and extract its contents so that backend/ sits "
         "directly under the repo root above.\n"
-        % (ROOT, REPO_URL, ROOT, REPO_URL)
+        "- If you had to use the zip fallback, git-ify the folder afterwards so "
+        "future updates work (updates rely on git): once git is available, run "
+        "`git init -b main && git remote add origin %s && git fetch origin main "
+        "&& git reset --hard origin/main` in the repo root. reset --hard only "
+        "touches tracked files; personal/ignored files are preserved.\n"
+        % (ROOT, REPO_URL, ROOT, REPO_URL, REPO_URL)
     )
 
 

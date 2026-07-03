@@ -100,8 +100,8 @@ PHONE_VERIFIED_PACKAGES = {
     "contest",          # AI 경진대회 검색(sense:contest, Kaggle API HTTP + stdlib). KAGGLE_API_TOKEN 폰 프로비저닝 전제.
     "study",            # 연구 검색(HTTP + stdlib; study:paper 만 arxiv 3p — A36서 안 되면 그 액션 mac_only)
     "python-exec",  # 폰 네이티브 코드 실행 탈출구 — handler 가 capability-gate 로 폰서 Chaquopy 인-프로세스 exec(맥=subprocess). stdlib만 import(서드파티 0). execute_python 은 IBL 액션 아니라 직접 도구라 runnable_actions 엔 미포함(정상).
-    "data-ops",  # 통화→통화 변환자(filter/sort/take/select/dedup/groupby/join/union/merge). 순수 superstructure(IBL 문법, 몸 무관)+stdlib만(json/re, 서드파티 0). 폰-로컬 통화(sense:here 등)는 폰서 거르고 정렬해야 맞음 → anywhere 가 정직. 외부 자원 없음.
-    "media_producer",  # ★순수 연산만 anywhere(document html 렌더=문자열·structure/image_critic/image_gemini=httpx+Gemini REST). 무거운 emitter(html_video·tts·slide·render_html·remotion=moviepy/edge_tts/playwright)는 액션별 mac_only 유지 → 폰선 포워드. moviepy·edge_tts 모듈레벨 import를 지연화해 폰서 모듈 import 성공(폰 시뮬 검증). 갇혀있던 문서IR 렌더 해방.
+    "data-ops",  # 통화→통화 변환자(filter/sort/take/select/dedup/groupby/join/union/merge) + 표준 코어 문서 emitter(table:structure/document — 2026-07-03 media_producer서 이관). 순수 superstructure(IBL 문법, 몸 무관), 모듈레벨 stdlib만(json/re, 서드파티 0 — 문서 emitter의 playwright/docx/pptx/typst는 함수 안 지연 import, html 렌더=문자열이라 폰서도 동작). 폰-로컬 통화(sense:here 등)는 폰서 거르고 정렬해야 맞음 → anywhere 가 정직.
+    "media_producer",  # ★순수 연산만 anywhere(image_critic/image_gemini=httpx+Gemini REST). 무거운 emitter(html_video·tts·slide·render_html·remotion=moviepy/edge_tts/playwright)는 액션별 mac_only 유지 → 폰선 포워드. moviepy·edge_tts 모듈레벨 import를 지연화해 폰서 모듈 import 성공(폰 시뮬 검증). (table:document/structure 문서 emitter는 data-ops로 이관.)
 }
 
 # === 포크-가드: INDIEBIZ_PROFILE 분기 위치 통제 (2026-06-13, 폰-자아 호스팅) ===

@@ -51,11 +51,9 @@ const CATEGORY_LABEL: Record<Category, string> = {
 const STANDARD_PACKAGES = new Set<string>([
   'ibl-core',           // IBL 핵심 인프라
   'system_essentials',  // self 파일 문법(read/write/grep/…) + table:spreadsheet emitter
-  'data-ops',           // table 관계대수 9종(filter/sort/…/merge) — 파이프 설탕의 desugar 타깃
+  'data-ops',           // table 관계대수 9종(filter/sort/…/merge) + document/structure emitter — 파이프 설탕의 desugar 타깃
   'visualization',      // table:chart emitter
 ]);
-// ★알려진 경계 이상: media_producer 가 표준 코어 table:document/structure 를 소유(표준 패키지로
-//   이관 후보). 이관 전까지 키 필요로 분류되지만, 제거하면 table emitter 2개가 죽는다.
 
 function categoryOf(pkg: PackageInfo): Category {
   if (STANDARD_PACKAGES.has(pkg.id)) return 'standard';

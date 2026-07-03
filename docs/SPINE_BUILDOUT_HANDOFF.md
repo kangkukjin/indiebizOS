@@ -59,6 +59,9 @@ IBL을 **산출물 생산의 척추 A~G**로 본다:
 - **`>>` 자동 파이프**: chart·spreadsheet가 `_prev_result`의 table 자동 수용(`_extract_table_from_prev`).
   → `[sense:world_bank]{...} >> [engines:chart]{title,chart_type}` 무reshape 동작(라이브 검증).
 
+> **2026-07-03 이관 노트**: 아래 B·C의 `structure_document`/`render_document`(+문서 IR 헬퍼)는 표준 코어
+> 경계 이상 해소로 `media_producer` → **`data-ops`** handler.py 로 이사했다(액션명 `table:structure/document` 불변).
+
 ### B 구조화 원자 ✅
 - `[engines:structure]{content, instruction}` — 경량 LLM 편집자가 콘텐츠→문서 IR blocks.
   `media_producer/handler.py` `structure_document` + `_STRUCTURE_PROMPT`. `>>` 시 이전 텍스트를 content로 수용.

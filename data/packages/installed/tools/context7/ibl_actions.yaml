@@ -1,6 +1,9 @@
 node: sense
 actions:
   devdocs:
+    aliases:
+      library_name: [library, lib, name]
+      library_id: [id, lib_id]
     returns: items
     fixture: '[sense:devdocs]{op: "resolve", library_name: "react"}'
     description: 소프트웨어 라이브러리/프레임워크 공식 문서 (op 분기, Context7). 코드 작성 시 API 참조용. 논문은 paper.

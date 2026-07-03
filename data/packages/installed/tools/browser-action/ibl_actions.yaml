@@ -1,6 +1,9 @@
 node: limbs
 actions:
   browser:
+    aliases:
+      source_ref: [from_ref]
+      target_ref: [to_ref]
     returns: effect
     runs_on: mac_only
     description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.

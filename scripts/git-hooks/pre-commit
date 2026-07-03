@@ -3,11 +3,13 @@
 #
 # 다음 파일이 스테이징될 때만 `build_ibl_nodes.py --check` 를 실행:
 #   - data/ibl_nodes_src/*.yaml          (src 편집)
-#   - data/packages/installed/**/tool.json   (op enum/default)
+#   - data/packages/installed/**/ibl_actions.yaml (패키지 어휘 fragment — aliases/ops/tool_json)
+#   - data/packages/installed/**/tool.json   (op enum/default — 빌드 파생물)
 #   - data/packages/installed/**/handler.py  (op 분기 substring + 코퍼스 param 정합)
 #   - data/training/*.json                   (코퍼스 param 정합)
-#   - backend/ibl_routing.py                 (ACTION_PARAM_ALIASES 편집)
 #   - scripts/build_ibl_nodes.py             (빌더 자체)
+# (2026-07-03: 파라미터 별칭이 ibl_routing.ACTION_PARAM_ALIASES → 어휘 데이터의
+#  aliases: 블록으로 이주 — ibl_routing.py 트리거를 ibl_actions.yaml 로 교체)
 #
 # 검사 실패 시 커밋 차단. `--no-verify` 로 우회 가능하지만 권장 X.
 #
@@ -20,7 +22,7 @@ set -euo pipefail
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 
 # 검사 트리거 — 위 4종 중 하나라도 스테이지되어 있으면 실행.
-if echo "$staged" | grep -qE '^(data/ibl_nodes_src/.*\.yaml|data/packages/installed/.*/tool\.json|data/packages/installed/.*/handler\.py|data/training/.*\.json|backend/ibl_routing\.py|scripts/build_ibl_nodes\.py)$'; then
+if echo "$staged" | grep -qE '^(data/ibl_nodes_src/.*\.yaml|data/packages/installed/.*/ibl_actions\.yaml|data/packages/installed/.*/tool\.json|data/packages/installed/.*/handler\.py|data/training/.*\.json|scripts/build_ibl_nodes\.py)$'; then
   repo_root=$(git rev-parse --show-toplevel)
   echo "[pre-commit] IBL 정합성 검사 실행..."
   if ! python3 "$repo_root/scripts/build_ibl_nodes.py" --check; then

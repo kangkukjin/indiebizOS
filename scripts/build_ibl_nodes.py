@@ -23,9 +23,14 @@ tool_selector / system_tools).
 실패하면 `--check`는 비0 종료, 일반 빌드는 경고만 출력.
 
 코퍼스 param 정합 (2026-06-04 추가, --check/--validate 전용):
-  학습 코퍼스의 액션별 param 키 ↔ (핸들러 읽기키 ∪ ACTION_PARAM_ALIASES ∪ 보편키 ∪ target_key).
+  학습 코퍼스의 액션별 param 키 ↔ (핸들러 읽기키 ∪ 액션 aliases 선언 ∪ 보편키 ∪ target_key).
   코퍼스가 자연어로 쓰는 키를 핸들러가 조용히 무시하는 신규 불일치를 검출 (silent-ignore 회귀 방지).
   의도된 노이즈는 CORPUS_PARAM_ALLOW 에 등록. 파서/코퍼스 미가용 시 건너뜀.
+
+파라미터 별칭 (2026-07-03 데이터화):
+  각 액션 정의처(src yaml / 패키지 ibl_actions.yaml)의 `aliases: {정규키: [별칭...]}` 블록이
+  단일 소스 — 빌드가 ibl_nodes.yaml 로 병합하고, 런타임(ibl_routing._normalize_param_aliases)은
+  레지스트리에서 읽는다. 옛 ibl_routing.ACTION_PARAM_ALIASES 하드코딩 테이블은 은퇴.
 """
 from __future__ import annotations
 import argparse
@@ -494,6 +499,21 @@ def _check_action(
             issues.append(f"{qualified}: ops.values 가 비어있거나 매핑이 아님")
             return issues
 
+    # --- aliases(파라미터 별칭) 스키마 검증 — 어휘 데이터화(2026-07-03) ---
+    # 형식: aliases: {<정규 키>: [<별칭>, ...]} — 런타임 _normalize_param_aliases 가 읽는다.
+    aliases = action.get("aliases")
+    if aliases is not None:
+        if not isinstance(aliases, dict) or not aliases:
+            issues.append(f"{qualified}: aliases 는 비어있지 않은 매핑이어야 함 ({{정규키: [별칭...]}})")
+        else:
+            for canonical, alts in aliases.items():
+                if not isinstance(alts, list) or not alts or not all(
+                    isinstance(a, str) and a for a in alts
+                ):
+                    issues.append(f"{qualified}: aliases.{canonical} 는 비어있지 않은 문자열 리스트여야 함")
+                elif canonical in alts:
+                    issues.append(f"{qualified}: aliases.{canonical} 에 정규 키 자신이 별칭으로 들어감")
+
     # target_key:op 인데 ops 없음 — 모든 라우터에서 강제 (IBL 어휘 일관성).
     # handler 가 아닌 라우터(system/workflow_engine/trigger_engine 등)는 tool.json 삼각 검증은 못 하지만
     # ops 블록 자체는 어휘 완성을 위해 필수.
@@ -663,41 +683,27 @@ def _dir_read_keys(paths) -> set[str]:
     return keys
 
 
-def _extract_action_param_aliases(root: Path) -> dict[str, set[str]]:
-    """backend/ibl_routing.py 의 ACTION_PARAM_ALIASES → {qualified: {정규키 ∪ 별칭들}} (AST)."""
-    path = root / "backend" / "ibl_routing.py"
+def _extract_action_param_aliases(data: dict) -> dict[str, set[str]]:
+    """병합된 레지스트리의 액션별 aliases 블록 → {qualified: {정규키 ∪ 별칭들}}.
+
+    (이주 2026-07-03: 옛 ibl_routing.ACTION_PARAM_ALIASES AST 추출 → 어휘 데이터 소유.
+    별칭은 각 액션 정의처(src yaml / 패키지 ibl_actions.yaml)의 aliases: 블록이 단일 소스.)"""
     out: dict[str, set[str]] = {}
-    if not path.is_file():
-        return out
-    try:
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-    except SyntaxError:
-        return out
-    for node in tree.body:
-        # 일반 대입과 주석 대입(`X: T = {...}`) 둘 다.
-        if isinstance(node, ast.Assign):
-            targets = node.targets
-        elif isinstance(node, ast.AnnAssign):
-            targets = [node.target]
-        else:
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
             continue
-        if not any(isinstance(t, ast.Name) and t.id == "ACTION_PARAM_ALIASES" for t in targets):
-            continue
-        if not isinstance(node.value, ast.Dict):
-            continue
-        for k_node, v_node in zip(node.value.keys, node.value.values):
-            if not (isinstance(k_node, ast.Constant) and isinstance(k_node.value, str)):
+        for action_name, action in (node.get("actions", {}) or {}).items():
+            if not isinstance(action, dict):
+                continue
+            aliases = action.get("aliases")
+            if not isinstance(aliases, dict):
                 continue
             ks: set[str] = set()
-            if isinstance(v_node, ast.Dict):
-                for ck, cv in zip(v_node.keys, v_node.values):
-                    if isinstance(ck, ast.Constant) and isinstance(ck.value, str):
-                        ks.add(ck.value)
-                    if isinstance(cv, ast.List):
-                        for el in cv.elts:
-                            if isinstance(el, ast.Constant) and isinstance(el.value, str):
-                                ks.add(el.value)
-            out[k_node.value] = ks
+            for canonical, alts in aliases.items():
+                ks.add(str(canonical))
+                ks.update(str(a) for a in (alts or []))
+            out[f"{node_name}:{action_name}"] = ks
     return out
 
 
@@ -747,7 +753,7 @@ def _load_corpus_param_keys(root: Path) -> dict[str, set[str]] | None:
 
 
 def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
-    """코퍼스 param 키 ↔ (핸들러 읽기키 ∪ ACTION_PARAM_ALIASES ∪ 보편키 ∪ target_key) 대조.
+    """코퍼스 param 키 ↔ (핸들러 읽기키 ∪ 액션 aliases 선언 ∪ 보편키 ∪ target_key) 대조.
 
     코퍼스가 자연어로 쓰는 키를 핸들러가 조용히 무시하는 신규 불일치를 검출한다.
     router:handler 액션은 패키지 .py 전체를, 그 외(system/engine/driver/trigger)는
@@ -756,7 +762,7 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
     corpus = _load_corpus_param_keys(root)
     if corpus is None:
         return None
-    aliases = _extract_action_param_aliases(root)
+    aliases = _extract_action_param_aliases(data)
     tool_index = build_tool_index(root)
     backend_keys = _dir_read_keys((root / "backend").glob("*.py"))
     pkg_cache: dict[Path, set[str]] = {}
@@ -790,7 +796,7 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
             if unknown:
                 issues.append(
                     f"{qualified}: 코퍼스 param 키가 핸들러/별칭에 없음 — {unknown} "
-                    f"(ibl_routing.ACTION_PARAM_ALIASES 별칭 추가 · 핸들러 폴백 · 코퍼스 정정 중 택1; "
+                    f"(액션 정의처의 aliases: 블록에 별칭 추가 · 핸들러 폴백 · 코퍼스 정정 중 택1; "
                     f"의도된 노이즈면 build_ibl_nodes.CORPUS_PARAM_ALLOW 에 등록)"
                 )
     return issues
@@ -1528,6 +1534,30 @@ def validate_node_guides(data: dict, root: Path) -> list[str]:
     return issues
 
 
+def validate_always_on(data: dict) -> list[str]:
+    """노드 레벨 always_on 플래그 검증 — 인프라/문법 노드 항상-on 의 단일 소스(2026-07-03 데이터화).
+
+    ibl_access._always_allowed() 가 이 플래그로 항상-허용 노드 집합을 만든다.
+    전부 사라지면 노드 선별(allowed_nodes) 시 self/others/table 파이프라인이
+    침묵으로 깨지므로 빌드에서 막는다."""
+    issues: list[str] = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    on: list[str] = []
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict) or "always_on" not in node:
+            continue
+        if not isinstance(node["always_on"], bool):
+            issues.append(f"[{node_name}] always_on 은 불리언이어야 함 (현재 {node['always_on']!r})")
+        elif node["always_on"]:
+            on.append(node_name)
+    if nodes and not on:
+        issues.append(
+            "always_on: true 노드가 하나도 없음 — 인프라/문법 노드(self/others/table)가 "
+            "노드 선별에서 꺼지면 파이프라인이 깨짐 (노드 yaml 에 always_on: true 복구 필요)"
+        )
+    return issues
+
+
 def validate(data: dict, root: Path) -> list[str]:
     """전체 yaml 데이터에 대해 삼각 검증 수행."""
     issues: list[str] = []
@@ -1548,6 +1578,7 @@ def validate(data: dict, root: Path) -> list[str]:
     issues.extend(validate_transform_contract(data))
     issues.extend(validate_phone_reachability(data, root))
     issues.extend(validate_node_guides(data, root))
+    issues.extend(validate_always_on(data))
     return issues
 
 

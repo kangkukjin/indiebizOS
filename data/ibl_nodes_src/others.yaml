@@ -1,6 +1,8 @@
   others:
     actions:
       delegate:
+        aliases:
+          steps: [pipeline]
         returns: effect
         description: 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기.
         target_description: 'agent_id (''에이전트'' 또는 ''프로젝트/에이전트''). message 필수. mode: async(기본,비동기 보고)/sync(응답 대기, 파이프라인용)/workflow(steps IBL 위임). scope: same(기본)/cross(타 프로젝트 자동 활성화, 시스템 AI 전용)/system(자율주행 top-level 시스템 AI에 자연어 의도 fire-and-forget — 앱 "생성" 버튼용, agent_id 불필요). mode=workflow 시 steps 필수.'
@@ -197,6 +199,8 @@
         - 게시판
         - 커뮤니티
     description: '타자: 외부 에이전트 및 사용자와의 소통 — 위임, 메시징, SMS, 이메일, 연락처, 협업'
+    # 인프라 노드 — 어떤 노드 선별에서도 항상 허용 (ibl_access가 always_on 플래그를 읽음)
+    always_on: true
     tags:
     - 위임
     - 에이전트

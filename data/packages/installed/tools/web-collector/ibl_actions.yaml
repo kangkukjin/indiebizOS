@@ -1,6 +1,9 @@
 node: sense
 actions:
   collect:
+    aliases:
+      site_id: [site]
+      query: [keyword]
     returns: items
     fixture: '[sense:collect]{op: "query", action: "recent"}'
     runs_on: mac_only

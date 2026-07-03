@@ -182,6 +182,8 @@
         - 실행
         - 단계
       trigger:
+        aliases:
+          trigger_id: [id]
         returns: effect
         description: 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
         target_description: 'create는 name + pipeline(실행할 IBL) 필수, schedule이면 cron("0 9 * * *" 등 표준 cron, 내부에서 일정으로 해소) 또는 config. get/update/delete/enable/disable/history는 id 필요. list/status는 파라미터 없음.'
@@ -209,6 +211,9 @@
         - 트리거 상태
         - 자동 실행
       output:
+        aliases:
+          content: [data]
+          format: [type]
         returns: effect
         description: 결과를 지정한 목적지로 내보냄 (op 분기). gui=UI 표시, file=파일 저장, clipboard=클립보드 복사. 파일 *조작*은 write/read 별도.
         target_description: 'gui — content(HTML/데이터) + format(카드/테이블/HTML). file — path(확장자로 형식 자동) + content. clipboard — content(텍스트).'
@@ -267,6 +272,8 @@
         - 능력
         - 확장
     description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
+    # 인프라 노드 — 어떤 노드 선별에서도 항상 허용 (ibl_access가 always_on 플래그를 읽음)
+    always_on: true
     tags:
     - 파일
     - 메모리

@@ -886,7 +886,13 @@ def _pipe_looks_numeric(s: str) -> bool:
 
 
 def _pipe_block(verb: str, val: str) -> str:
-    """파이프 op 값 → 해당 table 변환자 블록 문자열."""
+    """파이프 op 값 → 해당 table 변환자 블록 문자열.
+
+    ★결합 명시(2026-07-03): 아래 [table:filter/sort/take/select/dedup] 하드코딩은
+    파이프 단축문법(`|where` 등)을 table 노드 어휘로 펼치는 레거시 흡수용 *코드젠*이다.
+    table 변환자의 액션명/파라미터 키(where·by·n·columns)가 바뀌면 여기도 함께 바꿔야
+    한다. 어휘 자체는 정의처(패키지 ibl_actions.yaml)가 소유하고, 이 함수는 그 어휘를
+    생성하는 문법 설탕이라 파라미터 별칭 데이터화(aliases: 블록) 대상에서 의도적으로 제외."""
     val = (val or "").strip()
     if verb == "filter":
         # where 값은 복합(문자열/{field,op,value})일 수 있어 대체로 그대로.

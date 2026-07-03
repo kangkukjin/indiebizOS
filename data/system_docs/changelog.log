@@ -1577,3 +1577,9 @@
 - §4 마찰 신호 텔레메트리: A.raw-코드 추락(굶주림 경보 겸용) B.IBL 실패→쉘 폴백 C.반복 다단 조합(단어 주조 후보). 은퇴깃발·자동승격 없음(감지=시스템, 결정=사용자)
 - 데이터=episode_log 구조화 stdout 라인([tool:...]/[node:action] 화살표 + IBL_DEBUG code). ibl_execution_logs 테이블은 호출자 0 죽은 배관으로 확인, 미사용
 - run_maintenance_bundle 항목 6(주간 카덴스) + self_checks(__telemetry__) + 알림 + data/vocab_crystallization_flags.json. 첫 실측: 7일 156 에피소드, 우회율 17.7%, 후보 6건(ep548 self:read 실패→grep 폴백 등). ★백엔드 재시작 후 번들 합류 라이브
+[2026-07-03] DESC_DRIFT_CLEANUP: 설명 드리프트 깃발 9건 해소 (주간 감사 2026-07-01분)
+- contradiction 5건: self:storage(집계 요약 1건 명시)/business·business_item·business_document·work_guideline(조회·관리 + "list=items 통화, 단건 op=해당 객체" 명시, item은 add/remove_image op 누락도 보강)
+- currency 4건: engines:newspaper=은퇴로 깃발 무효 / table:spreadsheet("행 데이터(rows/sheets)"→"items 통화") / table:structure·document("문서 IR(공유 문서 모델)"→"blocks(문서 구조 배열)", document는 stale "(현재 html)"→6 emitter 명시)
+- 예방 정리: table 분리 잔여 좀비 참조 일소 — self:photo desc "engines 변환자"→table, kosis/investment/study target_desc의 engines:chart→table:chart, sense:read_page "문서 IR"→"문단 단위", company/kosis/grep/world_bank "items(행 dict)"→"items 통화"
+- 감사 앵커 오탐 방지 2줄(ibl_description_audit._VOCAB_ANCHOR): 도메인 명사(통계표·행·시트)·파라미터명은 통화 주장 아님 / effect의 >> 파이프 안내·단건 op 부연은 transform/returns 모순 아님 — 재실행 2회 연속 드리프트 0
+- build --check 통과(141 액션 불변, desc만) + self_checks(description_drift=ok) 기록 → 조종실 "설명 정합" 초록. ★앵커 수정은 백엔드 재시작 후 번들에 반영

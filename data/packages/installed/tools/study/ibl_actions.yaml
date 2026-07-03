@@ -61,14 +61,14 @@ actions:
     target_description: 검색어 또는 키워드 (영어).
     router: handler
     tool: search_guardian
-    implementation: Guardian Open Platform API로 뉴스 아카이브 검색 (API키 필요). records[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 폐지(records를 문자열로 파괴하던 결함 제거).
+    implementation: Guardian Open Platform API로 뉴스 아카이브 검색 (API키 필요). items[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 폐지(목록을 문자열로 파괴하던 결함 제거).
     target_key: query
   world_bank:
     returns: items
     fixture: '[sense:world_bank]{indicator: "GDP", country: "한국"}'
-    description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. items(행 dict — 연도+지표값) 반환, 소비자가 table 재구성.
+    description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. items 통화(연도+지표값 필드) 반환.
     group: world
-    target_description: 지표명 또는 코드 (예 "GDP"/"인구"/"실업률" 자연어 가능, NY.GDP.MKTP.CD 코드도). country는 국가명(한국/미국) 또는 ISO 코드. 반환에 table={columns:[연도,지표],rows:[[연도,값],...]} 포함 — 그대로 engines:chart{table:...}/spreadsheet{table:...}로 흘려보내 reshape 없이 시각화/표.
+    target_description: 지표명 또는 코드 (예 "GDP"/"인구"/"실업률" 자연어 가능, NY.GDP.MKTP.CD 코드도). country는 국가명(한국/미국) 또는 ISO 코드. 반환에 table={columns:[연도,지표],rows:[[연도,값],...]} 포함 — 그대로 table:chart{table:...}/spreadsheet{table:...}로 흘려보내 reshape 없이 시각화/표.
     router: handler
     tool: fetch_world_bank_data
     implementation: 세계은행 공개 API로 국가별 경제/사회 지표 시계열 조회

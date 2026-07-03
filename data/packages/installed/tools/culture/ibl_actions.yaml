@@ -200,6 +200,8 @@ actions:
     - Gutenberg
     - 한국고전
   exhibit:
+    aliases:
+      keyword: [query]
     returns: items
     fixture: '[sense:exhibit]{query: "미술"}'
     description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.

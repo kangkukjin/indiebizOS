@@ -1,12 +1,14 @@
 node: table
 actions:
   chart:
+    aliases:
+      chart_type: [type]
     returns: effect
     runs_on: mac_only
     description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
     target_description: 'title (필수). chart_type으로 종류 분기 (기본 line).
 
-      표준 테이블 통화도 수용: table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(table:spreadsheet와 같은 통화). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
+      표형 table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} 파라미터도 수용 — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(table:spreadsheet와 같은 입력 형태). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
 
       - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
 

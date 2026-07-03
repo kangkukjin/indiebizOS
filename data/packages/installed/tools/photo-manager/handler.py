@@ -98,7 +98,7 @@ def execute(tool_input: Dict[str, Any], context) -> Dict[str, Any]:
 # [self:photo] — 보편 파일 질의(file_index) 위의 얇은 '미디어 preset'.
 #   보편 질의(OS 색인·몸 분기·필터·정렬)는 backend/file_index 가 한 번만 한다.
 #   여기선 사진다운 것만 얹는다: kind=media 선택 + 썸네일 image + GPS·기종 meta.
-#   파생 조회(타임라인·통계·중복)는 records → engines 변환자(groupby/filter) 조합.
+#   파생 조회(타임라인·통계·중복)는 items → table 변환자(groupby/filter) 조합.
 # ============================================================================
 
 # 사진/영상에서 끌어올 facet (보편 질의에 추가로 요청).

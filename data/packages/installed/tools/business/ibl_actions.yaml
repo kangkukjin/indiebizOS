@@ -4,7 +4,7 @@ nodes:
       business:
         returns: items
         fixture: '[self:business]{op: "list"}'
-        description: 나의 비즈니스(사업) CRUD — op:list(기본)/detail/save/delete.
+        description: 나의 비즈니스(사업) 조회·관리 — op:list(기본, items 통화)/detail/save/delete(단건 op는 해당 객체 응답).
         group: business
         target_description: op:list(level 0-4·search 필터) / detail(id 필수, +소속 아이템) / save(id 없으면 생성·name 필수, 있으면 수정 — name/level(0-4 공개수준)/description) / delete(id 필수, 아이템도 함께).
         target_key: op
@@ -258,7 +258,7 @@ nodes:
       business_item:
         returns: items
         fixture: '[self:business_item]{op: "list"}'
-        description: 비즈니스 아이템(상품/항목) CRUD — op:list(기본)/detail/save/delete.
+        description: 비즈니스 아이템(상품/항목) 조회·관리 — op:list(기본, items 통화)/detail/save/delete/add_image/remove_image(단건 op는 해당 객체 응답).
         group: business
         target_description: op:list(business_id 필수) / detail(item_id 필수) / save(id 없으면 생성·business_id+title 필수, 있으면 수정 — title/details/attachment_path) / delete(item_id 필수).
         target_key: op
@@ -283,7 +283,7 @@ nodes:
       business_document:
         returns: items
         fixture: '[self:business_document]{op: "list"}'
-        description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 관리 — op:list(기본)/detail/update/regenerate.
+        description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 조회·관리 — op:list(기본, items 통화)/detail/update/regenerate(단건 op는 해당 문서 응답).
         group: business
         target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content) / regenerate(비즈니스·아이템 기반 레벨별 자동 재생성, 파라미터 없음).
         target_key: op
@@ -305,7 +305,7 @@ nodes:
       work_guideline:
         returns: items
         fixture: '[self:work_guideline]{op: "list"}'
-        description: 레벨별 근무 지침(업무 가이드라인) 관리 — op:list(기본)/detail/update.
+        description: 레벨별 근무 지침(업무 가이드라인) 조회·관리 — op:list(기본, items 통화)/detail/update(단건 op는 해당 지침 응답).
         group: business
         target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content).
         target_key: op
@@ -340,6 +340,8 @@ nodes:
   others:
     actions:
       messages:
+        aliases:
+          neighbor_id: [contact, name, id]
         returns: items
         fixture: '[others:messages]{op: "inbox"}'
         description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr).

@@ -57,9 +57,12 @@ nodes:
         implementation: pathlib.glob 패턴 검색. path 파라미터로 검색 루트 지정 (절대경로/~/상대경로). max_results로 결과 상한 (기본 200). 매칭 없으면 path 옵션 안내
         target_key: pattern
       grep:
+        aliases:
+          root_path: [path]
+          pattern: [query]
         returns: items
         fixture: '[self:grep]{pattern: "provider", path: "."}'
-        description: 파일 내용에서 패턴 검색 (grep/ripgrep). items(행 dict — 파일/줄번호/내용). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
+        description: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
         group: file
         target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터.
         keywords:
@@ -112,8 +115,8 @@ nodes:
       spreadsheet:
         returns: effect
         runs_on: mac_only
-        description: 행 데이터(rows/sheets) → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
-        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표준 테이블 통화 table={columns,rows}도 수용(headers/rows로 매핑 — table:chart와 같은 통화). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
+        description: items 통화 → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
+        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표형 table={columns,rows} 파라미터도 수용(headers/rows로 매핑 — table:chart와 같은 입력 형태). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
         group: chart
         router: handler
         tool: spreadsheet

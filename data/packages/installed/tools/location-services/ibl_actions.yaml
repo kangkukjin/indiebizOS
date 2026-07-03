@@ -143,7 +143,7 @@ nodes:
           values:
             flight: 항공권 검색 (from→to·date). 도시명→IATA·상대날짜 자동 해소
             hotel: 도시 호텔 목록 (city→도시코드 자동)
-        implementation: Amadeus API(OAuth2). op→endpoint 매핑 + 도시명/날짜 내부 해소 (endpoint+params 직접 지정도 가능). 두 op 모두 records[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 없이 깨끗(weather/restaurant 형제). (poi=관광지는 Amadeus가 2026 영구 폐기(HTTP 410)해 제거.)
+        implementation: Amadeus API(OAuth2). op→endpoint 매핑 + 도시명/날짜 내부 해소 (endpoint+params 직접 지정도 가능). 두 op 모두 items[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 없이 깨끗(weather/restaurant 형제). (poi=관광지는 Amadeus가 2026 영구 폐기(HTTP 410)해 제거.)
         app:
           instrument: travel
           icon: ✈️
@@ -193,6 +193,8 @@ nodes:
   limbs:
     actions:
       show_map:
+        aliases:
+          query: [location]
         returns: effect
         description: 지도에 위치 마커 표시 (HTML 지도 생성). 장소명 입력 시 자동 좌표 변환.
         group: open

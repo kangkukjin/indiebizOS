@@ -14,7 +14,7 @@ nodes:
       crawl:
         returns: items
         fixture: '[sense:crawl]{url: "https://example.com"}'
-        description: 웹페이지 원문 읽기 (URL 필요). items=문서 IR(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
+        description: 웹페이지 원문 읽기 (URL 필요). items=문단 단위(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
         group: research
         target_description: 읽을 페이지 URL (http/https). 검색 결과의 link 필드 그대로 전달 가능.
         router: handler

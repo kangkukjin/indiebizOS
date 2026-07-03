@@ -85,6 +85,8 @@ nodes:
         - 발표자료
         - 카드
       image_gemini:
+        aliases:
+          output_path: [filename]
         returns: effect
         runs_on: anywhere
         description: Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").
@@ -173,7 +175,7 @@ nodes:
         returns: effect
         runs_on: anywhere
         scope: workspace
-        description: 원본 콘텐츠를 문서 IR(blocks)로 구조화하는 편집자 원자. A획득→B구조화→IR→emit 파이프라인의 B. document로 이어 렌더.
+        description: 원본 콘텐츠를 blocks(문서 구조 배열)로 정리하는 편집자 원자 — 획득→구조화→렌더 파이프라인의 중간. >> [table:document]로 이어 렌더.
         target_description: content(필수, 구조화할 원본 텍스트 — >> 파이프 시 이전 결과를 content로 받아 생략 가능). instruction(선택, 정리 방향 예 "3섹션 요약 보고서로"·"비교는 표로"). 반환에 title·blocks(문서 IR) 포함 — 그대로 table:document로 >> 파이프하면 렌더.
         group: media_produce
         router: handler
@@ -189,12 +191,12 @@ nodes:
       document:
         returns: effect
         runs_on: anywhere
-        description: 문서 IR(공유 문서 모델)을 산출물로 렌더. 포맷 중립 IR을 emitter가 렌더(현재 html). 보고서·문서·페이지 산출의 단일 진실 소스.
+        description: blocks(문서 구조 배열)를 산출물로 렌더 — 같은 blocks를 html/pdf/png/docx/pptx/typst emitter로. 보고서·문서·페이지 산출의 단일 진실 소스.
         target_description: 'blocks(필수): 문서 IR 블록 배열. 각 블록은 {type, ...}:
 
           - heading{level(1~6), text} · paragraph{text} · list{ordered?, items[]}
 
-          - image{src(경로/URL), caption?} · table{columns, rows}(데이터 통화 그대로 재사용)
+          - image{src(경로/URL), caption?} · table{columns, rows}(표형 데이터 그대로 재사용)
 
           - cards{columns(기본2), items:[{title, meta?, summary?, url?, link_label?}]}(링크 카드 그리드 — 뉴스·검색결과·북마크·상품목록)
 
@@ -210,7 +212,7 @@ nodes:
         group: media_produce
         router: handler
         tool: render_document
-        implementation: 포맷 중립 문서 IR을 emitter로 렌더 — html(_doc_blocks_to_html)·pdf/png(Playwright 동일 HTML)·docx(_doc_blocks_to_docx, python-docx)·pptx(_doc_blocks_to_pptx, python-pptx 슬라이드 투영). table 블록은 데이터 통화({columns,rows}) 재사용. 단일 IR → 다중 emitter.
+        implementation: 포맷 중립 문서 IR을 emitter로 렌더 — html(_doc_blocks_to_html)·pdf/png(Playwright 동일 HTML)·docx(_doc_blocks_to_docx, python-docx)·pptx(_doc_blocks_to_pptx, python-pptx 슬라이드 투영). table 블록은 표형 {columns,rows} 재사용. 단일 IR → 다중 emitter.
         target_key: blocks
         keywords:
         - 문서

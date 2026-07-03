@@ -92,7 +92,7 @@ nodes:
       storage:
         returns: scalar
         fixture: '[self:storage]{op: "volumes"}'
-        description: 디스크 용량 분석 (op 분기) — 폴더·확장자별 용량 집계. scan(분석 인덱스 구축)/summary(용량 집계)/volumes(볼륨 목록). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
+        description: 디스크 용량 분석 (op 분기) — scan(용량 인덱스 구축)/summary(폴더·확장자별 용량 집계)/volumes(스캔된 볼륨 개요). 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
         target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
         target_key: op
@@ -106,11 +106,13 @@ nodes:
             volumes: 용량 분석된 볼륨 목록 (이름·경로·용량, 기본)
         implementation: scan_storage/get_storage_summary/list_volumes op 분기 (pc-manager)
       fs_query:
+        aliases:
+          min_size_mb: [min_size]
         returns: items
         fixture: '[self:fs_query]{kind: "pdf"}'
         description: 파일 메타 검색 (이름·확장자·크기·종류) — OS 색인(맥 Spotlight) 직접. 선스캔 불필요·항상 최신. 내용 검색은 grep, 패턴은 find. self:photo 와 같은 file_index 보편 질의 위의 종류-무관 preset.
         group: file
-        target_description: search_term(이름 부분일치) · extension(확장자) · kind(image/video/audio/pdf/any) · min_size_mb · path(검색 루트, 생략 시 홈) · limit(기본 100). 결과 records(보편 파일 필드) + table 통화.
+        target_description: search_term(이름 부분일치) · extension(확장자) · kind(image/video/audio/pdf/any) · min_size_mb · path(검색 루트, 생략 시 홈) · limit(기본 100). 결과 items(보편 파일 필드) + 표형 table={columns,rows} 키.
         router: handler
         tool: query_storage
         implementation: pc-manager _query_storage — backend/file_index.query 위임(mdfind 무상태). 비색인 경로는 라이브 walk 폴백.
@@ -162,6 +164,9 @@ nodes:
                 - '{meta}'
                 - '{path}'
       folder_note:
+        aliases:
+          folder_path: [path]
+          root_path: [path]
         returns: scalar
         fixture: '[self:folder_note]{op: "get"}'
         description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.

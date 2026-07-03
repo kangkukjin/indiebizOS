@@ -18,65 +18,33 @@ TOOL_EXECUTION_TIMEOUT = 60
 
 # === 파라미터 alias 정규화 ===
 # AI(특히 실행기억/해마 RAG)가 자연스러운 이름으로 호출했을 때 핸들러의 정규 키로 자동 매핑.
-# 형식: {"node:action": {"<정규 키>": ["<alias1>", "<alias2>", ...]}}
+# 별칭은 어휘 데이터가 소유한다: 각 액션 정의(src yaml / 패키지 ibl_actions.yaml)의
+# `aliases: {<정규 키>: [<alias1>, ...]}` 블록 → 빌드가 ibl_nodes.yaml 로 병합 →
+# 여기서는 레지스트리의 action_config 를 읽기만 한다 (tool.json 파생화와 같은 수).
 # 정규화 규칙: 정규 키가 비어있고 alias 키 중 하나에 값이 있으면 그 값을 정규 키로 옮긴다.
-ACTION_PARAM_ALIASES: Dict[str, Dict[str, list]] = {
-    # 2026-06-03 전수조사(param 이름 불일치): 코퍼스/자연어가 쓰는 키 → 핸들러 정규 키.
-    #   옛 항목(apt_trade/resolve_library/recommended_books)은 어휘 통합으로 사라져 현재 액션명으로 재키잉.
-    # === 부동산 (real-estate) — 옛 apt_*/house_* → realty{op}, region_code가 정식 ===
-    "sense:realty": {"region_code": ["district_code", "dong_code", "code"]},
-    "sense:commercial": {
-        "region_code": ["district_code", "dong_code", "code"],
-        "lat": ["latitude", "y"],
-        "lng": ["longitude", "lon", "x"],
-    },
-    # === 라이브러리 문서 (context7) — 옛 resolve_library/get_library_docs → devdocs{op} ===
-    "sense:devdocs": {"library_name": ["library", "lib", "name"], "library_id": ["id", "lib_id"]},
-    # === 문화 (KCISA 전시 — keyword가 정식) ===
-    "sense:exhibit": {"keyword": ["query"]},
-    # === 지역 정보 DB (area가 정식) ===
-    "sense:local_query": {"area": ["region"]},
-    # === 웹 수집 (query op: site_id/query가 정식) ===
-    "sense:collect": {"site_id": ["site"], "query": ["keyword"]},
-    # === self ===
-    "self:fs_query": {"min_size_mb": ["min_size"]},
-    "self:folder_note": {"folder_path": ["path"], "root_path": ["path"]},
-    "self:photo": {"media_type": ["filter"]},
-    "self:grep": {"root_path": ["path"], "pattern": ["query"]},
-    "self:trigger": {"trigger_id": ["id"]},
-    "self:output": {"content": ["data"], "format": ["type"]},
-    # === limbs ===
-    # browser 통합(2026-06-04): 옛 limbs:drag 별칭을 limbs:browser{op:drag}로 재키.
-    "limbs:browser": {"source_ref": ["from_ref"], "target_ref": ["to_ref"]},
-    "limbs:radio_favorite": {"stream_url": ["url"], "name": ["title"]},
-    "limbs:show_map": {"query": ["location"]},
-    # (은퇴 2026-06-04) limbs:iframe name:[id] 별칭 — switch가 id를 HTML id 속성으로 직접 처리(name 폴백 포함).
-    # === table ===
-    "table:chart": {"chart_type": ["type"]},
-    # === engines ===
-    "engines:image_gemini": {"output_path": ["filename"]},
-    # === others ===
-    "others:messages": {"neighbor_id": ["contact", "name", "id"]},
-    "others:delegate": {"steps": ["pipeline"]},
-}
 
 
-def _normalize_param_aliases(node: str, action: str, params: dict) -> dict:
-    """액션별 alias 매핑을 적용해 핸들러가 받는 정규 키로 변환.
+def _normalize_param_aliases(node: str, action: str, params: dict,
+                             action_config: Optional[dict] = None) -> dict:
+    """액션의 aliases 선언(레지스트리)을 적용해 핸들러가 받는 정규 키로 변환.
 
     핸들러는 변경 없이 정규 키만 받고, AI 호출자는 자연스러운 이름을 써도 통과한다.
     이미 정규 키에 값이 있으면 alias는 무시 (정규 키 우선).
+    action_config 미전달 시 레지스트리(ibl_nodes.yaml)에서 직접 조회한다.
     """
     if not isinstance(params, dict):
         return params
-    key = f"{node}:{action}"
-    aliases = ACTION_PARAM_ALIASES.get(key)
-    if not aliases:
+    if action_config is None:
+        from ibl_engine import _load_nodes_config
+        action_config = (_load_nodes_config().get("nodes", {})
+                         .get(node, {}).get("actions", {}).get(action)) or {}
+    aliases = action_config.get("aliases") if isinstance(action_config, dict) else None
+    if not isinstance(aliases, dict):
         return params
     for canonical, alts in aliases.items():
         if params.get(canonical) is not None:
             continue
-        for alt in alts:
+        for alt in (alts or []):
             if params.get(alt) is not None:
                 params[canonical] = params[alt]
                 break
@@ -1107,7 +1075,7 @@ def _route_by_config(action_config, params, node, action,
                      project_path, agent_id):
     """YAML 액션 설정 기반 통합 라우팅"""
     # 자연스러운 파라미터 이름(district_code, name 등)을 핸들러 정규 키로 자동 매핑
-    params = _normalize_param_aliases(node, action, params)
+    params = _normalize_param_aliases(node, action, params, action_config)
 
     router = action_config.get("router")
     # Phase 30: scope 선언 (workspace/system/project). 미지정 시 project.

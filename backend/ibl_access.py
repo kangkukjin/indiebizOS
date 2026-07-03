@@ -26,12 +26,21 @@ from typing import List, Optional, Set, Dict
 logger = logging.getLogger(__name__)
 
 
-# 항상 허용되는 인프라 노드
-# Phase 19-22: system, team
-# Phase 23: 5-노드 체계 (system→self, team→others)
-# table 분리: table = IBL 문법 계층(통화 변환자). 어떤 노드 선별에서도 꺼지면 파이프라인이
-#   깨지므로 self/others 처럼 항상 허용한다(노드 on/off 시 문법 항상-on 보장).
-_ALWAYS_ALLOWED = {"self", "others", "table"}
+# 항상 허용되는 인프라 노드 — 노드 yaml 의 `always_on: true` 플래그가 단일 소스.
+# (역사: Phase 19-22 system/team → Phase 23 self/others → table 분리로 문법 계층 합류.
+#  table = IBL 문법 계층(통화 변환자)이라 어떤 노드 선별에서도 꺼지면 파이프라인이 깨짐 —
+#  노드 on/off 기능의 토대. 현재 always_on 노드: self, others, table)
+# 레지스트리 미가용(부트스트랩/테스트) 시에만 쓰는 최후 폴백:
+_ALWAYS_ALLOWED_FALLBACK = {"self", "others", "table"}
+
+
+def _always_allowed() -> Set[str]:
+    """ibl_nodes.yaml 에서 always_on: true 노드 집합을 읽는다 (_load_nodes_data 캐시 공유)."""
+    nodes = _load_nodes_data().get("nodes") or {}
+    if not nodes:
+        return set(_ALWAYS_ALLOWED_FALLBACK)
+    return {n for n, cfg in nodes.items()
+            if isinstance(cfg, dict) and cfg.get("always_on")}
 
 
 # ============ 접근 제어 ============
@@ -68,7 +77,7 @@ def resolve_allowed_nodes(allowed_nodes: Optional[List[str]]) -> Optional[Set[st
         else:
             resolved.add(entry)
 
-    resolved.update(_ALWAYS_ALLOWED)
+    resolved.update(_always_allowed())
     return resolved
 
 
@@ -81,7 +90,7 @@ def check_node_access(node: str, allowed: Optional[Set[str]]) -> bool:
 
 def get_denied_message(node: str, allowed: Set[str]) -> dict:
     """접근 거부 에러 메시지"""
-    user_nodes = sorted(allowed - _ALWAYS_ALLOWED)
+    user_nodes = sorted(allowed - _always_allowed())
     return {
         "error": f"노드 '{node}'에 대한 접근 권한이 없습니다.",
         "allowed_nodes": user_nodes,

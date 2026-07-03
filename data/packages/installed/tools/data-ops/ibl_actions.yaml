@@ -9,7 +9,7 @@ actions:
     group: transform
     router: handler
     tool: data_filter
-    implementation: data-ops handler.py — records|table 통화에서 where 미니 DSL로 부분집합. 비파괴(같은 통화 반환).
+    implementation: data-ops handler.py — items(또는 표형 table 입력)에서 where 미니 DSL로 부분집합. 비파괴(같은 형태 반환).
     target_key: where
     keywords:
     - 필터
@@ -73,7 +73,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교).
-    target_description: by(중복 판정 키 필드/열; 미지정 시 records=title, table=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)
+    target_description: by(중복 판정 키 필드/열; 미지정 시 items=title, 표형 table 입력=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)
     group: transform
     router: handler
     tool: data_dedup
@@ -107,11 +107,11 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자(이항) — 두 입력을 공통 키(on)로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.
-    target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). table=열 기준, records=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
+    target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). 표형 table 입력=열 기준, items=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}. 두 입력은 & 병렬로 공급.'
     group: transform
     router: handler
     tool: data_join
-    implementation: data-ops handler.py — & 병렬 두 입력을 on 키로 inner join(우측 인덱싱, 키 정규화 비교). table·records 통화 모두 지원(같은 통화끼리).
+    implementation: data-ops handler.py — & 병렬 두 입력을 on 키로 inner join(우측 인덱싱, 키 정규화 비교). items·표형 table 입력 모두 지원(같은 형태끼리).
     target_key: true
     keywords:
     - 조인
@@ -124,11 +124,11 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자(이항) — 두 입력을 행 결합(이어붙이기). & 병렬로 공급. 중복 제거는 뒤에 >> dedup.
-    target_description: '파라미터 없음. table은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), records는 단순 concat. 예: [A] & [B] >> [table:union]. records 합치며 중복까지 지우려면 table:merge.'
+    target_description: '파라미터 없음. 표형 table 입력은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), items는 단순 concat. 예: [A] & [B] >> [table:union]. items 합치며 중복까지 지우려면 table:merge.'
     group: transform
     router: handler
     tool: data_union
-    implementation: data-ops handler.py — & 병렬 두 입력 행 결합(table 열 통합/records concat). 같은 통화 종류만.
+    implementation: data-ops handler.py — & 병렬 두 입력 행 결합(표형 table 입력=열 통합/items=concat). 같은 형태끼리만.
     target_key: ''
     keywords:
     - 행결합

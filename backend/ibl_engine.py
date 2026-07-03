@@ -622,10 +622,10 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     params = tool_input.get("params", {})
 
     # 중앙 파라미터 별칭 정규화 — 비-handler 라우터(system/workflow_engine/channel_engine/
-    # trigger_engine 등)도 ACTION_PARAM_ALIASES 적용받게. handler/driver는 _route_by_config 에서
-    # 한 번 더 적용되나 정규 키 우선이라 멱등. (예: self:trigger 의 id→trigger_id)
+    # trigger_engine 등)도 액션의 aliases 선언(레지스트리) 적용받게. handler/driver는
+    # _route_by_config 에서 한 번 더 적용되나 정규 키 우선이라 멱등. (예: self:trigger 의 id→trigger_id)
     from ibl_routing import _normalize_param_aliases
-    params = _normalize_param_aliases(node, action, params)
+    params = _normalize_param_aliases(node, action, params, action_config)
 
     # default_input 병합: 액션에 정의된 기본값을 params에 적용 (사용자 값 우선)
     default_input = action_config.get("default_input")

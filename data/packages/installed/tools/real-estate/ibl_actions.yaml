@@ -1,6 +1,10 @@
 node: sense
 actions:
   commercial:
+    aliases:
+      region_code: [district_code, dong_code, code]
+      lat: [latitude, y]
+      lng: [longitude, lon, x]
     returns: items
     fixture: '[sense:commercial]{lat: 37.5, lng: 127.0}'
     description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
@@ -58,6 +62,8 @@ actions:
                 href: '{url}'
                 label: 카카오맵·상세 보기 →
   realty:
+    aliases:
+      region_code: [district_code, dong_code, code]
     returns: items
     fixture: '[sense:realty]{op: "query", region: "강남구"}'
     description: 부동산 시세·매물 (op 분기). query=시세/매물(source=molit 국토부 실거래가 기본 / source=zigbang 직방 현재 매물·링크·사진), codes=법정동 코드. region 이름만 넣으면 자동 해소.

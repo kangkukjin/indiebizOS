@@ -5,7 +5,7 @@ actions:
     fixture: '[sense:stock]{query: "삼성전자"}'
     description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
     group: finance
-    target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). history는 표준 table 통화(table={columns:[날짜,종가],rows:[...]})도 반환 — 그대로 engines:chart/spreadsheet로 흘리거나 >> 파이프.
+    target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). history는 표형 table={columns:[날짜,종가],rows:[...]} 키도 함께 반환 — 그대로 table:chart/spreadsheet로 흘리거나 >> 파이프.
     target_key: op
     router: handler
     tool: stock_op
@@ -174,7 +174,7 @@ actions:
   company:
     returns: items
     fixture: '[sense:company]{op: "disclosures", query: "삼성전자"}'
-    description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. items(행 dict). 주가·시세는 stock.
+    description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. items 통화. 주가·시세는 stock.
     group: finance
     target_description: ticker=기업명 또는 코드 (삼성전자/005930=한국 DART, AAPL=미국 FMP·SEC 자동판별). market="kr"/"us"로 강제 지정 가능. financials는 year(한국)·statement_type·period 옵션, disclosures는 count·기간·유형 옵션.
     target_key: op

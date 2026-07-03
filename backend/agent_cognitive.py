@@ -83,12 +83,57 @@ def _merge_keywords(existing: str, new: str) -> str:
     return ",".join(out)
 
 
+def _unwrap_payload(obj: Any, depth: int = 0) -> Any:
+    """IBL 결과 envelope({"success":..,"results":[..]})을 재귀적으로 벗겨 페이로드만 남긴다.
+
+    병렬 실행 결과는 results[].result 안에 branch별 JSON이 문자열로 재포장돼
+    있어 한 겹으로는 안 벗겨진다 — 문자열이 JSON이면 파싱해 계속 내려간다."""
+    if depth > 6:
+        return obj
+    if isinstance(obj, str):
+        s = obj.strip()
+        if s[:1] in "[{":
+            try:
+                return _unwrap_payload(json.loads(s), depth + 1)
+            except Exception:
+                return obj
+        return obj
+    if isinstance(obj, dict):
+        for k in ("results", "result"):
+            if obj.get(k):
+                return _unwrap_payload(obj[k], depth + 1)
+        return obj
+    if isinstance(obj, list):
+        return [_unwrap_payload(x, depth + 1) for x in obj]
+    return obj
+
+
+def _result_evidence(result: Any) -> str:
+    """평가자에게 보여줄 결과 발췌의 원문 — envelope 대신 실제 내용(검색 결과 등).
+
+    발췌가 `{"success": true, "steps_completed"...}` 포장에서 끝나면 평가자가
+    증거 없이 자기 파라미터 지식으로 사실성을 판정하는 사고가 난다
+    (2026-07-03 fable5 오판: 실제 검색 증거를 못 보고 실존 모델을 허구로 판정)."""
+    if not isinstance(result, str):
+        result = str(result)
+    try:
+        unwrapped = _unwrap_payload(result)
+    except Exception:
+        return result
+    if isinstance(unwrapped, str):
+        return unwrapped
+    try:
+        return json.dumps(unwrapped, ensure_ascii=False)
+    except Exception:
+        return result
+
+
 def serialize_tool_trace(
     items: List[Union[str, Dict[str, Any]]],
     total_budget: int = 8000,
     head_keep: int = 8,
     tail_keep: int = 8,
-    per_result_chars: int = 220,
+    per_result_chars: int = 1600,
 ) -> str:
     """도구 호출 시퀀스를 평가자가 읽을 수 있는 한 문자열로 직렬화.
 
@@ -137,7 +182,7 @@ def serialize_tool_trace(
             if omitted_run > 0:
                 lines.append(f"  … (호출 {omitted_run}개 — 헤더는 위에서 이어짐, 결과 생략) …")
                 omitted_run = 0
-            result = entry["result"] or ""
+            result = _result_evidence(entry["result"]) if entry["result"] else ""
             if isinstance(result, str) and result:
                 excerpt = result.strip().replace("\n", " ")
                 if len(excerpt) > per_result_chars:
@@ -162,10 +207,12 @@ def serialize_tool_trace(
         budget = total_budget
         for line in lines:
             if budget <= 0:
-                # 결과 줄이면 스킵, 헤더 줄이면 짧게라도 포함
+                # 결과 줄이면 스킵, 헤더 줄이면 짧게라도 포함.
+                # 상세 항목은 "헤더\n    → 결과" 결합 문자열이라 헤더만 잘라 살린다
+                # (안 하면 budget 소진 후에도 결과 본문이 통째로 통과).
                 if line.startswith("    → ") or line.startswith("  … "):
                     continue
-                kept.append(line)
+                kept.append(line.split("\n", 1)[0])
                 continue
             kept.append(line)
             budget -= len(line) + 1
@@ -1103,7 +1150,8 @@ class AgentCognitiveMixin:
 
 판정하라:
 1. 이 framing이 새 메시지를 푸는 데 그대로 맞는가? 같은 태스크의 연장·변주(조건/방향/대상만 바뀐 경우)면 맞고(fits=true), 주제가 바뀌었으면 안 맞다(fits=false).
-2. 맞다면 이번 메시지의 구체적 달성 기준을 한 줄로 작성하라.
+2. ★같은 주제라도, 사용자가 직전 결론·전제를 **반박**하거나("아니야", "다시 찾아봐", "있어/없어" 단언, "틀렸어") 자신의 직접 경험으로 새 사실을 단언하면 fits=false다 — 기존 framing의 전제가 무너졌으므로 새 정보를 반영해 처음부터 다시 프레이밍해야 한다. 재사용은 이전 접근이 여전히 유효할 때만 정당하다.
+3. 맞다면 이번 메시지의 구체적 달성 기준을 한 줄로 작성하라.
 
 JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
 

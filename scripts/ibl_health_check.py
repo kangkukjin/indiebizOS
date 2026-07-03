@@ -169,3 +169,15 @@ if buckets["RED"]:
     for n, r in buckets["RED"]: print(f"     - {n}: {r}")
 verdict = "건강 ✅" if (static_ok and not buckets["RED"] and pipe_pass == len(PIPES)) else "주의 ⚠️"
 print(f"\n  ▶ IBL 구조 건강: {verdict}")
+
+# ── 기계 판독 요약 — world_pulse_health.run_ibl_health_check 가 이 한 줄을 파싱한다.
+# 사람용 로그의 문구가 바뀌어도 계약이 깨지지 않도록 구조화 출력을 병행(마커 없으면 파서가 fail 처리).
+_summary = {
+    "static_ok": bool(static_ok),
+    "currency": {
+        "green": len(buckets["GREEN"]), "yellow": len(buckets["YELLOW"]), "red": len(buckets["RED"]),
+        "reds": [{"name": n, "reason": r} for n, r in buckets["RED"]],
+    },
+    "golden_pipes": {"passed": int(pipe_pass), "total": len(PIPES)},
+}
+print("\n@@HEALTH_JSON@@ " + json.dumps(_summary, ensure_ascii=False))

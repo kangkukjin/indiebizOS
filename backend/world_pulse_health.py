@@ -166,52 +166,76 @@ def run_ibl_health_check() -> List[Dict]:
 
     구조 건강이 변하는 건 어휘를 쓸 때뿐이고(그건 커밋 시 --check 가 막는다), 이건 그 정적
     검사 + fixture 행동검사 + 흐름검사를 하루 1회 회귀 그물로 한 번 더 돌리는 것. AI 0.
+
+    ★계약(검증자 튼튼화, 2026-07-03): 스크립트가 마지막에 '@@HEALTH_JSON@@ {…}' 한 줄로
+    기계 판독 요약을 내놓는다. 옛 방식(사람용 한국어 stdout 정규식 스크레이핑 + returncode
+    무시)은 문구가 바뀌거나 스크립트가 죽으면 이벤트가 조용히 사라져 대시보드가 옛 GREEN 을
+    계속 보여주는 침묵 실패 구조였다. 이제 returncode·마커 부재·파싱 실패는 전부
+    __ibl_health__:ibl_health_check 의 명시적 fail 이벤트가 된다(대시보드가 이 키도 읽는다).
     """
-    import subprocess, re
+    import subprocess
+    import json as _json
     _root = Path(__file__).parent.parent
     _script = _root / "scripts" / "ibl_health_check.py"
-    out = []
+
+    def _runner_fail(msg: str) -> List[Dict]:
+        return [{"node": "__ibl_health__", "action": "ibl_health_check", "success": False,
+                 "response_ms": 0, "data_quality": "error", "error_message": msg[:220]}]
+
     if not _script.exists():
-        return out
+        return _runner_fail("scripts/ibl_health_check.py 없음")
     try:
         proc = subprocess.run(
             [sys.executable, str(_script)],
             cwd=str(_root), capture_output=True, text=True, timeout=300,
         )
-        text = proc.stdout or ""
     except Exception as e:
-        return [{"node": "__ibl_health__", "action": "ibl_health_check", "success": False,
-                 "response_ms": 0, "data_quality": "error",
-                 "error_message": f"ibl_health_check 실행 실패: {str(e)[:120]}"}]
+        return _runner_fail(f"ibl_health_check 실행 실패: {str(e)[:150]}")
 
-    # §1A 정적 정합성 (build --check): "→ 정적: GREEN ✅" / "RED ❌"
-    ms = re.search(r"→ 정적:\s*(GREEN|RED)", text)
-    if ms:
-        ok = ms.group(1) == "GREEN"
-        out.append({"node": "__static__", "action": "ibl_consistency",
-                    "success": ok, "response_ms": 0,
-                    "data_quality": "ok" if ok else "consistency_failure",
-                    "error_message": None if ok else "build --check 불일치 — src↔tool.json↔handler/fixture"})
-    # §1B 통화: GREEN N / YELLOW M / RED K
-    m = re.search(r"§1B 통화:\s*GREEN\s*(\d+)\s*/\s*YELLOW\s*(\d+)\s*/\s*RED\s*(\d+)", text)
-    if m:
-        g, y, r = int(m.group(1)), int(m.group(2)), int(m.group(3))
-        reds = re.findall(r"\[RED   \]\s*(\S+)\s+returns:\S+\s+(.+)", text)
-        note = f"GREEN {g} / YELLOW {y} / RED {r}"
-        if reds:
-            note += " — " + "; ".join(f"{n}:{d.strip()[:60]}" for n, d in reds[:5])
-        out.append({"node": "__ibl_health__", "action": "currency",
-                    "success": r == 0, "response_ms": 0,
-                    "data_quality": "ok" if r == 0 else "currency_broken",
-                    "error_message": None if r == 0 else note})
-    # §1C 골든파이프: X/Y PASS
-    mp = re.search(r"§1C 골든파이프:\s*(\d+)\s*/\s*(\d+)\s*PASS", text)
-    if mp:
-        passed, total = int(mp.group(1)), int(mp.group(2))
-        out.append({"node": "__ibl_health__", "action": "golden_pipes",
-                    "success": passed == total, "response_ms": 0,
-                    "data_quality": "ok" if passed == total else "error",
-                    "error_message": None if passed == total else f"{passed}/{total} PASS"})
+    text = proc.stdout or ""
+    marker = None
+    for line in reversed(text.splitlines()):
+        if line.startswith("@@HEALTH_JSON@@"):
+            marker = line[len("@@HEALTH_JSON@@"):].strip()
+            break
+    if proc.returncode != 0 or not marker:
+        tail = ((proc.stderr or "").strip() or text.strip())[-180:]
+        return _runner_fail(
+            f"점검 스크립트 비정상 종료(rc={proc.returncode}, 요약마커 {'유' if marker else '무'}): {tail}")
+    try:
+        s = _json.loads(marker)
+    except Exception as e:
+        return _runner_fail(f"요약 JSON 파싱 실패: {str(e)[:120]}")
+
+    out = []
+    # §1A 정적 정합성
+    static_ok = bool(s.get("static_ok"))
+    out.append({"node": "__static__", "action": "ibl_consistency",
+                "success": static_ok, "response_ms": 0,
+                "data_quality": "ok" if static_ok else "consistency_failure",
+                "error_message": None if static_ok else "build --check 불일치 — src↔tool.json↔handler/fixture"})
+    # §1B 통화
+    cur = s.get("currency") or {}
+    g, y, r = int(cur.get("green", 0)), int(cur.get("yellow", 0)), int(cur.get("red", 0))
+    note = f"GREEN {g} / YELLOW {y} / RED {r}"
+    reds = cur.get("reds") or []
+    if reds:
+        note += " — " + "; ".join(f"{d.get('name')}:{str(d.get('reason'))[:60]}" for d in reds[:5])
+    out.append({"node": "__ibl_health__", "action": "currency",
+                "success": r == 0, "response_ms": 0,
+                "data_quality": "ok" if r == 0 else "currency_broken",
+                "error_message": None if r == 0 else note})
+    # §1C 골든파이프
+    gp = s.get("golden_pipes") or {}
+    passed, total = int(gp.get("passed", 0)), int(gp.get("total", 0))
+    gp_ok = total > 0 and passed == total
+    out.append({"node": "__ibl_health__", "action": "golden_pipes",
+                "success": gp_ok, "response_ms": 0,
+                "data_quality": "ok" if gp_ok else "error",
+                "error_message": None if gp_ok else f"{passed}/{total} PASS"})
+    # 러너 자신의 성공 기록 — 대시보드의 '점검 실행 실패' 항목을 초록으로 되돌리는 짝
+    out.append({"node": "__ibl_health__", "action": "ibl_health_check", "success": True,
+                "response_ms": 0, "data_quality": "ok", "error_message": None})
     return out
 
 
@@ -274,8 +298,11 @@ def run_maintenance_bundle() -> Dict:
         result["description_drift"] = dd
         if dd.get("flags"):
             logger.warning(f"[Maintenance] IBL 설명 드리프트 {len(dd['flags'])}건 — ibl_description_flags.json")
+        # 실제 실행됐으면 성공/실패 무관하게 기록 — 깃발 있을 때만 저장하면 깨끗해진 뒤에도
+        # 옛 fail 이 '마지막 기록'으로 영구 잔존한다(조종실 유령 빨간불).
+        if dd.get("node"):
             try:
-                save_self_check(dd)  # self_checks 테이블에 깃발 남김
+                save_self_check(dd)
             except Exception:
                 pass
     except Exception as e:
@@ -296,7 +323,63 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 결정화 감지 실패 (무시): {e}")
 
+    # 7) 좀비 건강기록 청소 — 은퇴·이동한 어휘의 self_checks/action_health 잔재 제거.
+    #    저비용(SELECT DISTINCT + 드문 DELETE)이라 매일 호출해도 안전.
+    try:
+        zp = purge_zombie_health_records()
+        result["zombie_purge"] = zp
+        rows = sum((v or {}).get("rows", 0) for v in (zp.get("removed") or {}).values())
+        if rows:
+            logger.info(f"[Maintenance] 좀비 건강기록 청소: {rows}행 제거")
+    except Exception as e:
+        logger.warning(f"[Maintenance] 좀비 건강기록 청소 실패 (무시): {e}")
+
     return result
+
+
+def purge_zombie_health_records() -> Dict:
+    """은퇴·이동한 어휘의 건강 기록 청소 — 어휘 생애주기 대칭(어휘 제거가 기록도 지운다).
+
+    self_checks/action_health 의 (node, action) 중 현존 어휘(data/ibl_nodes.yaml)에 없는
+    액션의 행을 지운다. 남겨두면 '마지막 기록=fail'이 영구 잔존해 유령 경고등이 된다
+    (실례: table 분리로 이사간 engines:filter 9종, 은퇴한 others:neighbors).
+    __static__/__ibl_health__ 같은 시스템 네임스페이스(__ 접두)는 보존.
+    """
+    import yaml
+    from world_pulse import _get_pulse_db
+
+    nodes_path = Path(__file__).parent.parent / "data" / "ibl_nodes.yaml"
+    try:
+        with open(nodes_path, encoding="utf-8") as f:
+            nodes = (yaml.safe_load(f) or {}).get("nodes", {})
+    except Exception as e:
+        return {"error": f"ibl_nodes.yaml 로드 실패: {e}"}
+    valid = {(n, a) for n, nd in nodes.items() for a in ((nd or {}).get("actions") or {})}
+    if not valid:
+        return {"error": "어휘 레지스트리가 비어 있음 — 청소 중단(안전판)"}
+
+    removed = {}
+    try:
+        conn = _get_pulse_db()
+        for table in ("self_checks", "action_health"):
+            try:
+                pairs = conn.execute(f"SELECT DISTINCT node, action FROM {table}").fetchall()
+            except Exception:
+                continue  # 테이블 없으면 스킵
+            zombies = [(r["node"], r["action"]) for r in pairs
+                       if r["node"] and not str(r["node"]).startswith("__")
+                       and (r["node"], r["action"]) not in valid]
+            cnt = 0
+            for n, a in zombies:
+                cur = conn.execute(f"DELETE FROM {table} WHERE node=? AND action=?", (n, a))
+                cnt += cur.rowcount
+            if cnt:
+                conn.commit()
+            removed[table] = {"pairs": len(zombies), "rows": cnt}
+        conn.close()
+    except Exception as e:
+        return {"error": str(e), "removed": removed}
+    return {"removed": removed}
 
 
 def save_self_check(result: Dict):
@@ -669,21 +752,31 @@ def get_system_health() -> Dict:
 
 
 def get_ibl_health_status() -> Dict:
-    """계기판용 — self_checks 에 마지막으로 기록된 IBL 건강(정적·통화·골든)을 읽는다.
+    """조종실용 — self_checks 에 마지막으로 기록된 IBL 건강을 읽는다.
 
     검사를 *실행하지 않는다* (수십 초 걸리는 ibl_health_check.py 호출 X). 마지막 일일/수동
-    점검 결과를 SQL 한 번으로 즉시 돌려준다 — 계기판이 열릴 때마다 가볍게 표시하기 위한 것.
+    점검 결과를 SQL 한 번으로 즉시 돌려준다 — 조종실이 열릴 때마다 가볍게 표시하기 위한 것.
     아직 한 번도 점검 안 됐으면 ok=None('미점검').
+
+    항목 4 + 러너 감시 1:
+      · 어휘 정합/통화 규약/파이프 흐름 = '지금 점검'·일일 점검이 갱신
+      · 설명 정합(description_drift) = 주 1회 감사가 갱신 (주기가 달라 checked_at 이 뒤질 수 있음)
+      · 점검 러너 자체가 실패하면(스크립트 죽음·계약 위반) 맨 앞에 빨간 항목으로 표면화 —
+        옛 구조는 이때 옛 GREEN 이 말없이 유지되는 침묵 실패였다.
+    stale: 마지막 점검이 STALE_HOURS(48h) 를 넘으면 True — 초록 배지를 바래게 할 근거.
     """
     from world_pulse import _get_pulse_db
 
     KEYS = [
-        ("__static__", "ibl_consistency", "정적 정합성 — 어휘 삼각 + fixture"),
-        ("__ibl_health__", "currency", "통화 무결성 — fixture 실행"),
-        ("__ibl_health__", "golden_pipes", "골든 파이프 — >> 흐름"),
+        ("__static__", "ibl_consistency", "어휘 정합 — 선언·구현·도구 일치"),
+        ("__ibl_health__", "currency", "통화 규약 — 실행 결과 형태"),
+        ("__ibl_health__", "golden_pipes", "파이프 흐름 — 액션 조합(>>)"),
+        ("__ibl_health__", "description_drift", "설명 정합 — 어휘 설명 최신성"),
     ]
+    STALE_HOURS = 48
     items = []
     checked_at = None
+    runner_row = None
     try:
         conn = _get_pulse_db()
         for node, action, label in KEYS:
@@ -701,14 +794,36 @@ def get_ibl_health_status() -> Dict:
                     checked_at = row["timestamp"]
             else:
                 items.append({"key": action, "label": label, "ok": None, "detail": None, "checked_at": None})
+        # 점검 러너 감시 — 최신 기록이 fail 이고 위 항목들보다 새로우면 표면화
+        runner_row = conn.execute(
+            "SELECT success, error_message, timestamp FROM self_checks "
+            "WHERE node='__ibl_health__' AND action='ibl_health_check' ORDER BY id DESC LIMIT 1",
+        ).fetchone()
         conn.close()
     except Exception as e:
         logger.warning(f"[Dashboard] IBL 건강 조회 실패: {e}")
+
+    if runner_row is not None and not bool(runner_row["success"]) \
+            and (runner_row["timestamp"] or "") >= (checked_at or ""):
+        items.insert(0, {
+            "key": "ibl_health_check", "label": "점검 실행 — 검사기 자체", "ok": False,
+            "detail": runner_row["error_message"], "checked_at": runner_row["timestamp"],
+        })
+        checked_at = runner_row["timestamp"]
+
+    stale = False
+    if checked_at:
+        try:
+            dt = datetime.fromisoformat(checked_at)
+            stale = (datetime.now() - dt) > timedelta(hours=STALE_HOURS)
+        except Exception:
+            pass
 
     known = [i for i in items if i["ok"] is not None]
     return {
         "checked_at": checked_at,
         "healthy": (all(i["ok"] for i in known) if known else None),
+        "stale": stale,
         "items": items,
         "action_count": _count_all_actions(),
     }

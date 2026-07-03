@@ -98,11 +98,18 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Download all artifacts
         uses: actions/download-artifact@v5
         with:
           path: dist
           merge-multiple: true
+
+      - name: Add click-to-run launcher
+        # 일반 사용자용 더블클릭 설치기(.command) — 정적 파일이라 그대로 릴리스에 동봉.
+        run: cp installer/install-mac.command dist/
 
       - name: List files
         run: ls -la dist/
@@ -113,24 +120,28 @@ jobs:
           tag_name: seed-latest
           name: 'IndieBiz OS 최소 설치파일 (seed)'
           body: |
-            `installer/seed.py`를 OS별 단일 실행파일로 패키징한 **최소 설치파일**입니다.
             내려받아 실행하고 자기 AI API 키(Anthropic/OpenAI/Google)만 넣으면,
-            씨앗 에이전트가 이 리포를 clone하고 하드웨어에 맞춰 IndieBiz OS를 설치합니다.
+            씨앗 에이전트가 이 리포를 받아 하드웨어에 맞춰 IndieBiz OS를 설치합니다.
 
-            ### macOS
-            칩에 맞는 파일을 받으세요 (터미널에서 `uname -m` — `arm64`=Apple Silicon,
-            `x86_64`=인텔. 틀리면 "Bad CPU type in executable" 오류가 납니다):
-            - Apple Silicon: `indiebiz-seed-macos-arm64`
-            - 인텔: `indiebiz-seed-macos-x86_64`
+            ## 🍎 macOS — 가장 쉬운 방법 (더블클릭)
+            터미널을 몰라도 됩니다.
+            1. **`install-mac.command`** 파일을 내려받으세요.
+            2. **더블클릭**하세요. (처음 한 번은 "알 수 없는 개발자" 경고가 뜨는데,
+               파일을 **우클릭 → 열기 → 열기**를 누르면 됩니다.)
+            3. **AI API 키 입력창**이 뜨면 키를 붙여넣고, **모델 선택창**은 그대로 두거나
+               원하는 모델로 바꾼 뒤 계속을 누르세요. 나머지는 자동입니다.
 
-            서명·공증 없는 바이너리라 브라우저로 받으면 Gatekeeper가 "알 수 없는
-            개발자" 경고로 막습니다. 터미널에서 curl로 받으면 경고 없이 실행됩니다:
+            Apple Silicon/인텔은 자동 판별합니다. 설치가 끝나면 실행 방법이 안내됩니다.
+
+            <details><summary>맥 고급 사용자 / 터미널 직접 실행</summary>
+
             ```bash
             ARCH=$(uname -m); curl -L -o indiebiz-seed "https://github.com/kangkukjin/indiebizOS/releases/download/seed-latest/indiebiz-seed-macos-${ARCH}"
             chmod +x indiebiz-seed && ./indiebiz-seed
             ```
-            이미 브라우저로 받았다면: `chmod +x` 후 `xattr -d com.apple.quarantine <파일>`
-            (또는 설정 → 개인정보 보호 및 보안 → "그래도 열기").
+            `arm64`=Apple Silicon, `x86_64`=인텔. 브라우저로 바이너리를 직접 받았다면
+            `xattr -d com.apple.quarantine <파일>` 로 Gatekeeper 격리를 풀면 됩니다.
+            </details>
 
             ### Linux (x86_64)
             ```bash

@@ -70,6 +70,7 @@ jobs:
           env = dict(os.environ,
                      INDIEBIZ_API_KEY="sk-ant-dummy-key-for-smoke",
                      INDIEBIZ_DIR=os.path.join(os.getcwd(), "smoke-install-dir"),
+                     INDIEBIZ_YES="1",   # 무인: 모델 프롬프트 스킵(기본값 사용)
                      NO_COLOR="1")
           p = subprocess.run([binary], env=env, capture_output=True,
                              text=True, timeout=180)

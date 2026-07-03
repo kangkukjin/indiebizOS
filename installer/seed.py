@@ -120,10 +120,13 @@ def infer_provider(key):
         return "openai"
     return ""
 
+# 설치는 절차적 작업이라 각 프로바이더의 저렴한 현행 모델이 기본값.
+# 모델 세대는 계속 바뀌므로 이 목록은 참고 기본값일 뿐 — 실행 시 프롬프트나
+# INDIEBIZ_MODEL 로 아무 모델 ID나 지정할 수 있다.
 DEFAULT_MODEL = {
-    "anthropic": "claude-sonnet-5",
-    "openai":    "gpt-4o",
-    "google":    "gemini-2.0-flash",
+    "anthropic": "claude-haiku-4-5",
+    "openai":    "gpt-5-mini",
+    "google":    "gemini-3.1-flash-lite",
 }
 
 def resolve_credentials():
@@ -144,7 +147,17 @@ def resolve_credentials():
         err("Unknown provider %r. Aborting." % provider)
         sys.exit(1)
 
-    model = os.environ.get("INDIEBIZ_MODEL", "").strip() or DEFAULT_MODEL[provider]
+    # 모델 이름도 사용자가 결정한다 — env(INDIEBIZ_MODEL) > 프롬프트 > 기본값.
+    # 모델 세대가 빨리 바뀌어 하드코딩 기본값은 금방 낡으므로(예: gemini-2.0 시절 기본값),
+    # 대화형이면 항상 물어보고 Enter=기본값. 무인 모드(INDIEBIZ_YES=1)는 프롬프트 스킵.
+    model = os.environ.get("INDIEBIZ_MODEL", "").strip()
+    if not model:
+        if os.environ.get("INDIEBIZ_YES") == "1":
+            model = DEFAULT_MODEL[provider]
+        else:
+            entered = ask_line(
+                "Model id [Enter = %s]: " % DEFAULT_MODEL[provider]).strip()
+            model = entered or DEFAULT_MODEL[provider]
     return key, provider, model
 
 # --------------------------------------------------------------------------

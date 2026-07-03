@@ -25,22 +25,37 @@ if lsof -ti :8765 > /dev/null 2>&1; then
     sleep 1
 fi
 
+# 파이썬 선택: 씨앗 설치기(installer/seed.py)가 만든 가상환경이 있으면 그걸 쓴다.
+# (시스템 파이썬에는 fastapi/dotenv 등이 없어 ModuleNotFoundError — 실사례: 인텔 맥 설치)
+PY="python3"
+if [ -x ".venv/bin/python3" ]; then
+    PY="$(pwd)/.venv/bin/python3"
+    echo "✅ 가상환경 파이썬 사용 (.venv)"
+fi
+
 # 백엔드 시작
 cd backend
-python3 api.py &
+"$PY" api.py &
 BACKEND_PID=$!
 cd ..
 
 sleep 2
 
-# 프론트엔드 시작 (electron:dev 사용)
-cd frontend
-npm run electron:dev &
-FRONTEND_PID=$!
-cd ..
-
 echo "✅ 백엔드 PID: $BACKEND_PID"
-echo "✅ 프론트엔드 PID: $FRONTEND_PID"
+
+# 프론트엔드 시작 (electron:dev) — 선택 사항: Node/npm과 node_modules가 있을 때만.
+# 없으면 백엔드 전용(헤드리스)으로 계속 실행 — 원격 런처/REST로 사용 가능.
+FRONTEND_PID=""
+if command -v npm >/dev/null 2>&1 && [ -d "frontend/node_modules" ]; then
+    cd frontend
+    npm run electron:dev &
+    FRONTEND_PID=$!
+    cd ..
+    echo "✅ 프론트엔드 PID: $FRONTEND_PID"
+else
+    echo "ℹ️  프론트엔드 스킵 (npm 또는 frontend/node_modules 없음) — 백엔드 전용으로 실행"
+    echo "   데스크탑 UI가 필요하면 Node ≥ 18 설치 후: cd frontend && npm install"
+fi
 
 # 종료 시 정리 - 프로세스 그룹 전체 종료 + 고아 프로세스 정리
 cleanup() {

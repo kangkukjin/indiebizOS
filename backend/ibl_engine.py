@@ -552,6 +552,31 @@ def _run_router_safely(fn, *args, **kwargs):
     return _get_offload_pool().submit(_worker).result()
 
 
+def _attach_param_warning(result: Any, warning: Optional[dict]) -> Any:
+    """미인식-파라미터 경고를 결과에 부착 (인자 층 침묵 제거, 2026-07-03).
+
+    핸들러 반환형이 dict/JSON 문자열/평문으로 갈리므로 셋 다 처리:
+    dict 는 키 추가, JSON 문자열은 파싱→추가→재직렬화, 평문은 꼬리에 덧붙임.
+    """
+    if not warning:
+        return result
+    msg = warning["message"]
+    if isinstance(result, dict):
+        result.setdefault("param_warning", msg)
+        return result
+    if isinstance(result, str):
+        import json as _json
+        try:
+            obj = _json.loads(result)
+        except Exception:
+            return result + f"\n\n[param_warning] {msg}"
+        if isinstance(obj, dict) and "param_warning" not in obj:
+            obj["param_warning"] = msg
+            return _json.dumps(obj, ensure_ascii=False)
+        return result
+    return result
+
+
 def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
     """
     IBL 노드 도구 실행
@@ -627,6 +652,18 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     from ibl_routing import _normalize_param_aliases
     params = _normalize_param_aliases(node, action, params, action_config)
 
+    # 인자 층 침묵 제거 (2026-07-03): 핸들러가 읽지 않는 키는 .get() 기본값으로 조용히
+    # 흡수돼 "성공처럼 보이는 오동작"이 된다. 거부하지 않고 결과에 경고를 실어
+    # 다음 턴 자가교정(평가 루프)을 돕고, 마찰 이벤트는 결정화 감지기가 집계한다.
+    _param_warning = None
+    try:
+        from ibl_param_vocab import check_params, log_param_friction
+        _param_warning = check_params(node, action, params, action_config)
+        if _param_warning:
+            log_param_friction(node, action, _param_warning["unknown"], agent_id)
+    except Exception:
+        _param_warning = None
+
     # default_input 병합: 액션에 정의된 기본값을 params에 적용 (사용자 값 우선)
     default_input = action_config.get("default_input")
     if default_input and isinstance(default_input, dict):
@@ -643,7 +680,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     _dist = _resolve_and_maybe_forward(node, action, action_config, params,
                                        tool_input.get("target_node"), agent_id)
     if _dist is not None:
-        return _dist
+        return _attach_param_warning(_dist, _param_warning)
 
     # 라우터별 실행 + 개별 액션 기록 (X-Ray용)
     import time as _time
@@ -733,7 +770,8 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     if postprocess and result is not None and agent_id != "__self_check__" and not _raw:
         result = _postprocess(result, action, postprocess)
 
-    return result
+    # 인자 경고 부착 — postprocess 이후 (압축이 경고를 지우지 않게)
+    return _attach_param_warning(result, _param_warning)
 
 
 # === 후처리 시스템 (Postprocessing) ===

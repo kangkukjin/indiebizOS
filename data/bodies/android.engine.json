@@ -66,6 +66,7 @@
     "ibl_embedding_trainer",
     "ibl_engine",
     "ibl_executors",
+    "ibl_param_vocab",
     "ibl_parser",
     "ibl_routing",
     "ibl_synthetic_opus",
@@ -144,8 +145,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 138,
-    "engine": 126,
+    "total": 139,
+    "engine": 127,
     "blocklist": 12
   }
 }

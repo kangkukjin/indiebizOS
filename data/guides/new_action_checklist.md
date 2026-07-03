@@ -121,6 +121,10 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         implementation: 내부 동작 요약 (UI 전용)
         target_key: query         # tool_input 의 주 파라미터 키
         keywords: [한글키워드, english_keyword]
+        # aliases: {정규키: [별칭1, 별칭2]}   # (선택) 자연스러운 인자명 → 정규키 자동 매핑
+        # open_params: true       # (선택) 자유 키를 정당하게 받는 액션만 — 인자 층 검사 면제.
+        #   기본은 검사 대상: 핸들러가 읽지 않는 파라미터 키는 실행 결과에 param_warning 으로
+        #   경고된다 (ibl_param_vocab.check_params — 허용집합=패키지 읽기키∪input_schema∪aliases).
         # runs_on: mac_only      # (선택) 폰 네이티브: 집 PC 전용이면. 기본 anywhere.
         #   집 하드웨어/무거운 의존/미검증 패키지=mac_only · 폰 센서=phone_only.
         #   build 가 data/phone_manifest.json 파생(폰 번들/계기필터/엔진가드 SSOT).

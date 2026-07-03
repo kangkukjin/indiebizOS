@@ -632,6 +632,19 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
         if not _validate_ibl_actions(code):
             return False
 
+        # 인자 게이트 (2026-07-03): 핸들러가 읽지 않는 키가 박힌 코드는 증류하지 않는다.
+        # 침묵 인자 드리프트가 "성공"으로 위장한 채 코퍼스(몸)에 들어가면 Reflex 가
+        # 틀린 인자명을 영구 재생산한다 — 경고(실행 층)의 짝인 쓰기 층 위생 장치.
+        try:
+            from ibl_param_vocab import check_code_params
+            _param_issues = check_code_params(code)
+            if _param_issues:
+                print(f"[경험증류] 미인식 파라미터 — 증류 스킵: "
+                      f"{[(i['action'], i['unknown']) for i in _param_issues]}")
+                return False
+        except Exception:
+            pass  # 검사기 문제로 증류 자체를 막지는 않는다
+
         # 노드 추출
         node_pattern = re.compile(r'\[([a-z_-]+):')
         nodes = ",".join(sorted(set(node_pattern.findall(code))))

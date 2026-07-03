@@ -371,12 +371,25 @@ async def validate_ibl(req: ValidateRequest):
         if safety != "read":
             has_side_effect = True
 
+        # 인자 층 검사 (2026-07-03): 핸들러가 읽지 않는 키를 dry-run 단계에서 미리
+        # 소리 나게 — 경량모델(조종실 번역)이 실행 전에 자가교정할 수 있게 한다.
+        param_warning = None
+        if ok:
+            try:
+                from ibl_param_vocab import check_params
+                pw = check_params(node, action, params)
+                if pw:
+                    param_warning = pw["message"]
+            except Exception:
+                param_warning = None
+
         steps.append({
             "node": node, "action": action, "params": params,
             "kind": "action",
             "effect": _action_description(node, action) or "(설명 없음)",
             "safety": safety,
             "valid": ok, "error": err,
+            "param_warning": param_warning,
         })
 
     return {

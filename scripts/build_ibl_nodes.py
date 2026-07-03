@@ -41,6 +41,18 @@ import re
 import sys
 from pathlib import Path
 
+# 인자 어휘(읽기키 추출기·보편키·문서화 예외)는 backend/ibl_param_vocab.py 가 단일
+# 소유한다 — 런타임 검사(ibl_engine 경고·증류 게이트)와 이 정적 검사가 같은 수를 쓰게.
+_BACKEND_DIR = str(Path(__file__).resolve().parent.parent / "backend")
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
+from ibl_param_vocab import (  # noqa: E402
+    UNIVERSAL_PARAM_KEYS,
+    CORPUS_PARAM_ALLOW,
+    _file_read_keys,
+    _dir_read_keys,
+)
+
 
 # 순서가 중요 — 원본 yaml의 노드 순서와 동일해야 함.
 NODE_ORDER = ["sense", "self", "limbs", "others", "engines", "table"]
@@ -279,16 +291,8 @@ def check_launcher_handlers(root: Path) -> list[str]:
 
 
 # === 코퍼스 param 정합 검사 (2026-06-04) ===
-# 모든 액션이 자연히 받는 보편 키 (op 디스패치/레거시 target).
-UNIVERSAL_PARAM_KEYS = {"op", "target"}
-
-# 코퍼스가 쓰지만 핸들러/별칭에 의도적으로 없는 키 (문서화된 예외).
-# 목적: 신규 불일치만 잡고 알려진 노이즈는 통과. 코퍼스 정제/별칭으로 해소되면 여기서 제거할 것.
-CORPUS_PARAM_ALLOW: dict[str, set[str]] = {
-    # browser_op은 2차 selector 'mode'를 _OP_SELECTOR로 동적 pop(handler.py) —
-    # 정적 리터럴이 아니라 검출 불가. 핸들러가 실제로 읽으므로 의도된 예외.
-    "limbs:browser": {"mode"},
-}
+# UNIVERSAL_PARAM_KEYS / CORPUS_PARAM_ALLOW 는 backend/ibl_param_vocab.py 로 이주
+# (2026-07-03, 런타임 인자 경고와 단일 소스). 상단 import 로 여기서도 같은 수를 쓴다.
 # 정리됨(2026-06-04): pew_research:topic / blog:sort / web_site:reference / web:font
 #   (migrate_allowlist_cleanup.py — 군더더기 제거) + self:trigger:cron
 #   (trigger_engine._cron_to_config 로 내부 해소 — 핸들러가 cron 직접 읽음).
@@ -641,46 +645,7 @@ def _check_action(
     return issues
 
 
-def _file_read_keys(text: str) -> set[str]:
-    """파이썬 소스에서 '핸들러가 읽는 키' 후보를 AST로 추출.
-    함수 파라미터명 + .get/_arg/pop 문자열 인자 + call 키워드 인자 + 문자열 subscript."""
-    keys: set[str] = set()
-    try:
-        tree = ast.parse(text)
-    except SyntaxError:
-        return keys
-    for n in ast.walk(tree):
-        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            a = n.args
-            for arg in list(a.posonlyargs) + list(a.args) + list(a.kwonlyargs):
-                keys.add(arg.arg)
-        elif isinstance(n, ast.Call):
-            for kw in n.keywords:
-                if kw.arg:
-                    keys.add(kw.arg)
-            func = n.func
-            fname = func.attr if isinstance(func, ast.Attribute) else (func.id if isinstance(func, ast.Name) else "")
-            if fname in ("_arg", "get", "pop"):
-                for arg in n.args:
-                    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                        keys.add(arg.value)
-        elif isinstance(n, ast.Subscript):
-            sl = n.slice
-            if isinstance(sl, ast.Constant) and isinstance(sl.value, str):
-                keys.add(sl.value)
-    keys.discard(None)
-    return keys
-
-
-def _dir_read_keys(paths) -> set[str]:
-    """여러 .py 파일에서 읽기키 합집합."""
-    keys: set[str] = set()
-    for py in paths:
-        try:
-            keys |= _file_read_keys(py.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-    return keys
+# _file_read_keys / _dir_read_keys 는 backend/ibl_param_vocab.py 에서 import (상단).
 
 
 def _extract_action_param_aliases(data: dict) -> dict[str, set[str]]:

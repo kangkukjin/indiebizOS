@@ -27,6 +27,7 @@ export interface IblValidateStep {
   safety: IblSafety;    // 'read'=부작용 없음(되돌릴 필요 없음), 'write'=부작용, 'unknown'=미분류
   valid: boolean;
   error: string | null;
+  param_warning?: string | null;  // 미인식 파라미터 경고 (핸들러가 읽지 않는 키 — 실행 전 자가교정용)
 }
 
 export interface IblValidateResult {

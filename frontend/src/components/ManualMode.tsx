@@ -734,6 +734,9 @@ export default function ManualMode() {
                         {Object.keys(s.params).length > 0 && ' ' + JSON.stringify(s.params)}
                       </code>
                       {s.error && <div className="text-xs text-red-600 mt-0.5">{s.error}</div>}
+                      {s.param_warning && (
+                        <div className="text-xs text-amber-700 mt-0.5">⚠ {s.param_warning}</div>
+                      )}
                     </div>
                   </div>
                 ))}

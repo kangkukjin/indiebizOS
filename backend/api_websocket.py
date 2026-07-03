@@ -768,6 +768,12 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     event_queue.put({"type": "final", "content": reset_text_predefined}),
                     loop
                 )
+                # 조기 return은 아래 try/finally 밖이라 종료 신호를 여기서 직접 넣어야
+                # while 루프가 600초 타임아웃까지 대기하지 않는다 (episode 565)
+                asyncio.run_coroutine_threadsafe(
+                    event_queue.put(None),
+                    loop
+                )
                 return
 
             # 가변 컨텍스트는 augmented_message에 prepend된 상태 (캐시 prefix 보존)

@@ -1,0 +1,123 @@
+# 최소 설치파일 (seed) 빌드 — installer/seed.py 를 OS별 단일 실행파일로 패키징.
+#
+# build.yml(전체 Electron 앱 번들)과 별개의 *최소* 경로다: 씨앗은 stdlib-only
+# 에이전트라 PyInstaller --onefile 로 수 MB짜리 바이너리가 나온다. 사용자는
+# 파이썬조차 없어도 바이너리 하나 + 자기 AI 키로 설치를 시작한다
+# (frozen 모드: ROOT=INDIEBIZ_DIR 또는 ~/indiebizOS, 리포는 에이전트가 clone).
+#
+# 저장: 매 빌드를 artifact 로 + main 푸시마다 롤링 릴리스 `seed-latest` 갱신
+# (고정 다운로드 URL: releases/download/seed-latest/<파일명>).
+name: Build Seed Installers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'installer/**'
+      - 'install.sh'
+      - 'install.ps1'
+      - '.github/workflows/build-seed.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest        # Apple Silicon
+            target: indiebiz-seed-macos-arm64
+          - os: ubuntu-latest
+            target: indiebiz-seed-linux-x86_64
+          - os: windows-latest
+            target: indiebiz-seed-windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build single-file binary
+        shell: bash
+        run: |
+          # --add-data 구분자: POSIX=':' / Windows=';'
+          SEP=':'
+          if [ "$RUNNER_OS" = "Windows" ]; then SEP=';'; fi
+          pyinstaller --onefile --console \
+            --name "${{ matrix.target }}" \
+            --add-data "installer/bootstrap.md${SEP}." \
+            installer/seed.py
+          ls -la dist/
+
+      - name: Smoke test (banner + provider inference + frozen ROOT)
+        shell: bash
+        run: |
+          python - <<'EOF'
+          import glob, os, subprocess, sys
+          binary = glob.glob("dist/*")[0]
+          env = dict(os.environ,
+                     INDIEBIZ_API_KEY="sk-ant-dummy-key-for-smoke",
+                     INDIEBIZ_DIR=os.path.join(os.getcwd(), "smoke-install-dir"),
+                     NO_COLOR="1")
+          p = subprocess.run([binary], env=env, capture_output=True,
+                             text=True, timeout=180)
+          out = p.stdout + p.stderr
+          print(out[:3000])
+          # 더미 키라 첫 API 호출은 당연히 실패(비0 종료) — 검증 대상은 기동 경로다:
+          assert "installer agent" in out, "banner missing"
+          assert "anthropic" in out, "provider inference from key prefix failed"
+          assert "repo not present yet" in out, "frozen-mode ROOT/clone path missing"
+          assert os.path.isdir(env["INDIEBIZ_DIR"]), "install dir was not created"
+          print("SMOKE OK")
+          EOF
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ matrix.target }}
+          path: dist/*
+
+  release:
+    # main 푸시(또는 수동 실행)마다 롤링 릴리스 seed-latest 에 3-OS 바이너리를 갱신.
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List files
+        run: ls -la dist/
+
+      - name: Update rolling release (seed-latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: seed-latest
+          name: 'IndieBiz OS 최소 설치파일 (seed)'
+          body: |
+            `installer/seed.py`를 OS별 단일 실행파일로 패키징한 **최소 설치파일**입니다.
+            내려받아 실행하고 자기 AI API 키(Anthropic/OpenAI/Google)만 넣으면,
+            씨앗 에이전트가 이 리포를 clone하고 하드웨어에 맞춰 IndieBiz OS를 설치합니다.
+
+            - macOS (Apple Silicon): `indiebiz-seed-macos-arm64`
+            - Linux (x86_64): `indiebiz-seed-linux-x86_64`
+            - Windows (x86_64): `indiebiz-seed-windows-x86_64.exe`
+
+            설치 위치는 기본 `~/indiebizOS` (환경변수 `INDIEBIZ_DIR`로 변경).
+            파이썬/git이 이미 있다면 한 줄 설치(`install.sh`/`install.ps1`)도 동일하게 동작합니다.
+            이 릴리스는 main 브랜치의 installer 변경마다 자동 갱신됩니다 (rolling).
+          files: dist/*
+          prerelease: false
+          make_latest: false

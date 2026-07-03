@@ -45,6 +45,20 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)                      # repo root (installer/ lives inside it)
 REPO_URL = "https://github.com/kangkukjin/indiebizOS"
 
+# Frozen (PyInstaller single-binary) mode: the binary is downloaded on its own,
+# outside any clone. __file__ then lives in a throwaway extraction dir, so the
+# "parent of installer/" rule would point ROOT at a temp path that vanishes on
+# exit (and the write gate would confine the agent there). Instead: bundled
+# data (bootstrap.md) is read from the extraction dir, and ROOT becomes the
+# *install destination* — INDIEBIZ_DIR or ~/indiebizOS — which the agent
+# populates by cloning/downloading the repo as its first step (see
+# build_system's "repo not present" note).
+if getattr(sys, "frozen", False):
+    HERE = getattr(sys, "_MEIPASS", HERE)
+    ROOT = os.path.abspath(
+        os.environ.get("INDIEBIZ_DIR")
+        or os.path.join(os.path.expanduser("~"), "indiebizOS"))
+
 # --------------------------------------------------------------------------
 # Terminal I/O  (must work even when the bootstrap was piped via curl|bash,
 # where sys.stdin is the script itself, not the keyboard)
@@ -576,6 +590,30 @@ def _update_note(update_mode):
     return common
 
 
+def _repo_present():
+    return os.path.isdir(os.path.join(ROOT, "backend")) and \
+           os.path.isdir(os.path.join(ROOT, "installer"))
+
+
+def _clone_note():
+    """Standalone binary ran outside a clone: the repo must be fetched first."""
+    if _repo_present():
+        return ""
+    return (
+        "\n\n=== THE REPO IS NOT ON THIS MACHINE YET ===\n"
+        "Repo root %s is empty (or not a clone). Your FIRST task is to fetch the "
+        "repo into it, then continue with the normal install guide:\n"
+        "- If git is available: git clone %s \"%s\"  (the directory already exists "
+        "and is empty, so clone into it; if clone refuses, git init + remote add + "
+        "fetch + checkout works too.)\n"
+        "- If git is missing: either install git first, or download "
+        "%s/archive/refs/heads/main.zip (curl -L on mac/linux, Invoke-WebRequest "
+        "on Windows PowerShell) and extract its contents so that backend/ sits "
+        "directly under the repo root above.\n"
+        % (ROOT, REPO_URL, ROOT, REPO_URL)
+    )
+
+
 def build_system(provider, model, facts, update_mode=""):
     return (
         "You are the IndieBiz OS installer agent. Your job: install IndieBiz OS "
@@ -585,10 +623,10 @@ def build_system(provider, model, facts, update_mode=""):
         "held by the installer; reference it only via the {{LLM_API_KEY}} placeholder).\n\n"
         "Machine snapshot:\n%s\n\n"
         "Work by calling tools. Read the repo to confirm real paths/schemas before "
-        "writing. Do not run destructive commands. When done (or blocked), call finish.%s\n\n"
+        "writing. Do not run destructive commands. When done (or blocked), call finish.%s%s\n\n"
         "=== INSTALL GUIDE (compose against the real repo; it may be slightly stale) ===\n%s"
         % (ROOT, REPO_URL, provider, model, json.dumps(facts, indent=2, ensure_ascii=False),
-           _update_note(update_mode), load_bootstrap())
+           _clone_note(), _update_note(update_mode), load_bootstrap())
     )
 
 # --------------------------------------------------------------------------
@@ -599,6 +637,15 @@ MAX_TURNS = 100
 def main():
     say("IndieBiz OS installer agent")
     say("repo: %s" % ROOT)
+    # 단일 바이너리 모드: 목적지 폴더가 없으면 만들어 둔다 (run 도구의 cwd이자 쓰기 가드 경계)
+    if getattr(sys, "frozen", False):
+        try:
+            os.makedirs(ROOT, exist_ok=True)
+        except Exception as e:
+            err("cannot create install dir %s: %s" % (ROOT, e))
+            sys.exit(1)
+        if not _repo_present():
+            say("repo not present yet — the agent will fetch it first")
     key, provider, model = resolve_credentials()
     say("LLM: %s / %s" % (provider, model))
 

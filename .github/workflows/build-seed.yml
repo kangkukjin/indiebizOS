@@ -30,6 +30,8 @@ jobs:
         include:
           - os: macos-latest        # Apple Silicon
             target: indiebiz-seed-macos-arm64
+          - os: macos-15-intel      # Intel Mac (macos-13 은퇴 후 GitHub 공식 인텔 러너)
+            target: indiebiz-seed-macos-x86_64
           - os: ubuntu-latest
             target: indiebiz-seed-linux-x86_64
           - os: windows-latest
@@ -111,11 +113,16 @@ jobs:
             내려받아 실행하고 자기 AI API 키(Anthropic/OpenAI/Google)만 넣으면,
             씨앗 에이전트가 이 리포를 clone하고 하드웨어에 맞춰 IndieBiz OS를 설치합니다.
 
-            ### macOS (Apple Silicon)
+            ### macOS
+            칩에 맞는 파일을 받으세요 (터미널에서 `uname -m` — `arm64`=Apple Silicon,
+            `x86_64`=인텔. 틀리면 "Bad CPU type in executable" 오류가 납니다):
+            - Apple Silicon: `indiebiz-seed-macos-arm64`
+            - 인텔: `indiebiz-seed-macos-x86_64`
+
             서명·공증 없는 바이너리라 브라우저로 받으면 Gatekeeper가 "알 수 없는
             개발자" 경고로 막습니다. 터미널에서 curl로 받으면 경고 없이 실행됩니다:
             ```bash
-            curl -L -o indiebiz-seed https://github.com/kangkukjin/indiebizOS/releases/download/seed-latest/indiebiz-seed-macos-arm64
+            ARCH=$(uname -m); curl -L -o indiebiz-seed "https://github.com/kangkukjin/indiebizOS/releases/download/seed-latest/indiebiz-seed-macos-${ARCH}"
             chmod +x indiebiz-seed && ./indiebiz-seed
             ```
             이미 브라우저로 받았다면: `chmod +x` 후 `xattr -d com.apple.quarantine <파일>`

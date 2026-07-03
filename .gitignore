@@ -7,6 +7,7 @@ data/claude_code_config.json
 data/claude_code_sessions.json
 data/system_ai_memory.db
 data/switches.json
+data/event_triggers.json
 tokens/
 **/api_key.json
 **/config.json

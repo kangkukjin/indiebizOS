@@ -237,32 +237,18 @@ The easiest way to install IndieBiz OS is through **Claude Desktop**.
 **You'll provide:** an LLM API key (Anthropic, Google, or OpenAI); answers to a few questions about what you want; external API keys only as you actually use those features.
 
 <details>
-<summary><strong>Alternative: standalone installer (no Claude Desktop)</strong></summary>
+<summary><strong>Alternative: download the desktop app (no Claude Desktop)</strong></summary>
 
-Don't have Claude Desktop? A tiny, hardware-agnostic **seed** installs the system itself — it detects your machine, clones the repo, installs dependencies, wires your key, picks a profile that fits your hardware, and verifies the backend boots. It's a stdlib-only Python agent (no dependencies to run the installer itself); the only thing embedded is this repo's URL. Bring your own LLM key (Anthropic / OpenAI / Google — the provider is inferred from the key).
+Don't have Claude Desktop? Download a prebuilt desktop app. It bundles everything (Python, Node, all runtimes) inside the app, so nothing has to be installed on your machine and installing costs nothing — you just enter your own AI API key (Anthropic / Google / OpenAI) on first launch.
 
-**macOS / Linux:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/kangkukjin/indiebizOS/main/install.sh | INDIEBIZ_API_KEY=sk-ant-... bash
-```
+Get it from the [**app-latest** release](https://github.com/kangkukjin/indiebizOS/releases/tag/app-latest):
+- **macOS (Apple Silicon)**: `IndieBiz-*-arm64.dmg`
+- **macOS (Intel)**: `IndieBiz-*-x64.dmg`
+- **Windows**: `IndieBiz-Setup-*.exe`
 
-**Windows (PowerShell):**
-```powershell
-$env:INDIEBIZ_API_KEY="sk-ant-..."; irm https://raw.githubusercontent.com/kangkukjin/indiebizOS/main/install.ps1 | iex
-```
+Open the `.dmg` and drag IndieBiz into Applications (macOS), or run the installer (Windows). The apps aren't code-signed yet, so the first launch may need **right-click → Open** on macOS, or **More info → Run anyway** on Windows SmartScreen.
 
-The key is used only to run the installer and is written into your local config; it never leaves your machine except as the auth header to your chosen provider. See `installer/` for the seed and its install guide.
-
-**Language:** the installer and the running system both work in English — the AI replies in whatever language you write to it, so no setting is needed. (The bundled guides and desktop UI labels are currently Korean; the AI reads them and still answers you in your language.)
-
-**Re-installing / updating** an existing install overwrites it with the latest GitHub code while your `.env`, keys, and personal data are always kept (`.gitignore` is the preservation boundary). Two modes:
-```bash
-# keep your learning & settings, refresh code + shipped vocabulary:
-curl -fsSL https://raw.githubusercontent.com/kangkukjin/indiebizOS/main/install.sh | INDIEBIZ_UPDATE=standard bash
-# factory-reset learned data & tuning too (still keeps .env + personal data):
-curl -fsSL https://raw.githubusercontent.com/kangkukjin/indiebizOS/main/install.sh | INDIEBIZ_UPDATE=full bash
-```
-(Windows: set `$env:INDIEBIZ_UPDATE="standard"` before the `irm … | iex` line. Omit the variable and you'll be asked which mode.)
+**Language:** the AI replies in whatever language you write to it, so no setting is needed. (The bundled guides and desktop UI labels are currently Korean.)
 
 </details>
 

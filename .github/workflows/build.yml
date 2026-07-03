@@ -342,7 +342,7 @@ jobs:
 
   release-app:
     # 3개 빌드(win + mac arm64 + mac x64)를 모아 다운로드 링크 있는 롤링 릴리스로 발행.
-    # 씨앗(seed-latest)과 별개의 '풀 번들 앱' 배포 채널 = app-latest (고정 다운로드 URL).
+    # '풀 번들 앱' 배포 채널 = app-latest (고정 다운로드 URL).
     needs: [build-windows, build-mac]
     runs-on: ubuntu-latest
     steps:

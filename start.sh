@@ -25,8 +25,8 @@ if lsof -ti :8765 > /dev/null 2>&1; then
     sleep 1
 fi
 
-# 파이썬 선택: 씨앗 설치기(installer/seed.py)가 만든 가상환경이 있으면 그걸 쓴다.
-# (시스템 파이썬에는 fastapi/dotenv 등이 없어 ModuleNotFoundError — 실사례: 인텔 맥 설치)
+# 파이썬 선택: 저장소 루트에 가상환경(.venv)이 있으면 그걸 쓴다.
+# (시스템 파이썬에는 fastapi/dotenv 등이 없어 ModuleNotFoundError 가 날 수 있다)
 PY="python3"
 if [ -x ".venv/bin/python3" ]; then
     PY="$(pwd)/.venv/bin/python3"

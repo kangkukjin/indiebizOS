@@ -33,30 +33,35 @@ interface PackageInfo {
 }
 
 // 도구 관리 상위 4개 카테고리. 각 섹션은 열리고 닫히며, 안에 설치됨 + 미설치를 함께 보여준다.
-// ★각 패키지의 소속(멤버십)은 곧 재결정 예정 — categoryOf() 한 곳만 고치면 됨(임시 규칙).
+// 멤버십은 IBL 헌법 '언어의 경계'(ibl.md)를 따른다:
+//   표준 = 언어가 성립하려면 모든 인스턴스가 공유해야 하는 패키지 — 기능어 코어(self/others/table)
+//          어휘와 언어 인프라의 소유자. 명시 선언(STANDARD_PACKAGES)이며 낙수 버킷이 아니다.
+//   그 외 = 전부 개인 사전(내용어). 실용 관심사로 하위 분류: 한국 전용(locale) / 키 필요.
 type Category = 'standard' | 'kr' | 'needs_key' | 'personal';
 const CATEGORY_ORDER: Category[] = ['standard', 'kr', 'needs_key', 'personal'];
 const CATEGORY_LABEL: Record<Category, string> = {
-  standard: '⭐ 표준',
+  standard: '⭐ 표준 — 언어 코어',
   kr: '🇰🇷 한국 전용',
   needs_key: '🔑 키 필요',
   personal: '👤 개인어휘',
 };
 
-// 임시 멤버십(재결정 중). 키 필요지만 표준으로 취급하는 팩(예외):
-const STANDARD_OVERRIDE = new Set<string>(['cloudflare', 'context7', 'web']);
-// 개인 어휘 팩:
-const PERSONAL_PACKAGES = new Set<string>([
-  'memory', 'blog', 'lecture_workspace', 'media_producer', 'web-builder',
-  'android', 'remotion-video', 'house-designer', 'publishing',
+// IBL 표준 패키지: 기능어 코어 어휘 + 언어 인프라 소유자.
+// 여기 추가/제거는 표준 변경 = 언어 개정 — ibl.md '언어의 경계' 조항과 함께 의식적으로.
+const STANDARD_PACKAGES = new Set<string>([
+  'ibl-core',           // IBL 핵심 인프라
+  'system_essentials',  // self 파일 문법(read/write/grep/…) + table:spreadsheet emitter
+  'data-ops',           // table 관계대수 9종(filter/sort/…/merge) — 파이프 설탕의 desugar 타깃
+  'visualization',      // table:chart emitter
 ]);
+// ★알려진 경계 이상: media_producer 가 표준 코어 table:document/structure 를 소유(표준 패키지로
+//   이관 후보). 이관 전까지 키 필요로 분류되지만, 제거하면 table emitter 2개가 죽는다.
 
 function categoryOf(pkg: PackageInfo): Category {
-  if (STANDARD_OVERRIDE.has(pkg.id)) return 'standard';
-  if (PERSONAL_PACKAGES.has(pkg.id)) return 'personal';
+  if (STANDARD_PACKAGES.has(pkg.id)) return 'standard';
   if (pkg.locale === 'kr') return 'kr';
   if ((pkg.needs_key?.length ?? 0) > 0) return 'needs_key';
-  return 'standard';
+  return 'personal'; // 기본 = 개인 사전 (표준이 아니면 내용어)
 }
 
 interface ToolboxDialogProps {

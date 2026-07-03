@@ -1534,6 +1534,57 @@ def validate_node_guides(data: dict, root: Path) -> list[str]:
     return issues
 
 
+# === 표준-코어 가드: IBL 표준(문법+기능어) 경계 통제 (2026-07-03, ibl.md '언어의 경계' 조항) ===
+# IBL 표준 = 문법(연산자·[node:action]{params}·파이프 설탕) + 기능어 코어(아래 집합).
+# 이 집합을 바꾸는 것은 '언어 개정'이다 — ibl.md 헌법 조항·파서 desugar·노드 yaml의
+# always_on 플래그를 함께, 의식적으로 바꿔야 하며, 여기 선언을 갱신하지 않으면 빌드가 멈춘다.
+# 내용어(그 외 노드의 액션)는 개인 사전: yaml+패키지 데이터만으로 추가·제거되어야 하고
+# 파서·엔진 코드에 이름이 박히면 안 된다 (별칭·always_on 데이터화로 확립된 불변식).
+STANDARD_CORE_NODES = {"self", "others", "table"}
+
+
+def validate_standard_core(data: dict, root: Path) -> list[str]:
+    """표준-코어 가드 — ①always_on 노드 집합이 STANDARD_CORE_NODES 선언과 일치하는지
+    ②파서 파이프 설탕(_pipe_block)의 desugar 타깃(문법이 아는 유일한 어휘)이
+    표준 코어 노드의 실존 액션인지 적발한다."""
+    issues: list[str] = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    on = {n for n, cfg in nodes.items()
+          if isinstance(cfg, dict) and cfg.get("always_on") is True}
+    if nodes and on != STANDARD_CORE_NODES:
+        issues.append(
+            f"표준-코어 가드: always_on 노드 집합 {sorted(on)} ≠ 선언 {sorted(STANDARD_CORE_NODES)} "
+            "(STANDARD_CORE_NODES). 기능어 코어 변경은 언어 개정 — ibl.md '언어의 경계' 조항과 "
+            "이 선언을 함께 갱신할 것."
+        )
+    parser_path = root / "backend" / "ibl_parser.py"
+    try:
+        src = parser_path.read_text(encoding="utf-8")
+    except OSError:
+        issues.append(f"표준-코어 가드: 파서를 읽지 못함 ({parser_path})")
+        return issues
+    m = re.search(r"def _pipe_block\(.*?(?=\ndef |\Z)", src, re.S)
+    body = m.group(0) if m else ""
+    targets = set(re.findall(r"\[(\w+):(\w+)\]", body))
+    if not targets:
+        issues.append(
+            "표준-코어 가드: 파서 _pipe_block 에서 desugar 타깃([x:y] 코드젠 리터럴)을 찾지 못함 — "
+            "함수 이동/개명 시 이 가드도 함께 갱신할 것"
+        )
+    for node_name, action_name in sorted(targets):
+        if node_name not in STANDARD_CORE_NODES:
+            issues.append(
+                f"표준-코어 가드: 파서 desugar 가 비표준 노드 [{node_name}:{action_name}] 를 코드젠 — "
+                "문법 설탕은 기능어 코어(STANDARD_CORE_NODES)로만 펼칠 수 있음"
+            )
+        elif action_name not in ((nodes.get(node_name) or {}).get("actions") or {}):
+            issues.append(
+                f"표준-코어 가드: 파서 desugar 타깃 [{node_name}:{action_name}] 가 레지스트리에 없음 — "
+                "표준 코어 액션 개명 시 ibl_parser._pipe_block 도 함께 (언어 개정)"
+            )
+    return issues
+
+
 def validate_always_on(data: dict) -> list[str]:
     """노드 레벨 always_on 플래그 검증 — 인프라/문법 노드 항상-on 의 단일 소스(2026-07-03 데이터화).
 
@@ -1579,6 +1630,7 @@ def validate(data: dict, root: Path) -> list[str]:
     issues.extend(validate_phone_reachability(data, root))
     issues.extend(validate_node_guides(data, root))
     issues.extend(validate_always_on(data))
+    issues.extend(validate_standard_core(data, root))
     return issues
 
 

@@ -553,14 +553,25 @@ function createWindow() {
 }
 
 /**
+ * 이미 열린 창을 화면 맨앞으로 — focus()만으론 macOS에서 뒤에 깔린/최소화된 창이
+ * 안 올라온다. 복원→show(앞으로 가져오며 포커스)→focus 순으로 확실히 끌어올린다.
+ * (조종실 '액티브 프로젝트' 칩 클릭 등에서 사용)
+ */
+function raiseWindow(win) {
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+/**
  * 프로젝트 창 생성
  */
 function createProjectWindow(projectId, projectName, agentName) {
-  // 이미 열려있으면 포커스
+  // 이미 열려있으면 맨앞으로
   if (projectWindows.has(projectId)) {
     const existingWindow = projectWindows.get(projectId);
     if (!existingWindow.isDestroyed()) {
-      existingWindow.focus();
+      raiseWindow(existingWindow);
       // 이미 열린 창에 에이전트 선택 명령 전달 (스케줄 결과 등)
       if (agentName) {
         existingWindow.webContents.send('select-agent', agentName);
@@ -694,9 +705,9 @@ function createFolderWindow(folderId, folderName) {
  * 시스템 AI 창 생성
  */
 function createSystemAIWindow() {
-  // 이미 열려있으면 포커스
+  // 이미 열려있으면 맨앞으로
   if (systemAIWindow && !systemAIWindow.isDestroyed()) {
-    systemAIWindow.focus();
+    raiseWindow(systemAIWindow);
     return;
   }
 

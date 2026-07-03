@@ -7,9 +7,53 @@ IndieBiz OS Core
 """
 
 import threading
+import time
 
 # 스레드 로컬 저장소
 _thread_local = threading.local()
+
+# ============ 활성 작업 레지스트리 (조종실 '액티브 프로젝트' 계기) ============
+# 모든 실행 경로가 시작 시 thread_context 세터를 부르고 finally 에서 clear_all_context()
+# 를 부르는 관습을 초크포인트로 쓴다: set_user_input(프로젝트 에이전트 런) 과
+# 'task_sysai_' 접두사의 set_current_task_id(시스템 AI 런)에서 등록, clear 에서 해제.
+# 조종실이 GET /nodes/active-work 로 읽는다. 건강점검 런은 제외.
+
+_active_lock = threading.Lock()
+_active_work = {}  # thread ident → {project_id, agent_id, agent_name, sysai, started_at}
+
+
+def _touch_active_work(sysai: bool = False):
+    """현재 스레드를 활성 작업으로 등록 (런 시작 세터들이 호출)."""
+    if is_health_check_mode():
+        return
+    with _active_lock:
+        _active_work[threading.get_ident()] = {
+            "project_id": getattr(_thread_local, 'project_id', None) or "",
+            "agent_id": getattr(_thread_local, 'agent_id', None) or "",
+            "agent_name": getattr(_thread_local, 'agent_name', None) or "",
+            "sysai": sysai,
+            "started_at": time.time(),
+        }
+
+
+def _drop_active_work():
+    with _active_lock:
+        _active_work.pop(threading.get_ident(), None)
+
+
+def list_active_work() -> list:
+    """지금 실행 중인 작업 목록. 죽은 스레드/1시간 초과 잔재(clear 누락 방어)는 청소."""
+    now = time.time()
+    alive = {t.ident for t in threading.enumerate()}
+    out = []
+    with _active_lock:
+        for ident in list(_active_work.keys()):
+            w = _active_work[ident]
+            if ident not in alive or now - w["started_at"] > 3600:
+                _active_work.pop(ident, None)
+                continue
+            out.append(dict(w, elapsed_sec=int(now - w["started_at"])))
+    return out
 
 
 # ============ 에이전트 ID 관리 ============
@@ -58,6 +102,9 @@ def set_current_agent_name(name: str):
 def set_current_task_id(task_id: str):
     """현재 스레드의 task_id 설정 (시스템 자동 관리)"""
     _thread_local.task_id = task_id
+    # 시스템 AI 런은 set_user_input 을 안 거치므로 task 접두사로 활성 작업 등록
+    if task_id and str(task_id).startswith('task_sysai_'):
+        _touch_active_work(sysai=True)
 
 
 def get_current_task_id() -> str:
@@ -116,6 +163,9 @@ def is_health_check_mode() -> bool:
 def set_user_input(text: str):
     """현재 스레드의 사용자 원본 입력 저장 (IBL 실행 로그에 사용)"""
     _thread_local.user_input = text
+    # 런 시작 신호 — 이 시점엔 project_id/agent_name 이 이미 세팅돼 있다(호출 관습)
+    if text:
+        _touch_active_work()
 
 
 def get_user_input() -> str:
@@ -203,6 +253,7 @@ def restore(snap: dict):
 
 def clear_all_context():
     """모든 스레드 로컬 컨텍스트 초기화"""
+    _drop_active_work()
     _thread_local.agent_id = None
     _thread_local.agent_name = None
     _thread_local.project_id = None

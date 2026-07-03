@@ -121,6 +121,66 @@ async def peer_status():
             "nodes": [e.get("alias") for e in others], "detail": None}
 
 
+@router.get("/nodes/active-work")
+def active_work():
+    """조종실 '액티브 프로젝트' 계기 — 판단 기준 2층(사용자 확정, 2026-07-03):
+
+    · 칩(로스터) = **started AgentRunner 가 있는 프로젝트**. 사용자가 직접 명령하려면
+      창을 열어야 하고(창 열림=에이전트 시작), 창을 닫으면 Electron 이 stop_all 을
+      부르므로 "러너 레지스트리 = 창이 열려 당직 중"이 성립한다.
+    · busy(펄스) = thread_context 활성 작업 레지스트리에 지금 처리 중으로 잡히는 곳.
+    · 시스템 AI 는 시작/정지 상태가 없는 싱글턴 → 처리 중일 때만 항목으로 등장.
+    · 창 없이 도는 런(위임 등)도 busy 로 잡히면 정직하게 표시한다(계기는 진실 우선).
+    프로젝트는 id==name 관습이라 project_name=project_id 를 그대로 쓴다.
+    """
+    import time as _t
+    from thread_context import list_active_work
+
+    # 지금 처리 중(busy) — 프로젝트별 가장 이른 시작 시각
+    busy_projects = {}
+    sys_started = None
+    for w in list_active_work():
+        if w.get("sysai"):
+            sys_started = w["started_at"] if sys_started is None else min(sys_started, w["started_at"])
+            continue
+        pid = w.get("project_id") or ""
+        if pid:
+            busy_projects[pid] = min(busy_projects.get(pid, w["started_at"]), w["started_at"])
+
+    now = _t.time()
+    items = []
+    if sys_started is not None:
+        items.append({"kind": "system_ai", "project_id": "", "project_name": "시스템 AI",
+                      "agents": [], "busy": True, "elapsed_sec": int(now - sys_started)})
+
+    # 당직 로스터 = started 러너 보유 프로젝트 (창 닫힘=stop_all 로 여기서 빠진다)
+    try:
+        from api_agents import get_agent_runners
+        runners = get_agent_runners() or {}
+    except Exception:
+        runners = {}
+    for pid in sorted(runners.keys()):
+        names = []
+        for aid, info in (runners.get(pid) or {}).items():
+            r = (info or {}).get("runner")
+            if (info or {}).get("running") and r is not None and getattr(r, "running", True):
+                names.append(((info.get("config") or {}).get("name")) or aid)
+        if not names:
+            continue
+        busy = pid in busy_projects
+        items.append({"kind": "project", "project_id": pid, "project_name": pid,
+                      "agents": sorted(names), "busy": busy,
+                      "elapsed_sec": int(now - busy_projects[pid]) if busy else 0})
+
+    # busy 인데 로스터에 없는 프로젝트(창 없는 위임 런 등) — 진실 우선으로 표시
+    listed = {it["project_id"] for it in items if it["kind"] == "project"}
+    for pid, st in sorted(busy_projects.items()):
+        if pid not in listed:
+            items.append({"kind": "project", "project_id": pid, "project_name": pid,
+                          "agents": [], "busy": True, "elapsed_sec": int(now - st)})
+    return {"items": items}
+
+
 @router.post("/nodes/primary")
 async def set_primary(req: PrimaryRequest):
     """노드를 그 능력의 주(主)기기로 지정(주소 생략 시 자동선택 대상). 같은 능력의 다른

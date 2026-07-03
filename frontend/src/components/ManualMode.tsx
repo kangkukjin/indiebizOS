@@ -1,5 +1,8 @@
 /**
- * ManualMode.tsx - 수동 모드 (컴파일러 프론트엔드)
+ * ManualMode.tsx - 조종실 (구 수동 모드/계기판 — 컴파일러 프론트엔드)
+ *
+ * 이름의 계보: 수동 → 계기판 → 조종실(2026-07-03). 자율주행을 포함한 시스템 전체를
+ * 감독·개입하는 주권 기관이라는 승격을 반영한다(내부 탭 키는 'manual' 유지).
  *
  * 트릴레마에서 표현력+주권을 갖고 속도를 지불하는 면. 인간이 에이전트 루프를 대체한다:
  *   1) 의도 입력  → 2) 경량 모델이 해마에 기대 IBL로 번역  → 3) 효과(dry-run)로 검수·편집
@@ -10,11 +13,11 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { Terminal, Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert, HelpCircle, Copy, X, Stethoscope, RotateCw, HardDrive, Boxes } from 'lucide-react';
+import { Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert, HelpCircle, Copy, X, Stethoscope, RotateCw, HardDrive, Boxes, ChevronDown, Brain } from 'lucide-react';
 import { api } from '../lib/api';
-import { NodePresence, ModelGearLever } from './launcher-components';
+import { NodePresence, ModelGearLever, ActiveProjects } from './launcher-components';
 import { EpisodeJournal } from './EpisodeJournal';
-import type { IblValidateResult, IblSafety, IblCatalog, DashboardStatus } from '../lib/api-ibl';
+import type { IblValidateResult, IblSafety, IblCatalog, DashboardStatus, RecallPreviewResult } from '../lib/api-ibl';
 
 // 계기판 서비스 라벨
 const SERVICE_LABELS: Record<string, string> = {
@@ -145,6 +148,16 @@ export default function ManualMode() {
   // 계기판: 시스템 상태 (마지막 IBL 건강 + vitals) + 수동 재점검
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null);
   const [healthChecking, setHealthChecking] = useState(false);
+  // 시스템 상태 접이식 — 기본 접힘(한 줄 요약), 선택은 localStorage에 기억
+  const [statusOpen, setStatusOpen] = useState<boolean>(() => {
+    try { return localStorage.getItem('cockpit_status_open') === '1'; } catch { return false; }
+  });
+
+  // 기억 회상 검증 — 에이전트 0단계(연상)가 주입할 기억 묶음을 실행 없이 미리 본다 (조종실 맨 아래)
+  const [recallQuery, setRecallQuery] = useState('');
+  const [recalling, setRecalling] = useState(false);
+  const [recallResult, setRecallResult] = useState<RecallPreviewResult | null>(null);
+  const [recallError, setRecallError] = useState<string | null>(null);
 
   const validateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
@@ -330,6 +343,23 @@ export default function ManualMode() {
 
   // 부작용이 있으면 명시적 확인을 받아야만 실행 가능. 전부 read-only면 무마찰.
   const needsConfirm = !!validation?.has_side_effect;
+  // 기억 회상 검증 — 실제 주입물과 동일한 연상 묶음을 백엔드에서 받아온다 (LLM 0, 부작용 없음)
+  const handleRecall = useCallback(async () => {
+    const q = recallQuery.trim();
+    if (!q || recalling) return;
+    setRecalling(true);
+    setRecallResult(null);
+    setRecallError(null);
+    try {
+      const r = await api.recallPreview(q);
+      setRecallResult(r);
+    } catch (e) {
+      setRecallError(e instanceof Error ? e.message : '회상 조회 실패 — 백엔드 상태를 확인하세요');
+    } finally {
+      setRecalling(false);
+    }
+  }, [recallQuery, recalling]);
+
   const canExecute =
     !!validation && validation.valid && !!iblCode.trim() && !executing &&
     (!needsConfirm || confirmSideEffect);
@@ -338,67 +368,65 @@ export default function ManualMode() {
     <div className="h-full overflow-y-auto bg-[#F5F1EB]">
       <div className="max-w-2xl mx-auto px-5 py-6 space-y-4">
 
-        {/* 헤더 */}
-        <div className="flex items-center justify-between gap-2 text-stone-500">
-          <div className="flex items-center gap-2 min-w-0">
-            <Terminal size={18} className="shrink-0" />
-            <span className="text-sm truncate">계기판 — 시스템 상태를 보고, 명령을 IBL로 번역·검수해 실행합니다</span>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => { setBrowsing((v) => !v); setShowAbout(false); }}
-              className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 border transition ${
-                browsing ? 'bg-stone-800 text-white border-stone-800' : 'bg-white/70 border-stone-200 text-stone-600 hover:bg-white'
-              }`}
-            >
-              <BookOpen size={13} /> IBL 사전
-            </button>
-            <button
-              onClick={() => { setShowAbout((v) => !v); setBrowsing(false); }}
-              className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 border transition ${
-                showAbout ? 'bg-stone-800 text-white border-stone-800' : 'bg-white/70 border-stone-200 text-stone-600 hover:bg-white'
-              }`}
-            >
-              <HelpCircle size={13} /> IBL이란?
-            </button>
-          </div>
-        </div>
+        {/* 액티브 프로젝트 — 지금 일하고 있는 에이전트들의 프로젝트. 클릭=대화창 맨앞으로 (조종실 맨 윗줄) */}
+        <ActiveProjects />
 
         {/* 모델 기어 — 계기판 변속 레버(절약/균형/최대). 시스템 전체 모델 등급을 재시작 없이 변속. */}
         <ModelGearLever />
 
-        {/* 시스템 상태 (계기판) — 마지막 IBL 건강 + 핵심 vitals. 열 때 즉시(검사 X), '지금 점검'으로 새로. */}
-        <div className="rounded-xl border border-stone-200 bg-white/70 p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-stone-700 flex items-center gap-1.5">
-              <Stethoscope size={14} /> 시스템 상태
-            </span>
-            <div className="flex items-center gap-2">
+        {/* 시스템 상태 — 접이식 한 줄(dark cockpit): 요약 배지만 상시, 펼치면 상세+지금 점검 */}
+        <div className="rounded-xl border border-stone-200 bg-white/70">
+          <button
+            onClick={() => setStatusOpen((v) => {
+              const nv = !v;
+              try { localStorage.setItem('cockpit_status_open', nv ? '1' : '0'); } catch { /* noop */ }
+              return nv;
+            })}
+            className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left"
+          >
+            <span className="text-sm font-semibold text-stone-700 flex items-center gap-2 min-w-0">
+              <Stethoscope size={14} className="shrink-0" /> 시스템 상태
+              {/* 폰 접속상태 — PC(맥)에선 이게 제일 중요해 접힌 줄에 상시 표시 */}
+              <NodePresence />
               {dashboard && (
-                <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded ${
+                <span className={`inline-flex items-center gap-1 text-[11px] font-normal px-2 py-0.5 rounded shrink-0 ${
                   dashboard.ibl_health.healthy == null ? 'text-stone-500 bg-stone-100'
-                    : dashboard.ibl_health.healthy ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'
+                    : !dashboard.ibl_health.healthy ? 'text-red-700 bg-red-50'
+                    : dashboard.ibl_health.stale ? 'text-amber-700 bg-amber-50'
+                    : 'text-emerald-700 bg-emerald-50'
                 }`}>
                   {dashboard.ibl_health.healthy == null ? <HelpCircle size={11} />
-                    : dashboard.ibl_health.healthy ? <Check size={11} /> : <AlertTriangle size={11} />}
-                  IBL {dashboard.ibl_health.healthy == null ? '미점검' : dashboard.ibl_health.healthy ? '건강' : '주의'}
+                    : !dashboard.ibl_health.healthy ? <AlertTriangle size={11} />
+                    : dashboard.ibl_health.stale ? <RotateCw size={11} />
+                    : <Check size={11} />}
+                  IBL {dashboard.ibl_health.healthy == null ? '미점검'
+                    : !dashboard.ibl_health.healthy ? '주의'
+                    : dashboard.ibl_health.stale ? '점검 오래됨' : '건강'}
                 </span>
               )}
-              <button
-                onClick={handleHealthCheck}
-                disabled={healthChecking}
-                title="지금 점검 — fixture 통화·정적·골든을 새로 실행 (AI 0, 수십 초)"
-                className="px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 disabled:opacity-50 transition"
-              >
-                {healthChecking ? <Loader2 size={12} className="animate-spin" /> : <RotateCw size={12} />}
-                지금 점검
-              </button>
-            </div>
-          </div>
+              {healthChecking && <Loader2 size={12} className="animate-spin text-stone-400 shrink-0" />}
+              {dashboard && (
+                <span className="text-[11px] font-normal text-stone-400 truncate">
+                  마지막 점검 {relTime(dashboard.ibl_health.checked_at)}
+                </span>
+              )}
+            </span>
+            <ChevronDown size={14} className={`shrink-0 text-stone-400 transition-transform ${statusOpen ? 'rotate-180' : ''}`} />
+          </button>
 
-          {/* 다른 몸(폰) 연결상태 — 연락할 몸이 살아있나 */}
-          <div className="flex items-center gap-2 pb-2 border-b border-stone-100">
-            <NodePresence />
+          {statusOpen && (
+          <div className="px-4 pb-4 space-y-3">
+          {/* 지금 점검 — 폰 연결상태는 헤더 줄로 이동(상시 표시) */}
+          <div className="flex items-center justify-end pb-2 border-b border-stone-100">
+            <button
+              onClick={handleHealthCheck}
+              disabled={healthChecking}
+              title="지금 점검 — fixture 통화·정적·골든을 새로 실행 (AI 0, 수십 초)"
+              className="px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 disabled:opacity-50 transition shrink-0"
+            >
+              {healthChecking ? <Loader2 size={12} className="animate-spin" /> : <RotateCw size={12} />}
+              지금 점검
+            </button>
           </div>
 
           {/* IBL 건강 3항목 */}
@@ -448,10 +476,35 @@ export default function ManualMode() {
               fixture를 실제 실행해 점검 중… 수십 초 걸릴 수 있습니다 (AI 0).
             </div>
           )}
+          </div>
+          )}
         </div>
 
         {/* 주행기록계 — 지난 주행 목록 + 분석 스위치 */}
         <EpisodeJournal />
+
+        {/* 조종실 타이틀 + IBL 사전 / IBL이란? — 번역기 바로 위(2026-07-03 헤더에서 이동). 열리는 패널이 이 줄과 번역기 사이에 뜬다. */}
+        <div className="flex items-center justify-between gap-2 text-stone-500">
+          <span className="text-sm truncate min-w-0">명령을 IBL로 번역·검수해 실행합니다</span>
+          <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => { setBrowsing((v) => !v); setShowAbout(false); }}
+            className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 border transition ${
+              browsing ? 'bg-stone-800 text-white border-stone-800' : 'bg-white/70 border-stone-200 text-stone-600 hover:bg-white'
+            }`}
+          >
+            <BookOpen size={13} /> IBL 사전
+          </button>
+          <button
+            onClick={() => { setShowAbout((v) => !v); setBrowsing(false); }}
+            className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 border transition ${
+              showAbout ? 'bg-stone-800 text-white border-stone-800' : 'bg-white/70 border-stone-200 text-stone-600 hover:bg-white'
+            }`}
+          >
+            <HelpCircle size={13} /> IBL이란?
+          </button>
+          </div>
+        </div>
 
         {/* IBL이란 무엇인가 — 언어 자체만(어휘·문법·통화). 앱·표면·인프라는 IBL이 아니라 그 위에 지은 것. */}
         {showAbout && (
@@ -779,6 +832,68 @@ export default function ManualMode() {
             </div>
           </div>
         )}
+
+        {/* 기억 회상 검증 — 에이전트 0단계(연상)가 주입할 기억(실행기억·심층·포식·디스크골격)을
+            실행 없이 미리 본다. 번역기와 같은 형식: 입력 → [회상] → 채널별 원문 표시(가공 없음). */}
+        <div className="space-y-3 pt-3 border-t border-stone-200">
+          <div className="flex items-center gap-2 text-stone-500">
+            <Brain size={15} className="shrink-0" />
+            <span className="text-sm truncate">기억 회상 검증 — 이 명령에 무엇이 회상되어 주입되는지 미리 봅니다</span>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={recallQuery}
+              onChange={(e) => setRecallQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !recalling) handleRecall(); }}
+              placeholder="예) 강남구 아파트 실거래가 찾아줘"
+              className="flex-1 pl-4 pr-4 py-2.5 rounded-xl border border-stone-300 bg-white text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400"
+            />
+            <button
+              onClick={handleRecall}
+              disabled={recalling || !recallQuery.trim()}
+              className="px-4 py-2 rounded-xl bg-stone-800 text-white text-sm flex items-center gap-1.5 disabled:opacity-40 hover:bg-stone-700 transition shrink-0"
+            >
+              {recalling ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
+              회상
+            </button>
+          </div>
+
+          {recallError && <div className="text-xs text-red-600">{recallError}</div>}
+
+          {recallResult && (
+            <div className="space-y-2">
+              {/* 요약 칩 — 해마 최고점수(0.85↑=반사 경로)와 top 용례, 총 주입량 */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-stone-500">
+                <span className={`px-2 py-0.5 rounded ${
+                  recallResult.top_score >= 0.85 ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600'
+                }`}>
+                  해마 최고점수 {(recallResult.top_score * 100).toFixed(1)}%
+                  {recallResult.top_score >= 0.85 ? ' — 반사(Reflex) 경로' : ''}
+                </span>
+                {recallResult.top_code && (
+                  <code className="text-stone-400 truncate max-w-[50%]">{recallResult.top_code}</code>
+                )}
+                <span>주입 {recallResult.total_chars.toLocaleString()}자</span>
+              </div>
+              {recallResult.sections.map((sec) => (
+                sec.present ? (
+                  <details key={sec.key} open className="rounded-xl border border-stone-200 bg-white/70">
+                    <summary className="px-4 py-2.5 text-sm text-stone-700 cursor-pointer select-none">
+                      {sec.label}{' '}
+                      <span className="text-[11px] text-stone-400">({sec.content.length.toLocaleString()}자)</span>
+                    </summary>
+                    <pre className="px-4 pb-3 text-[11px] leading-relaxed text-stone-600 whitespace-pre-wrap break-words max-h-72 overflow-y-auto">{sec.content}</pre>
+                  </details>
+                ) : (
+                  <div key={sec.key} className="rounded-xl border border-stone-100 bg-white/40 px-4 py-2 text-[13px] text-stone-400">
+                    {sec.label} — 회상 없음
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

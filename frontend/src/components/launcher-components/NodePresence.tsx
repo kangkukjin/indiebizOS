@@ -48,8 +48,10 @@ export function NodePresence() {
   const statusText = !peer.has_peer ? '미연동' : (peer.online ? '연결됨' : '오프라인');
   const title = peer.detail || (online ? `${name} 연결됨` : `${name} ${statusText}`);
 
+  // 루트가 span(inline-flex)인 이유: 조종실 '시스템 상태' 접힌 줄(button 요소) 안에
+  // IBL 배지와 나란히 들어가므로 phrasing content 여야 한다.
   return (
-    <div className="flex items-center gap-2 text-[12px] select-none" title={title}>
+    <span className="inline-flex items-center gap-2 text-[12px] font-normal select-none" title={title}>
       <span className="relative flex h-2 w-2" aria-hidden="true">
         {online && (
           <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
@@ -61,6 +63,6 @@ export function NodePresence() {
       <Smartphone size={13} className={online ? 'text-stone-600' : 'text-stone-400'} />
       <span className={online ? 'text-stone-700' : 'text-stone-400'}>{name}</span>
       <span className={online ? 'text-emerald-600' : 'text-stone-400'}>· {statusText}</span>
-    </div>
+    </span>
   );
 }

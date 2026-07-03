@@ -244,6 +244,50 @@ def chat_with_system_ai(chat: ChatMessage):
     )
 
 
+class RecallPreviewRequest(BaseModel):
+    message: str
+
+
+# 연상 묶음의 채널 태그 → 조종실 표시 라벨. _build_execution_memory 가 이 순서로 결합한다.
+_RECALL_CHANNELS = [
+    ("execution_memory", "실행기억 — 해마 (과거 IBL 용례 연상)"),
+    ("related_memory", "심층 메모리 — 사용자·세계 사실"),
+    ("forage_memory", "포식 기억 — 냄새지도 + 주인모델"),
+    ("disk_skeleton", "디스크 골격 — 집중 폴더 지도 (포식 의도일 때만)"),
+]
+
+
+@router.post("/system-ai/recall-preview")
+def recall_preview(req: RecallPreviewRequest):
+    """조종실 '기억 회상 검증' — 에이전트 0단계(연상)가 주입하는 기억 묶음을 실행 없이 미리 본다.
+
+    시스템 AI 러너의 _build_execution_memory(해마+심층+포식+디스크골격, LLM 0·부작용 없음)를
+    그대로 호출해 *실제 주입물과 동일한* XML 을 채널별로 갈라 돌려준다 — 가공하면 검증창이
+    거짓말을 하게 되므로 원문 그대로. sync def 라 FastAPI 스레드풀에서 돈다(임베딩 검색 블로킹).
+    """
+    import re as _re
+    message = (req.message or "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="message 가 비어 있습니다")
+    from system_ai_core import get_system_ai_runner
+    runner = get_system_ai_runner()
+    if runner is None:
+        raise HTTPException(status_code=503, detail="시스템 AI 러너가 아직 준비되지 않았습니다")
+    xml, top_score, top_code = runner._build_execution_memory(message)
+
+    sections = []
+    for tag, label in _RECALL_CHANNELS:
+        m = _re.search(rf"<{tag}\b.*?</{tag}>", xml or "", _re.DOTALL)
+        content = m.group(0) if m else ""
+        sections.append({"key": tag, "label": label, "present": bool(content), "content": content})
+    return {
+        "top_score": round(float(top_score or 0.0), 4),
+        "top_code": top_code or "",
+        "total_chars": len(xml or ""),
+        "sections": sections,
+    }
+
+
 class ForageMessage(BaseModel):
     message: str
     images: Optional[List[ImageData]] = None

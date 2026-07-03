@@ -79,11 +79,27 @@ export interface DashboardStatus {
   ibl_health: {
     checked_at: string | null;
     healthy: boolean | null;   // null = 미점검
+    stale: boolean;            // 마지막 점검이 48h 초과 — 초록 배지를 바래게
     items: IblHealthStatusItem[];
     action_count: number;
   };
   services: Record<string, boolean>;
   disk_free_gb: number | null;
+}
+
+// 조종실 '기억 회상 검증' — 0단계 연상 묶음(해마+심층+포식+디스크골격) 미리보기
+export interface RecallSection {
+  key: string;
+  label: string;
+  present: boolean;
+  content: string;
+}
+
+export interface RecallPreviewResult {
+  top_score: number;    // 해마 최고 점수 (≥0.85 = Reflex 경로)
+  top_code: string;
+  total_chars: number;  // 실제 주입될 전체 문자 수
+  sections: RecallSection[];
 }
 
 export function applyIblMethods<T extends APIClientCore>(client: T) {
@@ -94,6 +110,14 @@ export function applyIblMethods<T extends APIClientCore>(client: T) {
       return client.request<IblTranslateResult>('/ibl/translate', {
         method: 'POST',
         body: JSON.stringify({ intent, allowed_nodes: allowedNodes ?? null }),
+      });
+    },
+
+    /** 조종실 '기억 회상 검증' — 이 명령에 0단계 연상이 주입할 기억 묶음을 실행 없이 미리 본다. */
+    async recallPreview(message: string) {
+      return client.request<RecallPreviewResult>('/system-ai/recall-preview', {
+        method: 'POST',
+        body: JSON.stringify({ message }),
       });
     },
 

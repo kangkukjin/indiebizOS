@@ -543,7 +543,7 @@ input,textarea,select{ font-family:inherit; }
 .btn2{ padding:11px 16px; border:1px solid var(--line); background:var(--bg3); color:var(--txt); border-radius:10px; font-weight:600; font-size:14px; }
 .btn2:hover{ border-color:var(--acc); }
 .btn2.danger{ color:#e5484d; padding:11px 12px; }
-/* 계기판 헤더 + IBL이란 설명 */
+/* 조종실 헤더 + IBL이란 설명 */
 .dash-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
 .dash-titles{ min-width:0; }
 .dash-title{ font-size:17px; font-weight:700; color:var(--txt); }
@@ -682,7 +682,7 @@ a{ color:var(--info); }
     <button class="surf-tab on" id="t-autopilot" onclick="setSurface('autopilot')">
       <span class="em">🛰️</span><span>자율주행</span><span class="hint">속도·표현력</span></button>
     <button class="surf-tab" id="t-manual" onclick="setSurface('manual')">
-      <span class="em">⚙️</span><span>계기판</span><span class="hint">표현력·주권</span></button>
+      <span class="em">⚙️</span><span>조종실</span><span class="hint">표현력·주권</span></button>
     <button class="surf-tab" id="t-app" onclick="setSurface('app')">
       <span class="em">📱</span><span>앱</span><span class="hint">속도·주권</span></button>
   </div>
@@ -711,13 +711,13 @@ a{ color:var(--info); }
     </div>
   </div>
 
-  <!-- 계기판 -->
+  <!-- 조종실 (구 계기판) -->
   <div class="panel" id="p-manual">
     <div class="wrap">
-      <!-- 계기판 헤더 — IBL 사전 / IBL이란? -->
+      <!-- 조종실 헤더 — IBL 사전 / IBL이란? -->
       <div class="dash-head">
         <div class="dash-titles">
-          <div class="dash-title">계기판</div>
+          <div class="dash-title">조종실</div>
           <div class="dash-sub">자연어를 IBL로 번역·검수해 실행합니다</div>
         </div>
         <div class="dash-btns">

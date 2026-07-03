@@ -159,7 +159,17 @@ jobs:
           path: frontend/release/*.exe
 
   build-mac:
-    runs-on: macos-latest
+    # 애플실리콘(arm64)과 인텔(x64) 둘 다 빌드 — 인텔 맥에서 "Bad CPU type" 방지.
+    # 잡 스텝이 uname -m 으로 아키텍처별 python/node 를 받으므로 러너만 바꾸면 됨.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest      # Apple Silicon (arm64)
+            arch: arm64
+          - runner: macos-15-intel    # Intel (x64)
+            arch: x64
+    runs-on: ${{ matrix.runner }}
 
     steps:
       - name: Checkout
@@ -325,7 +335,51 @@ jobs:
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v5
         with:
-          name: IndieBiz-macOS
+          name: IndieBiz-macOS-${{ matrix.arch }}
           path: |
             frontend/release/*.dmg
             frontend/release/*.zip
+
+  release-app:
+    # 3개 빌드(win + mac arm64 + mac x64)를 모아 다운로드 링크 있는 롤링 릴리스로 발행.
+    # 씨앗(seed-latest)과 별개의 '풀 번들 앱' 배포 채널 = app-latest (고정 다운로드 URL).
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List files
+        run: ls -la dist/
+
+      - name: Publish rolling release (app-latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-latest
+          name: 'IndieBiz OS 데스크탑 앱'
+          body: |
+            Python·Node·모든 런타임을 **앱 안에 번들**한 데스크탑 앱입니다.
+            받아서 설치하면 바로 창이 뜹니다 — 컴퓨터에 파이썬/Node가 없어도,
+            설치 중 AI를 쓰지 않으므로 **API 요금이 들지 않습니다.**
+            (첫 실행 때 자기 AI API 키만 넣으면 됩니다.)
+
+            ### macOS — 칩에 맞는 파일을 받으세요
+            - **Apple Silicon(M1~)**: `IndieBiz-*-arm64.dmg`
+            - **Intel**: `IndieBiz-*-x64.dmg`
+            - (모르겠으면 왼쪽 위 사과 → 이 Mac에 관하여 → 칩/프로세서 확인)
+
+            받은 `.dmg`를 열고 IndieBiz 를 응용프로그램 폴더로 드래그하세요.
+            처음 실행 시 "확인되지 않은 개발자" 경고가 뜨면, 앱을 **우클릭 → 열기**
+            (또는 설정 → 개인정보 보호 및 보안 → "확인 없이 열기").
+
+            ### Windows
+            `IndieBiz-Setup-*.exe` 실행. SmartScreen 경고가 뜨면
+            "추가 정보 → 실행"을 누르세요. (둘 다 코드 서명 전이라 나오는 경고입니다.)
+          files: |
+            dist/*.dmg
+            dist/*.exe
+          prerelease: false
+          make_latest: false

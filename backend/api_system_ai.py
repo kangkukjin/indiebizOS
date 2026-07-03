@@ -84,6 +84,10 @@ FORAGE_ROLE_PATH = DATA_PATH / "forage_role.txt"
 # 웹 검색 가이드(검색법 + 웹 랜드마크 지도). 포식=정의상 항상 웹검색이라 forage_chat 이 *항상 주입*.
 # 일반 에이전트는 read_guide/의식 get_guide_list 로 선택적으로 읽는다(같은 파일). 매 요청 read=라이브.
 WEB_SEARCH_GUIDE_PATH = DATA_PATH / "guides" / "web_search.md"
+# 합작 포식 가이드 — 포식 브라우저 *전용*(깊이 상한·후보=가설·탐사적 다양성). 일반 에이전트의
+# "끝까지 답하라"와 상충하므로 guide_db 에 등록하지 않고 forage_chat 만 항상 주입한다.
+# 웹 검색 가이드 *뒤에* 붙여 특수(포식)가 일반(웹검색)의 상세 검증 절을 덮게 한다.
+FORAGE_SEARCH_GUIDE_PATH = DATA_PATH / "guides" / "forage_search.md"
 
 
 # ============ Pydantic 모델 ============
@@ -291,6 +295,12 @@ def recall_preview(req: RecallPreviewRequest):
 class ForageMessage(BaseModel):
     message: str
     images: Optional[List[ImageData]] = None
+    # 사냥판 상태(합작 포식 보충 라운드) — 프론트가 들고 있는 후보 풀의 스냅샷.
+    # {query, round, need, pinned[], kept[], deleted[], excluded[], trail[]} — 백엔드는 stateless 유지,
+    # 이 스냅샷을 한국어 블록으로 직렬화해 메시지에 접합할 뿐이다(forager는 AI다, 짓지 않는다).
+    hunt: Optional[Dict[str, Any]] = None
+    # 판 크기(테이블 위 물건 수) — 첫 검색에서 몇 개쯤 깔지. 사용자가 계기에서 조정(5든 15든).
+    count: Optional[int] = None
 
 
 class ForageTranslateReq(BaseModel):
@@ -366,6 +376,164 @@ def forage_translate(req: ForageTranslateReq):
     return {"translations": out}
 
 
+# ============ 포식 브라우징 히스토리 (전부 기록 · 수동 삭제) ============
+# 사용자 결정: 전부 기록 + 수동 삭제, 저장만 하고 물어볼 때 분석. 프론트가 webview 이동
+# (did-navigate)마다 POST 로 적재한다. 새 사냥 검색 시 최근 방문이 약한 맥락으로 동봉된다(사냥 간 전이).
+
+FORAGE_HISTORY_DB = DATA_PATH / "forage_history.db"
+
+
+def _history_conn():
+    import sqlite3
+    conn = sqlite3.connect(str(FORAGE_HISTORY_DB))
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS history("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, url TEXT NOT NULL, "
+        "title TEXT DEFAULT '', hunt_query TEXT DEFAULT '')"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_forage_history_ts ON history(ts)")
+    return conn
+
+
+class ForageHistoryItem(BaseModel):
+    url: str
+    title: str = ""
+    hunt_query: str = ""
+
+
+@router.post("/forage/history")
+def forage_history_add(item: ForageHistoryItem):
+    if not item.url or item.url == "about:blank":
+        return {"ok": False}
+    conn = _history_conn()
+    try:
+        # 직전 기록과 같은 URL 이면 중복 적재 안 함(리로드·리다이렉트·이벤트 중복 노이즈)
+        row = conn.execute("SELECT url FROM history ORDER BY id DESC LIMIT 1").fetchone()
+        if row and row[0] == item.url:
+            return {"ok": True, "dedup": True}
+        conn.execute(
+            "INSERT INTO history(ts, url, title, hunt_query) VALUES(?,?,?,?)",
+            (datetime.now().isoformat(timespec="seconds"), item.url[:2000], item.title[:200], item.hunt_query[:200]),
+        )
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+@router.get("/forage/history")
+def forage_history_list(limit: int = 200, q: str = ""):
+    conn = _history_conn()
+    try:
+        limit = max(1, min(1000, limit))
+        if q:
+            like = f"%{q}%"
+            rows = conn.execute(
+                "SELECT id, ts, url, title, hunt_query FROM history WHERE url LIKE ? OR title LIKE ? "
+                "ORDER BY id DESC LIMIT ?", (like, like, limit)).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, ts, url, title, hunt_query FROM history ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        return {"items": [dict(zip(("id", "ts", "url", "title", "hunt_query"), r)) for r in rows]}
+    finally:
+        conn.close()
+
+
+@router.delete("/forage/history/{item_id}")
+def forage_history_delete(item_id: int):
+    conn = _history_conn()
+    try:
+        conn.execute("DELETE FROM history WHERE id=?", (item_id,))
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+@router.delete("/forage/history")
+def forage_history_clear():
+    conn = _history_conn()
+    try:
+        conn.execute("DELETE FROM history")
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+def _recent_history_lines(minutes: int = 60, limit: int = 8) -> str:
+    """새 사냥 검색에 동봉할 최근 방문(약한 맥락, 최신순). 실패는 조용히 빈 문자열."""
+    try:
+        from datetime import timedelta
+        cutoff = (datetime.now() - timedelta(minutes=minutes)).isoformat(timespec="seconds")
+        conn = _history_conn()
+        try:
+            rows = conn.execute(
+                "SELECT title, url FROM history WHERE ts >= ? ORDER BY id DESC LIMIT ?",
+                (cutoff, limit)).fetchall()
+        finally:
+            conn.close()
+        return "\n".join(f"- {(t or '')[:60]} <{u}>" for t, u in rows)
+    except Exception:
+        return ""
+
+
+def _format_hunt_block(hunt: Dict[str, Any]) -> str:
+    """사냥판 스냅샷 → 모델이 읽을 한국어 상태 블록.
+
+    신호 어휘(합작 포식 가이드 §4와 짝): 직접 담음(최강 양성) / 방문 후 삭제(강한 음성)
+    / 안 가보고 제외(음성) / 판에 남은 후보(보류, 체류=관심 깊이). 해석은 전부 모델 몫 —
+    여기는 직렬화만 한다.
+    """
+    def _rows(items, dwell=False):
+        lines = []
+        for it in (items or [])[:30]:
+            if not isinstance(it, dict):
+                continue
+            title = str(it.get("title") or it.get("url") or "")[:80]
+            url = str(it.get("url") or "")
+            reason = str(it.get("reason") or "").strip()
+            parts = [f"- {title} <{url}>"]
+            if reason:
+                parts.append(f"({reason})")
+            if dwell:
+                try:
+                    s = int(it.get("dwell_s") or 0)
+                    if s > 0:
+                        parts.append(f"[체류 {s}초]")
+                except (TypeError, ValueError):
+                    pass
+            lines.append(" ".join(parts))
+        return "\n".join(lines) if lines else "(없음)"
+
+    try:
+        need = max(1, min(10, int(hunt.get("need") or 3)))
+    except (TypeError, ValueError):
+        need = 3
+    rnd = hunt.get("round") or 1
+
+    # 브라우징 궤적 — 후보 진입 뒤 사용자가 흘러간 길(오래된→최신). 끝이 지금 관심.
+    trail_lines = []
+    for t in (hunt.get("trail") or [])[-12:]:
+        if isinstance(t, dict) and t.get("url"):
+            ttl = str(t.get("title") or "")[:60]
+            trail_lines.append(f"- {ttl} <{t.get('url')}>")
+    trail_txt = "\n".join(trail_lines) if trail_lines else "(없음)"
+
+    return (
+        f"[사냥판 상태 — 합작 포식 보충 라운드 {rnd}]\n"
+        f"원 질의: {str(hunt.get('query') or '')[:200]}\n\n"
+        f"직접 담음 (사용자가 브라우징 중 직접 들고 온 실물 예시 — 최우선 기준점):\n{_rows(hunt.get('pinned'))}\n\n"
+        f"방문 후 삭제 (가보고 아니라고 함 — 강한 음성):\n{_rows(hunt.get('deleted'), dwell=True)}\n\n"
+        f"안 가보고 제외 (보기에 아님 — 해석·출처 패턴을 읽어라):\n{_rows(hunt.get('excluded'))}\n\n"
+        f"판에 남은 후보 (보류 중):\n{_rows(hunt.get('kept'), dwell=True)}\n\n"
+        f"최근 브라우징 궤적 (오래된→최신 — 후보에서 어디로 흘러갔는가, 끝이 지금 관심):\n{trail_txt}\n\n"
+        f"보충 요청: 위 신호를 반영해 **새 후보 {need}개**를 보충하라. "
+        f"위에 나온 URL(제외·삭제 포함)은 절대 다시 내지 말 것. "
+        f"출력은 링크 목록만(서두 1줄 이내), 형식: - [제목](URL) — 한 줄 이유."
+    )
+
+
 @router.post("/forage/chat", response_model=ChatResponse)
 def forage_chat(chat: ForageMessage):
     """포식 브라우저 검색 — 실행 에이전트와 *동일한* 인지 파이프라인에 '포식 역할'만 덧댄다.
@@ -398,10 +566,40 @@ def forage_chat(chat: ForageMessage):
     if WEB_SEARCH_GUIDE_PATH.exists():
         guide = WEB_SEARCH_GUIDE_PATH.read_text(encoding='utf-8')
         extra_role = f"{extra_role}\n\n---\n\n{guide}" if extra_role else guide
+    # ★합작 포식 가이드(포식 전용) — 맨 뒤 주입으로 웹 검색 가이드의 일반 지침(상세 crawl 검증 등)을
+    #   포식 문법(깊이 상한·후보=가설)으로 덮는다. 매 요청 read=라이브 편집.
+    if FORAGE_SEARCH_GUIDE_PATH.exists():
+        forage_guide = FORAGE_SEARCH_GUIDE_PATH.read_text(encoding='utf-8')
+        extra_role = f"{extra_role}\n\n---\n\n{forage_guide}" if extra_role else forage_guide
 
     images_data = None
     if chat.images:
         images_data = [{"base64": img.base64, "media_type": img.media_type} for img in chat.images]
+
+    # 사냥판 상태(보충 라운드)를 메시지에 접합 — 모델·에피소드·포식 증류가 *같은 텍스트*를 본다.
+    # 증류가 제외/삭제/담음 신호까지 먹으므로 owner_model 에 취향의 경계가 쌓인다(음성 신호가 주식).
+    message_text = chat.message
+    if chat.hunt:
+        try:
+            message_text = f"{chat.message}\n\n{_format_hunt_block(chat.hunt)}"
+        except Exception as he:
+            print(f"[포식] 사냥판 블록 직렬화 실패 (무시): {he}")
+    elif chat.count:
+        # 첫 검색의 판 크기 — 역할 프롬프트의 "10개면 충분" 기본값을 사용자 조정값으로 덮는다.
+        try:
+            n = max(3, min(30, int(chat.count)))
+            message_text = f"{chat.message}\n\n(가볼 만한 곳을 약 {n}개 제시하라.)"
+        except (TypeError, ValueError):
+            pass
+    # 사냥 간 전이 — 새 사냥(보충 아님)이면 최근 방문(포식 역사)을 약한 맥락으로 동봉.
+    # 직전 브라우징의 연속인 검색("아까 보던 그거")에서 중의성 해소를 돕는다.
+    if not chat.hunt:
+        recent = _recent_history_lines()
+        if recent:
+            message_text += (
+                "\n\n[최근 방문 — 약한 맥락 신호(최신순). 검색어와 관련될 때만 반영하고 무관하면 완전히 무시하라]\n"
+                + recent
+            )
 
     task_id = f"task_forage_{uuid.uuid4().hex[:8]}"
     create_system_ai_task(
@@ -425,12 +623,12 @@ def forage_chat(chat: ForageMessage):
     #   더럽히지 않는다(stateless 검색 성격 보존). 단 *포식 기억 증류*는 붙인다(아래 스레드) —
     #   포식 브라우저가 웹 포식의 주 표면이라 owner_model·웹 관습이 여기서 쌓여야 하기 때문.
     try:
-        EpisodeLogger.start_episode("forage", chat.message)
+        EpisodeLogger.start_episode("forage", message_text)
     except Exception:
         pass
     try:
         response_text, _imgs = process_system_ai_message(
-            message=chat.message, history=[], images=images_data, extra_role=extra_role,
+            message=message_text, history=[], images=images_data, extra_role=extra_role,
             force_role="forage",       # 모델 = 계기판 에이전트 핀(overrides["forage"], 기본 경량). 의식·분류 건너뛰고 빠르게.
             allowed_set=forage_nodes,  # 어휘를 sense+self+table 로만 — 경량 모델 프롬프트 다이어트 + 라우팅 집중.
         )
@@ -456,7 +654,7 @@ def forage_chat(chat: ForageMessage):
                     print(f"[포식기억] 브라우저 증류 오류 (무시): {fe}")
 
             threading.Thread(
-                target=_forage_distill, args=(chat.message, response_text), daemon=True
+                target=_forage_distill, args=(message_text, response_text), daemon=True
             ).start()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"포식 검색 실패: {str(e)}")

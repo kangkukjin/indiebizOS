@@ -805,7 +805,7 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
 # === app: 블록 검증 (2026-06-11, 원격 앱 표면 제네릭화 2단계) ===
 # 액션이 자기 앱 표면(inputs/action 템플릿/view)을 선언하면 원격 런처가 자동 파생.
 # 어휘 명세: docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md. 소비자: api_launcher_web._derive_instruments.
-APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list", "map", "calendar", "group"}
+APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "form", "editable_list", "map", "calendar", "group", "blocks"}
 # 뷰-이벤트 → 액션 바인딩(상호작용을 데이터로): map 프리미티브가 사용자 조작을 액션으로 흘린다.
 #   marker_click=마커 클릭(IBL 템플릿: 페이로드 $id/$name/$lat/$lng/$url · 또는 {stream: true}=마커 url 을 클라이언트 영상 재생, CCTV) · moveend/center_drag=지도 이동·중심 드래그(재조회, $lat/$lng/$radius)
 APP_VIEW_EVENTS = {"marker_click", "moveend", "center_drag"}
@@ -1034,7 +1034,7 @@ def _app_check_view(qualified: str, view, depth: int = 0, in_group: bool = False
         if ptype not in APP_VIEW_TYPES:
             issues.append(f"{where}: 미지의 프리미티브 type={ptype!r} (어휘: {sorted(APP_VIEW_TYPES)})")
             continue
-        if ptype in ("kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "editable_list") and not p.get("from"):
+        if ptype in ("kv_list", "card_list", "image_grid", "sparkline", "list_action", "thread", "editable_list", "blocks") and not p.get("from"):
             issues.append(f"{where}: {ptype} 는 from(데이터 경로) 필수")
         if ptype == "card_list" and not isinstance(p.get("card"), dict):
             issues.append(f"{where}: card_list 는 card 매핑 필수")

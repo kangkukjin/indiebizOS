@@ -197,13 +197,16 @@ def execute(tool_input: dict, context) -> str:
                 path = str(get_base_path() / "data" / raw_path)
             else:
                 path = os.path.join(project_path, raw_path)
-            # blocks: 문서를 빈 줄 기준 문단 items 로 분할해 반환(문서 뷰어 앱이 thread/list
-            # 로 렌더). 원문은 message 로도 보존. 어느 파일이든 쓰는 일반 표시 옵션.
+            # blocks: 문서를 *타입 있는 문서 IR* items 로 반환(2026-07-03 승격 — 옛 {text}
+            # 문단 조각은 표면에서 마크다운이 생으로 보였음). markdown_to_blocks(backend/doc_ir)
+            # 가 heading/list/quote/table/code/divider 를 살려 blocks 뷰·render_document 가
+            # 그대로 소비. docx·pdf 읽기의 자체 IR 방출과 같은 통화로 3경로 정렬.
+            # 원문은 message 로도 보존. 어느 파일이든 쓰는 일반 표시 옵션.
             if tool_input.get("blocks"):
-                import re as _re
+                from doc_ir import markdown_to_blocks
                 with open(path, 'r', encoding='utf-8') as f:
                     _txt = f.read()
-                _parts = [{"text": p.strip()} for p in _re.split(r"\n\s*\n", _txt) if p.strip()]
+                _parts = markdown_to_blocks(_txt)
                 return json.dumps({"success": True, "items": _parts, "message": _txt,
                                    "path": path, "count": len(_parts)}, ensure_ascii=False)
             offset = tool_input.get("offset", 0) or 0

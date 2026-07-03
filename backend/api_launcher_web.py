@@ -632,6 +632,25 @@ input,textarea,select{ font-family:inherit; }
 .tbub{ max-width:78%; padding:9px 13px; border-radius:14px; border-bottom-left-radius:4px; font-size:14px; line-height:1.5; white-space:pre-wrap; word-break:break-word; background:var(--bg2); border:1px solid var(--line); }
 .tmsg.me .tbub{ background:var(--acc); border-color:var(--acc); color:#fff; border-bottom-left-radius:14px; border-bottom-right-radius:4px; }
 .tfoot{ font-size:10px; color:var(--dim); margin-top:2px; padding:0 5px; }
+/* blocks: 문서 IR 렌더(.docv) — heading/list/table/quote/code/divider/image */
+.docv{ line-height:1.65; }
+.docv .dh{ font-weight:700; margin:14px 0 6px; }
+.docv .dh1{ font-size:20px; }
+.docv .dh2{ font-size:17px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+.docv .dh3{ font-size:15px; }
+.docv .dh4,.docv .dh5,.docv .dh6{ font-size:13.5px; }
+.docv .dp,.docv li{ font-size:13.5px; white-space:pre-wrap; word-break:break-word; margin:6px 0; }
+.docv ul,.docv ol{ padding-left:20px; margin:6px 0; }
+.docv .dq{ border-left:3px solid var(--line); margin:8px 0; padding:2px 10px; color:var(--dim); white-space:pre-wrap; }
+.docv .dq cite{ display:block; font-size:11px; margin-top:4px; }
+.docv .dcode{ background:var(--bg3); border-radius:8px; padding:10px; font-size:12px; overflow-x:auto; }
+.docv .dhr{ border:none; border-top:1px solid var(--line); margin:12px 0; }
+.docv table.dtab{ border-collapse:collapse; font-size:13px; }
+.docv table.dtab th,.docv table.dtab td{ border:1px solid var(--line); padding:5px 9px; text-align:left; }
+.docv .dfig img{ max-width:100%; border-radius:8px; }
+.docv .dfig figcaption{ font-size:11px; color:var(--dim); text-align:center; margin-top:4px; }
+.docv code{ background:var(--bg3); padding:1px 4px; border-radius:4px; font-size:0.9em; }
+.docv a{ color:var(--acc); }
 .composebar{ position:sticky; bottom:0; display:flex; gap:8px; padding:10px 0 6px; margin-top:8px; background:linear-gradient(transparent,var(--bg) 35%); }
 .composebar .field{ border-radius:22px; }
 .composebar .go{ border-radius:22px; }
@@ -1666,6 +1685,41 @@ function tpl(t,data){
 }
 
 function statusGlyph(s){ return s==='sent'?'✓':s==='pending'?'⏳':s==='failed'?'⚠':''; }
+// blocks — 문서 IR 렌더. 블록 구조는 IR이 정본, 여기선 인라인 마크다운(**·`·[링크](url))만 얇게 해석.
+function mdInline(t){
+  return esc(t==null?'':String(t))
+    .replace(/\\*\\*([^*]+)\\*\\*/g,'<strong>$1</strong>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\\[([^\\]]+)\\]\\((https?:[^)\\s]+)\\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+function docBlockHtml(b){
+  if(!b||typeof b!=='object') return '';
+  const t=String(b.type||'paragraph');
+  if(t==='heading'){ const l=Math.min(6,Math.max(1,parseInt(b.level)||2)); return '<div class="dh dh'+l+'">'+mdInline(b.text)+'</div>'; }
+  if(t==='list'){
+    const tag=b.ordered?'ol':'ul';
+    return '<'+tag+'>'+(b.items||[]).map(it=>{
+      const o=(it&&typeof it==='object')?it:null;
+      const tx=o?String(o.text==null?'':o.text):String(it==null?'':it);
+      const u=o&&o.url?String(o.url):'';
+      return '<li>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(tx)+'</a>':mdInline(tx))+'</li>';
+    }).join('')+'</'+tag+'>';
+  }
+  if(t==='table'){
+    const cols=b.columns||[], rows=(b.rows||[]).filter(r=>Array.isArray(r));
+    return '<div style="overflow-x:auto"><table class="dtab">'
+      +(cols.length?'<thead><tr>'+cols.map(c=>'<th>'+esc(c==null?'':String(c))+'</th>').join('')+'</tr></thead>':'')
+      +'<tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c==null?'':String(c))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+  }
+  if(t==='quote') return '<blockquote class="dq">'+mdInline(b.text)+(b.cite?'<cite>— '+esc(String(b.cite))+'</cite>':'')+'</blockquote>';
+  if(t==='code') return '<pre class="dcode"><code>'+esc(b.text==null?'':String(b.text))+'</code></pre>';
+  if(t==='divider') return '<hr class="dhr">';
+  if(t==='image'){
+    const s=String(b.src||b.path||'');
+    return s?'<figure class="dfig"><img src="'+esc(s)+'" loading="lazy">'+(b.caption?'<figcaption>'+esc(String(b.caption))+'</figcaption>':'')+'</figure>':'';
+  }
+  return '<p class="dp">'+mdInline(b.text)+'</p>';
+}
 
 // 반복 주기 표준 어휘 — recurrence 필드 타입 baked 옵션(manage_events repeat 값과 일치, 데스크탑 RECURRENCE_OPTS 쌍).
 var _RECUR_OPTS=[['none','한 번'],['daily','매일'],['weekly','매주'],['monthly','매월'],['yearly','매년']];
@@ -1950,6 +2004,12 @@ function renderPrim(p,vi,data){
       const foot=[p.meta?tpl(p.meta,it):'', p.time?tpl(p.time,it):'', st].filter(Boolean).join(' · ');
       return '<div class="tmsg'+(mine?' me':'')+'"><div class="tbub">'+tpl(p.text,it)+'</div>'+(foot?'<div class="tfoot">'+foot+'</div>':'')+'</div>';
     }).join('')+'</div>';
+  }
+  if(p.type==='blocks'){
+    // 문서 IR 렌더 — from 배열의 각 원소 = 블록 {type,...} (self:read blocks:true / table:structure 출력)
+    const arr=viewList(data,p.from);
+    if(!arr.length) return emptyMsg(p,data);
+    return '<div class="card docv">'+arr.map(docBlockHtml).join('')+'</div>';
   }
   if(p.type==='form'){
     let h='<div class="card">'+(p.title?'<div class="step-label">'+esc(p.title)+'</div>':'');

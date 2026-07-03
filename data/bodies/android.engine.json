@@ -48,6 +48,7 @@
     "consciousness_agent",
     "conversation_db",
     "device_registry",
+    "doc_ir",
     "document_converter",
     "episode_logger",
     "event_engine",
@@ -143,8 +144,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 137,
-    "engine": 125,
+    "total": 138,
+    "engine": 126,
     "blocklist": 12
   }
 }

@@ -6,9 +6,8 @@
  * 새 IBL 액션에 app: 블록만 달면 데스크탑·원격에 동시 등장.
  *
  * 어휘 명세: docs/REMOTE_APP_GENERIC_RENDERER_PLAN.md
- *  - view 프리미티브 10종: metric / kv / kv_list / card_list(+item_click 드릴·탭) /
- *    image_grid / sparkline / list_action / thread(채팅 버블+status) /
- *    form(편집 필드+저장) / editable_list(행 CRUD)
+ *  - view 프리미티브 목록의 정본 = build_ibl_nodes.APP_VIEW_TYPES (+ ibl.md 앱 절 어휘 줄,
+ *    뷰-어휘 문서-동기 가드가 대조). 여기 주석에 열거하지 않는다 — 박제 방지.
  *  - compose: 하단 작성바 — $text=작성, {field}=드릴 데이터. 전송 후 새로고침.
  *  - item_click.tabs: 드릴 상세 탭(대화↔이웃정보) — 한 액션 데이터를 탭별 view 로.
  *  - form/editable_list: $field=입력값, {field}=드릴 데이터 → 저장/추가/삭제 후 새로고침(dispatch).
@@ -18,7 +17,7 @@
  * 더 풍부한 데스크탑 전용 계기(도서·투자·라디오 등)는 ActionDesktop의
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.
  */
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { StreamPlayer } from './StreamPlayer';
@@ -64,7 +63,7 @@ export interface AppComposeChannels {
 }
 
 export interface AppViewPrim {
-  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map' | 'group' | 'calendar';
+  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map' | 'group' | 'calendar' | 'blocks';
   [k: string]: unknown;
 }
 
@@ -742,6 +741,96 @@ function CalField({ f, value, onChange }: { f: AppFormField; value: string; onCh
   return <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={f.placeholder || ''} className={`${fieldCls} flex-1 min-w-[8rem]`} />;
 }
 
+// ===== blocks — 문서 IR 렌더 (표현 언어 층위 조항: 페이로드 IR의 정적 부분집합이 표면 언어에 옴) =====
+// [self:read]{blocks:true}·[table:structure] 출력(items=블록 배열 {type,...})을 문서로 그린다.
+// 블록 구조는 IR이 정본 — 여기선 인라인 마크다운(**굵게**·`코드`·[링크](url))만 얇게 해석.
+const MD_INLINE_RE = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)\s]+\))/g;
+function mdInline(text: unknown): ReactNode[] {
+  return String(text ?? '').split(MD_INLINE_RE).filter(Boolean).map((seg, i) => {
+    if (seg.startsWith('**') && seg.endsWith('**') && seg.length > 4) return <strong key={i}>{seg.slice(2, -2)}</strong>;
+    if (seg.startsWith('`') && seg.endsWith('`') && seg.length > 2) return <code key={i} className="bg-stone-100 px-1 rounded text-[0.88em]">{seg.slice(1, -1)}</code>;
+    const m = seg.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+    if (m) return <a key={i} href={m[2]} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline">{m[1]}</a>;
+    return <span key={i}>{seg}</span>;
+  });
+}
+
+const HEADING_CLS: Record<number, string> = {
+  1: 'text-xl mt-4 mb-2',
+  2: 'text-lg mt-4 mb-1.5 border-b border-stone-200 pb-1',
+  3: 'text-base mt-3 mb-1',
+  4: 'text-sm mt-2.5 mb-1',
+};
+
+function DocBlock({ b }: { b: Json }) {
+  const t = String(b.type || 'paragraph');
+  if (t === 'heading') {
+    const lvl = Math.min(6, Math.max(1, Number(b.level) || 2));
+    return <div className={`font-bold text-stone-900 ${HEADING_CLS[lvl] || 'text-sm mt-2 mb-1'}`}>{mdInline(b.text)}</div>;
+  }
+  if (t === 'list') {
+    const items = (Array.isArray(b.items) ? b.items : []) as unknown[];
+    const Tag = (b.ordered ? 'ol' : 'ul') as 'ol' | 'ul';
+    return (
+      <Tag className={`${b.ordered ? 'list-decimal' : 'list-disc'} pl-5 my-1.5 space-y-1`}>
+        {items.map((it, i) => {
+          const o = (typeof it === 'object' && it !== null ? it : null) as Json | null;
+          const text = o ? String(o.text ?? '') : String(it ?? '');
+          const url = o?.url ? String(o.url) : '';
+          return (
+            <li key={i} className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">
+              {url
+                ? <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:underline">{text}</a>
+                : mdInline(text)}
+            </li>
+          );
+        })}
+      </Tag>
+    );
+  }
+  if (t === 'table') {
+    const cols = (Array.isArray(b.columns) ? b.columns : []) as unknown[];
+    const rows = (Array.isArray(b.rows) ? b.rows : []).filter((r) => Array.isArray(r)) as unknown[][];
+    return (
+      <div className="overflow-x-auto my-2">
+        <table className="text-sm border-collapse w-full">
+          {cols.length > 0 && (
+            <thead><tr>{cols.map((c, i) => <th key={i} className="border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-left font-semibold text-stone-700">{String(c ?? '')}</th>)}</tr></thead>
+          )}
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>{r.map((c, j) => <td key={j} className="border border-stone-200 px-2.5 py-1.5 text-stone-700">{String(c ?? '')}</td>)}</tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+  if (t === 'quote') {
+    return (
+      <blockquote className="border-l-4 border-stone-300 pl-3 my-2 text-sm text-stone-500 whitespace-pre-wrap">
+        {mdInline(b.text)}
+        {!!b.cite && <cite className="block mt-1 text-xs not-italic text-stone-400">— {String(b.cite)}</cite>}
+      </blockquote>
+    );
+  }
+  if (t === 'code') {
+    return <pre className="bg-stone-50 border border-stone-200 rounded-lg p-3 my-2 text-xs overflow-x-auto"><code>{String(b.text ?? '')}</code></pre>;
+  }
+  if (t === 'divider') return <hr className="my-3 border-stone-200" />;
+  if (t === 'image') {
+    const src = String(b.src || b.path || '');
+    if (!src) return null;
+    return (
+      <figure className="my-2">
+        <img src={src} alt={String(b.caption ?? '')} className="max-w-full rounded-lg" loading="lazy" />
+        {!!b.caption && <figcaption className="text-xs text-stone-400 text-center mt-1">{String(b.caption)}</figcaption>}
+      </figure>
+    );
+  }
+  return <p className="text-sm text-stone-700 leading-relaxed my-1.5 whitespace-pre-wrap">{mdInline(b.text)}</p>;
+}
+
 function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, onViewEvent }: {
   p: AppViewPrim; data: unknown;
   onDrill: (p: AppViewPrim, item: Json) => void;
@@ -914,6 +1003,17 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
   }
 
   if (p.type === 'sparkline') return <Sparkline p={p} data={data} />;
+
+  // blocks — 문서 IR 렌더. from 배열의 각 원소 = 블록 {type, ...}.
+  if (p.type === 'blocks') {
+    const arr = asList(data, p.from);
+    if (!arr.length) return <EmptyMsg p={p} data={data} />;
+    return (
+      <div className="bg-white border border-stone-200 rounded-xl px-5 py-4">
+        {arr.map((b, i) => <DocBlock key={i} b={b} />)}
+      </div>
+    );
+  }
 
   if (p.type === 'form') return <FormPrim p={p} data={data} dispatch={dispatch} />;
   if (p.type === 'editable_list') return <EditableListPrim p={p} data={data} dispatch={dispatch} />;

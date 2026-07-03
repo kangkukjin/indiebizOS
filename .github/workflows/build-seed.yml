@@ -47,7 +47,9 @@ jobs:
           python-version: '3.12'
 
       - name: Install PyInstaller
-        run: pip install pyinstaller
+        # certifi: frozen 파이썬은 빌드 머신의 CA 경로를 물고 나와 사용자 머신에서
+        # CERTIFICATE_VERIFY_FAILED 가 남(실사례: 인텔 맥) → CA 번들을 바이너리에 동봉.
+        run: pip install pyinstaller certifi
 
       - name: Build single-file binary
         shell: bash
@@ -58,6 +60,7 @@ jobs:
           pyinstaller --onefile --console \
             --name "${{ matrix.target }}" \
             --add-data "installer/bootstrap.md${SEP}." \
+            --hidden-import certifi \
             installer/seed.py
           ls -la dist/
 

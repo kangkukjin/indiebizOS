@@ -163,13 +163,57 @@ def resolve_credentials():
 # --------------------------------------------------------------------------
 # HTTP
 # --------------------------------------------------------------------------
+_SSL_CTX = None
+
+def _ssl_context():
+    """TLS 신뢰 루트 해석 — frozen(PyInstaller) 바이너리 대응.
+
+    번들된 파이썬은 빌드 머신의 OpenSSL 기본 CA 경로를 물고 나오는데, 사용자
+    머신에는 그 경로가 없어 CERTIFICATE_VERIFY_FAILED 가 난다(실사례: 인텔 맥).
+    체인: certifi(빌드에 번들) → ssl 기본(CA 로드 확인) → OS 알려진 경로.
+    검증 비활성화 폴백은 두지 않는다 — API 키가 오가는 채널이다.
+    """
+    global _SSL_CTX
+    if _SSL_CTX is not None:
+        return _SSL_CTX
+    import ssl
+    ctx = None
+    try:
+        import certifi  # frozen 빌드에 번들됨; 맨 파이썬에선 없어도 됨(아래 폴백)
+        ctx = ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        pass
+    if ctx is None:
+        try:
+            c = ssl.create_default_context()
+            if c.cert_store_stats().get("x509_ca", 0) > 0:
+                ctx = c
+        except Exception:
+            pass
+    if ctx is None:
+        for cafile in ("/etc/ssl/cert.pem",
+                       "/etc/ssl/certs/ca-certificates.crt",
+                       "/etc/pki/tls/certs/ca-bundle.crt",
+                       "/usr/local/etc/openssl/cert.pem"):
+            if os.path.isfile(cafile):
+                try:
+                    ctx = ssl.create_default_context(cafile=cafile)
+                    break
+                except Exception:
+                    continue
+    if ctx is None:
+        ctx = ssl.create_default_context()  # 마지막 시도 — 실패 시 아래에서 안내
+    _SSL_CTX = ctx
+    return ctx
+
+
 def http_post_json(url, headers, payload, timeout=180):
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     last = None
     for attempt in range(4):
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
+            with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context()) as r:
                 return json.loads(r.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             body = ""
@@ -185,6 +229,15 @@ def http_post_json(url, headers, payload, timeout=180):
                 continue
             raise RuntimeError("LLM API error %s: %s" % (e.code, body))
         except urllib.error.URLError as e:
+            if "CERTIFICATE_VERIFY_FAILED" in str(e):
+                # SSL 신뢰 루트 문제는 재시도해도 소용없다 — 바로 안내.
+                raise RuntimeError(
+                    "TLS certificate verification failed: %s\n"
+                    "  This usually means the bundled Python cannot find your system's "
+                    "root certificates.\n"
+                    "  Workarounds: set SSL_CERT_FILE to a CA bundle (e.g. "
+                    "SSL_CERT_FILE=/etc/ssl/cert.pem), or download the newest seed "
+                    "binary (it bundles certifi)." % e)
             if attempt < 3:
                 time.sleep(2 ** attempt)
                 last = str(e)

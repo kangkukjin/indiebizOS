@@ -1,171 +1,85 @@
-# IndieBiz OS — install guide (for the installer agent)
+# IndieBiz OS — install map (for the installer agent)
 
-You are installing IndieBiz OS onto the machine you are running on. This file is
-the **install vocabulary**: a set of known landmarks and a strategy. It may be
-slightly stale — **always confirm against the real repo** (read files) before
-acting. Compose these steps; do not invent shell commands from nothing.
+You are an agent with a shell installing IndieBiz OS onto the machine you are
+running on. **This is not a script.** It is a map: the destination, the landmarks
+that save you from guessing, and the few hard constraints. *You* decide the exact
+commands by looking at THIS machine and THIS repo — every machine differs, so a
+fixed recipe would be wrong. Read the repo before you act; let what you actually
+find (and the errors you actually hit) drive the next command.
 
-## What you are installing
+## The destination
 
-- **Backend**: Python **FastAPI** server, listens on **port 8765**
-  (`backend/api.py` is the entrypoint). This is the core — it must run.
-- **Frontend**: **Electron + React (TypeScript)** in `frontend/`. This is the
-  desktop UI. It is **optional** — the backend is fully usable headless (remote
-  launcher / REST) without it. Only install it if Node ≥ 18 is present and the
-  user wants the desktop app.
-- **Data**: runtime state under `data/` (configs, SQLite DBs, guides, the
-  fine-tuned embedding model, packages).
-- **Start script**: `start.sh` (macOS/Linux) launches backend + frontend.
+**Success = the backend boots.** It is a Python **FastAPI** server that listens on
+**port 8765**; `backend/api.py` is the entrypoint. When `http://localhost:8765/`
+responds, the install has succeeded. Everything else is an optional layer on top
+and may be skipped on weak hardware without failing the install.
 
-## The one hard rule about the AI key
+## Landmarks (things worth knowing so you don't have to rediscover them)
 
-The user's LLM key is held by the installer, not by you. Whenever you write it
-into a config, use the literal placeholder **`{{LLM_API_KEY}}`** (also
-`{{LLM_PROVIDER}}`, `{{LLM_MODEL}}`). The installer substitutes the real values
-locally on write/run, so the raw key never enters your context or any log.
+- **Python lives in a `.venv` at the repo root, by convention.** Create one and
+  use it for all Python (the OS's system Python won't have the deps). `start.sh`
+  looks for `.venv` first, so this is also what makes the run command work later.
+- **Dependencies**: prefer a real list if the repo has one (a `requirements*.txt`,
+  `pyproject.toml`, …). If there isn't one, infer from the backend's imports and
+  let import errors during verification tell you what's still missing. The heavy
+  optional deps (embedding model, torch, sqlite-vec, …) power the hippocampus —
+  install them only on capable machines; the backend must boot without them.
+- **Model config lives under `data/`** (files like `system_ai_config.json`,
+  `model_gear.json`). Read an existing/example one to learn the real schema
+  before writing — do not assume a schema. Setting the main (`system_ai`) key is
+  enough to boot; other tiers fall back to it.
+- **The desktop frontend is optional** — Electron + React in `frontend/`, needs
+  Node ≥ 18 and `npm install`. If Node is absent or the user doesn't want a GUI,
+  leave it out; the backend is fully usable headless (remote launcher / REST).
+- **Package set is adjustable but not required to touch.** Everything ships
+  installed. `scripts/apply_edition.py` can narrow it (skip packages that need
+  their own service keys, or region-specific ones) if the user wants a leaner
+  set — read its `--help`/`--list`. Skipping this entirely is fine.
+- **`scripts/build_ibl_nodes.py` (run via the venv) (re)builds the IBL vocabulary**
+  from source. Run it if you change the package set or after an update; `--check`
+  validates it.
 
-## Updating / reinstalling over an existing install
+## Hard constraints (these you cannot derive from the repo — obey them)
 
-If the environment variable `INDIEBIZ_UPDATE` is `standard` or `full`, this is a
-re-install over an existing clone, **not** a fresh install. The dumb bootstrap
-has already done the overwrite before handing off to you:
+- **The AI key is never yours to see.** The installer holds it. Whenever you write
+  it into a config, write the literal placeholders **`{{LLM_API_KEY}}`**,
+  **`{{LLM_PROVIDER}}`**, **`{{LLM_MODEL}}`** — the installer substitutes the real
+  values locally on write, so the raw key never enters your context or any log.
+- **Never destructive.** No `rm -rf`, no `sudo` unless truly unavoidable and
+  confirmed. Stay inside the repo dir and the venv.
+- **On an update, personal data is sacred.** (See below.)
 
-- It ran `git fetch` + `git reset --hard`, so **every tracked file** (all backend
-  / frontend / scripts code, and the shipped "standard" IBL vocabulary under
-  `data/ibl_nodes_src/` + `data/ibl_nodes.yaml` + guides + system docs) is now
-  exactly the GitHub state.
-- **`.gitignore` is the preservation boundary.** `git reset --hard` never touches
-  untracked/ignored files, so the user's `.env`, API keys, `data/*_ai_config.json`,
-  `data/my_profile.txt`, conversation/business/calendar DBs, `data/world_pulse.db`
-  (episodic history), and everything under `projects/` are all intact.
-- For `INDIEBIZ_UPDATE=full` only, the bootstrap additionally ran
-  `scripts/reset_runtime_state.py`, which factory-reset the *learned/tuning*
-  artifacts (hippocampus `data/ibl_usage.db`, forager memory, distilled recipes,
-  `data/model_gear.json`, `data/package_meta.json`) back to shipped defaults.
-  `standard` keeps all of that learning.
+## How to adapt to this machine
 
-**On an update your job is narrower — do NOT run the full fresh-install flow:**
-1. Do **not** recreate `.env` or overwrite any existing `data/*_ai_config.json` —
-   they hold the user's keys and were deliberately preserved. Read them if you
-   need to; never clobber them.
-2. Make sure the venv + dependencies still satisfy the profile (a `pip install`
-   is idempotent; add anything the fresh code now imports).
-3. Rebuild the IBL vocabulary: `.venv/bin/python scripts/build_ibl_nodes.py`
-   (this also regenerates `data/package_meta.json`). Confirm `--check` passes.
-4. For a `full` update, the hippocampus index was wiped — rebuild it from the
-   **shipped** training corpus if the heavy deps are installed (look for
-   `backend/rebuild_usage_db.py` or the rebuild routine). The backend also
-   rebuilds a missing hippocampus on boot, so treat this as best-effort.
-5. Skip the edition/locale step (§3) unless the user explicitly asks to change it.
-6. Verify the backend boots (§7) and finish (§8).
+Match ambition to hardware, then verify empirically:
 
-## Steps
+- **Weak** (low RAM, no GPU, small/ARM board): backend only, most economical
+  model gear, skip the heavy embedding model / semantic index (keyword fallback
+  is fine).
+- **Strong** (lots of RAM, GPU / Apple Silicon): install everything, max gear.
 
-### 1. Understand this machine
-You already have a hardware snapshot in the system prompt. Refine only if needed
-(`python3 --version`, `node --version`, RAM, CPU, GPU). Decide a **profile**:
+Then **prove it**: start the backend with the venv in the background, poll
+`http://localhost:8765/` a few times, read the logs if it fails, fix what's
+actually missing, retry, and stop your test process (leave no zombie). Booting is
+the whole game — don't declare success without seeing 8765 respond.
 
-- **lean** — low RAM (≲ 4 GB), no GPU, or a small/ARM SBC / server: backend
-  only, lightweight model gear, **skip** the heavy embedding model / hippocampus
-  semantic index (keyword fallback is fine).
-- **standard** — a normal laptop/desktop: backend + frontend, balanced gear.
-- **full** — lots of RAM + GPU/Apple Silicon: everything, including the
-  embedding model, max gear.
+## Updating over an existing install
 
-### 2. Backend dependencies
-- Create an isolated venv at the repo root: `python3 -m venv .venv`
-  (on Windows the interpreter is `.venv\Scripts\python.exe`; on unix
-  `.venv/bin/python`). Use the venv's pip for everything below.
-- **Find the dependency list**: look for `requirements.txt`, `pyproject.toml`,
-  `Pipfile`, or a `requirements*.txt` under `backend/`. If one exists, install
-  from it: `.venv/bin/python -m pip install -r <file>`.
-- **If no requirements file exists**, infer core deps by reading the top imports
-  of `backend/api.py` and the `backend/api_*.py` / core modules. At minimum the
-  backend needs: `fastapi`, `uvicorn[standard]`, `httpx`/`requests`,
-  `python-dotenv`, `pyyaml`, `websockets`, and the AI SDK for the chosen
-  provider (`anthropic`, `openai`, or `google-genai`). Install what the imports
-  actually require; add more as import errors reveal them during verification.
-- Heavy/optional deps (`sentence-transformers`, `torch`, `sqlite-vec`, etc.)
-  power the hippocampus. Install them **only** for the `standard`/`full`
-  profile. If they fail to build on this machine, fall back to `lean` and
-  continue — the backend must still boot without them.
+If `INDIEBIZ_UPDATE` is `standard` or `full`, the tracked code + shipped IBL
+vocabulary were already overwritten from GitHub before you started. **`.gitignore`
+is the preservation line**: the user's `.env`, keys, `data/*_ai_config.json`,
+profile, conversation/business DBs, `data/world_pulse.db`, and `projects/` are
+untouched. So: do **not** recreate `.env` or clobber existing config files — read
+them, don't overwrite. Make sure deps still satisfy the profile, rebuild the IBL
+vocabulary, verify the backend boots, finish. (`full` also factory-reset the
+learned/tuning state; `standard` kept it. Rebuild the hippocampus index only if
+its heavy deps are present — the backend also rebuilds a missing one on boot.)
+Don't re-run the edition/locale narrowing unless asked.
 
-### 3. Choose package edition + locale
-IndieBiz ships with every tool package *installed*. Each package is a
-self-contained capability (code + its IBL vocabulary), so the install set can be
-narrowed by a single deterministic filter — you don't hand-pick packages.
+## Finishing
 
-Ask the user two short questions (default in brackets; in unattended mode use the
-defaults or `INDIEBIZ_EDITION` / `INDIEBIZ_LOCALE`):
-- **Edition** [standard]: `standard` = only packages that need **no external API
-  key** and are **lightweight** (they just work out of the box); `full` =
-  everything, including packages that need their own service keys or heavy deps
-  (playwright, torch, moviepy, …). Standard is the right default; the user can
-  add any package later.
-- **Locale** [universal]: `universal` = region-neutral packages only; `kr` =
-  also include Korea-specific packages (real-estate, legal, KOSIS statistics,
-  culture, …). Pick `kr` only if the user is in / works with Korea.
-
-Then apply it with the venv (needs pyyaml, installed in step 2):
-```
-.venv/bin/python scripts/apply_edition.py --edition <standard|full> --locale <universal|kr|all>
-```
-Run `--list` first to show the membership, or `--dry-run` to preview moves.
-Non-selected packages are moved to `not_installed/` (they stay in the catalog as
-*available* for on-demand install — nothing is deleted). This also rebuilds the
-IBL vocabulary. Re-running with a wider edition restores the packages it parked.
-This is safe to skip entirely (everything stays installed) if the user wants all
-packages.
-
-### 4. Wire the AI key + provider
-- Read `.env.example` at the repo root. Create `.env` from it (copy), and set
-  any owner/identity fields the user provides. Leave external service keys as
-  their placeholders — the user adds those later as they use features.
-- Find how the backend selects its model. Look under `data/` for existing or
-  example config files such as `system_ai_config.json`,
-  `lightweight_ai_config.json`, `midtier_ai_config.json`, and
-  `model_gear.json`. **Read an existing one to learn the exact schema**, then
-  write the chosen provider/model/key into it using the placeholders. If only
-  some tiers have keys, the lightweight/midtier tiers fall back to the main key
-  — setting the main (`system_ai`) config is enough to boot.
-- Do **not** hardcode a schema you haven't confirmed by reading the repo.
-
-### 5. Model gear (hardware profile → tiers)
-If `data/model_gear.json` exists, read it and set a gear matching the profile
-(lean → most economical, full → max). If it doesn't exist, skip — the system
-has a default.
-
-### 6. Frontend (optional)
-Only if installing the desktop UI: ensure Node ≥ 18 (`node --version`); then
-`cd frontend && npm install`. This can be large and slow — tell the user it's
-optional and continue on failure (backend still works).
-
-### 7. Verify the backend boots
-- Start it in the background using the venv:
-  `.venv/bin/python backend/api.py` (Windows: `.venv\Scripts\python.exe backend\api.py`).
-- Poll `http://localhost:8765/` (or an obvious health/docs route like `/docs`)
-  a few times with a short delay. A 200/response means success.
-- Read the startup logs if it fails; fix missing deps (install them) or config
-  errors and retry. Then **stop** the test process (don't leave a zombie).
-
-### 8. Finish
-Report the profile chosen, what was installed vs skipped, and the **exact**
-command to run it:
-- macOS/Linux: `cd <repo> && ./start.sh` (backend + frontend), or
-  `.venv/bin/python backend/api.py` for backend-only.
-- Windows: `.venv\Scripts\python.exe backend\api.py` for the backend; the
-  frontend via `cd frontend; npm run electron:dev` if installed.
-
-Mention that the system replies in whatever language the user writes to it (no
-language setting needed), while the bundled guides and UI labels are currently
-Korean. Say this in the user's own language.
-
-Then call the `finish` tool with `ok: true`.
-
-## Principles
-- **Read before you write.** The repo is the source of truth; this guide is a map.
-- **The backend booting is success.** Frontend, hippocampus, and extras are
-  layered on top and may be skipped on weak hardware without failing the install.
-- **Never destructive.** No `rm -rf`, no `sudo` unless truly required and
-  confirmed. Work inside the repo dir and the venv.
-- **Be honest in the summary** about what you skipped and why.
+Call `finish` with `ok: true` and report, in the user's language: the exact run
+command (`cd <repo> && ./start.sh`, or `.venv/bin/python backend/api.py` for
+backend-only), what you installed vs skipped and why, and that the system replies
+in whatever language the user writes to it (the bundled guides/UI are Korean).
+Be honest about anything you skipped or couldn't verify.

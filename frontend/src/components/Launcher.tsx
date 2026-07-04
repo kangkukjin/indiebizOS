@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText, HelpCircle, Info, ChevronDown, BookOpen, ScanLine } from 'lucide-react';
+import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -874,6 +874,16 @@ export function Launcher() {
         <div className="flex items-center gap-1.5 no-drag">
           {/* 그룹 A: 세계 / 감각 */}
           <div className="flex items-center gap-0.5">
+            {/* 검색 브라우저 — 조종실 전용 공동 포식. 눈에 띄는 검정 버튼(시스템 AI와 대칭). 어느 탭이든
+                누르면 조종실로 전환 후 브라우저를 연다. */}
+            <button
+              onClick={() => { setLauncherTab('manual'); setBrowserOpen(true); }}
+              className="mr-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-stone-800 to-stone-900 text-white shadow-sm hover:shadow-md hover:from-stone-900 hover:to-black active:translate-y-[0.5px] transition-all"
+              title="검색 브라우저 — 공동 포식 검색"
+            >
+              <Search size={15} />
+              <span className="text-[13px] font-semibold">검색 브라우저</span>
+            </button>
             <button
               onClick={() => {
                 window.electron?.openExternal('http://127.0.0.1:8765/xray/app');
@@ -948,21 +958,7 @@ export function Launcher() {
 
           <div className="w-px h-5 bg-[#D8D1C3] mx-1" aria-hidden="true" />
 
-          {/* 그룹 C: 관리 */}
-          <div className="flex items-center gap-0.5">
-            <button
-              onClick={handleOpenScheduler}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
-              title="예약작업"
-            >
-              <Clock size={15} />
-              <span className="text-[13px]">예약작업</span>
-            </button>
-          </div>
-
-          <div className="w-px h-5 bg-[#D8D1C3] mx-1" aria-hidden="true" />
-
-          {/* 메인 메뉴 (드롭다운) */}
+          {/* 메인 메뉴 (드롭다운) — 예약작업 등 관리 항목을 펼친다 */}
           <div className="relative" ref={mainMenuRef}>
             <button
               onClick={() => setShowMainMenu(!showMainMenu)}
@@ -979,6 +975,17 @@ export function Launcher() {
 
             {showMainMenu && (
               <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-stone-200 py-1.5 min-w-[200px] z-50 overflow-hidden">
+                <button
+                  onClick={() => {
+                    handleOpenScheduler();
+                    setShowMainMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
+                >
+                  <Clock size={16} className="text-stone-500" />
+                  <span className="text-sm">예약작업</span>
+                </button>
+                <div className="border-t border-stone-100 my-1" />
                 <button
                   onClick={() => {
                     setShowToolboxDialog(true);
@@ -1225,19 +1232,10 @@ export function Launcher() {
         )}
       </div>
 
-        {/* 포식 브라우저 — 조종실(manual) 탭 전용. 열리면 탭 스위치까지 덮어 공간을 넓게 쓴다(상단 헤더는 보존). */}
+        {/* 포식 브라우저 — 조종실(manual) 탭 전용. 진입 버튼은 상단 툴바(검정 '검색 브라우저')로 옮겼다.
+            열리면 탭 스위치까지 덮어 공간을 넓게 쓴다(상단 헤더는 보존). */}
         {launcherTab === 'manual' && (
-          <>
-            {!browserOpen && (
-              <button
-                onClick={() => setBrowserOpen(true)}
-                className="absolute bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-stone-800 text-white text-sm shadow-lg hover:bg-stone-700 transition"
-              >
-                🌐 검색 브라우저
-              </button>
-            )}
-            <ForageBrowser open={browserOpen} onClose={() => setBrowserOpen(false)} />
-          </>
+          <ForageBrowser open={browserOpen} onClose={() => setBrowserOpen(false)} />
         )}
       </div>
 

@@ -673,6 +673,37 @@ a{ color:var(--info); }
   .grid{ grid-template-columns:repeat(3,1fr); }
   .surf-tab .hint{ display:none; }
 }
+/* === 포식(검색) 브라우저 — 폰/원격 표면. 데스크탑 Electron ForageBrowser 의 검색→판→진입 루프를
+      네이티브 코드 없이 재현: 후보 진입은 시스템 브라우저로 위임(런처 WebView 는 판을 든 채 뒤에 남음).
+      그리드/썸네일은 생략(리스트만) — 폰 스코프. === */
+.fg-wrap{ padding:12px 14px; display:flex; flex-direction:column; gap:10px; height:100%; box-sizing:border-box; }
+.fg-search{ display:flex; gap:6px; }
+.fg-search input{ flex:1; padding:11px 13px; background:var(--bg2); border:1px solid var(--line); border-radius:10px; color:var(--txt); font-size:14px; }
+.fg-search button{ padding:0 16px; background:var(--acc); border:none; border-radius:10px; color:#fff; font-weight:600; font-size:14px; }
+.fg-search button:disabled{ opacity:.5; }
+.fg-subnav{ display:flex; gap:6px; }
+.fg-subnav button{ flex:1; padding:7px; background:var(--bg2); border:1px solid var(--line); border-radius:8px; color:var(--dim); font-size:12px; font-weight:600; }
+.fg-subnav button.on{ background:var(--acc); border-color:var(--acc); color:#fff; }
+.fg-list{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:8px; }
+.fg-intro{ font-size:12px; color:var(--dim); line-height:1.5; padding:2px 2px 4px; }
+.fg-card{ background:var(--bg2); border:1px solid var(--line); border-radius:11px; padding:11px 12px; display:flex; flex-direction:column; gap:4px; }
+.fg-card.pinned{ border-color:var(--acc); }
+.fg-card.excluded{ opacity:.4; }
+.fg-card .t{ font-size:14px; font-weight:600; color:var(--info); }
+.fg-card .r{ font-size:12px; color:var(--dim); line-height:1.45; }
+.fg-card .u{ font-size:10px; color:var(--dim); opacity:.55; word-break:break-all; }
+.fg-card .acts{ display:flex; gap:6px; margin-top:5px; }
+.fg-card .acts button{ padding:6px 10px; background:var(--bg); border:1px solid var(--line); border-radius:7px; color:var(--dim); font-size:12px; }
+.fg-card .acts .go{ flex:1; color:var(--info); font-weight:600; }
+.fg-card .acts .pin.on{ color:var(--acc); border-color:var(--acc); }
+.fg-more{ padding:11px; background:var(--bg2); border:1px dashed var(--line); border-radius:10px; color:var(--dim); font-size:13px; text-align:center; }
+.fg-empty{ padding:34px 14px; text-align:center; color:var(--dim); font-size:13px; line-height:1.7; }
+.fg-row{ display:flex; align-items:center; gap:8px; padding:9px 11px; background:var(--bg2); border:1px solid var(--line); border-radius:9px; }
+.fg-row .rx{ flex:1; min-width:0; }
+.fg-row .rx .rt{ font-size:13px; color:var(--info); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fg-row .rx .ru{ font-size:10px; color:var(--dim); opacity:.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fg-row .rd{ color:var(--dim); font-size:16px; padding:2px 8px; }
+.fg-row .rprev{ font-size:11px; color:var(--dim); }
 </style>
 </head>
 <body>
@@ -704,6 +735,8 @@ a{ color:var(--info); }
       <span class="em">⚙️</span><span>조종실</span><span class="hint">표현력·주권</span></button>
     <button class="surf-tab" id="t-app" onclick="setSurface('app')">
       <span class="em">📱</span><span>앱</span><span class="hint">속도·주권</span></button>
+    <button class="surf-tab" id="t-forage" onclick="setSurface('forage')">
+      <span class="em">🔍</span><span>포식</span><span class="hint">검색·수집</span></button>
   </div>
 
   <!-- 자율주행 — 드릴다운: ① 대상 선택(시스템AI/스위치/프로젝트→에이전트) → ② 대화/결과 -->
@@ -822,6 +855,23 @@ a{ color:var(--info); }
   <div class="panel" id="p-app">
     <div class="wrap" id="appHome"></div>
     <div class="wrap" id="appInst" style="display:none"></div>
+  </div>
+
+  <!-- 포식(검색) 브라우저 — 검색 → 후보판 → 진입(시스템 브라우저) → 판 유지 + ✕제외/📌담기 -->
+  <div class="panel" id="p-forage">
+    <div class="fg-wrap">
+      <div class="fg-search">
+        <input id="fgQ" type="text" placeholder="무엇을 찾을까요?" autocomplete="off"
+          onkeydown="if(event.key==='Enter')fgSearch()">
+        <button id="fgGo" onclick="fgSearch()">포식</button>
+      </div>
+      <div class="fg-subnav">
+        <button id="fgnav-board" class="on" onclick="fgNav('board')">판</button>
+        <button id="fgnav-history" onclick="fgNav('history')">방문기록</button>
+        <button id="fgnav-library" onclick="fgNav('library')">도서관</button>
+      </div>
+      <div class="fg-list" id="fgList"></div>
+    </div>
   </div>
 </div>
 
@@ -1008,11 +1058,12 @@ document.addEventListener('change',function(ev){
 /* ===== 표면 토글 ===== */
 function setSurface(s){
   surface=s;
-  ['autopilot','manual','app'].forEach(k=>{
+  ['autopilot','manual','app','forage'].forEach(k=>{
     document.getElementById('t-'+k).classList.toggle('on',k===s);
     document.getElementById('p-'+k).classList.toggle('on',k===s);
   });
   if(s==='app' && !appHomeRendered) renderAppHome();
+  if(s==='forage' && !fgInit){ fgInit=true; fgNav('board'); }
 }
 function refreshSurface(){
   if(surface==='autopilot') apLoad();
@@ -2323,6 +2374,245 @@ async function rowDrill(vi,ri){
     renderDrill();
   }catch(e){ detail.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }
 }
+
+/* ================= 포식(검색) 브라우저 ================= */
+/* 데스크탑 Electron ForageBrowser 의 핵심 루프(검색→후보판→진입→신호)를 폰/원격에서 재현.
+   진입(브라우징)은 시스템 브라우저로 위임 — 런처 WebView 는 판을 든 채 뒤에 남고 뒤로가기로 복귀.
+   그리드/썸네일·인앱 webview·번역주입은 데스크탑 전용(폰 스코프 밖). */
+let fgInit=false, fgSub='board', fgBoard=null, fgSeq=0, fgSearching=false, fgHist=[], fgLib=[];
+const FG_COUNT=10;
+
+function fgNorm(u){ return String(u||'').replace(/\\/+$/,'').toLowerCase(); }
+function fgPick(i){ return {title:i.title, url:i.url, reason:i.reason}; }
+
+function fgNav(which){
+  fgSub=which;
+  ['board','history','library'].forEach(k=>{
+    const b=document.getElementById('fgnav-'+k); if(b) b.classList.toggle('on',k===which);
+  });
+  if(which==='board') fgRenderBoard();
+  else if(which==='history') fgHistory();
+  else if(which==='library') fgLibrary();
+}
+
+/* --- 응답 파싱 (데스크탑 parseCandidates + extractDestinations 이식) --- */
+function fgParseCandidates(text){
+  const items=[], intro=[], outro=[];
+  const linkRe=/\\[([^\\]]+)\\]\\((https?:\\/\\/[^)\\s]+)\\)/;
+  for(const raw of String(text||'').split('\\n')){
+    const line=raw.trim(); if(!line) continue;
+    const m=line.match(linkRe);
+    if(m){
+      const after=line.slice((m.index||0)+m[0].length);
+      items.push({
+        title:m[1].replace(/\\*+/g,'').trim(),
+        url:m[2],
+        reason:after.replace(/^[\\s—–:·,\\-]+/,'').replace(/\\*+/g,'').trim()
+      });
+    } else {
+      (items.length===0?intro:outro).push(line.replace(/^[#>*\\-]+\\s*/,'').replace(/\\*+/g,''));
+    }
+  }
+  return {intro:intro.join(' ').trim(), outro:outro.join(' ').trim(), items};
+}
+function fgExtractDest(content){
+  const dests=[]; let text=String(content||'');
+  const MARK='[MAP:'; let start=text.indexOf(MARK);
+  while(start!==-1){
+    let depth=0,end=-1,inStr=false,esc2=false;
+    for(let i=start+MARK.length;i<text.length;i++){
+      const c=text[i];
+      if(esc2){esc2=false;continue;}
+      if(c==='\\\\'&&inStr){esc2=true;continue;}
+      if(c==='"'){inStr=!inStr;continue;}
+      if(inStr)continue;
+      if(c==='{')depth++;
+      else if(c==='}'){depth--; if(depth===0&&text[i+1]===']'){end=i+2;break;}}
+    }
+    if(end===-1)break;
+    try{
+      const data=JSON.parse(text.substring(start+MARK.length,end-1));
+      for(const mk of (data.markers||[])){ if(mk&&mk.url) dests.push({title:mk.name||mk.url, reason:mk.meta||'', url:mk.url}); }
+    }catch(e){}
+    text=text.slice(0,start)+text.slice(end);
+    start=text.indexOf(MARK);
+  }
+  return {text, dests};
+}
+function fgParseResp(content){
+  const ed=fgExtractDest(content);
+  const p=fgParseCandidates(ed.text);
+  return {intro:p.intro, outro:p.outro, items:p.items.concat(ed.dests)};
+}
+
+/* --- 검색 → 후보판 --- */
+async function fgSearch(){
+  if(fgSearching) return;
+  const inp=document.getElementById('fgQ'); const q=(inp?inp.value:'').trim();
+  if(!q) return;
+  fgSearching=true; const go=document.getElementById('fgGo'); if(go){go.disabled=true;go.textContent='…';}
+  fgNav('board');
+  const list=document.getElementById('fgList'); if(list) list.innerHTML='<div class="fg-empty">포식 중… 🔍</div>';
+  try{
+    const r=await jfetch('/forage/chat',{method:'POST',body:JSON.stringify({message:q,count:FG_COUNT})});
+    if(!r.ok) throw new Error('검색 실패 ('+r.status+')');
+    const d=await r.json();
+    const parsed=fgParseResp(d.response||'');
+    const seen=new Set(); const pool=[];
+    for(const c of parsed.items){
+      const k=fgNorm(c.url); if(!c.url||seen.has(k))continue; seen.add(k);
+      pool.push({id:'c'+(++fgSeq),title:c.title,url:c.url,reason:c.reason||'',pinned:false,excluded:false,visited:false});
+    }
+    if(pool.length){
+      fgBoard={id:'b'+Date.now()+'_'+fgSeq, query:q, intro:parsed.intro, outro:parsed.outro, round:1, saved:false, items:pool};
+      if(inp) inp.value='';
+    } else {
+      fgBoard=null;
+      if(list) list.innerHTML='<div class="fg-empty">'+esc(parsed.intro||parsed.outro||'후보를 찾지 못했어요. 다르게 물어봐 주세요.')+'</div>';
+    }
+  }catch(e){
+    if(list) list.innerHTML='<div class="fg-empty">'+esc(e.message||'오류')+'</div>';
+  }finally{
+    fgSearching=false; const g2=document.getElementById('fgGo'); if(g2){g2.disabled=false;g2.textContent='포식';}
+    if(fgBoard) fgRenderBoard();
+  }
+}
+
+/* --- 후보판 렌더 --- */
+function fgRenderBoard(){
+  if(fgSub!=='board') return;
+  const list=document.getElementById('fgList'); if(!list) return;
+  if(!fgBoard){
+    list.innerHTML='<div class="fg-empty">검색어를 넣고 포식하세요.<br>후보판이 깔리면 ✕로 치우고 📌로 담을 수 있어요.</div>';
+    return;
+  }
+  let h='';
+  if(fgBoard.intro) h+='<div class="fg-intro">'+esc(fgBoard.intro)+'</div>';
+  const active=fgBoard.items.filter(i=>!i.excluded);
+  const excluded=fgBoard.items.filter(i=>i.excluded);
+  for(const it of active) h+=fgCardHtml(it);
+  h+='<div class="fg-more" onclick="fgMore()">'+(fgSearching?'보충 중…':'＋ 더 채우기 ('+active.length+'/'+FG_COUNT+')')+'</div>';
+  h+='<div class="fg-more" onclick="fgSave()">'+(fgBoard.saved?'✓ 도서관에 보존됨 (갱신)':'💾 이 판 보존하기')+'</div>';
+  if(excluded.length){
+    h+='<div class="fg-intro">치운 후보 '+excluded.length+'개</div>';
+    for(const it of excluded) h+=fgCardHtml(it);
+  }
+  list.innerHTML=h;
+}
+function fgCardHtml(it){
+  return '<div class="fg-card'+(it.pinned?' pinned':'')+(it.excluded?' excluded':'')+'">'+
+    '<div class="t">'+(it.visited?'✓ ':'')+esc(it.title||it.url)+'</div>'+
+    (it.reason?'<div class="r">'+esc(it.reason)+'</div>':'')+
+    '<div class="u">'+esc(it.url)+'</div>'+
+    '<div class="acts">'+
+      '<button class="go" onclick="fgOpen(\\''+it.id+'\\')">열기 ↗</button>'+
+      '<button class="pin'+(it.pinned?' on':'')+'" onclick="fgTogglePin(\\''+it.id+'\\')">📌'+(it.pinned?' 담음':'')+'</button>'+
+      '<button onclick="fgToggleExclude(\\''+it.id+'\\')">'+(it.excluded?'되돌리기':'✕')+'</button>'+
+    '</div>'+
+  '</div>';
+}
+
+/* --- 진입 · 신호 --- */
+async function fgOpen(id){
+  if(!fgBoard) return;
+  const it=fgBoard.items.find(x=>x.id===id); if(!it) return;
+  it.visited=true;
+  try{ await jfetch('/forage/history',{method:'POST',body:JSON.stringify({url:it.url,title:it.title||'',hunt_query:fgBoard.query||''})}); }catch(e){}
+  fgRenderBoard();
+  fgVisit(it.url);
+}
+function fgVisit(url){
+  if(!url) return;
+  if(IS_PHONE){ window.location.href=url; }   /* shouldOverrideUrlLoading → 시스템 브라우저, 런처는 판을 든 채 유지 */
+  else { window.open(url,'_blank','noopener'); }  /* 원격 = 새 탭 */
+}
+function fgTogglePin(id){ const it=fgBoard&&fgBoard.items.find(x=>x.id===id); if(!it)return; it.pinned=!it.pinned; if(it.pinned)it.excluded=false; fgRenderBoard(); }
+function fgToggleExclude(id){ const it=fgBoard&&fgBoard.items.find(x=>x.id===id); if(!it)return; it.excluded=!it.excluded; if(it.excluded)it.pinned=false; fgRenderBoard(); }
+
+/* --- 보충(합작 포식 라운드) --- */
+async function fgMore(){
+  if(!fgBoard||fgSearching) return;
+  fgSearching=true; fgRenderBoard();
+  const active=fgBoard.items.filter(i=>!i.excluded);
+  const hunt={
+    query:fgBoard.query, round:(fgBoard.round||1)+1, need:Math.max(1,FG_COUNT-active.length),
+    pinned:fgBoard.items.filter(i=>i.pinned).map(fgPick),
+    excluded:fgBoard.items.filter(i=>i.excluded).map(fgPick),
+    kept:active.filter(i=>!i.pinned).map(fgPick),
+    trail:fgBoard.items.filter(i=>i.visited).map(fgPick)
+  };
+  try{
+    const r=await jfetch('/forage/chat',{method:'POST',body:JSON.stringify({message:fgBoard.query,count:FG_COUNT,hunt:hunt})});
+    const d=await r.json();
+    const parsed=fgParseResp(d.response||'');
+    const seen=new Set(fgBoard.items.map(i=>fgNorm(i.url)));
+    for(const c of parsed.items){
+      const k=fgNorm(c.url); if(!c.url||seen.has(k))continue; seen.add(k);
+      fgBoard.items.push({id:'c'+(++fgSeq),title:c.title,url:c.url,reason:c.reason||'',pinned:false,excluded:false,visited:false});
+    }
+    fgBoard.round=hunt.round;
+  }catch(e){ toast('보충 실패'); }
+  finally{ fgSearching=false; fgRenderBoard(); }
+}
+
+/* --- 판 보존 · 도서관 --- */
+async function fgSave(){
+  if(!fgBoard) return;
+  fgBoard.saved=true;
+  try{
+    await jfetch('/forage/boards',{method:'POST',body:JSON.stringify({id:fgBoard.id, name:fgBoard.query||'',
+      state:{query:fgBoard.query,intro:fgBoard.intro,round:fgBoard.round,
+        items:fgBoard.items.map(i=>({title:i.title,url:i.url,reason:i.reason,pinned:i.pinned,removed:i.excluded,visited:i.visited}))}})});
+    toast('도서관에 보존했어요');
+  }catch(e){ toast('보존 실패'); }
+  fgRenderBoard();
+}
+async function fgLibrary(){
+  const list=document.getElementById('fgList'); if(!list) return;
+  list.innerHTML='<div class="fg-empty">불러오는 중…</div>';
+  try{
+    const r=await jfetch('/forage/boards'); const d=await r.json(); fgLib=(d&&d.items)||[];
+    if(!fgLib.length){ list.innerHTML='<div class="fg-empty">보존한 판이 없어요.<br>판에서 💾로 보존하면 여기 모입니다.</div>'; return; }
+    let h='';
+    fgLib.forEach((b,idx)=>{
+      h+='<div class="fg-card"><div class="t" onclick="fgLoadBoard('+idx+')">'+esc(b.name||'(제목 없음)')+'</div>'+
+        ((b.preview&&b.preview.length)?'<div class="r">'+esc(b.preview.join(' · '))+'</div>':'')+
+        '<div class="acts"><button class="go" onclick="fgLoadBoard('+idx+')">판 열기 ('+(b.count||0)+')</button>'+
+        '<button onclick="fgDeleteBoard('+idx+')">🗑 삭제</button></div></div>';
+    });
+    list.innerHTML=h;
+  }catch(e){ list.innerHTML='<div class="fg-empty">오류: '+esc(e.message)+'</div>'; }
+}
+async function fgLoadBoard(idx){
+  const b=fgLib[idx]; if(!b) return;
+  try{
+    const r=await jfetch('/forage/boards/'+encodeURIComponent(b.id)); const d=await r.json();
+    if(!d||!d.ok){ toast('판을 불러오지 못했어요'); return; }
+    const st=d.state||{};
+    fgBoard={id:d.id, query:st.query||d.name||'', intro:st.intro||'', outro:st.outro||'', round:st.round||1, saved:true,
+      items:(st.items||[]).map(i=>({id:'c'+(++fgSeq),title:i.title,url:i.url,reason:i.reason||'',pinned:!!i.pinned,excluded:!!i.removed,visited:!!i.visited}))};
+    fgNav('board');
+  }catch(e){ toast('오류'); }
+}
+async function fgDeleteBoard(idx){ const b=fgLib[idx]; if(!b)return; try{ await jfetch('/forage/boards/'+encodeURIComponent(b.id),{method:'DELETE'}); fgLibrary(); }catch(e){} }
+
+/* --- 방문기록 --- */
+async function fgHistory(){
+  const list=document.getElementById('fgList'); if(!list) return;
+  list.innerHTML='<div class="fg-empty">불러오는 중…</div>';
+  try{
+    const r=await jfetch('/forage/history?limit=300'); const d=await r.json(); fgHist=(d&&d.items)||[];
+    if(!fgHist.length){ list.innerHTML='<div class="fg-empty">방문기록이 없어요.<br>후보를 열면 여기 쌓입니다.</div>'; return; }
+    let h='<div class="fg-intro">방문기록 '+fgHist.length+'개</div>';
+    fgHist.forEach((it,idx)=>{
+      h+='<div class="fg-row"><div class="rx" onclick="fgHistOpen('+idx+')"><div class="rt">'+esc(it.title||it.url)+'</div><div class="ru">'+esc(it.url)+'</div></div>'+
+        '<div class="rd" onclick="fgHistDelete('+it.id+')">🗑</div></div>';
+    });
+    list.innerHTML=h;
+  }catch(e){ list.innerHTML='<div class="fg-empty">오류: '+esc(e.message)+'</div>'; }
+}
+function fgHistOpen(idx){ const it=fgHist[idx]; if(it) fgVisit(it.url); }
+async function fgHistDelete(id){ try{ await jfetch('/forage/history/'+id,{method:'DELETE'}); fgHistory(); }catch(e){} }
 </script>
 </body>
 </html>

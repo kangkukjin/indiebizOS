@@ -461,6 +461,209 @@ def forage_history_clear():
         conn.close()
 
 
+# ============ 포식 판 도서관 (수동 보존 · 여러 판) ============
+# 사냥판은 본래 순간이다(새 검색 시 사라짐). "판 보존" 토글을 켠 판만 여기 남아, 내가 떠난 그대로
+# (후보·담기/치우기·라운드·궤적·판 크기) 다시 펼칠 수 있다. 즐겨찾기(개별 전리품)와 다른 층 —
+# 작업판 통째를 이름 붙여 남긴다. 백엔드는 프론트 Hunt 스냅샷(JSON)을 그대로 보관할 뿐이다.
+
+FORAGE_BOARDS_DB = DATA_PATH / "forage_boards.db"
+
+
+def _boards_conn():
+    import sqlite3
+    conn = sqlite3.connect(str(FORAGE_BOARDS_DB))
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS boards("
+        "id TEXT PRIMARY KEY, name TEXT DEFAULT '', ts TEXT NOT NULL, "
+        "updated TEXT NOT NULL, state TEXT NOT NULL)"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_forage_boards_updated ON boards(updated)")
+    return conn
+
+
+class ForageBoard(BaseModel):
+    id: str
+    name: str = ""
+    state: Dict[str, Any] = {}
+
+
+@router.post("/forage/boards")
+def forage_board_save(board: ForageBoard):
+    """판 보존(upsert) — 보존 토글 켤 때 + 이후 편집마다 최신화. 최초 생성시각(ts)은 보존."""
+    import json
+    conn = _boards_conn()
+    try:
+        now = datetime.now().isoformat(timespec="seconds")
+        row = conn.execute("SELECT ts FROM boards WHERE id=?", (board.id,)).fetchone()
+        ts = row[0] if row else now
+        conn.execute(
+            "INSERT OR REPLACE INTO boards(id, name, ts, updated, state) VALUES(?,?,?,?,?)",
+            (board.id, (board.name or "")[:200], ts, now, json.dumps(board.state, ensure_ascii=False)),
+        )
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+@router.get("/forage/boards")
+def forage_boards_list():
+    """보존된 판 목록 — 가벼운 미리보기만(제목·후보 수). 펼칠 땐 개별 GET 으로 전체 상태를 당긴다."""
+    import json
+    conn = _boards_conn()
+    try:
+        rows = conn.execute(
+            "SELECT id, name, ts, updated, state FROM boards ORDER BY updated DESC").fetchall()
+        out = []
+        for rid, name, ts, updated, state in rows:
+            try:
+                st = json.loads(state)
+            except Exception:
+                st = {}
+            items = st.get("items") or []
+            active = [i for i in items if isinstance(i, dict) and not i.get("removed")]
+            out.append({
+                "id": rid, "name": name, "ts": ts, "updated": updated,
+                "count": len(active),
+                "preview": [str(i.get("title") or i.get("url") or "")[:60] for i in active[:4]],
+            })
+        return {"items": out}
+    finally:
+        conn.close()
+
+
+@router.get("/forage/boards/{board_id}")
+def forage_board_get(board_id: str):
+    """판 하나의 전체 상태 — 펼치기용."""
+    import json
+    conn = _boards_conn()
+    try:
+        row = conn.execute(
+            "SELECT id, name, ts, updated, state FROM boards WHERE id=?", (board_id,)).fetchone()
+        if not row:
+            return {"ok": False}
+        try:
+            st = json.loads(row[4])
+        except Exception:
+            st = {}
+        return {"ok": True, "id": row[0], "name": row[1], "ts": row[2], "updated": row[3], "state": st}
+    finally:
+        conn.close()
+
+
+@router.delete("/forage/boards/{board_id}")
+def forage_board_delete(board_id: str):
+    conn = _boards_conn()
+    try:
+        conn.execute("DELETE FROM boards WHERE id=?", (board_id,))
+        conn.commit()
+        return {"ok": True}
+    finally:
+        conn.close()
+
+
+# ============ 포식 썸네일 (og:image 지연·캐시) ============
+# 시각 그리드용 — 후보 URL 하나마다 페이지 대표 이미지(og:image/twitter:image)를 뽑아 캐시한다.
+# 지연·점진: 후보는 즉시 카드로 깔고, 이미지는 이 엔드포인트가 도착하는 대로 채운다. 캐시는 재fetch 0
+# (빈 문자열 = "받아봤지만 없음"도 캐시해 매번 재시도하지 않는다).
+
+FORAGE_THUMBS_DB = DATA_PATH / "forage_thumbs.db"
+
+
+def _thumbs_conn():
+    import sqlite3
+    conn = sqlite3.connect(str(FORAGE_THUMBS_DB))
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS thumbs("
+        "url TEXT PRIMARY KEY, image TEXT DEFAULT '', ts TEXT NOT NULL)"
+    )
+    return conn
+
+
+# 사진 없는 og 호스트 — SSR 이 일반 지도카드/빈 og 만 줘서 fetch 가 낭비다. 곧장 ''(파비콘 폴백).
+# ★네이버 place 사진은 CSRF 가드된 GraphQL 로만 와서 스크래핑=취약(벤더층 회피·튼튼함 원칙). 데이터로만 관리.
+# 카카오(place.map.kakao.com)는 og:image 가 진짜 리뷰 사진이라 여기 없음 — 일반 경로로 fetch 한다.
+_PHOTOLESS_OG_HOSTS = ("map.naver.com", "place.naver.com")
+# 일반/플레이스홀더 이미지 마커 — og:image 가 있어도 내용 없는 회색 카드면 '' 로 눌러 파비콘 폴백.
+_GENERIC_IMAGE_MARKERS = ("og-map-", "/static/maps/", "noimage", "no_image", "no-image", "default_image", "blank.")
+
+
+def _is_generic_image(img: str) -> bool:
+    low = (img or "").lower()
+    return any(m in low for m in _GENERIC_IMAGE_MARKERS)
+
+
+def _host_is_photoless(url: str) -> bool:
+    try:
+        from urllib.parse import urlparse
+        h = (urlparse(url).hostname or "").lower()
+        return h == "map.naver.com" or h.endswith("place.naver.com")
+    except Exception:
+        return False
+
+
+def _fetch_og_image(url: str) -> str:
+    """페이지 HTML 에서 og:image(→twitter:image) 한 장. 실패·부재·일반카드는 빈 문자열(graceful)."""
+    import requests
+    import re as _re
+    from urllib.parse import urljoin
+    if _host_is_photoless(url):
+        return ""  # 사진 없는 호스트(네이버 지도) — fetch 건너뛰고 파비콘 폴백
+    try:
+        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                                                     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"},
+                         timeout=6, allow_redirects=True)
+        html = r.text[:300000]
+        for prop in ("og:image:secure_url", "og:image:url", "og:image", "twitter:image", "twitter:image:src"):
+            pat_a = rf'<meta[^>]+(?:property|name)=["\']{_re.escape(prop)}["\'][^>]+content=["\']([^"\']+)["\']'
+            pat_b = rf'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\']{_re.escape(prop)}["\']'
+            m = _re.search(pat_a, html, _re.I) or _re.search(pat_b, html, _re.I)
+            if m:
+                img = m.group(1).strip()
+                if img.startswith("//"):
+                    img = "https:" + img
+                elif img.startswith("/"):
+                    img = urljoin(url, img)
+                if img.startswith("http") and not _is_generic_image(img):
+                    return img[:1000]  # 일반 카드면 이 prop 은 건너뛰고 다음 prop 시도
+        return ""
+    except Exception:
+        return ""
+
+
+class ForageEnrichReq(BaseModel):
+    urls: List[str]
+
+
+@router.post("/forage/enrich")
+def forage_enrich(req: ForageEnrichReq):
+    """URL 목록 → {url: 대표이미지}. 캐시 우선, 없는 것만 동시 fetch 해 캐시에 적재."""
+    urls = [u for u in (req.urls or []) if u and u.startswith("http")][:40]
+    conn = _thumbs_conn()
+    try:
+        out: Dict[str, str] = {}
+        missing = []
+        for u in urls:
+            row = conn.execute("SELECT image FROM thumbs WHERE url=?", (u,)).fetchone()
+            if row is not None:
+                img = row[0] or ""
+                out[u] = "" if _is_generic_image(img) else img  # 옛 캐시의 일반 카드도 폴백 처리
+            else:
+                missing.append(u)
+        if missing:
+            from concurrent.futures import ThreadPoolExecutor
+            now = datetime.now().isoformat(timespec="seconds")
+            with ThreadPoolExecutor(max_workers=8) as ex:
+                results = list(ex.map(_fetch_og_image, missing))
+            for u, img in zip(missing, results):
+                out[u] = img
+                conn.execute("INSERT OR REPLACE INTO thumbs(url, image, ts) VALUES(?,?,?)", (u, img, now))
+            conn.commit()
+        return {"images": out}
+    finally:
+        conn.close()
+
+
 def _recent_history_lines(minutes: int = 60, limit: int = 8) -> str:
     """새 사냥 검색에 동봉할 최근 방문(약한 맥락, 최신순). 실패는 조용히 빈 문자열."""
     try:

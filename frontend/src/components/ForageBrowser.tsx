@@ -71,9 +71,12 @@ interface PoolItem {
   removed: null | 'excluded' | 'deleted';  // excluded=안 가보고 치움, deleted=가보고 치움
   visited: boolean;
   dwellMs: number;         // 누적 체류(대략) — 판으로 돌아올 때 합산
+  image?: string;          // 대표 이미지(og:image) — 그리드용. undefined=아직 안 받음, ''=받았지만 없음
 }
 
 interface Hunt {
+  id: string;      // 보존·복원용 안정 식별자 — 세션을 넘어 살아남는다
+  saved: boolean;  // 판 도서관에 보존 중인가(수동 토글)
   query: string;   // 원 질의 — 보충 라운드의 기준
   intro: string;   // AI 서두 한 줄
   outro: string;   // 링크 뒤 덧말(재고 고갈 시 되물음 등)
@@ -110,7 +113,7 @@ function parseCandidates(text: string): { intro: string; outro: string; items: {
 // src 를 이후에 안 건드려야 in-page 이동이 재로드로 튀지 않는다(원래 단일 webview 의 src 불변 원칙 계승).
 interface Tab {
   id: string;
-  kind: 'web' | 'favorites' | 'history';   // web=webview, 나머지=내부 페이지(webview 아님)
+  kind: 'web' | 'favorites' | 'history' | 'library';   // web=webview, 나머지=내부 페이지(webview 아님)
   initialUrl: string;
   url: string;
   title: string;
@@ -232,6 +235,40 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
     dryRef.current = false;
     if (huntRef.current) scheduleRefill();   // 사냥 중 판을 키우면 모자란 만큼 채우러 간다
   };
+
+  // 판 정리(+/−) — 치운 후보를 판에서 숨길지(−) 되살려 볼지(+). 치운 이력은 데이터로 남는다(숨김은 시야만).
+  const [showRemoved, setShowRemoved] = useState(true);
+
+  // 보기 모드 — 그리드(썸네일 카드) ↔ 목록(텍스트 행). 발견엔 그리드가 유리해 기본 그리드, localStorage 영속.
+  const [viewMode, setViewModeState] = useState<'list' | 'grid'>(() => (localStorage.getItem('forage_view') === 'list' ? 'list' : 'grid'));
+  const setViewMode = (m: 'list' | 'grid') => { setViewModeState(m); try { localStorage.setItem('forage_view', m); } catch { /* */ } };
+
+  // 썸네일 지연·점진 로딩 — 아직 이미지 없는 후보(image===undefined)만 백엔드로 보내 og:image 를 받아 채운다.
+  // 중복 요청 방지용 in-flight 집합. 백엔드가 캐시하므로 재방문·재보충은 거의 즉시.
+  const enrichingRef = useRef<Set<string>>(new Set());
+  const enrichImages = async (items: PoolItem[]) => {
+    const urls = Array.from(new Set(items
+      .filter((i) => i.image === undefined && i.url && /^https?:/.test(i.url) && !enrichingRef.current.has(i.url))
+      .map((i) => i.url)));
+    if (!urls.length) return;
+    urls.forEach((u) => enrichingRef.current.add(u));
+    try {
+      const r = await fetch(`${API}/forage/enrich`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ urls }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const map = d.images || {};
+        setHunt((prev) => prev ? {
+          ...prev, items: prev.items.map((it) => (it.image === undefined && map[it.url] !== undefined) ? { ...it, image: map[it.url] || '' } : it),
+        } : prev);
+      }
+    } catch { /* 썸네일 실패는 조용히 — 폴백(파비콘)으로 렌더 */ }
+    finally { urls.forEach((u) => enrichingRef.current.delete(u)); }
+  };
+
+  // 판 식별자 — 보존/복원용. 세션을 넘어 살아남아야 하므로 시간+난수.
+  const newBoardId = () => `b${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
 
   // 판으로 돌아오면 진행 중이던 체류 시계를 그 후보에 합산(탭 전환은 근사치로 무시).
   const stopDwell = () => {
@@ -372,6 +409,67 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
     } catch { flash('즐겨찾기 저장 실패'); }
   };
 
+  // --- 판 보존(판 도서관) — 수동 토글. 켜면 backend 에 저장(내가 떠난 그대로), 끄면 삭제. ---
+  // 즐겨찾기(개별 전리품)와 다른 층: 작업판 통째(후보·담기/치우기·라운드·궤적·판 크기)를 이름 붙여 남긴다.
+  const serializeBoard = (h: Hunt) => ({
+    query: h.query, intro: h.intro, outro: h.outro, round: h.round,
+    items: h.items, poolSize: poolSizeRef.current, showRemoved,
+    trail: trailRef.current.slice(-50),
+  });
+
+  const persistBoard = async (h: Hunt) => {
+    try {
+      await fetch(`${API}/forage/boards`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: h.id, name: h.query.slice(0, 120), state: serializeBoard(h) }),
+      });
+    } catch { /* 보존 실패는 조용히 — 다음 편집에서 재시도 */ }
+  };
+
+  // 보존 토글 — 즐겨찾기 별표처럼 켜고 끈다. 켜면 즉시 저장, 끄면 도서관에서 뺀다.
+  const toggleBoardSave = async () => {
+    const h = huntRef.current;
+    if (!h) return;
+    if (h.saved) {
+      setHunt((prev) => prev ? { ...prev, saved: false } : prev);
+      try { await fetch(`${API}/forage/boards/${h.id}`, { method: 'DELETE' }); } catch { /* */ }
+      flash('판 보존을 껐어요');
+    } else {
+      setHunt((prev) => prev ? { ...prev, saved: true } : prev);
+      await persistBoard({ ...h, saved: true });
+      flash('판을 도서관에 보존했어요 📋');
+    }
+  };
+
+  // 보존된 판 하나를 펼치기 — 내가 떠난 그대로(후보·담기/치우기·라운드·궤적·판 크기) 되살린다.
+  const openBoard = (b: { id: string; name: string; state: any }) => {
+    const st = b.state || {};
+    const rawItems = Array.isArray(st.items) ? st.items : [];
+    // id 충돌 방지 — 불러온 후보에 새 id 재부여(React key·체류 패치가 이 id 를 쓴다).
+    const items: PoolItem[] = rawItems.map((i: any) => ({
+      id: `c${++poolSeq.current}`,
+      url: String(i.url || ''), title: String(i.title || ''), reason: String(i.reason || ''),
+      source: i.source === 'human' ? 'human' : 'ai',
+      round: Number(i.round) || 1,
+      removed: i.removed === 'deleted' ? 'deleted' : i.removed === 'excluded' ? 'excluded' : null,
+      visited: !!i.visited, dwellMs: Number(i.dwellMs) || 0,
+      image: typeof i.image === 'string' ? i.image : undefined,  // 저장된 썸네일 유지(없으면 effect 가 채움)
+    }));
+    trailRef.current = Array.isArray(st.trail) ? st.trail.slice(-50) : [];
+    dryRef.current = false;
+    if (refillTimer.current) { clearTimeout(refillTimer.current); refillTimer.current = null; }
+    // 판 크기 복원 — scheduleRefill 부작용 없이(내가 떠난 그대로여야 하므로 자동 보충 금지).
+    if (typeof st.poolSize === 'number') {
+      const v = Math.min(30, Math.max(3, st.poolSize));
+      poolSizeRef.current = v; setPoolSizeState(v);
+      try { localStorage.setItem('forage_pool_size', String(v)); } catch { /* */ }
+    }
+    setShowRemoved(st.showRemoved !== false);
+    setAnswer(null); setDestinations([]); setError(null);
+    setHunt({ id: b.id, saved: true, query: st.query || b.name || '', intro: st.intro || '', outro: st.outro || '', round: Number(st.round) || 1, items });
+    setMode('search');
+  };
+
   // --- 브라우즈(탭) 상태 — 크롬처럼 여러 사이트를 탭으로 동시에. 각 탭 = 하나의 webview. ---
   const webviewRefs = useRef<Record<string, any>>({});   // 탭 id → webview DOM
   const tabSeq = useRef(0);
@@ -433,6 +531,16 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
     if (existing) { setActiveId(existing.id); setMode('browse'); return; }
     const id = `t${++tabSeq.current}`;
     setTabs((prev) => [...prev, { id, kind: 'history', initialUrl: '', url: '', title: '방문 기록', canBack: false, canFwd: false, loading: false, translated: false }]);
+    setActiveId(id);
+    setMode('browse');
+  };
+
+  // 판 도서관 페이지 탭 — 보존된 판들을 즐겨찾기처럼 나열. 이미 있으면 그 탭으로 전환.
+  const openLibraryTab = () => {
+    const existing = tabs.find((t) => t.kind === 'library');
+    if (existing) { setActiveId(existing.id); setMode('browse'); return; }
+    const id = `t${++tabSeq.current}`;
+    setTabs((prev) => [...prev, { id, kind: 'library', initialUrl: '', url: '', title: '판 도서관', canBack: false, canFwd: false, loading: false, translated: false }]);
     setActiveId(id);
     setMode('browse');
   };
@@ -566,8 +674,8 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
     const message = att.prepareMessageContent(rawQ);   // 텍스트파일 내용은 메시지에 인라인
     const images = att.prepareImageData();               // 이미지는 base64 로 동봉
     setSearching(true); setError(null); setAnswer(null); setDestinations([]);
-    // 새 검색 = 새 사냥 — 이전 판·궤적·체류 시계를 접는다.
-    setHunt(null); dwellRef.current = null; trailRef.current = []; dryRef.current = false;
+    // 새 검색 = 새 사냥 — 이전 판·궤적·체류 시계를 접는다(보존된 판은 backend 에 이미 남아 있다).
+    setHunt(null); dwellRef.current = null; trailRef.current = []; dryRef.current = false; setShowRemoved(true);
     if (refillTimer.current) { clearTimeout(refillTimer.current); refillTimer.current = null; }
     try {
       const r = await fetch(`${API}/forage/chat`, {
@@ -585,7 +693,7 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
         const pool = cand
           .filter((i) => { const k = normUrl(i.url); if (!i.url || seen.has(k)) return false; seen.add(k); return true; })
           .map((i) => ({ id: `c${++poolSeq.current}`, ...i, source: 'ai' as const, round: 1, removed: null, visited: false, dwellMs: 0 }));
-        setHunt({ query: q || message.slice(0, 200), intro: parsed.intro, outro: parsed.outro, round: 1, items: pool });
+        setHunt({ id: newBoardId(), saved: false, query: q || message.slice(0, 200), intro: parsed.intro, outro: parsed.outro, round: 1, items: pool });
         if (pool.length < poolSizeRef.current) scheduleRefill();   // 판 크기만큼 못 깔렸으면 채우러
       } else {
         setAnswer(text); setDestinations(destinations);   // 링크 없는 응답(희소 안내 등)은 본문 그대로
@@ -704,6 +812,21 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
   // 판(검색홈)으로 돌아오면 체류 시계를 멈춰 후보에 합산 — "돌아왔다"가 다음 판의 신호가 된다.
   useEffect(() => { if (mode === 'search') stopDwell(); }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 보존된 판은 편집(치우기·담기·보충·판 크기·정리)마다 backend 를 최신화 — 내가 떠난 그대로 남게. 디바운스.
+  useEffect(() => {
+    if (!hunt?.saved) return;
+    const t = setTimeout(() => { const h = huntRef.current; if (h?.saved) persistBoard(h); }, 1000);
+    return () => clearTimeout(t);
+  }, [hunt, poolSize, showRemoved]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 아직 썸네일 없는 후보를 채운다 — 검색·보충·판 펼치기 어디서 새 후보가 들어오든 여기서 잡힌다.
+  // enrich 후 image 가 undefined→값이 되어 pending 이 비므로 자기종료(무한 재요청 없음).
+  useEffect(() => {
+    if (!hunt) return;
+    const pending = hunt.items.filter((i) => i.image === undefined && i.url);
+    if (pending.length) enrichImages(pending);
+  }, [hunt]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div
       className={`absolute inset-0 z-30 flex-col bg-white ${open ? 'flex' : 'hidden'}`}
@@ -718,7 +841,7 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
                 mode === 'browse' && t.id === activeId ? 'bg-white' : 'bg-stone-200/50 hover:bg-stone-200'
               }`}>
               {t.kind !== 'web'
-                ? <span className="w-4 h-4 shrink-0 text-sm leading-none flex items-center justify-center">{t.kind === 'favorites' ? '⊞' : '🕘'}</span>
+                ? <span className="w-4 h-4 shrink-0 text-sm leading-none flex items-center justify-center">{t.kind === 'favorites' ? '⊞' : t.kind === 'library' ? '📋' : '🕘'}</span>
                 : <TabFav url={t.url} />}
               <span className="text-xs text-stone-700 truncate flex-1">{t.loading ? '불러오는 중…' : (t.title || t.url)}</span>
               <button onClick={(e) => { e.stopPropagation(); closeTab(t.id); }} title="탭 닫기"
@@ -754,7 +877,7 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
             <button onClick={() => setMode('search')} className="px-3 py-1.5 rounded-lg text-sm text-stone-600 hover:bg-stone-200 whitespace-nowrap">＋ 새 탭</button>
             {activeTab && activeTab.kind !== 'web' ? (
               <>
-                <span className="px-3 py-1.5 text-sm text-stone-500">{activeTab.kind === 'favorites' ? '⊞ 즐겨찾기' : '🕘 방문 기록'}</span>
+                <span className="px-3 py-1.5 text-sm text-stone-500">{activeTab.kind === 'favorites' ? '⊞ 즐겨찾기' : activeTab.kind === 'library' ? '📋 판 도서관' : '🕘 방문 기록'}</span>
                 <div className="flex-1" />
               </>
             ) : (
@@ -871,6 +994,11 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
               <span className="text-base leading-none">🕘</span>
               <span>기록</span>
             </button>
+            <button onClick={openLibraryTab} title="보존한 판 모아보기"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-200 bg-white text-sm text-stone-600 hover:bg-stone-100 hover:border-stone-300 transition">
+              <span className="text-base leading-none">📋</span>
+              <span>판 도서관</span>
+            </button>
           </div>
           <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-sm text-stone-500 hover:bg-stone-100">✕ 닫기</button>
         </div>
@@ -928,6 +1056,30 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
 
           {/* 판 크기 — 테이블 위에 유지할 후보 수(5든 15든). 사냥 중 키우면 모자란 만큼 즉시 보충. */}
           <div className="mt-2 flex items-center justify-end gap-1.5 text-xs text-stone-400 select-none">
+            {hunt && (
+              <button type="button" onClick={toggleBoardSave}
+                title={hunt.saved ? '판 보존 켜짐 — 도서관에 남아요 (눌러서 끄기)' : '이 판을 도서관에 보존'}
+                className={`mr-1 px-2.5 py-1 rounded-lg transition ${
+                  hunt.saved ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'text-stone-400 hover:bg-stone-100 hover:text-stone-600'
+                }`}>{hunt.saved ? '📋 보존됨' : '📋 판 보존'}</button>
+            )}
+            {hunt && hunt.items.some((i) => i.removed) && (
+              <span className="mr-2 inline-flex items-center gap-0.5" title="치운 후보 숨기기(−) · 되살려 보기(＋)">
+                <span className="text-stone-400 mr-0.5">판 정리</span>
+                <button type="button" onClick={() => setShowRemoved(false)} disabled={!showRemoved}
+                  className={`w-6 h-6 rounded-lg flex items-center justify-center ${showRemoved ? 'hover:bg-stone-100 text-stone-500' : 'text-stone-300 cursor-default'}`}>−</button>
+                <button type="button" onClick={() => setShowRemoved(true)} disabled={showRemoved}
+                  className={`w-6 h-6 rounded-lg flex items-center justify-center ${!showRemoved ? 'hover:bg-stone-100 text-stone-500' : 'text-stone-300 cursor-default'}`}>＋</button>
+              </span>
+            )}
+            {hunt && (
+              <span className="mr-2 inline-flex items-center border border-stone-200 rounded-lg overflow-hidden">
+                <button type="button" onClick={() => setViewMode('grid')} title="그리드(썸네일) 보기"
+                  className={`px-2 py-1 ${viewMode === 'grid' ? 'bg-stone-200 text-stone-700' : 'text-stone-400 hover:bg-stone-100'}`}>그리드</button>
+                <button type="button" onClick={() => setViewMode('list')} title="목록 보기"
+                  className={`px-2 py-1 ${viewMode === 'list' ? 'bg-stone-200 text-stone-700' : 'text-stone-400 hover:bg-stone-100'}`}>목록</button>
+              </span>
+            )}
             {(hunt || answer || error) && (
               <button type="button" onClick={clearBoard} title="판을 비우고 새로 시작"
                 className="mr-2 px-2.5 py-1 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-600 transition">판 비우기</button>
@@ -946,20 +1098,27 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
           {searching && <div className="mt-8 text-center text-sm text-stone-400">포식 중… 가볼 만한 곳을 찾고 있어요</div>}
 
           {/* 사냥판 — AI가 채우고 인간이 치우고(✕)·담는(📌) 후보 풀. 클릭=webview 진입. */}
-          {hunt && hunt.items.length > 0 && (
+          {hunt && hunt.items.length > 0 && (() => {
+            const visible = showRemoved ? hunt.items : hunt.items.filter((it) => !it.removed);
+            return (
             <div className="mt-6 pb-12">
               {hunt.intro && <div className="text-sm text-stone-500 mb-3">{hunt.intro}</div>}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-1">
-                {hunt.items.map((it, i) => (
+              {visible.length === 0 && (
+                <div className="text-center text-xs text-stone-400 py-6">치운 후보를 숨겼어요 (판 정리 ＋ 로 다시 보기)</div>
+              )}
+              <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 gap-3' : 'grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-1'}>
+                {visible.map((it, i) => (
                   <Fragment key={it.id}>
-                    {i > 0 && it.round > 1 && it.round !== hunt.items[i - 1].round && (
-                      <div className="md:col-span-2 flex items-center gap-2 mt-1 mb-0.5 text-[11px] text-stone-400 select-none">
+                    {i > 0 && it.round > 1 && it.round !== visible[i - 1].round && (
+                      <div className="col-span-full flex items-center gap-2 mt-1 mb-0.5 text-[11px] text-stone-400 select-none">
                         <div className="flex-1 border-t border-stone-100" />
                         <span>{it.round}차 보충</span>
                         <div className="flex-1 border-t border-stone-100" />
                       </div>
                     )}
-                    <PoolRow item={it} onOpen={() => openPoolItem(it)} onRemove={() => removePoolItem(it)} onRestore={() => restorePoolItem(it)} onSave={() => savePoolFav(it)} />
+                    {viewMode === 'grid'
+                      ? <PoolCard item={it} onOpen={() => openPoolItem(it)} onRemove={() => removePoolItem(it)} onRestore={() => restorePoolItem(it)} onSave={() => savePoolFav(it)} />
+                      : <PoolRow item={it} onOpen={() => openPoolItem(it)} onRemove={() => removePoolItem(it)} onRestore={() => restorePoolItem(it)} onSave={() => savePoolFav(it)} />}
                   </Fragment>
                 ))}
               </div>
@@ -968,7 +1127,8 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
               )}
               {hunt.outro && <div className="mt-3 text-xs text-stone-400">{hunt.outro}</div>}
             </div>
-          )}
+            );
+          })()}
 
           {/* 목적지 카드 (MAP 마커 등) — 클릭하면 webview 진입 */}
           {destinations.length > 0 && (
@@ -1018,7 +1178,9 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
               ? <FavoritesPage favorites={favorites} onOpen={openTab} onRemove={removeFavorite} />
               : t.kind === 'history'
                 ? <HistoryPage onOpen={openTab} active={mode === 'browse' && t.id === activeId} />
-                : <BrowserTabView tab={t} onUpdate={updateTab} registerRef={registerRef} onOpenTab={openTab} />}
+                : t.kind === 'library'
+                  ? <BoardsPage onOpenBoard={openBoard} active={mode === 'browse' && t.id === activeId} />
+                  : <BrowserTabView tab={t} onUpdate={updateTab} registerRef={registerRef} onOpenTab={openTab} />}
           </div>
         ))}
       </div>
@@ -1145,6 +1307,68 @@ function PoolRow({ item, onOpen, onRemove, onRestore, onSave }: {
   );
 }
 
+// 사냥판 후보 카드(그리드) — 썸네일(대표 이미지) + 제목 + 한 줄 이유. 발견용(사진으로 한눈에 스캔).
+// PoolRow 와 같은 동작(✕치우기·📌·☆승격·↩복구·다녀옴·치운 카드 흐리기), 배치만 카드 코너로.
+function PoolCard({ item, onOpen, onRemove, onRestore, onSave }: {
+  item: PoolItem; onOpen: () => void; onRemove: () => void; onRestore: () => void; onSave: () => void;
+}) {
+  const removed = !!item.removed;
+  return (
+    <div className={`group relative rounded-xl border overflow-hidden transition ${
+      removed ? 'border-transparent bg-stone-50 opacity-50' : 'border-stone-200 hover:border-stone-300'
+    }`}>
+      <button onClick={onOpen} disabled={removed} className="block w-full">
+        <CardThumb url={item.url} image={item.image} />
+      </button>
+      {/* 왼쪽 위 — 직접 담음(📌) 또는 체류 배지 */}
+      {item.source === 'human' ? (
+        <span className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-[11px] flex items-center justify-center" title="직접 담음">📌</span>
+      ) : (item.visited && item.dwellMs >= 1000 && (
+        <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-white/90 border border-stone-200 text-[10px] text-stone-500">다녀옴 {Math.round(item.dwellMs / 1000)}초</span>
+      ))}
+      {/* 오른쪽 위 — 액션(호버 시 노출). 치운 카드는 ↩ 복구만 상시. */}
+      <div className="absolute top-1.5 right-1.5 flex gap-1">
+        {removed ? (
+          <button onClick={onRestore} title="되살리기"
+            className="w-6 h-6 rounded-full bg-white/90 border border-stone-200 text-stone-500 hover:text-stone-700 text-xs flex items-center justify-center">↩</button>
+        ) : (
+          <>
+            <button onClick={onSave} title="즐겨찾기로 저장"
+              className="w-6 h-6 rounded-full bg-white/90 border border-stone-200 text-stone-400 hover:text-amber-500 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition">☆</button>
+            <button onClick={onRemove} title={item.visited ? '가봤는데 아님 — 치우기' : '아님 — 치우기'}
+              className="w-6 h-6 rounded-full bg-white/90 border border-stone-200 text-stone-400 hover:text-stone-700 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition">✕</button>
+          </>
+        )}
+      </div>
+      <button onClick={onOpen} disabled={removed} className="block w-full text-left px-2.5 py-2">
+        <div className={`text-[13px] font-medium text-stone-800 truncate ${removed ? 'line-through' : ''}`}>{item.title}</div>
+        {item.reason && <div className="text-[11px] text-stone-500 mt-0.5 line-clamp-2" title={item.reason}>{item.reason}</div>}
+      </button>
+    </div>
+  );
+}
+
+// 카드 썸네일 — 대표 이미지가 있으면 표시, 없으면(undefined 로딩 중·'' 부재·로드 실패) 파비콘 폴백.
+function CardThumb({ url, image }: { url: string; image?: string }) {
+  const [err, setErr] = useState(false);
+  let host = '';
+  try { host = new URL(url).hostname; } catch { /* 잘못된 URL */ }
+  if (image && !err) {
+    return (
+      <div className="w-full aspect-[16/9] bg-stone-100">
+        <img src={image} alt="" onError={() => setErr(true)} className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+  return (
+    <div className="w-full aspect-[16/9] bg-stone-100 flex items-center justify-center">
+      {host
+        ? <img src={`https://www.google.com/s2/favicons?sz=64&domain=${host}`} alt="" className="w-8 h-8 opacity-50" />
+        : <span className="text-stone-300 text-xl">◦</span>}
+    </div>
+  );
+}
+
 // 방문 기록 페이지 — 전부 기록·수동 삭제. 행 클릭=새 탭 방문, ×=개별 삭제, 전체 비우기, 검색.
 function HistoryPage({ onOpen, active }: { onOpen: (url: string) => void; active: boolean }) {
   const [items, setItems] = useState<{ id: number; ts: string; url: string; title: string; hunt_query: string }[]>([]);
@@ -1190,6 +1414,67 @@ function HistoryPage({ onOpen, active }: { onOpen: (url: string) => void; active
                 <span className="text-[11px] text-stone-400 whitespace-nowrap">{(it.ts || '').replace('T', ' ').slice(5, 16)}</span>
                 <button onClick={() => del(it.id)} title="이 기록 삭제"
                   className="w-6 h-6 rounded text-stone-300 hover:bg-stone-200 hover:text-stone-600 text-xs opacity-0 group-hover:opacity-100 transition">×</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// 판 도서관 페이지 — 보존한 판들을 카드로. 클릭=그 판 펼치기, ×=삭제. 목록은 미리보기만(가벼움),
+// 펼칠 땐 개별 GET 으로 전체 상태를 당긴다(내가 떠난 그대로).
+function BoardsPage({ onOpenBoard, active }: {
+  onOpenBoard: (b: { id: string; name: string; state: any }) => void;
+  active: boolean;
+}) {
+  const [boards, setBoards] = useState<{ id: string; name: string; ts: string; updated: string; count: number; preview: string[] }[]>([]);
+  const load = async () => {
+    try {
+      const r = await fetch(`${API}/forage/boards`);
+      const d = await r.json();
+      setBoards(Array.isArray(d.items) ? d.items : []);
+    } catch { setBoards([]); }
+  };
+  // 탭이 보일 때마다 최신 목록 — 방금 보존한 판이 반영되게.
+  useEffect(() => { if (active) load(); }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
+  const open = async (id: string) => {
+    try {
+      const r = await fetch(`${API}/forage/boards/${id}`);
+      const d = await r.json();
+      if (d?.ok) onOpenBoard({ id: d.id, name: d.name, state: d.state });
+    } catch { /* */ }
+  };
+  const del = async (id: string) => {
+    try { await fetch(`${API}/forage/boards/${id}`, { method: 'DELETE' }); setBoards((p) => p.filter((b) => b.id !== id)); } catch { /* */ }
+  };
+  return (
+    <div className="w-full h-full overflow-auto bg-white">
+      <div className="max-w-4xl mx-auto px-8 py-10">
+        <h2 className="text-2xl font-light tracking-tight text-stone-700 mb-8 text-center">판 도서관</h2>
+        {boards.length === 0 ? (
+          <div className="text-center text-sm text-stone-400 mt-16">
+            아직 보존한 판이 없어요. 사냥판에서 '판 보존'을 켜면 여기 남아요.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {boards.map((b) => (
+              <div key={b.id} className="group relative rounded-2xl border border-stone-200 hover:border-stone-300 hover:bg-stone-50 transition">
+                <button onClick={() => del(b.id)} title="이 판 삭제"
+                  className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-stone-100 text-stone-400 hover:bg-red-500 hover:text-white text-xs leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition">×</button>
+                <button onClick={() => open(b.id)} className="w-full text-left p-4">
+                  <div className="flex items-baseline gap-2 mb-1.5 pr-6">
+                    <span className="text-sm font-medium text-stone-800 truncate">{b.name || '(제목 없음)'}</span>
+                    <span className="shrink-0 text-[11px] text-stone-400">후보 {b.count}</span>
+                  </div>
+                  <div className="space-y-0.5">
+                    {(b.preview || []).map((p, i) => (
+                      <div key={i} className="text-[11px] text-stone-500 truncate">· {p}</div>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-[10px] text-stone-400">{(b.updated || '').replace('T', ' ').slice(0, 16)}</div>
+                </button>
               </div>
             ))}
           </div>

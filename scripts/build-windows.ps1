@@ -88,9 +88,10 @@ $backendDist = Join-Path $DIST_DIR "backend"
 New-Item -ItemType Directory -Force -Path $backendDist | Out-Null
 Copy-Item -Path (Join-Path $BACKEND_DIR "*") -Destination $backendDist -Recurse -Force -Exclude @("__pycache__", "*.pyc", "venv", ".DS_Store")
 
-# data, projects, templates, tokens 복사
+# data, templates 만 복사 (projects/tokens 는 개인 데이터·비밀 → 번들 안 함.
+# 새 설치의 앱모드/수동모드 폴더는 부팅 시 ensure_system_projects 가 자동 생성한다.)
 Write-Host "[3/6] 데이터 디렉토리 복사 중..." -ForegroundColor Yellow
-$dataDirs = @("data", "projects", "templates", "tokens")
+$dataDirs = @("data", "templates")
 foreach ($dir in $dataDirs) {
     $srcDir = Join-Path $ROOT_DIR $dir
     $dstDir = Join-Path $DIST_DIR $dir
@@ -98,6 +99,45 @@ foreach ($dir in $dataDirs) {
         Copy-Item -Path $srcDir -Destination $dstDir -Recurse -Force
     }
 }
+
+# 개인/비밀 파일 제거 — 로컬 빌드가 개발자 데이터를 배포에 담는 유출 방지.
+# .gitignore 의 data/·backend/data/·.env 항목과 일치(새 항목 추가 시 양쪽 동기화).
+Write-Host "[3/6] 개인/비밀 데이터 제거 중(유출 방지)..." -ForegroundColor Yellow
+$sensitive = @(
+    "backend\.env", "backend\data", "backend\tokens", "backend\conversations.db",
+    "data\claude_code_config.json", "data\claude_code_sessions.json",
+    "data\system_ai_config.json", "data\midtier_ai_config.json",
+    "data\lightweight_ai_config.json", "data\unconscious_ai_config.json",
+    "data\model_gear.json", "data\system_ai_memory.db",
+    "data\conversations.db", "data\tokens", "data\packages\outputs",
+    "data\switches.json", "data\event_triggers.json", "data\ai_desktop_map.json",
+    "data\my_profile.txt", "data\device_id.txt", "data\business.db", "data\multi_chat.db",
+    "data\calendar_events.json", "data\plan.md", "data\gomoku_board.png",
+    "data\system_ai_role.txt", "data\system_ai_memo.txt",
+    "data\launcher_web_config.json", "data\nas_config.json", "data\tunnel_config.json",
+    "data\location_cache.json", "data\world_pulse.db", "data\indiebiz.db",
+    "data\SKILLs\skills.db", "data\business_images", "data\packages\installed\tools\web\sites.json",
+    "data\browser_cookies", "data\outputs", "data\health", "data\system_ai_prompts",
+    "data\thumbnail_cache", "data\storage_scans",
+    "data\packages\system_ai_state", "data\packages\available", "data\packages\photo_scans",
+    "data\packages\storage_index.db", "data\packages\installed\photo_index.db"
+)
+foreach ($rel in $sensitive) {
+    $p = Join-Path $DIST_DIR $rel
+    if (Test-Path $p) { Remove-Item -Path $p -Recurse -Force -ErrorAction SilentlyContinue }
+}
+# 이름을 몰라도 잡히는 비밀-형태 파일 광역 제거(자격증명·키·nostr 개인키·.env·백업본)
+Get-ChildItem -Path $DIST_DIR -Recurse -Force -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -like 'credentials*.json' -or $_.Name -like '*credential*.json' -or $_.Name -eq 'nostr_keys' -or $_.Extension -in @('.pem', '.key') -or $_.Name -eq '.env' -or $_.Name -like '*.bak*' } |
+    Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
+# backend 하위 런타임 DB 제거(코드만 남긴다)
+Get-ChildItem -Path $backendDist -Recurse -Force -ErrorAction SilentlyContinue |
+    Where-Object { $_.Extension -in @('.db') -or $_.Name -match '\.db-(shm|wal)$' } |
+    Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
+# 도구 패키지 런타임 DB·임시파일 제거
+Get-ChildItem -Path (Join-Path $DIST_DIR "data\packages\installed\tools") -Recurse -Force -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '\.(db|db-shm|db-wal)$' -or $_.Name -match '\.db\.bak$' -or $_.Name -like '_temp_*' -or $_.Name -like '*_index.db' } |
+    Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
 
 # 프론트엔드 빌드
 if (-not $SkipFrontend) {

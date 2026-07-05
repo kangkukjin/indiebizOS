@@ -144,6 +144,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Audit bundle for leaked secrets
+        run: python scripts/audit_bundle_secrets.py frontend/release
+
       - name: Verify Python in Built App
         shell: powershell
         run: |
@@ -311,6 +314,9 @@ jobs:
         run: npm run electron:build:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Audit bundle for leaked secrets
+        run: python3 scripts/audit_bundle_secrets.py frontend/release
 
       - name: Verify Runtimes in Built App
         run: |

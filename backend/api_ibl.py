@@ -61,10 +61,14 @@ async def execute_ibl_code(req: IBLRequest):
     try:
         # project_id가 오면 절대경로로 해소해 project_path로 넘긴다 (해소 우선순위 1 — race 없음).
         # 활성 프로젝트 컨텍스트가 없는 수동/앱 모드 호출이 프로젝트 경로를 확보하는 통로.
+        from project_manager import ProjectManager
         project_path = req.project_path
         if req.project_id:
-            from project_manager import ProjectManager
             p = ProjectManager().get_project_path(req.project_id)
+            # 시스템 프로젝트(앱/수동 모드)는 경로 홀더라, 부팅 provisioning이 누락됐거나
+            # 폴더가 지워졌어도 여기서 즉석 보장(멱등 mkdir, json 읽기 없음)해 자가 치유한다.
+            if not p.exists() and req.project_id in ProjectManager.SYSTEM_PROJECT_IDS:
+                p.mkdir(parents=True, exist_ok=True)
             if p and p.exists():
                 project_path = str(p.resolve())
 
@@ -72,7 +76,7 @@ async def execute_ibl_code(req: IBLRequest):
         # agent_id가 비어 있으면 system_ai 신원으로 채널 발신(메신저 작성·커뮤니티 게시)을 허용한다.
         # (이 표면은 데스크탑=localhost 또는 원격=런처 인증 게이트 뒤에 있음.)
         agent_id = req.agent_id
-        if not agent_id and req.project_id in ("앱모드", "수동모드"):
+        if not agent_id and req.project_id in ProjectManager.SYSTEM_PROJECT_IDS:
             agent_id = "system_ai"
 
         # 직접조작 표면은 thread_context에 자기 project_id를 명시한다.

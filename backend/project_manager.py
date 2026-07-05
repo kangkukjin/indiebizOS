@@ -12,6 +12,11 @@ from datetime import datetime
 class ProjectManager:
     """프로젝트 CRUD 관리"""
 
+    # 런처의 앱/수동 모드가 IBL 실행 시 project_path 컨텍스트로 쓰는 시스템 프로젝트.
+    # 활성 프로젝트가 없어도 경로를 확보하는 홀더 — 삭제/이름변경 시 해당 모드 IBL이 깨진다.
+    # ★단일 진실 소스: api_ibl 등은 이 상수를 참조한다(리터럴 중복 금지).
+    SYSTEM_PROJECT_IDS = ("앱모드", "수동모드")
+
     def __init__(self, base_path: Path = None):
         if base_path is None:
             import os
@@ -207,6 +212,42 @@ agents:
     def get_project_path(self, name: str) -> Path:
         """프로젝트 경로 반환"""
         return self.projects_path / name
+
+    def ensure_system_projects(self) -> list:
+        """앱/수동 모드가 하드 의존하는 시스템 프로젝트 폴더·등록을 보장(멱등).
+
+        `projects/` 는 런타임 상태(.gitignore·미번들)라 fresh 설치(특히 윈도우 패키지)엔
+        이 폴더들이 없다 → api_ibl 의 project_path 해소가 `p.exists()` 게이트에서 실패해
+        앱/수동 모드의 모든 도구가 "활성 프로젝트 경로 없음"으로 거부됐다. 부팅 시 없으면
+        만들어 어떤 설치에서도 통과하게 한다. 이미 있으면 아무것도 바꾸지 않는다.
+
+        Returns: 이번에 새로 만든(폴더 생성 또는 신규 등록) 시스템 프로젝트 id 목록.
+        """
+        touched = []
+        projects = self._load_projects_list()
+        known_ids = {p.get("id") for p in projects if isinstance(p, dict)}
+        changed = False
+        for name in self.SYSTEM_PROJECT_IDS:
+            folder = self.projects_path / name
+            if not folder.exists():
+                folder.mkdir(parents=True, exist_ok=True)
+                if name not in touched:
+                    touched.append(name)
+            if name not in known_ids:
+                projects.append({
+                    "id": name,
+                    "name": name,
+                    "type": "project",
+                    "path": str(folder),
+                    "created_at": datetime.now().isoformat(),
+                    "items": [],
+                })
+                changed = True
+                if name not in touched:
+                    touched.append(name)
+        if changed:
+            self._save_projects_list(projects)
+        return touched
 
     def create_folder(self, name: str, icon_position: tuple = None, parent_folder: str = None) -> dict:
         """빈 폴더 생성"""

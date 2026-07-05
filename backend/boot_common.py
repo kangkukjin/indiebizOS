@@ -56,6 +56,21 @@ def wire_local_subsystems(profile: str = None) -> dict:
         print(f"{tag} task 정리 실패 (무시): {e}")
         results["task_cleanup"] = False
 
+    # 시스템 프로젝트(앱모드/수동모드) 폴더 보장: 런처의 앱/수동 모드가 IBL 실행 시
+    # project_path 컨텍스트로 쓰는 홀더 폴더다. projects/ 는 런타임 상태(gitignore·미번들)라
+    # fresh 설치(특히 윈도우 패키지)엔 없어, api_ibl 의 p.exists() 게이트가 실패 → 앱/수동
+    # 모드 도구가 "활성 프로젝트 경로 없음"으로 전멸했다. 없으면 만들어 자가 치유(멱등).
+    # 몸 독립 — 폰-자아도 앱/수동 표면을 쓰므로 같이 보장받아야 한다.
+    try:
+        from project_manager import ProjectManager
+        made = ProjectManager().ensure_system_projects()
+        results["system_projects"] = True
+        if made:
+            print(f"{tag} 시스템 프로젝트 폴더 생성: {', '.join(made)}")
+    except Exception as e:
+        print(f"{tag} 시스템 프로젝트 보장 실패 (무시): {e}")
+        results["system_projects"] = False
+
     return results
 
 

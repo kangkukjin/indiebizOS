@@ -20,6 +20,15 @@ import os
 import re
 import sys
 
+# ★Windows CI 등 비-UTF-8 로케일(cp1252/cp949)에서 한글 출력이 UnicodeEncodeError 로
+# 죽지 않도록 stdout/stderr 를 UTF-8 로 고정한다(이 스크립트가 바로 그 이식성 버그로
+# 빌드를 깨뜨렸다 — strftime 과 같은 부류: 개발 맥은 UTF-8이라 재현 안 됨).
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # 우리가 번들하는 디렉토리 세그먼트(경로에 이게 있어야 검사). 그 외(런타임)는 스킵.
 BUNDLE_SEGMENTS = ("backend", "data", "templates", "projects", "tokens")
 # 스캔 제외 세그먼트 — 번들 런타임/서드파티(정상 인증서·테스트 키가 있어 오탐 유발).

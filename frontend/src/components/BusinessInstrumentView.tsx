@@ -1,6 +1,8 @@
 /**
- * BusinessInstrumentView — 런처 '비즈니스' 버튼이 여는 전용 창(#/business).
+ * BusinessInstrumentView — 비즈니스 계기 뷰.
  *
+ * 두 진입점 공유: (1) 런처 상단 모드 선택기의 '비즈니스' 모드(인라인 렌더),
+ * (2) IBL `[limbs:launch] open_business` 로 열리는 전용 창(#/business, App.tsx 라우트).
  * 옛 비즈니스 관리 창(BusinessManager)을 대체한다. 별도 UI를 그리지 않고,
  * 앱모드와 동일한 IBL 비즈니스 계기(self:business/business_item/business_document/
  * work_guideline + others:auto_response 토글)를 GenericInstrument 로 그대로 렌더한다.

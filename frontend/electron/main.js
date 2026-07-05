@@ -1166,11 +1166,6 @@ function setupIPC() {
     createSystemAIWindow();
   });
 
-  // 비즈니스 관리 창 열기
-  ipcMain.handle('open-business-window', () => {
-    createBusinessWindow();
-  });
-
   // 커뮤니티 창 열기 (옛 IndieNet 대체)
   ipcMain.handle('open-community-window', () => {
     createCommunityWindow();

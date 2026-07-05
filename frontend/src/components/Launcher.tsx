@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine } from 'lucide-react';
+import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -25,6 +25,7 @@ import { UserManualDialog } from './UserManualDialog';
 import { ActionDesktop } from './ActionDesktop';
 import ManualMode from './ManualMode';
 import { ForageBrowser } from './ForageBrowser';
+import { BusinessInstrumentView } from './BusinessInstrumentView';
 import type {
   ContextMenuState,
   ClipboardItem,
@@ -35,6 +36,17 @@ import type {
   LightweightAISettings,
   MidtierAISettings,
 } from './launcher-components';
+
+// 런처 상단 모드 선택기의 다섯 표면 (순서 = 드롭다운 표시 순서).
+const LAUNCHER_MODES = ['browser', 'autopilot', 'manual', 'app', 'business'] as const;
+type LauncherMode = typeof LAUNCHER_MODES[number];
+const MODE_META: Record<LauncherMode, { label: string; icon: typeof Search }> = {
+  browser: { label: '검색 브라우저', icon: Search },
+  autopilot: { label: '자율주행', icon: Compass },
+  manual: { label: '조종실', icon: Gauge },
+  app: { label: '앱', icon: LayoutGrid },
+  business: { label: '비즈니스', icon: Building2 },
+};
 
 export function Launcher() {
   const {
@@ -48,13 +60,22 @@ export function Launcher() {
     error,
   } = useAppStore();
 
-  // 런처는 같은 IBL 위에 얹힌 세 개의 표면이다 (트릴레마: 속도/표현력/주권 중 둘):
-  //   autopilot(자율주행) = 속도+표현력−주권 (구 'projects')
-  //   manual(수동)        = 표현력+주권−속도 (미구현 — IBL 번역·dry-run 검수·커맨드 팔레트)
-  //   app(앱)             = 속도+주권−표현력 (구 'actions', ActionDesktop)
-  const [launcherTab, setLauncherTab] = useState<'autopilot' | 'manual' | 'app'>('autopilot');
-  // 포식 브라우저 — 조종실 데스크탑 위로 슬라이드 인하는 진짜 크로미움(공동 포식의 '도로').
-  const [browserOpen, setBrowserOpen] = useState(false);
+  // 런처는 하나의 모드 전환 버튼(상단 X-Ray 앞)으로 오가는 다섯 표면이다:
+  //   browser(검색 브라우저) = 공동 포식 크로미움  ·  autopilot(자율주행) = 데스크탑 아이콘
+  //   manual(조종실) = IBL 번역·검수·실행  ·  app(앱) = 아이콘 GUI 계기
+  //   business(비즈니스) = 비즈니스 계기(옛 전용 창을 인라인 모드로 흡수)
+  // (옛 3토글 자율주행/조종실/앱은 이 단일 모드 선택기로 대체됨)
+  const [launcherTab, setLauncherTab] = useState<LauncherMode>(() => {
+    const saved = localStorage.getItem('indiebiz_launcher_mode');
+    return (saved && (LAUNCHER_MODES as readonly string[]).includes(saved))
+      ? (saved as LauncherMode) : 'autopilot';
+  });
+  // 검색 브라우저에서 ✕닫기 시 돌아갈 직전 모드(브라우저 제외).
+  const prevModeRef = useRef<Exclude<LauncherMode, 'browser'>>('autopilot');
+  const [showModeMenu, setShowModeMenu] = useState(false);
+  const modeMenuRef = useRef<HTMLDivElement>(null);
+  // 검색 브라우저를 특정 URL로 열도록 넘기는 신호(예: X-Ray). ForageBrowser가 소비 후 null 복귀.
+  const [pendingBrowserUrl, setPendingBrowserUrl] = useState<string | null>(null);
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [showNewMultiChatDialog, setShowNewMultiChatDialog] = useState(false);
@@ -186,6 +207,25 @@ export function Launcher() {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMainMenu]);
+
+  // 모드 선택 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modeMenuRef.current && !modeMenuRef.current.contains(event.target as Node)) {
+        setShowModeMenu(false);
+      }
+    };
+    if (showModeMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showModeMenu]);
+
+  // 선택 모드 영속화 + 브라우저로 갈 때 직전 모드 기억(✕닫기 복귀용)
+  useEffect(() => {
+    localStorage.setItem('indiebiz_launcher_mode', launcherTab);
+    if (launcherTab !== 'browser') prevModeRef.current = launcherTab;
+  }, [launcherTab]);
 
   // PC Manager 창 열기 요청 폴링
   useEffect(() => {
@@ -867,21 +907,58 @@ export function Launcher() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedItem, clipboard, renamingItem, projects, switches, showNewProjectDialog, showNewFolderDialog, showSchedulerDialog]);
 
+  const ActiveModeIcon = MODE_META[launcherTab].icon;
+
   return (
     <div className="h-full flex flex-col bg-[#F5F1EB]">
       {/* 상단 툴바 */}
       <div className="h-11 flex items-center justify-end px-4 drag bg-gradient-to-b from-[#F7F3ED] to-[#F5F1EB] border-b border-[#E5DFD5]">
         <div className="flex items-center gap-1.5 no-drag">
+          {/* 모드 선택기 — 다섯 표면(검색 브라우저/자율주행/조종실/앱/비즈니스)을 오간다. X-Ray 앞. */}
+          <div className="relative" ref={modeMenuRef}>
+            <button
+              onClick={() => setShowModeMenu((v) => !v)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors text-[#6B5B4F] ${showModeMenu ? 'bg-[#EAE4DA]' : 'hover:bg-[#EAE4DA] active:bg-[#E0D9CC]'}`}
+              title="모드 전환"
+              aria-haspopup="true"
+              aria-expanded={showModeMenu}
+            >
+              <ActiveModeIcon size={15} />
+              <span className="text-[13px] font-medium">{MODE_META[launcherTab].label}</span>
+              <ChevronDown size={12} className={`transition-transform ${showModeMenu ? 'rotate-180' : ''}`} />
+            </button>
+            {showModeMenu && (
+              <div className="absolute left-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-stone-200 py-1.5 min-w-[190px] z-50 overflow-hidden">
+                {LAUNCHER_MODES.map((m) => {
+                  const Icon = MODE_META[m].icon;
+                  const active = launcherTab === m;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => { setLauncherTab(m); setShowModeMenu(false); }}
+                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${active ? 'bg-amber-50 text-amber-900' : 'text-[#4A4035] hover:bg-amber-50'}`}
+                    >
+                      <Icon size={16} className={active ? 'text-amber-600' : 'text-stone-500'} />
+                      <span className="text-sm">{MODE_META[m].label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="w-px h-5 bg-[#D8D1C3] mx-1" aria-hidden="true" />
+
           {/* 그룹 A: 세계 / 감각 */}
           <div className="flex items-center gap-0.5">
-            {/* 검색 브라우저 진입점은 조종실(ManualMode)의 모델 기어박스 밑 전폭 검정 버튼으로 이관.
-                상태(browserOpen)·렌더(ForageBrowser)는 여기 남고, 여는 콜백만 ManualMode에 내려준다. */}
             <button
               onClick={() => {
-                window.electron?.openExternal('http://127.0.0.1:8765/xray/app');
+                // 외부 브라우저 대신 검색 브라우저(포식)의 한 탭으로 X-Ray 대시보드를 연다.
+                setLauncherTab('browser');
+                setPendingBrowserUrl('http://127.0.0.1:8765/xray/app');
               }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
-              title="System X-Ray - 시스템 상태를 전체적으로 보는 대시보드"
+              title="System X-Ray - 시스템 상태를 검색 브라우저 탭으로 연다"
             >
               <ScanLine size={15} />
               <span className="text-[13px]">X-Ray</span>
@@ -901,20 +978,6 @@ export function Launcher() {
             >
               <Globe size={15} />
               <span className="text-[13px]">IndieNet</span>
-            </button>
-            <button
-              onClick={() => {
-                if (window.electron?.openBusinessWindow) {
-                  window.electron.openBusinessWindow();
-                } else {
-                  console.log('Business: Electron API 없음');
-                }
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
-              title="비즈니스 관리"
-            >
-              <Building2 size={15} />
-              <span className="text-[13px]">비즈니스</span>
             </button>
           </div>
 
@@ -1035,23 +1098,9 @@ export function Launcher() {
         </div>
       </div>
 
-      {/* 탭 바 + 데스크탑 + 포식 오버레이를 한 relative 래퍼로 — 포식 브라우저가 탭 스위치까지 덮을 수 있게 */}
+      {/* 데스크탑 + 포식 오버레이를 한 relative 래퍼로 — 포식 브라우저가 전체를 덮을 수 있게.
+          (옛 자율주행/조종실/앱 3토글은 상단 툴바의 모드 선택기로 대체됨) */}
       <div className="relative flex-1 flex flex-col min-h-0">
-      {/* 탭 토글: 자율주행 ↔ 조종실 ↔ 앱 — 캔버스 위 전용 바. 워크스페이스 위에 떠서 아이콘과 겹치지 않도록 자기 영역을 가진다 */}
-      <div className="shrink-0 flex justify-center py-2 bg-[#F5F1EB]">
-        <div className="inline-flex rounded-full bg-white/85 shadow-sm border border-stone-200 p-0.5">
-          {([['autopilot', '자율주행'], ['manual', '조종실'], ['app', '앱']] as const).map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => setLauncherTab(k)}
-              className={`px-4 py-1 rounded-full text-sm transition ${launcherTab === k ? 'bg-stone-800 text-white' : 'text-stone-500 hover:text-stone-700'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* 데스크탑 영역 */}
       <div
         ref={desktopRef}
@@ -1060,8 +1109,10 @@ export function Launcher() {
       >
         {launcherTab === 'app' ? (
           <ActionDesktop />
+        ) : launcherTab === 'business' ? (
+          <BusinessInstrumentView />
         ) : launcherTab === 'manual' ? (
-          <ManualMode onOpenBrowser={() => setBrowserOpen(true)} />
+          <ManualMode onOpenBrowser={() => setLauncherTab('browser')} />
         ) : isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D97706]" />
@@ -1214,11 +1265,14 @@ export function Launcher() {
         )}
       </div>
 
-        {/* 포식 브라우저 — 조종실(manual) 탭 전용. 진입 버튼은 상단 툴바(검정 '검색 브라우저')로 옮겼다.
-            열리면 탭 스위치까지 덮어 공간을 넓게 쓴다(상단 헤더는 보존). */}
-        {launcherTab === 'manual' && (
-          <ForageBrowser open={browserOpen} onClose={() => setBrowserOpen(false)} />
-        )}
+        {/* 포식 브라우저 — 이제 독립 모드('browser'). 상시 마운트해 탭·사냥판 상태를 보존하고
+            open 으로 표시/숨김만 토글한다. ✕닫기는 직전 모드로 복귀. 데스크탑 영역을 덮는다(헤더 보존). */}
+        <ForageBrowser
+          open={launcherTab === 'browser'}
+          onClose={() => setLauncherTab(prevModeRef.current)}
+          openUrl={pendingBrowserUrl}
+          onUrlConsumed={() => setPendingBrowserUrl(null)}
+        />
       </div>
 
       {/* 컨텍스트 메뉴 */}

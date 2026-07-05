@@ -200,7 +200,6 @@ export interface ElectronAPI {
   openCommunityWindow: () => Promise<void>;
   openMessengerWindow: () => Promise<void>;
   openSystemAIWindow: () => Promise<void>;
-  openBusinessWindow: () => Promise<void>;
   openMultiChatWindow: (roomId: string, roomName: string) => Promise<void>;
   openPCManagerWindow: (initialPath?: string | null) => Promise<void>;
   openPhotoManagerWindow: (initialPath?: string | null) => Promise<void>;

@@ -186,7 +186,14 @@ function extractDestinations(content: string): { text: string; destinations: Des
   return { text: text.trim(), destinations };
 }
 
-export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
+  open: boolean;
+  onClose: () => void;
+  // 외부(예: 런처 X-Ray 버튼)가 특정 URL을 새 탭으로 열도록 넘기는 신호. 열고 나면
+  // onUrlConsumed 로 부모가 null 로 되돌려 재발화를 막는다.
+  openUrl?: string | null;
+  onUrlConsumed?: () => void;
+}) {
   const [mode, setMode] = useState<'search' | 'browse'>('search');
 
   // --- 검색홈 상태 ---
@@ -544,6 +551,15 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
     setActiveId(id);
     setMode('browse');
   };
+
+  // 외부에서 openUrl 신호가 오면(브라우저가 열린 상태) 그 URL을 새 탭으로 열고 신호를 소비한다.
+  useEffect(() => {
+    if (open && openUrl) {
+      openTab(openUrl);
+      onUrlConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, openUrl]);
 
   // 스위치 → 즐겨찾기 바둑판 페이지를 새 탭으로(이미 있으면 그 탭으로 전환). 최신 목록 당김.
   const openFavoritesTab = () => {
@@ -1003,8 +1019,6 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
             )}
             </>
             )}
-
-            <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-sm text-stone-500 hover:bg-stone-200 whitespace-nowrap">✕ 닫기</button>
           </div>
           {pwToast && (
             <div onClick={() => setPwToast(null)}
@@ -1031,7 +1045,6 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
               <span>판 도서관</span>
             </button>
           </div>
-          <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-sm text-stone-500 hover:bg-stone-100">✕ 닫기</button>
         </div>
       )}
 

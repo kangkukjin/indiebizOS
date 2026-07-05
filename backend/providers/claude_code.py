@@ -28,6 +28,7 @@ config 예시 (data/system_ai_config.json 등):
 import base64
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -48,28 +49,65 @@ _IMG_EXT_BY_MEDIA = {
 
 
 def find_claude_binary() -> Optional[str]:
-    """claude CLI 위치 탐지.
+    """claude CLI 위치 탐지 (크로스플랫폼).
 
     탐색 순서:
-    1. PATH에 claude
-    2. Claude Desktop 번들 (macOS): ~/Library/Application Support/Claude/claude-code/*/claude.app/...
+    1. PATH의 claude / claude.exe (shutil.which)
+    2. 데스크톱 앱 동봉 번들:
+       - macOS:   ~/Library/Application Support/Claude/claude-code/<ver>/claude.app/Contents/MacOS/claude
+       - Windows: %APPDATA%\\Claude\\claude-code\\<ver>\\claude.exe  (LOCALAPPDATA 폴백)
+
+    번들 실행파일은 PATH에 없으므로(설치판) 이 2단계가 없으면 윈도우에선 'claude 못 찾음'
+    → init_client 가 False 반환 → provider not-ready → 사용자에겐 '키/인증 없음'으로 보인다.
     """
     found = shutil.which("claude")
     if found:
         return found
 
-    bundle_root = Path.home() / "Library" / "Application Support" / "Claude" / "claude-code"
-    if bundle_root.exists():
-        version_dirs = sorted(
-            (p for p in bundle_root.iterdir() if p.is_dir()),
-            reverse=True,
-        )
-        for version_dir in version_dirs:
-            binary = version_dir / "claude.app" / "Contents" / "MacOS" / "claude"
-            if binary.exists() and os.access(binary, os.X_OK):
-                return str(binary)
+    candidates: List[Path] = []
+    if os.name == "nt":  # Windows — 번들 exe: <appdata>\Claude\claude-code\<ver>\claude.exe
+        roots: List[Path] = []
+        for var in ("APPDATA", "LOCALAPPDATA"):
+            base = os.environ.get(var)
+            if base:
+                roots.append(Path(base) / "Claude" / "claude-code")
+        for root in roots:
+            if root.exists():
+                for version_dir in sorted(
+                    (p for p in root.iterdir() if p.is_dir()), reverse=True
+                ):
+                    candidates.append(version_dir / "claude.exe")
+    else:  # macOS 번들
+        root = Path.home() / "Library" / "Application Support" / "Claude" / "claude-code"
+        if root.exists():
+            for version_dir in sorted(
+                (p for p in root.iterdir() if p.is_dir()), reverse=True
+            ):
+                candidates.append(
+                    version_dir / "claude.app" / "Contents" / "MacOS" / "claude"
+                )
+
+    for binary in candidates:
+        # 윈도우 .exe 는 os.access(X_OK)가 신뢰불가 → 존재만 확인
+        if binary.exists() and (os.name == "nt" or os.access(binary, os.X_OK)):
+            return str(binary)
 
     return None
+
+
+def _data_dir() -> Path:
+    """데이터 디렉토리 경로. 다른 백엔드 모듈과 동일한 관례(runtime_utils.get_base_path)로
+    해석한다 — 프로덕션(패키지 앱)에선 INDIEBIZ_BASE_PATH(=userData), 개발에선 repo 루트.
+
+    ★윈도우 패키지 앱 버그 방지: 하드코딩 parents[2]/data 는 설치폴더(resources, 읽기전용)를
+    가리켜, 사용자가 userData(%APPDATA%\\IndieBiz OS\\data)에 넣은 OAuth 토큰을 못 봤다.
+    이 헬퍼로 통일해 토큰·세션·MCP 파일을 모두 userData 기준으로 읽는다. (맥/개발은 동일 경로.)
+    """
+    try:
+        from runtime_utils import get_base_path
+        return get_base_path() / "data"
+    except Exception:
+        return Path(__file__).resolve().parents[2] / "data"
 
 
 def load_oauth_token_from_central_config() -> Optional[str]:
@@ -78,8 +116,7 @@ def load_oauth_token_from_central_config() -> Optional[str]:
     Provider config에 api_key가 비어있을 때 fallback으로 사용.
     파일은 .gitignore 처리되며 600 권한 권장.
     """
-    # backend/providers/claude_code.py 기준 ../../data/claude_code_config.json
-    config_path = Path(__file__).resolve().parents[2] / "data" / "claude_code_config.json"
+    config_path = _data_dir() / "claude_code_config.json"
     if not config_path.exists():
         return None
     try:
@@ -93,7 +130,7 @@ def load_oauth_token_from_central_config() -> Optional[str]:
 
 def get_mcp_config_path() -> Optional[str]:
     """IBL MCP 설정 파일 경로. 없으면 None."""
-    mcp_path = Path(__file__).resolve().parents[2] / "data" / "claude_code_mcp.json"
+    mcp_path = _data_dir() / "claude_code_mcp.json"
     return str(mcp_path) if mcp_path.exists() else None
 
 
@@ -102,7 +139,7 @@ def get_mcp_config_path() -> Optional[str]:
 # agent별로 session_id를 저장하고 다음 호출에 재사용한다.
 
 def _session_map_path() -> Path:
-    return Path(__file__).resolve().parents[2] / "data" / "claude_code_sessions.json"
+    return _data_dir() / "claude_code_sessions.json"
 
 
 def load_session_map() -> Dict[str, str]:
@@ -146,7 +183,7 @@ SESSION_RESET_TOKEN_THRESHOLD = 150_000
 
 
 def _session_size_path() -> Path:
-    return Path(__file__).resolve().parents[2] / "data" / "claude_code_session_sizes.json"
+    return _data_dir() / "claude_code_session_sizes.json"
 
 
 def load_session_sizes() -> Dict[str, int]:
@@ -344,6 +381,10 @@ class ClaudeCodeProvider(BaseProvider):
         # 2) MCP 브리지 (IBL execute_ibl 등) 자동 활성화
         mcp_config_path = get_mcp_config_path()
 
+        # 2.5) 시스템 프롬프트를 파일로 (윈도우 argv 상한 회피 — _build_command 주석 참조).
+        #      리트라이 루프 전체에서 재사용(내용 불변). 실패 시 None → 인자 방식 폴백.
+        system_prompt_file = self._write_system_prompt_file()
+
         # 3) 세션 연속성 결정 (--resume)
         # 정책: history가 비어있으면 새 대화로 간주하여 fresh session, 그렇지 않으면 저장된 session_id로 resume
         # 단, disable_session_persistence가 True면 (의식·평가 등 메타 역할) 항상 fresh.
@@ -407,6 +448,7 @@ class ClaudeCodeProvider(BaseProvider):
                 mcp_config_path=mcp_config_path,
                 stream=True,
                 resume_session_id=resume_session_id,
+                system_prompt_file=system_prompt_file,
             )
 
             _sp_len = len(self.system_prompt or "")
@@ -421,11 +463,19 @@ class ClaudeCodeProvider(BaseProvider):
             start = time.time()
             cwd = self.project_path if self.project_path and self.project_path != "." else None
             try:
+                # ★유저 프롬프트는 argv 가 아니라 stdin 으로 넘긴다: 윈도우 명령줄 상한
+                #  (32,767자)에 걸려 [WinError 206]로 실행 자체가 실패하던 걸 회피. claude
+                #  --print 는 stdin EOF까지 읽은 뒤 응답하므로 먼저 써넣고 닫는다.
+                #  encoding=utf-8 명시: 윈도우 기본 로케일 인코딩(cp949 등)으로 stdin/stdout이
+                #  깨지지 않도록(한글 프롬프트·응답 JSON 보존).
                 proc = subprocess.Popen(
-                    cmd + ["--", full_prompt],
+                    cmd,
+                    stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
+                    encoding="utf-8",
+                    errors="replace",
                     bufsize=1,
                     cwd=cwd,
                     env=env,
@@ -434,6 +484,14 @@ class ClaudeCodeProvider(BaseProvider):
                 self.metrics.record_error()
                 yield {"type": "error", "content": f"Claude Code 바이너리 실행 실패: {e}"}
                 return
+
+            # 유저 프롬프트 주입 후 stdin 닫기 (EOF 신호 → claude 가 응답 시작)
+            try:
+                if proc.stdin:
+                    proc.stdin.write(full_prompt)
+                    proc.stdin.close()
+            except (BrokenPipeError, OSError) as e:
+                print(f"[ClaudeCode/{self.agent_name}] stdin 프롬프트 쓰기 실패: {e}")
 
             accumulated_text = ""
             captured_session_id: Optional[str] = None
@@ -794,11 +852,33 @@ class ClaudeCodeProvider(BaseProvider):
         "셸·코드 실행(`Bash`)은 그대로 사용 가능하다 — IBL 에 등가물이 없는 탈출구다."
     )
 
+    def _write_system_prompt_file(self) -> Optional[str]:
+        """시스템 프롬프트+도구정책을 에이전트별 고정 임시 파일에 쓰고 경로를 반환.
+
+        --append-system-prompt-file 로 넘기기 위함(윈도우 argv 상한 회피 — _build_command 참조).
+        에이전트별 고정 경로에 매 호출 덮어써 리트라이 간 재사용하므로 별도 정리가 필요 없다
+        (누적되지 않고 덮어써짐). 생성 실패 시 None → 호출 측이 인자 방식으로 폴백.
+        """
+        text = (self.system_prompt or "") + self.TOOL_POLICY
+        safe = re.sub(
+            r"[^A-Za-z0-9_.-]", "_",
+            str(self.agent_id or self.agent_name or "default"),
+        )[:60]
+        path = os.path.join(tempfile.gettempdir(), f"claude_code_sys_{safe}.txt")
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+            return path
+        except OSError as e:
+            print(f"[ClaudeCodeProvider] {self.agent_name}: 시스템 프롬프트 파일 생성 실패({e}) → 인자 폴백")
+            return None
+
     def _build_command(
         self,
         mcp_config_path: Optional[str] = None,
         stream: bool = False,
         resume_session_id: Optional[str] = None,
+        system_prompt_file: Optional[str] = None,
     ) -> List[str]:
         """공통 CLI 인자 구성 (positional prompt는 호출 측에서 append).
 
@@ -831,8 +911,14 @@ class ClaudeCodeProvider(BaseProvider):
         if self.model:
             cmd += ["--model", self.model]
 
-        # 시스템 프롬프트 + Claude Code 전용 도구 정책(차단 네이티브 → IBL 등가물 안내)
-        cmd += ["--append-system-prompt", (self.system_prompt or "") + self.TOOL_POLICY]
+        # 시스템 프롬프트 + Claude Code 전용 도구 정책(차단 네이티브 → IBL 등가물 안내).
+        # ★파일 경로로 넘긴다(--append-system-prompt-file): 윈도우 명령줄 상한(32,767자)에
+        #  ~62K 시스템 프롬프트를 인자로 실으면 [WinError 206]로 실행 자체가 실패한다. 파일
+        #  생성이 실패했을 때만 인자 방식으로 폴백(맥 등 상한 큰 OS는 어느 쪽이든 무해).
+        if system_prompt_file:
+            cmd += ["--append-system-prompt-file", system_prompt_file]
+        else:
+            cmd += ["--append-system-prompt", (self.system_prompt or "") + self.TOOL_POLICY]
 
         # MCP 브리지 (IBL execute_ibl 등)
         if mcp_config_path:
@@ -848,12 +934,19 @@ class ClaudeCodeProvider(BaseProvider):
         - INDIEBIZOS_PROJECT_PATH → MCP 서버가 execute_ibl 기본 project_path로 사용
         """
         env = os.environ.copy()
-        if self._effective_token:
-            if self._effective_token.startswith("sk-ant-oat"):
-                env["CLAUDE_CODE_OAUTH_TOKEN"] = self._effective_token
-                env.pop("ANTHROPIC_API_KEY", None)
-            else:
-                env["ANTHROPIC_API_KEY"] = self._effective_token
+        # ★구독(OAuth) vs API 과금 경로를 코드로 격리한다. 기본은 "구독만" —
+        #  .env 의 ANTHROPIC_API_KEY 가 claude 서브프로세스에 새어들어 구독 대신 API 로
+        #  과금되는 것을 원천 차단한다(토큰 로딩이 실패해 _effective_token 이 None 인 코너 포함).
+        #  명시적으로 API 키(sk-ant-api…)를 준 경우에만 API 과금 경로를 연다.
+        #  ANTHROPIC_API_KEY 는 os.environ(.env)에 그대로 남아 *다른* 프로바이더에서는 계속 쓰인다.
+        tok = self._effective_token
+        if tok and tok.startswith("sk-ant-api"):
+            env["ANTHROPIC_API_KEY"] = tok
+            env.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
+        else:
+            env.pop("ANTHROPIC_API_KEY", None)
+            if tok:  # sk-ant-oat… (구독 토큰)
+                env["CLAUDE_CODE_OAUTH_TOKEN"] = tok
         if self.project_path and self.project_path != ".":
             env["INDIEBIZOS_PROJECT_PATH"] = str(self.project_path)
         # 발신 신원: subprocess(claude)가 MCP→/ibl/execute로 IBL을 돌릴 때 자기 agent_id를 갖고 가게 한다.

@@ -159,7 +159,7 @@ export function DraggableIcon({
   return (
     <div
       ref={setRef}
-      className={`group absolute flex flex-col items-center gap-1.5 p-2 rounded-xl cursor-pointer transition-all no-select ${
+      className={`group absolute w-24 flex flex-col items-center gap-1.5 p-2 rounded-xl cursor-pointer transition-all no-select ${
         finalIsSelected ? 'bg-[#E5DFD5]/60' : 'hover:bg-[#EAE4DA]/70'
       } ${isDragging ? 'z-50' : ''} ${isDragging && trashHover ? 'opacity-50 scale-90' : ''} ${
         isFolderHovered ? 'bg-[#BBF7D0] scale-110' : ''

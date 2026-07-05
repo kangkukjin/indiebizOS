@@ -134,35 +134,6 @@ contextBridge.exposeInMainWorld('electron', {
   foragePwListAll: () => ipcRenderer.invoke('forage-pw-list-all'),
   foragePwImportChrome: () => ipcRenderer.invoke('forage-pw-import-chrome'),
 
-  // === 로그 뷰어 관련 ===
-  // 로그 창 열기
-  openLogWindow: () => ipcRenderer.invoke('open-log-window'),
-
-  // 로그 클리어
-  clearLogs: () => ipcRenderer.invoke('clear-logs'),
-
-  // 로그 메시지 수신 (실시간)
-  onLogMessage: (callback) => {
-    ipcRenderer.on('log-message', (_, message) => callback(message));
-  },
-
-  // 로그 히스토리 수신 (창 열 때)
-  onLogHistory: (callback) => {
-    ipcRenderer.on('log-history', (_, logs) => callback(logs));
-  },
-
-  // 로그 클리어 이벤트 수신
-  onLogCleared: (callback) => {
-    ipcRenderer.on('log-cleared', () => callback());
-  },
-
-  // 로그 리스너 제거
-  removeLogListeners: () => {
-    ipcRenderer.removeAllListeners('log-message');
-    ipcRenderer.removeAllListeners('log-history');
-    ipcRenderer.removeAllListeners('log-cleared');
-  },
-
   // === 에이전트 선택 IPC (스케줄 결과 전달용) ===
   onSelectAgent: (callback) => {
     ipcRenderer.on('select-agent', (_, agentName) => callback(agentName));

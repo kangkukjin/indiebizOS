@@ -8,7 +8,7 @@
  *   api-multi-chat.ts - 다중채팅 (방, 참가자, 메시지)
  */
 
-import type { Project, Switch, Agent, Message, Tool, SchedulerTask, SchedulerAction } from '../types';
+import type { Project, Switch, Agent, Message, Tool, SchedulerTask, SchedulerAction, AppLayout } from '../types';
 import { applySystemAIMethods } from './api-system-ai';
 import { applyPackagesMethods } from './api-packages';
 import { applyBusinessMethods } from './api-business';
@@ -59,6 +59,32 @@ class APIClientBase {
   // 헬스 체크
   async health() {
     return this.request<{ status: string; timestamp: string }>('/health');
+  }
+
+  // 시스템 문서 원본 마크다운 (조종실 '구조' 인라인 박스가 렌더)
+  async getSystemDoc(docName: string) {
+    return this.request<{ name: string; content: string }>(`/xray/doc/${docName}/raw`);
+  }
+
+  // ============ 앱모드 홈 레이아웃 (자유배치·폴더·앱저장소) ============
+
+  async getAppLayout() {
+    return this.request<AppLayout>('/launcher/app-layout');
+  }
+
+  async saveAppLayout(layout: AppLayout) {
+    return this.request<AppLayout>('/launcher/app-layout', {
+      method: 'PUT',
+      body: JSON.stringify(layout),
+    });
+  }
+
+  // 휴지통 — 앱이 사용 중 쌓은 데이터를 지우고 초기화 (앱이 선언한 reset IBL 실행)
+  async resetApp(appId: string) {
+    return this.request<{ reset: boolean; reason?: string; app_id: string }>(
+      `/launcher/app-layout/reset/${encodeURIComponent(appId)}`,
+      { method: 'POST' }
+    );
   }
 
   // ============ 프로젝트 ============

@@ -14,7 +14,6 @@ import { MultiChat } from './components/MultiChat';
 import { PCManager } from './components/PCManager';
 import { PhotoManager } from './components/PhotoManager';
 import { AndroidManager } from './components/AndroidManager';
-import { LogViewer } from './components/LogViewer';
 import { SystemAIView } from './components/SystemAIView';
 import { LectureWorkspace } from './components/LectureWorkspace';
 import { api } from './lib/api';
@@ -35,7 +34,6 @@ function App() {
   const [isAndroidManager, setIsAndroidManager] = useState(false);
   const [androidDeviceId, setAndroidDeviceId] = useState<string | null>(null);
   const [androidProjectId, setAndroidProjectId] = useState<string | null>(null);
-  const [isLogViewer, setIsLogViewer] = useState(false);
   const [isSystemAI, setIsSystemAI] = useState(false);
   const [isLectureWorkspace, setIsLectureWorkspace] = useState(false);
   const [lectureId, setLectureId] = useState<string | null>(null);
@@ -68,7 +66,6 @@ function App() {
       // 시스템 AI 체크
       if (hash === '#/system-ai') {
         setIsSystemAI(true);
-        setIsLogViewer(false);
         setIsBusiness(false);
         setIsPCManager(false);
         setIsPhotoManager(false);
@@ -84,7 +81,7 @@ function App() {
       if (hash.startsWith('#/lecture-workspace')) {
         setIsLectureWorkspace(true);
         setIsSystemAI(false);
-        setIsLogViewer(false);        setIsBusiness(false);
+        setIsBusiness(false);
         setIsPCManager(false);
         setIsPhotoManager(false);
         setIsAndroidManager(false);
@@ -94,19 +91,6 @@ function App() {
         // lecture_id 쿼리 파라미터 추출
         const lectureIdMatch = hash.match(/lecture_id=([^&]+)/);
         setLectureId(lectureIdMatch ? decodeURIComponent(lectureIdMatch[1]) : null);
-        return;
-      }
-
-      // 로그 뷰어 체크
-      if (hash === '#/log-viewer') {
-        setIsSystemAI(false);
-        setIsLogViewer(true);        setIsBusiness(false);
-        setIsPCManager(false);
-        setIsPhotoManager(false);
-        setIsAndroidManager(false);
-        setProjectId(null);
-        setFolderId(null);
-        setMultiChatRoomId(null);
         return;
       }
 
@@ -216,7 +200,6 @@ function App() {
       setIsPCManager(false);
       setIsPhotoManager(false);
       setIsAndroidManager(false);
-      setIsLogViewer(false);
       setIsSystemAI(false);
       setIsLectureWorkspace(false);
       setLectureId(null);
@@ -275,11 +258,6 @@ function App() {
     const interval = setInterval(checkConnection, 10000);
     return () => clearInterval(interval);
   }, [setIsConnected, setError]);
-
-  // 로그 뷰어 창인 경우
-  if (isLogViewer) {
-    return <LogViewer />;
-  }
 
 
   // 시스템 AI 창인 경우

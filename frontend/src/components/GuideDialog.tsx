@@ -9,7 +9,8 @@ import {
   Folder, Bot, Zap, Package,
   Users, Building2, Key,
   MessageSquare, FileText,
-  HardDrive, Cloud, Mail
+  HardDrive, Cloud, Mail,
+  Compass, Gauge, LayoutGrid, Search
 } from 'lucide-react';
 import guideExampleImage from '../assets/guide-example.jpg';
 
@@ -37,8 +38,11 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             <strong>IndieBiz OS</strong>에 오신 것을 환영합니다!
           </p>
           <p className="text-gray-600 text-center">
-            하나의 "만능 AI"가 아닌,<br/>
-            <strong>전문가 팀처럼 협력하는 AI 시스템</strong>입니다.
+            데려다주는 "자율주행차"가 아니라,<br/>
+            내가 입는 <strong>인지 외골격</strong>입니다.
+          </p>
+          <p className="text-gray-500 text-sm text-center">
+            힘은 AI가 대되, 어디로 뻗을지는 매 순간 <strong>사람이</strong> 정합니다.
           </p>
           <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
             <img src={guideExampleImage} alt="IndieBiz OS 사용 예시" className="w-full" />
@@ -69,11 +73,11 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             </p>
           </div>
           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-            <p className="text-blue-800 text-sm font-medium mb-2">모델 이름 (2026.2 현재)</p>
+            <p className="text-blue-800 text-sm font-medium mb-2">모델 선택</p>
             <div className="space-y-1 text-blue-700 text-sm">
-              <p>• <strong>gemini-3-flash-preview</strong> - 빠르고 가벼움 (추천)</p>
-              <p>• <strong>gemini-3.1-pro-preview</strong> - 최신, 가장 강력</p>
-              <p>• <strong>gemini-2.5-flash</strong> - 안정적, 가성비 좋음</p>
+              <p>• 설정 화면에서 프로바이더가 제공하는 <strong>최신 모델</strong>을 고르면 됩니다.</p>
+              <p>• 가볍고 빠른 <strong>Flash 계열</strong>은 일상용, <strong>Pro 계열</strong>은 복잡한 작업용.</p>
+              <p>• <strong>모델 기어</strong>가 가벼운 판단은 경량 모델에, 복잡한 계획은 본격 모델에 자동 배분합니다.</p>
             </div>
           </div>
           <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
@@ -87,12 +91,6 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             </p>
             <p className="text-amber-600 text-sm mt-2">
               ⏳ 시간이 오래 걸릴 수 있으니 기다리세요.
-            </p>
-          </div>
-          <div className="bg-gray-100 p-3 rounded-lg">
-            <p className="text-gray-700 text-sm">
-              💡 <strong>안경 메뉴 → 로그 보기</strong>를 켜두면 AI가 뭘 하는지 알 수 있습니다.
-              문제가 생기면 로그 메시지를 복사해서 AI에게 물어볼 수도 있습니다.
             </p>
           </div>
         </div>
@@ -154,13 +152,55 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       )
     },
     {
+      title: '런처의 3표면',
+      icon: <Compass className="w-10 h-10 text-slate-600" />,
+      content: (
+        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+          <p className="text-gray-600">
+            같은 시스템을 <strong>세 가지 방식</strong>으로 모십니다.<br/>
+            런처 상단의 3토글로 오갑니다.
+          </p>
+          <div className="bg-indigo-50 p-3 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <Compass className="w-5 h-5 text-indigo-600" />
+              <strong className="text-indigo-800">자율주행</strong>
+            </div>
+            <p className="text-indigo-700 text-sm">
+              의도를 말하면 <strong>AI가 다단계로</strong> 알아서 처리. 탐색적이고 애매한 일에.
+            </p>
+          </div>
+          <div className="bg-cyan-50 p-3 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <Gauge className="w-5 h-5 text-cyan-600" />
+              <strong className="text-cyan-800">조종실</strong>
+            </div>
+            <p className="text-cyan-700 text-sm">
+              경량 모델이 자연어를 명령으로 <strong>번역·검수·실행</strong>. 시스템을 감독하고 개입하는 곳 (거의 무료).
+            </p>
+          </div>
+          <div className="bg-orange-50 p-3 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <LayoutGrid className="w-5 h-5 text-orange-600" />
+              <strong className="text-orange-800">앱</strong>
+            </div>
+            <p className="text-orange-700 text-sm">
+              자주 쓰는 일을 <strong>아이콘/GUI로 직접</strong> (부동산·도서·투자 등). AI 호출 없이 0토큰.
+            </p>
+          </div>
+          <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-700">
+            💡 새 일은 자율주행이 탐색 → 손에 익으면 조종실 → 굳으면 앱으로 <strong>결정화</strong>됩니다.
+          </div>
+        </div>
+      )
+    },
+    {
       title: 'IBL 노드 & 도구 패키지',
       icon: <Package className="w-10 h-10 text-green-600" />,
       content: (
         <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
           <p className="text-gray-600">
             에이전트는 <strong>IBL(IndieBiz Logic)</strong>이라는 통합 명령어로<br/>
-            6개 노드의 <strong>142가지 액션</strong>을 실행합니다.
+            6개 노드의 <strong>141개 액션</strong>을 실행합니다.
           </p>
           <div className="grid grid-cols-3 gap-2 text-sm">
             <div className="bg-blue-50 p-2 rounded text-center">
@@ -191,7 +231,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
           <div className="bg-gray-50 p-3 rounded-lg text-sm">
             <p className="text-gray-700">
               각 노드는 <strong>도구 패키지</strong>로 확장됩니다.<br/>
-              현재 <strong>35개</strong>의 도구 패키지가 설치되어 있습니다.
+              현재 <strong>36개</strong>의 도구 패키지가 설치되어 있습니다.
             </p>
           </div>
           <div className="bg-green-50 p-3 rounded-lg text-sm text-green-700">
@@ -287,8 +327,15 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
           <div className="flex items-center gap-3 p-2 bg-gray-50 rounded text-gray-900">
             <Building2 className="w-5 h-5 text-blue-500" />
             <div>
-              <strong>비즈니스 관리</strong>
-              <p className="text-gray-700 text-sm">이웃(파트너) 관리, 자동응답 AI</p>
+              <strong>비즈니스 계기</strong>
+              <p className="text-gray-700 text-sm">이웃(파트너)·아이템 관리, 자동응답 AI (앱 모드)</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded text-gray-900">
+            <Search className="w-5 h-5 text-teal-500" />
+            <div>
+              <strong>포식 브라우저</strong>
+              <p className="text-gray-700 text-sm">정답 하나가 아니라 후보 여럿으로 시야를 넓히는 개인 검색</p>
             </div>
           </div>
         </div>
@@ -371,8 +418,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
             <p className="text-orange-800 text-sm">
               <strong>⏳ 처음에는 시간이 걸립니다!</strong><br/>
-              시스템 AI가 필요한 라이브러리들을 설치합니다.<br/>
-              안경 메뉴 → <strong>로그 보기</strong>로 진행 상황을 확인하세요.
+              시스템 AI가 필요한 라이브러리들을 설치합니다.
             </p>
           </div>
         </div>

@@ -240,7 +240,11 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
     runner = get_system_ai_runner()
 
     # 인지 파이프라인: 연상 → (Reflex 또는 무의식) → 의식 → 프롬프트 갱신
-    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
+    # ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 무상태 검색을 개인 사실이
+    #   하이재킹하는 필터버블 드리프트 방지(개인화는 포식기억 owner_model 이 담당). 해마·포식기억은 유지.
+    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(
+        message, action_hint=action_hint, include_related=(force_role != "forage")
+    )
 
     # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
     if force_role:
@@ -361,7 +365,11 @@ def process_system_ai_message_stream(
     runner = get_system_ai_runner()
 
     # 인지 파이프라인: 연상 → (Reflex 또는 무의식) → 의식 → 프롬프트 갱신
-    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
+    # ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 무상태 검색을 개인 사실이
+    #   하이재킹하는 필터버블 드리프트 방지(개인화는 포식기억 owner_model 이 담당). 해마·포식기억은 유지.
+    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(
+        message, action_hint=action_hint, include_related=(force_role != "forage")
+    )
 
     # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
     if force_role:

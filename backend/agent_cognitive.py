@@ -715,7 +715,8 @@ class AgentCognitiveMixin:
             allowed_set=allowed_set,
         )
 
-    def _build_execution_memory(self, user_message: str, action_hint: Optional[str] = None) -> tuple:
+    def _build_execution_memory(self, user_message: str, action_hint: Optional[str] = None,
+                                include_related: bool = True) -> tuple:
         """연상기억 생성 — 실행기억(해마) + 관련기억(심층 메모리)
 
         파이프라인의 모든 에이전트(무의식/의식/실행/평가)가 공유하는 통합 기억.
@@ -751,8 +752,12 @@ class AgentCognitiveMixin:
                     allowed_set = resolve_allowed_nodes(allowed_nodes)
                 exec_xml, top_score, top_code = build_execution_memory(user_message, allowed_set)
 
-            # 심층 메모리에서 관련기억 검색 → 연상기억 합성
-            related = self._search_related_memory(user_message)
+            # 심층 메모리에서 관련기억 검색 → 연상기억 합성.
+            #   ★include_related=False(포식 등): 무상태 검색을 개인 사실(심층 메모리)이 하이재킹하지
+            #   않도록 관련기억 주입을 끈다 — 포식은 이미 심층 메모리에 *쓰지 않으며*(무상태), 정당한
+            #   개인화는 포식기억(owner_model 웹 관습)이 담당한다. 넓은 질의가 최근 관심사로 좁혀지는
+            #   필터버블 드리프트 방지. (실행기억[해마]·포식기억·디스크골격은 그대로 유지.)
+            related = self._search_related_memory(user_message) if include_related else ""
             result = exec_xml
             if related:
                 result = (result + "\n" + related) if result else related

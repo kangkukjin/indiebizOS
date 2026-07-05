@@ -13,7 +13,9 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert, HelpCircle, Copy, X, Stethoscope, RotateCw, HardDrive, Boxes, ChevronDown, Brain } from 'lucide-react';
+import { Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert, HelpCircle, Copy, X, Stethoscope, RotateCw, HardDrive, Boxes, ChevronDown, Brain, Search } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
 import { NodePresence, ModelGearLever, ActiveProjects } from './launcher-components';
 import { EpisodeJournal } from './EpisodeJournal';
@@ -119,7 +121,35 @@ const NODE_GLOSS: Record<string, string> = {
   table: '표 · 통화 변환',
 };
 
-export default function ManualMode() {
+interface ManualModeProps {
+  /** 검색 브라우저(공동 포식) 열기 — 상태는 Launcher가 소유(ForageBrowser도 거기서 렌더). */
+  onOpenBrowser?: () => void;
+}
+
+export default function ManualMode({ onOpenBrowser }: ManualModeProps = {}) {
+  // 'indiebizOS의 구조' — 버튼 밑 인라인 박스(anatomy 문서). 첫 펼칠 때 원본 마크다운을 당겨 캐시.
+  const [structOpen, setStructOpen] = useState(false);
+  const [structDoc, setStructDoc] = useState<string | null>(null);
+  const [structLoading, setStructLoading] = useState(false);
+  const [structError, setStructError] = useState<string | null>(null);
+
+  const toggleStruct = useCallback(async () => {
+    const next = !structOpen;
+    setStructOpen(next);
+    if (next && structDoc === null && !structLoading) {
+      setStructLoading(true);
+      setStructError(null);
+      try {
+        const res = await api.getSystemDoc('anatomy');
+        setStructDoc(res.content);
+      } catch (e) {
+        setStructError(e instanceof Error ? e.message : '문서를 불러오지 못했습니다');
+      } finally {
+        setStructLoading(false);
+      }
+    }
+  }, [structOpen, structDoc, structLoading]);
+
   const [intent, setIntent] = useState('');
   const [iblCode, setIblCode] = useState('');
   const [refs, setRefs] = useState<ParsedRef[]>([]);
@@ -373,6 +403,50 @@ export default function ManualMode() {
 
         {/* 모델 기어 — 계기판 변속 레버(절약/균형/최대). 시스템 전체 모델 등급을 재시작 없이 변속. */}
         <ModelGearLever />
+
+        {/* 기어박스 밑 검정 버튼 줄: 검색 브라우저(공동 포식) + indiebizOS의 구조(anatomy 문서).
+            검색 브라우저 진입점은 옛 상단 툴바/플로팅에서 조종실로 이관 — 상태·렌더는 Launcher 소유,
+            onOpenBrowser 콜백으로 연다. 구조 버튼은 밑에 인라인 박스를 펼쳐 anatomy 문서를 보여준다. */}
+        <div>
+          <div className="flex items-center gap-2">
+            {onOpenBrowser && (
+              <button
+                onClick={onOpenBrowser}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-br from-stone-800 to-stone-900 text-white shadow-sm hover:shadow-md hover:from-stone-900 hover:to-black active:translate-y-[0.5px] transition-all"
+                title="검색 브라우저 — 공동 포식 검색"
+              >
+                <Search size={16} />
+                <span className="text-sm font-semibold">검색 브라우저</span>
+              </button>
+            )}
+            <button
+              onClick={toggleStruct}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-br from-stone-800 to-stone-900 text-white shadow-sm hover:shadow-md hover:from-stone-900 hover:to-black active:translate-y-[0.5px] transition-all"
+              title="indiebizOS의 구조 — 해부도(anatomy) 문서"
+            >
+              <Boxes size={16} />
+              <span className="text-sm font-semibold">indiebizOS의 구조</span>
+              <ChevronDown size={15} className={`transition-transform ${structOpen ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+
+          {/* 인라인 박스 — 버튼 밑에서 펼쳐지며 anatomy 문서를 렌더 */}
+          {structOpen && (
+            <div className="mt-2 rounded-xl border border-stone-200 bg-white/70 max-h-[60vh] overflow-y-auto">
+              {structLoading ? (
+                <div className="flex items-center gap-2 px-4 py-6 text-sm text-stone-500">
+                  <Loader2 size={15} className="animate-spin" /> 불러오는 중…
+                </div>
+              ) : structError ? (
+                <div className="px-4 py-6 text-sm text-red-600">{structError}</div>
+              ) : (
+                <div className="px-5 py-4 prose prose-sm prose-stone max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{structDoc || ''}</ReactMarkdown>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* 시스템 상태 — 접이식 한 줄(dark cockpit): 요약 배지만 상시, 펼치면 상세+지금 점검 */}
         <div className="rounded-xl border border-stone-200 bg-white/70">

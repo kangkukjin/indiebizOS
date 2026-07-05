@@ -75,6 +75,7 @@
     "ibl_usage_rag",
     "indienet",
     "korean_utils",
+    "launcher_layout",
     "logging_utils",
     "memory_consolidation",
     "migrate_alias_retirement",
@@ -145,8 +146,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 139,
-    "engine": 127,
+    "total": 140,
+    "engine": 128,
     "blocklist": 12
   }
 }

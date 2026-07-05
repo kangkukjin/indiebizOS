@@ -133,7 +133,7 @@ indiebizOS/
 │   ├── bodies/          # 몸 프로파일 (android.json 등) → 폰 엔진 번들 파생 소스 (build_body_bundle.py)
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
-│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 12개 파일 — system_structure.md는 항상 프롬프트에 포함)
+│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 11 문서+changelog — system_structure.md는 항상 프롬프트에 포함)
 │   ├── guides/          # 가이드 파일 (47개, 의식 에이전트가 선택하여 프롬프트에 주입)
 │   ├── common_prompts/  # 공용 프롬프트 (consciousness/evaluator/unconscious + fragments)
 │   ├── system_ai_memory.db # 시스템 AI 메모리 (SQLite)

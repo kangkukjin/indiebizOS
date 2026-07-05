@@ -81,13 +81,14 @@ SYSTEM_AI_ROLE_PATH = DATA_PATH / "system_ai_role.txt"
 # 포식 브라우저 역할 프롬프트 — 실행 에이전트에 "가볼 만한 링크를 나열하라"를 덧대는 표면별 역할.
 # 매 요청마다 읽어 편집이 바로 반영된다(계기판 설정에서 이 파일을 고치는 미래를 위한 이음매).
 FORAGE_ROLE_PATH = DATA_PATH / "forage_role.txt"
-# 웹 검색 가이드(검색법 + 웹 랜드마크 지도). 포식=정의상 항상 웹검색이라 forage_chat 이 *항상 주입*.
-# 일반 에이전트는 read_guide/의식 get_guide_list 로 선택적으로 읽는다(같은 파일). 매 요청 read=라이브.
-WEB_SEARCH_GUIDE_PATH = DATA_PATH / "guides" / "web_search.md"
-# 합작 포식 가이드 — 포식 브라우저 *전용*(깊이 상한·후보=가설·탐사적 다양성). 일반 에이전트의
-# "끝까지 답하라"와 상충하므로 guide_db 에 등록하지 않고 forage_chat 만 항상 주입한다.
-# 웹 검색 가이드 *뒤에* 붙여 특수(포식)가 일반(웹검색)의 상세 검증 절을 덮게 한다.
+# 포식 가이드 — 포식 브라우저 *전용*의 **자기완결** 단일 가이드: 검색법(키워드·소스·언어·지어내지마라)
+# + 포식 문법(깊이 상한·후보=가설·사냥판) + 웹 랜드마크 지도를 모두 담는다. 포식=정의상 항상 웹검색이라
+# forage_chat 이 *항상 주입*. 일반 에이전트의 "끝까지 답하라"와 상충하므로 guide_db 엔 등록하지 않는다.
+# (일반 에이전트의 검색 기본기는 별도 web_search.md 를 read_guide 로 읽는 경로가 담당 — 무영향.) 매 요청 read=라이브.
 FORAGE_SEARCH_GUIDE_PATH = DATA_PATH / "guides" / "forage_search.md"
+# 웹 랜드마크 지도(비액션 출처) — web_search.md·forage_search.md 가 공유하는 단일 소스. 포식은 이 파일을
+# 포식 가이드 뒤에 항상 이어 붙이고(약한 모델은 read_guide 로 못 당김), 일반 에이전트는 read_guide("웹 랜드마크")로 읽는다.
+WEB_LANDMARKS_GUIDE_PATH = DATA_PATH / "guides" / "web_landmarks.md"
 
 
 # ============ Pydantic 모델 ============
@@ -684,9 +685,9 @@ def _recent_history_lines(minutes: int = 60, limit: int = 8) -> str:
 def _format_hunt_block(hunt: Dict[str, Any]) -> str:
     """사냥판 스냅샷 → 모델이 읽을 한국어 상태 블록.
 
-    신호 어휘(합작 포식 가이드 §4와 짝): 직접 담음(최강 양성) / 방문 후 삭제(강한 음성)
-    / 안 가보고 제외(음성) / 판에 남은 후보(보류, 체류=관심 깊이). 해석은 전부 모델 몫 —
-    여기는 직렬화만 한다.
+    신호 어휘(합작 포식 가이드 §4와 짝): 판의 후보=**사용자가 매긴 순위**(위=더 옳다고 느낌,
+    📌=직접 담은 실물 예시=최강 기준점) / 방문 후 삭제(강한 음성) / 안 가보고 제외(음성) /
+    체류=관심 깊이. 해석·전략(닮은것 vs 새관점)은 전부 모델 몫 — 여기는 직렬화만 한다.
     """
     def _rows(items, dwell=False):
         lines = []
@@ -709,6 +710,30 @@ def _format_hunt_block(hunt: Dict[str, Any]) -> str:
             lines.append(" ".join(parts))
         return "\n".join(lines) if lines else "(없음)"
 
+    def _ordered_rows(items):
+        # 판의 활성 후보 — 사용자가 매긴 순위대로(위=상위). rank 번호·📌·체류를 붙인다.
+        lines = []
+        for it in (items or [])[:30]:
+            if not isinstance(it, dict):
+                continue
+            rank = it.get("rank")
+            title = str(it.get("title") or it.get("url") or "")[:80]
+            url = str(it.get("url") or "")
+            reason = str(it.get("reason") or "").strip()
+            parts = [f"{rank}. {title} <{url}>" if rank else f"- {title} <{url}>"]
+            if it.get("pinned"):
+                parts.append("📌직접담음")
+            if reason:
+                parts.append(f"({reason})")
+            try:
+                s = int(it.get("dwell_s") or 0)
+                if s > 0:
+                    parts.append(f"[체류 {s}초]")
+            except (TypeError, ValueError):
+                pass
+            lines.append(" ".join(parts))
+        return "\n".join(lines) if lines else "(없음)"
+
     try:
         need = max(1, min(10, int(hunt.get("need") or 3)))
     except (TypeError, ValueError):
@@ -726,12 +751,12 @@ def _format_hunt_block(hunt: Dict[str, Any]) -> str:
     return (
         f"[사냥판 상태 — 합작 포식 보충 라운드 {rnd}]\n"
         f"원 질의: {str(hunt.get('query') or '')[:200]}\n\n"
-        f"직접 담음 (사용자가 브라우징 중 직접 들고 온 실물 예시 — 최우선 기준점):\n{_rows(hunt.get('pinned'))}\n\n"
+        f"판의 후보 — **사용자가 직접 매긴 순위**(위=1위, 위쪽일수록 더 옳다고 느낀 것. 📌=직접 담은 실물 예시=최강 기준점):\n{_ordered_rows(hunt.get('order'))}\n\n"
         f"방문 후 삭제 (가보고 아니라고 함 — 강한 음성):\n{_rows(hunt.get('deleted'), dwell=True)}\n\n"
         f"안 가보고 제외 (보기에 아님 — 해석·출처 패턴을 읽어라):\n{_rows(hunt.get('excluded'))}\n\n"
-        f"판에 남은 후보 (보류 중):\n{_rows(hunt.get('kept'), dwell=True)}\n\n"
         f"최근 브라우징 궤적 (오래된→최신 — 후보에서 어디로 흘러갔는가, 끝이 지금 관심):\n{trail_txt}\n\n"
-        f"보충 요청: 위 신호를 반영해 **새 후보 {need}개**를 보충하라. "
+        f"보충 요청: 위 신호(**순위**·📌·삭제·제외·궤적)를 반영해 **먼저 실제로 검색한 뒤, 그 결과에서 새 후보 {need}개**를 보충하라. "
+        f"판에 grounded 후보가 이미 보여도 그걸 기억으로 흉내내지 말 것 — URL은 반드시 이번 검색으로 확보하라(판이 주제를 잡아줄수록 검색을 건너뛰고 싶어지지만 그게 날조의 함정이다). "
         f"위에 나온 URL(제외·삭제 포함)은 절대 다시 내지 말 것. "
         f"출력은 링크 목록만(서두 1줄 이내), 형식: - [제목](URL) — 한 줄 이유."
     )
@@ -764,16 +789,17 @@ def forage_chat(chat: ForageMessage):
         raise HTTPException(status_code=400, detail="API 키가 설정되지 않았습니다.")
 
     extra_role = FORAGE_ROLE_PATH.read_text(encoding='utf-8') if FORAGE_ROLE_PATH.exists() else ""
-    # ★웹 검색 가이드 항상 주입(포식=늘 웹검색). 이전 bespoke web_landmarks 키워드-게이트 주입을
-    #   대체 — 이제 가이드(검색법 + 랜드마크)가 단일 소스. 일반 에이전트는 read_guide 로 선택적.
-    if WEB_SEARCH_GUIDE_PATH.exists():
-        guide = WEB_SEARCH_GUIDE_PATH.read_text(encoding='utf-8')
-        extra_role = f"{extra_role}\n\n---\n\n{guide}" if extra_role else guide
-    # ★합작 포식 가이드(포식 전용) — 맨 뒤 주입으로 웹 검색 가이드의 일반 지침(상세 crawl 검증 등)을
-    #   포식 문법(깊이 상한·후보=가설)으로 덮는다. 매 요청 read=라이브 편집.
+    # ★포식 가이드 항상 주입(포식=늘 웹검색) — 검색법(키워드·소스·언어·지어내지마라) + 포식 문법
+    #   (임무=판 채우기·깊이 상한·후보=가설·사냥판 신호). web_search.md 의 override 층위 혼란은
+    #   제거했고(자기완결), 일반 에이전트는 web_search.md 를 read_guide 로 선택적으로 읽는다(별개 경로).
+    # 랜드마크 지도는 web_landmarks.md **단일 소스**를 web_search.md·forage 가 공유 — 여기선 포식 가이드
+    #   뒤에 이어 붙여 "어디로 가나"를 항상 함께 준다(약한 모델은 read_guide 로 못 당기므로). 매 요청 read=라이브.
     if FORAGE_SEARCH_GUIDE_PATH.exists():
         forage_guide = FORAGE_SEARCH_GUIDE_PATH.read_text(encoding='utf-8')
         extra_role = f"{extra_role}\n\n---\n\n{forage_guide}" if extra_role else forage_guide
+    if WEB_LANDMARKS_GUIDE_PATH.exists():
+        landmarks = WEB_LANDMARKS_GUIDE_PATH.read_text(encoding='utf-8')
+        extra_role = f"{extra_role}\n\n---\n\n{landmarks}" if extra_role else landmarks
 
     images_data = None
     if chat.images:

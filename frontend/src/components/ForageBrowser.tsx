@@ -12,7 +12,7 @@
  *
  * webview 는 main.js 의 webviewTag=true 필요(앱 재시작 후 적용).
  */
-import { Fragment, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useFileAttachments } from './chat/useFileAttachments';
@@ -290,16 +290,47 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
     openTab(item.url);
   };
 
+  // 치운 아이템은 순서상 맨끝으로 밀어낸다(활성 후보만 위에 남게). 안정 분할=각 블록 내부 순서 보존.
+  const partitionRemoved = (items: PoolItem[]) => [...items.filter((x) => !x.removed), ...items.filter((x) => x.removed)];
+
   // ✕ = 치우기 — 가봤으면 '삭제'(강한 음성), 안 가봤으면 '제외'(음성). 판이 모자란 만큼 보충이 예약된다.
   const removePoolItem = (item: PoolItem) => {
-    patchItem(item.id, { removed: item.visited ? 'deleted' : 'excluded' });
+    setHunt((h) => h ? { ...h, items: partitionRemoved(h.items.map((x) => x.id === item.id ? { ...x, removed: x.visited ? 'deleted' : 'excluded' } : x)) } : h);
     dryRef.current = false;
     scheduleRefill();
   };
 
   const restorePoolItem = (item: PoolItem) => {
-    patchItem(item.id, { removed: null });
+    // 되살리면 활성 블록 끝으로 복귀(제거 블록에서 빠져나옴).
+    setHunt((h) => h ? { ...h, items: partitionRemoved(h.items.map((x) => x.id === item.id ? { ...x, removed: null } : x)) } : h);
   };
+
+  // ↕ 순서 바꾸기 — 사람이 아이콘을 끌어 판 위 순서를 직접 준다. 배열 순서 = 표시·저장 순서.
+  // (AI가 이 순서를 어떻게 쓰는지·아이콘 주석은 별개 문제. 여기선 순수 입력만 담는다.)
+  const dragId = useRef<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const reorderPoolItem = (draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return;
+    setHunt((h) => {
+      if (!h) return h;
+      const arr = [...h.items];
+      const from = arr.findIndex((x) => x.id === draggedId);
+      const to = arr.findIndex((x) => x.id === targetId);
+      if (from < 0 || to < 0) return h;
+      const [moved] = arr.splice(from, 1);
+      arr.splice(to, 0, moved);
+      return { ...h, items: partitionRemoved(arr) };
+    });
+  };
+  const dragProps = (it: PoolItem): React.HTMLAttributes<HTMLDivElement> =>
+    it.removed ? {} : {
+      draggable: true,
+      onDragStart: (e) => { dragId.current = it.id; e.dataTransfer.effectAllowed = 'move'; },
+      onDragOver: (e) => { if (dragId.current && dragId.current !== it.id) { e.preventDefault(); setDragOverId(it.id); } },
+      onDragLeave: () => setDragOverId((c) => (c === it.id ? null : c)),
+      onDrop: (e) => { e.preventDefault(); if (dragId.current) reorderPoolItem(dragId.current, it.id); dragId.current = null; setDragOverId(null); },
+      onDragEnd: () => { dragId.current = null; setDragOverId(null); },
+    };
 
   // 판 비우기 — 사냥을 접고 깨끗한 검색홈으로(새 시작). 방문 기록·즐겨찾기는 건드리지 않는다.
   const clearBoard = () => {
@@ -321,8 +352,8 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
     query: h.query,
     round: h.round,
     need,
-    pinned: h.items.filter((i) => i.source === 'human' && !i.removed).map((i) => ({ title: i.title, url: i.url })),
-    kept: h.items.filter((i) => i.source === 'ai' && !i.removed).map((i) => ({ title: i.title, url: i.url, reason: i.reason, dwell_s: dwellSec(i) })),
+    // 활성 후보를 판 순서(위=사용자가 더 옳다고 느낀 상위 순위)대로 — 사람·AI 안 가르고 한 리스트(1층 순서 신호).
+    order: h.items.filter((i) => !i.removed).map((i, idx) => ({ rank: idx + 1, title: i.title, url: i.url, reason: i.reason, pinned: i.source === 'human', dwell_s: dwellSec(i) })),
     deleted: h.items.filter((i) => i.removed === 'deleted').map((i) => ({ title: i.title, url: i.url, reason: i.reason, dwell_s: dwellSec(i) })),
     excluded: h.items.filter((i) => i.removed === 'excluded').map((i) => ({ title: i.title, url: i.url, reason: i.reason })),
     trail: trailRef.current.slice(-12).map((t) => ({ url: t.url, title: t.title.slice(0, 60) })),
@@ -355,9 +386,9 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
           const round = cur.round + 1;
           setHunt((prev) => prev ? {
             ...prev, round,
-            items: [...prev.items, ...fresh.map((i) => ({
+            items: partitionRemoved([...prev.items, ...fresh.map((i) => ({
               id: `c${++poolSeq.current}`, ...i, source: 'ai' as const, round, removed: null, visited: false, dwellMs: 0,
-            }))],
+            }))]),
           } : prev);
         } else {
           // 재고 고갈 — 자동 재보충 중지(빈손 루프 방지). AI 의 되물음(사냥 틀 재제안)이 있으면 덧말로.
@@ -390,10 +421,10 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
     let host = url; try { host = new URL(url).hostname; } catch { /* */ }
     setHunt((prev) => prev ? {
       ...prev,
-      items: [...prev.items, {
+      items: partitionRemoved([...prev.items, {
         id: `c${++poolSeq.current}`, url, title: (title || host).slice(0, 80), reason: '직접 담음',
-        source: 'human' as const, round: prev.round, removed: null, visited: true, dwellMs: 0,
-      }],
+        source: 'human' as const, round: prev.round, removed: null as PoolItem['removed'], visited: true, dwellMs: 0,
+      }]),
     } : prev);
     flash('후보 리스트에 담았어요 📌');
   };
@@ -466,7 +497,7 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
     }
     setShowRemoved(st.showRemoved !== false);
     setAnswer(null); setDestinations([]); setError(null);
-    setHunt({ id: b.id, saved: true, query: st.query || b.name || '', intro: st.intro || '', outro: st.outro || '', round: Number(st.round) || 1, items });
+    setHunt({ id: b.id, saved: true, query: st.query || b.name || '', intro: st.intro || '', outro: st.outro || '', round: Number(st.round) || 1, items: partitionRemoved(items) });
     setMode('search');
   };
 
@@ -1099,7 +1130,10 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
 
           {/* 사냥판 — AI가 채우고 인간이 치우고(✕)·담는(📌) 후보 풀. 클릭=webview 진입. */}
           {hunt && hunt.items.length > 0 && (() => {
-            const visible = showRemoved ? hunt.items : hunt.items.filter((it) => !it.removed);
+            // 제거된 아이템은 항상 활성 후보(판 크기까지) 뒤에 — showRemoved(＋)여도 상위 순위를 차지하지 못하게.
+            const visible = showRemoved
+              ? [...hunt.items.filter((it) => !it.removed), ...hunt.items.filter((it) => it.removed)]
+              : hunt.items.filter((it) => !it.removed);
             return (
             <div className="mt-6 pb-12">
               {hunt.intro && <div className="text-sm text-stone-500 mb-3">{hunt.intro}</div>}
@@ -1107,19 +1141,10 @@ export function ForageBrowser({ open, onClose }: { open: boolean; onClose: () =>
                 <div className="text-center text-xs text-stone-400 py-6">치운 후보를 숨겼어요 (판 정리 ＋ 로 다시 보기)</div>
               )}
               <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 gap-3' : 'grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-1'}>
-                {visible.map((it, i) => (
-                  <Fragment key={it.id}>
-                    {i > 0 && it.round > 1 && it.round !== visible[i - 1].round && (
-                      <div className="col-span-full flex items-center gap-2 mt-1 mb-0.5 text-[11px] text-stone-400 select-none">
-                        <div className="flex-1 border-t border-stone-100" />
-                        <span>{it.round}차 보충</span>
-                        <div className="flex-1 border-t border-stone-100" />
-                      </div>
-                    )}
-                    {viewMode === 'grid'
-                      ? <PoolCard item={it} onOpen={() => openPoolItem(it)} onRemove={() => removePoolItem(it)} onRestore={() => restorePoolItem(it)} onSave={() => savePoolFav(it)} />
-                      : <PoolRow item={it} onOpen={() => openPoolItem(it)} onRemove={() => removePoolItem(it)} onRestore={() => restorePoolItem(it)} onSave={() => savePoolFav(it)} />}
-                  </Fragment>
+                {visible.map((it) => (
+                  viewMode === 'grid'
+                    ? <PoolCard key={it.id} item={it} drag={dragProps(it)} dragOver={dragOverId === it.id} onOpen={() => openPoolItem(it)} onRemove={() => removePoolItem(it)} onRestore={() => restorePoolItem(it)} onSave={() => savePoolFav(it)} />
+                    : <PoolRow key={it.id} item={it} drag={dragProps(it)} dragOver={dragOverId === it.id} onOpen={() => openPoolItem(it)} onRemove={() => removePoolItem(it)} onRestore={() => restorePoolItem(it)} onSave={() => savePoolFav(it)} />
                 ))}
               </div>
               {refilling && (
@@ -1236,7 +1261,7 @@ function BrowserTabView({ tab, onUpdate, registerRef, onOpenTab }: {
   );
 }
 
-// 즐겨찾기 바둑판 페이지 — 스위치로 새 탭에서 열림. 타일 클릭=새 탭으로 방문, × =즐겨찾기에서 제거.
+// 즐겨찾기 바둑판 페이지 — 스위치로 새 탭에서 열림. 타일 클릭=새 탭으로 방문, 모서리 흰 × =즐겨찾기에서 제거.
 function FavoritesPage({ favorites, onOpen, onRemove }: {
   favorites: { name: string; url: string }[];
   onOpen: (url: string) => void;
@@ -1255,7 +1280,7 @@ function FavoritesPage({ favorites, onOpen, onRemove }: {
             {favorites.map((f, i) => (
               <div key={i} className="group relative flex flex-col items-center">
                 <button onClick={() => onRemove(f.name)} title="즐겨찾기에서 제거"
-                  className="absolute -top-1 -right-1 z-10 w-5 h-5 rounded-full bg-stone-200 text-stone-500 hover:bg-red-500 hover:text-white text-[11px] leading-none flex items-center justify-center transition">×</button>
+                  className="absolute -top-1 -right-1 z-10 w-5 h-5 rounded-full bg-white shadow-sm text-stone-500 hover:bg-red-500 hover:text-white text-[11px] leading-none flex items-center justify-center transition">×</button>
                 <button onClick={() => onOpen(f.url)} title={f.url}
                   className="flex flex-col items-center gap-2 p-2 rounded-2xl hover:bg-stone-100 transition w-full">
                   <FavIcon url={f.url} name={f.name} />
@@ -1273,14 +1298,15 @@ function FavoritesPage({ favorites, onOpen, onRemove }: {
 // 사냥판 후보 한 줄 — 밀도 우선(한 눈에 여러 개). 파비콘 + 제목 한 줄 + 이유 한 줄로 압축,
 // 전체 URL 줄은 뺐다(파비콘·클릭이 대신함). ✕=치우기(가봤으면 '삭제', 아니면 '제외'),
 // 치운 건 흐려지고 ↩ 로 복구. 📌=직접 담은 후보, ☆=즐겨찾기 승격. "다녀옴 N초"가 체류 신호.
-function PoolRow({ item, onOpen, onRemove, onRestore, onSave }: {
+function PoolRow({ item, onOpen, onRemove, onRestore, onSave, drag, dragOver }: {
   item: PoolItem; onOpen: () => void; onRemove: () => void; onRestore: () => void; onSave: () => void;
+  drag?: React.HTMLAttributes<HTMLDivElement>; dragOver?: boolean;
 }) {
   const removed = !!item.removed;
   return (
-    <div className={`flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-lg border transition ${
-      removed ? 'border-transparent bg-stone-50 opacity-50' : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50'
-    }`}>
+    <div {...drag} className={`flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-lg border transition ${
+      removed ? 'border-transparent bg-stone-50 opacity-50' : 'border-stone-200 hover:border-stone-300 hover:bg-stone-50 cursor-grab active:cursor-grabbing'
+    }${dragOver ? ' ring-2 ring-sky-400' : ''}`}>
       <span className="shrink-0"><TabFav url={item.url} /></span>
       <button onClick={onOpen} disabled={removed} className="flex-1 min-w-0 text-left">
         <div className={`flex items-baseline gap-1.5 ${removed ? 'line-through' : ''}`}>
@@ -1309,14 +1335,15 @@ function PoolRow({ item, onOpen, onRemove, onRestore, onSave }: {
 
 // 사냥판 후보 카드(그리드) — 썸네일(대표 이미지) + 제목 + 한 줄 이유. 발견용(사진으로 한눈에 스캔).
 // PoolRow 와 같은 동작(✕치우기·📌·☆승격·↩복구·다녀옴·치운 카드 흐리기), 배치만 카드 코너로.
-function PoolCard({ item, onOpen, onRemove, onRestore, onSave }: {
+function PoolCard({ item, onOpen, onRemove, onRestore, onSave, drag, dragOver }: {
   item: PoolItem; onOpen: () => void; onRemove: () => void; onRestore: () => void; onSave: () => void;
+  drag?: React.HTMLAttributes<HTMLDivElement>; dragOver?: boolean;
 }) {
   const removed = !!item.removed;
   return (
-    <div className={`group relative rounded-xl border overflow-hidden transition ${
-      removed ? 'border-transparent bg-stone-50 opacity-50' : 'border-stone-200 hover:border-stone-300'
-    }`}>
+    <div {...drag} className={`group relative rounded-xl border overflow-hidden transition ${
+      removed ? 'border-transparent bg-stone-50 opacity-50' : 'border-stone-200 hover:border-stone-300 cursor-grab active:cursor-grabbing'
+    }${dragOver ? ' ring-2 ring-sky-400 ring-offset-1' : ''}`}>
       <button onClick={onOpen} disabled={removed} className="block w-full">
         <CardThumb url={item.url} image={item.image} />
       </button>

@@ -1,20 +1,22 @@
 /**
  * UserManualDialog - 사용자 메뉴얼 다이얼로그
  * 시스템의 상세한 사용 방법과 기능 안내
+ *
+ * 2026-07-05 전면 재작성 — 현재 시스템(런처 3표면·IBL 6노드·인지 파이프라인·
+ * 메모리 7종·포식 브라우저·두 자아) 기준으로 재구성. 은퇴한 별도 창(이웃 관리창·
+ * 빠른 연락처·비즈니스 관리창)과 낡은 수치를 제거.
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import {
   X, ChevronLeft, ChevronRight,
   Folder, Bot, Zap, Package,
-  Users, Globe, Building2, Key,
+  Users, Globe, Key,
   MessageSquare, FileText,
-  Wrench, BookOpen, HardDrive, Scale,
-  Video, ShoppingCart, GraduationCap, Music,
-  Camera, Newspaper, Heart, Home, TrendingUp,
-  Smartphone, Share2, Hash, Contact,
-  Mail, Shield, Radio,
-  Clock, Monitor, Cloud
+  BookOpen, HardDrive, Eye,
+  Compass, Gauge, LayoutGrid,
+  Network, Brain, Database, Search,
+  Smartphone, Mail, Monitor, Sparkles
 } from 'lucide-react';
 
 interface UserManualDialogProps {
@@ -32,170 +34,166 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
   const [currentPage, setCurrentPage] = useState(0);
 
   const pages: ManualPage[] = [
+    // 0. 목차
     {
       title: '목차',
       icon: <BookOpen className="w-12 h-12 text-amber-600" />,
       content: (
         <div className="space-y-4">
           <p className="text-gray-800 text-base mb-4">
-            IndieBiz OS의 전체 기능과 사용법을 안내합니다.
+            IndieBiz OS는 데려다주는 <strong>자율주행차</strong>가 아니라, 입는 <strong>인지 외골격</strong>입니다.
+            아래 순서대로 읽으면 전체가 잡힙니다.
           </p>
           <div className="grid grid-cols-2 gap-3 text-base">
-            <button onClick={() => setCurrentPage(1)} className="p-3 bg-amber-50 rounded-lg hover:bg-amber-100 text-left">
-              <strong className="text-base text-gray-900">1. 핵심 개념</strong>
-              <p className="text-gray-700 text-sm">프로젝트, 에이전트, 도구</p>
-            </button>
-            <button onClick={() => setCurrentPage(2)} className="p-3 bg-slate-50 rounded-lg hover:bg-slate-100 text-left">
-              <strong className="text-base text-gray-900">2. 런처 오브젝트</strong>
-              <p className="text-gray-700 text-sm">프로젝트, 스위치, 폴더</p>
-            </button>
-            <button onClick={() => setCurrentPage(3)} className="p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 text-left">
-              <strong className="text-base text-gray-900">3. 업무자동화</strong>
-              <p className="text-gray-700 text-sm">스위치 & 스케줄러</p>
-            </button>
-            <button onClick={() => setCurrentPage(4)} className="p-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 text-left">
-              <strong className="text-base text-gray-900">4. 원격 명령 & 자동 비지니스</strong>
-              <p className="text-gray-700 text-sm">원격 명령, 자동응답</p>
-            </button>
-            <button onClick={() => setCurrentPage(5)} className="p-3 bg-cyan-50 rounded-lg hover:bg-cyan-100 text-left">
-              <strong className="text-base text-gray-900">5. IndieNet</strong>
-              <p className="text-gray-700 text-sm">Nostr 기반 탈중앙화 네트워크</p>
-            </button>
-            <button onClick={() => setCurrentPage(6)} className="p-3 bg-orange-50 rounded-lg hover:bg-orange-100 text-left">
-              <strong className="text-base text-gray-900">6. 비즈니스 관리창</strong>
-              <p className="text-gray-700 text-sm">메시지, 자동응답, 채널</p>
-            </button>
-            <button onClick={() => setCurrentPage(7)} className="p-3 bg-blue-50 rounded-lg hover:bg-blue-100 text-left">
-              <strong className="text-base text-gray-900">7. 이웃 관리창</strong>
-              <p className="text-gray-700 text-sm">연락처, 정보레벨, 이력</p>
-            </button>
-            <button onClick={() => setCurrentPage(8)} className="p-3 bg-teal-50 rounded-lg hover:bg-teal-100 text-left">
-              <strong className="text-base text-gray-900">8. 빠른 연락처</strong>
-              <p className="text-gray-700 text-sm">즉시 메시지 전송</p>
-            </button>
-            <button onClick={() => setCurrentPage(9)} className="p-3 bg-red-50 rounded-lg hover:bg-red-100 text-left">
-              <strong className="text-base text-gray-900">9. AI 설정</strong>
-              <p className="text-gray-700 text-sm">API 키, 모델 선택</p>
-            </button>
-            <button onClick={() => setCurrentPage(10)} className="p-3 bg-green-50 rounded-lg hover:bg-green-100 text-left">
-              <strong className="text-base text-gray-900">10. 도구 패키지</strong>
-              <p className="text-gray-700 text-sm">사용, 제작, 공유</p>
-            </button>
-            <button onClick={() => setCurrentPage(11)} className="p-3 bg-purple-50 rounded-lg hover:bg-purple-100 text-left">
-              <strong className="text-base text-gray-900">11. 위임 체인</strong>
-              <p className="text-gray-700 text-sm">내부 위임, 시스템 위임</p>
-            </button>
-            <button onClick={() => setCurrentPage(12)} className="p-3 bg-pink-50 rounded-lg hover:bg-pink-100 text-left">
-              <strong className="text-base text-gray-900">12. 사용 예시</strong>
-              <p className="text-gray-700 text-sm">16가지 실제 활용법</p>
-            </button>
-            <button onClick={() => setCurrentPage(13)} className="p-3 bg-sky-50 rounded-lg hover:bg-sky-100 text-left">
-              <strong className="text-base text-gray-900">13. 원격 접근</strong>
-              <p className="text-gray-700 text-sm">Finder & 런처</p>
-            </button>
-            <button onClick={() => setCurrentPage(14)} className="p-3 bg-gray-100 rounded-lg hover:bg-gray-200 text-left">
-              <strong className="text-base text-gray-900">14. 버전 정보</strong>
-              <p className="text-gray-700 text-sm">현재 상태, 철학, 시스템 문서 안내</p>
-            </button>
+            {[
+              ['1. 무엇인가', '인지 외골격이라는 생각', 'bg-amber-50 hover:bg-amber-100'],
+              ['2. 런처의 3표면', '자율주행 · 조종실 · 앱', 'bg-slate-50 hover:bg-slate-100'],
+              ['3. 바탕화면 & 오브젝트', '프로젝트 · 스위치 · 폴더 · 앱', 'bg-yellow-50 hover:bg-yellow-100'],
+              ['4. IBL — 신경계', '6개 노드 141개 액션', 'bg-green-50 hover:bg-green-100'],
+              ['5. 자율주행 — 인지', '분류→의식→실행→평가→증류', 'bg-indigo-50 hover:bg-indigo-100'],
+              ['6. 조종실', '감독·개입의 주권 기관', 'bg-cyan-50 hover:bg-cyan-100'],
+              ['7. 앱 모드', '결정화된 계기 24종', 'bg-orange-50 hover:bg-orange-100'],
+              ['8. 메모리 — 7종', '해마 · 심층 · 포식 기억', 'bg-blue-50 hover:bg-blue-100'],
+              ['9. 포식 브라우저', '정답이 아닌 시야를 넓히는 검색', 'bg-teal-50 hover:bg-teal-100'],
+              ['10. AI 프로바이더 설정', 'API 키 · 모델 기어', 'bg-red-50 hover:bg-red-100'],
+              ['11. 도구 패키지', '설치 · 제작 · 공유', 'bg-purple-50 hover:bg-purple-100'],
+              ['12. 소통 & 자동 비즈니스', 'Gmail · Nostr · IndieNet', 'bg-pink-50 hover:bg-pink-100'],
+              ['13. 두 자아 (맥 & 폰)', '독립 자아 · CRDT 공유', 'bg-sky-50 hover:bg-sky-100'],
+              ['14. 원격 접근', 'Cloudflare 터널 · 리모컨', 'bg-lime-50 hover:bg-lime-100'],
+              ['15. 버전 정보', '현재 상태 · 철학 · 문서', 'bg-gray-100 hover:bg-gray-200'],
+            ].map(([title, sub, cls], i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`p-3 rounded-lg text-left ${cls}`}
+              >
+                <strong className="text-base text-gray-900">{title}</strong>
+                <p className="text-gray-700 text-sm">{sub}</p>
+              </button>
+            ))}
           </div>
         </div>
       )
     },
+
+    // 1. 무엇인가 — 인지 외골격
     {
-      title: '핵심 개념',
-      icon: <Folder className="w-12 h-12 text-amber-600" />,
+      title: '무엇인가 — 인지 외골격',
+      icon: <Eye className="w-12 h-12 text-amber-600" />,
       content: (
         <div className="space-y-4 text-base">
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200">
             <p className="text-xl font-bold text-amber-800 mb-2">
-              필요한 건 오직 연결 (Connection is all you need)
+              데려다주는 자율주행차가 아니라, 입는 외골격
             </p>
-            <p className="text-amber-700">
-              우리는 모든 것이 모든 것과 더 잘 연결되게 하기 위해서 IndieBiz OS를 만들었습니다.
+            <p className="text-amber-700 text-sm">
+              내 PC에서 도는 <strong>개인 소유 프로그램</strong>이 웨어러블 로봇의 <strong>몸</strong>이고,
+              AI 모델은 그 <strong>두뇌</strong>(빌리는 것 · 언제든 교체됨)입니다.
+              진짜 자산은 한 사람의 의지가 응고된 <strong>핏(fit)</strong> — 쓸수록 나에게 맞아 갑니다.
             </p>
           </div>
 
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Package className="w-6 h-6 text-green-600" />
-              <strong className="text-green-800">🔧 도구와 AI 에이전트의 연결</strong>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gray-100 p-4 rounded-lg">
+              <p className="font-bold text-gray-800 mb-1">정답 패러다임</p>
+              <p className="text-gray-600 text-sm">
+                업계 주류 · AI 브라우저. 명령 → <strong>정답 하나</strong> 도출.
+                가능성을 <strong>줄여</strong> 시야를 좁힙니다.
+              </p>
             </div>
-            <p className="text-green-700 text-sm">
-              우리가 여러 가지 일들을 하기 위해서는 수많은 도구가 필요하고, 그걸 잘 관리하는 것이 필요합니다.
-              그래서 우리는 <strong>프로젝트마다, 에이전트마다</strong> 지정한 도구만 쓰도록 했습니다.
-              필요할 때 도구를 직접 만들어 시스템에 더할 수 있고, 원하는 에이전트만 쓰게 할 수 있습니다.
-            </p>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <p className="font-bold text-green-800 mb-1">시야 패러다임 (우리)</p>
+              <p className="text-green-700 text-sm">
+                인간 판단에 기반해 가능성을 <strong>늘립니다</strong>.
+                힘은 AI가 대되, 어디로 뻗을지는 매 순간 <strong>사람이</strong> 정합니다.
+              </p>
+            </div>
           </div>
 
           <div className="bg-blue-50 p-4 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
-              <Bot className="w-6 h-6 text-blue-600" />
-              <strong className="text-blue-800">🧑‍💻 인간과 AI 에이전트의 연결</strong>
+              <Sparkles className="w-6 h-6 text-blue-600" />
+              <strong className="text-blue-800">깊은 일에는 시야가 필요합니다</strong>
             </div>
             <p className="text-blue-700 text-sm">
-              인간과 AI 에이전트를 더 잘 이어주기 위해 <strong>2차원 데스크탑 형태의 GUI</strong>를 만들었고,
-              정보채널을 통해 외부에서 명령을 받을 수 있게 했습니다.
-              지금은 Nostr와 Gmail을 통해 소통하지만, 이 정보채널은 더 확장될 수 있습니다.
-            </p>
-          </div>
-
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="w-6 h-6 text-purple-600" />
-              <strong className="text-purple-800">🤝 인간과 인간의 연결</strong>
-            </div>
-            <div className="text-purple-700 text-sm space-y-2">
-              <p>
-                우리는 AI가 복잡한 세상에서 <strong>인간을 잇는 미디어</strong>가 되어야 한다고 믿습니다.
-                정보채널은 도구를 공유하는 데 쓰일 수도 있고, AI 에이전트끼리 이어서
-                인간 대신 <strong>자동 비즈니스</strong>를 하는 데 쓸 수도 있습니다.
-              </p>
-              <p>
-                스마트폰이 사람과 사람을 통신으로 연결한다면, IndieBiz OS는 그 연결을
-                <strong>AI 에이전트의 도움을 받아 더 스마트하게</strong> 만들려고 합니다.
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-orange-50 p-4 rounded-lg">
-            <p className="font-medium text-orange-800 mb-2">💡 예를 들면</p>
-            <div className="text-sm text-orange-700 space-y-1">
-              <p>• 공유하고 싶은 물품을 등록하면 찾는 사람에게 <strong>자동으로 연락</strong></p>
-              <p>• 내가 찾는 물건을 <strong>AI 에이전트가 자동으로 검색</strong></p>
-              <p>• 내 AI가 지인의 AI에게 물어서 <strong>정보를 찾아오게</strong> 하기</p>
-            </div>
-            <p className="text-orange-600 text-sm mt-2">
-              Nostr 같은 탈중앙화 연결을 사용하면 <strong>플랫폼에서 독립된 방식</strong>으로 이뤄질 수 있습니다.
-            </p>
-          </div>
-
-          <div className="bg-gray-100 p-3 rounded-lg text-center">
-            <p className="text-gray-700 text-sm italic">
-              IndieBiz OS는 이 같은 방식의 연결이 <strong>실제로 가능하다</strong>는 것을 보이기 위해 만든 것입니다.
+              연구 · 집필 · 창업 · "뭘 원하는지 알아내기" 같은 일은 <strong>목적지가 루프 안에서 생성</strong>됩니다.
+              한 방에 정답을 뽑는 게 아니라, 사람과 함께 좁혀 갑니다.
+              그래서 IndieBiz OS의 모든 기관은 결국 이 한 신념의 파생입니다 —
+              <strong> 도구는 인간의 시야를 가리기보다 넓혀야 한다.</strong>
             </p>
           </div>
         </div>
       )
     },
+
+    // 2. 런처의 3표면
     {
-      title: '런처 오브젝트',
+      title: '런처의 3표면',
+      icon: <Compass className="w-12 h-12 text-slate-600" />,
+      content: (
+        <div className="space-y-4 text-base">
+          <p className="text-slate-700 text-sm">
+            같은 IBL 신경계 위에, 직접 모는 세 표면이 있습니다.
+            각각 <strong>{'{'}속도 · 표현력 · 주권{'}'}</strong> 중 둘을 갖고 하나를 내줍니다 (트릴레마).
+            런처 상단의 <strong>3토글</strong>로 오갑니다.
+          </p>
+
+          <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+            <div className="flex items-center gap-2 mb-1">
+              <Compass className="w-6 h-6 text-indigo-600" />
+              <strong className="text-indigo-800">자율주행</strong>
+              <span className="text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">비쌈 · AI 큐레이션</span>
+            </div>
+            <p className="text-indigo-700 text-sm">
+              의도를 말하면 <strong>플래그십 AI가 다단계로</strong> 처리합니다 (5장의 인지 파이프라인).
+              탐색적이고 애매한 일에 씁니다.
+            </p>
+          </div>
+
+          <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
+            <div className="flex items-center gap-2 mb-1">
+              <Gauge className="w-6 h-6 text-cyan-600" />
+              <strong className="text-cyan-800">조종실</strong>
+              <span className="text-xs bg-cyan-200 text-cyan-800 px-2 py-0.5 rounded-full">거의 0 · 인간+언어</span>
+            </div>
+            <p className="text-cyan-700 text-sm">
+              <strong>경량 모델</strong>이 자연어를 IBL로 번역 → dry-run 검수 → 실행.
+              시스템 상태 · 모델 기어 · 프레즌스 · 주행기록이 모인 <strong>감독·개입의 주권 기관</strong>입니다.
+            </p>
+          </div>
+
+          <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <div className="flex items-center gap-2 mb-1">
+              <LayoutGrid className="w-6 h-6 text-orange-600" />
+              <strong className="text-orange-800">앱</strong>
+              <span className="text-xs bg-orange-200 text-orange-800 px-2 py-0.5 rounded-full">0 토큰 · 결정화</span>
+            </div>
+            <p className="text-orange-700 text-sm">
+              증명된 워크플로를 <strong>아이콘/GUI로 직접</strong> 조작합니다 (부동산 · 도서검색 · 투자 등).
+              AI 호출 없이 코드만 실행돼 공짜입니다.
+            </p>
+          </div>
+
+          <div className="bg-amber-50 p-3 rounded-lg text-amber-700 text-sm">
+            💡 <strong>생애주기</strong>: 새 일은 자율주행이 탐색 → IBL 흔적이 조종실 초안으로 →
+            검증된 고빈도 워크플로가 앱으로 <strong>결정화</strong>. 굳히는 건 증명된 것만입니다.
+          </div>
+        </div>
+      )
+    },
+
+    // 3. 바탕화면 & 오브젝트
+    {
+      title: '바탕화면 & 오브젝트',
       icon: <HardDrive className="w-12 h-12 text-slate-600" />,
       content: (
         <div className="space-y-4 text-base">
           <div className="bg-slate-50 p-4 rounded-lg">
             <p className="text-slate-800 font-medium mb-2">데스크탑 같은 공간</p>
             <p className="text-slate-700 text-sm">
-              런처는 <strong>바탕화면처럼</strong> 아이콘을 배치할 수 있는 공간입니다.
-              4가지 종류의 오브젝트를 만들고 관리할 수 있습니다.
+              런처는 <strong>바탕화면처럼</strong> 아이콘을 자유롭게 배치하는 공간입니다.
+              자율주행 · 앱 두 표면 모두 이 위에서 아이콘으로 조직됩니다.
             </p>
-          </div>
-
-          <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-            <img
-              src="/example1.jpg"
-              alt="IndieBiz OS 런처 화면"
-              className="w-full h-auto"
-            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -205,7 +203,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
                 <strong className="text-amber-800">프로젝트</strong>
               </div>
               <p className="text-amber-700 text-sm">
-                에이전트들이 작업하는 독립된 공간. 더블클릭으로 열기.
+                에이전트들이 작업하는 독립된 공간. 대화·맥락이 서로 섞이지 않습니다. 더블클릭으로 열기.
               </p>
             </div>
             <div className="bg-yellow-50 p-4 rounded-lg">
@@ -214,7 +212,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
                 <strong className="text-yellow-800">스위치</strong>
               </div>
               <p className="text-yellow-700 text-sm">
-                저장된 작업을 원클릭 실행. 더블클릭으로 즉시 실행.
+                저장한 작업을 원클릭 실행. 원래 프로젝트를 삭제해도 독립적으로 남습니다.
               </p>
             </div>
             <div className="bg-blue-50 p-4 rounded-lg">
@@ -223,10 +221,8 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
                 <strong className="text-blue-800">다중채팅방</strong>
               </div>
               <p className="text-blue-700 text-sm">
-                여러 프로젝트의 에이전트를 하나의 방에 모아 그룹 대화.
-                독립 창에서 열리며, <strong>@멘션</strong>으로 특정 에이전트 지정 가능.
-                에이전트는 <strong>프로젝트 도구를 자동 적용</strong>받아 대화와 작업 모두 수행.
-                이미지·파일 첨부도 지원.
+                여러 프로젝트의 에이전트를 한 방에 모아 그룹 대화. <strong>@멘션</strong>으로 지정,
+                프로젝트 도구 자동 적용, 파일 첨부 지원.
               </p>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg">
@@ -235,462 +231,305 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
                 <strong className="text-purple-800">폴더</strong>
               </div>
               <p className="text-purple-700 text-sm">
-                아이콘들을 정리하는 공간. 드래그해서 넣기.
+                아이콘들을 정리하는 공간. 드래그해서 넣습니다.
               </p>
             </div>
           </div>
 
           <div className="bg-green-50 p-4 rounded-lg">
-            <p className="font-medium text-green-800 mb-2">🖱️ 아이콘 관리</p>
-            <div className="text-sm text-green-700 space-y-2">
-              <p>• <strong>드래그</strong>: 아이콘을 원하는 위치로 이동</p>
-              <p>• <strong>우클릭</strong>: 편집, 이름 변경, 삭제 메뉴</p>
-              <p>• <strong>아이콘 정렬</strong>: 바탕화면 우클릭 → 정렬 옵션</p>
-              <p>• <strong>폴더에 넣기</strong>: 아이콘을 폴더로 드래그</p>
-            </div>
-          </div>
-
-          <div className="bg-red-50 p-4 rounded-lg">
-            <p className="font-medium text-red-800 mb-2">🗑️ 삭제</p>
-            <div className="text-sm text-red-700 space-y-2">
-              <p>• 필요없는 오브젝트는 <strong>휴지통</strong>에 드래그</p>
-              <p>• 또는 우클릭 → 삭제 선택</p>
-              <p>• 프로젝트 삭제 시 내부 대화/설정도 함께 삭제됨</p>
+            <p className="font-medium text-green-800 mb-2">🖱️ 관리</p>
+            <div className="text-sm text-green-700 space-y-1">
+              <p>• <strong>드래그</strong>: 원하는 위치로 이동 (앱 아이콘도 자유 배치)</p>
+              <p>• <strong>우클릭</strong>: 편집 · 이름 변경 · 삭제, 바탕화면 우클릭 → 새 프로젝트/스위치·정렬</p>
+              <p>• <strong>휴지통</strong>: 필요없는 오브젝트를 드래그. 앱은 휴지통에서 되살리거나 앱 저장소에서 다시 꺼낼 수 있습니다</p>
             </div>
           </div>
         </div>
       )
     },
+
+    // 4. IBL — 신경계
     {
-      title: '업무자동화 : 스위치&스케줄러',
-      icon: <Zap className="w-12 h-12 text-yellow-600" />,
+      title: 'IBL — 신경계',
+      icon: <Network className="w-12 h-12 text-green-600" />,
       content: (
         <div className="space-y-4 text-base">
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Zap className="w-6 h-6 text-yellow-600" />
-              <strong className="text-yellow-800">스위치란?</strong>
-            </div>
-            <p className="text-yellow-700">
-              반복 작업을 저장해두고 <strong>원클릭으로 실행</strong>하는 버튼입니다.
-            </p>
-          </div>
-
-          <div className="bg-white border rounded-lg p-3">
-            <p className="font-medium text-gray-700 mb-2">🔧 스위치 만들기</p>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-start gap-2">
-                <div className="bg-yellow-100 text-yellow-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">1</div>
-                <p className="text-gray-800"><strong>프로젝트</strong>를 열고 에이전트와 대화</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="bg-yellow-100 text-yellow-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">2</div>
-                <p className="text-gray-800">반복하고 싶은 작업을 <strong>프롬프트로 작성</strong></p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="bg-yellow-100 text-yellow-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">3</div>
-                <p className="text-gray-800">채팅창 상단의 <strong>⚡ 스위치 저장</strong> 버튼 클릭</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="bg-yellow-100 text-yellow-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">4</div>
-                <p className="text-gray-800">이름과 아이콘 설정 후 저장</p>
-              </div>
-            </div>
-          </div>
-
           <div className="bg-green-50 p-4 rounded-lg">
-            <p className="font-medium text-green-800 mb-2">✨ 스위치의 특징</p>
-            <div className="text-sm text-green-700 space-y-2">
-              <p>• 프로젝트 안에서 만들지만 <strong>런처 바탕화면</strong>에 아이콘 생성</p>
-              <p>• <strong>원래 프로젝트를 삭제해도</strong> 스위치는 독립적으로 남음</p>
-              <p>• 어떤 프로젝트, 어떤 에이전트가 실행할지 자유롭게 변경 가능</p>
-              <p>• 더블클릭하면 즉시 실행, 우클릭으로 편집</p>
-            </div>
-          </div>
-
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-6 h-6 text-blue-600" />
-              <strong className="text-blue-800">스케줄러</strong>
-            </div>
-            <p className="text-blue-700 mb-2 text-sm">
-              스위치를 <strong>자동으로 예약 실행</strong>합니다. 상단 툴바 → 예약작업
+            <p className="text-green-800 font-medium mb-2">하나의 문법으로 세계를 만진다</p>
+            <p className="text-green-700 text-sm">
+              세 표면이 무엇을 하든, 밑바닥에서는 전부 <strong>IBL(IndieBiz Logic)</strong> 한 문법으로 번역됩니다.
+              API든 크롤링이든 안드로이드든 DB든 같은 형태로 요청 — 프로토콜 차이는 드라이버가 감춥니다.
             </p>
-            <div className="text-sm text-blue-600">
-              • 매일 8시: <code>0 8 * * *</code><br/>
-              • 매주 금요일 6시: <code>0 18 * * 5</code><br/>
-              • 2시간마다: <code>0 */2 * * *</code>
+            <div className="bg-white p-2 rounded mt-2 font-mono text-sm text-gray-700">
+              [node:action]{'{'}params{'}'} &nbsp;예){' '}
+              [sense:search_ddg]{'{'}query: "AI 뉴스"{'}'}
             </div>
           </div>
-        </div>
-      )
-    },
-    {
-      title: '원격 명령 & 자동 비지니스',
-      icon: <Mail className="w-12 h-12 text-indigo-600" />,
-      content: (
-        <div className="space-y-4 text-base max-h-[420px] overflow-y-auto pr-1">
+
+          <div className="grid grid-cols-3 gap-2 text-sm">
+            {[
+              ['sense', '지각 — 정보 수집', 'bg-blue-50 text-blue-700'],
+              ['self', '내 자원 · 파일 · 일정', 'bg-green-50 text-green-700'],
+              ['limbs', '장치 · 신체 제어', 'bg-purple-50 text-purple-700'],
+              ['others', '소통 · 협업', 'bg-cyan-50 text-cyan-700'],
+              ['engines', '콘텐츠 생성', 'bg-amber-50 text-amber-700'],
+              ['table', '통화(데이터) 변환', 'bg-rose-50 text-rose-700'],
+            ].map(([n, d, c], i) => (
+              <div key={i} className={`p-2 rounded text-center ${c.split(' ')[0]}`}>
+                <p className={`font-medium ${c.split(' ')[1]}`}>{n}</p>
+                <p className="text-xs text-gray-600">{d}</p>
+              </div>
+            ))}
+          </div>
+
           <div className="bg-indigo-50 p-4 rounded-lg">
-            <p className="text-indigo-800 font-medium mb-2">지원 채널</p>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white p-2 rounded">
-                <strong className="text-red-600">Gmail</strong>
-                <p className="text-gray-800 text-sm">OAuth2 인증, 폴링 방식</p>
-              </div>
-              <div className="bg-white p-2 rounded">
-                <strong className="text-purple-600">Nostr</strong>
-                <p className="text-gray-800 text-sm">탈중앙화, 실시간 WebSocket</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-blue-100 p-4 rounded-lg border-2 border-blue-300">
             <div className="flex items-center gap-2 mb-2">
-              <Smartphone className="w-6 h-6 text-blue-700" />
-              <strong className="text-blue-800">🎯 원격 명령 (사용자 → 에이전트)</strong>
+              <Sparkles className="w-6 h-6 text-indigo-600" />
+              <strong className="text-indigo-800">왜 도구 더미가 아니라 언어인가</strong>
             </div>
-            <div className="text-sm text-blue-700 space-y-2">
-              <p>• <strong>등록된 내 연락처</strong>에서 오는 메시지는 <strong>명령으로 인식</strong></p>
-              <p>• 외출 중에도 Gmail/Nostr 앱으로 PC의 에이전트에게 지시 가능</p>
-              <p>• 시스템 AI가 명령을 받아 적절한 프로젝트에 위임/실행</p>
-            </div>
-            <div className="bg-white p-2 rounded mt-2 text-sm text-blue-600">
-              예: "오늘 뉴스 정리해서 이메일로 보내줘" → 자동 실행 후 결과 회신
-            </div>
+            <p className="text-indigo-700 text-sm">
+              표현력은 어휘 크기가 아니라 <strong>조합</strong>에서 나옵니다.
+              적게 고른 프리미티브 <strong>6개 노드 · 141개 액션</strong>을
+              <span className="font-mono"> {'>>'} </span>(순차) ·
+              <span className="font-mono"> & </span>(병렬) ·
+              <span className="font-mono"> ?? </span>(폴백)로 엮으면 사실상 무한한 워크플로가 됩니다.
+            </p>
           </div>
 
-          <div className="bg-green-100 p-4 rounded-lg border-2 border-green-300">
-            <div className="flex items-center gap-2 mb-2">
-              <Bot className="w-6 h-6 text-green-700" />
-              <strong className="text-green-800">🤖 자동응답 (외부인 → 에이전트)</strong>
-            </div>
-            <div className="text-sm text-green-700 space-y-2">
-              <p>• 사용자가 아닌 <strong>외부인의 메시지</strong>는 자동응답 또는 기록</p>
-              <p>• AI가 비즈니스 문서를 검색하여 <strong>자동으로 응대</strong></p>
-              <p>• 모든 수신 메시지는 <strong>데이터베이스에 저장</strong>되어 나중에 확인 가능</p>
-            </div>
-            <div className="bg-white p-2 rounded mt-2 text-sm text-green-600">
-              <strong>💼 자동 비즈니스의 핵심!</strong> 고객 문의, 예약, 상담을 24시간 자동 처리
-            </div>
-          </div>
-
-          <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-            <div className="flex items-center gap-2 mb-2">
-              <Mail className="w-6 h-6 text-red-600" />
-              <strong className="text-red-800">📧 Gmail 설정 방법</strong>
-            </div>
-            <div className="text-sm text-red-700 space-y-2">
-              <p><strong>1. Google Cloud Console에서 OAuth 앱 생성</strong></p>
-              <p className="pl-3">• console.cloud.google.com → API 및 서비스 → OAuth 클라이언트 ID 생성</p>
-              <p className="pl-3">• 데스크톱 앱 선택 → <code>client_id</code>와 <code>client_secret</code> 발급</p>
-              <p><strong>2. IndieBiz OS에서 설정 (설정 → 채널 → Gmail)</strong></p>
-              <p className="pl-3">• Client ID, Client Secret 입력 (모든 이메일 계정 공유)</p>
-              <p className="pl-3">• 시스템 AI용 이메일 주소 입력</p>
-              <p><strong>3. 에이전트별 이메일은 프로젝트 설정에서 추가</strong></p>
-              <p className="pl-3">• 에이전트 설정 → Gmail 채널 체크 → 이메일 주소만 입력</p>
-              <p className="pl-3">• OAuth 정보는 전역 설정 공유 (별도 입력 불필요)</p>
-              <p><strong>4. 처음 사용 시 브라우저에서 Google 계정 인증</strong></p>
-            </div>
-          </div>
-
-          <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-            <div className="flex items-center gap-2 mb-2">
-              <Key className="w-6 h-6 text-purple-600" />
-              <strong className="text-purple-800">🔐 Nostr 설정 방법</strong>
-            </div>
-            <div className="text-sm text-purple-700 space-y-2">
-              <p><strong>가입이 필요 없습니다!</strong></p>
-              <p>Nostr는 탈중앙화 프로토콜로, 키를 직접 생성하면 즉시 신원(identity)이 됩니다.</p>
-              <div className="bg-white p-2 rounded mt-2 space-y-1">
-                <p>• <strong>비밀키 (nsec)</strong>: 나만 알고 있는 키 → 절대 공유 금지</p>
-                <p>• <strong>공개키 (npub)</strong>: 다른 사람에게 알려주는 주소</p>
-              </div>
-              <p className="mt-2"><strong>설정 방법:</strong></p>
-              <p className="pl-3">1. 설정 → 채널 → Nostr에서 "새 키 생성" 또는 기존 nsec 입력</p>
-              <p className="pl-3">2. 생성된 npub을 다른 사람에게 공유하면 DM 수신 가능</p>
-              <p className="pl-3">3. IndieNet에서도 같은 신원으로 게시글 작성 가능</p>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="font-medium text-gray-700 mb-2">🔌 채널 확장</p>
-            <div className="text-sm text-gray-800 space-y-2">
-              <p>• 현재는 <strong>Gmail</strong>과 <strong>Nostr</strong> 두 채널 지원</p>
-              <p>• 더 많은 통신 채널을 추가하는 것이 가능</p>
-              <p>• 원한다면 <strong>직접 새 채널을 개발</strong>할 수도 있습니다</p>
-            </div>
+          <div className="bg-gray-100 p-3 rounded-lg text-gray-700 text-sm">
+            💡 조종실에서 자연어로 말하면 경량 AI가 알아서 IBL로 번역해 주니,
+            문법을 외울 필요는 없습니다. 다만 이 언어가 있기에 표면 셋이 한 몸으로 움직입니다.
           </div>
         </div>
       )
     },
+
+    // 5. 자율주행 — 인지 파이프라인
     {
-      title: 'IndieNet (P2P 네트워크)',
-      icon: <Globe className="w-12 h-12 text-cyan-600" />,
+      title: '자율주행 — 인지 파이프라인',
+      icon: <Brain className="w-12 h-12 text-indigo-600" />,
+      content: (
+        <div className="space-y-3 text-base">
+          <p className="text-gray-700 text-sm">
+            자율주행 표면의 내부. 인간의 인지 과정을 모델링합니다 —
+            <strong> 분류(반사) → 의식(계획) → 실행 → 평가(성찰) → 증류(학습)</strong>.
+          </p>
+
+          <div className="bg-white border rounded-lg p-3 space-y-2 text-sm">
+            {[
+              ['0 · 연상', '해마(과거 IBL 사례) + 심층메모리(사용자 사실)를 1회 검색', 'bg-slate-100 text-slate-700'],
+              ['1 · 반사', '해마 점수 ≥ 0.85 → 곧장 실행(무의식 스킵). 미만이면 경량 AI가 EXECUTE/THINK 분류', 'bg-blue-100 text-blue-700'],
+              ['2 · 의식', '(THINK만) 본격 AI가 "지금 무슨 문제를 풀어야 하나" 규정 + 달성 기준', 'bg-purple-100 text-purple-700'],
+              ['3 · 실행', 'IBL 엔진 → 도구 실행', 'bg-green-100 text-green-700'],
+              ['4 · 평가', '경량 AI가 달성 기준 대비 검증. 미달이면 재시도 (최대 3라운드)', 'bg-amber-100 text-amber-700'],
+              ['5 · 증류', '성공 경험을 해마·심층메모리에 저장 → 다음엔 더 빠르게', 'bg-rose-100 text-rose-700'],
+            ].map(([step, desc, c], i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className={`px-2 py-0.5 rounded font-medium flex-shrink-0 ${c}`}>{step}</span>
+                <span className="text-gray-700">{desc}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-cyan-50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <Gauge className="w-6 h-6 text-cyan-600" />
+              <strong className="text-cyan-800">모델 기어 — 비용/속도를 한 손잡이로 변속</strong>
+            </div>
+            <p className="text-cyan-700 text-sm">
+              <strong>절약 / 균형 / 최대</strong> 레버(조종실에 노출)가 4축(분류·평가·실행·의식)을
+              티어(경량 / 중급 / 고급)로 매핑합니다. <strong>의식 토글</strong>을 끄면 THINK 경로를 차단해
+              더 빠르고 싸게 돕니다.
+            </p>
+          </div>
+        </div>
+      )
+    },
+
+    // 6. 조종실
+    {
+      title: '조종실 — 주권 기관',
+      icon: <Gauge className="w-12 h-12 text-cyan-600" />,
       content: (
         <div className="space-y-4 text-base">
           <div className="bg-cyan-50 p-4 rounded-lg">
-            <p className="text-cyan-800 font-medium mb-2">IndieNet이란?</p>
+            <p className="text-cyan-800 font-medium mb-2">감독하고 개입하는 곳</p>
             <p className="text-cyan-700 text-sm">
-              Nostr 프로토콜 기반의 <strong>탈중앙화 P2P 네트워크</strong>입니다.
-              중앙 서버 없이 다른 IndieBiz 사용자들과 연결됩니다.
+              조종실은 단순한 "수동 모드"가 아니라, 자율주행을 포함한 <strong>전체를 감독·개입하는 주권 기관</strong>입니다.
+              토큰을 거의 쓰지 않으면서 시스템이 무엇을 하는지 들여다보고 직접 손댈 수 있습니다.
             </p>
           </div>
 
           <div className="bg-white border rounded-lg p-3">
-            <p className="font-medium text-gray-700 mb-2">🔑 신원 (Identity)</p>
-            <div className="text-sm text-gray-800 space-y-2">
-              <p>• <strong>공개키 (npub)</strong>: 다른 사용자에게 공유하는 주소</p>
-              <p>• <strong>비밀키 (nsec)</strong>: 절대 공유하면 안 되는 개인키</p>
-              <p>• 처음 실행 시 자동 생성되며, 설정에서 가져오기/내보내기 가능</p>
+            <p className="font-medium text-gray-700 mb-2">⚙️ 자연어 → 실행까지</p>
+            <div className="space-y-2 text-sm">
+              {[
+                ['번역', '경량 모델이 자연어를 IBL 코드로 컴파일'],
+                ['검수', 'dry-run으로 무엇이 실행될지 먼저 보여줌'],
+                ['실행', '확인 후 게이팅 실행'],
+                ['증류', '성공한 실행을 해마에 학습'],
+              ].map(([s, d], i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="bg-cyan-100 text-cyan-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">{i + 1}</div>
+                  <p className="text-gray-800"><strong>{s}</strong> — {d}</p>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <p className="font-medium text-purple-800 mb-2">📋 공개 게시판</p>
-            <div className="text-sm text-purple-700 space-y-2">
-              <p>• 모든 IndieBiz 사용자가 볼 수 있는 공개 글 게시</p>
-              <p>• 도구 패키지 공유, 공지사항, 질문/답변</p>
-              <p>• <strong>#indiebizOS-package</strong> 해시태그로 도구 검색</p>
+          <div className="bg-slate-50 p-4 rounded-lg">
+            <p className="font-medium text-slate-800 mb-2">🎛️ 계기판에 모인 것들</p>
+            <div className="text-sm text-slate-700 space-y-1">
+              <p>• <strong>모델 기어 레버</strong>: 절약/균형/최대 + 의식 토글</p>
+              <p>• <strong>시스템 상태</strong>: 서비스 건강 · 자가점검 결과</p>
+              <p>• <strong>프레즌스</strong>: 지금 어떤 자아(맥/폰)가 깨어 있는지</p>
+              <p>• <strong>액티브 프로젝트</strong>: 지금 일하는 대화창 (클릭하면 맨 앞으로)</p>
+              <p>• <strong>주행기록</strong>: 최근 무엇을 실행했는지의 로그</p>
+              <p>• <strong>둘러보기 팔레트</strong>: 쓸 수 있는 IBL 어휘를 훑어봄</p>
             </div>
-          </div>
-
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="font-medium text-blue-800 mb-2">#️⃣ 해시태그 게시판</p>
-            <div className="text-sm text-blue-700 space-y-2">
-              <p>• 특정 해시태그로 <strong>반공개 커뮤니티</strong> 형성</p>
-              <p>• 해시태그를 아는 사람만 접근 가능</p>
-              <p>• 관심사 모임, 소그룹 소통에 활용</p>
-            </div>
-          </div>
-
-          <div className="bg-green-50 p-4 rounded-lg">
-            <p className="font-medium text-green-800 mb-2">🔒 암호화 DM</p>
-            <div className="text-sm text-green-700 space-y-2">
-              <p>• NIP-04 암호화로 1:1 비밀 대화</p>
-              <p>• 송신자와 수신자만 내용 확인 가능</p>
-            </div>
-          </div>
-
-          <div className="bg-amber-50 p-2 rounded-lg text-amber-700 text-sm">
-            📍 접속: 앱 모드 → <strong>커뮤니티</strong> 계기(피드·게시판·내 계정). DM은 <strong>메신저</strong> 계기.
           </div>
         </div>
       )
     },
+
+    // 7. 앱 모드
     {
-      title: '비즈니스 관리창',
-      icon: <Building2 className="w-12 h-12 text-orange-600" />,
+      title: '앱 모드 — 결정화된 계기',
+      icon: <LayoutGrid className="w-12 h-12 text-orange-600" />,
       content: (
         <div className="space-y-4 text-base">
           <div className="bg-orange-50 p-4 rounded-lg">
-            <p className="text-orange-800 font-medium mb-2">비즈니스 관리창이란?</p>
+            <p className="text-orange-800 font-medium mb-2">증명된 워크플로를 아이콘으로</p>
             <p className="text-orange-700 text-sm">
-              <strong>내 비즈니스를 정의</strong>하고 <strong>비즈니스 아이템을 올리는</strong> 곳입니다.
-              비즈니스는 "이웃"이라 부르는 사람들과 하게 되며, 이웃들은 각각 다른 <strong>정보 레벨</strong>을 부여받습니다.
-            </p>
-          </div>
-
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="w-6 h-6 text-blue-600" />
-              <strong className="text-blue-800">🔐 정보 레벨 기반 비즈니스</strong>
-            </div>
-            <div className="text-sm text-blue-700 space-y-2">
-              <p>• 이웃마다 <strong>다른 정보 레벨</strong>을 부여</p>
-              <p>• 레벨이 다르면 <strong>다른 비즈니스</strong>를 하게 됨</p>
-              <p>• 예: 가족에게만 최고 레벨 → 공유 비즈니스는 가족만 접근</p>
-            </div>
-            <div className="bg-white p-2 rounded mt-2 text-blue-600 text-sm">
-              💡 가족과만 물건 공유를 하고 싶다면? 가족에게 최고 레벨을 주고,
-              공유 비즈니스를 최고 레벨 전용으로 정의하면 됩니다.
-            </div>
-          </div>
-
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="w-6 h-6 text-green-600" />
-              <strong className="text-green-800">📄 비즈니스 문서</strong>
-            </div>
-            <div className="text-sm text-green-700 space-y-2">
-              <p>• 내가 <strong>어떤 비즈니스를 하는지</strong> 레벨별로 정의한 문서</p>
-              <p>• 다른 사람이 요청하면 <strong>답변할 때 참조</strong></p>
-              <p>• <strong>자동응답</strong> 시 AI 에이전트가 이 문서를 검색하여 응대</p>
-            </div>
-          </div>
-
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Bot className="w-6 h-6 text-purple-600" />
-              <strong className="text-purple-800">📋 근무지침</strong>
-            </div>
-            <div className="text-sm text-purple-700 space-y-2">
-              <p>• 자동응답하는 AI 에이전트가 <strong>특별히 알아야 할 내용</strong></p>
-              <p>• 예: "예의바르게 답하라", "특정인에게는 응답하지 마라"</p>
-              <p>• AI의 응대 방식, 톤, 정책을 세밀하게 조정</p>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="font-medium text-gray-700 mb-2">📝 참고</p>
-            <p className="text-sm text-gray-800">
-              메시지 송수신 관리는 <strong>이웃 관리창</strong>에서 합니다.
-              비즈니스 관리창은 비즈니스 정의와 AI 응대 설정에 집중합니다.
-            </p>
-          </div>
-
-          <div className="bg-amber-50 p-2 rounded-lg text-amber-700 text-sm">
-            📍 접속: 상단 툴바 → <strong>비즈니스</strong> 버튼
-          </div>
-        </div>
-      )
-    },
-    {
-      title: '이웃 관리창',
-      icon: <Users className="w-12 h-12 text-blue-600" />,
-      content: (
-        <div className="space-y-4 text-base">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-blue-800 font-medium mb-2">이웃이란?</p>
-            <p className="text-blue-700 text-sm">
-              IndieBiz OS에서 <strong>외부 연락처</strong>를 "이웃"이라고 부릅니다.
-              고객, 거래처, 파트너 등 모든 외부인을 이웃으로 등록하여 관리합니다.
+              자주 쓰는 IBL 호출은 <strong>계기(instrument)</strong>로 결정화되어, AI 호출 없이
+              <strong> GUI로 직접</strong> 조작됩니다. 각 계기는 액션 정의 안의 <code>app:</code> 선언 하나로
+              데스크탑·원격·폰 <strong>전 표면에 동시에</strong> 등장합니다.
             </p>
           </div>
 
           <div className="bg-white border rounded-lg p-3">
-            <p className="font-medium text-gray-700 mb-2">👤 이웃 정보 관리</p>
-            <div className="text-sm text-gray-800 space-y-2">
-              <p>• <strong>기본 정보</strong>: 이름, 별명, 프로필 이미지</p>
-              <p>• <strong>연락처</strong>: Gmail 주소, Nostr 공개키(npub) 등록</p>
-              <p>• <strong>메모</strong>: 해당 이웃에 대한 자유로운 기록</p>
-              <p>• <strong>태그</strong>: 고객/거래처/VIP 등 분류용 태그</p>
+            <p className="font-medium text-gray-700 mb-2">📦 현재 계기 (24종)</p>
+            <div className="grid grid-cols-3 gap-1 text-sm text-center">
+              {['부동산', '상가', '길찾기', '날씨', '맛집', '여행', '도서검색', '고전', '공연·전시',
+                '투자', '라디오', 'YT음악', '신문', '리포트', '달력', '사진', '메신저', '커뮤니티',
+                '비즈니스', '창업', '공모전', 'CCTV', '시스템(PC)', '파일'].map((m, i) => (
+                <div key={i} className="bg-orange-50 text-orange-700 p-1 rounded">{m}</div>
+              ))}
             </div>
           </div>
 
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className="w-6 h-6 text-green-600" />
-              <strong className="text-green-800">🔐 정보 레벨 설정</strong>
-            </div>
-            <div className="text-sm text-green-700 space-y-2">
-              <p>• 이웃마다 <strong>공개할 정보의 수준</strong>을 다르게 설정</p>
-              <p>• 자동응답 시 AI가 정보 레벨에 맞춰 응대</p>
-              <p>• 예: VIP 고객에게는 상세 정보, 일반 문의에는 기본 정보만</p>
-            </div>
+          <div className="bg-green-50 p-3 rounded-lg text-green-700 text-sm">
+            💡 예: <strong>부동산</strong> 계기에서 지역·전세/월세를 고르면 국토부 실거래가와 직방 현재 매물이
+            지도 위에 뜹니다 — 대화 한 줄 없이, 0토큰으로.
           </div>
 
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-6 h-6 text-purple-600" />
-              <strong className="text-purple-800">📜 대화 이력</strong>
-            </div>
-            <div className="text-sm text-purple-700 space-y-2">
-              <p>• 각 이웃과의 <strong>전체 메시지 기록</strong> 확인</p>
-              <p>• 수신/발신/자동응답 모두 시간순 정렬</p>
-              <p>• 과거 대화 맥락 파악 후 응대 가능</p>
-            </div>
-          </div>
-
-          <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
-            <p className="font-medium text-cyan-800 mb-2">🍗 예시: AI가 이웃에게 메시지 보내기</p>
-            <div className="text-sm text-cyan-700 space-y-2">
-              <p>시스템 AI는 이웃 목록의 정보를 알고 있습니다. 예를 들어:</p>
-              <div className="bg-white p-3 rounded mt-2 space-y-2">
-                <p><strong>"통닭집"</strong>이 이웃 목록에 있다면?</p>
-                <p>→ AI에게 <em>"통닭 한 마리 주문해줘"</em>라고 말하면, AI가 통닭집에게 주문 메시지를 보낼 수 있습니다.</p>
-                <p className="text-cyan-600 mt-2">만약 통닭집도 IndieBiz OS를 사용한다면?</p>
-                <p>→ 통닭집의 AI가 자동으로 주문을 접수하고 응답할 수 있습니다!</p>
-              </div>
-              <p className="text-cyan-600 mt-2">💡 이웃 목록 = AI가 연락할 수 있는 대상</p>
-            </div>
-          </div>
-
-          <div className="bg-orange-50 p-4 rounded-lg">
-            <p className="font-medium text-orange-800 mb-2">➕ 이웃 추가 방법</p>
-            <div className="text-sm text-orange-700 space-y-2">
-              <p>• <strong>직접 추가</strong>: 이웃 관리창에서 + 버튼</p>
-              <p>• <strong>메시지에서 추가</strong>: 새 발신자 자동 감지 → 이웃 등록</p>
-              <p>• <strong>IndieNet에서 추가</strong>: 게시판/DM 상대를 이웃으로 저장</p>
-            </div>
-          </div>
-
-          <div className="bg-amber-50 p-2 rounded-lg text-amber-700 text-sm">
-            📍 접속: 비즈니스 창 → <strong>이웃 관리</strong> 탭 또는 상단 이웃 아이콘
+          <div className="bg-amber-50 p-3 rounded-lg text-amber-700 text-sm">
+            자율주행에서 반복적으로 쓰던 일이 어느새 계기가 되어 있는 것 — 그게 "핏"이 굳는 방식입니다.
           </div>
         </div>
       )
     },
+
+    // 8. 메모리 — 7종
     {
-      title: '빠른 연락처',
-      icon: <Contact className="w-12 h-12 text-teal-600" />,
+      title: '메모리 — 7종',
+      icon: <Database className="w-12 h-12 text-blue-600" />,
+      content: (
+        <div className="space-y-4 text-base">
+          <p className="text-gray-700 text-sm">
+            메모리는 곧 <strong>속도·비용 최적화 장치이자 개인화의 엔진</strong>입니다.
+            인간 기억 분류에 대응하는 7종이 있습니다.
+          </p>
+
+          <div className="bg-white border rounded-lg overflow-hidden text-sm">
+            <table className="w-full">
+              <thead className="bg-gray-100 text-gray-800">
+                <tr><th className="p-2 text-left">인간 기억</th><th className="p-2 text-left">IndieBiz OS</th></tr>
+              </thead>
+              <tbody className="text-gray-700">
+                {[
+                  ['의미 (정적 지식)', '시스템 문서'],
+                  ['작업 (단기)', '대화 이력'],
+                  ['일화 (경험)', '에피소드 로그'],
+                  ['절차 (방법)', 'IBL 액션 + 해마 (자연어→IBL 자기학습)'],
+                  ['관계 (사용자 사실)', '심층메모리 (선호·결정·중요날짜 자동 흡수)'],
+                  ['자기상태 (항상성)', 'World Pulse + Self-Check'],
+                  ['공간 (포식)', '포식 기억 (냄새지도 — 어디에 무엇이 사는가)'],
+                ].map(([h, v], i) => (
+                  <tr key={i} className="border-t">
+                    <td className="p-2">{h}</td>
+                    <td className="p-2 font-medium">{v}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-6 h-6 text-blue-600" />
+              <strong className="text-blue-800">핵심은 사실이 아니라 직관(감)</strong>
+            </div>
+            <p className="text-blue-700 text-sm">
+              요리사의 손이 소금에서 알아서 멈추듯, <strong>해마 점수</strong>(과거에 해본 일인가)가
+              인지 라우팅을 가릅니다. 두 자기학습 루프(해마 증류 / 심층메모리 증류)가
+              <strong> 쓸수록</strong> 시스템을 빠르고 개인적으로 만듭니다 — 이게 핏이 쌓이는 방식입니다.
+            </p>
+          </div>
+        </div>
+      )
+    },
+
+    // 9. 포식 브라우저
+    {
+      title: '포식 브라우저',
+      icon: <Search className="w-12 h-12 text-teal-600" />,
       content: (
         <div className="space-y-4 text-base">
           <div className="bg-teal-50 p-4 rounded-lg">
-            <p className="text-teal-800 font-medium mb-2">빠른 연락처란?</p>
+            <p className="text-teal-800 font-medium mb-2">철학이 기능 하나로 응축된 곳</p>
             <p className="text-teal-700 text-sm">
-              자주 연락하는 사람들에게 <strong>원클릭으로 메시지를 보내는</strong> 기능입니다.
-              비즈니스 창을 열지 않고도 즉시 연락할 수 있습니다.
+              구글 검색창처럼 보이지만 작동이 다릅니다. 정답 하나를 주는 대신,
+              <strong> 판(board)</strong>을 채워 시야를 넓힙니다.
             </p>
           </div>
 
           <div className="bg-white border rounded-lg p-3">
-            <p className="font-medium text-gray-700 mb-2">사용 방법</p>
             <div className="space-y-2 text-sm">
-              <div className="flex items-start gap-2">
-                <div className="bg-teal-100 text-teal-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">1</div>
-                <p className="text-gray-800">상단 툴바에서 <strong>빠른 연락처</strong> 버튼 클릭</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="bg-teal-100 text-teal-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">2</div>
-                <p className="text-gray-800">등록된 연락처 목록에서 <strong>상대방 선택</strong></p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="bg-teal-100 text-teal-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">3</div>
-                <p className="text-gray-800">메시지 입력 후 <strong>전송</strong></p>
-              </div>
+              {[
+                '판의 크기 N을 정한다 (예: 10).',
+                '키워드에 대해 AI가 정답 하나가 아니라 후보 N개를 판에 올린다.',
+                '마음에 안 드는 것을 지운다. 들어가 보기도 한다.',
+                'AI는 지운 수만큼 새 후보로 채운다 — 남은 것에서 취향을 읽어.',
+                '반복하는 가운데 판의 분위기가 바뀌고, 새로운 것을 발견한다.',
+              ].map((t, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="bg-teal-100 text-teal-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">{i + 1}</div>
+                  <p className="text-gray-800">{t}</p>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="font-medium text-blue-800 mb-2">연락처 추가</p>
-            <div className="text-sm text-blue-700 space-y-2">
-              <p>• 빠른 연락처 창에서 <strong>+ 추가</strong> 버튼</p>
-              <p>• 이름, 연락처 유형(Gmail/Nostr), 주소 입력</p>
-              <p>• 또는 비즈니스 창의 이웃 목록에서 추가</p>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <strong className="text-purple-800">📋 판 도서관</strong>
+              <p className="text-purple-700">마음에 든 판을 통째로 저장해 나중에 돌아옵니다.</p>
             </div>
-          </div>
-
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <p className="font-medium text-purple-800 mb-2">지원 채널</p>
-            <div className="grid grid-cols-2 gap-2 text-sm mt-2">
-              <div className="bg-white p-2 rounded">
-                <Mail className="w-4 h-4 text-red-500 mb-1" />
-                <p className="text-gray-700"><strong>Gmail</strong></p>
-                <p className="text-gray-700">이메일 주소로 전송</p>
-              </div>
-              <div className="bg-white p-2 rounded">
-                <Radio className="w-4 h-4 text-purple-500 mb-1" />
-                <p className="text-gray-700"><strong>Nostr DM</strong></p>
-                <p className="text-gray-700">npub 주소로 암호화 전송</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-green-50 p-4 rounded-lg">
-            <p className="font-medium text-green-800 mb-2">활용 예시</p>
-            <div className="text-sm text-green-700 space-y-2">
-              <p>• 거래처에 빠른 확인 요청</p>
-              <p>• 팀원에게 간단한 알림 전송</p>
-              <p>• 자주 연락하는 고객에게 안내 발송</p>
+            <div className="bg-green-50 p-3 rounded-lg">
+              <strong className="text-green-800">🔒 개인화</strong>
+              <p className="text-green-700">내 PC의 파일·사실을 참고해 후보를 개인화 — 구글이 못 하는 일.</p>
             </div>
           </div>
 
           <div className="bg-amber-50 p-2 rounded-lg text-amber-700 text-sm">
-            📍 접속: 상단 툴바 → <strong>빠른 연락처</strong> 버튼
+            정답 AI가 가능성을 줄인다면, 이 브라우저는 <strong>빈칸을 채워야 하므로</strong> 계속 가능성을 늘립니다.
           </div>
         </div>
       )
     },
+
+    // 10. AI 프로바이더 설정
     {
       title: 'AI 프로바이더 설정',
       icon: <Key className="w-12 h-12 text-red-500" />,
@@ -698,586 +537,323 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
         <div className="space-y-4 text-base">
           <div className="bg-red-50 p-2 rounded-lg border border-red-200">
             <p className="text-red-700 font-medium text-center">
-              ⚠️ API 키 없이는 AI를 사용할 수 없습니다!
+              ⚠️ API 키(또는 로컬 모델) 없이는 AI를 사용할 수 없습니다
             </p>
           </div>
+
           <div className="bg-white border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-3 text-left text-gray-900 font-bold">프로바이더</th>
-                  <th className="p-3 text-left text-gray-900 font-bold">발급처</th>
-                </tr>
+                <tr><th className="p-3 text-left text-gray-900 font-bold">프로바이더</th><th className="p-3 text-left text-gray-900 font-bold">발급처</th></tr>
               </thead>
               <tbody className="text-gray-900">
-                <tr className="border-t">
-                  <td className="p-3"><strong>Google Gemini</strong> (추천)</td>
-                  <td className="p-3 text-blue-700">aistudio.google.com</td>
-                </tr>
-                <tr className="border-t">
-                  <td className="p-3">Anthropic Claude</td>
-                  <td className="p-3 text-blue-700">console.anthropic.com</td>
-                </tr>
-                <tr className="border-t">
-                  <td className="p-3">OpenAI GPT</td>
-                  <td className="p-3 text-blue-700">platform.openai.com</td>
-                </tr>
-                <tr className="border-t">
-                  <td className="p-3">Ollama (로컬)</td>
-                  <td className="p-3 text-gray-900">API 키 불필요</td>
-                </tr>
+                {[
+                  ['Google Gemini (추천 · 무료 등급)', 'aistudio.google.com'],
+                  ['Anthropic Claude', 'console.anthropic.com'],
+                  ['OpenAI GPT', 'platform.openai.com'],
+                  ['Ollama (로컬)', 'API 키 불필요'],
+                ].map(([p, s], i) => (
+                  <tr key={i} className="border-t">
+                    <td className="p-3">{p}</td>
+                    <td className="p-3 text-blue-700">{s}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-blue-800 font-medium mb-2">Gemini 모델 (2026.2 현재)</p>
-            <div className="space-y-2 text-blue-700">
-              <p>• <strong>gemini-3-flash-preview</strong> - 빠르고 경제적 (추천)</p>
-              <p>• <strong>gemini-3.1-pro-preview</strong> - 최신, 가장 강력</p>
-              <p>• <strong>gemini-2.5-flash</strong> - 안정적, 가성비 좋음</p>
-            </div>
-          </div>
-
-          <div className="bg-green-50 p-4 rounded-lg">
-            <p className="text-green-800 font-medium mb-2">🔌 도구도 API가 필요합니다</p>
-            <div className="text-sm text-green-700 space-y-2">
-              <p>에이전트가 제대로 작동하려면 <strong>정보 소스</strong>가 필요합니다. 많은 도구들이 외부 API를 사용합니다.</p>
-              <div className="bg-white p-2 rounded mt-2 text-green-600">
-                예: 뉴스 검색(NewsAPI), 주식 시세(금융 API), 날씨(OpenWeather), 지도(Google Maps) 등
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <p className="text-purple-800 font-medium mb-2">🔐 API 키 관리 방법</p>
-            <div className="text-sm text-purple-700 space-y-2">
-              <p>• API 키는 <strong>별도 문서에 안전하게 보관</strong>하세요</p>
-              <p>• 시스템 AI에게 "이 API 키로 도구 설정해줘"라고 요청 가능</p>
-              <p>• <strong>중요:</strong> "환경변수로 저장해줘"라고 꼭 말하세요</p>
-              <p>• 하드코딩하면 키를 잊어버리거나 노출 위험이 있습니다</p>
-            </div>
-          </div>
 
           <div className="bg-amber-50 p-4 rounded-lg">
-            <p className="text-amber-800 font-medium mb-2">📍 시스템 AI 프로바이더 설정</p>
-            <div className="text-sm text-amber-700 space-y-2">
-              <p>1. 런처 상단의 <strong>안경 메뉴</strong> 클릭</p>
-              <p>2. <strong>설정</strong> 선택</p>
-              <p>3. <strong>AI 프로바이더</strong> 탭에서 원하는 프로바이더 선택</p>
-              <p>4. API 키 입력 후 저장</p>
-              <p>5. 사용할 모델 선택 (예: gemini-3-flash-preview)</p>
-            </div>
-            <div className="bg-white p-2 rounded mt-2 text-amber-600 text-sm">
-              💡 설정 후 시스템 AI와 대화하면 API가 정상 작동하는지 확인할 수 있습니다
+            <p className="text-amber-800 font-medium mb-2">📍 설정 방법</p>
+            <div className="text-sm text-amber-700 space-y-1">
+              <p>1. 런처 상단 <strong>로고(안경) 메뉴</strong> → <strong>설정</strong></p>
+              <p>2. <strong>AI 프로바이더</strong> 탭에서 프로바이더 선택 → API 키 입력</p>
+              <p>3. 사용할 모델 선택 (프로바이더가 제공하는 <strong>최신 모델</strong>을 고르면 됩니다)</p>
+              <p>4. 프로젝트 에이전트는 <strong>프로젝트 설정</strong>에서 별도 지정 가능</p>
             </div>
           </div>
 
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <p className="text-slate-800 font-medium mb-2">📁 프로젝트 에이전트 프로바이더 설정</p>
-            <div className="text-sm text-slate-700 space-y-2">
-              <p>• 프로젝트 내부 에이전트의 AI는 <strong>프로젝트 설정</strong>에서 별도로 설정</p>
-              <p>• 프로젝트 열기 → 상단 메뉴 → <strong>프로젝트 설정</strong></p>
-              <p>• 프로젝트별로 다른 프로바이더/모델 사용 가능</p>
+          <div className="bg-cyan-50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <Gauge className="w-6 h-6 text-cyan-600" />
+              <strong className="text-cyan-800">모델 기어 — 티어별로 나눠 쓰기</strong>
             </div>
+            <p className="text-cyan-700 text-sm">
+              분류·평가 같은 가벼운 판단은 <strong>경량 모델</strong>이, 복잡한 계획은 <strong>본격 모델</strong>이
+              맡도록 자동 배분됩니다. 경량 모델 키가 비어 있으면 시스템 AI 키를 자동으로 씁니다.
+            </p>
+          </div>
+
+          <div className="bg-green-50 p-3 rounded-lg text-sm text-green-700">
+            🔌 <strong>도구도 API가 필요할 수 있습니다</strong> — 뉴스·주식·날씨·지도 등.
+            시스템 AI에게 "이 키를 <strong>환경변수로</strong> 저장해줘"라고 하면 안전하게 설정합니다.
           </div>
         </div>
       )
     },
+
+    // 11. 도구 패키지
     {
       title: '도구 패키지',
       icon: <Package className="w-12 h-12 text-green-600" />,
       content: (
         <div className="space-y-4 text-base">
           <div className="bg-green-50 p-4 rounded-lg">
-            <p className="text-green-800 font-medium mb-2">IBL 노드 & 도구 패키지</p>
+            <p className="text-green-800 font-medium mb-2">IBL 노드의 실제 구현체</p>
             <p className="text-green-700 text-sm">
-              에이전트는 <strong>IBL(IndieBiz Logic)</strong> 통합 명령어로 6개 노드(sense, self, limbs, others, engines, table)의
-              <strong>142가지 액션</strong>을 실행합니다. 각 노드는 <strong>도구 패키지</strong>로 확장되며,
-              현재 <strong>35개</strong>의 도구가 설치되어 있습니다.
-            </p>
-            <p className="text-green-700 text-sm mt-2">
-              자신이 쓸 도구를 직접 만들고 수리할 수 있다는 것은 <strong>AI 시대의 특징</strong>입니다.
-              시스템 AI와 상담하세요. 더 좋은 AI가 있다면 그것과 상담해도 됩니다.
+              6개 노드 141개 액션의 실제 능력은 <strong>도구 패키지</strong>(폴더 기반 동적 로딩)에서 옵니다.
+              현재 <strong>36개</strong>가 설치되어 있고, 설치/철거가 <strong>코드와 어휘를 원자적으로</strong> 넣고 뺍니다.
             </p>
           </div>
 
           <div className="bg-white border rounded-lg p-3">
-            <p className="font-medium text-gray-700 mb-2">🔧 도구 패키지 직접 만들기</p>
+            <p className="font-medium text-gray-700 mb-2">🔧 직접 만들고 수리하기</p>
             <div className="text-sm text-gray-800 space-y-2">
-              <p>• 시스템 AI에게 <strong>"○○ 도구 패키지 만들어줘"</strong>라고 요청</p>
-              <p>• AI가 <code>tool.json</code> (도구 정의)와 실행 로직 파일 생성</p>
-              <p>• 필요한 Python 라이브러리도 자동 설치</p>
-              <p>• 나만의 워크플로우에 맞는 커스텀 도구 제작 가능</p>
+              <p>• 시스템 AI에게 <strong>"○○ 도구 패키지 만들어줘"</strong> — 정의와 실행 로직을 생성</p>
+              <p>• 작동하지 않으면 <strong>"왜 안 되는지 알려줘 / 고쳐줘"</strong> — 도구는 Python이라 수리 가능</p>
+              <p>• 자신이 쓸 도구를 직접 만들고 고칠 수 있다는 건 <strong>AI 시대의 특징</strong>입니다</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <strong className="text-purple-800">🌐 공유 (Nostr)</strong>
+              <p className="text-purple-700">
+                내 패키지를 <strong>#indiebizOS-package</strong> 해시태그로 게시.
+                프로그램이 아닌 <strong>설명·구조·의존성</strong>만 공유합니다.
+              </p>
+            </div>
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <strong className="text-blue-800">🔍 검색·설치</strong>
+              <p className="text-blue-700">
+                Nostr에 공개된 패키지를 검색 → 시스템 AI가 보안·호환성 검토 후 설치.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 p-2 rounded-lg text-amber-700 text-sm">
+            📦 로고(안경) 메뉴 → <strong>도구 상점</strong>에서 설치/제거/검색/공개
+          </div>
+        </div>
+      )
+    },
+
+    // 12. 소통 & 자동 비즈니스
+    {
+      title: '소통 & 자동 비즈니스',
+      icon: <Mail className="w-12 h-12 text-pink-600" />,
+      content: (
+        <div className="space-y-4 text-base max-h-[440px] overflow-y-auto pr-1">
+          <div className="bg-pink-50 p-4 rounded-lg">
+            <p className="text-pink-800 font-medium mb-2">AI가 사람을 잇는 미디어</p>
+            <p className="text-pink-700 text-sm">
+              <strong>Gmail</strong> · <strong>Nostr</strong>(NIP-17 암호화 DM) · 탈중앙 망 <strong>IndieNet</strong>으로
+              AI와, 이웃과, 에이전트끼리 소통합니다. 이 채널들은 앱 모드의
+              <strong> 메신저 · 커뮤니티 · 비즈니스 계기</strong>로 다뤄집니다.
+            </p>
+          </div>
+
+          <div className="bg-blue-100 p-4 rounded-lg border-2 border-blue-300">
+            <div className="flex items-center gap-2 mb-1">
+              <Smartphone className="w-6 h-6 text-blue-700" />
+              <strong className="text-blue-800">🎯 원격 명령 (사용자 → 에이전트)</strong>
+            </div>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>• <strong>등록된 내 연락처</strong>에서 오는 메시지는 명령으로 인식</p>
+              <p>• 외출 중에도 Gmail/Nostr 앱으로 PC의 에이전트에게 지시</p>
+              <p className="bg-white p-2 rounded mt-1 text-blue-600">예: "오늘 뉴스 정리해서 이메일로 보내줘" → 실행 후 결과 회신</p>
+            </div>
+          </div>
+
+          <div className="bg-green-100 p-4 rounded-lg border-2 border-green-300">
+            <div className="flex items-center gap-2 mb-1">
+              <Bot className="w-6 h-6 text-green-700" />
+              <strong className="text-green-800">🤖 자동응답 (외부인 → 에이전트)</strong>
+            </div>
+            <div className="text-sm text-green-700 space-y-1">
+              <p>• 사용자가 아닌 외부인의 메시지는 자동응답 또는 기록 (명령은 실행 안 함)</p>
+              <p>• AI가 <strong>비즈니스 문서·근무지침</strong>을 참조해 응대</p>
+              <p>• 모든 수신 메시지는 저장되어 나중에 확인 가능</p>
+              <p className="bg-white p-2 rounded mt-1 text-green-600"><strong>💼 자동 비즈니스의 핵심</strong> — 고객 문의·예약·상담을 24시간 자동 처리</p>
             </div>
           </div>
 
           <div className="bg-orange-50 p-4 rounded-lg">
-            <p className="font-medium text-orange-800 mb-2">🛠️ 도구가 작동하지 않을 때</p>
-            <div className="text-sm text-orange-700 space-y-2">
-              <p>• 시스템 AI에게 <strong>"왜 안 되는지 알려줘"</strong>라고 물어보기</p>
-              <p>• <strong>"고쳐줘"</strong>라고 요청하면 AI가 코드를 수정</p>
-              <p>• 도구는 <strong>Python 프로그램</strong>이므로 다른 AI(Claude, ChatGPT 등)에게 도움을 요청할 수도 있음</p>
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="w-6 h-6 text-orange-600" />
+              <strong className="text-orange-800">🏪 비즈니스 계기</strong>
+            </div>
+            <div className="text-sm text-orange-700 space-y-1">
+              <p>• 내 비즈니스와 아이템을 정의하고, 이웃(연락처)마다 <strong>정보 레벨</strong>을 부여</p>
+              <p>• 레벨별 <strong>공개 문서</strong>를 자동 생성 → 자동응답이 이를 참조</p>
+              <p>• 예전의 "비즈니스 관리창 · 이웃 관리창 · 빠른 연락처"는 이제 앱 모드의 계기로 통합되었습니다</p>
             </div>
           </div>
 
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <p className="font-medium text-purple-800 mb-2">🌐 Nostr에 공개하기</p>
-            <div className="text-sm text-purple-700 space-y-2">
-              <p>• 도구 상점에서 내 패키지의 <strong>"Nostr에 공개"</strong> 버튼 클릭</p>
-              <p>• AI가 설치 방법을 자동 생성 (다른 AI도 구현 가능한 정보)</p>
-              <p>• <strong>#indiebizOS-package</strong> 해시태그로 네트워크에 게시</p>
+          <div className="bg-cyan-50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <Globe className="w-6 h-6 text-cyan-600" />
+              <strong className="text-cyan-800">🌐 IndieNet (탈중앙 커뮤니티)</strong>
             </div>
-          </div>
-
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="font-medium text-blue-800 mb-2">🔍 다른 사람의 도구 검색/설치</p>
-            <div className="text-sm text-blue-700 space-y-2">
-              <p>• 도구 상점 → <strong>"도구 검색"</strong> 버튼</p>
-              <p>• Nostr에 공개된 패키지 검색 및 상세 정보 확인</p>
-              <p>• 시스템 AI가 보안/품질/호환성 검토 후 설치</p>
+            <div className="text-sm text-cyan-700 space-y-1">
+              <p>• Nostr 기반 <strong>P2P 네트워크</strong> — 중앙 서버 없이 신원(npub)만으로 참여</p>
+              <p>• 공개 피드 · 해시태그 게시판(반공개) · 암호화 DM</p>
+              <p>• 접속: 앱 모드 → <strong>커뮤니티</strong> 계기, DM은 <strong>메신저</strong> 계기</p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-1 text-sm max-h-[100px] overflow-y-auto">
-            <div className="bg-gray-50 p-1 rounded text-center">web</div>
-            <div className="bg-gray-50 p-1 rounded text-center">investment</div>
-            <div className="bg-gray-50 p-1 rounded text-center">youtube</div>
-            <div className="bg-gray-50 p-1 rounded text-center">legal</div>
-            <div className="bg-gray-50 p-1 rounded text-center">web-collector</div>
-            <div className="bg-gray-50 p-1 rounded text-center">+30개 더</div>
-          </div>
-
-          <div className="bg-amber-50 p-2 rounded-lg text-amber-700 text-sm">
-            📦 안경 메뉴 → <strong>도구 상점</strong>에서 설치/제거/검색/공개
           </div>
         </div>
       )
     },
+
+    // 13. 두 자아 (맥 & 폰)
     {
-      title: '위임 체인',
-      icon: <MessageSquare className="w-12 h-12 text-purple-600" />,
+      title: '두 자아 (맥 & 폰)',
+      icon: <Smartphone className="w-12 h-12 text-sky-600" />,
       content: (
         <div className="space-y-4 text-base">
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <p className="text-purple-800 font-medium mb-2">위임이란?</p>
-            <p className="text-purple-700 text-sm">
-              에이전트가 다른 에이전트에게 작업을 맡기는 것입니다.
-              위임은 <strong>체인(연쇄)</strong> 형태로 이루어집니다.
+          <div className="bg-sky-50 p-4 rounded-lg">
+            <p className="text-sky-800 font-medium mb-2">맥과 폰, 각각 독립된 자아</p>
+            <p className="text-sky-700 text-sm">
+              IndieBiz OS는 PC(맥)뿐 아니라 <strong>폰에서도 온디바이스 두뇌로</strong> 돕니다.
+              둘은 각각 독립된 자아 — 케이블 없이도 폰 스스로 감각하고 판단합니다.
             </p>
           </div>
 
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="bg-green-50 p-3 rounded-lg">
+              <strong className="text-green-800">🔄 공유되는 것</strong>
+              <p className="text-green-700">
+                세계-데이터(연락처·일정·비즈니스)는 <strong>CRDT로 동기화</strong> — 어느 자아에서 고쳐도 합쳐집니다.
+              </p>
+            </div>
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <strong className="text-purple-800">🔒 사적인 것</strong>
+              <p className="text-purple-700">
+                각 자아의 <strong>주관적 기억</strong>(대화·해마)은 사적입니다 — 몸마다 다른 경험이 쌓입니다.
+              </p>
+            </div>
+          </div>
+
           <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="font-medium text-blue-800 mb-2">📁 유형 1: 프로젝트 내부 위임</p>
-            <div className="text-sm text-blue-700 space-y-2">
-              <p>• 같은 프로젝트 안의 에이전트끼리 협업</p>
-              <p>• 예: 리서처 → 분석가 → 작성자 순으로 작업</p>
-              <div className="bg-white p-2 rounded mt-2 font-mono text-blue-600">
-                에이전트A → call_agent(B) → 에이전트B → 결과 → A
-              </div>
+            <p className="font-medium text-blue-800 mb-2">📱 폰만의 온디맨드 감각</p>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>• <strong>위치</strong>(here) · <strong>마이크 받아쓰기/녹음</strong>(listen) · <strong>카메라 촬영</strong>(see)</p>
+              <p>• 상시 수집이 아니라 <strong>필요할 때만</strong> — 프라이버시 우선</p>
+              <p>• 폰이 자기 하드웨어(알림·진동·클립보드 등)를 직접 만질 수 있습니다</p>
             </div>
           </div>
 
-          <div className="bg-green-50 p-4 rounded-lg">
-            <p className="font-medium text-green-800 mb-2">🌐 유형 2: 시스템 AI → 프로젝트 위임</p>
-            <div className="text-sm text-green-700 space-y-2">
-              <p>• <strong>시스템 AI</strong>가 적합한 프로젝트를 선택해 작업 위임</p>
-              <p>• 프로젝트가 많아지고 <strong>신뢰도가 높아지면</strong> 자동 선택</p>
-              <p>• 시스템 AI에게 명령 → 프로젝트 자동 활성화 → 작업 수행</p>
-              <div className="bg-white p-2 rounded mt-2 font-mono text-green-600">
-                사용자 → 시스템AI → (프로젝트 선택/활성화) → 작업 완료
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-amber-50 p-4 rounded-lg">
-            <p className="font-medium text-amber-800 mb-2">✨ 자동 위임의 장점</p>
-            <div className="text-sm text-amber-700 space-y-2">
-              <p>• 프로젝트를 직접 열 필요 없이 <strong>시스템 AI에게만 명령</strong></p>
-              <p>• AI가 <strong>가장 적합한 프로젝트와 에이전트</strong>를 자동 선택</p>
-              <p>• 여러 프로젝트가 협력하는 복잡한 작업도 가능</p>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="font-medium text-gray-700 mb-2">💬 대화 기록</p>
-            <div className="text-sm text-gray-800 space-y-2">
-              <p>• 시스템 AI, 프로젝트 에이전트와의 <strong>모든 대화가 기록</strong>됩니다</p>
-              <p>• 프로젝트 → 대화 기록에서 언제든 <strong>검색/열람</strong> 가능</p>
-              <p>• 과거 작업 내용 확인, 이어서 작업할 때 유용</p>
-            </div>
+          <div className="bg-amber-50 p-2 rounded-lg text-amber-700 text-sm">
+            💡 어느 자아가 지금 깨어 있는지는 <strong>조종실의 프레즌스</strong>에서 확인합니다.
           </div>
         </div>
       )
     },
+
+    // 14. 원격 접근
     {
-      title: '실제 사용 예시',
-      icon: <Wrench className="w-12 h-12 text-pink-600" />,
+      title: '원격 접근',
+      icon: <Monitor className="w-12 h-12 text-lime-600" />,
       content: (
-        <div className="space-y-3 text-base max-h-[420px] overflow-y-auto pr-1">
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <HardDrive className="w-5 h-5 text-blue-700" />
-              <strong className="text-blue-900">🔧 하드웨어 관리</strong>
-            </div>
-            <div className="text-sm text-blue-800 space-y-1">
-              <p>• <strong>PC 파일 관리</strong>: 에이전트와 대화로 파일 정리 — AI가 삭제 필요성과 위험도 평가</p>
-              <p>• <strong>안드로이드 폰 제어</strong>: 에이전트를 통한 기기 관리</p>
-              <p>• <strong>ESP32 IoT</strong>: 에이전트가 ESP32에 코드 업로드 + 웹앱 생성 → 폰에서 LED 스위치 제어</p>
-            </div>
-          </div>
-
-          <div className="bg-amber-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Scale className="w-5 h-5 text-amber-700" />
-              <strong className="text-amber-900">⚖️ 법률 연구</strong>
-            </div>
-            <div className="text-sm text-amber-800 space-y-1">
-              <p>• <strong>법령 검증</strong>: 특정 세금 감면법이 실제로 제정되었는지 정부 입법 DB에서 확인</p>
-              <p>• <strong>상속세 검색</strong>: 상속세 규정 검색 및 상담</p>
-              <p>• 뉴스 기사가 아닌 <strong>정부 공식 자료</strong> 기반의 신뢰할 수 있는 답변</p>
-            </div>
-          </div>
-
-          <div className="bg-pink-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Video className="w-5 h-5 text-pink-700" />
-              <strong className="text-pink-900">🎬 영상 / 슬라이드 / 홈페이지 제작</strong>
-            </div>
-            <div className="text-sm text-pink-800 space-y-1">
-              <p>• <strong>빠른 영상</strong>: 가족 사진 + YouTube BGM → 사진 슬라이드쇼 영상</p>
-              <p>• <strong>전문 영상</strong>: 책 리뷰 기반 소개 영상 (React/Remotion)</p>
-              <p>• <strong>프레젠테이션</strong>: 슬라이드 덱 빠르게 생성</p>
-              <p>• <strong>홈페이지 관리</strong>: 여러 웹사이트 파일 위치 기억, 최신 Tailwind CSS로 업데이트</p>
-            </div>
-          </div>
-
-          <div className="bg-green-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <ShoppingCart className="w-5 h-5 text-green-700" />
-              <strong className="text-green-900">🛒 스마트 쇼핑</strong>
-            </div>
-            <div className="text-sm text-green-800 space-y-1">
-              <p>• 네이버 쇼핑 + 다나와 가격 비교를 <strong>AI 판단</strong>과 결합</p>
-              <p>• "아내 생일 선물로 뭘 사지?" 같은 모호한 질문 → AI가 아이템 선정 → 실제 상품 검색 및 비교</p>
-            </div>
-          </div>
-
-          <div className="bg-indigo-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <GraduationCap className="w-5 h-5 text-indigo-700" />
-              <strong className="text-indigo-900">📚 심층 학습 & 연구</strong>
-            </div>
-            <div className="text-sm text-indigo-800 space-y-1">
-              <p>• 여러 소스 연결 (학술 논문, The Guardian 등)로 심층 학습 대화</p>
-              <p>• "왜 한국에 미세먼지가 심해?" → <strong>최신 논문 검색</strong> 기반 답변</p>
-              <p>• "트럼프 재선 후 한국 정책 변화" → <strong>1차 자료 기반</strong> 보고서 작성</p>
-            </div>
-          </div>
-
-          <div className="bg-purple-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Music className="w-5 h-5 text-purple-700" />
-              <strong className="text-purple-900">🎵 음악</strong>
-            </div>
-            <div className="text-sm text-purple-800 space-y-1">
-              <p>• <strong>ABC 기보법 작곡</strong>: "경쾌한 2분짜리 왈츠를 4중주로 연주해줘" → LLM이 악보 생성 및 재생</p>
-              <p>• <strong>YouTube 음악 재생</strong>: "아이유 노래 3곡 틀어줘" → AI가 선곡 → 재생. 무한 플레이리스트 같은 경험</p>
-            </div>
-          </div>
-
-          <div className="bg-cyan-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Camera className="w-5 h-5 text-cyan-700" />
-              <strong className="text-cyan-900">📷 사진 관리</strong>
-            </div>
-            <div className="text-sm text-cyan-800 space-y-1">
-              <p>• 사진 폴더 스캔 → 시간순 보기, 지도 보기</p>
-              <p>• "2024년 10월에 어디 갔었지?" → <strong>사진의 GPS 데이터</strong>로 답변</p>
-              <p>• "수원 갔을 때 사진 보여줘" → 일치하는 사진을 브라우저에 표시</p>
-            </div>
-          </div>
-
-          <div className="bg-orange-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Newspaper className="w-5 h-5 text-orange-700" />
-              <strong className="text-orange-900">📰 개인 신문</strong>
-            </div>
-            <div className="text-sm text-orange-800 space-y-1">
-              <p>• 스위치 한 번 클릭 → 설정된 키워드로 구글 뉴스 검색 → 신문 형식 자동 편집 → 브라우저 표시</p>
-              <p>• <strong>매일 클릭 한 번</strong>으로 맞춤형 뉴스 브리핑</p>
-            </div>
-          </div>
-
-          <div className="bg-red-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Heart className="w-5 h-5 text-red-700" />
-              <strong className="text-red-900">🏥 건강 관리</strong>
-            </div>
-            <div className="text-sm text-red-800 space-y-1">
-              <p>• 여러 전문의 에이전트 (내과, 외과 등)</p>
-              <p>• 대화에서 건강 정보 <strong>자동 기록</strong> → 축적된 기록 기반 맞춤형 건강 상담</p>
-            </div>
-          </div>
-
-          <div className="bg-teal-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Home className="w-5 h-5 text-teal-700" />
-              <strong className="text-teal-900">🏠 부동산 분석</strong>
-            </div>
-            <div className="text-sm text-teal-800 space-y-1">
-              <p>• 아파트/다세대 실거래가, 월세/전세 조회 + <strong>지도 시각화</strong></p>
-              <p>• "청주 오송역 상권 어때?" 같은 지역 분석</p>
-            </div>
-          </div>
-
-          <div className="bg-emerald-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-5 h-5 text-emerald-700" />
-              <strong className="text-emerald-900">📈 투자 상담</strong>
-            </div>
-            <div className="text-sm text-emerald-800 space-y-1">
-              <p>• 보유 주식 포트폴리오 기반 투자 상담</p>
-              <p>• 주가, 금, 암호화폐 가격 <strong>그래프 시각화</strong></p>
-            </div>
-          </div>
-
-          <div className="bg-violet-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Radio className="w-5 h-5 text-violet-700" />
-              <strong className="text-violet-900">📱 원격 명령 & 자동응답</strong>
-            </div>
-            <div className="text-sm text-violet-800 space-y-1">
-              <p>• 외출 중 Gmail이나 Nostr 앱으로 PC의 IndieBiz OS에 명령 전송</p>
-              <p>• 예: "신문 발행해서 첨부파일로 보내줘" → 시스템 AI가 실행</p>
-              <p>• <strong>자동응답 시스템</strong>: 주인 외의 메시지에 AI가 적절히 응답 (명령은 실행 안 함)</p>
-              <p>• 이 시스템이 고객 문의 처리, 예약 안내 등 <strong>자동화 비즈니스의 기반</strong></p>
-            </div>
-          </div>
-
-          <div className="bg-slate-100 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Share2 className="w-5 h-5 text-slate-700" />
-              <strong className="text-slate-900">🔄 도구 패키지 공유</strong>
-            </div>
-            <div className="text-sm text-slate-800 space-y-1">
-              <p>• Nostr 공개 메시지로 도구 패키지 설치 정보 공유</p>
-              <p>• 다른 사용자는 정보를 받아 자신의 시스템 AI에게 설치 요청</p>
-              <p>• 프로그램 자체가 아닌 <strong>정보(설명, 구조, 의존성)</strong>만으로 시스템 AI가 빌드 및 설치</p>
-            </div>
-          </div>
-
-          <div className="bg-fuchsia-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Hash className="w-5 h-5 text-fuchsia-700" />
-              <strong className="text-fuchsia-900">#️⃣ 해시태그 게시판</strong>
-            </div>
-            <div className="text-sm text-fuchsia-800 space-y-1">
-              <p>• IndieNet 해시태그 기반 게시판: 참여 희망자들 간 <strong>아무 해시태그로나 게시판 생성</strong></p>
-              <p>• 반공개 구조 — 해시태그 아는 사람에겐 공개, 모르면 접근 불가</p>
-              <p>• 관심 기반 커뮤니티, 소규모 그룹 소통, 도구 패키지 공유 채널로 활용</p>
-            </div>
-          </div>
-
-          <div className="bg-rose-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <MessageSquare className="w-5 h-5 text-rose-700" />
-              <strong className="text-rose-900">💬 멀티 채팅방</strong>
-            </div>
-            <div className="text-sm text-rose-800 space-y-1">
-              <p>• 아무 프로젝트의 에이전트들을 <strong>하나의 채팅방에 자유롭게</strong> 모으기</p>
-              <p>• <strong>@멘션</strong>으로 특정 에이전트 지정, 응답 수(1~5) 조절 가능</p>
-              <p>• 에이전트는 <strong>프로젝트 도구가 자동 적용</strong>되어 대화와 작업 모두 수행</p>
-              <p>• 창의적 활용: 이순신 장군, 원균 장군, 나의 3자 대화 같은 것도 가능</p>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: '원격 접근 (Finder & 런처)',
-      icon: <Monitor className="w-12 h-12 text-sky-600" />,
-      content: (
-        <div className="space-y-4 text-base max-h-[420px] overflow-y-auto pr-1">
-          <div className="bg-sky-50 p-4 rounded-lg">
-            <p className="text-sky-800 font-medium mb-2">원격 접근 시스템</p>
-            <p className="text-sky-700 text-sm">
-              Cloudflare Tunnel을 통해 <strong>외부에서 안전하게</strong> 홈 서버에 접근합니다.
-              포트 포워딩이나 DDNS 없이도 HTTPS로 보호된 접속이 가능합니다.
+        <div className="space-y-4 text-base max-h-[440px] overflow-y-auto pr-1">
+          <div className="bg-lime-50 p-4 rounded-lg">
+            <p className="text-lime-800 font-medium mb-2">집 PC를 어디서든 접근하는 개인 서버로</p>
+            <p className="text-lime-700 text-sm">
+              <strong>Cloudflare Tunnel</strong>로 포트 포워딩·DDNS 없이 HTTPS 보호된 외부 접근이 가능합니다.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1">
                 <Folder className="w-6 h-6 text-cyan-600" />
                 <strong className="text-cyan-800">📁 원격 Finder</strong>
               </div>
-              <p className="text-cyan-700 text-sm mb-2">
-                파일 탐색, 동영상 스트리밍, 다운로드
-              </p>
-              <div className="bg-white p-2 rounded text-cyan-600 text-sm">
-                경로: <code>/nas/app</code>
-              </div>
+              <p className="text-cyan-700 text-sm">파일 탐색 · 동영상 스트리밍 · 다운로드</p>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-1">
                 <Bot className="w-6 h-6 text-purple-600" />
                 <strong className="text-purple-800">🤖 원격 런처</strong>
               </div>
-              <p className="text-purple-700 text-sm mb-2">
-                시스템 AI 채팅, 에이전트 제어, 스위치 실행
-              </p>
-              <div className="bg-white p-2 rounded text-purple-600 text-sm">
-                경로: <code>/launcher/app</code>
-              </div>
+              <p className="text-purple-700 text-sm">3표면을 웹으로 — AI 채팅 · 앱 계기 · 스위치 실행</p>
             </div>
           </div>
 
-          <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-            <p className="font-medium text-orange-800 mb-2">📋 사전 준비: Cloudflare 가입</p>
-            <div className="text-sm text-orange-700 space-y-2">
-              <p><strong>1. Cloudflare 계정 가입</strong></p>
-              <p className="pl-3">• <code>dash.cloudflare.com/sign-up</code> 에서 무료 가입</p>
-              <p><strong>2. Workers & Pages 방문 (필수)</strong></p>
-              <p className="pl-3">• 대시보드 → Workers & Pages 한 번 클릭</p>
-              <p className="pl-3">• 자동으로 <code>username.workers.dev</code> 서브도메인 생성</p>
-              <p className="pl-3 text-xs text-orange-600">※ workers.dev는 Tunnel에 직접 사용 불가</p>
-              <p><strong>3. 도메인 추가 (Tunnel용)</strong></p>
-              <p className="pl-3">• 보유 도메인을 Cloudflare에 등록 (네임서버 변경)</p>
-              <p className="pl-3">• 또는 Cloudflare에서 새 도메인 구매</p>
-              <p><strong>4. API 토큰 발급</strong></p>
-              <p className="pl-3">• <code>dash.cloudflare.com/profile/api-tokens</code></p>
-              <p className="pl-3">• Edit Cloudflare Workers 템플릿 + Tunnel 권한</p>
-              <p><strong>5. Account ID 확인</strong></p>
-              <p className="pl-3">• 도메인 선택 → 우측 하단 API 섹션</p>
-              <p><strong>6. cloudflared 설치</strong></p>
-              <p className="pl-3">• macOS: <code>brew install cloudflared</code></p>
-              <p className="pl-3">• Linux: cloudflared.deb 다운로드 설치</p>
-              <p><strong>7. Cloudflare 로그인 (최초 1회)</strong></p>
-              <p className="pl-3">• 터미널에서 <code>cloudflared tunnel login</code></p>
+          <div className="bg-orange-50 p-4 rounded-lg">
+            <p className="font-medium text-orange-800 mb-2">📋 설정 순서</p>
+            <div className="text-sm text-orange-700 space-y-1">
+              <p>1. <strong>dash.cloudflare.com</strong>에서 무료 가입 + 도메인 연결</p>
+              <p>2. <strong>API 토큰</strong>과 <strong>Account ID</strong> 발급</p>
+              <p>3. 시스템 AI에게 "cloudflare 환경변수를 설정해줘" (토큰·ID 전달)</p>
+              <p>4. 재시작 후 "원격 접근 터널을 설정해줘" — 도메인은 AI가 자동 조회</p>
+              <p>5. 설정 → 원격 Finder/런처 탭에서 활성화 + <strong>비밀번호</strong> 설정</p>
             </div>
           </div>
 
-          <div className="bg-indigo-50 p-4 rounded-lg border-2 border-indigo-300">
-            <p className="font-medium text-indigo-800 mb-2">🚀 시스템 AI 명령 (사전 준비 완료 후)</p>
-            <div className="text-sm text-indigo-700 space-y-2">
-              <p><strong>1️⃣ 환경변수 설정</strong></p>
-              <div className="bg-white p-2 rounded text-indigo-600 text-xs">
-                "cloudflare 도구의 환경변수를 설정해줘.<br/>
-                CLOUDFLARE_API_TOKEN: [토큰값]<br/>
-                CLOUDFLARE_ACCOUNT_ID: [Account ID]"
-              </div>
-              <p><strong>2️⃣ IndieBiz OS 재시작</strong></p>
-              <p className="pl-3 text-xs">런처를 닫고 다시 실행</p>
-              <p><strong>3️⃣ 터널 설정 요청</strong></p>
-              <div className="bg-white p-2 rounded text-indigo-600 text-xs">
-                "원격 접근 터널을 설정해줘."
-              </div>
-              <p className="pl-3 text-xs text-indigo-500">💡 도메인을 몰라도 됩니다! 시스템 AI가 자동 조회합니다.</p>
-              <p><strong>4️⃣ 터널 실행</strong> (터미널)</p>
-              <div className="bg-white p-2 rounded text-indigo-600 text-xs">
-                <code>cloudflared tunnel run indiebiz</code>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="font-medium text-blue-800 mb-2">⚙️ IndieBiz OS 설정</p>
-            <div className="text-sm text-blue-700 space-y-2">
-              <p>1. 안경 메뉴 → <strong>설정</strong> 클릭</p>
-              <p>2. <strong>원격 Finder</strong> 또는 <strong>원격 런처</strong> 탭 선택</p>
-              <p>3. 기능 활성화 및 비밀번호 설정</p>
-              <p>4. (원격 Finder만) 접근 허용할 폴더 경로 추가</p>
-            </div>
-          </div>
-
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Cloud className="w-6 h-6 text-green-600" />
-              <strong className="text-green-800">🌐 Cloudflare Tunnel 특징</strong>
-            </div>
-            <div className="text-sm text-green-700 space-y-2">
-              <p>• <strong>포트 포워딩 불필요</strong>: 공유기 설정 없이 외부 접근</p>
-              <p>• <strong>자동 HTTPS</strong>: Cloudflare가 SSL 인증서 관리</p>
-              <p>• <strong>안전한 터널</strong>: 서버 IP 노출 없이 안전하게 연결</p>
-              <p>• <strong>무료</strong>: Cloudflare Free 플랜에서 Tunnel 무료 제공</p>
-            </div>
-          </div>
-
-          <div className="bg-amber-50 p-4 rounded-lg">
-            <p className="font-medium text-amber-800 mb-2">🔐 보안 고려사항</p>
-            <div className="text-sm text-amber-700 space-y-2">
-              <p>• Finder와 런처에 <strong>서로 다른 비밀번호</strong> 설정 권장</p>
-              <p>• 외부 노출되므로 <strong>복잡한 비밀번호</strong> 사용</p>
-              <p>• 원격 Finder에서 <strong>민감한 폴더 제외</strong></p>
-              <p>• 추가 보안이 필요하면 <strong>Cloudflare Zero Trust</strong> 활용</p>
-            </div>
-          </div>
-
-          <div className="bg-gray-100 p-4 rounded-lg">
-            <p className="font-medium text-gray-700 mb-2">📱 사용 예시</p>
-            <div className="text-sm text-gray-800 space-y-2">
-              <p>• 외출 중 스마트폰으로 집 PC의 동영상 스트리밍</p>
-              <p>• 외부에서 시스템 AI에게 작업 지시</p>
-              <p>• 원클릭으로 스위치 실행하여 자동화 작업 수행</p>
-              <p>• 프로젝트 에이전트와 원격 채팅</p>
-            </div>
+          <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
+            📖 자세한 절차: <strong>data/system_docs/remote_access.md</strong> ·
+            시스템 AI에게 "원격 접근 문서 보여줘"
           </div>
 
           <div className="bg-red-50 p-2 rounded-lg text-red-700 text-sm">
-            ⚠️ 원격 접근은 <strong>Electron 앱</strong>이 아닌 <strong>웹 브라우저</strong>에서 작동하는 경량 인터페이스입니다.
+            ⚠️ 원격은 <strong>웹 브라우저</strong>에서 도는 경량 리모컨입니다 — 무거운 작업은 집 PC(맥 자아)가 수행합니다.
+            외부 노출되니 <strong>복잡한 비밀번호</strong>를 쓰고 민감한 폴더는 제외하세요.
           </div>
         </div>
       )
     },
+
+    // 15. 버전 정보
     {
       title: '버전 정보',
       icon: <FileText className="w-12 h-12 text-gray-800" />,
       content: (
         <div className="space-y-4 text-base">
           <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-bold text-lg text-gray-800 mb-3">IndieBiz OS</h3>
+            <h3 className="font-bold text-lg text-gray-800 mb-3">IndieBiz OS — 현재 상태</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="bg-white p-2 rounded">
-                <p className="text-gray-700">활성 프로젝트</p>
-                <p className="text-xl font-bold text-amber-600">24개</p>
+                <p className="text-gray-700">IBL 노드</p>
+                <p className="text-xl font-bold text-purple-600">6개</p>
+              </div>
+              <div className="bg-white p-2 rounded">
+                <p className="text-gray-700">IBL 액션</p>
+                <p className="text-xl font-bold text-indigo-600">141개</p>
               </div>
               <div className="bg-white p-2 rounded">
                 <p className="text-gray-700">도구 패키지</p>
-                <p className="text-xl font-bold text-green-600">35개</p>
+                <p className="text-xl font-bold text-green-600">36개</p>
               </div>
               <div className="bg-white p-2 rounded">
-                <p className="text-gray-700">IBL 노드</p>
-                <p className="text-xl font-bold text-purple-600">5개 (321 액션)</p>
-              </div>
-              <div className="bg-white p-2 rounded">
-                <p className="text-gray-700">확장 패키지</p>
-                <p className="text-xl font-bold text-blue-600">9개</p>
+                <p className="text-gray-700">앱 계기</p>
+                <p className="text-xl font-bold text-orange-600">24종</p>
               </div>
             </div>
           </div>
+
           <div className="bg-amber-50 p-4 rounded-lg">
             <p className="text-amber-800 font-medium mb-2">철학</p>
             <p className="text-amber-700 text-sm italic">
-              "하나의 범용 AI보다 여러 목적별 AI가 낫다"
+              "도구는 인간의 시야를 가리기보다 넓혀야 한다."
             </p>
             <p className="text-amber-600 text-sm mt-2">
-              IndieBiz OS는 모든 사용자가 같은 방식으로 사용하는 제품이 아닙니다.
-              당신의 고유한 필요에 맞게 적응하는 기반입니다.
+              IndieBiz OS는 모두가 같은 방식으로 쓰는 제품이 아니라,
+              당신의 고유한 필요에 맞게 적응하는 <strong>기반</strong>입니다.
             </p>
           </div>
+
           <div className="bg-blue-50 p-4 rounded-lg">
             <p className="text-blue-800 font-medium mb-1">📚 더 자세한 내용</p>
             <p className="text-blue-700 text-sm">
-              시스템의 상세한 기술 문서는 <strong>data/system_docs/</strong> 폴더에 있습니다.
-              시스템 AI에게 "시스템 문서 보여줘"라고 요청하면 확인할 수 있습니다.
+              상세 문서는 <strong>data/system_docs/</strong>에 있습니다.
+              (해부도 <code>anatomy.md</code>가 전체 지도, 그 아래로 비전·아키텍처·IBL·메모리 문서로 이어집니다.)
+              시스템 AI에게 <strong>"시스템 문서 보여줘"</strong>라고 요청하세요.
             </p>
           </div>
+
           <div className="text-center text-gray-700 text-sm">
             <p>MIT License</p>
-            <p className="mt-1">
-              <strong>IndieBiz OS</strong> - Design. Automate. Connect.
-            </p>
+            <p className="mt-1"><strong>IndieBiz OS</strong> — 인지 외골격</p>
           </div>
         </div>
       )

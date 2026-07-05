@@ -713,6 +713,30 @@ async def xray_docs():
     return JSONResponse(_collect_docs())
 
 
+def _resolve_system_doc(docname: str) -> Path | None:
+    """docname → data/system_docs/{stem}.md 안전 해석 (경로 탈출 차단)."""
+    safe = Path(docname).name
+    if safe.endswith(".md"):
+        safe = safe[:-3]
+    doc_path = DATA_PATH / "system_docs" / f"{safe}.md"
+    try:
+        doc_path.relative_to(DATA_PATH / "system_docs")
+    except ValueError:
+        return None
+    return doc_path
+
+
+@router.get("/doc/{docname}/raw")
+async def xray_doc_raw(docname: str):
+    """system_docs 문서의 원본 마크다운 (조종실 인라인 박스가 ReactMarkdown 으로 렌더)."""
+    doc_path = _resolve_system_doc(docname)
+    if doc_path is None:
+        return JSONResponse({"error": "invalid document"}, status_code=400)
+    if not doc_path.exists():
+        return JSONResponse({"error": "not found", "name": doc_path.name}, status_code=404)
+    return JSONResponse({"name": doc_path.name, "content": doc_path.read_text(encoding="utf-8")})
+
+
 def _parse_markdown_file(filepath: Path) -> Dict:
     """마크다운 파일을 섹션/테이블/코드 블록으로 파싱"""
     import os

@@ -363,6 +363,37 @@ async def get_instruments():
         raise HTTPException(status_code=500, detail=f"계기 파생 실패: {e}")
 
 
+class AppLayoutModel(BaseModel):
+    """앱모드 홈 레이아웃 — 자유배치·폴더·앱저장소 상태 (launcher_layout 스키마)."""
+    version: int = 1
+    positions: dict = {}
+    folders: dict = {}
+    membership: dict = {}
+    removed: list = []
+    uninstalled: list = []
+
+
+@router.get("/app-layout")
+async def get_app_layout():
+    """앱모드 홈 레이아웃 로드 — 위치/폴더/소속/앱저장소(removed) 상태."""
+    from launcher_layout import load_layout
+    return load_layout()
+
+
+@router.put("/app-layout")
+async def put_app_layout(data: AppLayoutModel):
+    """앱모드 홈 레이아웃 저장 — 드래그 배치·폴더 정리·앱 추가/제거 후 지속."""
+    from launcher_layout import save_layout
+    return save_layout(data.model_dump())
+
+
+@router.post("/app-layout/reset/{app_id}")
+async def reset_app_layout(app_id: str):
+    """휴지통 의미 — 앱이 사용 중 쌓은 데이터를 지우고 초기화(앱이 선언한 reset IBL 실행)."""
+    from launcher_layout import reset_app_data
+    return reset_app_data(app_id)
+
+
 @router.post("/auth/login")
 async def login(data: LoginModel, response: Response):
     """로그인"""

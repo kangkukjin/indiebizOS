@@ -3,7 +3,7 @@ title: 시스템 구조 가이드
 scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행·평가에 자동 주입)
 owner_code: prompt_builder.py, consciousness_agent.py, agent_cognitive.py (모두 자동 로드)
 last_updated: 2026-06-30
-see_also: [architecture.md, execution_memory.md]
+see_also: [architecture.md, memory.md]
 ---
 
 # IndieBiz OS 시스템 구조 가이드
@@ -30,17 +30,17 @@ see_also: [architecture.md, execution_memory.md]
 ## 시스템 문서 (System AI 참조)
 - **경로**: `/Users/kangkukjin/Desktop/AI/indiebizOS/data/system_docs/`
 - 시스템 AI가 장기 기억으로 참조하는 문서들
-- **파일 목록** (13개):
+- **파일 목록** (12 문서 + changelog):
   - `system_structure.md` - 시스템 구조 가이드 (**항상 프롬프트에 포함** — 의식/실행/평가 에이전트)
+  - `anatomy.md` - **해부도(정문)** — 신참용 전체 지도(철학→3표면→IBL→인지→메모리→검색브라우저→몸), 각 상세 문서 허브
   - `vision.md` - **비전: 인지 외골격** — 목표(자율 아닌 융합)·개발 북극성=착용감. 모든 설계 결정의 최상위 기준
-  - `architecture.md` - 시스템 개요, 아키텍처, 설계 의도
+  - `architecture.md` - 시스템 개요·아키텍처·설계 의도 (구 overview.md 오브젝트/에이전트 유형 흡수)
   - `technical.md` - 기술 문서 (API, 설정, 경로)
-  - `ibl.md` - IBL 명세 — 6-Node·141 액션·op 어휘화·삼각 검증
-  - `execution_memory.md` - 실행기억 & 해마 & RAG
+  - `ibl.md` - IBL 명세(6-Node·op 어휘화·삼각 검증) + **설계 철학**(구 ibl_design_philosophy.md)
+  - `memory.md` - 메모리 7종 통합 지도 + **연상기억 심층**(해마·심층메모리 — 구 memory_architecture.md + execution_memory.md)
   - `packages.md` - 패키지 시스템 (38개 도구 + 9개 extensions)
   - `inventory.md` - 프로젝트/패키지 현황 (자동 생성)
-  - `communication.md` - 통신/연동
-  - `delegation.md` - 위임 체인 시스템
+  - `communication.md` - 통신/연동 + **위임 체인**(구 delegation.md)
   - `scheduler_guide.md` - 스케줄러 가이드
   - `remote_access.md` - 원격 접속 문서
   - `changelog.log` - 변경 이력
@@ -179,7 +179,7 @@ indiebizOS/
 │   ├── bodies/          # 몸 프로파일 (android.json 등) → 폰 엔진 번들 파생 소스 (build_body_bundle.py)
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
-│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 12개 파일 — system_structure.md는 항상 프롬프트에 포함)
+│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 11 문서+changelog — system_structure.md는 항상 프롬프트에 포함)
 │   ├── guides/          # 가이드 파일 (47개, 의식 에이전트가 선택하여 프롬프트에 주입)
 │   ├── common_prompts/  # 공용 프롬프트 (consciousness/evaluator/unconscious + fragments)
 │   ├── system_ai_memory.db # 시스템 AI 메모리 (SQLite)

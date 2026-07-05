@@ -3,7 +3,7 @@ title: 스케줄러 가이드
 scope: 정기 작업 스케줄, 트리거 엔진, 워크플로우, 캘린더 연동
 owner_code: scheduler.py, trigger_engine.py, workflow_engine.py, calendar_manager.py
 last_updated: 2026-06-22
-see_also: [architecture.md, delegation.md]
+see_also: [architecture.md, communication.md]
 ---
 
 # 스케줄러 사용 가이드

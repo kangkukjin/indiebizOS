@@ -16,6 +16,20 @@ export interface Project {
   in_trash?: boolean; // 휴지통 여부
 }
 
+// 앱모드 홈 레이아웃 — 자유배치·폴더·앱저장소 개인화 레이어 (data/launcher_app_layout.json)
+export interface AppFolder {
+  label: string;
+  icon: string;
+}
+export interface AppLayout {
+  version: number;
+  positions: Record<string, [number, number]>; // appId|folderId → 홈 좌표
+  folders: Record<string, AppFolder>;           // folderId → 폴더 메타
+  membership: Record<string, string>;           // appId → folderId 소속
+  removed: string[];                             // 앱저장소로 내려간 appId(홈에서 뺌, 복구 가능)
+  uninstalled?: string[];                        // 완전 삭제된 appId(카탈로그에서 영구 제거)
+}
+
 // 스위치
 export interface Switch {
   id: string;
@@ -221,13 +235,6 @@ export interface ElectronAPI {
   // 이미지 파일 선택 다이얼로그 (다중 선택)
   selectImages: () => Promise<string[] | null>;
 
-  // 로그 뷰어 관련
-  openLogWindow?: () => Promise<void>;
-  onLogMessage?: (callback: (message: string) => void) => void;
-  onLogHistory?: (callback: (logs: string[]) => void) => void;
-  onLogCleared?: (callback: () => void) => void;
-  removeLogListeners?: () => void;
-  clearLogs?: () => Promise<void>;
   copyToClipboard?: (text: string) => void;
 }
 

@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, ScrollText, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search } from 'lucide-react';
+import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -874,16 +874,8 @@ export function Launcher() {
         <div className="flex items-center gap-1.5 no-drag">
           {/* 그룹 A: 세계 / 감각 */}
           <div className="flex items-center gap-0.5">
-            {/* 검색 브라우저 — 조종실 전용 공동 포식. 눈에 띄는 검정 버튼(시스템 AI와 대칭). 어느 탭이든
-                누르면 조종실로 전환 후 브라우저를 연다. */}
-            <button
-              onClick={() => { setLauncherTab('manual'); setBrowserOpen(true); }}
-              className="mr-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-stone-800 to-stone-900 text-white shadow-sm hover:shadow-md hover:from-stone-900 hover:to-black active:translate-y-[0.5px] transition-all"
-              title="검색 브라우저 — 공동 포식 검색"
-            >
-              <Search size={15} />
-              <span className="text-[13px] font-semibold">검색 브라우저</span>
-            </button>
+            {/* 검색 브라우저 진입점은 조종실(ManualMode)의 모델 기어박스 밑 전폭 검정 버튼으로 이관.
+                상태(browserOpen)·렌더(ForageBrowser)는 여기 남고, 여는 콜백만 ManualMode에 내려준다. */}
             <button
               onClick={() => {
                 window.electron?.openExternal('http://127.0.0.1:8765/xray/app');
@@ -1006,16 +998,6 @@ export function Launcher() {
                   <Settings size={16} className="text-stone-500" />
                   <span className="text-sm">설정</span>
                 </button>
-                <button
-                  onClick={() => {
-                    window.electron?.openLogWindow?.();
-                    setShowMainMenu(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
-                >
-                  <ScrollText size={16} className="text-stone-500" />
-                  <span className="text-sm">로그 보기</span>
-                </button>
                 <div className="border-t border-stone-100 my-1" />
                 <button
                   onClick={() => {
@@ -1079,7 +1061,7 @@ export function Launcher() {
         {launcherTab === 'app' ? (
           <ActionDesktop />
         ) : launcherTab === 'manual' ? (
-          <ManualMode />
+          <ManualMode onOpenBrowser={() => setBrowserOpen(true)} />
         ) : isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D97706]" />

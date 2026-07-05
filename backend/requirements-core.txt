@@ -23,3 +23,11 @@ websocket-client
 yt-dlp
 youtube-transcript-api
 PyMuPDF
+
+# 웹 검색·크롤 (근본 IBL 액션 [sense:search_ddg]/[sense:crawl]/[sense:search_news]에 필요 —
+# 가볍고 안정적이라 core에 포함해 fresh 설치에서 OOTB 동작. 무거운 도구 의존성은 tools로.)
+ddgs
+beautifulsoup4
+feedparser
+requests
+nest-asyncio

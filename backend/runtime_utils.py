@@ -162,6 +162,64 @@ def get_node_cmd() -> str:
     return _runtime_paths["node"]
 
 
+def install_python_dependency(package: str, timeout: int = 300) -> dict:
+    """런타임에 파이썬 라이브러리를 쓰기가능한 userData(pylibs)에 설치한다.
+
+    도구 의존성 누락([sense:search_ddg]의 ddgs 등)을 사용자 승낙 후 그 자리에서 채우기 위함.
+    - 번들 site-packages 는 읽기전용일 수 있어 --target userData/pylibs 로 설치(항상 쓰기가능).
+      pylibs 는 setup_bundled_runtime_paths 가 sys.path 에 올려 두므로 설치 즉시 import 가능.
+    - package 가 'playwright' 계열이면 chromium 브라우저 바이너리(playwright install chromium)도
+      userData/ms-playwright 에 함께 받는다(browser-action 이 그 경로에서 찾음).
+
+    반환: {success: bool, message: str, log: str}
+    """
+    import subprocess
+    package = (package or "").strip()
+    if not package:
+        return {"success": False, "message": "설치할 라이브러리명(package)이 비었습니다."}
+    # 안전: 공백·셸메타 차단(단일 패키지 스펙만 허용)
+    if any(c in package for c in " ;&|`$\n"):
+        return {"success": False, "message": f"허용되지 않는 패키지명: {package!r} (한 번에 하나씩, 셸 메타문자 불가)"}
+
+    py = get_python_cmd()
+    target = get_base_path() / "pylibs"
+    target.mkdir(parents=True, exist_ok=True)
+    target_str = str(target)
+    log = []
+    try:
+        r = subprocess.run(
+            [py, "-m", "pip", "install", "--upgrade", "--target", target_str, package],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        if r.stdout:
+            log.append(r.stdout[-1500:])
+        if r.returncode != 0:
+            return {"success": False, "message": f"pip 설치 실패: {package}",
+                    "log": (r.stderr or r.stdout or "")[-1500:]}
+        if target_str not in sys.path:
+            sys.path.insert(0, target_str)  # 설치 즉시 import 가능하게
+
+        if package.lower().split("==")[0].split(">")[0].strip() in ("playwright",):
+            browsers = str(get_base_path() / "ms-playwright")
+            env = dict(os.environ)
+            env["PLAYWRIGHT_BROWSERS_PATH"] = browsers
+            env["PYTHONPATH"] = target_str + os.pathsep + env.get("PYTHONPATH", "")
+            r2 = subprocess.run(
+                [py, "-m", "playwright", "install", "chromium"],
+                capture_output=True, text=True, timeout=max(timeout, 600), env=env,
+            )
+            if r2.returncode != 0:
+                return {"success": False, "message": "playwright 는 설치됐으나 chromium 브라우저 다운로드 실패",
+                        "log": (r2.stderr or r2.stdout or "")[-1500:]}
+            log.append("chromium 브라우저 설치 완료")
+
+        return {"success": True, "message": f"'{package}' 설치 완료", "log": "\n".join(log)[-1500:]}
+    except subprocess.TimeoutExpired:
+        return {"success": False, "message": f"설치 시간 초과({timeout}초): {package}"}
+    except Exception as e:
+        return {"success": False, "message": f"설치 중 오류: {e}"}
+
+
 def setup_bundled_runtime_paths():
     """
     백엔드 시작 시 호출 — 번들 Python의 Scripts/bin과 site-packages를
@@ -219,6 +277,21 @@ def setup_bundled_runtime_paths():
         if sp_str not in sys.path:
             sys.path.insert(0, sp_str)
             print(f"[Runtime] sys.path에 추가: {sp_str}")
+
+    # --- 2.5. userData 쓰기가능 라이브러리 폴더 (런타임 자동설치 [self:install_lib]가 여기 설치) ---
+    # 번들 site-packages(resources)는 프로덕션에서 읽기전용일 수 있어(맥 /Applications 등),
+    # 런타임 설치는 항상 쓰기가능한 userData(get_base_path)로 target 한다. 그 폴더를 sys.path 최상단에.
+    try:
+        user_libs = get_base_path() / "pylibs"
+        user_libs.mkdir(parents=True, exist_ok=True)
+        ul_str = str(user_libs)
+        if ul_str not in sys.path:
+            sys.path.insert(0, ul_str)
+            print(f"[Runtime] sys.path에 추가(userData libs): {ul_str}")
+        # playwright 브라우저(chromium)도 userData 에 두고 런타임에 찾게 한다(설치·실행 공통 경로).
+        os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(get_base_path() / "ms-playwright"))
+    except Exception as e:
+        print(f"[Runtime] userData libs 설정 실패(무시): {e}")
 
     # --- 3. Node.js도 PATH에 추가 ---
     node_cmd = get_node_cmd()

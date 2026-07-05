@@ -2012,6 +2012,19 @@ nodes:
         - 제거
         - 능력
         - 확장
+      install_lib:
+        returns: effect
+        description: 도구가 필요로 하는 파이썬 라이브러리를 런타임에 설치(쓰기가능 userData/pylibs). 의존성 누락 에러('ddgs 라이브러리 없음' 등)를 사용자 승낙 후 그 자리에서 채운다. package="playwright"면 chromium 브라우저 바이너리도 함께 받는다.
+        target_description: 'package(필수) — pip 패키지명. 예: ddgs, playwright, matplotlib.'
+        group: system
+        router: system
+        func: install_lib
+        keywords:
+        - 설치
+        - 라이브러리
+        - 의존성
+        - pip
+        - 라이브러리설치
       blog:
         returns: items
         fixture: '[self:blog]{op: "list"}'

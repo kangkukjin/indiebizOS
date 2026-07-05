@@ -214,6 +214,7 @@ OS_SEAM_ALLOWLIST = {
     "backend/calendar_html.py",   # 브라우저 열기(open/start)
     "backend/api_photo.py",       # 사진 파일 OS 열기(open/startfile/xdg-open) — tier-2: ibl_executors 열기와 통합 후보
     "backend/api_tunnel.py",      # cloudflared 바이너리 위치 탐색(외부 바이너리 finder) — tier-2: 공유 find_binary 후보
+    "backend/providers/claude_code.py",  # claude CLI 바이너리 탐색(Win %APPDATA%\\...\\claude.exe vs 맥 .app 번들) — 외부 바이너리 finder, api_tunnel 과 동류
 }
 OS_SCAN_DIRS = ["backend"]
 # 강한 OS 신호만 — 일반 'open'/'start' 같은 건 오탐이라 제외.

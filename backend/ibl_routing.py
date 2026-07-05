@@ -237,7 +237,28 @@ def _route_handler(mapped_tool: str, params: dict,
         context = ToolContext.from_thread_context(resolved_path, mapped_tool)
     except ToolContextError as e:
         return {"error": f"ToolContext 생성 실패: {e}"}
-    result = handler.execute(merged_params, context)
+    # ★침묵 실패 방지: 핸들러 실행 예외(특히 의존성 미설치 ModuleNotFoundError)를 여기서
+    #   잡아 사용자에게 보이는 명확한 에러로 바꾼다. 예전엔 [sense:search_ddg] 등이 없는
+    #   라이브러리(ddgs)를 top-level import 하다 예외가 조용히 전파돼 빈 응답으로 뭉개졌다
+    #   (browser-action 은 자기 핸들러에서 감싸 명확했지만 나머지는 아니었다 — 불일관 해소).
+    try:
+        result = handler.execute(merged_params, context)
+    except (ModuleNotFoundError, ImportError) as _dep_err:
+        _missing = getattr(_dep_err, "name", None) or str(_dep_err)
+        print(f"[IBL] 도구 의존성 누락 ({mapped_tool}): {_missing}")
+        return {
+            "error": (
+                f"도구 '{mapped_tool}' 실행에 필요한 라이브러리 '{_missing}' 가 설치돼 있지 않습니다. "
+                f"사용자에게 설치할지 물어본 뒤, 승낙하면 [self:install_lib]{{package: \"{_missing}\"}} 로 "
+                f"설치하고 다시 시도하세요. (거절하면 이 도구는 건너뜁니다.)"
+            ),
+            # 인지층/UI가 '설치할까요?' 흐름을 태울 수 있도록 기계가독 신호도 함께.
+            "missing_dependency": _missing,
+            "install_action": f'[self:install_lib]{{package: "{_missing}"}}',
+        }
+    except Exception as _exec_err:
+        print(f"[IBL] 도구 실행 실패 ({mapped_tool}): {_exec_err}")
+        return {"error": f"도구 실행 실패 ({mapped_tool}): {_exec_err}"}
 
     # async 핸들러 지원 (persistent 이벤트 루프 + 타임아웃)
     if asyncio.iscoroutine(result):
@@ -451,7 +472,21 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
     elif func_name == "package_op":
         return _package_op(dict(params))
 
+    # 도구 의존성 런타임 자동설치 — self:install_lib {package}
+    elif func_name == "install_lib":
+        return _install_lib(dict(params))
+
     return {"error": f"알 수 없는 시스템 함수: {func_name}"}
+
+
+def _install_lib(params: dict) -> dict:
+    """self:install_lib — 도구가 필요로 하는 파이썬 라이브러리를 런타임에 설치.
+    의존성 누락 에러('X 라이브러리 없음')를 사용자 승낙 후 그 자리에서 채우는 데 쓴다."""
+    package = (params.get("package") or params.get("name") or params.get("lib") or "").strip()
+    if not package:
+        return {"error": "설치할 라이브러리를 package 로 지정하세요. 예: [self:install_lib]{package: \"ddgs\"}"}
+    from runtime_utils import install_python_dependency
+    return install_python_dependency(package)
 
 
 def _rebuild_ibl_vocab() -> Optional[str]:

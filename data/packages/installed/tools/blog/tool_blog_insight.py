@@ -426,11 +426,16 @@ def blog_stats() -> Dict[str, Any]:
 def _search_gnews(keyword: str, max_results: int = 5) -> List[Dict]:
     results = []
     try:
-        from duckduckgo_search import DDGS
-        with DDGS() as ddgs:
-            for r in ddgs.news(keyword, max_results=max_results):
-                results.append({"title": r['title'], "snippet": r['body'], "link": r['url'], "source": r['source']})
-    except: pass
+        from ddgs import DDGS  # 표준 검색 패키지(구 duckduckgo_search 대체, core 번들)
+        for r in DDGS().news(keyword, max_results=max_results):
+            results.append({
+                "title": r.get('title', ''),
+                "snippet": r.get('body') or r.get('excerpt', ''),
+                "link": r.get('url') or r.get('href', ''),
+                "source": r.get('source', ''),
+            })
+    except Exception:
+        pass
     return results
 
 

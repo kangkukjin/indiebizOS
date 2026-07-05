@@ -47,9 +47,9 @@ pip install playwright
 playwright install chromium
 ```
 
-**web** (웹 검색/크롤링)
+**web** (웹 검색/크롤링) — ★검색은 `ddgs`(신규 패키지). 구 `duckduckgo-search`는 `ddgs` 모듈을 제공하지 않으니 주의.
 ```bash
-pip install beautifulsoup4 duckduckgo-search requests nest-asyncio
+pip install ddgs beautifulsoup4 requests nest-asyncio
 pip install browser-use langchain-google-genai
 ```
 
@@ -171,7 +171,7 @@ pip install -r backend/requirements-tools.txt
 
 ### 또는 한 줄로
 ```bash
-pip install fastapi "uvicorn[standard]" pydantic python-dotenv python-multipart pyyaml anthropic openai google-genai pynostr websocket-client yt-dlp youtube-transcript-api beautifulsoup4 requests feedparser pillow matplotlib plotly kaleido numpy duckduckgo-search finance-datareader yfinance moviepy edge-tts jinja2 midiutil arxiv markdown nest-asyncio
+pip install fastapi "uvicorn[standard]" pydantic python-dotenv python-multipart pyyaml anthropic openai google-genai pynostr websocket-client yt-dlp youtube-transcript-api ddgs beautifulsoup4 requests feedparser pillow matplotlib plotly kaleido numpy duckduckgo-search finance-datareader yfinance moviepy edge-tts jinja2 midiutil arxiv markdown nest-asyncio
 ```
 
 ### Playwright (브라우저 자동화 필요시)

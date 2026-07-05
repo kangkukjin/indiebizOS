@@ -2,12 +2,13 @@
 # 도구 패키지가 사용하는 라이브러리들
 # requirements-core.txt와 함께 설치
 
-# 웹/크롤링
-beautifulsoup4
-requests
-feedparser
-duckduckgo-search
-nest-asyncio
+# 웹/크롤링 — 핵심(ddgs·beautifulsoup4·feedparser·requests·nest-asyncio)은
+# requirements-core.txt로 승격됨(CI가 core를 번들해 OOTB 동작). 검색은 표준 ddgs 단일화
+# (구 duckduckgo-search 제거 — blog 포함 전 도구가 ddgs 사용).
+
+# 브라우저 자동화 (browser-action) — 무거워 번들 제외, 로드 실패 시 명확한 에러+안내.
+# chromium 바이너리는 별도: playwright install chromium
+playwright
 
 # 데이터/시각화
 matplotlib

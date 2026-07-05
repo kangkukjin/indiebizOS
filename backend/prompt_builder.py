@@ -263,7 +263,13 @@ class PromptBuilder:
         #   부족하면 에이전트가 [self:time] 도구로 초 단위까지 얻는다.
         from datetime import datetime
         now = datetime.now()
-        date_info = f"# 현재 시점\n현재 날짜: {now.strftime('%Y년 %m월 %d일 %A')}"
+        # ★ 로케일 비의존 조립: strftime 포맷에 한글 리터럴(년/월/일)이나 %A(로케일
+        #   요일명)를 넣으면 윈도우 임베디드 Python(로케일 Korean_Korea + 코드페이지
+        #   1252 불일치)에서 인코딩이 UnicodeEncodeError로 터져 부팅이 죽는다.
+        #   맥 번들 Python은 UTF-8 로케일이라 재현 안 됨 → 코드가 같아도 윈도우만 깨짐.
+        #   숫자 필드 + 한글 요일 테이블로 직접 조립(출력 동일: 2026년 07월 05일 일요일).
+        _weekday_ko = ('월', '화', '수', '목', '금', '토', '일')[now.weekday()]
+        date_info = f"# 현재 시점\n현재 날짜: {now.year}년 {now.month:02d}월 {now.day:02d}일 {_weekday_ko}요일"
         parts.append(date_info)
 
         # 1. 기본 프롬프트 (항상 포함)

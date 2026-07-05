@@ -665,8 +665,12 @@ def summarize_youtube(
     # 3. HTML 파일로 저장
     print("[3/3] HTML 파일 생성 중...")
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    today_str = datetime.now().strftime("%Y년 %m월 %d일")
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d_%H%M%S")  # ASCII 포맷이라 로케일 무관
+    # ★ 로케일 비의존 조립: strftime 포맷 속 한글 리터럴(년/월/일)은 윈도우 임베디드
+    #   Python(로케일 Korean_Korea + 코드페이지 1252 불일치)에서 UnicodeEncodeError로
+    #   터진다. 맥(UTF-8)에선 재현 안 됨. 숫자 필드로 직접 조립(출력 동일).
+    today_str = f"{now.year}년 {now.month:02d}월 {now.day:02d}일"
 
     # 제목에서 파일명으로 쓸 수 없는 문자 제거
     safe_title = re.sub(r'[^\w가-힣\s-]', '', title)[:30].strip()
@@ -689,7 +693,7 @@ def summarize_youtube(
 - **원본 자막 길이**: {len(transcript)}자
 - **요약 길이**: {len(summary_content)}자
 - **요약 언어**: {language}
-- **생성 시각**: {datetime.now().strftime('%Y년 %m월 %d일 %H시 %M분')}
+- **생성 시각**: {now.year}년 {now.month:02d}월 {now.day:02d}일 {now.hour:02d}시 {now.minute:02d}분
 """
 
     # HTML 변환 및 저장

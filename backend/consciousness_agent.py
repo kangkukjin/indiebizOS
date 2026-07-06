@@ -150,10 +150,11 @@ class ConsciousnessAgent:
                 "history_summary": str,    # 히스토리 맥락 요약 (원본 대체)
                 "task_framing": str,       # 지금 풀어야 할 문제 정의
                 "achievement_criteria": str, # 달성 기준 (비어있으면 평가 루프 안 탐)
-                "ibl_focus": {             # IBL 포커싱
+                "capability_focus": {      # IBL 포커싱 (프롬프트 응답 형식 키)
                     "primary_nodes": list,     # 주요 노드
                     "highlight_actions": list, # 강조할 액션
-                    "hint": str                # AI에게 줄 힌트
+                    "hint": str,               # AI에게 줄 힌트
+                    "tools": list              # IBL 외 가용 도구
                 },
                 "guide_files": list[str],  # 읽어야 할 가이드 파일
                 "context_notes": str       # 추가 상황 메모

@@ -38,3 +38,36 @@
 
 ## 권고
 **대량 리네임 불필요.** 어휘 계층은 건강하다. 위 2개 내부 tool명만 원하면 위생 차원 정리(저비용). 감사의 핵심 소득 = *search_gnews는 이상치였고 패턴이 아니다*라는 확인.
+
+---
+
+## 4번째 층 (2026-07-06): 의식 출력 스키마 키 — 생산자↔소비처 정합
+
+위 3층은 **IBL 어휘**(액션·tool·함수)를 봤다. 그러나 이름 드리프트는 어휘 밖에서도 난다 —
+**의식 에이전트 출력 dict의 키**가 그 예다. 이 층은 자동 가드로 상시화한다.
+
+### 계기가 된 버그 (2026-07-06)
+의식 프롬프트가 IBL 포커싱 dict를 `ibl_focus` → `capability_focus`로 개명했는데,
+소비처가 부분적으로만 따라갔다:
+- 갱신됨: 평가 에이전트·도구 필터(`capability_focus` 읽음).
+- **뒤처짐**: `compile_user_command`(사용자 명령 융합)·`_build_agent_prompt_split`의 focus 블록이
+  옛 `ibl_focus`를 읽어 **항상 빈 dict** → `highlight_actions`(쓸 액션)·`hint`(접근법·op)가
+  사용자 명령 융합에서 **조용히 사라짐**. 의식 조언의 가장 실행 지향적인 절반이 무성음 누락.
+- task_framing·achievement_criteria·guide_files는 최상위 키라 이름이 맞아 살아남음 → "일부만
+  듣는 것처럼" 보였다.
+
+### 비대칭 (3층과 다르다)
+- 3층 어휘: **코퍼스가 진실 소스**(액션명), 층1 리네임만 무겁다.
+- 4층 스키마: **프롬프트 응답 형식 JSON이 진실 소스**(생산자). 소비처가 읽는 키는 반드시
+  생산자가 내는 키의 부분집합이어야 한다. 아니면 그 읽기는 *항상 빈 값* = 조언 유실.
+- consciousness_output은 **런타임 생성·비영속**이라 코퍼스 마이그레이션이 없다 — 순수 코드 정합.
+
+### 자동 가드: `scripts/consciousness_schema_check.py`
+- 생산자 = `consciousness_prompt.md` 응답 형식 JSON 블록(최상위 키 + `capability_focus` 하위 키).
+- 소비처 = `prompt_builder.py`·`agent_cognitive.py`의 `consciousness_output`(및 별칭 `co`,
+  focus 하위 dict)의 `.get("K")`/`["K"]` 읽기 — AST 1-hop 스코핑으로 프레즌스 dict(`cap.get`) 오탐 회피.
+- 소비처가 읽는 키 ⊄ 생산자 선언 → **FAIL(exit 1)**. 정적·백엔드 불필요.
+- **첫 실행 소득**: `context_notes`(2026-06-28 폐지됐으나 두 곳이 계속 읽어 항상 빈 "# 상황 메모"
+  생성)를 즉시 검출 → 죽은 읽기 제거. 이후 GREEN.
+- 카덴스: [IBL_MAINTENANCE_MANUAL.md](IBL_MAINTENANCE_MANUAL.md) §1A(정적 검사)에 합류 —
+  커밋 전·의식 프롬프트 개명 직후 실행.

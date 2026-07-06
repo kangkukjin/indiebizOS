@@ -324,7 +324,8 @@ class PromptBuilder:
             # NOTE: history_summary는 messages 파라미터에서 원본 히스토리를 대체하므로 여기엔 넣지 않음
 
             # IBL 포커싱 힌트 (제한이 아닌 초점 설정)
-            ibl_focus = consciousness_output.get("ibl_focus", {})
+            # 키는 capability_focus (consciousness_prompt.md); ibl_focus는 구 이름 폴백.
+            ibl_focus = consciousness_output.get("capability_focus") or consciousness_output.get("ibl_focus") or {}
             if ibl_focus:
                 focus_parts = []
                 primary = ibl_focus.get("primary_nodes", [])
@@ -343,10 +344,9 @@ class PromptBuilder:
                         + "\n</focus>"
                     )
 
-            # 상황 메모
-            context_notes = consciousness_output.get("context_notes", "")
-            if context_notes:
-                consciousness_parts.append(f"# 상황 메모\n{context_notes}")
+            # context_notes 출력 필드도 폐지 (2026-06-28 self_awareness/world_state와 함께).
+            # 프롬프트 응답 형식에 없어 항상 빈 값이었다 → 죽은 읽기 제거(2026-07-06 스키마 감사).
+            # 맥락은 task_framing으로 흡수한다.
 
             # self_awareness·world_state 출력 필드 폐지 (2026-06-28). 의식은 task_framing
             # 으로 문제를 규정하고 self/world 맥락을 그 안에 녹인다. 모델명만 남긴다.
@@ -565,9 +565,8 @@ def _build_dynamic_context(
     # 배경 참고만 담는다. 명령을 *형성*하는 것(문제 설정·쓸 액션·가이드 지시·충족 기준)은
     # 여기 두지 않는다 — 그건 compile_user_command()가 사용자 명령에 융합한다(의식 경로).
     if consciousness_output:
-        context_notes = consciousness_output.get("context_notes", "")
-        if context_notes:
-            parts.append(f"# 상황 메모\n{context_notes}")
+        # context_notes 폐지 (2026-06-28). 응답 형식에 없어 항상 빈 값 → 죽은 읽기 제거
+        # (2026-07-06 스키마 감사). 맥락은 task_framing으로 흡수된다.
 
         # self_awareness·world_state 출력 필드 폐지 (2026-06-28). 모델명만 남긴다.
         if model_name:
@@ -619,12 +618,15 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     if task_framing:
         aug.append(task_framing)
 
-    ibl_focus = co.get("ibl_focus", {}) or {}
-    highlight = ibl_focus.get("highlight_actions") or []
+    # 의식 프롬프트 출력 키는 capability_focus (consciousness_prompt.md 응답 형식).
+    # 예전 ibl_focus 이름을 폴백으로 둔다 — 개명 드리프트로 highlight_actions·hint가
+    # 융합에서 조용히 새던 버그의 재발 방지.
+    cap_focus = co.get("capability_focus") or co.get("ibl_focus") or {}
+    highlight = cap_focus.get("highlight_actions") or []
     if highlight:
         # 팔레트가 열려 있다는 건 사실 — '(이 밖의 액션도 가능)'은 *목록*에만 남긴다.
         aug.append("쓸 수 있는 IBL 액션: " + ", ".join(highlight) + " (이 밖의 액션도 가능).")
-    hint = (ibl_focus.get("hint") or "").strip()
+    hint = (cap_focus.get("hint") or "").strip()
     if hint:
         # 방법 지시는 허가 어조에서 분리해 명령문 줄로.
         aug.append(f"수행 절차: {hint}")

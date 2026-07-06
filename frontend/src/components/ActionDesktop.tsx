@@ -494,40 +494,51 @@ function AppStore({ domains, removed, onBack, onAdd, onUninstall }: {
   domains: App[]; removed: string[]; onBack: () => void; onAdd: (id: string) => void; onUninstall: (id: string) => void;
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  // 우클릭 컨텍스트 메뉴 — 박스에 상시 버튼 대신(오클릭 완전삭제 방지). 데스크탑 홈과 같은 패턴.
+  const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(null);
   const confirmApp = domains.find((d) => d.id === confirmId) || null;
+  const menuApp = menu ? (domains.find((d) => d.id === menu.id) || null) : null;
+  const menuRemoved = menu ? removed.includes(menu.id) : false;
   return (
-    <div className="absolute inset-0 flex flex-col">
+    <div className="absolute inset-0 flex flex-col" onClick={() => setMenu(null)}>
       <div className="shrink-0 flex items-center gap-3 px-5 py-3 border-b border-stone-200">
         <button onClick={onBack} className="px-2 py-1 rounded-lg text-stone-500 hover:bg-stone-100">‹ 뒤로</button>
         <span className="text-stone-800 font-medium flex items-center gap-1.5"><Package size={16} /> 앱저장소</span>
-        <span className="text-xs text-stone-400">앱을 골라 홈에 추가 · 제거로 완전 삭제</span>
+        <span className="text-xs text-stone-400">앱 박스를 오른쪽 클릭 → 추가 · 제거</span>
       </div>
       <div className="flex-1 overflow-auto p-6">
         <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 max-w-4xl mx-auto">
           {domains.map((d) => {
             const isRemoved = removed.includes(d.id);
             return (
-              <div key={d.id} className="flex items-center gap-3 p-3 rounded-xl bg-white border border-stone-200 shadow-sm">
+              <div key={d.id}
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setMenu({ x: e.clientX, y: e.clientY, id: d.id }); }}
+                title="오른쪽 클릭 — 추가 / 제거"
+                className="flex items-center gap-3 p-3 rounded-xl bg-white border border-stone-200 shadow-sm hover:border-stone-300 select-none">
                 <div className="w-11 h-11 shrink-0 rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-center text-2xl">{d.icon}</div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm text-stone-700 truncate">{d.label}</div>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    {isRemoved ? (
-                      <button onClick={() => onAdd(d.id)}
-                        className="text-xs px-2 py-0.5 rounded-full bg-stone-800 text-white hover:bg-stone-700">＋ 추가</button>
-                    ) : (
-                      <span className="text-xs text-stone-400">설치됨</span>
-                    )}
-                    {/* 완전 삭제 — 추가 버튼과 같은 알약 모양, 빨강 */}
-                    <button onClick={() => setConfirmId(d.id)}
-                      className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 hover:bg-red-100">제거</button>
-                  </div>
+                  <div className="mt-0.5 text-xs text-stone-400">{isRemoved ? '저장소에 있음' : '홈에 설치됨'}</div>
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* 우클릭 컨텍스트 메뉴 — 추가(저장소에 있을 때) / 완전 삭제 */}
+      {menu && menuApp && (
+        <div className="fixed z-50 bg-white rounded-lg shadow-lg border border-stone-200 py-1 text-sm text-stone-700 min-w-[150px]"
+          style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
+          <div className="px-4 py-1.5 text-xs text-stone-400 border-b border-stone-100 truncate">{menuApp.icon} {menuApp.label}</div>
+          {menuRemoved && (
+            <button className="block w-full text-left px-4 py-1.5 hover:bg-stone-100"
+              onClick={() => { onAdd(menu.id); setMenu(null); }}>＋ 홈에 추가</button>
+          )}
+          <button className="block w-full text-left px-4 py-1.5 hover:bg-stone-100 text-red-600"
+            onClick={() => { setConfirmId(menu.id); setMenu(null); }}>완전 삭제</button>
+        </div>
+      )}
 
       {/* 완전 삭제 확인 */}
       {confirmApp && (

@@ -61,6 +61,7 @@
     "generate_newspaper",
     "goal_evaluator",
     "health_sync",
+    "hippocampus_provision",
     "ibl_access",
     "ibl_description_audit",
     "ibl_embedding_trainer",
@@ -146,8 +147,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 140,
-    "engine": 128,
+    "total": 141,
+    "engine": 129,
     "blocklist": 12
   }
 }

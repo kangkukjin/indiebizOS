@@ -27,9 +27,18 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# DB 경로
+# DB 경로 — 검색 인덱스(용례+벡터). 프로덕션(INDIEBIZ_BASE_PATH)에선 userData 아래에 둔다:
+#   번들 resources 는 읽기전용일 수 있고, ibl_usage.db 는 gitignore·미번들이라 거기 없다.
+#   첫 실행 해마 공급(hippocampus_provision)이 릴리스에서 userData/data/ibl_usage.db 로 받아온다.
+#   dev(맥, INDIEBIZ_BASE_PATH 미설정)에선 repo 의 data/ibl_usage.db (기존 동작 보존).
+def _resolve_db_path() -> str:
+    base = os.environ.get("INDIEBIZ_BASE_PATH")
+    if base:
+        return str(Path(base) / "data" / "ibl_usage.db")
+    return str(Path(__file__).parent.parent / "data" / "ibl_usage.db")
+
 _BASE_DIR = Path(__file__).parent.parent / "data"
-DB_PATH = str(_BASE_DIR / "ibl_usage.db")
+DB_PATH = _resolve_db_path()
 
 
 # =============================================================================
@@ -65,6 +74,20 @@ class IBLUsageDB:
 
     EMBEDDING_DIM = 768
     # 해마 (hippocampus): IBL 도메인 fine-tuned 모델 (Top-5 95.3%, 범용 대비 +53.3%p / 2026-05-31 Modal GPU batch=16)
+    # 경로 우선순위: userData(INDIEBIZ_BASE_PATH)/data/models — 첫 실행에 릴리스에서 받은 모델이 여기 온다.
+    #   프로덕션 번들의 resources/data/models 는 비어 있으므로(모델은 gitignore·미번들), userData 를 봐야 한다.
+    #   dev(맥)에선 INDIEBIZ_BASE_PATH 미설정 → repo 의 data/models 로 폴백(기존 동작 보존).
+    @staticmethod
+    def _resolve_model_dir() -> str:
+        repo = Path(__file__).parent.parent / 'data' / 'models' / 'ibl_embedding'
+        base = os.environ.get("INDIEBIZ_BASE_PATH")
+        if base:
+            ud = Path(base) / 'data' / 'models' / 'ibl_embedding'
+            # userData 에 실제 모델이 있으면 그걸, 없으면 repo 폴백(dev)
+            if (ud / 'model.safetensors').exists() or (ud / 'config.json').exists():
+                return str(ud)
+        return str(repo)
+
     EMBEDDING_MODEL = str(Path(__file__).parent.parent / 'data' / 'models' / 'ibl_embedding')
     DEFAULT_ALPHA = 1.0
     BATCH_SIZE = 32
@@ -242,8 +265,9 @@ class IBLUsageDB:
         def _load():
             try:
                 from sentence_transformers import SentenceTransformer
-                print(f"[IBL Usage DB] 백그라운드 임베딩 모델 로딩 시작: {cls.EMBEDDING_MODEL}")
-                cls._model = SentenceTransformer(cls.EMBEDDING_MODEL)
+                _model_dir = cls._resolve_model_dir()
+                print(f"[IBL Usage DB] 백그라운드 임베딩 모델 로딩 시작: {_model_dir}")
+                cls._model = SentenceTransformer(_model_dir)
                 print("[IBL Usage DB] 임베딩 모델 로딩 완료")
             except ImportError:
                 logger.warning("[IBL Usage DB] sentence-transformers 미설치 → FTS5 검색만 사용")
@@ -263,8 +287,9 @@ class IBLUsageDB:
             return True
         try:
             from sentence_transformers import SentenceTransformer
-            logger.info(f"[IBL Usage DB] 동기 모델 로딩: {cls.EMBEDDING_MODEL}")
-            cls._model = SentenceTransformer(cls.EMBEDDING_MODEL)
+            _model_dir = cls._resolve_model_dir()
+            logger.info(f"[IBL Usage DB] 동기 모델 로딩: {_model_dir}")
+            cls._model = SentenceTransformer(_model_dir)
             cls._model_load_attempted = True
             cls._model_loading = False
             logger.info("[IBL Usage DB] 동기 모델 로딩 완료")

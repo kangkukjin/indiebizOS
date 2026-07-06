@@ -140,6 +140,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[IBL] 모델 로딩 시작 실패 (무시): {e}")
 
+    # 첫 실행 해마 공급 — 모델·용례·런타임이 없으면(주로 fresh 윈도우 설치) GitHub Release 에셋에서
+    # userData 로 내려받고 임베딩 런타임을 설치한다(백그라운드·멱등, 이미 있으면 즉시 통과).
+    # INDIEBIZ_HIPPOCAMPUS_AUTO=0 으로 끌 수 있다. 데스크탑 진입점 전용(폰-자아는 렌트 모드).
+    try:
+        from hippocampus_provision import provision_async
+        provision_async(enabled=os.environ.get("INDIEBIZ_HIPPOCAMPUS_AUTO", "1") != "0")
+    except Exception as e:
+        print(f"[해마공급] 시작 실패 (무시): {e}")
+
     # World Pulse: 오늘의 세계 상태 스냅샷 확인 (없으면 백그라운드 수집)
     # 서버 시작을 블로킹하지 않도록 별도 스레드에서 실행
     import threading

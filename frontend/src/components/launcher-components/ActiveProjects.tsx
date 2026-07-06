@@ -4,7 +4,8 @@
  * 판단 기준 2층 (GET /nodes/active-work):
  *   · 칩(로스터) = started AgentRunner 가 있는 프로젝트 — 사용자가 직접 명령하려면 창을
  *     열어야 하고, 창을 닫으면 stop_all 로 비활성화되므로 "칩 = 창이 열려 당직 중".
- *   · 펄스 = 지금 실제로 요청을 처리 중인 곳(시스템 AI 는 처리 중일 때만 등장).
+ *     시스템 AI 는 러너가 없어 대화창 하트비트(/system-ai/presence)로 창 열림을 안다.
+ *   · 펄스 = 지금 실제로 요청을 처리 중인 곳(busy). 창만 열려 있으면 대기 칩, 처리 중이면 펄스.
  * 이름을 클릭하면 연결된 대화창이 화면 맨앞으로 온다(이미 열려 있으면 focus, 없으면 생성):
  *   시스템 AI → openSystemAIWindow() / 프로젝트 → openProjectWindow(id, name).
  * dark cockpit: 당직도 작업도 없으면 흐린 '없음' 한 단어만.

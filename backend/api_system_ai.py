@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
 
 # 메모리 관련
@@ -75,6 +75,17 @@ from system_ai_plans import (
 )
 
 router = APIRouter()
+
+
+@router.post("/system-ai/presence")
+def system_ai_presence(body: dict = Body(default={})):
+    """System AI 대화창 존재 하트비트. 조종실 '액티브 프로젝트'가 "창 열림=활성"을
+    판단하는 신호 — SystemAIView 가 열려 있는 동안 주기적으로 부른다. open=false 는
+    닫힘 즉시 부재 처리(창 닫기 beacon)."""
+    from thread_context import mark_sysai_window
+    mark_sysai_window(bool(body.get("open", True)))
+    return {"ok": True}
+
 
 # 시스템 AI 역할 파일 경로
 SYSTEM_AI_ROLE_PATH = DATA_PATH / "system_ai_role.txt"

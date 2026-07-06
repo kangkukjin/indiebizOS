@@ -54,6 +54,26 @@ def _drop_active_work_if_sysai():
             _active_work.pop(ident, None)
 
 
+# System AI 대화창 존재(하트비트) — 조종실 '액티브 프로젝트'가 "창 열림=활성"을 판단.
+# 프로젝트는 started AgentRunner 로 창 존재를 알지만 System AI 는 싱글턴이라 러너가 없다.
+# SystemAIView 가 열려 있는 동안 주기적으로 갱신 → TTL 안이면 '창 열림'. 닫힘/크래시/백엔드
+# 재시작 모두 하트비트 중단·재개로 self-healing(별도 close 신호에 의존하지 않음).
+_sysai_presence = {"last_seen": 0.0}
+_SYSAI_PRESENCE_TTL = 8.0
+
+
+def mark_sysai_window(present: bool = True):
+    """System AI 창 하트비트. present=False 는 즉시 부재 처리(닫힘 beacon)."""
+    with _active_lock:
+        _sysai_presence["last_seen"] = time.time() if present else 0.0
+
+
+def is_sysai_window_open() -> bool:
+    """마지막 하트비트가 TTL 안이면 창이 열려 있다고 본다."""
+    with _active_lock:
+        return (time.time() - _sysai_presence["last_seen"]) < _SYSAI_PRESENCE_TTL
+
+
 def list_active_work() -> list:
     """지금 실행 중인 작업 목록. 죽은 스레드/1시간 초과 잔재(clear 누락 방어)는 청소."""
     now = time.time()

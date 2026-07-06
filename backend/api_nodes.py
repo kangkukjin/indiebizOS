@@ -129,7 +129,8 @@ def active_work():
       창을 열어야 하고(창 열림=에이전트 시작), 창을 닫으면 Electron 이 stop_all 을
       부르므로 "러너 레지스트리 = 창이 열려 당직 중"이 성립한다.
     · busy(펄스) = thread_context 활성 작업 레지스트리에 지금 처리 중으로 잡히는 곳.
-    · 시스템 AI 는 시작/정지 상태가 없는 싱글턴 → 처리 중일 때만 항목으로 등장.
+    · 시스템 AI 는 러너가 없는 싱글턴이라 대화창 하트비트(is_sysai_window_open)로
+      "창 열림=활성"을 판단한다 — 창이 열려 있으면 칩, 처리 중이면 펄스(busy).
     · 창 없이 도는 런(위임 등)도 busy 로 잡히면 정직하게 표시한다(계기는 진실 우선).
     프로젝트는 id==name 관습이라 project_name=project_id 를 그대로 쓴다.
     """
@@ -147,11 +148,20 @@ def active_work():
         if pid:
             busy_projects[pid] = min(busy_projects.get(pid, w["started_at"]), w["started_at"])
 
+    # 창 열림(하트비트) — 프로젝트의 started-runner 에 해당하는 System AI 신호.
+    try:
+        from thread_context import is_sysai_window_open
+        sys_open = is_sysai_window_open()
+    except Exception:
+        sys_open = False
+
     now = _t.time()
     items = []
-    if sys_started is not None:
+    # 창이 열려 있으면(창 열림=활성) 또는 지금 처리 중이면 칩을 띄운다. busy=처리 중일 때만 펄스.
+    if sys_started is not None or sys_open:
         items.append({"kind": "system_ai", "project_id": "", "project_name": "시스템 AI",
-                      "agents": [], "busy": True, "elapsed_sec": int(now - sys_started)})
+                      "agents": [], "busy": sys_started is not None,
+                      "elapsed_sec": int(now - sys_started) if sys_started is not None else 0})
 
     # 당직 로스터 = started 러너 보유 프로젝트 (창 닫힘=stop_all 로 여기서 빠진다)
     try:

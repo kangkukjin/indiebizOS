@@ -17,6 +17,30 @@ export function SystemAIView() {
   const [initialMessage, setInitialMessage] = useState<string | undefined>();
   const [initialLabel, setInitialLabel] = useState<string | undefined>();
 
+  // 존재 하트비트 — 이 창이 열려 있는 동안 조종실 '액티브 프로젝트'에 System AI 가 뜨게 한다
+  // (창 열림=활성). 닫힘/이탈 시 즉시 부재(open:false) + 하트비트 중단으로 TTL 만료 → 사라짐.
+  useEffect(() => {
+    const ping = (open: boolean) => {
+      try {
+        fetch(`${API_BASE}/system-ai/presence`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ open }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch { /* noop */ }
+    };
+    ping(true);
+    const timer = setInterval(() => ping(true), 3000);
+    const onHide = () => ping(false);
+    window.addEventListener('pagehide', onHide);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('pagehide', onHide);
+      ping(false);
+    };
+  }, []);
+
   useEffect(() => {
     const fetchPrompt = (id: number) => {
       fetch(`${API_BASE}/world-pulse/episodes/${id}/analysis-prompt`)

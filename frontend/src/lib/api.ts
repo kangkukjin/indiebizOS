@@ -79,6 +79,13 @@ class APIClientBase {
     });
   }
 
+  // 앱저장소 '코드보기' — 그 앱을 구성하는 소스(선언형=yaml / 커스텀=tsx). 대개 1파일.
+  async getAppSource(appId: string) {
+    return this.request<{ kind: string; path: string; lang: string; code: string }>(
+      `/launcher/app-source/${encodeURIComponent(appId)}`
+    );
+  }
+
   // 휴지통 — 앱이 사용 중 쌓은 데이터를 지우고 초기화 (앱이 선언한 reset IBL 실행)
   async resetApp(appId: string) {
     return this.request<{ reset: boolean; reason?: string; app_id: string }>(

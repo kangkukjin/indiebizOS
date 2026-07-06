@@ -496,9 +496,19 @@ function AppStore({ domains, removed, onBack, onAdd, onUninstall }: {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   // 우클릭 컨텍스트 메뉴 — 박스에 상시 버튼 대신(오클릭 완전삭제 방지). 데스크탑 홈과 같은 패턴.
   const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(null);
+  const [codeView, setCodeView] = useState<{ label: string; path: string; code: string } | null>(null);
   const confirmApp = domains.find((d) => d.id === confirmId) || null;
   const menuApp = menu ? (domains.find((d) => d.id === menu.id) || null) : null;
   const menuRemoved = menu ? removed.includes(menu.id) : false;
+  const openCode = async (id: string, label: string) => {
+    setMenu(null);
+    try {
+      const r = await api.getAppSource(id);
+      setCodeView({ label, path: r.path, code: r.code });
+    } catch (e) {
+      setCodeView({ label, path: '', code: '(소스를 불러오지 못했습니다: ' + (e instanceof Error ? e.message : String(e)) + ')' });
+    }
+  };
   return (
     <div className="absolute inset-0 flex flex-col" onClick={() => setMenu(null)}>
       <div className="shrink-0 flex items-center gap-3 px-5 py-3 border-b border-stone-200">
@@ -531,12 +541,29 @@ function AppStore({ domains, removed, onBack, onAdd, onUninstall }: {
         <div className="fixed z-50 bg-white rounded-lg shadow-lg border border-stone-200 py-1 text-sm text-stone-700 min-w-[150px]"
           style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
           <div className="px-4 py-1.5 text-xs text-stone-400 border-b border-stone-100 truncate">{menuApp.icon} {menuApp.label}</div>
+          <button className="block w-full text-left px-4 py-1.5 hover:bg-stone-100"
+            onClick={() => openCode(menu.id, menuApp.label)}>{'<>'} 코드보기</button>
           {menuRemoved && (
             <button className="block w-full text-left px-4 py-1.5 hover:bg-stone-100"
               onClick={() => { onAdd(menu.id); setMenu(null); }}>＋ 홈에 추가</button>
           )}
           <button className="block w-full text-left px-4 py-1.5 hover:bg-stone-100 text-red-600"
             onClick={() => { setConfirmId(menu.id); setMenu(null); }}>완전 삭제</button>
+        </div>
+      )}
+
+      {/* 코드보기 — 그 앱의 소스(선언형 yaml / 커스텀 tsx). 대개 1파일. */}
+      {codeView && (
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/40 p-6" onClick={() => setCodeView(null)}>
+          <div className="bg-white rounded-2xl shadow-xl border border-stone-200 w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="shrink-0 flex items-center gap-2 px-5 py-3 border-b border-stone-200">
+              <span className="font-medium text-stone-800 shrink-0">{codeView.label} — 코드</span>
+              {codeView.path && <span className="text-xs text-stone-400 truncate">{codeView.path}</span>}
+              <div className="flex-1" />
+              <button onClick={() => setCodeView(null)} className="px-2 py-1 rounded-lg text-stone-500 hover:bg-stone-100">✕</button>
+            </div>
+            <pre className="flex-1 overflow-auto p-4 text-xs leading-relaxed text-stone-800 bg-stone-50 whitespace-pre font-mono">{codeView.code}</pre>
+          </div>
         </div>
       )}
 

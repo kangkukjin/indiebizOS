@@ -319,6 +319,73 @@ class ConfigModel(BaseModel):
 class LoginModel(BaseModel):
     password: str
 
+
+# 커스텀 React 계기(선언형 밖) id → 컴포넌트 파일. 매니페스트 밖 프론트 등록이라 여기 명시.
+_CUSTOM_APP_SOURCES = {
+    "binnote": "frontend/src/components/BinNote.tsx",
+    "directions": "frontend/src/components/DirectionsInstrument.tsx",
+    "newspaper": "frontend/src/components/NewspaperInstrument.tsx",
+    "ytmusic": "frontend/src/components/YtMusicInstrument.tsx",
+}
+
+
+@router.get("/app-source/{app_id}")
+def app_source(app_id: str):
+    """앱 id → 그 앱을 구성하는 소스(대개 1파일). 앱저장소 '코드보기'용.
+
+    선언형 앱은 instruments yaml 또는 액션의 app: 블록(YAML), 커스텀 React 앱은 .tsx.
+    로컬 개인 도구라 리포 안 소스만 읽는다(realpath 로 리포 밖 차단)."""
+    import yaml  # 이 모듈은 yaml 을 함수-지역으로 import 하는 관례
+    root = os.path.realpath(os.path.dirname(os.path.dirname(IBL_NODES_PATH)))  # repo root
+
+    def _read(rel):
+        p = os.path.realpath(os.path.join(root, rel))
+        if not p.startswith(root + os.sep) or not os.path.isfile(p):
+            return None
+        try:
+            return open(p, encoding="utf-8").read()
+        except Exception:
+            return None
+
+    # 1) 커스텀 React 컴포넌트
+    if app_id in _CUSTOM_APP_SOURCES:
+        rel = _CUSTOM_APP_SOURCES[app_id]
+        code = _read(rel)
+        if code is not None:
+            return {"kind": "component", "path": rel, "lang": "tsx", "code": code}
+
+    # 2) 독립 instruments yaml (data/instruments/<id>.yaml)
+    code = _read(os.path.join("data", "instruments", f"{app_id}.yaml"))
+    if code is not None:
+        return {"kind": "instrument", "path": f"data/instruments/{app_id}.yaml", "lang": "yaml", "code": code}
+
+    # 3) 선언형 app: 블록 (액션의 app.instrument==id 또는 액션명==id)
+    try:
+        with open(IBL_NODES_PATH, "r", encoding="utf-8") as f:
+            nodes = (yaml.safe_load(f) or {}).get("nodes", {})
+    except Exception:
+        nodes = {}
+    for nname, nd in nodes.items():
+        for aname, ad in ((nd or {}).get("actions") or {}).items():
+            app = (ad or {}).get("app")
+            if isinstance(app, dict) and (app.get("instrument") or aname) == app_id:
+                block = yaml.safe_dump({"app": app}, allow_unicode=True, sort_keys=False)
+                # 소스 파일 best-effort(내용은 동일). ibl_nodes_src/ + 패키지 fragment 검색.
+                import glob as _glob
+                src_hint = f"{nname}:{aname} 의 app: 블록"
+                for fp in (_glob.glob(os.path.join(root, "data", "ibl_nodes_src", "*.yaml"))
+                           + _glob.glob(os.path.join(root, "data", "packages", "installed", "tools", "*", "ibl_actions.yaml"))):
+                    try:
+                        if f"instrument: {app_id}" in open(fp, encoding="utf-8").read():
+                            src_hint = os.path.relpath(fp, root) + f" ({nname}:{aname})"
+                            break
+                    except Exception:
+                        continue
+                return {"kind": "app-block", "path": src_hint, "lang": "yaml", "code": block}
+
+    raise HTTPException(status_code=404, detail=f"'{app_id}' 앱의 소스를 찾지 못했습니다(선언형/커스텀 매핑 없음).")
+
+
 @router.get("/config")
 async def get_config():
     """설정 조회"""

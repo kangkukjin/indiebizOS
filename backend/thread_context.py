@@ -41,6 +41,19 @@ def _drop_active_work():
         _active_work.pop(threading.get_ident(), None)
 
 
+def _drop_active_work_if_sysai():
+    """이 스레드의 활성작업 등록이 sysai 런일 때만 해제 (clear_current_task_id 대칭 해제).
+
+    set_current_task_id('task_sysai_…') 가 sysai=True 로 등록하므로 그 등록만 되돌린다.
+    프로젝트 에이전트 런(set_user_input, sysai=False)은 clear_all_context 가 해제하니
+    여기선 건드리지 않는다. 등록 레코드를 직접 봐 task_id 문자열 변화와 무관하게 정확히 해제."""
+    ident = threading.get_ident()
+    with _active_lock:
+        w = _active_work.get(ident)
+        if w and w.get("sysai"):
+            _active_work.pop(ident, None)
+
+
 def list_active_work() -> list:
     """지금 실행 중인 작업 목록. 죽은 스레드/1시간 초과 잔재(clear 누락 방어)는 청소."""
     now = time.time()
@@ -113,8 +126,14 @@ def get_current_task_id() -> str:
 
 
 def clear_current_task_id():
-    """현재 스레드의 task_id 초기화"""
+    """현재 스레드의 task_id 초기화 + sysai 활성작업 등록 해제(대칭).
+
+    set_current_task_id 가 task_sysai_ 런을 _active_work 에 등록하므로, 이 스레드의 sysai
+    등록을 여기서 해제한다. 안 그러면 시스템 AI 응답이 끝나도 조종실 '액티브 프로젝트'에
+    최대 1시간(list_active_work 안전청소)까지 유령으로 남는다 — HTTP/러너/폴러 sysai 경로가
+    clear_all_context 대신 이 함수를 finally 에서 쓰기 때문(WebSocket 경로만 clear_all_context)."""
     _thread_local.task_id = None
+    _drop_active_work_if_sysai()
 
 
 # ============ call_agent 호출 추적 ============

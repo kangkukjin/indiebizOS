@@ -147,6 +147,17 @@ AI 호출은 raw fetch 로 새로 짜지 말고 **어휘로** 부른다. 세 모
 
 **③ 무거운 동기 대화 (드묾)** — 지금 답이 필요한데 **도구까지** 써야 할 때(예: "이 글 PDF로 저장하고 경로 알려줘"). `askSystemAI` — 전체 인지 파이프라인이라 느리다(수십 초~분). ①·②로 안 될 때만.
 
+**④ ai_dock — 텍스트를 고치는 AI (선언형, 코드 0).** "이 글을 AI에게 다듬어 달라"는 편집기 UX(빈노트 656)를 어휘로. `form` 의 `textarea` 필드에 `ai_dock` 을 붙이면 요청→제안→**반영(대체)/첨부/닫기** 박스가 자동으로 뜬다(비누적, 데스크탑·원격 동일). 커스텀 React 편집기를 새로 짤 필요 없이 선언형 form 이면 어디서나.
+```yaml
+- key: body
+  type: textarea
+  ai_dock:
+    action: '[self:ask]{prompt: "지시대로 고쳐 본문만 답하라: $dock", context: "$body"}'
+    modes: [replace, append]   # dismiss 는 항상. 생략 시 둘 다
+    placeholder: "AI에게 시키기 — 더 간결하게 / 개요 만들어줘"
+```
+`$<필드키>`(현재 텍스트)·`$dock`(요청 입력)이 action 에 주입되고, 결과 스칼라 텍스트가 제안이 된다. 참조 소비자: `data/instruments/notepad.yaml`(메모 앱). 무거운 편집기(폴더 트리·다른이름저장)가 필요하면 아직 커스텀(BinNote)이지만, 단순 "쓰고 AI로 다듬기"는 이걸로 선언형이면 충분하다.
+
 > 판별: **가볍게 지금 답** = ① `askAI`/`[self:ask]`(기본) · **가서 만들어 둬** = ② `[others:delegate]` · **도구+지금 답** = ③ `askSystemAI`. 대부분 ①로 충분하다.
 
 ---

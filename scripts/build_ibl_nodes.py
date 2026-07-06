@@ -780,6 +780,9 @@ APP_VIEW_EVENTS = {"marker_click", "moveend", "center_drag"}
 APP_EVENT_VARS = {"lat", "lng", "id", "name", "radius", "url"}  # 이벤트 페이로드가 액션 템플릿에 주입하는 $변수
 APP_INPUT_TYPES = {"text", "select"}
 APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images", "date", "time", "datetime", "recurrence"}
+# ai_dock 어피던스(textarea 위 ephemeral AI 제안 — 요청→제안→반영/첨부/닫기). BinNote 656 UX 를
+# 어휘로 흡수 — 어떤 선언형 form 이든 textarea 에 붙일 수 있다. dismiss 는 항상, 아래는 적용 모드.
+APP_AIDOCK_MODES = {"replace", "append"}
 APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes",
             "note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter",
             "phone_render"}
@@ -915,11 +918,16 @@ def _app_action_templates(app: dict) -> list[str]:
                 for a in p.get("actions") or []:
                     if isinstance(a, dict) and isinstance(a.get("action"), str):
                         out.append(a["action"])
-                for f in p.get("fields") or []:  # images 필드의 add_image/remove_image 템플릿
-                    if isinstance(f, dict) and f.get("type") == "images":
+                for f in p.get("fields") or []:  # images 필드의 add_image/remove_image · ai_dock 템플릿
+                    if not isinstance(f, dict):
+                        continue
+                    if f.get("type") == "images":
                         for k in ("add_action", "remove_action"):
                             if isinstance(f.get(k), str):
                                 out.append(f[k])
+                    dock = f.get("ai_dock")
+                    if isinstance(dock, dict) and isinstance(dock.get("action"), str):
+                        out.append(dock["action"])
             if p.get("type") in ("editable_list", "calendar"):
                 if isinstance(p.get("delete_action"), str):
                     out.append(p["delete_action"])
@@ -971,6 +979,8 @@ def _block_local_keys(blk: dict) -> set:
                 keys.add(f["key"])
             if isinstance(f, dict) and f.get("type") == "images":  # add/remove_image 가 $path 런타임 주입
                 keys.add("path")
+            if isinstance(f, dict) and isinstance(f.get("ai_dock"), dict):  # ai_dock.action 이 $dock(요청) 주입
+                keys.add("dock")
 
     def walk(view):
         for p in view or []:
@@ -997,6 +1007,25 @@ def _block_local_keys(blk: dict) -> set:
     from_compose(blk.get("compose"))
     walk(blk.get("view"))
     return keys
+
+
+def _check_ai_dock(where: str, field: dict) -> list[str]:
+    """textarea 필드의 ai_dock 어피던스 검증 — action(AI 템플릿) 필수, modes 는 {replace,append} 부분집합.
+    ai_dock.action 은 $<필드키>(현재 텍스트)·$dock(요청 입력)을 주입받는다(_block_local_keys 참조)."""
+    issues: list[str] = []
+    dock = field.get("ai_dock")
+    if not isinstance(dock, dict):
+        issues.append(f"{where}: ai_dock 는 매핑")
+        return issues
+    if field.get("type") != "textarea":
+        issues.append(f"{where}: ai_dock 는 textarea 필드 전용 (현재 type={field.get('type')!r})")
+    if not isinstance(dock.get("action"), str) or not dock.get("action"):
+        issues.append(f"{where}: ai_dock.action(AI IBL 템플릿) 필수")
+    modes = dock.get("modes")
+    if modes is not None and (not isinstance(modes, list) or not modes
+                              or any(m not in APP_AIDOCK_MODES for m in modes)):
+        issues.append(f"{where}: ai_dock.modes 는 {sorted(APP_AIDOCK_MODES)} 부분집합")
+    return issues
 
 
 def _check_compose_channels(where: str, cmp) -> list[str]:
@@ -1078,6 +1107,8 @@ def _app_check_view(qualified: str, view, depth: int = 0, in_group: bool = False
                         issues.append(f"{where}: form.fields[{fi}] key 필수")
                     elif f.get("type") not in APP_FORM_FIELD_TYPES:
                         issues.append(f"{where}: form.fields[{fi}] type={f.get('type')!r} (허용: {sorted(APP_FORM_FIELD_TYPES)})")
+                    if isinstance(f, dict) and f.get("ai_dock") is not None:
+                        issues.extend(_check_ai_dock(f"{where}: form.fields[{fi}]", f))
             # 보조 액션(즐겨찾기 토글·삭제 등) — label + action 필수, style 은 danger 만
             acts = p.get("actions")
             if acts is not None:

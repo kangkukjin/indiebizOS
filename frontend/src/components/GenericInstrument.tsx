@@ -77,6 +77,9 @@ export interface AppFormField {
   // type:'images' 전용 — 업로드 즉시 영속(form save 와 무관). add 는 데스크탑(window.electron)만.
   add_action?: string;    // [..]{op:add_image, ..., path:"$path"} — $path=소스 파일경로
   remove_action?: string; // [..]{op:remove_image, ..., path:"$path"} — $path=제거할 첨부
+  // type:'textarea' 전용 — ai_dock 어피던스(요청→제안→반영/첨부/닫기). BinNote 656 UX 를 어휘로.
+  // action 은 $<필드키>(현재 텍스트)·$dock(요청)을 주입받고, 결과 스칼라 텍스트가 제안이 된다.
+  ai_dock?: { action: string; modes?: ('replace' | 'append')[]; placeholder?: string };
 }
 
 // form 보조 액션 — 저장 외 부가 동작(즐겨찾기 토글·삭제 등). 드릴 데이터 컨텍스트로 실행.
@@ -336,6 +339,69 @@ function ImagesField({ f, value, dispatch, busy, setBusy }:
 const RECURRENCE_OPTS: [string, string][] = [['none', '한 번'], ['daily', '매일'], ['weekly', '매주'], ['monthly', '매월'], ['yearly', '매년']];
 const dateInputType = (t: string) => (t === 'datetime' ? 'datetime-local' : t); // date/time 은 그대로, datetime → datetime-local
 
+// textarea 위 ephemeral AI 제안 독 — 요청→제안→반영(대체)/첨부/닫기. 실행 후 제안 사라짐(비누적).
+// action 은 $<필드키>(현재 텍스트)·$dock(요청)을 주입받아 스칼라 텍스트를 낸다(runIBL: project_id='앱모드').
+function AiDock({ field, value, vals, onApply }: {
+  field: AppFormField; value: string; vals: Record<string, string>; onApply: (v: string) => void;
+}) {
+  const dock = field.ai_dock!;
+  const modes = dock.modes && dock.modes.length ? dock.modes : (['replace', 'append'] as const);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const ask = async () => {
+    const instruction = input.trim();
+    if (!instruction || busy) return;
+    setInput(''); setBusy(true); setSuggestion(null);
+    try {
+      const code = buildAction(dock.action, { ...vals, [field.key]: value, dock: instruction });
+      const d = await runIBL(code);
+      const o = d && typeof d === 'object' ? (d as Json) : null;
+      const text = typeof d === 'string' ? d
+        : String(o?.result ?? o?.text ?? o?.answer ?? o?.message ?? o?.error ?? '');
+      setSuggestion(text || '(빈 응답)');
+    } catch {
+      setSuggestion('⚠️ AI 응답을 받지 못했습니다. 백엔드 연결을 확인하세요.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const apply = (mode: 'replace' | 'append') => {
+    if (suggestion == null) return;
+    onApply(mode === 'append' ? (value.trim() ? `${value}\n\n${suggestion}` : suggestion) : suggestion);
+    setSuggestion(null);
+  };
+  const isErr = suggestion != null && suggestion.startsWith('⚠️');
+  return (
+    <div className="mt-1.5 flex flex-col gap-1.5">
+      {busy && <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-400">AI가 생각 중…</div>}
+      {!busy && suggestion != null && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/60 overflow-hidden">
+          <div className="max-h-40 overflow-auto px-3 py-2 text-sm whitespace-pre-wrap leading-relaxed text-stone-800">{suggestion}</div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 border-t border-amber-100">
+            {!isErr && modes.includes('replace') && (
+              <button type="button" onClick={() => apply('replace')} className="px-2.5 py-1 rounded-md text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700">반영 (대체)</button>
+            )}
+            {!isErr && modes.includes('append') && (
+              <button type="button" onClick={() => apply('append')} className="px-2.5 py-1 rounded-md text-xs font-semibold text-amber-700 border border-amber-300 hover:bg-amber-100">첨부</button>
+            )}
+            <div className="flex-1" />
+            <button type="button" onClick={() => setSuggestion(null)} className="px-2 py-1 rounded-md text-xs text-stone-500 hover:bg-stone-100">닫기</button>
+          </div>
+        </div>
+      )}
+      <div className="flex items-end gap-1.5">
+        <textarea value={input} onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } }}
+          placeholder={dock.placeholder || 'AI에게 시키기 — 예: 더 간결하게 (Enter 전송)'} rows={1}
+          className={`${fieldCls} resize-none flex-1`} />
+        <button type="button" onClick={ask} disabled={busy || !input.trim()}
+          className="px-3 py-2 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-40 shrink-0">✨ AI</button>
+      </div>
+    </div>
+  );
+}
+
 function FormPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown; dispatch: Dispatch }) {
   const fields = (p.fields as AppFormField[]) || [];
   const initVals = useCallback(
@@ -374,7 +440,10 @@ function FormPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown; dispat
                 {vals[f.key] === '1' ? '켜짐' : '꺼짐'}
               </button>
             ) : f.type === 'textarea' ? (
-              <textarea value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} rows={3} placeholder={f.placeholder || ''} className={`${fieldCls} resize-y`} />
+              <>
+                <textarea value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} rows={3} placeholder={f.placeholder || ''} className={`${fieldCls} resize-y`} />
+                {f.ai_dock && <AiDock field={f} value={vals[f.key] ?? ''} vals={vals} onApply={(v) => set(f.key, v)} />}
+              </>
             ) : f.type === 'images' ? (
               <ImagesField f={f} value={vals[f.key] ?? ''} dispatch={dispatch} busy={saving} setBusy={setSaving} />
             ) : f.type === 'recurrence' ? (

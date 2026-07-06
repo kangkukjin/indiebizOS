@@ -2100,7 +2100,12 @@ function renderPrim(p,vi,data){
       const val=tpl(f.value||'',data); const id='ff_'+vi+'_'+f.key;
       h+='<div style="margin-bottom:8px"><label class="muted" style="display:block;font-size:11px;margin-bottom:3px">'+esc(f.label||'')+'</label>';
       if(f.type==='select') h+='<select class="field" id="'+id+'">'+(f.options||[]).map(o=>'<option value="'+esc(String(o.value))+'"'+(String(o.value)===String(val)?' selected':'')+'>'+esc(o.label)+'</option>').join('')+'</select>';
-      else if(f.type==='textarea') h+='<textarea class="field" id="'+id+'" rows="3">'+esc(val)+'</textarea>';
+      else if(f.type==='textarea'){ h+='<textarea class="field" id="'+id+'" rows="3">'+esc(val)+'</textarea>';
+        if(f.ai_dock){ h+='<div id="aid_sug_'+vi+'_'+fi+'"></div>'
+          +'<div class="row" style="margin-top:6px;align-items:flex-end">'
+          +'<textarea class="field" id="aid_in_'+vi+'_'+fi+'" rows="1" style="flex:1" placeholder="'+esc(f.ai_dock.placeholder||'AI에게 시키기 — 예: 더 간결하게')+'"></textarea>'
+          +'<button class="go" onclick="aiDockAsk('+vi+','+fi+',this)">✨ AI</button></div>'; }
+      }
       else if(f.type==='toggle') h+='<select class="field" id="'+id+'"><option value="0"'+(String(val)!=='1'?' selected':'')+'>꺼짐</option><option value="1"'+(String(val)==='1'?' selected':'')+'>켜짐</option></select>';
       else if(f.type==='images'){
         // 썸네일(전 표면 /image?path=) + 제거. 추가(파일선택)는 데스크탑 전용이라 원격엔 없음.
@@ -2308,6 +2313,41 @@ async function formAct(vi,ai,btn){
   catch(e){ alert('실패: '+e.message); }
   finally{ btn.disabled=false; }
 }
+/* ai_dock — textarea 위 ephemeral AI 제안(요청→제안→반영/첨부/닫기). dispatchAction 과 달리
+   새로고침 없이 ibl() 결과 텍스트만 받아 제안으로 띄우고, 적용 시 textarea 값을 바꾼다. */
+window.__aidock = window.__aidock || {};
+async function aiDockAsk(vi,fi,btn){
+  const p=activeView()[vi]; if(!p) return;
+  const f=(p.fields||[])[fi]; if(!f||!f.ai_dock) return;
+  const inEl=document.getElementById('aid_in_'+vi+'_'+fi);
+  const instruction=((inEl&&inEl.value)||'').trim(); if(!instruction) return;
+  const vals={}; (p.fields||[]).forEach(ff=>{ const el=document.getElementById('ff_'+vi+'_'+ff.key); if(el) vals[ff.key]=el.value; });
+  vals.dock=instruction;
+  const sug=document.getElementById('aid_sug_'+vi+'_'+fi);
+  btn.disabled=true; if(sug) sug.innerHTML='<div class="card muted" style="font-size:12px;margin-top:6px">AI가 생각 중…</div>';
+  try{
+    const d=await ibl(buildAction(f.ai_dock.action,vals));
+    const text=(typeof d==='string')?d:String((d&&(d.result??d.text??d.answer??d.message??d.error))||'');
+    window.__aidock[vi+'_'+fi]=text;
+    const modes=(f.ai_dock.modes&&f.ai_dock.modes.length)?f.ai_dock.modes:['replace','append'];
+    const isErr=!text||text.indexOf('⚠️')===0;
+    let btns='';
+    if(!isErr&&modes.indexOf('replace')>=0) btns+='<button class="go" onclick="aiDockApply('+vi+','+fi+',\\'replace\\')">반영 (대체)</button>';
+    if(!isErr&&modes.indexOf('append')>=0) btns+='<button class="linkbtn" style="padding:9px 13px;border:1px solid var(--line);border-radius:10px" onclick="aiDockApply('+vi+','+fi+',\\'append\\')">첨부</button>';
+    btns+='<button class="linkbtn" style="padding:9px 13px" onclick="aiDockClose('+vi+','+fi+')">닫기</button>';
+    if(sug) sug.innerHTML='<div class="card" style="margin-top:6px"><div style="white-space:pre-wrap;font-size:13px;max-height:160px;overflow:auto">'+esc(text||'(빈 응답)')+'</div><div class="row" style="margin-top:6px">'+btns+'</div></div>';
+    if(inEl) inEl.value='';
+  }catch(e){ if(sug) sug.innerHTML='<div class="card muted" style="font-size:12px;margin-top:6px">⚠️ AI 응답 실패: '+esc(e.message)+'</div>'; }
+  finally{ btn.disabled=false; }
+}
+function aiDockApply(vi,fi,mode){
+  const p=activeView()[vi]; if(!p) return; const f=(p.fields||[])[fi]; if(!f) return;
+  const text=window.__aidock[vi+'_'+fi]; if(text==null) return;
+  const el=document.getElementById('ff_'+vi+'_'+f.key); if(!el) return;
+  el.value=(mode==='append')?((el.value.trim()?el.value+'\\n\\n':'')+text):text;
+  aiDockClose(vi,fi);
+}
+function aiDockClose(vi,fi){ const sug=document.getElementById('aid_sug_'+vi+'_'+fi); if(sug) sug.innerHTML=''; delete window.__aidock[vi+'_'+fi]; }
 async function elAdd(vi,btn){
   const p=activeView()[vi]; if(!p||!p.add) return;
   const vals={}; (p.add.fields||[]).forEach(f=>{ const el=document.getElementById('ea_'+vi+'_'+f.key); if(el) vals[f.key]=el.value; });

@@ -253,6 +253,7 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 - **저술 전에 기존 계기를 모방하라.** 명세 암기보다 튼튼한 절차: 만들려는 계기와 가장 비슷한 기존 `app:` 블록을 먼저 읽는다 — 살아있는 용례 코퍼스는 `grep -rn 'app:' data/ibl_nodes_src/*.yaml data/packages/installed/tools/*/ibl_actions.yaml` + standalone `data/instruments/*.yaml`. 패턴별 모범: 단순 조회+지표=host(시스템) / 목록+드릴+지도+종속 select=realty / CRUD 폼·탭=business / 채팅=messenger / 달력=calendar / 이미지=photo.
 - view 프리미티브 14종: metric / kv / kv_list / card_list / image_grid / sparkline / list_action / thread / form / editable_list / map / calendar / group / blocks — 표시 템플릿 `{path|filter}`. blocks=문서 IR(read{blocks:true}·table:structure 출력) 렌더. **응답 shape은 추측하지 말고 live `/ibl/execute`로 확인 후 작성.**
 - form 필드 9종: text / select / toggle / textarea / images / date / time / datetime / recurrence
+- textarea 어피던스 `ai_dock`(필드 타입 아님) — `{action, modes:[replace,append], placeholder}`. 텍스트에 대한 ephemeral AI 제안(요청→반영/첨부/닫기). action 에 `$<필드키>`(현재 텍스트)·`$dock`(요청) 주입. 참조: `data/instruments/notepad.yaml`. 상세는 `custom_app_instrument.md` ④.
 - ★위 두 어휘 줄은 빌드의 **뷰-어휘 문서-동기 가드**가 `APP_VIEW_TYPES`/`APP_FORM_FIELD_TYPES` 선언과 자동 대조한다 — 뷰 어휘를 바꾸면 이 줄(과 `ibl.md` 앱 절의 같은 줄)도 함께 고쳐야 빌드가 통과한다.
 - 정합성은 2단계의 `--check`가 함께 검증한다(`validate_app_blocks` — 참조 액션 실존, $key↔inputs, view 어휘, 계기 그룹).
 - 해마(3·4단계)와 무관 — app:은 에이전트가 호출하는 어휘가 아니라 표면이 읽는 선언.

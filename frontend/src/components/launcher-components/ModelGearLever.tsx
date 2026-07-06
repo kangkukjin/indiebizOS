@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Gauge, Loader2, Settings2, Save, Check, Brain } from 'lucide-react';
+import { Gauge, Loader2, Settings2, Save, Check, Brain, Boxes } from 'lucide-react';
 import { api } from '../../lib/api';
 
 interface GearState {
@@ -33,7 +33,10 @@ const GEAR_DESC: Record<string, string> = {
 const AXES = ['분류', '평가', '실행', '의식'];
 const TIERS = ['경량', '중급', '고급'];
 
-export function ModelGearLever() {
+export function ModelGearLever({ onToggleStruct, structOpen }: {
+  onToggleStruct?: () => void;   // 'indiebizOS의 구조'(anatomy) 토글 — 설정 옆 작은 버튼으로 노출
+  structOpen?: boolean;
+} = {}) {
   const [gear, setGear] = useState<GearState | null>(null);
   const [changing, setChanging] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -131,6 +134,17 @@ export function ModelGearLever() {
         </span>
         <div className="flex items-center gap-2">
           {changing && <Loader2 size={13} className="animate-spin text-stone-400" />}
+          {onToggleStruct && (
+            <button
+              onClick={onToggleStruct}
+              title="indiebizOS의 구조 — 해부도(anatomy) 문서"
+              className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 border transition-colors ${
+                structOpen ? 'bg-stone-800 text-white border-stone-800' : 'bg-white border-stone-200 text-stone-500 hover:border-stone-400'
+              }`}
+            >
+              <Boxes size={12} /> 구조
+            </button>
+          )}
           <button
             onClick={() => setShowSettings((v) => !v)}
             title="기어 프리셋 편집 · 에이전트 핀"

@@ -17,8 +17,8 @@
  * 폴더 생성: [self:mkdir] 로 빈 폴더를 만든다(중간 경로 자동 생성·멱등).
  * 목록에서 점(.)으로 시작하는 항목은 감춘다(과거 .keep 잔여 등).
  */
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { FileText, Save, FolderOpen, FolderPlus, Folder, ChevronRight, FilePlus2, Send, Sparkles, X, Trash2, ArrowDownToLine } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { FileText, Save, FolderOpen, FolderPlus, Folder, ChevronRight, FilePlus2, Send, Sparkles, X, Trash2, ArrowDownToLine, Plus } from 'lucide-react';
 // 앱 모드 계기 공용 헬퍼 — project_id:'앱모드' 내장 IBL 호출 + 시스템 AI 동기 대화.
 import { iblExecuteApp, askSystemAI } from '../lib/instrument';
 
@@ -30,7 +30,6 @@ const CWD_KEY = 'binnote.cwd';   // 현재 폴더(루트 기준 하위 경로, '
 
 // 목록 한 항목(폴더 또는 노트).
 interface Entry { name: string; meta: string; isDir: boolean }
-interface ChatMsg { role: 'user' | 'ai'; text: string }
 
 // 파일명 정리 — 확장자 없으면 .md, 위험문자 제거.
 function normalizeName(raw: string): string {
@@ -56,17 +55,16 @@ export function BinNote() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [filter, setFilter] = useState('');
 
-  // AI 대화창
-  const [chat, setChat] = useState<ChatMsg[]>([]);
+  // AI 제안 박스 — 채팅 누적이 아니라, 최근 응답 하나만 글 아래 임시로 띄운다.
+  // 반영/첨부로 원본에 흡수하거나 닫으면 사라진다(비영구).
+  const [suggestion, setSuggestion] = useState<string | null>(null);
   const [aiInput, setAiInput] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   // 자동 임시저장 — 창을 잘못 닫아도 작업이 날아가지 않게.
   useEffect(() => { localStorage.setItem(DRAFT_KEY, content); }, [content]);
   useEffect(() => { localStorage.setItem(NAME_KEY, name); }, [name]);
   useEffect(() => { localStorage.setItem(CWD_KEY, cwd); }, [cwd]);
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat, aiBusy]);
 
   const flashStatus = (msg: string) => { setStatus(msg); window.setTimeout(() => setStatus(''), 3000); };
 
@@ -188,9 +186,9 @@ export function BinNote() {
   const askAI = useCallback(async () => {
     const instruction = aiInput.trim();
     if (!instruction || aiBusy) return;
-    setChat((c) => [...c, { role: 'user', text: instruction }]);
     setAiInput('');
     setAiBusy(true);
+    setSuggestion(null);   // 이전 제안은 새 요청 시 치운다(누적 금지).
     const saveDir = cwd ? `${NOTE_DIR}/${cwd}` : NOTE_DIR;
     const message =
       `아래는 사용자가 '빈노트' 편집기에서 작성 중인 문서입니다.\n` +
@@ -200,20 +198,31 @@ export function BinNote() {
       `다른 형식(pdf·docx·html 등)으로 저장하라는 요청이면 ${saveDir}/ 아래에 저장하고 저장 경로를 알려주세요.`;
     try {
       const reply = (await askSystemAI(message)) || '(응답 없음)';
-      setChat((c) => [...c, { role: 'ai', text: reply }]);
+      setSuggestion(reply);
     } catch {
-      setChat((c) => [...c, { role: 'ai', text: '⚠️ AI 응답을 받지 못했습니다. 백엔드 연결을 확인하세요.' }]);
+      setSuggestion('⚠️ AI 응답을 받지 못했습니다. 백엔드 연결을 확인하세요.');
     } finally {
       setAiBusy(false);
     }
   }, [aiInput, aiBusy, name, content, cwd]);
 
-  const applyToCanvas = useCallback((text: string) => {
-    if (dirty && !window.confirm('현재 캔버스 내용을 AI 결과로 교체할까요?')) return;
-    setContent(text);
+  // 반영 — AI 제안으로 원본 글을 통째로 대체. 실행 후 제안 박스는 사라진다.
+  const replaceWithSuggestion = useCallback(() => {
+    if (suggestion == null) return;
+    setContent(suggestion);
     setDirty(true);
-    flashStatus('AI 결과를 캔버스에 반영했습니다');
-  }, [dirty]);
+    setSuggestion(null);
+    flashStatus('AI 제안으로 원본 글을 대체했습니다');
+  }, [suggestion]);
+
+  // 첨부 — AI 제안을 원본 글 끝에 이어붙인다. 실행 후 제안 박스는 사라진다.
+  const appendSuggestion = useCallback(() => {
+    if (suggestion == null) return;
+    setContent((c) => (c.trim() ? `${c}\n\n${suggestion}` : suggestion));
+    setDirty(true);
+    setSuggestion(null);
+    flashStatus('AI 제안을 원본 글에 첨부했습니다');
+  }, [suggestion]);
 
   // Esc: 브라우저 모달이 열려 있으면 닫는다. (앱 모드 나가기는 상단 '‹ 뒤로' BackBar가 담당)
   useEffect(() => {
@@ -277,32 +286,49 @@ export function BinNote() {
 
       {/* 하단 AI 대화창 */}
       <section className="border-t border-stone-200 bg-white/80 backdrop-blur">
-        {chat.length > 0 && (
-          <div className="max-h-52 overflow-auto px-4 py-3 space-y-2.5">
-            {chat.map((m, i) => (
-              <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
-                <div className={
-                  'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap leading-relaxed ' +
-                  (m.role === 'user' ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-800')
-                }>
-                  {m.text}
-                  {m.role === 'ai' && m.text.length > 40 && !m.text.startsWith('⚠️') && (
+        {/* AI 제안 박스 — 글 아래 임시로 뜨는 단일 박스. 반영/첨부/닫기 후 사라진다. */}
+        {aiBusy && (
+          <div className="px-4 pt-3">
+            <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-400">AI가 생각 중…</div>
+          </div>
+        )}
+        {!aiBusy && suggestion !== null && (
+          <div className="px-4 pt-3">
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-amber-100">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-700">
+                  <Sparkles size={13} /> AI 제안
+                </span>
+                <button onClick={() => setSuggestion(null)} title="닫기" className="text-stone-400 hover:text-stone-700">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="max-h-52 overflow-auto px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed text-stone-800">
+                {suggestion}
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2.5 border-t border-amber-100">
+                {!suggestion.startsWith('⚠️') && (
+                  <>
                     <button
-                      onClick={() => applyToCanvas(m.text)}
-                      className="mt-2 flex items-center gap-1 text-xs font-semibold text-amber-700 hover:underline"
+                      onClick={replaceWithSuggestion}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700"
                     >
-                      <ArrowDownToLine size={13} /> 캔버스에 반영
+                      <ArrowDownToLine size={14} /> 반영 (원본 대체)
                     </button>
-                  )}
-                </div>
+                    <button
+                      onClick={appendSuggestion}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold text-amber-700 border border-amber-300 hover:bg-amber-100"
+                    >
+                      <Plus size={14} /> 첨부 (이어붙이기)
+                    </button>
+                  </>
+                )}
+                <div className="flex-1" />
+                <button onClick={() => setSuggestion(null)} className="px-2.5 py-1.5 rounded-lg text-sm text-stone-500 hover:bg-stone-100">
+                  닫기
+                </button>
               </div>
-            ))}
-            {aiBusy && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl px-3.5 py-2 text-sm bg-stone-100 text-stone-400">AI가 생각 중…</div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
+            </div>
           </div>
         )}
         <div className="flex items-end gap-2 px-4 py-3">

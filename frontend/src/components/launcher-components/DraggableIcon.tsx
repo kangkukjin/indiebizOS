@@ -20,6 +20,7 @@ export function DraggableIcon({
   isSwitch = false,
   isFolder = false,
   isMultiChat = false,
+  whiteTile = false,
   isFolderHovered = false,
   folderRef,
   hoveringFolderId,
@@ -175,13 +176,15 @@ export function DraggableIcon({
     >
       <div
         className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl transition-all shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.06)] ${
-          isSwitch
-            ? 'bg-gradient-to-br from-[#F59E0B] to-[#D97706] text-white'
-            : isFolder
-              ? 'bg-gradient-to-br from-[#FBBF24] to-[#F59E0B] text-white'
-              : isMultiChat
-                ? 'bg-gradient-to-br from-[#A78BFA] to-[#8B5CF6] text-white'
-                : 'bg-gradient-to-br from-[#60A5FA] to-[#3B82F6] text-white'
+          whiteTile
+            ? 'bg-white border border-stone-200 text-stone-700'
+            : isSwitch
+              ? 'bg-gradient-to-br from-[#F59E0B] to-[#D97706] text-white'
+              : isFolder
+                ? 'bg-gradient-to-br from-[#FBBF24] to-[#F59E0B] text-white'
+                : isMultiChat
+                  ? 'bg-gradient-to-br from-[#A78BFA] to-[#8B5CF6] text-white'
+                  : 'bg-gradient-to-br from-[#60A5FA] to-[#3B82F6] text-white'
         } ${isDragging ? '' : 'group-hover:scale-[1.04] group-hover:shadow-[0_2px_5px_rgba(0,0,0,0.1),0_8px_20px_rgba(0,0,0,0.1)]'} ${
           finalIsSelected ? 'ring-2 ring-[#D97706] ring-offset-2 ring-offset-[#F5F1EB]' : ''
         } ${

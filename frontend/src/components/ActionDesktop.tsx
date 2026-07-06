@@ -26,8 +26,11 @@ import type { AppLayout } from '../types';
 
 // 계기는 두 종류 — 인라인으로 펼쳐지는 것(el)과, 누르면 별도 네이티브 창을 띄우는 것(onOpen).
 interface Instrument { id: string; icon: string; label: string; el?: ReactNode; onOpen?: () => void; soon?: boolean }
-// 도메인도 onOpen을 가질 수 있다 — 계기 화면을 거치지 않고 홈에서 바로 액션을 실행하는 단일 아이콘.
+// 도메인은 코드 안에서 관련 계기를 묶는 *선언 구조*일 뿐 — 런타임엔 평탄화되어 각 계기가
+// 독립 최상위 앱이 된다(도메인→계기 2단 진입 폐지, 그룹핑은 사용자 폴더가 담당).
 interface Domain { id: string; icon: string; label: string; soon?: boolean; onOpen?: () => void; instruments: Instrument[] }
+// 평탄한 앱 = 계기 하나(홈 아이콘 하나). 계기와 같은 모양.
+type App = Instrument;
 
 // ===== 매니페스트 구동 계기 =====
 // 진실 소스 = ibl_nodes_src 액션의 app: 블록 → GET /launcher/instruments 자동 파생.
@@ -77,20 +80,32 @@ const STATIC_DOMAINS: Domain[] = [
   },
 ];
 
-// 홈 그리드 기본 배치 순서 (사용자 레이아웃이 없는 첫 실행/신규 앱의 자동 자리 계산용).
+// 홈 그리드 기본 배치 순서 (평탄화된 앱 id 기준 — 사용자 레이아웃이 없는 첫 실행/신규 앱의 자동 자리).
 const HOME_ORDER = [
-  'realestate', 'book', 'obsidian', 'calendar', 'newspaper', 'device', 'launch',
+  'realty', 'commercial', 'book', 'obsidian', 'calendar', 'newspaper', 'photo', 'files', 'launch',
   'lecture', 'binnote', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic',
 ];
 
-const STATIC_INSTRUMENT_IDS = new Set(STATIC_DOMAINS.flatMap((d) => d.instruments.map((i) => i.id)));
+// STATIC 도메인을 평탄한 앱 목록으로 — instruments 있으면 각각을 앱으로, 없으면(onOpen 도메인)
+// 도메인 자체를 앱으로. soon(placeholder)은 뺀다. el 미지정 static 계기는 매니페스트 app: 블록에서 주입.
+function staticAppsFrom(manById: Map<string, AppInstrument>): App[] {
+  return STATIC_DOMAINS.flatMap((d) =>
+    d.instruments.length === 0
+      ? [{ id: d.id, icon: d.icon, label: d.label, onOpen: d.onOpen }]
+      : d.instruments
+          .filter((ins) => !ins.soon)
+          .map((ins) => {
+            const inst = manById.get(ins.id);
+            return {
+              id: ins.id, icon: ins.icon, label: ins.label, onOpen: ins.onOpen,
+              el: ins.el ?? (inst ? <GenericInstrument instrument={inst} /> : undefined),
+            };
+          })
+  );
+}
 
-function manifestToDomain(inst: AppInstrument): Domain {
-  const el = OVERRIDES[inst.id] ?? <GenericInstrument instrument={inst} />;
-  return {
-    id: inst.id, icon: inst.icon, label: inst.name,
-    instruments: [{ id: inst.id, icon: inst.icon, label: inst.name, el }],
-  };
+function manifestToApp(inst: AppInstrument): App {
+  return { id: inst.id, icon: inst.icon, label: inst.name, el: OVERRIDES[inst.id] ?? <GenericInstrument instrument={inst} /> };
 }
 
 // 자유 배치 자동 자리 — 사용자가 아직 안 옮긴(위치 미저장) 아이콘의 격자 위치.
@@ -101,14 +116,18 @@ function autoPos(index: number): [number, number] {
 
 const EMPTY_LAYOUT: AppLayout = { version: 1, positions: {}, folders: {}, membership: {}, removed: [], uninstalled: [], promoted: [] };
 
-// 런처 모드 선택기가 승격된 앱의 아이콘·라벨을 알 수 있도록 static 도메인 메타를 내보낸다.
+// 런처 모드 선택기가 승격된 앱의 아이콘·라벨을 알 수 있도록 static 앱 메타를 내보낸다(평탄화된 id 기준).
 // (매니페스트 앱은 런처가 /launcher/instruments 로 직접 파싱 — 여기선 코드-정의 static 만)
-export const STATIC_APP_META = STATIC_DOMAINS.map((d) => ({ id: d.id, icon: d.icon, label: d.label }));
+export const STATIC_APP_META = STATIC_DOMAINS.flatMap((d) =>
+  d.instruments.length === 0
+    ? [{ id: d.id, icon: d.icon, label: d.label }]
+    : d.instruments.filter((i) => !i.soon).map((i) => ({ id: i.id, icon: i.icon, label: i.label }))
+);
 
 // openAppId: 런처 모드 선택기의 승격 앱에서 넘어온 딥링크 대상. 마운트/변경 시 그 앱을 바로 연다.
 export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {}) {
-  const [domainId, setDomainId] = useState<string | null>(null);
-  const [instrumentId, setInstrumentId] = useState<string | null>(null);
+  // 레벨2로 열린 앱 id(인라인 el). null = 홈. 도메인→계기 2단이 없어져 단일 상태로 충분.
+  const [openId, setOpenId] = useState<string | null>(null);
   const [manifest, setManifest] = useState<AppInstrument[]>([]);
   const [layout, setLayout] = useState<AppLayout>(EMPTY_LAYOUT);
   const [storeOpen, setStoreOpen] = useState(false);
@@ -157,66 +176,50 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
     });
   }, []);
 
-  // 카탈로그 — STATIC_DOMAINS + 매니페스트 병합 (홈에 놓을 수 있는 앱의 전체 집합)
-  const DOMAINS = useMemo<Domain[]>(() => {
-    const byId = new Map<string, Domain>();
-    STATIC_DOMAINS.forEach((d) => byId.set(d.id, d));
-    const shown = manifest.filter((i) => !STATIC_INSTRUMENT_IDS.has(i.id));
-    shown.forEach((inst) => byId.set(inst.id, manifestToDomain(inst)));
-    // realty·commercial: 부동산 도메인 안에서 선언형(manifest app: 블록)으로 렌더
-    const realestate = byId.get('realestate');
-    if (realestate) {
-      const manById = new Map(manifest.map((i) => [i.id, i]));
-      byId.set('realestate', {
-        ...realestate,
-        instruments: realestate.instruments.map((ins) => {
-          const inst = manById.get(ins.id);
-          return inst ? { ...ins, el: <GenericInstrument instrument={inst} /> } : ins;
-        }),
-      });
-    }
-    const ordered = HOME_ORDER.map((id) => byId.get(id)).filter((d): d is Domain => !!d);
-    const extras = shown.filter((i) => !HOME_ORDER.includes(i.id)).map(manifestToDomain);
-    return [...ordered, ...extras];
+  // 카탈로그 — STATIC(평탄화) + 매니페스트 병합. 각 계기가 독립 최상위 앱(도메인 그룹핑 없음).
+  const APPS = useMemo<App[]>(() => {
+    const manById = new Map(manifest.map((i) => [i.id, i]));
+    const statics = staticAppsFrom(manById);
+    const staticIds = new Set(statics.map((a) => a.id));  // 매니페스트에서 static 이 소유한 것(realty·photo 등) 제외
+    const all: App[] = [...statics, ...manifest.filter((i) => !staticIds.has(i.id)).map(manifestToApp)];
+    const byId = new Map(all.map((a) => [a.id, a]));
+    const ordered = HOME_ORDER.map((id) => byId.get(id)).filter((a): a is App => !!a);
+    const orderedIds = new Set(ordered.map((a) => a.id));
+    return [...ordered, ...all.filter((a) => !orderedIds.has(a.id))];
   }, [manifest]);
 
   // 승격 앱 딥링크 — openAppId 가 주어지면 그 앱을 바로 연다(계기 인라인 or 네이티브 창).
-  // DOMAINS 는 매니페스트 비동기 로드 후 채워지므로 준비될 때까지 대기하고, 같은 id 재적용은 스킵
+  // APPS 는 매니페스트 비동기 로드 후 채워지므로 준비될 때까지 대기하고, 같은 id 재적용은 스킵
   // (window focus 로 매니페스트 재조회 시 사용자 내비게이션을 되감지 않도록).
   const deepLinkRef = useRef<string | null>(null);
   useEffect(() => {
     if (!openAppId) { deepLinkRef.current = null; return; }
     if (deepLinkRef.current === openAppId) return;
-    const d = DOMAINS.find((x) => x.id === openAppId);
-    if (!d) return;  // 매니페스트 아직 로드 전 — 다음 렌더에서 재시도
+    const a = APPS.find((x) => x.id === openAppId);
+    if (!a) return;  // 매니페스트 아직 로드 전 — 다음 렌더에서 재시도
     deepLinkRef.current = openAppId;
-    if (d.onOpen) {
-      d.onOpen();  // 네이티브 창(사진·파일 등) — 앱 홈은 그대로 둔다
-      setDomainId(null); setInstrumentId(null);
-    } else if (d.instruments.length === 1 && d.instruments[0].el) {
-      setDomainId(d.id); setInstrumentId(d.instruments[0].id);  // 단일 인라인 계기 → 바로 레벨2
-    } else {
-      setDomainId(d.id); setInstrumentId(null);  // 다중 계기 → 계기 목록(레벨1)
-    }
-  }, [openAppId, DOMAINS]);
+    if (a.onOpen) { a.onOpen(); setOpenId(null); }  // 네이티브 창 — 앱 홈은 그대로
+    else if (a.el) setOpenId(a.id);                 // 인라인 → 바로 레벨2
+    else setOpenId(null);
+  }, [openAppId, APPS]);
 
   const folderTargets = useMemo(() => Object.keys(layout.folders), [layout.folders]);
 
   // 완전 삭제(uninstalled)된 앱은 카탈로그에서 아예 뺀다 — 홈·앱저장소 어디에도 안 나옴.
   const catalog = useMemo(
-    () => DOMAINS.filter((d) => !(layout.uninstalled || []).includes(d.id)),
-    [DOMAINS, layout.uninstalled]
+    () => APPS.filter((a) => !(layout.uninstalled || []).includes(a.id)),
+    [APPS, layout.uninstalled]
   );
 
   // 홈에 실제로 놓인 것: 카탈로그 중 removed 아니고 폴더에도 안 든 것 + 폴더 아이콘들
   const homeApps = useMemo(
-    () => catalog.filter((d) => !layout.removed.includes(d.id) && !layout.membership[d.id]),
+    () => catalog.filter((a) => !layout.removed.includes(a.id) && !layout.membership[a.id]),
     [catalog, layout.removed, layout.membership]
   );
 
-  // 앱의 *고정* 자리 인덱스 = 전체 카탈로그(DOMAINS) 내 순서. 폴더 이동/제거로 홈 목록이 줄어도
+  // 앱의 *고정* 자리 인덱스 = 전체 카탈로그(APPS) 내 순서. 폴더 이동/제거로 홈 목록이 줄어도
   // 이 인덱스는 안 밀리므로, 위치를 안 준 아이콘들이 서로 밀려 재배치되는 일이 없다(버그 방지).
-  const catalogIndex = useMemo(() => new Map(DOMAINS.map((d, i) => [d.id, i])), [DOMAINS]);
+  const catalogIndex = useMemo(() => new Map(APPS.map((a, i) => [a.id, i])), [APPS]);
 
   const posOf = useCallback((id: string, idx: number): [number, number] =>
     layout.positions[id] || autoPos(idx), [layout.positions]);
@@ -293,7 +296,7 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
   // window.prompt 는 Electron 에서 미지원(항상 null) → 폴더를 바로 만들고 인라인 이름변경으로 진입.
   const createFolder = () => {
     const fid = `folder_${Date.now()}`;
-    const pos = autoPos(DOMAINS.length + folderTargets.length);
+    const pos = autoPos(APPS.length + folderTargets.length);
     mutate((l) => {
       l.folders[fid] = { label: '새 폴더', icon: '📁' };
       l.positions[fid] = pos;
@@ -314,46 +317,19 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
     mutate((l) => { ids.forEach((id, i) => { l.positions[id] = autoPos(i); }); return l; });
   };
 
-  const openApp = (d: Domain) => {
-    if (d.soon) return;
-    if (d.onOpen) d.onOpen();
-    else setDomainId(d.id);
+  const openApp = (a: App) => {
+    if (a.soon) return;
+    if (a.onOpen) a.onOpen();        // 네이티브 창/외부(사진·파일·블로그·강의)
+    else if (a.el) setOpenId(a.id);  // 인라인 계기 → 바로 레벨2 (중간 목록 없음)
   };
 
-  const domain = DOMAINS.find((d) => d.id === domainId) || null;
-  const instrument = domain?.instruments.find((i) => i.id === instrumentId) || null;
-
-  // 레벨 2: 계기 열림 → 직접 조작
-  if (domain && instrument?.el) {
+  // 레벨 2: 앱(인라인 계기) 열림 → 직접 조작. 뒤로 = 홈 (도메인 중간 단계 폐지).
+  const openAppObj = openId ? APPS.find((a) => a.id === openId) || null : null;
+  if (openAppObj?.el) {
     return (
       <div className="absolute inset-0 flex flex-col">
-        <BackBar onBack={() => setInstrumentId(null)} crumbs={[domain.label, instrument.label]} />
-        <div className="flex-1 min-h-0">{instrument.el}</div>
-      </div>
-    );
-  }
-
-  // 레벨 1: 도메인 열림 → 그 도메인의 계기들 (고정 그리드 유지)
-  if (domain) {
-    return (
-      <div className="absolute inset-0 flex flex-col">
-        <BackBar onBack={() => setDomainId(null)} crumbs={[domain.label]} />
-        <div className="flex-1 overflow-auto p-8">
-          {domain.instruments.length === 0 ? (
-            <Empty label={`${domain.label} 계기는 곧 추가됩니다`} />
-          ) : (
-            <Grid>
-              {domain.instruments.map((ins) => (
-                <IconTile key={ins.id} icon={ins.icon} label={ins.label} soon={ins.soon}
-                  onClick={() => {
-                    if (ins.soon) return;
-                    if (ins.onOpen) ins.onOpen();
-                    else if (ins.el) setInstrumentId(ins.id);
-                  }} />
-              ))}
-            </Grid>
-          )}
-        </div>
+        <BackBar onBack={() => setOpenId(null)} crumbs={[openAppObj.label]} />
+        <div className="flex-1 min-h-0">{openAppObj.el}</div>
       </div>
     );
   }
@@ -369,7 +345,7 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
   // 폴더 열림 — 그 폴더에 든 앱들
   const openFolder = openFolderId ? layout.folders[openFolderId] : null;
   if (openFolderId && openFolder) {
-    const members = DOMAINS.filter((d) => layout.membership[d.id] === openFolderId);
+    const members = APPS.filter((a) => layout.membership[a.id] === openFolderId);
     return (
       <div className="absolute inset-0 flex flex-col">
         <BackBar onBack={() => setOpenFolderId(null)} crumbs={[`${openFolder.icon} ${openFolder.label}`]} />
@@ -409,6 +385,7 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
             icon={d.icon}
             label={d.label}
             position={p}
+            whiteTile   // 앱 아이콘 = 흰 배경 타일
             onDoubleClick={() => openApp(d)}
             onPositionChange={(x, y) => setPosition(d.id, x, y)}
             onDragStart={() => {}}
@@ -426,7 +403,7 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
       {/* 폴더 아이콘 — 폴더는 생성 시 명시 위치를 가지므로 fallback은 거의 안 쓰이나, 안정적으로 카탈로그 뒤에 둔다 */}
       {folderTargets.map((fid, i) => {
         const f = layout.folders[fid];
-        const p = posOf(fid, DOMAINS.length + i);
+        const p = posOf(fid, APPS.length + i);
         return (
           <DraggableIcon
             key={`${fid}@${p.join(',')}`}
@@ -499,7 +476,7 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
 
 // ===== 앱저장소 =====
 function AppStore({ domains, removed, onBack, onAdd, onUninstall }: {
-  domains: Domain[]; removed: string[]; onBack: () => void; onAdd: (id: string) => void; onUninstall: (id: string) => void;
+  domains: App[]; removed: string[]; onBack: () => void; onAdd: (id: string) => void; onUninstall: (id: string) => void;
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const confirmApp = domains.find((d) => d.id === confirmId) || null;

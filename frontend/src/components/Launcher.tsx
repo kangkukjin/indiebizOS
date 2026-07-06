@@ -1253,6 +1253,7 @@ export function Launcher() {
                 onDropOnFolder={(folderId) => handleMoveToFolder(project.id, folderId)}
                 trashHover={trashHover}
                 isFolder={project.type === 'folder'}
+                whiteTile={project.type !== 'folder'}
                 isFolderHovered={hoveringFolderId === project.id}
                 folderRef={(el) => {
                   if (project.type === 'folder') {

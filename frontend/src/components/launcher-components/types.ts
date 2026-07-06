@@ -115,6 +115,7 @@ export interface DraggableIconProps {
   isSwitch?: boolean;
   isFolder?: boolean;
   isMultiChat?: boolean;
+  whiteTile?: boolean;   // 앱 모드 아이콘 = 흰 배경 타일(그라데이션 대신). 앱모드에서만 true.
   isFolderHovered?: boolean;
   folderRef?: (el: HTMLDivElement | null) => void;
   hoveringFolderId?: string | null;

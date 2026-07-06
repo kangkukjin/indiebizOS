@@ -34,8 +34,10 @@ from typing import Any, Dict, List, Optional, Set
 # 모든 액션이 자연히 받는 보편 키 (op 디스패치/레거시 target).
 UNIVERSAL_PARAM_KEYS = {"op", "target"}
 
-# 런타임 메타 키 — 핸들러 인자가 아니라 라우팅이 읽는 키 (ibl_routing._resolve_project_path).
-RUNTIME_META_KEYS = {"project_id"}
+# 런타임 메타 키 — 핸들러 인자가 아니라 라우팅이 읽는 키.
+#   project_id: ibl_routing._resolve_project_path · scope: ibl_routing scope 해소
+#   (same/system/cross/workspace, ibl_routing.py params.get("scope") + ibl_engine action scope).
+RUNTIME_META_KEYS = {"project_id", "scope"}
 
 # 핸들러/별칭에 의도적으로 없는 문서화된 예외 (동적 pop 등 정적 검출 불가).
 # 코퍼스 정제/별칭으로 해소되면 제거할 것.

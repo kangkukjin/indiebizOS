@@ -5,8 +5,8 @@ import json, urllib.request, subprocess, sys, os
 BASE = "http://localhost:8765"
 PID = "하드웨어"
 
-def execute(code):
-    body = json.dumps({"code": code, "project_id": PID}).encode()
+def execute(code, pid=PID):
+    body = json.dumps({"code": code, "project_id": pid}).encode()
     req = urllib.request.Request(BASE + "/ibl/execute", data=body,
                                  headers={"Content-Type": "application/json"})
     try:
@@ -87,6 +87,108 @@ import yaml as _yaml
 _nodes = _yaml.safe_load(open("data/ibl_nodes.yaml"))
 RETURNS = {f"{n}:{a}": (ad.get("returns") or "?")
            for n, nd in _nodes["nodes"].items() for a, ad in (nd.get("actions") or {}).items()}
+
+
+# ── 단일-계기 verify (Phase 2, 앱 저술 튼튼함) ──
+# 저술 직후 "이 앱의 액션을 1회 실제로 실행해 view 가 통화를 받는가"를 한 방으로 단언.
+# 에피소드 656 에서 GoalEval 이 앱을 렌더하지 않고 편집 원장만으로 ACHIEVED 판정하던
+# 약한 검증자 공백을, *선언형(Path A) 계기 범위 안에서* 닫는다.
+#   · read-only 게이팅: /ibl/validate 와 같은 self_check_plan.json 안전분류(safe=True만 실행)
+#     → business_document regenerate·auto_response start/stop 같은 부작용 op 는 실행 없이 SKIP.
+#   · 앱모드 PID: self:* 경로 해소를 실제 앱 컨텍스트(project_id='앱모드')와 일치.
+#   · Path B(app: 블록 없는 커스텀 React)는 N/A — currency 개념 부재, tsc 로만 검증(GREEN 사칭 금지).
+#   · 한계: currency GREEN = "액션이 통화를 냈다"까지. override 렌더 컴포넌트가 그걸 실제로
+#     그리는지는 이 게이트 범위 밖(Phase 3 소관).
+def _load_safety_map():
+    """self_check_plan.json → (node, action) → safe(bool). api_ibl._load_safety_map 와 같은 계약."""
+    try:
+        plan = json.load(open("data/self_check_plan.json", encoding="utf-8"))
+        return {(a.get("node", ""), a.get("action", "")): bool(a.get("safe"))
+                for a in plan.get("actions", [])}
+    except Exception:
+        return {}
+
+
+def _first_action(tmpl):
+    import re
+    m = re.search(r"\[(\w+):(\w+)\]", tmpl or "")
+    return (m.group(1), m.group(2)) if m else None
+
+
+def _resolve_instrument_blocks(inst_id):
+    """계기 id → [(label, action_template), ...]. 선언형 app:/standalone 만. 없으면 []."""
+    import glob as _glob
+    blocks = []
+    for n, nd in _nodes["nodes"].items():
+        for a, ad in (nd.get("actions") or {}).items():
+            app = ad.get("app")
+            if not isinstance(app, dict):
+                continue
+            if (app.get("instrument") or a) != inst_id:
+                continue
+            modes = [m for m in (app.get("modes") or []) if isinstance(m, dict)] or [app]
+            for bi, blk in enumerate(modes):
+                if isinstance(blk.get("action"), str):
+                    blocks.append((f"{inst_id}:{n}:{a}#{bi}", blk["action"]))
+    for fp in sorted(_glob.glob("data/instruments/*.yaml")):
+        try:
+            m = _yaml.safe_load(open(fp, encoding="utf-8")) or {}
+        except Exception:
+            continue
+        if (m.get("instrument") or os.path.splitext(os.path.basename(fp))[0]) != inst_id:
+            continue
+        for mi, mode in enumerate(m.get("modes") or []):
+            if isinstance(mode, dict) and isinstance(mode.get("action"), str):
+                blocks.append((f"{inst_id}:instruments/{os.path.basename(fp)}#{mi}", mode["action"]))
+    return blocks
+
+
+def verify_instrument(inst_id):
+    """단일 계기 verify. (worst_verdict, [(label, verdict, reason), ...]) 반환.
+    verdict ∈ GREEN/YELLOW/RED/SKIP/N_A. 종료코드: YELLOW/RED 만 실패(1)."""
+    blocks = _resolve_instrument_blocks(inst_id)
+    if not blocks:
+        return "N_A", [(inst_id, "N_A",
+                        "선언형 app: 블록 없음 — Path B(커스텀 React)이거나 미존재. "
+                        "이 게이트 범위 밖(tsc 로만 검증).")]
+    safety = _load_safety_map()
+    order = {"RED": 4, "YELLOW": 3, "N_A": 2, "SKIP": 1, "GREEN": 0}
+    results = []
+    for label, tmpl in blocks:
+        fa = _first_action(tmpl)
+        if fa is None:
+            results.append((label, "SKIP", "실행 액션 없음")); continue
+        if "$" in tmpl:
+            results.append((label, "SKIP", "런타임 입력($var) 필요 — 자동 실행 불가")); continue
+        safe = safety.get(fa)
+        if safe is not True:
+            tag = "부작용 가능" if safe is False else "안전 미분류"
+            results.append((label, "SKIP",
+                            f"{tag} 액션 [{fa[0]}:{fa[1]}] — read-only 게이트로 실행 생략")); continue
+        declared = RETURNS.get(f"{fa[0]}:{fa[1]}", "?")
+        d = execute(tmpl, pid="앱모드")
+        verdict, reason = classify_currency(d, declared if declared != "?" else "items")
+        results.append((label, verdict, f"returns:{declared} {reason}"))
+    worst = max((v for _, v, _ in results), key=lambda v: order.get(v, 0))
+    return worst, results
+
+
+if "--instrument" in sys.argv:
+    _idx = sys.argv.index("--instrument")
+    _inst = sys.argv[_idx + 1] if _idx + 1 < len(sys.argv) else ""
+    if not _inst:
+        print("사용법: python scripts/ibl_health_check.py --instrument <id>", file=sys.stderr)
+        sys.exit(2)
+    _worst, _rows = verify_instrument(_inst)
+    print("=" * 72)
+    print(f"단일-계기 verify: {_inst}")
+    print("=" * 72)
+    for _label, _v, _r in _rows:
+        print(f"  [{_v:6}] {_label:36} {_r}")
+    _fail = _worst in ("YELLOW", "RED")
+    print(f"\n  ▶ 판정: {_worst}  {'❌ 실패' if _fail else ('⚠️ 검증 밖' if _worst == 'N_A' else '✅ 통과')}")
+    sys.exit(1 if _fail else 0)
+
 
 # ── §1A 정적 정합성 ──
 print("="*72); print("§1A 정적 정합성 (build --check)"); print("="*72)

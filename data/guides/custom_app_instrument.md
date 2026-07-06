@@ -181,7 +181,13 @@ AI 호출은 raw fetch 로 새로 짜지 말고 **어휘로** 부른다. 세 모
 
 ## 검증 (모델 불문 — `run_command` 로)
 
-- `run_command("cd frontend && npx tsc -b")` — **`tsc -b`** 로(‑‑noEmit 아님). 미사용 import·var까지 잡는다. 만들었든 고쳤든 통과할 때까진 미완성.
+- **선언형 `app:` 블록을 만들었거나 고쳤으면 — 완료 조건은 verify 게이트 GREEN/SKIP:**
+  `run_command("python3 scripts/build_ibl_nodes.py --check")` (뷰-어휘·뷰-렌더러·앱-템플릿 param 가드 통과) **+**
+  `run_command("python3 scripts/ibl_health_check.py --instrument <계기id>")`.
+  후자는 그 앱의 액션을 앱모드로 **1회 실제 실행**해 view 가 통화를 받는지 단언한다(GoalEval 원장만 보던 공백을 메움).
+  · GREEN=통화 확인 / SKIP=read-only 게이트·입력 필요(정상) / **YELLOW·RED=실패**(통화 미부착 — op·view.from 확인). YELLOW/RED면 미완성.
+  · 한계: currency GREEN 은 "액션이 통화를 냈다"까지. override 렌더 컴포넌트가 실제로 그리는지·상호작용은 아래 라이브 스모크로.
+- `run_command("cd frontend && npx tsc -b")` — **`tsc -b`** 로(‑‑noEmit 아님). 미사용 import·var까지 잡는다. **커스텀 React(Path B) 계기는 verify 게이트가 N_A 라 tsc + 라이브 스모크가 유일한 안전망** — 더 꼼꼼히.
 - 별도 창 경로를 건드렸으면 `run_command("cd frontend && node --check electron/main.js electron/preload.js")`.
 - 라이브: 앱 모드에서 아이콘 열기 → **뒤로 나가지는지** → 저장/불러오기/AI 왕복. 인라인이면 HMR 즉시 반영, 별도 창·main.js 건드렸으면 재시작 후.
 

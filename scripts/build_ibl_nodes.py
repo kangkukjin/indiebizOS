@@ -48,6 +48,7 @@ if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 from ibl_param_vocab import (  # noqa: E402
     UNIVERSAL_PARAM_KEYS,
+    RUNTIME_META_KEYS,
     CORPUS_PARAM_ALLOW,
     _file_read_keys,
     _dir_read_keys,
@@ -829,6 +830,64 @@ def check_app_vocab_docs(root: Path) -> list[str]:
     return issues
 
 
+def check_view_renderers(root: Path) -> list[str]:
+    """뷰 어휘(APP_VIEW_TYPES) ↔ 렌더러 2곳의 p.type 디스패치 파리티(뷰-렌더러 가드).
+
+    build 는 app: 블록이 *선언한* view type 이 enum 에 있는지만 봤다 — 하지만 그 type 을
+    실제로 *그리는* 렌더러 코드가 없으면 success:true 인데 빈 화면(좀비 어휘)이다.
+    check_launcher_handlers(어휘→라우터→main.js) 와 같은 패턴을 뷰 계층에 적용:
+    데스크탑(GenericInstrument.tsx if-chain)·원격(api_launcher_web.py renderPrim if-chain)
+    두 렌더러가 각 view type 을 디스패치하는지 정규식으로 확인한다.
+
+    견고화(경량 모델·리팩터 대비):
+      · `\\bp\\.type` 단어경계 — inp.type/f.type/apChat.type 오채집 제거.
+      · if-chain(p.type===) 와 switch(case '…') 두 문법을 union 추출 — 부분 리팩터로
+        한 view 만 문법이 바뀌어도 거짓 하드에러가 안 나게(과채집은 '누락' 방향엔 무해).
+      · 알려진 view type 추출량이 기대치의 70% 미만이면 형식 전면 변경으로 보고 graceful skip.
+    '누락' 방향(enum 에 있으나 렌더러에 없음)만 하드 에러로 emit — 렌더러에만 있는 여분
+    (예: 'select' 하위 프리미티브)은 무시(거짓양성 회피). OVERRIDES/STATIC 컴포넌트
+    (Newspaper·Book·Invest 등)는 제네릭 렌더러 밖이라 이 검사 범위 아님(사각지대)."""
+    import re as _re
+    issues: list[str] = []
+    desktop = root / "frontend" / "src" / "components" / "GenericInstrument.tsx"
+    remote = root / "backend" / "api_launcher_web.py"
+    if not desktop.is_file() or not remote.is_file():
+        return issues  # 소스 부재(폰/헤드리스) — graceful skip
+    try:
+        dtext = desktop.read_text(encoding="utf-8")
+        rtext = remote.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return issues
+    pats = (_re.compile(r"\bp\.type\s*===\s*['\"](\w+)['\"]"),
+            _re.compile(r"\bcase\s+['\"](\w+)['\"]"))
+
+    def _extract(text: str) -> set[str]:
+        out: set[str] = set()
+        for pat in pats:
+            out.update(pat.findall(text))
+        return out
+
+    desktop_types = _extract(dtext)
+    remote_types = _extract(rtext)
+    thresh = max(1, int(len(APP_VIEW_TYPES) * 0.7))
+    if (len(desktop_types & APP_VIEW_TYPES) < thresh
+            or len(remote_types & APP_VIEW_TYPES) < thresh):
+        return issues  # 디스패치 형식 전면 변경 — graceful skip(거짓양성 회피)
+    for missing in sorted(APP_VIEW_TYPES - desktop_types):
+        issues.append(
+            f"뷰 어휘 {missing!r} 가 APP_VIEW_TYPES 에 선언됐으나 데스크탑 렌더러 "
+            f"(frontend/src/components/GenericInstrument.tsx)에 p.type 케이스 없음 — "
+            f"빈 화면(좀비 어휘). 렌더러에 추가하거나 어휘에서 제거."
+        )
+    for missing in sorted(APP_VIEW_TYPES - remote_types):
+        issues.append(
+            f"뷰 어휘 {missing!r} 가 APP_VIEW_TYPES 에 선언됐으나 원격 렌더러 "
+            f"(backend/api_launcher_web.py renderPrim)에 p.type 케이스 없음 — "
+            f"데스크탑/원격 파리티 깨짐. 원격 렌더러에 추가."
+        )
+    return issues
+
+
 def _app_action_templates(app: dict) -> list[str]:
     """app 블록에서 IBL 액션 템플릿 문자열 전부 수집 (참조 존재 검증용)."""
     import re as _re  # noqa: F401 (지역 사용 명시)
@@ -1329,6 +1388,181 @@ def validate_app_blocks(data: dict) -> list[str]:
             mode_names = [a.get("mode") for _, a in members if a.get("mode")]
             if len(mode_names) != len(set(mode_names)):
                 issues.append(f"계기 {gid!r}: mode 이름 중복 {mode_names}")
+    return issues
+
+
+def _template_param_keys(t: str) -> list[tuple[str, str, set[str]]]:
+    """IBL 템플릿 문자열에서 각 [node:action]{...} 의 최상위 리터럴 파라미터 *키* 추출.
+
+    (node, action, {key,...}) 리스트. $변수·{행필드} 는 값이라 키가 아니며(depth>1),
+    중첩·따옴표를 추적해 값 안의 콜론/중괄호를 키로 오인하지 않는다. 과소추출(놓침)은
+    검사를 건너뛸 뿐이나 과대추출(값→키 오인)은 거짓 하드에러라, 확신 위치의 키만 잡는다."""
+    import re as _re
+    out: list[tuple[str, str, set[str]]] = []
+    for m in _re.finditer(r"\[(\w+):(\w+)\]", t):
+        node, action = m.group(1), m.group(2)
+        j = m.end()
+        n = len(t)
+        while j < n and t[j] in " \t":
+            j += 1
+        keys: set[str] = set()
+        if j < n and t[j] == "{":
+            depth = 0
+            expect_key = False
+            k = j
+            while k < n:
+                c = t[k]
+                if c in "\"'":
+                    if depth == 1 and expect_key:  # 따옴표 키 "path":
+                        km = _re.match(r"([\"'])([A-Za-z_]\w*)\1\s*:", t[k:])
+                        if km:
+                            keys.add(km.group(2))
+                            k += km.end()
+                            expect_key = False
+                            continue
+                    q = c  # 문자열 값 통째 skip(내부 콤마·중괄호 무시)
+                    k += 1
+                    while k < n and t[k] != q:
+                        if t[k] == "\\":
+                            k += 1
+                        k += 1
+                    k += 1
+                    continue
+                if c == "{":
+                    depth += 1
+                    if depth == 1:
+                        expect_key = True
+                    k += 1
+                    continue
+                if c == "}":
+                    depth -= 1
+                    k += 1
+                    if depth == 0:
+                        break
+                    continue
+                if depth == 1:
+                    if c == ",":
+                        expect_key = True
+                        k += 1
+                        continue
+                    if c in " \t\n":
+                        k += 1
+                        continue
+                    if expect_key:
+                        km = _re.match(r"([A-Za-z_]\w*)\s*:", t[k:])
+                        if km:
+                            keys.add(km.group(1))
+                            k += km.end()
+                            expect_key = False
+                            continue
+                        expect_key = False  # 키 위치가 아님(값 시작)
+                    k += 1
+                    continue
+                k += 1  # depth != 1
+        out.append((node, action, keys))
+    return out
+
+
+def validate_app_template_params(data: dict, root: Path) -> list[str]:
+    """app:/standalone 템플릿의 리터럴 파라미터 키 ↔ 액션 허용키 대조 (뷰-어휘 밖 침묵 닫기).
+
+    validate_corpus_params 와 같은 허용집합(핸들러 읽기키 ∪ aliases ∪ 보편키 ∪ target_key)을
+    쓰되 출처가 학습 코퍼스가 아니라 *저술된 앱 템플릿*이다. 선언형 앱이 [sense:realty]{deposit_max:…}
+    처럼 핸들러가 안 읽는 키를 넘겨 조용히 무시되는 오답(성공처럼 보임)을 저술 시점(빌드)에
+    하드 실패로 잡는다. open_params 액션·미존재 액션(별도 가드가 잡음)은 스킵 = 보수적."""
+    import glob
+    import os
+    import yaml
+
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    action_cfg: dict[str, dict] = {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            if isinstance(action, dict):
+                action_cfg[f"{node_name}:{action_name}"] = action
+
+    aliases = _extract_action_param_aliases(data)
+    tool_index = build_tool_index(root)
+    backend_keys = _dir_read_keys((root / "backend").glob("*.py"))
+    pkg_cache: dict[Path, set[str]] = {}
+
+    # (label, template) 수집 — 노드 app: 블록 + standalone 매니페스트.
+    templates: list[tuple[str, str]] = []
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            if not isinstance(action, dict) or "app" not in action:
+                continue
+            app = action["app"]
+            if not isinstance(app, dict):
+                continue
+            qualified = f"{node_name}:{action_name}"
+            mode_list = app.get("modes")
+            blocks = ([m for m in mode_list if isinstance(m, dict)]
+                      if isinstance(mode_list, list) and mode_list else [app])
+            for blk in blocks:
+                for tmpl in _app_action_templates(blk):
+                    templates.append((qualified, tmpl))
+    inst_dir = os.path.join(os.path.dirname(__file__), "..", "data", "instruments")
+    if os.path.isdir(inst_dir):
+        for fp in sorted(glob.glob(os.path.join(inst_dir, "*.yaml"))):
+            try:
+                with open(fp, "r", encoding="utf-8") as f:
+                    mani = yaml.safe_load(f) or {}
+            except Exception:
+                continue
+            if not isinstance(mani, dict):
+                continue
+            for mode in mani.get("modes") or []:
+                if isinstance(mode, dict):
+                    for tmpl in _app_action_templates(mode):
+                        templates.append((f"instruments/{os.path.basename(fp)}", tmpl))
+
+    def _known_for(qualified: str, ac: dict) -> set[str]:
+        known = set(UNIVERSAL_PARAM_KEYS) | set(RUNTIME_META_KEYS)
+        if ac.get("target_key"):
+            known.add(ac["target_key"])
+        known |= aliases.get(qualified, set())
+        known |= CORPUS_PARAM_ALLOW.get(qualified, set())
+        tool_name = ac.get("tool")
+        if ac.get("router") == "handler" and tool_name and tool_name in tool_index:
+            pkg_dir = tool_index[tool_name][0]
+            if pkg_dir not in pkg_cache:
+                pkg_cache[pkg_dir] = _dir_read_keys(pkg_dir.rglob("*.py"))
+            known |= pkg_cache[pkg_dir]
+        else:
+            known |= backend_keys
+        return known
+
+    issues: list[str] = []
+    seen: set[tuple[str, str, str]] = set()
+    for label, tmpl in templates:
+        for node, action, keys in _template_param_keys(tmpl):
+            # '_'/'$' 접두 키는 시스템/템플릿 메타 — 런타임 check_params 와 동일 제외.
+            keys = {k for k in keys if not k.startswith(("_", "$"))}
+            if not keys:
+                continue
+            qualified = f"{node}:{action}"
+            ac = action_cfg.get(qualified)
+            if not isinstance(ac, dict):
+                continue  # 미존재 액션 참조는 _validate_app_block 이 잡음
+            if ac.get("open_params"):
+                continue  # 자유 키 선언 — 스킵
+            unknown = sorted(keys - _known_for(qualified, ac))
+            if not unknown:
+                continue
+            dedup = (label, qualified, ",".join(unknown))
+            if dedup in seen:
+                continue
+            seen.add(dedup)
+            issues.append(
+                f"{label}: app 템플릿이 [{qualified}] 에 미인식 파라미터 {unknown} 전달 — "
+                f"핸들러가 읽지 않는 키라 조용히 무시됨(오타?). 액션 정의처 aliases: 블록에 추가 · "
+                f"오타 정정 · open_params 중 택1. ({tmpl!r})"
+            )
     return issues
 
 
@@ -2242,10 +2476,48 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 "(ibl.md·new_action_checklist.md 어휘 줄 = 코드 선언)"
             )
 
+    # --- 뷰-렌더러 가드: APP_VIEW_TYPES ↔ 렌더러 2곳 p.type 파리티 (--check/--validate 전용) ---
+    renderer_failed = False
+    if check or validate_only:
+        rvissues = check_view_renderers(root)
+        if rvissues:
+            renderer_failed = True
+            print(
+                f"[build_ibl_nodes] 뷰-렌더러 가드 실패: {len(rvissues)}건 "
+                f"(선언된 view 어휘를 렌더러가 안 그림 — 빈 화면(좀비) 또는 데스크탑/원격 파리티 깨짐)",
+                file=sys.stderr,
+            )
+            for issue in rvissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print(
+                "[build_ibl_nodes] 뷰-렌더러 가드 통과 ✓ "
+                "(APP_VIEW_TYPES 전부 데스크탑·원격 렌더러에 p.type 케이스 보유)"
+            )
+
+    # --- 앱-템플릿 param 가드: app: 템플릿 리터럴 키 ↔ 액션 허용키 (--check/--validate 전용) ---
+    # 선언형 앱이 핸들러가 안 읽는 키를 넘겨 조용히 무시되는 오답(성공처럼 보임)을
+    # 저술 시점 하드 실패로 잡는다(런타임 soft 경고 → 빌드 hard 게이트).
+    appparam_failed = False
+    if check or validate_only:
+        apissues = validate_app_template_params(data, root) if data is not None else []
+        if apissues:
+            appparam_failed = True
+            print(
+                f"[build_ibl_nodes] 앱-템플릿 param 가드 실패: {len(apissues)}건 "
+                f"(app 템플릿이 핸들러 미인식 파라미터 전달 — 침묵 무시되는 오타)",
+                file=sys.stderr,
+            )
+            for issue in apissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 앱-템플릿 param 가드 통과 ✓ (모든 app 템플릿 키가 액션 허용키)")
+
     if validate_only:
         return 1 if (validation_failed or corpus_failed or fixture_failed
                      or profile_failed or os_failed or launcher_failed
-                     or textbook_failed or appvocab_failed) else 0
+                     or textbook_failed or appvocab_failed
+                     or renderer_failed or appparam_failed) else 0
 
     # 폰 매니페스트 파생 (runs_on + 검증된 폰 패키지). data 파싱 성공 시에만.
     manifest_path = root / "data" / "phone_manifest.json"
@@ -2354,7 +2626,8 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      and not corpus_failed and not fixture_failed
                      and not profile_failed and not os_failed
                      and not launcher_failed and not textbook_failed
-                     and not appvocab_failed) else 1
+                     and not appvocab_failed
+                     and not renderer_failed and not appparam_failed) else 1
 
     if validation_failed:
         print(

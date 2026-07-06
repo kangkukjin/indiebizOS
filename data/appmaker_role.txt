@@ -5,9 +5,12 @@
 - **작게 시작해 왕복을 줄이세요.** 사용자가 자주 하는 일 하나를 앱으로 박제하는 게 목표입니다 — 거대한 앱이 아니라 "버튼 한 번으로 반복되는 작은 워크플로우".
 
 ## 만드는 법 (순서)
-1. **비슷한 기존 앱을 먼저 모방하세요.** `read_guide("custom_app_instrument")`와 `read_guide("new_action_checklist")`를 읽고, 가장 닮은 기존 계기(`data/ibl_nodes_src/*.yaml`의 `app:` 블록 또는 `data/instruments/*.yaml`)를 찾아 그 패턴을 따릅니다. 바닥부터 새로 짜지 마세요.
+**핵심 원칙: 앱 = 이미 있는 IBL 낱말을 엮는 것.** 능력을 새로 짜지 말고 기존 어휘를 조합하세요 — 컴포넌트는 표현만, 능력은 어휘입니다.
+1. **비슷한 기존 앱을 먼저 모방하세요.** `read_guide("custom_app_instrument")`(앱 저술 가이드)를 읽고, 가장 닮은 기존 계기(`data/ibl_nodes_src/*.yaml`의 `app:` 블록 또는 `data/instruments/*.yaml`)를 찾아 그 패턴을 따릅니다. 바닥부터 새로 짜지 마세요.
 2. **선언형 `app:` 블록이 먼저입니다.** 데이터-모양 앱(목록·지표·폼·차트·달력·지도 등)은 뷰 어휘 14종 + 폼 필드로 표현되면 코드 0줄로 만들어지고 원격·폰 파리티가 공짜입니다. 텍스트 편집 + AI 다듬기가 필요하면 `form`의 `textarea`에 `ai_dock`를 붙이세요(참조: `data/instruments/notepad.yaml`).
-3. **선언형으로 안 되는 자유 UI만** 커스텀 React 계기(`frontend/src/components/*.tsx` + `ActionDesktop` 등록)로. 능력은 기존 IBL 어휘 조합, 컴포넌트는 표현만. 앱 모드에서 `[self:*]` 파일 호출은 **`project_id: "앱모드"` 필수**(헬퍼 `iblExecuteApp` 사용).
+3. **선언형으로 안 되는 자유 UI만** 커스텀 React 계기(`frontend/src/components/*.tsx` + `ActionDesktop` 등록)로. 앱 모드에서 `[self:*]` 파일 호출은 **`project_id: "앱모드"` 필수**(헬퍼 `iblExecuteApp` 사용).
+
+> **예외 — 새 어휘가 필요할 때만:** 앱에 필요한 능력이 *아직 IBL 액션에 없을 때*에만 새 액션(어휘)을 만듭니다. 드문 일이며, 그때만 `read_guide("new_action_checklist")`를 읽으세요 — *앱 만들기와는 다른 작업*이라 검증 절차도 다릅니다(삼각 검증·op·fixture·해마 코퍼스). 대부분의 앱은 새 어휘 없이 기존 낱말 조합으로 끝납니다.
 
 ## 반드시 검증
 편집한 뒤 **끝났다고 말하기 전에** 검증하세요:

@@ -33,7 +33,10 @@ import {
 
 export type ChatTarget =
   | { type: 'agent'; projectId: string; agent: Agent }
-  | { type: 'system_ai' };
+  | { type: 'system_ai' }
+  // 앱메이커 — 시스템 AI에 앱메이커 role을 씌운 앱모드 표면. 동작은 system_ai와 거의 동일하되
+  // 대화 스레드 분리(thread='appmaker')·WS role 태그·타이틀만 다르다.
+  | { type: 'appmaker' };
 
 export type ChatLayout = 'fullpage' | 'dialog';
 
@@ -68,11 +71,12 @@ interface DialogPosition { x: number; y: number; }
 
 export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose, onBack, initialMessage, initialMessageLabel }: ChatViewProps) {
   const isAgent = chatTarget.type === 'agent';
+  const isAppMaker = chatTarget.type === 'appmaker';  // system_ai 분기(!isAgent)를 공유하되 스레드/타이틀만 분기
   const isDialog = layout === 'dialog';
   const variant = isDialog ? 'neutral' : 'warm';
 
   // chatTarget에서 안정적인 primitive key 추출 (useEffect/useCallback dependency용)
-  const targetKey = isAgent ? `agent-${chatTarget.projectId}-${chatTarget.agent.id}` : 'system_ai';
+  const targetKey = isAgent ? `agent-${chatTarget.projectId}-${chatTarget.agent.id}` : (isAppMaker ? 'appmaker' : 'system_ai');
   const projectId = isAgent ? chatTarget.projectId : null;
   const agentId = isAgent ? chatTarget.agent.id : null;
   const agentName = isAgent ? chatTarget.agent.name : null;
@@ -160,7 +164,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
     setTodos([]);
   };
 
-  const agentLabel = agentName || '시스템 AI';
+  const agentLabel = agentName || (isAppMaker ? '앱메이커' : '시스템 AI');
   const agentModel = isAgent ? chatTarget.agent.ai?.model : null;
 
   // provider 추적 — Claude Code일 때만 세션 재시작 버튼 노출.
@@ -470,7 +474,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
     const loadSystemAIHistory = async () => {
       try {
-        const data = await api.getSystemAIRecentConversations?.(10);
+        const data = await api.getSystemAIRecentConversations?.(10, isAppMaker ? 'appmaker' : 'system_ai');
         if (data?.conversations && data.conversations.length > 0) {
           setMessages(data.conversations.map((msg: { id: number; timestamp: string; role: string; content: string }) => ({
             id: String(msg.id),
@@ -653,6 +657,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         images: imageData.length > 0 ? imageData : undefined,
         documents: documentData.length > 0 ? documentData : undefined,
         action_hint: selectedAction || undefined,
+        role: isAppMaker ? 'appmaker' : undefined,  // 백엔드가 appmaker role(extra_role)+분리 스레드로 처리
       }));
     }
 

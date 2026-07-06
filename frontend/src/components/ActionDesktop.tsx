@@ -14,13 +14,14 @@
  * 홈에 자동 등장(기존 불변식 보존), 사용자는 그 위에서 배치/정리/제거.
  */
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
-import { Plus, Package, LayoutGrid, Trash2, ArrowUpFromLine, ArrowDownFromLine } from 'lucide-react';
+import { Plus, Package, LayoutGrid, Trash2, ArrowUpFromLine, ArrowDownFromLine, Wand2 } from 'lucide-react';
 import { DirectionsInstrument } from './DirectionsInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
 import { BinNote } from './BinNote';
 import { YtMusicInstrument } from './YtMusicInstrument';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 import { DraggableIcon } from './launcher-components/DraggableIcon';
+import { ChatView } from './chat/ChatView';
 import { api } from '../lib/api';
 import type { AppLayout } from '../types';
 
@@ -131,6 +132,7 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
   const [manifest, setManifest] = useState<AppInstrument[]>([]);
   const [layout, setLayout] = useState<AppLayout>(EMPTY_LAYOUT);
   const [storeOpen, setStoreOpen] = useState(false);
+  const [makerOpen, setMakerOpen] = useState(false);  // 앱메이커 플로팅 패널(앱 저술 전용 AI)
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
 
   // 드래그 히트테스트 상태 (제거는 우클릭 메뉴로 이관 — 휴지통 폐기)
@@ -373,6 +375,19 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
     <div className="absolute inset-0 overflow-hidden" onClick={() => setMenu(null)}
       onContextMenu={(e) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY }); }}>
       {/* 새 폴더·앱저장소·아이콘 정렬은 빈 곳 오른쪽 클릭 메뉴로 (자율주행 데스크탑과 동일) */}
+
+      {/* 앱메이커 — 앱모드 플로팅 버튼. 누르면 앱 저술 전용 AI(시스템 AI + 앱메이커 role)가 등장. */}
+      <button
+        onClick={(e) => { e.stopPropagation(); setMakerOpen(true); }}
+        title="앱메이커 — 내 앱을 만들고 고치는 AI"
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-stone-900 text-white shadow-lg hover:bg-black active:translate-y-[0.5px] transition-all"
+      >
+        <Wand2 size={18} />
+        <span className="text-sm font-semibold">앱메이커</span>
+      </button>
+      {makerOpen && (
+        <ChatView chatTarget={{ type: 'appmaker' }} layout="dialog" show onClose={() => setMakerOpen(false)} />
+      )}
 
       {/* 앱 아이콘 — 위치 fallback은 고정 카탈로그 인덱스(홈 목록 변동에 안 흔들림) */}
       {homeApps.map((d) => {

@@ -1161,16 +1161,16 @@ async def get_available_providers():
 # ============ 메모리 관련 API ============
 
 @router.get("/system-ai/conversations")
-async def get_conversations(limit: int = 20):
-    """시스템 AI 대화 이력 조회"""
-    conversations = get_recent_conversations(limit)
+async def get_conversations(limit: int = 20, thread: str = "system_ai"):
+    """시스템 AI 대화 이력 조회 (thread='appmaker'=앱메이커 전용, 기본=앱메이커 제외)"""
+    conversations = get_recent_conversations(limit, thread=thread)
     return {"conversations": conversations}
 
 
 @router.get("/system-ai/conversations/recent")
-async def get_conversations_recent(limit: int = 20):
-    """시스템 AI 최근 대화 조회"""
-    conversations = get_recent_conversations(limit)
+async def get_conversations_recent(limit: int = 20, thread: str = "system_ai"):
+    """시스템 AI 최근 대화 조회 (thread='appmaker'=앱메이커 전용, 기본=앱메이커 제외)"""
+    conversations = get_recent_conversations(limit, thread=thread)
     return {"conversations": conversations}
 
 

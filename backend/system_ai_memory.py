@@ -199,16 +199,24 @@ def save_conversation(role: str, content: str, importance: int = 0, source: str 
     return conversation_id
 
 
-def get_recent_conversations(limit: int = 10) -> List[Dict[str, Any]]:
-    """최근 대화 조회"""
+def get_recent_conversations(limit: int = 10, thread: str = "system_ai") -> List[Dict[str, Any]]:
+    """최근 대화 조회.
+
+    thread='appmaker' 는 앱메이커 전용 스레드(source='appmaker')만, 그 외(기본 'system_ai')는
+    앱메이커를 제외한 나머지 — 앱메이커/시스템 AI 대화 격리(같은 conversations 테이블·source 컬럼).
+    """
     init_memory_db()
 
     conn = _get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    # thread 는 코드-제어 상수만(사용자 입력 아님) → 고정 절로 매핑.
+    src_clause = "WHERE source = 'appmaker'" if thread == "appmaker" \
+        else "WHERE (source IS NULL OR source != 'appmaker')"
+    cursor.execute(f"""
         SELECT id, timestamp, role, content, summary, importance
         FROM conversations
+        {src_clause}
         ORDER BY id DESC
         LIMIT ?
     """, (limit,))
@@ -230,8 +238,11 @@ def get_recent_conversations(limit: int = 10) -> List[Dict[str, Any]]:
     return conversations
 
 
-def get_history_for_ai(limit: int = 7) -> List[Dict[str, str]]:
+def get_history_for_ai(limit: int = 7, thread: str = "system_ai") -> List[Dict[str, str]]:
     """시스템 AI용 대화 히스토리 (조회 + 역할 매핑 + Observation Masking 통합)
+
+    thread='appmaker' 는 앱메이커 전용 스레드(source='appmaker')만, 그 외(기본)는 앱메이커
+    제외 — 두 대화가 서로의 히스토리에 안 섞이게(격리). System AI 호출부는 기본값이라 무변경.
 
     모든 시스템 AI 통로(GUI WebSocket, HTTP, 외부 채널)가 이 함수 하나만 호출하면
     동일한 히스토리를 받습니다.
@@ -255,10 +266,14 @@ def get_history_for_ai(limit: int = 7) -> List[Dict[str, str]]:
     conn = _get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    # thread 는 코드-제어 상수만(사용자 입력 아님) → 고정 절로 매핑.
+    src_clause = "AND source = 'appmaker'" if thread == "appmaker" \
+        else "AND (source IS NULL OR source != 'appmaker')"
+    cursor.execute(f"""
         SELECT id, timestamp, role, content, summary, importance, images
         FROM conversations
         WHERE role IN ('user', 'assistant')
+        {src_clause}
         ORDER BY id DESC
         LIMIT ?
     """, (limit,))

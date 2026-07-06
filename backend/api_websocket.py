@@ -1118,6 +1118,21 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
     action_hint = data.get("action_hint")  # 마법책 선택 액션 (예: "sense:price")
     message = _process_documents(data.get("documents", []), message)
 
+    # 앱메이커 표면 — 시스템 AI에 앱메이커 role(extra_role)을 씌우고 대화를 분리(source='appmaker').
+    # forage_role 선례와 같은 방식. 전체 파이프라인 유지(force_role 없음 = 의식 프레이밍 1회 활용).
+    is_appmaker = data.get("role") == "appmaker"
+    conv_source = "appmaker" if is_appmaker else None
+    conv_thread = "appmaker" if is_appmaker else "system_ai"
+    extra_role = ""
+    if is_appmaker:
+        try:
+            from pathlib import Path as _Path
+            from runtime_utils import get_base_path
+            _rp = _Path(get_base_path()) / "data" / "appmaker_role.txt"
+            extra_role = _rp.read_text(encoding="utf-8") if _rp.exists() else ""
+        except Exception:
+            extra_role = ""
+
     # 에피소드 로그 시작
     try:
         from episode_logger import EpisodeLogger
@@ -1176,10 +1191,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             return
 
         # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
-        history = get_history_for_ai(limit=7)
+        history = get_history_for_ai(limit=7, thread=conv_thread)
 
         # 사용자 메시지 저장 (이미지 포함)
-        save_conversation("user", message, images=images if images else None)
+        save_conversation("user", message, source=conv_source, images=images if images else None)
 
         # 스트리밍 처리 (AIAgent 사용)
         event_queue = asyncio.Queue()
@@ -1214,7 +1229,8 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     history=history,
                     images=images if images else None,
                     cancel_check=lambda: is_cancelled(client_id),  # 중단 체크 함수 전달
-                    action_hint=action_hint
+                    action_hint=action_hint,
+                    extra_role=extra_role
                 ):
                     # 중단 요청 시 루프 탈출
                     if is_cancelled(client_id):
@@ -1306,7 +1322,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     # 타임아웃 이후 워커가 결과를 완성한 경우: 시스템 AI 대화 저장
                     try:
                         filtered = filter_internal_markers(final_content)
-                        save_conversation("assistant", filtered)
+                        save_conversation("assistant", filtered, source=conv_source)
                         print(f"[WS run_stream] 시스템AI 타임아웃 후 대화 저장 완료")
                     except Exception as save_err:
                         print(f"[WS run_stream] 시스템AI 타임아웃 후 저장 실패: {save_err}")
@@ -1476,7 +1492,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         # 내부 시스템 마커 필터링
         final_content = filter_internal_markers(final_content)
 
-        save_conversation("assistant", final_content, images=collected_tool_images if collected_tool_images else None)
+        save_conversation("assistant", final_content, source=conv_source, images=collected_tool_images if collected_tool_images else None)
 
         await manager.send_message(client_id, {
             "type": "response",

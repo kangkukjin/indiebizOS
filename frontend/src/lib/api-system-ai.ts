@@ -260,7 +260,7 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
       }>(`/system-ai/conversations/by-date/${date}`);
     },
 
-    async getSystemAIRecentConversations(limit: number = 100) {
+    async getSystemAIRecentConversations(limit: number = 100, thread: string = 'system_ai') {
       return client.request<{
         conversations: Array<{
           id: number;
@@ -268,7 +268,7 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
           role: string;
           content: string;
         }>;
-      }>(`/system-ai/conversations/recent?limit=${limit}`);
+      }>(`/system-ai/conversations/recent?limit=${limit}&thread=${encodeURIComponent(thread)}`);
     },
 
     // ============ Todo 상태 ============

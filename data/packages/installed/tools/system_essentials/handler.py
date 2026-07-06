@@ -429,6 +429,34 @@ def execute(tool_input: dict, context) -> str:
             fmt = tool_input.get("format", "%Y-%m-%d %H:%M:%S")
             return datetime.now().strftime(fmt)
 
+        elif tool_name == "ai_ask":
+            # 시스템 AI 원샷 호출 — 도구·다단계 없이 경량 LLM 으로 즉답. [self:ask]
+            # 능력=어휘: 앱(선언형/커스텀)이 raw fetch 없이 IBL 로 AI 를 부른다.
+            prompt = (tool_input.get("prompt") or "").strip()
+            if not prompt:
+                return json.dumps({"success": False, "error": "prompt(지시/질문)가 필요합니다."}, ensure_ascii=False)
+            # context 명시가 없으면 파이프 입력(_prev_result)을 맥락으로 받는다 → 조합 가능
+            # (예: [sense:search_gnews]{...} >> [self:ask]{prompt: "요약해줘"}).
+            ctx = tool_input.get("context")
+            if ctx is None:
+                prev = tool_input.get("_prev_result")
+                if prev not in (None, ""):
+                    ctx = prev if isinstance(prev, str) else json.dumps(prev, ensure_ascii=False)
+            if ctx is not None and not isinstance(ctx, str):
+                ctx = json.dumps(ctx, ensure_ascii=False)
+            message = f"{ctx}\n\n---\n\n{prompt}" if ctx else prompt
+            sys_prompt = (tool_input.get("system") or
+                          "당신은 앱에 내장된 유능한 조수입니다. 사용자의 지시에 간결하고 정확하게 답하세요. "
+                          "불필요한 서론·맺음말 없이 요청한 결과만 반환하세요.")
+            try:
+                from consciousness_agent import lightweight_ai_call
+                answer = lightweight_ai_call(message, system_prompt=sys_prompt, role="background")
+            except Exception as e:
+                return json.dumps({"success": False, "error": f"AI 호출 실패: {e}"}, ensure_ascii=False)
+            if not answer:
+                return json.dumps({"success": False, "error": "AI 응답을 받지 못했습니다(모델 미설정 가능)."}, ensure_ascii=False)
+            return json.dumps({"result": answer, "text": answer}, ensure_ascii=False)
+
         elif tool_name == "glob_files":
             pattern = tool_input["pattern"]
 

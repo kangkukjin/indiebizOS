@@ -14,7 +14,8 @@
   "positions":  { "<appId|folderId>": [x, y] },   # 홈 자유 배치 좌표
   "folders":    { "<folderId>": {"label": "금융", "icon": "📁"} },
   "membership": { "<appId>": "<folderId>" },        # 앱 → 폴더 소속
-  "removed":    ["<appId>", ...]                     # 앱저장소로 내려간 것(홈에서 뺌)
+  "removed":    ["<appId>", ...],                    # 앱저장소로 내려간 것(홈에서 뺌)
+  "promoted":   ["<appId>", ...]                     # 런처 모드 선택기로 올린 것(순서=표시 순서)
 }
 
 휴지통 의미(사용자 결정): 홈에서 빼서 앱저장소로 되돌림 + 그 앱이 사용 중 쌓은 데이터를
@@ -33,6 +34,7 @@ _DEFAULT = {
     "membership": {},
     "removed": [],       # 앱저장소로 내려간 것(홈에서 뺌, 복구 가능)
     "uninstalled": [],   # 완전 삭제 — 카탈로그에서 영구 제거(홈·앱저장소 어디에도 안 나옴)
+    "promoted": [],      # 런처 모드 선택기에 올린 앱(순서 = 바 표시 순서, 사용자 지정)
 }
 
 
@@ -49,7 +51,7 @@ def load_layout() -> dict:
             v = data.get(k)
             if isinstance(v, dict):
                 out[k] = v
-        for k in ("removed", "uninstalled"):
+        for k in ("removed", "uninstalled", "promoted"):
             v = data.get(k)
             if isinstance(v, list):
                 out[k] = [str(x) for x in v]
@@ -93,6 +95,17 @@ def _sanitize(data: dict) -> dict:
         v = data.get(k)
         if isinstance(v, list):
             out[k] = sorted({str(x) for x in v})
+    # promoted 는 순서가 곧 바 표시 순서 — sorted 로 뭉개지 말고 삽입 순서 보존 중복제거
+    prom = data.get("promoted")
+    if isinstance(prom, list):
+        seen: set[str] = set()
+        clean_prom: list[str] = []
+        for x in prom:
+            s = str(x)
+            if s not in seen:
+                seen.add(s)
+                clean_prom.append(s)
+        out["promoted"] = clean_prom
     out["version"] = 1
     return out
 

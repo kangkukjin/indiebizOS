@@ -14,9 +14,10 @@
  * 홈에 자동 등장(기존 불변식 보존), 사용자는 그 위에서 배치/정리/제거.
  */
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
-import { Plus, Package, LayoutGrid, Trash2 } from 'lucide-react';
+import { Plus, Package, LayoutGrid, Trash2, ArrowUpFromLine, ArrowDownFromLine } from 'lucide-react';
 import { DirectionsInstrument } from './DirectionsInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
+import { BinNote } from './BinNote';
 import { YtMusicInstrument } from './YtMusicInstrument';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 import { DraggableIcon } from './launcher-components/DraggableIcon';
@@ -63,6 +64,12 @@ const STATIC_DOMAINS: Domain[] = [
   },
   { id: 'lecture', icon: '🎓', label: '강의 만들기', onOpen: () => window.electron?.openLectureWorkspaceWindow?.(null), instruments: [] },
   {
+    id: 'binnote', icon: '📝', label: '빈노트',
+    instruments: [
+      { id: 'binnote', icon: '📝', label: '빈노트', el: <BinNote /> },  // 인라인 계기 — 메인 창 안에서 열리고 BackBar로 나간다
+    ],
+  },
+  {
     id: 'directions', icon: '🛣️', label: '길찾기·CCTV',
     instruments: [
       { id: 'directions', icon: '🛣️', label: '길찾기·CCTV', el: <DirectionsInstrument /> },
@@ -73,7 +80,7 @@ const STATIC_DOMAINS: Domain[] = [
 // 홈 그리드 기본 배치 순서 (사용자 레이아웃이 없는 첫 실행/신규 앱의 자동 자리 계산용).
 const HOME_ORDER = [
   'realestate', 'book', 'obsidian', 'calendar', 'newspaper', 'device', 'launch',
-  'lecture', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic',
+  'lecture', 'binnote', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic',
 ];
 
 const STATIC_INSTRUMENT_IDS = new Set(STATIC_DOMAINS.flatMap((d) => d.instruments.map((i) => i.id)));
@@ -92,9 +99,14 @@ function autoPos(index: number): [number, number] {
   return [GRID_X0 + (index % GRID_COLS) * GRID_DX, GRID_Y0 + Math.floor(index / GRID_COLS) * GRID_DY];
 }
 
-const EMPTY_LAYOUT: AppLayout = { version: 1, positions: {}, folders: {}, membership: {}, removed: [], uninstalled: [] };
+const EMPTY_LAYOUT: AppLayout = { version: 1, positions: {}, folders: {}, membership: {}, removed: [], uninstalled: [], promoted: [] };
 
-export function ActionDesktop() {
+// 런처 모드 선택기가 승격된 앱의 아이콘·라벨을 알 수 있도록 static 도메인 메타를 내보낸다.
+// (매니페스트 앱은 런처가 /launcher/instruments 로 직접 파싱 — 여기선 코드-정의 static 만)
+export const STATIC_APP_META = STATIC_DOMAINS.map((d) => ({ id: d.id, icon: d.icon, label: d.label }));
+
+// openAppId: 런처 모드 선택기의 승격 앱에서 넘어온 딥링크 대상. 마운트/변경 시 그 앱을 바로 연다.
+export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {}) {
   const [domainId, setDomainId] = useState<string | null>(null);
   const [instrumentId, setInstrumentId] = useState<string | null>(null);
   const [manifest, setManifest] = useState<AppInstrument[]>([]);
@@ -138,6 +150,7 @@ export function ActionDesktop() {
         membership: { ...prev.membership },
         removed: [...prev.removed],
         uninstalled: [...(prev.uninstalled || [])],
+        promoted: [...(prev.promoted || [])],
       });
       api.saveAppLayout(next).catch((e) => console.error('레이아웃 저장 실패:', e));
       return next;
@@ -166,6 +179,26 @@ export function ActionDesktop() {
     const extras = shown.filter((i) => !HOME_ORDER.includes(i.id)).map(manifestToDomain);
     return [...ordered, ...extras];
   }, [manifest]);
+
+  // 승격 앱 딥링크 — openAppId 가 주어지면 그 앱을 바로 연다(계기 인라인 or 네이티브 창).
+  // DOMAINS 는 매니페스트 비동기 로드 후 채워지므로 준비될 때까지 대기하고, 같은 id 재적용은 스킵
+  // (window focus 로 매니페스트 재조회 시 사용자 내비게이션을 되감지 않도록).
+  const deepLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openAppId) { deepLinkRef.current = null; return; }
+    if (deepLinkRef.current === openAppId) return;
+    const d = DOMAINS.find((x) => x.id === openAppId);
+    if (!d) return;  // 매니페스트 아직 로드 전 — 다음 렌더에서 재시도
+    deepLinkRef.current = openAppId;
+    if (d.onOpen) {
+      d.onOpen();  // 네이티브 창(사진·파일 등) — 앱 홈은 그대로 둔다
+      setDomainId(null); setInstrumentId(null);
+    } else if (d.instruments.length === 1 && d.instruments[0].el) {
+      setDomainId(d.id); setInstrumentId(d.instruments[0].id);  // 단일 인라인 계기 → 바로 레벨2
+    } else {
+      setDomainId(d.id); setInstrumentId(null);  // 다중 계기 → 계기 목록(레벨1)
+    }
+  }, [openAppId, DOMAINS]);
 
   const folderTargets = useMemo(() => Object.keys(layout.folders), [layout.folders]);
 
@@ -215,6 +248,13 @@ export function ActionDesktop() {
   const ejectFromFolder = (appId: string) =>
     mutate((l) => { delete l.membership[appId]; return l; });
 
+  // 승격/빼기 — 앱을 런처 모드 선택기(바)에 올리거나 내린다. promoted 배열 순서 = 바 표시 순서.
+  const isPromoted = (id: string) => (layout.promoted || []).includes(id);
+  const promoteApp = (id: string) =>
+    mutate((l) => { if (!(l.promoted || []).includes(id)) l.promoted = [...(l.promoted || []), id]; return l; });
+  const demoteApp = (id: string) =>
+    mutate((l) => { l.promoted = (l.promoted || []).filter((x) => x !== id); return l; });
+
   // 제거(우클릭 메뉴): 앱 → 앱저장소로 되돌림 + 데이터 초기화(soft reset). 폴더 → 해체(자식은 홈으로).
   const removeApp = (id: string) => {
     api.resetApp(id).catch((e) => console.error('앱 초기화 실패:', e)); // 앱이 쌓은 데이터 지우기
@@ -222,6 +262,7 @@ export function ActionDesktop() {
       if (!l.removed.includes(id)) l.removed.push(id);
       delete l.positions[id];
       delete l.membership[id];
+      l.promoted = (l.promoted || []).filter((x) => x !== id);  // 홈에서 빼면 바에서도 내린다
       return l;
     });
   };
@@ -242,6 +283,7 @@ export function ActionDesktop() {
     mutate((l) => {
       if (!(l.uninstalled || []).includes(id)) l.uninstalled = [...(l.uninstalled || []), id];
       l.removed = l.removed.filter((x) => x !== id);
+      l.promoted = (l.promoted || []).filter((x) => x !== id);  // 완전 삭제 → 바에서도 제거
       delete l.positions[id];
       delete l.membership[id];
       return l;
@@ -415,8 +457,17 @@ export function ActionDesktop() {
         <div className="fixed z-50 bg-white rounded-lg shadow-lg border border-stone-200 py-1 text-sm text-stone-700 min-w-[150px]"
           style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
           {menu.target?.kind === 'app' ? (
-            <button className="flex items-center gap-2 w-full text-left px-4 py-1.5 hover:bg-stone-100 text-red-600"
-              onClick={() => { removeApp(menu.target!.id); setMenu(null); }}><Trash2 size={15} /> 앱 제거</button>
+            <>
+              {isPromoted(menu.target.id) ? (
+                <button className="flex items-center gap-2 w-full text-left px-4 py-1.5 hover:bg-stone-100"
+                  onClick={() => { demoteApp(menu.target!.id); setMenu(null); }}><ArrowDownFromLine size={15} /> 런처에서 빼기</button>
+              ) : (
+                <button className="flex items-center gap-2 w-full text-left px-4 py-1.5 hover:bg-stone-100"
+                  onClick={() => { promoteApp(menu.target!.id); setMenu(null); }}><ArrowUpFromLine size={15} /> 런처에 승격</button>
+              )}
+              <button className="flex items-center gap-2 w-full text-left px-4 py-1.5 hover:bg-stone-100 text-red-600"
+                onClick={() => { removeApp(menu.target!.id); setMenu(null); }}><Trash2 size={15} /> 앱 제거</button>
+            </>
           ) : menu.target?.kind === 'folder' ? (
             <>
               <button className="block w-full text-left px-4 py-1.5 hover:bg-stone-100"

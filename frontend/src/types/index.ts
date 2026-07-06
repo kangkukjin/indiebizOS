@@ -28,6 +28,7 @@ export interface AppLayout {
   membership: Record<string, string>;           // appId → folderId 소속
   removed: string[];                             // 앱저장소로 내려간 appId(홈에서 뺌, 복구 가능)
   uninstalled?: string[];                        // 완전 삭제된 appId(카탈로그에서 영구 제거)
+  promoted?: string[];                           // 런처 모드 선택기에 올린 appId(순서 = 바 표시 순서)
 }
 
 // 스위치

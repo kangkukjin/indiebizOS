@@ -2788,6 +2788,28 @@ nodes:
         router: handler
         tool: get_current_time
         implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
+      ask:
+        returns: scalar
+        exempt: LLM 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합
+        description: 시스템 AI에게 원샷으로 물어 답을 즉시 받는다(도구 없이 가볍고 빠름). 요약·개선·설명·변환·답변에. 다단계 작업은 [others:delegate].
+        group: system
+        target_description: prompt(지시/질문)에 할 일을, context(선택)에 대상 텍스트/데이터를 준다.
+        target_key: prompt
+        router: handler
+        tool: ai_ask
+        implementation: consciousness_agent.lightweight_ai_call 로 경량 원샷 LLM 호출 (도구·다단계 없음)
+        keywords:
+        - 질문
+        - 물어봐
+        - 요약
+        - 개선
+        - 설명
+        - 변환
+        - 답변
+        - ask
+        - ai
+        - summarize
+        - rewrite
       read:
         returns: scalar
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)

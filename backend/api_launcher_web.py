@@ -371,6 +371,7 @@ class AppLayoutModel(BaseModel):
     membership: dict = {}
     removed: list = []
     uninstalled: list = []
+    promoted: list = []  # 런처 모드 선택기에 승격한 앱(순서 = 바 표시 순서)
 
 
 @router.get("/app-layout")

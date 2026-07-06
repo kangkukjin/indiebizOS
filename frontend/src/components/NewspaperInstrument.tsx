@@ -9,9 +9,8 @@
  * 키워드/제목은 편집 가능(localStorage 결정화).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { iblExecuteApp } from '../lib/instrument';  // 앱모드 IBL 호출 공용 헬퍼(project_id 내장)
 
-const IBL_ENDPOINT = 'http://127.0.0.1:8765/ibl/execute';
-const PROJECT_ID = '앱모드';
 const KW_KEY = 'newspaper.keywords';
 const TITLE_KEY = 'newspaper.title';
 
@@ -33,14 +32,7 @@ const openExternal = (url?: string) => { if (url) window.electron?.openExternal?
 
 // [sense:search_gnews] 한 키워드 → items. /ibl/execute 응답을 견고하게 파싱.
 async function fetchNews(keyword: string): Promise<NewsItem[]> {
-  const code = `[sense:search_gnews]{query: ${JSON.stringify(keyword)}}`;
-  const res = await fetch(IBL_ENDPOINT, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, project_id: PROJECT_ID }),
-  });
-  const d = await res.json();
-  let result: unknown = d?.final_result ?? (d && typeof d === 'object' && 'result' in d ? (d as { result: unknown }).result : d);
-  if (typeof result === 'string') { try { result = JSON.parse(result); } catch { /* keep */ } }
+  const result = await iblExecuteApp(`[sense:search_gnews]{query: ${JSON.stringify(keyword)}}`);
   const items = (result as { items?: NewsItem[] } | null)?.items;
   return Array.isArray(items) ? items : [];
 }

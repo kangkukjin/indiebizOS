@@ -923,6 +923,44 @@
         "아키텍처 파일"
       ],
       "file": "codebase_map.md"
+    },
+    {
+      "id": "custom_app_instrument",
+      "name": "커스텀 앱(계기) 만들기·수정 — 리치 React 계기",
+      "description": "앱 모드에 선언형 app: 블록으로 표현 못 하는 리치 커스텀 앱(자유 편집 캔버스·채팅·특수 인터랙션 — 빈노트·신문·길찾기류)을 React 계기로 만들거나 기존 앱을 수정하는 절차. 만들 때도 고칠 때도 읽는다. 모델 불문(Claude Code 아니어도): 파일=[self:read/edit/write/grep], 빌드검증=run_command, 가이드=read_guide. 철칙 ①기본은 인라인 el(별도창 아님 — BackBar로 나감, 갇힘 방지) ②앱모드 [self:*]는 project_id:'앱모드' 필수 ③응답 shape 라이브 확인.",
+      "keywords": [
+        "앱",
+        "계기",
+        "수정",
+        "만들기",
+        "변경",
+        "고치기",
+        "커스텀",
+        "컴포넌트",
+        "편집기",
+        "캔버스",
+        "인라인",
+        "별도창",
+        "갇힘",
+        "뒤로가기",
+        "빈노트",
+        "리치계기",
+        "React계기",
+        "escape",
+        "앱 만들기",
+        "앱 수정",
+        "커스텀 계기",
+        "계기 수정",
+        "project_id 앱모드",
+        "ActionDesktop",
+        "instrument",
+        "모델 불문",
+        "run_command",
+        "만들",
+        "개선",
+        "앱개선"
+      ],
+      "file": "custom_app_instrument.md"
     }
   ]
 }

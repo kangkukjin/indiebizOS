@@ -2,8 +2,8 @@
  * 런처 - 데스크탑 스타일 프로젝트/폴더/스위치 관리
  */
 
-import { useEffect, useState, useRef } from 'react';
-import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass } from 'lucide-react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -22,7 +22,7 @@ import {
 } from './launcher-components';
 import { GuideDialog } from './GuideDialog';
 import { UserManualDialog } from './UserManualDialog';
-import { ActionDesktop } from './ActionDesktop';
+import { ActionDesktop, STATIC_APP_META } from './ActionDesktop';
 import ManualMode from './ManualMode';
 import { ForageBrowser } from './ForageBrowser';
 import { BusinessInstrumentView } from './BusinessInstrumentView';
@@ -70,6 +70,40 @@ export function Launcher() {
     return (saved && (LAUNCHER_MODES as readonly string[]).includes(saved))
       ? (saved as LauncherMode) : 'autopilot';
   });
+  // 승격된 앱 — 모드 선택기 구분선 아래에 뜨는 바로가기. 선택하면 앱 모드로 딥링크(그 앱을 바로 연다).
+  // 앱 모드를 승격 없이 열면 null(일반 앱 홈).
+  const [activeAppId, setActiveAppId] = useState<string | null>(() =>
+    localStorage.getItem('indiebiz_launcher_app') || null
+  );
+  const [promotedIds, setPromotedIds] = useState<string[]>([]);
+  // 승격 앱 아이콘·라벨 해소용 — static 도메인 메타 + 매니페스트(런타임) 병합.
+  const [appMetaById, setAppMetaById] = useState<Record<string, { icon: string; label: string }>>({});
+
+  const loadPromoted = useCallback(async () => {
+    try {
+      const layout = await api.getAppLayout();
+      setPromotedIds(layout.promoted || []);
+    } catch { /* 백엔드 미기동 시 무시 */ }
+    try {
+      const r = await fetch('http://127.0.0.1:8765/launcher/instruments');
+      if (r.ok) {
+        const d = await r.json();
+        const map: Record<string, { icon: string; label: string }> = {};
+        for (const m of STATIC_APP_META) map[m.id] = { icon: m.icon, label: m.label };
+        for (const inst of (d.instruments || [])) map[inst.id] = { icon: inst.icon, label: inst.name };
+        setAppMetaById(map);
+      }
+    } catch { /* 무시 */ }
+  }, []);
+
+  // 승격 목록에서 실제로 해소되는(카탈로그에 존재하는) 앱만 바에 표시.
+  const promotedApps = useMemo(
+    () => promotedIds
+      .map((id) => { const m = appMetaById[id]; return m ? { id, ...m } : null; })
+      .filter((x): x is { id: string; icon: string; label: string } => !!x),
+    [promotedIds, appMetaById]
+  );
+
   // 검색 브라우저에서 ✕닫기 시 돌아갈 직전 모드(브라우저 제외).
   const prevModeRef = useRef<Exclude<LauncherMode, 'browser'>>('autopilot');
   const [showModeMenu, setShowModeMenu] = useState(false);
@@ -180,7 +214,14 @@ export function Launcher() {
     loadProjects();
     loadSwitches();
     loadMultiChatRooms();
-  }, [loadProjects, loadSwitches]);
+    loadPromoted();
+  }, [loadProjects, loadSwitches, loadPromoted]);
+
+  // 활성(승격) 앱 영속화 — 다음 실행 시 마지막으로 연 승격 앱으로 복귀.
+  useEffect(() => {
+    if (activeAppId) localStorage.setItem('indiebiz_launcher_app', activeAppId);
+    else localStorage.removeItem('indiebiz_launcher_app');
+  }, [activeAppId]);
 
   // 첫 실행 시 가이드 표시
   useEffect(() => {
@@ -908,6 +949,27 @@ export function Launcher() {
   }, [selectedItem, clipboard, renamingItem, projects, switches, showNewProjectDialog, showNewFolderDialog, showSchedulerDialog]);
 
   const ActiveModeIcon = MODE_META[launcherTab].icon;
+  // 승격 앱이 활성일 때(앱 모드 + activeAppId) 선택기 라벨을 그 앱의 아이콘·이름으로 표시.
+  const activeMeta = activeAppId ? appMetaById[activeAppId] : null;
+  const showingApp = launcherTab === 'app' && !!activeMeta;
+
+  // 기본 다섯 모드 선택 — 승격 딥링크 해제.
+  const selectMode = (m: LauncherMode) => { setActiveAppId(null); setLauncherTab(m); setShowModeMenu(false); };
+  // 승격 앱 선택 — 앱 모드로 전환하고 그 앱을 딥링크로 연다.
+  const selectPromoted = (id: string) => { setActiveAppId(id); setLauncherTab('app'); setShowModeMenu(false); };
+  // 승격 앱 빼기 — 드롭다운 ✕에서 바로. 레이아웃을 읽어 promoted 만 걷어내고 다시 저장(다른 필드 보존).
+  const demotePromoted = async (id: string) => {
+    setPromotedIds((prev) => prev.filter((x) => x !== id));  // 낙관적
+    if (activeAppId === id) setActiveAppId(null);             // 열려있던 앱이면 앱 홈으로
+    try {
+      const layout = await api.getAppLayout();
+      const next = { ...layout, promoted: (layout.promoted || []).filter((x) => x !== id) };
+      await api.saveAppLayout(next);
+    } catch (e) {
+      console.error('승격 해제 실패:', e);
+      loadPromoted();  // 실패 시 서버 상태로 되돌림
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#F5F1EB]">
@@ -917,25 +979,27 @@ export function Launcher() {
           {/* 모드 선택기 — 다섯 표면(검색 브라우저/자율주행/조종실/앱/비즈니스)을 오간다. X-Ray 앞. */}
           <div className="relative" ref={modeMenuRef}>
             <button
-              onClick={() => setShowModeMenu((v) => !v)}
+              onClick={() => setShowModeMenu((v) => { if (!v) loadPromoted(); return !v; })}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors text-[#6B5B4F] ${showModeMenu ? 'bg-[#EAE4DA]' : 'hover:bg-[#EAE4DA] active:bg-[#E0D9CC]'}`}
               title="모드 전환"
               aria-haspopup="true"
               aria-expanded={showModeMenu}
             >
-              <ActiveModeIcon size={15} />
-              <span className="text-[13px] font-medium">{MODE_META[launcherTab].label}</span>
+              {showingApp
+                ? <span className="text-[15px] leading-none">{activeMeta!.icon}</span>
+                : <ActiveModeIcon size={15} />}
+              <span className="text-[13px] font-medium">{showingApp ? activeMeta!.label : MODE_META[launcherTab].label}</span>
               <ChevronDown size={12} className={`transition-transform ${showModeMenu ? 'rotate-180' : ''}`} />
             </button>
             {showModeMenu && (
               <div className="absolute left-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-stone-200 py-1.5 min-w-[190px] z-50 overflow-hidden">
                 {LAUNCHER_MODES.map((m) => {
                   const Icon = MODE_META[m].icon;
-                  const active = launcherTab === m;
+                  const active = launcherTab === m && !(m === 'app' && showingApp);
                   return (
                     <button
                       key={m}
-                      onClick={() => { setLauncherTab(m); setShowModeMenu(false); }}
+                      onClick={() => selectMode(m)}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${active ? 'bg-amber-50 text-amber-900' : 'text-[#4A4035] hover:bg-amber-50'}`}
                     >
                       <Icon size={16} className={active ? 'text-amber-600' : 'text-stone-500'} />
@@ -943,6 +1007,37 @@ export function Launcher() {
                     </button>
                   );
                 })}
+                {/* 구분선 아래 = 앱 모드에서 승격한 앱들. 선택하면 그 앱이 바로 열린다. */}
+                {promotedApps.length > 0 && (
+                  <>
+                    <div className="border-t border-stone-100 my-1" />
+                    {promotedApps.map((app) => {
+                      const active = showingApp && activeAppId === app.id;
+                      return (
+                        <div
+                          key={app.id}
+                          className={`group flex items-center transition-colors ${active ? 'bg-amber-50' : 'hover:bg-amber-50'}`}
+                        >
+                          <button
+                            onClick={() => selectPromoted(app.id)}
+                            className={`flex-1 min-w-0 flex items-center gap-3 pl-4 pr-2 py-2.5 text-left ${active ? 'text-amber-900' : 'text-[#4A4035]'}`}
+                          >
+                            <span className="text-base leading-none w-4 text-center">{app.icon}</span>
+                            <span className="text-sm truncate">{app.label}</span>
+                          </button>
+                          <button
+                            onClick={() => demotePromoted(app.id)}
+                            title="런처에서 빼기"
+                            aria-label={`${app.label} 런처에서 빼기`}
+                            className="shrink-0 mr-2 p-1 rounded-md text-stone-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1108,7 +1203,8 @@ export function Launcher() {
         onContextMenu={handleContextMenu}
       >
         {launcherTab === 'app' ? (
-          <ActionDesktop />
+          // key 에 activeAppId 를 넣어 승격 앱 전환 시 깨끗이 remount(딥링크 재적용).
+          <ActionDesktop key={`app:${activeAppId || ''}`} openAppId={activeAppId} />
         ) : launcherTab === 'business' ? (
           <BusinessInstrumentView />
         ) : launcherTab === 'manual' ? (

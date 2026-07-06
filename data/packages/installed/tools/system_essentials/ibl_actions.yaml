@@ -10,6 +10,17 @@ nodes:
         router: handler
         tool: get_current_time
         implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
+      ask:
+        returns: scalar
+        exempt: LLM 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합
+        description: 시스템 AI에게 원샷으로 물어 답을 즉시 받는다(도구 없이 가볍고 빠름). 요약·개선·설명·변환·답변에. 다단계 작업은 [others:delegate].
+        group: system
+        target_description: prompt(지시/질문)에 할 일을, context(선택)에 대상 텍스트/데이터를 준다.
+        target_key: prompt
+        router: handler
+        tool: ai_ask
+        implementation: consciousness_agent.lightweight_ai_call 로 경량 원샷 LLM 호출 (도구·다단계 없음)
+        keywords: [질문, 물어봐, 요약, 개선, 설명, 변환, 답변, ask, ai, summarize, rewrite]
       read:
         returns: scalar
         exempt: '파일 경로 인자 필요(고정 fixture 부적합)'
@@ -263,6 +274,20 @@ tool_json:
         format:
           type: string
           description: '시간 포맷 (기본: %Y-%m-%d %H:%M:%S)'
+  - name: ai_ask
+    description: '시스템 AI에게 원샷 질문을 보내 답 텍스트를 받는다. 도구·다단계 없는 가벼운 호출 —
+      요약·개선·설명·변환·답변에. 무언가를 만들거나 여러 단계가 필요하면 [others:delegate].'
+    input_schema:
+      type: object
+      properties:
+        prompt:
+          type: string
+          description: AI에게 줄 지시 또는 질문 (필수)
+        context:
+          type: string
+          description: 판단 대상이 되는 텍스트/데이터 (선택)
+      required:
+      - prompt
   # 산 배관(2026-07-03 감사): agent_cognitive._build_ibl_tools·system_ai_tools·api_xray가 tool.json에서 스키마 로드, system_tools→load_tool_handler로 실행 (최상위 도구)
   - name: run_command
     description: "쉘 명령어를 실행합니다. execute_ibl과 함께 에이전트의 두 가지 실행 경로 중 하나.\n\n주의사항 - 반드시 읽으세요:\n1. 파일/디렉토리 작업은 IBL 액션을 우선 사용:\n   - 디렉토리 목록: execute_ibl [self:list] (ls 대신)\n   - 파일 검색: execute_ibl [self:file_find] (find 대신)\n   - 내용 검색: execute_ibl [self:grep] (grep/rg 대신)\n   - 파일 읽기: execute_ibl [self:read] (cat/head/tail 대신)\n   - 파일 쓰기: execute_ibl [self:write] (echo > 대신)\n   - 파일 수정: execute_ibl [self:edit] (sed/awk 대신)\n\n2. Python/Node.js 코드 실행 — write→run 패턴:\n   - 멀티라인: [self:write]로 /tmp/*.py 파일 생성 후 run_command 'python3 /tmp/x.py'\n   - 한 줄: run_command 'python3 -c \"...\"' 또는 'node -e \"...\"'\n   - 별도의 execute_python/execute_node 도구는 없음 (이스케이프·traceback 손실 회피)\n\n3. 금지된 명령어 (대용량 출력 위험):\n   - ls -R, ls -la -R (재귀 목록)\n   - find / (루트 검색)\n   - cat 대용량파일\n   - 출력 제한 없는 검색 명령\n\n4. 위험 명령은 approved=true 필요:\n   - rm, rmdir (삭제)\n   - sudo (권한 상승)\n   - chmod, chown (권한 변경)\n\nrun_command가 어울리는 경우:\n- git 명령어 (git status, git log --oneline -10)\n- 패키지 관리 (npm install, pip install)\n\

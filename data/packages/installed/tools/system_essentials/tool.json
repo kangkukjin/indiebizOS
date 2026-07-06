@@ -365,6 +365,22 @@
       }
     },
     {
+      "name": "make_directory",
+      "description": "빈 폴더(디렉토리)를 생성합니다.\n\n사용법:\n- 중간 경로가 없으면 함께 생성 (mkdir -p 동등)\n- 이미 존재해도 오류 없이 통과 (멱등)\n\n주의사항:\n- 파일 삭제·폴더 삭제는 delete_path 사용\n- 이동·이름변경은 move_path 사용",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "생성할 폴더 경로"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
       "name": "read_op",
       "description": "파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).\n\n파라미터: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션. 스캔 PDF는 별도 OCR 필요.",
       "input_schema": {

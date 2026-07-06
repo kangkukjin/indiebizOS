@@ -121,6 +121,16 @@ nodes:
         tool: delete_path
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
+      mkdir:
+        returns: effect
+        fixture: '[self:mkdir]{path: "outputs/새폴더"}'
+        description: 빈 폴더 생성 (mkdir -p 동등, 중간 경로 자동 생성·이미 있으면 조용히 통과). 삭제는 delete, 이동·이름변경은 move.
+        group: file
+        target_description: 만들 폴더 경로 (절대 또는 상대). 중간 폴더가 없으면 함께 만든다. 이미 있어도 오류 아님.
+        router: handler
+        tool: make_directory
+        implementation: os.makedirs(exist_ok=True)로 빈 디렉토리 생성
+        target_key: path
   table:
     actions:
       spreadsheet:
@@ -747,6 +757,30 @@ tool_json:
         path:
           type: string
           description: 삭제할 파일 또는 폴더 경로
+      required:
+      - path
+  - name: make_directory
+    description: '빈 폴더(디렉토리)를 생성합니다.
+
+
+      사용법:
+
+      - 중간 경로가 없으면 함께 생성 (mkdir -p 동등)
+
+      - 이미 존재해도 오류 없이 통과 (멱등)
+
+
+      주의사항:
+
+      - 파일 삭제·폴더 삭제는 delete_path 사용
+
+      - 이동·이름변경은 move_path 사용'
+    input_schema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: 생성할 폴더 경로
       required:
       - path
   - name: read_op

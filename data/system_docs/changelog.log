@@ -1583,3 +1583,10 @@
 - 예방 정리: table 분리 잔여 좀비 참조 일소 — self:photo desc "engines 변환자"→table, kosis/investment/study target_desc의 engines:chart→table:chart, sense:read_page "문서 IR"→"문단 단위", company/kosis/grep/world_bank "items(행 dict)"→"items 통화"
 - 감사 앵커 오탐 방지 2줄(ibl_description_audit._VOCAB_ANCHOR): 도메인 명사(통계표·행·시트)·파라미터명은 통화 주장 아님 / effect의 >> 파이프 안내·단건 op 부연은 transform/returns 모순 아님 — 재실행 2회 연속 드리프트 0
 - build --check 통과(141 액션 불변, desc만) + self_checks(description_drift=ok) 기록 → 조종실 "설명 정합" 초록. ★앵커 수정은 백엔드 재시작 후 번들에 반영
+
+[2026-07-06] IBL_MKDIR: 파일 동사 패밀리에 빈 폴더 생성 [self:mkdir] 추가 (액션 143→144, self 그룹 file)
+- 계기: 빈노트 앱 폴더 기능(에피소드 #654)에서 mkdir 프리미티브 부재 → 숨김 .keep 를 [self:write] 하는 워크어라운드가 포식기억에 convention 으로 굳던 것을 어휘로 결정화
+- 명명 판단: file 그룹은 이미 flat 동사 패밀리(read/write/list/file_find/grep/edit/copy/move/delete). mkdir 은 그 형제로 편입 — self:folder{op} 대신 flat verb (삭제는 delete 가 이미 담당 → op:remove 는 한 단어=한 개념 위반이라 배제). "셸 전체 이식"이 아니라 사용자 의도(런처 '새 폴더')가 당긴 단일 공백 충전
+- 구현: system_essentials ibl_actions.yaml(액션 def + tool_json make_directory 엔트리) + handler.py make_directory 분기(os.makedirs exist_ok=True 멱등, 동명 파일 존재 시 거부). build --check 삼각 통과(tool.json 파생 일치)
+- 라이브 검증: /packages/reload 후 [self:mkdir] 생성(existed:false)·멱등 재호출(existed:true)·list 반영 종단 확인. BinNote.tsx makeFolder 를 .keep → [self:mkdir] 전환(tsc 통과)
+- 해마: mkdir 용례 8건 add_examples_batch + ibl_distilled 652→660 + rebuild_index 2650 재임베딩. 연상 2/3 즉시 적중(현 미retrain 모델, "새 폴더"↔limbs:explorer 혼동은 다음 fine-tune 흡수)

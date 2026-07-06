@@ -683,6 +683,21 @@ def execute(tool_input: dict, context) -> str:
                 os.remove(target)
                 return f"파일을 삭제했습니다: {abs_target}"
 
+        elif tool_name == "make_directory":
+            raw_path = _get_path(tool_input)
+            if not raw_path:
+                return json.dumps({"success": False, "error": "폴더 경로(path)가 지정되지 않았습니다."}, ensure_ascii=False)
+            target = os.path.join(project_path, os.path.expanduser(raw_path))
+            scope_err = _validate_path_in_scope(target, project_path)
+            if scope_err:
+                return scope_err
+            abs_target = os.path.abspath(target)
+            if os.path.isfile(abs_target):
+                return json.dumps({"success": False, "error": f"같은 이름의 파일이 이미 있습니다: {abs_target}"}, ensure_ascii=False)
+            existed = os.path.isdir(abs_target)
+            os.makedirs(abs_target, exist_ok=True)
+            return json.dumps({"success": True, "path": abs_target, "existed": existed}, ensure_ascii=False)
+
         elif tool_name == "read_pdf":
             import fitz  # PyMuPDF
             file_path = tool_input.get("file_path") or tool_input.get("path")  # path 별칭 수용(read 일관성)

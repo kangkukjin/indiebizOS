@@ -628,9 +628,18 @@ async def browser_screenshot(params: dict, project_path: str = None) -> dict:
 
         # 이미지 데이터가 있으면 파일로 저장
         if isinstance(result, dict) and "image_data" in result:
-            out_dir = _output_dir(project_path)
-            filename = f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-            filepath = out_dir / filename
+            # 호출자가 path 를 주면 그대로 존중(tool.json 계약). 없으면 자동 이름으로 폴백.
+            req_path = (params.get("path") or "").strip()
+            if req_path:
+                p = Path(req_path)
+                if not p.is_absolute():
+                    p = Path(project_path or ".") / p
+                if p.suffix.lower() != ".png":
+                    p = p.with_suffix(".png")
+                p.parent.mkdir(parents=True, exist_ok=True)
+                filepath = p
+            else:
+                filepath = _output_dir(project_path) / f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
             img_data = base64.b64decode(result["image_data"])
             filepath.write_bytes(img_data)
             return {"success": True, "path": str(filepath), "driver": "chrome"}

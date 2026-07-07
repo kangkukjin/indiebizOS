@@ -14,7 +14,10 @@ import re
 import json
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from common.platform_utils import find_binary, install_hint, spawn_detached, open_url
+from common.platform_utils import (
+    find_binary, install_hint, spawn_detached, open_url,
+    kill_processes_by_marker, is_process_running_by_marker,
+)
 
 # common 유틸리티 사용
 _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
@@ -720,6 +723,10 @@ def summarize_youtube(
 import threading
 
 # ffplay 기반 오디오 플레이어
+# 라디오와 동일한 고아 청소 전략: ffplay 명령줄(-window_title)에 이 표식을 박아,
+# 정지 때 전역 _player_process 뿐 아니라 표식 단 프로세스를 모두 psutil 로 종료한다.
+# → 이전 백엔드가 띄운 고아(전역 추적 밖) ffplay 도 확실히 멈춘다("stop 이 거짓 성공" 방지).
+YOUTUBE_MARKER = "indiebiz-youtube-player"
 _player_process = None   # ffplay subprocess.Popen
 _player_video_id = None  # 현재 재생 중인 video_id
 _player_title = None     # 현재 재생 중인 제목
@@ -748,6 +755,7 @@ def _start_ffplay(audio_url):
         raise FileNotFoundError(install_hint("ffplay"))
     _player_process = spawn_detached(
         [ffplay_path, '-nodisp', '-autoexit', '-loglevel', 'quiet',
+         '-window_title', YOUTUBE_MARKER,  # 고아 청소용 표식(-nodisp 라 창 없음)
          '-reconnect', '1',
          '-reconnect_streamed', '1',
          '-reconnect_delay_max', '5',
@@ -815,6 +823,9 @@ def _close_player():
                     _player_process.kill()
                 except Exception:
                     pass
+        # 표식 단 ffplay 를 모두 종료 — 이전 백엔드가 띄운 고아(전역 추적 밖)까지 확실히 정지.
+        # (이게 없으면 _player_process=None 인 고아가 살아있어 "stop 이 거짓 성공"을 반환한다.)
+        kill_processes_by_marker(YOUTUBE_MARKER)
         _player_process = None
         _player_video_id = None
         _player_title = None
@@ -1129,8 +1140,11 @@ def stop_youtube() -> dict:
     with _player_lock:
         vid = _player_video_id
         remaining = len(_player_queue)
-    if vid or _player_process:
-        _close_player()
+    # 전역이 비어 있어도(이전 백엔드가 띄운 고아) 표식 단 ffplay 가 살아있으면 정리한다.
+    # → 옛 코드처럼 "재생 중인 항목이 없습니다"라는 거짓 성공을 내지 않는다.
+    orphan = is_process_running_by_marker(YOUTUBE_MARKER)
+    if vid or _player_process or orphan:
+        _close_player()  # _player_process + 표식 고아 모두 종료
         msg = '재생을 중지했습니다.'
         if remaining > 0:
             msg += f' (대기열 {remaining}곡도 취소됨)'

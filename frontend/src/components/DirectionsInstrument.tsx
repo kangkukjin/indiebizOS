@@ -294,8 +294,10 @@ export function DirectionsInstrument() {
         </div>
       </div>
 
-      {/* ── 지도 ── */}
-      <div className="relative flex-1 min-h-[240px]">
+      {/* ── 지도 ──
+          isolate: Leaflet 내부 컨트롤(z-index 1000)·팬이 이 지도 영역을 벗어나
+          CCTV 영상 모달(fixed z-[1000]) 위로 새어 나오지 않도록 독립 스태킹 컨텍스트로 가둔다. */}
+      <div className="relative isolate flex-1 min-h-[240px]">
         <div ref={mapDiv} className="absolute inset-0 bg-stone-100" />
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-[500] px-3 py-1 rounded-full bg-white/90 border border-stone-200 text-[11px] text-stone-500 shadow-sm pointer-events-none">
           지도를 클릭해 <b className={pick === 'origin' ? 'text-green-600' : 'text-rose-600'}>{pick === 'origin' ? '출발지' : '도착지'}</b>를 찍으세요

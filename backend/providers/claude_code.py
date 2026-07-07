@@ -35,6 +35,7 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Generator, List, Optional
+from urllib.parse import quote
 
 from .base import BaseProvider
 
@@ -378,250 +379,258 @@ class ClaudeCodeProvider(BaseProvider):
         # 1) 이미지 → 임시 파일 → 프롬프트에 path 주입
         image_paths: List[str] = self._save_images_to_temp(images or [])
 
-        # 2) MCP 브리지 (IBL execute_ibl 등) 자동 활성화
-        mcp_config_path = get_mcp_config_path()
+        # 2) MCP 브리지: HTTP 우선(플래그 ON일 때) → stdio 폴백
+        _http_cfg = self._http_mcp_config_path()
+        mcp_config_path = _http_cfg or get_mcp_config_path()
+        try:
 
-        # 2.5) 시스템 프롬프트를 파일로 (윈도우 argv 상한 회피 — _build_command 주석 참조).
-        #      리트라이 루프 전체에서 재사용(내용 불변). 실패 시 None → 인자 방식 폴백.
-        system_prompt_file = self._write_system_prompt_file()
+            # 2.5) 시스템 프롬프트를 파일로 (윈도우 argv 상한 회피 — _build_command 주석 참조).
+            #      리트라이 루프 전체에서 재사용(내용 불변). 실패 시 None → 인자 방식 폴백.
+            system_prompt_file = self._write_system_prompt_file()
 
-        # 3) 세션 연속성 결정 (--resume)
-        # 정책: history가 비어있으면 새 대화로 간주하여 fresh session, 그렇지 않으면 저장된 session_id로 resume
-        # 단, disable_session_persistence가 True면 (의식·평가 등 메타 역할) 항상 fresh.
-        if self.disable_session_persistence:
-            session_key_val = None
-            session_map = {}
-            stored_session_id = None
-            resume_session_id = None
-        else:
-            session_key_val = self._get_session_key()
-            session_map = load_session_map()
-            stored_session_id = session_map.get(session_key_val)
-            resume_session_id = stored_session_id if (history and stored_session_id) else None
-            # history 없으면 (= 새 대화) 기존 매핑 무효화
-            if not history and stored_session_id:
-                clear_session_for_agent(session_key_val)
+            # 3) 세션 연속성 결정 (--resume)
+            # 정책: history가 비어있으면 새 대화로 간주하여 fresh session, 그렇지 않으면 저장된 session_id로 resume
+            # 단, disable_session_persistence가 True면 (의식·평가 등 메타 역할) 항상 fresh.
+            if self.disable_session_persistence:
+                session_key_val = None
+                session_map = {}
                 stored_session_id = None
-            # 크기 기반 리셋: 직전 턴 컨텍스트가 임계 초과면 fresh 로 끊는다.
-            # fresh 경로는 _build_prompt_with_history 로 트림된 5턴 히스토리를 재시드하므로
-            # 맥락은 indiebizOS 기억층 + 트림 히스토리로 이어진다 (raw 중복만 제거).
-            if resume_session_id:
-                prev_size = int(load_session_sizes().get(session_key_val) or 0)
-                if prev_size > SESSION_RESET_TOKEN_THRESHOLD:
-                    print(
-                        f"[ClaudeCodeProvider] {self.agent_name}: 세션 컨텍스트 "
-                        f"{prev_size:,} > {SESSION_RESET_TOKEN_THRESHOLD:,} 토큰 → fresh 리셋"
-                    )
-                    clear_session_for_agent(session_key_val)
-                    clear_session_size(session_key_val)
-                    stored_session_id = None
-                    resume_session_id = None
-
-        # 4~6) resume 시도 → 만료/무효 시 fresh 로 자동 재시도 (resume→fresh 1회)
-        #      + 일시 서버 과부하(529 Overloaded) → backoff 후 재시도 (최대 N회)
-        # CLI 가 `--resume <소멸한 세션>` 을 만나면 stdout JSON 이 아니라 stderr +
-        # 종료코드 1("No conversation found with session ID")로 즉사한다. 첫 시도가
-        # 그렇게 실패하면 그 에러를 사용자에게 노출하지 않고 삼킨 뒤(deferred) 매핑을
-        # 폐기하고 fresh 로 한 번 더 돌린다. 그래야 stale 매핑이 고착되지 않는다.
-        # 과부하(529)는 입력과 무관한 서버측 신호 → 본문 미수신이면 backoff 후 같은 호출 반복.
-        resume_attempt = 0       # resume→fresh 폴백 횟수 (0 또는 1)
-        overloaded_retries = 0   # 529 과부하 재시도 횟수
-        while True:
-            is_resume_attempt = bool(resume_session_id)
-
-            # 프롬프트 빌드 — resume 면 CLI 가 자체 세션에서 history 를 알므로 현재 메시지만,
-            # fresh 면 직렬화된 history 를 함께 보낸다.
-            if resume_session_id:
-                full_prompt = message
-            else:
-                full_prompt = self._build_prompt_with_history(message, history or [])
-
-            if image_paths:
-                img_lines = "\n".join(f"첨부 이미지 경로: {p}" for p in image_paths)
-                full_prompt = (
-                    f"{img_lines}\n"
-                    f"(위 이미지 파일을 Read 도구로 읽어 시각 내용을 확인할 수 있다)\n\n"
-                    f"{full_prompt}"
-                )
-
-            cmd = self._build_command(
-                mcp_config_path=mcp_config_path,
-                stream=True,
-                resume_session_id=resume_session_id,
-                system_prompt_file=system_prompt_file,
-            )
-
-            _sp_len = len(self.system_prompt or "")
-            _msg_len = len(full_prompt or "")
-            _resumed = "resume" if resume_session_id else "new"
-            print(
-                f"[ClaudeCode/{self.agent_name}] call: session={_resumed} "
-                f"system_prompt={_sp_len}자 message={_msg_len}자"
-            )
-
-            env = self._build_env()
-            start = time.time()
-            cwd = self.project_path if self.project_path and self.project_path != "." else None
-            try:
-                # ★유저 프롬프트는 argv 가 아니라 stdin 으로 넘긴다: 윈도우 명령줄 상한
-                #  (32,767자)에 걸려 [WinError 206]로 실행 자체가 실패하던 걸 회피. claude
-                #  --print 는 stdin EOF까지 읽은 뒤 응답하므로 먼저 써넣고 닫는다.
-                #  encoding=utf-8 명시: 윈도우 기본 로케일 인코딩(cp949 등)으로 stdin/stdout이
-                #  깨지지 않도록(한글 프롬프트·응답 JSON 보존).
-                proc = subprocess.Popen(
-                    cmd,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    bufsize=1,
-                    cwd=cwd,
-                    env=env,
-                )
-            except FileNotFoundError as e:
-                self.metrics.record_error()
-                yield {"type": "error", "content": f"Claude Code 바이너리 실행 실패: {e}"}
-                return
-
-            # 유저 프롬프트 주입 후 stdin 닫기 (EOF 신호 → claude 가 응답 시작)
-            try:
-                if proc.stdin:
-                    proc.stdin.write(full_prompt)
-                    proc.stdin.close()
-            except (BrokenPipeError, OSError) as e:
-                print(f"[ClaudeCode/{self.agent_name}] stdin 프롬프트 쓰기 실패: {e}")
-
-            accumulated_text = ""
-            captured_session_id: Optional[str] = None
-            committed = False          # 실제 본문(text/tool/thinking)을 하나라도 받았나
-            resume_err_text = ""       # stdout result 에러 텍스트 (보통 비어있음)
-            deferred: List[Dict] = []  # resume 시도 중 보류한 터미널 이벤트(error/final)
-            try:
-                for raw_line in proc.stdout:
-                    if cancel_check and cancel_check():
-                        proc.kill()
-                        yield {"type": "error", "content": "사용자 취소"}
-                        return
-
-                    line = raw_line.strip()
-                    if not line:
-                        continue
-                    try:
-                        event = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-
-                    sid = event.get("session_id")
-                    if sid:
-                        captured_session_id = sid
-
-                    if event.get("type") == "result" and event.get("is_error"):
-                        resume_err_text = str(event.get("result") or "")
-
-                    yielded = self._translate_stream_event(event, accumulated_text, start)
-                    for out_event, new_acc in yielded:
-                        if new_acc is not None:
-                            accumulated_text = new_acc
-                        t2 = out_event.get("type")
-                        if t2 in ("text", "tool_start", "tool_result", "thinking"):
-                            committed = True
-                        # 아직 본문이 안 왔으면(committed=False) 터미널 에러/final 은 보류.
-                        # resume 실패(만료 세션)·일시 과부하(529) 둘 다 본문 도착 전에만
-                        # 재시도 가능하므로, 보류해 두고 스트림 종료 후 재시도 여부를 판단한다.
-                        if not committed and t2 in ("error", "final"):
-                            deferred.append(out_event)
-                        else:
-                            yield out_event
-
-                proc.wait(timeout=self.DEFAULT_TIMEOUT_SEC)
-
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                self.metrics.record_error()
-                yield {"type": "error", "content": f"Claude Code 호출 타임아웃 ({self.DEFAULT_TIMEOUT_SEC}초)"}
-                return
-            except Exception as e:
-                self.metrics.record_error()
-                yield {"type": "error", "content": f"Claude Code 스트림 오류: {e}"}
-                return
-            finally:
-                if proc.poll() is None:
-                    proc.kill()
-
-            # 비정상 종료 시 stderr 확보 (resume 실패 메시지가 여기에 담긴다)
-            stderr_text = ""
-            if proc.returncode is not None and proc.returncode != 0 and not accumulated_text:
-                stderr_text = (proc.stderr.read() if proc.stderr else "").strip()
-
-            # --- resume 실패 판정 (stdout result 텍스트 + stderr 종합) ---
-            combined = (resume_err_text + " " + stderr_text).lower()
-            session_issue = ("no conversation found" in combined) or (
-                "session" in combined
-                and ("not found" in combined or "invalid" in combined)
-            )
-            # session 만료/무효일 때만 재시도 — rate limit·인증 등 일시적 에러로는
-            # 멀쩡한 매핑을 폐기하지 않는다 (그 에러는 그대로 사용자에게 보고).
-            resume_failed = is_resume_attempt and not committed and session_issue
-
-            if resume_attempt == 0 and resume_failed:
-                # 매핑 폐기 + fresh 재시도 (보류했던 에러는 버린다 → 사용자에 미노출)
-                resume_attempt += 1
-                if session_key_val:
-                    clear_session_for_agent(session_key_val)
-                print(
-                    f"[ClaudeCodeProvider] {self.agent_name}: 저장된 세션"
-                    f"({(stored_session_id or '')[:8]}...) 만료/무효 → fresh 재시도"
-                )
                 resume_session_id = None
-                stored_session_id = None
-                continue
+            else:
+                session_key_val = self._get_session_key()
+                session_map = load_session_map()
+                stored_session_id = session_map.get(session_key_val)
+                resume_session_id = stored_session_id if (history and stored_session_id) else None
+                # history 없으면 (= 새 대화) 기존 매핑 무효화
+                if not history and stored_session_id:
+                    clear_session_for_agent(session_key_val)
+                    stored_session_id = None
+                # 크기 기반 리셋: 직전 턴 컨텍스트가 임계 초과면 fresh 로 끊는다.
+                # fresh 경로는 _build_prompt_with_history 로 트림된 5턴 히스토리를 재시드하므로
+                # 맥락은 indiebizOS 기억층 + 트림 히스토리로 이어진다 (raw 중복만 제거).
+                if resume_session_id:
+                    prev_size = int(load_session_sizes().get(session_key_val) or 0)
+                    if prev_size > SESSION_RESET_TOKEN_THRESHOLD:
+                        print(
+                            f"[ClaudeCodeProvider] {self.agent_name}: 세션 컨텍스트 "
+                            f"{prev_size:,} > {SESSION_RESET_TOKEN_THRESHOLD:,} 토큰 → fresh 리셋"
+                        )
+                        clear_session_for_agent(session_key_val)
+                        clear_session_size(session_key_val)
+                        stored_session_id = None
+                        resume_session_id = None
 
-            # --- 일시 서버 과부하(529 Overloaded) → backoff 후 재시도 ---
-            # 본문 미수신(not committed) + 과부하 신호일 때만. 보류한 에러는 버리고
-            # (continue 시 deferred 가 다음 루프 진입부에서 초기화됨) 잠시 쉰 뒤 같은 호출 반복.
-            # 한 번의 transient 과부하가 강의 저작 같은 일회성 호출을 통째 실패시키던 걸 흡수.
-            if (
-                not committed
-                and self._is_overloaded_error(combined)
-                and overloaded_retries < self.OVERLOADED_MAX_RETRIES
-            ):
-                delay = min(
-                    self.OVERLOADED_BASE_DELAY_SEC * (2 ** overloaded_retries),
-                    self.OVERLOADED_MAX_DELAY_SEC,
-                )
-                overloaded_retries += 1
-                self.metrics.record_retry()
-                print(
-                    f"[ClaudeCodeProvider] {self.agent_name}: 서버 과부하(529) → "
-                    f"{delay:.0f}초 후 재시도 {overloaded_retries}/{self.OVERLOADED_MAX_RETRIES}"
-                )
-                time.sleep(delay)
-                continue
+            # 4~6) resume 시도 → 만료/무효 시 fresh 로 자동 재시도 (resume→fresh 1회)
+            #      + 일시 서버 과부하(529 Overloaded) → backoff 후 재시도 (최대 N회)
+            # CLI 가 `--resume <소멸한 세션>` 을 만나면 stdout JSON 이 아니라 stderr +
+            # 종료코드 1("No conversation found with session ID")로 즉사한다. 첫 시도가
+            # 그렇게 실패하면 그 에러를 사용자에게 노출하지 않고 삼킨 뒤(deferred) 매핑을
+            # 폐기하고 fresh 로 한 번 더 돌린다. 그래야 stale 매핑이 고착되지 않는다.
+            # 과부하(529)는 입력과 무관한 서버측 신호 → 본문 미수신이면 backoff 후 같은 호출 반복.
+            resume_attempt = 0       # resume→fresh 폴백 횟수 (0 또는 1)
+            overloaded_retries = 0   # 529 과부하 재시도 횟수
+            while True:
+                is_resume_attempt = bool(resume_session_id)
 
-            # --- 최종 attempt: 결과 확정 ---
-            for ev in deferred:          # 보류했던 터미널 이벤트 방출
-                yield ev
-            if proc.returncode not in (0, None) and not accumulated_text and not deferred:
-                yield {
-                    "type": "error",
-                    "content": f"Claude Code 종료 코드 {proc.returncode}: {stderr_text[:500]}",
-                }
+                # 프롬프트 빌드 — resume 면 CLI 가 자체 세션에서 history 를 알므로 현재 메시지만,
+                # fresh 면 직렬화된 history 를 함께 보낸다.
+                if resume_session_id:
+                    full_prompt = message
+                else:
+                    full_prompt = self._build_prompt_with_history(message, history or [])
 
-            # 세션 매핑 갱신 (disable_session_persistence면 스킵)
-            if not self.disable_session_persistence and session_key_val:
-                if captured_session_id and captured_session_id != stored_session_id:
-                    session_map[session_key_val] = captured_session_id
-                    save_session_map(session_map)
-                    print(
-                        f"[ClaudeCodeProvider] {self.agent_name}: 세션 저장 "
-                        f"({session_key_val} → {captured_session_id[:8]}...)"
+                if image_paths:
+                    img_lines = "\n".join(f"첨부 이미지 경로: {p}" for p in image_paths)
+                    full_prompt = (
+                        f"{img_lines}\n"
+                        f"(위 이미지 파일을 Read 도구로 읽어 시각 내용을 확인할 수 있다)\n\n"
+                        f"{full_prompt}"
                     )
-                # 컨텍스트 크기 기록 — resume 세션은 매 턴 성장하므로 id 변동과 무관하게
-                # 매번 갱신해 다음 턴 리셋 판단의 최신 값을 유지한다.
-                record_session_size(session_key_val, self._last_context_size)
-            break
+
+                cmd = self._build_command(
+                    mcp_config_path=mcp_config_path,
+                    stream=True,
+                    resume_session_id=resume_session_id,
+                    system_prompt_file=system_prompt_file,
+                )
+
+                _sp_len = len(self.system_prompt or "")
+                _msg_len = len(full_prompt or "")
+                _resumed = "resume" if resume_session_id else "new"
+                print(
+                    f"[ClaudeCode/{self.agent_name}] call: session={_resumed} "
+                    f"system_prompt={_sp_len}자 message={_msg_len}자"
+                )
+
+                env = self._build_env()
+                start = time.time()
+                cwd = self.project_path if self.project_path and self.project_path != "." else None
+                try:
+                    # ★유저 프롬프트는 argv 가 아니라 stdin 으로 넘긴다: 윈도우 명령줄 상한
+                    #  (32,767자)에 걸려 [WinError 206]로 실행 자체가 실패하던 걸 회피. claude
+                    #  --print 는 stdin EOF까지 읽은 뒤 응답하므로 먼저 써넣고 닫는다.
+                    #  encoding=utf-8 명시: 윈도우 기본 로케일 인코딩(cp949 등)으로 stdin/stdout이
+                    #  깨지지 않도록(한글 프롬프트·응답 JSON 보존).
+                    proc = subprocess.Popen(
+                        cmd,
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                        bufsize=1,
+                        cwd=cwd,
+                        env=env,
+                    )
+                except FileNotFoundError as e:
+                    self.metrics.record_error()
+                    yield {"type": "error", "content": f"Claude Code 바이너리 실행 실패: {e}"}
+                    return
+
+                # 유저 프롬프트 주입 후 stdin 닫기 (EOF 신호 → claude 가 응답 시작)
+                try:
+                    if proc.stdin:
+                        proc.stdin.write(full_prompt)
+                        proc.stdin.close()
+                except (BrokenPipeError, OSError) as e:
+                    print(f"[ClaudeCode/{self.agent_name}] stdin 프롬프트 쓰기 실패: {e}")
+
+                accumulated_text = ""
+                captured_session_id: Optional[str] = None
+                committed = False          # 실제 본문(text/tool/thinking)을 하나라도 받았나
+                resume_err_text = ""       # stdout result 에러 텍스트 (보통 비어있음)
+                deferred: List[Dict] = []  # resume 시도 중 보류한 터미널 이벤트(error/final)
+                try:
+                    for raw_line in proc.stdout:
+                        if cancel_check and cancel_check():
+                            proc.kill()
+                            yield {"type": "error", "content": "사용자 취소"}
+                            return
+
+                        line = raw_line.strip()
+                        if not line:
+                            continue
+                        try:
+                            event = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+
+                        sid = event.get("session_id")
+                        if sid:
+                            captured_session_id = sid
+
+                        if event.get("type") == "result" and event.get("is_error"):
+                            resume_err_text = str(event.get("result") or "")
+
+                        yielded = self._translate_stream_event(event, accumulated_text, start)
+                        for out_event, new_acc in yielded:
+                            if new_acc is not None:
+                                accumulated_text = new_acc
+                            t2 = out_event.get("type")
+                            if t2 in ("text", "tool_start", "tool_result", "thinking"):
+                                committed = True
+                            # 아직 본문이 안 왔으면(committed=False) 터미널 에러/final 은 보류.
+                            # resume 실패(만료 세션)·일시 과부하(529) 둘 다 본문 도착 전에만
+                            # 재시도 가능하므로, 보류해 두고 스트림 종료 후 재시도 여부를 판단한다.
+                            if not committed and t2 in ("error", "final"):
+                                deferred.append(out_event)
+                            else:
+                                yield out_event
+
+                    proc.wait(timeout=self.DEFAULT_TIMEOUT_SEC)
+
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    self.metrics.record_error()
+                    yield {"type": "error", "content": f"Claude Code 호출 타임아웃 ({self.DEFAULT_TIMEOUT_SEC}초)"}
+                    return
+                except Exception as e:
+                    self.metrics.record_error()
+                    yield {"type": "error", "content": f"Claude Code 스트림 오류: {e}"}
+                    return
+                finally:
+                    if proc.poll() is None:
+                        proc.kill()
+
+                # 비정상 종료 시 stderr 확보 (resume 실패 메시지가 여기에 담긴다)
+                stderr_text = ""
+                if proc.returncode is not None and proc.returncode != 0 and not accumulated_text:
+                    stderr_text = (proc.stderr.read() if proc.stderr else "").strip()
+
+                # --- resume 실패 판정 (stdout result 텍스트 + stderr 종합) ---
+                combined = (resume_err_text + " " + stderr_text).lower()
+                session_issue = ("no conversation found" in combined) or (
+                    "session" in combined
+                    and ("not found" in combined or "invalid" in combined)
+                )
+                # session 만료/무효일 때만 재시도 — rate limit·인증 등 일시적 에러로는
+                # 멀쩡한 매핑을 폐기하지 않는다 (그 에러는 그대로 사용자에게 보고).
+                resume_failed = is_resume_attempt and not committed and session_issue
+
+                if resume_attempt == 0 and resume_failed:
+                    # 매핑 폐기 + fresh 재시도 (보류했던 에러는 버린다 → 사용자에 미노출)
+                    resume_attempt += 1
+                    if session_key_val:
+                        clear_session_for_agent(session_key_val)
+                    print(
+                        f"[ClaudeCodeProvider] {self.agent_name}: 저장된 세션"
+                        f"({(stored_session_id or '')[:8]}...) 만료/무효 → fresh 재시도"
+                    )
+                    resume_session_id = None
+                    stored_session_id = None
+                    continue
+
+                # --- 일시 서버 과부하(529 Overloaded) → backoff 후 재시도 ---
+                # 본문 미수신(not committed) + 과부하 신호일 때만. 보류한 에러는 버리고
+                # (continue 시 deferred 가 다음 루프 진입부에서 초기화됨) 잠시 쉰 뒤 같은 호출 반복.
+                # 한 번의 transient 과부하가 강의 저작 같은 일회성 호출을 통째 실패시키던 걸 흡수.
+                if (
+                    not committed
+                    and self._is_overloaded_error(combined)
+                    and overloaded_retries < self.OVERLOADED_MAX_RETRIES
+                ):
+                    delay = min(
+                        self.OVERLOADED_BASE_DELAY_SEC * (2 ** overloaded_retries),
+                        self.OVERLOADED_MAX_DELAY_SEC,
+                    )
+                    overloaded_retries += 1
+                    self.metrics.record_retry()
+                    print(
+                        f"[ClaudeCodeProvider] {self.agent_name}: 서버 과부하(529) → "
+                        f"{delay:.0f}초 후 재시도 {overloaded_retries}/{self.OVERLOADED_MAX_RETRIES}"
+                    )
+                    time.sleep(delay)
+                    continue
+
+                # --- 최종 attempt: 결과 확정 ---
+                for ev in deferred:          # 보류했던 터미널 이벤트 방출
+                    yield ev
+                if proc.returncode not in (0, None) and not accumulated_text and not deferred:
+                    yield {
+                        "type": "error",
+                        "content": f"Claude Code 종료 코드 {proc.returncode}: {stderr_text[:500]}",
+                    }
+
+                # 세션 매핑 갱신 (disable_session_persistence면 스킵)
+                if not self.disable_session_persistence and session_key_val:
+                    if captured_session_id and captured_session_id != stored_session_id:
+                        session_map[session_key_val] = captured_session_id
+                        save_session_map(session_map)
+                        print(
+                            f"[ClaudeCodeProvider] {self.agent_name}: 세션 저장 "
+                            f"({session_key_val} → {captured_session_id[:8]}...)"
+                        )
+                    # 컨텍스트 크기 기록 — resume 세션은 매 턴 성장하므로 id 변동과 무관하게
+                    # 매번 갱신해 다음 턴 리셋 판단의 최신 값을 유지한다.
+                    record_session_size(session_key_val, self._last_context_size)
+                break
+        finally:
+            if _http_cfg:
+                try:
+                    os.remove(_http_cfg)
+                except OSError:
+                    pass
 
     def _translate_stream_event(
         self, event: Dict, accumulated_text: str, start_time: float
@@ -872,6 +881,33 @@ class ClaudeCodeProvider(BaseProvider):
         except OSError as e:
             print(f"[ClaudeCodeProvider] {self.agent_name}: 시스템 프롬프트 파일 생성 실패({e}) → 인자 폴백")
             return None
+
+    def _http_mcp_config_path(self) -> Optional[str]:
+        """HTTP MCP config 를 spawn 마다 유니크 temp 파일로 쓴다 (플래그 ON일 때만).
+
+        INDIEBIZOS_MCP_HTTP="1" 이 아니면 None → 호출부에서 stdio(get_mcp_config_path())로 폴백.
+        신원(agent_id/project_path)은 config 안 헤더로 실린다. 동시에 여러 에이전트가
+        돌 수 있으므로 고정 파일을 덮어쓰면 서로의 신원을 읽는 레이스가 난다 → spawn 마다
+        유니크 파일로 쓰고 실행 후 finally 에서 정리한다.
+        ★헤더는 ASCII 전용이라 한글 신원은 quote() 로 퍼센트 인코딩(서버가 unquote).
+        """
+        if os.environ.get("INDIEBIZOS_MCP_HTTP", "0") != "1":
+            return None
+        headers: Dict[str, str] = {}
+        if self.agent_id:
+            headers["X-IndieBiz-Agent-Id"] = quote(str(self.agent_id))
+        if self.project_path and self.project_path != ".":
+            headers["X-IndieBiz-Project-Path"] = quote(str(self.project_path))
+        cfg = {"mcpServers": {"indiebizos": {
+            "type": "http",
+            # ★트레일링 슬래시: backend mount /mcp + 내부 streamable_http_path "/" → /mcp/ 가 직행
+            "url": "http://localhost:8765/mcp/",
+            "headers": headers,
+        }}}
+        fd, path = tempfile.mkstemp(prefix="ccmcp_", suffix=".json")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(cfg, f)
+        return path
 
     def _build_command(
         self,

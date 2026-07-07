@@ -638,8 +638,9 @@ async def stop_ollama():
             ollama_process.wait(timeout=5)
             ollama_process = None
 
-        # pkill로 확실히 종료
-        subprocess.run(['pkill', '-f', 'ollama serve'], stderr=subprocess.DEVNULL)
+        # 외부 프로세스도 확실히 종료 (psutil, 전 OS — 구 pkill 대체)
+        from common.platform_utils import kill_processes_by_marker
+        kill_processes_by_marker('ollama serve')
 
         ollama_running = False
         return {"status": "stopped", "running": False}

@@ -7,7 +7,7 @@ import subprocess
 import json
 import os
 import time
-import signal
+import tempfile
 
 TOOL_NAME = "preview_site"
 TOOL_DESCRIPTION = "로컬에서 사이트를 미리보기합니다"
@@ -30,8 +30,8 @@ TOOL_PARAMETERS = {
     }
 }
 
-# 실행 중인 프로세스 추적
-PROCESS_FILE = "/tmp/web-builder-preview.json"
+# 실행 중인 프로세스 추적 (전 OS 임시 디렉토리 — 구 하드코딩 /tmp 대체)
+PROCESS_FILE = os.path.join(tempfile.gettempdir(), "web-builder-preview.json")
 
 
 def save_process_info(project_path: str, pid: int, port: int) -> None:
@@ -74,11 +74,12 @@ def remove_process_info(project_path: str) -> None:
 
 
 def is_process_running(pid: int) -> bool:
-    """프로세스 실행 여부 확인"""
+    """프로세스 실행 여부 확인 (psutil, 전 OS).
+    ★윈도우에선 os.kill(pid, 0) 이 프로세스를 실제로 종료(TerminateProcess)시키므로 금지."""
     try:
-        os.kill(pid, 0)
-        return True
-    except OSError:
+        import psutil
+        return psutil.pid_exists(pid) and psutil.Process(pid).is_running()
+    except Exception:
         return False
 
 
@@ -108,13 +109,22 @@ def start_preview(project_path: str, port: int) -> dict:
         env = os.environ.copy()
         env["PORT"] = str(port)
 
+        # npm 은 윈도우에서 npm.cmd — shutil.which 로 해소(미발견 시 OS별 기본명)
+        import shutil
+        npm_cmd = shutil.which("npm") or ("npm.cmd" if os.name == "nt" else "npm")
+        # 백그라운드 분리 — 유닉스 setsid / 윈도우 새 프로세스 그룹
+        popen_kw = {}
+        if os.name == "nt":
+            popen_kw["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        else:
+            popen_kw["start_new_session"] = True
         process = subprocess.Popen(
-            ["npm", "run", "dev", "--", "-p", str(port)],
+            [npm_cmd, "run", "dev", "--", "-p", str(port)],
             cwd=project_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
-            start_new_session=True
+            **popen_kw
         )
 
         # 서버 시작 대기
@@ -169,13 +179,25 @@ def stop_preview(project_path: str) -> dict:
         }
 
     try:
-        # 프로세스 그룹 종료
-        os.killpg(os.getpgid(pid), signal.SIGTERM)
-        time.sleep(1)
-
-        # 강제 종료 (필요시)
-        if is_process_running(pid):
-            os.killpg(os.getpgid(pid), signal.SIGKILL)
+        # 프로세스 트리 종료 (psutil, 전 OS — 구 os.killpg 대체).
+        # 자식(npm→node dev 서버)까지 함께 정리.
+        import psutil
+        try:
+            parent = psutil.Process(pid)
+            procs = parent.children(recursive=True) + [parent]
+        except psutil.NoSuchProcess:
+            procs = []
+        for p in procs:
+            try:
+                p.terminate()
+            except Exception:
+                pass
+        _gone, alive = psutil.wait_procs(procs, timeout=3)
+        for p in alive:  # 강제 종료 (필요시)
+            try:
+                p.kill()
+            except Exception:
+                pass
 
         remove_process_info(project_path)
 

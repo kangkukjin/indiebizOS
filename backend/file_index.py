@@ -21,8 +21,11 @@ import time
 import calendar
 import plistlib
 import subprocess
+import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence
+
+_IS_MAC = sys.platform == "darwin"
 
 try:
     from runtime_utils import detect_body
@@ -472,6 +475,65 @@ def disk_skeleton(roots: Sequence[str], *, maxdepth: int = 3,
     return "\n".join(blocks)
 
 
+def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, min_size=None):
+    """비-맥(윈도우/리눅스) 파일 질의 — Spotlight(mdfind) 없이 os.walk 로 사용자 roots 순회.
+
+    맥의 _spotlight_query 와 같은 필터 의미를 stdlib 만으로 재현:
+      q=파일명 부분일치 / kind·ext=확장자 / 시간=mtime 창 / min_size=바이트.
+    한계: has_gps·EXIF facet(taken_at/lat/lng)은 색인이 없어 미지원(기본 파일 검색만).
+    """
+    root = os.path.abspath(os.path.expanduser(path)) if path else os.path.expanduser("~")
+    want = None
+    if kind and kind.lower() not in ("any", "media"):
+        want = {kind.lower()}
+    elif (kind or "").lower() == "media":
+        want = {"image", "video"}
+    q_low = (q or "").strip().lower() or None
+    ext_low = ext.lower().lstrip(".") if ext else None
+    start_ep = (_epoch_ms(start, False) or 0) / 1000 if start else 0
+    end_ep = (_epoch_ms(end, True) or 0) / 1000 if end else 0
+    min_sz = min_size if isinstance(min_size, int) and min_size > 0 else None
+
+    found: List[tuple] = []
+    if os.path.isdir(root):
+        for dp, dirs, files in os.walk(root):
+            dirs[:] = [d for d in dirs
+                       if d not in _SKELETON_NOISE_DIRS and not d.startswith(".")]
+            for name in files:
+                fp = os.path.join(dp, name)
+                if any(n in fp for n in _NOISE_SUBSTR):
+                    continue
+                dot_ext = os.path.splitext(name)[1].lower()
+                ek = _EXT_KIND.get(dot_ext)
+                if want is not None and ek not in want:
+                    continue
+                if ext_low and dot_ext.lstrip(".") != ext_low:
+                    continue
+                if q_low and q_low not in name.lower():
+                    continue
+                mt = _safe_stat(fp, mtime=True) or 0
+                if start_ep and mt < start_ep:
+                    continue
+                if end_ep and mt > end_ep:
+                    continue
+                if min_sz and (_safe_stat(fp, mtime=False) or 0) < min_sz:
+                    continue
+                found.append((fp, ek))
+            if len(found) > _MAX_CANDIDATES:
+                break
+
+    found.sort(key=lambda t: _safe_stat(t[0], mtime=True) or 0, reverse=True)
+    items = []
+    for fp, ek in found[:limit]:
+        it = _item_from_meta(fp, facets)
+        if ek:  # 윈도우엔 mdls 없어 kind 가 generic → 확장자 기반으로 교정
+            it["kind"] = ek
+        items.append(it)
+    _sort_items(items, sort)
+    return {"success": True, "count": len(found), "shown": len(items),
+            "scope": root, "engine": "walk", "items": items}
+
+
 def query(*, kind: str = "any", q: Optional[str] = None,
           start: Optional[str] = None, end: Optional[str] = None,
           has_gps: bool = False, ext: Optional[str] = None,
@@ -493,4 +555,6 @@ def query(*, kind: str = "any", q: Optional[str] = None,
                 min_size=min_size)
     if body == "phone":
         return _mediastore_query(**args)
-    return _spotlight_query(**args)
+    if _IS_MAC:
+        return _spotlight_query(**args)
+    return _walk_query(**args)  # 윈도우/리눅스 — Spotlight 없이 os.walk

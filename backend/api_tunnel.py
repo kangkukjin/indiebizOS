@@ -61,14 +61,26 @@ def save_config(config: dict):
 
 
 def get_cloudflared_path() -> str:
-    """cloudflared 실행 경로 찾기"""
-    # 가능한 경로들
-    possible_paths = [
-        "/opt/homebrew/bin/cloudflared",  # macOS Apple Silicon (Homebrew)
-        "/usr/local/bin/cloudflared",      # macOS Intel / Linux
-        "/usr/bin/cloudflared",            # Linux 시스템
-        "cloudflared",                      # PATH에 있는 경우
-    ]
+    """cloudflared 실행 경로 찾기 (전 OS — PATH + OS별 표준 설치 경로)"""
+    from common.platform_utils import find_binary
+    hit = find_binary("cloudflared")  # PATH(윈도우 .exe 자동) 우선
+    if hit:
+        return hit
+    # 폴백 — 실행해 --version 으로 검증하는 후보들(윈도우 경로 포함)
+    if os.name == "nt":
+        possible_paths = [
+            r"C:\Program Files (x86)\cloudflared\cloudflared.exe",
+            r"C:\Program Files\cloudflared\cloudflared.exe",
+            r"C:\ProgramData\chocolatey\bin\cloudflared.exe",
+            "cloudflared",
+        ]
+    else:
+        possible_paths = [
+            "/opt/homebrew/bin/cloudflared",  # macOS Apple Silicon (Homebrew)
+            "/usr/local/bin/cloudflared",      # macOS Intel / Linux
+            "/usr/bin/cloudflared",            # Linux 시스템
+            "cloudflared",                      # PATH에 있는 경우
+        ]
 
     for path in possible_paths:
         try:
@@ -103,16 +115,11 @@ def is_tunnel_running() -> bool:
         else:
             _tunnel_process = None
 
-    # 외부에서 실행 중인 cloudflared 확인
+    # 외부에서 실행 중인 cloudflared 확인 (psutil, 전 OS — 구 pgrep 대체)
     try:
-        result = subprocess.run(
-            ["pgrep", "-f", "cloudflared tunnel run"],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        return result.returncode == 0
-    except:
+        from common.platform_utils import is_process_running_by_marker
+        return is_process_running_by_marker("cloudflared tunnel run")
+    except Exception:
         return False
 
 
@@ -210,16 +217,12 @@ def stop_tunnel() -> dict:
                 pass
         _tunnel_process = None
 
-    # 외부 프로세스도 종료
+    # 외부 프로세스도 종료 (psutil, 전 OS — 구 pkill 대체)
     try:
-        result = subprocess.run(
-            ["pkill", "-f", "cloudflared tunnel run"],
-            capture_output=True,
-            timeout=5
-        )
-        if result.returncode == 0:
+        from common.platform_utils import kill_processes_by_marker
+        if kill_processes_by_marker("cloudflared tunnel run"):
             stopped = True
-    except:
+    except Exception:
         pass
 
     if stopped or not is_tunnel_running():

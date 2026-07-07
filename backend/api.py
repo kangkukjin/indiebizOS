@@ -149,6 +149,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[해마공급] 시작 실패 (무시): {e}")
 
+    # 첫 실행 ffmpeg 공급 — 라디오(ffplay)·유튜브 재생용 ffmpeg 가 없으면(주로 fresh 윈도우)
+    # 정적 빌드를 userData/bin 에 내려받는다(백그라운드·멱등, 시스템 ffmpeg 있으면 즉시 통과).
+    # INDIEBIZ_FFMPEG_AUTO=0 으로 끌 수 있다. 재시작 후엔 register_bin_path 만으로 즉시 인식.
+    try:
+        from ffmpeg_provision import provision_async as _ffmpeg_provision_async
+        _ffmpeg_provision_async(enabled=os.environ.get("INDIEBIZ_FFMPEG_AUTO", "1") != "0")
+    except Exception as e:
+        print(f"[ffmpeg공급] 시작 실패 (무시): {e}")
+
     # World Pulse: 오늘의 세계 상태 스냅샷 확인 (없으면 백그라운드 수집)
     # 서버 시작을 블로킹하지 않도록 별도 스레드에서 실행
     import threading

@@ -12,9 +12,9 @@ import sys
 import shutil
 import re
 import json
-import subprocess
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+from common.platform_utils import find_binary, install_hint, spawn_detached, open_url
 
 # common 유틸리티 사용
 _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
@@ -94,24 +94,12 @@ def download_youtube_music(url: str, filename: str = "output.mp3", mode: str = "
             if not filename.endswith('.mp3'):
                 filename += '.mp3'
         
-        # FFmpeg 경로 찾기 (크로스 플랫폼)
-        ffmpeg_path = shutil.which("ffmpeg")
-        if not ffmpeg_path:
-            # 일반적인 설치 경로들 확인
-            common_paths = [
-                "/opt/homebrew/bin/ffmpeg",  # macOS (Apple Silicon)
-                "/usr/local/bin/ffmpeg",      # macOS (Intel) / Linux
-                "/usr/bin/ffmpeg",            # Linux
-            ]
-            for path in common_paths:
-                if os.path.isfile(path):
-                    ffmpeg_path = path
-                    break
-
+        # FFmpeg 경로 찾기 (전 OS — PATH + OS별 표준 설치 경로 폴백)
+        ffmpeg_path = find_binary("ffmpeg")
         if not ffmpeg_path or not os.path.isfile(ffmpeg_path):
             return {
                 'success': False,
-                'message': 'FFmpeg를 찾을 수 없습니다. FFmpeg를 설치해주세요. (brew install ffmpeg)'
+                'message': install_hint("ffmpeg"),
             }
         
         print(f"[YouTube] 다운로드 시작: {url}")
@@ -753,15 +741,17 @@ def _get_audio_url(video_id):
 
 
 def _start_ffplay(audio_url):
-    """ffplay로 오디오 스트림 재생 (백그라운드 프로세스)"""
+    """ffplay로 오디오 스트림 재생 (백그라운드 분리 프로세스, 전 OS)"""
     global _player_process
-    _player_process = subprocess.Popen(
-        ['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet',
+    ffplay_path = find_binary("ffplay")
+    if not ffplay_path:
+        raise FileNotFoundError(install_hint("ffplay"))
+    _player_process = spawn_detached(
+        [ffplay_path, '-nodisp', '-autoexit', '-loglevel', 'quiet',
          '-reconnect', '1',
          '-reconnect_streamed', '1',
          '-reconnect_delay_max', '5',
-         audio_url],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+         audio_url]
     )
 
 
@@ -1066,11 +1056,8 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
     if mode == "video":
         # video 모드: 기본 브라우저로 열기 (큰 화면)
         watch_url = f"https://www.youtube.com/watch?v={video_id}"
-        try:
-            subprocess.Popen(['open', watch_url],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception as e:
-            return {'success': False, 'message': f'브라우저 열기 실패: {str(e)}'}
+        if not open_url(watch_url):  # 전 OS 기본 브라우저 (맥 전용 'open' 대체)
+            return {'success': False, 'message': '브라우저 열기 실패'}
         _player_video_id = video_id
         _player_title = title
         result = {

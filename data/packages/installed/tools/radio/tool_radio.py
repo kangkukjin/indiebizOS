@@ -7,8 +7,6 @@ import os
 import sys
 import json
 import time
-import signal
-import subprocess
 from pathlib import Path
 from threading import Lock
 
@@ -18,14 +16,19 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, os.path.abspath(_backend_dir))
 
 from common.api_client import api_call_raw
+from common.platform_utils import (
+    find_binary, install_hint, spawn_detached,
+    kill_processes_by_marker, is_process_running_by_marker,
+)
 
 # ─── 상수 ───
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 FAVORITES_PATH = os.path.join(DATA_DIR, "favorites.json")
-# mpv 는 os.setsid 로 백엔드에서 분리 실행 → 백엔드(Electron 자식)가 죽어도 계속 재생된다.
-# 그래서 모듈 전역(_player_process)만으로는 새 백엔드가 옛 mpv 를 못 찾아 정지 불가·중복 재생.
-# 해법: 라디오 mpv 명령줄에 이 표식을 박아두고, 정지/재생 때 표식 단 mpv 를 모두 죽인다.
+# 재생기(ffplay)는 spawn_detached(유닉스 setsid / 윈도우 DETACHED_PROCESS)로 백엔드에서 분리 실행 →
+# 백엔드(Electron 자식)가 죽어도 계속 재생된다.
+# 그래서 모듈 전역(_player_process)만으로는 새 백엔드가 옛 재생기를 못 찾아 정지 불가·중복 재생.
+# 해법: 라디오 ffplay 명령줄(-window_title)에 이 표식을 박아, 정지/재생 때 표식 단 프로세스를 모두 죽인다(psutil, 전 OS).
 # (어느 백엔드가 띄웠든 무관 — "정지=음악 프로세스 종료"의 단순·확실한 구현.)
 RADIO_MARKER = "indiebiz-radio-player"
 RADIO_BROWSER_API = "https://de1.api.radio-browser.info"
@@ -153,32 +156,14 @@ _play_start_time = None
 
 def _kill_radio_mpv():
     """표식 단 라디오 mpv 를 모두 종료. 어느 백엔드가 띄웠든(창 닫기·재시작 후 고아 포함)
-    상관없이 정지·중복재생을 한 방에 해결. 다른 용도 mpv 는 표식이 없어 영향 없음."""
-    found = False
-    try:
-        out = subprocess.run(["pgrep", "-f", RADIO_MARKER], capture_output=True, text=True, timeout=5)
-        for line in out.stdout.split():
-            try:
-                os.kill(int(line), signal.SIGTERM)
-                found = True
-            except Exception:
-                pass
-    except Exception:
-        # pgrep 없는 환경 폴백: pkill 시도
-        try:
-            subprocess.run(["pkill", "-f", RADIO_MARKER], timeout=5)
-        except Exception:
-            pass
-    return found
+    상관없이 정지·중복재생을 한 방에 해결. 다른 용도 mpv 는 표식이 없어 영향 없음.
+    psutil 기반이라 맥·윈도우·리눅스 동일 동작(구 pgrep/pkill 대체)."""
+    return kill_processes_by_marker(RADIO_MARKER)
 
 
 def _radio_mpv_running():
-    """표식 단 라디오 mpv 가 살아있는지."""
-    try:
-        out = subprocess.run(["pgrep", "-f", RADIO_MARKER], capture_output=True, text=True, timeout=5)
-        return bool(out.stdout.strip())
-    except Exception:
-        return False
+    """표식 단 라디오 mpv 가 살아있는지(전 OS)."""
+    return is_process_running_by_marker(RADIO_MARKER)
 
 
 # ─── HTTP 헬퍼 (common.api_client 사용) ───
@@ -350,21 +335,13 @@ def get_korean_radio(broadcaster=None):
     }, ensure_ascii=False)
 
 
-# ─── 재생 제어 (mpv) ───
+# ─── 재생 제어 (ffplay) ───
+# 재생기는 ffplay(ffmpeg 동반). mpv 별도 설치가 필요 없고, ffmpeg 하나로 라디오 재생 +
+# 유튜브 재생·다운로드까지 커버된다. 윈도우에 없으면 ffmpeg_provision 이 자동 공급한다.
 
-def _find_mpv():
-    """mpv 실행 경로 찾기"""
-    for path in ["/opt/homebrew/bin/mpv", "/usr/local/bin/mpv", "/usr/bin/mpv"]:
-        if os.path.isfile(path):
-            return path
-    # PATH에서 찾기
-    try:
-        result = subprocess.run(["which", "mpv"], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0:
-            return result.stdout.strip()
-    except Exception:
-        pass
-    return None
+def _find_ffplay():
+    """ffplay 실행 경로 찾기 (전 OS — PATH + 자동 공급 bin + OS별 표준 경로 폴백)."""
+    return find_binary("ffplay")
 
 
 def play_radio(station_id=None, stream_url=None, volume=70, name=None):
@@ -404,38 +381,47 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None):
             "message": f"{station_name} 재생",
         }, ensure_ascii=False)
 
-    # PC: mpv 로 재생
-    mpv_path = _find_mpv()
-    if not mpv_path:
+    # PC: ffplay 로 재생 (없으면 윈도우는 자동 공급 시도)
+    ffplay_path = _find_ffplay()
+    if not ffplay_path:
+        try:
+            from ffmpeg_provision import provision_async, is_provisioning
+            provision_async()  # 백그라운드 다운로드 시작(윈도우) — 없으면 no-op
+            if os.name == "nt":
+                return json.dumps({
+                    "success": False,
+                    "provisioning": True,
+                    "error": "재생기(ffmpeg)를 자동 설치하는 중입니다 (최초 1회, 수십 초). "
+                             "잠시 후 다시 재생을 눌러주세요." if is_provisioning() or True else "",
+                }, ensure_ascii=False)
+        except Exception:
+            pass
         return json.dumps({
             "success": False,
-            "error": "mpv가 설치되어 있지 않습니다. 'brew install mpv'로 설치해주세요.",
+            "error": install_hint("ffplay"),
         }, ensure_ascii=False)
 
-    # 기존 라디오 mpv 전부 종료(이 백엔드 것·옛 백엔드 고아 모두) → 중복 재생 방지
+    # 기존 라디오 재생기 전부 종료(이 백엔드 것·옛 백엔드 고아 모두) → 중복 재생 방지
     with _player_lock:
         _kill_radio_mpv()
 
-        # mpv 실행 — --force-media-title 에 표식을 박아 정지 때 명령줄로 찾는다(GUI 없어 부작용 없음)
+        # ffplay 실행 — -window_title 에 표식을 박아 정지 때 명령줄(psutil)로 찾는다(-nodisp 라 창 없음).
         cmd = [
-            mpv_path,
-            "--no-video",
-            "--really-quiet",
-            f"--force-media-title={RADIO_MARKER}",
-            f"--volume={volume}",
-            "--cache=yes",
-            "--cache-secs=10",
-            "--demuxer-max-bytes=500KiB",
+            ffplay_path,
+            "-nodisp",
+            "-autoexit",
+            "-loglevel", "quiet",
+            "-window_title", RADIO_MARKER,
+            "-volume", str(volume),
+            "-reconnect", "1",
+            "-reconnect_streamed", "1",
+            "-reconnect_delay_max", "5",
             stream_url,
         ]
 
         try:
-            _player_process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                preexec_fn=os.setsid,
-            )
+            # 백그라운드 분리 실행 — 유닉스 setsid / 윈도우 DETACHED_PROCESS 를 흡수
+            _player_process = spawn_detached(cmd)
             _current_station = {
                 "station_id": station_id,
                 "name": station_name,
@@ -460,7 +446,7 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None):
             _current_station = None
             return json.dumps({
                 "success": False,
-                "error": f"mpv 실행 실패: {str(e)}",
+                "error": f"재생기(ffplay) 실행 실패: {str(e)}",
             }, ensure_ascii=False)
 
     return json.dumps({

@@ -35,11 +35,18 @@ def _find_ffmpeg() -> Optional[str]:
     if ffmpeg_path:
         return ffmpeg_path
 
-    common_paths = [
-        "/opt/homebrew/bin/ffmpeg",
-        "/usr/local/bin/ffmpeg",
-        "/usr/bin/ffmpeg",
-    ]
+    if os.name == "nt":  # 윈도우
+        common_paths = [
+            r"C:\ffmpeg\bin\ffmpeg.exe",
+            r"C:\Program Files\ffmpeg\bin\ffmpeg.exe",
+            r"C:\ProgramData\chocolatey\bin\ffmpeg.exe",
+        ]
+    else:
+        common_paths = [
+            "/opt/homebrew/bin/ffmpeg",
+            "/usr/local/bin/ffmpeg",
+            "/usr/bin/ffmpeg",
+        ]
     for path in common_paths:
         if os.path.isfile(path):
             return path

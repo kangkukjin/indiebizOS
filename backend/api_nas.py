@@ -459,8 +459,9 @@ _config_cache_mtime = 0
 
 # ============ 트랜스코딩 설정 ============
 
-FFMPEG_PATH = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
-FFPROBE_PATH = shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
+from common.platform_utils import find_binary  # 전 OS 바이너리 탐색 (윈도우 .exe·표준 경로 폴백)
+FFMPEG_PATH = find_binary("ffmpeg") or "ffmpeg"
+FFPROBE_PATH = find_binary("ffprobe") or "ffprobe"
 
 # 프로브 결과 캐시: {(file_path, mtime): probe_result}
 _probe_cache: dict = {}

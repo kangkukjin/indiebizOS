@@ -32,7 +32,7 @@ for _p in _extra_paths:
     if os.path.exists(_p) and _p not in os.environ.get("PATH", ""):
         os.environ["PATH"] = _p + os.pathsep + os.environ.get("PATH", "")
 from datetime import datetime
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 
 # .env 파일 로드 (python-dotenv)
 from dotenv import load_dotenv
@@ -61,6 +61,36 @@ from switch_manager import SwitchManager
 
 
 # ============ 앱 초기화 ============
+
+# ── IBL MCP over HTTP (additive) ────────────────────────────────────────────
+# 문제: 내부 claude_code 에이전트의 IBL 도구(mcp__indiebizos__execute_ibl)가 stdio MCP 서버
+#   (mcp_server.py)를 매 호출 새로 spawn → python 콜드스타트 + 핸드셰이크 완료 전 첫 호출이
+#   나가는 연결 레이스로 "No such tool available" 이 반복됐다(풀네임 에러가 그 증거).
+# 해법: 백엔드가 상시 떠 있으니, 같은 MCP 도구를 warm HTTP 엔드포인트(/mcp)로도 노출 → 콜드스타트
+#   핸드셰이크가 사라져 레이스가 구조적으로 제거된다. ★기존 stdio 경로(claude_code_mcp.json)는
+#   그대로 둔다 — 이건 additive. config 교체·실기 검증은 별도 단계(회귀 0).
+_ibl_mcp = None
+_ibl_mcp_app = None
+try:
+    _repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if _repo_root not in sys.path:
+        sys.path.insert(0, _repo_root)
+    from mcp_server import mcp as _ibl_mcp  # execute_ibl · read_guide 툴 등록됨(run() 은 __main__ 가드라 미실행)
+    _ibl_mcp.settings.streamable_http_path = "/"   # 마운트 prefix(/mcp)와 합쳐 최종 경로 = /mcp
+    # DNS 리바인딩 방어는 ON 유지(★터널·외부 Host 로 /mcp 무단 IBL 실행 차단) + 로컬 claude CLI 만 허용.
+    # allowed_hosts 가 비면 localhost 조차 421 로 거부되므로 반드시 명시.
+    from mcp.server.transport_security import TransportSecuritySettings as _TSS
+    _local_hosts = ["localhost", "localhost:8765", "127.0.0.1", "127.0.0.1:8765"]
+    _ibl_mcp.settings.transport_security = _TSS(
+        allowed_hosts=_local_hosts,
+        allowed_origins=[f"http://{h}" for h in _local_hosts],
+    )
+    _ibl_mcp_app = _ibl_mcp.streamable_http_app()   # 이 호출이 session_manager 를 초기화한다(위 설정 반영)
+    print("[MCP-HTTP] /mcp 마운트 준비 완료 (additive — stdio 경로 병행, localhost 전용)")
+except Exception as _e:
+    print(f"[MCP-HTTP] 마운트 준비 실패 (무시, stdio 경로는 유지): {_e}")
+    _ibl_mcp = None
+    _ibl_mcp_app = None
 
 
 @asynccontextmanager
@@ -177,7 +207,11 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=_deferred_world_pulse, daemon=True).start()
     print("[WorldPulse] 백그라운드 수집 스레드 시작")
 
-    yield
+    # IBL MCP HTTP 세션 매니저를 앱 수명 동안 켠다(마운트한 /mcp 가 동작하려면 필수).
+    # 실패/미준비면 nullcontext 로 조용히 통과(기존 stdio 경로는 영향 없음).
+    _mcp_ctx = _ibl_mcp.session_manager.run() if _ibl_mcp is not None else nullcontext()
+    async with _mcp_ctx:
+        yield
 
     # Cloudflare 터널 종료
     try:
@@ -204,6 +238,10 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan
 )
+
+# IBL MCP over HTTP — warm 엔드포인트 /mcp (additive, stdio 병행). 세션 매니저는 lifespan 에서 켠다.
+if _ibl_mcp_app is not None:
+    app.mount("/mcp", _ibl_mcp_app)
 
 # CORS 설정 (Electron 및 로컬 개발 환경에서 접근 허용)
 # 보안: 허용된 오리진만 명시적으로 지정

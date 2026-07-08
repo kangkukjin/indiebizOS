@@ -1050,7 +1050,8 @@ class IndieNet:
         return result
 
     def _query_relays(self, req_filter: dict, accept, timeout: int = 10,
-                      relays: List[str] = None) -> List[dict]:
+                      relays: List[str] = None,
+                      grace_after_first: float = None) -> List[dict]:
         """릴레이에 동일 REQ를 병렬 전송하고 이벤트를 수집·dedup한다.
 
         쓰기(_publish_event)가 전 릴레이에 fan-out 하는 것과 대칭으로, 읽기도
@@ -1060,8 +1061,10 @@ class IndieNet:
         Args:
             req_filter: Nostr REQ 필터 (kinds/#t/#p/limit/since 등)
             accept: (event_dict) -> item_dict | None. None이면 제외.
-            timeout: 릴레이별 EOSE 대기 최대 시간(초)
+            timeout: 릴레이별 EOSE 대기 최대 시간(초) — 조기 반환의 하드 상한
             relays: 조회할 relay 목록. 미지정 시 우리 일반 relay (NIP-17 수신은 DM relay 지정).
+            grace_after_first: 첫 릴레이 응답 후 낙오 릴레이를 더 기다릴 유예(초, 기본 1.5).
+                죽은 릴레이가 timeout 전체를 먹지 않도록 하는 조기 반환 창.
         Returns:
             event id 기준 dedup된 item 리스트
         """
@@ -1087,6 +1090,16 @@ class IndieNet:
 
         collected: Dict[str, dict] = {}
         lock = threading.Lock()
+        total = len(relays)
+        all_done = threading.Event()          # 모든 릴레이가 EOSE/에러/종료
+        first_eose_at = [None]                # 첫 응답(EOSE) 시각 — 낙오 릴레이 유예 기준
+        finished = [0]                        # 완료(성공/실패 무관) 릴레이 수
+
+        def _mark_finished():
+            with lock:
+                finished[0] += 1
+                if finished[0] >= total:
+                    all_done.set()
 
         def _query_one(relay_url: str):
             done = threading.Event()
@@ -1107,6 +1120,9 @@ class IndieNet:
                                 if eid not in collected:
                                     collected[eid] = item
                     elif data[0] == "EOSE":
+                        with lock:
+                            if first_eose_at[0] is None:
+                                first_eose_at[0] = time.monotonic()
                         done.set()
                 except:
                     pass
@@ -1131,14 +1147,27 @@ class IndieNet:
                 ws.close()
             except Exception as e:
                 print(f"  릴레이 조회 실패 ({relay_url}): {e}")
+            finally:
+                _mark_finished()
 
-        threads = []
         for relay_url in relays:
             t = threading.Thread(target=_query_one, args=(relay_url,), daemon=True)
             t.start()
-            threads.append(t)
-        for t in threads:
-            t.join(timeout=timeout + 2)
+
+        # 조기 반환: (1) 전 릴레이 완료, 또는 (2) 첫 응답 후 grace 만큼만 낙오 릴레이를
+        # 더 기다리고 반환. 죽은 릴레이 하나가 timeout(=10초)을 통째로 먹지 않게 한다.
+        # replaceable(kind:0/10002 등)은 아무 릴레이나 하나면 충분하고, 피드도 살아있는
+        # 릴레이는 수백 ms 안에 응답하므로 grace 안에 다 잡힌다.
+        grace = grace_after_first if grace_after_first is not None else 1.5
+        start = time.monotonic()
+        while not all_done.is_set():
+            elapsed = time.monotonic() - start
+            if elapsed >= timeout:
+                break
+            fe = first_eose_at[0]
+            if fe is not None and (time.monotonic() - fe) >= grace:
+                break
+            all_done.wait(timeout=0.1)
 
         return list(collected.values())
 

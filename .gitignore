@@ -101,6 +101,7 @@ data/packages/installed/photo_index.db-shm
 data/packages/installed/photo_index.db-wal
 data/conversation.db*
 data/location_cache.json
+data/param_friction.jsonl
 data/regime_change_analysis.html
 data/business_images/
 

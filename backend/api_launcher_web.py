@@ -186,6 +186,10 @@ def _derive_instruments() -> dict:
             "name": primary.get("name", gid),
             "_order": primary.get("order", 999),
         }
+        # 시스템 표면 플래그 통과 — 데스크탑 앱 그리드가 이걸 보고 제외(런처 직속 창이 진입점).
+        # 원격/폰(리모컨) 그리드는 무시하고 그대로 노출.
+        if primary.get("system"):
+            inst["system"] = True
         explicit = primary.get("modes")
         if isinstance(explicit, list) and explicit:
             # 명시적 modes — 한 액션이 여러 탭을 선언(주식/코인/자원). 탭별로 다른 액션 호출 가능.

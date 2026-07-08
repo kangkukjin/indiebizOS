@@ -1604,3 +1604,5 @@
 - DM 역할 정리(코드 무변경 — 조사 결과 이미 뷰 층에서 단일화돼 있었음): messages thread/inbox가 business.db+dms.db 캐시를 이벤트 id dedupe로 병합하는 정본 뷰, channel_read nostr는 릴레이 풀+캐시 갱신(새로고침·원시 프로브). 어휘 서술에 역할 명시 + channel_read의 미구현 telegram 언급 제거.
 - 어휘 이관(messages/neighbor 등 business 패키지→코어) 검토 후 이관 안 함으로 종결: 표준=노드·문법, 패키지 fragment가 코어 노드를 확장하는 게 헌법 패턴(설치/제거 생애주기 대칭 — 구현이 패키지에 있는데 어휘만 코어로 가면 미소유 어휘 위험).
 - 검증: build --check 전 가드, 라이브 종단(승격→멱등→상태 갱신→역방향 라벨→정리), 브라우저 실기(팔로우 목록 이웃 등록 클릭→'· 이웃✓' 즉시 반영, 저자 드릴 상태 줄). 해마 4용례.
+
+[2026-07-08] 메신저·IndieNet = 시스템 표면 승격(앱 아님): 두 통신 표면은 부동산·도서 같은 도메인 앱이 아니라 시스템 AI처럼 런처 직속이라는 설계 확정. app: 블록에 `system: true` 플래그 신설(진실 소스 선언) → /launcher/instruments 파생 통과 → 데스크탑 앱 그리드(ActionDesktop)·앱저장소에서 제외. 진입점=런처 상단 버튼(IndieNet·연락처)+전용 창. 비즈니스도 동일 처리(런처 다섯 번째 표면=모드 선택기가 정식 진입점, BusinessInstrumentView는 계기 직접 조회라 무영향) — system 계기 3종=messenger/community/business. ★원격/폰은 리모컨이라 계기 노출 유지(플래그 무시). APP_KEYS 가드에 system 등록. 검증=build --check·tsc·매니페스트 플래그 라이브·브라우저 실기(그리드에서 소멸, 런처 버튼 잔존).

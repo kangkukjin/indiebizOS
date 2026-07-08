@@ -121,6 +121,7 @@ export interface AppInstrument extends AppMode {
   icon: string;
   name: string;
   modes?: AppMode[];
+  system?: boolean;  // 런처 직속 시스템 표면(메신저·커뮤니티) — 데스크탑 앱 그리드에서 제외
 }
 
 type Json = Record<string, unknown>;

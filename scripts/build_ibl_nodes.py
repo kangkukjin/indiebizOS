@@ -787,7 +787,10 @@ APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images", "date"
 APP_AIDOCK_MODES = {"replace", "append"}
 APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes",
             "note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter",
-            "phone_render"}
+            "phone_render",
+            # system: true = 런처 직속 시스템 표면(메신저·커뮤니티) — 데스크탑 앱 그리드에서 제외,
+            # 원격/폰(리모컨)은 노출 유지. 진입점은 런처 버튼·전용 창.
+            "system"}
 APP_TPL_FILTERS = {"round", "num", "abs", "arrow"}  # + 'opt:' / 'trunc:' 접두 허용
 
 # === 뷰-어휘 문서-동기 가드 (2026-07-03, ibl.md '표현 언어의 층위' 조항 집행) ===

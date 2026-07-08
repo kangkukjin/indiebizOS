@@ -29,6 +29,9 @@ nodes:
           icon: 🏢
           name: 비즈니스
           order: 11
+          # 시스템 표면 — 런처의 다섯 번째 표면(모드 선택기 비즈니스)이 정식 진입점.
+          # 데스크탑 앱 그리드에서 제외, 원격/폰(리모컨)은 계기 노출 유지.
+          system: true
           modes:
           - name: 비즈니스
             auto_run: true
@@ -361,6 +364,9 @@ nodes:
           icon: 💬
           name: 메신저
           order: 7
+          # 시스템 표면 — 도메인 앱이 아니라 런처 직속(전용 창·'연락처' 버튼). 데스크탑 앱 그리드에서 제외.
+          # 원격/폰은 리모컨이라 계기 노출 유지.
+          system: true
           auto_run: true
           inputs:
           - key: q

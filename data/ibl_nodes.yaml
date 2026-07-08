@@ -2094,6 +2094,7 @@ nodes:
           icon: 🏢
           name: 비즈니스
           order: 11
+          system: true
           modes:
           - name: 비즈니스
             auto_run: true
@@ -3475,6 +3476,7 @@ nodes:
           icon: 🌐
           name: IndieNet
           order: 8
+          system: true
           modes:
           - name: 팔로잉
             auto_run: true
@@ -3733,6 +3735,7 @@ nodes:
           icon: 💬
           name: 메신저
           order: 7
+          system: true
           auto_run: true
           inputs:
           - key: q

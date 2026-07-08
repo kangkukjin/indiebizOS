@@ -183,7 +183,8 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
     const manById = new Map(manifest.map((i) => [i.id, i]));
     const statics = staticAppsFrom(manById);
     const staticIds = new Set(statics.map((a) => a.id));  // 매니페스트에서 static 이 소유한 것(realty·photo 등) 제외
-    const all: App[] = [...statics, ...manifest.filter((i) => !staticIds.has(i.id)).map(manifestToApp)];
+    // system: true(메신저·커뮤니티)는 도메인 앱이 아니라 런처 직속 표면 — 그리드·앱저장소에서 제외.
+    const all: App[] = [...statics, ...manifest.filter((i) => !staticIds.has(i.id) && !i.system).map(manifestToApp)];
     const byId = new Map(all.map((a) => [a.id, a]));
     const ordered = HOME_ORDER.map((id) => byId.get(id)).filter((a): a is App => !!a);
     const orderedIds = new Set(ordered.map((a) => a.id));

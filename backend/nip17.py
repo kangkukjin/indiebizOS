@@ -24,6 +24,13 @@ KIND_SEAL = 13
 KIND_GIFT_WRAP = 1059
 _TWO_DAYS = 2 * 24 * 3600
 
+# indiebizOS peer 표식: 모든 발신 DM 의 rumor 태그에 [INDIEBIZ_TAG, INDIEBIZ_PROTOCOL] 을 실어
+# "이 DM 은 indiebizOS 노드에서 왔다"를 알린다. 수신측(channel_poller)이 이 태그를 보면
+# 발신 이웃을 is_indiebiz_peer 로 마킹한다. rumor 는 seal 안에 있어 릴레이엔 노출되지 않고,
+# NIP-17 seal 서명이 발신자 키를 증명하므로 별도 인증 핸드셰이크가 필요 없다.
+INDIEBIZ_TAG = "indiebiz"      # rumor 태그[0]
+INDIEBIZ_PROTOCOL = "1"        # rumor 태그[1]: peer 프로토콜 버전
+
 
 def _random_past_timestamp() -> int:
     """현재로부터 과거 2일 내 무작위 시각 (타이밍 누출 방지)."""

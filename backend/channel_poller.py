@@ -644,6 +644,13 @@ class ChannelPoller:
             kst = timezone(timedelta(hours=9))
             dt = datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(kst)
 
+            # indiebizOS peer 표식: rumor 태그에 indiebiz 마커가 있으면 발신 이웃을 peer 로 마킹.
+            peer_version = None
+            for _t in ((out.get('rumor') or {}).get('tags') or []):
+                if isinstance(_t, list) and _t and _t[0] == nip17.INDIEBIZ_TAG:
+                    peer_version = _t[1] if len(_t) > 1 else nip17.INDIEBIZ_PROTOCOL
+                    break
+
             self._log(f"Nostr DM(NIP-17) 수신: from={sender_npub[:20]}...")
             self._save_message_to_db(
                 contact_type='nostr',
@@ -652,6 +659,7 @@ class ChannelPoller:
                 content=content,
                 external_id=rumor_id,
                 message_time=dt.isoformat(),
+                peer_version=peer_version,
             )
             self._update_last_poll_time('nostr')
 
@@ -836,8 +844,10 @@ class ChannelPoller:
 
     def _save_message_to_db(self, contact_type: str, contact_value: str,
                            subject: str, content: str, external_id: str = None,
-                           message_time: str = None):
-        """메시지를 DB에 저장 (Gmail/Nostr 공통)"""
+                           message_time: str = None, peer_version: str = None):
+        """메시지를 DB에 저장 (Gmail/Nostr 공통).
+
+        peer_version 이 있으면(발신 rumor 에 indiebiz 태그) 해당 이웃을 indiebizOS peer 로 마킹."""
         try:
             bm = self._get_business_manager()
 
@@ -887,6 +897,13 @@ class ChannelPoller:
                 # 연락처 추가
                 bm.add_contact(neighbor_id, contact_type, contact_value)
                 self._log(f"새 이웃 생성: {name}")
+
+            # indiebizOS peer 표식 (발신 rumor 에 indiebiz 태그 감지 시) — 멱등
+            if peer_version and neighbor_id:
+                try:
+                    bm.mark_neighbor_peer(neighbor_id, peer_version)
+                except Exception as _e:
+                    self._log(f"peer 마킹 실패: {_e}")
 
             # 메시지 저장
             bm.create_message(

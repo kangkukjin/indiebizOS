@@ -30,6 +30,11 @@ from runtime_utils import get_data_path as _get_data_path
 DATA_PATH = _get_data_path()
 DB_PATH = DATA_PATH / "business.db"
 
+# 공개인사프로필 = 비즈니스 문서 하나(전용 어휘 없이 self:business_document 그대로 사용).
+# 레벨 -1: 정보공개 레벨(0=최공개 ~ 4=최비공개) 밖의 예약 키라 seed(range 5)·regenerate(0-4)가
+# 건드리지 않는다(= AI 재생성 대상 아님, 순수 사용자 작성). ORDER BY level 에서 맨 앞(공개문서 최상단).
+GREETING_DOC_LEVEL = -1
+
 
 class BusinessManager:
     """비즈니스 관리 매니저"""
@@ -125,6 +130,13 @@ class BusinessManager:
         except sqlite3.OperationalError:
             pass  # 이미 존재하면 무시
 
+        # 마이그레이션: indiebizOS peer 표식 (상대가 indiebizOS 노드인지 + 프로토콜 버전)
+        for _col, _ddl in (("is_indiebiz_peer", "INTEGER DEFAULT 0"), ("peer_version", "TEXT")):
+            try:
+                cursor.execute(f"ALTER TABLE neighbors ADD COLUMN {_col} {_ddl}")
+            except sqlite3.OperationalError:
+                pass  # 이미 존재하면 무시
+
         # 연락처 테이블 (이웃당 여러 연락처)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS contacts (
@@ -200,6 +212,13 @@ class BusinessManager:
                 INSERT OR IGNORE INTO work_guidelines (level, title, content)
                 VALUES (?, ?, ?)
             """, (level, f"레벨 {level} 근무 지침", ""))
+
+        # 공개인사프로필 (사용자가 직접 작성하는 공개 인사 — 레벨 문서와 별개, AI 재생성 대상 아님).
+        # 전용 어휘 없이 self:business_document 로 편집·조회. 발행 시 열린 비즈니스 문서 0 과 결합.
+        cursor.execute("""
+            INSERT OR IGNORE INTO business_documents (level, title, content)
+            VALUES (?, ?, ?)
+        """, (GREETING_DOC_LEVEL, "공개인사프로필", ""))
 
         # 기본 통신채널 설정
         default_channels = [
@@ -843,6 +862,17 @@ class BusinessManager:
             return None
         new_favorite = 0 if neighbor.get('favorite', 0) == 1 else 1
         return self.update_neighbor(neighbor_id, favorite=new_favorite)
+
+    def mark_neighbor_peer(self, neighbor_id: int, version: Optional[str] = None) -> None:
+        """이웃을 indiebizOS peer 로 표시 (발신 DM 의 indiebiz 태그 감지 시). 멱등."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE neighbors SET is_indiebiz_peer = 1, peer_version = ?, updated_at = ? WHERE id = ?",
+            (version, datetime.now().isoformat(), neighbor_id),
+        )
+        conn.commit()
+        conn.close()
 
     # ============ 연락처 (Contacts) CRUD ============
 

@@ -216,6 +216,8 @@ OS_SEAM_ALLOWLIST = {
     "backend/api_photo.py",       # 사진 파일 OS 열기(open/startfile/xdg-open) — tier-2: ibl_executors 열기와 통합 후보
     "backend/api_tunnel.py",      # cloudflared 바이너리 위치 탐색(외부 바이너리 finder) — tier-2: 공유 find_binary 후보
     "backend/providers/claude_code.py",  # claude CLI 바이너리 탐색(Win %APPDATA%\\...\\claude.exe vs 맥 .app 번들) — 외부 바이너리 finder, api_tunnel 과 동류
+    "backend/common/platform_utils.py",  # 크로스플랫폼 이음매 그 자체(find_binary/spawn_detached/open_url/install_hint — os.name·sys.platform 분기가 존재 이유)
+    "backend/ffmpeg_provision.py",  # ffmpeg 자동 공급(윈도우 첫 실행 시 BtbN 정적 빌드 다운로드 — os.name 분기)
 }
 OS_SCAN_DIRS = ["backend"]
 # 강한 OS 신호만 — 일반 'open'/'start' 같은 건 오탐이라 제외.

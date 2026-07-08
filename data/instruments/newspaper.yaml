@@ -1,0 +1,33 @@
+# 신문 앱 — 어휘 없는 순수 매니페스트 (상부구조). 정기보고(report.yaml)와 같은 모델.
+#
+# PC(데스크톱 신문 계기 = frontend/src/components/NewspaperInstrument.tsx)가 '새로 발행' 시
+# 뉴스를 긁어 판을 만들고, 그 판을 마크다운 파일로 outputs/ 에 저장한다:
+#   projects/앱모드/outputs/newspaper_current.md   (최신 판 하나, 덮어쓰기)
+# 폰/원격은 그 파일을 읽어 보여주기만 한다 — 재취재도, 뉴스 팬아웃도 하지 않는다.
+# (구 방식: 이 앱이 매니페스트 app: 블록으로 search_gnews 를 auto_run → 열 때마다 뉴스 재수집.
+#  폰이 제 신문을 따로 만드는 셈이라, 정기보고처럼 "PC 작성 → 파일 → 폰 열람"으로 바꿨다.)
+#
+# 새 IBL 액션 0 — 보기는 전부 일반 부품(self:file_find / self:read)의 조합.
+# %BASE% 는 서버측(_load_standalone_instruments)에서 레포 루트로 치환된다(폰/타 머신 이식성).
+
+instrument: newspaper
+icon: 📰
+name: 신문
+order: 12
+phone_render: false   # 신문 판은 PC outputs/ 에 산다 — 폰은 맥 리모컨(원격)만, 폰 네이티브 숨김
+
+modes:
+  # ── PC 가 발행한 최신 신문 판을 읽어 보여준다(재취재 없음) ──
+  - name: 신문
+    auto_run: true
+    action: '[self:file_find]{pattern: "newspaper_current.md", path: "%BASE%/projects/앱모드/outputs"} | take: 1 >> [self:read]{scope: "workspace", blocks: true}'
+    view:
+      - type: blocks
+        from: items
+        empty: 아직 발행된 신문이 없습니다 — PC 의 신문 앱에서 "새로 발행"을 눌러 만드세요.
+    # 폰에 저장·공유 — PC 가 발행한 자기완결 HTML 판을 읽어(blocks 없이 raw 텍스트=_prev_result) 폰으로
+    # 넘겨 공유 시트를 연다(카카오톡 등, 공유는 사용자 탭). [limbs:phone]{share} 는 phone_only 라
+    # 원격(맥)에서 부르면 맥이 파일을 읽어 폰으로 포워드 → 폰이 Downloads 저장 + ACTION_SEND.
+    buttons:
+      - label: 📤 폰에 저장·공유
+        action: '[self:read]{path: "%BASE%/projects/앱모드/outputs/newspaper_current.html", scope: "workspace"} >> [limbs:phone]{op: "share", filename: "newspaper.html", mime: "text/html"}'

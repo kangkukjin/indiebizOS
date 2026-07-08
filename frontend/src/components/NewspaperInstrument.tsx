@@ -6,19 +6,74 @@
  * (구 방식: [engines:newspaper] 가 수집+조립+디자인을 한 어휘에 박제 → HTML 파일 생성 후 외부
  *  브라우저로 열기. 그 어휘는 은퇴했고, 디자인은 여기로, 팬아웃(키워드별)은 이 컴포넌트 코드로.)
  *
- * 키워드/제목은 편집 가능(localStorage 결정화).
+ * ★발행 모델: 신문은 열 때마다 재취재하지 않는다. '새로 발행'을 누를 때만 뉴스를 긁어
+ *  판(edition)을 만들고, 그 판을 데이터 레이어(outputs/newspaper_current.json, [self:write])에
+ *  최신 하나 저장한다. 다음에 열면 저장된 판을 [self:read] 로 그대로 보여준다(재취재 없음).
+ *
+ * 키워드/제목은 편집 가능(localStorage 결정화) — '다음 판'에 쓸 편집 설정이다.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { iblExecuteApp } from '../lib/instrument';  // 앱모드 IBL 호출 공용 헬퍼(project_id 내장)
 
 const KW_KEY = 'newspaper.keywords';
 const TITLE_KEY = 'newspaper.title';
+
+// 발행된 최신 판(edition)이 사는 곳 — 앱모드 프로젝트 outputs/ (self:write/read 가 project_id 기준 해소).
+// 최신 판 하나만 유지: 새로 발행하면 덮어쓴다.
+//  · JSON = 데스크톱이 카드 그리드로 다시 그리기 위한 구조화 판(이 컴포넌트 전용).
+//  · MD   = 폰/원격 뷰어(정기보고식)가 읽고, 파일로 공유하기 위한 사람이 읽는 판.
+//    둘 다 '새로 발행' 시 같은 sections 에서 파생 — PC 가 만들고 폰은 MD 를 보여주기만 한다.
+const EDITION_PATH = 'outputs/newspaper_current.json';
+const MD_PATH = 'outputs/newspaper_current.md';
+// 공유용 자기완결 HTML — 폰 뷰어의 "폰에 저장·공유" 버튼이 읽어 카톡 등으로 보낸다(친구가 브라우저로 바로 열람).
+const HTML_PATH = 'outputs/newspaper_current.html';
 
 const DEFAULT_KEYWORDS = ['청주', 'AI', '문화', '드라마', '영화', '만화', '세종', '경제', '주식'];
 const DEFAULT_TITLE = '청주 데일리';
 
 interface NewsItem { title?: string; meta?: string; summary?: string; url?: string }
 interface Section { keyword: string; items: NewsItem[]; error?: boolean }
+// 저장되는 판. sections=스냅샷 내용, dateLabel/issuedAt=발행 시점. title/keywords 는 발행 당시 설정 사본.
+interface Edition { title: string; keywords: string[]; sections: Section[]; dateLabel: string; issuedAt: string }
+
+// 저장된 최신 판을 읽어온다. 없으면(파일 부재 → "Error: ..." 문자열) null.
+async function loadEdition(): Promise<Edition | null> {
+  try {
+    const r = await iblExecuteApp(`[self:read]{path: ${JSON.stringify(EDITION_PATH)}}`);
+    if (r && typeof r === 'object' && Array.isArray((r as Edition).sections)) return r as Edition;
+  } catch { /* 파일 없음/파싱 실패 → 저장된 판 없음 */ }
+  return null;
+}
+
+// 판을 데이터 레이어에 저장(최신 하나 덮어쓰기). content 는 JSON 문자열(이중 stringify 로 IBL 문자열 리터럴).
+async function saveEdition(ed: Edition): Promise<void> {
+  const content = JSON.stringify(ed);
+  await iblExecuteApp(`[self:write]{path: ${JSON.stringify(EDITION_PATH)}, content: ${JSON.stringify(content)}}`);
+}
+
+// 폰/원격 뷰어(정기보고식)가 읽을 마크다운 판을 PC 에 쓴다 — sections → 어휘 파이프(table:document
+// 마크다운 emitter)로 사람이 읽는 문서 텍스트를 얻어 self:write. 파생물이라 실패해도 발행 자체는 유지(best-effort).
+async function saveMarkdownFile(title: string, dateLabel: string, sections: Section[]): Promise<void> {
+  try {
+    const items = sections.flatMap((sec) => sec.items.map((it) => ({ ...it, section: sec.keyword })));
+    const doc = (await iblExecuteApp(
+      `[table:document]{format: "markdown", title: ${JSON.stringify(title)}, ` +
+      `meta: ${JSON.stringify(dateLabel)}, group_by: "section", items: ${JSON.stringify(items)}}`
+    )) as { markdown?: string } | null;
+    const md = doc?.markdown;
+    if (typeof md === 'string' && md) {
+      await iblExecuteApp(`[self:write]{path: ${JSON.stringify(MD_PATH)}, content: ${JSON.stringify(md)}}`);
+    }
+  } catch { /* 파생 파일 실패는 발행을 막지 않는다 */ }
+}
+
+// 공유용 자기완결 HTML 판을 PC 에 쓴다 — 폰 뷰어의 공유 버튼이 이 파일을 카톡 등으로 보낸다(친구=브라우저 열람).
+async function saveHtmlFile(title: string, dateLabel: string, sections: Section[]): Promise<void> {
+  try {
+    const html = buildNewspaperHtml(title, dateLabel, sections);
+    await iblExecuteApp(`[self:write]{path: ${JSON.stringify(HTML_PATH)}, content: ${JSON.stringify(html)}}`);
+  } catch { /* 파생 파일 실패는 발행을 막지 않는다 */ }
+}
 
 function loadKeywords(): string[] {
   try {
@@ -102,6 +157,14 @@ const todayStr = () => {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${wd})`;
 };
 
+// 발행 시각을 짧게 — 상단 바 신선도 표시용.
+const whenLabel = (iso: string | null): string | null => {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch { return null; }
+};
+
 export function NewspaperInstrument() {
   const [keywords, setKeywords] = useState<string[]>(loadKeywords);
   const [title, setTitle] = useState<string>(() => localStorage.getItem(TITLE_KEY) || DEFAULT_TITLE);
@@ -112,7 +175,9 @@ export function NewspaperInstrument() {
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
-  const date = useMemo(todayStr, []);
+  // date=마스트헤드에 찍히는 발행일(스냅샷). 새로 발행하면 오늘로, 저장된 판을 열면 그 판의 발행일.
+  const [date, setDate] = useState<string>(todayStr);
+  const [issuedAt, setIssuedAt] = useState<string | null>(null);
 
   const persistKw = (kw: string[]) => { setKeywords(kw); localStorage.setItem(KW_KEY, JSON.stringify(kw)); };
   const addKeyword = () => {
@@ -167,8 +232,8 @@ export function NewspaperInstrument() {
 
   const copyShare = () => { if (shareUrl) navigator.clipboard?.writeText(shareUrl); };
 
-  // 키워드마다 search_gnews 팬아웃 → 섹션. (약간의 앱 코드; 언어로 팬아웃하지 않는다.)
-  const load = useCallback(async () => {
+  // 새로 발행 = 키워드마다 search_gnews 팬아웃 → 섹션 → 판을 저장. (버튼을 눌러야만 실행; 열 때 자동 재취재 없음.)
+  const issue = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       // 핫토픽(AI가 오늘의 사건 선정)과 키워드 섹션을 동시에 — 핫토픽을 맨 위에.
@@ -184,21 +249,50 @@ export function NewspaperInstrument() {
       const all: Section[] = [];
       if (hot.length) all.push({ keyword: HOT_KEYWORD, items: hot });
       all.push(...kwSections);
+      const nowLabel = todayStr();
+      const iso = new Date().toISOString();
       setSections(all);
+      setDate(nowLabel);
+      setIssuedAt(iso);
+      // 발행된 판을 최신 하나로 저장 → 다음에 열면 재취재 없이 이 판을 보여준다.
+      // JSON(데스크톱 카드 재렌더) + MD(폰/원격 뷰어·공유) 둘 다 — PC 가 만들고 폰은 MD 를 본다.
+      const ttl = title || DEFAULT_TITLE;
+      await saveEdition({ title: ttl, keywords, sections: all, dateLabel: nowLabel, issuedAt: iso });
+      await saveMarkdownFile(ttl, nowLabel, all);  // 폰 뷰어 표시용(blocks)
+      await saveHtmlFile(ttl, nowLabel, all);      // 폰 공유용(카톡 등)
     } catch {
       setError('서버에 연결할 수 없습니다.');
     } finally {
       setLoading(false);
     }
-  }, [keywords]);
+  }, [keywords, title]);
 
-  useEffect(() => { load(); }, [load]);
+  // 열 때: 저장된 최신 판을 보여준다(재취재 없음). 없으면 빈 상태 → 사용자가 '새로 발행'을 눌러 첫 판을 만든다.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      const ed = await loadEdition();
+      if (!alive) return;
+      if (ed) {
+        setSections(ed.sections || []);
+        if (ed.dateLabel) setDate(ed.dateLabel);
+        setIssuedAt(ed.issuedAt || null);
+      }
+      setLoading(false);
+    })();
+    return () => { alive = false; };
+  }, []);
 
   return (
     <div className="h-full w-full flex flex-col bg-[#f0f2f5] text-stone-800">
-      {/* 상단 바: 편집 토글 + 새로고침 */}
+      {/* 상단 바: 편집 토글 + 발행 */}
       <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-stone-200 bg-white/70">
-        <div className="text-xs text-stone-400">{loading ? '뉴스 불러오는 중…' : `${keywords.length}개 섹션`}</div>
+        <div className="text-xs text-stone-400">
+          {loading ? '신문 발행 중…'
+            : issuedAt ? `${whenLabel(issuedAt)} 발행 · ${sections.length}개 섹션`
+            : '아직 발행되지 않음'}
+        </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setEditing((e) => !e)}
             className="text-xs px-2.5 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 hover:bg-stone-50">
@@ -212,9 +306,9 @@ export function NewspaperInstrument() {
             className="text-xs px-2.5 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 disabled:opacity-40">
             {publishing ? '발행 중…' : '🔗 링크로 발행'}
           </button>
-          <button onClick={load} disabled={loading}
-            className="text-xs px-2.5 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 disabled:opacity-40">
-            ↻ 새로고침
+          <button onClick={issue} disabled={loading}
+            className="text-xs px-2.5 py-1 rounded-lg border border-stone-800 bg-[#1a1a2e] text-white hover:opacity-90 disabled:opacity-40">
+            🗞 {loading ? '발행 중…' : '새로 발행'}
           </button>
         </div>
       </div>
@@ -268,7 +362,16 @@ export function NewspaperInstrument() {
           <div className="text-center text-sm text-stone-500 mt-3 mb-2">{date}</div>
 
           {error && <div className="text-center text-rose-500 text-sm py-6">{error}</div>}
-          {loading && sections.length === 0 && <div className="text-center text-stone-400 text-sm py-10">뉴스를 불러오는 중…</div>}
+          {loading && sections.length === 0 && <div className="text-center text-stone-400 text-sm py-10">신문을 불러오는 중…</div>}
+          {!loading && !error && sections.length === 0 && (
+            <div className="text-center py-16">
+              <div className="text-stone-400 text-sm mb-4">아직 발행된 신문이 없습니다.</div>
+              <button onClick={issue}
+                className="text-sm px-4 py-2 rounded-lg bg-[#1a1a2e] text-white hover:opacity-90">
+                🗞 첫 신문 발행하기
+              </button>
+            </div>
+          )}
 
           {sections.map((sec) => (
             <section key={sec.keyword} className="mt-9">

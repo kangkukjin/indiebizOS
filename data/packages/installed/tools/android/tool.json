@@ -186,7 +186,9 @@
               "speak",
               "open_app",
               "sms",
-              "call"
+              "call",
+              "save",
+              "share"
             ],
             "default": "notify"
           },

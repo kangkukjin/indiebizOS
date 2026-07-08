@@ -57,6 +57,9 @@ _OP_DISPATCHERS = {
         # SEND_SMS/CALL_PHONE 위험권한 불필요 — augmentation-over-autonomy.
         "sms": None,
         "call": None,
+        # 파일을 공유 가능한 위치(Downloads)에 저장(save) / 저장 후 공유 시트(share, 카카오톡 등 — 사용자 탭).
+        "save": None,
+        "share": None,
     },
 }
 _OP_DEFAULTS = {"android_op": "snapshot", "phone_op": "notifications",
@@ -300,8 +303,50 @@ def _phone_act(tool_input: dict) -> dict:
                 "message": (f"다이얼러 열림 ({number}) — 통화는 직접 탭하세요" if ok
                             else "다이얼러 열기 실패.")}
 
+    if op in ("save", "share"):
+        # 파일을 폰의 공유 가능한 위치(공용 Downloads)에 저장(save) 또는 저장 후 공유 시트 열기(share).
+        # 내용원: content(텍스트 — 신문/보고서 마크다운 등) 또는 b64(바이너리 — PDF/이미지).
+        # 파이프 이전 단계([self:read] 등)의 텍스트도 _prev_result 로 수용.
+        import base64 as _b64mod
+        filename = (tool_input.get("filename") or tool_input.get("name") or "").strip()
+        mime = (tool_input.get("mime") or tool_input.get("mime_type") or "").strip()
+        content = tool_input.get("content")
+        b64 = tool_input.get("b64")
+        if content is None and b64 is None:
+            prev = tool_input.get("_prev_result")
+            if isinstance(prev, dict):
+                content = prev.get("message") or prev.get("markdown") or prev.get("text") or prev.get("content")
+            elif isinstance(prev, str):
+                content = prev
+        if b64:
+            try:
+                data = _b64mod.b64decode(b64)
+            except Exception:
+                return {"success": False, "error": "b64 디코드 실패."}
+        elif content is not None:
+            data = str(content).encode("utf-8")
+        else:
+            return {"success": False,
+                    "error": f"{op} 엔 content(텍스트) 또는 b64(바이너리)가 필요합니다."}
+        if not filename:
+            filename = "indiebiz_share.txt"
+        if not mime:
+            mime = "text/plain"
+        try:
+            MS = jclass("com.indiebiz.phoneagent.MediaSaver")
+        except Exception as e:
+            return {"success": False, "error": f"MediaSaver 브리지 로드 실패: {e}"}
+        res = str(MS.shareFile(data, filename, mime) if op == "share"
+                  else MS.saveToDownloads(data, filename, mime))
+        if res.startswith("ERROR"):
+            return {"success": False, "error": res}
+        if op == "share":
+            return {"success": True, "staged": True, "location": res,
+                    "message": f"공유 시트 열림 — {res} 에 저장, 앱(카카오톡 등)을 골라 공유하세요"}
+        return {"success": True, "location": res, "message": f"공유 가능한 위치에 저장됨: {res}"}
+
     return {"success": False,
-            "error": f"알 수 없는 op '{op}'. 사용 가능: notify/vibrate/toast/clipboard/speak/open_app/sms/call"}
+            "error": f"알 수 없는 op '{op}'. 사용 가능: notify/vibrate/toast/clipboard/speak/open_app/sms/call/save/share"}
 
 
 def _phone_locate(tool_input: dict) -> dict:

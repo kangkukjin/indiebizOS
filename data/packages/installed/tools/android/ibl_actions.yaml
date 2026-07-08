@@ -115,9 +115,9 @@ nodes:
         - 탭
       phone:
         returns: effect
-        description: 폰 네이티브 동작 (op 분기) — 알림/진동/토스트/복사/음성/앱실행. 동작 요청은 sense:phone 진단 없이 바로 실행 — 도달성은 sense:phone(푸시 피드) 신선도와 무관, 미도달이면 phone_unreachable 명시됨.
+        description: 폰 네이티브 동작 (op 분기) — 알림/진동/토스트/복사/음성/앱실행/파일저장·공유. 동작 요청은 sense:phone 진단 없이 바로 실행 — 도달성은 sense:phone(푸시 피드) 신선도와 무관, 미도달이면 phone_unreachable 명시됨.
         group: device
-        target_description: 'op=notify(기본): 알림 표시 — title/body. vibrate: 진동 — duration_ms(기본 400). toast: 화면 토스트 — text. clipboard: 클립보드 복사 — text. speak: TTS 음성 — text. open_app: 앱 실행 — package_name(예 com.kakao.talk). sms: 문자 작성창을 받는사람(to)·본문(text) 채워 열기 — 전송은 사용자 탭. call: 다이얼러를 번호(to) 채워 열기 — 통화는 사용자 탭.'
+        target_description: 'op=notify(기본): 알림 표시 — title/body. vibrate: 진동 — duration_ms(기본 400). toast: 화면 토스트 — text. clipboard: 클립보드 복사 — text. speak: TTS 음성 — text. open_app: 앱 실행 — package_name(예 com.kakao.talk). sms: 문자 작성창을 받는사람(to)·본문(text) 채워 열기 — 전송은 사용자 탭. call: 다이얼러를 번호(to) 채워 열기 — 통화는 사용자 탭. save: 파일을 공유 가능한 위치(다운로드 폴더)에 저장 — content(텍스트) 또는 b64(바이너리) + filename/mime. share: 저장 후 공유 시트를 열어 카카오톡 등으로 보내기(공유는 사용자 탭) — content/b64 + filename/mime.'
         target_key: op
         router: handler
         tool: phone_act
@@ -134,6 +134,8 @@ nodes:
             open_app: 앱 실행 (package_name)
             sms: 문자 작성창 열기 (to·text 채움, 전송은 사용자 탭 — 자율 발송 아님)
             call: 다이얼러 열기 (to 채움, 통화는 사용자 탭 — 즉시 발신 아님)
+            save: 파일을 공유 가능한 위치(다운로드)에 저장 (content 또는 b64 + filename)
+            share: 저장 후 공유 시트 열기 (카카오톡 등으로 공유 — 공유는 사용자 탭)
         implementation: Chaquopy Java 브리지로 Kotlin PhoneActions(@JvmStatic) 호출. android 패키지 phone_act 핸들러(scope:system).
         keywords:
         - 폰알림

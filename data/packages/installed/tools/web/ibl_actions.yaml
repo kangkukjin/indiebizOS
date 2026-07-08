@@ -31,38 +31,10 @@ nodes:
         tool: search_gnews
         implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
         target_key: query
-        # 신문 계기 — queries 배치 팬아웃(핸들러)이 항목을 query 로 태그 → group 뷰가 키워드별 섹션.
-        # engines:newspaper 은퇴로 앵커 잃은 신문을 매니페스트로 복원(원격·폰 전 표면). group 콤비네이터 증명 앱.
-        app:
-          instrument: newspaper
-          icon: 📰
-          name: 신문
-          order: 12
-          auto_run: true
-          inputs:
-          - key: keywords
-            type: text
-            label: 키워드(쉼표로 구분)
-            default: 청주,AI,문화,드라마,영화,만화,세종,경제,주식
-          action: '[sense:search_gnews]{queries: "$keywords", curate: 7, headlines: true}'
-          buttons:
-          - label: 🔗 링크로 발행
-            action: '[sense:search_gnews]{queries: "$keywords", curate: 7, headlines: true} >> [table:document]{format: "markdown", group_by: "query", title: "오늘의 신문"} >> [others:publish]{title: "오늘의 신문", slug: "my-newspaper"}'
-          view:
-          - type: group
-            from: items
-            by: '{query}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{summary}'
-                link:
-                  href: '{url}'
-                  label: 기사 보기 →
+        # 신문 계기는 여기서 앵커를 뺐다(정기보고식 재편, 2026-07-09). PC(데스크톱 NewspaperInstrument.tsx)가
+        # '새로 발행' 시 뉴스를 긁어 판을 만들고 outputs/newspaper_current.md 로 저장 → 폰/원격은 그 파일을
+        # 읽어 보여주기만(재취재 없음). 폰/원격 뷰어는 data/instruments/newspaper.yaml 스탠드얼론 매니페스트.
+        # (search_gnews 자체는 데스크톱 계기·일반 뉴스검색이 계속 사용 — 액션은 그대로, app: 블록만 제거.)
   limbs:
     actions:
       launch:

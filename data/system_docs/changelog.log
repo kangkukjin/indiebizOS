@@ -1590,3 +1590,5 @@
 - 구현: system_essentials ibl_actions.yaml(액션 def + tool_json make_directory 엔트리) + handler.py make_directory 분기(os.makedirs exist_ok=True 멱등, 동명 파일 존재 시 거부). build --check 삼각 통과(tool.json 파생 일치)
 - 라이브 검증: /packages/reload 후 [self:mkdir] 생성(existed:false)·멱등 재호출(existed:true)·list 반영 종단 확인. BinNote.tsx makeFolder 를 .keep → [self:mkdir] 전환(tsc 통과)
 - 해마: mkdir 용례 8건 add_examples_batch + ibl_distilled 652→660 + rebuild_index 2650 재임베딩. 연상 2/3 즉시 적중(현 미retrain 모델, "새 폴더"↔limbs:explorer 혼동은 다음 fine-tune 흡수)
+
+[2026-07-08] [self:fill] 신설 — 문서 변환 축의 첫 동사 (144→145 액션). read의 짝으로 문서→문서(구조 보존) 변환 사분면을 엶. PDF 폼(PyMuPDF widget, flatten=제출용 평탄화)·DOCX {{자리표시자}} 치환, data 생략 시 필드 introspection. 새 의존성 0. system_essentials 패키지(ibl_actions.yaml+handler.py). 라이브 종단 검증·해마 12용례. 동기: 스킬/MCP 코퍼스를 거울 삼아 IBL의 빠진 사분면(문서⇄문서) 식별.

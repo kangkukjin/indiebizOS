@@ -146,6 +146,118 @@ def _get_path(tool_input: dict) -> str:
     raw = tool_input.get("file_path") or tool_input.get("path") or tool_input.get("target") or ""
     return os.path.expanduser(raw) if raw else raw
 
+
+def _truthy(v) -> bool:
+    """체크박스 값 해석 — bool 또는 흔한 참 표기 문자열."""
+    if isinstance(v, bool):
+        return v
+    return str(v).strip().lower() in ("true", "yes", "on", "1", "y", "checked", "x", "v", "✓", "예", "네")
+
+
+def _fill_pdf(path: Path, data: dict, output: str, flatten: bool) -> dict:
+    """PDF 폼 채우기 — PyMuPDF widget. data 없으면 필드 목록 반환(introspection)."""
+    import fitz  # PyMuPDF
+    doc = fitz.open(str(path))
+    try:
+        # --- introspection: 채울 수 있는 필드 열거 ---
+        if not data:
+            fields = []
+            for page in doc:
+                for w in (page.widgets() or []):
+                    t = w.field_type_string
+                    f = {"name": w.field_name, "type": t, "value": w.field_value}
+                    if t in ("CheckBox", "RadioButton"):
+                        try:
+                            f["states"] = w.button_states()
+                        except Exception:
+                            pass
+                    if t in ("ComboBox", "ListBox"):
+                        f["options"] = list(getattr(w, "choice_values", None) or [])
+                    fields.append(f)
+            return {"success": True, "mode": "fields", "format": "pdf",
+                    "items": fields, "count": len(fields), "path": str(path)}
+
+        # --- fill ---
+        filled, seen = [], set()
+        for page in doc:
+            for w in (page.widgets() or []):
+                name = w.field_name
+                if name not in data:
+                    continue
+                val = data[name]
+                t = w.field_type_string
+                if t == "CheckBox":
+                    w.field_value = _truthy(val)
+                else:
+                    w.field_value = str(val)
+                w.update()
+                filled.append(name)
+                seen.add(name)
+        unmatched = [k for k in data if k not in seen]
+        if flatten and hasattr(doc, "bake"):
+            doc.bake()  # 폼 필드를 정적 내용으로 구움 → 제출용(수정 불가)
+        doc.save(output, garbage=3, deflate=True)
+        return {"success": True, "path": os.path.abspath(output), "format": "pdf",
+                "filled": filled, "unmatched": unmatched, "flattened": bool(flatten)}
+    finally:
+        doc.close()
+
+
+def _set_para_text(paragraph, text: str) -> None:
+    """문단 텍스트를 통째로 교체 — 첫 run 에 넣고 나머지 run 은 비운다.
+    ({{자리표시자}}가 여러 run 에 쪼개져도 문단 단위로 안전하게 치환)"""
+    runs = paragraph.runs
+    if runs:
+        runs[0].text = text
+        for r in runs[1:]:
+            r.text = ""
+    else:
+        paragraph.add_run(text)
+
+
+def _fill_docx(path: Path, data: dict, output: str) -> dict:
+    """DOCX {{자리표시자}} 치환. data 없으면 자리표시자 이름 목록 반환."""
+    from docx import Document as DocxDocument
+    doc = DocxDocument(str(path))
+    ph = re.compile(r"\{\{\s*([^{}]+?)\s*\}\}")
+
+    def _paras(document):
+        for p in document.paragraphs:
+            yield p
+        for tbl in document.tables:
+            for row in tbl.rows:
+                for cell in row.cells:
+                    for p in cell.paragraphs:
+                        yield p
+
+    # --- introspection ---
+    if not data:
+        keys = set()
+        for p in _paras(doc):
+            for m in ph.finditer(p.text):
+                keys.add(m.group(1).strip())
+        return {"success": True, "mode": "fields", "format": "docx",
+                "items": [{"name": k, "type": "text"} for k in sorted(keys)],
+                "count": len(keys), "path": str(path)}
+
+    # --- fill ---
+    filled = set()
+    for p in _paras(doc):
+        if "{{" not in p.text:
+            continue
+        original = p.text
+        used = [k.strip() for k in ph.findall(original) if k.strip() in data]
+        if not used:
+            continue
+        new = ph.sub(lambda m: str(data.get(m.group(1).strip(), m.group(0))), original)
+        _set_para_text(p, new)
+        filled.update(used)
+    unmatched = [k for k in data if k not in filled]
+    doc.save(output)
+    return {"success": True, "path": os.path.abspath(output), "format": "docx",
+            "filled": sorted(filled), "unmatched": unmatched}
+
+
 def execute(tool_input: dict, context) -> str:
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name
@@ -261,6 +373,48 @@ def execute(tool_input: dict, context) -> str:
             if redirected:
                 result["redirected_to"] = "outputs/"
             return json.dumps(result, ensure_ascii=False)
+
+        elif tool_name == "fill_op":
+            # 양식 채우기 — read 의 짝(문서→문서). PDF 폼 / DOCX 자리표시자.
+            raw_path = _get_path(tool_input)
+            if not raw_path:
+                return json.dumps({"success": False, "error": "템플릿 경로(path)가 지정되지 않았습니다."}, ensure_ascii=False)
+            tpl = Path(raw_path)
+            if not tpl.is_absolute():
+                tpl = Path(project_path) / tpl
+            if not tpl.exists():
+                return json.dumps({"success": False, "error": f"템플릿을 찾을 수 없습니다: {tpl}"}, ensure_ascii=False)
+
+            data = tool_input.get("data") or {}
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except Exception:
+                    return json.dumps({"success": False, "error": "data 는 필드→값 매핑(JSON 객체)이어야 합니다."}, ensure_ascii=False)
+            flatten = _truthy(tool_input.get("flatten", False))
+
+            ext = tpl.suffix.lower().lstrip(".")
+
+            # 출력 경로 — data 있을 때만 필요. 생략 시 원본 옆 _filled.
+            out_raw = tool_input.get("output") or tool_input.get("output_path")
+            if out_raw:
+                out = out_raw if os.path.isabs(out_raw) else os.path.join(project_path, out_raw)
+            else:
+                out = str(tpl.with_name(f"{tpl.stem}_filled{tpl.suffix}"))
+            if data:
+                os.makedirs(os.path.dirname(os.path.abspath(out)) or ".", exist_ok=True)
+
+            try:
+                if ext == "pdf":
+                    res = _fill_pdf(tpl, data, out, flatten)
+                elif ext in ("docx", "doc"):
+                    res = _fill_docx(tpl, data, out)
+                else:
+                    return json.dumps({"success": False,
+                                       "error": f"채우기를 지원하지 않는 형식입니다: .{ext} (지원: pdf, docx)"}, ensure_ascii=False)
+            except Exception as e:  # noqa: BLE001
+                return json.dumps({"success": False, "error": f"양식 채우기 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
+            return json.dumps(res, ensure_ascii=False)
 
         elif tool_name == "list_directory":
             dir_path = os.path.join(project_path, os.path.expanduser(tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or "."))

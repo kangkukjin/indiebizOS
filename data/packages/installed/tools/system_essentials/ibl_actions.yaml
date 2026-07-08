@@ -31,6 +31,25 @@ nodes:
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
         target_key: path
+      fill:
+        returns: effect
+        exempt: '템플릿 파일·데이터 인자 필요(고정 fixture 부적합)'
+        description: 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면 채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기).
+        group: file
+        target_description: 'path — 템플릿 문서(.pdf 폼 또는 {{자리표시자}} 든 .docx). data — 필드→값 매핑({이름: 값}); 생략하면 채울 수 있는 필드 목록 반환(introspection). output — 출력 경로(생략 시 원본 옆 _filled). flatten — PDF 전용, true면 폼을 정적 내용으로 구워 제출용(수정 불가, 기본 false). 스캔 이미지 PDF는 폼 필드가 없어 채울 수 없다(별도 OCR 대상).'
+        router: handler
+        tool: fill_op
+        implementation: handler.py가 확장자로 분기 — PDF는 PyMuPDF widget 값 설정(+flatten=bake), DOCX는 {{자리표시자}} 치환. data 없으면 필드 열거.
+        target_key: path
+        keywords:
+        - 양식
+        - 폼
+        - 채우기
+        - 신청서
+        - 서식
+        - 작성
+        - fill
+        - form
       write:
         returns: effect
         description: 텍스트 파일 새로 쓰기·덮어쓰기. write→run 패턴의 한 축, append 아님.
@@ -795,6 +814,28 @@ tool_json:
           type: string
           description: 동작 분기 — target_description 참조
       additionalProperties: true
+  - name: fill_op
+    description: '양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서 생성. read 의 짝(문서→문서, 구조 보존).
+
+
+      파라미터: path(템플릿 .pdf 폼 또는 {{자리표시자}} 든 .docx). data({필드: 값}) — 생략하면 채울 수 있는 필드 목록을 반환. output(출력 경로, 생략 시 원본 옆 _filled). flatten(PDF 전용, true면 폼을 정적 내용으로 구워 제출용).'
+    input_schema:
+      type: object
+      properties:
+        path:
+          type: string
+          description: 템플릿 문서 경로 (.pdf 폼 또는 {{자리표시자}} 든 .docx)
+        data:
+          type: object
+          description: 필드→값 매핑. 생략하면 채울 수 있는 필드 목록을 반환
+        output:
+          type: string
+          description: 출력 파일 경로 (생략 시 원본 옆 _filled)
+        flatten:
+          type: boolean
+          description: 'PDF 전용 — true면 폼을 정적 내용으로 구워 제출용(수정 불가). 기본 false'
+      required:
+      - path
   - name: spreadsheet
     description: '행 데이터를 xlsx 스프레드시트로 씁니다 (값만, 수식·서식 제외).
 

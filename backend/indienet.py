@@ -696,6 +696,95 @@ class IndieNet:
             print(f"✗ IndieNet: 글 게시 실패 - {e}")
             return None
 
+    def publish_profile(self, about: str = "", name: str = "", extra: dict = None) -> Optional[str]:
+        """공개 프로필(kind:0 메타데이터) 발행. content = 사용자가 작성/설정한 값만(name·about) +
+        indiebiz peer 마커. replaceable(최신본이 이김)이라 재발행이 곧 갱신 → njump.me/npub 이
+        이 프로필을 자기소개 페이지로 렌더한다. 여러 소스에서 정보를 긁어 조합하지 않는다."""
+        if not self._initialized:
+            print("✗ IndieNet이 초기화되지 않음")
+            return None
+        try:
+            import nip17
+            meta: dict = {}
+            if name:
+                meta["name"] = name
+                meta["display_name"] = name
+            if about:
+                meta["about"] = about
+            if extra:
+                meta.update(extra)
+            # indiebizOS peer 마커(kind:0 = 접촉 전 발견용 프로필 마커, DM rumor 태그와 동일 프로토콜)
+            meta["indiebiz_agent"] = {"protocol": nip17.INDIEBIZ_PROTOCOL}
+            content = json.dumps(meta, ensure_ascii=False)
+            if _ON_PHONE:
+                import nostr_phone_bridge as bridge
+                relays = self.settings.relays if self.settings.relays else DEFAULT_RELAYS
+                return bridge.publish_note(0, [], content, relays, int(time.time()))
+            event = Event(pubkey=self.identity.public_key.hex(), content=content, kind=0)
+            event.sign(self.identity.private_key.hex())
+            event_id = self._publish_event(event)
+            if event_id:
+                print(f"✓ IndieNet: 공개 프로필(kind:0) 발행 - {event_id[:16]}...")
+            return event_id
+        except Exception as e:
+            print(f"✗ IndieNet: 공개 프로필 발행 실패 - {e}")
+            return None
+
+    def publish_article(self, title: str, content: str, slug: str,
+                        summary: str = "") -> Optional[str]:
+        """공개 장문 글(NIP-23, kind:30023) 발행. slug=d 태그(같은 slug 재발행 = 같은 글 갱신).
+        content = 사용자가 작성한 마크다운 그대로. njump 가 제목·본문 있는 글로 렌더."""
+        if not self._initialized:
+            print("✗ IndieNet이 초기화되지 않음")
+            return None
+        try:
+            now = int(time.time())
+            tags = [["d", slug], ["title", title or ""], ["published_at", str(now)]]
+            if summary:
+                tags.append(["summary", summary])
+            if _ON_PHONE:
+                import nostr_phone_bridge as bridge
+                relays = self.settings.relays if self.settings.relays else DEFAULT_RELAYS
+                return bridge.publish_note(30023, tags, content or "", relays, now)
+            event = Event(pubkey=self.identity.public_key.hex(), content=content or "", kind=30023)
+            for t in tags:
+                event.tags.append(t)
+            event.sign(self.identity.private_key.hex())
+            event_id = self._publish_event(event)
+            if event_id:
+                print(f"✓ IndieNet: 공개 글(NIP-23) 발행 '{title}' - {event_id[:16]}...")
+            return event_id
+        except Exception as e:
+            print(f"✗ IndieNet: 공개 글 발행 실패 - {e}")
+            return None
+
+    def article_url(self, slug: str) -> Optional[str]:
+        """발행한 NIP-23 글의 공유 링크(njump). naddr(NIP-19 주소)라 같은 slug 재발행해도
+        링크가 최신본을 가리킨다. 실패 시 npub 프로필 링크로 폴백."""
+        try:
+            from pynostr import bech32
+            pubkey_hex = self.identity.public_key.hex()
+
+            def _tlv(t: int, v: bytes) -> bytes:
+                return bytes([t, len(v)]) + v
+
+            # naddr TLV: 0=identifier(slug), 1=relay(옵션·복수), 2=author(32B), 3=kind(4B BE)
+            data = _tlv(0, slug.encode("utf-8"))
+            for r in (self.settings.relays or DEFAULT_RELAYS)[:2]:
+                data += _tlv(1, r.encode("ascii"))
+            data += _tlv(2, bytes.fromhex(pubkey_hex))
+            data += _tlv(3, (30023).to_bytes(4, "big"))
+
+            five = bech32.convertbits(list(data), 8, 5)
+            naddr = bech32.bech32_encode("naddr", five, bech32.Encoding.BECH32)
+            return f"https://njump.me/{naddr}"
+        except Exception as e:
+            print(f"✗ IndieNet: naddr 링크 생성 실패({e}) — npub 폴백")
+            try:
+                return f"https://njump.me/{self.identity.public_key.bech32()}"
+            except Exception:
+                return None
+
     def _publish_event(self, event, relays: List[str] = None) -> Optional[str]:
         """이벤트를 릴레이에 발행. event는 Event 객체 또는 이벤트 dict.
         relays 미지정 시 우리 일반 relay 목록, 지정 시 그 목록으로만 발행
@@ -1195,6 +1284,80 @@ class IndieNet:
             print(f"✗ IndieNet: 팔로잉 피드 조회 실패 - {e}")
             return []
 
+    def _article_accept(self, event: dict) -> Optional[dict]:
+        """kind:30023(NIP-23) 이벤트 → 표준 글 dict. 태그에서 title/summary 추출."""
+        author_hex = event.get("pubkey", "")
+        try:
+            author_npub = PublicKey(bytes.fromhex(author_hex)).bech32()
+        except Exception:
+            author_npub = author_hex
+        title = summary = ""
+        for t in (event.get("tags") or []):
+            if isinstance(t, list) and len(t) >= 2:
+                if t[0] == "title":
+                    title = t[1]
+                elif t[0] == "summary":
+                    summary = t[1]
+        return {
+            "id": event.get("id"),
+            "author": author_npub,
+            "title": title,
+            "summary": summary,
+            "content": event.get("content", ""),
+            "created_at": event.get("created_at"),
+        }
+
+    def fetch_author_articles(self, pubkey: str, limit: int = 20) -> List[dict]:
+        """특정 저자의 공개 장문 글(NIP-23, kind:30023) 조회. fetch_author_posts 와 같은
+        authors 필터 프리미티브 재사용 — kind 만 30023. 새 릴레이 로직 없음."""
+        if not self._initialized:
+            return []
+        author_hex = self._pubkey_to_hex(pubkey)
+        if not author_hex:
+            return []
+        try:
+            arts = self._query_relays({"kinds": [30023], "authors": [author_hex], "limit": limit},
+                                      self._article_accept)
+            arts.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+            return arts[:limit]
+        except Exception as e:
+            print(f"✗ IndieNet: 저자 글(NIP-23) 조회 실패 - {e}")
+            return []
+
+    def _profile_accept(self, event: dict) -> Optional[dict]:
+        """kind:0 이벤트 → 프로필 dict(name/about 등)."""
+        if event.get("kind") != 0:
+            return None
+        try:
+            c = json.loads(event.get("content") or "{}")
+        except Exception:
+            c = {}
+        return {
+            "pubkey": event.get("pubkey"),
+            "name": c.get("name", ""),
+            "display_name": c.get("display_name", ""),
+            "about": c.get("about", ""),
+            "picture": c.get("picture", ""),
+            "created_at": event.get("created_at", 0),
+        }
+
+    def fetch_author_profile(self, pubkey: str) -> Optional[dict]:
+        """저자 공개 프로필(kind:0) 조회. _query_relays 다중 릴레이 프리미티브 재사용
+        (get_user_info 의 단일 릴레이보다 견고 — replaceable 최신본 1개)."""
+        if not self._initialized:
+            return None
+        author_hex = self._pubkey_to_hex(pubkey)
+        if not author_hex:
+            return None
+        try:
+            got = self._query_relays({"kinds": [0], "authors": [author_hex], "limit": 1},
+                                     self._profile_accept)
+            got.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+            return got[0] if got else None
+        except Exception as e:
+            print(f"✗ IndieNet: 저자 프로필 조회 실패 - {e}")
+            return None
+
     def get_user_info(self, pubkey: str) -> Optional[dict]:
         """
         사용자 프로필 정보 조회
@@ -1489,9 +1652,13 @@ class IndieNet:
             print(f"✗ DM inbox relay 발행 실패 - {e}")
             return None
 
-    def send_dm_nip17(self, to_pubkey: str, content: str) -> Optional[str]:
+    def send_dm_nip17(self, to_pubkey: str, content: str,
+                      extra_tags: Optional[list] = None) -> Optional[str]:
         """NIP-17 비공개 DM 발송. 수신자의 kind:10050 DM relay로 gift-wrap(kind1059) 발행.
-        최신 클라이언트(Damus/Amethyst/0xchat)가 읽는 표준 방식."""
+        최신 클라이언트(Damus/Amethyst/0xchat)가 읽는 표준 방식.
+
+        모든 발신 DM 은 rumor 에 indiebizOS peer 표식 태그를 얹는다(nip17.INDIEBIZ_TAG).
+        extra_tags 로 추가 rumor 태그(예: 의뢰 타입)를 실을 수 있다."""
         if not self._initialized:
             print("✗ IndieNet이 초기화되지 않음")
             return None
@@ -1516,7 +1683,11 @@ class IndieNet:
             dm_relays = self.fetch_dm_relays(to_hex)
             print(f"✓ NIP-17 DM: to={to_hex[:16]}... relays={dm_relays}")
 
-            gift_wrap = nip17.wrap_dm(self.identity.private_key.hex(), to_hex, content)
+            peer_tags = [[nip17.INDIEBIZ_TAG, nip17.INDIEBIZ_PROTOCOL]]
+            if extra_tags:
+                peer_tags.extend(extra_tags)
+            gift_wrap = nip17.wrap_dm(self.identity.private_key.hex(), to_hex, content,
+                                      extra_tags=peer_tags)
             event_id = self._publish_event(gift_wrap, relays=dm_relays)
 
             if event_id:

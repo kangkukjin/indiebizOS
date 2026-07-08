@@ -227,7 +227,8 @@
               "list",
               "detail",
               "update",
-              "regenerate"
+              "regenerate",
+              "publish"
             ],
             "default": "list"
           },

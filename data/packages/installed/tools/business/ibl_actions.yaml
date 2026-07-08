@@ -188,6 +188,8 @@ nodes:
             - label: ↻ 비즈니스 기반 재생성
               action: '[self:business_document]{op: "regenerate"}'
               refresh: true
+            - label: 🌐 공개 발행
+              action: '[self:business_document]{op: "publish"}'
             action: '[self:business_document]{op: "list"}'
             view:
             - type: card_list
@@ -209,7 +211,7 @@ nodes:
                   action: '[self:business_document]{op: "update", level: "{document.level}", title: "$title", content: "$content"}'
                   button: 저장
               card:
-                title: 레벨 {level} · {title}
+                title: '{title}'
                 lines:
                 - '{content|trunc:60}'
           - name: 근무지침
@@ -286,9 +288,9 @@ nodes:
       business_document:
         returns: items
         fixture: '[self:business_document]{op: "list"}'
-        description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 조회·관리 — op:list(기본, items 통화)/detail/update/regenerate(단건 op는 해당 문서 응답).
+        description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 조회·관리 — op:list(기본, items 통화)/detail/update/regenerate/publish(사용자 작성 공개인사프로필+열린 문서0을 Nostr 공개 발행).
         group: business
-        target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content) / regenerate(비즈니스·아이템 기반 레벨별 자동 재생성, 파라미터 없음).
+        target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content) / regenerate(비즈니스·아이템 기반 레벨별 자동 재생성, 파라미터 없음) / publish(공개인사프로필 kind:0 + 열린 문서0 NIP-23 발행, 파라미터 없음).
         target_key: op
         router: handler
         tool: business_document_op
@@ -299,6 +301,7 @@ nodes:
             detail: 특정 레벨 문서 (level 필수)
             update: 문서 수정 (level + title/content)
             regenerate: 비즈니스·아이템 기반 레벨별 자동 재생성
+            publish: 공개인사프로필+열린 문서0을 Nostr 공개 발행(kind:0 프로필 + NIP-23 글)
         implementation: business 패키지 business_document_op — business_manager.get_all_business_documents/get_business_document/update_business_document/regenerate_business_documents.
         keywords:
         - 비즈니스 문서

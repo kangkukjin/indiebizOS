@@ -75,11 +75,17 @@
               "en"
             ],
             "description": "언어 (기본 ko)"
+          },
+          "curate": {
+            "type": "integer",
+            "description": "지정 시 경량 AI 섹션 편집자가 같은 사건 중복 기사를 하나로 묶고 뉴스가치 순으로 이 개수만큼 선별. 오버페치(약 3배) 후 dedup → 빈 자리 자동 채움. 신문 섹션용. 미지정 시 순수 검색."
+          },
+          "headlines": {
+            "type": "boolean",
+            "description": "true면 키워드 없이 구글뉴스 톱 헤드라인을 가져온다. curate와 함께 쓰면 오늘 가장 많이 다뤄진 사건 순으로 '오늘의 핫토픽' 섹션이 된다. query 불필요."
           }
         },
-        "required": [
-          "query"
-        ]
+        "required": []
       }
     },
     {

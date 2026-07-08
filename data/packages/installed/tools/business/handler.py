@@ -253,12 +253,14 @@ def _msg_inbox(bm, tool_input: dict) -> str:
             preview, time_s, sort, unread = "", "", 0.0, 0
         if channel == "nostr" and to:
             biz_nostr_hex.add(_npub_to_hex(to))
+        peer = _int_or(n.get("is_indiebiz_peer", 0), 0)
         convs.append({
             "id": n["id"], "pubkey": "", "name": n.get("name", ""), "channel": channel,
             "to": to, "preview": preview, "time": time_s, "unread": unread, "_sort": sort,
             "info_level": n.get("info_level", 0), "rating": n.get("rating", 0),
             "favorite": n.get("favorite", 0), "is_neighbor": 1,
-            "badge": _badge(1, n.get("info_level", 0), n.get("rating", 0)),
+            "is_indiebiz_peer": peer, "peer_version": n.get("peer_version") or "",
+            "badge": ("🤖 " if peer else "") + _badge(1, n.get("info_level", 0), n.get("rating", 0)),
         })
 
     # dms.db: 이웃으로 안 잡힌 Nostr DM 상대를 대화로 추가 (캐시 직접 — 릴레이 안 침).
@@ -628,6 +630,45 @@ def _doc_regenerate(bm, ti: dict) -> str:
     return _err((r or {}).get("message") or "문서 재생성에 실패했습니다.")
 
 
+def _doc_publish(bm, ti: dict) -> str:
+    """공개인사프로필(kind:0) + 열린 비즈니스 문서 0(NIP-23)을 Nostr 공개 발행.
+    사용자가 공개문서 난에 직접 작성한 내용만 verbatim 발행 — 데이터 수집·합성 없음."""
+    from business_manager import GREETING_DOC_LEVEL
+    ind = _indienet()
+    if not ind:
+        return _err("IndieNet(Nostr) 미초기화 — 먼저 계정을 설정하세요.")
+    greeting = ((bm.get_business_document(GREETING_DOC_LEVEL) or {}).get("content") or "").strip()
+    doc0 = bm.get_business_document(0) or {}
+    doc0_content = (doc0.get("content") or "").strip()
+    if not greeting and not doc0_content:
+        return _err("공개할 내용이 없습니다. 공개문서의 '공개인사프로필'을 먼저 작성하세요.")
+    name = ""
+    try:
+        name = (ind.identity.display_name or "").strip()
+    except Exception:
+        pass
+    published = {}
+    # 1) 공개인사프로필 → kind:0 (자기소개 카드)
+    pid = ind.publish_profile(about=greeting, name=name)
+    if pid:
+        published["profile"] = pid
+    # 2) 열린 비즈니스 문서 0 → NIP-23 (장문 글). 같은 slug 재발행 = 같은 글 갱신.
+    if doc0_content:
+        aid = ind.publish_article(title=(doc0.get("title") or "비즈니스 안내"),
+                                  content=doc0_content, slug="open-business-0")
+        if aid:
+            published["article"] = aid
+    if not published:
+        return _err("발행에 실패했습니다 (릴레이 응답 없음).")
+    npub = ""
+    try:
+        npub = ind.identity.npub or ""
+    except Exception:
+        pass
+    msg = "공개 발행 완료" + (f" — https://njump.me/{npub}" if npub else "")
+    return _ok({"published": published, "npub": npub}, msg)
+
+
 def _guide_list(bm, ti: dict) -> str:
     """레벨별 근무 지침 전체(레벨 0-4).
 
@@ -766,7 +807,7 @@ _OP_DISPATCHERS = {
     "business_op": {"list": _biz_list, "detail": _biz_detail, "save": _biz_save, "delete": _biz_delete},
     "business_item_op": {"list": _item_list, "detail": _item_detail, "save": _item_save, "delete": _item_delete,
                           "add_image": _item_add_image, "remove_image": _item_remove_image},
-    "business_document_op": {"list": _doc_list, "detail": _doc_detail, "update": _doc_update, "regenerate": _doc_regenerate},
+    "business_document_op": {"list": _doc_list, "detail": _doc_detail, "update": _doc_update, "regenerate": _doc_regenerate, "publish": _doc_publish},
     "work_guideline_op": {"list": _guide_list, "detail": _guide_detail, "update": _guide_update},
     "auto_response_op": {"status": _ar_status, "start": _ar_start, "stop": _ar_stop},
 }

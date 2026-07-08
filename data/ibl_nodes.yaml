@@ -1546,7 +1546,7 @@ nodes:
             type: text
             label: 키워드(쉼표로 구분)
             default: 청주,AI,문화,드라마,영화,만화,세종,경제,주식
-          action: '[sense:search_gnews]{queries: "$keywords", count: 5}'
+          action: '[sense:search_gnews]{queries: "$keywords", curate: 7}'
           view:
           - type: group
             from: items
@@ -2251,6 +2251,8 @@ nodes:
             - label: ↻ 비즈니스 기반 재생성
               action: '[self:business_document]{op: "regenerate"}'
               refresh: true
+            - label: 🌐 공개 발행
+              action: '[self:business_document]{op: "publish"}'
             action: '[self:business_document]{op: "list"}'
             view:
             - type: card_list
@@ -2272,7 +2274,7 @@ nodes:
                   action: '[self:business_document]{op: "update", level: "{document.level}", title: "$title", content: "$content"}'
                   button: 저장
               card:
-                title: 레벨 {level} · {title}
+                title: '{title}'
                 lines:
                 - '{content|trunc:60}'
           - name: 근무지침
@@ -2349,9 +2351,9 @@ nodes:
       business_document:
         returns: items
         fixture: '[self:business_document]{op: "list"}'
-        description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 조회·관리 — op:list(기본, items 통화)/detail/update/regenerate(단건 op는 해당 문서 응답).
+        description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 조회·관리 — op:list(기본, items 통화)/detail/update/regenerate/publish(사용자 작성 공개인사프로필+열린 문서0을 Nostr 공개 발행).
         group: business
-        target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content) / regenerate(비즈니스·아이템 기반 레벨별 자동 재생성, 파라미터 없음).
+        target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content) / regenerate(비즈니스·아이템 기반 레벨별 자동 재생성, 파라미터 없음) / publish(공개인사프로필 kind:0 + 열린 문서0 NIP-23 발행, 파라미터 없음).
         target_key: op
         router: handler
         tool: business_document_op
@@ -2362,6 +2364,7 @@ nodes:
             detail: 특정 레벨 문서 (level 필수)
             update: 문서 수정 (level + title/content)
             regenerate: 비즈니스·아이템 기반 레벨별 자동 재생성
+            publish: 공개인사프로필+열린 문서0을 Nostr 공개 발행(kind:0 프로필 + NIP-23 글)
         implementation: business 패키지 business_document_op — business_manager.get_all_business_documents/get_business_document/update_business_document/regenerate_business_documents.
         keywords:
         - 비즈니스 문서
@@ -3444,6 +3447,18 @@ nodes:
         - 발송
         - 텔레그램
         - 이메일
+      publish:
+        returns: effect
+        description: 내가 쓴 글(마크다운)을 Nostr 공개 장문(NIP-23, kind:30023)으로 발행하고 공유 링크(njump)를 돌려준다. 신문·리포트를 친구에게 링크 하나로. slug 재발행 = 같은 주소 갱신. 발행물은 사용자/앱이 조립한 것만 그대로(조작·PII 금지).
+        target_description: title=글 제목. content=마크다운 본문(사용자/앱이 조립). slug=주소 식별자(생략 시 제목 기반, 같은 slug 재발행=갱신). summary=옵션 요약. 반환=njump 링크(url).
+        group: channel
+        target_key: title
+        router: channel_engine
+        implementation: channel_engine._publish_article → indienet.publish_article(kind:30023) 릴레이 fan-out + article_url(naddr) njump 링크 생성.
+        keywords:
+        - 발행
+        - 공개글
+        - 링크공유
       channel_read:
         returns: items
         fixture: '[others:channel_read]{channel_type: "gmail"}'
@@ -3493,6 +3508,12 @@ nodes:
               item_click:
                 action: '[others:feed]{op: "read", author: "{author_full}"}'
                 view:
+                - type: card_list
+                  from: profile
+                  card:
+                    title: '{name}'
+                    lines:
+                    - '{about}'
                 - type: list_action
                   from: author_row
                   icon: '@'
@@ -3506,6 +3527,12 @@ nodes:
                     label: 이웃 등록
                     action: '[others:neighbor]{op: "save", name: "{name}", npub: "{pubkey}"}'
                     refresh: true
+                - type: card_list
+                  from: articles
+                  card:
+                    title: 📄 {title}
+                    lines:
+                    - '{content}'
                 - type: card_list
                   from: items
                   empty_from: message
@@ -3544,6 +3571,18 @@ nodes:
                 action: '[others:feed]{op: "read", author: "{pubkey}"}'
                 view:
                 - type: card_list
+                  from: profile
+                  card:
+                    title: '{name}'
+                    lines:
+                    - '{about}'
+                - type: card_list
+                  from: articles
+                  card:
+                    title: 📄 {title}
+                    lines:
+                    - '{content}'
+                - type: card_list
                   from: items
                   empty_from: message
                   card:
@@ -3577,6 +3616,12 @@ nodes:
               item_click:
                 action: '[others:feed]{op: "read", author: "{author_full}"}'
                 view:
+                - type: card_list
+                  from: profile
+                  card:
+                    title: '{name}'
+                    lines:
+                    - '{about}'
                 - type: list_action
                   from: author_row
                   icon: '@'
@@ -3590,6 +3635,12 @@ nodes:
                     label: 이웃 등록
                     action: '[others:neighbor]{op: "save", name: "{name}", npub: "{pubkey}"}'
                     refresh: true
+                - type: card_list
+                  from: articles
+                  card:
+                    title: 📄 {title}
+                    lines:
+                    - '{content}'
                 - type: card_list
                   from: items
                   empty_from: message

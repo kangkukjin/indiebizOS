@@ -289,6 +289,8 @@ def execute_channel_action(action: str, params: dict,
         return _community_follow(params)
     if action == "nostr":
         return _nostr_identity(params)
+    if action == "publish":
+        return _publish_article(params)
 
     channel_type_raw = params.get("channel_type", "")
     if not channel_type_raw:
@@ -385,6 +387,33 @@ def _get_indienet():
     if not indienet.is_initialized():
         raise Exception("IndieNet이 초기화되지 않았습니다. Nostr 설정을 먼저 완료하세요.")
     return indienet
+
+
+def _publish_article(params: dict) -> dict:
+    """others:publish — 마크다운을 NIP-23(kind:30023) 공개 글로 발행하고 njump 링크 반환.
+    신문·리포트를 친구에게 링크 하나로 공유. slug 재발행 = 같은 주소 갱신.
+    ★발행물=사용자/앱이 조립한 것만 verbatim(조작·PII 유출 금지)."""
+    indienet = _get_indienet()
+    title = (params.get("title") or "").strip()
+    content = params.get("content") or ""
+    slug = (params.get("slug") or "").strip()
+    summary = (params.get("summary") or "").strip()
+    if not content:
+        return {"error": "content(마크다운 본문)가 필요합니다."}
+    if not slug:
+        import re as _re
+        slug = _re.sub(r"[^0-9a-z가-힣]+", "-", title.lower()).strip("-") or "article"
+    event_id = indienet.publish_article(title=title, content=content, slug=slug, summary=summary)
+    if not event_id:
+        return {"error": "발행 실패 — Nostr 설정/릴레이 연결을 확인하세요."}
+    url = indienet.article_url(slug)
+    return {
+        "success": True,
+        "event_id": event_id,
+        "slug": slug,
+        "url": url,
+        "message": f"공개 발행 완료 — {url}" if url else "공개 발행 완료",
+    }
 
 
 # === 커뮤니티 (IndieNet 피드/보드) — others:feed / others:board ===
@@ -497,6 +526,27 @@ def _community_feed(params: dict) -> dict:
             "name": (author[:12] + "…") if str(author).startswith("npub") and len(str(author)) > 14 else author,
             **_bridge_status(str(author), indienet),
         }]
+        # 공개 얼굴: kind:0 인사말 + kind:30023 공개 문서를 동봉 → 드릴다운에서 프로필·문서에 도달.
+        short_a = (author[:12] + "…") if str(author).startswith("npub") and len(str(author)) > 14 else str(author)
+        about, pname = "", ""
+        try:
+            info = indienet.fetch_author_profile(author) or {}
+            about = (info.get("about") or "").strip()
+            pname = (info.get("name") or info.get("display_name") or "").strip()
+        except Exception:
+            pass
+        out["profile"] = [{"name": pname or short_a, "about": about}] if about else []
+        try:
+            arts = indienet.fetch_author_articles(pubkey=author, limit=20)
+        except Exception:
+            arts = []
+        out["articles"] = [{
+            "title": a.get("title") or "(제목 없음)",
+            "content": (a.get("content") or "").strip(),
+            "summary": a.get("summary") or "",
+            "time": _fmt_unix(a.get("created_at")),
+            "id": a.get("id") or "",
+        } for a in (arts or [])]
     # 게시판 계기용(with_boards: true) — 활성 보드 글 + 보드 목록을 한 액션·한 응답으로.
     if str(params.get("with_boards") or "").lower() in ("true", "1", "yes"):
         out["boards"] = _boards_items(indienet)

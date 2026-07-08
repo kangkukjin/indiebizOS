@@ -542,10 +542,20 @@ def _auto_inject_prev(tool_input: dict, prev_result: str) -> dict:
 
 
 def _to_string(result: Any) -> str:
-    """결과를 문자열로 변환"""
+    """결과를 문자열로 변환 (다음 step 의 _prev_result 로 주입)."""
     if isinstance(result, str):
         return result
     if isinstance(result, dict):
+        # 포워드된 결과 봉투 벗기기 — @hub/@노드 로 원격 실행된 bare-string 읽기는
+        # {"result": "<본문>", "_forwarded_to": ...} 로 감싸져 온다. 다음 step 은 전송 봉투가
+        # 아니라 *본문*을 원하므로 내부 본문만 넘긴다(크로스노드 이음매).
+        # ★단 통화(items/table)가 있으면 벗기지 않는다 — 변환자(table:sort 등)가 통화를 소비해야
+        #   하는데, text 같은 요약 문자열로 벗기면 통화가 사라진다(file_find@hub >> sort 회귀).
+        if result.get("_forwarded_to") and "items" not in result and "table" not in result:
+            for _k in ("result", "message", "markdown", "text", "content"):
+                _v = result.get(_k)
+                if isinstance(_v, str):
+                    return _v
         return json.dumps(result, ensure_ascii=False)
     if isinstance(result, (list, tuple)):
         return json.dumps(result, ensure_ascii=False)

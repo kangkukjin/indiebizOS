@@ -1,41 +1,41 @@
-# 정기보고 앱 — 어휘 없는 순수 매니페스트 (상부구조).
+# 정기보고 앱 — 어휘 없는 순수 매니페스트 (상부구조). 신문과 같은 "PC 문서" 형(型).
 #
-# 옛 report-viewer 패키지의 self:report 전용 액션을 은퇴하고, 이 앱을 전부 일반
-# 어휘의 조합으로 재구성했다. 여기엔 새 IBL 액션이 하나도 없다 — 모든 모드의
-# action: 은 일반 부품(self:file_find / self:read / others:delegate)만 부른다.
-#
-#   보기(목록·최신) = [self:file_find] → [self:read]{blocks} → blocks 뷰(문서 IR 렌더)
+#   보기(최신·목록) = [self:file_find]@hub → [self:read]{blocks}@hub → blocks 뷰
+#   공유           = 최신 보고서를 @hub 로 읽어 [limbs:phone]{share} (폰 Downloads + 공유 시트)
 #   생성(작성)     = [others:delegate]{scope: system}  (자율주행에 위임)
 #   레시피         = data/guides/ai_trend_report.md · ai_startup_report.md (어휘 아님)
-#   정기 실행      = [self:trigger]{op: create, cron} 로 별도 등록(앱 밖)
 #
-# %BASE% 는 서버측(_derive_instruments)에서 레포 루트로 치환된다(폰/타 머신 이식성).
-# 새 보고서 타입 추가 = 아래 두 select 의 options 에 {value: 폴더, label: 이름}
-# 한 줄 + 작성 버튼 하나. 코드 변경 0.
+# ★다중 노드(신문과 동일 크리스털라이즈): 보고서 파일은 PC(맥)에 산다(가이드가 절대경로 고정).
+#  읽기를 `@hub`(주 컴퓨트 노드=PC)로 지정 → 맥에선 로컬, 폰에선 맥으로 포워드해 당겨온다.
+#  경로는 가이드가 고정한 절대경로를 그대로 쓴다(포워드돼도 맥에서 그 경로가 정답 — %BASE% 는
+#  서빙 노드 기준이라 폰서 포워드 시 어긋나므로 안 씀). 저술(가이드/시스템 AI)은 무변경.
 
 instrument: report
 icon: 📑
 name: 정기보고
 order: 16
-phone_render: false   # 보고서는 맥 outputs/ 에 산다 — 폰은 맥 리모컨(원격)만, 폰 네이티브 숨김
 
 modes:
-  # ── 최신: 선택 타입의 가장 최근 보고서 본문 ──
+  # ── 최신: 선택 타입의 가장 최근 보고서 본문 (@hub = PC 에서 읽기) ──
   - name: 최신
     auto_run: true
     inputs:
       - key: folder
         type: select
         placeholder: 보고서 종류
-        default: "%BASE%/outputs/ai_trend_reports"   # auto_run 시 기본 선택(옛 handler DEFAULT_TYPE 대체)
+        default: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports"
         options:
-          - {value: "%BASE%/outputs/ai_trend_reports",   label: AI 동향 보고서}
-          - {value: "%BASE%/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
-    action: '[self:file_find]{pattern: "*.md", path: "$folder"} | sort: title desc | take: 1 >> [self:read]{scope: "workspace", blocks: true}'
+          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports",   label: AI 동향 보고서}
+          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
+    action: '[self:file_find]{pattern: "*.md", path: "$folder"}@hub | sort: title desc | take: 1 >> [self:read]{scope: "workspace", blocks: true}@hub'
     view:
       - type: blocks
         from: items
         empty: 아직 작성된 보고서가 없습니다 — "작성" 탭에서 새 보고서를 만들어 보세요.
+    # 폰에 저장·공유 — 최신 보고서를 @hub 로 읽어 폰 공유 시트로(카카오톡 등). 공유는 사용자 탭.
+    buttons:
+      - label: 📤 폰에 저장·공유
+        action: '[self:file_find]{pattern: "*.md", path: "$folder"}@hub | sort: title desc | take: 1 >> [self:read]{scope: "workspace"}@hub >> [limbs:phone]{op: "share", filename: "report.md", mime: "text/markdown"}'
 
   # ── 목록: 선택 타입의 전체 보고서(최신순), 클릭하면 본문 ──
   - name: 목록
@@ -44,11 +44,11 @@ modes:
       - key: folder
         type: select
         placeholder: 보고서 종류
-        default: "%BASE%/outputs/ai_trend_reports"   # auto_run 시 기본 선택(옛 handler DEFAULT_TYPE 대체)
+        default: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports"
         options:
-          - {value: "%BASE%/outputs/ai_trend_reports",   label: AI 동향 보고서}
-          - {value: "%BASE%/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
-    action: '[self:file_find]{pattern: "*.md", path: "$folder"} | sort: title desc'
+          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports",   label: AI 동향 보고서}
+          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
+    action: '[self:file_find]{pattern: "*.md", path: "$folder"}@hub | sort: title desc'
     view:
       - type: card_list
         from: items
@@ -58,7 +58,7 @@ modes:
           lines:
             - '{meta}'
         item_click:
-          action: '[self:read]{path: "{url}", scope: "workspace", blocks: true}'
+          action: '[self:read]{path: "{url}", scope: "workspace", blocks: true}@hub'
           view:
             - type: blocks
               from: items

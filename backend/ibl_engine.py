@@ -354,7 +354,22 @@ def _resolve_and_maybe_forward(node, action, action_config, params,
     except Exception:
         dr = None
 
-    # 1. 명시 주소 @alias 최우선
+    # 0. 예약 별칭 @hub — 주(主) 컴퓨트 노드(PC). 별칭 하드코딩(@맥)을 대체하는 일반 지시.
+    #    "PC 가 만든 문서를 어느 표면에서든 @hub 로 읽는다" 같은 크로스노드 패턴의 이음매.
+    #    - 컴퓨트 노드(맥/데스크탑, profile!=phone) = 자기가 허브 → 로컬 실행.
+    #    - 폰 = 허브(맥)로 포워드: 라이브 컴퓨트 노드 우선, 없으면 INDIEBIZ_MAC_URL(콜드).
+    if target_alias == "hub":
+        if profile != "phone":
+            return None  # 컴퓨트 노드 자신이 허브 → 로컬
+        if dr is not None:
+            _cc = dr.live_with_capability(dr.COMPUTE_CLASS)
+            _prim = next((c for c in _cc if c.get("primary") and c.get("url")),
+                         next((c for c in _cc if c.get("url")), None))
+            if _prim:
+                return _forward_to_node(_prim, node, action, params, agent_id)
+        return _forward_to_mac(node, action, params, agent_id=agent_id)  # env 폴백
+
+    # 1. 명시 주소 @alias
     if target_alias:
         if dr is None:
             return {"error": f"노드 주소지정(@{target_alias})을 쓸 수 없습니다(레지스트리 미가용)."}

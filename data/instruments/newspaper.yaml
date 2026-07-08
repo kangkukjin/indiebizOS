@@ -5,9 +5,9 @@
 # 폰/원격은 그 파일을 읽어 보여주기만 한다 — 재취재도, 뉴스 팬아웃도 하지 않는다.
 #
 # ★다중 노드: 신문 파일은 PC(맥)에 산다. 폰 네이티브 앱에서도 보이게 하되(파일은 폰에 없으므로)
-#  읽기를 `@맥` 으로 지정해 컴퓨트 노드(맥)에서 실행시킨다:
-#   - 맥/데스크탑/원격(맥 백엔드)  : @맥 = 자기 자신 → 로컬 읽기.
-#   - 폰 네이티브                 : @맥 = 맥으로 포워드(project_id=앱모드 동봉) → 맥이 읽어 결과 반환.
+#  읽기를 `@hub` 으로 지정해 컴퓨트 노드(맥)에서 실행시킨다:
+#   - 맥/데스크탑/원격(맥 백엔드)  : @hub = 자기 자신 → 로컬 읽기.
+#   - 폰 네이티브                 : @hub = 맥으로 포워드(project_id=앱모드 동봉) → 맥이 읽어 결과 반환.
 #  경로는 %BASE% 절대경로(=서빙 노드 기준이라 포워드 시 어긋남) 대신 **상대경로 + scope:workspace**
 #  를 써서 어느 노드에서 실행되든 그 노드의 projects/앱모드/outputs 로 풀리게 한다.
 
@@ -17,16 +17,16 @@ name: 신문
 order: 12
 
 modes:
-  # ── PC 가 발행한 최신 신문 판을 읽어 보여준다(재취재 없음). @맥 = 맥에서 읽기(폰은 포워드). ──
+  # ── PC 가 발행한 최신 신문 판을 읽어 보여준다(재취재 없음). @hub = 맥에서 읽기(폰은 포워드). ──
   - name: 신문
     auto_run: true
-    action: '[self:read]{path: "outputs/newspaper_current.md", scope: "workspace", blocks: true}@맥'
+    action: '[self:read]{path: "outputs/newspaper_current.md", scope: "workspace", blocks: true}@hub'
     view:
       - type: blocks
         from: items
         empty: 아직 발행된 신문이 없습니다 — PC 의 신문 앱에서 "새로 발행"을 눌러 만드세요.
-    # 폰에 저장·공유 — 맥의 자기완결 HTML 판을 @맥 으로 읽어(raw 텍스트=_prev_result) 폰 공유 시트로.
-    # read 는 @맥(맥에서 읽기), share 는 phone_only(폰에서 저장+ACTION_SEND). 공유는 사용자 탭.
+    # 폰에 저장·공유 — 맥의 자기완결 HTML 판을 @hub 으로 읽어(raw 텍스트=_prev_result) 폰 공유 시트로.
+    # read 는 @hub(맥에서 읽기), share 는 phone_only(폰에서 저장+ACTION_SEND). 공유는 사용자 탭.
     buttons:
       - label: 📤 폰에 저장·공유
-        action: '[self:read]{path: "outputs/newspaper_current.html", scope: "workspace"}@맥 >> [limbs:phone]{op: "share", filename: "newspaper.html", mime: "text/html"}'
+        action: '[self:read]{path: "outputs/newspaper_current.html", scope: "workspace"}@hub >> [limbs:phone]{op: "share", filename: "newspaper.html", mime: "text/html"}'

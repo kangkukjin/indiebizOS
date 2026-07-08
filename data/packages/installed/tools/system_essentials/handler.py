@@ -196,11 +196,21 @@ def _fill_pdf(path: Path, data: dict, output: str, flatten: bool) -> dict:
         unmatched = [k for k in data if k not in seen]
         if flatten and hasattr(doc, "bake"):
             doc.bake()  # 폼 필드를 정적 내용으로 구움 → 제출용(수정 불가)
+        # PyMuPDF는 열려 있는 원본에 직접 덮어쓸 수 없다 — output==template(제자리 채우기)이면
+        # 임시 파일에 저장 후 교체.
+        if os.path.abspath(output) == os.path.abspath(str(path)):
+            tmp = output + ".tmp"
+            doc.save(tmp, garbage=3, deflate=True)
+            doc.close()
+            os.replace(tmp, output)
+            return {"success": True, "path": os.path.abspath(output), "format": "pdf",
+                    "filled": filled, "unmatched": unmatched, "flattened": bool(flatten)}
         doc.save(output, garbage=3, deflate=True)
         return {"success": True, "path": os.path.abspath(output), "format": "pdf",
                 "filled": filled, "unmatched": unmatched, "flattened": bool(flatten)}
     finally:
-        doc.close()
+        if not getattr(doc, "is_closed", False):
+            doc.close()
 
 
 def _set_para_text(paragraph, text: str) -> None:

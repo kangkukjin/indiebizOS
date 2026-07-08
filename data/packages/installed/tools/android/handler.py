@@ -314,8 +314,19 @@ def _phone_act(tool_input: dict) -> dict:
         b64 = tool_input.get("b64")
         if content is None and b64 is None:
             prev = tool_input.get("_prev_result")
+            # @맥 등으로 포워드된 read 결과는 {"result": "<본문>", "_forwarded_to": ...} JSON 봉투로 옴 → 벗긴다.
+            # (로컬 read 는 순수 문자열이라 파싱 실패 → 그대로 사용.)
+            if isinstance(prev, str):
+                try:
+                    import json as _json
+                    _parsed = _json.loads(prev)
+                    if isinstance(_parsed, dict):
+                        prev = _parsed
+                except Exception:
+                    pass
             if isinstance(prev, dict):
-                content = prev.get("message") or prev.get("markdown") or prev.get("text") or prev.get("content")
+                content = (prev.get("result") or prev.get("message") or prev.get("markdown")
+                           or prev.get("text") or prev.get("content"))
             elif isinstance(prev, str):
                 content = prev
         if b64:

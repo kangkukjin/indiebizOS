@@ -1094,6 +1094,9 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 "_node": step.get("_node", step.get("node", "")),
                 "action": step.get("action", ""),
                 "params": step.get("params", {}),
+                # 노드 주소지정(@별칭) 전달 — 단일 액션도 특정 노드로 라우팅(파이프 경로는 이미 전달됨).
+                # 없으면 `[self:read]{...}@맥` 이 폰서 로컬 실행돼 맥 파일을 못 읽는다(다중노드 버그).
+                "target_node": step.get("target_node"),
             }
             # 노드 타입 처리 (info, store, exec, output)
             node = step.get("_node", step.get("node", ""))

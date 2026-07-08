@@ -136,6 +136,11 @@ tasks.register('bundleIndiebizBase', Zip) {
     // 레지스트리 + 폰 프로파일 매니페스트 (단일 진실 소스)
     from("${_ROOT}/data/ibl_nodes.yaml") { into 'data' }
     from("${_ROOT}/data/phone_manifest.json") { into 'data' }
+    // 어휘 없는 순수 앱(상부구조) — data/instruments/*.yaml (신문·정기보고 등). _derive_instruments 가
+    // 폰서도 로드 → 폰 네이티브 앱에 이 계기들이 뜬다(파일은 @맥 으로 PC 에서 당겨옴).
+    from("${_ROOT}/data/instruments") {
+        into 'data/instruments'
+    }
     // 공용 프롬프트 에셋 (step4: prompt_builder 가 로드 — base/consciousness/evaluator/unconscious 등)
     from("${_ROOT}/data/common_prompts") {
         into 'data/common_prompts'

@@ -360,6 +360,11 @@ def _resolve_and_maybe_forward(node, action, action_config, params,
             return {"error": f"노드 주소지정(@{target_alias})을 쓸 수 없습니다(레지스트리 미가용)."}
         entry = dr.get_by_alias(target_alias)
         if entry is None:
+            # 콜드 레지스트리 폴백(단일 사용자 홈): 폰에서 못 찾는 @별칭은 허브(맥)로 본다.
+            # 폰의 실질 원격은 맥 하나뿐 — 재설치/TTL 로 레지스트리가 비어도 INDIEBIZ_MAC_URL 로
+            # 도달한다(autopilot 프록시가 쓰는 값). 맥에선(profile!=phone) 폴백 안 함 → 기존 에러 유지.
+            if profile == "phone" and os.environ.get("INDIEBIZ_MAC_URL"):
+                return _forward_to_mac(node, action, params, agent_id=agent_id)
             live = dr.live_aliases()
             return {"error": f"'@{target_alias}' 노드를 찾을 수 없습니다. 지금 연결된 노드: "
                              f"{', '.join(live) if live else '없음'}",

@@ -173,9 +173,17 @@ def _msg_thread(bm, tool_input: dict) -> str:
         target_hex = _npub_to_hex(pubkey)
 
     # dms.db 병합 (이 대화의 nostr 상대 hex 로 필터, 캐시 직접 — 릴레이 안 침)
+    following_label = ""
     if target_hex:
         ind = _indienet()
         if ind:
+            try:
+                # 승격 다리 역방향 표시 — 이 상대를 IndieNet에서 팔로우 중인지
+                if any(_npub_to_hex(f.get("pubkey", "")) == target_hex
+                       for f in (ind.get_follows() or [])):
+                    following_label = "팔로우 중"
+            except Exception:
+                pass
             try:
                 my_hex = ind.identity.public_key.hex()
                 for d in ind._get_cached_dms(limit=500):
@@ -210,6 +218,7 @@ def _msg_thread(bm, tool_input: dict) -> str:
         "is_neighbor": bool(nb),
         "badge": _badge(bool(nb), nb.get("info_level", 0) if nb else 0, nb.get("rating", 0) if nb else 0),
         "contacts": contacts,
+        "following_label": following_label,  # IndieNet 팔로우 여부 (승격 다리 역방향 표시)
         "message": "" if items else "주고받은 메시지가 없습니다.",
     }, ensure_ascii=False)
 
@@ -308,8 +317,12 @@ def _int_or(v, default=None):
 
 
 def _nb_save(bm, ti: dict) -> str:
-    """이웃 생성(id 없음)/수정(id 있음) — 이름·정보레벨·평점·정보공유·메모·비즈니스문서."""
+    """이웃 생성(id 없음)/수정(id 있음) — 이름·정보레벨·평점·정보공유·메모·비즈니스문서.
+
+    npub 옵션: nostr 연락처를 함께 연결(IndieNet 팔로우→이웃 승격 다리). 같은 npub 이
+    이미 이웃이면 새로 만들지 않고 그 이웃을 반환(멱등 — 승격 버튼 중복 클릭 안전)."""
     nid = _int_or(ti.get("id") or ti.get("neighbor_id"))
+    npub = (ti.get("npub") or "").strip()
     fields = {}
     for k in ("name", "additional_info", "business_doc"):
         if ti.get(k) is not None:
@@ -319,12 +332,33 @@ def _nb_save(bm, ti: dict) -> str:
             fields[k] = _int_or(ti.get(k), 0)
     if nid:
         nb = bm.update_neighbor(nid, **fields)
+        if npub:
+            _ensure_nostr_contact(bm, nid, npub)
         return _ok({"neighbor": nb}, "이웃 정보를 저장했습니다.")
+    # 승격 멱등 가드 — 같은 npub 이 이미 이웃이면 그대로 반환
+    if npub:
+        existing = bm.find_neighbor_by_contact("nostr", npub)
+        if existing:
+            return _ok({"neighbor": existing}, f"이미 이웃입니다: {existing.get('name', '')}")
     name = fields.pop("name", None)
     if not name:
         return _err("이름(name)이 필요합니다.")
     nb = bm.create_neighbor(name=name, **fields)
+    if npub:
+        _ensure_nostr_contact(bm, nb["id"], npub)
+        return _ok({"neighbor": nb}, "이웃으로 등록하고 nostr 연락처를 연결했습니다.")
     return _ok({"neighbor": nb}, "이웃을 추가했습니다.")
+
+
+def _ensure_nostr_contact(bm, neighbor_id: int, npub: str):
+    """이웃에 nostr 연락처가 없으면 추가 (있으면 그대로 — 중복 방지)."""
+    try:
+        for c in bm.get_contacts(neighbor_id) or []:
+            if c.get("contact_type") == "nostr" and c.get("contact_value") == npub:
+                return
+        bm.add_contact(neighbor_id, "nostr", npub)
+    except Exception:
+        pass
 
 
 def _nb_delete(bm, ti: dict) -> str:

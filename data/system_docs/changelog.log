@@ -1592,3 +1592,15 @@
 - 해마: mkdir 용례 8건 add_examples_batch + ibl_distilled 652→660 + rebuild_index 2650 재임베딩. 연상 2/3 즉시 적중(현 미retrain 모델, "새 폴더"↔limbs:explorer 혼동은 다음 fine-tune 흡수)
 
 [2026-07-08] [self:fill] 신설 — 문서 변환 축의 첫 동사 (144→145 액션). read의 짝으로 문서→문서(구조 보존) 변환 사분면을 엶. PDF 폼(PyMuPDF widget, flatten=제출용 평탄화)·DOCX {{자리표시자}} 치환, data 생략 시 필드 introspection. 새 의존성 0. system_essentials 패키지(ibl_actions.yaml+handler.py). 라이브 종단 검증·해마 12용례. 동기: 스킬/MCP 코퍼스를 거울 삼아 IBL의 빠진 사분면(문서⇄문서) 식별.
+
+[2026-07-08] IndieNet(커뮤니티 계기) 재구성 — X 스타일 4탭: 팔로잉(팔로우 타임라인, 글쓴이 클릭=그 사람 글만) / 팔로우 목록(팔로우·언팔+행 클릭 드릴) / 게시판(활성 보드 글+작성바+보드 목록[전환·삭제·생성]) / 설정(구 '내 계정'). 옛 '피드' 탭 제거. DM은 메신저 소관으로 확정(공개=IndieNet, 사적=메신저).
+- 어휘: [others:feed] read에 with_boards:true(보드 목록·활성 보드 동봉, 게시판 화면용) + 기본 read가 활성 보드를 따름(이전엔 전환이 조회에 무반영이던 버그) / [others:board]에 op:delete(기본 #indienet 불가, 글은 릴레이 잔존). 146 액션 유지.
+- 렌더러 어휘 확장: list_action에 item_click(행 클릭 드릴) — 데스크탑·원격 2렌더러+빌드 가드 3곳 동기. 버그 수정: 모드 상단 버튼(fireButton)이 $입력 치환 없이 raw 실행하던 것(팔로우 $npub·보드 만들기 $name/$tag 리터럴 전송) 두 렌더러 모두 buildAction 경유로 수정 + 행 버튼 클릭이 드릴로 전파되던 것 차단.
+- 검증: build --check 전 가드 통과, tsc, 라이브 종단(보드 생성→전환→조회 반영→삭제→복구 / 팔로우 추가→타임라인→행 드릴→언팔), 브라우저 실기(vite:3000, 4탭 전부). 해마 3용례(manual_seed) — delete 완전연상은 다음 재학습에서.
+
+[2026-07-08] 통신 재설계 2단계 — 팔로우↔이웃 승격 다리 + 역할 정리. 공개층(IndieNet)에서 만난 사람이 사적층(메신저 이웃)으로 이어지는 깔때기 완성.
+- 승격 다리: [others:neighbor] save에 npub 옵션(nostr 연락처 동시 연결, 같은 npub 기존 이웃이면 멱등). IndieNet 저자 드릴·팔로우 목록에 '이웃 등록' 버튼 + 다리 상태 표시(팔로우 여부 · 이웃: 이름 / 목록 title에 '· 이웃✓'). 역방향: 메신저 대화 헤더에 '팔로우 중' 라벨([others:messages] thread에 following_label).
+- 창 별칭 교정: open_window에 community 추가(7개 창), indienet 별칭을 messenger→community로 교정(옛 IndieNet 창의 진짜 후신). ibl_routing command_map+main.js 케이스+limbs.yaml+open_window.md 가이드 동기. ★main.js 변경=Electron 재시작 후 반영.
+- DM 역할 정리(코드 무변경 — 조사 결과 이미 뷰 층에서 단일화돼 있었음): messages thread/inbox가 business.db+dms.db 캐시를 이벤트 id dedupe로 병합하는 정본 뷰, channel_read nostr는 릴레이 풀+캐시 갱신(새로고침·원시 프로브). 어휘 서술에 역할 명시 + channel_read의 미구현 telegram 언급 제거.
+- 어휘 이관(messages/neighbor 등 business 패키지→코어) 검토 후 이관 안 함으로 종결: 표준=노드·문법, 패키지 fragment가 코어 노드를 확장하는 게 헌법 패턴(설치/제거 생애주기 대칭 — 구현이 패키지에 있는데 어휘만 코어로 가면 미소유 어휘 위험).
+- 검증: build --check 전 가드, 라이브 종단(승격→멱등→상태 갱신→역방향 라벨→정리), 브라우저 실기(팔로우 목록 이웃 등록 클릭→'· 이웃✓' 즉시 반영, 저자 드릴 상태 줄). 해마 4용례.

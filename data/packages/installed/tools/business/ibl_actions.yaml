@@ -344,7 +344,7 @@ nodes:
           neighbor_id: [contact, name, id]
         returns: items
         fixture: '[others:messages]{op: "inbox"}'
-        description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr).
+        description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와 Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read).
         target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, 파라미터 없음·최근순).
         group: channel
         target_key: op
@@ -398,7 +398,7 @@ nodes:
                 view:
                 - type: metric
                   big: '{name}'
-                  sub: '{badge}{channel|opt:  ·  ,}'
+                  sub: '{badge}{channel|opt:  ·  ,}{following_label|opt:  ·  ,}'
                 - type: thread
                   from: items
                   text: '{content}'
@@ -523,7 +523,7 @@ nodes:
         returns: items
         fixture: '[others:neighbor]{op: "list"}'
         description: 이웃(비즈니스 파트너) 조회·관리 — op:list(기본)/detail/save/delete/favorite.
-        target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc) / delete(id 필수) / favorite(id 필수, 토글).
+        target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc. npub 옵션=nostr 연락처 동시 연결, IndieNet 팔로우→이웃 승격용 — 같은 npub이 이미 이웃이면 멱등) / delete(id 필수) / favorite(id 필수, 토글).
         group: neighbor
         target_key: op
         router: handler

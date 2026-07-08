@@ -601,9 +601,10 @@ def _execute_launcher_command(action: str, params: dict) -> dict:
         "open_project": "open_project_window",
         "open_system_ai": "open_system_ai_window",
         "open_messenger": "open_messenger_window",
-        # 레거시 별칭: indienet 창은 messenger 계기로 은퇴 → messenger 창으로 라우팅.
-        # (옛 매핑 open_indienet_window 는 Electron switch에 핸들러가 없어 침묵 실패였음)
-        "open_indienet": "open_messenger_window",
+        "open_community": "open_community_window",
+        # 레거시 별칭: 옛 IndieNet 창의 후신은 커뮤니티 계기 창(공개 피드·게시판).
+        # 한때 messenger 로 매핑돼 이름-대상이 어긋나 있었음 — 2026-07-08 교정.
+        "open_indienet": "open_community_window",
         "open_business": "open_business_window",
         "open_multichat": "open_multichat_window",
         "open_folder": "open_folder_window",

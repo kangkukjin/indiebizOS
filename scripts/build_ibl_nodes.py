@@ -1174,8 +1174,8 @@ def _app_check_view(qualified: str, view, depth: int = 0, in_group: bool = False
         if drill is not None:
             if in_group:
                 issues.append(f"{where}: group 내부 view 는 item_click(드릴) 미지원 — 원격 rowDrill 제약. 링크(card.link)·버튼 사용")
-            if ptype != "card_list":
-                issues.append(f"{where}: item_click 은 card_list 전용")
+            if ptype not in ("card_list", "list_action"):
+                issues.append(f"{where}: item_click 은 card_list/list_action 전용")
             elif not isinstance(drill, dict) or not isinstance(drill.get("action"), str):
                 issues.append(f"{where}: item_click 은 action 템플릿 필수")
             else:

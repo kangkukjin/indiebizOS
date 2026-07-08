@@ -398,6 +398,42 @@ def _fmt_unix(ts) -> str:
         return ""
 
 
+def _bridge_status(pubkey: str, indienet) -> dict:
+    """팔로우↔이웃 승격 다리 상태 — 한 인물(npub)의 팔로우 여부 + 이웃 등록 여부(business.db nostr 연락처 조인).
+
+    공개층(IndieNet)에서 만난 사람이 사적층(메신저 이웃)으로 이어져 있는지를 한 줄(status)로.
+    hex/npub 표기 차이를 흡수하기 위해 hex 로 정규화해 비교."""
+    def _hex(pk: str) -> str:
+        try:
+            return indienet._pubkey_to_hex(pk) or pk
+        except Exception:
+            return pk
+
+    target = _hex(pubkey)
+    following = any(_hex(f.get("pubkey", "")) == target for f in (indienet.get_follows() or []))
+    neighbor_name = ""
+    try:
+        from business_manager import BusinessManager
+        bm = BusinessManager()
+        nb = bm.find_neighbor_by_contact("nostr", pubkey)
+        if not nb:  # 표기 차이 폴백 — 전 이웃의 nostr 연락처를 hex 비교
+            for n in bm.get_neighbors() or []:
+                for c in bm.get_contacts(n["id"]) or []:
+                    if c.get("contact_type") == "nostr" and _hex(c.get("contact_value", "")) == target:
+                        nb = n
+                        break
+                if nb:
+                    break
+        if nb:
+            neighbor_name = nb.get("name", "")
+    except Exception:
+        pass
+    status = ("팔로우 중" if following else "팔로우 안 함") + \
+             (f" · 이웃: {neighbor_name}" if neighbor_name else " · 이웃 아님")
+    return {"following": following, "neighbor_name": neighbor_name, "status": status,
+            "neighbor_mark": (" · 이웃✓" if neighbor_name else "")}
+
+
 def _community_feed(params: dict) -> dict:
     """커뮤니티 피드 — op:read(조회)/post(게시). IndieNet(Nostr) 기반, 릴레이가 진실원."""
     op = (params.get("op") or "read").lower()
@@ -453,12 +489,18 @@ def _community_feed(params: dict) -> dict:
     # 단일 통화 — native 글 dict(author/content/time/id 등)를 items로.
     out = {"items": posts, "count": len(posts),
            "message": "" if posts else "아직 글이 없습니다."}
-    # 저자 드릴다운이면 그 저자를 팔로우할 수 있게 한 줄짜리 author_row 동봉.
+    # 저자 드릴다운이면 그 저자를 팔로우/이웃 등록할 수 있게 한 줄짜리 author_row 동봉
+    # (+승격 다리 상태: 팔로우 여부 · 이웃 등록 여부).
     if author:
         out["author_row"] = [{
             "pubkey": author,
             "name": (author[:12] + "…") if str(author).startswith("npub") and len(str(author)) > 14 else author,
+            **_bridge_status(str(author), indienet),
         }]
+    # 게시판 계기용(with_boards: true) — 활성 보드 글 + 보드 목록을 한 액션·한 응답으로.
+    if str(params.get("with_boards") or "").lower() in ("true", "1", "yes"):
+        out["boards"] = _boards_items(indienet)
+        out["active_board"] = (getattr(indienet.settings, "active_board", None) or "indienet")
     return out
 
 
@@ -491,7 +533,7 @@ def _community_follow(params: dict) -> dict:
         return {"success": bool(ok),
                 "message": "언팔로우했습니다." if ok else "팔로우 목록에 없습니다."}
 
-    # list
+    # list — 승격 다리 상태(이웃 등록 여부) 동봉
     follows = indienet.get_follows() or []
     out = []
     for f in follows:
@@ -501,9 +543,20 @@ def _community_follow(params: dict) -> dict:
             "pubkey": pk,
             "name": f.get("name") or short,
             "short": short,
+            **_bridge_status(pk, indienet),
         })
     return {"items": out, "count": len(out),
             "message": "" if out else "아직 팔로우한 사람이 없습니다."}
+
+
+def _boards_items(indienet) -> list:
+    """보드 목록 items — 기본 #indienet + 사용자 보드, 활성 표시.
+    active_mark(✓)는 렌더러 템플릿용 표시 필드 — 활성 보드를 목록에서 한눈에."""
+    active = (getattr(indienet.settings, "active_board", None) or "indienet")
+    boards = [{"name": "IndieNet", "hashtag": "indienet"}] + list(indienet.get_boards() or [])
+    return [{"name": b.get("name", ""), "hashtag": b.get("hashtag", ""),
+             "active": (b.get("hashtag") == active),
+             "active_mark": ("✓ " if b.get("hashtag") == active else "")} for b in boards]
 
 
 def _community_board(params: dict) -> dict:
@@ -534,12 +587,21 @@ def _community_board(params: dict) -> dict:
         return {"success": bool(ok), "active": (hashtag or "indienet"),
                 "message": "보드를 전환했습니다." if ok else "전환 실패 (보드 없음)"}
 
+    if op == "delete":
+        hashtag = (params.get("hashtag") or params.get("tag") or "").lstrip('#').lower()
+        if not hashtag:
+            return {"success": False, "error": "삭제할 보드 해시태그(hashtag)가 필요합니다."}
+        if hashtag == "indienet":
+            return {"success": False, "error": "기본 보드 #indienet 은 삭제할 수 없습니다."}
+        ok = indienet.delete_board(hashtag)
+        # 글은 릴레이에 남는다 — 보드 삭제=로컬 등록 해제(재생성 시 복원). 활성 보드였다면 기본으로 복귀.
+        return {"success": bool(ok),
+                "message": f"보드 #{hashtag} 를 삭제했습니다." if ok else "삭제 실패 (보드 없음)"}
+
     # list — 기본 #indienet + 사용자 보드, 활성 표시
     active = (getattr(indienet.settings, "active_board", None) or "indienet")
-    boards = [{"name": "IndieNet", "hashtag": "indienet"}] + list(indienet.get_boards() or [])
-    out = [{"name": b.get("name", ""), "hashtag": b.get("hashtag", ""),
-            "active": (b.get("hashtag") == active)} for b in boards]
     # 단일 통화 — native 보드 dict(name/hashtag/active)를 items로.
+    out = _boards_items(indienet)
     return {"items": out, "active": active,
             "message": "" if out else "보드가 없습니다."}
 

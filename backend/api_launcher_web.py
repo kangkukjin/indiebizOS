@@ -1791,7 +1791,8 @@ function closeMedia(){
 async function fireButton(bi,btn){
   const b=(CUR.mode.buttons||[])[bi]; if(!b) return;
   btn.disabled=true;
-  try{ const d=await ibl(b.action);
+  /* $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 데스크탑 fireButton 과 동일 의미 */
+  try{ const d=await ibl(buildAction(b.action,gatherInputs()));
     if(d&&d.stop_in_client){ stopRadioStream(); }
     else if(d&&d.error){ alert(d.error); }
     else if(b.refresh){ runMode(); }  // 실행 후 현재 모드 재조회(토글/재생성 즉시 반영)
@@ -2227,11 +2228,12 @@ function renderPrim(p,vi,data){
   if(p.type==='list_action'){
     const arr=viewList(data,p.from);
     if(!arr.length) return emptyMsg(p,data);
+    const click=p.item_click?' style="cursor:pointer"':'';
     return arr.map((it,ri)=>
-      '<div class="card sw-item">'+(p.icon?'<span>'+esc(p.icon)+'</span>':'')+
+      '<div class="card sw-item"'+(p.item_click?' onclick="rowDrill('+vi+','+ri+')"':'')+click+'>'+(p.icon?'<span>'+esc(p.icon)+'</span>':'')+
       '<div style="flex:1"><div class="nm">'+tpl(p.title,it)+'</div><div class="pr">'+tpl(p.sub,it)+'</div></div>'+
-      (p.button?'<button class="btn2" onclick="rowBtn('+vi+','+ri+',this)">'+esc(p.button.label||'▶')+'</button>':'')+
-      (p.button2?'<button class="btn2" onclick="rowBtn('+vi+','+ri+',this,\\'button2\\')">'+esc(p.button2.label||'⬇')+'</button>':'')+'</div>'
+      (p.button?'<button class="btn2" onclick="event.stopPropagation();rowBtn('+vi+','+ri+',this)">'+esc(p.button.label||'▶')+'</button>':'')+
+      (p.button2?'<button class="btn2" onclick="event.stopPropagation();rowBtn('+vi+','+ri+',this,\\'button2\\')">'+esc(p.button2.label||'⬇')+'</button>':'')+'</div>'
     ).join('');
   }
   return '';

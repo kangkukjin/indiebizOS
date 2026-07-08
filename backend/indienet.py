@@ -1055,12 +1055,14 @@ class IndieNet:
 
     def fetch_posts(self, limit: int = 50, since: int = None) -> List[dict]:
         """
-        IndieNet 기본 #indienet 피드 조회 (전 릴레이 조회 + 영구 캐시 합집합).
+        IndieNet 활성 보드 피드 조회 (전 릴레이 조회 + 영구 캐시 합집합).
 
-        #indienet은 사실상 '기본 보드'이므로 fetch_board_posts('indienet')에 위임한다.
-        같은 캐시 테이블에 보드 글이 섞여 쌓이지만, 태그 필터로 #indienet 글만 반환된다.
+        활성 보드(settings.active_board, 기본 #indienet)에 위임 — 보드 '전환'이
+        게시 기본값뿐 아니라 조회에도 반영된다. 같은 캐시 테이블에 보드 글이 섞여
+        쌓이지만, 태그 필터로 해당 보드 글만 반환된다.
         """
-        return self.fetch_board_posts(hashtag='indienet', limit=limit, since=since)
+        active = (getattr(self.settings, "active_board", None) or "indienet")
+        return self.fetch_board_posts(hashtag=active, limit=limit, since=since)
 
     # ============ 팔로우 (로컬 저장) + 저자별/팔로잉 피드 ============
 

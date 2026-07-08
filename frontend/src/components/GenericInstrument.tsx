@@ -1099,7 +1099,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
           const rowKey = `${p.type}-${i}`;
           const rowKey2 = `${p.type}-${i}-2`;
           return (
-            <Card key={i}>
+            <Card key={i} onClick={p.item_click ? () => onDrill(p, it) : undefined}>
               <div className="flex items-center gap-3">
                 {p.icon != null && <span className="text-lg">{String(p.icon)}</span>}
                 <div className="flex-1 min-w-0">
@@ -1108,14 +1108,14 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
                 </div>
                 {btn && (
                   <button disabled={busyRow === rowKey}
-                    onClick={() => btn.stream ? onStream(it) : btn.action && onRowAction(btn.action, it, rowKey, btn.refresh)}
+                    onClick={(e) => { e.stopPropagation(); btn.stream ? onStream(it) : btn.action && onRowAction(btn.action, it, rowKey, btn.refresh); }}
                     className="px-3 py-1.5 rounded-lg border border-stone-200 text-sm text-stone-800 hover:border-stone-400 disabled:opacity-40">
                     {busyRow === rowKey ? '…' : btn.label || '▶'}
                   </button>
                 )}
                 {btn2 && (
                   <button disabled={busyRow === rowKey2}
-                    onClick={() => btn2.stream ? onStream(it) : btn2.action && onRowAction(btn2.action, it, rowKey2, btn2.refresh)}
+                    onClick={(e) => { e.stopPropagation(); btn2.stream ? onStream(it) : btn2.action && onRowAction(btn2.action, it, rowKey2, btn2.refresh); }}
                     className="px-3 py-1.5 rounded-lg border border-stone-200 text-sm text-stone-800 hover:border-stone-400 disabled:opacity-40">
                     {busyRow === rowKey2 ? '…' : btn2.label || '⬇'}
                   </button>
@@ -1349,7 +1349,8 @@ function ModePane({ mode }: { mode: AppMode }) {
   const fireButton = useCallback(async (b: AppButton) => {
     if (!b.action) return;
     try {
-      const d = await runIBL(b.action);
+      // $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 빈 입력 파라미터는 제거됨
+      const d = await runIBL(buildAction(b.action, valuesRef.current));
       if (d?.error) { alert(String(d.error)); return; }
       if (b.refresh) run();  // 실행 후 현재 모드 재조회(토글/재생성 결과 즉시 반영)
     } catch (e) {

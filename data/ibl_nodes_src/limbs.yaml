@@ -16,8 +16,8 @@
         - 브라우저
       open_window:
         returns: effect
-        description: Electron 런처의 6개 메인 작업창 열기 (project/system_ai/messenger/business/multichat/folder). 자세한 진입 시나리오는 가이드(open_window.md) 참조.
-        target_description: 'app 종류: project | system_ai | messenger | business | multichat | folder. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). system_ai/messenger/business는 파라미터 없음. (indienet=messenger 레거시 별칭)'
+        description: Electron 런처의 7개 메인 작업창 열기 (project/system_ai/messenger/community/business/multichat/folder). 자세한 진입 시나리오는 가이드(open_window.md) 참조.
+        target_description: 'app 종류: project | system_ai | messenger | community | business | multichat | folder. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). system_ai/messenger/community/business는 파라미터 없음. (indienet=community 레거시 별칭 — 옛 IndieNet 창의 후신은 커뮤니티 창)'
         group: open
         target_key: app
         router: system

@@ -41,8 +41,8 @@
         - 상세
       channel_send:
         returns: effect
-        description: 메시지 발송 (Gmail/Nostr). 발신자는 자기 계정 자동 설정(없으면 차단).
-        target_description: '채널 타입 (gmail/nostr). to=수신자 — 이웃 이름(주소록에서 자동 해소) 또는 이메일/npub 주소 직접 지정. subject/body로 내용 구성. 발신자는 호출 주체의 자기 계정(미설정 시 발신 차단).'
+        description: 메시지 발송 (Gmail/Nostr). 수신자는 주소록/주인 확정 원천으로만 해소(임의 주소 금지). 발신자는 자기 계정 자동 설정(없으면 차단).
+        target_description: '채널 타입 (gmail/nostr). to=수신자는 이웃 이름 또는 "나"(주인 본인, .env 확정 원천)로 넘겨라 — 시스템이 주소록에서 주소를 해소한다. raw 이메일/npub을 직접 넣으면 주소록에 등록된 경우만 발송되고, 미등록이면 needs_confirmation으로 막힌다(사용자에게 확인 후 주소록 등록 또는 confirmed:true 로 재실행). subject/body로 내용 구성. 발신자는 호출 주체의 자기 계정(미설정 시 발신 차단).'
         group: channel
         target_key: channel_type
         router: channel_engine

@@ -147,45 +147,124 @@ def _looks_like_address(channel_type: str, to: str) -> bool:
     return False
 
 
-def _resolve_recipient(channel_type: str, to: str) -> dict:
-    """수신자(to)를 채널 주소로 해소한다.
+# 주인(사용자 본인) 별칭 — 이웃·고객과 다른 존재라 주소록이 아니라 .env 확정 원천에서 해소.
+_OWNER_ALIASES = {
+    "나", "나에게", "나한테", "내주소", "내 주소", "내게", "본인", "주인", "저", "제게",
+    "me", "self", "myself", "owner",
+}
 
-    - 이미 주소 형식이면 그대로 통과.
-    - 이름이면 business.db 주소록(neighbors/contacts)에서 해당 채널 주소를 찾는다.
-      0건: 에러. 다건: 후보 목록과 함께 에러(AI가 다시 선택).
 
-    Returns: {"value": addr} 또는 {"error": ..., "candidates": [...]}
+def _load_owner_addresses(channel_type: str) -> list:
+    """`.env`의 OWNER_* 에서 주인 발송 주소 목록을 읽는다 (단일 확정 원천).
+
+    channel_poller._is_from_owner 가 수신측에서 쓰는 것과 같은 원천을 발신측에서도 사용.
+    """
+    try:
+        from dotenv import load_dotenv
+        from runtime_utils import get_base_path
+        load_dotenv(get_base_path() / ".env")
+    except Exception:
+        pass
+    if channel_type == "gmail":
+        raw = os.getenv("OWNER_EMAILS", "")
+    elif channel_type == "nostr":
+        raw = os.getenv("OWNER_NOSTR_PUBKEYS", "")
+    else:
+        raw = ""
+    return [a.strip() for a in raw.split(",") if a.strip()]
+
+
+def _norm_addr(channel_type: str, addr: str) -> str:
+    """비교용 주소 정규화. nostr 는 npub/hex 두 형식이 등가라 npub 소문자로 통일.
+
+    (주소록 contacts 는 npub 로 저장됨 — business_manager 마이그레이션 참조.)
+    """
+    a = (addr or "").strip().lower()
+    if channel_type == "nostr" and len(a) == 64:
+        try:
+            int(a, 16)
+            from channel_poller import _hex_to_npub
+            return (_hex_to_npub(a) or a).lower()
+        except Exception:
+            return a
+    return a
+
+
+def _resolve_recipient(channel_type: str, to: str, confirmed: bool = False) -> dict:
+    """수신자(to)를 채널 주소로 해소한다 — 주소록/주인 확정 원천만 신뢰.
+
+    규율(모델이 아무 주소나 골라 보내는 것을 막는다):
+    - "나/주인" 별칭 → .env(OWNER_*) 확정 원천으로 해소.
+    - 이름 → business.db 주소록에서 해당 채널 주소. 0건: 에러. 다건: 후보와 함께 에러.
+    - 이미 주소 형식이면 주소록/주인에 등록된 주소일 때만 통과. 미등록이면
+      needs_confirmation 으로 되돌려 AI 가 사용자 확인을 받게 한다(confirmed=True 면 통과).
+
+    Returns: {"value": addr} | {"error": ..., "candidates": [...]}
+             | {"needs_confirmation": True, "error": ..., "address": ...}
     """
     to = (to or "").strip()
     if not to:
         return {"error": "수신자(to)가 비어 있습니다."}
 
-    if _looks_like_address(channel_type, to):
-        return {"value": to}
+    owner_addrs = _load_owner_addresses(channel_type)
+    owner_set = {_norm_addr(channel_type, a) for a in owner_addrs}
+
+    # 1) 주인 별칭 → .env 확정 원천 (이웃 목록을 뒤지지 않는다)
+    if to.lower() in _OWNER_ALIASES:
+        if not owner_addrs:
+            return {"error": f"주인의 {channel_type} 주소가 .env(OWNER_*)에 설정되어 있지 않습니다."}
+        return {"value": owner_addrs[0], "owner": True}
 
     try:
         from business_manager import BusinessManager
         bm = BusinessManager()
-        neighbors = bm.get_neighbors()
     except Exception as e:
         return {"error": f"주소록 조회 실패: {e}"}
 
+    # 2) 이미 주소 형식 → 주소록/주인에 등록된 주소만 통과, 아니면 확인 요청
+    if _looks_like_address(channel_type, to):
+        norm = _norm_addr(channel_type, to)
+        if norm in owner_set:
+            return {"value": to, "owner": True}
+        try:
+            found = bm.get_neighbor_by_contact(channel_type, norm) or \
+                    bm.get_neighbor_by_contact(channel_type, to.strip())
+        except Exception:
+            found = None
+        if found:
+            return {"value": to}
+        if confirmed:
+            return {"value": to, "unregistered": True}
+        return {
+            "needs_confirmation": True,
+            "address": to,
+            "error": (f"'{to}' 는 주소록에 없는 새 {channel_type} 주소입니다. 임의로 발송하지 "
+                      f"않았습니다. 사용자에게 이 주소가 맞는지 확인하세요. 확인되면 "
+                      f"[others:neighbor]/[others:contact]로 주소록에 먼저 등록한 뒤 이름으로 "
+                      f"보내거나, 같은 발송을 confirmed: true 로 다시 실행하세요."),
+        }
+
+    # 3) 이름 → 주소록 해소 (이름이 같은 이웃들의 해당 채널 연락처 수집)
     name_l = to.lower()
-    matched = []  # contact_value 목록
-    for n in neighbors:
-        if (n.get("name") or "").strip().lower() != name_l:
-            continue
-        for c in n.get("contacts", []):
-            if c.get("contact_type") == channel_type and c.get("contact_value"):
-                matched.append(c["contact_value"])
+    matched = []
+    try:
+        for n in bm.get_neighbors():
+            if (n.get("name") or "").strip().lower() != name_l:
+                continue
+            for c in bm.get_contacts(n.get("id")):
+                if c.get("contact_type") == channel_type and c.get("contact_value"):
+                    matched.append(c["contact_value"])
+    except Exception as e:
+        return {"error": f"주소록 조회 실패: {e}"}
 
     if not matched:
         return {"error": f"주소록에서 '{to}'의 {channel_type} 주소를 찾지 못했습니다. "
-                         f"이름을 확인하거나 주소를 직접 지정하세요."}
-    if len(set(matched)) > 1:
+                         f"이름을 확인하거나, 주소를 직접 지정한 뒤 사용자 확인을 받으세요."}
+    uniq = list(dict.fromkeys(matched))
+    if len(uniq) > 1:
         return {"error": f"'{to}'에 해당하는 {channel_type} 주소가 여러 개입니다. 어느 것인지 지정하세요.",
-                "candidates": list(dict.fromkeys(matched))}
-    return {"value": matched[0]}
+                "candidates": uniq}
+    return {"value": uniq[0]}
 
 
 # === IBL 노드 액션 핸들러 (ibl_engine에서 호출) ===
@@ -472,10 +551,13 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
         if not to:
             return {"error": "수신자(to)가 필요합니다. (이웃 이름 또는 이메일 주소)"}
 
-        # 수신자 해소: 이름이면 주소록에서 이메일로 변환
-        resolved = _resolve_recipient("gmail", to)
-        if resolved.get("error"):
-            out = {"success": False, "channel": "gmail", "error": resolved["error"]}
+        # 수신자 해소: 이름/주인 별칭 → 주소록·.env 확정 원천. 미등록 주소는 확인 요청.
+        resolved = _resolve_recipient("gmail", to, confirmed=bool(params.get("confirmed")))
+        if resolved.get("error") or resolved.get("needs_confirmation"):
+            out = {"success": False, "channel": "gmail", "error": resolved.get("error")}
+            if resolved.get("needs_confirmation"):
+                out["needs_confirmation"] = True
+                out["address"] = resolved.get("address")
             if resolved.get("candidates"):
                 out["candidates"] = resolved["candidates"]
             return out
@@ -515,10 +597,13 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
                     "error": "에이전트 자체 nostr 키 서명은 아직 지원되지 않습니다. "
                              "현재 nostr 발신은 시스템(indienet) 신원만 가능합니다."}
 
-        # 수신자 해소: 이름이면 주소록에서 npub으로 변환
-        resolved = _resolve_recipient("nostr", to)
-        if resolved.get("error"):
-            out = {"success": False, "channel": "nostr", "error": resolved["error"]}
+        # 수신자 해소: 이름/주인 별칭 → 주소록·.env 확정 원천. 미등록 주소는 확인 요청.
+        resolved = _resolve_recipient("nostr", to, confirmed=bool(params.get("confirmed")))
+        if resolved.get("error") or resolved.get("needs_confirmation"):
+            out = {"success": False, "channel": "nostr", "error": resolved.get("error")}
+            if resolved.get("needs_confirmation"):
+                out["needs_confirmation"] = True
+                out["address"] = resolved.get("address")
             if resolved.get("candidates"):
                 out["candidates"] = resolved["candidates"]
             return out

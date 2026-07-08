@@ -396,6 +396,17 @@ def _publish_article(params: dict) -> dict:
     indienet = _get_indienet()
     title = (params.get("title") or "").strip()
     content = params.get("content") or ""
+    # >> 파이프: [table:document]{format: markdown} 의 결과를 content로 자동 수용
+    if not content:
+        pr = params.get("_prev_result")
+        if pr:
+            try:
+                import json as _j
+                po = _j.loads(pr) if isinstance(pr, str) else pr
+                if isinstance(po, dict):
+                    content = po.get("markdown") or po.get("content") or po.get("text") or ""
+            except Exception:
+                pass
     slug = (params.get("slug") or "").strip()
     summary = (params.get("summary") or "").strip()
     if not content:
@@ -489,9 +500,19 @@ def _community_feed(params: dict) -> dict:
     author = params.get("author") or params.get("pubkey") or params.get("npub")
     following = str(params.get("following") or "").lower() in ("true", "1", "yes")
     hashtag = params.get("hashtag") or params.get("board")
+    # 저자 드릴다운은 독립적인 릴레이 조회 3개(글 kind:1 · 프로필 kind:0 · 문서 kind:30023)를
+    # 필요로 한다. 직렬로 하면 각 조회가 느린/죽은 릴레이를 기다려 3배로 쌓이므로, 세 조회를
+    # 동시에 띄우고 아래에서 결과를 회수한다(체감 ~3배 단축).
+    author_futures = None
     try:
         if author:
-            raw = indienet.fetch_author_posts(pubkey=author, limit=limit)
+            import concurrent.futures
+            _ex = concurrent.futures.ThreadPoolExecutor(max_workers=3)
+            f_posts = _ex.submit(indienet.fetch_author_posts, pubkey=author, limit=limit)
+            f_profile = _ex.submit(indienet.fetch_author_profile, author)
+            f_articles = _ex.submit(indienet.fetch_author_articles, pubkey=author, limit=20)
+            author_futures = (_ex, f_profile, f_articles)
+            raw = f_posts.result()
         elif following:
             raw = indienet.fetch_following_feed(limit=limit)
         elif hashtag:
@@ -527,19 +548,25 @@ def _community_feed(params: dict) -> dict:
             **_bridge_status(str(author), indienet),
         }]
         # 공개 얼굴: kind:0 인사말 + kind:30023 공개 문서를 동봉 → 드릴다운에서 프로필·문서에 도달.
+        # (위에서 글 조회와 함께 병렬로 띄운 futures 를 회수 — 추가 릴레이 왕복 없음.)
         short_a = (author[:12] + "…") if str(author).startswith("npub") and len(str(author)) > 14 else str(author)
+        _ex, f_profile, f_articles = author_futures
         about, pname = "", ""
         try:
-            info = indienet.fetch_author_profile(author) or {}
+            info = f_profile.result() or {}
             about = (info.get("about") or "").strip()
             pname = (info.get("name") or info.get("display_name") or "").strip()
         except Exception:
             pass
         out["profile"] = [{"name": pname or short_a, "about": about}] if about else []
         try:
-            arts = indienet.fetch_author_articles(pubkey=author, limit=20)
+            arts = f_articles.result()
         except Exception:
             arts = []
+        try:
+            _ex.shutdown(wait=False)
+        except Exception:
+            pass
         out["articles"] = [{
             "title": a.get("title") or "(제목 없음)",
             "content": (a.get("content") or "").strip(),

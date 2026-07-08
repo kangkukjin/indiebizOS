@@ -1152,34 +1152,119 @@ def structure_document(tool_input, output_base="."):
                         "message": f"{len(blocks)}블록 문서 IR로 구조화."}, ensure_ascii=False)
 
 
-def render_document(tool_input, output_base="."):
-    """문서 IR → 산출물. 현재 emitter: html (단일 IR, 향후 pdf/docx/pptx emitter 추가).
+def _items_to_blocks(rows: list, group_by: str = None) -> list:
+    """단일 통화 items → 문서 IR 블록. group_by 있으면 그 필드로 섹션(heading+cards) 분할.
+    이미 문서 IR(type+text) 이면 그대로 반환."""
+    if not rows:
+        return []
+    if isinstance(rows[0], dict) and "type" in rows[0] and "text" in rows[0]:
+        return rows  # 이미 문서 IR(산문)
+    if group_by:
+        groups, order = {}, []
+        for r in rows:
+            key = str((r.get(group_by) if isinstance(r, dict) else "") or "")
+            if key not in groups:
+                groups[key] = []
+                order.append(key)
+            groups[key].append(r)
+        blocks = []
+        for key in order:
+            if key:
+                blocks.append({"type": "heading", "level": 2, "text": key})
+            blocks.append({"type": "cards", "columns": 2, "items": groups[key]})
+        return blocks
+    return [{"type": "cards", "columns": 2, "items": rows}]
 
-    파라미터: blocks(필수, IR 블록 배열) · title(선택) · format(기본 html) · filename(선택).
-    반환: {success, path, format, blocks}.
+
+def _doc_blocks_to_markdown(blocks: list, title: str = "", meta: str = "") -> str:
+    """문서 IR → 마크다운. cards = 링크 목록(뉴스/검색결과 공용). NIP-23 발행 등 범용."""
+    out = []
+    if title:
+        out.append(f"# {title}")
+    if meta:
+        out.append(f"_{meta}_")
+    if out:
+        out.append("")
+    for b in blocks:
+        if not isinstance(b, dict):
+            continue
+        t = (b.get("type") or "paragraph").lower()
+        if t == "heading":
+            lvl = max(1, min(6, int(b.get("level") or 2)))
+            out += [f"{'#' * lvl} {b.get('text') or ''}", ""]
+        elif t == "list":
+            ordered = bool(b.get("ordered"))
+            for idx, i in enumerate(b.get("items") or [], 1):
+                mark = f"{idx}." if ordered else "-"
+                if isinstance(i, dict):
+                    txt = i.get("text") or ""
+                    out.append(f"{mark} [{txt}]({i.get('url')})" if i.get("url") else f"{mark} {txt}")
+                else:
+                    out.append(f"{mark} {i}")
+            out.append("")
+        elif t == "cards":
+            for it in (b.get("items") or []):
+                if not isinstance(it, dict):
+                    continue
+                url = it.get("url")
+                out.append(f"- [{it.get('title') or ''}]({url})" if url else f"- {it.get('title') or ''}")
+                sub = " — ".join(x for x in [it.get("meta"), it.get("summary")] if x)
+                if sub:
+                    out.append(f"  {sub}")
+            out.append("")
+        elif t == "table":
+            cols, rows = b.get("columns") or [], b.get("rows") or []
+            if cols:
+                out.append("| " + " | ".join(str(c) for c in cols) + " |")
+                out.append("| " + " | ".join("---" for _ in cols) + " |")
+            for r in rows:
+                if isinstance(r, (list, tuple)):
+                    out.append("| " + " | ".join(str(c) for c in r) + " |")
+            out.append("")
+        elif t == "quote":
+            out.append(f"> {b.get('text') or ''}")
+            if b.get("cite"):
+                out.append(f"> — {b.get('cite')}")
+            out.append("")
+        elif t == "code":
+            out += ["```", str(b.get("text") or ""), "```", ""]
+        elif t == "image":
+            out += [f"![{b.get('caption') or ''}]({b.get('src') or b.get('path') or ''})", ""]
+        elif t == "divider":
+            out += ["---", ""]
+        else:  # paragraph
+            out += [str(b.get("text") or ""), ""]
+    return "\n".join(out).strip() + "\n"
+
+
+def render_document(tool_input, output_base="."):
+    """문서 IR → 산출물. emitter: html/pdf/png/docx/pptx/typst/markdown.
+
+    파라미터: blocks 또는 items(단일 통화 — group_by로 섹션 분할) · title · meta ·
+    format(기본 html) · group_by(선택, items 섹션 필드) · filename(선택).
+    반환: {success, path, format, blocks, (markdown 시)markdown}.
     """
     import os
     import html as _html
     import json as _json
 
+    group_by = (tool_input.get("group_by") or "").strip() or None
     blocks = tool_input.get("blocks")
+    # 직접 items 파라미터 (조립된 단일 통화 items 전달 — >> 파이프 밖 호출, 예: 데스크탑 신문)
+    if not blocks and isinstance(tool_input.get("items"), list) and tool_input["items"]:
+        blocks = _items_to_blocks(tool_input["items"], group_by)
     if not blocks:
-        # >> 파이프: 이전 생산자 결과(_prev_result)의 blocks·title·meta·theme 자동 수용
+        # >> 파이프: 이전 생산자 결과(_prev_result)의 blocks·items·title·meta·theme 자동 수용
         pr = tool_input.get("_prev_result")
         if pr:
             try:
                 po = _json.loads(pr) if isinstance(pr, str) else pr
                 if isinstance(po, dict):
-                    _rows = po.get("items")
                     if po.get("blocks"):
                         blocks = po["blocks"]
-                    elif isinstance(_rows, list) and _rows:
-                        if isinstance(_rows[0], dict) and "type" in _rows[0] and "text" in _rows[0]:
-                            # 문서 IR items(type+text — crawl·read 등) = blocks 그 자체(산문).
-                            blocks = _rows
-                        else:
-                            # 단일 통화 items([{title,meta,summary,url,image}]) → cards 블록으로 래핑.
-                            blocks = [{"type": "cards", "columns": 2, "items": _rows}]
+                    elif isinstance(po.get("items"), list) and po["items"]:
+                        # 단일 통화 items → cards(또는 group_by 섹션) 블록. IR(type+text)이면 그대로.
+                        blocks = _items_to_blocks(po["items"], group_by)
                     for k in ("title", "meta", "theme"):
                         if not tool_input.get(k) and po.get(k):
                             tool_input[k] = po[k]
@@ -1198,14 +1283,31 @@ def render_document(tool_input, output_base="."):
     meta = tool_input.get("meta") or ""
     theme = (tool_input.get("theme") or "default").strip().lower()
     fmt = (tool_input.get("format") or "html").strip().lower()
+    if fmt == "md":
+        fmt = "markdown"
     note = ""
-    if fmt not in ("html", "pdf", "png", "docx", "pptx", "typst"):
+    if fmt not in ("html", "pdf", "png", "docx", "pptx", "typst", "markdown"):
         note = f" (format '{fmt}' 미지원 — html로 산출)"
         fmt = "html"
 
     os.makedirs(output_base, exist_ok=True)
     base = tool_input.get("filename") or "document"
     base = os.path.splitext(os.path.basename(str(base)))[0] or "document"
+
+    # markdown emitter — 문서 IR → md 텍스트(+.md 파일). NIP-23 발행 등 텍스트 파이프.
+    if fmt == "markdown":
+        md_text = _doc_blocks_to_markdown(blocks, title, meta)
+        out_path = os.path.join(output_base, f"{base}.md")
+        try:
+            with open(out_path, "w", encoding="utf-8") as f:
+                f.write(md_text)
+        except Exception:
+            out_path = ""
+        return _json.dumps({"success": True, "path": out_path, "file": out_path,
+                            "title": title, "format": "markdown", "markdown": md_text,
+                            "blocks": len(blocks),
+                            "message": f"문서 {len(blocks)}블록을 마크다운으로 렌더했습니다.{note}"},
+                           ensure_ascii=False)
 
     # typst emitter — 책 품질 조판 PDF(산문·보고서). HTML theme/cards 그리드는 무시(조판 모델 상이).
     if fmt == "typst":

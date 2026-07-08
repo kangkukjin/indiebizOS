@@ -44,7 +44,10 @@ nodes:
             type: text
             label: 키워드(쉼표로 구분)
             default: 청주,AI,문화,드라마,영화,만화,세종,경제,주식
-          action: '[sense:search_gnews]{queries: "$keywords", curate: 7}'
+          action: '[sense:search_gnews]{queries: "$keywords", curate: 7, headlines: true}'
+          buttons:
+          - label: 🔗 링크로 발행
+            action: '[sense:search_gnews]{queries: "$keywords", curate: 7, headlines: true} >> [table:document]{format: "markdown", group_by: "query", title: "오늘의 신문"} >> [others:publish]{title: "오늘의 신문", slug: "my-newspaper"}'
           view:
           - type: group
             from: items

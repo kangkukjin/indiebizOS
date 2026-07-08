@@ -173,8 +173,8 @@ actions:
   document:
     returns: effect
     runs_on: anywhere
-    description: blocks(문서 구조 배열)를 산출물로 렌더 — 같은 blocks를 html/pdf/png/docx/pptx/typst emitter로. 보고서·문서·페이지 산출의 단일 진실 소스.
-    target_description: 'blocks(필수): 문서 IR 블록 배열. 각 블록은 {type, ...}:
+    description: blocks(문서 구조 배열) 또는 items(단일 통화)를 산출물로 렌더 — 같은 입력을 html/pdf/png/docx/pptx/typst/markdown emitter로. 보고서·문서·페이지·발행글 산출의 단일 진실 소스.
+    target_description: 'blocks 또는 items(둘 중 하나) — blocks(문서 IR 블록 배열) 또는 items(단일 통화 [{title,meta,summary,url}] — 자동으로 cards 블록화, group_by 지정 시 그 필드로 섹션 heading 분할). 각 블록은 {type, ...}:
 
       - heading{level(1~6), text} · paragraph{text} · list{ordered?, items[]}
 
@@ -186,9 +186,9 @@ actions:
 
       title(선택, 최상단 제목) · meta(선택, 제목 아래 부제/발행정보 한 줄) · theme(default 기본/newspaper 제호+카드그리드)
 
-      · filename(선택) · format(html 기본/pdf/png/docx/pptx/typst — 같은 IR을 여러 emitter로).
+      · filename(선택) · group_by(선택, items 섹션 분할 필드 예 "query") · format(html 기본/pdf/png/docx/pptx/typst/markdown — 같은 IR을 여러 emitter로).
 
-      결과 산출물 경로(path·file) 반환. 단일 IR → 다중 emitter. typst=책 품질 조판 PDF(산문·보고서에 최적, HTML theme/cards 그리드는 무시). pptx는 문서 구조를 슬라이드로 투영(heading=새 슬라이드) — 시각 레이아웃 슬라이드가 필요하면 engines:slide를 쓸 것.
+      결과 산출물 경로(path·file) 반환. markdown 은 md 텍스트도 결과의 markdown 필드로 반환(>> [others:publish] 로 바로 발행 가능). 단일 IR → 다중 emitter. typst=책 품질 조판 PDF(산문·보고서에 최적, HTML theme/cards 그리드는 무시). pptx는 문서 구조를 슬라이드로 투영(heading=새 슬라이드) — 시각 레이아웃 슬라이드가 필요하면 engines:slide를 쓸 것.
 
       '
     group: media_produce

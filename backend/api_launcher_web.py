@@ -1796,9 +1796,12 @@ async function fireButton(bi,btn){
   const b=(CUR.mode.buttons||[])[bi]; if(!b) return;
   btn.disabled=true;
   /* $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 데스크탑 fireButton 과 동일 의미 */
-  try{ const d=await ibl(buildAction(b.action,gatherInputs()));
+  try{ let d=await ibl(buildAction(b.action,gatherInputs()));
+    /* 합성(>>) 결과는 final_result(마지막 단계)를 펼쳐 본다 — 발행 링크 등 */
+    if(d&&typeof d==='object'&&'final_result' in d){ let fr=d.final_result; if(typeof fr==='string'){try{fr=JSON.parse(fr)}catch(e){}} if(fr&&typeof fr==='object') d=fr; }
     if(d&&d.stop_in_client){ stopRadioStream(); }
     else if(d&&d.error){ alert(d.error); }
+    else if(d&&d.url){ try{await navigator.clipboard.writeText(d.url);}catch(e){} alert((d.message||'발행 완료')+'\\n\\n링크가 복사되었습니다 — 친구에게 붙여넣으세요:\\n'+d.url); }  // 발행 등 링크 반환 액션
     else if(b.refresh){ runMode(); }  // 실행 후 현재 모드 재조회(토글/재생성 즉시 반영)
   }
   catch(e){ alert('실행 실패: '+e.message); }

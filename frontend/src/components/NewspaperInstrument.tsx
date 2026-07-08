@@ -96,23 +96,6 @@ function buildNewspaperHtml(title: string, date: string, sections: Section[]): s
 </div></body></html>`;
 }
 
-// 신문 → 마크다운(NIP-23 발행용). njump가 제목·섹션·링크 있는 글로 렌더.
-function buildNewspaperMarkdown(title: string, date: string, sections: Section[]): string {
-  const lines: string[] = [`# ${title}`, `_${date}_`, ''];
-  for (const sec of sections) {
-    lines.push(`## ${sec.keyword}`, '');
-    if (!sec.items.length) { lines.push('_관련 뉴스가 없습니다._', ''); continue; }
-    for (const it of sec.items) {
-      lines.push(`- ${it.url ? `[${it.title ?? ''}](${it.url})` : (it.title ?? '')}`);
-      const sub = [it.meta, it.summary].filter(Boolean).join(' — ');
-      if (sub) lines.push(`  ${sub}`);
-    }
-    lines.push('');
-  }
-  lines.push('---', '_IndieBiz OS · 나만의 신문_');
-  return lines.join('\n');
-}
-
 const todayStr = () => {
   const d = new Date();
   const wd = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
@@ -163,12 +146,16 @@ export function NewspaperInstrument() {
     if (!sections.length) return;
     setPublishing(true); setShareUrl(null); setError(null);
     try {
-      const md = buildNewspaperMarkdown(title || DEFAULT_TITLE, date, sections);
+      // 섹션 → 통화 items(섹션 태그) → [table:document] 마크다운 → [others:publish] 파이프.
+      // 마크다운 직렬화가 어휘(table:document)라 원격/폰/스케줄러도 같은 경로를 쓴다.
+      const items = sections.flatMap((sec) => sec.items.map((it) => ({ ...it, section: sec.keyword })));
       const d = new Date();
       const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-      const result = (await iblExecuteApp(
-        `[others:publish]{title: ${JSON.stringify(`${title || DEFAULT_TITLE} · ${date}`)}, content: ${JSON.stringify(md)}, slug: ${JSON.stringify(`newspaper-${stamp}`)}}`
-      )) as { url?: string; error?: string } | null;
+      const code =
+        `[table:document]{format: "markdown", title: ${JSON.stringify(title || DEFAULT_TITLE)}, ` +
+        `meta: ${JSON.stringify(date)}, group_by: "section", items: ${JSON.stringify(items)}} ` +
+        `>> [others:publish]{title: ${JSON.stringify(`${title || DEFAULT_TITLE} · ${date}`)}, slug: ${JSON.stringify(`newspaper-${stamp}`)}}`;
+      const result = (await iblExecuteApp(code)) as { url?: string; error?: string } | null;
       if (result?.url) setShareUrl(result.url);
       else setError(result?.error || '발행에 실패했습니다. Nostr 설정을 확인하세요.');
     } catch {

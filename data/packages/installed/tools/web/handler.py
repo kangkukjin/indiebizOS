@@ -413,6 +413,19 @@ def execute(tool_input: dict, context):
                 return "ko" if kc > len(q) * 0.2 else "en"
 
             all_items, sections = [], []
+            # 오늘의 핫토픽 — headlines:true 면 키워드 없는 톱헤드라인을 맨 앞 섹션으로(원격/폰 신문 파리티)
+            if tool_input.get("headlines") in (True, "true", "True", 1, "1"):
+                _hl = search_gnews(count=_fetch, language=(_lang if _lang != "auto" else "ko"), headlines=True)
+                _hi = [{
+                    "title": r.get("title", ""),
+                    "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
+                    "summary": "" if (r.get("summary") or "") == r.get("title") else (r.get("summary") or ""),
+                    "url": r.get("url", ""), "link_label": "기사 보기", "query": "오늘의 핫토픽",
+                } for r in (_hl.get("results") or [])]
+                if _curate:
+                    _hi = _curate_section("오늘의 핫토픽", _hi, _curate)
+                all_items.extend(_hi)
+                sections.append({"query": "오늘의 핫토픽", "count": len(_hi)})
             for q in _queries:
                 res = search_gnews(query=q, count=_fetch, language=_dl(q))
                 items = [{
